@@ -150,7 +150,7 @@ ClpCholeskyDense::factorize(const double * diagonal, int * rowsDropped)
 	}
       } else {
 	// drop column
-	rowsDropped_[iColumn]=-1;
+	rowsDropped_[iColumn]=1;
 	rowsDropped[numberDropped++]=iColumn;
 	numberRowsDropped_++;
 	// clean up as this is a debug version
