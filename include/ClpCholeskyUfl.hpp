@@ -7,7 +7,7 @@
 #ifdef __cplusplus
 extern "C"{
 #endif
-#include "/home/forrest/ordering/AMD/Include/amd.h"
+#include "amd.h"
 #ifdef __cplusplus
           }
 #endif
