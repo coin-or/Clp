@@ -1294,7 +1294,8 @@ CoinPostsolveMatrix::CoinPostsolveMatrix(ClpSimplex*  si,
     int ml = maxlink_;
     for (CoinBigIndex k=nelemsr; k<ml; ++k)
       link_[k] = k+1;
-    link_[ml-1] = NO_LINK;
+    if (ml)
+      link_[ml-1] = NO_LINK;
   }
   free_list_ = nelemsr;
 }
