@@ -149,7 +149,7 @@ int main (int argc, const char *argv[])
       if (!field.length()) {
 	if (numberGoodCommands==1&&goodModels[0]) {
 	  // we just had file name - do dual or primal
-	  field="either";
+	  field="duals";
 	} else if (!numberGoodCommands) {
 	  // let's give the sucker a hint
 	  std::cout
