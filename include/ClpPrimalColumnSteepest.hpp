@@ -89,6 +89,10 @@ public:
 	       CoinIndexedVector * spareRow2,
 	       CoinIndexedVector * spareColumn1,
 	       CoinIndexedVector * spareColumn2);
+  /// Updates two arrays for steepest
+  void transposeTimes2(const CoinIndexedVector * pi1, CoinIndexedVector * dj1,
+                       const CoinIndexedVector * pi2, CoinIndexedVector * dj2,
+                       CoinIndexedVector * spare,double scaleFactor);
 
   /// Updates weights - part 1 - also checks accuracy
   virtual void updateWeights(CoinIndexedVector * input);

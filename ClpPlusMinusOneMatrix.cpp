@@ -1589,3 +1589,233 @@ ClpPlusMinusOneMatrix::releasePackedMatrix() const
   elements_=NULL;
   lengths_=NULL;
 }
+/* Returns true if can combine transposeTimes and subsetTransposeTimes
+   and if it would be faster */
+bool 
+ClpPlusMinusOneMatrix::canCombine(const ClpSimplex * model,
+                            const CoinIndexedVector * pi) const
+{
+  int numberInRowArray = pi->getNumElements();
+  int numberRows = model->numberRows();
+  bool packed = pi->packedMode();
+  // factor should be smaller if doing both with two pi vectors 
+  double factor = 0.27;
+  // We may not want to do by row if there may be cache problems
+  // It would be nice to find L2 cache size - for moment 512K
+  // Be slightly optimistic
+  if (numberColumns_*sizeof(double)>1000000) {
+    if (numberRows*10<numberColumns_)
+      factor *= 0.333333333;
+    else if (numberRows*4<numberColumns_)
+      factor *= 0.5;
+    else if (numberRows*2<numberColumns_)
+      factor *= 0.66666666667;
+    //if (model->numberIterations()%50==0)
+    //printf("%d nonzero\n",numberInRowArray);
+  }
+  // if not packed then bias a bit more towards by column
+  if (!packed)
+    factor *= 0.9;
+  return (numberInRowArray>factor*numberRows||!model->rowCopy());
+}
+// These have to match ClpPrimalColumnSteepest version
+#define reference(i)  (((reference[i>>5]>>(i&31))&1)!=0)
+// Updates two arrays for steepest 
+void 
+ClpPlusMinusOneMatrix::transposeTimes2(const ClpSimplex * model,
+                                 const CoinIndexedVector * pi1, CoinIndexedVector * dj1,
+                                 const CoinIndexedVector * pi2, CoinIndexedVector * dj2,
+                                 CoinIndexedVector * spare,
+                                 double referenceIn, double devex,
+                                 // Array for exact devex to say what is in reference framework
+                                 unsigned int * reference,
+                                 double * weights, double scaleFactor)
+{
+  // put row of tableau in dj1
+  double * pi = pi1->denseVector();
+  int numberNonZero=0;
+  int * index = dj1->getIndices();
+  double * array = dj1->denseVector();
+  int numberInRowArray = pi1->getNumElements();
+  double zeroTolerance = model->factorization()->zeroTolerance();
+  bool packed = pi1->packedMode();
+  // do by column
+  int iColumn;
+  assert (!spare->getNumElements());
+  double * piWeight = pi2->denseVector();
+  assert (!pi2->packedMode());
+  bool killDjs = (scaleFactor==0.0);
+  if (!scaleFactor)
+    scaleFactor=1.0;
+  // Note scale factor was -1.0
+  if (packed) {
+    // need to expand pi into y
+    assert(spare->capacity()>=model->numberRows());
+    double * piOld = pi;
+    pi = spare->denseVector();
+    const int * whichRow = pi1->getIndices();
+    int i;
+    // modify pi so can collapse to one loop
+    for (i=0;i<numberInRowArray;i++) {
+      int iRow = whichRow[i];
+      pi[iRow]=piOld[i];
+    }
+    CoinBigIndex j;
+    for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+      ClpSimplex::Status status = model->getStatus(iColumn);
+      if (status==ClpSimplex::basic||status==ClpSimplex::isFixed) continue;
+      double value = 0.0;
+      for (j=startPositive_[iColumn];j<startNegative_[iColumn];j++) {
+        int iRow = indices_[j];
+        value -= pi[iRow];
+      }
+      for (;j<startPositive_[iColumn+1];j++) {
+        int iRow = indices_[j];
+        value += pi[iRow];
+      }
+      if (fabs(value)>zeroTolerance) {
+        // and do other array
+        double modification = 0.0;
+        for (j=startPositive_[iColumn];j<startNegative_[iColumn];j++) {
+          int iRow = indices_[j];
+          modification += piWeight[iRow];
+        }
+        for (;j<startPositive_[iColumn+1];j++) {
+          int iRow = indices_[j];
+          modification -= piWeight[iRow];
+        }
+        double thisWeight = weights[iColumn];
+        double pivot = value*scaleFactor;
+        double pivotSquared = pivot * pivot;
+        thisWeight += pivotSquared * devex + pivot * modification;
+        if (thisWeight<DEVEX_TRY_NORM) {
+          if (referenceIn<0.0) {
+            // steepest
+            thisWeight = CoinMax(DEVEX_TRY_NORM,DEVEX_ADD_ONE+pivotSquared);
+          } else {
+            // exact
+            thisWeight = referenceIn*pivotSquared;
+            if (reference(iColumn))
+              thisWeight += 1.0;
+            thisWeight = CoinMax(thisWeight,DEVEX_TRY_NORM);
+          }
+        }
+        weights[iColumn] = thisWeight;
+        if (!killDjs) {
+          array[numberNonZero]=value;
+          index[numberNonZero++]=iColumn;
+        }
+      }
+    }
+    // zero out
+    for (i=0;i<numberInRowArray;i++) {
+      int iRow = whichRow[i];
+      pi[iRow]=0.0;
+    }
+  } else {
+    CoinBigIndex j;
+    for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+      ClpSimplex::Status status = model->getStatus(iColumn);
+      if (status==ClpSimplex::basic||status==ClpSimplex::isFixed) continue;
+      double value = 0.0;
+      for (j=startPositive_[iColumn];j<startNegative_[iColumn];j++) {
+        int iRow = indices_[j];
+        value -= pi[iRow];
+      }
+      for (;j<startPositive_[iColumn+1];j++) {
+        int iRow = indices_[j];
+        value += pi[iRow];
+      }
+      if (fabs(value)>zeroTolerance) {
+        // and do other array
+        double modification = 0.0;
+        for (j=startPositive_[iColumn];j<startNegative_[iColumn];j++) {
+          int iRow = indices_[j];
+          modification += piWeight[iRow];
+        }
+        for (;j<startPositive_[iColumn+1];j++) {
+          int iRow = indices_[j];
+          modification -= piWeight[iRow];
+        }
+        double thisWeight = weights[iColumn];
+        double pivot = value*scaleFactor;
+        double pivotSquared = pivot * pivot;
+        thisWeight += pivotSquared * devex + pivot * modification;
+        if (thisWeight<DEVEX_TRY_NORM) {
+          if (referenceIn<0.0) {
+            // steepest
+            thisWeight = CoinMax(DEVEX_TRY_NORM,DEVEX_ADD_ONE+pivotSquared);
+          } else {
+            // exact
+            thisWeight = referenceIn*pivotSquared;
+            if (reference(iColumn))
+              thisWeight += 1.0;
+            thisWeight = CoinMax(thisWeight,DEVEX_TRY_NORM);
+          }
+        }
+        weights[iColumn] = thisWeight;
+        if (!killDjs) {
+          array[iColumn]=value;
+          index[numberNonZero++]=iColumn;
+        }
+      }
+    }
+  }
+  dj1->setNumElements(numberNonZero);
+  spare->setNumElements(0);
+  if (packed)
+    dj1->setPackedMode(true);
+}
+// Updates second array for steepest and does devex weights
+void 
+ClpPlusMinusOneMatrix::subsetTimes2(const ClpSimplex * model,
+                              CoinIndexedVector * dj1,
+                            const CoinIndexedVector * pi2, CoinIndexedVector * dj2,
+                            double referenceIn, double devex,
+                            // Array for exact devex to say what is in reference framework
+                            unsigned int * reference,
+                            double * weights, double scaleFactor)
+{
+  int number = dj1->getNumElements();
+  const int * index = dj1->getIndices();
+  double * array = dj1->denseVector();
+  assert( dj1->packedMode());
+
+  double * piWeight = pi2->denseVector();
+  bool killDjs = (scaleFactor==0.0);
+  if (!scaleFactor)
+    scaleFactor=1.0;
+  for (int k=0;k<number;k++) {
+    int iColumn = index[k];
+    double pivot = array[k]*scaleFactor;
+    if (killDjs)
+      array[k]=0.0;
+    // and do other array
+    double modification = 0.0;
+    CoinBigIndex j;
+    for (j=startPositive_[iColumn];j<startNegative_[iColumn];j++) {
+      int iRow = indices_[j];
+      modification += piWeight[iRow];
+    }
+    for (;j<startPositive_[iColumn+1];j++) {
+      int iRow = indices_[j];
+      modification -= piWeight[iRow];
+    }
+    double thisWeight = weights[iColumn];
+    double pivotSquared = pivot * pivot;
+    thisWeight += pivotSquared * devex + pivot * modification;
+    if (thisWeight<DEVEX_TRY_NORM) {
+      if (referenceIn<0.0) {
+        // steepest
+        thisWeight = CoinMax(DEVEX_TRY_NORM,DEVEX_ADD_ONE+pivotSquared);
+      } else {
+        // exact
+        thisWeight = referenceIn*pivotSquared;
+        if (reference(iColumn))
+          thisWeight += 1.0;
+        thisWeight = CoinMax(thisWeight,DEVEX_TRY_NORM);
+      }
+    }
+    weights[iColumn] = thisWeight;
+  }
+}

@@ -188,13 +188,6 @@ public:
 			      const CoinIndexedVector * x,
 			      CoinIndexedVector * y,
 			      CoinIndexedVector * z) const;
-    /** Return <code>x * scalar * A in <code>z</code>. 
-	Note - this version when x packed mode and so will be z
-	This does by column and knows no gaps and knows y empty 
-	Squashes small elements and knows about ClpSimplex */
-  void transposeTimesByColumn(const ClpSimplex * model, double scalar,
-			      const CoinIndexedVector * x,
-			      CoinIndexedVector * z) const;
     /** Return <code>x * scalar * A + y</code> in <code>z</code>. 
 	Can use y as temporary array (will be empty at end)
 	Note - If x packed mode - then z packed mode
@@ -211,6 +204,27 @@ public:
 				    const CoinIndexedVector * x,
 				    const CoinIndexedVector * y,
 				    CoinIndexedVector * z) const;
+  /** Returns true if can combine transposeTimes and subsetTransposeTimes
+      and if it would be faster */
+  virtual bool canCombine(const ClpSimplex * model,
+                          const CoinIndexedVector * pi) const;
+  /// Updates two arrays for steepest 
+  virtual void transposeTimes2(const ClpSimplex * model,
+                               const CoinIndexedVector * pi1, CoinIndexedVector * dj1,
+                               const CoinIndexedVector * pi2, CoinIndexedVector * dj2,
+                               CoinIndexedVector * spare,
+                               double referenceIn, double devex,
+                               // Array for exact devex to say what is in reference framework
+                               unsigned int * reference,
+                               double * weights, double scaleFactor);
+  /// Updates second array for steepest and does devex weights 
+  virtual void subsetTimes2(const ClpSimplex * model,
+                                CoinIndexedVector * dj1,
+                               const CoinIndexedVector * pi2, CoinIndexedVector * dj2,
+                               double referenceIn, double devex,
+                               // Array for exact devex to say what is in reference framework
+                               unsigned int * reference,
+                               double * weights, double scaleFactor);
   /// Sets up an effective RHS
   void useEffectiveRhs(ClpSimplex * model);
 //@}

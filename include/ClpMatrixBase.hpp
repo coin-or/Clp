@@ -265,6 +265,27 @@ public:
 				    const CoinIndexedVector * x,
 				    const CoinIndexedVector * y,
 				    CoinIndexedVector * z) const = 0;
+  /** Returns true if can combine transposeTimes and subsetTransposeTimes
+      and if it would be faster */
+  virtual bool canCombine(const ClpSimplex * model,
+                          const CoinIndexedVector * pi) const {return false;};
+  /// Updates two arrays for steepest and does devex weights (need not be coded)
+  virtual void transposeTimes2(const ClpSimplex * model,
+                               const CoinIndexedVector * pi1, CoinIndexedVector * dj1,
+                               const CoinIndexedVector * pi2, CoinIndexedVector * dj2,
+                               CoinIndexedVector * spare,
+                               double referenceIn, double devex,
+                               // Array for exact devex to say what is in reference framework
+                               unsigned int * reference,
+                               double * weights, double scaleFactor);
+  /// Updates second array for steepest and does devex weights (need not be coded)
+  virtual void subsetTimes2(const ClpSimplex * model,
+                            CoinIndexedVector * dj1,
+                               const CoinIndexedVector * pi2, CoinIndexedVector * dj2,
+                               double referenceIn, double devex,
+                               // Array for exact devex to say what is in reference framework
+                               unsigned int * reference,
+                               double * weights, double scaleFactor);
   /** Return <code>x *A</code> in <code>z</code> but
       just for number indices in y.
       Default cheats with fake CoinIndexedVector and

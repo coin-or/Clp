@@ -145,6 +145,27 @@ public:
 				    const CoinIndexedVector * x,
 				    const CoinIndexedVector * y,
 				    CoinIndexedVector * z) const;
+  /** Returns true if can combine transposeTimes and subsetTransposeTimes
+      and if it would be faster */
+  virtual bool canCombine(const ClpSimplex * model,
+                          const CoinIndexedVector * pi) const;
+  /// Updates two arrays for steepest 
+  virtual void transposeTimes2(const ClpSimplex * model,
+                               const CoinIndexedVector * pi1, CoinIndexedVector * dj1,
+                               const CoinIndexedVector * pi2, CoinIndexedVector * dj2,
+                               CoinIndexedVector * spare,
+                               double referenceIn, double devex,
+                               // Array for exact devex to say what is in reference framework
+                               unsigned int * reference,
+                               double * weights, double scaleFactor);
+  /// Updates second array for steepest and does devex weights 
+  virtual void subsetTimes2(const ClpSimplex * model,
+                                CoinIndexedVector * dj1,
+                               const CoinIndexedVector * pi2, CoinIndexedVector * dj2,
+                               double referenceIn, double devex,
+                               // Array for exact devex to say what is in reference framework
+                               unsigned int * reference,
+                               double * weights, double scaleFactor);
   //@}
 
   /**@name Other */

@@ -1277,4 +1277,7 @@ public:
   int oddState_;
   //@}
 };
+// For Devex stuff
+#define DEVEX_TRY_NORM 1.0e-4
+#define DEVEX_ADD_ONE 1.0
 #endif

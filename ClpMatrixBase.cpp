@@ -475,6 +475,65 @@ ClpMatrixBase::checkFeasible(ClpSimplex * model) const
   delete [] rhs;
   return numberInfeasible;
 }
+// These have to match ClpPrimalColumnSteepest version
+#define reference(i)  (((reference[i>>5]>>(i&31))&1)!=0)
+// Updates second array for steepest and does devex weights (need not be coded)
+void 
+ClpMatrixBase::subsetTimes2(const ClpSimplex * model,
+                            CoinIndexedVector * dj1,
+                            const CoinIndexedVector * pi2, CoinIndexedVector * dj2,
+                            double referenceIn, double devex,
+                            // Array for exact devex to say what is in reference framework
+                            unsigned int * reference,
+                            double * weights, double scaleFactor)
+{
+  // get subset which have nonzero tableau elements
+  subsetTransposeTimes(model,pi2,dj1,dj2);
+  bool killDjs = (scaleFactor==0.0);
+  if (!scaleFactor)
+    scaleFactor=1.0;
+  // columns
+  
+  int number = dj1->getNumElements();
+  const int * index = dj1->getIndices();
+  double * updateBy = dj1->denseVector();
+  double * updateBy2 = dj2->denseVector();
+  
+  for (int j=0;j<number;j++) {
+    double thisWeight;
+    double pivot;
+    double pivotSquared;
+    int iSequence = index[j];
+    double value2 = updateBy[j];
+    if (killDjs)
+      updateBy[j]=0.0;
+    double modification=updateBy2[j];
+    updateBy2[j]=0.0;
+    ClpSimplex::Status status = model->getStatus(iSequence);
+    
+    if (status!=ClpSimplex::basic&&status!=ClpSimplex::isFixed) {
+      thisWeight = weights[iSequence];
+      pivot = value2*scaleFactor;
+      pivotSquared = pivot * pivot;
+      
+      thisWeight += pivotSquared * devex + pivot * modification;
+      if (thisWeight<DEVEX_TRY_NORM) {
+        if (referenceIn<0.0) {
+          // steepest
+          thisWeight = CoinMax(DEVEX_TRY_NORM,DEVEX_ADD_ONE+pivotSquared);
+        } else {
+          // exact
+          thisWeight = referenceIn*pivotSquared;
+          if (reference(iSequence))
+            thisWeight += 1.0;
+          thisWeight = CoinMax(thisWeight,DEVEX_TRY_NORM);
+        }
+      }
+      weights[iSequence] = thisWeight;
+    }
+  }
+  dj2->setNumElements(0);
+}
 // Correct sequence in and out to give true value
 void 
 ClpMatrixBase::correctSequence(int & sequenceIn, int & sequenceOut) const
@@ -485,6 +544,20 @@ void
 ClpMatrixBase::reallyScale(const double * rowScale, const double * columnScale)
 {
   std::cerr<<"reallyScale not supported - ClpMatrixBase"<<std::endl;
+  abort();
+}
+// Updates two arrays for steepest 
+void 
+ClpMatrixBase::transposeTimes2(const ClpSimplex * model,
+                               const CoinIndexedVector * pi1, CoinIndexedVector * dj1,
+                               const CoinIndexedVector * pi2, CoinIndexedVector * dj2,
+                               CoinIndexedVector * spare,
+                               double referenceIn, double devex,
+                               // Array for exact devex to say what is in reference framework
+                               unsigned int * reference,
+                               double * weights, double scaleFactor)
+{
+  std::cerr<<"transposeTimes2 not supported - ClpMatrixBase"<<std::endl;
   abort();
 }
 

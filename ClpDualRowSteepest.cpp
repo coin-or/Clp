@@ -302,7 +302,6 @@ k
   //printf("smallest %g largest %g\n",smallestWeight,largestWeight);
   return chosenRow;
 }
-#define TRY_NORM 1.0e-4
 // Updates weights and returns pivot alpha
 double
 ClpDualRowSteepest::updateWeights(CoinIndexedVector * input,
@@ -413,14 +412,14 @@ ClpDualRowSteepest::updateWeights(CoinIndexedVector * input,
       int jRow = pivotColumn[iRow];
       double value = work2[jRow];
       devex +=  theta * (theta*norm+value * multiplier);
-      if (devex < TRY_NORM) 
-	devex = TRY_NORM;
+      if (devex < DEVEX_TRY_NORM) 
+	devex = DEVEX_TRY_NORM;
       weights_[iRow]=devex;
     }
     alternateWeights_->setPackedMode(true);
     alternateWeights_->setNumElements(nSave);
-    if (norm < TRY_NORM) 
-      norm = TRY_NORM;
+    if (norm < DEVEX_TRY_NORM) 
+      norm = DEVEX_TRY_NORM;
     // Try this to make less likely will happen again and stop cycling
     //norm *= 1.02;
     weights_[pivotRow] = norm;
@@ -460,8 +459,8 @@ ClpDualRowSteepest::updateWeights(CoinIndexedVector * input,
     norm /= model_->alpha() * model_->alpha();
     
     assert(norm);
-    //if (norm < TRY_NORM) 
-    //norm = TRY_NORM;
+    //if (norm < DEVEX_TRY_NORM) 
+    //norm = DEVEX_TRY_NORM;
     // pivot element
     alpha=0.0;
     double multiplier = 2.0 / model_->alpha();
@@ -483,15 +482,15 @@ ClpDualRowSteepest::updateWeights(CoinIndexedVector * input,
       which3[nSave++]=iRow;
       double value = work2[iRow];
       devex +=  theta * (theta*norm+value * multiplier);
-      if (devex < TRY_NORM) 
-	devex = TRY_NORM;
+      if (devex < DEVEX_TRY_NORM) 
+	devex = DEVEX_TRY_NORM;
       weights_[iRow]=devex;
     }
     assert (alpha);
     alternateWeights_->setPackedMode(true);
     alternateWeights_->setNumElements(nSave);
-    if (norm < TRY_NORM) 
-      norm = TRY_NORM;
+    if (norm < DEVEX_TRY_NORM) 
+      norm = DEVEX_TRY_NORM;
     weights_[pivotRow] = norm;
     spare->clear();
   }
@@ -774,8 +773,8 @@ ClpDualRowSteepest::saveWeights(ClpSimplex * model,int mode)
 	iPivot = back[iPivot];
 	if (iPivot>=0) {
 	  weights_[i]=array[iPivot];
-	  if (weights_[i]<TRY_NORM)
-	    weights_[i] = TRY_NORM; // may need to check more
+	  if (weights_[i]<DEVEX_TRY_NORM)
+	    weights_[i] = DEVEX_TRY_NORM; // may need to check more
 	} else {
 	  // odd
 	  weights_[i]=1.0;
