@@ -1115,11 +1115,12 @@ stopping",
 #if 1
 		  if (type==DUALSIMPLEX) {
 		    int numberInfeasibilities = model2->tightenPrimalBounds();
-		    if (numberInfeasibilities)
+		    if (numberInfeasibilities) {
 		      std::cout<<"** Analysis indicates model infeasible"
 			       <<std::endl;
-		    model2 = models+iModel;
-		    preSolve=0;
+		      model2 = models+iModel;
+		      preSolve=0;
+		    }
 		  }
 #endif
 #endif
