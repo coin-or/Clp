@@ -913,7 +913,7 @@ int main (int argc, const char *argv[])
       ClpItem("-","From stdin",
 	      STDIN,299,false);
     parameters[numberParameters++]=
-      ClpItem("allS!lack","Set basis back to all slack",
+      ClpItem("allS!lack","Set basis back to all slack and reset solution",
 	      ALLSLACK,false);
     parameters[numberParameters-1].setLonghelp
       (
@@ -1579,7 +1579,7 @@ costs this much to be infeasible",
 	    int across=0;
 	    std::cout<<types[iType]<<std::endl;
 	    for ( iParam=0; iParam<numberParameters; iParam++ ) {
-	      int type = parameters[iParam].indexNumber();
+	      int type = parameters[iParam].type();
 	      if (parameters[iParam].displayThis()&&type>=limits[iType]
 		  &&type<limits[iType+1]) {
 		if (!across)
@@ -1596,7 +1596,7 @@ costs this much to be infeasible",
 	      std::cout<<std::endl;
 	  }
 	} else if (type==FULLGENERALQUERY) {
-	  std::cout<<"Full list of ommands is:"<<std::endl;
+	  std::cout<<"Full list of commands is:"<<std::endl;
 	  int maxAcross=5;
 	  int limits[]={1,101,201,301,401};
 	  std::vector<std::string> types;
@@ -1609,7 +1609,7 @@ costs this much to be infeasible",
 	    int across=0;
 	    std::cout<<types[iType]<<std::endl;
 	    for ( iParam=0; iParam<numberParameters; iParam++ ) {
-	      int type = parameters[iParam].indexNumber();
+	      int type = parameters[iParam].type();
 	      if (type>=limits[iType]
 		  &&type<limits[iType+1]) {
 		if (!across)
@@ -2266,24 +2266,7 @@ costs this much to be infeasible",
 	    models[iModel].setOptimizationDirection(1);
 	    break;
 	  case ALLSLACK:
-	    models[iModel].createStatus();
-	    {
-	      // and do solution
-	      int iColumn;
-	      double * solution = models[iModel].primalColumnSolution();
-	      const double * lower = models[iModel].columnLower();
-	      const double * upper = models[iModel].columnUpper();
-	      int numberColumns = models[iModel].numberColumns();
-	      for (iColumn=0;iColumn<numberColumns;iColumn++) {
-		if (lower[iColumn]>0.0) {
-		  solution[iColumn]=lower[iColumn];
-		} else if (upper[iColumn]<0.0) {
-		  solution[iColumn]=upper[iColumn];
-		} else {
-		  solution[iColumn]=0.0;
-		}
-	      }
-	    }
+	    models[iModel].allSlackBasis();
 	    break;
 	  case REVERSE:
 	    if (goodModels[iModel]) {
