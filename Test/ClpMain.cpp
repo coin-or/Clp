@@ -1136,10 +1136,20 @@ but this program turns this off to make it look more friendly.  It can be useful
        ); 
     parameters[numberParameters++]=
       ClpItem("netlib","Solve entire netlib test set",
-	      NETLIB_DUAL,-1,false);
+	      NETLIB_DUAL);
+    parameters[numberParameters-1].setLonghelp
+      (
+       "This exercises the unit test for clp and then solves the netlib test set using dual.\
+The user can set options before e.g. clp -presolve off -netlib"
+       ); 
     parameters[numberParameters++]=
       ClpItem("netlibP!rimal","Solve entire netlib test set (primal)",
-	      NETLIB_PRIMAL,-1,false);
+	      NETLIB_PRIMAL);
+    parameters[numberParameters-1].setLonghelp
+      (
+       "This exercises the unit test for clp and then solves the netlib test set using primal.\
+The user can set options before e.g. clp -presolve off -netlibp"
+       ); 
     parameters[numberParameters++]=
       ClpItem("network","Tries to make network matrix",
 	      NETWORK,-1,false);
@@ -1377,7 +1387,11 @@ costs this much to be infeasible",
 	      TIGHTEN,-1,false);
     parameters[numberParameters++]=
       ClpItem("unitTest","Do unit test",
-	      UNITTEST,-1,false);
+	      UNITTEST);
+    parameters[numberParameters-1].setLonghelp
+      (
+       "This exercises the unit test for clp"
+       ); 
     assert(numberParameters<MAXPARAMETERS);
     
     // total number of commands read
