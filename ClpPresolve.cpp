@@ -686,7 +686,7 @@ void ClpPresolve::postsolve(CoinPostsolveMatrix &prob)
     // Check activities
     double *colels	= prob.colels_;
     int *hrow		= prob.hrow_;
-    int *mcstrt		= prob.mcstrt_;
+    CoinBigIndex *mcstrt		= prob.mcstrt_;
     int *hincol		= prob.hincol_;
     int *link		= prob.link_;
     int ncols		= prob.ncols_;

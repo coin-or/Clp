@@ -1455,7 +1455,11 @@ ClpPackedMatrix::allElementsInRange(ClpModel * model,
       double value = fabs(elementByColumn[j]);
       int iRow = row[j];
       if (iRow<0||iRow>=numberRows) {
+#ifndef COIN_BIG_INDEX
 	printf("Out of range %d %d %d %g\n",iColumn,j,row[j],elementByColumn[j]);
+#else
+	printf("Out of range %d %ld %d %g\n",iColumn,j,row[j],elementByColumn[j]);
+#endif
 	return false;
       }
       if (mark[iRow]==-1) {
@@ -1584,7 +1588,7 @@ ClpPackedMatrix::partialPricing(ClpSimplex * model, int start, int end,
 {
   const double * element =matrix_->getElements();
   const int * row = matrix_->getIndices();
-  const int * startColumn = matrix_->getVectorStarts();
+  const CoinBigIndex * startColumn = matrix_->getVectorStarts();
   const int * length = matrix_->getVectorLengths();
   const double * rowScale = model->rowScale();
   const double * columnScale = model->columnScale();

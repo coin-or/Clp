@@ -181,7 +181,7 @@ ClpQuadraticObjective::gradient(const double * solution, double & offset,bool re
       if (!gradient_) 
 	gradient_ = new double[numberExtendedColumns_];
       const int * columnQuadratic = quadraticObjective_->getIndices();
-      const int * columnQuadraticStart = quadraticObjective_->getVectorStarts();
+      const CoinBigIndex * columnQuadraticStart = quadraticObjective_->getVectorStarts();
       const int * columnQuadraticLength = quadraticObjective_->getVectorLengths();
       const double * quadraticElement = quadraticObjective_->getElements();
       double offset=0.0;

@@ -14,6 +14,12 @@ class ClpMatrixBase;
 class CoinIndexedVector;
 class ClpSimplex;
 
+#ifndef COIN_BIG_INDEX
+typedef int CoinBigIndex;
+#else
+typedef long CoinBigIndex;
+#endif
+
 /** This deals with Factorization and Updates for network structures
  */
 
@@ -29,7 +35,7 @@ public:
   /// Constructor from CoinFactorization
   ClpNetworkBasis(const ClpSimplex * model,
 		  int numberRows, const double * pivotRegion,
-		  const int * permuteBack,const int * startColumn,
+		  const int * permuteBack,const CoinBigIndex * startColumn,
 		  const int * numberInColumn,
 		  const int * indexRow, const double * element);
   /// Copy constructor 

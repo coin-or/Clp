@@ -147,10 +147,10 @@ public:
   /**@name Other */
    //@{
   /// Return starts of +1s
-  inline int * startPositive() const
+  inline CoinBigIndex * startPositive() const
   { return startPositive_;};
   /// Return starts of -1s
-  inline int * startNegative() const
+  inline CoinBigIndex * startNegative() const
   { return startNegative_;};
    //@}
 
@@ -186,7 +186,7 @@ public:
   /// pass in copy (object takes ownership)
   void passInCopy(int numberRows, int numberColumns,
 		  bool columnOrdered, int * indices,
-		  int * startPositive, int * startNegative);
+		  CoinBigIndex * startPositive, CoinBigIndex * startNegative);
   /// Says whether it can do partial pricing
   virtual bool canDoPartialPricing() const;
   /// Partial pricing 
@@ -203,9 +203,9 @@ protected:
   mutable double * elements_;
   mutable int * lengths_;
   /// Start of +1's for each
-  int * startPositive_;
+  CoinBigIndex * startPositive_;
   /// Start of -1's for each
-  int * startNegative_;
+  CoinBigIndex * startNegative_;
   /// Data -1, then +1 rows in pairs (row==-1 if one entry)
   int * indices_;
   /// Number of rows

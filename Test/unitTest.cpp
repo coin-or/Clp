@@ -826,7 +826,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     int * index = new int[numberElements];
     double * element = new double[numberElements];
 
-    const int * startM;
+    const CoinBigIndex * startM;
     const int * lengthM;
     const int * indexM;
     const double * elementM;
@@ -1034,7 +1034,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
       double * upperColumn = new double[numberColumns];
       
       double * element = new double [2*numberColumns];
-      int * start = new int[numberColumns+1];
+      CoinBigIndex * start = new CoinBigIndex [numberColumns+1];
       int * row = new int[2*numberColumns];
       start[numberColumns]=2*numberColumns;
       for (i=0;i<numberColumns;i++) {

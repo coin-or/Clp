@@ -176,7 +176,7 @@ protected:
    //@{
   /// For fake CoinPackedMatrix
   mutable double * elements_;
-  mutable int * starts_;
+  mutable CoinBigIndex * starts_;
   mutable int * lengths_;
   /// Data -1, then +1 rows in pairs (row==-1 if one entry)
   int * indices_;

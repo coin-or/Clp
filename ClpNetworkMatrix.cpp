@@ -231,10 +231,10 @@ ClpMatrixBase *
 ClpNetworkMatrix::reverseOrderedCopy() const
 {
   // count number in each row
-  int * tempP = new int [numberRows_];
-  int * tempN = new int [numberRows_];
-  memset(tempP,0,numberRows_*sizeof(int));
-  memset(tempN,0,numberRows_*sizeof(int));
+  CoinBigIndex * tempP = new CoinBigIndex [numberRows_];
+  CoinBigIndex * tempN = new CoinBigIndex [numberRows_];
+  memset(tempP,0,numberRows_*sizeof(CoinBigIndex));
+  memset(tempN,0,numberRows_*sizeof(CoinBigIndex));
   CoinBigIndex j=0;
   int i;
   for (i=0;i<numberColumns_;i++,j+=2) {
@@ -244,8 +244,8 @@ ClpNetworkMatrix::reverseOrderedCopy() const
     tempP[iRow]++;
   }
   int * newIndices = new int [2*numberColumns_];
-  int * newP = new int [numberRows_+1];
-  int * newN = new int[numberRows_];
+  CoinBigIndex * newP = new CoinBigIndex [numberRows_+1];
+  CoinBigIndex * newN = new CoinBigIndex[numberRows_];
   int iRow;
   j=0;
   // do starts
@@ -261,7 +261,7 @@ ClpNetworkMatrix::reverseOrderedCopy() const
   j=0;
   for (i=0;i<numberColumns_;i++,j+=2) {
     int iRow = indices_[j];
-    int put = tempN[iRow];
+    CoinBigIndex put = tempN[iRow];
     newIndices[put++] = i;
     tempN[iRow] = put;
     iRow = indices_[j+1];
@@ -687,7 +687,7 @@ ClpNetworkMatrix::getVectorStarts() const
 {
   assert (trueNetwork_); // fix later
   if (!starts_) {
-    starts_ = new int [numberColumns_+1];
+    starts_ = new CoinBigIndex [numberColumns_+1];
     int i;
     for (i=0;i<numberColumns_+1;i++) {
       starts_[i]=i;

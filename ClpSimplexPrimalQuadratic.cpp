@@ -92,7 +92,7 @@ ClpSimplexPrimalQuadratic::primalSLP(int numberPasses, double deltaTolerance)
   int * listNonLinearColumn = new int[numberColumns];
   memset(listNonLinearColumn,0,numberColumns*sizeof(int));
   const int * columnQuadratic = quadratic->getIndices();
-  const int * columnQuadraticStart = quadratic->getVectorStarts();
+  const CoinBigIndex * columnQuadraticStart = quadratic->getVectorStarts();
   const int * columnQuadraticLength = quadratic->getVectorLengths();
   const double * quadraticElement = quadratic->getElements();
   for (iColumn=0;iColumn<numberColumns;iColumn++) {
@@ -1429,7 +1429,7 @@ ClpSimplexPrimalQuadratic::primalRow(CoinIndexedVector * rowArray,
   // This is expanded one
   const CoinPackedMatrix * quadratic = info->quadraticObjective();
   const int * columnQuadratic = quadratic->getIndices();
-  const int * columnQuadraticStart = quadratic->getVectorStarts();
+  const CoinBigIndex * columnQuadraticStart = quadratic->getVectorStarts();
   const int * columnQuadraticLength = quadratic->getVectorLengths();
   const double * quadraticElement = quadratic->getElements();
   //const double * originalCost = info->originalObjective();
@@ -2103,7 +2103,7 @@ ClpSimplexPrimalQuadratic::primalRow(CoinIndexedVector * rowArray,
     CoinPackedMatrix * quadratic = 
       info->originalObjective()->quadraticObjective();
     const int * columnQuadratic = quadratic->getIndices();
-    const int * columnQuadraticStart = quadratic->getVectorStarts();
+    const CoinBigIndex * columnQuadraticStart = quadratic->getVectorStarts();
     const int * columnQuadraticLength = quadratic->getVectorLengths();
     const double * quadraticElement = quadratic->getElements();
     int numberColumns = info->numberXColumns();
@@ -2605,7 +2605,7 @@ ClpSimplexPrimalQuadratic::checkComplementarity (ClpQuadraticInfo * info,
   const CoinPackedMatrix * quadratic = 
     info->quadraticObjective();
   const int * columnQuadratic = quadratic->getIndices();
-  const int * columnQuadraticStart = quadratic->getVectorStarts();
+  const CoinBigIndex * columnQuadraticStart = quadratic->getVectorStarts();
   const int * columnQuadraticLength = quadratic->getVectorLengths();
   const double * quadraticElement = quadratic->getElements();
   const double * originalCost = info->linearObjective();
@@ -2794,13 +2794,13 @@ ClpSimplexPrimalQuadratic::makeQuadratic(ClpQuadraticInfo & info)
   // and elements
   CoinPackedMatrix * matrix = this->matrix();
   const int * row = matrix->getIndices();
-  const int * columnStart = matrix->getVectorStarts();
+  const CoinBigIndex * columnStart = matrix->getVectorStarts();
   const double * element =  matrix->getElements();
   const int * columnLength = matrix->getVectorLengths();
 
   int iColumn;
   const int * columnQuadratic = quadratic->getIndices();
-  const int * columnQuadraticStart = quadratic->getVectorStarts();
+  const CoinBigIndex * columnQuadraticStart = quadratic->getVectorStarts();
   const int * columnQuadraticLength = quadratic->getVectorLengths();
   const double * quadraticElement = quadratic->getElements();
 #if 0
@@ -2838,7 +2838,7 @@ ClpSimplexPrimalQuadratic::makeQuadratic(ClpQuadraticInfo & info)
     +2*quadratic->getNumElements()
     + numberQuadratic;
   double * elements2 = new double[numberElements];
-  int * start2 = new int[newNumberColumns+1];
+  CoinBigIndex * start2 = new CoinBigIndex [newNumberColumns+1];
   int * row2 = new int[numberElements];
   double * objective2 = new double[newNumberColumns];
   double * columnLower2 = new double[newNumberColumns];
@@ -3140,12 +3140,12 @@ ClpSimplexPrimalQuadratic::endQuadratic(ClpSimplexPrimalQuadratic * quadraticMod
   double * dj = dualColumnSolution();
   // Matrix for linear stuff
   const int * row = matrix_->getIndices();
-  const int * columnStart = matrix_->getVectorStarts();
+  const CoinBigIndex * columnStart = matrix_->getVectorStarts();
   const double * element =  matrix_->getElements();
   const int * columnLength = matrix_->getVectorLengths();
   if (quadratic) {
     const int * columnQuadratic = quadratic->getIndices();
-    const int * columnQuadraticStart = quadratic->getVectorStarts();
+    const CoinBigIndex * columnQuadraticStart = quadratic->getVectorStarts();
     const int * columnQuadraticLength = quadratic->getVectorLengths();
     const double * quadraticElement = quadratic->getElements();
     int start = info.numberQuadraticRows()+numberColumns_;
@@ -3456,7 +3456,7 @@ ClpQuadraticInfo::createGradient(ClpSimplex * model)
   double * solution = model->solutionRegion();
   const CoinPackedMatrix * quadratic = quadraticObjective();
   const int * columnQuadratic = quadratic->getIndices();
-  const int * columnQuadraticStart = quadratic->getVectorStarts();
+  const CoinBigIndex * columnQuadraticStart = quadratic->getVectorStarts();
   const int * columnQuadraticLength = quadratic->getVectorLengths();
   const double * quadraticElement = quadratic->getElements();
   // get current costs

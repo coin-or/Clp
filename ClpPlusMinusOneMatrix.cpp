@@ -50,13 +50,13 @@ ClpPlusMinusOneMatrix::ClpPlusMinusOneMatrix (const ClpPlusMinusOneMatrix & rhs)
   numberColumns_=rhs.numberColumns_;
   columnOrdered_=rhs.columnOrdered_;
   if (numberColumns_) {
-    int numberElements = rhs.startPositive_[numberColumns_];
+    CoinBigIndex numberElements = rhs.startPositive_[numberColumns_];
     indices_ = new int [ numberElements];
     memcpy(indices_,rhs.indices_,numberElements*sizeof(int));
-    startPositive_ = new int [ numberColumns_+1];
-    memcpy(startPositive_,rhs.startPositive_,(numberColumns_+1)*sizeof(int));
-    startNegative_ = new int [ numberColumns_];
-    memcpy(startNegative_,rhs.startNegative_,numberColumns_*sizeof(int));
+    startPositive_ = new CoinBigIndex [ numberColumns_+1];
+    memcpy(startPositive_,rhs.startPositive_,(numberColumns_+1)*sizeof(CoinBigIndex));
+    startNegative_ = new CoinBigIndex [ numberColumns_];
+    memcpy(startNegative_,rhs.startNegative_,numberColumns_*sizeof(CoinBigIndex));
   }
   int numberRows = getNumRows();
   if (rhs.effectiveRhs_&&numberRows) {
@@ -86,8 +86,8 @@ ClpPlusMinusOneMatrix::ClpPlusMinusOneMatrix (const CoinPackedMatrix & rhs)
   bool goodPlusMinusOne=true;
   numberRows_=-1;
   indices_ = new int[rhs.getNumElements()];
-  startPositive_ = new int [numberColumns_+1];
-  startNegative_ = new int [numberColumns_];
+  startPositive_ = new CoinBigIndex [numberColumns_+1];
+  startNegative_ = new CoinBigIndex [numberColumns_];
   int * temp = new int [rhs.getNumRows()];
   CoinBigIndex j=0;
   for (iColumn=0;iColumn<numberColumns_;iColumn++) {
@@ -170,13 +170,13 @@ ClpPlusMinusOneMatrix::operator=(const ClpPlusMinusOneMatrix& rhs)
     numberColumns_=rhs.numberColumns_;
     columnOrdered_=rhs.columnOrdered_;
     if (numberColumns_) {
-      int numberElements = rhs.startPositive_[numberColumns_];
+      CoinBigIndex numberElements = rhs.startPositive_[numberColumns_];
       indices_ = new int [ numberElements];
       memcpy(indices_,rhs.indices_,numberElements*sizeof(int));
-      startPositive_ = new int [ numberColumns_+1];
-      memcpy(startPositive_,rhs.startPositive_,(numberColumns_+1)*sizeof(int));
-      startNegative_ = new int [ numberColumns_];
-      memcpy(startNegative_,rhs.startNegative_,numberColumns_*sizeof(int));
+      startPositive_ = new CoinBigIndex [ numberColumns_+1];
+      memcpy(startPositive_,rhs.startPositive_,(numberColumns_+1)*sizeof(CoinBigIndex));
+      startNegative_ = new CoinBigIndex [ numberColumns_];
+      memcpy(startNegative_,rhs.startNegative_,numberColumns_*sizeof(CoinBigIndex));
     }
   }
   return *this;
@@ -215,13 +215,13 @@ ClpPlusMinusOneMatrix::ClpPlusMinusOneMatrix (
   numberColumns_=0;
   columnOrdered_=rhs.columnOrdered_;
   if (numberRows<=0||numberColumns<=0) {
-    startPositive_ = new int[1];
+    startPositive_ = new CoinBigIndex [1];
     startPositive_[0] = 0;
   } else {
     numberColumns_ = numberColumns;
     numberRows_ = numberRows;
     const int * index1 = rhs.indices_;
-    int * startPositive1 = rhs.startPositive_;
+    CoinBigIndex * startPositive1 = rhs.startPositive_;
 
     int numberMinor = (!columnOrdered_) ? numberColumns_ : numberRows_;
     int numberMajor = (columnOrdered_) ? numberColumns_ : numberRows_;
@@ -271,13 +271,13 @@ ClpPlusMinusOneMatrix::ClpPlusMinusOneMatrix (
       throw CoinError("bad minor entries", 
 		      "subset constructor", "ClpPlusMinusOneMatrix");
     // now get size and check columns
-    int size = 0;
+    CoinBigIndex size = 0;
     int iColumn;
     numberBad=0;
     for (iColumn=0;iColumn<numberMajor;iColumn++) {
       int kColumn = whichColumn[iColumn];
       if (kColumn>=0  && kColumn <numberMajor1) {
-	int i;
+	CoinBigIndex i;
 	for (i=startPositive1[kColumn];i<startPositive1[kColumn+1];i++) {
 	  int kRow = index1[i];
 	  kRow = newRow[kRow];
@@ -296,16 +296,16 @@ ClpPlusMinusOneMatrix::ClpPlusMinusOneMatrix (
       throw CoinError("bad major entries", 
 		      "subset constructor", "ClpPlusMinusOneMatrix");
     // now create arrays
-    startPositive_ = new int [numberMajor+1];
-    startNegative_ = new int [numberMajor];
+    startPositive_ = new CoinBigIndex [numberMajor+1];
+    startNegative_ = new CoinBigIndex [numberMajor];
     indices_ = new int[size];
     // and fill them
     size = 0;
     startPositive_[0]=0;
-    int * startNegative1 = rhs.startNegative_;
+    CoinBigIndex * startNegative1 = rhs.startNegative_;
     for (iColumn=0;iColumn<numberMajor;iColumn++) {
       int kColumn = whichColumn[iColumn];
-      int i;
+      CoinBigIndex i;
       for (i=startPositive1[kColumn];i<startNegative1[kColumn];i++) {
 	int kRow = index1[i];
 	kRow = newRow[kRow];
@@ -338,10 +338,10 @@ ClpPlusMinusOneMatrix::reverseOrderedCopy() const
   int numberMinor = (!columnOrdered_) ? numberColumns_ : numberRows_;
   int numberMajor = (columnOrdered_) ? numberColumns_ : numberRows_;
   // count number in each row/column
-  int * tempP = new int [numberMinor];
-  int * tempN = new int [numberMinor];
-  memset(tempP,0,numberMinor*sizeof(int));
-  memset(tempN,0,numberMinor*sizeof(int));
+  CoinBigIndex * tempP = new CoinBigIndex [numberMinor];
+  CoinBigIndex * tempN = new CoinBigIndex [numberMinor];
+  memset(tempP,0,numberMinor*sizeof(CoinBigIndex));
+  memset(tempN,0,numberMinor*sizeof(CoinBigIndex));
   CoinBigIndex j=0;
   int i;
   for (i=0;i<numberMajor;i++) {
@@ -355,8 +355,8 @@ ClpPlusMinusOneMatrix::reverseOrderedCopy() const
     }
   }
   int * newIndices = new int [startPositive_[numberMajor]];
-  int * newP = new int [numberMinor+1];
-  int * newN = new int[numberMinor];
+  CoinBigIndex * newP = new CoinBigIndex [numberMinor+1];
+  CoinBigIndex * newN = new CoinBigIndex[numberMinor];
   int iRow;
   j=0;
   // do starts
@@ -373,13 +373,13 @@ ClpPlusMinusOneMatrix::reverseOrderedCopy() const
   for (i=0;i<numberMajor;i++) {
     for (;j<startNegative_[i];j++) {
       int iRow = indices_[j];
-      int put = tempP[iRow];
+      CoinBigIndex put = tempP[iRow];
       newIndices[put++] = i;
       tempP[iRow] = put;
     }
     for (;j<startPositive_[i+1];j++) {
       int iRow = indices_[j];
-      int put = tempN[iRow];
+      CoinBigIndex put = tempN[iRow];
       newIndices[put++] = i;
       tempN[iRow] = put;
     }
@@ -1061,7 +1061,7 @@ void
 ClpPlusMinusOneMatrix::deleteCols(const int numDel, const int * indDel) 
 {
   int iColumn;
-  int newSize=startPositive_[numberColumns_];;
+  CoinBigIndex newSize=startPositive_[numberColumns_];;
   int numberBad=0;
   // Use array to make sure we can have duplicates
   int * which = new int[numberColumns_];
@@ -1087,8 +1087,8 @@ ClpPlusMinusOneMatrix::deleteCols(const int numDel, const int * indDel)
   lengths_=NULL;
   delete [] elements_;
   elements_= NULL;
-  int * newPositive = new int [newNumber+1];
-  int * newNegative = new int [newNumber];
+  CoinBigIndex * newPositive = new CoinBigIndex [newNumber+1];
+  CoinBigIndex * newNegative = new CoinBigIndex [newNumber];
   int * newIndices = new int [newSize];
   newNumber=0;
   newSize=0;
@@ -1203,7 +1203,7 @@ ClpPlusMinusOneMatrix::getNumElements() const
 void 
 ClpPlusMinusOneMatrix::passInCopy(int numberRows, int numberColumns,
 		  bool columnOrdered, int * indices,
-		  int * startPositive, int * startNegative)
+		  CoinBigIndex * startPositive, CoinBigIndex * startNegative)
 {
   columnOrdered_=columnOrdered;
   startPositive_ = startPositive;
@@ -1263,19 +1263,19 @@ ClpPlusMinusOneMatrix::appendCols(int number, const CoinPackedVectorBase * const
   delete [] elements_;
   elements_= NULL;
   int numberNow = startPositive_[numberColumns_];
-  int * temp;
-  temp = new int [numberColumns_+1+number];
-  memcpy(temp,startPositive_,(numberColumns_+1)*sizeof(int));
+  CoinBigIndex * temp;
+  temp = new CoinBigIndex [numberColumns_+1+number];
+  memcpy(temp,startPositive_,(numberColumns_+1)*sizeof(CoinBigIndex ));
   delete [] startPositive_;
   startPositive_= temp;
-  temp = new int [numberColumns_+number];
-  memcpy(temp,startNegative_,numberColumns_*sizeof(int));
+  temp = new CoinBigIndex [numberColumns_+number];
+  memcpy(temp,startNegative_,numberColumns_*sizeof(CoinBigIndex ));
   delete [] startNegative_;
   startNegative_= temp;
-  temp = new int [numberNow+size];
-  memcpy(temp,indices_,numberNow*sizeof(int));
+  int * temp2 = new int [numberNow+size];
+  memcpy(temp2,indices_,numberNow*sizeof(int));
   delete [] indices_;
-  indices_= temp;
+  indices_= temp2;
   // now add
   size=numberNow;
   for (iColumn=0;iColumn<number;iColumn++) {

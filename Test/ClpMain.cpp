@@ -1775,7 +1775,7 @@ costs this much to be infeasible",
 		  ClpPresolve pinfo;
 		  model2 = 
 		    pinfo.presolvedModel(models[iModel],1.0e-8,
-					 false,preSolve);
+					 true,preSolve);
 		  if (model2) {
 		    printf("Saving presolved model on %s\n",
 			   fileName.c_str());
