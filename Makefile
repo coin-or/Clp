@@ -16,19 +16,21 @@ export MakefileDir := $(CoinDir)/Makefiles
 default: install
 libClp: library
 
-libdepend:
-	(cd $(CoinDir)/Coin && $(MAKE) install)
+libClp: library
 
 install library: libdepend
 	${MAKE} -f Makefile.Clp $@
 
-doc:
-	doxygen $(MakefileDir)/doxygen.conf
+libdepend:
+	(cd $(CoinDir)/Coin && $(MAKE) install)
 
 unitTest: 
 	(cd Test && ${MAKE} unitTest)
 
 clean: 
 	@rm -rf Junk
-	@rm -rf $(UNAME)
+	@rm -rf $(UNAME)*
 	@rm -rf dep
+
+doc:
+	doxygen $(MakefileDir)/doxygen.conf
