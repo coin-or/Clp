@@ -1620,7 +1620,7 @@ ClpModel::addColumns( CoinModel & modelObject)
       assert(integerType);
       for (iColumn=0;iColumn<numberColumns2;iColumn++) {
         if (integerType[iColumn])
-          setInteger(iColumn);
+          setInteger(iColumn+numberColumns);
       }
     }
     if (columnLower!=modelObject.columnLowerArray()) {
