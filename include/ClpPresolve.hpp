@@ -39,7 +39,7 @@ public:
   /** This version saves data in a file.  The passed in model
       is updated to be presolved model.  names are always dropped.
       Returns non-zero if infeasible*/
-  int presolvedModel(ClpSimplex &si,std::string fileName,
+  int presolvedModelToFile(ClpSimplex &si,std::string fileName,
 			      double feasibilityTolerance=0.0,
 			      bool keepIntegers=true,
 			      int numberPasses=5);

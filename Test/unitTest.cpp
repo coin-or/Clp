@@ -281,8 +281,8 @@ int mainTest (int argc, const char *argv[],bool doDual,
 	  if (numberInfeasibilities)
 	    std::cout<<"** Analysis indicates model infeasible"
 		     <<std::endl;
-	  if (doIdiot<0)
-	    model2->crash(1000,1);
+	  //if (doIdiot<0)
+	  //model2->crash(1000,1);
 	  model2->dual();
 	} else {
 #ifdef CLP_IDIOT

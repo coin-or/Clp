@@ -398,9 +398,11 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
   // status -3 to go to top without an invert
   int returnCode = -1;
 
+#if 0
   // compute average infeasibility for backward test
   double averagePrimalInfeasibility = sumPrimalInfeasibilities_/
     ((double ) (numberPrimalInfeasibilities_+1));
+#endif
 
   // Get dubious weights
   factorization_->getWeights(rowArray_[0]->getIndices());
@@ -764,7 +766,9 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
 	  factorization_->updateColumn(rowArray_[3],rowArray_[2]);
 	  dualRowPivot_->updatePrimalSolution(rowArray_[2],
 					      1.0,objectiveChange);
-	  
+#ifdef CLP_DEBUG
+	  double saveDualOut = dualOut_;
+#endif
 	  // recompute dualOut_
 	  valueOut_ = solution_[sequenceOut_];
 	  if (directionOut_<0) {
@@ -772,8 +776,20 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
 	  } else {
 	    dualOut_ = lowerOut_ - valueOut_;
 	  }
+#if 0
+	  if (dualOut_<0.0) {
+#ifdef CLP_DEBUG
+	    if (handler_->logLevel()&32) {
+	      printf(" dualOut_ %g %g save %g\n",dualOut_,averagePrimalInfeasibility,saveDualOut);
+	      printf("values %g %g %g %g %g %g %g\n",lowerOut_,valueOut_,upperOut_,
+		     objectiveChange,);
+	    }
+#endif
+	    if (upperOut_==lowerOut_)
+	      dualOut_=0.0;
+	  }
 	  if(dualOut_<-max(1.0e-12*averagePrimalInfeasibility,1.0e-8)
-	     &&factorization_->pivots()&&
+	     &&factorization_->pivots()>100&&
 	     getStatus(sequenceIn_)!=isFree) {
 	    // going backwards - factorize
 	    dualRowPivot_->unrollWeights();
@@ -781,6 +797,7 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
 	    returnCode=-2;
 	    break;
 	  }
+#endif
 	}
 	// amount primal will move
 	double movement = -dualOut_*directionOut_/alpha_;
@@ -793,7 +810,7 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
 		   objectiveChange+fabs(movement*dualIn_),
 		   objectiveChange,movement,dualIn_);
 #endif
-	  if(factorization_->pivots()>5) {
+	  if(factorization_->pivots()) {
 	    // going backwards - factorize
 	    dualRowPivot_->unrollWeights();
 	    problemStatus_=-2; // factorize now
@@ -2375,7 +2392,12 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	  memcpy(columnActivityWork_,savedSolution_ ,
 		 numberColumns_*sizeof(double));
 	  // debug
-	  assert (internalFactorize(1)==0);
+#ifndef NDEBUG
+	  int returnCode = internalFactorize(1);
+	  assert (returnCode==0);
+#else
+	  internalFactorize(1);
+#endif
 	}
       }
     }
@@ -2925,6 +2947,7 @@ ClpSimplexDual::perturb()
     return; //perturbed already
   if (perturbation_==100)
     perturbation_=50; // treat as normal
+  int savePerturbation = perturbation_;
   bool modifyRowCosts=false;
   // dual perturbation
   double perturbation=1.0e-20;
@@ -3192,8 +3215,21 @@ ClpSimplexDual::perturb()
 #endif
 	value *= multiplier;
 	value = min (value,value2);
-	if (fabs(value)<=dualTolerance_)
-	  value=0.0;
+	if (savePerturbation!=50) {
+	  if (fabs(value)<=dualTolerance_)
+	    value=0.0;
+	} else if (value) {
+	  // get in range 
+	  if (fabs(value)<=dualTolerance_) {
+	    value *= 10.0;
+	    while (fabs(value)<=dualTolerance_) 
+	      value *= 10.0;
+	  } else if (fabs(value)>0.1) {
+	    value *= 0.1;
+	    while (fabs(value)>0.1) 
+	      value *= 0.1;
+	  }
+	}
 	if (currentValue) {
 	  largest = max(largest,fabs(value));
 	  if (fabs(value)>fabs(currentValue)*largestPerCent)

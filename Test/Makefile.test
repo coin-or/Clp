@@ -13,10 +13,10 @@ export MakefileDir := $(CoinDir)/Makefiles
 include ${MakefileDir}/Makefile.coin
 include ${MakefileDir}/Makefile.location
 
-IncDir := ${ClpIncDir} ${CoinIncDir} ${bzlibIncDir} ${zlibIncDir}
-LibDir := ${ClpLibDir} ${CoinLibDir} ${bzlibLibDir} ${zlibLibDir}
-LibName := ${ClpLibName} ${CoinLibName} ${bzlibLibName} ${zlibLibName}
-Define := ${ClpDefine} ${CoinDefine} ${bzlibDefine} ${zlibDefine}
+IncDir := ${ClpIncDir} ${CoinIncDir} ${bzlibIncDir} ${zlibIncDir} $(lapackIncDir)
+LibDir := ${ClpLibDir} ${CoinLibDir} ${bzlibLibDir} ${zlibLibDir} $(lapackLibDir)
+LibName := ${ClpLibName} ${CoinLibName} ${bzlibLibName} ${zlibLibName} $(lapackLibName)
+Define := ${ClpDefine} ${CoinDefine} ${bzlibDefine} ${zlibDefine} $(lapackLibDefine)
 
 ##############################################################################
 # You should not need to edit below this line.
@@ -64,10 +64,6 @@ endif
 #LDFLAGS += -lefence
 #LDFLAGS += -static
 CXXFLAGS += -pg
-#if DENSE and using ATLAS
-#LDFLAGS += -L/home/forrest/ATLAS/lib/Linux_P4SSE2 -llapack -lcblas -latlas -lf77blas -lg2c
-#if DENSE and using given libraries
-LDFLAGS += -llapack -lblas -lg2c
 #LDFLAGS += -Wl,-M
 ###############################################################################
 

@@ -88,11 +88,11 @@ ClpPresolve::presolvedModel(ClpSimplex & si,
   else
     return gutsOfPresolvedModel(&si,feasibilityTolerance,keepIntegers,numberPasses,dropNames);
 }
-/* This version of presolve returns a pointer to a new presolved 
-   model and save original data to file.  Returns non-zero if infeasible
+/* This version of presolve updates
+   model and saves original data to file.  Returns non-zero if infeasible
 */
 int
-ClpPresolve::presolvedModel(ClpSimplex &si,std::string fileName,
+ClpPresolve::presolvedModelToFile(ClpSimplex &si,std::string fileName,
 			    double feasibilityTolerance,
 			    bool keepIntegers,
 			    int numberPasses)

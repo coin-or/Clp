@@ -177,7 +177,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
     }
     if (presolveToFile) {
       printf("***** temp test\n");
-      pinfo.presolvedModel(*this,"ss.sav",1.0e-8,
+      pinfo.presolvedModelToFile(*this,"ss.sav",1.0e-8,
 			   false,numberPasses);
       model2=this;
     } else {
@@ -701,7 +701,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
     //smallNumberColumns = max(smallNumberColumns,numberRows+1000);
     // We will be using all rows
     int * whichRows = new int [numberRows];
-    for (int iRow=0;iRow<numberRows;iRow++)
+    for (iRow=0;iRow<numberRows;iRow++)
       whichRows[iRow]=iRow;
     double originalOffset;
     model2->getDblParam(ClpObjOffset,originalOffset);
@@ -922,9 +922,10 @@ ClpSolve::ClpSolve (  )
   method_ = useDual;
   presolveType_=presolveOn;
   numberPasses_=5;
-  for (int i=0;i<4;i++)
+  int i;
+  for (i=0;i<4;i++)
     options_[i]=0;
-  for (int i=0;i<4;i++)
+  for (i=0;i<4;i++)
     extraInfo_[i]=-1;
 }
 
@@ -934,9 +935,10 @@ ClpSolve::ClpSolve(const ClpSolve & rhs)
   method_ = rhs.method_;
   presolveType_=rhs.presolveType_;
   numberPasses_=rhs.numberPasses_;
-  for (int i=0;i<4;i++)
+  int i;
+  for ( i=0;i<4;i++)
     options_[i]=rhs.options_[i];
-  for (int i=0;i<4;i++)
+  for ( i=0;i<4;i++)
     extraInfo_[i]=rhs.extraInfo_[i];
 }
 // Assignment operator. This copies the data
@@ -947,9 +949,10 @@ ClpSolve::operator=(const ClpSolve & rhs)
     method_ = rhs.method_;
     presolveType_=rhs.presolveType_;
     numberPasses_=rhs.numberPasses_;
-    for (int i=0;i<4;i++)
+    int i;
+    for (i=0;i<4;i++)
       options_[i]=rhs.options_[i];
-    for (int i=0;i<4;i++)
+    for (i=0;i<4;i++)
       extraInfo_[i]=rhs.extraInfo_[i];
   }
   return *this;
