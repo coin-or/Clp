@@ -13,12 +13,7 @@
 class ClpMatrixBase;
 class CoinIndexedVector;
 class ClpSimplex;
-
-#ifndef COIN_BIG_INDEX
-typedef int CoinBigIndex;
-#else
-typedef long CoinBigIndex;
-#endif
+#include "CoinFinite.hpp"
 
 /** This deals with Factorization and Updates for network structures
  */
