@@ -196,7 +196,7 @@ ClpModel::gutsOfLoadModel (int numberRows, int numberColumns,
   }
 }
 // This just loads up a row objective
-void ClpModel::SetRowObjective(const double * rowObjective)
+void ClpModel::setRowObjective(const double * rowObjective)
 {
   delete [] rowObjective_;
   rowObjective_=ClpCopyOfArray(rowObjective,numberRows_);
