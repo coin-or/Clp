@@ -881,8 +881,10 @@ ClpSimplex::initialSolve(ClpSolve & options)
   handler_->printing(timeIdiot!=0.0)
     <<timeIdiot;
   handler_->message()<<CoinMessageEol;
+#ifndef NO_INTERRUPT
   if (interrupt) 
     signal(SIGINT,saveSignal);
+#endif
   perturbation_=savePerturbation;
   scalingFlag_=saveScaling;
   return finalStatus;
