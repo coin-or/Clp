@@ -2298,8 +2298,10 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
 	reducedCostWork_ = dj_;
 	rowReducedCost_ = dj_+numberColumns_;
       }
-      memcpy(reducedCostWork_,reducedCost_,numberColumns_*sizeof(double));
-      memcpy(rowReducedCost_,dual_,numberRows_*sizeof(double));
+      if (doSanityCheck) {
+	memcpy(reducedCostWork_,reducedCost_,numberColumns_*sizeof(double));
+	memcpy(rowReducedCost_,dual_,numberRows_*sizeof(double));
+      }
     }
     if (!solution_||initialize) {
       if (newArrays) {
@@ -2633,7 +2635,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
     }    
   }
   double primalTolerance=dblParam_[ClpPrimalTolerance];
-  if ((what&1)!=0) {
+  if ((what&1)!=0&&doSanityCheck) {
     // fix any variables with tiny gaps
     for (i=0;i<numberColumns_;i++) {
       if (columnUpperWork_[i]-columnLowerWork_[i]<=primalTolerance) {
