@@ -1296,7 +1296,7 @@ ClpModel::addRows(const CoinBuild & buildObject,bool tryPlusMinusOne)
     int iRow;
     double * lower = new double [number];
     double * upper = new double [number];
-    if (!matrix_->getNumElements()&&tryPlusMinusOne) {
+    if ((!matrix_||!matrix_->getNumElements())&&tryPlusMinusOne) {
       // See if can be +-1
       for (iRow=0;iRow<number;iRow++) {
         const int * columns;
@@ -1472,7 +1472,8 @@ ClpModel::addRows( CoinModel & modelObject,bool tryPlusMinusOne)
       CoinBigIndex * startPositive = NULL;
       CoinBigIndex * startNegative = NULL;
       int numberColumns = modelObject.numberColumns();
-      if (!matrix_->getNumElements()&&!numberRows&&tryPlusMinusOne) {
+      if ((!matrix_||!matrix_->getNumElements())
+	  &&!numberRows&&tryPlusMinusOne) {
         startPositive = new CoinBigIndex[numberColumns+1];
         startNegative = new CoinBigIndex[numberColumns];
         modelObject.countPlusMinusOne(startPositive,startNegative,associated);
@@ -1714,7 +1715,7 @@ ClpModel::addColumns(const CoinBuild & buildObject,bool tryPlusMinusOne)
     double * upper = new double [number];
     int iColumn;
     double * objective = new double [number];
-    if (!matrix_->getNumElements()&&tryPlusMinusOne) {
+    if ((!matrix_||!matrix_->getNumElements())&&tryPlusMinusOne) {
       // See if can be +-1
       for (iColumn=0;iColumn<number;iColumn++) {
         const int * rows;
@@ -1846,7 +1847,8 @@ ClpModel::addColumns( CoinModel & modelObject,bool tryPlusMinusOne)
     if (numberColumns2&&!numberErrors) {
       CoinBigIndex * startPositive = NULL;
       CoinBigIndex * startNegative = NULL;
-      if (!matrix_->getNumElements()&&!numberColumns&&tryPlusMinusOne) {
+      if ((!matrix_||!matrix_->getNumElements())
+	  &&!numberColumns&&tryPlusMinusOne) {
         startPositive = new CoinBigIndex[numberColumns2+1];
         startNegative = new CoinBigIndex[numberColumns2];
         modelObject.countPlusMinusOne(startPositive,startNegative,associated);
