@@ -3,7 +3,7 @@
   <title>
   Not-Quite-So-Basic Model Classes
   </title>
-  <section>
+  <section id="pivotchoices">
   <title>Pivot Choices</title>
   <para>
   In the dual algorithm, any infeasible basic variable may be chosen to leave the
@@ -49,7 +49,7 @@
   exist.  This could be implemented by anyone who is interested.
   </para>
   </section>
-  <section>
+  <section id="matrixclasses">
   <title>Matrix Classes</title>
   <para>
   The next abstract class of interest is <function>ClpMatrixBase</function>.
@@ -76,7 +76,7 @@
   </para>
   <para>
   The use <function>ClpPlusMinusOneMatrix</function> involves some work as one
-  cannot simply read-in an MPS file.  The keyt is to use
+  cannot simply read-in an MPS file.  The key is to use
   <function>loadProblem</function> to pass in a matrix.  So if
   <varname>matrix</varname> was a <function>CoinPackedMatrix</function> one
   could do the following:
@@ -117,7 +117,7 @@
   (there is already a dummy &quot;refresh&quot; method which would be used).
   </para>
   </section>
-  <section>
+  <section id="messagehandling">
   <title>Message Handling</title>
   <para>
   Strictly speaking, message handling is a general COIN topic, but it won't hurt

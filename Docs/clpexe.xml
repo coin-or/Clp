@@ -4,17 +4,18 @@
   The CLP Executable
   </title>
   <para>
-  The result of <userinput>make unitTest</userinput> is an executable
+  The result of <userinput>make unitTest</userinput> (executed in 
+  <filename>COIN/Clp</filename> is an executable
   <filename>clp</filename> as well as the CLP and COIN libraries.
   This can be used to do various unit tests, but can also be used as a standalone
-  solver.  As it only has a very simple solution file format you may wish to
-  modify that part of <filename>Test/ClpMain.cpp</filename> and even offer it to
-  Clp.
+  solver.  As it only has a very simple solution file format the user may wish to
+  modify that part of <filename>COIN/Clp/Test/ClpMain.cpp</filename> and even
+  offer the modifications as contribution to CLP.
   </para>
   <para>
   The <filename>clp</filename> executable operates in command line mode or 
-  prompted mode.  Entering <userinput>clp</userinput> will bring you to prompt
-  mode,while <userinput>clp &lt;filename&gt;</userinput> will import an MPS file
+  prompted mode.  Entering <userinput>clp</userinput> will bring being &quot;prompt
+  mode&quot;, while <userinput>clp &lt;filename&gt;</userinput> will import an MPS file
   from filename and solve it using the dual simplex method and exit.  Again
   <userinput>clp &lt;filename&gt; -primalsimplex</userinput> will import a file
   and solve using the primal simplex method.  A dash 

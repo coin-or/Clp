@@ -9,9 +9,10 @@
   </title>
   <para>
   The basic model class hierarchy is simple.  The top three levels of the 
-  hierarchy are depicted in the figure below. The first two levels  (i.e., Clp 
-  Model, Clp Simplex, ClpInterior) contain all the problem data which defines a
-  model (aka, a problem instance). The third level is less model and more
+  hierarchy are depicted in the figure below. The first two levels  (i.e.
+  <classname>ClpModel</classname>, <classname>ClpSimplex</classname>,
+  <classname>ClpInterior</classname>) contain all the problem data which defines
+  a model (aka, a problem instance). The third level is less model and more
   algorithmic.  There is a fourth level (for models with more general
   objectives than linear ones), but it is beyond the current scope of this
   document.  
@@ -29,24 +30,30 @@
     </imageobject>
   </mediaobject>
   <para>
-  The class ClpModel contains all problem data.  There may be a few pieces of
-  data which could be elsewhere but which are permanent and so they are here.
-  The main example of this is a status array: it makes the most sense for
-  Simplex but has use for crossing over from any solution.
+  The class <classname>ClpModel</classname> contains all problem data.
+  There may be a few pieces of data which could be elsewhere but which are
+  permanent and so they are here.  The main example of this is a status array:
+  it makes the most sense for Simplex but has use for crossing over from any
+  solution.
   </para>
   <para>
-  ClpSimplex inherits from ClpModel, as does ClpInterior.  Extra data is specific
-  to the Simplex Algorithm and can be transient  e.g., scaling arrays.  Normally
-  a user will just be dealing with the ClpSimplex class and not with the ClpModel
-  class.
+  <classname>ClpSimplex</classname> inherits from
+  <classname>ClpModel</classname>, as does <classname>ClpInterior</classname>.
+  Extra data is specific to the Simplex Algorithm and can be transient, e.g.
+  scaling arrays.  Normally a user will just be dealing with the
+  <classname>ClpSimplex</classname> class and not with the
+  <classname>ClpModel</classname> class.
   </para>
   <para>
-  From the point of view of most Simplex users, the ClpModel and ClpSimplex
+  From the point of view of most Simplex users, the
+  <classname>ClpModel</classname> and <classname>ClpSimplex</classname>
   classes are all one needs to know about.  There are algorithm-specific classes
-  which inherit from ClpSimplex (e.g., ClpSimplexDual and ClpSimplexPrimal), but
-  they have no member data and very rarely need be visible to user.  So, for 
-  example, after instantiating an object <userinput>model</userinput> of type ClpSimplex,
-  the user would type <userinput>model.dual()</userinput> to invoke dual algorithm.
+  which inherit from <classname>ClpSimplex</classname> (e.g.
+  <classname>ClpSimplexDual</classname> and
+  <classname>ClpSimplexPrimal</classname>), but they have no member data and
+  very rarely need be visible to user.  So, for example, after instantiating an
+  object <userinput>model</userinput> of type <classname>ClpSimplex</classname>,
+  the user would use <userinput>model.dual()</userinput> to invoke dual algorithm.
   </para>
   </section>
   <section>
@@ -84,10 +91,10 @@ int main (int argc, const char *argv[])
   </example>
   <para>
   This sample program creates a default <classname>ClpSimplex</classname> model,
-  reads an mps file, and if there are no errors, solves it using the primal
-  algorithm.  Simple, but not terribly useful: there is no way to see the results
-  of the solve.  There are two main kinds of results -- a status saying what
-  happened to the model, and arrays filled with the solution values.
+  reads an MPS file, and if there are no errors, solves it using the primal
+  algorithm.  Simple, but not terribly useful: there is no way to inspect the
+  results of the solve.  There are two main kinds of results: a status saying
+  what happened to the model, and arrays filled with the solution values.
   </para>
   </section>
   <section>
@@ -96,8 +103,10 @@ int main (int argc, const char *argv[])
   </title>
   <para>
   It is often the case with CLP that there is more than one way to do something.
-  This is a consequence of CLP's mixed heritage as a child of OSL and a cousin of
-  OSI.  Finding the status of a model exemplifies this situation.
+  This is a consequence of CLP's mixed heritage as a child of 
+  <ulink url="http://www-306.ibm.com/software/data/bi/osl/">OSL</ulink>
+  and a cousin of <ulink url="http://www.coin-or.org/faqs.html#OSI">OSI</ulink>.
+  Finding the status of a model exemplifies this situation.
   </para>
   <para>
   The OSI way to check for optimality is to call model.isProvenOptimal().  Also
@@ -311,7 +320,7 @@ int main (int argc, const char *argv[])
   </para>
   </section>
   <section>
-  <title>Some Useful Sets and Gets</title>
+  <title>Some Useful Set and Get Methods</title>
   <table frame="none">
   <title>Some Useful Sets and Gets</title>
     <tgroup cols="2">
@@ -329,11 +338,13 @@ int main (int argc, const char *argv[])
     <row>
       <entry align="left" valign="top">
       <function>setMaximumIterations(int value)</function><sbr/>
-      <function>setMaximumSeconds(double value)</function>
+      <function>int maximumIterations()</function><sbr/>
+      <function>setMaximumSeconds(double value)</function><sbr/>
+      <function>double maximumIterations()</function>
       </entry>
       <entry align="left" valign="top">
       These methods tell CLP to stop after a given number of iterations or
-      seconds.
+      seconds (and returns these values).
       </entry>
     </row>
     <row>
@@ -370,8 +381,8 @@ int main (int argc, const char *argv[])
     </row>
     <row>
       <entry align="left" valign="top">
-      <function>infeasibilityRay()</function><sbr/>
-      <function>unboundedRay()</function>
+      <function>double * infeasibilityRay()</function><sbr/>
+      <function>double * unboundedRay()</function>
       </entry>
       <entry align="left" valign="top">
       If the problem was primal or dual infeasible, these methods will give a
@@ -380,19 +391,20 @@ int main (int argc, const char *argv[])
     </row>
     <row>
       <entry align="left" valign="top">
-      <function>matrix()</function>
+      <function>CoinPackMatrix * matrix()</function>
       </entry>
       <entry align="left" valign="top">
       There are more options as the user has great flexibility in how the problem
-      matrix is stored, but the default is as a
-      <classname>CoinPackedMatrix</classname> and so we have that this method
-      returns a pointer to a <classname>CoinPackedMatrix</classname> which can
-      be further manipulated.
+      matrix is stored, but the default matrix class is
+      <classname>CoinPackedMatrix</classname> (see 
+      <xref linkend="matrixclasses"/>).
+      So we have that this method returns a pointer to a
+      <classname>CoinPackedMatrix</classname> which can be further manipulated.
       </entry>
     </row>
     <row>
       <entry align="left" valign="top">
-      <function>getNumElements()</function>
+      <function>CoinBigIndex getNumElements()</function>
       </entry>
       <entry align="left" valign="top">
       Returns the number of elements in the problem matrix.
@@ -400,12 +412,12 @@ int main (int argc, const char *argv[])
     </row>
     <row>
       <entry align="left" valign="top">
-      <function>setOptimizationDirection(int&nbsp;direction)</function><sbr/>
-      <function>optimizationDirection()</function>
+      <function>void setOptimizationDirection(double&nbsp;value)</function><sbr/>
+      <function>double optimizationDirection()</function>
       </entry>
       <entry align="left" valign="top">
       These methods set and get the objective sense.  The parameter
-      <parameter>direction</parameter> should be +1 to minimize, -1 to maximize,
+      <parameter>value</parameter> should be +1 to minimize, -1 to maximize,
       and 0 to ignore.
       </entry>
     </row>
@@ -547,7 +559,7 @@ int main (int argc, const char *argv[])
   </tgroup>
   </table>
   </section>
-  <section>
+  <section id="presolve">
   <title>
   Presolve
   </title>
@@ -613,7 +625,8 @@ int main (int argc, const char *argv[])
       <thead>
         <row>
 	  <entry>
-	  State
+	  <type>Status</type><footnote><para><type>Status</type>
+	    is an enumeration.</para></footnote>
 	  </entry>
 	  <entry>
 	  Description

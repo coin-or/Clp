@@ -37,8 +37,8 @@ listing some of the sample files with a short description for each.
 	</entry>
         <entry align="left" valign="top">
 	This is one of the simpler drivers.  It sets tolerances to defaults and 
-	is a useful place to find simple use of &lt;sets&gt; and &lt;gets&gt;.
-	It also prints out a full MPS-like solutions.
+	is a useful place to find simple use of &quot;sets&quot; and
+	&quot;gets&quot;.  It also prints out a full MPS-like solutions.
 	</entry>
       </row>
       <row>
@@ -52,11 +52,22 @@ listing some of the sample files with a short description for each.
       </row>
       <row>
         <entry align="left" valign="top">
+	<filename>piece.cpp</filename>
+	</entry>
+        <entry align="left" valign="top">
+	This simple example takes a matrix read in by
+	<classname>CoinMpsIo</classname> (can be used to read in MPS files
+	without a solver), deletes every second column and solves the
+	resulting problem.
+	</entry>
+      </row>
+      <row>
+        <entry align="left" valign="top">
 	<filename>network.cpp</filename>
 	</entry>
         <entry align="left" valign="top">
 	This shows the use of non-standard matrices and how to load a problem
-	without going throu MPS files.
+	without the use of MPS files.
 	</entry>
       </row>
       <row>
