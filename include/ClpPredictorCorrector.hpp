@@ -56,9 +56,9 @@ public:
   //phase 0=affine , 1 = corrector , 2 = primal-dual
   void setupForSolve(const int phase);
   //method: sees if looks plausible change in complementarity
-  bool checkGoodMove(const bool doCorrector);
+  bool checkGoodMove(const bool doCorrector,double & bestNextGap);
   ///:  checks for one step size
-  bool checkGoodMove2(const double move);
+  bool checkGoodMove2(const double move,double & bestNextGap);
   /// updateSolution.  Updates solution at end of iteration
   //returns number fixed
   int updateSolution();
