@@ -2285,19 +2285,19 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
     // clean up any mismatches on infinity
     for (i=0;i<numberColumns_;i++) {
       columnLowerWork_[i] = columnLower_[i];
-      if (columnLowerWork_[i]<-1.0e30)
+      if (columnLowerWork_[i]<-1.0e20)
 	columnLowerWork_[i] = -COIN_DBL_MAX;
       columnUpperWork_[i] = columnUpper_[i];
-      if (columnUpperWork_[i]>1.0e30)
+      if (columnUpperWork_[i]>1.0e20)
 	columnUpperWork_[i] = COIN_DBL_MAX;
     }
     // clean up any mismatches on infinity
     for (i=0;i<numberRows_;i++) {
       rowLowerWork_[i] = rowLower_[i];
-      if (rowLowerWork_[i]<-1.0e30)
+      if (rowLowerWork_[i]<-1.0e20)
 	rowLowerWork_[i] = -COIN_DBL_MAX;
       rowUpperWork_[i] = rowUpper_[i];
-      if (rowUpperWork_[i]>1.0e30)
+      if (rowUpperWork_[i]>1.0e20)
 	rowUpperWork_[i] = COIN_DBL_MAX;
     }
   }
@@ -2665,7 +2665,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
 	    if (lower_[i]>-1.0e20) {
               solution_[i]=lower_[i];
             } else {
-              printf("seq %d at lower of %g\n",i,lower_[i]);
+              //printf("seq %d at lower of %g\n",i,lower_[i]);
               if (upper_[i]<1.0e20) {
                 solution_[i]=upper_[i];
                 setStatus(i,atUpperBound);
@@ -2677,7 +2677,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
 	    if (upper_[i]<1.0e20) {
               solution_[i]=upper_[i];
             } else {
-              printf("seq %d at upper of %g\n",i,upper_[i]);
+              //printf("seq %d at upper of %g\n",i,upper_[i]);
               if (lower_[i]>-1.0e20) {
                 solution_[i]=lower_[i];
                 setStatus(i,atLowerBound);

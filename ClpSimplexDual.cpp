@@ -1078,14 +1078,15 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
 	}
       } else {
 	// no incoming column is valid
+        pivotRow_=-1;
 #ifdef CLP_DEBUG
 	if (handler_->logLevel()&32)
 	  printf("** no column pivot\n");
 #endif
 	if (factorization_->pivots()<5) {
 	  // If we have just factorized and infeasibility reasonable say infeas
-	  if ((specialOptions_&4096)!=0&&dualBound_>1.0e8) {
-	    if (valueOut_>upperOut_+1.0e-4||valueOut_<lowerOut_-1.0e-4
+	  if (((specialOptions_&4096)!=0||bestPossiblePivot<1.0e-11)&&dualBound_>1.0e8) {
+	    if (valueOut_>upperOut_+1.0e-3||valueOut_<lowerOut_-1.0e-3
 		|| (specialOptions_&64)==0) {
 	      // say infeasible
 	      problemStatus_=1;
