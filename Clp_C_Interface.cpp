@@ -21,7 +21,7 @@
 #define CLP_EXTERN_C
 #include "Coin_C_defines.h"
 
-// To allow call backs
+/// To allow call backs
 class CMessageHandler : public CoinMessageHandler {
   
 public:

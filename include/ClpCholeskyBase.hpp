@@ -125,9 +125,9 @@ public:
   ClpCholeskyBase(int denseThreshold=-1);
    /** Destructor (has to be public) */
    virtual ~ClpCholeskyBase();
-  // Copy
+  /// Copy
    ClpCholeskyBase(const ClpCholeskyBase&);
-  // Assignment
+  /// Assignment
    ClpCholeskyBase& operator=(const ClpCholeskyBase&);
    //@}
   //@{

@@ -3848,6 +3848,7 @@ ClpSimplex::borrowModel(ClpSimplex & otherModel)
   specialOptions_ = otherModel.specialOptions_;
   automaticScale_ = otherModel.automaticScale_;
 }
+/// Saves scalars for ClpSimplex
 typedef struct {
   double optimizationDirection;
   double dblParam[ClpLastDblParam];

@@ -3,7 +3,7 @@
 
 #include "CoinPragma.hpp"
 #include "ClpMessage.hpp"
-
+/// Structure for use by ClpMessage.cpp
 typedef struct {
   CLP_Message internalNumber;
   int externalNumber; // or continuation
