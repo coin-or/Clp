@@ -135,7 +135,6 @@ ClpDualRowSteepest::operator=(const ClpDualRowSteepest& rhs)
   }
   return *this;
 }
-
 // Returns pivot row, -1 if none
 int 
 ClpDualRowSteepest::pivotRow()
@@ -143,7 +142,7 @@ ClpDualRowSteepest::pivotRow()
   assert(model_);
   int i,iRow;
   double * infeas = infeasible_->denseVector();
-  double largest=1.0e-50;
+  double largest=0.0;
   int * index = infeasible_->getIndices();
   int number = infeasible_->getNumElements();
   const int * pivotVariable =model_->pivotVariable();
@@ -256,6 +255,7 @@ k
 	}
 #endif
 	double weight = weights_[iRow];
+	assert (weight<1.0e50);
 	//largestWeight = CoinMax(largestWeight,weight);
 	//smallestWeight = CoinMin(smallestWeight,weight);
 	//double dubious = dubiousWeights_[iRow];
@@ -743,6 +743,12 @@ ClpDualRowSteepest::saveWeights(ClpSimplex * model,int mode)
       }
     } else {
       int * which = alternateWeights_->getIndices();
+      CoinIndexedVector * rowArray3 = model_->rowArray(3);
+      assert (!rowArray3->getNumElements());
+      int * back = rowArray3->getIndices();
+      // In case something went wrong
+      for (i=0;i<numberRows+numberColumns;i++)
+	back[i]=-1;
       if (mode!=4) {
 	// save
 	memcpy(savedWeights_->getIndices(),which,
@@ -751,24 +757,30 @@ ClpDualRowSteepest::saveWeights(ClpSimplex * model,int mode)
 	       numberRows*sizeof(double));
       } else {
 	// restore
-	memcpy(which,savedWeights_->getIndices(),
-	       numberRows*sizeof(int));
-	memcpy(weights_,savedWeights_->denseVector(),
-	       numberRows*sizeof(double));
+	//memcpy(which,savedWeights_->getIndices(),
+	//     numberRows*sizeof(int));
+	//memcpy(weights_,savedWeights_->denseVector(),
+	//     numberRows*sizeof(double));
+	which = savedWeights_->getIndices();
       }
       // restore (a bit slow - but only every re-factorization)
-      double * array = new double[numberRows+numberColumns];
+      double * array = savedWeights_->denseVector();
       for (i=0;i<numberRows;i++) {
 	int iSeq=which[i];
-	array[iSeq]=weights_[i];
+	back[iSeq]=i;
       }
       for (i=0;i<numberRows;i++) {
 	int iPivot=pivotVariable[i];
-	weights_[i]=array[iPivot];
-	if (weights_[i]<TRY_NORM)
-	  weights_[i] = TRY_NORM; // may need to check more
+	iPivot = back[iPivot];
+	if (iPivot>=0) {
+	  weights_[i]=array[iPivot];
+	  if (weights_[i]<TRY_NORM)
+	    weights_[i] = TRY_NORM; // may need to check more
+	} else {
+	  // odd
+	  weights_[i]=1.0;
+	}
       }
-      delete [] array;
     }
     state_=0;
     // set up infeasibilities
