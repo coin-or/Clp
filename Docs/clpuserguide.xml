@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<!DOCTYPE book SYSTEM "/home/delanuez/docbook/dtd/docbookx.dtd" [
+<!DOCTYPE book SYSTEM "/usr/share/docbook-xml42/docbookx.dtd" [
   <!ENTITY authors SYSTEM "authors.xml">
   <!ENTITY legal SYSTEM "legal.xml">
   <!ENTITY intro SYSTEM "intro.xml">
