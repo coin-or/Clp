@@ -1563,7 +1563,8 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
 						 <<CoinMessageEol;
   } else {
     destroyPresolve();
-    delete presolvedModel_;
+    if (presolvedModel_!=originalModel_)
+      delete presolvedModel_;
     presolvedModel_=NULL;
   }
   return presolvedModel_;
