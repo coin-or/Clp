@@ -707,6 +707,9 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
     // something may have changed
     gutsOfSolution(rowActivityWork_, columnActivityWork_);
   }
+  // really for free variables in
+  //if((progressFlag_&2)!=0)
+  //problemStatus_=-1;;
   progressFlag_ = 0; //reset progress flag
 
   handler_->message(CLP_SIMPLEX_STATUS,messages_)

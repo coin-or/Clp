@@ -670,7 +670,6 @@ int ClpSimplex::internalFactorize ( int solveType)
       } else {
 	// all slack basis
 	int numberBasic=0;
-	// changed to put free variables in basis
 	if (!status_) {
 	  createStatus();
 	}
@@ -679,14 +678,11 @@ int ClpSimplex::internalFactorize ( int solveType)
 	  double upper=rowUpperWork_[iRow];
 	  if (lower>-largeValue_||upper<largeValue_) {
 	    if (fabs(lower)<=fabs(upper)) {
-	      setRowStatus(iRow,atLowerBound);
 	      rowActivityWork_[iRow]=lower;
 	    } else {
-	      setRowStatus(iRow,atUpperBound);
 	      rowActivityWork_[iRow]=upper;
 	    }
 	  } else {
-	    setRowStatus(iRow,isFree);
 	    rowActivityWork_[iRow]=0.0;
 	  }
 	  setRowStatus(iRow,basic);
@@ -707,13 +703,6 @@ int ClpSimplex::internalFactorize ( int solveType)
 	  } else {
 	    setColumnStatus(iColumn,isFree);
 	    columnActivityWork_[iColumn]=0.0;
-	  }
-	}
-	assert(numberBasic<=numberRows_); // problems if too many free
-	if (!numberBasic) {
-	  // might as well do all slack basis
-	  for (iRow=0;iRow<numberRows_;iRow++) {
-	    setRowStatus(iRow,basic);
 	  }
 	}
       }
@@ -996,6 +985,8 @@ ClpSimplex::housekeeping(double objectiveChange)
       setStatus(sequenceIn_, atUpperBound);
     }
   }
+  if (upper_[sequenceIn_]>1.0e20&&lower_[sequenceIn_]<-1.0e20)
+    progressFlag_ |= 2; // making real progress
   if (algorithm_<0)
     objectiveChange += cost*(value-valueIn_);
   else
@@ -1549,12 +1540,12 @@ ClpSimplex::checkDualSolution()
   for (iColumn=0;iColumn<numberColumns_;iColumn++) {
     if (getColumnStatus(iColumn) != basic) {
       // not basic
-      double value = reducedCostWork_[iColumn];
       double distanceUp = columnUpperWork_[iColumn]-
 	columnActivityWork_[iColumn];
       double distanceDown = columnActivityWork_[iColumn] -
 	columnLowerWork_[iColumn];
       if (distanceUp>primalTolerance_) {
+	double value = reducedCostWork_[iColumn];
 	// Check if "free"
 	if (firstFree_<0&&distanceDown>primalTolerance_) {
 	  if (algorithm_>0) {
@@ -1602,6 +1593,7 @@ ClpSimplex::checkDualSolution()
 	}
       }
       if (distanceDown>primalTolerance_) {
+	double value = reducedCostWork_[iColumn];
 	// should not be positive
 	if (value>0.0) {
 	  if (value>columnDualInfeasibility_) {
@@ -1627,10 +1619,10 @@ ClpSimplex::checkDualSolution()
   for (iRow=0;iRow<numberRows_;iRow++) {
     if (getRowStatus(iRow) != basic) {
       // not basic
-      double value = rowReducedCost_[iRow];
       double distanceUp = rowUpperWork_[iRow]-rowActivityWork_[iRow];
       double distanceDown = rowActivityWork_[iRow] -rowLowerWork_[iRow];
       if (distanceUp>primalTolerance_) {
+	double value = rowReducedCost_[iRow];
 	// Check if "free"
 	if (firstFree_<0&&distanceDown>primalTolerance_) {
 	  if (algorithm_>0) {
@@ -1668,6 +1660,7 @@ ClpSimplex::checkDualSolution()
 	}
       }
       if (distanceDown>primalTolerance_) {
+	double value = rowReducedCost_[iRow];
 	// should not be positive
 	if (value>0.0) {
 	  if (value>rowDualInfeasibility_) {

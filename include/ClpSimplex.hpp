@@ -493,6 +493,14 @@ public:
   /// Return address of row or column cost
   inline double & costAddress(int sequence)
   { return cost_[sequence];};
+  /// Return original lower bound
+  inline double originalLower(int iSequence) const
+  { if (iSequence<numberColumns_) return columnLower_[iSequence]; else
+    return rowLower_[iSequence-numberColumns_];};
+  /// Return original lower bound
+  inline double originalUpper(int iSequence) const
+  { if (iSequence<numberColumns_) return columnUpper_[iSequence]; else
+    return rowUpper_[iSequence-numberColumns_];};
   /// Scaling
   const double * rowScale() const {return rowScale_;};
   const double * columnScale() const {return columnScale_;};
@@ -725,7 +733,7 @@ protected:
   int lastBadIteration_;
   /// Can be used for count of fake bounds (dual) or fake costs (primal)
   int numberFake_;
-  /// Progress flag - at present 0 bit says artificials out
+  /// Progress flag - at present 0 bit says artificials out, 1 free in
   int progressFlag_;
   /// First free/super-basic variable (-1 if none)
   int firstFree_;

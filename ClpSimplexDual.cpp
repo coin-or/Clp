@@ -667,8 +667,6 @@ ClpSimplexDual::whileIterating()
 #endif
       if (!factorization_->pivots()) {
 	// may have crept through - so may be optimal
-	//problemStatus_=-5; //say looks unbounded
-	problemStatus_=0;
 	// check any flagged variables
 	int iRow;
 	for (iRow=0;iRow<numberRows_;iRow++) {
@@ -680,12 +678,15 @@ ClpSimplexDual::whileIterating()
 #ifdef CLP_DEBUG
 	  std::cerr<<"Flagged variables at end - infeasible?"<<std::endl;
 #endif
-	  problemStatus_=-4; //say looks infeasible
-	  // create ray anyway
-	  delete [] ray_;
-	  ray_ = new double [ numberRows_];
-	  ClpDisjointCopyN(rowArray_[0]->denseVector(),numberRows_,ray_);
 	}
+	if (numberFake_||numberDualInfeasibilities_) {
+	  // may be dual infeasible
+	  problemStatus_=-5;
+	} else {
+	  problemStatus_=0;
+	}
+      } else {
+	problemStatus_=-3;
       }
       returnCode=0;
       break;
@@ -881,7 +882,7 @@ void
 ClpSimplexDual::dualRow()
 {
   // get pivot row using whichever method it is
-#if 0
+#if 1
   // Doesnt seem to help - think harder about free variables
   // first see if any free variables and put them in basis
   int nextFree = nextSuperBasic();
@@ -1247,11 +1248,9 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
       case isFree:
       case superBasic:
 	if (oldValue>dualTolerance_) {
-	  if (value<-newTolerance) 
-	    keep = 2;
+	  keep = 2;
 	} else if (oldValue<-dualTolerance_) {
-	  if (value>newTolerance) 
-	    keep = 2;
+	  keep = 2;
 	} else {
 	  if (fabs(alpha)>10.0*acceptablePivot) 
 	    keep = 2;
@@ -1859,7 +1858,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
   gutsOfSolution(rowActivityWork_,columnActivityWork_);
   // Check if looping
   int loop = progress.looping();
-  bool situationChanged=false;
+  int situationChanged=0;
   if (loop>=0) {
     problemStatus_ = loop; //exit if in loop
     if (!problemStatus_) {
@@ -1871,7 +1870,11 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
   } else if (loop<-1) {
     // something may have changed
     gutsOfSolution(rowActivityWork_,columnActivityWork_);
-    situationChanged=true;
+    situationChanged=1;
+  }
+  // really for free variables in
+  if((progressFlag_&2)!=0) {
+    situationChanged=2;
   }
   progressFlag_ = 0; //reset progress flag
 #ifdef CLP_DEBUG
@@ -1915,8 +1918,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
   // dual bound coming in
   //double saveDualBound = dualBound_;
   while (problemStatus_<=-3) {
-    bool cleanDuals=situationChanged;
-    situationChanged=false;
+    bool cleanDuals=situationChanged!=0;
     int numberChangedBounds=0;
     int doOriginalTolerance=0;
     if ( lastCleaned==numberIterations_)
@@ -1971,8 +1973,42 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	  cleanDuals=true;
 	  if (doOriginalTolerance==1) {
 	    // check unbounded
-	    problemStatus_ = checkUnbounded(rowArray_[0],rowArray_[1],
-					    changeCost);
+	    // find a variable with bad dj
+	    int iSequence;
+	    int iChosen=-1;
+	    double largest = 100.0*primalTolerance_;
+	    for (iSequence=0;iSequence<numberRows_+numberColumns_;
+		 iSequence++) {
+	      double djValue = dj_[iSequence];
+	      double originalLo = originalLower(iSequence);
+	      double originalUp = originalUpper(iSequence);
+	      if (fabs(djValue)>fabs(largest)) {
+		if (getStatus(iSequence)!=basic) {
+		  if (djValue>0&&originalLo<-1.0e20) {
+		    if (djValue>fabs(largest)) {
+		      largest=djValue;
+		      iChosen=iSequence;
+		    }
+		  } else if (djValue<0&&originalUp>1.0e20) {
+		    if (-djValue>fabs(largest)) {
+		      largest=djValue;
+		      iChosen=iSequence;
+		    }
+		  } 
+		}
+	      }
+	    }
+	    if (iChosen>=0) {
+	      int iSave=sequenceIn_;
+	      sequenceIn_=iChosen;
+	      unpack(rowArray_[1]);
+	      sequenceIn_ = iSave;
+	      problemStatus_ = checkUnbounded(rowArray_[0],rowArray_[1],
+					      changeCost);
+	      rowArray_[1]->clear();
+	    } else {
+	      problemStatus_=-3;
+	    }
 	    if (problemStatus_==2&&perturbation_==101) {
 	      perturbation_=102; // stop any perturbations
 	      cleanDuals=true;
@@ -2062,14 +2098,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	// for now - recompute all
 	gutsOfSolution(rowActivityWork_,columnActivityWork_);
 	//assert(numberDualInfeasibilitiesWithoutFree_==0);
-	if (numberDualInfeasibilities_) {
-	  // bad free variables
-	  if (primalFeasible()) {
-#ifdef DEBUG
-	    std::cerr<<"Free variable problem?"<<std::endl;
-#endif
-	    //abort(); // what now
-	  }
+	if (numberDualInfeasibilities_||situationChanged==2) {
 	  problemStatus_=-1; // carry on as normal
 	}
       } else {
