@@ -3465,7 +3465,7 @@ int ClpSimplex::dual (int ifValuesPass , int startFinishOptions)
     else
       returnCode = ((ClpSimplexDual *) this)->dual(0,startFinishOptions);
     if (problemStatus_==3&&numberIterations_<saveMax) {
-      printf("looks like trouble - too many iterations in clean up - trying again\n");
+      //printf("looks like trouble - too many iterations in clean up - trying again\n");
       // flatten solution and try again
       int iRow,iColumn;
       for (iRow=0;iRow<numberRows_;iRow++) {
