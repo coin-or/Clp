@@ -49,7 +49,7 @@ inline void setInitialStatus(unsigned char &status)
 inline void setSameStatus(unsigned char &status)
 { status &= ~(15<<4);status |= (CLP_SAME<<4);}
 // Use second version to get more speed
-#define FAST_CLPNON
+//#define FAST_CLPNON
 #ifndef FAST_CLPNON
 #define CLP_METHOD1 ((method_&1)!=0)
 #define CLP_METHOD2 ((method_&2)!=0)

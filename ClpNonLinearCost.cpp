@@ -49,7 +49,7 @@ ClpNonLinearCost::ClpNonLinearCost () :
 */
 ClpNonLinearCost::ClpNonLinearCost ( ClpSimplex * model,int method)
 {
-  method=2;
+  //method=2;
   model_ = model;
   numberRows_ = model_->numberRows();
   //if (numberRows_==402) {
