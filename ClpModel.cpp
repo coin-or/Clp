@@ -1,9 +1,5 @@
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
-#if defined(_MSC_VER)
-// Turn off compiler warning about long names
-#  pragma warning(disable:4786)
-#endif
 
 #include <cmath>
 #include <cassert>
@@ -13,9 +9,14 @@
 #include <iostream>
 
 #include <time.h>
+#if defined(_MSC_VER)
+// Turn off compiler warning about long names
+#  pragma warning(disable:4786)
+#else
 #include <sys/times.h>
 #include <sys/resource.h>
 #include <unistd.h>
+#endif
 
 #include "CoinHelperFunctions.hpp"
 #include "ClpModel.hpp"

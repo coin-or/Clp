@@ -170,6 +170,7 @@ int presolve_find_row2(int irow, CoinBigIndex ks, int nc, const int *hrow, const
     ks = link[ks];
   }
   abort();
+  return -1;
 }
 
 int presolve_find_row3(int irow, CoinBigIndex ks, int nc, const int *hrow, const int *link)
@@ -775,11 +776,12 @@ void PostsolveMatrix::check_nbasic()
 {
   int nbasic = 0;
 
-  for (int i=0; i<ncols_; i++)
+  int i;
+  for (i=0; i<ncols_; i++)
     if (columnIsBasic(i))
       nbasic++;
 
-  for (int i=0; i<nrows_; i++)
+  for (i=0; i<nrows_; i++)
     if (rowIsBasic(i))
       nbasic++;
 

@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <math.h>
-#include <strings.h>
 
 #include "PresolveMatrix.hpp"
 #include "PresolveEmpty.hpp"	// for DROP_COL/DROP_ROW

@@ -56,7 +56,7 @@ enum ClpStrParam {
 template <class T> inline void
 ClpDisjointCopyN( const T * array, const int size, T * newArray)
 {
-  memcpy(newArray,array,size*sizeof(T));
+  memcpy((void *) newArray,array,size*sizeof(T));
 }
 /// And set
 template <class T> inline void

@@ -6,9 +6,17 @@
 #if defined(_MSC_VER)
 // Turn off compiler warning about long names
 #  pragma warning(disable:4786)
+#if !defined(min)
+#define min(a,b)  (((a) < (b)) ? (a) : (b))
 #endif
+#if !defined(max)
+#define max(a,b)  (((a) > (b)) ? (a) : (b))
+#endif
+double drand48(void);
+#else
 using std::min;
 using std::max;
+#endif
 
 #include "CoinPackedMatrix.hpp"
 class CoinIndexedVector;

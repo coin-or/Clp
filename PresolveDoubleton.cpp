@@ -3,7 +3,6 @@
 
 #include <stdio.h>
 #include <math.h>
-#include <strings.h>
 
 #include "CoinHelperFunctions.hpp"
 #include "PresolveMatrix.hpp"

@@ -13,11 +13,16 @@
 #include <iostream>
 
 #include <time.h>
+
+#if defined(_MSC_VER)
+// Turn off compiler warning about long names
+#  pragma warning(disable:4786)
+#else
 #include <sys/times.h>
 #include <sys/resource.h>
 #include <unistd.h>
-
-#define CLPVERSION "0.92"
+#endif
+#define CLPVERSION "0.93"
 
 //#include "CoinPackedMatrix.hpp"
 //#include "CoinPackedVector.hpp"
@@ -560,8 +565,8 @@ ClpItem::intParameter (ClpSimplex * model) const
   return value;
 }
 #ifdef READLINE     
-#include "/usr/include/readline/readline.h"
-#include "/usr/include/readline/history.h"
+#include <readline/readline.h>
+#include <readline/history.h>
 #include <signal.h>
 static ClpSimplex * currentModel = NULL;
 static void signal_handler(int whichSignal)

@@ -4,7 +4,6 @@
 #include <new>
 #include <stdio.h>
 #include <math.h>
-#include <strings.h>
 
 #include "PresolveMatrix.hpp"
 

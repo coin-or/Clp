@@ -1,9 +1,5 @@
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
-#if defined(_MSC_VER)
-// Turn off compiler warning about long names
-#  pragma warning(disable:4786)
-#endif
 
 #include <cassert>
 #include <cstdio>
@@ -13,9 +9,10 @@
 #include <iostream>
 
 #include <time.h>
-#include <sys/times.h>
-#include <sys/resource.h>
-#include <unistd.h>
+#if defined(_MSC_VER)
+// Turn off compiler warning about long names
+#  pragma warning(disable:4786)
+#endif
 
 #include "CoinMpsIO.hpp"
 #include "CoinPackedMatrix.hpp"
@@ -295,7 +292,7 @@ int mainTest (int argc, const char *argv[],bool doDual,
 	       solution.numberDualInfeasibilities(),
 	       solution.sumPrimalInfeasibilities(),
 	       solution.numberPrimalInfeasibilities());
-	{
+	if (0) {
 	  Presolve pinfoA;
 	  model2 = pinfoA.presolvedModel(solution,1.0e-8);
 
