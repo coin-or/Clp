@@ -24,7 +24,7 @@ int main (int argc, const char *argv[])
     exit(1);
   }
 
-  // Load up model1
+  // Load up model1 - so we can use known good solution
   ClpSimplex model1;
   model1.loadProblem(*m.getMatrixByCol(),
 		    m.getColLower(),m.getColUpper(),
@@ -63,9 +63,13 @@ int main (int argc, const char *argv[])
   double * rowLower2 = new double[numberRows];
   double * rowUpper2 = new double[numberRows];
 
-  // could have used old arrays
+  // We need to modify rhs
   memcpy(rowLower2,rowLower1,numberRows*sizeof(double));
   memcpy(rowUpper2,rowUpper1,numberRows*sizeof(double));
+
+  // For new solution
+  double * newSolution = new double [numberColumns];
+  const double * oldSolution = model1.primalColumnSolution();
 
   int iColumn;
   numberColumns2=0;
@@ -88,8 +92,10 @@ int main (int argc, const char *argv[])
     row2[numberElements]=row1[j];
     element2[numberElements++] = element1[j];
   }
+  newSolution[0]=oldSolution[0];
   start2[++numberColumns2]=numberElements;
 
+  int xxxx=0;
   // Now check for duplicates
   for (iColumn=1;iColumn<numberColumns;iColumn++) {
     maxUpper = max(maxUpper, columnUpper1[iColumn]);
@@ -106,7 +112,26 @@ int main (int argc, const char *argv[])
 	break;
       }
     }
+    if (iColumn>xxxx)
+      ifcopy=0;
     if (ifcopy) {
+      // subtract out from rhs
+      double fixed = columnLower1[iColumn];
+      if(fabs(fixed-columnUpper1[iColumn-1])>1.0e-8) {
+	// try other way
+	fixed = columnUpper1[iColumn];
+	assert(fabs(fixed-columnLower1[iColumn-1])<1.0e-8);
+      }
+      for (int j=start1[iColumn];j<start1[iColumn]+length1[iColumn];j++) {
+	int iRow = row1[j];
+	double value = element1[j];
+	if (rowLower2[iRow]>-1.0e30)
+	  rowLower2[iRow] -= value*fixed;
+	if (rowUpper2[iRow]<1.0e30)
+	  rowUpper2[iRow] -= value*fixed;
+      }
+      if (fabs(oldSolution[iColumn]-fixed)>1.0e-8)
+	newSolution[numberColumns2-1]=oldSolution[iColumn]; 
       breakpt[segptr] = columnLower1[iColumn];
       slope[segptr++] = objective1[iColumn];
       numseg++;
@@ -126,6 +151,7 @@ int main (int argc, const char *argv[])
       row2[numberElements]=row1[j];
       element2[numberElements++] = element1[j];
     }
+    newSolution[numberColumns2]=oldSolution[iColumn]; 
     start2[++numberColumns2]=numberElements;
   }
   breakpt[segptr] = maxUpper;
@@ -173,8 +199,15 @@ int main (int argc, const char *argv[])
   delete [] rowLower2;
   delete [] rowUpper2;
 
+  // copy in solution - (should be optimal)
+  model.allSlackBasis();
+  memcpy(model.primalColumnSolution(),newSolution,numberColumns2*sizeof(double));
+  //memcpy(model.columnLower(),newSolution,numberColumns2*sizeof(double));
+  //memcpy(model.columnUpper(),newSolution,numberColumns2*sizeof(double));
+  delete [] newSolution;
+
   // solve
-  model.primal();
+  model.primal(1);
   return 0;
 }    
 
