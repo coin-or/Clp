@@ -18,7 +18,7 @@ static Clp_message us_english[]=
   {CLP_SIMPLEX_STOPPED,3,1,"Stopped - objective value %g"},
   {CLP_SIMPLEX_ERROR,4,1,"Stopped due to errors - objective value %g"},
   {CLP_SIMPLEX_STATUS,5,1,"%d  Objective %g%? Primal infeas %g (%d)%? Dual infeas %g (%d)%? without free dual infeas (%d)"},
-  {CLP_DUAL_BOUNDS,5,3,"Looking optimal checking bounds with %g"},
+  {CLP_DUAL_BOUNDS,25,3,"Looking optimal checking bounds with %g"},
   {CLP_SIMPLEX_ACCURACY,6,3,"Primal error %g, dual error %g"},
   {CLP_SIMPLEX_BADFACTOR,7,1,"Singular factorization of basis - status %d"},
   {CLP_SIMPLEX_BOUNDTIGHTEN,8,1,"Bounds were tightened %d times"},

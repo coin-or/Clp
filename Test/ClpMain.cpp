@@ -1089,6 +1089,7 @@ stopping",
 	    if (goodModels[iModel]) {
 	      int saveMaxIterations = models[iModel].maximumIterations();
 	      ClpSimplex * model2 = models+iModel;
+	      time1 = cpuTime();
 #ifdef USE_PRESOLVE
 	      Presolve pinfo;
 	      if (preSolve) {
@@ -1102,12 +1103,14 @@ stopping",
 		       ,model2->sumPrimalInfeasibilities()
 		       ,model2->numberPrimalInfeasibilities());
 #endif
+#if 1
 		if (type==DUALSIMPLEX) {
 		  int numberInfeasibilities = model2->tightenPrimalBounds();
 		  if (numberInfeasibilities)
 		    std::cout<<"** Analysis indicates model infeasible"
 			     <<std::endl;
 		}
+#endif
 	      }
 #endif
 #ifdef READLINE     

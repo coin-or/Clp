@@ -138,29 +138,28 @@ ClpDualRowSteepest::pivotRow()
   double * upper = model_->upperRegion();
   // do last pivot row one here
   if (lastPivotRow>=0) {
-    int iPivot=model_->sequenceIn();
-    if (iPivot>=0) {
-      double value = solution[iPivot];
-      double lower = model_->lower(iPivot);
-      double upper = model_->upper(iPivot);
-      if (value>upper+tolerance) {
-	// store square in list
-	if (infeas[lastPivotRow])
-	  infeas[lastPivotRow] = (value-upper)*(value-upper); // already there
-	else
-	  infeasible_->quickAdd(lastPivotRow,(value-upper)*(value-upper));
-      } else if (value<lower-tolerance) {
-	// store square in list
-	if (infeas[lastPivotRow])
-	  infeas[lastPivotRow] = (value-lower)*(value-lower); // already there
-	else
-	  infeasible_->add(lastPivotRow,(value-lower)*(value-lower));
-      } else {
-	// feasible - was it infeasible - if so set tiny
-	if (infeas[lastPivotRow])
-	  infeas[lastPivotRow] = 1.0e-100;
-      }
+    int iPivot=pivotVariable[lastPivotRow];
+    double value = solution[iPivot];
+    double lower = model_->lower(iPivot);
+    double upper = model_->upper(iPivot);
+    if (value>upper+tolerance) {
+      // store square in list
+      if (infeas[lastPivotRow])
+	infeas[lastPivotRow] = (value-upper)*(value-upper); // already there
+      else
+	infeasible_->quickAdd(lastPivotRow,(value-upper)*(value-upper));
+    } else if (value<lower-tolerance) {
+      // store square in list
+      if (infeas[lastPivotRow])
+	infeas[lastPivotRow] = (value-lower)*(value-lower); // already there
+      else
+	infeasible_->add(lastPivotRow,(value-lower)*(value-lower));
+    } else {
+      // feasible - was it infeasible - if so set tiny
+      if (infeas[lastPivotRow])
+	infeas[lastPivotRow] = 1.0e-100;
     }
+    number = infeasible_->getNumElements();
   }
   for (i=0;i<number;i++) {
     iRow = index[i];

@@ -313,6 +313,7 @@ int ClpSimplexDual::dual ( )
     }
   }
 
+  assert (problemStatus_||!sumPrimalInfeasibilities_);
   //assert(!numberFake_||problemStatus_); // all bounds should be okay
   factorization_->sparseThreshold(saveSparse);
   // Get rid of some arrays and empty factorization
