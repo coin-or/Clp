@@ -275,20 +275,41 @@ const PresolveAction *make_fixed_action::presolve(PresolveMatrix *prob,
 {
   double *clo	= prob->clo_;
   double *cup	= prob->cup_;
+  double *csol = prob->sol_;
+
+  double *colels	= prob->colels_;
+  int *hrow	= prob->hrow_;
+  int *mcstrt	= prob->mcstrt_;
+  int *hincol	= prob->hincol_;
+
+  double *acts	= prob->acts_;
+
 
   action *actions 	= new  action[nfcols];
 
   for (int ckc=0; ckc<nfcols; ckc++) {
     int j = fcols[ckc];
+    double movement;
 
     action &f = actions[ckc];
       
     if (fix_to_lower) {
       f.bound = cup[j];
       cup[j] = clo[j];
+      movement = clo[j]-csol[j];
+      csol[j] = clo[j];
     } else {
       f.bound = clo[j];
       clo[j] = cup[j];
+      movement = cup[j]-csol[j];
+      csol[j] = cup[j];
+    }
+    if (movement) {
+      int k;
+      for (k=mcstrt[j];k<mcstrt[j]+hincol[j];k++) {
+	int row = hrow[k];
+	acts[row] += movement*colels[k];
+      }
     }
   }
 

@@ -1830,7 +1830,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
   handler_->message()<<CoinMessageEol;
 
   while (problemStatus_<=-3) {
-    bool cleanDuals=false;
+    bool cleanDuals=situationChanged;
     int numberChangedBounds=0;
     int doOriginalTolerance=0;
     if ( lastCleaned==numberIterations_)

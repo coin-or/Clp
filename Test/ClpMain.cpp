@@ -1082,7 +1082,7 @@ stopping",
 #ifdef USE_PRESOLVE
 	      Presolve pinfo;
 	      if (preSolve) {
-		model2 = pinfo.presolvedModel(models[iModel],1.0e-8,preSolve);
+		model2 = pinfo.presolvedModel(models[iModel],1.0e-8,false,preSolve);
 		model2->checkSolution();
 #ifdef CLP_DEBUG
 		printf("%g %g (%d) %g (%d)\n"

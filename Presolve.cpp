@@ -531,7 +531,7 @@ const PresolveAction *Presolve::presolve(PresolveMatrix *prob)
     const bool dupcol = ATOI("off");
     const bool duprow = ATOI("off");
     const bool dual = ATOI("off");
-
+    
     // some things are expensive so just do once (normally)
 
     int i;
@@ -664,6 +664,7 @@ const PresolveAction *Presolve::presolve(PresolveMatrix *prob)
 #ifdef PRESOLVE_SUMMARY
       printf("Starting expensive\n");
 #endif
+
       if (dual) {
 	int itry;
 	for (itry=0;itry<5;itry++) {
@@ -681,7 +682,9 @@ const PresolveAction *Presolve::presolve(PresolveMatrix *prob)
 	    break;
 	}
       }
-
+#if	DEBUG_PRESOLVE
+      check_sol(prob,1.0e0);
+#endif
       if (dupcol) {
 	paction_ = dupcol_action::presolve(prob, paction_);
 	if (prob->status_)

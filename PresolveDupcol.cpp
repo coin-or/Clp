@@ -274,6 +274,7 @@ const PresolveAction *dupcol_action::presolve(PresolveMatrix *prob,
 
 	    // delete ithis
 	    dcost[ithis] = 0.0;
+	    sol[ithis]=clo2;
 	    {
 	      int kcs = mcstrt[ithis];
 	      int kce = kcs + hincol[ithis];
@@ -326,8 +327,20 @@ const PresolveAction *dupcol_action::presolve(PresolveMatrix *prob,
 		//PRESOLVE_STMT(printf("DUPCOL1 (%d,%d) %g\n", ithis, ilast, workcol[jj]));
 		// both have an lb, both have no ub
 		// the more expensive one would end up at its lb
-		fixed_down[nfixed_down++] = (dcost1<dcost2 ? ithis : ilast);
-		sort[jj]                  = (dcost1<dcost2 ? ilast : ithis);
+		if (dcost1>dcost2) {
+		  swap(ilast, ithis);
+		  swap(clo1, clo2);
+		  swap(cup1, cup2);
+		  swap(dcost1, dcost2);
+		}
+		sol[ilast] = newSolution;
+		if (prob->getColumnStatus(ilast)==PrePostsolveMatrix::basic||
+		    prob->getColumnStatus(ithis)==PrePostsolveMatrix::basic)
+		  prob->setColumnStatus(ilast,PrePostsolveMatrix::basic);
+		
+		sol[ithis]=clo2;
+		fixed_down[nfixed_down++] = ithis ;
+		sort[jj]                  = ilast;
 	      } else {
 		/* ithis ranged - last not */
 		if (dcost2>dcost1) {
@@ -335,6 +348,12 @@ const PresolveAction *dupcol_action::presolve(PresolveMatrix *prob,
 		  /* set ithis to lower bound */
 		  fixed_down[nfixed_down++] = ithis;
 		  sort[jj] = ilast;
+		  sol[ilast] = newSolution;
+		  if (prob->getColumnStatus(ilast)==PrePostsolveMatrix::basic||
+		      prob->getColumnStatus(ithis)==PrePostsolveMatrix::basic)
+		    prob->setColumnStatus(ilast,PrePostsolveMatrix::basic);
+		  
+		  sol[ithis]=clo2;
 		} else {
 		  /* no good */
 		  continue;
@@ -349,6 +368,12 @@ const PresolveAction *dupcol_action::presolve(PresolveMatrix *prob,
 		  /* set ilast to upper bound */
 		  fixed_up[nfixed_up++] = ilast;
 		  sort[jj] = ithis;
+		  sol[ithis] = newSolution;
+		  if (prob->getColumnStatus(ithis)==PrePostsolveMatrix::basic||
+		      prob->getColumnStatus(ilast)==PrePostsolveMatrix::basic)
+		    prob->setColumnStatus(ithis,PrePostsolveMatrix::basic);
+		  
+		  sol[ilast]=clo1;
 		} else {
 		  /* need both */
 		  continue;
@@ -360,6 +385,12 @@ const PresolveAction *dupcol_action::presolve(PresolveMatrix *prob,
 		  //SWAP(int, ilast, ithis);
 		  fixed_down[nfixed_down++] = ilast;
 		  sort[jj] = ithis;
+		  sol[ithis] = newSolution;
+		  if (prob->getColumnStatus(ithis)==PrePostsolveMatrix::basic||
+		      prob->getColumnStatus(ilast)==PrePostsolveMatrix::basic)
+		    prob->setColumnStatus(ithis,PrePostsolveMatrix::basic);
+		  
+		  sol[ilast]=clo1;
 		} else {
 		  /* need both */
 		  continue;

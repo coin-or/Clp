@@ -2768,16 +2768,14 @@ ClpSimplexProgress::looping()
       matched |= (1<<i);
       numberMatched++;
     }
-    if (numberMatched||numberTimes_>50) 
-      printf("%d %d %d %d\n",numberMatched,
-	     matchedOnObjective,matchedOnInfeasibility,
-	     matchedOnInfeasibilities);
     if (i) {
       objective_[i-1] = objective_[i];
       infeasibility_[i-1] = infeasibility_[i];
       numberInfeasibilities_[i-1]=numberInfeasibilities_[i]; 
     }
   }
+  if (numberMatched) 
+    printf("%d loop check\n",numberMatched);
   objective_[CLP_PROGRESS-1] = objective;
   infeasibility_[CLP_PROGRESS-1] = infeasibility;
   numberInfeasibilities_[CLP_PROGRESS-1]=numberInfeasibilities;
@@ -2800,9 +2798,17 @@ ClpSimplexProgress::looping()
       if (model_->algorithm()<0) {
 	// dual - change tolerance
 	model_->setCurrentDualTolerance(model_->currentDualTolerance()*1.05);
+	// if infeasible increase dual bound
+	if (model_->dualBound()<1.0e19) {
+	  model_->setDualBound(model_->dualBound()*1.1);
+	}
       } else {
 	// primal - change tolerance
 	model_->setCurrentPrimalTolerance(model_->currentPrimalTolerance()*1.05);
+	// if infeasible increase infeasibility cost
+	if (model_->infeasibilityCost()<1.0e19) {
+	  model_->setInfeasibilityCost(model_->infeasibilityCost()*1.1);
+	}
       }
     } else {
       model_->messageHandler()->message(CLP_LOOP,model_->messages())
