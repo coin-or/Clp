@@ -933,9 +933,9 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     n=0;
     nel=0;
     int iRow , iColumn;
-    double * lower = solution.columnLower();
-    double * upper = solution.columnUpper();
-    double * objective = solution.objective();
+    const double * lower = m.getColLower();
+    const double * upper = m.getColUpper();
+    const double * objective = m.getObjCoefficients();
     startM = m.getMatrixByCol()->getVectorStarts();
     lengthM = m.getMatrixByCol()->getVectorLengths();
     indexM = m.getMatrixByCol()->getIndices();
@@ -962,6 +962,32 @@ ClpSimplexUnitTest(const std::string & mpsDir,
 			starts,index,element);
     solution.dual();
     assert(eq(solution.objectiveValue(),1.5185098965e+03));
+    // Delete all columns and add back
+    n=0;
+    nel=0;
+    starts[0]=0;
+    lower = m.getColLower();
+    upper = m.getColUpper();
+    objective = m.getObjCoefficients();
+    for (iColumn=0;iColumn<numberColumns;iColumn++) {
+      saveObj[n]=objective[iColumn];
+      saveLower[n]=lower[iColumn];
+      saveUpper[n]=upper[iColumn];
+      int j;
+      for (j=startM[iColumn];j<startM[iColumn]+lengthM[iColumn];j++) {
+	index[nel]=indexM[j];
+	element[nel++]=elementM[j];
+      }
+      which[n++]=iColumn;
+      starts[n]=nel;
+    }
+    solution.deleteColumns(n,which);
+    solution.dual();
+    // Put back
+    solution.addColumns(n,saveLower,saveUpper,saveObj,
+			starts,index,element);
+    solution.dual();
+    assert(eq(solution.objectiveValue(),1.5185098965e+03));
 
     // reload with original
     solution.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
@@ -970,8 +996,8 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     // delete half rows
     n=0;
     nel=0;
-    lower = solution.rowLower();
-    upper = solution.rowUpper();
+    lower = m.getRowLower();
+    upper = m.getRowUpper();
     startM = m.getMatrixByRow()->getVectorStarts();
     lengthM = m.getMatrixByRow()->getVectorLengths();
     indexM = m.getMatrixByRow()->getIndices();
@@ -997,10 +1023,49 @@ ClpSimplexUnitTest(const std::string & mpsDir,
 			starts,index,element);
     solution.dual();
     assert(eq(solution.objectiveValue(),1.5185098965e+03));
+    solution.writeMps("yy.mps");
+    // Delete all rows
+    n=0;
+    nel=0;
+    lower = m.getRowLower();
+    upper = m.getRowUpper();
+    starts[0]=0;
+    for (iRow=0;iRow<numberRows;iRow++) {
+      saveLower[n]=lower[iRow];
+      saveUpper[n]=upper[iRow];
+      int j;
+      for (j=startM[iRow];j<startM[iRow]+lengthM[iRow];j++) {
+	index[nel]=indexM[j];
+	element[nel++]=elementM[j];
+      }
+      which[n++]=iRow;
+      starts[n]=nel;
+    }
+    solution.deleteRows(n,which);
+    solution.dual();
+    // Put back
+    solution.addRows(n,saveLower,saveUpper,
+			starts,index,element);
+    solution.dual();
+    solution.writeMps("xx.mps");
+    assert(eq(solution.objectiveValue(),1.5185098965e+03));
     // Zero out status array to give some interest
     memset(solution.statusArray()+numberColumns,0,numberRows);
     solution.primal(1);
     assert(eq(solution.objectiveValue(),1.5185098965e+03));
+    // Delete all columns and rows
+    n=0;
+    for (iColumn=0;iColumn<numberColumns;iColumn++) {
+      which[n++]=iColumn;
+      starts[n]=nel;
+    }
+    solution.deleteColumns(n,which);
+    n=0;
+    for (iRow=0;iRow<numberRows;iRow++) {
+      which[n++]=iRow;
+      starts[n]=nel;
+    }
+    solution.deleteRows(n,which);
 
     delete [] saveObj;
     delete [] saveLower;

@@ -708,16 +708,22 @@ ClpModel::resize (int newNumberRows, int newNumberColumns)
   delete [] columnScale_;
   columnScale_ = NULL;
   if (status_) {
-    unsigned char * tempC = new unsigned char [newNumberColumns+newNumberRows];
-    unsigned char * tempR = tempC + newNumberColumns;
-    memset(tempC,0,(newNumberColumns+newNumberRows)*sizeof(unsigned char));
-    memcpy(tempC,status_,CoinMin(newNumberColumns,numberColumns_)*sizeof(unsigned char));
-    memcpy(tempR,status_+numberColumns_,CoinMin(newNumberRows,numberRows_)*sizeof(unsigned char));
-    delete [] status_;
-    status_ = tempC;
+    if (newNumberColumns+newNumberRows) {
+      unsigned char * tempC = new unsigned char [newNumberColumns+newNumberRows];
+      unsigned char * tempR = tempC + newNumberColumns;
+      memset(tempC,0,(newNumberColumns+newNumberRows)*sizeof(unsigned char));
+      memcpy(tempC,status_,CoinMin(newNumberColumns,numberColumns_)*sizeof(unsigned char));
+      memcpy(tempR,status_+numberColumns_,CoinMin(newNumberRows,numberRows_)*sizeof(unsigned char));
+      delete [] status_;
+      status_ = tempC;
+    } else {
+      // empty model - some systems don't like new [0]
+      delete [] status_;
+      status_ = NULL;
+    }
   }
   numberRows_ = newNumberRows;
-  if (newNumberColumns<numberColumns_) {
+  if (newNumberColumns<numberColumns_&&matrix_->getNumCols()) {
     int * which = new int[numberColumns_-newNumberColumns];
     int i;
     for (i=newNumberColumns;i<numberColumns_;i++) 
@@ -754,19 +760,26 @@ ClpModel::deleteRows(int number, const int * which)
 			      number, which, newSize);
   rowUpper_ = deleteDouble(rowUpper_,numberRows_,
 			      number, which, newSize);
-  matrix_->deleteRows(number,which);
+  if (matrix_->getNumRows())
+    matrix_->deleteRows(number,which);
   //matrix_->removeGaps();
   // status
   if (status_) {
-    unsigned char * tempR  = (unsigned char *) deleteChar((char *)status_+numberColumns_,
-					numberRows_,
-					number, which, newSize,false);
-    unsigned char * tempC = new unsigned char [numberColumns_+newSize];
-    memcpy(tempC,status_,numberColumns_*sizeof(unsigned char));
-    memcpy(tempC+numberColumns_,tempR,newSize*sizeof(unsigned char));
-    delete [] tempR;
-    delete [] status_;
-    status_ = tempC;
+    if (numberColumns_+newSize) {
+      unsigned char * tempR  = (unsigned char *) deleteChar((char *)status_+numberColumns_,
+							    numberRows_,
+							    number, which, newSize,false);
+      unsigned char * tempC = new unsigned char [numberColumns_+newSize];
+      memcpy(tempC,status_,numberColumns_*sizeof(unsigned char));
+      memcpy(tempC+numberColumns_,tempR,newSize*sizeof(unsigned char));
+      delete [] tempR;
+      delete [] status_;
+      status_ = tempC;
+    } else {
+      // empty model - some systems don't like new [0]
+      delete [] status_;
+      status_ = NULL;
+    }
   }
 #if 1
   if (lengthNames_) {
@@ -831,16 +844,22 @@ ClpModel::deleteColumns(int number, const int * which)
   //matrix_->removeGaps();
   // status
   if (status_) {
-    unsigned char * tempC  = (unsigned char *) deleteChar((char *)status_,
-					numberColumns_,
-					number, which, newSize,false);
-    unsigned char * temp = new unsigned char [numberRows_+newSize];
-    memcpy(temp,tempC,newSize*sizeof(unsigned char));
-    memcpy(temp+newSize,status_+numberColumns_,
-	   numberRows_*sizeof(unsigned char));
-    delete [] tempC;
-    delete [] status_;
-    status_ = temp;
+    if (numberRows_+newSize) {
+      unsigned char * tempC  = (unsigned char *) deleteChar((char *)status_,
+							    numberColumns_,
+							    number, which, newSize,false);
+      unsigned char * temp = new unsigned char [numberRows_+newSize];
+      memcpy(temp,tempC,newSize*sizeof(unsigned char));
+      memcpy(temp+newSize,status_+numberColumns_,
+	     numberRows_*sizeof(unsigned char));
+      delete [] tempC;
+      delete [] status_;
+      status_ = temp;
+    } else {
+      // empty model - some systems don't like new [0]
+      delete [] status_;
+      status_ = NULL;
+    }
   }
   integerType_ = deleteChar(integerType_,numberColumns_,
 			    number, which, newSize,true);
