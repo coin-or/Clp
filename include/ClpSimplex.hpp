@@ -854,6 +854,7 @@ public:
       128 - Switch off all matrix sanity checks
       256 - No row copy
       512 - Not values pass, solution guaranteed, skip as much as possible
+      1024 - In branch and bound
   */
   inline unsigned int specialOptions() const
   { return specialOptions_;};

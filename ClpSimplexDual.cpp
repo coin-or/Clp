@@ -2638,7 +2638,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	// throw away change
 	for (int i=0;i<4;i++) 
 	  rowArray_[i]->clear();
-	if(factorization_->pivotTolerance(),0.2)
+	if(factorization_->pivotTolerance()<0.2)
 	  factorization_->pivotTolerance(0.2);
 	if (internalFactorize(1)) {
 	  memcpy(status_ ,saveStatus_,(numberColumns_+numberRows_)*sizeof(char));
@@ -3126,6 +3126,27 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	   !numberAtFakeBound()&&!numberDualInfeasibilities_) {
     problemStatus_=1;
     secondaryStatus_ = 1; // and say was on cutoff
+  }
+  // If we are in trouble and in branch and bound give up
+  if ((specialOptions_&1024)!=0) {
+    int looksBad=0;
+    if (numberIterations_>10000&&largestPrimalError_*largestDualError_>1.0e2) {
+      looksBad=1;
+    } else if (numberIterations_>10000&&largestPrimalError_>1.0e-2
+	&&objectiveValue_>CoinMin(1.0e15,limit)) {
+      looksBad=2;
+    }
+    if (looksBad) {
+      if (factorization_->pivotTolerance()<0.9) {
+	// up tolerance
+	factorization_->pivotTolerance(CoinMin(factorization_->pivotTolerance()*1.05+0.02,0.91));
+      } else {
+	if (handler_->logLevel()>0)
+	  printf("bad dual - saying infeasible %d\n",looksBad);
+	problemStatus_=1;
+	secondaryStatus_ = 1; // and say was on cutoff
+      }
+    }
   }
   if (problemStatus_<0&&!changeMade_) {
     problemStatus_=4; // unknown
