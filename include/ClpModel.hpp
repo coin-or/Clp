@@ -20,7 +20,7 @@
 #define COIN_DBL_MAX DBL_MAX
 #endif
 
-/** This is the base class for Linear Models
+/** This is the base class for Linear and quadratic Models
     This knows nothing about the algorithm, but it seems to
     have a reasonable amount of information
 
@@ -91,6 +91,12 @@ public:
 		     const double* obj,
 		      const double* rowlb, const double* rowub,
 		      const double * rowObjective=NULL);
+  /// Load up quadratic objective 
+  void loadQuadraticObjective(const int numberColumns, const CoinBigIndex * start,
+			      const int * column, const double * element);
+  void loadQuadraticObjective (  const CoinPackedMatrix& matrix);
+  /// Get rid of quadratic objective
+  void deleteQuadraticObjective();
   /// This just loads up a row objective
   void setRowObjective(const double * rowObjective);
   /// Read an mps file from the given filename
@@ -263,6 +269,8 @@ public:
    inline ClpMatrixBase * rowCopy() const       { return rowCopy_; }
    /// Clp Matrix 
    inline ClpMatrixBase * clpMatrix() const     { return matrix_; }
+   /// Quadratic objective
+   inline CoinPackedMatrix * quadraticObjective() const     { return quadraticObjective_; }
    /// Objective value
    inline double objectiveValue() const {
       return objectiveValue_*optimizationDirection_ - dblParam_[ClpObjOffset];
@@ -437,6 +445,8 @@ protected:
   ClpMatrixBase * matrix_;
   /// Row copy if wanted
   ClpMatrixBase * rowCopy_;
+  /// Quadratic objective if any
+  CoinPackedMatrix * quadraticObjective_;
   /// Infeasible/unbounded ray
   double * ray_;
   /** Status Region.  I know that not all algorithms need a status

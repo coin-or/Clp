@@ -85,7 +85,7 @@ ClpSimplex::ClpSimplex () :
   columnActivityWork_(NULL),
   numberDualInfeasibilities_(0),
   numberDualInfeasibilitiesWithoutFree_(0),
-  numberPrimalInfeasibilities_(0),
+  numberPrimalInfeasibilities_(100),
   numberRefinements_(0),
   pivotVariable_(NULL),
   factorization_(NULL),
@@ -1154,7 +1154,7 @@ ClpSimplex::ClpSimplex(const ClpSimplex &rhs) :
   columnActivityWork_(NULL),
   numberDualInfeasibilities_(0),
   numberDualInfeasibilitiesWithoutFree_(0),
-  numberPrimalInfeasibilities_(0),
+  numberPrimalInfeasibilities_(100),
   numberRefinements_(0),
   pivotVariable_(NULL),
   factorization_(NULL),
@@ -1245,7 +1245,7 @@ ClpSimplex::ClpSimplex(const ClpModel &rhs) :
   columnActivityWork_(NULL),
   numberDualInfeasibilities_(0),
   numberDualInfeasibilitiesWithoutFree_(0),
-  numberPrimalInfeasibilities_(0),
+  numberPrimalInfeasibilities_(100),
   numberRefinements_(0),
   pivotVariable_(NULL),
   factorization_(NULL),
@@ -2364,6 +2364,21 @@ int ClpSimplex::dual (int ifValuesPass )
 int ClpSimplex::primal (int ifValuesPass )
 {
   return ((ClpSimplexPrimal *) this)->primal(ifValuesPass);
+}
+#include "ClpSimplexPrimalQuadratic.hpp"
+/* Solves quadratic problem using SLP - may be used as crash
+   for other algorithms when number of iterations small
+*/
+int 
+ClpSimplex::quadraticSLP(int numberPasses, double deltaTolerance)
+{
+  return ((ClpSimplexPrimalQuadratic *) this)->primalSLP(numberPasses,deltaTolerance);
+}
+// Solves quadratic using Beale's algorithm - primal
+int 
+ClpSimplex::quadraticBeale()
+{
+  return ((ClpSimplexPrimalQuadratic *) this)->primalBeale();
 }
 /* For strong branching.  On input lower and upper are new bounds
    while on output they are objective function values (>1.0e50 infeasible).

@@ -30,6 +30,7 @@ LIBSRC += ClpPrimalColumnSteepest.cpp
 LIBSRC += ClpSimplex.cpp
 LIBSRC += ClpSimplexDual.cpp
 LIBSRC += ClpSimplexPrimal.cpp
+LIBSRC += ClpSimplexPrimalQuadratic.cpp
 # and Presolve stuff
 LIBSRC += Presolve.cpp
 LIBSRC += PresolveDoubleton.cpp

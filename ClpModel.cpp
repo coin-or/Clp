@@ -63,6 +63,7 @@ ClpModel::ClpModel () :
   columnUpper_(NULL),
   matrix_(NULL),
   rowCopy_(NULL),
+  quadraticObjective_(NULL),
   ray_(NULL),
   status_(NULL),
   integerType_(NULL),
@@ -126,6 +127,8 @@ void ClpModel::gutsOfDelete()
   matrix_=NULL;
   delete rowCopy_;
   rowCopy_=NULL;
+  delete quadraticObjective_;
+  quadraticObjective_ = NULL;
   delete [] ray_;
   ray_ = NULL;
   delete [] integerType_;
@@ -388,6 +391,11 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
     } else {
       rowCopy_=NULL;
     }
+    if (rhs.quadraticObjective_) {
+      quadraticObjective_ = new CoinPackedMatrix(*rhs.quadraticObjective_);
+    } else {
+      quadraticObjective_=NULL;
+    }
     matrix_=NULL;
     if (rhs.matrix_) {
       matrix_ = rhs.matrix_->clone();
@@ -405,6 +413,7 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
     columnUpper_ = rhs.columnUpper_;
     matrix_ = rhs.matrix_;
     rowCopy_ = rhs.rowCopy_;
+    quadraticObjective_ = rhs.quadraticObjective_;
     ray_ = rhs.ray_;
     lengthNames_ = 0;
     rowNames_ = std::vector<std::string> ();
@@ -450,6 +459,7 @@ ClpModel::returnModel(ClpModel & otherModel)
   columnUpper_ = NULL;
   matrix_ = NULL;
   rowCopy_ = NULL;
+  quadraticObjective_=NULL,
   delete [] otherModel.ray_;
   otherModel.ray_ = ray_;
   ray_ = NULL;
@@ -685,6 +695,10 @@ ClpModel::resize (int newNumberRows, int newNumberColumns)
     for (i=newNumberColumns;i<numberColumns_;i++) 
       which[i-newNumberColumns]=i;
     matrix_->deleteCols(numberColumns_-newNumberColumns,which);
+    if (quadraticObjective_) {
+      quadraticObjective_->deleteCols(numberColumns_-newNumberColumns,which);
+      quadraticObjective_->deleteRows(numberColumns_-newNumberColumns,which);
+    }
     delete [] which;
   }
   if (integerType_) {
@@ -754,6 +768,10 @@ ClpModel::deleteColumns(int number, const int * which)
   columnUpper_ = deleteDouble(columnUpper_,numberColumns_,
 			      number, which, newSize);
   matrix_->deleteCols(number,which);
+  if (quadraticObjective_) {
+    quadraticObjective_->deleteCols(number,which);
+    quadraticObjective_->deleteRows(number,which);
+  }
   // status
   if (status_) {
     unsigned char * tempC  = (unsigned char *) deleteChar((char *)status_,
@@ -992,6 +1010,29 @@ ClpModel::copyinStatus(const unsigned char * statusArray)
   } else {
     status_=NULL;
   }
+}
+
+// Load up quadratic objective 
+void 
+ClpModel::loadQuadraticObjective(const int numberColumns, const CoinBigIndex * start,
+			      const int * column, const double * element)
+{
+  assert (numberColumns==numberColumns_);
+  quadraticObjective_ = new CoinPackedMatrix(true,numberColumns,numberColumns,
+					     start[numberColumns],element,column,start,NULL);
+}
+void 
+ClpModel::loadQuadraticObjective (  const CoinPackedMatrix& matrix)
+{
+  assert (matrix.getNumCols()==numberColumns_);
+  quadraticObjective_ = new CoinPackedMatrix(matrix);
+}
+// Get rid of quadratic objective
+void 
+ClpModel::deleteQuadraticObjective()
+{
+  delete quadraticObjective_;
+  quadraticObjective_ = NULL;
 }
 //#############################################################################
 // Constructors / Destructor / Assignment

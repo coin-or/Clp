@@ -137,6 +137,14 @@ public:
   int dual(int ifValuesPass=0);
   /** Primal algorithm - see ClpSimplexPrimal.hpp for method */
   int primal(int ifValuesPass=0);
+  /** Solves quadratic problem using SLP - may be used as crash
+      for other algorithms when number of iterations small.
+      Also exits if all problematical variables are changing
+      less than deltaTolerance
+  */
+  int quadraticSLP(int numberPasses,double deltaTolerance);
+  /// Solves quadratic using Beale's algorithm - primal
+  int quadraticBeale();
   /// Passes in factorization
   void setFactorization( ClpFactorization & factorization);
   /// Sets or unsets scaling, 0 -off, 1 on, 2 dynamic(later)

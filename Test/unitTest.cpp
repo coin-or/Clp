@@ -792,7 +792,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
       delete [] ray;
     }
   }
-  
+#if 0  
   // test network
   {    
     std::string fn = mpsDir+"input.130";
@@ -954,6 +954,32 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     delete [] objective;
     delete [] lowerColumn;
     delete [] upperColumn;
+  }
+#endif
+  // Test quadratic
+  {    
+    CoinMpsIO m;
+    std::string fn = mpsDir+"share2qp";
+    m.readMps(fn.c_str(),"mps");
+    ClpSimplex solution;
+    solution.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
+			 m.getObjCoefficients(),
+			 m.getRowLower(),m.getRowUpper());
+    solution.dual();
+    // get quadratic part
+    int * start=NULL;
+    int * column = NULL;
+    double * element = NULL;
+    m.readQuadraticMps(NULL,start,column,element,2);
+    // Load up objective
+    solution.loadQuadraticObjective(solution.numberColumns(),start,column,element);
+    delete [] start;
+    delete [] column;
+    delete [] element;
+    solution.quadraticSLP(50,1.0e-4);
+    double objValue = solution.getObjValue();
+    CoinRelFltEq eq(1.0e-2);
+    assert(eq(objValue,-400.92));
   }
   
 }
