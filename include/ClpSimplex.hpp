@@ -48,6 +48,18 @@ class ClpSimplex : public ClpModel {
 
 public:
 
+  /** enums for solve function */
+  enum SolveType {
+    useDual=0,
+    usePrimal,
+    useSprint,
+    automatic
+  };
+  enum PresolveType {
+    presolveOn=0,
+    presolveOff,
+    presolveMaximum
+  };
   /** enums for status of various sorts.
       First 4 match CoinWarmStartBasis,
       isFixed means fixed at lower bound and out of basis
@@ -89,7 +101,7 @@ public:
     ClpSimplex & operator=(const ClpSimplex & rhs);
   /// Destructor
    ~ClpSimplex (  );
-  // Ones below are just ClpModel with setti
+  // Ones below are just ClpModel with some changes
   /** Loads a problem (the constraints on the
         rows are given by lower and upper bounds). If a pointer is 0 then the
         following values are the default:
@@ -142,6 +154,17 @@ public:
 
   /**@name Functions most useful to user */
   //@{
+  /** General solve algorithm which can do presolve
+      special options (bits)
+      1 - do not perturb
+      2 - do not scale
+      4 - use crash (default allslack in dual, idiot in primal)
+      8 - all slack basis in primal
+      16 - switch off interrupt handling
+      32 - do not try and make plus minus one matrix
+   */
+  int initialSolve(SolveType method=useDual, PresolveType presolve=presolveOn,
+		   int specialOptions=0);
   /** Dual algorithm - see ClpSimplexDual.hpp for method */
   int dual(int ifValuesPass=0);
   /** Primal algorithm - see ClpSimplexPrimal.hpp for method */
@@ -156,7 +179,7 @@ public:
   int quadraticPrimal(int phase=2);
   /// Passes in factorization
   void setFactorization( ClpFactorization & factorization);
-  /// Sets or unsets scaling, 0 -off, 1 on, 2 dynamic(later)
+  /// Sets or unsets scaling, 0 -off, 1 equilibrium, 2 geometric, 3 dynamic(later)
   void scaling(int mode=1);
   /// Gets scalingFlag
   inline int scalingFlag() const {return scalingFlag_;};
@@ -855,7 +878,7 @@ protected:
   double * savedSolution_;
   /// Column scale factors 
   double * columnScale_;
-  /// Scale flag, 0 none, 1 normal, 2 dynamic
+  /// Scale flag, 0 none, 1 equilibrium, 2 geometric, 3 dynamic
   int scalingFlag_;
   /// Number of times code has tentatively thought optimal
   int numberTimesOptimal_;

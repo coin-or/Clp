@@ -211,10 +211,24 @@ k
       tolerance *= model_->largestPrimalError()/checkTolerance;
   }
   int numberWanted;
-  if (mode_<2)
+  if (mode_<2 ) {
     numberWanted = number+1;
-  else
+  } else if (mode_==2) {
     numberWanted = max(2000,number/8);
+  } else {
+    int numberElements = model_->factorization()->numberElements();
+    double ratio = (double) numberElements/(double) model_->numberRows();
+    numberWanted = max(2000,number/8);
+    if (ratio<1.0) {
+      numberWanted = max(2000,number/20);
+    } else if (ratio>10.0) {
+      ratio = number * (ratio/80.0);
+      if (ratio>number)
+	numberWanted=number+1;
+      else
+	numberWanted = max(2000,(int) ratio);
+    }
+  }
   int iPass;
   // Setup two passes
   int start[4];
@@ -224,13 +238,24 @@ k
   start[0]=(int) dstart;
   start[3]=start[0];
   //double largestWeight=0.0;
+  //double smallestWeight=1.0e100;
   for (iPass=0;iPass<2;iPass++) {
     int end = start[2*iPass+1];
     for (i=start[2*iPass];i<end;i++) {
       iRow = index[i];
       double value = infeas[iRow];
       if (value>tolerance) {
+	//#define OUT_EQ
+#ifdef OUT_EQ
+	{
+	  int iSequence = pivotVariable[iRow];
+	  if (upper[iSequence]==lower[iSequence])
+	    value *= 2.0;
+	}
+#endif
 	double weight = weights_[iRow];
+	//largestWeight = max(largestWeight,weight);
+	//smallestWeight = min(smallestWeight,weight);
 	//double dubious = dubiousWeights_[iRow];
 	//weight *= dubious;
 	//if (value>2.0*largest*weight||(value>0.5*largest*weight&&value*largestWeight>dubious*largest*weight)) {
@@ -269,6 +294,7 @@ k
     if (!numberWanted)
       break;
   }
+  //printf("smallest %g largest %g\n",smallestWeight,largestWeight);
   return chosenRow;
 }
 #define TRY_NORM 1.0e-4

@@ -9,6 +9,8 @@
 #include "OsiSolverInterface.hpp"
 typedef int CoinBigIndex;
 #endif
+class CoinMessageHandler;
+class CoinMessages;
 // for use internally
 typedef struct {
   double infeas;
@@ -64,7 +66,7 @@ public:
   /// Get an approximate solution with the idiot code
   void solve();
   /// Lightweight "crash"
-  void crash(int numberPass=0);
+  void crash(int numberPass,CoinMessageHandler * handler ,const CoinMessages * messages);
   /** Use simplex to get an optimal solution
       mode is how many steps the simplex crossover should take to
       arrive to an extreme point:
@@ -148,7 +150,7 @@ public:
 private:
 
   /// Does actual work
-  void solve2();
+  void solve2(CoinMessageHandler * handler,const CoinMessages *messages);
 IdiotResult IdiSolve(
 		     int nrows, int ncols, double * rowsol , double * colsol,
 		     double * pi, double * djs, const double * origcost , 

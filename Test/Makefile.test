@@ -62,6 +62,12 @@ ifeq ($(findstring Linux,${UNAME}),Linux)
 	LDFLAGS += -lhistory -lreadline -ltermcap
 endif
 #LDFLAGS += -lefence
+LDFLAGS += -static
+CXXFLAGS += -pg
+#if DENSE and using ATLAS
+#LDFLAGS += -L/home/forrest/ATLAS/lib/Linux_P4SSE2 -llapack -lcblas -latlas -lf77blas -lg2c
+#if DENSE and using given libraries
+LDFLAGS += -llapack -lblas -lg2c
 
 ###############################################################################
 
@@ -87,7 +93,6 @@ $(TARGETDIR)/clp : $(TESTOBJ)
 	@echo Creating clp
 	@mkdir -p $(TARGETDIR)
 	@rm -f $@
-#	$(CXX) -static $(CXXFLAGS) -o $@ $(TESTOBJ) $(LDFLAGS) $(SYSLD) -lm
 	$(CXX) $(CXXFLAGS) -o $@ $(TESTOBJ) $(LDFLAGS) $(SYSLD) -lm
 	${CP} $@ ..
 

@@ -269,7 +269,22 @@ ClpPackedMatrix::transposeTimes(const ClpSimplex * model, double scalar,
   ClpPackedMatrix* rowCopy =
     dynamic_cast< ClpPackedMatrix*>(model->rowCopy());
   bool packed = rowArray->packedMode();
-  if (numberInRowArray>0.333*numberRows||!rowCopy) {
+  double factor = 0.3;
+  // We may not want to do by row if there may be cache problems
+  int numberColumns = model->numberColumns();
+  // It would be nice to find L2 cache size - for moment 512K
+  // Be slightly optimistic
+  if (numberColumns*sizeof(double)>1000000) {
+    if (numberRows*10<numberColumns)
+      factor=0.1;
+    else if (numberRows*4<numberColumns)
+      factor=0.15;
+    else if (numberRows*2<numberColumns)
+      factor=0.2;
+    if (model->numberIterations()%50==0)
+      printf("%d nonzero\n",numberInRowArray);
+  }
+  if (numberInRowArray>factor*numberRows||!rowCopy) {
     // do by column
     int iColumn;
     // get matrix data pointers
@@ -1165,66 +1180,120 @@ ClpPackedMatrix::scale(ClpSimplex * model) const
     }
     ClpFillN ( rowScale, numberRows,1.0);
     ClpFillN ( columnScale, numberColumns,1.0);
-    int numberPass=3;
-    double overallLargest;
-    double overallSmallest;
-    while (numberPass) {
-      overallLargest=0.0;
-      overallSmallest=1.0e50;
-      numberPass--;
-      // Geometric mean on row scales
+    double overallLargest=-1.0e-30;
+    double overallSmallest=1.0e30;
+    if (model->scalingFlag()==1) {
+      // Maximum in each row
       for (iRow=0;iRow<numberRows;iRow++) {
 	if (usefulRow[iRow]) {
 	  CoinBigIndex j;
 	  largest=1.0e-20;
-	  smallest=1.0e50;
 	  for (j=rowStart[iRow];j<rowStart[iRow+1];j++) {
 	    int iColumn = column[j];
 	    if (usefulColumn[iColumn]) {
 	      double value = fabs(element[j]);
-	      // Don't bother with tiny elements
-	      if (value>1.0e-30) {
-		value *= columnScale[iColumn];
-		largest = max(largest,value);
-		smallest = min(smallest,value);
-	      }
+	      largest = max(largest,value);
 	    }
 	  }
-	  rowScale[iRow]=1.0/sqrt(smallest*largest);
-	  overallLargest = max(largest*rowScale[iRow],overallLargest);
-	  overallSmallest = min(smallest*rowScale[iRow],overallSmallest);
+	  rowScale[iRow]=1.0/largest;
+	  overallLargest = max(overallLargest,largest);
+	  overallSmallest = min(overallSmallest,largest);
 	}
       }
-      model->messageHandler()->message(CLP_PACKEDSCALE_WHILE,*model->messagesPointer())
-	<<overallSmallest
-	<<overallLargest
-	<<CoinMessageEol;
-      // skip last column round
-      if (numberPass==1)
-	break;
-      // Geometric mean on column scales
-      for (iColumn=0;iColumn<numberColumns;iColumn++) {
-	if (usefulColumn[iColumn]) {
-	  CoinBigIndex j;
-	  largest=1.0e-20;
-	  smallest=1.0e50;
-	  for (j=columnStart[iColumn];
-	       j<columnStart[iColumn]+columnLength[iColumn];j++) {
-	    iRow=row[j];
-	    double value = fabs(elementByColumn[j]);
+    } else {
+      assert(model->scalingFlag()==2);
+      int numberPass=3;
+#ifdef USE_OBJECTIVE
+      // This will be used to help get scale factors
+      double * objective = new double[numberColumns];
+      memcpy(objective,model->costRegion(1),numberColumns*sizeof(double));
+      double objScale=1.0;
+#endif
+      while (numberPass) {
+	overallLargest=0.0;
+	overallSmallest=1.0e50;
+	numberPass--;
+	// Geometric mean on row scales
+	for (iRow=0;iRow<numberRows;iRow++) {
+	  if (usefulRow[iRow]) {
+	    CoinBigIndex j;
+	    largest=1.0e-20;
+	    smallest=1.0e50;
+	    for (j=rowStart[iRow];j<rowStart[iRow+1];j++) {
+	      int iColumn = column[j];
+	      if (usefulColumn[iColumn]) {
+		double value = fabs(element[j]);
+		// Don't bother with tiny elements
+		if (value>1.0e-30) {
+		  value *= columnScale[iColumn];
+		  largest = max(largest,value);
+		  smallest = min(smallest,value);
+		}
+	      }
+	    }
+	    rowScale[iRow]=1.0/sqrt(smallest*largest);
+	    overallLargest = max(largest*rowScale[iRow],overallLargest);
+	    overallSmallest = min(smallest*rowScale[iRow],overallSmallest);
+	  }
+	}
+#ifdef USE_OBJECTIVE
+	largest=1.0e-20;
+	smallest=1.0e50;
+	for (iColumn=0;iColumn<numberColumns;iColumn++) {
+	  if (usefulColumn[iColumn]) {
+	    double value = fabs(objective[iColumn]);
 	    // Don't bother with tiny elements
-	    if (value>1.0e-30&&usefulRow[iRow]) {
-	      value *= rowScale[iRow];
+	    if (value>1.0e-30) {
+	      value *= columnScale[iColumn];
 	      largest = max(largest,value);
 	      smallest = min(smallest,value);
 	    }
 	  }
-	  columnScale[iColumn]=1.0/sqrt(smallest*largest);
+	}
+	objScale=1.0/sqrt(smallest*largest);
+#endif
+	model->messageHandler()->message(CLP_PACKEDSCALE_WHILE,*model->messagesPointer())
+	  <<overallSmallest
+	  <<overallLargest
+	  <<CoinMessageEol;
+	// skip last column round
+	if (numberPass==1)
+	  break;
+	// Geometric mean on column scales
+	for (iColumn=0;iColumn<numberColumns;iColumn++) {
+	  if (usefulColumn[iColumn]) {
+	    CoinBigIndex j;
+	    largest=1.0e-20;
+	    smallest=1.0e50;
+	    for (j=columnStart[iColumn];
+		 j<columnStart[iColumn]+columnLength[iColumn];j++) {
+	      iRow=row[j];
+	      double value = fabs(elementByColumn[j]);
+	      // Don't bother with tiny elements
+	      if (value>1.0e-30&&usefulRow[iRow]) {
+		value *= rowScale[iRow];
+		largest = max(largest,value);
+		smallest = min(smallest,value);
+	      }
+	    }
+#ifdef USE_OBJECTIVE
+	    if (fabs(objective[iColumn])>1.0e-30) {
+	      double value = fabs(objective[iColumn])*objScale;
+	      largest = max(largest,value);
+	      smallest = min(smallest,value);
+	    }
+#endif
+	    columnScale[iColumn]=1.0/sqrt(smallest*largest);
+	  }
 	}
       }
+#ifdef USE_OBJECTIVE
+      delete [] objective;
+      printf("obj scale %g - use it if you want\n",objScale);
+#endif
     }
-    // final pass to scale columns so largest is 1.0
-    overallLargest=0.0;
+    // final pass to scale columns so largest is reasonable
+    // See what smallest will be if largest is 1.0
     overallSmallest=1.0e50;
     for (iColumn=0;iColumn<numberColumns;iColumn++) {
       if (usefulColumn[iColumn]) {
@@ -1240,8 +1309,30 @@ ClpPackedMatrix::scale(ClpSimplex * model) const
 	    smallest = min(smallest,value);
 	  }
 	}
-	columnScale[iColumn]=1.0/largest;
-	overallLargest = max(overallLargest,largest*columnScale[iColumn]);
+	if (overallSmallest*largest>smallest)
+	  overallSmallest = smallest/largest;
+      }
+    }
+    overallLargest=1.0;
+    if (overallSmallest<1.0e-3)
+      overallLargest = 1.0/sqrt(overallSmallest);
+    overallLargest = min(1000.0,overallLargest);
+    overallSmallest=1.0e50;
+    for (iColumn=0;iColumn<numberColumns;iColumn++) {
+      if (usefulColumn[iColumn]) {
+	CoinBigIndex j;
+	largest=1.0e-20;
+	smallest=1.0e50;
+	for (j=columnStart[iColumn];
+	     j<columnStart[iColumn]+columnLength[iColumn];j++) {
+	  iRow=row[j];
+	  if(elementByColumn[j]&&usefulRow[iRow]) {
+	    double value = fabs(elementByColumn[j]*rowScale[iRow]);
+	    largest = max(largest,value);
+	    smallest = min(smallest,value);
+	  }
+	}
+	columnScale[iColumn]=overallLargest/largest;
 	overallSmallest = min(overallSmallest,smallest*columnScale[iColumn]);
       }
     }
@@ -1249,7 +1340,6 @@ ClpPackedMatrix::scale(ClpSimplex * model) const
       <<overallSmallest
       <<overallLargest
       <<CoinMessageEol;
-    
     delete [] usefulRow;
     delete [] usefulColumn;
     // If quadratic then make symmetric

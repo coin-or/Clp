@@ -1101,10 +1101,5 @@ Idiot::IdiSolve(
   result.iteration=iter;
   result.objval-=saveOffset;
   result.weighted=result.objval+weight*result.sumSquared;
-  if ((logLevel_&1)!=0) {
-    printf("%d Final infeas %g, obj %g - wtObj %g\n",
-	       iter,result.infeas,result.objval,
-	   result.weighted);
-  }
   return result;
 }

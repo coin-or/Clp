@@ -65,7 +65,7 @@ ClpModel::ClpModel () :
 
   strParam_[ClpProbName] = "ClpDefaultName";
   handler_ = new CoinMessageHandler();
-  handler_->setLogLevel(2);
+  handler_->setLogLevel(1);
   messages_ = ClpMessage();
 }
 

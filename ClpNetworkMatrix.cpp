@@ -369,7 +369,22 @@ ClpNetworkMatrix::transposeTimes(const ClpSimplex * model, double scalar,
   ClpPlusMinusOneMatrix* rowCopy =
     dynamic_cast< ClpPlusMinusOneMatrix*>(model->rowCopy());
   bool packed = rowArray->packedMode();
-  if (numberInRowArray>0.3*numberRows||!rowCopy) {
+  double factor = 0.3;
+  // We may not want to do by row if there may be cache problems
+  int numberColumns = model->numberColumns();
+  // It would be nice to find L2 cache size - for moment 512K
+  // Be slightly optimistic
+  if (numberColumns*sizeof(double)>1000000) {
+    if (numberRows*10<numberColumns)
+      factor=0.1;
+    else if (numberRows*4<numberColumns)
+      factor=0.15;
+    else if (numberRows*2<numberColumns)
+      factor=0.2;
+    if (model->numberIterations()%50==0)
+      printf("%d nonzero\n",numberInRowArray);
+  }
+  if (numberInRowArray>factor*numberRows||!rowCopy) {
     // do by column
     int iColumn;
     assert (!y->getNumElements());

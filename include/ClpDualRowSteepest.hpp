@@ -61,12 +61,13 @@ public:
   ///@name Constructors and destructors
   //@{
   /** Default Constructor 
-      0 is uninitialized, 1 full, 2 is partial uninitialized.
+      0 is uninitialized, 1 full, 2 is partial uninitialized,
+      3 starts as 2 but may switch to 1.
       By partial is meant that the weights are updated as normal
       but only part of the infeasible basic variables are scanned.  
       This can be faster on very easy problems.
   */
-  ClpDualRowSteepest(int mode=0); 
+  ClpDualRowSteepest(int mode=3); 
   
   /// Copy constructor 
   ClpDualRowSteepest(const ClpDualRowSteepest &);
@@ -99,7 +100,7 @@ private:
   */
   int state_;
   /** If 0 then we are using uninitialized weights, 1 then full,
-      if 2 then uninitialized partial */
+      if 2 then uninitialized partial, 3 switchable */
   int mode_;
   /// weight array 
   double * weights_;

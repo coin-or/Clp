@@ -9,8 +9,10 @@
 #include "ClpPresolve.hpp"
 #include "Idiot.hpp"
 #include "CoinHelperFunctions.hpp"
+#include "CoinMessageHandler.hpp"
 // Redefine stuff for Clp
 #ifdef CLP_IDIOT
+#include "ClpMessage.hpp"
 #define OsiObjOffset ClpObjOffset
 #endif
 /**** strategy 4 - drop, exitDrop and djTolerance all relative:
@@ -104,7 +106,7 @@ Idiot::dropping(IdiotResult result,
   return slackStart;
 }
 void
-Idiot::crash(int numberPass)
+Idiot::crash(int numberPass, CoinMessageHandler * handler,const CoinMessages *messages)
 {
   // lightweight options
   int numberColumns = model_->getNumCols();
@@ -127,8 +129,8 @@ Idiot::crash(int numberPass)
     majorIterations_=(int)(2+log10((double)(numberColumns+1)));
   else
     majorIterations_=numberPass;
-  printf("setting mu to %g and doing %d passes\n",mu_,majorIterations_);
-  solve2();
+  //printf("setting mu to %g and doing %d passes\n",mu_,majorIterations_);
+  solve2(handler,messages);
 #ifdef CLP_IDIOT
   crossOver(3); // make basis ?
 #endif
@@ -136,14 +138,14 @@ Idiot::crash(int numberPass)
 void
 Idiot::solve()
 {
-  solve2();
+  CoinMessages dummy;
+  solve2(NULL,&dummy);
 }
 void
-Idiot::solve2()
+Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
 {
   int strategy=0;
   double d2;
-  double startTime = CoinCpuTime();
   int i,n;
   int allOnes=1;
   int iteration=0;
@@ -153,6 +155,14 @@ Idiot::solve2()
   int maxBigIts=maxBigIts_;
   int maxIts=maxIts_;
   int logLevel=logLevel_;
+  if (handler) {
+    if (handler->logLevel()>0&&handler->logLevel()<3)
+      logLevel=1;
+    else if (!handler->logLevel())
+      logLevel=0;
+    else
+      logLevel=7;
+  }
   double djExit=djTolerance_;
   double djFlag=1.0+100.0*djExit;
   double djTol=0.00001;
@@ -245,7 +255,7 @@ Idiot::solve2()
     ordStart=0;
     ordEnd=ncols;
   }
-  if (offset) {
+  if (offset&&logLevel>2) {
     printf("** Objective offset is %g\n",offset);
   }
   /* compute reasonable solution cost */
@@ -299,11 +309,39 @@ Idiot::solve2()
   strategy=strategies[strategy];
   if ((saveStrategy&8)!=0) strategy |= 64; /* don't allow large theta */
   memcpy(saveSol,colsol,ncols*sizeof(double));
+  
   lastResult=IdiSolve(nrows,ncols,rowsol ,colsol,pi,
 		       dj,cost,rowlower,rowupper,
 		       lower,upper,elemXX,row,columnStart,columnLength,lambda,
 		       0,mu,drop,
 		       maxmin,offset,strategy,djTol,djExit,djFlag);
+  n=0;
+  for (i=ordStart;i<ordEnd;i++) {
+    if (colsol[i]>lower[i]+fixTolerance) {
+      if (colsol[i]<upper[i]-fixTolerance) {
+	n++;
+      } else {
+	colsol[i]=upper[i];
+      }
+      whenUsed[i]=iteration;
+    } else {
+      colsol[i]=lower[i];
+    }
+  }
+  if ((logLevel_&1)!=0) {
+#ifdef CLP_IDIOT
+    if (!handler) {
+#endif
+      printf("Iteration %d infeasibility %g, objective %g - mu %g, its %d, %d interior\n", 
+	     iteration,lastResult.infeas,lastResult.objval,mu,lastResult.iteration,n);
+#ifdef CLP_IDIOT
+    } else {
+      handler->message(CLP_IDIOT_ITERATION,*messages)
+	<<iteration<<lastResult.infeas<<lastResult.objval<<mu<<lastResult.iteration<<n
+	<<CoinMessageEol;
+    }
+#endif
+  }
   iterationTotal = lastResult.iteration;
   firstInfeas=lastResult.infeas;
   if ((strategy_&1024)!=0) reasonableInfeas=0.5*firstInfeas;
@@ -320,28 +358,6 @@ Idiot::solve2()
     if (lastResult.infeas<=smallInfeas&&lastResult.objval<bestFeasible) {
       bestFeasible=lastResult.objval;
     }
-    n=0;
-    for (i=ordStart;i<ordEnd;i++) {
-      if (colsol[i]>lower[i]+fixTolerance) {
-	if (colsol[i]<upper[i]-fixTolerance) {
-	  n++;
-	} else {
-	  colsol[i]=upper[i];
-	}
-	whenUsed[i]=iteration;
-      } else {
-	colsol[i]=lower[i];
-      }
-    }
-    if ((logLevel&1)!=0) {
-      printf(
-	      "Iteration %d - mu %g, drop %g, dj test %g, %d away from bounds\n",
-	      iteration,mu,drop,djExit,n);
-    } else {
-      printf(
-	      "%d - mu %g, infeasibility %g, objective %g, %d interior\n",
-	      iteration,mu,lastResult.infeas,lastResult.objval,n);
-    }
     if ((saveStrategy&4096)) strategy |=256;
     if ((saveStrategy&4)!=0&&iteration>2) {
       /* go to relative tolerances */
@@ -356,6 +372,33 @@ Idiot::solve2()
 		     lower,upper,elemXX,row,columnStart,columnLength,lambda,
 		     maxIts,mu,drop,
 		     maxmin,offset,strategy,djTol,djExit,djFlag);
+    n=0;
+    for (i=ordStart;i<ordEnd;i++) {
+      if (colsol[i]>lower[i]+fixTolerance) {
+	if (colsol[i]<upper[i]-fixTolerance) {
+	  n++;
+	} else {
+	  colsol[i]=upper[i];
+	}
+	whenUsed[i]=iteration;
+      } else {
+	colsol[i]=lower[i];
+      }
+    }
+    if ((logLevel_&1)!=0) {
+#ifdef CLP_IDIOT
+      if (!handler) {
+#endif
+	printf("Iteration %d infeasibility %g, objective %g - mu %g, its %d, %d interior\n", 
+	       iteration,result.infeas,result.objval,mu,result.iteration,n);
+#ifdef CLP_IDIOT
+      } else {
+	handler->message(CLP_IDIOT_ITERATION,*messages)
+	  <<iteration<<result.infeas<<result.objval<<mu<<result.iteration<<n
+	  <<CoinMessageEol;
+      }
+#endif
+    }
     keepinfeas = result.infeas;
     lastWeighted=result.weighted;
     iterationTotal += result.iteration;
@@ -491,7 +534,8 @@ Idiot::solve2()
       }
     }
     if (iteration>=majorIterations_) {
-      printf("Exiting due to number of major iterations\n");
+      if (logLevel>2) 
+	printf("Exiting due to number of major iterations\n");
       break;
     }
   }
@@ -559,7 +603,8 @@ Idiot::solve2()
 	  large=diff;
       } 
     }
-    printf("largest infeasibility is %g\n",large);
+    if (logLevel>2)
+      printf("largest infeasibility is %g\n",large);
   }
   /* subtract out lambda */
   for (i=0;i<nrows;i++) {
@@ -602,7 +647,6 @@ Idiot::solve2()
   delete [] colsol;
   delete [] pi;
   delete [] dj;
-  printf("Idiot took %g seconds\n", CoinCpuTime()-startTime);
   return ;
 }
 #ifdef CLP_IDIOT

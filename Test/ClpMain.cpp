@@ -13,7 +13,7 @@
 
 #include "CoinPragma.hpp"
 #include "CoinHelperFunctions.hpp"
-#define CLPVERSION "0.98.1"
+#define CLPVERSION "0.98.5"
 
 #include "CoinMpsIO.hpp"
 
@@ -26,11 +26,8 @@
 #include "ClpDualRowDantzig.hpp"
 #include "ClpPrimalColumnSteepest.hpp"
 #include "ClpPrimalColumnDantzig.hpp"
-
 #include "ClpPresolve.hpp"
-#ifdef CLP_IDIOT
-#include "Idiot.hpp"
-#endif
+
 // For Branch and bound
 //  #include "OsiClpSolverInterface.hpp"
 //  #include "OsiCuts.hpp"
@@ -56,10 +53,10 @@ enum ClpParameterType {
   
   DUALTOLERANCE=1,PRIMALTOLERANCE,DUALBOUND,PRIMALWEIGHT,MAXTIME,OBJSCALE,
 
-  LOGLEVEL=101,MAXFACTOR,PERTURBATION,MAXITERATION,PRESOLVEPASS,IDIOT,
+  LOGLEVEL=101,MAXFACTOR,PERTVALUE,MAXITERATION,PRESOLVEPASS,IDIOT,
   
   DIRECTION=201,DUALPIVOT,SCALING,ERRORSALLOWED,KEEPNAMES,SPARSEFACTOR,
-  PRIMALPIVOT,PRESOLVE,CRASH,BIASLU,
+  PRIMALPIVOT,PRESOLVE,CRASH,BIASLU,PERTURBATION,
   
   DIRECTORY=301,IMPORT,EXPORT,RESTORE,SAVE,DUALSIMPLEX,PRIMALSIMPLEX,
   MAXIMIZE,MINIMIZE,EXIT,STDIN,UNITTEST,NETLIB_DUAL,NETLIB_PRIMAL,SOLUTION,
@@ -525,7 +522,7 @@ ClpItem::setIntParameter (ClpSimplex * model,int value) const
     case DIRECTION:
       model->setOptimizationDirection(value);
       break;
-    case PERTURBATION:
+    case PERTVALUE:
       model->setPerturbation(value);
       break;
     case MAXITERATION:
@@ -559,7 +556,7 @@ ClpItem::intParameter (ClpSimplex * model) const
 	value=0;
     }
     break;
-  case PERTURBATION:
+  case PERTVALUE:
     value=model->perturbation();
     break;
   case MAXITERATION:
@@ -574,14 +571,6 @@ ClpItem::intParameter (ClpSimplex * model) const
 #ifdef READLINE     
 #include <readline/readline.h>
 #include <readline/history.h>
-#include <signal.h>
-static ClpSimplex * currentModel = NULL;
-static void signal_handler(int whichSignal)
-{
-  if (currentModel!=NULL) 
-    currentModel->setMaximumIterations(0); // stop at next iterations
-  return;
-}
 #endif
 // Returns next valid field
 static int read_mode=1;
@@ -788,9 +777,10 @@ gap between bounds exceeds this value",
 	      1.0e-20,1.0e12,DUALBOUND);
     parameters[numberParameters++]=
       ClpItem("dualP!ivot","Dual pivot choice algorithm",
-	      "steep!est",DUALPIVOT);
+	      "auto!matic",DUALPIVOT);
     parameters[numberParameters-1].append("dant!zig");
     parameters[numberParameters-1].append("partial");
+    parameters[numberParameters-1].append("steep!est");
     parameters[numberParameters++]=
       ClpItem("dualS!implex","Do dual simplex algorithm",
 	      DUALSIMPLEX);
@@ -856,8 +846,12 @@ stopping",
       ClpItem("passP!resolve","How many passes in presolve",
 	      0,100,PRESOLVEPASS);
     parameters[numberParameters++]=
-      ClpItem("pert!urbation","Method of perturbation",
-	      -5000,102,PERTURBATION);
+      ClpItem("pertV!alue","Method of perturbation",
+	      -5000,102,PERTVALUE,false);
+    parameters[numberParameters++]=
+      ClpItem("perturb!ation","Whether to perturb problem",
+	      "on",PERTURBATION);
+    parameters[numberParameters-1].append("off");
     parameters[numberParameters++]=
       ClpItem("plus!Minus","Tries to make +- 1 matrix",
 	      PLUSMINUS);
@@ -865,6 +859,7 @@ stopping",
       ClpItem("presolve","Whether to presolve problem",
 	      "on",PRESOLVE);
     parameters[numberParameters-1].append("off");
+    parameters[numberParameters-1].append("more");
     parameters[numberParameters++]=
       ClpItem("primalP!ivot","Primal pivot choice algorithm",
 	      "steep!est",PRIMALPIVOT);
@@ -928,11 +923,6 @@ costs this much to be infeasible",
     ClpSimplex * models = new ClpSimplex[1];
     bool * goodModels = new bool[1];
     int getNewMatrix=0;
-#ifdef READLINE     
-    currentModel = models;
-    // register signal handler
-    signal(SIGINT,signal_handler);
-#endif
     
     // default action on import
     int allowImportErrors=0;
@@ -943,7 +933,7 @@ costs this much to be infeasible",
     goodModels[0]=false;
     // set reasonable defaults
     int preSolve=5;
-    models->setPerturbation(53);
+    models->setPerturbation(50);
     //models[0].scaling(1);
     //models[0].setDualBound(1.0e6);
     //models[0].setDualTolerance(1.0e-7);
@@ -954,6 +944,8 @@ costs this much to be infeasible",
     //models[0].setPrimalColumnPivotAlgorithm(steepP);
     std::string directory ="./";
     std::string field;
+    std::cout<<"Coin LP version "<<CLPVERSION
+	     <<", build "<<__DATE__<<std::endl;
     
     while (1) {
       // next command
@@ -971,7 +963,7 @@ costs this much to be infeasible",
 	    <<std::endl
 	    <<"Enter ? for list of commands, (-)unitTest or (-)netlib"
 	    <<" for tests"<<std::endl;
-	  break;
+	  field="-";
 	} else {
 	  break;
 	}
@@ -1083,14 +1075,17 @@ costs this much to be infeasible",
 	      break;
 	    case DUALPIVOT:
 	      if (action==0) {
-		ClpDualRowSteepest steep;
+		ClpDualRowSteepest steep(3);
 		models[iModel].setDualRowPivotAlgorithm(steep);
 	      } else if (action==1) {
 		ClpDualRowDantzig dantzig;
 		models[iModel].setDualRowPivotAlgorithm(dantzig);
-	      } else {
+	      } else if (action==2) {
 		// partial steep
 		ClpDualRowSteepest steep(2);
+		models[iModel].setDualRowPivotAlgorithm(steep);
+	      } else {
+		ClpDualRowSteepest steep;
 		models[iModel].setDualRowPivotAlgorithm(steep);
 	      }
 	      break;
@@ -1115,6 +1110,12 @@ costs this much to be infeasible",
 	    case BIASLU:
 	      models[iModel].factorization()->setBiasLU(action);
 	      break;
+	    case PERTURBATION:
+	      if (action==0)
+		models[iModel].setPerturbation(50);
+	      else
+		models[iModel].setPerturbation(100);
+	      break;
 	    case ERRORSALLOWED:
 	      allowImportErrors = action;
 	      break;
@@ -1122,7 +1123,12 @@ costs this much to be infeasible",
 	      keepImportNames = 1-action;
 	      break;
 	    case PRESOLVE:
-	      preSolve = (1-action)*5;
+	      if (action==0)
+		preSolve = 5;
+	      else if (action==1)
+		preSolve=0;
+	      else
+		preSolve=10;
 	      break;
 	    case CRASH:
 	      doIdiot=-1;
@@ -1139,184 +1145,29 @@ costs this much to be infeasible",
 	  case DUALSIMPLEX:
 	  case PRIMALSIMPLEX:
 	    if (goodModels[iModel]) {
-	      int saveMaxIterations = models[iModel].maximumIterations();
-	      int finalStatus=-1;
-	      int numberIterations=0;
-	      time1 = CoinCpuTime();
-	      ClpMatrixBase * saveMatrix=NULL;
+	      ClpSimplex::SolveType method;
+	      ClpSimplex::PresolveType presolveType;
 	      ClpSimplex * model2 = models+iModel;
-	      ClpPresolve pinfo;
-	      double timePresolve=0.0;
-	      if (preSolve) {
-		model2 = pinfo.presolvedModel(models[iModel],1.0e-8,
-					      false,preSolve,true);
-		timePresolve = CoinCpuTime()-time1;
-		
-		std::cout<<"Presolve took "<<timePresolve<<" seconds"<<std::endl;
-		if (model2) {
-		  //model2->checkSolution();
-		  if (type==DUALSIMPLEX) {
-		    int numberInfeasibilities = model2->tightenPrimalBounds();
-		    if (numberInfeasibilities) {
-		      std::cout<<"** Analysis indicates model infeasible"
-			       <<std::endl;
-		      model2 = models+iModel;
-		      preSolve=0;
-		    }
-		  }
-#ifdef READLINE     
-		currentModel = model2;
-#endif
-		} else {
-		  std::cout<<"** Analysis indicates model infeasible"
-			   <<std::endl;
-		  model2 = models+iModel;
-		  preSolve=0;
-		}
-	      }
-	      if (getNewMatrix) {
-		saveMatrix = model2->clpMatrix();
-		ClpPackedMatrix* clpMatrix =
-		  dynamic_cast< ClpPackedMatrix*>(saveMatrix);
-		if (clpMatrix) {
-		  if (getNewMatrix==1) {
-		    ClpPlusMinusOneMatrix * newMatrix = new ClpPlusMinusOneMatrix(*(clpMatrix->matrix()));
-		    if (newMatrix->getIndices()) {
-		      std::cout<<"** Matrix is valid +- one"<<std::endl;
-		      model2->replaceMatrix(newMatrix);
-		    } else {
-		      std::cout<<"** Matrix is NOT valid +- one"<<std::endl;
-		      saveMatrix=NULL;
-		      delete newMatrix;
-		    }
-		  } else if (getNewMatrix==2) {
-		    ClpNetworkMatrix * newMatrix = new ClpNetworkMatrix(*(clpMatrix->matrix()));
-		    if (newMatrix->getIndices()) {
-		      std::cout<<"** Matrix is valid network"<<std::endl;
-		      model2->replaceMatrix(newMatrix);
-		    } else {
-		      std::cout<<"** Matrix is NOT valid network"<<std::endl;
-		      saveMatrix=NULL;
-		      delete newMatrix;
-		    }
-		  }
-		} else {
-		  saveMatrix=NULL;
-		}
-	      }
-	      if (model2->factorizationFrequency()==200) {
-		// User did not touch preset
-		model2->setFactorizationFrequency(100+model2->numberRows()/100);
-	      }
-	      if (type==DUALSIMPLEX) {
-		if (doIdiot==-1)
-		  model2->crash(1000,1);
-		//int status =model2->saveModel("xx.save");
-		model2->dual();
-		//int status =model2->saveModel("xx.save");
-	      } else {
-#ifdef CLP_IDIOT
-		if (doIdiot==-2||doIdiot>0) {
-		  if (doIdiot==-2) {
-		    int numberColumns = model2->numberColumns();
-		    int numberRows = model2->numberRows();
-		    if (numberRows>2000&&numberColumns>2*numberRows) {
-		      ClpPackedMatrix* clpMatrix =
-			dynamic_cast< ClpPackedMatrix*>(model2->clpMatrix());
-		      if (clpMatrix) {
-			ClpPlusMinusOneMatrix * newMatrix = new ClpPlusMinusOneMatrix(*(clpMatrix->matrix()));
-			if (newMatrix->getIndices()) {
-			  saveMatrix = model2->clpMatrix();
-			  std::cout<<"** Matrix is valid +- one"<<std::endl;
-			  model2->replaceMatrix(newMatrix);
-			  int nPasses = 10+numberColumns/1000;
-			  nPasses = min(nPasses,100);
-			  Idiot info(*model2);
-			  info.crash(nPasses);
-			} else {
-			  delete newMatrix;
-			  int nPasses = 10+numberColumns/100000;
-			  if (numberColumns>4*numberRows) 
-			    nPasses = min(nPasses,50);
-			  else
-			    nPasses=5;
-			  Idiot info(*model2);
-			  info.crash(nPasses);
-			}
-		      } else {
-			ClpPlusMinusOneMatrix* clpMatrix =
-			  dynamic_cast< ClpPlusMinusOneMatrix*>(model2->clpMatrix());
-			if (clpMatrix) {
-			  int nPasses = 10+numberColumns/1000;
-			  nPasses = min(nPasses,100);
-			  Idiot info(*model2);
-			  info.crash(nPasses);
-			} else {
-			  int nPasses = 10+numberColumns/100000;
-			  if (numberColumns>4*numberRows) 
-			    nPasses = min(nPasses,50);
-			  else
-			    nPasses=5;
-			  Idiot info(*model2);
-			  info.crash(nPasses);
-			}
-		      }
-		    }
-		  } else {
-		    Idiot info(*model2);
-		    info.crash(doIdiot);
-		  }
-		}
-#endif
-		int savePerturbation = model2->perturbation();
-		if (savePerturbation==53)
-		  model2->setPerturbation(100);
-		model2->primal(1);
-		model2->setPerturbation(savePerturbation);
-	      }
-	      if (saveMatrix) {
-		// delete and replace
-		delete model2->clpMatrix();
-		model2->replaceMatrix(saveMatrix);
-	      }
-	      numberIterations = model2->numberIterations();
-	      finalStatus=model2->status();
-	      if (preSolve) {
-		double timeX=CoinCpuTime();
-		pinfo.postsolve(true);
-		timePresolve += CoinCpuTime()-timeX;
-
-		delete model2;
-
-#ifdef READLINE     
-		currentModel = models+iModel;
-#endif
-		models[iModel].checkSolution();
-		if (finalStatus&&finalStatus!=3) {
-		  printf("Resolving from postsolved model\n");
-		  
-		  int savePerturbation = models[iModel].perturbation();
-		  models[iModel].setPerturbation(100);
-		  models[iModel].primal(1);
-		  models[iModel].setPerturbation(savePerturbation);
-		  numberIterations += models[iModel].numberIterations();
-		  finalStatus=models[iModel].status();
-		}
-	      }
-	      models[iModel].setMaximumIterations(saveMaxIterations);
-	      time2 = CoinCpuTime();
-	      totalTime += time2-time1;
-	      std::cout<<"Result "<<finalStatus<<
-		" - "<<models[iModel].objectiveValue()<<
-		" iterations "<<numberIterations<<
-		" took "<<time2-time1<<" seconds - total "<<totalTime;
-	      if (preSolve)
-		std::cout<<" (Presolve took "<<timePresolve<<")";
-	      std::cout<<std::endl;
-	      if (finalStatus)
-		std::cerr<<"Non zero status "<<finalStatus<<
-		  std::endl;
-	      time1=time2;
+	      if (preSolve>5)
+		presolveType=ClpSimplex::presolveMaximum;
+	      else if (preSolve)
+		presolveType=ClpSimplex::presolveOn;
+	      else
+		presolveType=ClpSimplex::presolveOff;
+	      if (type==DUALSIMPLEX)
+		method=ClpSimplex::useDual;
+	      else
+		method=ClpSimplex::usePrimal;
+	      int option=0;
+	      if (model2->perturbation()==100||method==ClpSimplex::usePrimal) 
+		option |= 1;
+	      if (!model2->scalingFlag()) 
+		option |= 2;
+	      if (doIdiot==-1)
+		option |=4;
+	      if (doIdiot==0)
+		option |= 8;
+	      model2->initialSolve(method,presolveType,option);
 	    } else {
 	      std::cout<<"** Current model not valid"<<std::endl;
 	    }
@@ -1660,8 +1511,13 @@ costs this much to be infeasible",
 		     <<", build "<<__DATE__<<std::endl;
 	    std::cout<<"Non default values:-"<<std::endl;
 	    std::cout<<"Perturbation "<<models[0].perturbation()
-		     <<" (default 100), Presolve being done with 5 passes"<<std::endl;
-	    break;
+		     <<" (default 100), Presolve being done with 5 passes"
+		     <<std::endl;
+	    std::cout <<"Dual steepest edge steep/partial on matrix shape"
+		      <<std::endl;
+	    std::cout <<"If Factorization frequency default then done on size of matrix"
+		      <<std::endl;
+  	    break;
 	  case SOLUTION:
 	    if (goodModels[iModel]) {
 	      // get next field

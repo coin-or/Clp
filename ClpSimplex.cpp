@@ -1928,8 +1928,15 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
 {
   bool goodMatrix=true;
   int saveLevel=handler_->logLevel();
-  if (problemStatus_==10)
+  if (problemStatus_==10) {
     handler_->setLogLevel(0); // switch off messages
+  } else if (factorization_) {
+    // match up factorization messages
+    if (handler_->logLevel()<3)
+      factorization_->messageLevel(0);
+    else
+      factorization_->messageLevel(3);
+  }
   int i;
   if ((what&(16+32))!=0) {
     // move information to work arrays
@@ -2286,7 +2293,7 @@ ClpSimplex::transposeTimes(double scalar,
 void 
 ClpSimplex::setPerturbation(int value)
 {
-  if(value<=100&&value >=-50) {
+  if(value<=100&&value >=-1000) {
     perturbation_=value;
   } 
 }
@@ -4185,7 +4192,7 @@ ClpSimplex::startup(int ifValuesPass)
     // Switch off dense
     int saveThreshold = factorization_->denseThreshold();
     factorization_->setDenseThreshold(0);
-
+#if 0
     // do perturbation if asked for
 
     if (perturbation_<100) {
@@ -4195,6 +4202,7 @@ ClpSimplex::startup(int ifValuesPass)
 	((ClpSimplexDual *) this)->perturb();
       }
     }
+#endif
     // for primal we will change bounds using infeasibilityCost_
     if (nonLinearCost_==NULL&&algorithm_>0) {
       // get a valid nonlinear cost function

@@ -287,7 +287,7 @@ int mainTest (int argc, const char *argv[],bool doDual,
 #ifdef CLP_IDIOT
 	  if (doIdiot>0) {
 	    Idiot info(*model2);
-	    info.crash(doIdiot);
+	    info.crash(doIdiot,model2->messageHandler(),model2->messagesPointer());
 	  }
 #endif
 	  model2->primal(1);
@@ -346,7 +346,7 @@ int mainTest (int argc, const char *argv[],bool doDual,
 #ifdef CLP_IDIOT
 	  if (doIdiot>0) {
 	    Idiot info(solution);
-	    info.crash(doIdiot);
+	    info.crash(doIdiot,solution.messageHandler(),solution.messagesPointer());
 	  }
 #endif
 	  solution.primal(1);

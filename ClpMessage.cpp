@@ -21,13 +21,13 @@ static Clp_message us_english[]=
   {CLP_DUAL_BOUNDS,25,3,"Looking optimal checking bounds with %g"},
   {CLP_SIMPLEX_ACCURACY,6,3,"Primal error %g, dual error %g"},
   {CLP_SIMPLEX_BADFACTOR,7,1,"Singular factorization of basis - status %d"},
-  {CLP_SIMPLEX_BOUNDTIGHTEN,8,1,"Bounds were tightened %d times"},
+  {CLP_SIMPLEX_BOUNDTIGHTEN,8,3,"Bounds were tightened %d times"},
   {CLP_SIMPLEX_INFEASIBILITIES,9,1,"%d infeasibilities"},
   {CLP_SIMPLEX_FLAG,10,3,"Flagging variable %c%d"},
   {CLP_SIMPLEX_GIVINGUP,11,2,"Stopping as close enough"},
   {CLP_DUAL_CHECKB,12,2,"New dual bound of %g"},
   {CLP_DUAL_ORIGINAL,13,3,"Going back to original objective"},
-  {CLP_SIMPLEX_PERTURB,14,1,"Perturbing problem by %g"},
+  {CLP_SIMPLEX_PERTURB,14,1,"Perturbing problem by %g %% of %g - largest change %g (%% %g) - largest zero change %g"},
   {CLP_PRIMAL_ORIGINAL,15,2,"Going back to original tolerance"},
   {CLP_PRIMAL_WEIGHT,16,2,"New infeasibility weight of %g"},
   {CLP_PRIMAL_OPTIMAL,17,2,"Looking optimal with tolerance of %g"},
@@ -62,6 +62,11 @@ static Clp_message us_english[]=
   {CLP_END_VALUES_PASS,29,1,"End of values pass after %d iterations"},
   {CLP_QUADRATIC_BOTH,108,32,"%s %d (%g) and %d (%g) both basic"},
   {CLP_QUADRATIC_PRIMAL_DETAILS,109,32,"coeff %g, %g, %g - dj %g - deriv zero at %g, sj at %g"},
+  {CLP_IDIOT_ITERATION,30,1,"%d infeas %g, obj %g - mu %g, its %d, %d interior"}, 
+  {CLP_INFEASIBLE,3003,1,"Analysis indicates model infeasible"}, 
+  {CLP_MATRIX_CHANGE,31,1,"Matrix can not be converted into %s"}, 
+  {CLP_TIMING,32,1,"%s objective %.9g - %d iterations time %.2f2%?, Presolve %.2f%?, Idiot %.2f%?"}, 
+  {CLP_INTERVAL_TIMING,33,2,"%s took %.2f seconds (total %.2f)"}, 
   {CLP_DUMMY_END,999999,0,""}
 };
 static Clp_message uk_english[]=
