@@ -257,6 +257,39 @@ Presolve::presolvedModel(ClpSimplex & si,
     result =0; 
 
     if (prob.status_==0&&paction_) {
+      // Looks feasible but double check to see if anything slipped through
+      int n		= prob.ncols_;
+      double * lo = prob.clo_;
+      double * up = prob.cup_;
+      int i;
+      
+      for (i=0;i<n;i++) {
+	if (up[i]<lo[i]) {
+	  if (up[i]<lo[i]-1.0e-8) {
+	    // infeasible
+	    prob.status_=1;
+	  } else {
+	    up[i]=lo[i];
+	  }
+	}
+      }
+      
+      n = prob.nrows_;
+      lo = prob.rlo_;
+      up = prob.rup_;
+
+      for (i=0;i<n;i++) {
+	if (up[i]<lo[i]) {
+	  if (up[i]<lo[i]-1.0e-8) {
+	    // infeasible
+	    prob.status_=1;
+	  } else {
+	    up[i]=lo[i];
+	  }
+	}
+      }
+    }
+    if (prob.status_==0&&paction_) {
       // feasible
     
       prob.update_model(*presolvedModel_, nrows_, ncols_, nelems_);

@@ -23,7 +23,8 @@
 //-------------------------------------------------------------------
 ClpPackedMatrix::ClpPackedMatrix () 
   : ClpMatrixBase(),
-    matrix_(NULL)
+    matrix_(NULL),
+    zeroElements_(false)
 {
   setType(1);
 }
@@ -35,6 +36,7 @@ ClpPackedMatrix::ClpPackedMatrix (const ClpPackedMatrix & rhs)
 : ClpMatrixBase(rhs)
 {  
   matrix_ = new CoinPackedMatrix(*(rhs.matrix_));
+  zeroElements_ = rhs.zeroElements_;
   
 }
 
@@ -45,6 +47,7 @@ ClpPackedMatrix::ClpPackedMatrix (CoinPackedMatrix * rhs)
 : ClpMatrixBase()
 {  
   matrix_ = rhs;
+  zeroElements_ = false;
   setType(1);
   
 }
@@ -53,6 +56,7 @@ ClpPackedMatrix::ClpPackedMatrix (const CoinPackedMatrix & rhs)
 : ClpMatrixBase()
 {  
   matrix_ = new CoinPackedMatrix(rhs);
+  zeroElements_ = false;
   setType(1);
   
 }
@@ -75,6 +79,7 @@ ClpPackedMatrix::operator=(const ClpPackedMatrix& rhs)
     ClpMatrixBase::operator=(rhs);
     delete matrix_;
     matrix_ = new CoinPackedMatrix(*(rhs.matrix_));
+    zeroElements_ = rhs.zeroElements_;
   }
   return *this;
 }
@@ -570,9 +575,24 @@ ClpPackedMatrix::numberInBasis(const int * columnIsBasic) const
   int numberColumns = getNumCols();
   const int * columnLength = matrix_->getVectorLengths(); 
   CoinBigIndex numberElements=0;
-  for (i=0;i<numberColumns;i++) {
-    if (columnIsBasic[i]>=0) {
-      numberElements += columnLength[i];
+  if (!zeroElements_) {
+    for (i=0;i<numberColumns;i++) {
+      if (columnIsBasic[i]>=0) {
+	numberElements += columnLength[i];
+      }
+    }
+  } else {
+    // there are zero elements so need to look more closely
+    const CoinBigIndex * columnStart = matrix_->getVectorStarts();
+    const double * elementByColumn = matrix_->getElements();
+    for (i=0;i<numberColumns;i++) {
+      if (columnIsBasic[i]>=0) {
+	CoinBigIndex j;
+	for (j=columnStart[i];j<columnStart[i]+columnLength[i];j++) {
+	  if (elementByColumn[j])
+	    numberElements++;
+	}
+      }
     }
   }
   return numberElements;
@@ -592,33 +612,73 @@ ClpPackedMatrix::fillBasis(const ClpSimplex * model,
   int i;
   int numberColumns = getNumCols();
   CoinBigIndex numberElements=0;
-  if (!rowScale) {
-    // no scaling
-    for (i=0;i<numberColumns;i++) {
-      if (columnIsBasic[i]>=0) {
-	CoinBigIndex j;
-	for (j=columnStart[i];j<columnStart[i]+columnLength[i];j++) {
-	  indexRowU[numberElements]=row[j];
-	  indexColumnU[numberElements]=numberBasic;
-	  elementU[numberElements++]=elementByColumn[j];
+  if (!zeroElements_) {
+    if (!rowScale) {
+      // no scaling
+      for (i=0;i<numberColumns;i++) {
+	if (columnIsBasic[i]>=0) {
+	  CoinBigIndex j;
+	  for (j=columnStart[i];j<columnStart[i]+columnLength[i];j++) {
+	    indexRowU[numberElements]=row[j];
+	    indexColumnU[numberElements]=numberBasic;
+	    elementU[numberElements++]=elementByColumn[j];
+	  }
+	  numberBasic++;
 	}
-	numberBasic++;
+      }
+    } else {
+      // scaling
+      const double * columnScale = model->columnScale();
+      for (i=0;i<numberColumns;i++) {
+	if (columnIsBasic[i]>=0) {
+	  CoinBigIndex j;
+	  double scale = columnScale[i];
+	  for (j=columnStart[i];j<columnStart[i]+columnLength[i];j++) {
+	    int iRow = row[j];
+	    indexRowU[numberElements]=iRow;
+	    indexColumnU[numberElements]=numberBasic;
+	    elementU[numberElements++]=elementByColumn[j]*scale*rowScale[iRow];
+	  }
+	  numberBasic++;
+	}
       }
     }
   } else {
-    // scaling
-    const double * columnScale = model->columnScale();
-    for (i=0;i<numberColumns;i++) {
-      if (columnIsBasic[i]>=0) {
-	CoinBigIndex j;
-	double scale = columnScale[i];
-	for (j=columnStart[i];j<columnStart[i]+columnLength[i];j++) {
-	  int iRow = row[j];
-	  indexRowU[numberElements]=iRow;
-	  indexColumnU[numberElements]=numberBasic;
-	  elementU[numberElements++]=elementByColumn[j]*scale*rowScale[iRow];
+    // there are zero elements so need to look more closely
+    if (!rowScale) {
+      // no scaling
+      for (i=0;i<numberColumns;i++) {
+	if (columnIsBasic[i]>=0) {
+	  CoinBigIndex j;
+	  for (j=columnStart[i];j<columnStart[i]+columnLength[i];j++) {
+	    double value = elementByColumn[j];
+	    if (value) {
+	      indexRowU[numberElements]=row[j];
+	      indexColumnU[numberElements]=numberBasic;
+	      elementU[numberElements++]=value;
+	    }
+	  }
+	  numberBasic++;
 	}
-	numberBasic++;
+      }
+    } else {
+      // scaling
+      const double * columnScale = model->columnScale();
+      for (i=0;i<numberColumns;i++) {
+	if (columnIsBasic[i]>=0) {
+	  CoinBigIndex j;
+	  double scale = columnScale[i];
+	  for (j=columnStart[i];j<columnStart[i]+columnLength[i];j++) {
+	    double value = elementByColumn[j];
+	    if (value) {
+	      int iRow = row[j];
+	      indexRowU[numberElements]=iRow;
+	      indexColumnU[numberElements]=numberBasic;
+	      elementU[numberElements++]=value*scale*rowScale[iRow];
+	    }
+	  }
+	  numberBasic++;
+	}
       }
     }
   }
@@ -733,9 +793,13 @@ ClpPackedMatrix::scale(ClpSimplex * model) const
 	  for (j=rowStart[iRow];j<rowStart[iRow+1];j++) {
 	    int iColumn = column[j];
 	    if (usefulColumn[iColumn]) {
-	      double value = fabs(element[j]*columnScale[iColumn]);
-	      largest = max(largest,value);
-	      smallest = min(smallest,value);
+	      double value = fabs(element[j]);
+	      // Don't bother with tiny elements
+	      if (value>1.0e-30) {
+		value *= columnScale[iColumn];
+		largest = max(largest,value);
+		smallest = min(smallest,value);
+	      }
 	    }
 	  }
 	  rowScale[iRow]=1.0/sqrt(smallest*largest);
@@ -759,8 +823,10 @@ ClpPackedMatrix::scale(ClpSimplex * model) const
 	  for (j=columnStart[iColumn];
 	       j<columnStart[iColumn]+columnLength[iColumn];j++) {
 	    iRow=row[j];
-	    if(elementByColumn[j]&&usefulRow[iRow]) {
-	      double value = fabs(elementByColumn[j]*rowScale[iRow]);
+	    double value = fabs(elementByColumn[j]);
+	    // Don't bother with tiny elements
+	    if (value>1.0e-30&&usefulRow[iRow]) {
+	      value *= rowScale[iRow];
 	      largest = max(largest,value);
 	      smallest = min(smallest,value);
 	    }
@@ -925,6 +991,8 @@ ClpPackedMatrix::allElementsInRange(ClpSimplex * model,
 	numberDuplicate++;
       }
       //printf("%d %d %d %g\n",iColumn,j,row[j],elementByColumn[j]);
+      if (!value)
+	zeroElements_ = true; // there are zero elements
       if (value<smallest) {
 	numberSmall++;
       } else if (value>largest) {
@@ -963,6 +1031,9 @@ ClpPackedMatrix::allElementsInRange(ClpSimplex * model,
     matrix_->eliminateDuplicates(smallest);
   else if (numberSmall) 
     matrix_->compress(smallest);
+  // If smallest >0.0 then there can't be zero elements
+  if (smallest>0.0)
+    zeroElements_=false;
   return true;
 }
 

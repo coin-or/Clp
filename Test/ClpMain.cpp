@@ -18,7 +18,7 @@
 #include <sys/resource.h>
 #include <unistd.h>
 #endif
-#define CLPVERSION "0.94.1"
+#define CLPVERSION "0.96.1"
 
 //#include "CoinPackedMatrix.hpp"
 //#include "CoinPackedVector.hpp"
@@ -1102,28 +1102,37 @@ stopping",
 	      Presolve pinfo;
 	      if (preSolve) {
 		model2 = pinfo.presolvedModel(models[iModel],1.0e-8,false,preSolve);
-		model2->checkSolution();
+		if (model2) {
+		  model2->checkSolution();
 #ifdef CLP_DEBUG
-		printf("%g %g (%d) %g (%d)\n"
-		       ,model2->objectiveValue()
-		       ,model2->sumDualInfeasibilities()
-		       ,model2->numberDualInfeasibilities()
-		       ,model2->sumPrimalInfeasibilities()
-		       ,model2->numberPrimalInfeasibilities());
+		  printf("%g %g (%d) %g (%d)\n"
+			 ,model2->objectiveValue()
+			 ,model2->sumDualInfeasibilities()
+			 ,model2->numberDualInfeasibilities()
+			 ,model2->sumPrimalInfeasibilities()
+			 ,model2->numberPrimalInfeasibilities());
 #endif
 #if 1
-		if (type==DUALSIMPLEX) {
-		  int numberInfeasibilities = model2->tightenPrimalBounds();
-		  if (numberInfeasibilities)
-		    std::cout<<"** Analysis indicates model infeasible"
-			     <<std::endl;
-		}
+		  if (type==DUALSIMPLEX) {
+		    int numberInfeasibilities = model2->tightenPrimalBounds();
+		    if (numberInfeasibilities)
+		      std::cout<<"** Analysis indicates model infeasible"
+			       <<std::endl;
+		    model2 = models+iModel;
+		    preSolve=0;
+		  }
 #endif
-	      }
 #endif
 #ifdef READLINE     
-	      currentModel = model2;
+		currentModel = model2;
 #endif
+		} else {
+		  std::cout<<"** Analysis indicates model infeasible"
+			   <<std::endl;
+		  model2 = models+iModel;
+		  preSolve=0;
+		}
+	      }
 	      if (type==DUALSIMPLEX) {
 		if (doIdiot<0)
 		  model2->crash(1000,1);

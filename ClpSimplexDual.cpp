@@ -2327,7 +2327,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
   gutsOfSolution(rowActivityWork_,columnActivityWork_,givenDuals,NULL);
   // Check if looping
   int loop;
-  if (!givenDuals) 
+  if (!givenDuals&&type!=2) 
     loop = progress.looping();
   else
     loop=-1;

@@ -181,6 +181,8 @@ protected:
    //@{
   /// Data
   CoinPackedMatrix * matrix_;
+  /// Zero element flag - set true if any zero elements
+  bool zeroElements_;
    //@}
 };
 

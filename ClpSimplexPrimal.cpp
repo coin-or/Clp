@@ -451,7 +451,11 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
   createRim(4);
   gutsOfSolution(rowActivityWork_, columnActivityWork_,NULL,NULL);
   // Check if looping
-  int loop = progress.looping();
+  int loop;
+  if (type!=2) 
+    loop = progress.looping();
+  else
+    loop=-1;
   if (loop>=0) {
     problemStatus_ = loop; //exit if in loop
     return ;
