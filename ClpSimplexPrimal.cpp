@@ -1193,6 +1193,7 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
   double upperTheta = maximumMovement;
   if (tentativeTheta>0.5*maximumMovement)
     tentativeTheta=maximumMovement;
+  bool thetaAtMaximum=tentativeTheta==maximumMovement;
 
   double dualCheck = fabs(dualIn_);
   // but make a bit more pessimistic
@@ -1268,9 +1269,10 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
     if (upperTheta<maximumMovement&&totalThru*infeasibilityCost_>=1.0001*dualCheck) {
       // Can pivot here
       break;
-    } else if (tentativeTheta<maximumMovement) {
+    } else if (!thetaAtMaximum) {
       //printf("Going round with average theta of %g\n",averageTheta);
       tentativeTheta=maximumMovement;
+      thetaAtMaximum=true; // seems to be odd compiler error
     } else {
       break;
     }
