@@ -543,7 +543,7 @@ ClpNetworkMatrix::fillBasis(const ClpSimplex * model,
       Note that model is NOT const.  Bounds and objective could
       be modified if doing column generation */
 void 
-ClpNetworkMatrix::unpack(ClpSimplex * model,CoinIndexedVector * rowArray,
+ClpNetworkMatrix::unpack(const ClpSimplex * model,CoinIndexedVector * rowArray,
 		   int iColumn) const 
 {
   CoinBigIndex j=iColumn<<1;

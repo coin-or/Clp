@@ -429,28 +429,33 @@ ClpPlusMinusOneMatrix::transposeTimesByRow(const ClpSimplex * model, double scal
       }
     }
   } else if (numberInRowArray==2) {
-    // do by rows when two rows
-    int iRow;
+    // do by rows when two rows (do longer first)
+    int iRow0 = whichRow[0];
+    int iRow1 = whichRow[1];
+    if (startPositive[iRow0+1]-startPositive[iRow0]<
+	startPositive[iRow1+1]-startPositive[iRow1]) {
+      int temp = iRow0;
+      iRow0 = iRow1;
+      iRow1 = temp;
+    }
     int numberOriginal;
     int i;
     numberNonZero=0;
     double value;
-    iRow = whichRow[0]; 
-    value = pi[iRow]*scalar;
+    value = pi[iRow0]*scalar;
     CoinBigIndex j;
-    for (j=startPositive[iRow];j<startNegative[iRow];j++) {
+    for (j=startPositive[iRow0];j<startNegative[iRow0];j++) {
       int iColumn = column[j];
       index[numberNonZero++]=iColumn;
       array[iColumn] = value;
     }
-    for (j=startNegative[iRow];j<startPositive[iRow+1];j++) {
+    for (j=startNegative[iRow0];j<startPositive[iRow0+1];j++) {
       int iColumn = column[j];
       index[numberNonZero++]=iColumn;
       array[iColumn] = -value;
     }
-    iRow = whichRow[1]; 
-    value = pi[iRow]*scalar;
-    for (j=startPositive[iRow];j<startNegative[iRow];j++) {
+    value = pi[iRow1]*scalar;
+    for (j=startPositive[iRow1];j<startNegative[iRow1];j++) {
       int iColumn = column[j];
       double value2= array[iColumn];
       if (value2) {
@@ -461,7 +466,7 @@ ClpPlusMinusOneMatrix::transposeTimesByRow(const ClpSimplex * model, double scal
       }
       array[iColumn] = value2;
     }
-    for (j=startNegative[iRow];j<startPositive[iRow+1];j++) {
+    for (j=startNegative[iRow1];j<startPositive[iRow1+1];j++) {
       int iColumn = column[j];
       double value2= array[iColumn];
       if (value2) {
@@ -594,8 +599,9 @@ ClpPlusMinusOneMatrix::fillBasis(const ClpSimplex * model,
       Note that model is NOT const.  Bounds and objective could
       be modified if doing column generation */
 void 
-ClpPlusMinusOneMatrix::unpack(ClpSimplex * model,CoinIndexedVector * rowArray,
-		   int iColumn) const 
+ClpPlusMinusOneMatrix::unpack(const ClpSimplex * model,
+			      CoinIndexedVector * rowArray,
+			      int iColumn) const 
 {
   CoinBigIndex j=startPositive_[iColumn];
   for (;j<startNegative_[iColumn];j++) {

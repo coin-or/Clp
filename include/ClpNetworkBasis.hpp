@@ -12,6 +12,8 @@
 
 class ClpMatrixBase;
 class CoinIndexedVector;
+class ClpSimplex;
+
 /** This deals with Factorization and Updates for network structures
  */
 
@@ -24,6 +26,12 @@ public:
   //@{
   /// Default constructor
     ClpNetworkBasis (  );
+  /// Constructor from CoinFactorization
+  ClpNetworkBasis(const ClpSimplex * model,
+		  int numberRows, const double * pivotRegion,
+		  const int * permuteBack,const int * startColumn,
+		  const int * numberInColumn,
+		  const int * indexRow, const double * element);
   /// Copy constructor 
   ClpNetworkBasis ( const ClpNetworkBasis &other);
 
@@ -60,32 +68,23 @@ public:
   /**@name various uses of factorization (return code number elements) 
    which user may want to know about */
   //@{
-  /** Updates one column (FTRAN) from region2
-      number returned is negative if no room
-      region1 starts as zero and is zero at end */
-  int updateColumn ( CoinIndexedVector * regionSparse,
-		     CoinIndexedVector * regionSparse2);
+  /** Updates one column (FTRAN) from region */
+  int updateColumn ( CoinIndexedVector * regionSparse2);
   /** Updates one column (FTRAN) to/from array 
-      number returned is negative if no room
       ** For large problems you should ALWAYS know where the nonzeros
       are, so please try and migrate to previous method after you
       have got code working using this simple method - thank you!
-      (the only exception is if you know input is dense e.g. rhs)
-      region starts as zero and is zero at end */
-  int updateColumn ( CoinIndexedVector * regionSparse,
-			double array[] ) const;
+      (the only exception is if you know input is dense e.g. rhs) */
+  int updateColumn ( double array[] ) const;
   /** Updates one column transpose (BTRAN)
       ** For large problems you should ALWAYS know where the nonzeros
       are, so please try and migrate to previous method after you
       have got code working using this simple method - thank you!
       (the only exception is if you know input is dense e.g. dense objective)
       returns number of nonzeros */
-  int updateColumnTranspose ( CoinIndexedVector * regionSparse,
-				 double array[] ) const;
-  /** Updates one column (BTRAN) from region2
-      region1 starts as zero and is zero at end */
-  int updateColumnTranspose ( CoinIndexedVector * regionSparse,
-			      CoinIndexedVector * regionSparse2) const;
+  int updateColumnTranspose ( double array[] ) const;
+  /** Updates one column (BTRAN) from region2 */
+  int updateColumnTranspose ( CoinIndexedVector * regionSparse2) const;
   //@}
 ////////////////// data //////////////////
 private:
@@ -98,16 +97,32 @@ private:
   int numberRows_;
   /// Number of Columns in factorization
   int numberColumns_;
-  /// Maximum number of pivots before factorization
-  int maximumPivots_;
-  /// Number pivots since last factorization
-  int numberPivots_;
-  /// Pivot order for each Column
-  int *pivotColumn_;
-  /// Permutation vector for pivot row order
-  int *permute_;
-  /// DePermutation vector for pivot row order
-  int *permuteBack_;
+  /// Index of root
+  int root_;
+  /// Index of extreme leaf
+  int leaf_;
+  /// model
+  const ClpSimplex * model_; 
+  /// Parent for each column
+  int * parent_;
+  /// Descendant
+  int * descendant_;
+  /// Pivot row
+  int * pivot_;
+  /// Right sibling
+  int * rightSibling_;
+  /// Left sibling
+  int * leftSibling_;
+  /// Sign of pivot
+  double * sign_;
+  /// Stack
+  int * stack_;
+  /// Next one towards leaf
+  int * toLeaf_;
+  /// Next one towards root
+  int * toRoot_;
+  /// To mark rows
+  char * mark_;
   //@}
 };
 #endif

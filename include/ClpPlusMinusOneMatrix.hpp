@@ -62,7 +62,7 @@ public:
   /** Unpacks a column into an CoinIndexedvector
       Note that model is NOT const.  Bounds and objective could
       be modified if doing column generation */
-  virtual void unpack(ClpSimplex * model,CoinIndexedVector * rowArray,
+  virtual void unpack(const ClpSimplex * model,CoinIndexedVector * rowArray,
 		   int column) const ;
   /** Adds multiple of a column into an CoinIndexedvector
       You can use quickAdd to add to vector */
