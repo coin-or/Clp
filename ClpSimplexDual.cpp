@@ -1928,7 +1928,6 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 	  bestPivot=acceptablePivot;
 	  sequenceIn_=-1;
 	  // now choose largest and sum all ones which will go through
-#define MINIMUMTHETA 1.0e-12
 	  for (i=0;i<interesting[iFlip];i++) {
 	    int iSequence=index[i];
 	    double alpha=spare[i];
@@ -2062,6 +2061,14 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
       iFlip = 1-iFlip;
     }
     
+#define MINIMUMTHETA 1.0e-12
+    // Movement should be minimum for anti-degeneracy - unless
+    // fixed variable out
+    double minimumTheta;
+    if (upperOut_>lowerOut_)
+      minimumTheta=MINIMUMTHETA;
+    else
+      minimumTheta=0.0;
     if (sequenceIn_>=0) {
       // at this stage sequenceIn_ is just pointer into index array
       // flip just so we can use iFlip
@@ -2073,12 +2080,12 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
       sequenceIn_ = indices[iFlip][sequenceIn_];
       oldValue = dj_[sequenceIn_];
       theta_ = oldValue/alpha;
-      if (theta_<MINIMUMTHETA) {
+      if (theta_<minimumTheta) {
 	// can't pivot to zero
-	if (oldValue-MINIMUMTHETA*alpha>=-dualTolerance_) {
-	  theta_=MINIMUMTHETA;
-	} else if (oldValue-MINIMUMTHETA*alpha>=-newTolerance) {
-	  theta_=MINIMUMTHETA;
+	if (oldValue-minimumTheta*alpha>=-dualTolerance_) {
+	  theta_=minimumTheta;
+	} else if (oldValue-minimumTheta*alpha>=-newTolerance) {
+	  theta_=minimumTheta;
 	  thisIncrease=true;
 	} else {
 	  theta_=(oldValue+newTolerance)/alpha;

@@ -260,6 +260,7 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
     computeDuals(NULL);
   }
   // clean up
+  unflag();
   finish();
   restoreData(data);
   return problemStatus_;
@@ -636,6 +637,8 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	problemStatus_ = 2;
       } 
     } else {
+      if(type==3&&problemStatus_!=-5)
+	unflag(); // odd
       // carry on
       problemStatus_ = -1;
     }
@@ -1001,14 +1004,27 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
 
   if (pivotRow_>=0) {
     
+    alpha_ = work[pivotRow_];
+    // translate to sequence
+    sequenceOut_ = pivotVariable_[pivotRow_];
+    valueOut_ = solution(sequenceOut_);
+    lowerOut_=lower_[sequenceOut_];
+    upperOut_=upper_[sequenceOut_];
 #define MINIMUMTHETA 1.0e-12
+    // Movement should be minimum for anti-degeneracy - unless
+    // fixed variable out
+    double minimumTheta;
+    if (upperOut_>lowerOut_)
+      minimumTheta=MINIMUMTHETA;
+    else
+      minimumTheta=0.0;
     // will we need to increase tolerance
 #ifdef CLP_DEBUG
     bool found=false;
 #endif
     double largestInfeasibility = primalTolerance_;
-    if (theta_<MINIMUMTHETA) {
-      theta_=MINIMUMTHETA;
+    if (theta_<minimumTheta) {
+      theta_=minimumTheta;
       for (iIndex=0;iIndex<numberSwapped;iIndex++) {
 	int iRow = indexSwapped[iIndex];
 #ifdef CLP_DEBUG
@@ -1026,12 +1042,6 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
 #endif
       primalTolerance_ = max(primalTolerance_,largestInfeasibility);
     }
-    alpha_ = work[pivotRow_];
-    // translate to sequence
-    sequenceOut_ = pivotVariable_[pivotRow_];
-    valueOut_ = solution(sequenceOut_);
-    lowerOut_=lower_[sequenceOut_];
-    upperOut_=upper_[sequenceOut_];
 
     if (way<0.0) 
       theta_ = - theta_;

@@ -39,7 +39,7 @@ ClpNonLinearCost::ClpNonLinearCost () :
    This will just set up wasteful arrays for linear, but
    later may do dual analysis and even finding duplicate columns 
 */
-ClpNonLinearCost::ClpNonLinearCost ( ClpSimplex * model)
+ClpNonLinearCost::ClpNonLinearCost ( ClpSimplex * model,bool forQuadratic)
 {
   model_ = model;
   numberRows_ = model_->numberRows();
@@ -67,9 +67,19 @@ ClpNonLinearCost::ClpNonLinearCost ( ClpSimplex * model)
   double * cost = model_->costRegion();
 
   for (iSequence=0;iSequence<numberTotal;iSequence++) {
+    if (lower[iSequence]>-1.0e20)
+      put++;
     if (upper[iSequence]<1.0e20)
       put++;
-    put += 3;
+    put += 2;
+  }
+
+  // For quadratic we need -inf,0,0,+inf
+  if (forQuadratic) {
+    for (iSequence=0;iSequence<numberTotal;iSequence++) {
+      if (lower[iSequence]<-1.0e20&&upper[iSequence]>1.0e20)
+	put+=2;
+    }
   }
 
   lower_ = new double [put];
@@ -83,21 +93,38 @@ ClpNonLinearCost::ClpNonLinearCost ( ClpSimplex * model)
 
   for (iSequence=0;iSequence<numberTotal;iSequence++) {
 
-    lower_[put] = -COIN_DBL_MAX;
-    setInfeasible(put,true);
-
-    cost_[put++] = cost[iSequence]-infeasibilityCost;
-    whichRange_[iSequence]=put;
-    lower_[put] = lower[iSequence];
-    cost_[put++] = cost[iSequence];
-    lower_[put] = upper[iSequence];
-    cost_[put++] = cost[iSequence]+infeasibilityCost;
-    if (upper[iSequence]<1.0e20) {
+    if (!forQuadratic||lower[iSequence]>-1.0e20||upper[iSequence]<1.0e20) {
+      if (lower[iSequence]>-COIN_DBL_MAX) {
+	lower_[put] = -COIN_DBL_MAX;
+	setInfeasible(put,true);
+	cost_[put++] = cost[iSequence]-infeasibilityCost;
+      }
+      whichRange_[iSequence]=put;
+      lower_[put] = lower[iSequence];
+      cost_[put++] = cost[iSequence];
+      lower_[put] = upper[iSequence];
+      cost_[put++] = cost[iSequence]+infeasibilityCost;
+      if (upper[iSequence]<1.0e20) {
+	lower_[put] = COIN_DBL_MAX;
+	setInfeasible(put-1,true);
+	cost_[put++] = 1.0e50;
+      }
+      start_[iSequence+1]=put;
+    } else {
+      // quadratic free variable
+      lower_[put] = -COIN_DBL_MAX;
+      setInfeasible(put,true);
+      cost_[put++] = -infeasibilityCost;
+      whichRange_[iSequence]=put;
+      lower_[put] = -0.5*COIN_DBL_MAX;
+      cost_[put++] = 0.0;
+      lower_[put] = 0.5*COIN_DBL_MAX;
+      cost_[put++] = infeasibilityCost;
       lower_[put] = COIN_DBL_MAX;
       setInfeasible(put-1,true);
-      cost_[put++] = 1.0e50;
+      cost_[put++] = 0.0;
+      start_[iSequence+1]=put;
     }
-    start_[iSequence+1]=put;
   }
 
 }
@@ -728,5 +755,14 @@ ClpNonLinearCost::nearest(int sequence, double solutionValue)
   }
   assert(jRange<end);
   return lower_[jRange];
+}
+// Sets inside bounds (i.e. non infinite - used in QP
+void 
+ClpNonLinearCost::setBounds(int sequence, double lower, double upper)
+{
+  int start = start_[sequence];
+  assert(start_[sequence+1]==start+4);
+  lower_[start+1]=lower;
+  lower_[start+2]=upper;
 }
 

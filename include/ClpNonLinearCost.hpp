@@ -39,9 +39,10 @@ public:
   ClpNonLinearCost();
   /** Constructor from simplex.
       This will just set up wasteful arrays for linear, but
-      later may do dual analysis and even finding duplicate columns 
+      later may do dual analysis and even finding duplicate columns .
+      If for quadratic then free varaibles get extra 0,0 bits
   */
-  ClpNonLinearCost(ClpSimplex * model);
+  ClpNonLinearCost(ClpSimplex * model,bool forQuadratic=false);
   /** Constructor from simplex and list of non-linearities (columns only)
       First lower of each column has to match real lower
       Last lower has to be <= upper (if == then cost ignored)
@@ -136,6 +137,8 @@ public:
   /// Returns current cost
   inline double cost(int sequence) const
   { return cost_[whichRange_[sequence]+offset_[sequence]];};
+  /// Sets inside bounds (i.e. non infinite - used in QP
+  void setBounds(int sequence, double lower, double upper);
   //@}
 
 

@@ -152,7 +152,9 @@ Idiot::crash(int numberPass)
     majorIterations_=numberPass;
   printf("setting mu to %g and doing %d passes\n",mu_,majorIterations_);
   solve2();
+#ifdef CLP_IDIOT
   crossOver(3); // make basis ?
+#endif
 }
 void
 Idiot::solve()

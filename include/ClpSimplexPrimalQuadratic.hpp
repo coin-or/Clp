@@ -14,8 +14,9 @@
 
 /** This solves LPs using the primal simplex method
 
-    It inherits from ClpSimplex.  It has no data of its own and 
-    is never created - only cast from a ClpSimplex object at algorithm time. 
+    It inherits from ClpSimplexPrimal.  It has no data of its own and 
+    is never created - only cast from a ClpSimplexPrimal object at algorithm time. 
+    If needed create new class and pass around
 
 */
 
@@ -36,8 +37,31 @@ public:
   */
   /// A sequential LP method
   int primalSLP(int numberPasses, double deltaTolerance);
-  /// Beale's method
-  int primalBeale();
+  /// Wolfe's method (actually a mixture with Jensen and King)
+  int primalWolfe();
+  /// This is done after first pass
+  int primalWolfe2 (const ClpSimplexPrimalQuadratic * originalModel);
+  /// Main part
+  int whileIterating (const ClpSimplexPrimalQuadratic * originalModel,
+		      int & sequenceIn,
+		      int & crucialSj);
+  /** 
+      Row array has pivot column
+      This chooses pivot row.
+      Rhs array is used for distance to next bound (for speed)
+      For speed, we may need to go to a bucket approach when many
+      variables go through bounds
+      On exit rhsArray will have changes in costs of basic variables
+      Initially no go thru
+      Returns 0 - can do normal iteration
+      1 - losing complementarity
+  */
+  int primalRow(CoinIndexedVector * rowArray,
+		CoinIndexedVector * rhsArray,
+		CoinIndexedVector * spareArray,
+		CoinIndexedVector * spareArray2,
+		const ClpSimplexPrimalQuadratic * originalModel,
+		int crucialSj);
   //@}
 
 };

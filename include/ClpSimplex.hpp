@@ -143,8 +143,8 @@ public:
       less than deltaTolerance
   */
   int quadraticSLP(int numberPasses,double deltaTolerance);
-  /// Solves quadratic using Beale's algorithm - primal
-  int quadraticBeale();
+  /// Solves quadratic using Wolfe's algorithm - primal
+  int quadraticWolfe();
   /// Passes in factorization
   void setFactorization( ClpFactorization & factorization);
   /// Sets or unsets scaling, 0 -off, 1 on, 2 dynamic(later)

@@ -2401,6 +2401,7 @@ int ClpSimplex::primal (int ifValuesPass )
 {
   return ((ClpSimplexPrimal *) this)->primal(ifValuesPass);
 }
+#ifdef QUADRATIC
 #include "ClpSimplexPrimalQuadratic.hpp"
 /* Solves quadratic problem using SLP - may be used as crash
    for other algorithms when number of iterations small
@@ -2410,12 +2411,13 @@ ClpSimplex::quadraticSLP(int numberPasses, double deltaTolerance)
 {
   return ((ClpSimplexPrimalQuadratic *) this)->primalSLP(numberPasses,deltaTolerance);
 }
-// Solves quadratic using Beale's algorithm - primal
+// Solves quadratic using Wolfe's algorithm - primal
 int 
-ClpSimplex::quadraticBeale()
+ClpSimplex::quadraticWolfe()
 {
-  return ((ClpSimplexPrimalQuadratic *) this)->primalBeale();
+  return ((ClpSimplexPrimalQuadratic *) this)->primalWolfe();
 }
+#endif
 /* For strong branching.  On input lower and upper are new bounds
    while on output they are objective function values (>1.0e50 infeasible).
    Return code is 0 if nothing interesting, -1 if infeasible both
