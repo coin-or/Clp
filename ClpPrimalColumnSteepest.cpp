@@ -3581,7 +3581,7 @@ ClpPrimalColumnSteepest::partialPricing(CoinIndexedVector * updates,
       if (saveSequence!=bestSequence) {
 	// dj
 	reducedCost[bestSequence] = cost[bestSequence] +duals[bestSequence-numberColumns];
-	bestDj=reducedCost[bestSequence];
+	bestDj=fabs(reducedCost[bestSequence]);
       }
       if (!numberWanted) 
 	break;
@@ -3605,7 +3605,7 @@ ClpPrimalColumnSteepest::partialPricing(CoinIndexedVector * updates,
       model_->clpMatrix()->partialPricing(model_,start,end,bestSequence,numberWanted);
       if (saveSequence!=bestSequence) {
 	// dj
-	bestDj=reducedCost[bestSequence];
+	bestDj=fabs(reducedCost[bestSequence]);
       }
       if (!numberWanted)
 	break;

@@ -2041,7 +2041,7 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
     // need to clear toIndex_ in gub
     // ? when can I clear stuff
     // Clean up any gub stuff
-    int updateType=matrix_->extendUpdated(this,rowArray_[1],1);
+    matrix_->extendUpdated(this,rowArray_[1],1);
     if (pivotRow_>=numberRows_)
       printf("** danger - key out %d in %d theta %g\n",sequenceOut_,sequenceIn_,theta_);
     double checkValue=1.0e-2;
@@ -2129,20 +2129,13 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	}
       }
       // if stable replace in basis
-      int updateStatus = 0;
       // If gub or odd then alpha and pivotRow may change
-      //printf("Update type before %d\n",updateType);
-      if (updateType>=0) {
-	if (updateType>0)
-	  matrix_->generalExpanded(this,3,updateType);
-	if (updateType>=0)
+      int updateType=0;
+      int updateStatus = matrix_->generalExpanded(this,3,updateType);
+      if (updateType>=0)
 	updateStatus = factorization_->replaceColumn(rowArray_[2],
 						     pivotRow_,
 						     alpha_);
-      } 
-      if (updateType)
-	updateStatus = matrix_->generalExpanded(this,4,updateStatus);
-      //printf("Update type after %d - status %d\n",updateType,updateStatus);
 
       // if no pivots, bad update but reasonable alpha - take and invert
       if (updateStatus==2&&
