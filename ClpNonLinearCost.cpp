@@ -150,6 +150,31 @@ ClpNonLinearCost::ClpNonLinearCost ( ClpSimplex * model)
     start_[iSequence+1]=put;
   }
 }
+// Refreshes costs always makes row costs zero
+void 
+ClpNonLinearCost::refreshCosts(const double * columnCosts)
+{
+  double * cost = model_->costRegion();
+  // zero row costs
+  memset(cost+numberColumns_,0,numberRows_*sizeof(double));
+  // copy column costs
+  memcpy(cost,columnCosts,numberColumns_*sizeof(double));
+
+  for (int iSequence=0;iSequence<numberRows_+numberColumns_;iSequence++) {
+    int start = start_[iSequence];
+    int end = start_[iSequence+1]-1;
+    double thisFeasibleCost=cost[iSequence];
+    if (infeasible(start)) {
+      cost_[start] = thisFeasibleCost-infeasibilityWeight_;
+      cost_[start+1] = thisFeasibleCost;
+    } else {
+      cost_[start] = thisFeasibleCost;
+    }
+    if (infeasible(end-1)) {
+      cost_[end-1] = thisFeasibleCost+infeasibilityWeight_;
+    }
+  }
+}
 ClpNonLinearCost::ClpNonLinearCost(ClpSimplex * model,const int * starts,
 		   const double * lowerNon, const double * costNon)
 {

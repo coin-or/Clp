@@ -97,6 +97,8 @@ public:
   void goBackAll(const CoinIndexedVector * update);
   /// Temporary zeroing of feasible costs
   void zapCosts();
+  /// Refreshes costs always makes row costs zero
+  void refreshCosts(const double * columnCosts);
   /** Sets bounds and cost for one variable 
       Returns change in cost
    May need to be inline for speed */
