@@ -353,23 +353,24 @@ void do_tighten_action::postsolve(PostsolveMatrix *prob) const
       }
     }
 
-    sol[jcol] += correction;
-
-    // by construction, the last row corrected (if there was one)
-    // must be at its bound, so it can be non-basic.
-    // All other rows may not be at a bound (but may if the difference
-    // is very small, causing a new correction by a tiny amount).
-
-    // now adjust the activities
-    k = mcstrt[jcol];
-    for (i=0; i<nk; ++i) {
-      int irow = hrow[k];
-      double coeff = colels[k];
-      k = link[k];
-      //      double activity = acts[irow];
-
-      acts[irow] += correction * coeff;
-
+    if (last_corrected>=0) {
+      sol[jcol] += correction;
+      
+      // by construction, the last row corrected (if there was one)
+      // must be at its bound, so it can be non-basic.
+      // All other rows may not be at a bound (but may if the difference
+      // is very small, causing a new correction by a tiny amount).
+      
+      // now adjust the activities
+      k = mcstrt[jcol];
+      for (i=0; i<nk; ++i) {
+	int irow = hrow[k];
+	double coeff = colels[k];
+	k = link[k];
+	//      double activity = acts[irow];
+	
+	acts[irow] += correction * coeff;
+      }
     }
 
     // if the col happens to get pushed to its bound,
@@ -377,7 +378,6 @@ void do_tighten_action::postsolve(PostsolveMatrix *prob) const
     if (fabs(sol[jcol] - clo[jcol]) > ZTOLDP &&
 	fabs(sol[jcol] - cup[jcol]) > ZTOLDP) {
 
-      PRESOLVEASSERT(last_corrected != -1);
       prob->setRowStatus(last_corrected,PrePostsolveMatrix::atLowerBound);
       prob->setColumnStatus(jcol,PrePostsolveMatrix::basic);
     }
