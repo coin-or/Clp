@@ -168,6 +168,8 @@ ClpCholeskyTaucs::order(ClpInterior * model)
   // Now we have size - create arrays and fill in
   matrix_ = taucs_ccs_create(numberRows_,numberRows_,sizeFactor_,
 			     TAUCS_DOUBLE|TAUCS_SYMMETRIC|TAUCS_LOWER); 
+  if (!matrix_) 
+    return 1;
   // Space for starts
   choleskyStart_ = matrix_->colptr;
   choleskyRow_ = matrix_->rowind;
@@ -223,7 +225,7 @@ ClpCholeskyTaucs::order(ClpInterior * model)
   // symbolic
   factorization_ = taucs_ccs_factor_llt_symbolic(permuted);
   taucs_ccs_free(permuted);
-  return 0;
+  return factorization_ ? 0 :1;
 }
 /* Factorize - filling in rowsDropped and returning number dropped */
 int 

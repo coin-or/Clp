@@ -52,7 +52,10 @@ int ClpPredictorCorrector::solve ( )
 
   //bool firstTime=true;
   //firstFactorization(true);
-  cholesky_->order(this);
+  if (cholesky_->order(this)) {
+    printf("Not enough memory\n");
+    return -1;
+  }
   mu_=1.0e10;
   //set iterations
   numberIterations_=-1;
@@ -220,8 +223,10 @@ int ClpPredictorCorrector::solve ( )
     bool useAffine=false;
     bool goodMove=false;
     bool doCorrector=true;
+    double bestNextGap = COIN_DBL_MAX;
     //bool retry=false;
     worstDirectionAccuracy_=0.0;
+    double saveMu=mu_;
     while (!goodMove) {
       goodMove=true;
       int newDropped=0;
@@ -297,6 +302,8 @@ int ClpPredictorCorrector::solve ( )
           findStepLength(phase);
           int nextNumber; //number of complementarity pairs
           double nextGap=complementarityGap(nextNumber,1);
+	  assert (nextGap<=bestNextGap);
+	  bestNextGap=nextGap;
           //if (complementarityGap_>1.0e-1&&worstDirectionAccuracy_<1.0e-5) {
           //wasif (complementarityGap_>1.0e-2*numberComplementarityPairs_) {
           if (complementarityGap_>1.0e-4*numberComplementarityPairs_) {
@@ -322,7 +329,7 @@ int ClpPredictorCorrector::solve ( )
 	    //mu_=1.0e-4/(numberComplementarityPairs_*qqqq);
 	    //? better to skip corrector?
             //} 
-          } 
+          }
           //save information
           double product=affineProduct();
           //can we do corrector step?
@@ -357,6 +364,7 @@ int ClpPredictorCorrector::solve ( )
 	  //printf("product %g mu %g\n",product,mu_);
           if (complementarityGap_*(beta2-tau)+product-mu_*numberComplementarityPairs_<0.0) {
             doCorrector=false;
+	    bestNextGap=COIN_DBL_MAX;
             double floatNumber = numberComplementarityPairs_;
 	    if (product>0.0)
 	      mu_=complementarityGap_/(floatNumber*floatNumber);
@@ -393,26 +401,29 @@ int ClpPredictorCorrector::solve ( )
             goodMove=false;
             useAffine=true;//if bad accuracy
             doCorrector=false;
+	    bestNextGap=COIN_DBL_MAX;
             recoveryMode=9;
           } 
         } 
         if (goodMove) {
           findStepLength(phase);
           if (numberIterations_>=-77) {
-            goodMove=checkGoodMove(doCorrector);
+            goodMove=checkGoodMove(doCorrector,bestNextGap);
           } else {
             goodMove=true;
           } 
           if (!goodMove) {
             if (doCorrector) {
               doCorrector=false;
-              double floatNumber = numberComplementarityPairs_;
-              mu_=complementarityGap_/(floatNumber*floatNumber);
+              //double floatNumber = numberComplementarityPairs_;
+              //mu_=complementarityGap_/(floatNumber*floatNumber);
+	      mu_=saveMu;
 	      handler_->message(CLP_BARRIER_INFO,messages_)
 		<<" no corrector step - original move would be bad"
 		<<CoinMessageEol;
-              phase=2;
-              recoveryMode=1;
+              phase=0;
+              recoveryMode=2;
+	      useAffine=true;
             } else {
               // if any killed then do zero step and hope for best
               abort();
@@ -1474,13 +1485,18 @@ void ClpPredictorCorrector::setupForSolve(const int phase)
   } /* endswitch */
 }
 //method: sees if looks plausible change in complementarity
-bool ClpPredictorCorrector::checkGoodMove(const bool doCorrector)
+bool ClpPredictorCorrector::checkGoodMove(const bool doCorrector,double & bestNextGap)
 {
   const double beta3 = 0.99997;
   bool goodMove=false;
   int nextNumber;
   int numberTotal = numberRows_+numberColumns_;
+  double returnGap=bestNextGap;
   double nextGap=complementarityGap(nextNumber,2);
+  if (nextGap>bestNextGap)
+    return false;
+  else
+    returnGap=nextGap;
   double step;
   if (actualDualStep_>actualPrimalStep_) {
     step=actualDualStep_;
@@ -1499,7 +1515,10 @@ bool ClpPredictorCorrector::checkGoodMove(const bool doCorrector)
     //} else {
       //step=actualPrimalStep_;
     //} 
-    goodMove=checkGoodMove2(step);
+    double gap = bestNextGap;
+    goodMove=checkGoodMove2(step,gap);
+    if (goodMove)
+      returnGap=gap;
   } else {
     goodMove=true;
   } 
@@ -1516,7 +1535,10 @@ bool ClpPredictorCorrector::checkGoodMove(const bool doCorrector)
     actualPrimalStep_=step;
     actualDualStep_=step;
     while (!goodMove) {
-      goodMove=checkGoodMove2(step);
+      double gap = bestNextGap;
+      goodMove=checkGoodMove2(step,gap);
+      if (goodMove)
+	returnGap=gap;
       if (step<1.0e-10) {
         break;
       } 
@@ -1606,11 +1628,13 @@ bool ClpPredictorCorrector::checkGoodMove(const bool doCorrector)
         //std::cout <<"sign we should be stopping"<<std::endl;
       } 
     } 
-  } 
+  }
+  if (goodMove)
+    bestNextGap=returnGap;
   return goodMove;
 }
 //:  checks for one step size
-bool ClpPredictorCorrector::checkGoodMove2(const double move)
+bool ClpPredictorCorrector::checkGoodMove2(const double move,double & bestNextGap)
 {
   double complementarityMultiplier =1.0/numberComplementarityPairs_;
   const double gamma = 1.0e-8;
@@ -1618,6 +1642,8 @@ bool ClpPredictorCorrector::checkGoodMove2(const double move)
   const double gammad = 1.0e-8;
   int nextNumber;
   double nextGap=complementarityGap(nextNumber,2);
+  if (nextGap>bestNextGap)
+    return false;
   double lowerBoundGap = gamma*nextGap*complementarityMultiplier;
   bool goodMove=true;
   double * deltaZ = deltaZ_;
@@ -1668,7 +1694,9 @@ bool ClpPredictorCorrector::checkGoodMove2(const double move)
     if (nextGap<gammad*(1.0-move)*errorCheck) {
       goodMove=false;
     } 
-  } 
+  }
+  if (goodMove)
+    bestNextGap=nextGap;
   return goodMove;
 }
 // updateSolution.  Updates solution at end of iteration

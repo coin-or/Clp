@@ -874,11 +874,11 @@ ClpSimplex::initialSolve(ClpSolve & options)
       currentModel2 = &barrier;
 #ifdef REAL_BARRIER
     // uncomment this if you have Anshul Gupta's wsmp package
-    ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp();
-    barrier.setCholesky(cholesky);
-    // uncomment this if you have Sivan Toledo's Taucs package
-    //ClpCholeskyTaucs * cholesky = new ClpCholeskyTaucs();
+    //ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp();
     //barrier.setCholesky(cholesky);
+    // uncomment this if you have Sivan Toledo's Taucs package
+    ClpCholeskyTaucs * cholesky = new ClpCholeskyTaucs();
+    barrier.setCholesky(cholesky);
 #endif
     //#define SAVEIT 2
 #ifndef SAVEIT

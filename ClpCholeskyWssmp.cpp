@@ -253,7 +253,7 @@ ClpCholeskyWssmp::order(ClpInterior * model)
   //std::cout<<"Ordering and symbolic factorization took "<<doubleParameters_[0]<<std::endl;
   if (integerParameters_[63]) {
     std::cout<<"wssmp returning error code of "<<integerParameters_[63]<<std::endl;
-    abort();
+    return 1;
   }
   std::cout<<integerParameters_[23]<<" elements in sparse Cholesky"<<std::endl;
   if (!integerParameters_[23]) {
