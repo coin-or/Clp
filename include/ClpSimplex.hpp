@@ -785,6 +785,7 @@ public:
       4 - Force outgoing variables to exact bound (primal)
       8 - Safe to use dense initial factorization
       16 -Just use basic variables for operation if column generation
+      32 -Clean up with primal before strong branching
   */
   inline unsigned int specialOptions() const
   { return specialOptions_;};

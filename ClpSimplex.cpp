@@ -303,9 +303,9 @@ ClpSimplex::gutsOfSolution ( double * givenDuals,
 	&&nonLinearCost_->largestInfeasibility()>
 	max(incomingInfeasibility_,allowedInfeasibility_)||
 	largestPrimalError_>1.0e-3) {
-      printf("Original largest infeas %g, now %g, primalError %g\n",
-	     oldValue,nonLinearCost_->largestInfeasibility(),
-	     largestPrimalError_);
+      //printf("Original largest infeas %g, now %g, primalError %g\n",
+      //     oldValue,nonLinearCost_->largestInfeasibility(),
+      //     largestPrimalError_);
       // throw out up to 1000 structurals
       int iRow;
       int * sort = new int[numberRows_];

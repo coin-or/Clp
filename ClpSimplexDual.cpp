@@ -3425,19 +3425,20 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
       upper_[iColumn] = newUpper[i]/columnScale_[iColumn]; // scale
     // Start of fast iterations
     int status = fastDual(alwaysFinish);
+    // make sure plausible
+    double obj = max(objectiveValue_,saveObjectiveValue);
     if (status) {
       // not finished - might be optimal
       checkPrimalSolution(rowActivityWork_,columnActivityWork_);
       double limit = 0.0;
       getDblParam(ClpDualObjectiveLimit, limit);
-      if (!numberPrimalInfeasibilities_&&objectiveValue()*optimizationDirection_<
-	  limit) { 
+      if (!numberPrimalInfeasibilities_&&obj<limit) { 
 	problemStatus_=0;
       } 
       status=problemStatus_;
     }
     if (status||(problemStatus_==0&&!isDualObjectiveLimitReached())) {
-      objectiveChange = objectiveValue_-saveObjectiveValue;
+      objectiveChange = obj-saveObjectiveValue;
     } else {
       objectiveChange = 1.0e100;
       status=1;
@@ -3485,19 +3486,20 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
       lower_[iColumn] = newLower[i]/columnScale_[iColumn]; // scale
     // Start of fast iterations
     status = fastDual(alwaysFinish);
+    // make sure plausible
+    obj = max(objectiveValue_,saveObjectiveValue);
     if (status) {
       // not finished - might be optimal
       checkPrimalSolution(rowActivityWork_,columnActivityWork_);
       double limit = 0.0;
       getDblParam(ClpDualObjectiveLimit, limit);
-      if (!numberPrimalInfeasibilities_&&objectiveValue()*optimizationDirection_<
-	  limit) { 
+      if (!numberPrimalInfeasibilities_&&obj< limit) { 
 	problemStatus_=0;
       } 
       status=problemStatus_;
     }
     if (status||(problemStatus_==0&&!isDualObjectiveLimitReached())) {
-      objectiveChange = objectiveValue_-saveObjectiveValue;
+      objectiveChange = obj-saveObjectiveValue;
     } else {
       objectiveChange = 1.0e100;
       status=1;
@@ -3761,7 +3763,7 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
 	   limit|| 
 	   numberAtFakeBound()) {
 	  returnCode=1;
-	  secondaryStatus_ = 1; // and say was on cutoff
+	  secondaryStatus_ = 1; 
 	  // can't say anything interesting - might as well return
 #ifdef CLP_DEBUG
 	  printf("returning from fastDual after %d iterations with code %d\n",
