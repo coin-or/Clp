@@ -15,7 +15,6 @@
 #include "ClpFactorization.hpp"
 #include "ClpPackedMatrix.hpp"
 #include "CoinIndexedVector.hpp"
-#include "CoinWarmStartBasis.hpp"
 #include "ClpDualRowDantzig.hpp"
 #include "ClpDualRowSteepest.hpp"
 #include "ClpPrimalColumnDantzig.hpp"
@@ -237,7 +236,7 @@ ClpSimplex::gutsOfSolution ( const double * rowActivities,
       numberOut = min(1000,numberOut);
       for (iRow=0;iRow<numberOut;iRow++) {
 	int iColumn=sort[iRow];
-	setColumnStatus(iColumn,ClpSimplex::superBasic);
+	setColumnStatus(iColumn,superBasic);
 
       }
       delete [] sort;
@@ -525,7 +524,7 @@ int ClpSimplex::internalFactorize ( int solveType)
       bool allSlack=true;
       if (status_) {
 	for (iRow=0;iRow<numberRows_;iRow++) {
-	  if (getRowStatus(iRow)!=ClpSimplex::basic) {
+	  if (getRowStatus(iRow)!=basic) {
 	    allSlack=false;
 	    break;
 	  }
@@ -537,41 +536,41 @@ int ClpSimplex::internalFactorize ( int solveType)
 	for (iRow=0;iRow<numberRows_;iRow++) {
 	  switch(getRowStatus(iRow)) {
 	    
-	  case ClpSimplex::basic:
+	  case basic:
 	    numberBasic++;
 	    break;
-	  case ClpSimplex::isFree:
+	  case isFree:
 	    assert(rowLowerWork_[iRow]<-largeValue_);
 	    assert(rowUpperWork_[iRow]>largeValue_);
 	    rowActivityWork_[iRow]=0.0;
 	    break;
-	  case ClpSimplex::atUpperBound:
+	  case atUpperBound:
 	    rowActivityWork_[iRow]=rowUpperWork_[iRow];
 	    if (rowActivityWork_[iRow]>largeValue_) {
 	      if (rowLowerWork_[iRow]>-largeValue_) {
 		rowActivityWork_[iRow]=rowLowerWork_[iRow];
-		setRowStatus(iRow,ClpSimplex::atLowerBound);
+		setRowStatus(iRow,atLowerBound);
 	      } else {
 		// say free
-		setRowStatus(iRow,ClpSimplex::isFree);
+		setRowStatus(iRow,isFree);
 		rowActivityWork_[iRow]=0.0;
 	      }
 	    }
 	    break;
-	  case ClpSimplex::atLowerBound:
+	  case atLowerBound:
 	    rowActivityWork_[iRow]=rowLowerWork_[iRow];
 	    if (rowActivityWork_[iRow]<-largeValue_) {
 	      if (rowUpperWork_[iRow]<largeValue_) {
 		rowActivityWork_[iRow]=rowUpperWork_[iRow];
-		setRowStatus(iRow,ClpSimplex::atUpperBound);
+		setRowStatus(iRow,atUpperBound);
 	      } else {
 		// say free
-		setRowStatus(iRow,ClpSimplex::isFree);
+		setRowStatus(iRow,isFree);
 		rowActivityWork_[iRow]=0.0;
 	      }
 	    }
 	    break;
-	  case ClpSimplex::superBasic:
+	  case superBasic:
 	    abort();
 	    break;
 	  }
@@ -580,49 +579,49 @@ int ClpSimplex::internalFactorize ( int solveType)
 	for (iColumn=0;iColumn<numberColumns_;iColumn++) {
 	  switch(getColumnStatus(iColumn)) {
 	    
-	  case ClpSimplex::basic:
+	  case basic:
 	    if (numberBasic==numberRows_) {
 	      // take out of basis
 	      if (columnLowerWork_[iColumn]>-largeValue_) {
 		if (columnActivityWork_[iColumn]-columnLowerWork_[iColumn]<
 		    columnUpperWork_[iColumn]-columnActivityWork_[iColumn]) {
 		  columnActivityWork_[iColumn]=columnLowerWork_[iColumn];
-		  setColumnStatus(iColumn,ClpSimplex::atLowerBound);
+		  setColumnStatus(iColumn,atLowerBound);
 		} else {
 		  columnActivityWork_[iColumn]=columnUpperWork_[iColumn];
-		  setColumnStatus(iColumn,ClpSimplex::atUpperBound);
+		  setColumnStatus(iColumn,atUpperBound);
 		}
 	      } else if (columnUpperWork_[iColumn]<largeValue_) {
 		columnActivityWork_[iColumn]=columnUpperWork_[iColumn];
-		setColumnStatus(iColumn,ClpSimplex::atUpperBound);
+		setColumnStatus(iColumn,atUpperBound);
 	      } else {
 		columnActivityWork_[iColumn]=0.0;
-		setColumnStatus(iColumn,ClpSimplex::isFree);
+		setColumnStatus(iColumn,isFree);
 	      }
 	    } else {
 	      numberBasic++;
 	    }
 	    break;
-	  case ClpSimplex::isFree:
+	  case isFree:
 	    columnActivityWork_[iColumn]=0.0;
 	    break;
-	  case ClpSimplex::atUpperBound:
+	  case atUpperBound:
 	    columnActivityWork_[iColumn]=columnUpperWork_[iColumn];
 	    if (columnActivityWork_[iColumn]>largeValue_) {
 	      assert(columnLowerWork_[iColumn]>-largeValue_);
 	      columnActivityWork_[iColumn]=columnLowerWork_[iColumn];
-	      setColumnStatus(iColumn,ClpSimplex::atLowerBound);
+	      setColumnStatus(iColumn,atLowerBound);
 	    }
 	    break;
-	  case ClpSimplex::atLowerBound:
+	  case atLowerBound:
 	    columnActivityWork_[iColumn]=columnLowerWork_[iColumn];
 	    if (columnActivityWork_[iColumn]<-largeValue_) {
 	      assert(columnUpperWork_[iColumn]<largeValue_);
 	      columnActivityWork_[iColumn]=columnUpperWork_[iColumn];
-	      setColumnStatus(iColumn,ClpSimplex::atUpperBound);
+	      setColumnStatus(iColumn,atUpperBound);
 	    }
 	    break;
-	  case ClpSimplex::superBasic:
+	  case superBasic:
 	    abort();
 	    break;
 	  }
@@ -633,26 +632,25 @@ int ClpSimplex::internalFactorize ( int solveType)
 	int numberBasic=0;
 	// changed to put free variables in basis
 	if (!status_) {
-	  status_ = new unsigned char [numberColumns_+numberRows_];
-	  memset(status_,0,(numberColumns_+numberRows_)*sizeof(char));
+	  createStatus();
 	}
 	for (iRow=0;iRow<numberRows_;iRow++) {
 	  double lower=rowLowerWork_[iRow];
 	  double upper=rowUpperWork_[iRow];
 	  if (lower>-largeValue_||upper<largeValue_) {
 	    if (fabs(lower)<=fabs(upper)) {
-	      setRowStatus(iRow,ClpSimplex::atLowerBound);
+	      setRowStatus(iRow,atLowerBound);
 	      rowActivityWork_[iRow]=lower;
 	    } else {
-	      setRowStatus(iRow,ClpSimplex::atUpperBound);
+	      setRowStatus(iRow,atUpperBound);
 	      rowActivityWork_[iRow]=upper;
 	    }
 	  } else {
-	    setRowStatus(iRow,ClpSimplex::isFree);
+	    setRowStatus(iRow,isFree);
 	    rowActivityWork_[iRow]=0.0;
 	  }
 #ifdef TESTFREE
-	  setRowStatus(iRow,ClpSimplex::basic);
+	  setRowStatus(iRow,basic);
 	  numberBasic++;
 #endif
 	}
@@ -662,18 +660,18 @@ int ClpSimplex::internalFactorize ( int solveType)
 	  double big_bound = largeValue_;
 	  if (lower>-big_bound||upper<big_bound) {
 	    if (fabs(lower)<=fabs(upper)) {
-	      setColumnStatus(iColumn,ClpSimplex::atLowerBound);
+	      setColumnStatus(iColumn,atLowerBound);
 	      columnActivityWork_[iColumn]=lower;
 	    } else {
-	      setColumnStatus(iColumn,ClpSimplex::atUpperBound);
+	      setColumnStatus(iColumn,atUpperBound);
 	      columnActivityWork_[iColumn]=upper;
 	    }
 	  } else {
 #ifndef TESTFREE
 	    numberBasic++;
-	    setColumnStatus(iColumn,ClpSimplex::basic);
+	    setColumnStatus(iColumn,basic);
 #else
-	    setColumnStatus(iColumn,ClpSimplex::isFree);
+	    setColumnStatus(iColumn,isFree);
 #endif
 	    columnActivityWork_[iColumn]=0.0;
 	  }
@@ -682,7 +680,7 @@ int ClpSimplex::internalFactorize ( int solveType)
 	if (!numberBasic) {
 	  // might as well do all slack basis
 	  for (iRow=0;iRow<numberRows_;iRow++) {
-	    setRowStatus(iRow,ClpSimplex::basic);
+	    setRowStatus(iRow,basic);
 	  }
 	}
       }
@@ -695,36 +693,35 @@ int ClpSimplex::internalFactorize ( int solveType)
 	// set values from warm start (if sensible)
 	int numberBasic=0;
 	for (iRow=0;iRow<numberRows_;iRow++) {
-	  if (getRowStatus(iRow)==ClpSimplex::basic) 
+	  if (getRowStatus(iRow)==basic) 
 	    numberBasic++;
 	  else
-	    setRowStatus(iRow,ClpSimplex::superBasic);
+	    setRowStatus(iRow,superBasic);
 	}
 	totalSlacks=numberBasic;
 	for (iColumn=0;iColumn<numberColumns_;iColumn++) {
-	  if (getColumnStatus(iColumn)==ClpSimplex::basic) {
+	  if (getColumnStatus(iColumn)==basic) {
 	    if (numberBasic==numberRows_) 
 	      // take out of basis
-	      setColumnStatus(iColumn,ClpSimplex::superBasic);
+	      setColumnStatus(iColumn,superBasic);
 	    else 
 	      numberBasic++;
 	  } else {
-	    setColumnStatus(iColumn,ClpSimplex::superBasic);
+	    setColumnStatus(iColumn,superBasic);
 	  }
 	}
       } else {
 	// all slack basis
 	int numberBasic=0;
 	if (!status_) {
-	  status_ = new unsigned char [numberColumns_+numberRows_];
-	  memset(status_,0,(numberColumns_+numberRows_)*sizeof(char));
+	  createStatus();
 	}
 	for (iRow=0;iRow<numberRows_;iRow++) {
-	  setRowStatus(iRow,ClpSimplex::basic);
+	  setRowStatus(iRow,basic);
 	  numberBasic++;
 	}
 	for (iColumn=0;iColumn<numberColumns_;iColumn++) {
-	  setColumnStatus(iColumn,ClpSimplex::superBasic);
+	  setColumnStatus(iColumn,superBasic);
 	}
       }
     }
@@ -739,7 +736,7 @@ int ClpSimplex::internalFactorize ( int solveType)
     int i;
     int numberBasic=0;
     for (i=0;i<numberRows_;i++) {
-      if (getRowStatus(i) == ClpSimplex::basic) {
+      if (getRowStatus(i) == basic) {
 	rowIsBasic[i]=1;
 	numberBasic++;
       } else {
@@ -747,7 +744,7 @@ int ClpSimplex::internalFactorize ( int solveType)
       }
     }
     for (i=0;i<numberColumns_;i++) {
-      if (getColumnStatus(i) == ClpSimplex::basic) {
+      if (getColumnStatus(i) == basic) {
 	columnIsBasic[i]=1;
 	numberBasic++;
       } else {
@@ -768,12 +765,12 @@ int ClpSimplex::internalFactorize ( int solveType)
     if (!status) {
       // do pivot information
       for (i=0;i<numberRows_;i++) {
-	if (getRowStatus(i) == ClpSimplex::basic) {
+	if (getRowStatus(i) == basic) {
 	  pivotVariable_[rowIsBasic[i]]=i+numberColumns_;
 	}
       }
       for (i=0;i<numberColumns_;i++) {
-	if (getColumnStatus(i) == ClpSimplex::basic) {
+	if (getColumnStatus(i) == basic) {
 	  pivotVariable_[columnIsBasic[i]]=i;
 	}
       }
@@ -783,14 +780,14 @@ int ClpSimplex::internalFactorize ( int solveType)
 	pivotVariable_[i]=-1;
       }
       for (i=0;i<numberRows_;i++) {
-	if (getRowStatus(i) == ClpSimplex::basic) {
+	if (getRowStatus(i) == basic) {
 	  int iPivot = rowIsBasic[i];
 	  if (iPivot>=0) 
 	    pivotVariable_[iPivot]=i+numberColumns_;
 	}
       }
       for (i=0;i<numberColumns_;i++) {
-	if (getColumnStatus(i) == ClpSimplex::basic) {
+	if (getColumnStatus(i) == basic) {
 	  int iPivot = columnIsBasic[i];
 	  if (iPivot>=0) 
 	    pivotVariable_[iPivot]=i;
@@ -802,7 +799,7 @@ int ClpSimplex::internalFactorize ( int solveType)
 	//redo basis - first take ALL columns out
 	for (iColumn=0;iColumn<numberColumns_;iColumn++) {
 	  if (getColumnStatus(iColumn)==
-	      ClpSimplex::basic) {
+	      basic) {
 	    // take out
 	    if (!valuesPass) {
 	      double lower=columnLowerWork_[iColumn];
@@ -810,17 +807,17 @@ int ClpSimplex::internalFactorize ( int solveType)
 	      double value=columnActivityWork_[iColumn];
 	      if (lower>-largeValue_||upper<largeValue_) {
 		if (fabs(value-lower)<fabs(value-upper)) {
-		  setColumnStatus(iColumn,ClpSimplex::atLowerBound);
+		  setColumnStatus(iColumn,atLowerBound);
 		  columnActivityWork_[iColumn]=lower;
 		} else {
-		  setColumnStatus(iColumn,ClpSimplex::atUpperBound);
+		  setColumnStatus(iColumn,atUpperBound);
 		  columnActivityWork_[iColumn]=upper;
 		}
 	      } else {
-		setColumnStatus(iColumn,ClpSimplex::isFree);
+		setColumnStatus(iColumn,isFree);
 	      }
 	    } else {
-	      setColumnStatus(iColumn,ClpSimplex::superBasic);
+	      setColumnStatus(iColumn,superBasic);
 	    }
 	  }
 	}
@@ -833,11 +830,11 @@ int ClpSimplex::internalFactorize ( int solveType)
 	      assert (iSequence-numberColumns_==iRow);
 	    } else {
 	      // put back structural
-	      setColumnStatus(iSequence,ClpSimplex::basic);
+	      setColumnStatus(iSequence,basic);
 	    }
 	  } else {
 	    // put in slack
-	    setRowStatus(iRow,ClpSimplex::basic);
+	    setRowStatus(iRow,basic);
 	  }
 	}
 	// signal repeat
@@ -856,7 +853,7 @@ int ClpSimplex::internalFactorize ( int solveType)
     // Initial basis - return number of singularities
     int numberSlacks=0;
     for (iRow=0;iRow<numberRows_;iRow++) {
-      if (getRowStatus(iRow) == ClpSimplex::basic)
+      if (getRowStatus(iRow) == basic)
 	numberSlacks++;
     }
     status= max(numberSlacks-totalSlacks,0);
@@ -887,7 +884,7 @@ ClpSimplex::housekeeping(double objectiveChange)
     <<directionIn_<<theta_
     <<dualOut_<<dualIn_<<alpha_
     <<CoinMessageEol;
-  if (getStatus(sequenceIn_)==ClpSimplex::isFree) {
+  if (getStatus(sequenceIn_)==isFree) {
     handler_->message(CLP_SIMPLEX_FREEIN,messages_)
       <<sequenceIn_
       <<CoinMessageEol;
@@ -906,7 +903,7 @@ ClpSimplex::housekeeping(double objectiveChange)
     // as if from upper bound
     if (sequenceIn_!=sequenceOut_) {
       // variable becoming basic
-      setStatus(sequenceIn_,ClpSimplex::basic);
+      setStatus(sequenceIn_,basic);
       if (algorithm_<0) {
 	value = upperIn_+dualOut_;
 	dj_[sequenceIn_]=0.0;
@@ -915,13 +912,13 @@ ClpSimplex::housekeeping(double objectiveChange)
       }
     } else {
       value=lowerIn_;
-      setStatus(sequenceIn_, ClpSimplex::atLowerBound);
+      setStatus(sequenceIn_, atLowerBound);
     }
   } else {
     // as if from lower bound
     if (sequenceIn_!=sequenceOut_) {
       // variable becoming basic
-      setStatus(sequenceIn_,ClpSimplex::basic);
+      setStatus(sequenceIn_,basic);
       if (algorithm_<0) {
 	value = lowerIn_+dualOut_;
 	dj_[sequenceIn_]=0.0;
@@ -930,7 +927,7 @@ ClpSimplex::housekeeping(double objectiveChange)
       }
     } else {
       value=upperIn_;
-      setStatus(sequenceIn_, ClpSimplex::atUpperBound);
+      setStatus(sequenceIn_, atUpperBound);
     }
   }
   if (algorithm_<0)
@@ -941,17 +938,17 @@ ClpSimplex::housekeeping(double objectiveChange)
 
   // outgoing
   if (sequenceIn_!=sequenceOut_) {
-    assert( getStatus(sequenceOut_)== ClpSimplex::basic);
+    assert( getStatus(sequenceOut_)== basic);
     if (upper_[sequenceOut_]-lower_[sequenceOut_]<1.0e-12)
       progressFlag_ |= 1; // making real progress
     if (algorithm_<0) {
       if (directionOut_>0) {
 	value = lowerOut_;
-	setStatus(sequenceOut_,ClpSimplex::atLowerBound);
+	setStatus(sequenceOut_,atLowerBound);
 	dj_[sequenceOut_]=theta_;
       } else {
 	value = upperOut_;
-	setStatus(sequenceOut_,ClpSimplex::atUpperBound);
+	setStatus(sequenceOut_,atUpperBound);
 	dj_[sequenceOut_]=-theta_;
       }
       solution_[sequenceOut_]=value;
@@ -968,17 +965,17 @@ ClpSimplex::housekeeping(double objectiveChange)
 	     value<=upperValue+primalTolerance_);
       // may not be exactly at bound and bounds may have changed
       if (value<=lowerValue+primalTolerance_) {
-	setStatus(sequenceOut_,ClpSimplex::atLowerBound);
+	setStatus(sequenceOut_,atLowerBound);
       } else if (value>=upperValue-primalTolerance_) {
-	setStatus(sequenceOut_,ClpSimplex::atUpperBound);
+	setStatus(sequenceOut_,atUpperBound);
       } else {
 	printf("*** variable wandered off bound %g %g %g!\n",
 	       lowerValue,value,upperValue);
 	if (value-lowerValue<=upperValue-value) {
-	  setStatus(sequenceOut_,ClpSimplex::atLowerBound);
+	  setStatus(sequenceOut_,atLowerBound);
 	  value=lowerValue;
 	} else {
-	  setStatus(sequenceOut_,ClpSimplex::atUpperBound);
+	  setStatus(sequenceOut_,atUpperBound);
 	  value=upperValue;
 	}
       }
@@ -1476,7 +1473,7 @@ ClpSimplex::checkDualSolution()
   sumOfRelaxedDualInfeasibilities_ = 0.0;
 
   for (iRow=0;iRow<numberRows_;iRow++) {
-    if (getRowStatus(iRow) != ClpSimplex::basic) {
+    if (getRowStatus(iRow) != basic) {
       // not basic
       double value = rowReducedCost_[iRow];
       double distance;
@@ -1494,7 +1491,7 @@ ClpSimplex::checkDualSolution()
 	    if (value>relaxedTolerance) 
 	      sumOfRelaxedDualInfeasibilities_ += value-relaxedTolerance;
 	    numberDualInfeasibilities_ ++;
-	    if (getRowStatus(iRow) != ClpSimplex::isFree) 
+	    if (getRowStatus(iRow) != isFree) 
 	      numberDualInfeasibilitiesWithoutFree_ ++;
 	    // maybe we can make feasible by increasing tolerance
 	    if (distance<largeValue_) {
@@ -1521,7 +1518,7 @@ ClpSimplex::checkDualSolution()
 	    if (value>relaxedTolerance) 
 	      sumOfRelaxedDualInfeasibilities_ += value-relaxedTolerance;
 	    numberDualInfeasibilities_ ++;
-	    if (getRowStatus(iRow) != ClpSimplex::isFree) 
+	    if (getRowStatus(iRow) != isFree) 
 	      numberDualInfeasibilitiesWithoutFree_ ++;
 	    // maybe we can make feasible by increasing tolerance
 	    if (distance<largeValue_&&
@@ -1534,7 +1531,7 @@ ClpSimplex::checkDualSolution()
   }
   solution = columnActivityWork_;
   for (iColumn=0;iColumn<numberColumns_;iColumn++) {
-    if (getColumnStatus(iColumn) != ClpSimplex::basic) {
+    if (getColumnStatus(iColumn) != basic) {
       // not basic
       double value = reducedCostWork_[iColumn];
       double distance;
@@ -1552,7 +1549,7 @@ ClpSimplex::checkDualSolution()
 	    if (value>relaxedTolerance) 
 	      sumOfRelaxedDualInfeasibilities_ += value-relaxedTolerance;
 	    numberDualInfeasibilities_ ++;
-	    if (getColumnStatus(iColumn) != ClpSimplex::isFree) 
+	    if (getColumnStatus(iColumn) != isFree) 
 	      numberDualInfeasibilitiesWithoutFree_ ++;
 	    // maybe we can make feasible by increasing tolerance
 	    if (distance<largeValue_) {
@@ -1579,7 +1576,7 @@ ClpSimplex::checkDualSolution()
 	    if (value>relaxedTolerance) 
 	      sumOfRelaxedDualInfeasibilities_ += value-relaxedTolerance;
 	    numberDualInfeasibilities_ ++;
-	    if (getColumnStatus(iColumn) != ClpSimplex::isFree) 
+	    if (getColumnStatus(iColumn) != isFree) 
 	      numberDualInfeasibilitiesWithoutFree_ ++;
 	    // maybe we can make feasible by increasing tolerance
 	    if (distance<largeValue_&&
@@ -1870,60 +1867,12 @@ ClpSimplex::scaling(int mode)
     columnScale_ = NULL;
   }
 }
-// Sets up basis
-void 
-ClpSimplex::setBasis ( const CoinWarmStartBasis & basis)
-{
-  // transform basis to status arrays
-  int iRow,iColumn;
-  if (!status_) {
-    /*
-      get status arrays
-      CoinWarmStartBasis would seem to have overheads and we will need
-      extra bits anyway.
-    */
-    status_ = new unsigned char [numberColumns_+numberRows_];
-    memset(status_,0,(numberColumns_+numberRows_)*sizeof(char));
-  }
-  CoinWarmStartBasis basis2 = basis;
-  // resize if necessary
-  basis2.resize(numberRows_,numberColumns_);
-  // move status
-  for (iRow=0;iRow<numberRows_;iRow++) {
-    setRowStatus(iRow,
-		 (Status) basis2.getArtifStatus(iRow));
-  }
-  for (iColumn=0;iColumn<numberColumns_;iColumn++) {
-    setColumnStatus(iColumn,
-		    (Status) basis2.getStructStatus(iColumn));
-  }
-}
 // Passes in factorization
 void 
 ClpSimplex::setFactorization( ClpFactorization & factorization)
 {
   delete factorization_;
   factorization_= new ClpFactorization(factorization);
-}
-// Warm start
-CoinWarmStartBasis  
-ClpSimplex::getBasis() const
-{
-  int iRow,iColumn;
-  CoinWarmStartBasis basis;
-  basis.setSize(numberColumns_,numberRows_);
-
-  if(status_) {
-    for (iRow=0;iRow<numberRows_;iRow++) {
-      basis.setArtifStatus(iRow,
-			   (CoinWarmStartBasis::Status) getRowStatus(iRow));
-    }
-    for (iColumn=0;iColumn<numberColumns_;iColumn++) {
-      basis.setStructStatus(iColumn,
-		       (CoinWarmStartBasis::Status) getColumnStatus(iColumn));
-    }
-  }
-  return basis;
 }
 void 
 ClpSimplex::times(double scalar,
@@ -2240,6 +2189,7 @@ void
 ClpSimplex::borrowModel(ClpModel & otherModel) 
 {
   ClpModel::borrowModel(otherModel);
+  createStatus();
   scaling();
   ClpDualRowSteepest steep1;
   setDualRowPivotAlgorithm(steep1);
@@ -2956,4 +2906,95 @@ ClpSimplex::sanityCheck()
       <<minimumGap
       <<CoinMessageEol;
   return true;
+}
+// Set up status array (for OsiClp)
+void 
+ClpSimplex::createStatus() 
+{
+  delete [] status_;
+  status_ = new unsigned char [numberColumns_+numberRows_];
+  memset(status_,0,(numberColumns_+numberRows_)*sizeof(char));
+  int i;
+  // set column status to one nearest zero
+  for (i=0;i<numberColumns_;i++) {
+#if 0
+    if (columnLower_[i]>=0.0) {
+      setColumnStatus(i,atLowerBound);
+    } else if (columnUpper_[i]<=0.0) {
+      setColumnStatus(i,atUpperBound);
+    } else if (columnLower_[i]<-1.0e20&&columnUpper_[i]>1.0e20) {
+      // free
+      setColumnStatus(i,isFree);
+    } else if (fabs(columnLower_[i])<fabs(columnUpper_[i])) {
+      setColumnStatus(i,atLowerBound);
+    } else {
+      setColumnStatus(i,atUpperBound);
+    }
+#else
+    setColumnStatus(i,atLowerBound);
+#endif
+  }
+  for (i=0;i<numberRows_;i++) {
+    setRowStatus(i,basic);
+  }
+}
+/* Loads a problem (the constraints on the
+   rows are given by lower and upper bounds). If a pointer is 0 then the
+   following values are the default:
+   <ul>
+   <li> <code>colub</code>: all columns have upper bound infinity
+   <li> <code>collb</code>: all columns have lower bound 0 
+   <li> <code>rowub</code>: all rows have upper bound infinity
+   <li> <code>rowlb</code>: all rows have lower bound -infinity
+   <li> <code>obj</code>: all variables have 0 objective coefficient
+   </ul>
+*/
+void 
+ClpSimplex::loadProblem (  const ClpMatrixBase& matrix,
+		    const double* collb, const double* colub,   
+		    const double* obj,
+		    const double* rowlb, const double* rowub,
+		    const double * rowObjective)
+{
+  ClpModel::loadProblem(matrix, collb, colub, obj, rowlb, rowub,
+			rowObjective);
+  createStatus();
+}
+void 
+ClpSimplex::loadProblem (  const CoinPackedMatrix& matrix,
+		    const double* collb, const double* colub,   
+		    const double* obj,
+		    const double* rowlb, const double* rowub,
+		    const double * rowObjective)
+{
+  ClpModel::loadProblem(matrix, collb, colub, obj, rowlb, rowub,
+			rowObjective);
+  createStatus();
+}
+
+/* Just like the other loadProblem() method except that the matrix is
+   given in a standard column major ordered format (without gaps). */
+void 
+ClpSimplex::loadProblem (  const int numcols, const int numrows,
+		    const int* start, const int* index,
+		    const double* value,
+		    const double* collb, const double* colub,   
+		    const double* obj,
+		    const double* rowlb, const double* rowub,
+		    const double * rowObjective)
+{
+  ClpModel::loadProblem(numcols, numrows, start, index, value,
+			  collb, colub, obj, rowlb, rowub,
+			  rowObjective);
+  createStatus();
+}
+// Read an mps file from the given filename
+int 
+ClpSimplex::readMps(const char *filename,
+	    bool keepNames,
+	    bool ignoreErrors)
+{
+  int status = ClpModel::readMps(filename,keepNames,ignoreErrors);
+  createStatus();
+  return status;
 }

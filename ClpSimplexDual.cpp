@@ -419,21 +419,21 @@ ClpSimplexDual::whileIterating()
 	double lowerValue=lower_[iSequence];
 	double upperValue=upper_[iSequence];
 	double value=solution_[iSequence];
-	if(getStatus(iSequence)!=ClpSimplex::basic) {
+	if(getStatus(iSequence)!=basic) {
 	  assert(lowerValue>-1.0e20);
 	  assert(upperValue<1.0e20);
 	}
 	switch(getStatus(iSequence)) {
 	  
-	case ClpSimplex::basic:
+	case basic:
 	  break;
-	case ClpSimplex::isFree:
-	case ClpSimplex::superBasic:
+	case isFree:
+	case superBasic:
 	  break;
-	case ClpSimplex::atUpperBound:
+	case atUpperBound:
 	  assert (fabs(value-upperValue)<=primalTolerance_) ;
 	  break;
-	case ClpSimplex::atLowerBound:
+	case atLowerBound:
 	  assert (fabs(value-lowerValue)<=primalTolerance_) ;
 	  break;
 	}
@@ -773,10 +773,10 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
 
 	switch(status) {
 	  
-	case ClpSimplex::basic:
-	case ClpSimplex::superBasic:
+	case basic:
+	case superBasic:
 	  break;
-	case ClpSimplex::isFree:
+	case isFree:
 	  if (fabs(value)>tolerance) { 
 #ifdef CLP_DEBUG
 	    if (handler_->logLevel()&32)
@@ -785,7 +785,7 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
 #endif
 	  }
 	  break;
-	case ClpSimplex::atUpperBound:
+	case atUpperBound:
 	  if (value>tolerance) {
 	    // to lower bound (if swap)
 	    // put back alpha
@@ -809,7 +809,7 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
 	      if (bound==ClpSimplexDual::upperFake&&
 		  value>=-tolerance) {
 		movement = lower[iSequence]-upper[iSequence];
-		setStatus(iSequence+addSequence,ClpSimplex::atLowerBound);
+		setStatus(iSequence+addSequence,atLowerBound);
 		solution[iSequence] = lower[iSequence];
 		changeObj += movement*cost[iSequence];
 	      } else {
@@ -818,7 +818,7 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
 	    }
 	  }
 	  break;
-	case ClpSimplex::atLowerBound:
+	case atLowerBound:
 	  if (value<-tolerance) {
 	    // to upper bound 
 	    // put back alpha
@@ -842,7 +842,7 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
 	      if (bound==ClpSimplexDual::lowerFake&&
 		  value<=tolerance) {
 		movement = upper[iSequence] - lower[iSequence];
-		setStatus(iSequence+addSequence,ClpSimplex::atUpperBound);
+		setStatus(iSequence+addSequence,atUpperBound);
 		solution[iSequence] = upper[iSequence];
 		changeObj += movement*cost[iSequence];
 	      } else {
@@ -951,16 +951,16 @@ ClpSimplexDual::changeBounds(bool initialize,
       setFakeBound(iSequence,ClpSimplexDual::noFake);
       switch(getStatus(iSequence)) {
 
-      case ClpSimplex::basic:
+      case basic:
 	break;
-      case ClpSimplex::isFree:
-      case ClpSimplex::superBasic:
+      case isFree:
+      case superBasic:
 	break;
-      case ClpSimplex::atUpperBound:
+      case atUpperBound:
 	if (fabs(value-upperValue)>primalTolerance_) 
 	  numberInfeasibilities++;
 	break;
-      case ClpSimplex::atLowerBound:
+      case atLowerBound:
 	if (fabs(value-lowerValue)>primalTolerance_) 
 	  numberInfeasibilities++;
 	break;
@@ -974,8 +974,8 @@ ClpSimplexDual::changeBounds(bool initialize,
 	double newLowerValue;
 	double newUpperValue;
 	Status status = getStatus(iSequence);
-	if (status==ClpSimplex::atUpperBound||
-	    status==ClpSimplex::atLowerBound) {
+	if (status==atUpperBound||
+	    status==atLowerBound) {
 	  double value = solution_[iSequence];
 	  if (value-lowerValue<=upperValue-value) {
 	    newLowerValue = max(lowerValue,value-0.666667*newBound);
@@ -995,7 +995,7 @@ ClpSimplexDual::changeBounds(bool initialize,
 	    if (newUpperValue < upperValue) 
 	      setFakeBound(iSequence,ClpSimplexDual::upperFake);
 	  }
-	  if (status==ClpSimplex::atUpperBound)
+	  if (status==atUpperBound)
 	    solution_[iSequence] = newUpperValue;
 	  else
 	    solution_[iSequence] = newLowerValue;
@@ -1023,8 +1023,8 @@ ClpSimplexDual::changeBounds(bool initialize,
       
     for (iSequence=0;iSequence<numberRows_+numberColumns_;iSequence++) {
       Status status = getStatus(iSequence);
-      if (status==ClpSimplex::atUpperBound||
-	  status==ClpSimplex::atLowerBound) {
+      if (status==atUpperBound||
+	  status==atLowerBound) {
 	double lowerValue=lower_[iSequence];
 	double upperValue=upper_[iSequence];
 	double value = solution_[iSequence];
@@ -1183,10 +1183,10 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 
       switch(getStatus(iSequence+addSequence)) {
 	  
-      case ClpSimplex::basic:
+      case basic:
 	break;
-      case ClpSimplex::isFree:
-      case ClpSimplex::superBasic:
+      case isFree:
+      case superBasic:
 	if (oldValue>dualTolerance_) {
 	  if (value<-newTolerance) 
 	    keep = 2;
@@ -1200,7 +1200,7 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 	    keep = 2;
 	}
 	break;
-      case ClpSimplex::atUpperBound:
+      case atUpperBound:
 #ifdef CHECK_DJ
 	// For Debug so we can find out where problem is
 	perturbation_ = iSequence+addSequence;
@@ -1213,7 +1213,7 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 	    upperTheta = (oldValue-newTolerance)/alpha;
 	}
 	break;
-      case ClpSimplex::atLowerBound:
+      case atLowerBound:
 #ifdef CHECK_DJ
 	// For Debug so we can find out where problem is
 	perturbation_ = iSequence+addSequence;
@@ -1913,7 +1913,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	      int iColumn;
 	      double * original = columnArray_[0]->denseVector();
 	      for (iColumn=0;iColumn<numberColumns_;iColumn++) {
-		if(getColumnStatus(iColumn)!= ClpSimplex::basic)
+		if(getColumnStatus(iColumn)!= basic)
 		  ray_[iColumn] += 
 		    columnActivityWork_[iColumn]-original[iColumn];
 		columnActivityWork_[iColumn] = original[iColumn];
@@ -2072,20 +2072,20 @@ ClpSimplexDual::flipBounds(CoinIndexedVector * rowArray,
 
       switch(status) {
 
-      case ClpSimplex::basic:
-      case ClpSimplex::isFree:
-      case ClpSimplex::superBasic:
+      case basic:
+      case isFree:
+      case superBasic:
 	break;
-      case ClpSimplex::atUpperBound:
+      case atUpperBound:
 	assert (value<=0.0);
 	// to lower bound
-	setStatus(iSequence+addSequence,ClpSimplex::atLowerBound);
+	setStatus(iSequence+addSequence,atLowerBound);
 	solution[iSequence] = lower[iSequence];
 	break;
-      case ClpSimplex::atLowerBound:
+      case atLowerBound:
 	assert (value>=0.0);
 	// to upper bound 
-	setStatus(iSequence+addSequence,ClpSimplex::atUpperBound);
+	setStatus(iSequence+addSequence,atUpperBound);
 	solution[iSequence] = upper[iSequence];
 	break;
       }
@@ -2121,7 +2121,7 @@ ClpSimplexDual::originalBound( int iSequence)
 	columnUpperWork_[iSequence] *= multiplier;
     }
   }
-  setFakeBound(iSequence,ClpSimplex::noFake);
+  setFakeBound(iSequence,noFake);
 }
 /* As changeBounds but just changes new bounds for a single variable.
    Returns true if change */
@@ -2143,13 +2143,13 @@ ClpSimplexDual::changeBound( int iSequence)
   if (value==oldLower) {
     if (upperValue > oldLower + dualBound_) {
       upper_[iSequence]=oldLower+dualBound_;
-      setFakeBound(iSequence,ClpSimplex::upperFake);
+      setFakeBound(iSequence,upperFake);
       modified=true;
     }
   } else if (value==oldUpper) {
     if (lowerValue < oldUpper - dualBound_) {
       lower_[iSequence]=oldUpper-dualBound_;
-      setFakeBound(iSequence,ClpSimplex::lowerFake);
+      setFakeBound(iSequence,lowerFake);
       modified=true;
     }
   } else {
@@ -2623,17 +2623,17 @@ ClpSimplexDual::numberAtFakeBound()
     FakeBound bound = getFakeBound(iSequence);
     switch(getStatus(iSequence)) {
 
-    case ClpSimplex::basic:
+    case basic:
       break;
-    case ClpSimplex::isFree:
-    case ClpSimplex::superBasic:
+    case isFree:
+    case superBasic:
       break;
-    case ClpSimplex::atUpperBound:
-      if (bound==ClpSimplex::upperFake||bound==ClpSimplex::bothFake)
+    case atUpperBound:
+      if (bound==upperFake||bound==bothFake)
 	numberFake++;
       break;
-    case ClpSimplex::atLowerBound:
-      if (bound==ClpSimplex::lowerFake||bound==ClpSimplex::bothFake)
+    case atLowerBound:
+      if (bound==lowerFake||bound==bothFake)
 	numberFake++;
       break;
     }

@@ -17,7 +17,6 @@
 class ClpDualRowPivot;
 class ClpPrimalColumnPivot;
 class ClpFactorization;
-class CoinWarmStartBasis;
 class CoinIndexedVector;
 class ClpNonLinearCost;
 
@@ -77,6 +76,42 @@ public:
     ClpSimplex & operator=(const ClpSimplex & rhs);
   /// Destructor
    ~ClpSimplex (  );
+  // Ones below are just ClpModel with setti
+  /** Loads a problem (the constraints on the
+        rows are given by lower and upper bounds). If a pointer is 0 then the
+        following values are the default:
+        <ul>
+          <li> <code>colub</code>: all columns have upper bound infinity
+          <li> <code>collb</code>: all columns have lower bound 0 
+          <li> <code>rowub</code>: all rows have upper bound infinity
+          <li> <code>rowlb</code>: all rows have lower bound -infinity
+	  <li> <code>obj</code>: all variables have 0 objective coefficient
+        </ul>
+    */
+  void loadProblem (  const ClpMatrixBase& matrix,
+		     const double* collb, const double* colub,   
+		     const double* obj,
+		     const double* rowlb, const double* rowub,
+		      const double * rowObjective=NULL);
+  void loadProblem (  const CoinPackedMatrix& matrix,
+		     const double* collb, const double* colub,   
+		     const double* obj,
+		     const double* rowlb, const double* rowub,
+		      const double * rowObjective=NULL);
+
+  /** Just like the other loadProblem() method except that the matrix is
+	given in a standard column major ordered format (without gaps). */
+  void loadProblem (  const int numcols, const int numrows,
+		     const int* start, const int* index,
+		     const double* value,
+		     const double* collb, const double* colub,   
+		     const double* obj,
+		      const double* rowlb, const double* rowub,
+		      const double * rowObjective=NULL);
+  /// Read an mps file from the given filename
+  int readMps(const char *filename,
+	      bool keepNames=false,
+	      bool ignoreErrors = false);
   /** Borrow model.  This is so we dont have to copy large amounts
       of data around.  It assumes a derived class wants to overwrite
       an empty model with a real one - while it does an algorithm.
@@ -90,8 +125,6 @@ public:
   int dual();
   /** Primal algorithm - see ClpSimplexPrimal.hpp for method */
   int primal(int ifValuesPass=0);
-  /// Sets up working basis as a copy of input
-  void setBasis( const CoinWarmStartBasis & basis);
   /// Passes in factorization
   void setFactorization( ClpFactorization & factorization);
   /// Sets or unsets scaling, 0 -off, 1 on, 2 dynamic(later)
@@ -175,8 +208,6 @@ public:
   /// Number of primal infeasibilities
   inline int numberPrimalInfeasibilities() const 
           { return numberPrimalInfeasibilities_;} ;
-  /// Warm start
-  CoinWarmStartBasis getBasis() const;
   /** Save model to file, returns 0 if success.  This is designed for
       use outside algorithms so does not save iterating arrays etc.
   It does not save any messaging information. 
@@ -481,6 +512,13 @@ public:
   };
   inline bool flagged(int sequence) const
   {return (((status_[sequence]>>6)&1)!=0);};
+  /// See if status array exists (partly for OsiClp)
+  inline bool statusExists() const
+  { return (status_!=NULL);};
+  /** Set up status array (can be used by OsiClp).
+      Also can be used to set up all slack basis */
+  void createStatus() ;
+    
   /// So we know when to be cautious
   inline int lastBadIteration() const
   {return lastBadIteration_;};

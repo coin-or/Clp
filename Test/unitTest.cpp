@@ -20,7 +20,7 @@
 #include "CoinMpsIO.hpp"
 #include "CoinPackedMatrix.hpp"
 #include "CoinPackedVector.hpp"
-#include "CoinWarmStartBasis.hpp"
+#include "CoinHelperFunctions.hpp"
 
 #include "ClpFactorization.hpp"
 #include "ClpSimplex.hpp"
@@ -342,30 +342,42 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     // basis 1
     int rowBasis1[3]={-1,-1,-1};
     int colBasis1[5]={1,1,-1,-1,1};
+    solution.loadProblem(matrix,colLower,colUpper,objective,
+			 rowLower,rowUpper);
     int i;
-    CoinWarmStartBasis warm;
-    warm.setSize(5,3);
+    solution.createStatus();
     for (i=0;i<3;i++) {
       if (rowBasis1[i]<0) {
-	warm.setArtifStatus(i,CoinWarmStartBasis::atLowerBound);
+	solution.setRowStatus(i,ClpSimplex::atLowerBound);
       } else {
-	warm.setArtifStatus(i,CoinWarmStartBasis::basic);
+	solution.setRowStatus(i,ClpSimplex::basic);
       }
     }
     for (i=0;i<5;i++) {
       if (colBasis1[i]<0) {
-	warm.setStructStatus(i,CoinWarmStartBasis::atLowerBound);
+	solution.setColumnStatus(i,ClpSimplex::atLowerBound);
       } else {
-	warm.setStructStatus(i,CoinWarmStartBasis::basic);
+	solution.setColumnStatus(i,ClpSimplex::basic);
       }
     }
-    solution.loadProblem(matrix,colLower,colUpper,objective,
-			 rowLower,rowUpper);
     solution.setLogLevel(3+4+8+16+32);
     solution.primal();
+    for (i=0;i<3;i++) {
+      if (rowBasis1[i]<0) {
+	solution.setRowStatus(i,ClpSimplex::atLowerBound);
+      } else {
+	solution.setRowStatus(i,ClpSimplex::basic);
+      }
+    }
+    for (i=0;i<5;i++) {
+      if (colBasis1[i]<0) {
+	solution.setColumnStatus(i,ClpSimplex::atLowerBound);
+      } else {
+	solution.setColumnStatus(i,ClpSimplex::basic);
+      }
+    }
     // intricate stuff does not work with scaling
     solution.scaling(0);
-    solution.setBasis(warm);
     assert(!solution.factorize ( ));
     const double * colsol = solution.primalColumnSolution();
     const double * rowsol = solution.primalRowSolution();
@@ -378,7 +390,21 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     ClpFactorization factorization2 = *solution.factorization();
     ClpSimplex solution2 = solution;
     solution2.setFactorization(factorization2);
-    solution2.setBasis(warm);
+    solution2.createStatus();
+    for (i=0;i<3;i++) {
+      if (rowBasis1[i]<0) {
+	solution2.setRowStatus(i,ClpSimplex::atLowerBound);
+      } else {
+	solution2.setRowStatus(i,ClpSimplex::basic);
+      }
+    }
+    for (i=0;i<5;i++) {
+      if (colBasis1[i]<0) {
+	solution2.setColumnStatus(i,ClpSimplex::atLowerBound);
+      } else {
+	solution2.setColumnStatus(i,ClpSimplex::basic);
+      }
+    }
     // intricate stuff does not work with scaling
     solution2.scaling(0);
     solution2.getSolution(rowsol,colsol);
@@ -505,8 +531,8 @@ ClpSimplexUnitTest(const std::string & mpsDir,
       double * rowObjective = solution.rowObjective();
       CoinDisjointCopyN(solution.dualRowSolution(),numberRows,rowObjective);
       CoinDisjointCopyN(solution.dualColumnSolution(),numberColumns,objective);
-      CoinWarmStartBasis basis;
-      solution.setBasis(basis);
+      // this sets up all slack basis
+      solution.createStatus();
       solution.dual();
       CoinFillN(rowObjective,numberRows,0.0);
       CoinDisjointCopyN(m.getObjCoefficients(),numberColumns,objective);

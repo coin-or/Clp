@@ -21,7 +21,6 @@
 
 //#include "CoinPackedMatrix.hpp"
 //#include "CoinPackedVector.hpp"
-#include "CoinWarmStartBasis.hpp"
 #include "CoinMpsIO.hpp"
 
 #include "ClpFactorization.hpp"
@@ -1155,10 +1154,9 @@ stopping",
 						   keepImportNames,
 						   allowImportErrors);
 		if (!status||(status>0&&allowImportErrors)) {
-		  // I don't think there is any need for this but ..
-		  CoinWarmStartBasis allSlack;
 		  goodModels[iModel]=true;
-		  models[iModel].setBasis(allSlack);
+		  // sets to all slack (not necessary?)
+		  models[iModel].createStatus();
 		  time2 = cpuTime();
 		  totalTime += time2-time1;
 		  time1=time2;

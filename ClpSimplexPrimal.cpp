@@ -1397,17 +1397,17 @@ ClpSimplexPrimal::nextSuperBasic(int & firstSuperBasic)
     iColumn=firstSuperBasic+1;
   }
   for (;iColumn<numberRows_+numberColumns_;iColumn++) {
-    if (getStatus(iColumn)==ClpSimplex::superBasic) {
+    if (getStatus(iColumn)==superBasic) {
       // is it really super basic
       if (fabs(solution_[iColumn]-lower_[iColumn])<=primalTolerance_) {
 	solution_[iColumn]=lower_[iColumn];
-	setStatus(iColumn,ClpSimplex::atLowerBound);
+	setStatus(iColumn,atLowerBound);
       } else if (fabs(solution_[iColumn]-upper_[iColumn])
 		 <=primalTolerance_) {
 	solution_[iColumn]=upper_[iColumn];
-	setStatus(iColumn,ClpSimplex::atUpperBound);
+	setStatus(iColumn,atUpperBound);
       } else if (lower_[iColumn]<-1.0e20&&upper_[iColumn]>1.0e20) {
-	setStatus(iColumn,ClpSimplex::isFree);
+	setStatus(iColumn,isFree);
       } else {
 	break;
       }

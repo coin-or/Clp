@@ -17,7 +17,6 @@ LIBSRC += ClpDualRowDantzig.cpp
 LIBSRC += ClpDualRowPivot.cpp
 LIBSRC += ClpDualRowSteepest.cpp
 LIBSRC += ClpFactorization.cpp
-#LIBSRC += ClpMalloc.cpp
 LIBSRC += ClpMatrixBase.cpp
 LIBSRC += ClpMessage.cpp
 LIBSRC += ClpModel.cpp
