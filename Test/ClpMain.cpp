@@ -2109,6 +2109,11 @@ costs this much to be infeasible",
 		ClpSimplex * model2 = models+iModel;
 		if (preSolve) {
 		  ClpPresolve pinfo;
+		  int presolveOptions2 = presolveOptions&~0x40000000;
+		  if ((presolveOptions2&0xffff)!=0)
+		    pinfo.setPresolveActions(presolveOptions2);
+		  if ((printOptions&1)!=0)
+		    pinfo.statistics();
 		  model2 = 
 		    pinfo.presolvedModel(models[iModel],1.0e-8,
 					 true,preSolve);
