@@ -1320,19 +1320,20 @@ ClpSimplexUnitTest(const std::string & mpsDir,
       std::cout<<"Network problem, ClpPackedMatrix took "<<CoinCpuTime()-time1<<" seconds"<<std::endl;
       ClpPlusMinusOneMatrix * plusMinus = new ClpPlusMinusOneMatrix(matrix);
       assert (plusMinus->getIndices()); // would be zero if not +- one
-      ClpPlusMinusOneMatrix *plusminus_matrix;
+      //ClpPlusMinusOneMatrix *plusminus_matrix;
 
-      plusminus_matrix = new ClpPlusMinusOneMatrix;
+      //plusminus_matrix = new ClpPlusMinusOneMatrix;
 
-      plusminus_matrix->passInCopy(numberRows, numberColumns, true, plusMinus->getMutableIndices(),
-                                   plusMinus->startPositive(),plusMinus->startNegative());
+      //plusminus_matrix->passInCopy(numberRows, numberColumns, true, plusMinus->getMutableIndices(),
+      //                         plusMinus->startPositive(),plusMinus->startNegative());
       model.loadProblem(*plusMinus,
 			lowerColumn,upperColumn,objective,
 			lower,upper);
-      model.replaceMatrix( plusminus_matrix , true);
-      model.createStatus();
-      model.initialSolve();
-      model.writeMps("xx.mps");
+      //model.replaceMatrix( plusminus_matrix , true);
+      delete plusMinus;
+      //model.createStatus();
+      //model.initialSolve();
+      //model.writeMps("xx.mps");
       
       model.factorization()->maximumPivots(200+model.numberRows()/100);
       model.createStatus();
