@@ -1189,7 +1189,7 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
                 }
                 arrayVector->setNumElements(number);
                 // Extended duals before "updateTranspose"
-                matrix_->dualExpanded(this,arrayVector,false,0);
+                matrix_->dualExpanded(this,arrayVector,NULL,0);
                 // Btran basic costs
                 rowArray_[2]->clear();
                 factorization_->updateColumnTranspose(rowArray_[2],arrayVector);
