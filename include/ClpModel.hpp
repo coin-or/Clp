@@ -181,6 +181,10 @@ public:
   /// Copies in names
   void copyNames(std::vector<std::string> & rowNames,
 		 std::vector<std::string> & columnNames);
+  /// Copies in Row names - modifies names first .. last-1
+  void copyRowNames(const std::vector<std::string> & rowNames,int first, int last);
+  /// Copies in Column names - modifies names first .. last-1
+  void copyColumnNames(const std::vector<std::string> & columnNames, int first, int last);
   
     /** Write the problem in MPS format to the specified file.
 
@@ -222,6 +226,9 @@ public:
    /// Dual tolerance to use
    inline double dualTolerance() const  { return dblParam_[ClpDualTolerance]; }
    void setDualTolerance( double value) ;
+  /// Primal objective limit
+  inline double primalObjectiveLimit() const { return dblParam_[ClpPrimalObjectiveLimit];}
+  void setPrimalObjectiveLimit(double value);
   /// Dual objective limit
   inline double dualObjectiveLimit() const { return dblParam_[ClpDualObjectiveLimit];}
   void setDualObjectiveLimit(double value);
@@ -312,6 +319,87 @@ public:
    /// Row upper 
    inline double* rowUpper() const              { return rowUpper_; }
    inline const double* getRowUpper() const     { return rowUpper_; }
+    //-------------------------------------------------------------------------
+    /**@name Changing bounds on variables and constraints */
+    //@{
+       /** Set an objective function coefficient */
+       void setObjectiveCoefficient( int elementIndex, double elementValue );
+       /** Set an objective function coefficient */
+       inline void setObjCoeff( int elementIndex, double elementValue )
+       { setObjectiveCoefficient( elementIndex, elementValue);};
+
+      /** Set a single column lower bound<br>
+    	  Use -DBL_MAX for -infinity. */
+       void setColumnLower( int elementIndex, double elementValue );
+      
+      /** Set a single column upper bound<br>
+    	  Use DBL_MAX for infinity. */
+       void setColumnUpper( int elementIndex, double elementValue );
+
+      /** Set a single column lower and upper bound */
+      void setColumnBounds( int elementIndex,
+	double lower, double upper );
+
+      /** Set the bounds on a number of columns simultaneously<br>
+    	  The default implementation just invokes setColLower() and
+    	  setColUpper() over and over again.
+    	  @param indexFirst,indexLast pointers to the beginning and after the
+	         end of the array of the indices of the variables whose
+		 <em>either</em> bound changes
+    	  @param boundList the new lower/upper bound pairs for the variables
+      */
+      void setColumnSetBounds(const int* indexFirst,
+				   const int* indexLast,
+				   const double* boundList);
+      
+      /** Set a single column lower bound<br>
+    	  Use -DBL_MAX for -infinity. */
+       inline void setColLower( int elementIndex, double elementValue )
+       { setColumnLower(elementIndex, elementValue);};
+      /** Set a single column upper bound<br>
+    	  Use DBL_MAX for infinity. */
+       inline void setColUpper( int elementIndex, double elementValue )
+       { setColumnUpper(elementIndex, elementValue);};
+
+      /** Set a single column lower and upper bound */
+      inline void setColBounds( int elementIndex,
+	double lower, double upper )
+       { setColumnBounds(elementIndex, lower, upper);};
+
+      /** Set the bounds on a number of columns simultaneously<br>
+    	  @param indexFirst,indexLast pointers to the beginning and after the
+	         end of the array of the indices of the variables whose
+		 <em>either</em> bound changes
+    	  @param boundList the new lower/upper bound pairs for the variables
+      */
+      inline void setColSetBounds(const int* indexFirst,
+				   const int* indexLast,
+				   const double* boundList)
+      { setColumnSetBounds(indexFirst, indexLast, boundList);};
+      
+      /** Set a single row lower bound<br>
+    	  Use -DBL_MAX for -infinity. */
+      void setRowLower( int elementIndex, double elementValue );
+      
+      /** Set a single row upper bound<br>
+    	  Use DBL_MAX for infinity. */
+      void setRowUpper( int elementIndex, double elementValue ) ;
+    
+      /** Set a single row lower and upper bound */
+      void setRowBounds( int elementIndex,
+    				 double lower, double upper ) ;
+    
+      /** Set the bounds on a number of rows simultaneously<br>
+    	  @param indexFirst,indexLast pointers to the beginning and after the
+	         end of the array of the indices of the constraints whose
+		 <em>either</em> bound changes
+    	  @param boundList the new lower/upper bound pairs for the constraints
+      */
+      void setRowSetBounds(const int* indexFirst,
+    				   const int* indexLast,
+    				   const double* boundList);
+    
+    //@}
    /// Scaling
    inline const double * rowScale() const {return rowScale_;};
    inline const double * columnScale() const {return columnScale_;};
@@ -410,16 +498,16 @@ public:
        Up to user to use delete [] on these arrays.  */
    double * infeasibilityRay() const;
    double * unboundedRay() const;
-  /// See if status array exists (partly for OsiClp)
+  /// See if status (i.e. basis) array exists (partly for OsiClp)
   inline bool statusExists() const
   { return (status_!=NULL);};
-  /// Return address of status array (char[numberRows+numberColumns])
+  /// Return address of status (i.e. basis) array (char[numberRows+numberColumns])
   inline unsigned char *  statusArray() const
   { return status_;};
-  /** Return copy of status array (char[numberRows+numberColumns]),
+  /** Return copy of status (i.e. basis) array (char[numberRows+numberColumns]),
       use delete [] */
   unsigned char *  statusCopy() const;
-  /// Copy in status vector
+  /// Copy in status (basis) vector
   void copyinStatus(const unsigned char * statusArray);
 
   /// User pointer for whatever reason
@@ -631,7 +719,7 @@ protected:
   double * columnScale_;
   /// Scale flag, 0 none, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic
   int scalingFlag_;
-  /** Status Region.  I know that not all algorithms need a status
+  /** Status (i.e. basis) Region.  I know that not all algorithms need a status
       array, but it made sense for things like crossover and put
       all permanent stuff in one place.  No assumption is made
       about what is in status array (although it might be good to reserve

@@ -291,6 +291,151 @@ ClpModel::getRowBound(int iRow, double& lower, double& upper) const
   if (rowLower_)
     lower=rowLower_[iRow];
 }
+//------------------------------------------------------------------
+/* Set an objective function coefficient */
+void 
+ClpModel::setObjectiveCoefficient( int elementIndex, double elementValue )
+{
+#ifndef NDEBUG
+  if (elementIndex<0||elementIndex>=numberColumns_) {
+    indexError(elementIndex,"setObjectiveCoefficient");
+  }
+#endif
+  objective()[elementIndex] = elementValue;
+}
+/* Set a single row lower bound<br>
+   Use -DBL_MAX for -infinity. */
+void 
+ClpModel::setRowLower( int elementIndex, double elementValue ) {
+  if (elementValue<-1.0e27)
+    elementValue=-COIN_DBL_MAX;
+  rowLower_[elementIndex] = elementValue;
+}
+      
+/* Set a single row upper bound<br>
+   Use DBL_MAX for infinity. */
+void 
+ClpModel::setRowUpper( int elementIndex, double elementValue ) {
+  if (elementValue>1.0e27)
+    elementValue=COIN_DBL_MAX;
+  rowUpper_[elementIndex] = elementValue;
+}
+    
+/* Set a single row lower and upper bound */
+void 
+ClpModel::setRowBounds( int elementIndex,
+	      double lower, double upper ) {
+  if (lower<-1.0e27)
+    lower=-COIN_DBL_MAX;
+  if (upper>1.0e27)
+    upper=COIN_DBL_MAX;
+  assert (upper>=lower);
+  rowLower_[elementIndex] = lower;
+  rowUpper_[elementIndex] = upper;
+}
+void ClpModel::setRowSetBounds(const int* indexFirst,
+					    const int* indexLast,
+					    const double* boundList)
+{
+#ifndef NDEBUG
+  int n = numberRows_;
+#endif
+  double * lower = rowLower_;
+  double * upper = rowUpper_;
+  while (indexFirst != indexLast) {
+    const int iRow=*indexFirst++;
+#ifndef NDEBUG
+    if (iRow<0||iRow>=n) {
+      indexError(iRow,"setRowSetBounds");
+    }
+#endif
+    lower[iRow]= *boundList++;
+    upper[iRow]= *boundList++;
+    if (lower[iRow]<-1.0e27)
+      lower[iRow]=-COIN_DBL_MAX;
+    if (upper[iRow]>1.0e27)
+      upper[iRow]=COIN_DBL_MAX;
+    assert (upper[iRow]>=lower[iRow]);
+  }
+}
+//-----------------------------------------------------------------------------
+/* Set a single column lower bound<br>
+   Use -DBL_MAX for -infinity. */
+void 
+ClpModel::setColumnLower( int elementIndex, double elementValue )
+{
+#ifndef NDEBUG
+  int n = numberColumns_;
+  if (elementIndex<0||elementIndex>=n) {
+    indexError(elementIndex,"setColumnLower");
+  }
+#endif
+  if (elementValue<-1.0e27)
+    elementValue=-COIN_DBL_MAX;
+  columnLower_[elementIndex] = elementValue;
+}
+      
+/* Set a single column upper bound<br>
+   Use DBL_MAX for infinity. */
+void 
+ClpModel::setColumnUpper( int elementIndex, double elementValue )
+{
+#ifndef NDEBUG
+  int n = numberColumns_;
+  if (elementIndex<0||elementIndex>=n) {
+    indexError(elementIndex,"setColumnUpper");
+  }
+#endif
+  if (elementValue>1.0e27)
+    elementValue=COIN_DBL_MAX;
+  columnUpper_[elementIndex] = elementValue;
+}
+
+/* Set a single column lower and upper bound */
+void 
+ClpModel::setColumnBounds( int elementIndex,
+				     double lower, double upper )
+{
+#ifndef NDEBUG
+  int n = numberColumns_;
+  if (elementIndex<0||elementIndex>=n) {
+    indexError(elementIndex,"setColumnBounds");
+  }
+#endif
+  if (lower<-1.0e27)
+    lower=-COIN_DBL_MAX;
+  if (upper>1.0e27)
+    upper=COIN_DBL_MAX;
+  columnLower_[elementIndex] = lower;
+  columnUpper_[elementIndex] = upper;
+  assert (upper>=lower);
+}
+void ClpModel::setColumnSetBounds(const int* indexFirst,
+					    const int* indexLast,
+					    const double* boundList)
+{
+  double * lower = columnLower_;
+  double * upper = columnUpper_;
+#ifndef NDEBUG
+  int n = numberColumns_;
+#endif
+  while (indexFirst != indexLast) {
+    const int iColumn=*indexFirst++;
+#ifndef NDEBUG
+    if (iColumn<0||iColumn>=n) {
+      indexError(iColumn,"setColumnSetBounds");
+    }
+#endif
+    lower[iColumn]= *boundList++;
+    upper[iColumn]= *boundList++;
+    assert (upper[iColumn]>=lower[iColumn]);
+    if (lower[iColumn]<-1.0e27)
+      lower[iColumn]=-COIN_DBL_MAX;
+    if (upper[iColumn]>1.0e27)
+      upper[iColumn]=COIN_DBL_MAX;
+  }
+}
+//-----------------------------------------------------------------------------
 //#############################################################################
 // Copy constructor. 
 ClpModel::ClpModel(const ClpModel &rhs, int scalingMode) :
@@ -1719,6 +1864,44 @@ ClpModel::copyNames(std::vector<std::string> & rowNames,
   }
   lengthNames_=(int) maxLength;
 }
+// Copies in Row names - modifies names first .. last-1
+void 
+ClpModel::copyRowNames(const std::vector<std::string> & rowNames, int first, int last)
+{
+  unsigned int maxLength=lengthNames_;
+  int size = rowNames_.size();
+  if (size!=numberRows_)
+    rowNames_.resize(numberRows_);
+  int iRow;
+  for (iRow=first; iRow<last;iRow++) {
+    rowNames_[iRow]= rowNames[iRow-first];
+    maxLength = CoinMax(maxLength,(unsigned int) strlen(rowNames_[iRow].c_str()));
+  }
+  // May be too big - but we would have to check both rows and columns to be exact
+  lengthNames_=(int) maxLength;
+}
+// Copies in Column names - modifies names first .. last-1
+void 
+ClpModel::copyColumnNames(const std::vector<std::string> & columnNames, int first, int last)
+{
+  unsigned int maxLength=lengthNames_;
+  int size = columnNames_.size();
+  if (size!=numberColumns_)
+    columnNames_.resize(numberColumns_);
+  int iColumn;
+  for (iColumn=first; iColumn<last;iColumn++) {
+    columnNames_[iColumn]= columnNames[iColumn-first];
+    maxLength = CoinMax(maxLength,(unsigned int) strlen(columnNames_[iColumn].c_str()));
+  }
+  // May be too big - but we would have to check both rows and columns to be exact
+  lengthNames_=(int) maxLength;
+}
+// Primal objective limit
+void 
+ClpModel::setPrimalObjectiveLimit(double value)
+{
+  dblParam_[ClpPrimalObjectiveLimit]=value;
+}
 // Dual objective limit
 void 
 ClpModel::setDualObjectiveLimit(double value)
@@ -1745,6 +1928,7 @@ ClpDataSave::ClpDataSave ()
   sparseThreshold_ = 0;
   pivotTolerance_=0.0;
   perturbation_ = 0;
+  forceFactorization_=-1;
 }
 
 //-------------------------------------------------------------------
@@ -1757,6 +1941,7 @@ ClpDataSave::ClpDataSave (const ClpDataSave & rhs)
   pivotTolerance_ = rhs.pivotTolerance_;
   sparseThreshold_ = rhs.sparseThreshold_;
   perturbation_ = rhs.perturbation_;
+  forceFactorization_=rhs.forceFactorization_;
 }
 
 //-------------------------------------------------------------------
@@ -1779,6 +1964,7 @@ ClpDataSave::operator=(const ClpDataSave& rhs)
     pivotTolerance_ = rhs.pivotTolerance_;
     sparseThreshold_ = rhs.sparseThreshold_;
     perturbation_ = rhs.perturbation_;
+    forceFactorization_=rhs.forceFactorization_;
   }
   return *this;
 }
