@@ -402,7 +402,11 @@ ClpSimplex::initialSolve(ClpSolve & options)
     if (options.getSpecialOption(0)==1)
       model2->crash(1000,1);
     if (!nPasses) {
+      int saveOptions = model2->specialOptions();
+      if (model2->numberRows()>100000)
+	model2->setSpecialOptions(saveOptions|64); // go as far as possible
       model2->dual(0);
+      model2->setSpecialOptions(saveOptions);
     } else if (!numberNotE&&0) {
       // E so we can do in another way
       double * pi = model2->dualRowSolution();

@@ -802,6 +802,7 @@ public:
       8 - Safe to use dense initial factorization
       16 -Just use basic variables for operation if column generation
       32 -Clean up with primal before strong branching
+      64 -Treat problem as feasible until last minute (i.e. minimize infeasibilities)
   */
   inline unsigned int specialOptions() const
   { return specialOptions_;};
