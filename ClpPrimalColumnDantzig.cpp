@@ -139,31 +139,30 @@ ClpPrimalColumnDantzig::pivotColumn(CoinIndexedVector * updates,
 
   for (iSequence=0;iSequence<number;iSequence++) {
     double value = reducedCost[iSequence];
-    if (!model_->fixed(iSequence)) {
-      ClpSimplex::Status status = model_->getStatus(iSequence);
+    ClpSimplex::Status status = model_->getStatus(iSequence);
+    
+    switch(status) {
       
-      switch(status) {
-
-      case ClpSimplex::basic:
-	break;
-      case ClpSimplex::isFree:
-      case ClpSimplex::superBasic:
-	if (fabs(value)>bestFreeDj) { 
-	  bestFreeDj = fabs(value);
-	  bestFreeSequence = iSequence;
-	}
-	break;
-      case ClpSimplex::atUpperBound:
-	if (value>bestDj) {
-	  bestDj = value;
-	  bestSequence = iSequence;
-	}
-	break;
-      case ClpSimplex::atLowerBound:
-	if (value<-bestDj) {
-	  bestDj = -value;
-	  bestSequence = iSequence;
-	}
+    case ClpSimplex::basic:
+    case ClpSimplex::isFixed:
+      break;
+    case ClpSimplex::isFree:
+    case ClpSimplex::superBasic:
+      if (fabs(value)>bestFreeDj) { 
+	bestFreeDj = fabs(value);
+	bestFreeSequence = iSequence;
+      }
+      break;
+    case ClpSimplex::atUpperBound:
+      if (value>bestDj) {
+	bestDj = value;
+	bestSequence = iSequence;
+      }
+      break;
+    case ClpSimplex::atLowerBound:
+      if (value<-bestDj) {
+	bestDj = -value;
+	bestSequence = iSequence;
       }
     }
   }

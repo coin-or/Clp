@@ -203,6 +203,7 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
 
   if (anyUpdates>0) {
     model_->factorization()->updateColumnTranspose(spareRow2,updates);
+    
     // put row of tableau in rowArray and columnArray
     model_->clpMatrix()->transposeTimes(model_,-1.0,
 					updates,spareColumn2,spareColumn1);
@@ -228,14 +229,13 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
 	double value = reducedCost[iSequence];
 	value -= updateBy[iSequence];
 	reducedCost[iSequence] = value;
-	if (model_->fixed(iSequence+addSequence))
-	  continue;
 	ClpSimplex::Status status = model_->getStatus(iSequence+addSequence);
 
 	switch(status) {
 	  
 	case ClpSimplex::basic:
 	  infeasible_->zero(iSequence+addSequence);
+	case ClpSimplex::isFixed:
 	  break;
 	case ClpSimplex::isFree:
 	case ClpSimplex::superBasic:
@@ -289,49 +289,48 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
   // make sure outgoing from last iteration okay
   int sequenceOut = model_->sequenceOut();
   if (sequenceOut>=0) {
-    if (!model_->fixed(sequenceOut)) {
-      ClpSimplex::Status status = model_->getStatus(sequenceOut);
-      double value = model_->reducedCost(sequenceOut);
+    ClpSimplex::Status status = model_->getStatus(sequenceOut);
+    double value = model_->reducedCost(sequenceOut);
+    
+    switch(status) {
       
-      switch(status) {
-
-      case ClpSimplex::basic:
-	break;
-      case ClpSimplex::isFree:
-      case ClpSimplex::superBasic:
-	if (fabs(value)>1.0e2*tolerance) { 
-	  // we are going to bias towards free (but only if reasonable)
-	  value *= FREE_BIAS;
-	  // store square in list
-	  if (infeas[sequenceOut])
-	    infeas[sequenceOut] = value*value; // already there
-	  else
-	    infeasible_->quickAdd(sequenceOut,value*value);
-	} else {
-	  infeasible_->zero(sequenceOut);
-	}
-	break;
-      case ClpSimplex::atUpperBound:
-	if (value>tolerance) {
-	  // store square in list
-	  if (infeas[sequenceOut])
-	    infeas[sequenceOut] = value*value; // already there
-	  else
-	    infeasible_->quickAdd(sequenceOut,value*value);
-	} else {
-	  infeasible_->zero(sequenceOut);
-	}
-	break;
-      case ClpSimplex::atLowerBound:
-	if (value<-tolerance) {
-	  // store square in list
-	  if (infeas[sequenceOut])
-	    infeas[sequenceOut] = value*value; // already there
-	  else
-	    infeasible_->quickAdd(sequenceOut,value*value);
-	} else {
-	  infeasible_->zero(sequenceOut);
-	}
+    case ClpSimplex::basic:
+    case ClpSimplex::isFixed:
+      break;
+    case ClpSimplex::isFree:
+    case ClpSimplex::superBasic:
+      if (fabs(value)>1.0e2*tolerance) { 
+	// we are going to bias towards free (but only if reasonable)
+	value *= FREE_BIAS;
+	// store square in list
+	if (infeas[sequenceOut])
+	  infeas[sequenceOut] = value*value; // already there
+	else
+	  infeasible_->quickAdd(sequenceOut,value*value);
+      } else {
+	infeasible_->zero(sequenceOut);
+      }
+      break;
+    case ClpSimplex::atUpperBound:
+      if (value>tolerance) {
+	// store square in list
+	if (infeas[sequenceOut])
+	  infeas[sequenceOut] = value*value; // already there
+	else
+	  infeasible_->quickAdd(sequenceOut,value*value);
+      } else {
+	infeasible_->zero(sequenceOut);
+      }
+      break;
+    case ClpSimplex::atLowerBound:
+      if (value<-tolerance) {
+	// store square in list
+	if (infeas[sequenceOut])
+	  infeas[sequenceOut] = value*value; // already there
+	else
+	  infeasible_->quickAdd(sequenceOut,value*value);
+      } else {
+	infeasible_->zero(sequenceOut);
       }
     }
   }
@@ -353,14 +352,13 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
 
     for (iSequence=0;iSequence<number;iSequence++) {
       double value = reducedCost[iSequence];
-      if (model_->fixed(iSequence+addSequence))
-	continue;
       ClpSimplex::Status status = model_->getStatus(iSequence+addSequence);
       
       switch(status) {
 
       case ClpSimplex::basic:
 	infeasible_->zero(iSequence+addSequence);
+      case ClpSimplex::isFixed:
 	break;
       case ClpSimplex::isFree:
 	if (fabs(value)>tolerance) {
@@ -507,23 +505,12 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
     alternateWeights_->clear();
     spareColumn2->setNumElements(0);
 #ifdef SOME_DEBUG_1
-#if 1
     // check for accuracy
     int iCheck=229;
     printf("weight for iCheck is %g\n",weights_[iCheck]);
     if (model_->getStatus(iCheck)!=ClpSimplex::basic&&
-	!model_->fixed(iCheck))
+	!model_->getStatus(iCheck)!=isFixed)
       checkAccuracy(iCheck,1.0e-1,updates,spareRow2);
-#else
-    // check for accuracy
-    number = updates->getNumElements();
-    index = updates->getIndices();
-    for (j=0;j<number;j++) {
-      if (model_->getStatus(index[j])!=ClpSimplex::basic&&
-	  !model_->fixed(index[j]))
-	checkAccuracy(index[j],1.0e-1,updates,spareRow2);
-    }
-#endif
 #endif
     updates->setNumElements(0);
     spareColumn1->setNumElements(0);
@@ -696,14 +683,13 @@ ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model,int mode)
     double * reducedCost = model_->djRegion();
       
     for (iSequence=0;iSequence<number;iSequence++) {
-      if (model_->fixed(iSequence))
-	continue;
       double value = reducedCost[iSequence];
       ClpSimplex::Status status = model_->getStatus(iSequence);
       
       switch(status) {
 
       case ClpSimplex::basic:
+      case ClpSimplex::isFixed:
 	break;
       case ClpSimplex::isFree:
       case ClpSimplex::superBasic:
@@ -937,9 +923,8 @@ ClpPrimalColumnSteepest::initializeWeights()
       
     for (iSequence=0;iSequence<number;iSequence++) {
       weights_[iSequence]=1.0+ADD_ONE;
-      if (model_->fixed(iSequence))
-	continue;
-      if (model_->getStatus(iSequence)!=ClpSimplex::basic) {
+      if (model_->getStatus(iSequence)!=ClpSimplex::basic&&
+	  model_->getStatus(iSequence)!=ClpSimplex::isFixed) {
 	model_->unpack(alternateWeights_,iSequence);
 	double value=ADD_ONE;
 	model_->factorization()->updateColumn(temp,alternateWeights_);

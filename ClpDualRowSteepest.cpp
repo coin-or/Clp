@@ -139,23 +139,40 @@ ClpDualRowSteepest::pivotRow()
   double * lower = model_->lowerRegion();
   double * upper = model_->upperRegion();
   // do last pivot row one here
+  //#define COLUMN_BIAS 4.0
+  //#define FIXED_BIAS 10.0
   if (lastPivotRow>=0) {
+#ifdef COLUMN_BIAS 
+    int numberColumns = model_->numberColumns();
+#endif
     int iPivot=pivotVariable[lastPivotRow];
     double value = solution[iPivot];
     double lower = model_->lower(iPivot);
     double upper = model_->upper(iPivot);
     if (value>upper+tolerance) {
+      value -= upper;
+      value *= value;
+#ifdef COLUMN_BIAS 
+      if (iPivot<numberColumns)
+	value *= COLUMN_BIAS; // bias towards columns
+#endif
       // store square in list
       if (infeas[lastPivotRow])
-	infeas[lastPivotRow] = (value-upper)*(value-upper); // already there
+	infeas[lastPivotRow] = value; // already there
       else
-	infeasible_->quickAdd(lastPivotRow,(value-upper)*(value-upper));
+	infeasible_->quickAdd(lastPivotRow,value);
     } else if (value<lower-tolerance) {
+      value -= lower;
+      value *= value;
+#ifdef COLUMN_BIAS 
+      if (iPivot<numberColumns)
+	value *= COLUMN_BIAS; // bias towards columns
+#endif
       // store square in list
       if (infeas[lastPivotRow])
-	infeas[lastPivotRow] = (value-lower)*(value-lower); // already there
+	infeas[lastPivotRow] = value; // already there
       else
-	infeasible_->add(lastPivotRow,(value-lower)*(value-lower));
+	infeasible_->add(lastPivotRow,value);
     } else {
       // feasible - was it infeasible - if so set tiny
       if (infeas[lastPivotRow])
@@ -324,6 +341,9 @@ ClpDualRowSteepest::updatePrimalSolution(
   double * infeas = infeasible_->denseVector();
   int pivotRow = model_->pivotRow();
   double * solution = model_->solutionRegion();
+#ifdef COLUMN_BIAS 
+  int numberColumns = model_->numberColumns();
+#endif
   for (i=0;i<number;i++) {
     int iRow=which[i];
     int iPivot=pivotVariable[iRow];
@@ -344,18 +364,38 @@ ClpDualRowSteepest::updatePrimalSolution(
       upper = model_->upper(iPivot);
       value = model_->valueIncomingDual();
     }
-    if (value>upper+tolerance) {
+    if (value<lower-tolerance) {
+      value -= lower;
+      value *= value;
+#ifdef COLUMN_BIAS 
+      if (iPivot<numberColumns)
+	value *= COLUMN_BIAS; // bias towards columns
+#endif
+#ifdef FIXED_BIAS 
+      if (lower==upper)
+	value *= FIXED_BIAS; // bias towards taking out fixed variables
+#endif
       // store square in list
       if (infeas[iRow])
-	infeas[iRow] = (value-upper)*(value-upper); // already there
+	infeas[iRow] = value; // already there
       else
-	infeasible_->quickAdd(iRow,(value-upper)*(value-upper));
-    } else if (value<lower-tolerance) {
+	infeasible_->quickAdd(iRow,value);
+    } else if (value>upper+tolerance) {
+      value -= upper;
+      value *= value;
+#ifdef COLUMN_BIAS 
+      if (iPivot<numberColumns)
+	value *= COLUMN_BIAS; // bias towards columns
+#endif
+#ifdef FIXED_BIAS 
+      if (lower==upper)
+	value *= FIXED_BIAS; // bias towards taking out fixed variables
+#endif
       // store square in list
       if (infeas[iRow])
-	infeas[iRow] = (value-lower)*(value-lower); // already there
+	infeas[iRow] = value; // already there
       else
-	infeasible_->quickAdd(iRow,(value-lower)*(value-lower));
+	infeasible_->quickAdd(iRow,value);
     } else {
       // feasible - was it infeasible - if so set tiny
       if (infeas[iRow])
@@ -482,19 +522,37 @@ ClpDualRowSteepest::saveWeights(ClpSimplex * model,int mode)
     int iRow;
     const int * pivotVariable = model_->pivotVariable();
     double tolerance=model_->currentPrimalTolerance();
-    for (iRow=0;iRow<model_->numberRows();iRow++) {
+    for (iRow=0;iRow<numberRows;iRow++) {
       int iPivot=pivotVariable[iRow];
       double value = model_->solution(iPivot);
       double lower = model_->lower(iPivot);
       double upper = model_->upper(iPivot);
-      if (value>upper+tolerance) {
-	value -= upper;
-	// store square in list
-	infeasible_->quickAdd(iRow,value*value);
-      } else if (value<lower-tolerance) {
+      if (value<lower-tolerance) {
 	value -= lower;
+	value *= value;
+#ifdef COLUMN_BIAS 
+	if (iPivot<numberColumns)
+	  value *= COLUMN_BIAS; // bias towards columns
+#endif
+#ifdef FIXED_BIAS 
+	if (lower==upper)
+	  value *= FIXED_BIAS; // bias towards taking out fixed variables
+#endif
 	// store square in list
-	infeasible_->quickAdd(iRow,value*value);
+	infeasible_->quickAdd(iRow,value);
+      } else if (value>upper+tolerance) {
+	value -= upper;
+	value *= value;
+#ifdef COLUMN_BIAS 
+	if (iPivot<numberColumns)
+	  value *= COLUMN_BIAS; // bias towards columns
+#endif
+#ifdef FIXED_BIAS 
+	if (lower==upper)
+	  value *= FIXED_BIAS; // bias towards taking out fixed variables
+#endif
+	// store square in list
+	infeasible_->quickAdd(iRow,value);
       }
     }
   }

@@ -253,7 +253,7 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
     sumPrimalInfeasibilities_=nonLinearCost_->sumInfeasibilities();
     numberPrimalInfeasibilities_= nonLinearCost_->numberInfeasibilities();
     // and get good feasible duals
-    computeDuals();
+    computeDuals(NULL);
   }
   // clean up
   finish();
@@ -307,7 +307,7 @@ ClpSimplexPrimal::whileIterating()
       memcpy(saveColumn1,reducedCostWork_,numberColumns_*sizeof(double));
       memcpy(saveColumn2,columnActivityWork_,numberColumns_*sizeof(double));
       createRim(7);
-      gutsOfSolution(rowActivityWork_,columnActivityWork_);
+      gutsOfSolution(rowActivityWork_,columnActivityWork_,NULL,NULL);
       printf("xxx %d old obj %g, recomputed %g, sum primal inf %g\n",
 	     numberIterations_,
 	     saveValue,objectiveValue_,sumPrimalInfeasibilities_);
@@ -335,6 +335,8 @@ ClpSimplexPrimal::whileIterating()
       int sequenceIn=nextSuperBasic();
       if (sequenceIn<0) {
 	// end of values pass - initialize weights etc
+	handler_->message(CLP_END_VALUES_PASS,messages_)
+	  <<numberIterations_;
 	primalColumnPivot_->saveWeights(this,5);
 	problemStatus_=-2; // factorize now
 	pivotRow_=-1; // say no weights update
@@ -443,7 +445,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
   // get primal and dual solutions
   // put back original costs and then check
   createRim(4);
-  gutsOfSolution(rowActivityWork_, columnActivityWork_);
+  gutsOfSolution(rowActivityWork_, columnActivityWork_,NULL,NULL);
   // Check if looping
   int loop = progress.looping();
   if (loop>=0) {
@@ -451,7 +453,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
     return ;
   } else if (loop<-1) {
     // something may have changed
-    gutsOfSolution(rowActivityWork_, columnActivityWork_);
+    gutsOfSolution(rowActivityWork_, columnActivityWork_,NULL,NULL);
   }
   // really for free variables in
   //if((progressFlag_&2)!=0)
@@ -494,7 +496,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
       // put back original costs
       createRim(4);
       nonLinearCost_->checkInfeasibilities(true);
-      gutsOfSolution(rowActivityWork_, columnActivityWork_);
+      gutsOfSolution(rowActivityWork_, columnActivityWork_,NULL,NULL);
 
       infeasibilityCost_=1.0e100;
       // put back original costs
@@ -511,7 +513,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	int i;
 	for (i=0;i<numberRows_+numberColumns_;i++) 
 	  cost_[i] *= 1.0e-100;
-	gutsOfSolution(rowActivityWork_, columnActivityWork_);
+	gutsOfSolution(rowActivityWork_, columnActivityWork_,NULL,NULL);
 	nonLinearCost_=nonLinear;
 	infeasibilityCost_=saveWeight;
 	if ((infeasibilityCost_>=1.0e18||
@@ -529,7 +531,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	  infeasibilityCost_=0.0;
 	  createRim(4);
 	  nonLinearCost_->checkInfeasibilities(true);
-	  gutsOfSolution(rowActivityWork_, columnActivityWork_);
+	  gutsOfSolution(rowActivityWork_, columnActivityWork_,NULL,NULL);
 	  // so will exit
 	  infeasibilityCost_=1.0e30;
 	}
@@ -543,7 +545,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	  // put back original costs and then check
 	  createRim(4);
 	  nonLinearCost_->checkInfeasibilities(true);
-	  gutsOfSolution(rowActivityWork_, columnActivityWork_);
+	  gutsOfSolution(rowActivityWork_, columnActivityWork_,NULL,NULL);
 	  problemStatus_=-1; //continue
 	} else {
 	  // say infeasible
@@ -575,7 +577,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	  // put back original costs and then check
 	  createRim(4);
 	  nonLinearCost_->checkInfeasibilities(true);
-	  gutsOfSolution(rowActivityWork_, columnActivityWork_);
+	  gutsOfSolution(rowActivityWork_, columnActivityWork_,NULL,NULL);
 	  problemStatus_ = -1;
 	} else {
 	  problemStatus_=0; // optimal
@@ -606,7 +608,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	    <<CoinMessageEol;
 	  // put back original costs and then check
 	  createRim(4);
-	  gutsOfSolution(rowActivityWork_, columnActivityWork_);
+	  gutsOfSolution(rowActivityWork_, columnActivityWork_,NULL,NULL);
 	  problemStatus_=-1; //continue
 	} else {
 	  // say unbounded
@@ -1216,7 +1218,7 @@ ClpSimplexPrimal::unPerturb()
   perturbation_ = 102; // stop any further perturbation
   // move non basic variables to new bounds
   nonLinearCost_->checkInfeasibilities(true);
-  gutsOfSolution(rowActivityWork_, columnActivityWork_);
+  gutsOfSolution(rowActivityWork_, columnActivityWork_,NULL,NULL);
 }
 // Unflag all variables and return number unflagged
 int 

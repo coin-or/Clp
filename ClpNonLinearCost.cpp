@@ -341,7 +341,12 @@ ClpNonLinearCost::checkInfeasibilities(bool toNearest)
     assert(iRange<end);
     lowerValue = lower_[iRange];
     upperValue = lower_[iRange+1];
-    switch(model_->getStatus(iSequence)) {
+    ClpSimplex::Status status = model_->getStatus(iSequence);
+    if (upperValue==lowerValue) {
+      if (status != ClpSimplex::basic) 
+	model_->setStatus(iSequence,ClpSimplex::isFixed);
+    }
+    switch(status) {
       
     case ClpSimplex::basic:
     case ClpSimplex::superBasic:
@@ -413,6 +418,8 @@ ClpNonLinearCost::checkInfeasibilities(bool toNearest)
 	  solution[iSequence] = upperValue;
 	}
       }
+      break;
+    case ClpSimplex::isFixed:
       break;
     }
   }
@@ -616,7 +623,14 @@ ClpNonLinearCost::setOne(int iPivot, double value)
   double & cost = model_->costAddress(iPivot);
   lower = lower_[iRange];
   upper = lower_[iRange+1];
-  switch(model_->getStatus(iPivot)) {
+  ClpSimplex::Status status = model_->getStatus(iPivot);
+  if (upper==lower) {
+    if (status != ClpSimplex::basic) {
+      model_->setStatus(iPivot,ClpSimplex::isFixed);
+      status = ClpSimplex::basic; // so will skip
+    }
+  }
+  switch(status) {
       
   case ClpSimplex::basic:
   case ClpSimplex::superBasic:
@@ -624,6 +638,7 @@ ClpNonLinearCost::setOne(int iPivot, double value)
     break;
   case ClpSimplex::atUpperBound:
   case ClpSimplex::atLowerBound:
+  case ClpSimplex::isFixed:
     // set correctly
     if (fabs(value-lower)<=primalTolerance*1.001){
       model_->setStatus(iPivot,ClpSimplex::atLowerBound);
@@ -635,10 +650,6 @@ ClpNonLinearCost::setOne(int iPivot, double value)
     }
     break;
   }
-  if (upper-lower<1.0e-8)
-    model_->setFixed(iPivot);
-  else
-    model_->clearFixed(iPivot);
   double difference = cost-cost_[iRange]; 
   cost = cost_[iRange];
   changeCost_ += value*difference;

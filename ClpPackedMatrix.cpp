@@ -221,7 +221,7 @@ ClpPackedMatrix::transposeTimes(const ClpSimplex * model, double scalar,
   int numberRows = model->numberRows();
   ClpPackedMatrix* rowCopy =
     dynamic_cast< ClpPackedMatrix*>(model->rowCopy());
-  if (numberInRowArray>0.3*numberRows||!rowCopy) {
+  if (numberInRowArray>0.333*numberRows||!rowCopy) {
     // do by column
     int iColumn;
     // get matrix data pointers
@@ -229,43 +229,143 @@ ClpPackedMatrix::transposeTimes(const ClpSimplex * model, double scalar,
     const CoinBigIndex * columnStart = matrix_->getVectorStarts();
     const int * columnLength = matrix_->getVectorLengths(); 
     const double * elementByColumn = matrix_->getElements();
-    double * markVector = y->denseVector(); // probably empty
     const double * rowScale = model->rowScale();
     int numberColumns = model->numberColumns();
-    if (!rowScale) {
-      for (iColumn=0;iColumn<numberColumns;iColumn++) {
-	double value = markVector[iColumn];
-	markVector[iColumn]=0.0;
-	double value2 = 0.0;
-	CoinBigIndex j;
-	for (j=columnStart[iColumn];
-	     j<columnStart[iColumn]+columnLength[iColumn];j++) {
-	  int iRow = row[j];
-	  value2 += pi[iRow]*elementByColumn[j];
+    if (!y->getNumElements()) {
+      if (!rowScale) {
+	if (scalar==-1.0) {
+	  for (iColumn=0;iColumn<numberColumns;iColumn++) {
+	    double value = 0.0;
+	    CoinBigIndex j;
+	    for (j=columnStart[iColumn];
+		 j<columnStart[iColumn]+columnLength[iColumn];j++) {
+	      int iRow = row[j];
+	      value += pi[iRow]*elementByColumn[j];
+	    }
+	    if (fabs(value)>zeroTolerance) {
+	      index[numberNonZero++]=iColumn;
+	      array[iColumn]=-value;
+	    }
+	  }
+	} else if (scalar==1.0) {
+	  for (iColumn=0;iColumn<numberColumns;iColumn++) {
+	    double value = 0.0;
+	    CoinBigIndex j;
+	    for (j=columnStart[iColumn];
+		 j<columnStart[iColumn]+columnLength[iColumn];j++) {
+	      int iRow = row[j];
+	      value += pi[iRow]*elementByColumn[j];
+	    }
+	    if (fabs(value)>zeroTolerance) {
+	      index[numberNonZero++]=iColumn;
+	      array[iColumn]=value;
+	    }
+	  }
+	} else {
+	  for (iColumn=0;iColumn<numberColumns;iColumn++) {
+	    double value = 0.0;
+	    CoinBigIndex j;
+	    for (j=columnStart[iColumn];
+		 j<columnStart[iColumn]+columnLength[iColumn];j++) {
+	      int iRow = row[j];
+	      value += pi[iRow]*elementByColumn[j];
+	    }
+	    value *= scalar;
+	    if (fabs(value)>zeroTolerance) {
+	      index[numberNonZero++]=iColumn;
+	      array[iColumn]=value;
+	    }
+	  }
 	}
-	value += value2*scalar;
-	if (fabs(value)>zeroTolerance) {
-	  index[numberNonZero++]=iColumn;
-	  array[iColumn]=value;
+      } else {
+	// scaled
+	if (scalar==-1.0) {
+	  for (iColumn=0;iColumn<numberColumns;iColumn++) {
+	    double value = 0.0;
+	    CoinBigIndex j;
+	    const double * columnScale = model->columnScale();
+	    for (j=columnStart[iColumn];
+		 j<columnStart[iColumn]+columnLength[iColumn];j++) {
+	      int iRow = row[j];
+	      value += pi[iRow]*elementByColumn[j]*rowScale[iRow];
+	    }
+	    value *= columnScale[iColumn];
+	    if (fabs(value)>zeroTolerance) {
+	      index[numberNonZero++]=iColumn;
+	      array[iColumn]=-value;
+	    }
+	  }
+	} else if (scalar==1.0) {
+	  for (iColumn=0;iColumn<numberColumns;iColumn++) {
+	    double value = 0.0;
+	    CoinBigIndex j;
+	    const double * columnScale = model->columnScale();
+	    for (j=columnStart[iColumn];
+		 j<columnStart[iColumn]+columnLength[iColumn];j++) {
+	      int iRow = row[j];
+	      value += pi[iRow]*elementByColumn[j]*rowScale[iRow];
+	    }
+	    value *= columnScale[iColumn];
+	    if (fabs(value)>zeroTolerance) {
+	      index[numberNonZero++]=iColumn;
+	      array[iColumn]=value;
+	    }
+	  }
+	} else {
+	  for (iColumn=0;iColumn<numberColumns;iColumn++) {
+	    double value = 0.0;
+	    CoinBigIndex j;
+	    const double * columnScale = model->columnScale();
+	    for (j=columnStart[iColumn];
+		 j<columnStart[iColumn]+columnLength[iColumn];j++) {
+	      int iRow = row[j];
+	      value += pi[iRow]*elementByColumn[j]*rowScale[iRow];
+	    }
+	    value *= scalar*columnScale[iColumn];
+	    if (fabs(value)>zeroTolerance) {
+	      index[numberNonZero++]=iColumn;
+	      array[iColumn]=value;
+	    }
+	  }
 	}
       }
     } else {
-      // scaled
-      for (iColumn=0;iColumn<numberColumns;iColumn++) {
-	double value = markVector[iColumn];
-	markVector[iColumn]=0.0;
-	CoinBigIndex j;
-	const double * columnScale = model->columnScale();
-	double value2 = 0.0;
-	for (j=columnStart[iColumn];
-	     j<columnStart[iColumn]+columnLength[iColumn];j++) {
-	  int iRow = row[j];
-	  value2 += pi[iRow]*elementByColumn[j]*rowScale[iRow];
+      double * markVector = y->denseVector(); // not empty
+      if (!rowScale) {
+	for (iColumn=0;iColumn<numberColumns;iColumn++) {
+	  double value = markVector[iColumn];
+	  markVector[iColumn]=0.0;
+	  double value2 = 0.0;
+	  CoinBigIndex j;
+	  for (j=columnStart[iColumn];
+	       j<columnStart[iColumn]+columnLength[iColumn];j++) {
+	    int iRow = row[j];
+	    value2 += pi[iRow]*elementByColumn[j];
+	  }
+	  value += value2*scalar;
+	  if (fabs(value)>zeroTolerance) {
+	    index[numberNonZero++]=iColumn;
+	    array[iColumn]=value;
+	  }
 	}
-	value += value2*scalar*columnScale[iColumn];
-	if (fabs(value)>zeroTolerance) {
-	  index[numberNonZero++]=iColumn;
-	  array[iColumn]=value;
+      } else {
+	// scaled
+	for (iColumn=0;iColumn<numberColumns;iColumn++) {
+	  double value = markVector[iColumn];
+	  markVector[iColumn]=0.0;
+	  CoinBigIndex j;
+	  const double * columnScale = model->columnScale();
+	  double value2 = 0.0;
+	  for (j=columnStart[iColumn];
+	       j<columnStart[iColumn]+columnLength[iColumn];j++) {
+	    int iRow = row[j];
+	    value2 += pi[iRow]*elementByColumn[j]*rowScale[iRow];
+	  }
+	  value += value2*scalar*columnScale[iColumn];
+	  if (fabs(value)>zeroTolerance) {
+	    index[numberNonZero++]=iColumn;
+	    array[iColumn]=value;
+	  }
 	}
       }
     }

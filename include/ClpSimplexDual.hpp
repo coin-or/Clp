@@ -113,7 +113,7 @@ public:
 
   */
 
-  int dual();
+  int dual(int ifValuesPass);
   /** For strong branching.  On input lower and upper are new bounds
       while on output they are change in objective function values 
       (>1.0e50 infeasible).
@@ -138,8 +138,10 @@ public:
       +0 looks optimal (might be unbounded - but we will investigate)
       +1 looks infeasible
       +3 max iterations 
+
+      If givenPi not NULL then in values pass
    */
-  int whileIterating(); 
+  int whileIterating(double * & givenPi); 
   /** The duals are updated by the given arrays.
       Returns number of infeasibilities.
       After rowArray and columnArray will just have those which 
@@ -168,18 +170,38 @@ public:
       If necessary will modify costs
       For speed, we may need to go to a bucket approach when many
       variables are being flipped
+
   */
   void dualColumn(CoinIndexedVector * rowArray,
 		  CoinIndexedVector * columnArray,
 		  CoinIndexedVector * spareArray,
-		  CoinIndexedVector * spareArray2);
+		  CoinIndexedVector * spareArray2,
+		  double accpetablePivot);
+  /** 
+      Row array has row part of pivot row
+      Column array has column part.
+      This sees what is best thing to do in dual values pass
+      Returns 0 if theta_ move will put basic variable out to bound,
+      1 if can change dual on chosen row and leave variable in basis
+  */
+  int checkPossibleValuesMove(CoinIndexedVector * rowArray,
+			       CoinIndexedVector * columnArray,
+			       double acceptablePivot);
+  /** 
+      This sees if we can move duals in dual values pass.
+      This is done before any pivoting
+  */
+  void doEasyOnesInValuesPass(double * givenReducedCosts);
   /** 
       Chooses dual pivot row
       Would be faster with separate region to scan
       and will have this (with square of infeasibility) when steepest
       For easy problems we can just choose one of the first rows we look at
+      
+      If alreadyChosen >=0 then in values pass and that row has been 
+      selected
   */
-  void dualRow();
+  void dualRow(int alreadyChosen);
   /** Checks if any fake bounds active - if so returns number and modifies
       updatedDualBound_ and everything.
       Free variables will be left as free
@@ -209,7 +231,8 @@ public:
 	    - 2 restoring from saved 
   */
   void statusOfProblemInDual(int & lastCleaned, int type,
-			     ClpSimplexProgress & progress);
+			     ClpSimplexProgress & progress,
+			     double * givenDjs);
   /// Perturbs problem (method depends on perturbation())
   void perturb();
   /** Fast iterations.  Misses out a lot of initialization.

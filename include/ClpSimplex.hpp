@@ -57,6 +57,7 @@ public:
     atUpperBound = 0x02,
     atLowerBound = 0x03,
     superBasic = 0x04,
+    isFixed = 0x05
   };
 
   enum FakeBound {
@@ -133,7 +134,7 @@ public:
   /**@name Functions most useful to user */
   //@{
   /** Dual algorithm - see ClpSimplexDual.hpp for method */
-  int dual();
+  int dual(int ifValuesPass=0);
   /** Primal algorithm - see ClpSimplexPrimal.hpp for method */
   int primal(int ifValuesPass=0);
   /// Passes in factorization
@@ -322,8 +323,9 @@ public:
   int internalFactorize(int solveType);
   /// Factorizes using current basis. For external use
   int factorize();
-  /// Computes duals from scratch
-  void computeDuals();
+  /** Computes duals from scratch. If givenDjs then
+      allows for nonzero basic djs */
+  void computeDuals(double * givenDjs);
   /// Computes primals from scratch
   void computePrimals (  const double * rowActivities,
 		     const double * columnActivities);
@@ -446,9 +448,13 @@ public:
   protected:
   /**@name protected methods */
   //@{
-  /// May change basis and then returns number changed
+  /** May change basis and then returns number changed.
+      Computation of solutions may be overriden by given pi and solution
+  */
   int gutsOfSolution ( const double * rowActivities,
 		       const double * columnActivities,
+		       double * givenDuals,
+		       const double * givenPrimals,
 		       bool valuesPass=false);
   /// Does most of deletion (0 = all, 1 = most, 2 most + factorization)
   void gutsOfDelete(int type);
@@ -600,11 +606,11 @@ public:
   };
   inline Status getColumnStatus(int sequence) const
   {return static_cast<Status> (status_[sequence]&7);};
-  inline void setFixed( int sequence)
+  inline void setPivoted( int sequence)
   { status_[sequence] |= 32;};
-  inline void clearFixed( int sequence)
+  inline void clearPivoted( int sequence)
   { status_[sequence] &= ~32; };
-  inline bool fixed(int sequence) const
+  inline bool pivoted(int sequence) const
   {return (((status_[sequence]>>5)&1)!=0);};
   inline void setFlagged( int sequence)
   {
