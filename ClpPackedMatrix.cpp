@@ -159,11 +159,25 @@ ClpPackedMatrix::reverseOrderedCopy() const
   copy->hasGaps_=false;
   return copy;
 }
+static void checkGaps(const CoinPackedMatrix * matrix)
+{
+  int iColumn;
+  // get matrix data pointers
+  const CoinBigIndex * columnStart = matrix->getVectorStarts();
+  const int * columnLength = matrix->getVectorLengths(); 
+  int numberColumns = matrix->getNumCols();
+  for (iColumn=0;iColumn<numberColumns;iColumn++) {
+    assert (columnStart[iColumn]+columnLength[iColumn]==
+            columnStart[iColumn+1]);
+  }
+}
 //unscaled versions
 void 
 ClpPackedMatrix::times(double scalar,
 		   const double * x, double * y) const
 {
+  if (!hasGaps_) 
+  checkGaps(matrix_);
   int iRow,iColumn;
   // get matrix data pointers
   const int * row = matrix_->getIndices();
@@ -187,6 +201,8 @@ void
 ClpPackedMatrix::transposeTimes(double scalar,
 				const double * x, double * y) const
 {
+  if (!hasGaps_) 
+  checkGaps(matrix_);
   int iColumn;
   // get matrix data pointers
   const int * row = matrix_->getIndices();
@@ -253,6 +269,8 @@ ClpPackedMatrix::times(double scalar,
 		       const double * rowScale, 
 		       const double * columnScale) const
 {
+  if (!hasGaps_) 
+  checkGaps(matrix_);
   if (rowScale) {
     int iRow,iColumn;
     // get matrix data pointers
@@ -284,6 +302,8 @@ ClpPackedMatrix::transposeTimes( double scalar,
 				 const double * columnScale,
 				 double * spare) const
 {
+  if (!hasGaps_) 
+  checkGaps(matrix_);
   if (rowScale) {
     int iColumn;
     // get matrix data pointers
@@ -368,6 +388,8 @@ ClpPackedMatrix::transposeTimes(const ClpSimplex * model, double scalar,
 			      CoinIndexedVector * y,
 			      CoinIndexedVector * columnArray) const
 {
+  if (!hasGaps_) 
+  checkGaps(matrix_);
   columnArray->clear();
   double * pi = rowArray->denseVector();
   int numberNonZero=0;
@@ -606,6 +628,8 @@ ClpPackedMatrix::transposeTimesByColumn(const ClpSimplex * model, double scalar,
 					CoinIndexedVector * y,
 					CoinIndexedVector * columnArray) const
 {
+  if (!hasGaps_) 
+  checkGaps(matrix_);
   double * pi = rowArray->denseVector();
   int numberNonZero=0;
   int * index = columnArray->getIndices();
@@ -1126,6 +1150,8 @@ ClpPackedMatrix::subsetTransposeTimes(const ClpSimplex * model,
 			      const CoinIndexedVector * y,
 			      CoinIndexedVector * columnArray) const
 {
+  if (!hasGaps_) 
+  checkGaps(matrix_);
   columnArray->clear();
   double * pi = rowArray->denseVector();
   double * array = columnArray->denseVector();
@@ -1614,6 +1640,8 @@ ClpPackedMatrix::fillBasis(ClpSimplex * model,
 			 int * rowCount, int * columnCount,
 			 double * elementU)
 {
+  if (!hasGaps_) 
+  checkGaps(matrix_);
   const int * columnLength = matrix_->getVectorLengths(); 
   int i;
   CoinBigIndex numberElements=start[0];
@@ -1704,6 +1732,8 @@ ClpPackedMatrix::fillBasis(ClpSimplex * model,
 int 
 ClpPackedMatrix::scale(ClpModel * model) const 
 {
+  if (!hasGaps_) 
+  checkGaps(matrix_);
   int numberRows = model->numberRows();
   int numberColumns = matrix_->getNumCols();
   // If empty - return as sanityCheck will trap
@@ -2112,6 +2142,8 @@ void
 ClpPackedMatrix::unpack(const ClpSimplex * model,CoinIndexedVector * rowArray,
 		   int iColumn) const 
 {
+  if (!hasGaps_) 
+  checkGaps(matrix_);
   const double * rowScale = model->rowScale();
   const int * row = matrix_->getIndices();
   const CoinBigIndex * columnStart = matrix_->getVectorStarts();
@@ -2142,6 +2174,8 @@ ClpPackedMatrix::unpackPacked(ClpSimplex * model,
 			    CoinIndexedVector * rowArray,
 			    int iColumn) const
 {
+  if (!hasGaps_) 
+  checkGaps(matrix_);
   const double * rowScale = model->rowScale();
   const int * row = matrix_->getIndices();
   const CoinBigIndex * columnStart = matrix_->getVectorStarts();
@@ -2238,6 +2272,8 @@ ClpPackedMatrix::allElementsInRange(ClpModel * model,
 				    double smallest, double largest,
 				    int check)
 {
+  if (!hasGaps_) 
+  checkGaps(matrix_);
   int iColumn;
   // make sure matrix correct size
   matrix_->setDimensions(model->numberRows(),model->numberColumns());
@@ -2380,6 +2416,8 @@ void
 ClpPackedMatrix::rangeOfElements(double & smallestNegative, double & largestNegative,
 		       double & smallestPositive, double & largestPositive)
 {
+  if (!hasGaps_) 
+  checkGaps(matrix_);
   smallestNegative=-COIN_DBL_MAX;
   largestNegative=0.0;
   smallestPositive=COIN_DBL_MAX;
@@ -2762,4 +2800,36 @@ ClpPackedMatrix::reallyScale(const double * rowScale, const double * columnScale
       element[j] *= scale*rowScale[iRow];
     }
   }
+}
+/* Delete the columns whose indices are listed in <code>indDel</code>. */
+void 
+ClpPackedMatrix::deleteCols(const int numDel, const int * indDel)
+{ 
+  matrix_->deleteCols(numDel,indDel);
+  numberActiveColumns_ = matrix_->getNumCols();
+}
+/* Delete the rows whose indices are listed in <code>indDel</code>. */
+void 
+ClpPackedMatrix::deleteRows(const int numDel, const int * indDel)
+{ 
+  matrix_->deleteRows(numDel,indDel);
+  numberActiveColumns_ = matrix_->getNumCols();
+  // may now have gaps
+  hasGaps_=true;
+}
+// Append Columns
+void 
+ClpPackedMatrix::appendCols(int number, const CoinPackedVectorBase * const * columns)
+{ 
+  matrix_->appendCols(number,columns);
+  numberActiveColumns_ = matrix_->getNumCols();
+}
+// Append Rows
+void 
+ClpPackedMatrix::appendRows(int number, const CoinPackedVectorBase * const * rows)
+{ 
+  matrix_->appendRows(number,rows);
+  numberActiveColumns_ = matrix_->getNumCols();
+  // may now have gaps
+  hasGaps_=true;
 }

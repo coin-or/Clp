@@ -52,17 +52,13 @@ public:
   { return matrix_->getVectorLengths();} ;
 
     /** Delete the columns whose indices are listed in <code>indDel</code>. */
-    virtual void deleteCols(const int numDel, const int * indDel)
-  { matrix_->deleteCols(numDel,indDel);numberActiveColumns_ = matrix_->getNumCols();};
+  virtual void deleteCols(const int numDel, const int * indDel);
     /** Delete the rows whose indices are listed in <code>indDel</code>. */
-    virtual void deleteRows(const int numDel, const int * indDel)
-  { matrix_->deleteRows(numDel,indDel);numberActiveColumns_ = matrix_->getNumCols();};
+  virtual void deleteRows(const int numDel, const int * indDel);
   /// Append Columns
-  virtual void appendCols(int number, const CoinPackedVectorBase * const * columns)
-  { matrix_->appendCols(number,columns);numberActiveColumns_ = matrix_->getNumCols();};
+  virtual void appendCols(int number, const CoinPackedVectorBase * const * columns);
   /// Append Rows
-  virtual void appendRows(int number, const CoinPackedVectorBase * const * rows)
-  { matrix_->appendRows(number,rows);numberActiveColumns_ = matrix_->getNumCols();};
+  virtual void appendRows(int number, const CoinPackedVectorBase * const * rows);
   /** Replace the elements of a vector.  The indices remain the same.
       This is only needed if scaling and a row copy is used.
       At most the number specified will be replaced.
