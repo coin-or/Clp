@@ -1392,6 +1392,14 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	}
       } else if (updateStatus==2) {
 	// major error
+	// better to have small tolerance even if slower
+	factorization_->zeroTolerance(1.0e-15);
+	int maxFactor = factorization_->maximumPivots();
+	if (maxFactor>10) {
+	  if (forceFactorization_<0)
+	    forceFactorization_= maxFactor;
+	  forceFactorization_ = max (1,(forceFactorization_>>1));
+	} 
 	// later we may need to unwind more e.g. fake bounds
 	if(lastGoodIteration_ != numberIterations_) {
 	  rowArray_[1]->clear();

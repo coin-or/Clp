@@ -1084,7 +1084,7 @@ ClpSimplex::housekeeping(double objectiveChange)
     if (forceFactorization_>0&&
 	factorization_->pivots()==forceFactorization_) {
       // relax
-      forceFactorization_ *= 2;
+      forceFactorization_ = (1+3*forceFactorization_)/2;
       if (forceFactorization_>factorization_->maximumPivots())
 	forceFactorization_ = -1; //off
       return 1;
