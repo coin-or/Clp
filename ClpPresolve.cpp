@@ -163,6 +163,10 @@ ClpPresolve::postsolve(bool updateStatus)
     sol  = originalModel_->primalColumnSolution();
     if (updateStatus) {
       unsigned char *status = originalModel_->statusArray();
+      if (!status) {
+        originalModel_->createStatus();
+        status = originalModel_->statusArray();
+      }
       rowstat = status + ncols0;
       colstat = status;
       memcpy(colstat, presolvedModel_->statusArray(), ncols);
