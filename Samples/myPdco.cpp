@@ -89,8 +89,10 @@ void myPdco::matVecMult(ClpInterior * model,  int mode, double* x_elts, double* 
     for (int k=0; k<numlinks_; k++){
       y_sum += y_elts[k];
       int i1 = rowIndex_[2*k];
+      assert (i1>=0);
       x_elts[i1] += y_elts[k];
       int i2 = rowIndex_[2*k+1];
+      assert (i2>=0);
       x_elts[i2] -= y_elts[k];
     }
     double y_suma = 0.0;
@@ -150,7 +152,7 @@ void myPdco::matPrecon(ClpInterior * model, double delta, double* x_elts, double
   x_elts[nrow-3] += y_suma;
   x_elts[nrow-2] += y_sumb;
   x_elts[nrow-1] += (y_sum + y_suma + y_sumb);
-  delete ysq;
+  delete [] ysq;
   double delsq = delta*delta;
   for (int k=0; k<nrow; k++)
     x_elts[k] = 1.0/(sqrt(x_elts[k]+delsq));
@@ -185,7 +187,7 @@ void myPdco::getHessian(ClpInterior * model, CoinDenseVector &x, CoinDenseVector
     H_elts[k] = 1.0 / x_elts[k];
   return;
 }
-myPdco::myPdco(ClpInterior & model)
+myPdco::myPdco(ClpInterior & model, FILE * fpData, FILE * fpParam)
 {
   int nrow;
   int ncol;
@@ -199,11 +201,8 @@ myPdco::myPdco(ClpInterior & model)
   double  *y;
   double  *dj;
   int ipair[2], igparm[4], maxrows, maxlinks;
-  // Open graph and parameter files
-  FILE *fpin = fopen("./g.graph","r");
-  FILE *fpp = fopen("./gparm","r");
   // Read max array sizes and allocate them
-  fscanf(fpp, "%d %d", &maxrows, &maxlinks);
+  fscanf(fpParam, "%d %d", &maxrows, &maxlinks);
   int *ir = new int[2*maxlinks + 5];
   /********************** alpha parameter hrdwired here ***********/
   double alpha = 0.9; 
@@ -214,14 +213,22 @@ myPdco::myPdco(ClpInterior & model)
   int *ifrom = &ipair[0];
   int *ito = &ipair[1];
   int nonzpt = 0;
-  while(fscanf(fpin, "%d %d", ifrom, ito) && kct++ < maxlinks){
-  //  while(fread(ipair, 4,2, fpin) && kct++ < maxlinks){
-    if (*ifrom < 0){
+  numlinks_ = 0;
+  while(fscanf(fpData, "%d %d", ifrom, ito) && kct++ < maxlinks){
+  //  while(fread(ipair, 4,2, fpData) && kct++ < maxlinks){
+    if ((*ifrom) < 0){
       printf("Bad link  %d  %d\n",*ifrom,*ito);
       continue;
     }
     ipair[0]--;
-	  ipair[1]--;
+    ipair[1]--;
+    //assert(*ifrom>=0&&*ifrom<maxrows);
+    //assert(*ito>=0&&*ifrom<maxrows);
+    if (*ifrom<0||*ifrom>=maxrows||*ito<0||*ito>=maxrows) {
+      printf("bad link %d %d\n",*ifrom,*ito);
+      continue;
+    }
+    numlinks_++;
     ir[nonzpt++] = *ifrom;
     ir[nonzpt++] = *ito;
     imax = max(imax, *ifrom);
@@ -229,12 +236,11 @@ myPdco::myPdco(ClpInterior & model)
     imin = min(imin, *ifrom);
     imin = min(imin, *ito);
   }
-  fclose(fpin);
-  fclose(fpp);
+  fclose(fpData);
+  fclose(fpParam);
   printf ("imax %d  imin %d\n", imax, imin);
   // Set model size
   numnodes_ = imax + 1;
-  numlinks_ = maxlinks;
   nrow = numnodes_ + 3;
   ncol = numlinks_ + 2*numnodes_;
   numelts = 3*ncol;

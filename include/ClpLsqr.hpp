@@ -118,8 +118,8 @@ public:
   void matVecMult( int, CoinDenseVector *, CoinDenseVector *);
 
   void matVecMult( int, CoinDenseVector &, CoinDenseVector &);
-  /// diag1
-  void setDiag1(double * array)
+  /// diag1 - we just borrow as it is part of a CoinDenseVector
+  void borrowDiag1(double * array)
   { diag1_=array;};
   //@}
 };

@@ -588,7 +588,7 @@ ClpPdco::pdco( ClpPdcoBase * stuff, Options &options, Info &info, Outfo &outfo)
 	H[fix[k]] = 0;
       for (int k=0; k<n; k++)
 	D_elts[k]= sqrt(H_elts[k]);
-      thisLsqr.setDiag1(D_elts);
+      thisLsqr.borrowDiag1(D_elts);
       thisLsqr.diag2_ = d2;
 
       if (direct){
@@ -804,8 +804,6 @@ ClpPdco::pdco( ClpPdcoBase * stuff, Options &options, Info &info, Outfo &outfo)
     }else{
       printf(" %5.1f%7d%7.3f", log10(atolold), itncg, r3ratio);
     }
-    printf("\n************ debug\n");
-    break;
     //-------------------------------------------------------------------
     // Test for termination.
     //-------------------------------------------------------------------

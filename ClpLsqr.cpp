@@ -170,7 +170,7 @@ void ClpLsqr::do_lsqr( CoinDenseVector &b,
 
     acond   =   anorm * sqrt( ddnorm );
     real res1    =   phibar*phibar;
-    real res2    =   res2  +  psi*psi;
+    real res2    =   res1  +  psi*psi;
     rnorm   =   sqrt( res1 + res2 );
     arnorm  =   alfa * fabs( tau );
 
@@ -337,7 +337,7 @@ ClpLsqr::ClpLsqr(ClpInterior *model) :
 /** Destructor */
 ClpLsqr::~ClpLsqr()
 {
-  delete [] diag1_;
+  // delete [] diag1_; no as we just borrowed it
 }
 bool 
 ClpLsqr::setParam(char *parmName, int parmValue){

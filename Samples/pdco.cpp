@@ -19,7 +19,14 @@ int main (int argc, const char *argv[])
 
   // Get model in some way
   ClpInterior model;
-  myPdco stuff(model);
+  // Open graph and parameter files
+  FILE *fpin = fopen("./g.graph","r");
+  FILE *fpp = fopen("./gparm","r");
+  //FILE *fpin = fopen("./g.tiny","r");
+  //FILE *fpp = fopen("./gparm.tiny","r");
+  assert(fpin);
+  assert(fpp);
+  myPdco stuff(model,fpin,fpp);
   Info info;
   Outfo outfo;
   Options options;

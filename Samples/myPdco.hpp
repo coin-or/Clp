@@ -38,7 +38,7 @@ public:
   myPdco(double d1,double d2,
 	     int numnodes, int numlinks);
   /// Also reads a model
-  myPdco(ClpInterior &  model);
+  myPdco(ClpInterior & model, FILE * fpData, FILE * fpParam);
    /** Destructor */
    virtual ~myPdco();
    //@}

@@ -21,6 +21,7 @@
 #include "CoinPresolvePsdebug.hpp"
 #include "CoinPresolveSingleton.hpp"
 #include "CoinPresolveDoubleton.hpp"
+#include "CoinPresolveTripleton.hpp"
 #include "CoinPresolveZeros.hpp"
 #include "CoinPresolveSubst.hpp"
 #include "CoinPresolveForcing.hpp"
@@ -477,7 +478,8 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
     // normal
 #if 1
     const bool slackd = true;
-    const bool doubleton = true;
+    const bool doubleton = false;
+    const bool tripleton = true;
     const bool forcing = true;
     const bool ifree = true;
     const bool zerocost = true;
@@ -552,6 +554,12 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
 
 	if (doubleton) {
 	  paction_ = doubleton_action::presolve(prob, paction_);
+	  if (prob->status_)
+	    break;
+	}
+
+	if (tripleton) {
+	  paction_ = tripleton_action::presolve(prob, paction_);
 	  if (prob->status_)
 	    break;
 	}
