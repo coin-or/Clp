@@ -87,7 +87,6 @@
 #include "ClpNonLinearCost.hpp"
 #include "CoinPackedMatrix.hpp"
 #include "CoinIndexedVector.hpp"
-#include "CoinWarmStartBasis.hpp"
 #include "ClpPrimalColumnPivot.hpp"
 #include "ClpMessage.hpp"
 #include <cfloat>

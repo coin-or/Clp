@@ -14,7 +14,6 @@
 #include "ClpNonLinearCost.hpp"
 #include "ClpPackedMatrix.hpp"
 #include "CoinIndexedVector.hpp"
-#include "CoinWarmStartBasis.hpp"
 #include "CoinMpsIO.hpp"
 #include "ClpPrimalColumnPivot.hpp"
 #include "ClpMessage.hpp"
