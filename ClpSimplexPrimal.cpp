@@ -717,8 +717,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
     <<sumDualInfeasibilities_<<numberDualInfeasibilities_;
   handler_->printing(numberDualInfeasibilitiesWithoutFree_
 		     <numberDualInfeasibilities_)
-		       <<numberDualInfeasibilities_-
-    numberDualInfeasibilitiesWithoutFree_;
+		       <<numberDualInfeasibilitiesWithoutFree_;
   handler_->message()<<CoinMessageEol;
   assert (primalFeasible());
   // we may wish to say it is optimal even if infeasible

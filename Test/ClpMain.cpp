@@ -914,7 +914,7 @@ stopping",
     models[0].setDualTolerance(1.0e-7);
     ClpDualRowSteepest steep;
     models[0].setDualRowPivotAlgorithm(steep);
-    models[0].setPrimalTolerance(1.0e-8);
+    models[0].setPrimalTolerance(1.0e-7);
     ClpPrimalColumnSteepest steepP;
     models[0].setPrimalColumnPivotAlgorithm(steepP);
     std::string directory ="./";

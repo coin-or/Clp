@@ -234,9 +234,9 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
 	  break;
 	case ClpSimplex::isFree:
 	case ClpSimplex::superBasic:
-	  if (fabs(value)>tolerance) {
-	    // we are going to bias towards free
-	    value *= 10.0;
+	  if (fabs(value)>1.0e2*tolerance) {
+	    // we are going to bias towards free (but only if reasonable)
+	    value *= 1000.0;
 	    // store square in list
 	    if (infeas[iSequence+addSequence])
 	      infeas[iSequence+addSequence] = value*value; // already there
@@ -294,9 +294,9 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
 	break;
       case ClpSimplex::isFree:
       case ClpSimplex::superBasic:
-	if (fabs(value)>tolerance) { 
-	  // we are going to bias towards free
-	  value *= 10.0;
+	if (fabs(value)>1.0e2*tolerance) { 
+	  // we are going to bias towards free (but only if reasonable)
+	  value *= 1000.0;
 	  // store square in list
 	  if (infeas[sequenceOut])
 	    infeas[sequenceOut] = value*value; // already there
@@ -359,8 +359,8 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
 	break;
       case ClpSimplex::isFree:
 	if (fabs(value)>tolerance) {
-	  // we are going to bias towards free
-	  value *= 10.0;
+	  // we are going to bias towards free (but only if reasonable)
+	  value *= 1000.0;
 	  // store square in list
 	  if (infeas[iSequence+addSequence])
 	    infeas[iSequence+addSequence] = value*value; // already there
@@ -704,9 +704,10 @@ ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model,int mode)
 	break;
       case ClpSimplex::isFree:
       case ClpSimplex::superBasic:
-	if (fabs(value)>tolerance) { 
+	if (fabs(value)>1.0e2*tolerance) { 
+	  // we are going to bias towards free (but only if reasonable)
 	  // store square in list
-	  infeasible_->quickAdd(iSequence,value*value);
+	  infeasible_->quickAdd(iSequence,1.0e6*value*value);
 	}
 	break;
       case ClpSimplex::atUpperBound:

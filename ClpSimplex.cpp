@@ -99,6 +99,7 @@ ClpSimplex::ClpSimplex () :
   lastBadIteration_(-999999),
   numberFake_(0),
   progressFlag_(0),
+  firstFree_(-1),
   sumOfRelaxedDualInfeasibilities_(0.0),
   sumOfRelaxedPrimalInfeasibilities_(0.0)
 
@@ -483,6 +484,32 @@ int ClpSimplex::internalFactorize ( int solveType)
     valuesPass=true;
     solveType -= 10;
   }
+#ifdef CLP_DEBUG
+  if (solveType==1) {
+    int numberFreeIn=0,numberFreeOut=0;
+    double biggestDj=0.0;
+    for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+      switch(getColumnStatus(iColumn)) {
+	
+      case basic:
+	if (columnLower_[iColumn]<-largeValue_
+	    &&columnUpper_[iColumn]>largeValue_) 
+	  numberFreeIn++;
+	break;
+      default:
+	if (columnLower_[iColumn]<-largeValue_
+	    &&columnUpper_[iColumn]>largeValue_) {
+	  numberFreeOut++;
+	  biggestDj = max(fabs(dj_[iColumn]),biggestDj);
+	}
+	break;
+      }
+    }
+    if (numberFreeIn+numberFreeOut)
+      printf("%d in basis, %d out - largest dj %g\n",
+	     numberFreeIn,numberFreeOut,biggestDj);
+  }
+#endif
   if (!solveType) {
     if (!valuesPass) {
       // not values pass so set to bounds
@@ -565,6 +592,7 @@ int ClpSimplex::internalFactorize ( int solveType)
 	  }
 	}
 	totalSlacks=numberBasic;
+
 	for (iColumn=0;iColumn<numberColumns_;iColumn++) {
 	  switch(getColumnStatus(iColumn)) {
 	    
@@ -640,7 +668,6 @@ int ClpSimplex::internalFactorize ( int solveType)
 	  }
 	}
       } else {
-	//#define TESTFREE
 	// all slack basis
 	int numberBasic=0;
 	// changed to put free variables in basis
@@ -662,10 +689,8 @@ int ClpSimplex::internalFactorize ( int solveType)
 	    setRowStatus(iRow,isFree);
 	    rowActivityWork_[iRow]=0.0;
 	  }
-#ifdef TESTFREE
 	  setRowStatus(iRow,basic);
 	  numberBasic++;
-#endif
 	}
 	for (iColumn=0;iColumn<numberColumns_;iColumn++) {
 	  double lower=columnLowerWork_[iColumn];
@@ -680,12 +705,7 @@ int ClpSimplex::internalFactorize ( int solveType)
 	      columnActivityWork_[iColumn]=upper;
 	    }
 	  } else {
-#ifndef TESTFREE
-	    numberBasic++;
-	    setColumnStatus(iColumn,basic);
-#else
 	    setColumnStatus(iColumn,isFree);
-#endif
 	    columnActivityWork_[iColumn]=0.0;
 	  }
 	}
@@ -1132,6 +1152,7 @@ ClpSimplex::ClpSimplex(const ClpSimplex &rhs) :
   lastBadIteration_(-999999),
   numberFake_(0),
   progressFlag_(0),
+  firstFree_(-1),
   sumOfRelaxedDualInfeasibilities_(0.0),
   sumOfRelaxedPrimalInfeasibilities_(0.0)
 {
@@ -1220,6 +1241,7 @@ ClpSimplex::ClpSimplex(const ClpModel &rhs) :
   lastBadIteration_(-999999),
   numberFake_(0),
   progressFlag_(0),
+  firstFree_(-1),
   sumOfRelaxedDualInfeasibilities_(0.0),
   sumOfRelaxedPrimalInfeasibilities_(0.0)
 {
@@ -1348,6 +1370,7 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
   lastBadIteration_ = rhs.lastBadIteration_;
   numberFake_ = rhs.numberFake_;
   progressFlag_ = rhs.progressFlag_;
+  firstFree_ = rhs.firstFree_;
   sumOfRelaxedDualInfeasibilities_ = rhs.sumOfRelaxedDualInfeasibilities_;
   sumOfRelaxedPrimalInfeasibilities_ = rhs.sumOfRelaxedPrimalInfeasibilities_;
   if (rhs.nonLinearCost_!=NULL)
@@ -1426,6 +1449,7 @@ ClpSimplex::checkPrimalSolution(const double * rowActivities,
   int iRow,iColumn;
 
   objectiveValue_ = 0.0;
+  firstFree_ = -1;
   // now look at primal solution
   columnPrimalInfeasibility_=0.0;
   columnPrimalSequence_=-1;
@@ -1444,6 +1468,7 @@ ClpSimplex::checkPrimalSolution(const double * rowActivities,
   sumOfRelaxedPrimalInfeasibilities_ = 0.0;
 
   for (iRow=0;iRow<numberRows_;iRow++) {
+    //assert (fabs(solution[iRow])<1.0e15||getRowStatus(iRow) == basic);
     double infeasibility=0.0;
     objectiveValue_ += solution[iRow]*rowObjectiveWork_[iRow];
     if (solution[iRow]>rowUpperWork_[iRow]) {
@@ -1471,6 +1496,7 @@ ClpSimplex::checkPrimalSolution(const double * rowActivities,
   }
   solution = columnActivityWork_;
   for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+    //assert (fabs(solution[iColumn])<1.0e15||getColumnStatus(iColumn) == basic);
     double infeasibility=0.0;
     objectiveValue_ += objectiveWork_[iColumn]*solution[iColumn];
     if (solution[iColumn]>columnUpperWork_[iColumn]) {
@@ -1501,7 +1527,6 @@ void
 ClpSimplex::checkDualSolution()
 {
 
-  double * solution;
   int iRow,iColumn;
   sumDualInfeasibilities_=0.0;
   numberDualInfeasibilities_=0;
@@ -1510,10 +1535,10 @@ ClpSimplex::checkDualSolution()
   columnDualSequence_=-1;
   rowDualInfeasibility_=0.0;
   rowDualSequence_=-1;
+  firstFree_ = -1;
   primalToleranceToGetOptimal_=max(rowPrimalInfeasibility_,
 				   columnPrimalInfeasibility_);
   remainingDualInfeasibility_=0.0;
-  solution = rowActivityWork_;
   double relaxedTolerance=dualTolerance_;
   // we can't really trust infeasibilities if there is dual error
   double error = min(1.0e-3,largestDualError_);
@@ -1521,31 +1546,53 @@ ClpSimplex::checkDualSolution()
   relaxedTolerance = relaxedTolerance +  error;
   sumOfRelaxedDualInfeasibilities_ = 0.0;
 
-  for (iRow=0;iRow<numberRows_;iRow++) {
-    if (getRowStatus(iRow) != basic) {
+  for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+    if (getColumnStatus(iColumn) != basic) {
       // not basic
-      double value = rowReducedCost_[iRow];
-      double distance;
-      distance = rowUpperWork_[iRow]-solution[iRow];
-      if (distance>primalTolerance_) {
+      double value = reducedCostWork_[iColumn];
+      double distanceUp = columnUpperWork_[iColumn]-
+	columnActivityWork_[iColumn];
+      double distanceDown = columnActivityWork_[iColumn] -
+	columnLowerWork_[iColumn];
+      if (distanceUp>primalTolerance_) {
+	// Check if "free"
+	if (firstFree_<0&&distanceDown>primalTolerance_) {
+	  if (algorithm_>0) {
+	    // primal
+	    firstFree_ = iColumn;
+	  } else if (fabs(value)>1.0e2*relaxedTolerance) {
+	    // dual with dj
+	    firstFree_ = iColumn;
+	  }
+	}
 	// should not be negative
 	if (value<0.0) {
 	  value = - value;
-	  if (value>rowDualInfeasibility_) {
-	    rowDualInfeasibility_=value;
-	    rowDualSequence_=iRow;
+	  if (value>columnDualInfeasibility_) {
+	    columnDualInfeasibility_=value;
+	    columnDualSequence_=iColumn;
 	  }
 	  if (value>dualTolerance_) {
-	    sumDualInfeasibilities_ += value-dualTolerance_;
-	    if (value>relaxedTolerance) 
-	      sumOfRelaxedDualInfeasibilities_ += value-relaxedTolerance;
-	    numberDualInfeasibilities_ ++;
-	    if (getRowStatus(iRow) != isFree) 
+	    if (getColumnStatus(iColumn) != isFree) {
 	      numberDualInfeasibilitiesWithoutFree_ ++;
+	      sumDualInfeasibilities_ += value-dualTolerance_;
+	      if (value>relaxedTolerance) 
+		sumOfRelaxedDualInfeasibilities_ += value-relaxedTolerance;
+	      numberDualInfeasibilities_ ++;
+	    } else {
+	      // free so relax a lot
+	      value *= 0.01;
+	      if (value>dualTolerance_) {
+		sumDualInfeasibilities_ += value-dualTolerance_;
+		if (value>relaxedTolerance) 
+		  sumOfRelaxedDualInfeasibilities_ += value-relaxedTolerance;
+		numberDualInfeasibilities_ ++;
+	      }
+	    }
 	    // maybe we can make feasible by increasing tolerance
-	    if (distance<largeValue_) {
-	      if (distance>primalToleranceToGetOptimal_)
-		primalToleranceToGetOptimal_=distance;
+	    if (distanceUp<largeValue_) {
+	      if (distanceUp>primalToleranceToGetOptimal_)
+		primalToleranceToGetOptimal_=distanceUp;
 	    } else {
 	      //gap too big for any tolerance
 	      remainingDualInfeasibility_=
@@ -1554,56 +1601,64 @@ ClpSimplex::checkDualSolution()
 	  }
 	}
       }
-      distance = solution[iRow] -rowLowerWork_[iRow];
-      if (distance>primalTolerance_) {
+      if (distanceDown>primalTolerance_) {
 	// should not be positive
 	if (value>0.0) {
-	  if (value>rowDualInfeasibility_) {
-	    rowDualInfeasibility_=value;
-	    rowDualSequence_=iRow;
+	  if (value>columnDualInfeasibility_) {
+	    columnDualInfeasibility_=value;
+	    columnDualSequence_=iColumn;
 	  }
 	  if (value>dualTolerance_) {
 	    sumDualInfeasibilities_ += value-dualTolerance_;
 	    if (value>relaxedTolerance) 
 	      sumOfRelaxedDualInfeasibilities_ += value-relaxedTolerance;
 	    numberDualInfeasibilities_ ++;
-	    if (getRowStatus(iRow) != isFree) 
+	    if (getColumnStatus(iColumn) != isFree) 
 	      numberDualInfeasibilitiesWithoutFree_ ++;
 	    // maybe we can make feasible by increasing tolerance
-	    if (distance<largeValue_&&
-		distance>primalToleranceToGetOptimal_)
-	      primalToleranceToGetOptimal_=distance;
+	    if (distanceDown<largeValue_&&
+		distanceDown>primalToleranceToGetOptimal_)
+	      primalToleranceToGetOptimal_=distanceDown;
 	  }
 	}
       }
     }
   }
-  solution = columnActivityWork_;
-  for (iColumn=0;iColumn<numberColumns_;iColumn++) {
-    if (getColumnStatus(iColumn) != basic) {
+  for (iRow=0;iRow<numberRows_;iRow++) {
+    if (getRowStatus(iRow) != basic) {
       // not basic
-      double value = reducedCostWork_[iColumn];
-      double distance;
-      distance = columnUpperWork_[iColumn]-solution[iColumn];
-      if (distance>primalTolerance_) {
+      double value = rowReducedCost_[iRow];
+      double distanceUp = rowUpperWork_[iRow]-rowActivityWork_[iRow];
+      double distanceDown = rowActivityWork_[iRow] -rowLowerWork_[iRow];
+      if (distanceUp>primalTolerance_) {
+	// Check if "free"
+	if (firstFree_<0&&distanceDown>primalTolerance_) {
+	  if (algorithm_>0) {
+	    // primal
+	    firstFree_ = iRow+numberColumns_;
+	  } else if (fabs(value)>1.0e2*relaxedTolerance) {
+	    // dual with dj
+	    firstFree_ = iRow+numberColumns_;
+	  }
+	}
 	// should not be negative
 	if (value<0.0) {
 	  value = - value;
-	  if (value>columnDualInfeasibility_) {
-	    columnDualInfeasibility_=value;
-	    columnDualSequence_=iColumn;
+	  if (value>rowDualInfeasibility_) {
+	    rowDualInfeasibility_=value;
+	    rowDualSequence_=iRow;
 	  }
 	  if (value>dualTolerance_) {
 	    sumDualInfeasibilities_ += value-dualTolerance_;
 	    if (value>relaxedTolerance) 
 	      sumOfRelaxedDualInfeasibilities_ += value-relaxedTolerance;
 	    numberDualInfeasibilities_ ++;
-	    if (getColumnStatus(iColumn) != isFree) 
+	    if (getRowStatus(iRow) != isFree) 
 	      numberDualInfeasibilitiesWithoutFree_ ++;
 	    // maybe we can make feasible by increasing tolerance
-	    if (distance<largeValue_) {
-	      if (distance>primalToleranceToGetOptimal_)
-		primalToleranceToGetOptimal_=distance;
+	    if (distanceUp<largeValue_) {
+	      if (distanceUp>primalToleranceToGetOptimal_)
+		primalToleranceToGetOptimal_=distanceUp;
 	    } else {
 	      //gap too big for any tolerance
 	      remainingDualInfeasibility_=
@@ -1612,25 +1667,24 @@ ClpSimplex::checkDualSolution()
 	  }
 	}
       }
-      distance = solution[iColumn] -columnLowerWork_[iColumn];
-      if (distance>primalTolerance_) {
+      if (distanceDown>primalTolerance_) {
 	// should not be positive
 	if (value>0.0) {
-	  if (value>columnDualInfeasibility_) {
-	    columnDualInfeasibility_=value;
-	    columnDualSequence_=iColumn;
+	  if (value>rowDualInfeasibility_) {
+	    rowDualInfeasibility_=value;
+	    rowDualSequence_=iRow;
 	  }
 	  if (value>dualTolerance_) {
 	    sumDualInfeasibilities_ += value-dualTolerance_;
 	    if (value>relaxedTolerance) 
 	      sumOfRelaxedDualInfeasibilities_ += value-relaxedTolerance;
 	    numberDualInfeasibilities_ ++;
-	    if (getColumnStatus(iColumn) != isFree) 
+	    if (getRowStatus(iRow) != isFree) 
 	      numberDualInfeasibilitiesWithoutFree_ ++;
 	    // maybe we can make feasible by increasing tolerance
-	    if (distance<largeValue_&&
-		distance>primalToleranceToGetOptimal_)
-	      primalToleranceToGetOptimal_=distance;
+	    if (distanceDown<largeValue_&&
+		distanceDown>primalToleranceToGetOptimal_)
+	      primalToleranceToGetOptimal_=distanceDown;
 	  }
 	}
       }

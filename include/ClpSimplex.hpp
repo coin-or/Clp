@@ -725,6 +725,8 @@ protected:
   int numberFake_;
   /// Progress flag - at present 0 bit says artificials out
   int progressFlag_;
+  /// First free/super-basic variable (-1 if none)
+  int firstFree_;
   /// Sum of Dual infeasibilities using tolerance based on error in duals
   double sumOfRelaxedDualInfeasibilities_;
   /// Sum of Primal infeasibilities using tolerance based on error in primals
