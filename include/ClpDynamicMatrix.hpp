@@ -17,6 +17,13 @@ class ClpSimplex;
 class ClpDynamicMatrix : public ClpPackedMatrix {
   
 public:
+  /// enums for status of various sorts
+  enum DynamicStatus {
+    soloKey = 0x00,
+    inSmall = 0x01,
+    atUpperBound = 0x02,
+    atLowerBound = 0x03,
+  };
   /// Partial pricing 
   virtual void partialPricing(ClpSimplex * model, int start, int end,
 		      int & bestSequence, int & numberWanted);
@@ -80,6 +87,15 @@ public:
   void gubCrash();
   /// Populates initial matrix from dynamic status
   void initialProblem();
+  /** Adds in a column to gub structure (called from descendant) and returns sequence */
+  int addColumn(int numberEntries,const int * row, const float * element,
+		 float cost, float lower, float upper, int iSet,
+		 DynamicStatus status);
+  /** If addColumn forces compression then this allows descendant to know what to do.
+      If >=0 then entry stayed in, if -1 then entry went out to lower bound.of zero.
+      Entries at upper bound (really nonzero) never go out (at present).
+  */
+  virtual void packDown(const int * in, int numberToPack) {};
   //@}
 
 
@@ -130,13 +146,6 @@ public:
   /// Number of sets (dynamic rows)
   inline int numberSets() const
   { return numberSets_;};
-  /// enums for status of various sorts
-  enum DynamicStatus {
-    soloKey = 0x00,
-    inSmall = 0x01,
-    atUpperBound = 0x02,
-    atLowerBound = 0x03,
-  };
   /// Whether flagged
   inline bool flagged(int i) const {
     return (dynamicStatus_[i]&8)!=0;
@@ -213,6 +222,8 @@ public:
   /// Status region for gub variables
   inline unsigned char * dynamicStatus() const
   { return dynamicStatus_;};
+  /// Returns which set a variable is in
+  int whichSet (int sequence) const;
    //@}
    
     
