@@ -154,6 +154,12 @@ public:
 		  CoinIndexedVector * outputArray,
 		  double theta,
 		  double & objectiveChange);
+  /** The duals are updated by the given arrays.
+      This is in values pass - so no changes to primal is made
+  */
+  void updateDualsInValuesPass(CoinIndexedVector * rowArray,
+		  CoinIndexedVector * columnArray,
+		  double theta);
   /** While updateDualsInDual sees what effect is of flip
       this does actuall flipping.
       If change >0.0 then value in array >0.0 => from lower to upper

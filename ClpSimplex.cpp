@@ -411,11 +411,13 @@ ClpSimplex::computeDuals(double * givenDjs)
 	    + array[iPivot-numberColumns_]-givenDjs[iPivot];
 	} else {
 	  // column
-	work[iRow] = reducedCostWork_[iPivot]- givenDjs[iPivot];
+	  work[iRow] = reducedCostWork_[iPivot]- givenDjs[iPivot];
 	}
 	if (fabs(work[iRow])>largestDualError_) {
 	  largestDualError_=fabs(work[iRow]);
-	  assert (largestDualError_<1.0e-7);
+	  //assert (largestDualError_<1.0e-7);
+	  //if (largestDualError_>1.0e-7)
+	  //printf("large dual error %g\n",largestDualError_);
 	}
       }
     }
@@ -426,7 +428,8 @@ ClpSimplex::computeDuals(double * givenDjs)
       previous=temp;
       break;
     }
-    if (iRefine<numberRefinements_&&largestDualError_>1.0e-20) {
+    if (iRefine<numberRefinements_&&largestDualError_>1.0e-20
+	&&!givenDjs) {
       // try and make better
       // save this
       double * temp = array;
