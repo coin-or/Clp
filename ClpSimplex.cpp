@@ -1977,7 +1977,7 @@ ClpSimplex::setPerturbation(int value)
 bool 
 ClpSimplex::sparseFactorization() const
 {
-  return factorization_->sparseThreshold();
+  return factorization_->sparseThreshold()!=0;
 }
 void 
 ClpSimplex::setSparseFactorization(bool value)

@@ -297,7 +297,8 @@ void do_tighten_action::postsolve(PostsolveMatrix *prob) const
     const double *ubound = f->ubound;
 
     PRESOLVEASSERT(prob->getColumnStatus(jcol)!=PrePostsolveMatrix::basic);
-    for (int i=0;i<nr; ++i) {
+    int i;
+    for (i=0;i<nr; ++i) {
       int irow = rows[i];
 
       rlo[irow] = lbound[i];
@@ -320,7 +321,7 @@ void do_tighten_action::postsolve(PostsolveMatrix *prob) const
     int last_corrected = -1;
     CoinBigIndex k = mcstrt[jcol];
     int nk = hincol[jcol];
-    for (int i=0; i<nk; ++i) {
+    for (i=0; i<nk; ++i) {
       int irow = hrow[k];
       double coeff = colels[k];
       k = link[k];
@@ -354,7 +355,7 @@ void do_tighten_action::postsolve(PostsolveMatrix *prob) const
 
     // now adjust the activities
     k = mcstrt[jcol];
-    for (int i=0; i<nk; ++i) {
+    for (i=0; i<nk; ++i) {
       int irow = hrow[k];
       double coeff = colels[k];
       k = link[k];

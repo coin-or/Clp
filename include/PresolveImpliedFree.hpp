@@ -34,7 +34,7 @@ class implied_free_action : public PresolveAction {
 
   void postsolve(PostsolveMatrix *prob) const;
 
-  ~implied_free_action() { delete[]actions_; }
+  ~implied_free_action() { deleteAction(actions_); }
 };
 
 #endif

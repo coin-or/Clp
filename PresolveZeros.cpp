@@ -23,8 +23,9 @@ static int drop_col_zeros(int ncheckcols, int *checkcols,
 {
   typedef dropped_zero action;
   int nactions = 0;
+  int i;
 
-  for (int i=0; i<ncheckcols; i++) {
+  for (i=0; i<ncheckcols; i++) {
     int col = checkcols[i];
     CoinBigIndex kcs = mcstrt[col];
     CoinBigIndex kce = mcstrt[col] + hincol[col];
@@ -66,7 +67,8 @@ void drop_row_zeros(int nzeros, const dropped_zero *zeros,
 		    const CoinBigIndex *mcstrt, double *colels, int *hrow,
 		    int *hincol)
 {
-  for (int i=0; i<nzeros; i++) {
+  int i;
+  for (i=0; i<nzeros; i++) {
     int col = zeros[i].row;
     CoinBigIndex kcs = mcstrt[col];
     CoinBigIndex kce = mcstrt[col] + hincol[col];

@@ -650,7 +650,8 @@ const PresolveAction *subst_constraint_action::presolve(PresolveMatrix *prob,
 
 	int nfill = -hinrow[bestrowy_row];
 	CoinBigIndex kcol1 = krs1;
-	for (CoinBigIndex kk=krs; kk<kre; ++kk) {
+	CoinBigIndex kk;
+	for (kk=krs; kk<kre; ++kk) {
 	  int jcol = hcol[kk];
 
 	  while (kcol1 < kre1 && hcol[kcol1] < jcol)
@@ -659,7 +660,7 @@ const PresolveAction *subst_constraint_action::presolve(PresolveMatrix *prob,
 	    nfill++;
 	}
 	CoinBigIndex kcol2 = krs2;
-	for (CoinBigIndex kk=krs; kk<kre; ++kk) {
+	for (kk=krs; kk<kre; ++kk) {
 	  int jcol = hcol[kk];
 
 	  while (kcol2 < kre2 && hcol[kcol2] < jcol)
@@ -1034,7 +1035,7 @@ const PresolveAction *subst_constraint_action::presolve(PresolveMatrix *prob,
     next = drop_zero_coefficients_action::presolve(prob, zerocols, nzerocols, next);
   }
   delete [] look2;
-  delete [] actions;
+  deleteAction(actions);
 
   delete[]x_to_y;
   delete[]zerocols;
@@ -1350,6 +1351,5 @@ subst_constraint_action::~subst_constraint_action()
     delete[]actions[i].costsx;
   }
 
-  delete[]actions;
-
+  deleteAction(actions_);
 }

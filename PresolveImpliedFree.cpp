@@ -322,7 +322,7 @@ const PresolveAction *implied_free_action::presolve(PresolveMatrix *prob,
 #endif
     next = new implied_free_action(nactions, copyOfArray(actions,nactions), next);
   }
-  delete [] actions;
+  deleteAction(actions);
 
   delete[]ilbound;
   delete[]iubound;

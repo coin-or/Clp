@@ -102,7 +102,7 @@ const remove_fixed_action *remove_fixed_action::presolve(PresolveMatrix *prob,
 #if 0
   remove_fixed_action * nextAction =  new 
     remove_fixed_action(nfcols, actions, next);
-  delete [] actions;
+  delete [] (void *) actions;
   return nextAction;
 #else
   return (new remove_fixed_action(nfcols, actions, next));
@@ -123,7 +123,7 @@ remove_fixed_action::~remove_fixed_action()
     delete[]actions_[i].colrows;
     delete[]actions_[i].colels;
   }
-  delete[]actions_;
+  deleteAction(actions_);
 }
 
 /*

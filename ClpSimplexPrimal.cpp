@@ -246,7 +246,7 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
       
       // for this we need clean basis so it is after factorize
       numberThrownOut=gutsOfSolution(rowActivityWork_,columnActivityWork_,
-				     ifValuesPass);
+				     ifValuesPass!=0);
       totalNumberThrownOut+= numberThrownOut;
       
       // find first superbasic - columns, then rows

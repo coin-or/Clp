@@ -51,7 +51,8 @@ const PresolveAction *isolated_constraint_action::presolve(PresolveMatrix *prob,
 #endif
     return NULL;
   }
-  for (CoinBigIndex k = krs; k<kre; ++k) {
+  CoinBigIndex k;
+  for ( k = krs; k<kre; ++k) {
     int jcol = hcol[k];
     if (clo[jcol] != 0.0 && cup[jcol] != 0.0) {
 #if	DEBUG_PRESOLVE
@@ -82,7 +83,7 @@ const PresolveAction *isolated_constraint_action::presolve(PresolveMatrix *prob,
 
   // HACK - set costs to 0.0 so empty.cpp doesn't complain
   double *costs = new double[nc];
-  for (CoinBigIndex k = krs; k<kre; ++k) {
+  for (k = krs; k<kre; ++k) {
     costs[k-krs] = dcost[hcol[k]];
     dcost[hcol[k]] = 0.0;
   }
@@ -94,7 +95,7 @@ const PresolveAction *isolated_constraint_action::presolve(PresolveMatrix *prob,
 					costs,
 					next);
 
-  for (CoinBigIndex k=krs; k<kre; k++)
+  for ( k=krs; k<kre; k++)
     presolve_delete_from_row(hcol[k], irow, mcstrt, hincol, hrow, colels);
   hinrow[irow] = 0;
 

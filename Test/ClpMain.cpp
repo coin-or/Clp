@@ -1068,7 +1068,7 @@ stopping",
 	      models[iModel].scaling(1-action);
 	      break;
 	    case SPARSEFACTOR:
-	      models[iModel].setSparseFactorization(1-action);
+	      models[iModel].setSparseFactorization((1-action)!=0);
 	      break;
 	    case ERRORSALLOWED:
 	      allowImportErrors = action;
@@ -1241,8 +1241,8 @@ stopping",
 	      }
 	      if (canOpen) {
 		int status =models[iModel].readMps(fileName.c_str(),
-						   keepImportNames,
-						   allowImportErrors);
+						   keepImportNames!=0,
+						   allowImportErrors!=0);
 		if (!status||(status>0&&allowImportErrors)) {
 		  goodModels[iModel]=true;
 		  // sets to all slack (not necessary?)

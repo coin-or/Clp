@@ -526,15 +526,15 @@ const PresolveAction *Presolve::presolve(PresolveMatrix *prob)
 #endif
 
   if (!prob->status_) {
-    const bool slackd = ATOI("SLACKD");
-    //const bool forcing = ATOI("FORCING");
-    const bool doubleton = ATOI("DOUBLETON");
-    const bool forcing = ATOI("off");
-    const bool ifree = ATOI("off");
-    const bool zerocost = ATOI("off");
-    const bool dupcol = ATOI("off");
-    const bool duprow = ATOI("off");
-    const bool dual = ATOI("off");
+    const bool slackd = ATOI("SLACKD")!=0;
+    //const bool forcing = ATOI("FORCING")!=0;
+    const bool doubleton = ATOI("DOUBLETON")!=0;
+    const bool forcing = ATOI("off")!=0;
+    const bool ifree = ATOI("off")!=0;
+    const bool zerocost = ATOI("off")!=0;
+    const bool dupcol = ATOI("off")!=0;
+    const bool duprow = ATOI("off")!=0;
+    const bool dual = ATOI("off")!=0;
     
     // some things are expensive so just do once (normally)
 

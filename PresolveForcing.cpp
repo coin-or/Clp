@@ -297,8 +297,8 @@ const PresolveAction *forcing_constraint_action::presolve(PresolveMatrix *prob,
 	int *rowcols = new int[hinrow[irow]];
 	int lk = krs;	// load fix-to-down in front
 	int uk = kre;	// load fix-to-up in back
-
-	for (CoinBigIndex k=krs; k<kre; k++) {
+        CoinBigIndex k;
+	for ( k=krs; k<kre; k++) {
 	  int jcol = hcol[k];
 	  prob->addCol(jcol);
 	  double coeff = rowels[k];
@@ -344,7 +344,7 @@ const PresolveAction *forcing_constraint_action::presolve(PresolveMatrix *prob,
     next = new forcing_constraint_action(nactions, 
 					 copyOfArray(actions,nactions), next);
   }
-  delete [] actions;
+  deleteAction(actions);
   if (nuseless_rows) {
     next = useless_constraint_action::presolve(prob,
 					       useless_rows, nuseless_rows,
@@ -491,8 +491,8 @@ static void implied_bounds1(PresolveMatrix * prob, const double *rowels,
 
     double maxup = 0.0;
     double maxdown = 0.0;
-
-    for (CoinBigIndex k=krs; k<kre; k++) {
+    CoinBigIndex k;
+    for (k=krs; k<kre; k++) {
       int jcol = hcol[k];
       double coeff = rowels[k];
       double lb = clo[jcol];
@@ -585,7 +585,7 @@ static void implied_bounds1(PresolveMatrix * prob, const double *rowels,
 	break;
     }
 
-    for (CoinBigIndex k = krs; k<kre; ++k) {
+    for (k = krs; k<kre; ++k) {
       int jcol = hcol[k];
       double coeff = rowels[k];
 
@@ -623,7 +623,7 @@ static void implied_bounds1(PresolveMatrix * prob, const double *rowels,
       }
     }
 
-    for (CoinBigIndex k = krs; k<kre; ++k) {
+    for (k = krs; k<kre; ++k) {
       int jcol = hcol[k];
       double coeff = rowels[k];
 
