@@ -534,6 +534,9 @@ public:
   /// Progress flag - at present 0 bit says artificials out
   inline int progressFlag() const
   {return progressFlag_;};
+  /// Force re-factorization early 
+  inline void forceFactorization(int value)
+  { forceFactorization_ = value;};
   //@}
 
 ////////////////// data //////////////////

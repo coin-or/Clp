@@ -2832,6 +2832,8 @@ ClpSimplexProgress::looping()
       <<CoinMessageEol;
     numberBadTimes_++;
     if (numberBadTimes_<10) {
+      // make factorize every iteration
+      model_->forceFactorization(1);
       if (model_->algorithm()<0) {
 	// dual - change tolerance
 	model_->setCurrentDualTolerance(model_->currentDualTolerance()*1.05);
