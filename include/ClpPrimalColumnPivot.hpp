@@ -12,8 +12,11 @@ class CoinIndexedVector;
 
 Abstract Base Class for describing an interface to an algorithm
 to choose column pivot in primal simplex algorithm.  For some algorithms
-e.g. Dantzig choice then some functions may be null.
+e.g. Dantzig choice then some functions may be null.  For Dantzig
+the only one of any importance is pivotColumn.
 
+If  you wish to inherit from this look at ClpPrimalColumnDantzig.cpp
+as that is simplest version.
 */
 
 class ClpPrimalColumnPivot  {
@@ -24,7 +27,20 @@ public:
   //@{
   
   /** Returns pivot column, -1 if none
-      updateArray has cost updates (also use pivotRow_ from last iteration)
+
+      Normally updates reduced costs using result of last iteration
+      before selecting incoming column.
+
+      The CoinIndexedVector updates has cost updates - for normal LP
+      that is just +-weight where a feasibility changed.
+
+      Inside pivotColumn the pivotRow_ and reduced cost from last iteration
+      are also used.
+
+      So in the simplest case i.e. feasible we compute the row of the
+      tableau corresponding to last pivot and add a multiple of this
+      to current reduced costs.
+
       We can use other arrays to help updates
   */
   virtual int pivotColumn(CoinIndexedVector * updates,
