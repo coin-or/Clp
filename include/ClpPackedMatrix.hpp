@@ -72,14 +72,6 @@ public:
       {matrix_->replaceVector(index,numReplace,newElements);};
   /** Returns a new matrix in reverse order without gaps */
   virtual ClpMatrixBase * reverseOrderedCopy() const;
-  /** Returns number of elements in basis
-      column is basic if entry >=0 */
-  virtual CoinBigIndex numberInBasis(const int * columnIsBasic) const ;
-  /// Fills in basis (Returns number of elements and updates numberBasic)
-  virtual CoinBigIndex fillBasis(const ClpSimplex * model,
-				const int * columnIsBasic, int & numberBasic,
-				int * row, int * column,
-				double * element) const ;
   /** If element NULL returns number of elements in column part of basis,
       If not NULL fills in as well */
   virtual CoinBigIndex fillBasis(const ClpSimplex * model,

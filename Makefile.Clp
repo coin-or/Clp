@@ -25,6 +25,7 @@ LIBSRC += ClpLinearObjective.cpp
 LIBSRC += ClpPackedMatrix.cpp
 LIBSRC += ClpPlusMinusOneMatrix.cpp
 LIBSRC += ClpDummyMatrix.cpp
+#LIBSRC += ClpGubMatrix.cpp
 LIBSRC += ClpPrimalColumnDantzig.cpp
 LIBSRC += ClpPrimalColumnPivot.cpp
 LIBSRC += ClpPrimalColumnSteepest.cpp

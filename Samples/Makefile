@@ -11,24 +11,28 @@ IncDir += ${ClpIncDir}
 IncDir += ${CoinIncDir}
 IncDir += ${zlibIncDir}
 IncDir += ${bzlibIncDir}
+IncDir += ${lapackIncDir}
 
 LibDir :=
 LibDir += ${ClpLibDir}
 LibDir += ${CoinLibDir}
 LibDir += ${zlibLibDir}
 LibDir += ${bzlibLibDir}
+LibDir += ${lapackLibDir}
 
 LibName :=
 LibName += ${ClpLibName}
 LibName += ${CoinLibName}
 LibName += ${zlibLibName}
 LibName += ${bzlibLibName}
+LibName += ${lapackLibName}
 
 Define :=
 Define += ${ClpDefine}
 Define += ${CoinDefine}
 Define += ${zlibDefine}
 Define += ${bzlibDefine}
+Define += ${lapackDefine}
 
 CXXFLAGS += $(OPTFLAG)
 

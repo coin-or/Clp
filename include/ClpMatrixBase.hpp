@@ -67,15 +67,6 @@ public:
       Is allowed to return NULL if doesn't want to have row copy */
   virtual ClpMatrixBase * reverseOrderedCopy() const {return NULL;};
 
-  // OLD - out soon
-  /** Returns number of elements in basis
-      column is basic if entry >=0 */
-  virtual CoinBigIndex numberInBasis(const int * columnIsBasic) const = 0;
-  /// Fills in basis (Returns number of elements and updates numberBasic)
-  virtual CoinBigIndex fillBasis(const ClpSimplex * model,
-				const int * columnIsBasic, int & numberBasic,
-				int * row, int * column,
-				double * element) const = 0;
   /** If element NULL returns number of elements in column part of basis,
       If not NULL fills in as well */
   virtual CoinBigIndex fillBasis(const ClpSimplex * model,

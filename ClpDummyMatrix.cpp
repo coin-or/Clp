@@ -148,26 +148,6 @@ ClpDummyMatrix::subsetTransposeTimes(const ClpSimplex * model,
   std::cerr<<"subsetTransposeTimes not supported - ClpDummyMatrix"<<std::endl;
   abort();
 }
-/* Returns number of elements in basis
-   column is basic if entry >=0 */
-CoinBigIndex 
-ClpDummyMatrix::numberInBasis(const int * columnIsBasic) const 
-{
-  std::cerr<<"numberInBasis not supported - ClpDummyMatrix"<<std::endl;
-  abort();
-  return 0;
-}
-// Fills in basis (Returns number of elements and updates numberBasic)
-CoinBigIndex 
-ClpDummyMatrix::fillBasis(const ClpSimplex * model,
-				const int * columnIsBasic, int & numberBasic,
-				int * indexRowU, int * indexColumnU,
-				double * elementU) const 
-{
-  std::cerr<<"fillBasis not supported - ClpDummyMatrix"<<std::endl;
-  abort();
-  return 0;
-}
 /* If element NULL returns number of elements in column part of basis,
    If not NULL fills in as well */
 CoinBigIndex 

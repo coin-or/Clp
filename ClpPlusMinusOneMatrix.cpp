@@ -880,54 +880,6 @@ ClpPlusMinusOneMatrix::subsetTransposeTimes(const ClpSimplex * model,
     array[jColumn]=value;
   }
 }
-/* Returns number of elements in basis
-   column is basic if entry >=0 */
-CoinBigIndex 
-ClpPlusMinusOneMatrix::numberInBasis(const int * columnIsBasic) const 
-{
-  int i;
-  CoinBigIndex numberElements=0;
-  assert (columnOrdered_);
-  for (i=0;i<numberColumns_;i++) {
-    if (columnIsBasic[i]>=0) 
-      numberElements += startPositive_[i+1]-startPositive_[i];
-  }
-  return numberElements;
-}
-// Fills in basis (Returns number of elements and updates numberBasic)
-CoinBigIndex 
-ClpPlusMinusOneMatrix::fillBasis(const ClpSimplex * model,
-				const int * columnIsBasic, int & numberBasic,
-				int * indexRowU, int * indexColumnU,
-				double * elementU) const 
-{
-#ifdef CLPDEBUG
-  const double * rowScale = model->rowScale();
-  assert (!rowScale);
-#endif
-  int i;
-  CoinBigIndex numberElements=0;
-  assert (columnOrdered_);
-  for (i=0;i<numberColumns_;i++) {
-    if (columnIsBasic[i]>=0) {
-      CoinBigIndex j=startPositive_[i];
-      for (;j<startNegative_[i];j++) {
-	int iRow = indices_[j];
-	indexRowU[numberElements]=iRow;
-	indexColumnU[numberElements]=numberBasic;
-	elementU[numberElements++]=1.0;
-      }
-      for (;j<startPositive_[i+1];j++) {
-	int iRow = indices_[j];
-	indexRowU[numberElements]=iRow;
-	indexColumnU[numberElements]=numberBasic;
-	elementU[numberElements++]=-1.0;
-      }
-      numberBasic++;
-    }
-  }
-  return numberElements;
-}
 /* If element NULL returns number of elements in column part of basis,
    If not NULL fills in as well */
 CoinBigIndex 
