@@ -58,10 +58,10 @@ ifeq ($(findstring Linux,${UNAME}),Linux)
 	CXXFLAGS +=	-DREADLINE
 	LDFLAGS += -lhistory -lreadline -ltermcap
 endif
-#LDFLAGS += -lefence
+LDFLAGS += -lefence
 ###############################################################################
 
-TESTSRC := modify.cpp
+TESTSRC := piece.cpp
 TESTOBJ := $(addprefix $(TARGETDIR)/, $(TESTSRC:.cpp=.o))
 TESTDEP := $(addprefix $(DEPDIR)/, $(TESTSRC:.cpp=.d))
 
