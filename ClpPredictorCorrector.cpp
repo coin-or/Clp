@@ -329,9 +329,10 @@ int ClpPredictorCorrector::solve ( )
 	<<CoinMessageEol;
       break;
     } 
-    if (numberIterations_>maximumBarrierIterations_) {
+    if (numberIterations_>maximumBarrierIterations_||hitMaximumIterations()) {
       handler_->message(CLP_BARRIER_STOPPING,messages_)
 	<<CoinMessageEol;
+      problemStatus_=3;
       break;
     } 
     if (gapO<targetGap_) {
