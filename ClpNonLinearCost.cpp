@@ -39,7 +39,8 @@ ClpNonLinearCost::ClpNonLinearCost () :
    This will just set up wasteful arrays for linear, but
    later may do dual analysis and even finding duplicate columns 
 */
-ClpNonLinearCost::ClpNonLinearCost ( ClpSimplex * model,bool forQuadratic)
+ClpNonLinearCost::ClpNonLinearCost ( ClpSimplex * model,
+				     int numberOriginalColumns)
 {
   model_ = model;
   numberRows_ = model_->numberRows();
@@ -66,20 +67,19 @@ ClpNonLinearCost::ClpNonLinearCost ( ClpSimplex * model,bool forQuadratic)
   double * lower = model_->lowerRegion();
   double * cost = model_->costRegion();
 
-  for (iSequence=0;iSequence<numberTotal;iSequence++) {
-    if (lower[iSequence]>-1.0e20)
-      put++;
-    if (upper[iSequence]<1.0e20)
-      put++;
-    put += 2;
-  }
+  bool forQuadratic = (numberOriginalColumns>0);
 
   // For quadratic we need -inf,0,0,+inf
-  if (forQuadratic) {
+  if (!forQuadratic) {
     for (iSequence=0;iSequence<numberTotal;iSequence++) {
-      if (lower[iSequence]<-1.0e20&&upper[iSequence]>1.0e20)
-	put+=2;
+      if (lower[iSequence]>-1.0e20)
+	put++;
+      if (upper[iSequence]<1.0e20)
+	put++;
+      put += 2;
     }
+  } else {
+    put = 4*numberTotal;
   }
 
   lower_ = new double [put];
@@ -93,7 +93,7 @@ ClpNonLinearCost::ClpNonLinearCost ( ClpSimplex * model,bool forQuadratic)
 
   for (iSequence=0;iSequence<numberTotal;iSequence++) {
 
-    if (!forQuadratic||lower[iSequence]>-1.0e20||upper[iSequence]<1.0e20) {
+    if (!forQuadratic||iSequence<numberOriginalColumns) {
       if (lower[iSequence]>-COIN_DBL_MAX) {
 	lower_[put] = -COIN_DBL_MAX;
 	setInfeasible(put,true);
@@ -111,14 +111,14 @@ ClpNonLinearCost::ClpNonLinearCost ( ClpSimplex * model,bool forQuadratic)
       }
       start_[iSequence+1]=put;
     } else {
-      // quadratic free variable
+      // quadratic  variable
       lower_[put] = -COIN_DBL_MAX;
       setInfeasible(put,true);
       cost_[put++] = -infeasibilityCost;
       whichRange_[iSequence]=put;
-      lower_[put] = -0.5*COIN_DBL_MAX;
+      lower_[put] = max(-0.5*COIN_DBL_MAX,lower[iSequence]);
       cost_[put++] = 0.0;
-      lower_[put] = 0.5*COIN_DBL_MAX;
+      lower_[put] = min(0.5*COIN_DBL_MAX,upper[iSequence]);
       cost_[put++] = infeasibilityCost;
       lower_[put] = COIN_DBL_MAX;
       setInfeasible(put-1,true);

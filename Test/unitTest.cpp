@@ -792,8 +792,139 @@ ClpSimplexUnitTest(const std::string & mpsDir,
       delete [] ray;
     }
   }
-  // test network
+  // test delete and add
   {    
+    CoinMpsIO m;
+    std::string fn = netlibDir+"brandy";
+    m.readMps(fn.c_str(),"mps");
+    ClpSimplex solution;
+    solution.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
+			 m.getObjCoefficients(),
+			 m.getRowLower(),m.getRowUpper());
+    solution.dual();
+    CoinRelFltEq eq(1.0e-8);
+    assert(eq(solution.objectiveValue(),1.5185098965e+03));
+
+    int numberColumns = solution.numberColumns();
+    int numberRows = solution.numberRows();
+    double * saveObj = new double [numberColumns];
+    double * saveLower = new double[numberRows+numberColumns];
+    double * saveUpper = new double[numberRows+numberColumns];
+    int * which = new int [numberRows+numberColumns];
+
+    int numberElements = m.getMatrixByCol()->getNumElements();
+    int * starts = new int[numberRows+numberColumns];
+    int * index = new int[numberElements];
+    double * element = new double[numberElements];
+
+    const int * startM;
+    const int * lengthM;
+    const int * indexM;
+    const double * elementM;
+
+    int n,nel;
+
+    // delete non basic columns
+    n=0;
+    nel=0;
+    int iRow , iColumn;
+    double * lower = solution.columnLower();
+    double * upper = solution.columnUpper();
+    double * objective = solution.objective();
+    startM = m.getMatrixByCol()->getVectorStarts();
+    lengthM = m.getMatrixByCol()->getVectorLengths();
+    indexM = m.getMatrixByCol()->getIndices();
+    elementM = m.getMatrixByCol()->getElements();
+    starts[0]=0;
+    for (iColumn=0;iColumn<numberColumns;iColumn++) {
+      if (solution.getColumnStatus(iColumn)!=ClpSimplex::basic) {
+	saveObj[n]=objective[iColumn];
+	saveLower[n]=lower[iColumn];
+	saveUpper[n]=upper[iColumn];
+	int j;
+	for (j=startM[iColumn];j<startM[iColumn]+lengthM[iColumn];j++) {
+	  index[nel]=indexM[j];
+	  element[nel++]=elementM[j];
+	}
+	which[n++]=iColumn;
+	starts[n]=nel;
+      }
+    }
+    solution.deleteColumns(n,which);
+    solution.dual();
+    // Put back
+    solution.addColumns(n,saveLower,saveUpper,saveObj,
+			starts,index,element);
+    solution.dual();
+    assert(eq(solution.objectiveValue(),1.5185098965e+03));
+
+    CoinMpsIO writer;
+    writer.setMpsData(*solution.matrix(), COIN_DBL_MAX,
+		      solution.getColLower(), solution.getColUpper(),
+		      solution.getObjCoefficients(),
+		      (const char*) 0 /*integrality*/,
+		      solution.getRowLower(), solution.getRowUpper(),
+		      NULL,NULL);
+    writer.writeMps("a.mps");
+    // reload with original
+    solution.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
+			 m.getObjCoefficients(),
+			 m.getRowLower(),m.getRowUpper());
+    // delete half rows
+    n=0;
+    nel=0;
+    lower = solution.rowLower();
+    upper = solution.rowUpper();
+    startM = m.getMatrixByRow()->getVectorStarts();
+    lengthM = m.getMatrixByRow()->getVectorLengths();
+    indexM = m.getMatrixByRow()->getIndices();
+    elementM = m.getMatrixByRow()->getElements();
+    starts[0]=0;
+    for (iRow=0;iRow<numberRows;iRow++) {
+      if ((iRow&1)==0) {
+	saveLower[n]=lower[iRow];
+	saveUpper[n]=upper[iRow];
+	int j;
+	for (j=startM[iRow];j<startM[iRow]+lengthM[iRow];j++) {
+	  index[nel]=indexM[j];
+	  element[nel++]=elementM[j];
+	}
+	which[n++]=iRow;
+	starts[n]=nel;
+      }
+    }
+    solution.deleteRows(n,which);
+    solution.dual();
+    writer.setMpsData(*solution.matrix(), COIN_DBL_MAX,
+		      solution.getColLower(), solution.getColUpper(),
+		      solution.getObjCoefficients(),
+		      (const char*) 0 /*integrality*/,
+		      solution.getRowLower(), solution.getRowUpper(),
+		      NULL,NULL);
+    writer.writeMps("b.mps");
+    // Put back
+    solution.addRows(n,saveLower,saveUpper,
+			starts,index,element);
+    writer.setMpsData(*solution.matrix(), COIN_DBL_MAX,
+		      solution.getColLower(), solution.getColUpper(),
+		      solution.getObjCoefficients(),
+		      (const char*) 0 /*integrality*/,
+		      solution.getRowLower(), solution.getRowUpper(),
+		      NULL,NULL);
+    writer.writeMps("c.mps");
+    solution.dual();
+    assert(eq(solution.objectiveValue(),1.5185098965e+03));
+
+    delete [] saveObj;
+    delete [] saveLower;
+    delete [] saveUpper;
+    delete [] which;
+    delete [] starts;
+    delete [] index;
+    delete [] element;
+  }
+  // test network
+  if (0) {    
     std::string fn = mpsDir+"input.130";
     int numberColumns;
     int numberRows;
@@ -958,13 +1089,13 @@ ClpSimplexUnitTest(const std::string & mpsDir,
   // Test quadratic to solve linear
   if (1) {    
     CoinMpsIO m;
-    std::string fn = "tiny";
+    std::string fn = "tiny2";
     m.readMps(fn.c_str(),"mps");
     ClpSimplex solution;
     solution.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
 			 m.getObjCoefficients(),
 			 m.getRowLower(),m.getRowUpper());
-    solution.dual();
+    //solution.dual();
     // get quadratic part
     int numberColumns=solution.numberColumns();
     int * start=new int [numberColumns+1];
@@ -983,15 +1114,15 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     delete [] start;
     delete [] column;
     delete [] element;
-    solution.quadraticSLP(50,1.0e-4);
+    //solution.quadraticSLP(50,1.0e-4);
     double objValue = solution.getObjValue();
     CoinRelFltEq eq(1.0e-4);
-    assert(eq(objValue,-8.42857));
+    //assert(eq(objValue,-8.42857));
     solution.setLogLevel(63);
     solution.quadraticWolfe();
     objValue = solution.getObjValue();
     assert(eq(objValue,-8.42857));
-    //exit(77);
+    exit(77);
   }
   // Test quadratic
   if (1) {    

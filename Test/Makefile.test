@@ -25,6 +25,7 @@ Define := ${ClpDefine} ${CoinDefine} ${bzlibDefine} ${zlibDefine}
 CXXFLAGS += $(OPTFLAG) 
 CXXFLAGS += -DUSE_PRESOLVE
 CXXFLAGS += -DCLP_IDIOT
+#CXXFLAGS += -DQUADRATIC
 #ifeq ($(OPTFLAG),-g)
 #    CXXFLAGS += -DCLP_DEBUG -DPRESOLVE_SUMMARY=1 
 #endif

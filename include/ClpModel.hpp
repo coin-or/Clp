@@ -111,9 +111,27 @@ public:
   void resize (int newNumberRows, int newNumberColumns);
   /// Deletes rows
   void deleteRows(int number, const int * which);
+  /// Add rows
+  void addRows(int number, const double * rowLower, 
+	       const double * rowUpper,
+	       const int * rowStarts, const int * columns,
+	       const double * elements);
+  void addRows(int number, const double * rowLower, 
+	       const double * rowUpper,
+	       const CoinPackedVectorBase * const * rows);
+
   /// Deletes columns
-  
   void deleteColumns(int number, const int * which);
+  /// Add columns
+  void addColumns(int number, const double * columnLower, 
+	       const double * columnUpper,
+		  const double * objective,
+	       const int * columnStarts, const int * rows,
+	       const double * elements);
+  void addColumns(int number, const double * columnLower, 
+	       const double * columnUpper,
+		  const double * objective,
+	       const CoinPackedVectorBase * const * columns);
   /** Borrow model.  This is so we dont have to copy large amounts
       of data around.  It assumes a derived class wants to overwrite
       an empty model with a real one - while it does an algorithm */

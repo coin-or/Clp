@@ -1382,6 +1382,7 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	  // put non-basics to bounds in case tolerance moved
 	  nonLinearCost_->checkInfeasibilities(true);
 	}
+	sequenceOut_=-1;
 	break;
       } else {
 	// take on more relaxed criterion
@@ -1397,6 +1398,7 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	  rowArray_[1]->clear();
 	  pivotRow_=-1;
 	  returnCode=-5;
+	  sequenceOut_=-1;
 	  break;
 	}
       }
@@ -1495,6 +1497,7 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	  lastBadIteration_ = numberIterations_; // say be more cautious
 	  rowArray_[1]->clear();
 	  pivotRow_=-1;
+	  sequenceOut_=-1;
 	  returnCode = -5;
 	  break;
 

@@ -31,6 +31,7 @@ LIBSRC += ClpSimplex.cpp
 LIBSRC += ClpSimplexDual.cpp
 LIBSRC += ClpSimplexPrimal.cpp
 LIBSRC += ClpSimplexPrimalQuadratic.cpp
+#LIBSRC += ClpPrimalQuadraticDantzig.cpp
 # and Presolve stuff
 LIBSRC += Presolve.cpp
 LIBSRC += PresolveDoubleton.cpp
@@ -62,6 +63,7 @@ include ${MakefileDir}/Makefile.location
 # Say Idiot code can use Clp interface
 CXXFLAGS += -DCLP_IDIOT 
 CXXFLAGS += -DUSE_PRESOLVE
+#CXXFLAGS += -DQUADRATIC
 ifeq ($(OptLevel),-g)
 #     CXXFLAGS += -DCLP_DEBUG
 #    CXXFLAGS += -DPRESOLVE_SUMMARY=1 -DDEBUG_PRESOLVE -DCHECK_CONSISTENCY=1
