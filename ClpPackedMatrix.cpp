@@ -2815,3 +2815,27 @@ ClpPackedMatrix::setDimensions(int numrows, int numcols) throw(CoinError)
 {
   matrix_->setDimensions(numrows,numcols);
 }
+/* Append a set of rows/columns to the end of the matrix. Returns number of errors
+   i.e. if any of the new rows/columns contain an index that's larger than the
+   number of columns-1/rows-1 (if numberOther>0) or duplicates
+   If 0 then rows, 1 if columns */
+int 
+ClpPackedMatrix::appendMatrix(int number, int type,
+                            const CoinBigIndex * starts, const int * index,
+                            const double * element, int numberOther)
+{
+  int numberErrors=0;
+  // make sure other dimension is big enough
+  if (type==0) {
+    // rows
+    if (matrix_->isColOrdered()&&numberOther>matrix_->getNumCols())
+      matrix_->setDimensions(-1,numberOther);
+    numberErrors=matrix_->appendRows(number,starts,index,element,numberOther);
+  } else {
+    // columns
+    if (!matrix_->isColOrdered()&&numberOther>matrix_->getNumRows())
+      matrix_->setDimensions(numberOther,-1);
+    numberErrors=matrix_->appendCols(number,starts,index,element,numberOther);
+  }
+  return numberErrors;
+}

@@ -570,5 +570,17 @@ ClpMatrixBase::setDimensions(int numrows, int numcols) throw(CoinError)
 {
   // If odd matrix assume user knows what they are doing
 }
-
+/* Append a set of rows/columns to the end of the matrix. Returns number of errors
+   i.e. if any of the new rows/columns contain an index that's larger than the
+   number of columns-1/rows-1 (if numberOther>0) or duplicates
+   If 0 then rows, 1 if columns */
+int 
+ClpMatrixBase::appendMatrix(int number, int type,
+                            const CoinBigIndex * starts, const int * index,
+                            const double * element, int numberOther)
+{
+  std::cerr<<"appendMatrix not supported - ClpMatrixBase"<<std::endl;
+  abort();
+  return -1;
+}
 

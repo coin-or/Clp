@@ -158,8 +158,12 @@ public:
   /** Add rows from a build object.
       If tryPlusMinusOne then will try adding as +-1 matrix
       if no matrix exists.
+      Returns number of errors e.g. duplicates
   */
-  void addRows(const CoinBuild & buildObject,bool tryPlusMinusOne=false);
+  int addRows(const CoinBuild & buildObject,bool tryPlusMinusOne=false,
+               bool checkDuplicates=true);
+  int addRowsTest(const CoinBuild & buildObject,bool tryPlusMinusOne=false,
+               bool checkDuplicates=true);
   /** Add rows from a model object.  returns
       -1 if object in bad state (i.e. has column information)
       otherwise number of errors.
@@ -168,7 +172,10 @@ public:
       If tryPlusMinusOne then will try adding as +-1 matrix
       if no matrix exists.
   */
-  int addRows(CoinModel & modelObject,bool tryPlusMinusOne=false);
+  int addRows(CoinModel & modelObject,bool tryPlusMinusOne=false,
+              bool checkDuplicates=true);
+  int addRowsTest(CoinModel & modelObject,bool tryPlusMinusOne=false,
+              bool checkDuplicates=true);
 
   /// Deletes columns
   void deleteColumns(int number, const int * which);
@@ -198,8 +205,12 @@ public:
   /** Add columns from a build object
       If tryPlusMinusOne then will try adding as +-1 matrix
       if no matrix exists.
+      Returns number of errors e.g. duplicates
   */
-  void addColumns(const CoinBuild & buildObject,bool tryPlusMinusOne=false);
+  int addColumns(const CoinBuild & buildObject,bool tryPlusMinusOne=false,
+                  bool checkDuplicates=true);
+  int addColumnsTest(const CoinBuild & buildObject,bool tryPlusMinusOne=false,
+                  bool checkDuplicates=true);
   /** Add columns from a model object.  returns
       -1 if object in bad state (i.e. has row information)
       otherwise number of errors
@@ -207,7 +218,10 @@ public:
       If tryPlusMinusOne then will try adding as +-1 matrix
       if no matrix exists.
   */
-  int addColumns(CoinModel & modelObject,bool tryPlusMinusOne=false);
+  int addColumns(CoinModel & modelObject,bool tryPlusMinusOne=false,
+                 bool checkDuplicates=true);
+  int addColumnsTest(CoinModel & modelObject,bool tryPlusMinusOne=false,
+                 bool checkDuplicates=true);
   /** Change row lower bounds */
   void chgRowLower(const double * rowLower);
   /** Change row upper bounds */
