@@ -23,10 +23,12 @@
 #ifdef CLP_IDIOT
 #include "Idiot.hpp"
 #endif
+
 //#############################################################################
 // Allow for interrupts
-// But is this threadsafe ? (so switched off by option
-#include <signal.h>
+// But is this threadsafe ? (so switched off by option)
+
+#include "CoinSignal.hpp"
 static ClpSimplex * currentModel = NULL;
 static void signal_handler(int whichSignal)
 {
@@ -58,7 +60,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
   ClpMatrixBase * saveMatrix=NULL;
   ClpSimplex * model2 = this;
   bool interrupt = (options.getSpecialOption(2)==0);
-  sighandler_t saveSignal=SIG_DFL;
+  CoinSighandler_t saveSignal=SIG_DFL;
   if (interrupt) {
     currentModel = model2;
     // register signal handler
