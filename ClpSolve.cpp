@@ -380,16 +380,25 @@ ClpSimplex::initialSolve(ClpSolve & options)
         double smallest = 1.0e30;
         double largestGap=0.0;
         int numberNotE=0;
+        bool notInteger=false;
         for (iRow=0;iRow<numberRows;iRow++) {
           double value1 = model2->rowLower_[iRow];
           if (value1&&value1>-1.0e31) {
             largest = CoinMax(largest,fabs(value1));
             smallest=CoinMin(smallest,fabs(value1));
+            if (fabs(value1-floor(value1+0.5))>1.0e-8) {
+              notInteger=true;
+              break;
+            }
           }
           double value2 = model2->rowUpper_[iRow];
           if (value2&&value2<1.0e31) {
             largest = CoinMax(largest,fabs(value2));
             smallest=CoinMin(smallest,fabs(value2));
+            if (fabs(value2-floor(value2+0.5))>1.0e-8) {
+              notInteger=true;
+              break;
+            }
           }
           if (value2>value1) {
             numberNotE++;
@@ -401,6 +410,10 @@ ClpSimplex::initialSolve(ClpSolve & options)
         }
         bool tryIt= numberRows>200&&numberColumns>2000&&numberColumns>2*numberRows;
         if (numberRows<1000&&numberColumns<3000)
+          tryIt=false;
+        if (notInteger)
+          tryIt=false;
+        if (largest/smallest>10||(largest/smallest>2.0&&largest>50))
           tryIt=false;
         if (tryIt) {
           if (largest/smallest>2.0) {
@@ -433,6 +446,10 @@ ClpSimplex::initialSolve(ClpSolve & options)
               nPasses *= 2;
           }
         }
+        printf("%d rows %d cols plus %c tryIt %c largest %g smallest %g largestGap %g npasses %d sprint %c\n",
+               numberRows,numberColumns,plusMinus ? 'Y' : 'N',
+               tryIt ? 'Y' :'N',largest,smallest,largestGap,nPasses,doSprint ? 'Y' :'N');
+        exit(0);
         if (!tryIt||nPasses<=5)
           doIdiot=0;
         if (doSprint) {

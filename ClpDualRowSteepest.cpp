@@ -157,6 +157,7 @@ ClpDualRowSteepest::pivotRow()
   // But cap
   tolerance = CoinMin(1000.0,tolerance);
   tolerance *= tolerance; // as we are using squares
+  double saveTolerance = tolerance;
   double * solution = model_->solutionRegion();
   double * lower = model_->lowerRegion();
   double * upper = model_->upperRegion();
@@ -205,11 +206,8 @@ k
   }
   if(model_->numberIterations()<model_->lastBadIteration()+200) {
     // we can't really trust infeasibilities if there is dual error
-    double checkTolerance = 1.0e-8;
-    if (!model_->factorization()->pivots())
-      checkTolerance = 1.0e-6;
-    if (model_->largestPrimalError()>checkTolerance)
-      tolerance *= model_->largestPrimalError()/checkTolerance;
+    if (model_->largestDualError()>model_->largestPrimalError())
+      tolerance *= CoinMin(model_->largestDualError()/model_->largestPrimalError(),1000.0);
   }
   int numberWanted;
   if (mode_<2 ) {
@@ -299,6 +297,14 @@ k
       break;
   }
   //printf("smallest %g largest %g\n",smallestWeight,largestWeight);
+  if (chosenRow<0&& tolerance>saveTolerance) {
+    // won't line up with checkPrimalSolution - do again
+    double saveError = model_->largestDualError();
+    model_->setLargestDualError(0.0);
+    // can't loop
+    chosenRow=pivotRow();
+    model_->setLargestDualError(saveError);
+  }
   return chosenRow;
 }
 // Updates weights and returns pivot alpha

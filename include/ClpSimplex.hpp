@@ -622,6 +622,12 @@ public:
   /// Largest error on basic duals
   inline double largestDualError() const
           { return largestDualError_;} ;
+  /// Largest error on Ax-b
+  inline void setLargestPrimalError(double value)
+          { largestPrimalError_=value;} ;
+  /// Largest error on basic duals
+  inline void setLargestDualError(double value)
+          { largestDualError_=value;} ;
   /// Basic variables pivoting on which rows
   inline int * pivotVariable() const
           { return pivotVariable_;};
