@@ -62,7 +62,7 @@ ifeq ($(findstring Linux,${UNAME}),Linux)
 	LDFLAGS += -lhistory -lreadline -ltermcap
 endif
 #LDFLAGS += -lefence
-LDFLAGS += -static
+#LDFLAGS += -static
 CXXFLAGS += -pg
 #if DENSE and using ATLAS
 #LDFLAGS += -L/home/forrest/ATLAS/lib/Linux_P4SSE2 -llapack -lcblas -latlas -lf77blas -lg2c

@@ -1,12 +1,12 @@
 # Static or shared libraries should be built (STATIC or SHARED)?
 LibType := SHARED
-LibType := STATIC
+#LibType := STATIC
 
 # Select optimization (-O or -g). -O will be automatically bumped up to the 
 # highest level of optimization the compiler supports. If want something in
 # between then specify the exact level you want, e.g., -O1 or -O2
 OptLevel := -g
-#OptLevel := -O2
+OptLevel := -O1
 
 LIBNAME := Clp
 LIBSRC :=
@@ -34,6 +34,7 @@ LIBSRC += ClpSimplexPrimal.cpp
 LIBSRC += ClpSimplexPrimalQuadratic.cpp
 LIBSRC += ClpSolve.cpp
 LIBSRC += ClpInterior.cpp
+LIBSRC += ClpPdco.cpp
 # and Presolve stuff
 LIBSRC += ClpPresolve.cpp
 

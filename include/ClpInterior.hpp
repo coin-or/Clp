@@ -21,7 +21,42 @@ class ClpFactorization;
 class CoinIndexedVector;
 class ClpNonLinearCost;
 class ClpInteriorProgress;
+// ******** DATA to be moved into protected section of ClpInterior
+typedef struct{
+  double  atolmin;
+  double  r3norm;
+  double  LSdamp;
+  double* deltay;
+} Info;
 
+typedef struct{
+  double  atolold;
+  double  atolnew;
+  double  r3ratio;
+  int   istop;
+  int   itncg;
+} Outfo;
+  
+typedef struct{
+double  gamma;
+double  delta;
+int MaxIter;
+double  FeaTol;
+double  OptTol;
+double  StepTol;
+double  x0min;
+double  z0min;
+double  mu0;
+int   LSmethod;   // 1=Cholesky    2=QR    3=LSQR
+int   LSproblem;  // See below
+int LSQRMaxIter;
+double  LSQRatol1; // Initial  atol
+double  LSQRatol2; // Smallest atol (unless atol1 is smaller)
+double  LSQRconlim;
+int  wait;
+} Options;
+class Lsqr;
+// ***** END
 /** This solves LPs using interior point methods
 
     It inherits from ClpModel and all its arrays are created at
@@ -106,12 +141,8 @@ public:
   //@{
   /** Pdco algorithm - see ClpPdco.hpp for method */
   int pdco();
-  //@}
-
-  /**@name Needed for functionality of OsiSimplexInterface */
-  //@{ 
-  /// LSQR
-  void lsqr();
+  // ** Temporary version
+  int  pdco( Lsqr *lsqr, Options &options, Info &info, Outfo &outfo);
   //@}
 
   /**@name most useful gets and sets */
