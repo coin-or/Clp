@@ -46,6 +46,7 @@ LIBSRC += ClpCholeskyUfl.cpp
 #LIBSRC += ClpCholeskyWssmp.cpp
 LIBSRC += ClpPredictorCorrector.cpp
 LIBSRC += ClpHelperFunctions.cpp
+LIBSRC += ClpBuild.cpp
 LIBSRC += Clp_C_Interface.cpp
 # and Presolve stuff
 LIBSRC += ClpPresolve.cpp
