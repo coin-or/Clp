@@ -220,7 +220,7 @@ int ClpSimplexDual::dual (int ifValuesPass )
   // If user asked for perturbation - do it
   if (!startup(0)) {
     // looks okay
-    
+    // Superbasic variables not allowed
     // If values pass then scale pi 
     if (ifValuesPass) {
       if (problemStatus_&&perturbation_<100) 
@@ -287,6 +287,8 @@ int ClpSimplexDual::dual (int ifValuesPass )
 	
     // This says whether to restore things etc
     int factorType=0;
+    // Start check for cycles
+    progress_->startCheck();
     /*
       Status of problem:
       0 - optimal
@@ -1056,6 +1058,7 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
 	  // to lower bound (if swap)
 	  which[numberInfeasibilities++]=iSequence;
 	  double movement = lower[iSequence]-upper[iSequence];
+	  assert (fabs(movement)<1.0e30);
 #ifdef CLP_DEBUG
 	  if ((handler_->logLevel()&32))
 	    printf("%d %d, new dj %g, alpha %g, movement %g\n",
@@ -1073,6 +1076,7 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
 	  // to upper bound 
 	  which[numberInfeasibilities++]=iSequence;
 	  double movement = upper[iSequence] - lower[iSequence];
+	  assert (fabs(movement)<1.0e30);
 #ifdef CLP_DEBUG
 	  if ((handler_->logLevel()&32))
 	    printf("%d %d, new dj %g, alpha %g, movement %g\n",
@@ -1107,11 +1111,13 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
 	  movement = lower[iSequence]-upper[iSequence];
 	  changeObj += movement*cost[iSequence];
 	  outputArray->quickAdd(iSequence,-movement);
+	  assert (fabs(movement)<1.0e30);
 	} else if (value>-tolerance) {
 	  // at correct bound but may swap
 	  FakeBound bound = getFakeBound(iSequence+numberColumns_);
 	  if (bound==ClpSimplexDual::upperFake) {
 	    movement = lower[iSequence]-upper[iSequence];
+	    assert (fabs(movement)<1.0e30);
 	    setStatus(iSequence+numberColumns_,atLowerBound);
 	    solution[iSequence] = lower[iSequence];
 	    changeObj += movement*cost[iSequence];
@@ -1127,6 +1133,7 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
 	  // put back alpha
 	  which[numberInfeasibilities++]=iSequence;
 	  movement = upper[iSequence] - lower[iSequence];
+	  assert (fabs(movement)<1.0e30);
 	  changeObj += movement*cost[iSequence];
 	  outputArray->quickAdd(iSequence,-movement);
 	} else if (value<tolerance) {
@@ -1134,6 +1141,7 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
 	  FakeBound bound = getFakeBound(iSequence+numberColumns_);
 	  if (bound==ClpSimplexDual::lowerFake) {
 	    movement = upper[iSequence]-lower[iSequence];
+	    assert (fabs(movement)<1.0e30);
 	    setStatus(iSequence+numberColumns_,atUpperBound);
 	    solution[iSequence] = upper[iSequence];
 	    changeObj += movement*cost[iSequence];
@@ -1178,6 +1186,7 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
 	  // to upper bound 
 	  which[numberInfeasibilities++]=iSequence;
 	  movement = upper[iSequence] - lower[iSequence];
+	  assert (fabs(movement)<1.0e30);
 #ifdef CLP_DEBUG
 	  if ((handler_->logLevel()&32))
 	    printf("%d %d, new dj %g, alpha %g, movement %g\n",
@@ -1195,6 +1204,7 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
 	  // to lower bound (if swap)
 	  which[numberInfeasibilities++]=iSequence;
 	  movement = lower[iSequence]-upper[iSequence];
+	  assert (fabs(movement)<1.0e30);
 #ifdef CLP_DEBUG
 	  if ((handler_->logLevel()&32))
 	    printf("%d %d, new dj %g, alpha %g, movement %g\n",
@@ -1233,6 +1243,7 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
 	  // put back alpha
 	  which[numberInfeasibilities++]=iSequence;
 	  movement = upper[iSequence] - lower[iSequence];
+	  assert (fabs(movement)<1.0e30);
 	  changeObj += movement*cost[iSequence];
 	  matrix_->add(this,outputArray,iSequence,movement);
 	} else if (value<tolerance) {
@@ -1240,6 +1251,7 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
 	  FakeBound bound = getFakeBound(iSequence);
 	  if (bound==ClpSimplexDual::lowerFake) {
 	    movement = upper[iSequence]-lower[iSequence];
+	    assert (fabs(movement)<1.0e30);
 	    setStatus(iSequence,atUpperBound);
 	    solution[iSequence] = upper[iSequence];
 	    changeObj += movement*cost[iSequence];
@@ -1255,6 +1267,7 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
 	  // put back alpha
 	  which[numberInfeasibilities++]=iSequence;
 	  movement = lower[iSequence]-upper[iSequence];
+	  assert (fabs(movement)<1.0e30);
 	  changeObj += movement*cost[iSequence];
 	  matrix_->add(this,outputArray,iSequence,movement);
 	} else if (value>-tolerance) {
@@ -1262,6 +1275,7 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
 	  FakeBound bound = getFakeBound(iSequence);
 	  if (bound==ClpSimplexDual::upperFake) {
 	    movement = lower[iSequence]-upper[iSequence];
+	    assert (fabs(movement)<1.0e30);
 	    setStatus(iSequence,atLowerBound);
 	    solution[iSequence] = lower[iSequence];
 	    changeObj += movement*cost[iSequence];
@@ -2497,6 +2511,8 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	    perturbation_=102; // stop any perturbations
 	    cleanDuals=1;
 	    createRim(4);
+	    // make sure fake bounds are back
+	    changeBounds(true,NULL,changeCost);
 	  }
 	  if (lastCleaned<numberIterations_&&numberTimesOptimal_<4) {
 	    doOriginalTolerance=2;
@@ -2595,15 +2611,25 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
       if (problemStatus_==-4||problemStatus_==5) {
 	// may be infeasible - or may be bounds are wrong
 	numberChangedBounds=changeBounds(false,NULL,changeCost);
-	if (perturbation_==101) {
+	/* Should this be here as makes no difference to being feasible.
+	   But seems to make a difference to run times. */
+	if (perturbation_==101&&0) {
 	  perturbation_=102; // stop any perturbations
 	  cleanDuals=1;
 	  numberChangedBounds=1;
+	  // make sure fake bounds are back
+	  changeBounds(true,NULL,changeCost);
 	  createRim(4);
 	}
 	if (numberChangedBounds<=0||dualBound_>1.0e20||
 	    (largestPrimalError_>1.0&&dualBound_>1.0e17)) {
 	  problemStatus_=1; // infeasible
+	  if (perturbation_==101) {
+	    perturbation_=102; // stop any perturbations
+	    //cleanDuals=1;
+	    //numberChangedBounds=1;
+	    //createRim(4);
+	  }
 	} else {
 	  normalType=false;
 	  problemStatus_=-1; //iterate
@@ -2625,7 +2651,6 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	lastCleaned=numberIterations_;
 	handler_->message(CLP_DUAL_ORIGINAL,messages_)
 	  <<CoinMessageEol;
-
 	perturbation_=102; // stop any perturbations
 #if 0
 	double * xcost = new double[numberRows_+numberColumns_];
@@ -2720,7 +2745,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	memcpy(xsolution,solution_,(numberRows_+numberColumns_)*sizeof(double));
 #endif
 	updateDualsInDual(rowArray_[0],columnArray_[0],rowArray_[1],
-			  0.0,objectiveChange,true);
+	  0.0,objectiveChange,true);
 #if 0
 	int i;
 	for (i=0;i<numberRows_+numberColumns_;i++) {
@@ -2748,6 +2773,8 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 #endif
 	// for now - recompute all
 	gutsOfSolution(NULL,NULL);
+	updateDualsInDual(rowArray_[0],columnArray_[0],rowArray_[1],
+		  0.0,objectiveChange,true);
 	//assert(numberDualInfeasibilitiesWithoutFree_==0);
 
 	if (numberDualInfeasibilities_||situationChanged==2) 

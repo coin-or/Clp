@@ -1,3 +1,26 @@
+// Copyright (C) 2003, International Business Machines
+// Corporation and others.  All Rights Reserved.
+#ifndef ClpHelperFunctions_H
+#define ClpHelperFunctions_H
+
+/**
+    Note (JJF) I have added some operations on arrays even though they may
+    duplicate CoinDenseVector.  I think the use of templates was a mistake
+    as I don't think inline generic code can take as much advantage of
+    parallelism or machine architectures or memory hierarchies.
+
+*/
+
+double maximumAbsElement(const double * region, int size);
+void setElements(double * region, int size, double value);
+void multiplyAdd(const double * region1, int size, double multiplier1,
+		 double * region2, double multiplier2);
+double innerProduct(const double * region1, int size, const double * region2);
+void getNorms(const double * region, int size, double & norm1, double & norm2);
+
+/// Following only included if ClpPdco defined
+#ifdef ClpPdco_H
+
 
 inline double pdxxxmerit(int nlow, int nupp, int *low, int *upp, CoinDenseVector <double> &r1,
 		CoinDenseVector <double> &r2, CoinDenseVector <double> &rL,
@@ -189,3 +212,5 @@ inline double  pdxxxstep(int nset, int *set, CoinDenseVector <double> &x, CoinDe
 //-----------------------------------------------------------------------
 // End private function pdxxxstep
 //-----------------------------------------------------------------------
+#endif
+#endif

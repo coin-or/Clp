@@ -17,6 +17,7 @@
 
 #include "ClpFactorization.hpp"
 #include "ClpSimplex.hpp"
+//#include "ClpInterior.hpp"
 #include "ClpLinearObjective.hpp"
 #include "ClpDualRowSteepest.hpp"
 #include "ClpDualRowDantzig.hpp"
@@ -365,7 +366,7 @@ void testingMessage( const char * const msg )
 }
 
 //--------------------------------------------------------------------------
-// test factorization methods and simplex method
+// test factorization methods and simplex method and simple barrier
 void
 ClpSimplexUnitTest(const std::string & mpsDir,
 		   const std::string & netlibDir)
@@ -913,6 +914,19 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     delete [] index;
     delete [] element;
   }
+#if 0
+  // Test barrier
+  {
+    CoinMpsIO m;
+    std::string fn = mpsDir+"exmip1";
+    m.readMps(fn.c_str(),"mps");
+    ClpInterior solution;
+    solution.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
+			 m.getObjCoefficients(),
+			 m.getRowLower(),m.getRowUpper());
+    solution.primalDual();
+  }
+#endif
   // test network 
   //#define QUADRATIC
 #ifndef QUADRATIC

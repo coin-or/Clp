@@ -13,7 +13,7 @@
 
 #include "CoinPragma.hpp"
 #include "CoinHelperFunctions.hpp"
-#define CLPVERSION "0.99.0"
+#define CLPVERSION "0.99.1"
 
 #include "CoinMpsIO.hpp"
 
@@ -63,7 +63,7 @@ enum ClpParameterType {
   
   DIRECTORY=301,IMPORT,EXPORT,RESTORE,SAVE,DUALSIMPLEX,PRIMALSIMPLEX,
   MAXIMIZE,MINIMIZE,EXIT,STDIN,UNITTEST,NETLIB_DUAL,NETLIB_PRIMAL,SOLUTION,
-  TIGHTEN,FAKEBOUND,HELP,PLUSMINUS,NETWORK,ALLSLACK,REVERSE,
+  TIGHTEN,FAKEBOUND,HELP,PLUSMINUS,NETWORK,ALLSLACK,REVERSE,BARRIER,
 
   INVALID=1000
 };
@@ -886,6 +886,17 @@ int main (int argc, const char *argv[])
        "Useful for playing around"
        ); 
     parameters[numberParameters++]=
+      ClpItem("barr!ier","Solve using primal dual predictor corrector algorithm",
+	      BARRIER);
+    parameters[numberParameters-1].setLonghelp
+      (
+       "This command solves the current model using the  primal dual predictor \
+corrector algorithm.  This is not a sophisticated version just something JJF\
+knocked up\
+** another slight drawback (early December) is that it does not work"
+
+       ); 
+    parameters[numberParameters++]=
       ClpItem("biasLU","Whether factorization biased towards U",
 	      "UU",BIASLU,2,false);
     parameters[numberParameters-1].append("UX");
@@ -1574,6 +1585,7 @@ costs this much to be infeasible",
 	  switch (type) {
 	  case DUALSIMPLEX:
 	  case PRIMALSIMPLEX:
+	  case BARRIER:
 	    if (goodModels[iModel]) {
 	      ClpSolve::SolveType method;
 	      ClpSolve::PresolveType presolveType;
@@ -1588,8 +1600,10 @@ costs this much to be infeasible",
 	      solveOptions.setPresolveType(presolveType,preSolve);
 	      if (type==DUALSIMPLEX)
 		method=ClpSolve::useDual;
-	      else
+	      else if (type==PRIMALSIMPLEX)
 		method=ClpSolve::usePrimalorSprint;
+	      else
+		method = ClpSolve::useBarrier;
 	      solveOptions.setSolveType(method);
 	      if (method==ClpSolve::useDual) {
 		// dual
@@ -1597,7 +1611,7 @@ costs this much to be infeasible",
 		  solveOptions.setSpecialOption(0,1); // crash
 		else if (doIdiot)
 		  solveOptions.setSpecialOption(0,2,doIdiot); // possible idiot
-	      } else {
+	      } else if (method==ClpSolve::usePrimalorSprint) {
 		// primal
 		if (doCrash) {
 		  solveOptions.setSpecialOption(1,1); // crash

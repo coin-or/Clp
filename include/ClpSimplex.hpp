@@ -1027,6 +1027,12 @@ public:
   double objective_[CLP_PROGRESS];
   /// Sum of infeasibilities for algorithm
   double infeasibility_[CLP_PROGRESS];
+#define CLP_CYCLE 12
+  /// For cycle checking
+  double obj_[CLP_CYCLE];
+  int in_[CLP_CYCLE];
+  int out_[CLP_CYCLE];
+  char way_[CLP_CYCLE];
   /// Pointer back to model so we can get information
   ClpSimplex * model_;
   /// Number of infeasibilities
@@ -1037,11 +1043,6 @@ public:
   int numberTimes_;
   /// Number of times it looked like loop
   int numberBadTimes_;
-#define CLP_CYCLE 12
-  /// For cycle checking
-  int in_[CLP_CYCLE];
-  int out_[CLP_CYCLE];
-  char way_[CLP_CYCLE];
   /// If things are in an odd state
   int oddState_;
   //@}

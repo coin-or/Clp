@@ -223,6 +223,8 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
     int reasonableSprintIteration=0;
     int lastSprintIteration=0;
     double lastObjectiveValue=COIN_DBL_MAX;
+    // Start check for cycles
+    progress_->startCheck();
     /*
       Status of problem:
       0 - optimal

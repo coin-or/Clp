@@ -9,9 +9,11 @@
 #include <math.h>
 
 #include "CoinHelperFunctions.hpp"
+#include "ClpHelperFunctions.hpp"
 #include "CoinSort.hpp"
 #include "ClpFactorization.hpp"
 #include "ClpSimplex.hpp"
+#include "ClpInterior.hpp"
 #include "ClpSolve.hpp"
 #include "ClpPackedMatrix.hpp"
 #include "ClpPlusMinusOneMatrix.hpp"
@@ -71,7 +73,6 @@ ClpSimplex::initialSolve(ClpSolve & options)
   double timePresolve=0.0;
   double timeIdiot=0.0;
   double timeCore=0.0;
-  double timeSimplex=0.0;
   int savePerturbation=perturbation_;
   int saveScaling = scalingFlag_;
   if (dynamic_cast< ClpNetworkMatrix*>(matrix_)) {
@@ -568,7 +569,6 @@ ClpSimplex::initialSolve(ClpSolve & options)
     model2->primal(1);
     time2 = CoinCpuTime();
     timeCore = time2-timeX;
-    timeSimplex = timeCore;
     handler_->message(CLP_INTERVAL_TIMING,messages_)
       <<"Primal"<<timeCore<<time2-time1
       <<CoinMessageEol;
@@ -855,12 +855,43 @@ ClpSimplex::initialSolve(ClpSolve & options)
     model2->setPerturbation(savePerturbation);
     time2 = CoinCpuTime();
     timeCore = time2-timeX;
-    timeSimplex = timeCore;
     handler_->message(CLP_INTERVAL_TIMING,messages_)
       <<"Sprint"<<timeCore<<time2-time1
       <<CoinMessageEol;
     timeX=time2;
     model2->setNumberIterations(model2->numberIterations()+totalIterations);
+  } else if (method==ClpSolve::useBarrier) {
+    printf("***** experimental pretty crude barrier\n");
+    ClpInterior barrier(*model2);
+    barrier.primalDual();
+    time2 = CoinCpuTime();
+    timeCore = time2-timeX;
+    handler_->message(CLP_INTERVAL_TIMING,messages_)
+      <<"Barrier"<<timeCore<<time2-time1
+      <<CoinMessageEol;
+    timeX=time2;
+    printf("***** crude crossover - I will improve\n");
+    // move solutions
+    CoinMemcpyN(barrier.primalRowSolution(),
+		model2->numberRows(),model2->primalRowSolution());
+    CoinMemcpyN(barrier.dualRowSolution(),
+		model2->numberRows(),model2->dualRowSolution());
+    CoinMemcpyN(barrier.primalColumnSolution(),
+		model2->numberColumns(),model2->primalColumnSolution());
+    CoinMemcpyN(barrier.dualColumnSolution(),
+		model2->numberColumns(),model2->dualColumnSolution());
+    // make sure no status left
+    model2->createStatus();
+    // solve
+    model2->setPerturbation(100);
+    model2->primal(1);
+    model2->setPerturbation(savePerturbation);
+    time2 = CoinCpuTime();
+    timeCore = time2-timeX;
+    handler_->message(CLP_INTERVAL_TIMING,messages_)
+      <<"Crossover"<<timeCore<<time2-time1
+      <<CoinMessageEol;
+    timeX=time2;
   } else {
     assert (method!=ClpSolve::automatic); // later
     time2=0.0;
@@ -896,7 +927,6 @@ ClpSimplex::initialSolve(ClpSolve & options)
       numberIterations += this->numberIterations();
       finalStatus=status();
       time2 = CoinCpuTime();
-      timeSimplex += time2-timeX;
       handler_->message(CLP_INTERVAL_TIMING,messages_)
       <<"Cleanup"<<time2-timeX<<time2-time1
       <<CoinMessageEol;
