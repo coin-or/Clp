@@ -307,22 +307,23 @@ int main (int argc, const char *argv[])
   <para>
   There are set and get methods for tolerances, for example,
   <function>double&nbsp;primalTolerance()</function> and
-  <function>setPrimalTolerance(double)</function>.  An individual variable is
-  deemed primal feasible if it is less than the tolerance referred to by these
-  methods below its lower bound and less than it above its upper bound.
-  Similarly for dual tolerances, a variable is deemed to be dual feasible if its
-  reduced cost is greater than minus the tolerance or its distance to the upper
-  bound is less than primal tolerance and the reduced cost is less than plus the
-  tolerance or the distance to lower bound is less than primal tolerance.  This
-  is just complementarity conditions adadpted for tolerances and simple lower and
-  upper bounds.(Note that the above was stated as for minimization - signs are
-  reversed for maximization.)
+  <function>setPrimalTolerance(double)</function>.  Assuming that one has a
+  minimization problem, an individual variable is deemed primal feasible if it
+  is less than the tolerance referred to by these methods below its lower bound
+  and less than it above its upper bound.  Similarly for dual tolerances, a
+  variable is deemed to be dual feasible if its reduced cost is greater than
+  minus the tolerance or its distance to the upper bound is less than primal
+  tolerance and the reduced cost is less than plus the tolerance or the distance
+  to lower bound is less than primal tolerance.  In short, this is complementarity
+  conditions adadpted for tolerances and simple lower and upper bounds.(Note
+  that the above was stated as for minimization; signs are reversed for
+  maximization.)
   </para>
   </section>
   <section>
   <title>Some Useful Set and Get Methods</title>
   <table frame="none">
-  <title>Some Useful Sets and Gets</title>
+  <title>Some Useful Set and Get Methods</title>
     <tgroup cols="2">
     <thead>
     <row>
@@ -404,7 +405,13 @@ int main (int argc, const char *argv[])
     </row>
     <row>
       <entry align="left" valign="top">
-      <function>CoinBigIndex getNumElements()</function>
+      <function>CoinBigIndex&nbsp;getNumElements()</function>
+      <footnote>
+        <para>
+	<type>CoinBigIndex</type> is a <function>typedef</function> which in
+	most cases is the same as <type>int</type>.
+	</para>
+      </footnote>
       </entry>
       <entry align="left" valign="top">
       Returns the number of elements in the problem matrix.
@@ -487,8 +494,8 @@ int main (int argc, const char *argv[])
       <function>int&nbsp;crash(double&nbsp;gap,int&nbsp;mode)</function>
       </entry>
       <entry align="left" valign="top">
-      This method attemps to improve on an all slack basis and remains a work
-      in progress.  For dual this will move variables to the dual feasible bound
+      This method attemps to improve on an all slack basis.
+      For dual this will move variables to the dual feasible bound
       if the gap between bounds is less than <parameter>gap</parameter>.  Setting
       <parameter>mode</parameter> to 0 guesses which algorithm is better, while
       a value of 1 or 2 will result in more work being done.  The return code is
@@ -565,43 +572,43 @@ int main (int argc, const char *argv[])
   </title>
   <para>
   The header file for the use of CLP's presolve functionality is
-  <filename>COIN/Clp/include/Presolve.hpp</filename>.  The code fragment below
+  <filename>COIN/Clp/include/Presolve.hpp</filename>.  The sample program below
   illustrates some of the possibilities offered by CLP's presolve:
   </para>
   <example id="presolveexample">
   <title>Presolve code fragment</title>
   <programlisting>
-    #include "Presolve.hpp"
-    
-    ...
-
-    ClpSimplex model; // initialized by readMps or some other method
-    
-    ...
-
-    Presolve presolveInfo;
-    ClpSimplex * presolvedModel = presolveInfo(model);
-    // at this point we have original model and a new model.  The information
-    // on the operations done is in presolveInfo
-    if (presolvedModel) { 
-      // was not found to be infeasible - so lets solve
-      // if presolvedModel was NULL then it was primal infeasible and ...
-      presolvedModel->dual(); // or whatever else we wish to do
-      presolveInfo.postsolve(true);  // the true updates status arrays in original
-      /* If the presolved model was optimal then so should the original be.
-         We can use checkSolution and test feasibility */
-    model.checkSolution();	
-    if (model.numberDualInfeasibilities()||
-      model.numberPrimalInfeasibilities()) {
-      printf("%g dual %g(%d) Primal %g(%d)\n",
-         model.objectiveValue(),
-	  model.sumDualInfeasibilities(),
-	  model.numberDualInfeasibilities(),
-	  model.sumPrimalInfeasibilities(),
-	  model.numberPrimalInfeasibilities());
-      // Due to tolerances we can not guarantee that so you may wish to throw in
-      model.primal(1);
-    }
+#include "ClpSimplex.hpp"
+#include "ClpPresolve.hpp"
+int main (int argc, const char *argv[])
+{
+  ClpSimplex model; 
+  model.readMps("../../Mps/Sample/p0033.mps"); // initialized by readMps or whatever 
+  ClpPresolve presolveInfo; 
+  ClpSimplex * presolvedModel = presolveInfo.presolvedModel(model); 
+  // at this point we have original model and a new model.  The  information
+  // on the operations done is in presolveInfo 
+  if (presolvedModel) { 
+    // was not found to be infeasible - so lets solve 
+    // if presolvedModel was NULL then it was primal infeasible and ... 
+    presolvedModel->dual(); // or whatever else we wish to do 
+    presolveInfo.postsolve(true);  // the true updates status arrays in original       
+    /* If the presolved model was optimal then so should the 
+       original be.           
+       We can use checkSolution and test feasibility */ 
+    model.checkSolution();         
+    if (model.numberDualInfeasibilities()|| 
+	model.numberPrimalInfeasibilities()) 
+      printf("%g dual %g(%d) Primal %g(%d)\n", 
+	     model.objectiveValue(), 
+	     model.sumDualInfeasibilities(), 
+	     model.numberDualInfeasibilities(), 
+	     model.sumPrimalInfeasibilities(), 
+	     model.numberPrimalInfeasibilities()); 
+    // Due to tolerances we can not guarantee that so you may wish to throw in
+    model.primal(1); 
+  }
+}   
   </programlisting>
   </example>
   <para>
@@ -636,14 +643,6 @@ int main (int argc, const char *argv[])
       <tbody>
         <row>
 	  <entry align="left" valign="top">
-	  <constant>isFree</constant>
-	  </entry>
-	  <entry align="left" valign="top">
-	  Not in basis, has infinite bounds
-	  </entry>
-        </row>
-        <row>
-	  <entry align="left" valign="top">
 	  <constant>basic</constant>
 	  </entry>
 	  <entry align="left" valign="top">
@@ -652,26 +651,10 @@ int main (int argc, const char *argv[])
         </row>
         <row>
 	  <entry align="left" valign="top">
-	  <constant>atUpperBound</constant>
+	  <constant>isFree</constant>
 	  </entry>
 	  <entry align="left" valign="top">
-	  At upper bound
-	  </entry>
-        </row>
-        <row>
-	  <entry align="left" valign="top">
-	  <constant>atLowerBound</constant>
-	  </entry>
-	  <entry align="left" valign="top">
-	  At lower bound
-	  </entry>
-        </row>
-        <row>
-	  <entry align="left" valign="top">
-	  <constant>superBasic</constant>
-	  </entry>
-	  <entry align="left" valign="top">
-	  Between bounds, but not basic or free
+	  Not in basis, has infinite bounds
 	  </entry>
         </row>
         <row>
@@ -680,6 +663,30 @@ int main (int argc, const char *argv[])
 	  </entry>
 	  <entry align="left" valign="top">
 	  Not in basis, bounds are equal
+	  </entry>
+        </row>
+        <row>
+	  <entry align="left" valign="top">
+	  <constant>atUpperBound</constant>
+	  </entry>
+	  <entry align="left" valign="top">
+	  At upper bound, not in basis
+	  </entry>
+        </row>
+        <row>
+	  <entry align="left" valign="top">
+	  <constant>atLowerBound</constant>
+	  </entry>
+	  <entry align="left" valign="top">
+	  At lower bound, not in basis
+	  </entry>
+        </row>
+        <row>
+	  <entry align="left" valign="top">
+	  <constant>superBasic</constant>
+	  </entry>
+	  <entry align="left" valign="top">
+	  Between bounds, but not basic or free
 	  </entry>
         </row>
       </tbody>
