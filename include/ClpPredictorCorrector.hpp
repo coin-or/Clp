@@ -60,15 +60,19 @@ public:
 		   const double * region1In, const double * region2In,
 		   const double * saveRegion1, const double * saveRegion2,
 		   bool gentleRefine);
-  //method: sees if looks plausible change in complementarity
-  bool checkGoodMove(const bool doCorrector,double & bestNextGap);
+  /// sees if looks plausible change in complementarity
+  bool checkGoodMove(const bool doCorrector,double & bestNextGap,
+		     bool allowIncreasingGap);
   ///:  checks for one step size
-  bool checkGoodMove2(const double move,double & bestNextGap);
+  bool checkGoodMove2(const double move,double & bestNextGap,
+		      bool allowIncreasingGap);
   /// updateSolution.  Updates solution at end of iteration
   //returns number fixed
   int updateSolution(double nextGap);
   ///  Save info on products of affine deltaT*deltaW and deltaS*deltaZ
   double affineProduct();
+  ///See exactly what would happen given current deltas
+  void debugMove(int phase,double primalStep, double dualStep);
   //@}
 
 };

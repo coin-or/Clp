@@ -12,6 +12,7 @@
 #include "ClpHelperFunctions.hpp"
 #include "CoinSort.hpp"
 #include "ClpFactorization.hpp"
+#include "ClpQuadraticObjective.hpp"
 #include "ClpSimplex.hpp"
 #include "ClpInterior.hpp"
 #ifdef REAL_BARRIER
@@ -99,7 +100,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
   int doIdiot=0;
   int doCrash=0;
   int doSprint=0;
-  if (method!=ClpSolve::useDual) {
+  if (method!=ClpSolve::useDual&&method!=ClpSolve::useBarrier) {
     switch (options.getSpecialOption(1)) {
     case 0:
       doIdiot=-1;
@@ -906,14 +907,56 @@ ClpSimplex::initialSolve(ClpSolve & options)
 #endif
     if (interrupt) 
       currentModel2 = &barrier;
+    int barrierOptions = options.getSpecialOption(4);
+    bool aggressiveGamma=false;
+    bool scale=false;
+    if (barrierOptions&8) {
+      barrierOptions &= ~8;
+      aggressiveGamma=true;
+    }
+    if (barrierOptions&4) {
+      barrierOptions &= ~4;
+      scale=true;
+    }
 #ifdef REAL_BARRIER
-    // uncomment this if you have Anshul Gupta's wsmp package
-    ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp(max(100,model2->numberRows()/10));
-    //ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp();
-    //ClpCholeskyWssmpKKT * cholesky = new ClpCholeskyWssmpKKT(max(100,model2->numberRows()/10));
+    // If quadratic force KKT
+#ifndef NO_RTTI
+    ClpQuadraticObjective * quadraticObj = (dynamic_cast< ClpQuadraticObjective*>(barrier.objectiveAsObject()));
+#else
+    ClpQuadraticObjective * quadraticObj = NULL;
+    if (objective_->type()==2)
+      quadraticObj = (static_cast< ClpQuadraticObjective*>(objective_));
+#endif
+    if (quadraticObj) {
+      barrierOptions = 2;
+    }
+    switch (barrierOptions) {
+    case 0:
+      {
+	ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp();
+	barrier.setCholesky(cholesky);
+      }
+      break;
+    case 1:
+      {
+	ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp(max(100,model2->numberRows()/10));
+	barrier.setCholesky(cholesky);
+      }
+      break;
+    case 2:
+      {
+	ClpCholeskyWssmpKKT * cholesky = new ClpCholeskyWssmpKKT(max(100,model2->numberRows()/10));
+	barrier.setCholesky(cholesky);
+      }
+      break;
+    case 3:
+      break;
+    default:
+      abort();
+    }
     // uncomment this if you have Sivan Toledo's Taucs package
     //ClpCholeskyTaucs * cholesky = new ClpCholeskyTaucs();
-    barrier.setCholesky(cholesky);
+    //barrier.setCholesky(cholesky);
 #endif
     int numberRows = model2->numberRows();
     int numberColumns = model2->numberColumns();
@@ -923,9 +966,17 @@ ClpSimplex::initialSolve(ClpSolve & options)
       model2->setMaximumIterations(1000000);
     }
 #ifndef SAVEIT
+    //barrier.setGamma(1.0e-8);
+    //barrier.setDelta(1.0e-8);
+    if (aggressiveGamma) {
+      barrier.setGamma(1.0e-3);
+      barrier.setDelta(1.0e-3);
+    }
+    if (scale)
+      barrier.scaling(1);
+    else
+      barrier.scaling(0);
     barrier.primalDual();
-    //printf("********** Stopping as this is debug run\n");
-    //exit(99);
 #elif SAVEIT==1
     barrier.primalDual();
 #else
@@ -955,7 +1006,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
     ClpPresolve pinfo2;
     ClpSimplex * saveModel2=NULL;
     int numberFixed = barrier.numberFixed();
-    if (numberFixed*20>barrier.numberRows()&&numberFixed>5000) {
+    if (numberFixed*20>barrier.numberRows()&&numberFixed>5000&&0) {
       // may as well do presolve
       int numberRows = barrier.numberRows();
       int numberColumns = barrier.numberColumns();
@@ -968,6 +1019,9 @@ ClpSimplex::initialSolve(ClpSolve & options)
       memcpy(saveUpper+numberColumns,barrier.rowUpper(),numberRows*sizeof(double));
       barrier.fixFixed();
       saveModel2=model2;
+    } else if (numberFixed) {
+      // Set fixed to bounds (may have restored earlier solution)
+      barrier.fixFixed(false);
     }
 #ifdef BORROW    
     barrier.returnModel(*model2);
@@ -1012,8 +1066,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	saveUpper=NULL;
       }
     }
-    if (maxIts&&barrierStatus<4) {
-      printf("***** crossover - needs more thought on difficult models\n");
+    if (maxIts&&barrierStatus<4&&!quadraticObj) {
+      //printf("***** crossover - needs more thought on difficult models\n");
 #if SAVEIT==1
       model2->ClpSimplex::saveModel("xx.save");
 #endif
@@ -1069,7 +1123,10 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	int numberRows = model2->numberRows();
 	int numberColumns = model2->numberColumns();
 	// just primal values pass
+	double saveScale = model2->objectiveScale();
+	model2->setObjectiveScale(1.0e-3);
 	model2->primal(2);
+	model2->setObjectiveScale(saveScale);
 	// save primal solution and copy back dual
 	CoinMemcpyN(model2->primalRowSolution(),
 		    numberRows,rowPrimal);
@@ -1139,6 +1196,10 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	CoinMemcpyN(columnPrimal,
 		    numberColumns,model2->primalColumnSolution());
       }
+      double saveScale = model2->objectiveScale();
+      model2->setObjectiveScale(1.0e-3);
+      model2->primal(2);
+      model2->setObjectiveScale(saveScale);
       model2->primal(1);
 #else
       // just primal

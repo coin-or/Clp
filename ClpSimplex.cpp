@@ -43,8 +43,6 @@ ClpSimplex::ClpSimplex () :
   primalToleranceToGetOptimal_(-1.0),
   remainingDualInfeasibility_(0.0),
   largeValue_(1.0e15),
-  objectiveScale_(1.0),
-  rhsScale_(1.0),
   largestPrimalError_(0.0),
   largestDualError_(0.0),
   largestSolutionError_(0.0),
@@ -148,8 +146,6 @@ ClpSimplex::ClpSimplex ( const ClpModel * rhs,
   primalToleranceToGetOptimal_(-1.0),
   remainingDualInfeasibility_(0.0),
   largeValue_(1.0e15),
-  objectiveScale_(1.0),
-  rhsScale_(1.0),
   largestPrimalError_(0.0),
   largestDualError_(0.0),
   largestSolutionError_(0.0),
@@ -1363,8 +1359,6 @@ ClpSimplex::ClpSimplex(const ClpSimplex &rhs) :
   primalToleranceToGetOptimal_(-1.0),
   remainingDualInfeasibility_(0.0),
   largeValue_(1.0e15),
-  objectiveScale_(1.0),
-  rhsScale_(1.0),
   largestPrimalError_(0.0),
   largestDualError_(0.0),
   largestSolutionError_(0.0),
@@ -1462,8 +1456,6 @@ ClpSimplex::ClpSimplex(const ClpModel &rhs) :
   primalToleranceToGetOptimal_(-1.0),
   remainingDualInfeasibility_(0.0),
   largeValue_(1.0e15),
-  objectiveScale_(1.0),
-  rhsScale_(1.0),
   largestPrimalError_(0.0),
   largestDualError_(0.0),
   largestSolutionError_(0.0),
@@ -1623,8 +1615,6 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
   primalToleranceToGetOptimal_ = rhs.primalToleranceToGetOptimal_;
   remainingDualInfeasibility_ = rhs.remainingDualInfeasibility_;
   largeValue_ = rhs.largeValue_;
-  objectiveScale_ = rhs.objectiveScale_;
-  rhsScale_ = rhs.rhsScale_;
   largestPrimalError_ = rhs.largestPrimalError_;
   largestDualError_ = rhs.largestDualError_;
   largestSolutionError_ = rhs.largestSolutionError_;
@@ -3472,6 +3462,55 @@ int ClpSimplex::dualRanging(int numberCheck,const int * which,
   finish(); // get rid of arrays
   return 0;
 }
+/* Primal ranging.
+   This computes increase/decrease in value for each given variable and corresponding
+   sequence numbers which would change basis.  Sequence numbers are 0..numberColumns 
+   and numberColumns.. for artificials/slacks.
+   For basic variables the sequence number will be that of the basic variables.
+   
+   Up to user to providen correct length arrays.
+   
+   Returns non-zero if infeasible unbounded etc
+*/
+int ClpSimplex::primalRanging(int numberCheck,const int * which,
+		  double * valueIncrease, int * sequenceIncrease,
+		  double * valueDecrease, int * sequenceDecrease)
+{
+  int savePerturbation = perturbation_;
+  perturbation_=100;
+  int returnCode = ((ClpSimplexPrimal *) this)->primal(0,1);
+  if (problemStatus_==10) {
+    //printf("Cleaning up with dual\n");
+    bool denseFactorization = initialDenseFactorization();
+    // It will be safe to allow dense
+    setInitialDenseFactorization(true);
+    // check which algorithms allowed
+    int dummy;
+    if ((matrix_->generalExpanded(this,4,dummy)&2)!=0) {
+      // upperOut_ has largest away from bound
+      double saveBound=dualBound_;
+      if (upperOut_>0.0)
+	dualBound_=2.0*upperOut_;
+      returnCode = ((ClpSimplexDual *) this)->dual(0,1);
+      dualBound_=saveBound;
+    } else {
+      returnCode = ((ClpSimplexPrimal *) this)->primal(0,1);
+    }
+    setInitialDenseFactorization(denseFactorization);
+    if (problemStatus_==10) 
+      problemStatus_=0;
+  }
+  perturbation_=savePerturbation;
+  if (problemStatus_) {
+    finish(); // get rid of arrays
+    return 1; // odd status
+  }
+  ((ClpSimplexOther *) this)->primalRanging(numberCheck,which,
+					  valueIncrease,sequenceIncrease,
+					  valueDecrease,sequenceDecrease);
+  finish(); // get rid of arrays
+  return 0;
+}
 #include "ClpSimplexPrimalQuadratic.hpp"
 /* Solves quadratic problem using SLP - may be used as crash
    for other algorithms when number of iterations small
@@ -3528,7 +3567,7 @@ ClpSimplex::barrier(bool crossover)
   ClpPresolve pinfo2;
   ClpSimplex * saveModel2=NULL;
   int numberFixed = barrier.numberFixed();
-  if (numberFixed*20>barrier.numberRows()&&numberFixed>5000&&crossover) {
+  if (numberFixed*20>barrier.numberRows()&&numberFixed>5000&&crossover&&0) {
     // may as well do presolve
     int numberRows = barrier.numberRows();
     int numberColumns = barrier.numberColumns();
@@ -3608,7 +3647,10 @@ ClpSimplex::barrier(bool crossover)
       int numberRows = model2->numberRows();
       int numberColumns = model2->numberColumns();
       // just primal values pass
+      double saveScale = model2->objectiveScale();
+      model2->setObjectiveScale(1.0e-3);
       model2->primal(2);
+      model2->setObjectiveScale(saveScale);
       // save primal solution and copy back dual
       CoinMemcpyN(model2->primalRowSolution(),
 		  numberRows,rowPrimal);
@@ -3678,6 +3720,10 @@ ClpSimplex::barrier(bool crossover)
       CoinMemcpyN(columnPrimal,
 		  numberColumns,model2->primalColumnSolution());
     }
+//     double saveScale = model2->objectiveScale();
+//     model2->setObjectiveScale(1.0e-3);
+//     model2->primal(2);
+//    model2->setObjectiveScale(saveScale);
     model2->primal(1);
   } else if (barrierStatus==4&&crossover) {
     // memory problems
@@ -3754,8 +3800,6 @@ ClpSimplex::borrowModel(ClpSimplex & otherModel)
   perturbation_ = otherModel.perturbation_;
   specialOptions_ = otherModel.specialOptions_;
   automaticScale_ = otherModel.automaticScale_;
-  objectiveScale_ = otherModel.objectiveScale_;
-  rhsScale_ = otherModel.rhsScale_;
 }
 typedef struct {
   double optimizationDirection;
@@ -5440,6 +5484,7 @@ ClpSimplexProgress::ClpSimplexProgress ()
   for (i=0;i<CLP_PROGRESS;i++) {
     objective_[i] = COIN_DBL_MAX;
     infeasibility_[i] = -1.0; // set to an impossible value
+    realInfeasibility_[i] = COIN_DBL_MAX;
     numberInfeasibilities_[i]=-1; 
     iterationNumber_[i]=-1;
   }
@@ -5468,6 +5513,7 @@ ClpSimplexProgress::ClpSimplexProgress(const ClpSimplexProgress &rhs)
   for (i=0;i<CLP_PROGRESS;i++) {
     objective_[i] = rhs.objective_[i];
     infeasibility_[i] = rhs.infeasibility_[i];
+    realInfeasibility_[i] = rhs.realInfeasibility_[i];
     numberInfeasibilities_[i]=rhs.numberInfeasibilities_[i]; 
     iterationNumber_[i]=rhs.iterationNumber_[i];
   }
@@ -5493,6 +5539,7 @@ ClpSimplexProgress::ClpSimplexProgress(ClpSimplex * model)
     else
       objective_[i] = -COIN_DBL_MAX;
     infeasibility_[i] = -1.0; // set to an impossible value
+    realInfeasibility_[i] = COIN_DBL_MAX;
     numberInfeasibilities_[i]=-1; 
     iterationNumber_[i]=-1;
   }
@@ -5515,6 +5562,7 @@ ClpSimplexProgress::operator=(const ClpSimplexProgress & rhs)
     for (i=0;i<CLP_PROGRESS;i++) {
       objective_[i] = rhs.objective_[i];
       infeasibility_[i] = rhs.infeasibility_[i];
+      realInfeasibility_[i] = rhs.realInfeasibility_[i];
       numberInfeasibilities_[i]=rhs.numberInfeasibilities_[i]; 
       iterationNumber_[i]=rhs.iterationNumber_[i];
     }
@@ -5548,6 +5596,7 @@ ClpSimplexProgress::looping()
     return -1;
   double objective = model_->objectiveValue();
   double infeasibility;
+  double realInfeasibility=0.0;
   int numberInfeasibilities;
   int iterationNumber = model_->numberIterations();
   if (model_->algorithm()<0) {
@@ -5557,6 +5606,7 @@ ClpSimplexProgress::looping()
   } else {
     //primal
     infeasibility = model_->sumDualInfeasibilities();
+    realInfeasibility = model_->nonLinearCost()->sumInfeasibilities();
     numberInfeasibilities = model_->numberDualInfeasibilities();
   }
   int i;
@@ -5587,12 +5637,14 @@ ClpSimplexProgress::looping()
     if (i) {
       objective_[i-1] = objective_[i];
       infeasibility_[i-1] = infeasibility_[i];
+      realInfeasibility_[i-1] = realInfeasibility_[i];
       numberInfeasibilities_[i-1]=numberInfeasibilities_[i]; 
       iterationNumber_[i-1]=iterationNumber_[i];
     }
   }
   objective_[CLP_PROGRESS-1] = objective;
   infeasibility_[CLP_PROGRESS-1] = infeasibility;
+  realInfeasibility_[CLP_PROGRESS-1] = realInfeasibility;
   numberInfeasibilities_[CLP_PROGRESS-1]=numberInfeasibilities;
   iterationNumber_[CLP_PROGRESS-1]=iterationNumber;
   if (nsame==CLP_PROGRESS)
@@ -5688,6 +5740,20 @@ double
 ClpSimplexProgress::lastObjective(int back) const
 {
   return objective_[CLP_PROGRESS-1-back];
+}
+// Returns previous infeasibility (if -1) - current if (0)
+double 
+ClpSimplexProgress::lastInfeasibility(int back) const
+{
+  return realInfeasibility_[CLP_PROGRESS-1-back];
+}
+// Sets real primal infeasibility
+void
+ClpSimplexProgress::setInfeasibility(double value)
+{
+  for (int i=1;i<CLP_PROGRESS;i++) 
+    realInfeasibility_[i-1] = realInfeasibility_[i];
+  realInfeasibility_[CLP_PROGRESS-1]=value;
 }
 // Modify objective e.g. if dual infeasible in dual
 void 

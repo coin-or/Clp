@@ -108,13 +108,15 @@ ClpCholeskyBase * ClpCholeskyWssmp::clone() const
 }
 // At present I can't get wssmp to work as my libraries seem to be out of sync
 // so I have linked in ekkwssmp which is an older version
-#if 0
+//#define WSMP
+#ifdef WSMP
   extern "C" void wssmp(int * n,
                         int * columnStart , int * rowIndex , double * element,
                         double * diagonal , int * perm , int * invp ,
                         double * rhs , int * ldb , int * nrhs ,
                         double * aux , int * naux ,
                         int   * mrp , int * iparm , double * dparm);
+extern "C" void wsetmaxthrds(int *);
 #else
 /* minimum needed for user */
 typedef struct EKKModel EKKModel;
@@ -320,6 +322,9 @@ ClpCholeskyWssmp::order(ClpInterior * model)
   integerParameters_[0]=0;
   int i0=0;
   int i1=1;
+#ifdef WSMP   
+  wsetmaxthrds(&i1);
+#endif
   wssmp(&numberRows_,choleskyStart_,choleskyRow_,sparseFactor_,
          NULL,permuteOut_,permuteIn_,0,&numberRows_,&i1,
          NULL,&i0,NULL,integerParameters_,doubleParameters_);
@@ -412,6 +417,8 @@ ClpCholeskyWssmp::factorize(const double * diagonal, int * rowsDropped)
       }
     }
   }
+  double delta2 = model_->delta(); // add delta*delta to diagonal
+  delta2 *= delta2;
   for (iRow=0;iRow<numberRows_;iRow++) {
     double * put = sparseFactor_+choleskyStart_[iRow];
     int * which = choleskyRow_+choleskyStart_[iRow];
@@ -421,7 +428,7 @@ ClpCholeskyWssmp::factorize(const double * diagonal, int * rowsDropped)
     if (!rowsDropped_[iRow]) {
       CoinBigIndex startRow=rowStart[iRow];
       CoinBigIndex endRow=rowStart[iRow]+rowLength[iRow];
-      work[iRow] = diagonalSlack[iRow];
+      work[iRow] = diagonalSlack[iRow]+delta2;
       for (CoinBigIndex k=startRow;k<endRow;k++) {
 	int iColumn=column[k];
 	if (!whichDense_||!whichDense_[iColumn]) {
@@ -454,7 +461,7 @@ ClpCholeskyWssmp::factorize(const double * diagonal, int * rowsDropped)
   }
   //check sizes
   double largest2=maximumAbsElement(sparseFactor_,sizeFactor_);
-  largest2*=1.0e-19;
+  largest2*=1.0e-20;
   largest = min (largest2,1.0e-11);
   int numberDroppedBefore=0;
   for (iRow=0;iRow<numberRows_;iRow++) {
@@ -480,6 +487,11 @@ ClpCholeskyWssmp::factorize(const double * diagonal, int * rowsDropped)
   integerParameters_[10]=2;
   //integerParameters_[11]=1;
   integerParameters_[12]=2;
+  doubleParameters_[10]=max(1.0e-20,largest2);
+  if (doubleParameters_[10]>1.0e-3)
+    integerParameters_[9]=1;
+  else
+    integerParameters_[9]=0;
   wssmp(&numberRows_,choleskyStart_,choleskyRow_,sparseFactor_,
 	NULL,permuteOut_,permuteIn_,NULL,&numberRows_,&i1,
 	NULL,&i0,rowsDropped,integerParameters_,doubleParameters_);

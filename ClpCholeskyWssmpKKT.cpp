@@ -10,6 +10,7 @@
 
 #include "ClpInterior.hpp"
 #include "ClpCholeskyWssmpKKT.hpp"
+#include "ClpQuadraticObjective.hpp"
 #include "ClpMessage.hpp"
 
 //#############################################################################
@@ -27,7 +28,7 @@ ClpCholeskyWssmpKKT::ClpCholeskyWssmpKKT (int denseThreshold)
     sizeFactor_(0),
     denseThreshold_(denseThreshold)
 {
-  type_=12;
+  type_=21;
   memset(integerParameters_,0,64*sizeof(int));
   memset(doubleParameters_,0,64*sizeof(double));
 }
@@ -87,13 +88,15 @@ ClpCholeskyBase * ClpCholeskyWssmpKKT::clone() const
 }
 // At present I can't get wssmp to work as my libraries seem to be out of sync
 // so I have linked in ekkwssmp which is an older version
-#if 0
+//#define WSMP
+#ifdef WSMP
   extern "C" void wssmp(int * n,
                         int * columnStart , int * rowIndex , double * element,
                         double * diagonal , int * perm , int * invp ,
                         double * rhs , int * ldb , int * nrhs ,
                         double * aux , int * naux ,
                         int   * mrp , int * iparm , double * dparm);
+extern "C" void wsetmaxthrds(int *);
 #else
 /* minimum needed for user */
 typedef struct EKKModel EKKModel;
@@ -144,8 +147,15 @@ ClpCholeskyWssmpKKT::order(ClpInterior * model)
   memset(rowsDropped_,0,numberRows_);
   numberRowsDropped_=0;
   model_=model;
+  CoinPackedMatrix * quadratic = NULL;
+  ClpQuadraticObjective * quadraticObj = 
+    (dynamic_cast< ClpQuadraticObjective*>(model_->objectiveAsObject()));
+  if (quadraticObj) 
+    quadratic = quadraticObj->quadraticObjective();
   int numberElements = model_->clpMatrix()->getNumElements();
   numberElements = numberElements+2*numberRowsModel+numberTotal;
+  if (quadratic)
+    numberElements += quadratic->getNumElements(); 
   // Space for starts
   choleskyStart_ = new CoinBigIndex[numberRows_+1];
   const CoinBigIndex * columnStart = model_->clpMatrix()->getVectorStarts();
@@ -177,13 +187,36 @@ ClpCholeskyWssmpKKT::order(ClpInterior * model)
   
   sizeFactor_=0;
   // matrix
-  for (iColumn=0;iColumn<numberColumns;iColumn++) {
-    choleskyStart_[iColumn]=sizeFactor_;
-    choleskyRow_[sizeFactor_++]=iColumn;
-    CoinBigIndex start=columnStart[iColumn];
-    CoinBigIndex end=columnStart[iColumn]+columnLength[iColumn];
-    for (CoinBigIndex j=start;j<end;j++) {
-      choleskyRow_[sizeFactor_++]=row[j]+numberTotal;
+  if (!quadratic) {
+    for (iColumn=0;iColumn<numberColumns;iColumn++) {
+      choleskyStart_[iColumn]=sizeFactor_;
+      choleskyRow_[sizeFactor_++]=iColumn;
+      CoinBigIndex start=columnStart[iColumn];
+      CoinBigIndex end=columnStart[iColumn]+columnLength[iColumn];
+      for (CoinBigIndex j=start;j<end;j++) {
+	choleskyRow_[sizeFactor_++]=row[j]+numberTotal;
+      }
+    }
+  } else {
+    // Quadratic
+    const int * columnQuadratic = quadratic->getIndices();
+    const CoinBigIndex * columnQuadraticStart = quadratic->getVectorStarts();
+    const int * columnQuadraticLength = quadratic->getVectorLengths();
+    //const double * quadraticElement = quadratic->getElements();
+    for (iColumn=0;iColumn<numberColumns;iColumn++) {
+      choleskyStart_[iColumn]=sizeFactor_;
+      choleskyRow_[sizeFactor_++]=iColumn;
+      for (CoinBigIndex j=columnQuadraticStart[iColumn];
+	   j<columnQuadraticStart[iColumn]+columnQuadraticLength[iColumn];j++) {
+	int jColumn = columnQuadratic[j];
+	if (jColumn>iColumn)
+	  choleskyRow_[sizeFactor_++]=jColumn;
+      }
+      CoinBigIndex start=columnStart[iColumn];
+      CoinBigIndex end=columnStart[iColumn]+columnLength[iColumn];
+      for (CoinBigIndex j=start;j<end;j++) {
+	choleskyRow_[sizeFactor_++]=row[j]+numberTotal;
+      }
     }
   }
   // slacks
@@ -192,7 +225,7 @@ ClpCholeskyWssmpKKT::order(ClpInterior * model)
     choleskyRow_[sizeFactor_++]=iColumn;
     choleskyRow_[sizeFactor_++]=iColumn-numberColumns+numberTotal;
   }
-  // Transpose - zero diagonal (may regularize)
+  // Transpose - nonzero diagonal (may regularize)
   for (iRow=0;iRow<numberRowsModel;iRow++) {
     choleskyStart_[iRow+numberTotal]=sizeFactor_;
     // diagonal
@@ -204,6 +237,9 @@ ClpCholeskyWssmpKKT::order(ClpInterior * model)
   integerParameters_[0]=0;
   int i0=0;
   int i1=1;
+#ifdef WSMP   
+  wsetmaxthrds(&i1);
+#endif
   wssmp(&numberRows_,choleskyStart_,choleskyRow_,sparseFactor_,
          NULL,permuteOut_,permuteIn_,0,&numberRows_,&i1,
          NULL,&i0,NULL,integerParameters_,doubleParameters_);
@@ -278,41 +314,95 @@ ClpCholeskyWssmpKKT::factorize(const double * diagonal, int * rowsDropped)
   const double * element = model_->clpMatrix()->getElements();
   
   CoinBigIndex numberElements=0;
+  CoinPackedMatrix * quadratic = NULL;
+  ClpQuadraticObjective * quadraticObj = 
+    (dynamic_cast< ClpQuadraticObjective*>(model_->objectiveAsObject()));
+  if (quadraticObj) 
+    quadratic = quadraticObj->quadraticObjective();
   // matrix
-  for (iColumn=0;iColumn<numberColumns;iColumn++) {
-    choleskyStart_[iColumn]=numberElements;
-    double value = diagonal[iColumn];
-    if (fabs(value)>1.0e-100)
-      value = 1.0/value;
-    else
-      value = 1.0e100;
-    sparseFactor_[numberElements] = -value;
-    choleskyRow_[numberElements++]=iColumn;
-    CoinBigIndex start=columnStart[iColumn];
-    CoinBigIndex end=columnStart[iColumn]+columnLength[iColumn];
-    for (CoinBigIndex j=start;j<end;j++) {
-      choleskyRow_[numberElements]=row[j]+numberTotal;
-      sparseFactor_[numberElements++]=element[j];
+  largest=1.0e-100;
+  if (!quadratic) {
+    for (iColumn=0;iColumn<numberColumns;iColumn++) {
+      choleskyStart_[iColumn]=numberElements;
+      double value = diagonal[iColumn];
+      if (fabs(value)>1.0e-100) {
+	value = 1.0/value;
+	largest = max(largest,fabs(value));
+	sparseFactor_[numberElements] = -value;
+	choleskyRow_[numberElements++]=iColumn;
+	CoinBigIndex start=columnStart[iColumn];
+	CoinBigIndex end=columnStart[iColumn]+columnLength[iColumn];
+	for (CoinBigIndex j=start;j<end;j++) {
+	  choleskyRow_[numberElements]=row[j]+numberTotal;
+	  sparseFactor_[numberElements++]=element[j];
+	}
+      } else {
+	sparseFactor_[numberElements] = -1.0e100;
+	choleskyRow_[numberElements++]=iColumn;
+      }
+    }
+  } else {
+    // Quadratic
+    const int * columnQuadratic = quadratic->getIndices();
+    const CoinBigIndex * columnQuadraticStart = quadratic->getVectorStarts();
+    const int * columnQuadraticLength = quadratic->getVectorLengths();
+    const double * quadraticElement = quadratic->getElements();
+    for (iColumn=0;iColumn<numberColumns;iColumn++) {
+      choleskyStart_[iColumn]=numberElements;
+      CoinBigIndex savePosition = numberElements;
+      choleskyRow_[numberElements++]=iColumn;
+      double value = diagonal[iColumn];
+      if (fabs(value)>1.0e-100) {
+	value = 1.0/value;
+	for (CoinBigIndex j=columnQuadraticStart[iColumn];
+	     j<columnQuadraticStart[iColumn]+columnQuadraticLength[iColumn];j++) {
+	  int jColumn = columnQuadratic[j];
+	  if (jColumn>iColumn) {
+	    sparseFactor_[numberElements]=quadraticElement[j];
+	    choleskyRow_[numberElements++]=jColumn;
+	  } else if (iColumn==jColumn) {
+	    value += quadraticElement[j];
+	  }
+	}
+	largest = max(largest,fabs(value));
+	sparseFactor_[savePosition] = -value;
+	CoinBigIndex start=columnStart[iColumn];
+	CoinBigIndex end=columnStart[iColumn]+columnLength[iColumn];
+	for (CoinBigIndex j=start;j<end;j++) {
+	  choleskyRow_[numberElements]=row[j]+numberTotal;
+	  sparseFactor_[numberElements++]=element[j];
+	}
+      } else {
+	value = 1.0e100;
+	sparseFactor_[savePosition] = -value;
+      }
     }
   }
+  for (iColumn=0;iColumn<numberColumns;iColumn++) {
+    assert (sparseFactor_[choleskyStart_[iColumn]]<0.0);
+  }
   // slacks
-  for (;iColumn<numberTotal;iColumn++) {
+  for (iColumn=numberColumns;iColumn<numberTotal;iColumn++) {
     choleskyStart_[iColumn]=numberElements;
     double value = diagonal[iColumn];
-    if (fabs(value)>1.0e-100)
+    if (fabs(value)>1.0e-100) {
       value = 1.0/value;
-    else
+      largest = max(largest,fabs(value));
+    } else {
       value = 1.0e100;
+    }
     sparseFactor_[numberElements] = -value;
     choleskyRow_[numberElements++]=iColumn;
     choleskyRow_[numberElements]=iColumn-numberColumns+numberTotal;
     sparseFactor_[numberElements++]=-1.0;
   }
   // Finish diagonal
+  double delta2 = model_->delta(); // add delta*delta to bottom
+  delta2 *= delta2;
   for (iRow=0;iRow<numberRowsModel;iRow++) {
     choleskyStart_[iRow+numberTotal]=numberElements;
     choleskyRow_[numberElements]=iRow+numberTotal;
-    sparseFactor_[numberElements++]=0.0;
+    sparseFactor_[numberElements++]=delta2;
   }
   choleskyStart_[numberRows_]=numberElements;
   int i1=1;
@@ -325,6 +415,15 @@ ClpCholeskyWssmpKKT::factorize(const double * diagonal, int * rowsDropped)
   // LDLT
   integerParameters_[30]=1;
   doubleParameters_[20]=1.0e100;
+#ifndef WSMP
+  // Set up LDL cutoff
+  integerParameters_[34]=numberTotal;
+  doubleParameters_[10]=min(largest*1.0e-19,1.0e-14);
+  doubleParameters_[20]=1.0e-15;
+  doubleParameters_[34]=1.0e-12;
+  //printf("tol is %g\n",doubleParameters_[10]);
+  //doubleParameters_[10]=1.0e-17;
+#endif
   int * rowsDropped2 = new int[numberRows_];
   CoinZeroN(rowsDropped2,numberRows_);
   wssmp(&numberRows_,choleskyStart_,choleskyRow_,sparseFactor_,
@@ -336,26 +435,35 @@ ClpCholeskyWssmpKKT::factorize(const double * diagonal, int * rowsDropped)
   } 
   newDropped=integerParameters_[20];
 #if 1
+  // Should save adjustments in ..R_
   int n1=0,n2=0;
+  double * primalR = model_->primalR();
+  double * dualR = model_->dualR();
   for (iRow=0;iRow<numberTotal;iRow++) { 
     if (rowsDropped2[iRow]) {
       n1++;
       //printf("row region1 %d dropped\n",iRow);
-      rowsDropped_[iRow]=1;
+      //rowsDropped_[iRow]=1;
+      rowsDropped_[iRow]=0;
+      primalR[iRow]=doubleParameters_[20];
     } else {
       rowsDropped_[iRow]=0;
+      primalR[iRow]=0.0;
     }
   }
   for (;iRow<numberRows_;iRow++) {
     if (rowsDropped2[iRow]) {
       n2++;
       //printf("row region2 %d dropped\n",iRow);
-      rowsDropped_[iRow]=1;
+      //rowsDropped_[iRow]=1;
+      rowsDropped_[iRow]=0;
+      dualR[iRow-numberTotal]=doubleParameters_[34];
     } else {
       rowsDropped_[iRow]=0;
+      dualR[iRow-numberTotal]=0.0;
     }
   }
-  printf("%d rows dropped in region1, %d in region2\n",n1,n2);
+  //printf("%d rows dropped in region1, %d in region2\n",n1,n2);
 #endif
   delete [] rowsDropped2;
   //if (integerParameters_[20]) 
@@ -413,7 +521,7 @@ ClpCholeskyWssmpKKT::solveKKT (double * region1, double * region2, const double 
   }
 #endif
   CoinMemcpyN(array+numberTotal,numberRowsModel,region2);
-#if 0
+#if 1
   CoinMemcpyN(array,numberTotal,region1);
 #else
   multiplyAdd(region2,numberRowsModel,-1.0,array+numberColumns,0.0);

@@ -59,7 +59,7 @@ void ClpSimplexOther::dualRanging(int numberCheck,const int * which,
 	matrix_->transposeTimes(this,-1.0,
 				rowArray_[0],rowArray_[3],columnArray_[0]);
 	// do ratio test up and down
-	checkRatios(rowArray_[0],columnArray_[0],costIncrease,sequenceIncrease,
+	checkDualRatios(rowArray_[0],columnArray_[0],costIncrease,sequenceIncrease,
 		    costDecrease,sequenceDecrease);
       }
       break;
@@ -123,7 +123,7 @@ void ClpSimplexOther::dualRanging(int numberCheck,const int * which,
    This is used in dual ranging
 */
 void
-ClpSimplexOther::checkRatios(CoinIndexedVector * rowArray,
+ClpSimplexOther::checkDualRatios(CoinIndexedVector * rowArray,
 			     CoinIndexedVector * columnArray,
 			     double & costIncrease, int & sequenceIncrease,
 			     double & costDecrease, int & sequenceDecrease)
@@ -218,5 +218,137 @@ ClpSimplexOther::checkRatios(CoinIndexedVector * rowArray,
   if (sequenceDown>=0) {
     costDecrease = thetaDown;
     sequenceDecrease = sequenceDown;
+  }
+}
+/** Primal ranging.
+    This computes increase/decrease in value for each given variable and corresponding
+    sequence numbers which would change basis.  Sequence numbers are 0..numberColumns 
+    and numberColumns.. for artificials/slacks.
+    For basic variables the sequence number will be that of the basic variables.
+    
+    Up to user to provide correct length arrays.
+    
+    When here - guaranteed optimal
+*/
+void 
+ClpSimplexOther::primalRanging(int numberCheck,const int * which,
+		  double * valueIncreased, int * sequenceIncreased,
+		  double * valueDecreased, int * sequenceDecreased)
+{
+  rowArray_[0]->clear();
+  rowArray_[1]->clear();
+  lowerIn_=-COIN_DBL_MAX;
+  upperIn_=COIN_DBL_MAX;
+  valueIn_ = 0.0;
+  for ( int i=0;i<numberCheck;i++) {
+    int iSequence = which[i];
+    double valueIncrease=COIN_DBL_MAX;
+    double valueDecrease=COIN_DBL_MAX;
+    int sequenceIncrease=-1;
+    int sequenceDecrease=-1;
+    
+    switch(getStatus(iSequence)) {
+      
+    case basic:
+    case isFree:
+    case superBasic:
+      // Easy
+      valueIncrease=max(0.0,upper_[iSequence]-solution_[iSequence]);
+      valueDecrease=max(0.0,solution_[iSequence]-lower_[iSequence]);
+      sequenceIncrease=iSequence;
+      sequenceDecrease=iSequence;
+      break;
+    case isFixed:
+    case atUpperBound:
+    case atLowerBound:
+      {
+	// Non trivial
+	// Other bound is ignored
+	unpackPacked(rowArray_[1],iSequence);
+	factorization_->updateColumn(rowArray_[2],rowArray_[1]);
+	// Get extra rows
+	matrix_->extendUpdated(this,rowArray_[1],0);
+	// do ratio test
+	checkPrimalRatios(rowArray_[1],1);
+	if (pivotRow_>=0) {
+	  valueIncrease = theta_;
+	  sequenceIncrease=pivotVariable_[pivotRow_];
+	}
+	directionIn_=-1; // down
+	checkPrimalRatios(rowArray_[1],-1);
+	if (pivotRow_>=0) {
+	  valueDecrease = theta_;
+	  sequenceDecrease=pivotVariable_[pivotRow_];
+	}
+	rowArray_[1]->clear();
+      }
+      break;
+    }
+    double scaleFactor;
+    if (rowScale_) {
+      if (iSequence<numberColumns_) 
+	scaleFactor = columnScale_[iSequence]/rhsScale_;
+      else
+	scaleFactor = 1.0/(rowScale_[iSequence-numberColumns_]*rhsScale_);
+    } else {
+      scaleFactor = 1.0/rhsScale_;
+    }
+    if (valueIncrease<1.0e30)
+      valueIncrease *= scaleFactor;
+    else
+      valueIncrease = COIN_DBL_MAX;
+    if (valueDecrease<1.0e30)
+      valueDecrease *= scaleFactor;
+    else
+      valueDecrease = COIN_DBL_MAX;
+    valueIncreased[i] = valueIncrease;
+    sequenceIncreased[i] = sequenceIncrease;
+    valueDecreased[i] = valueDecrease;
+    sequenceDecreased[i] = sequenceDecrease;
+  }
+}
+/* 
+   Row array has pivot column
+   This is used in primal ranging
+*/
+void 
+ClpSimplexOther::checkPrimalRatios(CoinIndexedVector * rowArray,
+			 int direction)
+{
+  // sequence stays as row number until end
+  pivotRow_=-1;
+  double acceptablePivot=1.0e-7;
+  double * work=rowArray->denseVector();
+  int number=rowArray->getNumElements();
+  int * which=rowArray->getIndices();
+
+  // we need to swap sign if going down
+  double way = direction;
+  theta_ = 1.0e30;
+  for (int iIndex=0;iIndex<number;iIndex++) {
+    
+    int iRow = which[iIndex];
+    double alpha = work[iIndex]*way;
+    int iPivot=pivotVariable_[iRow];
+    double oldValue = solution_[iPivot];
+    if (fabs(alpha)>acceptablePivot) {
+      if (alpha>0.0) {
+	// basic variable going towards lower bound
+	double bound = lower_[iPivot];
+	oldValue -= bound;
+	if (oldValue-theta_*alpha<0.0) {
+	  pivotRow_ = iRow;
+	  theta_ = max(0.0,oldValue/alpha);
+	}
+      } else {
+	// basic variable going towards upper bound
+	double bound = upper_[iPivot];
+	oldValue = oldValue-bound;
+	if (oldValue-theta_*alpha>0.0) {
+	  pivotRow_ = iRow;
+	  theta_ = max(0.0,oldValue/alpha);
+	}
+      }
+    }
   }
 }

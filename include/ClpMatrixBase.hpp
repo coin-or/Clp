@@ -86,7 +86,7 @@ public:
   { };
   /** Realy really scales column copy 
       Only called if scales already exist.
-      Up to user ro delete */
+      Up to user to delete */
   inline virtual ClpMatrixBase * scaledColumnCopy(ClpModel * model) const 
   { return this->clone();};
   

@@ -62,6 +62,7 @@ enum ClpParameterType {
   
   DIRECTION=201,DUALPIVOT,SCALING,ERRORSALLOWED,KEEPNAMES,SPARSEFACTOR,
   PRIMALPIVOT,PRESOLVE,CRASH,BIASLU,PERTURBATION,MESSAGES,AUTOSCALE,
+  CHOLESKY,BARRIERSCALE,GAMMA,
   
   DIRECTORY=301,IMPORT,EXPORT,RESTORE,SAVE,DUALSIMPLEX,PRIMALSIMPLEX,
   MAXIMIZE,MINIMIZE,EXIT,STDIN,UNITTEST,NETLIB_DUAL,NETLIB_PRIMAL,SOLUTION,
@@ -934,6 +935,16 @@ knocked up"
     parameters[numberParameters-1].append("LX");
     parameters[numberParameters-1].append("LL");
     parameters[numberParameters++]=
+      ClpItem("bscale","Whether to scale in barrier",
+	      "off",BARRIERSCALE,false);
+    parameters[numberParameters-1].append("on");
+    parameters[numberParameters++]=
+      ClpItem("chol!esky","Which cholesky algorithm",
+	      "wssmp",CHOLESKY,false);
+    parameters[numberParameters-1].append("fudge!Long");
+    parameters[numberParameters-1].append("KKT");
+    parameters[numberParameters-1].append("dense");
+    parameters[numberParameters++]=
       ClpItem("crash","Whether to create basis for problem",
 	      "off",CRASH);
     parameters[numberParameters-1].append("on");
@@ -1050,6 +1061,10 @@ no dual infeasibility may exceed this value",
     parameters[numberParameters++]=
       ClpItem("fakeB!ound","All bounds <= this value - DEBUG",
 	      1.0,1.0e15,FAKEBOUND,false);
+    parameters[numberParameters++]=
+      ClpItem("gamma","Whether to regularize barrier",
+	      "off",GAMMA,false);
+    parameters[numberParameters-1].append("on");
     parameters[numberParameters++]=
       ClpItem("help","Print out version, non-standard options and some help",
 	      HELP);
@@ -1415,7 +1430,11 @@ costs this much to be infeasible",
     // total number of commands read
     int numberGoodCommands=0;
     bool * goodModels = new bool[1];
-    
+
+    // Hidden stuff for barrier
+    int choleskyType = 0;
+    int gamma=0;
+    int scaleBarrier=0;
     
     int iModel=0;
     goodModels[0]=false;
@@ -1691,6 +1710,15 @@ costs this much to be infeasible",
 	    case MESSAGES:
 	      models[iModel].messageHandler()->setPrefix(action!=0);
 	      break;
+	    case CHOLESKY:
+	      choleskyType = action;
+	      break;
+	    case GAMMA:
+	      gamma=action;
+	      break;
+	    case BARRIERSCALE:
+	      scaleBarrier=action;
+	      break;
 	    default:
 	      abort();
 	    }
@@ -1750,6 +1778,13 @@ costs this much to be infeasible",
 		      solveOptions.setSpecialOption(1,7); // initiative
 		  }
 		}
+	      } else if (method==ClpSolve::useBarrier) {
+		int barrierOptions = choleskyType;
+		if (scaleBarrier)
+		  barrierOptions |= 4;
+		if (gamma)
+		  barrierOptions |= 8;
+		solveOptions.setSpecialOption(4,barrierOptions);
 	      }
 	      model2->initialSolve(solveOptions);
 	    } else {

@@ -43,8 +43,11 @@ public:
 			const int * column, const double * element,
 			int numberExtendedColumns_=-1);
   
-  /// Copy constructor 
-  ClpQuadraticObjective(const ClpQuadraticObjective &);
+  /** Copy constructor .
+      If type is -1 then make sure half symmetric,
+      if +1 then make sure full
+  */
+  ClpQuadraticObjective(const ClpQuadraticObjective & rhs,int type=0);
   /** Subset constructor.  Duplicates are allowed
       and order is as given.
   */

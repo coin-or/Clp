@@ -639,32 +639,31 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	    problemStatus_=5;
 	    return;
 	  }
-#if 1
-	  // switch off dense
-	  int saveDense = factorization_->denseThreshold();
-	  factorization_->setDenseThreshold(0);
-	  // make sure will do safe factorization
-	  pivotVariable_[0]=-1;
-	  internalFactorize(2);
-	  factorization_->setDenseThreshold(saveDense);
-	  // restore extra stuff
-	  matrix_->generalExpanded(this,6,dummy);
-#else
-	  
-	  // no - restore previous basis
-	  assert (type==1);
-	  memcpy(status_ ,saveStatus_,(numberColumns_+numberRows_)*sizeof(char));
-	  memcpy(rowActivityWork_,savedSolution_+numberColumns_ ,
-		 numberRows_*sizeof(double));
-	  memcpy(columnActivityWork_,savedSolution_ ,
-		 numberColumns_*sizeof(double));
-	  // restore extra stuff
-	  matrix_->generalExpanded(this,6,dummy);
-	  matrix_->generalExpanded(this,5,dummy);
-	  forceFactorization_=1; // a bit drastic but ..
-	  type = 2;
-	  assert (internalFactorize(1)==0);
-#endif
+	  if (type!=1||largestPrimalError_>1.0e3
+	      ||largestDualError_>1.0e3) {
+	    // switch off dense
+	    int saveDense = factorization_->denseThreshold();
+	    factorization_->setDenseThreshold(0);
+	    // make sure will do safe factorization
+	    pivotVariable_[0]=-1;
+	    internalFactorize(2);
+	    factorization_->setDenseThreshold(saveDense);
+	    // restore extra stuff
+	    matrix_->generalExpanded(this,6,dummy);
+	  } else {
+	    // no - restore previous basis
+	    memcpy(status_ ,saveStatus_,(numberColumns_+numberRows_)*sizeof(char));
+	    memcpy(rowActivityWork_,savedSolution_+numberColumns_ ,
+		   numberRows_*sizeof(double));
+	    memcpy(columnActivityWork_,savedSolution_ ,
+		   numberColumns_*sizeof(double));
+	    // restore extra stuff
+	    matrix_->generalExpanded(this,6,dummy);
+	    matrix_->generalExpanded(this,5,dummy);
+	    forceFactorization_=1; // a bit drastic but ..
+	    type = 2;
+	    assert (internalFactorize(1)==0);
+	  }
 	  changeMade_++; // say change made
 	}
       }
@@ -746,6 +745,19 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
   if (!primalFeasible()) {
     nonLinearCost_->checkInfeasibilities(primalTolerance_);
     gutsOfSolution(NULL,NULL,ifValuesPass!=0);
+    nonLinearCost_->checkInfeasibilities(primalTolerance_);
+  }
+  double trueInfeasibility =nonLinearCost_->sumInfeasibilities();
+  if (trueInfeasibility>1.0) {
+    // If infeasibility going up may change weights
+    double testValue = trueInfeasibility-1.0e-4*(10.0+trueInfeasibility);
+    if(progress->lastInfeasibility()<testValue) {
+      if (infeasibilityCost_<1.0e14) {
+	infeasibilityCost_ *= 1.5;
+	printf("increasing weight to %g\n",infeasibilityCost_);
+	gutsOfSolution(NULL,NULL,ifValuesPass!=0);
+      }
+    }
   }
   // we may wish to say it is optimal even if infeasible
   bool alwaysOptimal = (specialOptions_&1)!=0;

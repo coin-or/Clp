@@ -2776,6 +2776,8 @@ ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model,int mode)
   bool doInfeasibilities=true;
   if (mode==1&&weights_) {
     if (pivotSequence_>=0) {
+      // clean array first
+      alternateWeights_->clear();
       // save pivot order
       memcpy(alternateWeights_->getIndices(),pivotVariable,
 	     numberRows*sizeof(int));
@@ -2844,6 +2846,7 @@ ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model,int mode)
 	//model_->setSequenceOut(savedSequenceOut_); 
 	pivotSequence_= -1;
 	model_->setSequenceOut(-1); 
+	alternateWeights_->clear();
       }
     }
     state_=0;
@@ -2854,36 +2857,41 @@ ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model,int mode)
     }
   }
   if (mode>=2&&mode!=5) {
-    if (mode!=3&&pivotSequence_>=0) {
-      // restore pivot row
-      int iRow;
-      // permute alternateWeights
-      double * temp = new double[numberRows+numberColumns];
-      double * work = alternateWeights_->denseVector();
-      int * oldPivotOrder = alternateWeights_->getIndices();
-      for (iRow=0;iRow<numberRows;iRow++) {
-	int iPivot=oldPivotOrder[iRow];
-	temp[iPivot]=work[iRow];
-      }
-      int number=0;
-      int found=-1;
-      int * which = oldPivotOrder;
-      // find pivot row and re-create alternateWeights
-      for (iRow=0;iRow<numberRows;iRow++) {
-	int iPivot=pivotVariable[iRow];
-	if (iPivot==pivotSequence_) 
-	  found=iRow;
-	work[iRow]=temp[iPivot];
-	if (work[iRow])
-	  which[number++]=iRow;
-      }
-      alternateWeights_->setNumElements(number);
+    if (mode!=3) {
+      if (pivotSequence_>=0) {
+	// restore pivot row
+	int iRow;
+	// permute alternateWeights
+	double * temp = new double[numberRows+numberColumns];
+	double * work = alternateWeights_->denseVector();
+	int * oldPivotOrder = alternateWeights_->getIndices();
+	for (iRow=0;iRow<numberRows;iRow++) {
+	  int iPivot=oldPivotOrder[iRow];
+	  temp[iPivot]=work[iRow];
+	}
+	int number=0;
+	int found=-1;
+	int * which = oldPivotOrder;
+	// find pivot row and re-create alternateWeights
+	for (iRow=0;iRow<numberRows;iRow++) {
+	  int iPivot=pivotVariable[iRow];
+	  if (iPivot==pivotSequence_) 
+	    found=iRow;
+	  work[iRow]=temp[iPivot];
+	  if (work[iRow])
+	    which[number++]=iRow;
+	}
+	alternateWeights_->setNumElements(number);
 #ifdef CLP_DEBUG
-      // Can happen but I should clean up
-      assert(found>=0);
+	// Can happen but I should clean up
+	assert(found>=0);
 #endif
-      pivotSequence_ = found;
-      delete [] temp;
+	pivotSequence_ = found;
+	delete [] temp;
+      } else {
+	// Just clean up
+	alternateWeights_->clear();
+      }
     }
     // Save size of factorization
     if (!model->factorization()->pivots())

@@ -194,6 +194,19 @@ public:
   int dualRanging(int numberCheck,const int * which,
 		  double * costIncrease, int * sequenceIncrease,
 		  double * costDecrease, int * sequenceDecrease);
+  /** Primal ranging.
+      This computes increase/decrease in value for each given variable and corresponding
+      sequence numbers which would change basis.  Sequence numbers are 0..numberColumns 
+      and numberColumns.. for artificials/slacks.
+      For basic variables the sequence number will be that of the basic variables.
+
+      Up to user to providen correct length arrays.
+
+      Returns non-zero if infeasible unbounded etc
+  */
+  int primalRanging(int numberCheck,const int * which,
+		  double * valueIncrease, int * sequenceIncrease,
+		  double * valueDecrease, int * sequenceDecrease);
   /// Passes in factorization
   void setFactorization( ClpFactorization & factorization);
   /** Tightens primal bounds to make dual faster.  Unless
@@ -524,16 +537,6 @@ public:
   /// Basic variables pivoting on which rows
   inline int * pivotVariable() const
           { return pivotVariable_;};
-  /// Scaling of objective 
-  inline double objectiveScale() const 
-          { return objectiveScale_;} ;
-  inline void setObjectiveScale(double value)
-          { objectiveScale_ = value;} ;
-  /// Scaling of rhs and bounds
-  inline double rhsScale() const 
-          { return rhsScale_;} ;
-  inline void setRhsScale(double value)
-          { rhsScale_ = value;} ;
   /// If automatic scaling on
   inline bool automaticScaling() const
   { return automaticScale_!=0;};
@@ -828,10 +831,6 @@ protected:
   double remainingDualInfeasibility_;
   /// Large bound value (for complementarity etc)
   double largeValue_;
-  /// Scaling of objective
-  double objectiveScale_;
-  /// Scaling of rhs and bounds
-  double rhsScale_;
   /// Largest error on Ax-b
   double largestPrimalError_;
   /// Largest error on basic duals
@@ -1052,6 +1051,10 @@ public:
 
   /// Returns previous objective (if -1) - current if (0)
   double lastObjective(int back=1) const;
+  /// Set real primal infeasibility and move back
+  void setInfeasibility(double value);
+  /// Returns real primal infeasibility (if -1) - current if (0)
+  double lastInfeasibility(int back=1) const;
   /// Modify objective e.g. if dual infeasible in dual
   void modifyObjective(double value);
   /// Returns previous iteration number (if -1) - current if (0)
@@ -1079,6 +1082,8 @@ public:
   double objective_[CLP_PROGRESS];
   /// Sum of infeasibilities for algorithm
   double infeasibility_[CLP_PROGRESS];
+  /// Sum of real primal infeasibilities for primal
+  double realInfeasibility_[CLP_PROGRESS];
 #define CLP_CYCLE 12
   /// For cycle checking
   //double obj_[CLP_CYCLE];

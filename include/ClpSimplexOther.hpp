@@ -38,15 +38,34 @@ public:
   void dualRanging(int numberCheck,const int * which,
 		  double * costIncrease, int * sequenceIncrease,
 		  double * costDecrease, int * sequenceDecrease);
+  /** Primal ranging.
+      This computes increase/decrease in value for each given variable and corresponding
+      sequence numbers which would change basis.  Sequence numbers are 0..numberColumns 
+      and numberColumns.. for artificials/slacks.
+      For basic variables the sequence number will be that of the basic variables.
+
+      Up to user to providen correct length arrays.
+
+      When here - guaranteed optimal
+  */
+  void primalRanging(int numberCheck,const int * which,
+		  double * valueIncrease, int * sequenceIncrease,
+		  double * valueDecrease, int * sequenceDecrease);
   /** 
       Row array has row part of pivot row
       Column array has column part.
       This is used in dual ranging
   */
-  void checkRatios(CoinIndexedVector * rowArray,
+  void checkDualRatios(CoinIndexedVector * rowArray,
 		   CoinIndexedVector * columnArray,
 		   double & costIncrease, int & sequenceIncrease,
 		   double & costDecrease, int & sequencedecrease);
+  /** 
+      Row array has pivot column
+      This is used in primal ranging
+  */
+  void checkPrimalRatios(CoinIndexedVector * rowArray,
+			 int direction);
   //@}
 };
 #endif

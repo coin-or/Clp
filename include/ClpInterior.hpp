@@ -220,8 +220,15 @@ public:
   void setCholesky(ClpCholeskyBase * cholesky);
   /// Return number fixed to see if worth presolving
   int numberFixed() const;
-  /// fix variables interior says should be
-  void fixFixed();
+  /** fix variables interior says should be.  If reallyFix false then just
+      set values to exact bounds */
+  void fixFixed(bool reallyFix=true);
+  /// Primal erturbation vector
+  inline double * primalR() const
+  { return primalR_;};
+  /// Dual erturbation vector
+  inline double * dualR() const
+  { return dualR_;};
   //@}
 
   protected:
@@ -253,6 +260,10 @@ public:
   { return sequence<numberColumns_ ? sequence : sequence-numberColumns_;};
   /// Checks solution
   void checkSolution();
+  /** Modifies djs to allow for quadratic.
+      returns quadratic offset */
+  double quadraticDjs(double * djRegion, const double * solution,
+		      double scaleFactor);
 
   /// To say a variable is fixed
   inline void setFixed( int sequence)
@@ -469,6 +480,10 @@ protected:
   /// deltaS.
   double * deltaSU_;
   double * deltaSL_;
+  /// Primal regularization array
+  double * primalR_;
+  /// Dual regularization array
+  double * dualR_;
   /// rhs B
   double * rhsB_;
   /// rhsU.

@@ -302,6 +302,16 @@ public:
    inline const double * columnScale() const {return columnScale_;};
    inline void setRowScale(double * scale) { rowScale_ = scale;};
    inline void setColumnScale(double * scale) { columnScale_ = scale;};
+  /// Scaling of objective 
+  inline double objectiveScale() const 
+          { return objectiveScale_;} ;
+  inline void setObjectiveScale(double value)
+          { objectiveScale_ = value;} ;
+  /// Scaling of rhs and bounds
+  inline double rhsScale() const 
+          { return rhsScale_;} ;
+  inline void setRhsScale(double value)
+          { rhsScale_ = value;} ;
    /// Sets or unsets scaling, 0 -off, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic(later)
    void scaling(int mode=1);
    /// Gets scalingFlag
@@ -559,6 +569,10 @@ protected:
   double objectiveValue_;
   /// Small element value
   double smallElement_;
+  /// Scaling of objective
+  double objectiveScale_;
+  /// Scaling of rhs and bounds
+  double rhsScale_;
   /// Number of rows
   int numberRows_;
   /// Number of columns

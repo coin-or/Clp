@@ -17,7 +17,7 @@
 
 #include "ClpFactorization.hpp"
 #include "ClpSimplex.hpp"
-//#include "ClpInterior.hpp"
+#include "ClpInterior.hpp"
 #include "ClpLinearObjective.hpp"
 #include "ClpDualRowSteepest.hpp"
 #include "ClpDualRowDantzig.hpp"
@@ -566,16 +566,16 @@ ClpSimplexUnitTest(const std::string & mpsDir,
 			 m.getObjCoefficients(),
 			 m.getRowLower(),m.getRowUpper());
     model.primal();
-    int which[8] = {0,1,2,3,4,5,6,7};
-    double costIncrease[8];
-    int sequenceIncrease[8];
-    double costDecrease[8];
-    int sequenceDecrease[8];
+    int which[13] = {0,1,2,3,4,5,6,7,8,9,10,11,12};
+    double costIncrease[13];
+    int sequenceIncrease[13];
+    double costDecrease[13];
+    int sequenceDecrease[13];
     // ranging
-    model.dualRanging(8,which,costIncrease,sequenceIncrease,
+    model.dualRanging(13,which,costIncrease,sequenceIncrease,
 		      costDecrease,sequenceDecrease);
     int i;
-    for ( i=0;i<8;i++)
+    for ( i=0;i<13;i++)
       printf("%d increase %g %d, decrease %g %d\n",
 	     i,costIncrease[i],sequenceIncrease[i],
 	     costDecrease[i],sequenceDecrease[i]);
@@ -589,19 +589,45 @@ ClpSimplexUnitTest(const std::string & mpsDir,
       for (j=0;j<n;j++) 
 	obj[j] *= -1.0;
     }
-    double costIncrease2[8];
-    int sequenceIncrease2[8];
-    double costDecrease2[8];
-    int sequenceDecrease2[8];
+    double costIncrease2[13];
+    int sequenceIncrease2[13];
+    double costDecrease2[13];
+    int sequenceDecrease2[13];
     // ranging
-    model.dualRanging(8,which,costIncrease2,sequenceIncrease2,
+    model.dualRanging(13,which,costIncrease2,sequenceIncrease2,
 		      costDecrease2,sequenceDecrease2);
-    for (i=0;i<8;i++) {
+    for (i=0;i<13;i++) {
       assert (fabs(costIncrease[i]-costDecrease2[i])<1.0e-6);
       assert (fabs(costDecrease[i]-costIncrease2[i])<1.0e-6);
       assert (sequenceIncrease[i]==sequenceDecrease2[i]);
       assert (sequenceDecrease[i]==sequenceIncrease2[i]);
     }
+  }
+  // Test primal ranging
+  {    
+    CoinMpsIO m;
+    std::string fn = mpsDir+"exmip1";
+    m.readMps(fn.c_str(),"mps");
+    ClpSimplex model;
+    model.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
+			 m.getObjCoefficients(),
+			 m.getRowLower(),m.getRowUpper());
+    model.primal();
+    int which[13] = {0,1,2,3,4,5,6,7,8,9,10,11,12};
+    double valueIncrease[13];
+    int sequenceIncrease[13];
+    double valueDecrease[13];
+    int sequenceDecrease[13];
+    // ranging
+    model.primalRanging(13,which,valueIncrease,sequenceIncrease,
+		      valueDecrease,sequenceDecrease);
+    int i;
+    for ( i=0;i<13;i++)
+      printf("%d increase %g %d, decrease %g %d\n",
+	     i,valueIncrease[i],sequenceIncrease[i],
+	     valueDecrease[i],sequenceDecrease[i]);
+    assert (fabs(valueDecrease[3]-0.642857)<1.0e-4);
+    assert (fabs(valueDecrease[8]-2.95113)<1.0e-4);
   }
   // test steepest edge
   {    
@@ -976,7 +1002,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     delete [] index;
     delete [] element;
   }
-#if 0
+#if 1
   // Test barrier
   {
     CoinMpsIO m;
@@ -1201,7 +1227,32 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     //assert(eq(objValue,820.0));
     solution.setLogLevel(63);
     solution.quadraticPrimal(1);
+    int numberRows = solution.numberRows();
+
+    double * rowPrimal = solution.primalRowSolution();
+    double * rowDual = solution.dualRowSolution();
+    double * rowLower = solution.rowLower();
+    double * rowUpper = solution.rowUpper();
+    
+    int iRow;
+    printf("Rows\n");
+    for (iRow=0;iRow<numberRows;iRow++) {
+      printf("%d primal %g dual %g low %g up %g\n",
+	     iRow,rowPrimal[iRow],rowDual[iRow],
+	     rowLower[iRow],rowUpper[iRow]);
+    }
+    double * columnPrimal = solution.primalColumnSolution();
+    double * columnDual = solution.dualColumnSolution();
+    double * columnLower = solution.columnLower();
+    double * columnUpper = solution.columnUpper();
     objValue = solution.getObjValue();
+    int iColumn;
+    printf("Columns\n");
+    for (iColumn=0;iColumn<numberColumns;iColumn++) {
+      printf("%d primal %g dual %g low %g up %g\n",
+	     iColumn,columnPrimal[iColumn],columnDual[iColumn],
+	     columnLower[iColumn],columnUpper[iColumn]);
+    }
     //assert(eq(objValue,3.2368421));
     //exit(77);
   }

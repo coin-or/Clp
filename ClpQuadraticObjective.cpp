@@ -2,9 +2,9 @@
 // Corporation and others.  All Rights Reserved.
 
 #include "CoinPragma.hpp"
+#include "CoinHelperFunctions.hpp"
 #include "ClpModel.hpp"
 #include "ClpQuadraticObjective.hpp"
-
 //#############################################################################
 // Constructors / Destructor / Assignment
 //#############################################################################
@@ -58,7 +58,8 @@ ClpQuadraticObjective::ClpQuadraticObjective (const double * objective ,
 //-------------------------------------------------------------------
 // Copy constructor 
 //-------------------------------------------------------------------
-ClpQuadraticObjective::ClpQuadraticObjective (const ClpQuadraticObjective & rhs) 
+ClpQuadraticObjective::ClpQuadraticObjective (const ClpQuadraticObjective & rhs,
+					      int type) 
 : ClpObjective(rhs)
 {  
   numberColumns_=rhs.numberColumns_;
@@ -75,10 +76,109 @@ ClpQuadraticObjective::ClpQuadraticObjective (const ClpQuadraticObjective & rhs)
   } else {
     gradient_=NULL;
   }
-  if (rhs.quadraticObjective_) 
-    quadraticObjective_ = new CoinPackedMatrix(*rhs.quadraticObjective_);
-  else 
+  if (rhs.quadraticObjective_) {
+    // see what type of matrix wanted
+    if (type==0) {
+      // just copy
+      quadraticObjective_ = new CoinPackedMatrix(*rhs.quadraticObjective_);
+    } else if (type==1) {
+      // expand to full symmetric
+      const int * columnQuadratic1 = rhs.quadraticObjective_->getIndices();
+      const CoinBigIndex * columnQuadraticStart1 = rhs.quadraticObjective_->getVectorStarts();
+      const int * columnQuadraticLength1 = rhs.quadraticObjective_->getVectorLengths();
+      const double * quadraticElement1 = rhs.quadraticObjective_->getElements();
+      CoinBigIndex * columnQuadraticStart2 = new CoinBigIndex [numberExtendedColumns_+1];
+      int * columnQuadraticLength2 = new int [numberExtendedColumns_];
+      int iColumn;
+      int numberColumns = rhs.quadraticObjective_->getNumCols();
+      int numberBelow=0;
+      int numberAbove=0;
+      int numberDiagonal=0;
+      CoinZeroN(columnQuadraticLength2,numberExtendedColumns_);
+      for (iColumn=0;iColumn<numberColumns;iColumn++) {
+	for (CoinBigIndex j=columnQuadraticStart1[iColumn];
+	     j<columnQuadraticStart1[iColumn]+columnQuadraticLength1[iColumn];j++) {
+	  int jColumn = columnQuadratic1[j];
+	  if (jColumn>iColumn) {
+	    numberBelow++;
+	    columnQuadraticLength2[jColumn]++;
+	    columnQuadraticLength2[iColumn]++;
+	  } else if (jColumn==iColumn) {
+	    numberDiagonal++;
+	    columnQuadraticLength2[iColumn]++;
+	  } else {
+	    numberAbove++;
+	  }
+	}
+      }
+      if (numberAbove>0) {
+	if (numberAbove==numberBelow) {
+	  // already done
+	  quadraticObjective_ = new CoinPackedMatrix(*rhs.quadraticObjective_);
+	  delete [] columnQuadraticStart2;
+	  delete [] columnQuadraticLength2;
+	} else {
+	  printf("number above = %d, number below = %d, error\n",
+		 numberAbove,numberBelow);
+	}
+      } else {
+	int numberElements=numberDiagonal+2*numberBelow;
+	int * columnQuadratic2 = new int [numberElements];
+	double * quadraticElement2 = new double [numberElements];
+	columnQuadraticStart2[0]=0;
+	numberElements=0;
+	for (iColumn=0;iColumn<numberColumns;iColumn++) {
+	  int n=columnQuadraticLength2[iColumn];
+	  columnQuadraticLength2[iColumn]=0;
+	  numberElements += n;
+	  columnQuadraticStart2[iColumn+1]=numberElements;
+	}
+	for (iColumn=0;iColumn<numberColumns;iColumn++) {
+	  for (CoinBigIndex j=columnQuadraticStart1[iColumn];
+	       j<columnQuadraticStart1[iColumn]+columnQuadraticLength1[iColumn];j++) {
+	    int jColumn = columnQuadratic1[j];
+	    if (jColumn>iColumn) {
+	      // put in two places
+	      CoinBigIndex put=columnQuadraticLength2[jColumn]+columnQuadraticStart2[jColumn];
+	      columnQuadraticLength2[jColumn]++;
+	      quadraticElement2[put]=quadraticElement1[j];
+	      columnQuadratic2[put]=iColumn;
+	      put=columnQuadraticLength2[iColumn]+columnQuadraticStart2[iColumn];
+	      columnQuadraticLength2[iColumn]++;
+	      quadraticElement2[put]=quadraticElement1[j];
+	      columnQuadratic2[put]=jColumn;
+	    } else if (jColumn==iColumn) {
+	      CoinBigIndex put=columnQuadraticLength2[iColumn]+columnQuadraticStart2[iColumn];
+	      columnQuadraticLength2[iColumn]++;
+	      quadraticElement2[put]=quadraticElement1[j];
+	      columnQuadratic2[put]=iColumn;
+	    } else {
+	      abort();
+	    }
+	  }
+	}
+	// Now create
+	quadraticObjective_ = 
+	  new CoinPackedMatrix (true,
+				rhs.numberExtendedColumns_,
+				rhs.numberExtendedColumns_,
+				numberElements,
+				quadraticElement2,
+				columnQuadratic2,
+				columnQuadraticStart2,
+				columnQuadraticLength2,0.0,0.0);
+	delete [] columnQuadraticStart2;
+	delete [] columnQuadraticLength2;
+	delete [] columnQuadratic2;
+	delete [] quadraticElement2;
+      }
+    } else {
+      abort(); // code when needed
+    }
+	    
+  } else {
     quadraticObjective_=NULL;
+  }
 }
 /* Subset constructor.  Duplicates are allowed
    and order is as given.

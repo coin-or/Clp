@@ -30,6 +30,8 @@ ClpModel::ClpModel () :
   optimizationDirection_(1),
   objectiveValue_(0.0),
   smallElement_(1.0e-20),
+  objectiveScale_(1.0),
+  rhsScale_(1.0),
   numberRows_(0),
   numberColumns_(0),
   rowActivity_(NULL),
@@ -335,6 +337,8 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
   optimizationDirection_ = rhs.optimizationDirection_;
   objectiveValue_=rhs.objectiveValue_;
   smallElement_ = rhs.smallElement_;
+  objectiveScale_ = rhs.objectiveScale_;
+  rhsScale_ = rhs.rhsScale_;
   numberIterations_ = rhs.numberIterations_;
   solveType_ = rhs.solveType_;
   problemStatus_ = rhs.problemStatus_;
@@ -1198,6 +1202,18 @@ ClpModel::readMps(const char *fileName,
     } else {
       integerType_ = NULL;
     }
+    // get quadratic part
+    if (m.reader()->whichSection (  ) == COIN_QUAD_SECTION ) {
+      int * start=NULL;
+      int * column = NULL;
+      double * element = NULL;
+      status=m.readQuadraticMps(NULL,start,column,element,2);
+      if (!status||ignoreErrors) 
+	loadQuadraticObjective(numberColumns_,start,column,element);
+      delete [] start;
+      delete [] column;
+      delete [] element;
+    }
     // set problem name
     setStrParam(ClpProbName,m.getProblemName());
     // do names
@@ -1435,6 +1451,8 @@ ClpModel::ClpModel ( const ClpModel * rhs,
   optimizationDirection_ = rhs->optimizationDirection_;
   objectiveValue_=rhs->objectiveValue_;
   smallElement_ = rhs->smallElement_;
+  objectiveScale_ = rhs->objectiveScale_;
+  rhsScale_ = rhs->rhsScale_;
   numberIterations_ = rhs->numberIterations_;
   solveType_ = rhs->solveType_;
   problemStatus_ = rhs->problemStatus_;

@@ -20,6 +20,7 @@
 #include "ClpHelperFunctions.hpp"
 #include "ClpCholeskyDense.hpp"
 #include "ClpLinearObjective.hpp"
+#include "ClpQuadraticObjective.hpp"
 #include <cfloat>
 
 #include <string>
@@ -89,6 +90,8 @@ ClpInterior::ClpInterior () :
   deltaT_(NULL),
   deltaSU_(NULL),
   deltaSL_(NULL),
+  primalR_(NULL),
+  dualR_(NULL),
   rhsB_(NULL),
   rhsU_(NULL),
   rhsL_(NULL),
@@ -176,6 +179,8 @@ ClpInterior::ClpInterior ( const ClpModel * rhs,
     deltaT_(NULL),
     deltaSU_(NULL),
     deltaSL_(NULL),
+    primalR_(NULL),
+    dualR_(NULL),
     rhsB_(NULL),
     rhsU_(NULL),
     rhsL_(NULL),
@@ -249,6 +254,8 @@ ClpInterior::ClpInterior(const ClpInterior &rhs) :
   deltaT_(NULL),
   deltaSU_(NULL),
   deltaSL_(NULL),
+  primalR_(NULL),
+  dualR_(NULL),
   rhsB_(NULL),
   rhsU_(NULL),
   rhsL_(NULL),
@@ -325,6 +332,8 @@ ClpInterior::ClpInterior(const ClpModel &rhs) :
   deltaT_(NULL),
   deltaSU_(NULL),
   deltaSL_(NULL),
+  primalR_(NULL),
+  dualR_(NULL),
   rhsB_(NULL),
   rhsU_(NULL),
   rhsL_(NULL),
@@ -420,6 +429,8 @@ ClpInterior::gutsOfCopy(const ClpInterior & rhs)
   deltaT_ = ClpCopyOfArray(rhs.deltaT_,numberRows_+numberColumns_);
   deltaSU_ = ClpCopyOfArray(rhs.deltaSU_,numberRows_+numberColumns_);
   deltaSL_ = ClpCopyOfArray(rhs.deltaSL_,numberRows_+numberColumns_);
+  primalR_ = ClpCopyOfArray(rhs.primalR_,numberRows_+numberColumns_);
+  dualR_ = ClpCopyOfArray(rhs.dualR_,numberRows_+numberColumns_);
   rhsB_ = ClpCopyOfArray(rhs.rhsB_,numberRows_);
   rhsU_ = ClpCopyOfArray(rhs.rhsU_,numberRows_+numberColumns_);
   rhsL_ = ClpCopyOfArray(rhs.rhsL_,numberRows_+numberColumns_);
@@ -488,6 +499,10 @@ ClpInterior::gutsOfDelete()
   deltaSU_ = NULL;
   delete [] deltaSL_;
   deltaSL_ = NULL;
+  delete [] primalR_;
+  primalR_=NULL;
+  delete [] dualR_;
+  dualR_=NULL;
   delete [] rhsB_;
   rhsB_ = NULL;
   delete [] rhsU_;
@@ -529,7 +544,7 @@ ClpInterior::createWorkingData()
   delete [] cost_;
   cost_ = new double[nTotal];
   int i;
-  double direction = optimizationDirection_;
+  double direction = optimizationDirection_*objectiveScale_;
   // direction is actually scale out not scale in
   if (direction)
     direction = 1.0/direction;
@@ -538,7 +553,7 @@ ClpInterior::createWorkingData()
     cost_[i] = direction*obj[i];
   memset(cost_+numberColumns_,0,numberRows_*sizeof(double));
   // do scaling if needed
-  if (scalingFlag_>0&&!rowScale_&&0) {
+  if (scalingFlag_>0&&!rowScale_) {
     if (matrix_->scale(this))
       scalingFlag_=-scalingFlag_; // not scaled after all
   }
@@ -571,11 +586,10 @@ ClpInterior::createWorkingData()
   // check rim of problem okay
   if (!sanityCheck())
     goodMatrix=false;
-  if (rowScale_) {
-    for (i=0;i<numberColumns_;i++)
-      cost_[i] *= columnScale_[i];
+  if(rowScale_) {
     for (i=0;i<numberColumns_;i++) {
-      double multiplier = 1.0/columnScale_[i];
+      double multiplier = rhsScale_/columnScale_[i];
+      cost_[i] *= columnScale_[i];
       if (columnLowerWork_[i]>-1.0e50)
 	columnLowerWork_[i] *= multiplier;
       if (columnUpperWork_[i]<1.0e50)
@@ -583,11 +597,19 @@ ClpInterior::createWorkingData()
       
     }
     for (i=0;i<numberRows_;i++) {
-      double multiplier = rowScale_[i];
+      double multiplier = rhsScale_*rowScale_[i];
       if (rowLowerWork_[i]>-1.0e50)
 	rowLowerWork_[i] *= multiplier;
       if (rowUpperWork_[i]<1.0e50)
 	rowUpperWork_[i] *= multiplier;
+    }
+  } else if (rhsScale_!=1.0) {
+    for (i=0;i<numberColumns_+numberRows_;i++) {
+      if (lower_[i]>-1.0e50)
+	lower_[i] *= rhsScale_;
+      if (upper_[i]<1.0e50)
+	upper_[i] *= rhsScale_;
+      
     }
   }
   assert (!errorRegion_);
@@ -618,6 +640,15 @@ ClpInterior::createWorkingData()
   assert (!deltaSL_);
   deltaSL_ = new double [nTotal];
   CoinZeroN(deltaSL_,nTotal);
+  assert (!primalR_);
+  assert (!dualR_);
+  // create arrays if we are doing KKT
+  if (cholesky_->type()>20) {
+    primalR_ = new double [nTotal];
+    CoinZeroN(primalR_,nTotal);
+    dualR_ = new double [numberRows_];
+    CoinZeroN(dualR_,numberRows_);
+  }
   assert (!rhsB_);
   rhsB_ = new double [numberRows_];
   CoinZeroN(rhsB_,numberRows_);
@@ -656,23 +687,39 @@ void
 ClpInterior::deleteWorkingData()
 {
   int i;
-  if (optimizationDirection_!=1.0) {
+  if (optimizationDirection_!=1.0||objectiveScale_!=1.0) {
+    double scaleC = optimizationDirection_/objectiveScale_;
     // and modify all dual signs
     for (i=0;i<numberColumns_;i++) 
-      reducedCost_[i] = optimizationDirection_*dj_[i];
+      reducedCost_[i] = scaleC*dj_[i];
     for (i=0;i<numberRows_;i++) 
-      dual_[i] *= optimizationDirection_;
+      dual_[i] *= scaleC;
   }
   if (rowScale_) {
+    double scaleR = 1.0/rhsScale_;
     for (i=0;i<numberColumns_;i++) {
       double scaleFactor = columnScale_[i];
-      columnActivity_[i] *= scaleFactor;
-      reducedCost_[i] /= scaleFactor;
+      double valueScaled = columnActivity_[i];
+      columnActivity_[i] = valueScaled*scaleFactor*scaleR;
+      double valueScaledDual = reducedCost_[i];
+      reducedCost_[i] = valueScaledDual/scaleFactor;
     }
     for (i=0;i<numberRows_;i++) {
       double scaleFactor = rowScale_[i];
-      rowActivity_[i] /= scaleFactor;
-      dual_[i] *= scaleFactor;
+      double valueScaled = rowActivity_[i];
+      rowActivity_[i] = (valueScaled*scaleR)/scaleFactor;
+      double valueScaledDual = dual_[i];
+      dual_[i] = valueScaledDual*scaleFactor;
+    }
+  } else if (rhsScale_!=1.0) {
+    double scaleR = 1.0/rhsScale_;
+    for (i=0;i<numberColumns_;i++) {
+      double valueScaled = columnActivity_[i];
+      columnActivity_[i] = valueScaled*scaleR;
+    }
+    for (i=0;i<numberRows_;i++) {
+      double valueScaled = rowActivity_[i];
+      rowActivity_[i] = valueScaled*scaleR;
     }
   }
   delete [] cost_;
@@ -945,6 +992,11 @@ void
 ClpInterior::checkSolution()
 {
   int iRow,iColumn;
+  CoinMemcpyN(cost_,numberColumns_,reducedCost_);
+  matrix_->transposeTimes(-1.0,dual_,reducedCost_);
+  // Now modify reduced costs for quadratic
+  double quadraticOffset=quadraticDjs(reducedCost_,
+				      solution_,scaleFactor_);
 
   objectiveValue_ = 0.0;
   // now look at solution
@@ -952,80 +1004,93 @@ ClpInterior::checkSolution()
   sumDualInfeasibilities_=0.0;
   double dualTolerance =  10.0*dblParam_[ClpDualTolerance];
   double primalTolerance =  dblParam_[ClpPrimalTolerance];
+  double primalTolerance2 =  10.0*dblParam_[ClpPrimalTolerance];
   worstComplementarity_=0.0;
   complementarityGap_=0.0;
 
+  // Done scaled - use permanent regions for output
+  // but internal for bounds
+  const double * lower = lower_+numberColumns_;
+  const double * upper = upper_+numberColumns_;
   for (iRow=0;iRow<numberRows_;iRow++) {
     double infeasibility=0.0;
-    double distanceUp = min(rowUpper_[iRow]-
+    double distanceUp = min(upper[iRow]-
       rowActivity_[iRow],1.0e10);
     double distanceDown = min(rowActivity_[iRow] -
-      rowLower_[iRow],1.0e10);
-    if (distanceUp>primalTolerance) {
+      lower[iRow],1.0e10);
+    if (distanceUp>primalTolerance2) {
       double value = dual_[iRow];
       // should not be negative
       if (value<-dualTolerance) {
+	sumDualInfeasibilities_ += -dualTolerance-value;
 	value = - value*distanceUp;
 	if (value>worstComplementarity_) 
 	  worstComplementarity_=value;
 	complementarityGap_ += value;
       }
     }
-    if (distanceDown>primalTolerance) {
+    if (distanceDown>primalTolerance2) {
       double value = dual_[iRow];
       // should not be positive
       if (value>dualTolerance) {
+	sumDualInfeasibilities_ += value-dualTolerance;
 	value =  value*distanceDown;
 	if (value>worstComplementarity_) 
 	  worstComplementarity_=value;
 	complementarityGap_ += value;
       }
     }
-    if (rowActivity_[iRow]>rowUpper_[iRow]) {
-      infeasibility=rowActivity_[iRow]-rowUpper_[iRow];
-    } else if (rowActivity_[iRow]<rowLower_[iRow]) {
-      infeasibility=rowLower_[iRow]-rowActivity_[iRow];
+    if (rowActivity_[iRow]>upper[iRow]) {
+      infeasibility=rowActivity_[iRow]-upper[iRow];
+    } else if (rowActivity_[iRow]<lower[iRow]) {
+      infeasibility=lower[iRow]-rowActivity_[iRow];
     }
     if (infeasibility>primalTolerance) {
       sumPrimalInfeasibilities_ += infeasibility-primalTolerance;
     }
   }
+  lower = lower_;
+  upper = upper_;
   for (iColumn=0;iColumn<numberColumns_;iColumn++) {
     double infeasibility=0.0;
     objectiveValue_ += cost_[iColumn]*columnActivity_[iColumn];
-    double distanceUp = min(columnUpper_[iColumn]-
+    double distanceUp = min(upper[iColumn]-
       columnActivity_[iColumn],1.0e10);
     double distanceDown = min(columnActivity_[iColumn] -
-      columnLower_[iColumn],1.0e10);
-    if (distanceUp>primalTolerance) {
+      lower[iColumn],1.0e10);
+    if (distanceUp>primalTolerance2) {
       double value = reducedCost_[iColumn];
       // should not be negative
       if (value<-dualTolerance) {
+	sumDualInfeasibilities_ += -dualTolerance-value;
 	value = - value*distanceUp;
 	if (value>worstComplementarity_) 
 	  worstComplementarity_=value;
 	complementarityGap_ += value;
       }
     }
-    if (distanceDown>primalTolerance) {
+    if (distanceDown>primalTolerance2) {
       double value = reducedCost_[iColumn];
       // should not be positive
       if (value>dualTolerance) {
+	sumDualInfeasibilities_ += value-dualTolerance;
 	value =  value*distanceDown;
 	if (value>worstComplementarity_) 
 	  worstComplementarity_=value;
 	complementarityGap_ += value;
       }
     }
-    if (columnActivity_[iColumn]>columnUpper_[iColumn]) {
-      infeasibility=columnActivity_[iColumn]-columnUpper_[iColumn];
-    } else if (columnActivity_[iColumn]<columnLower_[iColumn]) {
-      infeasibility=columnLower_[iColumn]-columnActivity_[iColumn];
+    if (columnActivity_[iColumn]>upper[iColumn]) {
+      infeasibility=columnActivity_[iColumn]-upper[iColumn];
+    } else if (columnActivity_[iColumn]<lower[iColumn]) {
+      infeasibility=lower[iColumn]-columnActivity_[iColumn];
     }
     if (infeasibility>primalTolerance) {
       sumPrimalInfeasibilities_ += infeasibility-primalTolerance;
     }
   }
+  // add in offset
+  objectiveValue_ += 0.5*quadraticOffset;
 }
 // Set cholesky (and delete present one)
 void 
@@ -1075,7 +1140,7 @@ ClpInterior::numberFixed() const
 }
 // fix variables interior says should be
 void 
-ClpInterior::fixFixed()
+ClpInterior::fixFixed(bool reallyFix)
 {
   int i;
   for (i=0;i<numberColumns_;i++) {
@@ -1083,10 +1148,12 @@ ClpInterior::fixFixed()
       if (columnUpper_[i]>columnLower_[i]) { 
 	if (fixedOrFree(i)) {
 	  if (columnActivity_[i]-columnLower_[i]<columnUpper_[i]-columnActivity_[i]) {
-	    columnUpper_[i]=columnLower_[i];
+	    if (reallyFix)
+	      columnUpper_[i]=columnLower_[i];
 	    columnActivity_[i]=columnLower_[i];
 	  } else {
-	    columnLower_[i]=columnUpper_[i];
+	    if (reallyFix)
+	      columnLower_[i]=columnUpper_[i];
 	    columnActivity_[i]=columnUpper_[i];
 	  }
 	}
@@ -1108,4 +1175,41 @@ ClpInterior::fixFixed()
       }
     }
   }
+}
+/* Modifies djs to allow for quadratic.
+   returns quadratic offset */
+double 
+ClpInterior::quadraticDjs(double * djRegion, const double * solution,
+			  double scaleFactor)
+{
+  double quadraticOffset=0.0;
+#ifndef NO_RTTI
+  ClpQuadraticObjective * quadraticObj = (dynamic_cast< ClpQuadraticObjective*>(objective_));
+#else
+  ClpQuadraticObjective * quadraticObj = NULL;
+  if (objective_->type()==2)
+    quadraticObj = (static_cast< ClpQuadraticObjective*>(objective_));
+#endif
+  if (quadraticObj) {
+    CoinPackedMatrix * quadratic = quadraticObj->quadraticObjective();
+    const int * columnQuadratic = quadratic->getIndices();
+    const CoinBigIndex * columnQuadraticStart = quadratic->getVectorStarts();
+    const int * columnQuadraticLength = quadratic->getVectorLengths();
+    double * quadraticElement = quadratic->getMutableElements();
+    int numberColumns = quadratic->getNumCols();
+    for (int iColumn=0;iColumn<numberColumns;iColumn++) {
+      double value = 0.0;
+      for (CoinBigIndex j=columnQuadraticStart[iColumn];
+	   j<columnQuadraticStart[iColumn]+columnQuadraticLength[iColumn];j++) {
+	int jColumn = columnQuadratic[j];
+	double valueJ = solution[jColumn];
+	double elementValue = quadraticElement[j];
+	//value += valueI*valueJ*elementValue;
+	value += valueJ*elementValue;
+	quadraticOffset += solution[iColumn]*valueJ*elementValue;
+      }
+      djRegion[iColumn] += scaleFactor*value;
+    }
+  }
+  return quadraticOffset;
 }

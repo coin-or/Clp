@@ -75,6 +75,13 @@ public:
                    9 - do allslack or sprint
       2 - interrupt handling - 0 yes, 1 no (for threadsafe)
       3 - whether to make +- 1matrix - 0 yes, 1 no
+      4 - for barrier
+                   0 - dense cholesky
+		   1 - Wssmp allowing some long columns
+		   2 - Wssmp not allowing long columns
+		   3 - Wssmp using KKT
+		   4 - bit set to do scaling
+		   8 - set to be aggressive with gamma/delta?
   */
   void setSpecialOption(int which,int value,int extraInfo=-1);
   int getSpecialOption(int which) const;

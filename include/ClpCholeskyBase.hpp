@@ -78,11 +78,11 @@ protected:
   /// Clone
 public:
   virtual ClpCholeskyBase * clone() const = 0;
-protected:
  
   /// Returns type
   inline int type() const
   { return type_;};
+protected:
   /// Sets type
   void setType(int type) {type_=type;};
    //@}
@@ -92,7 +92,7 @@ protected:
    /**@name Data members
       The data members are protected to allow access for derived classes. */
    //@{
-   /// type (may be useful)
+   /// type (may be useful) if > 20 do KKT
    int type_;
   /// pivotTolerance.
   double pivotTolerance_;
