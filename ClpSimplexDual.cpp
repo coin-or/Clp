@@ -4045,7 +4045,7 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
     if (problemStatus_<0) {
       double * givenPi=NULL;
       returnCode = whileIterating(givenPi);
-      if ((!alwaysFinish&&(returnCode<1)||returnCode==3)) {
+      if ((!alwaysFinish&&returnCode<1)||returnCode==3) {
 	double limit = 0.0;
 	getDblParam(ClpDualObjectiveLimit, limit);
 	if(fabs(limit)>1.0e30||objectiveValue()*optimizationDirection_<
@@ -4058,8 +4058,11 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
 	  printf("returning from fastDual after %d iterations with code %d\n",
 		 numberIterations_,returnCode);
 #endif
-	  break;
+	} else {
+	  // looks as if it is infeasible
+	  returnCode=0;
 	}
+	break;
       }
       returnCode=0;
     }

@@ -663,15 +663,33 @@ ClpDualRowSteepest::saveWeights(ClpSimplex * model,int mode)
   int numberColumns = model_->numberColumns();
   const int * pivotVariable = model_->pivotVariable();
   int i;
-  if (mode==1&&weights_) {
-    alternateWeights_->clear();
-    // change from row numbers to sequence numbers
-    int * which = alternateWeights_->getIndices();
-    for (i=0;i<numberRows;i++) {
-      int iPivot=pivotVariable[i];
-      which[i]=iPivot;
+  if (mode==1) {
+    if(weights_) {
+      // Check if size has changed
+      if (infeasible_->capacity()==numberRows) {
+	alternateWeights_->clear();
+	// change from row numbers to sequence numbers
+	int * which = alternateWeights_->getIndices();
+	for (i=0;i<numberRows;i++) {
+	  int iPivot=pivotVariable[i];
+	  which[i]=iPivot;
+	}
+	state_=1;
+      } else {
+	// size has changed - clear everything
+	delete [] weights_;
+	weights_=NULL;
+	delete [] dubiousWeights_;
+	dubiousWeights_=NULL;
+	delete infeasible_;
+	infeasible_=NULL;
+	delete alternateWeights_;
+	alternateWeights_=NULL;
+	delete savedWeights_;
+	savedWeights_=NULL;
+	state_=-1;
+      }
     }
-    state_=1;
   } else if (mode==2||mode==4||mode==5) {
     // restore
     if (!weights_||state_==-1||mode==5) {
