@@ -535,9 +535,7 @@ int ClpSimplexPrimalQuadratic::primalQuadratic2 (ClpQuadraticInfo * info,
     info->setCrucialSj(-1);
     bool deleteCosts=false;
     if (scalingFlag_) {
-      // get own copy of original objective and scale
-      ClpQuadraticObjective * quadraticObj = new ClpQuadraticObjective(*info->originalObjective());
-      info->setOriginalObjective(quadraticObj);
+      // scale
       CoinPackedMatrix * quadratic = info->quadraticObjective();
       double * objective = info->linearObjective();
       // replace column by column
@@ -570,9 +568,6 @@ int ClpSimplexPrimalQuadratic::primalQuadratic2 (ClpQuadraticInfo * info,
       delete [] newElement;
       deleteCosts=true;
     } else if (optimizationDirection_!=1.0) {
-      // get own copy of original objective and scale
-      ClpQuadraticObjective * quadraticObj = new ClpQuadraticObjective(*info->originalObjective());
-      info->setOriginalObjective(quadraticObj);
       CoinPackedMatrix * quadratic = info->quadraticObjective();
       double * objective = info->linearObjective();
       // replace column by column
@@ -1365,12 +1360,12 @@ ClpSimplexPrimalQuadratic::primalRow(CoinIndexedVector * rowArray,
   int iSjRow=-1;
   // sj for incoming 
   int iSjRow2=-1,crucialSj2=-1;
-  if (sequenceIn_<numberColumns_) {
+  if (sequenceIn_<numberXColumns) {
     const int * which = info->quadraticSequence();
     crucialSj2 = which[sequenceIn_];
     if (crucialSj2>=0)
       crucialSj2 += numberRows_; // sj2 which should go to 0.0
-  } else {
+  } else if (sequenceIn_>=numberColumns_) {
     crucialSj2 = sequenceIn_-numberColumns_+numberXColumns; // pi which should go to 0.0
   }
   double tj = 0.0;
@@ -1445,8 +1440,8 @@ ClpSimplexPrimalQuadratic::primalRow(CoinIndexedVector * rowArray,
       dualIn_=0.0;
       coeff1=0.0;
     }
-    //assert (fabs(way*coeff1-dualIn_)<1.0e-1*(1.0+fabs(dualIn_)));
-    //assert (way*coeff1*dualIn_>=0.0);
+    assert (fabs(way*coeff1-dualIn_)<1.0e-1*(1.0+fabs(dualIn_)));
+    assert (way*coeff1*dualIn_>=0.0);
     if (way*coeff1*dualIn_<0.0) {
       // bad
       accuracyFlag=2;
@@ -1516,7 +1511,7 @@ ClpSimplexPrimalQuadratic::primalRow(CoinIndexedVector * rowArray,
   double tentativeTheta = maximumMovement;
   double upperTheta = maximumMovement;
   bool throwAway=false;
-  if (numberIterations_==126) {
+  if (numberIterations_==106) {
     printf("Bad iteration coming up after iteration %d\n",numberIterations_);
   }
 
@@ -2693,8 +2688,7 @@ ClpSimplexPrimalQuadratic::makeQuadratic(ClpQuadraticInfo & info)
   // Get list of non linear columns
   ClpQuadraticObjective * quadraticObj = (dynamic_cast< ClpQuadraticObjective*>(objective_));
   assert (quadraticObj);
-  info.setOriginalObjective(quadraticObj);
-  CoinPackedMatrix * quadratic = info.quadraticObjective();
+  CoinPackedMatrix * quadratic = quadraticObj->quadraticObjective();
   if (!quadratic||!quadratic->getNumElements()) {
     // no quadratic part
     return NULL;
@@ -2703,7 +2697,7 @@ ClpSimplexPrimalQuadratic::makeQuadratic(ClpQuadraticInfo & info)
   int numberColumns = this->numberColumns();
   double * columnLower = this->columnLower();
   double * columnUpper = this->columnUpper();
-  double * objective = info.linearObjective();
+  double * objective = this->objective();
   double * solution = this->primalColumnSolution();
   double * dj = this->dualColumnSolution();
   double * pi = this->dualRowSolution();
@@ -2879,7 +2873,6 @@ ClpSimplexPrimalQuadratic::makeQuadratic(ClpQuadraticInfo & info)
 		     columnLower2,columnUpper2,
 		     objective2,
 		     rowLower2,rowUpper2);
-  delete [] objective2;
   delete [] rowLower2;
   delete [] rowUpper2;
   delete [] columnLower2;
@@ -2918,7 +2911,12 @@ ClpSimplexPrimalQuadratic::makeQuadratic(ClpQuadraticInfo & info)
   for (;iColumn<newNumberColumns;iColumn++)
     start2[iColumn+1]=numberElements;
   // Load up objective
-  model2->loadQuadraticObjective(newNumberColumns,start2,row2,elements2);
+  ClpQuadraticObjective * obj = 
+    new ClpQuadraticObjective(objective2,newNumberColumns,
+			      start2,row2,elements2);
+  delete [] objective2;
+  info.setOriginalObjective(obj);
+  //model2->loadQuadraticObjective(newNumberColumns,start2,row2,elements2);
   delete [] start2;
   delete [] row2;
   delete [] elements2;

@@ -3128,7 +3128,7 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
 	  
     /* Possibilities are:
        Both sides feasible - store
-       Neither side feasible - set objective high and exit
+       Neither side feasible - set objective high and exit if desired
        One side feasible - change bounds and resolve
     */
     if (newUpper[i]<1.0e100) {

@@ -564,7 +564,9 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
     if (!mode_&&reference(sequenceIn))
       referenceIn=1.0;
     // save outgoing weight round update
-    double outgoingWeight=weights_[sequenceOut];
+    double outgoingWeight=0.0;
+    if (sequenceOut>=0)
+      outgoingWeight=weights_[sequenceOut];
     // update weights
     if (anyUpdates!=1) {
       updates->setNumElements(0);
@@ -653,7 +655,8 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
       weight[iSequence] = thisWeight;
     }
     // restore outgoing weight
-    weights_[sequenceOut]=outgoingWeight;
+    if (sequenceOut>=0)
+      weights_[sequenceOut]=outgoingWeight;
     alternateWeights_->clear();
     spareColumn2->setNumElements(0);
 #ifdef SOME_DEBUG_1
