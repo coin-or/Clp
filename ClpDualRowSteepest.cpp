@@ -676,7 +676,7 @@ ClpDualRowSteepest::saveWeights(ClpSimplex * model,int mode)
       // enough space so can use it for factorization
       alternateWeights_->reserve(numberRows+
 				 model_->factorization()->maximumPivots());
-      if (!mode_||mode_==2||mode==5) {
+      if (mode_!=1||mode==5) {
 	// initialize to 1.0 (can we do better?)
 	for (i=0;i<numberRows;i++) {
 	  weights_[i]=1.0;

@@ -1203,12 +1203,17 @@ ClpSimplex::housekeeping(double objectiveChange)
   handler_->message()<<CoinMessageEol;
   if (hitMaximumIterations())
     return 2;
-#if 0
+#if 1
+  //if (numberIterations_>14000)
+  //handler_->setLogLevel(63);
+  //if (numberIterations_>24000)
+  //exit(77);
   // check for small cycles
   int cycle=progress_->cycle(sequenceIn_,sequenceOut_,
 			    directionIn_,directionOut_);
   if (cycle>0) {
-    printf("Cycle of %d\n",cycle);
+    if (handler_->logLevel()>=63)
+      printf("Cycle of %d\n",cycle);
     // reset
     progress_->startCheck();
     if (factorization_->pivots()>cycle) {
@@ -1221,11 +1226,12 @@ ClpSimplex::housekeeping(double objectiveChange)
       else
 	iSequence = sequenceOut_;
       char x = isColumn(iSequence) ? 'C' :'R';
-      handler_->message(CLP_SIMPLEX_FLAG,messages_)
-	<<x<<sequenceWithin(iSequence)
-	<<CoinMessageEol;
+      if (handler_->logLevel()>=63)
+	handler_->message(CLP_SIMPLEX_FLAG,messages_)
+	  <<x<<sequenceWithin(iSequence)
+	  <<CoinMessageEol;
       setFlagged(iSequence);
-      printf("flagging %d\n",iSequence);
+      //printf("flagging %d\n",iSequence);
     }
     return 1;
   }
@@ -4630,7 +4636,7 @@ ClpSimplexProgress::ClpSimplexProgress ()
     iterationNumber_[i]=-1;
   }
   for (i=0;i<CLP_CYCLE;i++) {
-    obj_[i]=COIN_DBL_MAX;
+    //obj_[i]=COIN_DBL_MAX;
     in_[i]=-1;
     out_[i]=-1;
     way_[i]=0;
@@ -4658,7 +4664,7 @@ ClpSimplexProgress::ClpSimplexProgress(const ClpSimplexProgress &rhs)
     iterationNumber_[i]=rhs.iterationNumber_[i];
   }
   for (i=0;i<CLP_CYCLE;i++) {
-    obj_[i]=rhs.obj_[i];
+    //obj_[i]=rhs.obj_[i];
     in_[i]=rhs.in_[i];
     out_[i]=rhs.out_[i];
     way_[i]=rhs.way_[i];
@@ -4683,7 +4689,7 @@ ClpSimplexProgress::ClpSimplexProgress(ClpSimplex * model)
     iterationNumber_[i]=-1;
   }
   for (i=0;i<CLP_CYCLE;i++) {
-    obj_[i]=COIN_DBL_MAX;
+    //obj_[i]=COIN_DBL_MAX;
     in_[i]=-1;
     out_[i]=-1;
     way_[i]=0;
@@ -4705,7 +4711,7 @@ ClpSimplexProgress::operator=(const ClpSimplexProgress & rhs)
       iterationNumber_[i]=rhs.iterationNumber_[i];
     }
     for (i=0;i<CLP_CYCLE;i++) {
-      obj_[i]=rhs.obj_[i];
+      //obj_[i]=rhs.obj_[i];
       in_[i]=rhs.in_[i];
       out_[i]=rhs.out_[i];
       way_[i]=rhs.way_[i];
@@ -4801,22 +4807,53 @@ ClpSimplexProgress::looping()
     if (numberBadTimes_<10) {
       // make factorize every iteration
       model_->forceFactorization(1);
-      if (model_->algorithm()<0) {
-	// dual - change tolerance
-	model_->setCurrentDualTolerance(model_->currentDualTolerance()*1.05);
-	// if infeasible increase dual bound
-	if (model_->dualBound()<1.0e17) {
-	  model_->setDualBound(model_->dualBound()*1.1);
+      if (numberBadTimes_<2) {
+	startCheck(); // clear other loop check
+	if (model_->algorithm()<0) {
+	  // dual - change tolerance
+	  model_->setCurrentDualTolerance(model_->currentDualTolerance()*1.05);
+	  // if infeasible increase dual bound
+	  if (model_->dualBound()<1.0e17) {
+	    model_->setDualBound(model_->dualBound()*1.1);
+	  }
+	} else {
+	  // primal - change tolerance	
+	  if (numberBadTimes_>3)
+	    model_->setCurrentPrimalTolerance(model_->currentPrimalTolerance()*1.05);
+	  // if infeasible increase infeasibility cost
+	  if (model_->nonLinearCost()->numberInfeasibilities()&&
+	      model_->infeasibilityCost()<1.0e17) {
+	    model_->setInfeasibilityCost(model_->infeasibilityCost()*1.1);
+	  }
 	}
       } else {
-	// primal - change tolerance	
-	if (numberBadTimes_>3)
-	  model_->setCurrentPrimalTolerance(model_->currentPrimalTolerance()*1.05);
-	// if infeasible increase infeasibility cost
-	if (model_->nonLinearCost()->numberInfeasibilities()&&
-	    model_->infeasibilityCost()<1.0e17) {
-	  model_->setInfeasibilityCost(model_->infeasibilityCost()*1.1);
+	// flag
+	int iSequence;
+	if (model_->algorithm()<0) {
+	  // dual
+	  if (model_->dualBound()>1.0e14) 
+	    model_->setDualBound(1.0e14);
+	  iSequence=in_[CLP_CYCLE-1];
+	} else {
+	  // primal 
+	  if (model_->infeasibilityCost()>1.0e14) 
+	    model_->setInfeasibilityCost(1.0e14);
+	  iSequence=out_[CLP_CYCLE-1];
 	}
+	if (iSequence>=0) {
+	  char x = model_->isColumn(iSequence) ? 'C' :'R';
+	  if (model_->messageHandler()->logLevel()>=63)
+	    model_->messageHandler()->message(CLP_SIMPLEX_FLAG,model_->messages())
+	      <<x<<model_->sequenceWithin(iSequence)
+	      <<CoinMessageEol;
+	  model_->setFlagged(iSequence);
+	  //printf("flagging %d from loop\n",iSequence);
+	  startCheck();
+	} else {
+	  printf("-1 sequence\n");
+	}
+	// reset
+	numberBadTimes_=2;
       }
       return -2;
     } else {
@@ -4859,7 +4896,7 @@ ClpSimplexProgress::startCheck()
 {
   int i;
   for (i=0;i<CLP_CYCLE;i++) {
-    obj_[i]=COIN_DBL_MAX;
+    //obj_[i]=COIN_DBL_MAX;
     in_[i]=-1;
     out_[i]=-1;
     way_[i]=0;
@@ -4879,10 +4916,11 @@ ClpSimplexProgress::cycle(int in, int out,int wayIn,int wayOut)
       break;
     }
   }
+#if 0
   if (!matched||in_[0]<0) {
     // can't be cycle
     for (i=0;i<CLP_CYCLE-1;i++) {
-      obj_[i]=obj_[i+1];
+      //obj_[i]=obj_[i+1];
       in_[i]=in_[i+1];
       out_[i]=out_[i+1];
       way_[i]=way_[i+1];
@@ -4898,27 +4936,59 @@ ClpSimplexProgress::cycle(int in, int out,int wayIn,int wayOut)
       //double objThis = obj_[i];
       for(k=i+1;k<CLP_CYCLE;k++) {
 	if (inThis==in_[k]&&outThis==out_[k]&&wayThis==way_[k]) {
-	  if (k+(k-i)<CLP_CYCLE) {
+	  int distance = k-i;
+	  if (k+distance<CLP_CYCLE) {
 	    // See if repeats
-	    int j=k+(k-i);
+	    int j=k+distance;
 	    if (inThis==in_[j]&&outThis==out_[j]&&wayThis==way_[j]) {
-	      matched=k-i;
+	      matched=distance;
 	      break;
 	    }
 	  } else {
-	    matched=k-i;
+	    matched=distance;
 	    break;
 	  }
 	}
       }
-      obj_[i]=obj_[i+1];
+      //obj_[i]=obj_[i+1];
       in_[i]=in_[i+1];
       out_[i]=out_[i+1];
       way_[i]=way_[i+1];
     }
   }
+#else
+  if (matched&&in_[0]>=0) {
+    // possible cycle - only check [0] against all
+    matched=0;
+    char way0 = way_[0];
+    int in0 = in_[0];
+    int out0 = out_[0];
+    //double obj0 = obj_[i];
+    for(int k=1;k<CLP_CYCLE-4;k++) {
+      if (in0==in_[k]&&out0==out_[k]&&way0==way_[k]) {
+	// See if repeats
+	int end = CLP_CYCLE-k;
+	int j;
+	for ( j=1;j<end;j++) {
+	  if (in_[j+k]!=in_[j]||out_[j+k]!=out_[j]||way_[j+k]!=way_[j]) 
+	    break;
+	}
+	if (j==end) {
+	  matched=k;
+	  break;
+	}
+      }
+    }
+  }
+  for (i=0;i<CLP_CYCLE-1;i++) {
+    //obj_[i]=obj_[i+1];
+    in_[i]=in_[i+1];
+    out_[i]=out_[i+1];
+    way_[i]=way_[i+1];
+  }
+#endif
   char way = 1-wayIn+4*(1-wayOut);
-  obj_[i]=model_->objectiveValue();
+  //obj_[i]=model_->objectiveValue();
   in_[CLP_CYCLE-1]=in;
   out_[CLP_CYCLE-1]=out;
   way_[CLP_CYCLE-1]=way;

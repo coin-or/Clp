@@ -196,7 +196,7 @@ ClpCholeskyDense::factorize(const double * diagonal, int * rowsDropped)
 }
 /* Uses factorization to solve. */
 void 
-ClpCholeskyDense::solve (double * region) const 
+ClpCholeskyDense::solve (double * region) 
 {
   int iColumn;
   for (iColumn=0;iColumn<numberRows_;iColumn++) {

@@ -14,6 +14,7 @@
 #include "ClpFactorization.hpp"
 #include "ClpSimplex.hpp"
 #include "ClpInterior.hpp"
+#include "ClpCholeskyWssmp.hpp"
 #include "ClpSolve.hpp"
 #include "ClpPackedMatrix.hpp"
 #include "ClpPlusMinusOneMatrix.hpp"
@@ -863,6 +864,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
   } else if (method==ClpSolve::useBarrier) {
     printf("***** experimental pretty crude barrier\n");
     ClpInterior barrier(*model2);
+    //ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp();
+    //barrier.setCholesky(cholesky);
     barrier.primalDual();
     time2 = CoinCpuTime();
     timeCore = time2-timeX;

@@ -863,7 +863,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	if (infeasibilityCost_>1.0e18&&perturbation_==101) {
 	  // back off weight
 	  infeasibilityCost_ = 1.0e13;
-	  goToDual=unPerturb(); // stop any further perturbation
+	  unPerturb(); // stop any further perturbation
 	}
 	//we need infeasiblity cost changed
 	if (infeasibilityCost_<1.0e20) {

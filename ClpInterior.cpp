@@ -912,3 +912,10 @@ ClpInterior::checkSolution()
     }
   }
 }
+// Set cholesky (and delete present one)
+void 
+ClpInterior::setCholesky(ClpCholeskyBase * cholesky)
+{
+  delete cholesky_;
+  cholesky_= cholesky;
+}
