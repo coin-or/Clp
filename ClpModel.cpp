@@ -841,7 +841,7 @@ ClpModel::readMps(const char *fileName,
 		  bool ignoreErrors)
 {
   bool canOpen=false;
-  if (!strcmp(fileName,"-")) {
+  if (!strcmp(fileName,"-")||!strcmp(fileName,"stdin")) {
     // stdin
     canOpen=true;
   } else {
