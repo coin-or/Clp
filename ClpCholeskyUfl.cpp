@@ -68,7 +68,7 @@ ClpCholeskyUfl::order(ClpInterior * model)
   double Info[AMD_INFO];
 
   amd_defaults(Control);
-  amd_control(Control);
+  //amd_control(Control);
 
   int returnCode = amd_order(numberRows_,choleskyStart_,choleskyRow_,
 			     permute_,Control, Info);
@@ -76,7 +76,7 @@ ClpCholeskyUfl::order(ClpInterior * model)
   choleskyRow_=NULL;
   delete [] choleskyStart_;
   choleskyStart_=NULL;
-  amd_info(Info);
+  //amd_info(Info);
 
   if (returnCode!=AMD_OK) {
     std::cout<<"AMD ordering failed"<<std::endl;

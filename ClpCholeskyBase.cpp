@@ -2234,8 +2234,8 @@ ClpCholeskyBase::factorizePart2(int * rowsDropped)
       first[kRow]=k;
       diagonalValue -= value1*a_ik;
       CoinBigIndex offset = indexStart_[kRow]-choleskyStart_[kRow];
-      int jRow = choleskyRow_[k+offset];
       if (k<end) {
+	int jRow = choleskyRow_[k+offset];
 	if (clique_[kRow]<MINCLIQUE) {
 	  link_[kRow]=link_[jRow];
 	  link_[jRow]=kRow;
