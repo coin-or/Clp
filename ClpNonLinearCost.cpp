@@ -161,7 +161,6 @@ ClpNonLinearCost::ClpNonLinearCost(ClpSimplex * model,const int * starts,
   start_[0]=0;
   for (iSequence=0;iSequence<numberTotal;iSequence++) {
     lower_[put] = -COIN_DBL_MAX;
-    setInfeasible(put,true);
     whichRange_[iSequence]=put+1;
     double thisCost;
     double lowerValue;
@@ -207,6 +206,13 @@ ClpNonLinearCost::ClpNonLinearCost(ClpSimplex * model,const int * starts,
       lower_[put] = COIN_DBL_MAX;
       setInfeasible(put-1,true);
       cost_[put++] = 1.0e50;
+    }
+    int iFirst = start_[iSequence];
+    if (lower_[iFirst] != -COIN_DBL_MAX) {
+      setInfeasible(iFirst,true);
+      whichRange_[iSequence]=iFirst+1;
+    } else {
+      whichRange_[iSequence]=iFirst;
     }
     start_[iSequence+1]=put;
   }

@@ -30,7 +30,7 @@ int main (int argc, const char *argv[])
 		    m.getColLower(),m.getColUpper(),
 		    m.getObjCoefficients(),
 		    m.getRowLower(),m.getRowUpper());
-  model1.primal();
+  model1.dual();
   // Get data arrays
   const CoinPackedMatrix * matrix1 = m.getMatrixByCol();
   const int * start1 = matrix1->getVectorStarts();
@@ -66,6 +66,7 @@ int main (int argc, const char *argv[])
   // We need to modify rhs
   memcpy(rowLower2,rowLower1,numberRows*sizeof(double));
   memcpy(rowUpper2,rowUpper1,numberRows*sizeof(double));
+  double objectiveOffset = 0.0;
 
   // For new solution
   double * newSolution = new double [numberColumns];
@@ -95,7 +96,6 @@ int main (int argc, const char *argv[])
   newSolution[0]=oldSolution[0];
   start2[++numberColumns2]=numberElements;
 
-  int xxxx=0;
   // Now check for duplicates
   for (iColumn=1;iColumn<numberColumns;iColumn++) {
     maxUpper = max(maxUpper, columnUpper1[iColumn]);
@@ -112,8 +112,6 @@ int main (int argc, const char *argv[])
 	break;
       }
     }
-    if (iColumn>xxxx)
-      ifcopy=0;
     if (ifcopy) {
       // subtract out from rhs
       double fixed = columnLower1[iColumn];
@@ -122,6 +120,8 @@ int main (int argc, const char *argv[])
 	fixed = columnUpper1[iColumn];
 	assert(fabs(fixed-columnLower1[iColumn-1])<1.0e-8);
       }
+      // do offset
+      objectiveOffset += fixed*objective1[iColumn];
       for (int j=start1[iColumn];j<start1[iColumn]+length1[iColumn];j++) {
 	int iRow = row1[j];
 	double value = element1[j];
@@ -161,6 +161,7 @@ int main (int argc, const char *argv[])
   // print new number of columns, elements
   printf("New number of columns  = %d\n",numberColumns2);
   printf("New number of elements = %d\n",numberElements);
+  printf("Objective offset is %g\n",objectiveOffset);
 
   /*  for (int k=0; k<20; k++)
     printf("%d  %e %e\n",segstart[k],breakpt[k],slope[k]);
@@ -206,8 +207,31 @@ int main (int argc, const char *argv[])
   //memcpy(model.columnUpper(),newSolution,numberColumns2*sizeof(double));
   delete [] newSolution;
 
+  const double * solution = model.primalColumnSolution();
+  for (iColumn=0;iColumn<numberColumns2;iColumn++)
+    printf("%g ",solution[iColumn]);
+  printf("\n");
   // solve
   model.primal(1);
+  for (iColumn=0;iColumn<numberColumns2;iColumn++)
+    printf("%g ",solution[iColumn]);
+  printf("\n");
+  model.primal(1);
+  for (iColumn=0;iColumn<numberColumns2;iColumn++)
+    printf("%g ",solution[iColumn]);
+  printf("\n");
+  model.primal();
+  for (iColumn=0;iColumn<numberColumns2;iColumn++)
+    printf("%g ",solution[iColumn]);
+  printf("\n");
+  model.allSlackBasis();
+  for (iColumn=0;iColumn<numberColumns2;iColumn++)
+    printf("%g ",solution[iColumn]);
+  printf("\n");
+  model.primal();
+  for (iColumn=0;iColumn<numberColumns2;iColumn++)
+    printf("%g ",solution[iColumn]);
+  printf("\n");
   return 0;
 }    
 

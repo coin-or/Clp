@@ -826,7 +826,10 @@ protected:
       analysis.  If it doesn't work it can easily be replaced.
   */
   ClpNonLinearCost * nonLinearCost_;
-  /// For advanced options
+  /** For advanced options
+      1 - Don't keep changing infeasibility weight
+      2 - keep nonLinearCost round solves
+  */
   unsigned int specialOptions_;
   /// So we know when to be cautious
   int lastBadIteration_;

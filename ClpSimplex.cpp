@@ -130,6 +130,7 @@ ClpSimplex::ClpSimplex () :
 ClpSimplex::~ClpSimplex ()
 {
   gutsOfDelete(0);
+  delete nonLinearCost_;
 }
 //#############################################################################
 void ClpSimplex::setLargeValue( double value) 
@@ -1184,6 +1185,9 @@ ClpSimplex::ClpSimplex(const ClpSimplex &rhs) :
   dualRowPivot_ = NULL;
   primalColumnPivot_ = NULL;
   gutsOfDelete(0);
+  specialOptions_ =0;
+  delete nonLinearCost_;
+  nonLinearCost_ = NULL;
   gutsOfCopy(rhs);
   solveType_=1; // say simplex based life form
 }
@@ -1286,6 +1290,9 @@ ClpSimplex::operator=(const ClpSimplex & rhs)
 {
   if (this != &rhs) {
     gutsOfDelete(0);
+    specialOptions_=0;
+    delete nonLinearCost_;
+    nonLinearCost_ = NULL;
     ClpModel::operator=(rhs);
     gutsOfCopy(rhs);
   }
@@ -1397,6 +1404,8 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
   sumOfRelaxedPrimalInfeasibilities_ = rhs.sumOfRelaxedPrimalInfeasibilities_;
   if (rhs.nonLinearCost_!=NULL)
     nonLinearCost_ = new ClpNonLinearCost(*rhs.nonLinearCost_);
+  else
+    nonLinearCost_=NULL;
   solveType_=rhs.solveType_;
 }
 // type == 0 do everything, most + pivot data, 2 factorization data as well
@@ -1429,8 +1438,10 @@ ClpSimplex::gutsOfDelete(int type)
   savedSolution_ = NULL;
   delete [] columnScale_;
   columnScale_ = NULL;
-  delete nonLinearCost_;
-  nonLinearCost_ = NULL;
+  if ((specialOptions_&2)==0) {
+    delete nonLinearCost_;
+    nonLinearCost_ = NULL;
+  }
   int i;
   for (i=0;i<6;i++) {
     delete rowArray_[i];
@@ -4189,5 +4200,6 @@ ClpSimplex::createPiecewiseLinearCosts(const int * starts,
     }
   }
   nonLinearCost_ = new ClpNonLinearCost(this,starts,lower,gradient);
+  specialOptions_ |= 2; // say keep
   return returnCode;
 }
