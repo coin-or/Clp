@@ -263,6 +263,7 @@ public:
        5 - stopped by event handler (virtual int ClpEventHandler::event())
    */
    inline int status() const            { return problemStatus_; }
+   inline int problemStatus() const            { return problemStatus_; }
   /// Set problem status
   inline void setProblemStatus(int problemStatus)
   { problemStatus_ = problemStatus;};
@@ -488,6 +489,9 @@ public:
    /// Objective value
    inline double objectiveValue() const {
       return objectiveValue_*optimizationDirection_ - dblParam_[ClpObjOffset];
+   }
+  inline void setObjectiveValue(double value) {
+    objectiveValue_ = (value+ dblParam_[ClpObjOffset])/optimizationDirection_;
    }
    inline double getObjValue() const {
       return objectiveValue_*optimizationDirection_ - dblParam_[ClpObjOffset];
