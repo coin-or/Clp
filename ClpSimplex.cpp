@@ -3243,7 +3243,7 @@ ClpSimplex::crash(double gap,int pivot)
 {
   assert(!pivot); // rest not coded yet
   assert(!rowObjective_); // not coded
-  int i;
+  int iColumn;
   int numberBad=0;
   int numberBasic=0;
 
@@ -3251,70 +3251,79 @@ ClpSimplex::crash(double gap,int pivot)
   if (!status_)
     createStatus();
   
-  for (i=0;i<numberColumns_;i++) {
-    if (getColumnStatus(i)==basic)
+  for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+    if (getColumnStatus(iColumn)==basic)
       numberBasic++;
   }
   if (numberBasic) {
     // not all slack
     return 0;
   } else {
-    for (i=0;i<numberColumns_;i++) {
+    double * dj = new double [numberColumns_];
+    double objectiveValue=0.0;
+    int iColumn;
+    for (iColumn=0;iColumn<numberColumns_;iColumn++)
+      dj[iColumn] = optimizationDirection_*objective_[iColumn];
+    for (iColumn=0;iColumn<numberColumns_;iColumn++) {
       // assume natural place is closest to zero
-      double lowerBound = columnLower_[i];
-      double upperBound = columnUpper_[i];
+      double lowerBound = columnLower_[iColumn];
+      double upperBound = columnUpper_[iColumn];
       if (lowerBound>-1.0e20||upperBound<1.0e20) {
 	bool atLower;
 	if (fabs(upperBound)<fabs(lowerBound)) {
 	  atLower=false;
-	  setColumnStatus(i,atUpperBound);
+	  setColumnStatus(iColumn,atUpperBound);
 	} else {
 	  atLower=true;
-	  setColumnStatus(i,atLowerBound);
+	  setColumnStatus(iColumn,atLowerBound);
 	}
-	if (optimizationDirection_*objective_[i]<0.0) {
+	if (dj[iColumn]<0.0) {
 	  // should be at upper bound
 	  if (atLower) {
 	    // can we flip
 	    if (upperBound-lowerBound<=gap) {
-	      columnActivity_[i]=upperBound;
-	      setColumnStatus(i,atUpperBound);
-	    } else {
+	      columnActivity_[iColumn]=upperBound;
+	      setColumnStatus(iColumn,atUpperBound);
+	    } else if (dj[iColumn]<-dualTolerance_) {
 	      numberBad++;
 	    }
 	  }
-	} else if (optimizationDirection_*objective_[i]>0.0) {
+	} else if (dj[iColumn]>0.0) {
 	  // should be at lower bound
 	  if (!atLower) {
 	    // can we flip
 	    if (upperBound-lowerBound<=gap) {
-	      columnActivity_[i]=lowerBound;
-	      setColumnStatus(i,atLowerBound);
-	    } else {
+	      columnActivity_[iColumn]=lowerBound;
+	      setColumnStatus(iColumn,atLowerBound);
+	    } else if (dj[iColumn]>dualTolerance_) {
 	      numberBad++;
 	    }
 	  }
 	}
       } else {
 	// free
-	setColumnStatus(i,isFree);
-	if (objective_[i]) 
+	setColumnStatus(iColumn,isFree);
+	if (fabs(dj[iColumn])>dualTolerance_) 
 	  numberBad++;
       }
     }
     if (numberBad) {
       if (!pivot) {
+	delete [] dj;
 	return 1;
       } else {
+#if 0
 	// see if can be made dual feasible with gubs etc
-	// steal coding from tightenPrimalBounds
+	double * pi = new double[numberRows_];
+	memset (pi,0,numberRows_*sizeof(double));
+	int * way = new int[numberColumns];
+
 	// Get column copy
 	CoinPackedMatrix * columnCopy = matrix();
 	// Get a row copy in standard format
 	CoinPackedMatrix copy;
 	copy.reverseOrderedCopyOf(*columnCopy);
 	// get matrix data pointers
-#if 0
 	const int * column = copy.getIndices();
 	const CoinBigIndex * rowStart = copy.getVectorStarts();
 	const int * rowLength = copy.getVectorLengths(); 
@@ -3323,13 +3332,122 @@ ClpSimplex::crash(double gap,int pivot)
 	const CoinBigIndex * columnStart = columnCopy->getVectorStarts();
 	const int * columnLength = columnCopy->getVectorLengths(); 
 	const double * element = columnCopy->getElements();
+
+	
 	// if equality row and bounds mean artificial in basis bad
 	// then do anyway
-#endif
+
+	for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+	  // - if we want to reduce dj, + if we want to increase
+	  int thisWay = 100;
+	  double lowerBound = columnLower_[iColumn];
+	  double upperBound = columnUpper_[iColumn];
+	  if (upperBound>lowerBound) {
+	    switch(getColumnStatus(iColumn)) {
+	      
+	    case basic:
+	      thisWay=0;
+	      break;
+	    case isFree:
+	    case superBasic:
+	      if (dj[iColumn]<-dualTolerance) 
+		thisWay = 1;
+	      else if (dj[iColumn]>dualTolerance) 
+		thisWay = -1;
+	      else
+		thisWay =0;
+	      break;
+	    case atUpperBound:
+	      if (dj[iColumn]>dualTolerance) 
+		thisWay = -1;
+	      else if (dj[iColumn]<-dualTolerance) 
+		thisWay = -3;
+	      else
+		thisWay = -2;
+	      break;
+	    case atLowerBound:
+	      if (dj[iColumn]<-dualTolerance) 
+		thisWay = 1;
+	      else if (dj[iColumn]>dualTolerance) 
+		thisWay = 3;
+	      else
+		thisWay = 2;
+	      break;
+	    }
+	  }
+	  way[iColumn] = thisWay;
+	}
+	// we need to maximize chance of doing good
+	int iRow;
+	for (iRow=0;iRow<numberRows_;iRow++) {
+	  double lowerBound = rowLower_[iRow];
+	  double upperBound = rowUpper_[iRow];
+	  if (getRowStatus(iRow)==basic) {
+	    // see if we can find a column to pivot on
+	    int j;
+	    double maximumDown = DBL_MAX;
+	    double maximumUp = DBL_MAX;
+	    int numberBad=0;
+	    if (lowerBound<-1.0e20)
+	      maximumDown = -1.0;;
+	    if (upperBound<1.0e20)
+	      maximumUp = -1.0;;
+	    for (j=rowStart[iRow];j<rowStart[iRow]+rowLength[iRow];j++) {
+	      int iColumn = column[j];
+	      /* way -
+		 -3 - okay at upper bound with negative dj
+		 -2 - marginal at upper bound with zero dj - can only decrease
+		 -1 - bad at upper bound
+		 0 - we can never pivot on this row
+		 1 - bad at lower bound
+		 2 - marginal at lower bound with zero dj - can only increase
+		 3 - okay at lower bound with positive dj
+		 100 - fine we can just ignore
+	      */
+	      if (way[iColumn]!=100) {
+		switch(way[iColumn]) {
+	      
+		case -3:
+		  
+		  break;
+		case -2:
+		  
+		  break;
+		case -1:
+		  
+		  break;
+		case 0:
+		  maximumDown = -1.0;
+		  maximumUp=-1.0;
+		  break;
+		case 1:
+		  
+		  break;
+		case 2:
+		  
+		  break;
+		case 3:
+		  
+		  break;
+		default:
+		  break;
+		}
+	      }
+	    }
+	    if (max(maximumUp,maximumDown)>0.0) {
+	      // do something
+	    }
+	  }
+	}
 	abort();
+	delete [] pi;
+	delete [] dj;
+	delete [] way;
+#endif
 	return -1;
       }
     } else {
+      delete [] dj;
       return -1;
     }
   }

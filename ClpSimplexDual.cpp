@@ -1137,8 +1137,10 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
   
   double totalThru=0.0; // for when variables flip
   double acceptablePivot=1.0e-7;
-  if (factorization_->pivots())
+  if (factorization_->pivots()>10)
     acceptablePivot=1.0e-5; // if we have iterated be more strict
+  else if (factorization_->pivots()>5)
+    acceptablePivot=1.0e-6; // if we have iterated be slightly more strict
   double bestEverPivot=acceptablePivot;
   int lastSequence = -1;
   double lastPivot=0.0;
