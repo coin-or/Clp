@@ -1040,25 +1040,28 @@ the main thing is to think about which cuts to apply.  .. expand ..."
     CbcOrClpParam("chol!esky","Which cholesky algorithm",
 		  "native",CHOLESKY,false);
   parameters[numberParameters-1].append("dense");
-#ifdef FOREIGN_BARRIER
+  //#ifdef FOREIGN_BARRIER
 #ifdef WSSMP_BARRIER
   parameters[numberParameters-1].append("fudge!Long");
   parameters[numberParameters-1].append("wssmp");
+#define REAL_BARRIER
 #else
   parameters[numberParameters-1].append("fudge!Long_dummy");
   parameters[numberParameters-1].append("wssmp_dummy");
 #endif
 #ifdef UFL_BARRIER
   parameters[numberParameters-1].append("Uni!versityOfFlorida");
+#define REAL_BARRIER
 #else
   parameters[numberParameters-1].append("Uni!versityOfFlorida_dummy");
 #endif
 #ifdef TAUCS_BARRIER
   parameters[numberParameters-1].append("Taucs");
+#define REAL_BARRIER
 #else
   parameters[numberParameters-1].append("Taucs_dummy");
 #endif
-#endif
+  //#endif
 #ifdef COIN_USE_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("clique!Cuts","Whether to use Clique cuts",
@@ -1189,6 +1192,16 @@ no dual infeasibility may exceed this value",
      "Normally the default tolerance is fine, but you may want to increase it a\
  bit if a dual run seems to be having a hard time"
      ); 
+#ifdef COIN_USE_CLP
+  parameters[numberParameters++]=
+    CbcOrClpParam("either!Simplex","Do dual or primal simplex algorithm",
+		  EITHERSIMPLEX);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "This command solves the current model using the dual or primal algorithm,\
+ based on a dubious analysis of model."
+     );
+#endif 
   parameters[numberParameters++]=
     CbcOrClpParam("end","Stops clp execution",
 		  EXIT);
@@ -1447,10 +1460,10 @@ but this program turns this off to make it look more friendly.  It can be useful
 #ifdef COIN_USE_CLP
   parameters[numberParameters++]=
     CbcOrClpParam("netlib","Solve entire netlib test set",
-		  NETLIB_DUAL);
+		  NETLIB_EITHER);
   parameters[numberParameters-1].setLonghelp
     (
-     "This exercises the unit test for clp and then solves the netlib test set using dual.\
+     "This exercises the unit test for clp and then solves the netlib test set using dual or primal.\
 The user can set options before e.g. clp -presolve off -netlib"
      ); 
 #ifdef REAL_BARRIER
@@ -1460,9 +1473,17 @@ The user can set options before e.g. clp -presolve off -netlib"
   parameters[numberParameters-1].setLonghelp
     (
      "This exercises the unit test for clp and then solves the netlib test set using barrier.\
-The user can set options before e.g. clp -presolve off -netlib"
+The user can set options before e.g. clp -kkt on -netlib"
      ); 
 #endif
+  parameters[numberParameters++]=
+    CbcOrClpParam("netlibD!ual","Solve entire netlib test set (dual)",
+		  NETLIB_DUAL);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "This exercises the unit test for clp and then solves the netlib test set using dual.\
+The user can set options before e.g. clp -presolve off -netlib"
+     ); 
   parameters[numberParameters++]=
     CbcOrClpParam("netlibP!rimal","Solve entire netlib test set (primal)",
 		  NETLIB_PRIMAL);

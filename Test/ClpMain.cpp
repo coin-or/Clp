@@ -148,8 +148,8 @@ int main (int argc, const char *argv[])
       // exit if null or similar
       if (!field.length()) {
 	if (numberGoodCommands==1&&goodModels[0]) {
-	  // we just had file name - do dual
-	  field="duals";
+	  // we just had file name - do dual or primal
+	  field="either";
 	} else if (!numberGoodCommands) {
 	  // let's give the sucker a hint
 	  std::cout
@@ -438,6 +438,7 @@ int main (int argc, const char *argv[])
 	  switch (type) {
 	  case DUALSIMPLEX:
 	  case PRIMALSIMPLEX:
+	  case EITHERSIMPLEX:
 	  case BARRIER:
 	    if (goodModels[iModel]) {
 	      ClpSolve::SolveType method;
@@ -455,6 +456,8 @@ int main (int argc, const char *argv[])
 		method=ClpSolve::useDual;
 	      } else if (type==PRIMALSIMPLEX) {
 		method=ClpSolve::usePrimalorSprint;
+	      } else if (type==EITHERSIMPLEX) {
+		method=ClpSolve::automatic;
 	      } else {
 		method = ClpSolve::useBarrier;
 		if (crossover==1) {
@@ -1102,6 +1105,7 @@ int main (int argc, const char *argv[])
 	    CbcOrClpRead_mode=-1;
 	    break;
 	  case NETLIB_DUAL:
+	  case NETLIB_EITHER:
 	  case NETLIB_BARRIER:
 	  case NETLIB_PRIMAL:
 	    {
@@ -1122,6 +1126,9 @@ int main (int argc, const char *argv[])
 	      } else if (type==NETLIB_BARRIER) {
 		std::cerr<<"Doing netlib with barrier agorithm"<<std::endl;
 		algorithm =2;
+	      } else if (type==NETLIB_EITHER) {
+		std::cerr<<"Doing netlib with dual or primal agorithm"<<std::endl;
+		algorithm =3;
 	      } else {
 		std::cerr<<"Doing netlib with primal agorithm"<<std::endl;
 		algorithm=1;

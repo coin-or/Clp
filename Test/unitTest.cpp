@@ -264,96 +264,25 @@ int mainTest (int argc, const char *argv[],int algorithm,
 	  obj[j] *= -1.0;
       }
 #endif
-      if (doPresolve) {
-	ClpPresolve pinfo;
-	double a=CoinCpuTime();
-	ClpSimplex * model2 = pinfo.presolvedModel(solution,1.0e-8,
-						   false,5,true);
-	assert (model2);
-	printf("Presolve took %g seconds\n",CoinCpuTime()-a);
-	// change from 200 (unless user has changed)
-	if (model2->factorizationFrequency()==200) {
-	  // User did not touch preset
-	  int numberRows = model2->numberRows();
-	  const int cutoff1=10000;
-	  const int cutoff2=100000;
-	  const int base=75;
-	  const int freq0 = 50;
-	  const int freq1=200;
-	  const int freq2=400;
-	  const int maximum=2000;
-	  int frequency;
-	  if (numberRows<cutoff1)
-	    frequency=base+numberRows/freq0;
-	  else if (numberRows<cutoff2)
-	    frequency=base+cutoff1/freq0 + (numberRows-cutoff1)/freq1;
-	  else
-	    frequency=base+cutoff1/freq0 + (cutoff2-cutoff1)/freq1 + (numberRows-cutoff2)/freq2;
-	  model2->setFactorizationFrequency(CoinMin(maximum,frequency));
-	}
-	if (algorithm==0) {
-	  // faster if bounds tightened
-	  int numberInfeasibilities = model2->tightenPrimalBounds();
-	  if (numberInfeasibilities)
-	    std::cout<<"** Analysis indicates model infeasible"
-		     <<std::endl;
-	  //if (doIdiot<0)
-	  //model2->crash(1000,1);
-	  model2->dual();
-	} else if (algorithm==2) {
-	  model2->barrier();
-	} else {
-	  if (doIdiot>0) {
-	    Idiot info(*model2);
-	    info.crash(doIdiot,model2->messageHandler(),model2->messagesPointer());
-	  }
-	  model2->primal(1);
-	}
-	pinfo.postsolve(true);
-
-	delete model2;
-	solution.checkSolution();
-	if (!solution.isProvenOptimal()) {
-	  printf("Resolving from postsolved model\n");
-	  
-	  int savePerturbation = solution.perturbation();
-	  solution.setPerturbation(100);
-	  solution.primal(1);
-	  solution.setPerturbation(savePerturbation);
-	  if (solution.numberIterations())
-	    printf("****** iterated %d\n",solution.numberIterations());
-	}
-	/*solution.checkSolution();
-	printf("%g dual %g(%d) Primal %g(%d)\n",
-	       solution.objectiveValue(),
-	       solution.sumDualInfeasibilities(),
-	       solution.numberDualInfeasibilities(),
-	       solution.sumPrimalInfeasibilities(),
-	       solution.numberPrimalInfeasibilities());*/
-	if (0) {
-	  ClpPresolve pinfoA;
-	  model2 = pinfoA.presolvedModel(solution,1.0e-8);
-
-	  printf("Resolving from presolved optimal solution\n");
-	  model2->primal(1);
-
-	  delete model2;
-	}
+      ClpSolve::SolveType method;
+      ClpSolve::PresolveType presolveType;
+      ClpSolve solveOptions;
+      if (doPresolve)
+        presolveType=ClpSolve::presolveOn;
+      else
+        presolveType=ClpSolve::presolveOff;
+      solveOptions.setPresolveType(presolveType,5);
+      if (algorithm==0) {
+        method=ClpSolve::useDual;
+      } else if (algorithm==1) {
+        method=ClpSolve::usePrimalorSprint;
+      } else if (algorithm==3) {
+        method=ClpSolve::automatic;
       } else {
-	if (algorithm==0) {
-	  if (doIdiot<0)
-	    solution.crash(1000,1);
-	  solution.dual();
-	} else if (algorithm==2) {
-	  solution.barrier();
-	} else {
-	  if (doIdiot>0) {
-	    Idiot info(solution);
-	    info.crash(doIdiot,solution.messageHandler(),solution.messagesPointer());
-	  }
-	  solution.primal(1);
-	}
+        method = ClpSolve::useBarrier;
       }
+      solveOptions.setSolveType(method);
+      solution.initialSolve(solveOptions);
       double time2 = CoinCpuTime()-time1;
       timeTaken += time2;
       printf("Took %g seconds\n",time2);
