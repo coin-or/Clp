@@ -292,6 +292,16 @@ ClpModel::getRowBound(int iRow, double& lower, double& upper) const
     lower=rowLower_[iRow];
 }
 //------------------------------------------------------------------
+#ifndef NDEBUG
+// For errors to make sure print to screen
+// only called in debug mode
+static void indexError(int index,
+			std::string methodName)
+{
+  std::cerr<<"Illegal index "<<index<<" in ClpModel::"<<methodName<<std::endl;
+  throw CoinError("Illegal index",methodName,"ClpModel");
+}
+#endif
 /* Set an objective function coefficient */
 void 
 ClpModel::setObjectiveCoefficient( int elementIndex, double elementValue )

@@ -3660,8 +3660,14 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
   factorization_->zeroTolerance(1.0e-13);
 
   int factorizationStatus = internalFactorize(0);
-  if (factorizationStatus<0)
-    return 1; // some error
+  if (factorizationStatus<0) {
+    // some error
+    // we should either debug or ignore 
+#ifndef NDEBUG
+    printf("***** ClpDual strong branching factorization error - debug\n");
+#endif
+    return 0;
+  }
   else if (factorizationStatus)
     handler_->message(CLP_SINGULARITIES,messages_)
       <<factorizationStatus
