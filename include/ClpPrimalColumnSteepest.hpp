@@ -99,14 +99,8 @@ public:
   
 private:
   ///@name Private member data 
-  /** Status
-      0) Normal 
-      -1) Needs initialization
-      1) Weights are stored by sequence number
-  */
-  int state_;
-  /// If 0 then we are using exact devex, 1 then full
-  int mode_;
+  // Update weight
+  double devex_;
   /// weight array 
   double * weights_;
   /// square of infeasibility array (just for infeasible columns)
@@ -115,16 +109,22 @@ private:
   CoinIndexedVector * alternateWeights_;
   /// save weight array (so we can use checkpoint)
   double * savedWeights_;
+  // Array for exact devex to say what is in reference framework
+  unsigned int * reference_;
+  /** Status
+      0) Normal 
+      -1) Needs initialization
+      1) Weights are stored by sequence number
+  */
+  int state_;
+  /// If 0 then we are using exact devex, 1 then full
+  int mode_;
   // This is pivot row (or pivot sequence round re-factorization)
   int pivotSequence_;  
   // This is saved pivot sequence
   int savedPivotSequence_;  
   // This is saved outgoing variable
   int savedSequenceOut_;  
-  // Array for exact devex to say what is in reference framework
-  unsigned int * reference_;
-  // Update weight
-  double devex_;
   //@}
 };
 

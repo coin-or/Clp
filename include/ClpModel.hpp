@@ -375,6 +375,12 @@ protected:
   //@{
   /// Direction of optimization (1 - minimize, -1 - maximize, 0 - ignore
   double optimizationDirection_;
+  /// Array of double parameters
+  double dblParam_[ClpLastDblParam];
+  /// Objective value
+  double objectiveValue_;
+  /// Small element value
+  double smallElement_;
   /// Number of rows
   int numberRows_;
   /// Number of columns
@@ -405,28 +411,6 @@ protected:
   ClpMatrixBase * rowCopy_;
   /// Infeasible/unbounded ray
   double * ray_;
-  /// Array of integer parameters
-  int intParam_[ClpLastIntParam];
-  /// Array of double parameters
-  double dblParam_[ClpLastDblParam];
-  /// Array of string parameters
-  std::string strParam_[ClpLastStrParam];
-  /// Objective value
-  double objectiveValue_;
-  /// Small element value
-  double smallElement_;
-  /// Number of iterations
-  int numberIterations_;
-  /// Solve type - 1 simplex, 2 simplex interface
-  int solveType_;
-  /// Status of problem
-  int problemStatus_;
-  /// Message handler
-  CoinMessageHandler * handler_;
-  /// Flag to say if default handler (so delete)
-  bool defaultHandler_;
-  /// Messages
-  CoinMessages messages_;
   /** Status Region.  I know that not all algorithms need a status
       array, but it made sense for things like crossover and put
       all permanent stuff in one place.  No assumption is made
@@ -435,14 +419,30 @@ protected:
       is number of columns + number of rows long (in that order).
   */
   unsigned char * status_;
+  /// Integer information
+  char * integerType_;
+  /// Array of integer parameters
+  int intParam_[ClpLastIntParam];
+  /// Number of iterations
+  int numberIterations_;
+  /// Solve type - 1 simplex, 2 simplex interface
+  int solveType_;
+  /// Status of problem
+  int problemStatus_;
   /// length of names (0 means no names)
   int lengthNames_;
+  /// Message handler
+  CoinMessageHandler * handler_;
+  /// Flag to say if default handler (so delete)
+  bool defaultHandler_;
   /// Row names
   std::vector<std::string> rowNames_;
   /// Column names
   std::vector<std::string> columnNames_;
-  /// Integer information
-  char * integerType_;
+  /// Messages
+  CoinMessages messages_;
+  /// Array of string parameters
+  std::string strParam_[ClpLastStrParam];
   //@}
 };
 /** This is a tiny class where data can be saved round calls */

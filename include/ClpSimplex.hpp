@@ -623,18 +623,18 @@ protected:
   //@{
   /// Worst column primal infeasibility
   double columnPrimalInfeasibility_;
-  /// Sequence of worst (-1 if feasible)
-  int columnPrimalSequence_;
   /// Worst row primal infeasibility
   double rowPrimalInfeasibility_;
+  /// Sequence of worst (-1 if feasible)
+  int columnPrimalSequence_;
   /// Sequence of worst (-1 if feasible)
   int rowPrimalSequence_;
   /// Worst column dual infeasibility
   double columnDualInfeasibility_;
-  /// Sequence of worst (-1 if feasible)
-  int columnDualSequence_;
   /// Worst row dual infeasibility
   double rowDualInfeasibility_;
+  /// Sequence of worst (-1 if feasible)
+  int columnDualSequence_;
   /// Sequence of worst (-1 if feasible)
   int rowDualSequence_;
   /// Primal tolerance needed to make dual feasible (<largeTolerance)
@@ -651,6 +651,40 @@ protected:
   double largestSolutionError_;
   /// Dual bound
   double dualBound_;
+  /// Alpha (pivot element)
+  double alpha_;
+  /// Theta (pivot change)
+  double theta_;
+  /// Lower Bound on In variable
+  double lowerIn_;
+  /// Value of In variable
+  double valueIn_;
+  /// Upper Bound on In variable
+  double upperIn_;
+  /// Reduced cost of In variable
+  double dualIn_;
+  /// Lower Bound on Out variable
+  double lowerOut_;
+  /// Value of Out variable
+  double valueOut_;
+  /// Upper Bound on Out variable
+  double upperOut_;
+  /// Infeasibility (dual) or ? (primal) of Out variable
+  double dualOut_;
+  /// Current dual tolerance for algorithm
+  double dualTolerance_;
+  /// Current primal tolerance for algorithm
+  double primalTolerance_;
+  /// Sum of dual infeasibilities
+  double sumDualInfeasibilities_;
+  /// Sum of primal infeasibilities
+  double sumPrimalInfeasibilities_;
+  /// Weight assigned to being infeasible in primal
+  double infeasibilityCost_;
+  /// Sum of Dual infeasibilities using tolerance based on error in duals
+  double sumOfRelaxedDualInfeasibilities_;
+  /// Sum of Primal infeasibilities using tolerance based on error in primals
+  double sumOfRelaxedPrimalInfeasibilities_;
   /// Working copy of lower bounds (Owner of arrays below)
   double * lower_;
   /// Row lower bounds - working copy
@@ -673,30 +707,10 @@ protected:
   CoinIndexedVector * rowArray_[6];
   /// Useful column length arrays 
   CoinIndexedVector * columnArray_[6];
-  /// Alpha (pivot element)
-  double alpha_;
-  /// Theta (pivot change)
-  double theta_;
-  /// Lower Bound on In variable
-  double lowerIn_;
-  /// Value of In variable
-  double valueIn_;
-  /// Upper Bound on In variable
-  double upperIn_;
-  /// Reduced cost of In variable
-  double dualIn_;
   /// Sequence of In variable
   int sequenceIn_;
   /// Direction of In, 1 going up, -1 going down, 0 not a clude
   int directionIn_;
-  /// Lower Bound on Out variable
-  double lowerOut_;
-  /// Value of Out variable
-  double valueOut_;
-  /// Upper Bound on Out variable
-  double upperOut_;
-  /// Infeasibility (dual) or ? (primal) of Out variable
-  double dualOut_;
   /// Sequence of Out variable
   int sequenceOut_;
   /// Direction of Out, 1 to upper bound, -1 to lower bound, 0 - superbasic
@@ -717,20 +731,14 @@ protected:
   double * rowActivityWork_;
   /// Column activities - working copy
   double * columnActivityWork_;
-  /// Current dual tolerance for algorithm
-  double dualTolerance_;
-  /// Current primal tolerance for algorithm
-  double primalTolerance_;
-  /// Sum of dual infeasibilities
-  double sumDualInfeasibilities_;
   /// Number of dual infeasibilities
   int numberDualInfeasibilities_;
   /// Number of dual infeasibilities (without free)
   int numberDualInfeasibilitiesWithoutFree_;
-  /// Sum of primal infeasibilities
-  double sumPrimalInfeasibilities_;
   /// Number of primal infeasibilities
   int numberPrimalInfeasibilities_;
+  /// How many iterative refinements to do
+  int numberRefinements_;
   /// dual row pivot choice
   ClpDualRowPivot * dualRowPivot_;
   /// primal column pivot choice
@@ -739,8 +747,6 @@ protected:
   int * pivotVariable_;
   /// factorization 
   ClpFactorization * factorization_;
-  /// How many iterative refinements to do
-  int numberRefinements_;
   /// Row scale factors for matrix
   // ****** get working simply then make coding more efficient
   // on full matrix operations
@@ -760,8 +766,6 @@ protected:
   /** Now for some reliability aids
       This forces re-factorization early */
   int forceFactorization_;
-  /// Saved status regions
-  unsigned char * saveStatus_;
   /** Perturbation:
       -50 to +50 - perturb by this power of ten (-6 sounds good)
       100 - auto perturb if takes too long (1.0e-6 largest nonzero)
@@ -770,8 +774,8 @@ protected:
       default is 100
   */
   int perturbation_;
-  /// Weight assigned to being infeasible in primal
-  double infeasibilityCost_;
+  /// Saved status regions
+  unsigned char * saveStatus_;
   /** Very wasteful way of dealing with infeasibilities in primal.
       However it will allow non-linearities and use of dual
       analysis.  If it doesn't work it can easily be replaced.
@@ -787,10 +791,6 @@ protected:
   int progressFlag_;
   /// First free/super-basic variable (-1 if none)
   int firstFree_;
-  /// Sum of Dual infeasibilities using tolerance based on error in duals
-  double sumOfRelaxedDualInfeasibilities_;
-  /// Sum of Primal infeasibilities using tolerance based on error in primals
-  double sumOfRelaxedPrimalInfeasibilities_;
   //@}
 };
 //#############################################################################
@@ -845,14 +845,14 @@ public:
   double objective_[CLP_PROGRESS];
   /// Sum of infeasibilities for algorithm
   double infeasibility_[CLP_PROGRESS];
+  /// Pointer back to model so we can get information
+  ClpSimplex * model_;
   /// Number of infeasibilities
   int numberInfeasibilities_[CLP_PROGRESS];
   /// Number of times checked (so won't stop too early)
   int numberTimes_;
   /// Number of times it looked like loop
   int numberBadTimes_;
-  /// Pointer back to model so we can get information
-  ClpSimplex * model_;
   //@}
 };
 #endif

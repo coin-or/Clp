@@ -17,6 +17,9 @@
 // Default Constructor 
 //-------------------------------------------------------------------
 ClpNonLinearCost::ClpNonLinearCost () :
+  changeCost_(0.0),
+  largestInfeasibility_(0.0),
+  sumInfeasibilities_(0.0),
   numberRows_(0),
   numberColumns_(0),
   start_(NULL),
@@ -25,12 +28,9 @@ ClpNonLinearCost::ClpNonLinearCost () :
   lower_(NULL),
   cost_(NULL),
   model_(NULL),
+  infeasible_(NULL),
   numberInfeasibilities_(-1),
-  changeCost_(0.0),
-  largestInfeasibility_(0.0),
-  sumInfeasibilities_(0.0),
-  convex_(true),
-  infeasible_(NULL)
+  convex_(true)
 {
 
 }
@@ -195,6 +195,9 @@ ClpNonLinearCost::ClpNonLinearCost(ClpSimplex * model,const int * starts,
 // Copy constructor 
 //-------------------------------------------------------------------
 ClpNonLinearCost::ClpNonLinearCost (const ClpNonLinearCost & rhs) :
+  changeCost_(0.0),
+  largestInfeasibility_(0.0),
+  sumInfeasibilities_(0.0),
   numberRows_(rhs.numberRows_),
   numberColumns_(rhs.numberColumns_),
   start_(NULL),
@@ -203,12 +206,9 @@ ClpNonLinearCost::ClpNonLinearCost (const ClpNonLinearCost & rhs) :
   lower_(NULL),
   cost_(NULL),
   model_(NULL),
+  infeasible_(NULL),
   numberInfeasibilities_(-1),
-  changeCost_(0.0),
-  largestInfeasibility_(0.0),
-  sumInfeasibilities_(0.0),
-  convex_(true),
-  infeasible_(NULL)
+  convex_(true)
 {  
   if (numberRows_) {
     int numberTotal = numberRows_+numberColumns_;

@@ -24,17 +24,17 @@
 //-------------------------------------------------------------------
 ClpPrimalColumnSteepest::ClpPrimalColumnSteepest (int mode) 
   : ClpPrimalColumnPivot(),
-    state_(-1),
-    mode_(mode),
+    devex_(0.0),
     weights_(NULL),
     infeasible_(NULL),
     alternateWeights_(NULL),
     savedWeights_(NULL),
+    reference_(NULL),
+    state_(-1),
+    mode_(mode),
     pivotSequence_(-1),
     savedPivotSequence_(-1),
-    savedSequenceOut_(-1),  
-    reference_(NULL),
-    devex_(0.0)
+    savedSequenceOut_(-1)
 {
   type_=2+64*mode;
 }

@@ -157,6 +157,12 @@ public:
 private:
   /**@name Data members */
   //@{
+  /// Change in cost because of infeasibilities
+  double changeCost_;
+  /// Largest infeasibility
+  double largestInfeasibility_;
+  /// Sum of infeasibilities
+  double sumInfeasibilities_;
   /// Number of rows (mainly for checking and copy)
   int numberRows_;
   /// Number of columns (mainly for checking and copy)
@@ -175,18 +181,12 @@ private:
   double * cost_;
   /// Model
   ClpSimplex * model_;
-  /// Number of infeasibilities found
-  int numberInfeasibilities_;
-  /// Change in cost because of infeasibilities
-  double changeCost_;
-  /// Largest infeasibility
-  double largestInfeasibility_;
-  /// Sum of infeasibilities
-  double sumInfeasibilities_;
-  /// If all non-linear costs convex
-  bool convex_;
   // Array to say which regions are infeasible
   unsigned int * infeasible_;
+  /// Number of infeasibilities found
+  int numberInfeasibilities_;
+  /// If all non-linear costs convex
+  bool convex_;
   //@}
 };
 

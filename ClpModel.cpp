@@ -46,6 +46,8 @@ static double cpuTime()
 ClpModel::ClpModel () :
 
   optimizationDirection_(1),
+  objectiveValue_(0.0),
+  smallElement_(1.0e-20),
   numberRows_(0),
   numberColumns_(0),
   rowActivity_(NULL),
@@ -61,17 +63,15 @@ ClpModel::ClpModel () :
   matrix_(NULL),
   rowCopy_(NULL),
   ray_(NULL),
-  objectiveValue_(0.0),
-  smallElement_(1.0e-20),
+  status_(NULL),
+  integerType_(NULL),
   numberIterations_(0),
   solveType_(0),
   problemStatus_(-1),
-  defaultHandler_(true),
-  status_(NULL),
   lengthNames_(0),
+  defaultHandler_(true),
   rowNames_(),
-  columnNames_(),
-  integerType_(NULL)
+  columnNames_()
 {
   intParam_[ClpMaxNumIteration] = 99999999;
   intParam_[ClpMaxNumIterationHotStart] = 9999999;
