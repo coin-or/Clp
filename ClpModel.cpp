@@ -719,18 +719,20 @@ ClpModel::deleteRows(int number, const int * which)
     status_ = tempC;
   }
 #if 1
-  int i, j, k;
-  for (k = 0, j = 0, i = 0; j < number && i < numberRows_; ++i) {
-     if (which[j] == i) {
+  if (lengthNames_) {
+    int i, j, k;
+    for (k = 0, j = 0, i = 0; j < number && i < numberRows_; ++i) {
+      if (which[j] == i) {
 	++j;
-     } else {
+      } else {
 	rowNames_[k++] = rowNames_[i];
-     }
+      }
+    }
+    for ( ; i < numberRows_; ++i) {
+      rowNames_[k++] = rowNames_[i];
+    }
+    rowNames_.erase(rowNames_.begin()+k, rowNames_.end());
   }
-  for ( ; i < numberRows_; ++i) {
-     rowNames_[k++] = rowNames_[i];
-  }
-  rowNames_.erase(rowNames_.begin()+k, rowNames_.end());
 #else
   // for now gets rid of names
   lengthNames_ = 0;
@@ -776,18 +778,20 @@ ClpModel::deleteColumns(int number, const int * which)
   integerType_ = deleteChar(integerType_,numberColumns_,
 			    number, which, newSize,true);
 #if 1
-  int i, j, k;
-  for (k = 0, j = 0, i = 0; j < number && i < numberColumns_; ++i) {
-     if (which[j] == i) {
+  if (lengthNames_) {
+    int i, j, k;
+    for (k = 0, j = 0, i = 0; j < number && i < numberColumns_; ++i) {
+      if (which[j] == i) {
 	++j;
-     } else {
+      } else {
 	columnNames_[k++] = columnNames_[i];
-     }
+      }
+    }
+    for ( ; i < numberColumns_; ++i) {
+      columnNames_[k++] = columnNames_[i];
+    }
+    columnNames_.erase(columnNames_.begin()+k, columnNames_.end());
   }
-  for ( ; i < numberRows_; ++i) {
-     columnNames_[k++] = columnNames_[i];
-  }
-  columnNames_.erase(columnNames_.begin()+k, columnNames_.end());
 #else
   // for now gets rid of names
   lengthNames_ = 0;
