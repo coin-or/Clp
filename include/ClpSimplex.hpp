@@ -310,6 +310,8 @@ public:
       primal and dual solutions.  Uses current problem arrays for
       bounds.  Returns feasibility states */
   int getSolution ();
+  /** Return model - updates any scalars */
+  void returnModel(ClpSimplex & otherModel);
   /** Factorizes using current basis.  
       solveType - 1 iterating, 0 initial, -1 external 
       If 10 added then in primal values pass

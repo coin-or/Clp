@@ -538,6 +538,9 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	  gutsOfSolution(rowActivityWork_, columnActivityWork_,NULL,NULL);
 	  // so will exit
 	  infeasibilityCost_=1.0e30;
+	  // reset infeasibilities
+	  sumPrimalInfeasibilities_=nonLinearCost_->sumInfeasibilities();;
+	  numberPrimalInfeasibilities_=nonLinearCost_->numberInfeasibilities();;
 	}
 	
 	if (infeasibilityCost_<1.0e20) {

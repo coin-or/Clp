@@ -4103,3 +4103,46 @@ ClpSimplex::statusOfProblem()
   gutsOfSolution(rowActivityWork_, columnActivityWork_,NULL,NULL);
   return (primalFeasible()&&dualFeasible());
 }
+/* Return model - updates any scalars */
+void 
+ClpSimplex::returnModel(ClpSimplex & otherModel)
+{
+  ClpModel::returnModel(otherModel);
+  otherModel.columnPrimalInfeasibility_ = columnPrimalInfeasibility_;
+  otherModel.columnPrimalSequence_ = columnPrimalSequence_;
+  otherModel.rowPrimalInfeasibility_ = rowPrimalInfeasibility_;
+  otherModel.rowPrimalSequence_ = rowPrimalSequence_;
+  otherModel.columnDualInfeasibility_ = columnDualInfeasibility_;
+  otherModel.columnDualSequence_ = columnDualSequence_;
+  otherModel.rowDualInfeasibility_ = rowDualInfeasibility_;
+  otherModel.rowDualSequence_ = rowDualSequence_;
+  otherModel.primalToleranceToGetOptimal_ = primalToleranceToGetOptimal_;
+  otherModel.remainingDualInfeasibility_ = remainingDualInfeasibility_;
+  otherModel.largestPrimalError_ = largestPrimalError_;
+  otherModel.largestDualError_ = largestDualError_;
+  otherModel.largestSolutionError_ = largestSolutionError_;
+  otherModel.alpha_ = alpha_;
+  otherModel.theta_ = theta_;
+  otherModel.lowerIn_ = lowerIn_;
+  otherModel.valueIn_ = valueIn_;
+  otherModel.upperIn_ = upperIn_;
+  otherModel.dualIn_ = dualIn_;
+  otherModel.sequenceIn_ = sequenceIn_;
+  otherModel.directionIn_ = directionIn_;
+  otherModel.lowerOut_ = lowerOut_;
+  otherModel.valueOut_ = valueOut_;
+  otherModel.upperOut_ = upperOut_;
+  otherModel.dualOut_ = dualOut_;
+  otherModel.sequenceOut_ = sequenceOut_;
+  otherModel.directionOut_ = directionOut_;
+  otherModel.pivotRow_ = pivotRow_;
+  otherModel.sumDualInfeasibilities_ = sumDualInfeasibilities_;
+  otherModel.numberDualInfeasibilities_ = numberDualInfeasibilities_;
+  otherModel.numberDualInfeasibilitiesWithoutFree_ = 
+    numberDualInfeasibilitiesWithoutFree_;
+  otherModel.sumPrimalInfeasibilities_ = sumPrimalInfeasibilities_;
+  otherModel.numberPrimalInfeasibilities_ = numberPrimalInfeasibilities_;
+  otherModel.numberTimesOptimal_ = numberTimesOptimal_;
+  otherModel.sumOfRelaxedDualInfeasibilities_ = sumOfRelaxedDualInfeasibilities_;
+  otherModel.sumOfRelaxedPrimalInfeasibilities_ = sumOfRelaxedPrimalInfeasibilities_;
+}
