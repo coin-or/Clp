@@ -98,9 +98,15 @@ public:
       return true if you are not paranoid.  For Clp I will
       probably expect no zeros.  Code can modify matrix to get rid of
       small elements.
+      check bits (can be turned off to save time) :
+      1 - check if matrix has gaps
+      2 - check if zero elements
+      4 - check and compress duplicates
+      8 - report on large and small
   */
   virtual bool allElementsInRange(ClpModel * model,
-				  double smallest, double largest);
+				  double smallest, double largest,
+				  int check=15);
   /** Returns largest and smallest elements of both signs.
       Largest refers to largest absolute value.
   */

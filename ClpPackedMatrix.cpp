@@ -1769,10 +1769,16 @@ ClpPackedMatrix::add(const ClpSimplex * model,double * array,
    return true if you are not paranoid.  For Clp I will
    probably expect no zeros.  Code can modify matrix to get rid of
    small elements.
+   check bits (can be turned off to save time) :
+   1 - check if matrix has gaps
+   2 - check if zero elements
+   4 - check and compress duplicates
+   8 - report on large and small
 */
 bool 
 ClpPackedMatrix::allElementsInRange(ClpModel * model,
-				    double smallest, double largest)
+				    double smallest, double largest,
+				    int check)
 {
   int iColumn;
   // make sure matrix correct size
@@ -1790,10 +1796,22 @@ ClpPackedMatrix::allElementsInRange(ClpModel * model,
   const double * elementByColumn = matrix_->getElements();
   int numberRows = matrix_->getNumRows();
   int numberColumns = matrix_->getNumCols();
-  int * mark = new int [numberRows];
-  int i;
   // Say no gaps
   hasGaps_=false;
+  if (check==14) {
+    for (iColumn=0;iColumn<numberColumns;iColumn++) {
+      CoinBigIndex start = columnStart[iColumn];
+      CoinBigIndex end = start + columnLength[iColumn];
+      if (end!=columnStart[iColumn+1]) {
+	hasGaps_=true;
+	break;
+      }
+    }
+    return true;
+  }
+  assert (check=15);
+  int * mark = new int [numberRows];
+  int i;
   for (i=0;i<numberRows;i++)
     mark[i]=-1;
   for (iColumn=0;iColumn<numberColumns;iColumn++) {

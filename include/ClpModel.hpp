@@ -700,6 +700,7 @@ public:
   double pivotTolerance_;
   int sparseThreshold_;
   int perturbation_;
+  int forceFactorization_;
 
   //@}
 };

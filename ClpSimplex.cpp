@@ -2248,7 +2248,13 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
 	rowUpperWork_[i] = COIN_DBL_MAX;
     }
   }
+  bool doSanityCheck=true;
   if ((what&(16+32))!=0) {
+    // We may want to switch stuff off for speed
+    if ((specialOptions_&256)!=0)
+      makeRowCopy=false; // no row copy
+    if ((specialOptions_&128)!=0)
+      doSanityCheck=false; // no sanity check
     // move information to work arrays
     double direction = optimizationDirection_;
     // direction is actually scale out not scale in
@@ -2310,7 +2316,8 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
     //check matrix
     if (!matrix_)
       matrix_=new ClpPackedMatrix();
-    if (!matrix_->allElementsInRange(this,smallElement_,1.0e20)) {
+    int checkType=(doSanityCheck) ? 15 : 14;
+    if (!matrix_->allElementsInRange(this,smallElement_,1.0e20,checkType)) {
       problemStatus_=4;
       goodMatrix= false;
     }
@@ -2539,7 +2546,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
     }
   }
  
-  if ((what&16)!=0) {
+  if ((what&16)!=0&&doSanityCheck) {
     // check rim of problem okay
     if (!sanityCheck())
       goodMatrix=false;
@@ -5502,6 +5509,7 @@ ClpSimplex::saveData()
   saved.sparseThreshold_ = factorization_->sparseThreshold();
   saved.pivotTolerance_ = factorization_->pivotTolerance();
   saved.perturbation_ = perturbation_;
+  saved.forceFactorization_=forceFactorization_;
   // Progress indicator
   delete progress_;
   progress_ = new ClpSimplexProgress (this);
@@ -5516,6 +5524,7 @@ ClpSimplex::restoreData(ClpDataSave saved)
   perturbation_ = saved.perturbation_;
   infeasibilityCost_ = saved.infeasibilityCost_;
   dualBound_ = saved.dualBound_;
+  forceFactorization_=saved.forceFactorization_;
   delete progress_;
   progress_=NULL;
 }

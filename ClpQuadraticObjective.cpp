@@ -381,8 +381,8 @@ ClpQuadraticObjective::gradient(const ClpSimplex * model,
 	gradient_ = new double[numberExtendedColumns_];
       double direction = model->optimizationDirection()*model->objectiveScale();
       // direction is actually scale out not scale in
-      if (direction)
-	direction = 1.0/direction;
+      //if (direction)
+      //direction = 1.0/direction;
       const int * columnQuadratic = quadraticObjective_->getIndices();
       const CoinBigIndex * columnQuadraticStart = quadraticObjective_->getVectorStarts();
       const int * columnQuadraticLength = quadraticObjective_->getVectorLengths();
@@ -461,7 +461,7 @@ ClpQuadraticObjective::gradient(const ClpSimplex * model,
 	}
       }
     }
-    offset *= model->optimizationDirection()*model->objectiveScale();
+    offset *= model->optimizationDirection();
     return gradient_;
   }
 }
