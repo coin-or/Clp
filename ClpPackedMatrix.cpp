@@ -821,6 +821,7 @@ ClpPackedMatrix::allElementsInRange(ClpSimplex * model,
   int iColumn;
   CoinBigIndex numberLarge=0;;
   CoinBigIndex numberSmall=0;;
+  CoinBigIndex numberDuplicate=0;;
   int firstBadColumn=-1;
   int firstBadRow=-1;
   double firstBadElement=0.0;
@@ -830,11 +831,23 @@ ClpPackedMatrix::allElementsInRange(ClpSimplex * model,
   const int * columnLength = matrix_->getVectorLengths(); 
   const double * elementByColumn = matrix_->getElements();
   int numberColumns = matrix_->getNumCols();
+  int numberRows = matrix_->getNumRows();
+  int * mark = new int [numberRows];
+  int i;
+  for (i=0;i<numberRows;i++)
+    mark[i]=-1;
   for (iColumn=0;iColumn<numberColumns;iColumn++) {
     CoinBigIndex j;
     for (j=columnStart[iColumn];
 	 j<columnStart[iColumn]+columnLength[iColumn];j++) {
       double value = fabs(elementByColumn[j]);
+      int iRow = row[j];
+      if (mark[iRow]==-1) {
+	mark[iRow]=j;
+      } else {
+	// duplicate
+	numberDuplicate++;
+      }
       //printf("%d %d %d %g\n",iColumn,j,row[j],elementByColumn[j]);
       if (value<smallest) {
 	numberSmall++;
@@ -847,7 +860,14 @@ ClpPackedMatrix::allElementsInRange(ClpSimplex * model,
 	}
       }
     }
+    //clear mark
+    for (j=columnStart[iColumn];
+	 j<columnStart[iColumn]+columnLength[iColumn];j++) {
+      int iRow = row[j];
+      mark[iRow]=-1;
+    }
   }
+  delete [] mark;
   if (numberLarge) {
     model->messageHandler()->message(CLP_BAD_MATRIX,model->messages())
       <<numberLarge
@@ -855,12 +875,18 @@ ClpPackedMatrix::allElementsInRange(ClpSimplex * model,
       <<CoinMessageEol;
     return false;
   }
-  if (numberSmall) {
+  if (numberSmall) 
     model->messageHandler()->message(CLP_SMALLELEMENTS,model->messages())
       <<numberSmall
       <<CoinMessageEol;
+  if (numberDuplicate) 
+    model->messageHandler()->message(CLP_DUPLICATEELEMENTS,model->messages())
+      <<numberDuplicate
+      <<CoinMessageEol;
+  if (numberDuplicate) 
+    matrix_->eliminateDuplicates(smallest);
+  else if (numberSmall) 
     matrix_->compress(smallest);
-  }
   return true;
 }
 

@@ -66,7 +66,8 @@ static Clp_message us_english[]=
   {CLP_BAD_BOUNDS,6002,0,"%d bad bound pairs were found - first at %c%d"},
   {CLP_BAD_MATRIX,6003,0,"Matrix has %d large values, first at column %d, row %d is %g"},
   {CLP_LOOP,6004,0,"Can't get out of loop - stopping (Debug) (Don't panic, OsiClpSolverInterface will resolve)"},
-  {CLP_IMPORT_RESULT,18,1,"Model was imported from %s in %g seconds"},
+  {CLP_DUPLICATEELEMENTS,26,0,"Matrix will be packed to eliminate %d duplicate elements"},
+  {CLP_IMPORT_RESULT,27,1,"Model was imported from %s in %g seconds"},
   {CLP_IMPORT_ERRORS,3001,1," There were %d errors when importing model from %s"},
   {CLP_EMPTY_PROBLEM,3002,0,"Not solving empty problem - %d rows, %d columns and %d elements"},
   {CLP_DUMMY_END,999999,0,""}
