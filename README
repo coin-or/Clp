@@ -6,12 +6,26 @@ To make the unitTest and standalone executable do
 
 make unitTest in this directory.  This creates an executable clp.
 
-Running clp gives you some hints.  It can do a unit test and solve netlib problems.  It can also solve problems and set tolerances etc.  Just do clp - and then try ? or setting various stuff.
+Running clp gives you some hints.  It can do a unit test and solve netlib 
+problems.  It can also solve problems and set tolerances etc.  Just do 
+
+clp -
+ 
+and then try ? or setting various stuff.
 
 On Linux clp can do file completion and line editing.  
 
-If you want to stress the code you can set various stuff e.g. dantzig pricing and then go into netlib testing.  I do not guarantee that it will solve all netlib if you get too creative.
+If you want to stress the code you can set various stuff e.g. dantzig pricing
+ and then go into netlib testing.  I do not guarantee that it will solve all 
+netlib if you get too creative.
 
-There will be samples in ./Samples
+There will be samples in ./Samples.  Use the corresponding Makefile to 
+create an executable - testit.
 
-At present the only sample is minimim.cpp; use Makefile.minimum to create testit
+At present there are only two useful samples.
+
+minimum.cpp  This is the simplest possible program to read an mps file.
+defaults.cpp.  This does not do much more, but it does it in much more 
+complicated way by specifically setting defaults so it does give more
+useful information.  It also prints a solution in a format "similar" to that
+of MPSX.
