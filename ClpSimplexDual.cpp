@@ -2437,6 +2437,12 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	unflagVariables = false;
 	assert (type==1);
 	changeMade_++; // say something changed
+	// Keep any flagged variables
+	int i;
+	for (i=0;i<numberRows_+numberColumns_;i++) {
+	  if (flagged(i))
+	    saveStatus_[i] |= 64; //say flagged
+	}
 	memcpy(status_ ,saveStatus_,(numberColumns_+numberRows_)*sizeof(char));
 	memcpy(rowActivityWork_,savedSolution_+numberColumns_ ,
 	       numberRows_*sizeof(double));
@@ -2449,7 +2455,6 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	double dummyChangeCost=0.0;
 	changeBounds(true,rowArray_[2],dummyChangeCost);
 	// throw away change
-	int i;
 	for (i=0;i<4;i++) 
 	  rowArray_[i]->clear();
 	// need to reject something
