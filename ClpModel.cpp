@@ -22,6 +22,7 @@
 #include "ClpMessage.hpp"
 #include "ClpLinearObjective.hpp"
 #include "ClpQuadraticObjective.hpp"
+#include "ClpBuild.hpp"
 
 //#############################################################################
 
@@ -1088,7 +1089,6 @@ ClpModel::addRow(int numberInRow, const int * columns,
                  const double * elements, double rowLower, double rowUpper)
 {
   // Create a CoinPackedVector
-  whatsChanged_ &= ~(1+2+8+16+32); // all except columns changed
   CoinPackedVectorBase * row=
     new CoinPackedVector(numberInRow,columns,elements);
   addRows(1, &rowLower, &rowUpper,
@@ -1104,7 +1104,6 @@ ClpModel::addRows(int number, const double * rowLower,
 {
   // Create a list of CoinPackedVectors
   if (number) {
-    whatsChanged_ &= ~(1+2+8+16+32); // all except columns changed
     CoinPackedVectorBase ** rows=
       new CoinPackedVectorBase * [number];
     int iRow;
@@ -1120,10 +1119,6 @@ ClpModel::addRows(int number, const double * rowLower,
       delete rows[iRow];
     delete [] rows;
   }
-  delete [] rowScale_;
-  rowScale_ = NULL;
-  delete [] columnScale_;
-  columnScale_ = NULL;
 }
 // Add rows
 void 
@@ -1135,7 +1130,6 @@ ClpModel::addRows(int number, const double * rowLower,
 {
   // Create a list of CoinPackedVectors
   if (number) {
-    whatsChanged_ &= ~(1+2+8+16+32); // all except columns changed
     CoinPackedVectorBase ** rows=
       new CoinPackedVectorBase * [number];
     int iRow;
@@ -1151,10 +1145,6 @@ ClpModel::addRows(int number, const double * rowLower,
       delete rows[iRow];
     delete [] rows;
   }
-  delete [] rowScale_;
-  rowScale_ = NULL;
-  delete [] columnScale_;
-  columnScale_ = NULL;
 }
 void 
 ClpModel::addRows(int number, const double * rowLower, 
@@ -1204,6 +1194,35 @@ ClpModel::addRows(int number, const double * rowLower,
   rowScale_ = NULL;
   delete [] columnScale_;
   columnScale_ = NULL;
+}
+// Add rows from a build object
+void 
+ClpModel::addRows(ClpBuild & buildObject)
+{
+  int number = buildObject.numberRows();
+  if (number) {
+    CoinPackedVectorBase ** rows=
+      new CoinPackedVectorBase * [number];
+    int iRow;
+    double * lower = new double [number];
+    double * upper = new double [number];
+    for (iRow=0;iRow<number;iRow++) {
+      int * columns;
+      double * elements;
+      int numberElements = buildObject.row(iRow,lower[iRow],upper[iRow],
+                                           columns,elements);
+      rows[iRow] = 
+	new CoinPackedVector(numberElements,
+			     columns,elements);
+    }
+    addRows(number, lower, upper,rows);
+    for (iRow=0;iRow<number;iRow++) 
+      delete rows[iRow];
+    delete [] rows;
+    delete [] lower;
+    delete [] upper;
+  }
+  return;
 }
 // Add one column
 void 

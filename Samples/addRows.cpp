@@ -5,6 +5,8 @@
 // This is a simple example to create a model by row
 #include "ClpSimplex.hpp"
 #include "CoinHelperFunctions.hpp"
+#include "CoinTime.hpp"
+#include "ClpBuild.hpp"
 #include <iomanip>
 #include <cassert>
 
@@ -47,10 +49,41 @@ int main (int argc, const char *argv[])
   int row2Index[] = {0,1,2};
   double row2Value[]={1.0,-5.0,1.0};
   model.addRow(3,row2Index,row2Value,
-               1.0,1.0);
+                 1.0,1.0);
   // solve
   model.dual();
 
+  /*
+    Adding one row at a time has a significant overhead so let's
+    try a more complicated but faster way
+
+    First time adding in 10000 rows one by one
+  */
+  model.allSlackBasis();
+  ClpSimplex modelSave=model;
+  double time1 = CoinCpuTime();
+  int k;
+  for ( k=0;k<10000;k++) {
+    int row2Index[] = {0,1,2};
+    double row2Value[]={1.0,-5.0,1.0};
+    model.addRow(3,row2Index,row2Value,
+                 1.0,1.0);
+  }
+  printf("Time for 10000 addRow is %g\n",CoinCpuTime()-time1);
+  model.dual();
+  model=modelSave;
+  // Now use build
+  ClpBuild buildObject;
+  time1 = CoinCpuTime();
+  for ( k=0;k<10000;k++) {
+    int row2Index[] = {0,1,2};
+    double row2Value[]={1.0,-5.0,1.0};
+    buildObject.addRow(3,row2Index,row2Value,
+                 1.0,1.0);
+  }
+  model.addRows(buildObject);
+  printf("Time for 10000 addRow is %g\n",CoinCpuTime()-time1);
+  model.dual();
   // Print column solution
   int numberColumns = model.numberColumns();
 
