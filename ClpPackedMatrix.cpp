@@ -281,8 +281,8 @@ ClpPackedMatrix::transposeTimes(const ClpSimplex * model, double scalar,
       factor=0.15;
     else if (numberRows*2<numberColumns)
       factor=0.2;
-    if (model->numberIterations()%50==0)
-      printf("%d nonzero\n",numberInRowArray);
+    //if (model->numberIterations()%50==0)
+    //printf("%d nonzero\n",numberInRowArray);
   }
   if (numberInRowArray>factor*numberRows||!rowCopy) {
     // do by column
@@ -1125,7 +1125,7 @@ ClpPackedMatrix::scale(ClpSimplex * model) const
   }
   // mark empty and fixed columns
   // also see if worth scaling
-  assert (model->scalingFlag()==1); // dynamic not implemented
+  assert (model->scalingFlag()<4); // dynamic not implemented
   double largest=0.0;
   double smallest=1.0e50;
   // get matrix data pointers
@@ -1163,6 +1163,14 @@ ClpPackedMatrix::scale(ClpSimplex * model) const
     delete [] usefulColumn;
     return 1;
   } else {
+    int scalingMethod = model->scalingFlag();
+    if (scalingMethod==3) {
+      // Choose between 1 and 2
+      if (smallest<1.0e-5||smallest*largest<1.0)
+	scalingMethod=1;
+      else
+	scalingMethod=2;
+    }
     // and see if there any empty rows
     for (iRow=0;iRow<numberRows;iRow++) {
       if (usefulRow[iRow]) {
@@ -1182,7 +1190,7 @@ ClpPackedMatrix::scale(ClpSimplex * model) const
     ClpFillN ( columnScale, numberColumns,1.0);
     double overallLargest=-1.0e-30;
     double overallSmallest=1.0e30;
-    if (model->scalingFlag()==1) {
+    if (scalingMethod==1) {
       // Maximum in each row
       for (iRow=0;iRow<numberRows;iRow++) {
 	if (usefulRow[iRow]) {
@@ -1201,7 +1209,7 @@ ClpPackedMatrix::scale(ClpSimplex * model) const
 	}
       }
     } else {
-      assert(model->scalingFlag()==2);
+      assert(scalingMethod==2);
       int numberPass=3;
 #ifdef USE_OBJECTIVE
       // This will be used to help get scale factors
@@ -1313,8 +1321,16 @@ ClpPackedMatrix::scale(ClpSimplex * model) const
 	  overallSmallest = smallest/largest;
       }
     }
+#define RANDOMIZE
+#ifdef RANDOMIZE
+    // randomize by up to 10%
+    for (iRow=0;iRow<numberRows;iRow++) {
+      double value = 0.5-CoinDrand48();//between -0.5 to + 0.5
+      rowScale[iRow] *= (1.0+0.1*value);
+    }
+#endif
     overallLargest=1.0;
-    if (overallSmallest<1.0e-3)
+    if (overallSmallest<1.0e-1)
       overallLargest = 1.0/sqrt(overallSmallest);
     overallLargest = min(1000.0,overallLargest);
     overallSmallest=1.0e50;
@@ -1333,6 +1349,10 @@ ClpPackedMatrix::scale(ClpSimplex * model) const
 	  }
 	}
 	columnScale[iColumn]=overallLargest/largest;
+#ifdef RANDOMIZE
+	double value = 0.5-CoinDrand48();//between -0.5 to + 0.5
+	columnScale[iColumn] *= (1.0+0.1*value);
+#endif
 	overallSmallest = min(overallSmallest,smallest*columnScale[iColumn]);
       }
     }

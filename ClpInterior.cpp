@@ -9,7 +9,7 @@
 #include <math.h>
 
 #include "CoinHelperFunctions.hpp"
-#include "ClpSimplex.hpp"
+#include "ClpInterior.hpp"
 #include "ClpFactorization.hpp"
 #include "ClpPackedMatrix.hpp"
 #include "CoinIndexedVector.hpp"
@@ -27,7 +27,7 @@
 #include <iostream>
 //#############################################################################
 
-ClpSimplex::ClpSimplex () :
+ClpInterior::ClpInterior () :
 
   ClpModel(),
   columnPrimalInfeasibility_(0.0),
@@ -127,7 +127,7 @@ ClpSimplex::ClpSimplex () :
 }
 
 // Subproblem constructor
-ClpSimplex::ClpSimplex ( const ClpModel * rhs,
+ClpInterior::ClpInterior ( const ClpModel * rhs,
 		     int numberRows, const int * whichRow,
 		     int numberColumns, const int * whichColumn,
 		     bool dropNames, bool dropIntegers)
@@ -229,19 +229,19 @@ ClpSimplex::ClpSimplex ( const ClpModel * rhs,
 
 //-----------------------------------------------------------------------------
 
-ClpSimplex::~ClpSimplex ()
+ClpInterior::~ClpInterior ()
 {
   gutsOfDelete(0);
   delete nonLinearCost_;
 }
 //#############################################################################
-void ClpSimplex::setLargeValue( double value) 
+void ClpInterior::setLargeValue( double value) 
 {
   if (value>0.0&&value<COIN_DBL_MAX)
     largeValue_=value;
 }
 int
-ClpSimplex::gutsOfSolution ( double * givenDuals,
+ClpInterior::gutsOfSolution ( double * givenDuals,
 			     const double * givenPrimals,
 			     bool valuesPass)
 {
@@ -356,7 +356,7 @@ ClpSimplex::gutsOfSolution ( double * givenDuals,
   return 0;
 }
 void
-ClpSimplex::computePrimals ( const double * rowActivities,
+ClpInterior::computePrimals ( const double * rowActivities,
 				     const double * columnActivities)
 {
 
@@ -489,7 +489,7 @@ ClpSimplex::computePrimals ( const double * rowActivities,
 }
 // now dual side
 void
-ClpSimplex::computeDuals(double * givenDjs)
+ClpInterior::computeDuals(double * givenDjs)
 {
   //work space
   CoinIndexedVector  * workSpace = rowArray_[0];
@@ -652,7 +652,7 @@ ClpSimplex::computeDuals(double * givenDjs)
 /* Given an existing factorization computes and checks 
    primal and dual solutions.  Uses input arrays for variables at
    bounds.  Returns feasibility states */
-int ClpSimplex::getSolution ( const double * rowActivities,
+int ClpInterior::getSolution ( const double * rowActivities,
 			       const double * columnActivities)
 {
   if (!factorization_->status()) {
@@ -668,7 +668,7 @@ int ClpSimplex::getSolution ( const double * rowActivities,
 /* Given an existing factorization computes and checks 
    primal and dual solutions.  Uses current problem arrays for
    bounds.  Returns feasibility states */
-int ClpSimplex::getSolution ( )
+int ClpInterior::getSolution ( )
 {
   double * rowActivities = new double[numberRows_];
   double * columnActivities = new double[numberColumns_];
@@ -681,7 +681,7 @@ int ClpSimplex::getSolution ( )
 }
 // Factorizes using current basis.  This is for external use
 // Return codes are as from ClpFactorization
-int ClpSimplex::factorize ()
+int ClpInterior::factorize ()
 {
   // put in standard form
   createRim(7+8+16+32,false);
@@ -694,7 +694,7 @@ int ClpSimplex::factorize ()
 }
 // Clean up status
 void 
-ClpSimplex::cleanStatus()
+ClpInterior::cleanStatus()
 {
   int iRow,iColumn;
   int numberBasic=0;
@@ -762,7 +762,7 @@ ClpSimplex::cleanStatus()
 */
 /* Return codes are as from ClpFactorization unless initial factorization
    when total number of singularities is returned */
-int ClpSimplex::internalFactorize ( int solveType)
+int ClpInterior::internalFactorize ( int solveType)
 {
 
   int iRow,iColumn;
@@ -858,7 +858,7 @@ int ClpSimplex::internalFactorize ( int solveType)
 	      }
 	    }
 	    break;
-	  case ClpSimplex::isFixed:
+	  case ClpInterior::isFixed:
 	  case atLowerBound:
 	    rowActivityWork_[iRow]=rowLowerWork_[iRow];
 	    if (rowActivityWork_[iRow]<-largeValue_) {
@@ -1139,7 +1139,7 @@ int ClpSimplex::internalFactorize ( int solveType)
    Can also decide to re-factorize
 */
 int 
-ClpSimplex::housekeeping(double objectiveChange)
+ClpInterior::housekeeping(double objectiveChange)
 {
   numberIterations_++;
   changeMade_++; // something has happened
@@ -1235,7 +1235,7 @@ ClpSimplex::housekeeping(double objectiveChange)
   }
 }
 // Copy constructor. 
-ClpSimplex::ClpSimplex(const ClpSimplex &rhs) :
+ClpInterior::ClpInterior(const ClpInterior &rhs) :
   ClpModel(rhs),
   columnPrimalInfeasibility_(0.0),
   rowPrimalInfeasibility_(0.0),
@@ -1332,7 +1332,7 @@ ClpSimplex::ClpSimplex(const ClpSimplex &rhs) :
   solveType_=1; // say simplex based life form
 }
 // Copy constructor from model
-ClpSimplex::ClpSimplex(const ClpModel &rhs) :
+ClpInterior::ClpInterior(const ClpModel &rhs) :
   ClpModel(rhs),
   columnPrimalInfeasibility_(0.0),
   rowPrimalInfeasibility_(0.0),
@@ -1428,8 +1428,8 @@ ClpSimplex::ClpSimplex(const ClpModel &rhs) :
   
 }
 // Assignment operator. This copies the data
-ClpSimplex & 
-ClpSimplex::operator=(const ClpSimplex & rhs)
+ClpInterior & 
+ClpInterior::operator=(const ClpInterior & rhs)
 {
   if (this != &rhs) {
     gutsOfDelete(0);
@@ -1442,7 +1442,7 @@ ClpSimplex::operator=(const ClpSimplex & rhs)
   return *this;
 }
 void 
-ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
+ClpInterior::gutsOfCopy(const ClpInterior & rhs)
 {
   lower_ = ClpCopyOfArray(rhs.lower_,numberColumns_+numberRows_);
   rowLowerWork_ = lower_+numberColumns_;
@@ -1547,7 +1547,7 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
   incomingInfeasibility_ = rhs.incomingInfeasibility_;
   allowedInfeasibility_ = rhs.allowedInfeasibility_;
   if (rhs.progress_)
-    progress_ = new ClpSimplexProgress(*rhs.progress_);
+    progress_ = new ClpInteriorProgress(*rhs.progress_);
   else
     progress_=NULL;
   sumOfRelaxedDualInfeasibilities_ = rhs.sumOfRelaxedDualInfeasibilities_;
@@ -1560,7 +1560,7 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
 }
 // type == 0 do everything, most + pivot data, 2 factorization data as well
 void 
-ClpSimplex::gutsOfDelete(int type)
+ClpInterior::gutsOfDelete(int type)
 {
   delete [] lower_;
   lower_=NULL;
@@ -1628,7 +1628,7 @@ ClpSimplex::gutsOfDelete(int type)
 }
 // This sets largest infeasibility and most infeasible
 void 
-ClpSimplex::checkPrimalSolution(const double * rowActivities,
+ClpInterior::checkPrimalSolution(const double * rowActivities,
 					const double * columnActivities)
 {
   double * solution;
@@ -1701,7 +1701,7 @@ ClpSimplex::checkPrimalSolution(const double * rowActivities,
   }
 }
 void 
-ClpSimplex::checkDualSolution()
+ClpInterior::checkDualSolution()
 {
 
   int iRow,iColumn;
@@ -1883,7 +1883,7 @@ ClpSimplex::checkDualSolution()
   Unpacks one column of the matrix into indexed array 
 */
 void 
-ClpSimplex::unpack(CoinIndexedVector * rowArray) const
+ClpInterior::unpack(CoinIndexedVector * rowArray) const
 {
   rowArray->clear();
   if (sequenceIn_>=numberColumns_) {
@@ -1895,7 +1895,7 @@ ClpSimplex::unpack(CoinIndexedVector * rowArray) const
   }
 }
 void 
-ClpSimplex::unpack(CoinIndexedVector * rowArray,int sequence) const
+ClpInterior::unpack(CoinIndexedVector * rowArray,int sequence) const
 {
   rowArray->clear();
   if (sequence>=numberColumns_) {
@@ -1910,7 +1910,7 @@ ClpSimplex::unpack(CoinIndexedVector * rowArray,int sequence) const
   Unpacks one column of the matrix into indexed array 
 */
 void 
-ClpSimplex::unpackPacked(CoinIndexedVector * rowArray) 
+ClpInterior::unpackPacked(CoinIndexedVector * rowArray) 
 {
   rowArray->clear();
   if (sequenceIn_>=numberColumns_) {
@@ -1927,7 +1927,7 @@ ClpSimplex::unpackPacked(CoinIndexedVector * rowArray)
   }
 }
 void 
-ClpSimplex::unpackPacked(CoinIndexedVector * rowArray,int sequence)
+ClpInterior::unpackPacked(CoinIndexedVector * rowArray,int sequence)
 {
   rowArray->clear();
   if (sequence>=numberColumns_) {
@@ -1944,7 +1944,7 @@ ClpSimplex::unpackPacked(CoinIndexedVector * rowArray,int sequence)
   }
 }
 bool
-ClpSimplex::createRim(int what,bool makeRowCopy)
+ClpInterior::createRim(int what,bool makeRowCopy)
 {
   bool goodMatrix=true;
   int saveLevel=handler_->logLevel();
@@ -2186,7 +2186,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
   return goodMatrix;
 }
 void
-ClpSimplex::deleteRim(int getRidOfFactorizationData)
+ClpInterior::deleteRim(int getRidOfFactorizationData)
 {
   int i;
   if (problemStatus_!=1&&problemStatus_!=2) {
@@ -2234,39 +2234,39 @@ ClpSimplex::deleteRim(int getRidOfFactorizationData)
     gutsOfDelete(getRidOfFactorizationData+1);
 }
 void 
-ClpSimplex::setDualBound(double value)
+ClpInterior::setDualBound(double value)
 {
   if (value>0.0)
     dualBound_=value;
 }
 void 
-ClpSimplex::setInfeasibilityCost(double value)
+ClpInterior::setInfeasibilityCost(double value)
 {
   if (value>0.0)
     infeasibilityCost_=value;
 }
-void ClpSimplex::setNumberRefinements( int value) 
+void ClpInterior::setNumberRefinements( int value) 
 {
   if (value>=0&&value<10)
     numberRefinements_=value;
 }
 // Sets row pivot choice algorithm in dual
 void 
-ClpSimplex::setDualRowPivotAlgorithm(ClpDualRowPivot & choice)
+ClpInterior::setDualRowPivotAlgorithm(ClpDualRowPivot & choice)
 {
   delete dualRowPivot_;
   dualRowPivot_ = choice.clone(true);
 }
 // Sets row pivot choice algorithm in dual
 void 
-ClpSimplex::setPrimalColumnPivotAlgorithm(ClpPrimalColumnPivot & choice)
+ClpInterior::setPrimalColumnPivotAlgorithm(ClpPrimalColumnPivot & choice)
 {
   delete primalColumnPivot_;
   primalColumnPivot_ = choice.clone(true);
 }
 // Sets or unsets scaling, 0 -off, 1 on, 2 dynamic(later)
 void 
-ClpSimplex::scaling(int mode)
+ClpInterior::scaling(int mode)
 {
   if (mode>0&&mode<4) {
     scalingFlag_=mode;
@@ -2280,13 +2280,13 @@ ClpSimplex::scaling(int mode)
 }
 // Passes in factorization
 void 
-ClpSimplex::setFactorization( ClpFactorization & factorization)
+ClpInterior::setFactorization( ClpFactorization & factorization)
 {
   delete factorization_;
   factorization_= new ClpFactorization(factorization);
 }
 void 
-ClpSimplex::times(double scalar,
+ClpInterior::times(double scalar,
 		  const double * x, double * y) const
 {
   if (rowScale_)
@@ -2295,7 +2295,7 @@ ClpSimplex::times(double scalar,
     matrix_->times(scalar,x,y);
 }
 void 
-ClpSimplex::transposeTimes(double scalar,
+ClpInterior::transposeTimes(double scalar,
 			   const double * x, double * y) const 
 {
   if (rowScale_)
@@ -2311,7 +2311,7 @@ ClpSimplex::transposeTimes(double scalar,
    default is 100
 */
 void 
-ClpSimplex::setPerturbation(int value)
+ClpInterior::setPerturbation(int value)
 {
   if(value<=100&&value >=-1000) {
     perturbation_=value;
@@ -2319,12 +2319,12 @@ ClpSimplex::setPerturbation(int value)
 }
 // Sparsity on or off
 bool 
-ClpSimplex::sparseFactorization() const
+ClpInterior::sparseFactorization() const
 {
   return factorization_->sparseThreshold()!=0;
 }
 void 
-ClpSimplex::setSparseFactorization(bool value)
+ClpInterior::setSparseFactorization(bool value)
 {
   if (value) {
     if (!factorization_->sparseThreshold())
@@ -2343,7 +2343,7 @@ ClpSimplex::setSparseFactorization(bool value)
    in branch and bound on infeasible branches (0.0 is off)
 */
 int 
-ClpSimplex::tightenPrimalBounds(double factor)
+ClpInterior::tightenPrimalBounds(double factor)
 {
   
   // Get a row copy in standard format
@@ -2666,11 +2666,11 @@ ClpSimplex::tightenPrimalBounds(double factor)
   return (numberInfeasible);
 }
 // dual 
-#include "ClpSimplexDual.hpp"
-#include "ClpSimplexPrimal.hpp"
-int ClpSimplex::dual (int ifValuesPass )
+#include "ClpInteriorDual.hpp"
+#include "ClpInteriorPrimal.hpp"
+int ClpInterior::dual (int ifValuesPass )
 {
-  int returnCode = ((ClpSimplexDual *) this)->dual(ifValuesPass);
+  int returnCode = ((ClpInteriorDual *) this)->dual(ifValuesPass);
   if (problemStatus_==10) {
     //printf("Cleaning up with primal\n");
     int savePerturbation = perturbation_;
@@ -2678,16 +2678,16 @@ int ClpSimplex::dual (int ifValuesPass )
     bool denseFactorization = initialDenseFactorization();
     // It will be safe to allow dense
     setInitialDenseFactorization(true);
-    returnCode = ((ClpSimplexPrimal *) this)->primal(1);
+    returnCode = ((ClpInteriorPrimal *) this)->primal(1);
     setInitialDenseFactorization(denseFactorization);
     perturbation_=savePerturbation;
   }
   return returnCode;
 }
 // primal 
-int ClpSimplex::primal (int ifValuesPass )
+int ClpInterior::primal (int ifValuesPass )
 {
-  int returnCode = ((ClpSimplexPrimal *) this)->primal(ifValuesPass);
+  int returnCode = ((ClpInteriorPrimal *) this)->primal(ifValuesPass);
   if (problemStatus_==10) {
     //printf("Cleaning up with dual\n");
     int savePerturbation = perturbation_;
@@ -2695,40 +2695,40 @@ int ClpSimplex::primal (int ifValuesPass )
     bool denseFactorization = initialDenseFactorization();
     // It will be safe to allow dense
     setInitialDenseFactorization(true);
-    returnCode = ((ClpSimplexDual *) this)->dual(0);
+    returnCode = ((ClpInteriorDual *) this)->dual(0);
     setInitialDenseFactorization(denseFactorization);
     perturbation_=savePerturbation;
   }
   return returnCode;
 }
-#include "ClpSimplexPrimalQuadratic.hpp"
+#include "ClpInteriorPrimalQuadratic.hpp"
 /* Solves quadratic problem using SLP - may be used as crash
    for other algorithms when number of iterations small
 */
 int 
-ClpSimplex::quadraticSLP(int numberPasses, double deltaTolerance)
+ClpInterior::quadraticSLP(int numberPasses, double deltaTolerance)
 {
-  return ((ClpSimplexPrimalQuadratic *) this)->primalSLP(numberPasses,deltaTolerance);
+  return ((ClpInteriorPrimalQuadratic *) this)->primalSLP(numberPasses,deltaTolerance);
 }
 // Solves quadratic using Dantzig's algorithm - primal
 int 
-ClpSimplex::quadraticPrimal(int phase)
+ClpInterior::quadraticPrimal(int phase)
 {
-  return ((ClpSimplexPrimalQuadratic *) this)->primalQuadratic(phase);
+  return ((ClpInteriorPrimalQuadratic *) this)->primalQuadratic(phase);
 }
 /* For strong branching.  On input lower and upper are new bounds
    while on output they are objective function values (>1.0e50 infeasible).
    Return code is 0 if nothing interesting, -1 if infeasible both
    ways and +1 if infeasible one way (check values to see which one(s))
 */
-int ClpSimplex::strongBranching(int numberVariables,const int * variables,
+int ClpInterior::strongBranching(int numberVariables,const int * variables,
 				double * newLower, double * newUpper,
 				double ** outputSolution,
 				int * outputStatus, int * outputIterations,
 				bool stopOnFirstInfeasible,
 				bool alwaysFinish)
 {
-  return ((ClpSimplexDual *) this)->strongBranching(numberVariables,variables,
+  return ((ClpInteriorDual *) this)->strongBranching(numberVariables,variables,
 						    newLower,  newUpper,outputSolution,
 						    outputStatus, outputIterations,
 						    stopOnFirstInfeasible,
@@ -2739,7 +2739,7 @@ int ClpSimplex::strongBranching(int numberVariables,const int * variables,
    an empty model with a real one - while it does an algorithm.
    This is same as ClpModel one, but sets scaling on etc. */
 void 
-ClpSimplex::borrowModel(ClpModel & otherModel) 
+ClpInterior::borrowModel(ClpModel & otherModel) 
 {
   ClpModel::borrowModel(otherModel);
   createStatus();
@@ -2797,7 +2797,7 @@ int outDoubleArray(double * array, int length, FILE * fp)
 }
 // Save model to file, returns 0 if success
 int
-ClpSimplex::saveModel(const char * fileName)
+ClpInterior::saveModel(const char * fileName)
 {
   FILE * fp = fopen(fileName,"wb");
   if (fp) {
@@ -2979,7 +2979,7 @@ int inDoubleArray(double * &array, int length, FILE * fp)
 /* Restore model from file, returns 0 if success,
    deletes current model */
 int 
-ClpSimplex::restoreModel(const char * fileName)
+ClpInterior::restoreModel(const char * fileName)
 {
   FILE * fp = fopen(fileName,"rb");
   if (fp) {
@@ -3190,7 +3190,7 @@ ClpSimplex::restoreModel(const char * fileName)
 }
 // value of incoming variable (in Dual)
 double 
-ClpSimplex::valueIncomingDual() const
+ClpInterior::valueIncomingDual() const
 {
   // Need value of incoming for list of infeasibilities as may be infeasible
   double valueIncoming = (dualOut_/alpha_)*directionOut_;
@@ -3202,7 +3202,7 @@ ClpSimplex::valueIncomingDual() const
 }
 // Sanity check on input data - returns true if okay
 bool 
-ClpSimplex::sanityCheck()
+ClpInterior::sanityCheck()
 {
   // bad if empty
   if (!numberRows_||!numberColumns_||!matrix_->getNumElements()) {
@@ -3350,7 +3350,7 @@ ClpSimplex::sanityCheck()
 }
 // Set up status array (for OsiClp)
 void 
-ClpSimplex::createStatus() 
+ClpInterior::createStatus() 
 {
   if(!status_)
     status_ = new unsigned char [numberColumns_+numberRows_];
@@ -3391,7 +3391,7 @@ ClpSimplex::createStatus()
    </ul>
 */
 void 
-ClpSimplex::loadProblem (  const ClpMatrixBase& matrix,
+ClpInterior::loadProblem (  const ClpMatrixBase& matrix,
 		    const double* collb, const double* colub,   
 		    const double* obj,
 		    const double* rowlb, const double* rowub,
@@ -3402,7 +3402,7 @@ ClpSimplex::loadProblem (  const ClpMatrixBase& matrix,
   createStatus();
 }
 void 
-ClpSimplex::loadProblem (  const CoinPackedMatrix& matrix,
+ClpInterior::loadProblem (  const CoinPackedMatrix& matrix,
 		    const double* collb, const double* colub,   
 		    const double* obj,
 		    const double* rowlb, const double* rowub,
@@ -3416,7 +3416,7 @@ ClpSimplex::loadProblem (  const CoinPackedMatrix& matrix,
 /* Just like the other loadProblem() method except that the matrix is
    given in a standard column major ordered format (without gaps). */
 void 
-ClpSimplex::loadProblem (  const int numcols, const int numrows,
+ClpInterior::loadProblem (  const int numcols, const int numrows,
 		    const CoinBigIndex* start, const int* index,
 		    const double* value,
 		    const double* collb, const double* colub,   
@@ -3430,7 +3430,7 @@ ClpSimplex::loadProblem (  const int numcols, const int numrows,
   createStatus();
 }
 void 
-ClpSimplex::loadProblem (  const int numcols, const int numrows,
+ClpInterior::loadProblem (  const int numcols, const int numrows,
 			   const CoinBigIndex* start, const int* index,
 			   const double* value,const int * length,
 			   const double* collb, const double* colub,   
@@ -3445,7 +3445,7 @@ ClpSimplex::loadProblem (  const int numcols, const int numrows,
 }
 // Read an mps file from the given filename
 int 
-ClpSimplex::readMps(const char *filename,
+ClpInterior::readMps(const char *filename,
 	    bool keepNames,
 	    bool ignoreErrors)
 {
@@ -3455,7 +3455,7 @@ ClpSimplex::readMps(const char *filename,
 }
 // Just check solution (for external use)
 void 
-ClpSimplex::checkSolution()
+ClpInterior::checkSolution()
 {
   // put in standard form
   createRim(7+8+16);
@@ -3493,7 +3493,7 @@ ClpSimplex::checkSolution()
    2 Mini iterations
 */
 int 
-ClpSimplex::crash(double gap,int pivot)
+ClpInterior::crash(double gap,int pivot)
 {
   assert(!rowObjective_); // not coded
   int iColumn;
@@ -3610,7 +3610,7 @@ ClpSimplex::crash(double gap,int pivot)
 	      
 	    case basic:
 	      thisWay=0;
-	    case ClpSimplex::isFixed:
+	    case ClpInterior::isFixed:
 	      break;
 	    case isFree:
 	    case superBasic:
@@ -3895,7 +3895,7 @@ ClpSimplex::crash(double gap,int pivot)
 	    switch(getColumnStatus(iColumn)) {
 	      
 	    case basic:
-	    case ClpSimplex::isFixed:
+	    case ClpInterior::isFixed:
 	      break;
 	    case isFree:
 	    case superBasic:
@@ -3935,7 +3935,7 @@ ClpSimplex::crash(double gap,int pivot)
    Also updates primal/dual infeasibilities.
    Assumes sequenceIn_ and pivotRow_ set and also directionIn and Out.
 */
-int ClpSimplex::pivot()
+int ClpInterior::pivot()
 {
   // scaling not allowed
   assert (!scalingFlag_);
@@ -4105,7 +4105,7 @@ int ClpSimplex::pivot()
    Returns ray in ray_ (or NULL if no pivot)
    Return codes as before but -1 means no acceptable pivot
 */
-int ClpSimplex::primalPivotResult()
+int ClpInterior::primalPivotResult()
 {
   assert (sequenceIn_>=0);
   valueIn_=solution_[sequenceIn_];
@@ -4113,11 +4113,11 @@ int ClpSimplex::primalPivotResult()
   upperIn_=upper_[sequenceIn_];
   dualIn_=dj_[sequenceIn_];
 
-  int returnCode = ((ClpSimplexPrimal *) this)->pivotResult();
+  int returnCode = ((ClpInteriorPrimal *) this)->pivotResult();
   if (returnCode<0&&returnCode>-4) {
     return 0;
   } else {
-    printf("Return code of %d from ClpSimplexPrimal::pivotResult\n",
+    printf("Return code of %d from ClpInteriorPrimal::pivotResult\n",
 	   returnCode);
     return -1;
   }
@@ -4130,13 +4130,13 @@ int ClpSimplex::primalPivotResult()
    Return codes as before but -1 means no acceptable pivot
 */
 int 
-ClpSimplex::dualPivotResult()
+ClpInterior::dualPivotResult()
 {
-  return ((ClpSimplexDual *) this)->pivotResult();
+  return ((ClpInteriorDual *) this)->pivotResult();
 }
 // Factorization frequency
 int 
-ClpSimplex::factorizationFrequency() const
+ClpInterior::factorizationFrequency() const
 {
   if (factorization_)
     return factorization_->maximumPivots();
@@ -4144,14 +4144,14 @@ ClpSimplex::factorizationFrequency() const
     return -1;
 }
 void 
-ClpSimplex::setFactorizationFrequency(int value)
+ClpInterior::setFactorizationFrequency(int value)
 {
   if (factorization_)
     factorization_->maximumPivots(value);
 }
 // Common bits of coding for dual and primal
 int 
-ClpSimplex::startup(int ifValuesPass)
+ClpInterior::startup(int ifValuesPass)
 {
   // sanity check
   assert (numberRows_==matrix_->getNumRows());
@@ -4195,9 +4195,9 @@ ClpSimplex::startup(int ifValuesPass)
       
       if (perturbation_<100) {
 	if (algorithm_>0) {
-	  ((ClpSimplexPrimal *) this)->perturb(0);
+	  ((ClpInteriorPrimal *) this)->perturb(0);
 	} else if (algorithm_<0) {
-	((ClpSimplexDual *) this)->perturb();
+	((ClpInteriorDual *) this)->perturb();
 	}
       }
     }
@@ -4248,7 +4248,7 @@ ClpSimplex::startup(int ifValuesPass)
 
 
 void 
-ClpSimplex::finish()
+ClpInterior::finish()
 {
   // Get rid of some arrays and empty factorization
   deleteRim();
@@ -4265,7 +4265,7 @@ ClpSimplex::finish()
 }
 // Save data
 ClpDataSave 
-ClpSimplex::saveData() 
+ClpInterior::saveData() 
 {
   ClpDataSave saved;
   saved.dualBound_ = dualBound_;
@@ -4274,12 +4274,12 @@ ClpSimplex::saveData()
   saved.perturbation_ = perturbation_;
   // Progress indicator
   delete progress_;
-  progress_ = new ClpSimplexProgress (this);
+  progress_ = new ClpInteriorProgress (this);
   return saved;
 }
 // Restore data
 void 
-ClpSimplex::restoreData(ClpDataSave saved)
+ClpInterior::restoreData(ClpDataSave saved)
 {
   factorization_->sparseThreshold(saved.sparseThreshold_);
   perturbation_ = saved.perturbation_;
@@ -4290,7 +4290,7 @@ ClpSimplex::restoreData(ClpDataSave saved)
 }
 /* Factorizes and returns true if optimal.  Used by user */
 bool
-ClpSimplex::statusOfProblem()
+ClpInterior::statusOfProblem()
 {
   // is factorization okay?
   assert (internalFactorize(1)==0);
@@ -4308,7 +4308,7 @@ ClpSimplex::statusOfProblem()
 }
 /* Return model - updates any scalars */
 void 
-ClpSimplex::returnModel(ClpSimplex & otherModel)
+ClpInterior::returnModel(ClpInterior & otherModel)
 {
   ClpModel::returnModel(otherModel);
   otherModel.columnPrimalInfeasibility_ = columnPrimalInfeasibility_;
@@ -4356,7 +4356,7 @@ ClpSimplex::returnModel(ClpSimplex & otherModel)
    Returns nonzero if bad data e.g. lowers not monotonic
 */
 int 
-ClpSimplex::createPiecewiseLinearCosts(const int * starts,
+ClpInterior::createPiecewiseLinearCosts(const int * starts,
 				       const double * lower, const double * gradient)
 {
   delete nonLinearCost_;
@@ -4392,7 +4392,7 @@ ClpSimplex::createPiecewiseLinearCosts(const int * starts,
    Defaults are 1.0,10.0
 */
 void 
-ClpSimplex::setValuesPassAction(float incomingInfeasibility,
+ClpInterior::setValuesPassAction(float incomingInfeasibility,
 				float allowedInfeasibility)
 {
   incomingInfeasibility_=incomingInfeasibility;
@@ -4402,7 +4402,7 @@ ClpSimplex::setValuesPassAction(float incomingInfeasibility,
 }
 //#############################################################################
 
-ClpSimplexProgress::ClpSimplexProgress () 
+ClpInteriorProgress::ClpInteriorProgress () 
 {
   int i;
   for (i=0;i<CLP_PROGRESS;i++) {
@@ -4424,11 +4424,11 @@ ClpSimplexProgress::ClpSimplexProgress ()
 
 //-----------------------------------------------------------------------------
 
-ClpSimplexProgress::~ClpSimplexProgress ()
+ClpInteriorProgress::~ClpInteriorProgress ()
 {
 }
 // Copy constructor. 
-ClpSimplexProgress::ClpSimplexProgress(const ClpSimplexProgress &rhs) 
+ClpInteriorProgress::ClpInteriorProgress(const ClpInteriorProgress &rhs) 
 {
   int i;
   for (i=0;i<CLP_PROGRESS;i++) {
@@ -4447,7 +4447,7 @@ ClpSimplexProgress::ClpSimplexProgress(const ClpSimplexProgress &rhs)
   model_ = rhs.model_;
 }
 // Copy constructor.from model
-ClpSimplexProgress::ClpSimplexProgress(ClpSimplex * model) 
+ClpInteriorProgress::ClpInteriorProgress(ClpInterior * model) 
 {
   model_ = model;
   int i;
@@ -4469,8 +4469,8 @@ ClpSimplexProgress::ClpSimplexProgress(ClpSimplex * model)
   numberBadTimes_ = 0;
 }
 // Assignment operator. This copies the data
-ClpSimplexProgress & 
-ClpSimplexProgress::operator=(const ClpSimplexProgress & rhs)
+ClpInteriorProgress & 
+ClpInteriorProgress::operator=(const ClpInteriorProgress & rhs)
 {
   if (this != &rhs) {
     int i;
@@ -4502,7 +4502,7 @@ static bool equalDouble(double value1, double value2)
     return (i1[0]==i2[0]);
 }
 int
-ClpSimplexProgress::looping()
+ClpInteriorProgress::looping()
 {
   if (!model_)
     return -1;
@@ -4609,25 +4609,25 @@ ClpSimplexProgress::looping()
 }
 // Returns previous objective (if -1) - current if (0)
 double 
-ClpSimplexProgress::lastObjective(int back) const
+ClpInteriorProgress::lastObjective(int back) const
 {
   return objective_[CLP_PROGRESS-1-back];
 }
 // Modify objective e.g. if dual infeasible in dual
 void 
-ClpSimplexProgress::modifyObjective(double value)
+ClpInteriorProgress::modifyObjective(double value)
 {
   objective_[CLP_PROGRESS-1]=value;
 }
 // Returns previous iteration number (if -1) - current if (0)
 int 
-ClpSimplexProgress::lastIterationNumber(int back) const
+ClpInteriorProgress::lastIterationNumber(int back) const
 {
   return iterationNumber_[CLP_PROGRESS-1-back];
 }
 // Start check at beginning of whileIterating
 void 
-ClpSimplexProgress::startCheck()
+ClpInteriorProgress::startCheck()
 {
   int i;
   for (i=0;i<CLP_CYCLE;i++) {
@@ -4638,7 +4638,7 @@ ClpSimplexProgress::startCheck()
 }
 // Returns cycle length in whileIterating
 int 
-ClpSimplexProgress::cycle(int in, int out,int wayIn,int wayOut)
+ClpInteriorProgress::cycle(int in, int out,int wayIn,int wayOut)
 {
   int i;
   int matched=0;
@@ -4684,7 +4684,7 @@ ClpSimplexProgress::cycle(int in, int out,int wayIn,int wayOut)
 }
 // Allow initial dense factorization
 void 
-ClpSimplex::setInitialDenseFactorization(bool onOff)
+ClpInterior::setInitialDenseFactorization(bool onOff)
 {
   if (onOff)
     specialOptions_ |= 8;
@@ -4692,7 +4692,7 @@ ClpSimplex::setInitialDenseFactorization(bool onOff)
     specialOptions_ &= ~8;
 }
 bool 
-ClpSimplex::initialDenseFactorization() const
+ClpInterior::initialDenseFactorization() const
 {
   return (specialOptions_&8)!=0;
 }

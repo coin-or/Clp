@@ -92,7 +92,7 @@
 #include <math.h>
 
 #include "CoinHelperFunctions.hpp"
-#include "ClpSimplexDual.hpp"
+#include "ClpPdco.hpp"
 #include "ClpFactorization.hpp"
 #include "CoinPackedMatrix.hpp"
 #include "CoinIndexedVector.hpp"
@@ -108,7 +108,7 @@
 //#define CLP_DEBUG 1
 #define CHECK_DJ
 // dual 
-int ClpSimplexDual::dual (int ifValuesPass )
+int ClpPdco::dual (int ifValuesPass )
 {
 
   /* *** Method
@@ -375,7 +375,7 @@ int ClpSimplexDual::dual (int ifValuesPass )
    +3 max iterations 
  */
 int
-ClpSimplexDual::whileIterating(double * & givenDuals)
+ClpPdco::whileIterating(double * & givenDuals)
 {
 #ifdef CLP_DEBUG
   int debugIteration=-1;
@@ -978,7 +978,7 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
    rowArray and columnarray will have flipped
    The output vector has movement (row length array) */
 int
-ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
+ClpPdco::updateDualsInDual(CoinIndexedVector * rowArray,
 				  CoinIndexedVector * columnArray,
 				  CoinIndexedVector * outputArray,
 				  double theta,
@@ -1082,7 +1082,7 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
 	} else if (value>-tolerance) {
 	  // at correct bound but may swap
 	  FakeBound bound = getFakeBound(iSequence+numberColumns_);
-	  if (bound==ClpSimplexDual::upperFake) {
+	  if (bound==ClpPdco::upperFake) {
 	    movement = lower[iSequence]-upper[iSequence];
 	    setStatus(iSequence+numberColumns_,atLowerBound);
 	    solution[iSequence] = lower[iSequence];
@@ -1104,7 +1104,7 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
 	} else if (value<tolerance) {
 	  // at correct bound but may swap
 	  FakeBound bound = getFakeBound(iSequence+numberColumns_);
-	  if (bound==ClpSimplexDual::lowerFake) {
+	  if (bound==ClpPdco::lowerFake) {
 	    movement = upper[iSequence]-lower[iSequence];
 	    setStatus(iSequence+numberColumns_,atUpperBound);
 	    solution[iSequence] = upper[iSequence];
@@ -1210,7 +1210,7 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
 	} else if (value<tolerance) {
 	  // at correct bound but may swap
 	  FakeBound bound = getFakeBound(iSequence);
-	  if (bound==ClpSimplexDual::lowerFake) {
+	  if (bound==ClpPdco::lowerFake) {
 	    movement = upper[iSequence]-lower[iSequence];
 	    setStatus(iSequence,atUpperBound);
 	    solution[iSequence] = upper[iSequence];
@@ -1232,7 +1232,7 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
 	} else if (value>-tolerance) {
 	  // at correct bound but may swap
 	  FakeBound bound = getFakeBound(iSequence);
-	  if (bound==ClpSimplexDual::upperFake) {
+	  if (bound==ClpPdco::upperFake) {
 	    movement = lower[iSequence]-upper[iSequence];
 	    setStatus(iSequence,atLowerBound);
 	    solution[iSequence] = lower[iSequence];
@@ -1259,7 +1259,7 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
   return numberInfeasibilities;
 }
 void
-ClpSimplexDual::updateDualsInValuesPass(CoinIndexedVector * rowArray,
+ClpPdco::updateDualsInValuesPass(CoinIndexedVector * rowArray,
 				  CoinIndexedVector * columnArray,
 					double theta)
 {
@@ -1338,7 +1338,7 @@ ClpSimplexDual::updateDualsInValuesPass(CoinIndexedVector * rowArray,
    For easy problems we can just choose one of the first rows we look at
 */
 void
-ClpSimplexDual::dualRow(int alreadyChosen)
+ClpPdco::dualRow(int alreadyChosen)
 {
   // get pivot row using whichever method it is
   int chosenRow=-1;
@@ -1451,7 +1451,7 @@ ClpSimplexDual::dualRow(int alreadyChosen)
 // Fills in changeVector which can be used to see if unbounded
 // and cost of change vector
 int
-ClpSimplexDual::changeBounds(bool initialize,
+ClpPdco::changeBounds(bool initialize,
 				 CoinIndexedVector * outputArray,
 				 double & changeCost)
 { 
@@ -1470,7 +1470,7 @@ ClpSimplexDual::changeBounds(bool initialize,
       double lowerValue=lower_[iSequence];
       double upperValue=upper_[iSequence];
       double value=solution_[iSequence];
-      setFakeBound(iSequence,ClpSimplexDual::noFake);
+      setFakeBound(iSequence,ClpPdco::noFake);
       switch(getStatus(iSequence)) {
 
       case basic:
@@ -1515,15 +1515,15 @@ ClpSimplexDual::changeBounds(bool initialize,
 	  upper_[iSequence]=newUpperValue;
 	  if (newLowerValue > lowerValue) {
 	    if (newUpperValue < upperValue) {
-	      setFakeBound(iSequence,ClpSimplexDual::bothFake);
+	      setFakeBound(iSequence,ClpPdco::bothFake);
 	      numberFake_++;
 	    } else {
-	      setFakeBound(iSequence,ClpSimplexDual::lowerFake);
+	      setFakeBound(iSequence,ClpPdco::lowerFake);
 	      numberFake_++;
 	    }
 	  } else {
 	    if (newUpperValue < upperValue) {
-	      setFakeBound(iSequence,ClpSimplexDual::upperFake);
+	      setFakeBound(iSequence,ClpPdco::upperFake);
 	      numberFake_++;
 	    }
 	  }
@@ -1564,20 +1564,20 @@ ClpSimplexDual::changeBounds(bool initialize,
 	    if (fabs(lowerValue-value)<=fabs(upperValue-value)) {
 	      if (upperValue > lowerValue + dualBound_) {
 		upper_[iSequence]=lowerValue+dualBound_;
-		setFakeBound(iSequence,ClpSimplexDual::upperFake);
+		setFakeBound(iSequence,ClpPdco::upperFake);
 		numberFake_++;
 	      }
 	    } else {
 	      if (lowerValue < upperValue - dualBound_) {
 		lower_[iSequence]=upperValue-dualBound_;
-		setFakeBound(iSequence,ClpSimplexDual::lowerFake);
+		setFakeBound(iSequence,ClpPdco::lowerFake);
 		numberFake_++;
 	      }
 	    }
 	  } else {
 	    lower_[iSequence]=-0.5*dualBound_;
 	    upper_[iSequence]= 0.5*dualBound_;
-	    setFakeBound(iSequence,ClpSimplexDual::bothFake);
+	    setFakeBound(iSequence,ClpPdco::bothFake);
 	    numberFake_++;
 	  }
 	} else {
@@ -1586,7 +1586,7 @@ ClpSimplexDual::changeBounds(bool initialize,
 	  assert(!("should not be here"));
 	  lower_[iSequence]=-0.5*dualBound_;
 	  upper_[iSequence]= 0.5*dualBound_;
-	  setFakeBound(iSequence,ClpSimplexDual::bothFake);
+	  setFakeBound(iSequence,ClpPdco::bothFake);
 	  numberFake_++;
 	  setStatus(iSequence,atUpperBound);
 	  solution_[iSequence]=0.5*dualBound_;
@@ -1606,7 +1606,7 @@ ClpSimplexDual::changeBounds(bool initialize,
    If necessary will modify costs
 */
 void
-ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
+ClpPdco::dualColumn(CoinIndexedVector * rowArray,
 			   CoinIndexedVector * columnArray,
 			   CoinIndexedVector * spareArray,
 			   CoinIndexedVector * spareArray2,
@@ -2245,7 +2245,7 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 /* Checks if tentative optimal actually means unbounded
    Returns -3 if not, 2 if is unbounded */
 int 
-ClpSimplexDual::checkUnbounded(CoinIndexedVector * ray,
+ClpPdco::checkUnbounded(CoinIndexedVector * ray,
 				   CoinIndexedVector * spare,
 				   double changeCost)
 {
@@ -2306,7 +2306,7 @@ ClpSimplexDual::checkUnbounded(CoinIndexedVector * ray,
 }
 /* Checks if finished.  Updates status */
 void 
-ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
+ClpPdco::statusOfProblemInDual(int & lastCleaned,int type,
 				      ClpSimplexProgress * progress,
 				      double * givenDuals)
 {
@@ -2787,7 +2787,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
    If change >0.0 then value in array >0.0 => from lower to upper
 */
 void 
-ClpSimplexDual::flipBounds(CoinIndexedVector * rowArray,
+ClpPdco::flipBounds(CoinIndexedVector * rowArray,
 		  CoinIndexedVector * columnArray,
 		  double change)
 {
@@ -2841,7 +2841,7 @@ ClpSimplexDual::flipBounds(CoinIndexedVector * rowArray,
 }
 // Restores bound to original bound
 void 
-ClpSimplexDual::originalBound( int iSequence)
+ClpPdco::originalBound( int iSequence)
 {
   if (getFakeBound(iSequence)!=noFake)
     numberFake_--;;
@@ -2873,7 +2873,7 @@ ClpSimplexDual::originalBound( int iSequence)
 /* As changeBounds but just changes new bounds for a single variable.
    Returns true if change */
 bool 
-ClpSimplexDual::changeBound( int iSequence)
+ClpPdco::changeBound( int iSequence)
 {
   // old values 
   double oldLower=lower_[iSequence];
@@ -2910,7 +2910,7 @@ ClpSimplexDual::changeBound( int iSequence)
 }
 // Perturbs problem
 void 
-ClpSimplexDual::perturb()
+ClpPdco::perturb()
 {
   if (perturbation_>100)
     return; //perturbed already
@@ -3186,7 +3186,7 @@ ClpSimplexDual::perturb()
    Return code is 0 if nothing interesting, -1 if infeasible both
    ways and +1 if infeasible one way (check values to see which one(s))
 */
-int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
+int ClpPdco::strongBranching(int numberVariables,const int * variables,
 				    double * newLower, double * newUpper,
 				    double ** outputSolution,
 				    int * outputStatus, int * outputIterations,
@@ -3514,7 +3514,7 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
   return returnCode;
 }
 // treat no pivot as finished (unless interesting)
-int ClpSimplexDual::fastDual(bool alwaysFinish)
+int ClpPdco::fastDual(bool alwaysFinish)
 {
   algorithm_ = -1;
   // save data
@@ -3629,7 +3629,7 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
 /* Checks number of variables at fake bounds.  This is used by fastDual
    so can exit gracefully before end */
 int 
-ClpSimplexDual::numberAtFakeBound()
+ClpPdco::numberAtFakeBound()
 {
   int iSequence;
   int numberFake=0;
@@ -3665,7 +3665,7 @@ ClpSimplexDual::numberAtFakeBound()
    Return codes as before but -1 means no acceptable pivot
 */
 int 
-ClpSimplexDual::pivotResult()
+ClpPdco::pivotResult()
 {
   abort();
   return 0;
@@ -3676,7 +3676,7 @@ ClpSimplexDual::pivotResult()
    This is used in dual values pass
 */
 int
-ClpSimplexDual::checkPossibleValuesMove(CoinIndexedVector * rowArray,
+ClpPdco::checkPossibleValuesMove(CoinIndexedVector * rowArray,
 					CoinIndexedVector * columnArray,
 					double acceptablePivot,
 					CoinBigIndex * dubiousWeights)
@@ -3865,7 +3865,7 @@ ClpSimplexDual::checkPossibleValuesMove(CoinIndexedVector * rowArray,
    This sees if we can move duals in dual values pass.
    This is done before any pivoting
 */
-void ClpSimplexDual::doEasyOnesInValuesPass(double * dj)
+void ClpPdco::doEasyOnesInValuesPass(double * dj)
 {
   // Get column copy
   CoinPackedMatrix * columnCopy = matrix();
@@ -4007,7 +4007,7 @@ void ClpSimplexDual::doEasyOnesInValuesPass(double * dj)
   delete [] scaled;
 }
 int
-ClpSimplexDual::nextSuperBasic()
+ClpPdco::nextSuperBasic()
 {
   if (firstFree_>=0) {
     int returnValue=firstFree_;

@@ -716,8 +716,8 @@ ClpSimplexUnitTest(const std::string & mpsDir,
       for (iRow=0;iRow<numberRows;iRow++) {
 	double value = result[iRow];
 	assert(eq(value,sol[iRow]));
-	assert(value<upper[iRow]+1.0e-8);
-	assert(value>lower[iRow]-1.0e-8);
+	assert(value<upper[iRow]+2.0e-8);
+	assert(value>lower[iRow]-2.0e-8);
       }
       CoinFillN ( result, numberRows,0.0);
       solution.matrix()->times(ray, result);

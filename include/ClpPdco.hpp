@@ -1,14 +1,14 @@
-// Copyright (C) 2002, International Business Machines
+// Copyright (C) 2003, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
 /* 
    Authors
    
-   John Forrest
+   John Tomlin
 
  */
-#ifndef ClpSimplexDual_H
-#define ClpSimplexDual_H
+#ifndef ClpPdco_H
+#define ClpPdco_H
 
 #include "ClpSimplex.hpp"
 
@@ -19,7 +19,7 @@
 
 */
 
-class ClpSimplexDual : public ClpSimplex {
+class ClpPdco : public ClpSimplex {
 
 public:
 

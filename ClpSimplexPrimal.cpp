@@ -184,9 +184,10 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
 
   // save data
   ClpDataSave data = saveData();
-
-
-    // initialize - maybe values pass and algorithm_ is +1
+  
+  // Save so can see if doing after dual
+  int initialStatus=problemStatus_;
+  // initialize - maybe values pass and algorithm_ is +1
     if (!startup(ifValuesPass)) {
 
     int lastCleaned=0; // last time objective or bounds cleaned up
@@ -241,7 +242,8 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
       matrix_->refresh(this);
       // If getting nowhere - why not give it a kick
 #if 1
-      if (perturbation_<101&&numberIterations_>2*(numberRows_+numberColumns_)) 
+      if (perturbation_<101&&numberIterations_>2*(numberRows_+numberColumns_)
+	  &&initialStatus!=10) 
 	perturb(1);
 #endif
       // If we have done no iterations - special
@@ -261,7 +263,7 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
 	break;
       
       // Iterate
-      whileIterating();
+      whileIterating(ifValuesPass);
     }
   }
   // if infeasible get real values
@@ -291,11 +293,14 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
   +3 max iterations 
 */
 int
-ClpSimplexPrimal::whileIterating()
+ClpSimplexPrimal::whileIterating(int valuesOption)
 {
   // Say if values pass
   int ifValuesPass=(firstFree_>=0) ? 1 : 0;
   int returnCode=-1;
+  int superBasicType=1;
+  if (valuesOption>1)
+    superBasicType=3;
   // status stays at -1 while iterating, >=0 finished, -2 to invert
   // status -3 to go to top without an invert
   while (problemStatus_==-1) {
@@ -351,7 +356,9 @@ ClpSimplexPrimal::whileIterating()
 		   columnArray_[0],columnArray_[1]);
     } else {
       // in values pass
-      int sequenceIn=nextSuperBasic();
+      int sequenceIn=nextSuperBasic(superBasicType,columnArray_[0]);
+      if (valuesOption>1)
+	superBasicType=2;
       if (sequenceIn<0) {
 	// end of values pass - initialize weights etc
 	handler_->message(CLP_END_VALUES_PASS,messages_)
@@ -417,6 +424,8 @@ ClpSimplexPrimal::whileIterating()
       break;
     }
   }
+  if (valuesOption>1) 
+    columnArray_[0]->setNumElements(0);
   return returnCode;
 }
 /* Checks if finished.  Updates status */
@@ -603,6 +612,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	  nonLinearCost_->checkInfeasibilities(0.0);
 	  gutsOfSolution(NULL,NULL);
 	  problemStatus_=-1; //continue
+	  goToDual=false;
 	} else {
 	  // say infeasible
 	  problemStatus_ = 1;
@@ -1368,11 +1378,46 @@ ClpSimplexPrimal::perturb(int type)
 {
   if (perturbation_>100)
     return; //perturbed already
+  if (perturbation_==100)
+    perturbation_=50; // treat as normal
   int i;
+  if (!numberIterations_)
+    cleanStatus(); // make sure status okay
+  if (!numberIterations_&&perturbation_==50) {
+    // See if we need to perturb
+    double * sort = new double[numberRows_];
+    for (i=0;i<numberRows_;i++) {
+      double lo = fabs(lower_[i]);
+      double up = fabs(upper_[i]);
+      double value=0.0;
+      if (lo&&lo<1.0e20) {
+	if (up&&up<1.0e20)
+	  value = 0.5*(lo+up);
+	else
+	  value=lo;
+      } else {
+	if (up&&up<1.0e20)
+	  value = up;
+      }
+      sort[i]=value;
+    }
+    std::sort(sort,sort+numberRows_);
+    int number=1;
+    double last = sort[0];
+    for (i=1;i<numberRows_;i++) {
+      if (last!=sort[i])
+	number++;
+      last=sort[i];
+    }
+    delete [] sort;
+    if (number*4>numberRows_)
+      return; // good enough
+  }
   // primal perturbation
   double perturbation=1.0e-20;
+  int numberNonZero=0;
   // maximum fraction of rhs/bounds to perturb
-  double maximumFraction = 1.0e-8;
+  double maximumFraction = 1.0e-7;
   if (perturbation_>=50) {
     perturbation = 1.0e-4;
     for (i=0;i<numberColumns_+numberRows_;i++) {
@@ -1386,11 +1431,22 @@ ClpSimplexPrimal::perturb(int type)
 	  upperValue = fabs(upper_[i]);
 	else
 	  upperValue=0.0;
-	double value = max(lowerValue,upperValue);
+	double value = max(fabs(lowerValue),fabs(upperValue));
 	value = min(value,upper_[i]-lower_[i]);
+#if 1
+	if (value) {
+	  perturbation += value;
+	  numberNonZero++;
+	}
+#else
 	perturbation = max(perturbation,value);
+#endif
       }
     }
+    if (numberNonZero) 
+      perturbation /= (double) numberNonZero;
+    else
+      perturbation = 1.0e-1;
   } else if (perturbation_<100) {
     perturbation = pow(10.0,perturbation_);
     // user is in charge
@@ -1400,6 +1456,7 @@ ClpSimplexPrimal::perturb(int type)
   double largest=0.0;
   double largestPerCent=0.0;
   bool printOut=(handler_->logLevel()==63);
+  printOut=false; //off
   // Check if all slack
   int number=0;
   int iSequence;
@@ -1479,10 +1536,6 @@ ClpSimplexPrimal::perturb(int type)
 	  printf("col %d lower from %g to %g, upper from %g to %g\n",
 		 i,lower_[i],lowerValue,upper_[i],upperValue);
       }
-      if (solution_[i]==lower_[i])
-	solution_[i]=lowerValue;
-      else if (solution_[i]==upper_[i])
-	solution_[i]=upperValue;
       lower_[i]=lowerValue;
       upper_[i]=upperValue;
     }
@@ -1517,12 +1570,27 @@ ClpSimplexPrimal::perturb(int type)
       if (printOut)
 	printf("row %d lower from %g to %g, upper from %g to %g\n",
 	       i-numberColumns_,lower_[i],lowerValue,upper_[i],upperValue);
-      if (solution_[i]==lower_[i])
-	solution_[i]=lowerValue;
-      else if (solution_[i]==upper_[i])
-	solution_[i]=upperValue;
       lower_[i]=lowerValue;
       upper_[i]=upperValue;
+    }
+  }
+  // Clean up
+  for (i=0;i<numberColumns_+numberRows_;i++) {
+    switch(getStatus(i)) {
+      
+    case basic:
+      break;
+    case atUpperBound:
+      solution_[i]=upper_[i];
+      break;
+    case isFixed:
+    case atLowerBound:
+      solution_[i]=lower_[i];
+      break;
+    case isFree:
+      break;
+    case superBasic:
+      break;
     }
   }
   handler_->message(CLP_SIMPLEX_PERTURB,messages_)
@@ -1809,7 +1877,8 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	problemStatus_=-2; // factorize now
       }
       // here do part of steepest - ready for next iteration
-      primalColumnPivot_->updateWeights(rowArray_[1]);
+      if (!ifValuesPass)
+	primalColumnPivot_->updateWeights(rowArray_[1]);
     } else {
       if (pivotRow_==-1) {
 	// no outgoing row is valid
@@ -1954,5 +2023,87 @@ ClpSimplexPrimal::primalRay(CoinIndexedVector * rowArray)
       ray_[iPivot] = way* array[iRow];
   }
 }
+/* Get next superbasic -1 if none,
+   Normal type is 1
+   If type is 3 then initializes sorted list
+   if 2 uses list.
+*/
+int 
+ClpSimplexPrimal::nextSuperBasic(int superBasicType,CoinIndexedVector * columnArray)
+{
+  if (firstFree_>=0&&superBasicType) {
+    int returnValue=firstFree_;
+    int iColumn=firstFree_+1;
+    if (superBasicType>1) {
+      if (superBasicType>2) {
+	// Initialize list
+	// Wild guess that lower bound more natural than upper
+	int number=0;
+	double * work=columnArray->denseVector();
+	int * which=columnArray->getIndices();
+	for (iColumn=0;iColumn<numberRows_+numberColumns_;iColumn++) {
+	  if (getStatus(iColumn)==superBasic) {
+	    if (fabs(solution_[iColumn]-lower_[iColumn])<=primalTolerance_) {
+	      solution_[iColumn]=lower_[iColumn];
+	      setStatus(iColumn,atLowerBound);
+	    } else if (fabs(solution_[iColumn]-upper_[iColumn])
+		       <=primalTolerance_) {
+	      solution_[iColumn]=upper_[iColumn];
+	      setStatus(iColumn,atUpperBound);
+	    } else if (lower_[iColumn]<-1.0e20&&upper_[iColumn]>1.0e20) {
+	      setStatus(iColumn,isFree);
+	      break;
+	    } else if (!flagged(iColumn)) {
+	      // put ones near bounds at end after sorting
+	      work[number]= - min(0.1*(solution_[iColumn]-lower_[iColumn]),
+				  upper_[iColumn]-solution_[iColumn]);
+	      which[number++] = iColumn;
+	    }
+	  }
+	}
+	CoinSort_2(work,work+number,which);
+	columnArray->setNumElements(number);
+	memset(work,0,number*sizeof(double));
+      }
+      int * which=columnArray->getIndices();
+      int number = columnArray->getNumElements();
+      if (!number) {
+	// finished
+	iColumn = numberRows_+numberColumns_;
+	returnValue=-1;
+      } else {
+	number--;
+	returnValue=which[number];
+	iColumn=returnValue;
+	columnArray->setNumElements(number);
+      }      
+    } else {
+      for (;iColumn<numberRows_+numberColumns_;iColumn++) {
+	if (getStatus(iColumn)==superBasic) {
+	  if (fabs(solution_[iColumn]-lower_[iColumn])<=primalTolerance_) {
+	    solution_[iColumn]=lower_[iColumn];
+	    setStatus(iColumn,atLowerBound);
+	  } else if (fabs(solution_[iColumn]-upper_[iColumn])
+		     <=primalTolerance_) {
+	    solution_[iColumn]=upper_[iColumn];
+	    setStatus(iColumn,atUpperBound);
+	  } else if (lower_[iColumn]<-1.0e20&&upper_[iColumn]>1.0e20) {
+	    setStatus(iColumn,isFree);
+	    break;
+	  } else {
+	    break;
+	  }
+	}
+      }
+    }
+    firstFree_ = iColumn;
+    if (firstFree_==numberRows_+numberColumns_)
+      firstFree_=-1;
+    return returnValue;
+  } else {
+    return -1;
+  }
+}
+ 
   
 

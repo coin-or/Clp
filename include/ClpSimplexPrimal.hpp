@@ -137,8 +137,10 @@ public:
       -4 Looks optimal/infeasible
       -5 Looks unbounded
       +3 max iterations 
+      
+      valuesOption has original value of valuesPass
    */
-  int whileIterating(); 
+  int whileIterating(int valuesOption); 
 
   /** Do last half of an iteration.  This is split out so people can
       force incoming variable.  If solveType_ is 2 then this may
@@ -216,6 +218,12 @@ public:
   bool unPerturb();
   /// Unflag all variables and return number unflagged
   int unflag();
+  /** Get next superbasic -1 if none,
+      Normal type is 1
+      If type is 3 then initializes sorted list
+      if 2 uses list.
+  */
+  int nextSuperBasic(int superBasicType,CoinIndexedVector * columnArray);
 
   /// Create primal ray
   void primalRay(CoinIndexedVector * rowArray);

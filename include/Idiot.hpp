@@ -138,11 +138,16 @@ public:
   { return maxBigIts_;};
   inline void setReduceIterations(int value)
   { maxBigIts_ = value;};
-  /// Amount of information - default of 1 should be okay */
+  /// Amount of information - default of 1 should be okay 
   inline int getLogLevel() const
   { return logLevel_;};
   inline void setLogLevel(int value)
   { logLevel_ = value;};
+  /// How lightweight - 0 not, 1 yes
+  inline int getLightweight() const
+  { return lightWeight_;};
+  inline void setLightweight(int value)
+  { lightWeight_ = value;};
   //@}
 
 
@@ -210,5 +215,6 @@ private:
                     32 - "intelligent?" reduction of mu and reasonableInfeas
                   2048 - keep lambda across mu change
 		  4096 - return best solution (not last found) */
+  int lightWeight_; // 0 - normal, 1 lightweight
 };
 #endif

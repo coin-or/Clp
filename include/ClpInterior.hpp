@@ -1,14 +1,14 @@
-// Copyright (C) 2002, International Business Machines
+// Copyright (C) 2003, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
 /* 
    Authors
    
-   John Forrest
+   John Tomlin (with some help from John Forrest)
 
  */
-#ifndef ClpSimplex_H
-#define ClpSimplex_H
+#ifndef ClpInterior_H
+#define ClpInterior_H
 
 #include <iostream>
 #include <cfloat>
@@ -20,7 +20,7 @@ class ClpPrimalColumnPivot;
 class ClpFactorization;
 class CoinIndexedVector;
 class ClpNonLinearCost;
-class ClpSimplexProgress;
+class ClpInteriorProgress;
 
 /** This solves LPs using the simplex method
 
@@ -32,19 +32,19 @@ class ClpSimplexProgress;
 
     For a description of algorithms:
 
-    for dual see ClpSimplexDual.hpp and at top of ClpSimplexDual.cpp
-    for primal see ClpSimplexPrimal.hpp and at top of ClpSimplexPrimal.cpp
+    for dual see ClpInteriorDual.hpp and at top of ClpInteriorDual.cpp
+    for primal see ClpInteriorPrimal.hpp and at top of ClpInteriorPrimal.cpp
 
     There is an algorithm data member.  + for primal variations
     and - for dual variations
 
-    This file also includes (at end) a very simple class ClpSimplexProgress
+    This file also includes (at end) a very simple class ClpInteriorProgress
     which is where anti-looping stuff should migrate to
 
 */
 
-class ClpSimplex : public ClpModel {
-   friend void ClpSimplexUnitTest(const std::string & mpsDir,
+class ClpInterior : public ClpModel {
+   friend void ClpInteriorUnitTest(const std::string & mpsDir,
 				  const std::string & netlibDir);
 
 public:
@@ -71,24 +71,24 @@ public:
   /**@name Constructors and destructor and copy */
   //@{
   /// Default constructor
-    ClpSimplex (  );
+    ClpInterior (  );
 
   /// Copy constructor. 
-  ClpSimplex(const ClpSimplex &);
+  ClpInterior(const ClpInterior &);
   /// Copy constructor from model. 
-  ClpSimplex(const ClpModel &);
+  ClpInterior(const ClpModel &);
   /** Subproblem constructor.  A subset of whole model is created from the 
       row and column lists given.  The new order is given by list order and
       duplicates are allowed.  Name and integer information can be dropped
   */
-  ClpSimplex (const ClpModel * wholeModel,
+  ClpInterior (const ClpModel * wholeModel,
 	      int numberRows, const int * whichRows,
 	      int numberColumns, const int * whichColumns,
 	      bool dropNames=true, bool dropIntegers=true);
   /// Assignment operator. This copies the data
-    ClpSimplex & operator=(const ClpSimplex & rhs);
+    ClpInterior & operator=(const ClpInterior & rhs);
   /// Destructor
-   ~ClpSimplex (  );
+   ~ClpInterior (  );
   // Ones below are just ClpModel with some changes
   /** Loads a problem (the constraints on the
         rows are given by lower and upper bounds). If a pointer is 0 then the
@@ -146,9 +146,9 @@ public:
       See  ClpSolve.hpp for options
    */
   int initialSolve(ClpSolve & options);
-  /** Dual algorithm - see ClpSimplexDual.hpp for method */
+  /** Dual algorithm - see ClpInteriorDual.hpp for method */
   int dual(int ifValuesPass=0);
-  /** Primal algorithm - see ClpSimplexPrimal.hpp for method */
+  /** Primal algorithm - see ClpInteriorPrimal.hpp for method */
   int primal(int ifValuesPass=0);
   /** Solves quadratic problem using SLP - may be used as crash
       for other algorithms when number of iterations small.
@@ -347,7 +347,7 @@ public:
   int createPiecewiseLinearCosts(const int * starts,
 		   const double * lower, const double * gradient);
   /** Return model - updates any scalars */
-  void returnModel(ClpSimplex & otherModel);
+  void returnModel(ClpInterior & otherModel);
   /** Factorizes using current basis.  
       solveType - 1 iterating, 0 initial, -1 external 
       If 10 added then in primal values pass
@@ -528,7 +528,7 @@ public:
   /// Does most of deletion (0 = all, 1 = most, 2 most + factorization)
   void gutsOfDelete(int type);
   /// Does most of copying
-  void gutsOfCopy(const ClpSimplex & rhs);
+  void gutsOfCopy(const ClpInterior & rhs);
   /** puts in format I like (rowLower,rowUpper) also see StandardMatrix 
       1 bit does rows, 2 bit does column bounds, 4 bit does objective(s).
       8 bit does solution scaling in
@@ -918,11 +918,11 @@ protected:
   float incomingInfeasibility_;
   float allowedInfeasibility_;
   /// For dealing with all issues of cycling etc
-  ClpSimplexProgress * progress_;
+  ClpInteriorProgress * progress_;
   //@}
 };
 //#############################################################################
-/** A function that tests the methods in the ClpSimplex class. The
+/** A function that tests the methods in the ClpInterior class. The
     only reason for it not to be a member method is that this way it doesn't
     have to be compiled into the library. And that's a gain, because the
     library should be compiled with optimization on, but this method should be
@@ -931,12 +931,12 @@ protected:
     It also does some testing of ClpFactorization class
  */
 void
-ClpSimplexUnitTest(const std::string & mpsDir,
+ClpInteriorUnitTest(const std::string & mpsDir,
 		   const std::string & netlibDir);
 
 
 /// For saving extra information to see if looping.
-class ClpSimplexProgress {
+class ClpInteriorProgress {
 
 public:
 
@@ -944,18 +944,18 @@ public:
   /**@name Constructors and destructor and copy */
   //@{
   /// Default constructor
-    ClpSimplexProgress (  );
+    ClpInteriorProgress (  );
 
   /// Constructor from model
-    ClpSimplexProgress ( ClpSimplex * model );
+    ClpInteriorProgress ( ClpInterior * model );
 
   /// Copy constructor. 
-  ClpSimplexProgress(const ClpSimplexProgress &);
+  ClpInteriorProgress(const ClpInteriorProgress &);
 
   /// Assignment operator. This copies the data
-    ClpSimplexProgress & operator=(const ClpSimplexProgress & rhs);
+    ClpInteriorProgress & operator=(const ClpInteriorProgress & rhs);
   /// Destructor
-   ~ClpSimplexProgress (  );
+   ~ClpInteriorProgress (  );
   //@}
 
   /**@name Check progress */
@@ -985,7 +985,7 @@ public:
   /// Sum of infeasibilities for algorithm
   double infeasibility_[CLP_PROGRESS];
   /// Pointer back to model so we can get information
-  ClpSimplex * model_;
+  ClpInterior * model_;
   /// Number of infeasibilities
   int numberInfeasibilities_[CLP_PROGRESS];
   /// Iteration number at which occurred

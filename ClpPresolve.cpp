@@ -893,7 +893,7 @@ void ClpPresolve::postsolve(CoinPostsolveMatrix &prob)
 #if	DEBUG_PRESOLVE
 void check_djs(CoinPostsolveMatrix *prob)
 {
-  return;
+  //return;
   double *colels	= prob->colels_;
   int *hrow		= prob->hrow_;
   int *mcstrt		= prob->mcstrt_;
@@ -934,11 +934,10 @@ void check_djs(CoinPostsolveMatrix *prob)
 	int row = hrow[k];
 	double coeff = colels[k];
 	k = link[k];
-
 	dj -= rowduals[row] * coeff;
 	rsol[row] += solutionValue*coeff;
       }
-      if (! (fabs(rcosts[colx] - dj) < 100*ZTOLDP))
+      if (! (fabs(rcosts[colx] - dj) < 1.0e-4))
 	printf("BAD DJ:  %d %g %g\n",
 	       colx, rcosts[colx], dj);
       if (cup[colx]-clo[colx]>1.0e-6) {
@@ -964,15 +963,15 @@ void check_djs(CoinPostsolveMatrix *prob)
       if (rup[rowx]-rlo[rowx]>1.0e-6) {
 	double dj = rowduals[rowx];
 	if (rsol[rowx]<rlo[rowx]+1.0e-6) {
-	  if (dj <-1.0e-6)
+	  if (dj <-1.0e-5)
 	    printf("neg rDJ:  %d %g  - %g %g %g\n",
 		   rowx, dj, rlo[rowx], rsol[rowx], rup[rowx]);
 	} else if (rsol[rowx]>rup[rowx]-1.0e-6) {
-	  if (dj > 1.0e-6)
+	  if (dj > 1.0e-5)
 	    printf("pos rDJ:  %d %g  - %g %g %g\n",
 		   rowx, dj, rlo[rowx], rsol[rowx], rup[rowx]);
 	} else {
-	  if (fabs(dj) >1.0e-6)
+	  if (fabs(dj) >1.0e-5)
 	    printf("nonzero rDJ:  %d %g  - %g %g %g\n",
 		   rowx, dj, rlo[rowx], rsol[rowx], rup[rowx]);
 	}
@@ -1065,6 +1064,17 @@ static bool isGapFree(const CoinPackedMatrix& matrix)
   }
   return (! (i >= 0));
 }
+#if	DEBUG_PRESOLVE
+static void matrix_bounds_ok(const double *lo, const double *up, int n)
+{
+  int i;
+  for (i=0; i<n; i++) {
+    PRESOLVEASSERT(lo[i] <= up[i]);
+    PRESOLVEASSERT(lo[i] < PRESOLVE_INF);
+    PRESOLVEASSERT(-PRESOLVE_INF < up[i]);
+  }
+}
+#endif
 CoinPresolveMatrix::CoinPresolveMatrix(int ncols0_in,
 				     double maxmin_,
 				     // end prepost members

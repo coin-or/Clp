@@ -6,7 +6,7 @@ LibType := STATIC
 # highest level of optimization the compiler supports. If want something in
 # between then specify the exact level you want, e.g., -O1 or -O2
 OptLevel := -g
-OptLevel := -O1
+#OptLevel := -O2
 
 LIBNAME := Clp
 LIBSRC :=
@@ -52,6 +52,7 @@ CXXFLAGS += -DUSE_PRESOLVE
 #CXXFLAGS += -DCORRECT_COLUMN_COUNTS
 ifeq ($(OptLevel),-g)
 #     CXXFLAGS += -DCLP_DEBUG
+#CXXFLAGS += -DDEBUG_PRESOLVE
 endif
 ifeq ($(OptLevel),-O2)
 #     CXXFLAGS += -DNDEBUG

@@ -25,13 +25,63 @@ public:
   //@{
   
   /** Returns pivot column, -1 if none.
-      updateArray has cost updates (also use pivotRow_ from last iteration)
+      updateArray has cost updates (also use pivotRow_ from last iteration).
+      Parts of operation split out into seperate functions for
+      profiling and speed
   */
   virtual int pivotColumn(CoinIndexedVector * updates,
 			  CoinIndexedVector * spareRow1,
 			  CoinIndexedVector * spareRow2,
 			  CoinIndexedVector * spareColumn1,
 			  CoinIndexedVector * spareColumn2);
+  /// For quadratic or funny nonlinearities
+  int pivotColumnOldMethod(CoinIndexedVector * updates,
+			  CoinIndexedVector * spareRow1,
+			  CoinIndexedVector * spareRow2,
+			  CoinIndexedVector * spareColumn1,
+			  CoinIndexedVector * spareColumn2);
+  /// Just update djs
+  void justDjs(CoinIndexedVector * updates,
+	       CoinIndexedVector * spareRow1,
+	       CoinIndexedVector * spareRow2,
+	       CoinIndexedVector * spareColumn1,
+	       CoinIndexedVector * spareColumn2);
+  /// Update djs, weights for Devex using djs
+  void djsAndDevex(CoinIndexedVector * updates,
+	       CoinIndexedVector * spareRow1,
+	       CoinIndexedVector * spareRow2,
+	       CoinIndexedVector * spareColumn1,
+	       CoinIndexedVector * spareColumn2);
+  /// Update djs, weights for Steepest using djs
+  void djsAndSteepest(CoinIndexedVector * updates,
+	       CoinIndexedVector * spareRow1,
+	       CoinIndexedVector * spareRow2,
+	       CoinIndexedVector * spareColumn1,
+	       CoinIndexedVector * spareColumn2);
+  /// Update djs, weights for Devex using pivot row
+  void djsAndDevex2(CoinIndexedVector * updates,
+	       CoinIndexedVector * spareRow1,
+	       CoinIndexedVector * spareRow2,
+	       CoinIndexedVector * spareColumn1,
+	       CoinIndexedVector * spareColumn2);
+  /// Update djs, weights for Steepest using pivot row
+  void djsAndSteepest2(CoinIndexedVector * updates,
+	       CoinIndexedVector * spareRow1,
+	       CoinIndexedVector * spareRow2,
+	       CoinIndexedVector * spareColumn1,
+	       CoinIndexedVector * spareColumn2);
+  /// Update weights for Devex
+  void justDevex(CoinIndexedVector * updates,
+	       CoinIndexedVector * spareRow1,
+	       CoinIndexedVector * spareRow2,
+	       CoinIndexedVector * spareColumn1,
+	       CoinIndexedVector * spareColumn2);
+  /// Update weights for Steepest
+  void justSteepest(CoinIndexedVector * updates,
+	       CoinIndexedVector * spareRow1,
+	       CoinIndexedVector * spareRow2,
+	       CoinIndexedVector * spareColumn1,
+	       CoinIndexedVector * spareColumn2);
 
   /// Updates weights - part 1 - also checks accuracy
   virtual void updateWeights(CoinIndexedVector * input);
@@ -67,7 +117,7 @@ public:
   /** Default Constructor 
       0 is exact devex, 1 full steepest, 2 is partial exact devex
       3 switches between 0 and 2 depending on factorization
-      4 starts as partial dantzig but then may switch between 0 and 2.
+      4 starts as partial dantzig/devex but then may switch between 0 and 2.
       By partial exact devex is meant that the weights are updated as normal
       but only part of the nonbasic variables are scanned.  
       This can be faster on very easy problems.
@@ -129,7 +179,7 @@ private:
   /**
       0 is exact devex, 1 full steepest, 2 is partial exact devex
       3 switches between 0 and 2 depending on factorization
-      4 starts as partial dantzig but then may switch between 0 and 2.
+      4 starts as partial dantzig/devex but then may switch between 0 and 2.
       By partial exact devex is meant that the weights are updated as normal
       but only part of the nonbasic variables are scanned.  
       This can be faster on very easy problems.*/

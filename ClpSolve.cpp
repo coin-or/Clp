@@ -102,7 +102,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
       presolve=ClpSolve::presolveOff;
     }
     // We may be better off using original
-    if (numberRows_<1.01*model2->numberRows_&&numberColumns_<1.01*model2->numberColumns_) {
+    if (presolve!=ClpSolve::presolveOff&&
+	numberRows_<1.01*model2->numberRows_&&numberColumns_<1.01*model2->numberColumns_) {
       delete model2;
       model2 = this;
       presolve=ClpSolve::presolveOff;
@@ -214,7 +215,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
   }
   if (model2->factorizationFrequency()==200) {
     // User did not touch preset
-    model2->setFactorizationFrequency(100+model2->numberRows()/100);
+    model2->setFactorizationFrequency(100+model2->numberRows()/200);
   }
   if (method==ClpSolve::usePrimalorSprint) {
     if (doSprint<0) { 
@@ -240,7 +241,9 @@ ClpSimplex::initialSolve(ClpSolve & options)
     if (doIdiot) {
       int nPasses=0;
       Idiot info(*model2);
-      if (numberRows>1000&&numberColumns>2*numberRows) {
+      // Get ratio of average number of elements per column to 5
+      double ratio  = ((double) numberElements/(double) numberColumns)/5.0;
+      if (numberRows>200&&numberColumns>5000&&numberColumns>2*numberRows) {
 	if (plusMinus) {
 	  // look at rhs
 	  int iRow;
@@ -264,7 +267,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	    nPasses = min(nPasses,50);
 	    nPasses = max(nPasses,15);
 	    if (numberElements<3*numberColumns) 
-	      nPasses=0; // probably not worh it
+	      nPasses=10; // probably not worh it
+	    info.setLightweight(1); // say lightweight idiot
 	  } else if (largest/smallest>1.01||numberElements<=3*numberColumns) {
 	    nPasses = 10+numberColumns/1000;
 	    nPasses = min(nPasses,100);
@@ -283,10 +287,14 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	    nPasses = min(nPasses,50);
 	  else
 	    nPasses=5;
+	  info.setLightweight(1); // say lightweight idiot
 	  if (numberElements<3*numberColumns) 
-	    nPasses=0; // probably not worh it
+	    nPasses=2; // probably not worh it
 	  else
 	    nPasses = max(nPasses,5);
+	  nPasses = (int) (((double) nPasses)/ratio); // reduce if lots of elements per column
+	  if (nPasses<2)
+	    nPasses=0;
 	  //info.setStartingWeight(1.0e-1);
 	}
       }
@@ -311,7 +319,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
     // ?
     if (doCrash)
       model2->crash(1000,1);
-    model2->primal(1);
+    model2->primal(2);
     time2 = CoinCpuTime();
     timeCore = time2-timeX;
     timeSimplex = timeCore;
@@ -478,6 +486,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
       whichRows[iRow]=iRow;
     double originalOffset;
     model2->getDblParam(ClpObjOffset,originalOffset);
+    int totalIterations=0;
     for (iPass=0;iPass<maxPass;iPass++) {
       //printf("Bug until submodel new version\n");
       //CoinSort_2(sort,sort+numberSort,weight);
@@ -516,6 +525,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
       if (interrupt)
 	currentModel = &small;
       small.primal();
+      totalIterations += small.numberIterations();
       // move solution back
       const double * solution = small.primalColumnSolution();
       for (iColumn=0;iColumn<numberSort;iColumn++) {
@@ -593,6 +603,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
       <<"Sprint"<<timeCore<<time2-time1
       <<CoinMessageEol;
     timeX=time2;
+    model2->setNumberIterations(model2->numberIterations()+totalIterations);
   } else {
     assert (method!=ClpSolve::automatic); // later
     time2=0.0;

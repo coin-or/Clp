@@ -26,6 +26,7 @@
 #include "ClpNetworkMatrix.hpp"
 #include "ClpDualRowSteepest.hpp"
 #include "ClpDualRowDantzig.hpp"
+#include "ClpLinearObjective.hpp"
 #include "ClpPrimalColumnSteepest.hpp"
 #include "ClpPrimalColumnDantzig.hpp"
 #include "ClpPresolve.hpp"
@@ -62,7 +63,7 @@ enum ClpParameterType {
   
   DIRECTORY=301,IMPORT,EXPORT,RESTORE,SAVE,DUALSIMPLEX,PRIMALSIMPLEX,
   MAXIMIZE,MINIMIZE,EXIT,STDIN,UNITTEST,NETLIB_DUAL,NETLIB_PRIMAL,SOLUTION,
-  TIGHTEN,FAKEBOUND,HELP,PLUSMINUS,NETWORK,ALLSLACK,
+  TIGHTEN,FAKEBOUND,HELP,PLUSMINUS,NETWORK,ALLSLACK,REVERSE,
 
   INVALID=1000
 };
@@ -856,7 +857,7 @@ int main (int argc, const char *argv[])
     // default action on import
     int allowImportErrors=0;
     int keepImportNames=1;
-    int doIdiot=-2;
+    int doIdiot=-1;
     int doCrash=0;
     int doSprint=-1;
     // set reasonable defaults
@@ -879,10 +880,10 @@ int main (int argc, const char *argv[])
 	      STDIN,299,false);
     parameters[numberParameters++]=
       ClpItem("allS!lack","Set basis back to all slack",
-	      ALLSLACK);
+	      ALLSLACK,false);
     parameters[numberParameters-1].setLonghelp
       (
-       ""
+       "Useful for playing around"
        ); 
     parameters[numberParameters++]=
       ClpItem("biasLU","Whether factorization biased towards U",
@@ -915,7 +916,8 @@ You can also use the parameters 'maximize' or 'minimize'."
 	      DIRECTORY,299);
     parameters[numberParameters-1].setLonghelp
       (
-       "This sets the directory which import, export, saveModel and restoreModel will use"
+       "This sets the directory which import, export, saveModel and restoreModel will use.\
+  It is initialized to './'"
        ); 
     parameters[numberParameters-1].setStringValue(directory);
     parameters[numberParameters++]=
@@ -924,7 +926,15 @@ gap between bounds exceeds this value",
 	      1.0e-20,1.0e12,DUALBOUND);
     parameters[numberParameters-1].setLonghelp
       (
-       ""
+       "The dual algorithm in Clp is a single phase algorithm as opposed to a two phase\
+ algorithm where you first get feasible then optimal.  If a problem has both upper and\
+ lower bounds then it is trivial to get dual feasible by setting non basic variables\
+ to correct bound.  If the gap between the upper and lower bounds of a variable is more\
+ than the value of dualBound Clp introduces fake bounds so that it can make the problem\
+ dual feasible.  This has the same effect as a composite objective function in the\
+ primal algorithm.  Too high a value may mean more iterations, while too low a bound means\
+ the code may go all the way and then have to increase the bounds.  OSL had a heuristic to\
+ adjust bounds, maybe we need that here."
        );
     parameters[numberParameters-1].setDoubleValue(models->dualBound());
     parameters[numberParameters++]=
@@ -935,14 +945,21 @@ gap between bounds exceeds this value",
     parameters[numberParameters-1].append("steep!est");
     parameters[numberParameters-1].setLonghelp
       (
-       ""
+       "Clp can use any pivot selection algorithm which the user codes as long as it\
+ implements the features in the abstract pivot base class.  The Dantzig method is implemented\
+ to show a simple method but its use is deprecated.  Steepest is the method of choice and there\
+ are two variants which keep all weights updated but only scan a subset each iteration.\
+ Partial switches this on while automatic decides at each iteration based on information\
+ about the factorization."
        ); 
     parameters[numberParameters++]=
       ClpItem("dualS!implex","Do dual simplex algorithm",
 	      DUALSIMPLEX);
     parameters[numberParameters-1].setLonghelp
       (
-       ""
+       "This command solves the current model using the dual steepest algorithm.\
+The time and iterations may be affected by settings such as presolve, scaling, crash\
+ and also by dual pivot method, fake bound on variables and dual and primal tolerances."
        ); 
     parameters[numberParameters++]=
       ClpItem("dualT!olerance","For an optimal solution \
@@ -950,7 +967,8 @@ no dual infeasibility may exceed this value",
 	      1.0e-20,1.0e12,DUALTOLERANCE);
     parameters[numberParameters-1].setLonghelp
       (
-       ""
+       "Normally the default tolerance is fine, but you may want to increase it a\
+ bit if a dual run seems to be having a hard time"
        ); 
     parameters[numberParameters-1].setDoubleValue(models->dualTolerance());
     parameters[numberParameters++]=
@@ -958,28 +976,32 @@ no dual infeasibility may exceed this value",
 	      EXIT);
     parameters[numberParameters-1].setLonghelp
       (
-       ""
+       "This stops the execution of Clp, end, exit, quit and stop are synonyms"
        ); 
     parameters[numberParameters++]=
       ClpItem("error!sAllowed","Whether to allow import errors",
 	      "off",ERRORSALLOWED);
     parameters[numberParameters-1].setLonghelp
       (
-       ""
+       "The default is not to use any model which had errors when reading the mps file.\
+  Setting this to 'on' will allow all errors from which the code can recover\
+ by ignoring the error."
        );
     parameters[numberParameters++]=
       ClpItem("exit","Stops clp execution",
 	      EXIT);
     parameters[numberParameters-1].setLonghelp
       (
-       ""
+       "This stops the execution of Clp, end, exit, quit and stop are synonyms"
        ); 
     parameters[numberParameters++]=
       ClpItem("export","Export model as mps file",
 	      EXPORT);
     parameters[numberParameters-1].setLonghelp
       (
-       ""
+       "This will write an MPS format file to the given file name.  It will use the default\
+ directory given by 'directory'.  A name of '$' will use the previous value for the name.  This\
+ is initialized to 'default.mps'."
        ); 
     parameters[numberParameters-1].setStringValue(exportFile);
     parameters[numberParameters++]=
@@ -990,10 +1012,13 @@ no dual infeasibility may exceed this value",
 	      HELP);
     parameters[numberParameters++]=
       ClpItem("idiot!Crash","Whether to try idiot crash",
-	      -2,200,IDIOT);
+	      -1,200,IDIOT);
     parameters[numberParameters-1].setLonghelp
       (
-       ""
+       "This is a type of 'crash' which works well on some homogeneous problems.\
+ It works best on problems with unit elements and rhs but will do something to any model.  It should only be\
+ used before primal.  It can be set to -1 when the code decides for itself whether to use it,\
+ 0 to switch off or n > 0 to do n passes."
        ); 
     parameters[numberParameters-1].setIntValue(doIdiot);
     parameters[numberParameters++]=
@@ -1001,7 +1026,10 @@ no dual infeasibility may exceed this value",
 	      IMPORT);
     parameters[numberParameters-1].setLonghelp
       (
-       ""
+       "This will read an MPS format file from the given file name.  It will use the default\
+ directory given by 'directory'.  A name of '$' will use the previous value for the name.  This\
+ is initialized to '', i.e. it must be set.  If you have libgz then it can read compressed\
+ files 'xxxxxxxx.gz'.."
        ); 
     parameters[numberParameters-1].setStringValue(importFile);
     parameters[numberParameters++]=
@@ -1010,14 +1038,15 @@ no dual infeasibility may exceed this value",
     parameters[numberParameters-1].append("off");
     parameters[numberParameters-1].setLonghelp
       (
-       ""
+       "It saves space to get rid of names so if you need to you can set this to off."
        ); 
     parameters[numberParameters++]=
       ClpItem("log!Level","Level of detail in output",
 	      0,63,LOGLEVEL);
     parameters[numberParameters-1].setLonghelp
       (
-       ""
+       "If 0 then there should be no output in normal circumstances.  1 is probably the best\
+ value for most uses, while 2 and 3 give more information."
        ); 
     parameters[numberParameters-1].setIntValue(models->logLevel());
     parameters[numberParameters++]=
@@ -1025,7 +1054,8 @@ no dual infeasibility may exceed this value",
 	      MAXIMIZE,299);
     parameters[numberParameters-1].setLonghelp
       (
-       ""
+       "The default is minimize - use 'maximize' for maximization.\n\
+You can also use the parameters 'direction maximize'."
        ); 
     parameters[numberParameters++]=
       ClpItem("maxF!actor","Maximum number of iterations between \
@@ -1050,14 +1080,20 @@ stopping",
 	      MINIMIZE,299);
     parameters[numberParameters-1].setLonghelp
       (
-       ""
+       "The default is minimize - use 'maximize' for maximization.\n\
+This should only be necessary if you have previously set maximization \
+You can also use the parameters 'direction minimize'."
        ); 
     parameters[numberParameters++]=
       ClpItem("mess!ages","Controls if Clpnnnn is printed",
 	      "off",MESSAGES);
     parameters[numberParameters-1].append("on");
     parameters[numberParameters-1].setLonghelp
-      (""
+      ("The default for the Clp library is to put out messages such as:\n\
+   Clp0005 2261  Objective 109.024 Primal infeas 944413 (758)\n\
+but this program turns this off to make it look more friendly.  It can be useful\
+ to turn them back on if you want to be able 'grep' for particular messages or if\
+ you intend to override the behavior of a particular message."
        ); 
     parameters[numberParameters++]=
       ClpItem("netlib","Solve entire netlib test set",
@@ -1070,7 +1106,10 @@ stopping",
 	      NETWORK,-1,false);
     parameters[numberParameters-1].setLonghelp
       (
-       ""
+       "Clp will go faster if the matrix can be converted to a network.  The matrix\
+ operations may be a bit faster with more efficient storage, but the main advantage\
+ comes from using a network factorization.  It will probably not be as fast as a \
+specialized network code."
        ); 
     parameters[numberParameters++]=
       ClpItem("objective!Scale","Scale factor to apply to objective",
@@ -1081,7 +1120,9 @@ stopping",
 	      0,100,PRESOLVEPASS);
     parameters[numberParameters-1].setLonghelp
       (
-       ""
+       "Normally Presolve does 5 passes but you may want to do less to make it\
+ more lightweight or do more if improvements are still being made.  As Presolve will return\
+ if nothing is being taken out, then you should not need to use this fine tuning."
        ); 
     parameters[numberParameters-1].setIntValue(preSolve);
     parameters[numberParameters++]=
@@ -1094,14 +1135,19 @@ stopping",
     parameters[numberParameters-1].append("off");
     parameters[numberParameters-1].setLonghelp
       (
-       ""
+       "Perturbation helps to stop cycling, but Clp uses other measures for this.\
+  However large problems and especially ones with unit elements and unit rhs or costs\
+ benefit from perturbation.  Normally Clp tries to be intelligent, but you can switch this off.\
+  The Clp library has this off by default.  This program has it on."
        ); 
     parameters[numberParameters++]=
       ClpItem("plus!Minus","Tries to make +- 1 matrix",
 	      PLUSMINUS,-1,false);
     parameters[numberParameters-1].setLonghelp
       (
-       ""
+       "Clp will go slightly faster if the matrix can be converted so that the elements are\
+ not stored and are known to be unit.  The main advantage is memory use.  Clp may automatically\
+ see if it can convert the problem so you should not need to use this."
        ); 
     parameters[numberParameters++]=
       ClpItem("presolve","Whether to presolve problem",
@@ -1119,7 +1165,7 @@ stopping",
     parameters[numberParameters-1].append("dant!zig");
     parameters[numberParameters-1].append("part!ial");
     parameters[numberParameters-1].append("steep!est");
-    //parameters[numberParameters-1].append("change");
+    parameters[numberParameters-1].append("change");
     parameters[numberParameters-1].setLonghelp
       (
        ""
@@ -1154,21 +1200,34 @@ costs this much to be infeasible",
 	      EXIT);
     parameters[numberParameters-1].setLonghelp
       (
-       ""
+       "This stops the execution of Clp, end, exit, quit and stop are synonyms"
        ); 
     parameters[numberParameters++]=
       ClpItem("restore!Model","Restore model from binary file",
 	      RESTORE);
     parameters[numberParameters-1].setLonghelp
       (
+       "This will write an MPS format file to the given file name.  It will use the default\
+ directory given by 'directory'.  A name of '$' will use the previous value for the name.  This\
+ is initialized to 'default.mps'."
        ""
        ); 
     parameters[numberParameters-1].setStringValue(restoreFile);
+    parameters[numberParameters++]=
+      ClpItem("reverse","Reverses sign of objective",
+	      REVERSE,false);
+    parameters[numberParameters-1].setLonghelp
+      (
+       "Useful for testing if maximization works correctly"
+       ); 
     parameters[numberParameters++]=
       ClpItem("save!Model","Save model to binary file",
 	      SAVE);
     parameters[numberParameters-1].setLonghelp
       (
+       "This will write an MPS format file to the given file name.  It will use the default\
+ directory given by 'directory'.  A name of '$' will use the previous value for the name.  This\
+ is initialized to 'default.mps'."
        ""
        ); 
     parameters[numberParameters-1].setStringValue(saveFile);
@@ -1176,6 +1235,8 @@ costs this much to be infeasible",
       ClpItem("scal!ing","Whether to scale problem",
 	      "on",SCALING);
     parameters[numberParameters-1].append("off");
+    parameters[numberParameters-1].append("geo!metric");
+    parameters[numberParameters-1].append("auto!matic");
     parameters[numberParameters-1].setLonghelp
       (
        ""
@@ -1193,6 +1254,9 @@ costs this much to be infeasible",
 	      SOLUTION);
     parameters[numberParameters-1].setLonghelp
       (
+       "This will write an MPS format file to the given file name.  It will use the default\
+ directory given by 'directory'.  A name of '$' will use the previous value for the name.  This\
+ is initialized to 'default.mps'."
        ""
        ); 
     parameters[numberParameters-1].setStringValue(solutionFile);
@@ -1216,7 +1280,7 @@ costs this much to be infeasible",
 	      EXIT);
     parameters[numberParameters-1].setLonghelp
       (
-       ""
+       "This stops the execution of Clp, end, exit, quit and stop are synonyms"
        ); 
     parameters[numberParameters++]=
       ClpItem("tight!en","Poor person's preSolve for now",
@@ -1229,7 +1293,6 @@ costs this much to be infeasible",
     // total number of commands read
     int numberGoodCommands=0;
     bool * goodModels = new bool[1];
-    int getNewMatrix=0;
     
     
     int iModel=0;
@@ -1425,7 +1488,7 @@ costs this much to be infeasible",
 		ClpPrimalColumnSteepest steep(2);
 		models[iModel].setPrimalColumnPivotAlgorithm(steep);
 	      } else if (action==4) {
-		ClpPrimalColumnSteepest steep(0);
+		ClpPrimalColumnSteepest steep(1);
 		models[iModel].setPrimalColumnPivotAlgorithm(steep);
 	      } else if (action==5) {
 		ClpPrimalColumnSteepest steep(4);
@@ -1433,7 +1496,10 @@ costs this much to be infeasible",
 	      }
 	      break;
 	    case SCALING:
-	      models[iModel].scaling(1-action);
+	      if (action<2)
+		models[iModel].scaling(1-action);
+	      else
+		models[iModel].scaling(action);
 	      break;
 	    case SPARSEFACTOR:
 	      models[iModel].setSparseFactorization((1-action)!=0);
@@ -1462,7 +1528,7 @@ costs this much to be infeasible",
 		preSolve=10;
 	      break;
 	    case CRASH:
-	      doCrash=-action;
+	      doCrash=action;
 	      break;
 	    case MESSAGES:
 	      models[iModel].messageHandler()->setPrefix(action!=0);
@@ -1537,10 +1603,46 @@ costs this much to be infeasible",
 	    }
 	    break;
 	  case PLUSMINUS:
-	    getNewMatrix=1;
+	    if (goodModels[iModel]) {
+	      ClpMatrixBase * saveMatrix = models[iModel].clpMatrix();
+	      ClpPackedMatrix* clpMatrix =
+		dynamic_cast< ClpPackedMatrix*>(saveMatrix);
+	      if (clpMatrix) {
+		ClpPlusMinusOneMatrix * newMatrix = new ClpPlusMinusOneMatrix(*(clpMatrix->matrix()));
+		if (newMatrix->getIndices()) {
+		  models[iModel].replaceMatrix(newMatrix);
+		  delete saveMatrix;
+		  std::cout<<"Matrix converted to +- one matrix"<<std::endl;
+		} else {
+		  std::cout<<"Matrix can not be converted to +- 1 matrix"<<std::endl;
+		}
+	      } else {
+		std::cout<<"Matrix not a ClpPackedMatrix"<<std::endl;
+	      }
+	    } else {
+	      std::cout<<"** Current model not valid"<<std::endl;
+	    }
 	    break;
 	  case NETWORK:
-	    getNewMatrix=2;
+	    if (goodModels[iModel]) {
+	      ClpMatrixBase * saveMatrix = models[iModel].clpMatrix();
+	      ClpPackedMatrix* clpMatrix =
+		dynamic_cast< ClpPackedMatrix*>(saveMatrix);
+	      if (clpMatrix) {
+		ClpNetworkMatrix * newMatrix = new ClpNetworkMatrix(*(clpMatrix->matrix()));
+		if (newMatrix->getIndices()) {
+		  models[iModel].replaceMatrix(newMatrix);
+		  delete saveMatrix;
+		  std::cout<<"Matrix converted to network matrix"<<std::endl;
+		} else {
+		  std::cout<<"Matrix can not be converted to network matrix"<<std::endl;
+		}
+	      } else {
+		std::cout<<"Matrix not a ClpPackedMatrix"<<std::endl;
+	      }
+	    } else {
+	      std::cout<<"** Current model not valid"<<std::endl;
+	    }
 	    break;
 	  case IMPORT:
 	    {
@@ -1837,6 +1939,45 @@ costs this much to be infeasible",
 	    break;
 	  case ALLSLACK:
 	    models[iModel].createStatus();
+	    {
+	      // and do solution
+	      int iColumn;
+	      double * solution = models[iModel].primalColumnSolution();
+	      const double * lower = models[iModel].columnLower();
+	      const double * upper = models[iModel].columnUpper();
+	      int numberColumns = models[iModel].numberColumns();
+	      for (iColumn=0;iColumn<numberColumns;iColumn++) {
+		if (lower[iColumn]>0.0) {
+		  solution[iColumn]=lower[iColumn];
+		} else if (upper[iColumn]<0.0) {
+		  solution[iColumn]=upper[iColumn];
+		} else {
+		  solution[iColumn]=0.0;
+		}
+	      }
+	    }
+	    break;
+	  case REVERSE:
+	    if (goodModels[iModel]) {
+	      int iColumn;
+	      int numberColumns=models[iModel].numberColumns();
+	      double * dualColumnSolution = 
+		models[iModel].dualColumnSolution();
+	      ClpObjective * obj = models[iModel].objectiveAsObject();
+	      assert(dynamic_cast<ClpLinearObjective *> (obj));
+	      double offset;
+	      double * objective = obj->gradient(NULL,offset,true);
+	      for (iColumn=0;iColumn<numberColumns;iColumn++) {
+		dualColumnSolution[iColumn] = dualColumnSolution[iColumn];
+		objective[iColumn] = -objective[iColumn];
+	      }
+	      int iRow;
+	      int numberRows=models[iModel].numberRows();
+	      double * dualRowSolution = 
+		models[iModel].dualRowSolution();
+	      for (iRow=0;iRow<numberRows;iRow++) 
+		dualRowSolution[iRow] = dualRowSolution[iRow];
+	    }
 	    break;
 	  case DIRECTORY:
 	    {

@@ -121,16 +121,21 @@ Idiot::crash(int numberPass, CoinMessageHandler * handler,const CoinMessages *me
     }
   }
   sum /= (double) (nnzero+1);
-  // If mu not changed then compute
-  if (mu_==1e-4)
-    mu_= max(1.0e-3,sum*1.0e-5);
-  maxIts_=20;
-  maxIts2_=105;
+  maxIts_=2;
   if (numberPass<=0)
     // Cast to double to avoid VACPP complaining
     majorIterations_=(int)(2+log10((double)(numberColumns+1)));
   else
     majorIterations_=numberPass;
+  // If mu not changed then compute
+  if (mu_==1e-4)
+    mu_= max(1.0e-3,sum*1.0e-5);
+  if (!lightWeight_) {
+    maxIts2_=105;
+  } else {
+    mu_ *= 10.0;
+    maxIts2_=23;
+  }
   //printf("setting mu to %g and doing %d passes\n",mu_,majorIterations_);
   solve2(handler,messages);
 #ifdef CLP_IDIOT
