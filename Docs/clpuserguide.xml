@@ -1,17 +1,21 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
 <!DOCTYPE book SYSTEM "/home/delanuez/docbook/dtd/docbookx.dtd" [
   <!ENTITY authors SYSTEM "authors.xml">
+  <!ENTITY legal SYSTEM "legal.xml">
   <!ENTITY intro SYSTEM "intro.xml">
   <!ENTITY basicmodelclasses SYSTEM "basicmodelclasses.xml">
   <!ENTITY notsobasic SYSTEM "notsobasic.xml">
   <!ENTITY moresamples SYSTEM "moresamples.xml">
   <!ENTITY clpexe SYSTEM "clpexe.xml">
   <!ENTITY messages SYSTEM "messages.xml">
+  <!ENTITY revhist SYSTEM "revhist.xml">
+  <!ENTITY doxygen SYSTEM "doxygen.xml">
 ]>
 <book id="clpuserguide" lang="en">
 <bookinfo>
 <title>CLP User Manual</title>
   &authors;
+  &legal;
 </bookinfo>
   &intro;
   &basicmodelclasses;
@@ -19,5 +23,7 @@
   &moresamples;
   &clpexe;
   &messages;
+  &doxygen;
+  &revhist;
 </book>
 

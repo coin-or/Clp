@@ -1,16 +1,18 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-  <chapter>
+  <chapter id="intro">
   <title>
     Introduction
   </title>
   <para>
   The COIN  Linear Program code or CLP is an open-source simplex solver.  This
-  is a not-so-pathetic attempt to create a User Guide.
+  is the first edition of the User Guide, and is to be considered a work in
+  progress.
   </para>
   <para>
   This document is designed to be used in conjunction with the Samples 
-  subdirectory of the Clp directory.  In the rare event that this document
-  conflicts with the observed behavior of the source code, the comments in the
-  header files are the ultimate reference.
+  subdirectory of the Clp directory (i.e. <filename>COIN/Clp/Samples</filename>).
+  In the rare event that this document conflicts with the observed behavior of
+  the source code, the comments in the header files (found in
+  <filename>COIN/Clp/include</filename>) are the ultimate reference.
   </para>
   </chapter>

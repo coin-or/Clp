@@ -1,9 +1,107 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<chapter>
+<chapter id="clpexe">
   <title>
   The CLP Executable
   </title>
   <para>
-  Coming Soon
+  The result of <userinput>make unitTest</userinput> is an executable
+  <filename>clp</filename> as well as the CLP and COIN libraries.
+  This can be used to do various unit tests, but can also be used as a standalone
+  solver.  As it only has a very simple solution file format you may wish to
+  modify that part of <filename>Test/ClpMain.cpp</filename> and even offer it to
+  Clp.
+  </para>
+  <para>
+  The <filename>clp</filename> executable operates in command line mode or 
+  prompted mode.  Entering <userinput>clp</userinput> will bring you to prompt
+  mode,while <userinput>clp &lt;filename&gt;</userinput> will import an MPS file
+  from filename and solve it using the dual simplex method and exit.  Again
+  <userinput>clp &lt;filename&gt; -primalsimplex</userinput> will import a file
+  and solve using the primal simplex method.  A dash 
+  (&quot;<userinput>-</userinput>&quot;) by itself changes to prompt mode.  In
+  command line mode &quot;<userinput>-</userinput>&quot; is needed (apart from
+  first parameter which is taken as file name).  So the following are equivalent
+  and maximize a problem using dual and write a solution to file
+  <filename>solfile</filename>:
+  <blockquote>
+    <literallayout>
+    <prompt>$</prompt> <userinput>clp <replaceable>filename</replaceable> -maximize -dualsimplex -solution solfile</userinput>
+    </literallayout>
+  </blockquote>
+  <blockquote>
+    <literallayout>
+    <prompt>$</prompt> <userinput>clp <replaceable>filename</replaceable> -maximize -</userinput>
+    <prompt>Clp:</prompt><userinput>duals</userinput>
+    <prompt>Clp:</prompt><userinput>solution solfile</userinput>
+    <prompt>Clp:</prompt><userinput>quit</userinput>
+    </literallayout>
+  </blockquote>
+  </para>
+  <para>
+  The executable has some command-completion functionality as well as some inline
+  help.  Below is a table with some examples which summarize these capabilities.
+  </para>
+  <table frame="none">
+  <title>Command examples for the clp executable</title>
+  <tgroup cols="2">
+    <thead>
+      <row>
+        <entry align="left">
+	Command&nbsp;&nbsp;&nbsp;&nbsp;
+        </entry>
+        <entry align="left">
+	Result
+        </entry>
+      </row>
+    </thead>
+    <tbody>
+      <row>
+        <entry>
+	<command>?</command>
+        </entry>
+        <entry>
+	Gives a list of all  commands
+        </entry>
+      </row>
+      <row>
+        <entry>
+	<command>p?</command>
+        </entry>
+        <entry>
+	Gives a list of all commands which begin with &lt;p&gt;.
+        </entry>
+      </row>
+      <row>
+        <entry>
+	<command>p??</command>
+        </entry>
+        <entry>
+	Gives a list of all commands which begin with &lt;p&gt;., with a short
+	explanation for each.
+        </entry>
+      </row>
+      <row>
+        <entry>
+	<command>primals??</command>
+        </entry>
+        <entry>
+	If is this is enough to uniquely determine a command (in this example,
+	<command>primalS</command>, for primal simplex), a long explanation
+	is given.
+        </entry>
+      </row>
+    </tbody>
+  </tgroup>
+  </table>
+  <para>
+  In addition, matching a name without a ? will either execute the command or give
+  the value of the corresponding parameter.  So,
+  <command>primalweight</command> will give the current value of  the
+  primalWeight parameter while <command>primalw 1.0e7</command> will change
+  it to 1.0e7.
+  </para>
+  <para>
+  The executable is at a very early stage and comments will graciously
+  welcomed.
   </para>
 </chapter>

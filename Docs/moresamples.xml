@@ -1,9 +1,98 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<chapter>
+<chapter id="moreexamples">
 <title>
 More Samples
 </title>
 <para>
-Coming Soon
+CLP includes a number of <filename>.cpp</filename> sample files.  They can be
+found in the <filename>COIN/Clp/Samples</filename> directory.  Below is a table
+listing some of the sample files with a short description for each.
 </para>
+<table frame="none">
+  <title>Contents of the Samples directory</title>
+  <tgroup cols="2">
+    <thead>
+      <row>
+        <entry align="left" valign="bottom">
+	Filename&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	</entry>
+        <entry align="left" valign="bottom">
+	Description
+	</entry>
+      </row>
+    </thead>
+    <tbody>
+      <row>
+        <entry align="left" valign="top">
+	<filename>minimum.cpp</filename>
+	</entry>
+        <entry align="left" valign="top">
+	This is a CLP &lt;Hello, world&gt; program.  It reads an MPS file, and
+	solves the problem.
+	</entry>
+      </row>
+      <row>
+        <entry align="left" valign="top">
+	<filename>defaults.cpp</filename>
+	</entry>
+        <entry align="left" valign="top">
+	This is one of the simpler drivers.  It sets tolerances to defaults and 
+	is a useful place to find simple use of &lt;sets&gt; and &lt;gets&gt;.
+	It also prints out a full MPS-like solutions.
+	</entry>
+      </row>
+      <row>
+        <entry align="left" valign="top">
+	<filename>driver.cpp</filename>
+	</entry>
+        <entry align="left" valign="top">
+	This is designed to be the file that people modify to get a useful
+	driver.  It does presolve.
+	</entry>
+      </row>
+      <row>
+        <entry align="left" valign="top">
+	<filename>network.cpp</filename>
+	</entry>
+        <entry align="left" valign="top">
+	This shows the use of non-standard matrices and how to load a problem
+	without going throu MPS files.
+	</entry>
+      </row>
+      <row>
+        <entry align="left" valign="top">
+	<filename>decompose.cpp</filename>
+	</entry>
+        <entry align="left" valign="top">
+	This does full Dantzig-Wolfe decomposition.  It illustrates 
+	the use of many models, adding columns, et cetera.
+	</entry>
+      </row>
+      <row>
+        <entry align="left" valign="top">
+	<filename>sprint.cpp</filename>
+	</entry>
+        <entry align="left" valign="top">
+	This solves a long, thin problem by solving smaller subsets.  It is a
+	simplified version of work done by one of the authors on aircrew
+	scheduling problems.  It shows the use of two models and their
+	synchronization.  A more general version can be found in
+	<filename>COIN/Clp/ClpSolve.cpp</filename>
+	</entry>
+      </row>
+      <row>
+        <entry align="left" valign="top">
+	<filename>sprint2.cpp</filename>
+	</entry>
+        <entry align="left" valign="top">
+	This is similar to <filename>sprint.cpp</filename> but is designed for
+	solving large problems with little choice.  The idea is that if
+	relatively few variables are fixed, presolve can greatly reduce the
+	problem size so that a series of solves can get close to the optimal
+	solution much faster than would a na&iuml;ve solve of the full problem.
+	</entry>
+      </row>
+    </tbody>
+  </tgroup>
+</table>
 </chapter>

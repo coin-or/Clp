@@ -7,19 +7,7 @@
     <surname>
     Forrest
     </surname>
-    <affiliation>
-      <orgname>
-      IBM Research
-      </orgname>
-    </affiliation>
-  </author>
-  <author>
-    <firstname>
-    Robin
-    </firstname>
-    <surname>
-    Lougee-Heimer
-    </surname>
+    <email>jjforre@us.ibm.com</email>
     <affiliation>
       <orgname>
       IBM Research
@@ -33,9 +21,24 @@
     <surname>
     de la Nuez
     </surname>
+    <email>ddelanu@us.ibm.com</email>
     <affiliation>
       <orgname>
-      Columbia University
+      Columbia University &amp; IBM Research
+      </orgname>
+    </affiliation>
+  </author>
+  <author>
+    <firstname>
+    Robin
+    </firstname>
+    <surname>
+    Lougee-Heimer
+    </surname>
+    <email>robinlh@us.ibm.com</email>
+    <affiliation>
+      <orgname>
+      IBM Research
       </orgname>
     </affiliation>
   </author>
