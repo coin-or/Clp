@@ -690,7 +690,7 @@ ClpPackedMatrix::scale(ClpSimplex * model) const
     model->setColumnScale(columnScale);
     if (model->rowCopy()) {
       // need to replace row by row
-      double * newElement = new double[numberRows+numberColumns];
+      double * newElement = new double[numberColumns];
       // scale row copy
       for (iRow=0;iRow<numberRows;iRow++) {
 	int j;
@@ -698,6 +698,7 @@ ClpPackedMatrix::scale(ClpSimplex * model) const
 	const double * elementsInThisRow = element + rowStart[iRow];
 	const int * columnsInThisRow = column + rowStart[iRow];
 	int number = rowStart[iRow+1]-rowStart[iRow];
+	assert (number<=numberColumns);
 	for (j=0;j<number;j++) {
 	  int iColumn = columnsInThisRow[j];
 	  newElement[j] = elementsInThisRow[j]*scale*columnScale[iColumn];
@@ -743,6 +744,7 @@ ClpPackedMatrix::scaledRowCopy(ClpSimplex * model) const
       const double * elementsInThisRow = element + rowStart[iRow];
       const int * columnsInThisRow = column + rowStart[iRow];
       int number = rowStart[iRow+1]-rowStart[iRow];
+      assert (number<=numberColumns);
       for (j=0;j<number;j++) {
 	int iColumn = columnsInThisRow[j];
 	newElement[j] = elementsInThisRow[j]*scale*columnScale[iColumn];
