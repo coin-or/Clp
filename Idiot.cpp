@@ -608,6 +608,7 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
 	  result.weighted=1.0e31;
 	}
 #ifdef DEBUG
+        double trueCost=0.0;
 	for (i=0;i<ncols;i++) {
 	  int j;
 	  trueCost+=cost[i]*colsol[i];
