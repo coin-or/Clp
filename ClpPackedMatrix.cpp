@@ -1453,14 +1453,14 @@ ClpPackedMatrix::scale(ClpModel * model) const
     }
     ClpFillN ( rowScale, numberRows,1.0);
     ClpFillN ( columnScale, numberColumns,1.0);
-    double overallLargest=-1.0e-30;
-    double overallSmallest=1.0e30;
+    double overallLargest=-1.0e-20;
+    double overallSmallest=1.0e20;
     if (scalingMethod==1) {
       // Maximum in each row
       for (iRow=0;iRow<numberRows;iRow++) {
 	if (usefulRow[iRow]) {
 	  CoinBigIndex j;
-	  largest=1.0e-20;
+	  largest=1.0e-10;
 	  for (j=rowStart[iRow];j<rowStart[iRow+1];j++) {
 	    int iColumn = column[j];
 	    if (usefulColumn[iColumn]) {
@@ -1497,7 +1497,7 @@ ClpPackedMatrix::scale(ClpModel * model) const
 	      if (usefulColumn[iColumn]) {
 		double value = fabs(element[j]);
 		// Don't bother with tiny elements
-		if (value>1.0e-30) {
+		if (value>1.0e-20) {
 		  value *= columnScale[iColumn];
 		  largest = CoinMax(largest,value);
 		  smallest = CoinMin(smallest,value);
@@ -1505,6 +1505,7 @@ ClpPackedMatrix::scale(ClpModel * model) const
 	      }
 	    }
 	    rowScale[iRow]=1.0/sqrt(smallest*largest);
+            rowScale[iRow]=CoinMax(1.0e-10,CoinMin(1.0e10,rowScale[iRow]));
 	    overallLargest = CoinMax(largest*rowScale[iRow],overallLargest);
 	    overallSmallest = CoinMin(smallest*rowScale[iRow],overallSmallest);
 	  }
@@ -1516,7 +1517,7 @@ ClpPackedMatrix::scale(ClpModel * model) const
 	  if (usefulColumn[iColumn]) {
 	    double value = fabs(objective[iColumn]);
 	    // Don't bother with tiny elements
-	    if (value>1.0e-30) {
+	    if (value>1.0e-20) {
 	      value *= columnScale[iColumn];
 	      largest = CoinMax(largest,value);
 	      smallest = CoinMin(smallest,value);
@@ -1543,20 +1544,21 @@ ClpPackedMatrix::scale(ClpModel * model) const
 	      iRow=row[j];
 	      double value = fabs(elementByColumn[j]);
 	      // Don't bother with tiny elements
-	      if (value>1.0e-30&&usefulRow[iRow]) {
+	      if (value>1.0e-20&&usefulRow[iRow]) {
 		value *= rowScale[iRow];
 		largest = CoinMax(largest,value);
 		smallest = CoinMin(smallest,value);
 	      }
 	    }
 #ifdef USE_OBJECTIVE
-	    if (fabs(objective[iColumn])>1.0e-30) {
+	    if (fabs(objective[iColumn])>1.0e-20) {
 	      double value = fabs(objective[iColumn])*objScale;
 	      largest = CoinMax(largest,value);
 	      smallest = CoinMin(smallest,value);
 	    }
 #endif
 	    columnScale[iColumn]=1.0/sqrt(smallest*largest);
+            columnScale[iColumn]=CoinMax(1.0e-10,CoinMin(1.0e10,columnScale[iColumn]));
 	  }
 	}
       }
@@ -1574,6 +1576,7 @@ ClpPackedMatrix::scale(ClpModel * model) const
 	if (scaledDifference>tolerance&&scaledDifference<1.0e-4) {
 	  // make gap larger
 	  rowScale[iRow] *= 1.0e-4/scaledDifference;
+            rowScale[iRow]=CoinMax(1.0e-10,CoinMin(1.0e10,rowScale[iRow]));
 	  //printf("Row %d difference %g scaled diff %g => %g\n",iRow,difference,
 	  // scaledDifference,difference*rowScale[iRow]);
 	}
@@ -1628,6 +1631,7 @@ ClpPackedMatrix::scale(ClpModel * model) const
 	  }
 	}
 	columnScale[iColumn]=overallLargest/largest;
+        columnScale[iColumn]=CoinMax(1.0e-10,CoinMin(1.0e10,columnScale[iColumn]));
 #ifdef RANDOMIZE
 	double value = 0.5-CoinDrand48();//between -0.5 to + 0.5
 	columnScale[iColumn] *= (1.0+0.1*value);

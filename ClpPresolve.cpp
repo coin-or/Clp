@@ -1191,19 +1191,29 @@ CoinPostsolveMatrix::CoinPostsolveMatrix(ClpSimplex*  si,
 
   const CoinPackedMatrix * m = si->matrix();
 
+  const CoinBigIndex nelemsr = m->getNumElements();
   if (! isGapFree(*m)) {
-    CoinPresolveAction::throwCoinError("Matrix not gap free",
-				      "CoinPostsolveMatrix");
+    // Odd - gaps
+    CoinPackedMatrix mm(*m);
+    mm.removeGaps();
+    
+    ClpDisjointCopyN(mm.getVectorStarts(), ncols1, mcstrt_);
+    CoinZeroN(mcstrt_+ncols1,ncols0_-ncols1);
+    mcstrt_[ncols1] = nelems0;	// ??    (should point to end of bulk store   -- lh --)
+    ClpDisjointCopyN(mm.getVectorLengths(),ncols1,  hincol_);
+    ClpDisjointCopyN(mm.getIndices(),      nelemsr, hrow_);
+    ClpDisjointCopyN(mm.getElements(),     nelemsr, colels_);
+  } else {
+    // No gaps
+    
+    ClpDisjointCopyN(m->getVectorStarts(), ncols1, mcstrt_);
+    CoinZeroN(mcstrt_+ncols1,ncols0_-ncols1);
+    mcstrt_[ncols1] = nelems0;	// ??    (should point to end of bulk store   -- lh --)
+    ClpDisjointCopyN(m->getVectorLengths(),ncols1,  hincol_);
+    ClpDisjointCopyN(m->getIndices(),      nelemsr, hrow_);
+    ClpDisjointCopyN(m->getElements(),     nelemsr, colels_);
   }
 
-  const CoinBigIndex nelemsr = m->getNumElements();
-
-  ClpDisjointCopyN(m->getVectorStarts(), ncols1, mcstrt_);
-  CoinZeroN(mcstrt_+ncols1,ncols0_-ncols1);
-  mcstrt_[ncols1] = nelems0;	// ??    (should point to end of bulk store   -- lh --)
-  ClpDisjointCopyN(m->getVectorLengths(),ncols1,  hincol_);
-  ClpDisjointCopyN(m->getIndices(),      nelemsr, hrow_);
-  ClpDisjointCopyN(m->getElements(),     nelemsr, colels_);
 
 
 #if	0 && PRESOLVE_DEBUG

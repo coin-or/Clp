@@ -218,7 +218,6 @@ int ClpSimplexDual::dual (int ifValuesPass , int startFinishOptions)
     saveDuals = new double [numberRows_+numberColumns_];
     memcpy(saveDuals,dual_,numberRows_*sizeof(double));
   }
-  
   // sanity check
   // initialize - no values pass and algorithm_ is -1
   // put in standard form (and make row copy)
