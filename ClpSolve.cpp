@@ -124,6 +124,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
     case 1:
       doIdiot=0;
       doCrash=1;
+      if (options.getExtraInfo(1)>0)
+	doCrash = options.getExtraInfo(1);
       doSprint=0;
       break;
     case 2:
@@ -187,6 +189,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
     case 1:
       doIdiot=0;
       doCrash=1;
+      if (options.getExtraInfo(0)>0)
+	doCrash = options.getExtraInfo(0);
       doSprint=0;
       break;
     case 2:
@@ -402,8 +406,19 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	presolve=ClpSolve::presolveOff;
       }
     }
-    if (options.getSpecialOption(0)==1)
-      model2->crash(1000,1);
+    if (doCrash) {
+      switch(doCrash) {
+	// standard
+      case 1:
+	model2->crash(1000,1);
+	break;
+	// As in paper by Solow and Halim (approx)
+      case 2:
+      case 3:
+	model2->crash(model2->dualBound(),0);
+	break;
+      }
+    }
     if (!nPasses) {
       int saveOptions = model2->specialOptions();
       if (model2->numberRows()>100)
@@ -625,8 +640,22 @@ ClpSimplex::initialSolve(ClpSolve & options)
       }
     }
     // ?
-    if (doCrash)
-      model2->crash(1000,1);
+    if (doCrash) {
+      switch(doCrash) {
+	// standard
+      case 1:
+	model2->crash(1000,1);
+	break;
+	// As in paper by Solow and Halim (approx)
+      case 2:
+	model2->crash(model2->dualBound(),0);
+	break;
+	// My take on it
+      case 3:
+	model2->crash(model2->dualBound(),-1);
+	break;
+      }
+    }
     if (doSlp>0&&objective_->type()==2) {
       model2->nonlinearSLP(doSlp,1.0e-5);
     }
@@ -1366,8 +1395,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
   }
   setMaximumIterations(saveMaxIterations);
   std::string statusMessage[]={"Unknown","Optimal","PrimalInfeasible","DualInfeasible","Stopped",
-			       "Errors"};
-  assert (finalStatus>=-1&&finalStatus<=4);
+			       "Errors","User stopped"};
+  assert (finalStatus>=-1&&finalStatus<=5);
   handler_->message(CLP_TIMING,messages_)
     <<statusMessage[finalStatus+1]<<objectiveValue()<<numberIterations<<time2-time1;
   handler_->printing(presolve==ClpSolve::presolveOn)

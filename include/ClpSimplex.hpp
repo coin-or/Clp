@@ -234,8 +234,10 @@ public:
        2 if primal preferred and crash basis created.
        
        if gap between bounds <="gap" variables can be flipped
+       ( If pivot -1 then can be made super basic!)
 
        If "pivot" is
+       -1 No pivoting - always primal
        0 No pivoting (so will just be choice of algorithm)
        1 Simple pivoting e.g. gub
        2 Mini iterations

@@ -349,7 +349,7 @@ int ClpSimplexDual::dual (int ifValuesPass , int startFinishOptions)
 	}
       }
       // may factorize, checks if problem finished
-      statusOfProblemInDual(lastCleaned,factorType,progress_,saveDuals);
+      statusOfProblemInDual(lastCleaned,factorType,saveDuals);
       // If values pass then do easy ones on first time
       if (ifValuesPass&&
 	  progress_->lastIterationNumber(0)<0) {
@@ -965,6 +965,12 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
 	}
 	solution_[sequenceOut_]=valueOut_;
 	int whatNext=housekeeping(objectiveChange);
+#if 0
+	if (numberIterations_>206033)
+	  handler_->setLogLevel(63);
+	if (numberIterations_>210567)
+	  exit(77);
+#endif
 	// and set bounds correctly
 	originalBound(sequenceIn_); 
 	changeBound(sequenceOut_);
@@ -2428,7 +2434,6 @@ ClpSimplexDual::checkUnbounded(CoinIndexedVector * ray,
 /* Checks if finished.  Updates status */
 void 
 ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
-				      ClpSimplexProgress * progress,
 				      double * givenDuals)
 {
   bool normalType=true;
@@ -2529,22 +2534,83 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
   // get primal and dual solutions
   gutsOfSolution(givenDuals,NULL);
   // Double check infeasibility if no action
-  if (progress->lastIterationNumber(0)==numberIterations_) {
+  if (progress_->lastIterationNumber(0)==numberIterations_) {
     if (dualRowPivot_->looksOptimal()) {
       numberPrimalInfeasibilities_ = 0;
       sumPrimalInfeasibilities_ = 0.0;
     }
+#if 1
+  } else {
+    double thisObj = objectiveValue_;
+    double lastObj = progress_->lastObjective(0);
+    if (lastObj>thisObj+1.0e-3*CoinMax(fabs(thisObj),fabs(lastObj))+1.0
+	&&givenDuals==NULL) {
+      int maxFactor = factorization_->maximumPivots();
+      if (maxFactor>10&&numberPivots>1) {
+	//if (forceFactorization_<0)
+	//forceFactorization_= maxFactor;
+	//forceFactorization_ = CoinMax(1,(forceFactorization_>>1));
+	forceFactorization_=1;
+	//printf("Reducing factorization frequency - bad backwards\n");
+	unflagVariables = false;
+	changeMade_++; // say something changed
+	memcpy(status_ ,saveStatus_,(numberColumns_+numberRows_)*sizeof(char));
+	memcpy(rowActivityWork_,savedSolution_+numberColumns_ ,
+	       numberRows_*sizeof(double));
+	memcpy(columnActivityWork_,savedSolution_ ,
+	       numberColumns_*sizeof(double));
+	// restore extra stuff
+	int dummy;
+	matrix_->generalExpanded(this,6,dummy);
+	// get correct bounds on all variables
+	double dummyChangeCost=0.0;
+	changeBounds(true,rowArray_[2],dummyChangeCost);
+	// throw away change
+	for (int i=0;i<4;i++) 
+	  rowArray_[i]->clear();
+	if(factorization_->pivotTolerance(),0.2)
+	  factorization_->pivotTolerance(0.2);
+	if (internalFactorize(1)) {
+	  memcpy(status_ ,saveStatus_,(numberColumns_+numberRows_)*sizeof(char));
+	  memcpy(rowActivityWork_,savedSolution_+numberColumns_ ,
+		 numberRows_*sizeof(double));
+	  memcpy(columnActivityWork_,savedSolution_ ,
+		 numberColumns_*sizeof(double));
+	  // restore extra stuff
+	  int dummy;
+	  matrix_->generalExpanded(this,6,dummy);
+	  // debug
+	  int returnCode = internalFactorize(1);
+	  while (returnCode) {
+	    // ouch 
+	    // switch off dense
+	    int saveDense = factorization_->denseThreshold();
+	    factorization_->setDenseThreshold(0);
+	    // Go to safe
+	    factorization_->pivotTolerance(0.99);
+	    // make sure will do safe factorization
+	    pivotVariable_[0]=-1;
+	    returnCode=internalFactorize(2);
+	    factorization_->setDenseThreshold(saveDense);
+	  }
+	}
+	type = 2; // so will restore weights
+	// get primal and dual solutions
+	gutsOfSolution(givenDuals,NULL);
+      } 
+    }
+#endif
   }
   // Up tolerance if looks a bit odd
   if (numberIterations_>CoinMax(1000,numberRows_>>4)&&(specialOptions_&64)!=0) {
     if (sumPrimalInfeasibilities_&&sumPrimalInfeasibilities_<1.0e5) {
-      int backIteration = progress->lastIterationNumber(CLP_PROGRESS-1);
+      int backIteration = progress_->lastIterationNumber(CLP_PROGRESS-1);
       if (backIteration>0&&numberIterations_-backIteration<9*CLP_PROGRESS) {
 	if (factorization_->pivotTolerance()<0.9) {
 	  // up tolerance
 	  factorization_->pivotTolerance(CoinMin(factorization_->pivotTolerance()*1.05+0.02,0.91));
 	  //printf("tol now %g\n",factorization_->pivotTolerance());
-	  progress->clearIterationNumbers();
+	  progress_->clearIterationNumbers();
 	}
       }
     }
@@ -2552,7 +2618,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
   // Check if looping
   int loop;
   if (!givenDuals&&type!=2) 
-    loop = progress->looping();
+    loop = progress_->looping();
   else
     loop=-1;
   int situationChanged=0;
@@ -2615,7 +2681,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
     }
     //if (dualFeasible()||problemStatus_==-4||(primalFeasible()&&!numberDualInfeasibilitiesWithoutFree_)) {
     if (dualFeasible()||problemStatus_==-4) {
-      progress->modifyObjective(objectiveValue_
+      progress_->modifyObjective(objectiveValue_
 			       -sumDualInfeasibilities_*dualBound_);
       if (primalFeasible()&&!givenDuals) {
 	normalType=false;
@@ -2997,17 +3063,17 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
   lastGoodIteration_ = numberIterations_;
   if (problemStatus_<0)
     sumDualInfeasibilities_=realDualInfeasibilities; // back to say be careful
-#if 0
-  double thisObj = progress->lastObjective(0);
-  double lastObj = progress->lastObjective(1);
-  if (lastObj>thisObj+1.0e-6*CoinMax(fabs(thisObj),fabs(lastObj))+1.0e-8
+#if 1
+  double thisObj = progress_->lastObjective(0);
+  double lastObj = progress_->lastObjective(1);
+  if (lastObj>thisObj+1.0e-4*CoinMax(fabs(thisObj),fabs(lastObj))+1.0e-4
       &&givenDuals==NULL) {
     int maxFactor = factorization_->maximumPivots();
     if (maxFactor>10) {
       if (forceFactorization_<0)
 	forceFactorization_= maxFactor;
-      forceFactorization_ = CoinCoinMax(1,(forceFactorization_>>1));
-      printf("Reducing factorization frequency\n");
+      forceFactorization_ = CoinMax(1,(forceFactorization_>>1));
+      //printf("Reducing factorization frequency\n");
     } 
   }
 #endif
@@ -3894,7 +3960,7 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
     matrix_->refresh(this);
     // may factorize, checks if problem finished
     // should be able to speed this up on first time
-    statusOfProblemInDual(lastCleaned,factorType,progress_,NULL);
+    statusOfProblemInDual(lastCleaned,factorType,NULL);
 
     // Say good factorization
     factorType=1;

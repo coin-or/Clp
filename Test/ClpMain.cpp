@@ -975,12 +975,14 @@ corrector algorithm."
       ClpItem("crash","Whether to create basis for problem",
 	      "off",CRASH);
     parameters[numberParameters-1].append("on");
+    parameters[numberParameters-1].append("so!low_halim");
+    parameters[numberParameters-1].append("ha!lim_solow(JJF mods)");
     parameters[numberParameters-1].setLonghelp
       (
-       "If crash is set on and there is an all slack basis then Clp will put structural\
+       "If crash is set on and there is an all slack basis then Clp will flip or put structural\
  variables into basis with the aim of getting dual feasible.  On the whole dual seems to be\
- better without it and there alernative types of 'crash' for primal e.g. 'idiot' or 'sprint'."
-       ); 
+ better without it and there alernative types of 'crash' for primal e.g. 'idiot' or 'sprint'. \
+I have also added a variant due to Solow and Halim which is as on but just flip."); 
     parameters[numberParameters++]=
       ClpItem("cross!over","Whether to get a basic solution after barrier",
 	      "on",CROSSOVER);
@@ -1824,7 +1826,7 @@ costs this much to be infeasible",
 	      if (method==ClpSolve::useDual) {
 		// dual
 		if (doCrash)
-		  solveOptions.setSpecialOption(0,1); // crash
+		  solveOptions.setSpecialOption(0,1,doCrash); // crash
 		else if (doIdiot)
 		  solveOptions.setSpecialOption(0,2,doIdiot); // possible idiot
 	      } else if (method==ClpSolve::usePrimalorSprint) {
@@ -1838,7 +1840,7 @@ costs this much to be infeasible",
 		  method=ClpSolve::usePrimal;
 		}
 		if (doCrash) {
-		  solveOptions.setSpecialOption(1,1); // crash
+		  solveOptions.setSpecialOption(1,1,doCrash); // crash
 		} else if (doSprint>0) {
 		  // sprint overrides idiot
 		  solveOptions.setSpecialOption(1,3,doSprint); // sprint

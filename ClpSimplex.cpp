@@ -621,44 +621,113 @@ ClpSimplex::computeDuals(double * givenDjs)
     for (iRefine=0;iRefine<numberRefinements_+1;iRefine++) {
       // check basic reduced costs zero
       largestDualError_=0.0;
-      // would be faster to do just for basic but this reduces code
-      ClpDisjointCopyN(objectiveWork_,numberColumns_,reducedCostWork_);
-      transposeTimes(-1.0,array,reducedCostWork_);
-      // update by duals on sets
-      matrix_->dualExpanded(this,NULL,NULL,1);
-      if (!givenDjs) {
+      if (!numberExtraRows_) {
+	// Just basic
+	int * index2 = workSpace->getIndices();
+	// use reduced costs for slacks as work array
+	double * work2 = reducedCostWork_+numberColumns_;
+	int numberStructurals=0;
 	for (iRow=0;iRow<numberRows_;iRow++) {
 	  int iPivot=pivotVariable_[iRow];
-	  double value;
-	  if (iPivot>=numberColumns_) {
-	    // slack
-	    value = rowObjectiveWork_[iPivot-numberColumns_]
-	      + array[iPivot-numberColumns_];
-	  } else {
-	    // column
-	    value = reducedCostWork_[iPivot];
+	  if (iPivot<numberColumns_) 
+	    index2[numberStructurals++]=iPivot;
+	}
+	matrix_->listTransposeTimes(this,array,index2,numberStructurals,work2);
+	numberStructurals=0;
+	if (!givenDjs) {
+	  for (iRow=0;iRow<numberRows_;iRow++) {
+	    int iPivot=pivotVariable_[iRow];
+	    double value;
+	    if (iPivot>=numberColumns_) {
+	      // slack
+	      value = rowObjectiveWork_[iPivot-numberColumns_]
+		+ array[iPivot-numberColumns_];
+	    } else {
+	      // column
+	      value = objectiveWork_[iPivot]-work2[numberStructurals++];
+	    }
+	    work[iRow]=value;
+	    if (fabs(value)>largestDualError_) {
+	      largestDualError_=fabs(value);
+	    }
 	  }
-	  work[iRow]=value;
-	  if (fabs(value)>largestDualError_) {
-	    largestDualError_=fabs(value);
+	} else {
+	  for (iRow=0;iRow<numberRows_;iRow++) {
+	    int iPivot=pivotVariable_[iRow];
+	    if (iPivot>=numberColumns_) {
+	      // slack
+	      work[iRow] = rowObjectiveWork_[iPivot-numberColumns_]
+		+ array[iPivot-numberColumns_]-givenDjs[iPivot];
+	    } else {
+	      // column
+	      work[iRow] = objectiveWork_[iPivot]-work2[numberStructurals++]
+		- givenDjs[iPivot];
+	    }
+	    if (fabs(work[iRow])>largestDualError_) {
+	      largestDualError_=fabs(work[iRow]);
+	      //assert (largestDualError_<1.0e-7);
+	      //if (largestDualError_>1.0e-7)
+	      //printf("large dual error %g\n",largestDualError_);
+	    }
 	  }
 	}
       } else {
+	// extra rows - be more careful
+#if 1
+	// would be faster to do just for basic but this reduces code
+	ClpDisjointCopyN(objectiveWork_,numberColumns_,reducedCostWork_);
+	transposeTimes(-1.0,array,reducedCostWork_);
+#else
+	// Just basic
+	int * index2 = workSpace->getIndices();
+	int numberStructurals=0;
 	for (iRow=0;iRow<numberRows_;iRow++) {
 	  int iPivot=pivotVariable_[iRow];
-	  if (iPivot>=numberColumns_) {
-	    // slack
-	    work[iRow] = rowObjectiveWork_[iPivot-numberColumns_]
-	      + array[iPivot-numberColumns_]-givenDjs[iPivot];
-	  } else {
-	    // column
-	    work[iRow] = reducedCostWork_[iPivot]- givenDjs[iPivot];
+	  if (iPivot<numberColumns_) 
+	    index2[numberStructurals++]=iPivot;
+	}
+	matrix_->listTransposeTimes(this,array,index2,numberStructurals,work);
+	for (iRow=0;iRow<numberStructurals;iRow++) {
+	  int iPivot=index2[iRow];
+	  reducedCostWork_[iPivot]=objectiveWork_[iPivot]-work[iRow];
+	}
+#endif
+	// update by duals on sets
+	matrix_->dualExpanded(this,NULL,NULL,1);
+	if (!givenDjs) {
+	  for (iRow=0;iRow<numberRows_;iRow++) {
+	    int iPivot=pivotVariable_[iRow];
+	    double value;
+	    if (iPivot>=numberColumns_) {
+	      // slack
+	      value = rowObjectiveWork_[iPivot-numberColumns_]
+		+ array[iPivot-numberColumns_];
+	    } else {
+	      // column
+	      value = reducedCostWork_[iPivot];
+	    }
+	    work[iRow]=value;
+	    if (fabs(value)>largestDualError_) {
+	      largestDualError_=fabs(value);
+	    }
 	  }
-	  if (fabs(work[iRow])>largestDualError_) {
-	    largestDualError_=fabs(work[iRow]);
-	    //assert (largestDualError_<1.0e-7);
-	    //if (largestDualError_>1.0e-7)
-	    //printf("large dual error %g\n",largestDualError_);
+	} else {
+	  for (iRow=0;iRow<numberRows_;iRow++) {
+	    int iPivot=pivotVariable_[iRow];
+	    if (iPivot>=numberColumns_) {
+	      // slack
+	      work[iRow] = rowObjectiveWork_[iPivot-numberColumns_]
+		+ array[iPivot-numberColumns_]-givenDjs[iPivot];
+	    } else {
+	      // column
+	      work[iRow] = reducedCostWork_[iPivot]- givenDjs[iPivot];
+	    }
+	    if (fabs(work[iRow])>largestDualError_) {
+	      largestDualError_=fabs(work[iRow]);
+	      //assert (largestDualError_<1.0e-7);
+	      //if (largestDualError_>1.0e-7)
+	      //printf("large dual error %g\n",largestDualError_);
+	    }
 	  }
 	}
       }
@@ -4622,8 +4691,10 @@ ClpSimplex::checkSolution()
    2 if primal preferred and crash basis created.
    
    if gap between bounds <="gap" variables can be flipped
+   ( If pivot -1 then can be made super basic!)
    
    If "pivot" is
+   -1 No pivoting - always primal
    0 No pivoting (so will just be choice of algorithm)
    1 Simple pivoting e.g. gub
    2 Mini iterations
@@ -4674,24 +4745,32 @@ ClpSimplex::crash(double gap,int pivot)
 	  setColumnStatus(iColumn,atLowerBound);
 	  solution[iColumn]=lowerBound;
 	}
-	if (dj[iColumn]<0.0) {
+	if (dj[iColumn]<-dualTolerance_) {
 	  // should be at upper bound
 	  if (atLower) {
 	    // can we flip
 	    if (upperBound-lowerBound<=gap) {
 	      columnActivity_[iColumn]=upperBound;
 	      setColumnStatus(iColumn,atUpperBound);
+	    } else if (pivot<0) {
+	      // set superbasic
+	      columnActivity_[iColumn]=lowerBound+gap;
+	      setColumnStatus(iColumn,superBasic);
 	    } else if (dj[iColumn]<-dualTolerance) {
 	      numberBad++;
 	    }
 	  }
-	} else if (dj[iColumn]>0.0) {
+	} else if (dj[iColumn]>dualTolerance_) {
 	  // should be at lower bound
 	  if (!atLower) {
 	    // can we flip
 	    if (upperBound-lowerBound<=gap) {
 	      columnActivity_[iColumn]=lowerBound;
 	      setColumnStatus(iColumn,atLowerBound);
+	    } else if (pivot<0) {
+	      // set superbasic
+	      columnActivity_[iColumn]=upperBound-gap;
+	      setColumnStatus(iColumn,superBasic);
 	    } else if (dj[iColumn]>dualTolerance) {
 	      numberBad++;
 	    }
@@ -4705,7 +4784,7 @@ ClpSimplex::crash(double gap,int pivot)
       }
     }
     if (numberBad||pivot) {
-      if (!pivot) {
+      if (pivot<=0) {
 	delete [] dj;
 	returnCode = 1;
       } else {
@@ -5905,6 +5984,13 @@ int
 ClpSimplexProgress::cycle(int in, int out,int wayIn,int wayOut)
 {
   int i;
+#if 0
+  if (model_->numberIterations()>206571) {
+    printf("in %d out %d\n",in,out);
+    for (i=0;i<CLP_CYCLE;i++) 
+      printf("cy %d in %d out %d\n",i,in_[i],out_[i]);
+  }
+#endif
   int matched=0;
   // first see if in matches any out
   for (i=1;i<CLP_CYCLE;i++) {
@@ -5958,12 +6044,14 @@ ClpSimplexProgress::cycle(int in, int out,int wayIn,int wayOut)
   if (matched&&in_[0]>=0) {
     // possible cycle - only check [0] against all
     matched=0;
+    int nMatched=0;
     char way0 = way_[0];
     int in0 = in_[0];
     int out0 = out_[0];
     //double obj0 = obj_[i];
     for(int k=1;k<CLP_CYCLE-4;k++) {
       if (in0==in_[k]&&out0==out_[k]&&way0==way_[k]) {
+	nMatched++;
 	// See if repeats
 	int end = CLP_CYCLE-k;
 	int j;
@@ -5977,6 +6065,9 @@ ClpSimplexProgress::cycle(int in, int out,int wayIn,int wayOut)
 	}
       }
     }
+    // If three times then that is too much even if not regular
+    if (matched<=0&&nMatched>1)
+      matched=100;
   }
   for (i=0;i<CLP_CYCLE-1;i++) {
     //obj_[i]=obj_[i+1];

@@ -249,12 +249,20 @@ public:
   /** Return <code>x *A</code> in <code>z</code> but
       just for indices in y.
       This is only needed for primal steepest edge.
-      Note - z always packed mode
-      Squashes small elements and knows about ClpSimplex */
+      Note - z always packed mode */
   virtual void subsetTransposeTimes(const ClpSimplex * model,
 				    const CoinIndexedVector * x,
 				    const CoinIndexedVector * y,
 				    CoinIndexedVector * z) const = 0;
+  /** Return <code>x *A</code> in <code>z</code> but
+      just for number indices in y.
+      Default cheats with fake CoinIndexedVector and
+      then calls subsetTransposeTimes */
+  virtual void listTransposeTimes(const ClpSimplex * model,
+				  double * x,
+				  int * y,
+				  int number,
+				  double * z) const;
   //@}
   //@{
   ///@name Other

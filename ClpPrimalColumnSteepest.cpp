@@ -313,7 +313,9 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
 	spareColumn1,spareColumn2);
     }
   } 
+#ifdef CLP_DEBUG
   alternateWeights_->checkClear();
+#endif
   // make sure outgoing from last iteration okay
   if (sequenceOut>=0) {
     ClpSimplex::Status status = model_->getStatus(sequenceOut);

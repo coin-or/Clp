@@ -108,8 +108,7 @@ public:
 				const double * columnScale) const;
     /** Return <code>x * scalar * A + y</code> in <code>z</code>. 
 	Can use y as temporary array (will be empty at end)
-	Note - If x packed mode - then z packed mode
-	Squashes small elements and knows about ClpSimplex */
+	Note - If x packed mode - then z packed mode */
   virtual void transposeTimes(const ClpSimplex * model, double scalar,
 			      const CoinIndexedVector * x,
 			      CoinIndexedVector * y,

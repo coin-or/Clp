@@ -130,8 +130,7 @@ public:
 			      CoinIndexedVector * z) const;
     /** Return <code>x *A</code> in <code>z</code> but
 	just for indices in y.
-	Note - z always packed mode
-	Squashes small elements and knows about ClpSimplex */
+	Note - z always packed mode */
   virtual void subsetTransposeTimes(const ClpSimplex * model,
 				    const CoinIndexedVector * x,
 				    const CoinIndexedVector * y,

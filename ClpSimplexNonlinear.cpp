@@ -10,6 +10,7 @@
 #include "ClpFactorization.hpp"
 #include "ClpNonLinearCost.hpp"
 #include "ClpLinearObjective.hpp"
+#include "ClpQuadraticObjective.hpp"
 #include "CoinPackedMatrix.hpp"
 #include "CoinIndexedVector.hpp"
 #include "ClpPrimalColumnPivot.hpp"
@@ -34,8 +35,27 @@ int ClpSimplexNonlinear::primal ()
   ClpDataSave data = saveData();
   matrix_->refresh(this); // make sure matrix okay
 
+  // Save objective
+  ClpObjective * saveObjective=NULL;
+  if (objective_->type()>1) {
+    // expand to full if quadratic
+#ifndef NO_RTTI
+    ClpQuadraticObjective * quadraticObj = (dynamic_cast< ClpQuadraticObjective*>(objective_));
+#else
+    ClpQuadraticObjective * quadraticObj = NULL;
+    if (objective_->type()==2)
+      quadraticObj = (static_cast< ClpQuadraticObjective*>(objective_));
+#endif
+    // for moment only if no scaling
+    // May be faster if switched off - but can't see why
+    if (!quadraticObj->fullMatrix()&&!rowScale_) {
+      saveObjective = objective_;
+      objective_=new ClpQuadraticObjective(*quadraticObj,1);
+    }
+  }
   double bestObjectiveWhenFlagged=COIN_DBL_MAX;
   int pivotMode=15;
+  //pivotMode=20;
 
   // initialize - maybe values pass and algorithm_ is +1
   // true does something (? perturbs)
@@ -158,6 +178,11 @@ int ClpSimplexNonlinear::primal ()
   unflag();
   finish();
   restoreData(data);
+  // restore objective if full
+  if (saveObjective) {
+    delete objective_;
+    objective_=saveObjective;
+  }
   return problemStatus_;
 }
 /*  Refactorizes if necessary 
@@ -586,7 +611,7 @@ ClpSimplexNonlinear::whileIterating(int & pivotMode)
   int nextUnflag=10;
   int nextUnflagIteration=numberIterations_+10;
   // get two arrays
-  double * array1 = new double[numberRows_+numberColumns_];
+  double * array1 = new double[2*(numberRows_+numberColumns_)];
   double solutionError=-1.0;
   while (problemStatus_==-1) {
     int result;
@@ -1019,7 +1044,8 @@ ClpSimplexNonlinear::directionVector (CoinIndexedVector * vectorArray,
     }
     numberNonBasic = number;
   } else {
-    // compute norm of flagged
+    // compute norms
+    normUnflagged=0.0;
     for (int iSequence=0;iSequence<numberColumns_+numberRows_;iSequence++) {
       if (flagged(iSequence)) {
 	// accumulate  norm
@@ -1058,21 +1084,29 @@ ClpSimplexNonlinear::directionVector (CoinIndexedVector * vectorArray,
 	abort();
 	break;
       case atUpperBound:
-	if (dj_[iSequence]>dualTolerance_) 
+	if (dj_[iSequence]>dualTolerance_) {
 	  number++;
+	  normUnflagged += dj_[iSequence]*dj_[iSequence];
+	}
 	break;
       case atLowerBound:
-	if (dj_[iSequence]<-dualTolerance_) 
+	if (dj_[iSequence]<-dualTolerance_) {
 	  number++;
+	  normUnflagged += dj_[iSequence]*dj_[iSequence];
+	}
 	break;
       case isFree:
       case superBasic:
-	if (fabs(dj_[iSequence])>dualTolerance_) 
+	if (fabs(dj_[iSequence])>dualTolerance_) {
 	  number++;
+	  normUnflagged += dj_[iSequence]*dj_[iSequence];
+	}
 	break;
       }
       array[iSequence]=-dj_[iSequence];
     }
+    // switch to large
+    normUnflagged=1.0;
     if (!number) {
       for (j=0;j<numberNonBasic;j++) {
 	int iSequence = index[j];
@@ -1143,6 +1177,20 @@ ClpSimplexNonlinear::directionVector (CoinIndexedVector * vectorArray,
   }
   vectorArray->setNumElements(number);
 }
+#define MINTYPE 1
+#if MINTYPE==2
+static double 
+innerProductIndexed(const double * region1, int size, const double * region2,const int * which)
+{
+  int i;
+  double value=0.0;
+  for (i=0;i<size;i++) {
+    int j=which[i];
+    value += region1[j]*region2[j];
+  }
+  return value;
+}
+#endif
 /* 
    Row array and column array have direction
    Returns 0 - can do normal iteration (basis change)
@@ -1195,11 +1243,20 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
   objective_->stepLength(this,solution_,solution_,0.0,
 					       currentObj,predictedObj,thetaObj);
   double saveObj=currentObj;
-#define MINTYPE 1
 #if MINTYPE ==2
   // try Shanno's method
-  // Copy code from ....cpp.q
+  //would be memory leak
+  //double * saveY=new double[numberTotal];
+  //double * saveS=new double[numberTotal];
+  //double * saveY2=new double[numberTotal];
+  //double * saveS2=new double[numberTotal];
+  double saveY[100];
+  double saveS[100];
+  double saveY2[100];
+  double saveS2[100];
+  double zz[10000];
 #endif
+  double * dArray2 = dArray+numberTotal;
   // big big loop
   while (!allFinished) {
     double * work=longArray->denseVector();
@@ -1262,6 +1319,9 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
       {
 	// check null vector
 	double * rhs = spare->denseVector();
+#if CLP_DEBUG > 1
+	spare->checkClear();
+#endif
 	int iRow;
 	multiplyAdd(solution_+numberColumns_,numberRows_,-1.0,rhs,0.0);
 	matrix_->times(1.0,solution_,rhs,rowScale_,columnScale_);
@@ -1291,7 +1351,9 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
       }
       if (sequenceIn_>=0)
 	lastSequenceIn=sequenceIn_;
+#if MINTYPE!=2
       double djNormSave = djNorm;
+#endif
       djNorm=0.0;
       int iIndex;
       for (iIndex=0;iIndex<numberNonBasic;iIndex++) {
@@ -1308,9 +1370,22 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
 #if CONJUGATE == 2
       conjugate = (localPivotMode<10) ? MINTYPE : 0;
 #endif
+      //printf("bigP %d pass %d nBasic %d norm %g normI %g normF %g\n",
+      //     nBigPasses,nPasses,numberNonBasic,normUnflagged,normFlagged);
       if (!nPasses) {
-	djNorm0 = CoinMax(djNorm,1.0e-20);
+	//printf("numberNon %d\n",numberNonBasic);
+#if MINTYPE==2
+	assert (numberNonBasic<100);
+	memset(zz,0,numberNonBasic*numberNonBasic*sizeof(double));
+	int put=0;
+	for (int iVariable=0;iVariable<numberNonBasic;iVariable++) {
+	  zz[put]=1.0;
+	  put+= numberNonBasic+1;
+	}
+#endif
+	djNorm0 = CoinMax(djNorm, 1.0e-20);
 	memcpy(dArray,work,numberTotal*sizeof(double));
+	memcpy(dArray2,work,numberTotal*sizeof(double));
 	if (sequenceIn_>=0&&numberNonBasic==1) {
 	  // see if simple move
 	  double objTheta2 =objective_->stepLength(this,solution_,work,1.0e30,
@@ -1404,18 +1479,228 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
 	  }
 	}
       } else {
-	double beta = djNorm/djNormSave;
+#if MINTYPE==1
 	if (conjugate) {
+	  double djNorm2 = djNorm;
+	  if (numberNonBasic&&0) {
+	    int iIndex;
+	    djNorm2 = 0.0;
+	    for (iIndex=0;iIndex<numberNonBasic;iIndex++) {
+	      int iSequence = which[iIndex];
+	      double alpha = work[iSequence];
+	      //djNorm2 += alpha*alpha;
+	      double alpha2 = work[iSequence]-dArray2[iSequence];
+	      djNorm2 += alpha*alpha2;
+	    }
+	    //printf("a %.18g b %.18g\n",djNorm,djNorm2);
+	  }
+	  djNorm=djNorm2;
+	  double beta = djNorm2/djNormSave;
+	  // reset beta every so often
+	  //if (numberNonBasic&&nPasses>numberNonBasic&&(nPasses%(3*numberNonBasic))==1)
+	  //beta=0.0;
 	  //printf("current norm %g, old %g - beta %g\n",
 	  //     djNorm,djNormSave,beta);
-	  for (iSequence=0;iSequence<numberTotal;iSequence++)
+	  for (iSequence=0;iSequence<numberTotal;iSequence++) {
 	    dArray[iSequence] = work[iSequence] + beta *dArray[iSequence];
+	    dArray2[iSequence] = work[iSequence];
+	  }
 	} else {
 	  for (iSequence=0;iSequence<numberTotal;iSequence++)
 	    dArray[iSequence] = work[iSequence];
 	}
+#else
+	int number2=numberNonBasic;
+	if (number2) {
+	  // pack down into dArray
+	  int jLast=-1;
+	  for (iSequence=0;iSequence<numberNonBasic;iSequence++) {
+	    int j=which[iSequence];
+	    assert(j>jLast);
+	    jLast=j;
+	    double value=work[j];
+	    dArray[iSequence]=-value;
+	  }
+	  // see whether to restart
+	  // check signs - gradient
+	  double g1=innerProduct(dArray,number2,dArray);
+	  double g2=innerProduct(dArray,number2,saveY2);
+	  // Get differences
+	  for (iSequence=0;iSequence<numberNonBasic;iSequence++) {
+	    saveY2[iSequence] = dArray[iSequence]-saveY2[iSequence];
+	    saveS2[iSequence] = solution_[iSequence]-saveS2[iSequence];
+	  }
+	  double g3=innerProduct(saveS2,number2,saveY2);
+	  printf("inner %g\n",g3);
+	  //assert(g3>0);
+	  double zzz[10000];
+	  int iVariable;
+	  g2=1.0e50;// temp
+	  if (fabs(g2)>=0.2*fabs(g1)) {
+	    // restart
+	    double delta = innerProduct(saveY2,number2,saveS2)/
+	      innerProduct(saveY2,number2,saveY2);
+	    delta=1.0;//temp
+	    memset(zz,0,number2*sizeof(double));
+	    int put=0;
+	    for (iVariable=0;iVariable<number2;iVariable++) {
+	      zz[put]=delta;
+	      put+= number2+1;
+	    }
+	  } else {
+	  }
+	  memcpy(zzz,zz,number2*number2*sizeof(double));
+	  double ww[100];
+	  // get sk -Hkyk
+	  for (iVariable=0;iVariable<number2;iVariable++) {
+	    double value=0.0;
+	    for (int jVariable=0;jVariable<number2;jVariable++) {
+	      value += saveY2[jVariable]*zzz[iVariable+number2*jVariable];
+	    }
+	    ww[iVariable] = saveS2[iVariable]-value;
+	  }
+	  double ys = innerProduct(saveY2,number2,saveS2);
+	  double multiplier1 = 1.0/ys;
+	  double multiplier2= innerProduct(saveY2,number2,ww)/(ys*ys);
+#if 1
+	  // and second way
+	  // Hy
+	  double h[100];
+	  for (iVariable=0;iVariable<number2;iVariable++) {
+	    double value=0.0;
+	    for (int jVariable=0;jVariable<number2;jVariable++) {
+	      value += saveY2[jVariable]*zzz[iVariable+number2*jVariable];
+	    }
+	    h[iVariable] = value;
+	  }
+	  double hh[10000];
+	  double yhy1 = innerProduct(h,number2,saveY2)*multiplier1+1.0;
+	  yhy1 *= multiplier1;
+	  for (iVariable=0;iVariable<number2;iVariable++) {
+	    for (int jVariable=0;jVariable<number2;jVariable++) {
+	      int put = iVariable+number2*jVariable;
+	      double value = zzz[put];
+	      value += yhy1*saveS2[iVariable]*saveS2[jVariable];
+	      hh[put]=value;
+	    }
+	  }
+	  for (iVariable=0;iVariable<number2;iVariable++) {
+	    for (int jVariable=0;jVariable<number2;jVariable++) {
+	      int put = iVariable+number2*jVariable;
+	      double value = hh[put];
+	      value -= multiplier1*(saveS2[iVariable]*h[jVariable]);
+	      value -= multiplier1*(saveS2[jVariable]*h[iVariable]);
+	      hh[put]=value;
+	    }
+	  }
+#endif
+	  // now update H
+	  for (iVariable=0;iVariable<number2;iVariable++) {
+	    for (int jVariable=0;jVariable<number2;jVariable++) {
+	      int put = iVariable+number2*jVariable;
+	      double value = zzz[put];
+	      value += multiplier1*(ww[iVariable]*saveS2[jVariable]
+				    +ww[jVariable]*saveS2[iVariable]);
+	      value -= multiplier2*saveS2[iVariable]*saveS2[jVariable];
+	      zzz[put]=value;
+	    }
+	  }
+	  //memcpy(zzz,hh,size*sizeof(double));
+	  // do search direction
+	  memset(dArray,0,numberTotal*sizeof(double));
+	  for (iVariable=0;iVariable<numberNonBasic;iVariable++) {
+	    double value=0.0;
+	    for (int jVariable=0;jVariable<number2;jVariable++) {
+	      int k=which[jVariable];
+	      value += work[k]*zzz[iVariable+number2*jVariable];
+	    }
+	    int i=which[iVariable];
+	    dArray[i] = value;
+	  }
+	  // Now fill out dArray
+	  {
+	    int j;
+	    // Now do basic ones 
+	    int iRow;
+	    CoinIndexedVector * spare1=spare;
+	    CoinIndexedVector * spare2=rowArray;
+#if CLP_DEBUG > 1
+	    spare1->checkClear();
+	    spare2->checkClear();
+#endif
+	    double * array2=spare1->denseVector();
+	    int * index2 = spare1->getIndices();
+	    int number2=0;
+	    times(-1.0,dArray,array2);
+	    dArray = dArray+numberColumns_;
+	    for (iRow=0;iRow<numberRows_;iRow++) {
+	      double value = array2[iRow] + dArray[iRow];
+	      if (value) {
+		array2[iRow]=value;
+		index2[number2++]=iRow;
+	      } else {
+		array2[iRow]=0.0;
+	      }
+	    }
+	    dArray -= numberColumns_;
+	    spare1->setNumElements(number2);
+	    // Ftran
+	    factorization_->updateColumn(spare2,spare1);
+	    number2=spare1->getNumElements();
+	    for (j=0;j<number2;j++) {
+	      int iSequence = index2[j];
+	      double value = array2[iSequence];
+	      array2[iSequence]=0.0;
+	      if (value) {
+		int iPivot=pivotVariable_[iSequence];
+		double oldValue = dArray[iPivot];
+		dArray[iPivot] = value+oldValue;
+	      }
+	    }
+	    spare1->setNumElements(0);
+	  }
+	  //assert (innerProductIndexed(dArray,number2,work,which)>0);
+	  //printf ("innerP1 %g\n",innerProduct(dArray,numberTotal,work));
+	  printf ("innerP1 %g innerP2 %g\n",innerProduct(dArray,numberTotal,work),
+		  innerProductIndexed(dArray,numberNonBasic,work,which));
+	  assert (innerProduct(dArray,numberTotal,work)>0);
+#if 1
+	  {
+	    // check null vector
+	    int iRow;
+	    double qq[10];
+	    memset(qq,0,numberRows_*sizeof(double));
+	    multiplyAdd(dArray+numberColumns_,numberRows_,-1.0,qq,0.0);
+	    matrix_->times(1.0,dArray,qq,rowScale_,columnScale_);
+	    double largest=0.0;
+	    int iLargest=-1;
+	    for (iRow=0;iRow<numberRows_;iRow++) {
+	      double value=fabs(qq[iRow]);
+	      if (value>largest) {
+		largest=value;
+		iLargest=iRow;
+	      }
+	    }
+	    printf("largest null error %g on row %d\n",largest,iLargest);
+	    for (iSequence=0;iSequence<numberTotal;iSequence++) {
+	      if (getStatus(iSequence)==basic)
+		assert (fabs(dj_[iSequence])<1.0e-3);
+	    }
+	  }
+#endif
+	  memcpy(saveY,saveY2,numberNonBasic*sizeof(double));
+	  memcpy(saveS,saveS2,numberNonBasic*sizeof(double));
+	}
+#endif
       }
-      if (djNorm<eps*djNorm0||(nPasses>100&&djNorm<CoinMin(1.0e-1*djNorm0,1.0e-12))) {
+#if MINTYPE==2
+      for (iSequence=0;iSequence<numberNonBasic;iSequence++) {
+	int j=which[iSequence];
+	saveY2[iSequence]=-work[j];
+	saveS2[iSequence]=solution_[j];
+      }
+#endif
+      if (djNorm<eps*djNorm0||(nPasses>100&&djNorm<CoinMin(1.0e-1*djNorm0, 1.0e-12))) {
 #ifdef CLP_DEBUG
 	if (handler_->logLevel()&32) 
 	  printf("dj norm reduced from %g to %g\n",djNorm0,djNorm);
@@ -1601,6 +1886,7 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
       if (handler_->logLevel()&32) 
 	printf("current obj %g thetaObj %g, predictedObj %g\n",currentObj,thetaObj,predictedObj);
 #endif
+#if MINTYPE==1
       if (conjugate) {
 	double offset;
 	const double * gradient = objective_->gradient(this,
@@ -1628,6 +1914,9 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
       } else {
 	objTheta =objTheta2;
       }
+#else
+      objTheta =objTheta2;
+#endif
       // if very small difference then take pivot (depends on djNorm?)
       // distinguish between basic and non-basic
       bool chooseObjTheta=objTheta<theta_;

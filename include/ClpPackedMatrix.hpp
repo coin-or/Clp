@@ -179,7 +179,7 @@ public:
 			      CoinIndexedVector * z) const;
     /** Return <code>x * scalar * A in <code>z</code>. 
 	Note - this version when x packed mode and so will be z
-	This does by column and knows no gaps and knows y empty
+	This does by column and knows no gaps and knows y empty 
 	Squashes small elements and knows about ClpSimplex */
   void transposeTimesByColumn(const ClpSimplex * model, double scalar,
 			      const CoinIndexedVector * x,
@@ -195,8 +195,7 @@ public:
 			      CoinIndexedVector * z) const;
     /** Return <code>x *A</code> in <code>z</code> but
 	just for indices in y.
-	Note - z always packed mode
-	Squashes small elements and knows about ClpSimplex */
+	Note - z always packed mode */
   virtual void subsetTransposeTimes(const ClpSimplex * model,
 				    const CoinIndexedVector * x,
 				    const CoinIndexedVector * y,

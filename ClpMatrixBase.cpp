@@ -194,6 +194,34 @@ ClpMatrixBase::canDoPartialPricing() const
 {
   return false; // default is no
 }
+/* Return <code>x *A</code> in <code>z</code> but
+   just for number indices in y.
+   Default cheats with fake CoinIndexedVector and
+   then calls subsetTransposeTimes */
+void 
+ClpMatrixBase::listTransposeTimes(const ClpSimplex * model,
+				  double * x,
+				  int * y,
+				  int number,
+				  double * z) const
+{
+  CoinIndexedVector pi;
+  CoinIndexedVector list;
+  CoinIndexedVector output;
+  int * saveIndices = list.getIndices();
+  list.setNumElements(number);
+  list.setIndexVector(y);
+  double * savePi = pi.denseVector();
+  pi.setDenseVector(x);
+  double * saveOutput = output.denseVector();
+  output.setDenseVector(z);
+  output.setPacked();
+  subsetTransposeTimes(model,&pi,&list,&output);
+  // restore settings
+  list.setIndexVector(saveIndices);
+  pi.setDenseVector(savePi);
+  output.setDenseVector(saveOutput);
+}
 // Partial pricing 
 void 
 ClpMatrixBase::partialPricing(ClpSimplex * model, double start, double end,

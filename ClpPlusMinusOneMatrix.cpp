@@ -873,8 +873,7 @@ ClpPlusMinusOneMatrix::transposeTimesByRow(const ClpSimplex * model, double scal
   y->setNumElements(0);
 }
 /* Return <code>x *A in <code>z</code> but
-   just for indices in y.
-   Squashes small elements and knows about ClpSimplex */
+   just for indices in y. */
 void 
 ClpPlusMinusOneMatrix::subsetTransposeTimes(const ClpSimplex * model,
 			      const CoinIndexedVector * rowArray,

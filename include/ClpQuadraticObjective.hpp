@@ -116,6 +116,9 @@ public:
   /// Number of columns in quadratic objective
   inline int numberColumns() const
   {return numberColumns_;};
+  /// If a full or half matrix
+  inline bool fullMatrix() const
+  { return fullMatrix_;};
   //@}
 
   //---------------------------------------------------------------------------
@@ -132,6 +135,8 @@ private:
   int numberColumns_;
   /// Also length of linear objective which could be bigger
   int numberExtendedColumns_;
+  /// True if full symmetric matrix, false if half
+  bool fullMatrix_;
   //@}
 };
 

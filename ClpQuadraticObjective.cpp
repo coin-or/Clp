@@ -24,6 +24,7 @@ ClpQuadraticObjective::ClpQuadraticObjective ()
   numberColumns_=0;
   numberExtendedColumns_=0;
   activated_=0;
+  fullMatrix_=false;
 }
 
 //-------------------------------------------------------------------
@@ -57,6 +58,7 @@ ClpQuadraticObjective::ClpQuadraticObjective (const double * objective ,
   quadraticObjective_=NULL;
   gradient_ = NULL;
   activated_=1;
+  fullMatrix_=false;
 }
 
 //-------------------------------------------------------------------
@@ -68,6 +70,7 @@ ClpQuadraticObjective::ClpQuadraticObjective (const ClpQuadraticObjective & rhs,
 {  
   numberColumns_=rhs.numberColumns_;
   numberExtendedColumns_=rhs.numberExtendedColumns_;
+  fullMatrix_=rhs.fullMatrix_;
   if (rhs.objective_) {
     objective_ = new double [numberExtendedColumns_];
     memcpy(objective_,rhs.objective_,numberExtendedColumns_*sizeof(double));
@@ -87,6 +90,7 @@ ClpQuadraticObjective::ClpQuadraticObjective (const ClpQuadraticObjective & rhs,
       quadraticObjective_ = new CoinPackedMatrix(*rhs.quadraticObjective_);
     } else if (type==1) {
       // expand to full symmetric
+      fullMatrix_=true;
       const int * columnQuadratic1 = rhs.quadraticObjective_->getIndices();
       const CoinBigIndex * columnQuadraticStart1 = rhs.quadraticObjective_->getVectorStarts();
       const int * columnQuadraticLength1 = rhs.quadraticObjective_->getVectorLengths();
@@ -177,6 +181,7 @@ ClpQuadraticObjective::ClpQuadraticObjective (const ClpQuadraticObjective & rhs,
 	delete [] quadraticElement2;
       }
     } else {
+      fullMatrix_=false;
       abort(); // code when needed
     }
 	    
@@ -192,6 +197,7 @@ ClpQuadraticObjective::ClpQuadraticObjective (const ClpQuadraticObjective &rhs,
 					const int * whichColumn) 
 : ClpObjective(rhs)
 {
+  fullMatrix_=rhs.fullMatrix_;
   objective_=NULL;
   int extra = rhs.numberExtendedColumns_-rhs.numberColumns_;
   numberColumns_=0;
@@ -252,6 +258,7 @@ ClpQuadraticObjective &
 ClpQuadraticObjective::operator=(const ClpQuadraticObjective& rhs)
 {
   if (this != &rhs) {
+    fullMatrix_=rhs.fullMatrix_;
     delete quadraticObjective_;
     quadraticObjective_ = NULL;
     ClpObjective::operator=(rhs);
@@ -317,27 +324,47 @@ ClpQuadraticObjective::gradient(const ClpSimplex * model,
 	else
 	  memset(gradient_,0,numberExtendedColumns_*sizeof(double));
 	if (activated_) {
-	  int iColumn;
-	  for (iColumn=0;iColumn<numberColumns_;iColumn++) {
-	    double valueI = solution[iColumn];
-	    CoinBigIndex j;
-	    for (j=columnQuadraticStart[iColumn];
-		 j<columnQuadraticStart[iColumn]+columnQuadraticLength[iColumn];j++) {
-	      int jColumn = columnQuadratic[j];
-	      double valueJ = solution[jColumn];
-	      double elementValue = quadraticElement[j];
-	      if (iColumn!=jColumn) {
-		offset += valueI*valueJ*elementValue;
-		double gradientI = valueJ*elementValue;
-		double gradientJ = valueI*elementValue;
-		gradient_[iColumn] += gradientI;
-		gradient_[jColumn] += gradientJ;
-	      } else {
-		offset += 0.5*valueI*valueI*elementValue;
-		double gradientI = valueI*elementValue;
-		gradient_[iColumn] += gradientI;
+	  if (!fullMatrix_) {
+	    int iColumn;
+	    for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+	      double valueI = solution[iColumn];
+	      CoinBigIndex j;
+	      for (j=columnQuadraticStart[iColumn];
+		   j<columnQuadraticStart[iColumn]+columnQuadraticLength[iColumn];j++) {
+		int jColumn = columnQuadratic[j];
+		double valueJ = solution[jColumn];
+		double elementValue = quadraticElement[j];
+		if (iColumn!=jColumn) {
+		  offset += valueI*valueJ*elementValue;
+		  double gradientI = valueJ*elementValue;
+		  double gradientJ = valueI*elementValue;
+		  gradient_[iColumn] += gradientI;
+		  gradient_[jColumn] += gradientJ;
+		} else {
+		  offset += 0.5*valueI*valueI*elementValue;
+		  double gradientI = valueI*elementValue;
+		  gradient_[iColumn] += gradientI;
+		}
 	      }
 	    }
+	  } else {
+	    // full matrix
+	    int iColumn;
+	    offset *= 2.0;
+	    for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+	      CoinBigIndex j;
+	      double value=0.0;
+	      double current = gradient_[iColumn];
+	      for (j=columnQuadraticStart[iColumn];
+		   j<columnQuadraticStart[iColumn]+columnQuadraticLength[iColumn];j++) {
+		int jColumn = columnQuadratic[j];
+		double valueJ = solution[jColumn]*quadraticElement[j];
+		value += valueJ;
+	      }
+	      offset += value*solution[iColumn];
+	      gradient_[iColumn] = current+value;
+	    }
+	    offset *= 0.5;
 	  }
 	}
       }
@@ -346,6 +373,8 @@ ClpQuadraticObjective::gradient(const ClpSimplex * model,
   } else {
     // do scaling
     assert (solution);
+    // for now only if half
+    assert (!fullMatrix_);
     if (refresh||!gradient_) {
       if (!gradient_) 
 	gradient_ = new double[numberExtendedColumns_];
@@ -567,6 +596,7 @@ void
 ClpQuadraticObjective::loadQuadraticObjective(const int numberColumns, const CoinBigIndex * start,
 			      const int * column, const double * element,int numberExtended)
 {
+  fullMatrix_=false;
   delete quadraticObjective_;
   quadraticObjective_ = new CoinPackedMatrix(true,numberColumns,numberColumns,
 					     start[numberColumns],element,column,start,NULL);
@@ -728,30 +758,55 @@ ClpQuadraticObjective::stepLength(ClpSimplex * model,
   double b=delta;
   double c=0.0;
   if (!scaling) {
-    int iColumn;
-    for (iColumn=0;iColumn<numberColumns_;iColumn++) {
-      double valueI = solution[iColumn];
-      double changeI = change[iColumn];
-      CoinBigIndex j;
-      for (j=columnQuadraticStart[iColumn];
-	   j<columnQuadraticStart[iColumn]+columnQuadraticLength[iColumn];j++) {
-	int jColumn = columnQuadratic[j];
-	double valueJ = solution[jColumn];
-	double changeJ = change[jColumn];
-	double elementValue = quadraticElement[j];
-	if (iColumn!=jColumn) {
-	  a += changeI*changeJ*elementValue;
-	  b += (changeI*valueJ+changeJ*valueI)*elementValue;
-	  c += valueI*valueJ*elementValue;
-	} else {
-	  a += 0.5*changeI*changeI*elementValue;
-	  b += changeI*valueI*elementValue;
-	  c += 0.5*valueI*valueI*elementValue;
+    if (!fullMatrix_) {
+      int iColumn;
+      for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+	double valueI = solution[iColumn];
+	double changeI = change[iColumn];
+	CoinBigIndex j;
+	for (j=columnQuadraticStart[iColumn];
+	     j<columnQuadraticStart[iColumn]+columnQuadraticLength[iColumn];j++) {
+	  int jColumn = columnQuadratic[j];
+	  double valueJ = solution[jColumn];
+	  double changeJ = change[jColumn];
+	  double elementValue = quadraticElement[j];
+	  if (iColumn!=jColumn) {
+	    a += changeI*changeJ*elementValue;
+	    b += (changeI*valueJ+changeJ*valueI)*elementValue;
+	    c += valueI*valueJ*elementValue;
+	  } else {
+	    a += 0.5*changeI*changeI*elementValue;
+	    b += changeI*valueI*elementValue;
+	    c += 0.5*valueI*valueI*elementValue;
+	  }
 	}
       }
+    } else {
+      // full matrix stored
+      int iColumn;
+      for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+	double valueI = solution[iColumn];
+	double changeI = change[iColumn];
+	CoinBigIndex j;
+	for (j=columnQuadraticStart[iColumn];
+	     j<columnQuadraticStart[iColumn]+columnQuadraticLength[iColumn];j++) {
+	  int jColumn = columnQuadratic[j];
+	  double valueJ = solution[jColumn];
+	  double changeJ = change[jColumn];
+	  double elementValue = quadraticElement[j];
+	  valueJ *= elementValue;
+	  a += changeI*changeJ*elementValue;
+	  b += changeI*valueJ;
+	  c += valueI*valueJ;
+	}
+      }
+      a *= 0.5;
+      c *= 0.5;
     }
   } else {
     // scaling
+    // for now only if half
+    assert (!fullMatrix_);
     const double * columnScale = model->columnScale();
     double direction = model->optimizationDirection()*model->objectiveScale();
     // direction is actually scale out not scale in

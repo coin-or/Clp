@@ -137,8 +137,7 @@ ClpDummyMatrix::transposeTimes(const ClpSimplex * model, double scalar,
   abort();
 }
 /* Return <code>x *A in <code>z</code> but
-   just for indices in y.
-   Squashes small elements and knows about ClpSimplex */
+   just for indices in y */
 void 
 ClpDummyMatrix::subsetTransposeTimes(const ClpSimplex * model,
 			      const CoinIndexedVector * rowArray,

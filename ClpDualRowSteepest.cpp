@@ -421,6 +421,8 @@ ClpDualRowSteepest::updateWeights(CoinIndexedVector * input,
     alternateWeights_->setNumElements(nSave);
     if (norm < TRY_NORM) 
       norm = TRY_NORM;
+    // Try this to make less likely will happen again and stop cycling
+    //norm *= 1.02;
     weights_[pivotRow] = norm;
     spare->clear();
 #ifdef CLP_DEBUG
