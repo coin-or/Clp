@@ -33,10 +33,6 @@ const char *subst_constraint_action::name() const
 void compact_rep(double *elems, int *indices, CoinBigIndex *starts, const int *lengths, int n,
 		 const presolvehlink *link);
 
-inline int min(int x, int y)
-{
-  return (x < y) ? x : y;
-}
 
 
 // copy of expand_col; have to rename params
@@ -614,7 +610,7 @@ const PresolveAction *subst_constraint_action::presolve(PresolveMatrix *prob,
 	continue;
 
       bool all_ok = true;
-      for (CoinBigIndex k=kcs; k<kce; ++k) {
+      for (k=kcs; k<kce; ++k) {
 	double coeff_factor = fabs(colels[k] / bestrowy_coeff);
 	if (fabs(coeff_factor) > 1.3)
 	  all_ok = false;
@@ -650,7 +646,6 @@ const PresolveAction *subst_constraint_action::presolve(PresolveMatrix *prob,
 
 	int nfill = -hinrow[bestrowy_row];
 	CoinBigIndex kcol1 = krs1;
-	CoinBigIndex kk;
 	for (kk=krs; kk<kre; ++kk) {
 	  int jcol = hcol[kk];
 
@@ -837,7 +832,6 @@ const PresolveAction *subst_constraint_action::presolve(PresolveMatrix *prob,
 	    // substitute away jcoly in the other rows
 	    // Use ap as mcstrt etc may move if compacted
 	    kce = hincol[jcoly];
-	    CoinBigIndex k;
 	    action *ap = &actions[nactions-1];
 	    for (k=0; k<kce; ++k) {
 	      int rowx = ap->rows[k];

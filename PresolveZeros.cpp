@@ -8,10 +8,6 @@
 #include "PresolveMatrix.hpp"
 #include "PresolveZeros.hpp"
 
-inline double min(double x, double y)
-{
-  return (x < y) ? x : y;
-}
 
 // searches the cols in checkcols for zero entries.
 // creates a dropped_zero entry for each one; doesn't check for out-of-memory.

@@ -28,7 +28,7 @@ class drop_zero_coefficients_action : public PresolveAction {
 
   void postsolve(PostsolveMatrix *prob) const;
 
-  ~drop_zero_coefficients_action() { delete[]zeros_; }
+  ~drop_zero_coefficients_action() { deleteAction(zeros_); }
 };
 
 const PresolveAction *drop_zero_coefficients(PresolveMatrix *prob,

@@ -20,8 +20,6 @@ typedef struct {
   double djAtEnd;
   int iteration;
 } IdiotResult;
-using std::max;
-using std::min;
 /** This class implements a very silly algorithm.  It has no merit
     apart from the fact that it gets an approximate solution to 
     some classes of problems.  Better if vaguely homogeneous.

@@ -10,20 +10,11 @@
 #if defined(_MSC_VER)
 // Turn off compiler warning about long names
 #  pragma warning(disable:4786)
-#if !defined(min)
-#define min(a,b)  (((a) < (b)) ? (a) : (b))
-#endif
-#if !defined(max)
-#define max(a,b)  (((a) > (b)) ? (a) : (b))
-#endif
 // Visual C++ has bad bug on delete []
-#define deleteAction(array) delete [] (void *) array
+#define deleteAction(array) delete [] ((void *) array)
 #else
-using std::min;
-using std::max;
 // Visual C++ has bad bug on delete []
 #define deleteAction(array) delete [] array
-#
 #endif
 
 

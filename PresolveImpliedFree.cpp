@@ -434,7 +434,7 @@ void implied_free_action::postsolve(PostsolveMatrix *prob) const
       rlo[irow] = f->rlo;
       rup[irow] = f->rup;
     }
-    delete [] save_costs;
+    deleteAction( save_costs);
     // coeff has now been initialized
 
     // compute solution
