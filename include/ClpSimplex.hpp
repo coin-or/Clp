@@ -318,6 +318,8 @@ public:
       primal and dual solutions.  Uses current problem arrays for
       bounds.  Returns feasibility states */
   int getSolution ();
+  /// Pass in an existing non linear cost 
+  void passInNonLinearCost(ClpNonLinearCost * cost);
   /** Return model - updates any scalars */
   void returnModel(ClpSimplex & otherModel);
   /** Factorizes using current basis.  

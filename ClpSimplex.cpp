@@ -3029,14 +3029,13 @@ ClpSimplex::sanityCheck()
     problemStatus_=4;
     return false;
   }
-  int numberBad , numberBadBounds;
+  int numberBad ;
   double largestBound, smallestBound, minimumGap;
   double smallestObj, largestObj;
   int firstBad;
   int modifiedBounds=0;
   int i;
   numberBad=0;
-  numberBadBounds=0;
   firstBad=-1;
   minimumGap=1.0e100;
   smallestBound=1.0e100;
@@ -3060,7 +3059,7 @@ ClpSimplex::sanityCheck()
     }
     value=upper_[i]-lower_[i];
     if (value<-primalTolerance_) {
-      numberBadBounds++;
+      numberBad++;
       if (firstBad<0)
 	firstBad=i;
     } else if (value<=fixTolerance) {
@@ -3112,7 +3111,7 @@ ClpSimplex::sanityCheck()
     }
     value=upper_[i]-lower_[i];
     if (value<-primalTolerance_) {
-      numberBadBounds++;
+      numberBad++;
       if (firstBad<0)
 	firstBad=i;
     } else if (value<=fixTolerance) {
@@ -4160,4 +4159,11 @@ ClpSimplex::returnModel(ClpSimplex & otherModel)
   otherModel.numberTimesOptimal_ = numberTimesOptimal_;
   otherModel.sumOfRelaxedDualInfeasibilities_ = sumOfRelaxedDualInfeasibilities_;
   otherModel.sumOfRelaxedPrimalInfeasibilities_ = sumOfRelaxedPrimalInfeasibilities_;
+}
+// Pass in an existing non linear cost 
+void 
+ClpSimplex::passInNonLinearCost(ClpNonLinearCost * cost)
+{
+  delete nonLinearCost_;
+  nonLinearCost_ = cost;
 }
