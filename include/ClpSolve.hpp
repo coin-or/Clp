@@ -83,8 +83,10 @@ public:
 		   1 - Wssmp allowing some long columns
 		   2 - Wssmp not allowing long columns
 		   3 - Wssmp using KKT
-		   4 - bit set to do scaling
-		   8 - set to be aggressive with gamma/delta?
+                   4 - Using Florida ordering
+		   8 - bit set to do scaling
+		   16 - set to be aggressive with gamma/delta?
+                   32 - Use KKT
       5 - for presolve
                    1 - switch off dual stuff
       6 - for detailed printout (initially just presolve)

@@ -962,10 +962,6 @@ CoinPresolveMatrix::CoinPresolveMatrix(int ncols0_in,
 
 
   // temporary init
-  mrstrt_(new CoinBigIndex[nrows_in+1]),
-  hinrow_(new int[nrows_in+1]),
-  rowels_(new double[2*nelems_in]),
-  hcol_(new int[2*nelems_in]),
   integerType_(new unsigned char[ncols0_in]),
   tuning_(false),
   startTime_(0.0),
@@ -1018,12 +1014,29 @@ CoinPresolveMatrix::CoinPresolveMatrix(int ncols0_in,
   mRow->reverseOrderedCopyOf(*m);
   mRow->removeGaps();
 
+  // Now get rid of matrix
+  si->createEmptyMatrix();
 
-  ClpDisjointCopyN(mRow->getVectorStarts(),  nrows_,  mrstrt_);
+  double * el = mRow->getMutableElements();
+  int * ind = mRow->getMutableIndices();
+  CoinBigIndex * strt = mRow->getMutableVectorStarts();
+  int * len = mRow->getMutableVectorLengths();
+  // Do carefully to save memory
+  rowels_ = new double[2*nelems_in];
+  ClpDisjointCopyN(el,      nelems_, rowels_);
+  mRow->nullElementArray();
+  delete [] el;
+  hcol_ = new int[2*nelems_in];
+  ClpDisjointCopyN(ind,       nelems_, hcol_);
+  mRow->nullIndexArray();
+  delete [] ind;
+  mrstrt_ = new CoinBigIndex[nrows_in+1];
+  ClpDisjointCopyN(strt,  nrows_,  mrstrt_);
+  mRow->nullStartArray();
   mrstrt_[nrows_] = nelems_;
-  ClpDisjointCopyN(mRow->getVectorLengths(), nrows_,  hinrow_);
-  ClpDisjointCopyN(mRow->getIndices(),       nelems_, hcol_);
-  ClpDisjointCopyN(mRow->getElements(),      nelems_, rowels_);
+  delete [] strt;
+  hinrow_ = new int[nrows_in+1];
+  ClpDisjointCopyN(len, nrows_,  hinrow_);
 
   delete mRow;
   if (si->integerInformation()) {
@@ -1332,7 +1345,11 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
     // make new copy
     if (saveFile_=="") {
       delete presolvedModel_;
+      // So won't get names
+      int lengthNames = originalModel->lengthNames();
+      originalModel->setLengthNames(0);
       presolvedModel_ = new ClpSimplex(*originalModel);
+      originalModel->setLengthNames(lengthNames);
     } else {
       presolvedModel_=originalModel;
     }

@@ -620,6 +620,8 @@ public:
    void passInEventHandler(const ClpEventHandler * eventHandler);
    /// length of names (0 means no names0
    inline int lengthNames() const { return lengthNames_; }
+   /// length of names (0 means no names0
+   inline void setLengthNames(int value) { lengthNames_=value; }
    /// Row names
    inline const std::vector<std::string> * rowNames() const {
       return &rowNames_;

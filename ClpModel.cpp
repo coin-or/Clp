@@ -633,8 +633,10 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
   scalingFlag_ = rhs.scalingFlag_;
   if (trueCopy) {
     lengthNames_ = rhs.lengthNames_;
-    rowNames_ = rhs.rowNames_;
-    columnNames_ = rhs.columnNames_;
+    if (lengthNames_) {
+      rowNames_ = rhs.rowNames_;
+      columnNames_ = rhs.columnNames_;
+    }
     if (rhs.integerType_) {
       integerType_ = new char[numberColumns_];
       memcpy(integerType_,rhs.integerType_,numberColumns_*sizeof(char));

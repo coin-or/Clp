@@ -1641,7 +1641,7 @@ ClpSimplex::initialPrimalSolve()
 // Default constructor
 ClpSolve::ClpSolve (  )
 {
-  method_ = useDual;
+  method_ = automatic;
   presolveType_=presolveOn;
   numberPasses_=5;
   int i;

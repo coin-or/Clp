@@ -2777,14 +2777,16 @@ ClpPackedMatrix::reallyScale(const double * rowScale, const double * columnScale
 void 
 ClpPackedMatrix::deleteCols(const int numDel, const int * indDel)
 { 
-  matrix_->deleteCols(numDel,indDel);
+  if (matrix_->getNumCols())
+    matrix_->deleteCols(numDel,indDel);
   numberActiveColumns_ = matrix_->getNumCols();
 }
 /* Delete the rows whose indices are listed in <code>indDel</code>. */
 void 
 ClpPackedMatrix::deleteRows(const int numDel, const int * indDel)
 { 
-  matrix_->deleteRows(numDel,indDel);
+  if (matrix_->getNumRows())
+    matrix_->deleteRows(numDel,indDel);
   numberActiveColumns_ = matrix_->getNumCols();
   // may now have gaps
   hasGaps_=true;
