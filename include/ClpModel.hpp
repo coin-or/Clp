@@ -109,6 +109,8 @@ public:
       also updates any scalars */
   void returnModel(ClpModel & otherModel);
 
+  /// Create empty ClpPackedMatrix
+  void createEmptyMatrix();
   /// Drops names - makes lengthnames 0 and names empty
   void dropNames();
   

@@ -522,12 +522,14 @@ ClpModel::setStrParam(ClpStrParam key, const std::string & value)
 }
 // Useful routines
 // Returns resized array and deletes incoming
-double * resizeDouble(double * array , int size, int newSize, double fill)
+double * resizeDouble(double * array , int size, int newSize, double fill,
+		      bool createArray)
 {
-  if (array&&size!=newSize) {
+  if ((array||createArray)&&size!=newSize) {
     int i;
     double * newArray = new double[newSize];
-    memcpy(newArray,array,min(newSize,size)*sizeof(double));
+    if (array)
+      memcpy(newArray,array,min(newSize,size)*sizeof(double));
     delete [] array;
     array = newArray;
     for (i=size;i<newSize;i++) 
@@ -596,30 +598,38 @@ char * deleteChar(char * array , int size,
   }
   return array;
 }
+// Create empty ClpPackedMatrix
+void 
+ClpModel::createEmptyMatrix()
+{
+  delete matrix_;
+  CoinPackedMatrix matrix2;
+  matrix_=new ClpPackedMatrix(matrix2);
+}
 // Resizes 
 void 
 ClpModel::resize (int newNumberRows, int newNumberColumns)
 {
   rowActivity_ = resizeDouble(rowActivity_,numberRows_,
-			      newNumberRows,0.0);
+			      newNumberRows,0.0,true);
   dual_ = resizeDouble(dual_,numberRows_,
-		       newNumberRows,0.0);
+		       newNumberRows,0.0,true);
   rowObjective_ = resizeDouble(rowObjective_,numberRows_,
-			       newNumberRows,0.0);
+			       newNumberRows,0.0,false);
   rowLower_ = resizeDouble(rowLower_,numberRows_,
-			   newNumberRows,-DBL_MAX);
+			   newNumberRows,-DBL_MAX,true);
   rowUpper_ = resizeDouble(rowUpper_,numberRows_,
-			   newNumberRows,DBL_MAX);
+			   newNumberRows,DBL_MAX,true);
   columnActivity_ = resizeDouble(columnActivity_,numberColumns_,
-				 newNumberColumns,0.0);
+				 newNumberColumns,0.0,true);
   reducedCost_ = resizeDouble(reducedCost_,numberColumns_,
-			      newNumberColumns,0.0);
+			      newNumberColumns,0.0,true);
   objective_ = resizeDouble(objective_,numberColumns_,
-			    newNumberColumns,0.0);
+			    newNumberColumns,0.0,true);
   columnLower_ = resizeDouble(columnLower_,numberColumns_,
-			      newNumberColumns,0.0);
+			      newNumberColumns,0.0,true);
   columnUpper_ = resizeDouble(columnUpper_,numberColumns_,
-			      newNumberColumns,DBL_MAX);
+			      newNumberColumns,DBL_MAX,true);
   if (newNumberRows<numberRows_) {
     int * which = new int[numberRows_-newNumberRows];
     int i;
@@ -682,15 +692,6 @@ ClpModel::deleteRows(int number, const int * which)
   rowUpper_ = deleteDouble(rowUpper_,numberRows_,
 			      number, which, newSize);
   matrix_->deleteRows(number,which);
-  numberRows_=newSize;
-  // set state back to unknown
-  problemStatus_ = -1;
-  delete [] ray_;
-  ray_ = NULL;
-  // for now gets rid of names
-  lengthNames_ = 0;
-  rowNames_ = std::vector<std::string> ();
-  columnNames_ = std::vector<std::string> ();
   // status
   if (status_) {
     unsigned char * tempR  = (unsigned char *) deleteChar((char *)status_+numberColumns_,
@@ -703,6 +704,15 @@ ClpModel::deleteRows(int number, const int * which)
     delete [] status_;
     status_ = tempC;
   }
+  numberRows_=newSize;
+  // set state back to unknown
+  problemStatus_ = -1;
+  delete [] ray_;
+  ray_ = NULL;
+  // for now gets rid of names
+  lengthNames_ = 0;
+  rowNames_ = std::vector<std::string> ();
+  columnNames_ = std::vector<std::string> ();
 }
 // Deletes columns
 void 
@@ -720,17 +730,6 @@ ClpModel::deleteColumns(int number, const int * which)
   columnUpper_ = deleteDouble(columnUpper_,numberColumns_,
 			      number, which, newSize);
   matrix_->deleteCols(number,which);
-  numberColumns_=newSize;
-  // set state back to unknown
-  problemStatus_ = -1;
-  delete [] ray_;
-  ray_ = NULL;
-  // for now gets rid of names
-  lengthNames_ = 0;
-  rowNames_ = std::vector<std::string> ();
-  columnNames_ = std::vector<std::string> ();
-  integerType_ = deleteChar(integerType_,numberColumns_,
-			    number, which, newSize,true);
   // status
   if (status_) {
     unsigned char * tempC  = (unsigned char *) deleteChar((char *)status_,
@@ -744,6 +743,17 @@ ClpModel::deleteColumns(int number, const int * which)
     delete [] status_;
     status_ = temp;
   }
+  numberColumns_=newSize;
+  // set state back to unknown
+  problemStatus_ = -1;
+  delete [] ray_;
+  ray_ = NULL;
+  // for now gets rid of names
+  lengthNames_ = 0;
+  rowNames_ = std::vector<std::string> ();
+  columnNames_ = std::vector<std::string> ();
+  integerType_ = deleteChar(integerType_,numberColumns_,
+			    number, which, newSize,true);
 }
 // Infeasibility/unbounded ray (NULL returned if none/wrong)
 double * 
