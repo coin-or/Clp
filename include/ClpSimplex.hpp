@@ -57,7 +57,6 @@ public:
     atUpperBound = 0x02,
     atLowerBound = 0x03,
     superBasic = 0x04,
-    isFixed = 0x05
   };
 
   enum FakeBound {
@@ -601,6 +600,12 @@ public:
   };
   inline Status getColumnStatus(int sequence) const
   {return static_cast<Status> (status_[sequence]&7);};
+  inline void setFixed( int sequence)
+  { status_[sequence] |= 32;};
+  inline void clearFixed( int sequence)
+  { status_[sequence] &= ~32; };
+  inline bool fixed(int sequence) const
+  {return (((status_[sequence]>>5)&1)!=0);};
   inline void setFlagged( int sequence)
   {
     status_[sequence] |= 64;
