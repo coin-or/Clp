@@ -170,9 +170,6 @@ public:
   /// costs
   inline float * cost() const
   { return cost_;};
-  /// full starts
-  inline int * fullStart() const
-  { return fullStart_;};
   /// ids of active columns (just index here)
   inline int * id() const
   { return id_;};
@@ -200,6 +197,9 @@ public:
   /// number of columns in dynamic model
   inline int lastDynamic() const
   { return lastDynamic_;};
+  /// number of rows in original model
+  inline int numberStaticRows() const
+  { return numberStaticRows_;};
   /// size of working matrix (max)
   inline int numberElements() const
   { return numberElements_;};
@@ -300,8 +300,6 @@ protected:
   float * element_;
   /// costs
   float * cost_;
-  /// temp
-  int * fullStart_;
   /// ids of active columns (just index here)
   int * id_;
   /// for status and which bound
