@@ -4,7 +4,9 @@
     Introduction
   </title>
   <para>
-  The COIN  Linear Program code or CLP is an open-source simplex solver.  This
+  The COIN  Linear Program code or CLP is an open-source simplex solver written
+  in C++.  It is primarily meant to be used as a callable library, but a
+  basic stand-alone executable version is also available.  This
   is the first edition of the User Guide, and is to be considered a work in
   progress.
   </para>
