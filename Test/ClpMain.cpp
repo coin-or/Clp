@@ -2280,8 +2280,8 @@ costs this much to be infeasible",
 		for (iRow=0;iRow<numberRows;iRow++) {
 		  // leave free ones for now
 		  if (rowLower[iRow]>-1.0e20||rowUpper[iRow]<1.0e20) {
-		    rowLower[iRow]=max(rowLower[iRow],-value);
-		    rowUpper[iRow]=min(rowUpper[iRow],value);
+		    rowLower[iRow]=CoinMax(rowLower[iRow],-value);
+		    rowUpper[iRow]=CoinMin(rowUpper[iRow],value);
 		  }
 		}
 		int iColumn;
@@ -2292,8 +2292,8 @@ costs this much to be infeasible",
 		  // leave free ones for now
 		  if (columnLower[iColumn]>-1.0e20||
 		      columnUpper[iColumn]<1.0e20) {
-		    columnLower[iColumn]=max(columnLower[iColumn],-value);
-		    columnUpper[iColumn]=min(columnUpper[iColumn],value);
+		    columnLower[iColumn]=CoinMax(columnLower[iColumn],-value);
+		    columnUpper[iColumn]=CoinMin(columnUpper[iColumn],value);
 		  }
 		}
 	      } else if (valid==1) {
@@ -2375,7 +2375,7 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 		double * rowUpper = models[iModel].rowUpper();
 		double primalTolerance = models[iModel].primalTolerance();
 		char format[6];
-		sprintf(format,"%%-%ds",max(lengthName,8));
+		sprintf(format,"%%-%ds",CoinMax(lengthName,8));
 		for (iRow=0;iRow<numberRows;iRow++) {
 		  int type=0;
 		  if (primalRowSolution[iRow]>rowUpper[iRow]+primalTolerance||
