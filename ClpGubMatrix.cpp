@@ -77,7 +77,7 @@ ClpGubMatrix::ClpGubMatrix (const ClpGubMatrix & rhs)
   int numberColumns = getNumCols();
   backward_ = ClpCopyOfArray(rhs.backward_,numberColumns);
   backToPivotRow_ = ClpCopyOfArray(rhs.backToPivotRow_,numberColumns);
-  changeCost_ = ClpCopyOfArray(rhs.changeCost_,getNumRows());
+  changeCost_ = ClpCopyOfArray(rhs.changeCost_,getNumRows()+numberSets_);
   keyVariable_ = ClpCopyOfArray(rhs.keyVariable_,numberSets_);
   // find longest set
   int * longest = new int[numberSets_];
@@ -169,7 +169,7 @@ ClpGubMatrix::ClpGubMatrix(ClpPackedMatrix * matrix, int numberSets,
   int numberRows = matrix_->getNumRows();
   backward_ = new int[numberColumns];
   backToPivotRow_ = new int[numberColumns];
-  changeCost_ = new double [numberRows];
+  changeCost_ = new double [numberRows+numberSets_];
   keyVariable_ = new int[numberSets_];
   // signal to need new ordering
   next_ = NULL;
@@ -322,7 +322,7 @@ ClpGubMatrix::operator=(const ClpGubMatrix& rhs)
     int numberColumns = getNumCols();
     backward_ = ClpCopyOfArray(rhs.backward_,numberColumns);
     backToPivotRow_ = ClpCopyOfArray(rhs.backToPivotRow_,numberColumns);
-    changeCost_ = ClpCopyOfArray(rhs.changeCost_,getNumRows());
+    changeCost_ = ClpCopyOfArray(rhs.changeCost_,getNumRows()+numberSets_);
     keyVariable_ = ClpCopyOfArray(rhs.keyVariable_,numberSets_);
     // find longest set
     int * longest = new int[numberSets_];

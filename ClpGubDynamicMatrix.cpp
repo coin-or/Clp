@@ -15,7 +15,7 @@
 // at end to get min/max!
 #include "ClpGubDynamicMatrix.hpp"
 #include "ClpMessage.hpp"
-//#define CLP_DEBUG
+#define CLP_DEBUG
 //#define CLP_DEBUG_PRINT
 //#############################################################################
 // Constructors / Destructor / Assignment
@@ -161,11 +161,12 @@ ClpGubDynamicMatrix::ClpGubDynamicMatrix(ClpSimplex * model, int numberSets,
     dynamic_cast< ClpPackedMatrix*>(model->clpMatrix());
   assert (originalMatrixA);
   CoinPackedMatrix * originalMatrix = originalMatrixA->getPackedMatrix();
+  originalMatrixA->setMatrixNull(); // so can be deleted safely
   // guess how much space needed
-  double guess = numberElements;
+  double guess = originalMatrix->getNumElements()+10;
   guess /= (double) numberColumns;
   guess *= 2*numberGubColumns_;
-  numberElements_ = (int) guess;
+  numberElements_ = (int) min(guess,10000000.0);
   numberElements_ = min(numberElements_,numberElements)+originalMatrix->getNumElements();
   matrix_ = originalMatrix;
   zeroElements_ = false;
@@ -186,7 +187,7 @@ ClpGubDynamicMatrix::ClpGubDynamicMatrix(ClpSimplex * model, int numberSets,
   numberColumns = matrix_->getNumCols();
   backward_ = new int[numberNeeded];
   backToPivotRow_ = new int[numberNeeded];
-  changeCost_ = new double [numberRows];
+  changeCost_ = new double [numberRows+numberSets_];
   keyVariable_ = new int[numberSets_];
   // signal to need new ordering
   next_ = NULL;
@@ -461,7 +462,7 @@ ClpGubDynamicMatrix::partialPricing(ClpSimplex * model, int start, int end,
 	int numberThis = startColumn_[bestSequence+1]-startColumn_[bestSequence];
 	if (numberElements+numberThis>numberElements_) {
 	  // need to redo
-	  numberElements_ = (3*numberElements_/2);
+	  numberElements_ = max(3*numberElements_/2,numberElements+numberThis);
 	  matrix_->reserve(numberColumns,numberElements_);
 	  element =  matrix_->getMutableElements();
 	  row = matrix_->getMutableIndices();
@@ -791,9 +792,10 @@ ClpGubDynamicMatrix::synchronize(ClpSimplex * model,int mode)
 	  else
 	    upperColumn[i] = COIN_DBL_MAX;
 	}
-	model->nonLinearCost()->setOne(i,solution[i],
-				       lowerColumn[i],
-				       upperColumn[i],cost_[jColumn]);
+	if (model->nonLinearCost())
+	  model->nonLinearCost()->setOne(i,solution[i],
+					 lowerColumn[i],
+					 upperColumn[i],cost_[jColumn]);
       }
     }
     break;
@@ -1314,7 +1316,8 @@ ClpGubDynamicMatrix::useEffectiveRhs(ClpSimplex * model, bool cheapest)
 	    int numberThis = startColumn_[iBasic+1]-startColumn_[iBasic];
 	    if (numberElements+numberThis>numberElements_) {
 	      // need to redo
-	      abort();
+	      numberElements_ = max(3*numberElements_/2,numberElements+numberThis);
+	      matrix_->reserve(numberColumns,numberElements_);
 	      element =  matrix_->getMutableElements();
 	      row = matrix_->getMutableIndices();
 	      // these probably okay but be safe

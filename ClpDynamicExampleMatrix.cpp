@@ -15,7 +15,7 @@
 // at end to get min/max!
 #include "ClpDynamicExampleMatrix.hpp"
 #include "ClpMessage.hpp"
-#define CLP_DEBUG
+//#define CLP_DEBUG
 //#define CLP_DEBUG_PRINT
 //#############################################################################
 // Constructors / Destructor / Assignment
@@ -74,7 +74,6 @@ ClpDynamicExampleMatrix::ClpDynamicExampleMatrix(ClpSimplex * model, int numberS
 {
   setType(25);
   numberColumns_ = numberGubColumns;
-  fullStartGen_ = ClpCopyOfArray(starts,numberSets_+1);
   // start with safe values - then experiment
   maximumGubColumns_=numberColumns_;
   maximumElements_ = startColumn[numberColumns_];
@@ -90,6 +89,7 @@ ClpDynamicExampleMatrix::ClpDynamicExampleMatrix(ClpSimplex * model, int numberS
   delete [] columnLower_;
   delete [] columnUpper_;
   delete [] dynamicStatus_;
+  delete [] status_;
   delete [] id_;
   // and size correctly
   row_ = new int [maximumElements_];
@@ -100,6 +100,7 @@ ClpDynamicExampleMatrix::ClpDynamicExampleMatrix(ClpSimplex * model, int numberS
   startColumn_[0]=0;
   cost_ = new float[maximumGubColumns_];
   dynamicStatus_ = new unsigned char [maximumGubColumns_];
+  memset(dynamicStatus_,0,maximumGubColumns_);
   id_ = new int[maximumGubColumns_];
   if (columnLower) 
     columnLower_ = new float[maximumGubColumns_];
@@ -160,10 +161,6 @@ ClpDynamicExampleMatrix::ClpDynamicExampleMatrix(ClpSimplex * model, int numberS
     assert (dynamicStatus);
     memcpy(dynamicStatus_,dynamicStatus,numberIds);
     assert (numberIds);
-    dynamicStatusGen_ = new unsigned char [numberColumns_];
-    memset(dynamicStatusGen_,0,numberColumns_); // for clarity
-    for (int i=0;i<numberColumns_;i++)
-      setDynamicStatusGen(i,atLowerBound);
   } else {
     assert (!numberIds);
     status_= new unsigned char [numberSets_];
@@ -221,7 +218,158 @@ ClpDynamicExampleMatrix::ClpDynamicExampleMatrix(ClpSimplex * model, int numberS
     initialProblem();
   }
 }
-
+// This constructor just takes over ownership
+ClpDynamicExampleMatrix::ClpDynamicExampleMatrix(ClpSimplex * model, int numberSets,
+			  int numberGubColumns, int * starts,
+			  const double * lower, const double * upper,
+			  int * startColumn, int * row,
+			  float * element, float * cost,
+			  float * columnLower, float * columnUpper,
+			  const unsigned char * status,
+			  const unsigned char * dynamicStatus,
+			  int numberIds,const int *ids)
+  : ClpDynamicMatrix(model,numberSets,0,NULL,lower,upper,NULL,NULL,NULL,NULL,NULL,NULL,
+		     NULL,NULL)
+{
+  setType(25);
+  numberColumns_ = numberGubColumns;
+  // start with safe values - then experiment
+  maximumGubColumns_=numberColumns_;
+  maximumElements_ = startColumn[numberColumns_];
+  // delete odd stuff created by ClpDynamicMatrix constructor
+  delete [] startSet_;
+  startSet_ = new int [numberSets_];
+  delete [] next_;
+  next_ = new int [maximumGubColumns_];
+  delete [] row_;
+  delete [] element_;
+  delete [] startColumn_;
+  delete [] cost_;
+  delete [] columnLower_;
+  delete [] columnUpper_;
+  delete [] dynamicStatus_;
+  delete [] status_;
+  delete [] id_;
+  // and size correctly
+  row_ = new int [maximumElements_];
+  element_ = new float [maximumElements_];
+  startColumn_ = new CoinBigIndex [maximumGubColumns_+1];
+  // say no columns yet
+  numberGubColumns_=0;
+  startColumn_[0]=0;
+  cost_ = new float[maximumGubColumns_];
+  dynamicStatus_ = new unsigned char [maximumGubColumns_];
+  memset(dynamicStatus_,0,maximumGubColumns_);
+  id_ = new int[maximumGubColumns_];
+  if (columnLower) 
+    columnLower_ = new float[maximumGubColumns_];
+  else
+    columnLower_ = NULL;
+  if (columnUpper) 
+    columnUpper_ = new float[maximumGubColumns_];
+  else
+    columnUpper_=NULL;
+  // space for ids
+  idGen_ = new int [maximumGubColumns_];
+  int iSet;
+  for (iSet=0;iSet<numberSets_;iSet++) 
+    startSet_[iSet]=-1;
+  // This starts code specific to this storage method
+  CoinBigIndex i;
+  fullStartGen_ = starts;
+  startColumnGen_ = startColumn;
+  rowGen_ = row;
+  elementGen_ = element;
+  costGen_ = cost;
+  for (i=0;i<numberColumns_;i++) {
+    // I don't think I need sorted but ...
+    CoinSort_2(rowGen_+startColumnGen_[i],rowGen_+startColumnGen_[i+1],elementGen_+startColumnGen_[i]);
+  }
+  if (columnLower) {
+    columnLowerGen_ = columnLower;
+    for (i=0;i<numberColumns_;i++) {
+      if (columnLowerGen_[i]) {
+	printf("Non-zero lower bounds not allowed - subtract from model\n");
+	abort();
+      }
+    }
+  } else {
+    columnLowerGen_=NULL;
+  }
+  if (columnUpper) {
+    columnUpperGen_ = columnUpper;
+  } else {
+    columnUpperGen_=NULL;
+  }
+  // end specific coding
+  if (columnUpper_) {
+    // set all upper bounds so we have enough space
+    double * columnUpper = model->columnUpper();
+    for(i=firstDynamic_;i<lastDynamic_;i++)
+      columnUpper[i]=1.0e10;
+  }
+  if (status) {
+    status_ = ClpCopyOfArray(status,numberSets_);
+    assert (dynamicStatus);
+    memcpy(dynamicStatus_,dynamicStatus,numberIds);
+    assert (numberIds);
+  } else {
+    assert (!numberIds);
+    status_= new unsigned char [numberSets_];
+    memset(status_,0,numberSets_);
+    for (i=0;i<numberSets_;i++) {
+      // make slack key
+      setStatus(i,ClpSimplex::basic);
+    }
+  }
+  dynamicStatusGen_ = new unsigned char [numberColumns_];
+  memset(dynamicStatusGen_,0,numberColumns_); // for clarity
+  for (i=0;i<numberColumns_;i++)
+    setDynamicStatusGen(i,atLowerBound);
+  // Populate with enough columns
+  if (!numberIds) {
+    // This could be made more sophisticated
+    for (iSet=0;iSet<numberSets_;iSet++) {
+      int sequence = fullStartGen_[iSet];
+      CoinBigIndex start = startColumnGen_[sequence];
+      addColumn(startColumnGen_[sequence+1]-start,
+		rowGen_+start,
+		elementGen_+start,
+		costGen_[sequence],
+		columnLowerGen_ ? columnLowerGen_[sequence] : 0,
+		columnUpperGen_ ? columnUpperGen_[sequence] : 1.0e30,
+		iSet,getDynamicStatusGen(sequence));
+      idGen_[iSet]=sequence; // say which one in
+      setDynamicStatusGen(sequence,inSmall);
+    }
+  } else {
+    // put back old ones
+    int * set = new int[numberColumns_];
+    for (iSet=0;iSet<numberSets_;iSet++) {
+      for (CoinBigIndex j=fullStartGen_[iSet];j<fullStartGen_[iSet+1];j++) 
+	set[j]=iSet;
+    }
+    for (int i=0;i<numberIds;i++) {
+      int sequence = ids[i];
+      CoinBigIndex start = startColumnGen_[sequence];
+      addColumn(startColumnGen_[sequence+1]-start,
+		rowGen_+start,
+		elementGen_+start,
+		costGen_[sequence],
+		columnLowerGen_ ? columnLowerGen_[sequence] : 0,
+		columnUpperGen_ ? columnUpperGen_[sequence] : 1.0e30,
+		set[sequence],getDynamicStatus(i));
+      idGen_[iSet]=sequence; // say which one in
+      setDynamicStatusGen(sequence,inSmall);
+    }
+    delete [] set;
+  }
+  if (!status) {
+    gubCrash();
+  } else {
+    initialProblem();
+  }
+}
 //-------------------------------------------------------------------
 // Destructor 
 //-------------------------------------------------------------------

@@ -155,6 +155,16 @@ public:
   /// size of working matrix (max)
   inline int numberElements() const
   { return numberElements_;};
+  /// Switches off dj checking each factorization (for BIG models)
+  void switchOffCheck();
+  /// Status region for gub slacks
+  inline unsigned char * gubRowStatus() const
+  { return status_;};
+  /// Status region for gub variables
+  inline unsigned char * dynamicStatus() const
+  { return dynamicStatus_;};
+  /// Returns which set a variable is in
+  int whichSet (int sequence) const;
   //@}
    
     

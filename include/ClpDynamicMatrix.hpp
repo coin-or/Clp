@@ -114,6 +114,8 @@ public:
   /** This is the real constructor.
       It assumes factorization frequency will not be changed.
       This resizes model !!!!
+      The contents of original matrix in model will be taken over and original matrix
+      will be sanitized so can be deleted (to avoid a very small memory leak)
    */
   ClpDynamicMatrix(ClpSimplex * model, int numberSets,
 		   int numberColumns, const int * starts,

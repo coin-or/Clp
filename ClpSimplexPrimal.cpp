@@ -614,7 +614,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	// is factorization okay?
 	int factorStatus = internalFactorize(1);
 	if (factorStatus) {
-	  if (solveType_==2) {
+	  if (solveType_==2+8) {
 	    // say odd
 	    problemStatus_=5;
 	    return;
@@ -656,6 +656,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
     // put back original costs and then check
     createRim(4);
     // May need to do more if column generation
+    dummy=4;
     matrix_->generalExpanded(this,9,dummy);
     numberThrownOut=gutsOfSolution(NULL,NULL,(firstFree_>=0));
     if (numberThrownOut) {
@@ -2122,44 +2123,42 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	// do ray
 	primalRay(rowArray_[1]);
 	// update duals
-	if (pivotRow_>=0) {
-	  // as packed need to find pivot row
-	  //assert (rowArray_[1]->packedMode());
-	  //int i;
-	  
-	  //alpha_ = rowArray_[1]->denseVector()[pivotRow_];
-	  assert (fabs(alpha_)>1.0e-8);
-	  double multiplier = dualIn_/alpha_;
-	  rowArray_[0]->insert(pivotRow_,multiplier);
-	  factorization_->updateColumnTranspose(rowArray_[2],rowArray_[0]);
-	  // put row of tableau in rowArray[0] and columnArray[0]
-	  matrix_->transposeTimes(this,-1.0,
-				  rowArray_[0],columnArray_[1],columnArray_[0]);
-	  // update column djs
-	  int i;
-	  int * index = columnArray_[0]->getIndices();
-	  int number = columnArray_[0]->getNumElements();
-	  double * element = columnArray_[0]->denseVector();
-	  for (i=0;i<number;i++) {
-	    int ii = index[i];
-	    dj_[ii] += element[ii];
-	    element[ii]=0.0;
-	  }
-	  columnArray_[0]->setNumElements(0);
-	  // and row djs
-	  index = rowArray_[0]->getIndices();
-	  number = rowArray_[0]->getNumElements();
-	  element = rowArray_[0]->denseVector();
-	  for (i=0;i<number;i++) {
-	    int ii = index[i];
-	    dj_[ii+numberColumns_] += element[ii];
-	    dual_[ii] = dj_[ii+numberColumns_];
-	    element[ii]=0.0;
-	  }
-	  rowArray_[0]->setNumElements(0);
-	  // check incoming
-	  assert (fabs(dj_[sequenceIn_])<1.0e-6);
+	// as packed need to find pivot row
+	//assert (rowArray_[1]->packedMode());
+	//int i;
+	
+	//alpha_ = rowArray_[1]->denseVector()[pivotRow_];
+	assert (fabs(alpha_)>1.0e-8);
+	double multiplier = dualIn_/alpha_;
+	rowArray_[0]->insert(pivotRow_,multiplier);
+	factorization_->updateColumnTranspose(rowArray_[2],rowArray_[0]);
+	// put row of tableau in rowArray[0] and columnArray[0]
+	matrix_->transposeTimes(this,-1.0,
+				rowArray_[0],columnArray_[1],columnArray_[0]);
+	// update column djs
+	int i;
+	int * index = columnArray_[0]->getIndices();
+	int number = columnArray_[0]->getNumElements();
+	double * element = columnArray_[0]->denseVector();
+	for (i=0;i<number;i++) {
+	  int ii = index[i];
+	  dj_[ii] += element[ii];
+	  element[ii]=0.0;
 	}
+	columnArray_[0]->setNumElements(0);
+	// and row djs
+	index = rowArray_[0]->getIndices();
+	number = rowArray_[0]->getNumElements();
+	element = rowArray_[0]->denseVector();
+	for (i=0;i<number;i++) {
+	  int ii = index[i];
+	  dj_[ii+numberColumns_] += element[ii];
+	  dual_[ii] = dj_[ii+numberColumns_];
+	  element[ii]=0.0;
+	}
+	rowArray_[0]->setNumElements(0);
+	// check incoming
+	assert (fabs(dj_[sequenceIn_])<1.0e-1);
       }
       // if stable replace in basis
       // If gub or odd then alpha and pivotRow may change

@@ -15,7 +15,7 @@
 // at end to get min/max!
 #include "ClpDynamicMatrix.hpp"
 #include "ClpMessage.hpp"
-#define CLP_DEBUG
+//#define CLP_DEBUG
 //#define CLP_DEBUG_PRINT
 //#############################################################################
 // Constructors / Destructor / Assignment
@@ -227,6 +227,7 @@ ClpDynamicMatrix::ClpDynamicMatrix(ClpSimplex * model, int numberSets,
     dynamic_cast< ClpPackedMatrix*>(model->clpMatrix());
   assert (originalMatrixA);
   CoinPackedMatrix * originalMatrix = originalMatrixA->getPackedMatrix();
+  originalMatrixA->setMatrixNull(); // so can be deleted safely
   // guess how much space needed
   double guess = numberElements;
   guess /= (double) numberColumns;
@@ -236,7 +237,7 @@ ClpDynamicMatrix::ClpDynamicMatrix(ClpSimplex * model, int numberSets,
   matrix_ = originalMatrix;
   zeroElements_ = false;
   // resize model (matrix stays same)
-  int newRowSize = numberRows+min(numberSets_,max(frequency,numberRows));
+  int newRowSize = numberRows+min(numberSets_,max(frequency,numberRows))+1;
   model->resize(newRowSize,numberNeeded);
   for (i=numberRows;i<newRowSize;i++)
     model->setRowStatus(i,ClpSimplex::basic);
@@ -577,7 +578,7 @@ double *
 ClpDynamicMatrix::rhsOffset(ClpSimplex * model,bool forceRefresh,
 		      bool check)
 {
-  forceRefresh=true;
+  //forceRefresh=true;
   if (!model_->numberIterations())
     forceRefresh=true;
   //check=false;
@@ -1041,6 +1042,16 @@ ClpDynamicMatrix::generalExpanded(ClpSimplex * model,int mode,int &number)
       number = model->numberRows();
     }
     break;
+    // Before normal replaceColumn
+  case 3:
+    {
+      if (numberActiveSets_+numberStaticRows_==model_->numberRows()) {
+	// no space - re-factorize
+	returnCode=4;
+	number=-1; // say no need for normal replaceColumn
+      }
+    }
+    break;
     // To see if can dual or primal
   case 4:
     {
@@ -1153,10 +1164,10 @@ ClpDynamicMatrix::generalExpanded(ClpSimplex * model,int mode,int &number)
     }
   case 11:
     {
-      assert (number==model->sequenceIn());
       int sequenceIn = model->sequenceIn();
       if (sequenceIn>=firstDynamic_&&sequenceIn<lastDynamic_) {
-      // take out variable (but leave key)
+	assert (number==model->sequenceIn());
+	// take out variable (but leave key)
 	double * cost = model->costRegion();
 	double * columnLower = model->lowerRegion();
 	double * columnUpper = model->upperRegion();
@@ -1703,13 +1714,25 @@ ClpDynamicMatrix::createVariable(ClpSimplex * model, int & bestSequence)
 	unpack(model,model->rowArray(3),firstAvailable_);
 	model->factorization()->updateColumnFT(model->rowArray(2),model->rowArray(3));
 	double alpha = model->rowArray(3)->denseVector()[newRow];
-#ifndef NDEBUG
 	int updateStatus = 
-#endif
 	  model->factorization()->replaceColumn(model->rowArray(2),
 								 newRow, alpha);
 	model->rowArray(3)->clear();
-	assert (!updateStatus);
+	if (updateStatus) {
+	  if (updateStatus==3) {
+	    // out of memory
+	    // increase space if not many iterations
+	    if (model->factorization()->pivots()<
+		0.5*model->factorization()->maximumPivots()&&
+		model->factorization()->pivots()<400)
+	      model->factorization()->areaFactor(
+					 model->factorization()->areaFactor() * 1.1);
+	  } else {
+	    printf("Bad returncode %d from replaceColumn\n",updateStatus);
+	  }
+	  bestSequence=-1;
+	  return;
+	}
 	// firstAvailable_ only finally updated if good pivot (in updatePivot)
 	// otherwise it reverts to firstAvailableBefore_
 	firstAvailable_++;

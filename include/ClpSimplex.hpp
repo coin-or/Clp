@@ -390,11 +390,11 @@ public:
       Return codes are as from ClpFactorization unless initial factorization
       when total number of singularities is returned
   */
-    /// Save data
-    ClpDataSave saveData() ;
-    /// Restore data
-    void restoreData(ClpDataSave saved);
   int internalFactorize(int solveType);
+  /// Save data
+  ClpDataSave saveData() ;
+  /// Restore data
+    void restoreData(ClpDataSave saved);
   /// Clean up status
   void cleanStatus();
   /// Factorizes using current basis. For external use

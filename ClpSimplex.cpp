@@ -4973,7 +4973,7 @@ ClpSimplexProgress::looping()
 {
   if (!model_)
     return -1;
-  double objective = model_->rawObjectiveValue();
+  double objective = model_->objectiveValue();
   double infeasibility;
   int numberInfeasibilities;
   int iterationNumber = model_->numberIterations();

@@ -54,6 +54,8 @@ public:
   /** This is the real constructor.
       It assumes factorization frequency will not be changed.
       This resizes model !!!!
+      The contents of original matrix in model will be taken over and original matrix
+      will be sanitized so can be deleted (to avoid a very small memory leak)
    */
   ClpDynamicExampleMatrix(ClpSimplex * model, int numberSets,
 			  int numberColumns, const int * starts,
@@ -61,6 +63,16 @@ public:
 			  const int * startColumn, const int * row,
 			  const double * element, const double * cost,
 			  const double * columnLower=NULL, const double * columnUpper=NULL,
+			  const unsigned char * status=NULL,
+			  const unsigned char * dynamicStatus=NULL,
+			  int numberIds=0,const int *ids=NULL);
+  /// This constructor just takes over ownership (except for lower, upper)
+  ClpDynamicExampleMatrix(ClpSimplex * model, int numberSets,
+			  int numberColumns, int * starts,
+			  const double * lower, const double * upper,
+			  int * startColumn, int * row,
+			  float * element, float * cost,
+			  float * columnLower=NULL, float * columnUpper=NULL,
 			  const unsigned char * status=NULL,
 			  const unsigned char * dynamicStatus=NULL,
 			  int numberIds=0,const int *ids=NULL);

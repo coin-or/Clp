@@ -96,7 +96,7 @@ ClpInterior::ClpInterior () :
   algorithm_(-1)
 {
   memset(historyInfeasibility_,0,LENGTH_HISTORY*sizeof(double));
-  solveType_=2; // say interior based life form
+  solveType_=3; // say interior based life form
   cholesky_ = new ClpCholeskyDense(); // put in placeholder
 }
 
@@ -173,7 +173,7 @@ ClpInterior::ClpInterior ( const ClpModel * rhs,
     algorithm_(-1)
 {
   memset(historyInfeasibility_,0,LENGTH_HISTORY*sizeof(double));
-  solveType_=2; // say interior based life form
+  solveType_=3; // say interior based life form
   cholesky_= new ClpCholeskyDense();
 }
 
@@ -234,7 +234,7 @@ ClpInterior::ClpInterior(const ClpInterior &rhs) :
 {
   gutsOfDelete();
   gutsOfCopy(rhs);
-  solveType_=2; // say interior based life form
+  solveType_=3; // say interior based life form
 }
 // Copy constructor from model
 ClpInterior::ClpInterior(const ClpModel &rhs) :
@@ -305,7 +305,7 @@ ClpInterior::ClpInterior(const ClpModel &rhs) :
   algorithm_(-1)
 {
   memset(historyInfeasibility_,0,LENGTH_HISTORY*sizeof(double));
-  solveType_=2; // say interior based life form
+  solveType_=3; // say interior based life form
   cholesky_= new ClpCholeskyDense();
 }
 // Assignment operator. This copies the data

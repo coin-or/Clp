@@ -1678,3 +1678,89 @@ int ClpModel::emptyProblem(int * infeasNumber, double * infeasSum,bool printMess
     returnCode=4;
   return returnCode;
 }
+/* Write the problem in MPS format to the specified file.
+   
+Row and column names may be null.
+formatType is
+<ul>
+<li> 0 - normal
+<li> 1 - extra accuracy 
+<li> 2 - IEEE hex (later)
+</ul>
+
+Returns non-zero on I/O error
+*/
+int 
+ClpModel::writeMps(const char *filename, 
+		   int formatType,int numberAcross,
+		   double objSense) const 
+{
+  
+  // Get multiplier for objective function - default 1.0
+  double * objective = new double[numberColumns_];
+  memcpy(objective,getObjCoefficients(),numberColumns_*sizeof(double));
+  if (objSense*getObjSense()<0.0) {
+    for (int i = 0; i < numberColumns_; ++i) 
+      objective [i] = - objective[i];
+  }
+  
+  char ** rowNames = NULL;
+  char ** columnNames = NULL;
+  if (lengthNames()) {
+    rowNames = new char * [numberRows_];
+    for (int iRow=0;iRow<numberRows_;iRow++) {
+      rowNames[iRow] = 
+	strdup(rowName(iRow).c_str());
+#ifdef STRIPBLANKS
+      char * xx = rowNames[iRow];
+      int i;
+      int length = strlen(xx);
+      int n=0;
+      for (i=0;i<length;i++) {
+	if (xx[i]!=' ')
+	  xx[n++]=xx[i];
+      }
+      xx[n]='\0';
+#endif
+    }
+    
+    columnNames = new char * [numberColumns_];
+    for (int iColumn=0;iColumn<numberColumns_;iColumn++) {
+      columnNames[iColumn] = 
+	strdup(columnName(iColumn).c_str());
+#ifdef STRIPBLANKS
+      char * xx = columnNames[iColumn];
+      int i;
+      int length = strlen(xx);
+      int n=0;
+      for (i=0;i<length;i++) {
+	if (xx[i]!=' ')
+	  xx[n++]=xx[i];
+      }
+      xx[n]='\0';
+#endif
+    }
+  }
+  CoinMpsIO writer;
+  writer.passInMessageHandler(handler_);
+  writer.setMpsData(*(matrix_->getPackedMatrix()), COIN_DBL_MAX,
+		    getColLower(), getColUpper(),
+		    objective,
+		    (const char*) 0 /*integrality*/,
+		    getRowLower(), getRowUpper(),
+		    columnNames, rowNames);
+  // Pass in array saying if each variable integer
+  writer.copyInIntegerInformation(integerInformation());
+  delete [] objective;
+  return writer.writeMps(filename, 1 /*gzip it*/, formatType, numberAcross);
+  if (rowNames) {
+    for (int iRow=0;iRow<numberRows_;iRow++) {
+      free(rowNames[iRow]);
+    }
+    delete [] rowNames;
+    for (int iColumn=0;iColumn<numberColumns_;iColumn++) {
+      free(columnNames[iColumn]);
+    }
+    delete [] columnNames;
+  }
+}

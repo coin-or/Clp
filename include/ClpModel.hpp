@@ -168,6 +168,21 @@ public:
   void copyNames(std::vector<std::string> & rowNames,
 		 std::vector<std::string> & columnNames);
   
+    /** Write the problem in MPS format to the specified file.
+
+	Row and column names may be null.
+	formatType is
+	<ul>
+	  <li> 0 - normal
+	  <li> 1 - extra accuracy 
+	  <li> 2 - IEEE hex (later)
+	</ul>
+
+	Returns non-zero on I/O error
+    */
+    int writeMps(const char *filename, 
+		  int formatType=0,int numberAcross=2,
+		 double objSense=0.0) const ;
   //@}
   /**@name gets and sets */
   //@{ 
@@ -205,7 +220,7 @@ public:
    inline int getIterationCount() const { return numberIterations_; }
   inline void setNumberIterations(int numberIterations)
   { numberIterations_ = numberIterations;};
-  /// Solve type - 1 simplex, 2 simplex interface
+  /** Solve type - 1 simplex, 2 simplex interface, 3 Interior.*/
   inline int solveType() const
   { return solveType_;};
   inline void setSolveType(int type)
@@ -554,7 +569,7 @@ protected:
   int intParam_[ClpLastIntParam];
   /// Number of iterations
   int numberIterations_;
-  /// Solve type - 1 simplex, 2 simplex interface
+  /** Solve type - 1 simplex, 2 simplex interface, 3 Interior.*/
   int solveType_;
   /// Status of problem
   int problemStatus_;
