@@ -21,6 +21,7 @@ class ClpFactorization;
 class CoinIndexedVector;
 class ClpNonLinearCost;
 class ClpSimplexProgress;
+class CoinModel;
 
 /** This solves LPs using the simplex method
 
@@ -143,6 +144,11 @@ public:
 		     const double* obj,
 		      const double* rowlb, const double* rowub,
 		      const double * rowObjective=NULL);
+  /** This loads a model from a coinModel object - returns number of errors.
+      If keepSolution true and size is same as current then
+      keeps current status and solution
+  */
+  int loadProblem (  CoinModel & modelObject,bool keepSolution=false);
   /// Read an mps file from the given filename
   int readMps(const char *filename,
 	      bool keepNames=false,

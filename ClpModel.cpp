@@ -23,6 +23,7 @@
 #include "ClpLinearObjective.hpp"
 #include "ClpQuadraticObjective.hpp"
 #include "CoinBuild.hpp"
+#include "CoinModel.hpp"
 
 //#############################################################################
 
@@ -284,6 +285,62 @@ ClpModel::loadProblem (
   CoinPackedMatrix matrix(true,numrows,numcols,numberElements,
 			      value,index,start,length);
   matrix_ = new ClpPackedMatrix(matrix);
+}
+// This loads a model from a coinModel object - returns number of errors
+int 
+ClpModel::loadProblem (  CoinModel & modelObject)
+{
+  int numberErrors = 0;
+  // Set arrays for normal use
+  double * rowLower = modelObject.rowLowerArray();
+  double * rowUpper = modelObject.rowUpperArray();
+  double * columnLower = modelObject.columnLowerArray();
+  double * columnUpper = modelObject.columnUpperArray();
+  double * objective = modelObject.objectiveArray();
+  int * integerType = modelObject.integerTypeArray();
+  double * associated = modelObject.associatedArray();
+  // If strings then do copies
+  if (modelObject.stringsExist()) {
+    numberErrors = modelObject.createArrays(rowLower, rowUpper, columnLower, columnUpper,
+                                            objective, integerType,associated);
+  }
+  CoinPackedMatrix matrix;
+  modelObject.createPackedMatrix(matrix,associated);
+  int numberRows = modelObject.numberRows();
+  int numberColumns = modelObject.numberColumns();
+  gutsOfLoadModel(numberRows, numberColumns,
+		  columnLower, columnUpper, objective, rowLower, rowUpper, NULL);
+  matrix_ = new ClpPackedMatrix(matrix);
+  // Do names if wanted
+  if (modelObject.rowNames()->numberItems()) {
+    const char *const * rowNames=modelObject.rowNames()->names();
+    copyRowNames(rowNames,numberRows,numberRows_);
+  }
+  if (modelObject.columnNames()->numberItems()) {
+    const char *const * columnNames=modelObject.columnNames()->names();
+    copyColumnNames(columnNames,numberColumns,numberColumns_);
+  }
+  // Do integers if wanted
+  assert(integerType);
+  for (int iColumn=0;iColumn<numberColumns;iColumn++) {
+    if (integerType[iColumn])
+      setInteger(iColumn);
+  }
+  if (rowLower!=modelObject.rowLowerArray()||
+      columnLower!=modelObject.columnLowerArray()) {
+    delete [] rowLower;
+    delete [] rowUpper;
+    delete [] columnLower;
+    delete [] columnUpper;
+    delete [] objective;
+    delete [] integerType;
+      delete [] associated;
+      if (numberErrors)
+        handler_->message(CLP_BAD_STRING_VALUES,messages_)
+          <<numberErrors
+          <<CoinMessageEol;
+  }
+  return numberErrors;
 }
 void
 ClpModel::getRowBound(int iRow, double& lower, double& upper) const
@@ -1225,6 +1282,99 @@ ClpModel::addRows(const CoinBuild & buildObject)
   }
   return;
 }
+// Add rows from a model object
+int 
+ClpModel::addRows( CoinModel & modelObject)
+{
+  bool goodState=true;
+  if (modelObject.columnLowerArray()) {
+    // some column information exists
+    int numberColumns2 = modelObject.numberColumns();
+    const double * columnLower = modelObject.columnLowerArray();
+    const double * columnUpper = modelObject.columnUpperArray();
+    const double * objective = modelObject.objectiveArray();
+    const int * integerType = modelObject.integerTypeArray();
+    for (int i=0;i<numberColumns2;i++) {
+      if (columnLower[i]!=0.0) 
+        goodState=false;
+      if (columnUpper[i]!=COIN_DBL_MAX) 
+        goodState=false;
+      if (objective[i]!=0.0) 
+        goodState=false;
+      if (integerType[i]!=0)
+        goodState=false;
+    }
+  }
+  if (goodState) {
+    // can do addRows
+    int numberErrors = 0;
+    // Set arrays for normal use
+    double * rowLower = modelObject.rowLowerArray();
+    double * rowUpper = modelObject.rowUpperArray();
+    double * columnLower = modelObject.columnLowerArray();
+    double * columnUpper = modelObject.columnUpperArray();
+    double * objective = modelObject.objectiveArray();
+    int * integerType = modelObject.integerTypeArray();
+    double * associated = modelObject.associatedArray();
+    // If strings then do copies
+    if (modelObject.stringsExist()) {
+      numberErrors = modelObject.createArrays(rowLower, rowUpper, columnLower, columnUpper,
+                                 objective, integerType,associated);
+    }
+    CoinPackedMatrix matrix;
+    modelObject.createPackedMatrix(matrix,associated);
+    int numberRows = numberRows_; // save number of rows
+    int numberRows2 = modelObject.numberRows();
+    if (numberRows2&&!numberErrors) {
+      // matrix by rows
+      matrix.reverseOrdering();
+      const int * column = matrix.getIndices();
+      const int * rowLength = matrix.getVectorLengths();
+      const CoinBigIndex * rowStart = matrix.getVectorStarts();
+      const double * element = matrix.getElements();
+      CoinPackedVectorBase ** rows=
+        new CoinPackedVectorBase * [numberRows2];
+      int iRow;
+      assert (rowLower);
+      for (iRow=0;iRow<numberRows2;iRow++) {
+        int start = rowStart[iRow];
+        rows[iRow] = 
+          new CoinPackedVector(rowLength[iRow],
+                               column+start,element+start);
+      }
+      addRows(numberRows2, rowLower, rowUpper,rows);
+      for (iRow=0;iRow<numberRows2;iRow++) 
+        delete rows[iRow];
+      delete [] rows;
+      // Do names if wanted
+      if (modelObject.rowNames()->numberItems()) {
+        const char *const * rowNames=modelObject.rowNames()->names();
+        copyRowNames(rowNames,numberRows,numberRows_);
+      }
+    }
+    if (rowLower!=modelObject.rowLowerArray()) {
+      delete [] rowLower;
+      delete [] rowUpper;
+      delete [] columnLower;
+      delete [] columnUpper;
+      delete [] objective;
+      delete [] integerType;
+      delete [] associated;
+      if (numberErrors)
+        handler_->message(CLP_BAD_STRING_VALUES,messages_)
+          <<numberErrors
+          <<CoinMessageEol;
+    }
+    return numberErrors;
+  } else {
+    // not suitable for addRows
+    handler_->message(CLP_COMPLICATED_MODEL,messages_)
+      <<modelObject.numberRows()
+      <<modelObject.numberColumns()
+      <<CoinMessageEol;
+    return -1;
+  }
+}
 // Add one column
 void 
 ClpModel::addColumn(int numberInColumn,
@@ -1404,6 +1554,97 @@ ClpModel::addColumns(const CoinBuild & buildObject)
     delete [] upper;
   }
   return;
+}
+// Add columns from a model object
+int 
+ClpModel::addColumns( CoinModel & modelObject)
+{
+  bool goodState=true;
+  if (modelObject.rowLowerArray()) {
+    // some row information exists
+    int numberRows2 = modelObject.numberRows();
+    const double * rowLower = modelObject.rowLowerArray();
+    const double * rowUpper = modelObject.rowUpperArray();
+    for (int i=0;i<numberRows2;i++) {
+      if (rowLower[i]!=-COIN_DBL_MAX) 
+        goodState=false;
+      if (rowUpper[i]!=COIN_DBL_MAX) 
+        goodState=false;
+    }
+  }
+  if (goodState) {
+    // can do addColumns
+    int numberErrors = 0;
+    // Set arrays for normal use
+    double * rowLower = modelObject.rowLowerArray();
+    double * rowUpper = modelObject.rowUpperArray();
+    double * columnLower = modelObject.columnLowerArray();
+    double * columnUpper = modelObject.columnUpperArray();
+    double * objective = modelObject.objectiveArray();
+    int * integerType = modelObject.integerTypeArray();
+    double * associated = modelObject.associatedArray();
+    // If strings then do copies
+    if (modelObject.stringsExist()) {
+      numberErrors = modelObject.createArrays(rowLower, rowUpper, columnLower, columnUpper,
+                                 objective, integerType,associated);
+    }
+    CoinPackedMatrix matrix;
+    modelObject.createPackedMatrix(matrix,associated);
+    int numberColumns = numberColumns_; // save number of columns
+    int numberColumns2 = modelObject.numberColumns();
+    if (numberColumns2&&!numberErrors) {
+      const int * row = matrix.getIndices();
+      const int * columnLength = matrix.getVectorLengths();
+      const CoinBigIndex * columnStart = matrix.getVectorStarts();
+      const double * element = matrix.getElements();
+      CoinPackedVectorBase ** columns=
+        new CoinPackedVectorBase * [numberColumns2];
+      int iColumn;
+      assert (columnLower);
+      for (iColumn=0;iColumn<numberColumns2;iColumn++) {
+        int start = columnStart[iColumn];
+        columns[iColumn] = 
+          new CoinPackedVector(columnLength[iColumn],
+                               row+start,element+start);
+      }
+      addColumns(numberColumns2, columnLower, columnUpper,objective, columns);
+      for (iColumn=0;iColumn<numberColumns2;iColumn++) 
+        delete columns[iColumn];
+      delete [] columns;
+      // Do names if wanted
+      if (modelObject.columnNames()->numberItems()) {
+        const char *const * columnNames=modelObject.columnNames()->names();
+        copyColumnNames(columnNames,numberColumns,numberColumns_);
+      }
+      // Do integers if wanted
+      assert(integerType);
+      for (iColumn=0;iColumn<numberColumns2;iColumn++) {
+        if (integerType[iColumn])
+          setInteger(iColumn);
+      }
+    }
+    if (columnLower!=modelObject.columnLowerArray()) {
+      delete [] rowLower;
+      delete [] rowUpper;
+      delete [] columnLower;
+      delete [] columnUpper;
+      delete [] objective;
+      delete [] integerType;
+      delete [] associated;
+      if (numberErrors)
+        handler_->message(CLP_BAD_STRING_VALUES,messages_)
+          <<numberErrors
+          <<CoinMessageEol;
+    }
+    return numberErrors;
+  } else {
+    // not suitable for addColumns
+    handler_->message(CLP_COMPLICATED_MODEL,messages_)
+      <<modelObject.numberRows()
+      <<modelObject.numberColumns()
+      <<CoinMessageEol;
+    return -1;
+  }
 }
 // chgRowLower
 void 
@@ -2059,6 +2300,38 @@ ClpModel::copyColumnNames(const std::vector<std::string> & columnNames, int firs
   for (iColumn=first; iColumn<last;iColumn++) {
     columnNames_[iColumn]= columnNames[iColumn-first];
     maxLength = CoinMax(maxLength,(unsigned int) strlen(columnNames_[iColumn].c_str()));
+  }
+  // May be too big - but we would have to check both rows and columns to be exact
+  lengthNames_=(int) maxLength;
+}
+// Copies in Row names - modifies names first .. last-1
+void 
+ClpModel::copyRowNames(const char * const * rowNames, int first, int last)
+{
+  unsigned int maxLength=lengthNames_;
+  int size = rowNames_.size();
+  if (size!=numberRows_)
+    rowNames_.resize(numberRows_);
+  int iRow;
+  for (iRow=first; iRow<last;iRow++) {
+    rowNames_[iRow]= rowNames[iRow-first];
+    maxLength = CoinMax(maxLength,(unsigned int) strlen(rowNames[iRow]));
+  }
+  // May be too big - but we would have to check both rows and columns to be exact
+  lengthNames_=(int) maxLength;
+}
+// Copies in Column names - modifies names first .. last-1
+void 
+ClpModel::copyColumnNames(const char * const * columnNames, int first, int last)
+{
+  unsigned int maxLength=lengthNames_;
+  int size = columnNames_.size();
+  if (size!=numberColumns_)
+    columnNames_.resize(numberColumns_);
+  int iColumn;
+  for (iColumn=first; iColumn<last;iColumn++) {
+    columnNames_[iColumn]= columnNames[iColumn-first];
+    maxLength = CoinMax(maxLength,(unsigned int) strlen(columnNames[iColumn]));
   }
   // May be too big - but we would have to check both rows and columns to be exact
   lengthNames_=(int) maxLength;

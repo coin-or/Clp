@@ -22,6 +22,7 @@
 #include "ClpEventHandler.hpp"
 #include "ClpLinearObjective.hpp"
 #include "ClpHelperFunctions.hpp"
+#include "CoinModel.hpp"
 #include <cfloat>
 
 #include <string>
@@ -4815,6 +4816,39 @@ ClpSimplex::loadProblem (  const int numcols, const int numrows,
 			  collb, colub, obj, rowlb, rowub,
 			  rowObjective);
   createStatus();
+}
+// This loads a model from a coinModel object - returns number of errors
+int 
+ClpSimplex::loadProblem (  CoinModel & modelObject, bool keepSolution)
+{
+  unsigned char * status = NULL;
+  double * psol = NULL;
+  double * dsol = NULL;
+  if (status_&&numberRows_&&numberRows_==modelObject.numberRows()&&
+      numberColumns_==modelObject.numberColumns()) {
+    status = new unsigned char [numberRows_+numberColumns_];
+    memcpy(status,status_,numberRows_+numberColumns_);
+    psol = new double [numberRows_+numberColumns_];
+    memcpy(psol,columnActivity_,numberColumns_*sizeof(double));
+    memcpy(psol+numberColumns_,rowActivity_,numberRows_*sizeof(double));
+    dsol = new double [numberRows_+numberColumns_];
+    memcpy(dsol,reducedCost_,numberColumns_*sizeof(double));
+    memcpy(dsol+numberColumns_,dual_,numberRows_*sizeof(double));
+  }
+  int returnCode = ClpModel::loadProblem(modelObject);
+  createStatus();
+  if (status) {
+    // copy back
+    memcpy(status_,status,numberRows_+numberColumns_);
+    memcpy(columnActivity_,psol,numberColumns_*sizeof(double));
+    memcpy(rowActivity_,psol+numberColumns_,numberRows_*sizeof(double));
+    memcpy(reducedCost_,dsol,numberColumns_*sizeof(double));
+    memcpy(dual_,dsol+numberColumns_,numberRows_*sizeof(double));
+    delete [] status;
+    delete [] psol;
+    delete [] dsol;
+  }
+  return returnCode;
 }
 void 
 ClpSimplex::loadProblem (  const int numcols, const int numrows,

@@ -96,6 +96,8 @@ static Clp_message us_english[]=
   {CLP_BARRIER_KKT,6005,0,"Quadratic barrier needs a KKT factorization"},
   {CLP_RIM_SCALE,59,1,"Automatic rim scaling gives objective scale of %g and rhs/bounds scale of %g"}, 
   {CLP_SLP_ITER,58,1,"Pass %d objective %g - drop %g, largest delta %g"}, 
+  {CLP_COMPLICATED_MODEL,3004,1,"Can not use addRows or addColumns on CoinModel as mixed, %d rows, %d columns"},
+  {CLP_BAD_STRING_VALUES,3005,1,"%d string elements had no values associated with them"},
   {CLP_DUMMY_END,999999,0,""}
 };
 static Clp_message uk_english[]=

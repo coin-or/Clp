@@ -30,6 +30,7 @@ class ClpEventHandler;
 
 */
 class CoinBuild;
+class CoinModel;
 class ClpModel {
 
 public:
@@ -94,6 +95,8 @@ public:
 		     const double* obj,
 		      const double* rowlb, const double* rowub,
 		      const double * rowObjective=NULL);
+  /// This loads a model from a coinModel object - returns number of errors
+  int loadProblem (  CoinModel & modelObject);
   /// This one is for after presolve to save memory
   void loadProblem (  const int numcols, const int numrows,
 		     const CoinBigIndex* start, const int* index,
@@ -147,6 +150,13 @@ public:
 	       const CoinPackedVectorBase * const * rows);
   /// Add rows from a build object
   void addRows(const CoinBuild & buildObject);
+  /** Add rows from a model object.  returns
+      -1 if object in bad state (i.e. has column information)
+      otherwise number of errors.
+
+      modelObject non const as can be regularized as part of build
+  */
+  int addRows(CoinModel & modelObject);
 
   /// Deletes columns
   void deleteColumns(int number, const int * which);
@@ -175,6 +185,12 @@ public:
 	       const CoinPackedVectorBase * const * columns);
   /// Add columns from a build object
   void addColumns(const CoinBuild & buildObject);
+  /** Add columns from a model object.  returns
+      -1 if object in bad state (i.e. has row information)
+      otherwise number of errors
+      modelObject non const as can be regularized as part of build
+  */
+  int addColumns(CoinModel & modelObject);
   /** Change row lower bounds */
   void chgRowLower(const double * rowLower);
   /** Change row upper bounds */
@@ -204,6 +220,10 @@ public:
   void copyRowNames(const std::vector<std::string> & rowNames,int first, int last);
   /// Copies in Column names - modifies names first .. last-1
   void copyColumnNames(const std::vector<std::string> & columnNames, int first, int last);
+  /// Copies in Row names - modifies names first .. last-1
+  void copyRowNames(const char * const * rowNames,int first, int last);
+  /// Copies in Column names - modifies names first .. last-1
+  void copyColumnNames(const char * const * columnNames, int first, int last);
   
     /** Write the problem in MPS format to the specified file.
 

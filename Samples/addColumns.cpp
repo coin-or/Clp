@@ -7,6 +7,7 @@
 #include "CoinHelperFunctions.hpp"
 #include "CoinTime.hpp"
 #include "CoinBuild.hpp"
+#include "CoinModel.hpp"
 #include <iomanip>
 #include <cassert>
 
@@ -76,7 +77,20 @@ int main (int argc, const char *argv[])
                  0.0,1.0,10000.0);
   }
   model.addColumns(buildObject);
-  printf("Time for 10000 addColumn is %g\n",CoinCpuTime()-time1);
+  printf("Time for 10000 addColumn using CoinBuild is %g\n",CoinCpuTime()-time1);
+  model.dual();
+  model=modelSave;
+  // Now use model
+  CoinModel modelObject;
+  time1 = CoinCpuTime();
+  for ( k=0;k<10000;k++) {
+    int column2Index[] = {0,1};
+    double column2Value[]={1.0,-5.0};
+    modelObject.addColumn(2,column2Index,column2Value,
+                 0.0,1.0,10000.0);
+  }
+  model.addColumns(modelObject);
+  printf("Time for 10000 addColumn using CoinModel is %g\n",CoinCpuTime()-time1);
   model.dual();
   // Print column solution Just first 3 columns
   int numberColumns = model.numberColumns();
