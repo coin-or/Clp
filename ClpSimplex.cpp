@@ -5596,14 +5596,6 @@ ClpSimplex::ClpSimplex (ClpSimplex * wholeModel,
   delete [] whichRow;
   numberColumns_ = wholeModel->numberColumns_;
   // Now ClpSimplex stuff and status_
-  ClpPrimalColumnSteepest * steep =
-    dynamic_cast< ClpPrimalColumnSteepest*>(wholeModel->primalColumnPivot_);
-#ifdef NDEBUG
-  if (!steep)
-    abort();
-#else
-  assert (steep);
-#endif
   delete  wholeModel->primalColumnPivot_;
   wholeModel->primalColumnPivot_ = new ClpPrimalColumnSteepest(0);
   nonLinearCost_ = wholeModel->nonLinearCost_;
