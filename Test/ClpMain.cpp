@@ -72,7 +72,7 @@ enum ClpParameterType {
   
   DIRECTION=201,DUALPIVOT,SCALING,ERRORSALLOWED,KEEPNAMES,SPARSEFACTOR,
   PRIMALPIVOT,PRESOLVE,CRASH,BIASLU,PERTURBATION,MESSAGES,AUTOSCALE,
-  CHOLESKY,KKT,BARRIERSCALE,GAMMA,CROSSOVER,
+  CHOLESKY,KKT,BARRIERSCALE,GAMMA,CROSSOVER,PFI,
   
   DIRECTORY=301,IMPORT,EXPORT,RESTORE,SAVE,DUALSIMPLEX,PRIMALSIMPLEX,
   MAXIMIZE,MINIMIZE,EXIT,STDIN,UNITTEST,NETLIB_DUAL,NETLIB_PRIMAL,SOLUTION,
@@ -1321,6 +1321,14 @@ values, 2 saves values, 3 with greater accuracy and 4 in IEEE."
   The Clp library has this off by default.  This program has it on."
        ); 
     parameters[numberParameters++]=
+      ClpItem("PFI","Whether to use Product Form of Inverse in simplex",
+	      "off",PFI);
+    parameters[numberParameters-1].append("on");
+    parameters[numberParameters-1].setLonghelp
+      (
+       "By default clp uses Forrest-Tomlin L-U update.  If you are masochistic you can switch it off."
+       ); 
+    parameters[numberParameters++]=
       ClpItem("plus!Minus","Tries to make +- 1 matrix",
 	      PLUSMINUS,-1,false);
     parameters[numberParameters-1].setLonghelp
@@ -1809,6 +1817,9 @@ costs this much to be infeasible",
 		preSolve=10;
 	      else
 		preSolveFile=true;
+	      break;
+	    case PFI:
+	      models[iModel].factorization()->setForrestTomlin(action==0);
 	      break;
 	    case CRASH:
 	      doCrash=action;
