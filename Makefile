@@ -7,7 +7,7 @@ LibType := SHARED
 OptLevel := -O2
 # I seem to need this at present
 OPTFLAG := -O2
-#OptLevel := -g
+OptLevel := -g
 ifeq ($(OptLevel),-g)
     CXXFLAGS += -DCLP_DEBUG
 endif

@@ -223,7 +223,8 @@ public:
   { return objectiveValue_*optimizationDirection_ - dblParam_[OsiObjOffset];};
   inline double getObjValue() const
   { return objectiveValue_*optimizationDirection_ - dblParam_[OsiObjOffset];};
-  /// Infeasibility/unbounded ray (NULL returned if none/wrong)
+  /** Infeasibility/unbounded ray (NULL returned if none/wrong)
+      User must delete [] these */
   double * infeasibilityRay() const;
   double * unboundedRay() const;
   //@}
