@@ -106,6 +106,15 @@
 #include <stdio.h>
 #include <iostream>
 //#define CLP_DEBUG 1
+// To force to follow another run put logfile name here and define 
+//#define FORCE_FOLLOW
+#ifdef FORCE_FOLLOW
+static FILE * fpFollow=NULL;
+static char * forceFile="old.log";
+static int force_in=-1;
+static int force_out=-1;
+static int force_iteration=0;
+#endif
 // dual 
 int ClpSimplexDual::dual (int ifValuesPass , int startFinishOptions)
 {
@@ -1464,6 +1473,44 @@ ClpSimplexDual::dualRow(int alreadyChosen)
 {
   // get pivot row using whichever method it is
   int chosenRow=-1;
+#ifdef FORCE_FOLLOW
+  bool forceThis=false;
+  if (!fpFollow&&strlen(forceFile)) {
+    fpFollow = fopen(forceFile,"r");
+    assert (fpFollow);
+  }
+  if (fpFollow) {
+    if (numberIterations_<=force_iteration) {
+      // read to next Clp0102
+      char temp[300];
+      while (fgets(temp,250,fpFollow)) {
+	if (strncmp(temp,"Clp0102",7))
+	  continue;
+	char cin,cout;
+	sscanf(temp+9,"%d%*f%*s%*c%c%d%*s%*c%c%d",
+	       &force_iteration,&cin,&force_in,&cout,&force_out);
+	if (cin=='R')
+	  force_in += numberColumns_;
+	if (cout=='R')
+	  force_out += numberColumns_;
+	forceThis=true;
+	assert (numberIterations_==force_iteration-1);
+	printf("Iteration %d will force %d out and %d in\n",
+	       force_iteration,force_out,force_in);
+	alreadyChosen=force_out;
+	break;
+      }
+    } else {
+      // use old
+      forceThis=true;
+    }
+    if (!forceThis) {
+      fclose(fpFollow);
+      fpFollow=NULL;
+      forceFile="";
+    }
+  }
+#endif
   if (alreadyChosen<0) {
     // first see if any free variables and put them in basis
     int nextFree = nextSuperBasic();
@@ -1518,6 +1565,19 @@ ClpSimplexDual::dualRow(int alreadyChosen)
   } else {
     // in values pass
     chosenRow=alreadyChosen;
+#ifdef FORCE_FOLLOW
+    if(forceThis) {
+      alreadyChosen=-1;
+      chosenRow=-1;
+      for (int i=0;i<numberRows_;i++) {
+	if (pivotVariable_[i]==force_out) {
+	  chosenRow=i;
+	  break;
+	}
+      }
+      assert (chosenRow>=0);
+    }
+#endif
     pivotRow_=chosenRow;
   }
   if (chosenRow<0) 
@@ -2139,6 +2199,12 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 		if (weight*bestPivot<bestWeight*absAlpha)
 		  take=true;
 	      }
+#ifdef FORCE_FOLLOW
+	      if (iSequence==force_in) {
+		printf("taking %d - alpha %g best %g\n",force_in,absAlpha,largestPivot);
+		take=true;
+	      }
+#endif
 	      if (take) {
 		sequenceIn_ = numberPossiblySwapped;
 		bestPivot =  absAlpha;
