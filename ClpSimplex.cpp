@@ -3297,8 +3297,7 @@ ClpSimplex::sanityCheck()
   handler_->message(CLP_RIMSTATISTICS1,messages_)
     <<smallestObj
     <<largestObj
-    <<CoinMessageEol;
-  if (largestBound)
+    <<CoinMessageEol;  if (largestBound)
     handler_->message(CLP_RIMSTATISTICS2,messages_)
       <<smallestBound
       <<largestBound

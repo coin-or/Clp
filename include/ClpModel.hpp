@@ -368,7 +368,9 @@ public:
   /// Objective methods
   inline ClpObjective * objectiveAsObject() const
   { return objective_;};
-  void setObjective(const ClpObjective * objective);
+  void setObjective(ClpObjective * objective);
+  void setObjectivePointer(ClpObjective * objective)
+  { objective_ = objective;};
   //@}
 
 

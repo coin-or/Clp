@@ -165,7 +165,7 @@ public:
   inline const int * backSequence() const
   {return backSequence_;};
   /// Returns pointer to original objective
-  inline const ClpQuadraticObjective * originalObjective() const
+  inline ClpQuadraticObjective * originalObjective() const
   { return originalObjective_;};
   inline void setOriginalObjective( ClpQuadraticObjective * obj)
   { originalObjective_ = obj;};
@@ -191,7 +191,7 @@ private:
   /**@name Data members */
   //@{
   /// Objective
-  const ClpQuadraticObjective * originalObjective_;
+  ClpQuadraticObjective * originalObjective_;
   /// Quadratic sequence
   int * quadraticSequence_;
   /// Which ones are quadratic

@@ -20,6 +20,7 @@ ClpQuadraticObjective::ClpQuadraticObjective ()
   quadraticObjective_=NULL;
   gradient_ = NULL;
   numberColumns_=0;
+  numberExtendedColumns_=0;
 }
 
 //-------------------------------------------------------------------
@@ -28,17 +29,23 @@ ClpQuadraticObjective::ClpQuadraticObjective ()
 ClpQuadraticObjective::ClpQuadraticObjective (const double * objective , 
 					      int numberColumns,
 					      const CoinBigIndex * start,
-					      const int * column, const double * element)
+					      const int * column, const double * element,
+					      int numberExtendedColumns)
   : ClpObjective()
 {
   type_=2;
   numberColumns_ = numberColumns;
+  if (numberExtendedColumns>=0)
+    numberExtendedColumns_= max(numberColumns_,numberExtendedColumns);
+  else
+    numberExtendedColumns_= numberColumns_;
   if (objective) {
-    objective_ = new double [numberColumns_];
+    objective_ = new double [numberExtendedColumns_];
     memcpy(objective_,objective,numberColumns_*sizeof(double));
+    memset(objective_+numberColumns_,0,(numberExtendedColumns_-numberColumns_)*sizeof(double));
   } else {
-    objective_ = new double [numberColumns_];
-    memset(objective_,0,numberColumns_*sizeof(double));
+    objective_ = new double [numberExtendedColumns_];
+    memset(objective_,0,numberExtendedColumns_*sizeof(double));
   }
   if (start) 
     quadraticObjective_ = new CoinPackedMatrix(true,numberColumns,numberColumns,
@@ -55,15 +62,16 @@ ClpQuadraticObjective::ClpQuadraticObjective (const ClpQuadraticObjective & rhs)
 : ClpObjective(rhs)
 {  
   numberColumns_=rhs.numberColumns_;
+  numberExtendedColumns_=rhs.numberExtendedColumns_;
   if (rhs.objective_) {
-    objective_ = new double [numberColumns_];
-    memcpy(objective_,rhs.objective_,numberColumns_*sizeof(double));
+    objective_ = new double [numberExtendedColumns_];
+    memcpy(objective_,rhs.objective_,numberExtendedColumns_*sizeof(double));
   } else {
     objective_=NULL;
   }
   if (rhs.gradient_) {
-    gradient_ = new double [numberColumns_];
-    memcpy(gradient_,rhs.gradient_,numberColumns_*sizeof(double));
+    gradient_ = new double [numberExtendedColumns_];
+    memcpy(gradient_,rhs.gradient_,numberExtendedColumns_*sizeof(double));
   } else {
     gradient_=NULL;
   }
@@ -81,6 +89,7 @@ ClpQuadraticObjective::ClpQuadraticObjective (const ClpQuadraticObjective &rhs,
 : ClpObjective(rhs)
 {
   objective_=NULL;
+  int extra = rhs.numberExtendedColumns_-rhs.numberColumns_;
   numberColumns_=0;
   if (numberColumns>0) {
     // check valid lists
@@ -93,13 +102,18 @@ ClpQuadraticObjective::ClpQuadraticObjective (const ClpQuadraticObjective &rhs,
       throw CoinError("bad column list", "subset constructor", 
 		      "ClpQuadraticObjective");
     numberColumns_ = numberColumns;
-    objective_ = new double[numberColumns_];
+    numberExtendedColumns_ = numberColumns+extra;
+    objective_ = new double[numberExtendedColumns_];
     for (i=0;i<numberColumns_;i++) 
       objective_[i]=rhs.objective_[whichColumn[i]];
+    memcpy(objective_+numberColumns_,rhs.objective_+rhs.numberColumns_,
+	   (numberExtendedColumns_-numberColumns_)*sizeof(double));
     if (rhs.gradient_) {
-      gradient_ = new double[numberColumns_];
+      gradient_ = new double[numberExtendedColumns_];
       for (i=0;i<numberColumns_;i++) 
 	gradient_[i]=rhs.gradient_[whichColumn[i]];
+      memcpy(gradient_+numberColumns_,rhs.gradient_+rhs.numberColumns_,
+	     (numberExtendedColumns_-numberColumns_)*sizeof(double));
     }
   }
   if (rhs.quadraticObjective_) {
@@ -133,15 +147,16 @@ ClpQuadraticObjective::operator=(const ClpQuadraticObjective& rhs)
     quadraticObjective_ = NULL;
     ClpObjective::operator=(rhs);
     numberColumns_=rhs.numberColumns_;
+    numberExtendedColumns_=rhs.numberExtendedColumns_;
     if (rhs.objective_) {
-      objective_ = new double [numberColumns_];
-      memcpy(objective_,rhs.objective_,numberColumns_*sizeof(double));
+      objective_ = new double [numberExtendedColumns_];
+      memcpy(objective_,rhs.objective_,numberExtendedColumns_*sizeof(double));
     } else {
       objective_=NULL;
     }
     if (rhs.gradient_) {
-      gradient_ = new double [numberColumns_];
-      memcpy(gradient_,rhs.gradient_,numberColumns_*sizeof(double));
+      gradient_ = new double [numberExtendedColumns_];
+      memcpy(gradient_,rhs.gradient_,numberExtendedColumns_*sizeof(double));
     } else {
       gradient_=NULL;
     }
@@ -163,13 +178,13 @@ ClpQuadraticObjective::gradient(const double * solution, double & offset)
     return objective_;
   } else {
     if (!gradient_) 
-      gradient_ = new double[numberColumns_];
+      gradient_ = new double[numberExtendedColumns_];
     const int * columnQuadratic = quadraticObjective_->getIndices();
     const int * columnQuadraticStart = quadraticObjective_->getVectorStarts();
     const int * columnQuadraticLength = quadraticObjective_->getVectorLengths();
     const double * quadraticElement = quadraticObjective_->getElements();
     double offset=0.0;
-    memcpy(gradient_,objective_,numberColumns_*sizeof(double));
+    memcpy(gradient_,objective_,numberExtendedColumns_*sizeof(double));
     int iColumn;
     for (iColumn=0;iColumn<numberColumns_;iColumn++) {
       double valueI = solution[iColumn];
@@ -214,20 +229,21 @@ void
 ClpQuadraticObjective::resize(int newNumberColumns)
 {
   if (numberColumns_!=newNumberColumns) {
+    int newExtended = newNumberColumns + (numberExtendedColumns_-numberColumns_);
     int i;
-    double * newArray = new double[newNumberColumns];
+    double * newArray = new double[newExtended];
     if (objective_)
       memcpy(newArray,objective_,
-	     min(newNumberColumns,numberColumns_)*sizeof(double));
+	     min(newExtended,numberExtendedColumns_)*sizeof(double));
     delete [] objective_;
     objective_ = newArray;
     for (i=numberColumns_;i<newNumberColumns;i++) 
       objective_[i]=0.0;
     if (gradient_) {
-      newArray = new double[newNumberColumns];
+      newArray = new double[newExtended];
       if (gradient_)
 	memcpy(newArray,gradient_,
-	       min(newNumberColumns,numberColumns_)*sizeof(double));
+	       min(newExtended,numberExtendedColumns_)*sizeof(double));
       delete [] gradient_;
       gradient_ = newArray;
       for (i=numberColumns_;i<newNumberColumns;i++) 
@@ -247,6 +263,7 @@ ClpQuadraticObjective::resize(int newNumberColumns)
       }
     }
     numberColumns_ = newNumberColumns;
+    numberExtendedColumns_ = newExtended;
   } 
   
 }
@@ -254,6 +271,8 @@ ClpQuadraticObjective::resize(int newNumberColumns)
 void 
 ClpQuadraticObjective::deleteSome(int numberToDelete, const int * which) 
 {
+  int newNumberColumns = numberColumns_-numberToDelete;
+  int newExtended = numberExtendedColumns_ - numberToDelete;
   if (objective_) {
     int i ;
     char * deleted = new char[numberColumns_];
@@ -266,8 +285,9 @@ ClpQuadraticObjective::deleteSome(int numberToDelete, const int * which)
 	deleted[j]=1;
       }
     }
-    int newNumberColumns = numberColumns_-numberDeleted;
-    double * newArray = new double[newNumberColumns];
+    newNumberColumns = numberColumns_-numberDeleted;
+    newExtended = numberExtendedColumns_ - numberDeleted;
+    double * newArray = new double[newExtended];
     int put=0;
     for (i=0;i<numberColumns_;i++) {
       if (!deleted[i]) {
@@ -277,7 +297,8 @@ ClpQuadraticObjective::deleteSome(int numberToDelete, const int * which)
     delete [] objective_;
     objective_ = newArray;
     delete [] deleted;
-    numberColumns_ = newNumberColumns;
+    memcpy(objective_+newNumberColumns,objective_+numberColumns_,
+	   (numberExtendedColumns_-numberColumns_)*sizeof(double));
   }
   if (gradient_) {
     int i ;
@@ -291,8 +312,9 @@ ClpQuadraticObjective::deleteSome(int numberToDelete, const int * which)
 	deleted[j]=1;
       }
     }
-    int newNumberColumns = numberColumns_-numberDeleted;
-    double * newArray = new double[newNumberColumns];
+    newNumberColumns = numberColumns_-numberDeleted;
+    newExtended = numberExtendedColumns_ - numberDeleted;
+    double * newArray = new double[newExtended];
     int put=0;
     for (i=0;i<numberColumns_;i++) {
       if (!deleted[i]) {
@@ -302,8 +324,11 @@ ClpQuadraticObjective::deleteSome(int numberToDelete, const int * which)
     delete [] gradient_;
     gradient_ = newArray;
     delete [] deleted;
-    numberColumns_ = newNumberColumns;
+    memcpy(gradient_+newNumberColumns,gradient_+numberColumns_,
+	   (numberExtendedColumns_-numberColumns_)*sizeof(double));
   }
+  numberColumns_ = newNumberColumns;
+  numberExtendedColumns_ = newExtended;
   if (quadraticObjective_) {
     quadraticObjective_->deleteCols(numberToDelete,which);
     quadraticObjective_->deleteRows(numberToDelete,which);
@@ -313,11 +338,33 @@ ClpQuadraticObjective::deleteSome(int numberToDelete, const int * which)
 // Load up quadratic objective 
 void 
 ClpQuadraticObjective::loadQuadraticObjective(const int numberColumns, const CoinBigIndex * start,
-			      const int * column, const double * element)
+			      const int * column, const double * element,int numberExtended)
 {
   delete quadraticObjective_;
   quadraticObjective_ = new CoinPackedMatrix(true,numberColumns,numberColumns,
 					     start[numberColumns],element,column,start,NULL);
+  numberColumns_=numberColumns;
+  if (numberExtended>numberExtendedColumns_) {
+    if (objective_) {
+      // make correct size
+      double * newArray = new double[numberExtended];
+      memcpy(newArray,objective_,numberColumns_*sizeof(double));
+      delete [] objective_;
+      objective_ = newArray;
+      memset(objective_+numberColumns_,0,(numberExtended-numberColumns_)*sizeof(double));
+    }
+    if (gradient_) {
+      // make correct size
+      double * newArray = new double[numberExtended];
+      memcpy(newArray,gradient_,numberColumns_*sizeof(double));
+      delete [] gradient_;
+      gradient_ = newArray;
+      memset(gradient_+numberColumns_,0,(numberExtended-numberColumns_)*sizeof(double));
+    }
+    numberExtendedColumns_ = numberExtended;
+  } else {
+    numberExtendedColumns_ = numberColumns_;
+  }
 }
 void 
 ClpQuadraticObjective::loadQuadraticObjective (  const CoinPackedMatrix& matrix)

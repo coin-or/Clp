@@ -935,7 +935,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     delete [] element;
   }
   // test network 
-  //#define QUADRATIC
+#define QUADRATIC
 #ifndef QUADRATIC
   if (1) {    
     std::string fn = mpsDir+"input.130";

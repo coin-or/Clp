@@ -526,8 +526,12 @@ int ClpSimplexPrimalQuadratic::primalQuadratic2 (ClpQuadraticInfo * info,
   const int * which = info->quadraticSequence();
   //const int * back = info->backSequence();
   // initialize - values pass coding and algorithm_ is +1
+  // for moment just set objective for a bit
+  ClpObjective * saveObj = objectiveAsObject();
+  setObjectivePointer(info->originalObjective());
   if (!startup(1)) {
 
+    setObjectivePointer(saveObj);
     // Setup useful stuff
     info->setCurrentPhase(phase);
     int lastCleaned=0; // last time objective or bounds cleaned up
@@ -560,7 +564,7 @@ int ClpSimplexPrimalQuadratic::primalQuadratic2 (ClpQuadraticInfo * info,
 	assert (number<=numberXColumns);
 	for (j=0;j<number;j++) {
 	  int iColumn2 = columnsInThisColumn[j];
-	  newElement[j] = elementsInThisColumn[j]*scale*columnScale_[iColumn2];
+	  newElement[j] = elementsInThisColumn[j]*scale*rowScale_[iColumn2+numberXRows];
 	}
 	quadratic->replaceVector(iColumn,number,newElement);
 	objective[iColumn] *= direction*columnScale_[iColumn];
@@ -720,6 +724,7 @@ int ClpSimplexPrimalQuadratic::primalQuadratic2 (ClpQuadraticInfo * info,
       delete info->originalObjective();
     }
   }
+  setObjectivePointer(saveObj);
   // clean up
   finish();
   restoreData(data);
@@ -816,7 +821,7 @@ ClpSimplexPrimalQuadratic::whileIterating(
 	sequenceIn_ = nextSequenceIn;
       } else {
 	saveSequenceIn=sequenceIn_;
-	createDjs(info,rowArray_[1],rowArray_[2]);
+	createDjs(info,rowArray_[3],rowArray_[2]);
 	dualIn_=0.0; // so no updates
 	primalColumn(rowArray_[1],rowArray_[2],rowArray_[3],
 		     columnArray_[0],columnArray_[1]);
@@ -842,6 +847,7 @@ ClpSimplexPrimalQuadratic::whileIterating(
       int chosen = sequenceIn_;
       // do second half of iteration
       while (chosen>=0) {
+	rowArray_[1]->clear();
 	checkComplementarity (info,rowArray_[3],rowArray_[1]);
 	printf("True objective is %g, infeas cost %g, sum %g\n",
 	       objectiveValue_,info->infeasCost(),objectiveValue_+info->infeasCost());
@@ -849,7 +855,6 @@ ClpSimplexPrimalQuadratic::whileIterating(
 	returnCode=-1;
 	pivotRow_=-1;
 	sequenceOut_=-1;
-	rowArray_[1]->clear();
 	// we found a pivot column
 	// update the incoming column
 	sequenceIn_=chosen;
@@ -1381,7 +1386,8 @@ ClpSimplexPrimalQuadratic::primalRow(CoinIndexedVector * rowArray,
       index2[number2++]=iPivot;
       rhs[iPivot]=alpha;
       coeff1 += alpha*cost_[iPivot];
-      //printf("col %d alpha %g solution %g\n",iPivot,alpha,solution_[iPivot]);
+      //printf("col %d alpha %g solution %g cost %g scale %g\n",iPivot,alpha,solution_[iPivot],
+      //     cost_[iPivot],columnScale_[iPivot]);
     } else {
       if (iPivot>=numberColumns_) {
 	// ? do we go through column of pi
@@ -1407,13 +1413,16 @@ ClpSimplexPrimalQuadratic::primalRow(CoinIndexedVector * rowArray,
   if (sequenceIn_<numberXColumns) {
     index2[number2++]=sequenceIn_;
     rhs[sequenceIn_]=way;
-    //printf("incoming col %d alpha %g solution %g\n",sequenceIn_,way,valueIn_);
+    //printf("incoming col %d alpha %g solution %g cost %g scale %g\n",sequenceIn_,way,valueIn_,
+    //   cost_[sequenceIn_],columnScale_[sequenceIn_]);
     coeff1 += way*cost_[sequenceIn_];
   } else {
     //printf("incoming new col %d alpha %g solution %g\n",sequenceIn_,way,valueIn_);
     coeffSlack += way*cost_[sequenceIn_];
   }
+  printf("coeff1 now %g\n",coeff1);
   rhsArray->setNumElements(number2);
+  double largestCoeff1=1.0e-20;
   for (iIndex=0;iIndex<number2;iIndex++) {
     int iColumn=index2[iIndex];
     //double valueI = solution_[iColumn];
@@ -1425,7 +1434,9 @@ ClpSimplexPrimalQuadratic::primalRow(CoinIndexedVector * rowArray,
       double valueJ = solution_[jColumn];
       double alphaJ = rhs[jColumn];
       double elementValue = quadraticElement[j];
-      coeff1 += (valueJ*alphaI)*elementValue;
+      double addValue = (valueJ*alphaI)*elementValue;
+      largestCoeff1 = max(largestCoeff1,fabs(addValue));
+      coeff1 += addValue;
       coeff2 += (alphaI*alphaJ)*elementValue;
     }
   }
@@ -1440,6 +1451,9 @@ ClpSimplexPrimalQuadratic::primalRow(CoinIndexedVector * rowArray,
       dualIn_=0.0;
       coeff1=0.0;
     }
+    if (fabs(way*coeff1-dualIn_)>1.0e-2*(1.0+fabs(dualIn_)))
+      printf("primal error %g, largest %g, coeff1 %g, dualin %g\n",
+	     largestPrimalError_,largestCoeff1,way*coeff1,dualIn_);
     assert (fabs(way*coeff1-dualIn_)<1.0e-1*(1.0+fabs(dualIn_)));
     assert (way*coeff1*dualIn_>=0.0);
     if (way*coeff1*dualIn_<0.0) {
@@ -1511,7 +1525,7 @@ ClpSimplexPrimalQuadratic::primalRow(CoinIndexedVector * rowArray,
   double tentativeTheta = maximumMovement;
   double upperTheta = maximumMovement;
   bool throwAway=false;
-  if (numberIterations_==106) {
+  if (numberIterations_==1395) {
     printf("Bad iteration coming up after iteration %d\n",numberIterations_);
   }
 
@@ -1588,6 +1602,7 @@ ClpSimplexPrimalQuadratic::primalRow(CoinIndexedVector * rowArray,
     // loops increasing tentative theta until can't go through
     
     while (tentativeTheta <= maximumMovement) {
+      double bestPivotBeforeInteresting=0.0;
       double thruThis = 0.0;
       
       double bestPivot=acceptablePivot;
@@ -1623,6 +1638,7 @@ ClpSimplexPrimalQuadratic::primalRow(CoinIndexedVector * rowArray,
       }
       
       maximumSwapped = max(maximumSwapped,numberSwapped);
+      bestPivotBeforeInteresting=bestPivot;
 
       //double dualCheck = - 2.0*coeff2*tentativeTheta - coeff1 - 0.1*infeasibilityCost_;
       double dualCheck = - 2.0*coeff2*tentativeTheta - coeff1;
@@ -1709,6 +1725,8 @@ ClpSimplexPrimalQuadratic::primalRow(CoinIndexedVector * rowArray,
 	    break;
 	  } else {
 	    dualCheck = - 2.0*coeff2*theta_ - coeff1;
+	    if (bestPivotBeforeInteresting>1.0e-4&&bestPivot<1.0e-6)
+	      dualCheck=1.0e7;
 	    if ((totalThru>=dualCheck||fake*bestPivot>1.0e-3)
 		&&(sequenceIn_<numberXColumns||sequenceIn_>=numberColumns_)) {
 	      if (!cleanupIteration) {
@@ -2380,7 +2398,7 @@ ClpSimplexPrimalQuadratic::createDjs (const ClpQuadraticInfo * info,
       if (getRowStatus(iRow)==basic) 
 	solution_[iRow+numberXColumns]=0.0;
     }
-    times(-1.0,columnActivityWork_,modifiedCost);
+    matrix_->times(-1.0,columnActivityWork_,modifiedCost,rowScale_,columnScale_);
     
     int number=0;
     // Now costs
@@ -2446,7 +2464,7 @@ ClpSimplexPrimalQuadratic::createDjs (const ClpQuadraticInfo * info,
       solution_[iPi]-=cost_[iSequence];
     }
     // check looks okay
-    matrix_->times(1.0,solution_,modifiedCost);
+    matrix_->times(1.0,solution_,modifiedCost,rowScale_,columnScale_);
     // Back to pi
     for (iRow=0;iRow<numberXRows;iRow++) {
       int iSequence  = iRow + numberColumns_;
@@ -2468,11 +2486,7 @@ ClpSimplexPrimalQuadratic::createDjs (const ClpQuadraticInfo * info,
   }
   // fill in linear ones
   memcpy(dj_,cost_,numberXColumns*sizeof(double));
-  if (!rowScale_) {
-    matrix_->transposeTimes(-1.0,pi,dj_);
-  } else {
-    matrix_->transposeTimes(-1.0,pi,dj_,rowScale_,columnScale_);
-  }
+  matrix_->transposeTimes(-1.0,pi,dj_,rowScale_,columnScale_);
   memset(dj_+numberXColumns,0,(numberXRows+info->numberQuadraticColumns())*sizeof(double));
   for (iSequence=0;iSequence<numberXColumns;iSequence++) {
     int jSequence = which[iSequence];
@@ -2908,12 +2922,12 @@ ClpSimplexPrimalQuadratic::makeQuadratic(ClpQuadraticInfo & info)
     start2[iColumn+1]=numberElements;
   }
   // and pad
-  for (;iColumn<newNumberColumns;iColumn++)
-    start2[iColumn+1]=numberElements;
-  // Load up objective
+  //for (;iColumn<newNumberColumns;iColumn++)
+  //start2[iColumn+1]=numberElements;
+  // Load up objective with expanded linear
   ClpQuadraticObjective * obj = 
-    new ClpQuadraticObjective(objective2,newNumberColumns,
-			      start2,row2,elements2);
+    new ClpQuadraticObjective(objective2,numberColumns,
+			      start2,row2,elements2,newNumberColumns);
   delete [] objective2;
   info.setOriginalObjective(obj);
   //model2->loadQuadraticObjective(newNumberColumns,start2,row2,elements2);
@@ -2921,7 +2935,7 @@ ClpSimplexPrimalQuadratic::makeQuadratic(ClpQuadraticInfo & info)
   delete [] row2;
   delete [] elements2;
   model2->allSlackBasis();
-  model2->scaling(false);
+  //model2->scaling(false);
   model2->setLogLevel(this->logLevel());
   // Move solution across
   memcpy(model2->primalColumnSolution(),solution2,

@@ -55,8 +55,12 @@ ClpMatrixBase::times(double scalar,
 		     const double * rowScale, 
 		     const double * columnScale) const
 {
-  std::cerr<<"Scaling not supported - ClpMatrixBase"<<std::endl;
-  abort();
+  if (rowScale) {
+    std::cerr<<"Scaling not supported - ClpMatrixBase"<<std::endl;
+    abort();
+  } else {
+    times(scalar,x,y);
+  }
 }
 // And for scaling - default aborts for when scaling not supported
 void 
@@ -65,8 +69,12 @@ ClpMatrixBase::transposeTimes(double scalar,
 				const double * rowScale, 
 				const double * columnScale) const
 {
-  std::cerr<<"Scaling not supported - ClpMatrixBase"<<std::endl;
-  abort();
+  if (rowScale) {
+    std::cerr<<"Scaling not supported - ClpMatrixBase"<<std::endl;
+    abort();
+  } else {
+    transposeTimes(scalar,x,y);
+  }
 }
 /* Subset clone (without gaps).  Duplicates are allowed
    and order is as given.

@@ -1221,7 +1221,7 @@ ClpModel::deleteQuadraticObjective()
     obj->deleteQuadraticObjective();
 }
 void 
-ClpModel::setObjective(const ClpObjective * objective)
+ClpModel::setObjective(ClpObjective * objective)
 {
   delete objective_;
   objective_=objective->clone();

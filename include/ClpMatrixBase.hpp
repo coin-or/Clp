@@ -130,7 +130,9 @@ public:
         @pre <code>y</code> must be of size <code>numRows()</code> */
   virtual void times(double scalar,
 		       const double * x, double * y) const=0;
-  /// And for scaling - default aborts for when scaling not supported
+  /** And for scaling - default aborts for when scaling not supported
+      (unless pointers NULL when as normal)
+  */
   virtual void times(double scalar,
 		     const double * x, double * y,
 		     const double * rowScale, 
@@ -140,8 +142,10 @@ public:
         @pre <code>y</code> must be of size <code>numColumns()</code> */
     virtual void transposeTimes(double scalar,
 				const double * x, double * y) const = 0;
-  /// And for scaling - default aborts for when scaling not supported
-    virtual void transposeTimes(double scalar,
+  /** And for scaling - default aborts for when scaling not supported
+      (unless pointers NULL when as normal)
+  */
+  virtual void transposeTimes(double scalar,
 				const double * x, double * y,
 				const double * rowScale, 
 				const double * columnScale) const;

@@ -38,8 +38,9 @@ public:
   
   /// Constructor from objective
   ClpQuadraticObjective(const double * linearObjective, int numberColumns,
-			      const CoinBigIndex * start,
-			      const int * column, const double * element);
+			const CoinBigIndex * start,
+			const int * column, const double * element,
+			int numberExtendedColumns_=-1);
   
   /// Copy constructor 
   ClpQuadraticObjective(const ClpQuadraticObjective &);
@@ -66,7 +67,8 @@ public:
   /** Load up quadratic objective.  This is stored as a CoinPackedMatrix */
   void loadQuadraticObjective(const int numberColumns, 
 			      const CoinBigIndex * start,
-			      const int * column, const double * element);
+			      const int * column, const double * element,
+			      int numberExtendedColumns=-1);
   void loadQuadraticObjective (  const CoinPackedMatrix& matrix);
   /// Get rid of quadratic objective
   void deleteQuadraticObjective();
@@ -77,6 +79,12 @@ public:
    inline CoinPackedMatrix * quadraticObjective() const     { return quadraticObjective_; }
    /// Linear objective
    inline double * linearObjective() const     { return objective_; }
+  /// Length of linear objective which could be bigger
+  inline int numberExtendedColumns() const
+  {return numberExtendedColumns_;};
+  /// Number of columns in quadratic objective
+  inline int numberColumns() const
+  {return numberColumns_;};
   //@}
 
   //---------------------------------------------------------------------------
@@ -91,6 +99,8 @@ private:
   double * gradient_;
   /// Useful to have number of columns about
   int numberColumns_;
+  /// Also length of linear objective which could be bigger
+  int numberExtendedColumns_;
   //@}
 };
 

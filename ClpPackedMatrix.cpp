@@ -10,6 +10,7 @@
 
 #include "ClpSimplex.hpp"
 #include "ClpFactorization.hpp"
+#include "ClpQuadraticObjective.hpp"
 // at end to get min/max!
 #include "ClpPackedMatrix.hpp"
 #include "ClpMessage.hpp"
@@ -188,30 +189,34 @@ ClpPackedMatrix::times(double scalar,
 		       const double * rowScale, 
 		       const double * columnScale) const
 {
-  int iRow,iColumn;
-  // get matrix data pointers
-  const int * row = matrix_->getIndices();
-  const CoinBigIndex * columnStart = matrix_->getVectorStarts();
-  const int * columnLength = matrix_->getVectorLengths(); 
-  const double * elementByColumn = matrix_->getElements();
-  int numberColumns = matrix_->getNumCols();
-  //memset(y,0,matrix_->getNumRows()*sizeof(double));
-  for (iColumn=0;iColumn<numberColumns;iColumn++) {
-    CoinBigIndex j;
-    double value = x[iColumn];
-    if (value) {
-      // scaled
-      value *= scalar*columnScale[iColumn];
-      for (j=columnStart[iColumn];
-	   j<columnStart[iColumn]+columnLength[iColumn];j++) {
-	iRow=row[j];
-	y[iRow] += value*elementByColumn[j];
+  if (rowScale) {
+    int iRow,iColumn;
+    // get matrix data pointers
+    const int * row = matrix_->getIndices();
+    const CoinBigIndex * columnStart = matrix_->getVectorStarts();
+    const int * columnLength = matrix_->getVectorLengths(); 
+    const double * elementByColumn = matrix_->getElements();
+    int numberColumns = matrix_->getNumCols();
+    //memset(y,0,matrix_->getNumRows()*sizeof(double));
+    for (iColumn=0;iColumn<numberColumns;iColumn++) {
+      CoinBigIndex j;
+      double value = x[iColumn];
+      if (value) {
+	// scaled
+	value *= scalar*columnScale[iColumn];
+	for (j=columnStart[iColumn];
+	     j<columnStart[iColumn]+columnLength[iColumn];j++) {
+	  iRow=row[j];
+	  y[iRow] += value*elementByColumn[j];
+	}
       }
     }
-  }
-  int numberRows = getNumRows();
-  for (iRow=0;iRow<numberRows;iRow++) {
-    y[iRow] *= rowScale[iRow];
+    int numberRows = getNumRows();
+    for (iRow=0;iRow<numberRows;iRow++) {
+      y[iRow] *= rowScale[iRow];
+    }
+  } else {
+    times(scalar,x,y);
   }
 }
 void 
@@ -220,24 +225,28 @@ ClpPackedMatrix::transposeTimes( double scalar,
 				 const double * rowScale, 
 				 const double * columnScale) const
 {
-  int iColumn;
-  // get matrix data pointers
-  const int * row = matrix_->getIndices();
-  const CoinBigIndex * columnStart = matrix_->getVectorStarts();
-  const int * columnLength = matrix_->getVectorLengths(); 
-  const double * elementByColumn = matrix_->getElements();
-  int numberColumns = matrix_->getNumCols();
-  //memset(y,0,numberColumns*sizeof(double));
-  for (iColumn=0;iColumn<numberColumns;iColumn++) {
-    CoinBigIndex j;
-    double value=0.0;
-    // scaled
-    for (j=columnStart[iColumn];
-	 j<columnStart[iColumn]+columnLength[iColumn];j++) {
-      int jRow=row[j];
+  if (rowScale) {
+    int iColumn;
+    // get matrix data pointers
+    const int * row = matrix_->getIndices();
+    const CoinBigIndex * columnStart = matrix_->getVectorStarts();
+    const int * columnLength = matrix_->getVectorLengths(); 
+    const double * elementByColumn = matrix_->getElements();
+    int numberColumns = matrix_->getNumCols();
+    //memset(y,0,numberColumns*sizeof(double));
+    for (iColumn=0;iColumn<numberColumns;iColumn++) {
+      CoinBigIndex j;
+      double value=0.0;
+      // scaled
+      for (j=columnStart[iColumn];
+	   j<columnStart[iColumn]+columnLength[iColumn];j++) {
+	int jRow=row[j];
       value += x[jRow]*elementByColumn[j]*rowScale[jRow];
+      }
+      y[iColumn] += value*scalar*columnScale[iColumn];
     }
-    y[iColumn] += value*scalar*columnScale[iColumn];
+  } else {
+    transposeTimes(scalar,x,y);
   }
 }
 /* Return <code>x * A + y</code> in <code>z</code>. 
@@ -1243,6 +1252,29 @@ ClpPackedMatrix::scale(ClpSimplex * model) const
     
     delete [] usefulRow;
     delete [] usefulColumn;
+    // If quadratic then make symmetric
+    ClpObjective * obj = model->objectiveAsObject();
+    ClpQuadraticObjective * quadraticObj = (dynamic_cast< ClpQuadraticObjective*>(obj));
+    if (quadraticObj) {
+      CoinPackedMatrix * quadratic = quadraticObj->quadraticObjective();
+      int numberXColumns = quadratic->getNumCols();
+      int numberXRows = numberRows-numberXColumns;
+      if (numberXColumns<numberColumns) {
+	int i;
+	for (i=0;i<numberXColumns;i++) 
+	  rowScale[i+numberXRows] = columnScale[i];
+	for (i=0;i<numberXRows;i++) 
+	  columnScale[i+numberXColumns] = rowScale[i];
+	// and make sure Sj okay
+	for (iColumn=numberRows;iColumn<numberColumns;iColumn++) {
+	  CoinBigIndex j=columnStart[iColumn];
+	  assert(columnLength[iColumn]==1);
+	  int iRow=row[j];
+	  double value = fabs(elementByColumn[j]*rowScale[iRow]);
+	  columnScale[iColumn]=1.0/value;
+	}
+      }
+    }
     model->setRowScale(rowScale);
     model->setColumnScale(columnScale);
     if (model->rowCopy()) {
