@@ -2488,7 +2488,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 		  printf("Odd free/unbounded combo\n");
 		changeCost += cost_[iChosen];
 	      }
-	      problemStatus_ = checkUnbounded(rowArray_[0],rowArray_[1],
+	      problemStatus_ = checkUnbounded(rowArray_[1],rowArray_[0],
 					      changeCost);
 	      rowArray_[1]->clear();
 	    } else {
