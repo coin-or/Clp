@@ -2,9 +2,6 @@
 // Corporation and others.  All Rights Reserved.
 
 
-// The point of this example is to show how to create a model without
-// using mps files.
-
 // It also tests pdco
 
 // This reads a network problem created by netgen which can be

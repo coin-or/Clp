@@ -1116,11 +1116,11 @@ CoinPresolveMatrix::CoinPresolveMatrix(int ncols0_in,
 {
   const int bufsize = 2*nelems_in;
 
-  // Set up change bits
-  rowChanged_ = new unsigned int[(nrows_+31)>>5];
-  memset(rowChanged_,0,((nrows_+31)>>5)*sizeof(unsigned int));
-  colChanged_ = new unsigned int[(ncols_+31)>>5];
-  memset(colChanged_,0,((ncols_+31)>>5)*sizeof(unsigned int));
+  // Set up change bits etc
+  rowChanged_ = new unsigned char[nrows_];
+  memset(rowChanged_,0,nrows_);
+  colChanged_ = new unsigned char[ncols_];
+  memset(colChanged_,0,ncols_);
   CoinPackedMatrix * m = si->matrix();
 
   // The coefficient matrix is a big hunk of stuff.
@@ -1164,10 +1164,7 @@ CoinPresolveMatrix::CoinPresolveMatrix(int ncols0_in,
 
   // Set up prohibited bits if needed
   if (nonLinearValue) {
-    rowProhibited_ = new unsigned int[(nrows_+31)>>5];
-    memset(rowProhibited_,0,((nrows_+31)>>5)*sizeof(unsigned int));
-    colProhibited_ = new unsigned int[(ncols_+31)>>5];
-    memset(colProhibited_,0,((ncols_+31)>>5)*sizeof(unsigned int));
+    anyProhibited_ = true;
     for (icol=0;icol<ncols_;icol++) {
       int j;
       bool nonLinearColumn = false;
@@ -1183,8 +1180,7 @@ CoinPresolveMatrix::CoinPresolveMatrix(int ncols0_in,
 	setColProhibited(icol);
     }
   } else {
-    rowProhibited_ = NULL;
-    colProhibited_ = NULL;
+    anyProhibited_ = false;
   }
 
   if (doStatus) {

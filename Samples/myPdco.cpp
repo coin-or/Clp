@@ -9,6 +9,7 @@
 
 #include "ClpInterior.hpp"
 #include "myPdco.hpp"
+#include "ClpDummyMatrix.hpp"
 #include "ClpMessage.hpp"
 
 //#############################################################################
@@ -20,6 +21,7 @@
 //-------------------------------------------------------------------
 myPdco::myPdco () 
   : ClpPdcoBase(),
+    rowIndex_(NULL),
     numlinks_(0),
     numnodes_(0)
 {
@@ -30,6 +32,7 @@ myPdco::myPdco ()
 myPdco::myPdco(double d1,double d2,
 	     int numnodes, int numlinks)
   : ClpPdcoBase(),
+    rowIndex_(NULL),
     numlinks_(numlinks),
     numnodes_(numnodes)
 {
@@ -44,7 +47,8 @@ myPdco::myPdco (const myPdco & rhs)
 : ClpPdcoBase(rhs),
   numlinks_(rhs.numlinks_),
   numnodes_(rhs.numnodes_)
-{  
+{
+  rowIndex_ = ClpCopyOfArray(rhs.rowIndex_,2*(numlinks_+2*numnodes_));
 }
 
 //-------------------------------------------------------------------
@@ -52,6 +56,7 @@ myPdco::myPdco (const myPdco & rhs)
 //-------------------------------------------------------------------
 myPdco::~myPdco ()
 {
+  delete [] rowIndex_;
 }
 
 //----------------------------------------------------------------
@@ -64,6 +69,7 @@ myPdco::operator=(const myPdco& rhs)
     ClpPdcoBase::operator=(rhs);
     numlinks_ = rhs.numlinks_;
     numnodes_ = rhs.numnodes_;
+    rowIndex_ = ClpCopyOfArray(rhs.rowIndex_,2*(numlinks_+2*numnodes_));
   }
   return *this;
 }
@@ -77,15 +83,14 @@ ClpPdcoBase * myPdco::clone() const
 
 void myPdco::matVecMult(ClpInterior * model,  int mode, double* x_elts, double* y_elts) const
 {
-  const int * rowIndex = model->matrix()->getIndices();
   int nrow = model->numberRows();
   if (mode ==1){
     double y_sum = 0.0;
     for (int k=0; k<numlinks_; k++){
       y_sum += y_elts[k];
-      int i1 = rowIndex[2*k];
+      int i1 = rowIndex_[2*k];
       x_elts[i1] += y_elts[k];
-      int i2 = rowIndex[2*k+1];
+      int i2 = rowIndex_[2*k+1];
       x_elts[i2] -= y_elts[k];
     }
     double y_suma = 0.0;
@@ -102,9 +107,9 @@ void myPdco::matVecMult(ClpInterior * model,  int mode, double* x_elts, double* 
   }else{
     for (int k=0; k<numlinks_; k++){
       x_elts[k] += y_elts[nrow-1];
-      int i1 = rowIndex[2*k];
+      int i1 = rowIndex_[2*k];
       x_elts[k] += y_elts[i1];
-      int i2 = rowIndex[2*k+1];
+      int i2 = rowIndex_[2*k+1];
       x_elts[k] -= y_elts[i2];
     }
     for (int k=0; k<numnodes_; k++){
@@ -127,12 +132,11 @@ void myPdco::matPrecon(ClpInterior * model, double delta, double* x_elts, double
   for (int k=0; k<ncol; k++)
     ysq[k] = y_elts[k]*y_elts[k];
   
-  const int * rowIndex = model->matrix()->getIndices();
   for (int k=0; k<numlinks_; k++){
     y_sum += ysq[k];
-    int i1 = rowIndex[2*k];
+    int i1 = rowIndex_[2*k];
     x_elts[i1] += ysq[k];
-    int i2 = rowIndex[2*k+1];
+    int i2 = rowIndex_[2*k+1];
     x_elts[i2] += ysq[k];
   }
   double y_suma = 0.0;
@@ -186,9 +190,6 @@ myPdco::myPdco(ClpInterior & model)
   int nrow;
   int ncol;
   int numelts;
-  int *rowIndex;
-  int *colStarts;
-  double  *values;
   double  *rowUpper;
   double  *rowLower;
   double  *colUpper;
@@ -197,8 +198,6 @@ myPdco::myPdco(ClpInterior & model)
   double  *x;
   double  *y;
   double  *dj;
-  int numlinks;
-  int numnodes;
   int ipair[2], igparm[4], maxrows, maxlinks;
   // Open graph and parameter files
   FILE *fpin = fopen("./g.graph","r");
@@ -236,11 +235,11 @@ myPdco::myPdco(ClpInterior & model)
   // Set model size
   numnodes_ = imax + 1;
   numlinks_ = maxlinks;
-  nrow = numnodes + 3;
-  ncol = numlinks + 2*numnodes;
+  nrow = numnodes_ + 3;
+  ncol = numlinks_ + 2*numnodes_;
   numelts = 3*ncol;
   
-  rowIndex = ir;
+  rowIndex_ = ir;
 
   d1_ = 1.0e-3;
   d2_ = 1.0e-3;
@@ -268,16 +267,9 @@ myPdco::myPdco(ClpInterior & model)
   colUpper = U_def;
   colLower = L_def;
   // We have enough to create a model
-  // Create dummy starts and elements
-  colStarts = new int [ncol+1];
-  values = new double[numelts];
-  colStarts[ncol]=numelts;
-  for (int k=0; k<ncol; k++)
-    colStarts[k]=3*k;
-  for (int k=0; k<3*ncol; k++)
-    values[k]=1.0;
-  model.loadProblem(ncol,nrow,colStarts,rowIndex,values,
-		     colLower,colUpper,NULL,rowLower,rowUpper);
+  ClpDummyMatrix dummy(ncol,nrow,numelts);
+  model.loadProblem(dummy,
+		    colLower,colUpper,NULL,rowLower,rowUpper);
   double *y_def = new double[nrow];
   for (int k=0; k<nrow; k++)
     y_def[k] = 0.0;
@@ -287,12 +279,8 @@ myPdco::myPdco(ClpInterior & model)
     dj_def[k] = 1.0;
   dj = dj_def;
   // delete arrays
-  delete [] rhs_def;
   delete [] U_def;
   delete [] L_def;
-  delete [] rowIndex;
-  delete [] colStarts;
-  delete [] values;
   // Should be sets
   model.rhs_=rhs;
   model.x_=x;

@@ -202,6 +202,9 @@ ClpPdco::pdco( ClpPdcoBase * stuff, Options &options, Info &info, Outfo &outfo)
   y_=NULL;
   dj_=NULL;
 
+  // Save stuff so available elsewhere
+  pdcoStuff_ = stuff;
+
   double normb  = b.infNorm();
   double normx0 = x.infNorm();
   double normy0 = y.infNorm();
@@ -538,7 +541,6 @@ ClpPdco::pdco( ClpPdcoBase * stuff, Options &options, Info &info, Outfo &outfo)
   //---------------------------------------------------------------------
   // Lsqr
   ClpLsqr  thisLsqr(this);
-
   //  while (converged) {
   while(PDitns < maxitn) {
     PDitns = PDitns + 1;
@@ -802,7 +804,8 @@ ClpPdco::pdco( ClpPdcoBase * stuff, Options &options, Info &info, Outfo &outfo)
     }else{
       printf(" %5.1f%7d%7.3f", log10(atolold), itncg, r3ratio);
     }
-
+    printf("\n************ debug\n");
+    break;
     //-------------------------------------------------------------------
     // Test for termination.
     //-------------------------------------------------------------------

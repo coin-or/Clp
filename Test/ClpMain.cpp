@@ -1568,7 +1568,7 @@ costs this much to be infeasible",
 	      } else {
 		// primal
 		if (doCrash) {
-		  solveOptions.setSpecialOption(0,1); // crash
+		  solveOptions.setSpecialOption(1,1); // crash
 		} else if (doSprint>0) {
 		  // sprint overrides idiot
 		  solveOptions.setSpecialOption(1,3,doSprint); // sprint

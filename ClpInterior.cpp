@@ -208,7 +208,7 @@ ClpInterior::gutsOfDelete()
   dj_ = NULL;
   delete lsqrObject_;
   lsqrObject_ = NULL;
-  delete pdcoStuff_;
+  //delete pdcoStuff_;
   pdcoStuff_=NULL;
 }
 bool

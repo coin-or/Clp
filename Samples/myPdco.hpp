@@ -58,6 +58,7 @@ protected:
    /**@name Data members
       The data members are protected to allow access for derived classes. */
    //@{
+  int * rowIndex_;
   int numlinks_;
   int numnodes_;
   
