@@ -410,7 +410,7 @@ Idiot::IdiSolve(
 		  diff2=val1-val2;
 		  if (diff1*diff2>=0.0) {
 		    nsign++;
-		    if (fabs(diff1)<=fabs(diff2)) {
+		    if (fabs(diff1)<fabs(diff2)) {
           // cast is to avoid gcc compiler
           // warning: initialization to 'int' from 'double'
 		      int ii=(int)fabs(4.0*diff1/diff2);
