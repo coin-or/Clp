@@ -83,8 +83,9 @@ int ClpPredictorCorrector::solve ( )
 
   //bool firstTime=true;
   //firstFactorization(true);
-  if (cholesky_->order(this)) {
-    printf("Not enough memory\n");
+  int returnCode = cholesky_->order(this);
+  if (returnCode||cholesky_->symbolic()) {
+    printf("Error return from symbolic - probably not enough memory\n");
     problemStatus_=4;
     //delete all temporary regions
     deleteWorkingData();
@@ -92,6 +93,11 @@ int ClpPredictorCorrector::solve ( )
       // restore normal copy
       delete matrix_;
       matrix_ = saveMatrix;
+    }
+    // Restore quadratic objective if necessary
+    if (saveObjective) {
+      delete objective_;
+      objective_=saveObjective;
     }
     return -1;
   }
@@ -783,10 +789,12 @@ int ClpPredictorCorrector::solve ( )
   multiplyAdd(NULL,numberRows_,0,dual_,scaleFactor_);
   checkSolution();
   CoinMemcpyN(reducedCost_,numberColumns_,dj_);
+  // If quadratic use last solution 
   // Restore quadratic objective if necessary
   if (saveObjective) {
     delete objective_;
     objective_=saveObjective;
+    objectiveValue_=0.5*(primalObjective_+dualObjective_);
   }
   handler_->message(CLP_BARRIER_END,messages_)
     <<sumPrimalInfeasibilities_
@@ -1419,7 +1427,7 @@ double ClpPredictorCorrector::findDirectionVector(const int phase)
     goodSolve=true;
     double maximumRHS;
     double saveMaximum;
-    maximumRHS = maximumAbsElement(deltaY_,numberRows_);
+    maximumRHS = CoinMax(maximumAbsElement(deltaY_,numberRows_),1.0e-12);
     saveMaximum = maximumRHS;
     if (cholesky_->type()<20) {
       // no kkt

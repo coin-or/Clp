@@ -21,16 +21,9 @@
 // Default Constructor 
 //-------------------------------------------------------------------
 ClpCholeskyWssmpKKT::ClpCholeskyWssmpKKT (int denseThreshold) 
-  : ClpCholeskyBase(),
-    sparseFactor_(NULL),
-    choleskyStart_(NULL),
-    choleskyRow_(NULL),
-    sizeFactor_(0),
-    denseThreshold_(denseThreshold)
+  : ClpCholeskyBase(denseThreshold)
 {
   type_=21;
-  memset(integerParameters_,0,64*sizeof(int));
-  memset(doubleParameters_,0,64*sizeof(double));
 }
 
 //-------------------------------------------------------------------
@@ -39,14 +32,6 @@ ClpCholeskyWssmpKKT::ClpCholeskyWssmpKKT (int denseThreshold)
 ClpCholeskyWssmpKKT::ClpCholeskyWssmpKKT (const ClpCholeskyWssmpKKT & rhs) 
 : ClpCholeskyBase(rhs)
 {
-  type_=rhs.type_;
-  sparseFactor_ = ClpCopyOfArray(rhs.sparseFactor_,rhs.sizeFactor_);
-  choleskyStart_ = ClpCopyOfArray(rhs.choleskyStart_,numberRows_+1);
-  choleskyRow_ = ClpCopyOfArray(rhs.choleskyRow_,rhs.sizeFactor_);
-  sizeFactor_=rhs.sizeFactor_;
-  memcpy(integerParameters_,rhs.integerParameters_,64*sizeof(int));
-  memcpy(doubleParameters_,rhs.doubleParameters_,64*sizeof(double));
-  denseThreshold_ = rhs.denseThreshold_;
 }
 
 
@@ -55,9 +40,6 @@ ClpCholeskyWssmpKKT::ClpCholeskyWssmpKKT (const ClpCholeskyWssmpKKT & rhs)
 //-------------------------------------------------------------------
 ClpCholeskyWssmpKKT::~ClpCholeskyWssmpKKT ()
 {
-  delete [] sparseFactor_;
-  delete [] choleskyStart_;
-  delete [] choleskyRow_;
 }
 
 //----------------------------------------------------------------
@@ -68,14 +50,6 @@ ClpCholeskyWssmpKKT::operator=(const ClpCholeskyWssmpKKT& rhs)
 {
   if (this != &rhs) {
     ClpCholeskyBase::operator=(rhs);
-    delete [] sparseFactor_;
-    delete [] choleskyStart_;
-    delete [] choleskyRow_;
-    sparseFactor_ = ClpCopyOfArray(rhs.sparseFactor_,rhs.sizeFactor_);
-    choleskyStart_ = ClpCopyOfArray(rhs.choleskyStart_,numberRows_+1);
-    choleskyRow_ = ClpCopyOfArray(rhs.choleskyRow_,rhs.sizeFactor_);
-    sizeFactor_=rhs.sizeFactor_;
-    denseThreshold_ = rhs.denseThreshold_;
   }
   return *this;
 }
@@ -232,8 +206,8 @@ ClpCholeskyWssmpKKT::order(ClpInterior * model)
     choleskyRow_[sizeFactor_++]=iRow+numberTotal;
   }
   choleskyStart_[numberRows_]=sizeFactor_;
-  permuteIn_ = new int [numberRows_];
-  permuteOut_ = new int[numberRows_];
+  permuteInverse_ = new int [numberRows_];
+  permute_ = new int[numberRows_];
   integerParameters_[0]=0;
   int i0=0;
   int i1=1;
@@ -241,7 +215,7 @@ ClpCholeskyWssmpKKT::order(ClpInterior * model)
   wsetmaxthrds(&i1);
 #endif
   wssmp(&numberRows_,choleskyStart_,choleskyRow_,sparseFactor_,
-         NULL,permuteOut_,permuteIn_,0,&numberRows_,&i1,
+         NULL,permute_,permuteInverse_,0,&numberRows_,&i1,
          NULL,&i0,NULL,integerParameters_,doubleParameters_);
   integerParameters_[1]=1;//order and symbolic
   integerParameters_[2]=2;
@@ -258,12 +232,12 @@ ClpCholeskyWssmpKKT::order(ClpInterior * model)
 #if 1
   integerParameters_[1]=2;//just symbolic
   for (int iRow=0;iRow<numberRows_;iRow++) {
-    permuteIn_[iRow]=iRow;
-    permuteOut_[iRow]=iRow;
+    permuteInverse_[iRow]=iRow;
+    permute_[iRow]=iRow;
   }
 #endif
   wssmp(&numberRows_,choleskyStart_,choleskyRow_,sparseFactor_,
-         NULL,permuteOut_,permuteIn_,NULL,&numberRows_,&i1,
+         NULL,permute_,permuteInverse_,NULL,&numberRows_,&i1,
          NULL,&i0,NULL,integerParameters_,doubleParameters_);
   //std::cout<<"Ordering and symbolic factorization took "<<doubleParameters_[0]<<std::endl;
   if (integerParameters_[63]) {
@@ -273,18 +247,27 @@ ClpCholeskyWssmpKKT::order(ClpInterior * model)
   std::cout<<integerParameters_[23]<<" elements in sparse Cholesky"<<std::endl;
   if (!integerParameters_[23]) {
     for (int iRow=0;iRow<numberRows_;iRow++) {
-      permuteIn_[iRow]=iRow;
-      permuteOut_[iRow]=iRow;
+      permuteInverse_[iRow]=iRow;
+      permute_[iRow]=iRow;
     }
     std::cout<<"wssmp says no elements - fully dense? - switching to dense"<<std::endl;
     integerParameters_[1]=2;
     integerParameters_[2]=2;
     integerParameters_[7]=1; // no permute
     wssmp(&numberRows_,choleskyStart_,choleskyRow_,sparseFactor_,
-	  NULL,permuteOut_,permuteIn_,NULL,&numberRows_,&i1,
+	  NULL,permute_,permuteInverse_,NULL,&numberRows_,&i1,
 	  NULL,&i0,NULL,integerParameters_,doubleParameters_);
     std::cout<<integerParameters_[23]<<" elements in dense Cholesky"<<std::endl;
   }
+  return 0;
+}
+/* Does Symbolic factorization given permutation.
+   This is called immediately after order.  If user provides this then
+   user must provide factorize and solve.  Otherwise the default factorization is used
+   returns non-zero if not enough memory */
+int 
+ClpCholeskyWssmpKKT::symbolic()
+{
   return 0;
 }
 /* Factorize - filling in rowsDropped and returning number dropped */
@@ -434,7 +417,7 @@ ClpCholeskyWssmpKKT::factorize(const double * diagonal, int * rowsDropped)
   int * rowsDropped2 = new int[numberRows_];
   CoinZeroN(rowsDropped2,numberRows_);
   wssmp(&numberRows_,choleskyStart_,choleskyRow_,sparseFactor_,
-	NULL,permuteOut_,permuteIn_,NULL,&numberRows_,&i1,
+	NULL,permute_,permuteInverse_,NULL,&numberRows_,&i1,
 	NULL,&i0,rowsDropped2,integerParameters_,doubleParameters_);
    //std::cout<<"factorization took "<<doubleParameters_[0]<<std::endl;
   if (integerParameters_[9]) {
@@ -512,7 +495,7 @@ ClpCholeskyWssmpKKT::solveKKT (double * region1, double * region2, const double 
   integerParameters_[6]=6;
 #endif
   wssmp(&numberRows_,choleskyStart_,choleskyRow_,sparseFactor_,
-	NULL,permuteOut_,permuteIn_,array,&numberRows_,&i1,
+	NULL,permute_,permuteInverse_,array,&numberRows_,&i1,
 	NULL,&i0,NULL,integerParameters_,doubleParameters_);
 #if 1
   int iRow;

@@ -643,7 +643,7 @@ ClpInterior::createWorkingData()
   assert (!primalR_);
   assert (!dualR_);
   // create arrays if we are doing KKT
-  if (cholesky_->type()>20) {
+  if (cholesky_->type()>=20) {
     primalR_ = new double [nTotal];
     CoinZeroN(primalR_,nTotal);
     dualR_ = new double [numberRows_];
@@ -758,7 +758,7 @@ bool
 ClpInterior::sanityCheck()
 {
   // bad if empty
-  if (!numberRows_||!numberColumns_||!matrix_->getNumElements()) {
+  if (!numberColumns_||((!numberRows_||!matrix_->getNumElements())&&objective_->type()<2)) {
     problemStatus_=emptyProblem();
     return false;
   }

@@ -21,20 +21,9 @@
 // Default Constructor 
 //-------------------------------------------------------------------
 ClpCholeskyWssmp::ClpCholeskyWssmp (int denseThreshold) 
-  : ClpCholeskyBase(),
-    sparseFactor_(NULL),
-    choleskyStart_(NULL),
-    choleskyRow_(NULL),
-    sizeFactor_(0),
-    rowCopy_(NULL),
-    whichDense_(NULL),
-    denseColumn_(NULL),
-    dense_(NULL),
-    denseThreshold_(denseThreshold)
+  : ClpCholeskyBase(denseThreshold)
 {
   type_=12;
-  memset(integerParameters_,0,64*sizeof(int));
-  memset(doubleParameters_,0,64*sizeof(double));
 }
 
 //-------------------------------------------------------------------
@@ -43,18 +32,6 @@ ClpCholeskyWssmp::ClpCholeskyWssmp (int denseThreshold)
 ClpCholeskyWssmp::ClpCholeskyWssmp (const ClpCholeskyWssmp & rhs) 
 : ClpCholeskyBase(rhs)
 {
-  type_=rhs.type_;
-  sparseFactor_ = ClpCopyOfArray(rhs.sparseFactor_,rhs.sizeFactor_);
-  choleskyStart_ = ClpCopyOfArray(rhs.choleskyStart_,numberRows_+1);
-  choleskyRow_ = ClpCopyOfArray(rhs.choleskyRow_,rhs.sizeFactor_);
-  sizeFactor_=rhs.sizeFactor_;
-  memcpy(integerParameters_,rhs.integerParameters_,64*sizeof(int));
-  memcpy(doubleParameters_,rhs.doubleParameters_,64*sizeof(double));
-  rowCopy_ = rhs.rowCopy_->clone();
-  whichDense_ = NULL;
-  denseColumn_=NULL;
-  dense_=NULL;
-  denseThreshold_ = rhs.denseThreshold_;
 }
 
 
@@ -63,13 +40,6 @@ ClpCholeskyWssmp::ClpCholeskyWssmp (const ClpCholeskyWssmp & rhs)
 //-------------------------------------------------------------------
 ClpCholeskyWssmp::~ClpCholeskyWssmp ()
 {
-  delete [] sparseFactor_;
-  delete [] choleskyStart_;
-  delete [] choleskyRow_;
-  delete rowCopy_;
-  delete [] whichDense_;
-  delete [] denseColumn_;
-  delete dense_;
 }
 
 //----------------------------------------------------------------
@@ -80,22 +50,6 @@ ClpCholeskyWssmp::operator=(const ClpCholeskyWssmp& rhs)
 {
   if (this != &rhs) {
     ClpCholeskyBase::operator=(rhs);
-    delete [] sparseFactor_;
-    delete [] choleskyStart_;
-    delete [] choleskyRow_;
-    delete [] whichDense_;
-    delete [] denseColumn_;
-    delete dense_;
-    sparseFactor_ = ClpCopyOfArray(rhs.sparseFactor_,rhs.sizeFactor_);
-    choleskyStart_ = ClpCopyOfArray(rhs.choleskyStart_,numberRows_+1);
-    choleskyRow_ = ClpCopyOfArray(rhs.choleskyRow_,rhs.sizeFactor_);
-    sizeFactor_=rhs.sizeFactor_;
-    delete rowCopy_;
-    rowCopy_ = rhs.rowCopy_->clone();
-    whichDense_ = NULL;
-    denseColumn_=NULL;
-    dense_=NULL;
-    denseThreshold_ = rhs.denseThreshold_;
   }
   return *this;
 }
@@ -221,7 +175,7 @@ ClpCholeskyWssmp::order(ClpInterior * model)
       denseColumn_ = new double [numberDense*numberRows_];
       // dense cholesky
       dense_ = new ClpCholeskyDense();
-      dense_->reserveSpace(numberDense);
+      dense_->reserveSpace(NULL,numberDense);
       printf("Taking %d columns as dense\n",numberDense);
     }
   }
@@ -317,8 +271,8 @@ ClpCholeskyWssmp::order(ClpInterior * model)
   }
   choleskyStart_[numberRows_]=sizeFactor_;
   delete [] used;
-  permuteIn_ = new int [numberRows_];
-  permuteOut_ = new int[numberRows_];
+  permuteInverse_ = new int [numberRows_];
+  permute_ = new int[numberRows_];
   integerParameters_[0]=0;
   int i0=0;
   int i1=1;
@@ -326,7 +280,7 @@ ClpCholeskyWssmp::order(ClpInterior * model)
   wsetmaxthrds(&i1);
 #endif
   wssmp(&numberRows_,choleskyStart_,choleskyRow_,sparseFactor_,
-         NULL,permuteOut_,permuteIn_,0,&numberRows_,&i1,
+         NULL,permute_,permuteInverse_,0,&numberRows_,&i1,
          NULL,&i0,NULL,integerParameters_,doubleParameters_);
   integerParameters_[1]=1;//order and symbolic
   integerParameters_[2]=2;
@@ -341,7 +295,7 @@ ClpCholeskyWssmp::order(ClpInterior * model)
   doubleParameters_[10]=1.0e-20;
   doubleParameters_[11]=1.0e-15;
   wssmp(&numberRows_,choleskyStart_,choleskyRow_,sparseFactor_,
-         NULL,permuteOut_,permuteIn_,NULL,&numberRows_,&i1,
+         NULL,permute_,permuteInverse_,NULL,&numberRows_,&i1,
          NULL,&i0,NULL,integerParameters_,doubleParameters_);
   //std::cout<<"Ordering and symbolic factorization took "<<doubleParameters_[0]<<std::endl;
   if (integerParameters_[63]) {
@@ -351,18 +305,27 @@ ClpCholeskyWssmp::order(ClpInterior * model)
   std::cout<<integerParameters_[23]<<" elements in sparse Cholesky"<<std::endl;
   if (!integerParameters_[23]) {
     for (int iRow=0;iRow<numberRows_;iRow++) {
-      permuteIn_[iRow]=iRow;
-      permuteOut_[iRow]=iRow;
+      permuteInverse_[iRow]=iRow;
+      permute_[iRow]=iRow;
     }
     std::cout<<"wssmp says no elements - fully dense? - switching to dense"<<std::endl;
     integerParameters_[1]=2;
     integerParameters_[2]=2;
     integerParameters_[7]=1; // no permute
     wssmp(&numberRows_,choleskyStart_,choleskyRow_,sparseFactor_,
-	  NULL,permuteOut_,permuteIn_,NULL,&numberRows_,&i1,
+	  NULL,permute_,permuteInverse_,NULL,&numberRows_,&i1,
 	  NULL,&i0,NULL,integerParameters_,doubleParameters_);
     std::cout<<integerParameters_[23]<<" elements in dense Cholesky"<<std::endl;
   }
+  return 0;
+}
+/* Does Symbolic factorization given permutation.
+   This is called immediately after order.  If user provides this then
+   user must provide factorize and solve.  Otherwise the default factorization is used
+   returns non-zero if not enough memory */
+int 
+ClpCholeskyWssmp::symbolic()
+{
   return 0;
 }
 /* Factorize - filling in rowsDropped and returning number dropped */
@@ -398,13 +361,12 @@ ClpCholeskyWssmp::factorize(const double * diagonal, int * rowsDropped)
     perturbation=1.0;
   }
   if (whichDense_) {
-    longDouble * denseBlob = dense_->aMatrix();
-    CoinZeroN(denseBlob,numberDense*numberDense);
+    double * denseDiagonal = dense_->diagonal();
     double * dense = denseColumn_;
-    longDouble * blob = denseBlob;
+    int iDense=0;
     for (int iColumn=0;iColumn<numberColumns;iColumn++) {
       if (whichDense_[iColumn]) {
-	blob[0]=1.0/diagonal[iColumn];
+	denseDiagonal[iDense++]=1.0/diagonal[iColumn];
 	CoinZeroN(dense,numberRows_);
 	CoinBigIndex start=columnStart[iColumn];
 	CoinBigIndex end=columnStart[iColumn]+columnLength[iColumn];
@@ -413,7 +375,6 @@ ClpCholeskyWssmp::factorize(const double * diagonal, int * rowsDropped)
 	  dense[jRow] = element[j];
 	}
 	dense += numberRows_;
-	blob += numberDense+1;
       }
     }
   }
@@ -493,7 +454,7 @@ ClpCholeskyWssmp::factorize(const double * diagonal, int * rowsDropped)
   else
     integerParameters_[9]=0;
   wssmp(&numberRows_,choleskyStart_,choleskyRow_,sparseFactor_,
-	NULL,permuteOut_,permuteIn_,NULL,&numberRows_,&i1,
+	NULL,permute_,permuteInverse_,NULL,&numberRows_,&i1,
 	NULL,&i0,rowsDropped,integerParameters_,doubleParameters_);
   //std::cout<<"factorization took "<<doubleParameters_[0]<<std::endl;
   if (integerParameters_[9]) {
@@ -526,20 +487,28 @@ ClpCholeskyWssmp::factorize(const double * diagonal, int * rowsDropped)
     integerParameters_[1]=4;
     integerParameters_[2]=4;
     wssmp(&numberRows_,choleskyStart_,choleskyRow_,sparseFactor_,
-       NULL,permuteOut_,permuteIn_,denseColumn_,&numberRows_,&numberDense,
+       NULL,permute_,permuteInverse_,denseColumn_,&numberRows_,&numberDense,
        NULL,&i0,NULL,integerParameters_,doubleParameters_);
     integerParameters_[29]=0;
     dense_->resetRowsDropped();
     longDouble * denseBlob = dense_->aMatrix();
+    double * denseDiagonal = dense_->diagonal();
     // Update dense matrix
     for (i=0;i<numberDense;i++) {
       const double * a = denseColumn_+i*numberRows_;
-      for (int j=0;j<numberDense;j++) {
-	double value = denseBlob[i+j*numberDense];
+      // do diagonal
+      double value = denseDiagonal[i];
+      const double * b = denseColumn_+i*numberRows_;
+      for (int k=0;k<numberRows_;k++) 
+	value += a[k]*b[k];
+      denseDiagonal[i]=value;
+      for (int j=i+1;j<numberDense;j++) {
+	double value = 0.0;
 	const double * b = denseColumn_+j*numberRows_;
 	for (int k=0;k<numberRows_;k++) 
 	  value += a[k]*b[k];
-	denseBlob[i+j*numberDense]=value;
+	*denseBlob=value;
+	denseBlob++;
       }
     }
     // dense cholesky (? long double)
@@ -615,13 +584,13 @@ ClpCholeskyWssmp::solve (double * region)
 #endif
   if (!whichDense_) {
     wssmp(&numberRows_,choleskyStart_,choleskyRow_,sparseFactor_,
-	  NULL,permuteOut_,permuteIn_,region,&numberRows_,&i1,
+	  NULL,permute_,permuteInverse_,region,&numberRows_,&i1,
 	  NULL,&i0,NULL,integerParameters_,doubleParameters_);
   } else {
     // dense columns
     integerParameters_[29]=1;
     wssmp(&numberRows_,choleskyStart_,choleskyRow_,sparseFactor_,
-	  NULL,permuteOut_,permuteIn_,region,&numberRows_,&i1,
+	  NULL,permute_,permuteInverse_,region,&numberRows_,&i1,
 	  NULL,&i0,NULL,integerParameters_,doubleParameters_);
     // do change;
     int numberDense = dense_->numberRows();
@@ -647,7 +616,7 @@ ClpCholeskyWssmp::solve (double * region)
     integerParameters_[29]=2;
     integerParameters_[1]=4;
     wssmp(&numberRows_,choleskyStart_,choleskyRow_,sparseFactor_,
-	  NULL,permuteOut_,permuteIn_,region,&numberRows_,&i1,
+	  NULL,permute_,permuteInverse_,region,&numberRows_,&i1,
 	  NULL,&i0,NULL,integerParameters_,doubleParameters_);
     integerParameters_[29]=0;
   }

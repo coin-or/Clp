@@ -19,6 +19,11 @@ public:
   /** Orders rows and saves pointer to matrix.and model.
    Returns non-zero if not enough memory */
   virtual int order(ClpInterior * model) ;
+  /** Does Symbolic factorization given permutation.
+      This is called immediately after order.  If user provides this then
+      user must provide factorize and solve.  Otherwise the default factorization is used
+      returns non-zero if not enough memory */
+  virtual int symbolic();
   /** Factorize - filling in rowsDropped and returning number dropped.
       If return code negative then out of memory */
   virtual int factorize(const double * diagonal, int * rowsDropped) ;
@@ -28,14 +33,66 @@ public:
 
    /**@name Non virtual methods for ClpCholeskyDense  */
    //@{
-  /** Reserves space..
+  /** Reserves space.
+      If factor not NULL then just uses passed space
    Returns non-zero if not enough memory */
-   int reserveSpace(int numberRows) ;
-  /** part 2 of Factorize - filling in rowsDropped and returning number dropped */
-  int factorizePart2(int * rowsDropped) ;
+   int reserveSpace(const ClpCholeskyBase * factor, int numberRows) ;
+  /** Returns space needed */
+   CoinBigIndex space( int numberRows) const;
+  /** part 2 of Factorize - filling in rowsDropped */
+  void factorizePart2(int * rowsDropped) ;
+  /** part 2 of Factorize - filling in rowsDropped - blocked */
+  void factorizePart3(int * rowsDropped) ;
+  /// Non leaf recursive factor
+  void factor(double * a, int n, int numberBlocks,
+	      double * diagonal, double * work, int * rowsDropped);
+  /// Non leaf recursive triangle rectangle update
+  void triRec(double * aTri, int nThis, double * aUnder, double * diagonal, double * work,
+	      int nLeft, int iBlock, int jBlock,
+	      int numberBlocks);
+  /// Non leaf recursive rectangle triangle update
+  void recTri(double * aUnder, int nTri, int nDo,
+	      int iBlock, int jBlock,double * aTri,
+	      double * diagonal, double * work, 
+	      int numberBlocks);
+  /** Non leaf recursive rectangle rectangle update,
+      nUnder is number of rows in iBlock,
+      nUnderK is number of rows in kBlock
+  */
+  void recRec(double * above, int nUnder, int nUnderK,
+	      int nDo, double * aUnder, double *aOther,double * diagonal, double * work,
+	      int kBlock,int iBlock, int jBlock,
+	      int numberBlocks);
+  /// Leaf recursive factor
+  void factorLeaf(double * a, int n, 
+	      double * diagonal, double * work, int * rowsDropped);
+  /// Leaf recursive triangle rectangle update
+  void triRecLeaf(double * aTri, double * aUnder,
+		  double * diagonal, double * work,
+		  int nUnder);
+  /// Leaf recursive rectangle triangle update
+  void recTriLeaf(double * aUnder, double * aTri, 
+		  double * diagonal, double * work, int nUnder);
+  /** Leaf recursive rectangle rectangle update,
+      nUnder is number of rows in iBlock,
+      nUnderK is number of rows in kBlock
+  */
+  void recRecLeaf(double * above, 
+		  double * aUnder, double *aOther, double * diagonal, double * work,
+		  int nUnder);
+  /// Forward part of solve
+  void solveF1(double * a,int n,double * region);
+  void solveF2(double * a,int n,double * region,double * region2);
+  /// Backward part of solve
+  void solveB1(double * a,int n,double * region);
+  void solveB2(double * a,int n,double * region,double * region2);
+  int bNumber(const double * array,int &, int&);
   /// A
   inline double * aMatrix() const
-  { return work_;}
+  { return sparseFactor_;}
+  /// Diagonal
+  inline double * diagonal() const
+  { return diagonal_;}
   //@}
 
 
@@ -56,11 +113,9 @@ public:
     
 private:
   /**@name Data members */
-   //@{
-  /// ADAT stored in full
-  double * work_;
-  /// Row copy of matrix
-  ClpMatrixBase * rowCopy_;
+  //@{
+  /// Just borrowing space
+  bool borrowSpace_;
   //@}
 };
 

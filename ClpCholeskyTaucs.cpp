@@ -23,11 +23,11 @@ ClpCholeskyTaucs::ClpCholeskyTaucs ()
   : ClpCholeskyBase(),
     matrix_(NULL),
     factorization_(NULL),
-    sparseFactor_(NULL),
-    choleskyStart_(NULL),
-    choleskyRow_(NULL),
-    sizeFactor_(0),
-    rowCopy_(NULL)
+    sparseFactorT_(NULL),
+    choleskyStartT_(NULL),
+    choleskyRowT_(NULL),
+    sizeFactorT_(0),
+    rowCopyT_(NULL)
 {
   type_=13;
 }
@@ -41,24 +41,24 @@ ClpCholeskyTaucs::ClpCholeskyTaucs (const ClpCholeskyTaucs & rhs)
   type_=rhs.type_;
   // For Taucs stuff is done by malloc
   matrix_ = rhs.matrix_;
-  sizeFactor_=rhs.sizeFactor_;
+  sizeFactorT_=rhs.sizeFactorT_;
   if (matrix_) {
-    choleskyStart_ = (int *) malloc((numberRows_+1)*sizeof(int));
-    memcpy(choleskyStart_,rhs.choleskyStart_,(numberRows_+1)*sizeof(int));
-    choleskyRow_ = (int *) malloc(sizeFactor_*sizeof(int));
-    memcpy(choleskyRow_,rhs.choleskyRow_,sizeFactor_*sizeof(int));
-    sparseFactor_ = (double *) malloc(sizeFactor_*sizeof(double));
-    memcpy(sparseFactor_,rhs.sparseFactor_,sizeFactor_*sizeof(double));
-    matrix_->colptr = choleskyStart_;
-    matrix_->rowind = choleskyRow_;
-    matrix_->values.d = sparseFactor_;
+    choleskyStartT_ = (int *) malloc((numberRows_+1)*sizeof(int));
+    memcpy(choleskyStartT_,rhs.choleskyStartT_,(numberRows_+1)*sizeof(int));
+    choleskyRowT_ = (int *) malloc(sizeFactorT_*sizeof(int));
+    memcpy(choleskyRowT_,rhs.choleskyRowT_,sizeFactorT_*sizeof(int));
+    sparseFactorT_ = (double *) malloc(sizeFactorT_*sizeof(double));
+    memcpy(sparseFactorT_,rhs.sparseFactorT_,sizeFactorT_*sizeof(double));
+    matrix_->colptr = choleskyStartT_;
+    matrix_->rowind = choleskyRowT_;
+    matrix_->values.d = sparseFactorT_;
   } else {
-    sparseFactor_=NULL;
-    choleskyStart_=NULL;
-    choleskyRow_=NULL;
+    sparseFactorT_=NULL;
+    choleskyStartT_=NULL;
+    choleskyRowT_=NULL;
   }
   factorization_=NULL,
-  rowCopy_ = rhs.rowCopy_->clone();
+  rowCopyT_ = rhs.rowCopyT_->clone();
 }
 
 
@@ -70,7 +70,7 @@ ClpCholeskyTaucs::~ClpCholeskyTaucs ()
   taucs_ccs_free(matrix_);
   if (factorization_)
     taucs_supernodal_factor_free(factorization_);
-  delete rowCopy_;
+  delete rowCopyT_;
 }
 
 //----------------------------------------------------------------
@@ -85,25 +85,25 @@ ClpCholeskyTaucs::operator=(const ClpCholeskyTaucs& rhs)
     if (factorization_)
       taucs_supernodal_factor_free(factorization_);
     factorization_=NULL;
-    sizeFactor_=rhs.sizeFactor_;
+    sizeFactorT_=rhs.sizeFactorT_;
     matrix_ = rhs.matrix_;
     if (matrix_) {
-      choleskyStart_ = (int *) malloc((numberRows_+1)*sizeof(int));
-      memcpy(choleskyStart_,rhs.choleskyStart_,(numberRows_+1)*sizeof(int));
-      choleskyRow_ = (int *) malloc(sizeFactor_*sizeof(int));
-      memcpy(choleskyRow_,rhs.choleskyRow_,sizeFactor_*sizeof(int));
-      sparseFactor_ = (double *) malloc(sizeFactor_*sizeof(double));
-      memcpy(sparseFactor_,rhs.sparseFactor_,sizeFactor_*sizeof(double));
-      matrix_->colptr = choleskyStart_;
-      matrix_->rowind = choleskyRow_;
-      matrix_->values.d = sparseFactor_;
+      choleskyStartT_ = (int *) malloc((numberRows_+1)*sizeof(int));
+      memcpy(choleskyStartT_,rhs.choleskyStartT_,(numberRows_+1)*sizeof(int));
+      choleskyRowT_ = (int *) malloc(sizeFactorT_*sizeof(int));
+      memcpy(choleskyRowT_,rhs.choleskyRowT_,sizeFactorT_*sizeof(int));
+      sparseFactorT_ = (double *) malloc(sizeFactorT_*sizeof(double));
+      memcpy(sparseFactorT_,rhs.sparseFactorT_,sizeFactorT_*sizeof(double));
+      matrix_->colptr = choleskyStartT_;
+      matrix_->rowind = choleskyRowT_;
+      matrix_->values.d = sparseFactorT_;
     } else {
-      sparseFactor_=NULL;
-      choleskyStart_=NULL;
-      choleskyRow_=NULL;
+      sparseFactorT_=NULL;
+      choleskyStartT_=NULL;
+      choleskyRowT_=NULL;
     }
-    delete rowCopy_;
-    rowCopy_ = rhs.rowCopy_->clone();
+    delete rowCopyT_;
+    rowCopyT_ = rhs.rowCopyT_->clone();
   }
   return *this;
 }
@@ -123,19 +123,19 @@ ClpCholeskyTaucs::order(ClpInterior * model)
   memset(rowsDropped_,0,numberRows_);
   numberRowsDropped_=0;
   model_=model;
-  rowCopy_ = model->clpMatrix()->reverseOrderedCopy();
+  rowCopyT_ = model->clpMatrix()->reverseOrderedCopy();
   const CoinBigIndex * columnStart = model_->clpMatrix()->getVectorStarts();
   const int * columnLength = model_->clpMatrix()->getVectorLengths();
   const int * row = model_->clpMatrix()->getIndices();
-  const CoinBigIndex * rowStart = rowCopy_->getVectorStarts();
-  const int * rowLength = rowCopy_->getVectorLengths();
-  const int * column = rowCopy_->getIndices();
+  const CoinBigIndex * rowStart = rowCopyT_->getVectorStarts();
+  const int * rowLength = rowCopyT_->getVectorLengths();
+  const int * column = rowCopyT_->getIndices();
   // We need two arrays for counts
   int * which = new int [numberRows_];
   int * used = new int[numberRows_];
   CoinZeroN(used,numberRows_);
   int iRow;
-  sizeFactor_=0;
+  sizeFactorT_=0;
   for (iRow=0;iRow<numberRows_;iRow++) {
     int number=1;
     // make sure diagonal exists
@@ -158,7 +158,7 @@ ClpCholeskyTaucs::order(ClpInterior * model)
 	  }
 	}
       }
-      sizeFactor_ += number;
+      sizeFactorT_ += number;
       int j;
       for (j=0;j<number;j++)
 	used[which[j]]=0;
@@ -166,22 +166,22 @@ ClpCholeskyTaucs::order(ClpInterior * model)
   }
   delete [] which;
   // Now we have size - create arrays and fill in
-  matrix_ = taucs_ccs_create(numberRows_,numberRows_,sizeFactor_,
+  matrix_ = taucs_ccs_create(numberRows_,numberRows_,sizeFactorT_,
 			     TAUCS_DOUBLE|TAUCS_SYMMETRIC|TAUCS_LOWER); 
   if (!matrix_) 
     return 1;
   // Space for starts
-  choleskyStart_ = matrix_->colptr;
-  choleskyRow_ = matrix_->rowind;
-  sparseFactor_ = matrix_->values.d;
-  sizeFactor_=0;
-  which = choleskyRow_;
+  choleskyStartT_ = matrix_->colptr;
+  choleskyRowT_ = matrix_->rowind;
+  sparseFactorT_ = matrix_->values.d;
+  sizeFactorT_=0;
+  which = choleskyRowT_;
   for (iRow=0;iRow<numberRows_;iRow++) {
     int number=1;
     // make sure diagonal exists
     which[0]=iRow;
     used[iRow]=1;
-    choleskyStart_[iRow]=sizeFactor_;
+    choleskyStartT_[iRow]=sizeFactorT_;
     if (!rowsDropped_[iRow]) {
       CoinBigIndex startRow=rowStart[iRow];
       CoinBigIndex endRow=rowStart[iRow]+rowLength[iRow];
@@ -199,7 +199,7 @@ ClpCholeskyTaucs::order(ClpInterior * model)
 	  }
 	}
       }
-      sizeFactor_ += number;
+      sizeFactorT_ += number;
       int j;
       for (j=0;j<number;j++)
 	used[which[j]]=0;
@@ -209,22 +209,22 @@ ClpCholeskyTaucs::order(ClpInterior * model)
       which += number;
     }
   }
-  choleskyStart_[numberRows_]=sizeFactor_;
+  choleskyStartT_[numberRows_]=sizeFactorT_;
   delete [] used;
-  permuteIn_ = new int [numberRows_];
-  permuteOut_ = new int[numberRows_];
+  permuteInverse_ = new int [numberRows_];
+  permute_ = new int[numberRows_];
   int * perm, *invp;
   // There seem to be bugs in ordering if model too small
   if (numberRows_>10)
     taucs_ccs_order(matrix_,&perm,&invp,(const char *) "genmmd");
   else
     taucs_ccs_order(matrix_,&perm,&invp,(const char *) "identity");
-  memcpy(permuteIn_,perm,numberRows_*sizeof(int));
+  memcpy(permuteInverse_,perm,numberRows_*sizeof(int));
   free(perm);
-  memcpy(permuteOut_,invp,numberRows_*sizeof(int));
+  memcpy(permute_,invp,numberRows_*sizeof(int));
   free(invp);
   // need to permute
-  taucs_ccs_matrix * permuted = taucs_ccs_permute_symmetrically(matrix_,permuteIn_,permuteOut_);
+  taucs_ccs_matrix * permuted = taucs_ccs_permute_symmetrically(matrix_,permuteInverse_,permute_);
   // symbolic
   factorization_ = taucs_ccs_factor_llt_symbolic(permuted);
   taucs_ccs_free(permuted);
@@ -238,10 +238,10 @@ ClpCholeskyTaucs::factorize(const double * diagonal, int * rowsDropped)
   const int * columnLength = model_->clpMatrix()->getVectorLengths();
   const int * row = model_->clpMatrix()->getIndices();
   const double * element = model_->clpMatrix()->getElements();
-  const CoinBigIndex * rowStart = rowCopy_->getVectorStarts();
-  const int * rowLength = rowCopy_->getVectorLengths();
-  const int * column = rowCopy_->getIndices();
-  const double * elementByRow = rowCopy_->getElements();
+  const CoinBigIndex * rowStart = rowCopyT_->getVectorStarts();
+  const int * rowLength = rowCopyT_->getVectorLengths();
+  const int * column = rowCopyT_->getIndices();
+  const double * elementByRow = rowCopyT_->getElements();
   int numberColumns=model_->clpMatrix()->getNumCols();
   int iRow;
   double * work = new double[numberRows_];
@@ -259,9 +259,9 @@ ClpCholeskyTaucs::factorize(const double * diagonal, int * rowsDropped)
     perturbation=1.0;
   } 
   for (iRow=0;iRow<numberRows_;iRow++) {
-    double * put = sparseFactor_+choleskyStart_[iRow];
-    int * which = choleskyRow_+choleskyStart_[iRow];
-    int number = choleskyStart_[iRow+1]-choleskyStart_[iRow];
+    double * put = sparseFactorT_+choleskyStartT_[iRow];
+    int * which = choleskyRowT_+choleskyStartT_[iRow];
+    int number = choleskyStartT_[iRow+1]-choleskyStartT_[iRow];
     if (!rowLength[iRow])
       rowsDropped_[iRow]=1;
     if (!rowsDropped_[iRow]) {
@@ -297,7 +297,7 @@ ClpCholeskyTaucs::factorize(const double * diagonal, int * rowsDropped)
     }
   }
   //check sizes
-  double largest2=maximumAbsElement(sparseFactor_,sizeFactor_);
+  double largest2=maximumAbsElement(sparseFactorT_,sizeFactorT_);
   largest2*=1.0e-19;
   largest = CoinMin(largest2,1.0e-11);
   int numberDroppedBefore=0;
@@ -306,12 +306,12 @@ ClpCholeskyTaucs::factorize(const double * diagonal, int * rowsDropped)
     // Move to int array
     rowsDropped[iRow]=dropped;
     if (!dropped) {
-      CoinBigIndex start = choleskyStart_[iRow];
-      double diagonal = sparseFactor_[start];
+      CoinBigIndex start = choleskyStartT_[iRow];
+      double diagonal = sparseFactorT_[start];
       if (diagonal>largest2) {
-	sparseFactor_[start]=diagonal+perturbation;
+	sparseFactorT_[start]=diagonal+perturbation;
       } else {
-	sparseFactor_[start]=diagonal+perturbation;
+	sparseFactorT_[start]=diagonal+perturbation;
 	rowsDropped[iRow]=2;
 	numberDroppedBefore++;
       } 
@@ -319,7 +319,7 @@ ClpCholeskyTaucs::factorize(const double * diagonal, int * rowsDropped)
   }
   taucs_supernodal_factor_free_numeric(factorization_);
   // need to permute
-  taucs_ccs_matrix * permuted = taucs_ccs_permute_symmetrically(matrix_,permuteIn_,permuteOut_);
+  taucs_ccs_matrix * permuted = taucs_ccs_permute_symmetrically(matrix_,permuteInverse_,permute_);
   int rCode=taucs_ccs_factor_llt_numeric(permuted,factorization_);
   taucs_ccs_free(permuted);
   if (rCode)
@@ -390,11 +390,11 @@ ClpCholeskyTaucs::solve (double * region)
 {
   double * in = new double[numberRows_];
   double * out = new double[numberRows_];
-  taucs_vec_permute(numberRows_,TAUCS_DOUBLE,region,in,permuteIn_);
+  taucs_vec_permute(numberRows_,TAUCS_DOUBLE,region,in,permuteInverse_);
   int rCode=taucs_supernodal_solve_llt(factorization_,out,in);
   if (rCode)
     printf("return code of %d from solve\n",rCode);
-  taucs_vec_permute(numberRows_,TAUCS_DOUBLE,out,region,permuteOut_);
+  taucs_vec_permute(numberRows_,TAUCS_DOUBLE,out,region,permute_);
   delete [] out;
   delete [] in;
 }

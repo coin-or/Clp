@@ -5434,8 +5434,12 @@ ClpSimplex::statusOfProblem(bool initial)
 	<<totalNumberThrownOut
 	<<CoinMessageEol;
   } else {
+#ifndef NDEBUG    
     int returnCode=internalFactorize(1);
     assert (!returnCode);
+#else
+    internalFactorize(1);
+#endif
   }
   // put back original costs and then check
   // also move to work arrays

@@ -15,10 +15,15 @@
 #include "ClpQuadraticObjective.hpp"
 #include "ClpSimplex.hpp"
 #include "ClpInterior.hpp"
+#include "ClpCholeskyDense.hpp"
+#include "ClpCholeskyBase.hpp"
 #ifdef REAL_BARRIER
 #include "ClpCholeskyWssmp.hpp"
 #include "ClpCholeskyWssmpKKT.hpp"
 //#include "ClpCholeskyTaucs.hpp"
+#include "ClpCholeskyUfl.hpp"
+#else
+static int numberBarrier=0;
 #endif
 #include "ClpSolve.hpp"
 #include "ClpPackedMatrix.hpp"
@@ -101,7 +106,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
   int doCrash=0;
   int doSprint=0;
   int doSlp=0;
-  if (method!=ClpSolve::useDual&&method!=ClpSolve::useBarrier) {
+  if (method!=ClpSolve::useDual&&method!=ClpSolve::useBarrier
+      &&method!=ClpSolve::useBarrierNoCross) {
     switch (options.getSpecialOption(1)) {
     case 0:
       doIdiot=-1;
@@ -904,7 +910,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
       <<CoinMessageEol;
     timeX=time2;
     model2->setNumberIterations(model2->numberIterations()+totalIterations);
-  } else if (method==ClpSolve::useBarrier) {
+  } else if (method==ClpSolve::useBarrier||method==ClpSolve::useBarrierNoCross) {
     //printf("***** experimental pretty crude barrier\n");
     //#define SAVEIT 1
 #ifndef SAVEIT
@@ -921,12 +927,17 @@ ClpSimplex::initialSolve(ClpSolve & options)
     int barrierOptions = options.getSpecialOption(4);
     bool aggressiveGamma=false;
     bool scale=false;
-    if (barrierOptions&8) {
-      barrierOptions &= ~8;
+    bool doKKT=false;
+    if (barrierOptions&32) {
+      barrierOptions &= ~32;
+      doKKT=true;
+    }
+    if (barrierOptions&16) {
+      barrierOptions &= ~16;
       aggressiveGamma=true;
     }
-    if (barrierOptions&4) {
-      barrierOptions &= ~4;
+    if (barrierOptions&8) {
+      barrierOptions &= ~8;
       scale=true;
     }
     // If quadratic force KKT
@@ -939,28 +950,54 @@ ClpSimplex::initialSolve(ClpSolve & options)
 #endif
 #ifdef REAL_BARRIER
     if (quadraticObj) {
-      barrierOptions = 2;
+      doKKT=true;
     }
     switch (barrierOptions) {
     case 0:
-      {
-	ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp();
+      if (!doKKT) {
+	ClpCholeskyBase * cholesky = new ClpCholeskyBase(100);
+	barrier.setCholesky(cholesky);
+      } else {
+	ClpCholeskyBase * cholesky = new ClpCholeskyBase();
+	cholesky->setKKT(true);
 	barrier.setCholesky(cholesky);
       }
       break;
     case 1:
-      {
-	ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp(CoinMax(100,model2->numberRows()/10));
+      if (!doKKT) {
+	ClpCholeskyDense * cholesky = new ClpCholeskyDense();
+	barrier.setCholesky(cholesky);
+      } else {
+	ClpCholeskyDense * cholesky = new ClpCholeskyDense();
+	cholesky->setKKT(true);
 	barrier.setCholesky(cholesky);
       }
       break;
     case 2:
       {
+	ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp(CoinMax(100,model2->numberRows()/10));
+	barrier.setCholesky(cholesky);
+	assert (!doKKT);
+      }
+      break;
+    case 3:
+      if (!doKKT) {
+	ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp();
+	barrier.setCholesky(cholesky);
+      } else {
 	ClpCholeskyWssmpKKT * cholesky = new ClpCholeskyWssmpKKT(CoinMax(100,model2->numberRows()/10));
 	barrier.setCholesky(cholesky);
       }
       break;
-    case 3:
+    case 4:
+      if (!doKKT) {
+	ClpCholeskyUfl * cholesky = new ClpCholeskyUfl(100);
+	barrier.setCholesky(cholesky);
+      } else {
+	ClpCholeskyUfl * cholesky = new ClpCholeskyUfl();
+	cholesky->setKKT(true);
+	barrier.setCholesky(cholesky);
+      }
       break;
     default:
       abort();
@@ -968,6 +1005,36 @@ ClpSimplex::initialSolve(ClpSolve & options)
     // uncomment this if you have Sivan Toledo's Taucs package
     //ClpCholeskyTaucs * cholesky = new ClpCholeskyTaucs();
     //barrier.setCholesky(cholesky);
+#else
+    if (quadraticObj) {
+      doKKT=true;
+    }
+    switch (barrierOptions) {
+    case 1:
+      if (!doKKT) {
+	ClpCholeskyDense * cholesky = new ClpCholeskyDense();
+	barrier.setCholesky(cholesky);
+      } else {
+	ClpCholeskyDense * cholesky = new ClpCholeskyDense();
+	cholesky->setKKT(true);
+	barrier.setCholesky(cholesky);
+      }
+      break;
+    default:
+      if (!numberBarrier)
+	std::cout<<"Warning - the default ordering is just on row counts! "
+		 <<"The factorization is being improved"<<std::endl;
+      numberBarrier++;
+      if (!doKKT) {
+	ClpCholeskyBase * cholesky = new ClpCholeskyBase(100);
+	barrier.setCholesky(cholesky);
+      } else {
+	ClpCholeskyBase * cholesky = new ClpCholeskyBase();
+	cholesky->setKKT(true);
+	barrier.setCholesky(cholesky);
+      }
+      break;
+    }
 #endif
     int numberRows = model2->numberRows();
     int numberColumns = model2->numberColumns();
@@ -1077,156 +1144,158 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	saveUpper=NULL;
       }
     }
-    if (maxIts&&barrierStatus<4&&!quadraticObj) {
-      //printf("***** crossover - needs more thought on difficult models\n");
+    if (method==ClpSolve::useBarrier) {
+      if (maxIts&&barrierStatus<4&&!quadraticObj) {
+	//printf("***** crossover - needs more thought on difficult models\n");
 #if SAVEIT==1
-      model2->ClpSimplex::saveModel("xx.save");
+	model2->ClpSimplex::saveModel("xx.save");
 #endif
-      // make sure no status left
-      model2->createStatus();
-      // solve
-      model2->setPerturbation(100);
+	// make sure no status left
+	model2->createStatus();
+	// solve
+	model2->setPerturbation(100);
 #if 1
-      // throw some into basis 
-      {
-	int numberRows = model2->numberRows();
-	int numberColumns = model2->numberColumns();
-	double * dsort = new double[numberColumns];
-	int * sort = new int[numberColumns];
-	int n=0;
-	const double * columnLower = model2->columnLower();
-	const double * columnUpper = model2->columnUpper();
-	double * primalSolution = model2->primalColumnSolution();
-	const double * dualSolution = model2->dualColumnSolution();
-	double tolerance = 10.0*primalTolerance_;
-	int i;
-	for ( i=0;i<numberRows;i++) 
-	  model2->setRowStatus(i,superBasic);
-	for ( i=0;i<numberColumns;i++) {
-	  double distance = CoinMin(columnUpper[i]-primalSolution[i],
-				primalSolution[i]-columnLower[i]);
-	  if (distance>tolerance) {
-	    if (fabs(dualSolution[i])<1.0e-5)
-	      distance *= 100.0;
-	    dsort[n]=-distance;
-	    sort[n++]=i;
-	    model2->setStatus(i,superBasic);
-	  } else if (distance>primalTolerance_) {
-	    model2->setStatus(i,superBasic);
-	  } else if (primalSolution[i]<=columnLower[i]+primalTolerance_) {
-	    model2->setStatus(i,atLowerBound);
-	    primalSolution[i]=columnLower[i];
-	  } else {
-	    model2->setStatus(i,atUpperBound);
-	    primalSolution[i]=columnUpper[i];
+	// throw some into basis 
+	{
+	  int numberRows = model2->numberRows();
+	  int numberColumns = model2->numberColumns();
+	  double * dsort = new double[numberColumns];
+	  int * sort = new int[numberColumns];
+	  int n=0;
+	  const double * columnLower = model2->columnLower();
+	  const double * columnUpper = model2->columnUpper();
+	  double * primalSolution = model2->primalColumnSolution();
+	  const double * dualSolution = model2->dualColumnSolution();
+	  double tolerance = 10.0*primalTolerance_;
+	  int i;
+	  for ( i=0;i<numberRows;i++) 
+	    model2->setRowStatus(i,superBasic);
+	  for ( i=0;i<numberColumns;i++) {
+	    double distance = CoinMin(columnUpper[i]-primalSolution[i],
+				      primalSolution[i]-columnLower[i]);
+	    if (distance>tolerance) {
+	      if (fabs(dualSolution[i])<1.0e-5)
+		distance *= 100.0;
+	      dsort[n]=-distance;
+	      sort[n++]=i;
+	      model2->setStatus(i,superBasic);
+	    } else if (distance>primalTolerance_) {
+	      model2->setStatus(i,superBasic);
+	    } else if (primalSolution[i]<=columnLower[i]+primalTolerance_) {
+	      model2->setStatus(i,atLowerBound);
+	      primalSolution[i]=columnLower[i];
+	    } else {
+	      model2->setStatus(i,atUpperBound);
+	      primalSolution[i]=columnUpper[i];
+	    }
 	  }
+	  CoinSort_2(dsort,dsort+n,sort);
+	  n = CoinMin(numberRows,n);
+	  for ( i=0;i<n;i++) {
+	    int iColumn = sort[i];
+	    model2->setStatus(iColumn,basic);
+	  }
+	  delete [] sort;
+	  delete [] dsort;
 	}
-	CoinSort_2(dsort,dsort+n,sort);
-	n = CoinMin(numberRows,n);
-	for ( i=0;i<n;i++) {
-	  int iColumn = sort[i];
-	  model2->setStatus(iColumn,basic);
+	if (gap<1.0e-3*((double) (numberRows+numberColumns))) {
+	  int numberRows = model2->numberRows();
+	  int numberColumns = model2->numberColumns();
+	  // just primal values pass
+	  double saveScale = model2->objectiveScale();
+	  model2->setObjectiveScale(1.0e-3);
+	  model2->primal(2);
+	  model2->setObjectiveScale(saveScale);
+	  // save primal solution and copy back dual
+	  CoinMemcpyN(model2->primalRowSolution(),
+		      numberRows,rowPrimal);
+	  CoinMemcpyN(rowDual,
+		      numberRows,model2->dualRowSolution());
+	  CoinMemcpyN(model2->primalColumnSolution(),
+		      numberColumns,columnPrimal);
+	  CoinMemcpyN(columnDual,
+		      numberColumns,model2->dualColumnSolution());
+	  //model2->primal(1);
+	  // clean up reduced costs and flag variables
+	  {
+	    double * dj = model2->dualColumnSolution();
+	    double * cost = model2->objective();
+	    double * saveCost = new double[numberColumns];
+	    memcpy(saveCost,cost,numberColumns*sizeof(double));
+	    double * saveLower = new double[numberColumns];
+	    double * lower = model2->columnLower();
+	    memcpy(saveLower,lower,numberColumns*sizeof(double));
+	    double * saveUpper = new double[numberColumns];
+	    double * upper = model2->columnUpper();
+	    memcpy(saveUpper,upper,numberColumns*sizeof(double));
+	    int i;
+	    double tolerance = 10.0*dualTolerance_;
+	    for ( i=0;i<numberColumns;i++) {
+	      if (model2->getStatus(i)==basic) {
+		dj[i]=0.0;
+	      } else if (model2->getStatus(i)==atLowerBound) {
+		if (optimizationDirection_*dj[i]<tolerance) {
+		  if (optimizationDirection_*dj[i]<0.0) {
+		    //if (dj[i]<-1.0e-3)
+		    //printf("bad dj at lb %d %g\n",i,dj[i]);
+		    cost[i] -= dj[i];
+		    dj[i]=0.0;
+		  }
+		} else {
+		  upper[i]=lower[i];
+		}
+	      } else if (model2->getStatus(i)==atUpperBound) {
+		if (optimizationDirection_*dj[i]>tolerance) {
+		  if (optimizationDirection_*dj[i]>0.0) {
+		    //if (dj[i]>1.0e-3)
+		    //printf("bad dj at ub %d %g\n",i,dj[i]);
+		    cost[i] -= dj[i];
+		    dj[i]=0.0;
+		  }
+		} else {
+		  lower[i]=upper[i];
+		}
+	      }
+	    }
+	    // just dual values pass
+	    //model2->setLogLevel(63);
+	    //model2->setFactorizationFrequency(1);
+	    model2->dual(2);
+	    memcpy(cost,saveCost,numberColumns*sizeof(double));
+	    delete [] saveCost;
+	    memcpy(lower,saveLower,numberColumns*sizeof(double));
+	    delete [] saveLower;
+	    memcpy(upper,saveUpper,numberColumns*sizeof(double));
+	    delete [] saveUpper;
+	  }
+	  // and finish
+	  // move solutions
+	  CoinMemcpyN(rowPrimal,
+		      numberRows,model2->primalRowSolution());
+	  CoinMemcpyN(columnPrimal,
+		      numberColumns,model2->primalColumnSolution());
 	}
-	delete [] sort;
-	delete [] dsort;
-      }
-      if (gap<1.0e-3*((double) (numberRows+numberColumns))) {
-	int numberRows = model2->numberRows();
-	int numberColumns = model2->numberColumns();
-	// just primal values pass
 	double saveScale = model2->objectiveScale();
 	model2->setObjectiveScale(1.0e-3);
 	model2->primal(2);
 	model2->setObjectiveScale(saveScale);
-	// save primal solution and copy back dual
-	CoinMemcpyN(model2->primalRowSolution(),
-		    numberRows,rowPrimal);
-	CoinMemcpyN(rowDual,
-		    numberRows,model2->dualRowSolution());
-	CoinMemcpyN(model2->primalColumnSolution(),
-		    numberColumns,columnPrimal);
-	CoinMemcpyN(columnDual,
-		    numberColumns,model2->dualColumnSolution());
-	//model2->primal(1);
-	// clean up reduced costs and flag variables
-	{
-	  double * dj = model2->dualColumnSolution();
-	  double * cost = model2->objective();
-	  double * saveCost = new double[numberColumns];
-	  memcpy(saveCost,cost,numberColumns*sizeof(double));
-	  double * saveLower = new double[numberColumns];
-	  double * lower = model2->columnLower();
-	  memcpy(saveLower,lower,numberColumns*sizeof(double));
-	  double * saveUpper = new double[numberColumns];
-	  double * upper = model2->columnUpper();
-	  memcpy(saveUpper,upper,numberColumns*sizeof(double));
-	  int i;
-	  double tolerance = 10.0*dualTolerance_;
-	  for ( i=0;i<numberColumns;i++) {
-	    if (model2->getStatus(i)==basic) {
-	      dj[i]=0.0;
-	    } else if (model2->getStatus(i)==atLowerBound) {
-	      if (optimizationDirection_*dj[i]<tolerance) {
-		if (optimizationDirection_*dj[i]<0.0) {
-		  //if (dj[i]<-1.0e-3)
-		  //printf("bad dj at lb %d %g\n",i,dj[i]);
-		  cost[i] -= dj[i];
-		  dj[i]=0.0;
-		}
-	      } else {
-		upper[i]=lower[i];
-	      }
-	    } else if (model2->getStatus(i)==atUpperBound) {
-	      if (optimizationDirection_*dj[i]>tolerance) {
-		if (optimizationDirection_*dj[i]>0.0) {
-		  //if (dj[i]>1.0e-3)
-		  //printf("bad dj at ub %d %g\n",i,dj[i]);
-		  cost[i] -= dj[i];
-		  dj[i]=0.0;
-		}
-	      } else {
-		lower[i]=upper[i];
-	      }
-	    }
-	  }
-	  // just dual values pass
-	  //model2->setLogLevel(63);
-	  //model2->setFactorizationFrequency(1);
-	  model2->dual(2);
-	  memcpy(cost,saveCost,numberColumns*sizeof(double));
-	  delete [] saveCost;
-	  memcpy(lower,saveLower,numberColumns*sizeof(double));
-	  delete [] saveLower;
-	  memcpy(upper,saveUpper,numberColumns*sizeof(double));
-	  delete [] saveUpper;
-	}
-	// and finish
-	// move solutions
-	CoinMemcpyN(rowPrimal,
-		    numberRows,model2->primalRowSolution());
-	CoinMemcpyN(columnPrimal,
-		    numberColumns,model2->primalColumnSolution());
-      }
-      double saveScale = model2->objectiveScale();
-      model2->setObjectiveScale(1.0e-3);
-      model2->primal(2);
-      model2->setObjectiveScale(saveScale);
-      model2->primal(1);
+	model2->primal(1);
 #else
-      // just primal
-      model2->primal(1);
+	// just primal
+	model2->primal(1);
 #endif
-    } else if (barrierStatus==4) {
-      // memory problems
-      model2->setPerturbation(savePerturbation);
-      model2->createStatus();
-      model2->dual();
-    } else if (maxIts&&quadraticObj) {
-      // make sure no status left
-      model2->createStatus();
-      // solve
-      model2->setPerturbation(100);
-      model2->reducedGradient(1);
+      } else if (barrierStatus==4) {
+	// memory problems
+	model2->setPerturbation(savePerturbation);
+	model2->createStatus();
+	model2->dual();
+      } else if (maxIts&&quadraticObj) {
+	// make sure no status left
+	model2->createStatus();
+	// solve
+	model2->setPerturbation(100);
+	model2->reducedGradient(1);
+      }
     }
     model2->setMaximumIterations(saveMaxIts);
 #ifdef BORROW

@@ -45,11 +45,12 @@ public:
   /** Creates direction vector.  note longArray is long enough
       for rows and columns.  If numberNonBasic 0 then is updated
       otherwise mode is ignored and those are used.
+      Norms are only for those > 1.0e3*dualTolerance
       If mode is nonzero then just largest dj */
   void directionVector (CoinIndexedVector * longArray,
 			CoinIndexedVector * spare1, CoinIndexedVector * spare2,
 			int mode,
-			double & normFlagged,
+			double & normFlagged,double & normUnflagged,
 			int & numberNonBasic);
   /// Main part.
   int whileIterating (int & pivotMode);
@@ -70,7 +71,8 @@ public:
 		  CoinIndexedVector * columnArray,
 		  CoinIndexedVector * spare,
 		  int & pivotMode,
-		  double & nullError);
+		  double & solutionError,
+		  double * array1);
   /**  Refactorizes if necessary 
        Checks if finished.  Updates status.
        lastCleaned refers to iteration at which some objective/feasibility

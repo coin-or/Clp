@@ -585,7 +585,9 @@ ClpSimplexNonlinear::whileIterating(int & pivotMode)
   int numberInterior=0;
   int nextUnflag=10;
   int nextUnflagIteration=numberIterations_+10;
-  double nullError=-1.0;
+  // get two arrays
+  double * array1 = new double[numberRows_+numberColumns_];
+  double solutionError=-1.0;
   while (problemStatus_==-1) {
     int result;
     rowArray_[1]->clear();
@@ -623,7 +625,8 @@ ClpSimplexNonlinear::whileIterating(int & pivotMode)
     } 
     pivotRow_=-1;
     result = pivotColumn(rowArray_[3],rowArray_[0],
-			 columnArray_[0],rowArray_[1],pivotMode,nullError);
+			 columnArray_[0],rowArray_[1],pivotMode,solutionError,
+			 array1);
     if (result) {
       if (result==3) 
 	break; // null vector not accurate
@@ -721,6 +724,7 @@ ClpSimplexNonlinear::whileIterating(int & pivotMode)
       break;
     }
   }
+  delete [] array1;
   return returnCode;
 }
 // Creates direction vector
@@ -728,7 +732,7 @@ void
 ClpSimplexNonlinear::directionVector (CoinIndexedVector * vectorArray,
 				      CoinIndexedVector * spare1, CoinIndexedVector * spare2,
 				      int pivotMode2,
-				      double & normFlagged,
+				      double & normFlagged,double & normUnflagged,
 				      int & numberNonBasic)
 {
 #if CLP_DEBUG > 1
@@ -741,11 +745,14 @@ ClpSimplexNonlinear::directionVector (CoinIndexedVector * vectorArray,
   int number=0;
   sequenceIn_=-1;
   normFlagged=0.0;
+  normUnflagged=1.0;
   double dualTolerance2 = CoinMin(1.0e-8,1.0e-2*dualTolerance_);
+  double dualTolerance3 = CoinMin(1.0e-3,1.0e3*dualTolerance_);
   if (!numberNonBasic) {
     //if (nonLinearCost_->sumInfeasibilities()>1.0e-4)
     //printf("infeasible\n");
     if (!pivotMode2||pivotMode2>=10) {
+      normUnflagged=0.0;
       double bestDj=0.0;
       double bestSuper=0.0;
       double sumSuper=0.0;
@@ -761,16 +768,16 @@ ClpSimplexNonlinear::directionVector (CoinIndexedVector * vectorArray,
 	  case ClpSimplex::isFixed:
 	    break;
 	  case atUpperBound:
-	    if (dj_[iSequence]>dualTolerance_) 
+	    if (dj_[iSequence]>dualTolerance3) 
 	      normFlagged += dj_[iSequence]*dj_[iSequence];
 	    break;
 	  case atLowerBound:
-	    if (dj_[iSequence]<-dualTolerance_) 
+	    if (dj_[iSequence]<-dualTolerance3) 
 	      normFlagged += dj_[iSequence]*dj_[iSequence];
 	    break;
 	  case isFree:
 	  case superBasic:
-	    if (fabs(dj_[iSequence])>dualTolerance_) 
+	    if (fabs(dj_[iSequence])>dualTolerance3) 
 	      normFlagged += dj_[iSequence]*dj_[iSequence];
 	    break;
 	  }
@@ -783,6 +790,8 @@ ClpSimplexNonlinear::directionVector (CoinIndexedVector * vectorArray,
 	  break;
 	case atUpperBound:
 	  if (dj_[iSequence]>dualTolerance_) {
+	    if (dj_[iSequence]>dualTolerance3) 
+	      normUnflagged += dj_[iSequence]*dj_[iSequence];
 	    if (pivotMode2<10) {
 	      array[iSequence]=-dj_[iSequence];
 	      index[number++]=iSequence;
@@ -796,6 +805,8 @@ ClpSimplexNonlinear::directionVector (CoinIndexedVector * vectorArray,
 	  break;
 	case atLowerBound:
 	  if (dj_[iSequence]<-dualTolerance_) {
+	    if (dj_[iSequence]<-dualTolerance3) 
+	      normUnflagged += dj_[iSequence]*dj_[iSequence];
 	    if (pivotMode2<10) {
 	      array[iSequence]=-dj_[iSequence];
 	      index[number++]=iSequence;
@@ -813,6 +824,8 @@ ClpSimplexNonlinear::directionVector (CoinIndexedVector * vectorArray,
 #define NOSUPER
 #ifndef ALLSUPER
 	  if (fabs(dj_[iSequence])>dualTolerance_) {
+	    if (fabs(dj_[iSequence])>dualTolerance3) 
+	      normUnflagged += dj_[iSequence]*dj_[iSequence];
 	    nSuper++;
 	    bestSuper = CoinMax(fabs(dj_[iSequence]),bestSuper);
 	    sumSuper += fabs(dj_[iSequence]);
@@ -1141,7 +1154,8 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
 				 CoinIndexedVector * columnArray,
 				 CoinIndexedVector * spare,
 				 int & pivotMode,
-				 double & nullError)
+				 double & solutionError,
+				 double * dArray)
 {
   // say not optimal
   primalColumnPivot_->setLooksOptimal(false);
@@ -1156,7 +1170,6 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
   
   int number=longArray->getNumElements();
   int numberTotal = numberRows_+numberColumns_;
-  double * d = new double [numberTotal];
   int bestSequence=-1;
   int bestBasicSequence=-1;
   double eps= 1.0e-1;
@@ -1171,10 +1184,22 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
   double djNorm0=0.0;
   double djNorm=0.0;
   double normFlagged=0.0;
+  double normUnflagged=0.0;
   int localPivotMode=pivotMode;
   bool allFinished=false;
   bool justOne=false;
   int returnCode=1;
+  double currentObj;
+  double predictedObj;
+  double thetaObj;
+  objective_->stepLength(this,solution_,solution_,0.0,
+					       currentObj,predictedObj,thetaObj);
+  double saveObj=currentObj;
+#define MINTYPE 1
+#if MINTYPE ==2
+  // try Shanno's method
+  // Copy code from ....cpp.q
+#endif
   // big big loop
   while (!allFinished) {
     double * work=longArray->denseVector();
@@ -1187,13 +1212,13 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
 #define SMALLTHETA2 1.0e-10
 #define CONJUGATE 2
 #if CONJUGATE == 0
-    bool conjugate = false;
+    int conjugate = 0;
 #elif CONJUGATE == 1
-    bool conjugate = (pivotMode<10) ? true : false;
+    int conjugate = (pivotMode<10) ? MINTYPE : 0;
 #elif CONJUGATE == 2
-    bool conjugate = true;
+    int conjugate = MINTYPE;
 #else
-    bool conjugate = true;
+    int conjugate = MINTYPE;
 #endif
     
     //if (pivotMode==1)
@@ -1233,7 +1258,7 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
       if (!nPasses)
 	startLocalMode=local;
       directionVector(longArray,spare,rowArray,local,
-		      normFlagged,numberNonBasic);
+		      normFlagged,normUnflagged,numberNonBasic);
       {
 	// check null vector
 	double * rhs = spare->denseVector();
@@ -1251,12 +1276,12 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
 	  }
 	}
 #if CLP_DEBUG > 0
-	if (handler_->logLevel()>3&&largest>1.0e-8) 
-	  printf("largest non null %g on row %d\n",largest,iLargest);
+	if ((handler_->logLevel()&32)&&largest>1.0e-8) 
+	  printf("largest rhs error %g on row %d\n",largest,iLargest);
 #endif
-	if (nullError<0.0) {
-	  nullError=largest;
-	} else if (largest>max(1.0e-8,1.0e2*nullError)&&
+	if (solutionError<0.0) {
+	  solutionError=largest;
+	} else if (largest>max(1.0e-8,1.0e2*solutionError)&&
 		   factorization_->pivots()) {
 	  longArray->clear();
 	  pivotRow_ = -1;
@@ -1281,16 +1306,13 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
 	nPasses=0;
       }
 #if CONJUGATE == 2
-      conjugate = (localPivotMode<10) ? true : false;
+      conjugate = (localPivotMode<10) ? MINTYPE : 0;
 #endif
       if (!nPasses) {
 	djNorm0 = CoinMax(djNorm,1.0e-20);
-	memcpy(d,work,numberTotal*sizeof(double));
+	memcpy(dArray,work,numberTotal*sizeof(double));
 	if (sequenceIn_>=0&&numberNonBasic==1) {
 	  // see if simple move
-	  double currentObj;
-	  double predictedObj;
-	  double thetaObj;
 	  double objTheta2 =objective_->stepLength(this,solution_,work,1.0e30,
 					       currentObj,predictedObj,thetaObj);
 	  rowArray->clear();
@@ -1378,7 +1400,6 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
 	    longArray->clear();
 	    pivotRow_ = -1;
 	    theta_=0.0;
-	    delete [] d;
 	    return 0;
 	  }
 	}
@@ -1388,10 +1409,10 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
 	  //printf("current norm %g, old %g - beta %g\n",
 	  //     djNorm,djNormSave,beta);
 	  for (iSequence=0;iSequence<numberTotal;iSequence++)
-	    d[iSequence] = work[iSequence] + beta *d[iSequence];
+	    dArray[iSequence] = work[iSequence] + beta *dArray[iSequence];
 	} else {
 	  for (iSequence=0;iSequence<numberTotal;iSequence++)
-	    d[iSequence] = work[iSequence];
+	    dArray[iSequence] = work[iSequence];
 	}
       }
       if (djNorm<eps*djNorm0||(nPasses>100&&djNorm<CoinMin(1.0e-1*djNorm0,1.0e-12))) {
@@ -1502,9 +1523,8 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
 	} else {
 	  lastSequenceIn=-1;
 	}
-	if (!nFlagged2) {
+	if (!nFlagged2||(normFlagged+normUnflagged<1.0e-8)) {
 	  primalColumnPivot_->setLooksOptimal(true);
-	  delete [] d;
 	  return 0;
 	} else {
 	  localPivotMode=-1;
@@ -1528,7 +1548,7 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
       for (iSequence=0;iSequence<numberTotal;iSequence++) {
 	//if (flagged(iSequence)
 	//  continue;
-	double alpha = d[iSequence];
+	double alpha = dArray[iSequence];
 	Status thisStatus = getStatus(iSequence);
 	double oldValue = solution_[iSequence];
 	if (thisStatus!=basic) {
@@ -1575,10 +1595,7 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
       }
       theta_ = CoinMin(theta,basicTheta);
       // Now find minimum of function
-      double currentObj;
-      double predictedObj;
-      double thetaObj;
-      double objTheta2 =objective_->stepLength(this,solution_,d,CoinMin(theta,basicTheta),
+      double objTheta2 =objective_->stepLength(this,solution_,dArray,CoinMin(theta,basicTheta),
 					       currentObj,predictedObj,thetaObj);
 #ifdef CLP_DEBUG
       if (handler_->logLevel()&32) 
@@ -1587,18 +1604,18 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
       if (conjugate) {
 	double offset;
 	const double * gradient = objective_->gradient(this,
-						       d, offset,
+						       dArray, offset,
 						       true,0);
 	double product=0.0;
 	for (iSequence = 0;iSequence<numberColumns_;iSequence++) {
-	  double alpha = d[iSequence];
+	  double alpha = dArray[iSequence];
 	  double value = alpha*gradient[iSequence];
 	  product += value;
 	}
 	//#define INCLUDESLACK
 #ifdef INCLUDESLACK
 	for (;iSequence<numberColumns_+numberRows_;iSequence++) {
-	  double alpha = d[iSequence];
+	  double alpha = dArray[iSequence];
 	  double value = alpha*cost_[iSequence];
 	  product += value;
 	}
@@ -1650,6 +1667,21 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
 	printf(" djNorm %g\n",djNorm);
       }
 #endif
+      if (handler_->logLevel()>3&&objTheta!=theta_) {
+	printf("%d pass obj %g,",nPasses,currentObj);
+	if (sequenceIn_>=0)
+	  printf (" Sin %d,",sequenceIn_);
+	if (basicTheta==theta_)
+	  printf(" X(%d) basicTheta %g",bestBasicSequence,basicTheta);
+	else
+	  printf(" basicTheta %g",basicTheta);
+	if (theta==theta_)
+	  printf(" X(%d) non-basicTheta %g",bestSequence,theta);
+	else
+	  printf(" non-basicTheta %g",theta);
+	printf(" %s objTheta %g",objTheta==theta_ ? "X" : "",objTheta);
+	printf(" djNorm %g\n",djNorm);
+      }
       if (objTheta!=theta_) {
 	//printf("hit boundary after %d passes\n",nPasses);
 	nTotalPasses+= nPasses;
@@ -1664,7 +1696,7 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
 	//for (iIndex=0;iIndex<number;iIndex++) {
 	
 	//int iSequence = which[iIndex];
-	double alpha = d[iSequence];
+	double alpha = dArray[iSequence];
 	if (alpha) {
 	  double value = solution_[iSequence]+theta_*alpha;
 	  solution_[iSequence]=value;
@@ -1703,9 +1735,6 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
       }
 #ifdef CLP_DEBUG
       if (handler_->logLevel()&32) {
-	double currentObj;
-	double predictedObj;
-	double thetaObj;
 	objective_->stepLength(this,solution_,work,0.0,
 			       currentObj,predictedObj,thetaObj);
 	printf("current obj %g after update - simple was %g\n",currentObj,simpleObjective);
@@ -1763,6 +1792,7 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
 	  acceptablePivot=1.0e-5; // if we have iterated be more strict
 	else if (factorization_->pivots()>5)
 	  acceptablePivot=1.0e-6; // if we have iterated be slightly more strict
+	// should be dArray but seems better this way!
 	double direction = work[bestBasicSequence]>0.0 ? -1.0 : 1.0;
 	// create as packed
 	rowArray->createPacked(1,&pivotRow_,&direction);
@@ -1813,6 +1843,7 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
 	      //double distance = CoinMin(solution_[iSequence]-lower_[iSequence],
 	      //		  upper_[iSequence]-solution_[iSequence]);
 	      double alpha=work2[i];
+	      // should be dArray but seems better this way!
 	      double change=work[iSequence];
 	      Status thisStatus = getStatus(iSequence);
 	      double direction=0;;
@@ -1994,13 +2025,45 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
       }
     }
   }
-  delete [] d;
   if (djNorm0<1.0e-12*normFlagged) {
 #ifdef CLP_DEBUG
     if (handler_->logLevel()&32) 
       printf("unflagging as djNorm %g %g and flagged norm %g\n",djNorm,djNorm0,normFlagged);
 #endif
     unflag();
+  }
+  if (saveObj-currentObj<1.0e-5&&nTotalPasses>2000) {
+    normUnflagged=0.0;
+    double dualTolerance3 = CoinMin(1.0e-3,1.0e3*dualTolerance_);
+    for (int iSequence=0;iSequence<numberColumns_+numberRows_;iSequence++) {
+      switch(getStatus(iSequence)) {
+	
+      case basic:
+      case ClpSimplex::isFixed:
+	break;
+      case atUpperBound:
+	if (dj_[iSequence]>dualTolerance3) 
+	  normFlagged += dj_[iSequence]*dj_[iSequence];
+	break;
+      case atLowerBound:
+	if (dj_[iSequence]<-dualTolerance3) 
+	  normFlagged += dj_[iSequence]*dj_[iSequence];
+	break;
+      case isFree:
+      case superBasic:
+	if (fabs(dj_[iSequence])>dualTolerance3) 
+	  normFlagged += dj_[iSequence]*dj_[iSequence];
+	break;
+      }
+    }
+    if (handler_->logLevel()>2)
+      printf("possible optimal  %d %d %g %g\n",
+	     nBigPasses,nTotalPasses,saveObj-currentObj,normFlagged);
+    if (normFlagged<1.0e-5) {
+      unflag();
+      primalColumnPivot_->setLooksOptimal(true);
+      returnCode=0;
+    }
   }
   return returnCode;
 }
@@ -2323,6 +2386,7 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
   double * saveRowSolution = new double [numberRows];
   memset(saveRowSolution,0,numberRows*sizeof(double));
   double * savePi = new double [numberRows];
+  double * safeSolution = new double [numberColumns];
   unsigned char * saveStatus = new unsigned char[numberRows+numberColumns];
 #define MULTIPLE 0
 #if MULTIPLE>2
@@ -2398,6 +2462,11 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
 	  jNon++;
 	}
       }
+      // make sure both accurate
+      memset(rowActivity_,0,numberRows_*sizeof(double));
+      times(1.0,solution,rowActivity_);
+      memset(saveRowSolution,0,numberRows_*sizeof(double));
+      times(1.0,saveSolution,saveRowSolution);
       for (int iRow=0;iRow<numberRows;iRow++) { 
 	double alpha =rowActivity_[iRow]-saveRowSolution[iRow];
 	double oldValue = saveRowSolution[iRow];
@@ -2443,6 +2512,8 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
 	for (iColumn=0;iColumn<numberColumns;iColumn++) 
 	  solution[iColumn] = lambda * saveSolution[iColumn] 
 	    + theta * solution[iColumn];
+	memset(rowActivity_,0,numberRows_*sizeof(double));
+	times(1.0,solution,rowActivity_);
 	if (lambda>0.999) {
 	  memcpy(this->dualRowSolution(),savePi,numberRows*sizeof(double));
 	  memcpy(status_,saveStatus,numberRows+numberColumns);
@@ -2452,9 +2523,11 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
 #ifdef LOCAL
 	int saveScaling = scalingFlag();
 	scaling(0);
+	int savePerturbation=perturbation_;
+	perturbation_=100;
 	if (saveLogLevel==1)
 	  setLogLevel(0);
-	int status=startup(0);
+	int status=startup(1);
 	if (!status) {
 	  int numberTotal = numberRows_+numberColumns_;
 	  // resize arrays
@@ -2509,9 +2582,12 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
 	    // get direction vector in longArray
 	    longArray->clear();
 	    double normFlagged=0.0;
+	    double normUnflagged=0.0;
 	    int numberNonBasic=0;
 	    directionVector(longArray,spare,rowArray,0,
-			    normFlagged,numberNonBasic);
+			    normFlagged,normUnflagged,numberNonBasic);
+	    if (normFlagged+normUnflagged<1.0e-8)
+	      break;  //looks optimal
 	    double djNorm=0.0;
 	    int iIndex;
 	    for (iIndex=0;iIndex<numberNonBasic;iIndex++) {
@@ -2625,8 +2701,12 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
 	problemStatus_=0;
 	finish();
 	scaling(saveScaling);
+	perturbation_=savePerturbation;
 	setLogLevel(saveLogLevel);
 #endif
+	// redo rowActivity
+	memset(rowActivity_,0,numberRows_*sizeof(double));
+	times(1.0,solution,rowActivity_);
 	if (theta>0.99999&&theta2<1.9) {
 	  // If big changes then tighten
 	  /*  thetaObj is objvalue + a*2*2 +b*2
@@ -2835,10 +2915,35 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
 	setLogLevel(0);
       ClpSimplex::primal(1);
       setLogLevel(saveLogLevel);
+#ifdef CLP_DEBUG
       if (this->status()) {
 	writeMps("xx.mps");
       }
-      assert (this->status()!=1); // must be feasible
+#endif
+      if (this->status()==1) {
+	// not feasible ! - backtrack and exit
+	// use safe solution
+	memcpy(solution,safeSolution,numberColumns*sizeof(double));
+	memcpy(saveSolution,solution,numberColumns*sizeof(double));
+	memset(rowActivity_,0,numberRows_*sizeof(double));
+	times(1.0,solution,rowActivity_);
+	memcpy(saveRowSolution,rowActivity_,numberRows*sizeof(double));
+	memcpy(this->dualRowSolution(),savePi,numberRows*sizeof(double));
+	memcpy(status_,saveStatus,numberRows+numberColumns);
+	for (jNon=0;jNon<numberNonLinearColumns;jNon++) {
+	  iColumn=listNonLinearColumn[jNon];
+	  columnLower[iColumn]=CoinMax(solution[iColumn]
+				       -trust[jNon],
+				       trueLower[jNon]);
+	  columnUpper[iColumn]=CoinMin(solution[iColumn]
+				       +trust[jNon],
+				       trueUpper[jNon]);
+	}
+	break;
+      } else {
+	// save in case problems
+	memcpy(safeSolution,solution,numberColumns*sizeof(double));
+      }
       if (problemStatus_==3)
 	break; // probably user interrupt
       goodMove=1;
@@ -2890,6 +2995,7 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
     columnUpper[iColumn]= trueUpper[jNon];
   }
   delete [] saveSolution;
+  delete [] safeSolution;
   delete [] saveRowSolution;
   for (iPass=0;iPass<3;iPass++) 
     delete [] last[iPass];

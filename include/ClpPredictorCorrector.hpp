@@ -12,12 +12,24 @@
 
 #include "ClpInterior.hpp"
 
-/** This solves LPs using the predictor-corrector method.
+/** This solves LPs using the predictor-corrector method due to Mehrotra.
+    It also uses multiple centrality corrections as in Gondzio.
+
+    See;
+    S. Mehrotra, "On the implementation of a primal-dual interior point method",
+    SIAM Journal on optimization, 2 (1992)
+    J. Gondzio, "Multiple centraility corrections in a primal-dual method for linear programming",
+    Computational Optimization and Applications",6 (1996)
+
 
     It is rather basic as Interior point is not my speciality
 
     It inherits from ClpInterior.  It has no data of its own and 
     is never created - only cast from a ClpInterior object at algorithm time. 
+
+    It can also solve QPs
+
+    
 
 */
 

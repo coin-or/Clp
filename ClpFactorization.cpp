@@ -79,6 +79,8 @@ ClpFactorization::factorize ( ClpSimplex * model,
   ClpMatrixBase * matrix = model->clpMatrix(); 
   int numberRows = model->numberRows();
   int numberColumns = model->numberColumns();
+  if (!numberRows)
+    return 0;
   // If too many compressions increase area
   if (numberPivots_>1&&numberCompressions_*10 > numberPivots_+10) {
     areaFactor_ *= 1.1;
@@ -286,10 +288,10 @@ ClpFactorization::factorize ( ClpSimplex * model,
 	} else {
 	  // See if worth going sparse and when
 	  if (numberFtranCounts_>100) {
+	    ftranCountInput_= CoinMax(ftranCountInput_,1.0);
 	    ftranAverageAfterL_ = CoinMax(ftranCountAfterL_/ftranCountInput_,1.0);
 	    ftranAverageAfterR_ = CoinMax(ftranCountAfterR_/ftranCountAfterL_,1.0);
 	    ftranAverageAfterU_ = CoinMax(ftranCountAfterU_/ftranCountAfterR_,1.0);
-	    assert (ftranCountInput_&&ftranCountAfterL_&&ftranCountAfterR_);
 	    if (btranCountInput_&&btranCountAfterU_&&btranCountAfterR_) {
 	      btranAverageAfterU_ = CoinMax(btranCountAfterU_/btranCountInput_,1.0);
 	      btranAverageAfterR_ = CoinMax(btranCountAfterR_/btranCountAfterU_,1.0);
@@ -528,6 +530,8 @@ ClpFactorization::updateColumnFT ( CoinIndexedVector * regionSparse,
 #ifdef CLP_DEBUG
   regionSparse->checkClear();
 #endif
+  if (!numberRows_)
+    return 0;
   if (!networkBasis_) {
     collectStatistics_ = true;
     int returnValue= CoinFactorization::updateColumnFT(regionSparse,
@@ -568,6 +572,8 @@ ClpFactorization::updateColumn ( CoinIndexedVector * regionSparse,
   if (!noPermute)
     regionSparse->checkClear();
 #endif
+  if (!numberRows_)
+    return 0;
   if (!networkBasis_) {
     collectStatistics_ = true;
     int returnValue= CoinFactorization::updateColumn(regionSparse,
@@ -604,6 +610,8 @@ int
 ClpFactorization::updateColumnTranspose ( CoinIndexedVector * regionSparse,
     			  CoinIndexedVector * regionSparse2) const
 {
+  if (!numberRows_)
+    return 0;
   if (!networkBasis_) {
     collectStatistics_ = true;
     return CoinFactorization::updateColumnTranspose(regionSparse,

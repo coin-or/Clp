@@ -92,15 +92,15 @@ private:
   /// Taucs factot
   void * factorization_;
   /// sparseFactor.
-  double * sparseFactor_;
+  double * sparseFactorT_;
   /// choleskyStart
-  CoinBigIndex * choleskyStart_;
+  CoinBigIndex * choleskyStartT_;
   /// choleskyRow
-  int * choleskyRow_;
+  int * choleskyRowT_;
   /// sizeFactor.
-  CoinBigIndex sizeFactor_;
+  CoinBigIndex sizeFactorT_;
   /// Row copy of matrix
-  ClpMatrixBase * rowCopy_;
+  ClpMatrixBase * rowCopyT_;
   //@}
 };
 

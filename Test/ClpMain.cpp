@@ -13,7 +13,7 @@
 
 #include "CoinPragma.hpp"
 #include "CoinHelperFunctions.hpp"
-#define CLPVERSION "0.99.8"
+#define CLPVERSION "0.99.9"
 
 #include "CoinMpsIO.hpp"
 
@@ -62,7 +62,7 @@ enum ClpParameterType {
   
   DIRECTION=201,DUALPIVOT,SCALING,ERRORSALLOWED,KEEPNAMES,SPARSEFACTOR,
   PRIMALPIVOT,PRESOLVE,CRASH,BIASLU,PERTURBATION,MESSAGES,AUTOSCALE,
-  CHOLESKY,BARRIERSCALE,GAMMA,
+  CHOLESKY,KKT,BARRIERSCALE,GAMMA,CROSSOVER,
   
   DIRECTORY=301,IMPORT,EXPORT,RESTORE,SAVE,DUALSIMPLEX,PRIMALSIMPLEX,
   MAXIMIZE,MINIMIZE,EXIT,STDIN,UNITTEST,NETLIB_DUAL,NETLIB_PRIMAL,SOLUTION,
@@ -493,7 +493,7 @@ ClpItem::parameterOption ( std::string check ) const
 	  thisOne.substr(shriekPos+1);
 	length1 = thisOne.length();
       }
-      if (check.length()<=length1) {
+      if (check.length()<=length1&&length2<=check.length()) {
 	unsigned int i;
 	for (i=0;i<check.length();i++) {
 	  if (tolower(thisOne[i])!=tolower(check[i])) 
@@ -926,8 +926,7 @@ int main (int argc, const char *argv[])
     parameters[numberParameters-1].setLonghelp
       (
        "This command solves the current model using the  primal dual predictor \
-corrector algorithm.  This is not a sophisticated version just something JJF \
-knocked up"
+corrector algorithm."
 
        ); 
     parameters[numberParameters++]=
@@ -942,10 +941,13 @@ knocked up"
     parameters[numberParameters-1].append("on");
     parameters[numberParameters++]=
       ClpItem("chol!esky","Which cholesky algorithm",
-	      "wssmp",CHOLESKY,false);
-    parameters[numberParameters-1].append("fudge!Long");
-    parameters[numberParameters-1].append("KKT");
+	      "base",CHOLESKY,false);
     parameters[numberParameters-1].append("dense");
+#ifdef REAL_BARRIER
+    parameters[numberParameters-1].append("fudge!Long");
+    parameters[numberParameters-1].append("wssmp");
+    parameters[numberParameters-1].append("Uni!versityOfFlorida");
+#endif
     parameters[numberParameters++]=
       ClpItem("crash","Whether to create basis for problem",
 	      "off",CRASH);
@@ -955,6 +957,19 @@ knocked up"
        "If crash is set on and there is an all slack basis then Clp will put structural\
  variables into basis with the aim of getting dual feasible.  On the whole dual seems to be\
  better without it and there alernative types of 'crash' for primal e.g. 'idiot' or 'sprint'."
+       ); 
+    parameters[numberParameters++]=
+      ClpItem("cross!over","Whether to get a basic solution after barrier",
+	      "on",CROSSOVER);
+    parameters[numberParameters-1].append("off");
+    parameters[numberParameters-1].append("maybe");
+    parameters[numberParameters-1].setLonghelp
+      (
+       "Interior point algorithms do not obtain a basic solution (and \
+the feasibility criterion is a bit suspect (JJF)).  This option will crossover \
+to a basic solution suitable for ranging or branch and cut.  With the current state \
+of quadratic it may be a good idea to switch off crossover for quadratic (and maybe \
+presolve as well) - the option maybe does this."
        ); 
     parameters[numberParameters++]=
       ClpItem("direction","Minimize or Maximize",
@@ -1101,6 +1116,10 @@ no dual infeasibility may exceed this value",
        "It saves space to get rid of names so if you need to you can set this to off."
        ); 
     parameters[numberParameters++]=
+      ClpItem("KKT","Whether to use KKT factorization",
+	      "off",KKT,false);
+    parameters[numberParameters-1].append("on");
+    parameters[numberParameters++]=
       ClpItem("log!Level","Level of detail in output",
 	      -1,63,LOGLEVEL);
     parameters[numberParameters-1].setLonghelp
@@ -1123,7 +1142,7 @@ refactorizations",
 	      1,999999,MAXFACTOR);
     parameters[numberParameters-1].setLonghelp
       (
-       "If this is at its default value of 200 then in this executable clp will guess at a\
+       "If this is at its initial value of 201 then in this executable clp will guess at a\
  value to use.  Otherwise the user can set a value.  The code may decide to re-factorize\
  earlier."
        ); 
@@ -1443,6 +1462,8 @@ costs this much to be infeasible",
     int choleskyType = 0;
     int gamma=0;
     int scaleBarrier=0;
+    int doKKT=0;
+    int crossover=2; // do crossover unless quadratic
     
     int iModel=0;
     goodModels[0]=false;
@@ -1729,6 +1750,9 @@ costs this much to be infeasible",
 	    case BARRIERSCALE:
 	      scaleBarrier=action;
 	      break;
+	    case KKT:
+	      doKKT=action;
+	      break;
 	    default:
 	      abort();
 	    }
@@ -1753,12 +1777,23 @@ costs this much to be infeasible",
 	      else
 		presolveType=ClpSolve::presolveOff;
 	      solveOptions.setPresolveType(presolveType,preSolve);
-	      if (type==DUALSIMPLEX)
+	      if (type==DUALSIMPLEX) {
 		method=ClpSolve::useDual;
-	      else if (type==PRIMALSIMPLEX)
+	      } else if (type==PRIMALSIMPLEX) {
 		method=ClpSolve::usePrimalorSprint;
-	      else
+	      } else {
 		method = ClpSolve::useBarrier;
+		if (crossover==1) {
+		  method=ClpSolve::useBarrierNoCross;
+		} else if (crossover==2) {
+		  ClpObjective * obj = models[iModel].objectiveAsObject();
+		  if (obj->type()>1) {
+		    method=ClpSolve::useBarrierNoCross;
+		    presolveType=ClpSolve::presolveOff;
+		    solveOptions.setPresolveType(presolveType,preSolve);
+		  } 
+		}
+	      }
 	      solveOptions.setSolveType(method);
 	      if (method==ClpSolve::useDual) {
 		// dual
@@ -1796,12 +1831,14 @@ costs this much to be infeasible",
 		      solveOptions.setSpecialOption(1,7); // initiative
 		  }
 		}
-	      } else if (method==ClpSolve::useBarrier) {
+	      } else if (method==ClpSolve::useBarrier||method==ClpSolve::useBarrierNoCross) {
 		int barrierOptions = choleskyType;
 		if (scaleBarrier)
-		  barrierOptions |= 4;
-		if (gamma)
 		  barrierOptions |= 8;
+		if (gamma)
+		  barrierOptions |= 16;
+		if (doKKT)
+		  barrierOptions |= 32;
 		solveOptions.setSpecialOption(4,barrierOptions);
 	      }
 	      model2->initialSolve(solveOptions);

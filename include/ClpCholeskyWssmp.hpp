@@ -19,6 +19,11 @@ public:
   /** Orders rows and saves pointer to matrix.and model.
    Returns non-zero if not enough memory */
   virtual int order(ClpInterior * model) ;
+  /** Does Symbolic factorization given permutation.
+      This is called immediately after order.  If user provides this then
+      user must provide factorize and solve.  Otherwise the default factorization is used
+      returns non-zero if not enough memory */
+  virtual int symbolic();
   /** Factorize - filling in rowsDropped and returning number dropped.
       If return code negative then out of memory */
   virtual int factorize(const double * diagonal, int * rowsDropped) ;
@@ -46,28 +51,6 @@ public:
 private:
   /**@name Data members */
    //@{
-  /// sparseFactor.
-  double * sparseFactor_;
-  /// choleskyStart
-  CoinBigIndex * choleskyStart_;
-  /// choleskyRow
-  int * choleskyRow_;
-  /// sizeFactor.
-  CoinBigIndex sizeFactor_;
-  /// integerParameters
-  int integerParameters_[64];
-  /// doubleParameters;
-  double doubleParameters_[64];
-  /// Row copy of matrix
-  ClpMatrixBase * rowCopy_;
-  /// Dense indicators
-  char * whichDense_;
-  /// Dense columns (updated)
-  double * denseColumn_;
-  /// Dense square cholesky
-  ClpCholeskyDense * dense_;
-  /// Dense threshold
-  int denseThreshold_;
   //@}
 };
 
