@@ -972,7 +972,8 @@ CoinPresolveMatrix::CoinPresolveMatrix(int ncols0_in,
   rowsToDo_(new int [nrows_in]),
   numberRowsToDo_(0),
   nextRowsToDo_(new int[nrows_in]),
-  numberNextRowsToDo_(0)
+  numberNextRowsToDo_(0),
+  presolveOptions_(0)
 
 {
   const int bufsize = 2*nelems_in;
