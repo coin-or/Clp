@@ -43,7 +43,7 @@ public:
   //phase  - 0 predictor
   //         1 corrector
   //         2 primal dual
-  double findStepLength(const int phase);
+  double findStepLength(const int phase,const double * oldWeight);
   /// findDirectionVector.
   double findDirectionVector(const int phase);
   /// createSolution.  Creates solution from scratch (- code if no memory)
