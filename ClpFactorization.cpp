@@ -654,6 +654,24 @@ ClpFactorization::updateColumn ( CoinIndexedVector * regionSparse,
 #endif
   }
 }
+/* Updates one column (FTRAN) from region2
+   number returned is negative if no room
+   region1 starts as zero and is zero at end */
+int 
+ClpFactorization::updateColumnForDebug ( CoinIndexedVector * regionSparse,
+				 CoinIndexedVector * regionSparse2,
+				 bool noPermute) const
+{
+  if (!noPermute)
+    regionSparse->checkClear();
+  if (!numberRows_)
+    return 0;
+  collectStatistics_ = false;
+  int returnValue= CoinFactorization::updateColumn(regionSparse,
+                                                   regionSparse2,
+                                                   noPermute);
+  return returnValue;
+}
 /* Updates one column (BTRAN) from region2
    region1 starts as zero and is zero at end */
 int 

@@ -458,7 +458,7 @@ ClpSimplexPrimal::whileIterating(int valuesOption)
       }    
       for (i=0;i<2;i++) {
 	columnArray_[i]->checkClear();
-      }    
+      }
     }      
 #endif
 #if 0
@@ -563,6 +563,33 @@ ClpSimplexPrimal::whileIterating(int valuesOption)
 	std::cout<<"pivot column "<<
 	  x<<sequenceWithin(sequenceIn_)<<std::endl;
       }
+#endif
+#ifdef CLP_DEBUG
+    {
+      int checkSequence=-2077;
+      if (checkSequence>=0&&checkSequence<numberRows_+numberColumns_&&!ifValuesPass) {
+        rowArray_[2]->checkClear();
+        rowArray_[3]->checkClear();
+        double * array = rowArray_[3]->denseVector();
+        int * index = rowArray_[3]->getIndices();
+        unpackPacked(rowArray_[3],checkSequence);
+        factorization_->updateColumnForDebug(rowArray_[2],rowArray_[3]);
+        int number = rowArray_[3]->getNumElements();
+        double dualIn = cost_[checkSequence];
+        int i;
+        for (i=0;i<number;i++) {
+          int iRow = index[i];
+          int iPivot = pivotVariable_[iRow];
+          double alpha = array[i];
+          dualIn -= alpha*cost_[iPivot];
+        }
+        printf("old dj for %d was %g, recomputed %g\n",checkSequence,
+               dj_[checkSequence],dualIn);
+        rowArray_[3]->clear();
+        if (numberIterations_>2000)
+          exit(1);
+      }
+    }
 #endif
       // do second half of iteration
       returnCode = pivotResult(ifValuesPass);
@@ -2178,7 +2205,8 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	fabs(saveDj-dualIn_)>checkValue*(1.0+fabs(saveDj)))) {
       char x = isColumn(sequenceIn_) ? 'C' :'R';
       handler_->message(CLP_PRIMAL_DJ,messages_)
-	<<x<<sequenceIn_<<saveDj<<dualIn_
+        <<x<<sequenceWithin(sequenceIn_)
+        <<saveDj<<dualIn_
 	<<CoinMessageEol;
       if(lastGoodIteration_ != numberIterations_) {
 	clearAll();
@@ -2362,7 +2390,9 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
       }
     }
 
-    
+    double oldCost = 0.0;
+    if (sequenceOut_>=0)
+      oldCost=cost_[sequenceOut_];
     // update primal solution
     
     double objectiveChange=0.0;
@@ -2407,6 +2437,13 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
       // may not be exactly at bound and bounds may have changed
       // Make sure outgoing looks feasible
       directionOut_=nonLinearCost_->setOneOutgoing(sequenceOut_,valueOut_);
+      // May have got inaccurate
+      if (oldCost!=cost_[sequenceOut_])
+        printf("costchange on %d from %g to %g\n",sequenceOut_,
+               oldCost,cost_[sequenceOut_]);
+      //if (sequenceOut_<numberColumns_)
+      //dj_[sequenceOut_]=0.0;
+      dj_[sequenceOut_]=cost_[sequenceOut_]-oldCost;
       solution_[sequenceOut_]=valueOut_;
     }
     // change cost and bounds on incoming if primal

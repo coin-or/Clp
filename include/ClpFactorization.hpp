@@ -83,6 +83,10 @@ public:
   int updateColumn ( CoinIndexedVector * regionSparse,
 		     CoinIndexedVector * regionSparse2,
 		     bool noPermute=false) const;
+  /// For debug (no statistics update)
+  int updateColumnForDebug ( CoinIndexedVector * regionSparse,
+		     CoinIndexedVector * regionSparse2,
+		     bool noPermute=false) const;
   /** Updates one column (BTRAN) from region2
       region1 starts as zero and is zero at end */
   int updateColumnTranspose ( CoinIndexedVector * regionSparse,
