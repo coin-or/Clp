@@ -68,24 +68,15 @@ ClpPrimalColumnDantzig::pivotColumn(CoinIndexedVector * updates,
   int * index;
   double * updateBy;
   double * reducedCost;
-  double dj = model_->dualIn();
 
   bool anyUpdates;
 
   if (updates->getNumElements()) {
     anyUpdates=true;
-    // add in pivot contribution
-    if (model_->pivotRow()>=0) 
-      updates->add(model_->pivotRow(),-dj);
-  } else if (model_->pivotRow()>=0) {
-    updates->insert(model_->pivotRow(),-dj);
-    anyUpdates=true;
   } else {
     // sub flip - nothing to do
     anyUpdates=false;
   }
-  if (!updates->getNumElements())
-    anyUpdates=false; // in case dj 0.0 (for quadratic)
   if (anyUpdates) {
     model_->factorization()->updateColumnTranspose(spareRow2,updates);
     // put row of tableau in rowArray and columnArray
@@ -108,8 +99,8 @@ ClpPrimalColumnDantzig::pivotColumn(CoinIndexedVector * updates,
       for (j=0;j<number;j++) {
 	int iSequence = index[j];
 	double value = reducedCost[iSequence];
-	value -= updateBy[iSequence];
-	updateBy[iSequence]=0.0;
+	value -= updateBy[j];
+	updateBy[j]=0.0;
 	reducedCost[iSequence] = value;
       }
       

@@ -13,10 +13,6 @@
 #include <stdio.h>
 
 
-// bias for free variables
-#define FREE_BIAS 1.0e1
-// Acceptance criteria for free variables
-#define FREE_ACCEPT 1.0e2
 //#############################################################################
 // Constructors / Destructor / Assignment
 //#############################################################################
@@ -37,7 +33,8 @@ ClpPrimalColumnSteepest::ClpPrimalColumnSteepest (int mode)
     numberSwitched_(0),
     pivotSequence_(-1),
     savedPivotSequence_(-1),
-    savedSequenceOut_(-1)
+    savedSequenceOut_(-1),
+    sizeFactorization_(0)
 {
   type_=2+64*mode;
 }
@@ -55,6 +52,7 @@ ClpPrimalColumnSteepest::ClpPrimalColumnSteepest (const ClpPrimalColumnSteepest 
   pivotSequence_ = rhs.pivotSequence_;
   savedPivotSequence_ = rhs.savedPivotSequence_;
   savedSequenceOut_ = rhs.savedSequenceOut_;
+  sizeFactorization_ = rhs.sizeFactorization_;
   devex_ = rhs.devex_;
   if (rhs.infeasible_) {
     infeasible_= new CoinIndexedVector(rhs.infeasible_);
@@ -111,6 +109,7 @@ ClpPrimalColumnSteepest::operator=(const ClpPrimalColumnSteepest& rhs)
     pivotSequence_ = rhs.pivotSequence_;
     savedPivotSequence_ = rhs.savedPivotSequence_;
     savedSequenceOut_ = rhs.savedSequenceOut_;
+    sizeFactorization_ = rhs.sizeFactorization_;
     devex_ = rhs.devex_;
     delete [] weights_;
     delete [] reference_;
@@ -151,6 +150,9 @@ ClpPrimalColumnSteepest::operator=(const ClpPrimalColumnSteepest& rhs)
 #define TRY_NORM 1.0e-4
 #define ADD_ONE 1.0
 // Returns pivot column, -1 if none
+/*      The Packed CoinIndexedVector updates has cost updates - for normal LP
+	that is just +-weight where a feasibility changed.  It also has 
+	reduced cost from last iteration in pivot row*/
 int 
 ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
 				    CoinIndexedVector * spareRow1,
@@ -161,13 +163,12 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
   assert(model_);
   if (model_->nonLinearCost()->lookBothWays()||model_->algorithm()==2) {
     // Do old way
+    updates->expand();
     return pivotColumnOldMethod(updates,spareRow1,spareRow2,
 				spareColumn1,spareColumn2);
   }
   int number=0;
   int * index;
-  // dj could be very small (or even zero - take care)
-  double dj = model_->dualIn();
   double tolerance=model_->currentDualTolerance();
   // we can't really trust infeasibilities if there is dual error
   // this coding has to mimic coding in checkDualSolution
@@ -195,26 +196,18 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
      5 - dantzig
      10 - can go to mini-sprint
   */
-  if (updates->getNumElements()) {
+  if (updates->getNumElements()>1) {
     // would have to have two goes for devex, three for steepest
     anyUpdates=2;
-    // add in pivot contribution
-    if (pivotRow>=0) 
-      updates->add(pivotRow,-dj);
-  } else if (pivotRow>=0) {
-    if (fabs(dj)>1.0e-15) {
-      // some dj
-      updates->insert(pivotRow,-dj);
-      if (fabs(dj)>1.0e-6) {
-	// reasonable size
-	anyUpdates=1;
-      } else {
-	// too small
-	anyUpdates=2;
-      }
+  } else if (updates->getNumElements()) {
+    if (updates->getIndices()[0]==pivotRow&&fabs(updates->denseVector()[0])>1.0e-6) {
+      // reasonable size
+      anyUpdates=1;
+      //if (fabs(model_->dualIn())<1.0e-4||fabs(fabs(model_->dualIn())-fabs(updates->denseVector()[0]))>1.0e-5)
+      //printf("dualin %g pivot %g\n",model_->dualIn(),updates->denseVector()[0]);
     } else {
-      // zero dj
-      anyUpdates=-1;
+      // too small
+      anyUpdates=2;
     }
   } else if (pivotSequence_>=0){
     // just after re-factorization
@@ -224,6 +217,50 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
     anyUpdates=0;
   }
   int sequenceOut = model_->sequenceOut();
+  if (switchType==5) {
+    // If known matrix then we will do partial pricing
+    if (model_->clpMatrix()->canDoPartialPricing()) {
+      pivotSequence_=-1;
+      pivotRow=-1;
+      // See if to switch
+      int numberRows = model_->numberRows();
+      int numberWanted=0;
+      int numberColumns = model_->numberColumns();
+      double ratio = (double) sizeFactorization_/(double) numberRows;
+      // Number of dual infeasibilities at last invert
+      int numberDual = model_->numberDualInfeasibilities();
+      int numberLook = min(numberDual,numberColumns/10);
+      if (ratio<1.0) {
+	numberWanted = 100;
+	numberWanted = max(numberWanted,numberLook/20);
+      } else if (ratio<3.0) {
+	numberWanted = 500;
+	numberWanted = max(numberWanted,numberLook/15);
+      } else if (ratio<4.0) {
+	numberWanted = 1000;
+	numberWanted = max(numberWanted,numberLook/10);
+      } else {
+	switchType=4;
+	// initialize
+	numberSwitched_++;
+	// Make sure will re-do
+	delete [] weights_;
+	weights_=NULL;
+	model_->computeDuals(NULL);
+	saveWeights(model_,4);
+	anyUpdates=0;
+	printf("switching to devex %d nel ratio %g\n",sizeFactorization_,ratio);
+      }
+      if (switchType==5) {
+	if (model_->numberIterations()%1000==0)
+	  printf("numels %d ratio %g wanted %d\n",sizeFactorization_,ratio,numberWanted);
+	// Update duals and row djs
+	// Do partial pricing
+	return partialPricing(updates,spareRow2,
+			      numberWanted);
+      }
+    }
+  }
   if (switchType==5) {
     if (anyUpdates>0) {
       justDjs(updates,spareRow1,spareRow2,
@@ -260,6 +297,7 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
 	spareColumn1,spareColumn2);
     }
   } 
+  alternateWeights_->checkClear();
   // make sure outgoing from last iteration okay
   if (sequenceOut>=0) {
     ClpSimplex::Status status = model_->getStatus(sequenceOut);
@@ -316,17 +354,16 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
     pivotSequence_=-1;
     pivotRow=-1;
     // See if to switch
-    int numberElements = model_->factorization()->numberElements();
     int numberRows = model_->numberRows();
     // ratio is done on number of columns here
-    //double ratio = (double) numberElements/(double) numberColumns;
-    double ratio = (double) numberElements/(double) numberRows;
-    //double ratio = (double) numberElements/(double) model_->clpMatrix()->getNumElements();
-    if (ratio<0.1) {
+    //double ratio = (double) sizeFactorization_/(double) numberColumns;
+    double ratio = (double) sizeFactorization_/(double) numberRows;
+    //double ratio = (double) sizeFactorization_/(double) model_->clpMatrix()->getNumElements();
+    if (ratio<1.0) {
       numberWanted = max(100,number/200);
-    } else if (ratio<0.15) {
+    } else if (ratio<2.0-1.0) {
       numberWanted = max(500,number/40);
-    } else if (ratio<0.2) {
+    } else if (ratio<4.0-3.0) {
       numberWanted = max(2000,number/10);
       numberWanted = max(numberWanted,numberColumns/30);
     } else {
@@ -337,23 +374,23 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
       delete [] weights_;
       weights_=NULL;
       saveWeights(model_,4);
-      printf("switching to devex %d nel ratio %g\n",numberElements,ratio);
+      printf("switching to devex %d nel ratio %g\n",sizeFactorization_,ratio);
     }
     //if (model_->numberIterations()%1000==0)
-    //printf("numels %d ratio %g wanted %d\n",numberElements,ratio,numberWanted);
+    //printf("numels %d ratio %g wanted %d\n",sizeFactorization_,ratio,numberWanted);
   }
-  int numberElements = model_->factorization()->numberElements();
   int numberRows = model_->numberRows();
   // ratio is done on number of rows here
-  double ratio = (double) numberElements/(double) numberRows;
+  double ratio = (double) sizeFactorization_/(double) numberRows;
   if(switchType==4) {
     // Still in devex mode
     // Go to steepest if lot of iterations?
-    if (ratio<1.0) {
-      numberWanted = max(2000,number/20);
-    } else if (ratio<4.0) {
+    if (ratio<5.0) {
       numberWanted = max(2000,number/10);
       numberWanted = max(numberWanted,numberColumns/20);
+    } else if (ratio<7.0) {
+      numberWanted = max(2000,number/5);
+      numberWanted = max(numberWanted,numberColumns/10);
     } else {
       // we can zero out
       updates->clear();
@@ -367,11 +404,11 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
       delete [] weights_;
       weights_=NULL;
       saveWeights(model_,4);
-      printf("switching to exact %d nel ratio %g\n",numberElements,ratio);
+      printf("switching to exact %d nel ratio %g\n",sizeFactorization_,ratio);
       updates->clear();
     }
     if (model_->numberIterations()%1000==0)
-    printf("numels %d ratio %g wanted %d type x\n",numberElements,ratio,numberWanted);
+    printf("numels %d ratio %g wanted %d type x\n",sizeFactorization_,ratio,numberWanted);
   } 
   if (switchType<4) {
     if (switchType<2 ) {
@@ -398,7 +435,7 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
       }
     }
     //if (model_->numberIterations()%1000==0)
-    //printf("numels %d ratio %g wanted %d type %d\n",numberElements,ratio,numberWanted,
+    //printf("numels %d ratio %g wanted %d type %d\n",sizeFactorization_,ratio,numberWanted,
     //switchType);
   }
 
@@ -410,6 +447,7 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
   index = infeasible_->getIndices();
   number = infeasible_->getNumElements();
   // Re-sort infeasible every 100 pivots
+  // Not a good idea
   if (0&&model_->factorization()->pivots()>0&&
       (model_->factorization()->pivots()%100)==0) {
     int nLook = model_->numberRows()+numberColumns;
@@ -546,9 +584,10 @@ ClpPrimalColumnSteepest::justDjs(CoinIndexedVector * updates,
   tolerance = tolerance +  error;
   int pivotRow = model_->pivotRow();
   double * infeas = infeasible_->denseVector();
+  //updates->scanAndPack();
   model_->factorization()->updateColumnTranspose(spareRow2,updates);
   
-  // put row of tableau in rowArray and columnArray
+  // put row of tableau in rowArray and columnArray (packed mode)
   model_->clpMatrix()->transposeTimes(model_,-1.0,
 				      updates,spareColumn2,spareColumn1);
   // normal
@@ -572,8 +611,8 @@ ClpPrimalColumnSteepest::justDjs(CoinIndexedVector * updates,
     for (j=0;j<number;j++) {
       int iSequence = index[j];
       double value = reducedCost[iSequence];
-      value -= updateBy[iSequence];
-      updateBy[iSequence]=0.0;
+      value -= updateBy[j];
+      updateBy[j]=0.0;
       reducedCost[iSequence] = value;
       ClpSimplex::Status status = model_->getStatus(iSequence+addSequence);
       
@@ -642,8 +681,6 @@ ClpPrimalColumnSteepest::djsAndDevex(CoinIndexedVector * updates,
   int * index;
   double * updateBy;
   double * reducedCost;
-  // dj could be very small (or even zero - take care)
-  double dj = model_->dualIn();
   double tolerance=model_->currentDualTolerance();
   // we can't really trust infeasibilities if there is dual error
   // this coding has to mimic coding in checkDualSolution
@@ -655,6 +692,7 @@ ClpPrimalColumnSteepest::djsAndDevex(CoinIndexedVector * updates,
   assert (pivotSequence_>=0);
   pivotSequence_=-1;
   double * infeas = infeasible_->denseVector();
+  //updates->scanAndPack();
   model_->factorization()->updateColumnTranspose(spareRow2,updates);
   // and we can see if reference
   double referenceIn=0.0;
@@ -667,13 +705,13 @@ ClpPrimalColumnSteepest::djsAndDevex(CoinIndexedVector * updates,
   if (sequenceOut>=0)
     outgoingWeight=weights_[sequenceOut];
     
-  // put row of tableau in rowArray and columnArray
+  double scaleFactor = 1.0/updates->denseVector()[0]; // as formula is with 1.0
+  // put row of tableau in rowArray and columnArray (packed mode)
   model_->clpMatrix()->transposeTimes(model_,-1.0,
 				      updates,spareColumn2,spareColumn1);
   // update weights
   double * weight;
   int numberColumns = model_->numberColumns();
-  double scaleFactor = -1.0/dj; // as formula is with 1.0
   // rows
   reducedCost=model_->djRegion(0);
   int addSequence=model_->numberColumns();;
@@ -689,8 +727,8 @@ ClpPrimalColumnSteepest::djsAndDevex(CoinIndexedVector * updates,
     double value3;
     int iSequence = index[j];
     double value = reducedCost[iSequence];
-    double value2 = updateBy[iSequence];
-    updateBy[iSequence]=0.0;
+    double value2 = updateBy[j];
+    updateBy[j]=0.0;
     value -= value2;
     reducedCost[iSequence] = value;
     ClpSimplex::Status status = model_->getStatus(iSequence+addSequence);
@@ -777,9 +815,9 @@ ClpPrimalColumnSteepest::djsAndDevex(CoinIndexedVector * updates,
     double value3;
     int iSequence = index[j];
     double value = reducedCost[iSequence];
-    double value2 = updateBy[iSequence];
+    double value2 = updateBy[j];
     value -= value2;
-    updateBy[iSequence]=0.0;
+    updateBy[j]=0.0;
     reducedCost[iSequence] = value;
     ClpSimplex::Status status = model_->getStatus(iSequence);
     
@@ -882,8 +920,6 @@ ClpPrimalColumnSteepest::djsAndSteepest(CoinIndexedVector * updates,
   int * index;
   double * updateBy;
   double * reducedCost;
-  // dj could be very small (or even zero - take care)
-  double dj = model_->dualIn();
   double tolerance=model_->currentDualTolerance();
   // we can't really trust infeasibilities if there is dual error
   // this coding has to mimic coding in checkDualSolution
@@ -895,8 +931,10 @@ ClpPrimalColumnSteepest::djsAndSteepest(CoinIndexedVector * updates,
   assert (pivotSequence_>=0);
   pivotSequence_=-1;
   double * infeas = infeasible_->denseVector();
+  double scaleFactor = 1.0/updates->denseVector()[0]; // as formula is with 1.0
+  //updates->scanAndPack();
   model_->factorization()->updateColumnTranspose(spareRow2,updates);
-
+  //alternateWeights_->scanAndPack();
   model_->factorization()->updateColumnTranspose(spareRow2,
 						 alternateWeights_);
   // and we can see if reference
@@ -910,7 +948,7 @@ ClpPrimalColumnSteepest::djsAndSteepest(CoinIndexedVector * updates,
   if (sequenceOut>=0)
     outgoingWeight=weights_[sequenceOut];
     
-  // put row of tableau in rowArray and columnArray
+  // put row of tableau in rowArray and columnArray (packed)
   model_->clpMatrix()->transposeTimes(model_,-1.0,
 				      updates,spareColumn2,spareColumn1);
   // get subset which have nonzero tableau elements
@@ -918,12 +956,10 @@ ClpPrimalColumnSteepest::djsAndSteepest(CoinIndexedVector * updates,
   model_->clpMatrix()->subsetTransposeTimes(model_,alternateWeights_,
 					      spareColumn1,
 					      spareRow2);
-  assert (spareRow2->packedMode());
   // update weights
   double * weight;
   double * other = alternateWeights_->denseVector();
   int numberColumns = model_->numberColumns();
-  double scaleFactor = -1.0/dj; // as formula is with 1.0
   // rows
   reducedCost=model_->djRegion(0);
   int addSequence=model_->numberColumns();;
@@ -940,11 +976,12 @@ ClpPrimalColumnSteepest::djsAndSteepest(CoinIndexedVector * updates,
     double pivotSquared;
     int iSequence = index[j];
     double value = reducedCost[iSequence];
-    double value2 = updateBy[iSequence];
+    double value2 = updateBy[j];
     value -= value2;
     reducedCost[iSequence] = value;
     ClpSimplex::Status status = model_->getStatus(iSequence+addSequence);
-    updateBy[iSequence]=0.0;
+    modification = other[iSequence];
+    updateBy[j]=0.0;
     
     switch(status) {
       
@@ -957,7 +994,6 @@ ClpPrimalColumnSteepest::djsAndSteepest(CoinIndexedVector * updates,
       thisWeight = weight[iSequence];
       // row has -1 
       pivot = value2*scaleFactor;
-      modification = other[iSequence];
       pivotSquared = pivot * pivot;
       
       thisWeight += pivotSquared * devex_ + pivot * modification;
@@ -990,7 +1026,6 @@ ClpPrimalColumnSteepest::djsAndSteepest(CoinIndexedVector * updates,
       thisWeight = weight[iSequence];
       // row has -1 
       pivot = value2*scaleFactor;
-      modification = other[iSequence];
       pivotSquared = pivot * pivot;
       
       thisWeight += pivotSquared * devex_ + pivot * modification;
@@ -1021,7 +1056,6 @@ ClpPrimalColumnSteepest::djsAndSteepest(CoinIndexedVector * updates,
       thisWeight = weight[iSequence];
       // row has -1 
       pivot = value2*scaleFactor;
-      modification = other[iSequence];
       pivotSquared = pivot * pivot;
       
       thisWeight += pivotSquared * devex_ + pivot * modification;
@@ -1049,7 +1083,7 @@ ClpPrimalColumnSteepest::djsAndSteepest(CoinIndexedVector * updates,
       }
     }
   }
-  
+  alternateWeights_->clear();
   // columns
   weight = weights_;
   
@@ -1067,8 +1101,8 @@ ClpPrimalColumnSteepest::djsAndSteepest(CoinIndexedVector * updates,
     double pivotSquared;
     int iSequence = index[j];
     double value = reducedCost[iSequence];
-    double value2 = updateBy[iSequence];
-    updateBy[iSequence]=0.0;
+    double value2 = updateBy[j];
+    updateBy[j]=0.0;
     value -= value2;
     reducedCost[iSequence] = value;
     ClpSimplex::Status status = model_->getStatus(iSequence);
@@ -1183,7 +1217,6 @@ ClpPrimalColumnSteepest::djsAndSteepest(CoinIndexedVector * updates,
     weights_[sequenceOut]=outgoingWeight;
   // make sure infeasibility on incoming is 0.0
   infeasible_->zero(sequenceIn);
-  alternateWeights_->clear();
   spareRow2->setNumElements(0);
   //#define SOME_DEBUG_1
 #ifdef SOME_DEBUG_1
@@ -1224,6 +1257,7 @@ ClpPrimalColumnSteepest::djsAndDevex2(CoinIndexedVector * updates,
   tolerance = tolerance +  error;
   int pivotRow = model_->pivotRow();
   double * infeas = infeasible_->denseVector();
+  //updates->scanAndPack();
   model_->factorization()->updateColumnTranspose(spareRow2,updates);
   
   // put row of tableau in rowArray and columnArray
@@ -1250,7 +1284,8 @@ ClpPrimalColumnSteepest::djsAndDevex2(CoinIndexedVector * updates,
     for (j=0;j<number;j++) {
       int iSequence = index[j];
       double value = reducedCost[iSequence];
-      value -= updateBy[iSequence];
+      value -= updateBy[j];
+      updateBy[j]=0.0;
       reducedCost[iSequence] = value;
       ClpSimplex::Status status = model_->getStatus(iSequence+addSequence);
       
@@ -1298,9 +1333,9 @@ ClpPrimalColumnSteepest::djsAndDevex2(CoinIndexedVector * updates,
       }
     }
   }
-  // we can zero out as will have to get pivot row
-  updates->clear();
-  spareColumn1->clear();
+  // They are empty
+  updates->setNumElements(0);
+  spareColumn1->setNumElements(0);
   // make sure infeasibility on incoming is 0.0
   int sequenceIn = model_->sequenceIn();
   infeasible_->zero(sequenceIn);
@@ -1334,7 +1369,6 @@ ClpPrimalColumnSteepest::djsAndDevex2(CoinIndexedVector * updates,
 					updates,spareColumn2,spareColumn1);
     double * weight;
     int numberColumns = model_->numberColumns();
-    double scaleFactor = -1.0/dj; // as formula is with 1.0
     // rows
     number = updates->getNumElements();
     index = updates->getIndices();
@@ -1346,7 +1380,7 @@ ClpPrimalColumnSteepest::djsAndDevex2(CoinIndexedVector * updates,
       int iSequence = index[j];
       double thisWeight = weight[iSequence];
       // row has -1 
-      double pivot = updateBy[iSequence]*scaleFactor;
+      double pivot = - updateBy[iSequence];
       updateBy[iSequence]=0.0;
       double value = pivot * pivot*devex_;
       if (reference(iSequence+numberColumns))
@@ -1357,8 +1391,6 @@ ClpPrimalColumnSteepest::djsAndDevex2(CoinIndexedVector * updates,
     // columns
     weight = weights_;
     
-    scaleFactor = -scaleFactor;
-    
     number = spareColumn1->getNumElements();
     index = spareColumn1->getIndices();
     updateBy = spareColumn1->denseVector();
@@ -1366,7 +1398,7 @@ ClpPrimalColumnSteepest::djsAndDevex2(CoinIndexedVector * updates,
       int iSequence = index[j];
       double thisWeight = weight[iSequence];
       // row has -1 
-      double pivot = updateBy[iSequence]*scaleFactor;
+      double pivot = updateBy[iSequence];
       updateBy[iSequence]=0.0;
       double value = pivot * pivot*devex_;
       if (reference(iSequence))
@@ -1417,6 +1449,7 @@ ClpPrimalColumnSteepest::djsAndSteepest2(CoinIndexedVector * updates,
   tolerance = tolerance +  error;
   int pivotRow = model_->pivotRow();
   double * infeas = infeasible_->denseVector();
+  //updates->scanAndPack();
   model_->factorization()->updateColumnTranspose(spareRow2,updates);
   
   // put row of tableau in rowArray and columnArray
@@ -1443,7 +1476,8 @@ ClpPrimalColumnSteepest::djsAndSteepest2(CoinIndexedVector * updates,
     for (j=0;j<number;j++) {
       int iSequence = index[j];
       double value = reducedCost[iSequence];
-      value -= updateBy[iSequence];
+      value -= updateBy[j];
+      updateBy[j]=0.0;
       reducedCost[iSequence] = value;
       ClpSimplex::Status status = model_->getStatus(iSequence+addSequence);
       
@@ -1493,8 +1527,8 @@ ClpPrimalColumnSteepest::djsAndSteepest2(CoinIndexedVector * updates,
   }
   // we can zero out as will have to get pivot row
   // ***** move
-  updates->clear();
-  spareColumn1->clear();
+  updates->setNumElements(0);
+  spareColumn1->setNumElements(0);
   if (pivotRow>=0) {
     // make sure infeasibility on incoming is 0.0
     int sequenceIn = model_->sequenceIn();
@@ -1522,8 +1556,8 @@ ClpPrimalColumnSteepest::djsAndSteepest2(CoinIndexedVector * updates,
     updates->setNumElements(0);
     spareColumn1->setNumElements(0);
     // might as well set dj to 1
-    dj = 1.0;
-    updates->insert(pivotRow,-dj);
+    dj = -1.0;
+    updates->createPacked(1,&pivotRow,&dj);
     model_->factorization()->updateColumnTranspose(spareRow2,updates);
     // put row of tableau in rowArray and columnArray
     model_->clpMatrix()->transposeTimes(model_,-1.0,
@@ -1531,7 +1565,6 @@ ClpPrimalColumnSteepest::djsAndSteepest2(CoinIndexedVector * updates,
     double * weight;
     double * other = alternateWeights_->denseVector();
     int numberColumns = model_->numberColumns();
-    double scaleFactor = -1.0/dj; // as formula is with 1.0
     // rows
     number = updates->getNumElements();
     index = updates->getIndices();
@@ -1541,14 +1574,20 @@ ClpPrimalColumnSteepest::djsAndSteepest2(CoinIndexedVector * updates,
     if (mode_<4||numberSwitched_>1||mode_>=10) {
       // Exact
       // now update weight update array
+      //alternateWeights_->scanAndPack();
       model_->factorization()->updateColumnTranspose(spareRow2,
 						     alternateWeights_);
+      // Exact
+      // get subset which have nonzero tableau elements
+      model_->clpMatrix()->subsetTransposeTimes(model_,alternateWeights_,
+						spareColumn1,
+						spareColumn2);
       for (j=0;j<number;j++) {
 	int iSequence = index[j];
 	double thisWeight = weight[iSequence];
 	// row has -1 
-	double pivot = updateBy[iSequence]*scaleFactor;
-	updateBy[iSequence]=0.0;
+	double pivot = - updateBy[j];
+	updateBy[j]=0.0;
 	double modification = other[iSequence];
 	double pivotSquared = pivot * pivot;
 	
@@ -1574,8 +1613,8 @@ ClpPrimalColumnSteepest::djsAndSteepest2(CoinIndexedVector * updates,
 	int iSequence = index[j];
 	double thisWeight = weight[iSequence];
 	// row has -1 
-	double pivot = updateBy[iSequence]*scaleFactor;
-	updateBy[iSequence]=0.0;
+	double pivot = -updateBy[j];
+	updateBy[j]=0.0;
 	double value = pivot * pivot*devex_;
 	if (reference(iSequence+numberColumns))
 	  value += 1.0;
@@ -1586,24 +1625,17 @@ ClpPrimalColumnSteepest::djsAndSteepest2(CoinIndexedVector * updates,
     // columns
     weight = weights_;
     
-    scaleFactor = -scaleFactor;
-    
     number = spareColumn1->getNumElements();
     index = spareColumn1->getIndices();
     updateBy = spareColumn1->denseVector();
     if (mode_<4||numberSwitched_>1||mode_>=10) {
       // Exact
-      // get subset which have nonzero tableau elements
-      model_->clpMatrix()->subsetTransposeTimes(model_,alternateWeights_,
-						spareColumn1,
-						spareColumn2);
-      assert (spareColumn2->packedMode());
       double * updateBy2 = spareColumn2->denseVector();
       for (j=0;j<number;j++) {
 	int iSequence = index[j];
 	double thisWeight = weight[iSequence];
-	double pivot = updateBy[iSequence]*scaleFactor;
-	updateBy[iSequence]=0.0;
+	double pivot = updateBy[j];
+	updateBy[j]=0.0;
 	double modification = updateBy2[j];
 	updateBy2[j]=0.0;
 	double pivotSquared = pivot * pivot;
@@ -1629,8 +1661,8 @@ ClpPrimalColumnSteepest::djsAndSteepest2(CoinIndexedVector * updates,
 	int iSequence = index[j];
 	double thisWeight = weight[iSequence];
 	// row has -1 
-	double pivot = updateBy[iSequence]*scaleFactor;
-	updateBy[iSequence]=0.0;
+	double pivot = updateBy[j];
+	updateBy[j]=0.0;
 	double value = pivot * pivot*devex_;
 	if (reference(iSequence))
 	  value += 1.0;
@@ -1701,15 +1733,14 @@ ClpPrimalColumnSteepest::justDevex(CoinIndexedVector * updates,
   // unset in case sub flip
   pivotSequence_=-1;
   // might as well set dj to 1
-  dj = 1.0;
-  updates->insert(pivotRow,-dj);
+  dj = -1.0;
+  updates->createPacked(1,&pivotRow,&dj);
   model_->factorization()->updateColumnTranspose(spareRow2,updates);
   // put row of tableau in rowArray and columnArray
   model_->clpMatrix()->transposeTimes(model_,-1.0,
 				      updates,spareColumn2,spareColumn1);
   double * weight;
   int numberColumns = model_->numberColumns();
-  double scaleFactor = -1.0/dj; // as formula is with 1.0
   // rows
   number = updates->getNumElements();
   index = updates->getIndices();
@@ -1722,8 +1753,8 @@ ClpPrimalColumnSteepest::justDevex(CoinIndexedVector * updates,
     int iSequence = index[j];
     double thisWeight = weight[iSequence];
     // row has -1 
-    double pivot = updateBy[iSequence]*scaleFactor;
-    updateBy[iSequence]=0.0;
+    double pivot = - updateBy[j];
+    updateBy[j]=0.0;
     double value = pivot * pivot*devex_;
     if (reference(iSequence+numberColumns))
       value += 1.0;
@@ -1733,8 +1764,6 @@ ClpPrimalColumnSteepest::justDevex(CoinIndexedVector * updates,
   // columns
   weight = weights_;
   
-  scaleFactor = -scaleFactor;
-  
   number = spareColumn1->getNumElements();
   index = spareColumn1->getIndices();
   updateBy = spareColumn1->denseVector();
@@ -1743,8 +1772,8 @@ ClpPrimalColumnSteepest::justDevex(CoinIndexedVector * updates,
     int iSequence = index[j];
     double thisWeight = weight[iSequence];
     // row has -1 
-    double pivot = updateBy[iSequence]*scaleFactor;
-    updateBy[iSequence]=0.0;
+    double pivot = updateBy[j];
+    updateBy[j]=0.0;
     double value = pivot * pivot*devex_;
     if (reference(iSequence))
       value += 1.0;
@@ -1815,8 +1844,8 @@ ClpPrimalColumnSteepest::justSteepest(CoinIndexedVector * updates,
   //updates->setNumElements(0);
   //spareColumn1->setNumElements(0);
   // might as well set dj to 1
-  dj = 1.0;
-  updates->insert(pivotRow,-dj);
+  dj = -1.0;
+  updates->createPacked(1,&pivotRow,&dj);
   model_->factorization()->updateColumnTranspose(spareRow2,updates);
   // put row of tableau in rowArray and columnArray
   model_->clpMatrix()->transposeTimes(model_,-1.0,
@@ -1824,7 +1853,6 @@ ClpPrimalColumnSteepest::justSteepest(CoinIndexedVector * updates,
   double * weight;
   double * other = alternateWeights_->denseVector();
   int numberColumns = model_->numberColumns();
-  double scaleFactor = -1.0/dj; // as formula is with 1.0
   // rows
   number = updates->getNumElements();
   index = updates->getIndices();
@@ -1833,14 +1861,19 @@ ClpPrimalColumnSteepest::justSteepest(CoinIndexedVector * updates,
   
   // Exact
   // now update weight update array
+  //alternateWeights_->scanAndPack();
   model_->factorization()->updateColumnTranspose(spareRow2,
 						 alternateWeights_);
+  // get subset which have nonzero tableau elements
+  model_->clpMatrix()->subsetTransposeTimes(model_,alternateWeights_,
+					    spareColumn1,
+					    spareColumn2);
   for (j=0;j<number;j++) {
     int iSequence = index[j];
     double thisWeight = weight[iSequence];
     // row has -1 
-    double pivot = updateBy[iSequence]*scaleFactor;
-    updateBy[iSequence]=0.0;
+    double pivot = -updateBy[j];
+    updateBy[j]=0.0;
     double modification = other[iSequence];
     double pivotSquared = pivot * pivot;
     
@@ -1863,23 +1896,16 @@ ClpPrimalColumnSteepest::justSteepest(CoinIndexedVector * updates,
   // columns
   weight = weights_;
   
-  scaleFactor = -scaleFactor;
-  
   number = spareColumn1->getNumElements();
   index = spareColumn1->getIndices();
   updateBy = spareColumn1->denseVector();
   // Exact
-  // get subset which have nonzero tableau elements
-  model_->clpMatrix()->subsetTransposeTimes(model_,alternateWeights_,
-					    spareColumn1,
-					    spareColumn2);
-  assert (spareColumn2->packedMode());
   double * updateBy2 = spareColumn2->denseVector();
   for (j=0;j<number;j++) {
     int iSequence = index[j];
     double thisWeight = weight[iSequence];
-    double pivot = updateBy[iSequence]*scaleFactor;
-    updateBy[iSequence]=0.0;
+    double pivot = updateBy[j];
+    updateBy[j]=0.0;
     double modification = updateBy2[j];
     updateBy2[j]=0.0;
     double pivotSquared = pivot * pivot;
@@ -2349,12 +2375,11 @@ ClpPrimalColumnSteepest::pivotColumnOldMethod(CoinIndexedVector * updates,
     pivotSequence_=-1;
     pivotRow=-1;
     // See if to switch
-    int numberElements = model_->factorization()->numberElements();
     int numberRows = model_->numberRows();
     // ratio is done on number of columns here
-    //double ratio = (double) numberElements/(double) numberColumns;
-    double ratio = (double) numberElements/(double) numberRows;
-    //double ratio = (double) numberElements/(double) model_->clpMatrix()->getNumElements();
+    //double ratio = (double) sizeFactorization_/(double) numberColumns;
+    double ratio = (double) sizeFactorization_/(double) numberRows;
+    //double ratio = (double) sizeFactorization_/(double) model_->clpMatrix()->getNumElements();
     if (ratio<0.1) {
       numberWanted = max(100,number/200);
     } else if (ratio<0.3) {
@@ -2370,18 +2395,17 @@ ClpPrimalColumnSteepest::pivotColumnOldMethod(CoinIndexedVector * updates,
       delete [] weights_;
       weights_=NULL;
       saveWeights(model_,4);
-      printf("switching to devex %d nel ratio %g\n",numberElements,ratio);
+      printf("switching to devex %d nel ratio %g\n",sizeFactorization_,ratio);
       updates->clear();
     }
     if (model_->numberIterations()%1000==0)
-      printf("numels %d ratio %g wanted %d\n",numberElements,ratio,numberWanted);
+      printf("numels %d ratio %g wanted %d\n",sizeFactorization_,ratio,numberWanted);
   }
   if(switchType==4) {
     // Still in devex mode
-    int numberElements = model_->factorization()->numberElements();
     int numberRows = model_->numberRows();
     // ratio is done on number of rows here
-    double ratio = (double) numberElements/(double) numberRows;
+    double ratio = (double) sizeFactorization_/(double) numberRows;
     // Go to steepest if lot of iterations?
     if (ratio<1.0) {
       numberWanted = max(2000,number/20);
@@ -2401,11 +2425,11 @@ ClpPrimalColumnSteepest::pivotColumnOldMethod(CoinIndexedVector * updates,
       delete [] weights_;
       weights_=NULL;
       saveWeights(model_,4);
-      printf("switching to exact %d nel ratio %g\n",numberElements,ratio);
+      printf("switching to exact %d nel ratio %g\n",sizeFactorization_,ratio);
       updates->clear();
     }
     if (model_->numberIterations()%1000==0)
-      printf("numels %d ratio %g wanted %d\n",numberElements,ratio,numberWanted);
+      printf("numels %d ratio %g wanted %d\n",sizeFactorization_,ratio,numberWanted);
   } 
   if (switchType<4) {
     if (switchType<2 ) {
@@ -2413,8 +2437,7 @@ ClpPrimalColumnSteepest::pivotColumnOldMethod(CoinIndexedVector * updates,
     } else if (switchType==2) {
       numberWanted = max(2000,number/8);
     } else {
-      int numberElements = model_->factorization()->numberElements();
-      double ratio = (double) numberElements/(double) model_->numberRows();
+      double ratio = (double) sizeFactorization_/(double) model_->numberRows();
       if (ratio<1.0) {
 	numberWanted = max(2000,number/20);
       } else if (ratio<5.0) {
@@ -2532,7 +2555,6 @@ ClpPrimalColumnSteepest::pivotColumnOldMethod(CoinIndexedVector * updates,
       model_->clpMatrix()->subsetTransposeTimes(model_,alternateWeights_,
 						spareColumn1,
 						spareColumn2);
-      assert (spareColumn2->packedMode());
       double * updateBy2 = spareColumn2->denseVector();
       for (j=0;j<number;j++) {
 	int iSequence = index[j];
@@ -2721,6 +2743,7 @@ ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model,int mode)
   int numberRows = model_->numberRows();
   int numberColumns = model_->numberColumns();
   const int * pivotVariable = model_->pivotVariable();
+  bool doInfeasibilities=true;
   if (mode==1&&weights_) {
     if (pivotSequence_>=0) {
       // save pivot order
@@ -2735,20 +2758,43 @@ ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model,int mode)
   } else if (mode==2||mode==4||mode==5) {
     // restore
     if (!weights_||state_==-1||mode==5) {
-      // initialize weights
-      delete [] weights_;
-      delete alternateWeights_;
-      weights_ = new double[numberRows+numberColumns];
-      alternateWeights_ = new CoinIndexedVector();
-      // enough space so can use it for factorization
-      alternateWeights_->reserve(numberRows+
-				 model_->factorization()->maximumPivots());
-      initializeWeights();
-      // create saved weights 
-      delete [] savedWeights_;
-      savedWeights_ = new double[numberRows+numberColumns];
-      memcpy(savedWeights_,weights_,(numberRows+numberColumns)*
-	     sizeof(double));
+      // Partial is only allowed with certain types of matrix
+      if (mode_!=4||numberSwitched_||!model_->clpMatrix()->canDoPartialPricing()) {
+	// initialize weights
+	delete [] weights_;
+	delete alternateWeights_;
+	weights_ = new double[numberRows+numberColumns];
+	alternateWeights_ = new CoinIndexedVector();
+	// enough space so can use it for factorization
+	alternateWeights_->reserve(numberRows+
+				   model_->factorization()->maximumPivots());
+	initializeWeights();
+	// create saved weights 
+	delete [] savedWeights_;
+	savedWeights_ = new double[numberRows+numberColumns];
+	memcpy(savedWeights_,weights_,(numberRows+numberColumns)*
+	       sizeof(double));
+      } else {
+	// Partial pricing
+	// use region as somewhere to save non-fixed slacks
+	// set up infeasibilities
+	if (!infeasible_) {
+	  infeasible_ = new CoinIndexedVector();
+	  infeasible_->reserve(numberColumns+numberRows);
+	}
+	infeasible_->clear();
+	int number = model_->numberRows() + model_->numberColumns();
+	int iSequence;
+	int numberLook=0;
+	int * which = infeasible_->getIndices();
+	for (iSequence=model_->numberColumns();iSequence<number;iSequence++) {
+	  ClpSimplex::Status status = model_->getStatus(iSequence);
+	  if (status!=ClpSimplex::isFixed)
+	    which[numberLook++]=iSequence;
+	}
+	infeasible_->setNumElements(numberLook);
+	doInfeasibilities=false;
+      }
       savedPivotSequence_=-2;
       savedSequenceOut_ = -2;
       
@@ -2809,6 +2855,11 @@ ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model,int mode)
       pivotSequence_ = found;
       delete [] temp;
     }
+    // Save size of factorization
+    if (!model->factorization()->pivots())
+      sizeFactorization_ = model_->factorization()->numberElements();
+    if(!doInfeasibilities)
+      return; // don't disturb infeasibilities
     infeasible_->clear();
     double tolerance=model_->currentDualTolerance();
     int number = model_->numberRows() + model_->numberColumns();
@@ -2948,69 +2999,136 @@ ClpPrimalColumnSteepest::updateWeights(CoinIndexedVector * input)
   pivotSequence_ = pivotRow;
 
   devex_ =0.0;
-
-  if (pivotRow>=0) {
-    if (switchType==1) {
-      for (i=0;i<number;i++) {
-	int iRow = which[i];
-	devex_ += work[iRow]*work[iRow];
-	newWork[iRow] = -2.0*work[iRow];
+  // Can't create alternateWeights_ as packed as needed unpacked
+  if (!input->packedMode()) {
+    if (pivotRow>=0) {
+      if (switchType==1) {
+	for (i=0;i<number;i++) {
+	  int iRow = which[i];
+	  devex_ += work[iRow]*work[iRow];
+	  newWork[iRow] = -2.0*work[iRow];
+	}
+	newWork[pivotRow] = -2.0*max(devex_,0.0);
+	devex_+=ADD_ONE;
+	weights_[sequenceOut]=1.0+ADD_ONE;
+	memcpy(newWhich,which,number*sizeof(int));
+	alternateWeights_->setNumElements(number);
+      } else {
+	if (mode_!=4||numberSwitched_>1) {
+	  for (i=0;i<number;i++) {
+	    int iRow = which[i];
+	    int iPivot = pivotVariable[iRow];
+	    if (reference(iPivot)) {
+	      devex_ += work[iRow]*work[iRow];
+	      newWork[iRow] = -2.0*work[iRow];
+	      newWhich[newNumber++]=iRow;
+	    }
+	  }
+	  if (!newWork[pivotRow]&&devex_>0.0)
+	    newWhich[newNumber++]=pivotRow; // add if not already in
+	  newWork[pivotRow] = -2.0*max(devex_,0.0);
+	} else {
+	  for (i=0;i<number;i++) {
+	    int iRow = which[i];
+	    int iPivot = pivotVariable[iRow];
+	    if (reference(iPivot)) 
+	      devex_ += work[iRow]*work[iRow];
+	  }
+	}
+	if (reference(sequenceIn)) {
+	  devex_+=1.0;
+	} else {
+	}
+	if (reference(sequenceOut)) {
+	  weights_[sequenceOut]=1.0+1.0;
+	} else {
+	  weights_[sequenceOut]=1.0;
+	}
+	alternateWeights_->setNumElements(newNumber);
       }
-      newWork[pivotRow] = -2.0*max(devex_,0.0);
-      devex_+=ADD_ONE;
-      weights_[sequenceOut]=1.0+ADD_ONE;
-      memcpy(newWhich,which,number*sizeof(int));
-      alternateWeights_->setNumElements(number);
     } else {
-      if (mode_!=4||numberSwitched_>1) {
+      if (switchType==1) {
+	for (i=0;i<number;i++) {
+	  int iRow = which[i];
+	  devex_ += work[iRow]*work[iRow];
+	}
+	devex_ += ADD_ONE;
+      } else {
 	for (i=0;i<number;i++) {
 	  int iRow = which[i];
 	  int iPivot = pivotVariable[iRow];
 	  if (reference(iPivot)) {
 	    devex_ += work[iRow]*work[iRow];
-	    newWork[iRow] = -2.0*work[iRow];
-	    newWhich[newNumber++]=iRow;
 	  }
 	}
-	if (!newWork[pivotRow])
-	  newWhich[newNumber++]=pivotRow; // add if not already in
+	if (reference(sequenceIn)) 
+	  devex_+=1.0;
+      }
+    }
+  } else {
+    // packed input
+    if (pivotRow>=0) {
+      if (switchType==1) {
+	for (i=0;i<number;i++) {
+	  int iRow = which[i];
+	  devex_ += work[i]*work[i];
+	  newWork[iRow] = -2.0*work[i];
+	}
 	newWork[pivotRow] = -2.0*max(devex_,0.0);
+	devex_+=ADD_ONE;
+	weights_[sequenceOut]=1.0+ADD_ONE;
+	memcpy(newWhich,which,number*sizeof(int));
+	alternateWeights_->setNumElements(number);
+      } else {
+	if (mode_!=4||numberSwitched_>1) {
+	  for (i=0;i<number;i++) {
+	    int iRow = which[i];
+	    int iPivot = pivotVariable[iRow];
+	    if (reference(iPivot)) {
+	      devex_ += work[i]*work[i];
+	      newWork[iRow] = -2.0*work[i];
+	      newWhich[newNumber++]=iRow;
+	    }
+	  }
+	  if (!newWork[pivotRow]&&devex_>0.0)
+	    newWhich[newNumber++]=pivotRow; // add if not already in
+	  newWork[pivotRow] = -2.0*max(devex_,0.0);
+	} else {
+	  for (i=0;i<number;i++) {
+	    int iRow = which[i];
+	    int iPivot = pivotVariable[iRow];
+	    if (reference(iPivot)) 
+	      devex_ += work[i]*work[i];
+	  }
+	}
+	if (reference(sequenceIn)) {
+	  devex_+=1.0;
+	} else {
+	}
+	if (reference(sequenceOut)) {
+	  weights_[sequenceOut]=1.0+1.0;
+	} else {
+	  weights_[sequenceOut]=1.0;
+	}
+	alternateWeights_->setNumElements(newNumber);
+      }
+    } else {
+      if (switchType==1) {
+	for (i=0;i<number;i++) {
+	  devex_ += work[i]*work[i];
+	}
+	devex_ += ADD_ONE;
       } else {
 	for (i=0;i<number;i++) {
 	  int iRow = which[i];
 	  int iPivot = pivotVariable[iRow];
-	  if (reference(iPivot)) 
-	    devex_ += work[iRow]*work[iRow];
+	  if (reference(iPivot)) {
+	    devex_ += work[i]*work[i];
+	  }
 	}
+	if (reference(sequenceIn)) 
+	  devex_+=1.0;
       }
-      if (reference(sequenceIn)) {
-	devex_+=1.0;
-      } else {
-      }
-      if (reference(sequenceOut)) {
-	weights_[sequenceOut]=1.0+1.0;
-      } else {
-	weights_[sequenceOut]=1.0;
-      }
-      alternateWeights_->setNumElements(newNumber);
-    }
-  } else {
-    if (switchType==1) {
-      for (i=0;i<number;i++) {
-	int iRow = which[i];
-	devex_ += work[iRow]*work[iRow];
-      }
-      devex_ += ADD_ONE;
-    } else {
-      for (i=0;i<number;i++) {
-	int iRow = which[i];
-	int iPivot = pivotVariable[iRow];
-	if (reference(iPivot)) {
-	  devex_ += work[iRow]*work[iRow];
-	}
-      }
-      if (reference(sequenceIn)) 
-	devex_+=1.0;
     }
   }
   double oldDevex = weights_[sequenceIn];
@@ -3291,4 +3409,227 @@ void
 ClpPrimalColumnSteepest::switchOffSprint()
 {
   numberSwitched_=10;
+}
+// Update djs doing partial pricing (dantzig)
+int 
+ClpPrimalColumnSteepest::partialPricing(CoinIndexedVector * updates,
+					CoinIndexedVector * spareRow2,
+					int numberWanted)
+{
+  int number=0;
+  int * index;
+  double * updateBy;
+  double * reducedCost;
+  double saveTolerance = model_->currentDualTolerance();
+  double tolerance=model_->currentDualTolerance();
+  // we can't really trust infeasibilities if there is dual error
+  // this coding has to mimic coding in checkDualSolution
+  double error = min(1.0e-3,model_->largestDualError());
+  // allow tolerance at least slightly bigger than standard
+  tolerance = tolerance +  error;
+  if(model_->numberIterations()<model_->lastBadIteration()+200) {
+    // we can't really trust infeasibilities if there is dual error
+    double checkTolerance = 1.0e-8;
+    if (!model_->factorization()->pivots())
+      checkTolerance = 1.0e-6;
+    if (model_->largestDualError()>checkTolerance)
+      tolerance *= model_->largestDualError()/checkTolerance;
+    // But cap
+    tolerance = min(1000.0,tolerance);
+  }
+  if (model_->factorization()->pivots()&&model_->numberPrimalInfeasibilities())
+    tolerance = max(tolerance,1.0e-10*model_->infeasibilityCost());
+  // So partial pricing can use
+  model_->setCurrentDualTolerance(tolerance);
+  model_->factorization()->updateColumnTranspose(spareRow2,updates);
+  int numberColumns = model_->numberColumns();
+
+  // Rows
+  reducedCost=model_->djRegion(0);
+  int addSequence;
+    
+  number = updates->getNumElements();
+  index = updates->getIndices();
+  updateBy = updates->denseVector();
+  addSequence = numberColumns;
+  int j;  
+  double * duals = model_->dualRowSolution();
+  for (j=0;j<number;j++) {
+    int iSequence = index[j];
+    double value = duals[iSequence];
+    value -= updateBy[j];
+    updateBy[j]=0.0;
+    duals[iSequence] = value;
+  }
+  double bestDj = tolerance;
+  int bestSequence=-1;
+
+  const double * cost = model_->costRegion(1);
+
+  int iPassR=0,iPassC=0;
+  // Setup two passes
+  // This biases towards picking row variables
+  // This probably should be fixed
+  int startR[4];
+  const int * which = infeasible_->getIndices();
+  int nSlacks = infeasible_->getNumElements();
+  startR[1]=nSlacks;
+  startR[2]=0;
+  double randomR = CoinDrand48();
+  double dstart = ((double) nSlacks) * randomR;
+  startR[0]=(int) dstart;
+  startR[3]=startR[0];
+  int startC[4];
+  startC[1]=numberColumns;
+  startC[2]=0;
+  double randomC = CoinDrand48();
+  dstart = ((double) numberColumns) * randomC;
+  startC[0]=(int) dstart;
+  startC[3]=startC[0];
+  reducedCost = model_->djRegion(1);
+  int sequenceOut = model_->sequenceOut();
+  double * duals2 = duals-numberColumns;
+  int chunk = min(1024,(numberColumns+nSlacks)/32);
+  if (model_->numberIterations()%1000==0) {
+    printf("%d wanted, nSlacks %d, chunk %d\n",numberWanted,nSlacks,chunk);
+    int i;
+    for (i=0;i<4;i++)
+      printf("start R %d C %d ",startR[i],startC[i]);
+    printf("\n");
+  }
+  chunk = max(chunk,256);
+  bool finishedR=false,finishedC=false;
+  bool doingR = randomR>randomC;
+  doingR=false;
+  while (!finishedR||!finishedC) {
+    if (finishedR)
+      doingR=false;
+    if (doingR) {
+      int saveSequence = bestSequence;
+      int start = startR[iPassR];
+      int end = min(startR[iPassR+1],start+chunk/2);
+      int jSequence;
+      for (jSequence=start;jSequence<end;jSequence++) {
+	int iSequence=which[jSequence];
+	if (iSequence!=sequenceOut) {
+	  double value;
+	  ClpSimplex::Status status = model_->getStatus(iSequence);
+	  
+	  switch(status) {
+	    
+	  case ClpSimplex::basic:
+	  case ClpSimplex::isFixed:
+	    break;
+	  case ClpSimplex::isFree:
+	  case ClpSimplex::superBasic:
+	    value = fabs(cost[iSequence]+duals2[iSequence]);
+	    if (value>FREE_ACCEPT*tolerance) {
+	      numberWanted--;
+	      // we are going to bias towards free (but only if reasonable)
+	      value *= FREE_BIAS;
+	      if (value>bestDj) {
+		// check flagged variable and correct dj
+		if (!model_->flagged(iSequence)) {
+		  bestDj=value;
+		  bestSequence = iSequence;
+		} else {
+		  // just to make sure we don't exit before got something
+		  numberWanted++;
+		}
+	      }
+	    }
+	    break;
+	  case ClpSimplex::atUpperBound:
+	    value = cost[iSequence]+duals2[iSequence];
+	    if (value>tolerance) {
+	      numberWanted--;
+	      if (value>bestDj) {
+		// check flagged variable and correct dj
+		if (!model_->flagged(iSequence)) {
+		  bestDj=value;
+		  bestSequence = iSequence;
+		} else {
+		  // just to make sure we don't exit before got something
+		  numberWanted++;
+		}
+	      }
+	    }
+	    break;
+	  case ClpSimplex::atLowerBound:
+	    value = -(cost[iSequence]+duals2[iSequence]);
+	    if (value>tolerance) {
+	      numberWanted--;
+	      if (value>bestDj) {
+		// check flagged variable and correct dj
+		if (!model_->flagged(iSequence)) {
+		  bestDj=value;
+		  bestSequence = iSequence;
+		} else {
+		  // just to make sure we don't exit before got something
+		  numberWanted++;
+		}
+	      }
+	    }
+	    break;
+	  }
+	}
+	if (!numberWanted)
+	  break;
+      }
+      if (saveSequence!=bestSequence) {
+	// dj
+	reducedCost[bestSequence] = cost[bestSequence] +duals[bestSequence-numberColumns];
+	bestDj=reducedCost[bestSequence];
+      }
+      if (!numberWanted) 
+	break;
+      doingR=false;
+      // update start
+      startR[iPassR]=jSequence;
+      if (jSequence>=startR[iPassR+1]) {
+	if (iPassR)
+	  finishedR=true;
+	else
+	  iPassR=2;
+      }
+    }
+    if (finishedC)
+      doingR=true;
+    if (!doingR) {
+      int saveSequence = bestSequence;
+      // Columns
+      int start = startC[iPassC];
+      int end = min(startC[iPassC+1],start+chunk);;
+      model_->clpMatrix()->partialPricing(model_,start,end,bestSequence,numberWanted);
+      if (saveSequence!=bestSequence) {
+	// dj
+	bestDj=reducedCost[bestSequence];
+      }
+      if (!numberWanted)
+	break;
+      doingR=true;
+      // update start
+      int iSequence = end;
+      startC[iPassC]=iSequence;
+      if (iSequence>=startC[iPassC+1]) {
+	if (iPassC)
+	  finishedC=true;
+	else
+	  iPassC=2;
+      }
+    }
+  }
+  updates->setNumElements(0);
+
+  // Restore tolerance
+  model_->setCurrentDualTolerance(saveTolerance);
+#ifndef NDEBUG
+  if (bestSequence>=0) {
+    if (model_->getStatus(bestSequence)==ClpSimplex::atLowerBound)
+      assert(model_->reducedCost(bestSequence)<0.0);
+    if (model_->getStatus(bestSequence)==ClpSimplex::atUpperBound)
+      assert(model_->reducedCost(bestSequence)>0.0);
+  }
+#endif
+  return bestSequence;
 }

@@ -2960,6 +2960,8 @@ ClpSimplexDual::perturb()
   const int * lengths = matrix_->getVectorLengths();
   int maxLength=0;
   int minLength=numberRows_;
+  double averageCost = 0.0;
+  int numberNonZero=0;
   if (!numberIterations_&&perturbation_==50) {
     // See if we need to perturb
     double * sort = new double[numberColumns_];
@@ -2969,7 +2971,14 @@ ClpSimplexDual::perturb()
     for (i=0;i<numberColumns_;i++) {
       double value = fabs(obj[i]);
       sort[i]=value;
+      averageCost += value;
+      if (value)
+	numberNonZero++;
     }
+    if (numberNonZero)
+      averageCost /= (double) numberNonZero;
+    else
+      averageCost = 1.0;
     std::sort(sort,sort+numberColumns_);
     int number=1;
     double last = sort[0];
@@ -3017,7 +3026,7 @@ ClpSimplexDual::perturb()
   }
   int iRow;
   double smallestNonZero=1.0e100;
-  int numberNonZero=0;
+  numberNonZero=0;
   if (perturbation_>=50) {
     perturbation = 1.0e-8;
     bool allSame=true;
@@ -3090,7 +3099,8 @@ ClpSimplexDual::perturb()
       if (smallestNegative==largestNegative&&
 	  smallestPositive==largestPositive) {
 	// Really hit perturbation
-	maximumFraction = max(1.0e-3*max(lastValue,lastValue2),maximumFraction);
+	double adjust = min(100.0*maximumFraction,1.0e-3*max(lastValue,lastValue2));
+	maximumFraction = max(adjust,maximumFraction);
       }
     }
     perturbation = min(perturbation,smallestNonZero/maximumFraction);
@@ -3171,6 +3181,8 @@ ClpSimplexDual::perturb()
   }
   // Make variables with more elements more expensive
   const double m1 = 0.5;
+  double smallestAllowed = min(1.0e-2*dualTolerance_,maximumFraction);
+  double largestAllowed = max(1.0e3*dualTolerance_,maximumFraction*10.0*averageCost);
   for (iColumn=0;iColumn<numberColumns_;iColumn++) {
     if (columnLowerWork_[iColumn]<columnUpperWork_[iColumn]&&getStatus(iColumn)!=basic) {
       double value = perturbation;
@@ -3218,18 +3230,18 @@ ClpSimplexDual::perturb()
 #endif
 	value *= multiplier;
 	value = min (value,value2);
-	if (savePerturbation!=50) {
+	if (savePerturbation<50||savePerturbation>60) {
 	  if (fabs(value)<=dualTolerance_)
 	    value=0.0;
 	} else if (value) {
 	  // get in range 
-	  if (fabs(value)<=dualTolerance_) {
+	  if (fabs(value)<=smallestAllowed) {
 	    value *= 10.0;
-	    while (fabs(value)<=dualTolerance_) 
+	    while (fabs(value)<=smallestAllowed) 
 	      value *= 10.0;
-	  } else if (fabs(value)>0.1) {
+	  } else if (fabs(value)>largestAllowed) {
 	    value *= 0.1;
-	    while (fabs(value)>0.1) 
+	    while (fabs(value)>largestAllowed) 
 	      value *= 0.1;
 	  }
 	}

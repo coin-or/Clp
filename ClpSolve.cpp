@@ -507,6 +507,9 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	if (nPasses>70) {
 	  info.setStartingWeight(1.0e3);
 	  info.setReduceIterations(6);
+	  // also be more lenient on infeasibilities
+	  info.setDropEnoughFeasibility(0.5*info.getDropEnoughFeasibility());
+	  info.setDropEnoughWeighted(-2.0);
 	} else if (nPasses>=50) {
 	  info.setStartingWeight(1.0e3);
 	  //info.setReduceIterations(6);

@@ -1,6 +1,6 @@
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
-
+   
 #include "CoinPragma.hpp"
 
 #include <cassert>
@@ -13,7 +13,7 @@
 
 #include "CoinPragma.hpp"
 #include "CoinHelperFunctions.hpp"
-#define CLPVERSION "0.98.6"
+#define CLPVERSION "0.99.0"
 
 #include "CoinMpsIO.hpp"
 

@@ -190,6 +190,8 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
   // initialize - maybe values pass and algorithm_ is +1
   if (!startup(ifValuesPass)) {
     
+    // Set average theta
+    nonLinearCost_->setAverageTheta(1.0e3);
     int lastCleaned=0; // last time objective or bounds cleaned up
     
     // Say no pivot has occurred (for steepest edge and updates)
@@ -414,6 +416,7 @@ ClpSimplexPrimal::whileIterating(int valuesOption)
   // status stays at -1 while iterating, >=0 finished, -2 to invert
   // status -3 to go to top without an invert
   while (problemStatus_==-1) {
+    //#define CLP_DEBUG 1
 #ifdef CLP_DEBUG
     {
       int i;
@@ -939,6 +942,7 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
 			    CoinIndexedVector * spareArray2,
 			    int valuesPass)
 {
+  //rowArray->scanAndPack();
   if (valuesPass) {
     dualIn_ = cost_[sequenceIn_];
 
@@ -950,9 +954,9 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
     for (iIndex=0;iIndex<number;iIndex++) {
       
       int iRow = which[iIndex];
-      double alpha = work[iRow];
+      double alpha = work[iIndex];
       int iPivot=pivotVariable_[iRow];
-      dualIn_ -= alpha*cost(iPivot);
+      dualIn_ -= alpha*cost_[iPivot];
     }
     // determine direction here
     if (dualIn_<-dualTolerance_) {
@@ -973,12 +977,8 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
 
   // sequence stays as row number until end
   pivotRow_=-1;
-  int numberSwapped=0;
   int numberRemaining=0;
 
-  int numberThru =0; // number gone thru a barrier
-  int lastThru =0; // number gone thru a barrier on last time
-  
   double totalThru=0.0; // for when variables flip
   double acceptablePivot=1.0e-7;
   if (factorization_->pivots())
@@ -987,7 +987,6 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
   int lastPivotRow = -1;
   double lastPivot=0.0;
   double lastTheta=1.0e50;
-  int lastNumberSwapped=0;
 
   // use spareArrays to put ones looked at in
   // First one is list of candidates
@@ -995,22 +994,18 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
   // Second array has current set of pivot candidates
   // with a backup list saved in double * part of indexed vector
 
-  // for zeroing out arrays after
-  int maximumSwapped=0;
   // pivot elements
   double * spare;
   // indices
-  int * index, * indexSwapped;
-  int * saveSwapped;
+  int * index;
   spareArray->clear();
-  spareArray2->clear();
   spare = spareArray->denseVector();
   index = spareArray->getIndices();
-  saveSwapped = (int *) spareArray2->denseVector();
-  indexSwapped = spareArray2->getIndices();
 
   // we also need somewhere for effective rhs
   double * rhs=rhsArray->denseVector();
+  //int * indexRhs = rhsArray->getIndices();
+  //int numberFlip=0; // Those which may change if flips
 
   /*
     First we get a list of possible pivots.  We can also see if the
@@ -1024,9 +1019,6 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
 
   // do first pass to get possibles 
   // We can also see if unbounded
-  // We also re-compute reduced cost
-
-  dualIn_ = cost_[sequenceIn_];
 
   double * work=rowArray->denseVector();
   int number=rowArray->getNumElements();
@@ -1040,235 +1032,161 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
   else
     maximumMovement = min(1.0e30,valueIn_-lowerIn_);
 
-  double tentativeTheta = maximumMovement;
+  double averageTheta = nonLinearCost_->averageTheta();
+  double tentativeTheta = min(10.0*averageTheta,maximumMovement);
   double upperTheta = maximumMovement;
-
-  int iIndex;
-#if 0
-  if (numberIterations_<=39)
-    handler_->setLogLevel(63);
-  else
-    handler_->setLogLevel(2);
-  if (numberIterations_==38)
-    printf("trouble\n");
-  assert (solution_[29176]>-1.0e20);
-#endif
-  for (iIndex=0;iIndex<number;iIndex++) {
-
-    int iRow = which[iIndex];
-    double alpha = work[iRow];
-    int iPivot=pivotVariable_[iRow];
-    dualIn_ -= alpha*cost(iPivot);
-    alpha *= way;
-    double oldValue = solution(iPivot);
-    // get where in bound sequence
-    if (alpha>0.0) {
-      // basic variable going towards lower bound
-      double bound = lower(iPivot);
-      oldValue -= bound;
-    } else {
-      // basic variable going towards upper bound
-      double bound = upper(iPivot);
-      oldValue = bound-oldValue;
-    }
-      
-    double value = oldValue-tentativeTheta*fabs(alpha);
-    assert (oldValue>=-primalTolerance_*1.002);
-    if (value<-primalTolerance_) {
-      // add to list
-      spare[numberRemaining]=alpha;
-      rhs[iRow]=oldValue;
-      index[numberRemaining++]=iRow;
-      double value=oldValue-upperTheta*fabs(alpha);
-      if (value<-primalTolerance_&&fabs(alpha)>=acceptablePivot)
-	upperTheta = (oldValue+primalTolerance_)/fabs(alpha);
-    }
-  }
-#if 0
-  if (numberIterations_>17701)
-    handler_->setLogLevel(63);
-  if (!valuesPass&&fabs(dualIn_-saveDj)>1.0e-1*(1.0+fabs(saveDj))) {
-    double d=0.0;
-    for (iIndex=0;iIndex<number;iIndex++) {
-      
-      int iRow = which[iIndex];
-      double alpha = work[iRow];
-      int iPivot=pivotVariable_[iRow];
-      double value = alpha*cost(iPivot);
-      d -= value;
-      if (value>1.0e7)
-	printf("%d %g\n",iRow,value);
-    }
-  }
-#endif
-  // we need to keep where rhs non-zeros are
-  int numberInRhs=numberRemaining;
-  memcpy(rhsArray->getIndices(),index,numberInRhs*sizeof(int));
-  rhsArray->setNumElements(numberInRhs);
-
-  theta_=maximumMovement;
+  if (tentativeTheta>0.5*maximumMovement)
+    tentativeTheta=maximumMovement;
 
   double dualCheck = fabs(dualIn_);
   // but make a bit more pessimistic
   dualCheck=max(dualCheck-100.0*dualTolerance_,0.99*dualCheck);
 
+  int iIndex;
+  bool gotList=false;
+  int pivotOne=-1;
+  while (!gotList) {
+    pivotOne=-1;
+    totalThru=0.0;
+    // We also re-compute reduced cost
+    numberRemaining=0;
+    dualIn_ = cost_[sequenceIn_];
+    double tolerance = primalTolerance_*1.002;
+    for (iIndex=0;iIndex<number;iIndex++) {
+
+      int iRow = which[iIndex];
+      double alpha = work[iIndex];
+      int iPivot=pivotVariable_[iRow];
+      dualIn_ -= alpha*cost_[iPivot];
+      alpha *= way;
+      double oldValue = solution_[iPivot];
+      // get where in bound sequence
+      if (alpha>0.0) {
+	// basic variable going towards lower bound
+	double bound = lower_[iPivot];
+	oldValue -= bound;
+      } else {
+	// basic variable going towards upper bound
+	double bound = upper_[iPivot];
+	oldValue = bound-oldValue;
+      }
+      
+      double value = oldValue-tentativeTheta*fabs(alpha);
+      assert (oldValue>=-tolerance);
+      if (value<=tolerance) {
+	value=oldValue-upperTheta*fabs(alpha);
+	if (value<-primalTolerance_&&fabs(alpha)>=acceptablePivot) {
+	  upperTheta = (oldValue+primalTolerance_)/fabs(alpha);
+	  pivotOne=numberRemaining;
+	}
+	// add to list
+	spare[numberRemaining]=alpha;
+	rhs[numberRemaining]=oldValue;
+	index[numberRemaining++]=iRow;
+	totalThru += fabs(alpha);
+	setActive(iRow);
+	//} else if (value<primalTolerance_*1.002) {
+	// May change if is a flip
+	//indexRhs[numberFlip++]=iRow;
+      }
+    }
+    if (upperTheta<maximumMovement&&totalThru*infeasibilityCost_>=1.0001*dualCheck) {
+      // Can pivot here
+      gotList=true;
+    } else if (tentativeTheta<maximumMovement) {
+      //printf("Going round with average theta of %g\n",averageTheta);
+      tentativeTheta=maximumMovement;
+    } else {
+      gotList=true;
+    }
+  }
+  totalThru=0.0;
+  // we need to keep where rhs non-zeros are
+  int numberInRhs=numberRemaining;
+  memcpy(rhsArray->getIndices(),index,numberInRhs*sizeof(int));
+  rhsArray->setNumElements(numberInRhs);
+  rhsArray->setPacked();
+
+  theta_=maximumMovement;
+
   bool goBackOne = false;
+
+  //printf("%d remain out of %d\n",numberRemaining,number);
   int iTry=0;
-  int ibigTry=0;
-  if (numberRemaining) {
+#define MAXTRY 1000
+  if (numberRemaining&&upperTheta<maximumMovement) {
+    // First check if previously chosen one will work
+    if (pivotOne>=0&&0) {
+      double thruCost = infeasibilityCost_*fabs(spare[pivotOne]);
+      if (thruCost>=0.99*fabs(dualIn_))
+	printf("Could pivot on %d as change %g dj %g\n",
+	       index[pivotOne],thruCost,dualIn_);
+      double alpha = spare[pivotOne];
+      double oldValue = rhs[pivotOne];
+      theta_ = oldValue/fabs(alpha);
+      pivotRow_=pivotOne;
+      // Stop loop
+      iTry=MAXTRY;
+    }
 
-    // looks like pivoting
-    // now try until reasonable theta
-    tentativeTheta = max(10.0*upperTheta,1.0e-7);
-    tentativeTheta = min(tentativeTheta,maximumMovement);
-    
-    // loops increasing tentative theta until can't go through
-    
-    while (tentativeTheta <= maximumMovement) {
-      ibigTry++;
-      double thruThis = 0.0;
+    // first get ratio with tolerance
+    for ( ;iTry<MAXTRY;iTry++) {
       
-      double bestPivot=acceptablePivot;
-      pivotRow_ = -1;
-      
-      numberSwapped = 0;
-      
-      upperTheta = maximumMovement;
-      
+      upperTheta=maximumMovement;
+      int iBest=-1;
       for (iIndex=0;iIndex<numberRemaining;iIndex++) {
-
-	int iRow = index[iIndex];
-	double alpha = spare[iIndex];
-	double oldValue = rhs[iRow];
-	double value = oldValue-tentativeTheta*fabs(alpha);
-
-	if (value<-primalTolerance_) {
-	  // how much would it cost to go thru
-	  thruThis += alpha*
-	    nonLinearCost_->changeInCost(pivotVariable_[iRow],alpha);
-	  // goes on swapped list (also means candidates if too many)
-	  indexSwapped[numberSwapped++]=iRow;
-	  if (fabs(alpha)>bestPivot) {
-	    bestPivot=fabs(alpha);
-	    pivotRow_ = iRow;
-	    theta_ = oldValue/bestPivot;
-	  }
-	} else {
-	  value = oldValue-upperTheta*fabs(alpha);
-	  if (value<-primalTolerance_ && fabs(alpha)>=acceptablePivot) 
-	    upperTheta = (oldValue+primalTolerance_)/fabs(alpha);
+	
+	double alpha = fabs(spare[iIndex]);
+	double oldValue = rhs[iIndex];
+	double value = oldValue-upperTheta*alpha;
+	
+	if (value<-primalTolerance_ && alpha>=acceptablePivot) {
+	  upperTheta = (oldValue+primalTolerance_)/alpha;
+	  iBest=iIndex; // just in case weird numbers
 	}
       }
       
-      maximumSwapped = max(maximumSwapped,numberSwapped);
-
-      if (totalThru+thruThis>=dualCheck) {
-	// We should be pivoting in this batch
-	// so compress down to this lot
-
-	int saveNumber = numberRemaining;
-	numberRemaining=0;
-	for (iIndex=0;iIndex<numberSwapped;iIndex++) {
-	  int iRow = indexSwapped[iIndex];
-	  spare[numberRemaining]=way*work[iRow];
-	  index[numberRemaining++]=iRow;
+      // now look at best in this lot
+      double bestPivot=acceptablePivot;
+      pivotRow_=-1;
+      for (iIndex=0;iIndex<numberRemaining;iIndex++) {
+	
+	int iRow = index[iIndex];
+	double alpha = spare[iIndex];
+	double oldValue = rhs[iIndex];
+	double value = oldValue-upperTheta*fabs(alpha);
+	
+	if (value<=0||iBest==iIndex) {
+	  // how much would it cost to go thru and modify bound
+	  totalThru += nonLinearCost_->changeInCost(pivotVariable_[iRow],alpha,rhs[iIndex]);
+	  setActive(iRow);
+	  if (fabs(alpha)>bestPivot) {
+	    bestPivot=fabs(alpha);
+	    theta_ = oldValue/bestPivot;
+	    pivotRow_=iIndex;
+	  }
 	}
-	memset(spare+numberRemaining,0,
-	       (saveNumber-numberRemaining)*sizeof(double));
-	//int iTry;
-#define MAXTRY 100
-	// first get ratio with tolerance
-	for (iTry=0;iTry<MAXTRY;iTry++) {
-	  
-	  upperTheta=maximumMovement;
-	  numberSwapped = 0;
-	  int iBest=-1;
-	  for (iIndex=0;iIndex<numberRemaining;iIndex++) {
-	    
-	    int iRow = index[iIndex];
-	    double alpha = fabs(spare[iIndex]);
-	    double oldValue = rhs[iRow];
-	    double value = oldValue-upperTheta*alpha;
-	    
-	    if (value<-primalTolerance_ && alpha>=acceptablePivot) {
-	      upperTheta = (oldValue+primalTolerance_)/alpha;
-	      iBest=iRow; // just in case weird numbers
-	    }
-	  }
-	  
-	  // now look at best in this lot
-	  bestPivot=acceptablePivot;
-	  pivotRow_=-1;
-	  for (iIndex=0;iIndex<numberRemaining;iIndex++) {
-	    
-	    int iRow = index[iIndex];
-	    double alpha = spare[iIndex];
-	    double oldValue = rhs[iRow];
-	    double value = oldValue-upperTheta*fabs(alpha);
-	    
-	    if (value<=0||iRow==iBest) {
-	      // how much would it cost to go thru
-	      totalThru += alpha*
-		nonLinearCost_->changeInCost(pivotVariable_[iRow],alpha);
-	      // goes on swapped list (also means candidates if too many)
-	      indexSwapped[numberSwapped++]=iRow;
-	      if (fabs(alpha)>bestPivot) {
-		bestPivot=fabs(alpha);
-		theta_ = oldValue/bestPivot;
-		pivotRow_=iRow;
-	      }
-	    } else {
-	      value = oldValue-upperTheta*fabs(alpha);
-	      if (value<-primalTolerance_ && fabs(alpha)>=acceptablePivot) 
-		upperTheta = (oldValue+primalTolerance_)/fabs(alpha);
-	    }
-	  }
-	  
-	  maximumSwapped = max(maximumSwapped,numberSwapped);
-	  // had (&&bestPivot<1.0e-3||totalThru>0.1*dualCheck) as well
-	  if (bestPivot<0.1*bestEverPivot&&
-	      bestEverPivot>1.0e-6&& bestPivot<1.0e-3) {
-	    // back to previous one
-	    goBackOne = true;
-	    break;
-	  } else if (pivotRow_==-1&&upperTheta>largeValue_) {
-	    if (lastPivot>acceptablePivot) {
-	      // back to previous one
-	      goBackOne = true;
-	      //break;
-	    } else {
-	      // can only get here if all pivots so far too small
-	    }
-	    break;
-	  } else if (totalThru>=dualCheck) {
-	    break; // no point trying another loop
-	  } else {
-	    // skip this lot
-	    nonLinearCost_->goThru(numberSwapped,way,indexSwapped, work,rhs);
-	    lastPivotRow=pivotRow_;
-	    lastTheta = theta_;
-	    lastThru = numberThru;
-	    numberThru += numberSwapped;
-	    lastNumberSwapped = numberSwapped;
-	    memcpy(saveSwapped,indexSwapped,lastNumberSwapped*sizeof(int));
-	    if (bestPivot>bestEverPivot)
-	      bestEverPivot=bestPivot;
-	  }
+      }
+      if (bestPivot<0.1*bestEverPivot&&
+	  bestEverPivot>1.0e-6&& bestPivot<1.0e-3) {
+	// back to previous one
+	goBackOne = true;
+	break;
+      } else if (pivotRow_==-1&&upperTheta>largeValue_) {
+	if (lastPivot>acceptablePivot) {
+	  // back to previous one
+	  goBackOne = true;
+	} else {
+	  // can only get here if all pivots so far too small
 	}
 	break;
+      } else if (totalThru>=dualCheck) {
+	break; // no point trying another loop
       } else {
-	// skip this lot
-	nonLinearCost_->goThru(numberSwapped,way,indexSwapped, work,rhs);
 	lastPivotRow=pivotRow_;
 	lastTheta = theta_;
-	lastThru = numberThru;
-	numberThru += numberSwapped;
-	lastNumberSwapped = numberSwapped;
-	memcpy(saveSwapped,indexSwapped,lastNumberSwapped*sizeof(int));
 	if (bestPivot>bestEverPivot)
 	  bestEverPivot=bestPivot;
-	totalThru += thruThis;
-	tentativeTheta = 2.0*upperTheta;
       }
     }
     // can get here without pivotRow_ set but with lastPivotRow
@@ -1276,16 +1194,21 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
       // back to previous one
       pivotRow_=lastPivotRow;
       theta_ = lastTheta;
-	    // undo this lot
-      nonLinearCost_->goBack(lastNumberSwapped,saveSwapped,rhs);
-      memcpy(indexSwapped,saveSwapped,lastNumberSwapped*sizeof(int));
-      numberSwapped = lastNumberSwapped;
     }
+  } else {
+    // mark ones which may move
+    //for (int i=0;i<numberFlip;i++) {
+    //int iRow= indexRhs[i];
+    //setActive(iRow);
+    //}
   }
-
+  //if (iTry>50)
+  //printf("** %d tries\n",iTry);
   if (pivotRow_>=0) {
-    
-    alpha_ = work[pivotRow_];
+    int position=pivotRow_; // position in list
+    pivotRow_=index[position];
+    //alpha_ = work[pivotRow_];
+    alpha_ = way*spare[position];
     // translate to sequence
     sequenceOut_ = pivotVariable_[pivotRow_];
     valueOut_ = solution(sequenceOut_);
@@ -1307,17 +1230,12 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
     double largestInfeasibility = primalTolerance_;
     if (theta_<minimumTheta&&(specialOptions_&4)==0&&!valuesPass) {
       theta_=minimumTheta;
-      for (iIndex=0;iIndex<numberSwapped;iIndex++) {
-	int iRow = indexSwapped[iIndex];
-#ifdef CLP_DEBUG
-	if (iRow==pivotRow_)
-	  found=true;
-#endif
+      for (iIndex=0;iIndex<numberRemaining-numberRemaining;iIndex++) {
 	largestInfeasibility = max (largestInfeasibility,
-				    -(rhs[iRow]-fabs(work[iRow])*theta_));
+				    -(rhs[iIndex]-fabs(spare[iIndex])*theta_));
       }
+#define CLP_DEBUG
 #ifdef CLP_DEBUG
-      assert(found);
       if (largestInfeasibility>primalTolerance_&&(handler_->logLevel()&32)>-1)
 	printf("Primal tolerance increased from %g to %g\n",
 	       primalTolerance_,largestInfeasibility);
@@ -1325,7 +1243,11 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
 #undef CLP_DEBUG
       primalTolerance_ = max(primalTolerance_,largestInfeasibility);
     }
-
+    // Need to look at all in some cases
+    if (theta_>tentativeTheta) {
+      for (iIndex=0;iIndex<number;iIndex++) 
+	setActive(which[iIndex]);
+    }
     if (way<0.0) 
       theta_ = - theta_;
     double newValue = valueOut_ - theta_*alpha_;
@@ -1364,10 +1286,16 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
     }
   }
 
+  double theta1 = max(theta_,1.0e-12);
+  double theta2 = numberIterations_*nonLinearCost_->averageTheta();
+  // Set average theta
+  nonLinearCost_->setAverageTheta((theta1+theta2)/((double) (numberIterations_+1)));
+  //if (numberIterations_%1000==0)
+  //printf("average theta is %g\n",nonLinearCost_->averageTheta());
+
   // clear arrays
 
   memset(spare,0,numberRemaining*sizeof(double));
-  memset(saveSwapped,0,maximumSwapped*sizeof(int));
 
   // put back original bounds etc
   nonLinearCost_->goBackAll(rhsArray);
@@ -1444,74 +1372,166 @@ ClpSimplexPrimal::primalColumn(CoinIndexedVector * updates,
 */
 int 
 ClpSimplexPrimal::updatePrimalsInPrimal(CoinIndexedVector * rowArray,
-		  double theta,
-		  double & objectiveChange,
+					double theta,
+					double & objectiveChange,
 					int valuesPass)
 {
+  // Cost on pivot row may change - may need to change dualIn
+  double oldCost=0.0;
+  if (pivotRow_>=0)
+    oldCost = cost_[sequenceOut_];
+  //rowArray->scanAndPack();
   double * work=rowArray->denseVector();
   int number=rowArray->getNumElements();
   int * which=rowArray->getIndices();
 
   int newNumber = 0;
-
+  int pivotPosition = -1;
   nonLinearCost_->setChangeInCost(0.0);
   int iIndex;
-
-  for (iIndex=0;iIndex<number;iIndex++) {
-
-    int iRow = which[iIndex];
-    double alpha = work[iRow];
-    int iPivot=pivotVariable_[iRow];
-    double & value = solutionAddress(iPivot);
-    double change = theta*alpha;
-    value -= change;
-    // But make sure one going out is feasible
-    if (change>0.0) {
-      // going down
-      if (value<lower(iPivot)+primalTolerance_) {
-	if (iPivot==sequenceOut_&&value>lower(iPivot)-1.001*primalTolerance_)
-	  value=lower(iPivot);
-	double difference = nonLinearCost_->setOne(iPivot,value);
-	work[iRow] = difference;
-	if (difference) {
-	  //change reduced cost on this
-	  reducedCostAddress(iPivot) = -difference;
-	  which[newNumber++]=iRow;
+  if (!valuesPass) {
+    for (iIndex=0;iIndex<number;iIndex++) {
+      
+      int iRow = which[iIndex];
+      double alpha = work[iIndex];
+      work[iIndex]=0.0;
+      int iPivot=pivotVariable_[iRow];
+      double change = theta*alpha;
+      double value = solution_[iPivot] - change;
+      solution_[iPivot]=value;
+#ifndef NDEBUG
+      // check if not active then okay
+      if (!active(iRow)) {
+	// But make sure one going out is feasible
+	if (change>0.0) {
+	  // going down
+	  if (value<lower_[iPivot]+primalTolerance_) {
+	    if (iPivot==sequenceOut_&&value>lower_[iPivot]-1.001*primalTolerance_)
+	      value=lower_[iPivot];
+	    double difference = nonLinearCost_->setOne(iPivot,value);
+	    assert (!difference);
+	  }
+	} else {
+	  // going up
+	  if (value>upper_[iPivot]-primalTolerance_) {
+	    if (iPivot==sequenceOut_&&value<upper_[iPivot]+1.001*primalTolerance_)
+	      value=upper_[iPivot];
+	    double difference = nonLinearCost_->setOne(iPivot,value);
+	    assert (!difference);
+	  }
 	}
-      } else {
-	work[iRow]=0.0;
       }
-    } else {
-      // going up
-      if (value>upper(iPivot)-primalTolerance_) {
-	if (iPivot==sequenceOut_&&value<upper(iPivot)+1.001*primalTolerance_)
-	  value=upper(iPivot);
-	double difference = nonLinearCost_->setOne(iPivot,value);
-	work[iRow] = difference;
-	if (difference) {
-	  //change reduced cost on this
-	  reducedCostAddress(iPivot) = -difference;
-	  which[newNumber++]=iRow;
+#endif    
+      if (active(iRow)) {
+	clearActive(iRow);
+	// But make sure one going out is feasible
+	if (change>0.0) {
+	  // going down
+	  if (value<lower_[iPivot]+primalTolerance_) {
+	    if (iPivot==sequenceOut_&&value>lower_[iPivot]-1.001*primalTolerance_)
+	      value=lower_[iPivot];
+	    double difference = nonLinearCost_->setOne(iPivot,value);
+	    if (difference) {
+	      if (iRow==pivotRow_)
+		pivotPosition=newNumber;
+	      work[newNumber] = difference;
+	      //change reduced cost on this
+	      dj_[iPivot] = -difference;
+	      which[newNumber++]=iRow;
+	    }
+	  }
+	} else {
+	  // going up
+	  if (value>upper_[iPivot]-primalTolerance_) {
+	    if (iPivot==sequenceOut_&&value<upper_[iPivot]+1.001*primalTolerance_)
+	      value=upper_[iPivot];
+	    double difference = nonLinearCost_->setOne(iPivot,value);
+	    if (difference) {
+	      if (iRow==pivotRow_)
+		pivotPosition=newNumber;
+	      work[newNumber] = difference;
+	      //change reduced cost on this
+	      dj_[iPivot] = -difference;
+	      which[newNumber++]=iRow;
+	    }
+	  }
+	}
+      }
+    }
+  } else {
+    // values pass so look at all
+    for (iIndex=0;iIndex<number;iIndex++) {
+      
+      int iRow = which[iIndex];
+      double alpha = work[iIndex];
+      work[iIndex]=0.0;
+      int iPivot=pivotVariable_[iRow];
+      double change = theta*alpha;
+      double value = solution_[iPivot] - change;
+      solution_[iPivot]=value;
+      clearActive(iRow);
+      // But make sure one going out is feasible
+      if (change>0.0) {
+	// going down
+	if (value<lower_[iPivot]+primalTolerance_) {
+	  if (iPivot==sequenceOut_&&value>lower_[iPivot]-1.001*primalTolerance_)
+	    value=lower_[iPivot];
+	  double difference = nonLinearCost_->setOne(iPivot,value);
+	  if (difference) {
+	    if (iRow==pivotRow_)
+	      pivotPosition=newNumber;
+	    work[newNumber] = difference;
+	    //change reduced cost on this
+	    dj_[iPivot] = -difference;
+	    which[newNumber++]=iRow;
+	  }
 	}
       } else {
-	work[iRow]=0.0;
+	// going up
+	if (value>upper_[iPivot]-primalTolerance_) {
+	  if (iPivot==sequenceOut_&&value<upper_[iPivot]+1.001*primalTolerance_)
+	    value=upper_[iPivot];
+	  double difference = nonLinearCost_->setOne(iPivot,value);
+	  if (difference) {
+	    if (iRow==pivotRow_)
+	      pivotPosition=newNumber;
+	    work[newNumber] = difference;
+	    //change reduced cost on this
+	    dj_[iPivot] = -difference;
+	    which[newNumber++]=iRow;
+	  }
+	}
       }
     }
   }
   objectiveChange += nonLinearCost_->changeInCost();
-  rowArray->setNumElements(newNumber);
+  rowArray->setPacked();
 #if 0
-  if (newNumber>10) {
-    printf("in %d out %d, row %d alpha %g\n",
-	   sequenceIn_,sequenceOut_,pivotRow_,alpha_);
-    for (iIndex=0;iIndex<newNumber;iIndex++) {
-      int iRow = which[iIndex];
-      double alpha = work[iRow];
-      printf("%d %g\n",iRow,alpha);
+  rowArray->setNumElements(newNumber);
+  rowArray->expand();
+  if (pivotRow_>=0) {
+    dualIn_ += (oldCost-cost_[sequenceOut_]);
+    // update change vector to include pivot
+    rowArray->add(pivotRow_,-dualIn_);
+    // and convert to packed
+    rowArray->scanAndPack();
+  } else {
+    // and convert to packed
+    rowArray->scanAndPack();
+  }
+#else
+  if (pivotRow_>=0) {
+    dualIn_ += (oldCost-cost_[sequenceOut_]);
+    // update change vector to include pivot
+    if (pivotPosition>=0) {
+      work[pivotPosition] -= dualIn_;
+    } else {
+      work[newNumber]=-dualIn_;
+      which[newNumber++]=pivotRow_;
     }
   }
+  rowArray->setNumElements(newNumber);
 #endif
-
   return 0;
 }
 // Perturbs problem
@@ -1522,6 +1542,7 @@ ClpSimplexPrimal::perturb(int type)
     return; //perturbed already
   if (perturbation_==100)
     perturbation_=50; // treat as normal
+  int savePerturbation = perturbation_;
   int i;
   if (!numberIterations_)
     cleanStatus(); // make sure status okay
@@ -1561,7 +1582,7 @@ ClpSimplexPrimal::perturb(int type)
   double perturbation=1.0e-20;
   int numberNonZero=0;
   // maximum fraction of rhs/bounds to perturb
-  double maximumFraction = 1.0e-7;
+  double maximumFraction = 1.0e-5;
   if (perturbation_>=50) {
     perturbation = 1.0e-4;
     for (i=0;i<numberColumns_+numberRows_;i++) {
@@ -1613,8 +1634,9 @@ ClpSimplexPrimal::perturb(int type)
   // modify bounds
   // Change so at least 1.0e-5 and no more than 0.1
   // For now just no more than 0.1
+  // printf("Pert type %d perturbation %g, maxF %g\n",type,perturbation,maximumFraction);
   if (type==1) {
-    double multiplier = perturbation*maximumFraction;
+    //double multiplier = perturbation*maximumFraction;
     for (iSequence=0;iSequence<numberRows_+numberColumns_;iSequence++) {
       if (getStatus(iSequence)==basic) {
 	double solutionValue = solution_[iSequence];
@@ -1623,7 +1645,7 @@ ClpSimplexPrimal::perturb(int type)
 	double difference = upperValue-lowerValue;
 	difference = min(difference,perturbation);
 	difference = min(difference,fabs(solutionValue)+1.0);
-	double value = multiplier*(difference+1.0);
+	double value = maximumFraction*(difference+1.0);
 	value = min(value,0.1);
 	value *= CoinDrand48();
 	if (solutionValue-lowerValue<=primalTolerance_) {
@@ -1660,16 +1682,48 @@ ClpSimplexPrimal::perturb(int type)
       }
     }
   } else {
+    double tolerance = 100.0*primalTolerance_;
     for (i=0;i<numberColumns_;i++) {
       double lowerValue=lower_[i], upperValue=upper_[i];
       if (upperValue>lowerValue+primalTolerance_) {
 	double value = perturbation*maximumFraction;
 	value = min(value,0.1);
 	value *= CoinDrand48();
-	if (lowerValue>-1.0e20&&lowerValue)
-	  lowerValue -= value * (max(1.0,1.0e-5*fabs(lowerValue))); 
-	if (upperValue<1.0e20&&upperValue)
-	  upperValue += value * (max(1.0,1.0e-5*fabs(upperValue))); 
+	if (savePerturbation!=50) {
+	  if (fabs(value)<=primalTolerance_)
+	    value=0.0;
+	  if (lowerValue>-1.0e20&&lowerValue)
+	    lowerValue -= value * (max(1.0e-2,1.0e-5*fabs(lowerValue))); 
+	  if (upperValue<1.0e20&&upperValue)
+	    upperValue += value * (max(1.0e-2,1.0e-5*fabs(upperValue))); 
+	} else if (value) {
+	  double valueL =value *(max(1.0e-2,1.0e-5*fabs(lowerValue)));
+	  // get in range 
+	  if (valueL<=tolerance) {
+	    valueL *= 10.0;
+	    while (valueL<=tolerance) 
+	      valueL *= 10.0;
+	  } else if (valueL>1.0) {
+	    valueL *= 0.1;
+	    while (valueL>1.0) 
+	      valueL *= 0.1;
+	  }
+	  if (lowerValue>-1.0e20&&lowerValue)
+	    lowerValue -= valueL;
+	  double valueU =value *(max(1.0e-2,1.0e-5*fabs(upperValue)));
+	  // get in range 
+	  if (valueU<=tolerance) {
+	    valueU *= 10.0;
+	    while (valueU<=tolerance) 
+	      valueU *= 10.0;
+	  } else if (valueU>1.0) {
+	    valueU *= 0.1;
+	    while (valueU>1.0) 
+	      valueU *= 0.1;
+	  }
+	  if (upperValue<1.0e20&&upperValue)
+	    upperValue += valueU;
+	}
 	if (lowerValue!=lower_[i]) {
 	  double difference = fabs(lowerValue-lower_[i]);
 	  largest = max(largest,difference);
@@ -1694,17 +1748,48 @@ ClpSimplexPrimal::perturb(int type)
       double value = perturbation*maximumFraction;
       value = min(value,0.1);
       value *= CoinDrand48();
-      if (upperValue>lowerValue+primalTolerance_) {
-	if (lowerValue>-1.0e20&&lowerValue)
-	  lowerValue -= value * (max(1.0,1.0e-5*fabs(lowerValue))); 
-	if (upperValue<1.0e20&&upperValue)
-	  upperValue += value * (max(1.0,1.0e-5*fabs(upperValue))); 
+      if (upperValue>lowerValue+tolerance) {
+	if (savePerturbation!=50) {
+	  if (fabs(value)<=primalTolerance_)
+	    value=0.0;
+	  if (lowerValue>-1.0e20&&lowerValue)
+	    lowerValue -= value * (max(1.0e-2,1.0e-5*fabs(lowerValue))); 
+	  if (upperValue<1.0e20&&upperValue)
+	    upperValue += value * (max(1.0e-2,1.0e-5*fabs(upperValue))); 
+	} else if (value) {
+	  double valueL =value *(max(1.0e-2,1.0e-5*fabs(lowerValue)));
+	  // get in range 
+	  if (valueL<=tolerance) {
+	    valueL *= 10.0;
+	    while (valueL<=tolerance) 
+	      valueL *= 10.0;
+	  } else if (valueL>1.0) {
+	    valueL *= 0.1;
+	    while (valueL>1.0) 
+	      valueL *= 0.1;
+	  }
+	  if (lowerValue>-1.0e20&&lowerValue)
+	    lowerValue -= valueL;
+	  double valueU =value *(max(1.0e-2,1.0e-5*fabs(upperValue)));
+	  // get in range 
+	  if (valueU<=tolerance) {
+	    valueU *= 10.0;
+	    while (valueU<=tolerance) 
+	      valueU *= 10.0;
+	  } else if (valueU>1.0) {
+	    valueU *= 0.1;
+	    while (valueU>1.0) 
+	      valueU *= 0.1;
+	  }
+	  if (upperValue<1.0e20&&upperValue)
+	    upperValue += valueU;
+	}
       } else if (upperValue>0.0) {
-	upperValue -= value * (max(1.0,1.0e-5*fabs(lowerValue))); 
-	lowerValue -= value * (max(1.0,1.0e-5*fabs(lowerValue))); 
+	upperValue -= value * (max(1.0e-2,1.0e-5*fabs(lowerValue))); 
+	lowerValue -= value * (max(1.0e-2,1.0e-5*fabs(lowerValue))); 
       } else if (upperValue<0.0) {
-	upperValue += value * (max(1.0,1.0e-5*fabs(lowerValue))); 
-	lowerValue += value * (max(1.0,1.0e-5*fabs(lowerValue))); 
+	upperValue += value * (max(1.0e-2,1.0e-5*fabs(lowerValue))); 
+	lowerValue += value * (max(1.0e-2,1.0e-5*fabs(lowerValue))); 
       } else {
       }
       if (lowerValue!=lower_[i]) {
@@ -1837,6 +1922,9 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 
   bool roundAgain=true;
   int returnCode=-1;
+  double yyyy[20000];
+  if (numberIterations_==5141)
+    memcpy(yyyy,solution_,(numberColumns_+numberRows_)*sizeof(double));
 
   // loop round if user setting and doing refactorization
   while (roundAgain) {
@@ -1845,9 +1933,47 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
     pivotRow_=-1;
     sequenceOut_=-1;
     rowArray_[1]->clear();
+#if 0
+    {
+      int seq[]={612,643};
+      int k;
+      for (k=0;k<sizeof(seq)/sizeof(int);k++) {
+	int iSeq=seq[k];
+	if (getColumnStatus(iSeq)!=basic) {
+	  double djval;
+	  double * work;
+	  int number;
+	  int * which;
+	  
+	  int iIndex;
+	  unpack(rowArray_[1],iSeq);
+	  factorization_->updateColumn(rowArray_[2],rowArray_[1]);
+	  djval = cost_[iSeq];
+	  work=rowArray_[1]->denseVector();
+	  number=rowArray_[1]->getNumElements();
+	  which=rowArray_[1]->getIndices();
+	  
+	  for (iIndex=0;iIndex<number;iIndex++) {
+	    
+	    int iRow = which[iIndex];
+	    double alpha = work[iRow];
+	    int iPivot=pivotVariable_[iRow];
+	    djval -= alpha*cost_[iPivot];
+	  }
+	  double comp = 1.0e-8 + 1.0e-7*(max(fabs(dj_[iSeq]),fabs(djval)));
+	  if (fabs(djval-dj_[iSeq])>comp)
+	    printf("Bad dj %g for %d - true is %g\n",
+		   dj_[iSeq],iSeq,djval);
+	  assert (fabs(djval)<1.0e-3||djval*dj_[iSeq]>0.0);
+	  rowArray_[1]->clear();
+	}
+      }
+    }
+#endif
+	
     // we found a pivot column
     // update the incoming column
-    unpack(rowArray_[1]);
+    unpackPacked(rowArray_[1]);
     // save reduced cost
     double saveDj = dualIn_;
     factorization_->updateColumnFT(rowArray_[2],rowArray_[1]);
@@ -1873,7 +1999,7 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	    setFlagged(sequenceIn_);
 	    progress_->clearBadTimes();
 	    lastBadIteration_ = numberIterations_; // say be more cautious
-	    rowArray_[1]->clear();
+	    clearAll();
 	    pivotRow_=-1;
 	  }
 	  returnCode=-5;
@@ -1890,7 +2016,7 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	<<saveDj<<dualIn_
 	<<CoinMessageEol;
       if(lastGoodIteration_ != numberIterations_) {
-	rowArray_[1]->clear();
+	clearAll();
 	pivotRow_=-1; // say no weights update
 	returnCode=-4;
 	if(lastGoodIteration_+1 == numberIterations_) {
@@ -1912,7 +2038,7 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	  setFlagged(sequenceIn_);
 	  progress_->clearBadTimes();
 	  lastBadIteration_ = numberIterations_; // say be more cautious
-	  rowArray_[1]->clear();
+	  clearAll();
 	  pivotRow_=-1;
 	  returnCode=-5;
 	  sequenceOut_=-1;
@@ -1927,7 +2053,11 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	primalRay(rowArray_[1]);
 	// update duals
 	if (pivotRow_>=0) {
-	  alpha_ = rowArray_[1]->denseVector()[pivotRow_];
+	  // as packed need to find pivot row
+	  //assert (rowArray_[1]->packedMode());
+	  //int i;
+	  
+	  //alpha_ = rowArray_[1]->denseVector()[pivotRow_];
 	  assert (fabs(alpha_)>1.0e-8);
 	  double multiplier = dualIn_/alpha_;
 	  rowArray_[0]->insert(pivotRow_,multiplier);
@@ -1986,7 +2116,7 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	} 
 	// later we may need to unwind more e.g. fake bounds
 	if(lastGoodIteration_ != numberIterations_) {
-	  rowArray_[1]->clear();
+	  clearAll();
 	  pivotRow_=-1;
 	  if (solveType_==1) {
 	    returnCode=-4;
@@ -2013,7 +2143,7 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	    progress_->clearBadTimes();
 	  }
 	  lastBadIteration_ = numberIterations_; // say be more cautious
-	  rowArray_[1]->clear();
+	  clearAll();
 	  pivotRow_=-1;
 	  sequenceOut_=-1;
 	  returnCode = -5;
@@ -2066,14 +2196,9 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
     // update primal solution
     
     double objectiveChange=0.0;
-    // Cost on pivot row may change - may need to change dualIn
-    double oldCost=0.0;
-    if (pivotRow_>=0)
-      oldCost = cost(pivotVariable_[pivotRow_]);
-    // rowArray_[1] is not empty - used to update djs
+    // after this rowArray_[1] is not empty - used to update djs
     updatePrimalsInPrimal(rowArray_[1],theta_, objectiveChange,ifValuesPass);
-    if (pivotRow_>=0)
-      dualIn_ += (oldCost-cost(pivotVariable_[pivotRow_]));
+    
     double oldValue = valueIn_;
     if (directionIn_==-1) {
       // as if from upper bound
@@ -2100,8 +2225,10 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
       } else {
 	valueOut_ = upperOut_;
       }
-      assert(valueOut_>=lower_[sequenceOut_]-primalTolerance_&&
-	     valueOut_<=upper_[sequenceOut_]+primalTolerance_);
+      if(valueOut_<lower_[sequenceOut_]-primalTolerance_)
+	valueOut_=lower_[sequenceOut_]-0.9*primalTolerance_;
+      else if (valueOut_>upper_[sequenceOut_]+primalTolerance_)
+	valueOut_=upper_[sequenceOut_]+0.9*primalTolerance_;
       // may not be exactly at bound and bounds may have changed
       // Make sure outgoing looks feasible
       directionOut_=nonLinearCost_->setOneOutgoing(sequenceOut_,valueOut_);
@@ -2110,6 +2237,7 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
     // change cost and bounds on incoming if primal
     nonLinearCost_->setOne(sequenceIn_,valueIn_); 
     int whatNext=housekeeping(objectiveChange);
+
 #if 0
     if (numberIterations_==1148)
       whatNext=1;
@@ -2171,12 +2299,22 @@ ClpSimplexPrimal::primalRay(CoinIndexedVector * rowArray)
   double zeroTolerance=1.0e-12;
   if (sequenceIn_<numberColumns_)
     ray_[sequenceIn_]=directionIn_;
-  for (i=0;i<number;i++) {
-    int iRow=index[i];
-    int iPivot=pivotVariable_[iRow];
-    double arrayValue = array[iRow];
-    if (iPivot<numberColumns_&&fabs(arrayValue)>=zeroTolerance)
-      ray_[iPivot] = way* array[iRow];
+  if (!rowArray->packedMode()) {
+    for (i=0;i<number;i++) {
+      int iRow=index[i];
+      int iPivot=pivotVariable_[iRow];
+      double arrayValue = array[iRow];
+      if (iPivot<numberColumns_&&fabs(arrayValue)>=zeroTolerance)
+	ray_[iPivot] = way* arrayValue;
+    }
+  } else {
+    for (i=0;i<number;i++) {
+      int iRow=index[i];
+      int iPivot=pivotVariable_[iRow];
+      double arrayValue = array[i];
+      if (iPivot<numberColumns_&&fabs(arrayValue)>=zeroTolerance)
+	ray_[iPivot] = way* arrayValue;
+    }
   }
 }
 /* Get next superbasic -1 if none,
@@ -2260,6 +2398,18 @@ ClpSimplexPrimal::nextSuperBasic(int superBasicType,CoinIndexedVector * columnAr
     return -1;
   }
 }
- 
+void
+ClpSimplexPrimal::clearAll()
+{
+  int number=rowArray_[1]->getNumElements();
+  int * which=rowArray_[1]->getIndices();
   
+  int iIndex;
+  for (iIndex=0;iIndex<number;iIndex++) {
+    
+    int iRow = which[iIndex];
+    clearActive(iRow);
+  }
+  rowArray_[1]->clear();
+}
 

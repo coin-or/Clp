@@ -438,6 +438,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
 
     // Check number rows dropped
     int lastDropped=0;
+    prob->pass_=0;
     for (iLoop=0;iLoop<numberPasses_;iLoop++) {
 #ifdef PRESOLVE_SUMMARY
       printf("Starting major pass %d\n",iLoop+1);
@@ -457,6 +458,12 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
 	  while (notFinished) 
 	    paction_ = slack_doubleton_action::presolve(prob, paction_,
 							notFinished);
+	  if (prob->status_)
+	    break;
+	}
+	if (dual&&whichPass==1) {
+	  // this can also make E rows so do one bit here
+	  paction_ = remove_dual_action::presolve(prob, paction_);
 	  if (prob->status_)
 	    break;
 	}

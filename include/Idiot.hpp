@@ -157,6 +157,16 @@ public:
   { return strategy_;};
   inline void setStrategy(int value)
   { strategy_ = value;};
+  /// Fine tuning - okay if feasibility drop this factor 
+  inline double getDropEnoughFeasibility() const
+  { return dropEnoughFeasibility_;};
+  inline void setDropEnoughFeasibility(double value)
+  { dropEnoughFeasibility_=value;};
+  /// Fine tuning - okay if weighted obj drop this factor 
+  inline double getDropEnoughWeighted() const
+  { return dropEnoughWeighted_;};
+  inline void setDropEnoughWeighted(double value)
+  { dropEnoughWeighted_=value;};
   //@}
 
 
