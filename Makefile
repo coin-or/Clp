@@ -1,14 +1,12 @@
+
 # Look at and if necessary edit the following files:
 # - ../Makefiles/Makefile.location
-# - Makefile.Osi 
-# - Osi*/Makefile for the libs you have specified above
+# - Makefile.Clp
 
 ###############################################################################
 
 export CoinDir := $(shell cd ..; pwd)
 export MakefileDir := $(CoinDir)/Makefiles
-include ${MakefileDir}/Makefile.coin
-include ${MakefileDir}/Makefile.location
 
 ###############################################################################
 
@@ -17,6 +15,7 @@ include ${MakefileDir}/Makefile.location
 .PHONY: default install clean library unitTest libdepend libClp doc
 
 default: install
+libClp: library
 
 libdepend:
 	(cd $(CoinDir)/Coin && $(MAKE) install)
@@ -24,8 +23,8 @@ libdepend:
 install library: libdepend
 	${MAKE} -f Makefile.Clp $@
 
-libClp: libdepend
-	${MAKE} -f Makefile.Clp library
+doc:
+	doxygen $(MakefileDir)/doxygen.conf
 
 unitTest: 
 	(cd Test && ${MAKE} unitTest)

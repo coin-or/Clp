@@ -114,8 +114,8 @@ public:
      Also for simplex I am not using basic/non-basic split */
   //@{
     /** Return <code>y + A * x * scalar</code> in <code>y</code>.
-        @precond <code>x<code> must be of size <code>numColumns()</code>
-        @precond <code>y<code> must be of size <code>numRows()</code> */
+        @pre <code>x</code> must be of size <code>numColumns()</code>
+        @pre <code>y</code> must be of size <code>numRows()</code> */
   virtual void times(double scalar,
 		       const double * x, double * y) const=0;
   /// And for scaling - default aborts for when scaling not supported
@@ -124,8 +124,8 @@ public:
 		     const double * rowScale, 
 		     const double * columnScale) const;
     /** Return <code>y + x * scalar * A</code> in <code>y</code>.
-        @precond <code>x<code> must be of size <code>numRows()</code>
-        @precond <code>y<code> must be of size <code>numColumns()</code> */
+        @pre <code>x</code> must be of size <code>numRows()</code>
+        @pre <code>y</code> must be of size <code>numColumns()</code> */
     virtual void transposeTimes(double scalar,
 				const double * x, double * y) const = 0;
   /// And for scaling - default aborts for when scaling not supported
@@ -140,7 +140,7 @@ public:
 			      const CoinIndexedVector * x,
 			      CoinIndexedVector * y,
 			      CoinIndexedVector * z) const = 0;
-    /** Return <code>x *A in <code>z</code> but
+    /** Return <code>x *A</code> in <code>z</code> but
 	just for indices in y.
 	This is only needed for primal steepest edge.
 	Squashes small elements and knows about ClpSimplex */

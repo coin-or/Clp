@@ -290,13 +290,13 @@ public:
      Also for simplex I am not using basic/non-basic split */
   //@{
     /** Return <code>y + A * x * scalar</code> in <code>y</code>.
-        @precond <code>x<code> must be of size <code>numColumns()</code>
-        @precond <code>y<code> must be of size <code>numRows()</code> */
+        @pre <code>x</code> must be of size <code>numColumns()</code>
+        @pre <code>y</code> must be of size <code>numRows()</code> */
    void times(double scalar,
 		       const double * x, double * y) const;
     /** Return <code>y + x * scalar * A</code> in <code>y</code>.
-        @precond <code>x<code> must be of size <code>numRows()</code>
-        @precond <code>y<code> must be of size <code>numColumns()</code> */
+        @pre <code>x</code> must be of size <code>numRows()</code>
+        @pre <code>y</code> must be of size <code>numColumns()</code> */
     void transposeTimes(double scalar,
 				const double * x, double * y) const ;
   //@}

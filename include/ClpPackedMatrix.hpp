@@ -103,8 +103,8 @@ public:
   /**@name Matrix times vector methods */
   //@{
     /** Return <code>y + A * scalar *x</code> in <code>y</code>.
-        @precond <code>x<code> must be of size <code>numColumns()</code>
-        @precond <code>y<code> must be of size <code>numRows()</code> */
+        @pre <code>x</code> must be of size <code>numColumns()</code>
+        @pre <code>y</code> must be of size <code>numRows()</code> */
   virtual void times(double scalar,
 		       const double * x, double * y) const;
   /// And for scaling
@@ -113,8 +113,8 @@ public:
 		     const double * rowScale, 
 		     const double * columnScale) const;
     /** Return <code>y + x * scalar * A</code> in <code>y</code>.
-        @precond <code>x<code> must be of size <code>numRows()</code>
-        @precond <code>y<code> must be of size <code>numColumns()</code> */
+        @pre <code>x</code> must be of size <code>numRows()</code>
+        @pre <code>y</code> must be of size <code>numColumns()</code> */
     virtual void transposeTimes(double scalar,
 				const double * x, double * y) const;
   /// And for scaling 
@@ -129,13 +129,13 @@ public:
 			      const CoinIndexedVector * x,
 			      CoinIndexedVector * y,
 			      CoinIndexedVector * z) const;
-    /** Return <code>x *A in <code>z</code> but
+    /** Return <code>x *A</code> in <code>z</code> but
 	just for indices in y.
 	Squashes small elements and knows about ClpSimplex */
   virtual void subsetTransposeTimes(const ClpSimplex * model,
-			      const CoinIndexedVector * x,
-			      const CoinIndexedVector * y,
-			      CoinIndexedVector * z) const;
+				    const CoinIndexedVector * x,
+				    const CoinIndexedVector * y,
+				    CoinIndexedVector * z) const;
   //@}
 
   /**@name Other */
