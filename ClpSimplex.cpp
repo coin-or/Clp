@@ -289,10 +289,12 @@ ClpSimplex::gutsOfSolution ( double * givenDuals,
       nonLinearCost_->checkInfeasibilities(0.0);
     objectiveModification += nonLinearCost_->changeInCost();
     if (nonLinearCost_->numberInfeasibilities())
-      handler_->message(CLP_SIMPLEX_NONLINEAR,messages_)
-	<<nonLinearCost_->changeInCost()
-	<<nonLinearCost_->numberInfeasibilities()
-	<<CoinMessageEol;
+      if (handler_->detail(CLP_SIMPLEX_NONLINEAR,messages_)<100) {
+        handler_->message(CLP_SIMPLEX_NONLINEAR,messages_)
+          <<nonLinearCost_->changeInCost()
+          <<nonLinearCost_->numberInfeasibilities()
+          <<CoinMessageEol;
+      }
   }
   if (valuesPass) {
 #ifdef CLP_DEBUG
@@ -1320,15 +1322,17 @@ ClpSimplex::housekeeping(double objectiveChange)
   numberIterations_++;
   changeMade_++; // something has happened
   // incoming variable
-  handler_->message(CLP_SIMPLEX_HOUSE1,messages_)
-    <<directionOut_
-    <<directionIn_<<theta_
-    <<dualOut_<<dualIn_<<alpha_
-    <<CoinMessageEol;
-  if (getStatus(sequenceIn_)==isFree) {
-    handler_->message(CLP_SIMPLEX_FREEIN,messages_)
-      <<sequenceIn_
+  if (handler_->detail(CLP_SIMPLEX_HOUSE1,messages_)<100) {
+    handler_->message(CLP_SIMPLEX_HOUSE1,messages_)
+      <<directionOut_
+      <<directionIn_<<theta_
+      <<dualOut_<<dualIn_<<alpha_
       <<CoinMessageEol;
+    if (getStatus(sequenceIn_)==isFree) {
+      handler_->message(CLP_SIMPLEX_FREEIN,messages_)
+        <<sequenceIn_
+        <<CoinMessageEol;
+    }
   }
   // change of incoming
   char rowcol[]={'R','C'};
@@ -1377,13 +1381,15 @@ ClpSimplex::housekeeping(double objectiveChange)
   // Update hidden stuff e.g. effective RHS and gub
   matrix_->updatePivot(this,oldIn,oldOut);
   objectiveValue_ += objectiveChange/(objectiveScale_*rhsScale_);
-  handler_->message(CLP_SIMPLEX_HOUSE2,messages_)
-    <<numberIterations_<<objectiveValue()
-    <<rowcol[isColumn(sequenceIn_)]<<sequenceWithin(sequenceIn_)
-    <<rowcol[isColumn(sequenceOut_)]<<sequenceWithin(sequenceOut_);
-  handler_->printing(algorithm_<0)<<dualOut_<<theta_;
-  handler_->printing(algorithm_>0)<<dualIn_<<theta_;
-  handler_->message()<<CoinMessageEol;
+  if (handler_->detail(CLP_SIMPLEX_HOUSE2,messages_)<100) {
+    handler_->message(CLP_SIMPLEX_HOUSE2,messages_)
+      <<numberIterations_<<objectiveValue()
+      <<rowcol[isColumn(sequenceIn_)]<<sequenceWithin(sequenceIn_)
+      <<rowcol[isColumn(sequenceOut_)]<<sequenceWithin(sequenceOut_);
+    handler_->printing(algorithm_<0)<<dualOut_<<theta_;
+    handler_->printing(algorithm_>0)<<dualIn_<<theta_;
+    handler_->message()<<CoinMessageEol;
+  }
   if (hitMaximumIterations())
     return 2;
 #if 1
@@ -2320,10 +2326,14 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
 	reducedCostWork_ = dj_;
 	rowReducedCost_ = dj_+numberColumns_;
       }
-      if (doSanityCheck) {
+      //if (doSanityCheck) {
 	memcpy(reducedCostWork_,reducedCost_,numberColumns_*sizeof(double));
 	memcpy(rowReducedCost_,dual_,numberRows_*sizeof(double));
-      }
+        //} else {
+        // only for valgrind ? - take out
+	//memset(reducedCostWork_,0,numberColumns_*sizeof(double));
+	//memset(rowReducedCost_,0,numberRows_*sizeof(double));
+        //}
     }
     if (!solution_||initialize) {
       if (newArrays) {
@@ -5686,9 +5696,11 @@ ClpSimplex::finish(int startFinishOptions)
     if (problemStatus_==-1)
       problemStatus_=4;
     assert(problemStatus_>=0&&problemStatus_<6);
-    handler_->message(CLP_SIMPLEX_FINISHED+problemStatus_,messages_)
-      <<objectiveValue()
-      <<CoinMessageEol;
+    if (handler_->detail(CLP_SIMPLEX_FINISHED,messages_)<100) {
+      handler_->message(CLP_SIMPLEX_FINISHED+problemStatus_,messages_)
+        <<objectiveValue()
+        <<CoinMessageEol;
+    }
   }
   factorization_->relaxAccuracyCheck(1.0);
   // get rid of any network stuff - could do more
@@ -5735,6 +5747,7 @@ ClpSimplex::setFlagged( int sequence)
 bool
 ClpSimplex::statusOfProblem(bool initial)
 {
+  createRim(7+8+16+32);
   // is factorization okay?
   if (initial) {
     // First time - allow singularities
@@ -5744,10 +5757,12 @@ ClpSimplex::statusOfProblem(bool initial)
       int status = internalFactorize(0);
       if (status==numberRows_+1)
 	status=0; // all slack
-      if (status<0)
+      if (status<0) {
+        deleteRim(-1);
 	return false; // some error
-      else
+      } else {
 	numberThrownOut = status;
+      }
       
       // for this we need clean basis so it is after factorize
       //if (!numberThrownOut)
@@ -5771,9 +5786,6 @@ ClpSimplex::statusOfProblem(bool initial)
     internalFactorize(1);
 #endif
   }
-  // put back original costs and then check
-  // also move to work arrays
-  createRim(7+8+16+32);
   //memcpy(rowActivityWork_,rowActivity_,numberRows_*sizeof(double));
   //memcpy(columnActivityWork_,columnActivity_,numberColumns_*sizeof(double));
   gutsOfSolution(NULL,NULL);

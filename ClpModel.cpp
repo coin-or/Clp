@@ -1094,10 +1094,6 @@ ClpModel::addRow(int numberInRow, const int * columns,
   addRows(1, &rowLower, &rowUpper,
           &row);
   delete row;
-  delete [] rowScale_;
-  rowScale_ = NULL;
-  delete [] columnScale_;
-  columnScale_ = NULL;
 }
 // Add rows
 void 
