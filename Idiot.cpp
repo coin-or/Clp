@@ -144,7 +144,8 @@ Idiot::crash(int numberPass)
   maxIts2_=105;
   if (numberPass<=0)
     // Cast to avoid gcc compiler warning
-    majorIterations_=(int)(2+log10(numberColumns+1));
+    // Cast to double to avoid VACPP complaining
+    majorIterations_=(int)(2+log10((double)(numberColumns+1)));
   else
     majorIterations_=numberPass;
   printf("setting mu to %g and doing %d passes\n",mu_,majorIterations_);
