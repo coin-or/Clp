@@ -559,6 +559,8 @@ ClpSimplexDual::whileIterating()
 	    factorization_->areaFactor(
 				       factorization_->areaFactor() * 1.1);
 	  problemStatus_=-2; // factorize now
+	} else if (updateStatus==5) {
+	  problemStatus_=-2; // factorize now
 	} 
 	// update primal solution
 	if (theta_<0.0) {
