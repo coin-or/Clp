@@ -15,7 +15,8 @@
 //-------------------------------------------------------------------
 ClpPrimalColumnPivot::ClpPrimalColumnPivot () :
   model_(NULL), 
-  type_(-1)
+  type_(-1),
+  looksOptimal_(false)
 {
 
 }
@@ -25,7 +26,8 @@ ClpPrimalColumnPivot::ClpPrimalColumnPivot () :
 //-------------------------------------------------------------------
 ClpPrimalColumnPivot::ClpPrimalColumnPivot (const ClpPrimalColumnPivot & source) :
   model_(source.model_),
-  type_(source.type_)
+  type_(source.type_),
+  looksOptimal_(source.looksOptimal_)
 {  
 
 }
@@ -47,6 +49,7 @@ ClpPrimalColumnPivot::operator=(const ClpPrimalColumnPivot& rhs)
   if (this != &rhs) {
     type_ = rhs.type_;
     model_ = rhs.model_;
+    looksOptimal_ = rhs.looksOptimal_;
   }
   return *this;
 }

@@ -73,6 +73,7 @@ public:
 		   7 - use initiative but no crash
                    8 - do allslack or idiot
                    9 - do allslack or sprint
+		   10 - slp before 
       2 - interrupt handling - 0 yes, 1 no (for threadsafe)
       3 - whether to make +- 1matrix - 0 yes, 1 no
       4 - for barrier

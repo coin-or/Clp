@@ -868,6 +868,8 @@ ClpPlusMinusOneMatrix::transposeTimesByRow(const ClpSimplex * model, double scal
     }
   }
   columnArray->setNumElements(numberNonZero);
+  if (packed)
+    columnArray->setPacked();
   y->setNumElements(0);
 }
 /* Return <code>x *A in <code>z</code> but

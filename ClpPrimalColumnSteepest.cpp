@@ -3333,6 +3333,8 @@ ClpPrimalColumnSteepest::clearArrays()
 bool 
 ClpPrimalColumnSteepest::looksOptimal() const
 {
+  if (looksOptimal_)
+    return true; // user overrode
   //**** THIS MUST MATCH the action coding above
   double tolerance=model_->currentDualTolerance();
   // we can't really trust infeasibilities if there is dual error

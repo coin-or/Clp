@@ -620,6 +620,9 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
   int saveThreshold = factorization_->sparseThreshold();
   int tentativeStatus = problemStatus_;
   int numberThrownOut=1; // to loop round on bad factorization in values pass
+  double lastSumInfeasibility=COIN_DBL_MAX;
+  if (numberIterations_)
+    lastSumInfeasibility=nonLinearCost_->sumInfeasibilities();
   while (numberThrownOut) {
     if (problemStatus_>-3||problemStatus_==-4) {
       // factorize
@@ -644,6 +647,8 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	    // switch off dense
 	    int saveDense = factorization_->denseThreshold();
 	    factorization_->setDenseThreshold(0);
+	    // Go to safe
+	    factorization_->pivotTolerance(0.99);
 	    // make sure will do safe factorization
 	    pivotVariable_[0]=-1;
 	    internalFactorize(2);
@@ -662,7 +667,10 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	    matrix_->generalExpanded(this,5,dummy);
 	    forceFactorization_=1; // a bit drastic but ..
 	    type = 2;
-	    assert (internalFactorize(1)==0);
+	    // Go to safe 
+	    factorization_->pivotTolerance(0.99);
+	    if (internalFactorize(1)!=0)
+	       largestPrimalError_=1.0e4; // force other type
 	  }
 	  changeMade_++; // say change made
 	}
@@ -678,7 +686,10 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
     dummy=4;
     matrix_->generalExpanded(this,9,dummy);
     numberThrownOut=gutsOfSolution(NULL,NULL,(firstFree_>=0));
-    if (numberThrownOut) {
+    double sumInfeasibility =  nonLinearCost_->sumInfeasibilities();
+    if (numberThrownOut||
+	(sumInfeasibility>1.0e7&&sumInfeasibility>100.0*lastSumInfeasibility
+	 &&factorization_->pivotTolerance()<0.11)) {
       problemStatus_=tentativeStatus;
       doFactorization=true;
     }
@@ -1043,8 +1054,8 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
 			    CoinIndexedVector * spareArray2,
 			    int valuesPass)
 {
-  //rowArray->scanAndPack();
-  if (valuesPass) {
+  double saveDj = dualIn_;
+  if (valuesPass&&objective_->type()<2) {
     dualIn_ = cost_[sequenceIn_];
 
     double * work=rowArray->denseVector();
@@ -1150,7 +1161,7 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
   int pivotOne=-1;
   //#define CLP_DEBUG
 #ifdef CLP_DEBUG
-  if (numberIterations_==3839||numberIterations_==3840) {
+  if (numberIterations_==-3839||numberIterations_==-3840) {
     double dj=cost_[sequenceIn_];
     printf("cost in on %d is %g, dual in %g\n",sequenceIn_,dj,dualIn_);
     for (iIndex=0;iIndex<number;iIndex++) {
@@ -1228,6 +1239,8 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
   theta_=maximumMovement;
 
   bool goBackOne = false;
+  if (objective_->type()>1) 
+    dualIn_=saveDj;
 
   //printf("%d remain out of %d\n",numberRemaining,number);
   int iTry=0;
@@ -1348,13 +1361,13 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
 	largestInfeasibility = max (largestInfeasibility,
 				    -(rhs[iIndex]-spare[iIndex]*theta_));
       }
-#define CLP_DEBUG
+//#define CLP_DEBUG
 #ifdef CLP_DEBUG
       if (largestInfeasibility>primalTolerance_&&(handler_->logLevel()&32)>-1)
 	printf("Primal tolerance increased from %g to %g\n",
 	       primalTolerance_,largestInfeasibility);
 #endif
-#undef CLP_DEBUG
+//#undef CLP_DEBUG
       primalTolerance_ = max(primalTolerance_,largestInfeasibility);
     }
     // Need to look at all in some cases
@@ -2009,6 +2022,8 @@ ClpSimplexPrimal::unflag()
     }
   }
   numberFlagged += matrix_->generalExpanded(this,8,i);
+  if (handler_->logLevel()>2&&numberFlagged&&objective_->type()>1)
+    printf("%d unflagged\n",numberFlagged);
   return numberFlagged;
 }
 // Do not change infeasibility cost and always say optimal
@@ -2114,8 +2129,9 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	      ifValuesPass);
     if (ifValuesPass) {
       saveDj=dualIn_;
+      //assert (fabs(alpha_)>=1.0e-5||(objective_->type()<2||!objective_->activated())||pivotRow_==-2);
       if (pivotRow_==-1||(pivotRow_>=0&&fabs(alpha_)<1.0e-5)) {
-	if(fabs(dualIn_)<1.0e2*dualTolerance_) {
+	if(fabs(dualIn_)<1.0e2*dualTolerance_&&objective_->type()<2) {
 	  // try other way
 	  directionIn_=-directionIn_;
 	  primalRow(rowArray_[1],rowArray_[3],rowArray_[2],rowArray_[0],

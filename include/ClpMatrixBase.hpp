@@ -121,6 +121,8 @@ public:
   */
   virtual int refresh(ClpSimplex * model)
   { return 0;};
+  // Really scale matrix
+  virtual void reallyScale(const double * rowScale, const double * columnScale);
   /** Given positive integer weights for each row fills in sum of weights
       for each column (and slack).
       Returns weights vector

@@ -285,12 +285,30 @@ ClpModel::getRowBound(int iRow, double& lower, double& upper) const
 }
 //#############################################################################
 // Copy constructor. 
-ClpModel::ClpModel(const ClpModel &rhs) :
+ClpModel::ClpModel(const ClpModel &rhs, int scalingMode) :
   optimizationDirection_(rhs.optimizationDirection_),
   numberRows_(rhs.numberRows_),
   numberColumns_(rhs.numberColumns_)
 {
   gutsOfCopy(rhs);
+  if (scalingMode>=0&&matrix_&&
+      matrix_->allElementsInRange(this,smallElement_,1.0e20)) {
+    // really do scaling
+    scalingFlag_=scalingMode;
+    delete [] rowScale_;
+    rowScale_ = NULL;
+    delete [] columnScale_;
+    columnScale_ = NULL;
+    if (!matrix_->scale(this)) {
+      // scaling worked - now apply
+      gutsOfScaling();
+      // pretend not scaled
+      scalingFlag_ = -scalingFlag_;
+    } else {
+      // not scaled
+      scalingFlag_=0;
+    }
+  }
   CoinSeedRandom(1234567);
 }
 // Assignment operator. This copies the data
@@ -416,8 +434,8 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
     matrix_ = rhs.matrix_;
     rowCopy_ = NULL;
     ray_ = rhs.ray_;
-    rowScale_ = rhs.rowScale_;
-    columnScale_ = rhs.columnScale_;
+    //rowScale_ = rhs.rowScale_;
+    //columnScale_ = rhs.columnScale_;
     lengthNames_ = 0;
     rowNames_ = std::vector<std::string> ();
     columnNames_ = std::vector<std::string> ();
@@ -466,8 +484,8 @@ ClpModel::returnModel(ClpModel & otherModel)
   delete [] otherModel.ray_;
   otherModel.ray_ = ray_;
   ray_ = NULL;
-  rowScale_=NULL;
-  columnScale_=NULL;
+  //rowScale_=NULL;
+  //columnScale_=NULL;
   // do status
   if (otherModel.status_!=status_) {
     delete [] otherModel.status_;
@@ -1348,8 +1366,9 @@ ClpModel::loadQuadraticObjective(const int numberColumns, const CoinBigIndex * s
   assert (numberColumns==numberColumns_);
   assert ((dynamic_cast< ClpLinearObjective*>(objective_)));
   double offset;
-  ClpObjective * obj = new ClpQuadraticObjective(objective_->gradient(NULL,offset,false),numberColumns,
-					     start,column,element);
+  ClpObjective * obj = new ClpQuadraticObjective(objective_->gradient(NULL,NULL,offset,false),
+						 numberColumns,
+						 start,column,element);
   delete objective_;
   objective_ = obj;
 
@@ -1361,8 +1380,9 @@ ClpModel::loadQuadraticObjective (  const CoinPackedMatrix& matrix)
   assert ((dynamic_cast< ClpLinearObjective*>(objective_)));
   double offset;
   ClpQuadraticObjective * obj = 
-    new ClpQuadraticObjective(objective_->gradient(NULL,offset,false),numberColumns_,
-						 NULL,NULL,NULL);
+    new ClpQuadraticObjective(objective_->gradient(NULL,NULL,offset,false),
+			      numberColumns_,
+			      NULL,NULL,NULL);
   delete objective_;
   objective_ = obj;
   obj->loadQuadraticObjective(matrix);
@@ -1829,7 +1849,19 @@ ClpModel::writeMps(const char *filename,
   writer.copyInIntegerInformation(integerInformation());
   writer.setObjectiveOffset(objectiveOffset());
   delete [] objective;
-  return writer.writeMps(filename, 0 /* do not gzip it*/, formatType, numberAcross);
+  // allow for quadratic objective
+#ifndef NO_RTTI
+  ClpQuadraticObjective * quadraticObj = (dynamic_cast< ClpQuadraticObjective*>(objective_));
+#else
+  ClpQuadraticObjective * quadraticObj = NULL;
+  if (objective_->type()==2)
+    quadraticObj = (static_cast< ClpQuadraticObjective*>(objective_));
+#endif
+  CoinPackedMatrix * quadratic=NULL;
+  if (quadraticObj) 
+    quadratic = quadraticObj->quadraticObjective();
+  return writer.writeMps(filename, 0 /* do not gzip it*/, formatType, numberAcross,
+			 quadratic);
   if (rowNames) {
     for (int iRow=0;iRow<numberRows_;iRow++) {
       free(rowNames[iRow]);
@@ -1879,4 +1911,67 @@ ClpModel::transposeTimes(double scalar,
     matrix_->transposeTimes(scalar,x,y,rowScale_,columnScale_);
   else
     matrix_->transposeTimes(scalar,x,y);
+}
+// Does much of scaling
+void 
+ClpModel::gutsOfScaling()
+{
+  int i;
+  if (rowObjective_) {
+    for (i=0;i<numberRows_;i++) 
+      rowObjective_[i] /= rowScale_[i];
+  }
+  for (i=0;i<numberRows_;i++) {
+    double multiplier = rowScale_[i];
+    double inverseMultiplier = 1.0/multiplier;
+    rowActivity_[i] *= multiplier;
+    dual_[i] *= inverseMultiplier;
+    if (rowLower_[i]>-1.0e30)
+      rowLower_[i] *= multiplier;
+    else
+      rowLower_[i] = -COIN_DBL_MAX;
+    if (rowUpper_[i]<1.0e30)
+      rowUpper_[i] *= multiplier;
+    else
+      rowUpper_[i] = COIN_DBL_MAX;
+  }
+  for (i=0;i<numberColumns_;i++) {
+    double multiplier = 1.0/columnScale_[i];
+    columnActivity_[i] *= multiplier;
+    reducedCost_[i] *= columnScale_[i];
+    if (columnLower_[i]>-1.0e30)
+      columnLower_[i] *= multiplier;
+    else
+      columnLower_[i] = -COIN_DBL_MAX;
+    if (columnUpper_[i]<1.0e30)
+      columnUpper_[i] *= multiplier;
+    else
+      columnUpper_[i] = COIN_DBL_MAX;
+    
+  }
+  //now replace matrix
+  //and objective
+  matrix_->reallyScale(rowScale_,columnScale_);
+  objective_->reallyScale(columnScale_);
+}
+/* If we constructed a "really" scaled model then this reverses the operation.
+      Quantities may not be exactly as they were before due to rounding errors */
+void 
+ClpModel::unscale()
+{
+  if (rowScale_) {
+    int i;
+    // reverse scaling
+    for (i=0;i<numberRows_;i++) 
+      rowScale_[i] = 1.0/rowScale_[i];
+    for (i=0;i<numberColumns_;i++) 
+      columnScale_[i] = 1.0/columnScale_[i];
+    gutsOfScaling();
+  }
+  
+  scalingFlag_=0;
+  delete [] rowScale_;
+  rowScale_ = NULL;
+  delete [] columnScale_;
+  columnScale_ = NULL;
 }

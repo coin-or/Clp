@@ -42,8 +42,11 @@ public:
     /// Default constructor
     ClpModel (  );
 
-    /// Copy constructor. 
-    ClpModel(const ClpModel &);
+  /** Copy constructor. May scale depending on mode
+      -1 leave mode as is 
+      0 -off, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic(later)
+  */
+    ClpModel(const ClpModel & rhs, int scalingMode=-1);
     /// Assignment operator. This copies the data
     ClpModel & operator=(const ClpModel & rhs);
   /** Subproblem constructor.  A subset of whole model is created from the 
@@ -314,6 +317,9 @@ public:
           { rhsScale_ = value;} ;
    /// Sets or unsets scaling, 0 -off, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic(later)
    void scaling(int mode=1);
+  /** If we constructed a "really" scaled model then this reverses the operation.
+      Quantities may not be exactly as they were before due to rounding errors */
+  void unscale();
    /// Gets scalingFlag
    inline int scalingFlag() const {return scalingFlag_;};
    /// Objective
@@ -321,7 +327,7 @@ public:
   {
     if (objective_) {
       double offset; 
-      return objective_->gradient(NULL,offset,false);
+      return objective_->gradient(NULL,NULL,offset,false);
     } else {
       return NULL;
     }
@@ -330,7 +336,7 @@ public:
   {
     offset=0.0;
     if (objective_) {
-      return objective_->gradient(solution,offset,refresh);
+      return objective_->gradient(NULL,solution,offset,refresh);
     } else {
       return NULL;
     }
@@ -339,7 +345,7 @@ public:
   { 
     if (objective_) {
       double offset; 
-      return objective_->gradient(NULL,offset,false);
+      return objective_->gradient(NULL,NULL,offset,false);
     } else {
       return NULL;
     }
@@ -553,6 +559,8 @@ protected:
 		     const double* obj,
 		     const double* rowlb, const double* rowub,
 		      const double * rowObjective=NULL);
+  /// Does much of scaling
+  void gutsOfScaling();
   //@}
 
 

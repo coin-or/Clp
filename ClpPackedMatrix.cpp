@@ -2256,3 +2256,22 @@ ClpPackedMatrix::scaledColumnCopy(ClpModel * model) const
   delete [] newElement;
   return copy;
 }
+// Really scale matrix
+void 
+ClpPackedMatrix::reallyScale(const double * rowScale, const double * columnScale)
+{
+  int numberColumns = matrix_->getNumCols();
+  const int * row = matrix_->getIndices();
+  const CoinBigIndex * columnStart = matrix_->getVectorStarts();
+  const int * length = matrix_->getVectorLengths();
+  double * element = matrix_->getMutableElements();
+  // scale 
+  for (int iColumn=0;iColumn<numberColumns;iColumn++) {
+    CoinBigIndex j;
+    double scale = columnScale[iColumn];
+    for (j=columnStart[iColumn];j<columnStart[iColumn]+length[iColumn];j++) {
+      int iRow = row[j];
+      element[j] *= scale*rowScale[iRow];
+    }
+  }
+}

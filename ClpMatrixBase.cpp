@@ -404,5 +404,12 @@ void
 ClpMatrixBase::correctSequence(int & sequenceIn, int & sequenceOut) const
 {
 }
+// Really scale matrix
+void 
+ClpMatrixBase::reallyScale(const double * rowScale, const double * columnScale)
+{
+  std::cerr<<"reallyScale not supported - ClpMatrixBase"<<std::endl;
+  abort();
+}
 
 

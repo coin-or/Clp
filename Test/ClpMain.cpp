@@ -58,7 +58,7 @@ enum ClpParameterType {
   RHSSCALE,
 
   LOGLEVEL=101,MAXFACTOR,PERTVALUE,MAXITERATION,PRESOLVEPASS,IDIOT,SPRINT,
-  OUTPUTFORMAT,
+  OUTPUTFORMAT,SLPVALUE,
   
   DIRECTION=201,DUALPIVOT,SCALING,ERRORSALLOWED,KEEPNAMES,SPARSEFACTOR,
   PRIMALPIVOT,PRESOLVE,CRASH,BIASLU,PERTURBATION,MESSAGES,AUTOSCALE,
@@ -67,6 +67,7 @@ enum ClpParameterType {
   DIRECTORY=301,IMPORT,EXPORT,RESTORE,SAVE,DUALSIMPLEX,PRIMALSIMPLEX,
   MAXIMIZE,MINIMIZE,EXIT,STDIN,UNITTEST,NETLIB_DUAL,NETLIB_PRIMAL,SOLUTION,
   TIGHTEN,FAKEBOUND,HELP,PLUSMINUS,NETWORK,ALLSLACK,REVERSE,BARRIER,NETLIB_BARRIER,
+  REALLY_SCALE,
 
   INVALID=1000
 };
@@ -879,6 +880,7 @@ int main (int argc, const char *argv[])
     int keepImportNames=1;
     int doIdiot=-1;
     int outputFormat=2;
+    int slpValue=-1;
     int doCrash=0;
     int doSprint=-1;
     // set reasonable defaults
@@ -1320,6 +1322,9 @@ costs this much to be infeasible",
        "This stops the execution of Clp, end, exit, quit and stop are synonyms"
        ); 
     parameters[numberParameters++]=
+      ClpItem("reallyS!cale","Scales model in place",
+	      REALLY_SCALE,false);
+    parameters[numberParameters++]=
       ClpItem("restore!Model","Restore model from binary file",
 	      RESTORE);
     parameters[numberParameters-1].setLonghelp
@@ -1380,6 +1385,9 @@ costs this much to be infeasible",
       \tsetMaximumSeconds(value)\n can be useful."
        ); 
     parameters[numberParameters-1].setDoubleValue(models->maximumSeconds());
+    parameters[numberParameters++]=
+      ClpItem("slp!Value","Number of slp passes before primal",
+	      -1,50000,SLPVALUE,false);
     parameters[numberParameters++]=
       ClpItem("sol!ution","Prints solution to file",
 	      SOLUTION);
@@ -1598,6 +1606,8 @@ costs this much to be infeasible",
 	      doSprint = value;
 	    else if (parameters[iParam].type()==OUTPUTFORMAT)
 	      outputFormat = value;
+	    else if (parameters[iParam].type()==SLPVALUE)
+	      slpValue = value;
 	    else
 	      parameters[iParam].setIntParameter(models+iModel,value);
 	  } else if (valid==1) {
@@ -1758,6 +1768,14 @@ costs this much to be infeasible",
 		  solveOptions.setSpecialOption(0,2,doIdiot); // possible idiot
 	      } else if (method==ClpSolve::usePrimalorSprint) {
 		// primal
+		// if slp turn everything off
+		if (slpValue>0) {
+		  doCrash=false;
+		  doSprint=0;
+		  doIdiot=-1;
+		  solveOptions.setSpecialOption(1,10,slpValue); // slp
+		  method=ClpSolve::usePrimal;
+		}
 		if (doCrash) {
 		  solveOptions.setSpecialOption(1,1); // crash
 		} else if (doSprint>0) {
@@ -1765,7 +1783,7 @@ costs this much to be infeasible",
 		  solveOptions.setSpecialOption(1,3,doSprint); // sprint
 		} else if (doIdiot>0) {
 		  solveOptions.setSpecialOption(1,2,doIdiot); // idiot
-		} else {
+		} else if (slpValue<=0) {
 		  if (doIdiot==0) {
 		    if (doSprint==0)
 		      solveOptions.setSpecialOption(1,4); // all slack
@@ -2173,7 +2191,7 @@ costs this much to be infeasible",
 	      ClpObjective * obj = models[iModel].objectiveAsObject();
 	      assert(dynamic_cast<ClpLinearObjective *> (obj));
 	      double offset;
-	      double * objective = obj->gradient(NULL,offset,true);
+	      double * objective = obj->gradient(NULL,NULL,offset,true);
 	      for (iColumn=0;iColumn<numberColumns;iColumn++) {
 		dualColumnSolution[iColumn] = dualColumnSolution[iColumn];
 		objective[iColumn] = -objective[iColumn];
@@ -2284,6 +2302,14 @@ costs this much to be infeasible",
 		std::cout<<"enter value for "<<parameters[iParam].name()<<
 		  std::endl;
 	      }
+	    }
+	    break;
+	  case REALLY_SCALE:
+	    if (goodModels[iModel]) {
+	      ClpSimplex newModel(models[iModel],
+				  models[iModel].scalingFlag());
+	      printf("model really really scaled\n");
+	      models[iModel]=newModel;
 	    }
 	    break;
 	  case HELP:

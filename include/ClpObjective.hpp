@@ -11,7 +11,8 @@
 Abstract Base Class for describing an objective function
 
 */
-
+class ClpSimplex;
+class ClpModel;
 class ClpObjective  {
   
 public:
@@ -22,12 +23,40 @@ public:
   /** Returns gradient.  If Linear then solution may be NULL,
       also returns an offset (to be added to current one)
       If refresh is false then uses last solution
+      Uses model for scaling 
+      includeLinear 0 - no, 1 as is, 2 as feasible
   */
-  virtual double * gradient(const double * solution, double & offset,bool refresh) = 0;
+  virtual double * gradient(const ClpSimplex * model,
+			    const double * solution,
+			    double & offset,bool refresh,
+			    int includeLinear=2)=0;
+  /** Returns reduced gradient.Returns an offset (to be added to current one).
+  */
+  virtual double reducedGradient(ClpSimplex * model, double * region,
+				 bool useFeasibleCosts)=0;
+  /** Returns step length which gives minimum of objective for
+      solution + theta * change vector up to maximum theta.
+
+      arrays are numberColumns+numberRows
+      Also sets current objective, predicted  and at maximumTheta
+  */
+  virtual double stepLength(ClpSimplex * model,
+			    const double * solution,
+			    const double * change,
+			    double maximumTheta,
+			    double & currentObj,
+			    double & predictedObj,
+			    double & thetaObj)=0;
   /// Resize objective
   virtual void resize(int newNumberColumns) = 0; 
   /// Delete columns in  objective
   virtual void deleteSome(int numberToDelete, const int * which) = 0; 
+  /// Scale objective 
+  virtual void reallyScale(const double * columnScale) =0;
+  /** Given a zeroed array sets nonlinear columns to 1.
+      Returns number of nonlinear columns
+   */
+  virtual int markNonlinear(char * which);
   //@}
   
   
@@ -61,7 +90,16 @@ public:
   /// Returns type (above 63 is extra information)
   inline int type()
   { return type_;};
+  /// Whether activated
+  inline int activated() const
+  {return activated_;};
+  /// Set whether activated
+  inline void setActivated(int value)
+  {activated_=value;};
   
+  /// Objective offset
+  inline double nonlinearOffset () const
+  { return offset_;};
   //@}
 
   //---------------------------------------------------------------------------
@@ -69,8 +107,12 @@ public:
 protected:
   ///@name Protected member data 
   //@{
+  /// Value of non-linear part of objective
+  double offset_;
   /// Type of objective - linear is 1
   int type_;
+  /// Whether activated
+  int activated_;
   //@}
 };
 

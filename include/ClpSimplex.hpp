@@ -73,10 +73,16 @@ public:
   /// Default constructor
     ClpSimplex (  );
 
-  /// Copy constructor. 
-  ClpSimplex(const ClpSimplex &);
-  /// Copy constructor from model. 
-  ClpSimplex(const ClpModel &);
+  /** Copy constructor. May scale depending on mode
+      -1 leave mode as is 
+      0 -off, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic(later)
+  */
+  ClpSimplex(const ClpSimplex & rhs, int scalingMode =-1);
+  /** Copy constructor from model. May scale depending on mode
+      -1 leave mode as is 
+      0 -off, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic(later)
+  */
+  ClpSimplex(const ClpModel & rhs, int scalingMode=-1);
   /** Subproblem constructor.  A subset of whole model is created from the 
       row and column lists given.  The new order is given by list order and
       duplicates are allowed.  Name and integer information can be dropped
@@ -169,17 +175,18 @@ public:
   /** Primal algorithm - see ClpSimplexPrimal.hpp for method.
       ifValuesPass==2 just does values pass and then stops */
   int primal(int ifValuesPass=0);
-  /** Solves quadratic problem using SLP - may be used as crash
+  /** Solves nonlinear problem using SLP - may be used as crash
       for other algorithms when number of iterations small.
       Also exits if all problematical variables are changing
       less than deltaTolerance
   */
-  int quadraticSLP(int numberPasses,double deltaTolerance);
-  /// Solves quadratic using Dantzig's algorithm - primal
-  int quadraticPrimal(int phase=2);
+  int nonlinearSLP(int numberPasses,double deltaTolerance);
   /** Solves using barrier (assumes you have good cholesky factor code).
       Does crossover to simplex if asked*/
   int barrier(bool crossover=true);
+  /** Solves non-linear using reduced gradient.  Phase = 0 get feasible,
+      =1 use solution */
+  int reducedGradient(int phase=0);
   /** Dual ranging.
       This computes increase/decrease in cost for each given variable and corresponding
       sequence numbers which would change basis.  Sequence numbers are 0..numberColumns 
@@ -604,26 +611,26 @@ public:
   //@{
   /** Return row or column sections - not as much needed as it 
       once was.  These just map into single arrays */
-  inline double * solutionRegion(int section)
+  inline double * solutionRegion(int section) const
   { if (!section) return rowActivityWork_; else return columnActivityWork_;};
-  inline double * djRegion(int section)
+  inline double * djRegion(int section) const
   { if (!section) return rowReducedCost_; else return reducedCostWork_;};
-  inline double * lowerRegion(int section)
+  inline double * lowerRegion(int section) const
   { if (!section) return rowLowerWork_; else return columnLowerWork_;};
-  inline double * upperRegion(int section)
+  inline double * upperRegion(int section) const
   { if (!section) return rowUpperWork_; else return columnUpperWork_;};
-  inline double * costRegion(int section)
+  inline double * costRegion(int section) const
   { if (!section) return rowObjectiveWork_; else return objectiveWork_;};
   /// Return region as single array
-  inline double * solutionRegion()
+  inline double * solutionRegion() const
   { return solution_;};
-  inline double * djRegion()
+  inline double * djRegion() const
   { return dj_;};
-  inline double * lowerRegion()
+  inline double * lowerRegion() const
   { return lower_;};
-  inline double * upperRegion()
+  inline double * upperRegion() const
   { return upper_;};
-  inline double * costRegion()
+  inline double * costRegion() const
   { return cost_;};
   inline Status getStatus(int sequence) const
   {return static_cast<Status> (status_[sequence]&7);};
@@ -971,6 +978,8 @@ protected:
   unsigned int specialOptions_;
   /// So we know when to be cautious
   int lastBadIteration_;
+  /// So we know when to open up again
+  int lastFlaggedIteration_;
   /// Can be used for count of fake bounds (dual) or fake costs (primal)
   int numberFake_;
   /// Progress flag - at present 0 bit says artificials out, 1 free in

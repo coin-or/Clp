@@ -64,7 +64,7 @@ public:
   bool checkGoodMove(const bool doCorrector,double & bestNextGap,
 		     bool allowIncreasingGap);
   ///:  checks for one step size
-  bool checkGoodMove2(const double move,double & bestNextGap,
+  bool checkGoodMove2(double move,double & bestNextGap,
 		      bool allowIncreasingGap);
   /// updateSolution.  Updates solution at end of iteration
   //returns number fixed

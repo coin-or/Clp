@@ -487,7 +487,7 @@ ClpCholeskyWssmp::factorize(const double * diagonal, int * rowsDropped)
   integerParameters_[10]=2;
   //integerParameters_[11]=1;
   integerParameters_[12]=2;
-  doubleParameters_[10]=max(1.0e-20,largest2);
+  doubleParameters_[10]=max(1.0e-20,largest);
   if (doubleParameters_[10]>1.0e-3)
     integerParameters_[9]=1;
   else

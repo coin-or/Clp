@@ -320,7 +320,6 @@ ClpCholeskyWssmpKKT::factorize(const double * diagonal, int * rowsDropped)
   if (quadraticObj) 
     quadratic = quadraticObj->quadraticObjective();
   // matrix
-  largest=1.0e-100;
   if (!quadratic) {
     for (iColumn=0;iColumn<numberColumns;iColumn++) {
       choleskyStart_[iColumn]=numberElements;
@@ -335,6 +334,7 @@ ClpCholeskyWssmpKKT::factorize(const double * diagonal, int * rowsDropped)
 	for (CoinBigIndex j=start;j<end;j++) {
 	  choleskyRow_[numberElements]=row[j]+numberTotal;
 	  sparseFactor_[numberElements++]=element[j];
+	  largest = max(largest,fabs(element[j]));
 	}
       } else {
 	sparseFactor_[numberElements] = -1.0e100;
@@ -358,7 +358,7 @@ ClpCholeskyWssmpKKT::factorize(const double * diagonal, int * rowsDropped)
 	     j<columnQuadraticStart[iColumn]+columnQuadraticLength[iColumn];j++) {
 	  int jColumn = columnQuadratic[j];
 	  if (jColumn>iColumn) {
-	    sparseFactor_[numberElements]=quadraticElement[j];
+	    sparseFactor_[numberElements]=-quadraticElement[j];
 	    choleskyRow_[numberElements++]=jColumn;
 	  } else if (iColumn==jColumn) {
 	    value += quadraticElement[j];
@@ -371,6 +371,7 @@ ClpCholeskyWssmpKKT::factorize(const double * diagonal, int * rowsDropped)
 	for (CoinBigIndex j=start;j<end;j++) {
 	  choleskyRow_[numberElements]=row[j]+numberTotal;
 	  sparseFactor_[numberElements++]=element[j];
+	  largest = max(largest,fabs(element[j]));
 	}
       } else {
 	value = 1.0e100;
@@ -415,10 +416,16 @@ ClpCholeskyWssmpKKT::factorize(const double * diagonal, int * rowsDropped)
   // LDLT
   integerParameters_[30]=1;
   doubleParameters_[20]=1.0e100;
+  double largest2= largest*1.0e-20;
+  largest = min (largest2,1.0e-11);
+  doubleParameters_[10]=max(1.0e-20,largest);
+  if (doubleParameters_[10]>1.0e-3)
+    integerParameters_[9]=1;
+  else
+    integerParameters_[9]=0;
 #ifndef WSMP
   // Set up LDL cutoff
   integerParameters_[34]=numberTotal;
-  doubleParameters_[10]=min(largest*1.0e-19,1.0e-14);
   doubleParameters_[20]=1.0e-15;
   doubleParameters_[34]=1.0e-12;
   //printf("tol is %g\n",doubleParameters_[10]);

@@ -76,7 +76,10 @@ public:
   virtual void clearArrays();
   /// Returns true if would not find any column
   virtual bool looksOptimal() const
-  { return false;};
+  { return looksOptimal_;};
+  /// Sets optimality flag (for advanced use)
+  virtual void setLooksOptimal(bool flag)
+  { looksOptimal_ = flag;};
   //@}
   
   
@@ -127,6 +130,8 @@ protected:
   ClpSimplex * model_;
   /// Type of column pivot algorithm 
   int type_;
+  /// Says if looks optimal (normally computed)
+  bool looksOptimal_;
   //@}
 };
 

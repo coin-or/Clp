@@ -100,6 +100,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
   int doIdiot=0;
   int doCrash=0;
   int doSprint=0;
+  int doSlp=0;
   if (method!=ClpSolve::useDual&&method!=ClpSolve::useBarrier) {
     switch (options.getSpecialOption(1)) {
     case 0:
@@ -151,6 +152,13 @@ ClpSimplex::initialSolve(ClpSolve & options)
       doIdiot=0;
       doCrash=0;
       doSprint=-1;
+      break;
+    case 10:
+      doIdiot=0;
+      doCrash=0;
+      doSprint=0;
+      if (options.getExtraInfo(1)>0)
+	doSlp = options.getExtraInfo(1);
       break;
     default:
       abort();
@@ -599,6 +607,9 @@ ClpSimplex::initialSolve(ClpSolve & options)
     // ?
     if (doCrash)
       model2->crash(1000,1);
+    if (doSlp>0&&objective_->type()==2) {
+      model2->nonlinearSLP(doSlp,1.0e-5);
+    }
     model2->primal(1);
     time2 = CoinCpuTime();
     timeCore = time2-timeX;
@@ -1210,6 +1221,12 @@ ClpSimplex::initialSolve(ClpSolve & options)
       model2->setPerturbation(savePerturbation);
       model2->createStatus();
       model2->dual();
+    } else if (maxIts&&quadraticObj) {
+      // make sure no status left
+      model2->createStatus();
+      // solve
+      model2->setPerturbation(100);
+      model2->reducedGradient(1);
     }
     model2->setMaximumIterations(saveMaxIts);
 #ifdef BORROW

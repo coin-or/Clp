@@ -2457,6 +2457,8 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	setFlagged(sequenceOut_);
 	progress_->clearBadTimes();
         
+	// Go to safe 
+	factorization_->pivotTolerance(0.99);
 	forceFactorization_=1; // a bit drastic but ..
 	type = 2;
 	//assert (internalFactorize(1)==0);

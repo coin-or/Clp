@@ -454,6 +454,11 @@ ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
 	  lowerValue = lower_[iRange+1];
 	  if (value<lowerValue-primalTolerance) {
 	    value = lowerValue-value;
+#ifndef NDEBUG
+	    if(value>1.0e15)
+	      printf("nonlincostb %d %g %g %g\n",
+		     iSequence,lowerValue,solution[iSequence],lower_[iRange+2]);
+#endif
 	    sumInfeasibilities_ += value;
 	    largestInfeasibility_ = max(largestInfeasibility_,value);
 	    changeCost_ -= lowerValue*
@@ -466,6 +471,11 @@ ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
 	  upperValue = lower_[iRange];
 	  if (value>upperValue+primalTolerance) {
 	    value = value-upperValue;
+#ifndef NDEBUG
+	    if(value>1.0e15)
+	      printf("nonlincostu %d %g %g %g\n",
+		     iSequence,lower_[iRange-1],solution[iSequence],upperValue);
+#endif
 	    sumInfeasibilities_ += value;
 	    largestInfeasibility_ = max(largestInfeasibility_,value);
 	    changeCost_ -= upperValue*
@@ -984,7 +994,7 @@ ClpNonLinearCost::feasibleReportCost() const
 { 
   double value;
   model_->getDblParam(ClpObjOffset,value);
-  return feasibleCost_*model_->optimizationDirection()/
+  return (feasibleCost_+model_->objectiveAsObject()->nonlinearOffset())*model_->optimizationDirection()/
     (model_->objectiveScale()*model_->rhsScale())-value;
 }
 // Get rid of real costs (just for moment)

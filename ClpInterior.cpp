@@ -87,7 +87,7 @@ ClpInterior::ClpInterior () :
   deltaX_(NULL),
   deltaY_(NULL),
   deltaZ_(NULL),
-  deltaT_(NULL),
+  deltaW_(NULL),
   deltaSU_(NULL),
   deltaSL_(NULL),
   primalR_(NULL),
@@ -96,10 +96,10 @@ ClpInterior::ClpInterior () :
   rhsU_(NULL),
   rhsL_(NULL),
   rhsZ_(NULL),
-  rhsT_(NULL),
+  rhsW_(NULL),
   rhsC_(NULL),
   zVec_(NULL),
-  tVec_(NULL),
+  wVec_(NULL),
   cholesky_(NULL),
   numberComplementarityPairs_(0),
   numberComplementarityItems_(0),
@@ -176,7 +176,7 @@ ClpInterior::ClpInterior ( const ClpModel * rhs,
     deltaX_(NULL),
     deltaY_(NULL),
     deltaZ_(NULL),
-    deltaT_(NULL),
+    deltaW_(NULL),
     deltaSU_(NULL),
     deltaSL_(NULL),
     primalR_(NULL),
@@ -185,10 +185,10 @@ ClpInterior::ClpInterior ( const ClpModel * rhs,
     rhsU_(NULL),
     rhsL_(NULL),
     rhsZ_(NULL),
-    rhsT_(NULL),
+    rhsW_(NULL),
     rhsC_(NULL),
     zVec_(NULL),
-    tVec_(NULL),
+    wVec_(NULL),
     cholesky_(NULL),
     numberComplementarityPairs_(0),
     numberComplementarityItems_(0),
@@ -251,7 +251,7 @@ ClpInterior::ClpInterior(const ClpInterior &rhs) :
   deltaX_(NULL),
   deltaY_(NULL),
   deltaZ_(NULL),
-  deltaT_(NULL),
+  deltaW_(NULL),
   deltaSU_(NULL),
   deltaSL_(NULL),
   primalR_(NULL),
@@ -260,10 +260,10 @@ ClpInterior::ClpInterior(const ClpInterior &rhs) :
   rhsU_(NULL),
   rhsL_(NULL),
   rhsZ_(NULL),
-  rhsT_(NULL),
+  rhsW_(NULL),
   rhsC_(NULL),
   zVec_(NULL),
-  tVec_(NULL),
+  wVec_(NULL),
   cholesky_(NULL)
 {
   gutsOfDelete();
@@ -329,7 +329,7 @@ ClpInterior::ClpInterior(const ClpModel &rhs) :
   deltaX_(NULL),
   deltaY_(NULL),
   deltaZ_(NULL),
-  deltaT_(NULL),
+  deltaW_(NULL),
   deltaSU_(NULL),
   deltaSL_(NULL),
   primalR_(NULL),
@@ -338,10 +338,10 @@ ClpInterior::ClpInterior(const ClpModel &rhs) :
   rhsU_(NULL),
   rhsL_(NULL),
   rhsZ_(NULL),
-  rhsT_(NULL),
+  rhsW_(NULL),
   rhsC_(NULL),
   zVec_(NULL),
-  tVec_(NULL),
+  wVec_(NULL),
   cholesky_(NULL),
   numberComplementarityPairs_(0),
   numberComplementarityItems_(0),
@@ -426,7 +426,7 @@ ClpInterior::gutsOfCopy(const ClpInterior & rhs)
   diagonal_ = ClpCopyOfArray(rhs.diagonal_,numberRows_+numberColumns_);
   deltaX_ = ClpCopyOfArray(rhs.deltaX_,numberRows_+numberColumns_);
   deltaZ_ = ClpCopyOfArray(rhs.deltaZ_,numberRows_+numberColumns_);
-  deltaT_ = ClpCopyOfArray(rhs.deltaT_,numberRows_+numberColumns_);
+  deltaW_ = ClpCopyOfArray(rhs.deltaW_,numberRows_+numberColumns_);
   deltaSU_ = ClpCopyOfArray(rhs.deltaSU_,numberRows_+numberColumns_);
   deltaSL_ = ClpCopyOfArray(rhs.deltaSL_,numberRows_+numberColumns_);
   primalR_ = ClpCopyOfArray(rhs.primalR_,numberRows_+numberColumns_);
@@ -435,12 +435,12 @@ ClpInterior::gutsOfCopy(const ClpInterior & rhs)
   rhsU_ = ClpCopyOfArray(rhs.rhsU_,numberRows_+numberColumns_);
   rhsL_ = ClpCopyOfArray(rhs.rhsL_,numberRows_+numberColumns_);
   rhsZ_ = ClpCopyOfArray(rhs.rhsZ_,numberRows_+numberColumns_);
-  rhsT_ = ClpCopyOfArray(rhs.rhsT_,numberRows_+numberColumns_);
+  rhsW_ = ClpCopyOfArray(rhs.rhsW_,numberRows_+numberColumns_);
   rhsC_ = ClpCopyOfArray(rhs.rhsC_,numberRows_+numberColumns_);
   solution_ = ClpCopyOfArray(rhs.solution_,numberRows_+numberColumns_);
   workArray_ = ClpCopyOfArray(rhs.workArray_,numberRows_+numberColumns_);
   zVec_ = ClpCopyOfArray(rhs.zVec_,numberRows_+numberColumns_);
-  tVec_ = ClpCopyOfArray(rhs.tVec_,numberRows_+numberColumns_);
+  wVec_ = ClpCopyOfArray(rhs.wVec_,numberRows_+numberColumns_);
   cholesky_ = rhs.cholesky_->clone();
   numberComplementarityPairs_ = rhs.numberComplementarityPairs_;
   numberComplementarityItems_ = rhs.numberComplementarityItems_;
@@ -493,8 +493,8 @@ ClpInterior::gutsOfDelete()
   deltaX_ = NULL;
   delete [] deltaZ_;
   deltaZ_ = NULL;
-  delete [] deltaT_;
-  deltaT_ = NULL;
+  delete [] deltaW_;
+  deltaW_ = NULL;
   delete [] deltaSU_;
   deltaSU_ = NULL;
   delete [] deltaSL_;
@@ -511,8 +511,8 @@ ClpInterior::gutsOfDelete()
   rhsL_ = NULL;
   delete [] rhsZ_;
   rhsZ_ = NULL;
-  delete [] rhsT_;
-  rhsT_ = NULL;
+  delete [] rhsW_;
+  rhsW_ = NULL;
   delete [] rhsC_;
   rhsC_ = NULL;
   delete [] solution_;
@@ -521,8 +521,8 @@ ClpInterior::gutsOfDelete()
   workArray_ = NULL;
   delete [] zVec_;
   zVec_ = NULL;
-  delete [] tVec_;
-  tVec_ = NULL;
+  delete [] wVec_;
+  wVec_ = NULL;
   delete cholesky_;
 }
 bool
@@ -631,9 +631,9 @@ ClpInterior::createWorkingData()
   assert (!deltaZ_);
   deltaZ_ = new double [nTotal];
   CoinZeroN(deltaZ_,nTotal);
-  assert (!deltaT_);
-  deltaT_ = new double [nTotal];
-  CoinZeroN(deltaT_,nTotal);
+  assert (!deltaW_);
+  deltaW_ = new double [nTotal];
+  CoinZeroN(deltaW_,nTotal);
   assert (!deltaSU_);
   deltaSU_ = new double [nTotal];
   CoinZeroN(deltaSU_,nTotal);
@@ -661,9 +661,9 @@ ClpInterior::createWorkingData()
   assert (!rhsZ_);
   rhsZ_ = new double [nTotal];
   CoinZeroN(rhsZ_,nTotal);
-  assert (!rhsT_);
-  rhsT_ = new double [nTotal];
-  CoinZeroN(rhsT_,nTotal);
+  assert (!rhsW_);
+  rhsW_ = new double [nTotal];
+  CoinZeroN(rhsW_,nTotal);
   assert (!rhsC_);
   rhsC_ = new double [nTotal];
   CoinZeroN(rhsC_,nTotal);
@@ -673,9 +673,9 @@ ClpInterior::createWorkingData()
   assert (!zVec_);
   zVec_ = new double [nTotal];
   CoinZeroN(zVec_,nTotal);
-  assert (!tVec_);
-  tVec_ = new double [nTotal];
-  CoinZeroN(tVec_,nTotal);
+  assert (!wVec_);
+  wVec_ = new double [nTotal];
+  CoinZeroN(wVec_,nTotal);
   assert (!dj_);
   dj_ = new double [nTotal];
   if (!status_)
@@ -748,8 +748,8 @@ ClpInterior::deleteWorkingData()
   workArray_ = NULL;
   delete [] zVec_;
   zVec_ = NULL;
-  delete [] tVec_;
-  tVec_ = NULL;
+  delete [] wVec_;
+  wVec_ = NULL;
   delete [] dj_;
   dj_ = NULL;
 }

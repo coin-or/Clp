@@ -135,6 +135,8 @@ public:
 		      int & bestSequence, int & numberWanted);
   /// makes sure active columns correct
   virtual int refresh(ClpSimplex * model);
+  // Really scale matrix
+  virtual void reallyScale(const double * rowScale, const double * columnScale);
    //@}
 
   /**@name Matrix times vector methods */

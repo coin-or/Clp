@@ -94,6 +94,7 @@ static Clp_message us_english[]=
   {CLP_BARRIER_FEASIBLE,57,2,"Infeasibilities - bound %g , primal %g ,dual %g"}, 
   {CLP_BARRIER_STEP,58,2,"Steps - primal %g ,dual %g , mu %g"}, 
   {CLP_RIM_SCALE,59,1,"Automatic rim scaling gives objective scale of %g and rhs/bounds scale of %g"}, 
+  {CLP_SLP_ITER,58,1,"Pass %d objective %g - drop %g, largest delta %g"}, 
   {CLP_DUMMY_END,999999,0,""}
 };
 static Clp_message uk_english[]=

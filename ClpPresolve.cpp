@@ -12,6 +12,7 @@
 
 #include "CoinPackedMatrix.hpp"
 #include "ClpSimplex.hpp"
+#include "ClpQuadraticObjective.hpp"
 
 #include "ClpPresolve.hpp"
 #include "CoinPresolveMatrix.hpp"
@@ -214,8 +215,11 @@ ClpPresolve::postsolve(bool updateStatus)
       pi[i] = -pi[i];
   }
   // Now check solution
+  double offset;
   memcpy(originalModel_->dualColumnSolution(),
-	 originalModel_->objective(),ncols_*sizeof(double));
+	 originalModel_->objectiveAsObject()->gradient(originalModel_,
+						       originalModel_->primalColumnSolution(),
+						       offset,true),ncols_*sizeof(double));
   originalModel_->transposeTimes(-1.0,
 				 originalModel_->dualRowSolution(),
 				 originalModel_->dualColumnSolution());
@@ -370,6 +374,8 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
   // if integers then switch off dual stuff
   // later just do individually
   bool doDualStuff = (presolvedModel_->integerInformation()==NULL);
+  if (prob->anyProhibited()) 
+    doDualStuff=false;
 
 #if	CHECK_CONSISTENCY
   presolve_links_ok(prob->rlink_, prob->mrstrt_, prob->hinrow_, prob->nrows_);
@@ -861,7 +867,9 @@ CoinPrePostsolveMatrix::CoinPrePostsolveMatrix(const ClpSimplex * si,
 
   ClpDisjointCopyN(si->getColLower(), ncols, clo_);
   ClpDisjointCopyN(si->getColUpper(), ncols, cup_);
-  ClpDisjointCopyN(si->getObjCoefficients(), ncols, cost_);
+  //ClpDisjointCopyN(si->getObjCoefficients(), ncols, cost_);
+  double offset;
+  ClpDisjointCopyN(si->objectiveAsObject()->gradient(si,si->getColSolution(),offset,true), ncols, cost_);
   ClpDisjointCopyN(si->getRowLower(), nrows,  rlo_);
   ClpDisjointCopyN(si->getRowUpper(), nrows,  rup_);
   int i;
@@ -990,6 +998,13 @@ CoinPresolveMatrix::CoinPresolveMatrix(int ncols0_in,
     ClpFillN<char>(integerType_, ncols_, 0);
   }
 
+#ifndef NO_RTTI
+    ClpQuadraticObjective * quadraticObj = (dynamic_cast< ClpQuadraticObjective*>(si->objectiveAsObject()));
+#else
+    ClpQuadraticObjective * quadraticObj = NULL;
+    if (si->objectiveAsObject()->type()==2)
+      quadraticObj = (static_cast< ClpQuadraticObjective*>(si->objectiveAsObject()));
+#endif
   // Set up prohibited bits if needed
   if (nonLinearValue) {
     anyProhibited_ = true;
@@ -1006,6 +1021,20 @@ CoinPresolveMatrix::CoinPresolveMatrix(int ncols0_in,
       }
       if (nonLinearColumn)
 	setColProhibited(icol);
+    }
+  } else if (quadraticObj) {
+    CoinPackedMatrix * quadratic = quadraticObj->quadraticObjective();
+    //const int * columnQuadratic = quadratic->getIndices();
+    //const CoinBigIndex * columnQuadraticStart = quadratic->getVectorStarts();
+    const int * columnQuadraticLength = quadratic->getVectorLengths();
+    //double * quadraticElement = quadratic->getMutableElements();
+    int numberColumns = quadratic->getNumCols();
+    anyProhibited_ = true;
+    for (int iColumn=0;iColumn<numberColumns;iColumn++) {
+      if (columnQuadraticLength[iColumn]) {
+	setColProhibited(iColumn);
+	//printf("%d prohib\n",iColumn);
+      }
     }
   } else {
     anyProhibited_ = false;
@@ -1061,7 +1090,6 @@ void CoinPresolveMatrix::update_model(ClpSimplex * si,
 {
   si->loadProblem(ncols_, nrows_, mcstrt_, hrow_, colels_, hincol_,
 		 clo_, cup_, cost_, rlo_, rup_);
-
   delete [] si->integerInformation();
   int numberIntegers=0;
   for (int i=0; i<ncols_; i++) {
@@ -1290,7 +1318,6 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
     prob.feasibilityTolerance_ = feasibilityTolerance;
 
     // Do presolve
-
     paction_ = presolve(&prob);
 
     result =0; 
@@ -1350,6 +1377,50 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
       
       int ncolsNow = presolvedModel_->getNumCols();
       memcpy(originalColumn_,prob.originalColumn_,ncolsNow*sizeof(int));
+#ifndef NO_RTTI
+      ClpQuadraticObjective * quadraticObj = (dynamic_cast< ClpQuadraticObjective*>(originalModel->objectiveAsObject()));
+#else
+      ClpQuadraticObjective * quadraticObj = NULL;
+      if (originalModel->objectiveAsObject()->type()==2)
+	quadraticObj = (static_cast< ClpQuadraticObjective*>(originalModel->objectiveAsObject()));
+#endif
+      if (quadraticObj) {
+	// set up for subset
+	char * mark = new char [ncols_];
+	memset(mark,0,ncols_);
+	CoinPackedMatrix * quadratic = quadraticObj->quadraticObjective();
+	//const int * columnQuadratic = quadratic->getIndices();
+	//const CoinBigIndex * columnQuadraticStart = quadratic->getVectorStarts();
+	const int * columnQuadraticLength = quadratic->getVectorLengths();
+	//double * quadraticElement = quadratic->getMutableElements();
+	int numberColumns = quadratic->getNumCols();
+	ClpQuadraticObjective * newObj = new ClpQuadraticObjective(*quadraticObj,
+								   ncolsNow,
+								   originalColumn_);
+	// and modify linear and check
+	double * linear = newObj->linearObjective();
+	memcpy(linear,presolvedModel_->objective(),ncolsNow*sizeof(double));
+	int iColumn;
+	for ( iColumn=0;iColumn<numberColumns;iColumn++) {
+	  if (columnQuadraticLength[iColumn])
+	    mark[iColumn]=1;
+	}
+	// and new
+	quadratic = newObj->quadraticObjective();
+	columnQuadraticLength = quadratic->getVectorLengths();
+	int numberColumns2 = quadratic->getNumCols();
+	for ( iColumn=0;iColumn<numberColumns2;iColumn++) {
+	  if (columnQuadraticLength[iColumn])
+	    mark[originalColumn_[iColumn]]=0;
+	}
+	presolvedModel_->setObjective(newObj);
+	delete newObj;
+	// final check
+	for ( iColumn=0;iColumn<numberColumns;iColumn++) 
+	  if (mark[iColumn])
+	    printf("Quadratic column %d modified - may be okay\n",iColumn);
+	delete [] mark;
+      }
       delete [] prob.originalColumn_;
       prob.originalColumn_=NULL;
       int nrowsNow = presolvedModel_->getNumRows();

@@ -13,7 +13,9 @@
 // Default Constructor 
 //-------------------------------------------------------------------
 ClpObjective::ClpObjective () :
-  type_(-1)
+  offset_(0.0),
+  type_(-1),
+  activated_(1)
 {
 
 }
@@ -22,7 +24,9 @@ ClpObjective::ClpObjective () :
 // Copy constructor 
 //-------------------------------------------------------------------
 ClpObjective::ClpObjective (const ClpObjective & source) :
-  type_(source.type_)
+  offset_(source.offset_),
+  type_(source.type_),
+  activated_(source.activated_)
 {  
 
 }
@@ -42,7 +46,9 @@ ClpObjective &
 ClpObjective::operator=(const ClpObjective& rhs)
 {
   if (this != &rhs) {
+    offset_ = rhs.offset_;
     type_ = rhs.type_;
+    activated_= rhs.activated_;
   }
   return *this;
 }
@@ -56,5 +62,13 @@ ClpObjective::subsetClone (int numberColumns,
   std::cerr<<"subsetClone not supported - ClpObjective"<<std::endl;
   abort();
   return NULL;
+}
+/* Given a zeroed array sets nonlinear columns to 1.
+   Returns number of nonlinear columns
+*/
+int 
+ClpObjective::markNonlinear(char * which)
+{
+  return 0;
 }
 

@@ -100,6 +100,7 @@ ClpSimplex::ClpSimplex () :
   nonLinearCost_(NULL),
   specialOptions_(0),
   lastBadIteration_(-999999),
+  lastFlaggedIteration_(-999999),
   numberFake_(0),
   progressFlag_(0),
   firstFree_(-1),
@@ -203,6 +204,7 @@ ClpSimplex::ClpSimplex ( const ClpModel * rhs,
   nonLinearCost_(NULL),
   specialOptions_(0),
   lastBadIteration_(-999999),
+  lastFlaggedIteration_(-999999),
   numberFake_(0),
   progressFlag_(0),
   firstFree_(-1),
@@ -563,170 +565,175 @@ ClpSimplex::computePrimals ( const double * rowActivities,
 void
 ClpSimplex::computeDuals(double * givenDjs)
 {
-  //work space
-  CoinIndexedVector  * workSpace = rowArray_[0];
-
-  CoinIndexedVector arrayVector;
-  arrayVector.reserve(numberRows_+1);
-  CoinIndexedVector previousVector;
-  previousVector.reserve(numberRows_+1);
-
-
-  int iRow;
+  if (objective_->type()==1||!objective_->activated()) {
+    // Linear
+    //work space
+    CoinIndexedVector  * workSpace = rowArray_[0];
+    
+    CoinIndexedVector arrayVector;
+    arrayVector.reserve(numberRows_+1);
+    CoinIndexedVector previousVector;
+    previousVector.reserve(numberRows_+1);
+    
+    
+    int iRow;
 #ifdef CLP_DEBUG
-  workSpace->checkClear();
+    workSpace->checkClear();
 #endif
-  double * array = arrayVector.denseVector();
-  int * index = arrayVector.getIndices();
-  int number=0;
-  if (!givenDjs) {
-    for (iRow=0;iRow<numberRows_;iRow++) {
-      int iPivot=pivotVariable_[iRow];
-      double value = cost_[iPivot];
-      if (value) {
-	array[iRow]=value;
-	index[number++]=iRow;
-      }
-    }
-  } else {
-    // dual values pass - djs may not be zero
-    for (iRow=0;iRow<numberRows_;iRow++) {
-      int iPivot=pivotVariable_[iRow];
-      // make sure zero if done
-      if (!pivoted(iPivot))
-	givenDjs[iPivot]=0.0;
-      double value =cost_[iPivot]-givenDjs[iPivot];
-      if (value) {
-	array[iRow]=value;
-	index[number++]=iRow;
-      }
-    }
-  }
-  arrayVector.setNumElements(number);
-  // Extended duals before "updateTranspose"
-  matrix_->dualExpanded(this,&arrayVector,givenDjs,0);
-
-  // Btran basic costs and get as accurate as possible
-  double lastError=COIN_DBL_MAX;
-  int iRefine;
-  double * work = workSpace->denseVector();
-  CoinIndexedVector * thisVector = &arrayVector;
-  CoinIndexedVector * lastVector = &previousVector;
-  factorization_->updateColumnTranspose(workSpace,thisVector);
-
-  for (iRefine=0;iRefine<numberRefinements_+1;iRefine++) {
-    // check basic reduced costs zero
-    largestDualError_=0.0;
-    // would be faster to do just for basic but this reduces code
-    ClpDisjointCopyN(objectiveWork_,numberColumns_,reducedCostWork_);
-    transposeTimes(-1.0,array,reducedCostWork_);
-    // update by duals on sets
-    matrix_->dualExpanded(this,NULL,NULL,1);
+    double * array = arrayVector.denseVector();
+    int * index = arrayVector.getIndices();
+    int number=0;
     if (!givenDjs) {
       for (iRow=0;iRow<numberRows_;iRow++) {
 	int iPivot=pivotVariable_[iRow];
-	double value;
-	if (iPivot>=numberColumns_) {
-	  // slack
-	  value = rowObjectiveWork_[iPivot-numberColumns_]
-	    + array[iPivot-numberColumns_];
-	} else {
-	  // column
-	  value = reducedCostWork_[iPivot];
-	}
-	work[iRow]=value;
-	if (fabs(value)>largestDualError_) {
-	  largestDualError_=fabs(value);
+	double value = cost_[iPivot];
+	if (value) {
+	  array[iRow]=value;
+	  index[number++]=iRow;
 	}
       }
     } else {
+      // dual values pass - djs may not be zero
       for (iRow=0;iRow<numberRows_;iRow++) {
 	int iPivot=pivotVariable_[iRow];
-	if (iPivot>=numberColumns_) {
-	  // slack
-	  work[iRow] = rowObjectiveWork_[iPivot-numberColumns_]
-	    + array[iPivot-numberColumns_]-givenDjs[iPivot];
-	} else {
-	  // column
-	  work[iRow] = reducedCostWork_[iPivot]- givenDjs[iPivot];
-	}
-	if (fabs(work[iRow])>largestDualError_) {
-	  largestDualError_=fabs(work[iRow]);
-	  //assert (largestDualError_<1.0e-7);
-	  //if (largestDualError_>1.0e-7)
-	  //printf("large dual error %g\n",largestDualError_);
+	// make sure zero if done
+	if (!pivoted(iPivot))
+	  givenDjs[iPivot]=0.0;
+	double value =cost_[iPivot]-givenDjs[iPivot];
+	if (value) {
+	  array[iRow]=value;
+	  index[number++]=iRow;
 	}
       }
     }
-    if (largestDualError_>=lastError) {
-      // restore
-      CoinIndexedVector * temp = thisVector;
-      thisVector = lastVector;
-      lastVector=temp;
-      break;
-    }
-    if (iRefine<numberRefinements_&&largestDualError_>1.0e-10
-	&&!givenDjs) {
-      // try and make better
-      // save this
-      CoinIndexedVector * temp = thisVector;
-      thisVector = lastVector;
-      lastVector=temp;
-      int * indexOut = thisVector->getIndices();
-      int number=0;
-      array = thisVector->denseVector();
-      thisVector->clear();
-      double multiplier = 131072.0;
-      for (iRow=0;iRow<numberRows_;iRow++) {
-	double value = multiplier*work[iRow];
-	if (value) {
-	  array[iRow]=value;
-	  indexOut[number++]=iRow;
+    arrayVector.setNumElements(number);
+    // Extended duals before "updateTranspose"
+    matrix_->dualExpanded(this,&arrayVector,givenDjs,0);
+    
+    // Btran basic costs and get as accurate as possible
+    double lastError=COIN_DBL_MAX;
+    int iRefine;
+    double * work = workSpace->denseVector();
+    CoinIndexedVector * thisVector = &arrayVector;
+    CoinIndexedVector * lastVector = &previousVector;
+    factorization_->updateColumnTranspose(workSpace,thisVector);
+    
+    for (iRefine=0;iRefine<numberRefinements_+1;iRefine++) {
+      // check basic reduced costs zero
+      largestDualError_=0.0;
+      // would be faster to do just for basic but this reduces code
+      ClpDisjointCopyN(objectiveWork_,numberColumns_,reducedCostWork_);
+      transposeTimes(-1.0,array,reducedCostWork_);
+      // update by duals on sets
+      matrix_->dualExpanded(this,NULL,NULL,1);
+      if (!givenDjs) {
+	for (iRow=0;iRow<numberRows_;iRow++) {
+	  int iPivot=pivotVariable_[iRow];
+	  double value;
+	  if (iPivot>=numberColumns_) {
+	    // slack
+	    value = rowObjectiveWork_[iPivot-numberColumns_]
+	      + array[iPivot-numberColumns_];
+	  } else {
+	    // column
+	    value = reducedCostWork_[iPivot];
+	  }
+	  work[iRow]=value;
+	  if (fabs(value)>largestDualError_) {
+	    largestDualError_=fabs(value);
+	  }
+	}
+      } else {
+	for (iRow=0;iRow<numberRows_;iRow++) {
+	  int iPivot=pivotVariable_[iRow];
+	  if (iPivot>=numberColumns_) {
+	    // slack
+	    work[iRow] = rowObjectiveWork_[iPivot-numberColumns_]
+	      + array[iPivot-numberColumns_]-givenDjs[iPivot];
+	  } else {
+	    // column
+	    work[iRow] = reducedCostWork_[iPivot]- givenDjs[iPivot];
+	  }
+	  if (fabs(work[iRow])>largestDualError_) {
+	    largestDualError_=fabs(work[iRow]);
+	    //assert (largestDualError_<1.0e-7);
+	    //if (largestDualError_>1.0e-7)
+	    //printf("large dual error %g\n",largestDualError_);
+	  }
+	}
+      }
+      if (largestDualError_>=lastError) {
+	// restore
+	CoinIndexedVector * temp = thisVector;
+	thisVector = lastVector;
+	lastVector=temp;
+	break;
+      }
+      if (iRefine<numberRefinements_&&largestDualError_>1.0e-10
+	  &&!givenDjs) {
+	// try and make better
+	// save this
+	CoinIndexedVector * temp = thisVector;
+	thisVector = lastVector;
+	lastVector=temp;
+	int * indexOut = thisVector->getIndices();
+	int number=0;
+	array = thisVector->denseVector();
+	thisVector->clear();
+	double multiplier = 131072.0;
+	for (iRow=0;iRow<numberRows_;iRow++) {
+	  double value = multiplier*work[iRow];
+	  if (value) {
+	    array[iRow]=value;
+	    indexOut[number++]=iRow;
+	    work[iRow]=0.0;
+	  }
 	  work[iRow]=0.0;
 	}
-	work[iRow]=0.0;
-      }
-      thisVector->setNumElements(number);
-      lastError=largestDualError_;
-      factorization_->updateColumnTranspose(workSpace,thisVector);
-      multiplier = 1.0/multiplier;
-      double * previous = lastVector->denseVector();
-      number=0;
-      for (iRow=0;iRow<numberRows_;iRow++) {
-	double value = previous[iRow] + multiplier*array[iRow];
-	if (value) {
-	  array[iRow]=value;
-	  indexOut[number++]=iRow;
-	} else {
-	  array[iRow]=0.0;
+	thisVector->setNumElements(number);
+	lastError=largestDualError_;
+	factorization_->updateColumnTranspose(workSpace,thisVector);
+	multiplier = 1.0/multiplier;
+	double * previous = lastVector->denseVector();
+	number=0;
+	for (iRow=0;iRow<numberRows_;iRow++) {
+	  double value = previous[iRow] + multiplier*array[iRow];
+	  if (value) {
+	    array[iRow]=value;
+	    indexOut[number++]=iRow;
+	  } else {
+	    array[iRow]=0.0;
+	  }
 	}
+	thisVector->setNumElements(number);
+      } else {
+	break;
       }
-      thisVector->setNumElements(number);
-    } else {
-      break;
     }
+    ClpFillN(work,numberRows_,0.0);
+    // now look at dual solution
+    array = thisVector->denseVector();
+    for (iRow=0;iRow<numberRows_;iRow++) {
+      // slack
+      double value = array[iRow];
+      dual_[iRow]=value;
+      value += rowObjectiveWork_[iRow];
+      rowReducedCost_[iRow]=value;
+    }
+    ClpDisjointCopyN(objectiveWork_,numberColumns_,reducedCostWork_);
+    transposeTimes(-1.0,dual_,reducedCostWork_);
+    // Extended duals and check dual infeasibility
+    if (!matrix_->skipDualCheck()||algorithm_<0||problemStatus_!=-2) 
+      matrix_->dualExpanded(this,NULL,NULL,2);
+    // If necessary - override results
+    if (givenDjs) {
+      // restore accurate duals
+      memcpy(givenDjs,dj_,(numberRows_+numberColumns_)*sizeof(double));
+    }
+  } else {
+    // Nonlinear
+    objective_->reducedGradient(this,dj_,false);
   }
-  ClpFillN(work,numberRows_,0.0);
-  // now look at dual solution
-  array = thisVector->denseVector();
-  for (iRow=0;iRow<numberRows_;iRow++) {
-    // slack
-    double value = array[iRow];
-    dual_[iRow]=value;
-    value += rowObjectiveWork_[iRow];
-    rowReducedCost_[iRow]=value;
-  }
-  ClpDisjointCopyN(objectiveWork_,numberColumns_,reducedCostWork_);
-  transposeTimes(-1.0,dual_,reducedCostWork_);
-  // Extended duals and check dual infeasibility
-  if (!matrix_->skipDualCheck()||algorithm_<0||problemStatus_!=-2) 
-    matrix_->dualExpanded(this,NULL,NULL,2);
-  // If necessary - override results
-  if (givenDjs) {
-    // restore accurate duals
-    memcpy(givenDjs,dj_,(numberRows_+numberColumns_)*sizeof(double));
-  }
-
 }
 /* Given an existing factorization computes and checks 
    primal and dual solutions.  Uses input arrays for variables at
@@ -1265,6 +1272,7 @@ ClpSimplex::housekeeping(double objectiveChange)
     }
     solution_[sequenceOut_]=valueOut_;
   } else {
+    //if (objective_->type()<2)
     assert (fabs(theta_)>1.0e-13);
     // flip from bound to bound
     // As Nonlinear costs may have moved bounds (to more feasible)
@@ -1301,7 +1309,8 @@ ClpSimplex::housekeeping(double objectiveChange)
   matrix_->correctSequence(in,out);
   int cycle=progress_->cycle(in,out,
 			    directionIn_,directionOut_);
-  if (cycle>0) {
+  if (cycle>0&&objective_->type()<2) {
+    //if (cycle>0) {
     if (handler_->logLevel()>=63)
       printf("Cycle of %d\n",cycle);
     // reset
@@ -1346,8 +1355,8 @@ ClpSimplex::housekeeping(double objectiveChange)
   }
 }
 // Copy constructor. 
-ClpSimplex::ClpSimplex(const ClpSimplex &rhs) :
-  ClpModel(rhs),
+ClpSimplex::ClpSimplex(const ClpSimplex &rhs,int scalingMode) :
+  ClpModel(rhs,scalingMode),
   columnPrimalInfeasibility_(0.0),
   rowPrimalInfeasibility_(0.0),
   columnPrimalSequence_(-2),
@@ -1416,6 +1425,7 @@ ClpSimplex::ClpSimplex(const ClpSimplex &rhs) :
   nonLinearCost_(NULL),
   specialOptions_(0),
   lastBadIteration_(-999999),
+  lastFlaggedIteration_(-999999),
   numberFake_(0),
   progressFlag_(0),
   firstFree_(-1),
@@ -1443,8 +1453,8 @@ ClpSimplex::ClpSimplex(const ClpSimplex &rhs) :
   solveType_=1; // say simplex based life form
 }
 // Copy constructor from model
-ClpSimplex::ClpSimplex(const ClpModel &rhs) :
-  ClpModel(rhs),
+ClpSimplex::ClpSimplex(const ClpModel &rhs, int scalingMode) :
+  ClpModel(rhs,scalingMode),
   columnPrimalInfeasibility_(0.0),
   rowPrimalInfeasibility_(0.0),
   columnPrimalSequence_(-2),
@@ -1513,6 +1523,7 @@ ClpSimplex::ClpSimplex(const ClpModel &rhs) :
   nonLinearCost_(NULL),
   specialOptions_(0),
   lastBadIteration_(-999999),
+  lastFlaggedIteration_(-999999),
   numberFake_(0),
   progressFlag_(0),
   firstFree_(-1),
@@ -1654,6 +1665,7 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
   infeasibilityCost_ = rhs.infeasibilityCost_;
   specialOptions_ = rhs.specialOptions_;
   lastBadIteration_ = rhs.lastBadIteration_;
+  lastFlaggedIteration_ = rhs.lastFlaggedIteration_;
   numberFake_ = rhs.numberFake_;
   progressFlag_ = rhs.progressFlag_;
   firstFree_ = rhs.firstFree_;
@@ -1840,6 +1852,7 @@ ClpSimplex::checkPrimalSolution(const double * rowActivities,
 	largestSolutionError_=infeasibility;
     }
   }
+  objectiveValue_ += objective_->nonlinearOffset();
   objectiveValue_ /= (objectiveScale_*rhsScale_);
 }
 void 
@@ -2479,7 +2492,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
       if (!rowArray_[iRow]) {
 	rowArray_[iRow]=new CoinIndexedVector();
 	int length =numberRows2+factorization_->maximumPivots();
-	if (iRow==3)
+	if (iRow==3||objective_->type()>1)
 	  length += numberColumns_;
 	rowArray_[iRow]->reserve(length);
       }
@@ -3291,9 +3304,11 @@ ClpSimplex::tightenPrimalBounds(double factor)
 #include "ClpSimplexPrimal.hpp"
 int ClpSimplex::dual (int ifValuesPass )
 {
+  int saveQuadraticActivated = objective_->activated();
+  objective_->setActivated(0);
   assert (ifValuesPass>=0&&ifValuesPass<3);
   /*  Note use of "down casting".  The only class the user sees is ClpSimplex.
-      Classes ClpSimplexDual, ClpSimplexPrimal, (ClpSimplexPrimalQuadratic) 
+      Classes ClpSimplexDual, ClpSimplexPrimal, (ClpSimplexNonlinear) 
       and ClpSimplexOther all exist and inherit from ClpSimplex but have no
       additional data and have no destructor or (non-default) constructor.
 
@@ -3370,14 +3385,20 @@ int ClpSimplex::dual (int ifValuesPass )
     if (problemStatus_==10) 
       problemStatus_=0;
   }
+  objective_->setActivated(saveQuadraticActivated);
   return returnCode;
 }
+#include "ClpQuadraticObjective.hpp"
 // primal 
 int ClpSimplex::primal (int ifValuesPass )
 {
+  // See if nonlinear
+  if (objective_->type()>1&&objective_->activated()) 
+    return reducedGradient();
+  
   assert (ifValuesPass>=0&&ifValuesPass<3);
   /*  Note use of "down casting".  The only class the user sees is ClpSimplex.
-      Classes ClpSimplexDual, ClpSimplexPrimal, (ClpSimplexPrimalQuadratic) 
+      Classes ClpSimplexDual, ClpSimplexPrimal, (ClpSimplexNonlinear) 
       and ClpSimplexOther all exist and inherit from ClpSimplex but have no
       additional data and have no destructor or (non-default) constructor.
 
@@ -3511,20 +3532,37 @@ int ClpSimplex::primalRanging(int numberCheck,const int * which,
   finish(); // get rid of arrays
   return 0;
 }
-#include "ClpSimplexPrimalQuadratic.hpp"
-/* Solves quadratic problem using SLP - may be used as crash
+#include "ClpSimplexNonlinear.hpp"
+/* Solves nonlinear problem using SLP - may be used as crash
    for other algorithms when number of iterations small
 */
 int 
-ClpSimplex::quadraticSLP(int numberPasses, double deltaTolerance)
+ClpSimplex::nonlinearSLP(int numberPasses, double deltaTolerance)
 {
-  return ((ClpSimplexPrimalQuadratic *) this)->primalSLP(numberPasses,deltaTolerance);
+  return ((ClpSimplexNonlinear *) this)->primalSLP(numberPasses,deltaTolerance);
 }
-// Solves quadratic using Dantzig's algorithm - primal
-int 
-ClpSimplex::quadraticPrimal(int phase)
+// Solves non-linear using reduced gradient
+int ClpSimplex::reducedGradient(int phase)
 {
-  return ((ClpSimplexPrimalQuadratic *) this)->primalQuadratic(phase);
+  if (objective_->type()<2||!objective_->activated()) {
+    // no quadratic part
+    return primal(0);
+  }
+  // get feasible
+  if ((this->status()<0||numberPrimalInfeasibilities())&&phase==0) {
+    objective_->setActivated(0);
+    double saveDirection = optimizationDirection();
+    setOptimizationDirection(0.0);
+    primal(1);
+    setOptimizationDirection(saveDirection);
+    objective_->setActivated(1);
+    // still infeasible
+    if (numberPrimalInfeasibilities())
+      return 0;
+  }
+  // Now enter method
+  int returnCode = ((ClpSimplexNonlinear *) this)->primal();
+  return returnCode;
 }
 #include "ClpPredictorCorrector.hpp"
 #ifdef REAL_BARRIER
@@ -5259,7 +5297,7 @@ ClpSimplex::startup(int ifValuesPass)
       // do perturbation if asked for
       
       if (perturbation_<100) {
-	if (algorithm_>0) {
+	if (algorithm_>0&&(objective_->type()<2||!objective_->activated())) {
 	  ((ClpSimplexPrimal *) this)->perturb(0);
 	} else if (algorithm_<0) {
 	((ClpSimplexDual *) this)->perturb();
@@ -5363,6 +5401,7 @@ ClpSimplex::setFlagged( int sequence)
 {
   status_[sequence] |= 64;
   matrix_->generalExpanded(this,7,sequence);
+  lastFlaggedIteration_=numberIterations_;
 }
 /* Factorizes and returns true if optimal.  Used by user */
 bool

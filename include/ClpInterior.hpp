@@ -475,8 +475,8 @@ protected:
   double * deltaY_;
   /// deltaZ.
   double * deltaZ_;
-  /// deltaT.
-  double * deltaT_;
+  /// deltaW.
+  double * deltaW_;
   /// deltaS.
   double * deltaSU_;
   double * deltaSL_;
@@ -492,14 +492,14 @@ protected:
   double * rhsL_;
   /// rhsZ.
   double * rhsZ_;
-  /// rhsT.
-  double * rhsT_;
+  /// rhsW.
+  double * rhsW_;
   /// rhs C
   double * rhsC_;
   /// zVec
   double * zVec_;
-  /// tVec
-  double * tVec_;
+  /// wVec
+  double * wVec_;
   /// cholesky.
   ClpCholeskyBase * cholesky_;
   /// numberComplementarityPairs i.e. ones with lower and/or upper bounds (not fixed)

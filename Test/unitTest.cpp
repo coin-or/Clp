@@ -1016,7 +1016,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
   }
 #endif
   // test network 
-  //#define QUADRATIC
+#define QUADRATIC
 #ifndef QUADRATIC
   if (1) {    
     std::string fn = mpsDir+"input.130";
@@ -1225,8 +1225,8 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     double objValue = solution.getObjValue();
     CoinRelFltEq eq(1.0e-4);
     //assert(eq(objValue,820.0));
-    solution.setLogLevel(63);
-    solution.quadraticPrimal(1);
+    //solution.setLogLevel(63);
+    solution.primal();
     int numberRows = solution.numberRows();
 
     double * rowPrimal = solution.primalRowSolution();
@@ -1303,7 +1303,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     delete [] element;
     int numberColumns=model.numberColumns();
 #if 0
-    model.quadraticSLP(50,1.0e-4);
+    model.nonlinearSLP(50,1.0e-4);
 #else
     // Get feasible
     ClpObjective * saveObjective = model.objectiveAsObject()->clone();
@@ -1313,16 +1313,11 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     model.setObjective(saveObjective);
     delete saveObjective;
 #endif
-    model.setLogLevel(63);
+    //model.setLogLevel(63);
     //exit(77);
     model.setFactorizationFrequency(10);
-    model.quadraticPrimal(1);
+    model.primal();
     double objValue = model.getObjValue();
-    const double * solution = model.primalColumnSolution();
-    int i;
-    for (i=0;i<numberColumns;i++)
-      if (solution[i])
-	printf("%d %g\n",i,solution[i]);
     CoinRelFltEq eq(1.0e-4);
     assert(eq(objValue,-400.92));
   }
@@ -1347,12 +1342,12 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     delete [] start;
     delete [] column;
     delete [] element;
-    solution.quadraticPrimal(1);
-    solution.quadraticSLP(50,1.0e-4);
+    solution.primal(1);
+    solution.nonlinearSLP(50,1.0e-4);
     double objValue = solution.getObjValue();
     CoinRelFltEq eq(1.0e-4);
     assert(eq(objValue,0.5));
-    solution.quadraticPrimal();
+    solution.primal();
     objValue = solution.getObjValue();
     assert(eq(objValue,0.5));
   }
