@@ -33,6 +33,10 @@ clean:
 	@rm -rf Junk
 	@rm -rf $(UNAME)*
 	@rm -rf dep
+	@rm -rf Test/Junk
+	@rm -rf Test/$(UNAME)*
+	@rm -rf Test/dep
+	@rm -f clp
 
 doc:
 	doxygen $(MakefileDir)/doxygen.conf
