@@ -844,7 +844,6 @@ ClpSimplex::cleanStatus()
    when total number of singularities is returned */
 int ClpSimplex::internalFactorize ( int solveType)
 {
-
   int iRow,iColumn;
   int totalSlacks=numberRows_;
   if (!status_)
@@ -3434,10 +3433,10 @@ int ClpSimplex::primal (int ifValuesPass )
       double saveBound=dualBound_;
       if (upperOut_>0.0)
 	dualBound_=2.0*upperOut_;
-      returnCode = ((ClpSimplexPrimal *) this)->dual(0);
+      returnCode = ((ClpSimplexDual *) this)->dual(0);
       dualBound_=saveBound;
     } else {
-      returnCode = ((ClpSimplexDual *) this)->primal(0);
+      returnCode = ((ClpSimplexPrimal *) this)->primal(0);
     }
     setInitialDenseFactorization(denseFactorization);
     perturbation_=savePerturbation;
@@ -3445,6 +3444,56 @@ int ClpSimplex::primal (int ifValuesPass )
       problemStatus_=0;
   }
   return returnCode;
+}
+/* Dual ranging.
+   This computes increase/decrease in cost for each given variable and corresponding
+   sequence numbers which would change basis.  Sequence numbers are 0..numberColumns 
+   and numberColumns.. for artificials/slacks.
+   For non-basic variables the sequence number will be that of the non-basic variables.
+   
+   Up to user to provide correct length arrays.
+   
+   Returns non-zero if infeasible unbounded etc
+*/
+#include "ClpSimplexOther.hpp"
+int ClpSimplex::dualRanging(int numberCheck,const int * which,
+			    double * costIncrease, int * sequenceIncrease,
+			    double * costDecrease, int * sequenceDecrease)
+{
+  int savePerturbation = perturbation_;
+  perturbation_=100;
+  int returnCode = ((ClpSimplexPrimal *) this)->primal(0,1);
+  if (problemStatus_==10) {
+    //printf("Cleaning up with dual\n");
+    bool denseFactorization = initialDenseFactorization();
+    // It will be safe to allow dense
+    setInitialDenseFactorization(true);
+    // check which algorithms allowed
+    int dummy;
+    if ((matrix_->generalExpanded(this,4,dummy)&2)!=0) {
+      // upperOut_ has largest away from bound
+      double saveBound=dualBound_;
+      if (upperOut_>0.0)
+	dualBound_=2.0*upperOut_;
+      returnCode = ((ClpSimplexDual *) this)->dual(0,1);
+      dualBound_=saveBound;
+    } else {
+      returnCode = ((ClpSimplexPrimal *) this)->primal(0,1);
+    }
+    setInitialDenseFactorization(denseFactorization);
+    if (problemStatus_==10) 
+      problemStatus_=0;
+  }
+  perturbation_=savePerturbation;
+  if (problemStatus_) {
+    finish(); // get rid of arrays
+    return 1; // odd status
+  }
+  ((ClpSimplexOther *) this)->dualRanging(numberCheck,which,
+					  costIncrease,sequenceIncrease,
+					  costDecrease,sequenceDecrease);
+  finish(); // get rid of arrays
+  return 0;
 }
 #include "ClpSimplexPrimalQuadratic.hpp"
 /* Solves quadratic problem using SLP - may be used as crash

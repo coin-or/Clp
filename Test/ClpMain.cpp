@@ -58,6 +58,7 @@ enum ClpParameterType {
   RHSSCALE,
 
   LOGLEVEL=101,MAXFACTOR,PERTVALUE,MAXITERATION,PRESOLVEPASS,IDIOT,SPRINT,
+  OUTPUTFORMAT,
   
   DIRECTION=201,DUALPIVOT,SCALING,ERRORSALLOWED,KEEPNAMES,SPARSEFACTOR,
   PRIMALPIVOT,PRESOLVE,CRASH,BIASLU,PERTURBATION,MESSAGES,AUTOSCALE,
@@ -869,6 +870,7 @@ int main (int argc, const char *argv[])
     int allowImportErrors=0;
     int keepImportNames=1;
     int doIdiot=-1;
+    int outputFormat=2;
     int doCrash=0;
     int doSprint=-1;
     // set reasonable defaults
@@ -1157,6 +1159,18 @@ specialized network code."
  internally by this amount.  It can also be set by autoscale.  It is applied after scaling"
        ); 
     parameters[numberParameters-1].setDoubleValue(1.0);
+    parameters[numberParameters++]=
+      ClpItem("output!Format","Which output format to use",
+	      1,6,OUTPUTFORMAT);
+    parameters[numberParameters-1].setLonghelp
+      (
+       "Normally export will be done using normal representation for numbers and two values\
+ per line.  You may want to do just one per line (for grep or suchlike) and you may wish\
+ to save with absolute accuracy using a coded version of the IEEE value. A value of 2 is normal.\
+ otherwise odd values gives one value per line, even two.  Values 1,2 give normal format, 3,4\
+ gives greater precision, while 5,6 give IEEE values."
+       ); 
+    parameters[numberParameters-1].setIntValue(outputFormat);
     parameters[numberParameters++]=
       ClpItem("passP!resolve","How many passes in presolve",
 	      0,100,PRESOLVEPASS);
@@ -1501,6 +1515,8 @@ costs this much to be infeasible",
 	      doIdiot = value;
 	    else if (parameters[iParam].type()==SPRINT)
 	      doSprint = value;
+	    else if (parameters[iParam].type()==OUTPUTFORMAT)
+	      outputFormat = value;
 	    else
 	      parameters[iParam].setIntParameter(models+iModel,value);
 	  } else if (valid==1) {
@@ -1896,7 +1912,7 @@ costs this much to be infeasible",
 		  delete [] columnNames;
 		}
 #else
-		model2->writeMps(fileName.c_str(),2,2);
+		model2->writeMps(fileName.c_str(),(outputFormat-1)/2,1+((outputFormat-1)&1));
 #endif
 		if (deleteModel2)
 		  delete model2;

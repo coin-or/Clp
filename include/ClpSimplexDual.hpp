@@ -113,7 +113,7 @@ public:
 
   */
 
-  int dual(int ifValuesPass);
+  int dual(int ifValuesPass,int startFinishOptions=0);
   /** For strong branching.  On input lower and upper are new bounds
       while on output they are change in objective function values 
       (>1.0e50 infeasible).

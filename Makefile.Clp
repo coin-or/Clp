@@ -32,6 +32,7 @@ LIBSRC += ClpPrimalColumnSteepest.cpp
 LIBSRC += ClpQuadraticObjective.cpp
 LIBSRC += ClpSimplex.cpp
 LIBSRC += ClpSimplexDual.cpp
+LIBSRC += ClpSimplexOther.cpp
 LIBSRC += ClpSimplexPrimal.cpp
 LIBSRC += ClpSimplexPrimalQuadratic.cpp
 LIBSRC += ClpSolve.cpp

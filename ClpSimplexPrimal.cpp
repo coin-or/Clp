@@ -94,7 +94,7 @@
 #include <stdio.h>
 #include <iostream>
 // primal 
-int ClpSimplexPrimal::primal (int ifValuesPass )
+int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
 {
 
   /*
@@ -401,7 +401,8 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
   }
   // clean up
   unflag();
-  finish();
+  if (!startFinishOptions)
+    finish();
   restoreData(data);
   return problemStatus_;
 }

@@ -542,6 +542,52 @@ ClpSimplexUnitTest(const std::string & mpsDir,
       }
     }
   }
+  // Test dual ranging
+  {    
+    CoinMpsIO m;
+    std::string fn = mpsDir+"exmip1";
+    m.readMps(fn.c_str(),"mps");
+    ClpSimplex model;
+    model.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
+			 m.getObjCoefficients(),
+			 m.getRowLower(),m.getRowUpper());
+    model.primal();
+    int which[8] = {0,1,2,3,4,5,6,7};
+    double costIncrease[8];
+    int sequenceIncrease[8];
+    double costDecrease[8];
+    int sequenceDecrease[8];
+    // ranging
+    model.dualRanging(8,which,costIncrease,sequenceIncrease,
+		      costDecrease,sequenceDecrease);
+    for (int i=0;i<8;i++)
+      printf("%d increase %g %d, decrease %g %d\n",
+	     i,costIncrease[i],sequenceIncrease[i],
+	     costDecrease[i],sequenceDecrease[i]);
+    assert (fabs(costDecrease[3])<1.0e-4);
+    assert (fabs(costIncrease[7]-1.0)<1.0e-4);
+    model.setOptimizationDirection(-1);
+    {
+      int j;
+      double * obj = model.objective();
+      int n=model.numberColumns();
+      for (j=0;j<n;j++) 
+	obj[j] *= -1.0;
+    }
+    double costIncrease2[8];
+    int sequenceIncrease2[8];
+    double costDecrease2[8];
+    int sequenceDecrease2[8];
+    // ranging
+    model.dualRanging(8,which,costIncrease2,sequenceIncrease2,
+		      costDecrease2,sequenceDecrease2);
+    for (int i=0;i<8;i++) {
+      assert (fabs(costIncrease[i]-costDecrease2[i])<1.0e-6);
+      assert (fabs(costDecrease[i]-costIncrease2[i])<1.0e-6);
+      assert (sequenceIncrease[i]==sequenceDecrease2[i]);
+      assert (sequenceDecrease[i]==sequenceIncrease2[i]);
+    }
+  }
   // test steepest edge
   {    
     CoinMpsIO m;

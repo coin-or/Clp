@@ -175,6 +175,20 @@ public:
   int quadraticSLP(int numberPasses,double deltaTolerance);
   /// Solves quadratic using Dantzig's algorithm - primal
   int quadraticPrimal(int phase=2);
+  /** Dual ranging.
+      This computes increase/decrease in cost for each given variable and corresponding
+      sequence numbers which would change basis.  Sequence numbers are 0..numberColumns 
+      and numberColumns.. for artificials/slacks.
+      For non-basic variables the sequence number will be that of the non-basic variables.
+      The increase/decrease value is always >= 0.0
+
+      Up to user to provide correct length arrays.
+
+      Returns non-zero if infeasible unbounded etc
+  */
+  int dualRanging(int numberCheck,const int * which,
+		  double * costIncrease, int * sequenceIncrease,
+		  double * costDecrease, int * sequenceDecrease);
   /// Passes in factorization
   void setFactorization( ClpFactorization & factorization);
   /// Sets or unsets scaling, 0 -off, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic(later)

@@ -33,6 +33,7 @@ IncDir += ${zlibIncDir}
 IncDir += ${bzlibIncDir}
 IncDir += ${readlineIncDir}
 IncDir += ${lapackIncDir}
+IncDir += ${taucsIncDir}
 
 LibDir :=
 LibDir += ${ClpLibDir}
@@ -41,6 +42,7 @@ LibDir += ${zlibLibDir}
 LibDir += ${bzlibLibDir}
 LibDir += ${readlineLibDir}
 LibDir += ${lapackLibDir}
+#LibDir += ${taucsLibDir}
 
 LibName :=
 LibName += ${ClpLibName}
@@ -49,6 +51,7 @@ LibName += ${zlibLibName}
 LibName += ${bzlibLibName}
 LibName += ${readlineLibName}
 LibName += ${lapackLibName}
+#LibName += ${taucsLibName}
 
 Define :=
 Define += ${ClpDefine}
@@ -57,6 +60,7 @@ Define += ${zlibDefine}
 Define += ${bzlibDefine}
 Define += ${readlineDefine}
 Define += ${lapackDefine}
+Define += ${taucsDefine}
 
 CXXFLAGS += $(OPTFLAG)
 
@@ -83,9 +87,11 @@ LDFLAGS += $(call ifprefix,$(SHLINKPREFIX),$(LIBDIRS))
 LDFLAGS += $(patsubst lib%,-l%,$(basename $(LIBS)))
 
 #LDFLAGS += -lefence
+#LDFLAGS += -Wl,-static
 #LDFLAGS += -lwsmpP4 -lpthread
-#OSL_LIB_DIR = /home/forrest/osl/lib
-#LDFLAGS += -L $(OSL_LIB_DIR) -Wl,-rpath,$(OSL_LIB_DIR) -losl-g-nolic-native-32
+OSL_LIB_DIR = /home/forrest/osl/lib
+LDFLAGS += -L $(OSL_LIB_DIR) -Wl,-rpath,$(OSL_LIB_DIR) -losl-O-nolic-native-32
+#LDFLAGS += -pg
 ###############################################################################
 
 ifeq ($(DRIVER),driverC)

@@ -152,6 +152,13 @@ int main (int argc, const char *argv[])
 	  doUpper=true;
       }
     }
+    if (!numberNormal) {
+      printf("Putting back one gub row to make non-empty\n");
+      for (iColumn=gubStart[putGub];iColumn< gubEnd[putGub];iColumn++)
+	mark[numberNormal++]=iColumn;
+      putGub++;
+      numberGub--;
+    }
     ClpSimplex model2(&model,numberNonGub,which+putNonGub,numberNormal,mark);
     int numberGubColumns=numberColumns-numberNormal;
     // sort gubs so monotonic

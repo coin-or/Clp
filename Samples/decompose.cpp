@@ -42,6 +42,10 @@ int main (int argc, const char *argv[])
   } else if (numberRows==5418) {
     for (iRow=564;iRow<603;iRow++)
       rowBlock[iRow]=-1;
+  } else if (numberRows==10280) {
+    // osa-60
+    for (iRow=10198;iRow<10280;iRow++)
+      rowBlock[iRow]=-1;
   } else if (numberRows==1503) {
     // degen3
     for (iRow=0;iRow<561;iRow++)
@@ -116,6 +120,20 @@ int main (int argc, const char *argv[])
     }
   }
   printf("%d blocks found\n",numberBlocks);
+  if (numberBlocks>50) {
+    int iBlock;
+    for (iRow=0;iRow<numberRows;iRow++) {
+      iBlock = rowBlock[iRow];
+      if (iBlock>=0)
+	rowBlock[iRow] = iBlock%50;
+    }
+    for (iColumn=0;iColumn<numberColumns;iColumn++) {
+      iBlock = columnBlock[iColumn];
+      if (iBlock>=0)
+	columnBlock[iColumn] = iBlock%50;
+    }
+    numberBlocks=50;
+  }
   delete [] stack;
   // make up problems
   CoinPackedMatrix * top = new CoinPackedMatrix [numberBlocks];

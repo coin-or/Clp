@@ -106,7 +106,7 @@
 #include <iostream>
 //#define CLP_DEBUG 1
 // dual 
-int ClpSimplexDual::dual (int ifValuesPass )
+int ClpSimplexDual::dual (int ifValuesPass , int startFinishOptions)
 {
 
   /* *** Method
@@ -381,7 +381,8 @@ int ClpSimplexDual::dual (int ifValuesPass )
   assert (problemStatus_||!sumPrimalInfeasibilities_);
 
   // clean up
-  finish();
+  if (!startFinishOptions)
+    finish();
   delete [] saveDuals;
 
   // Restore any saved stuff

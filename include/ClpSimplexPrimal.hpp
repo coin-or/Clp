@@ -110,7 +110,7 @@ public:
 
   */
 
-  int primal(int ifValuesPass=0);
+  int primal(int ifValuesPass=0, int startFinishOptions=0);
   //@}
 
   /**@name For advanced users */
