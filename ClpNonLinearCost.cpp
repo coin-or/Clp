@@ -108,7 +108,6 @@ ClpNonLinearCost::ClpNonLinearCost ( ClpSimplex * model)
     }
     start_[iSequence+1]=put;
   }
-
 }
 ClpNonLinearCost::ClpNonLinearCost(ClpSimplex * model,const int * starts,
 		   const double * lowerNon, const double * costNon)
@@ -346,7 +345,6 @@ ClpNonLinearCost::operator=(const ClpNonLinearCost& rhs)
   }
   return *this;
 }
-
 // Changes infeasible costs and computes number and cost of infeas
 // We will need to re-think objective offsets later
 // We will also need a 2 bit per variable array for some
@@ -378,7 +376,8 @@ ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
     int start = start_[iSequence];
     int end = start_[iSequence+1]-1;
     // correct costs for this infeasibility weight
-    double thisFeasibleCost=0.0;
+    // If free then true cost will be first
+    double thisFeasibleCost=cost_[start];
     if (infeasible(start)) {
       thisFeasibleCost = cost_[start+1];
       cost_[start] = thisFeasibleCost-infeasibilityCost;
@@ -875,8 +874,8 @@ ClpNonLinearCost::setOneOutgoing(int iPivot, double & value)
     } else if (fabs(value-upper)<=primalTolerance*1.001){
       value = max(value,upper-primalTolerance);
     } else {
-      printf("*** variable wandered off bound %g %g %g!\n",
-	     lower,value,upper);
+      //printf("*** variable wandered off bound %g %g %g!\n",
+      //     lower,value,upper);
       if (value-lower<=upper-value) 
 	value = lower+primalTolerance;
       else 
