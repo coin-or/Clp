@@ -188,6 +188,16 @@ public:
   { return diagonalPerturbation_;};
   inline void setDiagonalPerturbation(double value)
   { diagonalPerturbation_=value;};
+  /// gamma
+  inline double gamma() const
+  { return gamma_;};
+  inline void setGamma(double value)
+  { gamma_=value;};
+  /// delta
+  inline double delta() const
+  { return delta_;};
+  inline void setDelta(double value)
+  { delta_=value;};
   /// ComplementarityGap
   inline double complementarityGap() const 
           { return complementarityGap_;} ;
@@ -399,6 +409,10 @@ protected:
   double linearPerturbation_;
   /// diagonalPerturbation
   double diagonalPerturbation_;
+  // gamma from Saunders and Tomlin regularized
+  double gamma_;
+  // delta from Saunders and Tomlin regularized
+  double delta_;
   /// targetGap
   double targetGap_;
   /// projectionTolerance

@@ -60,6 +60,8 @@ ClpInterior::ClpInterior () :
   stepLength_(0.995),
   linearPerturbation_(1.0e-12),
   diagonalPerturbation_(1.0e-15),
+  gamma_(0.0),
+  delta_(0),
   targetGap_(1.0e-12),
   projectionTolerance_(1.0e-7),
   maximumRHSError_(0.0),
@@ -145,6 +147,8 @@ ClpInterior::ClpInterior ( const ClpModel * rhs,
     stepLength_(0.99995),
     linearPerturbation_(1.0e-12),
     diagonalPerturbation_(1.0e-15),
+    gamma_(0.0),
+    delta_(0),
     targetGap_(1.0e-12),
     projectionTolerance_(1.0e-7),
     maximumRHSError_(0.0),
@@ -292,6 +296,8 @@ ClpInterior::ClpInterior(const ClpModel &rhs) :
   stepLength_(0.99995),
   linearPerturbation_(1.0e-12),
   diagonalPerturbation_(1.0e-15),
+  gamma_(0.0),
+  delta_(0),
   targetGap_(1.0e-12),
   projectionTolerance_(1.0e-7),
   maximumRHSError_(0.0),
@@ -387,6 +393,8 @@ ClpInterior::gutsOfCopy(const ClpInterior & rhs)
   stepLength_ = rhs.stepLength_;
   linearPerturbation_ = rhs.linearPerturbation_;
   diagonalPerturbation_ = rhs.diagonalPerturbation_;
+  gamma_=rhs.gamma_;
+  delta_=rhs.delta_;
   targetGap_ = rhs.targetGap_;
   projectionTolerance_ = rhs.projectionTolerance_;
   maximumRHSError_ = rhs.maximumRHSError_;
