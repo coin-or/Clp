@@ -99,7 +99,6 @@ ClpNonLinearCost::ClpNonLinearCost ( ClpSimplex * model)
   }
 
 }
-
 ClpNonLinearCost::ClpNonLinearCost(ClpSimplex * model,const int * starts,
 		   const double * lowerNon, const double * costNon)
 {
@@ -115,6 +114,9 @@ ClpNonLinearCost::ClpNonLinearCost(ClpSimplex * model,const int * starts,
   whichRange_ = new int [numberTotal];
   offset_ = new int [numberTotal];
   memset(offset_,0,numberTotal*sizeof(int));
+  
+  double whichWay = model_->optimizationDirection();
+  printf("Direction %g\n",whichWay);
 
   numberInfeasibilities_=0;
   changeCost_=0.0;
@@ -123,21 +125,32 @@ ClpNonLinearCost::ClpNonLinearCost(ClpSimplex * model,const int * starts,
   sumInfeasibilities_=0.0;
 
   int iSequence;
-  double * upper = model_->upperRegion();
-  double * lower = model_->lowerRegion();
-  double * cost = model_->costRegion();
-  // First see how much space we need - we know column part
-  // but not infeasibilities - see how much extra
-  // may be over-estimate
-  int put=starts[numberColumns_]-numberColumns_;
+  assert (!model_->rowObjective());
+  double * cost = model_->objective();
 
-  for (iSequence=0;iSequence<numberTotal;iSequence++) {
-    if (lower[iSequence]>-1.0e20)
-      if (upper[iSequence]<1.0e20)
-	put++;
-    put += 3;
+  // First see how much space we need 
+  // Also set up feasible bounds
+  int put=starts[numberColumns_];
+
+  double * columnUpper = model_->columnUpper();
+  double * columnLower = model_->columnLower();
+  for (iSequence=0;iSequence<numberColumns_;iSequence++) {
+    if (columnLower[iSequence]>-1.0e20)
+      put++;
+    if (columnUpper[iSequence]<1.0e20)
+      put++;
   }
 
+  double * rowUpper = model_->rowUpper();
+  double * rowLower = model_->rowLower();
+  for (iSequence=0;iSequence<numberRows_;iSequence++) {
+    if (rowLower[iSequence]>-1.0e20)
+      put++;
+    if (rowUpper[iSequence]<1.0e20)
+      put++;
+    put +=2;
+  }
+  printf("put %d\n",put);
   lower_ = new double [put];
   cost_ = new double [put];
   infeasible_ = new unsigned int[(put+31)>>5];
@@ -147,46 +160,58 @@ ClpNonLinearCost::ClpNonLinearCost(ClpSimplex * model,const int * starts,
   put=0;
 
   start_[0]=0;
-
   for (iSequence=0;iSequence<numberTotal;iSequence++) {
     lower_[put] = -COIN_DBL_MAX;
     setInfeasible(put,true);
-    cost_[put++] = cost[iSequence]-infeasibilityCost;
-    whichRange_[iSequence]=put;
+    whichRange_[iSequence]=put+1;
     double thisCost;
+    double lowerValue;
+    double upperValue;
     if (iSequence>=numberColumns_) {
       // rows
-      lower_[put] = lower[iSequence];
-      cost_[put++] = cost[iSequence];
-      thisCost = cost[iSequence];
+      lowerValue = rowLower[iSequence-numberColumns_];
+      upperValue = rowUpper[iSequence-numberColumns_];
+      if (lowerValue>-1.0e30) {
+	cost_[put++] = -infeasibilityCost;
+	lower_[put] = lowerValue;
+      }
+      cost_[put++] = 0.0;
+      thisCost = 0.0;
     } else {
       // columns - move costs and see if convex
+      lowerValue = columnLower[iSequence];
+      upperValue = columnUpper[iSequence];
+      if (lowerValue>-1.0e30) {
+	cost_[put++] = whichWay*cost[iSequence]-infeasibilityCost;
+	lower_[put] = lowerValue;
+      }
       int iIndex = starts[iSequence];
       int end = starts[iSequence+1];
-      assert (fabs(lower[iSequence]-lowerNon[iIndex])<1.0e-8);
+      assert (fabs(columnLower[iSequence]-lowerNon[iIndex])<1.0e-8);
       thisCost = -COIN_DBL_MAX;
       for (;iIndex<end;iIndex++) {
-	if (lowerNon[iIndex]<upper[iSequence]-1.0e-8) {
+	if (lowerNon[iIndex]<columnUpper[iSequence]-1.0e-8) {
 	  lower_[put] = lowerNon[iIndex];
-	  cost_[put++] = costNon[iIndex];
+	  cost_[put++] = whichWay*costNon[iIndex];
 	  // check convexity
-	  if (costNon[iIndex]<thisCost-1.0e-12)
+	  if (whichWay*costNon[iIndex]<thisCost-1.0e-12)
 	    convex_ = false;
-	  thisCost = costNon[iIndex];
+	  thisCost = whichWay*costNon[iIndex];
 	} else {
 	  break;
 	}
       }
     }
-    lower_[put] = upper[iSequence];
+    lower_[put] = upperValue;
     cost_[put++] = thisCost+infeasibilityCost;
-    if (upper[iSequence]<1.0e20) {
+    if (upperValue<1.0e20) {
       lower_[put] = COIN_DBL_MAX;
       setInfeasible(put-1,true);
       cost_[put++] = 1.0e50;
     }
     start_[iSequence+1]=put;
   }
+  printf("put %d\n",put);
   // can't handle non-convex at present
   assert(convex_);
 }

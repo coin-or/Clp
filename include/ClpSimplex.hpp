@@ -318,8 +318,14 @@ public:
       primal and dual solutions.  Uses current problem arrays for
       bounds.  Returns feasibility states */
   int getSolution ();
-  /// Pass in an existing non linear cost 
-  void passInNonLinearCost(ClpNonLinearCost * cost);
+  /** Constructs a non linear cost from list of non-linearities (columns only)
+      First lower of each column is taken as real lower
+      Last lower is taken as real upper and cost ignored
+
+      Returns nonzero if bad data e.g. lowers not monotonic
+  */
+  int createPiecewiseLinearCosts(const int * starts,
+		   const double * lower, const double * gradient);
   /** Return model - updates any scalars */
   void returnModel(ClpSimplex & otherModel);
   /** Factorizes using current basis.  

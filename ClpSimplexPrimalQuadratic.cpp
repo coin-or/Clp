@@ -226,6 +226,7 @@ ClpSimplexPrimalQuadratic::primalSLP(int numberPasses, double deltaTolerance)
     } else {
       // bad pass - restore solution
       memcpy(solution,saveSolution,numberColumns*sizeof(double));
+      iPass--;
     }
   }
   // restore solution
@@ -284,7 +285,212 @@ ClpSimplexPrimalQuadratic::primalSLP(int numberPasses, double deltaTolerance)
 int 
 ClpSimplexPrimalQuadratic::primalBeale()
 {
-  abort();
+  // Wolfe's method looks easier - lets try that
+  // This is as a user would see
+
+  int numberColumns = this->numberColumns();
+  double * columnLower = this->columnLower();
+  double * columnUpper = this->columnUpper();
+  double * objective = this->objective();
+  double * solution = this->primalColumnSolution();
+  double * dj = this->dualColumnSolution();
+  double * pi = this->dualRowSolution();
+
+  int numberRows = this->numberRows();
+  double * rowLower = this->rowLower();
+  double * rowUpper = this->rowUpper();
+
+  // and elements
+  CoinPackedMatrix * matrix = this->matrix();
+  const int * row = matrix->getIndices();
+  const int * columnStart = matrix->getVectorStarts();
+  const double * element =  matrix->getElements();
+  const int * columnLength = matrix->getVectorLengths();
+
+  // Get list of non linear columns
+  CoinPackedMatrix * quadratic = quadraticObjective();
+  if (!quadratic||!quadratic->getNumElements()) {
+    // no quadratic part
+    return primal(1);
+  }
+
+  int iColumn;
+  const int * columnQuadratic = quadratic->getIndices();
+  const int * columnQuadraticStart = quadratic->getVectorStarts();
+  const int * columnQuadraticLength = quadratic->getVectorLengths();
+  const double * quadraticElement = quadratic->getElements();
+  // Get a feasible solution 
+  if (numberPrimalInfeasibilities())
+    primal(1);
+  // still infeasible
+  if (numberPrimalInfeasibilities())
+    return 0;
+  
+  // Create larger problem
+  int newNumberRows = numberRows+numberColumns;
+  // See how many artificials we will need
+  // For now assume worst
+  int newNumberColumns = 3*numberColumns+ numberRows;
+  int numberElements = 2*matrix->getNumElements()
+    +quadratic->getNumElements()
+    + 2*numberColumns;
+  double * elements2 = new double[numberElements];
+  int * start2 = new int[newNumberColumns+1];
+  int * row2 = new int[numberElements];
+  double * objective2 = new double[newNumberColumns];
+  double * columnLower2 = new double[newNumberColumns];
+  double * columnUpper2 = new double[newNumberColumns];
+  double * rowLower2 = new double[newNumberRows];
+  double * rowUpper2 = new double[newNumberRows];
+  memset(rowLower2,0,newNumberRows*sizeof(double));
+  memcpy(rowLower2,rowLower,numberRows*sizeof(double));
+  memcpy(rowLower2+numberRows,objective,numberColumns*sizeof(double));
+  memset(rowUpper2,0,newNumberRows*sizeof(double));
+  memcpy(rowUpper2,rowUpper,numberRows*sizeof(double));
+  memcpy(rowUpper2+numberRows,objective,numberColumns*sizeof(double));
+  memset(objective2,0,newNumberColumns*sizeof(double));
+  // Get a row copy of quadratic objective in standard format
+  CoinPackedMatrix copyQ;
+  copyQ.reverseOrderedCopyOf(*quadratic);
+  const int * columnQ = copyQ.getIndices();
+  const CoinBigIndex * rowStartQ = copyQ.getVectorStarts();
+  const int * rowLengthQ = copyQ.getVectorLengths(); 
+  const double * elementByRowQ = copyQ.getElements();
+  newNumberColumns=0;
+  numberElements=0;
+  start2[0]=0;
+  // x
+  for (iColumn=0;iColumn<numberColumns;iColumn++) {
+    // Original matrix
+    columnLower2[iColumn]=columnLower[iColumn];
+    columnUpper2[iColumn]=columnUpper[iColumn];
+    int j;
+    for (j=columnStart[iColumn];
+	 j<columnStart[iColumn]+columnLength[iColumn];
+	 j++) {
+      elements2[numberElements]=element[j];
+      row2[numberElements++]=row[j];
+    }
+    // Quadratic and modify djs
+    for (j=columnQuadraticStart[iColumn];
+	 j<columnQuadraticStart[iColumn]+columnQuadraticLength[iColumn];
+	 j++) {
+      int jColumn = columnQuadratic[j];
+      double value = quadraticElement[j];
+      if (iColumn!=jColumn) 
+	value *= 0.5;
+      dj[iColumn] += solution[jColumn]*value;
+      elements2[numberElements]=-value;
+      row2[numberElements++]=jColumn+numberRows;
+    }
+    for (j=rowStartQ[iColumn];
+	 j<rowStartQ[iColumn]+rowLengthQ[iColumn];
+	 j++) {
+      int jColumn = columnQ[j];
+      double value = elementByRowQ[j];
+      if (iColumn!=jColumn) { 
+	value *= 0.5;
+	dj[iColumn] += solution[jColumn]*value;
+	elements2[numberElements]=-value;
+	row2[numberElements++]=jColumn+numberRows;
+      }
+    }
+    start2[iColumn+1]=numberElements;
+  }
+  newNumberColumns=numberColumns;
+  // pi
+  int iRow;
+  // Get a row copy in standard format
+  CoinPackedMatrix copy;
+  copy.reverseOrderedCopyOf(*(this->matrix()));
+  // get matrix data pointers
+  const int * column = copy.getIndices();
+  const CoinBigIndex * rowStart = copy.getVectorStarts();
+  const int * rowLength = copy.getVectorLengths(); 
+  const double * elementByRow = copy.getElements();
+  for (iRow=0;iRow<numberRows;iRow++) {
+    // should look at rows to get correct bounds
+    columnLower2[newNumberColumns]=-COIN_DBL_MAX;
+    columnUpper2[newNumberColumns]=COIN_DBL_MAX;
+    int j;
+    for (j=rowStart[iRow];
+	 j<rowStart[iRow]+rowLength[iRow];
+	 j++) {
+      elements2[numberElements]=elementByRow[j];
+      row2[numberElements++]=column[j]+numberRows;
+    }
+    newNumberColumns++;
+    start2[newNumberColumns]=numberElements;
+  }
+  // djs and artificials
+  double tolerance = dualTolerance();
+  for (iColumn=0;iColumn<numberColumns;iColumn++) {
+    // dj
+    columnLower2[newNumberColumns]=0.0;
+    columnUpper2[newNumberColumns]=COIN_DBL_MAX;
+    elements2[numberElements]=1.0;
+    row2[numberElements++]=iColumn+numberRows;
+    newNumberColumns++;
+    start2[newNumberColumns]=numberElements;
+    // artificial (assuming no bounds)
+    if (getStatus(iColumn)==basic||solution[iColumn]>1.0e-7) {
+      if (fabs(dj[iColumn])>tolerance) {
+	columnLower2[newNumberColumns]=0.0;
+	columnUpper2[newNumberColumns]=COIN_DBL_MAX;
+	objective2[newNumberColumns]=1.0;
+	if (dj[iColumn]>0.0)
+	  elements2[numberElements]=1.0;
+	else
+	  elements2[numberElements]=-1.0;
+	row2[numberElements++]=iColumn+numberRows;
+	newNumberColumns++;
+	start2[newNumberColumns]=numberElements;
+      }
+    } else if (dj[iColumn]<-tolerance) {
+      columnLower2[newNumberColumns]=0.0;
+      columnUpper2[newNumberColumns]=COIN_DBL_MAX;
+      objective2[newNumberColumns]=1.0;
+      elements2[numberElements]=-1.0;
+      row2[numberElements++]=iColumn+numberRows;
+      newNumberColumns++;
+      start2[newNumberColumns]=numberElements;
+    }
+  }
+  // Create model
+  ClpSimplex model2;
+  model2.loadProblem(newNumberColumns,newNumberRows,
+		     start2,row2, elements2,
+		     columnLower2,columnUpper2,
+		     objective2,
+		     rowLower2,rowUpper2);
+  model2.allSlackBasis();
+  // Move solution across
+  double * solution2 = model2.primalColumnSolution();
+  memcpy(solution2,solution,numberColumns*sizeof(double));
+  memcpy(solution2+numberColumns,pi,numberRows*sizeof(double));
+  for (iRow=0;iRow<numberRows;iRow++) 
+    model2.setRowStatus(iRow,getRowStatus(iRow));
+  // djs and artificials
+  newNumberColumns = numberRows+numberColumns;
+  for (iColumn=0;iColumn<numberColumns;iColumn++) {
+    model2.setStatus(iColumn,getStatus(iColumn));
+    if (getStatus(iColumn)==basic) {
+      solution2[newNumberColumns++]=0.0;
+      if (fabs(dj[iColumn])>tolerance) {
+	solution2[newNumberColumns++]=fabs(dj[iColumn]);
+      }
+    } else if (dj[iColumn]<-tolerance) {
+      solution2[newNumberColumns++]=0.0;
+      solution2[newNumberColumns++]=-dj[iColumn];
+    } else {
+      solution2[newNumberColumns++]=dj[iColumn];
+    }
+  }
+  memset(model2.primalRowSolution(),0,newNumberRows*sizeof(double));
+  model2.times(1.0,model2.primalColumnSolution(),
+	       model2.primalRowSolution());
+  // solve
+  model2.primal(1);
   return 0;
 }
   

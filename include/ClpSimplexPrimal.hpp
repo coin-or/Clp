@@ -117,6 +117,7 @@ public:
   //@{
   /// Do not change infeasibility cost and always say optimal
   void alwaysOptimal(bool onOff);
+  bool alwaysOptimal() const;
   //@}
 
   /**@name Functions used in primal */

@@ -429,6 +429,10 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	  problemStatus_=5;
 	  return;
 	}
+#if 1
+	internalFactorize(0);
+#else
+
 	// no - restore previous basis
 	assert (type==1);
 	memcpy(status_ ,saveStatus_,(numberColumns_+numberRows_)*sizeof(char));
@@ -439,6 +443,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	forceFactorization_=1; // a bit drastic but ..
 	type = 2;
 	assert (internalFactorize(1)==0);
+#endif
 	changeMade_++; // say change made
       }
     }
@@ -634,8 +639,8 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
       problemStatus_ = -1;
     }
   }
-  if (type==0||type==1) {
-    if (!type) {
+  if (type==0||type==1||(type==3&&!numberIterations_)) {
+    if (!type||(type==3&&!numberIterations_)) {
       // create save arrays
       delete [] saveStatus_;
       delete [] savedSolution_;
@@ -1254,6 +1259,11 @@ ClpSimplexPrimal::alwaysOptimal(bool onOff)
     specialOptions_ |= 1;
   else
     specialOptions_ &= ~1;
+}
+bool 
+ClpSimplexPrimal::alwaysOptimal() const
+{
+  return (specialOptions_&1)!=0;
 }
 /*
   Reasons to come out (normal mode/user mode):

@@ -4160,10 +4160,34 @@ ClpSimplex::returnModel(ClpSimplex & otherModel)
   otherModel.sumOfRelaxedDualInfeasibilities_ = sumOfRelaxedDualInfeasibilities_;
   otherModel.sumOfRelaxedPrimalInfeasibilities_ = sumOfRelaxedPrimalInfeasibilities_;
 }
-// Pass in an existing non linear cost 
-void 
-ClpSimplex::passInNonLinearCost(ClpNonLinearCost * cost)
+/* Constructs a non linear cost from list of non-linearities (columns only)
+   First lower of each column is taken as real lower
+   Last lower is taken as real upper and cost ignored
+   
+   Returns nonzero if bad data e.g. lowers not monotonic
+*/
+int 
+ClpSimplex::createPiecewiseLinearCosts(const int * starts,
+				       const double * lower, const double * gradient)
 {
   delete nonLinearCost_;
-  nonLinearCost_ = cost;
+  // Set up feasible bounds and check monotonicity
+  int iColumn;
+  int returnCode=0;
+
+  for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+    int iIndex = starts[iColumn];
+    int end = starts[iColumn+1]-1;
+    columnLower_[iColumn] = lower[iIndex];
+    columnUpper_[iColumn] = lower[end];
+    double value = columnLower_[iColumn];
+    iIndex++;
+    for (;iIndex<end;iIndex++) {
+      if (lower[iIndex]<value)
+	returnCode++; // not monotonic
+      value=lower[iIndex];
+    }
+  }
+  nonLinearCost_ = new ClpNonLinearCost(this,starts,lower,gradient);
+  return returnCode;
 }
