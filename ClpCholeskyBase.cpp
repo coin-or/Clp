@@ -528,7 +528,8 @@ ClpCholeskyBase::preOrder(bool lowerTriangular, bool includeDiagonal, bool doKKT
 	  choleskyStart_[iColumn]=sizeFactor_;
 	  if (includeDiagonal) 
 	    choleskyRow_[sizeFactor_++]=iColumn;
-	  for (CoinBigIndex j=columnQuadraticStart[iColumn];
+    CoinBigIndex j;
+	  for ( j=columnQuadraticStart[iColumn];
 	       j<columnQuadraticStart[iColumn]+columnQuadraticLength[iColumn];j++) {
 	    int jColumn = columnQuadratic[j];
 	    if (jColumn>iColumn)
@@ -536,7 +537,7 @@ ClpCholeskyBase::preOrder(bool lowerTriangular, bool includeDiagonal, bool doKKT
 	  }
 	  CoinBigIndex start=columnStart[iColumn];
 	  CoinBigIndex end=columnStart[iColumn]+columnLength[iColumn];
-	  for (CoinBigIndex j=start;j<end;j++) {
+	  for ( j=start;j<end;j++) {
 	    choleskyRow_[sizeFactor_++]=row[j]+numberTotal;
 	  }
 	}
@@ -1173,7 +1174,8 @@ ClpCholeskyBase::symbolic()
 	  //const double * quadraticElement = quadratic->getElements();
 	  for (iColumn=0;iColumn<numberColumns;iColumn++) {
 	    Astart[iColumn]=sizeFactor_;
-	    for (CoinBigIndex j=columnQuadraticStart[iColumn];
+      CoinBigIndex j;
+	    for ( j=columnQuadraticStart[iColumn];
 		 j<columnQuadraticStart[iColumn]+columnQuadraticLength[iColumn];j++) {
 	      int jColumn = columnQuadratic[j];
 	      if (jColumn>iColumn)
@@ -1181,7 +1183,7 @@ ClpCholeskyBase::symbolic()
 	    }
 	    CoinBigIndex start=columnStart[iColumn];
 	    CoinBigIndex end=columnStart[iColumn]+columnLength[iColumn];
-	    for (CoinBigIndex j=start;j<end;j++) {
+	    for ( j=start;j<end;j++) {
 	      Arow[sizeFactor_++]=row[j]+numberTotal;
 	    }
 	  }
@@ -1328,7 +1330,8 @@ ClpCholeskyBase::symbolic2(const CoinBigIndex * Astart, const int * Arow)
     start = end;
     int startSub=start;
     link_[iRow]=numberRows_;
-    for (CoinBigIndex j=Astart[iRow];j<Astart[iRow+1];j++) {
+    CoinBigIndex j;
+    for ( j=Astart[iRow];j<Astart[iRow+1];j++) {
       int kRow=Arow[j];
       int k=iRow;
       int linked = link_[iRow];
@@ -1408,7 +1411,7 @@ ClpCholeskyBase::symbolic2(const CoinBigIndex * Astart, const int * Arow)
 #define CLP_DEBUG
 #ifdef CLP_DEBUG
     int last=-1;
-    for (CoinBigIndex j=indexStart_[iRow];j<indexStart_[iRow]+nz;j++) {
+    for ( j=indexStart_[iRow];j<indexStart_[iRow]+nz;j++) {
       int kRow=choleskyRow_[j];
       assert (kRow>last);
       last=kRow;
@@ -1652,13 +1655,13 @@ ClpCholeskyBase::factorize(const double * diagonal, int * rowsDropped)
       std::cout<<"Cholesky - largest "<<largest<<" smallest "<<smallest<<std::endl;
     choleskyCondition_=largest/smallest;
     if (whichDense_) {
-      for (int i=0;i<numberRows_;i++) {
+      int i;
+      for ( i=0;i<numberRows_;i++) {
 	assert (diagonal_[i]>=0.0);
 	diagonal_[i]=sqrt(diagonal_[i]);
       }
       // Update dense columns (just L)
       // Zero out dropped rows
-      int i;
       for (i=0;i<numberDense;i++) {
 	longDouble * a = denseColumn_+i*numberRows_;
 	for (int j=0;j<numberRows_;j++) {
