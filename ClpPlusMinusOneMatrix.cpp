@@ -160,7 +160,8 @@ ClpPlusMinusOneMatrix::ClpPlusMinusOneMatrix (const CoinPackedMatrix & rhs)
     columnOrdered_ = true;
   }
   // Check valid
-  checkValid(false);
+  if (!numberBad)
+    checkValid(false);
 }
 
 //-------------------------------------------------------------------
