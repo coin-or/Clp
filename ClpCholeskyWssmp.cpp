@@ -257,6 +257,10 @@ ClpCholeskyWssmp::order(ClpInterior * model)
   }
   std::cout<<integerParameters_[23]<<" elements in sparse Cholesky"<<std::endl;
   if (!integerParameters_[23]) {
+    for (int iRow=0;iRow<numberRows_;iRow++) {
+      permuteIn_[iRow]=iRow;
+      permuteOut_[iRow]=iRow;
+    }
     std::cout<<"wssmp says no elements - fully dense? - switching to dense"<<std::endl;
     integerParameters_[1]=2;
     integerParameters_[2]=2;

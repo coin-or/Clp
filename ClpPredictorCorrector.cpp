@@ -223,10 +223,9 @@ int ClpPredictorCorrector::solve ( )
     bool useAffine=false;
     bool goodMove=false;
     bool doCorrector=true;
-    double bestNextGap = COIN_DBL_MAX;
     //bool retry=false;
+    double bestNextGap=COIN_DBL_MAX;
     worstDirectionAccuracy_=0.0;
-    double saveMu=mu_;
     while (!goodMove) {
       goodMove=true;
       int newDropped=0;
@@ -302,13 +301,9 @@ int ClpPredictorCorrector::solve ( )
           findStepLength(phase);
           int nextNumber; //number of complementarity pairs
           double nextGap=complementarityGap(nextNumber,1);
-	  assert (nextGap<=bestNextGap);
 	  bestNextGap=nextGap;
-          //if (complementarityGap_>1.0e-1&&worstDirectionAccuracy_<1.0e-5) {
-          //wasif (complementarityGap_>1.0e-2*numberComplementarityPairs_) {
           if (complementarityGap_>1.0e-4*numberComplementarityPairs_) {
             //std::cout <<"predicted duality gap "<<nextGap<<std::endl;
-            //double part1=nextGap/numberComplementarityPairs_;
             double part1=nextGap/numberComplementarityPairs_;
             double part2=nextGap/complementarityGap_;
             mu_=part1*part2*part2;
@@ -329,7 +324,7 @@ int ClpPredictorCorrector::solve ( )
 	    //mu_=1.0e-4/(numberComplementarityPairs_*qqqq);
 	    //? better to skip corrector?
             //} 
-          }
+          } 
           //save information
           double product=affineProduct();
           //can we do corrector step?
@@ -415,15 +410,14 @@ int ClpPredictorCorrector::solve ( )
           if (!goodMove) {
             if (doCorrector) {
               doCorrector=false;
-              //double floatNumber = numberComplementarityPairs_;
-              //mu_=complementarityGap_/(floatNumber*floatNumber);
-	      mu_=saveMu;
+              double floatNumber = numberComplementarityPairs_;
+              mu_=complementarityGap_/(floatNumber*floatNumber);
 	      handler_->message(CLP_BARRIER_INFO,messages_)
 		<<" no corrector step - original move would be bad"
 		<<CoinMessageEol;
-              phase=0;
-              recoveryMode=2;
-	      useAffine=true;
+              phase=2;
+              recoveryMode=1;
+	      bestNextGap=COIN_DBL_MAX;
             } else {
               // if any killed then do zero step and hope for best
               abort();
@@ -750,11 +744,11 @@ double ClpPredictorCorrector::findStepLength(const int phase)
     } 
   } 
   actualPrimalStep_=stepLength_*maximumPrimalStep;
-  if (phase>0&&actualPrimalStep_>1.0) {
+  if (phase>=0&&actualPrimalStep_>1.0) {
     actualPrimalStep_=1.0;
   } 
   actualDualStep_=stepLength_*maximumDualStep;
-  if (phase>0&&actualDualStep_>1.0) {
+  if (phase>=0&&actualDualStep_>1.0) {
     actualDualStep_=1.0;
   } 
   return directionNorm;

@@ -214,8 +214,11 @@ ClpCholeskyTaucs::order(ClpInterior * model)
   permuteIn_ = new int [numberRows_];
   permuteOut_ = new int[numberRows_];
   int * perm, *invp;
-  //taucs_ccs_order(matrix_,&perm,&invp,"identity");
-  taucs_ccs_order(matrix_,&perm,&invp,"genmmd");
+  // There seem to be bugs in ordering if model too small
+  if (numberRows_>10)
+    taucs_ccs_order(matrix_,&perm,&invp,(const char *) "genmmd");
+  else
+    taucs_ccs_order(matrix_,&perm,&invp,(const char *) "identity");
   memcpy(permuteIn_,perm,numberRows_*sizeof(int));
   free(perm);
   memcpy(permuteOut_,invp,numberRows_*sizeof(int));
