@@ -1444,6 +1444,7 @@ ClpSimplexDual::changeBounds(bool initialize,
 	break;
       }
     }
+    // If dual infeasible then carry on
     if (numberInfeasibilities) {
       handler_->message(CLP_DUAL_CHECKB,messages_)
 	<<newBound
@@ -2393,7 +2394,8 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
       numberPrimalInfeasibilities_ = 0;
       sumPrimalInfeasibilities_ = 0.0;
     }
-    if (dualFeasible()||problemStatus_==-4||(primalFeasible()&&!numberDualInfeasibilitiesWithoutFree_)) {
+    //if (dualFeasible()||problemStatus_==-4||(primalFeasible()&&!numberDualInfeasibilitiesWithoutFree_)) {
+    if (dualFeasible()||problemStatus_==-4) {
       progress->modifyObjective(objectiveValue_
 			       -sumDualInfeasibilities_*dualBound_);
       if (primalFeasible()) {
