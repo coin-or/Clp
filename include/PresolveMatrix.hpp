@@ -3,18 +3,18 @@
 #ifndef PresolveMatrix_H
 #define PresolveMatrix_H
 
+#include "CoinPragma.hpp"
 #include "ClpSimplex.hpp"
 
 #include <cmath>
 #include <cfloat>
+
 #if defined(_MSC_VER)
-// Turn off compiler warning about long names
-#  pragma warning(disable:4786)
-// Visual C++ has bad bug on delete []
-#define deleteAction(array) delete [] ((void *) array)
+// Avoid MS Compiler problem in recognizing type to delete
+// by casting to type.
+#define deleteAction(array,type) delete [] ((type) array)
 #else
-// Visual C++ has bad bug on delete []
-#define deleteAction(array) delete [] array
+#define deleteAction(array,type) delete [] array
 #endif
 
 

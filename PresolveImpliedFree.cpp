@@ -323,7 +323,7 @@ const PresolveAction *implied_free_action::presolve(PresolveMatrix *prob,
 #endif
     next = new implied_free_action(nactions, copyOfArray(actions,nactions), next);
   }
-  deleteAction(actions);
+  deleteAction(actions,action*);
 
   delete[]ilbound;
   delete[]iubound;
@@ -434,7 +434,7 @@ void implied_free_action::postsolve(PostsolveMatrix *prob) const
       rlo[irow] = f->rlo;
       rup[irow] = f->rup;
     }
-    deleteAction( save_costs);
+    deleteAction( save_costs,double*);
     // coeff has now been initialized
 
     // compute solution

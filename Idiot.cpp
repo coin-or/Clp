@@ -1,9 +1,7 @@
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
-#if defined(_MSC_VER)
-// Turn off compiler warning about long names
-#  pragma warning(disable:4786)
-#endif
+
+#include "CoinPragma.hpp"
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -145,7 +143,8 @@ Idiot::crash(int numberPass)
   maxIts_=20;
   maxIts2_=105;
   if (numberPass<=0)
-    majorIterations_=2+log10(numberColumns+1);
+    // Cast to avoid gcc compiler warning
+    majorIterations_=(int)(2+log10(numberColumns+1));
   else
     majorIterations_=numberPass;
   printf("setting mu to %g and doing %d passes\n",mu_,majorIterations_);

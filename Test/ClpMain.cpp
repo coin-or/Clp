@@ -1,9 +1,7 @@
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
-#if defined(_MSC_VER)
-// Turn off compiler warning about long names
-#  pragma warning(disable:4786)
-#endif
+
+#include "CoinPragma.hpp"
 
 #include <cassert>
 #include <cstdio>
@@ -14,10 +12,8 @@
 
 #include <time.h>
 
-#if defined(_MSC_VER)
-// Turn off compiler warning about long names
-#  pragma warning(disable:4786)
-#else
+#include "CoinPragma.hpp"
+#ifndef _MSC_VER
 #include <sys/times.h>
 #include <sys/resource.h>
 #include <unistd.h>

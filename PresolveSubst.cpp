@@ -1030,7 +1030,7 @@ const PresolveAction *subst_constraint_action::presolve(PresolveMatrix *prob,
     next = drop_zero_coefficients_action::presolve(prob, zerocols, nzerocols, next);
   }
   delete [] look2;
-  deleteAction(actions);
+  deleteAction(actions,action*);
 
   delete[]x_to_y;
   delete[]zerocols;
@@ -1343,9 +1343,13 @@ subst_constraint_action::~subst_constraint_action()
     delete[]actions[i].ninrowxs;
     delete[]actions[i].rowcolsxs;
     delete[]actions[i].rowelsxs;
-    delete[]actions[i].costsx;
+
+
+    //delete [](double*)actions[i].costsx;
+    deleteAction(actions[i].costsx,double*);
   }
 
-  //deleteAction(actions_);
-  delete [] (subst_constraint_action::action *) actions_;
+  // Must add cast to placate MS compiler
+  //delete [] (subst_constraint_action::action*)actions_;
+  deleteAction(actions_,subst_constraint_action::action*);
 }

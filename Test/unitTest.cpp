@@ -9,10 +9,8 @@
 #include <iostream>
 
 #include <time.h>
-#if defined(_MSC_VER)
-// Turn off compiler warning about long names
-#  pragma warning(disable:4786)
-#endif
+
+#include "CoinPragma.hpp"
 
 #include "CoinMpsIO.hpp"
 #include "CoinPackedMatrix.hpp"

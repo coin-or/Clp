@@ -123,7 +123,7 @@ remove_fixed_action::~remove_fixed_action()
     delete[]actions_[i].colrows;
     delete[]actions_[i].colels;
   }
-  deleteAction(actions_);
+  deleteAction(actions_,action*);
 }
 
 /*

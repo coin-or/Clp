@@ -344,7 +344,7 @@ const PresolveAction *forcing_constraint_action::presolve(PresolveMatrix *prob,
     next = new forcing_constraint_action(nactions, 
 					 copyOfArray(actions,nactions), next);
   }
-  deleteAction(actions);
+  deleteAction(actions,action*);
   if (nuseless_rows) {
     next = useless_constraint_action::presolve(prob,
 					       useless_rows, nuseless_rows,

@@ -3,10 +3,8 @@
 #ifndef ClpMessage_H
 #define ClpMessage_H
 
-#if defined(_MSC_VER)
-// Turn off compiler warning about long names
-#  pragma warning(disable:4786)
-#endif
+
+#include "CoinPragma.hpp"
 
 /** This deals with Clp messages (as against Osi messages etc)
  */

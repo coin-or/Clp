@@ -76,7 +76,10 @@ class make_fixed_action : public PresolveAction {
 
   void postsolve(PostsolveMatrix *prob) const;
 
-  ~make_fixed_action() { deleteAction(actions_); delete faction_;};
+  ~make_fixed_action() { 
+    deleteAction(actions_,action*); 
+    delete faction_;
+  };
 };
 
 

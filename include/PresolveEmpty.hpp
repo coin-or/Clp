@@ -45,7 +45,7 @@ private:
 
   void postsolve(PostsolveMatrix *prob) const;
 
-  ~drop_empty_cols_action() { deleteAction(actions_); }
+  ~drop_empty_cols_action() { deleteAction(actions_,action*); }
 };
 
 
@@ -77,7 +77,7 @@ private:
 
   void postsolve(PostsolveMatrix *prob) const;
 
-  ~drop_empty_rows_action() { deleteAction(actions_); }
+  ~drop_empty_rows_action() { deleteAction(actions_,action*); }
 };
 #endif
 

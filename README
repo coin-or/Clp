@@ -6,7 +6,7 @@ To make the unitTest and standalone executable do
 
 make unitTest in this directory.  This creates an executable clp.
 
-Doing clp gives you some hints.  It can do a unit test and solve netlib problems.  It can also solve problems and set tolerances etc.  Just do clp - and then try ? or setting various stuff.
+Running clp gives you some hints.  It can do a unit test and solve netlib problems.  It can also solve problems and set tolerances etc.  Just do clp - and then try ? or setting various stuff.
 
 On Linux clp can do file completion and line editing.  
 

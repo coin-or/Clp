@@ -43,6 +43,6 @@ class slack_doubleton_action : public PresolveAction {
   void postsolve(PostsolveMatrix *prob) const;
 
 
-  ~slack_doubleton_action() { deleteAction(actions_); }
+  ~slack_doubleton_action() { deleteAction(actions_,action*); }
 };
 #endif

@@ -416,7 +416,7 @@ const PresolveAction *dupcol_action::presolve(PresolveMatrix *prob,
 #endif
     next = new dupcol_action(nactions, copyOfArray(actions,nactions), next);
   }
-  deleteAction(actions);
+  deleteAction(actions,action*);
   if (nfixed_down)
     next = make_fixed_action::presolve(prob, fixed_down, nfixed_down,
 				       true,
@@ -698,7 +698,7 @@ const PresolveAction *duprow_action::presolve(PresolveMatrix *prob,
 #endif
     next = new duprow_action(nactions, copyOfArray(actions,nactions), next);
   }
-  deleteAction(actions);
+  deleteAction(actions,action*);
   return (next);
 }
 

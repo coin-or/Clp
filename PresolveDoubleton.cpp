@@ -782,7 +782,7 @@ const PresolveAction *doubleton_action::presolve(PresolveMatrix *prob,
 
   delete[]zeros;
   delete[]fixed;
-  deleteAction(actions);
+  deleteAction(actions,action*);
 
   return (next);
 }
@@ -1067,7 +1067,7 @@ doubleton_action::~doubleton_action()
     delete[]actions_[i].coly;
     delete[]actions_[i].indy;
   }
-  deleteAction(actions_);
+  deleteAction(actions_,action*);
 }
 
 

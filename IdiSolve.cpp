@@ -1,9 +1,7 @@
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
-#if defined(_MSC_VER)
-// Turn off compiler warning about long names
-#  pragma warning(disable:4786)
-#endif
+
+#include "CoinPragma.hpp"
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -344,8 +342,9 @@ Idiot::IdiSolve(
     if ((iter % EVERY)==0||doFull) {
       // for next pass
       direction = - direction;
-      // randomize
-      int kcol = ncols*CoinDrand48();
+      // randomize. 
+      // The cast is to avoid gcc compiler warning
+      int kcol = (int)(ncols*CoinDrand48());
       if (kcol==ncols)
 	kcol=ncols-1;
       if (direction>0) {
@@ -412,7 +411,9 @@ Idiot::IdiSolve(
 		  if (diff1*diff2>=0.0) {
 		    nsign++;
 		    if (fabs(diff1)<=fabs(diff2)) {
-		      int ii=fabs(4.0*diff1/diff2);
+          // cast is to avoid gcc compiler
+          // warning: initialization to 'int' from 'double'
+		      int ii=(int)fabs(4.0*diff1/diff2);
 		      if (ii==4) ii=3;
 		      mgood[ii]++;
 		      ngood++;

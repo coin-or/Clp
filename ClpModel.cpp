@@ -9,10 +9,9 @@
 #include <iostream>
 
 #include <time.h>
-#if defined(_MSC_VER)
-// Turn off compiler warning about long names
-#  pragma warning(disable:4786)
-#else
+
+#include "CoinPragma.hpp"
+#ifndef _MSC_VER
 #include <sys/times.h>
 #include <sys/resource.h>
 #include <unistd.h>
