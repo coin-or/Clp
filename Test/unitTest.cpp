@@ -292,8 +292,9 @@ int mainTest (int argc, const char *argv[],bool doDual,
 #ifdef USE_PRESOLVE
 	Presolve pinfo;
 	ClpSimplex * model2 = pinfo.presolvedModel(solution,1.0e-8);
-	// change from 200
-	model2->factorization()->maximumPivots(100+model2->numberRows()/50);
+	// change from 200 (unless user has changed)
+	if (model2->factorization()->maximumPivots()==200)
+	  model2->factorization()->maximumPivots(100+model2->numberRows()/100);
 	if (doDual) {
 	  // faster if bounds tightened
 	  int numberInfeasibilities = model2->tightenPrimalBounds();

@@ -119,6 +119,7 @@ ClpSimplex::ClpSimplex () :
   dualRowPivot_ = new ClpDualRowSteepest();
   // say Steepest pricing
   primalColumnPivot_ = new ClpPrimalColumnSteepest();
+  solveType_=1; // say simplex based life form
   
 }
 
@@ -1196,6 +1197,7 @@ ClpSimplex::ClpSimplex(const ClpModel &rhs) :
   dualRowPivot_ = new ClpDualRowSteepest();
   // say Dantzig pricing
   primalColumnPivot_ = new ClpPrimalColumnDantzig();
+  solveType_=1; // say simplex based life form
   
 }
 // Assignment operator. This copies the data
@@ -1315,6 +1317,7 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
   sumOfRelaxedPrimalInfeasibilities_ = rhs.sumOfRelaxedPrimalInfeasibilities_;
   if (rhs.nonLinearCost_!=NULL)
     nonLinearCost_ = new ClpNonLinearCost(*rhs.nonLinearCost_);
+  solveType_=rhs.solveType_;
 }
 // type == 0 do everything, most + pivot data, 2 factorization data as well
 void 
@@ -2825,7 +2828,8 @@ static bool equalDouble(double value1, double value2)
 int
 ClpSimplexProgress::looping()
 {
-  assert(model_);
+  if (!model_)
+    return -1;
   double objective = model_->objectiveValue();
   double infeasibility;
   int numberInfeasibilities;
@@ -3678,7 +3682,7 @@ int ClpSimplex::pivot()
   valueIn_ = solution_[sequenceIn_];
   upperIn_ = upper_[sequenceIn_];
   dualIn_ = dj_[sequenceIn_];
-  if (sequenceOut_>=0) {
+  if (sequenceOut_>=0&&sequenceIn_!=sequenceIn_) {
     assert (pivotRow_>=0&&pivotRow_<numberRows_);
     assert (pivotVariable_[pivotRow_]==sequenceOut_);
     lowerOut_ = lower_[sequenceOut_];
@@ -3761,8 +3765,8 @@ int ClpSimplex::pivot()
       double * element = columnArray_[0]->denseVector();
       for (i=0;i<number;i++) {
 	int ii = index[i];
-	dj_[ii] -= element[i];
-	element[i]=0.0;
+	dj_[ii] += element[ii];
+	element[ii]=0.0;
       }
       columnArray_[0]->setNumElements(0);
       // and row djs
@@ -3771,8 +3775,9 @@ int ClpSimplex::pivot()
       element = rowArray_[0]->denseVector();
       for (i=0;i<number;i++) {
 	int ii = index[i];
-	dj_[ii+numberRows_] -= element[i];
-	element[i]=0.0;
+	dj_[ii+numberColumns_] += element[ii];
+	dual_[ii] = dj_[ii+numberColumns_];
+	element[ii]=0.0;
       }
       rowArray_[0]->setNumElements(0);
       // check incoming
@@ -3839,7 +3844,20 @@ int ClpSimplex::pivot()
 */
 int ClpSimplex::primalPivotResult()
 {
-  return ((ClpSimplexPrimal *) this)->pivotResult();
+  assert (sequenceIn_>=0);
+  valueIn_=solution_[sequenceIn_];
+  lowerIn_=lower_[sequenceIn_];
+  upperIn_=upper_[sequenceIn_];
+  dualIn_=dj_[sequenceIn_];
+
+  int returnCode = ((ClpSimplexPrimal *) this)->pivotResult();
+  if (returnCode<0&&returnCode>-4) {
+    return 0;
+  } else {
+    printf("Return code of %d from ClpSimplexPrimal::pivotResult\n",
+	   returnCode);
+    return -1;
+  }
 }
   
 /* Pivot out a variable and choose an incoing one.  Assumes dual

@@ -280,6 +280,7 @@ ClpSimplexPrimal::whileIterating()
   // status stays at -1 while iterating, >=0 finished, -2 to invert
   // status -3 to go to top without an invert
   while (problemStatus_==-1) {
+#define CLP_DEBUG 1
 #ifdef CLP_DEBUG
     {
       int i;
@@ -418,6 +419,11 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
     if (type) {
       // is factorization okay?
       if (internalFactorize(1)) {
+	if (solveType_==2) {
+	  // say odd
+	  problemStatus_=5;
+	  return;
+	}
 	// no - restore previous basis
 	assert (type==1);
 	memcpy(status_ ,saveStatus_,(numberColumns_+numberRows_)*sizeof(char));
@@ -1296,8 +1302,8 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	}
       }
     }
-    if ((saveDj*dualIn_<1.0e-20&&!ifValuesPass&&solveType_==1)||
-	fabs(saveDj-dualIn_)>1.0e-3*(1.0+fabs(saveDj))) {
+    if (solveType_==1&&((saveDj*dualIn_<1.0e-20&&!ifValuesPass)||
+	fabs(saveDj-dualIn_)>1.0e-3*(1.0+fabs(saveDj)))) {
       handler_->message(CLP_PRIMAL_DJ,messages_)
 	<<saveDj<<dualIn_
 	<<CoinMessageEol;
@@ -1331,8 +1337,44 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
     }
     if (pivotRow_>=0) {
       if (solveType_==2) {
+	// **** Coding for user interface
 	// do ray
 	primalRay(rowArray_[1]);
+	// update duals
+	if (pivotRow_>=0) {
+	  alpha_ = rowArray_[1]->denseVector()[pivotRow_];
+	  assert (fabs(alpha_)>1.0e-8);
+	  double multiplier = dualIn_/alpha_;
+	  rowArray_[0]->insert(pivotRow_,multiplier);
+	  factorization_->updateColumnTranspose(rowArray_[2],rowArray_[0]);
+	  // put row of tableau in rowArray[0] and columnArray[0]
+	  matrix_->transposeTimes(this,-1.0,
+				  rowArray_[0],columnArray_[1],columnArray_[0]);
+	  // update column djs
+	  int i;
+	  int * index = columnArray_[0]->getIndices();
+	  int number = columnArray_[0]->getNumElements();
+	  double * element = columnArray_[0]->denseVector();
+	  for (i=0;i<number;i++) {
+	    int ii = index[i];
+	    dj_[ii] += element[ii];
+	    element[ii]=0.0;
+	  }
+	  columnArray_[0]->setNumElements(0);
+	  // and row djs
+	  index = rowArray_[0]->getIndices();
+	  number = rowArray_[0]->getNumElements();
+	  element = rowArray_[0]->denseVector();
+	  for (i=0;i<number;i++) {
+	    int ii = index[i];
+	    dj_[ii+numberColumns_] += element[ii];
+	    dual_[ii] = dj_[ii+numberColumns_];
+	    element[ii]=0.0;
+	  }
+	  rowArray_[0]->setNumElements(0);
+	  // check incoming
+	  assert (fabs(dj_[sequenceIn_])<1.0e-6);
+	}
       }
       // if stable replace in basis
       int updateStatus = factorization_->replaceColumn(rowArray_[2],
@@ -1415,6 +1457,7 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	// flipping from bound to bound
       }
     }
+
     
     // update primal solution
     
@@ -1496,6 +1539,11 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
     int lastCleaned;
     ClpSimplexProgress dummyProgress;
     statusOfProblemInPrimal(lastCleaned,1,dummyProgress);
+    if (problemStatus_==5) {
+      printf("Singular basis\n");
+      problemStatus_=-1;
+      returnCode=5;
+    }
   }
 #ifdef CLP_DEBUG
   {

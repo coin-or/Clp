@@ -257,6 +257,9 @@ public:
   /// Current (or last) algorithm
   inline int algorithm() const 
   {return algorithm_; } ;
+  /// Set algorithm
+  inline void setAlgorithm(int value)
+  {algorithm_=value; } ;
   /// Sum of dual infeasibilities
   inline double sumDualInfeasibilities() const 
           { return sumDualInfeasibilities_;} ;
@@ -510,6 +513,16 @@ public:
   { sequenceIn_=sequence;};
   inline void  setSequenceOut(int sequence)
   { sequenceOut_=sequence;};
+  /** Return direction In or Out */
+  inline int directionIn() const
+  {return directionIn_;};
+  inline int directionOut() const
+  {return directionOut_;};
+  /** Set directionIn or Out */
+  inline void  setDirectionIn(int direction)
+  { directionIn_=direction;};
+  inline void  setDirectionOut(int direction)
+  { directionOut_=direction;};
   /// Returns 1 if sequence indicates column
   inline int isColumn(int sequence) const
   { return sequence<numberColumns_ ? 1 : 0;};
@@ -549,6 +562,9 @@ public:
   inline double originalUpper(int iSequence) const
   { if (iSequence<numberColumns_) return columnUpper_[iSequence]; else
     return rowUpper_[iSequence-numberColumns_];};
+  /// Theta (pivot change)
+  inline double theta() const
+  { return theta_;};
   /// Scaling
   const double * rowScale() const {return rowScale_;};
   const double * columnScale() const {return columnScale_;};
