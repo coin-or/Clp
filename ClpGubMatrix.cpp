@@ -1139,8 +1139,8 @@ ClpGubMatrix::partialPricing(ClpSimplex * model, int start, int end,
 	}
       } else {
 	double bestDjMod=0.0;
-	printf("iteration %d start %d end %d - wanted %d\n",model->numberIterations(),
-	       startG,endG,numberWanted);
+	//printf("iteration %d start %d end %d - wanted %d\n",model->numberIterations(),
+	//     startG,endG,numberWanted);
 	for (iSequence=startG;iSequence<endG;iSequence++) {
 	  if (backward_[iSequence]!=iSet) {
 	    // get pi on gub row
