@@ -17,15 +17,23 @@ On Linux clp can do file completion and line editing.
 
 If you want to stress the code you can set various stuff e.g. dantzig pricing
  and then go into netlib testing.  I do not guarantee that it will solve all 
-netlib if you get too creative.
+netlib if you get too creative.  For instance using presolve makes netlib 
+solve faster - but pilot87 prefers a large infeasibility weight.  So
 
-There will be samples in ./Samples.  Use the corresponding Makefile to 
+clp -presolve on -dualbound 1.0e10 -netlib
+
+works well.
+
+There are samples in ./Samples.  Use the corresponding Makefile to 
 create an executable - testit.
 
-At present there are only two useful samples.
+At present there are only three useful samples.
 
 minimum.cpp  This is the simplest possible program to read an mps file.
+
 defaults.cpp.  This does not do much more, but it does it in much more 
 complicated way by specifically setting defaults so it does give more
 useful information.  It also prints a solution in a format "similar" to that
 of MPSX.
+
+presolve.cpp.  This is a good driver for larger problems.

@@ -3241,11 +3241,12 @@ ClpSimplex::checkSolution()
 int 
 ClpSimplex::crash(double gap,int pivot)
 {
-  assert(!pivot); // rest not coded yet
   assert(!rowObjective_); // not coded
   int iColumn;
   int numberBad=0;
   int numberBasic=0;
+  double dualTolerance=dblParam_[ClpDualTolerance];
+  //double primalTolerance=dblParam_[ClpPrimalTolerance];
 
   // If no basis then make all slack one
   if (!status_)
@@ -3260,7 +3261,8 @@ ClpSimplex::crash(double gap,int pivot)
     return 0;
   } else {
     double * dj = new double [numberColumns_];
-    double objectiveValue=0.0;
+    double * solution = columnActivity_;
+    //double objectiveValue=0.0;
     int iColumn;
     for (iColumn=0;iColumn<numberColumns_;iColumn++)
       dj[iColumn] = optimizationDirection_*objective_[iColumn];
@@ -3273,9 +3275,11 @@ ClpSimplex::crash(double gap,int pivot)
 	if (fabs(upperBound)<fabs(lowerBound)) {
 	  atLower=false;
 	  setColumnStatus(iColumn,atUpperBound);
+	  solution[iColumn]=upperBound;
 	} else {
 	  atLower=true;
 	  setColumnStatus(iColumn,atLowerBound);
+	  solution[iColumn]=lowerBound;
 	}
 	if (dj[iColumn]<0.0) {
 	  // should be at upper bound
@@ -3284,7 +3288,7 @@ ClpSimplex::crash(double gap,int pivot)
 	    if (upperBound-lowerBound<=gap) {
 	      columnActivity_[iColumn]=upperBound;
 	      setColumnStatus(iColumn,atUpperBound);
-	    } else if (dj[iColumn]<-dualTolerance_) {
+	    } else if (dj[iColumn]<-dualTolerance) {
 	      numberBad++;
 	    }
 	  }
@@ -3295,7 +3299,7 @@ ClpSimplex::crash(double gap,int pivot)
 	    if (upperBound-lowerBound<=gap) {
 	      columnActivity_[iColumn]=lowerBound;
 	      setColumnStatus(iColumn,atLowerBound);
-	    } else if (dj[iColumn]>dualTolerance_) {
+	    } else if (dj[iColumn]>dualTolerance) {
 	      numberBad++;
 	    }
 	  }
@@ -3303,21 +3307,21 @@ ClpSimplex::crash(double gap,int pivot)
       } else {
 	// free
 	setColumnStatus(iColumn,isFree);
-	if (fabs(dj[iColumn])>dualTolerance_) 
+	if (fabs(dj[iColumn])>dualTolerance) 
 	  numberBad++;
       }
     }
-    if (numberBad) {
+    if (numberBad||pivot) {
       if (!pivot) {
 	delete [] dj;
 	return 1;
       } else {
-#if 0
 	// see if can be made dual feasible with gubs etc
 	double * pi = new double[numberRows_];
 	memset (pi,0,numberRows_*sizeof(double));
-	int * way = new int[numberColumns];
-
+	int * way = new int[numberColumns_];
+	int numberIn = 0;
+	
 	// Get column copy
 	CoinPackedMatrix * columnCopy = matrix();
 	// Get a row copy in standard format
@@ -3328,15 +3332,15 @@ ClpSimplex::crash(double gap,int pivot)
 	const CoinBigIndex * rowStart = copy.getVectorStarts();
 	const int * rowLength = copy.getVectorLengths(); 
 	const double * elementByRow = copy.getElements();
-	const int * row = columnCopy->getIndices();
-	const CoinBigIndex * columnStart = columnCopy->getVectorStarts();
-	const int * columnLength = columnCopy->getVectorLengths(); 
-	const double * element = columnCopy->getElements();
-
+	//const int * row = columnCopy->getIndices();
+	//const CoinBigIndex * columnStart = columnCopy->getVectorStarts();
+	//const int * columnLength = columnCopy->getVectorLengths(); 
+	//const double * element = columnCopy->getElements();
+	
 	
 	// if equality row and bounds mean artificial in basis bad
 	// then do anyway
-
+	
 	for (iColumn=0;iColumn<numberColumns_;iColumn++) {
 	  // - if we want to reduce dj, + if we want to increase
 	  int thisWay = 100;
@@ -3377,73 +3381,276 @@ ClpSimplex::crash(double gap,int pivot)
 	  }
 	  way[iColumn] = thisWay;
 	}
-	// we need to maximize chance of doing good
-	int iRow;
-	for (iRow=0;iRow<numberRows_;iRow++) {
-	  double lowerBound = rowLower_[iRow];
-	  double upperBound = rowUpper_[iRow];
-	  if (getRowStatus(iRow)==basic) {
-	    // see if we can find a column to pivot on
-	    int j;
-	    double maximumDown = DBL_MAX;
-	    double maximumUp = DBL_MAX;
-	    int numberBad=0;
-	    if (lowerBound<-1.0e20)
-	      maximumDown = -1.0;;
-	    if (upperBound<1.0e20)
-	      maximumUp = -1.0;;
-	    for (j=rowStart[iRow];j<rowStart[iRow]+rowLength[iRow];j++) {
-	      int iColumn = column[j];
-	      /* way -
-		 -3 - okay at upper bound with negative dj
-		 -2 - marginal at upper bound with zero dj - can only decrease
-		 -1 - bad at upper bound
-		 0 - we can never pivot on this row
-		 1 - bad at lower bound
-		 2 - marginal at lower bound with zero dj - can only increase
-		 3 - okay at lower bound with positive dj
-		 100 - fine we can just ignore
-	      */
-	      if (way[iColumn]!=100) {
-		switch(way[iColumn]) {
-	      
-		case -3:
-		  
-		  break;
-		case -2:
-		  
-		  break;
-		case -1:
-		  
-		  break;
-		case 0:
-		  maximumDown = -1.0;
-		  maximumUp=-1.0;
-		  break;
-		case 1:
-		  
-		  break;
-		case 2:
-		  
-		  break;
-		case 3:
-		  
-		  break;
-		default:
-		  break;
+	/*if (!numberBad)
+	  printf("Was dual feasible before passes - rows %d\n",
+	  numberRows_);*/
+	int lastNumberIn = -100000;
+	int numberPasses=5;
+	while (numberIn>lastNumberIn+numberRows_/100) {
+	  lastNumberIn = numberIn;
+	  // we need to maximize chance of doing good
+	  int iRow;
+	  for (iRow=0;iRow<numberRows_;iRow++) {
+	    double lowerBound = rowLower_[iRow];
+	    double upperBound = rowUpper_[iRow];
+	    if (getRowStatus(iRow)==basic) {
+	      // see if we can find a column to pivot on
+	      int j;
+	      // down is amount pi can go down
+	      double maximumDown = DBL_MAX;
+	      double maximumUp = DBL_MAX;
+	      double minimumDown =0.0;
+	      double minimumUp =0.0;
+	      int iUp=-1;
+	      int iDown=-1;
+	      int iUpB=-1;
+	      int iDownB=-1;
+	      if (lowerBound<-1.0e20)
+		maximumDown = -1.0;
+	      if (upperBound>1.0e20)
+		maximumUp = -1.0;
+	      for (j=rowStart[iRow];j<rowStart[iRow]+rowLength[iRow];j++) {
+		int iColumn = column[j];
+		double value = elementByRow[j];
+		double djValue = dj[iColumn];
+		/* way -
+		   -3 - okay at upper bound with negative dj
+		   -2 - marginal at upper bound with zero dj - can only decrease
+		   -1 - bad at upper bound
+		   0 - we can never pivot on this row
+		   1 - bad at lower bound
+		   2 - marginal at lower bound with zero dj - can only increase
+		   3 - okay at lower bound with positive dj
+		   100 - fine we can just ignore
+		*/
+		if (way[iColumn]!=100) {
+		  switch(way[iColumn]) {
+		    
+		  case -3:
+		    if (value>0.0) {
+		      if (maximumDown*value>-djValue) {
+			maximumDown = -djValue/value;
+			iDown = iColumn;
+		      }
+		    } else {
+		      if (-maximumUp*value>-djValue) {
+			maximumUp = djValue/value;
+			iUp = iColumn;
+		      }
+		    }
+		    break;
+		  case -2:
+		    if (value>0.0) {
+		      maximumDown = 0.0;
+		    } else {
+		      maximumUp = 0.0;
+		    }
+		    break;
+		  case -1:
+		    // see if could be satisfied
+		    // dj value > 0
+		    if (value>0.0) {
+		      maximumDown=0.0;
+		      if (maximumUp*value<djValue-dualTolerance) {
+			maximumUp = 0.0; // would improve but not enough
+		      } else {
+			if (minimumUp*value<djValue) {
+			  minimumUp = djValue/value;
+			  iUpB = iColumn;
+			}
+		      }
+		    } else {
+		      maximumUp=0.0;
+		      if (-maximumDown*value<djValue-dualTolerance) {
+			maximumDown = 0.0; // would improve but not enough
+		      } else {
+			if (-minimumDown*value<djValue) {
+			  minimumDown = -djValue/value;
+			  iDownB = iColumn;
+			}
+		      }
+		    }
+		    
+		    break;
+		  case 0:
+		    maximumDown = -1.0;
+		    maximumUp=-1.0;
+		    break;
+		  case 1:
+		    // see if could be satisfied
+		    // dj value < 0
+		    if (value>0.0) {
+		      maximumUp=0.0;
+		      if (maximumDown*value<-djValue-dualTolerance) {
+			maximumDown = 0.0; // would improve but not enough
+		      } else {
+			if (minimumDown*value<-djValue) {
+			  minimumDown = -djValue/value;
+			  iDownB = iColumn;
+			}
+		      }
+		    } else {
+		      maximumDown=0.0;
+		      if (-maximumUp*value<-djValue-dualTolerance) {
+			maximumUp = 0.0; // would improve but not enough
+		      } else {
+			if (-minimumUp*value<-djValue) {
+			  minimumUp = djValue/value;
+			  iUpB = iColumn;
+			}
+		      }
+		    }
+		    
+		    break;
+		  case 2:
+		    if (value>0.0) {
+		      maximumUp = 0.0;
+		    } else {
+		      maximumDown = 0.0;
+		    }
+		    
+		    break;
+		  case 3:
+		    if (value>0.0) {
+		      if (maximumUp*value>djValue) {
+			maximumUp = djValue/value;
+			iUp = iColumn;
+		      }
+		    } else {
+		      if (-maximumDown*value>djValue) {
+			maximumDown = -djValue/value;
+			iDown = iColumn;
+		      }
+		    }
+		    
+		    break;
+		  default:
+		    break;
+		  }
+		}
+	      }
+	      if (iUpB>=0)
+		iUp=iUpB;
+	      if (maximumUp<=dualTolerance||maximumUp<minimumUp)
+		iUp=-1;
+	      if (iDownB>=0)
+		iDown=iDownB;
+	      if (maximumDown<=dualTolerance||maximumDown<minimumDown)
+		iDown=-1;
+	      if (iUp>=0||iDown>=0) {
+		// do something
+		if (iUp>=0&&iDown>=0) {
+		  if (maximumDown>maximumUp)
+		    iUp=-1;
+		}
+		double change;
+		int kColumn;
+		if (iUp>=0) {
+		  kColumn=iUp;
+		  change=maximumUp;
+		  setRowStatus(iRow,atUpperBound);
+		} else {
+		  kColumn=iDown;
+		  change=-maximumDown;
+		  setRowStatus(iRow,atLowerBound);
+		}
+		setColumnStatus(kColumn,basic);
+		numberIn++;
+		pi[iRow]=change;
+		for (j=rowStart[iRow];j<rowStart[iRow]+rowLength[iRow];j++) {
+		  int iColumn = column[j];
+		  double value = elementByRow[j];
+		  double djValue = dj[iColumn]-change*value;
+		  dj[iColumn]=djValue;
+		  if (abs(way[iColumn])==1) {
+		    numberBad--;
+		    /*if (!numberBad)
+		      printf("Became dual feasible at row %d out of %d\n",
+		      iRow, numberRows_);*/
+		    lastNumberIn=-1000000;
+		  }
+		  int thisWay = 100;
+		  double lowerBound = columnLower_[iColumn];
+		  double upperBound = columnUpper_[iColumn];
+		  if (upperBound>lowerBound) {
+		    switch(getColumnStatus(iColumn)) {
+		      
+		    case basic:
+		      thisWay=0;
+		      break;
+		    case isFree:
+		    case superBasic:
+		      if (djValue<-dualTolerance) 
+			thisWay = 1;
+		      else if (djValue>dualTolerance) 
+			thisWay = -1;
+		      else
+			{ thisWay =0; abort();}
+		      break;
+		    case atUpperBound:
+		      if (djValue>dualTolerance) 
+			{ thisWay =-1; abort();}
+		      else if (djValue<-dualTolerance) 
+			thisWay = -3;
+		      else
+			thisWay = -2;
+		      break;
+		    case atLowerBound:
+		      if (djValue<-dualTolerance) 
+			{ thisWay =1; abort();}
+		      else if (djValue>dualTolerance) 
+			thisWay = 3;
+		      else
+			thisWay = 2;
+		      break;
+		    }
+		  }
+		  way[iColumn] = thisWay;
 		}
 	      }
 	    }
-	    if (max(maximumUp,maximumDown)>0.0) {
-	      // do something
+	  }
+	  if (numberIn==lastNumberIn||numberBad||pivot<2)
+	    break;
+	  if (!(--numberPasses))
+	    break;
+	  //printf("%d put in so far\n",numberIn);
+	}
+	// last attempt to flip
+	for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+	  double lowerBound = columnLower_[iColumn];
+	  double upperBound = columnUpper_[iColumn];
+	  if (upperBound-lowerBound<=gap&&upperBound>lowerBound) {
+	    double djValue=dj[iColumn];
+	    switch(getColumnStatus(iColumn)) {
+	      
+	    case basic:
+	      break;
+	    case isFree:
+	    case superBasic:
+	      break;
+	    case atUpperBound:
+	      if (djValue>dualTolerance) {
+		setColumnStatus(iColumn,atUpperBound);
+		solution[iColumn]=upperBound;
+	      } 
+	      break;
+	    case atLowerBound:
+	      if (djValue<-dualTolerance) {
+		setColumnStatus(iColumn,atUpperBound);
+		solution[iColumn]=upperBound;
+	      }
+	      break;
 	    }
 	  }
 	}
-	abort();
 	delete [] pi;
 	delete [] dj;
 	delete [] way;
-#endif
+	handler_->message(CLP_CRASH,messages_)
+	  <<numberIn
+	  <<numberBad
+	  <<CoinMessageEol;
 	return -1;
       }
     } else {

@@ -70,6 +70,7 @@ static Clp_message us_english[]=
   {CLP_IMPORT_RESULT,27,1,"Model was imported from %s in %g seconds"},
   {CLP_IMPORT_ERRORS,3001,1," There were %d errors when importing model from %s"},
   {CLP_EMPTY_PROBLEM,3002,0,"Not solving empty problem - %d rows, %d columns and %d elements"},
+  {CLP_CRASH,28,1,"Crash put %d variables in basis, %d dual infeasibilities"},
   {CLP_DUMMY_END,999999,0,""}
 };
 static Clp_message uk_english[]=

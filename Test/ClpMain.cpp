@@ -18,7 +18,7 @@
 #include <sys/resource.h>
 #include <unistd.h>
 #endif
-#define CLPVERSION "0.94"
+#define CLPVERSION "0.94.1"
 
 //#include "CoinPackedMatrix.hpp"
 //#include "CoinPackedVector.hpp"
@@ -80,7 +80,7 @@ enum ClpParameterType {
   LOGLEVEL=101,MAXFACTOR,PERTURBATION,MAXITERATION,PRESOLVEPASS,IDIOT,
   
   DIRECTION=201,DUALPIVOT,SCALING,ERRORSALLOWED,KEEPNAMES,SPARSEFACTOR,
-  PRIMALPIVOT,PRESOLVE,
+  PRIMALPIVOT,PRESOLVE,CRASH,
   
   DIRECTORY=301,IMPORT,EXPORT,RESTORE,SAVE,DUALSIMPLEX,PRIMALSIMPLEX,BAB,
   MAXIMIZE,MINIMIZE,EXIT,STDIN,UNITTEST,NETLIB_DUAL,NETLIB_PRIMAL,SOLUTION,
@@ -803,6 +803,10 @@ stopping",
 	      "off",PRESOLVE);
     parameters[numberParameters-1].append("on");
     parameters[numberParameters++]=
+      ClpItem("crash","Whether to create basis for problem",
+	      "off",CRASH);
+    parameters[numberParameters-1].append("on");
+    parameters[numberParameters++]=
       ClpItem("idiot!Crash","Whether to try idiot crash",
 	      0,200,IDIOT);
     parameters[numberParameters++]=
@@ -1075,6 +1079,9 @@ stopping",
 	    case PRESOLVE:
 	      preSolve = action*5;
 	      break;
+	    case CRASH:
+	      doIdiot=-1;
+	      break;
 	    default:
 	      abort();
 	    }
@@ -1117,10 +1124,12 @@ stopping",
 	      currentModel = model2;
 #endif
 	      if (type==DUALSIMPLEX) {
+		if (doIdiot<0)
+		  model2->crash(1000,2);
 		model2->dual();
 	      } else {
 #ifdef CLP_IDIOT
-		if (doIdiot) {
+		if (doIdiot>0) {
 		  Idiot info(*model2);
 		  info.crash(doIdiot);
 		}

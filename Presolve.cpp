@@ -714,8 +714,8 @@ const PresolveAction *Presolve::presolve(PresolveMatrix *prob)
 	for (i=0;i<nrows_;i++) 
 	  if (!hinrow[i])
 	    numberDropped++;
-	printf("%d rows dropped after pass %d\n",numberDropped,
-	       iLoop+1);
+	//printf("%d rows dropped after pass %d\n",numberDropped,
+	//     iLoop+1);
 	if (numberDropped==lastDropped)
 	  break;
 	else

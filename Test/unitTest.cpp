@@ -300,10 +300,12 @@ int mainTest (int argc, const char *argv[],bool doDual,
 	  if (numberInfeasibilities)
 	    std::cout<<"** Analysis indicates model infeasible"
 		     <<std::endl;
+	  if (doIdiot<0)
+	    model2->crash(1000,2);
 	  model2->dual();
 	} else {
 #ifdef CLP_IDIOT
-	  if (doIdiot) {
+	  if (doIdiot>0) {
 	    Idiot info(*model2);
 	    info.crash(doIdiot);
 	  }
@@ -338,10 +340,12 @@ int mainTest (int argc, const char *argv[],bool doDual,
 	}
 #else
 	if (doDual) {
+	  if (doIdiot<0)
+	    solution.crash(1000,2);
 	  solution.dual();
 	} else {
 #ifdef CLP_IDIOT
-	  if (doIdiot) {
+	  if (doIdiot>0) {
 	    Idiot info(solution);
 	    info.crash(doIdiot);
 	  }
@@ -351,10 +355,12 @@ int mainTest (int argc, const char *argv[],bool doDual,
 #endif
       } else {
 	if (doDual) {
+	  if (doIdiot<0)
+	    solution.crash(1000,2);
 	  solution.dual();
 	} else {
 #ifdef CLP_IDIOT
-	  if (doIdiot) {
+	  if (doIdiot>0) {
 	    Idiot info(solution);
 	    info.crash(doIdiot);
 	  }
