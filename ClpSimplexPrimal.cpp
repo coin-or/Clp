@@ -381,6 +381,8 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
 	break;
       }
 
+      if (firstFree_<0)
+	ifValuesPass=0;
       // Iterate
       whileIterating(ifValuesPass ? 1 : 0);
     }
