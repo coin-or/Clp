@@ -770,8 +770,9 @@ public:
   /** Set up status array (can be used by OsiClp).
       Also can be used to set up all slack basis */
   void createStatus() ;
-  inline void allSlackBasis()
-  { createStatus();};
+  /** Sets up all slack basis and resets solution to 
+      as it was after initial load or readMps */
+  void allSlackBasis(bool resetSolution=false);
     
   /// So we know when to be cautious
   inline int lastBadIteration() const

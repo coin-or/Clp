@@ -4483,6 +4483,37 @@ ClpSimplex::createStatus()
     setRowStatus(i,basic);
   }
 }
+/* Sets up all slack basis and resets solution to 
+   as it was after initial load or readMps */
+void ClpSimplex::allSlackBasis(bool resetSolution)
+{
+  createStatus();
+  if (resetSolution) {
+    // put back to as it was originally
+    int i;
+    // set column status to one nearest zero
+    // But set value to zero if lb <0.0 and ub>0.0
+    for (i=0;i<numberColumns_;i++) {
+      if (columnLower_[i]>=0.0) {
+	columnActivity_[i]=columnLower_[i];
+	setColumnStatus(i,atLowerBound);
+      } else if (columnUpper_[i]<=0.0) {
+	columnActivity_[i]=columnUpper_[i];
+	setColumnStatus(i,atUpperBound);
+      } else if (columnLower_[i]<-1.0e20&&columnUpper_[i]>1.0e20) {
+	// free
+	columnActivity_[i]=0.0;
+	setColumnStatus(i,isFree);
+      } else if (fabs(columnLower_[i])<fabs(columnUpper_[i])) {
+	columnActivity_[i]=0.0;
+	setColumnStatus(i,atLowerBound);
+      } else {
+	columnActivity_[i]=0.0;
+	setColumnStatus(i,atUpperBound);
+      }
+    }
+  }
+}
 /* Loads a problem (the constraints on the
    rows are given by lower and upper bounds). If a pointer is 0 then the
    following values are the default:
