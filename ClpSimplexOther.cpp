@@ -86,7 +86,7 @@ void ClpSimplexOther::dualRanging(int numberCheck,const int * which,
       if (iSequence<numberColumns_) 
 	scaleFactor = 1.0/(objectiveScale_*columnScale_[iSequence]);
       else
-	scaleFactor = rowScale_[i]/objectiveScale_;
+	scaleFactor = rowScale_[iSequence-numberColumns_]/objectiveScale_;
     } else {
       scaleFactor = 1.0/objectiveScale_;
     }
