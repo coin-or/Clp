@@ -1072,11 +1072,12 @@ stopping",
 	  case PRIMALSIMPLEX:
 	    if (goodModels[iModel]) {
 	      int saveMaxIterations = models[iModel].maximumIterations();
-	      Presolve pinfo;
 	      ClpSimplex * model2 = models+iModel;
+#ifdef USE_PRESOLVE
+	      Presolve pinfo;
 	      if (preSolve) 
 		model2 = pinfo.presolvedModel(models[iModel],1.0e-8);
-
+#endif
 #ifdef READLINE     
 	      currentModel = model2;
 #endif
@@ -1084,6 +1085,7 @@ stopping",
 		model2->dual();
 	      else
 		model2->primal();
+#ifdef USE_PRESOLVE
 	      if (preSolve) {
 		pinfo.postsolve(true);
 		
@@ -1095,6 +1097,7 @@ stopping",
 #endif
 		models[iModel].primal(1);
 	      }
+#endif
 	      models[iModel].setMaximumIterations(saveMaxIterations);
 	      time2 = cpuTime();
 	      totalTime += time2-time1;

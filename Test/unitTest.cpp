@@ -255,6 +255,7 @@ int mainTest (int argc, const char *argv[],bool doDual,
 
       solution.setDblParam(ClpObjOffset,mps.objectiveOffset());
       if (doPresolve) {
+#ifdef USE_PRESOLVE
 	Presolve pinfo;
 	ClpSimplex * model2 = pinfo.presolvedModel(solution,1.0e-8);
 	if (doDual)
@@ -285,7 +286,13 @@ int mainTest (int argc, const char *argv[],bool doDual,
 		
 	  delete model2;
 	}
-
+#else
+	if (doDual) {
+	  solution.dual();
+	} else {
+	  solution.primal();
+	}
+#endif
       } else {
 	if (doDual) {
 	  solution.dual();
