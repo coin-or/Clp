@@ -174,6 +174,7 @@ public:
       mode=6  - restore status stuff
       mode=7  - flag given variable (normally sequenceIn)
       mode=8  - unflag all variables
+      mode=9  - synchronize costs
   */
   virtual int generalExpanded(ClpSimplex * model,int mode,int & number);
   /** 

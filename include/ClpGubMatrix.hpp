@@ -113,6 +113,9 @@ public:
       mode=4  - return 1 if can do primal, 2 if dual, 3 if both
       mode=5  - save any status stuff (when in good state)
       mode=6  - restore status stuff
+      mode=7  - flag given variable (normally sequenceIn)
+      mode=8  - unflag all variables
+      mode=9  - synchronize costs
   */
   virtual int generalExpanded(ClpSimplex * model,int mode,int & number);
   /** 
@@ -126,8 +129,13 @@ public:
       expensive.  This may re-compute */
   virtual double * effectiveRhs(ClpSimplex * model,bool forceRefresh=false,
 				bool check=false);
-  /// This is local to Gub to allow synchronization when status is good
-  virtual void synchronize(ClpSimplex * model);
+  /** This is local to Gub to allow synchronization:
+      mode=0 when status of basis is good 
+      mode=1 when variable is flagged
+      mode=2 when all variables unflagged (returns number flagged)
+      mode=3 just reset costs (primal)
+  */
+  virtual int synchronize(ClpSimplex * model,int mode);
   //@}
 
 

@@ -554,7 +554,7 @@ ClpGubMatrix::transposeTimes(const ClpSimplex * model, double scalar,
 		  // get dj without 
 		  assert (model->getStatus(iBasic)==ClpSimplex::basic);
 		  djMod=0.0;
-		  for (int j=columnStart[iBasic];
+		  for (CoinBigIndex j=columnStart[iBasic];
 		       j<columnStart[iBasic]+columnLength[iBasic];j++) {
 		    int jRow=row[j];
 		    djMod -= pi[jRow]*elementByColumn[j];
@@ -596,7 +596,7 @@ ClpGubMatrix::transposeTimes(const ClpSimplex * model, double scalar,
 		  assert (model->getStatus(iBasic)==ClpSimplex::basic);
 		  djMod=0.0;
 		  // scaled
-		  for (int j=columnStart[iBasic];
+		  for (CoinBigIndex j=columnStart[iBasic];
 		       j<columnStart[iBasic]+columnLength[iBasic];j++) {
 		    int jRow=row[j];
 		    djMod -= pi[jRow]*elementByColumn[j]*rowScale[jRow];
@@ -1663,7 +1663,6 @@ ClpGubMatrix::partialPricing(ClpSimplex * model, int start, int end,
 	      break;
 	    case ClpSimplex::atUpperBound:
 	      value=cost[iSequence]-djMod;
-	      // scaled
 	      for (j=startColumn[iSequence];
 		   j<startColumn[iSequence]+length[iSequence];j++) {
 		int jRow=row[j];
@@ -2454,9 +2453,10 @@ ClpGubMatrix::dualExpanded(ClpSimplex * model,
   }
 }
 // This is local to Gub to allow synchronization when status is good
-void 
-ClpGubMatrix::synchronize(ClpSimplex * model)
+int 
+ClpGubMatrix::synchronize(ClpSimplex * model, int mode)
 {
+  return 0;
 }
 /*
      general utility function for dealing with dynamic constraints
@@ -2666,8 +2666,6 @@ ClpGubMatrix::generalExpanded(ClpSimplex * model,int mode,int &number)
 	  keyVariable_[iSetOut]=iSetIn+numberColumns;
 	double * cost = model->costRegion();
 	if (possiblePivotKey_<0) {
-	  if (sequenceIn>=numberColumns)
-	    printf("test this\n");
 	  double dj = model->djRegion()[sequenceIn]-cost[sequenceIn];
 	  changeCost_[iExtra] = -dj;
 #ifdef CLP_DEBUG_PRINT
@@ -2786,15 +2784,32 @@ ClpGubMatrix::generalExpanded(ClpSimplex * model,int mode,int &number)
   case 5:
     {
       memcpy(saveStatus_,status_,numberSets_);
-      synchronize(model);
-      returnCode= 0;
+      synchronize(model,0);
     }
     break;
     // restore status
   case 6:
     {
       memcpy(status_,saveStatus_,numberSets_);
-      returnCode= 0;
+    }
+    break;
+    // flag a variable
+  case 7:
+    {
+      assert (number==model->sequenceIn());
+      synchronize(model,1);
+    }
+    break;
+    // unflag all variables
+  case 8:
+    {
+      returnCode=synchronize(model,2);
+    }
+    break;
+    // redo costs in primal
+  case 9:
+    {
+      returnCode=synchronize(model,3);
     }
     break;
   }
@@ -3140,19 +3155,23 @@ ClpGubMatrix::useEffectiveRhs(ClpSimplex * model, bool cheapest)
       int smallest=numberRows+1;
       int key=-1;
       j = keys[i];
-      while (1) {
-	if (mark[j]&&columnLength[j]<smallest) {
-	  key=j;
-	  smallest=columnLength[j];
+      if (j!=INT_MAX) {
+	while (1) {
+	  if (mark[j]&&columnLength[j]<smallest) {
+	    key=j;
+	    smallest=columnLength[j];
+	  }
+	  if (next_[j]!=INT_MAX) {
+	    j = next_[j];
+	  } else {
+	    // correct end
+	    next_[j]=-(keys[i]+1);
+	    break;
+	  }
 	}
-	if (next_[j]!=INT_MAX) {
-	  j = next_[j];
-	} else {
-	  // correct end
-	  next_[j]=-(keys[i]+1);
-	  break;
-	}
-      }
+      } else {
+	next_[i+numberColumns] = -(numberColumns+i+1);
+      }  
       if (key>=0) {
 	keyVariable_[i]=key;
       } else {
@@ -3167,15 +3186,19 @@ ClpGubMatrix::useEffectiveRhs(ClpSimplex * model, bool cheapest)
       int j;
       double sol=0.0;
       j = keys[i];
-      while (1) {
-	sol += columnSolution[j];
-	if (next_[j]!=INT_MAX) {
-	  j = next_[j];
-	} else {
-	  // correct end
-	  next_[j]=-(keys[i]+1);
-	  break;
+      if (j!=INT_MAX) {
+	while (1) {
+	  sol += columnSolution[j];
+	  if (next_[j]!=INT_MAX) {
+	    j = next_[j];
+	  } else {
+	    // correct end
+	    next_[j]=-(keys[i]+1);
+	    break;
+	  }
 	}
+      } else {
+	next_[i+numberColumns] = -(numberColumns+i+1);
       }
       if (sol>upper_[i]+tolerance) {
 	setAbove(i);
@@ -3407,7 +3430,7 @@ ClpGubMatrix::updatePivot(ClpSimplex * model,double oldInValue, double oldOutVal
 	    else
 	      oldB=upper_[iSetIn];
 	    // subtract out others at bounds
-	    if ((gubType_&8)!=0) {
+	    if ((gubType_&8)==0) {
 	      int j;
 	      for (j=start_[iSetIn];j<end_[iSetIn];j++) {
 		if (j == sequenceIn) 
@@ -3535,8 +3558,8 @@ ClpGubMatrix::updatePivot(ClpSimplex * model,double oldInValue, double oldOutVal
 	// slack in - so use old key
 	sequenceIn = keyVariable_[iSetIn];
 	model->setStatus(sequenceIn,ClpSimplex::basic);
-	keyVariable_[iSetIn] = iSetIn+numberColumns;
 	setStatus(iSetIn,ClpSimplex::basic);
+	redoSet(model,iSetIn+numberColumns,keyVariable_[iSetIn],iSetIn);
       }
       //? do not do if iSetIn<0 ? as will be done later
       pivotVariable[possiblePivotKey_]=sequenceIn;
@@ -3570,19 +3593,18 @@ ClpGubMatrix::updatePivot(ClpSimplex * model,double oldInValue, double oldOutVal
     }
   }
   if (iSetIn>=0&&iSetIn!=iSetOut) {
+    int key=keyVariable_[iSetIn];
     if (sequenceIn == numberColumns+2*numberRows) {
       // key slack in
       assert (pivotRow<numberRows);
       // must swap with current key
-      int key=keyVariable_[iSetIn];
       model->setStatus(key,ClpSimplex::basic);
       pivotVariable[pivotRow]=key;
       backToPivotRow_[key]=pivotRow;
       setStatus(iSetIn,ClpSimplex::basic);
-      keyVariable_[iSetIn] = iSetIn+numberColumns;
+      key = iSetIn+numberColumns;
     }
     // redo set to allow for new one
-    int key=keyVariable_[iSetIn];;
     redoSet(model,key,keyVariable_[iSetIn],iSetIn);
   }
   // update pivot 
@@ -3751,8 +3773,21 @@ ClpGubMatrix::updatePivot(ClpSimplex * model,double oldInValue, double oldOutVal
       if ((gubType_&8)!=0) {
 	int iColumn =next_[key];
 	// sum all non-key variables
+	int k=0;
 	while(iColumn>=0) {
+	  k++;
+	  assert (k<100);
+	  assert (backward_[iColumn]==i);
 	  value += solution[iColumn];
+	  iColumn=next_[iColumn];
+	}
+	int stop = -(key+1);
+	while (iColumn!=stop) {
+	  assert (iColumn<0);
+	  iColumn = -iColumn-1;
+	  k++;
+	  assert (k<100);
+	  assert (backward_[iColumn]==i);
 	  iColumn=next_[iColumn];
 	}
       } else {

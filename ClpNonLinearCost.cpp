@@ -824,18 +824,20 @@ ClpNonLinearCost::setOne(int iPivot, double value)
   changeCost_ += value*difference;
   return difference;
 }
-/* Sets bounds and infeasible cost for one variable 
-   This is for gub etc */
+/* Sets bounds and infeasible cost and true cost for one variable 
+   This is for gub and column generation etc */
 void 
-ClpNonLinearCost::setOne(int sequence, double solutionValue, double lowerValue, double upperValue)
+ClpNonLinearCost::setOne(int sequence, double solutionValue, double lowerValue, double upperValue,
+			 double costValue)
 {
   int iRange=-1;
   int start = start_[sequence];
   double infeasibilityCost = model_->infeasibilityCost();
-  cost_[start] = -infeasibilityCost;
+  cost_[start] = costValue-infeasibilityCost;
   lower_[start+1]=lowerValue;
+  cost_[start+1] = costValue;
   lower_[start+2]=upperValue;
-  cost_[start+2] = infeasibilityCost;
+  cost_[start+2] = costValue+infeasibilityCost;
   double primalTolerance = model_->currentPrimalTolerance();
   if (solutionValue>=lowerValue-primalTolerance) {
     if (solutionValue<=upperValue+primalTolerance) {
@@ -846,6 +848,7 @@ ClpNonLinearCost::setOne(int sequence, double solutionValue, double lowerValue, 
   } else {
     iRange = start;
   }
+  model_->costRegion()[sequence]=cost_[iRange];
   whichRange_[sequence]=iRange;
     
 }

@@ -101,9 +101,10 @@ public:
       Returns change in cost
    May need to be inline for speed */
   double setOne(int sequence, double solutionValue);
-  /** Sets bounds and infeasible cost for one variable 
-      This is for gub etc */
-  void setOne(int sequence, double solutionValue, double lowerValue, double upperValue);
+  /** Sets bounds and infeasible cost and true cost for one variable 
+      This is for gub and column generation etc */
+  void setOne(int sequence, double solutionValue, double lowerValue, double upperValue,
+	      double costValue=0.0);
   /** Sets bounds and cost for outgoing variable 
       may change value
       Returns direction */

@@ -577,6 +577,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 					  bool doFactorization,
 					  ClpSimplex * originalModel)
 {
+  int dummy; // for use in generalExpanded
   if (type==2) {
     // trouble - restore solution
     memcpy(status_ ,saveStatus_,(numberColumns_+numberRows_)*sizeof(char));
@@ -585,7 +586,6 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
     memcpy(columnActivityWork_,savedSolution_ ,
 	   numberColumns_*sizeof(double));
     // restore extra stuff
-    int dummy;
     matrix_->generalExpanded(this,6,dummy);
     forceFactorization_=1; // a bit drastic but ..
     pivotRow_=-1; // say no weights update
@@ -626,7 +626,6 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	memcpy(columnActivityWork_,savedSolution_ ,
 	       numberColumns_*sizeof(double));
 	// restore extra stuff
-	int dummy;
 	matrix_->generalExpanded(this,6,dummy);
 	forceFactorization_=1; // a bit drastic but ..
 	type = 2;
@@ -642,6 +641,8 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
   // get primal and dual solutions
   // put back original costs and then check
   createRim(4);
+  // May need to do more if column generation
+  matrix_->generalExpanded(this,9,dummy);
   gutsOfSolution(NULL,NULL,(firstFree_>=0));
   // Double check reduced costs if no action
   if (progress->lastIterationNumber(0)==numberIterations_) {
@@ -938,7 +939,6 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	   numberRows_*sizeof(double));
     memcpy(savedSolution_ ,columnActivityWork_,numberColumns_*sizeof(double));
     // save extra stuff
-    int dummy;
     matrix_->generalExpanded(this,5,dummy);
   }
   if (doFactorization) {
