@@ -1044,7 +1044,7 @@ ClpSimplex::housekeeping(double objectiveChange)
     nonLinearCost_->setOne(sequenceIn_,solution_[sequenceIn_]); 
   objectiveValue_ += objectiveChange;
   handler_->message(CLP_SIMPLEX_HOUSE2,messages_)
-    <<numberIterations_<<objectiveValue_
+    <<numberIterations_<<objectiveValue()
     <<rowcol[isColumn(sequenceIn_)]<<sequenceWithin(sequenceIn_)
     <<rowcol[isColumn(sequenceOut_)]<<sequenceWithin(sequenceOut_);
   handler_->printing(algorithm_<0)<<theta_<<dualOut_;
@@ -3212,7 +3212,7 @@ ClpSimplex::checkSolution()
   double value=0.0;
   for (i=0;i<numberRows_+numberColumns_;i++)
     value += dj_[i]*solution_[i];
-  printf("dual value %g, primal %g\n",value,objectiveValue_);
+  printf("dual value %g, primal %g\n",value,objectiveValue());
 #endif
   // release extra memory
   deleteRim(false);
