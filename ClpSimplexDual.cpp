@@ -2497,7 +2497,11 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 		       <<numberDualInfeasibilitiesWithoutFree_;
   handler_->message()<<CoinMessageEol;
   double saveTolerance =dualTolerance_;
-
+  /* If we are primal feasible and any dual infeasibilities are on
+     free variables then it is better to go to primal */
+  if (!numberPrimalInfeasibilities_&&!numberDualInfeasibilitiesWithoutFree_&&
+      numberDualInfeasibilities_)
+    problemStatus_=10;
   // dual bound coming in
   //double saveDualBound = dualBound_;
   while (problemStatus_<=-3) {

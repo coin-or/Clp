@@ -5000,8 +5000,10 @@ ClpSimplexProgress::looping()
 	  //printf("flagging %d from loop\n",iSequence);
 	  startCheck();
 	} else {
-	  printf("-1 sequence\n");
-	  assert (iSequence>=0);
+	  // Give up
+	  if (model_->messageHandler()->logLevel()>=63)
+	    printf("***** All flagged?\n");
+	  return 4;
 	}
 	// reset
 	numberBadTimes_=2;
