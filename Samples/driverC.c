@@ -13,7 +13,7 @@
 static void callBack(Clp_Simplex * model, int messageNumber,
 		     int nDouble, const double * vDouble,
 		     int nInt, const int * vInt,
-		     int nString, const char ** vString) 
+		     int nString, char ** vString) 
 {
   if (messageNumber==1000002) {
     /* Coin0002 */

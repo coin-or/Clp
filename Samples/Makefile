@@ -1,5 +1,25 @@
 OptLevel := -g
 
+DRIVER ?= driver
+
+# Possible choices for driver:
+#   decompose
+#   defaults
+#   driver
+#   driver2
+#   dualCuts
+#   ekk
+#   ekk_interface
+#   minimum
+#   network
+#   piece
+#   sprint
+#   sprint2
+#   testBarrier
+#   testBasis
+#   useVolume
+
+
 # The location of the customized Makefiles
 CoinDir := ../../
 export MakefileDir := $(CoinDir)/Makefiles
@@ -11,6 +31,7 @@ IncDir += ${ClpIncDir}
 IncDir += ${CoinIncDir}
 IncDir += ${zlibIncDir}
 IncDir += ${bzlibIncDir}
+IncDir += ${readlineIncDir}
 IncDir += ${lapackIncDir}
 
 LibDir :=
@@ -18,6 +39,7 @@ LibDir += ${ClpLibDir}
 LibDir += ${CoinLibDir}
 LibDir += ${zlibLibDir}
 LibDir += ${bzlibLibDir}
+LibDir += ${readlineLibDir}
 LibDir += ${lapackLibDir}
 
 LibName :=
@@ -25,6 +47,7 @@ LibName += ${ClpLibName}
 LibName += ${CoinLibName}
 LibName += ${zlibLibName}
 LibName += ${bzlibLibName}
+LibName += ${readlineLibName}
 LibName += ${lapackLibName}
 
 Define :=
@@ -32,6 +55,7 @@ Define += ${ClpDefine}
 Define += ${CoinDefine}
 Define += ${zlibDefine}
 Define += ${bzlibDefine}
+Define += ${readlineDefine}
 Define += ${lapackDefine}
 
 CXXFLAGS += $(OPTFLAG)
@@ -58,18 +82,19 @@ LDFLAGS := $(addprefix -L,$(LIBDIRS))
 LDFLAGS += $(call ifprefix,$(SHLINKPREFIX),$(LIBDIRS))
 LDFLAGS += $(patsubst lib%,-l%,$(basename $(LIBS)))
 
-ifeq ($(findstring Linux,${UNAME}),Linux)
-#	CXXFLAGS +=	-DREADLINE
-#	LDFLAGS += -lhistory -lreadline -ltermcap
-endif
-#if DENSE and using given libraries
-#LDFLAGS += -llapack -lblas -lg2c
 #LDFLAGS += -lefence
+
 ###############################################################################
 
-TESTSRC := $(DRIVER).cpp
-TESTOBJ := $(addprefix $(TARGETDIR)/, $(TESTSRC:.cpp=.o))
-TESTDEP := $(addprefix $(DEPDIR)/, $(TESTSRC:.cpp=.d))
+ifeq ($(DRIVER),driverC)
+    SRCEXT := c
+else
+    SRCEXT := cpp
+endif
+
+TESTSRC := $(DRIVER).$(SRCEXT)
+TESTOBJ := $(addprefix $(TARGETDIR)/, $(TESTSRC:.$(SRCEXT)=.o))
+TESTDEP := $(addprefix $(DEPDIR)/, $(TESTSRC:.$(SRCEXT)=.d))
 
 ###############################################################################
 # This one must be right before the rules

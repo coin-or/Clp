@@ -78,8 +78,13 @@ int main (int argc, const char *argv[])
   for (iColumn=0;iColumn<originalNumberColumns;iColumn++) 
     model.setColumnStatus(iColumn,model2.getColumnStatus(iColumn));
   
-  for (iRow=0;iRow<numberRows;iRow++) 
-    model.setRowStatus(iRow,model2.getColumnStatus(iRow+originalNumberColumns));
+  for (iRow=0;iRow<numberRows;iRow++) {
+     if (model2.getRowStatus(iRow) == ClpSimplex::basic) {
+	model.setRowStatus(iRow, ClpSimplex::basic);
+     } else {
+	model.setRowStatus(iRow,model2.getColumnStatus(iRow+originalNumberColumns));
+     }
+  }
   model.primal(0);
   // and now without solution values
 
