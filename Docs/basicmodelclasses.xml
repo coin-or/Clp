@@ -8,14 +8,14 @@
   Hierarchy
   </title>
   <para>
-  The basic model class hierarchy is simple.  The top three levels of the 
+  The basic CLP model class hierarchy is simple.  The top three levels of the 
   hierarchy are depicted in the figure below. The first two levels  (i.e.
   <classname>ClpModel</classname>, <classname>ClpSimplex</classname>,
-  <classname>ClpInterior</classname>) contain all the problem data which defines
-  a model (aka, a problem instance). The third level is less model and more
-  algorithmic.  There is a fourth level (for models with more general
-  objectives than linear ones), but it is beyond the current scope of this
-  document.  
+  <classname>ClpInterior</classname>) contain all the problem data which define
+  a model (that is, a problem instance). The third level contains most of the 
+  algorithmic aspects of CLP.  There is a fourth level (for models with more general
+  objectives than linear ones), but a description of it is beyond the current scope
+  of this document.
   </para>
   <mediaobject>
     <!-- Caption doesn't line-up nicely in HTML, leave out for now
@@ -29,8 +29,9 @@
       <imagedata fileref="figures/clpbasicmodelhier.gif" format="GIF"/>
     </imageobject>
   </mediaobject>
+  <!-- Not appropriate here and not entirely correct as worded!
   <para>
-  The class <classname>ClpModel</classname> contains all problem data.
+  The class <classname>ClpModel</classname> contains most of the  problem data.
   There may be a few pieces of data which could be elsewhere but which are
   permanent and so they are here.  The main example of this is a status array:
   it makes the most sense for Simplex but has use for crossing over from any
@@ -44,16 +45,18 @@
   <classname>ClpSimplex</classname> class and not with the
   <classname>ClpModel</classname> class.
   </para>
+  -->
   <para>
-  From the point of view of most Simplex users, the
-  <classname>ClpModel</classname> and <classname>ClpSimplex</classname>
-  classes are all one needs to know about.  There are algorithm-specific classes
-  which inherit from <classname>ClpSimplex</classname> (e.g.
-  <classname>ClpSimplexDual</classname> and
-  <classname>ClpSimplexPrimal</classname>), but they have no member data and
-  very rarely need be visible to the user.  So, for example, after instantiating an
-  object <userinput>model</userinput> of type <classname>ClpSimplex</classname>,
-  the user would use <userinput>model.dual()</userinput> to invoke dual algorithm.
+  Most Simplex users need only concern themselves with the classes
+  <classname>ClpModel</classname> and <classname>ClpSimplex</classname>.  There
+  are algorithm-specific classes which inherit from
+  <classname>ClpSimplex</classname> (e.g. <classname>ClpSimplexDual</classname>
+  and <classname>ClpSimplexPrimal</classname>), but they have no member data and
+  rarely need be visible to the user.  These  classes are cast at algorithm
+  time.  So, for example, after instantiating an object
+  <userinput>model</userinput> of type <classname>ClpSimplex</classname>,
+  a user only need call <userinput>model.dual()</userinput> to invoke the dual
+  simplex method.
   </para>
   </section>
   <section id="firstexample">
@@ -61,9 +64,10 @@
   First Example
   </title>
   <para>
-  Below is our first CLP example code.  It is short enough to present in full.
-  Most of the remaining examples in this Guide will take the form of small code
-  fragments.
+  Below is our first CLP sample program.  It is short enough to present in full
+  (this code can be found in the CLP Samples directory, see
+  <xref linkend="moreexamples"/>).  Most of the remaining examples in this Guide
+  will take the form of small code fragments.
   </para>
   <example>
   <title>minimum.cpp</title>
@@ -90,11 +94,13 @@ int main (int argc, const char *argv[])
   </programlisting>
   </example>
   <para>
-  This sample program creates a default <classname>ClpSimplex</classname> model,
+  This sample program creates a  <classname>ClpSimplex</classname> model,
   reads an MPS file, and if there are no errors, solves it using the primal
-  algorithm.  Simple, but not terribly useful: there is no way to inspect the
-  results of the solve.  There are two main kinds of results: a status saying
-  what happened to the model, and arrays filled with the solution values.
+  algorithm.  The program is easy to follow, but it is not terribly useful:
+  it does not attempt to inspect the results of the solve.  There are two main
+  kinds of results: a &quot;status&quot; describing what happened to the model
+  during the solve, and arrays filled with solution values.  Both will be
+  addressed in this chapter.
   </para>
   </section>
   <section id="gettingsolution">
@@ -116,16 +122,17 @@ int main (int argc, const char *argv[])
   <function>isDualObjectiveLimitReached()</function>,
   <function>isIterationLimitReached()</function> or the feared
   <function>isAbandoned()</function>.  Should one prefer the OSL way of doing
-  things, model.status() returns as it would in OSL-land, so 0 means optimal,
+  things, model.status() returns as it would in OSL, so 0 means optimal,
   1 means  primal infeasible etc.
   </para>
   <para>
-  Similarly, to pick up the solution values, we can inhabit the virtuous OSI-land
-  or the not-quite-so-virtuous CLP-land.  By this it is meant that there are 
-  const and non-const forms of arrays.  It is easier to deal with the non-const
-  versions, so most of the later elaborate algorithms use them.
+  Similarly, to pick up the solution values, one could inhabit the virtuous
+  world of OSI, or the not-quite-so-virtuous world of OSL and &quot;pure&quot;
+  CLP.  By this it is meant that const and non-const forms of arrays are used,
+  respectively.  It is easier to deal with the non-const versions, so most of
+  the elaborate algorithms in CLP and its
+  <link linkend="moresamples">Samples</link> use them.
   </para>
-
   <table frame="none">
   <title>
   Methods for getting solution information
@@ -140,7 +147,7 @@ int main (int argc, const char *argv[])
       OSI-style (virtuous)
       </entry>
       <entry>
-      CLP style (less virtuous)
+      CLP-style (less virtuous)
       </entry>
     </row>
   </thead>
@@ -220,10 +227,11 @@ int main (int argc, const char *argv[])
   &quot;num&quot; and &quot;column&quot; over &quot;col&quot;.  This may be a
   reaction to when one of the authors was young and 5 or 6 letters was the
   maximum in FORTRAN for any name or to early days with OSL when seven characters
-  were allowed but the first three had to be &quot;EKK&quot;!  
+  were allowed but the first three had to be &quot;ekk&quot;!  
   </para>
   <para>
-  Using the above-listed functions, our initial example might be continued as follows:
+  Using the above-listed functions, our
+  <link linkend="firstexample">initial example</link> might be continued as follows:
   </para>
   <example>
   <title>
@@ -257,14 +265,14 @@ int main (int argc, const char *argv[])
   This code sample would pretty-print information about the model's primal and
   dual solutions.  How to additionally print row and column names is
   illustrated in the <filename>defaults.cpp</filename> file in the
-  &quot;Samples&quot; directory (the &quot;Samples&quot; are properly addressed
+  &quot;Samples&quot; directory (the Samples are properly addressed
   in <xref linkend="moreexamples" />).  This sample is also useful as it
   explicitly performs default actions (e.g. it sets the primal feasiblility
   tolerance value to the default value).
   </para>
   <para>
-  The remainder of this chapter will show some more of the basic tasks a user
-  might want to perform.  Apart from presolve we will only be looking at actions
+  The remainder of this chapter will show  more of the basic CLP tasks a user
+  might wish to perform.  Apart from presolve we will only be looking at actions
   which can be performed when including the single header file
   <filename>COIN/Clp/include/ClpSimplex.hpp</filename>.
   </para>

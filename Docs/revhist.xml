@@ -3,6 +3,15 @@
 <title>Revision History</title>
 <revhistory>
 <revision>
+  <revnumber>0.4</revnumber>
+  <date>18 Oct 2004</date>
+  <authorinitials>DdlN</authorinitials>
+  <revremark>Second official release, including some corrections,
+  clarifications, and several improvements (better treatment of clp
+  executable and Samples).
+  </revremark>
+</revision>
+<revision>
   <revnumber>0.3</revnumber>
   <date>19 Aug 2004</date>
   <authorinitials>DdlN</authorinitials>
