@@ -129,6 +129,8 @@ public:
   virtual void releasePackedMatrix() const =0;
   /// Says whether it can do partial pricing
   virtual bool canDoPartialPricing() const;
+  /// Returns number of hidden rows e.g. gub
+  virtual int hiddenRows() const;
   /// Partial pricing 
   virtual void partialPricing(ClpSimplex * model, int start, int end,
 			      int & bestSequence, int & numberWanted);

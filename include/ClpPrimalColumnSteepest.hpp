@@ -51,7 +51,8 @@ public:
   /// Update djs doing partial pricing (dantzig)
   int partialPricing(CoinIndexedVector * updates,
 		     CoinIndexedVector * spareRow2,
-		     int numberToDo);
+		     int numberWanted,
+		     int numberLook);
   /// Update djs, weights for Devex using djs
   void djsAndDevex(CoinIndexedVector * updates,
 	       CoinIndexedVector * spareRow1,

@@ -228,19 +228,24 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
       int numberRows = model_->numberRows();
       int numberWanted=10;
       int numberColumns = model_->numberColumns();
-      double ratio = (double) sizeFactorization_/(double) numberRows;
+      int numberHiddenRows = model_->clpMatrix()->hiddenRows();
+      double ratio = (double) (sizeFactorization_+numberHiddenRows)/
+	(double) (numberRows + 2*numberHiddenRows);
       // Number of dual infeasibilities at last invert
       int numberDual = model_->numberDualInfeasibilities();
       int numberLook = min(numberDual,numberColumns/10);
       if (ratio<1.0) {
 	numberWanted = 100;
-	numberWanted = max(numberWanted,numberLook/20);
+	numberLook /= 20;
+	numberWanted = max(numberWanted,numberLook);
       } else if (ratio<3.0) {
 	numberWanted = 500;
-	numberWanted = max(numberWanted,numberLook/15);
+	numberLook /= 15;
+	numberWanted = max(numberWanted,numberLook);
       } else if (ratio<4.0||mode_==5) {
 	numberWanted = 1000;
-	numberWanted = max(numberWanted,numberLook/10);
+	numberLook /= 10;
+	numberWanted = max(numberWanted,numberLook);
       } else if (mode_!=5) {
 	switchType=4;
 	// initialize
@@ -259,7 +264,7 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
 	// Update duals and row djs
 	// Do partial pricing
 	return partialPricing(updates,spareRow2,
-			      numberWanted);
+			      numberWanted,numberLook);
       }
     }
   }
@@ -3416,7 +3421,8 @@ ClpPrimalColumnSteepest::switchOffSprint()
 int 
 ClpPrimalColumnSteepest::partialPricing(CoinIndexedVector * updates,
 					CoinIndexedVector * spareRow2,
-					int numberWanted)
+					int numberWanted,
+					int numberLook)
 {
   int number=0;
   int * index;
@@ -3547,6 +3553,7 @@ ClpPrimalColumnSteepest::partialPricing(CoinIndexedVector * updates,
   bool finishedR=false,finishedC=false;
   bool doingR = randomR>randomC;
   doingR=false;
+  int saveNumberWanted = numberWanted;
   while (!finishedR||!finishedC) {
     if (finishedR)
       doingR=false;
@@ -3622,6 +3629,9 @@ ClpPrimalColumnSteepest::partialPricing(CoinIndexedVector * updates,
 	if (!numberWanted)
 	  break;
       }
+      numberLook -= (end-start);
+      if (numberLook<0&&(10*(saveNumberWanted-numberWanted)>saveNumberWanted))
+	numberWanted=0; // give up
       if (saveSequence!=bestSequence) {
 	// dj
 	reducedCost[bestSequence] = cost[bestSequence] +duals[bestSequence-numberColumns];
@@ -3647,6 +3657,9 @@ ClpPrimalColumnSteepest::partialPricing(CoinIndexedVector * updates,
       int start = startC[iPassC];
       int end = min(startC[iPassC+1],start+chunk);;
       model_->clpMatrix()->partialPricing(model_,start,end,bestSequence,numberWanted);
+      numberLook -= (end-start);
+      if (numberLook<0&&(10*(saveNumberWanted-numberWanted)>saveNumberWanted))
+	numberWanted=0; // give up
       if (saveSequence!=bestSequence) {
 	// dj
 	bestDj=fabs(reducedCost[bestSequence]);

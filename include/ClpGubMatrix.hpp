@@ -50,6 +50,8 @@ public:
   /// Partial pricing 
   virtual void partialPricing(ClpSimplex * model, int start, int end,
 		      int & bestSequence, int & numberWanted);
+  /// Returns number of hidden rows e.g. gub
+  virtual int hiddenRows() const;
    //@}
 
   /**@name Matrix times vector methods */

@@ -323,6 +323,11 @@ ClpGubMatrix::subsetClone (int numberRows, const int * whichRows,
   return new ClpGubMatrix(*this, numberRows, whichRows,
 				   numberColumns, whichColumns);
 }
+int 
+ClpGubMatrix::hiddenRows() const
+{ 
+  return numberSets_;
+}
 /* Subset constructor (without gaps).  Duplicates are allowed
    and order is as given */
 ClpGubMatrix::ClpGubMatrix (
@@ -1134,6 +1139,8 @@ ClpGubMatrix::partialPricing(ClpSimplex * model, int start, int end,
 	}
       } else {
 	double bestDjMod=0.0;
+	printf("iteration %d start %d end %d - wanted %d\n",model->numberIterations(),
+	       startG,endG,numberWanted);
 	for (iSequence=startG;iSequence<endG;iSequence++) {
 	  if (backward_[iSequence]!=iSet) {
 	    // get pi on gub row
@@ -2872,7 +2879,7 @@ ClpGubMatrix::updatePivot(ClpSimplex * model,double oldInValue, double oldOutVal
       printf("key slack %d in, set out %d\n",gubSlackIn_,iSetOut);
     printf("** danger - key out for set %d in %d (set %d)\n",iSetOut,sequenceIn,
 	   iSetIn);
-#endif
+#endif   
     // if slack out mark correctly
     if (sequenceOut>=numberRows+numberColumns) {
       double value=model->valueOut();

@@ -336,4 +336,9 @@ ClpMatrixBase::updatePivot(ClpSimplex * model,double oldInValue, double oldOutVa
   }
   return 0;
 }
+int 
+ClpMatrixBase::hiddenRows() const
+{ 
+  return 0;
+}
 
