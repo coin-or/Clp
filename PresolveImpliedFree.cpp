@@ -145,8 +145,9 @@ const PresolveAction *implied_free_action::presolve(PresolveMatrix *prob,
 	if (hinrow[row] > 1 &&	// don't bother with singleton rows
 
 	    // either this is a singleton col,
+	    // (for momement - only if no cost)
 	    // or this particular row is an equality
-	    (hincol[j] == 1 || fabs(rlo[row] - rup[row]) < tol) &&
+	    ((hincol[j] == 1 && !cost[j]) || fabs(rlo[row] - rup[row]) < tol) &&
 
 	    fabs(coeffj) > ZTOLDP) {
 
