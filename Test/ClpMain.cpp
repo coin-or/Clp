@@ -18,7 +18,7 @@
 #include <sys/resource.h>
 #include <unistd.h>
 #endif
-#define CLPVERSION "0.93"
+#define CLPVERSION "0.94"
 
 //#include "CoinPackedMatrix.hpp"
 //#include "CoinPackedVector.hpp"
