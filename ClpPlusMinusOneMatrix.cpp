@@ -83,6 +83,8 @@ ClpPlusMinusOneMatrix::ClpPlusMinusOneMatrix(int numberRows, int numberColumns,
   startPositive_ = ClpCopyOfArray(startPositive,numberMajor+1);
   startNegative_ = ClpCopyOfArray(startNegative,numberMajor);
   indices_ = ClpCopyOfArray(indices,numberElements);
+  // Check valid
+  checkValid(false);
 }
 
 ClpPlusMinusOneMatrix::ClpPlusMinusOneMatrix (const CoinPackedMatrix & rhs) 
@@ -157,6 +159,8 @@ ClpPlusMinusOneMatrix::ClpPlusMinusOneMatrix (const CoinPackedMatrix & rhs)
     numberRows_ ++; //  correct
     columnOrdered_ = true;
   }
+  // Check valid
+  checkValid(false);
 }
 
 //-------------------------------------------------------------------
@@ -350,6 +354,8 @@ ClpPlusMinusOneMatrix::ClpPlusMinusOneMatrix (
     delete [] newRow;
     delete [] duplicateRow;
   }
+  // Check valid
+  checkValid(false);
 }
 
 
@@ -1237,6 +1243,42 @@ ClpPlusMinusOneMatrix::passInCopy(int numberRows, int numberColumns,
   indices_ = indices;
   numberRows_=numberRows;
   numberColumns_=numberColumns;
+  // Check valid
+  checkValid(false);
+}
+// Just checks matrix valid - will say if dimensions not quite right if detail
+void 
+ClpPlusMinusOneMatrix::checkValid(bool detail) const
+{
+  int maxIndex=-1;
+  int minIndex= columnOrdered_ ? numberRows_ : numberColumns_;
+  int number= !columnOrdered_ ? numberRows_ : numberColumns_;
+  int numberElements = getNumElements();
+  CoinBigIndex last=-1;
+  int bad=0;
+  for (int i=0;i<number;i++) {
+    if(startPositive_[i]<last)
+      bad++;
+    else
+      last = startPositive_[i];
+    if(startNegative_[i]<last)
+      bad++;
+    else
+      last = startNegative_[i];
+  }
+  if(startPositive_[number]<last)
+    bad++;
+  CoinAssertHint(!bad,"starts are not monotonic");
+  for (CoinBigIndex i=0;i<numberElements;i++) {
+    maxIndex = CoinMax(indices_[i],maxIndex);
+    minIndex = CoinMin(indices_[i],minIndex);
+  }
+  CoinAssert(maxIndex<(columnOrdered_ ? numberRows_ : numberColumns_));
+  CoinAssert(minIndex>=0);
+  if (detail) {
+    if (minIndex>0||maxIndex+1<(columnOrdered_ ? numberRows_ : numberColumns_))
+      printf("Not full range of indices - %d to %d\n",minIndex,maxIndex);
+  }
 }
 /* Given positive integer weights for each row fills in sum of weights
    for each column (and slack).

@@ -40,6 +40,9 @@ public:
         vectorLengths. */
   virtual const int * getIndices() const
   { return indices_;};
+  // and for advanced use
+  int * getMutableIndices() const
+  { return indices_;};
 
   virtual const CoinBigIndex * getVectorStarts() const;
    /** The lengths of the major-dimension vectors. */
@@ -103,6 +106,8 @@ public:
       MUST be at least as large as the current ones otherwise an exception
       is thrown. */
   virtual void setDimensions(int numrows, int numcols) throw(CoinError);
+  /// Just checks matrix valid - will say if dimensions not quite right if detail
+  void checkValid(bool detail) const;
    //@}
 
   /**@name Matrix times vector methods */

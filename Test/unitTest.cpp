@@ -496,7 +496,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     objective[4]=10.0;
     solution.dual();
     for (i=0;i<3;i++) {
-      rowLower[i]=-1.0e50;
+      rowLower[i]=-1.0e20;
       colUpper[i+2]=0.0;
     }
     solution.setLogLevel(3);
@@ -505,6 +505,9 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     solution.loadProblem(matrix,colLower,colUpper,objective,
 			 rowLower,rowUpper,rowObjective);
     solution.dual();
+    solution.loadProblem(matrix,colLower,colUpper,objective,
+			 rowLower,rowUpper,rowObjective);
+    solution.primal();
   }
   {    
     CoinMpsIO m;
@@ -1307,7 +1310,6 @@ ClpSimplexUnitTest(const std::string & mpsDir,
       matrix.assignMatrix(true,numberRows,numberColumns,
 			  2*numberColumns,element,row,start,lengths);
       // load model
-      
       model.loadProblem(matrix,
 			lowerColumn,upperColumn,objective,
 			lower,upper);
@@ -1316,11 +1318,21 @@ ClpSimplexUnitTest(const std::string & mpsDir,
       double time1 = CoinCpuTime();
       model.dual();
       std::cout<<"Network problem, ClpPackedMatrix took "<<CoinCpuTime()-time1<<" seconds"<<std::endl;
-      ClpPlusMinusOneMatrix plusMinus(matrix);
-      assert (plusMinus.getIndices()); // would be zero if not +- one
-      model.loadProblem(plusMinus,
+      ClpPlusMinusOneMatrix * plusMinus = new ClpPlusMinusOneMatrix(matrix);
+      assert (plusMinus->getIndices()); // would be zero if not +- one
+      ClpPlusMinusOneMatrix *plusminus_matrix;
+
+      plusminus_matrix = new ClpPlusMinusOneMatrix;
+
+      plusminus_matrix->passInCopy(numberRows, numberColumns, true, plusMinus->getMutableIndices(),
+                                   plusMinus->startPositive(),plusMinus->startNegative());
+      model.loadProblem(*plusMinus,
 			lowerColumn,upperColumn,objective,
 			lower,upper);
+      model.replaceMatrix( plusminus_matrix , true);
+      model.createStatus();
+      model.initialSolve();
+      model.writeMps("xx.mps");
       
       model.factorization()->maximumPivots(200+model.numberRows()/100);
       model.createStatus();
