@@ -256,6 +256,9 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
     nonLinearCost_= new ClpNonLinearCost(this);
   }
 
+  // save if sparse factorization wanted
+  int saveSparse = factorization_->sparseThreshold();
+
   // loop round to clean up solution if values pass
   int numberThrownOut = -1;
   int firstSuperBasic=numberRows_+numberColumns_;
@@ -327,6 +330,11 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
 
     // Say good factorization
     factorType=1;
+    if (saveSparse) {
+      // use default at present
+      factorization_->sparseThreshold(0);
+      factorization_->goSparse();
+    }
 
     // Say no pivot has occurred (for steepest edge and updates)
     pivotRow_=-2;
@@ -641,6 +649,7 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
     <<OsiMessageEol;
   // Restore any saved stuff
   perturbation_ = savePerturbation;
+  factorization_->sparseThreshold(saveSparse);
   infeasibilityCost_ = saveInfeasibilityCost;
   return problemStatus_;
 }

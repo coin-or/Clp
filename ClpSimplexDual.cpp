@@ -256,6 +256,9 @@ int ClpSimplexDual::dual ( )
   // row activities have negative sign
   factorization_->slackValue(-1.0);
   factorization_->zeroTolerance(1.0e-13);
+  // save if sparse factorization wanted
+  int saveSparse = factorization_->sparseThreshold();
+
   if (internalFactorize(0))
     return 1; // some error
 
@@ -315,6 +318,11 @@ int ClpSimplexDual::dual ( )
 
     // Say good factorization
     factorType=1;
+    if (saveSparse) {
+      // use default at present
+      factorization_->sparseThreshold(0);
+      factorization_->goSparse();
+    }
 
     // status stays at -1 while iterating, >=0 finished, -2 to invert
     // status -3 to go to top without an invert
@@ -640,6 +648,7 @@ int ClpSimplexDual::dual ( )
     <<OsiMessageEol;
   // Restore any saved stuff
   perturbation_ = savePerturbation;
+  factorization_->sparseThreshold(saveSparse);
   dualBound_ = saveDualBound_;
   return problemStatus_;
 }
