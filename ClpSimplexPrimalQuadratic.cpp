@@ -506,8 +506,8 @@ ClpSimplexPrimalQuadratic::primalQuadratic(int phase)
 #endif  
   // Now do quadratic
   //ClpPrimalQuadraticDantzig dantzigP(model2,&info);
-  //ClpPrimalColumnDantzig dantzigP;
-  //model2->setPrimalColumnPivotAlgorithm(dantzigP);
+  ClpPrimalColumnDantzig dantzigP;
+  model2->setPrimalColumnPivotAlgorithm(dantzigP);
   model2->messageHandler()->setLogLevel(63);
   model2->primalQuadratic2(&info,phase);
   endQuadratic(model2,info);
@@ -1072,10 +1072,15 @@ ClpSimplexPrimalQuadratic::whileIterating(
 	if (pivotRow_>=0) {
 	  // if stable replace in basis
 	  int updateStatus = 0;
-	  if (result<20)
+	  if (result<20) {
+	    double saveCheck = factorization_->getAccuracyCheck();
+	    if (cleanupIteration)
+	      factorization_->relaxAccuracyCheck(1.0e3*saveCheck);
 	    updateStatus=factorization_->replaceColumn(rowArray_[2],
 						       pivotRow_,
 						       alpha_);
+	    factorization_->relaxAccuracyCheck(saveCheck);
+	  }
 	  if (result>=10) {
 	    updateStatus = max(updateStatus,result/10);
 	    result = result%10;
@@ -1099,6 +1104,8 @@ ClpSimplexPrimalQuadratic::whileIterating(
 	    // sequenceIn_=saveSequenceIn;
 	    nextSequenceIn=saveSequenceInInfo;
 	    info->setCrucialSj(saveCrucialSjInfo);
+	    if (saveCrucialSjInfo<0&&!phase)
+	      nextSequenceIn=-1;
 	    pivotRow_=-1;
 	    // better to have small tolerance even if slower
 	    factorization_->zeroTolerance(1.0e-15);
@@ -1114,7 +1121,8 @@ ClpSimplexPrimalQuadratic::whileIterating(
 	      pivotRow_=-1;
 	      returnCode=-4;
 	      // retry on return
-	      nextSequenceIn = sequenceIn_;
+	      if (info->crucialSj()>=0)
+		nextSequenceIn = sequenceIn_;
 	      break;
 	    } else {
 	      // need to reject something
@@ -1790,7 +1798,7 @@ ClpSimplexPrimalQuadratic::primalRow(CoinIndexedVector * rowArray,
 	  //corresponding alpha nonzero
 	  double alpha=work[iSjRow2];
 	  printf("Sj alpha %g sol %g ratio %g\n",alpha,solution_[crucialSj2],solution_[crucialSj2]/alpha);
-	  if (fabs(fabs(d1)-fabs(solution_[crucialSj2]/alpha))>1.0e-3) {
+	  if (fabs(fabs(d1)-fabs(solution_[crucialSj2]/alpha))>1.0e-3*(1.0+fabs(d1))) {
 	    printf("bad test\n");
 	    if (factorization_->pivots())
 	      accuracyFlag=2;
@@ -1829,7 +1837,7 @@ ClpSimplexPrimalQuadratic::primalRow(CoinIndexedVector * rowArray,
   double tentativeTheta = maximumMovement;
   double upperTheta = maximumMovement;
   bool throwAway=false;
-  if (numberIterations_==931) {
+  if (numberIterations_==1750) {
     printf("Bad iteration coming up after iteration %d\n",numberIterations_);
   }
 
@@ -2270,7 +2278,7 @@ ClpSimplexPrimalQuadratic::primalRow(CoinIndexedVector * rowArray,
 	assert (sequenceOut_==crucialSj);
 	valueOut_ = solution(sequenceOut_);
 	theta_ = fabs(valueOut_/alpha_);
-	assert (fabs(maximumMovement-theta_)<1.0e-3*1.0+maximumMovement);
+	assert (fabs(maximumMovement-theta_)<1.0e-3*(1.0+maximumMovement));
 	if (way<0.0) 
 	  theta_ = - theta_;
 	lowerOut_=0.0;
@@ -3023,7 +3031,7 @@ ClpSimplexPrimalQuadratic::createDjs (ClpQuadraticInfo * info,
 	    //printf("bad nonbasic match %d %g %g\n",iRow,value,value2);
 	  // should adjust value?
 	  solution_[jSequence]=0.0;
-	  //value=value2;
+	  value=value2;
 	} else {
 	  //if (fabs(value-value2-dj_[jSequence-start])>1.0e-3)
 	  //printf("bad basic match %d %g %g\n",iRow,value,value2);
