@@ -3811,6 +3811,7 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
       upper_[iColumn] = (newUpper[i]/columnScale_[iColumn])*rhsScale_; // scale
     // Start of fast iterations
     int status = fastDual(alwaysFinish);
+    assert (status_||objectiveValue_<1.0e50);
     // make sure plausible
     double obj = CoinMax(objectiveValue_,saveObjectiveValue);
     if (status) {
@@ -4080,7 +4081,8 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
   for (iColumn=0;iColumn<2;iColumn++) {
     columnArray_[iColumn]->clear();
   }    
-  assert(!numberFake_||returnCode||problemStatus_); // all bounds should be okay
+  assert(!numberFake_||((specialOptions_&4096)!=0&&dualBound_>1.0e8)
+         ||returnCode||problemStatus_); // all bounds should be okay
   // Restore any saved stuff
   restoreData(data);
   dualBound_ = saveDualBound;

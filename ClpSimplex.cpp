@@ -476,11 +476,13 @@ ClpSimplex::computePrimals ( const double * rowActivities,
 	iRow = indexIn[j];
 	int iPivot=pivotVariable_[iRow];
 	solution_[iPivot] = arrayIn[iRow];
+        assert (fabs(solution_[iPivot])<1.0e100);
       }
     } else {
       for (iRow=0;iRow<numberRows_;iRow++) {
 	int iPivot=pivotVariable_[iRow];
 	solution_[iPivot] = arrayIn[iRow];
+        assert (fabs(solution_[iPivot])<1.0e100);
       }
     }
     // Extended solution after "update"
@@ -555,6 +557,7 @@ ClpSimplex::computePrimals ( const double * rowActivities,
     for (iRow=0;iRow<numberRows_;iRow++) {
       int iPivot=pivotVariable_[iRow];
       solution_[iPivot] = array[iRow];
+      assert (fabs(solution_[iPivot])<1.0e100);
     }
   }
   arrayVector->clear();
@@ -2643,11 +2646,29 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
 	    setStatus(i,isFixed);
 	    solution_[i]=lower_[i];
 	  } else if (status==atLowerBound) {
-	    assert (lower_[i]>-1.0e20);
-	    solution_[i]=lower_[i];
+	    if (lower_[i]>-1.0e20) {
+              solution_[i]=lower_[i];
+            } else {
+              printf("seq %d at lower of %g\n",i,lower_[i]);
+              if (upper_[i]<1.0e20) {
+                solution_[i]=upper_[i];
+                setStatus(i,atUpperBound);
+              } else {
+                setStatus(i,isFree);
+              }
+            }
 	  } else if (status==atUpperBound) {
-	    assert (upper_[i]<1.0e20);
-	    solution_[i]=upper_[i];
+	    if (upper_[i]<1.0e20) {
+              solution_[i]=upper_[i];
+            } else {
+              printf("seq %d at upper of %g\n",i,upper_[i]);
+              if (lower_[i]>-1.0e20) {
+                solution_[i]=lower_[i];
+                setStatus(i,atLowerBound);
+              } else {
+                setStatus(i,isFree);
+              }
+            }
 	  }
 	}
       }
