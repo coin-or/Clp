@@ -8,10 +8,10 @@
 
 #include "ClpSimplex.hpp"
 #include "ClpDualRowSteepest.hpp"
-#include "OsiIndexedVector.hpp"
+#include "CoinIndexedVector.hpp"
 #include "ClpFactorization.hpp"
 #include "CoinHelperFunctions.hpp"
-#include <stdio.h>
+#include <cstdio>
 
 //#############################################################################
 // Constructors / Destructor / Assignment
@@ -29,7 +29,7 @@ ClpDualRowSteepest::ClpDualRowSteepest (int mode)
     alternateWeights_(NULL),
     savedWeights_(NULL)
 {
-  type_=2;
+  type_=2+64*mode;
 }
 
 //-------------------------------------------------------------------
@@ -42,7 +42,7 @@ ClpDualRowSteepest::ClpDualRowSteepest (const ClpDualRowSteepest & rhs)
   mode_ = rhs.mode_;
   model_ = rhs.model_;
   if (rhs.infeasible_) {
-    infeasible_= new OsiIndexedVector(rhs.infeasible_);
+    infeasible_= new CoinIndexedVector(rhs.infeasible_);
   } else {
     infeasible_=NULL;
   }
@@ -50,17 +50,17 @@ ClpDualRowSteepest::ClpDualRowSteepest (const ClpDualRowSteepest & rhs)
     assert(model_);
     int number = model_->numberRows();
     weights_= new double[number];
-    CoinDisjointCopyN(rhs.weights_,number,weights_);
+    ClpDisjointCopyN(rhs.weights_,number,weights_);
   } else {
     weights_=NULL;
   }
   if (rhs.alternateWeights_) {
-    alternateWeights_= new OsiIndexedVector(rhs.alternateWeights_);
+    alternateWeights_= new CoinIndexedVector(rhs.alternateWeights_);
   } else {
     alternateWeights_=NULL;
   }
   if (rhs.savedWeights_) {
-    savedWeights_= new OsiIndexedVector(rhs.savedWeights_);
+    savedWeights_= new CoinIndexedVector(rhs.savedWeights_);
   } else {
     savedWeights_=NULL;
   }
@@ -93,7 +93,7 @@ ClpDualRowSteepest::operator=(const ClpDualRowSteepest& rhs)
     delete alternateWeights_;
     delete savedWeights_;
     if (rhs.infeasible_!=NULL) {
-      infeasible_= new OsiIndexedVector(rhs.infeasible_);
+      infeasible_= new CoinIndexedVector(rhs.infeasible_);
     } else {
       infeasible_=NULL;
     }
@@ -101,17 +101,17 @@ ClpDualRowSteepest::operator=(const ClpDualRowSteepest& rhs)
       assert(model_);
       int number = model_->numberRows();
       weights_= new double[number];
-      CoinDisjointCopyN(rhs.weights_,number,weights_);
+      ClpDisjointCopyN(rhs.weights_,number,weights_);
     } else {
       weights_=NULL;
     }
     if (rhs.alternateWeights_!=NULL) {
-      alternateWeights_= new OsiIndexedVector(rhs.alternateWeights_);
+      alternateWeights_= new CoinIndexedVector(rhs.alternateWeights_);
     } else {
       alternateWeights_=NULL;
     }
     if (rhs.savedWeights_!=NULL) {
-      savedWeights_= new OsiIndexedVector(rhs.savedWeights_);
+      savedWeights_= new CoinIndexedVector(rhs.savedWeights_);
     } else {
       savedWeights_=NULL;
     }
@@ -152,9 +152,9 @@ ClpDualRowSteepest::pivotRow()
 #define TRY_NORM 1.0e-4
 // Updates weights 
 void 
-ClpDualRowSteepest::updateWeights(OsiIndexedVector * input,
-				  OsiIndexedVector * spare,
-				  OsiIndexedVector * updatedColumn)
+ClpDualRowSteepest::updateWeights(CoinIndexedVector * input,
+				  CoinIndexedVector * spare,
+				  CoinIndexedVector * updatedColumn)
 {
   // clear other region
   alternateWeights_->clear();
@@ -171,7 +171,7 @@ ClpDualRowSteepest::updateWeights(OsiIndexedVector * input,
   // Very expensive debug
   {
     int numberRows = model_->numberRows();
-    OsiIndexedVector * temp = new OsiIndexedVector();
+    CoinIndexedVector * temp = new CoinIndexedVector();
     temp->reserve(numberRows+
 		  model_->factorization()->maximumPivots());
     double * array = alternateWeights_->denseVector();
@@ -244,7 +244,9 @@ ClpDualRowSteepest::updateWeights(OsiIndexedVector * input,
 	weights_[iRow]=devex;
       }
     }
+#ifdef CLP_DEBUG
     assert(work3[pivotRow]&&work[pivotRow]);
+#endif
     alternateWeights_->setNumElements(nSave);
     if (norm < TRY_NORM) 
       norm = TRY_NORM;
@@ -262,7 +264,7 @@ ClpDualRowSteepest::updateWeights(OsiIndexedVector * input,
 */
 void 
 ClpDualRowSteepest::updatePrimalSolution(
-					OsiIndexedVector * primalUpdate,
+					CoinIndexedVector * primalUpdate,
 					double primalRatio,
 					double & objectiveChange)
 {
@@ -274,15 +276,27 @@ ClpDualRowSteepest::updatePrimalSolution(
   double tolerance=model_->currentPrimalTolerance();
   const int * pivotVariable = model_->pivotVariable();
   double * infeas = infeasible_->denseVector();
+  int pivotRow = model_->pivotRow();
+  double * solution = model_->solutionRegion();
   for (i=0;i<number;i++) {
     int iRow=which[i];
     int iPivot=pivotVariable[iRow];
-    double & value = model_->solutionAddress(iPivot);
+    double value = solution[iPivot];
     double cost = model_->cost(iPivot);
     double change = primalRatio*work[iRow];
     value -= change;
+    changeObj -= change*cost;
+    solution[iPivot] = value;
     double lower = model_->lower(iPivot);
     double upper = model_->upper(iPivot);
+    // But if pivot row then use value of incoming
+    if (iRow==pivotRow) {
+      iPivot = model_->sequenceIn();
+      // make last resort choice
+      lower = 1.0e-6*model_->lower(iPivot);
+      upper = 1.0e-6*model_->upper(iPivot);
+      value = 1.0e-6*model_->valueIncomingDual();
+    }
     if (value>upper+tolerance) {
       // store square in list
       if (infeas[iRow])
@@ -300,7 +314,6 @@ ClpDualRowSteepest::updatePrimalSolution(
       if (infeas[iRow])
 	infeas[iRow] = 1.0e-100;
     }
-    changeObj -= change*cost;
     work[iRow]=0.0;
   }
   infeasible_->stopQuickAdd();
@@ -331,24 +344,24 @@ ClpDualRowSteepest::saveWeights(ClpSimplex * model,int mode)
       which[i]=iPivot;
     }
     state_=1;
-  } else if (mode==2||mode==4) {
+  } else if (mode==2||mode==4||mode==5) {
     // restore
-    if (!weights_||state_==-1) {
+    if (!weights_||state_==-1||mode==5) {
       // initialize weights
       delete [] weights_;
       delete alternateWeights_;
       weights_ = new double[numberRows];
-      alternateWeights_ = new OsiIndexedVector();
+      alternateWeights_ = new CoinIndexedVector();
       // enough space so can use it for factorization
       alternateWeights_->reserve(numberRows+
 				 model_->factorization()->maximumPivots());
-      if (!mode_) {
+      if (!mode_||mode==5) {
 	// initialize to 1.0 (can we do better?)
 	for (i=0;i<numberRows;i++) {
 	  weights_[i]=1.0;
 	}
       } else {
-	OsiIndexedVector * temp = new OsiIndexedVector();
+	CoinIndexedVector * temp = new CoinIndexedVector();
 	temp->reserve(numberRows+
 		      model_->factorization()->maximumPivots());
 	double * array = alternateWeights_->denseVector();
@@ -373,7 +386,7 @@ ClpDualRowSteepest::saveWeights(ClpSimplex * model,int mode)
 	delete temp;
       }
       // create saved weights (not really indexedvector)
-      savedWeights_ = new OsiIndexedVector();
+      savedWeights_ = new CoinIndexedVector();
       savedWeights_->reserve(numberRows);
       
       double * array = savedWeights_->denseVector();
@@ -414,7 +427,7 @@ ClpDualRowSteepest::saveWeights(ClpSimplex * model,int mode)
     state_=0;
     // set up infeasibilities
     if (!infeasible_) {
-      infeasible_ = new OsiIndexedVector();
+      infeasible_ = new CoinIndexedVector();
       infeasible_->reserve(numberRows);
     }
   }
@@ -466,5 +479,19 @@ ClpDualRowPivot * ClpDualRowSteepest::clone(bool CopyData) const
   } else {
     return new ClpDualRowSteepest();
   }
+}
+// Gets rid of all arrays
+void 
+ClpDualRowSteepest::clearArrays()
+{
+  delete [] weights_;
+  weights_=NULL;
+  delete infeasible_;
+  infeasible_ = NULL;
+  delete alternateWeights_;
+  alternateWeights_ = NULL;
+  delete savedWeights_;
+  savedWeights_ = NULL;
+  state_ =-1;
 }
 

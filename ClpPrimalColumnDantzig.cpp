@@ -5,13 +5,15 @@
 #  pragma warning(disable:4786)
 #endif
 
+#include <cstdio>
+
+#include "CoinIndexedVector.hpp"
 
 #include "ClpSimplex.hpp"
 #include "ClpPrimalColumnDantzig.hpp"
-#include "OsiIndexedVector.hpp"
 #include "ClpFactorization.hpp"
 #include "ClpPackedMatrix.hpp"
-#include <stdio.h>
+
 //#############################################################################
 // Constructors / Destructor / Assignment
 //#############################################################################
@@ -56,11 +58,11 @@ ClpPrimalColumnDantzig::operator=(const ClpPrimalColumnDantzig& rhs)
 
 // Returns pivot column, -1 if none
 int 
-ClpPrimalColumnDantzig::pivotColumn(OsiIndexedVector * updates,
-				    OsiIndexedVector * spareRow1,
-				    OsiIndexedVector * spareRow2,
-				    OsiIndexedVector * spareColumn1,
-				    OsiIndexedVector * spareColumn2)
+ClpPrimalColumnDantzig::pivotColumn(CoinIndexedVector * updates,
+				    CoinIndexedVector * spareRow1,
+				    CoinIndexedVector * spareRow2,
+				    CoinIndexedVector * spareColumn1,
+				    CoinIndexedVector * spareColumn2)
 {
   assert(model_);
   int iSection,j;
@@ -144,7 +146,7 @@ ClpPrimalColumnDantzig::pivotColumn(OsiIndexedVector * updates,
       ClpSimplex::Status status = model_->getStatus(iSequence);
       
       switch(status) {
-	
+
       case ClpSimplex::basic:
 	break;
       case ClpSimplex::isFree:

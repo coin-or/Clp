@@ -25,11 +25,11 @@ public:
       updateArray has cost updates (also use pivotRow_ from last iteration)
       Can just do full price if you really want to be slow
   */
-  virtual int pivotColumn(OsiIndexedVector * updates,
-			  OsiIndexedVector * spareRow1,
-			  OsiIndexedVector * spareRow2,
-			  OsiIndexedVector * spareColumn1,
-			  OsiIndexedVector * spareColumn2);
+  virtual int pivotColumn(CoinIndexedVector * updates,
+			  CoinIndexedVector * spareRow1,
+			  CoinIndexedVector * spareRow2,
+			  CoinIndexedVector * spareColumn1,
+			  CoinIndexedVector * spareColumn2);
 
   /// Just sets model
   virtual void saveWeights(ClpSimplex * model,int mode)

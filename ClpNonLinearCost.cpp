@@ -7,9 +7,10 @@
 
 #include <iostream>
 
+#include "CoinIndexedVector.hpp"
+
 #include "ClpNonLinearCost.hpp"
 #include "ClpSimplex.hpp"
-#include "OsiIndexedVector.hpp"
 
 //#############################################################################
 // Constructors / Destructor / Assignment
@@ -30,6 +31,7 @@ ClpNonLinearCost::ClpNonLinearCost () :
   numberInfeasibilities_(-1),
   changeCost_(0.0),
   largestInfeasibility_(0.0),
+  sumInfeasibilities_(0.0),
   convex_(true)
 {
 
@@ -53,6 +55,7 @@ ClpNonLinearCost::ClpNonLinearCost ( ClpSimplex * model)
   numberInfeasibilities_=0;
   changeCost_=0.0;
   double infeasibilityCost = model_->infeasibilityCost();
+  sumInfeasibilities_=0.0;
   largestInfeasibility_=0.0;
 
   // First see how much space we need
@@ -114,6 +117,7 @@ ClpNonLinearCost::ClpNonLinearCost(ClpSimplex * model,const int * starts,
   changeCost_=0.0;
   double infeasibilityCost = model_->infeasibilityCost();
   largestInfeasibility_=0.0;
+  sumInfeasibilities_=0.0;
 
   int iSequence;
   double * upper = model_->upperRegion();
@@ -195,6 +199,7 @@ ClpNonLinearCost::ClpNonLinearCost (const ClpNonLinearCost & rhs) :
   numberInfeasibilities_(-1),
   changeCost_(0.0),
   largestInfeasibility_(0.0),
+  sumInfeasibilities_(0.0),
   convex_(true)
 {  
   if (numberRows_) {
@@ -214,6 +219,7 @@ ClpNonLinearCost::ClpNonLinearCost (const ClpNonLinearCost & rhs) :
     numberInfeasibilities_=rhs.numberInfeasibilities_;
     changeCost_ = rhs.changeCost_;
     largestInfeasibility_ = rhs.largestInfeasibility_;
+    sumInfeasibilities_ = rhs.sumInfeasibilities_;
     convex_ = rhs.convex_;
   }
 }
@@ -267,6 +273,7 @@ ClpNonLinearCost::operator=(const ClpNonLinearCost& rhs)
     numberInfeasibilities_=rhs.numberInfeasibilities_;
     changeCost_ = rhs.changeCost_;
     largestInfeasibility_ = rhs.largestInfeasibility_;
+    sumInfeasibilities_ = rhs.sumInfeasibilities_;
     convex_ = rhs.convex_;
   }
   return *this;
@@ -283,6 +290,7 @@ ClpNonLinearCost::checkInfeasibilities(bool toNearest)
   double infeasibilityCost = model_->infeasibilityCost();
   changeCost_=0.0;
   largestInfeasibility_ = 0.0;
+  sumInfeasibilities_ = 0.0;
   double primalTolerance = model_->currentPrimalTolerance();
   
   int iSequence;
@@ -327,14 +335,16 @@ ClpNonLinearCost::checkInfeasibilities(bool toNearest)
       // iRange is in correct place
       // slot in here
       if (value<lower[iSequence]-primalTolerance) {
-	largestInfeasibility_ = max(largestInfeasibility_,
-				    lower[iSequence]-value);
+	value = lower[iSequence]-value;
+	sumInfeasibilities_ += value;
+	largestInfeasibility_ = max(largestInfeasibility_,value);
 	changeCost_ -= lower[iSequence]*
 	  (cost_[iRange]-cost[iSequence]);
 	numberInfeasibilities_++;
       } else if (value>upper[iSequence]+primalTolerance) {
-	largestInfeasibility_ = max(largestInfeasibility_,
-				    value-upper[iSequence]);
+	value = value-upper[iSequence];
+	sumInfeasibilities_ += value;
+	largestInfeasibility_ = max(largestInfeasibility_,value);
 	changeCost_ -= upper[iSequence]*
 	  (cost_[iRange]-cost[iSequence]);
 	numberInfeasibilities_++;
@@ -349,14 +359,22 @@ ClpNonLinearCost::checkInfeasibilities(bool toNearest)
       break;
     case ClpSimplex::atUpperBound:
       if (!toNearest) {
-	assert(fabs(value-upperValue)<=primalTolerance*1.0001) ;
+	// With increasing tolerances - we may be at wrong place
+	if (fabs(value-upperValue)>primalTolerance*1.0001) {
+	  assert(fabs(value-lowerValue)<=primalTolerance*1.0001); 
+	  model_->setStatus(iSequence,ClpSimplex::atLowerBound);
+	}
       } else {
 	solution[iSequence] = upperValue;
       }
       break;
     case ClpSimplex::atLowerBound:
       if (!toNearest) {
-	assert(fabs(value-lowerValue)<=primalTolerance*1.0001); 
+	// With increasing tolerances - we may be at wrong place
+	if (fabs(value-lowerValue)>primalTolerance*1.0001) {
+	  assert(fabs(value-upperValue)<=primalTolerance*1.0001); 
+	  model_->setStatus(iSequence,ClpSimplex::atUpperBound);
+	}
       } else {
 	solution[iSequence] = lowerValue;
       }
@@ -437,7 +455,7 @@ ClpNonLinearCost::goBack(int numberInArray, const int * index,
   }
 }
 void 
-ClpNonLinearCost::goBackAll(const OsiIndexedVector * update)
+ClpNonLinearCost::goBackAll(const CoinIndexedVector * update)
 {
   assert (model_!=NULL);
   const int * pivotVariable = model_->pivotVariable();
@@ -492,10 +510,10 @@ ClpNonLinearCost::checkInfeasibilities(int numberInArray, const int * index)
    The input indices are row indices and need converting to sequences
    for costs.
    On input array is empty (but indices exist).  On exit just
-   changed costs will be stored as normal OsiIndexedVector
+   changed costs will be stored as normal CoinIndexedVector
 */
 void 
-ClpNonLinearCost::checkChanged(int numberInArray, OsiIndexedVector * update)
+ClpNonLinearCost::checkChanged(int numberInArray, CoinIndexedVector * update)
 {
   assert (model_!=NULL);
   double primalTolerance = model_->currentPrimalTolerance();
@@ -572,13 +590,14 @@ ClpNonLinearCost::setOne(int iPivot, double value)
   case ClpSimplex::atUpperBound:
   case ClpSimplex::atLowerBound:
     // set correctly
-    if (fabs(value-lower)<=primalTolerance*1.001) 
+    if (fabs(value-lower)<=primalTolerance*1.001){
       model_->setStatus(iPivot,ClpSimplex::atLowerBound);
-    else if (fabs(value-upper)<=primalTolerance*1.001) 
+    } else if (fabs(value-upper)<=primalTolerance*1.001){
       model_->setStatus(iPivot,ClpSimplex::atUpperBound);
-    else
-      assert(fabs(value-lower)<=primalTolerance*1.0001||
-	     fabs(value-upper)<=primalTolerance*1.0001);
+    } else {
+      // set superBasic
+      model_->setStatus(iPivot,ClpSimplex::superBasic);
+    }
     break;
   }
   if (upper-lower<1.0e-8)

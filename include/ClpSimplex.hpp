@@ -17,8 +17,7 @@
 class ClpDualRowPivot;
 class ClpPrimalColumnPivot;
 class ClpFactorization;
-class OsiWarmStartBasis;
-class OsiIndexedVector;
+class CoinIndexedVector;
 class ClpNonLinearCost;
 
 /** This solves LPs using the simplex method
@@ -37,6 +36,9 @@ class ClpNonLinearCost;
     There is an algorithm data member.  + for primal variations
     and - for dual variations
 
+    This file also includes (at end) a very simple class ClpSimplexProgress
+    which is where anti-looping stuff should migrate to
+
 */
 
 class ClpSimplex : public ClpModel {
@@ -45,7 +47,7 @@ class ClpSimplex : public ClpModel {
 
 public:
 
-  /// enums for status of various sorts (matches OsiWarmStartBasis)
+  /// enums for status of various sorts (matches CoinWarmStartBasis)
   enum Status {
     isFree = 0x00,
     basic = 0x01,
@@ -74,6 +76,55 @@ public:
     ClpSimplex & operator=(const ClpSimplex & rhs);
   /// Destructor
    ~ClpSimplex (  );
+  // Ones below are just ClpModel with setti
+  /** Loads a problem (the constraints on the
+        rows are given by lower and upper bounds). If a pointer is 0 then the
+        following values are the default:
+        <ul>
+          <li> <code>colub</code>: all columns have upper bound infinity
+          <li> <code>collb</code>: all columns have lower bound 0 
+          <li> <code>rowub</code>: all rows have upper bound infinity
+          <li> <code>rowlb</code>: all rows have lower bound -infinity
+	  <li> <code>obj</code>: all variables have 0 objective coefficient
+        </ul>
+    */
+  void loadProblem (  const ClpMatrixBase& matrix,
+		     const double* collb, const double* colub,   
+		     const double* obj,
+		     const double* rowlb, const double* rowub,
+		      const double * rowObjective=NULL);
+  void loadProblem (  const CoinPackedMatrix& matrix,
+		     const double* collb, const double* colub,   
+		     const double* obj,
+		     const double* rowlb, const double* rowub,
+		      const double * rowObjective=NULL);
+
+  /** Just like the other loadProblem() method except that the matrix is
+	given in a standard column major ordered format (without gaps). */
+  void loadProblem (  const int numcols, const int numrows,
+		     const CoinBigIndex* start, const int* index,
+		     const double* value,
+		     const double* collb, const double* colub,   
+		     const double* obj,
+		      const double* rowlb, const double* rowub,
+		      const double * rowObjective=NULL);
+  /// This one is for after presolve to save memory
+  void loadProblem (  const int numcols, const int numrows,
+		     const CoinBigIndex* start, const int* index,
+		      const double* value,const int * length,
+		     const double* collb, const double* colub,   
+		     const double* obj,
+		      const double* rowlb, const double* rowub,
+		      const double * rowObjective=NULL);
+  /// Read an mps file from the given filename
+  int readMps(const char *filename,
+	      bool keepNames=false,
+	      bool ignoreErrors = false);
+  /** Borrow model.  This is so we dont have to copy large amounts
+      of data around.  It assumes a derived class wants to overwrite
+      an empty model with a real one - while it does an algorithm.
+      This is same as ClpModel one, but sets scaling on etc. */
+  void borrowModel(ClpModel & otherModel);
   //@}
 
   /**@name Functions most useful to user */
@@ -82,8 +133,6 @@ public:
   int dual();
   /** Primal algorithm - see ClpSimplexPrimal.hpp for method */
   int primal(int ifValuesPass=0);
-  /// Sets up working basis as a copy of input
-  void setBasis( const OsiWarmStartBasis & basis);
   /// Passes in factorization
   void setFactorization( ClpFactorization & factorization);
   /// Sets or unsets scaling, 0 -off, 1 on, 2 dynamic(later)
@@ -100,6 +149,16 @@ public:
   void setDualRowPivotAlgorithm(ClpDualRowPivot & choice);
   /// Sets column pivot choice algorithm in primal
   void setPrimalColumnPivotAlgorithm(ClpPrimalColumnPivot & choice);
+  /** For strong branching.  On input lower and upper are new bounds
+      while on output they are change in objective function values 
+      (>1.0e50 infeasible).
+      Return code is 0 if nothing interesting, -1 if infeasible both
+      ways and +1 if infeasible one way (check values to see which one(s))
+  */
+  int strongBranching(int numberVariables,const int * variables,
+		      double * newLower, double * newUpper,
+		      bool stopOnFirstInfeasible=true,
+		      bool alwaysFinish=false);
   //@}
 
   /**@name most useful gets and sets */
@@ -157,8 +216,20 @@ public:
   /// Number of primal infeasibilities
   inline int numberPrimalInfeasibilities() const 
           { return numberPrimalInfeasibilities_;} ;
-  /// Warm start
-  OsiWarmStartBasis getBasis() const;
+  /** Save model to file, returns 0 if success.  This is designed for
+      use outside algorithms so does not save iterating arrays etc.
+  It does not save any messaging information. 
+  Does not save scaling values.
+  It does not know about all types of virtual functions.
+  */
+  int saveModel(const char * fileName);
+  /** Restore model from file, returns 0 if success,
+      deletes current model */
+  int restoreModel(const char * fileName);
+  
+  /** Just check solution (for external use) - sets sum of
+      infeasibilities etc */
+  void checkSolution();
   //@}
 
   /******************** End of most useful part **************/
@@ -176,6 +247,8 @@ public:
   /** Factorizes using current basis.  
       solveType - 1 iterating, 0 initial, -1 external 
       If 10 added then in primal values pass
+      Return codes are as from ClpFactorization unless initial factorization
+      when total number of singularities is returned
   */
   int internalFactorize(int solveType);
   /// Factorizes using current basis. For external use
@@ -190,13 +263,13 @@ public:
      Uses sequenceIn_
      Also applies scaling if needed
   */
-  void unpack(OsiIndexedVector * rowArray);
+  void unpack(CoinIndexedVector * rowArray);
   /**
      Unpacks one column of the matrix into indexed array 
      Slack if sequence>= numberColumns
      Also applies scaling if needed
   */
-  void unpack(OsiIndexedVector * rowArray,int sequence);
+  void unpack(CoinIndexedVector * rowArray,int sequence);
   
   /** 
       This does basis housekeeping and does values for in/out variables.
@@ -280,9 +353,13 @@ public:
   /// Current dual tolerance
   inline double currentDualTolerance() const 
           { return dualTolerance_;} ;
+  inline void setCurrentDualTolerance(double value)
+          { dualTolerance_ = value;} ;
   /// Current primal tolerance
   inline double currentPrimalTolerance() const 
           { return primalTolerance_;} ;
+  inline void setCurrentPrimalTolerance(double value)
+          { primalTolerance_ = value;} ;
   /// How many iterative refinements to do
   inline int numberRefinements() const 
           { return numberRefinements_;} ;
@@ -293,6 +370,8 @@ public:
   inline double dualIn() const { return dualIn_;};
   /// Pivot Row for use by classes e.g. steepestedge
   inline int pivotRow() const{ return pivotRow_;};
+  /// value of incoming variable (in Dual)
+  double valueIncomingDual() const;
   //@}
 
   protected:
@@ -302,7 +381,7 @@ public:
   int gutsOfSolution ( const double * rowActivities,
 		       const double * columnActivities,
 		       bool valuesPass=false);
-  /// Does most of deletion (0 = all, 1 = most)
+  /// Does most of deletion (0 = all, 1 = most, 2 most + factorization)
   void gutsOfDelete(int type);
   /// Does most of copying
   void gutsOfCopy(const ClpSimplex & rhs);
@@ -313,10 +392,14 @@ public:
       and makes row copy if wanted, also sets columnStart_ etc
       Also creates scaling arrays if needed.  It does scaling if needed.
       16 also moves solutions etc in to work arrays
+      On 16 returns false if problem "bad" i.e. matrix or bounds bad
   */
-  void createRim(int what,bool makeRowCopy=false);
-  /// releases above arrays and does solution scaling out
-  void deleteRim();
+  bool createRim(int what,bool makeRowCopy=false);
+  /** releases above arrays and does solution scaling out.  May also 
+      get rid of factorization data */
+  void deleteRim(bool getRidOfFactorizationData=true);
+  /// Sanity check on input rim data (after scaling) - returns true if okay
+  bool sanityCheck();
   //@}
   public:
   /**@name public methods */
@@ -441,6 +524,16 @@ public:
   };
   inline bool flagged(int sequence) const
   {return (((status_[sequence]>>6)&1)!=0);};
+  /** Set up status array (can be used by OsiClp).
+      Also can be used to set up all slack basis */
+  void createStatus() ;
+    
+  /// So we know when to be cautious
+  inline int lastBadIteration() const
+  {return lastBadIteration_;};
+  /// Progress flag - at present 0 bit says artificials out
+  inline int progressFlag() const
+  {return progressFlag_;};
   //@}
 
 ////////////////// data //////////////////
@@ -501,9 +594,9 @@ protected:
   /// Column objective - working copy
   double * objectiveWork_;
   /// Useful row length arrays 
-  OsiIndexedVector * rowArray_[6];
+  CoinIndexedVector * rowArray_[6];
   /// Useful column length arrays 
-  OsiIndexedVector * columnArray_[6];
+  CoinIndexedVector * columnArray_[6];
   /// Alpha (pivot element)
   double alpha_;
   /// Theta (pivot change)
@@ -534,8 +627,6 @@ protected:
   int directionOut_;
   /// Pivot Row
   int pivotRow_;
-  /// Status Region (Owner of array below)
-  unsigned char * status_;
   /// Working copy of reduced costs (Owner of arrays below)
   double * dj_;
   /// Reduced costs of slacks not same as duals (or - duals)
@@ -610,6 +701,16 @@ protected:
   ClpNonLinearCost * nonLinearCost_;
   /// For advanced options
   unsigned int specialOptions_;
+  /// So we know when to be cautious
+  int lastBadIteration_;
+  /// Can be used for count of fake bounds (dual) or fake costs (primal)
+  int numberFake_;
+  /// Progress flag - at present 0 bit says artificials out
+  int progressFlag_;
+  /// Sum of Dual infeasibilities using tolerance based on error in duals
+  double sumOfRelaxedDualInfeasibilities_;
+  /// Sum of Primal infeasibilities using tolerance based on error in primals
+  double sumOfRelaxedPrimalInfeasibilities_;
   //@}
 };
 //#############################################################################
@@ -624,4 +725,54 @@ protected:
 void
 ClpSimplexUnitTest(const std::string & mpsDir,
 		   const std::string & netlibDir);
+
+
+/// For saving extra information to see if looping. not worth a Class
+class ClpSimplexProgress {
+
+public:
+
+
+  /**@name Constructors and destructor and copy */
+  //@{
+  /// Default constructor
+    ClpSimplexProgress (  );
+
+  /// Constructor from model
+    ClpSimplexProgress ( ClpSimplex * model );
+
+  /// Copy constructor. 
+  ClpSimplexProgress(const ClpSimplexProgress &);
+
+  /// Assignment operator. This copies the data
+    ClpSimplexProgress & operator=(const ClpSimplexProgress & rhs);
+  /// Destructor
+   ~ClpSimplexProgress (  );
+  //@}
+
+  /**@name Check progress */
+  //@{
+  /** Returns -1 if okay, -n+1 (n number of times bad) if bad but action taken,
+      >=0 if give up and use as problem status
+  */
+    int looping (  );
+
+  //@}
+  /**@name Data  */
+#define CLP_PROGRESS 5
+  //@{
+  /// Objective values
+  double objective_[CLP_PROGRESS];
+  /// Sum of infeasibilities for algorithm
+  double infeasibility_[CLP_PROGRESS];
+  /// Number of infeasibilities
+  int numberInfeasibilities_[CLP_PROGRESS];
+  /// Number of times checked (so won't stop too early)
+  int numberTimes_;
+  /// Number of times it looked like loop
+  int numberBadTimes_;
+  /// Pointer back to model so we can get information
+  ClpSimplex * model_;
+  //@}
+};
 #endif

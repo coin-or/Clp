@@ -6,28 +6,34 @@
 #endif
 
 #include <cassert>
+#include <cstdio>
+#include <cmath>
+#include <cfloat>
+#include <string>
+#include <iostream>
+
+#include <time.h>
+#include <sys/times.h>
+#include <sys/resource.h>
+#include <unistd.h>
+
+#include "CoinMpsIO.hpp"
+#include "CoinPackedMatrix.hpp"
+#include "CoinPackedVector.hpp"
+#include "CoinHelperFunctions.hpp"
 
 #include "ClpFactorization.hpp"
-#include "OsiMpsReader.hpp"
 #include "ClpSimplex.hpp"
 #include "ClpDualRowSteepest.hpp"
 #include "ClpDualRowDantzig.hpp"
 #include "ClpPrimalColumnSteepest.hpp"
 #include "ClpPrimalColumnDantzig.hpp"
-#include "OsiPackedMatrix.hpp"
-#include "OsiPackedVector.hpp"
-#include "OsiWarmStartBasis.hpp"
-#include <stdio.h>
+#include "ClpParameters.hpp"
 
-#include <cmath>
-#include <cfloat>
-
-#include <string>
-#include <iostream>
-#include  <time.h>
-#include <sys/times.h>
-#include <sys/resource.h>
-#include <unistd.h>
+#include "Presolve.hpp"
+#ifdef CLP_IDIOT
+#include "Idiot.hpp"
+#endif
 
 //#############################################################################
 
@@ -53,7 +59,7 @@ void testingMessage( const char * const msg );
 //----------------------------------------------------------------
 
 int mainTest (int argc, const char *argv[],bool doDual,
-	      ClpSimplex empty)
+	      ClpSimplex empty, bool doPresolve,int doIdiot)
 {
   int i;
 
@@ -138,7 +144,12 @@ int mainTest (int argc, const char *argv[],bool doDual,
     objValueTol.push_back(1.E-10);
     objValue.push_back(5.5018458883E+03);
 
+#if 0 // *MERGE*
 #if 0
+#else // devel-1
+#if 1
+    mpsName.push_back("80bau3b");min.push_back(true);nRows.push_back(2263);nCols.push_back(9799);objValueTol.push_back(1.e-10);objValue.push_back(9.8722419241E+05);
+#endif
     mpsName.push_back("blend");min.push_back(true);nRows.push_back(75);nCols.push_back(83);objValueTol.push_back(1.e-10);objValue.push_back(-3.0812149846e+01);
     mpsName.push_back("pilotnov");min.push_back(true);nRows.push_back(976);nCols.push_back(2172);objValueTol.push_back(1.e-10);objValue.push_back(-4.4972761882e+03);
     mpsName.push_back("maros-r7");min.push_back(true);nRows.push_back(3137);nCols.push_back(9408);objValueTol.push_back(1.e-10);objValue.push_back(1.4971851665e+06);
@@ -146,7 +157,6 @@ int mainTest (int argc, const char *argv[],bool doDual,
     mpsName.push_back("pilot");min.push_back(true);nRows.push_back(1442);nCols.push_back(3652);objValueTol.push_back(1.e-5);objValue.push_back(/*-5.5740430007e+02*/-557.48972927292);
     mpsName.push_back("pilot4");min.push_back(true);nRows.push_back(411);nCols.push_back(1000);objValueTol.push_back(1.e-8);objValue.push_back(-2.5811392641e+03);
     mpsName.push_back("pilot87");min.push_back(true);nRows.push_back(2031);nCols.push_back(4883);objValueTol.push_back(1.e-4);objValue.push_back(3.0171072827e+02);
-    mpsName.push_back("80bau3b");min.push_back(true);nRows.push_back(2263);nCols.push_back(9799);objValueTol.push_back(1.e-10);objValue.push_back(9.8722419241E+05);
     mpsName.push_back("adlittle");min.push_back(true);nRows.push_back(57);nCols.push_back(97);objValueTol.push_back(1.e-10);objValue.push_back(2.2549496316e+05);
     mpsName.push_back("afiro");min.push_back(true);nRows.push_back(28);nCols.push_back(32);objValueTol.push_back(1.e-10);objValue.push_back(-4.6475314286e+02);
     mpsName.push_back("agg");min.push_back(true);nRows.push_back(489);nCols.push_back(163);objValueTol.push_back(1.e-10);objValue.push_back(-3.5991767287e+07);
@@ -242,7 +252,7 @@ int mainTest (int argc, const char *argv[],bool doDual,
     
       // Read data mps file,
       std::string fn = netlibDir+mpsName[m];
-      OsiMpsReader mps;
+      CoinMpsIO mps;
       mps.readMps(fn.c_str(),"mps");
       ClpSimplex solution=empty;
       solution.loadProblem(*mps.getMatrixByCol(),mps.getColLower(),
@@ -250,41 +260,86 @@ int mainTest (int argc, const char *argv[],bool doDual,
 			   mps.getObjCoefficients(),
 			   mps.getRowLower(),mps.getRowUpper());
 
-      if (doDual) {
+      solution.setDblParam(ClpObjOffset,mps.objectiveOffset());
 #if 0
-	solution.scaling(1);
-	solution.setDualBound(1.0e6);
-	solution.setDualTolerance(1.0e-7);
-	// set objective sense,
-	if(min[m]) 
-	  solution.setOptimizationDirection(1);
-	else       
-	  solution.setOptimizationDirection(-1);
-	ClpDualRowSteepest steep;
-	solution.setDualRowPivotAlgorithm(steep);
+      solution.setOptimizationDirection(-1);
+      {
+	int j;
+	double * obj = solution.objective();
+	int n=solution.numberColumns();
+	for (j=0;j<n;j++) 
+	  obj[j] *= -1.0;
+      }
 #endif
-	solution.setDblParam(OsiObjOffset,mps.objectiveOffset());
-	solution.dual();
+      if (doPresolve) {
+#ifdef USE_PRESOLVE
+	Presolve pinfo;
+	ClpSimplex * model2 = pinfo.presolvedModel(solution,1.0e-8);
+	if (doDual) {
+	  model2->dual();
+	} else {
+#ifdef CLP_IDIOT
+	  if (doIdiot) {
+	    Idiot info(*model2);
+	    info.crash(doIdiot);
+	  }
+#endif
+	  model2->primal(1);
+	}
+	pinfo.postsolve(true);
+	
+	delete model2;
+	printf("Resolving from postsolved model\n");
+	// later try without (1) and check duals before solve
+	solution.primal(1);
+	if (solution.numberIterations())
+	  printf("****** iterated %d\n",solution.numberIterations());
+	solution.checkSolution();
+	printf("%g dual %g(%d) Primal %g(%d)\n",
+	       solution.objectiveValue(),
+	       solution.sumDualInfeasibilities(),
+	       solution.numberDualInfeasibilities(),
+	       solution.sumPrimalInfeasibilities(),
+	       solution.numberPrimalInfeasibilities());
+	{
+	  Presolve pinfoA;
+	  model2 = pinfoA.presolvedModel(solution,1.0e-8);
+
+	  printf("Resolving from presolved optimal solution\n");
+	  model2->primal(1);
+		
+	  delete model2;
+	}
+#else
+	if (doDual) {
+	  solution.dual();
+	} else {
+#ifdef CLP_IDIOT
+	  if (doIdiot) {
+	    Idiot info(solution);
+	    info.crash(doIdiot);
+	  }
+#endif
+	  solution.primal(1);
+	}
+#endif
       } else {
-#if 0
-	solution.setPrimalTolerance(1.0e-8);
-	solution.scaling(1);
-	ClpPrimalColumnSteepest steep;
-	solution.setPrimalColumnPivotAlgorithm(steep);
-	// set objective sense,
-	if(min[m]) 
-	  solution.setOptimizationDirection(1);
-	else       
-	  solution.setOptimizationDirection(-1);
-	solution.setInfeasibilityCost(1.0e6);
+	if (doDual) {
+	  solution.dual();
+	} else {
+#ifdef CLP_IDIOT
+	  if (doIdiot) {
+	    Idiot info(solution);
+	    info.crash(doIdiot);
+	  }
 #endif
-	solution.setDblParam(OsiObjOffset,mps.objectiveOffset());
-	solution.primal();
+	  solution.primal(1);
+	}
       }
       // Test objective solution value
       {
         double soln = solution.objectiveValue();
-        OsiRelFltEq eq(objValueTol[m]);
+        CoinRelFltEq eq(objValueTol[m]);
         std::cerr <<soln <<",  " <<objValue[m] <<" diff "<<
 	  soln-objValue[m]<<std::endl;
         if(!eq(soln,objValue[m]))
@@ -318,18 +373,18 @@ ClpSimplexUnitTest(const std::string & mpsDir,
 		   const std::string & netlibDir)
 {
   
-  OsiRelFltEq eq(0.000001);
+  CoinRelFltEq eq(0.000001);
 
   {
     ClpSimplex solution;
   
     // matrix data
     //deliberate hiccup of 2 between 0 and 1
-    int start[5]={0,4,7,8,9};
+    CoinBigIndex start[5]={0,4,7,8,9};
     int length[5]={2,3,1,1,1};
     int rows[11]={0,2,-1,-1,0,1,2,0,1,2};
     double elements[11]={7.0,2.0,1.0e10,1.0e10,-2.0,1.0,-2.0,1,1,1};
-    OsiPackedMatrix matrix(true,3,5,8,elements,rows,start,length);
+    CoinPackedMatrix matrix(true,3,5,8,elements,rows,start,length);
     
     // rim data
     double objective[7]={-4.0,1.0,0.0,0.0,0.0,0.0,0.0};
@@ -341,28 +396,42 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     // basis 1
     int rowBasis1[3]={-1,-1,-1};
     int colBasis1[5]={1,1,-1,-1,1};
+    solution.loadProblem(matrix,colLower,colUpper,objective,
+			 rowLower,rowUpper);
     int i;
-    OsiWarmStartBasis warm;
-    warm.setSize(5,3);
+    solution.createStatus();
     for (i=0;i<3;i++) {
       if (rowBasis1[i]<0) {
-	warm.setArtifStatus(i,OsiWarmStartBasis::atLowerBound);
+	solution.setRowStatus(i,ClpSimplex::atLowerBound);
       } else {
-	warm.setArtifStatus(i,OsiWarmStartBasis::basic);
+	solution.setRowStatus(i,ClpSimplex::basic);
       }
     }
     for (i=0;i<5;i++) {
       if (colBasis1[i]<0) {
-	warm.setStructStatus(i,OsiWarmStartBasis::atLowerBound);
+	solution.setColumnStatus(i,ClpSimplex::atLowerBound);
       } else {
-	warm.setStructStatus(i,OsiWarmStartBasis::basic);
+	solution.setColumnStatus(i,ClpSimplex::basic);
       }
     }
-    solution.loadProblem(matrix,colLower,colUpper,objective,
-			 rowLower,rowUpper);
     solution.setLogLevel(3+4+8+16+32);
     solution.primal();
-    solution.setBasis(warm);
+    for (i=0;i<3;i++) {
+      if (rowBasis1[i]<0) {
+	solution.setRowStatus(i,ClpSimplex::atLowerBound);
+      } else {
+	solution.setRowStatus(i,ClpSimplex::basic);
+      }
+    }
+    for (i=0;i<5;i++) {
+      if (colBasis1[i]<0) {
+	solution.setColumnStatus(i,ClpSimplex::atLowerBound);
+      } else {
+	solution.setColumnStatus(i,ClpSimplex::basic);
+      }
+    }
+    // intricate stuff does not work with scaling
+    solution.scaling(0);
     assert(!solution.factorize ( ));
     const double * colsol = solution.primalColumnSolution();
     const double * rowsol = solution.primalRowSolution();
@@ -375,7 +444,23 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     ClpFactorization factorization2 = *solution.factorization();
     ClpSimplex solution2 = solution;
     solution2.setFactorization(factorization2);
-    solution2.setBasis(warm);
+    solution2.createStatus();
+    for (i=0;i<3;i++) {
+      if (rowBasis1[i]<0) {
+	solution2.setRowStatus(i,ClpSimplex::atLowerBound);
+      } else {
+	solution2.setRowStatus(i,ClpSimplex::basic);
+      }
+    }
+    for (i=0;i<5;i++) {
+      if (colBasis1[i]<0) {
+	solution2.setColumnStatus(i,ClpSimplex::atLowerBound);
+      } else {
+	solution2.setColumnStatus(i,ClpSimplex::basic);
+      }
+    }
+    // intricate stuff does not work with scaling
+    solution2.scaling(0);
     solution2.getSolution(rowsol,colsol);
     colsol = solution2.primalColumnSolution();
     rowsol = solution2.primalRowSolution();
@@ -400,7 +485,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     solution.dual();
   }
   {    
-    OsiMpsReader m;
+    CoinMpsIO m;
     std::string fn = mpsDir+"exmip1";
     m.readMps(fn.c_str(),"mps");
     ClpSimplex solution;
@@ -411,7 +496,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
   }
   // test steepest edge
   {    
-    OsiMpsReader m;
+    CoinMpsIO m;
     std::string fn = netlibDir+"finnis";
     m.readMps(fn.c_str(),"mps");
     ClpModel model;
@@ -429,12 +514,12 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     // set objective sense,
     ClpDualRowSteepest steep;
     solution.setDualRowPivotAlgorithm(steep);
-    solution.setDblParam(OsiObjOffset,m.objectiveOffset());
+    solution.setDblParam(ClpObjOffset,m.objectiveOffset());
     solution.dual();
   }
   // test normal solution
   {    
-    OsiMpsReader m;
+    CoinMpsIO m;
     std::string fn = netlibDir+"afiro";
     m.readMps(fn.c_str(),"mps");
     ClpSimplex solution;
@@ -460,10 +545,10 @@ ClpSimplexUnitTest(const std::string & mpsDir,
       assert (solution.status()==0);
       int numberColumns = solution.numberColumns();
       int numberRows = solution.numberRows();
-      OsiPackedVector colsol(numberColumns,solution.primalColumnSolution());
+      CoinPackedVector colsol(numberColumns,solution.primalColumnSolution());
       double * objective = solution.objective();
       double objValue = colsol.dotProduct(objective);
-      OsiRelFltEq eq(1.0e-8);
+      CoinRelFltEq eq(1.0e-8);
       assert(eq(objValue,-4.6475314286e+02));
       double * lower = solution.columnLower();
       double * upper = solution.columnUpper();
@@ -500,8 +585,8 @@ ClpSimplexUnitTest(const std::string & mpsDir,
       double * rowObjective = solution.rowObjective();
       CoinDisjointCopyN(solution.dualRowSolution(),numberRows,rowObjective);
       CoinDisjointCopyN(solution.dualColumnSolution(),numberColumns,objective);
-      OsiWarmStartBasis basis;
-      solution.setBasis(basis);
+      // this sets up all slack basis
+      solution.createStatus();
       solution.dual();
       CoinFillN(rowObjective,numberRows,0.0);
       CoinDisjointCopyN(m.getObjCoefficients(),numberColumns,objective);
@@ -510,7 +595,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
   }
   // test unbounded
   {    
-    OsiMpsReader m;
+    CoinMpsIO m;
     std::string fn = netlibDir+"brandy";
     m.readMps(fn.c_str(),"mps");
     ClpSimplex solution;
@@ -582,7 +667,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
   }
   // test infeasible
   {    
-    OsiMpsReader m;
+    CoinMpsIO m;
     std::string fn = netlibDir+"brandy";
     m.readMps(fn.c_str(),"mps");
     ClpSimplex solution;

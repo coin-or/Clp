@@ -18,32 +18,22 @@
 //-------------------------------------------------------------------
 // Default Constructor 
 //-------------------------------------------------------------------
-ClpFactorization::ClpFactorization () 
-  : OsiFactorization()
-{
-}
+ClpFactorization::ClpFactorization () :
+   CoinFactorization() {}
 
 //-------------------------------------------------------------------
 // Copy constructor 
 //-------------------------------------------------------------------
-ClpFactorization::ClpFactorization (const ClpFactorization & rhs) 
-: OsiFactorization(rhs)
-{  
-  
-}
+ClpFactorization::ClpFactorization (const ClpFactorization & rhs) :
+   CoinFactorization(rhs) {}
 
-ClpFactorization::ClpFactorization (const OsiFactorization & rhs) 
-: OsiFactorization(rhs)
-{  
-  
-}
+ClpFactorization::ClpFactorization (const CoinFactorization & rhs) :
+   CoinFactorization(rhs) {}
 
 //-------------------------------------------------------------------
 // Destructor 
 //-------------------------------------------------------------------
-ClpFactorization::~ClpFactorization ()
-{
-}
+ClpFactorization::~ClpFactorization () {}
 
 //----------------------------------------------------------------
 // Assignment operator 
@@ -52,7 +42,7 @@ ClpFactorization &
 ClpFactorization::operator=(const ClpFactorization& rhs)
 {
   if (this != &rhs) {
-    OsiFactorization::operator=(rhs);
+    CoinFactorization::operator=(rhs);
   }
   return *this;
 }
@@ -69,7 +59,7 @@ ClpFactorization::factorize ( const ClpSimplex * model,
   if (areaFactor)
     areaFactor_ = areaFactor;
   int numberBasic = 0;
-  OsiBigIndex numberElements=0;
+  CoinBigIndex numberElements=0;
   int numberRowBasic=0;
 
   // compute how much in basis
@@ -90,7 +80,7 @@ ClpFactorization::factorize ( const ClpSimplex * model,
   numberElements += matrix->numberInBasis(columnIsBasic);
   if ( numberBasic > numberRows ) {
     return -2; // say too many in basis
-  }				
+  }
   numberElements = 3 * numberBasic + 3 * numberElements + 10000;
   getAreas ( numberRows, numberBasic, numberElements,
 	     2 * numberElements );
@@ -133,8 +123,8 @@ ClpFactorization::factorize ( const ClpSimplex * model,
       if (increasingRows_<3) {
 	// these arrays start off as copies of permute
 	// (and we could use permute_ instead of pivotColumn (not back though))
-	CoinDisjointCopyN ( permute_, numberRows_ , pivotColumn_  );
-	CoinDisjointCopyN ( permuteBack_, numberRows_ , pivotColumnBack_  );
+	ClpDisjointCopyN ( permute_, numberRows_ , pivotColumn_  );
+	ClpDisjointCopyN ( permuteBack_, numberRows_ , pivotColumnBack_  );
       }
     } else {
       // Set up permutation vector

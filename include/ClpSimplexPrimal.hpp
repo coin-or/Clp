@@ -121,11 +121,25 @@ public:
 
   /**@name Functions used in primal */
   //@{
+  /** This has the flow between re-factorizations
+      firstSuperBasic == number rows + columns normally,
+      otherwise first super basic variable
+
+      Reasons to come out:
+      -1 iterations etc
+      -2 inaccuracy 
+      -3 slight inaccuracy (and done iterations)
+      -4 end of values pass and done iterations
+      +0 looks optimal (might be infeasible - but we will investigate)
+      +2 looks unbounded
+      +3 max iterations 
+   */
+  int whileIterating(int & firstSuperBasic); 
   /** The primals are updated by the given array.
       Returns number of infeasibilities.
       After rowArray will have cost changes for use next iteration
   */
-  int updatePrimalsInPrimal(OsiIndexedVector * rowArray,
+  int updatePrimalsInPrimal(CoinIndexedVector * rowArray,
 		  double theta,
 		  double & objectiveChange);
   /** 
@@ -137,10 +151,10 @@ public:
       On exit rhsArray will have changes in costs of basic variables
       If valuesPass non-zero then compute dj for direction
   */
-  void primalRow(OsiIndexedVector * rowArray,
-		 OsiIndexedVector * rhsArray,
-		 OsiIndexedVector * spareArray,
-		 OsiIndexedVector * spareArray2,
+  void primalRow(CoinIndexedVector * rowArray,
+		 CoinIndexedVector * rhsArray,
+		 CoinIndexedVector * spareArray,
+		 CoinIndexedVector * spareArray2,
 		 int valuesPass);
   /** 
       Chooses primal pivot column
@@ -149,15 +163,15 @@ public:
       and will have this (with square of infeasibility) when steepest
       For easy problems we can just choose one of the first columns we look at
   */
-  void primalColumn(OsiIndexedVector * updateArray,
-		    OsiIndexedVector * spareRow1,
-		    OsiIndexedVector * spareRow2,
-		    OsiIndexedVector * spareColumn1,
-		    OsiIndexedVector * spareColumn2);
+  void primalColumn(CoinIndexedVector * updateArray,
+		    CoinIndexedVector * spareRow1,
+		    CoinIndexedVector * spareRow2,
+		    CoinIndexedVector * spareColumn1,
+		    CoinIndexedVector * spareColumn2);
 
   /** Checks if tentative optimal actually means unbounded in primal
       Returns -3 if not, 2 if is unbounded */
-  int checkUnbounded(OsiIndexedVector * ray,OsiIndexedVector * spare,
+  int checkUnbounded(CoinIndexedVector * ray,CoinIndexedVector * spare,
 		     double changeCost);
   /**  Refactorizes if necessary 
        Checks if finished.  Updates status.
@@ -168,7 +182,8 @@ public:
             - 1 normal -if good update save
 	    - 2 restoring from saved 
   */
-  void statusOfProblemInPrimal(int & lastCleaned, int type);
+  void statusOfProblemInPrimal(int & lastCleaned, int type,
+			     ClpSimplexProgress & progress);
   /// Perturbs problem (method depends on perturbation())
   void perturb();
   /// Sets sequenceIn_ to next superBasic (input by first..) and updates

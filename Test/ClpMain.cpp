@@ -6,29 +6,40 @@
 #endif
 
 #include <cassert>
-#define CLPVERSION "0.90"
+#include <cstdio>
+#include <cmath>
+#include <cfloat>
+#include <string>
+#include <iostream>
+
+#include <time.h>
+#include <sys/times.h>
+#include <sys/resource.h>
+#include <unistd.h>
+
+#define CLPVERSION "0.92"
+
+//#include "CoinPackedMatrix.hpp"
+//#include "CoinPackedVector.hpp"
+#include "CoinMpsIO.hpp"
 
 #include "ClpFactorization.hpp"
-#include "OsiMpsReader.hpp"
 #include "ClpSimplex.hpp"
 #include "ClpDualRowSteepest.hpp"
 #include "ClpDualRowDantzig.hpp"
 #include "ClpPrimalColumnSteepest.hpp"
 #include "ClpPrimalColumnDantzig.hpp"
-#include "OsiPackedMatrix.hpp"
-#include "OsiPackedVector.hpp"
-#include "OsiWarmStartBasis.hpp"
-#include <stdio.h>
 
-#include <cmath>
-#include <cfloat>
+#include "Presolve.hpp"
+#ifdef CLP_IDIOT
+#include "Idiot.hpp"
+#endif
+// For Branch and bound
+//  #include "OsiClpSolverInterface.hpp"
+//  #include "OsiCuts.hpp"
+//  #include "OsiRowCut.hpp"
+//  #include "OsiColCut.hpp"
 
-#include <string>
-#include <iostream>
-#include  <time.h>
-#include <sys/times.h>
-#include <sys/resource.h>
-#include <unistd.h>
 #ifdef DMALLOC
 #include "dmalloc.h"
 #endif
@@ -59,18 +70,18 @@ static double cpuTime()
 #endif
 
 int mainTest (int argc, const char *argv[],bool doDual,
-	      ClpSimplex empty);
+	      ClpSimplex empty, bool doPresolve,int doIdiot);
 enum ClpParameterType {
   GENERALQUERY=-100,
   
   DUALTOLERANCE=1,PRIMALTOLERANCE,DUALBOUND,PRIMALWEIGHT,
 
-  LOGLEVEL=101,MAXFACTOR,PERTURBATION,MAXITERATION,
+  LOGLEVEL=101,MAXFACTOR,PERTURBATION,MAXITERATION,PRESOLVEPASS,IDIOT,
   
   DIRECTION=201,DUALPIVOT,SCALING,ERRORSALLOWED,KEEPNAMES,SPARSEFACTOR,
-  PRIMALPIVOT,
+  PRIMALPIVOT,PRESOLVE,
   
-  DIRECTORY=301,IMPORT,DUALSIMPLEX,PRIMALSIMPLEX,
+  DIRECTORY=301,IMPORT,EXPORT,RESTORE,SAVE,DUALSIMPLEX,PRIMALSIMPLEX,BAB,
   MAXIMIZE,MINIMIZE,EXIT,STDIN,UNITTEST,NETLIB_DUAL,NETLIB_PRIMAL,SOLUTION,
   TIGHTEN,FAKEBOUND,VERSION,
 
@@ -787,6 +798,16 @@ stopping",
 	      "on",SCALING);
     parameters[numberParameters-1].append("off");
     parameters[numberParameters++]=
+      ClpItem("presolve","Whether to presolve problem",
+	      "off",PRESOLVE);
+    parameters[numberParameters-1].append("on");
+    parameters[numberParameters++]=
+      ClpItem("idiot!Crash","Whether to try idiot crash",
+	      0,200,IDIOT);
+    parameters[numberParameters++]=
+      ClpItem("passP!resolve","How many passes in presolve",
+	      0,100,PRESOLVEPASS);
+    parameters[numberParameters++]=
       ClpItem("spars!eFactor","Whether factorization treated as sparse",
 	      "on",SPARSEFACTOR);
     parameters[numberParameters-1].append("off");
@@ -805,11 +826,23 @@ stopping",
       ClpItem("import","Import model from mps file",
 	      IMPORT);
     parameters[numberParameters++]=
+      ClpItem("export","Export model as mps file",
+	      EXPORT);
+    parameters[numberParameters++]=
+      ClpItem("save!Model","Save model to binary file",
+	      SAVE);
+    parameters[numberParameters++]=
+      ClpItem("restore!Model","Restore model from binary file",
+	      RESTORE);
+    parameters[numberParameters++]=
       ClpItem("dualS!implex","Do dual simplex algorithm",
 	      DUALSIMPLEX);
     parameters[numberParameters++]=
       ClpItem("primalS!implex","Do primal simplex algorithm",
 	      PRIMALSIMPLEX);
+    parameters[numberParameters++]=
+      ClpItem("branch!Andbound","Do Branch and Bound",
+	      BAB);
     parameters[numberParameters++]=
       ClpItem("tight!en","Poor person's preSolve for now",
 	      TIGHTEN);
@@ -869,6 +902,8 @@ stopping",
     // default action on import
     int allowImportErrors=0;
     int keepImportNames=1;
+    int preSolve=0;
+    int doIdiot=0;
     
     int iModel=0;
     goodModels[0]=false;
@@ -968,7 +1003,12 @@ stopping",
 	  // get next field as int
 	  int value = getIntField(argc,argv,&valid);
 	  if (!valid) {
-	    parameters[iParam].setIntParameter(models+iModel,value);
+	    if (parameters[iParam].type()==PRESOLVEPASS)
+	      preSolve = value;
+	    else if (parameters[iParam].type()==IDIOT)
+	      doIdiot = value;
+	    else
+	      parameters[iParam].setIntParameter(models+iModel,value);
 	  } else if (valid==1) {
 	    abort();
 	  } else {
@@ -1031,6 +1071,9 @@ stopping",
 	    case KEEPNAMES:
 	      keepImportNames = 1-action;
 	      break;
+	    case PRESOLVE:
+	      preSolve = action*5;
+	      break;
 	    default:
 	      abort();
 	    }
@@ -1044,13 +1087,73 @@ stopping",
 	  case PRIMALSIMPLEX:
 	    if (goodModels[iModel]) {
 	      int saveMaxIterations = models[iModel].maximumIterations();
-#ifdef READLINE     
-	      currentModel = models+iModel;
+	      ClpSimplex * model2 = models+iModel;
+#ifdef USE_PRESOLVE
+	      Presolve pinfo;
+	      if (preSolve) {
+		model2 = pinfo.presolvedModel(models[iModel],1.0e-8,false,preSolve);
+		model2->checkSolution();
+#ifdef CLP_DEBUG
+		printf("%g %g (%d) %g (%d)\n"
+		       ,model2->objectiveValue()
+		       ,model2->sumDualInfeasibilities()
+		       ,model2->numberDualInfeasibilities()
+		       ,model2->sumPrimalInfeasibilities()
+		       ,model2->numberPrimalInfeasibilities());
 #endif
-	      if (type==DUALSIMPLEX)
-		models[iModel].dual();
-	      else
-		models[iModel].primal();
+		if (type==DUALSIMPLEX) {
+		  int numberInfeasibilities = model2->tightenPrimalBounds();
+		  if (numberInfeasibilities)
+		    std::cout<<"** Analysis indicates model infeasible"
+			     <<std::endl;
+		}
+	      }
+#endif
+#ifdef READLINE     
+	      currentModel = model2;
+#endif
+	      if (type==DUALSIMPLEX) {
+		model2->dual();
+	      } else {
+#ifdef CLP_IDIOT
+		if (doIdiot) {
+		  Idiot info(*model2);
+		  info.crash(doIdiot);
+		}
+#endif
+		model2->primal(1);
+	      }
+#ifdef USE_PRESOLVE
+	      if (preSolve) {
+		pinfo.postsolve(true);
+		
+		delete model2;
+		printf("Resolving from postsolved model\n");
+		
+#ifdef READLINE     
+		currentModel = models+iModel;
+#endif
+		models[iModel].primal(1);
+#ifdef CLP_DEBUG_not
+		models[iModel].checkSolution();
+		printf("%g dual %g(%d) Primal %g(%d)\n",
+		       models[iModel].objectiveValue(),
+		       models[iModel].sumDualInfeasibilities(),
+		       models[iModel].numberDualInfeasibilities(),
+		       models[iModel].sumPrimalInfeasibilities(),
+		       models[iModel].numberPrimalInfeasibilities());
+		{
+		  Presolve pinfoA;
+		  model2 = pinfoA.presolvedModel(models[iModel],1.0e-8);
+		  
+		  printf("Resolving from presolved optimal solution\n");
+		  model2->primal(1);
+		  
+		  delete model2;
+		}
+#endif
+	      }
+#endif
 	      models[iModel].setMaximumIterations(saveMaxIterations);
 	      time2 = cpuTime();
 	      totalTime += time2-time1;
@@ -1068,12 +1171,44 @@ stopping",
 	    break;
 	  case TIGHTEN:
 	    if (goodModels[iModel]) {
-	      int numberInfeasibilities = models[iModel].tightenPrimalBounds();
+     	      int numberInfeasibilities = models[iModel].tightenPrimalBounds();
 	      if (numberInfeasibilities)
 		std::cout<<"** Analysis indicates model infeasible"<<std::endl;
 	    } else {
 	      std::cout<<"** Current model not valid"<<std::endl;
 	    }
+	    break;
+	  case BAB:
+#if 0
+	    if (goodModels[iModel]) {
+	      int saveMaxIterations = models[iModel].maximumIterations();
+#ifdef READLINE     
+	      currentModel = models+iModel;
+#endif
+	      {
+		// get OsiClp stuff 
+		OsiClpSolverInterface m(models+iModel);
+		m.getModelPtr()->messageHandler()->setLogLevel(0);
+		m.branchAndBound();
+		m.resolve();
+		std::cout<<"Optimal solution "<<m.getObjValue()<<std::endl;
+		m.releaseClp();
+	      }
+	      models[iModel].setMaximumIterations(saveMaxIterations);
+	      time2 = cpuTime();
+	      totalTime += time2-time1;
+	      std::cout<<"Result "<<models[iModel].status()<<
+		" - "<<models[iModel].objectiveValue()<<
+		" iterations "<<models[iModel].numberIterations()<<
+		" took "<<time2-time1<<" seconds - total "<<totalTime<<std::endl;
+	      if (models[iModel].status())
+		std::cerr<<"Non zero status "<<models[iModel].status()<<
+		  std::endl;
+	      time1=time2;
+	    } else {
+	      std::cout<<"** Current model not valid"<<std::endl;
+	    }
+#endif
 	    break;
 	  case IMPORT:
 	    {
@@ -1104,10 +1239,9 @@ stopping",
 						   keepImportNames,
 						   allowImportErrors);
 		if (!status||(status>0&&allowImportErrors)) {
-		  // I don't think there is any need for ths but ..
-		  OsiWarmStartBasis allSlack;
 		  goodModels[iModel]=true;
-		  models[iModel].setBasis(allSlack);
+		  // sets to all slack (not necessary?)
+		  models[iModel].createStatus();
 		  time2 = cpuTime();
 		  totalTime += time2-time1;
 		  time1=time2;
@@ -1115,6 +1249,130 @@ stopping",
 		  // errors
 		  std::cout<<"There were "<<status<<
 		    " errors on input"<<std::endl;
+		}
+	      }
+	    }
+	    break;
+	  case EXPORT:
+	    {
+	      // get next field
+	      field = getString(argc,argv);
+	      std::string fileName;
+	      bool canOpen=false;
+	      if (field[0]=='/'||field[0]=='~')
+		fileName = field;
+	      else
+		fileName = directory+field;
+	      FILE *fp=fopen(fileName.c_str(),"w");
+	      if (fp) {
+		// can open - lets go for it
+		fclose(fp);
+		canOpen=true;
+	      } else {
+		std::cout<<"Unable to open file "<<fileName<<std::endl;
+	      }
+	      if (canOpen) {
+		// Convert names
+		int iRow;
+		int numberRows=models[iModel].numberRows();
+
+		char ** rowNames = new char * [numberRows];
+		for (iRow=0;iRow<numberRows;iRow++) {
+		  rowNames[iRow] = 
+		    strdup(models[iModel].rowName(iRow).c_str());
+		}
+		int iColumn;
+		int numberColumns=models[iModel].numberColumns();
+
+		char ** columnNames = new char * [numberColumns];
+		for (iColumn=0;iColumn<numberColumns;iColumn++) {
+		  columnNames[iColumn] = 
+		    strdup(models[iModel].columnName(iColumn).c_str());
+		}
+
+		ClpSimplex& m = models[iModel];
+		CoinMpsIO writer;
+		writer.setMpsData(*m.matrix(), CLP_INFINITY,
+				  m.getColLower(), m.getColUpper(),
+				  m.getObjCoefficients(),
+				  (const char*) 0 /*integrality*/,
+				  m.getRowLower(), m.getRowUpper(),
+				  columnNames, rowNames);
+		writer.writeMps(fileName.c_str());
+		for (iRow=0;iRow<numberRows;iRow++) {
+		  free(rowNames[iRow]);
+		}
+		delete [] rowNames;
+		for (iColumn=0;iColumn<numberColumns;iColumn++) {
+		  free(columnNames[iColumn]);
+		}
+		delete [] columnNames;
+		time2 = cpuTime();
+		totalTime += time2-time1;
+		time1=time2;
+	      }
+	    }
+	    break;
+	  case SAVE:
+	    {
+	      // get next field
+	      field = getString(argc,argv);
+	      std::string fileName;
+	      bool canOpen=false;
+	      if (field[0]=='/'||field[0]=='~')
+		fileName = field;
+	      else
+		fileName = directory+field;
+	      FILE *fp=fopen(fileName.c_str(),"wb");
+	      if (fp) {
+		// can open - lets go for it
+		fclose(fp);
+		canOpen=true;
+	      } else {
+		std::cout<<"Unable to open file "<<fileName<<std::endl;
+	      }
+	      if (canOpen) {
+		int status =models[iModel].saveModel(fileName.c_str());
+		if (!status) {
+		  goodModels[iModel]=true;
+		  time2 = cpuTime();
+		  totalTime += time2-time1;
+		  time1=time2;
+		} else {
+		  // errors
+		  std::cout<<"There were errors on output"<<std::endl;
+		}
+	      }
+	    }
+	    break;
+	  case RESTORE:
+	    {
+	      // get next field
+	      field = getString(argc,argv);
+	      std::string fileName;
+	      bool canOpen=false;
+	      if (field[0]=='/'||field[0]=='~')
+		fileName = field;
+	      else
+		fileName = directory+field;
+	      FILE *fp=fopen(fileName.c_str(),"rb");
+	      if (fp) {
+		// can open - lets go for it
+		fclose(fp);
+		canOpen=true;
+	      } else {
+		std::cout<<"Unable to open file "<<fileName<<std::endl;
+	      }
+	      if (canOpen) {
+		int status =models[iModel].restoreModel(fileName.c_str());
+		if (!status) {
+		  goodModels[iModel]=true;
+		  time2 = cpuTime();
+		  totalTime += time2-time1;
+		  time1=time2;
+		} else {
+		  // errors
+		  std::cout<<"There were errors on input"<<std::endl;
 		}
 	      }
 	    }
@@ -1148,7 +1406,8 @@ stopping",
 		std::cerr<<"Doing netlib with dual agorithm"<<std::endl;
 	      else
 		std::cerr<<"Doing netlib with primal agorithm"<<std::endl;
-	      mainTest(nFields,fields,(type==NETLIB_DUAL),models[iModel]);
+	      mainTest(nFields,fields,(type==NETLIB_DUAL),models[iModel],
+		       (preSolve!=0),doIdiot);
 	    }
 	    break;
 	  case UNITTEST:
@@ -1162,7 +1421,8 @@ stopping",
 		fields[2]=directory.c_str();
 		nFields=3;
 	      }
-	      mainTest(nFields,fields,false,models[iModel]);
+	      mainTest(nFields,fields,false,models[iModel],(preSolve!=0),
+		       false);
 	    }
 	    break;
 	  case FAKEBOUND:

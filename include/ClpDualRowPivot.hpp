@@ -4,7 +4,7 @@
 #define ClpDualRowPivot_H
 
 class ClpSimplex;
-class OsiIndexedVector;
+class CoinIndexedVector;
 
 //#############################################################################
 
@@ -27,9 +27,9 @@ public:
   virtual int pivotRow() = 0;
   
   /// Updates weights (may be empty)
-  virtual void updateWeights(OsiIndexedVector * input,
-			     OsiIndexedVector * spare,
-			     OsiIndexedVector * updatedColumn);
+  virtual void updateWeights(CoinIndexedVector * input,
+			     CoinIndexedVector * spare,
+			     CoinIndexedVector * updatedColumn);
   
   /** Updates primal solution (and maybe list of candidates)
       Uses input vector which it deletes
@@ -37,9 +37,10 @@ public:
       Would be faster if we kept basic regions, but on other hand it
       means everything is always in sync
   */
-  virtual void updatePrimalSolution(OsiIndexedVector * input,
+   /* FIXME: this was pure virtul (=0). Why? */
+  virtual void updatePrimalSolution(CoinIndexedVector * input,
 				    double theta,
-				    double & changeInObjective)=0;
+				    double & changeInObjective) = 0;
   /** Saves any weights round factorization as pivot rows may change
       Will be empty unless steepest edge (will save model)
       May also recompute infeasibility stuff
@@ -48,12 +49,15 @@ public:
       3) after something happened but no factorization 
          (e.g. check for infeasible)
       4) as 2 but restore weights from previous snapshot
+      5) for strong branching - initialize  , infeasibilities
   */
   virtual void saveWeights(ClpSimplex * model,int mode);
   /// checks accuracy and may re-initialize (may be empty)
   virtual void checkAccuracy();
   /// Gets rid of last update (may be empty)
   virtual void unrollWeights();
+  /// Gets rid of all arrays (may be empty)
+  virtual void clearArrays();
   //@}
   
   
@@ -82,7 +86,7 @@ public:
   inline ClpSimplex * model()
   { return model_;};
   
-  /// Returns type
+  /// Returns type (above 63 is extra information)
   inline int type()
   { return type_;};
   

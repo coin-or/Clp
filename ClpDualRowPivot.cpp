@@ -65,12 +65,17 @@ ClpDualRowPivot::checkAccuracy()
 }
 
 void 
-ClpDualRowPivot::updateWeights(OsiIndexedVector * input,
-			       OsiIndexedVector * spare,
-			       OsiIndexedVector * updatedColumn)
+ClpDualRowPivot::updateWeights(CoinIndexedVector * input,
+			       CoinIndexedVector * spare,
+			       CoinIndexedVector * updatedColumn)
 {
 }
 void 
 ClpDualRowPivot::unrollWeights()
+{
+}
+// Gets rid of all arrays
+void 
+ClpDualRowPivot::clearArrays()
 {
 }

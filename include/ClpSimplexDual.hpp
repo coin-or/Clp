@@ -114,10 +114,32 @@ public:
   */
 
   int dual();
+  /** For strong branching.  On input lower and upper are new bounds
+      while on output they are change in objective function values 
+      (>1.0e50 infeasible).
+      Return code is 0 if nothing interesting, -1 if infeasible both
+      ways and +1 if infeasible one way (check values to see which one(s))
+  */
+  int strongBranching(int numberVariables,const int * variables,
+		      double * newLower, double * newUpper,
+		      bool stopOnFirstInfeasible=true,
+		      bool alwaysFinish=false);
   //@}
 
   /**@name Functions used in dual */
   //@{
+  /** This has the flow between re-factorizations
+      Broken out for clarity and will be used by strong branching
+
+      Reasons to come out:
+      -1 iterations etc
+      -2 inaccuracy 
+      -3 slight inaccuracy (and done iterations)
+      +0 looks optimal (might be unbounded - but we will investigate)
+      +1 looks infeasible
+      +3 max iterations 
+   */
+  int whileIterating(); 
   /** The duals are updated by the given arrays.
       Returns number of infeasibilities.
       After rowArray and columnArray will just have those which 
@@ -125,17 +147,17 @@ public:
       Variables may be flipped between bounds to stay dual feasible.
       The output vector has movement of primal
       solution (row length array) */
-  int updateDualsInDual(OsiIndexedVector * rowArray,
-		  OsiIndexedVector * columnArray,
-		  OsiIndexedVector * outputArray,
+  int updateDualsInDual(CoinIndexedVector * rowArray,
+		  CoinIndexedVector * columnArray,
+		  CoinIndexedVector * outputArray,
 		  double theta,
 		  double & objectiveChange);
   /** While updateDualsInDual sees what effect is of flip
       this does actuall flipping.
       If change >0.0 then value in array >0.0 => from lower to upper
   */
-  void flipBounds(OsiIndexedVector * rowArray,
-		  OsiIndexedVector * columnArray,
+  void flipBounds(CoinIndexedVector * rowArray,
+		  CoinIndexedVector * columnArray,
 		  double change);
   /** 
       Row array has row part of pivot row
@@ -147,10 +169,10 @@ public:
       For speed, we may need to go to a bucket approach when many
       variables are being flipped
   */
-  void dualColumn(OsiIndexedVector * rowArray,
-		  OsiIndexedVector * columnArray,
-		  OsiIndexedVector * spareArray,
-		  OsiIndexedVector * spareArray2);
+  void dualColumn(CoinIndexedVector * rowArray,
+		  CoinIndexedVector * columnArray,
+		  CoinIndexedVector * spareArray,
+		  CoinIndexedVector * spareArray2);
   /** 
       Chooses dual pivot row
       Would be faster with separate region to scan
@@ -166,7 +188,7 @@ public:
       Fills in changeVector which can be used to see if unbounded
       and cost of change vector
   */
-  int changeBounds(bool initialize,OsiIndexedVector * outputArray,
+  int changeBounds(bool initialize,CoinIndexedVector * outputArray,
 		   double & changeCost);
   /** As changeBounds but just changes new bounds for a single variable.
       Returns true if change */
@@ -175,7 +197,7 @@ public:
   void originalBound(int iSequence);
   /** Checks if tentative optimal actually means unbounded in dual
       Returns -3 if not, 2 if is unbounded */
-  int checkUnbounded(OsiIndexedVector * ray,OsiIndexedVector * spare,
+  int checkUnbounded(CoinIndexedVector * ray,CoinIndexedVector * spare,
 		     double changeCost);
   /**  Refactorizes if necessary 
        Checks if finished.  Updates status.
@@ -186,9 +208,19 @@ public:
             - 1 normal -if good update save
 	    - 2 restoring from saved 
   */
-  void statusOfProblemInDual(int & lastCleaned, int type);
+  void statusOfProblemInDual(int & lastCleaned, int type,
+			     ClpSimplexProgress & progress);
   /// Perturbs problem (method depends on perturbation())
   void perturb();
+  /** Fast iterations.  Misses out a lot of initialization.
+      Normally stops on maximum iterations, first re-factorization
+      or tentative optimum.  If looks interesting then continues as
+      normal.  Returns 0 if finished properly, 1 otherwise.
+  */
+  int fastDual(bool alwaysFinish=false);
+  /** Checks number of variables at fake bounds.  This is used by fastDual
+      so can exit gracefully before end */
+  int numberAtFakeBound();
   //@}
 };
 #endif

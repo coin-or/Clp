@@ -8,7 +8,7 @@
 
 #include "ClpSimplex.hpp"
 #include "ClpPrimalColumnSteepest.hpp"
-#include "OsiIndexedVector.hpp"
+#include "CoinIndexedVector.hpp"
 #include "ClpFactorization.hpp"
 #include "ClpMessage.hpp"
 #include "CoinHelperFunctions.hpp"
@@ -34,7 +34,7 @@ ClpPrimalColumnSteepest::ClpPrimalColumnSteepest (int mode)
     reference_(NULL),
     devex_(0.0)
 {
-  type_=2;
+  type_=2+64*mode;
 }
 
 //-------------------------------------------------------------------
@@ -51,7 +51,7 @@ ClpPrimalColumnSteepest::ClpPrimalColumnSteepest (const ClpPrimalColumnSteepest 
   savedSequenceOut_ = rhs.savedSequenceOut_;
   devex_ = rhs.devex_;
   if (rhs.infeasible_) {
-    infeasible_= new OsiIndexedVector(rhs.infeasible_);
+    infeasible_= new CoinIndexedVector(rhs.infeasible_);
   } else {
     infeasible_=NULL;
   }
@@ -60,9 +60,9 @@ ClpPrimalColumnSteepest::ClpPrimalColumnSteepest (const ClpPrimalColumnSteepest 
     assert(model_);
     int number = model_->numberRows()+model_->numberColumns();
     weights_= new double[number];
-    CoinDisjointCopyN(rhs.weights_,number,weights_);
+    ClpDisjointCopyN(rhs.weights_,number,weights_);
     savedWeights_= new double[number];
-    CoinDisjointCopyN(rhs.savedWeights_,number,savedWeights_);
+    ClpDisjointCopyN(rhs.savedWeights_,number,savedWeights_);
     if (!mode_) {
       reference_ = new unsigned int[(number+31)>>5];
       memcpy(reference_,rhs.reference_,((number+31)>>5)*sizeof(unsigned int));
@@ -72,7 +72,7 @@ ClpPrimalColumnSteepest::ClpPrimalColumnSteepest (const ClpPrimalColumnSteepest 
     savedWeights_=NULL;
   }
   if (rhs.alternateWeights_) {
-    alternateWeights_= new OsiIndexedVector(rhs.alternateWeights_);
+    alternateWeights_= new CoinIndexedVector(rhs.alternateWeights_);
   } else {
     alternateWeights_=NULL;
   }
@@ -113,7 +113,7 @@ ClpPrimalColumnSteepest::operator=(const ClpPrimalColumnSteepest& rhs)
     delete [] savedWeights_;
     savedWeights_ = NULL;
     if (rhs.infeasible_!=NULL) {
-      infeasible_= new OsiIndexedVector(rhs.infeasible_);
+      infeasible_= new CoinIndexedVector(rhs.infeasible_);
     } else {
       infeasible_=NULL;
     }
@@ -121,9 +121,9 @@ ClpPrimalColumnSteepest::operator=(const ClpPrimalColumnSteepest& rhs)
       assert(model_);
       int number = model_->numberRows()+model_->numberColumns();
       weights_= new double[number];
-      CoinDisjointCopyN(rhs.weights_,number,weights_);
+      ClpDisjointCopyN(rhs.weights_,number,weights_);
       savedWeights_= new double[number];
-      CoinDisjointCopyN(rhs.savedWeights_,number,savedWeights_);
+      ClpDisjointCopyN(rhs.savedWeights_,number,savedWeights_);
       if (!mode_) {
 	reference_ = new unsigned int[(number+31)>>5];
 	memcpy(reference_,rhs.reference_,
@@ -133,7 +133,7 @@ ClpPrimalColumnSteepest::operator=(const ClpPrimalColumnSteepest& rhs)
       weights_=NULL;
     }
     if (rhs.alternateWeights_!=NULL) {
-      alternateWeights_= new OsiIndexedVector(rhs.alternateWeights_);
+      alternateWeights_= new CoinIndexedVector(rhs.alternateWeights_);
     } else {
       alternateWeights_=NULL;
     }
@@ -145,11 +145,11 @@ ClpPrimalColumnSteepest::operator=(const ClpPrimalColumnSteepest& rhs)
 #define ADD_ONE 1.0
 // Returns pivot column, -1 if none
 int 
-ClpPrimalColumnSteepest::pivotColumn(OsiIndexedVector * updates,
-				    OsiIndexedVector * spareRow1,
-				    OsiIndexedVector * spareRow2,
-				    OsiIndexedVector * spareColumn1,
-				    OsiIndexedVector * spareColumn2)
+ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
+				    CoinIndexedVector * spareRow1,
+				    CoinIndexedVector * spareRow2,
+				    CoinIndexedVector * spareColumn1,
+				    CoinIndexedVector * spareColumn2)
 {
   assert(model_);
   int iSection,j;
@@ -224,7 +224,7 @@ ClpPrimalColumnSteepest::pivotColumn(OsiIndexedVector * updates,
 	if (model_->fixed(iSequence+addSequence))
 	  continue;
 	ClpSimplex::Status status = model_->getStatus(iSequence+addSequence);
-	
+
 	switch(status) {
 	  
 	case ClpSimplex::basic:
@@ -287,7 +287,7 @@ ClpPrimalColumnSteepest::pivotColumn(OsiIndexedVector * updates,
       double value = model_->reducedCost(sequenceOut);
       
       switch(status) {
-	
+
       case ClpSimplex::basic:
 	break;
       case ClpSimplex::isFree:
@@ -351,7 +351,7 @@ ClpPrimalColumnSteepest::pivotColumn(OsiIndexedVector * updates,
       ClpSimplex::Status status = model_->getStatus(iSequence+addSequence);
       
       switch(status) {
-	
+
       case ClpSimplex::basic:
 	infeasible_->zero(iSequence+addSequence);
 	break;
@@ -456,7 +456,7 @@ ClpPrimalColumnSteepest::pivotColumn(OsiIndexedVector * updates,
 	}
       }
       weight[iSequence] = thisWeight;
-    }			
+    }
     
     // columns
     weight = weights_;
@@ -494,7 +494,7 @@ ClpPrimalColumnSteepest::pivotColumn(OsiIndexedVector * updates,
 	}
       }
       weight[iSequence] = thisWeight;
-    }			
+    }
     // restore outgoing weight
     weights_[sequenceOut]=outgoingWeight;
     alternateWeights_->clear();
@@ -533,13 +533,20 @@ ClpPrimalColumnSteepest::pivotColumn(OsiIndexedVector * updates,
   int i,iSequence;
   index = infeasible_->getIndices();
   number = infeasible_->getNumElements();
-  // we can't really trust infeasibilities if there is dual error
-  double checkTolerance = 1.0e-8;
-  if (!model_->factorization()->pivots())
-    checkTolerance = 1.0e-6;
-  if (model_->largestDualError()>checkTolerance)
-    tolerance *= model_->largestDualError()/checkTolerance;
-
+  if(model_->numberIterations()<model_->lastBadIteration()+200) {
+    // we can't really trust infeasibilities if there is dual error
+    double checkTolerance = 1.0e-8;
+    if (!model_->factorization()->pivots())
+      checkTolerance = 1.0e-6;
+    if (model_->largestDualError()>checkTolerance)
+      tolerance *= model_->largestDualError()/checkTolerance;
+  }
+  // stop last one coming immediately
+  double saveOutInfeasibility=0.0;
+  if (sequenceOut>=0) {
+    saveOutInfeasibility = infeas[sequenceOut];
+    infeas[sequenceOut]=0.0;
+  }
   tolerance *= tolerance; // as we are using squares
   for (i=0;i<number;i++) {
     iSequence = index[i];
@@ -557,6 +564,9 @@ ClpPrimalColumnSteepest::pivotColumn(OsiIndexedVector * updates,
 	bestSequence = iSequence;
       }
     }
+  }
+  if (sequenceOut>=0) {
+    infeas[sequenceOut]=saveOutInfeasibility;
   }
   /*if (model_->numberIterations()%100==0)
     printf("%d best %g\n",bestSequence,bestDj);*/
@@ -604,7 +614,7 @@ ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model,int mode)
       delete [] weights_;
       delete alternateWeights_;
       weights_ = new double[numberRows+numberColumns];
-      alternateWeights_ = new OsiIndexedVector();
+      alternateWeights_ = new CoinIndexedVector();
       // enough space so can use it for factorization
       alternateWeights_->reserve(numberRows+
 				 model_->factorization()->maximumPivots());
@@ -627,14 +637,17 @@ ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model,int mode)
 	// restore
 	memcpy(weights_,savedWeights_,(numberRows+numberColumns)*
 	       sizeof(double));
-	pivotSequence_= savedPivotSequence_;
-	model_->setSequenceOut(savedSequenceOut_); 
+	// was - but I think should not be
+	//pivotSequence_= savedPivotSequence_;
+	//model_->setSequenceOut(savedSequenceOut_); 
+	pivotSequence_= -1;
+	model_->setSequenceOut(-1); 
       }
     }
     state_=0;
     // set up infeasibilities
     if (!infeasible_) {
-      infeasible_ = new OsiIndexedVector();
+      infeasible_ = new CoinIndexedVector();
       infeasible_->reserve(numberColumns+numberRows);
     }
   }
@@ -663,7 +676,10 @@ ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model,int mode)
 	  which[number++]=iRow;
       }
       alternateWeights_->setNumElements(number);
+#ifdef CLP_DEBUG
+      // Can happen but I should clean up
       assert(found>=0);
+#endif
       pivotSequence_ = found;
       delete [] temp;
     }
@@ -681,7 +697,7 @@ ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model,int mode)
       ClpSimplex::Status status = model_->getStatus(iSequence);
       
       switch(status) {
-	
+
       case ClpSimplex::basic:
 	break;
       case ClpSimplex::isFree:
@@ -733,7 +749,7 @@ ClpPrimalColumnPivot * ClpPrimalColumnSteepest::clone(bool CopyData) const
   }
 }
 void
-ClpPrimalColumnSteepest::updateWeights(OsiIndexedVector * input)
+ClpPrimalColumnSteepest::updateWeights(CoinIndexedVector * input)
 {
   int number=input->getNumElements();
   int * which = input->getIndices();
@@ -823,9 +839,9 @@ ClpPrimalColumnSteepest::updateWeights(OsiIndexedVector * input)
       model_->messageHandler()->message(CLP_INITIALIZE_STEEP,
 					*model_->messagesPointer())
 					  <<oldDevex<<devex_
-					  <<OsiMessageEol;
+					  <<CoinMessageEol;
       initializeWeights();
-    }				
+    }
   }
   if (pivotRow>=0) {
     // set outgoing weight here
@@ -836,8 +852,8 @@ ClpPrimalColumnSteepest::updateWeights(OsiIndexedVector * input)
 void 
 ClpPrimalColumnSteepest::checkAccuracy(int sequence,
 				       double relativeTolerance,
-				       OsiIndexedVector * rowArray1,
-				       OsiIndexedVector * rowArray2)
+				       CoinIndexedVector * rowArray1,
+				       CoinIndexedVector * rowArray2)
 {
   model_->unpack(rowArray1,sequence);
   model_->factorization()->updateColumn(rowArray2,rowArray1);
@@ -907,7 +923,7 @@ ClpPrimalColumnSteepest::initializeWeights()
       }
     }
   } else {
-    OsiIndexedVector * temp = new OsiIndexedVector();
+    CoinIndexedVector * temp = new CoinIndexedVector();
     temp->reserve(numberRows+
 		  model_->factorization()->maximumPivots());
     double * array = alternateWeights_->denseVector();
@@ -934,4 +950,24 @@ ClpPrimalColumnSteepest::initializeWeights()
     }
     delete temp;
   }
+}
+// Gets rid of all arrays
+void 
+ClpPrimalColumnSteepest::clearArrays()
+{
+  delete [] weights_;
+  weights_=NULL;
+  delete infeasible_;
+  infeasible_ = NULL;
+  delete alternateWeights_;
+  alternateWeights_ = NULL;
+  delete [] savedWeights_;
+  savedWeights_ = NULL;
+  delete [] reference_;
+  reference_ = NULL;
+  pivotSequence_=-1;
+  state_ = -1;
+  savedPivotSequence_ = -1;
+  savedSequenceOut_ = -1;  
+  devex_ = 0.0;
 }

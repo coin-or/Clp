@@ -4,6 +4,7 @@
 #define ClpPrimalColumnSteepest_H
 
 #include "ClpPrimalColumnPivot.hpp"
+#include <bitset>
 
 //#############################################################################
 
@@ -14,7 +15,7 @@ See Forrest-Goldfarb paper for algorithm
 
 */
 
-class OsiIndexedVector;
+class CoinIndexedVector;
 
 class ClpPrimalColumnSteepest : public ClpPrimalColumnPivot {
   
@@ -26,19 +27,19 @@ public:
   /** Returns pivot column, -1 if none.
       updateArray has cost updates (also use pivotRow_ from last iteration)
   */
-  virtual int pivotColumn(OsiIndexedVector * updates,
-			  OsiIndexedVector * spareRow1,
-			  OsiIndexedVector * spareRow2,
-			  OsiIndexedVector * spareColumn1,
-			  OsiIndexedVector * spareColumn2);
+  virtual int pivotColumn(CoinIndexedVector * updates,
+			  CoinIndexedVector * spareRow1,
+			  CoinIndexedVector * spareRow2,
+			  CoinIndexedVector * spareColumn1,
+			  CoinIndexedVector * spareColumn2);
 
   /// Updates weights - part 1 - also checks accuracy
-  virtual void updateWeights(OsiIndexedVector * input);
+  virtual void updateWeights(CoinIndexedVector * input);
 
   /// Checks accuracy - just for debug
   void checkAccuracy(int sequence,double relativeTolerance,
-		     OsiIndexedVector * rowArray1,
-		     OsiIndexedVector * rowArray2);
+		     CoinIndexedVector * rowArray1,
+		     CoinIndexedVector * rowArray2);
 
   /// Initialize weights
   void initializeWeights();
@@ -47,8 +48,17 @@ public:
   virtual void saveWeights(ClpSimplex * model,int mode);
   /// Gets rid of last update
   virtual void unrollWeights();
+  /// Gets rid of all arrays
+  virtual void clearArrays();
   //@}
   
+  /**@name gets and sets */
+  //@{ 
+  /// Mode
+  inline int mode() const
+    { return mode_;};
+ //@}
+
   
   ///@name Constructors and destructors
   //@{
@@ -100,9 +110,9 @@ private:
   /// weight array 
   double * weights_;
   /// square of infeasibility array (just for infeasible columns)
-  OsiIndexedVector * infeasible_;
+  CoinIndexedVector * infeasible_;
   /// alternate weight array (so we can unroll)
-  OsiIndexedVector * alternateWeights_;
+  CoinIndexedVector * alternateWeights_;
   /// save weight array (so we can use checkpoint)
   double * savedWeights_;
   // This is pivot row (or pivot sequence round re-factorization)

@@ -13,7 +13,7 @@ See Forrest-Goldfarb paper for algorithm
 
 */
 
-class OsiIndexedVector;
+class CoinIndexedVector;
 
 class ClpDualRowSteepest : public ClpDualRowPivot {
   
@@ -26,15 +26,15 @@ public:
   virtual int pivotRow();
   
   /// Updates weights (may be empty)
-  virtual void updateWeights(OsiIndexedVector * input,
-			     OsiIndexedVector * spare,
-			     OsiIndexedVector * updatedColumn);
+  virtual void updateWeights(CoinIndexedVector * input,
+			     CoinIndexedVector * spare,
+			     CoinIndexedVector * updatedColumn);
   
   /** Updates primal solution (and maybe list of candidates)
       Uses input vector which it deletes
       Computes change in objective function
   */
-  virtual void updatePrimalSolution(OsiIndexedVector * input,
+  virtual void updatePrimalSolution(CoinIndexedVector * input,
 				    double theta,
 				    double & changeInObjective);
 
@@ -46,10 +46,13 @@ public:
       3) after something happened but no factorization 
          (e.g. check for infeasible)
       4) as 2 but restore weights from previous snapshot
+      5) for strong branching - initialize (uninitialized) , infeasibilities
   */
   virtual void saveWeights(ClpSimplex * model, int mode);
   /// Gets rid of last update
   virtual void unrollWeights();
+  /// Gets rid of all arrays
+  virtual void clearArrays();
   //@}
   
   
@@ -72,7 +75,13 @@ public:
   /// Clone
   virtual ClpDualRowPivot * clone(bool copyData = true) const;
  
-  //@}
+   //@}
+  /**@name gets and sets */
+  //@{ 
+  /// Mode
+  inline int mode() const
+    { return mode_;};
+ //@}
 
   //---------------------------------------------------------------------------
   
@@ -89,11 +98,11 @@ private:
   /// weight array 
   double * weights_;
   /// square of infeasibility array (just for infeasible rows)
-  OsiIndexedVector * infeasible_;
+  CoinIndexedVector * infeasible_;
   /// alternate weight array (so we can unroll)
-  OsiIndexedVector * alternateWeights_;
+  CoinIndexedVector * alternateWeights_;
   /// save weight array (so we can use checkpoint)
-  OsiIndexedVector * savedWeights_;
+  CoinIndexedVector * savedWeights_;
   //@}
 };
 

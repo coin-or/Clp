@@ -21,12 +21,13 @@ class ClpPackedMatrix : public ClpMatrixBase {
 public:
   /**@name Useful methods */
    //@{
-   /// Return a complete OsiPackedMatrix
-  virtual OsiPackedMatrix * getPackedMatrix() const { return matrix_;};
+   /// Return a complete CoinPackedMatrix
+  virtual CoinPackedMatrix * getPackedMatrix() const { return matrix_;};
     /** Whether the packed matrix is column major ordered or not. */
     virtual bool isColOrdered() const { return matrix_->isColOrdered(); }
    /** Number of entries in the packed matrix. */
-  virtual  int getNumElements() const { return matrix_->getNumElements(); }
+  virtual  CoinBigIndex getNumElements() const 
+  { return matrix_->getNumElements(); }
    /** Number of columns. */
    virtual int getNumCols() const { return matrix_->getNumCols(); }
    /** Number of rows. */
@@ -46,7 +47,7 @@ public:
    virtual const int * getIndices() const 
   { return matrix_->getIndices();};
 
-   virtual const int * getVectorStarts() const 
+   virtual const CoinBigIndex * getVectorStarts() const 
   { return matrix_->getVectorStarts();};
    /** The lengths of the major-dimension vectors. */
    virtual const int * getVectorLengths() const 
@@ -69,25 +70,35 @@ public:
   virtual ClpMatrixBase * reverseOrderedCopy() const;
   /** Returns number of elements in basis
       column is basic if entry >=0 */
-  virtual OsiBigIndex numberInBasis(const int * columnIsBasic) const ;
+  virtual CoinBigIndex numberInBasis(const int * columnIsBasic) const ;
   /// Fills in basis (Returns number of elements and updates numberBasic)
-  virtual OsiBigIndex fillBasis(const ClpSimplex * model,
+  virtual CoinBigIndex fillBasis(const ClpSimplex * model,
 				const int * columnIsBasic, int & numberBasic,
 				int * row, int * column,
 				double * element) const ;
   /** Creates scales for column copy (rowCopy in model may be modified)
       returns non-zero if no scaling done */
   virtual int scale(ClpSimplex * model) const ;
-  /** Unpacks a column into an OsiIndexedvector
+  /// Creates row copy and scales if necessary
+  virtual ClpMatrixBase * scaledRowCopy(ClpSimplex * model) const;
+  /** Checks if all elements are in valid range.  Can just
+      return true if you are not paranoid.  For Clp I will
+      probably expect no zeros.  Code can modify matrix to get rid of
+      small elements.
+  */
+  virtual bool allElementsInRange(ClpSimplex * model,
+				  double smallest, double largest);
+
+  /** Unpacks a column into an CoinIndexedvector
       Note that model is NOT const.  Bounds and objective could
       be modified if doing column generation */
-  virtual void unpack(ClpSimplex * model,OsiIndexedVector * rowArray,
+  virtual void unpack(ClpSimplex * model,CoinIndexedVector * rowArray,
 		   int column) const ;
-  /** Adds multiple of a column into an OsiIndexedvector
+  /** Adds multiple of a column into an CoinIndexedvector
       You can use quickAdd to add to vector */
-  virtual void add(const ClpSimplex * model,OsiIndexedVector * rowArray,
+  virtual void add(const ClpSimplex * model,CoinIndexedVector * rowArray,
 		   int column, double multiplier) const ;
-   /// Allow any parts of a created OsiPackedMatrix to be deleted
+   /// Allow any parts of a created CoinPackedMatrix to be deleted
    virtual void releasePackedMatrix() const { };
    //@}
 
@@ -117,22 +128,22 @@ public:
 	Can use y as temporary array (will be empty at end)
 	Squashes small elements and knows about ClpSimplex */
   virtual void transposeTimes(const ClpSimplex * model, double scalar,
-			      const OsiIndexedVector * x,
-			      OsiIndexedVector * y,
-			      OsiIndexedVector * z) const;
+			      const CoinIndexedVector * x,
+			      CoinIndexedVector * y,
+			      CoinIndexedVector * z) const;
     /** Return <code>x *A in <code>z</code> but
 	just for indices in y.
 	Squashes small elements and knows about ClpSimplex */
   virtual void subsetTransposeTimes(const ClpSimplex * model,
-			      const OsiIndexedVector * x,
-			      const OsiIndexedVector * y,
-			      OsiIndexedVector * z) const;
+			      const CoinIndexedVector * x,
+			      const CoinIndexedVector * y,
+			      CoinIndexedVector * z) const;
   //@}
 
   /**@name Other */
    //@{
-  /// Returns OsiPackedMatrix (non const)
-  inline OsiPackedMatrix * matrix() const { return matrix_;};
+  /// Returns CoinPackedMatrix (non const)
+  inline CoinPackedMatrix * matrix() const { return matrix_;};
    //@}
 
 
@@ -148,8 +159,11 @@ public:
    //@{
    /** The copy constructor. */
    ClpPackedMatrix(const ClpPackedMatrix&);
-   /** The copy constructor from an OsiPackedMatrix. */
-   ClpPackedMatrix(const OsiPackedMatrix&);
+   /** The copy constructor from an CoinPackedMatrix. */
+   ClpPackedMatrix(const CoinPackedMatrix&);
+
+  /** This takes over ownership (for space reasons) */
+   ClpPackedMatrix(CoinPackedMatrix * matrix);
 
    ClpPackedMatrix& operator=(const ClpPackedMatrix&);
   /// Clone
@@ -162,7 +176,7 @@ protected:
       The data members are protected to allow access for derived classes. */
    //@{
   /// Data
-  OsiPackedMatrix * matrix_;
+  CoinPackedMatrix * matrix_;
    //@}
 };
 
