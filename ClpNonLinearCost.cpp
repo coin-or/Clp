@@ -660,12 +660,17 @@ ClpNonLinearCost::setOne(int iPivot, double value)
   int start = start_[iPivot];
   int end = start_[iPivot+1]-1;
   if (!bothWays_) {
-    for (iRange=start; iRange<end;iRange++) {
-      if (value<lower_[iRange+1]+primalTolerance) {
-	// put in better range
-	if (value>=lower_[iRange+1]-primalTolerance&&infeasible(iRange)&&iRange==start) 
-	  iRange++;
-	break;
+    // If fixed try and get feasible
+    if (lower_[start+1]==lower_[start+2]&&fabs(value-lower_[start+1])<1.001*primalTolerance) {
+      iRange =start+1;
+    } else {
+      for (iRange=start; iRange<end;iRange++) {
+	if (value<=lower_[iRange+1]+primalTolerance) {
+	  // put in better range
+	  if (value>=lower_[iRange+1]-primalTolerance&&infeasible(iRange)&&iRange==start) 
+	    iRange++;
+	  break;
+	}
       }
     }
   } else {

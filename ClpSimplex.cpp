@@ -1080,148 +1080,20 @@ int ClpSimplex::internalFactorize ( int solveType)
       }
     }
   }
-#if 0
-  int status=-99;
-  int * rowIsBasic = new int[numberRows_];
-  int * columnIsBasic = new int[numberColumns_];
-  //returns 0 -okay, -1 singular, -2 too many in basis, -99 memory */
-  while (status<-98) {
-  
+  if (0)  {
+    static int k=0;
+    printf("start basis\n");
     int i;
-    int numberBasic=0;
-    for (i=0;i<numberRows_;i++) {
-      if (getRowStatus(i) == basic) {
-	rowIsBasic[i]=1;
-	numberBasic++;
-      } else {
-	rowIsBasic[i]=-1;
-      }
-    }
-    for (i=0;i<numberColumns_;i++) {
-      if (getColumnStatus(i) == basic) {
-	columnIsBasic[i]=1;
-	numberBasic++;
-      } else {
-	columnIsBasic[i]=-1;
-      }
-    }
-    assert (numberBasic<=numberRows_);
-    while (status==-99) {
-      status =  factorization_->factorizeOld(this,matrix_,
-					  numberRows_,numberColumns_,
-					  rowIsBasic, columnIsBasic,
-					  0.0);
-      if (status==-99) {
-	// get more memory
-	factorization_->areaFactor(2.0*factorization_->areaFactor());
-      }
-    }
-    if (!status) {
-      // See whether to redo pivot order
-      if (factorization_->needToReorder()||
-	  progress_->lastIterationNumber(0)<0) {
-	// do pivot information
-	for (i=0;i<numberRows_;i++) {
-	  if (getRowStatus(i) == basic) {
-	    pivotVariable_[rowIsBasic[i]]=i+numberColumns_;
-	  }
-	}
-	for (i=0;i<numberColumns_;i++) {
-	  if (getColumnStatus(i) == basic) {
-	    pivotVariable_[columnIsBasic[i]]=i;
-	  }
-	}
-      }
-    } else {
-      // leave pivotVariable_ in useful form for cleaning basis
-      for (i=0;i<numberRows_;i++) {
-	pivotVariable_[i]=-1;
-      }
-      for (i=0;i<numberRows_;i++) {
-	if (getRowStatus(i) == basic) {
-	  int iPivot = rowIsBasic[i];
-	  if (iPivot>=0) 
-	    pivotVariable_[iPivot]=i+numberColumns_;
-	}
-      }
-      for (i=0;i<numberColumns_;i++) {
-	if (getColumnStatus(i) == basic) {
-	  int iPivot = columnIsBasic[i];
-	  if (iPivot>=0) 
-	    pivotVariable_[iPivot]=i;
-	}
-      }
-    }
-    if (status==-1) {
-      if (!solveType) {
-	//redo basis - first take ALL columns out
-	for (iColumn=0;iColumn<numberColumns_;iColumn++) {
-	  if (getColumnStatus(iColumn)==
-	      basic) {
-	    // take out
-	    if (!valuesPass) {
-	      double lower=columnLowerWork_[iColumn];
-	      double upper=columnUpperWork_[iColumn];
-	      double value=columnActivityWork_[iColumn];
-	      if (lower>-largeValue_||upper<largeValue_) {
-		if (fabs(value-lower)<fabs(value-upper)) {
-		  setColumnStatus(iColumn,atLowerBound);
-		  columnActivityWork_[iColumn]=lower;
-		} else {
-		  setColumnStatus(iColumn,atUpperBound);
-		  columnActivityWork_[iColumn]=upper;
-		}
-	      } else {
-		setColumnStatus(iColumn,isFree);
-	      }
-	    } else {
-	      setColumnStatus(iColumn,superBasic);
-	    }
-	  }
-	}
-	for (iRow=0;iRow<numberRows_;iRow++) {
-	  int iSequence=pivotVariable_[iRow];
-	  if (iSequence>=0) {
-	    // basic
-	    if (iSequence>=numberColumns_) {
-	      // slack in - leave
-	      //assert (iSequence-numberColumns_==iRow);
-	    } else {
-	      // put back structural
-	      setColumnStatus(iSequence,basic);
-	    }
-	  } else {
-	    // put in slack
-	    setRowStatus(iRow,basic);
-	  }
-	}
-	// signal repeat
-	status=-99;
-	// set fixed if they are
-	for (iRow=0;iRow<numberRows_;iRow++) {
-	  if (getRowStatus(iRow)!=basic ) {
-	    if (rowLowerWork_[iRow]==rowUpperWork_[iRow]) {
-	      rowActivityWork_[iRow]=rowLowerWork_[iRow];
-	      setRowStatus(iRow,isFixed);
-	    }
-	  }
-	}
-	for (iColumn=0;iColumn<numberColumns_;iColumn++) {
-	  if (getColumnStatus(iColumn)!=basic ) {
-	    if (columnLowerWork_[iColumn]==columnUpperWork_[iColumn]) {
-	      columnActivityWork_[iColumn]=columnLowerWork_[iColumn];
-	      setColumnStatus(iColumn,isFixed);
-	    }
-	  }
-	}
-      }
-    }
-  } 
-  delete [] rowIsBasic;
-  delete [] columnIsBasic;
-#else
+    for (i=0;i<numberRows_;i++)
+      printf ("xx %d %d\n",i,pivotVariable_[i]);
+    for (i=0;i<numberRows_+numberColumns_;i++)
+      if (getColumnStatus(i)==basic)
+	printf ("yy %d basic\n",i);
+    if (k>20)
+      exit(0);
+    k++;
+  }
   int status = factorization_->factorize(this, solveType,valuesPass);
-#endif
   if (status) {
     handler_->message(CLP_SIMPLEX_BADFACTOR,messages_)
       <<status

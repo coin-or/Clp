@@ -1250,10 +1250,12 @@ ClpSimplexPrimal::updatePrimalsInPrimal(CoinIndexedVector * rowArray,
     double & value = solutionAddress(iPivot);
     double change = theta*alpha;
     value -= change;
-
+    // But make sure one going out is feasible
     if (change>0.0) {
       // going down
-      if (value<=lower(iPivot)+primalTolerance_) {
+      if (value<lower(iPivot)+primalTolerance_) {
+	if (iPivot==sequenceOut_&&value>lower(iPivot)-1.001*primalTolerance_)
+	  value=lower(iPivot);
 	double difference = nonLinearCost_->setOne(iPivot,value);
 	work[iRow] = difference;
 	if (difference) {
@@ -1266,7 +1268,9 @@ ClpSimplexPrimal::updatePrimalsInPrimal(CoinIndexedVector * rowArray,
       }
     } else {
       // going up
-      if (value>=upper(iPivot)-primalTolerance_) {
+      if (value>upper(iPivot)-primalTolerance_) {
+	if (iPivot==sequenceOut_&&value<upper(iPivot)+1.001*primalTolerance_)
+	  value=upper(iPivot);
 	double difference = nonLinearCost_->setOne(iPivot,value);
 	work[iRow] = difference;
 	if (difference) {
@@ -1684,23 +1688,29 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
       assert(valueOut_>=lowerValue-primalTolerance_&&
 	     valueOut_<=upperValue+primalTolerance_);
       // may not be exactly at bound and bounds may have changed
+      // Make sure outgoing looks feasible
+      double useValue=valueOut_;
       if (valueOut_<=lowerValue+primalTolerance_) {
 	directionOut_=1;
+	useValue= lower_[sequenceOut_];
       } else if (valueOut_>=upperValue-primalTolerance_) {
 	directionOut_=-1;
+	useValue= upper_[sequenceOut_];
       } else {
 	printf("*** variable wandered off bound %g %g %g!\n",
 	       lowerValue,valueOut_,upperValue);
 	if (valueOut_-lowerValue<=upperValue-valueOut_) {
+	  useValue= lower_[sequenceOut_];
 	  valueOut_=lowerValue;
 	  directionOut_=1;
 	} else {
+	  useValue= upper_[sequenceOut_];
 	  valueOut_=upperValue;
 	  directionOut_=-1;
 	}
       }
       solution_[sequenceOut_]=valueOut_;
-      nonLinearCost_->setOne(sequenceOut_,valueOut_);
+      nonLinearCost_->setOne(sequenceOut_,useValue);
     }
     // change cost and bounds on incoming if primal
     nonLinearCost_->setOne(sequenceIn_,valueIn_); 

@@ -106,6 +106,8 @@ ClpPrimalQuadraticDantzig::pivotColumn(CoinIndexedVector * updates,
   const int * which = quadraticInfo_->quadraticSequence();
   const double * objective = quadraticInfo_->originalObjective();
   for (iSequence=0;iSequence<originalNumberColumns;iSequence++) {
+    if (model_->flagged(iSequence))
+      continue;
     int jSequence = which[iSequence];
     double value;
     if (jSequence>=0) {
@@ -162,6 +164,8 @@ ClpPrimalQuadraticDantzig::pivotColumn(CoinIndexedVector * updates,
   int originalNumberRows = quadraticInfo_->numberXRows();
   for (jSequence=0;jSequence<originalNumberRows;jSequence++) {
     int iSequence  = jSequence + firstSlack;
+    if (model_->flagged(iSequence))
+      continue;
     int iPi = jSequence+originalNumberColumns;
     // for slacks either pi zero or row at bound
     // for L rows pi negative okay so choose if positive

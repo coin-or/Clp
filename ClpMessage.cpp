@@ -60,6 +60,8 @@ static Clp_message us_english[]=
   {CLP_EMPTY_PROBLEM,3002,0,"Not solving empty problem - %d rows, %d columns and %d elements"},
   {CLP_CRASH,28,1,"Crash put %d variables in basis, %d dual infeasibilities"},
   {CLP_END_VALUES_PASS,29,1,"End of values pass after %d iterations"},
+  {CLP_QUADRATIC_BOTH,108,32,"%s %d (%g) and %d (%g) both basic"},
+  {CLP_QUADRATIC_PRIMAL_DETAILS,109,32,"coeff %g, %g, %g - dj %g - deriv zero at %g, sj at %g"},
   {CLP_DUMMY_END,999999,0,""}
 };
 static Clp_message uk_english[]=
