@@ -33,4 +33,12 @@ typedef void Clp_Simplex;
 typedef  void (CLPLINKAGE_CB *clp_callback) (Clp_Simplex * model,int  msgno, int ndouble,
                             const double * dvec, int nint, const int * ivec,
                             int nchar, char ** cvec);
+
+#if COIN_BIG_INDEX==0
+typedef int CoinBigIndex;
+#elif COIN_BIG_INDEX==1
+typedef long CoinBigIndex;
+#else
+typedef long long CoinBigIndex;
+#endif
 #endif

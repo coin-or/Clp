@@ -1276,7 +1276,8 @@ ClpSimplex::housekeeping(double objectiveChange)
 #endif
   // only time to re-factorize if one before real time
   // this is so user won't be surprised that maximumPivots has exact meaning
-  if (factorization_->pivots()==factorization_->maximumPivots()) {
+  if (factorization_->pivots()==factorization_->maximumPivots()||
+      factorization_->maximumPivots()<2) {
     return 1;
   } else {
     if (forceFactorization_>0&&

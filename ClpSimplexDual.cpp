@@ -353,6 +353,12 @@ int ClpSimplexDual::dual (int ifValuesPass )
       if (problemStatus_>=0)
 	break;
       
+      // test for maximum iterations
+      if (hitMaximumIterations()) {
+	problemStatus_=3;
+	break;
+      }
+
       // Do iterations
       whileIterating(saveDuals);
     }

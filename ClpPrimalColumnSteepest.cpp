@@ -3463,6 +3463,50 @@ ClpPrimalColumnSteepest::partialPricing(CoinIndexedVector * updates,
     updateBy[j]=0.0;
     duals[iSequence] = value;
   }
+  //#define CLP_DEBUG
+#ifdef CLP_DEBUG
+  // check duals
+  {
+    int numberRows = model_->numberRows();
+    //work space
+    CoinIndexedVector arrayVector;
+    arrayVector.reserve(numberRows+1000);
+    CoinIndexedVector workSpace;
+    workSpace.reserve(numberRows+1000);
+    
+    
+    int iRow;
+    double * array = arrayVector.denseVector();
+    int * index = arrayVector.getIndices();
+    int number=0;
+    int * pivotVariable = model_->pivotVariable();
+    double * cost = model_->costRegion();
+    for (iRow=0;iRow<numberRows;iRow++) {
+      int iPivot=pivotVariable[iRow];
+      double value = cost[iPivot];
+      if (value) {
+	array[iRow]=value;
+	index[number++]=iRow;
+      }
+    }
+    arrayVector.setNumElements(number);
+    // Extended duals before "updateTranspose"
+    model_->clpMatrix()->dualExpanded(model_,&arrayVector,NULL,0);
+    
+    // Btran basic costs
+    model_->factorization()->updateColumnTranspose(&workSpace,&arrayVector);
+    
+    // now look at dual solution
+    for (iRow=0;iRow<numberRows;iRow++) {
+      // slack
+      double value = array[iRow];
+      if (fabs(duals[iRow]-value)>1.0e-3)
+	printf("bad row %d old dual %g new %g\n",iRow,duals[iRow],value);
+      //duals[iRow]=value;
+    }
+  }
+#endif
+  //#undef CLP_DEBUG
   double bestDj = tolerance;
   int bestSequence=-1;
 

@@ -45,7 +45,7 @@ static Clp_message us_english[]=
   {CLP_SIMPLEX_FREEIN,104,32,"Free column in %d"},
   {CLP_SIMPLEX_PIVOTROW,105,32,"Pivot row %d"},
   {CLP_DUAL_CHECK,106,4,"Btran alpha %g, ftran alpha %g"},
-  {CLP_PRIMAL_DJ,107,4,"Btran dj %g, ftran dj %g"},
+  {CLP_PRIMAL_DJ,107,4,"For %c%d btran dj %g, ftran dj %g"},
   {CLP_PACKEDSCALE_INITIAL,1001,2,"Initial range of elements is %g to %g"},
   {CLP_PACKEDSCALE_WHILE,1002,3,"Range of elements is %g to %g"},
   {CLP_PACKEDSCALE_FINAL,1003,2,"Final range of elements is %g to %g"},

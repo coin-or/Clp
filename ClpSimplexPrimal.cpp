@@ -376,6 +376,12 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
       if (problemStatus_>=0)
 	break;
       
+      // test for maximum iterations
+      if (hitMaximumIterations()) {
+	problemStatus_=3;
+	break;
+      }
+
       // Iterate
       whileIterating(ifValuesPass);
     }
@@ -2042,15 +2048,14 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
     // ? when can I clear stuff
     // Clean up any gub stuff
     matrix_->extendUpdated(this,rowArray_[1],1);
-    if (pivotRow_>=numberRows_)
-      printf("** danger - key out %d in %d theta %g\n",sequenceOut_,sequenceIn_,theta_);
     double checkValue=1.0e-2;
     if (largestDualError_>1.0e-5)
       checkValue=1.0e-1;
     if (solveType_==1&&((saveDj*dualIn_<1.0e-20&&!ifValuesPass)||
 	fabs(saveDj-dualIn_)>checkValue*(1.0+fabs(saveDj)))) {
+      char x = isColumn(sequenceIn_) ? 'C' :'R';
       handler_->message(CLP_PRIMAL_DJ,messages_)
-	<<saveDj<<dualIn_
+	<<x<<sequenceIn_<<saveDj<<dualIn_
 	<<CoinMessageEol;
       if(lastGoodIteration_ != numberIterations_) {
 	clearAll();

@@ -8,7 +8,8 @@ int main (int argc, const char *argv[])
 {
   ClpSimplex  model;
   int status;
-  int maxIts=200;
+  int maxIts=0;
+  int maxFactor=100;
   if (argc<2)
     status=model.readMps("../../Mps/Sample/p0033.mps");
   else
@@ -18,7 +19,11 @@ int main (int argc, const char *argv[])
     exit(77);
   }
   if (argc>2) {
-    maxIts = atoi(argv[2]);
+    maxFactor = atoi(argv[2]);
+    printf("max factor %d\n",maxFactor);
+  }
+  if (argc>3) {
+    maxIts = atoi(argv[3]);
     printf("max its %d\n",maxIts);
   }
   // For now scaling off
@@ -26,10 +31,12 @@ int main (int argc, const char *argv[])
   // Do partial dantzig
   ClpPrimalColumnSteepest dantzig(5);
   model.setPrimalColumnPivotAlgorithm(dantzig);
-  model.messageHandler()->setLogLevel(63);
-  //model.setFactorizationFrequency(1);
+  //model.messageHandler()->setLogLevel(63);
+  model.setFactorizationFrequency(maxFactor);
   model.setMaximumIterations(maxIts);
   model.primal();
+  if (!model.status())
+    exit(1);
   // find gub
   int numberRows = model.numberRows();
   int * gubStart = new int[numberRows];
@@ -118,9 +125,9 @@ int main (int argc, const char *argv[])
     // Do partial dantzig
     ClpPrimalColumnSteepest dantzig(5);
     model2.setPrimalColumnPivotAlgorithm(dantzig);
-    model2.messageHandler()->setLogLevel(63);
-    model2.setFactorizationFrequency(1);
-    model2.setMaximumIterations(200);
+    //model2.messageHandler()->setLogLevel(63);
+    model2.setFactorizationFrequency(maxFactor);
+    model2.setMaximumIterations(20000);
     model2.primal();
   } else {
     // dummy gub

@@ -109,7 +109,6 @@ public:
       mode=1  - Set all key variables as basic
       mode=2  - return number extra rows needed, number gives maximum number basic
       mode=3  - before replaceColumn
-      mode=4  - after replaceColumn
   */
   virtual int generalExpanded(ClpSimplex * model,int mode,int & number);
   /** 
