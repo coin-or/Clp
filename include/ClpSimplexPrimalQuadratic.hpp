@@ -79,13 +79,14 @@ public:
       Initially no go thru
       Returns 0 - can do normal iteration
       1 - losing complementarity
+      cleanupIteration - 0 no, 1 yes, 2 restoring one of x/s in basis
   */
   int primalRow(CoinIndexedVector * rowArray,
 		CoinIndexedVector * rhsArray,
 		CoinIndexedVector * spareArray,
 		CoinIndexedVector * spareArray2,
 		ClpQuadraticInfo * info,
-		bool cleanupIteration);
+		int cleanupIteration);
   /**  Refactorizes if necessary 
        Checks if finished.  Updates status.
        lastCleaned refers to iteration at which some objective/feasibility

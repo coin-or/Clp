@@ -1209,6 +1209,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
 #endif
     model.setLogLevel(63);
     //exit(77);
+    model.setFactorizationFrequency(1);
     model.quadraticPrimal(1);
     double objValue = model.getObjValue();
     const double * solution = model.primalColumnSolution();
