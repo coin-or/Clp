@@ -283,9 +283,8 @@ PrePostsolveMatrix::PrePostsolveMatrix(const ClpSimplex& si,
   ztolzb_(getTolerance(si, ClpPrimalTolerance)),
   ztoldj_(getTolerance(si, ClpDualTolerance)),
 
-  maxmin_(si.getObjSense()),
+  maxmin_(si.getObjSense())
 
-  whichpass_(0)
 {
   si.getDblParam(ClpObjOffset,originalOffset_);
   int ncols = si.getNumCols();

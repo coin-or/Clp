@@ -2760,12 +2760,18 @@ ClpSimplexProgress::looping()
   int matched=0;
 
   for (i=0;i<CLP_PROGRESS;i++) {
-    if (objective==objective_[i]&&
-	infeasibility==infeasibility_[i]&&
-	numberInfeasibilities==numberInfeasibilities_[i]) {
+    bool matchedOnObjective = (objective==objective_[i]);
+    bool matchedOnInfeasibility = (infeasibility==infeasibility_[i]);
+    bool matchedOnInfeasibilities = 
+      (numberInfeasibilities==numberInfeasibilities_[i]);
+    if (matchedOnObjective&&matchedOnInfeasibility&&matchedOnInfeasibilities) {
       matched |= (1<<i);
       numberMatched++;
     }
+    if (numberMatched||numberTimes_>50) 
+      printf("%d %d %d %d\n",numberMatched,
+	     matchedOnObjective,matchedOnInfeasibility,
+	     matchedOnInfeasibilities);
     if (i) {
       objective_[i-1] = objective_[i];
       infeasibility_[i-1] = infeasibility_[i];
@@ -2838,6 +2844,8 @@ ClpSimplex::sanityCheck()
   largestBound=0.0;
   smallestObj=1.0e100;
   largestObj=0.0;
+  // If bounds are too close - fix
+  double fixTolerance = 1.1*primalTolerance_;
   for (i=numberColumns_;i<numberColumns_+numberRows_;i++) {
     double value;
     value = fabs(cost_[i]);
@@ -2856,7 +2864,7 @@ ClpSimplex::sanityCheck()
       numberBadBounds++;
       if (firstBad<0)
 	firstBad=i;
-    } else if (value<=primalTolerance_) {
+    } else if (value<=fixTolerance) {
       if (value) {
 	// modify
 	upper_[i] = lower_[i];
@@ -2908,7 +2916,7 @@ ClpSimplex::sanityCheck()
       numberBadBounds++;
       if (firstBad<0)
 	firstBad=i;
-    } else if (value<=primalTolerance_) {
+    } else if (value<=fixTolerance) {
       if (value) {
 	// modify
 	upper_[i] = lower_[i];

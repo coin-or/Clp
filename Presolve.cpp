@@ -556,7 +556,9 @@ const PresolveAction *Presolve::presolve(PresolveMatrix *prob)
       const PresolveAction * const paction0 = paction_;
       // look for substitutions with no fill
       int fill_level=2;
+      int whichPass=0;
       while (1) {
+	whichPass++;
 	const PresolveAction * const paction1 = paction_;
 	
 	if (slackd) {
@@ -609,7 +611,6 @@ const PresolveAction *Presolve::presolve(PresolveMatrix *prob)
 	prob->consistent();
 #endif
 	
-	prob->whichpass_++;
 	  
 	// set up for next pass
 	// later do faster if many changes i.e. memset and memcpy
@@ -624,7 +625,7 @@ const PresolveAction *Presolve::presolve(PresolveMatrix *prob)
 	  prob->rowsToDo_[i] = index;
 	  if (index==kcheck) {
 	    printf("row %d on list after pass %d\n",kcheck,
-		   prob->whichpass_);
+		   whichPass);
 	    found=true;
 	  }
 	}
@@ -640,7 +641,7 @@ const PresolveAction *Presolve::presolve(PresolveMatrix *prob)
 	  prob->colsToDo_[i] = index;
 	  if (index==kcheck) {
 	    printf("col %d on list after pass %d\n",kcheck,
-		   prob->whichpass_);
+		   whichPass);
 	    found=true;
 	  }
 	}
@@ -705,7 +706,7 @@ const PresolveAction *Presolve::presolve(PresolveMatrix *prob)
 	  if (!hinrow[i])
 	    numberDropped++;
 	printf("%d rows dropped after pass %d\n",numberDropped,
-	       prob->whichpass_+1);
+	       iLoop+1);
       }
       if (paction_ == paction0)
 	break;

@@ -371,6 +371,7 @@ ClpSimplexPrimal::whileIterating(int & firstSuperBasic)
   // Say if values pass
   int ifValuesPass=0;
   int returnCode=-1;
+  int startIteration = numberIterations_;
   if (firstSuperBasic<numberRows_+numberColumns_)
     ifValuesPass=1;
   int saveNumber = numberIterations_;
@@ -625,6 +626,10 @@ ClpSimplexPrimal::whileIterating(int & firstSuperBasic)
 	problemStatus_= 3;
 	returnCode=3;
 	break;
+      } else if(numberIterations_ == startIteration
+		+ 2 * factorization_->maximumPivots()) {
+	// done a lot of flips - be safe
+	problemStatus_ =-2; // refactorize
       }
     } else {
       // no pivot column

@@ -54,7 +54,7 @@ include ${MakefileDir}/Makefile.location
 
 CXXFLAGS += -DUSE_PRESOLVE
 ifeq ($(OptLevel),-g)
-     CXXFLAGS += -DCLP_DEBUG
+#     CXXFLAGS += -DCLP_DEBUG
 #    CXXFLAGS += -DPRESOLVE_SUMMARY=1 -DDEBUG_PRESOLVE -DCHECK_CONSISTENCY=1
 endif
 

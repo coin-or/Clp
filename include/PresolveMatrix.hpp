@@ -172,7 +172,6 @@ class PrePostsolveMatrix {
 
   double maxmin_;
 
-  int whichpass_;	// mostly for debugging
 
   PrePostsolveMatrix(const ClpSimplex& si,
 			int ncols_,

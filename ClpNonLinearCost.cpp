@@ -359,14 +359,22 @@ ClpNonLinearCost::checkInfeasibilities(bool toNearest)
       break;
     case ClpSimplex::atUpperBound:
       if (!toNearest) {
-	assert(fabs(value-upperValue)<=primalTolerance*1.0001) ;
+	// With increasing tolerances - we may be at wrong place
+	if (fabs(value-upperValue)>primalTolerance*1.0001) {
+	  assert(fabs(value-lowerValue)<=primalTolerance*1.0001); 
+	  model_->setStatus(iSequence,ClpSimplex::atLowerBound);
+	}
       } else {
 	solution[iSequence] = upperValue;
       }
       break;
     case ClpSimplex::atLowerBound:
       if (!toNearest) {
-	assert(fabs(value-lowerValue)<=primalTolerance*1.0001); 
+	// With increasing tolerances - we may be at wrong place
+	if (fabs(value-lowerValue)>primalTolerance*1.0001) {
+	  assert(fabs(value-upperValue)<=primalTolerance*1.0001); 
+	  model_->setStatus(iSequence,ClpSimplex::atUpperBound);
+	}
       } else {
 	solution[iSequence] = lowerValue;
       }
@@ -582,13 +590,14 @@ ClpNonLinearCost::setOne(int iPivot, double value)
   case ClpSimplex::atUpperBound:
   case ClpSimplex::atLowerBound:
     // set correctly
-    if (fabs(value-lower)<=primalTolerance*1.001) 
+    if (fabs(value-lower)<=primalTolerance*1.001){
       model_->setStatus(iPivot,ClpSimplex::atLowerBound);
-    else if (fabs(value-upper)<=primalTolerance*1.001) 
+    } else if (fabs(value-upper)<=primalTolerance*1.001){
       model_->setStatus(iPivot,ClpSimplex::atUpperBound);
-    else
-      assert(fabs(value-lower)<=primalTolerance*1.0001||
-	     fabs(value-upper)<=primalTolerance*1.0001);
+    } else {
+      // set superBasic
+      model_->setStatus(iPivot,ClpSimplex::superBasic);
+    }
     break;
   }
   if (upper-lower<1.0e-8)
