@@ -837,6 +837,7 @@ ClpPackedMatrix::allElementsInRange(ClpSimplex * model,
     for (j=columnStart[iColumn];
 	 j<columnStart[iColumn]+columnLength[iColumn];j++) {
       double value = fabs(elementByColumn[j]);
+      //printf("%d %d %d %g\n",iColumn,j,row[j],elementByColumn[j]);
       if (value<smallest) {
 	numberSmall++;
       } else if (value>largest) {

@@ -264,7 +264,6 @@ PrePostsolveMatrix::PrePostsolveMatrix(const ClpSimplex& si,
 					     int ncols_in,
 					     int nrows_in,
 					     int nelems_in) :
-  originalModel_(&si),
   ncols_(si.getNumCols()),
   ncols0_(ncols_in),
   nelems_(si.getNumElements()),
@@ -440,16 +439,22 @@ PresolveMatrix::PresolveMatrix(int ncols0_in,
   // The coefficient matrix is a big hunk of stuff.
   // Do the copy here to try to avoid running out of memory.
 
-  if (! isGapFree(*m)) {
-    PresolveAction::throwCoinError("getMatrixByCol not gap free",
-				      "PrePostsolveMatrix");
+  const int * start = m->getVectorStarts();
+  const int * length = m->getVectorLengths();
+  const int * row = m->getIndices();
+  const double * element = m->getElements();
+  int icol,nel=0;
+  mcstrt_[0]=0;
+  for (icol=0;icol<ncols_;icol++) {
+    int j;
+    for (j=start[icol];j<start[icol]+length[icol];j++) {
+      hrow_[nel]=row[j];
+      colels_[nel++]=element[j];
+    }
+    mcstrt_[icol+1]=nel;
   }
-
-  CoinDisjointCopyN<int>(m->getVectorStarts(), ncols_, mcstrt_);
-  mcstrt_[ncols_] = nelems_;
+  assert(mcstrt_[ncols_] == nelems_);
   CoinDisjointCopyN(m->getVectorLengths(),ncols_,  hincol_);
-  CoinDisjointCopyN(m->getIndices(),      nelems_, hrow_);
-  CoinDisjointCopyN(m->getElements(),     nelems_, colels_);
 
   // same thing for row rep
   m = new CoinPackedMatrix();
@@ -494,7 +499,7 @@ PresolveMatrix::PresolveMatrix(int ncols0_in,
 #endif
 
 #if 0
-  for (int i=0; i<nrows; ++i)
+  for (i=0; i<nrows; ++i)
     printf("NR: %6d\n", hinrow[i]);
   for (int i=0; i<ncols; ++i)
     printf("NC: %6d\n", hincol[i]);

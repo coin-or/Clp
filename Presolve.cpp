@@ -73,6 +73,7 @@ void Presolve::presolve(ClpSimplex& si)
 			 maxmin,
 			 si,
 			 nrows_, nelems_,false);
+  prob.originalModel_ = originalModel_;
 
   paction_ = presolve(&prob);
 
@@ -113,6 +114,7 @@ void Presolve::postsolve(ClpSimplex& si,
 
 			    sol, acts,
 			 colstat, rowstat);
+    prob.originalModel_ = originalModel_;
 
     postsolve(prob);
 
@@ -178,6 +180,10 @@ Presolve::presolvedModel(ClpSimplex & si,
   originalModel_ = &si;
   originalColumn_ = new int[ncols_];
 
+  // Check matrix
+  if (!si.clpMatrix()->allElementsInRange(&si,1.0e-20,1.0e20))
+    return NULL;
+
   // result is 0 - okay, 1 infeasible, -1 go round again
   int result = -1;
 
@@ -196,6 +202,7 @@ Presolve::presolvedModel(ClpSimplex & si,
 			maxmin,
 			*presolvedModel_,
 			nrows_, nelems_,true);
+    prob.originalModel_ = originalModel_;
 
     // move across feasibility tolerance
     prob.feasibilityTolerance_ = feasibilityTolerance;
@@ -345,6 +352,7 @@ Presolve::postsolve(bool updateStatus)
 		       
 		       sol, acts,
 		       colstat, rowstat);
+  prob.originalModel_ = originalModel_;
     
   postsolve(prob);
 

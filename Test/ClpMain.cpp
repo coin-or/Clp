@@ -73,10 +73,10 @@ enum ClpParameterType {
   
   DUALTOLERANCE=1,PRIMALTOLERANCE,DUALBOUND,PRIMALWEIGHT,
 
-  LOGLEVEL=101,MAXFACTOR,PERTURBATION,MAXITERATION,PRESOLVE,
+  LOGLEVEL=101,MAXFACTOR,PERTURBATION,MAXITERATION,PRESOLVEPASS,
   
   DIRECTION=201,DUALPIVOT,SCALING,ERRORSALLOWED,KEEPNAMES,SPARSEFACTOR,
-  PRIMALPIVOT,
+  PRIMALPIVOT,PRESOLVE,
   
   DIRECTORY=301,IMPORT,EXPORT,RESTORE,SAVE,DUALSIMPLEX,PRIMALSIMPLEX,BAB,
   MAXIMIZE,MINIMIZE,EXIT,STDIN,UNITTEST,NETLIB_DUAL,NETLIB_PRIMAL,SOLUTION,
@@ -795,8 +795,12 @@ stopping",
 	      "on",SCALING);
     parameters[numberParameters-1].append("off");
     parameters[numberParameters++]=
-      ClpItem("presolve","Whether to presolve problem - how many passes",
-	      0,100,PRESOLVE);
+      ClpItem("presolve","Whether to presolve problem",
+	      "off",PRESOLVE);
+    parameters[numberParameters-1].append("on");
+    parameters[numberParameters++]=
+      ClpItem("passP!resolve","How many passes in presolve",
+	      0,100,PRESOLVEPASS);
     parameters[numberParameters++]=
       ClpItem("spars!eFactor","Whether factorization treated as sparse",
 	      "on",SPARSEFACTOR);
@@ -992,7 +996,7 @@ stopping",
 	  // get next field as int
 	  int value = getIntField(argc,argv,&valid);
 	  if (!valid) {
-	    if (parameters[iParam].type()==PRESOLVE)
+	    if (parameters[iParam].type()==PRESOLVEPASS)
 	      preSolve = value;
 	    else
 	      parameters[iParam].setIntParameter(models+iModel,value);
@@ -1057,6 +1061,9 @@ stopping",
 	      break;
 	    case KEEPNAMES:
 	      keepImportNames = 1-action;
+	      break;
+	    case PRESOLVE:
+	      preSolve = action*5;
 	      break;
 	    default:
 	      abort();
