@@ -98,7 +98,6 @@ int ClpPredictorCorrector::solve ( )
   double * savePi=NULL;
   double * savePrimal=NULL;
   int numberTotal = numberRows_+numberColumns_;
-  bool tryJustPredictor=false;
   while (problemStatus_<0) {
     if (numberIterations_==xxxxxx) {
       FILE *fp = fopen("yy.yy","wb");
@@ -280,7 +279,7 @@ int ClpPredictorCorrector::solve ( )
 	<<CoinMessageEol;
         break;//finished
     } 
-    if (complementarityGap_<1.0e-18) {
+    if (complementarityGap_<1.0e-12) {
       problemStatus_=0;
       handler_->message(CLP_BARRIER_EXIT,messages_)
         <<"- small complementarity gap"
@@ -307,230 +306,214 @@ int ClpPredictorCorrector::solve ( )
         break;//finished
       } 
     } 
-    bool useAffine=false;
     bool goodMove=false;
-    bool doCorrector=true;
-    //bool retry=false;
     double bestNextGap=COIN_DBL_MAX;
     worstDirectionAccuracy_=0.0;
     while (!goodMove) {
       goodMove=true;
       int newDropped=0;
       //Predictor step
-      //Are we going to use the affine direction?
-      if (!useAffine) {
-        //no - normal
-        //prepare for cholesky.  Set up scaled diagonal in weights
-        //  ** for efficiency may be better if scale factor known before
-        double norm2=0.0;
-        double maximumValue;
-	getNorms(diagonal_,numberColumns_,maximumValue,norm2);
-        diagonalNorm_ = sqrt(norm2/numberComplementarityPairs_);
-        diagonalScaleFactor_=1.0;
-        double maximumAllowable=eScale;
-        //scale so largest is less than allowable ? could do better
-        double factor=0.5;
-        while (maximumValue>maximumAllowable) {
-          diagonalScaleFactor_*=factor;
-          maximumValue*=factor;
-        } /* endwhile */
-        if (diagonalScaleFactor_!=1.0) {
-	  handler_->message(CLP_BARRIER_SCALING,messages_)
-	    <<"diagonal"<<diagonalScaleFactor_
-	    <<CoinMessageEol;
-          diagonalNorm_*=diagonalScaleFactor_;
-        } 
-        multiplyAdd(NULL,numberTotal,0.0,diagonal_,
-		      diagonalScaleFactor_);
-        int * rowsDroppedThisTime = new int [numberRows_];
-        newDropped=cholesky_->factorize(diagonal_,rowsDroppedThisTime);
-        if (newDropped>0) {
-	  //int newDropped2=cholesky_->factorize(diagonal_,rowsDroppedThisTime);
-	  //assert(!newDropped2);
-          if (newDropped<0) {
-            //replace dropped
-            newDropped=-newDropped;
-            //off 1 to allow for reset all
-            newDropped--;
-            //set all bits false
-            cholesky_->resetRowsDropped();
-          } 
-        } else if (newDropped==-1) {
-	  printf("Out of memory\n");
-	  problemStatus_=4;
-	  return -1;
-	} 
-        delete [] rowsDroppedThisTime;
-        if (cholesky_->status()) {
-          std::cout << "bad cholesky?" <<std::endl;
-          abort();
-        } 
-      } 
-      //set up for affine direction
-      setupForSolve(0);
-      double directionAccuracy=findDirectionVector(0);
-      if (directionAccuracy>worstDirectionAccuracy_) {
-        worstDirectionAccuracy_=directionAccuracy;
-      } 
-      int phase=0; // predictor, corrector , primal dual
-      // 0 - normal
-      // 1 - second time around i.e. no need for first part
-      // 2 - affine step only
-      // 9 - to exit from while because of error (to go round again)
-      // (9 also used to signal end of while (but then goodMove is true))
-      int recoveryMode=0;
-      if (!goodMove) {
-        recoveryMode=9;
-      } 
-      if (goodMove&&useAffine) {
-        recoveryMode=2;
-        phase=0;
-      } 
-      while (recoveryMode!=9) {
-        goodMove=true;
-        if (!recoveryMode) {
-          findStepLength(phase);
-          int nextNumber; //number of complementarity pairs
-          double nextGap=complementarityGap(nextNumber,1);
-	  bestNextGap=nextGap;
-          if (complementarityGap_>1.0e-4*numberComplementarityPairs_) {
-            //std::cout <<"predicted duality gap "<<nextGap<<std::endl;
-            double part1=nextGap/numberComplementarityPairs_;
-            double part2=nextGap/complementarityGap_;
-            mu_=part1*part2*part2;
-#if 0
-	    double papermu =complementarityGap_/numberComplementarityPairs_;
-	    double affmu = nextGap/nextNumber;
-	    double sigma = pow(affmu/papermu,3);
-	    printf("mu %g, papermu %g, affmu %g, sigma %g sigmamu %g\n",
-		   mu_,papermu,affmu,sigma,sigma*papermu);
-#endif		   
-          } else {
-            double phi;
-            if (numberComplementarityPairs_<=500) {
-              phi=pow((double) numberComplementarityPairs_,2.0);
-            } else {
-              phi=pow((double) numberComplementarityPairs_,1.5);
-              if (phi<500.0*500.0) {
-                phi=500.0*500.0;
-              } 
-            }
-            mu_=complementarityGap_/phi;
-            //? could use gapO?
-            //if small then should be stopping
-            //if (mu_<1.0e-4/(numberComplementarityPairs_*qqqq)) {
-	    //mu_=1.0e-4/(numberComplementarityPairs_*qqqq);
-	    //? better to skip corrector?
-            //} 
-          } 
-          //save information
-          double product=affineProduct();
-          //can we do corrector step?
-          double xx= complementarityGap_*(beta2-tau) +product;
-          //std::cout<<"gap part "<<
-	  //complementarityGap_*(beta2-tau)<<" after adding product = "<<xx<<std::endl;
-	  xx=-1.0;
-          if (xx>0.0) {
-	    double saveMu = mu_;
-            double mu2=numberComplementarityPairs_;
-            mu2=xx/mu2;
-            if (mu2>mu_) {
-              //std::cout<<" could increase to "<<mu2<<std::endl;
-              //was mu2=mu2*0.25;
-              mu2=mu2*0.99;
-              if (mu2<mu_) {
-                mu_=mu2;
-                //std::cout<<" changing mu to "<<mu_<<std::endl;
-              } else {
-                //std::cout<<std::endl;
-              } 
-            } else {
-              //std::cout<<" should decrease to "<<mu2<<std::endl;
-              mu_=0.5*mu2;
-              //std::cout<<" changing mu to "<<mu_<<std::endl;
-            } 
-	    handler_->message(CLP_BARRIER_MU,messages_)
-	      <<saveMu<<mu_
-	      <<CoinMessageEol;
-          } else {
-            //std::cout<<" bad by any standards"<<std::endl;
-          } 
-	  //printf("product %g mu %g\n",product,mu_);
-          if (complementarityGap_*(beta2-tau)+product-mu_*numberComplementarityPairs_<0.0||
-	      tryJustPredictor) {
-            doCorrector=false;
-	    bestNextGap=COIN_DBL_MAX;
-            double floatNumber = numberComplementarityPairs_;
-	    if (product>0.0)
-	      mu_=complementarityGap_/(floatNumber*floatNumber);
-            //? if small we should be stopping
-            //if (mu_<1.0e-4/(numberComplementarityPairs_*numberComplementarityPairs_)) {
-	    //mu_=1.0e-4/(totalVariables*totalVariables);
-            //} 
-	    handler_->message(CLP_BARRIER_INFO,messages_)
-	      <<"no corrector step"
-	      <<CoinMessageEol;
-	    phase=2;
-	    tryJustPredictor=false;
-          } else {
-            phase=1;
-          } 
-        } 
-        //set up for next step
-        setupForSolve(phase);
-        double directionAccuracy2=findDirectionVector(phase);
-        if (directionAccuracy2>worstDirectionAccuracy_) {
-          worstDirectionAccuracy_=directionAccuracy2;
-        } 
-        double testValue=1.0e2*directionAccuracy;
-        if (1.0e2*projectionTolerance_>testValue) {
-          testValue=1.0e2*projectionTolerance_;
-        } 
-        if (primalTolerance()>testValue) {
-          testValue=primalTolerance();
-        } 
-        if (maximumRHSError_>testValue) {
-          testValue=maximumRHSError_;
-        } 
-        if (!recoveryMode) {
-          if (directionAccuracy2>testValue&&numberIterations_>=-77) {
-            goodMove=false;
-            useAffine=true;//if bad accuracy
-            doCorrector=false;
-	    bestNextGap=COIN_DBL_MAX;
-            recoveryMode=9;
-          } 
-        } 
-        if (goodMove) {
-          findStepLength(phase);
-          if (numberIterations_>=-77) {
-            goodMove=checkGoodMove(doCorrector,bestNextGap);
-          } else {
-            goodMove=true;
-          } 
-          if (!goodMove) {
-            if (doCorrector) {
-              doCorrector=false;
-              double floatNumber = numberComplementarityPairs_;
-              mu_=complementarityGap_/(floatNumber*floatNumber);
-	      handler_->message(CLP_BARRIER_INFO,messages_)
-		<<" no corrector step - original move would be bad"
-		<<CoinMessageEol;
-              phase=2;
-              recoveryMode=1;
-	      bestNextGap=COIN_DBL_MAX;
-            } else {
-              // if any killed then do zero step and hope for best
-              abort();
-            } 
-          } 
-        } 
-        //force leave
-        if (goodMove) {
-          recoveryMode=9;
-        } 
+      //prepare for cholesky.  Set up scaled diagonal in weights
+      //  ** for efficiency may be better if scale factor known before
+      double norm2=0.0;
+      double maximumValue;
+      getNorms(diagonal_,numberTotal,maximumValue,norm2);
+      diagonalNorm_ = sqrt(norm2/numberComplementarityPairs_);
+      diagonalScaleFactor_=1.0;
+      double maximumAllowable=eScale;
+      //scale so largest is less than allowable ? could do better
+      double factor=0.5;
+      while (maximumValue>maximumAllowable) {
+	diagonalScaleFactor_*=factor;
+	maximumValue*=factor;
       } /* endwhile */
+      if (diagonalScaleFactor_!=1.0) {
+	handler_->message(CLP_BARRIER_SCALING,messages_)
+	  <<"diagonal"<<diagonalScaleFactor_
+	  <<CoinMessageEol;
+	diagonalNorm_*=diagonalScaleFactor_;
+      } 
+      multiplyAdd(NULL,numberTotal,0.0,diagonal_,
+		  diagonalScaleFactor_);
+      int * rowsDroppedThisTime = new int [numberRows_];
+      newDropped=cholesky_->factorize(diagonal_,rowsDroppedThisTime);
+      if (newDropped>0) {
+	//int newDropped2=cholesky_->factorize(diagonal_,rowsDroppedThisTime);
+	//assert(!newDropped2);
+	if (newDropped<0) {
+	  //replace dropped
+	  newDropped=-newDropped;
+	  //off 1 to allow for reset all
+	  newDropped--;
+	  //set all bits false
+	  cholesky_->resetRowsDropped();
+	} 
+      } else if (newDropped==-1) {
+	printf("Out of memory\n");
+	problemStatus_=4;
+	return -1;
+      } 
+      delete [] rowsDroppedThisTime;
+      if (cholesky_->status()) {
+	std::cout << "bad cholesky?" <<std::endl;
+	abort();
+      }
+      int phase=0; // predictor, corrector , primal dual
+      double directionAccuracy=0.0;
+      bool doCorrector=true;
+      //goodMove=false;
+      if (goodMove) {
+	//set up for affine direction
+	setupForSolve(phase);
+	directionAccuracy=findDirectionVector(phase);
+	if (directionAccuracy>worstDirectionAccuracy_) {
+	  worstDirectionAccuracy_=directionAccuracy;
+	} 
+	findStepLength(phase);
+	int nextNumber; //number of complementarity pairs
+	double nextGap=complementarityGap(nextNumber,1);
+	
+	bestNextGap=max(nextGap,0.8*complementarityGap_);
+	if (complementarityGap_>1.0e-5*numberComplementarityPairs_) {
+	  //std::cout <<"predicted duality gap "<<nextGap<<std::endl;
+	  double part1=nextGap/numberComplementarityPairs_;
+	  double part2=nextGap/complementarityGap_;
+	  mu_=part1*part2*part2;
+#if 0
+	  double papermu =complementarityGap_/numberComplementarityPairs_;
+	  double affmu = nextGap/nextNumber;
+	  double sigma = pow(affmu/papermu,3);
+	  printf("mu %g, papermu %g, affmu %g, sigma %g sigmamu %g\n",
+		 mu_,papermu,affmu,sigma,sigma*papermu);
+#endif	
+	  //printf("paper mu %g\n",(nextGap*nextGap*nextGap)/(complementarityGap_*complementarityGap_*
+	  //					    (double) numberComplementarityPairs_));
+	} else {
+	  double phi;
+	  if (numberComplementarityPairs_<=500) {
+	    phi=pow((double) numberComplementarityPairs_,2.0);
+	  } else {
+	    phi=pow((double) numberComplementarityPairs_,1.5);
+	    if (phi<500.0*500.0) {
+	      phi=500.0*500.0;
+	    } 
+	  }
+	  mu_=complementarityGap_/phi;
+	  //? could use gapO?
+	  //if small then should be stopping
+	  //if (mu_<1.0e-4/(numberComplementarityPairs_*qqqq)) {
+	  //mu_=1.0e-4/(numberComplementarityPairs_*qqqq);
+	  //? better to skip corrector?
+	  //} 
+	} 
+	//save information
+	double product=affineProduct();
+	//can we do corrector step?
+	double xx= complementarityGap_*(beta2-tau) +product;
+	//std::cout<<"gap part "<<
+	//complementarityGap_*(beta2-tau)<<" after adding product = "<<xx<<std::endl;
+	//xx=-1.0;
+	if (xx>0.0) {
+	  double saveMu = mu_;
+	  double mu2=numberComplementarityPairs_;
+	  mu2=xx/mu2;
+	  if (mu2>mu_) {
+	    //std::cout<<" could increase to "<<mu2<<std::endl;
+	    //was mu2=mu2*0.25;
+	    mu2=mu2*0.99;
+	    if (mu2<mu_) {
+	      mu_=mu2;
+	      //std::cout<<" changing mu to "<<mu_<<std::endl;
+	    } else {
+	      //std::cout<<std::endl;
+	    } 
+	  } else {
+	    //std::cout<<" should decrease to "<<mu2<<std::endl;
+	    mu_=0.5*mu2;
+	    //std::cout<<" changing mu to "<<mu_<<std::endl;
+	  } 
+	  handler_->message(CLP_BARRIER_MU,messages_)
+	    <<saveMu<<mu_
+	    <<CoinMessageEol;
+	} else {
+	  //std::cout<<" bad by any standards"<<std::endl;
+	} 
+	//printf("product %g mu %g\n",product,mu_);
+	if (complementarityGap_*(beta2-tau)+product-mu_*numberComplementarityPairs_<0.0) {
+	  doCorrector=false;
+	  goodMove=false;
+	  bestNextGap=COIN_DBL_MAX;
+	  handler_->message(CLP_BARRIER_INFO,messages_)
+	    <<"no corrector step"
+	    <<CoinMessageEol;
+	} else {
+	  phase=1;
+	} 
+      }
+      if (goodMove&&doCorrector) {
+	//set up for next step
+	setupForSolve(phase);
+	double directionAccuracy2=findDirectionVector(phase);
+	if (directionAccuracy2>worstDirectionAccuracy_) {
+	  worstDirectionAccuracy_=directionAccuracy2;
+	} 
+	double testValue=1.0e2*directionAccuracy;
+	if (1.0e2*projectionTolerance_>testValue) {
+	  testValue=1.0e2*projectionTolerance_;
+	} 
+	if (primalTolerance()>testValue) {
+	  testValue=primalTolerance();
+	} 
+	if (maximumRHSError_>testValue) {
+	  testValue=maximumRHSError_;
+	} 
+	if (directionAccuracy2>testValue&&numberIterations_>=-77) {
+	  goodMove=false;
+	  bestNextGap=COIN_DBL_MAX;
+	} 
+	if (goodMove) {
+	  findStepLength(phase);
+	  // just for debug
+	  int nextNumber;
+	  complementarityGap(nextNumber,1);
+	  if (numberIterations_>=-77) {
+	    goodMove=checkGoodMove(true,bestNextGap);
+	  } else {
+	    goodMove=true;
+	  } 
+	}
+      } 
+      if (!goodMove) {
+	// Just primal dual step
+	goodMove=true;
+	double floatNumber;
+	floatNumber = 2.0*numberComplementarityPairs_;
+	//floatNumber = 1.1*numberComplementarityPairs_;
+	mu_=complementarityGap_/floatNumber;
+	//set up for next step
+	setupForSolve(2);
+	double directionAccuracy=findDirectionVector(2);
+	if (directionAccuracy>worstDirectionAccuracy_) {
+	  worstDirectionAccuracy_=directionAccuracy;
+	} 
+	double testValue=1.0e2*directionAccuracy;
+	if (1.0e2*projectionTolerance_>testValue) {
+	  testValue=1.0e2*projectionTolerance_;
+	} 
+	if (primalTolerance()>testValue) {
+	  testValue=primalTolerance();
+	} 
+	if (maximumRHSError_>testValue) {
+	  testValue=maximumRHSError_;
+	} 
+	findStepLength(2);
+	// just for debug
+	int nextNumber;
+	complementarityGap(nextNumber,2);
+      }
     } /* endwhile */
+    //numberFixed=updateSolution();
+    //numberFixedTotal+=numberFixed;
     if (numberIterations_==1) {
       FILE *fp = fopen("xx.xx","rb");
       if (fp) {
@@ -634,7 +617,8 @@ double ClpPredictorCorrector::findStepLength(const int phase)
   double * work4 = deltaT_;
   //direction vector in weights
   double * weights = weights_;
-  if (!phase) {
+  switch (phase) {
+  case 0:
     //Now get affine deltas for Z(duals on LBds) and W (duals on UBds)
     for (int iColumn=0;iColumn<numberTotal;iColumn++) {
       if (!flagged(iColumn)) {
@@ -715,8 +699,9 @@ double ClpPredictorCorrector::findStepLength(const int phase)
         work3[iColumn]=0.0;
         work4[iColumn]=0.0;
       } 
-    } 
-  } else if (phase==1) {
+    }
+    break;
+  case 1:
     //corrector step
     for (int iColumn=0;iColumn<numberTotal;iColumn++) {
       if (!flagged(iColumn)) {
@@ -799,8 +784,9 @@ double ClpPredictorCorrector::findStepLength(const int phase)
         work3[iColumn]=0.0;
         work4[iColumn]=0.0;
       } 
-    } 
-  } else {
+    }
+    break;
+  case 2:
     //just primal dual
     for (int iColumn=0;iColumn<numberTotal;iColumn++) {
       if (!flagged(iColumn)) {
@@ -881,8 +867,11 @@ double ClpPredictorCorrector::findStepLength(const int phase)
         work3[iColumn]=0.0;
         work4[iColumn]=0.0;
       } 
-    } 
+    }
+    break;
   } 
+  printf("step - phase %d, norm %g, dual step %g, primal step %g\n",
+	 phase,directionNorm,maximumPrimalStep,maximumDualStep);
   actualPrimalStep_=stepLength_*maximumPrimalStep;
   if (phase>=0&&actualPrimalStep_>1.0) {
     actualPrimalStep_=1.0;
@@ -1186,7 +1175,7 @@ int ClpPredictorCorrector::createSolution()
   } 
   baseObjectiveNorm_=objectiveNorm_;
   //accumulate fixed in dj region (as spare)
-  //acumulate primal solution in primal region
+  //accumulate primal solution in primal region
   //DZ in lowerDual
   //DW in upperDual
   double infiniteCheck=1.0e40;
@@ -1521,6 +1510,7 @@ double ClpPredictorCorrector::complementarityGap(int & numberComplementarityPair
   numberComplementarityPairs=0;
   double toleranceGap=0.0;
   double largestGap=0.0;
+  double smallestGap=COIN_DBL_MAX;
   //seems to be same coding for phase = 1 or 2
   int numberNegativeGaps=0;
   double sumNegativeGap=0.0;
@@ -1544,6 +1534,7 @@ double ClpPredictorCorrector::complementarityGap(int & numberComplementarityPair
   double * weights = weights_;
   for (int iColumn=0;iColumn<numberRows_+numberColumns_;iColumn++) {
     if (!fixedOrFree(iColumn)) {
+      numberComplementarityPairs++;
       //can collapse as if no lower bound both zVec and work1 0.0
       if (lowerBound(iColumn)) {
         double dualValue;
@@ -1576,11 +1567,11 @@ double ClpPredictorCorrector::complementarityGap(int & numberComplementarityPair
         gap+=gapProduct;
         if (gapProduct>largestGap) {
           largestGap=gapProduct;
-        } 
+        }
+	smallestGap = min(smallestGap,gapProduct);
         if (dualValue>dualTolerance&&primalValue>primalTolerance) {
           toleranceGap+=dualValue*primalValue;
         } 
-        numberComplementarityPairs++;
       } 
       if (upperBound(iColumn)) {
         double dualValue;
@@ -1617,7 +1608,6 @@ double ClpPredictorCorrector::complementarityGap(int & numberComplementarityPair
         if (dualValue>dualTolerance&&primalValue>primalTolerance) {
           toleranceGap+=dualValue*primalValue;
         } 
-        numberComplementarityPairs++;
       } 
     } 
   } 
@@ -1626,10 +1616,13 @@ double ClpPredictorCorrector::complementarityGap(int & numberComplementarityPair
     <<numberNegativeGaps<<sumNegativeGap
     <<CoinMessageEol;
   } 
+  
   //in case all free!
   if (!numberComplementarityPairs) {
     numberComplementarityPairs=1;
   } 
+  printf("gap %g - smallest %g, largest %g, pairs %d\n",
+	 gap,smallestGap,largestGap,numberComplementarityPairs);
   return gap;
 }
 // setupForSolve.
@@ -1650,6 +1643,7 @@ void ClpPredictorCorrector::setupForSolve(const int phase)
   double * work4 = deltaT_;
 
   int iColumn;
+  printf("phase %d in setupForSolve, mu %g\n",phase,mu_);
   switch (phase) {
   case 0:
     for (iColumn=0;iColumn<numberRows_+numberColumns_;iColumn++) {
@@ -1732,6 +1726,26 @@ void ClpPredictorCorrector::setupForSolve(const int phase)
           } else {
             value+=(mu_+wVec[iColumn])/ (upperSlack[iColumn]+extra);
           } 
+        } 
+#ifndef KKT
+        work2[iColumn]=diagonal_[iColumn]*(dual[iColumn]+value);
+#else
+        work2[iColumn]=dual[iColumn]+value;
+#endif
+      } else {
+        work2[iColumn]=0.0;
+      } 
+    } 
+    break;
+  case 3:
+    for (iColumn=0;iColumn<numberRows_+numberColumns_;iColumn++) {
+      if (!flagged(iColumn)) {
+        double value= 0.0;
+        if (lowerBound(iColumn)) {
+	  value-=work3[iColumn]/(lowerSlack[iColumn]+extra);
+        } 
+        if (upperBound(iColumn)) {
+	  value+=work4[iColumn]/(upperSlack[iColumn]+extra);
         } 
 #ifndef KKT
         work2[iColumn]=diagonal_[iColumn]*(dual[iColumn]+value);
