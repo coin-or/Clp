@@ -92,6 +92,7 @@
 #include <math.h>
 
 #include "CoinHelperFunctions.hpp"
+#include "ClpHelperFunctions.hpp"
 #include "ClpSimplexDual.hpp"
 #include "ClpEventHandler.hpp"
 #include "ClpFactorization.hpp"
@@ -1107,6 +1108,12 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
 	    //}
 	    problemStatus_=-5;
 	  } else {
+            if (numberPivots) {
+              // objective may be wrong
+              objectiveValue_ = innerProduct(cost_,numberColumns_+numberRows_,solution_);
+              objectiveValue_ += objective_->nonlinearOffset();
+              objectiveValue_ /= (objectiveScale_*rhsScale_);
+            }
 	    problemStatus_=0;
 	    sumPrimalInfeasibilities_=0.0;
 	  }
@@ -4080,7 +4087,7 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
   for (iColumn=0;iColumn<2;iColumn++) {
     columnArray_[iColumn]->clear();
   }    
-  assert(!numberFake_||((specialOptions_&4096)!=0&&dualBound_>1.0e8)
+  assert(!numberFake_||((specialOptions_&(2048|4096))!=0&&dualBound_>1.0e8)
          ||returnCode||problemStatus_); // all bounds should be okay
   // Restore any saved stuff
   restoreData(data);

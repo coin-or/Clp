@@ -254,8 +254,7 @@ k
 	    value *= 2.0;
 	}
 #endif
-	double weight = weights_[iRow];
-	assert (weight<1.0e50);
+	double weight = CoinMin(weights_[iRow],1.0e50);
 	//largestWeight = CoinMax(largestWeight,weight);
 	//smallestWeight = CoinMin(smallestWeight,weight);
 	//double dubious = dubiousWeights_[iRow];
