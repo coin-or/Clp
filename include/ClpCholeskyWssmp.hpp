@@ -1,16 +1,16 @@
 // Copyright (C) 2003, International Business Machines
 // Corporation and others.  All Rights Reserved.
-#ifndef ClpCholeskyDense_H
-#define ClpCholeskyDense_H
+#ifndef ClpCholeskyWssmp_H
+#define ClpCholeskyWssmp_H
 
 #include "ClpCholeskyBase.hpp"
 
 
-/** Dense class for Clp Cholesky factorization
+/** Wssmp class for Clp Cholesky factorization
 
 */
 class ClpMatrixBase;
-class ClpCholeskyDense : public ClpCholeskyBase {
+class ClpCholeskyWssmp : public ClpCholeskyBase {
   
 public:
    /**@name Virtual methods that the derived classes provides  */
@@ -28,13 +28,13 @@ public:
   /**@name Constructors, destructor */
   //@{
   /** Default constructor. */
-  ClpCholeskyDense();
+  ClpCholeskyWssmp();
   /** Destructor  */
-  virtual ~ClpCholeskyDense();
+  virtual ~ClpCholeskyWssmp();
   // Copy
-  ClpCholeskyDense(const ClpCholeskyDense&);
+  ClpCholeskyWssmp(const ClpCholeskyWssmp&);
   // Assignment
-  ClpCholeskyDense& operator=(const ClpCholeskyDense&);
+  ClpCholeskyWssmp& operator=(const ClpCholeskyWssmp&);
   /// Clone
   virtual ClpCholeskyBase * clone() const ;
   //@}
@@ -43,8 +43,18 @@ public:
 private:
   /**@name Data members */
    //@{
-  /// ADAT stored in full
-  double * work_;
+  /// sparseFactor.
+  double * sparseFactor_;
+  /// choleskyStart
+  CoinBigIndex * choleskyStart_;
+  /// choleskyRow
+  int * choleskyRow_;
+  /// sizeFactor.
+  CoinBigIndex sizeFactor_;
+  /// integerParameters
+  int integerParameters_[64];
+  /// doubleParameters;
+  double doubleParameters_[64];
   /// Row copy of matrix
   ClpMatrixBase * rowCopy_;
   //@}

@@ -165,6 +165,19 @@ public:
   /// Sum of primal infeasibilities
   inline double sumPrimalInfeasibilities() const 
           { return sumPrimalInfeasibilities_;} ;
+  /// diagonalNorm
+  inline double diagonalNorm() const
+  { return diagonalNorm_;};
+  /// linearPerturbation
+  inline double linearPerturbation() const
+  { return linearPerturbation_;};
+  inline void setLinearPerturbation(double value)
+  { linearPerturbation_=value;};
+  /// diagonalPerturbation
+  inline double diagonalPerturbation() const
+  { return diagonalPerturbation_;};
+  inline void setDiagonalPerturbation(double value)
+  { diagonalPerturbation_=value;};
   //@}
 
   /**@name most useful gets and sets */
@@ -180,6 +193,8 @@ public:
   { return maximumBarrierIterations_;};
   inline void setMaximumBarrierIterations(int value)
   { maximumBarrierIterations_=value;};
+  /// Set cholesky (and delete present one)
+  void setCholesky(ClpCholeskyBase * cholesky);
   //@}
 
   protected:

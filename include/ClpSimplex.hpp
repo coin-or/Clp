@@ -1029,7 +1029,7 @@ public:
   double infeasibility_[CLP_PROGRESS];
 #define CLP_CYCLE 12
   /// For cycle checking
-  double obj_[CLP_CYCLE];
+  //double obj_[CLP_CYCLE];
   int in_[CLP_CYCLE];
   int out_[CLP_CYCLE];
   char way_[CLP_CYCLE];

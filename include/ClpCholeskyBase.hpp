@@ -23,7 +23,7 @@ public:
   /** Factorize - filling in rowsDropped and returning number dropped */
   virtual int factorize(const double * diagonal, int * rowsDropped) =0;
   /** Uses factorization to solve. */
-  virtual void solve (double * region) const = 0;
+  virtual void solve (double * region) = 0;
   //@}
 
   /**@name Gets */
