@@ -71,7 +71,7 @@ const PresolveAction *implied_free_action::presolve(PresolveMatrix *prob,
 
   const char *integerType = prob->integerType_;
 
-  const double tol = ZTOLDP;
+  const double tol = prob->feasibilityTolerance_;
 
   int nbounds = 0;
 
@@ -330,8 +330,12 @@ const PresolveAction *implied_free_action::presolve(PresolveMatrix *prob,
   delete[]tclo;
   delete[]tcup;
 
-  if (isolated_row != -1)
-    next = isolated_constraint_action::presolve(prob, isolated_row, next);
+  if (isolated_row != -1) {
+    const PresolveAction *nextX = isolated_constraint_action::presolve(prob, 
+						isolated_row, next);
+    if (nextX)
+      next = nextX; // may fail
+  }
 
   // try more complex ones
   if (fill_level)

@@ -469,7 +469,7 @@ const PresolveAction *subst_constraint_action::presolve(PresolveMatrix *prob,
   presolvehlink *clink = prob->clink_;
   presolvehlink *rlink = prob->rlink_;
 
-  const double tol = ZTOLDP;
+  const double tol = prob->feasibilityTolerance_;
 
   action *actions	= new action [ncols];
   int nactions = 0;
@@ -1124,7 +1124,7 @@ void subst_constraint_action::postsolve(PostsolveMatrix *prob) const
     const double *rowelsy=NULL;
     double coeffy=0.0;
 
-    double rloy;
+    double rloy=1.0e50;
     {
       int nel = 0;
       for (int i=0; i<nincoly; ++i) {
@@ -1138,6 +1138,7 @@ void subst_constraint_action::postsolve(PostsolveMatrix *prob) const
 
 	  coeffy = coeffxs[i];
 	  rloy = rlo[row];
+
 	}
 	nel += ninrowxs[i];
       }

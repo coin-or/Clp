@@ -48,13 +48,21 @@ Presolve::Presolve() :
 
 Presolve::~Presolve()
 {
-  const PresolveAction *paction = paction_;
+  gutsOfDestroy();
+}
+// Gets rid of presolve actions (e.g.when infeasible)
+void 
+Presolve::gutsOfDestroy()
+{
+ const PresolveAction *paction = paction_;
   while (paction) {
     const PresolveAction *next = paction->next;
     delete paction;
     paction = next;
   }
-  delete originalColumn_;
+  delete [] originalColumn_;
+  paction_=NULL;
+  originalColumn_=NULL;
 }
 
 #if 0
@@ -214,87 +222,102 @@ Presolve::presolvedModel(ClpSimplex & si,
 
     paction_ = presolve(&prob);
 
-    result =0; // do infeasible later
-    
-    prob.update_model(*presolvedModel_, nrows_, ncols_, nelems_);
-    // copy status and solution
-    memcpy(presolvedModel_->primalColumnSolution(),
-	   prob.sol_,prob.ncols_*sizeof(double));
-    memcpy(presolvedModel_->primalRowSolution(),
-      prob.acts_,prob.nrows_*sizeof(double));
-    memcpy(presolvedModel_->statusArray(),
-      prob.colstat_,prob.ncols_*sizeof(unsigned char));
-    memcpy(presolvedModel_->statusArray()+prob.ncols_,
-      prob.rowstat_,prob.nrows_*sizeof(unsigned char));
-    delete [] prob.sol_;
-    delete [] prob.acts_;
-    delete [] prob.colstat_;
-    prob.sol_=NULL;
-    prob.acts_=NULL;
-    prob.colstat_=NULL;
+    result =0; 
 
-    int ncolsNow = presolvedModel_->getNumCols();
-    memcpy(originalColumn_,prob.originalColumn_,ncolsNow*sizeof(int));
-    // now clean up integer variables.  This can modify original
-    int i;
-    const char * information = presolvedModel_->integerInformation();
-    if (information) {
-      int numberChanges=0;
-      double * lower0 = originalModel_->columnLower();
-      double * upper0 = originalModel_->columnUpper();
-      double * lower = presolvedModel_->columnLower();
-      double * upper = presolvedModel_->columnUpper();
-      for (i=0;i<ncolsNow;i++) {
-	if (!information[i])
-	  continue;
-	int iOriginal = originalColumn_[i];
-	double lowerValue0 = lower0[iOriginal];
-	double upperValue0 = upper0[iOriginal];
-	double lowerValue = ceil(lower[i]-1.0e-5);
-	double upperValue = floor(upper[i]+1.0e-5);
-	lower[i]=lowerValue;
-	upper[i]=upperValue;
-	if (lowerValue>upperValue) {
-	  numberChanges++;
-	  presolvedModel_->messageHandler()->message(CLP_PRESOLVE_COLINFEAS,
-					     presolvedModel_->messages())
-					       <<iOriginal
-					       <<lowerValue
-					       <<upperValue
-					       <<CoinMessageEol;
-	  result=1;
-	} else {
-	  if (lowerValue>lowerValue0+1.0e-8) {
-	    lower0[iOriginal] = lowerValue;
+    if (prob.status_==0&&paction_) {
+      // feasible
+    
+      prob.update_model(*presolvedModel_, nrows_, ncols_, nelems_);
+      // copy status and solution
+      memcpy(presolvedModel_->primalColumnSolution(),
+	     prob.sol_,prob.ncols_*sizeof(double));
+      memcpy(presolvedModel_->primalRowSolution(),
+	     prob.acts_,prob.nrows_*sizeof(double));
+      memcpy(presolvedModel_->statusArray(),
+	     prob.colstat_,prob.ncols_*sizeof(unsigned char));
+      memcpy(presolvedModel_->statusArray()+prob.ncols_,
+	     prob.rowstat_,prob.nrows_*sizeof(unsigned char));
+      delete [] prob.sol_;
+      delete [] prob.acts_;
+      delete [] prob.colstat_;
+      prob.sol_=NULL;
+      prob.acts_=NULL;
+      prob.colstat_=NULL;
+      
+      int ncolsNow = presolvedModel_->getNumCols();
+      memcpy(originalColumn_,prob.originalColumn_,ncolsNow*sizeof(int));
+      // now clean up integer variables.  This can modify original
+      int i;
+      const char * information = presolvedModel_->integerInformation();
+      if (information) {
+	int numberChanges=0;
+	double * lower0 = originalModel_->columnLower();
+	double * upper0 = originalModel_->columnUpper();
+	double * lower = presolvedModel_->columnLower();
+	double * upper = presolvedModel_->columnUpper();
+	for (i=0;i<ncolsNow;i++) {
+	  if (!information[i])
+	    continue;
+	  int iOriginal = originalColumn_[i];
+	  double lowerValue0 = lower0[iOriginal];
+	  double upperValue0 = upper0[iOriginal];
+	  double lowerValue = ceil(lower[i]-1.0e-5);
+	  double upperValue = floor(upper[i]+1.0e-5);
+	  lower[i]=lowerValue;
+	  upper[i]=upperValue;
+	  if (lowerValue>upperValue) {
 	    numberChanges++;
-	  }
-	  if (upperValue<upperValue0-1.0e-8) {
-	    upper0[iOriginal] = upperValue;
-	    numberChanges++;
-	  }
-	}	  
-      }
-      if (numberChanges) {
+	    presolvedModel_->messageHandler()->message(CLP_PRESOLVE_COLINFEAS,
+						       presolvedModel_->messages())
+							 <<iOriginal
+							 <<lowerValue
+							 <<upperValue
+							 <<CoinMessageEol;
+	    result=1;
+	  } else {
+	    if (lowerValue>lowerValue0+1.0e-8) {
+	      lower0[iOriginal] = lowerValue;
+	      numberChanges++;
+	    }
+	    if (upperValue<upperValue0-1.0e-8) {
+	      upper0[iOriginal] = upperValue;
+	      numberChanges++;
+	    }
+	  }	  
+	}
+	if (numberChanges) {
 	  presolvedModel_->messageHandler()->message(CLP_PRESOLVE_INTEGERMODS,
-					     presolvedModel_->messages())
-					       <<numberChanges
-					       <<CoinMessageEol;
-	if (!result) {
-	  result = -1; // round again
+						     presolvedModel_->messages())
+						       <<numberChanges
+						       <<CoinMessageEol;
+	  if (!result) {
+	    result = -1; // round again
+	  }
 	}
       }
+    } else {
+      // infeasible
+      delete [] prob.sol_;
+      delete [] prob.acts_;
+      delete [] prob.colstat_;
+      result=1;
     }
   }
-  int nrowsAfter = presolvedModel_->getNumRows();
-  int ncolsAfter = presolvedModel_->getNumCols();
-  int nelsAfter = presolvedModel_->getNumElements();
-  presolvedModel_->messageHandler()->message(CLP_PRESOLVE_STATS,
-				     presolvedModel_->messages())
-				       <<nrowsAfter<< -(nrows_ - nrowsAfter)
-				       << ncolsAfter<< -(ncols_ - ncolsAfter)
-				       <<nelsAfter<< -(nelems_ - nelsAfter)
-				       <<CoinMessageEol;
-
+  if (!result) {
+    int nrowsAfter = presolvedModel_->getNumRows();
+    int ncolsAfter = presolvedModel_->getNumCols();
+    int nelsAfter = presolvedModel_->getNumElements();
+    presolvedModel_->messageHandler()->message(CLP_PRESOLVE_STATS,
+					       presolvedModel_->messages())
+						 <<nrowsAfter<< -(nrows_ - nrowsAfter)
+						 << ncolsAfter<< -(ncols_ - ncolsAfter)
+						 <<nelsAfter<< -(nelems_ - nelsAfter)
+						 <<CoinMessageEol;
+  } else {
+    gutsOfDestroy();
+    delete presolvedModel_;
+    presolvedModel_=NULL;
+  }
   return presolvedModel_;
 }
 
@@ -394,6 +417,63 @@ static int ATOI(const char *name)
 #endif
 }
 
+#ifdef	DEBUG_PRESOLVE
+void check_sol(PresolveMatrix *prob)
+{
+  double *colels	= prob->colels_;
+  int *hrow		= prob->hrow_;
+  int *mcstrt		= prob->mcstrt_;
+  int *hincol		= prob->hincol_;
+  int ncols		= prob->ncols_;
+
+
+  double * csol = prob->sol_;
+  double * clo = prob->clo_;
+  double * cup = prob->cup_;
+  int nrows = prob->nrows_;
+  double * rlo = prob->rlo_;
+  double * rup = prob->rup_;
+
+  int colx;
+
+  double * rsol = new double[nrows];
+  memset(rsol,0,nrows*sizeof(double));
+
+  for (colx = 0; colx < ncols; ++colx) {
+    if (1) {
+      int k = mcstrt[colx];
+      int nx = hincol[colx];
+      double solutionValue = csol[colx];
+      for (int i=0; i<nx; ++i) {
+	int row = hrow[k];
+	double coeff = colels[k];
+	k++;
+	rsol[row] += solutionValue*coeff;
+      }
+      if (csol[colx]<clo[colx]-1.0e-4) {
+	printf("low CSOL:  %d  - %g %g %g\n",
+		   colx, clo[colx], csol[colx], cup[colx]);
+      } else if (csol[colx]>cup[colx]+1.0e-4) {
+	printf("high CSOL:  %d  - %g %g %g\n",
+		   colx, clo[colx], csol[colx], cup[colx]);
+      } 
+    }
+  }
+  int rowx;
+  for (rowx = 0; rowx < nrows; ++rowx) {
+    if (1) {
+      if (rsol[rowx]<rlo[rowx]-1.0e-4) {
+	printf("low RSOL:  %d - %g %g %g\n",
+		   rowx,  rlo[rowx], rsol[rowx], rup[rowx]);
+      } else if (rsol[rowx]>rup[rowx]+1.0e-4) {
+	printf("high RSOL:  %d - %g %g %g\n",
+		   rowx,  rlo[rowx], rsol[rowx], rup[rowx]);
+      } 
+    }
+  }
+  delete [] rsol;
+}
+#endif
 // This is the presolve loop.
 // It is a separate virtual function so that it can be easily
 // customized by subclassing Presolve.
@@ -478,6 +558,10 @@ const PresolveAction *Presolve::presolve(PresolveMatrix *prob)
 	}
 	
 	
+#if	DEBUG_PRESOLVE
+	check_sol(prob);
+#endif
+
 #if	CHECK_CONSISTENCY
 	presolve_links_ok(prob->rlink_, prob->mrstrt_, prob->hinrow_, 
 			  prob->nrows_);
@@ -603,8 +687,8 @@ const PresolveAction *Presolve::presolve(PresolveMatrix *prob)
 	  presolvedModel_->messageHandler()->message(CLP_PRESOLVE_INFEASUNBOUND,
 					     presolvedModel_->messages())
 					       <<CoinMessageEol;
-    delete paction_;
-    paction_=NULL;
+    // get rid of data
+    gutsOfDestroy();
   }
   return (paction_);
 }

@@ -1382,8 +1382,6 @@ ClpSimplex::gutsOfDelete(int type)
     dualRowPivot_ = NULL;
     delete primalColumnPivot_;
     primalColumnPivot_ = NULL;
-    delete [] status_;
-    status_=NULL;
   } else {
     // delete any size information in methods
     if (type>1) {

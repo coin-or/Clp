@@ -361,10 +361,7 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
     columnUpper_ = ClpCopyOfArray ( rhs.columnUpper_, numberColumns_ );
     objective_ = ClpCopyOfArray ( rhs.objective_, numberColumns_ );
     rowObjective_ = ClpCopyOfArray ( rhs.rowObjective_, numberRows_ );
-    if (rhs.status_) 
-      status_ = ClpCopyOfArray( rhs.status_,numberColumns_+numberRows_);
-    else
-      status_ = NULL;
+    status_ = ClpCopyOfArray( rhs.status_,numberColumns_+numberRows_);
     ray_ = NULL;
     if (problemStatus_==1)
       ray_ = ClpCopyOfArray (rhs.ray_,numberRows_);

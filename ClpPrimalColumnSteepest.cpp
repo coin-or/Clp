@@ -628,8 +628,11 @@ ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model,int mode)
 	// restore
 	memcpy(weights_,savedWeights_,(numberRows+numberColumns)*
 	       sizeof(double));
-	pivotSequence_= savedPivotSequence_;
-	model_->setSequenceOut(savedSequenceOut_); 
+	// was - but I think should not be
+	//pivotSequence_= savedPivotSequence_;
+	//model_->setSequenceOut(savedSequenceOut_); 
+	pivotSequence_= -1;
+	model_->setSequenceOut(-1); 
       }
     }
     state_=0;

@@ -484,7 +484,7 @@ static void implied_bounds1(PresolveMatrix * prob, const double *rowels,
 				int nrows,
 				double *ilbound, double *iubound)
 {
-  const double tol = ZTOLDP;
+  const double tol = prob->feasibilityTolerance_;
 
   for (int irow=0; irow<nrows; irow++) {
     int krs = mrstrt[irow];

@@ -46,13 +46,20 @@ const PresolveAction *isolated_constraint_action::presolve(PresolveMatrix *prob,
   printf("\n");
 #endif
 
-  if (rlo[irow] != 0.0 || rup[irow] != 0.0)
-    DIE("can't handle non-trivial isolated constraints for now\n");
-
+  if (rlo[irow] != 0.0 || rup[irow] != 0.0) {
+#if	DEBUG_PRESOLVE
+    printf("can't handle non-trivial isolated constraints for now\n");
+#endif
+    return NULL;
+  }
   for (int k = krs; k<kre; ++k) {
     int jcol = hcol[k];
-    if (clo[jcol] != 0.0 && cup[jcol] != 0.0)
-      DIE("can't handle non-trivial isolated constraints for now\n");
+    if (clo[jcol] != 0.0 && cup[jcol] != 0.0) {
+#if	DEBUG_PRESOLVE
+      printf("can't handle non-trivial isolated constraints for now\n");
+#endif
+    return NULL;
+    }
   }
 
   int nc = hinrow[irow];

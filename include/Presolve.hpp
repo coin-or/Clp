@@ -131,5 +131,7 @@ protected:
   /// if you want to add code to test for consistency
   /// while debugging new presolve techniques.
   virtual void postsolve(PostsolveMatrix &prob);
+  /// Gets rid of presolve actions (e.g.when infeasible)
+  void gutsOfDestroy();
 };
 #endif
