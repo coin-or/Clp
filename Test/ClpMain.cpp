@@ -13,7 +13,7 @@
 
 #include "CoinPragma.hpp"
 #include "CoinHelperFunctions.hpp"
-#define CLPVERSION "0.99.6"
+#define CLPVERSION "0.99.7"
 
 #include "CoinMpsIO.hpp"
 
@@ -49,10 +49,10 @@ static double totalTime=0.0;
 #undef NDEBUG
 #endif
 
-int mainTest (int argc, const char *argv[],bool doDual,
+int mainTest (int argc, const char *argv[],int algorithm,
 	      ClpSimplex empty, bool doPresolve,int doIdiot);
 enum ClpParameterType {
-  GENERALQUERY=-100,
+  GENERALQUERY=-100,FULLGENERALQUERY,
   
   DUALTOLERANCE=1,PRIMALTOLERANCE,DUALBOUND,PRIMALWEIGHT,MAXTIME,OBJSCALE,
   RHSSCALE,
@@ -65,7 +65,7 @@ enum ClpParameterType {
   
   DIRECTORY=301,IMPORT,EXPORT,RESTORE,SAVE,DUALSIMPLEX,PRIMALSIMPLEX,
   MAXIMIZE,MINIMIZE,EXIT,STDIN,UNITTEST,NETLIB_DUAL,NETLIB_PRIMAL,SOLUTION,
-  TIGHTEN,FAKEBOUND,HELP,PLUSMINUS,NETWORK,ALLSLACK,REVERSE,BARRIER,
+  TIGHTEN,FAKEBOUND,HELP,PLUSMINUS,NETWORK,ALLSLACK,REVERSE,BARRIER,NETLIB_BARRIER,
 
   INVALID=1000
 };
@@ -896,6 +896,8 @@ int main (int argc, const char *argv[])
     parameters[numberParameters++]=
       ClpItem("?","For help",GENERALQUERY,-1,false);
     parameters[numberParameters++]=
+      ClpItem("???","For help",FULLGENERALQUERY,-1,false);
+    parameters[numberParameters++]=
       ClpItem("-","From stdin",
 	      STDIN,299,false);
     parameters[numberParameters++]=
@@ -921,9 +923,8 @@ int main (int argc, const char *argv[])
     parameters[numberParameters-1].setLonghelp
       (
        "This command solves the current model using the  primal dual predictor \
-corrector algorithm.  This is not a sophisticated version just something JJF\
-knocked up\
-** another slight drawback (early December) is that it does not work"
+corrector algorithm.  This is not a sophisticated version just something JJF \
+knocked up"
 
        ); 
     parameters[numberParameters++]=
@@ -1149,6 +1150,16 @@ but this program turns this off to make it look more friendly.  It can be useful
        "This exercises the unit test for clp and then solves the netlib test set using dual.\
 The user can set options before e.g. clp -presolve off -netlib"
        ); 
+#ifdef REAL_BARRIER
+    parameters[numberParameters++]=
+      ClpItem("netlibB!arrier","Solve entire netlib test set with barrier",
+	      NETLIB_BARRIER);
+    parameters[numberParameters-1].setLonghelp
+      (
+       "This exercises the unit test for clp and then solves the netlib test set using barrier.\
+The user can set options before e.g. clp -presolve off -netlib"
+       ); 
+#endif
     parameters[numberParameters++]=
       ClpItem("netlibP!rimal","Solve entire netlib test set (primal)",
 	      NETLIB_PRIMAL);
@@ -1443,7 +1454,7 @@ costs this much to be infeasible",
       
       // see if ? at end
       int numberQuery=0;
-      if (field!="?") {
+      if (field!="?"&&field!="???") {
 	int length = field.length();
 	int i;
 	for (i=length-1;i>0;i--) {
@@ -1499,6 +1510,36 @@ costs this much to be infeasible",
 	    for ( iParam=0; iParam<numberParameters; iParam++ ) {
 	      int type = parameters[iParam].indexNumber();
 	      if (parameters[iParam].displayThis()&&type>=limits[iType]
+		  &&type<limits[iType+1]) {
+		if (!across)
+		  std::cout<<"  ";
+		std::cout<<parameters[iParam].matchName()<<"  ";
+		across++;
+		if (across==maxAcross) {
+		  std::cout<<std::endl;
+		  across=0;
+		}
+	      }
+	    }
+	    if (across)
+	      std::cout<<std::endl;
+	  }
+	} else if (type==FULLGENERALQUERY) {
+	  std::cout<<"Full list of ommands is:"<<std::endl;
+	  int maxAcross=5;
+	  int limits[]={1,101,201,301,401};
+	  std::vector<std::string> types;
+	  types.push_back("Double parameters:");
+	  types.push_back("Int parameters:");
+	  types.push_back("Keyword parameters and others:");
+	  types.push_back("Actions:");
+	  int iType;
+	  for (iType=0;iType<4;iType++) {
+	    int across=0;
+	    std::cout<<types[iType]<<std::endl;
+	    for ( iParam=0; iParam<numberParameters; iParam++ ) {
+	      int type = parameters[iParam].indexNumber();
+	      if (type>=limits[iType]
 		  &&type<limits[iType+1]) {
 		if (!across)
 		  std::cout<<"  ";
@@ -2129,6 +2170,7 @@ costs this much to be infeasible",
 	    read_mode=-1;
 	    break;
 	  case NETLIB_DUAL:
+	  case NETLIB_BARRIER:
 	  case NETLIB_PRIMAL:
 	    {
 	      // create fields for unitTest
@@ -2141,11 +2183,18 @@ costs this much to be infeasible",
 		fields[3]=directory.c_str();
 		nFields=4;
 	      }
-	      if (type==NETLIB_DUAL)
+	      int algorithm;
+	      if (type==NETLIB_DUAL) {
 		std::cerr<<"Doing netlib with dual agorithm"<<std::endl;
-	      else
+		algorithm =0;
+	      } else if (type==NETLIB_BARRIER) {
+		std::cerr<<"Doing netlib with barrier agorithm"<<std::endl;
+		algorithm =2;
+	      } else {
 		std::cerr<<"Doing netlib with primal agorithm"<<std::endl;
-	      mainTest(nFields,fields,(type==NETLIB_DUAL),models[iModel],
+		algorithm=1;
+	      }
+	      mainTest(nFields,fields,algorithm,models[iModel],
 		       (preSolve!=0),doIdiot);
 	    }
 	    break;

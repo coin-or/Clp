@@ -3487,6 +3487,226 @@ ClpSimplex::quadraticPrimal(int phase)
 {
   return ((ClpSimplexPrimalQuadratic *) this)->primalQuadratic(phase);
 }
+#include "ClpPredictorCorrector.hpp"
+#ifdef REAL_BARRIER
+#include "ClpCholeskyWssmp.hpp"
+#include "ClpCholeskyWssmpKKT.hpp"
+//#include "ClpCholeskyTaucs.hpp"
+#endif
+#include "ClpPresolve.hpp"
+/* Solves using barrier (assumes you have good cholesky factor code).
+   Does crossover to simplex if asked*/
+int 
+ClpSimplex::barrier(bool crossover)
+{
+  ClpSimplex * model2 = this;
+  int savePerturbation=perturbation_;
+  ClpInterior barrier;
+  barrier.borrowModel(*model2);
+#ifdef REAL_BARRIER
+  // uncomment this if you have Anshul Gupta's wsmp package
+  ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp(max(100,model2->numberRows()/10));
+  //ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp();
+  //ClpCholeskyWssmpKKT * cholesky = new ClpCholeskyWssmpKKT(max(100,model2->numberRows()/10));
+  // uncomment this if you have Sivan Toledo's Taucs package
+  //ClpCholeskyTaucs * cholesky = new ClpCholeskyTaucs();
+  barrier.setCholesky(cholesky);
+#endif
+  int numberRows = model2->numberRows();
+  int numberColumns = model2->numberColumns();
+  int saveMaxIts = model2->maximumIterations();
+  if (saveMaxIts<1000) {
+    barrier.setMaximumBarrierIterations(saveMaxIts);
+    model2->setMaximumIterations(1000000);
+  }
+  barrier.primalDual();
+  int barrierStatus=barrier.status();
+  double gap = barrier.complementarityGap();
+  // get which variables are fixed
+  double * saveLower=NULL;
+  double * saveUpper=NULL;
+  ClpPresolve pinfo2;
+  ClpSimplex * saveModel2=NULL;
+  int numberFixed = barrier.numberFixed();
+  if (numberFixed*20>barrier.numberRows()&&numberFixed>5000&&crossover) {
+    // may as well do presolve
+    int numberRows = barrier.numberRows();
+    int numberColumns = barrier.numberColumns();
+    int numberTotal = numberRows+numberColumns;
+    saveLower = new double [numberTotal];
+    saveUpper = new double [numberTotal];
+    memcpy(saveLower,barrier.columnLower(),numberColumns*sizeof(double));
+    memcpy(saveLower+numberColumns,barrier.rowLower(),numberRows*sizeof(double));
+    memcpy(saveUpper,barrier.columnUpper(),numberColumns*sizeof(double));
+    memcpy(saveUpper+numberColumns,barrier.rowUpper(),numberRows*sizeof(double));
+    barrier.fixFixed();
+    saveModel2=model2;
+  }
+  barrier.returnModel(*model2);
+  double * rowPrimal = new double [numberRows];
+  double * columnPrimal = new double [numberColumns];
+  double * rowDual = new double [numberRows];
+  double * columnDual = new double [numberColumns];
+  // move solutions other way
+  CoinMemcpyN(model2->primalRowSolution(),
+	      numberRows,rowPrimal);
+  CoinMemcpyN(model2->dualRowSolution(),
+	      numberRows,rowDual);
+  CoinMemcpyN(model2->primalColumnSolution(),
+	      numberColumns,columnPrimal);
+  CoinMemcpyN(model2->dualColumnSolution(),
+	      numberColumns,columnDual);
+  if (saveModel2) {
+    // do presolve
+    model2 = pinfo2.presolvedModel(*model2,1.0e-8,
+				   false,5,true);
+  }
+  if (barrierStatus<4&&crossover) {
+    // make sure no status left
+    model2->createStatus();
+    // solve
+    model2->setPerturbation(100);
+    // throw some into basis 
+    {
+      int numberRows = model2->numberRows();
+      int numberColumns = model2->numberColumns();
+      double * dsort = new double[numberColumns];
+      int * sort = new int[numberColumns];
+      int n=0;
+      const double * columnLower = model2->columnLower();
+      const double * columnUpper = model2->columnUpper();
+      const double * primalSolution = model2->primalColumnSolution();
+      double tolerance = 10.0*primalTolerance_;
+      int i;
+      for ( i=0;i<numberRows;i++) 
+	model2->setRowStatus(i,superBasic);
+      for ( i=0;i<numberColumns;i++) {
+	double distance = min(columnUpper[i]-primalSolution[i],
+			      primalSolution[i]-columnLower[i]);
+	if (distance>tolerance) {
+	  dsort[n]=-distance;
+	  sort[n++]=i;
+	  model2->setStatus(i,superBasic);
+	} else if (distance>primalTolerance_) {
+	  model2->setStatus(i,superBasic);
+	} else if (primalSolution[i]<=columnLower[i]+primalTolerance_) {
+	  model2->setStatus(i,atLowerBound);
+	} else {
+	  model2->setStatus(i,atUpperBound);
+	}
+      }
+      CoinSort_2(dsort,dsort+n,sort);
+      n = min(numberRows,n);
+      for ( i=0;i<n;i++) {
+	int iColumn = sort[i];
+	model2->setStatus(iColumn,basic);
+      }
+      delete [] sort;
+      delete [] dsort;
+    }
+    if (gap<1.0e-3*((double) (numberRows+numberColumns))) {
+      int numberRows = model2->numberRows();
+      int numberColumns = model2->numberColumns();
+      // just primal values pass
+      model2->primal(2);
+      // save primal solution and copy back dual
+      CoinMemcpyN(model2->primalRowSolution(),
+		  numberRows,rowPrimal);
+      CoinMemcpyN(rowDual,
+		  numberRows,model2->dualRowSolution());
+      CoinMemcpyN(model2->primalColumnSolution(),
+		  numberColumns,columnPrimal);
+      CoinMemcpyN(columnDual,
+		  numberColumns,model2->dualColumnSolution());
+      //model2->primal(1);
+      // clean up reduced costs and flag variables
+      {
+	double * dj = model2->dualColumnSolution();
+	double * cost = model2->objective();
+	double * saveCost = new double[numberColumns];
+	memcpy(saveCost,cost,numberColumns*sizeof(double));
+	double * saveLower = new double[numberColumns];
+	double * lower = model2->columnLower();
+	memcpy(saveLower,lower,numberColumns*sizeof(double));
+	double * saveUpper = new double[numberColumns];
+	double * upper = model2->columnUpper();
+	memcpy(saveUpper,upper,numberColumns*sizeof(double));
+	int i;
+	double tolerance = 10.0*dualTolerance_;
+	for ( i=0;i<numberColumns;i++) {
+	  if (model2->getStatus(i)==basic) {
+	    dj[i]=0.0;
+	  } else if (model2->getStatus(i)==atLowerBound) {
+	    if (optimizationDirection_*dj[i]<tolerance) {
+	      if (optimizationDirection_*dj[i]<0.0) {
+		//if (dj[i]<-1.0e-3)
+		//printf("bad dj at lb %d %g\n",i,dj[i]);
+		cost[i] -= dj[i];
+		dj[i]=0.0;
+	      }
+	    } else {
+	      upper[i]=lower[i];
+	    }
+	  } else if (model2->getStatus(i)==atUpperBound) {
+	    if (optimizationDirection_*dj[i]>tolerance) {
+	      if (optimizationDirection_*dj[i]>0.0) {
+		//if (dj[i]>1.0e-3)
+		//printf("bad dj at ub %d %g\n",i,dj[i]);
+		cost[i] -= dj[i];
+		dj[i]=0.0;
+	      }
+	    } else {
+	      lower[i]=upper[i];
+	    }
+	  }
+	}
+	// just dual values pass
+	//model2->setLogLevel(63);
+	//model2->setFactorizationFrequency(1);
+	model2->dual(2);
+	memcpy(cost,saveCost,numberColumns*sizeof(double));
+	delete [] saveCost;
+	memcpy(lower,saveLower,numberColumns*sizeof(double));
+	delete [] saveLower;
+	memcpy(upper,saveUpper,numberColumns*sizeof(double));
+	delete [] saveUpper;
+      }
+      // and finish
+      // move solutions
+      CoinMemcpyN(rowPrimal,
+		  numberRows,model2->primalRowSolution());
+      CoinMemcpyN(columnPrimal,
+		  numberColumns,model2->primalColumnSolution());
+    }
+    model2->primal(1);
+  } else if (barrierStatus==4&&crossover) {
+    // memory problems
+    model2->setPerturbation(savePerturbation);
+    model2->createStatus();
+    model2->dual();
+  }
+  model2->setMaximumIterations(saveMaxIts);
+  delete [] rowPrimal;
+  delete [] columnPrimal;
+  delete [] rowDual;
+  delete [] columnDual;
+  if (saveLower) {
+    pinfo2.postsolve(true);
+    delete model2;
+    model2=saveModel2;
+    int numberRows = model2->numberRows();
+    int numberColumns = model2->numberColumns();
+    memcpy(model2->columnLower(),saveLower,numberColumns*sizeof(double));
+    memcpy(model2->rowLower(),saveLower+numberColumns,numberRows*sizeof(double));
+    delete [] saveLower;
+    memcpy(model2->columnUpper(),saveUpper,numberColumns*sizeof(double));
+    memcpy(model2->rowUpper(),saveUpper+numberColumns,numberRows*sizeof(double));
+    delete [] saveUpper;
+    model2->primal(1);
+  }
+  model2->setPerturbation(savePerturbation);
+  return model2->status();
+}
 /* For strong branching.  On input lower and upper are new bounds
    while on output they are objective function values (>1.0e50 infeasible).
    Return code is 0 if nothing interesting, -1 if infeasible both

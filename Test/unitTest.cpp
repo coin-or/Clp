@@ -55,7 +55,7 @@ void testingMessage( const char * const msg );
 //
 // All parameters are optional.
 //----------------------------------------------------------------
-int mainTest (int argc, const char *argv[],bool doDual,
+int mainTest (int argc, const char *argv[],int algorithm,
 	      ClpSimplex empty, bool doPresolve,int doIdiot)
 {
   int i;
@@ -274,7 +274,7 @@ int mainTest (int argc, const char *argv[],bool doDual,
 	if (model2->factorization()->maximumPivots()==200&&
 	    model2->numberRows()>-5000)
 	  model2->factorization()->maximumPivots(100+model2->numberRows()/100);
-	if (doDual) {
+	if (algorithm==0) {
 	  // faster if bounds tightened
 	  int numberInfeasibilities = model2->tightenPrimalBounds();
 	  if (numberInfeasibilities)
@@ -283,6 +283,8 @@ int mainTest (int argc, const char *argv[],bool doDual,
 	  //if (doIdiot<0)
 	  //model2->crash(1000,1);
 	  model2->dual();
+	} else if (algorithm==2) {
+	  model2->barrier();
 	} else {
 	  if (doIdiot>0) {
 	    Idiot info(*model2);
@@ -321,10 +323,12 @@ int mainTest (int argc, const char *argv[],bool doDual,
 	  delete model2;
 	}
       } else {
-	if (doDual) {
+	if (algorithm==0) {
 	  if (doIdiot<0)
 	    solution.crash(1000,1);
 	  solution.dual();
+	} else if (algorithm==2) {
+	  solution.barrier();
 	} else {
 	  if (doIdiot>0) {
 	    Idiot info(solution);

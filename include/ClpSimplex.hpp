@@ -177,6 +177,9 @@ public:
   int quadraticSLP(int numberPasses,double deltaTolerance);
   /// Solves quadratic using Dantzig's algorithm - primal
   int quadraticPrimal(int phase=2);
+  /** Solves using barrier (assumes you have good cholesky factor code).
+      Does crossover to simplex if asked*/
+  int barrier(bool crossover=true);
   /** Dual ranging.
       This computes increase/decrease in cost for each given variable and corresponding
       sequence numbers which would change basis.  Sequence numbers are 0..numberColumns 
