@@ -2505,7 +2505,8 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
       numberPrimalInfeasibilities_ = 0;
       sumPrimalInfeasibilities_ = 0.0;
     }
-    if (dualFeasible()||problemStatus_==-4||(primalFeasible()&&!numberDualInfeasibilitiesWithoutFree_)) {
+    //if (dualFeasible()||problemStatus_==-4||(primalFeasible()&&!numberDualInfeasibilitiesWithoutFree_)) {
+    if (dualFeasible()||problemStatus_==-4) {
       if (primalFeasible()) {
 	// may be optimal - or may be bounds are wrong
 	handler_->message(CLP_DUAL_BOUNDS,messages_)
