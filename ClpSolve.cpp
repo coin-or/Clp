@@ -236,10 +236,13 @@ ClpSimplex::initialSolve(ClpSolve & options)
     // We may be better off using original (but if dual leave because of bounds)
     if (presolve!=ClpSolve::presolveOff&&
 	numberRows_<1.01*model2->numberRows_&&numberColumns_<1.01*model2->numberColumns_
-	&&method!=ClpSolve::useDual&&model2!=this) {
-      delete model2;
-      model2 = this;
-      presolve=ClpSolve::presolveOff;
+	&&model2!=this) {
+      if(method!=ClpSolve::useDual||
+	 (numberRows_==model2->numberRows_&&numberColumns_==model2->numberColumns_)) {
+	delete model2;
+	model2 = this;
+	presolve=ClpSolve::presolveOff;
+      }
     }
   }
   if (interrupt)

@@ -129,6 +129,9 @@ ClpPresolve::originalModel() const
 void 
 ClpPresolve::postsolve(bool updateStatus)
 {
+  // Return at once if no presolved model
+  if (!presolvedModel_)
+    return;
   // Messages
   CoinMessages messages = CoinMessage(presolvedModel_->messages().language());
   if (!presolvedModel_->isProvenOptimal()) {
@@ -854,33 +857,35 @@ static inline double getTolerance(const ClpSimplex  *si, ClpDblParam key)
 CoinPrePostsolveMatrix::CoinPrePostsolveMatrix(const ClpSimplex * si,
 					     int ncols_in,
 					     int nrows_in,
-					     CoinBigIndex nelems_in) :
-  ncols_(si->getNumCols()),
-  ncols0_(ncols_in),
-  nrows0_(nrows_in),
-  nelems_(si->getNumElements()),
-
-  handler_(0),
-  defaultHandler_(false),
-  messages_(),
-
-  mcstrt_(new CoinBigIndex[ncols_in+1]),
-  hincol_(new int[ncols_in+1]),
-  hrow_  (new int   [2*nelems_in]),
-  colels_(new double[2*nelems_in]),
-
-  cost_(new double[ncols_in]),
-  clo_(new double[ncols_in]),
-  cup_(new double[ncols_in]),
-  rlo_(new double[nrows_in]),
-  rup_(new double[nrows_in]),
-  originalColumn_(new int[ncols_in]),
-  originalRow_(new int[nrows_in]),
-
-  ztolzb_(getTolerance(si, ClpPrimalTolerance)),
-  ztoldj_(getTolerance(si, ClpDualTolerance)),
-
-  maxmin_(si->getObjSense())
+					     CoinBigIndex nelems_in) 
+  : ncols_(si->getNumCols()),
+    nrows_(si->getNumRows()),
+    nelems_(si->getNumElements()),
+    ncols0_(ncols_in),
+    nrows0_(nrows_in),
+    mcstrt_(new CoinBigIndex[ncols_in+1]),
+    hincol_(new int[ncols_in+1]),
+    hrow_  (new int   [2*nelems_in]),
+    colels_(new double[2*nelems_in]),
+    cost_(new double[ncols_in]),
+    clo_(new double[ncols_in]),
+    cup_(new double[ncols_in]),
+    rlo_(new double[nrows_in]),
+    rup_(new double[nrows_in]),
+    originalColumn_(new int[ncols_in]),
+    originalRow_(new int[nrows_in]),
+    ztolzb_(getTolerance(si, ClpPrimalTolerance)),
+    ztoldj_(getTolerance(si, ClpDualTolerance)),
+    maxmin_(si->getObjSense()),
+    sol_(NULL),
+    rowduals_(NULL),
+    acts_(NULL),
+    rcosts_(NULL),
+    colstat_(NULL),
+    rowstat_(NULL),
+    handler_(NULL),
+    defaultHandler_(false),
+    messages_()
 
 {
   si->getDblParam(ClpObjOffset,originalOffset_);
@@ -963,14 +968,14 @@ CoinPresolveMatrix::CoinPresolveMatrix(int ncols0_in,
   integerType_(new unsigned char[ncols0_in]),
   feasibilityTolerance_(0.0),
   status_(-1),
-  rowsToDo_(new int [nrows_in]),
-  numberRowsToDo_(0),
-  nextRowsToDo_(new int[nrows_in]),
-  numberNextRowsToDo_(0),
   colsToDo_(new int [ncols0_in]),
   numberColsToDo_(0),
   nextColsToDo_(new int[ncols0_in]),
-  numberNextColsToDo_(0)
+  numberNextColsToDo_(0),
+  rowsToDo_(new int [nrows_in]),
+  numberRowsToDo_(0),
+  nextRowsToDo_(new int[nrows_in]),
+  numberNextRowsToDo_(0)
 
 {
   const int bufsize = 2*nelems_in;
@@ -1295,7 +1300,7 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
   delete [] originalRow_;
   originalRow_ = new int[nrows_];
 
-  // result is 0 - okay, 1 infeasible, -1 go round again
+  // result is 0 - okay, 1 infeasible, -1 go round again, 2 - original model
   int result = -1;
   
   // User may have deleted - its their responsibility
@@ -1530,15 +1535,26 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
 	  }
 	}
       }
-    } else {
-      // infeasible
-      delete [] prob.sol_;
-      delete [] prob.acts_;
-      delete [] prob.colstat_;
+    } else if (prob.status_) {
+      // infeasible or unbounded
       result=1;
+    } else {
+      // no changes - model needs restoring after Lou's changes
+      if (saveFile_=="") {
+	delete presolvedModel_;
+	presolvedModel_ = new ClpSimplex(*originalModel);
+      } else {
+	presolvedModel_=originalModel;
+      }
+      presolvedModel_->dropNames();
+      
+      // drop integer information if wanted
+      if (!keepIntegers)
+	presolvedModel_->deleteIntegerInformation();
+      result=2;
     }
   }
-  if (!result) {
+  if (result==0||result==2) {
     int nrowsAfter = presolvedModel_->getNumRows();
     int ncolsAfter = presolvedModel_->getNumCols();
     CoinBigIndex nelsAfter = presolvedModel_->getNumElements();
