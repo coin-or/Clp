@@ -2254,7 +2254,7 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	//int i;
 	
 	//alpha_ = rowArray_[1]->denseVector()[pivotRow_];
-	assert (fabs(alpha_)>1.0e-8);
+	CoinAssert (fabs(alpha_)>1.0e-8);
 	double multiplier = dualIn_/alpha_;
 	rowArray_[0]->insert(pivotRow_,multiplier);
 	factorization_->updateColumnTranspose(rowArray_[2],rowArray_[0]);
@@ -2284,7 +2284,7 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	}
 	rowArray_[0]->setNumElements(0);
 	// check incoming
-	assert (fabs(dj_[sequenceIn_])<1.0e-1);
+	CoinAssert (fabs(dj_[sequenceIn_])<1.0e-1);
       }
       // if stable replace in basis
       // If gub or odd then alpha and pivotRow may change

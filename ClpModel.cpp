@@ -365,11 +365,11 @@ ClpModel::loadProblem (  CoinModel & modelObject,bool tryPlusMinusOne)
     delete [] columnUpper;
     delete [] objective;
     delete [] integerType;
-      delete [] associated;
-      if (numberErrors)
-        handler_->message(CLP_BAD_STRING_VALUES,messages_)
-          <<numberErrors
-          <<CoinMessageEol;
+    delete [] associated;
+    if (numberErrors)
+      handler_->message(CLP_BAD_STRING_VALUES,messages_)
+        <<numberErrors
+        <<CoinMessageEol;
   }
   matrix_->setDimensions(numberRows_,numberColumns_);
   return numberErrors;
@@ -435,7 +435,7 @@ ClpModel::setRowBounds( int elementIndex,
     lower=-COIN_DBL_MAX;
   if (upper>1.0e27)
     upper=COIN_DBL_MAX;
-  assert (upper>=lower);
+  CoinAssert (upper>=lower);
   rowLower_[elementIndex] = lower;
   rowUpper_[elementIndex] = upper;
   whatsChanged_ = 0; // Can't be sure (use ClpSimplex to keep)
@@ -463,7 +463,7 @@ void ClpModel::setRowSetBounds(const int* indexFirst,
       lower[iRow]=-COIN_DBL_MAX;
     if (upper[iRow]>1.0e27)
       upper[iRow]=COIN_DBL_MAX;
-    assert (upper[iRow]>=lower[iRow]);
+    CoinAssert (upper[iRow]>=lower[iRow]);
   }
 }
 //-----------------------------------------------------------------------------
@@ -518,7 +518,7 @@ ClpModel::setColumnBounds( int elementIndex,
     upper=COIN_DBL_MAX;
   columnLower_[elementIndex] = lower;
   columnUpper_[elementIndex] = upper;
-  assert (upper>=lower);
+  CoinAssert (upper>=lower);
   whatsChanged_ = 0; // Can't be sure (use ClpSimplex to keep)
 }
 void ClpModel::setColumnSetBounds(const int* indexFirst,
@@ -540,7 +540,7 @@ void ClpModel::setColumnSetBounds(const int* indexFirst,
 #endif
     lower[iColumn]= *boundList++;
     upper[iColumn]= *boundList++;
-    assert (upper[iColumn]>=lower[iColumn]);
+    CoinAssert (upper[iColumn]>=lower[iColumn]);
     if (lower[iColumn]<-1.0e27)
       lower[iColumn]=-COIN_DBL_MAX;
     if (upper[iColumn]>1.0e27)
@@ -1289,7 +1289,7 @@ ClpModel::addRows(int number, const double * rowLower,
 void 
 ClpModel::addRows(const CoinBuild & buildObject,bool tryPlusMinusOne)
 {
-  assert (buildObject.type()==0); // check correct
+  CoinAssertHint (buildObject.type()==0,"Looks as if both addRows and addCols being used"); // check correct
   int number = buildObject.numberRows();
   if (number) {
     CoinBigIndex size=0;
@@ -1367,7 +1367,8 @@ ClpModel::addRows(const CoinBuild & buildObject,bool tryPlusMinusOne)
       }
       // check size
       int numberColumns = maxColumn+1;
-      assert (numberColumns<=numberColumns_);
+      CoinAssertHint (numberColumns<=numberColumns_,
+                      "rows having column indices >= numberColumns_");
       size=0;
       int iColumn;
       for (iColumn=0;iColumn<numberColumns_;iColumn++) {
@@ -1472,8 +1473,7 @@ ClpModel::addRows( CoinModel & modelObject,bool tryPlusMinusOne)
       CoinBigIndex * startPositive = NULL;
       CoinBigIndex * startNegative = NULL;
       int numberColumns = modelObject.numberColumns();
-      if ((!matrix_||!matrix_->getNumElements())
-	  &&!numberRows&&tryPlusMinusOne) {
+      if ((!matrix_||!matrix_->getNumElements())&&!numberRows&&tryPlusMinusOne) {
         startPositive = new CoinBigIndex[numberColumns+1];
         startNegative = new CoinBigIndex[numberColumns];
         modelObject.countPlusMinusOne(startPositive,startNegative,associated);
@@ -1706,7 +1706,7 @@ ClpModel::addColumns(int number, const double * columnLower,
 void 
 ClpModel::addColumns(const CoinBuild & buildObject,bool tryPlusMinusOne)
 {
-  assert (buildObject.type()==1); // check correct
+  CoinAssertHint (buildObject.type()==1,"Looks as if both addRows and addCols being used"); // check correct
   int number = buildObject.numberColumns();
   if (number) {
     CoinBigIndex size=0;
@@ -1847,8 +1847,7 @@ ClpModel::addColumns( CoinModel & modelObject,bool tryPlusMinusOne)
     if (numberColumns2&&!numberErrors) {
       CoinBigIndex * startPositive = NULL;
       CoinBigIndex * startNegative = NULL;
-      if ((!matrix_||!matrix_->getNumElements())
-	  &&!numberColumns&&tryPlusMinusOne) {
+      if ((!matrix_||!matrix_->getNumElements())&&!numberColumns&&tryPlusMinusOne) {
         startPositive = new CoinBigIndex[numberColumns2+1];
         startNegative = new CoinBigIndex[numberColumns2];
         modelObject.countPlusMinusOne(startPositive,startNegative,associated);
@@ -2319,7 +2318,7 @@ ClpModel::loadQuadraticObjective(const int numberColumns, const CoinBigIndex * s
 			      const int * column, const double * element)
 {
   whatsChanged_ = 0; // Use ClpSimplex stuff to keep
-  assert (numberColumns==numberColumns_);
+  CoinAssert (numberColumns==numberColumns_);
   assert ((dynamic_cast< ClpLinearObjective*>(objective_)));
   double offset;
   ClpObjective * obj = new ClpQuadraticObjective(objective_->gradient(NULL,NULL,offset,false),
@@ -2333,7 +2332,7 @@ void
 ClpModel::loadQuadraticObjective (  const CoinPackedMatrix& matrix)
 {
   whatsChanged_ = 0; // Use ClpSimplex stuff to keep
-  assert (matrix.getNumCols()==numberColumns_);
+  CoinAssert (matrix.getNumCols()==numberColumns_);
   assert ((dynamic_cast< ClpLinearObjective*>(objective_)));
   double offset;
   ClpQuadraticObjective * obj = 

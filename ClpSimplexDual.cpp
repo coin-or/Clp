@@ -708,7 +708,7 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
 		 rowArray_[3],acceptablePivot,dubiousWeights);
       } else {
 	// Make sure direction plausible
-	assert (upperOut_<1.0e50||lowerOut_>-1.0e50);
+	CoinAssert (upperOut_<1.0e50||lowerOut_>-1.0e50);
 	if (directionOut_<0&&fabs(valueOut_-upperOut_)>dualBound_+primalTolerance_) {
 	  if (fabs(valueOut_-upperOut_)>fabs(valueOut_-lowerOut_))
 	    directionOut_=1;
@@ -903,7 +903,7 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
 	    break;
 	  }
 	}
-	assert(fabs(dualOut_)<1.0e50);
+	CoinAssert(fabs(dualOut_)<1.0e50);
 	// if stable replace in basis
 	int updateStatus = factorization_->replaceColumn(this,
 							 rowArray_[2],
@@ -1912,7 +1912,7 @@ ClpSimplexDual::changeBounds(bool initialize,
 	} else {
 	  // set non basic free variables to fake bounds
 	  // I don't think we should ever get here
-	  assert(!("should not be here"));
+	  CoinAssert(!("should not be here"));
 	  lower_[iSequence]=-0.5*dualBound_;
 	  upper_[iSequence]= 0.5*dualBound_;
 	  setFakeBound(iSequence,ClpSimplexDual::bothFake);
@@ -3923,7 +3923,7 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
       upper_[iColumn] = (newUpper[i]/columnScale_[iColumn])*rhsScale_; // scale
     // Start of fast iterations
     int status = fastDual(alwaysFinish);
-    assert (status_||objectiveValue_<1.0e50);
+    CoinAssert (status_||objectiveValue_<1.0e50);
     // make sure plausible
     double obj = CoinMax(objectiveValue_,saveObjectiveValue);
     if (status) {

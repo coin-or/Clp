@@ -13,7 +13,7 @@
 
 int main (int argc, const char *argv[])
 {
-  {
+  try {
     // Empty model
     ClpSimplex  model;
     
@@ -87,7 +87,7 @@ int main (int argc, const char *argv[])
     printf("Time for 10000 addRow using CoinBuild is %g\n",CoinCpuTime()-time1);
     model.dual();
     model=modelSave;
-    int del[]={0,1};
+    int del[]={0,1,2};
     model.deleteRows(2,del);
     // Now use build +-1
     CoinBuild buildObject2;
@@ -193,6 +193,27 @@ int main (int argc, const char *argv[])
       std::cout<<std::endl;
     }
     std::cout<<"--------------------------------------"<<std::endl;
+    // Test CoinAssert
+    std::cout<<"If Clp compiled with -g below should give assert, if with -O1 or COIN_ASSERT CoinError"<<std::endl;
+    model=modelSave;
+    model.deleteRows(2,del);
+    // Deliberate error
+    model.deleteColumns(1,del+2);
+    // Now use build +-1
+    CoinBuild buildObject3;
+    time1 = CoinCpuTime();
+    for ( k=0;k<10000;k++) {
+      int row2Index[] = {0,1,2};
+      double row2Value[]={1.0,-1.0,1.0};
+      buildObject3.addRow(3,row2Index,row2Value,
+                          1.0,1.0);
+    }
+    model.addRows(buildObject3,true);
+  }
+  catch (CoinError e) {
+    e.print();
+    if (e.lineNumber()>=0)
+      std::cout<<"This was from a CoinAssert"<<std::endl;
   }
   return 0;
 }    

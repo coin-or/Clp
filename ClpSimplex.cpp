@@ -2418,7 +2418,11 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
     }
     objectiveWork_ = cost_;
     rowObjectiveWork_ = cost_+numberColumns_;
-    memcpy(objectiveWork_,objective(),numberColumns_*sizeof(double));
+    const double * obj = objective();
+    for (i=0;i<numberColumns_;i++) {
+      cost_[i]=obj[i];
+      CoinAssert(fabs(cost_[i])<1.0e25);
+    }
     if (rowObjective_)
       memcpy(rowObjectiveWork_,rowObjective_,numberRows_*sizeof(double));
     else
@@ -3521,7 +3525,7 @@ int ClpSimplex::dual (int ifValuesPass , int startFinishOptions)
 {
   int saveQuadraticActivated = objective_->activated();
   objective_->setActivated(0);
-  assert (ifValuesPass>=0&&ifValuesPass<3);
+  CoinAssert (ifValuesPass>=0&&ifValuesPass<3);
   /*  Note use of "down casting".  The only class the user sees is ClpSimplex.
       Classes ClpSimplexDual, ClpSimplexPrimal, (ClpSimplexNonlinear) 
       and ClpSimplexOther all exist and inherit from ClpSimplex but have no
@@ -3619,7 +3623,7 @@ int ClpSimplex::primal (int ifValuesPass , int startFinishOptions)
   if (objective_->type()>1&&objective_->activated()) 
     return reducedGradient();
   
-  assert (ifValuesPass>=0&&ifValuesPass<3);
+  CoinAssert (ifValuesPass>=0&&ifValuesPass<3);
   /*  Note use of "down casting".  The only class the user sees is ClpSimplex.
       Classes ClpSimplexDual, ClpSimplexPrimal, (ClpSimplexNonlinear) 
       and ClpSimplexOther all exist and inherit from ClpSimplex but have no
@@ -4256,7 +4260,7 @@ ClpSimplex::saveModel(const char * fileName)
       char * array = 
 	new char[CoinMax(numberRows_,numberColumns_)*(lengthNames_+1)];
       char * put = array;
-      assert (numberRows_ == (int) rowNames_.size());
+      CoinAssert (numberRows_ == (int) rowNames_.size());
       for (i=0;i<numberRows_;i++) {
 	assert((int)rowNames_[i].size()<=lengthNames_);
 	strcpy(put,rowNames_[i].c_str());
@@ -4266,7 +4270,7 @@ ClpSimplex::saveModel(const char * fileName)
       if (numberWritten!=numberRows_)
 	return 1;
       put=array;
-      assert (numberColumns_ == (int) columnNames_.size());
+      CoinAssert (numberColumns_ == (int) columnNames_.size());
       for (i=0;i<numberColumns_;i++) {
 	assert((int) columnNames_[i].size()<=lengthNames_);
 	strcpy(put,columnNames_[i].c_str());
@@ -4279,8 +4283,8 @@ ClpSimplex::saveModel(const char * fileName)
     }
     // just standard type at present
     assert (matrix_->type()==1);
-    assert (matrix_->getNumCols() == numberColumns_);
-    assert (matrix_->getNumRows() == numberRows_);
+    CoinAssert (matrix_->getNumCols() == numberColumns_);
+    CoinAssert (matrix_->getNumRows() == numberRows_);
     // we are going to save with gaps
     length = matrix_->getVectorStarts()[numberColumns_-1]
       + matrix_->getVectorLengths()[numberColumns_-1];
@@ -4918,7 +4922,7 @@ ClpSimplex::checkSolution()
 int 
 ClpSimplex::crash(double gap,int pivot)
 {
-  assert(!rowObjective_); // not coded
+  CoinAssert(!rowObjective_); // not coded
   int iColumn;
   int numberBad=0;
   int numberBasic=0;
@@ -5921,8 +5925,8 @@ ClpSimplex::setValuesPassAction(float incomingInfeasibility,
 {
   incomingInfeasibility_=incomingInfeasibility;
   allowedInfeasibility_=allowedInfeasibility;
-  assert(incomingInfeasibility_>=0.0);
-  assert(allowedInfeasibility_>=incomingInfeasibility_);
+  CoinAssert(incomingInfeasibility_>=0.0);
+  CoinAssert(allowedInfeasibility_>=incomingInfeasibility_);
 }
 //#############################################################################
 
@@ -6377,7 +6381,7 @@ ClpSimplex::ClpSimplex (ClpSimplex * wholeModel,
     wholeModel->rowCopy_=NULL;
   }
   whatsChanged_=0;
-  assert (wholeModel->matrix_);
+  CoinAssert (wholeModel->matrix_);
   wholeModel->matrix_ = wholeModel->matrix_->subsetClone(numberRows_,whichRow,
 					numberColumns,whichColumns);
   delete [] whichRow;
@@ -6926,7 +6930,7 @@ ClpSimplex::getBasics(int* index)
     printf("ClpSimplexPrimal or ClpSimplexDual must have been called with correct startFinishOption\n");
     abort();
   }
-  assert (index);
+  CoinAssert (index);
   memcpy(index,pivotVariable(),
 	 numberRows()*sizeof(int));
 }
@@ -7026,7 +7030,7 @@ ClpSimplex::setRowBounds( int elementIndex,
     lowerValue=-COIN_DBL_MAX;
   if (upperValue>1.0e27)
     upperValue=COIN_DBL_MAX;
-  assert (upperValue>=lowerValue);
+  CoinAssert (upperValue>=lowerValue);
   if (rowLower_[elementIndex] != lowerValue) {
     rowLower_[elementIndex] = lowerValue;
     if ((whatsChanged_&1)!=0) {
@@ -7080,7 +7084,7 @@ void ClpSimplex::setRowSetBounds(const int* indexFirst,
       lowerValue=-COIN_DBL_MAX;
     if (upperValue>1.0e27)
       upperValue=COIN_DBL_MAX;
-    assert (upperValue>=lowerValue);
+    CoinAssert (upperValue>=lowerValue);
     if (rowLower_[iRow] != lowerValue) {
       rowLower_[iRow] = lowerValue;
       whatsChanged_ &= ~16;
@@ -7206,7 +7210,7 @@ ClpSimplex::setColumnBounds( int elementIndex,
   }
   if (upperValue>1.0e27)
     upperValue=COIN_DBL_MAX;
-  assert (upperValue>=lowerValue);
+  CoinAssert (upperValue>=lowerValue);
   if (columnUpper_[elementIndex] != upperValue) {
     columnUpper_[elementIndex] = upperValue;
     if ((whatsChanged_&1)!=0) {
@@ -7245,7 +7249,7 @@ void ClpSimplex::setColumnSetBounds(const int* indexFirst,
       lowerValue=-COIN_DBL_MAX;
     if (upperValue>1.0e27)
       upperValue=COIN_DBL_MAX;
-    assert (upperValue>=lowerValue);
+    CoinAssert (upperValue>=lowerValue);
     if (columnLower_[iColumn] != lowerValue) {
       columnLower_[iColumn] = lowerValue;
       whatsChanged_ &= ~16;
