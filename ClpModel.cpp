@@ -1123,7 +1123,7 @@ bool ClpModel::isPrimalObjectiveLimitReached() const
   const double maxmin = optimizationDirection();
 
   if (problemStatus_ == 0) // optimal
-    return maxmin > 0 ? (obj < limit) /*minim*/ : (obj > limit) /*maxim*/;
+    return maxmin > 0 ? (obj < limit) /*minim*/ : (-obj < limit) /*maxim*/;
   else if (problemStatus_==2)
     return true;
   else
@@ -1144,7 +1144,7 @@ bool ClpModel::isDualObjectiveLimitReached() const
   const double maxmin = optimizationDirection();
 
   if (problemStatus_ == 0) // optimal
-    return maxmin > 0 ? (obj > limit) /*minim*/ : (obj < limit) /*maxim*/;
+    return maxmin > 0 ? (obj > limit) /*minim*/ : (-obj > limit) /*maxim*/;
   else if (problemStatus_==1)
     return true;
   else

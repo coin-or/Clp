@@ -2789,7 +2789,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
   double limit = 0.0;
   getDblParam(ClpDualObjectiveLimit, limit);
   if(fabs(limit)<1.0e30&&objectiveValue()*optimizationDirection_>
-	   optimizationDirection_*limit&&
+	   limit&&
 	   !numberAtFakeBound()&&!numberDualInfeasibilities_) {
     problemStatus_=1;
     secondaryStatus_ = 1; // and say was on cutoff
@@ -3344,7 +3344,7 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
       double limit = 0.0;
       getDblParam(ClpDualObjectiveLimit, limit);
       if (!numberPrimalInfeasibilities_&&objectiveValue()*optimizationDirection_<
-	  optimizationDirection_*limit) { 
+	  limit) { 
 	problemStatus_=0;
       } 
       status=problemStatus_;
@@ -3403,7 +3403,7 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
       double limit = 0.0;
       getDblParam(ClpDualObjectiveLimit, limit);
       if (!numberPrimalInfeasibilities_&&objectiveValue()*optimizationDirection_<
-	  optimizationDirection_*limit) { 
+	  limit) { 
 	problemStatus_=0;
       } 
       status=problemStatus_;
@@ -3669,7 +3669,7 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
 	double limit = 0.0;
 	getDblParam(ClpDualObjectiveLimit, limit);
 	if(fabs(limit)>1.0e30||objectiveValue()*optimizationDirection_<
-	   optimizationDirection_*limit|| 
+	   limit|| 
 	   numberAtFakeBound()) {
 	  returnCode=1;
 	  secondaryStatus_ = 1; // and say was on cutoff

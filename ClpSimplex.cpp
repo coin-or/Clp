@@ -2257,8 +2257,8 @@ ClpSimplex::deleteRim(int getRidOfFactorizationData)
     }
     if (!problemStatus_&&!secondaryStatus_) {
       // See if we need to set secondary status
-      assert (!numberPrimalScaled);
-      assert (!numberDualScaled);
+      // assert (!numberPrimalScaled);
+      // assert (!numberDualScaled);
       if (numberPrimalUnscaled) {
 	if (numberDualUnscaled) 
 	  secondaryStatus_=4;

@@ -1099,7 +1099,8 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
   dualCheck=max(dualCheck-100.0*dualTolerance_,0.99*dualCheck);
 
   bool goBackOne = false;
-
+  int iTry=0;
+  int ibigTry=0;
   if (numberRemaining) {
 
     // looks like pivoting
@@ -1110,6 +1111,7 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
     // loops increasing tentative theta until can't go through
     
     while (tentativeTheta <= maximumMovement) {
+      ibigTry++;
       double thruThis = 0.0;
       
       double bestPivot=acceptablePivot;
@@ -1159,7 +1161,7 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
 	}
 	memset(spare+numberRemaining,0,
 	       (saveNumber-numberRemaining)*sizeof(double));
-	int iTry;
+	//int iTry;
 #define MAXTRY 100
 	// first get ratio with tolerance
 	for (iTry=0;iTry<MAXTRY;iTry++) {
