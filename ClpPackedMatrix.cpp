@@ -97,6 +97,7 @@ ClpPackedMatrix::times(double scalar,
   const int * columnLength = matrix_->getVectorLengths(); 
   const double * elementByColumn = matrix_->getElements();
   int numberColumns = matrix_->getNumCols();
+  //memset(y,0,matrix_->getNumRows()*sizeof(double));
   for (iColumn=0;iColumn<numberColumns;iColumn++) {
     int j;
     double value = scalar*x[iColumn];
@@ -120,6 +121,7 @@ ClpPackedMatrix::transposeTimes(double scalar,
   const int * columnLength = matrix_->getVectorLengths(); 
   const double * elementByColumn = matrix_->getElements();
   int numberColumns = matrix_->getNumCols();
+  //memset(y,0,numberColumns*sizeof(double));
   for (iColumn=0;iColumn<numberColumns;iColumn++) {
     int j;
     double value=0.0;
@@ -144,6 +146,7 @@ ClpPackedMatrix::times(double scalar,
   const int * columnLength = matrix_->getVectorLengths(); 
   const double * elementByColumn = matrix_->getElements();
   int numberColumns = matrix_->getNumCols();
+  //memset(y,0,matrix_->getNumRows()*sizeof(double));
   for (iColumn=0;iColumn<numberColumns;iColumn++) {
     int j;
     double value = x[iColumn];
@@ -175,6 +178,7 @@ ClpPackedMatrix::transposeTimes( double scalar,
   const int * columnLength = matrix_->getVectorLengths(); 
   const double * elementByColumn = matrix_->getElements();
   int numberColumns = matrix_->getNumCols();
+  //memset(y,0,numberColumns*sizeof(double));
   for (iColumn=0;iColumn<numberColumns;iColumn++) {
     int j;
     double value=0.0;

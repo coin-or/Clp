@@ -30,6 +30,7 @@ ClpNonLinearCost::ClpNonLinearCost () :
   numberInfeasibilities_(-1),
   changeCost_(0.0),
   largestInfeasibility_(0.0),
+  sumInfeasibilities_(0.0),
   convex_(true)
 {
 
@@ -53,6 +54,7 @@ ClpNonLinearCost::ClpNonLinearCost ( ClpSimplex * model)
   numberInfeasibilities_=0;
   changeCost_=0.0;
   double infeasibilityCost = model_->infeasibilityCost();
+  sumInfeasibilities_=0.0;
   largestInfeasibility_=0.0;
 
   // First see how much space we need
@@ -114,6 +116,7 @@ ClpNonLinearCost::ClpNonLinearCost(ClpSimplex * model,const int * starts,
   changeCost_=0.0;
   double infeasibilityCost = model_->infeasibilityCost();
   largestInfeasibility_=0.0;
+  sumInfeasibilities_=0.0;
 
   int iSequence;
   double * upper = model_->upperRegion();
@@ -195,6 +198,7 @@ ClpNonLinearCost::ClpNonLinearCost (const ClpNonLinearCost & rhs) :
   numberInfeasibilities_(-1),
   changeCost_(0.0),
   largestInfeasibility_(0.0),
+  sumInfeasibilities_(0.0),
   convex_(true)
 {  
   if (numberRows_) {
@@ -214,6 +218,7 @@ ClpNonLinearCost::ClpNonLinearCost (const ClpNonLinearCost & rhs) :
     numberInfeasibilities_=rhs.numberInfeasibilities_;
     changeCost_ = rhs.changeCost_;
     largestInfeasibility_ = rhs.largestInfeasibility_;
+    sumInfeasibilities_ = rhs.sumInfeasibilities_;
     convex_ = rhs.convex_;
   }
 }
@@ -267,6 +272,7 @@ ClpNonLinearCost::operator=(const ClpNonLinearCost& rhs)
     numberInfeasibilities_=rhs.numberInfeasibilities_;
     changeCost_ = rhs.changeCost_;
     largestInfeasibility_ = rhs.largestInfeasibility_;
+    sumInfeasibilities_ = rhs.sumInfeasibilities_;
     convex_ = rhs.convex_;
   }
   return *this;
@@ -283,6 +289,7 @@ ClpNonLinearCost::checkInfeasibilities(bool toNearest)
   double infeasibilityCost = model_->infeasibilityCost();
   changeCost_=0.0;
   largestInfeasibility_ = 0.0;
+  sumInfeasibilities_ = 0.0;
   double primalTolerance = model_->currentPrimalTolerance();
   
   int iSequence;
@@ -327,14 +334,16 @@ ClpNonLinearCost::checkInfeasibilities(bool toNearest)
       // iRange is in correct place
       // slot in here
       if (value<lower[iSequence]-primalTolerance) {
-	largestInfeasibility_ = max(largestInfeasibility_,
-				    lower[iSequence]-value);
+	value = lower[iSequence]-value;
+	sumInfeasibilities_ += value;
+	largestInfeasibility_ = max(largestInfeasibility_,value);
 	changeCost_ -= lower[iSequence]*
 	  (cost_[iRange]-cost[iSequence]);
 	numberInfeasibilities_++;
       } else if (value>upper[iSequence]+primalTolerance) {
-	largestInfeasibility_ = max(largestInfeasibility_,
-				    value-upper[iSequence]);
+	value = value-upper[iSequence];
+	sumInfeasibilities_ += value;
+	largestInfeasibility_ = max(largestInfeasibility_,value);
 	changeCost_ -= upper[iSequence]*
 	  (cost_[iRange]-cost[iSequence]);
 	numberInfeasibilities_++;

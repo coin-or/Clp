@@ -7,8 +7,8 @@ LibType := SHARED
 OptLevel := -O2
 # I seem to need this at present
 OPTFLAG := -O2
-OptLevel := -g
-OPTFLAG := -g
+#OptLevel := -g
+#OPTFLAG := -g
 ifeq ($(OptLevel),-g)
     CXXFLAGS += -DCLP_DEBUG
 endif

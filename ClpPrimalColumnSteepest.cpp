@@ -535,7 +535,8 @@ ClpPrimalColumnSteepest::pivotColumn(OsiIndexedVector * updates,
   number = infeasible_->getNumElements();
   // we can't really trust infeasibilities if there is dual error
   double checkTolerance = 1.0e-8;
-  if (!model_->factorization()->pivots())
+  if (!model_->factorization()->pivots()&&
+      model_->numberIterations()<model_->lastBadIteration()+200)
     checkTolerance = 1.0e-6;
   if (model_->largestDualError()>checkTolerance)
     tolerance *= model_->largestDualError()/checkTolerance;
@@ -663,7 +664,10 @@ ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model,int mode)
 	  which[number++]=iRow;
       }
       alternateWeights_->setNumElements(number);
+#ifdef CLP_DEBUG
+      // Can happen but I should clean up
       assert(found>=0);
+#endif
       pivotSequence_ = found;
       delete [] temp;
     }

@@ -124,7 +124,8 @@ ClpSimplex::ClpSimplex () :
   perturbation_(100),
   infeasibilityCost_(1.0e7),
   nonLinearCost_(NULL),
-  specialOptions_(0)
+  specialOptions_(0),
+  lastBadIteration_(-999999)
 
 {
   int i;
@@ -178,13 +179,7 @@ ClpSimplex::gutsOfSolution ( const double * rowActivities,
     save = new double[numberRows_];
     for (iRow=0;iRow<numberRows_;iRow++) {
       int iPivot=pivotVariable_[iRow];
-      if (iPivot>=numberColumns_) {
-	// slack
-	save[iRow] = rowActivityWork_[iPivot-numberColumns_];
-      } else {
-	// column
-	save[iRow] = columnActivityWork_[iPivot];
-      }
+      save[iRow] = solution_[iPivot];
     }
   }
   // do work
@@ -202,8 +197,10 @@ ClpSimplex::gutsOfSolution ( const double * rowActivities,
 	<<OsiMessageEol;
   }
   if (valuesPass) {
+#ifdef CLP_DEBUG
     std::cout<<"Largest given infeasibility "<<oldValue
 	     <<" now "<<nonLinearCost_->largestInfeasibility()<<std::endl;
+#endif
     int numberOut=0;
     if (oldValue<1.0
 	&&nonLinearCost_->largestInfeasibility()>1.1*oldValue+1.0e-4||
@@ -211,12 +208,19 @@ ClpSimplex::gutsOfSolution ( const double * rowActivities,
       // throw out up to 1000 structurals
       int iRow;
       int * sort = new int[numberRows_];
+      // first put back solution and store difference
       for (iRow=0;iRow<numberRows_;iRow++) {
 	int iPivot=pivotVariable_[iRow];
-
+	double difference = fabs(solution_[iPivot]=save[iRow]);
+	solution_[iPivot]=save[iRow];
+	save[iRow]=difference;
+      }
+      for (iRow=0;iRow<numberRows_;iRow++) {
+	int iPivot=pivotVariable_[iRow];
+	
 	if (iPivot<numberColumns_) {
 	  // column
-	  double difference= fabs(save[iRow] - columnActivityWork_[iPivot]);
+	  double difference= save[iRow];
 	  if (difference>1.0e-4) {
 	    sort[numberOut]=iPivot;
 	    save[numberOut++]=difference;
@@ -244,8 +248,8 @@ ClpSimplex::gutsOfSolution ( const double * rowActivities,
   checkPrimalSolution( rowActivities, columnActivities);
   objectiveValue_ += objectiveModification;
   checkDualSolution();
-  if (handler_->logLevel()>3||(largestPrimalError_>1.0e-4||
-			       largestDualError_>1.0e-4)) 
+  if (handler_->logLevel()>3||(largestPrimalError_>1.0e-2||
+			       largestDualError_>1.0e-2)) 
     handler_->message(CLP_SIMPLEX_ACCURACY,messages_)
       <<largestPrimalError_
       <<largestDualError_
@@ -277,13 +281,7 @@ ClpSimplex::computePrimals ( const double * rowActivities,
     CoinDisjointCopyN(rowActivities,numberRows_,rowActivityWork_);
   for (iRow=0;iRow<numberRows_;iRow++) {
     int iPivot=pivotVariable_[iRow];
-    if (iPivot>=numberColumns_) {
-      // slack
-      rowActivityWork_[iPivot-numberColumns_] = 0.0;
-    } else {
-      // column
-      columnActivityWork_[iPivot] = 0.0;
-    }
+    solution_[iPivot] = 0.0;
   }
   times(-1.0,columnActivityWork_,array);
 
@@ -304,13 +302,7 @@ ClpSimplex::computePrimals ( const double * rowActivities,
     // put solution in correct place
     for (iRow=0;iRow<numberRows_;iRow++) {
       int iPivot=pivotVariable_[iRow];
-      if (iPivot>=numberColumns_) {
-	// slack
-	rowActivityWork_[iPivot-numberColumns_] = array[iRow];
-      } else {
-	// column
-	columnActivityWork_[iPivot] = array[iRow];
-      }
+      solution_[iPivot] = array[iRow];
     }
     // check Ax == b  (for all)
     times(-1.0,columnActivityWork_,work);
@@ -358,13 +350,7 @@ ClpSimplex::computePrimals ( const double * rowActivities,
   // put solution in correct place
   for (iRow=0;iRow<numberRows_;iRow++) {
     int iPivot=pivotVariable_[iRow];
-    if (iPivot>=numberColumns_) {
-      // slack
-      rowActivityWork_[iPivot-numberColumns_] = array[iRow];
-    } else {
-      // column
-      columnActivityWork_[iPivot] = array[iRow];
-     }
+    solution_[iPivot] = array[iRow];
   }
   delete [] previous;
   delete [] array;
@@ -529,7 +515,16 @@ int ClpSimplex::internalFactorize ( int solveType)
   if (!solveType) {
     if (!valuesPass) {
       // not values pass so set to bounds
+      bool allSlack=true;
       if (status_) {
+	for (iRow=0;iRow<numberRows_;iRow++) {
+	  if (getRowStatus(iRow)!=ClpSimplex::basic) {
+	    allSlack=false;
+	    break;
+	  }
+	}
+      }
+      if (!allSlack) {
 	// set values from warm start (if sensible)
 	int numberBasic=0;
 	for (iRow=0;iRow<numberRows_;iRow++) {
@@ -676,7 +671,8 @@ int ClpSimplex::internalFactorize ( int solveType)
     } else {
       // values pass has less coding
       // make row activities correct
-      times(-1.0,columnActivityWork_,rowActivityWork_);
+      memset(rowActivityWork_,0,numberRows_*sizeof(double));
+      times(1.0,columnActivityWork_,rowActivityWork_);
       if (status_) {
 	// set values from warm start (if sensible)
 	int numberBasic=0;
@@ -789,19 +785,23 @@ int ClpSimplex::internalFactorize ( int solveType)
 	  if (getColumnStatus(iColumn)==
 	      ClpSimplex::basic) {
 	    // take out
-	    double lower=columnLowerWork_[iColumn];
-	    double upper=columnUpperWork_[iColumn];
-	    double value=columnActivityWork_[iColumn];
-	    if (lower>-largeValue_||upper<largeValue_) {
-	      if (fabs(value-lower)<fabs(value-upper)) {
-		setColumnStatus(iColumn,ClpSimplex::atLowerBound);
-		columnActivityWork_[iColumn]=lower;
+	    if (!valuesPass) {
+	      double lower=columnLowerWork_[iColumn];
+	      double upper=columnUpperWork_[iColumn];
+	      double value=columnActivityWork_[iColumn];
+	      if (lower>-largeValue_||upper<largeValue_) {
+		if (fabs(value-lower)<fabs(value-upper)) {
+		  setColumnStatus(iColumn,ClpSimplex::atLowerBound);
+		  columnActivityWork_[iColumn]=lower;
+		} else {
+		  setColumnStatus(iColumn,ClpSimplex::atUpperBound);
+		  columnActivityWork_[iColumn]=upper;
+		}
 	      } else {
-		setColumnStatus(iColumn,ClpSimplex::atUpperBound);
-		columnActivityWork_[iColumn]=upper;
+		setColumnStatus(iColumn,ClpSimplex::isFree);
 	      }
 	    } else {
-	      setColumnStatus(iColumn,ClpSimplex::isFree);
+	      setColumnStatus(iColumn,ClpSimplex::superBasic);
 	    }
 	  }
 	}
@@ -1058,7 +1058,8 @@ ClpSimplex::ClpSimplex(const ClpSimplex &rhs) :
   perturbation_(100),
   infeasibilityCost_(1.0e7),
   nonLinearCost_(NULL),
-  specialOptions_(0)
+  specialOptions_(0),
+  lastBadIteration_(-999999)
 {
   int i;
   for (i=0;i<6;i++) {
@@ -1142,7 +1143,8 @@ ClpSimplex::ClpSimplex(const ClpModel &rhs) :
   perturbation_(100),
   infeasibilityCost_(1.0e7),
   nonLinearCost_(NULL),
-  specialOptions_(0)
+  specialOptions_(0),
+  lastBadIteration_(-999999)
 {
   int i;
   for (i=0;i<6;i++) {
@@ -1269,6 +1271,7 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
   perturbation_ = rhs.perturbation_;
   infeasibilityCost_ = rhs.infeasibilityCost_;
   specialOptions_ = rhs.specialOptions_;
+  lastBadIteration_ = rhs.lastBadIteration_;
   if (rhs.nonLinearCost_!=NULL)
     nonLinearCost_ = new ClpNonLinearCost(*rhs.nonLinearCost_);
 }
@@ -1391,7 +1394,7 @@ ClpSimplex::checkPrimalSolution(const double * rowActivities,
     infeasibility = fabs(columnActivities[iColumn]-solution[iColumn]);
     if (infeasibility>largestSolutionError_)
       largestSolutionError_=infeasibility;
-    if (columnLowerWork_[iColumn]!=columnUpperWork_[iColumn])
+    if (columnUpperWork_[iColumn]-columnLowerWork_[iColumn]>primalTolerance_)
       clearFixed(iColumn);
     else
       setFixed(iColumn);
@@ -1802,34 +1805,28 @@ ClpSimplex::scaling(int mode)
 void 
 ClpSimplex::setBasis ( const OsiWarmStartBasis & basis)
 {
-  if (basis.getNumStructural()) {
-    // transform basis to status arrays
-    int iRow,iColumn;
-    if (!status_) {
-      /*
-	get status arrays
-	OsiWarmStartBasis would seem to have overheads and we will need
-	extra bits anyway.
-      */
-      status_ = new unsigned char [numberColumns_+numberRows_];
-      memset(status_,0,(numberColumns_+numberRows_)*sizeof(char));
-    }
-    OsiWarmStartBasis basis2 = basis;
-    // resize if necessary
-    basis2.resize(numberRows_,numberColumns_);
-    // move status
-    for (iRow=0;iRow<numberRows_;iRow++) {
-      setRowStatus(iRow,
-		   (Status) basis2.getArtifStatus(iRow));
-    }
-    for (iColumn=0;iColumn<numberColumns_;iColumn++) {
-      setColumnStatus(iColumn,
-		      (Status) basis2.getStructStatus(iColumn));
-    }
-  } else {
-    // null basis so just delete any status arrays
-    delete [] status_;
-    status_=NULL;
+  // transform basis to status arrays
+  int iRow,iColumn;
+  if (!status_) {
+    /*
+      get status arrays
+      OsiWarmStartBasis would seem to have overheads and we will need
+      extra bits anyway.
+    */
+    status_ = new unsigned char [numberColumns_+numberRows_];
+    memset(status_,0,(numberColumns_+numberRows_)*sizeof(char));
+  }
+  OsiWarmStartBasis basis2 = basis;
+  // resize if necessary
+  basis2.resize(numberRows_,numberColumns_);
+  // move status
+  for (iRow=0;iRow<numberRows_;iRow++) {
+    setRowStatus(iRow,
+		 (Status) basis2.getArtifStatus(iRow));
+  }
+  for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+    setColumnStatus(iColumn,
+		    (Status) basis2.getStructStatus(iColumn));
   }
 }
 // Passes in factorization

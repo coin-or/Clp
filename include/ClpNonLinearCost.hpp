@@ -133,6 +133,9 @@ public:
   /// Change in cost
   inline double changeInCost() const
   {return changeCost_;};
+  /// Sum of infeasibilities
+  inline double sumInfeasibilities() const
+  {return sumInfeasibilities_;};
   /// Largest infeasibility
   inline double largestInfeasibility() const
   {return largestInfeasibility_;};
@@ -167,6 +170,8 @@ private:
   double changeCost_;
   /// Largest infeasibility
   double largestInfeasibility_;
+  /// Sum of infeasibilities
+  double sumInfeasibilities_;
   /// If all non-linear costs convex
   bool convex_;
   //@}

@@ -86,6 +86,7 @@ public:
   /// Deletes rows
   void deleteRows(int number, const int * which);
   /// Deletes columns
+  
   void deleteColumns(int number, const int * which);
   /** Borrow model.  This is so we dont have to copy large amounts
       of data around.  It assumes a derived class wants to overwrite

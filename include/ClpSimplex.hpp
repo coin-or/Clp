@@ -441,6 +441,9 @@ public:
   };
   inline bool flagged(int sequence) const
   {return (((status_[sequence]>>6)&1)!=0);};
+  /// So we know when to be cautious
+  inline int lastBadIteration() const
+  {return lastBadIteration_;};
   //@}
 
 ////////////////// data //////////////////
@@ -610,6 +613,8 @@ protected:
   ClpNonLinearCost * nonLinearCost_;
   /// For advanced options
   unsigned int specialOptions_;
+  /// So we know when to be cautious
+  int lastBadIteration_;
   //@}
 };
 //#############################################################################

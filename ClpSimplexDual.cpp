@@ -448,6 +448,7 @@ int ClpSimplexDual::dual ( )
 		  <<x<<sequenceWithin(sequenceOut_)
 		  <<OsiMessageEol;
 		setFlagged(sequenceOut_);
+		lastBadIteration_ = numberIterations_; // say be more cautious
 		rowArray_[0]->clear();
 		rowArray_[1]->clear();
 		columnArray_[0]->clear();
@@ -534,6 +535,7 @@ int ClpSimplexDual::dual ( )
 		<<x<<sequenceWithin(sequenceOut_)
 		<<OsiMessageEol;
 	      setFlagged(sequenceOut_);
+	      lastBadIteration_ = numberIterations_; // say be more cautious
 	      rowArray_[0]->clear();
 	      rowArray_[1]->clear();
 	      columnArray_[0]->clear();

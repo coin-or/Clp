@@ -262,7 +262,6 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
   while(numberThrownOut) {
     if (internalFactorize(0+10*ifValuesPass))
       return 1; // some error
-
     // for this we need clean basis so it is after factorize
     numberThrownOut=gutsOfSolution(rowActivityWork_,columnActivityWork_,
 				   ifValuesPass);
@@ -288,6 +287,8 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
 
   // This says whether to restore things etc
   int factorType=0;
+  // Save iteration number
+  int saveNumber = -1;
   /*
     Status of problem:
     0 - optimal
@@ -318,6 +319,9 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
     if (perturbation_<101&&numberIterations_>2*(numberRows_+numberColumns_)) 
       perturb();
 #endif
+    // If we have done no iterations - special
+    if (saveNumber==numberIterations_)
+      factorType=3;
     // may factorize, checks if problem finished
     statusOfProblemInPrimal(lastCleaned,factorType);
 
@@ -328,7 +332,7 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
     pivotRow_=-2;
 
     // Save iteration number
-    int saveNumber = numberIterations_;
+    saveNumber = numberIterations_;
 
     // status stays at -1 while iterating, >=0 finished, -2 to invert
     // status -3 to go to top without an invert
@@ -445,6 +449,7 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
 		<<x<<sequenceWithin(sequenceIn_)
 		<<OsiMessageEol;
 	      setFlagged(sequenceIn_);
+	      lastBadIteration_ = numberIterations_; // say be more cautious
 	      rowArray_[1]->clear();
 	      pivotRow_=-1;
 	      continue;
@@ -457,7 +462,7 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
 	  printf("btran dj %g, ftran dj %g\n",saveDj,dualIn_);
 #endif
 	if (saveDj*dualIn_<1.0e-20||
-	    fabs(saveDj-dualIn_)>1.0e-7*(1.0+fabs(dualIn_))) {
+	    fabs(saveDj-dualIn_)>1.0e-5*(1.0+fabs(saveDj))) {
 	  handler_->message(CLP_PRIMAL_DJ,messages_)
 	    <<saveDj<<dualIn_
 	    <<OsiMessageEol;
@@ -476,6 +481,7 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
 		<<x<<sequenceWithin(sequenceIn_)
 		<<OsiMessageEol;
 	      setFlagged(sequenceIn_);
+	      lastBadIteration_ = numberIterations_; // say be more cautious
 	      rowArray_[1]->clear();
 	      pivotRow_=-1;
 	      continue;
@@ -504,6 +510,7 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
 		<<x<<sequenceWithin(sequenceIn_)
 		<<OsiMessageEol;
 	      setFlagged(sequenceIn_);
+	      lastBadIteration_ = numberIterations_; // say be more cautious
 	      rowArray_[1]->clear();
 	      pivotRow_=-1;
 	      continue;
@@ -618,6 +625,14 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
 #endif
   }
 
+  // if infeasible get real values
+  if (problemStatus_) {
+    infeasibilityCost_=0.0;
+    createRim(7);
+    nonLinearCost_->checkInfeasibilities(true);
+    sumPrimalInfeasibilities_=nonLinearCost_->sumInfeasibilities();
+    numberPrimalInfeasibilities_= nonLinearCost_->numberInfeasibilities();
+  }
   // at present we are leaving factorization around
   // maybe we should empty it
   deleteRim();
@@ -689,7 +704,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type)
   assert (primalFeasible());
   // we may wish to say it is optimal even if infeasible
   bool alwaysOptimal = (specialOptions_&1)!=0;
-  if (dualFeasible()||problemStatus_==-4) {
+  if (dualFeasible()||problemStatus_==-4||type==3) {
     if (nonLinearCost_->numberInfeasibilities()&&!alwaysOptimal) {
       //may need infeasiblity cost changed
       // we can see if we can construct a ray
