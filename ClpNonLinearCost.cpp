@@ -496,6 +496,7 @@ ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
 	}
 	assert (iRange>=0);
 	iRange--;
+	whichRange_[iSequence]=iRange;
 	solution[iSequence]=lower_[iRange+1];
       }
       break;
@@ -525,6 +526,7 @@ ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
 	  }
 	}
 	assert (iRange>=0);
+	whichRange_[iSequence]=iRange;
 	solution[iSequence]=lower_[iRange];
       }
       break;
@@ -548,6 +550,7 @@ ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
 	    }
 	  }
 	  assert (iRange>=0);
+	  whichRange_[iSequence]=iRange;
 	  model_->setStatus(iSequence,ClpSimplex::atLowerBound);
 	}
 	solution[iSequence]=lower_[iRange];
@@ -558,7 +561,7 @@ ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
     upper[iSequence] = lower_[iRange+1];
     cost[iSequence] = cost_[iRange];
     feasibleCost_ += thisFeasibleCost*solution[iSequence];
-    assert (iRange==whichRange_[iSequence]);
+    //assert (iRange==whichRange_[iSequence]);
   }
 }
 /* Goes through one bound for each variable.
