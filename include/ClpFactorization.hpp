@@ -63,7 +63,9 @@ public:
       speed considerations.  You could just do this on first iteration
       after factorization and thereafter re-factorize
    partial update already in U */
-  int replaceColumn ( CoinIndexedVector * regionSparse,
+  int replaceColumn ( const ClpSimplex * model,
+		      CoinIndexedVector * regionSparse,
+		      CoinIndexedVector * tableauColumn,
 		      int pivotRow,
 		      double pivotCheck ,
 		      bool checkBeforeModifying=false);

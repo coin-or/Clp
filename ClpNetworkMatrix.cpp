@@ -771,10 +771,13 @@ ClpNetworkMatrix::canDoPartialPricing() const
 }
 // Partial pricing 
 void 
-ClpNetworkMatrix::partialPricing(ClpSimplex * model, int start, int end,
+ClpNetworkMatrix::partialPricing(ClpSimplex * model, double startFraction, double endFraction,
 			      int & bestSequence, int & numberWanted)
 {
+  numberWanted=currentWanted_;
   int j;
+  int start = (int) (startFraction*numberColumns_);
+  int end = min((int) (endFraction*numberColumns_+1),numberColumns_);
   double tolerance=model->currentDualTolerance();
   double * reducedCost = model->djRegion();
   const double * duals = model->dualRowSolution();
@@ -894,6 +897,8 @@ ClpNetworkMatrix::partialPricing(ClpSimplex * model, int start, int end,
       if (iRowP>=0)
 	value -= duals[iRowP];
       reducedCost[bestSequence] = value;
+      savedBestSequence_ = bestSequence;
+      savedBestDj_ = reducedCost[savedBestSequence_];
     }
   } else {
     // true network
@@ -991,8 +996,11 @@ ClpNetworkMatrix::partialPricing(ClpSimplex * model, int start, int end,
       value += duals[iRowM];
       value -= duals[iRowP];
       reducedCost[bestSequence] = value;
+      savedBestSequence_ = bestSequence;
+      savedBestDj_ = reducedCost[savedBestSequence_];
     }
   }
+  currentWanted_=numberWanted;
 }
 // Allow any parts of a created CoinMatrix to be deleted
 void 

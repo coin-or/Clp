@@ -19,14 +19,31 @@ int main (int argc, const char *argv[])
     fprintf(stdout,"Bad readMps %s\n",argv[1]);
     exit(1);
   }
-
+#ifdef STYLE1
   if (argc<3 ||!strstr(argv[2],"primal")) {
     // Use the dual algorithm unless user said "primal"
     model.initialDualSolve();
   } else {
     model.initialPrimalSolve();
   }
+#else
+  model.setLogLevel(8);
+  ClpSolve solvectl;
 
+
+  if (argc<3 ||!strstr(argv[2],"primal")) {
+    // Use the dual algorithm unless user said "primal"
+    std::cout << std::endl << " Solve using Dual: " << std::endl;
+    solvectl.setSolveType(ClpSolve::useDual);
+    solvectl.setPresolveType(ClpSolve::presolveOn);
+    model.initialSolve(solvectl);
+  } else {
+    std::cout << std::endl << " Solve using Primal: " << std::endl;
+    solvectl.setSolveType(ClpSolve::usePrimal);
+    solvectl.setPresolveType(ClpSolve::presolveOn);
+    model.initialSolve(solvectl);
+  }
+#endif
   std::string modelName;
   model.getStrParam(ClpProbName,modelName);
   std::cout<<"Model "<<modelName<<" has "<<model.numberRows()<<" rows and "<<

@@ -1050,7 +1050,9 @@ ClpSimplexPrimalQuadratic::whileIterating(
 	    double saveCheck = factorization_->getAccuracyCheck();
 	    if (cleanupIteration)
 	      factorization_->relaxAccuracyCheck(1.0e3*saveCheck);
-	    updateStatus=factorization_->replaceColumn(rowArray_[2],
+	    updateStatus=factorization_->replaceColumn(this,
+						       rowArray_[2],
+						       rowArray_[1],
 						       pivotRow_,
 						       alpha_);
 	    factorization_->relaxAccuracyCheck(saveCheck);

@@ -18,7 +18,7 @@ class ClpGubDynamicMatrix : public ClpGubMatrix {
   
 public:
   /// Partial pricing 
-  virtual void partialPricing(ClpSimplex * model, int start, int end,
+  virtual void partialPricing(ClpSimplex * model, double start, double end,
 			      int & bestSequence, int & numberWanted);
   /** This is local to Gub to allow synchronization:
       mode=0 when status of basis is good 
@@ -49,6 +49,10 @@ public:
         @pre <code>y</code> must be of size <code>numRows()</code> */
   virtual void times(double scalar,
 		       const double * x, double * y) const;
+  /** Just for debug 
+      Returns number of primal infeasibilities. Recomputes keys
+  */
+  virtual int checkFeasible() const;
   //@}
 
   
@@ -155,8 +159,6 @@ public:
   /// size of working matrix (max)
   inline int numberElements() const
   { return numberElements_;};
-  /// Switches off dj checking each factorization (for BIG models)
-  void switchOffCheck();
   /// Status region for gub slacks
   inline unsigned char * gubRowStatus() const
   { return status_;};
@@ -196,8 +198,6 @@ protected:
   float * lowerSet_;
   /// Optional true upper bounds on sets
   float * upperSet_;
-  /// Pointer back to model
-  ClpSimplex * model_;
   /// size
   int numberGubColumns_;
   /// first free

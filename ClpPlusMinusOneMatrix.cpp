@@ -570,15 +570,13 @@ ClpPlusMinusOneMatrix::transposeTimesByRow(const ClpSimplex * model, double scal
   const CoinBigIndex * startNegative = startNegative_;
   const int * whichRow = rowArray->getIndices();
   bool packed = rowArray->packedMode();
-  if (numberInRowArray>2||y->getNumElements()) {
+  if (numberInRowArray>2) {
     // do by rows
     int iRow;
     double * markVector = y->denseVector(); // probably empty .. but
-    int * mark = y->getIndices();
-    int numberOriginal=y->getNumElements();
+    int numberOriginal=0;
     int i;
     if (packed) {
-      assert(!numberOriginal);
       numberNonZero=0;
       // and set up mark as char array
       char * marked = (char *) (index+columnArray->capacity());
@@ -627,13 +625,7 @@ ClpPlusMinusOneMatrix::transposeTimesByRow(const ClpSimplex * model, double scal
 	}
       }
     } else {      
-      for (i=0;i<numberOriginal;i++) {
-	int iColumn = mark[i];
-	index[i]=iColumn;
-	array[iColumn]=markVector[iColumn];
-	markVector[iColumn]=0.0;
-      }
-      numberNonZero=numberOriginal;
+      numberNonZero=0;
       // and set up mark as char array
       char * marked = (char *) markVector;
       for (i=0;i<numberOriginal;i++) {
@@ -1422,9 +1414,12 @@ ClpPlusMinusOneMatrix::canDoPartialPricing() const
 }
 // Partial pricing 
 void 
-ClpPlusMinusOneMatrix::partialPricing(ClpSimplex * model, int start, int end,
+ClpPlusMinusOneMatrix::partialPricing(ClpSimplex * model, double startFraction, double endFraction,
 			      int & bestSequence, int & numberWanted)
 {
+  numberWanted=currentWanted_;
+  int start = (int) (startFraction*numberColumns_);
+  int end = min((int) (endFraction*numberColumns_+1),numberColumns_);
   CoinBigIndex j;
   double tolerance=model->currentDualTolerance();
   double * reducedCost = model->djRegion();
@@ -1546,7 +1541,10 @@ ClpPlusMinusOneMatrix::partialPricing(ClpSimplex * model, int start, int end,
       value += duals[iRow];
     }
     reducedCost[bestSequence] = value;
+    savedBestSequence_ = bestSequence;
+    savedBestDj_ = reducedCost[savedBestSequence_];
   }
+  currentWanted_=numberWanted;
 }
 // Allow any parts of a created CoinMatrix to be deleted
 void 

@@ -53,16 +53,16 @@ public:
 
     /** Delete the columns whose indices are listed in <code>indDel</code>. */
     virtual void deleteCols(const int numDel, const int * indDel)
-  { matrix_->deleteCols(numDel,indDel);};
+  { matrix_->deleteCols(numDel,indDel);numberActiveColumns_ = matrix_->getNumCols();};
     /** Delete the rows whose indices are listed in <code>indDel</code>. */
     virtual void deleteRows(const int numDel, const int * indDel)
-  { matrix_->deleteRows(numDel,indDel);};
+  { matrix_->deleteRows(numDel,indDel);numberActiveColumns_ = matrix_->getNumCols();};
   /// Append Columns
   virtual void appendCols(int number, const CoinPackedVectorBase * const * columns)
-  { matrix_->appendCols(number,columns);};
+  { matrix_->appendCols(number,columns);numberActiveColumns_ = matrix_->getNumCols();};
   /// Append Rows
   virtual void appendRows(int number, const CoinPackedVectorBase * const * rows)
-  { matrix_->appendRows(number,rows);};
+  { matrix_->appendRows(number,rows);numberActiveColumns_ = matrix_->getNumCols();};
   /** Replace the elements of a vector.  The indices remain the same.
       This is only needed if scaling and a row copy is used.
       At most the number specified will be replaced.
@@ -124,8 +124,10 @@ public:
   /// Says whether it can do partial pricing
   virtual bool canDoPartialPricing() const;
   /// Partial pricing 
-  virtual void partialPricing(ClpSimplex * model, int start, int end,
+  virtual void partialPricing(ClpSimplex * model, double start, double end,
 		      int & bestSequence, int & numberWanted);
+  /// makes sure active columns correct
+  virtual int refresh(ClpSimplex * model);
    //@}
 
   /**@name Matrix times vector methods */
@@ -157,6 +159,21 @@ public:
   virtual void transposeTimes(const ClpSimplex * model, double scalar,
 			      const CoinIndexedVector * x,
 			      CoinIndexedVector * y,
+			      CoinIndexedVector * z) const;
+    /** Return <code>x * scalar * A + y</code> in <code>z</code>. 
+	Note - If x packed mode - then z packed mode
+	This does by column and knows no gaps
+	Squashes small elements and knows about ClpSimplex */
+  void transposeTimesByColumn(const ClpSimplex * model, double scalar,
+			      const CoinIndexedVector * x,
+			      CoinIndexedVector * y,
+			      CoinIndexedVector * z) const;
+    /** Return <code>x * scalar * A in <code>z</code>. 
+	Note - this version when x packed mode and so will be z
+	This does by column and knows no gaps and knows y empty
+	Squashes small elements and knows about ClpSimplex */
+  void transposeTimesByColumn(const ClpSimplex * model, double scalar,
+			      const CoinIndexedVector * x,
 			      CoinIndexedVector * z) const;
     /** Return <code>x * scalar * A + y</code> in <code>z</code>. 
 	Can use y as temporary array (will be empty at end)
@@ -234,8 +251,12 @@ protected:
    //@{
   /// Data
   CoinPackedMatrix * matrix_;
+  /// number of active columns (normally same as number of columns)
+  int numberActiveColumns_;
   /// Zero element flag - set true if any zero elements
   bool zeroElements_;
+  /// Gaps flag - set true if column start and length don't say contiguous
+  bool hasGaps_;
    //@}
 };
 

@@ -190,7 +190,7 @@ public:
   /// Says whether it can do partial pricing
   virtual bool canDoPartialPricing() const;
   /// Partial pricing 
-  virtual void partialPricing(ClpSimplex * model, int start, int end,
+  virtual void partialPricing(ClpSimplex * model, double start, double end,
 		      int & bestSequence, int & numberWanted);
    //@}
    

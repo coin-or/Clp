@@ -30,6 +30,7 @@ ClpGubMatrix::ClpGubMatrix ()
     sumPrimalInfeasibilities_(0.0),
     sumOfRelaxedDualInfeasibilities_(0.0),
     sumOfRelaxedPrimalInfeasibilities_(0.0),
+    infeasibilityWeight_(0.0),
     start_(NULL),
     end_(NULL),
     lower_(NULL),
@@ -44,8 +45,10 @@ ClpGubMatrix::ClpGubMatrix ()
     next_(NULL),
     toIndex_(NULL),
     fromIndex_(NULL),
+    model_(NULL),
     numberDualInfeasibilities_(0),
     numberPrimalInfeasibilities_(0),
+    noCheck_(-1),
     numberSets_(0),
     saveNumber_(0),
     possiblePivotKey_(0),
@@ -78,6 +81,7 @@ ClpGubMatrix::ClpGubMatrix (const ClpGubMatrix & rhs)
   backward_ = ClpCopyOfArray(rhs.backward_,numberColumns);
   backToPivotRow_ = ClpCopyOfArray(rhs.backToPivotRow_,numberColumns);
   changeCost_ = ClpCopyOfArray(rhs.changeCost_,getNumRows()+numberSets_);
+  fromIndex_ = ClpCopyOfArray(rhs.fromIndex_,getNumRows()+numberSets_+1);
   keyVariable_ = ClpCopyOfArray(rhs.keyVariable_,numberSets_);
   // find longest set
   int * longest = new int[numberSets_];
@@ -93,16 +97,18 @@ ClpGubMatrix::ClpGubMatrix (const ClpGubMatrix & rhs)
     length = max(length,longest[j]);
   next_ = ClpCopyOfArray(rhs.next_,numberColumns+numberSets_+2*length);
   toIndex_ = ClpCopyOfArray(rhs.toIndex_,numberSets_);
-  fromIndex_ = ClpCopyOfArray(rhs.fromIndex_,getNumRows()+1);
   sumDualInfeasibilities_ = rhs. sumDualInfeasibilities_;
   sumPrimalInfeasibilities_ = rhs.sumPrimalInfeasibilities_;
   sumOfRelaxedDualInfeasibilities_ = rhs.sumOfRelaxedDualInfeasibilities_;
   sumOfRelaxedPrimalInfeasibilities_ = rhs.sumOfRelaxedPrimalInfeasibilities_;
+  infeasibilityWeight_=rhs.infeasibilityWeight_;
   numberDualInfeasibilities_ = rhs.numberDualInfeasibilities_;
   numberPrimalInfeasibilities_ = rhs.numberPrimalInfeasibilities_;
+  noCheck_ = rhs.noCheck_;
   firstGub_ = rhs.firstGub_;
   lastGub_ = rhs.lastGub_;
   gubType_ = rhs.gubType_;
+  model_ = rhs.model_;
 }
 
 //-------------------------------------------------------------------
@@ -114,6 +120,7 @@ ClpGubMatrix::ClpGubMatrix (CoinPackedMatrix * rhs)
     sumPrimalInfeasibilities_(0.0),
     sumOfRelaxedDualInfeasibilities_(0.0),
     sumOfRelaxedPrimalInfeasibilities_(0.0),
+    infeasibilityWeight_(0.0),
     start_(NULL),
     end_(NULL),
     lower_(NULL),
@@ -128,8 +135,10 @@ ClpGubMatrix::ClpGubMatrix (CoinPackedMatrix * rhs)
     next_(NULL),
     toIndex_(NULL),
     fromIndex_(NULL),
+    model_(NULL),
     numberDualInfeasibilities_(0),
     numberPrimalInfeasibilities_(0),
+    noCheck_(-1),
     numberSets_(0),
     saveNumber_(0),
     possiblePivotKey_(0),
@@ -158,6 +167,7 @@ ClpGubMatrix::ClpGubMatrix(ClpPackedMatrix * matrix, int numberSets,
     possiblePivotKey_(0),
     gubSlackIn_(-1)
 {
+  model_=NULL;
   numberSets_ = numberSets;
   start_ = ClpCopyOfArray(start,numberSets_);
   end_ = ClpCopyOfArray(end,numberSets_);
@@ -229,6 +239,8 @@ ClpGubMatrix::ClpGubMatrix(ClpPackedMatrix * matrix, int numberSets,
   memset(saveStatus_,0,numberSets_);
   savedKeyVariable_= new int [numberSets_];
   memset(savedKeyVariable_,0,numberSets_*sizeof(int));
+  noCheck_ = -1;
+  infeasibilityWeight_=0.0;
 }
 
 ClpGubMatrix::ClpGubMatrix (const CoinPackedMatrix & rhs) 
@@ -237,6 +249,7 @@ ClpGubMatrix::ClpGubMatrix (const CoinPackedMatrix & rhs)
     sumPrimalInfeasibilities_(0.0),
     sumOfRelaxedDualInfeasibilities_(0.0),
     sumOfRelaxedPrimalInfeasibilities_(0.0),
+    infeasibilityWeight_(0.0),
     start_(NULL),
     end_(NULL),
     lower_(NULL),
@@ -251,8 +264,10 @@ ClpGubMatrix::ClpGubMatrix (const CoinPackedMatrix & rhs)
     next_(NULL),
     toIndex_(NULL),
     fromIndex_(NULL),
+    model_(NULL),
     numberDualInfeasibilities_(0),
     numberPrimalInfeasibilities_(0),
+    noCheck_(-1),
     numberSets_(0),
     saveNumber_(0),
     possiblePivotKey_(0),
@@ -323,6 +338,7 @@ ClpGubMatrix::operator=(const ClpGubMatrix& rhs)
     backward_ = ClpCopyOfArray(rhs.backward_,numberColumns);
     backToPivotRow_ = ClpCopyOfArray(rhs.backToPivotRow_,numberColumns);
     changeCost_ = ClpCopyOfArray(rhs.changeCost_,getNumRows()+numberSets_);
+    fromIndex_ = ClpCopyOfArray(rhs.fromIndex_,getNumRows()+numberSets_+1);
     keyVariable_ = ClpCopyOfArray(rhs.keyVariable_,numberSets_);
     // find longest set
     int * longest = new int[numberSets_];
@@ -338,16 +354,18 @@ ClpGubMatrix::operator=(const ClpGubMatrix& rhs)
       length = max(length,longest[j]);
     next_ = ClpCopyOfArray(rhs.next_,numberColumns+numberSets_+2*length);
     toIndex_ = ClpCopyOfArray(rhs.toIndex_,numberSets_);
-    fromIndex_ = ClpCopyOfArray(rhs.fromIndex_,getNumRows()+1);
     sumDualInfeasibilities_ = rhs. sumDualInfeasibilities_;
     sumPrimalInfeasibilities_ = rhs.sumPrimalInfeasibilities_;
     sumOfRelaxedDualInfeasibilities_ = rhs.sumOfRelaxedDualInfeasibilities_;
     sumOfRelaxedPrimalInfeasibilities_ = rhs.sumOfRelaxedPrimalInfeasibilities_;
+    infeasibilityWeight_=rhs.infeasibilityWeight_;
     numberDualInfeasibilities_ = rhs.numberDualInfeasibilities_;
     numberPrimalInfeasibilities_ = rhs.numberPrimalInfeasibilities_;
+    noCheck_ = rhs.noCheck_;
     firstGub_ = rhs.firstGub_;
     lastGub_ = rhs.lastGub_;
     gubType_ = rhs.gubType_;
+    model_ = rhs.model_;
   }
   return *this;
 }
@@ -529,6 +547,7 @@ ClpGubMatrix::transposeTimes(const ClpSimplex * model, double scalar,
   }
   // reduce for gub
   factor *= 0.5;
+  assert (!y->getNumElements());
   if (numberInRowArray>factor*numberRows||!rowCopy) {
     // do by column
     int iColumn;
@@ -541,43 +560,110 @@ ClpGubMatrix::transposeTimes(const ClpSimplex * model, double scalar,
     int numberColumns = model->numberColumns();
     int iSet = -1;
     double djMod=0.0;
-    if (!y->getNumElements()) {
-      if (packed) {
-	// need to expand pi into y
-	assert(y->capacity()>=numberRows);
-	double * piOld = pi;
-	pi = y->denseVector();
-	const int * whichRow = rowArray->getIndices();
-	int i;
-	if (!rowScale) {
-	  // modify pi so can collapse to one loop
-	  for (i=0;i<numberInRowArray;i++) {
-	    int iRow = whichRow[i];
-	    pi[iRow]=scalar*piOld[i];
-	  }
-	  for (iColumn=0;iColumn<numberColumns;iColumn++) {
-	    if (backward_[iColumn]!=iSet) {
-	      // get pi on gub row
-	      iSet = backward_[iColumn];
-	      if (iSet>=0) {
-		int iBasic = keyVariable_[iSet];
-		if (iBasic<numberColumns) {
-		  // get dj without 
-		  assert (model->getStatus(iBasic)==ClpSimplex::basic);
-		  djMod=0.0;
-		  for (CoinBigIndex j=columnStart[iBasic];
-		       j<columnStart[iBasic]+columnLength[iBasic];j++) {
-		    int jRow=row[j];
-		    djMod -= pi[jRow]*elementByColumn[j];
-		  }
-		} else {
-		  djMod = 0.0;
+    if (packed) {
+      // need to expand pi into y
+      assert(y->capacity()>=numberRows);
+      double * piOld = pi;
+      pi = y->denseVector();
+      const int * whichRow = rowArray->getIndices();
+      int i;
+      if (!rowScale) {
+	// modify pi so can collapse to one loop
+	for (i=0;i<numberInRowArray;i++) {
+	  int iRow = whichRow[i];
+	  pi[iRow]=scalar*piOld[i];
+	}
+	for (iColumn=0;iColumn<numberColumns;iColumn++) {
+	  if (backward_[iColumn]!=iSet) {
+	    // get pi on gub row
+	    iSet = backward_[iColumn];
+	    if (iSet>=0) {
+	      int iBasic = keyVariable_[iSet];
+	      if (iBasic<numberColumns) {
+		// get dj without 
+		assert (model->getStatus(iBasic)==ClpSimplex::basic);
+		djMod=0.0;
+		for (CoinBigIndex j=columnStart[iBasic];
+		     j<columnStart[iBasic]+columnLength[iBasic];j++) {
+		  int jRow=row[j];
+		  djMod -= pi[jRow]*elementByColumn[j];
 		}
 	      } else {
 		djMod = 0.0;
 	      }
+	    } else {
+	      djMod = 0.0;
 	    }
-	    double value = -djMod;
+	  }
+	  double value = -djMod;
+	  CoinBigIndex j;
+	  for (j=columnStart[iColumn];
+	       j<columnStart[iColumn]+columnLength[iColumn];j++) {
+	    int iRow = row[j];
+	    value += pi[iRow]*elementByColumn[j];
+	  }
+	  if (fabs(value)>zeroTolerance) {
+	    array[numberNonZero]=value;
+	    index[numberNonZero++]=iColumn;
+	  }
+	}
+      } else {
+	// scaled
+	// modify pi so can collapse to one loop
+	for (i=0;i<numberInRowArray;i++) {
+	  int iRow = whichRow[i];
+	  pi[iRow]=scalar*piOld[i]*rowScale[iRow];
+	}
+	for (iColumn=0;iColumn<numberColumns;iColumn++) {
+	  if (backward_[iColumn]!=iSet) {
+	    // get pi on gub row
+	    iSet = backward_[iColumn];
+	    if (iSet>=0) {
+	      int iBasic = keyVariable_[iSet];
+	      if (iBasic<numberColumns) {
+		// get dj without 
+		assert (model->getStatus(iBasic)==ClpSimplex::basic);
+		djMod=0.0;
+		// scaled
+		for (CoinBigIndex j=columnStart[iBasic];
+		     j<columnStart[iBasic]+columnLength[iBasic];j++) {
+		  int jRow=row[j];
+		  djMod -= pi[jRow]*elementByColumn[j]*rowScale[jRow];
+		}
+	      } else {
+		djMod = 0.0;
+	      }
+	    } else {
+	      djMod = 0.0;
+	    }
+	  }
+	  double value = -djMod;
+	  CoinBigIndex j;
+	  const double * columnScale = model->columnScale();
+	  for (j=columnStart[iColumn];
+	       j<columnStart[iColumn]+columnLength[iColumn];j++) {
+	    int iRow = row[j];
+	    value += pi[iRow]*elementByColumn[j];
+	  }
+	  value *= columnScale[iColumn];
+	  if (fabs(value)>zeroTolerance) {
+	    array[numberNonZero]=value;
+	    index[numberNonZero++]=iColumn;
+	  }
+	}
+      }
+      // zero out
+      for (i=0;i<numberInRowArray;i++) {
+	int iRow = whichRow[i];
+	pi[iRow]=0.0;
+      }
+    } else {
+      // code later
+      assert (packed);
+      if (!rowScale) {
+	if (scalar==-1.0) {
+	  for (iColumn=0;iColumn<numberColumns;iColumn++) {
+	    double value = 0.0;
 	    CoinBigIndex j;
 	    for (j=columnStart[iColumn];
 		 j<columnStart[iColumn]+columnLength[iColumn];j++) {
@@ -585,200 +671,89 @@ ClpGubMatrix::transposeTimes(const ClpSimplex * model, double scalar,
 	      value += pi[iRow]*elementByColumn[j];
 	    }
 	    if (fabs(value)>zeroTolerance) {
-	      array[numberNonZero]=value;
 	      index[numberNonZero++]=iColumn;
+	      array[iColumn]=-value;
+	    }
+	  }
+	} else if (scalar==1.0) {
+	  for (iColumn=0;iColumn<numberColumns;iColumn++) {
+	    double value = 0.0;
+	    CoinBigIndex j;
+	    for (j=columnStart[iColumn];
+		 j<columnStart[iColumn]+columnLength[iColumn];j++) {
+	      int iRow = row[j];
+	      value += pi[iRow]*elementByColumn[j];
+	    }
+	    if (fabs(value)>zeroTolerance) {
+	      index[numberNonZero++]=iColumn;
+	      array[iColumn]=value;
 	    }
 	  }
 	} else {
-	  // scaled
-	  // modify pi so can collapse to one loop
-	  for (i=0;i<numberInRowArray;i++) {
-	    int iRow = whichRow[i];
-	    pi[iRow]=scalar*piOld[i]*rowScale[iRow];
-	  }
 	  for (iColumn=0;iColumn<numberColumns;iColumn++) {
-	    if (backward_[iColumn]!=iSet) {
-	      // get pi on gub row
-	      iSet = backward_[iColumn];
-	      if (iSet>=0) {
-		int iBasic = keyVariable_[iSet];
-		if (iBasic<numberColumns) {
-		  // get dj without 
-		  assert (model->getStatus(iBasic)==ClpSimplex::basic);
-		  djMod=0.0;
-		  // scaled
-		  for (CoinBigIndex j=columnStart[iBasic];
-		       j<columnStart[iBasic]+columnLength[iBasic];j++) {
-		    int jRow=row[j];
-		    djMod -= pi[jRow]*elementByColumn[j]*rowScale[jRow];
-		  }
-		} else {
-		  djMod = 0.0;
-		}
-	      } else {
-		djMod = 0.0;
-	      }
+	    double value = 0.0;
+	    CoinBigIndex j;
+	    for (j=columnStart[iColumn];
+		 j<columnStart[iColumn]+columnLength[iColumn];j++) {
+	      int iRow = row[j];
+	      value += pi[iRow]*elementByColumn[j];
 	    }
-	    double value = -djMod;
+	    value *= scalar;
+	    if (fabs(value)>zeroTolerance) {
+	      index[numberNonZero++]=iColumn;
+	      array[iColumn]=value;
+	    }
+	  }
+	}
+      } else {
+	// scaled
+	if (scalar==-1.0) {
+	  for (iColumn=0;iColumn<numberColumns;iColumn++) {
+	    double value = 0.0;
 	    CoinBigIndex j;
 	    const double * columnScale = model->columnScale();
 	    for (j=columnStart[iColumn];
 		 j<columnStart[iColumn]+columnLength[iColumn];j++) {
 	      int iRow = row[j];
-	      value += pi[iRow]*elementByColumn[j];
+	      value += pi[iRow]*elementByColumn[j]*rowScale[iRow];
 	    }
 	    value *= columnScale[iColumn];
 	    if (fabs(value)>zeroTolerance) {
-	      array[numberNonZero]=value;
 	      index[numberNonZero++]=iColumn;
+	      array[iColumn]=-value;
 	    }
 	  }
-	}
-	// zero out
-	for (i=0;i<numberInRowArray;i++) {
-	  int iRow = whichRow[i];
-	  pi[iRow]=0.0;
-	}
-      } else {
-	// code later
-	assert (packed);
-	if (!rowScale) {
-	  if (scalar==-1.0) {
-	    for (iColumn=0;iColumn<numberColumns;iColumn++) {
-	      double value = 0.0;
-	      CoinBigIndex j;
-	      for (j=columnStart[iColumn];
-		   j<columnStart[iColumn]+columnLength[iColumn];j++) {
-		int iRow = row[j];
-		value += pi[iRow]*elementByColumn[j];
-	      }
-	      if (fabs(value)>zeroTolerance) {
-		index[numberNonZero++]=iColumn;
-		array[iColumn]=-value;
-	      }
+	} else if (scalar==1.0) {
+	  for (iColumn=0;iColumn<numberColumns;iColumn++) {
+	    double value = 0.0;
+	    CoinBigIndex j;
+	    const double * columnScale = model->columnScale();
+	    for (j=columnStart[iColumn];
+		 j<columnStart[iColumn]+columnLength[iColumn];j++) {
+	      int iRow = row[j];
+	      value += pi[iRow]*elementByColumn[j]*rowScale[iRow];
 	    }
-	  } else if (scalar==1.0) {
-	    for (iColumn=0;iColumn<numberColumns;iColumn++) {
-	      double value = 0.0;
-	      CoinBigIndex j;
-	      for (j=columnStart[iColumn];
-		   j<columnStart[iColumn]+columnLength[iColumn];j++) {
-		int iRow = row[j];
-		value += pi[iRow]*elementByColumn[j];
-	      }
-	      if (fabs(value)>zeroTolerance) {
-		index[numberNonZero++]=iColumn;
-		array[iColumn]=value;
-	      }
-	    }
-	  } else {
-	    for (iColumn=0;iColumn<numberColumns;iColumn++) {
-	      double value = 0.0;
-	      CoinBigIndex j;
-	      for (j=columnStart[iColumn];
-		   j<columnStart[iColumn]+columnLength[iColumn];j++) {
-		int iRow = row[j];
-		value += pi[iRow]*elementByColumn[j];
-	      }
-	      value *= scalar;
-	      if (fabs(value)>zeroTolerance) {
-		index[numberNonZero++]=iColumn;
-		array[iColumn]=value;
-	      }
+	    value *= columnScale[iColumn];
+	    if (fabs(value)>zeroTolerance) {
+	      index[numberNonZero++]=iColumn;
+	      array[iColumn]=value;
 	    }
 	  }
 	} else {
-	  // scaled
-	  if (scalar==-1.0) {
-	    for (iColumn=0;iColumn<numberColumns;iColumn++) {
-	      double value = 0.0;
-	      CoinBigIndex j;
-	      const double * columnScale = model->columnScale();
-	      for (j=columnStart[iColumn];
-		   j<columnStart[iColumn]+columnLength[iColumn];j++) {
-		int iRow = row[j];
-		value += pi[iRow]*elementByColumn[j]*rowScale[iRow];
-	      }
-	      value *= columnScale[iColumn];
-	      if (fabs(value)>zeroTolerance) {
-		index[numberNonZero++]=iColumn;
-		array[iColumn]=-value;
-	      }
+	  for (iColumn=0;iColumn<numberColumns;iColumn++) {
+	    double value = 0.0;
+	    CoinBigIndex j;
+	    const double * columnScale = model->columnScale();
+	    for (j=columnStart[iColumn];
+		 j<columnStart[iColumn]+columnLength[iColumn];j++) {
+	      int iRow = row[j];
+	      value += pi[iRow]*elementByColumn[j]*rowScale[iRow];
 	    }
-	  } else if (scalar==1.0) {
-	    for (iColumn=0;iColumn<numberColumns;iColumn++) {
-	      double value = 0.0;
-	      CoinBigIndex j;
-	      const double * columnScale = model->columnScale();
-	      for (j=columnStart[iColumn];
-		   j<columnStart[iColumn]+columnLength[iColumn];j++) {
-		int iRow = row[j];
-		value += pi[iRow]*elementByColumn[j]*rowScale[iRow];
-	      }
-	      value *= columnScale[iColumn];
-	      if (fabs(value)>zeroTolerance) {
-		index[numberNonZero++]=iColumn;
-		array[iColumn]=value;
-	      }
+	    value *= scalar*columnScale[iColumn];
+	    if (fabs(value)>zeroTolerance) {
+	      index[numberNonZero++]=iColumn;
+	      array[iColumn]=value;
 	    }
-	  } else {
-	    for (iColumn=0;iColumn<numberColumns;iColumn++) {
-	      double value = 0.0;
-	      CoinBigIndex j;
-	      const double * columnScale = model->columnScale();
-	      for (j=columnStart[iColumn];
-		   j<columnStart[iColumn]+columnLength[iColumn];j++) {
-		int iRow = row[j];
-		value += pi[iRow]*elementByColumn[j]*rowScale[iRow];
-	      }
-	      value *= scalar*columnScale[iColumn];
-	      if (fabs(value)>zeroTolerance) {
-		index[numberNonZero++]=iColumn;
-		array[iColumn]=value;
-	      }
-	    }
-	  }
-	}
-      }
-    } else {
-      assert(!packed);
-      // code later
-      assert (!y->getNumElements());
-      double * markVector = y->denseVector(); // not empty
-      if (!rowScale) {
-	for (iColumn=0;iColumn<numberColumns;iColumn++) {
-	  double value = markVector[iColumn];
-	  markVector[iColumn]=0.0;
-	  double value2 = 0.0;
-	  CoinBigIndex j;
-	  for (j=columnStart[iColumn];
-	       j<columnStart[iColumn]+columnLength[iColumn];j++) {
-	    int iRow = row[j];
-	    value2 += pi[iRow]*elementByColumn[j];
-	  }
-	  value += value2*scalar;
-	  if (fabs(value)>zeroTolerance) {
-	    index[numberNonZero++]=iColumn;
-	    array[iColumn]=value;
-	  }
-	}
-      } else {
-	// scaled
-	for (iColumn=0;iColumn<numberColumns;iColumn++) {
-	  double value = markVector[iColumn];
-	  markVector[iColumn]=0.0;
-	  CoinBigIndex j;
-	  const double * columnScale = model->columnScale();
-	  double value2 = 0.0;
-	  for (j=columnStart[iColumn];
-	       j<columnStart[iColumn]+columnLength[iColumn];j++) {
-	    int iRow = row[j];
-	    value2 += pi[iRow]*elementByColumn[j]*rowScale[iRow];
-	  }
-	  value += value2*scalar*columnScale[iColumn];
-	  if (fabs(value)>zeroTolerance) {
-	    index[numberNonZero++]=iColumn;
-	    array[iColumn]=value;
 	  }
 	}
       }
@@ -1377,13 +1352,17 @@ ClpGubMatrix::add(const ClpSimplex * model,double * array,
 }
 // Partial pricing 
 void 
-ClpGubMatrix::partialPricing(ClpSimplex * model, int start, int end,
+ClpGubMatrix::partialPricing(ClpSimplex * model, double startFraction, double endFraction,
 			      int & bestSequence, int & numberWanted)
 {
+  numberWanted=currentWanted_;
   if (numberSets_) {
     // Do packed part before gub
-    ClpPackedMatrix::partialPricing(model,start,firstGub_,bestSequence,numberWanted);
-    if (numberWanted) {
+    int numberColumns = matrix_->getNumCols();
+    double ratio = ((double) firstGub_)/((double) numberColumns);
+    ClpPackedMatrix::partialPricing(model,startFraction*ratio,
+				    endFraction*ratio,bestSequence,numberWanted);
+    if (numberWanted||minimumGoodReducedCosts_<-1) {
       // do gub
       const double * element =matrix_->getElements();
       const int * row = matrix_->getIndices();
@@ -1401,24 +1380,40 @@ ClpGubMatrix::partialPricing(ClpSimplex * model, int start, int end,
       int numberColumns = model->numberColumns();
       int numberRows = model->numberRows();
       if (bestSequence>=0)
-	bestDj = fabs(reducedCost[bestSequence]);
+	bestDj = fabs(this->reducedCost(model,bestSequence));
       else
 	bestDj=tolerance;
       int sequenceOut = model->sequenceOut();
       int saveSequence = bestSequence;
-      int startG = max (start,firstGub_);
-      int endG = min(lastGub_,end);
+      int startG = firstGub_+ (int) (startFraction* (lastGub_-firstGub_));
+      int endG = firstGub_+ (int) (endFraction* (lastGub_-firstGub_));
+      endG = min(lastGub_,endG+1);
+      // If nothing found yet can go all the way to end
+      int endAll = endG;
+      if (bestSequence<0&&!startG)
+	endAll = lastGub_;
+      int minSet = minimumObjectsScan_<0 ? 5 : minimumObjectsScan_; 
+      int minNeg = minimumGoodReducedCosts_==-1 ? 5 : minimumGoodReducedCosts_;
+      int nSets=0;
       int iSet = -1;
       double djMod=0.0;
       double infeasibilityCost = model->infeasibilityCost();
       if (rowScale) {
 	double bestDjMod=0.0;
 	// scaled
-	for (iSequence=startG;iSequence<endG;iSequence++) {
+	for (iSequence=startG;iSequence<endAll;iSequence++) {
+	  if (numberWanted+minNeg<originalWanted_&&nSets>minSet) {
+	    // give up
+	    numberWanted=0;
+	    break;
+	  } else if (iSequence==endG&&bestSequence>=0) {
+	    break;
+	  }
 	  if (backward_[iSequence]!=iSet) {
 	    // get pi on gub row
 	    iSet = backward_[iSequence];
 	    if (iSet>=0) {
+	      nSets++;
 	      int iBasic = keyVariable_[iSet];
 	      if (iBasic>=numberColumns) {
 		djMod = - weight(iSet)*infeasibilityCost;
@@ -1591,16 +1586,26 @@ ClpGubMatrix::partialPricing(ClpSimplex * model, int start, int end,
 	    model->upperRegion()[bestSequence] = upper_[gubSlackIn_];
 	    model->costRegion()[bestSequence] = 0.0;
 	  }
+	  savedBestSequence_ = bestSequence;
+	  savedBestDj_ = reducedCost[savedBestSequence_];
 	}
       } else {
 	double bestDjMod=0.0;
 	//printf("iteration %d start %d end %d - wanted %d\n",model->numberIterations(),
 	//     startG,endG,numberWanted);
 	for (iSequence=startG;iSequence<endG;iSequence++) {
+	  if (numberWanted+minNeg<originalWanted_&&nSets>minSet) {
+	    // give up
+	    numberWanted=0;
+	    break;
+	  } else if (iSequence==endG&&bestSequence>=0) {
+	    break;
+	  }
 	  if (backward_[iSequence]!=iSet) {
 	    // get pi on gub row
 	    iSet = backward_[iSequence];
 	    if (iSet>=0) {
+	      nSets++;
 	      int iBasic = keyVariable_[iSet];
 	      if (iBasic>=numberColumns) {
 		djMod = - weight(iSet)*infeasibilityCost;
@@ -1771,15 +1776,27 @@ ClpGubMatrix::partialPricing(ClpSimplex * model, int start, int end,
 	  }
 	}
       }
+      // See if may be finished
+      if (startG==firstGub_&&bestSequence<0)
+	infeasibilityWeight_=model_->infeasibilityCost();
+      else if (bestSequence>=0) 
+	infeasibilityWeight_=-1.0;
     }
     if (numberWanted) {
       // Do packed part after gub
-      ClpPackedMatrix::partialPricing(model,max(lastGub_,start),end,bestSequence,numberWanted);
+      double offset = ((double) lastGub_)/((double) numberColumns); 
+      double ratio = ((double) numberColumns)/((double) numberColumns)-offset;
+      double start2 = offset + ratio*startFraction;
+      double end2 = min(1.0,offset + ratio*endFraction+1.0e-6);
+      ClpPackedMatrix::partialPricing(model,start2,end2,bestSequence,numberWanted);
     }
   } else {
     // no gub
-    ClpPackedMatrix::partialPricing(model,start,end,bestSequence,numberWanted);
+    ClpPackedMatrix::partialPricing(model,startFraction,endFraction,bestSequence,numberWanted);
   }
+  if (bestSequence>=0)
+    infeasibilityWeight_=-1.0; // not optimal
+  currentWanted_=numberWanted;
 }
 /* expands an updated column to allow for extra rows which the main
    solver does not know about and returns number added. 
@@ -2045,17 +2062,24 @@ ClpGubMatrix::extendUpdated(ClpSimplex * model,CoinIndexedVector * update, int m
     // take off?
     if (number>saveNumber_) {
       // clear
+      double theta = model->theta();
+      double * solution = model->solutionRegion();
       for (i=saveNumber_;i<number;i++) {
-#ifdef CLP_DEBUG_PRINT
 	int iRow = index[i];
 	int iColumn = pivotVariable[iRow];
+#ifdef CLP_DEBUG_PRINT
 	printf("Column %d (set %d) lower %g, upper %g - alpha %g - old value %g, new %g (theta %g)\n",
 	       iColumn,fromIndex_[i-saveNumber_],lower[iColumn],upper[iColumn],array[i],
 	       solution[iColumn],solution[iColumn]-model->theta()*array[i],model->theta());
 #endif
+	double value = array[i];
 	array[i]=0.0;
 	int iSet=fromIndex_[i-saveNumber_];
 	toIndex_[iSet]=-1;
+	if (iSet==iSetIn&&iColumn<numberColumns) {
+	  // update as may need value
+	  solution[iColumn] -= theta*value;
+	}
       }
     }
 #ifdef CLP_DEBUG
@@ -2294,6 +2318,15 @@ ClpGubMatrix::dualExpanded(ClpSimplex * model,
 	if (iPivot<numberColumns)
 	  backToPivotRow_[iPivot]=i;
       }
+      if (noCheck_>=0) {
+	if (infeasibilityWeight_!=model->infeasibilityCost()) {
+	  // don't bother checking
+	  sumDualInfeasibilities_=100.0;
+	  numberDualInfeasibilities_=1;
+	  sumOfRelaxedDualInfeasibilities_ =100.0;
+	  return;
+	}
+      }
       double * dj = model->djRegion();
       double * dual = model->dualRowSolution();
       double * cost = model->costRegion();
@@ -2408,6 +2441,7 @@ ClpGubMatrix::dualExpanded(ClpSimplex * model,
       }
       // and get statistics for column generation
       synchronize(model,4);
+      infeasibilityWeight_=-1.0;
     }
     break;
     // Report on infeasibilities of key variables
@@ -2604,6 +2638,8 @@ ClpGubMatrix::generalExpanded(ClpSimplex * model,int mode,int &number)
 	}
       }
       number = numberBasic;
+      if (model->numberIterations())
+	assert (number==model->numberRows());
     }
     break;
     // Make all key variables basic
@@ -2719,7 +2755,9 @@ ClpGubMatrix::generalExpanded(ClpSimplex * model,int mode,int &number)
 		double alpha = model->rowArray(3)->denseVector()[iRow];
 		//if (!alpha)
 		//printf("zero alpha a\n");
-		int updateStatus = model->factorization()->replaceColumn(model->rowArray(2),
+		int updateStatus = model->factorization()->replaceColumn(model,
+									 model->rowArray(2),
+									 model->rowArray(3),
 									 iRow, alpha);
 		returnCode = max (updateStatus, returnCode);
 		model->rowArray(3)->clear();
@@ -2740,7 +2778,9 @@ ClpGubMatrix::generalExpanded(ClpSimplex * model,int mode,int &number)
 	      double alpha = model->rowArray(3)->denseVector()[pivotRow];
 	      //if (!alpha)
 	      //printf("zero alpha b\n");
-	      int updateStatus = model->factorization()->replaceColumn(model->rowArray(2),
+	      int updateStatus = model->factorization()->replaceColumn(model,
+								       model->rowArray(2),
+								       model->rowArray(3),
 								       pivotRow, alpha);
 	      returnCode = max (updateStatus, returnCode);
 	      model->rowArray(3)->clear();
@@ -2753,9 +2793,11 @@ ClpGubMatrix::generalExpanded(ClpSimplex * model,int mode,int &number)
 #ifdef CLP_DEBUG_PRINT
 	    printf("TTTTTTry 4 %d\n",possiblePivotKey_);
 #endif
-	    int updateStatus = model->factorization()->replaceColumn(model->rowArray(2),
+	    int updateStatus = model->factorization()->replaceColumn(model,
+								     model->rowArray(2),
+								     model->rowArray(1),
 								     possiblePivotKey_, 
-								   bestAlpha);
+								     bestAlpha);
 	    returnCode = max (updateStatus, returnCode);
 	    incomingColumn = pivotVariable[possiblePivotKey_];
 	  }
@@ -2800,7 +2842,9 @@ ClpGubMatrix::generalExpanded(ClpSimplex * model,int mode,int &number)
 	    double alpha = array[iRow];
 	    //if (!alpha)
 	    //printf("zero alpha d\n");
-	    int updateStatus = model->factorization()->replaceColumn(model->rowArray(2),
+	    int updateStatus = model->factorization()->replaceColumn(model,
+								     model->rowArray(2),
+								     model->rowArray(3),
 								     iRow, alpha);
 	    returnCode = max (updateStatus, returnCode);
 	    model->rowArray(3)->clear();
@@ -2847,7 +2891,9 @@ ClpGubMatrix::generalExpanded(ClpSimplex * model,int mode,int &number)
 	    double alpha = model->rowArray(3)->denseVector()[iRow];
 	    //if (!alpha)
 	    //printf("zero alpha e\n");
-	    int updateStatus = model->factorization()->replaceColumn(model->rowArray(2),
+	    int updateStatus = model->factorization()->replaceColumn(model,
+								     model->rowArray(2),
+								     model->rowArray(3),
 								     iRow, alpha);
 	    returnCode = max (updateStatus, returnCode);
 	    model->rowArray(3)->clear();
@@ -2867,7 +2913,9 @@ ClpGubMatrix::generalExpanded(ClpSimplex * model,int mode,int &number)
 	  double alpha = model->rowArray(3)->denseVector()[pivotRow];
 	  //if (!alpha)
 	  //printf("zero alpha f\n");
-	  int updateStatus = model->factorization()->replaceColumn(model->rowArray(2),
+	  int updateStatus = model->factorization()->replaceColumn(model,
+								   model->rowArray(2),
+								   model->rowArray(3),
 								   pivotRow, alpha);
 	  returnCode = max (updateStatus, returnCode);
 	  model->rowArray(3)->clear();
@@ -2876,7 +2924,9 @@ ClpGubMatrix::generalExpanded(ClpSimplex * model,int mode,int &number)
 	keyVariable_[iSetIn]=key;
       } else {
 	// normal - but might as well do here
-	returnCode = model->factorization()->replaceColumn(model->rowArray(2),
+	returnCode = model->factorization()->replaceColumn(model,
+							   model->rowArray(2),
+							   model->rowArray(1),
 							   model->pivotRow(),
 							   model->alpha());
       }
@@ -2998,6 +3048,8 @@ ClpGubMatrix::generalExpanded(ClpSimplex * model,int mode,int &number)
       assert (number==model->sequenceIn());
       returnCode=synchronize(model,8);
     }
+    break;
+  default:
     break;
   }
   return returnCode;
@@ -3602,13 +3654,18 @@ ClpGubMatrix::updatePivot(ClpSimplex * model,double oldInValue, double oldOutVal
   int numberRows = model->numberRows();
   int pivotRow = model->pivotRow();
   int iSetIn;
-  if (sequenceIn<numberColumns)
+  // Correct sequence in
+  trueSequenceIn_=sequenceIn;
+  if (sequenceIn<numberColumns) {
     iSetIn = backward_[sequenceIn];
-  else if (sequenceIn<numberColumns+numberRows)
+  } else if (sequenceIn<numberColumns+numberRows) {
     iSetIn = -1;
-  else
+  } else {
     iSetIn = gubSlackIn_;
+    trueSequenceIn_ = numberColumns+numberRows+iSetIn;
+  }
   int iSetOut=-1;
+  trueSequenceOut_=sequenceOut;
   if (sequenceOut<numberColumns) {
     iSetOut = backward_[sequenceOut];
   } else if (sequenceOut>=numberRows+numberColumns) {
@@ -3619,6 +3676,7 @@ ClpGubMatrix::updatePivot(ClpSimplex * model,double oldInValue, double oldOutVal
       iSetOut = fromIndex_[iExtra];
     else
       assert(iSetOut == fromIndex_[iExtra]);
+    trueSequenceOut_ = numberColumns+numberRows+iSetOut;
   }
   if (rhsOffset_) {
     // update effective rhs
@@ -4016,5 +4074,17 @@ ClpGubMatrix::updatePivot(ClpSimplex * model,double oldInValue, double oldOutVal
 #endif
   return 0;
 }
-
-
+// Switches off dj checking each factorization (for BIG models)
+void 
+ClpGubMatrix::switchOffCheck()
+{
+  noCheck_=0;
+  infeasibilityWeight_=0.0;
+}
+// Correct sequence in and out to give true value
+void 
+ClpGubMatrix::correctSequence(int & sequenceIn, int & sequenceOut) const
+{
+  sequenceIn = trueSequenceIn_;
+  sequenceOut = trueSequenceOut_;
+}

@@ -25,7 +25,7 @@ public:
     atLowerBound = 0x03,
   };
   /// Partial pricing 
-  virtual void partialPricing(ClpSimplex * model, int start, int end,
+  virtual void partialPricing(ClpSimplex * model, double start, double end,
 		      int & bestSequence, int & numberWanted);
 
   /** 
@@ -70,6 +70,8 @@ public:
       mode=9  - synchronize costs
       mode=10  - return 1 if there may be changing bounds on variable (column generation)
       mode=11  - make sure set is clean (used when a variable rejected - but not flagged)
+      mode=12  - after factorize but before permute stuff
+      mode=13  - at end of simplex to delete stuff
   */
   virtual int generalExpanded(ClpSimplex * model,int mode,int & number);
   /** Purely for column generation and similar ideas.  Allows
@@ -250,10 +252,6 @@ protected:
   double sumOfRelaxedPrimalInfeasibilities_;
   /// Saved best dual on gub row in pricing
   double savedBestGubDual_;
-  /// Saved best dj in pricing
-  double savedBestDj_;
-  /// Saved best sequence in pricing
-  int savedBestSequence_;
   /// Saved best set in pricing
   int savedBestSet_;
   /// Backward pointer to pivot row !!!

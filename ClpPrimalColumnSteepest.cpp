@@ -12,7 +12,6 @@
 #include "CoinHelperFunctions.hpp"
 #include <stdio.h>
 
-
 //#############################################################################
 // Constructors / Destructor / Assignment
 //#############################################################################
@@ -197,7 +196,12 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
      10 - can go to mini-sprint
   */
   // Look at gub
+#if 1
   model_->clpMatrix()->dualExpanded(model_,updates,NULL,4);
+#else
+  updates->clear();
+  model_->computeDuals(NULL);
+#endif
   if (updates->getNumElements()>1) {
     // would have to have two goes for devex, three for steepest
     anyUpdates=2;
@@ -513,8 +517,8 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
       for (i=start[2*iPass];i<end;i++) {
 	iSequence = index[i];
 	double value = infeas[iSequence];
+	double weight = weights_[iSequence];
 	if (value>tolerance) {
-	  double weight = weights_[iSequence];
 	  //weight=1.0;
 	  if (value>bestDj*weight) {
 	    // check flagged variable and correct dj
@@ -526,8 +530,8 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
 	      numberWanted++;
 	    }
 	  }
+	  numberWanted--;
 	}
-	numberWanted--;
 	if (!numberWanted)
 	  break;
       }
@@ -547,8 +551,8 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
 	      numberWanted++;
 	    }
 	  }
+	  numberWanted--;
 	}
-	numberWanted--;
 	if (!numberWanted)
 	  break;
       }
@@ -556,6 +560,9 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
     if (!numberWanted)
       break;
   }
+  model_->clpMatrix()->setSavedBestSequence(bestSequence);
+  if (bestSequence>=0)
+    model_->clpMatrix()->setSavedBestDj(model_->djRegion()[bestSequence]);
   if (sequenceOut>=0) {
     infeas[sequenceOut]=saveOutInfeasibility;
   }
@@ -984,28 +991,29 @@ ClpPrimalColumnSteepest::djsAndSteepest(CoinIndexedVector * updates,
     double modification;
     double pivotSquared;
     int iSequence = index[j];
-    double value = reducedCost[iSequence];
     double value2 = updateBy[j];
-    value -= value2;
-    reducedCost[iSequence] = value;
-    ClpSimplex::Status status = model_->getStatus(iSequence+addSequence);
-    modification = other[iSequence];
     updateBy[j]=0.0;
+    ClpSimplex::Status status = model_->getStatus(iSequence+addSequence);
+    double value;
     
     switch(status) {
       
     case ClpSimplex::basic:
       infeasible_->zero(iSequence+addSequence);
+      reducedCost[iSequence] = 0.0;
     case ClpSimplex::isFixed:
       break;
     case ClpSimplex::isFree:
     case ClpSimplex::superBasic:
+      value = reducedCost[iSequence] - value2;
+      modification = other[iSequence];
       thisWeight = weight[iSequence];
       // row has -1 
       pivot = value2*scaleFactor;
       pivotSquared = pivot * pivot;
       
       thisWeight += pivotSquared * devex_ + pivot * modification;
+      reducedCost[iSequence] = value;
       if (thisWeight<TRY_NORM) {
 	if (mode_==1) {
 	  // steepest
@@ -1032,12 +1040,15 @@ ClpPrimalColumnSteepest::djsAndSteepest(CoinIndexedVector * updates,
       }
       break;
     case ClpSimplex::atUpperBound:
+      value = reducedCost[iSequence] - value2;
+      modification = other[iSequence];
       thisWeight = weight[iSequence];
       // row has -1 
       pivot = value2*scaleFactor;
       pivotSquared = pivot * pivot;
       
       thisWeight += pivotSquared * devex_ + pivot * modification;
+      reducedCost[iSequence] = value;
       if (thisWeight<TRY_NORM) {
 	if (mode_==1) {
 	  // steepest
@@ -1062,12 +1073,15 @@ ClpPrimalColumnSteepest::djsAndSteepest(CoinIndexedVector * updates,
       }
       break;
     case ClpSimplex::atLowerBound:
+      value = reducedCost[iSequence] - value2;
+      modification = other[iSequence];
       thisWeight = weight[iSequence];
       // row has -1 
       pivot = value2*scaleFactor;
       pivotSquared = pivot * pivot;
       
       thisWeight += pivotSquared * devex_ + pivot * modification;
+      reducedCost[iSequence] = value;
       if (thisWeight<TRY_NORM) {
 	if (mode_==1) {
 	  // steepest
@@ -2722,6 +2736,10 @@ ClpPrimalColumnSteepest::pivotColumnOldMethod(CoinIndexedVector * updates,
   }
   /*if (model_->numberIterations()%100==0)
     printf("%d best %g\n",bestSequence,bestDj);*/
+  reducedCost=model_->djRegion();
+  model_->clpMatrix()->setSavedBestSequence(bestSequence);
+  if (bestSequence>=0)
+    model_->clpMatrix()->setSavedBestDj(reducedCost[bestSequence]);
   
 #ifdef CLP_DEBUG
   if (bestSequence>=0) {
@@ -3520,6 +3538,8 @@ ClpPrimalColumnSteepest::partialPricing(CoinIndexedVector * updates,
 
   const double * cost = model_->costRegion(1);
 
+  model_->clpMatrix()->setOriginalWanted(numberWanted);
+  model_->clpMatrix()->setCurrentWanted(numberWanted);
   int iPassR=0,iPassC=0;
   // Setup two passes
   // This biases towards picking row variables
@@ -3533,13 +3553,12 @@ ClpPrimalColumnSteepest::partialPricing(CoinIndexedVector * updates,
   double dstart = ((double) nSlacks) * randomR;
   startR[0]=(int) dstart;
   startR[3]=startR[0];
-  int startC[4];
-  startC[1]=numberColumns;
+  double startC[4];
+  startC[1]=1.0;
   startC[2]=0;
   double randomC = CoinDrand48();
-  dstart = ((double) numberColumns) * randomC;
-  startC[0]=(int) dstart;
-  startC[3]=startC[0];
+  startC[0]=randomC;
+  startC[3]=randomC;
   reducedCost = model_->djRegion(1);
   int sequenceOut = model_->sequenceOut();
   double * duals2 = duals-numberColumns;
@@ -3548,13 +3567,13 @@ ClpPrimalColumnSteepest::partialPricing(CoinIndexedVector * updates,
     printf("%d wanted, nSlacks %d, chunk %d\n",numberWanted,nSlacks,chunk);
     int i;
     for (i=0;i<4;i++)
-      printf("start R %d C %d ",startR[i],startC[i]);
+      printf("start R %d C %g ",startR[i],startC[i]);
     printf("\n");
   }
   chunk = max(chunk,256);
   bool finishedR=false,finishedC=false;
   bool doingR = randomR>randomC;
-  doingR=false;
+  //doingR=false;
   int saveNumberWanted = numberWanted;
   while (!finishedR||!finishedC) {
     if (finishedR)
@@ -3638,7 +3657,10 @@ ClpPrimalColumnSteepest::partialPricing(CoinIndexedVector * updates,
 	// dj
 	reducedCost[bestSequence] = cost[bestSequence] +duals[bestSequence-numberColumns];
 	bestDj=fabs(reducedCost[bestSequence]);
+	model_->clpMatrix()->setSavedBestSequence(bestSequence);
+	model_->clpMatrix()->setSavedBestDj(reducedCost[bestSequence]);
       }
+      model_->clpMatrix()->setCurrentWanted(numberWanted);
       if (!numberWanted) 
 	break;
       doingR=false;
@@ -3656,10 +3678,17 @@ ClpPrimalColumnSteepest::partialPricing(CoinIndexedVector * updates,
     if (!doingR) {
       int saveSequence = bestSequence;
       // Columns
-      int start = startC[iPassC];
-      int end = min(startC[iPassC+1],start+chunk);;
+      double start = startC[iPassC];
+      // If we put this idea back then each function needs to update endFraction **
+#if 0
+      double dchunk = ((double) chunk)/((double) numberColumns);
+      double end = min(startC[iPassC+1],start+dchunk);;
+#else
+      double end=startC[iPassC+1]; // force end
+#endif
       model_->clpMatrix()->partialPricing(model_,start,end,bestSequence,numberWanted);
-      numberLook -= (end-start);
+      numberWanted=model_->clpMatrix()->currentWanted();
+      numberLook -= (int) ((end-start)*numberColumns);
       if (numberLook<0&&(10*(saveNumberWanted-numberWanted)>saveNumberWanted))
 	numberWanted=0; // give up
       if (saveSequence!=bestSequence) {
@@ -3670,9 +3699,8 @@ ClpPrimalColumnSteepest::partialPricing(CoinIndexedVector * updates,
 	break;
       doingR=true;
       // update start
-      int iSequence = end;
-      startC[iPassC]=iSequence;
-      if (iSequence>=startC[iPassC+1]) {
+      startC[iPassC]=end;
+      if (end>=startC[iPassC+1]-1.0e-8) {
 	if (iPassC)
 	  finishedC=true;
 	else

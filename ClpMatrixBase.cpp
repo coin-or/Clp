@@ -19,9 +19,19 @@
 //-------------------------------------------------------------------
 ClpMatrixBase::ClpMatrixBase () :
   rhsOffset_(NULL),
+  startFraction_(0.0),
+  endFraction_(1.0),
+  savedBestDj_(0.0),
+  originalWanted_(0),
+  currentWanted_(0),
+  savedBestSequence_(-1),
   type_(-1),
   lastRefresh_(-1),
   refreshFrequency_(0),
+  minimumObjectsScan_(-1),
+  minimumGoodReducedCosts_(-1),
+  trueSequenceIn_(-1),
+  trueSequenceOut_(-1),
   skipDualCheck_(false)
 {
 
@@ -34,8 +44,18 @@ ClpMatrixBase::ClpMatrixBase (const ClpMatrixBase & rhs) :
   type_(rhs.type_),
   skipDualCheck_(rhs.skipDualCheck_)
 {  
+  startFraction_ = rhs.startFraction_;
+  endFraction_ = rhs.endFraction_;
+  savedBestDj_ = rhs.savedBestDj_;
+  originalWanted_ = rhs.originalWanted_;
+  currentWanted_ = rhs.currentWanted_;
+  savedBestSequence_ = rhs.savedBestSequence_;
   lastRefresh_ = rhs.lastRefresh_;
   refreshFrequency_ = rhs.refreshFrequency_;
+  minimumObjectsScan_ = rhs.minimumObjectsScan_;
+  minimumGoodReducedCosts_ = rhs.minimumGoodReducedCosts_;
+  trueSequenceIn_ = rhs.trueSequenceIn_;
+  trueSequenceOut_ = rhs.trueSequenceOut_;
   skipDualCheck_ = rhs.skipDualCheck_;
   int numberRows = rhs.getNumRows();
   if (rhs.rhsOffset_&&numberRows) {
@@ -68,8 +88,18 @@ ClpMatrixBase::operator=(const ClpMatrixBase& rhs)
     } else {
       rhsOffset_=NULL;
     }
+    startFraction_ = rhs.startFraction_;
+    endFraction_ = rhs.endFraction_;
+    savedBestDj_ = rhs.savedBestDj_;
+    originalWanted_ = rhs.originalWanted_;
+    currentWanted_ = rhs.currentWanted_;
+    savedBestSequence_ = rhs.savedBestSequence_;
     lastRefresh_ = rhs.lastRefresh_;
     refreshFrequency_ = rhs.refreshFrequency_;
+    minimumObjectsScan_ = rhs.minimumObjectsScan_;
+    minimumGoodReducedCosts_ = rhs.minimumGoodReducedCosts_;
+    trueSequenceIn_ = rhs.trueSequenceIn_;
+    trueSequenceOut_ = rhs.trueSequenceOut_;
     skipDualCheck_ = rhs.skipDualCheck_;
   }
   return *this;
@@ -166,7 +196,7 @@ ClpMatrixBase::canDoPartialPricing() const
 }
 // Partial pricing 
 void 
-ClpMatrixBase::partialPricing(ClpSimplex * model, int start, int end,
+ClpMatrixBase::partialPricing(ClpSimplex * model, double start, double end,
 			      int & bestSequence, int & numberWanted)
 {
   std::cerr<<"partialPricing not supported - ClpMatrixBase"<<std::endl;
@@ -354,7 +384,25 @@ ClpMatrixBase::createVariable(ClpSimplex * model, int & bestSequence)
 double 
 ClpMatrixBase::reducedCost(ClpSimplex * model,int sequence) const
 {
-  return model->djRegion()[sequence];
+  int numberRows = model->numberRows();
+  int numberColumns = model->numberColumns();
+  if (sequence<numberRows+numberColumns)
+    return model->djRegion()[sequence];
+  else
+    return savedBestDj_;
+}
+/* Just for debug if odd type matrix.
+   Returns number of primal infeasibilities.
+*/
+int 
+ClpMatrixBase::checkFeasible() const 
+{
+  return 0;
+}
+// Correct sequence in and out to give true value
+void 
+ClpMatrixBase::correctSequence(int & sequenceIn, int & sequenceOut) const
+{
 }
 
 

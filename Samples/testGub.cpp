@@ -37,7 +37,6 @@ int main (int argc, const char *argv[])
     int numberRows = model.numberRows();
     char * status = new char [numberColumns];
     char * rowStatus = new char[numberRows];
-    int i;
     int n;
     n = fread(solution,sizeof(double),numberColumns,fp);
     assert (n==numberColumns);
@@ -48,6 +47,7 @@ int main (int argc, const char *argv[])
     n = fread(rowStatus,sizeof(char),numberRows,fp);
     assert (n==numberRows);
 #if 0
+    int i;
     for (i=0;i<numberColumns;i++) {
       if (status[i]==0)
 	model.setStatus(i,ClpSimplex::basic);

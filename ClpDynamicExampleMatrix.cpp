@@ -351,6 +351,7 @@ ClpDynamicExampleMatrix::ClpDynamicExampleMatrix(ClpSimplex * model, int numberS
     }
     for (int i=0;i<numberIds;i++) {
       int sequence = ids[i];
+      int iSet = set[sequence];
       CoinBigIndex start = startColumnGen_[sequence];
       addColumn(startColumnGen_[sequence+1]-start,
 		rowGen_+start,
@@ -358,8 +359,8 @@ ClpDynamicExampleMatrix::ClpDynamicExampleMatrix(ClpSimplex * model, int numberS
 		costGen_[sequence],
 		columnLowerGen_ ? columnLowerGen_[sequence] : 0,
 		columnUpperGen_ ? columnUpperGen_[sequence] : 1.0e30,
-		set[sequence],getDynamicStatus(i));
-      idGen_[iSet]=sequence; // say which one in
+		iSet,getDynamicStatus(i));
+      idGen_[i]=sequence; // say which one in
       setDynamicStatusGen(sequence,inSmall);
     }
     delete [] set;
@@ -426,28 +427,18 @@ ClpMatrixBase * ClpDynamicExampleMatrix::clone() const
 }
 // Partial pricing 
 void 
-ClpDynamicExampleMatrix::partialPricing(ClpSimplex * model, int start, int end,
+ClpDynamicExampleMatrix::partialPricing(ClpSimplex * model, double startFraction, double endFraction,
 			      int & bestSequence, int & numberWanted)
 {
+  numberWanted=currentWanted_;
   assert(!model->rowScale());
-  if (numberSets_) {
-    // Do packed part before gub
-    // always???
-    //printf("normal packed price - start %d end %d (passed end %d, first %d)\n",
-    //   start,min(end,firstAvailable_),end,firstAvailable_);
-    ClpPackedMatrix::partialPricing(model,0,firstDynamic_,bestSequence,numberWanted);
-  } else {
+  if (!numberSets_) {
     // no gub
-    ClpPackedMatrix::partialPricing(model,start,end,bestSequence,numberWanted);
-    return;
-  }
-  if (numberWanted>0) {
+    ClpPackedMatrix::partialPricing(model,startFraction,endFraction,bestSequence,numberWanted);
+  } else {
     // and do some proportion of full set
-    double ratio = ((double) numberSets_)/((double) lastDynamic_-firstDynamic_);
-    int startG = max (start,firstDynamic_);
-    int endG = min(lastDynamic_,end);
-    int startG2 = (int) (ratio* (startG-firstDynamic_));
-    int endG2 = ((int) (startG2 + ratio *(endG-startG)))+1;
+    int startG2 = (int) (startFraction*numberSets_);
+    int endG2 = (int) (endFraction*numberSets_+0.1);
     endG2 = min(endG2,numberSets_);
     //printf("gub price - set start %d end %d\n",
     //   startG2,endG2);
@@ -459,7 +450,6 @@ ClpDynamicExampleMatrix::partialPricing(ClpSimplex * model, int start, int end,
     int slackOffset = lastDynamic_+numberRows;
     int structuralOffset = slackOffset+numberSets_;
     int structuralOffset2 = structuralOffset+maximumGubColumns_;
-    int saveWanted=numberWanted;
     // If nothing found yet can go all the way to end
     int endAll = endG2;
     if (bestSequence<0&&!startG2)
@@ -478,13 +468,14 @@ ClpDynamicExampleMatrix::partialPricing(ClpSimplex * model, int start, int end,
     //printf("iteration %d start %d end %d - wanted %d\n",model->numberIterations(),
     //     startG2,endG2,numberWanted);
     int bestSet=-1;
+    int minSet = minimumObjectsScan_<0 ? 5 : minimumObjectsScan_; 
+    int minNeg = minimumGoodReducedCosts_<0 ? 5 : minimumGoodReducedCosts_;
     for (int iSet = startG2;iSet<endAll;iSet++) {
-      //if (numberWanted+50<saveWanted&&iSet>startG2+5) {
-      if (numberWanted+5<saveWanted&&iSet>startG2+5) {
+      if (numberWanted+minNeg<originalWanted_&&iSet>startG2+minSet) {
 	// give up
 	numberWanted=0;
 	break;
-      } else if (iSet==endG2-1&&bestSequence>=0) {
+      } else if (iSet==endG2&&bestSequence>=0) {
 	break;
       }
       int gubRow = toIndex_[iSet];
@@ -617,11 +608,23 @@ ClpDynamicExampleMatrix::partialPricing(ClpSimplex * model, int start, int end,
       savedBestSequence_ = bestSequence;
       savedBestSet_ = bestSet;
     }
+    // Do packed part before gub
+    // always???
+    // Resize so just do to gub
+    numberActiveColumns_=firstDynamic_;
+    int saveMinNeg=minimumGoodReducedCosts_;
+    if (bestSequence>=0)
+      minimumGoodReducedCosts_=-2;
+    currentWanted_=numberWanted;
+    ClpPackedMatrix::partialPricing(model,startFraction,endFraction,bestSequence,numberWanted);
+    numberActiveColumns_=matrix_->getNumCols();
+    minimumGoodReducedCosts_=saveMinNeg;
     // See if may be finished
     if (!startG2&&bestSequence<0)
       infeasibilityWeight_=model_->infeasibilityCost();
-    else
+    else if (bestSequence>=0)
       infeasibilityWeight_=-1.0;
+    currentWanted_=numberWanted;
   }
 }
 /* Creates a variable.  This is called after partial pricing and may modify matrix.

@@ -479,8 +479,8 @@ ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
       //cost[iSequence] = cost_[iRange];
       break;
     case ClpSimplex::isFree:
-      if (toNearest)
-	solution[iSequence] = 0.0;
+      //if (toNearest)
+      //solution[iSequence] = 0.0;
       break;
     case ClpSimplex::atUpperBound:
       if (!toNearest) {
@@ -576,6 +576,7 @@ ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
     feasibleCost_ += thisFeasibleCost*solution[iSequence];
     //assert (iRange==whichRange_[iSequence]);
   }
+  //feasibleCost_ /= (model_->rhsScale()*model_->objScale());
 }
 /* Goes through one bound for each variable.
    If array[i]*multiplier>0 goes down, otherwise up.
@@ -983,7 +984,8 @@ ClpNonLinearCost::feasibleReportCost() const
 { 
   double value;
   model_->getDblParam(ClpObjOffset,value);
-  return feasibleCost_*model_->optimizationDirection()-value;
+  return feasibleCost_*model_->optimizationDirection()/
+    (model_->objectiveScale()*model_->rhsScale())-value;
 }
 // Get rid of real costs (just for moment)
 void 

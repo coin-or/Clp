@@ -8,7 +8,7 @@
 
 
 #include "CoinPragma.hpp"
-
+static int xxxxxx=-1;
 #include <math.h>
 
 #include "CoinHelperFunctions.hpp"
@@ -98,7 +98,62 @@ int ClpPredictorCorrector::solve ( )
   double * savePi=NULL;
   double * savePrimal=NULL;
   int numberTotal = numberRows_+numberColumns_;
+  bool tryJustPredictor=false;
   while (problemStatus_<0) {
+    if (numberIterations_==xxxxxx) {
+      FILE *fp = fopen("yy.yy","wb");
+      if (fp) {
+	int nrow=numberRows_;
+	int ncol=numberColumns_;
+	// and flip
+	int i;
+	for (i=0;i<nrow;i++) {
+	  solution_[ncol+i]= -solution_[ncol+i];
+	  double value;
+	  value=lowerSlack_[ncol+i];
+	  lowerSlack_[ncol+i]=upperSlack_[ncol+i];
+	  upperSlack_[ncol+i]=value;
+	  value=zVec_[ncol+i];
+	  zVec_[ncol+i]=wVec_[ncol+i];
+	  wVec_[ncol+i]=value;
+	}
+	fwrite(dual_,sizeof(double),nrow,fp);
+	fwrite(errorRegion_,sizeof(double),nrow,fp);
+	fwrite(rhsFixRegion_,sizeof(double),nrow,fp);
+	fwrite(solution_+ncol,sizeof(double),nrow,fp);
+	fwrite(diagonal_+ncol,sizeof(double),nrow,fp);
+	fwrite(wVec_+ncol,sizeof(double),nrow,fp);
+	fwrite(zVec_+ncol,sizeof(double),nrow,fp);
+	fwrite(upperSlack_+ncol,sizeof(double),nrow,fp);
+	fwrite(lowerSlack_+ncol,sizeof(double),nrow,fp);
+	fwrite(solution_,sizeof(double),ncol,fp);
+	fwrite(diagonal_,sizeof(double),ncol,fp);
+	fwrite(wVec_,sizeof(double),ncol,fp);
+	fwrite(zVec_,sizeof(double),ncol,fp);
+	fwrite(upperSlack_,sizeof(double),ncol,fp);
+	fwrite(lowerSlack_,sizeof(double),ncol,fp);
+	fclose(fp);
+	actualDualStep_=0.0;
+	actualPrimalStep_=0.0;
+      } else {
+	printf("no file\n");
+      }
+    }
+    //#define FULL_DEBUG
+#ifdef FULL_DEBUG
+    {
+      int i;
+      printf("row    pi          artvec       rhsfx\n");
+      for (i=0;i<numberRows_;i++) {
+	printf("%d %g %g %g\n",i,dual_[i],errorRegion_[i],rhsFixRegion_[i]);
+      }
+      printf(" col  dsol  ddiag  dwvec  dzvec dbdslu dbdsll\n");
+      for (i=0;i<numberColumns_+numberRows_;i++) {
+	printf(" %d %g %g %g %g %g %g\n",i,solution_[i],diagonal_[i],wVec_[i],
+	       zVec_[i],upperSlack_[i],lowerSlack_[i]);
+      }
+    }
+#endif
     complementarityGap_=complementarityGap(numberComplementarityPairs_,0);
       handler_->message(CLP_BARRIER_ITERATION,messages_)
     <<numberIterations_
@@ -186,6 +241,10 @@ int ClpPredictorCorrector::solve ( )
 	<<numberIterations_<<complementarityGap_
 	<<CoinMessageEol;
     } 
+    //if (complementarityGap_>=0.98*lastComplementarityGap) {
+    //tryJustPredictor=true;
+    //printf("trying just predictor\n");
+    //}
     if (complementarityGap_>=1.05*lastComplementarityGap) {
       handler_->message(CLP_BARRIER_COMPLEMENTARITY,messages_)
 	<<complementarityGap_<<"increasing"
@@ -339,6 +398,13 @@ int ClpPredictorCorrector::solve ( )
             double part1=nextGap/numberComplementarityPairs_;
             double part2=nextGap/complementarityGap_;
             mu_=part1*part2*part2;
+#if 0
+	    double papermu =complementarityGap_/numberComplementarityPairs_;
+	    double affmu = nextGap/nextNumber;
+	    double sigma = pow(affmu/papermu,3);
+	    printf("mu %g, papermu %g, affmu %g, sigma %g sigmamu %g\n",
+		   mu_,papermu,affmu,sigma,sigma*papermu);
+#endif		   
           } else {
             double phi;
             if (numberComplementarityPairs_<=500) {
@@ -363,7 +429,7 @@ int ClpPredictorCorrector::solve ( )
           double xx= complementarityGap_*(beta2-tau) +product;
           //std::cout<<"gap part "<<
 	  //complementarityGap_*(beta2-tau)<<" after adding product = "<<xx<<std::endl;
-	  //xx=-1.0;
+	  xx=-1.0;
           if (xx>0.0) {
 	    double saveMu = mu_;
             double mu2=numberComplementarityPairs_;
@@ -390,7 +456,8 @@ int ClpPredictorCorrector::solve ( )
             //std::cout<<" bad by any standards"<<std::endl;
           } 
 	  //printf("product %g mu %g\n",product,mu_);
-          if (complementarityGap_*(beta2-tau)+product-mu_*numberComplementarityPairs_<0.0) {
+          if (complementarityGap_*(beta2-tau)+product-mu_*numberComplementarityPairs_<0.0||
+	      tryJustPredictor) {
             doCorrector=false;
 	    bestNextGap=COIN_DBL_MAX;
             double floatNumber = numberComplementarityPairs_;
@@ -404,6 +471,7 @@ int ClpPredictorCorrector::solve ( )
 	      <<"no corrector step"
 	      <<CoinMessageEol;
 	    phase=2;
+	    tryJustPredictor=false;
           } else {
             phase=1;
           } 
@@ -463,6 +531,45 @@ int ClpPredictorCorrector::solve ( )
         } 
       } /* endwhile */
     } /* endwhile */
+    if (numberIterations_==1) {
+      FILE *fp = fopen("xx.xx","rb");
+      if (fp) {
+	int nrow=numberRows_;
+	int ncol=numberColumns_;
+	fread(dual_,sizeof(double),nrow,fp);
+	fread(errorRegion_,sizeof(double),nrow,fp);
+	fread(rhsFixRegion_,sizeof(double),nrow,fp);
+	fread(solution_+ncol,sizeof(double),nrow,fp);
+	fread(diagonal_+ncol,sizeof(double),nrow,fp);
+	fread(wVec_+ncol,sizeof(double),nrow,fp);
+	fread(zVec_+ncol,sizeof(double),nrow,fp);
+	fread(upperSlack_+ncol,sizeof(double),nrow,fp);
+	fread(lowerSlack_+ncol,sizeof(double),nrow,fp);
+	fread(solution_,sizeof(double),ncol,fp);
+	fread(diagonal_,sizeof(double),ncol,fp);
+	fread(wVec_,sizeof(double),ncol,fp);
+	fread(zVec_,sizeof(double),ncol,fp);
+	fread(upperSlack_,sizeof(double),ncol,fp);
+	fread(lowerSlack_,sizeof(double),ncol,fp);
+	fclose(fp);
+	// and flip
+	int i;
+	for (i=0;i<nrow;i++) {
+	  solution_[ncol+i]= -solution_[ncol+i];
+	  double value;
+	  value=lowerSlack_[ncol+i];
+	  lowerSlack_[ncol+i]=upperSlack_[ncol+i];
+	  upperSlack_[ncol+i]=value;
+	  value=zVec_[ncol+i];
+	  zVec_[ncol+i]=wVec_[ncol+i];
+	  wVec_[ncol+i]=value;
+	}
+	actualDualStep_=0.0;
+	actualPrimalStep_=0.0;
+      } else {
+	printf("no file\n");
+      }
+    }
     numberFixed=updateSolution();
     numberFixedTotal+=numberFixed;
   } /* endwhile */
@@ -694,7 +801,7 @@ double ClpPredictorCorrector::findStepLength(const int phase)
       } 
     } 
   } else {
-    //iColumnust primal dual
+    //just primal dual
     for (int iColumn=0;iColumn<numberTotal;iColumn++) {
       if (!flagged(iColumn)) {
         double z1=-zVec[iColumn];
@@ -900,6 +1007,7 @@ double ClpPredictorCorrector::findDirectionVector(const int phase)
     goodSolve=true;
 #ifndef KKT
     double maximumRHS = maximumAbsElement(updateRegion_,numberRows_);
+    double saveMaximum = maximumRHS;
     double scale=1.0;
     double unscale=1.0;
     if (maximumRHS>1.0e-30) {
@@ -984,6 +1092,7 @@ double ClpPredictorCorrector::findDirectionVector(const int phase)
       } 
     } 
     relativeError = maximumRHSError/solutionNorm_;
+    relativeError = maximumRHSError/saveMaximum;
     if (relativeError>tryError) 
       relativeError=tryError;
     if (relativeError<lastError) {
@@ -1156,11 +1265,11 @@ int ClpPredictorCorrector::createSolution()
     } 
   } 
   //   modify fixed RHS
-  multiplyAdd(dj_+numberColumns_,numberRows_,-1.0,rhsFixRegion_,0.0);
+  multiplyAdd(dj_+numberColumns_,numberRows_,1.0,rhsFixRegion_,0.0);
   //   create plausible RHS?
   matrix_->times(-1.0,dj_,rhsFixRegion_);
-  multiplyAdd(solution_+numberColumns_,numberRows_,1.0,errorRegion_,0.0);
-  matrix_->times(-1.0,solution_,errorRegion_);
+  multiplyAdd(solution_+numberColumns_,numberRows_,-1.0,errorRegion_,0.0);
+  matrix_->times(1.0,solution_,errorRegion_);
   rhsNorm_=maximumAbsElement(errorRegion_,numberRows_);
   if (rhsNorm_<1.0) {
     rhsNorm_=1.0;
@@ -1228,10 +1337,12 @@ int ClpPredictorCorrector::createSolution()
   handler_->message(CLP_BARRIER_SAFE,messages_)
     <<initialValue<<objectiveNorm_
     <<CoinMessageEol;
-  int strategy=1;
+  int strategy=0;
   double extra=1.0e-10;
   double largeGap=1.0e15;
   double safeObjectiveValue=2.0*objectiveNorm_;
+  //safeObjectiveValue=1.0+objectiveNorm_;
+  //printf("temp safe obj value of %g\n",safeObjectiveValue);
   double safeFree=1.0e-1*initialValue;
   safeFree=1.0;
   double zwLarge=1.0e2*initialValue;
@@ -1244,8 +1355,8 @@ int ClpPredictorCorrector::createSolution()
       double newValue;
       double low;
       double high;
-      double randomZ =0.5*CoinDrand48()+0.5;
-      double randomW =0.5*CoinDrand48()+0.5;
+      double randomZ =0.1*CoinDrand48()+0.9;
+      double randomW =0.1*CoinDrand48()+0.9;
       double setPrimal=initialValue;
       if (strategy==0) {
         randomZ=1.0;
@@ -2252,6 +2363,16 @@ int ClpPredictorCorrector::updateSolution()
   handler_->message(CLP_BARRIER_DIAGONAL,messages_)
     <<largestDiagonal<<smallestDiagonal
     <<CoinMessageEol;
+#if 0
+  // If diagonal wild - kill some
+  if (largestDiagonal>1.0e17*smallestDiagonal) {
+    double killValue =largestDiagonal*1.0e-17;
+    for (int iColumn=0;iColumn<numberRows_+numberColumns_;iColumn++) {
+      if (fabs(diagonal_[iColumn])<killValue)
+	diagonal_[iolumn]=0.0;
+    }
+  }
+#endif
   // update rhs region
   multiplyAdd(work1+numberColumns_,numberRows_,-1.0,rhsFixRegion_,1.0);
   matrix_->times(1.0,work1,rhsFixRegion_);
@@ -2273,7 +2394,7 @@ int ClpPredictorCorrector::updateSolution()
   maximumBoundInfeasibility_ = maximumBoundInfeasibility;
   solutionNorm_ = norm;
   //compute error and fixed RHS
-  multiplyAdd(solution_+numberColumns_,numberRows_,-1.0,errorRegion_,1.0);
+  multiplyAdd(solution_+numberColumns_,numberRows_,-1.0,errorRegion_,0.0);
   matrix_->times(1.0,solution_,errorRegion_);
   maximumDualError_=maximumDualError;
   maximumBoundInfeasibility_=maximumBoundInfeasibility;

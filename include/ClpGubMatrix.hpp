@@ -48,7 +48,7 @@ public:
   virtual void add(const ClpSimplex * model,double * array,
 		   int column, double multiplier) const;
   /// Partial pricing 
-  virtual void partialPricing(ClpSimplex * model, int start, int end,
+  virtual void partialPricing(ClpSimplex * model, double start, double end,
 		      int & bestSequence, int & numberWanted);
   /// Returns number of hidden rows e.g. gub
   virtual int hiddenRows() const;
@@ -118,6 +118,8 @@ public:
       mode=9  - synchronize costs
       mode=10  - return 1 if there may be changing bounds on variable (column generation)
       mode=11  - make sure set is clean (used when a variable rejected - but not flagged)
+      mode=12  - after factorize but before permute stuff
+      mode=13  - at end of simplex to delete stuff
   */
   virtual int generalExpanded(ClpSimplex * model,int mode,int & number);
   /** 
@@ -144,6 +146,8 @@ public:
       mode=9  - adjust lower, upper on set by incoming
   */
   virtual int synchronize(ClpSimplex * model,int mode);
+  /// Correct sequence in and out to give true value
+  virtual void correctSequence(int & sequenceIn, int & sequenceOut) const;
   //@}
 
 
@@ -262,6 +266,8 @@ public:
   /// Number of sets (gub rows)
   inline int numberSets() const
   { return numberSets_;};
+  /// Switches off dj checking each factorization (for BIG models)
+  void ClpGubMatrix::switchOffCheck();
    //@}
    
     
@@ -277,6 +283,8 @@ protected:
   double sumOfRelaxedDualInfeasibilities_;
   /// Sum of Primal infeasibilities using tolerance based on error in primals
   double sumOfRelaxedPrimalInfeasibilities_;
+  /// Infeasibility weight when last full pass done
+  double infeasibilityWeight_;
   /// Starts
   int * start_;
   /// End
@@ -307,10 +315,18 @@ protected:
   int * toIndex_;
   // Reverse pointer from index to set
   int * fromIndex_; 
+  /// Pointer back to model
+  ClpSimplex * model_;
   /// Number of dual infeasibilities
   int numberDualInfeasibilities_;
   /// Number of primal infeasibilities
   int numberPrimalInfeasibilities_;
+  /** If pricing will declare victory (i.e. no check every factorization).
+      -1 - always check
+      0  - don't check
+      1  - in don't check mode but looks optimal
+  */
+  int noCheck_;
   /// Number of sets (gub rows)
   int numberSets_;
   /// Number in vector without gub extension

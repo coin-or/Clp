@@ -132,7 +132,7 @@ public:
   /// Returns number of hidden rows e.g. gub
   virtual int hiddenRows() const;
   /// Partial pricing 
-  virtual void partialPricing(ClpSimplex * model, int start, int end,
+  virtual void partialPricing(ClpSimplex * model, double start, double end,
 			      int & bestSequence, int & numberWanted);
   /** expands an updated column to allow for extra rows which the main
       solver does not know about and returns number added. 
@@ -177,6 +177,8 @@ public:
       mode=9  - synchronize costs and bounds
       mode=10  - return 1 if there may be changing bounds on variable (column generation)
       mode=11  - make sure set is clean (used when a variable rejected - but not flagged)
+      mode=12  - after factorize but before permute stuff
+      mode=13  - at end of simplex to delete stuff
   */
   virtual int generalExpanded(ClpSimplex * model,int mode,int & number);
   /** 
@@ -187,8 +189,13 @@ public:
       May update bestSequence.
   */
   virtual void createVariable(ClpSimplex * model, int & bestSequence);
+  /** Just for debug if odd type matrix.
+      Returns number of primal infeasibilities. */
+  virtual int checkFeasible() const ;
   /// Returns reduced cost of a variable
-  virtual double reducedCost(ClpSimplex * model,int sequence) const;
+  double reducedCost(ClpSimplex * model,int sequence) const;
+  /// Correct sequence in and out to give true value
+  virtual void correctSequence(int & sequenceIn, int & sequenceOut) const;
   //@}
   
   //---------------------------------------------------------------------------
@@ -275,6 +282,47 @@ public:
   { return skipDualCheck_;};
   inline void setSkipDualCheck(bool yes)
   { skipDualCheck_=yes;};
+  /** Partial pricing tuning parameter - minimum number of "objects" to scan.
+      e.g. number of Gub sets but could be number of variables */
+  inline int minimumObjectsScan() const
+  { return minimumObjectsScan_;};
+  inline void setMinimumObjectsScan(int value)
+  { minimumObjectsScan_=value;};
+  /// Partial pricing tuning parameter - minimum number of negative reduced costs to get
+  inline int minimumGoodReducedCosts() const
+  { return minimumGoodReducedCosts_;};
+  inline void setMinimumGoodReducedCosts(int value)
+  { minimumGoodReducedCosts_=value;};
+  /// Current start of search space in matrix (as fraction)
+  inline double startFraction() const
+  { return startFraction_;};
+  inline void setStartFraction(double value) 
+  { startFraction_ = value;};
+  /// Current end of search space in matrix (as fraction)
+  inline double endFraction() const
+  { return endFraction_;};
+  inline void setEndFraction(double value) 
+  { endFraction_ = value;};
+  /// Current best reduced cost
+  inline double savedBestDj() const
+  { return savedBestDj_;};
+  inline void setSavedBestDj(double value) 
+  { savedBestDj_ = value;};
+  /// Initial number of negative reduced costs wanted
+  inline int originalWanted() const
+  { return originalWanted_;};
+  inline void setOriginalWanted(int value) 
+  { originalWanted_ = value;};
+  /// Current number of negative reduced costs which we still need
+  inline int currentWanted() const
+  { return currentWanted_;};
+  inline void setCurrentWanted(int value) 
+  { currentWanted_ = value;};
+  /// Current best sequence
+  inline int savedBestSequence() const
+  { return savedBestSequence_;};
+  inline void setSavedBestSequence(int value) 
+  { savedBestSequence_ = value;};
   //@}
   
   
@@ -305,12 +353,32 @@ protected:
       or big gub or anywhere where going through full columns is
       expensive */
   double * rhsOffset_;
+  /// Current start of search space in matrix (as fraction)
+  double startFraction_;
+  /// Current end of search space in matrix (as fraction)
+  double endFraction_;
+  /// Best reduced cost so far
+  double savedBestDj_;
+  /// Initial number of negative reduced costs wanted
+  int originalWanted_;
+  /// Current number of negative reduced costs which we still need
+  int currentWanted_;
+  /// Saved best sequence in pricing
+  int savedBestSequence_;
   /// type (may be useful)
   int type_;
   /// If rhsOffset used this is iteration last refreshed
   int lastRefresh_;
   /// If rhsOffset used this is refresh frequency (0==off)
   int refreshFrequency_;
+  /// Partial pricing tuning parameter - minimum number of "objects" to scan
+  int minimumObjectsScan_;
+  /// Partial pricing tuning parameter - minimum number of negative reduced costs to get
+  int minimumGoodReducedCosts_;
+  /// True sequence in (i.e. from larger problem)
+  int trueSequenceIn_;
+  /// True sequence out (i.e. from larger problem)
+  int trueSequenceOut_;
   /// whether to skip dual checks most of time
   bool skipDualCheck_;
   //@}

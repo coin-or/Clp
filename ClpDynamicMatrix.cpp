@@ -31,8 +31,6 @@ ClpDynamicMatrix::ClpDynamicMatrix ()
     sumOfRelaxedDualInfeasibilities_(0.0),
     sumOfRelaxedPrimalInfeasibilities_(0.0),
     savedBestGubDual_(0.0),
-    savedBestDj_(0.0),
-    savedBestSequence_(-1),
     savedBestSet_(0),
     backToPivotRow_(NULL),
     keyVariable_(NULL),
@@ -102,8 +100,6 @@ ClpDynamicMatrix::ClpDynamicMatrix (const ClpDynamicMatrix & rhs)
   numberDualInfeasibilities_ = rhs.numberDualInfeasibilities_;
   numberPrimalInfeasibilities_ = rhs.numberPrimalInfeasibilities_;
   savedBestGubDual_=rhs.savedBestGubDual_;
-  savedBestDj_ = rhs.savedBestDj_;
-  savedBestSequence_=rhs.savedBestSequence_;
   savedBestSet_=rhs.savedBestSet_;
   noCheck_ = rhs.noCheck_;
   infeasibilityWeight_=rhs.infeasibilityWeight_;
@@ -162,8 +158,6 @@ ClpDynamicMatrix::ClpDynamicMatrix(ClpSimplex * model, int numberSets,
   int numberRows = model->numberRows();
   numberStaticRows_ = numberRows;
   savedBestGubDual_=0.0;
-  savedBestSequence_=-1;
-  savedBestDj_ = 0.0;
   savedBestSet_=0;
   // Number of columns needed
   int frequency = model->factorizationFrequency();
@@ -364,8 +358,6 @@ ClpDynamicMatrix::operator=(const ClpDynamicMatrix& rhs)
     numberDualInfeasibilities_ = rhs.numberDualInfeasibilities_;
     numberPrimalInfeasibilities_ = rhs.numberPrimalInfeasibilities_;
     savedBestGubDual_=rhs.savedBestGubDual_;
-    savedBestDj_ = rhs.savedBestDj_;
-    savedBestSequence_=rhs.savedBestSequence_;
     savedBestSet_=rhs.savedBestSet_;
     noCheck_ = rhs.noCheck_;
     infeasibilityWeight_=rhs.infeasibilityWeight_;
@@ -395,28 +387,25 @@ ClpMatrixBase * ClpDynamicMatrix::clone() const
 }
 // Partial pricing 
 void 
-ClpDynamicMatrix::partialPricing(ClpSimplex * model, int start, int end,
+ClpDynamicMatrix::partialPricing(ClpSimplex * model, double startFraction, double endFraction,
 			      int & bestSequence, int & numberWanted)
 {
+  numberWanted=currentWanted_;
   assert(!model->rowScale());
   if (numberSets_) {
     // Do packed part before gub
     // always???
     //printf("normal packed price - start %d end %d (passed end %d, first %d)\n",
-    //   start,min(end,firstAvailable_),end,firstAvailable_);
-    ClpPackedMatrix::partialPricing(model,0,firstDynamic_,bestSequence,numberWanted);
+    ClpPackedMatrix::partialPricing(model,startFraction,endFraction,bestSequence,numberWanted);
   } else {
     // no gub
-    ClpPackedMatrix::partialPricing(model,start,end,bestSequence,numberWanted);
+    ClpPackedMatrix::partialPricing(model,startFraction,endFraction,bestSequence,numberWanted);
     return;
   }
   if (numberWanted>0) {
     // and do some proportion of full set
-    double ratio = ((double) numberSets_)/((double) lastDynamic_-firstDynamic_);
-    int startG = max (start,firstDynamic_);
-    int endG = min(lastDynamic_,end);
-    int startG2 = (int) (ratio* (startG-firstDynamic_));
-    int endG2 = ((int) (startG2 + ratio *(endG-startG)))+1;
+    int startG2 = (int) (startFraction*numberSets_);
+    int endG2 = (int) (endFraction*numberSets_+0.1);
     endG2 = min(endG2,numberSets_);
     //printf("gub price - set start %d end %d\n",
     //   startG2,endG2);
@@ -427,7 +416,6 @@ ClpDynamicMatrix::partialPricing(ClpSimplex * model, int start, int end,
     int numberRows = model->numberRows();
     int slackOffset = lastDynamic_+numberRows;
     int structuralOffset = slackOffset+numberSets_;
-    int saveWanted=numberWanted;
     // If nothing found yet can go all the way to end
     int endAll = endG2;
     if (bestSequence<0&&!startG2)
@@ -457,13 +445,14 @@ ClpDynamicMatrix::partialPricing(ClpSimplex * model, int start, int end,
 	assert(!cost[i]);
     }
 #endif
+    int minSet = minimumObjectsScan_<0 ? 5 : minimumObjectsScan_; 
+    int minNeg = minimumGoodReducedCosts_<0 ? 5 : minimumGoodReducedCosts_;
     for (int iSet = startG2;iSet<endAll;iSet++) {
-      //if (numberWanted+50<saveWanted&&iSet>startG2+5) {
-      if (numberWanted+5<saveWanted&&iSet>startG2+5) {
+      if (numberWanted+minNeg<originalWanted_&&iSet>startG2+minSet) {
 	// give up
 	numberWanted=0;
 	break;
-      } else if (iSet==endG2-1&&bestSequence>=0) {
+      } else if (iSet==endG2&&bestSequence>=0) {
 	break;
       }
       int gubRow = toIndex_[iSet];
@@ -567,9 +556,10 @@ ClpDynamicMatrix::partialPricing(ClpSimplex * model, int start, int end,
     // See if may be finished
     if (!startG2&&bestSequence<0)
       infeasibilityWeight_=model_->infeasibilityCost();
-    else
+    else if (bestSequence>=0)
       infeasibilityWeight_=-1.0;
   }
+  currentWanted_=numberWanted;
 }
 /* Returns effective RHS if it is being used.  This is used for long problems
    or big gub or anywhere where going through full columns is
@@ -1710,14 +1700,19 @@ ClpDynamicMatrix::createVariable(ClpSimplex * model, int & bestSequence)
 	reducedCost[firstAvailable_] = 0.0;
 	modifyOffset(key,valueOfKey);
 	rhsOffset_[newRow] = -shift; // sign?
+#ifdef CLP_DEBUG
+	model->rowArray(1)->checkClear();
+#endif
 	// now pivot in
-	unpack(model,model->rowArray(3),firstAvailable_);
-	model->factorization()->updateColumnFT(model->rowArray(2),model->rowArray(3));
-	double alpha = model->rowArray(3)->denseVector()[newRow];
+	unpack(model,model->rowArray(1),firstAvailable_);
+	model->factorization()->updateColumnFT(model->rowArray(2),model->rowArray(1));
+	double alpha = model->rowArray(1)->denseVector()[newRow];
 	int updateStatus = 
-	  model->factorization()->replaceColumn(model->rowArray(2),
-								 newRow, alpha);
-	model->rowArray(3)->clear();
+	  model->factorization()->replaceColumn(model,
+						model->rowArray(2),
+						model->rowArray(1),
+						newRow, alpha);
+	model->rowArray(1)->clear();
 	if (updateStatus) {
 	  if (updateStatus==3) {
 	    // out of memory

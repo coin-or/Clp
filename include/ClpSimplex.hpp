@@ -526,11 +526,21 @@ public:
   /// Basic variables pivoting on which rows
   inline int * pivotVariable() const
           { return pivotVariable_;};
-  /// Scaling of objective 12345.0 (auto), 0.0 (off), other user
+  /// Scaling of objective 
   inline double objectiveScale() const 
           { return objectiveScale_;} ;
   inline void setObjectiveScale(double value)
           { objectiveScale_ = value;} ;
+  /// Scaling of rhs and bounds
+  inline double rhsScale() const 
+          { return rhsScale_;} ;
+  inline void setRhsScale(double value)
+          { rhsScale_ = value;} ;
+  /// If automatic scaling on
+  inline bool automaticScaling() const
+  { return automaticScale_!=0;};
+  inline void setAutomaticScaling(bool onOff)
+  { automaticScale_ = onOff ? 1: 0;}; 
   /// Current dual tolerance
   inline double currentDualTolerance() const 
           { return dualTolerance_;} ;
@@ -827,6 +837,8 @@ protected:
   double largeValue_;
   /// Scaling of objective
   double objectiveScale_;
+  /// Scaling of rhs and bounds
+  double rhsScale_;
   /// Largest error on Ax-b
   double largestPrimalError_;
   /// Largest error on basic duals
@@ -999,6 +1011,8 @@ protected:
   */
   float incomingInfeasibility_;
   float allowedInfeasibility_;
+  /// Automatic scaling of objective and rhs and bounds
+  int automaticScale_;
   /// For dealing with all issues of cycling etc
   ClpSimplexProgress * progress_;
   //@}

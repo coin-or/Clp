@@ -170,9 +170,13 @@ ClpFactorization::factorize ( ClpSimplex * model,
 					   numberRowBasic,
 					   numberColumnBasic,
 					   NULL,NULL,NULL);
-
+	// and recompute as network side say different
+	if (model->numberIterations())
+	  numberRowBasic = numberBasic - numberColumnBasic;
 	numberElements = 3 * numberBasic + 3 * numberElements + 10000;
-	getAreas ( numberRows, numberRowBasic+numberColumnBasic, numberElements,
+	// If iteration not zero then may be compressed
+	getAreas ( !model->numberIterations() ? numberRows : numberBasic, 
+		   numberRowBasic+numberColumnBasic, numberElements,
 		   2 * numberElements );
 	//fill
 	//copy
@@ -213,17 +217,22 @@ ClpFactorization::factorize ( ClpSimplex * model,
       }
       // If we get here status is 0 or -1
       if (status_ == 0) {
+	// We may need to tamper with order and redo - e.g. network with side
+	int useNumberRows = numberRows;
+	// **** we will also need to add test in dual steepest to do
+	// as we do for network
+        matrix->generalExpanded(model,12,useNumberRows);
 	int * permuteBack = permuteBack_;
 	int * back = pivotColumnBack_;
 	//int * pivotTemp = pivotColumn_;
-	//ClpDisjointCopyN ( pivotVariable, numberRows_ , pivotTemp  );
+	//ClpDisjointCopyN ( pivotVariable, numberRows , pivotTemp  );
 	// Redo pivot order
 	for (i=0;i<numberRowBasic;i++) {
 	  int k = pivotTemp[i];
 	  // so rowIsBasic[k] would be permuteBack[back[i]]
 	  pivotVariable[permuteBack[back[i]]]=k+numberColumns;
 	}
-	for (;i<numberRows;i++) {
+	for (;i<useNumberRows;i++) {
 	  int k = pivotTemp[i];
 	  // so rowIsBasic[k] would be permuteBack[back[i]]
 	  pivotVariable[permuteBack[back[i]]]=k;
@@ -231,8 +240,8 @@ ClpFactorization::factorize ( ClpSimplex * model,
 	// Set up permutation vector
 	// these arrays start off as copies of permute
 	// (and we could use permute_ instead of pivotColumn (not back though))
-	ClpDisjointCopyN ( permute_, numberRows_ , pivotColumn_  );
-	ClpDisjointCopyN ( permuteBack_, numberRows_ , pivotColumnBack_  );
+	ClpDisjointCopyN ( permute_, useNumberRows , pivotColumn_  );
+	ClpDisjointCopyN ( permuteBack_, useNumberRows , pivotColumnBack_  );
 	if (networkMatrix) {
 	  maximumPivots(saveMaximumPivots);
 	  // create network factorization
@@ -248,6 +257,7 @@ ClpFactorization::factorize ( ClpSimplex * model,
 	  // kill off arrays in ordinary factorization
 	  if (!doCheck) {
 	    gutsOfDestructor();
+	    status_=0;
 #if 0
 	    // but put back permute arrays so odd things will work
 	    int numberRows = model->numberRows();
@@ -459,16 +469,24 @@ ClpFactorization::factorize ( ClpSimplex * model,
    after factorization and thereafter re-factorize
    partial update already in U */
 int 
-ClpFactorization::replaceColumn ( CoinIndexedVector * regionSparse,
-		      int pivotRow,
-		      double pivotCheck ,
-		      bool checkBeforeModifying)
+ClpFactorization::replaceColumn ( const ClpSimplex * model, 
+				  CoinIndexedVector * regionSparse,
+				  CoinIndexedVector * tableauColumn,
+				  int pivotRow,
+				  double pivotCheck ,
+				  bool checkBeforeModifying)
 {
   if (!networkBasis_) {
-    return CoinFactorization::replaceColumn(regionSparse,
-					    pivotRow,
-					    pivotCheck,
-					    checkBeforeModifying);
+    // see if FT
+    if (doForrestTomlin_)
+      return CoinFactorization::replaceColumn(regionSparse,
+					      pivotRow,
+					      pivotCheck,
+					      checkBeforeModifying);
+    else
+      return CoinFactorization::replaceColumnPFI(tableauColumn,
+					      pivotRow,pivotCheck); // Note array
+
   } else {
     if (doCheck) {
       int returnCode = CoinFactorization::replaceColumn(regionSparse,

@@ -8,7 +8,6 @@
 #include "ClpFactorization.hpp"
 #include "CoinHelperFunctions.hpp"
 #include <cstdio>
-
 //#############################################################################
 // Constructors / Destructor / Assignment
 //#############################################################################

@@ -32,6 +32,10 @@ int main (int argc, const char *argv[])
     // ken-18
     for (iRow=104976;iRow<numberRows;iRow++)
       rowBlock[iRow]=-1;
+  } else if (numberRows==2426) {
+    // ken-7
+    for (iRow=2401;iRow<numberRows;iRow++)
+      rowBlock[iRow]=-1;
   } else if (numberRows==810) {
     for (iRow=81;iRow<84;iRow++)
       rowBlock[iRow]=-1;
@@ -141,7 +145,7 @@ int main (int argc, const char *argv[])
 	whichColumn[numberColumn2++]=iColumn;
     sub[iBlock]=ClpSimplex(&model,numberRow2,whichRow,
 			   numberColumn2,whichColumn);
-#if 1
+#if 0
     // temp
     double * upper = sub[iBlock].columnUpper();
     for (iColumn=0;iColumn<numberColumn2;iColumn++)
@@ -218,17 +222,11 @@ int main (int argc, const char *argv[])
     // Solve master - may be infeasible
     master.scaling(false);
     if (0) {
-      CoinMpsIO writer;
-      writer.setMpsData(*master.matrix(), COIN_DBL_MAX,
-			master.getColLower(), master.getColUpper(),
-			master.getObjCoefficients(),
-			(const char*) 0 /*integrality*/,
-			master.getRowLower(), master.getRowUpper(),
-			NULL,NULL);
-      writer.writeMps("yy.mps");
+      master.writeMps("yy.mps");
     }
 
     master.primal();
+    int problemStatus = master.status(); // do here as can change (delcols)
     if (master.numberIterations()==0&&iPass)
       break; // finished
     if (master.objectiveValue()>lastObjective-1.0e-7&&iPass>555)
@@ -262,9 +260,9 @@ int main (int argc, const char *argv[])
     }
     const double * dual=NULL;
     bool deleteDual=false;
-    if (master.isProvenOptimal()) {
+    if (problemStatus==0) {
       dual = master.dualRowSolution();
-    } else if (master.isProvenPrimalInfeasible()) {
+    } else if (problemStatus==1) {
       // could do composite objective
       dual = master.infeasibilityRay();
       deleteDual = true;
@@ -289,7 +287,7 @@ int main (int argc, const char *argv[])
       // new objective
       top[iBlock].transposeTimes(dual,objective2);
       int i;
-      if (master.isProvenOptimal()) {
+      if (problemStatus==0) {
 	for (i=0;i<numberColumns2;i++)
 	  objective2[i] = saveObj[i]-objective2[i];
       } else {
@@ -311,7 +309,7 @@ int main (int argc, const char *argv[])
 	  // See if good dj and pack down
 	  int number=start;
 	  double dj = objValue;
-	  if (!master.isProvenOptimal()) 
+	  if (problemStatus) 
 	    dj=0.0;
 	  double smallest=1.0e100;
 	  double largest=0.0;
@@ -376,6 +374,7 @@ int main (int argc, const char *argv[])
 	  abort();
 	}
       }
+      delete [] saveObj;
     }
     if (deleteDual)
       delete [] dual;
@@ -394,9 +393,16 @@ int main (int argc, const char *argv[])
   double * fullSolution = model.primalColumnSolution();
   const double * fullLower = model.columnLower();
   const double * fullUpper = model.columnUpper();
+  const double * rowSolution = master.primalRowSolution();
+  double * fullRowSolution = model.primalRowSolution();
+  int kRow=0;
+  for (iRow=0;iRow<numberRows;iRow++) {
+    if (rowBlock[iRow]==-1) {
+      model.setRowStatus(iRow,master.getRowStatus(kRow));
+      fullRowSolution[iRow]=rowSolution[kRow++];
+    }
+  }
   int kColumn=0;
-  for (iRow=0;iRow<numberRows;iRow++)
-    model.setRowStatus(iRow,ClpSimplex::superBasic);
   for (iColumn=0;iColumn<numberColumns;iColumn++) {
     if (columnBlock[iColumn]==-1) {
       model.setStatus(iColumn,master.getStatus(kColumn));
@@ -412,7 +418,7 @@ int main (int argc, const char *argv[])
     for (i=numberMasterColumns;i<numberColumnsGenerated;i++)
       if (whichBlock[i-numberMasterColumns]==iBlock)
 	sol[i] = solution[i];
-    memset(lower,0,numberMasterRows*sizeof(double));
+    memset(lower,0,(numberMasterRows+numberBlocks)*sizeof(double));
     master.times(1.0,sol,lower);
     for (iRow=0;iRow<numberMasterRows;iRow++) {
       double value = lower[iRow];
@@ -432,6 +438,7 @@ int main (int argc, const char *argv[])
 			top[iBlock].getElements());
     sub[iBlock].primal();
     const double * subSolution = sub[iBlock].primalColumnSolution();
+    const double * subRowSolution = sub[iBlock].primalRowSolution();
     // move solution
     kColumn=0;
     for (iColumn=0;iColumn<numberColumns;iColumn++) {
@@ -441,13 +448,29 @@ int main (int argc, const char *argv[])
       }
     }
     assert(kColumn==sub[iBlock].numberColumns());
+    kRow=0;
+    for (iRow=0;iRow<numberRows;iRow++) {
+      if (rowBlock[iRow]==iBlock) {
+	model.setRowStatus(iRow,sub[iBlock].getRowStatus(kRow));
+	fullRowSolution[iRow]=subRowSolution[kRow++];
+      }
+    }
+    assert(kRow == sub[iBlock].numberRows()-numberMasterRows);
   }
   for (iColumn=0;iColumn<numberColumns;iColumn++) {
     if (fullSolution[iColumn]<fullUpper[iColumn]-1.0e-8&&
 	fullSolution[iColumn]>fullLower[iColumn]+1.0e-8) {
-      model.setStatus(iColumn,ClpSimplex::basic);
+      assert(model.getStatus(iColumn)==ClpSimplex::basic);
+    } else if (fullSolution[iColumn]>=fullUpper[iColumn]-1.0e-8) {
+      // may help to make rest non basic
+      model.setStatus(iColumn,ClpSimplex::atUpperBound);
+    } else if (fullSolution[iColumn]<=fullLower[iColumn]+1.0e-8) {
+      // may help to make rest non basic
+      model.setStatus(iColumn,ClpSimplex::atLowerBound);
     }
   }
+  for (iRow=0;iRow<numberRows;iRow++) 
+    model.setRowStatus(iRow,ClpSimplex::superBasic);
   model.primal(1);
   delete [] sol;
   delete [] lower;

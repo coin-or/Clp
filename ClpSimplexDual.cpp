@@ -572,7 +572,8 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
     }
 #endif
 #if 0
-    if (!factorization_->pivots()){
+    //    if (factorization_->pivots()){
+    {
       int iPivot;
       double * array = rowArray_[3]->denseVector();
       int i;
@@ -595,7 +596,7 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
 	double lowerValue=lower_[iSequence];
 	double upperValue=upper_[iSequence];
 	double value=solution_[iSequence];
-	if(getStatus(iSequence)!=basic) {
+	if(getStatus(iSequence)!=basic&&getStatus(iSequence)!=isFree) {
 	  assert(lowerValue>-1.0e20);
 	  assert(upperValue<1.0e20);
 	}
@@ -842,7 +843,9 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
 	}
 	assert(fabs(dualOut_)<1.0e50);
 	// if stable replace in basis
-	int updateStatus = factorization_->replaceColumn(rowArray_[2],
+	int updateStatus = factorization_->replaceColumn(this,
+							 rowArray_[2],
+							 rowArray_[1],
 							 pivotRow_,
 							 alpha_);
 	// if no pivots, bad update but reasonable alpha - take and invert
@@ -2957,9 +2960,14 @@ ClpSimplexDual::originalBound( int iSequence)
     rowUpperWork_[iRow]=rowUpper_[iRow];
     if (rowScale_) {
       if (rowLowerWork_[iRow]>-1.0e50)
-	rowLowerWork_[iRow] *= rowScale_[iRow];
+	rowLowerWork_[iRow] *= rowScale_[iRow]*rhsScale_;
       if (rowUpperWork_[iRow]<1.0e50)
-	rowUpperWork_[iRow] *= rowScale_[iRow];
+	rowUpperWork_[iRow] *= rowScale_[iRow]*rhsScale_;
+    } else if (rhsScale_!=1.0) {
+      if (rowLowerWork_[iRow]>-1.0e50)
+	rowLowerWork_[iRow] *= rhsScale_;
+      if (rowUpperWork_[iRow]<1.0e50)
+	rowUpperWork_[iRow] *= rhsScale_;
     }
   } else {
     // columns
@@ -2968,9 +2976,14 @@ ClpSimplexDual::originalBound( int iSequence)
     if (rowScale_) {
       double multiplier = 1.0/columnScale_[iSequence];
       if (columnLowerWork_[iSequence]>-1.0e50)
-	columnLowerWork_[iSequence] *= multiplier;
+	columnLowerWork_[iSequence] *= multiplier*rhsScale_;
       if (columnUpperWork_[iSequence]<1.0e50)
-	columnUpperWork_[iSequence] *= multiplier;
+	columnUpperWork_[iSequence] *= multiplier*rhsScale_;
+    } else if (rhsScale_!=1.0) {
+      if (columnLowerWork_[iSequence]>-1.0e50)
+	columnLowerWork_[iSequence] *= rhsScale_;
+      if (columnUpperWork_[iSequence]<1.0e50)
+	columnUpperWork_[iSequence] *= rhsScale_;
     }
   }
   setFakeBound(iSequence,noFake);
@@ -3032,6 +3045,16 @@ ClpSimplexDual::perturb()
   int maxLength=0;
   int minLength=numberRows_;
   double averageCost = 0.0;
+  // look at element range
+  double smallestNegative;
+  double largestNegative;
+  double smallestPositive;
+  double largestPositive;
+  matrix_->rangeOfElements(smallestNegative, largestNegative,
+			   smallestPositive, largestPositive);
+  smallestPositive = min(fabs(smallestNegative),smallestPositive);
+  largestPositive = max(fabs(largestNegative),largestPositive);
+  double elementRatio = largestPositive/smallestPositive;
   int numberNonZero=0;
   if (!numberIterations_&&perturbation_==50) {
     // See if we need to perturb
@@ -3067,8 +3090,10 @@ ClpSimplexDual::perturb()
       printf(" - Would perturb\n");
     //exit(0);
 #endif
+    //printf("ratio number diff costs %g, element ratio %g\n",((double)number)/((double) numberColumns_),
+    //								      elementRatio);
     //number=0;
-    if (number*4>numberColumns_) {
+    if (number*4>numberColumns_||elementRatio>1.0e12) {
       perturbation_=100;
       return; // good enough
     }
@@ -3420,9 +3445,9 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
     // external view - in case really getting optimal 
     columnUpper_[iColumn] = newUpper[i];
     if (scalingFlag_<=0) 
-      upper_[iColumn] = newUpper[i];
+      upper_[iColumn] = newUpper[i]*rhsScale_;
     else 
-      upper_[iColumn] = newUpper[i]/columnScale_[iColumn]; // scale
+      upper_[iColumn] = (newUpper[i]/columnScale_[iColumn])*rhsScale_; // scale
     // Start of fast iterations
     int status = fastDual(alwaysFinish);
     // make sure plausible
@@ -3481,9 +3506,9 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
     // external view - in case really getting optimal 
     columnLower_[iColumn] = newLower[i];
     if (scalingFlag_<=0) 
-      lower_[iColumn] = newLower[i];
+      lower_[iColumn] = newLower[i]*rhsScale_;
     else 
-      lower_[iColumn] = newLower[i]/columnScale_[iColumn]; // scale
+      lower_[iColumn] = (newLower[i]/columnScale_[iColumn])*rhsScale_; // scale
     // Start of fast iterations
     status = fastDual(alwaysFinish);
     // make sure plausible

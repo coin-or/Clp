@@ -55,11 +55,12 @@ enum ClpParameterType {
   GENERALQUERY=-100,
   
   DUALTOLERANCE=1,PRIMALTOLERANCE,DUALBOUND,PRIMALWEIGHT,MAXTIME,OBJSCALE,
+  RHSSCALE,
 
   LOGLEVEL=101,MAXFACTOR,PERTVALUE,MAXITERATION,PRESOLVEPASS,IDIOT,SPRINT,
   
   DIRECTION=201,DUALPIVOT,SCALING,ERRORSALLOWED,KEEPNAMES,SPARSEFACTOR,
-  PRIMALPIVOT,PRESOLVE,CRASH,BIASLU,PERTURBATION,MESSAGES,
+  PRIMALPIVOT,PRESOLVE,CRASH,BIASLU,PERTURBATION,MESSAGES,AUTOSCALE,
   
   DIRECTORY=301,IMPORT,EXPORT,RESTORE,SAVE,DUALSIMPLEX,PRIMALSIMPLEX,
   MAXIMIZE,MINIMIZE,EXIT,STDIN,UNITTEST,NETLIB_DUAL,NETLIB_PRIMAL,SOLUTION,
@@ -566,7 +567,10 @@ ClpItem::setDoubleParameter (ClpSimplex * model,double value) const
       model->setMaximumSeconds(value);
       break;
     case OBJSCALE:
-      model->setOptimizationDirection(value);
+      model->setObjectiveScale(value);
+      break;
+    case RHSSCALE:
+      model->setRhsScale(value);
       break;
     default:
       abort();
@@ -595,7 +599,10 @@ ClpItem::doubleParameter (ClpSimplex * model) const
     value=model->maximumSeconds();
     break;
   case OBJSCALE:
-    value=model->optimizationDirection();
+    value=model->objectiveScale();
+    break;
+  case RHSSCALE:
+    value=model->rhsScale();
     break;
   default:
     abort();
@@ -890,6 +897,16 @@ int main (int argc, const char *argv[])
        "Useful for playing around"
        ); 
     parameters[numberParameters++]=
+      ClpItem("auto!Scale","Whether to scale objective, rhs and bounds of problem if they look odd",
+	      "off",AUTOSCALE,false);
+    parameters[numberParameters-1].append("on");
+    parameters[numberParameters-1].setLonghelp
+      (
+       "If you think you may get odd objective values or large equality rows etc then\
+ it may be worth setting this true.  It is still experimental and you may prefer\
+ to use objective!Scale and rhs!Scale"
+       ); 
+    parameters[numberParameters++]=
       ClpItem("barr!ier","Solve using primal dual predictor corrector algorithm",
 	      BARRIER);
     parameters[numberParameters-1].setLonghelp
@@ -1134,7 +1151,12 @@ specialized network code."
     parameters[numberParameters++]=
       ClpItem("objective!Scale","Scale factor to apply to objective",
 	      -1.0e20,1.0e20,OBJSCALE,false);
-    parameters[numberParameters-1].setDoubleValue(models->optimizationDirection());
+    parameters[numberParameters-1].setLonghelp
+      (
+       "If the objective function has some very large values, you may wish to scale them\
+ internally by this amount.  It can also be set by autoscale.  It is applied after scaling"
+       ); 
+    parameters[numberParameters-1].setDoubleValue(1.0);
     parameters[numberParameters++]=
       ClpItem("passP!resolve","How many passes in presolve",
 	      0,100,PRESOLVEPASS);
@@ -1257,6 +1279,15 @@ costs this much to be infeasible",
       (
        "Useful for testing if maximization works correctly"
        ); 
+    parameters[numberParameters++]=
+      ClpItem("rhs!Scale","Scale factor to apply to rhs and bounds",
+	      -1.0e20,1.0e20,RHSSCALE,false);
+    parameters[numberParameters-1].setLonghelp
+      (
+       "If the rhs or bounds have some very large meaningful values, you may wish to scale them\
+ internally by this amount.  It can also be set by autoscale"
+       ); 
+    parameters[numberParameters-1].setDoubleValue(1.0);
     parameters[numberParameters++]=
       ClpItem("save!Model","Save model to binary file",
 	      SAVE);
@@ -1546,6 +1577,9 @@ costs this much to be infeasible",
 	      break;
 	    case SCALING:
 	      models[iModel].scaling(action);
+	      break;
+	    case AUTOSCALE:
+	      models[iModel].setAutomaticScaling(action!=0);
 	      break;
 	    case SPARSEFACTOR:
 	      models[iModel].setSparseFactorization((1-action)!=0);

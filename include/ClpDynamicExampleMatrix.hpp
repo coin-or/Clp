@@ -31,7 +31,7 @@ class ClpDynamicExampleMatrix : public ClpDynamicMatrix {
   
 public:
   /// Partial pricing 
-  virtual void partialPricing(ClpSimplex * model, int start, int end,
+  virtual void partialPricing(ClpSimplex * model, double start, double end,
 		      int & bestSequence, int & numberWanted);
   
   /** Creates a variable.  This is called after partial pricing and will modify matrix.
