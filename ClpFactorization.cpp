@@ -181,10 +181,16 @@ ClpFactorization::factorize ( ClpSimplex * model,
 	if (model->numberIterations())
 	  numberRowBasic = numberBasic - numberColumnBasic;
 	numberElements = 3 * numberBasic + 3 * numberElements + 10000;
+#if 0
 	// If iteration not zero then may be compressed
 	getAreas ( !model->numberIterations() ? numberRows : numberBasic, 
 		   numberRowBasic+numberColumnBasic, numberElements,
 		   2 * numberElements );
+#else
+	getAreas ( numberRows,
+		   numberRowBasic+numberColumnBasic, numberElements,
+		   2 * numberElements );
+#endif
 	//fill
 	//copy
 	numberElements=numberRowBasic;

@@ -2481,22 +2481,24 @@ ClpSimplexPrimal::nextSuperBasic(int superBasicType,CoinIndexedVector * columnAr
 	  double * work=columnArray->denseVector();
 	  int * which=columnArray->getIndices();
 	  for (iColumn=0;iColumn<numberRows_+numberColumns_;iColumn++) {
-	    if (getStatus(iColumn)==superBasic) {
-	      if (fabs(solution_[iColumn]-lower_[iColumn])<=primalTolerance_) {
-		solution_[iColumn]=lower_[iColumn];
-		setStatus(iColumn,atLowerBound);
-	      } else if (fabs(solution_[iColumn]-upper_[iColumn])
-			 <=primalTolerance_) {
-		solution_[iColumn]=upper_[iColumn];
-		setStatus(iColumn,atUpperBound);
-	      } else if (lower_[iColumn]<-1.0e20&&upper_[iColumn]>1.0e20) {
-		setStatus(iColumn,isFree);
-		break;
-	      } else if (!flagged(iColumn)) {
-		// put ones near bounds at end after sorting
-		work[number]= - min(0.1*(solution_[iColumn]-lower_[iColumn]),
-				    upper_[iColumn]-solution_[iColumn]);
-		which[number++] = iColumn;
+	    if (!flagged(iColumn)) {
+	      if (getStatus(iColumn)==superBasic) {
+		if (fabs(solution_[iColumn]-lower_[iColumn])<=primalTolerance_) {
+		  solution_[iColumn]=lower_[iColumn];
+		  setStatus(iColumn,atLowerBound);
+		} else if (fabs(solution_[iColumn]-upper_[iColumn])
+			   <=primalTolerance_) {
+		  solution_[iColumn]=upper_[iColumn];
+		  setStatus(iColumn,atUpperBound);
+		} else if (lower_[iColumn]<-1.0e20&&upper_[iColumn]>1.0e20) {
+		  setStatus(iColumn,isFree);
+		  break;
+		} else if (!flagged(iColumn)) {
+		  // put ones near bounds at end after sorting
+		  work[number]= - min(0.1*(solution_[iColumn]-lower_[iColumn]),
+				      upper_[iColumn]-solution_[iColumn]);
+		  which[number++] = iColumn;
+		}
 	      }
 	    }
 	  }
@@ -2518,19 +2520,21 @@ ClpSimplexPrimal::nextSuperBasic(int superBasicType,CoinIndexedVector * columnAr
 	}      
       } else {
 	for (;iColumn<numberRows_+numberColumns_;iColumn++) {
-	  if (getStatus(iColumn)==superBasic) {
-	    if (fabs(solution_[iColumn]-lower_[iColumn])<=primalTolerance_) {
-	      solution_[iColumn]=lower_[iColumn];
-	      setStatus(iColumn,atLowerBound);
-	    } else if (fabs(solution_[iColumn]-upper_[iColumn])
-		       <=primalTolerance_) {
-	      solution_[iColumn]=upper_[iColumn];
-	      setStatus(iColumn,atUpperBound);
-	    } else if (lower_[iColumn]<-1.0e20&&upper_[iColumn]>1.0e20) {
-	      setStatus(iColumn,isFree);
-	      break;
-	    } else {
-	      break;
+	  if (!flagged(iColumn)) {
+	    if (getStatus(iColumn)==superBasic) {
+	      if (fabs(solution_[iColumn]-lower_[iColumn])<=primalTolerance_) {
+		solution_[iColumn]=lower_[iColumn];
+		setStatus(iColumn,atLowerBound);
+	      } else if (fabs(solution_[iColumn]-upper_[iColumn])
+			 <=primalTolerance_) {
+		solution_[iColumn]=upper_[iColumn];
+		setStatus(iColumn,atUpperBound);
+	      } else if (lower_[iColumn]<-1.0e20&&upper_[iColumn]>1.0e20) {
+		setStatus(iColumn,isFree);
+		break;
+	      } else {
+		break;
+	      }
 	    }
 	  }
 	}

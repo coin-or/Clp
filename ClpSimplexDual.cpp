@@ -245,14 +245,14 @@ int ClpSimplexDual::dual (int ifValuesPass , int startFinishOptions)
       for (i=0;i<numberColumns_;i++) {
 	if (getStatus(i)==atLowerBound) {
 	  if (saveDuals[i]<0.0) {
-	    if (saveDuals[i]<-1.0e-3)
-	      printf("bad dj at lb %d %g\n",i,saveDuals[i]);
+	    //if (saveDuals[i]<-1.0e-3)
+	    //printf("bad dj at lb %d %g\n",i,saveDuals[i]);
 	    saveDuals[i]=0.0;
 	  }
 	} else if (getStatus(i)==atUpperBound) {
 	  if (saveDuals[i]>0.0) {
-	    if (saveDuals[i]>1.0e-3)
-	      printf("bad dj at ub %d %g\n",i,saveDuals[i]);
+	    //if (saveDuals[i]>1.0e-3)
+	    //printf("bad dj at ub %d %g\n",i,saveDuals[i]);
 	    saveDuals[i]=0.0;
 	  }
 	}
