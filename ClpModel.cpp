@@ -1199,6 +1199,7 @@ ClpModel::addRows(int number, const double * rowLower,
 void 
 ClpModel::addRows(const CoinBuild & buildObject)
 {
+  assert (buildObject.type()==0); // check correct
   int number = buildObject.numberRows();
   if (number) {
     CoinPackedVectorBase ** rows=
@@ -1370,6 +1371,39 @@ ClpModel::addColumns(int number, const double * columnLower,
   rowScale_ = NULL;
   delete [] columnScale_;
   columnScale_ = NULL;
+}
+// Add columns from a build object
+void 
+ClpModel::addColumns(const CoinBuild & buildObject)
+{
+  assert (buildObject.type()==1); // check correct
+  int number = buildObject.numberColumns();
+  if (number) {
+    CoinPackedVectorBase ** columns=
+      new CoinPackedVectorBase * [number];
+    int iColumn;
+    double * objective = new double [number];
+    double * lower = new double [number];
+    double * upper = new double [number];
+    for (iColumn=0;iColumn<number;iColumn++) {
+      const int * rows;
+      const double * elements;
+      int numberElements = buildObject.column(iColumn,lower[iColumn],
+                                              upper[iColumn],objective[iColumn],
+                                              rows,elements);
+      columns[iColumn] = 
+	new CoinPackedVector(numberElements,
+			     rows,elements);
+    }
+    addColumns(number, lower, upper,objective,columns);
+    for (iColumn=0;iColumn<number;iColumn++) 
+      delete columns[iColumn];
+    delete [] columns;
+    delete [] objective;
+    delete [] lower;
+    delete [] upper;
+  }
+  return;
 }
 // chgRowLower
 void 

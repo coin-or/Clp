@@ -173,6 +173,8 @@ public:
 	       const double * columnUpper,
 		  const double * objective,
 	       const CoinPackedVectorBase * const * columns);
+  /// Add columns from a build object
+  void addColumns(const CoinBuild & buildObject);
   /** Change row lower bounds */
   void chgRowLower(const double * rowLower);
   /** Change row upper bounds */
