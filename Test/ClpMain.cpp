@@ -913,12 +913,12 @@ stopping",
     int iModel=0;
     goodModels[0]=false;
     // set reasonable defaults
-    models[0].scaling(1);
-    models[0].setDualBound(1.0e6);
-    models[0].setDualTolerance(1.0e-7);
+    //models[0].scaling(1);
+    //models[0].setDualBound(1.0e6);
+    //models[0].setDualTolerance(1.0e-7);
     ClpDualRowSteepest steep;
     models[0].setDualRowPivotAlgorithm(steep);
-    models[0].setPrimalTolerance(1.0e-7);
+    //models[0].setPrimalTolerance(1.0e-7);
     ClpPrimalColumnSteepest steepP;
     models[0].setPrimalColumnPivotAlgorithm(steepP);
     std::string directory ="./";
