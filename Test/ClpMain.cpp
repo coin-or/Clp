@@ -708,6 +708,7 @@ nextField()
       if ( *where)
 	add_history (where);
       strcpy(line,where);
+      free(where);
     }
 #else
     fprintf(stdout,"Clp:");
