@@ -27,14 +27,19 @@ int main (int argc, const char *argv[])
     model.initialPrimalSolve();
   }
 #else
-  model.setLogLevel(8);
   ClpSolve solvectl;
 
 
-  if (argc<3 ||!strstr(argv[2],"primal")) {
-    // Use the dual algorithm unless user said "primal"
+  if (argc<3 ||(!strstr(argv[2],"primal")&&!strstr(argv[2],"barrier"))) {
+    // Use the dual algorithm unless user said "primal" or "barrier"
     std::cout << std::endl << " Solve using Dual: " << std::endl;
     solvectl.setSolveType(ClpSolve::useDual);
+    solvectl.setPresolveType(ClpSolve::presolveOn);
+    model.initialSolve(solvectl);
+  } else if (strstr(argv[2],"barrier")) {
+    // Use the barrier algorithm if user said "barrier"
+    std::cout << std::endl << " Solve using Barrier: " << std::endl;
+    solvectl.setSolveType(ClpSolve::useBarrier);
     solvectl.setPresolveType(ClpSolve::presolveOn);
     model.initialSolve(solvectl);
   } else {
@@ -51,7 +56,7 @@ int main (int argc, const char *argv[])
 
   // remove this to print solution
 
-  //exit(0);
+  exit(0);
 
   /*
     Now to print out solution.  The methods used return modifiable
