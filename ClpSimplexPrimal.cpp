@@ -622,7 +622,21 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
     problemStatus_ = loop; //exit if in loop
     return ;
   } else if (loop<-1) {
+    // Is it time for drastic measures
+    if (nonLinearCost_->numberInfeasibilities()&&progress->badTimes()>5&&
+	progress->oddState()<10&&progress->oddState()>=0) {
+      progress->newOddState();
+      nonLinearCost_->zapCosts();
+    }
     // something may have changed
+    gutsOfSolution(NULL,NULL);
+  }
+  // If progress then reset costs
+  if (loop==-1&&!nonLinearCost_->numberInfeasibilities()&&progress->oddState()<0) {
+    createRim(4,false); // costs back
+    delete nonLinearCost_;
+    nonLinearCost_ = new ClpNonLinearCost(this);
+    progress->endOddState();
     gutsOfSolution(NULL,NULL);
   }
   // Flag to say whether to go to dual to clean up
@@ -1431,7 +1445,8 @@ ClpSimplexPrimal::primalColumn(CoinIndexedVector * updates,
 int 
 ClpSimplexPrimal::updatePrimalsInPrimal(CoinIndexedVector * rowArray,
 		  double theta,
-		  double & objectiveChange)
+		  double & objectiveChange,
+					int valuesPass)
 {
   double * work=rowArray->denseVector();
   int number=rowArray->getNumElements();
@@ -1856,6 +1871,7 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	      <<x<<sequenceWithin(sequenceIn_)
 	      <<CoinMessageEol;
 	    setFlagged(sequenceIn_);
+	    progress_->clearBadTimes();
 	    lastBadIteration_ = numberIterations_; // say be more cautious
 	    rowArray_[1]->clear();
 	    pivotRow_=-1;
@@ -1894,6 +1910,7 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	    <<x<<sequenceWithin(sequenceIn_)
 	    <<CoinMessageEol;
 	  setFlagged(sequenceIn_);
+	  progress_->clearBadTimes();
 	  lastBadIteration_ = numberIterations_; // say be more cautious
 	  rowArray_[1]->clear();
 	  pivotRow_=-1;
@@ -1993,6 +2010,7 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	      <<x<<sequenceWithin(sequenceIn_)
 	      <<CoinMessageEol;
 	    setFlagged(sequenceIn_);
+	    progress_->clearBadTimes();
 	  }
 	  lastBadIteration_ = numberIterations_; // say be more cautious
 	  rowArray_[1]->clear();
@@ -2053,7 +2071,7 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
     if (pivotRow_>=0)
       oldCost = cost(pivotVariable_[pivotRow_]);
     // rowArray_[1] is not empty - used to update djs
-    updatePrimalsInPrimal(rowArray_[1],theta_, objectiveChange);
+    updatePrimalsInPrimal(rowArray_[1],theta_, objectiveChange,ifValuesPass);
     if (pivotRow_>=0)
       dualIn_ += (oldCost-cost(pivotVariable_[pivotRow_]));
     double oldValue = valueIn_;

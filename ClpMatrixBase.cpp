@@ -133,3 +133,17 @@ ClpMatrixBase::rangeOfElements(double & smallestNegative, double & largestNegati
   smallestPositive=0.0;
   largestPositive=0.0;
 }
+// Says whether it can do partial pricing
+bool 
+ClpMatrixBase::canDoPartialPricing() const
+{
+  return false; // default is no
+}
+// Partial pricing 
+void 
+ClpMatrixBase::partialPricing(ClpSimplex * model, int start, int end,
+			      int & bestSequence, int & numberWanted)
+{
+  std::cerr<<"partialPricing not supported - ClpMatrixBase"<<std::endl;
+  abort();
+}

@@ -1151,7 +1151,7 @@ ClpSimplexPrimalQuadratic::whileIterating(
 	if (pivotRow_>=0)
 	  oldCost = cost(pivotVariable_[pivotRow_]);
 	// rowArray_[1] is not empty - used to update djs
-	updatePrimalsInPrimal(rowArray_[1],theta_, objectiveChange);
+	updatePrimalsInPrimal(rowArray_[1],theta_, objectiveChange,1);
 	if (pivotRow_>=0)
 	  dualIn_ += (oldCost-cost(pivotVariable_[pivotRow_]));
 	double oldValue = valueIn_;

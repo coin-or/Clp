@@ -32,8 +32,6 @@ djFlag - mostly skip variables with bad dj worse than this => 2*djExit
 djTol - only look at variables with dj better than this => 0.01*djExit
 ****************/
 
-/**** strategy 32 - intelligent mu and reasonableInfeas
-****************/
 #define IDIOT_FIX_TOLERANCE 1e-6
 #define SMALL_IDIOT_FIX_TOLERANCE 1e-10
 int 
@@ -133,7 +131,7 @@ Idiot::crash(int numberPass, CoinMessageHandler * handler,const CoinMessages *me
   if (!lightWeight_) {
     maxIts2_=105;
   } else if (lightWeight_==1) {
-    mu_ *= 10.0;
+    mu_ *= 1000.0;
     maxIts2_=23;
   } else if (lightWeight_==2) {
     maxIts2_=11;
@@ -143,7 +141,11 @@ Idiot::crash(int numberPass, CoinMessageHandler * handler,const CoinMessages *me
   //printf("setting mu to %g and doing %d passes\n",mu_,majorIterations_);
   solve2(handler,messages);
 #ifndef OSI_IDIOT
-  crossOver(3); // make basis ?
+  double averageInfeas = model_->sumPrimalInfeasibilities()/((double) model_->numberRows());
+  if (averageInfeas<0.01&&(strategy_&512)!=0) 
+    crossOver(16+1); 
+  else
+    crossOver(3);
 #endif
 }
 void
@@ -166,6 +168,7 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
   int maxBigIts=maxBigIts_;
   int maxIts=maxIts_;
   int logLevel=logLevel_;
+  int saveMajorIterations = majorIterations_;
   if (handler) {
     if (handler->logLevel()>0&&handler->logLevel()<3)
       logLevel=1;
@@ -218,15 +221,18 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
   double * pi, * dj;
 #ifndef OSI_IDIOT
   double * cost = model_->objective();
+  double * lower = model_->columnLower();
+  double * upper = model_->columnUpper();
+  double * rowlower= model_->rowLower();
 #else
   double * cost = new double [ncols];
   memcpy( cost, model_->getObjCoefficients(), ncols*sizeof(double));
-#endif
-  const double *elemXX;
   const double * lower = model_->getColLower();
   const double * upper = model_->getColUpper();
-  double * saveSol;
   const double * rowlower= model_->getRowLower();
+#endif
+  const double *elemXX;
+  double * saveSol;
   double * rowupper= new double[nrows]; // not const as modified
   memcpy(rowupper,model_->getRowUpper(),nrows*sizeof(double));
   int * whenUsed;
@@ -287,6 +293,57 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
   } else {
     elemXX=element;
   }
+  // Do scaling if wanted
+  bool scaled=false;
+#ifndef OSI_IDIOT
+  if ((strategy_&32)!=0&&!allOnes) {
+    scaled = model_->clpMatrix()->scale(model_)==0;
+    if (scaled) {
+      const double * rowScale = model_->rowScale();
+      const double * columnScale = model_->columnScale();
+      double * oldLower = lower;
+      double * oldUpper = upper;
+      double * oldCost = cost;
+      lower = new double[ncols];
+      upper = new double[ncols];
+      cost = new double[ncols];
+      memcpy(lower,oldLower,ncols*sizeof(double));
+      memcpy(upper,oldUpper,ncols*sizeof(double));
+      memcpy(cost,oldCost,ncols*sizeof(double));
+      int icol,irow;
+      for (icol=0;icol<ncols;icol++) {
+	double multiplier = 1.0/columnScale[icol];
+	if (lower[icol]>-1.0e50)
+	  lower[icol] *= multiplier;
+	if (upper[icol]<1.0e50)
+	  upper[icol] *= multiplier;
+	colsol[icol] *= multiplier;
+	cost[icol] *= columnScale[icol];
+      }
+      rowlower = new double[nrows];
+      memcpy(rowlower,model_->rowLower(),nrows*sizeof(double));
+      for (irow=0;irow<nrows;irow++) {
+	double multiplier = rowScale[irow];
+	if (rowlower[irow]>-1.0e50)
+	  rowlower[irow] *= multiplier;
+	if (rowupper[irow]<1.0e50)
+	  rowupper[irow] *= multiplier;
+	rowsol[irow] *= multiplier;
+      }
+      int length = columnStart[ncols-1]+columnLength[ncols-1];
+      double * elemYY = new double[length];
+      for (i=0;i<ncols;i++) {
+	CoinBigIndex j;
+	double scale = columnScale[i];
+	for (j=columnStart[i];j<columnStart[i]+columnLength[i];j++) {
+	  int irow=row[j];
+	  elemYY[j] = element[j]*scale*rowScale[irow];
+	}
+      }
+      elemXX=elemYY;
+    }
+  }
+#endif
   for (i=0;i<ncols;i++) {
     CoinBigIndex j;
     double dd=columnLength[i];
@@ -415,9 +472,9 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
     }
     if (iteration>50&&n==numberAway&&result.infeas<1.0e-4)
       break; // not much happening
-    if (lightWeight_==1&&iteration>10&&result.infeas>1.0) {
+    if (lightWeight_==1&&iteration>10&&result.infeas>1.0&&maxIts!=7) {
       if (lastInfeas!=bestInfeas&&min(result.infeas,lastInfeas)>0.95*bestInfeas)
-	break; // not getting feasible
+	majorIterations_ = min(majorIterations_,iteration); // not getting feasible
     }
     bestInfeas=min(bestInfeas,result.infeas);
     lastInfeas = result.infeas;
@@ -465,7 +522,7 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
 	     &&result.weighted>lastResult.weighted
 	     -dropEnoughWeighted_*fabs(lastResult.weighted))) {
 	  mu*=changeMu;
-          if ((saveStrategy&32)!=0&&result.infeas<reasonableInfeas) {
+          if ((saveStrategy&32)!=0&&result.infeas<reasonableInfeas&&0) {
 	    reasonableInfeas=max(smallInfeas,reasonableInfeas*sqrt(changeMu));
 	    printf("reasonable infeas now %g\n",reasonableInfeas);
 	  }
@@ -559,11 +616,46 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
       }
     }
     if (iteration>=majorIterations_) {
-      if (logLevel>2) 
-	printf("Exiting due to number of major iterations\n");
-      break;
+      // If small and not feasible and crash then dive dive dive
+      if (0&&result.infeas>1.0&&majorIterations_<30&&(maxIts2_==11||maxIts2_==23)) {
+	maxIts=7;
+	majorIterations_=100;
+      } else {
+	if (logLevel>2) 
+	  printf("Exiting due to number of major iterations\n");
+	break;
+      }
     }
   }
+  majorIterations_ = saveMajorIterations;
+#ifndef OSI_IDIOT
+  if (scaled) {
+    // Scale solution and free arrays
+    const double * rowScale = model_->rowScale();
+    const double * columnScale = model_->columnScale();
+    int icol,irow;
+    for (icol=0;icol<ncols;icol++) {
+      colsol[icol] *= columnScale[icol];
+      dj[icol] /= columnScale[icol];
+    }
+    for (irow=0;irow<nrows;irow++) {
+      rowsol[irow] /= rowScale[irow];
+      pi[irow] *= rowScale[irow];
+    }
+    delete [] rowScale;
+    delete [] columnScale;
+    model_->setRowScale(NULL);
+    model_->setColumnScale(NULL);
+    delete [] elemXX;
+    delete [] lower;
+    delete [] upper;
+    delete [] cost;
+    lower = model_->columnLower();
+    upper = model_->columnUpper();
+    cost = model_->objective();
+    rowlower = model_->rowLower();
+  }
+#endif
 #define TRYTHIS
 #ifdef TRYTHIS
   if ((saveStrategy&2048)!=0) {
@@ -605,6 +697,9 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
 	    "%d - mu %g, infeasibility %g, objective %g, %d interior\n",
 	    iteration,mu,lastResult.infeas,lastResult.objval,n);
   }
+#ifndef OSI_IDIOT
+  model_->setSumPrimalInfeasibilities(lastResult.infeas);
+#endif
   {
     double large=0.0;
     int i;
@@ -715,7 +810,7 @@ Idiot::crossOver(int mode)
   if ((strategy_&128)!=0) {
     fixTolerance=SMALL_IDIOT_FIX_TOLERANCE;
   }
-  if ((mode&16)!=0&&addAll<2) presolve=1;
+  if ((mode&16)!=0&&addAll<3) presolve=1;
   double * saveUpper = NULL;
   double * saveLower = NULL;
   if (addAll<3) {
@@ -773,6 +868,21 @@ Idiot::crossOver(int mode)
     }
     printf("New objective after scaling %g\n",objValue);
   }
+#if 0
+   maybe put back - but just get feasible ?
+  // If not many fixed then just exit
+  int numberFixed=0;
+  for (i=ordStart;i<ordEnd;i++) {
+    if (colsol[i]<lower[i]+fixTolerance) 
+      numberFixed++;
+    else if (colsol[i]>upper[i]-fixTolerance) 
+      numberFixed++;
+  }
+  if (numberFixed<ncols/2) {
+    addAll=3;
+    presolve=0;
+  }
+#endif
   model_->createStatus();
   /* addAll
      0 - chosen,all used, all 
@@ -883,10 +993,18 @@ Idiot::crossOver(int mode)
       saveModel = model_;
       model_ = pinfo.presolvedModel(*model_,1.0e-8,false,5);
     }
-    model_->primal(1);
-    if (presolve) {
-      pinfo.postsolve(true);
-      delete model_;
+    if (model_) {
+      model_->primal(1);
+      if (presolve) {
+	pinfo.postsolve(true);
+	delete model_;
+	model_ = saveModel;
+	saveModel=NULL;
+      }
+    } else {
+      // not feasible
+      addAll=1;
+      presolve=0;
       model_ = saveModel;
       saveModel=NULL;
     }
@@ -915,6 +1033,8 @@ Idiot::crossOver(int mode)
       }
       printf("Time so far %g, %d now added from previous iterations\n",
 	     CoinCpuTime()-startTime,n);
+      if (addAll)
+	presolve=0;
       if (presolve) {
 	saveModel = model_;
 	model_ = pinfo.presolvedModel(*model_,1.0e-8,false,5);

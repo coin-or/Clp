@@ -316,6 +316,8 @@ public:
   /// Sum of primal infeasibilities
   inline double sumPrimalInfeasibilities() const 
           { return sumPrimalInfeasibilities_;} ;
+  inline void setSumPrimalInfeasibilities(double value)
+          { sumPrimalInfeasibilities_=value;} ;
   /// Number of primal infeasibilities
   inline int numberPrimalInfeasibilities() const 
           { return numberPrimalInfeasibilities_;} ;
@@ -716,17 +718,17 @@ public:
   };
   inline bool flagged(int sequence) const
   {return ((status_[sequence]&64)!=0);};
-  /// To say variable active in primal pivot row choice
-  inline void setActive( int sequence)
+  /// To say row active in primal pivot row choice
+  inline void setActive( int iRow)
   {
-    status_[sequence] |= 128;
+    status_[iRow] |= 128;
   };
-  inline void clearActive( int sequence)
+  inline void clearActive( int iRow)
   {
-    status_[sequence] &= ~128;
+    status_[iRow] &= ~128;
   };
-  inline bool active(int sequence) const
-  {return ((status_[sequence]&128)!=0);};
+  inline bool active(int iRow) const
+  {return ((status_[iRow]&128)!=0);};
   /** Set up status array (can be used by OsiClp).
       Also can be used to set up all slack basis */
   void createStatus() ;
@@ -1002,6 +1004,20 @@ public:
   void modifyObjective(double value);
   /// Returns previous iteration number (if -1) - current if (0)
   int lastIterationNumber(int back=1) const;
+  /// Odd state
+  inline void newOddState()
+  { oddState_= - oddState_-1;};
+  inline void endOddState()
+  { oddState_=abs(oddState_);};
+  inline void clearOddState() 
+  { oddState_=0;};
+  inline int oddState() const
+  { return oddState_;};
+  /// number of bad times
+  inline int badTimes() const
+  { return numberBadTimes_;};
+  inline void clearBadTimes()
+  { numberBadTimes_=0;};
 
   //@}
   /**@name Data  */
@@ -1026,6 +1042,8 @@ public:
   int in_[CLP_CYCLE];
   int out_[CLP_CYCLE];
   char way_[CLP_CYCLE];
+  /// If things are in an odd state
+  int oddState_;
   //@}
 };
 #endif

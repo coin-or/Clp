@@ -913,11 +913,12 @@ ClpPrimalColumnSteepest::djsAndSteepest(CoinIndexedVector * updates,
   // put row of tableau in rowArray and columnArray
   model_->clpMatrix()->transposeTimes(model_,-1.0,
 				      updates,spareColumn2,spareColumn1);
-    // get subset which have nonzero tableau elements
-    // Luckily spareRow2 is long enough (rowArray_[3])
-    model_->clpMatrix()->subsetTransposeTimes(model_,alternateWeights_,
+  // get subset which have nonzero tableau elements
+  // Luckily spareRow2 is long enough (rowArray_[3])
+  model_->clpMatrix()->subsetTransposeTimes(model_,alternateWeights_,
 					      spareColumn1,
 					      spareRow2);
+  assert (spareRow2->packedMode());
   // update weights
   double * weight;
   double * other = alternateWeights_->denseVector();
@@ -1076,15 +1077,16 @@ ClpPrimalColumnSteepest::djsAndSteepest(CoinIndexedVector * updates,
       
     case ClpSimplex::basic:
       infeasible_->zero(iSequence);
+      updateBy2[j]=0.0;
     case ClpSimplex::isFixed:
-      updateBy2[iSequence]=0.0;
+      updateBy2[j]=0.0;
       break;
     case ClpSimplex::isFree:
     case ClpSimplex::superBasic:
       thisWeight = weight[iSequence];
       pivot = value2*scaleFactor;
-      modification = updateBy2[iSequence];
-      updateBy2[iSequence]=0.0;
+      modification = updateBy2[j];
+      updateBy2[j]=0.0;
       pivotSquared = pivot * pivot;
       
       thisWeight += pivotSquared * devex_ + pivot * modification;
@@ -1116,8 +1118,8 @@ ClpPrimalColumnSteepest::djsAndSteepest(CoinIndexedVector * updates,
     case ClpSimplex::atUpperBound:
       thisWeight = weight[iSequence];
       pivot = value2*scaleFactor;
-      modification = updateBy2[iSequence];
-      updateBy2[iSequence]=0.0;
+      modification = updateBy2[j];
+      updateBy2[j]=0.0;
       pivotSquared = pivot * pivot;
       
       thisWeight += pivotSquared * devex_ + pivot * modification;
@@ -1147,8 +1149,8 @@ ClpPrimalColumnSteepest::djsAndSteepest(CoinIndexedVector * updates,
     case ClpSimplex::atLowerBound:
       thisWeight = weight[iSequence];
       pivot = value2*scaleFactor;
-      modification = updateBy2[iSequence];
-      updateBy2[iSequence]=0.0;
+      modification = updateBy2[j];
+      updateBy2[j]=0.0;
       pivotSquared = pivot * pivot;
       
       thisWeight += pivotSquared * devex_ + pivot * modification;
@@ -1595,14 +1597,15 @@ ClpPrimalColumnSteepest::djsAndSteepest2(CoinIndexedVector * updates,
       model_->clpMatrix()->subsetTransposeTimes(model_,alternateWeights_,
 						spareColumn1,
 						spareColumn2);
+      assert (spareColumn2->packedMode());
       double * updateBy2 = spareColumn2->denseVector();
       for (j=0;j<number;j++) {
 	int iSequence = index[j];
 	double thisWeight = weight[iSequence];
 	double pivot = updateBy[iSequence]*scaleFactor;
 	updateBy[iSequence]=0.0;
-	double modification = updateBy2[iSequence];
-	updateBy2[iSequence]=0.0;
+	double modification = updateBy2[j];
+	updateBy2[j]=0.0;
 	double pivotSquared = pivot * pivot;
 	
 	thisWeight += pivotSquared * devex_ + pivot * modification;
@@ -1870,14 +1873,15 @@ ClpPrimalColumnSteepest::justSteepest(CoinIndexedVector * updates,
   model_->clpMatrix()->subsetTransposeTimes(model_,alternateWeights_,
 					    spareColumn1,
 					    spareColumn2);
+  assert (spareColumn2->packedMode());
   double * updateBy2 = spareColumn2->denseVector();
   for (j=0;j<number;j++) {
     int iSequence = index[j];
     double thisWeight = weight[iSequence];
     double pivot = updateBy[iSequence]*scaleFactor;
     updateBy[iSequence]=0.0;
-    double modification = updateBy2[iSequence];
-    updateBy2[iSequence]=0.0;
+    double modification = updateBy2[j];
+    updateBy2[j]=0.0;
     double pivotSquared = pivot * pivot;
     
     thisWeight += pivotSquared * devex_ + pivot * modification;
@@ -2528,14 +2532,15 @@ ClpPrimalColumnSteepest::pivotColumnOldMethod(CoinIndexedVector * updates,
       model_->clpMatrix()->subsetTransposeTimes(model_,alternateWeights_,
 						spareColumn1,
 						spareColumn2);
+      assert (spareColumn2->packedMode());
       double * updateBy2 = spareColumn2->denseVector();
       for (j=0;j<number;j++) {
 	int iSequence = index[j];
 	double thisWeight = weight[iSequence];
 	double pivot = updateBy[iSequence]*scaleFactor;
 	updateBy[iSequence]=0.0;
-	double modification = updateBy2[iSequence];
-	updateBy2[iSequence]=0.0;
+	double modification = updateBy2[j];
+	updateBy2[j]=0.0;
 	double pivotSquared = pivot * pivot;
 	
 	thisWeight += pivotSquared * devex_ + pivot * modification;

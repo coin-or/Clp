@@ -412,7 +412,6 @@ ClpDualRowSteepest::updateWeights(CoinIndexedVector * input,
 	devex = TRY_NORM;
       weights_[iRow]=devex;
     }
-    assert (alpha);
     alternateWeights_->setPackedMode(true);
     alternateWeights_->setNumElements(nSave);
     if (norm < TRY_NORM) 

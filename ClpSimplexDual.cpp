@@ -738,6 +738,7 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
 		<<x<<sequenceWithin(sequenceOut_)
 		<<CoinMessageEol;
 	      setFlagged(sequenceOut_);
+	      progress_->clearBadTimes();
 	      lastBadIteration_ = numberIterations_; // say be more cautious
 	      rowArray_[0]->clear();
 	      rowArray_[1]->clear();
@@ -848,6 +849,7 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
 	      <<x<<sequenceWithin(sequenceOut_)
 	      <<CoinMessageEol;
 	    setFlagged(sequenceOut_);
+	    progress_->clearBadTimes();
 	    lastBadIteration_ = numberIterations_; // say be more cautious
 	    rowArray_[0]->clear();
 	    rowArray_[1]->clear();
@@ -2381,6 +2383,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	  <<x<<sequenceWithin(sequenceOut_)
 	  <<CoinMessageEol;
 	setFlagged(sequenceOut_);
+	progress_->clearBadTimes();
         
 	forceFactorization_=1; // a bit drastic but ..
 	type = 2;
@@ -2587,7 +2590,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	ClpFillN(columnArray_[0]->denseVector(),numberColumns_,0.0);
 	ClpFillN(rowArray_[2]->denseVector(),numberRows_,0.0);
       } 
-      if (problemStatus_==-4) {
+      if (problemStatus_==-4||problemStatus_==5) {
 	// may be infeasible - or may be bounds are wrong
 	numberChangedBounds=changeBounds(false,NULL,changeCost);
 	if (perturbation_==101) {

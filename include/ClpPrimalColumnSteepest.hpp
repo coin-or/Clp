@@ -25,8 +25,10 @@ public:
   //@{
   
   /** Returns pivot column, -1 if none.
-      updateArray has cost updates (also use pivotRow_ from last iteration).
-      Parts of operation split out into seperate functions for
+      The Packed CoinIndexedVector updates has cost updates - for normal LP
+      that is just +-weight where a feasibility changed.  It also has 
+      reduced cost from last iteration in pivot row
+      Parts of operation split out into separate functions for
       profiling and speed
   */
   virtual int pivotColumn(CoinIndexedVector * updates,
@@ -46,6 +48,10 @@ public:
 	       CoinIndexedVector * spareRow2,
 	       CoinIndexedVector * spareColumn1,
 	       CoinIndexedVector * spareColumn2);
+  /// Update djs doing partial pricing (dantzig)
+  int partialPricing(CoinIndexedVector * updates,
+		     CoinIndexedVector * spareRow2,
+		     int numberToDo);
   /// Update djs, weights for Devex using djs
   void djsAndDevex(CoinIndexedVector * updates,
 	       CoinIndexedVector * spareRow1,
@@ -202,6 +208,8 @@ private:
   int savedPivotSequence_;  
   // This is saved outgoing variable
   int savedSequenceOut_;  
+  // Size of factorization at invert (used to decide algorithm)
+  int sizeFactorization_;
   //@}
 };
 

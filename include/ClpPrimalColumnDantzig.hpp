@@ -22,7 +22,9 @@ public:
   
   /** Returns pivot column, -1 if none.
       Lumbers over all columns - slow 
-      updateArray has cost updates (also use pivotRow_ from last iteration)
+      The Packed CoinIndexedVector updates has cost updates - for normal LP
+      that is just +-weight where a feasibility changed.  It also has 
+      reduced cost from last iteration in pivot row
       Can just do full price if you really want to be slow
   */
   virtual int pivotColumn(CoinIndexedVector * updates,

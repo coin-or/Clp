@@ -133,6 +133,11 @@ public:
 		   int column, double multiplier) const =0;
    /// Allow any parts of a created CoinPackedMatrix to be deleted
    virtual void releasePackedMatrix() const {};
+  /// Says whether it can do partial pricing
+  virtual bool canDoPartialPricing() const;
+  /// Partial pricing 
+  virtual void partialPricing(ClpSimplex * model, int start, int end,
+		      int & bestSequence, int & numberWanted);
    //@}
 
   //---------------------------------------------------------------------------
@@ -175,7 +180,7 @@ public:
     /** Return <code>x *A</code> in <code>z</code> but
 	just for indices in y.
 	This is only needed for primal steepest edge.
-	Note - If x packed mode - then z packed mode
+	Note - z always packed mode
 	Squashes small elements and knows about ClpSimplex */
   virtual void subsetTransposeTimes(const ClpSimplex * model,
 			      const CoinIndexedVector * x,
@@ -229,5 +234,9 @@ protected:
    int type_;
    //@}
 };
+// bias for free variables
+#define FREE_BIAS 1.0e1
+// Acceptance criteria for free variables
+#define FREE_ACCEPT 1.0e2
 
 #endif

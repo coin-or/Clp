@@ -152,6 +152,11 @@ public:
   { return lightWeight_;};
   inline void setLightweight(int value)
   { lightWeight_ = value;};
+  /// strategy
+  inline int getStrategy() const
+  { return strategy_;};
+  inline void setStrategy(int value)
+  { strategy_ = value;};
   //@}
 
 
@@ -216,7 +221,8 @@ private:
 		     4 - drop, exitDrop and djTolerance all relative
 		     8 - keep accelerator step to theta=10.0
 
-                    32 - "intelligent?" reduction of mu and reasonableInfeas
+                    32 - Scale
+		   512 - crossover 
                   2048 - keep lambda across mu change
 		  4096 - return best solution (not last found) */
   int lightWeight_; // 0 - normal, 1 lightweight

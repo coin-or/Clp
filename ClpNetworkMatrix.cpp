@@ -481,90 +481,36 @@ ClpNetworkMatrix::subsetTransposeTimes(const ClpSimplex * model,
 {
   columnArray->clear();
   double * pi = rowArray->denseVector();
-  int numberNonZero=0;
-  int * index = columnArray->getIndices();
   double * array = columnArray->denseVector();
-  // maybe I need one in OsiSimplex
-  double zeroTolerance = model->factorization()->zeroTolerance();
   int jColumn;
   int numberToDo = y->getNumElements();
   const int * which = y->getIndices();
-  bool packed = rowArray->packedMode();
-  if (packed) {
-    // Must line up with y
-    // need to expand pi into y
-    int numberInRowArray = rowArray->getNumElements();
-    assert(y->capacity()>=model->numberRows());
-    double * piOld = pi;
-    pi = y->denseVector();
-    const int * whichRow = rowArray->getIndices();
-    int i;
-    for (i=0;i<numberInRowArray;i++) {
-      int iRow = whichRow[i];
-      pi[iRow]=piOld[i];
-    }
-    if (trueNetwork_) {
-      for (jColumn=0;jColumn<numberToDo;jColumn++) {
-	int iColumn = which[jColumn];
-	double value = 0.0;
-	CoinBigIndex j=iColumn<<1;
-	int iRowM = indices_[j];
-	int iRowP = indices_[j+1];
-	value -= pi[iRowM];
-	value += pi[iRowP];
-	array[jColumn]=value;
-      }
-    } else {
-      // skip negative rows
-      for (jColumn=0;jColumn<numberToDo;jColumn++) {
-	int iColumn = which[jColumn];
-	double value = 0.0;
-	CoinBigIndex j=iColumn<<1;
-	int iRowM = indices_[j];
-	int iRowP = indices_[j+1];
-	if (iRowM>=0)
-	  value -= pi[iRowM];
-	if (iRowP>=0)
-	  value += pi[iRowP];
-	array[jColumn]=value;
-      }
-    }
-    for (i=0;i<numberInRowArray;i++) {
-      int iRow = whichRow[i];
-      pi[iRow]=0.0;
+  assert (!rowArray->packedMode());
+  columnArray->setPacked();
+  if (trueNetwork_) {
+    for (jColumn=0;jColumn<numberToDo;jColumn++) {
+      int iColumn = which[jColumn];
+      double value = 0.0;
+      CoinBigIndex j=iColumn<<1;
+      int iRowM = indices_[j];
+      int iRowP = indices_[j+1];
+      value -= pi[iRowM];
+      value += pi[iRowP];
+      array[jColumn]=value;
     }
   } else {
-    if (trueNetwork_) {
-      for (jColumn=0;jColumn<numberToDo;jColumn++) {
-	int iColumn = which[jColumn];
-	double value = 0.0;
-	CoinBigIndex j=iColumn<<1;
-	int iRowM = indices_[j];
-	int iRowP = indices_[j+1];
+    // skip negative rows
+    for (jColumn=0;jColumn<numberToDo;jColumn++) {
+      int iColumn = which[jColumn];
+      double value = 0.0;
+      CoinBigIndex j=iColumn<<1;
+      int iRowM = indices_[j];
+      int iRowP = indices_[j+1];
+      if (iRowM>=0)
 	value -= pi[iRowM];
+      if (iRowP>=0)
 	value += pi[iRowP];
-	if (fabs(value)>zeroTolerance) {
-	  index[numberNonZero++]=iColumn;
-	  array[iColumn]=value;
-	}
-      }
-    } else {
-      // skip negative rows
-      for (jColumn=0;jColumn<numberToDo;jColumn++) {
-	int iColumn = which[jColumn];
-	double value = 0.0;
-	CoinBigIndex j=iColumn<<1;
-	int iRowM = indices_[j];
-	int iRowP = indices_[j+1];
-	if (iRowM>=0)
-	  value -= pi[iRowM];
-	if (iRowP>=0)
-	  value += pi[iRowP];
-	if (fabs(value)>zeroTolerance) {
-	  index[numberNonZero++]=iColumn;
-	  array[iColumn]=value;
-	}
-      }
+      array[jColumn]=value;
     }
   }
 }
@@ -876,4 +822,235 @@ ClpNetworkMatrix::rangeOfElements(double & smallestNegative, double & largestNeg
   largestNegative=-1.0;
   smallestPositive=1.0;
   largestPositive=1.0;
+}
+// Says whether it can do partial pricing
+bool 
+ClpNetworkMatrix::canDoPartialPricing() const
+{
+  return true; 
+}
+// Partial pricing 
+void 
+ClpNetworkMatrix::partialPricing(ClpSimplex * model, int start, int end,
+			      int & bestSequence, int & numberWanted)
+{
+  int j;
+  double tolerance=model->currentDualTolerance();
+  double * reducedCost = model->djRegion();
+  const double * duals = model->dualRowSolution();
+  const double * cost = model->costRegion();
+  double bestDj;
+  if (bestSequence>=0)
+    bestDj = fabs(reducedCost[bestSequence]);
+  else
+    bestDj=tolerance;
+  int sequenceOut = model->sequenceOut();
+  int saveSequence = bestSequence;
+  if (!trueNetwork_) {
+    // Not true network
+    int iSequence;
+    for (iSequence=start;iSequence<end;iSequence++) {
+      if (iSequence!=sequenceOut) {
+	double value;
+	int iRowM,iRowP;
+	ClpSimplex::Status status = model->getStatus(iSequence);
+	
+	switch(status) {
+	  
+	case ClpSimplex::basic:
+	case ClpSimplex::isFixed:
+	  break;
+	case ClpSimplex::isFree:
+	case ClpSimplex::superBasic:
+	  value=cost[iSequence];
+	  j = iSequence<<1;
+	  // skip negative rows
+	  iRowM = indices_[j];
+	  iRowP = indices_[j+1];
+	  if (iRowM>=0)
+	    value += duals[iRowM];
+	  if (iRowP>=0)
+	    value -= duals[iRowP];
+	  value = fabs(value);
+	  if (value>FREE_ACCEPT*tolerance) {
+	    numberWanted--;
+	    // we are going to bias towards free (but only if reasonable)
+	    value *= FREE_BIAS;
+	    if (value>bestDj) {
+	      // check flagged variable and correct dj
+	      if (!model->flagged(iSequence)) {
+		bestDj=value;
+		bestSequence = iSequence;
+	      } else {
+		// just to make sure we don't exit before got something
+		numberWanted++;
+	      }
+	    }
+	  }
+	  break;
+	case ClpSimplex::atUpperBound:
+	  value=cost[iSequence];
+	  j = iSequence<<1;
+	  // skip negative rows
+	  iRowM = indices_[j];
+	  iRowP = indices_[j+1];
+	  if (iRowM>=0)
+	    value += duals[iRowM];
+	  if (iRowP>=0)
+	    value -= duals[iRowP];
+	  if (value>tolerance) {
+	    numberWanted--;
+	    if (value>bestDj) {
+	      // check flagged variable and correct dj
+	      if (!model->flagged(iSequence)) {
+		bestDj=value;
+		bestSequence = iSequence;
+	      } else {
+		// just to make sure we don't exit before got something
+		numberWanted++;
+	      }
+	    }
+	  }
+	  break;
+	case ClpSimplex::atLowerBound:
+	  value=cost[iSequence];
+	  j = iSequence<<1;
+	  // skip negative rows
+	  iRowM = indices_[j];
+	  iRowP = indices_[j+1];
+	  if (iRowM>=0)
+	    value += duals[iRowM];
+	  if (iRowP>=0)
+	    value -= duals[iRowP];
+	  value = -value;
+	  if (value>tolerance) {
+	    numberWanted--;
+	    if (value>bestDj) {
+	      // check flagged variable and correct dj
+	      if (!model->flagged(iSequence)) {
+		bestDj=value;
+		bestSequence = iSequence;
+	      } else {
+		// just to make sure we don't exit before got something
+		numberWanted++;
+	      }
+	    }
+	  }
+	  break;
+	}
+      }
+      if (!numberWanted)
+	break;
+    }
+    if (bestSequence!=saveSequence) {
+      // recompute dj
+      double value=cost[bestSequence];
+      j = bestSequence<<1;
+      // skip negative rows
+      int iRowM = indices_[j];
+      int iRowP = indices_[j+1];
+      if (iRowM>=0)
+	value += duals[iRowM];
+      if (iRowP>=0)
+	value -= duals[iRowP];
+      reducedCost[bestSequence] = value;
+    }
+  } else {
+    // true network
+    int iSequence;
+    for (iSequence=start;iSequence<end;iSequence++) {
+      if (iSequence!=sequenceOut) {
+	double value;
+	int iRowM,iRowP;
+	ClpSimplex::Status status = model->getStatus(iSequence);
+	
+	switch(status) {
+	  
+	case ClpSimplex::basic:
+	case ClpSimplex::isFixed:
+	  break;
+	case ClpSimplex::isFree:
+	case ClpSimplex::superBasic:
+	  value=cost[iSequence];
+	  j = iSequence<<1;
+	  iRowM = indices_[j];
+	  iRowP = indices_[j+1];
+	  value += duals[iRowM];
+	  value -= duals[iRowP];
+	  value = fabs(value);
+	  if (value>FREE_ACCEPT*tolerance) {
+	    numberWanted--;
+	    // we are going to bias towards free (but only if reasonable)
+	    value *= FREE_BIAS;
+	    if (value>bestDj) {
+	      // check flagged variable and correct dj
+	      if (!model->flagged(iSequence)) {
+		bestDj=value;
+		bestSequence = iSequence;
+	      } else {
+		// just to make sure we don't exit before got something
+		numberWanted++;
+	      }
+	    }
+	  }
+	  break;
+	case ClpSimplex::atUpperBound:
+	  value=cost[iSequence];
+	  j = iSequence<<1;
+	  iRowM = indices_[j];
+	  iRowP = indices_[j+1];
+	  value += duals[iRowM];
+	  value -= duals[iRowP];
+	  if (value>tolerance) {
+	    numberWanted--;
+	    if (value>bestDj) {
+	      // check flagged variable and correct dj
+	      if (!model->flagged(iSequence)) {
+		bestDj=value;
+		bestSequence = iSequence;
+	      } else {
+		// just to make sure we don't exit before got something
+		numberWanted++;
+	      }
+	    }
+	  }
+	  break;
+	case ClpSimplex::atLowerBound:
+	  value=cost[iSequence];
+	  j = iSequence<<1;
+	  iRowM = indices_[j];
+	  iRowP = indices_[j+1];
+	  value += duals[iRowM];
+	  value -= duals[iRowP];
+	  value = -value;
+	  if (value>tolerance) {
+	    numberWanted--;
+	    if (value>bestDj) {
+	      // check flagged variable and correct dj
+	      if (!model->flagged(iSequence)) {
+		bestDj=value;
+		bestSequence = iSequence;
+	      } else {
+		// just to make sure we don't exit before got something
+		numberWanted++;
+	      }
+	    }
+	  }
+	  break;
+	}
+      }
+      if (!numberWanted)
+	break;
+    }
+    if (bestSequence!=saveSequence) {
+      // recompute dj
+      double value=cost[bestSequence];
+      j = bestSequence<<1;
+      int iRowM = indices_[j];
+      int iRowP = indices_[j+1];
+      value += duals[iRowM];
+      value -= duals[iRowP];
+      reducedCost[bestSequence] = value;
+    }
+  }
 }

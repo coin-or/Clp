@@ -5,6 +5,7 @@
 #include "CoinSort.hpp"
 #include "CoinHelperFunctions.hpp"
 #include "CoinTime.hpp"
+#include "CoinMpsIO.hpp"
 #include <iomanip>
 
 int main (int argc, const char *argv[])

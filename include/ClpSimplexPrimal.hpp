@@ -169,14 +169,14 @@ public:
   */
   int updatePrimalsInPrimal(CoinIndexedVector * rowArray,
 		  double theta,
-		  double & objectiveChange);
+		  double & objectiveChange,
+			    int valuesPass);
   /** 
       Row array has pivot column
       This chooses pivot row.
       Rhs array is used for distance to next bound (for speed)
       For speed, we may need to go to a bucket approach when many
       variables go through bounds
-      On exit rhsArray will have changes in costs of basic variables
       If valuesPass non-zero then compute dj for direction
   */
   void primalRow(CoinIndexedVector * rowArray,
@@ -230,6 +230,8 @@ public:
 
   /// Create primal ray
   void primalRay(CoinIndexedVector * rowArray);
+  /// Clears all bits and clears rowArray[1] etc
+  void clearAll();
   
   //@}
 };

@@ -859,64 +859,25 @@ ClpPlusMinusOneMatrix::subsetTransposeTimes(const ClpSimplex * model,
 {
   columnArray->clear();
   double * pi = rowArray->denseVector();
-  int numberNonZero=0;
-  int * index = columnArray->getIndices();
   double * array = columnArray->denseVector();
-  // maybe I need one in OsiSimplex
-  double zeroTolerance = model->factorization()->zeroTolerance();
   int jColumn;
   int numberToDo = y->getNumElements();
   const int * which = y->getIndices();
-  bool packed = rowArray->packedMode();
-  if (packed) {
-    // need to expand pi into y
-    int numberInRowArray = rowArray->getNumElements();
-    assert(y->capacity()>=model->numberRows());
-    double * piOld = pi;
-    pi = y->denseVector();
-    const int * whichRow = rowArray->getIndices();
-    int i;
-    for (i=0;i<numberInRowArray;i++) {
-      int iRow = whichRow[i];
-      pi[iRow]=piOld[i];
+  assert (!rowArray->packedMode());
+  columnArray->setPacked();
+  for (jColumn=0;jColumn<numberToDo;jColumn++) {
+    int iColumn = which[jColumn];
+    double value = 0.0;
+    CoinBigIndex j=startPositive_[iColumn];
+    for (;j<startNegative_[iColumn];j++) {
+      int iRow = indices_[j];
+      value += pi[iRow];
     }
-    // Must line up with y
-    for (jColumn=0;jColumn<numberToDo;jColumn++) {
-      int iColumn = which[jColumn];
-      double value = 0.0;
-      CoinBigIndex j=startPositive_[iColumn];
-      for (;j<startNegative_[iColumn];j++) {
-	int iRow = indices_[j];
-	value += pi[iRow];
-      }
-      for (;j<startPositive_[iColumn+1];j++) {
-	int iRow = indices_[j];
-	value -= pi[iRow];
-      }
-      array[jColumn]=value;
+    for (;j<startPositive_[iColumn+1];j++) {
+      int iRow = indices_[j];
+      value -= pi[iRow];
     }
-    for (i=0;i<numberInRowArray;i++) {
-      int iRow = whichRow[i];
-      pi[iRow]=0.0;
-    }
-  } else {
-    for (jColumn=0;jColumn<numberToDo;jColumn++) {
-      int iColumn = which[jColumn];
-      double value = 0.0;
-      CoinBigIndex j=startPositive_[iColumn];
-      for (;j<startNegative_[iColumn];j++) {
-	int iRow = indices_[j];
-	value += pi[iRow];
-      }
-      for (;j<startPositive_[iColumn+1];j++) {
-	int iRow = indices_[j];
-	value -= pi[iRow];
-      }
-      if (fabs(value)>zeroTolerance) {
-	index[numberNonZero++]=iColumn;
-	array[iColumn]=value;
-      }
-    }
+    array[jColumn]=value;
   }
 }
 /* Returns number of elements in basis
@@ -1384,9 +1345,9 @@ ClpPlusMinusOneMatrix::appendRows(int number, const CoinPackedVectorBase * const
     for (i=0;i<n;i++) {
       int iColumn = column[i];
       if (element[i]==1.0)
-	countPositive[iColumn++];
+	countPositive[iColumn]++;
       else if (element[i]==-1.0)
-	countNegative[iColumn++];
+	countNegative[iColumn]++;
       else
 	numberBad++;
     }
@@ -1477,5 +1438,139 @@ ClpPlusMinusOneMatrix::rangeOfElements(double & smallestNegative, double & large
   } else {
     smallestPositive=0.0;
     largestPositive=0.0;
+  }
+}
+// Says whether it can do partial pricing
+bool 
+ClpPlusMinusOneMatrix::canDoPartialPricing() const
+{
+  return true;
+}
+// Partial pricing 
+void 
+ClpPlusMinusOneMatrix::partialPricing(ClpSimplex * model, int start, int end,
+			      int & bestSequence, int & numberWanted)
+{
+  int j;
+  double tolerance=model->currentDualTolerance();
+  double * reducedCost = model->djRegion();
+  const double * duals = model->dualRowSolution();
+  const double * cost = model->costRegion();
+  double bestDj;
+  if (bestSequence>=0)
+    bestDj = fabs(reducedCost[bestSequence]);
+  else
+    bestDj=tolerance;
+  int sequenceOut = model->sequenceOut();
+  int saveSequence = bestSequence;
+  int iSequence;
+  for (iSequence=start;iSequence<end;iSequence++) {
+    if (iSequence!=sequenceOut) {
+      double value;
+      ClpSimplex::Status status = model->getStatus(iSequence);
+      
+      switch(status) {
+	
+      case ClpSimplex::basic:
+      case ClpSimplex::isFixed:
+	break;
+      case ClpSimplex::isFree:
+      case ClpSimplex::superBasic:
+	value=cost[iSequence];
+	j=startPositive_[iSequence];
+	for (;j<startNegative_[iSequence];j++) {
+	  int iRow = indices_[j];
+	  value -= duals[iRow];
+	}
+	for (;j<startPositive_[iSequence+1];j++) {
+	  int iRow = indices_[j];
+	  value += duals[iRow];
+	}
+	value = fabs(value);
+	if (value>FREE_ACCEPT*tolerance) {
+	  numberWanted--;
+	  // we are going to bias towards free (but only if reasonable)
+	  value *= FREE_BIAS;
+	  if (value>bestDj) {
+	    // check flagged variable and correct dj
+	    if (!model->flagged(iSequence)) {
+	      bestDj=value;
+	      bestSequence = iSequence;
+	    } else {
+	      // just to make sure we don't exit before got something
+	      numberWanted++;
+	    }
+	  }
+	}
+	break;
+      case ClpSimplex::atUpperBound:
+	value=cost[iSequence];
+	j=startPositive_[iSequence];
+	for (;j<startNegative_[iSequence];j++) {
+	  int iRow = indices_[j];
+	  value -= duals[iRow];
+	}
+	for (;j<startPositive_[iSequence+1];j++) {
+	  int iRow = indices_[j];
+	  value += duals[iRow];
+	}
+	if (value>tolerance) {
+	  numberWanted--;
+	  if (value>bestDj) {
+	    // check flagged variable and correct dj
+	    if (!model->flagged(iSequence)) {
+	      bestDj=value;
+	      bestSequence = iSequence;
+	    } else {
+	      // just to make sure we don't exit before got something
+	      numberWanted++;
+	    }
+	  }
+	}
+	break;
+      case ClpSimplex::atLowerBound:
+	value=cost[iSequence];
+	j=startPositive_[iSequence];
+	for (;j<startNegative_[iSequence];j++) {
+	  int iRow = indices_[j];
+	  value -= duals[iRow];
+	}
+	for (;j<startPositive_[iSequence+1];j++) {
+	  int iRow = indices_[j];
+	  value += duals[iRow];
+	}
+	value = -value;
+	if (value>tolerance) {
+	  numberWanted--;
+	  if (value>bestDj) {
+	    // check flagged variable and correct dj
+	    if (!model->flagged(iSequence)) {
+	      bestDj=value;
+	      bestSequence = iSequence;
+	    } else {
+	      // just to make sure we don't exit before got something
+	      numberWanted++;
+	    }
+	  }
+	}
+	break;
+      }
+    }
+    if (!numberWanted)
+      break;
+  }
+  if (bestSequence!=saveSequence) {
+    // recompute dj
+    double value=cost[bestSequence];
+    j=startPositive_[bestSequence];
+    for (;j<startNegative_[bestSequence];j++) {
+      int iRow = indices_[j];
+      value -= duals[iRow];
+    }
+    for (;j<startPositive_[bestSequence+1];j++) {
+      int iRow = indices_[j];
+      value += duals[iRow];
+    }
+    reducedCost[bestSequence] = value;
   }
 }

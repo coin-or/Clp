@@ -256,7 +256,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
   }
   if (model2->factorizationFrequency()==200) {
     // User did not touch preset
-    model2->setFactorizationFrequency(100+model2->numberRows()/200);
+    model2->setFactorizationFrequency(min(2000,100+model2->numberRows()/200));
   }
   if (method==ClpSolve::usePrimalorSprint) {
     if (doSprint<0) { 
@@ -520,7 +520,37 @@ ClpSimplex::initialSolve(ClpSolve & options)
       }
       if (nPasses) {
 	doCrash=0;
+#if 0
+	double * solution = model2->primalColumnSolution();
+	int iColumn;
+	double * saveLower = new double[numberColumns];
+	memcpy(saveLower,model2->columnLower(),numberColumns*sizeof(double));
+	double * saveUpper = new double[numberColumns];
+	memcpy(saveUpper,model2->columnUpper(),numberColumns*sizeof(double));
+	printf("doing tighten before idiot\n");
+	model2->tightenPrimalBounds();
+	// Move solution
+	double * columnLower = model2->columnLower();
+	double * columnUpper = model2->columnUpper();
+	for (iColumn=0;iColumn<numberColumns;iColumn++) {
+	  if (columnLower[iColumn]>0.0)
+	    solution[iColumn]=columnLower[iColumn];
+	  else if (columnUpper[iColumn]<0.0)
+	    solution[iColumn]=columnUpper[iColumn];
+	  else
+	    solution[iColumn]=0.0;
+	}
+	memcpy(columnLower,saveLower,numberColumns*sizeof(double));
+	memcpy(columnUpper,saveUpper,numberColumns*sizeof(double));
+	delete [] saveLower;
+	delete [] saveUpper;
+#else
+	// Allow for crossover
+	info.setStrategy(512|info.getStrategy());
+	// Allow for scaling
+	info.setStrategy(32|info.getStrategy());
 	info.crash(nPasses,model2->messageHandler(),model2->messagesPointer());
+#endif
 	time2 = CoinCpuTime();
 	timeIdiot = time2-timeX;
 	handler_->message(CLP_INTERVAL_TIMING,messages_)

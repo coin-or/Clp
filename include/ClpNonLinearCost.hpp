@@ -95,6 +95,8 @@ public:
       At the end of this all temporary offsets are zero
   */
   void goBackAll(const CoinIndexedVector * update);
+  /// Temporary zeroing of feasible costs
+  void zapCosts();
   /** Sets bounds and cost for one variable 
       Returns change in cost
    May need to be inline for speed */
@@ -132,6 +134,22 @@ public:
     else
       return 1.0e100;
   }
+  /// This also updates next bound
+  inline double changeInCost(int sequence, double alpha, double &rhs)
+  {
+    int iRange = whichRange_[sequence]+offset_[sequence];
+    if (alpha>0.0) {
+      assert(iRange-1>=start_[sequence]);
+      offset_[sequence]--;
+      rhs += lower_[iRange]-lower_[iRange-1];
+      return alpha*(cost_[iRange]-cost_[iRange-1]);
+    } else {
+      assert(iRange+1<start_[sequence+1]-1);
+      offset_[sequence]++;
+      rhs += lower_[iRange+2]-lower_[iRange+1];
+      return alpha*(cost_[iRange]-cost_[iRange+1]);
+    }
+  }
   /// Returns current lower bound
   inline double lower(int sequence) const
   { return lower_[whichRange_[sequence]+offset_[sequence]];};
@@ -163,6 +181,11 @@ public:
   /// Largest infeasibility
   inline double largestInfeasibility() const
   {return largestInfeasibility_;};
+  /// Average theta
+  inline double averageTheta() const
+  {return averageTheta_;};
+  inline void setAverageTheta(double value)
+  {averageTheta_=value;};
   inline void setChangeInCost(double value) 
   {changeCost_ = value;};
   /// See if may want to look both ways
@@ -194,6 +217,8 @@ private:
   double largestInfeasibility_;
   /// Sum of infeasibilities
   double sumInfeasibilities_;
+  /// Average theta - kept here as only for primal
+  double averageTheta_;
   /// Number of rows (mainly for checking and copy)
   int numberRows_;
   /// Number of columns (mainly for checking and copy)

@@ -31,8 +31,9 @@ public:
       Normally updates reduced costs using result of last iteration
       before selecting incoming column.
 
-      The CoinIndexedVector updates has cost updates - for normal LP
-      that is just +-weight where a feasibility changed.
+      The Packed CoinIndexedVector updates has cost updates - for normal LP
+      that is just +-weight where a feasibility changed.  It also has 
+      reduced cost from last iteration in pivot row
 
       Inside pivotColumn the pivotRow_ and reduced cost from last iteration
       are also used.

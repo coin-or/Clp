@@ -126,6 +126,11 @@ public:
       Returns weights vector
   */
   virtual CoinBigIndex * dubiousWeights(const ClpSimplex * model,int * inputWeights) const;
+  /// Says whether it can do partial pricing
+  virtual bool canDoPartialPricing() const;
+  /// Partial pricing 
+  virtual void partialPricing(ClpSimplex * model, int start, int end,
+		      int & bestSequence, int & numberWanted);
    //@}
 
   /**@name Matrix times vector methods */
@@ -169,7 +174,7 @@ public:
 			      CoinIndexedVector * z) const;
     /** Return <code>x *A</code> in <code>z</code> but
 	just for indices in y.
-	Note - If x packed mode - then z packed mode
+	Note - z always packed mode
 	Squashes small elements and knows about ClpSimplex */
   virtual void subsetTransposeTimes(const ClpSimplex * model,
 				    const CoinIndexedVector * x,

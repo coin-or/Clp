@@ -3,6 +3,7 @@
 
 #include "CoinPragma.hpp"
 #include <iostream>
+#include <cassert>
 
 #include "CoinIndexedVector.hpp"
 
@@ -21,6 +22,7 @@ ClpNonLinearCost::ClpNonLinearCost () :
   feasibleCost_(0.0),
   largestInfeasibility_(0.0),
   sumInfeasibilities_(0.0),
+  averageTheta_(0.0),
   numberRows_(0),
   numberColumns_(0),
   start_(NULL),
@@ -58,6 +60,7 @@ ClpNonLinearCost::ClpNonLinearCost ( ClpSimplex * model)
   feasibleCost_=0.0;
   double infeasibilityCost = model_->infeasibilityCost();
   sumInfeasibilities_=0.0;
+  averageTheta_=0.0;
   largestInfeasibility_=0.0;
 
   // First see how much space we need
@@ -240,6 +243,7 @@ ClpNonLinearCost::ClpNonLinearCost (const ClpNonLinearCost & rhs) :
   feasibleCost_(0.0),
   largestInfeasibility_(0.0),
   sumInfeasibilities_(0.0),
+  averageTheta_(0.0),
   numberRows_(rhs.numberRows_),
   numberColumns_(rhs.numberColumns_),
   start_(NULL),
@@ -272,6 +276,7 @@ ClpNonLinearCost::ClpNonLinearCost (const ClpNonLinearCost & rhs) :
     feasibleCost_ = rhs.feasibleCost_;
     largestInfeasibility_ = rhs.largestInfeasibility_;
     sumInfeasibilities_ = rhs.sumInfeasibilities_;
+    averageTheta_ = rhs.averageTheta_;
     convex_ = rhs.convex_;
     infeasible_ = new unsigned int[(numberEntries+31)>>5];
     memcpy(infeasible_,rhs.infeasible_,
@@ -335,6 +340,7 @@ ClpNonLinearCost::operator=(const ClpNonLinearCost& rhs)
     feasibleCost_ = rhs.feasibleCost_;
     largestInfeasibility_ = rhs.largestInfeasibility_;
     sumInfeasibilities_ = rhs.sumInfeasibilities_;
+    averageTheta_ = rhs.averageTheta_;
     convex_ = rhs.convex_;
     bothWays_ = rhs.bothWays_;
   }
@@ -910,4 +916,24 @@ ClpNonLinearCost::feasibleReportCost() const
   model_->getDblParam(ClpObjOffset,value);
   return feasibleCost_*model_->optimizationDirection()-value;
 }
-
+// Get rid of real costs (just for moment)
+void 
+ClpNonLinearCost::zapCosts()
+{
+  int iSequence;
+  double infeasibilityCost = model_->infeasibilityCost();
+  // zero out all costs
+  int n = start_[numberColumns_+numberRows_];
+  memset(cost_,0,n*sizeof(double));
+  for (iSequence=0;iSequence<numberColumns_+numberRows_;iSequence++) {
+    int start = start_[iSequence];
+    int end = start_[iSequence+1]-1;
+    // correct costs for this infeasibility weight
+    if (infeasible(start)) {
+      cost_[start] = -infeasibilityCost;
+    }
+    if (infeasible(end-1)) {
+      cost_[end-1] = infeasibilityCost;
+    }
+  }
+}

@@ -769,11 +769,7 @@ ClpPackedMatrix::subsetTransposeTimes(const ClpSimplex * model,
 {
   columnArray->clear();
   double * pi = rowArray->denseVector();
-  int numberNonZero=0;
-  int * index = columnArray->getIndices();
   double * array = columnArray->denseVector();
-  // maybe I need one in OsiSimplex
-  double zeroTolerance = model->factorization()->zeroTolerance();
   int jColumn;
   // get matrix data pointers
   const int * row = matrix_->getIndices();
@@ -783,90 +779,34 @@ ClpPackedMatrix::subsetTransposeTimes(const ClpSimplex * model,
   const double * rowScale = model->rowScale();
   int numberToDo = y->getNumElements();
   const int * which = y->getIndices();
-  bool packed = rowArray->packedMode();
-  if (packed) {
-    // need to expand pi into y
-    int numberInRowArray = rowArray->getNumElements();
-    assert(y->capacity()>=model->numberRows());
-    double * piOld = pi;
-    pi = y->denseVector();
-    const int * whichRow = rowArray->getIndices();
-    int i;
-    // Do NOT squash small elements - must line up with  y
-    if (!rowScale) {
-      for (i=0;i<numberInRowArray;i++) {
-	int iRow = whichRow[i];
-	pi[iRow]=piOld[i];
+  assert (!rowArray->packedMode());
+  columnArray->setPacked();
+  if (!rowScale) {
+    for (jColumn=0;jColumn<numberToDo;jColumn++) {
+      int iColumn = which[jColumn];
+      double value = 0.0;
+      CoinBigIndex j;
+      for (j=columnStart[iColumn];
+	   j<columnStart[iColumn]+columnLength[iColumn];j++) {
+	int iRow = row[j];
+	value += pi[iRow]*elementByColumn[j];
       }
-      for (jColumn=0;jColumn<numberToDo;jColumn++) {
-	int iColumn = which[jColumn];
-	double value = 0.0;
-	CoinBigIndex j;
-	for (j=columnStart[iColumn];
-	     j<columnStart[iColumn]+columnLength[iColumn];j++) {
-	  int iRow = row[j];
-	  value += pi[iRow]*elementByColumn[j];
-	}
-	array[jColumn]=value;
-      }
-    } else {
-      // scaled
-      for (i=0;i<numberInRowArray;i++) {
-	int iRow = whichRow[i];
-	pi[iRow]=rowScale[iRow]*piOld[i];
-      }
-      for (jColumn=0;jColumn<numberToDo;jColumn++) {
-	int iColumn = which[jColumn];
-	double value = 0.0;
-	CoinBigIndex j;
-	const double * columnScale = model->columnScale();
-	for (j=columnStart[iColumn];
-	     j<columnStart[iColumn]+columnLength[iColumn];j++) {
-	  int iRow = row[j];
-	  value += pi[iRow]*elementByColumn[j]*rowScale[iRow];
-	}
-	value *= columnScale[iColumn];
-	array[jColumn]=value;
-      }
-    }
-    for (i=0;i<numberInRowArray;i++) {
-      int iRow = whichRow[i];
-      pi[iRow]=0.0;
+      array[jColumn]=value;
     }
   } else {
-    if (!rowScale) {
-      for (jColumn=0;jColumn<numberToDo;jColumn++) {
-	int iColumn = which[jColumn];
-	double value = 0.0;
-	CoinBigIndex j;
-	for (j=columnStart[iColumn];
-	     j<columnStart[iColumn]+columnLength[iColumn];j++) {
-	  int iRow = row[j];
-	  value += pi[iRow]*elementByColumn[j];
-	}
-	if (fabs(value)>zeroTolerance) {
-	  index[numberNonZero++]=iColumn;
-	  array[iColumn]=value;
-	}
+    // scaled
+    for (jColumn=0;jColumn<numberToDo;jColumn++) {
+      int iColumn = which[jColumn];
+      double value = 0.0;
+      CoinBigIndex j;
+      const double * columnScale = model->columnScale();
+      for (j=columnStart[iColumn];
+	   j<columnStart[iColumn]+columnLength[iColumn];j++) {
+	int iRow = row[j];
+	value += pi[iRow]*elementByColumn[j]*rowScale[iRow];
       }
-    } else {
-      // scaled
-      for (jColumn=0;jColumn<numberToDo;jColumn++) {
-	int iColumn = which[jColumn];
-	double value = 0.0;
-	CoinBigIndex j;
-	const double * columnScale = model->columnScale();
-	for (j=columnStart[iColumn];
-	     j<columnStart[iColumn]+columnLength[iColumn];j++) {
-	  int iRow = row[j];
-	  value += pi[iRow]*elementByColumn[j]*rowScale[iRow];
-	}
-	value *= columnScale[iColumn];
-	if (fabs(value)>zeroTolerance) {
-	  index[numberNonZero++]=iColumn;
-	  array[iColumn]=value;
-	}
-      }
+      value *= columnScale[iColumn];
+      array[jColumn]=value;
     }
   }
 }
@@ -1091,6 +1031,11 @@ ClpPackedMatrix::fillBasis(const ClpSimplex * model,
 int 
 ClpPackedMatrix::scale(ClpSimplex * model) const 
 {
+  int numberRows = model->numberRows();
+  int numberColumns = model->numberColumns();
+  // If empty - return as sanityCheck will trap
+  if (!numberRows||!numberColumns)
+    return 1;
   ClpMatrixBase * rowCopyBase=model->rowCopy();
   if (!rowCopyBase) {
     // temporary copy
@@ -1101,8 +1046,6 @@ ClpPackedMatrix::scale(ClpSimplex * model) const
 
   // Make sure it is really a ClpPackedMatrix
   assert (rowCopy!=NULL);
-  int numberRows = model->numberRows();
-  int numberColumns = model->numberColumns();
   const int * column = rowCopy->getIndices();
   const CoinBigIndex * rowStart = rowCopy->getVectorStarts();
   const double * element = rowCopy->getElements();
@@ -1579,6 +1522,8 @@ ClpPackedMatrix::allElementsInRange(ClpModel * model,
   int firstBadColumn=-1;
   int firstBadRow=-1;
   double firstBadElement=0.0;
+  if (!matrix_)
+    return false; // No matrix?
   // get matrix data pointers
   const int * row = matrix_->getIndices();
   const CoinBigIndex * columnStart = matrix_->getVectorStarts();
@@ -1710,6 +1655,233 @@ ClpPackedMatrix::rangeOfElements(double & smallestNegative, double & largestNega
 	smallestNegative = max(smallestNegative,value);
 	largestNegative = min(largestNegative,value);
       }
+    }
+  }
+}
+// Says whether it can do partial pricing
+bool 
+ClpPackedMatrix::canDoPartialPricing() const
+{
+  return true;
+}
+// Partial pricing 
+void 
+ClpPackedMatrix::partialPricing(ClpSimplex * model, int start, int end,
+			      int & bestSequence, int & numberWanted)
+{
+  const double * element =matrix_->getElements();
+  const int * row = matrix_->getIndices();
+  const int * startColumn = matrix_->getVectorStarts();
+  const int * length = matrix_->getVectorLengths();
+  const double * rowScale = model->rowScale();
+  const double * columnScale = model->columnScale();
+  int iSequence,j;
+  double tolerance=model->currentDualTolerance();
+  double * reducedCost = model->djRegion();
+  const double * duals = model->dualRowSolution();
+  const double * cost = model->costRegion();
+  double bestDj;
+  if (bestSequence>=0)
+    bestDj = fabs(reducedCost[bestSequence]);
+  else
+    bestDj=tolerance;
+  int sequenceOut = model->sequenceOut();
+  int saveSequence = bestSequence;
+  if (rowScale) {
+    // scaled
+    for (iSequence=start;iSequence<end;iSequence++) {
+      if (iSequence!=sequenceOut) {
+	double value;
+	ClpSimplex::Status status = model->getStatus(iSequence);
+	
+	switch(status) {
+	  
+	case ClpSimplex::basic:
+	case ClpSimplex::isFixed:
+	  break;
+	case ClpSimplex::isFree:
+	case ClpSimplex::superBasic:
+	  value=0.0;
+	  // scaled
+	  for (j=startColumn[iSequence];
+	       j<startColumn[iSequence]+length[iSequence];j++) {
+	    int jRow=row[j];
+	    value -= duals[jRow]*element[j]*rowScale[jRow];
+	  }
+	  value = fabs(cost[iSequence] +value*columnScale[iSequence]);
+	  if (value>FREE_ACCEPT*tolerance) {
+	    numberWanted--;
+	    // we are going to bias towards free (but only if reasonable)
+	    value *= FREE_BIAS;
+	    if (value>bestDj) {
+	      // check flagged variable and correct dj
+	      if (!model->flagged(iSequence)) {
+		bestDj=value;
+		bestSequence = iSequence;
+	      } else {
+		// just to make sure we don't exit before got something
+		numberWanted++;
+	      }
+	    }
+	  }
+	  break;
+	case ClpSimplex::atUpperBound:
+	  value=0.0;
+	  // scaled
+	  for (j=startColumn[iSequence];
+	       j<startColumn[iSequence]+length[iSequence];j++) {
+	    int jRow=row[j];
+	    value -= duals[jRow]*element[j]*rowScale[jRow];
+	  }
+	  value = cost[iSequence] +value*columnScale[iSequence];
+	  if (value>tolerance) {
+	    numberWanted--;
+	    if (value>bestDj) {
+	      // check flagged variable and correct dj
+	      if (!model->flagged(iSequence)) {
+		bestDj=value;
+		bestSequence = iSequence;
+	      } else {
+		// just to make sure we don't exit before got something
+		numberWanted++;
+	      }
+	    }
+	  }
+	  break;
+	case ClpSimplex::atLowerBound:
+	  value=0.0;
+	  // scaled
+	  for (j=startColumn[iSequence];
+	       j<startColumn[iSequence]+length[iSequence];j++) {
+	    int jRow=row[j];
+	    value -= duals[jRow]*element[j]*rowScale[jRow];
+	  }
+	  value = -(cost[iSequence] +value*columnScale[iSequence]);
+	  if (value>tolerance) {
+	    numberWanted--;
+	    if (value>bestDj) {
+	      // check flagged variable and correct dj
+	      if (!model->flagged(iSequence)) {
+		bestDj=value;
+		bestSequence = iSequence;
+	      } else {
+		// just to make sure we don't exit before got something
+		numberWanted++;
+	      }
+	    }
+	  }
+	  break;
+	}
+      }
+      if (!numberWanted)
+	break;
+    }
+    if (bestSequence!=saveSequence) {
+      // recompute dj
+      double value=0.0;
+      // scaled
+      for (j=startColumn[bestSequence];
+	   j<startColumn[bestSequence]+length[bestSequence];j++) {
+	int jRow=row[j];
+	value -= duals[jRow]*element[j]*rowScale[jRow];
+      }
+      reducedCost[bestSequence] = cost[bestSequence] +value*columnScale[bestSequence];
+    }
+  } else {
+    // not scaled
+    for (iSequence=start;iSequence<end;iSequence++) {
+      if (iSequence!=sequenceOut) {
+	double value;
+	ClpSimplex::Status status = model->getStatus(iSequence);
+	
+	switch(status) {
+	  
+	case ClpSimplex::basic:
+	case ClpSimplex::isFixed:
+	  break;
+	case ClpSimplex::isFree:
+	case ClpSimplex::superBasic:
+	  value=cost[iSequence];
+	  for (j=startColumn[iSequence];
+	       j<startColumn[iSequence]+length[iSequence];j++) {
+	    int jRow=row[j];
+	    value -= duals[jRow]*element[j];
+	  }
+	  value = fabs(value);
+	  if (value>FREE_ACCEPT*tolerance) {
+	    numberWanted--;
+	    // we are going to bias towards free (but only if reasonable)
+	    value *= FREE_BIAS;
+	    if (value>bestDj) {
+	      // check flagged variable and correct dj
+	      if (!model->flagged(iSequence)) {
+		bestDj=value;
+		bestSequence = iSequence;
+	      } else {
+		// just to make sure we don't exit before got something
+		numberWanted++;
+	      }
+	    }
+	  }
+	  break;
+	case ClpSimplex::atUpperBound:
+	  value=cost[iSequence];
+	  // scaled
+	  for (j=startColumn[iSequence];
+	       j<startColumn[iSequence]+length[iSequence];j++) {
+	    int jRow=row[j];
+	    value -= duals[jRow]*element[j];
+	  }
+	  if (value>tolerance) {
+	    numberWanted--;
+	    if (value>bestDj) {
+	      // check flagged variable and correct dj
+	      if (!model->flagged(iSequence)) {
+		bestDj=value;
+		bestSequence = iSequence;
+	      } else {
+		// just to make sure we don't exit before got something
+		numberWanted++;
+	      }
+	    }
+	  }
+	  break;
+	case ClpSimplex::atLowerBound:
+	  value=cost[iSequence];
+	  for (j=startColumn[iSequence];
+	       j<startColumn[iSequence]+length[iSequence];j++) {
+	    int jRow=row[j];
+	    value -= duals[jRow]*element[j];
+	  }
+	  value = -value;
+	  if (value>tolerance) {
+	    numberWanted--;
+	    if (value>bestDj) {
+	      // check flagged variable and correct dj
+	      if (!model->flagged(iSequence)) {
+		bestDj=value;
+		bestSequence = iSequence;
+	      } else {
+		// just to make sure we don't exit before got something
+		numberWanted++;
+	      }
+	    }
+	  }
+	  break;
+	}
+      }
+      if (!numberWanted)
+	break;
+    }
+    if (bestSequence!=saveSequence) {
+      // recompute dj
+      double value=cost[bestSequence];
+      for (j=startColumn[bestSequence];
+	   j<startColumn[bestSequence]+length[bestSequence];j++) {
+	int jRow=row[j];
+	value -= duals[jRow]*element[j];
+      }
+      reducedCost[bestSequence] = value;
     }
   }
 }
