@@ -67,7 +67,7 @@ enum ClpParameterType {
   RHSSCALE,
 
   LOGLEVEL=101,MAXFACTOR,PERTVALUE,MAXITERATION,PRESOLVEPASS,IDIOT,SPRINT,
-  OUTPUTFORMAT,SLPVALUE,PRESOLVEOPTIONS,PRINTOPTIONS,
+  OUTPUTFORMAT,SLPVALUE,PRESOLVEOPTIONS,PRINTOPTIONS,SPECIALOPTIONS,
   
   DIRECTION=201,DUALPIVOT,SCALING,ERRORSALLOWED,KEEPNAMES,SPARSEFACTOR,
   PRIMALPIVOT,PRESOLVE,CRASH,BIASLU,PERTURBATION,MESSAGES,AUTOSCALE,
@@ -650,6 +650,9 @@ ClpItem::setIntParameter (ClpSimplex * model,int value) const
     case MAXITERATION:
       model->setMaximumIterations(value);
       break;
+    case SPECIALOPTIONS:
+      model->setSpecialOptions(value);
+      break;
     default:
       abort();
     }
@@ -673,6 +676,9 @@ ClpItem::intParameter (ClpSimplex * model) const
     break;
   case MAXITERATION:
     value=model->maximumIterations();
+    break;
+  case SPECIALOPTIONS:
+    value=model->specialOptions();
     break;
   default:
     value=-1;
@@ -1454,7 +1460,9 @@ costs this much to be infeasible",
       ClpItem("spars!eFactor","Whether factorization treated as sparse",
 	      "on",SPARSEFACTOR,0,false);
     parameters[numberParameters-1].append("off");
-    parameters[numberParameters-1].append("on");
+    parameters[numberParameters++]=
+      ClpItem("special!Options","Dubious options for Simplex - see Clpsimplex.hpp",
+	      0,INT_MAX,SPECIALOPTIONS,false);
     parameters[numberParameters++]=
       ClpItem("sprint!Crash","Whether to try sprint crash",
 	      -1,500,SPRINT);
