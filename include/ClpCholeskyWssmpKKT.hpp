@@ -4,13 +4,13 @@
 #define ClpCholeskyWssmpKKT_H
 
 #include "ClpCholeskyBase.hpp"
+class ClpMatrixBase;
+class ClpCholeskyDense;
 
 
 /** WssmpKKT class for Clp Cholesky factorization
 
 */
-class ClpMatrixBase;
-class ClpCholeskyDense;
 class ClpCholeskyWssmpKKT : public ClpCholeskyBase {
   
 public:

@@ -4,6 +4,7 @@
 #define ClpCholeskyTaucs_H
 #include "taucs.h"
 #include "ClpCholeskyBase.hpp"
+class ClpMatrixBase;
 
 
 /** Taucs class for Clp Cholesky factorization
@@ -52,7 +53,6 @@ to
             END IF
 
 */
-class ClpMatrixBase;
 class ClpCholeskyTaucs : public ClpCholeskyBase {
   
 public:

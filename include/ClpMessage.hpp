@@ -6,8 +6,7 @@
 
 #include "CoinPragma.hpp"
 
-/** This deals with Clp messages (as against Osi messages etc)
- */
+// This deals with Clp messages (as against Osi messages etc)
 
 #include "CoinMessageHandler.hpp"
 enum CLP_Message
@@ -98,6 +97,8 @@ enum CLP_Message
   CLP_DUMMY_END
 };
 
+/** This deals with Clp messages (as against Osi messages etc)
+ */
 class ClpMessage : public CoinMessages {
 
 public:

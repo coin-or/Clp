@@ -7,6 +7,7 @@
 #include <bitset>
 
 //#############################################################################
+class CoinIndexedVector;
 
 
 /** Primal Column Pivot Steepest Edge Algorithm Class
@@ -15,7 +16,6 @@ See Forrest-Goldfarb paper for algorithm
 
 */
 
-class CoinIndexedVector;
 
 class ClpPrimalColumnSteepest : public ClpPrimalColumnPivot {
   

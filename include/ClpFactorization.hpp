@@ -7,14 +7,14 @@
 #include "CoinPragma.hpp"
 
 #include "CoinFactorization.hpp"
+class ClpMatrixBase;
+class ClpSimplex;
+class ClpNetworkBasis;
 
 /** This just implements CoinFactorization when an ClpMatrixBase object
     is passed.  If a network then has a dummy CoinFactorization and
     a genuine ClpNetworkBasis object
 */
-class ClpMatrixBase;
-class ClpSimplex;
-class ClpNetworkBasis;
 
 class ClpFactorization : public CoinFactorization {
   

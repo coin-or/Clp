@@ -5,14 +5,14 @@
 
 
 //#############################################################################
+class ClpSimplex;
+class ClpModel;
 
 /** Objective Abstract Base Class
 
 Abstract Base Class for describing an objective function
 
 */
-class ClpSimplex;
-class ClpModel;
 class ClpObjective  {
   
 public:

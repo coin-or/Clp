@@ -17,6 +17,8 @@ typedef double longDouble;
 typedef double longWork;
 #endif
 class ClpInterior;
+class ClpCholeskyDense;
+class ClpMatrixBase;
 
 /** Base class for Clp Cholesky factorization
     Will do better factorization.  very crude ordering
@@ -24,8 +26,6 @@ class ClpInterior;
     Derived classes may be using more sophisticated methods 
 */
 
-class ClpCholeskyDense;
-class ClpMatrixBase;
 class ClpCholeskyBase  {
   
 public:

@@ -4,6 +4,8 @@
 #define ClpDualRowSteepest_H
 
 #include "ClpDualRowPivot.hpp"
+class CoinIndexedVector;
+
 
 //#############################################################################
 
@@ -12,8 +14,6 @@
 See Forrest-Goldfarb paper for algorithm
 
 */
-
-class CoinIndexedVector;
 
 class ClpDualRowSteepest : public ClpDualRowPivot {
   

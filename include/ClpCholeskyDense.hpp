@@ -4,11 +4,11 @@
 #define ClpCholeskyDense_H
 
 #include "ClpCholeskyBase.hpp"
+class ClpMatrixBase;
 
 /** Dense class for Clp Cholesky factorization
 
 */
-class ClpMatrixBase;
 class ClpCholeskyDense : public ClpCholeskyBase {
   
 public:

@@ -11,6 +11,8 @@ extern "C"{
 #ifdef __cplusplus
           }
 #endif
+class ClpMatrixBase;
+class ClpCholeskyDense;
 
 /** Ufl class for Clp Cholesky factorization
 
@@ -46,8 +48,6 @@ Availability:
 -------------------------------------------------------------------------------
 
 */
-class ClpMatrixBase;
-class ClpCholeskyDense;
 class ClpCholeskyUfl : public ClpCholeskyBase {
   
 public:

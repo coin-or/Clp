@@ -15,7 +15,7 @@ typedef int CoinBigIndex;
 #endif
 class CoinMessageHandler;
 class CoinMessages;
-// for use internally
+/// for use internally
 typedef struct {
   double infeas;
   double objval;
