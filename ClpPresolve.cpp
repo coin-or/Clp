@@ -165,6 +165,8 @@ ClpPresolve::postsolve(bool updateStatus)
     // from file
     acts = new double[nrows0];
     sol  = new double[ncols0];
+    CoinZeroN(acts,nrows0);
+    CoinZeroN(sol,ncols0);
     if (updateStatus) {
       unsigned char *status = new unsigned char [nrows0+ncols0];
       rowstat = status + ncols0;
