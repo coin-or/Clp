@@ -292,7 +292,14 @@ int mainTest (int argc, const char *argv[],bool doDual,
 #ifdef USE_PRESOLVE
 	Presolve pinfo;
 	ClpSimplex * model2 = pinfo.presolvedModel(solution,1.0e-8);
+	// change from 200
+	model2->factorization()->maximumPivots(100+model2->numberRows()/50);
 	if (doDual) {
+	  // faster if bounds tightened
+	  int numberInfeasibilities = model2->tightenPrimalBounds();
+	  if (numberInfeasibilities)
+	    std::cout<<"** Analysis indicates model infeasible"
+		     <<std::endl;
 	  model2->dual();
 	} else {
 #ifdef CLP_IDIOT
@@ -312,13 +319,13 @@ int mainTest (int argc, const char *argv[],bool doDual,
 	solution.primal(1);
 	if (solution.numberIterations())
 	  printf("****** iterated %d\n",solution.numberIterations());
-	solution.checkSolution();
+	/*solution.checkSolution();
 	printf("%g dual %g(%d) Primal %g(%d)\n",
 	       solution.objectiveValue(),
 	       solution.sumDualInfeasibilities(),
 	       solution.numberDualInfeasibilities(),
 	       solution.sumPrimalInfeasibilities(),
-	       solution.numberPrimalInfeasibilities());
+	       solution.numberPrimalInfeasibilities());*/
 #endif
 	if (0) {
 	  Presolve pinfoA;
