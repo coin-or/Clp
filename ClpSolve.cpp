@@ -1433,7 +1433,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
       delete model2;
     if (interrupt)
       currentModel = this;
-    checkSolution();
+    // checkSolution(); already done by postSolve
     setLogLevel(saveLevel);
     if (finalStatus!=3&&(finalStatus||status()==-1)) {
       int savePerturbation = perturbation();

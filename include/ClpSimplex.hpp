@@ -455,8 +455,11 @@ public:
   int restoreModel(const char * fileName);
   
   /** Just check solution (for external use) - sets sum of
-      infeasibilities etc */
+      infeasibilities etc.*/
   void checkSolution();
+  /** Just check solution (for internal use) - sets sum of
+      infeasibilities etc. */
+  void checkSolutionInternal();
   /// Useful row length arrays (0,1,2,3,4,5)
   inline CoinIndexedVector * rowArray(int index) const
   { return rowArray_[index];};
@@ -567,6 +570,8 @@ public:
   //@}
   /**@name most useful gets and sets */
   //@{ 
+  // On reflection I doubt whether anyone uses so test
+private:
   /// Worst column primal infeasibility
   inline double columnPrimalInfeasibility() const 
           { return columnPrimalInfeasibility_;} ;
@@ -598,6 +603,10 @@ public:
   /// Remaining largest dual infeasibility
   inline double remainingDualInfeasibility() const 
           { return remainingDualInfeasibility_;} ;
+  /// Largest difference between input primal solution and computed
+  inline double largestSolutionError() const
+          { return largestSolutionError_;} ;
+public:
   /// Large bound value (for complementarity etc)
   inline double largeValue() const 
           { return largeValue_;} ;
@@ -608,9 +617,6 @@ public:
   /// Largest error on basic duals
   inline double largestDualError() const
           { return largestDualError_;} ;
-  /// Largest difference between input primal solution and computed
-  inline double largestSolutionError() const
-          { return largestSolutionError_;} ;
   /// Basic variables pivoting on which rows
   inline int * pivotVariable() const
           { return pivotVariable_;};

@@ -7284,6 +7284,94 @@ void ClpSimplex::setColumnSetBounds(const int* indexFirst,
     }
   }
 }
+/* Just check solution (for internal use) - sets sum of
+   infeasibilities etc. */
+void 
+ClpSimplex::checkSolutionInternal()
+{
+  double dualTolerance=dblParam_[ClpDualTolerance];
+  double primalTolerance=dblParam_[ClpPrimalTolerance];
+  double nonLinearOffset=0.0;
+  const double * objective = objective_->gradient(this,columnActivity_,
+                                                  nonLinearOffset,true);
+  int iRow,iColumn;
+  assert (!rowObjective_);
+
+  objectiveValue_ = 0.0;
+  // now look at solution
+  sumPrimalInfeasibilities_=0.0;
+  numberPrimalInfeasibilities_=0;
+
+  sumDualInfeasibilities_=0.0;
+  numberDualInfeasibilities_=0;
+
+  for (iRow=0;iRow<numberRows_;iRow++) {
+    double dualValue = dual_[iRow];
+    double primalValue = rowActivity_[iRow];
+    double lower = rowLower_[iRow];
+    double upper = rowUpper_[iRow];
+    if (primalValue>upper+primalTolerance) {
+      sumPrimalInfeasibilities_ += primalValue-upper-primalTolerance;
+      numberPrimalInfeasibilities_ ++;
+    } else if (primalValue<lower-primalTolerance) {
+      sumPrimalInfeasibilities_ += lower-primalValue-primalTolerance;
+      numberPrimalInfeasibilities_ ++;
+    } else if (getRowStatus(iRow) != basic) {
+      // not basic
+      if (primalValue<upper-primalTolerance) {
+	// dual should not be negative
+	if (dualValue<-dualTolerance) {
+          sumDualInfeasibilities_ -= dualValue+dualTolerance_;
+          numberDualInfeasibilities_ ++;
+        }
+      }
+      if (primalValue>lower+primalTolerance) {
+	// dual should not be positive
+	if (dualValue>dualTolerance) {
+          sumDualInfeasibilities_ += dualValue-dualTolerance_;
+          numberDualInfeasibilities_ ++;
+        }
+      }
+    }
+  }
+  for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+    double dualValue = reducedCost_[iColumn];
+    double primalValue = columnActivity_[iColumn];
+    objectiveValue_ += objective[iColumn]*primalValue;
+    double lower = columnLower_[iColumn];
+    double upper = columnUpper_[iColumn];
+    if (primalValue>upper+primalTolerance) {
+      sumPrimalInfeasibilities_ += primalValue-upper-primalTolerance;
+      numberPrimalInfeasibilities_ ++;
+    } else if (primalValue<lower-primalTolerance) {
+      sumPrimalInfeasibilities_ += lower-primalValue-primalTolerance;
+      numberPrimalInfeasibilities_ ++;
+    } else if (getColumnStatus(iColumn) != basic) {
+      // not basic
+      if (primalValue<upper-primalTolerance) {
+	// dual should not be negative
+	if (dualValue<-dualTolerance) {
+          sumDualInfeasibilities_ -= dualValue+dualTolerance_;
+          numberDualInfeasibilities_ ++;
+        }
+      }
+      if (primalValue>lower+primalTolerance) {
+	// dual should not be positive
+	if (dualValue>dualTolerance) {
+          sumDualInfeasibilities_ += dualValue-dualTolerance_;
+          numberDualInfeasibilities_ ++;
+        }
+      }
+    }
+  }
+  objectiveValue_ += objective_->nonlinearOffset();
+
+  if (!numberDualInfeasibilities_&&
+      !numberPrimalInfeasibilities_)
+    problemStatus_=0;
+  else
+    problemStatus_=-1;
+}
 /*
   When scaling is on it is possible that the scaled problem
   is feasible but the unscaled is not.  Clp returns a secondary

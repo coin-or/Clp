@@ -241,7 +241,7 @@ ClpPresolve::postsolve(bool updateStatus)
   memset(originalModel_->primalRowSolution(),0,nrows_*sizeof(double));
   originalModel_->times(1.0,originalModel_->primalColumnSolution(),
 			originalModel_->primalRowSolution());
-  originalModel_->checkSolution();
+  originalModel_->checkSolutionInternal();
   // Messages
   presolvedModel_->messageHandler()->message(COIN_PRESOLVE_POSTSOLVE,
 					    messages)
