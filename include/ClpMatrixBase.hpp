@@ -172,6 +172,8 @@ public:
       mode=4  - return 1 if can do primal, 2 if dual, 3 if both
       mode=5  - save any status stuff (when in good state)
       mode=6  - restore status stuff
+      mode=7  - flag given variable (normally sequenceIn)
+      mode=8  - unflag all variables
   */
   virtual int generalExpanded(ClpSimplex * model,int mode,int & number);
   /** 

@@ -4640,6 +4640,13 @@ ClpSimplex::restoreData(ClpDataSave saved)
   delete progress_;
   progress_=NULL;
 }
+// To flag a variable (not inline to allow for column generation)
+void 
+ClpSimplex::setFlagged( int sequence)
+{
+  status_[sequence] |= 64;
+  matrix_->generalExpanded(this,7,sequence);
+}
 /* Factorizes and returns true if optimal.  Used by user */
 bool
 ClpSimplex::statusOfProblem()

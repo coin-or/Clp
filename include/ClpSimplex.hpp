@@ -731,11 +731,8 @@ public:
   { status_[sequence] &= ~32; };
   inline bool pivoted(int sequence) const
   {return (((status_[sequence]>>5)&1)!=0);};
-  /// To flag a variable
-  inline void setFlagged( int sequence)
-  {
-    status_[sequence] |= 64;
-  };
+  /// To flag a variable (not inline to allow for column generation)
+  void setFlagged( int sequence);
   inline void clearFlagged( int sequence)
   {
     status_[sequence] &= ~64;

@@ -1922,6 +1922,7 @@ ClpSimplexPrimal::unflag()
       numberFlagged++;
     }
   }
+  numberFlagged += matrix_->generalExpanded(this,8,i);
   return numberFlagged;
 }
 // Do not change infeasibility cost and always say optimal
