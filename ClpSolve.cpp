@@ -23,15 +23,13 @@
 #ifdef CLP_IDIOT
 #include "Idiot.hpp"
 #endif
+
 //#############################################################################
 #ifndef NO_INTERRUPT
 // Allow for interrupts
-// But is this threadsafe ? (so switched off by option
-#include <signal.h>
-#ifdef __sun
-// signal.h doesn't have this typedef on Sun systems
-typedef void (*sighandler_t)(int) ;
-#endif
+// But is this threadsafe ? (so switched off by option)
+#include <csignal>
+
 static ClpSimplex * currentModel = NULL;
 static void signal_handler(int whichSignal)
 {
@@ -40,6 +38,8 @@ static void signal_handler(int whichSignal)
   return;
 }
 #endif
+
+//#############################################################################
 /** General solve algorithm which can do presolve
     special options (bits)
     1 - do not perturb
@@ -64,7 +64,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
   ClpSimplex * model2 = this;
 #ifndef NO_INTERRUPT
   bool interrupt = (options.getSpecialOption(2)==0);
-  sighandler_t saveSignal=SIG_DFL;
+  typeof(SIG_DFL) saveSignal=SIG_DFL;
   if (interrupt) {
     currentModel = model2;
     // register signal handler
