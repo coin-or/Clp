@@ -89,8 +89,8 @@ LDFLAGS += $(patsubst lib%,-l%,$(basename $(LIBS)))
 #LDFLAGS += -lefence
 #LDFLAGS += -Wl,-static
 #LDFLAGS += -lwsmpP4 -lpthread
-OSL_LIB_DIR = /home/forrest/osl/lib
-LDFLAGS += -L $(OSL_LIB_DIR) -Wl,-rpath,$(OSL_LIB_DIR) -losl-O-nolic-native-32
+#OSL_LIB_DIR = /home/forrest/osl/lib
+#LDFLAGS += -L $(OSL_LIB_DIR) -Wl,-rpath,$(OSL_LIB_DIR) -losl-O-nolic-native-32
 #LDFLAGS += -pg
 ###############################################################################
 
