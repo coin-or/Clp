@@ -527,6 +527,9 @@ ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
     case ClpSimplex::atLowerBound:
       if (!toNearest) {
 	// With increasing tolerances - we may be at wrong place
+	// below stops compiler error with gcc 3.2!!!
+	if (iSequence==-119)
+	  printf("ZZ %g %g %g %g\n",lowerValue,value,upperValue,oldTolerance);
 	if (fabs(value-lowerValue)>oldTolerance*1.0001) {
 	  if (fabs(value-upperValue)<=oldTolerance*1.0001) {
 	    if  (fabs(value-upperValue)>primalTolerance)

@@ -269,6 +269,7 @@ int mainTest (int argc, const char *argv[],int algorithm,
 	double a=CoinCpuTime();
 	ClpSimplex * model2 = pinfo.presolvedModel(solution,1.0e-8,
 						   false,5,true);
+	assert (model2);
 	printf("Presolve took %g seconds\n",CoinCpuTime()-a);
 	// change from 200 (unless user has changed)
 	if (model2->factorization()->maximumPivots()==200&&
