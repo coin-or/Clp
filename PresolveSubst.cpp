@@ -1076,6 +1076,7 @@ void subst_constraint_action::postsolve(PostsolveMatrix *prob) const
   const double ztolzb	= prob->ztolzb_;
   //  const double ztoldj	= prob->ztoldj_;
   const double maxmin = prob->maxmin_;
+  int k;
 
   for (const action *f = &actions[nactions-1]; actions<=f; f--) {
     int icol = f->col;
@@ -1160,7 +1161,7 @@ void subst_constraint_action::postsolve(PostsolveMatrix *prob) const
     {
       double sol0 = rloy;
       sol[icol] = 0.0;	// to avoid condition in loop
-      for (int k = 0; k<ninrowy; ++k) {
+      for (k = 0; k<ninrowy; ++k) {
 	int jcolx = rowcolsy[k];
 	double coeffx = rowelsy[k];
 	sol0 -= coeffx * sol[jcolx];
@@ -1188,7 +1189,7 @@ void subst_constraint_action::postsolve(PostsolveMatrix *prob) const
       // erase those cols in the other rows that occur in rowy
       // (with the exception of icol, which was deleted);
       // the other rows *must* contain these cols
-      for (int k = 0; k<ninrowy; ++k) {
+      for (k = 0; k<ninrowy; ++k) {
 	int col = rowcolsy[k];
 
 	// remove jrowx from col in the col rep
@@ -1216,7 +1217,7 @@ void subst_constraint_action::postsolve(PostsolveMatrix *prob) const
 	  int jrowx = rows[i];
 
 	  if (jrowx != jrowy)
-	    for (int k = 0; k<ninrowx; ++k) {
+	    for (k = 0; k<ninrowx; ++k) {
 	      int col = rowcolsx[k];
 	      CoinBigIndex kcolx = presolve_find_row3(jrowx, mcstrt[col], hincol[col], hrow, link);
 
@@ -1246,7 +1247,7 @@ void subst_constraint_action::postsolve(PostsolveMatrix *prob) const
       }
 
       // finally, add original rowy elements
-      for (int k = 0; k<ninrowy; ++k) {
+      for (k = 0; k<ninrowy; ++k) {
 	int col = rowcolsy[k];
 
 	{
@@ -1278,7 +1279,7 @@ void subst_constraint_action::postsolve(PostsolveMatrix *prob) const
 
       // DEBUG CHECK
       double acty = 0.0;
-      for (int k = 0; k<ninrowy; ++k) {
+      for (k = 0; k<ninrowy; ++k) {
 	int col = rowcolsy[k];
 	acty += rowelsy[k] * sol[col];
       }
@@ -1296,7 +1297,7 @@ void subst_constraint_action::postsolve(PostsolveMatrix *prob) const
 	    int jrowx = rows[i];
 
 	    double actx = 0.0;
-	    for (int k = 0; k<ninrowx; ++k) {
+	    for (k = 0; k<ninrowx; ++k) {
 	      int col = rowcolsx[k];
 	      actx += rowelsx[k] * sol[col];
 	    }

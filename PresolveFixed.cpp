@@ -53,8 +53,6 @@ const remove_fixed_action *remove_fixed_action::presolve(PresolveMatrix *prob,
   for (int ckc=0; ckc<nfcols; ckc++) {
     int j = fcols[ckc];
 
-    PRESOLVEASSERT(/*hincol[j] > 0 &&*/ cup[j] == clo[j]);
-
     double sol = clo[j];
     CoinBigIndex kcs = mcstrt[j];
     CoinBigIndex kce = kcs + hincol[j];
@@ -207,8 +205,6 @@ void remove_fixed_action::postsolve(PostsolveMatrix *prob) const
 	colels[k] = coeff;
 	link[k] = cs;
 	cs = k;
-
-	PRESOLVEASSERT(rdone[row]);
 
 	if (-PRESOLVE_INF < rlo[row])
 	  rlo[row] += coeff * thesol;

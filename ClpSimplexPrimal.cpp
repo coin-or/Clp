@@ -1466,7 +1466,7 @@ ClpSimplexPrimal::perturb()
   for (i=0;i<numberColumns_+numberRows_;i++) {
     double lowerValue=lower_[i], upperValue=upper_[i];
     if (upperValue>lowerValue+primalTolerance_) {
-      double value = drand48()*perturbation;
+      double value = CoinDrand48()*perturbation;
       if (lowerValue>-1.0e20)
 	lowerValue -= value * (max(1.0,1.0e-3*fabs(lowerValue))); 
       if (upperValue<1.0e20)

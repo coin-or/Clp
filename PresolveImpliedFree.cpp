@@ -447,7 +447,6 @@ void implied_free_action::postsolve(PostsolveMatrix *prob) const
 	else {
 	  int jcol = rowcols[k];
 	  PRESOLVE_STMT(CoinBigIndex kk = presolve_find_row2(irow, mcstrt[jcol], hincol[jcol], hrow, link));
-	  PRESOLVEASSERT(colels[kk] == rowels[k]);
 	  act += rowels[k] * sol[jcol];
 	}
 	    

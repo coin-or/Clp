@@ -20,18 +20,6 @@ inline double min(double x, double y)
   return (x < y) ? x : y;
 }
 #endif
-static void implied_bounds1(PresolveMatrix * prob,const double *rowels,
-				const int *mrstrt,
-				const int *hrow,
-				const int *hinrow,
-				const double *clo, const double *cup,
-				const int *hcol,
-				int ncols,
-				const double *rlo, const double *rup,
-				const char *integerType,
-				int nrows,
-				double *ilbound, double *iubound);
-
 
 /*static*/ void implied_bounds(const double *els,
 			   const double *clo, const double *cup,
@@ -405,14 +393,15 @@ void forcing_constraint_action::postsolve(PostsolveMatrix *prob) const
     const int ninrow	= nlo + nup;
     const int *rowcols	= f->rowcols;
     const double *bounds= f->bounds;
+    int k;
 
-    for (int k=0; k<nlo; k++) {
+    for (k=0; k<nlo; k++) {
       int jcol = rowcols[k];
       cup[jcol] = bounds[k];
       PRESOLVEASSERT(prob->getColumnStatus(jcol)!=PrePostsolveMatrix::basic);
     }
 
-    for (int k=nlo; k<ninrow; k++) {
+    for (k=nlo; k<ninrow; k++) {
       int jcol = rowcols[k];
       clo[jcol] = bounds[k];
       PRESOLVEASSERT(prob->getColumnStatus(jcol)!=PrePostsolveMatrix::basic);
@@ -432,7 +421,7 @@ void forcing_constraint_action::postsolve(PostsolveMatrix *prob) const
     // find the one most out of whack and fix it.
     int whacked = -1;
     double whack = 0.0;
-    for (int k=0; k<ninrow; k++) {
+    for (k=0; k<ninrow; k++) {
       int jcol = rowcols[k];
       CoinBigIndex kk = presolve_find_row2(irow, mcstrt[jcol], hincol[jcol], hrow, link);
 
@@ -452,7 +441,7 @@ void forcing_constraint_action::postsolve(PostsolveMatrix *prob) const
       prob->setRowStatus(irow,PrePostsolveMatrix::atLowerBound);
       rowduals[irow] = whack;
 
-      for (int k=0; k<ninrow; k++) {
+      for (k=0; k<ninrow; k++) {
 	int jcol = rowcols[k];
 	CoinBigIndex kk = presolve_find_row2(irow, mcstrt[jcol], hincol[jcol], hrow, link);
 	      
@@ -464,7 +453,7 @@ void forcing_constraint_action::postsolve(PostsolveMatrix *prob) const
 
 
 
-
+#if 0
 // Determine the maximum and minimum values the constraint sums
 // may take, given the bounds on the variables.
 // If there are infinite terms, record where the first one is,
@@ -742,7 +731,7 @@ postsolve for implied_bound
 	      colstat[jcol] = PRESOLVE_XBASIC;
 	    }
 
-	    for (int k=0; k<ninrow; k++) {
+	    for (k=0; k<ninrow; k++) {
 	      int jcol = rowcols[k];
 	      CoinBigIndex kk = presolve_find_row(irow, mcstrt[jcol], mcstrt[jcol] + hincol[jcol], hrow);
 	      
@@ -782,6 +771,7 @@ postsolve for implied_bound
 	    }
 	  }
 	}
+#endif
 #endif
 
 

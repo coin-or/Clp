@@ -502,7 +502,6 @@ void dupcol_action::postsolve(PostsolveMatrix *prob) const
       double u_k = f->lastup;
       double x_k_sol = sol[icol2];
 
-      PRESOLVEASSERT(l_j + u_k <= l_k + u_j);
       prob->setColumnStatus(icol,prob->getColumnStatus(icol2));
       if (x_k_sol <= l_k + u_j) {
 	sol[icol2] = l_k;

@@ -136,7 +136,6 @@ void useless_constraint_action::postsolve(PostsolveMatrix *prob) const
     
     // I don't know if this is always true
     PRESOLVEASSERT(prob->getRowStatus(irow)==PrePostsolveMatrix::basic);
-    PRESOLVEASSERT(rowduals[irow] == 0.0);    
     // rcosts are unaffected since rowdual is 0
 
     rowacts[irow] = rowact;

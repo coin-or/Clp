@@ -2177,11 +2177,11 @@ ClpSimplexDual::perturb()
     value = min(value,maximumFraction*fabs(currentValue)+1.0e-6);
     if (rowLowerWork_[iRow]>-largeValue_) {
       if (fabs(rowLowerWork_[iRow])<fabs(rowUpperWork_[iRow])) 
-	value *= drand48();
+	value *= CoinDrand48();
       else
-	value *= -drand48();
+	value *= -CoinDrand48();
     } else if (rowUpperWork_[iRow]<largeValue_) {
-      value *= -drand48();
+      value *= -CoinDrand48();
     } else {
       value=0.0;
     }
@@ -2194,11 +2194,11 @@ ClpSimplexDual::perturb()
     if (columnLowerWork_[iColumn]>-largeValue_) {
       if (fabs(columnLowerWork_[iColumn])<
 	  fabs(columnUpperWork_[iColumn])) 
-	value *= drand48();
+	value *= CoinDrand48();
       else
-	value *= -drand48();
+	value *= -CoinDrand48();
     } else if (columnUpperWork_[iColumn]<largeValue_) {
-      value *= -drand48();
+      value *= -CoinDrand48();
     } else {
       value=0.0;
     }

@@ -257,9 +257,6 @@ void slack_doubleton_action::postsolve(PostsolveMatrix *prob) const
     double coeff = f->coeff;
     int jcol = f->col;
 
-    /* the column was in the reduced problem */
-    PRESOLVEASSERT(cdone[jcol] && rdone[irow]==DROP_ROW);
-
     rlo[irow] = f->rlo;
     rup[irow] = f->rup;
 

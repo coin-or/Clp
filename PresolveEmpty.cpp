@@ -187,8 +187,8 @@ void drop_empty_cols_action::postsolve(PostsolveMatrix *prob) const
 
   memset(colmapping,0,ncols2*sizeof(int));
   char *cdone	= prob->cdone_;
-
-  for (int action_i = 0; action_i < nactions; action_i++) {
+  int action_i;
+  for (action_i = 0; action_i < nactions; action_i++) {
     const action *e = &actions[action_i];
     int jcol = e->jcol;
     colmapping[jcol]=-1;
@@ -221,7 +221,7 @@ void drop_empty_cols_action::postsolve(PostsolveMatrix *prob) const
   
   delete [] colmapping;
 
-  for (int action_i = 0; action_i < nactions; action_i++) {
+  for (action_i = 0; action_i < nactions; action_i++) {
     const action *e = &actions[action_i];
     int jcol = e->jcol;
     

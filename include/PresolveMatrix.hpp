@@ -51,7 +51,7 @@ inline void	DIE(const char *s)	{ std::cout<<s; abort(); }
 #define	PRESOLVE_STMT(s)	s
 #define PRESOLVEASSERT(x)	((x) ? 1 : ((std::cerr<< "FAILED ASSERTION at line "<< __LINE__ << ":  " #x "\n"), abort(), 0))
 #else
-#define PRESOLVEASSERT(x)
+#define PRESOLVEASSERT(x) assert(x)
 #define	PRESOLVE_STMT(s)
 #endif
 

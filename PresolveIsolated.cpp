@@ -135,8 +135,9 @@ void isolated_constraint_action::postsolve(PostsolveMatrix *prob) const
 
   rup[irow] = this->rup_;
   rlo[irow] = this->rlo_;
+  int k;
 
-  for (int k=0; k<this->ninrow_; k++) {
+  for (k=0; k<this->ninrow_; k++) {
     int jcol = this->rowcols_[k];
 
     sol[jcol] = 0.0;	// ONLY ACCEPTED SUCH CONSTRAINTS

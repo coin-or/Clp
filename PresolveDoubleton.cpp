@@ -456,8 +456,8 @@ const PresolveAction *doubleton_action::presolve(PresolveMatrix *prob,
       icoly = hcol[k];
       
       // don't bother with fixed variables
-      if (!fabs(cup[icolx] - clo[icolx]) < ZTOLDP &&
-	  !fabs(cup[icoly] - clo[icoly]) < ZTOLDP) {
+      if ((!fabs(cup[icolx] - clo[icolx]) < ZTOLDP) &&
+	  (!fabs(cup[icoly] - clo[icoly]) < ZTOLDP)) {
 	double coeffx, coeffy;
 	/* find this row in each of the columns */
 	CoinBigIndex krowx = presolve_find_row(irow, mcstrt[icolx], mcstrt[icolx] + hincol[icolx], hrow);

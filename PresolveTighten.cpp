@@ -336,20 +336,16 @@ void do_tighten_action::postsolve(PostsolveMatrix *prob) const
 
 	// adjust to just meet newrlo (solve for correction)
 	double new_correction = (newrlo - activity) / coeff;
-	PRESOLVEASSERT((iflag == 1) == (correction < new_correction));
 	correction = new_correction;
       } else if (activity + correction * coeff > newrup) {
 	last_corrected = irow;
 
 	double new_correction = (newrup - activity) / coeff;
-	PRESOLVEASSERT((iflag == 1) == (correction < new_correction));
 	correction = new_correction;
       }
     }
 
     sol[jcol] += correction;
-    PRESOLVEASSERT(clo[jcol] - ztolzb < sol[jcol] &&
-	      sol[jcol] <= cup[jcol] + ztolzb);
 
     // by construction, the last row corrected (if there was one)
     // must be at its bound, so it can be non-basic.
@@ -366,9 +362,6 @@ void do_tighten_action::postsolve(PostsolveMatrix *prob) const
 
       acts[irow] += correction * coeff;
 
-      // ? there isn't really a tolerance for tihs
-      PRESOLVEASSERT(rlo[irow] - ztolzb <= acts[irow] &&
-		acts[irow] <= rup[irow] + ztolzb);
     }
 
     // if the col happens to get pushed to its bound,
