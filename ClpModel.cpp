@@ -1233,7 +1233,8 @@ ClpModel::setMaximumSeconds(double value)
 bool 
 ClpModel::hitMaximumIterations() const
 {
-  bool hitMax= (numberIterations_>=maximumIterations());
+  // replaced - compiler error? bool hitMax= (numberIterations_>=maximumIterations());
+  bool hitMax = (numberIterations_ >= intParam_[ClpMaxNumIteration]);
   if (dblParam_[ClpMaxSeconds]>=0.0&&!hitMax)
     hitMax = (CoinCpuTime()>=dblParam_[ClpMaxSeconds]);
   return hitMax;
