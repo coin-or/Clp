@@ -259,8 +259,13 @@ int ClpSimplexDual::dual ( )
   // save if sparse factorization wanted
   int saveSparse = factorization_->sparseThreshold();
 
-  if (internalFactorize(0))
+  int factorizationStatus = internalFactorize(0);
+  if (factorizationStatus<0)
     return 1; // some error
+  else if (factorizationStatus)
+    handler_->message(CLP_SINGULARITIES,messages_)
+    <<factorizationStatus
+    <<OsiMessageEol;
 
   // If user asked for perturbation - do it
   int savePerturbation = perturbation_;
@@ -726,7 +731,7 @@ ClpSimplexDual::updateDualsInDual(OsiIndexedVector * rowArray,
 	double movement=0.0;
 	FakeBound bound = getFakeBound(iSequence+addSequence);
 	Status status = getStatus(iSequence+addSequence);
-	
+
 	switch(status) {
 	  
 	case ClpSimplex::basic:
@@ -905,7 +910,7 @@ ClpSimplexDual::changeBounds(bool initialize,
       double value=solution_[iSequence];
       setFakeBound(iSequence,ClpSimplexDual::noFake);
       switch(getStatus(iSequence)) {
-	
+
       case ClpSimplex::basic:
 	break;
       case ClpSimplex::isFree:
@@ -1135,7 +1140,7 @@ ClpSimplexDual::dualColumn(OsiIndexedVector * rowArray,
       double oldValue = reducedCost[iSequence];
       double value = oldValue-tentativeTheta*alpha;
       int keep = 0;
-	
+
       switch(getStatus(iSequence+addSequence)) {
 	  
       case ClpSimplex::basic:
@@ -1966,9 +1971,9 @@ ClpSimplexDual::flipBounds(OsiIndexedVector * rowArray,
 #endif
       work[iSequence]=0.0;
       Status status = getStatus(iSequence+addSequence);
-	
+
       switch(status) {
-	
+
       case ClpSimplex::basic:
       case ClpSimplex::isFree:
       case ClpSimplex::superBasic:

@@ -34,6 +34,7 @@ static Clp_message us_english[]=
   {CLP_PRIMAL_ORIGINAL,15,2,"Going back to original tolerance"},
   {CLP_PRIMAL_WEIGHT,16,2,"New infeasibility weight of %g"},
   {CLP_PRIMAL_OPTIMAL,17,2,"Looking optimal with tolerance of %g"},
+  {CLP_SINGULARITIES,18,2,"%d total structurals rejected in initial factorization"},
   {CLP_SIMPLEX_HOUSE1,101,32,"dirOut %d, dirIn %d, theta %g, out %g, dj %g, alpha %g"},
   {CLP_SIMPLEX_HOUSE2,102,4,"%d %g In: %c%d Out: %c%d%? dj ratio %g distance %g%? dj %g distance %g"},
   {CLP_SIMPLEX_NONLINEAR,103,4,"Primal nonlinear change %g (%d)"},

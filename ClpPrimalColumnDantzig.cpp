@@ -144,7 +144,7 @@ ClpPrimalColumnDantzig::pivotColumn(OsiIndexedVector * updates,
       ClpSimplex::Status status = model_->getStatus(iSequence);
       
       switch(status) {
-	
+
       case ClpSimplex::basic:
 	break;
       case ClpSimplex::isFree:

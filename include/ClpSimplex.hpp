@@ -176,6 +176,8 @@ public:
   /** Factorizes using current basis.  
       solveType - 1 iterating, 0 initial, -1 external 
       If 10 added then in primal values pass
+      Return codes are as from ClpFactorization unless initial factorization
+      when total number of singularities is returned
   */
   int internalFactorize(int solveType);
   /// Factorizes using current basis. For external use

@@ -125,7 +125,7 @@ public:
       firstSuperBasic == number rows + columns normally,
       otherwise first super basic variable
    */
-  void whileIterating(int firstSuperBasic); 
+  void whileIterating(int & firstSuperBasic); 
   /** The primals are updated by the given array.
       Returns number of infeasibilities.
       After rowArray will have cost changes for use next iteration

@@ -258,12 +258,18 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
   // loop round to clean up solution if values pass
   int numberThrownOut = -1;
   int firstSuperBasic=numberRows_+numberColumns_;
+  int totalNumberThrownOut=0;
   while(numberThrownOut) {
-    if (internalFactorize(0+10*ifValuesPass))
+    int status = internalFactorize(0+10*ifValuesPass);
+    if (status<0)
       return 1; // some error
+    else
+      totalNumberThrownOut+= status;
+
     // for this we need clean basis so it is after factorize
     numberThrownOut=gutsOfSolution(rowActivityWork_,columnActivityWork_,
 				   ifValuesPass);
+    totalNumberThrownOut+= numberThrownOut;
 
     // find first superbasic - columns, then rows
     if (ifValuesPass) {
@@ -272,6 +278,11 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
 	ifValuesPass=0; // signal no values pass
     }
   }
+
+  if (totalNumberThrownOut)
+    handler_->message(CLP_SINGULARITIES,messages_)
+    <<totalNumberThrownOut
+    <<OsiMessageEol;
 
   problemStatus_ = -1;
   numberIterations_=0;
@@ -365,7 +376,7 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
   return problemStatus_;
 }
 void
-ClpSimplexPrimal::whileIterating(int firstSuperBasic)
+ClpSimplexPrimal::whileIterating(int & firstSuperBasic)
 {
 
   // Say if values pass
@@ -441,7 +452,7 @@ ClpSimplexPrimal::whileIterating(int firstSuperBasic)
 	  pivotRow_=-1; // say no weights update
 	  break;
 	}
-	
+
 	// and get variable
 	primalColumn(rowArray_[1],rowArray_[2],rowArray_[3],
 		     columnArray_[0],columnArray_[1]);
@@ -495,7 +506,7 @@ ClpSimplexPrimal::whileIterating(int firstSuperBasic)
       if ((handler_->logLevel()&32))
 	printf("btran dj %g, ftran dj %g\n",saveDj,dualIn_);
 #endif
-      if (saveDj*dualIn_<1.0e-20||
+      if ((saveDj*dualIn_<1.0e-20&&!ifValuesPass)||
 	  fabs(saveDj-dualIn_)>1.0e-5*(1.0+fabs(saveDj))) {
 	handler_->message(CLP_PRIMAL_DJ,messages_)
 	  <<saveDj<<dualIn_
@@ -724,7 +735,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type)
 	// so will exit
 	infeasibilityCost_=1.0e30;
       }
-	
+
       if (infeasibilityCost_<1.0e20) {
 	infeasibilityCost_ *= 5.0;
 	changeMade_++; // say change made
@@ -1010,12 +1021,12 @@ ClpSimplexPrimal::primalRow(OsiIndexedVector * rowArray,
       upperTheta = maximumMovement;
       
       for (iIndex=0;iIndex<numberRemaining;iIndex++) {
-	
+
 	int iRow = index[iIndex];
 	double alpha = spare[iIndex];
 	double oldValue = rhs[iRow];
 	double value = oldValue-tentativeTheta*fabs(alpha);
-	
+
 	if (value<-primalTolerance_) {
 	  // how much would it cost to go thru
 	  thruThis += alpha*

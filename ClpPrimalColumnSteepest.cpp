@@ -224,7 +224,7 @@ ClpPrimalColumnSteepest::pivotColumn(OsiIndexedVector * updates,
 	if (model_->fixed(iSequence+addSequence))
 	  continue;
 	ClpSimplex::Status status = model_->getStatus(iSequence+addSequence);
-	
+
 	switch(status) {
 	  
 	case ClpSimplex::basic:
@@ -287,7 +287,7 @@ ClpPrimalColumnSteepest::pivotColumn(OsiIndexedVector * updates,
       double value = model_->reducedCost(sequenceOut);
       
       switch(status) {
-	
+
       case ClpSimplex::basic:
 	break;
       case ClpSimplex::isFree:
@@ -351,7 +351,7 @@ ClpPrimalColumnSteepest::pivotColumn(OsiIndexedVector * updates,
       ClpSimplex::Status status = model_->getStatus(iSequence+addSequence);
       
       switch(status) {
-	
+
       case ClpSimplex::basic:
 	infeasible_->zero(iSequence+addSequence);
 	break;
@@ -456,7 +456,7 @@ ClpPrimalColumnSteepest::pivotColumn(OsiIndexedVector * updates,
 	}
       }
       weight[iSequence] = thisWeight;
-    }			
+    }
     
     // columns
     weight = weights_;
@@ -494,7 +494,7 @@ ClpPrimalColumnSteepest::pivotColumn(OsiIndexedVector * updates,
 	}
       }
       weight[iSequence] = thisWeight;
-    }			
+    }
     // restore outgoing weight
     weights_[sequenceOut]=outgoingWeight;
     alternateWeights_->clear();
@@ -685,7 +685,7 @@ ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model,int mode)
       ClpSimplex::Status status = model_->getStatus(iSequence);
       
       switch(status) {
-	
+
       case ClpSimplex::basic:
 	break;
       case ClpSimplex::isFree:
@@ -829,7 +829,7 @@ ClpPrimalColumnSteepest::updateWeights(OsiIndexedVector * input)
 					  <<oldDevex<<devex_
 					  <<OsiMessageEol;
       initializeWeights();
-    }				
+    }
   }
   if (pivotRow>=0) {
     // set outgoing weight here

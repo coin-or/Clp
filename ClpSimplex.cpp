@@ -217,7 +217,7 @@ ClpSimplex::gutsOfSolution ( const double * rowActivities,
       }
       for (iRow=0;iRow<numberRows_;iRow++) {
 	int iPivot=pivotVariable_[iRow];
-	
+
 	if (iPivot<numberColumns_) {
 	  // column
 	  double difference= save[iRow];
@@ -233,7 +233,7 @@ ClpSimplex::gutsOfSolution ( const double * rowActivities,
       for (iRow=0;iRow<numberOut;iRow++) {
 	int iColumn=sort[iRow];
 	setColumnStatus(iColumn,ClpSimplex::superBasic);
-	
+
       }
       delete [] sort;
     }
@@ -501,11 +501,13 @@ int ClpSimplex::factorize ()
       solveType - 1 iterating, 0 initial, -1 external 
       If 10 added then in primal values pass
 */
-// Return codes are as from ClpFactorization
+/* Return codes are as from ClpFactorization unless initial factorization
+   when total number of singularities is returned */
 int ClpSimplex::internalFactorize ( int solveType)
 {
 
   int iRow,iColumn;
+  int totalSlacks=numberRows_;
 
   bool valuesPass=false;
   if (solveType>=10) {
@@ -559,6 +561,7 @@ int ClpSimplex::internalFactorize ( int solveType)
 	    break;
 	  }
 	}
+	totalSlacks=numberBasic;
 	for (iColumn=0;iColumn<numberColumns_;iColumn++) {
 	  switch(getColumnStatus(iColumn)) {
 	    
@@ -682,6 +685,7 @@ int ClpSimplex::internalFactorize ( int solveType)
 	  else
 	    setRowStatus(iRow,ClpSimplex::superBasic);
 	}
+	totalSlacks=numberBasic;
 	for (iColumn=0;iColumn<numberColumns_;iColumn++) {
 	  if (getColumnStatus(iColumn)==ClpSimplex::basic) {
 	    if (numberBasic==numberRows_) 
@@ -833,6 +837,14 @@ int ClpSimplex::internalFactorize ( int solveType)
       <<status
       <<OsiMessageEol;
     return -1;
+  } else if (!solveType) {
+    // Initial basis - return number of singularities
+    int numberSlacks=0;
+    for (iRow=0;iRow<numberRows_;iRow++) {
+      if (getRowStatus(iRow) == ClpSimplex::basic)
+	numberSlacks++;
+    }
+    status= numberSlacks-totalSlacks;
   }
 
   // sparse methods

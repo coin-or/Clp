@@ -90,7 +90,7 @@ ClpFactorization::factorize ( const ClpSimplex * model,
   numberElements += matrix->numberInBasis(columnIsBasic);
   if ( numberBasic > numberRows ) {
     return -2; // say too many in basis
-  }				
+  }
   numberElements = 3 * numberBasic + 3 * numberElements + 10000;
   getAreas ( numberRows, numberBasic, numberElements,
 	     2 * numberElements );
