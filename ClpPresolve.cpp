@@ -1011,18 +1011,18 @@ CoinPresolveMatrix::CoinPresolveMatrix(int ncols0_in,
   ClpDisjointCopyN(m->getVectorLengths(),ncols_,  hincol_);
 
   // same thing for row rep
-  m = new CoinPackedMatrix();
-  m->reverseOrderedCopyOf(*si->matrix());
-  m->removeGaps();
+  CoinPackedMatrix * mRow = new CoinPackedMatrix();
+  mRow->reverseOrderedCopyOf(*m);
+  mRow->removeGaps();
 
 
-  ClpDisjointCopyN(m->getVectorStarts(),  nrows_,  mrstrt_);
+  ClpDisjointCopyN(mRow->getVectorStarts(),  nrows_,  mrstrt_);
   mrstrt_[nrows_] = nelems_;
-  ClpDisjointCopyN(m->getVectorLengths(), nrows_,  hinrow_);
-  ClpDisjointCopyN(m->getIndices(),       nelems_, hcol_);
-  ClpDisjointCopyN(m->getElements(),      nelems_, rowels_);
+  ClpDisjointCopyN(mRow->getVectorLengths(), nrows_,  hinrow_);
+  ClpDisjointCopyN(mRow->getIndices(),       nelems_, hcol_);
+  ClpDisjointCopyN(mRow->getElements(),      nelems_, rowels_);
 
-  delete m;
+  delete mRow;
   if (si->integerInformation()) {
     memcpy(integerType_,si->integerInformation(),ncols_*sizeof(char));
   } else {
