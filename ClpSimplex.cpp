@@ -102,6 +102,7 @@ ClpSimplex::ClpSimplex () :
   lastBadIteration_(-999999),
   lastFlaggedIteration_(-999999),
   numberFake_(0),
+  numberChanged_(0),
   progressFlag_(0),
   firstFree_(-1),
   numberExtraRows_(0),
@@ -206,6 +207,7 @@ ClpSimplex::ClpSimplex ( const ClpModel * rhs,
   lastBadIteration_(-999999),
   lastFlaggedIteration_(-999999),
   numberFake_(0),
+  numberChanged_(0),
   progressFlag_(0),
   firstFree_(-1),
   numberExtraRows_(0),
@@ -1499,6 +1501,7 @@ ClpSimplex::ClpSimplex(const ClpSimplex &rhs,int scalingMode) :
   lastBadIteration_(-999999),
   lastFlaggedIteration_(-999999),
   numberFake_(0),
+  numberChanged_(0),
   progressFlag_(0),
   firstFree_(-1),
   numberExtraRows_(0),
@@ -1597,6 +1600,7 @@ ClpSimplex::ClpSimplex(const ClpModel &rhs, int scalingMode) :
   lastBadIteration_(-999999),
   lastFlaggedIteration_(-999999),
   numberFake_(0),
+  numberChanged_(0),
   progressFlag_(0),
   firstFree_(-1),
   numberExtraRows_(0),
@@ -1739,6 +1743,7 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
   lastBadIteration_ = rhs.lastBadIteration_;
   lastFlaggedIteration_ = rhs.lastFlaggedIteration_;
   numberFake_ = rhs.numberFake_;
+  numberChanged_ = rhs.numberChanged_;
   progressFlag_ = rhs.progressFlag_;
   firstFree_ = rhs.firstFree_;
   incomingInfeasibility_ = rhs.incomingInfeasibility_;

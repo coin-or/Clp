@@ -1018,6 +1018,18 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
 	  printf("** no column pivot\n");
 #endif
 	if (factorization_->pivots()<5) {
+	  // If we have just factorized and infeasibility reasonable say infeas
+	  if ((specialOptions_&4096)!=0&&dualBound_>1.0e8) {
+	    if (valueOut_>upperOut_+1.0e-2||valueOut_<lowerOut_-1.0e-2
+		|| (specialOptions_&64)==0) {
+	      // say infeasible
+	      problemStatus_=1;
+	      rowArray_[0]->clear();
+	      columnArray_[0]->clear();
+	      returnCode=1;
+	      break;
+	    }
+	  }
 	  // If special option set - put off as long as possible
 	  if ((specialOptions_&64)==0) {
 	    problemStatus_=-4; //say looks infeasible
@@ -1052,8 +1064,19 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
 	printf("** no row pivot\n");
 #endif
       int numberPivots = factorization_->pivots();
-      if (!numberPivots||(numberPivots<20&&
-			  (specialOptions_&2048)!=0&&!numberChanged_&&perturbation_>=100)) {
+      bool specialCase;
+      int useNumberFake;
+      if (numberPivots<20&&
+	  (specialOptions_&2048)!=0&&!numberChanged_&&perturbation_>=100
+	  &&dualBound_>1.0e8) {
+	specialCase=true;
+	// as dual bound high - should be okay
+	useNumberFake=0;
+      } else {
+	specialCase=false;
+	useNumberFake=numberFake_;
+      }
+      if (!numberPivots||specialCase) {
 	// may have crept through - so may be optimal
 	// check any flagged variables
 	int iRow;
@@ -1067,7 +1090,7 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
 	  returnCode=0;
 	  break;
 	}
-	if (numberFake_||numberDualInfeasibilities_) {
+	if (useNumberFake||numberDualInfeasibilities_) {
 	  // may be dual infeasible
 	  problemStatus_=-5;
 	} else {
@@ -1086,6 +1109,7 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
 	    problemStatus_=-5;
 	  } else {
 	    problemStatus_=0;
+	    sumPrimalInfeasibilities_=0.0;
 	  }
 	}
       } else {
@@ -2370,11 +2394,19 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 	      // modify cost to hit new tolerance
 	      double modification = alpha*theta_-dj_[iSequence]
 		+newTolerance;
-	      //modification = CoinMin(modification,dualTolerance_);
-	      //assert (fabs(modification)<1.0e-7);
+	      if ((specialOptions_&(2048+4096))!=0) {
+		if ((specialOptions_&2048)!=0) {
+		  if (fabs(modification)<1.0e-10)
+		    modification=0.0;
+		} else {
+		  if (fabs(modification)<1.0e-12)
+		    modification=0.0;
+		}
+	      }
 	      dj_[iSequence] += modification;
 	      cost_[iSequence] +=  modification;
-	      numberChanged_ ++; // Say changed costs
+	      if (modification)
+		numberChanged_ ++; // Say changed costs
 	      //cost_[iSequence+costOffset] += modification; // save change
 #endif
 	    }
@@ -2388,9 +2420,19 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 		-newTolerance;
 	      //modification = CoinMax(modification,-dualTolerance_);
 	      //assert (fabs(modification)<1.0e-7);
+	      if ((specialOptions_&(2048+4096))!=0) {
+		if ((specialOptions_&2048)!=0) {
+		  if (fabs(modification)<1.0e-10)
+		    modification=0.0;
+		} else {
+		  if (fabs(modification)<1.0e-12)
+		    modification=0.0;
+		}
+	      }
 	      dj_[iSequence] += modification;
 	      cost_[iSequence] +=  modification;
-	      numberChanged_ ++; // Say changed costs
+	      if (modification)
+		numberChanged_ ++; // Say changed costs
 	      //cost_[iSequence+costOffset] += modification; // save change
 #endif
 	    }
@@ -2414,10 +2456,20 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
     // modify cost to hit zero exactly
     // so (dualIn_+modification)==theta_*alpha_
     double modification = theta_*alpha_-dualIn_;
+    if ((specialOptions_&(2048+4096))!=0) {
+      if ((specialOptions_&2048)!=0) {
+	if (fabs(modification)<1.0e-10)
+	  modification=0.0;
+      } else {
+	if (fabs(modification)<1.0e-12)
+	  modification=0.0;
+      }
+    }
     dualIn_ += modification;
     dj_[sequenceIn_]=dualIn_;
     cost_[sequenceIn_] += modification;
-    numberChanged_ ++; // Say changed costs
+    if (modification)
+      numberChanged_ ++; // Say changed costs
     //int costOffset = numberRows_+numberColumns_;
     //cost_[sequenceIn_+costOffset] += modification; // save change
     //assert (fabs(modification)<1.0e-6);
@@ -2803,7 +2855,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	    cleanDuals=2; // If nothing changed optimal else primal
 	  } else {
 	    problemStatus_=0; // optimal
-	    if (lastCleaned<numberIterations_) {
+	    if (lastCleaned<numberIterations_&&numberChanged_) {
 	      handler_->message(CLP_SIMPLEX_GIVINGUP,messages_)
 		<<CoinMessageEol;
 	    }

@@ -855,6 +855,8 @@ public:
       256 - No row copy
       512 - Not values pass, solution guaranteed, skip as much as possible
       1024 - In branch and bound
+      2048 - Don't bother to re-factorize if < 20 iterations
+      4096 - Skip some optimality checks
   */
   inline unsigned int specialOptions() const
   { return specialOptions_;};
@@ -1129,11 +1131,7 @@ protected:
   */
   ClpNonLinearCost * nonLinearCost_;
   /** For advanced options
-      1 - Don't keep changing infeasibility weight
-      2 - Keep nonLinearCost round solves
-      4 - Force outgoing variables to exact bound (primal)
-      8 - Safe to use dense initial factorization
-      16 -Just use basic variables for operation
+      See get and set for meaning
   */
   unsigned int specialOptions_;
   /// So we know when to be cautious
@@ -1142,6 +1140,8 @@ protected:
   int lastFlaggedIteration_;
   /// Can be used for count of fake bounds (dual) or fake costs (primal)
   int numberFake_;
+  /// Can be used for count of changed costs (dual) or changed bounds (primal)
+  int numberChanged_;
   /// Progress flag - at present 0 bit says artificials out, 1 free in
   int progressFlag_;
   /// First free/super-basic variable (-1 if none)
