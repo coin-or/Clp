@@ -188,6 +188,7 @@ Presolve::presolvedModel(ClpSimplex & si,
 
   double maxmin = si.getObjSense();
   originalModel_ = &si;
+  delete [] originalColumn_;
   originalColumn_ = new int[ncols_];
 
   // Check matrix
@@ -196,6 +197,9 @@ Presolve::presolvedModel(ClpSimplex & si,
 
   // result is 0 - okay, 1 infeasible, -1 go round again
   int result = -1;
+  
+  // User may have deleted - its their responsibility
+  presolvedModel_=NULL;
 
   while (result==-1) {
 
