@@ -61,13 +61,16 @@ public:
 	    while >= 10 trying startup phase
       Returns 0 - can do normal iteration (basis change)
       1 - no basis change
+      2 - if wants singleton
+      3 - if time to re-factorize
       If sequenceIn_ >=0 then that will be incoming variable
   */
   int pivotColumn(CoinIndexedVector * longArray,
 		  CoinIndexedVector * rowArray,
 		  CoinIndexedVector * columnArray,
 		  CoinIndexedVector * spare,
-		  int & pivotMode);
+		  int & pivotMode,
+		  double & nullError);
   /**  Refactorizes if necessary 
        Checks if finished.  Updates status.
        lastCleaned refers to iteration at which some objective/feasibility

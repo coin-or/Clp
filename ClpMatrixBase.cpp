@@ -395,9 +395,56 @@ ClpMatrixBase::reducedCost(ClpSimplex * model,int sequence) const
    Returns number of primal infeasibilities.
 */
 int 
-ClpMatrixBase::checkFeasible() const 
+ClpMatrixBase::checkFeasible(ClpSimplex * model) const 
 {
-  return 0;
+  int numberRows = model->numberRows();
+  double * rhs = new double[numberRows];
+  int numberColumns = model->numberColumns();
+  int iRow;
+  CoinZeroN(rhs,numberRows);
+  times(1.0,model->solutionRegion(),rhs,model->rowScale(),model->columnScale());
+  int iColumn;
+  int logLevel = model->messageHandler()->logLevel();
+  int numberInfeasible=0;
+  const double * rowLower = model->rowLower();
+  const double * rowUpper = model->rowUpper();
+  const double * solution;
+  solution = model->solutionRegion(0);
+  double tolerance = model->primalTolerance()*1.01;
+  for (iRow=0;iRow<numberRows;iRow++) {
+    double value=rhs[iRow];
+    double value2= solution[iRow];
+    if (logLevel>3) {
+      if (fabs(value-value2)>1.0e-8)
+	printf("Row %d stored %g, computed %g\n",iRow,value2,value);
+    }
+    if (value<rowLower[iRow]-tolerance||
+	value>rowUpper[iRow]+tolerance) {
+      numberInfeasible++;
+    }
+    if (value2>rowLower[iRow]+tolerance&&
+	value2<rowUpper[iRow]-tolerance&&
+	model->getRowStatus(iRow)!=ClpSimplex::basic) {
+      assert (model->getRowStatus(iRow)==ClpSimplex::superBasic);
+    }
+  }
+  const double * columnLower = model->columnLower();
+  const double * columnUpper = model->columnUpper();
+  solution = model->solutionRegion(1);
+  for (iColumn=0;iColumn<numberColumns;iColumn++) {
+    double value= solution[iColumn];
+    if (value<columnLower[iColumn]-tolerance||
+	value>columnUpper[iColumn]+tolerance) {
+      numberInfeasible++;
+    }
+    if (value>columnLower[iColumn]+tolerance&&
+	value<columnUpper[iColumn]-tolerance&&
+	model->getColumnStatus(iColumn)!=ClpSimplex::basic) {
+      assert (model->getColumnStatus(iColumn)==ClpSimplex::superBasic);
+    }
+  }
+  delete [] rhs;
+  return numberInfeasible;
 }
 // Correct sequence in and out to give true value
 void 

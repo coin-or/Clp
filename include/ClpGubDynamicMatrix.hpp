@@ -52,7 +52,7 @@ public:
   /** Just for debug 
       Returns number of primal infeasibilities. Recomputes keys
   */
-  virtual int checkFeasible() const;
+  virtual int checkFeasible(ClpSimplex * model) const;
   //@}
 
   

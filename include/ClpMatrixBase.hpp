@@ -202,7 +202,7 @@ public:
   virtual void createVariable(ClpSimplex * model, int & bestSequence);
   /** Just for debug if odd type matrix.
       Returns number of primal infeasibilities. */
-  virtual int checkFeasible() const ;
+  virtual int checkFeasible(ClpSimplex * model) const ;
   /// Returns reduced cost of a variable
   double reducedCost(ClpSimplex * model,int sequence) const;
   /// Correct sequence in and out to give true value

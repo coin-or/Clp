@@ -5,6 +5,7 @@
 
 #include <math.h>
 #include "CoinHelperFunctions.hpp"
+#include "ClpHelperFunctions.hpp"
 #include "ClpSimplexNonlinear.hpp"
 #include "ClpFactorization.hpp"
 #include "ClpNonLinearCost.hpp"
@@ -584,6 +585,7 @@ ClpSimplexNonlinear::whileIterating(int & pivotMode)
   int numberInterior=0;
   int nextUnflag=10;
   int nextUnflagIteration=numberIterations_+10;
+  double nullError=-1.0;
   while (problemStatus_==-1) {
     int result;
     rowArray_[1]->clear();
@@ -621,8 +623,10 @@ ClpSimplexNonlinear::whileIterating(int & pivotMode)
     } 
     pivotRow_=-1;
     result = pivotColumn(rowArray_[3],rowArray_[0],
-			 columnArray_[0],rowArray_[1],pivotMode);
+			 columnArray_[0],rowArray_[1],pivotMode,nullError);
     if (result) {
+      if (result==3) 
+	break; // null vector not accurate
 #ifdef CLP_DEBUG
       if (handler_->logLevel()&32) {
 	double currentObj;
@@ -1136,7 +1140,8 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
 				 CoinIndexedVector * rowArray,
 				 CoinIndexedVector * columnArray,
 				 CoinIndexedVector * spare,
-				 int & pivotMode)
+				 int & pivotMode,
+				 double & nullError)
 {
   // say not optimal
   primalColumnPivot_->setLooksOptimal(false);
@@ -1229,6 +1234,36 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
 	startLocalMode=local;
       directionVector(longArray,spare,rowArray,local,
 		      normFlagged,numberNonBasic);
+      {
+	// check null vector
+	double * rhs = spare->denseVector();
+	int iRow;
+	multiplyAdd(solution_+numberColumns_,numberRows_,-1.0,rhs,0.0);
+	matrix_->times(1.0,solution_,rhs,rowScale_,columnScale_);
+	double largest=0.0;
+	int iLargest=-1;
+	for (iRow=0;iRow<numberRows_;iRow++) {
+	  double value=fabs(rhs[iRow]);
+	  rhs[iRow]=0.0;
+	  if (value>largest) {
+	    largest=value;
+	    iLargest=iRow;
+	  }
+	}
+#if CLP_DEBUG > 0
+	if (handler_->logLevel()>3&&largest>1.0e-8) 
+	  printf("largest non null %g on row %d\n",largest,iLargest);
+#endif
+	if (nullError<0.0) {
+	  nullError=largest;
+	} else if (largest>max(1.0e-8,1.0e2*nullError)&&
+		   factorization_->pivots()) {
+	  longArray->clear();
+	  pivotRow_ = -1;
+	  theta_=0.0;
+	  return 3;
+	}
+      }
       if (sequenceIn_>=0)
 	lastSequenceIn=sequenceIn_;
       double djNormSave = djNorm;
@@ -2186,7 +2221,7 @@ ClpSimplexNonlinear::pivotNonlinearResult()
   //#define CLP_DEBUG
 #if CLP_DEBUG > 1
   {
-    int ninf= matrix_->checkFeasible();
+    int ninf= matrix_->checkFeasible(this);
     if (ninf)
       printf("infeas %d\n",ninf);
   }

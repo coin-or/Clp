@@ -1962,7 +1962,7 @@ ClpGubDynamicMatrix::times(double scalar,
    Returns number of primal infeasibilities.
 */
 int 
-ClpGubDynamicMatrix::checkFeasible() const
+ClpGubDynamicMatrix::checkFeasible(ClpSimplex * model) const
 {
   int numberRows = model_->numberRows();
   double * rhs = new double[numberRows];

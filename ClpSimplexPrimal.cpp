@@ -2400,9 +2400,9 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
     // change cost and bounds on incoming if primal
     nonLinearCost_->setOne(sequenceIn_,valueIn_); 
     int whatNext=housekeeping(objectiveChange);
-#ifdef CLP_DEBUG
+#if CLP_DEBUG >1
     {
-      int ninf= matrix_->checkFeasible();
+      int ninf= matrix_->checkFeasible(this);
       if (ninf)
 	printf("infeas %d\n",ninf);
     }
