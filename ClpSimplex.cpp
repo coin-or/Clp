@@ -696,12 +696,20 @@ int ClpSimplex::internalFactorize ( int solveType)
 	  double upper=columnUpperWork_[iColumn];
 	  double big_bound = largeValue_;
 	  if (lower>-big_bound||upper<big_bound) {
-	    if (fabs(lower)<=fabs(upper)) {
-	      setColumnStatus(iColumn,atLowerBound);
-	      columnActivityWork_[iColumn]=lower;
+	    if ((getColumnStatus(iColumn)==atLowerBound&&
+		 columnActivityWork_[iColumn]==lower)||
+		(getColumnStatus(iColumn)==atUpperBound&&
+		 columnActivityWork_[iColumn]==upper)) {
+	      // status looks plausible
 	    } else {
-	      setColumnStatus(iColumn,atUpperBound);
-	      columnActivityWork_[iColumn]=upper;
+	      // set to sensible
+	      if (fabs(lower)<=fabs(upper)) {
+		setColumnStatus(iColumn,atLowerBound);
+		columnActivityWork_[iColumn]=lower;
+	      } else {
+		setColumnStatus(iColumn,atUpperBound);
+		columnActivityWork_[iColumn]=upper;
+	      }
 	    }
 	  } else {
 	    setColumnStatus(iColumn,isFree);
@@ -3379,9 +3387,9 @@ ClpSimplex::crash(double gap,int pivot)
 	      int iUpB=-1;
 	      int iDownB=-1;
 	      if (lowerBound<-1.0e20)
-		maximumDown = -1.0;
-	      if (upperBound>1.0e20)
 		maximumUp = -1.0;
+	      if (upperBound>1.0e20)
+		maximumDown = -1.0;
 	      for (j=rowStart[iRow];j<rowStart[iRow]+rowLength[iRow];j++) {
 		int iColumn = column[j];
 		double value = elementByRow[j];
