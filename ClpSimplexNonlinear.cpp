@@ -1911,7 +1911,11 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
 	  objTheta = djNorm/product;
 	else
 	  objTheta=COIN_DBL_MAX;
-	assert (product>-1.0e-5);
+#ifndef NDEBUG
+	if (product<-1.0e-5) 
+          printf("bad product %g\n",product);
+#endif
+        product = CoinMax(product,0.0);
       } else {
 	objTheta =objTheta2;
       }
