@@ -2206,6 +2206,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
     else
       factorization_->messageLevel(CoinMax(3,factorization_->messageLevel()));
   }
+  bool newArrays = (what&32)!=0;
   numberExtraRows_ = matrix_->generalExpanded(this,2,maximumBasic_);
   if (numberExtraRows_) {
     // make sure status array large enough
@@ -2268,16 +2269,17 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
 	dual_[i] *= direction;
     }
     // row reduced costs
-    if (!dj_) {
+    if (!dj_||newArrays) {
+      delete [] dj_;
       dj_ = new double[numberRows2+numberColumns_];
       reducedCostWork_ = dj_;
       rowReducedCost_ = dj_+numberColumns_;
       memcpy(reducedCostWork_,reducedCost_,numberColumns_*sizeof(double));
       memcpy(rowReducedCost_,dual_,numberRows_*sizeof(double));
     }
-    if (!solution_||(what&32)!=0) {
-      if (!solution_)
-	solution_ = new double[numberRows2+numberColumns_];
+    if (!solution_||newArrays) {
+      delete [] solution_;
+      solution_ = new double[numberRows2+numberColumns_];
       columnActivityWork_ = solution_;
       rowActivityWork_ = solution_+numberColumns_;
       if (status_) {
@@ -2553,7 +2555,8 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
   } 
   // we need to treat matrix as if each element by rowScaleIn and columnScaleout??
   // maybe we need to move scales to SimplexModel for factorization?
-  if ((what&8)!=0&&!pivotVariable_) {
+  if (((what&8)!=0&&!pivotVariable_)||newArrays) {
+    delete [] pivotVariable_;
     pivotVariable_=new int[numberRows2];
     for (int i=0;i<numberRows2;i++)
       pivotVariable_[i]=-1;
