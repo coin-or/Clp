@@ -226,138 +226,140 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
 
   // save infeasibility cost
   double saveInfeasibilityCost = infeasibilityCost_;
-
-  int iRow,iColumn;
-  // Do initial factorization
-  // and set certain stuff
-  // We can either set increasing rows so ...IsBasic gives pivot row
-  // or we can just increment iBasic one by one
-  // for now let ...iBasic give pivot row
-  factorization_->increasingRows(2);
-  // row activities have negative sign
-  factorization_->slackValue(-1.0);
-  factorization_->zeroTolerance(1.0e-13);
-  
-
-  // If user asked for perturbation - do it
+  // Save perturbation
   int savePerturbation = perturbation_;
-
-  if (perturbation_<100) 
-    perturb();
-
-  // for primal we will change bounds using infeasibilityCost_
-  if (nonLinearCost_==NULL) {
-    // get a valid nonlinear cost function
-    delete nonLinearCost_;
-    nonLinearCost_= new ClpNonLinearCost(this);
-  }
-
   // save if sparse factorization wanted
   int saveSparse = factorization_->sparseThreshold();
 
-  // loop round to clean up solution if values pass
-  int numberThrownOut = -1;
-  int firstSuperBasic=numberRows_+numberColumns_;
-  int totalNumberThrownOut=0;
-  while(numberThrownOut) {
-    int status = internalFactorize(0+10*ifValuesPass);
-    if (status<0)
-      return 1; // some error
-    else
-      totalNumberThrownOut+= status;
-
-    // for this we need clean basis so it is after factorize
-    numberThrownOut=gutsOfSolution(rowActivityWork_,columnActivityWork_,
-				   ifValuesPass);
-    totalNumberThrownOut+= numberThrownOut;
-
-    // find first superbasic - columns, then rows
-    if (ifValuesPass) {
-      nextSuperBasic(firstSuperBasic);
-      if (firstSuperBasic==numberRows_+numberColumns_)
-	ifValuesPass=0; // signal no values pass
-    }
-  }
-
-  if (totalNumberThrownOut)
-    handler_->message(CLP_SINGULARITIES,messages_)
-    <<totalNumberThrownOut
-    <<CoinMessageEol;
-
-  problemStatus_ = -1;
-  numberIterations_=0;
-
-  int lastCleaned=0; // last time objective or bounds cleaned up
-
-  // number of times we have declared optimality
-  numberTimesOptimal_=0;
-
-  // Progress indicator
-  ClpSimplexProgress progress(this);
-
-  // Say no pivot has occurred (for steepest edge and updates)
-  pivotRow_=-2;
-
-  // This says whether to restore things etc
-  int factorType=0;
-  // Save iteration number
-  int saveNumber = -1;
-  /*
-    Status of problem:
-    0 - optimal
-    1 - infeasible
-    2 - unbounded
-    -1 - iterating
-    -2 - factorization wanted
-    -3 - redo checking without factorization
-    -4 - looks infeasible
-    -5 - looks unbounded
-  */
-  while (problemStatus_<0) {
-    // clear
-    for (iRow=0;iRow<4;iRow++) {
-      rowArray_[iRow]->clear();
-    }    
+  if (sanityCheck()) {
+    // Model looks okay
+    int iRow,iColumn;
+    // Do initial factorization
+    // and set certain stuff
+    // We can either set increasing rows so ...IsBasic gives pivot row
+    // or we can just increment iBasic one by one
+    // for now let ...iBasic give pivot row
+    factorization_->increasingRows(2);
+    // row activities have negative sign
+    factorization_->slackValue(-1.0);
+    factorization_->zeroTolerance(1.0e-13);
     
-    for (iColumn=0;iColumn<2;iColumn++) {
-      columnArray_[iColumn]->clear();
-    }    
-
-    // give matrix (and model costs and bounds a chance to be
-    // refreshed (normally null)
-    matrix_->refresh(this);
-    // If getting nowhere - why not give it a kick
-#if 0
-    // primal perturbation not coded yet
-    if (perturbation_<101&&numberIterations_>2*(numberRows_+numberColumns_)) 
+    
+    // If user asked for perturbation - do it
+    
+    if (perturbation_<100) 
       perturb();
-#endif
-    // If we have done no iterations - special
-    if (saveNumber==numberIterations_)
-      factorType=3;
-    // may factorize, checks if problem finished
-    statusOfProblemInPrimal(lastCleaned,factorType,progress);
-
-    // Say good factorization
-    factorType=1;
-    if (saveSparse) {
-      // use default at present
-      factorization_->sparseThreshold(0);
-      factorization_->goSparse();
+    
+    // for primal we will change bounds using infeasibilityCost_
+    if (nonLinearCost_==NULL) {
+      // get a valid nonlinear cost function
+      delete nonLinearCost_;
+      nonLinearCost_= new ClpNonLinearCost(this);
     }
-
+    
+    // loop round to clean up solution if values pass
+    int numberThrownOut = -1;
+    int firstSuperBasic=numberRows_+numberColumns_;
+    int totalNumberThrownOut=0;
+    while(numberThrownOut) {
+      int status = internalFactorize(0+10*ifValuesPass);
+      if (status<0)
+	return 1; // some error
+      else
+	totalNumberThrownOut+= status;
+      
+      // for this we need clean basis so it is after factorize
+      numberThrownOut=gutsOfSolution(rowActivityWork_,columnActivityWork_,
+				     ifValuesPass);
+      totalNumberThrownOut+= numberThrownOut;
+      
+      // find first superbasic - columns, then rows
+      if (ifValuesPass) {
+	nextSuperBasic(firstSuperBasic);
+	if (firstSuperBasic==numberRows_+numberColumns_)
+	  ifValuesPass=0; // signal no values pass
+      }
+    }
+    
+    if (totalNumberThrownOut)
+      handler_->message(CLP_SINGULARITIES,messages_)
+	<<totalNumberThrownOut
+	<<CoinMessageEol;
+    
+    problemStatus_ = -1;
+    numberIterations_=0;
+    
+    int lastCleaned=0; // last time objective or bounds cleaned up
+    
+    // number of times we have declared optimality
+    numberTimesOptimal_=0;
+    
+    // Progress indicator
+    ClpSimplexProgress progress(this);
+    
     // Say no pivot has occurred (for steepest edge and updates)
     pivotRow_=-2;
-
+    
+    // This says whether to restore things etc
+    int factorType=0;
     // Save iteration number
-    saveNumber = numberIterations_;
-
-    // Iterate
-    whileIterating(firstSuperBasic);
+    int saveNumber = -1;
+    /*
+      Status of problem:
+      0 - optimal
+      1 - infeasible
+      2 - unbounded
+      -1 - iterating
+      -2 - factorization wanted
+      -3 - redo checking without factorization
+      -4 - looks infeasible
+      -5 - looks unbounded
+    */
+    while (problemStatus_<0) {
+      // clear
+      for (iRow=0;iRow<4;iRow++) {
+	rowArray_[iRow]->clear();
+      }    
+      
+      for (iColumn=0;iColumn<2;iColumn++) {
+	columnArray_[iColumn]->clear();
+      }    
+      
+      // give matrix (and model costs and bounds a chance to be
+      // refreshed (normally null)
+      matrix_->refresh(this);
+      // If getting nowhere - why not give it a kick
+#if 0
+      // primal perturbation not coded yet
+      if (perturbation_<101&&numberIterations_>2*(numberRows_+numberColumns_)) 
+	perturb();
+#endif
+      // If we have done no iterations - special
+      if (saveNumber==numberIterations_)
+	factorType=3;
+      // may factorize, checks if problem finished
+      statusOfProblemInPrimal(lastCleaned,factorType,progress);
+      
+      // Say good factorization
+      factorType=1;
+      if (saveSparse) {
+	// use default at present
+	factorization_->sparseThreshold(0);
+	factorization_->goSparse();
+      }
+      
+      // Say no pivot has occurred (for steepest edge and updates)
+      pivotRow_=-2;
+      
+      // Save iteration number
+      saveNumber = numberIterations_;
+      
+      // Iterate
+      whileIterating(firstSuperBasic);
+    }
   }
-
   // if infeasible get real values
-  if (problemStatus_) {
+  if (problemStatus_==1) {
     infeasibilityCost_=0.0;
     createRim(7);
     nonLinearCost_->checkInfeasibilities(true);

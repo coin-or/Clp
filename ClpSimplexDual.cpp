@@ -245,97 +245,101 @@ int ClpSimplexDual::dual ( )
 
   // save dual bound
   double saveDualBound_ = dualBound_;
-
-  int iRow,iColumn;
-  // Do initial factorization
-  // and set certain stuff
-  // We can either set increasing rows so ...IsBasic gives pivot row
-  // or we can just increment iBasic one by one
-  // for now let ...iBasic give pivot row
-  factorization_->increasingRows(2);
-  // row activities have negative sign
-  factorization_->slackValue(-1.0);
-  factorization_->zeroTolerance(1.0e-13);
+  // save perturbation
+  int savePerturbation = perturbation_;
   // save if sparse factorization wanted
   int saveSparse = factorization_->sparseThreshold();
 
-  int factorizationStatus = internalFactorize(0);
-  if (factorizationStatus<0)
-    return 1; // some error
-  else if (factorizationStatus)
-    handler_->message(CLP_SINGULARITIES,messages_)
-    <<factorizationStatus
-    <<CoinMessageEol;
-
-  // If user asked for perturbation - do it
-  int savePerturbation = perturbation_;
-
-  if (perturbation_<100) 
-    perturb();
-
-  double objectiveChange;
-  // for dual we will change bounds using dualBound_
-  // for this we need clean basis so it is after factorize
-  gutsOfSolution(rowActivityWork_,columnActivityWork_);
-
-  numberFake_ =0; // Number of variables at fake bounds
-  changeBounds(true,NULL,objectiveChange);
-
-  problemStatus_ = -1;
-  numberIterations_=0;
-
-  int lastCleaned=0; // last time objective or bounds cleaned up
-
-  // number of times we have declared optimality
-  numberTimesOptimal_=0;
-
-  // Progress indicator
-  ClpSimplexProgress progress(this);
-
-  // This says whether to restore things etc
-  int factorType=0;
-  /*
-    Status of problem:
-    0 - optimal
-    1 - infeasible
-    2 - unbounded
-    -1 - iterating
-    -2 - factorization wanted
-    -3 - redo checking without factorization
-    -4 - looks infeasible
-  */
-  while (problemStatus_<0) {
-    // clear
-    for (iRow=0;iRow<4;iRow++) {
-      rowArray_[iRow]->clear();
-    }    
+  if (sanityCheck()) {
+    // Problem looks okay
+    int iRow,iColumn;
+    // Do initial factorization
+    // and set certain stuff
+    // We can either set increasing rows so ...IsBasic gives pivot row
+    // or we can just increment iBasic one by one
+    // for now let ...iBasic give pivot row
+    factorization_->increasingRows(2);
+    // row activities have negative sign
+    factorization_->slackValue(-1.0);
+    factorization_->zeroTolerance(1.0e-13);
     
-    for (iColumn=0;iColumn<2;iColumn++) {
-      columnArray_[iColumn]->clear();
-    }    
-
-    // give matrix (and model costs and bounds a chance to be
-    // refreshed (normally null)
-    matrix_->refresh(this);
-    // If getting nowhere - why not give it a kick
-#if 0
-    // does not seem to work too well - do some more work
-    if (perturbation_<101&&numberIterations_>2*(numberRows_+numberColumns_)) 
+    int factorizationStatus = internalFactorize(0);
+    if (factorizationStatus<0)
+      return 1; // some error
+    else if (factorizationStatus)
+      handler_->message(CLP_SINGULARITIES,messages_)
+	<<factorizationStatus
+	<<CoinMessageEol;
+    
+    // If user asked for perturbation - do it
+    
+    if (perturbation_<100) 
       perturb();
+    
+    double objectiveChange;
+    // for dual we will change bounds using dualBound_
+    // for this we need clean basis so it is after factorize
+    gutsOfSolution(rowActivityWork_,columnActivityWork_);
+    
+    numberFake_ =0; // Number of variables at fake bounds
+    changeBounds(true,NULL,objectiveChange);
+    
+    problemStatus_ = -1;
+    numberIterations_=0;
+    
+    int lastCleaned=0; // last time objective or bounds cleaned up
+    
+    // number of times we have declared optimality
+    numberTimesOptimal_=0;
+    
+    // Progress indicator
+    ClpSimplexProgress progress(this);
+    
+    // This says whether to restore things etc
+    int factorType=0;
+    /*
+      Status of problem:
+      0 - optimal
+      1 - infeasible
+      2 - unbounded
+      -1 - iterating
+      -2 - factorization wanted
+      -3 - redo checking without factorization
+      -4 - looks infeasible
+    */
+    while (problemStatus_<0) {
+      // clear
+      for (iRow=0;iRow<4;iRow++) {
+	rowArray_[iRow]->clear();
+      }    
+      
+      for (iColumn=0;iColumn<2;iColumn++) {
+	columnArray_[iColumn]->clear();
+      }    
+      
+      // give matrix (and model costs and bounds a chance to be
+      // refreshed (normally null)
+      matrix_->refresh(this);
+      // If getting nowhere - why not give it a kick
+#if 0
+      // does not seem to work too well - do some more work
+      if (perturbation_<101&&numberIterations_>2*(numberRows_+numberColumns_)) 
+	perturb();
 #endif
-    // may factorize, checks if problem finished
-    statusOfProblemInDual(lastCleaned,factorType,progress);
-
-    // Say good factorization
-    factorType=1;
-    if (saveSparse) {
-      // use default at present
-      factorization_->sparseThreshold(0);
-      factorization_->goSparse();
+      // may factorize, checks if problem finished
+      statusOfProblemInDual(lastCleaned,factorType,progress);
+      
+      // Say good factorization
+      factorType=1;
+      if (saveSparse) {
+	// use default at present
+	factorization_->sparseThreshold(0);
+	factorization_->goSparse();
+      }
+      
+      // Do iterations
+      whileIterating();
     }
-
-    // Do iterations
-    whileIterating();
   }
 
   //assert(!numberFake_||problemStatus_); // all bounds should be okay

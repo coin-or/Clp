@@ -354,6 +354,8 @@ public:
   void createRim(int what,bool makeRowCopy=false);
   /// releases above arrays and does solution scaling out
   void deleteRim();
+  /// Sanity check on input data (after scaling) - returns true if okay
+  bool sanityCheck();
   //@}
   public:
   /**@name public methods */

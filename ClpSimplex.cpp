@@ -2804,3 +2804,149 @@ ClpSimplexProgress::looping()
   }
   return -1;
 }
+// Sanity check on input data - returns true if okay
+bool 
+ClpSimplex::sanityCheck()
+{
+  int badProblem=0;
+  int numberBad , numberBadBounds;
+  double largestBound, smallestBound, minimumGap;
+  double smallestObj, largestObj;
+  int firstBad;
+  int modifiedBounds=0;
+  int i;
+  numberBad=0;
+  numberBadBounds=0;
+  firstBad=-1;
+  minimumGap=1.0e100;
+  smallestBound=1.0e100;
+  largestBound=0.0;
+  smallestObj=1.0e100;
+  largestObj=0.0;
+  for (i=numberColumns_;i<numberColumns_+numberRows_;i++) {
+    double value;
+    value = fabs(cost_[i]);
+    if (value>1.0e50) {
+      numberBad++;
+      if (firstBad<0)
+	firstBad=i;
+    } else if (value) {
+      if (value>largestObj)
+	largestObj=value;
+      if (value<smallestObj)
+	smallestObj=value;
+    }
+    value=upper_[i]-lower_[i];
+    if (value<-primalTolerance_) {
+      numberBadBounds++;
+      if (firstBad<0)
+	firstBad=i;
+    } else if (value<=primalTolerance_) {
+      if (value) {
+	// modify
+	upper_[i] = lower_[i];
+	modifiedBounds++;
+      }
+    } else {
+      if (value<minimumGap)
+	minimumGap=value;
+    }
+    if (lower_[i]>-1.0e100&&lower_[i]) {
+      value = fabs(lower_[i]);
+      if (value>largestBound)
+	largestBound=value;
+      if (value<smallestBound)
+	smallestBound=value;
+    }
+    if (upper_[i]<1.0e100&&upper_[i]) {
+      value = fabs(upper_[i]);
+      if (value>largestBound)
+	largestBound=value;
+      if (value<smallestBound)
+	smallestBound=value;
+    }
+  }
+  if (largestBound)
+    handler_->message(CLP_RIMSTATISTICS3,messages_)
+      <<smallestBound
+      <<largestBound
+      <<minimumGap
+      <<CoinMessageEol;
+  minimumGap=1.0e100;
+  smallestBound=1.0e100;
+  largestBound=0.0;
+  for (i=0;i<numberColumns_;i++) {
+    double value;
+    value = fabs(cost_[i]);
+    if (value>1.0e50) {
+      numberBad++;
+      if (firstBad<0)
+	firstBad=i;
+    } else if (value) {
+      if (value>largestObj)
+	largestObj=value;
+      if (value<smallestObj)
+	smallestObj=value;
+    }
+    value=upper_[i]-lower_[i];
+    if (value<-primalTolerance_) {
+      numberBadBounds++;
+      if (firstBad<0)
+	firstBad=i;
+    } else if (value<=primalTolerance_) {
+      if (value) {
+	// modify
+	upper_[i] = lower_[i];
+	modifiedBounds++;
+      }
+    } else {
+      if (value<minimumGap)
+	minimumGap=value;
+    }
+    if (lower_[i]>-1.0e100&&lower_[i]) {
+      value = fabs(lower_[i]);
+      if (value>largestBound)
+	largestBound=value;
+      if (value<smallestBound)
+	smallestBound=value;
+    }
+    if (upper_[i]<1.0e100&&upper_[i]) {
+      value = fabs(upper_[i]);
+      if (value>largestBound)
+	largestBound=value;
+      if (value<smallestBound)
+	smallestBound=value;
+    }
+  }
+  char rowcol[]={'R','C'};
+  if (numberBad) {
+    handler_->message(CLP_BAD_BOUNDS,messages_)
+      <<numberBad
+      <<rowcol[isColumn(firstBad)]<<sequenceWithin(firstBad)
+      <<CoinMessageEol;
+    problemStatus_=4;
+    return false;
+  }
+  //check matrix
+  if (!matrix_->allElementsInRange(1.0e-20,1.0e20)) {
+    handler_->message(CLP_BAD_MATRIX,messages_)
+      <<CoinMessageEol;
+    problemStatus_=4;
+    return false;
+  }
+  if (modifiedBounds)
+    handler_->message(CLP_MODIFIEDBOUNDS,messages_)
+      <<modifiedBounds
+      <<CoinMessageEol;
+  handler_->message(CLP_RIMSTATISTICS1,messages_)
+    <<smallestObj
+    <<largestObj
+    <<CoinMessageEol;
+  if (largestBound)
+    handler_->message(CLP_RIMSTATISTICS2,messages_)
+      <<smallestBound
+      <<largestBound
+      <<minimumGap
+      <<CoinMessageEol;
+  return true;
+}

@@ -768,4 +768,32 @@ ClpPackedMatrix::add(const ClpSimplex * model,CoinIndexedVector * rowArray,
     }
   }
 }
+/* Checks if all elements are in valid range.  Can just
+   return true if you are not paranoid.  For Clp I will
+   probably expect no zeros.  Code can modify matrix to get rid of
+   small elements.
+*/
+bool 
+ClpPackedMatrix::allElementsInRange(double smallest, double largest)
+{
+  int iColumn;
+  int numberBad=0;;
+  // get matrix data pointers
+  //const int * row = matrix_->getIndices();
+  const int * columnStart = matrix_->getVectorStarts();
+  const int * columnLength = matrix_->getVectorLengths(); 
+  const double * elementByColumn = matrix_->getElements();
+  int numberColumns = matrix_->getNumCols();
+  for (iColumn=0;iColumn<numberColumns;iColumn++) {
+    int j;
+    for (j=columnStart[iColumn];
+	 j<columnStart[iColumn]+columnLength[iColumn];j++) {
+      double value = fabs(elementByColumn[j]);
+      if (value<smallest||value>largest)
+	numberBad++;
+    }
+  }
+  return (numberBad==0);
+}
+
 

@@ -82,6 +82,14 @@ public:
   virtual int scale(ClpSimplex * model) const 
   { return 1;};
 
+  /** Checks if all elements are in valid range.  Can just
+      return true if you are not paranoid.  For Clp I will
+      probably expect no zeros.  Code can modify matrix to get rid of
+      small elements.
+  */
+  virtual bool allElementsInRange(double smallest, double largest)
+  { return true;};
+
   /** Unpacks a column into an CoinIndexedvector
       Note that model is NOT const.  Bounds and objective could
       be modified if doing column generation (just for this variable) */
