@@ -330,7 +330,7 @@ ClpCholeskyWssmp::factorize(const double * diagonal, int * rowsDropped)
   largest2*=1.0e-19;
   largest = min (largest2,1.0e-11);
   int numberDroppedBefore=0;
-  for (int iRow=0;iRow<numberRows_;iRow++) {
+  for (iRow=0;iRow<numberRows_;iRow++) {
     int dropped=rowsDropped_[iRow];
     // Move to int array
     rowsDropped[iRow]=dropped;

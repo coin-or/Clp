@@ -18,7 +18,7 @@ maximumAbsElement(const double * region, int size)
   int i;
   double maxValue=0.0;
   for (i=0;i<size;i++) 
-    maxValue = std::max(maxValue,fabs(region[i]));
+    maxValue = CoinMax(maxValue,fabs(region[i]));
   return maxValue;
 }
 void 
@@ -107,7 +107,7 @@ getNorms(const double * region, int size, double & norm1, double & norm2)
   int i;
   for (i=0;i<size;i++) {
     norm2 += region[i]*region[i];
-    norm1 = std::max(norm1,fabs(region[i]));
+    norm1 = CoinMax(norm1,fabs(region[i]));
   }
 }
 #ifdef DEBUG_MEMORY

@@ -204,9 +204,10 @@ ClpCholeskyDense::solve (double * region)
   for (iColumn=0;iColumn<numberRows_;iColumn++) {
     if (!rowsDropped_[iColumn]) {
       double value = region[iColumn];
-      for (int iRow=0;iRow<iColumn;iRow++)
+	  int iRow;
+      for (iRow=0;iRow<iColumn;iRow++)
 	value -= region[iRow]*work_[iColumn+iRow*numberRows_];
-      for (int iRow=0;iRow<iColumn;iRow++)
+      for (iRow=0;iRow<iColumn;iRow++)
 	if (rowsDropped_[iRow])
 	  assert(!work_[iColumn+iRow*numberRows_]||!region[iRow]);
       region[iColumn]=value/work_[iColumn+iColumn*numberRows_];
@@ -221,7 +222,7 @@ ClpCholeskyDense::solve (double * region)
       double value = region[iColumn];
       for (int iRow=iColumn+1;iRow<numberRows_;iRow++)
 	value -= region[iRow]*work[iRow];
-      for (int iRow=iColumn+1;iRow<numberRows_;iRow++)
+      for (iRow=iColumn+1;iRow<numberRows_;iRow++)
 	if (rowsDropped_[iRow])
 	  assert(!work[iRow]||!region[iRow]);
       region[iColumn]=value/work[iColumn];

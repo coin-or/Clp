@@ -1457,8 +1457,10 @@ ClpPackedMatrix::allElementsInRange(ClpModel * model,
       if (iRow<0||iRow>=numberRows) {
 #ifndef COIN_BIG_INDEX
 	printf("Out of range %d %d %d %g\n",iColumn,j,row[j],elementByColumn[j]);
-#else
+#elif COIN_BIG_INDEX==1
 	printf("Out of range %d %ld %d %g\n",iColumn,j,row[j],elementByColumn[j]);
+#else
+	printf("Out of range %d %lld %d %g\n",iColumn,j,row[j],elementByColumn[j]);
 #endif
 	return false;
       }
