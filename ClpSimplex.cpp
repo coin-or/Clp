@@ -4895,7 +4895,7 @@ ClpSimplexProgress::cycle(int in, int out,int wayIn,int wayOut)
       char wayThis = way_[i];
       int inThis = in_[i];
       int outThis = out_[i];
-      double objThis = obj_[i];
+      //double objThis = obj_[i];
       for(k=i+1;k<CLP_CYCLE;k++) {
 	if (inThis==in_[k]&&outThis==out_[k]&&wayThis==way_[k]) {
 	  if (k+(k-i)<CLP_CYCLE) {
