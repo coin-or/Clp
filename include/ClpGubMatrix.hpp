@@ -99,6 +99,7 @@ public:
       mode=1  - Update dual solution after "transposeTimes" using extended rows.
       mode=2  - Compute all djs and compute key dual infeasibilities
       mode=3  - Report on key dual infeasibilities
+      mode=4  - Modify before updateTranspose in partial pricing
   */
   virtual void dualExpanded(ClpSimplex * model,CoinIndexedVector * array,
 			    double * other,int mode);
@@ -244,6 +245,10 @@ protected:
   mutable unsigned char * status_;
   /// Backward pointer to set number
   int * backward_;
+  /// Backward pointer to pivot row !!!
+  int * backToPivotRow_;
+  /// Change in costs for keys
+  double * changeCost_;
   /// Key variable of set
   mutable int * keyVariable_;
   /** Next basic variable in set - starts at key and end with -(set+1) */

@@ -645,6 +645,9 @@ public:
   { directionIn_=direction;};
   inline void  setDirectionOut(int direction)
   { directionOut_=direction;};
+  /// Value of Out variable
+  inline double valueOut() const
+  { return valueOut_;};
   /// Returns 1 if sequence indicates column
   inline int isColumn(int sequence) const
   { return sequence<numberColumns_ ? 1 : 0;};
