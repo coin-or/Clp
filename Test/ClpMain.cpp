@@ -1222,7 +1222,7 @@ costs this much to be infeasible",
 		    int numberRows = model2->numberRows();
 		    if (numberRows>2000&&numberColumns>2*numberRows) {
 		      ClpPackedMatrix* clpMatrix =
-			dynamic_cast< ClpPackedMatrix*>(saveMatrix);
+			dynamic_cast< ClpPackedMatrix*>(model2->clpMatrix());
 		      if (clpMatrix) {
 			ClpPlusMinusOneMatrix * newMatrix = new ClpPlusMinusOneMatrix(*(clpMatrix->matrix()));
 			if (newMatrix->getIndices()) {
@@ -1245,7 +1245,7 @@ costs this much to be infeasible",
 			}
 		      } else {
 			ClpPlusMinusOneMatrix* clpMatrix =
-			  dynamic_cast< ClpPlusMinusOneMatrix*>(saveMatrix);
+			  dynamic_cast< ClpPlusMinusOneMatrix*>(model2->clpMatrix());
 			if (clpMatrix) {
 			  int nPasses = 10+numberColumns/1000;
 			  nPasses = min(nPasses,100);
@@ -1292,7 +1292,7 @@ costs this much to be infeasible",
 		currentModel = models+iModel;
 #endif
 		models[iModel].checkSolution();
-		if (!finalStatus&&finalStatus!=3) {
+		if (finalStatus&&finalStatus!=3) {
 		  printf("Resolving from postsolved model\n");
 		  
 		  int savePerturbation = models[iModel].perturbation();

@@ -507,7 +507,7 @@ ClpPlusMinusOneMatrix::transposeTimes(const ClpSimplex * model, double scalar,
 	  int iRow = indices_[j];
 	  value -= pi[iRow];
 	}
-	value += scalar;
+	value *= scalar;
 	if (fabs(value)>zeroTolerance) {
 	  index[numberNonZero++]=iColumn;
 	  array[iColumn]=value;
@@ -1138,4 +1138,30 @@ ClpPlusMinusOneMatrix::passInCopy(int numberRows, int numberColumns,
   indices_ = indices;
   numberRows_=numberRows;
   numberColumns_=numberColumns;
+}
+/* Given positive integer weights for each row fills in sum of weights
+   for each column (and slack).
+   Returns weights vector
+*/
+CoinBigIndex * 
+ClpPlusMinusOneMatrix::dubiousWeights(const ClpSimplex * model,int * inputWeights) const
+{
+  int numberRows = model->numberRows();
+  int numberColumns =model->numberColumns();
+  int number = numberRows+numberColumns;
+  CoinBigIndex * weights = new CoinBigIndex[number];
+  int i;
+  for (i=0;i<numberColumns;i++) {
+    CoinBigIndex j;
+    CoinBigIndex count=0;
+    for (j=startPositive_[i];j<startPositive_[i+1];j++) {
+      int iRow=indices_[j];
+      count += inputWeights[iRow];
+    }
+    weights[i]=count;
+  }
+  for (i=0;i<numberRows;i++) {
+    weights[i+numberColumns]=inputWeights[i];
+  }
+  return weights;
 }

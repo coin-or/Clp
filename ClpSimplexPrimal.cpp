@@ -276,7 +276,6 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
 int
 ClpSimplexPrimal::whileIterating()
 {
-
   // Say if values pass
   int ifValuesPass=(firstFree_>=0) ? 1 : 0;
   int returnCode=-1;
@@ -344,6 +343,14 @@ ClpSimplexPrimal::whileIterating()
 	problemStatus_=-2; // factorize now
 	pivotRow_=-1; // say no weights update
 	returnCode=-4;
+	// Clean up
+	int i;
+	for (i=0;i<numberRows_+numberColumns_;i++) {
+	  if (getColumnStatus(i)==atLowerBound||getColumnStatus(i)==isFixed)
+	    solution_[i]=lower_[i];
+	  else if (getColumnStatus(i)==atUpperBound)
+	    solution_[i]=upper_[i];
+	}
 	break;
       } else {
 	// normal
@@ -856,7 +863,6 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
   if (numberIterations_==1147)
     printf("trouble\n");
 #endif
-
   for (iIndex=0;iIndex<number;iIndex++) {
 
     int iRow = which[iIndex];
@@ -877,7 +883,7 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
     }
       
     double value = oldValue-tentativeTheta*fabs(alpha);
-    assert (oldValue>=-primalTolerance_*1.0001);
+    assert (oldValue>=-primalTolerance_*1.002);
     if (value<-primalTolerance_) {
       // add to list
       spare[numberRemaining]=alpha;
@@ -888,7 +894,23 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
 	upperTheta = (oldValue+primalTolerance_)/fabs(alpha);
     }
   }
-
+#if 0
+  if (numberIterations_>17701)
+    handler_->setLogLevel(63);
+  if (!valuesPass&&fabs(dualIn_-saveDj)>1.0e-1*(1.0+fabs(saveDj))) {
+    double d=0.0;
+    for (iIndex=0;iIndex<number;iIndex++) {
+      
+      int iRow = which[iIndex];
+      double alpha = work[iRow];
+      int iPivot=pivotVariable_[iRow];
+      double value = alpha*cost(iPivot);
+      d -= value;
+      if (value>1.0e7)
+	printf("%d %g\n",iRow,value);
+    }
+  }
+#endif
   // we need to keep where rhs non-zeros are
   int numberInRhs=numberRemaining;
   memcpy(rhsArray->getIndices(),index,numberInRhs*sizeof(int));
@@ -1091,7 +1113,7 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
     bool found=false;
 #endif
     double largestInfeasibility = primalTolerance_;
-    if (theta_<minimumTheta&&(specialOptions_&4)==0) {
+    if (theta_<minimumTheta&&(specialOptions_&4)==0&&!valuesPass) {
       theta_=minimumTheta;
       for (iIndex=0;iIndex<numberSwapped;iIndex++) {
 	int iRow = indexSwapped[iIndex];
@@ -1490,8 +1512,11 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	}
       }
     }
+    double checkValue=1.0e-2;
+    if (largestDualError_>1.0e-5)
+      checkValue=1.0e-1;
     if (solveType_==1&&((saveDj*dualIn_<1.0e-20&&!ifValuesPass)||
-	fabs(saveDj-dualIn_)>1.0e-3*(1.0+fabs(saveDj)))) {
+	fabs(saveDj-dualIn_)>checkValue*(1.0+fabs(saveDj)))) {
       handler_->message(CLP_PRIMAL_DJ,messages_)
 	<<saveDj<<dualIn_
 	<<CoinMessageEol;
@@ -1509,7 +1534,7 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
       } else {
 	// take on more relaxed criterion
 	if (saveDj*dualIn_<1.0e-20||
-	    fabs(saveDj-dualIn_)>1.0e-1*(1.0+fabs(dualIn_))) {
+	    fabs(saveDj-dualIn_)>2.0e-1*(1.0+fabs(dualIn_))) {
 	  // need to reject something
 	  char x = isColumn(sequenceIn_) ? 'C' :'R';
 	  handler_->message(CLP_SIMPLEX_FLAG,messages_)

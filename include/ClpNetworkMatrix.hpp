@@ -69,6 +69,11 @@ public:
 				 int numberColumnBasic,
 				 int * row, int * column,
 				 double * element) const ;
+  /** Given positive integer weights for each row fills in sum of weights
+      for each column (and slack).
+      Returns weights vector
+  */
+  virtual CoinBigIndex * dubiousWeights(const ClpSimplex * model,int * inputWeights) const;
   /** Unpacks a column into an CoinIndexedvector
    */
   virtual void unpack(const ClpSimplex * model,CoinIndexedVector * rowArray,
