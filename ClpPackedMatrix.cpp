@@ -992,6 +992,8 @@ ClpPackedMatrix::scale(ClpSimplex * model) const
     delete [] usefulRow;
     delete [] columnScale;
     delete [] usefulColumn;
+    if (!model->rowCopy()) 
+      delete rowCopyBase; // get rid of temporary row copy
     return 1;
   } else {
       // need to scale 
