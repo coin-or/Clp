@@ -2805,3 +2805,13 @@ ClpPackedMatrix::appendRows(int number, const CoinPackedVectorBase * const * row
   // may now have gaps
   hasGaps_=true;
 }
+/* Set the dimensions of the matrix. In effect, append new empty
+   columns/rows to the matrix. A negative number for either dimension
+   means that that dimension doesn't change. Otherwise the new dimensions
+   MUST be at least as large as the current ones otherwise an exception
+   is thrown. */
+void 
+ClpPackedMatrix::setDimensions(int numrows, int numcols) throw(CoinError)
+{
+  matrix_->setDimensions(numrows,numcols);
+}

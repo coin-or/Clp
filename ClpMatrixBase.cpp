@@ -560,5 +560,15 @@ ClpMatrixBase::transposeTimes2(const ClpSimplex * model,
   std::cerr<<"transposeTimes2 not supported - ClpMatrixBase"<<std::endl;
   abort();
 }
+/* Set the dimensions of the matrix. In effect, append new empty
+   columns/rows to the matrix. A negative number for either dimension
+   means that that dimension doesn't change. Otherwise the new dimensions
+   MUST be at least as large as the current ones otherwise an exception
+   is thrown. */
+void 
+ClpMatrixBase::setDimensions(int numrows, int numcols) throw(CoinError)
+{
+  // If odd matrix assume user knows what they are doing
+}
 
 

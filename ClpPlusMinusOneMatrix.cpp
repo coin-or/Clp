@@ -1819,3 +1819,56 @@ ClpPlusMinusOneMatrix::subsetTimes2(const ClpSimplex * model,
     weights[iColumn] = thisWeight;
   }
 }
+/* Set the dimensions of the matrix. In effect, append new empty
+   columns/rows to the matrix. A negative number for either dimension
+   means that that dimension doesn't change. Otherwise the new dimensions
+   MUST be at least as large as the current ones otherwise an exception
+   is thrown. */
+void 
+ClpPlusMinusOneMatrix::setDimensions(int newnumrows, int newnumcols)
+  throw(CoinError)
+{
+  if (newnumrows < 0)
+    newnumrows = numberRows_;
+  if (newnumrows < numberRows_)
+    throw CoinError("Bad new rownum (less than current)",
+		    "setDimensions", "CoinPackedMatrix");
+
+  if (newnumcols < 0)
+    newnumcols = numberColumns_;
+  if (newnumcols < numberColumns_)
+    throw CoinError("Bad new colnum (less than current)",
+		    "setDimensions", "CoinPackedMatrix");
+
+  int number = 0;
+  int length = 0;
+  if (columnOrdered_) {
+    length = numberColumns_;
+    numberColumns_ = newnumcols;
+    number = numberColumns_;
+
+  } else {
+    length = numberRows_;
+    numberRows_ = newnumrows;
+    number = numberRows_;
+  }
+  if (number > length) {
+    CoinBigIndex * temp;
+    int i;
+    CoinBigIndex end = startPositive_[length];
+    temp = new CoinBigIndex [number+1];
+    memcpy(temp,startPositive_,(length+1)*sizeof(CoinBigIndex));
+    delete [] startPositive_;
+    for (i=length+1;i<number+1;i++)
+      temp[i]= end;
+    startPositive_=temp;
+    temp = new CoinBigIndex [number];
+    memcpy(temp,startNegative_,length*sizeof(CoinBigIndex));
+    delete [] startNegative_;
+    for (i=length;i<number;i++)
+      temp[i]= end;
+    startNegative_=temp;
+  }
+
+  
+}

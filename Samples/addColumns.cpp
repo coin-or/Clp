@@ -93,7 +93,23 @@ int main (int argc, const char *argv[])
                  0.0,1.0,10000.0);
   }
   model.addColumns(buildObject2,true);
-  printf("Time for 10000 addColumn using CoinBuild is %g\n",CoinCpuTime()-time1);
+  printf("Time for 10000 addColumn using CoinBuild+-1 is %g\n",CoinCpuTime()-time1);
+  model.dual();
+  model=modelSave;
+  // Now use build +-1
+  model.deleteColumns(3,del);
+  CoinModel modelObject2;
+  time1 = CoinCpuTime();
+  for ( k=0;k<10000;k++) {
+    int column2Index[] = {0,1};
+    double column2Value[]={1.0,1.0,-1.0};
+    int bias = k&1;
+    modelObject2.addColumn(2,column2Index,column2Value+bias,
+                 0.0,1.0,10000.0);
+  }
+  model.addColumns(modelObject2,true);
+  printf("Time for 10000 addColumn using CoinModel+-1 is %g\n",CoinCpuTime()-time1);
+  model.writeMps("xx.mps");
   model.dual();
   model=modelSave;
   // Now use model

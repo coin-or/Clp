@@ -232,6 +232,7 @@ ClpModel::loadProblem (  const ClpMatrixBase& matrix,
     matrix.releasePackedMatrix();
     matrix_=new ClpPackedMatrix(matrix2);
   }    
+  matrix_->setDimensions(numberRows_,numberColumns_);
 }
 void
 ClpModel::loadProblem (  const CoinPackedMatrix& matrix,
@@ -249,6 +250,7 @@ ClpModel::loadProblem (  const CoinPackedMatrix& matrix,
     matrix2.reverseOrderedCopyOf(matrix);
     matrix_=new ClpPackedMatrix(matrix2);
   }    
+  matrix_->setDimensions(numberRows_,numberColumns_);
 }
 void
 ClpModel::loadProblem ( 
@@ -265,6 +267,7 @@ ClpModel::loadProblem (
   CoinPackedMatrix matrix(true,numrows,numcols,start[numcols],
 			      value,index,start,NULL);
   matrix_ = new ClpPackedMatrix(matrix);
+  matrix_->setDimensions(numberRows_,numberColumns_);
 }
 void
 ClpModel::loadProblem ( 
@@ -291,7 +294,6 @@ ClpModel::loadProblem (
 int 
 ClpModel::loadProblem (  CoinModel & modelObject,bool tryPlusMinusOne)
 {
-  assert (!tryPlusMinusOne);
   int numberErrors = 0;
   // Set arrays for normal use
   double * rowLower = modelObject.rowLowerArray();
@@ -306,13 +308,40 @@ ClpModel::loadProblem (  CoinModel & modelObject,bool tryPlusMinusOne)
     numberErrors = modelObject.createArrays(rowLower, rowUpper, columnLower, columnUpper,
                                             objective, integerType,associated);
   }
-  CoinPackedMatrix matrix;
-  modelObject.createPackedMatrix(matrix,associated);
   int numberRows = modelObject.numberRows();
   int numberColumns = modelObject.numberColumns();
   gutsOfLoadModel(numberRows, numberColumns,
 		  columnLower, columnUpper, objective, rowLower, rowUpper, NULL);
-  matrix_ = new ClpPackedMatrix(matrix);
+  CoinBigIndex * startPositive = NULL;
+  CoinBigIndex * startNegative = NULL;
+  delete matrix_;
+  if (tryPlusMinusOne) {
+    startPositive = new CoinBigIndex[numberColumns+1];
+    startNegative = new CoinBigIndex[numberColumns];
+    modelObject.countPlusMinusOne(startPositive,startNegative,associated);
+    if (startPositive[0]<0) {
+      // no good
+      tryPlusMinusOne=false;
+      delete [] startPositive;
+      delete [] startNegative;
+    }
+  }
+  if (!tryPlusMinusOne) {
+    CoinPackedMatrix matrix;
+    modelObject.createPackedMatrix(matrix,associated);
+    matrix_ = new ClpPackedMatrix(matrix);
+  } else {
+    // create +-1 matrix
+    CoinBigIndex size = startPositive[numberColumns];
+    int * indices = new int[size];
+    modelObject.createPlusMinusOne(startPositive,startNegative,indices,
+                                   associated);
+    // Get good object
+    ClpPlusMinusOneMatrix * matrix = new ClpPlusMinusOneMatrix();
+    matrix->passInCopy(numberRows,numberColumns,
+                       true,indices,startPositive,startNegative);
+    matrix_=matrix;
+  }
   // Do names if wanted
   if (modelObject.rowNames()->numberItems()) {
     const char *const * rowNames=modelObject.rowNames()->names();
@@ -342,6 +371,7 @@ ClpModel::loadProblem (  CoinModel & modelObject,bool tryPlusMinusOne)
           <<numberErrors
           <<CoinMessageEol;
   }
+  matrix_->setDimensions(numberRows_,numberColumns_);
   return numberErrors;
 }
 void
@@ -1259,30 +1289,141 @@ ClpModel::addRows(int number, const double * rowLower,
 void 
 ClpModel::addRows(const CoinBuild & buildObject,bool tryPlusMinusOne)
 {
-  assert (!tryPlusMinusOne);
   assert (buildObject.type()==0); // check correct
   int number = buildObject.numberRows();
   if (number) {
-    CoinPackedVectorBase ** rows=
-      new CoinPackedVectorBase * [number];
+    CoinBigIndex size=0;
     int iRow;
     double * lower = new double [number];
     double * upper = new double [number];
-    for (iRow=0;iRow<number;iRow++) {
-      const int * columns;
-      const double * elements;
-      int numberElements = buildObject.row(iRow,lower[iRow],upper[iRow],
-                                           columns,elements);
-      rows[iRow] = 
-	new CoinPackedVector(numberElements,
-			     columns,elements);
+    if (!matrix_->getNumElements()&&tryPlusMinusOne) {
+      // See if can be +-1
+      for (iRow=0;iRow<number;iRow++) {
+        const int * columns;
+        const double * elements;
+        int numberElements = buildObject.row(iRow,lower[iRow],
+                                                upper[iRow],
+                                                columns,elements);
+        for (int i=0;i<numberElements;i++) {
+          // allow for zero elements
+          if (elements[i]) {
+            if (fabs(elements[i])==1.0) {
+              size++;
+            } else {
+              // bad
+              tryPlusMinusOne=false;
+            }
+          }
+        }
+        if (!tryPlusMinusOne)
+          break;
+      }
+    } else {
+      // Will add to whatever sort of matrix exists
+      tryPlusMinusOne=false;
     }
-    addRows(number, lower, upper,rows);
-    for (iRow=0;iRow<number;iRow++) 
-      delete rows[iRow];
-    delete [] rows;
+    if (!tryPlusMinusOne) {
+      CoinPackedVectorBase ** rows=
+        new CoinPackedVectorBase * [number];
+      for (iRow=0;iRow<number;iRow++) {
+        const int * columns;
+        const double * elements;
+        int numberElements = buildObject.row(iRow,lower[iRow],upper[iRow],
+                                             columns,elements);
+        rows[iRow] = 
+          new CoinPackedVector(numberElements,
+                               columns,elements);
+      }
+      addRows(number, lower, upper,rows);
+      for (iRow=0;iRow<number;iRow++) 
+        delete rows[iRow];
+      delete [] rows;
+    } else {
+      // build +-1 matrix
+      // arrays already filled in
+      addRows(number, lower, upper,NULL);
+      CoinBigIndex * startPositive = new CoinBigIndex [numberColumns_+1];
+      CoinBigIndex * startNegative = new CoinBigIndex [numberColumns_];
+      int * indices = new int [size];
+      memset(startPositive,0,numberColumns_*sizeof(int));
+      memset(startNegative,0,numberColumns_*sizeof(int));
+      int maxColumn=-1;
+      // need two passes
+      for (iRow=0;iRow<number;iRow++) {
+        const int * columns;
+        const double * elements;
+        int numberElements = buildObject.row(iRow,lower[iRow],
+                                                upper[iRow],
+                                                columns,elements);
+        for (int i=0;i<numberElements;i++) {
+          int iColumn=columns[i];
+          maxColumn = CoinMax(maxColumn,iColumn);
+          if (elements[i]==1.0) {
+            startPositive[iColumn]++;
+          } else if (elements[i]==-1.0) {
+            startNegative[iColumn]++;
+          }
+        }
+      }
+      // check size
+      int numberColumns = maxColumn+1;
+      assert (numberColumns<=numberColumns_);
+      size=0;
+      int iColumn;
+      for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+        CoinBigIndex n=startPositive[iColumn];
+        startPositive[iColumn]=size;
+        size+= n;
+        n=startNegative[iColumn];
+        startNegative[iColumn]=size;
+        size+= n;
+      }
+      startPositive[numberColumns_]=size;
+      for (iRow=0;iRow<number;iRow++) {
+        const int * columns;
+        const double * elements;
+        int numberElements = buildObject.row(iRow,lower[iRow],
+                                                upper[iRow],
+                                                columns,elements);
+        for (int i=0;i<numberElements;i++) {
+          int iColumn=columns[i];
+          maxColumn = CoinMax(maxColumn,iColumn);
+          if (elements[i]==1.0) {
+            CoinBigIndex position = startPositive[iColumn];
+            indices[position]=iRow;
+            startPositive[iColumn]++;
+          } else if (elements[i]==-1.0) {
+            CoinBigIndex position = startNegative[iColumn];
+            indices[position]=iRow;
+            startNegative[iColumn]++;
+          }
+        }
+      }
+      // and now redo starts
+      for (iColumn=numberColumns_-1;iColumn>=0;iColumn--) {
+        startPositive[iColumn+1]=startNegative[iColumn];
+        startNegative[iColumn]=startPositive[iColumn];
+      }
+      startPositive[0]=0;
+      for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+        CoinBigIndex start = startPositive[iColumn];
+        CoinBigIndex end = startNegative[iColumn];
+        std::sort(indices+start,indices+end);
+        start = startNegative[iColumn];
+        end = startPositive[iColumn+1];
+        std::sort(indices+start,indices+end);
+      }
+      // Get good object
+      delete matrix_;
+      ClpPlusMinusOneMatrix * matrix = new ClpPlusMinusOneMatrix();
+      matrix->passInCopy(numberRows_,numberColumns,
+                         true,indices,startPositive,startNegative);
+      matrix_=matrix;
+    }
     delete [] lower;
     delete [] upper;
+    // make sure matrix correct size
+    matrix_->setDimensions(numberRows_,numberColumns_);
   }
   return;
 }
@@ -1290,7 +1431,6 @@ ClpModel::addRows(const CoinBuild & buildObject,bool tryPlusMinusOne)
 int 
 ClpModel::addRows( CoinModel & modelObject,bool tryPlusMinusOne)
 {
-  assert (!tryPlusMinusOne);
   bool goodState=true;
   if (modelObject.columnLowerArray()) {
     // some column information exists
@@ -1326,31 +1466,64 @@ ClpModel::addRows( CoinModel & modelObject,bool tryPlusMinusOne)
       numberErrors = modelObject.createArrays(rowLower, rowUpper, columnLower, columnUpper,
                                  objective, integerType,associated);
     }
-    CoinPackedMatrix matrix;
-    modelObject.createPackedMatrix(matrix,associated);
     int numberRows = numberRows_; // save number of rows
     int numberRows2 = modelObject.numberRows();
     if (numberRows2&&!numberErrors) {
-      // matrix by rows
-      matrix.reverseOrdering();
-      const int * column = matrix.getIndices();
-      const int * rowLength = matrix.getVectorLengths();
-      const CoinBigIndex * rowStart = matrix.getVectorStarts();
-      const double * element = matrix.getElements();
-      CoinPackedVectorBase ** rows=
-        new CoinPackedVectorBase * [numberRows2];
-      int iRow;
-      assert (rowLower);
-      for (iRow=0;iRow<numberRows2;iRow++) {
-        int start = rowStart[iRow];
-        rows[iRow] = 
-          new CoinPackedVector(rowLength[iRow],
-                               column+start,element+start);
+      CoinBigIndex * startPositive = NULL;
+      CoinBigIndex * startNegative = NULL;
+      int numberColumns = modelObject.numberColumns();
+      if (!matrix_->getNumElements()&&!numberRows&&tryPlusMinusOne) {
+        startPositive = new CoinBigIndex[numberColumns+1];
+        startNegative = new CoinBigIndex[numberColumns];
+        modelObject.countPlusMinusOne(startPositive,startNegative,associated);
+        if (startPositive[0]<0) {
+          // no good
+          tryPlusMinusOne=false;
+          delete [] startPositive;
+          delete [] startNegative;
+        }
+      } else {
+        // Will add to whatever sort of matrix exists
+        tryPlusMinusOne=false;
       }
-      addRows(numberRows2, rowLower, rowUpper,rows);
-      for (iRow=0;iRow<numberRows2;iRow++) 
-        delete rows[iRow];
-      delete [] rows;
+      if (!tryPlusMinusOne) {
+        CoinPackedMatrix matrix;
+        modelObject.createPackedMatrix(matrix,associated);
+        // matrix by rows
+        matrix.reverseOrdering();
+        const int * column = matrix.getIndices();
+        const int * rowLength = matrix.getVectorLengths();
+        const CoinBigIndex * rowStart = matrix.getVectorStarts();
+        const double * element = matrix.getElements();
+        CoinPackedVectorBase ** rows=
+          new CoinPackedVectorBase * [numberRows2];
+        int iRow;
+        assert (rowLower);
+        for (iRow=0;iRow<numberRows2;iRow++) {
+          int start = rowStart[iRow];
+          rows[iRow] = 
+            new CoinPackedVector(rowLength[iRow],
+                                 column+start,element+start);
+        }
+        addRows(numberRows2, rowLower, rowUpper,rows);
+        for (iRow=0;iRow<numberRows2;iRow++) 
+          delete rows[iRow];
+        delete [] rows;
+      } else {
+        assert (rowLower);
+        addRows(numberRows2, rowLower, rowUpper,NULL);
+        // create +-1 matrix
+        CoinBigIndex size = startPositive[numberColumns];
+        int * indices = new int[size];
+        modelObject.createPlusMinusOne(startPositive,startNegative,indices,
+                                       associated);
+        // Get good object
+        ClpPlusMinusOneMatrix * matrix = new ClpPlusMinusOneMatrix();
+        matrix->passInCopy(numberRows2,numberColumns,
+                           true,indices,startPositive,startNegative);
+        delete matrix_;
+        matrix_=matrix;
+      }
       // Do names if wanted
       if (modelObject.rowNames()->numberItems()) {
         const char *const * rowNames=modelObject.rowNames()->names();
@@ -1534,9 +1707,9 @@ ClpModel::addColumns(const CoinBuild & buildObject,bool tryPlusMinusOne)
 {
   assert (buildObject.type()==1); // check correct
   int number = buildObject.numberColumns();
-  CoinBigIndex size=0;
-  int maximumLength=0;
   if (number) {
+    CoinBigIndex size=0;
+    int maximumLength=0;
     double * lower = new double [number];
     double * upper = new double [number];
     int iColumn;
@@ -1603,6 +1776,7 @@ ClpModel::addColumns(const CoinBuild & buildObject,bool tryPlusMinusOne)
                                                 upper[iColumn],objective[iColumn],
                                                 rows,elements);
         int nNeg=0;
+        CoinBigIndex start = size;
         for (int i=0;i<numberElements;i++) {
           int iRow=rows[i];
           maxRow = CoinMax(maxRow,iRow);
@@ -1612,6 +1786,8 @@ ClpModel::addColumns(const CoinBuild & buildObject,bool tryPlusMinusOne)
             neg[nNeg++]=iRow;
           }
         }
+        std::sort(indices+start,indices+size);
+        std::sort(neg,neg+nNeg);
         startNegative[iColumn]=size;
         memcpy(indices+size,neg,nNeg*sizeof(int));
         size += nNeg;
@@ -1619,8 +1795,7 @@ ClpModel::addColumns(const CoinBuild & buildObject,bool tryPlusMinusOne)
       }
       delete [] neg;
       // check size
-      int numberRows = maxRow+1;
-      assert (numberRows<=numberRows_);
+      assert (maxRow+1<=numberRows_);
       // Get good object
       delete matrix_;
       ClpPlusMinusOneMatrix * matrix = new ClpPlusMinusOneMatrix();
@@ -1637,7 +1812,6 @@ ClpModel::addColumns(const CoinBuild & buildObject,bool tryPlusMinusOne)
 int 
 ClpModel::addColumns( CoinModel & modelObject,bool tryPlusMinusOne)
 {
-  assert (!tryPlusMinusOne);
   bool goodState=true;
   if (modelObject.rowLowerArray()) {
     // some row information exists
@@ -1667,29 +1841,61 @@ ClpModel::addColumns( CoinModel & modelObject,bool tryPlusMinusOne)
       numberErrors = modelObject.createArrays(rowLower, rowUpper, columnLower, columnUpper,
                                  objective, integerType,associated);
     }
-    CoinPackedMatrix matrix;
-    modelObject.createPackedMatrix(matrix,associated);
     int numberColumns = numberColumns_; // save number of columns
     int numberColumns2 = modelObject.numberColumns();
     if (numberColumns2&&!numberErrors) {
-      const int * row = matrix.getIndices();
-      const int * columnLength = matrix.getVectorLengths();
-      const CoinBigIndex * columnStart = matrix.getVectorStarts();
-      const double * element = matrix.getElements();
-      CoinPackedVectorBase ** columns=
-        new CoinPackedVectorBase * [numberColumns2];
-      int iColumn;
-      assert (columnLower);
-      for (iColumn=0;iColumn<numberColumns2;iColumn++) {
-        int start = columnStart[iColumn];
-        columns[iColumn] = 
-          new CoinPackedVector(columnLength[iColumn],
-                               row+start,element+start);
+      CoinBigIndex * startPositive = NULL;
+      CoinBigIndex * startNegative = NULL;
+      if (!matrix_->getNumElements()&&!numberColumns&&tryPlusMinusOne) {
+        startPositive = new CoinBigIndex[numberColumns2+1];
+        startNegative = new CoinBigIndex[numberColumns2];
+        modelObject.countPlusMinusOne(startPositive,startNegative,associated);
+        if (startPositive[0]<0) {
+          // no good
+          tryPlusMinusOne=false;
+          delete [] startPositive;
+          delete [] startNegative;
+        }
+      } else {
+        // Will add to whatever sort of matrix exists
+        tryPlusMinusOne=false;
       }
-      addColumns(numberColumns2, columnLower, columnUpper,objective, columns);
-      for (iColumn=0;iColumn<numberColumns2;iColumn++) 
-        delete columns[iColumn];
-      delete [] columns;
+      if (!tryPlusMinusOne) {
+        CoinPackedMatrix matrix;
+        modelObject.createPackedMatrix(matrix,associated);
+        const int * row = matrix.getIndices();
+        const int * columnLength = matrix.getVectorLengths();
+        const CoinBigIndex * columnStart = matrix.getVectorStarts();
+        const double * element = matrix.getElements();
+        CoinPackedVectorBase ** columns=
+          new CoinPackedVectorBase * [numberColumns2];
+        int iColumn;
+        assert (columnLower);
+        for (iColumn=0;iColumn<numberColumns2;iColumn++) {
+          int start = columnStart[iColumn];
+          columns[iColumn] = 
+            new CoinPackedVector(columnLength[iColumn],
+                                 row+start,element+start);
+        }
+        addColumns(numberColumns2, columnLower, columnUpper,objective, columns);
+        for (iColumn=0;iColumn<numberColumns2;iColumn++) 
+          delete columns[iColumn];
+        delete [] columns;
+      } else {
+        assert (columnLower);
+        addColumns(numberColumns2, columnLower, columnUpper,objective, NULL);
+        // create +-1 matrix
+        CoinBigIndex size = startPositive[numberColumns2];
+        int * indices = new int[size];
+        modelObject.createPlusMinusOne(startPositive,startNegative,indices,
+                                       associated);
+        // Get good object
+        ClpPlusMinusOneMatrix * matrix = new ClpPlusMinusOneMatrix();
+        matrix->passInCopy(numberRows_,numberColumns2,
+                           true,indices,startPositive,startNegative);
+        delete matrix_;
+        matrix_=matrix;
+      }
       // Do names if wanted
       if (modelObject.columnNames()->numberItems()) {
         const char *const * columnNames=modelObject.columnNames()->names();
@@ -1697,7 +1903,7 @@ ClpModel::addColumns( CoinModel & modelObject,bool tryPlusMinusOne)
       }
       // Do integers if wanted
       assert(integerType);
-      for (iColumn=0;iColumn<numberColumns2;iColumn++) {
+      for (int iColumn=0;iColumn<numberColumns2;iColumn++) {
         if (integerType[iColumn])
           setInteger(iColumn+numberColumns);
       }
@@ -2623,6 +2829,7 @@ ClpModel::writeMps(const char *filename,
 		   int formatType,int numberAcross,
 		   double objSense) const 
 {
+  matrix_->setDimensions(numberRows_,numberColumns_);
   
   // Get multiplier for objective function - default 1.0
   double * objective = new double[numberColumns_];

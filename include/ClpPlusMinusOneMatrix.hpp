@@ -97,6 +97,12 @@ public:
 		   int column, double multiplier) const;
    /// Allow any parts of a created CoinMatrix to be deleted
    virtual void releasePackedMatrix() const;
+  /** Set the dimensions of the matrix. In effect, append new empty
+      columns/rows to the matrix. A negative number for either dimension
+      means that that dimension doesn't change. Otherwise the new dimensions
+      MUST be at least as large as the current ones otherwise an exception
+      is thrown. */
+  virtual void setDimensions(int numrows, int numcols) throw(CoinError);
    //@}
 
   /**@name Matrix times vector methods */
