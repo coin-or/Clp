@@ -10,6 +10,7 @@
 #include "ClpFactorization.hpp"
 #include "CoinPackedMatrix.hpp"
 #include "CoinIndexedVector.hpp"
+#include "CoinMpsIO.hpp"
 #include "ClpMessage.hpp"
 #include <cfloat>
 #include <cassert>
@@ -351,4 +352,181 @@ ClpSimplexOther::checkPrimalRatios(CoinIndexedVector * rowArray,
       }
     }
   }
+}
+/* Write the basis in MPS format to the specified file.
+   If writeValues true writes values of structurals
+   (and adds VALUES to end of NAME card)
+   
+   Row and column names may be null.
+   formatType is
+   <ul>
+   <li> 0 - normal
+   <li> 1 - extra accuracy 
+   <li> 2 - IEEE hex (later)
+   </ul>
+   
+   Returns non-zero on I/O error
+
+   This is based on code contributed by Thorsten Koch
+*/
+int 
+ClpSimplexOther::writeBasis(const char *filename,
+			    bool writeValues,
+			    int formatType) const
+{
+  formatType=CoinMax(0,formatType);
+  formatType=CoinMin(2,formatType);
+  if (!writeValues)
+    formatType=0;
+  // See if INTEL if IEEE
+  if (formatType==2) {
+    // test intel here and add 1 if not intel
+    double value=1.0;
+    char x[8];
+    memcpy(x,&value,8);
+    if (x[0]==63) {
+      formatType ++; // not intel
+    } else {
+      assert (x[0]==0);
+    }
+  }
+  
+  char number[20];
+  FILE * fp = fopen(filename,"w");
+  if (!fp)
+    return -1;
+   
+  // NAME card
+
+  if (strcmp(strParam_[ClpProbName].c_str(),"")==0) {
+    fprintf(fp, "NAME          BLANK      ");
+  } else {
+    fprintf(fp, "NAME          %s       ",strParam_[ClpProbName].c_str());
+  }
+  if (formatType>=2)
+    fprintf(fp,"IEEE");
+  else if (writeValues)
+    fprintf(fp,"VALUES");
+  // finish off name 
+  fprintf(fp,"\n");
+  int iRow=0;
+  for(int iColumn =0; iColumn < numberColumns_; iColumn++) {
+    bool printit=false;
+    if( getColumnStatus(iColumn) == ClpSimplex::basic) {
+      printit=true;
+      // Find non basic row
+      for(; iRow < numberRows_; iRow++) {
+	if (getRowStatus(iRow) != ClpSimplex::basic) 
+	  break;
+      }
+      if (lengthNames_) {
+	if (iRow!=numberRows_) {
+	  fprintf(fp, " %s %-8s       %s",
+		  getRowStatus(iRow) == ClpSimplex::atUpperBound ? "XU" : "XL",
+		  columnNames_[iColumn].c_str(),
+		  rowNames_[iRow].c_str());
+	  iRow++;
+	} else {
+	  // Allow for too many basics!
+	  fprintf(fp, " BS %-8s       ",
+		  columnNames_[iColumn].c_str());
+	  // Dummy row name if values
+	  if (writeValues)
+	    fprintf(fp,"      _dummy_");
+	}
+      } else {
+	// no names
+	if (iRow!=numberRows_) {
+	  fprintf(fp, " %s C%7.7d     R%7.7d",
+		  getRowStatus(iRow) == ClpSimplex::atUpperBound ? "XU" : "XL",
+		  iColumn,iRow);
+	  iRow++;
+	} else {
+	  // Allow for too many basics!
+	  fprintf(fp, " BS C%7.7d",iColumn);
+	  // Dummy row name if values
+	  if (writeValues)
+	    fprintf(fp,"      _dummy_");
+	}
+      }
+    } else  {
+      if( getColumnStatus(iColumn) == ClpSimplex::atUpperBound) {
+	printit=true;
+	if (lengthNames_) 
+	  fprintf(fp, " UL %s", columnNames_[iColumn].c_str());
+	else 
+	  fprintf(fp, " UL C%7.7d", iColumn);
+	// Dummy row name if values
+	if (writeValues)
+	  fprintf(fp,"      _dummy_");
+      }
+    }
+    if (printit&&writeValues) {
+      // add value
+      CoinConvertDouble(formatType,columnActivity_[iColumn],number);
+      fprintf(fp,"     %s",number);
+    }
+    if (printit)
+      fprintf(fp,"\n");
+  }
+  fprintf(fp, "ENDATA\n");
+  fclose(fp);
+  return 0;
+}
+// Read a basis from the given filename
+int 
+ClpSimplexOther::readBasis(const char *fileName)
+{
+  int status=0;
+  bool canOpen=false;
+  if (!strcmp(fileName,"-")||!strcmp(fileName,"stdin")) {
+    // stdin
+    canOpen=true;
+  } else {
+    FILE *fp=fopen(fileName,"r");
+    if (fp) {
+      // can open - lets go for it
+      fclose(fp);
+      canOpen=true;
+    } else {
+      handler_->message(CLP_UNABLE_OPEN,messages_)
+	<<fileName<<CoinMessageEol;
+      return -1;
+    }
+  }
+  CoinMpsIO m;
+  m.passInMessageHandler(handler_);
+  bool savePrefix =m.messageHandler()->prefix();
+  m.messageHandler()->setPrefix(handler_->prefix());
+  status=m.readBasis(fileName,"",columnActivity_,status_+numberColumns_,
+		     status_,
+		     columnNames_,numberColumns_,
+		     rowNames_,numberRows_);
+  m.messageHandler()->setPrefix(savePrefix);
+  if (status>=0) {
+    if (!status) {
+      // set values
+      int iColumn,iRow;
+      for (iRow=0;iRow<numberRows_;iRow++) {
+	if (getRowStatus(iRow)==atLowerBound)
+	  rowActivity_[iRow]=rowLower_[iRow];
+	else if (getRowStatus(iRow)==atUpperBound)
+	  rowActivity_[iRow]=rowUpper_[iRow];
+      }
+      for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+	if (getColumnStatus(iColumn)==atLowerBound)
+	  columnActivity_[iColumn]=columnLower_[iColumn];
+	else if (getColumnStatus(iColumn)==atUpperBound)
+	  columnActivity_[iColumn]=columnUpper_[iColumn];
+      }
+    } else {
+      memset(rowActivity_,0,numberRows_*sizeof(double));
+      matrix_->times(-1.0,columnActivity_,rowActivity_);
+    }
+  } else {
+    // errors
+    handler_->message(CLP_IMPORT_ERRORS,messages_)
+      <<status<<fileName<<CoinMessageEol;
+  }
+  return status;
 }

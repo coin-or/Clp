@@ -659,7 +659,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
 
     ClpSimplex model;
     model.loadProblem(M, collb, colub, obj, rowlb, rowub);
-    model.dual(0,1); // keep factorization
+    model.dual(0,1); // keep factorization 
     
     //check that the tableau matches wolsey (B-1 A)
     // slacks in second part of binvA
@@ -674,8 +674,8 @@ ClpSimplexUnitTest(const std::string & mpsDir,
       }
       printf("\n");
     }
-    // See if can re-use factorization
-    model.primal(0,3); // keep factorization
+    // See if can re-use factorization AND arrays
+    model.primal(0,3+4); // keep factorization
     // And do by column
     printf("B-1 A by column\n");
     for(int i = 0; i < n_rows+n_cols; i++){
@@ -687,7 +687,8 @@ ClpSimplexUnitTest(const std::string & mpsDir,
       printf("\n");
     }
     free(binvA);
-    model.dual(0,2); // use factorization
+    model.setColUpper(1,2.0);
+    model.dual(0,2+4); // use factorization and arrays
     model.dual(0,2); // hopefully will not use factorization
   }
   // test steepest edge

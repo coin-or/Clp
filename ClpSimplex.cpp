@@ -396,6 +396,7 @@ ClpSimplex::computePrimals ( const double * rowActivities,
     // So zero out basic
     for (iRow=0;iRow<numberRows_;iRow++) {
       int iPivot=pivotVariable_[iRow];
+      assert (iPivot>=0);
       solution_[iPivot] = 0.0;
     }
     // Extended solution before "update"
@@ -814,7 +815,7 @@ int ClpSimplex::getSolution ( const double * rowActivities,
 {
   if (!factorization_->status()) {
     // put in standard form
-    createRim(7+8+16+32);
+    createRim(7+8+16+32,false,-1);
     // do work
     gutsOfSolution ( NULL,NULL);
     // release extra memory
@@ -2193,22 +2194,41 @@ ClpSimplex::unpackPacked(CoinIndexedVector * rowArray,int sequence)
   }
 }
 bool
-ClpSimplex::createRim(int what,bool makeRowCopy)
+ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
 {
   bool goodMatrix=true;
   int saveLevel=handler_->logLevel();
+  // Arrays will be there and correct size unless what is 63
+  bool newArrays = (what==63);
+  bool initialize = (what==63);
+  // We may be restarting with same size
+  bool keepPivots=false;
+  if (startFinishOptions==-1) {
+    startFinishOptions=0;
+    keepPivots=true;
+  }
+  bool oldMatrix = ((startFinishOptions&4)!=0&&(whatsChanged_&1)!=0);
+  if (oldMatrix)
+    newArrays=false;
   if (problemStatus_==10) {
     handler_->setLogLevel(0); // switch off messages
+    if (rowArray_[0]) {
+      // stuff is still there
+      oldMatrix=true;
+      newArrays=false;
+      keepPivots=true;
+    }
   } else if (factorization_) {
     // match up factorization messages
     if (handler_->logLevel()<3)
       factorization_->messageLevel(0);
     else
       factorization_->messageLevel(CoinMax(3,factorization_->messageLevel()));
+    if ((startFinishOptions&2)!=0&&factorization_->numberRows()==numberRows_)
+      keepPivots=true;
   }
-  bool newArrays = (what&32)!=0;
   numberExtraRows_ = matrix_->generalExpanded(this,2,maximumBasic_);
-  if (numberExtraRows_) {
+  if (numberExtraRows_&&newArrays) {
     // make sure status array large enough
     assert (status_);
     int numberOld = numberRows_+numberColumns_;
@@ -2222,29 +2242,31 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
   int numberRows2 = numberRows_+numberExtraRows_;
   int i;
   if ((what&1)!=0) {
-    delete [] lower_;
-    delete [] upper_;
-    lower_ = new double[numberColumns_+numberRows2];
-    upper_ = new double[numberColumns_+numberRows2];
-    rowLowerWork_ = lower_+numberColumns_;
-    columnLowerWork_ = lower_;
-    rowUpperWork_ = upper_+numberColumns_;
-    columnUpperWork_ = upper_;
-    memcpy(rowLowerWork_,rowLower_,numberRows_*sizeof(double));
-    memcpy(rowUpperWork_,rowUpper_,numberRows_*sizeof(double));
-    memcpy(columnLowerWork_,columnLower_,numberColumns_*sizeof(double));
-    memcpy(columnUpperWork_,columnUpper_,numberColumns_*sizeof(double));
+    if (newArrays) {
+      delete [] lower_;
+      delete [] upper_;
+      lower_ = new double[numberColumns_+numberRows2];
+      upper_ = new double[numberColumns_+numberRows2];
+      rowLowerWork_ = lower_+numberColumns_;
+      columnLowerWork_ = lower_;
+      rowUpperWork_ = upper_+numberColumns_;
+      columnUpperWork_ = upper_;
+    }
     // clean up any mismatches on infinity
     for (i=0;i<numberColumns_;i++) {
+      columnLowerWork_[i] = columnLower_[i];
       if (columnLowerWork_[i]<-1.0e30)
 	columnLowerWork_[i] = -COIN_DBL_MAX;
+      columnUpperWork_[i] = columnUpper_[i];
       if (columnUpperWork_[i]>1.0e30)
 	columnUpperWork_[i] = COIN_DBL_MAX;
     }
     // clean up any mismatches on infinity
     for (i=0;i<numberRows_;i++) {
+      rowLowerWork_[i] = rowLower_[i];
       if (rowLowerWork_[i]<-1.0e30)
 	rowLowerWork_[i] = -COIN_DBL_MAX;
+      rowUpperWork_[i] = rowUpper_[i];
       if (rowUpperWork_[i]>1.0e30)
 	rowUpperWork_[i] = COIN_DBL_MAX;
     }
@@ -2269,19 +2291,23 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
 	dual_[i] *= direction;
     }
     // row reduced costs
-    if (!dj_||newArrays) {
-      delete [] dj_;
-      dj_ = new double[numberRows2+numberColumns_];
-      reducedCostWork_ = dj_;
-      rowReducedCost_ = dj_+numberColumns_;
+    if (!dj_||initialize) {
+      if (newArrays) {
+	delete [] dj_;
+	dj_ = new double[numberRows2+numberColumns_];
+	reducedCostWork_ = dj_;
+	rowReducedCost_ = dj_+numberColumns_;
+      }
       memcpy(reducedCostWork_,reducedCost_,numberColumns_*sizeof(double));
       memcpy(rowReducedCost_,dual_,numberRows_*sizeof(double));
     }
-    if (!solution_||newArrays) {
-      delete [] solution_;
-      solution_ = new double[numberRows2+numberColumns_];
-      columnActivityWork_ = solution_;
-      rowActivityWork_ = solution_+numberColumns_;
+    if (!solution_||initialize) {
+      if (newArrays) {
+	delete [] solution_;
+	solution_ = new double[numberRows2+numberColumns_];
+	columnActivityWork_ = solution_;
+	rowActivityWork_ = solution_+numberColumns_;
+      }
       if (status_) {
 	for (i=0;i<numberColumns_;i++) {
 	  columnActivityWork_[i] = columnActivity_[i];
@@ -2319,11 +2345,13 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
     if (!matrix_)
       matrix_=new ClpPackedMatrix();
     int checkType=(doSanityCheck) ? 15 : 14;
+    if (oldMatrix)
+      checkType = 14;
     if (!matrix_->allElementsInRange(this,smallElement_,1.0e20,checkType)) {
       problemStatus_=4;
       goodMatrix= false;
     }
-    if (makeRowCopy) {
+    if (makeRowCopy&&!oldMatrix) {
       delete rowCopy_;
       // may return NULL if can't give row copy
       rowCopy_ = matrix_->reverseOrderedCopy();
@@ -2345,11 +2373,13 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
     }
   }
   if ((what&4)!=0) {
-    delete [] cost_;
-    // extra copy with original costs
-    int nTotal = numberRows2+numberColumns_;
-    //cost_ = new double[2*nTotal];
-    cost_ = new double[nTotal];
+    if (newArrays) {
+      delete [] cost_;
+      // extra copy with original costs
+      int nTotal = numberRows2+numberColumns_;
+      //cost_ = new double[2*nTotal];
+      cost_ = new double[nTotal];
+    }
     objectiveWork_ = cost_;
     rowObjectiveWork_ = cost_+numberColumns_;
     memcpy(objectiveWork_,objective(),numberColumns_*sizeof(double));
@@ -2361,119 +2391,128 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
     //memset(cost_+nTotal,0,nTotal*sizeof(double));
   }
   // do scaling if needed
-  if (scalingFlag_>0&&!rowScale_&&(what&16)!=0) {
-    if (matrix_->scale(this))
-      scalingFlag_=-scalingFlag_; // not scaled after all
-    if (rowScale_&&automaticScale_) {
-      // try automatic scaling
-      double smallestObj=1.0e100;
-      double largestObj=0.0;
-      double largestRhs=0.0;
-      for (i=0;i<numberColumns_+numberRows_;i++) {
-	double value = fabs(cost_[i]);
-	if (i<numberColumns_)
-	  value *= columnScale_[i];
-	if (value&&lower_[i]!=upper_[i]) {
-	  smallestObj = CoinMin(smallestObj,value);
-	  largestObj = CoinMax(largestObj,value);
-	}
-	if (lower_[i]>0.0||upper_[i]<0.0) {
-	  double scale;
-	  if (i<numberColumns_)
-	    scale = 1.0/columnScale_[i];
-	  else
-	    scale = rowScale_[i-numberColumns_];
-	  //printf("%d %g %g %g %g\n",i,scale,lower_[i],upper_[i],largestRhs);
-	  if (lower_[i]>0)
-	    largestRhs=CoinMax(largestRhs,lower_[i]*scale);
-	  if (upper_[i]<0.0)
-	    largestRhs=CoinMax(largestRhs,-upper_[i]*scale);
-	}
-      }
-      printf("small obj %g, large %g - rhs %g\n",smallestObj,largestObj,largestRhs);
-      bool scalingDone=false;
-      // look at element range
-      double smallestNegative;
-      double largestNegative;
-      double smallestPositive;
-      double largestPositive;
-      matrix_->rangeOfElements(smallestNegative, largestNegative,
-			       smallestPositive, largestPositive);
-      smallestPositive = CoinMin(fabs(smallestNegative),smallestPositive);
-      largestPositive = CoinMax(fabs(largestNegative),largestPositive);
-      if (largestObj) {
-	double ratio = largestObj/smallestObj;
-	double scale=1.0;
-	if (ratio<1.0e8) {
-	  // reasonable
-	  if (smallestObj<1.0e-4) {
-	    // may as well scale up
-	    scalingDone=true;
-	    scale=1.0e-3/smallestObj;
-	  } else if (largestObj<1.0e6||(algorithm_>0&&largestObj<1.0e-4*infeasibilityCost_)) {
-	    //done=true;
-	  } else {
-	    scalingDone=true;
-	    if (algorithm_<0) {
-	      scale = 1.0e6/largestObj;
-	    } else {
-	      scale = CoinMax(1.0e6,1.0e-4*infeasibilityCost_)/largestObj;
-	    }
-	  }
-	} else if (ratio<1.0e12) {
-	  // not so good
-	  if (smallestObj<1.0e-7) {
-	    // may as well scale up
-	    scalingDone=true;
-	    scale=1.0e-6/smallestObj;
-	  } else if (largestObj<1.0e7||(algorithm_>0&&largestObj<1.0e-3*infeasibilityCost_)) {
-	    //done=true;
-	  } else {
-	    scalingDone=true;
-	    if (algorithm_<0) {
-	      scale = 1.0e7/largestObj;
-	    } else {
-	      scale = CoinMax(1.0e7,1.0e-3*infeasibilityCost_)/largestObj;
-	    }
-	  }
-	} else {
-	  // Really nasty problem
-	  if (smallestObj<1.0e-8) {
-	    // may as well scale up
-	    scalingDone=true;
-	    scale=1.0e-7/smallestObj;
-	    largestObj *= scale;
-	  } 
-	  if (largestObj<1.0e7||(algorithm_>0&&largestObj<1.0e-3*infeasibilityCost_)) {
-	    //done=true;
-	  } else {
-	    scalingDone=true;
-	    if (algorithm_<0) {
-	      scale = 1.0e7/largestObj;
-	    } else {
-	      scale = CoinMax(1.0e7,1.0e-3*infeasibilityCost_)/largestObj;
-	    }
-	  }
-	}
-	objectiveScale_=scale;
-      }
-      if (largestRhs>1.0e12) {
-	scalingDone=true;
-	rhsScale_=1.0e9/largestRhs;
-      } else if (largestPositive>1.0e-14*smallestPositive&&largestRhs>1.0e6) {
-	scalingDone=true;
-	rhsScale_=1.0e6/largestRhs;
-      } else {
-	rhsScale_=1.0;
-      }
-      if (scalingDone) {
-	handler_->message(CLP_RIM_SCALE,messages_)
-	  <<objectiveScale_<<rhsScale_
-	  <<CoinMessageEol;
-      }
+  if ((what&16)!=0) {
+    if (!oldMatrix) {
+      assert (scalingFlag_>0||!rowScale_);
+      delete [] rowScale_;
+      delete [] columnScale_;
+      rowScale_=NULL;
+      columnScale_=NULL;
     }
-  } else if (makeRowCopy&&(what&16)!=0&&scalingFlag_>0) {
-    matrix_->scaleRowCopy(this);
+    if (scalingFlag_>0&&!rowScale_) {
+      if (matrix_->scale(this))
+	scalingFlag_=-scalingFlag_; // not scaled after all
+      if (rowScale_&&automaticScale_) {
+	// try automatic scaling
+	double smallestObj=1.0e100;
+	double largestObj=0.0;
+	double largestRhs=0.0;
+	for (i=0;i<numberColumns_+numberRows_;i++) {
+	  double value = fabs(cost_[i]);
+	  if (i<numberColumns_)
+	    value *= columnScale_[i];
+	  if (value&&lower_[i]!=upper_[i]) {
+	    smallestObj = CoinMin(smallestObj,value);
+	    largestObj = CoinMax(largestObj,value);
+	  }
+	  if (lower_[i]>0.0||upper_[i]<0.0) {
+	    double scale;
+	    if (i<numberColumns_)
+	      scale = 1.0/columnScale_[i];
+	    else
+	      scale = rowScale_[i-numberColumns_];
+	    //printf("%d %g %g %g %g\n",i,scale,lower_[i],upper_[i],largestRhs);
+	    if (lower_[i]>0)
+	      largestRhs=CoinMax(largestRhs,lower_[i]*scale);
+	    if (upper_[i]<0.0)
+	      largestRhs=CoinMax(largestRhs,-upper_[i]*scale);
+	  }
+	}
+	printf("small obj %g, large %g - rhs %g\n",smallestObj,largestObj,largestRhs);
+	bool scalingDone=false;
+	// look at element range
+	double smallestNegative;
+	double largestNegative;
+	double smallestPositive;
+	double largestPositive;
+	matrix_->rangeOfElements(smallestNegative, largestNegative,
+				 smallestPositive, largestPositive);
+	smallestPositive = CoinMin(fabs(smallestNegative),smallestPositive);
+	largestPositive = CoinMax(fabs(largestNegative),largestPositive);
+	if (largestObj) {
+	  double ratio = largestObj/smallestObj;
+	  double scale=1.0;
+	  if (ratio<1.0e8) {
+	    // reasonable
+	    if (smallestObj<1.0e-4) {
+	      // may as well scale up
+	      scalingDone=true;
+	      scale=1.0e-3/smallestObj;
+	    } else if (largestObj<1.0e6||(algorithm_>0&&largestObj<1.0e-4*infeasibilityCost_)) {
+	      //done=true;
+	    } else {
+	      scalingDone=true;
+	      if (algorithm_<0) {
+		scale = 1.0e6/largestObj;
+	      } else {
+		scale = CoinMax(1.0e6,1.0e-4*infeasibilityCost_)/largestObj;
+	      }
+	    }
+	  } else if (ratio<1.0e12) {
+	    // not so good
+	    if (smallestObj<1.0e-7) {
+	      // may as well scale up
+	      scalingDone=true;
+	      scale=1.0e-6/smallestObj;
+	    } else if (largestObj<1.0e7||(algorithm_>0&&largestObj<1.0e-3*infeasibilityCost_)) {
+	      //done=true;
+	    } else {
+	      scalingDone=true;
+	      if (algorithm_<0) {
+		scale = 1.0e7/largestObj;
+	      } else {
+		scale = CoinMax(1.0e7,1.0e-3*infeasibilityCost_)/largestObj;
+	      }
+	    }
+	  } else {
+	    // Really nasty problem
+	    if (smallestObj<1.0e-8) {
+	      // may as well scale up
+	      scalingDone=true;
+	      scale=1.0e-7/smallestObj;
+	      largestObj *= scale;
+	    } 
+	    if (largestObj<1.0e7||(algorithm_>0&&largestObj<1.0e-3*infeasibilityCost_)) {
+	      //done=true;
+	    } else {
+	      scalingDone=true;
+	      if (algorithm_<0) {
+		scale = 1.0e7/largestObj;
+	      } else {
+		scale = CoinMax(1.0e7,1.0e-3*infeasibilityCost_)/largestObj;
+	      }
+	    }
+	  }
+	  objectiveScale_=scale;
+	}
+	if (largestRhs>1.0e12) {
+	  scalingDone=true;
+	  rhsScale_=1.0e9/largestRhs;
+	} else if (largestPositive>1.0e-14*smallestPositive&&largestRhs>1.0e6) {
+	  scalingDone=true;
+	  rhsScale_=1.0e6/largestRhs;
+	} else {
+	  rhsScale_=1.0;
+	}
+	if (scalingDone) {
+	  handler_->message(CLP_RIM_SCALE,messages_)
+	    <<objectiveScale_<<rhsScale_
+	    <<CoinMessageEol;
+	}
+      }
+    } else if (makeRowCopy&&scalingFlag_>0&&!oldMatrix) {
+      matrix_->scaleRowCopy(this);
+    }
   }
   if ((what&4)!=0) {
     double direction = optimizationDirection_*objectiveScale_;
@@ -2555,9 +2594,13 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
   } 
   // we need to treat matrix as if each element by rowScaleIn and columnScaleout??
   // maybe we need to move scales to SimplexModel for factorization?
-  if (((what&8)!=0&&!pivotVariable_)||newArrays) {
+  if (((what&8)!=0&&!pivotVariable_)||(newArrays&&!keepPivots)) {
     delete [] pivotVariable_;
     pivotVariable_=new int[numberRows2];
+    for (int i=0;i<numberRows2;i++)
+      pivotVariable_[i]=-1;
+  } else if (what==63&&!keepPivots) {
+    // just reset
     for (int i=0;i<numberRows2;i++)
       pivotVariable_[i]=-1;
   }
@@ -3612,6 +3655,34 @@ int ClpSimplex::primalRanging(int numberCheck,const int * which,
 					  valueDecrease,sequenceDecrease);
   finish(); // get rid of arrays
   return 0;
+}
+/* Write the basis in MPS format to the specified file.
+   If writeValues true writes values of structurals
+   (and adds VALUES to end of NAME card)
+   
+   Row and column names may be null.
+   formatType is
+   <ul>
+   <li> 0 - normal
+   <li> 1 - extra accuracy 
+   <li> 2 - IEEE hex (later)
+   </ul>
+   
+   Returns non-zero on I/O error
+*/
+int 
+ClpSimplex::writeBasis(const char *filename,
+			    bool writeValues,
+			    int formatType) const
+{
+  return ((const ClpSimplexOther *) this)->writeBasis(filename,writeValues,
+					 formatType);
+}
+// Read a basis from the given filename
+int 
+ClpSimplex::readBasis(const char *filename)
+{
+  return ((ClpSimplexOther *) this)->readBasis(filename);
 }
 #include "ClpSimplexNonlinear.hpp"
 /* Solves nonlinear problem using SLP - may be used as crash
@@ -5412,7 +5483,7 @@ ClpSimplex::startup(int ifValuesPass, int startFinishOptions)
 
   // put in standard form (and make row copy)
   // create modifiable copies of model rim and do optional scaling
-  bool goodMatrix=createRim(7+8+16+32,true);
+  bool goodMatrix=createRim(7+8+16+32,true,startFinishOptions);
 
   if (goodMatrix) {
     // Model looks okay
@@ -5465,9 +5536,13 @@ ClpSimplex::startup(int ifValuesPass, int startFinishOptions)
 	// for this we need clean basis so it is after factorize
 	if (!numberThrownOut) {
 	  // solution will be done again - skip if absolutely sure
-	  if ((specialOptions_&512)==0)
+	  if ((specialOptions_&512)==0) {
 	    numberThrownOut = gutsOfSolution(  NULL,NULL,
 					       ifValuesPass!=0);
+	  } else {
+	    // make sure not optimal at once
+	    numberPrimalInfeasibilities_=1;
+	  }
 	} else {
 	  matrix_->rhsOffset(this,true); // redo rhs offset
 	}
@@ -5506,7 +5581,7 @@ ClpSimplex::finish(int startFinishOptions)
 {
   // Get rid of some arrays and empty factorization
   int getRidOfData=1;
-  if ((startFinishOptions&1)!=0) {
+  if ((startFinishOptions&1)!=0||problemStatus_==10) {
     getRidOfData=0; // Keep stuff
     // mark all as current
     whatsChanged_ = 0xffff;
@@ -6159,6 +6234,7 @@ ClpSimplex::ClpSimplex (ClpSimplex * wholeModel,
   } else {
     wholeModel->rowCopy_=NULL;
   }
+  whatsChanged_=0;
   assert (wholeModel->matrix_);
   wholeModel->matrix_ = wholeModel->matrix_->subsetClone(numberRows_,whichRow,
 					numberColumns,whichColumns);
@@ -6180,7 +6256,7 @@ ClpSimplex::ClpSimplex (ClpSimplex * wholeModel,
   for (iRow=0;iRow<numberRows_;iRow++) 
     mapping[iRow+numberColumns_] = iRow+numberColumns;
   // Redo costs and bounds of whole model
-  wholeModel->createRim(5,false);
+  wholeModel->createRim(1+4,false);
   lower_ = wholeModel->lower_;
   wholeModel->lower_ = new double [numberTotal];
   memcpy(wholeModel->lower_+numberColumns,lower_+numberColumns_,numberRows_*sizeof(double));

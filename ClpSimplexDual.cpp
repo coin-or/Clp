@@ -1648,7 +1648,7 @@ ClpSimplexDual::changeBounds(bool initialize,
     numberInfeasibilities=0;
     changeCost=0.0;
     // put back original bounds and then check
-    createRim(3);
+    createRim(1);
     int iSequence;
     // bounds will get bigger - just look at ones at bounds
     for (iSequence=0;iSequence<numberRows_+numberColumns_;iSequence++) {

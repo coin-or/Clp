@@ -13,7 +13,8 @@
 
 #include "CoinPragma.hpp"
 #include "CoinHelperFunctions.hpp"
-#define CLPVERSION "1.00.00"
+// History since 1.0 at end
+#define CLPVERSION "1.00.01"
 
 #include "CoinMpsIO.hpp"
 
@@ -76,7 +77,7 @@ enum ClpParameterType {
   DIRECTORY=301,IMPORT,EXPORT,RESTORE,SAVE,DUALSIMPLEX,PRIMALSIMPLEX,
   MAXIMIZE,MINIMIZE,EXIT,STDIN,UNITTEST,NETLIB_DUAL,NETLIB_PRIMAL,SOLUTION,
   TIGHTEN,FAKEBOUND,HELP,PLUSMINUS,NETWORK,ALLSLACK,REVERSE,BARRIER,NETLIB_BARRIER,
-  REALLY_SCALE,
+  REALLY_SCALE,BASISIN,BASISOUT,
 
   INVALID=1000
 };
@@ -908,6 +909,9 @@ int main (int argc, const char *argv[])
     std::string directory ="./";
     std::string importFile ="";
     std::string exportFile ="default.mps";
+    std::string importBasisFile ="";
+    int basisHasValues=0;
+    std::string exportBasisFile ="default.bas";
     std::string saveFile ="default.prob";
     std::string restoreFile ="default.prob";
     std::string solutionFile ="stdout";
@@ -947,6 +951,27 @@ int main (int argc, const char *argv[])
 corrector algorithm."
 
        ); 
+    parameters[numberParameters++]=
+      ClpItem("basisI!n","Import basis from bas file",
+	      BASISIN);
+    parameters[numberParameters-1].setLonghelp
+      (
+       "This will read an MPS format basis file from the given file name.  It will use the default\
+ directory given by 'directory'.  A name of '$' will use the previous value for the name.  This\
+ is initialized to '', i.e. it must be set.  If you have libgz then it can read compressed\
+ files 'xxxxxxxx.gz'.."
+       ); 
+    parameters[numberParameters-1].setStringValue(importBasisFile);
+    parameters[numberParameters++]=
+      ClpItem("basisO!ut","Export basis as bas file",
+	      BASISOUT);
+    parameters[numberParameters-1].setLonghelp
+      (
+       "This will write an MPS format basis file to the given file name.  It will use the default\
+ directory given by 'directory'.  A name of '$' will use the previous value for the name.  This\
+ is initialized to 'default.bas'."
+       ); 
+    parameters[numberParameters-1].setStringValue(exportBasisFile);
     parameters[numberParameters++]=
       ClpItem("biasLU","Whether factorization biased towards U",
 	      "UU",BIASLU,2,false);
@@ -1266,7 +1291,8 @@ specialized network code."
  per line.  You may want to do just one per line (for grep or suchlike) and you may wish\
  to save with absolute accuracy using a coded version of the IEEE value. A value of 2 is normal.\
  otherwise odd values gives one value per line, even two.  Values 1,2 give normal format, 3,4\
- gives greater precision, while 5,6 give IEEE values."
+ gives greater precision, while 5,6 give IEEE values.  When used for exporting a basis 1 does not save \
+values, 2 saves values, 3 with greater accuracy and 4 in IEEE."
        ); 
     parameters[numberParameters-1].setIntValue(outputFormat);
     parameters[numberParameters++]=
@@ -1887,6 +1913,8 @@ costs this much to be infeasible",
 		      solveOptions.setSpecialOption(1,7); // initiative
 		  }
 		}
+		if (basisHasValues==-1)
+		  solveOptions.setSpecialOption(1,11); // switch off values
 	      } else if (method==ClpSolve::useBarrier||method==ClpSolve::useBarrierNoCross) {
 		int barrierOptions = choleskyType;
 		if (scaleBarrier)
@@ -1898,6 +1926,7 @@ costs this much to be infeasible",
 		solveOptions.setSpecialOption(4,barrierOptions);
 	      }
 	      model2->initialSolve(solveOptions);
+	      basisHasValues=1;
 	    } else {
 	      std::cout<<"** Current model not valid"<<std::endl;
 	    }
@@ -2028,7 +2057,7 @@ costs this much to be infeasible",
 	    }
 	    break;
 	  case EXPORT:
-	    {
+	    if (goodModels[iModel]) {
 	      // get next field
 	      field = getString(argc,argv);
 	      if (field=="$") {
@@ -2161,6 +2190,108 @@ costs this much to be infeasible",
 		totalTime += time2-time1;
 		time1=time2;
 	      }
+	    } else {
+	      std::cout<<"** Current model not valid"<<std::endl;
+	    }
+	    break;
+	  case BASISIN:
+	    if (goodModels[iModel]) {
+	      // get next field
+	      field = getString(argc,argv);
+	      if (field=="$") {
+		field = parameters[iParam].stringValue();
+	      } else if (field=="EOL") {
+		parameters[iParam].printString();
+		break;
+	      } else {
+		parameters[iParam].setStringValue(field);
+	      }
+	      std::string fileName;
+	      bool canOpen=false;
+	      if (field=="-") {
+		// stdin
+		canOpen=true;
+		fileName = "-";
+	      } else {
+		if (field[0]=='/'||field[0]=='\\') {
+		  fileName = field;
+		} else if (field[0]=='~') {
+		  char * environ = getenv("HOME");
+		  if (environ) {
+		    std::string home(environ);
+		    field=field.erase(0,1);
+		    fileName = home+field;
+		  } else {
+		    fileName=field;
+		  }
+		} else {
+		  fileName = directory+field;
+		}
+		FILE *fp=fopen(fileName.c_str(),"r");
+		if (fp) {
+		  // can open - lets go for it
+		  fclose(fp);
+		  canOpen=true;
+		} else {
+		  std::cout<<"Unable to open file "<<fileName<<std::endl;
+		}
+	      }
+	      if (canOpen) {
+		int values = models[iModel].readBasis(fileName.c_str());
+		if (values==0)
+		  basisHasValues=-1;
+		else
+		  basisHasValues=1;
+	      }
+	    } else {
+	      std::cout<<"** Current model not valid"<<std::endl;
+	    }
+	    break;
+	  case BASISOUT:
+	    if (goodModels[iModel]) {
+	      // get next field
+	      field = getString(argc,argv);
+	      if (field=="$") {
+		field = parameters[iParam].stringValue();
+	      } else if (field=="EOL") {
+		parameters[iParam].printString();
+		break;
+	      } else {
+		parameters[iParam].setStringValue(field);
+	      }
+	      std::string fileName;
+	      bool canOpen=false;
+	      if (field[0]=='/'||field[0]=='\\') {
+		fileName = field;
+	      } else if (field[0]=='~') {
+		char * environ = getenv("HOME");
+		if (environ) {
+		  std::string home(environ);
+		  field=field.erase(0,1);
+		  fileName = home+field;
+		} else {
+		  fileName=field;
+		}
+	      } else {
+		fileName = directory+field;
+	      }
+	      FILE *fp=fopen(fileName.c_str(),"w");
+	      if (fp) {
+		// can open - lets go for it
+		fclose(fp);
+		canOpen=true;
+	      } else {
+		std::cout<<"Unable to open file "<<fileName<<std::endl;
+	      }
+	      if (canOpen) {
+		ClpSimplex * model2 = models+iModel;
+		model2->writeBasis(fileName.c_str(),outputFormat>1,outputFormat-2);
+		time2 = CoinCpuTime();
+		totalTime += time2-time1;
+		time1=time2;
+	      }
+	    } else {
+	      std::cout<<"** Current model not valid"<<std::endl;
 	    }
 	    break;
 	  case SAVE:
@@ -2603,3 +2734,8 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 #endif
   return 0;
 }    
+/*
+  Version 1.00.00 October 13 2004.
+  1.00.01 October 18.  Added basis handline helped/prodded by Thorsten Koch.
+  Also modifications to make faster with sbb (I hope I haven't broken anything).
+ */

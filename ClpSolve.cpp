@@ -69,6 +69,7 @@ extern "C" {
     8 - all slack basis in primal
     16 - switch off interrupt handling
     32 - do not try and make plus minus one matrix
+    64 - do not use sprint even if problem looks good
  */
 int 
 ClpSimplex::initialSolve(ClpSolve & options)
@@ -121,6 +122,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
   int doCrash=0;
   int doSprint=0;
   int doSlp=0;
+  int primalStartup=1;
   if (method!=ClpSolve::useDual&&method!=ClpSolve::useBarrier
       &&method!=ClpSolve::useBarrierNoCross) {
     switch (options.getSpecialOption(1)) {
@@ -182,6 +184,12 @@ ClpSimplex::initialSolve(ClpSolve & options)
       doSprint=0;
       if (options.getExtraInfo(1)>0)
 	doSlp = options.getExtraInfo(1);
+      break;
+    case 11:
+      doIdiot=0;
+      doCrash=0;
+      doSprint=0;
+      primalStartup=0;
       break;
     default:
       abort();
@@ -666,7 +674,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
     if (doSlp>0&&objective_->type()==2) {
       model2->nonlinearSLP(doSlp,1.0e-5);
     }
-    model2->primal(1);
+    model2->primal(primalStartup);
     time2 = CoinCpuTime();
     timeCore = time2-timeX;
     handler_->message(CLP_INTERVAL_TIMING,messages_)

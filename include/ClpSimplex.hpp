@@ -230,6 +230,26 @@ public:
   int primalRanging(int numberCheck,const int * which,
 		  double * valueIncrease, int * sequenceIncrease,
 		  double * valueDecrease, int * sequenceDecrease);
+  /** Write the basis in MPS format to the specified file.
+      If writeValues true writes values of structurals
+      (and adds VALUES to end of NAME card)
+      
+      Row and column names may be null.
+      formatType is
+      <ul>
+      <li> 0 - normal
+      <li> 1 - extra accuracy 
+      <li> 2 - IEEE hex (later)
+      </ul>
+      
+      Returns non-zero on I/O error
+  */
+  int writeBasis(const char *filename,
+		 bool writeValues=false,
+		 int formatType=0) const;
+  /** Read a basis from the given filename,
+      returns -1 on file error, 0 if no values, 1 if values */
+  int readBasis(const char *filename);
   /// Passes in factorization
   void setFactorization( ClpFactorization & factorization);
   /** Tightens primal bounds to make dual faster.  Unless
@@ -623,8 +643,10 @@ public:
       Also creates scaling arrays if needed.  It does scaling if needed.
       16 also moves solutions etc in to work arrays
       On 16 returns false if problem "bad" i.e. matrix or bounds bad
+      If startFinishOptions is -1 then called by user in getSolution
+      so do arrays but keep pivotVariable_
   */
-  bool createRim(int what,bool makeRowCopy=false);
+  bool createRim(int what,bool makeRowCopy=false,int startFinishOptions=0);
   /** releases above arrays and does solution scaling out.  May also 
       get rid of factorization data -
       0 get rid of nothing, 1 get rid of arrays, 2 also factorization

@@ -412,7 +412,7 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
   // if infeasible get real values
   if (problemStatus_==1) {
     infeasibilityCost_=0.0;
-    createRim(7);
+    createRim(1+4);
     nonLinearCost_->checkInfeasibilities(0.0);
     sumPrimalInfeasibilities_=nonLinearCost_->sumInfeasibilities();
     numberPrimalInfeasibilities_= nonLinearCost_->numberInfeasibilities();
@@ -496,7 +496,7 @@ ClpSimplexPrimal::whileIterating(int valuesOption)
       double * saveColumn2 = new double[numberColumns_];
       memcpy(saveColumn1,reducedCostWork_,numberColumns_*sizeof(double));
       memcpy(saveColumn2,columnActivityWork_,numberColumns_*sizeof(double));
-      createRim(7);
+      createRim(1+4);
       gutsOfSolution(NULL,NULL);
       printf("xxx %d old obj %g, recomputed %g, sum primal inf %g\n",
 	     numberIterations_,
@@ -2001,7 +2001,7 @@ ClpSimplexPrimal::unPerturb()
   if (perturbation_!=101)
     return false;
   // put back original bounds and costs
-  createRim(7);
+  createRim(1+4);
   sanityCheck();
   // unflag
   unflag();

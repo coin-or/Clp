@@ -164,7 +164,7 @@ int ClpSimplexNonlinear::primal ()
   // if infeasible get real values
   if (problemStatus_==1) {
     infeasibilityCost_=0.0;
-    createRim(7);
+    createRim(1+4);
     nonLinearCost_->checkInfeasibilities(0.0);
     sumPrimalInfeasibilities_=nonLinearCost_->sumInfeasibilities();
     numberPrimalInfeasibilities_= nonLinearCost_->numberInfeasibilities();

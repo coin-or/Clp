@@ -226,8 +226,11 @@ ClpFactorization::factorize ( ClpSimplex * model,
 #endif
 	// recompute number basic
         numberBasic = numberRowBasic+numberColumnBasic;
-	numberElements = startColumnU_[numberBasic-1]
-	  +numberInColumn_[numberBasic-1];
+	if (numberBasic) 
+	  numberElements = startColumnU_[numberBasic-1]
+	    +numberInColumn_[numberBasic-1];
+	else
+	  numberElements=0;
 	lengthU_ = numberElements;
 	//CoinFillN(indexColumnU_,numberElements,-1);
 	preProcess ( 2 );

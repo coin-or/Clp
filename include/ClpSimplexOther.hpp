@@ -66,6 +66,25 @@ public:
   */
   void checkPrimalRatios(CoinIndexedVector * rowArray,
 			 int direction);
+    /** Write the basis in MPS format to the specified file.
+	If writeValues true writes values of structurals
+	(and adds VALUES to end of NAME card)
+
+	Row and column names may be null.
+	formatType is
+	<ul>
+	  <li> 0 - normal
+	  <li> 1 - extra accuracy 
+	  <li> 2 - IEEE hex (later)
+	</ul>
+
+	Returns non-zero on I/O error
+    */
+    int writeBasis(const char *filename,
+		 bool writeValues=false,
+		 int formatType=0) const;
+    /// Read a basis from the given filename
+    int readBasis(const char *filename);
   //@}
 };
 #endif
