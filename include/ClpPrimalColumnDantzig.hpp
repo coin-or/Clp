@@ -1,0 +1,66 @@
+// Copyright (C) 2002, International Business Machines
+// Corporation and others.  All Rights Reserved.
+#ifndef ClpPrimalColumnDantzig_H
+#define ClpPrimalColumnDantzig_H
+
+#include "ClpPrimalColumnPivot.hpp"
+
+//#############################################################################
+
+/** Primal Column Pivot Dantzig Algorithm Class
+
+This is simplest choice - choose largest infeasibility
+
+*/
+
+class ClpPrimalColumnDantzig : public ClpPrimalColumnPivot {
+  
+public:
+  
+  ///@name Algorithmic methods 
+  //@{
+  
+  /** Returns pivot column, -1 if none.
+      Lumbers over all columns - slow 
+      updateArray has cost updates (also use pivotRow_ from last iteration)
+      Can just do full price if you really want to be slow
+  */
+  virtual int pivotColumn(OsiIndexedVector * updates,
+			  OsiIndexedVector * spareRow1,
+			  OsiIndexedVector * spareRow2,
+			  OsiIndexedVector * spareColumn1,
+			  OsiIndexedVector * spareColumn2);
+
+  /// Just sets model
+  virtual void saveWeights(ClpSimplex * model,int mode)
+  {model_=model;};
+  //@}
+  
+  
+  ///@name Constructors and destructors
+  //@{
+  /// Default Constructor
+  ClpPrimalColumnDantzig(); 
+  
+  /// Copy constructor 
+  ClpPrimalColumnDantzig(const ClpPrimalColumnDantzig &);
+  
+  /// Assignment operator 
+  ClpPrimalColumnDantzig & operator=(const ClpPrimalColumnDantzig& rhs);
+  
+  /// Destructor 
+  virtual ~ClpPrimalColumnDantzig ();
+
+  /// Clone
+  virtual ClpPrimalColumnPivot * clone(bool copyData = true) const;
+ 
+  //@}
+
+  //---------------------------------------------------------------------------
+  
+private:
+  ///@name Private member data 
+  //@}
+};
+
+#endif

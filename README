@@ -1,0 +1,17 @@
+To build Clp see INSTALL file
+
+To use Clp you need the Clp and Osi libraries
+
+To make the unitTest and standalone executable do
+
+make unitTest in this directory.  This creates an executable clp.
+
+Doing clp gives you some hints.  It can do a unit test and solve netlib problems.  It can also solve problems and set tolerances etc.  Just do clp - and then try ? or setting various stuff.
+
+On Linux clp can do file completion and line editing.  
+
+If you want to stress the code you can set various stuff e.g. dantzig pricing and then go into netlib testing.  I do not guarantee that it will solve all netlib if you get too creative.
+
+There will be samples in ./Samples
+
+At present the only sample is minimim.cpp; use Makefile.minimum to create testit
