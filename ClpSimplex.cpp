@@ -1236,8 +1236,8 @@ ClpSimplex::housekeeping(double objectiveChange)
     <<numberIterations_<<objectiveValue()
     <<rowcol[isColumn(sequenceIn_)]<<sequenceWithin(sequenceIn_)
     <<rowcol[isColumn(sequenceOut_)]<<sequenceWithin(sequenceOut_);
-  handler_->printing(algorithm_<0)<<theta_<<dualOut_;
-  handler_->printing(algorithm_>0)<<theta_<<dualIn_;
+  handler_->printing(algorithm_<0)<<dualOut_<<theta_;
+  handler_->printing(algorithm_>0)<<dualIn_<<theta_;
   handler_->message()<<CoinMessageEol;
   if (hitMaximumIterations())
     return 2;
