@@ -576,11 +576,6 @@ int ClpSimplex::internalFactorize ( int solveType)
 	  case basic:
 	    numberBasic++;
 	    break;
-	  case isFree:
-	    //assert(rowLowerWork_[iRow]<-largeValue_);
-	    //assert(rowUpperWork_[iRow]>largeValue_);
-	    rowActivityWork_[iRow]=0.0;
-	    break;
 	  case atUpperBound:
 	    rowActivityWork_[iRow]=rowUpperWork_[iRow];
 	    if (rowActivityWork_[iRow]>largeValue_) {
@@ -608,6 +603,11 @@ int ClpSimplex::internalFactorize ( int solveType)
 	      }
 	    }
 	    break;
+	  case isFree:
+	    // may not be free after all
+	    if (rowLowerWork_[iRow]<-largeValue_&&rowUpperWork_[iRow]>largeValue_)
+	      break;
+	    // not really free - fall through to superbasic
 	  case superBasic:
 	    if (rowUpperWork_[iRow]>largeValue_) {
 	      if (rowLowerWork_[iRow]>-largeValue_) {
@@ -665,9 +665,6 @@ int ClpSimplex::internalFactorize ( int solveType)
 	      numberBasic++;
 	    }
 	    break;
-	  case isFree:
-	    columnActivityWork_[iColumn]=0.0;
-	    break;
 	  case atUpperBound:
 	    columnActivityWork_[iColumn]=columnUpperWork_[iColumn];
 	    if (columnActivityWork_[iColumn]>largeValue_) {
@@ -685,6 +682,11 @@ int ClpSimplex::internalFactorize ( int solveType)
 	      setColumnStatus(iColumn,atUpperBound);
 	    }
 	    break;
+	  case isFree:
+	    // may not be free after all
+	    if (columnLowerWork_[iColumn]<-largeValue_&&columnUpperWork_[iColumn]>largeValue_)
+	      break;
+	    // not really free - fall through to superbasic
 	  case superBasic:
 	    if (columnUpperWork_[iColumn]>largeValue_) {
 	      if (columnLowerWork_[iColumn]>-largeValue_) {
@@ -1548,7 +1550,7 @@ ClpSimplex::checkDualSolution()
   columnDualSequence_=-1;
   rowDualInfeasibility_=0.0;
   rowDualSequence_=-1;
-  firstFree_ = -1;
+  int firstFree = -1;
   primalToleranceToGetOptimal_=max(rowPrimalInfeasibility_,
 				   columnPrimalInfeasibility_);
   remainingDualInfeasibility_=0.0;
@@ -1568,14 +1570,16 @@ ClpSimplex::checkDualSolution()
 	columnLowerWork_[iColumn];
       if (distanceUp>primalTolerance_) {
 	double value = reducedCostWork_[iColumn];
-	// Check if "free"
-	if (firstFree_<0&&distanceDown>primalTolerance_) {
-	  if (algorithm_>0) {
-	    // primal
-	    firstFree_ = iColumn;
-	  } else if (fabs(value)>1.0e2*relaxedTolerance) {
-	    // dual with dj
-	    firstFree_ = iColumn;
+	if (!flagged(iColumn)) {
+	  // Check if "free"
+	  if (firstFree<0&&distanceDown>primalTolerance_) {
+	    if (algorithm_>0) {
+	      // primal
+	      firstFree = iColumn;
+	    } else if (fabs(value)>1.0e2*relaxedTolerance) {
+	      // dual with dj
+	      firstFree = iColumn;
+	    }
 	  }
 	}
 	// should not be negative
@@ -1645,14 +1649,16 @@ ClpSimplex::checkDualSolution()
       double distanceDown = rowActivityWork_[iRow] -rowLowerWork_[iRow];
       if (distanceUp>primalTolerance_) {
 	double value = rowReducedCost_[iRow];
-	// Check if "free"
-	if (firstFree_<0&&distanceDown>primalTolerance_) {
-	  if (algorithm_>0) {
-	    // primal
-	    firstFree_ = iRow+numberColumns_;
-	  } else if (fabs(value)>1.0e2*relaxedTolerance) {
-	    // dual with dj
-	    firstFree_ = iRow+numberColumns_;
+	if (!flagged(iRow+numberColumns_)) {
+	  // Check if "free"
+	  if (firstFree<0&&distanceDown>primalTolerance_) {
+	    if (algorithm_>0) {
+	      // primal
+	      firstFree = iRow+numberColumns_;
+	    } else if (fabs(value)>1.0e2*relaxedTolerance) {
+	      // dual with dj
+	      firstFree = iRow+numberColumns_;
+	    }
 	  }
 	}
 	// should not be negative
@@ -1704,6 +1710,10 @@ ClpSimplex::checkDualSolution()
 	}
       }
     }
+  }
+  if (firstFree>=0) {
+    if (algorithm_<0||!numberIterations_)
+      firstFree_=firstFree;
   }
 }
 /*

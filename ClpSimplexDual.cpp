@@ -307,6 +307,10 @@ int ClpSimplexDual::dual (int ifValuesPass )
 	factorization_->sparseThreshold(0);
 	factorization_->goSparse();
       }
+
+      // exit if victory declared
+      if (problemStatus_>=0)
+	break;
       
       // Do iterations
       whileIterating(saveDuals);
@@ -2402,7 +2406,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
       numberPrimalInfeasibilities_ = 0;
       sumPrimalInfeasibilities_ = 0.0;
     }
-    if (dualFeasible()||problemStatus_==-4) {
+    if (dualFeasible()||problemStatus_==-4||(primalFeasible()&&!numberDualInfeasibilitiesWithoutFree_)) {
       if (primalFeasible()) {
 	// may be optimal - or may be bounds are wrong
 	handler_->message(CLP_DUAL_BOUNDS,messages_)
@@ -2414,7 +2418,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	ClpDisjointCopyN(rowActivityWork_,numberRows_,
 			  rowArray_[2]->denseVector());
 	numberChangedBounds=changeBounds(false,rowArray_[3],changeCost);
-	if (numberChangedBounds<=0) {
+	if (numberChangedBounds<=0&&!numberDualInfeasibilities_) {
 	  //looks optimal - do we need to reset tolerance
 	  if (perturbation_==101) {
 	    perturbation_=102; // stop any perturbations
@@ -2472,6 +2476,12 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	      sequenceIn_=iChosen;
 	      unpack(rowArray_[1]);
 	      sequenceIn_ = iSave;
+	      // if dual infeasibilities then must be free vector so add in dual
+	      if (numberDualInfeasibilities_) {
+		if (fabs(changeCost)>1.0e-5)
+		  printf("Odd free/unbounded combo\n");
+		changeCost += cost_[iChosen];
+	      }
 	      problemStatus_ = checkUnbounded(rowArray_[0],rowArray_[1],
 					      changeCost);
 	      rowArray_[1]->clear();
@@ -2567,6 +2577,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	// for now - recompute all
 	gutsOfSolution(rowActivityWork_,columnActivityWork_,NULL,NULL);
 	//assert(numberDualInfeasibilitiesWithoutFree_==0);
+
 	if (numberDualInfeasibilities_||situationChanged==2) {
 	  problemStatus_=-1; // carry on as normal
 	}

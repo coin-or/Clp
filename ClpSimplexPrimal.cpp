@@ -240,6 +240,10 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
       
       // Say no pivot has occurred (for steepest edge and updates)
       pivotRow_=-2;
+
+      // exit if victory declared
+      if (problemStatus_>=0)
+	break;
       
       // Iterate
       whileIterating();
