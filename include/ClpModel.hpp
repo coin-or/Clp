@@ -390,10 +390,12 @@ public:
    inline ClpMatrixBase * rowCopy() const       { return rowCopy_; }
    /// Clp Matrix 
    inline ClpMatrixBase * clpMatrix() const     { return matrix_; }
-  /** Replace Clp Matrix (current is not deleted and new is used)
-      So up to user to delete one
+  /** Replace Clp Matrix (current is not deleted unless told to
+      and new is used)
+      So up to user to delete current.  This was used where
+      matrices were being rotated.
   */
-   void replaceMatrix(ClpMatrixBase * matrix);
+   void replaceMatrix(ClpMatrixBase * matrix,bool deleteCurrent=false);
    /// Objective value
    inline double objectiveValue() const {
       return objectiveValue_*optimizationDirection_ - dblParam_[ClpObjOffset];

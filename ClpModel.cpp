@@ -1531,8 +1531,10 @@ unsigned char * whichUnsignedChar(unsigned char * array ,
 }
 // Replace Clp Matrix (current is not deleted)
 void 
-ClpModel::replaceMatrix( ClpMatrixBase * matrix)
+ClpModel::replaceMatrix( ClpMatrixBase * matrix,bool deleteCurrent)
 {
+  if (deleteCurrent)
+    delete matrix_;
   matrix_=matrix;
 }
 // Subproblem constructor
