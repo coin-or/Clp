@@ -681,7 +681,10 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
       // check accuracy of weights
       dualRowPivot_->checkAccuracy();
       // Get good size for pivot
+      // Allow first few iterations to take tiny
       double acceptablePivot=1.0e-9;
+      if (numberIterations_>100)
+        acceptablePivot=1.0e-8;
       if (factorization_->pivots()>10||
 	  (factorization_->pivots()&&saveSumDual))
 	acceptablePivot=1.0e-5; // if we have iterated be more strict
@@ -689,6 +692,7 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
 	acceptablePivot=1.0e-6; // if we have iterated be slightly more strict
       else if (factorization_->pivots())
         acceptablePivot=1.0e-8; // relax
+      double bestPossiblePivot=1.0;
       // get sign for finding row of tableau
       if (candidate<0) {
 	// normal iteration
@@ -700,7 +704,7 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
 	matrix_->transposeTimes(this,-1.0,
 			      rowArray_[0],rowArray_[3],columnArray_[0]);
 	// do ratio test for normal iteration
-	dualColumn(rowArray_[0],columnArray_[0],columnArray_[1],
+	bestPossiblePivot = dualColumn(rowArray_[0],columnArray_[0],columnArray_[1],
 		 rowArray_[3],acceptablePivot,dubiousWeights);
       } else {
 	// Make sure direction plausible
@@ -801,8 +805,13 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
 	    break;
 	  } else {
 	    // take on more relaxed criterion
+            double test;
+	    if (fabs(btranAlpha)<1.0e-8||fabs(alpha_)<1.0e-8)
+              test = 1.0e-1*fabs(alpha_);
+            else
+              test = 1.0e-4*(1.0+fabs(alpha_));
 	    if (fabs(btranAlpha)<1.0e-12||fabs(alpha_)<1.0e-12||
-		fabs(btranAlpha-alpha_)>1.0e-4*(1.0+fabs(alpha_))) {
+		fabs(btranAlpha-alpha_)>test) {
 	      dualRowPivot_->unrollWeights();
 	      // need to reject something
 	      char x = isColumn(sequenceOut_) ? 'C' :'R';
@@ -815,6 +824,12 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
 	      rowArray_[0]->clear();
 	      rowArray_[1]->clear();
 	      columnArray_[0]->clear();
+              if (fabs(alpha_)<1.0e-10&&fabs(btranAlpha)<1.0e-8&&numberIterations_>100) {
+                //printf("I think should declare infeasible\n");
+                problemStatus_=1;
+                returnCode=1;
+                break;
+              }
 	      continue;
 	    }
 	  }
@@ -1070,7 +1085,7 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
 	if (factorization_->pivots()<5) {
 	  // If we have just factorized and infeasibility reasonable say infeas
 	  if ((specialOptions_&4096)!=0&&dualBound_>1.0e8) {
-	    if (valueOut_>upperOut_+1.0e-2||valueOut_<lowerOut_-1.0e-2
+	    if (valueOut_>upperOut_+1.0e-4||valueOut_<lowerOut_-1.0e-4
 		|| (specialOptions_&64)==0) {
 	      // say infeasible
 	      problemStatus_=1;
@@ -1918,7 +1933,7 @@ ClpSimplexDual::changeBounds(bool initialize,
    We will check for basic so spare array will never overflow.
    If necessary will modify costs
 */
-void
+double
 ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 			   CoinIndexedVector * columnArray,
 			   CoinIndexedVector * spareArray,
@@ -2006,9 +2021,10 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 
   // do first pass to get possibles 
   // We can also see if infeasible or pivoting on free
-  double tentativeTheta = 1.0e22;
+  double tentativeTheta = 1.0e25;
   upperTheta = 1.0e31;
   double freePivot = acceptablePivot;
+  double bestPossible=0.0;
 
   for (iSection=0;iSection<2;iSection++) {
 
@@ -2047,6 +2063,7 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
       case isFree:
       case superBasic:
 	alpha = work[i];
+        bestPossible = CoinMax(bestPossible,fabs(alpha));
 	oldValue = reducedCost[iSequence];
 	if (oldValue>dualTolerance_) {
 	  keep = true;
@@ -2074,6 +2091,7 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 	value = oldValue-tentativeTheta*alpha;
 	//assert (oldValue<=dualTolerance_*1.0001);
 	if (value>newTolerance) {
+          bestPossible = CoinMax(bestPossible,-alpha);
 	  value = oldValue-upperTheta*alpha;
 	  if (value>newTolerance && -alpha>=acceptablePivot) 
 	    upperTheta = (oldValue-newTolerance)/alpha;
@@ -2088,6 +2106,7 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 	value = oldValue-tentativeTheta*alpha;
 	//assert (oldValue>=-dualTolerance_*1.0001);
 	if (value<-newTolerance) {
+          bestPossible = CoinMax(bestPossible,alpha);
 	  value = oldValue-upperTheta*alpha;
 	  if (value<-newTolerance && alpha>=acceptablePivot) 
 	    upperTheta = (oldValue+newTolerance)/alpha;
@@ -2103,7 +2122,7 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
   marker[0][0] = numberRemaining;
 
   if (!numberRemaining&&sequenceIn_<0)
-    return ; // Looks infeasible
+    return 0.0; // Looks infeasible
 
   if (sequenceIn_>=0) {
     // free variable - always choose
@@ -2325,7 +2344,7 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 	      weight += CoinDrand48()*1.0e-2;
 	      if (absAlpha>2.0*bestPivot) {
 		take=true;
-	      } else if (absAlpha>0.5*largestPivot) {
+	      } else if (absAlpha>largestPivot) {
 		// could multiply absAlpha and weight
 		if (weight*bestPivot<bestWeight*absAlpha)
 		  take=true;
@@ -2340,7 +2359,7 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 		sequenceIn_ = numberPossiblySwapped;
 		bestPivot =  absAlpha;
 		theta_ = dj_[iSequence]/alpha;
-		largestPivot = CoinMax(largestPivot,bestPivot);
+		largestPivot = CoinMax(largestPivot,0.5*bestPivot);
 		bestWeight = weight;
 		//printf(" taken seq %d alpha %g weight %d\n",
 		//   iSequence,absAlpha,dubiousWeights[iSequence]);
@@ -2453,8 +2472,8 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
       alpha_ = spare[sequenceIn_];
       sequenceIn_ = indices[iFlip][sequenceIn_];
       oldValue = dj_[sequenceIn_];
-      theta_ = oldValue/alpha_;
-      if (theta_<minimumTheta) {
+      theta_ = CoinMax(oldValue/alpha_,0.0);
+      if (theta_<minimumTheta&&fabs(alpha_)<1.0e5&&0) {
 	// can't pivot to zero
 	if (oldValue-minimumTheta*alpha_>=-dualTolerance_) {
 	  theta_=minimumTheta;
@@ -2592,9 +2611,7 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
     memset(array[i]+marker[i][1],0,
 	   (numberColumns_-marker[i][1])*sizeof(double));
   }
-  //if (fabs(alpha_)<saveAcceptable)
-  //printf("iteration %d in %d alpha %g acceptable %g\n",
-  //   numberIterations_,sequenceIn_,alpha_,saveAcceptable);
+  return bestPossible;
 }
 /* Checks if tentative optimal actually means unbounded
    Returns -3 if not, 2 if is unbounded */

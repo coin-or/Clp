@@ -389,6 +389,9 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
   // if integers then switch off dual stuff
   // later just do individually
   bool doDualStuff = (presolvedModel_->integerInformation()==NULL);
+  // but allow in some cases
+  if ((presolveActions_&512)!=0)
+    doDualStuff=true;
   if (prob->anyProhibited()) 
     doDualStuff=false;
   if (!doDual())

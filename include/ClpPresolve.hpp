@@ -169,6 +169,7 @@ private:
   std::string saveFile_;
   /** Whether we want to skip dual part of presolve etc.
       512 bit allows duplicate column processing on integer columns
+      and dual stuff on integers
   */
   int presolveActions_;
 protected:

@@ -182,10 +182,10 @@ public:
       We will check for basic so spare array will never overflow.
       If necessary will modify costs
       For speed, we may need to go to a bucket approach when many
-      variables are being flipped
-
+      variables are being flipped.
+      Returns best possible pivot value
   */
-  void dualColumn(CoinIndexedVector * rowArray,
+  double dualColumn(CoinIndexedVector * rowArray,
 		  CoinIndexedVector * columnArray,
 		  CoinIndexedVector * spareArray,
 		  CoinIndexedVector * spareArray2,
