@@ -517,19 +517,22 @@ ClpSimplexUnitTest(const std::string & mpsDir,
   {    
     CoinMpsIO m;
     std::string fn = mpsDir+"exmip1";
+    fn = "Test/subGams4";
     m.readMps(fn.c_str(),"mps");
-    ClpSimplex solution;
-    solution.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
+    ClpSimplex model;
+    model.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
 			 m.getObjCoefficients(),
 			 m.getRowLower(),m.getRowUpper());
     // Message handler
-    MyMessageHandler messageHandler(&solution);
+    MyMessageHandler messageHandler(&model);
     std::cout<<"Testing derived message handler"<<std::endl;
-    solution.passInMessageHandler(&messageHandler);
-    solution.primal();
+    model.passInMessageHandler(&messageHandler);
+    model.messagesPointer()->setDetailMessage(1,102);
+    model.setFactorizationFrequency(10);
+    model.primal();
 
     // Write saved solutions
-    int nc = solution.getNumCols();
+    int nc = model.getNumCols();
     int s; 
     std::deque<StdVectorDouble> fep = messageHandler.getFeasibleExtremePoints();
     int numSavedSolutions = fep.size();
@@ -540,11 +543,14 @@ ClpSimplexUnitTest(const std::string & mpsDir,
           std::cout <<"Saved Solution: " <<s <<" ColNum: " <<c <<" Value: " <<solnVec[c] <<std::endl;
       }
     }
-    // solve again without scaling
+    // Solve again without scaling
+    // and maximize then minimize
     messageHandler.clearFeasibleExtremePoints();
-    solution.scaling(0);
-    solution.allSlackBasis();
-    solution.primal();
+    model.scaling(0);
+    model.setOptimizationDirection(-1);
+    model.primal();
+    model.setOptimizationDirection(1);
+    model.primal();
     fep = messageHandler.getFeasibleExtremePoints();
     numSavedSolutions = fep.size();
     for ( s=0; s<numSavedSolutions; ++s ) {

@@ -9,6 +9,7 @@
 #include <cstdio>
 
 #include "ClpSimplex.hpp"
+#include "ClpNonLinearCost.hpp"
 #include "MyMessageHandler.hpp"
 #include "ClpMessage.hpp"
 
@@ -90,33 +91,39 @@ int
 MyMessageHandler::print()
 {
   if (currentSource()=="Clp") {
-    if (currentMessage().externalNumber()==5) {
-      // Are we feasible
-      // We can pick up two ways - check same
-      assert (model_->numberPrimalInfeasibilities()==
-        intValue(1));
-      if (!intValue(1)&&intValue(0)!=iterationNumber_) {
-        iterationNumber_ = intValue(0);
+    if (currentMessage().externalNumber()==102) {
+      printf("There are %d primal infeasibilities\n",
+	     model_->nonLinearCost()->numberInfeasibilities());
+      // Feasibility
+      if (!model_->nonLinearCost()->numberInfeasibilities()) {
         // Column solution
         int numberColumns = model_->numberColumns();
         const double * solution = model_->solutionRegion(1);
-
+	
         // Create vector to contain solution
         StdVectorDouble feasibleExtremePoint;
-
+	
+        const double *objective = model_->objective();
+        double objectiveValue = 0;
+        
         if (!model_->columnScale()) {
           // No scaling
-          for (int i=0;i<numberColumns;i++)
+          for (int i=0;i<numberColumns;i++) {
             feasibleExtremePoint.push_back(solution[i]);
+	    objectiveValue += solution[i]*objective[i];
+	  }
         } else {
           // scaled
           const double * columnScale = model_->columnScale();
-          for (int i=0;i<numberColumns;i++)
+          for (int i=0;i<numberColumns;i++) {
             feasibleExtremePoint.push_back(solution[i]*columnScale[i]);
+	    objectiveValue += solution[i]*objective[i]*columnScale[i];
+	  }
         }
+        std::cout << "Objective "<< objectiveValue << std::endl;
         // Save solution
         feasibleExtremePoints_.push_front(feasibleExtremePoint);
-
+	
         // Want maximum of 10 solutions, so if more then 10 get rid of oldest
         int numExtremePointsSaved = feasibleExtremePoints_.size();
         if ( numExtremePointsSaved>=10 ) {
@@ -126,6 +133,7 @@ MyMessageHandler::print()
         };
 
       }
+      return 0; // skip printing
     }
   }
   return CoinMessageHandler::print();
