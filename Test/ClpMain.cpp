@@ -1146,7 +1146,10 @@ stopping",
 #ifdef READLINE     
 		currentModel = models+iModel;
 #endif
+		int savePerturbation = models[iModel].perturbation();
+		models[iModel].setPerturbation(100);
 		models[iModel].primal(1);
+		models[iModel].setPerturbation(savePerturbation);
 #ifdef CLP_DEBUG_not
 		models[iModel].checkSolution();
 		printf("%g dual %g(%d) Primal %g(%d)\n",

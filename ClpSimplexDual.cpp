@@ -342,6 +342,23 @@ ClpSimplexDual::whileIterating()
       objectiveValue_=saveValue;
     }
 #endif
+#if 0
+    {
+      int iPivot;
+      double * array = rowArray_[3]->denseVector();
+      int i;
+      for (iPivot=0;iPivot<numberRows_;iPivot++) {
+	int iSequence = pivotVariable_[iPivot];
+	unpack(rowArray_[3],iSequence);
+	factorization_->updateColumn(rowArray_[2],rowArray_[3],false);
+	assert (array[iPivot]==1.0);
+	array[iPivot]=0.0;
+	for (i=0;i<numberRows_;i++)
+	  assert (array[i]==0.0);
+	rowArray_[3]->clear();
+      }
+    }
+#endif
 #ifdef CLP_DEBUG
     {
       int iSequence, number=numberRows_+numberColumns_;
@@ -551,7 +568,7 @@ ClpSimplexDual::whileIterating()
 	    continue;
 	  }
 	} else if (updateStatus==3) {
-	  // out of memory or maximum pivots
+	  // out of memory
 	  // increase space if not many iterations
 	  if (factorization_->pivots()<
 	      0.5*factorization_->maximumPivots()&&
@@ -559,7 +576,9 @@ ClpSimplexDual::whileIterating()
 	    factorization_->areaFactor(
 				       factorization_->areaFactor() * 1.1);
 	  problemStatus_=-2; // factorize now
-	} 
+	} else if (updateStatus==5) {
+	  problemStatus_=-2; // factorize now
+	}
 	// update primal solution
 	if (theta_<0.0) {
 #ifdef CLP_DEBUG

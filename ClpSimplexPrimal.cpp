@@ -1434,6 +1434,8 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	  factorization_->areaFactor(
 				     factorization_->areaFactor() * 1.1);
 	returnCode =-2; // factorize now
+      } else if (updateStatus==5) {
+	problemStatus_=-2; // factorize now
       }
       // here do part of steepest - ready for next iteration
       primalColumnPivot_->updateWeights(rowArray_[1]);

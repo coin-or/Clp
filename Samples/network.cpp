@@ -164,8 +164,15 @@ int main (int argc, const char *argv[])
   delete [] start;
   delete [] row;
   model.factorization()->maximumPivots(200+model.numberRows()/100);
-  model.factorization()->maximumPivots(2);
-  model.messageHandler()->setLogLevel(63);
+  model.factorization()->maximumPivots(1000);
+  //model.factorization()->maximumPivots(1);
+  if (model.numberRows()<50)
+    model.messageHandler()->setLogLevel(63);
   model.dual();
+  model.setOptimizationDirection(-1);
+  //model.messageHandler()->setLogLevel(63);
+  model.primal();
+  model.setOptimizationDirection(1);
+  model.primal();
   return 0;
 }    

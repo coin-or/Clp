@@ -69,26 +69,34 @@ public:
    which user may want to know about */
   //@{
   /** Updates one column (FTRAN) from region */
-  int updateColumn ( CoinIndexedVector * regionSparse2);
+  int updateColumn ( CoinIndexedVector * regionSparse, 
+		     CoinIndexedVector * regionSparse2);
   /** Updates one column (FTRAN) to/from array 
       ** For large problems you should ALWAYS know where the nonzeros
       are, so please try and migrate to previous method after you
       have got code working using this simple method - thank you!
       (the only exception is if you know input is dense e.g. rhs) */
-  int updateColumn ( double array[] ) const;
+  int updateColumn (  CoinIndexedVector * regionSparse,
+		      double array[] ) const;
   /** Updates one column transpose (BTRAN)
       ** For large problems you should ALWAYS know where the nonzeros
       are, so please try and migrate to previous method after you
       have got code working using this simple method - thank you!
       (the only exception is if you know input is dense e.g. dense objective)
       returns number of nonzeros */
-  int updateColumnTranspose ( double array[] ) const;
+  int updateColumnTranspose (  CoinIndexedVector * regionSparse,
+			       double array[] ) const;
   /** Updates one column (BTRAN) from region2 */
-  int updateColumnTranspose ( CoinIndexedVector * regionSparse2) const;
+  int updateColumnTranspose (  CoinIndexedVector * regionSparse,
+			       CoinIndexedVector * regionSparse2) const;
   //@}
 ////////////////// data //////////////////
 private:
 
+  // checks looks okay
+  void check();
+  // prints data
+  void print();
   /**@name data */
   //@{
   /// Whether slack value is  +1 or -1
@@ -97,10 +105,6 @@ private:
   int numberRows_;
   /// Number of Columns in factorization
   int numberColumns_;
-  /// Index of root
-  int root_;
-  /// Index of extreme leaf
-  int leaf_;
   /// model
   const ClpSimplex * model_; 
   /// Parent for each column
@@ -117,10 +121,14 @@ private:
   double * sign_;
   /// Stack
   int * stack_;
-  /// Next one towards leaf
-  int * toLeaf_;
-  /// Next one towards root
-  int * toRoot_;
+  /// Permute into array
+  int * permute_;
+  /// Permute back array
+  int * permuteBack_;
+  /// Second stack
+  int * stack2_;
+  /// Depth
+  int * depth_;
   /// To mark rows
   char * mark_;
   //@}

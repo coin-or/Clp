@@ -21,8 +21,6 @@ ClpNetworkBasis::ClpNetworkBasis ()
   slackValue_=-1.0;
   numberRows_=0;
   numberColumns_=0;
-  root_ = -1;
-  leaf_ = -1;
   parent_ = NULL;
   descendant_ = NULL;
   pivot_ = NULL;
@@ -30,8 +28,10 @@ ClpNetworkBasis::ClpNetworkBasis ()
   leftSibling_ = NULL;
   sign_ = NULL;
   stack_ = NULL;
-  toLeaf_ = NULL;
-  toRoot_ = NULL;
+  permute_ = NULL;
+  permuteBack_ = NULL;
+  stack2_=NULL;
+  depth_ = NULL;
   mark_ = NULL;
   model_=NULL;
 }
@@ -53,9 +53,11 @@ ClpNetworkBasis::ClpNetworkBasis(const ClpSimplex * model,
   leftSibling_ = new int [ numberRows_+1];
   sign_ = new double [ numberRows_+1];
   stack_ = new int [ numberRows_+1];
-  toLeaf_ = new int [numberRows_+1];
-  toRoot_ = new int [numberRows_+1];
+  stack2_ = new int[numberRows_+1];
+  depth_ = new int[numberRows_+1];
   mark_ = new char[numberRows_+1];
+  permute_ = new int [numberRows_ + 1];
+  permuteBack_ = new int [numberRows_ + 1];
   int i;
   for (i=0;i<numberRows_+1;i++) {
     parent_[i]=-1;
@@ -65,18 +67,20 @@ ClpNetworkBasis::ClpNetworkBasis(const ClpSimplex * model,
     leftSibling_[i]=-1;
     sign_[i]=-1.0;
     stack_[i]=-1;
+    permute_[i]=i;
+    permuteBack_[i]=i;
+    stack2_[i]=-1;
+    depth_[i]=-1;
     mark_[i]=0;
   }
+  mark_[numberRows_]=1;
   // pivotColumnBack gives order of pivoting into basis
   // so pivotColumnback[0] is first slack in basis and
   // it pivots on row permuteBack[0]
   // a known root is given by permuteBack[numberRows_-1]
-  root_ = numberRows_;
   int lastPivot=numberRows_;
   for (i=0;i<numberRows_;i++) {
     int iPivot = permuteBack[i];
-    toRoot_[iPivot] = lastPivot;
-    toLeaf_[lastPivot]=iPivot;
     lastPivot=iPivot;
     double sign;
     if (pivotRegion[i]>0.0)
@@ -105,9 +109,25 @@ ClpNetworkBasis::ClpNetworkBasis(const ClpSimplex * model,
     descendant_[iParent] = iPivot;
     leftSibling_[iPivot]=-1;
   }
-  toLeaf_[lastPivot]=numberRows_;
-  leaf_ = lastPivot;
+  // do depth
+  int iPivot = numberRows_;
+  int nStack = 1;
+  stack_[0]=descendant_[numberRows_];
+  depth_[numberRows_]=-1; // root
+  while (nStack) {
+    // take off
+    int iNext = stack_[--nStack];
+    if (iNext>=0) {
+      depth_[iNext] = nStack;
+      iPivot = iNext;
+      int iRight = rightSibling_[iNext];
+      stack_[nStack++] = iRight;
+      if (descendant_[iNext]>=0)
+	stack_[nStack++] = descendant_[iNext];
+    }
+  }
   model_=model;
+  check();
 }
 
 //-------------------------------------------------------------------
@@ -118,8 +138,6 @@ ClpNetworkBasis::ClpNetworkBasis (const ClpNetworkBasis & rhs)
   slackValue_=rhs.slackValue_;
   numberRows_=rhs.numberRows_;
   numberColumns_=rhs.numberColumns_;
-  root_ = rhs.root_;
-  leaf_ = rhs.leaf_;
   if (rhs.parent_) {
     parent_ = new int [numberRows_+1];
     memcpy(parent_,rhs.parent_,(numberRows_+1)*sizeof(int));
@@ -162,17 +180,29 @@ ClpNetworkBasis::ClpNetworkBasis (const ClpNetworkBasis & rhs)
   } else {
     stack_ = NULL;
   }
-  if (rhs.toLeaf_) {
-    toLeaf_ = new int [numberRows_+1];
-    memcpy(toLeaf_,rhs.toLeaf_,(numberRows_+1)*sizeof(int));
+  if (rhs.permute_) {
+    permute_ = new int [numberRows_+1];
+    memcpy(permute_,rhs.permute_,(numberRows_+1)*sizeof(int));
   } else {
-    toLeaf_ = NULL;
+    permute_ = NULL;
   }
-  if (rhs.toRoot_) {
-    toRoot_ = new int [numberRows_+1];
-    memcpy(toRoot_,rhs.toRoot_,(numberRows_+1)*sizeof(int));
+  if (rhs.permuteBack_) {
+    permuteBack_ = new int [numberRows_+1];
+    memcpy(permuteBack_,rhs.permuteBack_,(numberRows_+1)*sizeof(int));
   } else {
-    toRoot_ = NULL;
+    permuteBack_ = NULL;
+  }
+  if (rhs.stack2_) {
+    stack2_ = new int [numberRows_+1];
+    memcpy(stack2_,rhs.stack2_,(numberRows_+1)*sizeof(int));
+  } else {
+    stack2_ = NULL;
+  }
+  if (rhs.depth_) {
+    depth_ = new int [numberRows_+1];
+    memcpy(depth_,rhs.depth_,(numberRows_+1)*sizeof(int));
+  } else {
+    depth_ = NULL;
   }
   if (rhs.mark_) {
     mark_ = new char [numberRows_+1];
@@ -195,8 +225,10 @@ ClpNetworkBasis::~ClpNetworkBasis ()
   delete [] leftSibling_;
   delete [] sign_;
   delete [] stack_;
-  delete [] toLeaf_;
-  delete [] toRoot_;
+  delete [] permute_;
+  delete [] permuteBack_;
+  delete [] stack2_;
+  delete [] depth_;
   delete [] mark_;
 }
 
@@ -214,14 +246,14 @@ ClpNetworkBasis::operator=(const ClpNetworkBasis& rhs)
     delete [] leftSibling_;
     delete [] sign_;
     delete [] stack_;
-    delete [] toLeaf_;
-    delete [] toRoot_;
+    delete [] permute_;
+    delete [] permuteBack_;
+    delete [] stack2_;
+    delete [] depth_;
     delete [] mark_;
     slackValue_=rhs.slackValue_;
     numberRows_=rhs.numberRows_;
     numberColumns_=rhs.numberColumns_;
-    root_ = rhs.root_;
-    leaf_ = rhs.leaf_;
     if (rhs.parent_) {
       parent_ = new int [numberRows_+1];
       memcpy(parent_,rhs.parent_,(numberRows_+1)*sizeof(int));
@@ -264,27 +296,70 @@ ClpNetworkBasis::operator=(const ClpNetworkBasis& rhs)
     } else {
       stack_ = NULL;
     }
-    if (rhs.toLeaf_) {
-      toLeaf_ = new int [numberRows_+1];
-      memcpy(toLeaf_,rhs.toLeaf_,(numberRows_+1)*sizeof(int));
+    if (rhs.permute_) {
+      permute_ = new int [numberRows_+1];
+      memcpy(permute_,rhs.permute_,(numberRows_+1)*sizeof(int));
     } else {
-      toLeaf_ = NULL;
+      permute_ = NULL;
     }
-    if (rhs.toRoot_) {
-      toRoot_ = new int [numberRows_+1];
-      memcpy(toRoot_,rhs.toRoot_,(numberRows_+1)*sizeof(int));
+    if (rhs.permuteBack_) {
+      permuteBack_ = new int [numberRows_+1];
+      memcpy(permuteBack_,rhs.permuteBack_,(numberRows_+1)*sizeof(int));
     } else {
-      toRoot_ = NULL;
+      permuteBack_ = NULL;
+    }
+    if (rhs.stack2_) {
+      stack2_ = new int [numberRows_+1];
+      memcpy(stack2_,rhs.stack2_,(numberRows_+1)*sizeof(int));
+    } else {
+      stack2_ = NULL;
+    }
+    if (rhs.depth_) {
+      depth_ = new int [numberRows_+1];
+      memcpy(depth_,rhs.depth_,(numberRows_+1)*sizeof(int));
+    } else {
+      depth_ = NULL;
     }
     if (rhs.mark_) {
       mark_ = new char [numberRows_+1];
       memcpy(mark_,rhs.mark_,(numberRows_+1)*sizeof(char));
     } else {
-    mark_ = NULL;
+      mark_ = NULL;
     }
-    model_=rhs.model_;
   }
   return *this;
+}
+// checks looks okay
+void ClpNetworkBasis::check()
+{
+  // check depth
+  int iPivot = numberRows_;
+  int nStack = 1;
+  stack_[0]=descendant_[numberRows_];
+  depth_[numberRows_]=-1; // root
+  while (nStack) {
+    // take off
+    int iNext = stack_[--nStack];
+    if (iNext>=0) {
+      assert (depth_[iNext]==nStack);
+      depth_[iNext] = nStack;
+      iPivot = iNext;
+      int iRight = rightSibling_[iNext];
+      stack_[nStack++] = iRight;
+      if (descendant_[iNext]>=0)
+	stack_[nStack++] = descendant_[iNext];
+    }
+  }
+}
+// prints
+void ClpNetworkBasis::print()
+{
+  int i;
+  printf("       parent descendant     left    right   sign    depth\n");
+  for (i=0;i<numberRows_+1;i++)
+    printf("%4d  %7d   %8d  %7d  %7d  %5g  %7d\n",
+	   i,parent_[i],descendant_[i],leftSibling_[i],rightSibling_[i],
+	   sign_[i],depth_[i]);
 }
 /* Replaces one Column to basis,
    returns 0=OK
@@ -293,11 +368,13 @@ int
 ClpNetworkBasis::replaceColumn ( CoinIndexedVector * regionSparse,
 				 int pivotRow)
 {
+  // When things have settled down then redo this to make more elegant
+  // I am sure lots of loops can be combined
   // regionSparse is empty
   assert (!regionSparse->getNumElements());
   model_->unpack(regionSparse, model_->sequenceIn());
   // arc given by pivotRow is leaving basis
-  int iParent = parent_[pivotRow];
+  //int kParent = parent_[pivotRow];
   // arc coming in has these two nodes
   int * indices = regionSparse->getIndices();
   int iRow0 = indices[0];
@@ -307,76 +384,305 @@ ClpNetworkBasis::replaceColumn ( CoinIndexedVector * regionSparse,
   else
     iRow1 = numberRows_;
   double sign = -regionSparse->denseVector()[iRow0];
-  printf("In %d (%g) %d pivoting on %d\n",
-	 iRow1, sign, iRow0,pivotRow);
   regionSparse->clear();
-  // take out of tree
-  int iLeft = leftSibling_[pivotRow];
-  int iRight = rightSibling_[pivotRow];
-  if (iLeft>=0) {
-    rightSibling_[iLeft] = iRight;
-    if (iRight>=0) 
-      leftSibling_[iRight]=iLeft;
-  } else if (iRight>=0) {
-    leftSibling_[iRight]=-1;
-    descendant_[iParent]=iRight;
+  // and outgoing
+  model_->unpack(regionSparse,model_->pivotVariable()[pivotRow]);
+  int jRow0 = indices[0];
+  int jRow1;
+  if (regionSparse->getNumElements()==2)
+    jRow1 = indices[1];
+  else
+    jRow1 = numberRows_;
+  regionSparse->clear();
+  // get correct pivotRow
+  //#define FULL_DEBUG
+#ifdef FULL_DEBUG
+  printf ("irow %d %d, jrow %d %d\n",
+	  iRow0,iRow1,jRow0,jRow1);
+#endif
+  if (parent_[jRow0]==jRow1) {
+    int newPivot = jRow0;
+    if (newPivot!=pivotRow) {
+#ifdef FULL_DEBUG
+      printf("pivot row of %d permuted to %d\n",pivotRow,newPivot);
+#endif
+      pivotRow = newPivot;
+    }
   } else {
-    descendant_[iParent]=-1;;
+    assert (parent_[jRow1]==jRow0);
+    int newPivot = jRow1;
+    if (newPivot!=pivotRow) {
+#ifdef FULL_DEBUG
+      printf("pivot row of %d permuted to %d\n",pivotRow,newPivot);
+#endif
+      pivotRow = newPivot;
+    }
   }
-  // move to other end of chain
-  int descendant = descendant_[pivotRow];
-  if (descendant>=0) {
-    // make this descendant of that
-    if (descendant_[descendant]>=0) {
-      // we have a sibling
-      int iRight = descendant_[descendant];
-      rightSibling_[pivotRow]=iRight;
-      leftSibling_[iRight]=pivotRow;
+  bool extraPrint = (model_->numberIterations()>-3)&&
+    (model_->logLevel()>10);
+  if (extraPrint)
+    print();
+#ifdef FULL_DEBUG
+  printf("In %d (region= %g, stored %g) %d (%g) pivoting on %d (%g)\n",
+	 iRow1, sign, sign_[iRow1], iRow0, sign_[iRow0] ,pivotRow,sign_[pivotRow]);
+#endif
+  // see which path outgoing pivot is on
+  int kRow = -1;
+  int jRow = iRow1;
+  while (jRow!=numberRows_) {
+    if (jRow==pivotRow) {
+      kRow = iRow1;
+      break;
     } else {
-      rightSibling_[pivotRow]=-1;
-    }	    
-    descendant_[descendant] = pivotRow;
-    leftSibling_[pivotRow]=-1;
+      jRow = parent_[jRow];
+    }
   }
-  // now insert new one
-  descendant = descendant_[iRow1];
-  parent_[iRow0] = iRow1;
-  sign_[iRow1]= sign;
-  if (descendant>=0) {
-    // we have a sibling
-    int iRight = descendant;
-    rightSibling_[iRow1]=iRight;
-    leftSibling_[iRight]=iRow1;
+  if (kRow<0) {
+    jRow = iRow0;
+    while (jRow!=numberRows_) {
+      if (jRow==pivotRow) {
+	kRow = iRow0;
+	break;
+      } else {
+	jRow = parent_[jRow];
+      }
+    }
+  }
+  assert (kRow>=0);
+  if (iRow0==kRow) {
+    iRow0 = iRow1;
+    iRow1 = kRow;
+    sign = -sign;
+  }
+  // pivot row is on path from iRow1 back to root
+  // get stack of nodes to change
+  // Also get precursors for cleaning order
+  int nStack=1;
+  stack_[0]=iRow0;
+  while (kRow!=pivotRow) {
+    stack_[nStack++] = kRow;
+    if (sign*sign_[kRow]<0.0) {
+      sign_[kRow]= -sign_[kRow];
+    } else {
+      sign = -sign;
+    }
+    kRow = parent_[kRow];
+    //sign *= sign_[kRow];
+  }
+  stack_[nStack++]=pivotRow;
+  if (sign*sign_[pivotRow]<0.0) {
+    sign_[pivotRow]= -sign_[pivotRow];
   } else {
-    rightSibling_[iRow1]=-1;
-  }	    
-  descendant_[descendant] = iRow1;
-  leftSibling_[iRow1]=-1;
+    sign = -sign;
+  }
+  int iParent = parent_[pivotRow];
+  while (nStack>1) {
+    int iLeft;
+    int iRight;
+    kRow = stack_[--nStack];
+    int newParent = stack_[nStack-1];
+#ifdef FULL_DEBUG
+    printf("row %d, old parent %d, new parent %d, pivotrow %d\n",kRow,
+	   iParent,newParent,pivotRow);
+#endif
+    int i1 = permuteBack_[pivotRow];
+    int i2 = permuteBack_[kRow];
+    permuteBack_[pivotRow]=i2;
+    permuteBack_[kRow]=i1;
+    // do Btran permutation
+    permute_[i1]=kRow;
+    permute_[i2]=pivotRow;
+    pivotRow = kRow;
+    // Take out of old parent 
+    iLeft = leftSibling_[kRow];
+    iRight = rightSibling_[kRow];
+    if (iLeft<0) {
+      // take out of tree
+      if (iRight>=0) {
+	leftSibling_[iRight]=iLeft;
+	descendant_[iParent]=iRight;
+      } else {
+#ifdef FULL_DEBUG
+	printf("Saying %d (old parent of %d) has no descendants\n",
+	       iParent, kRow);
+#endif
+	descendant_[iParent]=-1;
+      }
+    } else {
+      // take out of tree
+      rightSibling_[iLeft] = iRight;
+      if (iRight>=0) 
+	leftSibling_[iRight]=iLeft;
+    }
+    leftSibling_[kRow]=-1;
+    rightSibling_[kRow]=-1;
+    
+    // now insert new one
+    // make this descendant of that
+    if (descendant_[newParent]>=0) {
+      // we will have a sibling
+      int jRight = descendant_[newParent];
+      rightSibling_[kRow]=jRight;
+      leftSibling_[jRight]=kRow;
+    } else {
+      rightSibling_[kRow]=-1;
+    }	    
+    descendant_[newParent] = kRow;
+    leftSibling_[kRow]=-1;
+    parent_[kRow]=newParent;
+      
+    iParent = kRow;
+  }
+  // now redo all depths from stack_[1]
+  // This must be possible to combine - but later
+  {
+    int iPivot  = stack_[1];
+    int iDepth=depth_[parent_[iPivot]]; //depth of parent
+    iDepth ++; //correct for this one
+    int nStack = 1;
+    stack_[0]=iPivot;
+    while (nStack) {
+      // take off
+      int iNext = stack_[--nStack];
+      if (iNext>=0) {
+	// add stack level
+	depth_[iNext]=nStack+iDepth;
+	stack_[nStack++] = rightSibling_[iNext];
+	if (descendant_[iNext]>=0)
+	  stack_[nStack++] = descendant_[iNext];
+      }
+    }
+  }
+  if (extraPrint)
+    print();
+  //check();
   return 0;
 }
 
 /* Updates one column (FTRAN) from region2 */
 int 
-ClpNetworkBasis::updateColumn ( CoinIndexedVector * regionSparse2)
+ClpNetworkBasis::updateColumn (  CoinIndexedVector * regionSparse,
+				 CoinIndexedVector * regionSparse2)
 {
-  int iPivot=leaf_;
-  int numberNonZero=0;
-  double * array = regionSparse2->denseVector();
-  while (iPivot!=numberRows_) {
-    double pivotValue = array[iPivot];
-    if (pivotValue) {
-      numberNonZero++;
-      int otherRow = parent_[iPivot];
-      if (sign_[iPivot]<0) {
-	array[iPivot] = - pivotValue;
-	array[otherRow] += pivotValue;
-      } else {
-	array[otherRow] += pivotValue;
+  regionSparse->clear (  );
+  double *region = regionSparse->denseVector (  );
+  double *region2 = regionSparse2->denseVector (  );
+  int *regionIndex2 = regionSparse2->getIndices (  );
+  int numberNonZero = regionSparse2->getNumElements (  );
+  int *regionIndex = regionSparse->getIndices (  );
+  int i;
+  bool doTwo = (numberNonZero==2);
+  int i0;
+  int i1;
+  if (doTwo) {
+    i0 = regionIndex2[0];
+    i1 = regionIndex2[1];
+    doTwo =  (region2[i0]*region2[i1]<0.0);
+  }
+  if (doTwo) {
+    // If just +- 1 then could go backwards on depth until join
+    region[i0] = region2[i0];
+    region2[i0]=0.0;
+    region[i1] = region2[i1];
+    region2[i1]=0.0;
+    int iDepth0 = depth_[i0];
+    int iDepth1 = depth_[i1];
+    if (iDepth1>iDepth0) {
+      int temp = i0;
+      i0 = i1;
+      i1 = temp;
+      temp = iDepth0;
+      iDepth0 = iDepth1;
+      iDepth1 = temp;
+    }
+    numberNonZero=0;
+    while (iDepth0>iDepth1) {
+      double pivotValue = region[i0];
+      // put back now ?
+      int iBack = permuteBack_[i0];
+      regionIndex2[numberNonZero++] = iBack;
+      int otherRow = parent_[i0];
+      region2[iBack] = pivotValue*sign_[i0];
+      region[i0] =0.0;
+      region[otherRow] += pivotValue;
+      iDepth0--;
+      i0 = otherRow;
+    }
+    while (i0!=i1) {
+      double pivotValue = region[i0];
+      // put back now ?
+      int iBack = permuteBack_[i0];
+      regionIndex2[numberNonZero++] = iBack;
+      int otherRow = parent_[i0];
+      region2[iBack] = pivotValue*sign_[i0];
+      region[i0] =0.0;
+      region[otherRow] += pivotValue;
+      i0 = otherRow;
+      double pivotValue1 = region[i1];
+      // put back now ?
+      int iBack1 = permuteBack_[i1];
+      regionIndex2[numberNonZero++] = iBack1;
+      int otherRow1 = parent_[i1];
+      region2[iBack1] = pivotValue1*sign_[i1];
+      region[i1] =0.0;
+      region[otherRow1] += pivotValue1;
+      i1 = otherRow1;
+    }
+  } else {
+    // set up linked lists at each depth
+    // stack2 is start, stack is next
+    int greatestDepth=-1;
+    //mark_[numberRows_]=1;
+    for (i=0;i<numberNonZero;i++) {
+      int j = regionIndex2[i];
+      double value = region2[j];
+      region2[j]=0.0;
+      region[j]=value;
+      regionIndex[i]=j;
+      int iDepth = depth_[j];
+      if (iDepth>greatestDepth) 
+	greatestDepth = iDepth;
+      // and back until marked
+      while (!mark_[j]) {
+	int iNext = stack2_[iDepth];
+	stack2_[iDepth]=j;
+	stack_[j]=iNext;
+	mark_[j]=1;
+	iDepth--;
+	j=parent_[j];
       }
     }
-    iPivot = toRoot_[iPivot];
+    numberNonZero=0;
+    for (;greatestDepth>=0; greatestDepth--) {
+      int iPivot = stack2_[greatestDepth];
+      stack2_[greatestDepth]=-1;
+      while (iPivot>=0) {
+	mark_[iPivot]=0;
+	double pivotValue = region[iPivot];
+	if (pivotValue) {
+	  // put back now ?
+	  int iBack = permuteBack_[iPivot];
+	  regionIndex2[numberNonZero++] = iBack;
+	  int otherRow = parent_[iPivot];
+	  region2[iBack] = pivotValue*sign_[iPivot];
+	  region[iPivot] =0.0;
+	  region[otherRow] += pivotValue;
+	}
+	iPivot = stack_[iPivot];
+      }
+    }
   }
-  array[numberRows_]=0.0;
+  region[numberRows_]=0.0;
+  regionSparse2->setNumElements(numberNonZero);
+#ifdef FULL_DEBUG
+ {
+   int i;
+   for (i=0;i<numberRows_;i++) {
+     assert(!mark_[i]);
+     assert (stack2_[i]==-1);
+   }
+ }
+#endif
   return numberNonZero;
 }
 /* Updates one column (FTRAN) to/from array 
@@ -385,25 +691,58 @@ ClpNetworkBasis::updateColumn ( CoinIndexedVector * regionSparse2)
    have got code working using this simple method - thank you!
    (the only exception is if you know input is dense e.g. rhs) */
 int 
-ClpNetworkBasis::updateColumn ( double array[] ) const
+ClpNetworkBasis::updateColumn (  CoinIndexedVector * regionSparse,
+				 double region2[] ) const
 {
-  int iPivot=leaf_;
-  int numberNonZero=0;
-  while (iPivot!=numberRows_) {
-    double pivotValue = array[iPivot];
-    if (pivotValue) {
-      numberNonZero++;
-      int otherRow = parent_[iPivot];
-      if (sign_[iPivot]<0) {
-	array[iPivot] = - pivotValue;
-	array[otherRow] += pivotValue;
-      } else {
-	array[otherRow] += pivotValue;
+  regionSparse->clear (  );
+  double *region = regionSparse->denseVector (  );
+  int numberNonZero = 0;
+  int *regionIndex = regionSparse->getIndices (  );
+  int i;
+  // set up linked lists at each depth
+  // stack2 is start, stack is next
+  int greatestDepth=-1;
+  for (i=0;i<numberRows_;i++) {
+    double value = region2[i];
+    if (value) {
+      region2[i]=0.0;
+      region[i]=value;
+      regionIndex[numberNonZero++]=i;
+      int j=i;
+      int iDepth = depth_[j];
+      if (iDepth>greatestDepth) 
+	greatestDepth = iDepth;
+      // and back until marked
+      while (!mark_[j]) {
+	int iNext = stack2_[iDepth];
+	stack2_[iDepth]=j;
+	stack_[j]=iNext;
+	mark_[j]=1;
+	iDepth--;
+	j=parent_[j];
       }
     }
-    iPivot = toRoot_[iPivot];
   }
-  array[numberRows_]=0.0;
+  numberNonZero=0;
+  for (;greatestDepth>=0; greatestDepth--) {
+    int iPivot = stack2_[greatestDepth];
+    stack2_[greatestDepth]=-1;
+    while (iPivot>=0) {
+      mark_[iPivot]=0;
+      double pivotValue = region[iPivot];
+      if (pivotValue) {
+	// put back now ?
+	int iBack = permuteBack_[iPivot];
+	numberNonZero++;
+	int otherRow = parent_[iPivot];
+	region2[iBack] = pivotValue*sign_[iPivot];
+	region[iPivot] =0.0;
+	region[otherRow] += pivotValue;
+      }
+      iPivot = stack_[iPivot];
+    }
+  }
+  region[numberRows_]=0.0;
   return numberNonZero;
 }
 /* Updates one column transpose (BTRAN)
@@ -413,16 +752,169 @@ ClpNetworkBasis::updateColumn ( double array[] ) const
    (the only exception is if you know input is dense e.g. dense objective)
    returns number of nonzeros */
 int 
-ClpNetworkBasis::updateColumnTranspose ( double array[] ) const
+ClpNetworkBasis::updateColumnTranspose (  CoinIndexedVector * regionSparse,
+					  double region2[] ) const
 {
-  abort();
-  return 1;
+  // permute in after copying
+  // so will end up in right place
+  double *region = regionSparse->denseVector (  );
+  int *regionIndex = regionSparse->getIndices (  );
+  int i;
+  int numberNonZero=0;
+  memcpy(region,region2,numberRows_*sizeof(double));
+  for (i=0;i<numberRows_;i++) {
+    double value = region[i];
+    if (value) {
+      int k = permute_[i];
+      region[i]=0.0;
+      region2[k]=value;
+      regionIndex[numberNonZero++]=k;
+      mark_[k]=1;
+    }
+  }
+  // copy back
+  // set up linked lists at each depth
+  // stack2 is start, stack is next
+  int greatestDepth=-1;
+  int smallestDepth=numberRows_;
+  for (i=0;i<numberNonZero;i++) {
+    int j = regionIndex[i];
+    // add in
+    int iDepth = depth_[j];
+    smallestDepth = min(iDepth,smallestDepth) ;
+    greatestDepth = max(iDepth,greatestDepth) ;
+    int jNext = stack2_[iDepth];
+    stack2_[iDepth]=j;
+    stack_[j]=jNext;
+    // and put all descendants on list
+    int iChild = descendant_[j];
+    while (iChild>=0) {
+      if (!mark_[iChild]) {
+	regionIndex[numberNonZero++] = iChild;
+	mark_[iChild]=1;
+      }
+      iChild = rightSibling_[iChild];
+    }
+  }
+  numberNonZero=0;
+  region2[numberRows_]=0.0;
+  int iDepth;
+  for (iDepth=smallestDepth;iDepth<=greatestDepth; iDepth++) {
+    int iPivot = stack2_[iDepth];
+    stack2_[iDepth]=-1;
+    while (iPivot>=0) {
+      mark_[iPivot]=0;
+      double pivotValue = region2[iPivot];
+      int otherRow = parent_[iPivot];
+      double otherValue = region2[otherRow];
+      pivotValue = sign_[iPivot]*pivotValue+otherValue;
+      region2[iPivot]=pivotValue;
+      if (pivotValue) 
+	numberNonZero++;
+      iPivot = stack_[iPivot];
+    }
+  }
+  return numberNonZero;
 }
 /* Updates one column (BTRAN) from region2 */
 int 
-ClpNetworkBasis::updateColumnTranspose ( 
+ClpNetworkBasis::updateColumnTranspose (  CoinIndexedVector * regionSparse,
 					CoinIndexedVector * regionSparse2) const
 {
-  abort();
-  return 1;
+  // permute in - presume small number so copy back
+  // so will end up in right place
+  regionSparse->clear (  );
+  double *region = regionSparse->denseVector (  );
+  double *region2 = regionSparse2->denseVector (  );
+  int *regionIndex2 = regionSparse2->getIndices (  );
+  int numberNonZero2 = regionSparse2->getNumElements (  );
+  int *regionIndex = regionSparse->getIndices (  );
+  int i;
+  int numberNonZero=0;
+  for (i=0;i<numberNonZero2;i++) {
+    int k = regionIndex2[i];
+    int j = permute_[k];
+    double value = region2[k];
+    region2[k]=0.0;
+    region[j]=value;
+    mark_[j]=1;
+    regionIndex[numberNonZero++]=j;
+  }
+  // copy back
+  // set up linked lists at each depth
+  // stack2 is start, stack is next
+  int greatestDepth=-1;
+  int smallestDepth=numberRows_;
+  //mark_[numberRows_]=1;
+  for (i=0;i<numberNonZero2;i++) {
+    int j = regionIndex[i];
+    double value = region[j];
+    region[j]=0.0;
+    region2[j]=value;
+    regionIndex2[i]=j;
+    // add in
+    int iDepth = depth_[j];
+    smallestDepth = min(iDepth,smallestDepth) ;
+    greatestDepth = max(iDepth,greatestDepth) ;
+    int jNext = stack2_[iDepth];
+    stack2_[iDepth]=j;
+    stack_[j]=jNext;
+    // and put all descendants on list
+    int iChild = descendant_[j];
+    while (iChild>=0) {
+      if (!mark_[iChild]) {
+	regionIndex2[numberNonZero++] = iChild;
+	mark_[iChild]=1;
+      }
+      iChild = rightSibling_[iChild];
+    }
+  }
+  for (;i<numberNonZero;i++) {
+    int j = regionIndex2[i];
+    // add in
+    int iDepth = depth_[j];
+    smallestDepth = min(iDepth,smallestDepth) ;
+    greatestDepth = max(iDepth,greatestDepth) ;
+    int jNext = stack2_[iDepth];
+    stack2_[iDepth]=j;
+    stack_[j]=jNext;
+    // and put all descendants on list
+    int iChild = descendant_[j];
+    while (iChild>=0) {
+      if (!mark_[iChild]) {
+	regionIndex2[numberNonZero++] = iChild;
+	mark_[iChild]=1;
+      }
+      iChild = rightSibling_[iChild];
+    }
+  }
+  numberNonZero2=0;
+  region2[numberRows_]=0.0;
+  int iDepth;
+  for (iDepth=smallestDepth;iDepth<=greatestDepth; iDepth++) {
+    int iPivot = stack2_[iDepth];
+    stack2_[iDepth]=-1;
+    while (iPivot>=0) {
+      mark_[iPivot]=0;
+      double pivotValue = region2[iPivot];
+      int otherRow = parent_[iPivot];
+      double otherValue = region2[otherRow];
+      pivotValue = sign_[iPivot]*pivotValue+otherValue;
+      region2[iPivot]=pivotValue;
+      if (pivotValue) 
+	regionIndex2[numberNonZero2++]=iPivot;
+      iPivot = stack_[iPivot];
+    }
+  }
+  regionSparse2->setNumElements(numberNonZero2);
+#ifdef FULL_DEBUG
+ {
+   int i;
+   for (i=0;i<numberRows_;i++) {
+     assert(!mark_[i]);
+     assert (stack2_[i]==-1);
+   }
+ }
+#endif
+  return numberNonZero2;
 }

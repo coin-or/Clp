@@ -9,7 +9,12 @@
 #include "ClpMatrixBase.hpp"
 #include "ClpNetworkBasis.hpp"
 #include "ClpNetworkMatrix.hpp"
-
+//#define CHECK_NETWORK
+#ifdef CHECK_NETWORK
+const static bool doCheck=true;
+#else
+const static bool doCheck=false;
+#endif
 
 //#############################################################################
 // Constructors / Destructor / Assignment
@@ -73,14 +78,15 @@ ClpFactorization::factorize ( const ClpSimplex * model,
 			      int rowIsBasic[], int columnIsBasic[] , 
 			      double areaFactor )
 {
-  if (!networkBasis_||1) {
+  if (!networkBasis_||doCheck) {
     // see if matrix a network
     ClpNetworkMatrix* networkMatrix =
       dynamic_cast< ClpNetworkMatrix*>(model->clpMatrix());
     // If network - still allow ordinary factorization first time for laziness
-    networkMatrix=NULL;
     int saveMaximumPivots = maximumPivots();
-    if (networkMatrix)
+    delete networkBasis_;
+    networkBasis_ = NULL;
+    if (networkMatrix&&!doCheck)
       maximumPivots(1);
     // maybe for speed will be better to leave as many regions as possible
     gutsOfDestructor();
@@ -189,7 +195,8 @@ ClpFactorization::factorize ( const ClpSimplex * model,
       maximumPivots(saveMaximumPivots);
       if (!status_) {
 	// create network factorization
-	delete networkBasis_; // temp
+	if (doCheck)
+	  delete networkBasis_; // temp
         networkBasis_ = new ClpNetworkBasis(model,numberRows_,
 					    pivotRegion_,
 					    permuteBack_,
@@ -198,7 +205,8 @@ ClpFactorization::factorize ( const ClpSimplex * model,
 					    indexRowU_,
 					    elementU_);
 	// kill off arrays in ordinary factorization
-	//gutsOfDestructor(); temp
+	if (!doCheck)
+	  gutsOfDestructor();
       }
     }
   } else {
@@ -227,13 +235,20 @@ ClpFactorization::replaceColumn ( CoinIndexedVector * regionSparse,
 					    pivotCheck,
 					    checkBeforeModifying);
   } else {
-    int returnCode = CoinFactorization::replaceColumn(regionSparse,
-					    pivotRow,
-					    pivotCheck,
-					    checkBeforeModifying);
-    networkBasis_->replaceColumn(regionSparse,
-					pivotRow);
-    return returnCode;
+    if (doCheck) {
+      int returnCode = CoinFactorization::replaceColumn(regionSparse,
+							pivotRow,
+							pivotCheck,
+							checkBeforeModifying);
+      networkBasis_->replaceColumn(regionSparse,
+				   pivotRow);
+      return returnCode;
+    } else {
+      // increase number of pivots
+      numberPivots_++;
+      return networkBasis_->replaceColumn(regionSparse,
+				   pivotRow);
+    }
   }
 }
 
@@ -245,22 +260,30 @@ ClpFactorization::updateColumn ( CoinIndexedVector * regionSparse,
 				 CoinIndexedVector * regionSparse2,
 				 bool FTUpdate) 
 {
+  regionSparse->checkClear();
   if (!networkBasis_) {
     return CoinFactorization::updateColumn(regionSparse,
 					   regionSparse2,
 					   FTUpdate);
   } else {
+#ifdef CHECK_NETWORK
     CoinIndexedVector * save = new CoinIndexedVector(*regionSparse2);
     int returnCode = CoinFactorization::updateColumn(regionSparse,
-					   regionSparse2, FTUpdate);
-    networkBasis_->updateColumn(save);
+						     regionSparse2, FTUpdate);
+    networkBasis_->updateColumn(regionSparse,save);
     int i;
     double * array = regionSparse2->denseVector();
     double * array2 = save->denseVector();
-    for (i=0;i<numberRows_;i++)
-      assert (array2[i]==array[i]);
+    for (i=0;i<numberRows_;i++) {
+      double value1 = array[i];
+      double value2 = array2[i];
+      assert (value1==value2);
+    }
     delete save;
     return returnCode;
+#else
+    return networkBasis_->updateColumn(regionSparse,regionSparse2);
+#endif
   }
 }
 /* Updates one column (FTRAN) to/from array 
@@ -278,16 +301,20 @@ ClpFactorization::updateColumn ( CoinIndexedVector * regionSparse,
     return CoinFactorization::updateColumn(regionSparse,
 					   array);
   } else {
+#ifdef CHECK_NETWORK
     double * save = new double [numberRows_+1];
     memcpy(save,array,(numberRows_+1)*sizeof(double));
     int returnCode = CoinFactorization::updateColumn(regionSparse,
-					   array);
-    networkBasis_->updateColumn(save);
+						     array);
+    networkBasis_->updateColumn(regionSparse, save);
     int i;
     for (i=0;i<numberRows_;i++)
-      assert (save[i]==array[i]);
+      assert (fabs(save[i]-array[i])<1.0e-8*(1.0+fabs(array[i])));
     delete [] save;
     return returnCode;
+#else
+    return networkBasis_->updateColumn(regionSparse, array);
+#endif
   }
 }
 /* Updates one column transpose (BTRAN)
@@ -300,11 +327,24 @@ int
 ClpFactorization::updateColumnTranspose ( CoinIndexedVector * regionSparse,
 					  double array[] ) const
 {
-  if (!networkBasis_||1) {
+  if (!networkBasis_) {
     return CoinFactorization::updateColumnTranspose(regionSparse,
 						    array);
   } else {
-    return networkBasis_->updateColumnTranspose(array);
+#ifdef CHECK_NETWORK
+    double * save = new double [numberRows_+1];
+    memcpy(save,array,(numberRows_+1)*sizeof(double));
+    int returnCode = CoinFactorization::updateColumnTranspose(regionSparse,
+							      array);
+    networkBasis_->updateColumnTranspose(regionSparse, save);
+    int i;
+    for (i=0;i<numberRows_;i++)
+      assert (fabs(save[i]-array[i])<1.0e-8*(1.0+fabs(array[i])));
+    delete [] save;
+    return returnCode;
+#else
+    return networkBasis_->updateColumnTranspose(regionSparse, array);
+#endif
   }
 }
 /* Updates one column (BTRAN) from region2
@@ -313,11 +353,28 @@ int
 ClpFactorization::updateColumnTranspose ( CoinIndexedVector * regionSparse,
     			  CoinIndexedVector * regionSparse2) const
 {
-  if (!networkBasis_||1) {
+  if (!networkBasis_) {
     return CoinFactorization::updateColumnTranspose(regionSparse,
 						    regionSparse2);
   } else {
-    return networkBasis_->updateColumnTranspose( regionSparse2);
+#ifdef CHECK_NETWORK
+      CoinIndexedVector * save = new CoinIndexedVector(*regionSparse2);
+      int returnCode = CoinFactorization::updateColumnTranspose(regionSparse,
+								regionSparse2);
+      networkBasis_->updateColumnTranspose(regionSparse,save);
+      int i;
+      double * array = regionSparse2->denseVector();
+      double * array2 = save->denseVector();
+      for (i=0;i<numberRows_;i++) {
+	double value1 = array[i];
+	double value2 = array2[i];
+	assert (value1==value2);
+      }
+      delete save;
+      return returnCode;
+#else
+      return networkBasis_->updateColumnTranspose(regionSparse,regionSparse2);
+#endif
   }
 }
 /* makes a row copy of L for speed and to allow very sparse problems */
@@ -326,4 +383,23 @@ ClpFactorization::goSparse()
 {
   if (!networkBasis_) 
     CoinFactorization::goSparse();
+}
+// Cleans up i.e. gets rid of network basis 
+void 
+ClpFactorization::cleanUp()
+{
+  delete networkBasis_;
+  networkBasis_=NULL;
+}
+/// Says whether to redo pivot order
+bool 
+ClpFactorization::needToReorder() const
+{
+#ifdef CHECK_NETWORK
+  return true;
+#endif
+  if (!networkBasis_)
+    return true;
+  else
+    return false;
 }

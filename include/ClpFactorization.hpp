@@ -109,6 +109,10 @@ public:
   //@{ 
   /** makes a row copy of L for speed and to allow very sparse problems */
   void goSparse();
+  /// Cleans up i.e. gets rid of network basis 
+  void cleanUp();
+  /// Says whether to redo pivot order
+  bool needToReorder() const;
   //@}
 
 ////////////////// data //////////////////

@@ -841,15 +841,18 @@ int ClpSimplex::internalFactorize ( int solveType)
       }
     }
     if (!status) {
-      // do pivot information
-      for (i=0;i<numberRows_;i++) {
-	if (getRowStatus(i) == basic) {
-	  pivotVariable_[rowIsBasic[i]]=i+numberColumns_;
+  /// See whether to redo pivot order
+      if (factorization_->needToReorder()||!numberIterations_) {
+	// do pivot information
+	for (i=0;i<numberRows_;i++) {
+	  if (getRowStatus(i) == basic) {
+	    pivotVariable_[rowIsBasic[i]]=i+numberColumns_;
+	  }
 	}
-      }
-      for (i=0;i<numberColumns_;i++) {
-	if (getColumnStatus(i) == basic) {
-	  pivotVariable_[columnIsBasic[i]]=i;
+	for (i=0;i<numberColumns_;i++) {
+	  if (getColumnStatus(i) == basic) {
+	    pivotVariable_[columnIsBasic[i]]=i;
+	  }
 	}
       }
     } else {
@@ -3926,6 +3929,7 @@ ClpSimplex::startup(int ifValuesPass)
     // row activities have negative sign
     factorization_->slackValue(-1.0);
     factorization_->zeroTolerance(1.0e-13);
+    numberIterations_=0;
 
     // do perturbation if asked for
 
@@ -3966,7 +3970,6 @@ ClpSimplex::startup(int ifValuesPass)
 	<<CoinMessageEol;
     
     problemStatus_ = -1;
-    numberIterations_=0;
     
     // number of times we have declared optimality
     numberTimesOptimal_=0;
@@ -3989,6 +3992,8 @@ ClpSimplex::finish()
     <<objectiveValue()
     <<CoinMessageEol;
   factorization_->relaxAccuracyCheck(1.0);
+  // get rid of any network stuff - could do more
+  factorization_->cleanUp();
 }
 // Save data
 ClpDataSave 
