@@ -226,13 +226,9 @@ ClpPackedMatrix::times(double scalar,
 	for (j=columnStart[iColumn];
 	     j<columnStart[iColumn]+columnLength[iColumn];j++) {
 	  iRow=row[j];
-	  y[iRow] += value*elementByColumn[j];
+	  y[iRow] += value*elementByColumn[j]*rowScale[iRow];
 	}
       }
-    }
-    int numberRows = getNumRows();
-    for (iRow=0;iRow<numberRows;iRow++) {
-      y[iRow] *= rowScale[iRow];
     }
   } else {
     times(scalar,x,y);

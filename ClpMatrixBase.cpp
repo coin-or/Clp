@@ -406,8 +406,8 @@ ClpMatrixBase::checkFeasible(ClpSimplex * model) const
   int iColumn;
   int logLevel = model->messageHandler()->logLevel();
   int numberInfeasible=0;
-  const double * rowLower = model->rowLower();
-  const double * rowUpper = model->rowUpper();
+  const double * rowLower = model->lowerRegion(0);
+  const double * rowUpper = model->upperRegion(0);
   const double * solution;
   solution = model->solutionRegion(0);
   double tolerance = model->primalTolerance()*1.01;
@@ -428,8 +428,8 @@ ClpMatrixBase::checkFeasible(ClpSimplex * model) const
       assert (model->getRowStatus(iRow)==ClpSimplex::superBasic);
     }
   }
-  const double * columnLower = model->columnLower();
-  const double * columnUpper = model->columnUpper();
+  const double * columnLower = model->lowerRegion(1);
+  const double * columnUpper = model->upperRegion(1);
   solution = model->solutionRegion(1);
   for (iColumn=0;iColumn<numberColumns;iColumn++) {
     double value= solution[iColumn];
