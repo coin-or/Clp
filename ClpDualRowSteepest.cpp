@@ -130,8 +130,10 @@ ClpDualRowSteepest::pivotRow()
   int lastPivotRow = model_->pivotRow();
   double tolerance=model_->currentPrimalTolerance();
   // we can't really trust infeasibilities if there is primal error
-  if (model_->largestPrimalError()>1.0e-8)
-    tolerance *= model_->largestPrimalError()/1.0e-8;
+  // this coding has to mimic coding in checkPrimalSolution
+  double error = min(1.0e-3,model_->largestPrimalError());
+  // allow tolerance at least slightly bigger than standard
+  tolerance = tolerance +  error;
   tolerance *= tolerance; // as we are using squares
   double * solution = model_->solutionRegion();
   double * lower = model_->lowerRegion();

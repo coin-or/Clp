@@ -158,6 +158,11 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
   double dj = model_->dualIn();
   double * infeas = infeasible_->denseVector();
   double tolerance=model_->currentDualTolerance();
+  // we can't really trust infeasibilities if there is dual error
+  // this coding has to mimic coding in checkDualSolution
+  double error = min(1.0e-3,model_->largestDualError());
+  // allow tolerance at least slightly bigger than standard
+  tolerance = tolerance +  error;
   int pivotRow = model_->pivotRow();
 
   int anyUpdates;
