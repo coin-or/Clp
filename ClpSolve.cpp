@@ -26,7 +26,7 @@
 //#############################################################################
 // Allow for interrupts
 // But is this threadsafe ? (so switched off by option
-#include <csignal>
+#include <signal.h>
 static ClpSimplex * currentModel = NULL;
 static void signal_handler(int whichSignal)
 {

@@ -792,6 +792,12 @@ Idiot::crossOver(int mode)
     }
     model_->setColumnStatus(i,ClpSimplex::superBasic);
   }
+  double maxmin;
+  if (model_->getObjSense()==-1.0) {
+    maxmin=-1.0;
+  } else {
+    maxmin=1.0;
+  }
   if (slackStart>=0) {
     for (i=0;i<nrows;i++) {
       model_->setRowStatus(i,ClpSimplex::superBasic);
@@ -837,7 +843,7 @@ Idiot::crossOver(int mode)
 	  }
 	} else {
 	  /* move to improve objective */
-	  if (cost[i]>=0.0) {
+	  if (cost[i]*maxmin>0.0) {
 	    if (value>0.0) {
 	      move=(rlo-rowsol[irow])/value;
 	      /* reduce */
@@ -847,7 +853,7 @@ Idiot::crossOver(int mode)
 	      /* increase */
 	      if (csol+move>cup) move=max(0.0,cup-csol);
 	    }
-	  } else {
+	  } else if (cost[i]*maxmin<0.0) {
 	    if (value>0.0) {
 	      move=(rup-rowsol[irow])/value;
 	      /* increase */

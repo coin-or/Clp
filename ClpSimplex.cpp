@@ -2238,13 +2238,15 @@ ClpSimplex::deleteRim(int getRidOfFactorizationData)
 	numberPrimalUnscaled++;
       else if (value>rowUpper_[i]+primalTolerance_)
 	numberPrimalUnscaled++;
-      double valueScaledDual = dual_[i];
+      double valueScaledDual = dual_[i]+rowObjectiveWork_[i];;
       if (valueScaled>rowLowerWork_[i]+primalTolerance_&&valueScaledDual>dualTolerance_)
 	numberDualScaled++;
       if (valueScaled<rowUpperWork_[i]-primalTolerance_&&valueScaledDual<-dualTolerance_)
 	numberDualScaled++;
       dual_[i] = valueScaledDual*scaleFactor;
       double valueDual = dual_[i]; 
+      if (rowObjective_)
+	valueDual += rowObjective_[i];
       if (value>rowLower_[i]+primalTolerance_&&valueDual>dualTolerance_)
 	numberDualUnscaled++;
       if (value<rowUpper_[i]-primalTolerance_&&valueDual<-dualTolerance_)

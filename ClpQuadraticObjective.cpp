@@ -257,8 +257,8 @@ ClpQuadraticObjective::resize(int newNumberColumns)
 	int i;
 	for (i=newNumberColumns;i<numberColumns_;i++) 
 	  which[i-newNumberColumns]=i;
-	quadraticObjective_->deleteCols(numberColumns_-newNumberColumns,which);
 	quadraticObjective_->deleteRows(numberColumns_-newNumberColumns,which);
+	quadraticObjective_->deleteCols(numberColumns_-newNumberColumns,which);
 	delete [] which;
       } else {
 	quadraticObjective_->setDimensions(newNumberColumns,newNumberColumns);
