@@ -25,6 +25,7 @@
 #include "ClpParameters.hpp"
 #include "ClpNetworkMatrix.hpp"
 #include "ClpPlusMinusOneMatrix.hpp"
+#include "MyMessageHandler.hpp" 
 
 #include "Presolve.hpp"
 #ifdef CLP_IDIOT
@@ -531,6 +532,48 @@ ClpSimplexUnitTest(const std::string & mpsDir,
 			 m.getObjCoefficients(),
 			 m.getRowLower(),m.getRowUpper());
     solution.dual();
+  }
+  // Test Message handler
+  {    
+    CoinMpsIO m;
+    std::string fn = mpsDir+"exmip1";
+    m.readMps(fn.c_str(),"mps");
+    ClpSimplex solution;
+    solution.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
+			 m.getObjCoefficients(),
+			 m.getRowLower(),m.getRowUpper());
+    // Message handler
+    MyMessageHandler messageHandler(&solution);
+    std::cout<<"Testing derived message handler"<<std::endl;
+    solution.passInMessageHandler(&messageHandler);
+    solution.primal();
+
+    // Write saved solutions
+    int nc = solution.getNumCols();
+    int s; 
+    std::deque<StdVectorDouble> fep = messageHandler.getFeasibleExtremePoints();
+    int numSavedSolutions = fep.size();
+    for ( s=0; s<numSavedSolutions; ++s ) {
+      const StdVectorDouble & solnVec = fep[s];
+      for ( int c=0; c<nc; ++c ) {
+        if (fabs(solnVec[c])>1.0e-8)
+          std::cout <<"Saved Solution: " <<s <<" ColNum: " <<c <<" Value: " <<solnVec[c] <<std::endl;
+      }
+    }
+    // solve again without scaling
+    messageHandler.clearFeasibleExtremePoints();
+    solution.scaling(0);
+    solution.allSlackBasis();
+    solution.primal();
+    fep = messageHandler.getFeasibleExtremePoints();
+    numSavedSolutions = fep.size();
+    for ( s=0; s<numSavedSolutions; ++s ) {
+      const StdVectorDouble & solnVec = fep[s];
+      for ( int c=0; c<nc; ++c ) {
+        if (fabs(solnVec[c])>1.0e-8)
+          std::cout <<"Saved Solution: " <<s <<" ColNum: " <<c <<" Value: " <<solnVec[c] <<std::endl;
+      }
+    }
   }
   // test steepest edge
   {    
