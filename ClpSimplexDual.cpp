@@ -439,6 +439,7 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
   // status stays at -1 while iterating, >=0 finished, -2 to invert
   // status -3 to go to top without an invert
   int returnCode = -1;
+  double saveSumDual = sumDualInfeasibilities_; // so we know to be careful
 
 #if 0
   // compute average infeasibility for backward test
@@ -658,7 +659,8 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
       dualRowPivot_->checkAccuracy();
       // Get good size for pivot
       double acceptablePivot=1.0e-7;
-      if (factorization_->pivots()>10)
+      if (factorization_->pivots()>10||
+	  (factorization_->pivots()&&saveSumDual))
 	acceptablePivot=1.0e-5; // if we have iterated be more strict
       else if (factorization_->pivots()>5)
 	acceptablePivot=1.0e-6; // if we have iterated be slightly more strict
@@ -2405,6 +2407,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 				      double * givenDuals)
 {
   bool normalType=true;
+  double realDualInfeasibilities=0.0;
   if (type==2) {
     // trouble - restore solution
     memcpy(status_ ,saveStatus_,(numberColumns_+numberRows_)*sizeof(char));
@@ -2472,12 +2475,19 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	  int dummy;
 	  matrix_->generalExpanded(this,6,dummy);
 	  // debug
-#ifndef NDEBUG
 	  int returnCode = internalFactorize(1);
-	  assert (returnCode==0);
-#else
-	  internalFactorize(1);
-#endif
+	  while (returnCode) {
+	    // ouch 
+	    // switch off dense
+	    int saveDense = factorization_->denseThreshold();
+	    factorization_->setDenseThreshold(0);
+	    // Go to safe
+	    factorization_->pivotTolerance(0.99);
+	    // make sure will do safe factorization
+	    pivotVariable_[0]=-1;
+	    returnCode=internalFactorize(2);
+	    factorization_->setDenseThreshold(saveDense);
+	  }
 	}
       }
     }
@@ -2531,6 +2541,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 		     <numberDualInfeasibilities_)
 		       <<numberDualInfeasibilitiesWithoutFree_;
   handler_->message()<<CoinMessageEol;
+  realDualInfeasibilities=sumDualInfeasibilities_;
   double saveTolerance =dualTolerance_;
   /* If we are primal feasible and any dual infeasibilities are on
      free variables then it is better to go to primal */
@@ -2914,6 +2925,8 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
     problemStatus_=4; // unknown
   }
   lastGoodIteration_ = numberIterations_;
+  if (problemStatus_<0)
+    sumDualInfeasibilities_=realDualInfeasibilities; // back to say be careful
 #if 0
   double thisObj = progress->lastObjective(0);
   double lastObj = progress->lastObjective(1);
