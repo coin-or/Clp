@@ -78,7 +78,7 @@ ClpFactorization::factorize ( const ClpSimplex * model,
     ClpNetworkMatrix* networkMatrix =
       dynamic_cast< ClpNetworkMatrix*>(model->clpMatrix());
     // If network - still allow ordinary factorization first time for laziness
-
+    networkMatrix=NULL;
     int saveMaximumPivots = maximumPivots();
     if (networkMatrix)
       maximumPivots(1);
