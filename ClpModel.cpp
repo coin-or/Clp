@@ -2445,14 +2445,12 @@ ClpModel::ClpModel ( const ClpModel * rhs,
   for (i=0;i<numberRows;i++)
     if (whichRow[i]<0||whichRow[i]>=rhs->numberRows_)
       numberBad++;
-  if (numberBad)
-    throw CoinError("bad row list", "subproblem constructor", "ClpModel");
+  CoinAssertHint(!numberBad,"Bad row list for subproblem constructor");
   numberBad=0;
   for (i=0;i<numberColumns;i++)
     if (whichColumn[i]<0||whichColumn[i]>=rhs->numberColumns_)
       numberBad++;
-  if (numberBad)
-    throw CoinError("bad column list", "subproblem constructor", "ClpModel");
+  CoinAssertHint(!numberBad,"Bad Column list for subproblem constructor");
   numberRows_ = numberRows;
   numberColumns_ = numberColumns;
   userPointer_ = rhs->userPointer_;
