@@ -26,32 +26,6 @@
 #include <string>
 #include <stdio.h>
 #include <iostream>
-// This returns a non const array filled with input from scalar
-// or actual array
-template <class T> inline T*
-copyOfArray( const T * array, const int size, T value)
-{
-  T * arrayNew = new T[size];
-  if (array) 
-    CoinDisjointCopyN(array,size,arrayNew);
-  else
-    CoinFillN ( arrayNew, size,value);
-  return arrayNew;
-}
-
-// This returns a non const array filled with actual array (or NULL)
-template <class T> inline T*
-copyOfArray( const T * array, const int size)
-{
-  if (array) {
-    T * arrayNew = new T[size];
-    CoinDisjointCopyN(array,size,arrayNew);
-    return arrayNew;
-  } else {
-    return NULL;
-  }
-}
-
 //#############################################################################
 
 ClpSimplex::ClpSimplex () :
@@ -272,16 +246,16 @@ ClpSimplex::computePrimals ( const double * rowActivities,
   double * previous = new double [numberRows_];
 
   // accumulate non basic stuff 
-  CoinFillN(array,numberRows_,0.0);
+  ClpFillN(array,numberRows_,0.0);
 
   int iRow;
   // order is this way for scaling
   // Use whole matrix every time to make it easier for ClpMatrixBase
   // So zero out basic
   if (columnActivities!=columnActivityWork_)
-    CoinDisjointCopyN(columnActivities,numberColumns_,columnActivityWork_);
+    ClpDisjointCopyN(columnActivities,numberColumns_,columnActivityWork_);
   if (rowActivities!=rowActivityWork_)
-    CoinDisjointCopyN(rowActivities,numberRows_,rowActivityWork_);
+    ClpDisjointCopyN(rowActivities,numberRows_,rowActivityWork_);
   for (iRow=0;iRow<numberRows_;iRow++) {
     int iPivot=pivotVariable_[iRow];
     solution_[iPivot] = 0.0;
@@ -300,7 +274,7 @@ ClpSimplex::computePrimals ( const double * rowActivities,
 
   for (iRefine=0;iRefine<numberRefinements_+1;iRefine++) {
     // save in case we want to restore
-    CoinDisjointCopyN ( array, numberRows_ , save);
+    ClpDisjointCopyN ( array, numberRows_ , save);
 
     // put solution in correct place
     for (iRow=0;iRow<numberRows_;iRow++) {
@@ -349,7 +323,7 @@ ClpSimplex::computePrimals ( const double * rowActivities,
   }
 
   // solution as accurate as we are going to get
-  CoinFillN(work,numberRows_,0.0);
+  ClpFillN(work,numberRows_,0.0);
   // put solution in correct place
   for (iRow=0;iRow<numberRows_;iRow++) {
     int iPivot=pivotVariable_[iRow];
@@ -385,7 +359,7 @@ ClpSimplex::computeDuals()
       array[iRow]=objectiveWork_[iPivot];
     }
   }
-  CoinDisjointCopyN ( array, numberRows_ , save);
+  ClpDisjointCopyN ( array, numberRows_ , save);
 
   // Btran basic costs and get as accurate as possible
   double lastError=DBL_MAX;
@@ -396,7 +370,7 @@ ClpSimplex::computeDuals()
     // check basic reduced costs zero
     largestDualError_=0.0;
     // would be faster to do just for basic but this reduces code
-    CoinDisjointCopyN(objectiveWork_,numberColumns_,reducedCostWork_);
+    ClpDisjointCopyN(objectiveWork_,numberColumns_,reducedCostWork_);
     transposeTimes(-1.0,array,reducedCostWork_);
     for (iRow=0;iRow<numberRows_;iRow++) {
       int iPivot=pivotVariable_[iRow];
@@ -441,7 +415,7 @@ ClpSimplex::computeDuals()
       }
     }
   }
-  CoinFillN(work,numberRows_,0.0);
+  ClpFillN(work,numberRows_,0.0);
   // now look at dual solution
   for (iRow=0;iRow<numberRows_;iRow++) {
     // slack
@@ -450,7 +424,7 @@ ClpSimplex::computeDuals()
     value = rowObjectiveWork_[iRow] - value*slackValue;
     rowReducedCost_[iRow]=value;
   }
-  CoinDisjointCopyN(objectiveWork_,numberColumns_,reducedCostWork_);
+  ClpDisjointCopyN(objectiveWork_,numberColumns_,reducedCostWork_);
   transposeTimes(-1.0,dual_,reducedCostWork_);
   delete [] previous;
   delete [] array;
@@ -479,8 +453,8 @@ int ClpSimplex::getSolution ( )
 {
   double * rowActivities = new double[numberRows_];
   double * columnActivities = new double[numberColumns_];
-  CoinDisjointCopyN ( rowActivityWork_, numberRows_ , rowActivities);
-  CoinDisjointCopyN ( columnActivityWork_, numberColumns_ , columnActivities);
+  ClpDisjointCopyN ( rowActivityWork_, numberRows_ , rowActivities);
+  ClpDisjointCopyN ( columnActivityWork_, numberColumns_ , columnActivities);
   int status = getSolution( rowActivities, columnActivities);
   delete [] rowActivities;
   delete [] columnActivities;
@@ -1253,28 +1227,28 @@ ClpSimplex::operator=(const ClpSimplex & rhs)
 void 
 ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
 {
-  lower_ = copyOfArray(rhs.lower_,numberColumns_+numberRows_);
+  lower_ = ClpCopyOfArray(rhs.lower_,numberColumns_+numberRows_);
   rowLowerWork_ = lower_+numberColumns_;
   columnLowerWork_ = lower_;
-  upper_ = copyOfArray(rhs.upper_,numberColumns_+numberRows_);
+  upper_ = ClpCopyOfArray(rhs.upper_,numberColumns_+numberRows_);
   rowUpperWork_ = upper_+numberColumns_;
   columnUpperWork_ = upper_;
-  cost_ = copyOfArray(rhs.cost_,(numberColumns_+numberRows_));
+  cost_ = ClpCopyOfArray(rhs.cost_,(numberColumns_+numberRows_));
   objectiveWork_ = cost_;
   rowObjectiveWork_ = cost_+numberColumns_;
-  dj_ = copyOfArray(rhs.dj_,numberRows_+numberColumns_);
+  dj_ = ClpCopyOfArray(rhs.dj_,numberRows_+numberColumns_);
   if (dj_) {
     reducedCostWork_ = dj_;
     rowReducedCost_ = dj_+numberColumns_;
   }
-  solution_ = copyOfArray(rhs.solution_,numberRows_+numberColumns_);
+  solution_ = ClpCopyOfArray(rhs.solution_,numberRows_+numberColumns_);
   if (solution_) {
     columnActivityWork_ = solution_;
     rowActivityWork_ = solution_+numberColumns_;
   }
   if (rhs.pivotVariable_) {
     pivotVariable_ = new int[numberRows_];
-    CoinDisjointCopyN ( rhs.pivotVariable_, numberRows_ , pivotVariable_);
+    ClpDisjointCopyN ( rhs.pivotVariable_, numberRows_ , pivotVariable_);
   } else {
     pivotVariable_=NULL;
   }
@@ -1283,9 +1257,9 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
   } else {
     factorization_=NULL;
   }
-  rowScale_ = copyOfArray(rhs.rowScale_,numberRows_);
-  savedSolution_ = copyOfArray(rhs.savedSolution_,numberColumns_+numberRows_);
-  columnScale_ = copyOfArray(rhs.columnScale_,numberColumns_);
+  rowScale_ = ClpCopyOfArray(rhs.rowScale_,numberRows_);
+  savedSolution_ = ClpCopyOfArray(rhs.savedSolution_,numberColumns_+numberRows_);
+  columnScale_ = ClpCopyOfArray(rhs.columnScale_,numberColumns_);
   int i;
   for (i=0;i<6;i++) {
     rowArray_[i]=NULL;
@@ -1296,7 +1270,7 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
       columnArray_[i] = new CoinIndexedVector(*rhs.columnArray_[i]);
   }
   if (rhs.saveStatus_) {
-    saveStatus_ = copyOfArray( rhs.saveStatus_,numberColumns_+numberRows_);
+    saveStatus_ = ClpCopyOfArray( rhs.saveStatus_,numberColumns_+numberRows_);
   }
   columnPrimalInfeasibility_ = rhs.columnPrimalInfeasibility_;
   columnPrimalSequence_ = rhs.columnPrimalSequence_;

@@ -97,31 +97,6 @@
 #include <string>
 #include <stdio.h>
 #include <iostream>
-// This returns a non const array filled with input from scalar
-// or actual array
-template <class T> inline T*
-copyOfArray( const T * array, const int size, T value)
-{
-  T * arrayNew = new T[size];
-  if (array) 
-    CoinDisjointCopyN(array,size,arrayNew);
-  else
-    CoinFillN ( arrayNew, size,value);
-  return arrayNew;
-}
-
-// This returns a non const array filled with actual array (or NULL)
-template <class T> inline T*
-copyOfArray( const T * array, const int size)
-{
-  if (array) {
-    T * arrayNew = new T[size];
-    CoinDisjointCopyN(array,size,arrayNew);
-    return arrayNew;
-  } else {
-    return NULL;
-  }
-}
 // primal 
 int ClpSimplexPrimal::primal (int ifValuesPass )
 {
@@ -604,7 +579,7 @@ ClpSimplexPrimal::whileIterating(int & firstSuperBasic)
 	    // do ray
 	    delete [] ray_;
 	    ray_ = new double [numberColumns_];
-	    CoinFillN(ray_,numberColumns_,0.0);
+	    ClpFillN(ray_,numberColumns_,0.0);
 	    int number=rowArray_[1]->getNumElements();
 	    int * index = rowArray_[1]->getIndices();
 	    double * array = rowArray_[1]->denseVector();

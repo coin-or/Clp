@@ -50,7 +50,7 @@ ClpDualRowSteepest::ClpDualRowSteepest (const ClpDualRowSteepest & rhs)
     assert(model_);
     int number = model_->numberRows();
     weights_= new double[number];
-    CoinDisjointCopyN(rhs.weights_,number,weights_);
+    ClpDisjointCopyN(rhs.weights_,number,weights_);
   } else {
     weights_=NULL;
   }
@@ -101,7 +101,7 @@ ClpDualRowSteepest::operator=(const ClpDualRowSteepest& rhs)
       assert(model_);
       int number = model_->numberRows();
       weights_= new double[number];
-      CoinDisjointCopyN(rhs.weights_,number,weights_);
+      ClpDisjointCopyN(rhs.weights_,number,weights_);
     } else {
       weights_=NULL;
     }

@@ -24,31 +24,6 @@
 #include "CoinMpsIO.hpp"
 #include "ClpMessage.hpp"
 
-// This returns a non const array filled with input from scalar
-// or actual array
-template <class T> inline T*
-copyOfArray( const T * array, const int size, T value)
-{
-  T * arrayNew = new T[size];
-  if (array) 
-    CoinDisjointCopyN(array,size,arrayNew);
-  else
-    CoinFillN ( arrayNew, size,value);
-  return arrayNew;
-}
-
-// This returns a non const array filled with actual array (or NULL)
-template <class T> inline T*
-copyOfArray( const T * array, const int size)
-{
-  if (array) {
-    T * arrayNew = new T[size];
-    CoinDisjointCopyN(array,size,arrayNew);
-    return arrayNew;
-  } else {
-    return NULL;
-  }
-}
 static double cpuTime()
 {
   double cpu_temp;
@@ -186,16 +161,16 @@ ClpModel::gutsOfLoadModel (int numberRows, int numberColumns,
   dual_=new double[numberRows_];
   reducedCost_=new double[numberColumns_];
 
-  CoinFillN(dual_,numberRows_,0.0);
-  CoinFillN(reducedCost_,numberColumns_,0.0);
+  ClpFillN(dual_,numberRows_,0.0);
+  ClpFillN(reducedCost_,numberColumns_,0.0);
   int iRow,iColumn;
 
-  rowLower_=copyOfArray(rowlb,numberRows_,-DBL_MAX);
-  rowUpper_=copyOfArray(rowub,numberRows_,DBL_MAX);
-  objective_=copyOfArray(obj,numberColumns_,0.0);
-  rowObjective_=copyOfArray(rowObjective,numberRows_);
-  columnLower_=copyOfArray(collb,numberColumns_,0.0);
-  columnUpper_=copyOfArray(colub,numberColumns_,DBL_MAX);
+  rowLower_=ClpCopyOfArray(rowlb,numberRows_,-DBL_MAX);
+  rowUpper_=ClpCopyOfArray(rowub,numberRows_,DBL_MAX);
+  objective_=ClpCopyOfArray(obj,numberColumns_,0.0);
+  rowObjective_=ClpCopyOfArray(rowObjective,numberRows_);
+  columnLower_=ClpCopyOfArray(collb,numberColumns_,0.0);
+  columnUpper_=ClpCopyOfArray(colub,numberColumns_,DBL_MAX);
   // set default solution
   for (iRow=0;iRow<numberRows_;iRow++) {
     if (rowLower_[iRow]>0.0) {
@@ -366,13 +341,13 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
       columnActivity_=new double[numberColumns_];
       dual_=new double[numberRows_];
       reducedCost_=new double[numberColumns_];
-      CoinDisjointCopyN ( rhs.rowActivity_, numberRows_ ,
+      ClpDisjointCopyN ( rhs.rowActivity_, numberRows_ ,
 			  rowActivity_);
-      CoinDisjointCopyN ( rhs.columnActivity_, numberColumns_ ,
+      ClpDisjointCopyN ( rhs.columnActivity_, numberColumns_ ,
 			  columnActivity_);
-      CoinDisjointCopyN ( rhs.dual_, numberRows_ , 
+      ClpDisjointCopyN ( rhs.dual_, numberRows_ , 
 			  dual_);
-      CoinDisjointCopyN ( rhs.reducedCost_, numberColumns_ ,
+      ClpDisjointCopyN ( rhs.reducedCost_, numberColumns_ ,
 			  reducedCost_);
     } else {
       rowActivity_=NULL;
@@ -380,21 +355,21 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
       dual_=NULL;
       reducedCost_=NULL;
     }
-    rowLower_ = copyOfArray ( rhs.rowLower_, numberRows_ );
-    rowUpper_ = copyOfArray ( rhs.rowUpper_, numberRows_ );
-    columnLower_ = copyOfArray ( rhs.columnLower_, numberColumns_ );
-    columnUpper_ = copyOfArray ( rhs.columnUpper_, numberColumns_ );
-    objective_ = copyOfArray ( rhs.objective_, numberColumns_ );
-    rowObjective_ = copyOfArray ( rhs.rowObjective_, numberRows_ );
+    rowLower_ = ClpCopyOfArray ( rhs.rowLower_, numberRows_ );
+    rowUpper_ = ClpCopyOfArray ( rhs.rowUpper_, numberRows_ );
+    columnLower_ = ClpCopyOfArray ( rhs.columnLower_, numberColumns_ );
+    columnUpper_ = ClpCopyOfArray ( rhs.columnUpper_, numberColumns_ );
+    objective_ = ClpCopyOfArray ( rhs.objective_, numberColumns_ );
+    rowObjective_ = ClpCopyOfArray ( rhs.rowObjective_, numberRows_ );
     if (rhs.status_) 
-      status_ = copyOfArray( rhs.status_,numberColumns_+numberRows_);
+      status_ = ClpCopyOfArray( rhs.status_,numberColumns_+numberRows_);
     else
       status_ = NULL;
     ray_ = NULL;
     if (problemStatus_==1)
-      ray_ = copyOfArray (rhs.ray_,numberRows_);
+      ray_ = ClpCopyOfArray (rhs.ray_,numberRows_);
     else if (problemStatus_==2)
-      ray_ = copyOfArray (rhs.ray_,numberColumns_);
+      ray_ = ClpCopyOfArray (rhs.ray_,numberColumns_);
     if (rhs.rowCopy_) {
       rowCopy_ = rhs.rowCopy_->clone();
     } else {
@@ -775,7 +750,7 @@ ClpModel::infeasibilityRay() const
 {
   double * array = NULL;
   if (problemStatus_==1) 
-    array = copyOfArray(ray_,numberRows_);
+    array = ClpCopyOfArray(ray_,numberRows_);
   return array;
 }
 double * 
@@ -783,7 +758,7 @@ ClpModel::unboundedRay() const
 {
   double * array = NULL;
   if (problemStatus_==2) 
-    array = copyOfArray(ray_,numberColumns_);
+    array = ClpCopyOfArray(ray_,numberColumns_);
   return array;
 }
 void 
@@ -951,7 +926,7 @@ ClpModel::deleteIntegerInformation()
 unsigned char *  
 ClpModel::statusCopy() const
 {
-  return copyOfArray(status_,numberRows_+numberColumns_);
+  return ClpCopyOfArray(status_,numberRows_+numberColumns_);
 }
 // Copy in status vector
 void 

@@ -60,9 +60,9 @@ ClpPrimalColumnSteepest::ClpPrimalColumnSteepest (const ClpPrimalColumnSteepest 
     assert(model_);
     int number = model_->numberRows()+model_->numberColumns();
     weights_= new double[number];
-    CoinDisjointCopyN(rhs.weights_,number,weights_);
+    ClpDisjointCopyN(rhs.weights_,number,weights_);
     savedWeights_= new double[number];
-    CoinDisjointCopyN(rhs.savedWeights_,number,savedWeights_);
+    ClpDisjointCopyN(rhs.savedWeights_,number,savedWeights_);
     if (!mode_) {
       reference_ = new unsigned int[(number+31)>>5];
       memcpy(reference_,rhs.reference_,((number+31)>>5)*sizeof(unsigned int));
@@ -121,9 +121,9 @@ ClpPrimalColumnSteepest::operator=(const ClpPrimalColumnSteepest& rhs)
       assert(model_);
       int number = model_->numberRows()+model_->numberColumns();
       weights_= new double[number];
-      CoinDisjointCopyN(rhs.weights_,number,weights_);
+      ClpDisjointCopyN(rhs.weights_,number,weights_);
       savedWeights_= new double[number];
-      CoinDisjointCopyN(rhs.savedWeights_,number,savedWeights_);
+      ClpDisjointCopyN(rhs.savedWeights_,number,savedWeights_);
       if (!mode_) {
 	reference_ = new unsigned int[(number+31)>>5];
 	memcpy(reference_,rhs.reference_,

@@ -427,7 +427,9 @@ const PresolveAction *Presolve::presolve(PresolveMatrix *prob)
     int iLoop;
 
     for (iLoop=0;iLoop<numberPasses_;iLoop++) {
+#ifdef PRESOLVE_SUMMARY
       printf("Starting major pass %d\n",iLoop+1);
+#endif
       const PresolveAction * const paction0 = paction_;
       // look for substitutions with no fill
       int fill_level=2;
@@ -534,7 +536,9 @@ const PresolveAction *Presolve::presolve(PresolveMatrix *prob)
       prob->numberColsToDo_=ncols_;
       // now expensive things
       // this caused world.mps to run into numerical difficulties
+#ifdef PRESOLVE_SUMMARY
       printf("Starting expensive\n");
+#endif
 
       if (dual) {
 	int itry;

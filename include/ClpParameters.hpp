@@ -1,9 +1,12 @@
-// Copyright (C) 2000, International Business Machines
+// Copyright (C) 2000, 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
 #ifndef _ClpParameters_H
 #define _ClpParameters_H
 
+/** This is where to put any useful stuff.
+
+*/
 enum ClpIntParam {
    /** The maximum number of iterations Clp can execute in the simplex methods
     */
@@ -49,4 +52,42 @@ enum ClpStrParam {
   ClpLastStrParam
 };
 
+/// Copy (I don't like complexity of Coin version)
+template <class T> inline void
+ClpDisjointCopyN( const T * array, const int size, T * newArray)
+{
+  memcpy(newArray,array,size*sizeof(T));
+}
+/// And set
+template <class T> inline void
+ClpFillN( T * array, const int size, T value)
+{
+  int i;
+  for (i=0;i<size;i++)
+    array[i]=value;
+}
+/// This returns a non const array filled with input from scalar or actual array
+template <class T> inline T*
+ClpCopyOfArray( const T * array, const int size, T value)
+{
+  T * arrayNew = new T[size];
+  if (array) 
+    ClpDisjointCopyN(array,size,arrayNew);
+  else
+    ClpFillN ( arrayNew, size,value);
+  return arrayNew;
+}
+
+/// This returns a non const array filled with actual array (or NULL)
+template <class T> inline T*
+ClpCopyOfArray( const T * array, const int size)
+{
+  if (array) {
+    T * arrayNew = new T[size];
+    ClpDisjointCopyN(array,size,arrayNew);
+    return arrayNew;
+  } else {
+    return NULL;
+  }
+}
 #endif

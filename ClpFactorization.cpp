@@ -123,8 +123,8 @@ ClpFactorization::factorize ( const ClpSimplex * model,
       if (increasingRows_<3) {
 	// these arrays start off as copies of permute
 	// (and we could use permute_ instead of pivotColumn (not back though))
-	CoinDisjointCopyN ( permute_, numberRows_ , pivotColumn_  );
-	CoinDisjointCopyN ( permuteBack_, numberRows_ , pivotColumnBack_  );
+	ClpDisjointCopyN ( permute_, numberRows_ , pivotColumn_  );
+	ClpDisjointCopyN ( permuteBack_, numberRows_ , pivotColumnBack_  );
       }
     } else {
       // Set up permutation vector

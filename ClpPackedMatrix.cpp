@@ -603,8 +603,8 @@ ClpPackedMatrix::scale(ClpSimplex * model) const
 	usefulRow[iRow]=useful;
       }
     }
-    CoinFillN ( rowScale, numberRows,1.0);
-    CoinFillN ( columnScale, numberColumns,1.0);
+    ClpFillN ( rowScale, numberRows,1.0);
+    ClpFillN ( columnScale, numberColumns,1.0);
     int numberPass=3;
     double overallLargest;
     double overallSmallest;

@@ -291,11 +291,11 @@ PrePostsolveMatrix::PrePostsolveMatrix(const ClpSimplex& si,
   int ncols = si.getNumCols();
   int nrows = si.getNumRows();
 
-  CoinDisjointCopyN(si.getColLower(), ncols, clo_);
-  CoinDisjointCopyN(si.getColUpper(), ncols, cup_);
-  CoinDisjointCopyN(si.getObjCoefficients(), ncols, cost_);
-  CoinDisjointCopyN(si.getRowLower(), nrows,  rlo_);
-  CoinDisjointCopyN(si.getRowUpper(), nrows,  rup_);
+  ClpDisjointCopyN(si.getColLower(), ncols, clo_);
+  ClpDisjointCopyN(si.getColUpper(), ncols, cup_);
+  ClpDisjointCopyN(si.getObjCoefficients(), ncols, cost_);
+  ClpDisjointCopyN(si.getRowLower(), nrows,  rlo_);
+  ClpDisjointCopyN(si.getRowUpper(), nrows,  rup_);
   int i;
   for (i=0;i<ncols_in;i++) 
     originalColumn_[i]=i;
@@ -454,7 +454,7 @@ PresolveMatrix::PresolveMatrix(int ncols0_in,
     mcstrt_[icol+1]=nel;
   }
   assert(mcstrt_[ncols_] == nelems_);
-  CoinDisjointCopyN(m->getVectorLengths(),ncols_,  hincol_);
+  ClpDisjointCopyN(m->getVectorLengths(),ncols_,  hincol_);
 
   // same thing for row rep
   m = new CoinPackedMatrix();
@@ -462,17 +462,17 @@ PresolveMatrix::PresolveMatrix(int ncols0_in,
   m->removeGaps();
 
 
-  CoinDisjointCopyN(m->getVectorStarts(),  nrows_,  mrstrt_);
+  ClpDisjointCopyN(m->getVectorStarts(),  nrows_,  mrstrt_);
   mrstrt_[nrows_] = nelems_;
-  CoinDisjointCopyN(m->getVectorLengths(), nrows_,  hinrow_);
-  CoinDisjointCopyN(m->getIndices(),       nelems_, hcol_);
-  CoinDisjointCopyN(m->getElements(),      nelems_, rowels_);
+  ClpDisjointCopyN(m->getVectorLengths(), nrows_,  hinrow_);
+  ClpDisjointCopyN(m->getIndices(),       nelems_, hcol_);
+  ClpDisjointCopyN(m->getElements(),      nelems_, rowels_);
 
   delete m;
   if (si.integerInformation()) {
     memcpy(integerType_,si.integerInformation(),ncols_*sizeof(char));
   } else {
-    CoinFillN<char>(integerType_, ncols_, 0);
+    ClpFillN<char>(integerType_, ncols_, 0);
   }
 
   if (doStatus) {
@@ -697,11 +697,11 @@ PostsolveMatrix::PostsolveMatrix(ClpSimplex& si,
 
   const int nelemsr = m->getNumElements();
 
-  CoinDisjointCopyN(m->getVectorStarts(), ncols1, mcstrt_);
+  ClpDisjointCopyN(m->getVectorStarts(), ncols1, mcstrt_);
   mcstrt_[ncols_] = nelems0;	// ??
-  CoinDisjointCopyN(m->getVectorLengths(),ncols1,  hincol_);
-  CoinDisjointCopyN(m->getIndices(),      nelemsr, hrow_);
-  CoinDisjointCopyN(m->getElements(),     nelemsr, colels_);
+  ClpDisjointCopyN(m->getVectorLengths(),ncols1,  hincol_);
+  ClpDisjointCopyN(m->getIndices(),      nelemsr, hrow_);
+  ClpDisjointCopyN(m->getElements(),     nelemsr, colels_);
 
 
 #if	0 && DEBUG_PRESOLVE
@@ -726,10 +726,10 @@ PostsolveMatrix::PostsolveMatrix(ClpSimplex& si,
   memset(rdone_, -1, nrows0_);
 
   rowduals_ = new double[nrows0_];
-  CoinDisjointCopyN(si.getRowPrice(), nrows1, rowduals_);
+  ClpDisjointCopyN(si.getRowPrice(), nrows1, rowduals_);
 
   rcosts_ = new double[ncols0_];
-  CoinDisjointCopyN(si.getReducedCost(), ncols1, rcosts_);
+  ClpDisjointCopyN(si.getReducedCost(), ncols1, rcosts_);
   if (maxmin_<0.0) {
     // change so will look as if minimize
     int i;
@@ -740,10 +740,10 @@ PostsolveMatrix::PostsolveMatrix(ClpSimplex& si,
     }
   }
 
-  //CoinDisjointCopyN(si.getRowUpper(), nrows1, rup_);
-  //CoinDisjointCopyN(si.getRowLower(), nrows1, rlo_);
+  //ClpDisjointCopyN(si.getRowUpper(), nrows1, rup_);
+  //ClpDisjointCopyN(si.getRowLower(), nrows1, rlo_);
 
-  CoinDisjointCopyN(si.getColSolution(), ncols1, sol_);
+  ClpDisjointCopyN(si.getColSolution(), ncols1, sol_);
   si.setDblParam(ClpObjOffset,originalOffset_);
 
   for (int j=0; j<ncols1; j++) {

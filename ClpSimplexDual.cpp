@@ -107,31 +107,6 @@
 #include <stdio.h>
 #include <iostream>
 #define CHECK_DJ
-// This returns a non const array filled with input from scalar
-// or actual array
-template <class T> inline T*
-copyOfArray( const T * array, const int size, T value)
-{
-  T * arrayNew = new T[size];
-  if (array) 
-    CoinDisjointCopyN(array,size,arrayNew);
-  else
-    CoinFillN ( arrayNew, size,value);
-  return arrayNew;
-}
-
-// This returns a non const array filled with actual array (or NULL)
-template <class T> inline T*
-copyOfArray( const T * array, const int size)
-{
-  if (array) {
-    T * arrayNew = new T[size];
-    CoinDisjointCopyN(array,size,arrayNew);
-    return arrayNew;
-  } else {
-    return NULL;
-  }
-}
 // dual 
 int ClpSimplexDual::dual ( )
 {
@@ -661,7 +636,7 @@ ClpSimplexDual::whileIterating()
 	  // create ray anyway
 	  delete [] ray_;
 	  ray_ = new double [ numberRows_];
-	  CoinDisjointCopyN(rowArray_[0]->denseVector(),numberRows_,ray_);
+	  ClpDisjointCopyN(rowArray_[0]->denseVector(),numberRows_,ray_);
 	}
 	rowArray_[0]->clear();
 	columnArray_[0]->clear();
@@ -693,7 +668,7 @@ ClpSimplexDual::whileIterating()
 	  // create ray anyway
 	  delete [] ray_;
 	  ray_ = new double [ numberRows_];
-	  CoinDisjointCopyN(rowArray_[0]->denseVector(),numberRows_,ray_);
+	  ClpDisjointCopyN(rowArray_[0]->denseVector(),numberRows_,ray_);
 	}
       }
       returnCode=0;
@@ -1741,7 +1716,7 @@ ClpSimplexDual::checkUnbounded(CoinIndexedVector * ray,
     // create ray
     delete [] ray_;
     ray_ = new double [numberColumns_];
-    CoinFillN(ray_,numberColumns_,0.0);
+    ClpFillN(ray_,numberColumns_,0.0);
     for (i=0;i<number;i++) {
       int iRow=index[i];
       int iPivot=pivotVariable_[iRow];
@@ -1818,9 +1793,9 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 #ifdef CLP_DEBUG
   if (!rowScale_&&(handler_->logLevel()&32)) {
     double * objectiveSimplex 
-      = copyOfArray(objective_,numberColumns_,0.0);
+      = ClpCopyOfArray(objective_,numberColumns_,0.0);
     double * rowObjectiveSimplex 
-      = copyOfArray(rowObjective_,numberRows_,0.0);
+      = ClpCopyOfArray(rowObjective_,numberRows_,0.0);
     int i;
     double largest;
     largest=0.0;
@@ -1877,9 +1852,9 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	  <<dualBound_
 	  <<CoinMessageEol;
 	// save solution in case unbounded
-	CoinDisjointCopyN(columnActivityWork_,numberColumns_,
+	ClpDisjointCopyN(columnActivityWork_,numberColumns_,
 			  columnArray_[0]->denseVector());
-	CoinDisjointCopyN(rowActivityWork_,numberRows_,
+	ClpDisjointCopyN(rowActivityWork_,numberRows_,
 			  rowArray_[2]->denseVector());
 	numberChangedBounds=changeBounds(false,rowArray_[0],changeCost);
 	if (numberChangedBounds<=0) {
@@ -1918,7 +1893,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 		    columnActivityWork_[iColumn]-original[iColumn];
 		columnActivityWork_[iColumn] = original[iColumn];
 	      }
-	      CoinDisjointCopyN(rowArray_[2]->denseVector(),numberRows_,
+	      ClpDisjointCopyN(rowArray_[2]->denseVector(),numberRows_,
 				rowActivityWork_);
 	    }
 	  } else {
@@ -1926,8 +1901,8 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	    rowArray_[0]->clear();
 	  }
 	}
-	CoinFillN(columnArray_[0]->denseVector(),numberColumns_,0.0);
-	CoinFillN(rowArray_[2]->denseVector(),numberRows_,0.0);
+	ClpFillN(columnArray_[0]->denseVector(),numberColumns_,0.0);
+	ClpFillN(rowArray_[2]->denseVector(),numberRows_,0.0);
       } 
       if (problemStatus_==-4) {
 	// may be infeasible - or may be bounds are wrong
