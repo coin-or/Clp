@@ -350,11 +350,12 @@ public:
       and makes row copy if wanted, also sets columnStart_ etc
       Also creates scaling arrays if needed.  It does scaling if needed.
       16 also moves solutions etc in to work arrays
+      On 16 returns false if problem "bad" i.e. matrix or bounds bad
   */
-  void createRim(int what,bool makeRowCopy=false);
+  bool createRim(int what,bool makeRowCopy=false);
   /// releases above arrays and does solution scaling out
   void deleteRim();
-  /// Sanity check on input data (after scaling) - returns true if okay
+  /// Sanity check on input rim data (after scaling) - returns true if okay
   bool sanityCheck();
   //@}
   public:

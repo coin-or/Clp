@@ -222,7 +222,7 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
 
   // put in standard form (and make row copy)
   // create modifiable copies of model rim and do optional scaling
-  createRim(7+8+16,true);
+  bool goodMatrix=createRim(7+8+16,true);
 
   // save infeasibility cost
   double saveInfeasibilityCost = infeasibilityCost_;
@@ -231,7 +231,7 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
   // save if sparse factorization wanted
   int saveSparse = factorization_->sparseThreshold();
 
-  if (sanityCheck()) {
+  if (goodMatrix) {
     // Model looks okay
     int iRow,iColumn;
     // Do initial factorization

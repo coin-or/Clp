@@ -1618,9 +1618,10 @@ ClpSimplex::unpack(CoinIndexedVector * rowArray,int sequence)
     matrix_->unpack(this,rowArray,sequence);
   }
 }
-void
+bool
 ClpSimplex::createRim(int what,bool makeRowCopy)
 {
+  bool goodMatrix=true;
   if ((what&16)!=0) {
     // move information to work arrays
     // row reduced costs
@@ -1639,7 +1640,11 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
       memcpy(rowActivityWork_,rowActivity_,
 	     numberRows_*sizeof(double));
     }
-    
+    //check matrix
+    if (!matrix_->allElementsInRange(this,1.0e-20,1.0e20)) {
+      problemStatus_=4;
+      goodMatrix= false;
+    }
     if (makeRowCopy) {
       delete rowCopy_;
       // may return NULL if can't give row copy
@@ -1739,6 +1744,11 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
     }
   }
  
+  if ((what&16)!=0) {
+    // check rim of problem okay
+    if (!sanityCheck())
+      goodMatrix=false;
+  } 
   // we need to treat matrix as if each element by rowScaleIn and columnScaleout??
   // maybe we need to move scales to SimplexModel for factorization?
   if ((what&8)!=0&&!pivotVariable_) {
@@ -1769,7 +1779,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
       }
     }    
   }
-
+  return goodMatrix;
 }
 void
 ClpSimplex::deleteRim()
@@ -2783,8 +2793,11 @@ ClpSimplexProgress::looping()
   if (matched==(1<<(CLP_PROGRESS-1)))
     numberMatched=0;
   if (numberMatched) {
-    printf("Possible loop - %d matches (%x) after %d checks\n",
-	   numberMatched,matched,numberTimes_);
+    model_->messageHandler()->message(CLP_POSSIBLELOOP,model_->messages())
+      <<numberMatched
+      <<matched
+      <<numberTimes_
+      <<CoinMessageEol;
     numberBadTimes_++;
     if (numberBadTimes_<10) {
       if (model_->algorithm()<0) {
@@ -2795,6 +2808,8 @@ ClpSimplexProgress::looping()
 	model_->setCurrentPrimalTolerance(model_->currentPrimalTolerance()*1.05);
       }
     } else {
+      model_->messageHandler()->message(CLP_LOOP,model_->messages())
+	<<CoinMessageEol;
       // look at solution and maybe declare victory
       if (infeasibility<1.0e-4)
 	return 0;
@@ -2808,7 +2823,6 @@ ClpSimplexProgress::looping()
 bool 
 ClpSimplex::sanityCheck()
 {
-  int badProblem=0;
   int numberBad , numberBadBounds;
   double largestBound, smallestBound, minimumGap;
   double smallestObj, largestObj;
@@ -2923,13 +2937,6 @@ ClpSimplex::sanityCheck()
     handler_->message(CLP_BAD_BOUNDS,messages_)
       <<numberBad
       <<rowcol[isColumn(firstBad)]<<sequenceWithin(firstBad)
-      <<CoinMessageEol;
-    problemStatus_=4;
-    return false;
-  }
-  //check matrix
-  if (!matrix_->allElementsInRange(1.0e-20,1.0e20)) {
-    handler_->message(CLP_BAD_MATRIX,messages_)
       <<CoinMessageEol;
     problemStatus_=4;
     return false;

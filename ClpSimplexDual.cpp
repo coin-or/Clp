@@ -106,6 +106,7 @@
 #include <string>
 #include <stdio.h>
 #include <iostream>
+#define CHECK_DJ
 // This returns a non const array filled with input from scalar
 // or actual array
 template <class T> inline T*
@@ -241,7 +242,7 @@ int ClpSimplexDual::dual ( )
 
   // put in standard form (and make row copy)
   // create modifiable copies of model rim and do optional scaling
-  createRim(7+8+16,true);
+  bool goodMatrix = createRim(7+8+16,true);
 
   // save dual bound
   double saveDualBound_ = dualBound_;
@@ -250,7 +251,7 @@ int ClpSimplexDual::dual ( )
   // save if sparse factorization wanted
   int saveSparse = factorization_->sparseThreshold();
 
-  if (sanityCheck()) {
+  if (goodMatrix) {
     // Problem looks okay
     int iRow,iColumn;
     // Do initial factorization
@@ -596,6 +597,15 @@ ClpSimplexDual::whileIterating()
 	    rowArray_[0]->clear();
 	    rowArray_[1]->clear();
 	    columnArray_[0]->clear();
+	    // make sure dual feasible
+	    // look at all rows and columns
+	    CoinIotaN(rowArray_[0]->getIndices(),numberRows_,0);
+	    rowArray_[0]->setNumElements(numberRows_);
+	    CoinIotaN(columnArray_[0]->getIndices(),numberColumns_,0);
+	    columnArray_[0]->setNumElements(numberColumns_);
+	    double objectiveChange=0.0;
+	    updateDualsInDual(rowArray_[0],columnArray_[0],rowArray_[1],
+			      0.0,objectiveChange);
 	    continue;
 	  }
 	} else if (updateStatus==3) {
@@ -1191,6 +1201,10 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 	}
 	break;
       case ClpSimplex::atUpperBound:
+#ifdef CHECK_DJ
+	// For Debug so we can find out where problem is
+	perturbation_ = iSequence+addSequence;
+#endif
 	assert (oldValue<=dualTolerance_*1.0001);
 	if (value>newTolerance) {
 	  keep = 1;
@@ -1200,6 +1214,10 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 	}
 	break;
       case ClpSimplex::atLowerBound:
+#ifdef CHECK_DJ
+	// For Debug so we can find out where problem is
+	perturbation_ = iSequence+addSequence;
+#endif
 	assert (oldValue>=-dualTolerance_*1.0001);
 	if (value<-newTolerance) {
 	  keep = 1;
@@ -1928,6 +1946,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	  delete [] ray_;
 	  ray_ = NULL;
 	}
+
       }
     } else {
       cleanDuals=true;

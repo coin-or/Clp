@@ -81,13 +81,17 @@ public:
       returns non-zero if no scaling done */
   virtual int scale(ClpSimplex * model) const 
   { return 1;};
+  /// Creates row copy and scales if necessary
+  virtual ClpMatrixBase * scaledRowCopy(ClpSimplex * model) const
+  { return reverseOrderedCopy();};
 
   /** Checks if all elements are in valid range.  Can just
       return true if you are not paranoid.  For Clp I will
       probably expect no zeros.  Code can modify matrix to get rid of
       small elements.
   */
-  virtual bool allElementsInRange(double smallest, double largest)
+  virtual bool allElementsInRange(ClpSimplex * model,
+				  double smallest, double largest)
   { return true;};
 
   /** Unpacks a column into an CoinIndexedvector

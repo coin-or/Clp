@@ -690,7 +690,7 @@ ClpPackedMatrix::scale(ClpSimplex * model) const
     model->setColumnScale(columnScale);
     if (model->rowCopy()) {
       // need to replace row by row
-      double * newElement = new double[numberColumns];
+      double * newElement = new double[numberRows];
       // scale row copy
       for (iRow=0;iRow<numberRows;iRow++) {
 	int j;
@@ -711,6 +711,47 @@ ClpPackedMatrix::scale(ClpSimplex * model) const
     }
     return 0;
   }
+}
+// Creates row copy and scales if necessary
+ClpMatrixBase * 
+ClpPackedMatrix::scaledRowCopy(ClpSimplex * model) const
+{
+  ClpMatrixBase * rowCopyBase = reverseOrderedCopy();
+  ClpPackedMatrix* rowCopy =
+    dynamic_cast< ClpPackedMatrix*>(rowCopyBase);
+
+  // Make sure it is really a ClpPackedMatrix
+  assert (rowCopy!=NULL);
+
+  const double * rowScale = model->rowScale();
+  const double * columnScale = model->columnScale();
+
+  if (rowScale) {
+    // scale row copy
+    int numberRows = model->numberRows();
+    int numberColumns = model->numberColumns();
+    const int * column = rowCopy->getIndices();
+    const int * rowStart = rowCopy->getVectorStarts();
+    const double * element = rowCopy->getElements();
+    int iRow;
+    // need to replace row by row
+    double * newElement = new double[numberColumns];
+    // scale row copy
+    for (iRow=0;iRow<numberRows;iRow++) {
+      int j;
+      double scale = rowScale[iRow];
+      const double * elementsInThisRow = element + rowStart[iRow];
+      const int * columnsInThisRow = column + rowStart[iRow];
+      int number = rowStart[iRow+1]-rowStart[iRow];
+      for (j=0;j<number;j++) {
+	int iColumn = columnsInThisRow[j];
+	newElement[j] = elementsInThisRow[j]*scale*columnScale[iColumn];
+      }
+      rowCopy->replaceVector(iRow,number,newElement);
+    }
+    delete [] newElement;
+  }
+  return rowCopyBase;
 }
 /* Unpacks a column into an CoinIndexedvector
       Note that model is NOT const.  Bounds and objective could
@@ -774,12 +815,17 @@ ClpPackedMatrix::add(const ClpSimplex * model,CoinIndexedVector * rowArray,
    small elements.
 */
 bool 
-ClpPackedMatrix::allElementsInRange(double smallest, double largest)
+ClpPackedMatrix::allElementsInRange(ClpSimplex * model,
+				    double smallest, double largest)
 {
   int iColumn;
-  int numberBad=0;;
+  int numberLarge=0;;
+  int numberSmall=0;;
+  int firstBadColumn=-1;
+  int firstBadRow=-1;
+  double firstBadElement=0.0;
   // get matrix data pointers
-  //const int * row = matrix_->getIndices();
+  const int * row = matrix_->getIndices();
   const int * columnStart = matrix_->getVectorStarts();
   const int * columnLength = matrix_->getVectorLengths(); 
   const double * elementByColumn = matrix_->getElements();
@@ -789,11 +835,32 @@ ClpPackedMatrix::allElementsInRange(double smallest, double largest)
     for (j=columnStart[iColumn];
 	 j<columnStart[iColumn]+columnLength[iColumn];j++) {
       double value = fabs(elementByColumn[j]);
-      if (value<smallest||value>largest)
-	numberBad++;
+      if (value<smallest) {
+	numberSmall++;
+      } else if (value>largest) {
+	numberLarge++;
+	if (firstBadColumn<0) {
+	  firstBadColumn=iColumn;
+	  firstBadRow=row[j];
+	  firstBadElement=elementByColumn[j];
+	}
+      }
     }
   }
-  return (numberBad==0);
+  if (numberLarge) {
+    model->messageHandler()->message(CLP_BAD_MATRIX,model->messages())
+      <<numberLarge
+      <<firstBadColumn<<firstBadRow<<firstBadElement
+      <<CoinMessageEol;
+    return false;
+  }
+  if (numberSmall) {
+    model->messageHandler()->message(CLP_SMALLELEMENTS,model->messages())
+      <<numberSmall
+      <<CoinMessageEol;
+    matrix_->compress(smallest);
+  }
+  return true;
 }
 
 
