@@ -1020,6 +1020,32 @@ ClpCholeskyDense::recRecLeaf(longDouble * above,
 #if BLOCK==16
   aa = aOther-4*BLOCK;
   if (nUnder==BLOCK) {
+    //#define INTEL
+#ifdef INTEL
+    aa+=2*BLOCK;
+    for (j = 0; j < BLOCK; j +=2) {
+      aa+=2*BLOCK;
+      for (i=0;i< BLOCK;i+=2) {
+	longDouble t00=aa[i+0*BLOCK];
+	longDouble t10=aa[i+1*BLOCK];
+	longDouble t01=aa[i+1+0*BLOCK];
+	longDouble t11=aa[i+1+1*BLOCK];
+	for (k=0;k<BLOCK;k++) {
+	  longDouble multiplier = work[k];
+          longDouble a00=aUnder[i+k*BLOCK]*multiplier;
+          longDouble a01=aUnder[i+1+k*BLOCK]*multiplier;
+          t00 -= a00 * above[j + 0 + k * BLOCK];
+          t10 -= a00 * above[j + 1 + k * BLOCK];
+          t01 -= a01 * above[j + 0 + k * BLOCK];
+          t11 -= a01 * above[j + 1 + k * BLOCK];
+	}
+	aa[i+0*BLOCK]=t00;
+	aa[i+1*BLOCK]=t10;
+	aa[i+1+0*BLOCK]=t01;
+	aa[i+1+1*BLOCK]=t11;
+      }
+    }
+#else
     for (j = 0; j < BLOCK; j +=4) {
       aa+=4*BLOCK;
       for (i=0;i< BLOCK;i+=4) {
@@ -1080,6 +1106,7 @@ ClpCholeskyDense::recRecLeaf(longDouble * above,
 	aa[i+3+3*BLOCK]=t33;
       }
     }
+#endif
   } else {
     int odd=nUnder&1;
     int n=nUnder-odd;

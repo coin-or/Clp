@@ -1528,10 +1528,10 @@ ClpCholeskyBase::factorize(const double * diagonal, int * rowsDropped)
   int numberColumns=model_->clpMatrix()->getNumCols();
   //perturbation
   longDouble perturbation=model_->diagonalPerturbation()*model_->diagonalNorm();
-  perturbation=perturbation*perturbation;
+  //perturbation=perturbation*perturbation*100000000.0;
   if (perturbation>1.0) {
     //if (model_->model()->logLevel()&4) 
-      std::cout <<"large perturbation "<<perturbation<<std::endl;
+    //std::cout <<"large perturbation "<<perturbation<<std::endl;
     perturbation=sqrt(perturbation);;
     perturbation=1.0;
   }
@@ -1635,6 +1635,7 @@ ClpCholeskyBase::factorize(const double * diagonal, int * rowsDropped)
 	  diagonal_[iRow]=diagonal+perturbation;
 	  rowsDropped[iRow]=2;
 	  numberDroppedBefore++;
+	  //printf("dropped - small diagonal %g\n",diagonal);
 	} 
       } 
     }
@@ -2384,19 +2385,116 @@ void ClpCholeskyBase::updateDense(longDouble * d, longDouble * work, int * first
     CoinBigIndex end=choleskyStart_[iRow+1];
     if (start<end) {
       CoinBigIndex offset = indexStart_[iRow]-choleskyStart_[iRow];
-      longDouble dValue=d[iRow];
-      for (CoinBigIndex k=start;k<end;k++) {
-	int kRow = choleskyRow_[k+offset]; 
-	assert(kRow>=firstDense_);
-	longDouble a_ik=sparseFactor_[k];
-	longDouble value1=dValue*a_ik;
-	diagonal_[kRow] -= value1*a_ik;
-	CoinBigIndex base = choleskyStart_[kRow]-kRow-1;
-	for (CoinBigIndex j=k+1;j<end;j++) {
-	  int jRow=choleskyRow_[j+offset];
-	  longDouble a_jk = sparseFactor_[j];
-	  sparseFactor_[base+jRow] -= a_jk*value1;
+      if (clique_[iRow]<2) {
+	longDouble dValue=d[iRow];
+	for (CoinBigIndex k=start;k<end;k++) {
+	  int kRow = choleskyRow_[k+offset]; 
+	  assert(kRow>=firstDense_);
+	  longDouble a_ik=sparseFactor_[k];
+	  longDouble value1=dValue*a_ik;
+	  diagonal_[kRow] -= value1*a_ik;
+	  CoinBigIndex base = choleskyStart_[kRow]-kRow-1;
+	  for (CoinBigIndex j=k+1;j<end;j++) {
+	    int jRow=choleskyRow_[j+offset];
+	    longDouble a_jk = sparseFactor_[j];
+	    sparseFactor_[base+jRow] -= a_jk*value1;
+	  }
 	}
+      } else if (clique_[iRow]<3) {
+	// do as pair
+	longDouble dValue0=d[iRow];
+	longDouble dValue1=d[iRow+1];
+	int offset1 = first[iRow+1]-start;
+	// skip row
+	iRow++;
+	for (CoinBigIndex k=start;k<end;k++) {
+	  int kRow = choleskyRow_[k+offset]; 
+	  assert(kRow>=firstDense_);
+	  longDouble a_ik0=sparseFactor_[k];
+	  longDouble value0=dValue0*a_ik0;
+	  longDouble a_ik1=sparseFactor_[k+offset1];
+	  longDouble value1=dValue1*a_ik1;
+	  diagonal_[kRow] -= value0*a_ik0 + value1*a_ik1;
+	  CoinBigIndex base = choleskyStart_[kRow]-kRow-1;
+	  for (CoinBigIndex j=k+1;j<end;j++) {
+	    int jRow=choleskyRow_[j+offset];
+	    longDouble a_jk0 = sparseFactor_[j];
+	    longDouble a_jk1 = sparseFactor_[j+offset1];
+	    sparseFactor_[base+jRow] -= a_jk0*value0+a_jk1*value1;
+	  }
+	}
+#define MANY_REGISTERS
+#ifdef MANY_REGISTERS
+      } else if (clique_[iRow]==3) {
+#else
+      } else {
+#endif
+	// do as clique
+	// maybe later get fancy on big cliques and do transpose copy
+	// seems only worth going to 3 on Intel
+	longDouble dValue0=d[iRow];
+	longDouble dValue1=d[iRow+1];
+	longDouble dValue2=d[iRow+2];
+	// get offsets and skip rows
+	int offset1 = first[++iRow]-start;
+	int offset2 = first[++iRow]-start;
+	for (CoinBigIndex k=start;k<end;k++) {
+	  int kRow = choleskyRow_[k+offset]; 
+	  assert(kRow>=firstDense_);
+	  double diagonalValue=diagonal_[kRow];
+	  longDouble a_ik0=sparseFactor_[k];
+	  longDouble value0=dValue0*a_ik0;
+	  longDouble a_ik1=sparseFactor_[k+offset1];
+	  longDouble value1=dValue1*a_ik1;
+	  longDouble a_ik2=sparseFactor_[k+offset2];
+	  longDouble value2=dValue2*a_ik2;
+	  CoinBigIndex base = choleskyStart_[kRow]-kRow-1;
+	  diagonal_[kRow] = diagonalValue - value0*a_ik0 - value1*a_ik1 - value2*a_ik2;
+	  for (CoinBigIndex j=k+1;j<end;j++) {
+	    int jRow=choleskyRow_[j+offset];
+	    longDouble a_jk0 = sparseFactor_[j];
+	    longDouble a_jk1 = sparseFactor_[j+offset1];
+	    longDouble a_jk2 = sparseFactor_[j+offset2];
+	    sparseFactor_[base+jRow] -= a_jk0*value0+a_jk1*value1+a_jk2*value2;
+	  }
+	}
+#ifdef MANY_REGISTERS
+      } else {
+	// do as clique
+	// maybe later get fancy on big cliques and do transpose copy
+	// maybe only worth going to 3 on Intel (but may have hidden registers)
+	longDouble dValue0=d[iRow];
+	longDouble dValue1=d[iRow+1];
+	longDouble dValue2=d[iRow+2];
+	longDouble dValue3=d[iRow+3];
+	// get offsets and skip rows
+	int offset1 = first[++iRow]-start;
+	int offset2 = first[++iRow]-start;
+	int offset3 = first[++iRow]-start;
+	for (CoinBigIndex k=start;k<end;k++) {
+	  int kRow = choleskyRow_[k+offset]; 
+	  assert(kRow>=firstDense_);
+	  double diagonalValue=diagonal_[kRow];
+	  longDouble a_ik0=sparseFactor_[k];
+	  longDouble value0=dValue0*a_ik0;
+	  longDouble a_ik1=sparseFactor_[k+offset1];
+	  longDouble value1=dValue1*a_ik1;
+	  longDouble a_ik2=sparseFactor_[k+offset2];
+	  longDouble value2=dValue2*a_ik2;
+	  longDouble a_ik3=sparseFactor_[k+offset3];
+	  longDouble value3=dValue3*a_ik3;
+	  CoinBigIndex base = choleskyStart_[kRow]-kRow-1;
+	  diagonal_[kRow] = diagonalValue - (value0*a_ik0 + value1*a_ik1 + value2*a_ik2+value3*a_ik3);
+	  for (CoinBigIndex j=k+1;j<end;j++) {
+	    int jRow=choleskyRow_[j+offset];
+	    longDouble a_jk0 = sparseFactor_[j];
+	    longDouble a_jk1 = sparseFactor_[j+offset1];
+	    longDouble a_jk2 = sparseFactor_[j+offset2];
+	    longDouble a_jk3 = sparseFactor_[j+offset3];
+	    sparseFactor_[base+jRow] -= a_jk0*value0+a_jk1*value1+a_jk2*value2+a_jk3*value3;
+	  }
+	}
+#endif
       }
     }
   }

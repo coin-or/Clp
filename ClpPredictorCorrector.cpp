@@ -23,7 +23,7 @@
 #include <cstdio>
 #include <iostream>
 
-static double eScale=1.0e57;
+static double eScale=1.0e27;
 static double eBaseCaution=1.0e-12;
 static double eBase=1.0e-12;
 static double eRatio=1.0e40;

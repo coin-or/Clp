@@ -1036,6 +1036,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
 #ifndef SAVEIT
     //barrier.setGamma(1.0e-8);
     //barrier.setDelta(1.0e-8);
+    barrier.setDiagonalPerturbation(1.0e-14);
     if (aggressiveGamma) {
       barrier.setGamma(1.0e-3);
       barrier.setDelta(1.0e-3);
