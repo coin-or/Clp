@@ -742,7 +742,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	goToDual=unPerturb(); // stop any further perturbation
 	lastCleaned=-1; // carry on
       }
-      bool unflagged = unflag();
+      bool unflagged = unflag()!=0;
       if ( lastCleaned!=numberIterations_||unflagged) {
 	handler_->message(CLP_PRIMAL_OPTIMAL,messages_)
 	  <<primalTolerance_

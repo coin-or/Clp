@@ -1694,7 +1694,7 @@ costs this much to be infeasible",
 		canOpen=true;
 		fileName = "-";
 	      } else {
-		if (field[0]=='/'||field[0]=='~')
+		if (field[0]=='/'||field[0]=='~'||field[0]=='\\')
 		  fileName = field;
 		else
 		  fileName = directory+field;
