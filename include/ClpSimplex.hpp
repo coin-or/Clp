@@ -292,7 +292,7 @@ public:
   void finish();
   
   /** Factorizes and returns true if optimal.  Used by user */
-  bool statusOfProblem();
+  bool statusOfProblem(bool initial=false);
   //@}
 
   /**@name most useful gets and sets */

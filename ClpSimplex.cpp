@@ -4299,7 +4299,7 @@ bool
 ClpSimplex::sanityCheck()
 {
   // bad if empty
-  if (!numberRows_||!numberColumns_||!matrix_->getNumElements()) {
+  if (!numberColumns_||((!numberRows_||!matrix_->getNumElements())&&objective_->type()<2)) {
     int infeasNumber[2];
     double infeasSum[2];
     problemStatus_=emptyProblem(infeasNumber,infeasSum,false);
@@ -5254,7 +5254,7 @@ ClpSimplex::startup(int ifValuesPass)
 {
   // sanity check
   // bad if empty (trap here to avoid using bad matrix_)
-  if (!matrix_||!matrix_->getNumElements()) {
+  if (!matrix_||(!matrix_->getNumElements()&&objective_->type()<2)) {
     int infeasNumber[2];
     double infeasSum[2];
     problemStatus_=emptyProblem(infeasNumber,infeasSum);
@@ -5405,10 +5405,38 @@ ClpSimplex::setFlagged( int sequence)
 }
 /* Factorizes and returns true if optimal.  Used by user */
 bool
-ClpSimplex::statusOfProblem()
+ClpSimplex::statusOfProblem(bool initial)
 {
   // is factorization okay?
-  assert (internalFactorize(1)==0);
+  if (initial) {
+    // First time - allow singularities
+    int numberThrownOut = -1;
+    int totalNumberThrownOut=0;
+    while(numberThrownOut) {
+      int status = internalFactorize(0);
+      if (status<0)
+	return false; // some error
+      else
+	numberThrownOut = status;
+      
+      // for this we need clean basis so it is after factorize
+      //if (!numberThrownOut)
+      //numberThrownOut = gutsOfSolution(  NULL,NULL,
+      //				   false);
+      //else
+      //matrix_->rhsOffset(this,true); // redo rhs offset
+      totalNumberThrownOut+= numberThrownOut;
+      
+    }
+    
+    if (totalNumberThrownOut)
+      handler_->message(CLP_SINGULARITIES,messages_)
+	<<totalNumberThrownOut
+	<<CoinMessageEol;
+  } else {
+    int returnCode=internalFactorize(1);
+    assert (!returnCode);
+  }
   // put back original costs and then check
   // also move to work arrays
   createRim(4+32);
