@@ -163,6 +163,7 @@ ClpFactorization::factorize ( ClpSimplex * model,
       networkBasis_ = NULL;
       if (networkMatrix&&!doCheck)
 	maximumPivots(1);
+      //printf("L, U, R %d %d %d\n",numberElementsL(),numberElementsU(),numberElementsR());
       while (status_==-99) {
 	// maybe for speed will be better to leave as many regions as possible
 	gutsOfDestructor();
@@ -241,7 +242,12 @@ ClpFactorization::factorize ( ClpSimplex * model,
 	if (status_==-99) {
 	  // get more memory
 	  areaFactor(2.0*areaFactor());
-	}
+	} else if (status_==-1&&model->numberIterations()==0&&
+                   denseThreshold_) {
+          // Round again without dense
+          denseThreshold_=0;
+          status_=-99;
+        }
       }
       // If we get here status is 0 or -1
       if (status_ == 0) {

@@ -489,7 +489,6 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
 	  if (prob->status_)
 	    break;
 	}
-
 	if (tripleton) {
 	  paction_ = tripleton_action::presolve(prob, paction_);
 	  if (prob->status_)

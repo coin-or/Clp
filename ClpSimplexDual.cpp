@@ -368,7 +368,7 @@ int ClpSimplexDual::dual (int ifValuesPass , int startFinishOptions)
 	}
       }
       // may factorize, checks if problem finished
-      statusOfProblemInDual(lastCleaned,factorType,saveDuals);
+      statusOfProblemInDual(lastCleaned,factorType,saveDuals,data);
       // If values pass then do easy ones on first time
       if (ifValuesPass&&
 	  progress_->lastIterationNumber(0)<0) {
@@ -1051,6 +1051,10 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
 	if (numberIterations_>210567)
 	  exit(77);
 #endif
+	//if (numberIterations_==1890)
+        //whatNext=1;
+	//if (numberIterations_>2000)
+        //exit(77);
 	// and set bounds correctly
 	originalBound(sequenceIn_); 
 	changeBound(sequenceOut_);
@@ -2679,7 +2683,7 @@ ClpSimplexDual::checkUnbounded(CoinIndexedVector * ray,
 /* Checks if finished.  Updates status */
 void 
 ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
-				      double * givenDuals)
+                                      double * givenDuals, ClpDataSave & saveData)
 {
   bool normalType=true;
   int numberPivots = factorization_->pivots();
@@ -2778,6 +2782,77 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
   // at this stage status is -3 or -4 if looks infeasible
   // get primal and dual solutions
   gutsOfSolution(givenDuals,NULL);
+  // If bad accuracy treat as singular
+  if (largestPrimalError_>1.0e15||largestDualError_>1.0e15) {
+    // restore previous basis
+    unflagVariables = false;
+    assert (type==1);
+    changeMade_++; // say something changed
+    // Keep any flagged variables
+    int i;
+    for (i=0;i<numberRows_+numberColumns_;i++) {
+      if (flagged(i))
+        saveStatus_[i] |= 64; //say flagged
+    }
+    memcpy(status_ ,saveStatus_,(numberColumns_+numberRows_)*sizeof(char));
+    memcpy(rowActivityWork_,savedSolution_+numberColumns_ ,
+           numberRows_*sizeof(double));
+    memcpy(columnActivityWork_,savedSolution_ ,
+           numberColumns_*sizeof(double));
+    // restore extra stuff
+    int dummy;
+    matrix_->generalExpanded(this,6,dummy);
+    // get correct bounds on all variables
+    //double dummyChangeCost=0.0;
+    //changeBounds(true,rowArray_[2],dummyChangeCost);
+    // throw away change
+    for (i=0;i<4;i++) 
+      rowArray_[i]->clear();
+    // need to reject something
+    char x = isColumn(sequenceOut_) ? 'C' :'R';
+    handler_->message(CLP_SIMPLEX_FLAG,messages_)
+      <<x<<sequenceWithin(sequenceOut_)
+      <<CoinMessageEol;
+    setFlagged(sequenceOut_);
+    progress_->clearBadTimes();
+    
+    // Go to safer 
+    double newTolerance = CoinMin(1.1*factorization_->pivotTolerance(),0.99);
+    factorization_->pivotTolerance(newTolerance);
+    forceFactorization_=1; // a bit drastic but ..
+    type = 2;
+    //assert (internalFactorize(1)==0);
+    if (internalFactorize(1)) {
+      memcpy(status_ ,saveStatus_,(numberColumns_+numberRows_)*sizeof(char));
+      memcpy(rowActivityWork_,savedSolution_+numberColumns_ ,
+             numberRows_*sizeof(double));
+      memcpy(columnActivityWork_,savedSolution_ ,
+             numberColumns_*sizeof(double));
+      // restore extra stuff
+      int dummy;
+      matrix_->generalExpanded(this,6,dummy);
+      // debug
+      int returnCode = internalFactorize(1);
+      while (returnCode) {
+        // ouch 
+        // switch off dense
+        int saveDense = factorization_->denseThreshold();
+        factorization_->setDenseThreshold(0);
+        // Go to safe
+        factorization_->pivotTolerance(0.99);
+        // make sure will do safe factorization
+        pivotVariable_[0]=-1;
+        returnCode=internalFactorize(2);
+        factorization_->setDenseThreshold(saveDense);
+      }
+    }
+    // get primal and dual solutions
+    gutsOfSolution(givenDuals,NULL);
+  } else if (largestPrimalError_<1.0e-7&&largestDualError_<1.0e-7) {
+    // Can reduce tolerance
+    double newTolerance = CoinMax(0.99*factorization_->pivotTolerance(),saveData.pivotTolerance_);
+    factorization_->pivotTolerance(newTolerance);
+  } 
   // Double check infeasibility if no action
   if (progress_->lastIterationNumber(0)==numberIterations_) {
     if (dualRowPivot_->looksOptimal()) {
@@ -4155,7 +4230,7 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
     matrix_->refresh(this);
     // may factorize, checks if problem finished
     // should be able to speed this up on first time
-    statusOfProblemInDual(lastCleaned,factorType,NULL);
+    statusOfProblemInDual(lastCleaned,factorType,NULL,data);
 
     // Say good factorization
     factorType=1;

@@ -1434,8 +1434,15 @@ ClpSimplex::housekeeping(double objectiveChange)
 #endif
   // only time to re-factorize if one before real time
   // this is so user won't be surprised that maximumPivots has exact meaning
+  CoinBigIndex lengthL = factorization_->numberElementsL();
+  CoinBigIndex lengthU = factorization_->numberElementsU();
+  CoinBigIndex lengthR = factorization_->numberElementsR();
   if (factorization_->pivots()==factorization_->maximumPivots()||
       factorization_->maximumPivots()<2) {
+    return 1;
+  } else if (factorization_->pivots()*3>factorization_->maximumPivots()*2&&
+             lengthR*3>(lengthL+lengthU)*2+1000) {
+    //printf("ret after %d pivots\n",factorization_->pivots());
     return 1;
   } else {
     if (forceFactorization_>0&&
@@ -3824,6 +3831,7 @@ ClpSimplex::tightenPrimalBounds(double factor)
 #include "ClpSimplexPrimal.hpp"
 int ClpSimplex::dual (int ifValuesPass , int startFinishOptions)
 {
+  //double savedPivotTolerance = factorization_->pivotTolerance();
   int saveQuadraticActivated = objective_->activated();
   objective_->setActivated(0);
   CoinAssert (ifValuesPass>=0&&ifValuesPass<3);
@@ -3914,12 +3922,14 @@ int ClpSimplex::dual (int ifValuesPass , int startFinishOptions)
     handler_->setLogLevel(saveLog);
   }
   objective_->setActivated(saveQuadraticActivated);
+  //factorization_->pivotTolerance(savedPivotTolerance);
   return returnCode;
 }
 #include "ClpQuadraticObjective.hpp"
 // primal 
 int ClpSimplex::primal (int ifValuesPass , int startFinishOptions)
 {
+  //double savedPivotTolerance = factorization_->pivotTolerance();
   // See if nonlinear
   if (objective_->type()>1&&objective_->activated()) 
     return reducedGradient();
@@ -3959,6 +3969,7 @@ int ClpSimplex::primal (int ifValuesPass , int startFinishOptions)
     if (problemStatus_==10) 
       problemStatus_=0;
   }
+  //factorization_->pivotTolerance(savedPivotTolerance);
   return returnCode;
 }
 /* Dual ranging.
@@ -5949,8 +5960,9 @@ ClpSimplex::startup(int ifValuesPass, int startFinishOptions)
       // row activities have negative sign
       factorization_->slackValue(-1.0);
       factorization_->zeroTolerance(1.0e-13);
-    // Switch off dense (unless special option set)
-      factorization_->setDenseThreshold(0);
+      // Switch off dense (unless special option set)
+      if ((specialOptions_&8)==0)
+        factorization_->setDenseThreshold(0);
     }
     // If values pass then perturb (otherwise may be optimal so leave a bit)
     if (ifValuesPass) {

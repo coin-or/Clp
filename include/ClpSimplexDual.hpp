@@ -245,7 +245,7 @@ public:
 	    - 2 restoring from saved 
   */
   void statusOfProblemInDual(int & lastCleaned, int type,
-			     double * givenDjs);
+			     double * givenDjs, ClpDataSave & saveData);
   /// Perturbs problem (method depends on perturbation())
   void perturb();
   /** Fast iterations.  Misses out a lot of initialization.

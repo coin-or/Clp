@@ -33,6 +33,7 @@
 #endif
 #ifdef UFL_BARRIER
 #include "ClpCholeskyUfl.hpp"
+#define FAST_BARRIER
 #endif
 #ifdef TAUCS_BARRIER
 #include "ClpCholeskyTaucs.hpp"
@@ -351,6 +352,99 @@ ClpSimplex::initialSolve(ClpSolve & options)
       frequency=base+cutoff1/freq0 + (cutoff2-cutoff1)/freq1 + (numberRows-cutoff2)/freq2;
     model2->setFactorizationFrequency(CoinMin(maximum,frequency));
   }
+  if (method==ClpSolve::automatic) {
+    if (doSprint==0&&doIdiot==0) {
+      // off
+      method=ClpSolve::useDual;
+    } else {
+      // only do primal if sprint or idiot
+      if (doSprint>0) {
+        method=ClpSolve::usePrimalorSprint;
+      } else if (doIdiot>0) {
+        method=ClpSolve::usePrimal;
+      } else {
+        if (numberElements<500000) {
+          // Small problem
+          if(numberRows*10>numberColumns||numberColumns<6000
+             ||(numberRows*20>numberColumns&&!plusMinus))
+            doSprint=0; // switch off sprint
+        } else {
+          // larger problem
+          if(numberRows*8>numberColumns)
+            doSprint=0; // switch off sprint
+        }
+        int nPasses=0;
+        // look at rhs
+        int iRow;
+        double largest=0.0;
+        double smallest = 1.0e30;
+        double largestGap=0.0;
+        int numberNotE=0;
+        for (iRow=0;iRow<numberRows;iRow++) {
+          double value1 = model2->rowLower_[iRow];
+          if (value1&&value1>-1.0e31) {
+            largest = CoinMax(largest,fabs(value1));
+            smallest=CoinMin(smallest,fabs(value1));
+          }
+          double value2 = model2->rowUpper_[iRow];
+          if (value2&&value2<1.0e31) {
+            largest = CoinMax(largest,fabs(value2));
+            smallest=CoinMin(smallest,fabs(value2));
+          }
+          if (value2>value1) {
+            numberNotE++;
+            if (value2>1.0e31||value1<-1.0e31)
+              largestGap = COIN_DBL_MAX;
+            else
+              largestGap = value2-value1;
+          }
+        }
+        bool tryIt= numberRows>200&&numberColumns>2000&&numberColumns>2*numberRows;
+        if (numberRows<1000&&numberColumns<3000)
+          tryIt=false;
+        if (tryIt) {
+          if (largest/smallest>2.0) {
+            nPasses = 10+numberColumns/100000;
+            nPasses = CoinMin(nPasses,50);
+            nPasses = CoinMax(nPasses,15);
+            if (numberRows>20000&&nPasses>5) {
+              // Might as well go for it
+              nPasses = CoinMax(nPasses,71);
+            } else if (numberRows>2000&&nPasses>5) {
+              nPasses = CoinMax(nPasses,50);
+            } else if (numberElements<3*numberColumns) {
+              nPasses=CoinMin(nPasses,10); // probably not worh it
+            }
+          } else if (largest/smallest>1.01||numberElements<=3*numberColumns) {
+            nPasses = 10+numberColumns/1000;
+            nPasses = CoinMin(nPasses,100);
+            nPasses = CoinMax(nPasses,30);
+            if (numberRows>25000) {
+              // Might as well go for it
+              nPasses = CoinMax(nPasses,71);
+            }
+            if (!largestGap)
+              nPasses *= 2;
+          } else {
+            nPasses = 10+numberColumns/1000;
+            nPasses = CoinMin(nPasses,200);
+            nPasses = CoinMax(nPasses,100);
+            if (!largestGap)
+              nPasses *= 2;
+          }
+        }
+        if (!tryIt||nPasses<=5)
+          doIdiot=0;
+        if (doSprint) {
+          method = ClpSolve::usePrimalorSprint;
+        } else if (doIdiot) {
+          method = ClpSolve::usePrimal;
+        } else {
+          method = ClpSolve::useDual;
+        }
+      }
+    }
+  }
   if (method==ClpSolve::usePrimalorSprint) {
     if (doSprint<0) { 
       if (numberElements<500000) {
@@ -372,6 +466,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
     }
   }
   if (method==ClpSolve::useDual) {
+    // switch off idiot for now
+    doIdiot=0;
     // pick up number passes
     int nPasses=0;
     int numberNotE=0;
@@ -430,6 +526,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	timeX=time2;
       }
     }
+    double * saveLower=NULL;
+    double * saveUpper=NULL;
     if (presolve==ClpSolve::presolveOn) {
       int numberInfeasibilities = model2->tightenPrimalBounds();
       if (numberInfeasibilities) {
@@ -437,6 +535,27 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	  <<CoinMessageEol;
 	model2 = this;
 	presolve=ClpSolve::presolveOff;
+      }
+    } else if (numberRows_+numberColumns_>5000) {
+      // do anyway
+      saveLower = new double[numberRows_+numberColumns_];
+      CoinMemcpyN(model2->columnLower(),numberColumns_,saveLower);
+      CoinMemcpyN(model2->rowLower(),numberRows_,saveLower+numberColumns_);
+      saveUpper = new double[numberRows_+numberColumns_];
+      CoinMemcpyN(model2->columnUpper(),numberColumns_,saveUpper);
+      CoinMemcpyN(model2->rowUpper(),numberRows_,saveUpper+numberColumns_);
+      int numberInfeasibilities = model2->tightenPrimalBounds();
+      if (numberInfeasibilities) {
+	handler_->message(CLP_INFEASIBLE,messages_)
+	  <<CoinMessageEol;
+        CoinMemcpyN(saveLower,numberColumns_,model2->columnLower());
+        CoinMemcpyN(saveLower+numberColumns_,numberRows_,model2->rowLower());
+        delete [] saveLower;
+        saveLower=NULL;
+        CoinMemcpyN(saveUpper,numberColumns_,model2->columnUpper());
+        CoinMemcpyN(saveUpper+numberColumns_,numberRows_,model2->rowUpper());
+        delete [] saveUpper;
+        saveUpper=NULL;
       }
     }
     if (doCrash) {
@@ -497,6 +616,16 @@ ClpSimplex::initialSolve(ClpSolve & options)
     } else {
       // solve
       model2->dual(1);
+    }
+    if (saveLower) {
+      CoinMemcpyN(saveLower,numberColumns_,model2->columnLower());
+      CoinMemcpyN(saveLower+numberColumns_,numberRows_,model2->rowLower());
+      delete [] saveLower;
+      saveLower=NULL;
+      CoinMemcpyN(saveUpper,numberColumns_,model2->columnUpper());
+      CoinMemcpyN(saveUpper+numberColumns_,numberRows_,model2->rowUpper());
+      delete [] saveUpper;
+      saveUpper=NULL;
     }
     time2 = CoinCpuTime();
     timeCore = time2-timeX;
