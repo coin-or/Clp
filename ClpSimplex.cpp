@@ -6128,6 +6128,7 @@ ClpSimplexProgress::looping()
 	model_->messageHandler()->message(CLP_LOOP,model_->messages())
 	  <<CoinMessageEol;
 #ifndef NDEBUG
+        printf("debug loop ClpSimplex A\n");
 	abort();
 #endif
 	return 3;

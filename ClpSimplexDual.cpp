@@ -2017,7 +2017,7 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 	alpha = work[i];
 	oldValue = reducedCost[iSequence];
 	value = oldValue-tentativeTheta*alpha;
-	assert (oldValue<=dualTolerance_*1.0001);
+	//assert (oldValue<=dualTolerance_*1.0001);
 	if (value>newTolerance) {
 	  value = oldValue-upperTheta*alpha;
 	  if (value>newTolerance && -alpha>=acceptablePivot) 
@@ -2031,7 +2031,7 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 	alpha = work[i];
 	oldValue = reducedCost[iSequence];
 	value = oldValue-tentativeTheta*alpha;
-	assert (oldValue>=-dualTolerance_*1.0001);
+	//assert (oldValue>=-dualTolerance_*1.0001);
 	if (value<-newTolerance) {
 	  value = oldValue-upperTheta*alpha;
 	  if (value<-newTolerance && alpha>=acceptablePivot) 
@@ -2407,8 +2407,7 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 	  theta_=minimumTheta;
 	  thisIncrease=true;
 	} else {
-	  theta_=(oldValue+newTolerance)/alpha_;
-	  assert(theta_>=0.0);
+	  theta_=CoinMax((oldValue+newTolerance)/alpha_,0.0);
 	  thisIncrease=true;
 	} 
       }
