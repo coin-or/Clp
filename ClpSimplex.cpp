@@ -782,7 +782,6 @@ ClpSimplex::computeDuals(double * givenDjs)
 	break;
       }
     }
-    ClpFillN(work,numberRows_,0.0);
     // now look at dual solution
     array = thisVector->denseVector();
     for (iRow=0;iRow<numberRows_;iRow++) {
@@ -793,7 +792,14 @@ ClpSimplex::computeDuals(double * givenDjs)
       rowReducedCost_[iRow]=value;
     }
     ClpDisjointCopyN(objectiveWork_,numberColumns_,reducedCostWork_);
-    transposeTimes(-1.0,dual_,reducedCostWork_);
+    // can use work if problem scaled (for better cache)
+    if (numberRows_>10000)
+      matrix_->transposeTimes(-1.0,dual_,reducedCostWork_,
+			      rowScale_,columnScale_,work);
+    else
+      matrix_->transposeTimes(-1.0,dual_,reducedCostWork_,
+			      rowScale_,columnScale_,NULL);
+    ClpFillN(work,numberRows_,0.0);
     // Extended duals and check dual infeasibility
     if (!matrix_->skipDualCheck()||algorithm_<0||problemStatus_!=-2) 
       matrix_->dualExpanded(this,NULL,NULL,2);
@@ -916,12 +922,13 @@ ClpSimplex::cleanStatus()
 }
 
 /* Factorizes using current basis.  
-      solveType - 1 iterating, 0 initial, -1 external 
-      - 2 then iterating but can throw out of basis
-      If 10 added then in primal values pass
+   solveType - 1 iterating, 0 initial, -1 external 
+   - 2 then iterating but can throw out of basis
+   If 10 added then in primal values pass
+   Return codes are as from ClpFactorization unless initial factorization
+   when total number of singularities is returned.
+   Special case is numberRows_+1 -> all slack basis.
 */
-/* Return codes are as from ClpFactorization unless initial factorization
-   when total number of singularities is returned */
 int ClpSimplex::internalFactorize ( int solveType)
 {
   int iRow,iColumn;
@@ -1282,6 +1289,10 @@ int ClpSimplex::internalFactorize ( int solveType)
 	numberSlacks++;
     }
     status= CoinMax(numberSlacks-totalSlacks,0);
+    // special case if all slack
+    if (numberSlacks==numberRows_) {
+      status=numberRows_+1;
+    }
   }
 
   // sparse methods
@@ -5579,14 +5590,15 @@ ClpSimplex::startup(int ifValuesPass, int startFinishOptions)
 	  numberThrownOut = status;
 	
 	// for this we need clean basis so it is after factorize
-	if (!numberThrownOut) {
+	if (!numberThrownOut||numberThrownOut==numberRows_+1) {
 	  // solution will be done again - skip if absolutely sure
-	  if ((specialOptions_&512)==0) {
+	  if ((specialOptions_&512)==0||numberThrownOut==numberRows_+1) {
 	    numberThrownOut = gutsOfSolution(  NULL,NULL,
 					       ifValuesPass!=0);
 	  } else {
 	    // make sure not optimal at once
 	    numberPrimalInfeasibilities_=1;
+	    numberThrownOut=0;
 	  }
 	} else {
 	  matrix_->rhsOffset(this,true); // redo rhs offset
@@ -5696,6 +5708,8 @@ ClpSimplex::statusOfProblem(bool initial)
     int totalNumberThrownOut=0;
     while(numberThrownOut) {
       int status = internalFactorize(0);
+      if (status==numberRows_+1)
+	status=0; // all slack
       if (status<0)
 	return false; // some error
       else

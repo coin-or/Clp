@@ -272,9 +272,25 @@ int mainTest (int argc, const char *argv[],int algorithm,
 	assert (model2);
 	printf("Presolve took %g seconds\n",CoinCpuTime()-a);
 	// change from 200 (unless user has changed)
-	if (model2->factorization()->maximumPivots()==200&&
-	    model2->numberRows()>-5000)
-	  model2->factorization()->maximumPivots(100+model2->numberRows()/100);
+	if (model2->factorizationFrequency()==200) {
+	  // User did not touch preset
+	  int numberRows = model2->numberRows();
+	  const int cutoff1=10000;
+	  const int cutoff2=100000;
+	  const int base=75;
+	  const int freq0 = 50;
+	  const int freq1=200;
+	  const int freq2=400;
+	  const int maximum=2000;
+	  int frequency;
+	  if (numberRows<cutoff1)
+	    frequency=base+numberRows/freq0;
+	  else if (numberRows<cutoff2)
+	    frequency=base+cutoff1/freq0 + (numberRows-cutoff1)/freq1;
+	  else
+	    frequency=base+cutoff1/freq0 + (cutoff2-cutoff1)/freq1 + (numberRows-cutoff2)/freq2;
+	  model2->setFactorizationFrequency(CoinMin(maximum,frequency));
+	}
 	if (algorithm==0) {
 	  // faster if bounds tightened
 	  int numberInfeasibilities = model2->tightenPrimalBounds();

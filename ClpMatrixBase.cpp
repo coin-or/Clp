@@ -121,9 +121,10 @@ ClpMatrixBase::times(double scalar,
 // And for scaling - default aborts for when scaling not supported
 void 
 ClpMatrixBase::transposeTimes(double scalar,
-				const double * x, double * y,
-				const double * rowScale, 
-				const double * columnScale) const
+			      const double * x, double * y,
+			      const double * rowScale, 
+			      const double * columnScale,
+			      double * spare) const
 {
   if (rowScale) {
     std::cerr<<"Scaling not supported - ClpMatrixBase"<<std::endl;

@@ -469,7 +469,8 @@ public:
       solveType - 1 iterating, 0 initial, -1 external 
       If 10 added then in primal values pass
       Return codes are as from ClpFactorization unless initial factorization
-      when total number of singularities is returned
+      when total number of singularities is returned.
+      Special case is numberRows_+1 -> all slack basis.
   */
   int internalFactorize(int solveType);
   /// Save data

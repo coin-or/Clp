@@ -193,16 +193,58 @@ ClpPackedMatrix::transposeTimes(double scalar,
   const CoinBigIndex * columnStart = matrix_->getVectorStarts();
   const int * columnLength = matrix_->getVectorLengths(); 
   const double * elementByColumn = matrix_->getElements();
-  //memset(y,0,numberActiveColumns_*sizeof(double));
-  for (iColumn=0;iColumn<numberActiveColumns_;iColumn++) {
-    CoinBigIndex j;
-    double value=0.0;
-    for (j=columnStart[iColumn];
-	 j<columnStart[iColumn]+columnLength[iColumn];j++) {
-      int jRow=row[j];
-      value += x[jRow]*elementByColumn[j];
+  if (!hasGaps_) {
+    if (scalar==1.0) {
+      CoinBigIndex start=columnStart[0];
+      for (iColumn=0;iColumn<numberActiveColumns_;iColumn++) {
+	CoinBigIndex j;
+	CoinBigIndex next=columnStart[iColumn+1];
+	double value=y[iColumn];
+	for (j=start;j<next;j++) {
+	  int jRow=row[j];
+	  value += x[jRow]*elementByColumn[j];
+	}
+	start=next;
+	y[iColumn] = value;
+      }
+    } else if (scalar==-1.0) {
+      CoinBigIndex start=columnStart[0];
+      for (iColumn=0;iColumn<numberActiveColumns_;iColumn++) {
+	CoinBigIndex j;
+	CoinBigIndex next=columnStart[iColumn+1];
+	double value=y[iColumn];
+	for (j=start;j<next;j++) {
+	  int jRow=row[j];
+	  value -= x[jRow]*elementByColumn[j];
+	}
+	start=next;
+	y[iColumn] = value;
+      }
+    } else {
+      CoinBigIndex start=columnStart[0];
+      for (iColumn=0;iColumn<numberActiveColumns_;iColumn++) {
+	CoinBigIndex j;
+	CoinBigIndex next=columnStart[iColumn+1];
+	double value=0.0;
+	for (j=start;j<next;j++) {
+	  int jRow=row[j];
+	  value += x[jRow]*elementByColumn[j];
+	}
+	start=next;
+	y[iColumn] += value*scalar;
+      }
     }
-    y[iColumn] += value*scalar;
+  } else {
+    for (iColumn=0;iColumn<numberActiveColumns_;iColumn++) {
+      CoinBigIndex j;
+      double value=0.0;
+      for (j=columnStart[iColumn];
+	   j<columnStart[iColumn]+columnLength[iColumn];j++) {
+	int jRow=row[j];
+	value += x[jRow]*elementByColumn[j];
+      }
+      y[iColumn] += value*scalar;
+    }
   }
 }
 void 
@@ -218,7 +260,6 @@ ClpPackedMatrix::times(double scalar,
     const CoinBigIndex * columnStart = matrix_->getVectorStarts();
     const int * columnLength = matrix_->getVectorLengths(); 
     const double * elementByColumn = matrix_->getElements();
-    //memset(y,0,matrix_->getNumRows()*sizeof(double));
     for (iColumn=0;iColumn<numberActiveColumns_;iColumn++) {
       CoinBigIndex j;
       double value = x[iColumn];
@@ -240,7 +281,8 @@ void
 ClpPackedMatrix::transposeTimes( double scalar,
 				 const double * x, double * y,
 				 const double * rowScale, 
-				 const double * columnScale) const
+				 const double * columnScale,
+				 double * spare) const
 {
   if (rowScale) {
     int iColumn;
@@ -249,17 +291,70 @@ ClpPackedMatrix::transposeTimes( double scalar,
     const CoinBigIndex * columnStart = matrix_->getVectorStarts();
     const int * columnLength = matrix_->getVectorLengths(); 
     const double * elementByColumn = matrix_->getElements();
-    //memset(y,0,numberActiveColumns_*sizeof(double));
-    for (iColumn=0;iColumn<numberActiveColumns_;iColumn++) {
-      CoinBigIndex j;
-      double value=0.0;
-      // scaled
-      for (j=columnStart[iColumn];
-	   j<columnStart[iColumn]+columnLength[iColumn];j++) {
-	int jRow=row[j];
-      value += x[jRow]*elementByColumn[j]*rowScale[jRow];
+    if (!spare) {
+      if (!hasGaps_) {
+	CoinBigIndex start=columnStart[0];
+	for (iColumn=0;iColumn<numberActiveColumns_;iColumn++) {
+	  CoinBigIndex j;
+	  CoinBigIndex next=columnStart[iColumn+1];
+	  double value=0.0;
+	  // scaled
+	  for (j=start;j<next;j++) {
+	    int jRow=row[j];
+	    value += x[jRow]*elementByColumn[j]*rowScale[jRow];
+	  }
+	  start=next;
+	  y[iColumn] += value*scalar*columnScale[iColumn];
+	}
+      } else {
+	for (iColumn=0;iColumn<numberActiveColumns_;iColumn++) {
+	  CoinBigIndex j;
+	  double value=0.0;
+	  // scaled
+	  for (j=columnStart[iColumn];
+	       j<columnStart[iColumn]+columnLength[iColumn];j++) {
+	    int jRow=row[j];
+	    value += x[jRow]*elementByColumn[j]*rowScale[jRow];
+	  }
+	  y[iColumn] += value*scalar*columnScale[iColumn];
+	}
       }
-      y[iColumn] += value*scalar*columnScale[iColumn];
+    } else {
+      // can use spare region
+      int iRow;
+      int numberRows = getNumRows();
+      for (iRow=0;iRow<numberRows;iRow++)
+	spare[iRow] = x[iRow]*rowScale[iRow];
+      if (!hasGaps_) {
+	CoinBigIndex start=columnStart[0];
+	for (iColumn=0;iColumn<numberActiveColumns_;iColumn++) {
+	  CoinBigIndex j;
+	  CoinBigIndex next=columnStart[iColumn+1];
+	  double value=0.0;
+	  // scaled
+	  for (j=start;j<next;j++) {
+	    int jRow=row[j];
+	    value += spare[jRow]*elementByColumn[j];
+	  }
+	  start=next;
+	  y[iColumn] += value*scalar*columnScale[iColumn];
+	}
+      } else {
+	for (iColumn=0;iColumn<numberActiveColumns_;iColumn++) {
+	  CoinBigIndex j;
+	  double value=0.0;
+	  // scaled
+	  for (j=columnStart[iColumn];
+	       j<columnStart[iColumn]+columnLength[iColumn];j++) {
+	    int jRow=row[j];
+	    value += spare[jRow]*elementByColumn[j];
+	  }
+	  y[iColumn] += value*scalar*columnScale[iColumn];
+	}
+      }
+      // no need to zero out
+      //for (iRow=0;iRow<numberRows;iRow++)
+      //spare[iRow] = 0.0;
     }
   } else {
     transposeTimes(scalar,x,y);
@@ -308,7 +403,7 @@ ClpPackedMatrix::transposeTimes(const ClpSimplex * model, double scalar,
   if (numberInRowArray>factor*numberRows||!rowCopy) {
     // do by column
     // If no gaps - can do a bit faster
-    if (!hasGaps_&&true) {
+    if (!hasGaps_) {
       transposeTimesByColumn( model,  scalar,
 			      rowArray, y, columnArray);
       return;

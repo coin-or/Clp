@@ -3762,7 +3762,7 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
       printf("***** ClpDual strong branching factorization error - debug\n");
 #endif
       return -2;
-    } else if (factorizationStatus) {
+    } else if (factorizationStatus&&factorizationStatus<=numberRows_) {
       handler_->message(CLP_SINGULARITIES,messages_)
 	<<factorizationStatus
 	<<CoinMessageEol;

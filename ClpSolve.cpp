@@ -331,7 +331,22 @@ ClpSimplex::initialSolve(ClpSolve & options)
   }
   if (model2->factorizationFrequency()==200) {
     // User did not touch preset
-    model2->setFactorizationFrequency(CoinMin(2000,100+model2->numberRows()/200));
+    int numberRows = model2->numberRows();
+    const int cutoff1=10000;
+    const int cutoff2=100000;
+    const int base=75;
+    const int freq0 = 50;
+    const int freq1=200;
+    const int freq2=400;
+    const int maximum=2000;
+    int frequency;
+    if (numberRows<cutoff1)
+      frequency=base+numberRows/freq0;
+    else if (numberRows<cutoff2)
+      frequency=base+cutoff1/freq0 + (numberRows-cutoff1)/freq1;
+    else
+      frequency=base+cutoff1/freq0 + (cutoff2-cutoff1)/freq1 + (numberRows-cutoff2)/freq2;
+    model2->setFactorizationFrequency(CoinMin(maximum,frequency));
   }
   if (method==ClpSolve::usePrimalorSprint) {
     if (doSprint<0) { 
