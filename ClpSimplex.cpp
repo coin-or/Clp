@@ -3043,13 +3043,61 @@ int ClpSimplex::dual (int ifValuesPass )
     bool denseFactorization = initialDenseFactorization();
     // It will be safe to allow dense
     setInitialDenseFactorization(true);
+    // Allow for catastrophe
+    int saveMax = intParam_[ClpMaxNumIteration];
+    if (intParam_[ClpMaxNumIteration]>100000+numberIterations_)
+      intParam_[ClpMaxNumIteration] = numberIterations_ + 1000 + 2*numberRows_+numberColumns_;
     // check which algorithms allowed
     int dummy;
     if ((matrix_->generalExpanded(this,4,dummy)&1)!=0)
       returnCode = ((ClpSimplexPrimal *) this)->primal(1);
     else
       returnCode = ((ClpSimplexDual *) this)->dual(0);
-	
+    if (problemStatus_==3&&numberIterations_<saveMax) {
+      printf("looks like trouble - too many iterations in clean up - trying again\n");
+      // flatten solution and try again
+      int iRow,iColumn;
+      for (iRow=0;iRow<numberRows_;iRow++) {
+	if (getRowStatus(iRow)!=basic) {
+	  setRowStatus(iRow,superBasic);
+	  // but put to bound if close
+	  if (fabs(rowActivity_[iRow]-rowLower_[iRow])
+	      <=primalTolerance_) {
+	    rowActivity_[iRow]=rowLower_[iRow];
+	    setRowStatus(iRow,atLowerBound);
+	  } else if (fabs(rowActivity_[iRow]-rowUpper_[iRow])
+		     <=primalTolerance_) {
+	    rowActivity_[iRow]=rowUpper_[iRow];
+	    setRowStatus(iRow,atUpperBound);
+	  }
+	}
+      }
+      for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+	if (getColumnStatus(iColumn)!=basic) {
+	  setColumnStatus(iColumn,superBasic);
+	  // but put to bound if close
+	  if (fabs(columnActivity_[iColumn]-columnLower_[iColumn])
+	      <=primalTolerance_) {
+	    columnActivity_[iColumn]=columnLower_[iColumn];
+	    setColumnStatus(iColumn,atLowerBound);
+	  } else if (fabs(columnActivity_[iColumn]
+			  -columnUpper_[iColumn])
+		     <=primalTolerance_) {
+	    columnActivity_[iColumn]=columnUpper_[iColumn];
+	    setColumnStatus(iColumn,atUpperBound);
+	  }
+	}
+      }
+      problemStatus_=-1;
+      intParam_[ClpMaxNumIteration] = min(numberIterations_ + 1000 + 
+					  2*numberRows_+numberColumns_,saveMax);
+      perturbation_=savePerturbation;
+      returnCode = ((ClpSimplexPrimal *) this)->primal(0);
+      if (problemStatus_==3&&numberIterations_<saveMax) 
+	printf("looks like real trouble - too many iterations in second clean up - giving up\n");
+    }
+    intParam_[ClpMaxNumIteration] = saveMax;
+
     setInitialDenseFactorization(denseFactorization);
     perturbation_=savePerturbation;
     if (problemStatus_==10) 
@@ -3128,6 +3176,20 @@ ClpSimplex::borrowModel(ClpModel & otherModel)
   setDualRowPivotAlgorithm(steep1);
   ClpPrimalColumnSteepest steep2;
   setPrimalColumnPivotAlgorithm(steep2);
+}
+void 
+ClpSimplex::borrowModel(ClpSimplex & otherModel) 
+{
+  ClpModel::borrowModel(otherModel);
+  createStatus();
+  dualBound_ = otherModel.dualBound_;
+  dualTolerance_ = otherModel.dualTolerance_;
+  primalTolerance_ = otherModel.primalTolerance_;
+  dualRowPivot_ = otherModel.dualRowPivot_->clone(true);
+  primalColumnPivot_ = otherModel.primalColumnPivot_->clone(true);
+  scalingFlag_ = otherModel.scalingFlag_;
+  perturbation_ = otherModel.perturbation_;
+  specialOptions_ = otherModel.specialOptions_;
 }
 typedef struct {
   double optimizationDirection;

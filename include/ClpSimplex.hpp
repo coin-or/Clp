@@ -146,6 +146,7 @@ public:
       an empty model with a real one - while it does an algorithm.
       This is same as ClpModel one, but sets scaling on etc. */
   void borrowModel(ClpModel & otherModel);
+  void borrowModel(ClpSimplex & otherModel);
   //@}
 
   /**@name Functions most useful to user */
