@@ -119,6 +119,10 @@ public:
   void copyInIntegerInformation(const char * information);
   /// Drop integer informations
   void deleteIntegerInformation();
+  /** Set the index-th variable to be a continuous variable */
+  void setContinuous(int index);
+  /** Set the index-th variable to be an integer variable */
+  void setInteger(int index);
   /// Resizes rim part of model 
   void resize (int newNumberRows, int newNumberColumns);
   /// Deletes rows

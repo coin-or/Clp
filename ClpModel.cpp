@@ -1669,6 +1669,34 @@ ClpModel::copyInIntegerInformation(const char * information)
     integerType_ = NULL;
   }
 }
+void
+ClpModel::setContinuous(int index)
+{
+
+  if (integerType_) {
+#ifndef NDEBUG
+    if (index<0||index>=numberColumns_) {
+      indexError(index,"setContinuous");
+    }
+#endif
+    integerType_[index]=0;
+  }
+}
+//-----------------------------------------------------------------------------
+void
+ClpModel::setInteger(int index)
+{
+  if (!integerType_) {
+    integerType_ = new char[numberColumns_];
+    CoinFillN ( integerType_, numberColumns_,(char) 0);
+  }
+#ifndef NDEBUG
+  if (index<0||index>=numberColumns_) {
+    indexError(index,"setInteger");
+  }
+#endif
+  integerType_[index]=1;
+}
 // Drops names - makes lengthnames 0 and names empty
 void 
 ClpModel::dropNames()
