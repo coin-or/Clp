@@ -72,7 +72,9 @@ export LibType OptLevel LIBNAME LIBSRC
 
 .DELETE_ON_ERROR:
 
-.PHONY: install library
+.PHONY: default install library
+
+default: install
 
 install library:
 	$(MAKE) -f ${MakefileDir}/Makefile.lib $@

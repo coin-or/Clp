@@ -145,7 +145,7 @@ public:
   inline void setNumberIterations(int numberIterations)
   { numberIterations_ = numberIterations;};
    /// Maximum number of iterations
-   inline int maximumIterations() const { return maximumIterations_; }
+   inline int maximumIterations() const { return intParam_[ClpMaxNumIteration]; }
    void setMaximumIterations(int value);
    /** Status of problem:
        0 - optimal
@@ -406,8 +406,6 @@ protected:
   int numberIterations_;
   /// Status of problem
   int problemStatus_;
-  /// Maximum number of iterations
-  int maximumIterations_;
   /// Message handler
   CoinMessageHandler * handler_;
   /// Flag to say if default handler (so delete)

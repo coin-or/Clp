@@ -64,7 +64,6 @@ ClpModel::ClpModel () :
   objectiveValue_(0.0),
   numberIterations_(0),
   problemStatus_(-1),
-  maximumIterations_(1000000000),
   defaultHandler_(true),
   status_(NULL),
   lengthNames_(0),
@@ -72,7 +71,7 @@ ClpModel::ClpModel () :
   columnNames_(),
   integerType_(NULL)
 {
-  intParam_[ClpMaxNumIteration] = 9999999;
+  intParam_[ClpMaxNumIteration] = 99999999;
   intParam_[ClpMaxNumIterationHotStart] = 9999999;
 
   dblParam_[ClpDualObjectiveLimit] = DBL_MAX;
@@ -325,7 +324,6 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
   objectiveValue_=rhs.objectiveValue_;
   numberIterations_ = rhs.numberIterations_;
   problemStatus_ = rhs.problemStatus_;
-  maximumIterations_ = rhs.maximumIterations_;
   if (trueCopy) {
     lengthNames_ = rhs.lengthNames_;
     rowNames_ = rhs.rowNames_;
@@ -776,7 +774,7 @@ void
 ClpModel::setMaximumIterations(int value)
 {
   if(value>=0)
-    maximumIterations_=value;
+    intParam_[ClpMaxNumIteration]=value;
 }
 // Pass in Message handler (not deleted at end)
 void 

@@ -1734,7 +1734,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
   int tentativeStatus = problemStatus_;
   double changeCost;
 
-  if (problemStatus_>-3) {
+  if (problemStatus_>-3||factorization_->pivots()) {
     // factorize
     // later on we will need to recover from singularities
     // also we could skip if first time
@@ -1755,10 +1755,21 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	double dummyChangeCost=0.0;
 	changeBounds(true,rowArray_[2],dummyChangeCost);
 	// throw away change
-	rowArray_[2]->clear();
+	int i;
+	for (i=0;i<4;i++) 
+	  rowArray_[i]->clear();
 	forceFactorization_=1; // a bit drastic but ..
 	type = 2;
-	assert (internalFactorize(1)==0);
+	//assert (internalFactorize(1)==0);
+	if (internalFactorize(1)) {
+	  memcpy(status_ ,saveStatus_,(numberColumns_+numberRows_)*sizeof(char));
+	  memcpy(rowActivityWork_,savedSolution_+numberColumns_ ,
+		 numberRows_*sizeof(double));
+	  memcpy(columnActivityWork_,savedSolution_ ,
+		 numberColumns_*sizeof(double));
+	  // debug
+	  assert (internalFactorize(1)==0);
+	}
       }
     }
     problemStatus_=-3;
@@ -1963,7 +1974,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 			  0.0,objectiveChange);
 	// for now - recompute all
 	gutsOfSolution(rowActivityWork_,columnActivityWork_);
-	assert(numberDualInfeasibilitiesWithoutFree_==0);
+	//assert(numberDualInfeasibilitiesWithoutFree_==0);
 	if (numberDualInfeasibilities_) {
 	  // bad free variables
 	  if (primalFeasible()) {

@@ -1039,7 +1039,7 @@ ClpSimplex::housekeeping(double objectiveChange)
   handler_->printing(algorithm_<0)<<theta_<<dualOut_;
   handler_->printing(algorithm_>0)<<dualIn_<<theta_;
   handler_->message()<<CoinMessageEol;
-  if (numberIterations_>=maximumIterations_)
+  if (numberIterations_>=maximumIterations())
     return 2;
   // only time to re-factorize if one before real time
   // this is so user won't be surprised that maximumPivots has exact meaning
@@ -1436,10 +1436,11 @@ ClpSimplex::checkPrimalSolution(const double * rowActivities,
   sumPrimalInfeasibilities_=0.0;
   numberPrimalInfeasibilities_=0;
   double primalTolerance = primalTolerance_;
-  double relaxedTolerance=dualTolerance_;
+  double relaxedTolerance=primalTolerance_;
   // we can't really trust infeasibilities if there is primal error
   double error = min(1.0e-3,largestPrimalError_);
-  relaxedTolerance = max(relaxedTolerance, error);
+  // allow tolerance at least slightly bigger than standard
+  relaxedTolerance = relaxedTolerance +  error;
   sumOfRelaxedPrimalInfeasibilities_ = 0.0;
 
   for (iRow=0;iRow<numberRows_;iRow++) {
@@ -1516,7 +1517,8 @@ ClpSimplex::checkDualSolution()
   double relaxedTolerance=dualTolerance_;
   // we can't really trust infeasibilities if there is dual error
   double error = min(1.0e-3,largestDualError_);
-  relaxedTolerance = max(relaxedTolerance, error);
+  // allow tolerance at least slightly bigger than standard
+  relaxedTolerance = relaxedTolerance +  error;
   sumOfRelaxedDualInfeasibilities_ = 0.0;
 
   for (iRow=0;iRow<numberRows_;iRow++) {
@@ -1702,6 +1704,21 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
       delete rowCopy_;
       // may return NULL if can't give row copy
       rowCopy_ = matrix_->reverseOrderedCopy();
+#ifdef TAKEOUT
+      {
+
+	ClpPackedMatrix* rowCopy =
+	  dynamic_cast< ClpPackedMatrix*>(rowCopy_);
+	const int * column = rowCopy->getIndices();
+	const CoinBigIndex * rowStart = rowCopy->getVectorStarts();
+	const double * element = rowCopy->getElements();
+	int i;
+	for (i=133;i<numberRows_;i++) {
+	  if (rowStart[i+1]-rowStart[i]==10||rowStart[i+1]-rowStart[i]==15)
+	    printf("Row %d has %d elements\n",i,rowStart[i+1]-rowStart[i]);
+	}
+      }  
+#endif
     }
   }
   if ((what&4)!=0) {
@@ -2332,7 +2349,7 @@ ClpSimplex::saveModel(const char * fileName)
     memcpy(scalars.intParam, intParam_,ClpLastIntParam * sizeof(double));
     scalars.numberIterations = numberIterations_;
     scalars.problemStatus = problemStatus_;
-    scalars.maximumIterations = maximumIterations_;
+    scalars.maximumIterations = maximumIterations();
     scalars.lengthNames = lengthNames_;
     scalars.numberDualInfeasibilities = numberDualInfeasibilities_;
     scalars.numberDualInfeasibilitiesWithoutFree 
@@ -2525,7 +2542,7 @@ ClpSimplex::restoreModel(const char * fileName)
     memcpy(intParam_, scalars.intParam,ClpLastIntParam * sizeof(double));
     numberIterations_ = scalars.numberIterations;
     problemStatus_ = scalars.problemStatus;
-    maximumIterations_ = scalars.maximumIterations;
+    setMaximumIterations(scalars.maximumIterations);
     lengthNames_ = scalars.lengthNames;
     numberDualInfeasibilities_ = scalars.numberDualInfeasibilities;
     numberDualInfeasibilitiesWithoutFree_ 
