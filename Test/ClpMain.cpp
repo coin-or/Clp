@@ -417,7 +417,7 @@ ClpItem::operator=(const ClpItem& rhs)
 void 
 ClpItem::gutsOfConstructor()
 {
-  unsigned int  shriekPos = name_.find('!');
+  std::string::size_type  shriekPos = name_.find('!');
   lengthName_ = name_.length();
   if ( shriekPos==std::string::npos ) {
     //does not contain '!'
@@ -479,7 +479,7 @@ ClpItem::parameterOption ( std::string check ) const
     unsigned int it;
     for (it=0;it<definedKeyWords_.size();it++) {
       std::string thisOne = definedKeyWords_[it];
-      unsigned int  shriekPos = thisOne.find('!');
+      std::string::size_type  shriekPos = thisOne.find('!');
       unsigned int length1 = thisOne.length();
       unsigned int length2 = length1;
       if ( shriekPos!=std::string::npos ) {
@@ -518,7 +518,7 @@ ClpItem::printOptions (  ) const
   unsigned int it;
   for (it=0;it<definedKeyWords_.size();it++) {
     std::string thisOne = definedKeyWords_[it];
-    unsigned int  shriekPos = thisOne.find('!');
+    std::string::size_type  shriekPos = thisOne.find('!');
     if ( shriekPos!=std::string::npos ) {
       //contains '!'
       thisOne = thisOne.substr(0,shriekPos)+
@@ -617,6 +617,10 @@ ClpItem::setIntParameter (ClpSimplex * model,int value) const
     switch(type_) {
     case LOGLEVEL:
       model->setLogLevel(value);
+      if (value>2)
+	model->factorization()->messageLevel(8);
+      else
+	model->factorization()->messageLevel(0);
       break;
     case MAXFACTOR:
       model->factorization()->maximumPivots(value);
