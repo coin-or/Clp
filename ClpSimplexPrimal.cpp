@@ -710,7 +710,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
     // at this stage status is -3 or -5 if looks unbounded
     // get primal and dual solutions
     // put back original costs and then check
-    createRim(4);
+    // createRim(4); // costs do not change 
     // May need to do more if column generation
     dummy=4;
     matrix_->generalExpanded(this,9,dummy);
@@ -2451,6 +2451,7 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
     // change cost and bounds on incoming if primal
     nonLinearCost_->setOne(sequenceIn_,valueIn_); 
     int whatNext=housekeeping(objectiveChange);
+    //nonLinearCost_->validate();
 #if CLP_DEBUG >1
     {
       int ninf= matrix_->checkFeasible(this);

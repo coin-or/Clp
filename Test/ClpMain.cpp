@@ -14,7 +14,7 @@
 #include "CoinPragma.hpp"
 #include "CoinHelperFunctions.hpp"
 // History since 1.0 at end
-#define CLPVERSION "1.00.01"
+#define CLPVERSION "1.00.02"
 
 #include "CoinMpsIO.hpp"
 
@@ -1341,4 +1341,6 @@ clp watson.mps -\nscaling off\nprimalsimplex"
   Version 1.00.00 October 13 2004.
   1.00.01 October 18.  Added basis handline helped/prodded by Thorsten Koch.
   Also modifications to make faster with sbb (I hope I haven't broken anything).
+  1.00.02 March 21 2005.  Redid ClpNonLinearCost to save memory also redid
+  createRim to try and improve cache characteristics.
  */
