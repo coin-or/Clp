@@ -982,7 +982,8 @@ ClpModel::resize (int newNumberRows, int newNumberColumns)
     if (newNumberColumns+newNumberRows) {
       unsigned char * tempC = new unsigned char [newNumberColumns+newNumberRows];
       unsigned char * tempR = tempC + newNumberColumns;
-      memset(tempC,0,(newNumberColumns+newNumberRows)*sizeof(unsigned char));
+      memset(tempC,3,newNumberColumns*sizeof(unsigned char));
+      memset(tempR,1,newNumberRows*sizeof(unsigned char));
       memcpy(tempC,status_,CoinMin(newNumberColumns,numberColumns_)*sizeof(unsigned char));
       memcpy(tempR,status_+numberColumns_,CoinMin(newNumberRows,numberRows_)*sizeof(unsigned char));
       delete [] status_;

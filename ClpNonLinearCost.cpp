@@ -81,9 +81,9 @@ ClpNonLinearCost::ClpNonLinearCost ( ClpSimplex * model)
   // For quadratic we need -inf,0,0,+inf
   for (iSequence=0;iSequence<numberTotal1;iSequence++) {
     if (!always4) {
-      if (lower[iSequence]>-1.0e20)
+      if (lower[iSequence]>-COIN_DBL_MAX)
 	put++;
-      if (upper[iSequence]<1.0e20)
+      if (upper[iSequence]<COIN_DBL_MAX)
 	put++;
       put += 2;
     } else {
@@ -93,6 +93,9 @@ ClpNonLinearCost::ClpNonLinearCost ( ClpSimplex * model)
 
   // and for extra
   put += 4*numberExtra;
+#ifndef NDEBUG
+  int kPut=put;
+#endif
   lower_ = new double [put];
   cost_ = new double [put];
   infeasible_ = new unsigned int[(put+31)>>5];
@@ -114,7 +117,7 @@ ClpNonLinearCost::ClpNonLinearCost ( ClpSimplex * model)
       cost_[put++] = cost[iSequence];
       lower_[put] = upper[iSequence];
       cost_[put++] = cost[iSequence]+infeasibilityCost;
-      if (upper[iSequence]<1.0e20) {
+      if (upper[iSequence]<COIN_DBL_MAX) {
 	lower_[put] = COIN_DBL_MAX;
 	setInfeasible(put-1,true);
 	cost_[put++] = 1.0e50;
@@ -149,6 +152,7 @@ ClpNonLinearCost::ClpNonLinearCost ( ClpSimplex * model)
     cost_[put++] = 1.0e50;
     start_[iSequence+1]=put;
   }
+  assert (put<=kPut);
 }
 // Refreshes costs always makes row costs zero
 void 

@@ -2285,19 +2285,19 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
     // clean up any mismatches on infinity
     for (i=0;i<numberColumns_;i++) {
       columnLowerWork_[i] = columnLower_[i];
-      if (columnLowerWork_[i]<-1.0e20)
+      if (columnLowerWork_[i]<=-1.0e20)
 	columnLowerWork_[i] = -COIN_DBL_MAX;
       columnUpperWork_[i] = columnUpper_[i];
-      if (columnUpperWork_[i]>1.0e20)
+      if (columnUpperWork_[i]>=1.0e20)
 	columnUpperWork_[i] = COIN_DBL_MAX;
     }
     // clean up any mismatches on infinity
     for (i=0;i<numberRows_;i++) {
       rowLowerWork_[i] = rowLower_[i];
-      if (rowLowerWork_[i]<-1.0e20)
+      if (rowLowerWork_[i]<=-1.0e20)
 	rowLowerWork_[i] = -COIN_DBL_MAX;
       rowUpperWork_[i] = rowUpper_[i];
-      if (rowUpperWork_[i]>1.0e20)
+      if (rowUpperWork_[i]>=1.0e20)
 	rowUpperWork_[i] = COIN_DBL_MAX;
     }
   }
@@ -2576,24 +2576,24 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
     if(rowScale_) {
       for (i=0;i<numberColumns_;i++) {
 	double multiplier = rhsScale_/columnScale_[i];
-	if (columnLowerWork_[i]>-1.0e50)
+	if (columnLowerWork_[i]>-1.0e20) 
 	  columnLowerWork_[i] *= multiplier;
-	if (columnUpperWork_[i]<1.0e50)
+	if (columnUpperWork_[i]<1.0e20)
 	  columnUpperWork_[i] *= multiplier;
 	
       }
       for (i=0;i<numberRows_;i++) {
 	double multiplier = rhsScale_*rowScale_[i];
-	if (rowLowerWork_[i]>-1.0e50)
+	if (rowLowerWork_[i]>-1.0e20)
 	  rowLowerWork_[i] *= multiplier;
-	if (rowUpperWork_[i]<1.0e50)
+	if (rowUpperWork_[i]<1.0e20)
 	  rowUpperWork_[i] *= multiplier;
       }
     } else if (rhsScale_!=1.0) {
       for (i=0;i<numberColumns_+numberRows_;i++) {
-	if (lower_[i]>-1.0e50)
+	if (lower_[i]>-1.0e20)
 	  lower_[i] *= rhsScale_;
-	if (upper_[i]<1.0e50)
+	if (upper_[i]<1.0e20)
 	  upper_[i] *= rhsScale_;
 	
       }
