@@ -2438,11 +2438,9 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
       // Make sure outgoing looks feasible
       directionOut_=nonLinearCost_->setOneOutgoing(sequenceOut_,valueOut_);
       // May have got inaccurate
-      if (oldCost!=cost_[sequenceOut_])
-        printf("costchange on %d from %g to %g\n",sequenceOut_,
-               oldCost,cost_[sequenceOut_]);
-      //if (sequenceOut_<numberColumns_)
-      //dj_[sequenceOut_]=0.0;
+      //if (oldCost!=cost_[sequenceOut_])
+      //printf("costchange on %d from %g to %g\n",sequenceOut_,
+      //       oldCost,cost_[sequenceOut_]);
       dj_[sequenceOut_]=cost_[sequenceOut_]-oldCost;
       solution_[sequenceOut_]=valueOut_;
     }
