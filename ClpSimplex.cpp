@@ -1813,14 +1813,14 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
     int iRow,iColumn;
     // these are "indexed" arrays so we always know where nonzeros are
     /**********************************************************
-      rowArray_[3] is long enough for columns as well
+      rowArray_[3] is long enough for rows+columns
     *********************************************************/
     for (iRow=0;iRow<4;iRow++) {
       if (!rowArray_[iRow]) {
 	rowArray_[iRow]=new CoinIndexedVector();
 	int length =numberRows_+factorization_->maximumPivots();
 	if (iRow==3)
-	  length = max(length,numberColumns_);
+	  length += numberColumns_;
 	rowArray_[iRow]->reserve(length);
       }
     }
@@ -3135,4 +3135,114 @@ ClpSimplex::checkSolution()
 #endif
   // release extra memory
   deleteRim(false);
+}
+/* Crash - at present just aimed at dual, returns
+   -2 if dual preferred and crash basis created
+   -1 if dual preferred and all slack basis preferred
+   0 if basis going in was not all slack
+   1 if primal preferred and all slack basis preferred
+   2 if primal preferred and crash basis created.
+   
+   if gap between bounds <="gap" variables can be flipped
+   
+   If "pivot" is
+   0 No pivoting (so will just be choice of algorithm)
+   1 Simple pivoting e.g. gub
+   2 Mini iterations
+*/
+int 
+ClpSimplex::crash(double gap,int pivot)
+{
+  assert(!pivot); // rest not coded yet
+  assert(!rowObjective_); // not coded
+  int i;
+  int numberBad=0;
+  int numberBasic=0;
+
+  // If no basis then make all slack one
+  if (!status_)
+    createStatus();
+  
+  for (i=0;i<numberColumns_;i++) {
+    if (getColumnStatus(i)==basic)
+      numberBasic++;
+  }
+  if (numberBasic) {
+    // not all slack
+    return 0;
+  } else {
+    for (i=0;i<numberColumns_;i++) {
+      // assume natural place is closest to zero
+      double lowerBound = columnLower_[i];
+      double upperBound = columnUpper_[i];
+      if (lowerBound>-1.0e20||upperBound<1.0e20) {
+	bool atLower;
+	if (fabs(upperBound)<fabs(lowerBound)) {
+	  atLower=false;
+	  setColumnStatus(i,atUpperBound);
+	} else {
+	  atLower=true;
+	  setColumnStatus(i,atLowerBound);
+	}
+	if (optimizationDirection_*objective_[i]<0.0) {
+	  // should be at upper bound
+	  if (atLower) {
+	    // can we flip
+	    if (upperBound-lowerBound<=gap) {
+	      columnActivity_[i]=upperBound;
+	      setColumnStatus(i,atUpperBound);
+	    } else {
+	      numberBad++;
+	    }
+	  }
+	} else if (optimizationDirection_*objective_[i]>0.0) {
+	  // should be at lower bound
+	  if (!atLower) {
+	    // can we flip
+	    if (upperBound-lowerBound<=gap) {
+	      columnActivity_[i]=lowerBound;
+	      setColumnStatus(i,atLowerBound);
+	    } else {
+	      numberBad++;
+	    }
+	  }
+	}
+      } else {
+	// free
+	setColumnStatus(i,isFree);
+	if (objective_[i]) 
+	  numberBad++;
+      }
+    }
+    if (numberBad) {
+      if (!pivot) {
+	return 1;
+      } else {
+	// see if can be made dual feasible with gubs etc
+	// steal coding from tightenPrimalBounds
+	// Get column copy
+	CoinPackedMatrix * columnCopy = matrix();
+	// Get a row copy in standard format
+	CoinPackedMatrix copy;
+	copy.reverseOrderedCopyOf(*columnCopy);
+	// get matrix data pointers
+#if 0
+	const int * column = copy.getIndices();
+	const CoinBigIndex * rowStart = copy.getVectorStarts();
+	const int * rowLength = copy.getVectorLengths(); 
+	const double * elementByRow = copy.getElements();
+	const int * row = columnCopy->getIndices();
+	const CoinBigIndex * columnStart = columnCopy->getVectorStarts();
+	const int * columnLength = columnCopy->getVectorLengths(); 
+	const double * element = columnCopy->getElements();
+	// if equality row and bounds mean artificial in basis bad
+	// then do anyway
+#endif
+	abort();
+	return -1;
+      }
+    } else {
+      return -1;
+    }
+  }
 }

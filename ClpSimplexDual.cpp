@@ -1844,7 +1844,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 			  columnArray_[0]->denseVector());
 	ClpDisjointCopyN(rowActivityWork_,numberRows_,
 			  rowArray_[2]->denseVector());
-	numberChangedBounds=changeBounds(false,rowArray_[0],changeCost);
+	numberChangedBounds=changeBounds(false,rowArray_[3],changeCost);
 	if (numberChangedBounds<=0) {
 	  //looks optimal - do we need to reset tolerance
 	  if (perturbation_==101) {
