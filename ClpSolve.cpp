@@ -949,7 +949,26 @@ ClpSimplex::initialSolve(ClpSolve & options)
     int maxIts = barrier.maximumBarrierIterations();
     int barrierStatus=barrier.status();
     double gap = barrier.complementarityGap();
-    // could get which variables are fixed - would help crossover *****
+    // get which variables are fixed
+    double * saveLower=NULL;
+    double * saveUpper=NULL;
+    ClpPresolve pinfo2;
+    ClpSimplex * saveModel2=NULL;
+    int numberFixed = barrier.numberFixed();
+    if (numberFixed*20>barrier.numberRows()&&numberFixed>5000) {
+      // may as well do presolve
+      int numberRows = barrier.numberRows();
+      int numberColumns = barrier.numberColumns();
+      int numberTotal = numberRows+numberColumns;
+      saveLower = new double [numberTotal];
+      saveUpper = new double [numberTotal];
+      memcpy(saveLower,barrier.columnLower(),numberColumns*sizeof(double));
+      memcpy(saveLower+numberColumns,barrier.rowLower(),numberRows*sizeof(double));
+      memcpy(saveUpper,barrier.columnUpper(),numberColumns*sizeof(double));
+      memcpy(saveUpper+numberColumns,barrier.rowUpper(),numberRows*sizeof(double));
+      barrier.fixFixed();
+      saveModel2=model2;
+    }
 #ifdef BORROW    
     barrier.returnModel(*model2);
     double * rowPrimal = new double [numberRows];
@@ -980,6 +999,11 @@ ClpSimplex::initialSolve(ClpSolve & options)
     CoinMemcpyN(columnDual,
 		  numberColumns,model2->dualColumnSolution());
 #endif
+    if (saveModel2) {
+      // do presolve
+      model2 = pinfo2.presolvedModel(*model2,1.0e-8,
+				    false,5,true);
+    }
     if (maxIts&&barrierStatus<4) {
       printf("***** crossover - needs more thought on difficult models\n");
 #if SAVEIT==1
@@ -992,6 +1016,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
 #if 1
       // throw some into basis 
       {
+	int numberRows = model2->numberRows();
+	int numberColumns = model2->numberColumns();
 	double * dsort = new double[numberColumns];
 	int * sort = new int[numberColumns];
 	int n=0;
@@ -1027,6 +1053,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	delete [] dsort;
       }
       if (gap<1.0e-3*((double) (numberRows+numberColumns))) {
+	int numberRows = model2->numberRows();
+	int numberColumns = model2->numberColumns();
 	// just primal values pass
 	model2->primal(2);
 	// save primal solution and copy back dual
@@ -1116,6 +1144,20 @@ ClpSimplex::initialSolve(ClpSolve & options)
     delete [] rowDual;
     delete [] columnDual;
 #endif
+    if (saveLower) {
+      pinfo2.postsolve(true);
+      delete model2;
+      model2=saveModel2;
+      int numberRows = model2->numberRows();
+      int numberColumns = model2->numberColumns();
+      memcpy(model2->columnLower(),saveLower,numberColumns*sizeof(double));
+      memcpy(model2->rowLower(),saveLower+numberColumns,numberRows*sizeof(double));
+      delete [] saveLower;
+      memcpy(model2->columnUpper(),saveUpper,numberColumns*sizeof(double));
+      memcpy(model2->rowUpper(),saveUpper+numberColumns,numberRows*sizeof(double));
+      delete [] saveUpper;
+      model2->primal(1);
+    }
     model2->setPerturbation(savePerturbation);
     time2 = CoinCpuTime();
     timeCore = time2-timeX;

@@ -221,6 +221,13 @@ int ClpPredictorCorrector::solve ( )
 	      <<CoinMessageEol;
 	    break;
 	  }
+	  if (complementarityGap_>0.95*checkGap&&bestObjectiveGap<1.0e-3&&
+	      numberIterations_>saveIteration+5) {
+	    handler_->message(CLP_BARRIER_EXIT2,messages_)
+	      <<saveIteration
+	      <<CoinMessageEol;
+	    break;
+	  }
 	}
       } 
     } 
@@ -373,7 +380,13 @@ int ClpPredictorCorrector::solve ( )
     directionAccuracy=findDirectionVector(phase);
     if (directionAccuracy>worstDirectionAccuracy_) {
       worstDirectionAccuracy_=directionAccuracy;
-    } 
+    }
+    if (saveIteration>0&&directionAccuracy>1.0) {
+      handler_->message(CLP_BARRIER_EXIT2,messages_)
+	<<saveIteration
+	<<CoinMessageEol;
+      break;
+    }
     findStepLength(phase);
     nextGap=complementarityGap(nextNumber,nextNumberItems,1);
     double affineGap=nextGap;
@@ -506,7 +519,8 @@ int ClpPredictorCorrector::solve ( )
 	      // Back to affine
 	      phase=0;
   	      // Try primal dual step instead - but with small mu
-	      phase=2;
+	      if (numberIterations_<100)
+		phase=2;
 	      double floatNumber;
 	      floatNumber = 2.0*numberComplementarityPairs_;
 	      mu_=complementarityGap_/floatNumber;
@@ -574,11 +588,12 @@ int ClpPredictorCorrector::solve ( )
       findStepLength(2);
       // just for debug
       nextGap=complementarityGap(nextNumber,nextNumberItems,2);
-      if (nextGap>0.99*complementarityGap_&&bestPhase==0&&affineGap<nextGap) {
+      if (nextGap>0.9*complementarityGap_&&bestPhase==0&&affineGap<nextGap) {
 	// Back to affine
 	phase=0;
 	// no
-	phase=2;
+	if (numberIterations_<80)
+	  phase=2;
 	mu_ *= 0.5;
 	setupForSolve(phase);
 	directionAccuracy=findDirectionVector(phase);
@@ -731,6 +746,13 @@ double ClpPredictorCorrector::findStepLength( int phase)
   double * upperSlack = upperSlack_;
   //direction vector in deltaX
   double * deltaX = deltaX_;
+  // If done many iterations then allow to hit boundary
+  double hitTolerance;
+  //printf("objective norm %g\n",objectiveNorm_);
+  if (numberIterations_<80|!gonePrimalFeasible_)
+    hitTolerance = COIN_DBL_MAX;
+  else
+    hitTolerance = max(1.0e3,1.0e-3*objectiveNorm_);
   int iColumn;
   for (iColumn=0;iColumn<numberTotal;iColumn++) {
     if (!flagged(iColumn)) {
@@ -741,29 +763,41 @@ double ClpPredictorCorrector::findStepLength( int phase)
       if (lowerBound(iColumn)) {
 	double delta = - deltaSL_[iColumn];
 	double z1 = deltaZ_[iColumn];
-	if (lowerSlack[iColumn]<maximumPrimalStep*delta) {
-	  maximumPrimalStep=lowerSlack[iColumn]/delta;
-	  chosenPrimalSequence=iColumn;
-	} 
+	double newZ = zVec[iColumn]+z1;
 	if (zVec[iColumn]>tolerance) {
 	  if (zVec[iColumn]<-z1*maximumDualStep) {
 	    maximumDualStep=-zVec[iColumn]/z1;
 	    chosenDualSequence=iColumn;
 	  } 
 	} 
+	if (lowerSlack[iColumn]<maximumPrimalStep*delta) {
+	  double newStep=lowerSlack[iColumn]/delta;
+	  if (newStep>0.2||newZ<hitTolerance||delta>1.0e3||delta<=1.0e-6||dj_[iColumn]<hitTolerance) {
+	    maximumPrimalStep = newStep;
+	    chosenPrimalSequence=iColumn;
+	  } else {
+	    printf("small %d delta %g newZ %g step %g\n",iColumn,delta,newZ,newStep); 
+	  }
+	} 
       }
       if (upperBound(iColumn)) {
 	double delta = - deltaSU_[iColumn];;
 	double t1 = deltaT_[iColumn];
-	if (upperSlack[iColumn]<maximumPrimalStep*delta) {
-	  maximumPrimalStep=upperSlack[iColumn]/delta;
-	  chosenPrimalSequence=iColumn;
-	} 
+	double newT = tVec[iColumn]+t1;
 	if (tVec[iColumn]>tolerance) {
 	  if (tVec[iColumn]<-t1*maximumDualStep) {
 	    maximumDualStep=-tVec[iColumn]/t1;
 	    chosenDualSequence=iColumn;
 	  } 
+	} 
+	if (upperSlack[iColumn]<maximumPrimalStep*delta) {
+	  double newStep=upperSlack[iColumn]/delta;
+	  if (newStep>0.2||newT<hitTolerance||delta>1.0e3||delta<=1.0e-6||dj_[iColumn]>-hitTolerance) {
+	    maximumPrimalStep = newStep;
+	    chosenPrimalSequence=iColumn;
+	  } else {
+	    printf("small %d delta %g newT %g step %g\n",iColumn,delta,newT,newStep); 
+	  }
 	} 
       } 
     } 
@@ -2045,7 +2079,7 @@ bool ClpPredictorCorrector::checkGoodMove(const bool doCorrector,double & bestNe
   int numberTotal = numberRows_+numberColumns_;
   double returnGap=bestNextGap;
   double nextGap=complementarityGap(nextNumber,nextNumberItems,2);
-  if (nextGap>bestNextGap&&nextGap>-0.9*complementarityGap_) {
+  if (nextGap>bestNextGap&&nextGap>0.9*complementarityGap_) {
 #ifdef SOME_DEBUG
     printf("checkGood phase 1 next gap %.18g, phase 0 %.18g, old gap %.18g\n",
 	   nextGap,bestNextGap,complementarityGap_);
@@ -2347,6 +2381,12 @@ int ClpPredictorCorrector::updateSolution(double nextGap)
   double * deltaX = deltaX_;
   double * cost = cost_;
   double largeGap2 = max(1.0e7,1.0e2*solutionNorm_);
+  // When to start looking at killing (factor0
+  double killFactor;
+  if (numberIterations_<50)
+    killFactor = 1.0;
+  else
+    killFactor = 1.0e5;
   for (int iColumn=0;iColumn<numberRows_+numberColumns_;iColumn++) {
     if (!flagged(iColumn)) {
       double reducedCost=dual[iColumn];
@@ -2469,13 +2509,13 @@ int ClpPredictorCorrector::updateSolution(double nextGap)
 	if (infeasibility>maximumBoundInfeasibility) {
 	  maximumBoundInfeasibility=infeasibility;
 	} 
-        if (lowerSlack[iColumn]<=1.0e5*kill&&fabs(newPrimal-lower[iColumn])<=1.0e5*kill) {
+        if (lowerSlack[iColumn]<=kill*killFactor&&fabs(newPrimal-lower[iColumn])<=kill*killFactor) {
 	  double step = min(actualPrimalStep_*1.1,1.0);
 	  double newPrimal2=primal[iColumn]+step*thisWeight;
 	  if (newPrimal2<newPrimal&&dj_[iColumn]>1.0e-5&&numberIterations_>50-40) {
 	    newPrimal=lower[iColumn];
 	    lowerSlack[iColumn]=0.0;
-	    printf("fixing %d to lower\n",iColumn);
+	    //printf("fixing %d to lower\n",iColumn);
 	  }
 	}
         if (lowerSlack[iColumn]<=kill&&fabs(newPrimal-lower[iColumn])<=kill) {
@@ -2541,13 +2581,13 @@ int ClpPredictorCorrector::updateSolution(double nextGap)
 	if (infeasibility>maximumBoundInfeasibility) {
 	  maximumBoundInfeasibility=infeasibility;
         } 
-        if (upperSlack[iColumn]<=1.0e5*kill&&fabs(newPrimal-upper[iColumn])<=1.0e5*kill) {
+        if (upperSlack[iColumn]<=kill*killFactor&&fabs(newPrimal-upper[iColumn])<=kill*killFactor) {
 	  double step = min(actualPrimalStep_*1.1,1.0);
 	  double newPrimal2=primal[iColumn]+step*thisWeight;
 	  if (newPrimal2>newPrimal&&dj_[iColumn]<-1.0e-5&&numberIterations_>50-40) {
 	    newPrimal=upper[iColumn];
 	    upperSlack[iColumn]=0.0;
-	    printf("fixing %d to upper\n",iColumn);
+	    //printf("fixing %d to upper\n",iColumn);
 	  }
 	}
         if (upperSlack[iColumn]<=kill&&fabs(newPrimal-upper[iColumn])<=kill) {

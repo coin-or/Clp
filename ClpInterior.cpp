@@ -57,7 +57,7 @@ ClpInterior::ClpInterior () :
   dualObjective_(0.0),
   primalObjective_(0.0),
   diagonalNorm_(1.0e-12),
-  stepLength_(0.99995),
+  stepLength_(0.995),
   linearPerturbation_(1.0e-12),
   diagonalPerturbation_(1.0e-15),
   targetGap_(1.0e-12),
@@ -1040,4 +1040,64 @@ void
 ClpInterior::returnModel(ClpModel & otherModel)
 {
   ClpModel::returnModel(otherModel);
+}
+// Return number fixed to see if worth presolving
+int 
+ClpInterior::numberFixed() const
+{
+  int i;
+  int nFixed=0;
+  for (i=0;i<numberColumns_;i++) {
+    if (columnUpper_[i]<1.0e20||columnLower_[i]>-1.0e20) { 
+      if (columnUpper_[i]>columnLower_[i]) { 
+	if (fixedOrFree(i))
+	  nFixed++;
+      }
+    }
+  }
+  for (i=0;i<numberRows_;i++) {
+    if (rowUpper_[i]<1.0e20||rowLower_[i]>-1.0e20) { 
+      if (rowUpper_[i]>rowLower_[i]) { 
+	if (fixedOrFree(i+numberColumns_))
+	  nFixed++;
+      }
+    }
+  }
+  return nFixed;
+}
+// fix variables interior says should be
+void 
+ClpInterior::fixFixed()
+{
+  int i;
+  for (i=0;i<numberColumns_;i++) {
+    if (columnUpper_[i]<1.0e20||columnLower_[i]>-1.0e20) { 
+      if (columnUpper_[i]>columnLower_[i]) { 
+	if (fixedOrFree(i)) {
+	  if (columnActivity_[i]-columnLower_[i]<columnUpper_[i]-columnActivity_[i]) {
+	    columnUpper_[i]=columnLower_[i];
+	    columnActivity_[i]=columnLower_[i];
+	  } else {
+	    columnLower_[i]=columnUpper_[i];
+	    columnActivity_[i]=columnUpper_[i];
+	  }
+	}
+      }
+    }
+  }
+  for (i=0;i<numberRows_;i++) {
+    if (rowUpper_[i]<1.0e20||rowLower_[i]>-1.0e20) { 
+      if (rowUpper_[i]>rowLower_[i]) { 
+	if (fixedOrFree(i+numberColumns_)) {
+	  if (rowActivity_[i]-rowLower_[i]<rowUpper_[i]-rowActivity_[i]) {
+	    rowUpper_[i]=rowLower_[i];
+	    rowActivity_[i]=rowLower_[i];
+	  } else {
+	    rowLower_[i]=rowUpper_[i];
+	    rowActivity_[i]=rowUpper_[i];
+	  }
+	}
+      }
+    }
+  }
 }

@@ -208,6 +208,10 @@ public:
   { maximumBarrierIterations_=value;};
   /// Set cholesky (and delete present one)
   void setCholesky(ClpCholeskyBase * cholesky);
+  /// Return number fixed to see if worth presolving
+  int numberFixed() const;
+  /// fix variables interior says should be
+  void fixFixed();
   //@}
 
   protected:
