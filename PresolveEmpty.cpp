@@ -294,10 +294,10 @@ const PresolveAction *drop_empty_rows_action::presolve(PresolveMatrix *prob,
 	printf("%d ", i);
 #endif
 	if (rlo[i] > 0.0 || rup[i] < 0.0) {
-	  if (fabs(rlo[i])<=prob->feasibilityTolerance_ &&
-	      fabs(rup[i])<=prob->feasibilityTolerance_) {
-	    rlo[i]=0.0;
-	    rup[i]=0.0;
+	  if (rlo[i]<=prob->feasibilityTolerance_ &&
+	      rup[i]>=-prob->feasibilityTolerance_) {
+	    rlo[i]=min(0.0,rlo[i]);
+	    rup[i]=max(0.0,rup[i]);
 	  } else {
 	    prob->status_|= 1;
 	  prob->messageHandler()->message(CLP_PRESOLVE_ROWINFEAS,
