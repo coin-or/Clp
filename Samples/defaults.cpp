@@ -2,7 +2,6 @@
 // Corporation and others.  All Rights Reserved.
 
 #include "ClpSimplex.hpp"
-#include "OsiWarmStartBasis.hpp"
 #include "ClpPrimalColumnSteepest.hpp"
 #include "ClpDualRowSteepest.hpp"
 #include <iomanip>
@@ -46,7 +45,7 @@ int main (int argc, const char *argv[])
   }
   // Number of rows and columns - also getNumRows, getNumCols
   std::string modelName;
-  model.getStrParam(OsiProbName,modelName);
+  model.getStrParam(ClpProbName,modelName);
   std::cout<<"Model "<<modelName<<" has "<<model.numberRows()<<" rows and "<<
     model.numberColumns()<<" columns"<<std::endl;
 
@@ -54,19 +53,19 @@ int main (int argc, const char *argv[])
      are not active yet.  dualTolerance, setDualTolerance,
      primalTolerance and setPrimalTolerance may be used as well */
 
-  model.getDblParam(OsiDualObjectiveLimit,value);
-  std::cout<<"Value of OsiDualObjectiveLimit is "<<value<<std::endl;
-  model.getDblParam(OsiPrimalObjectiveLimit,value);
-  std::cout<<"Value of OsiPrimalObjectiveLimit is "<<value<<std::endl;
-  model.getDblParam(OsiDualTolerance,value);
-  std::cout<<"Value of OsiDualTolerance is "<<value<<std::endl;
-  model.getDblParam(OsiPrimalTolerance,value);
-  std::cout<<"Value of OsiPrimalTolerance is "<<value<<std::endl;
-  model.getDblParam(OsiObjOffset,value);
-  std::cout<<"Value of OsiObjOffset is "<<value<<std::endl;
+  model.getDblParam(ClpDualObjectiveLimit,value);
+  std::cout<<"Value of ClpDualObjectiveLimit is "<<value<<std::endl;
+  model.getDblParam(ClpPrimalObjectiveLimit,value);
+  std::cout<<"Value of ClpPrimalObjectiveLimit is "<<value<<std::endl;
+  model.getDblParam(ClpDualTolerance,value);
+  std::cout<<"Value of ClpDualTolerance is "<<value<<std::endl;
+  model.getDblParam(ClpPrimalTolerance,value);
+  std::cout<<"Value of ClpPrimalTolerance is "<<value<<std::endl;
+  model.getDblParam(ClpObjOffset,value);
+  std::cout<<"Value of ClpObjOffset is "<<value<<std::endl;
 
-  // setDblParam(OsiPrimalTolerance) is same as this
-  model.getDblParam(OsiPrimalTolerance,value);
+  // setDblParam(ClpPrimalTolerance) is same as this
+  model.getDblParam(ClpPrimalTolerance,value);
   model.setPrimalTolerance(value);
 
   model.setDualTolerance( model.dualTolerance()) ;
@@ -74,13 +73,13 @@ int main (int argc, const char *argv[])
   // Other Param stuff
 
   // Can also use maximumIterations
-  model.getIntParam(OsiMaxNumIteration,integerValue);
-  std::cout<<"Value of OsiMaxNumIteration is "<<integerValue<<std::endl;
+  model.getIntParam(ClpMaxNumIteration,integerValue);
+  std::cout<<"Value of ClpMaxNumIteration is "<<integerValue<<std::endl;
   model.setMaximumIterations(integerValue);
 
   // Not sure this works yet
-  model.getIntParam(OsiMaxNumIterationHotStart,integerValue);
-  std::cout<<"Value of OsiMaxNumIterationHotStart is "
+  model.getIntParam(ClpMaxNumIterationHotStart,integerValue);
+  std::cout<<"Value of ClpMaxNumIterationHotStart is "
 	   <<integerValue<<std::endl;
 
   // Can also use getIterationCount and getObjValue
@@ -113,13 +112,13 @@ int main (int argc, const char *argv[])
   assert(model.sumDualInfeasibilities()<1.0e-7);
 
   // Save warm start and set to all slack
-  OsiWarmStartBasis basis1 = model.getBasis();
-  OsiWarmStartBasis allSlack;
-  model.setBasis(allSlack);
+  unsigned char * basis1 = model.statusCopy();
+  model.createStatus();
 
   // Now create another model and do hot start
   ClpSimplex model2=model;
-  model2.setBasis(basis1);
+  model2.copyinStatus(basis1);
+  delete [] basis1;
 
   // Check model has not got basis (should iterate)
   model.dual();
@@ -145,9 +144,9 @@ int main (int argc, const char *argv[])
 
   // Do some deafult message handling
   // To see real use - see OsiOslSolverInterfaceTest.cpp
-  OsiMessageHandler handler;
+  CoinMessageHandler handler;
   model2.passInMessageHandler(& handler);
-  model2.newLanguage(OsiMessages::us_en);
+  model2.newLanguage(CoinMessages::us_en);
 
   //Increase level of detail
   model2.setLogLevel(4);
@@ -305,7 +304,7 @@ int main (int argc, const char *argv[])
   std::cout<<resetiosflags(std::ios::fixed|std::ios::showpoint|std::ios::scientific);
 
   // Now matrix
-  OsiPackedMatrix * matrix = model2.matrix();
+  CoinPackedMatrix * matrix = model2.matrix();
 
   const double * element = matrix->getElements();
   const int * row = matrix->getIndices();

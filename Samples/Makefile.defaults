@@ -2,32 +2,31 @@ OptLevel := -g
 
 # The location of the customized Makefiles
 CoinDir := ../../
-export MakefileDir := $(CoinDir)/Common/make
+export MakefileDir := $(CoinDir)/Makefiles
 include ${MakefileDir}/Makefile.coin
 include ${MakefileDir}/Makefile.location
 
 IncDir :=
-IncDir += ${OsiSolverIncDir}
-IncDir += ${OsiIncDir}
+IncDir += ${CoinIncDir}
 IncDir += ${ClpIncDir}
 IncDir += ${zlibIncDir}
 IncDir += ${bzlibIncDir}
 
 LibDir :=
-LibDir += ${OsiLibDir}
+LibDir += ${CoinLibDir}
 LibDir += ${ClpLibDir}
 LibDir += ${zlibLibDir}
 LibDir += ${bzlibLibDir}
 
 LibName :=
-LibName += ${OsiLibName}
+LibName += ${CoinLibName}
 LibName += ${ClpLibName}
 LibName += ${zlibLibName}
 LibName += ${bzlibLibName}
 
 Define :=
 Define += ${ClpDefine}
-Define += ${OsiDefine}
+Define += ${CoinDefine}
 Define += ${zlibDefine}
 Define += ${bzlibDefine}
 
@@ -88,7 +87,7 @@ testit : libdepend $(TESTOBJ)
 	@echo Creating testit
 	@rm -f $@
 	$(CXX) $(CXXFLAGS) -o $@ $(TESTOBJ) $(LDFLAGS) $(SYSLD) -lm
-	${CP} $@ ..
+#	${CP} $@ ..
 
 ###############################################################################
 
