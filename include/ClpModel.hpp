@@ -140,6 +140,8 @@ public:
    /// Number of iterations
    inline int numberIterations() const  { return numberIterations_; }
    inline int getIterationCount() const { return numberIterations_; }
+  inline void setNumberIterations(int numberIterations)
+  { numberIterations_ = numberIterations;};
    /// Maximum number of iterations
    inline int maximumIterations() const { return maximumIterations_; }
    void setMaximumIterations(int value);
@@ -151,6 +153,9 @@ public:
        4 - stopped due to errors
    */
    inline int status() const            { return problemStatus_; }
+  /// Set problem status
+  inline void setProblemStatus(int problemStatus)
+  { problemStatus_ = problemStatus;};
    /// Are there a numerical difficulties?
    bool isAbandoned() const             { return problemStatus_==4; }
    /// Is optimality proven?

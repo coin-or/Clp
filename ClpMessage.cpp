@@ -59,6 +59,7 @@ static Clp_message us_english[]=
   {CLP_PRESOLVE_INFEASUNBOUND,509,0,"Presolve thinks problem is infeasible AND unbounded???"},
   {CLP_PRESOLVE_INTEGERMODS,510,1,"Presolve is modifying %d integer bounds and re-presolving"},
   {CLP_PRESOLVE_POSTSOLVE,511,0,"After Postsolve, objective %g, infeasibilities - dual %g (%d), primal %g (%d)"},
+  {CLP_PRESOLVE_NEEDS_CLEANING,512,0,"Presolved model was optimal, full model needs cleaning up"},
   {CLP_PACKEDSCALE_INITIAL,1001,2,"Initial range of elements is %g to %g"},
   {CLP_PACKEDSCALE_WHILE,1002,3,"Range of elements is %g to %g"},
   {CLP_PACKEDSCALE_FINAL,1003,2,"Final range of elements is %g to %g"},

@@ -719,6 +719,21 @@ void Presolve::postsolve(PostsolveMatrix &prob)
 					      <<originalModel_->numberPrimalInfeasibilities()
 					       <<CoinMessageEol;
   
+  //originalModel_->objectiveValue_=objectiveValue_;
+  originalModel_->setNumberIterations(presolvedModel_->numberIterations());
+  if (!presolvedModel_->status()) {
+    if (!originalModel_->numberDualInfeasibilities()&&
+	originalModel_->numberPrimalInfeasibilities()) {
+      originalModel_->setProblemStatus( 0);
+    } else {
+      originalModel_->setProblemStatus( -1);
+      originalModel_->messageHandler()->message(CLP_PRESOLVE_NEEDS_CLEANING,
+					    originalModel_->messages())
+					      <<CoinMessageEol;
+    }
+  } else {
+    originalModel_->setProblemStatus( presolvedModel_->status());
+  }
 }
 
 
