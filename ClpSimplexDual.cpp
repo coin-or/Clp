@@ -2762,7 +2762,14 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	// put back bounds as they were if was optimal
 	if (doOriginalTolerance==2) {
 	  changeMade_++; // say something changed
+	  /* We may have already changed some bounds in this function
+	     so save numberFake_ and add in.
+
+	     Worst that can happen is that we waste a bit of time  - but it must be finite.
+	  */
+	  int saveNumberFake = numberFake_;
 	  changeBounds(true,NULL,changeCost);
+	  numberFake_ += saveNumberFake;
 	  cleanDuals=2;
 	  //cleanDuals=1;
 	}
