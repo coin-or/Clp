@@ -13,6 +13,9 @@
   <!ENTITY faqcontent SYSTEM "faqcontent.xml">
   <!ENTITY doxygen SYSTEM "doxygen.xml">
   <!ENTITY revhist SYSTEM "revhist.xml">
+
+  <!ENTITY cvsweb "http://www-124.ibm.com/developerworks/opensource/cvs/coin/">
+  <!ENTITY clpsamplesdir "COIN/Clp/Samples/">
 ]>
 <book id="clpuserguide" lang="en">
 <bookinfo>

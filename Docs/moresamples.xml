@@ -3,10 +3,15 @@
 <title>
 More Samples
 </title>
+<section>
+<title>CLP's Samples Directory</title>
 <para>
-CLP includes a number of <filename>.cpp</filename> sample files.  They can be
-found in the <filename>COIN/Clp/Samples</filename> directory.  Below is a table
-listing some of the sample files with a short description for each.
+The CLP dsitribution includes a number of <filename>.cpp</filename> sample files.
+Users are encouraged to use them as starting points for their own CLP projects.
+The files can be found in the <filename>COIN/Clp/Samples</filename> directory.
+For the latest information on compiling and running these samples, please see
+the file <filename>COIN/Clp/Samples/INSTALL</filename>.  Below is a list of
+some of the most useful sample files with a short description for each file.
 </para>
 <table frame="none">
   <title>Contents of the Samples directory</title>
@@ -24,35 +29,37 @@ listing some of the sample files with a short description for each.
     <tbody>
       <row>
         <entry align="left" valign="top">
-	<filename>minimum.cpp</filename>
+	<ulink url="&cvsweb;&clpsamplesdir;minimum.cpp"><filename>minimum.cpp</filename></ulink>
 	</entry>
         <entry align="left" valign="top">
-	This is a CLP &lt;Hello, world&gt; program.  It reads an MPS file, and
-	solves the problem.
-	</entry>
-      </row>
-      <row>
-        <entry align="left" valign="top">
-	<filename>defaults.cpp</filename>
-	</entry>
-        <entry align="left" valign="top">
-	This is one of the simpler drivers.  It sets tolerances to defaults and 
-	is a useful place to find simple use of &quot;sets&quot; and
-	&quot;gets&quot;.  It also prints out a full MPS-like solutions.
+	This is a CLP &quot;Hello, world&quot; program.  It reads an MPS file,
+	and solves the problem.
 	</entry>
       </row>
       <row>
         <entry align="left" valign="top">
-	<filename>driver.cpp</filename>
+	<ulink url="&cvsweb;&clpsamplesdir;defaults.cpp"><filename>defaults.cpp</filename></ulink>
 	</entry>
         <entry align="left" valign="top">
-	This is designed to be the file that people modify to get a useful
-	driver.  It does presolve.
+	This is one of the simpler driver programs available.  It sets
+	tolerances to defaults and is a good place to find straightforward uses
+	of &quot;set&quot; and	&quot;get&quot; methods.  It also prints out full
+	MPS-like solutions.
 	</entry>
       </row>
       <row>
         <entry align="left" valign="top">
-	<filename>piece.cpp</filename>
+	<ulink url="&cvsweb;&clpsamplesdir;driver.cpp"><filename>driver.cpp</filename></ulink>
+	</entry>
+        <entry align="left" valign="top">
+	This is designed to be a file that a user could modify to get a useful
+	driver program for his or her project.  In particular, it demonstrates
+	the use of CLP's  presolve functionality.
+	</entry>
+      </row>
+      <row>
+        <entry align="left" valign="top">
+	<ulink url="&cvsweb;&clpsamplesdir;piece.cpp"><filename>piece.cpp</filename></ulink>
 	</entry>
         <entry align="left" valign="top">
 	This simple example takes a matrix read in by
@@ -63,7 +70,7 @@ listing some of the sample files with a short description for each.
       </row>
       <row>
         <entry align="left" valign="top">
-	<filename>network.cpp</filename>
+	<ulink url="&cvsweb;&clpsamplesdir;network.cpp"><filename>network.cpp</filename></ulink>
 	</entry>
         <entry align="left" valign="top">
 	This shows the use of non-standard matrices and how to load a problem
@@ -72,7 +79,7 @@ listing some of the sample files with a short description for each.
       </row>
       <row>
         <entry align="left" valign="top">
-	<filename>decompose.cpp</filename>
+	<ulink url="&cvsweb;&clpsamplesdir;decompose.cpp"><filename>decompose.cpp</filename></ulink>
 	</entry>
         <entry align="left" valign="top">
 	This does full Dantzig-Wolfe decomposition.  It illustrates 
@@ -81,7 +88,7 @@ listing some of the sample files with a short description for each.
       </row>
       <row>
         <entry align="left" valign="top">
-	<filename>sprint.cpp</filename>
+	<ulink url="&cvsweb;&clpsamplesdir;sprint.cpp"><filename>sprint.cpp</filename></ulink>
 	</entry>
         <entry align="left" valign="top">
 	This solves a long, thin problem by solving smaller subsets.  It is a
@@ -93,7 +100,7 @@ listing some of the sample files with a short description for each.
       </row>
       <row>
         <entry align="left" valign="top">
-	<filename>sprint2.cpp</filename>
+	<ulink url="&cvsweb;&clpsamplesdir;sprint2.cpp"><filename>sprint2.cpp</filename></ulink>
 	</entry>
         <entry align="left" valign="top">
 	This is similar to <filename>sprint.cpp</filename> but is designed for
@@ -106,4 +113,56 @@ listing some of the sample files with a short description for each.
     </tbody>
   </tgroup>
 </table>
+</section>
+<section>
+<title>Common CLP Tasks in the Samples</title>
+<para>
+Below is a listing of a number of common CLP tasks, such as loading a problem
+from an MPS file, matched with a list of each Sample file which illustrates the
+performance of a given task.
+</para>
+<table frame="none">
+  <title>Contents of the Samples directory</title>
+  <tgroup cols="3">
+    <thead>
+      <row>
+        <entry align="left" valign="bottom">
+	CLP Task&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	</entry>
+	<entry>
+	Method(s)
+	</entry>
+        <entry align="left" valign="bottom">
+	Sample(s)
+	</entry>
+      </row>
+    </thead>
+    <tbody>
+      <row>
+        <entry>
+	Read problem from MPS file
+	</entry>
+        <entry>
+	readMps
+	</entry>
+        <entry>
+	
+	</entry>
+      </row>
+      <row>
+        <entry>
+	
+	</entry>
+        <entry>
+	
+	</entry>
+        <entry>
+	
+	</entry>
+      </row>
+    </tbody>
+  </tgroup>
+</table>
+
+</section>
 </chapter>

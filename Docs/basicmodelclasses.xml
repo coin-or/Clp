@@ -3,7 +3,7 @@
   <title>
   Basic Model Classes
   </title>
-  <section>
+  <section id="hierarchy">
   <title>
   Hierarchy
   </title>
@@ -51,12 +51,12 @@
   which inherit from <classname>ClpSimplex</classname> (e.g.
   <classname>ClpSimplexDual</classname> and
   <classname>ClpSimplexPrimal</classname>), but they have no member data and
-  very rarely need be visible to user.  So, for example, after instantiating an
+  very rarely need be visible to the user.  So, for example, after instantiating an
   object <userinput>model</userinput> of type <classname>ClpSimplex</classname>,
   the user would use <userinput>model.dual()</userinput> to invoke dual algorithm.
   </para>
   </section>
-  <section>
+  <section id="firstexample">
   <title>
   First Example
   </title>
@@ -97,7 +97,7 @@ int main (int argc, const char *argv[])
   what happened to the model, and arrays filled with the solution values.
   </para>
   </section>
-  <section>
+  <section id="gettingsolution">
   <title>
   Getting at the Solution
   </title>
@@ -219,7 +219,7 @@ int main (int argc, const char *argv[])
   The reader  may have noted a preference for &quot;number&quot; over
   &quot;num&quot; and &quot;column&quot; over &quot;col&quot;.  This may be a
   reaction to when one of the authors was young and 5 or 6 letters was the
-  maximum in FORTRAN for any name or to early days with Osl when seven characters
+  maximum in FORTRAN for any name or to early days with OSL when seven characters
   were allowed but the first three had to be &quot;EKK&quot;!  
   </para>
   <para>
@@ -269,7 +269,7 @@ int main (int argc, const char *argv[])
   <filename>COIN/Clp/include/ClpSimplex.hpp</filename>.
   </para>
   </section>
-  <section>
+  <section id="buildandmodify">
   <title>
   Building and Modifying a Model
   </title>
@@ -282,17 +282,17 @@ int main (int argc, const char *argv[])
   <function>copyInIntegerInformation(const&nbsp;char&nbsp;*&nbsp;array)</function> where array
   is 0 or 1 to say integer and we can drop existing information by
   <function>deleteIntegerInformation()</function>.  There are various ways of
-  changing the size of a model.  The simplest is
+  changing the size of a model.  The simplest is by the use of the method
   <function>resize(newNumberRows,newNumberColumns)</function> - this will either
-  truncate model or add default rows or columns - a default row has lower bound
-  of -infinity and upper bound of +infinity, while a default column has zero cost,
-  zero lower bound and an upper bound of +infinity.
+  truncate the model or add &quot;default&quot; rows or columns - a default row
+  has lower bound of -infinity and upper bound of +infinity, while a default
+  column has zero cost, zero lower bound and an upper bound of +infinity.
   </para>
   <para>
   Normally we would use <function>deleteRows</function>,
   <function>addRows</function>, <function>deleteColumns</function> and
-  <function>addColumns</function>, where the add ones will also add in the
-  elements.  A potentially very useful way of modifying a model is strictly a
+  <function>addColumns</function>, where the <function>add</function> methods
+  will also add in the elements.  A potentially very useful way of modifying a model is strictly a
   constructor.  Given a large model and a list of rows and a list of columns it
   constructs the model as a subset of the large model.  It is possible to change
   the order of the columns/rows and to duplicate columns/rows.  So a list of
@@ -302,7 +302,7 @@ int main (int argc, const char *argv[])
   linear costs by duplicating columns and then modifying bounds and costs.
   </para>
   </section>
-  <section>
+  <section id="tolerances">
   <title>Tolerances</title>
   <para>
   There are set and get methods for tolerances, for example,
@@ -320,7 +320,7 @@ int main (int argc, const char *argv[])
   maximization.)
   </para>
   </section>
-  <section>
+  <section id="setsandgets">
   <title>Some Useful Set and Get Methods</title>
   <table frame="none">
   <title>Some Useful Set and Get Methods</title>
@@ -432,7 +432,7 @@ int main (int argc, const char *argv[])
   </tgroup>
   </table>
   </section>
-  <section>
+  <section id="simplexspecific">
   <title>
   Simplex-specific Methods
   </title>
@@ -617,7 +617,7 @@ int main (int argc, const char *argv[])
   column names.
   </para>
   </section>
-  <section>
+  <section id="statusarray">
   <title>Status Array</title>
   <para>
   The astute reader may have noticed that the status array has been mentioned
