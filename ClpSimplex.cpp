@@ -396,7 +396,6 @@ ClpSimplex::computePrimals ( const double * rowActivities,
       array[iRow]=0.0;
     }
   }
-
   arrayVector.setNumElements(number);
 
   // Ftran adjusted RHS and iterate to improve accuracy
@@ -1151,7 +1150,9 @@ ClpSimplex::housekeeping(double objectiveChange)
     //assert( getStatus(sequenceOut_)== basic);
     setStatus(sequenceIn_,basic);
     if (upper_[sequenceOut_]-lower_[sequenceOut_]>0) {
-      if (directionOut_>0) {
+      // As Nonlinear costs may have moved bounds (to more feasible)
+      // Redo using value
+      if (fabs(valueOut_-lower_[sequenceOut_])<fabs(valueOut_-upper_[sequenceOut_])) {
 	// going to lower
 	setStatus(sequenceOut_,atLowerBound);
       } else {
@@ -1165,7 +1166,9 @@ ClpSimplex::housekeeping(double objectiveChange)
     solution_[sequenceOut_]=valueOut_;
   } else {
     // flip from bound to bound
-    if (directionIn_==-1) {
+    // As Nonlinear costs may have moved bounds (to more feasible)
+    // Redo using value
+    if (fabs(valueIn_-lower_[sequenceIn_])<fabs(valueIn_-upper_[sequenceIn_])) {
       // as if from upper bound
       setStatus(sequenceIn_, atLowerBound);
     } else {
@@ -2662,7 +2665,15 @@ int ClpSimplex::dual (int ifValuesPass )
 // primal 
 int ClpSimplex::primal (int ifValuesPass )
 {
-  return ((ClpSimplexPrimal *) this)->primal(ifValuesPass);
+  int returnCode = ((ClpSimplexPrimal *) this)->primal(ifValuesPass);
+  if (problemStatus_==10) {
+    //printf("Cleaning up with dual\n");
+    int savePerturbation = perturbation_;
+    perturbation_=100;
+    returnCode = ((ClpSimplexDual *) this)->dual(0);
+    perturbation_=savePerturbation;
+  }
+  return returnCode;
 }
 #include "ClpSimplexPrimalQuadratic.hpp"
 /* Solves quadratic problem using SLP - may be used as crash
@@ -4168,6 +4179,7 @@ ClpSimplex::startup(int ifValuesPass)
   pivotRow_=-1;
   sequenceIn_=-1;
   sequenceOut_=-1;
+  secondaryStatus_=0;
 
   primalTolerance_=dblParam_[ClpPrimalTolerance];
   dualTolerance_=dblParam_[ClpDualTolerance];
@@ -4189,20 +4201,21 @@ ClpSimplex::startup(int ifValuesPass)
     // row activities have negative sign
     factorization_->slackValue(-1.0);
     factorization_->zeroTolerance(1.0e-13);
-    // Switch off dense
+    // Switch off dense (unless special option set)
     int saveThreshold = factorization_->denseThreshold();
     factorization_->setDenseThreshold(0);
-#if 0
-    // do perturbation if asked for
-
-    if (perturbation_<100) {
-      if (algorithm_>0) {
-	((ClpSimplexPrimal *) this)->perturb();
-      } else if (algorithm_<0) {
+    // If values pass then perturb (otherwise may be optimal so leave a bit)
+    if (ifValuesPass) {
+      // do perturbation if asked for
+      
+      if (perturbation_<100) {
+	if (algorithm_>0) {
+	  ((ClpSimplexPrimal *) this)->perturb(0);
+	} else if (algorithm_<0) {
 	((ClpSimplexDual *) this)->perturb();
+	}
       }
     }
-#endif
     // for primal we will change bounds using infeasibilityCost_
     if (nonLinearCost_==NULL&&algorithm_>0) {
       // get a valid nonlinear cost function
@@ -4683,4 +4696,18 @@ ClpSimplexProgress::cycle(int in, int out,int wayIn,int wayOut)
   out_[CLP_CYCLE-1]=out;
   way_[CLP_CYCLE-1]=way;
   return matched;
+}
+// Allow initial dense factorization
+void 
+ClpSimplex::setInitialDenseFactorization(bool onOff)
+{
+  if (onOff)
+    specialOptions_ |= 8;
+  else
+    specialOptions_ &= ~8;
+}
+bool 
+ClpSimplex::initialDenseFactorization() const
+{
+  return (specialOptions_&8)!=0;
 }

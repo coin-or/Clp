@@ -8,7 +8,7 @@
 #include <math.h>
 #include "ClpPresolve.hpp"
 #include "Idiot.hpp"
-#include "CoinHelperFunctions.hpp"
+#include "CoinTime.hpp"
 #include "CoinMessageHandler.hpp"
 // Redefine stuff for Clp
 #ifdef CLP_IDIOT
@@ -121,7 +121,9 @@ Idiot::crash(int numberPass, CoinMessageHandler * handler,const CoinMessages *me
     }
   }
   sum /= (double) (nnzero+1);
-  mu_= max(1.0e-3,sum*1.0e-5);
+  // If mu not changed then compute
+  if (mu_==1e-4)
+    mu_= max(1.0e-3,sum*1.0e-5);
   maxIts_=20;
   maxIts2_=105;
   if (numberPass<=0)
@@ -342,6 +344,7 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
     }
 #endif
   }
+  int numberAway=-1;
   iterationTotal = lastResult.iteration;
   firstInfeas=lastResult.infeas;
   if ((strategy_&1024)!=0) reasonableInfeas=0.5*firstInfeas;
@@ -399,6 +402,9 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
       }
 #endif
     }
+    if (iteration>50&&n==numberAway&&result.infeas<1.0e-4)
+      break; // not much happening
+    numberAway=n;
     keepinfeas = result.infeas;
     lastWeighted=result.weighted;
     iterationTotal += result.iteration;
@@ -469,8 +475,7 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
          if (lambdaIteration>4 && 
             (((lambdaIteration%10)==0 && smallInfeas<keepinfeas) ||
              (lambdaIteration%5)==0 && 1.5*smallInfeas<keepinfeas)) {
-           printf(
-   " Increasing smallInfeas from %f to %f\n",smallInfeas,1.5*smallInfeas);
+           //printf(" Increasing smallInfeas from %f to %f\n",smallInfeas,1.5*smallInfeas);
            smallInfeas *= 1.5;
          }
          if ((saveStrategy&2048)==0) {

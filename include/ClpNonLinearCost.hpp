@@ -99,6 +99,10 @@ public:
       Returns change in cost
    May need to be inline for speed */
   double setOne(int sequence, double solutionValue);
+  /** Sets bounds and cost for outgoing variable 
+      may change value
+      Returns direction */
+  int setOneOutgoing(int sequence, double &solutionValue);
   /// Returns nearest bound
   double nearest(int sequence, double solutionValue);
   /** Returns change in cost - one down if alpha >0.0, up if <0.0

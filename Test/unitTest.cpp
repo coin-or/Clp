@@ -13,6 +13,7 @@
 #include "CoinPackedMatrix.hpp"
 #include "CoinPackedVector.hpp"
 #include "CoinHelperFunctions.hpp"
+#include "CoinTime.hpp"
 
 #include "ClpFactorization.hpp"
 #include "ClpSimplex.hpp"

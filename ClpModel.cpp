@@ -12,6 +12,7 @@
 #include "CoinPragma.hpp"
 
 #include "CoinHelperFunctions.hpp"
+#include "CoinTime.hpp"
 #include "ClpModel.hpp"
 #include "ClpPackedMatrix.hpp"
 #include "CoinPackedVector.hpp"
@@ -48,6 +49,7 @@ ClpModel::ClpModel () :
   numberIterations_(0),
   solveType_(0),
   problemStatus_(-1),
+  secondaryStatus_(0),
   lengthNames_(0),
   defaultHandler_(true),
   rowNames_(),
@@ -318,6 +320,7 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
   numberIterations_ = rhs.numberIterations_;
   solveType_ = rhs.solveType_;
   problemStatus_ = rhs.problemStatus_;
+  secondaryStatus_ = rhs.secondaryStatus_;
   numberRows_ = rhs.numberRows_;
   numberColumns_ = rhs.numberColumns_;
   if (trueCopy) {
@@ -360,7 +363,7 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
     rowObjective_ = ClpCopyOfArray ( rhs.rowObjective_, numberRows_ );
     status_ = ClpCopyOfArray( rhs.status_,numberColumns_+numberRows_);
     ray_ = NULL;
-    if (problemStatus_==1)
+    if (problemStatus_==1&&!secondaryStatus_)
       ray_ = ClpCopyOfArray (rhs.ray_,numberRows_);
     else if (problemStatus_==2)
       ray_ = ClpCopyOfArray (rhs.ray_,numberColumns_);
@@ -419,6 +422,7 @@ ClpModel::returnModel(ClpModel & otherModel)
   otherModel.objectiveValue_=objectiveValue_;
   otherModel.numberIterations_ = numberIterations_;
   otherModel.problemStatus_ = problemStatus_;
+  otherModel.secondaryStatus_ = secondaryStatus_;
   rowActivity_ = NULL;
   columnActivity_ = NULL;
   dual_ = NULL;
@@ -647,6 +651,7 @@ ClpModel::resize (int newNumberRows, int newNumberColumns)
   if (numberRows_!=newNumberRows||numberColumns_!=newNumberColumns) {
     // set state back to unknown
     problemStatus_ = -1;
+    secondaryStatus_ = 0;
     delete [] ray_;
     ray_ = NULL;
   }
@@ -714,6 +719,7 @@ ClpModel::deleteRows(int number, const int * which)
   numberRows_=newSize;
   // set state back to unknown
   problemStatus_ = -1;
+  secondaryStatus_ = 0;
   delete [] ray_;
   ray_ = NULL;
   // for now gets rid of names
@@ -755,6 +761,7 @@ ClpModel::deleteColumns(int number, const int * which)
   numberColumns_=newSize;
   // set state back to unknown
   problemStatus_ = -1;
+  secondaryStatus_ = 0;
   delete [] ray_;
   ray_ = NULL;
   // for now gets rid of names
@@ -855,8 +862,7 @@ ClpModel::addRows(int number, const double * rowLower,
   rowCopy_=NULL;
   if (!matrix_)
     createEmptyMatrix();
-  // Use matrix() to get round virtual problem
-  matrix()->appendRows(number,rows);
+  matrix_->appendRows(number,rows);
 }
 // Add columns
 void 
@@ -966,15 +972,14 @@ ClpModel::addColumns(int number, const double * columnLower,
   rowCopy_=NULL;
   if (!matrix_)
     createEmptyMatrix();
-  // Use matrix() to get round virtual problem
-  matrix()->appendCols(number,columns);
+  matrix_->appendCols(number,columns);
 }
 // Infeasibility/unbounded ray (NULL returned if none/wrong)
 double * 
 ClpModel::infeasibilityRay() const
 {
   double * array = NULL;
-  if (problemStatus_==1) 
+  if (problemStatus_==1&&!secondaryStatus_) 
     array = ClpCopyOfArray(ray_,numberRows_);
   return array;
 }
@@ -1047,8 +1052,11 @@ ClpModel::readMps(const char *fileName,
     }
   }
   CoinMpsIO m;
+  bool savePrefix =m.messageHandler()->prefix();
+  m.messageHandler()->setPrefix(handler_->prefix());
   double time1 = CoinCpuTime(),time2;
   int status=m.readMps(fileName,"");
+  m.messageHandler()->setPrefix(savePrefix);
   if (!status||ignoreErrors) {
     loadProblem(*m.getMatrixByCol(),
 		m.getColLower(),m.getColUpper(),
@@ -1333,6 +1341,7 @@ ClpModel::ClpModel ( const ClpModel * rhs,
   numberIterations_ = rhs->numberIterations_;
   solveType_ = rhs->solveType_;
   problemStatus_ = rhs->problemStatus_;
+  secondaryStatus_ = rhs->secondaryStatus_;
   // check valid lists
   int numberBad=0;
   int i;
@@ -1407,7 +1416,7 @@ ClpModel::ClpModel ( const ClpModel * rhs,
   memcpy(status_,columnStatus,numberColumns_);
   delete [] columnStatus;
   ray_ = NULL;
-  if (problemStatus_==1)
+  if (problemStatus_==1&&!secondaryStatus_)
     ray_ = whichDouble (rhs->ray_,numberRows,whichRow);
   else if (problemStatus_==2)
     ray_ = whichDouble (rhs->ray_,numberColumns,whichColumn);

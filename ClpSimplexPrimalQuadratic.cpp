@@ -1190,6 +1190,7 @@ ClpSimplexPrimalQuadratic::whileIterating(
 	  assert(valueOut_>=lowerValue-primalTolerance_&&
 		 valueOut_<=upperValue+primalTolerance_);
 	  // may not be exactly at bound and bounds may have changed
+#if 1
 	  // Make sure outgoing looks feasible
 	  double useValue=valueOut_;
 	  if (valueOut_<=lowerValue+primalTolerance_) {
@@ -1213,6 +1214,10 @@ ClpSimplexPrimalQuadratic::whileIterating(
 	  }
 	  solution_[sequenceOut_]=valueOut_;
 	  nonLinearCost_->setOne(sequenceOut_,useValue);
+#else
+	  directionOut_=nonLinearCost_->setOneOutgoing(sequenceOut_,valueOut_);
+	  solution_[sequenceOut_]=valueOut_;
+#endif
 	}
 	// change cost and bounds on incoming if primal
 	if (sequenceIn_==sequenceOut_&&(lowerOut_!=lowerIn_||upperOut_!=upperIn_)) {

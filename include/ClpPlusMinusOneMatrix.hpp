@@ -49,6 +49,10 @@ public:
   virtual void deleteCols(const int numDel, const int * indDel);
     /** Delete the rows whose indices are listed in <code>indDel</code>. */
   virtual void deleteRows(const int numDel, const int * indDel);
+  /// Append Columns
+  virtual void appendCols(int number, const CoinPackedVectorBase * const * columns);
+  /// Append Rows
+  virtual void appendRows(int number, const CoinPackedVectorBase * const * rows);
   /** Returns a new matrix in reverse order without gaps */
   virtual ClpMatrixBase * reverseOrderedCopy() const;
   /** Returns number of elements in basis

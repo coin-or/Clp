@@ -309,11 +309,24 @@ int ClpSimplexDual::dual (int ifValuesPass )
       // refreshed (normally null)
       matrix_->refresh(this);
       // If getting nowhere - why not give it a kick
-#if 0
       // does not seem to work too well - do some more work
-      if (perturbation_<101&&numberIterations_>2*(numberRows_+numberColumns_)) 
+      if (perturbation_<101&&numberIterations_>2*(numberRows_+numberColumns_)) {
 	perturb();
-#endif
+	// Can't get here if values pass
+	gutsOfSolution(NULL,NULL);
+	if (handler_->logLevel()>2) {
+	  handler_->message(CLP_SIMPLEX_STATUS,messages_)
+	    <<numberIterations_<<objectiveValue();
+	  handler_->printing(sumPrimalInfeasibilities_>0.0)
+	    <<sumPrimalInfeasibilities_<<numberPrimalInfeasibilities_;
+	  handler_->printing(sumDualInfeasibilities_>0.0)
+	    <<sumDualInfeasibilities_<<numberDualInfeasibilities_;
+	  handler_->printing(numberDualInfeasibilitiesWithoutFree_
+			     <numberDualInfeasibilities_)
+			       <<numberDualInfeasibilitiesWithoutFree_;
+	  handler_->message()<<CoinMessageEol;
+	}
+      }
       // may factorize, checks if problem finished
       statusOfProblemInDual(lastCleaned,factorType,progress_,saveDuals);
       // If values pass then do easy ones on first time
@@ -2391,36 +2404,6 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
     situationChanged=2;
   }
   progressFlag_ = 0; //reset progress flag
-#ifdef CLP_DEBUG
-  if (!rowScale_&&(handler_->logLevel()&32)) {
-    double * objectiveSimplex 
-      = ClpCopyOfArray(objective(),numberColumns_,0.0);
-    double * rowObjectiveSimplex 
-      = ClpCopyOfArray(rowObjective_,numberRows_,0.0);
-    int i;
-    double largest;
-    largest=0.0;
-    // direction is actually scale out not scale in
-    if (direction)
-      direction = 1.0/direction;
-    for (i=0;i<numberRows_;i++) {
-      rowObjectiveSimplex[i] *= direction;
-      double difference = fabs(rowObjectiveWork_[i]-rowObjectiveSimplex[i]);
-      if (difference>largest)
-	largest=difference;
-    }
-    for (i=0;i<numberColumns_;i++) {
-      objectiveSimplex[i] *= direction;
-      double difference = fabs(objectiveWork_[i]-objectiveSimplex[i]);
-      if (difference>largest)
-	largest=difference;
-    }
-    if ((handler_->logLevel()&16))
-      printf("difference in obj %g\n",largest);
-    delete [] objectiveSimplex;
-    delete [] rowObjectiveSimplex;
-  }
-#endif
   handler_->message(CLP_SIMPLEX_STATUS,messages_)
     <<numberIterations_<<objectiveValue();
   handler_->printing(sumPrimalInfeasibilities_>0.0)
@@ -2774,6 +2757,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	   optimizationDirection_*limit&&
 	   !numberAtFakeBound()&&!numberDualInfeasibilities_) {
     problemStatus_=1;
+    secondaryStatus_ = 1; // and say was on cutoff
   }
   if (problemStatus_<0&&!changeMade_) {
     problemStatus_=4; // unknown
@@ -3103,7 +3087,7 @@ ClpSimplexDual::perturb()
   // Make variables with more elements more expensive
   const double m1 = 0.5;
   for (iColumn=0;iColumn<numberColumns_;iColumn++) {
-    if (columnLowerWork_[iColumn]<columnUpperWork_[iColumn]) {
+    if (columnLowerWork_[iColumn]<columnUpperWork_[iColumn]&&getStatus(iColumn)!=basic) {
       double value = perturbation;
       double currentValue = objectiveWork_[iColumn];
       value = min(value,constantPerturbation+maximumFraction*(fabs(currentValue)+1.0e-1*perturbation+1.0e-8));
@@ -3593,6 +3577,7 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
 	   optimizationDirection_*limit|| 
 	   numberAtFakeBound()) {
 	  returnCode=1;
+	  secondaryStatus_ = 1; // and say was on cutoff
 	  // can't say anything interesting - might as well return
 #ifdef CLP_DEBUG
 	  printf("returning from fastDual after %d iterations with code %d\n",

@@ -219,6 +219,13 @@ public:
   /// Set problem status
   inline void setProblemStatus(int problemStatus)
   { problemStatus_ = problemStatus;};
+   /** Secondary status of problem - may get extended
+       0 - none
+       1 - primal infeasible because dual limit reached
+   */
+   inline int secondaryStatus() const            { return secondaryStatus_; }
+  inline void setSecondaryStatus(int status)
+  { secondaryStatus_ = status;};
    /// Are there a numerical difficulties?
    bool isAbandoned() const             { return problemStatus_==4; }
    /// Is optimality proven?
@@ -520,6 +527,8 @@ protected:
   int solveType_;
   /// Status of problem
   int problemStatus_;
+  /// Secondary status of problem
+  int secondaryStatus_;
   /// length of names (0 means no names)
   int lengthNames_;
   /// Message handler

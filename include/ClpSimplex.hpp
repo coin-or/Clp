@@ -14,6 +14,7 @@
 #include <cfloat>
 #include "ClpModel.hpp"
 #include "ClpMatrixBase.hpp"
+#include "ClpSolve.hpp"
 class ClpDualRowPivot;
 class ClpPrimalColumnPivot;
 class ClpFactorization;
@@ -47,19 +48,6 @@ class ClpSimplex : public ClpModel {
 				  const std::string & netlibDir);
 
 public:
-
-  /** enums for solve function */
-  enum SolveType {
-    useDual=0,
-    usePrimal,
-    useSprint,
-    automatic
-  };
-  enum PresolveType {
-    presolveOn=0,
-    presolveOff,
-    presolveMaximum
-  };
   /** enums for status of various sorts.
       First 4 match CoinWarmStartBasis,
       isFixed means fixed at lower bound and out of basis
@@ -154,17 +142,10 @@ public:
 
   /**@name Functions most useful to user */
   //@{
-  /** General solve algorithm which can do presolve
-      special options (bits)
-      1 - do not perturb
-      2 - do not scale
-      4 - use crash (default allslack in dual, idiot in primal)
-      8 - all slack basis in primal
-      16 - switch off interrupt handling
-      32 - do not try and make plus minus one matrix
+  /** General solve algorithm which can do presolve.
+      See  ClpSolve.hpp for options
    */
-  int initialSolve(SolveType method=useDual, PresolveType presolve=presolveOn,
-		   int specialOptions=0);
+  int initialSolve(ClpSolve & options);
   /** Dual algorithm - see ClpSimplexDual.hpp for method */
   int dual(int ifValuesPass=0);
   /** Primal algorithm - see ClpSimplexPrimal.hpp for method */
@@ -600,6 +581,12 @@ public:
     st_byte &= ~7;
     st_byte |= status;
   };
+  /** Normally the first factorization does sparse coding because
+      the factorization could be singular.  This allows initial dense 
+      factorization when it is known to be safe
+  */
+  void setInitialDenseFactorization(bool onOff);
+  bool  initialDenseFactorization() const;
   /** Return sequence In or Out */
   inline int sequenceIn() const
   {return sequenceIn_;};
@@ -908,6 +895,7 @@ protected:
       1 - Don't keep changing infeasibility weight
       2 - Keep nonLinearCost round solves
       4 - Force outgoing variables to exact bound (primal)
+      8 - Safe to use dense initial factorization
   */
   unsigned int specialOptions_;
   /// So we know when to be cautious

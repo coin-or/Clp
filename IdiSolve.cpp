@@ -828,7 +828,7 @@ Idiot::IdiSolve(
 	}
 	obj[DROP-1]=best;
 	if (test-best<drop&&(strategy&8)==0) {
-	  if ((logLevel_&2)!=0) {
+	  if ((logLevel_&8)!=0) {
 	  printf("Exiting as drop in %d its is %g after %d iterations\n",
 		 DROP*checkFrequency_,test-best,iter);
 	  }
@@ -1028,7 +1028,7 @@ Idiot::IdiSolve(
       }
       maxDj = maxDj/(double) DJTEST;
       if (maxDj<djExit&&iter>50) {
-	printf("Exiting on low dj %g after %d iterations\n",maxDj,iter);
+	//printf("Exiting on low dj %g after %d iterations\n",maxDj,iter);
 	break;
       }
       if (nChange<100) {

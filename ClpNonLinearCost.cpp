@@ -439,12 +439,19 @@ ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
 	  solution[iSequence]=upperValue;
 	}
       } else {
-	if (fabs(value-upperValue)<=fabs(value-lowerValue)) {
-	  solution[iSequence] = upperValue;
-	} else {
-	  model_->setStatus(iSequence,ClpSimplex::atLowerBound);
-	  solution[iSequence] = lowerValue;
+	// Set to nearest and make at upper bound
+	int kRange;
+	iRange=-1;
+	double nearest = COIN_DBL_MAX;
+	for (kRange=start; kRange<end;kRange++) {
+	  if (fabs(lower_[kRange]-value)<nearest) {
+	    nearest = fabs(lower_[kRange]-value);
+	    iRange=kRange;
+	  }
 	}
+	assert (iRange>=0);
+	iRange--;
+	solution[iSequence]=lower_[iRange+1];
       }
       break;
     case ClpSimplex::atLowerBound:
@@ -459,15 +466,29 @@ ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
 	  solution[iSequence]=lowerValue;
 	}
       } else {
-	if (fabs(value-lowerValue)<=fabs(value-upperValue)) {
-	  solution[iSequence] = lowerValue;
-	} else {
-	  model_->setStatus(iSequence,ClpSimplex::atUpperBound);
-	  solution[iSequence] = upperValue;
+	// Set to nearest and make at lower bound
+	int kRange;
+	iRange=-1;
+	double nearest = COIN_DBL_MAX;
+	for (kRange=start; kRange<end;kRange++) {
+	  if (fabs(lower_[kRange]-value)<nearest) {
+	    nearest = fabs(lower_[kRange]-value);
+	    iRange=kRange;
+	  }
 	}
+	assert (iRange>=0);
+	solution[iSequence]=lower_[iRange];
       }
       break;
     case ClpSimplex::isFixed:
+      if (toNearest) {
+	// Set to true fixed
+	for (iRange=start; iRange<end;iRange++) {
+	  if (lower_[iRange]==lower_[iRange+1])
+	    break;
+	}
+	solution[iSequence]=lower_[iRange];
+      }
       break;
     }
     lower[iSequence] = lower_[iRange];
@@ -743,6 +764,89 @@ ClpNonLinearCost::setOne(int iPivot, double value)
   cost = cost_[iRange];
   changeCost_ += value*difference;
   return difference;
+}
+/* Sets bounds and cost for outgoing variable 
+   may change value
+   Returns direction */
+int 
+ClpNonLinearCost::setOneOutgoing(int iPivot, double & value)
+{
+  assert (model_!=NULL);
+  double primalTolerance = model_->currentPrimalTolerance();
+  // get where in bound sequence
+  int iRange;
+  int currentRange = whichRange_[iPivot];
+  int start = start_[iPivot];
+  int end = start_[iPivot+1]-1;
+  // Set perceived direction out
+  int direction;
+  if (value<=lower_[currentRange]+1.001*primalTolerance) {
+    direction=1;
+  } else if (value>=lower_[currentRange+1]-1.001*primalTolerance) {
+    direction=-1;
+  } else {
+    // odd
+    direction=0;
+  }
+  // If fixed try and get feasible
+  if (lower_[start+1]==lower_[start+2]&&fabs(value-lower_[start+1])<1.001*primalTolerance) {
+    iRange =start+1;
+  } else {
+    // See if exact
+    for (iRange=start; iRange<end;iRange++) {
+      if (value==lower_[iRange+1]) {
+	// put in better range
+	if (infeasible(iRange)&&iRange==start) 
+	  iRange++;
+	break;
+      }
+    }
+    if (iRange==end) {
+      // not exact
+      for (iRange=start; iRange<end;iRange++) {
+	if (value<=lower_[iRange+1]+primalTolerance) {
+	  // put in better range
+	  if (value>=lower_[iRange+1]-primalTolerance&&infeasible(iRange)&&iRange==start) 
+	    iRange++;
+	  break;
+	}
+      }
+    }
+  }
+  assert(iRange<end);
+  whichRange_[iPivot]=iRange;
+  if (iRange!=currentRange) {
+    if (infeasible(iRange))
+      numberInfeasibilities_++;
+    if (infeasible(currentRange))
+      numberInfeasibilities_--;
+  }
+  double & lower = model_->lowerAddress(iPivot);
+  double & upper = model_->upperAddress(iPivot);
+  double & cost = model_->costAddress(iPivot);
+  lower = lower_[iRange];
+  upper = lower_[iRange+1];
+  if (upper==lower) {
+    value=upper;
+  } else {
+    // set correctly
+    if (fabs(value-lower)<=primalTolerance*1.001){
+      value = min(value,lower+primalTolerance);
+    } else if (fabs(value-upper)<=primalTolerance*1.001){
+      value = max(value,upper-primalTolerance);
+    } else {
+      printf("*** variable wandered off bound %g %g %g!\n",
+	     lower,value,upper);
+      if (value-lower<=upper-value) 
+	value = lower+primalTolerance;
+      else 
+	value = upper-primalTolerance;
+    }
+  }
+  double difference = cost-cost_[iRange]; 
+  cost = cost_[iRange];
+  changeCost_ += value*difference;
+  return direction;
 }
 // Returns nearest bound
 double 

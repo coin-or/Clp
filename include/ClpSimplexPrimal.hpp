@@ -211,9 +211,9 @@ public:
   void statusOfProblemInPrimal(int & lastCleaned, int type,
 			     ClpSimplexProgress * progress);
   /// Perturbs problem (method depends on perturbation())
-  void perturb();
-  /// Take off effect of perturbation
-  void unPerturb();
+  void perturb(int type);
+  /// Take off effect of perturbation and say whether to try dual
+  bool unPerturb();
   /// Unflag all variables and return number unflagged
   int unflag();
 

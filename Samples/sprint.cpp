@@ -124,7 +124,7 @@ int main (int argc, const char *argv[])
 
   for (iPass=0;iPass<maxPass;iPass++) {
     printf("Start of pass %d\n",iPass);
-    printf("Bug until submodel new version\n");
+    //printf("Bug until submodel new version\n");
     CoinSort_2(sort,sort+numberSort,weight);
     // Create small problem
     ClpSimplex small(&model,numberRows,whichRows,numberSort,sort);

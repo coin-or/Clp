@@ -118,7 +118,6 @@ ClpPlusMinusOneMatrix::ClpPlusMinusOneMatrix (const CoinPackedMatrix & rhs)
   if (!goodPlusMinusOne) {
     delete [] indices_;
     // put in message
-    printf("Not all +-1 - can test if indices_ null\n");
     indices_=NULL;
     numberRows_=0;
     numberColumns_=0;
@@ -274,6 +273,7 @@ ClpPlusMinusOneMatrix::ClpPlusMinusOneMatrix (
       } else {
 	// bad column
 	numberBad++;
+	printf("%d %d %d %d\n",iColumn,numberMajor,numberMajor1,kColumn);
       }
     }
     if (numberBad)
@@ -470,8 +470,6 @@ ClpPlusMinusOneMatrix::transposeTimes(const ClpSimplex * model, double scalar,
       factor=0.15;
     else if (numberRows*2<numberColumns)
       factor=0.2;
-    if (model->numberIterations()%50==0)
-      printf("%d nonzero\n",numberInRowArray);
   }
   if (numberInRowArray>factor*numberRows||!rowCopy) {
     assert (!y->getNumElements());
@@ -1118,13 +1116,129 @@ ClpPlusMinusOneMatrix::getVectorLengths() const
 void 
 ClpPlusMinusOneMatrix::deleteCols(const int numDel, const int * indDel) 
 {
-  abort();
+  int iColumn;
+  int newSize=startPositive_[numberColumns_];;
+  int numberBad=0;
+  // Use array to make sure we can have duplicates
+  int * which = new int[numberColumns_];
+  memset(which,0,numberColumns_*sizeof(int));
+  int nDuplicate=0;
+  for (iColumn=0;iColumn<numDel;iColumn++) {
+    int jColumn = indDel[iColumn];
+    if (jColumn<0||jColumn>=numberColumns_) {
+      numberBad++;
+    } else {
+      newSize -= startPositive_[jColumn+1]-startPositive_[jColumn];
+      if (which[jColumn])
+	nDuplicate++;
+      else
+	which[jColumn]=1;
+    }
+  }
+  if (numberBad)
+    throw CoinError("Indices out of range", "deleteCols", "ClpPlusMinusOneMatrix");
+  int newNumber = numberColumns_-numDel+nDuplicate;
+  // Get rid of temporary arrays
+  delete [] lengths_;
+  lengths_=NULL;
+  delete [] elements_;
+  elements_= NULL;
+  int * newPositive = new int [newNumber+1];
+  int * newNegative = new int [newNumber];
+  int * newIndices = new int [newSize];
+  newNumber=0;
+  newSize=0;
+  for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+    if (!which[iColumn]) {
+      int start,end;
+      int i;
+      start = startPositive_[iColumn];
+      end=startNegative_[iColumn];
+      newPositive[newNumber]=newSize;
+      for (i=start;i<end;i++) 
+	newIndices[newSize++]=indices_[i];
+      start = startNegative_[iColumn];
+      end=startPositive_[iColumn+1];
+      newNegative[newNumber++]=newSize;
+      for (i=start;i<end;i++) 
+	newIndices[newSize++]=indices_[i];
+    }
+  }
+  newPositive[newNumber]=newSize;
+  delete [] which;
+  delete [] startPositive_;
+  startPositive_= newPositive;
+  delete [] startNegative_;
+  startNegative_= newNegative;
+  delete [] indices_;
+  indices_= newIndices;
+  numberColumns_ = newNumber;
 }
 /* Delete the rows whose indices are listed in <code>indDel</code>. */
 void 
 ClpPlusMinusOneMatrix::deleteRows(const int numDel, const int * indDel) 
 {
-  abort();
+  int iRow;
+  int numberBad=0;
+  // Use array to make sure we can have duplicates
+  int * which = new int[numberRows_];
+  memset(which,0,numberRows_*sizeof(int));
+  int nDuplicate=0;
+  for (iRow=0;iRow<numDel;iRow++) {
+    int jRow = indDel[iRow];
+    if (jRow<0||jRow>=numberRows_) {
+      numberBad++;
+    } else {
+      if (which[jRow])
+	nDuplicate++;
+      else
+	which[jRow]=1;
+    }
+  }
+  if (numberBad)
+    throw CoinError("Indices out of range", "deleteCols", "ClpPlusMinusOneMatrix");
+  int iElement;
+  int numberElements=startPositive_[numberColumns_];
+  int newSize=0;
+  for (iElement=0;iElement<numberElements;iElement++) {
+    iRow = indices_[iElement];
+    if (!which[iRow])
+      newSize++;
+  }
+  int newNumber = numberRows_-numDel+nDuplicate;
+  // Get rid of temporary arrays
+  delete [] lengths_;
+  lengths_=NULL;
+  delete [] elements_;
+  elements_= NULL;
+  int * newIndices = new int [newSize];
+  newSize=0;
+  int iColumn;
+  for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+    int start,end;
+    int i;
+    start = startPositive_[iColumn];
+    end=startNegative_[iColumn];
+    startPositive_[newNumber]=newSize;
+    for (i=start;i<end;i++) {
+	iRow = indices_[i];
+	if (!which[iRow])
+	  newIndices[newSize++]=iRow;
+    }
+    start = startNegative_[iColumn];
+    end=startPositive_[iColumn+1];
+    startNegative_[newNumber]=newSize;
+    for (i=start;i<end;i++) {
+	iRow = indices_[i];
+	if (!which[iRow])
+	  newIndices[newSize++]=iRow;
+    }
+  }
+  startPositive_[numberColumns_]=newSize;
+  delete [] which;
+  delete [] indices_;
+  indices_= newIndices;
+  numberRows_ = newNumber;
 }
 bool 
 ClpPlusMinusOneMatrix::isColOrdered() const 
@@ -1179,4 +1293,148 @@ ClpPlusMinusOneMatrix::dubiousWeights(const ClpSimplex * model,int * inputWeight
     weights[i+numberColumns]=inputWeights[i];
   }
   return weights;
+}
+// Append Columns
+void 
+ClpPlusMinusOneMatrix::appendCols(int number, const CoinPackedVectorBase * const * columns)
+{
+  int iColumn;
+  int size=0;
+  int numberBad=0;
+  for (iColumn=0;iColumn<number;iColumn++) {
+    int n=columns[iColumn]->getNumElements();
+    const double * element = columns[iColumn]->getElements();
+    size += n;
+    int i;
+    for (i=0;i<n;i++) {
+      if (fabs(element[i])!=1.0)
+	numberBad++;
+    }
+  }
+  if (numberBad)
+    throw CoinError("Not +- 1", "appendCols", "ClpPlusMinusOneMatrix");
+  // Get rid of temporary arrays
+  delete [] lengths_;
+  lengths_=NULL;
+  delete [] elements_;
+  elements_= NULL;
+  int numberNow = startPositive_[numberColumns_];
+  int * temp;
+  temp = new int [numberColumns_+1+number];
+  memcpy(temp,startPositive_,(numberColumns_+1)*sizeof(int));
+  delete [] startPositive_;
+  startPositive_= temp;
+  temp = new int [numberColumns_+number];
+  memcpy(temp,startNegative_,numberColumns_*sizeof(int));
+  delete [] startNegative_;
+  startNegative_= temp;
+  temp = new int [numberNow+size];
+  memcpy(temp,indices_,numberNow*sizeof(int));
+  delete [] indices_;
+  indices_= temp;
+  // now add
+  size=numberNow;
+  for (iColumn=0;iColumn<number;iColumn++) {
+    int n=columns[iColumn]->getNumElements();
+    const int * row = columns[iColumn]->getIndices();
+    const double * element = columns[iColumn]->getElements();
+    int i;
+    for (i=0;i<n;i++) {
+      if (element[i]==1.0) 
+	indices_[size++]=row[i];
+    }
+    startNegative_[iColumn+numberColumns_]=size;
+    for (i=0;i<n;i++) {
+      if (element[i]==-1.0) 
+	indices_[size++]=row[i];
+    }
+    startPositive_[iColumn+numberColumns_+1]=size;
+  }
+  
+  numberColumns_ += number;
+}
+// Append Rows
+void 
+ClpPlusMinusOneMatrix::appendRows(int number, const CoinPackedVectorBase * const * rows)
+{
+  // Allocate arrays to use for counting
+  int * countPositive = new int [numberColumns_+1];
+  memset(countPositive,0,numberColumns_*sizeof(int));
+  int * countNegative = new int [numberColumns_];
+  memset(countNegative,0,numberColumns_*sizeof(int));
+  int iRow;
+  int size=0;
+  int numberBad=0;
+  for (iRow=0;iRow<number;iRow++) {
+    int n=rows[iRow]->getNumElements();
+    const int * column = rows[iRow]->getIndices();
+    const double * element = rows[iRow]->getElements();
+    size += n;
+    int i;
+    for (i=0;i<n;i++) {
+      int iColumn = column[i];
+      if (element[i]==1.0)
+	countPositive[iColumn++];
+      else if (element[i]==-1.0)
+	countNegative[iColumn++];
+      else
+	numberBad++;
+    }
+  }
+  if (numberBad)
+    throw CoinError("Not +- 1", "appendRows", "ClpPlusMinusOneMatrix");
+  // Get rid of temporary arrays
+  delete [] lengths_;
+  lengths_=NULL;
+  delete [] elements_;
+  elements_= NULL;
+  int numberNow = startPositive_[numberColumns_];
+  int * newIndices = new int [numberNow+size];
+  // Update starts and turn counts into positions
+  // also move current indices
+  int iColumn;
+  int numberAdded=0;
+  for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+    int n,now,move;
+    now = startPositive_[iColumn];
+    move = startNegative_[iColumn]-now;
+    n = countPositive[iColumn];
+    startPositive_[iColumn] += numberAdded;
+    memcpy(indices_+now,newIndices+startPositive_[iColumn],move*sizeof(int));
+    countPositive[iColumn]= startNegative_[iColumn]+numberAdded;
+    numberAdded += n;
+    now = startNegative_[iColumn];
+    move = startPositive_[iColumn+1]-now;
+    n = countNegative[iColumn];
+    startNegative_[iColumn] += numberAdded;
+    memcpy(indices_+now,newIndices+startNegative_[iColumn],move*sizeof(int));
+    countNegative[iColumn]= startPositive_[iColumn+1]+numberAdded;
+    numberAdded += n;
+  }
+  delete [] indices_;
+  indices_ = newIndices;
+  startPositive_[numberColumns_] += numberAdded;
+  // Now put in
+  for (iRow=0;iRow<number;iRow++) {
+    int newRow = numberRows_+iRow;
+    int n=rows[iRow]->getNumElements();
+    const int * column = rows[iRow]->getIndices();
+    const double * element = rows[iRow]->getElements();
+    int i;
+    for (i=0;i<n;i++) {
+      int iColumn = column[i];
+      int put;
+      if (element[i]==1.0) {
+	put = countPositive[iColumn];
+	countPositive[iColumn] = put+1;
+      } else {
+	put = countNegative[iColumn];
+	countNegative[iColumn] = put+1;
+      }
+      indices_[put]=newRow;
+    }
+  }
+  delete [] countPositive;
+  delete [] countNegative;
+  numberRows_ += number;
 }

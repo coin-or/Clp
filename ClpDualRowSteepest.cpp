@@ -284,6 +284,9 @@ k
 	      largest=value/weight;
 	      //largestWeight = dubious;
 	    }
+	  } else {
+	    // just to make sure we don't exit before got something
+	    numberWanted++;
 	  }
 	}
 	numberWanted--;

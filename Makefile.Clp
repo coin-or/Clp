@@ -5,9 +5,8 @@ LibType := STATIC
 # Select optimization (-O or -g). -O will be automatically bumped up to the 
 # highest level of optimization the compiler supports. If want something in
 # between then specify the exact level you want, e.g., -O1 or -O2
-OptLevel := -O3
-#OptLevel := -g
-#OptLevel := -O1
+OptLevel := -g
+OptLevel := -O1
 
 LIBNAME := Clp
 LIBSRC :=
@@ -53,11 +52,9 @@ CXXFLAGS += -DUSE_PRESOLVE
 #CXXFLAGS += -DCORRECT_COLUMN_COUNTS
 ifeq ($(OptLevel),-g)
 #     CXXFLAGS += -DCLP_DEBUG
-#    CXXFLAGS += -DPRESOLVE_SUMMARY=1 -DDEBUG_PRESOLVE -DCHECK_CONSISTENCY=1
 endif
 ifeq ($(OptLevel),-O2)
 #     CXXFLAGS += -DNDEBUG
-#    CXXFLAGS += -DPRESOLVE_SUMMARY=1 -DDEBUG_PRESOLVE -DCHECK_CONSISTENCY=1
 endif
 
 export ExtraIncDir  := ${CoinIncDir} ${zlibIncDir} ${bzlibIncDir}

@@ -58,7 +58,9 @@ ifeq ($(findstring Linux,${UNAME}),Linux)
 #	CXXFLAGS +=	-DREADLINE
 #	LDFLAGS += -lhistory -lreadline -ltermcap
 endif
-LDFLAGS += -lefence
+#if DENSE and using given libraries
+LDFLAGS += -llapack -lblas -lg2c
+#LDFLAGS += -lefence
 ###############################################################################
 
 TESTSRC := $(DRIVER).cpp

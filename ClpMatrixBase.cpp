@@ -106,3 +106,17 @@ ClpMatrixBase::dubiousWeights(const ClpSimplex * model,int * inputWeights) const
     weights[i]=1;
   return weights;
 }
+// Append Columns
+void 
+ClpMatrixBase::appendCols(int number, const CoinPackedVectorBase * const * columns)
+{
+  std::cerr<<"appendCols not supported - ClpMatrixBase"<<std::endl;
+  abort();
+}
+// Append Rows
+void 
+ClpMatrixBase::appendRows(int number, const CoinPackedVectorBase * const * rows)
+{
+  std::cerr<<"appendRows not supported - ClpMatrixBase"<<std::endl;
+  abort();
+}

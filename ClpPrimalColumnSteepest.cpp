@@ -34,6 +34,7 @@ ClpPrimalColumnSteepest::ClpPrimalColumnSteepest (int mode)
     reference_(NULL),
     state_(-1),
     mode_(mode),
+    numberSwitched_(0),
     pivotSequence_(-1),
     savedPivotSequence_(-1),
     savedSequenceOut_(-1)
@@ -49,6 +50,7 @@ ClpPrimalColumnSteepest::ClpPrimalColumnSteepest (const ClpPrimalColumnSteepest 
 {  
   state_=rhs.state_;
   mode_ = rhs.mode_;
+  numberSwitched_ = rhs.numberSwitched_;
   model_ = rhs.model_;
   pivotSequence_ = rhs.pivotSequence_;
   savedPivotSequence_ = rhs.savedPivotSequence_;
@@ -67,7 +69,7 @@ ClpPrimalColumnSteepest::ClpPrimalColumnSteepest (const ClpPrimalColumnSteepest 
     ClpDisjointCopyN(rhs.weights_,number,weights_);
     savedWeights_= new double[number];
     ClpDisjointCopyN(rhs.savedWeights_,number,savedWeights_);
-    if (!mode_) {
+    if (mode_!=1) {
       reference_ = new unsigned int[(number+31)>>5];
       memcpy(reference_,rhs.reference_,((number+31)>>5)*sizeof(unsigned int));
     }
@@ -104,6 +106,7 @@ ClpPrimalColumnSteepest::operator=(const ClpPrimalColumnSteepest& rhs)
     ClpPrimalColumnPivot::operator=(rhs);
     state_=rhs.state_;
     mode_ = rhs.mode_;
+    numberSwitched_ = rhs.numberSwitched_;
     model_ = rhs.model_;
     pivotSequence_ = rhs.pivotSequence_;
     savedPivotSequence_ = rhs.savedPivotSequence_;
@@ -128,7 +131,7 @@ ClpPrimalColumnSteepest::operator=(const ClpPrimalColumnSteepest& rhs)
       ClpDisjointCopyN(rhs.weights_,number,weights_);
       savedWeights_= new double[number];
       ClpDisjointCopyN(rhs.savedWeights_,number,savedWeights_);
-      if (!mode_) {
+      if (mode_!=1) {
 	reference_ = new unsigned int[(number+31)>>5];
 	memcpy(reference_,rhs.reference_,
 	       ((number+31)>>5)*sizeof(unsigned int));
@@ -163,7 +166,6 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
   double * reducedCost;
   // dj could be very small (or even zero - take care)
   double dj = model_->dualIn();
-  double * infeas = infeasible_->denseVector();
   double tolerance=model_->currentDualTolerance();
   // we can't really trust infeasibilities if there is dual error
   // this coding has to mimic coding in checkDualSolution
@@ -171,8 +173,309 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
   // allow tolerance at least slightly bigger than standard
   tolerance = tolerance +  error;
   int pivotRow = model_->pivotRow();
+  // Local copy of mode so can decide what to do
+  int switchType = mode_;
+  if (mode_==4) {
+    if (numberSwitched_) {
+      switchType=3;
+    } else {
+      // See if to switch
+      int numberElements = model_->factorization()->numberElements();
+      int numberRows = model_->numberRows();
+      // ratio is done on number of columns here
+      int numberColumns = model_->numberColumns();
+      double ratio = (double) numberElements/(double) numberColumns;
+      //double ratio = (double) numberElements/(double) model_->clpMatrix()->getNumElements();
+      int numberWanted;
+      bool doPartial=true;
+      int numberTotal = numberColumns+model_->numberRows();
+      if (ratio<0.1) {
+	numberWanted = max(100,numberTotal/200);
+      } else if (ratio<1.0) {
+	numberWanted = max(100,numberTotal/20);
+      } else if (ratio<2.0) {
+	numberWanted = max(200,numberTotal/10);
+      } else {
+	doPartial=false; // switch off
+	numberWanted=0; // just for compliler message
+      }
+      if (doPartial) {
+	if (model_->numberIterations()%100==0)
+	  printf("numels %d ratio %g wanted %d\n",numberElements,ratio,numberWanted);
+	// No do partial
+	// Always do slacks
+	int anyUpdates;
+	double * dual = model_->dualRowSolution();
+	if (updates->getNumElements()) {
+	  // would have to have two goes for devex, three for steepest
+	  anyUpdates=2;
+	  // add in pivot contribution
+	  if (pivotRow>=0) 
+	    updates->add(pivotRow,-dj);
+	} else if (pivotRow>=0) {
+	  if (fabs(dj)>1.0e-15) {
+	    // some dj
+	    updates->insert(pivotRow,-dj);
+	    if (fabs(dj)>1.0e-6) {
+	      // reasonable size
+	      anyUpdates=1;
+	    } else {
+	      // too small
+	      anyUpdates=2;
+	    }
+	  } else {
+	    // zero dj
+	    anyUpdates=-1;
+	  }
+	} else if (pivotSequence_>=0){
+	  // just after re-factorization
+	  anyUpdates=-1;
+	} else {
+	  // sub flip - nothing to do
+	  anyUpdates=0;
+	}
 
+	// For now (as we can always switch off)
+	assert (!model_->nonLinearCost()->lookBothWays());
+	double * slackDj =model_->djRegion(0);
+	double * dj =model_->djRegion(1);
+	if (anyUpdates>0) {
+	  model_->factorization()->updateColumnTranspose(spareRow2,updates);
+    
+	  number = updates->getNumElements();
+	  index = updates->getIndices();
+	  updateBy = updates->denseVector();
+	  
+
+	  for (j=0;j<number;j++) {
+	    int iSequence = index[j];
+	    double value = updateBy[iSequence];
+	    slackDj[iSequence] -= value;
+	    dual[iSequence] -= value;
+	    updateBy[iSequence]=0.0;
+	  }
+	  updates->setNumElements(0);
+	}
+	
+	int iPass;
+	// Setup two passes AND treat slacks differently
+	int start[2][4];
+	// slacks
+	start[0][1]=numberRows;
+	start[0][2]=0;
+	double dstart = ((double) numberRows) * CoinDrand48();
+	start[0][0]=(int) dstart;
+	start[0][3]=start[0][0];
+	for (iPass=0;iPass<4;iPass++)
+	  start[0][iPass] += numberColumns;
+	start[1][1]=numberColumns;
+	start[1][2]=0;
+	dstart = ((double) numberColumns) * CoinDrand48();
+	start[1][0]=(int) dstart;
+	start[1][3]=start[1][0];
+	int bestSequence=-1;
+	double bestDj=tolerance;
+	// We are going to fake it so pi looks sparse
+	double * saveDense = updates->denseVector();
+	updates->setDenseVector(dual);
+	int kChunk = max(2000,numberWanted);
+	for (iPass=0;iPass<2;iPass++) {
+	  // Slacks
+	  int end = start[0][2*iPass+1];
+	  for (int iSequence=start[0][2*iPass];iSequence<end;iSequence++) {
+	    double value;
+	    ClpSimplex::Status status = model_->getStatus(iSequence);
+	  
+	    switch(status) {
+	      
+	    case ClpSimplex::basic:
+	    case ClpSimplex::isFixed:
+	      break;
+	    case ClpSimplex::isFree:
+	    case ClpSimplex::superBasic:
+	      value = dj[iSequence];
+	      if (fabs(value)>FREE_ACCEPT*tolerance) {
+		numberWanted--;
+		// we are going to bias towards free (but only if reasonable)
+		value = fabs(value*FREE_BIAS);
+		if (value>bestDj) {
+		  // check flagged variable and correct dj
+		  if (!model_->flagged(iSequence)) {
+		    bestDj=value;
+		    bestSequence = iSequence;
+		  } else {
+		    // just to make sure we don't exit before got something
+		    numberWanted++;
+		  }
+		}
+	      }
+	      break;
+	    case ClpSimplex::atUpperBound:
+	      value = dj[iSequence];
+	      if (value>tolerance) {
+		numberWanted--;
+		if (value>bestDj) {
+		  // check flagged variable and correct dj
+		  if (!model_->flagged(iSequence)) {
+		    bestDj=value;
+		    bestSequence = iSequence;
+		  } else {
+		    // just to make sure we don't exit before got something
+		    numberWanted++;
+		  }
+		}
+	      }
+	      break;
+	    case ClpSimplex::atLowerBound:
+	      value = dj[iSequence];
+	      if (value<-tolerance) {
+		numberWanted--;
+		if (-value>bestDj) {
+		  // check flagged variable and correct dj
+		  if (!model_->flagged(iSequence)) {
+		    bestDj=-value;
+		    bestSequence = iSequence;
+		  } else {
+		    // just to make sure we don't exit before got something
+		    numberWanted++;
+		  }
+		}
+	      }
+	    }
+	    if (!numberWanted)
+	      break;
+	  }
+	  if (!numberWanted)
+	    break;
+	  // For Columns break up into manageable chunks
+	  end = start[1][2*iPass+1];
+	  index = spareColumn1->getIndices();
+	  updateBy = spareColumn1->denseVector();
+	  for (int jSequence=start[1][2*iPass];jSequence<end;jSequence+=kChunk) {
+	    int endThis = min(end,jSequence+kChunk);
+	    number=0;
+	    for (int iSequence=jSequence;iSequence<endThis;iSequence++) {
+	      ClpSimplex::Status status = model_->getStatus(iSequence);
+	  
+	      if(status!=ClpSimplex::basic&&status!=ClpSimplex::isFixed) {
+		index[number++]=iSequence;
+	      }
+	    }
+	    spareColumn1->setNumElements(number);
+	    // get subset which have nonzero djs
+	    // updates is actually slack djs
+	    model_->clpMatrix()->subsetTransposeTimes(model_,updates,
+						      spareColumn1,
+						      spareColumn2);
+	    double * updateBy2 = spareColumn2->denseVector();
+	    const double * cost = model_->costRegion();
+	    for (int j=0;j<number;j++) {
+	      int iSequence = index[j];
+	      double value = cost[iSequence]-updateBy2[iSequence];
+	      updateBy2[iSequence]=0.0;
+	      ClpSimplex::Status status = model_->getStatus(iSequence);
+	  
+	      switch(status) {
+		
+	      case ClpSimplex::basic:
+	      case ClpSimplex::isFixed:
+		break;
+	      case ClpSimplex::isFree:
+	      case ClpSimplex::superBasic:
+		if (fabs(value)>FREE_ACCEPT*tolerance) {
+		  numberWanted--;
+		  // we are going to bias towards free (but only if reasonable)
+		  if (fabs(value*FREE_BIAS)>bestDj) {
+		    // check flagged variable and correct dj
+		    if (!model_->flagged(iSequence)) {
+		      bestDj=value*FREE_BIAS;
+		      dj[iSequence]=value;
+		      bestSequence = iSequence;
+		    } else {
+		      // just to make sure we don't exit before got something
+		      numberWanted++;
+		    }
+		  }
+		}
+		break;
+	      case ClpSimplex::atUpperBound:
+		if (value>tolerance) {
+		  numberWanted--;
+		  if (value>bestDj) {
+		    // check flagged variable and correct dj
+		    if (!model_->flagged(iSequence)) {
+		      bestDj=value;
+		      dj[iSequence]=value;
+		      bestSequence = iSequence;
+		    } else {
+		      // just to make sure we don't exit before got something
+		      numberWanted++;
+		    }
+		  }
+		}
+		break;
+	      case ClpSimplex::atLowerBound:
+		if (value<-tolerance) {
+		  numberWanted--;
+		  if (-value>bestDj) {
+		    // check flagged variable and correct dj
+		    if (!model_->flagged(iSequence)) {
+		      bestDj=-value;
+		      dj[iSequence]=value;
+		      bestSequence = iSequence;
+		    } else {
+		      // just to make sure we don't exit before got something
+		      numberWanted++;
+		    }
+		  }
+		}
+		break;
+	      }
+	      if (!numberWanted) {
+		// erase rest
+		for (;j<number;j++) {
+		  int iSequence = index[j];
+		  updateBy2[iSequence]=0.0;
+		}
+		break;
+	      }
+	    }
+	    if (!numberWanted)
+	      break;
+	  }
+	  if (!numberWanted)
+	    break;
+	}
+	spareColumn1->setNumElements(0);
+	spareColumn2->setNumElements(0);
+	updates->setDenseVector(saveDense);
+	/*if (model_->numberIterations()%100==0)
+	  printf("%d best %g\n",bestSequence,bestDj);*/
+	
+#ifdef CLP_DEBUG
+	if (bestSequence>=0) {
+	  if (model_->getStatus(bestSequence)==ClpSimplex::atLowerBound)
+	    assert(model_->reducedCost(bestSequence)<0.0);
+	  if (model_->getStatus(bestSequence)==ClpSimplex::atUpperBound)
+	    assert(model_->reducedCost(bestSequence)>0.0);
+	}
+#endif
+	return bestSequence;
+      } else {
+	// Yes initialize
+	pivotSequence_=-1;
+	pivotRow=-1;
+	numberSwitched_++;
+	// Redo dualsolution
+	model_->computeDuals(NULL);
+	saveWeights(model_,4);
+	printf("switching %d nel ratio %g\n",numberElements,ratio);
+	updates->clear();
+      }
+    }
+  }
   int anyUpdates;
+  double * infeas = infeasible_->denseVector();
 
   if (updates->getNumElements()) {
     // would have to have two goes for devex, three for steepest
@@ -561,7 +864,7 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
     infeasible_->zero(sequenceIn);
     // and we can see if reference
     double referenceIn=0.0;
-    if (!mode_&&reference(sequenceIn))
+    if (switchType!=1&&reference(sequenceIn))
       referenceIn=1.0;
     // save outgoing weight round update
     double outgoingWeight=0.0;
@@ -603,7 +906,7 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
       
       thisWeight += pivotSquared * devex_ + pivot * modification;
       if (thisWeight<TRY_NORM) {
-	if (mode_) {
+	if (switchType==1) {
 	  // steepest
 	  thisWeight = max(TRY_NORM,ADD_ONE+pivotSquared);
 	} else {
@@ -641,7 +944,7 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
       
       thisWeight += pivotSquared * devex_ + pivot * modification;
       if (thisWeight<TRY_NORM) {
-	if (mode_) {
+	if (switchType==1) {
 	  // steepest
 	  thisWeight = max(TRY_NORM,ADD_ONE+pivotSquared);
 	} else {
@@ -703,20 +1006,61 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
     infeas[sequenceOut]=0.0;
   }
   tolerance *= tolerance; // as we are using squares
-  for (i=0;i<number;i++) {
-    iSequence = index[i];
-    double value = infeas[iSequence];
-    double weight = weights_[iSequence];
-    //weight=1.0;
-    if (value>bestDj*weight&&value>tolerance) {
-      // check flagged variable and correct dj
-      if (!model_->flagged(iSequence)) {
-	/*if (model_->numberIterations()%100==0)
-	  printf("chosen %g => %g\n",bestDj,value/weight);*/
-	bestDj=value/weight;
-	bestSequence = iSequence;
-      }
+
+  int numberWanted;
+  if (switchType<2 ) {
+    numberWanted = number+1;
+  } else if (switchType==2) {
+    numberWanted = max(2000,number/8);
+  } else {
+    int numberElements = model_->factorization()->numberElements();
+    double ratio = (double) numberElements/(double) model_->numberRows();
+    numberWanted = max(2000,number/8);
+    if (ratio<1.0) {
+      numberWanted = max(2000,number/20);
+    } else if (ratio>10.0) {
+      ratio = number * (ratio/80.0);
+      if (ratio>number)
+	numberWanted=number+1;
+      else
+	numberWanted = max(2000,(int) ratio);
     }
+  }
+  int iPass;
+  // Setup two passes
+  int start[4];
+  start[1]=number;
+  start[2]=0;
+  double dstart = ((double) number) * CoinDrand48();
+  start[0]=(int) dstart;
+  start[3]=start[0];
+  //double largestWeight=0.0;
+  //double smallestWeight=1.0e100;
+  for (iPass=0;iPass<2;iPass++) {
+    int end = start[2*iPass+1];
+    for (i=start[2*iPass];i<end;i++) {
+      iSequence = index[i];
+      double value = infeas[iSequence];
+      if (value>tolerance) {
+	double weight = weights_[iSequence];
+	//weight=1.0;
+	if (value>bestDj*weight) {
+	  // check flagged variable and correct dj
+	  if (!model_->flagged(iSequence)) {
+	    bestDj=value/weight;
+	    bestSequence = iSequence;
+	  } else {
+	    // just to make sure we don't exit before got something
+	    numberWanted++;
+	  }
+	}
+      }
+      numberWanted--;
+      if (!numberWanted)
+	break;
+    }
+    if (!numberWanted)
+      break;
   }
   if (sequenceOut>=0) {
     infeas[sequenceOut]=saveOutInfeasibility;
@@ -743,9 +1087,15 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
 void 
 ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model,int mode)
 {
+  model_ = model;
+  if (mode_==4) {
+    if (mode==1&&!weights_) 
+      numberSwitched_=0; // Reset
+    if(!numberSwitched_)
+      return;
+  }
   // alternateWeights_ is defined as indexed but is treated oddly
   // at times
-  model_ = model;
   int numberRows = model_->numberRows();
   int numberColumns = model_->numberColumns();
   const int * pivotVariable = model_->pivotVariable();
@@ -927,6 +1277,8 @@ ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model,int mode)
 void 
 ClpPrimalColumnSteepest::unrollWeights()
 {
+  if (mode_==4&&!numberSwitched_)
+    return;
   double * saved = alternateWeights_->denseVector();
   int number = alternateWeights_->getNumElements();
   int * which = alternateWeights_->getIndices();
@@ -953,6 +1305,12 @@ ClpPrimalColumnPivot * ClpPrimalColumnSteepest::clone(bool CopyData) const
 void
 ClpPrimalColumnSteepest::updateWeights(CoinIndexedVector * input)
 {
+  // Local copy of mode so can decide what to do
+  int switchType = mode_;
+  if (mode_==4&&numberSwitched_)
+    switchType=3;
+  else if (mode_==4)
+    return;
   int number=input->getNumElements();
   int * which = input->getIndices();
   double * work = input->denseVector();
@@ -970,7 +1328,7 @@ ClpPrimalColumnSteepest::updateWeights(CoinIndexedVector * input)
   devex_ =0.0;
 
   if (pivotRow>=0) {
-    if (mode_) {
+    if (switchType==1) {
       for (i=0;i<number;i++) {
 	int iRow = which[i];
 	devex_ += work[iRow]*work[iRow];
@@ -1006,7 +1364,7 @@ ClpPrimalColumnSteepest::updateWeights(CoinIndexedVector * input)
       alternateWeights_->setNumElements(newNumber);
     }
   } else {
-    if (mode_) {
+    if (switchType==1) {
       for (i=0;i<number;i++) {
 	int iRow = which[i];
 	devex_ += work[iRow]*work[iRow];
@@ -1057,6 +1415,8 @@ ClpPrimalColumnSteepest::checkAccuracy(int sequence,
 				       CoinIndexedVector * rowArray1,
 				       CoinIndexedVector * rowArray2)
 {
+  if (mode_==4&&!numberSwitched_)
+    return;
   model_->unpack(rowArray1,sequence);
   model_->factorization()->updateColumn(rowArray2,rowArray1);
   int number=rowArray1->getNumElements();
@@ -1067,7 +1427,7 @@ ClpPrimalColumnSteepest::checkAccuracy(int sequence,
   double devex =0.0;
   int i;
 
-  if (mode_) {
+  if (mode_==1) {
     for (i=0;i<number;i++) {
       int iRow = which[i];
       devex += work[iRow]*work[iRow];
@@ -1105,7 +1465,7 @@ ClpPrimalColumnSteepest::initializeWeights()
   int numberColumns = model_->numberColumns();
   int number = numberRows + numberColumns;
   int iSequence;
-  if (!mode_) {
+  if (mode_!=1) {
     // initialize to 1.0 
     // and set reference framework
     if (!reference_) {

@@ -196,6 +196,24 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
     
     // This says whether to restore things etc
     int factorType=0;
+    if (problemStatus_<0&&perturbation_<100) {
+      perturb(0);
+      // Can't get here if values pass
+      assert (!ifValuesPass);
+      gutsOfSolution(NULL,NULL);
+      if (handler_->logLevel()>2) {
+	handler_->message(CLP_SIMPLEX_STATUS,messages_)
+	  <<numberIterations_<<objectiveValue();
+	handler_->printing(sumPrimalInfeasibilities_>0.0)
+	  <<sumPrimalInfeasibilities_<<numberPrimalInfeasibilities_;
+	handler_->printing(sumDualInfeasibilities_>0.0)
+	  <<sumDualInfeasibilities_<<numberDualInfeasibilities_;
+	handler_->printing(numberDualInfeasibilitiesWithoutFree_
+			   <numberDualInfeasibilities_)
+			     <<numberDualInfeasibilitiesWithoutFree_;
+	handler_->message()<<CoinMessageEol;
+      }
+    }
     /*
       Status of problem:
       0 - optimal
@@ -222,10 +240,9 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
       // refreshed (normally null)
       matrix_->refresh(this);
       // If getting nowhere - why not give it a kick
-#if 0
-      // primal perturbation not coded yet
+#if 1
       if (perturbation_<101&&numberIterations_>2*(numberRows_+numberColumns_)) 
-	perturb();
+	perturb(1);
 #endif
       // If we have done no iterations - special
       if (lastGoodIteration_==numberIterations_&&factorType)
@@ -486,6 +503,8 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
     // something may have changed
     gutsOfSolution(NULL,NULL);
   }
+  // Flag to say whether to go to dual to clean up
+  bool goToDual=false;
   // really for free variables in
   //if((progressFlag_&2)!=0)
   //problemStatus_=-1;;
@@ -501,7 +520,10 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 		     <numberDualInfeasibilities_)
 		       <<numberDualInfeasibilitiesWithoutFree_;
   handler_->message()<<CoinMessageEol;
-  assert (primalFeasible());
+  if (!primalFeasible()) {
+    nonLinearCost_->checkInfeasibilities(primalTolerance_);
+    gutsOfSolution(NULL,NULL);
+  }
   // we may wish to say it is optimal even if infeasible
   bool alwaysOptimal = (specialOptions_&1)!=0;
   // give code benefit of doubt
@@ -549,7 +571,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	infeasibilityCost_=saveWeight;
 	if ((infeasibilityCost_>=1.0e18||
 	     numberDualInfeasibilities_==0)&&perturbation_==101) {
-	  unPerturb(); // stop any further perturbation
+	  goToDual=unPerturb(); // stop any further perturbation
 	  numberDualInfeasibilities_=1; // carry on
 	}
 	if (infeasibilityCost_>=1.0e20||
@@ -589,10 +611,11 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
     } else {
       // may be optimal
       if (perturbation_==101) {
-	unPerturb(); // stop any further perturbation
+	goToDual=unPerturb(); // stop any further perturbation
 	lastCleaned=-1; // carry on
       }
-      if ( lastCleaned!=numberIterations_||unflag()) {
+      bool unflagged = unflag();
+      if ( lastCleaned!=numberIterations_||unflagged) {
 	handler_->message(CLP_PRIMAL_OPTIMAL,messages_)
 	  <<primalTolerance_
 	  <<CoinMessageEol;
@@ -650,7 +673,18 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	  delete [] xsolution;
 #endif
 	  gutsOfSolution(NULL,NULL);
-	  problemStatus_ = -1;
+	  if (sumOfRelaxedDualInfeasibilities_ == 0.0&&
+	      sumOfRelaxedPrimalInfeasibilities_ == 0.0) {
+	    // say optimal (with these bounds etc)
+	    numberDualInfeasibilities_ = 0;
+	    sumDualInfeasibilities_ = 0.0;
+	    numberPrimalInfeasibilities_ = 0;
+	    sumPrimalInfeasibilities_ = 0.0;
+	  }
+	  if (dualFeasible()&&!nonLinearCost_->numberInfeasibilities()&&lastCleaned>=0)
+	    problemStatus_=0;
+	  else
+	    problemStatus_ = -1;
 	} else {
 	  problemStatus_=0; // optimal
 	  if (lastCleaned<numberIterations_) {
@@ -669,7 +703,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	if (infeasibilityCost_>1.0e18&&perturbation_==101) {
 	  // back off weight
 	  infeasibilityCost_ = 1.0e13;
-	  unPerturb(); // stop any further perturbation
+	  goToDual=unPerturb(); // stop any further perturbation
 	}
 	//we need infeasiblity cost changed
 	if (infeasibilityCost_<1.0e20) {
@@ -725,6 +759,8 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
     factorization_->goSparse();
   }
   lastGoodIteration_ = numberIterations_;
+  if (goToDual) 
+    problemStatus_=10; // try dual
 #if 0
   double thisObj = progress->lastObjective(0);
   double lastObj = progress->lastObjective(1);
@@ -860,8 +896,13 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
 
   int iIndex;
 #if 0
-  if (numberIterations_==1147)
+  if (numberIterations_<=39)
+    handler_->setLogLevel(63);
+  else
+    handler_->setLogLevel(2);
+  if (numberIterations_==38)
     printf("trouble\n");
+  assert (solution_[29176]>-1.0e20);
 #endif
   for (iIndex=0;iIndex<number;iIndex++) {
 
@@ -1323,7 +1364,7 @@ ClpSimplexPrimal::updatePrimalsInPrimal(CoinIndexedVector * rowArray,
 }
 // Perturbs problem
 void 
-ClpSimplexPrimal::perturb()
+ClpSimplexPrimal::perturb(int type)
 {
   if (perturbation_>100)
     return; //perturbed already
@@ -1331,7 +1372,7 @@ ClpSimplexPrimal::perturb()
   // primal perturbation
   double perturbation=1.0e-20;
   // maximum fraction of rhs/bounds to perturb
-  double maximumFraction = 1.0e-4;
+  double maximumFraction = 1.0e-8;
   if (perturbation_>=50) {
     perturbation = 1.0e-4;
     for (i=0;i<numberColumns_+numberRows_;i++) {
@@ -1350,54 +1391,153 @@ ClpSimplexPrimal::perturb()
 	perturbation = max(perturbation,value);
       }
     }
-    perturbation *= 1.0e-8;
   } else if (perturbation_<100) {
     perturbation = pow(10.0,perturbation_);
     // user is in charge
-    maximumFraction = 1.0e100;
+    maximumFraction = 1.0;
   }
+  double largestZero=0.0;
+  double largest=0.0;
+  double largestPerCent=0.0;
+  bool printOut=(handler_->logLevel()==63);
+  // Check if all slack
+  int number=0;
+  int iSequence;
+  for (iSequence=0;iSequence<numberRows_;iSequence++) {
+    if (getRowStatus(iSequence)==basic) 
+      number++;
+  }
+  if (number!=numberRows_)
+    type=1;
   // modify bounds
-  handler_->message(CLP_SIMPLEX_PERTURB,messages_)
-    <<perturbation
-    <<CoinMessageEol;
-  for (i=0;i<numberColumns_;i++) {
-    double lowerValue=lower_[i], upperValue=upper_[i];
-    if (upperValue>lowerValue+primalTolerance_) {
-      double value = CoinDrand48()*perturbation;
-      if (lowerValue>-1.0e20&&lowerValue)
-	lowerValue -= value * (max(1.0,1.0e-5*fabs(lowerValue))); 
-      if (upperValue<1.0e20&&upperValue)
-	upperValue += value * (max(1.0,1.0e-5*fabs(upperValue))); 
+  if (type==1) {
+    double multiplier = perturbation*maximumFraction;
+    for (iSequence=0;iSequence<numberRows_+numberColumns_;iSequence++) {
+      if (getStatus(iSequence)==basic) {
+	double solutionValue = solution_[iSequence];
+	double lowerValue = lower_[iSequence];
+	double upperValue = upper_[iSequence];
+	double difference = upperValue-lowerValue;
+	difference = min(difference,perturbation);
+	difference = min(difference,fabs(solutionValue)+1.0);
+	double value = CoinDrand48()*multiplier*(difference+1.0);
+	if (solutionValue-lowerValue<=primalTolerance_) {
+	  lower_[iSequence] -= value;
+	} else if (upperValue-solutionValue<=primalTolerance_) {
+	  upper_[iSequence] += value;
+	} else {
+#if 0
+	  if (iSequence>=numberColumns_) {
+	    // may not be at bound - but still perturb (unless free)
+	    if (upperValue>1.0e30&&lowerValue<-1.0e30)
+	      value=0.0;
+	    else
+	      value = - value; // as -1.0 in matrix
+	  } else {
+	    value = 0.0;
+	  }
+#else
+	  value=0.0;
+#endif
+	}
+	if (value) {
+	  if (printOut)
+	    printf("col %d lower from %g to %g, upper from %g to %g\n",
+		   iSequence,lower_[iSequence],lowerValue,upper_[iSequence],upperValue);
+	  if (solutionValue) {
+	    largest = max(largest,value);
+	    if (value>(fabs(solutionValue)+1.0)*largestPerCent)
+	      largestPerCent=value/(fabs(solutionValue)+1.0);
+	  } else {
+	    largestZero = max(largestZero,value);
+	  } 
+	}
+      }
     }
-    lower_[i]=lowerValue;
-    upper_[i]=upperValue;
-  }
-  for (;i<numberColumns_+numberRows_;i++) {
-    double lowerValue=lower_[i], upperValue=upper_[i];
-    double value = CoinDrand48()*perturbation;
-    if (upperValue>lowerValue+primalTolerance_) {
-      if (lowerValue>-1.0e20)
-	lowerValue -= value * (max(1.0,1.0e-5*fabs(lowerValue))); 
-      if (upperValue<1.0e20)
-	upperValue += value * (max(1.0,1.0e-5*fabs(upperValue))); 
-    } else if (upperValue>0.0) {
-	lowerValue -= value * (max(1.0,1.0e-5*fabs(lowerValue))); 
+  } else {
+    for (i=0;i<numberColumns_;i++) {
+      double lowerValue=lower_[i], upperValue=upper_[i];
+      if (upperValue>lowerValue+primalTolerance_) {
+	double value = CoinDrand48()*perturbation*maximumFraction;
+	if (lowerValue>-1.0e20&&lowerValue)
+	  lowerValue -= value * (max(1.0,1.0e-5*fabs(lowerValue))); 
+	if (upperValue<1.0e20&&upperValue)
+	  upperValue += value * (max(1.0,1.0e-5*fabs(upperValue))); 
+	if (lowerValue!=lower_[i]) {
+	  double difference = fabs(lowerValue-lower_[i]);
+	  largest = max(largest,difference);
+	  if (difference>fabs(lower_[i])*largestPerCent)
+	    largestPerCent=fabs(difference/lower_[i]);
+	} 
+	if (upperValue!=upper_[i]) {
+	  double difference = fabs(upperValue-upper_[i]);
+	  largest = max(largest,difference);
+	  if (difference>fabs(upper_[i])*largestPerCent)
+	    largestPerCent=fabs(difference/upper_[i]);
+	} 
+	if (printOut)
+	  printf("col %d lower from %g to %g, upper from %g to %g\n",
+		 i,lower_[i],lowerValue,upper_[i],upperValue);
+      }
+      if (solution_[i]==lower_[i])
+	solution_[i]=lowerValue;
+      else if (solution_[i]==upper_[i])
+	solution_[i]=upperValue;
+      lower_[i]=lowerValue;
+      upper_[i]=upperValue;
+    }
+    for (;i<numberColumns_+numberRows_;i++) {
+      double lowerValue=lower_[i], upperValue=upper_[i];
+      double value = CoinDrand48()*perturbation*maximumFraction;
+      if (upperValue>lowerValue+primalTolerance_) {
+	if (lowerValue>-1.0e20&&lowerValue)
+	  lowerValue -= value * (max(1.0,1.0e-5*fabs(lowerValue))); 
+	if (upperValue<1.0e20&&upperValue)
+	  upperValue += value * (max(1.0,1.0e-5*fabs(upperValue))); 
+      } else if (upperValue>0.0) {
 	upperValue -= value * (max(1.0,1.0e-5*fabs(lowerValue))); 
-    } else if (upperValue<0.0) {
-	lowerValue += value * (max(1.0,1.0e-5*fabs(lowerValue))); 
+	lowerValue -= value * (max(1.0,1.0e-5*fabs(lowerValue))); 
+      } else if (upperValue<0.0) {
 	upperValue += value * (max(1.0,1.0e-5*fabs(lowerValue))); 
-    } else {
+	lowerValue += value * (max(1.0,1.0e-5*fabs(lowerValue))); 
+      } else {
+      }
+      if (lowerValue!=lower_[i]) {
+	double difference = fabs(lowerValue-lower_[i]);
+	largest = max(largest,difference);
+	if (difference>fabs(lower_[i])*largestPerCent)
+	  largestPerCent=fabs(difference/lower_[i]);
+      } 
+      if (upperValue!=upper_[i]) {
+	double difference = fabs(upperValue-upper_[i]);
+	largest = max(largest,difference);
+	if (difference>fabs(upper_[i])*largestPerCent)
+	  largestPerCent=fabs(difference/upper_[i]);
+      } 
+      if (printOut)
+	printf("row %d lower from %g to %g, upper from %g to %g\n",
+	       i-numberColumns_,lower_[i],lowerValue,upper_[i],upperValue);
+      if (solution_[i]==lower_[i])
+	solution_[i]=lowerValue;
+      else if (solution_[i]==upper_[i])
+	solution_[i]=upperValue;
+      lower_[i]=lowerValue;
+      upper_[i]=upperValue;
     }
-    lower_[i]=lowerValue;
-    upper_[i]=upperValue;
   }
+  handler_->message(CLP_SIMPLEX_PERTURB,messages_)
+    <<100.0*maximumFraction<<perturbation<<largest<<100.0*largestPerCent<<largestZero
+    <<CoinMessageEol;
+  // redo nonlinear costs
   // say perturbed
   perturbation_=101;
 }
 // un perturb
-void
+bool
 ClpSimplexPrimal::unPerturb()
 {
+  if (perturbation_!=101)
+    return false;
   // put back original bounds and costs
   createRim(7);
   // unflag
@@ -1408,7 +1548,14 @@ ClpSimplexPrimal::unPerturb()
   perturbation_ = 102; // stop any further perturbation
   // move non basic variables to new bounds
   nonLinearCost_->checkInfeasibilities(0.0);
+#if 1
+  // Try using dual
+  return true;
+#else
   gutsOfSolution(NULL,NULL);
+  return false;
+#endif
+  
 }
 // Unflag all variables and return number unflagged
 int 
@@ -1728,34 +1875,12 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
       } else {
 	valueOut_ = upperOut_;
       }
-      double lowerValue = lower_[sequenceOut_];
-      double upperValue = upper_[sequenceOut_];
-      assert(valueOut_>=lowerValue-primalTolerance_&&
-	     valueOut_<=upperValue+primalTolerance_);
+      assert(valueOut_>=lower_[sequenceOut_]-primalTolerance_&&
+	     valueOut_<=upper_[sequenceOut_]+primalTolerance_);
       // may not be exactly at bound and bounds may have changed
       // Make sure outgoing looks feasible
-      double useValue=valueOut_;
-      if (valueOut_<=lowerValue+primalTolerance_) {
-	directionOut_=1;
-	useValue= lower_[sequenceOut_];
-      } else if (valueOut_>=upperValue-primalTolerance_) {
-	directionOut_=-1;
-	useValue= upper_[sequenceOut_];
-      } else {
-	printf("*** variable wandered off bound %g %g %g!\n",
-	       lowerValue,valueOut_,upperValue);
-	if (valueOut_-lowerValue<=upperValue-valueOut_) {
-	  useValue= lower_[sequenceOut_];
-	  valueOut_=lowerValue;
-	  directionOut_=1;
-	} else {
-	  useValue= upper_[sequenceOut_];
-	  valueOut_=upperValue;
-	  directionOut_=-1;
-	}
-      }
+      directionOut_=nonLinearCost_->setOneOutgoing(sequenceOut_,valueOut_);
       solution_[sequenceOut_]=valueOut_;
-      nonLinearCost_->setOne(sequenceOut_,useValue);
     }
     // change cost and bounds on incoming if primal
     nonLinearCost_->setOne(sequenceIn_,valueIn_); 
