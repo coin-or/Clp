@@ -1082,6 +1082,23 @@ ClpModel::deleteColumns(int number, const int * which)
   delete [] columnScale_;
   columnScale_ = NULL;
 }
+// Add one row
+void 
+ClpModel::addRow(int numberInRow, const int * columns,
+                 const double * elements, double rowLower, double rowUpper)
+{
+  // Create a CoinPackedVector
+  whatsChanged_ &= ~(1+2+8+16+32); // all except columns changed
+  CoinPackedVectorBase * row=
+    new CoinPackedVector(numberInRow,columns,elements);
+  addRows(1, &rowLower, &rowUpper,
+          &row);
+  delete row;
+  delete [] rowScale_;
+  rowScale_ = NULL;
+  delete [] columnScale_;
+  columnScale_ = NULL;
+}
 // Add rows
 void 
 ClpModel::addRows(int number, const double * rowLower, 
@@ -1187,6 +1204,28 @@ ClpModel::addRows(int number, const double * rowLower,
   if (!matrix_)
     createEmptyMatrix();
   matrix_->appendRows(number,rows);
+  delete [] rowScale_;
+  rowScale_ = NULL;
+  delete [] columnScale_;
+  columnScale_ = NULL;
+}
+// Add one column
+void 
+ClpModel::addColumn(int numberInColumn,
+                 const int * rows,
+                 const double * elements,
+                 double columnLower, 
+                 double  columnUpper,
+                 double  objective)
+{
+  whatsChanged_ &= ~(1+2+4+64+128+256); // all except rows changed
+  CoinPackedVectorBase * column=
+    new CoinPackedVector(numberInColumn,
+                           rows,elements);
+  addColumns(1, &columnLower, &columnUpper,
+	       &objective, &column);
+  delete column;
+
   delete [] rowScale_;
   rowScale_ = NULL;
   delete [] columnScale_;

@@ -123,6 +123,10 @@ public:
   void resize (int newNumberRows, int newNumberColumns);
   /// Deletes rows
   void deleteRows(int number, const int * which);
+  /// Add one row
+  void addRow(int numberInRow, const int * columns,
+	       const double * elements, double rowLower=-COIN_DBL_MAX, 
+              double rowUpper=COIN_DBL_MAX);
   /// Add rows
   void addRows(int number, const double * rowLower, 
 	       const double * rowUpper,
@@ -140,6 +144,13 @@ public:
 
   /// Deletes columns
   void deleteColumns(int number, const int * which);
+  /// Add one column
+  void addColumn(int numberInColumn,
+                 const int * rows,
+                 const double * elements,
+                 double columnLower=0.0, 
+                 double  columnUpper=COIN_DBL_MAX,
+                 double  objective=0.0);
   /// Add columns
   void addColumns(int number, const double * columnLower, 
 		  const double * columnUpper,
