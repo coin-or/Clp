@@ -535,9 +535,13 @@ ClpSimplexPrimal::whileIterating(int & firstSuperBasic)
 	int updateStatus = factorization_->replaceColumn(rowArray_[2],
 							 pivotRow_,
 							 alpha_);
-	if (updateStatus==1) {
+	// if no pivots, bad update but reasonable alpha - take and invert
+	if (updateStatus==2&&
+		   saveNumber==numberIterations_&&fabs(alpha_)>1.0e-5)
+	  updateStatus=4;
+	if (updateStatus==1||updateStatus==4) {
 	  // slight error
-	  if (factorization_->pivots()>5) {
+	  if (factorization_->pivots()>5||updateStatus==4) {
 	    problemStatus_=-2; // factorize now
 	    returnCode=-3;
 	  }

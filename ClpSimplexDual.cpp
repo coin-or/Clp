@@ -563,9 +563,13 @@ ClpSimplexDual::whileIterating()
 	int updateStatus = factorization_->replaceColumn(rowArray_[2],
 							 pivotRow_,
 							 alpha_);
-	if (updateStatus==1) {
+	// if no pivots, bad update but reasonable alpha - take and invert
+	if (updateStatus==2&&
+		   !factorization_->pivots()&&fabs(alpha_)>1.0e-5)
+	  updateStatus=4;
+	if (updateStatus==1||updateStatus==4) {
 	  // slight error
-	  if (factorization_->pivots()>5) {
+	  if (factorization_->pivots()>5||updateStatus==4) {
 	    problemStatus_=-2; // factorize now
 	    returnCode=-3;
 	  }
@@ -674,16 +678,25 @@ ClpSimplexDual::whileIterating()
 	  if (flagged(iPivot))
 	    break;
 	}
-	if (iRow<numberRows_) {
-#ifdef CLP_DEBUG
-	  std::cerr<<"Flagged variables at end - infeasible?"<<std::endl;
-#endif
-	}
 	if (numberFake_||numberDualInfeasibilities_) {
 	  // may be dual infeasible
 	  problemStatus_=-5;
 	} else {
-	  problemStatus_=0;
+	  if (iRow<numberRows_) {
+#ifdef CLP_DEBUG
+	    std::cerr<<"Flagged variables at end - infeasible?"<<std::endl;
+	    printf("Probably infeasible - pivot was %g\n",alpha_);
+#endif
+	    if (fabs(alpha_)<1.0e-4) {
+	      problemStatus_=1;
+	    } else {
+#ifdef CLP_DEBUG
+	      abort();
+#endif
+	    }
+	  } else {
+	    problemStatus_=0;
+	  }
 	}
       } else {
 	problemStatus_=-3;
@@ -2101,6 +2114,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	if (numberDualInfeasibilities_||situationChanged==2) {
 	  problemStatus_=-1; // carry on as normal
 	}
+	situationChanged=0;
       } else {
 	// iterate
 	problemStatus_=-1;
