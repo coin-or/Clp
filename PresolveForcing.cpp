@@ -239,7 +239,7 @@ const PresolveAction *forcing_constraint_action::presolve(PresolveMatrix *prob,
 	prob->status_|= 1;
 	prob->messageHandler()->message(CLP_PRESOLVE_ROWINFEAS,
 					     prob->messages())
-					       <<irow
+				 	       <<irow
 					       <<rlo[irow]
 					       <<rup[irow]
 					       <<CoinMessageEol;

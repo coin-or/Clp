@@ -10,6 +10,11 @@
 #include "ClpMessage.hpp"
 #include "CoinHelperFunctions.hpp"
 #include <stdio.h>
+
+
+// bias for free variables
+
+#define FREE_BIAS 1.0e1
 //#############################################################################
 // Constructors / Destructor / Assignment
 //#############################################################################
@@ -236,7 +241,7 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
 	case ClpSimplex::superBasic:
 	  if (fabs(value)>1.0e2*tolerance) {
 	    // we are going to bias towards free (but only if reasonable)
-	    value *= 1000.0;
+	    value *= FREE_BIAS;
 	    // store square in list
 	    if (infeas[iSequence+addSequence])
 	      infeas[iSequence+addSequence] = value*value; // already there
@@ -296,7 +301,7 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
       case ClpSimplex::superBasic:
 	if (fabs(value)>1.0e2*tolerance) { 
 	  // we are going to bias towards free (but only if reasonable)
-	  value *= 1000.0;
+	  value *= FREE_BIAS;
 	  // store square in list
 	  if (infeas[sequenceOut])
 	    infeas[sequenceOut] = value*value; // already there
@@ -360,7 +365,7 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
       case ClpSimplex::isFree:
 	if (fabs(value)>tolerance) {
 	  // we are going to bias towards free (but only if reasonable)
-	  value *= 1000.0;
+	  value *= FREE_BIAS;
 	  // store square in list
 	  if (infeas[iSequence+addSequence])
 	    infeas[iSequence+addSequence] = value*value; // already there
@@ -706,8 +711,9 @@ ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model,int mode)
       case ClpSimplex::superBasic:
 	if (fabs(value)>1.0e2*tolerance) { 
 	  // we are going to bias towards free (but only if reasonable)
+	  value *= FREE_BIAS;
 	  // store square in list
-	  infeasible_->quickAdd(iSequence,1.0e6*value*value);
+	  infeasible_->quickAdd(iSequence,value*value);
 	}
 	break;
       case ClpSimplex::atUpperBound:

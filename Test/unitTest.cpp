@@ -29,6 +29,33 @@
 #include "Idiot.hpp"
 #endif
 
+
+#include <time.h>
+#ifndef _MSC_VER
+#include <sys/times.h>
+#include <sys/resource.h>
+#include <unistd.h>
+#endif
+
+static double cpuTime()
+{
+  double cpu_temp;
+#if defined(_MSC_VER)
+  unsigned int ticksnow;        /* clock_t is same as int */
+  
+  ticksnow = (unsigned int)clock();
+  
+  cpu_temp = (double)((double)ticksnow/CLOCKS_PER_SEC);
+#else
+  struct rusage usage;
+  getrusage(RUSAGE_SELF,&usage);
+  cpu_temp = usage.ru_utime.tv_sec;
+  cpu_temp += 1.0e-6*((double) usage.ru_utime.tv_usec);
+#endif
+  return cpu_temp;
+}
+
+
 //#############################################################################
 
 #ifdef NDEBUG
@@ -232,6 +259,8 @@ int mainTest (int argc, const char *argv[],bool doDual,
     mpsName.push_back("vtpbase");min.push_back(true);nRows.push_back(199);nCols.push_back(203);objValueTol.push_back(1.e-10);objValue.push_back(1.2983146246e+05);
     mpsName.push_back("wood1p");min.push_back(true);nRows.push_back(245);nCols.push_back(2594);objValueTol.push_back(1.e-10);objValue.push_back(1.4429024116e+00);
     mpsName.push_back("woodw");min.push_back(true);nRows.push_back(1099);nCols.push_back(8405);objValueTol.push_back(1.e-10);objValue.push_back(1.3044763331E+00);
+
+    double timeTaken =0.0;
   // Loop once for each Mps File
     for (m=0; m<mpsName.size(); m++ ) {
       std::cerr <<"  processing mps file: " <<mpsName[m] 
@@ -241,6 +270,7 @@ int mainTest (int argc, const char *argv[],bool doDual,
       std::string fn = netlibDir+mpsName[m];
       CoinMpsIO mps;
       mps.readMps(fn.c_str(),"mps");
+      double time1 = cpuTime();
       ClpSimplex solution=empty;
       solution.loadProblem(*mps.getMatrixByCol(),mps.getColLower(),
 			   mps.getColUpper(),
@@ -276,6 +306,7 @@ int mainTest (int argc, const char *argv[],bool doDual,
 	pinfo.postsolve(true);
 	
 	delete model2;
+#if 1
 	printf("Resolving from postsolved model\n");
 	// later try without (1) and check duals before solve
 	solution.primal(1);
@@ -288,6 +319,7 @@ int mainTest (int argc, const char *argv[],bool doDual,
 	       solution.numberDualInfeasibilities(),
 	       solution.sumPrimalInfeasibilities(),
 	       solution.numberPrimalInfeasibilities());
+#endif
 	if (0) {
 	  Presolve pinfoA;
 	  model2 = pinfoA.presolvedModel(solution,1.0e-8);
@@ -323,6 +355,9 @@ int mainTest (int argc, const char *argv[],bool doDual,
 	  solution.primal(1);
 	}
       }
+      double time2 = cpuTime()-time1;
+      timeTaken += time2;
+      printf("Took %g seconds\n",time2);
       // Test objective solution value
       {
         double soln = solution.objectiveValue();
@@ -333,13 +368,13 @@ int mainTest (int argc, const char *argv[],bool doDual,
 	  printf("** difference fails\n");
       }
     }
-    
+    printf("Total time %g seconds\n",timeTaken);
   }
   else {
     testingMessage( "***Skipped Testing on netlib    ***\n" );
     testingMessage( "***use -netlib to test class***\n" );
   }
-
+  
   testingMessage( "All tests completed successfully\n" );
   return 0;
 }

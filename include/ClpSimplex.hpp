@@ -415,6 +415,8 @@ public:
   void deleteRim(bool getRidOfFactorizationData=true);
   /// Sanity check on input rim data (after scaling) - returns true if okay
   bool sanityCheck();
+  /** Get next superbasic (primal) or next free (dual), -1 if none */
+  int nextSuperBasic();
   //@}
   public:
   /**@name public methods */

@@ -3334,3 +3334,43 @@ ClpSimplex::crash(double gap,int pivot)
     }
   }
 }
+int
+ClpSimplex::nextSuperBasic()
+{
+  if (firstFree_>=0) {
+    int returnValue=firstFree_;
+    int iColumn=firstFree_+1;
+    if (algorithm_>0) {
+      // primal
+      for (;iColumn<numberRows_+numberColumns_;iColumn++) {
+	if (getStatus(iColumn)==superBasic) {
+	  if (fabs(solution_[iColumn]-lower_[iColumn])<=primalTolerance_) {
+	    solution_[iColumn]=lower_[iColumn];
+	    setStatus(iColumn,atLowerBound);
+	  } else if (fabs(solution_[iColumn]-upper_[iColumn])
+		     <=primalTolerance_) {
+	    solution_[iColumn]=upper_[iColumn];
+	    setStatus(iColumn,atUpperBound);
+	  } else if (lower_[iColumn]<-1.0e20&&upper_[iColumn]>1.0e20) {
+	    setStatus(iColumn,isFree);
+	  } else {
+	    break;
+	  }
+	}
+      }
+    } else {
+      // dual
+      for (;iColumn<numberRows_+numberColumns_;iColumn++) {
+	if (getStatus(iColumn)==isFree) 
+	  if (fabs(dj_[iColumn])>1.0e2*dualTolerance_) 
+	    break;
+      }
+    }
+    firstFree_ = iColumn;
+    if (firstFree_==numberRows_+numberColumns_)
+      firstFree_=-1;
+    return returnValue;
+  } else {
+    return -1;
+  }
+}

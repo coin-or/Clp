@@ -1279,7 +1279,10 @@ void subst_constraint_action::postsolve(PostsolveMatrix *prob) const
 	int col = rowcolsy[k];
 	acty += rowelsy[k] * sol[col];
       }
-      PRESOLVEASSERT(fabs(acty - acts[jrowy]) < 100*ZTOLDP);
+
+#if	DEBUG_PRESOLVE
+       PRESOLVEASSERT(fabs(acty - acts[jrowy]) < 100*ZTOLDP);
+#endif
 
       // RECOMPUTING
       {

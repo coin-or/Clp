@@ -1,3 +1,4 @@
+
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
@@ -529,7 +530,7 @@ ClpSimplexDual::whileIterating()
 	    printf("%g\n",dualOut_);
 	  assert(dualOut_<=oldOut);
 #endif
-	  if(dualOut_<0.0&&factorization_->pivots()&&
+	  if(dualOut_<-10.0e-8&&factorization_->pivots()&&
 	     getStatus(sequenceIn_)!=isFree) {
 	    // going backwards - factorize
 	    dualRowPivot_->unrollWeights();
@@ -881,7 +882,66 @@ void
 ClpSimplexDual::dualRow()
 {
   // get pivot row using whichever method it is
-  pivotRow_=dualRowPivot_->pivotRow();
+#if 0
+  // Doesnt seem to help - think harder about free variables
+  // first see if any free variables and put them in basis
+  int nextFree = nextSuperBasic();
+  int chosenRow=-1;
+  //nextFree=-1; //off
+  if (nextFree>=0) {
+    // unpack vector and find a good pivot
+    int saveIn=sequenceIn_;
+    sequenceIn_=nextFree;
+    unpack(rowArray_[1]);
+    factorization_->updateColumn(rowArray_[2],rowArray_[1],false);
+
+    double * work=rowArray_[1]->denseVector();
+    int number=rowArray_[1]->getNumElements();
+    int * which=rowArray_[1]->getIndices();
+    double bestFeasibleAlpha=0.0;
+    int bestFeasibleRow=-1;
+    double bestInfeasibleAlpha=0.0;
+    int bestInfeasibleRow=-1;
+    int i;
+
+    for (i=0;i<number;i++) {
+      int iRow = which[i];
+      double alpha = fabs(work[iRow]);
+      if (alpha>1.0e-3) {
+	int iSequence=pivotVariable_[iRow];
+	double value = solution_[iSequence];
+	double lower = lower_[iSequence];
+	double upper = upper_[iSequence];
+	double infeasibility=0.0;
+	if (value>upper)
+	  infeasibility = value-upper;
+	else if (value<lower)
+	  infeasibility = lower-value;
+	if (infeasibility*alpha>bestInfeasibleAlpha&&alpha>1.0e-1) {
+	  if (!flagged(iSequence)) {
+	    bestInfeasibleAlpha = infeasibility*alpha;
+	    bestInfeasibleRow=iRow;
+	  }
+	}
+	if (alpha>bestFeasibleAlpha&&(lower>-1.0e20||upper<1.0e20)) {
+	  bestFeasibleAlpha = alpha;
+	  bestFeasibleRow=iRow;
+	}
+      }
+    }
+    if (bestInfeasibleRow>=0) 
+      chosenRow = bestInfeasibleRow;
+    else if (bestFeasibleAlpha>1.0e-2)
+      chosenRow = bestFeasibleRow;
+    if (chosenRow>=0)
+      pivotRow_=chosenRow;
+    sequenceIn_=saveIn;
+    rowArray_[1]->clear();
+  } 
+  if (chosenRow<0) 
+#endif
+    pivotRow_=dualRowPivot_->pivotRow();
+
   if (pivotRow_>=0) {
     sequenceOut_ = pivotVariable_[pivotRow_];
     valueOut_ = solution_[sequenceOut_];
@@ -896,7 +956,7 @@ ClpSimplexDual::dualRow()
       directionOut_ = 1;
       dualOut_ = lowerOut_ - valueOut_;
     } else {
-      // odd - it's feasible - go to nearest
+      // odd (could be free) - it's feasible - go to nearest
       if (valueOut_-lowerOut_<upperOut_-valueOut_) {
 	directionOut_ = 1;
 	dualOut_ = lowerOut_ - valueOut_;
