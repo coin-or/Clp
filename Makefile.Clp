@@ -42,6 +42,7 @@ LIBSRC += ClpSolve.cpp
 LIBSRC += ClpInterior.cpp
 LIBSRC += ClpCholeskyBase.cpp
 LIBSRC += ClpCholeskyDense.cpp
+LIBSRC += ClpCholeskyUfl.cpp
 #LIBSRC += ClpCholeskyWssmp.cpp
 LIBSRC += ClpPredictorCorrector.cpp
 LIBSRC += ClpHelperFunctions.cpp
