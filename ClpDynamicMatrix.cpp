@@ -860,11 +860,13 @@ ClpDynamicMatrix::updatePivot(ClpSimplex * model,double oldInValue, double oldOu
   for (int i=0;i<numberGubColumns_;i++)
     assert (!inSmall[i]);
   delete [] inSmall;
+#ifndef NDEBUG
   for (int i=0;i<numberActiveSets_;i++) {
     int iSet = fromIndex_[i];
     assert (toIndex_[iSet]==i);
     assert (model->getRowStatus(i+numberStaticRows_)==getStatus(iSet));
   }
+#endif
 #endif
   return 0;
 }
@@ -1100,10 +1102,11 @@ ClpDynamicMatrix::generalExpanded(ClpSimplex * model,int mode,int &number)
 	}
 	if (doCosts) {
 	  cost[i]=cost_[jColumn];
+	  // Original bounds
 	  if (model->nonLinearCost())
 	    model->nonLinearCost()->setOne(i,solution[i],
-					   columnLower[i],
-					   columnUpper[i],cost_[jColumn]);
+					   this->columnLower(jColumn),
+					   this->columnUpper(jColumn),cost_[jColumn]);
 	}
       }
       // and active sets
@@ -1431,6 +1434,39 @@ ClpDynamicMatrix::refresh(ClpSimplex * model)
   }
   printf("\n");
 #endif
+#ifdef CLP_DEBUG
+ {
+   // debug coding to analyze set
+   int i;
+   int kSet=-6;
+   if (kSet>=0) {
+     int * back = new int [numberGubColumns_];
+     for (i=0;i<numberGubColumns_;i++)
+       back[i]=-1;
+     for (i=firstDynamic_;i<firstAvailable_;i++)
+       back[id_[i-firstDynamic_]]= i;
+     int sequence = startSet_[kSet];
+     if (toIndex_[kSet]<0){
+       printf("Not in - Set %d - slack status %d, key %d\n",kSet,status_[kSet],keyVariable_[kSet]);
+       while (sequence>=0) {
+	 printf("( %d status %d ) ",sequence,getDynamicStatus(sequence));
+	 sequence = next_[sequence];
+       }
+     } else {
+       int iRow=numberStaticRows_+toIndex_[kSet];
+       printf("In - Set %d - slack status %d, key %d offset %g slack %g\n",kSet,status_[kSet],keyVariable_[kSet],
+	      rhsOffset_[iRow],model->solutionRegion(0)[iRow]);
+       while (sequence>=0) {
+	 int iBack = back[sequence];
+	 printf("( %d status %d value %g) ",sequence,getDynamicStatus(sequence),model->solutionRegion()[iBack]);
+	 sequence = next_[sequence];
+       }
+     }
+     printf("\n");
+     delete [] back;
+   }
+ }
+#endif
   int n=numberActiveSets_;
   for (i=0;i<numberSets_;i++) {
     if (toIndex_[i]<0) {
@@ -1667,7 +1703,10 @@ ClpDynamicMatrix::createVariable(ClpSimplex * model, int & bestSequence)
 	unpack(model,model->rowArray(3),firstAvailable_);
 	model->factorization()->updateColumnFT(model->rowArray(2),model->rowArray(3));
 	double alpha = model->rowArray(3)->denseVector()[newRow];
-	int updateStatus = model->factorization()->replaceColumn(model->rowArray(2),
+#ifndef NDEBUG
+	int updateStatus = 
+#endif
+	  model->factorization()->replaceColumn(model->rowArray(2),
 								 newRow, alpha);
 	model->rowArray(3)->clear();
 	assert (!updateStatus);
@@ -1945,14 +1984,6 @@ ClpDynamicMatrix::gubCrash()
 	  }
 	}
       }
-    }
-    if (!iSet)
-      printf("**** fake keys\n");
-    if (iBasic!=numberInSet&&(iSet<39&&iSet>10)) {
-      if (iBasic)
-	printf("set %d key was %d now %d\n",
-	       iSet,back[iBasic],back[0]);
-      iBasic=0;
     }
     // do solution i.e. bounds
     if (columnLower_||columnUpper_) {

@@ -96,6 +96,13 @@ public:
       Entries at upper bound (really nonzero) never go out (at present).
   */
   virtual void packDown(const int * in, int numberToPack) {};
+  /// Gets lower bound (to simplify coding)
+  inline double columnLower(int sequence) const
+  { if (columnLower_) return columnLower_[sequence]; else return 0.0;};
+  /// Gets upper bound (to simplify coding)
+  inline double columnUpper(int sequence) const
+  { if (columnUpper_) return columnUpper_[sequence]; else return COIN_DBL_MAX;};
+
   //@}
 
 
