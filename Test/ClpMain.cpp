@@ -2266,7 +2266,7 @@ costs this much to be infeasible",
 	    models[iModel].setOptimizationDirection(1);
 	    break;
 	  case ALLSLACK:
-	    models[iModel].allSlackBasis();
+	    models[iModel].allSlackBasis(true);
 	    break;
 	  case REVERSE:
 	    if (goodModels[iModel]) {
