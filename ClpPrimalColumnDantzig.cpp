@@ -73,7 +73,6 @@ ClpPrimalColumnDantzig::pivotColumn(CoinIndexedVector * updates,
   bool anyUpdates;
 
   if (updates->getNumElements()) {
-    // would have to have two goes for devex, three for steepest
     anyUpdates=true;
     // add in pivot contribution
     if (model_->pivotRow()>=0) 
