@@ -24,6 +24,8 @@ public:
     atUpperBound = 0x02,
     atLowerBound = 0x03,
   };
+  /**@name Main functions provided */
+   //@{
   /// Partial pricing 
   virtual void partialPricing(ClpSimplex * model, double start, double end,
 		      int & bestSequence, int & numberWanted);

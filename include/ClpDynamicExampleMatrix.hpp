@@ -30,6 +30,8 @@ class ClpSimplex;
 class ClpDynamicExampleMatrix : public ClpDynamicMatrix {
   
 public:
+  /**@name Main functions provided */
+   //@{
   /// Partial pricing 
   virtual void partialPricing(ClpSimplex * model, double start, double end,
 		      int & bestSequence, int & numberWanted);

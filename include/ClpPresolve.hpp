@@ -7,8 +7,13 @@
 
 class CoinPresolveAction;
 #include "CoinPresolveMatrix.hpp"
+/** This is the Clp interface to CoinPresolve
+
+*/
 class ClpPresolve {
 public:
+  /**@name Main Constructor, destructor */
+   //@{
   /// Default constructor
   ClpPresolve();
 

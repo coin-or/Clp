@@ -17,6 +17,8 @@
 class ClpGubDynamicMatrix : public ClpGubMatrix {
   
 public:
+  /**@name Main functions provided */
+   //@{
   /// Partial pricing 
   virtual void partialPricing(ClpSimplex * model, double start, double end,
 			      int & bestSequence, int & numberWanted);
