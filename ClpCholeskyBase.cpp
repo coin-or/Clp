@@ -1487,7 +1487,8 @@ ClpCholeskyBase::symbolic2(const CoinBigIndex * Astart, const int * Arow)
     int sizeLast = choleskyStart_[iRow]-choleskyStart_[iRow-1];
     int sizeThis = choleskyStart_[iRow+1]-choleskyStart_[iRow];
     if (indexStart_[iRow]==indexStart_[iRow-1]+1&&
-	sizeThis==sizeLast-1) {
+	sizeThis==sizeLast-1&&
+	sizeThis) {
       // in clique
       if (!inClique) {
 	inClique=true;
@@ -1509,6 +1510,8 @@ ClpCholeskyBase::symbolic2(const CoinBigIndex * Astart, const int * Arow)
       sizeClique--;
     }
   }
+  //for (iRow=0;iRow<numberRows_;iRow++)
+  //clique_[iRow]=0;
 }
 /* Factorize - filling in rowsDropped and returning number dropped */
 int 
@@ -2092,7 +2095,8 @@ ClpCholeskyBase::factorizePart2(int * rowsDropped)
   longDouble * d = ClpCopyOfArray(diagonal_,numberRows_);
   int iRow;
   // minimum size before clique done
-#define MINCLIQUE INT_MAX
+  //#define MINCLIQUE INT_MAX
+#define MINCLIQUE 3
   longDouble * work = workDouble_;
   CoinBigIndex * first = workInteger_;
   
@@ -2244,6 +2248,7 @@ ClpCholeskyBase::factorizePart2(int * rowsDropped)
 	  int last = kRow+clique_[kRow];
 	  for (int kkRow=kRow+1;kkRow<last;kkRow++) {
 	    CoinBigIndex j=first[kkRow];
+	    //int iiRow = choleskyRow_[j+indexStart_[kkRow]-choleskyStart_[kkRow]];
 	    longDouble a = sparseFactor_[j];
 	    longDouble dValue = d[kkRow]*a;
 	    diagonalValue -= a*dValue;
@@ -2253,7 +2258,7 @@ ClpCholeskyBase::factorizePart2(int * rowsDropped)
 	  }
 	  nextRow = link_[last-1];
 	  link_[last-1]=linkSave;
-	  int length = end-k+1;
+	  int length = end-k;
 	  for (int i=0;i<length;i++) {
 	    int lRow = choleskyRow_[currentIndex++];
 	    longDouble t0 = work[lRow];

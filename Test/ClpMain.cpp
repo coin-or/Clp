@@ -1776,6 +1776,9 @@ costs this much to be infeasible",
 	    case KKT:
 	      doKKT=action;
 	      break;
+	    case CROSSOVER:
+	      crossover=action;
+	      break;
 	    default:
 	      abort();
 	    }

@@ -255,6 +255,7 @@ int ClpPredictorCorrector::solve ( )
 	    handler_->message(CLP_BARRIER_EXIT2,messages_)
 	      <<saveIteration
 	      <<CoinMessageEol;
+	    problemStatus_=0; // benefit of doubt
 	    break;
 	  }
 	} else {
@@ -2911,6 +2912,7 @@ bool ClpPredictorCorrector::checkGoodMove2(double move,
 //returns number fixed
 int ClpPredictorCorrector::updateSolution(double nextGap)
 {
+  int numberTotal = numberRows_+numberColumns_;
   //update pi
   multiplyAdd(deltaY_,numberRows_,actualDualStep_,dual_,1.0);
   CoinZeroN(errorRegion_,numberRows_);
@@ -3009,11 +3011,40 @@ int ClpPredictorCorrector::updateSolution(double nextGap)
   }
   // put next primal into deltaSL_
   int iColumn;
-  for (iColumn=0;iColumn<numberRows_+numberColumns_;iColumn++) {
+  int iRow;
+  for (iColumn=0;iColumn<numberTotal;iColumn++) {
     double thisWeight=deltaX_[iColumn];
     double newPrimal=solution_[iColumn]+1.0*actualPrimalStep_*thisWeight;
     deltaSL_[iColumn]=newPrimal;
   }
+#if 0
+  // nice idea but doesn't work
+  multiplyAdd(solution_+numberColumns_,numberRows_,-1.0,errorRegion_,0.0);
+  matrix_->times(1.0,solution_,errorRegion_);
+  multiplyAdd(deltaSL_+numberColumns_,numberRows_,-1.0,rhsFixRegion_,0.0);
+  matrix_->times(1.0,deltaSL_,rhsFixRegion_);
+  double newNorm =  maximumAbsElement(deltaSL_,numberTotal);
+  double tol = newNorm*primalTolerance();
+  bool goneInf=false;
+  for (iRow=0;iRow<numberRows_;iRow++) {
+    double value=errorRegion_[iRow];
+    double valueNew=rhsFixRegion_[iRow];
+    if (fabs(value)<tol&&fabs(valueNew)>tol) {
+      printf("row %d old %g new %g\n",iRow,value,valueNew);
+      goneInf=true;
+    }
+  }
+  if (goneInf) {
+    actualPrimalStep_ *= 0.5;
+    for (iColumn=0;iColumn<numberTotal;iColumn++) {
+      double thisWeight=deltaX_[iColumn];
+      double newPrimal=solution_[iColumn]+1.0*actualPrimalStep_*thisWeight;
+      deltaSL_[iColumn]=newPrimal;
+    }
+  }
+  CoinZeroN(errorRegion_,numberRows_);
+  CoinZeroN(rhsFixRegion_,numberRows_);
+#endif
   // do reduced costs
   CoinMemcpyN(dual_,numberRows_,dj_+numberColumns_);
   CoinMemcpyN(cost_,numberColumns_,dj_);
@@ -3023,7 +3054,7 @@ int ClpPredictorCorrector::updateSolution(double nextGap)
   matrix_->transposeTimes(-1.0,dual_,dj_);
   double gamma2 = gamma_*gamma_; // gamma*gamma will be added to diagonal
   double gammaOffset=0.0;
-  for (iColumn=0;iColumn<numberRows_+numberColumns_;iColumn++) {
+  for (iColumn=0;iColumn<numberTotal;iColumn++) {
     if (!flagged(iColumn)) {
       double reducedCost=dj_[iColumn];
       bool thisKilled=false;
@@ -3373,7 +3404,7 @@ int ClpPredictorCorrector::updateSolution(double nextGap)
   // If diagonal wild - kill some
   if (largestDiagonal>1.0e17*smallestDiagonal) {
     double killValue =largestDiagonal*1.0e-17;
-    for (int iColumn=0;iColumn<numberRows_+numberColumns_;iColumn++) {
+    for (int iColumn=0;iColumn<numberTotal;iColumn++) {
       if (fabs(diagonal_[iColumn])<killValue)
 	diagonal_[iolumn]=0.0;
     }
@@ -3424,7 +3455,6 @@ int ClpPredictorCorrector::updateSolution(double nextGap)
   double maximumRHSError2=0.0;
   double primalOffset=0.0;
   char * dropped = cholesky_->rowsDropped();
-  int iRow;
   for (iRow=0;iRow<numberRows_;iRow++) {
     double value=errorRegion_[iRow];
     if (!dropped[iRow]) {
