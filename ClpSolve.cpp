@@ -403,7 +403,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
       model2->crash(1000,1);
     if (!nPasses) {
       int saveOptions = model2->specialOptions();
-      if (model2->numberRows()>100000)
+      if (model2->numberRows()>100)
 	model2->setSpecialOptions(saveOptions|64); // go as far as possible
       model2->dual(0);
       model2->setSpecialOptions(saveOptions);
