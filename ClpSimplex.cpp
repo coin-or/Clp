@@ -351,13 +351,7 @@ ClpSimplex::computeDuals()
 #endif
   for (iRow=0;iRow<numberRows_;iRow++) {
     int iPivot=pivotVariable_[iRow];
-    if (iPivot>=numberColumns_) {
-      // slack
-      array[iRow] = rowObjectiveWork_[iPivot-numberColumns_];
-    } else {
-      // column
-      array[iRow]=objectiveWork_[iPivot];
-    }
+    array[iRow]=cost_[iPivot];
   }
   ClpDisjointCopyN ( array, numberRows_ , save);
 
@@ -716,19 +710,44 @@ int ClpSimplex::internalFactorize ( int solveType)
 	for (iRow=0;iRow<numberRows_;iRow++) {
 	  if (getRowStatus(iRow)==basic) 
 	    numberBasic++;
-	  else
+	  else {
 	    setRowStatus(iRow,superBasic);
+	    // but put to bound if close
+	    if (fabs(rowActivityWork_[iRow]-rowLowerWork_[iRow])
+		<=primalTolerance_)
+	      rowActivityWork_[iRow]=rowLowerWork_[iRow];
+	    else if (fabs(rowActivityWork_[iRow]-rowUpperWork_[iRow])
+		<=primalTolerance_)
+	      rowActivityWork_[iRow]=rowUpperWork_[iRow];
+	  }
+	  
 	}
 	totalSlacks=numberBasic;
 	for (iColumn=0;iColumn<numberColumns_;iColumn++) {
 	  if (getColumnStatus(iColumn)==basic) {
-	    if (numberBasic==numberRows_) 
+	    if (numberBasic==numberRows_) {
 	      // take out of basis
 	      setColumnStatus(iColumn,superBasic);
-	    else 
+	      // but put to bound if close
+	      if (fabs(columnActivityWork_[iColumn]-columnLowerWork_[iColumn])
+		  <=primalTolerance_)
+		columnActivityWork_[iColumn]=columnLowerWork_[iColumn];
+	      else if (fabs(columnActivityWork_[iColumn]
+			    -columnUpperWork_[iColumn])
+		       <=primalTolerance_)
+		columnActivityWork_[iColumn]=columnUpperWork_[iColumn];
+	    } else 
 	      numberBasic++;
 	  } else {
 	    setColumnStatus(iColumn,superBasic);
+	    // but put to bound if close
+	    if (fabs(columnActivityWork_[iColumn]-columnLowerWork_[iColumn])
+		<=primalTolerance_)
+	      columnActivityWork_[iColumn]=columnLowerWork_[iColumn];
+	    else if (fabs(columnActivityWork_[iColumn]
+			  -columnUpperWork_[iColumn])
+		     <=primalTolerance_)
+	      columnActivityWork_[iColumn]=columnUpperWork_[iColumn];
 	  }
 	}
       } else {
@@ -743,6 +762,14 @@ int ClpSimplex::internalFactorize ( int solveType)
 	}
 	for (iColumn=0;iColumn<numberColumns_;iColumn++) {
 	  setColumnStatus(iColumn,superBasic);
+	  // but put to bound if close
+	  if (fabs(columnActivityWork_[iColumn]-columnLowerWork_[iColumn])
+	      <=primalTolerance_)
+	    columnActivityWork_[iColumn]=columnLowerWork_[iColumn];
+	  else if (fabs(columnActivityWork_[iColumn]
+			-columnUpperWork_[iColumn])
+		   <=primalTolerance_)
+	    columnActivityWork_[iColumn]=columnUpperWork_[iColumn];
 	}
       }
     }
@@ -979,7 +1006,6 @@ ClpSimplex::housekeeping(double objectiveChange)
       } else {
 	value = upperOut_;
       }
-      nonLinearCost_->setOne(sequenceOut_,value);
       double lowerValue = lower_[sequenceOut_];
       double upperValue = upper_[sequenceOut_];
       assert(value>=lowerValue-primalTolerance_&&
@@ -1001,6 +1027,7 @@ ClpSimplex::housekeeping(double objectiveChange)
 	}
       }
       solution_[sequenceOut_]=value;
+      nonLinearCost_->setOne(sequenceOut_,value);
     }
   }
   // change cost and bounds on incoming if primal
@@ -1014,7 +1041,6 @@ ClpSimplex::housekeeping(double objectiveChange)
   handler_->printing(algorithm_<0)<<theta_<<dualOut_;
   handler_->printing(algorithm_>0)<<dualIn_<<theta_;
   handler_->message()<<CoinMessageEol;
-
   if (numberIterations_>=maximumIterations_)
     return 2;
   // only time to re-factorize if one before real time
@@ -2773,6 +2799,7 @@ ClpSimplexProgress::looping()
     bool matchedOnInfeasibility = equalDouble(infeasibility,infeasibility_[i]);
     bool matchedOnInfeasibilities = 
       (numberInfeasibilities==numberInfeasibilities_[i]);
+
     if (matchedOnObjective&&matchedOnInfeasibility&&matchedOnInfeasibilities) {
       matched |= (1<<i);
       numberMatched++;

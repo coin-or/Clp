@@ -550,9 +550,11 @@ const PresolveAction *Presolve::presolve(PresolveMatrix *prob)
 
     int iLoop;
 #if	DEBUG_PRESOLVE
-	check_sol(prob,1.0e0);
+    check_sol(prob,1.0e0);
 #endif
 
+    // Check number rows dropped
+    int lastDropped=0;
     for (iLoop=0;iLoop<numberPasses_;iLoop++) {
 #ifdef PRESOLVE_SUMMARY
       printf("Starting major pass %d\n",iLoop+1);
@@ -714,6 +716,10 @@ const PresolveAction *Presolve::presolve(PresolveMatrix *prob)
 	    numberDropped++;
 	printf("%d rows dropped after pass %d\n",numberDropped,
 	       iLoop+1);
+	if (numberDropped==lastDropped)
+	  break;
+	else
+	  lastDropped = numberDropped;
       }
       if (paction_ == paction0)
 	break;

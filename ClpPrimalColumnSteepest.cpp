@@ -541,6 +541,12 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
     if (model_->largestDualError()>checkTolerance)
       tolerance *= model_->largestDualError()/checkTolerance;
   }
+  // stop last one coming immediately
+  double saveOutInfeasibility=0.0;
+  if (sequenceOut>=0) {
+    saveOutInfeasibility = infeas[sequenceOut];
+    infeas[sequenceOut]=0.0;
+  }
   tolerance *= tolerance; // as we are using squares
   for (i=0;i<number;i++) {
     iSequence = index[i];
@@ -558,6 +564,9 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
 	bestSequence = iSequence;
       }
     }
+  }
+  if (sequenceOut>=0) {
+    infeas[sequenceOut]=saveOutInfeasibility;
   }
   /*if (model_->numberIterations()%100==0)
     printf("%d best %g\n",bestSequence,bestDj);*/

@@ -31,6 +31,9 @@
 #include "ClpPrimalColumnDantzig.hpp"
 
 #include "Presolve.hpp"
+#ifdef CLP_IDIOT
+#include "Idiot.hpp"
+#endif
 // For Branch and bound
 //  #include "OsiClpSolverInterface.hpp"
 //  #include "OsiCuts.hpp"
@@ -67,13 +70,13 @@ static double cpuTime()
 #endif
 
 int mainTest (int argc, const char *argv[],bool doDual,
-	      ClpSimplex empty, bool doPresolve);
+	      ClpSimplex empty, bool doPresolve,int doIdiot);
 enum ClpParameterType {
   GENERALQUERY=-100,
   
   DUALTOLERANCE=1,PRIMALTOLERANCE,DUALBOUND,PRIMALWEIGHT,
 
-  LOGLEVEL=101,MAXFACTOR,PERTURBATION,MAXITERATION,PRESOLVEPASS,
+  LOGLEVEL=101,MAXFACTOR,PERTURBATION,MAXITERATION,PRESOLVEPASS,IDIOT,
   
   DIRECTION=201,DUALPIVOT,SCALING,ERRORSALLOWED,KEEPNAMES,SPARSEFACTOR,
   PRIMALPIVOT,PRESOLVE,
@@ -799,6 +802,9 @@ stopping",
 	      "off",PRESOLVE);
     parameters[numberParameters-1].append("on");
     parameters[numberParameters++]=
+      ClpItem("idiot!Crash","Whether to try idiot crash",
+	      0,200,IDIOT);
+    parameters[numberParameters++]=
       ClpItem("passP!resolve","How many passes in presolve",
 	      0,100,PRESOLVEPASS);
     parameters[numberParameters++]=
@@ -897,6 +903,7 @@ stopping",
     int allowImportErrors=0;
     int keepImportNames=1;
     int preSolve=0;
+    int doIdiot=0;
     
     int iModel=0;
     goodModels[0]=false;
@@ -998,6 +1005,8 @@ stopping",
 	  if (!valid) {
 	    if (parameters[iParam].type()==PRESOLVEPASS)
 	      preSolve = value;
+	    else if (parameters[iParam].type()==IDIOT)
+	      doIdiot = value;
 	    else
 	      parameters[iParam].setIntParameter(models+iModel,value);
 	  } else if (valid==1) {
@@ -1103,10 +1112,17 @@ stopping",
 #ifdef READLINE     
 	      currentModel = model2;
 #endif
-	      if (type==DUALSIMPLEX)
+	      if (type==DUALSIMPLEX) {
 		model2->dual();
-	      else
-		model2->primal();
+	      } else {
+#ifdef CLP_IDIOT
+		if (doIdiot) {
+		  Idiot info(*model2);
+		  info.crash(doIdiot);
+		}
+#endif
+		model2->primal(1);
+	      }
 #ifdef USE_PRESOLVE
 	      if (preSolve) {
 		pinfo.postsolve(true);
@@ -1118,7 +1134,7 @@ stopping",
 		currentModel = models+iModel;
 #endif
 		models[iModel].primal(1);
-#ifdef CLP_DEBUG
+#ifdef CLP_DEBUG_not
 		models[iModel].checkSolution();
 		printf("%g dual %g(%d) Primal %g(%d)\n",
 		       models[iModel].objectiveValue(),
@@ -1391,7 +1407,7 @@ stopping",
 	      else
 		std::cerr<<"Doing netlib with primal agorithm"<<std::endl;
 	      mainTest(nFields,fields,(type==NETLIB_DUAL),models[iModel],
-		       (preSolve!=0));
+		       (preSolve!=0),doIdiot);
 	    }
 	    break;
 	  case UNITTEST:
@@ -1405,7 +1421,8 @@ stopping",
 		fields[2]=directory.c_str();
 		nFields=3;
 	      }
-	      mainTest(nFields,fields,false,models[iModel],(preSolve!=0));
+	      mainTest(nFields,fields,false,models[iModel],(preSolve!=0),
+		       false);
 	    }
 	    break;
 	  case FAKEBOUND:

@@ -43,6 +43,9 @@ LIBSRC += PresolveSubst.cpp
 LIBSRC += PresolveTighten.cpp		    
 LIBSRC += PresolveUseless.cpp             
 
+#LIBSRC += Idiot.cpp
+#LIBSRC += IdiSolve.cpp
+
 ##############################################################################
 # You should not need to edit below this line.
 ##############################################################################
@@ -52,6 +55,8 @@ export MakefileDir := $(CoinDir)/Makefiles
 include ${MakefileDir}/Makefile.coin
 include ${MakefileDir}/Makefile.location
 
+# Say Idiot code can use Clp interface
+#CXXFLAGS += -DCLP_IDIOT
 CXXFLAGS += -DUSE_PRESOLVE
 ifeq ($(OptLevel),-g)
 #     CXXFLAGS += -DCLP_DEBUG

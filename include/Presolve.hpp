@@ -101,7 +101,7 @@ private:
   /// Original model - must not be destroyed before postsolve
   ClpSimplex * originalModel_;
 
-  /// Presolved model - up to user to destroy
+  /// Presolved model - up to user to destroy by deletePresolvedModel
   ClpSimplex * presolvedModel_;
   /// Original column numbers
   int * originalColumn_;

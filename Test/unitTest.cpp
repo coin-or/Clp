@@ -31,6 +31,9 @@
 #include "ClpParameters.hpp"
 
 #include "Presolve.hpp"
+#ifdef CLP_IDIOT
+#include "Idiot.hpp"
+#endif
 
 //#############################################################################
 
@@ -56,7 +59,7 @@ void testingMessage( const char * const msg );
 //----------------------------------------------------------------
 
 int mainTest (int argc, const char *argv[],bool doDual,
-	      ClpSimplex empty, bool doPresolve)
+	      ClpSimplex empty, bool doPresolve,int doIdiot)
 {
   int i;
 
@@ -268,10 +271,17 @@ int mainTest (int argc, const char *argv[],bool doDual,
 #ifdef USE_PRESOLVE
 	Presolve pinfo;
 	ClpSimplex * model2 = pinfo.presolvedModel(solution,1.0e-8);
-	if (doDual)
+	if (doDual) {
 	  model2->dual();
-	else
-	  model2->primal();
+	} else {
+#ifdef CLP_IDIOT
+	  if (doIdiot) {
+	    Idiot info(*model2);
+	    info.crash(doIdiot);
+	  }
+#endif
+	  model2->primal(1);
+	}
 	pinfo.postsolve(true);
 	
 	delete model2;
@@ -300,14 +310,26 @@ int mainTest (int argc, const char *argv[],bool doDual,
 	if (doDual) {
 	  solution.dual();
 	} else {
-	  solution.primal();
+#ifdef CLP_IDIOT
+	  if (doIdiot) {
+	    Idiot info(solution);
+	    info.crash(doIdiot);
+	  }
+#endif
+	  solution.primal(1);
 	}
 #endif
       } else {
 	if (doDual) {
 	  solution.dual();
 	} else {
-	  solution.primal();
+#ifdef CLP_IDIOT
+	  if (doIdiot) {
+	    Idiot info(solution);
+	    info.crash(doIdiot);
+	  }
+#endif
+	  solution.primal(1);
 	}
       }
       // Test objective solution value

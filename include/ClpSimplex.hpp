@@ -759,7 +759,7 @@ public:
 
   //@}
   /**@name Data  */
-#define CLP_PROGRESS 4
+#define CLP_PROGRESS 5
   //@{
   /// Objective values
   double objective_[CLP_PROGRESS];

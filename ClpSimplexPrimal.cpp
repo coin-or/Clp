@@ -499,7 +499,7 @@ ClpSimplexPrimal::whileIterating(int & firstSuperBasic)
 	printf("btran dj %g, ftran dj %g\n",saveDj,dualIn_);
 #endif
       if ((saveDj*dualIn_<1.0e-20&&!ifValuesPass)||
-	  fabs(saveDj-dualIn_)>1.0e-5*(1.0+fabs(saveDj))) {
+	  fabs(saveDj-dualIn_)>1.0e-3*(1.0+fabs(saveDj))) {
 	handler_->message(CLP_PRIMAL_DJ,messages_)
 	  <<saveDj<<dualIn_
 	  <<CoinMessageEol;
@@ -508,11 +508,16 @@ ClpSimplexPrimal::whileIterating(int & firstSuperBasic)
 	  rowArray_[1]->clear();
 	  pivotRow_=-1; // say no weights update
 	  returnCode=-2;
+	  if(saveNumber+1 == numberIterations_) {
+	    // not looking wonderful - try cleaning bounds
+	    // put non-basics to bounds in case tolerance moved
+	    nonLinearCost_->checkInfeasibilities(true);
+	  }
 	  break;
 	} else {
 	  // take on more relaxed criterion
 	  if (saveDj*dualIn_<1.0e-20||
-	      fabs(saveDj-dualIn_)>1.0e-4*(1.0+fabs(dualIn_))) {
+	      fabs(saveDj-dualIn_)>1.0e-1*(1.0+fabs(dualIn_))) {
 	    // need to reject something
 	    char x = isColumn(sequenceIn_) ? 'C' :'R';
 	    handler_->message(CLP_SIMPLEX_FLAG,messages_)
@@ -736,6 +741,11 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
       double saveWeight = infeasibilityCost_;
       // save nonlinear cost as we are going to switch off costs
       ClpNonLinearCost * nonLinear = nonLinearCost_;
+      // do twice to make sure Primal solution has settled
+      // put non-basics to bounds in case tolerance moved
+      nonLinearCost_->checkInfeasibilities(true);
+      gutsOfSolution(rowActivityWork_, columnActivityWork_);
+
       infeasibilityCost_=1.0e100;
       // put back original bounds
       createRim(7);
@@ -1224,18 +1234,21 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
     // translate to sequence
     sequenceOut_ = pivotVariable_[pivotRow_];
     valueOut_ = solution(sequenceOut_);
+    lowerOut_=lower_[sequenceOut_];
+    upperOut_=upper_[sequenceOut_];
+
     if (way<0.0) 
       theta_ = - theta_;
     double newValue = valueOut_ - theta_*alpha_;
     if (alpha_*way<0.0) {
       directionOut_=-1;      // to upper bound
-      if (fabs(theta_)>0.1)
+      if (fabs(theta_)>1.0e-6)
 	upperOut_ = nonLinearCost_->nearest(sequenceOut_,newValue);
       else
 	upperOut_ = newValue;
     } else {
       directionOut_=1;      // to lower bound
-      if (fabs(theta_)>0.1)
+      if (fabs(theta_)>1.0e-6)
 	lowerOut_ = nonLinearCost_->nearest(sequenceOut_,newValue);
       else
 	lowerOut_ = newValue;
