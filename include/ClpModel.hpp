@@ -91,6 +91,8 @@ public:
 		     const double* obj,
 		      const double* rowlb, const double* rowub,
 		      const double * rowObjective=NULL);
+  /// This just loads up a row objective
+  void SetRowObjective(const double * rowObjective);
   /// Read an mps file from the given filename
   int readMps(const char *filename,
 	      bool keepNames=false,

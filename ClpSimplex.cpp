@@ -244,8 +244,8 @@ ClpSimplex::computePrimals ( const double * rowActivities,
   CoinIndexedVector  * workSpace = rowArray_[0];
 
   double * array = new double [numberRows_+1]; // +1 for network
-  double * save = new double [numberRows_];
-  double * previous = new double [numberRows_];
+  double * save = new double [numberRows_+1];
+  double * previous = new double [numberRows_+1];
 
   // accumulate non basic stuff 
   ClpFillN(array,numberRows_,0.0);
@@ -344,8 +344,8 @@ ClpSimplex::computeDuals()
   CoinIndexedVector  * workSpace = rowArray_[0];
 
   double * array = new double [numberRows_+1]; // +1 for network
-  double * save = new double [numberRows_];
-  double * previous = new double [numberRows_];
+  double * save = new double [numberRows_+1];
+  double * previous = new double [numberRows_+1];
 
   int iRow;
 #ifdef CLP_DEBUG
