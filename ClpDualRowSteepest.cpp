@@ -742,7 +742,7 @@ ClpDualRowSteepest::saveWeights(ClpSimplex * model,int mode)
     } else {
       int * which = alternateWeights_->getIndices();
       CoinIndexedVector * rowArray3 = model_->rowArray(3);
-      assert (!rowArray3->getNumElements());
+      rowArray3->clear();
       int * back = rowArray3->getIndices();
       // In case something went wrong
       for (i=0;i<numberRows+numberColumns;i++)
