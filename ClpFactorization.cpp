@@ -3,6 +3,7 @@
 
 #include "CoinPragma.hpp"
 #include "ClpFactorization.hpp"
+#include "ClpQuadraticObjective.hpp"
 #include "CoinHelperFunctions.hpp"
 #include "CoinIndexedVector.hpp"
 #include "ClpSimplex.hpp"
@@ -364,6 +365,31 @@ ClpFactorization::factorize ( ClpSimplex * model,
     status_=0;
   }
 
+  if (!status_) {
+    // take out part if quadratic
+    if (model->algorithm()==2) {
+      ClpObjective * obj = model->objectiveAsObject();
+      ClpQuadraticObjective * quadraticObj = (dynamic_cast< ClpQuadraticObjective*>(obj));
+      assert (quadraticObj);
+      CoinPackedMatrix * quadratic = quadraticObj->quadraticObjective();
+      int numberXColumns = quadratic->getNumCols();
+      assert (numberXColumns<numberColumns);
+      int base = numberColumns-numberXColumns;
+      int * which = new int [numberXColumns];
+      int * pivotVariable = model->pivotVariable();
+      int * permute = pivotColumn();
+      int i;
+      int n=0;
+      for (i=0;i<numberRows;i++) {
+	int iSj = pivotVariable[i]-base;
+	if (iSj>=0&&iSj<numberXColumns) 
+	  which[n++]=permute[i];
+      }
+      if (n)
+	emptyRows(n,which);
+      delete [] which;
+    }
+  }
   return status_;
 }
 /* Replaces one Column to basis,

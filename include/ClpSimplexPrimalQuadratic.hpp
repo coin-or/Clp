@@ -162,18 +162,6 @@ public:
   inline const double * currentSolution() const
   {return currentSolution_;};
   void setCurrentSolution(const double * solution);
-  /// Quadratic sequence or -1 if linear
-  inline const int * quadraticSequence() const
-  {return quadraticSequence_;};
-  /// Which ones are quadratic
-  inline const int * backSequence() const
-  {return backSequence_;};
-  /// Row Quadratic sequence or -1 if linear
-  inline const int * quadraticRowSequence() const
-  {return quadraticRowSequence_;};
-  /// Which rows are quadratic
-  inline const int * backRowSequence() const
-  {return backRowSequence_;};
   /// Returns pointer to original objective
   inline ClpQuadraticObjective * originalObjective() const
   { return originalObjective_;};
@@ -200,6 +188,12 @@ public:
   { return infeasCost_;};
   inline void setInfeasCost(double value)
   { infeasCost_ = value;};
+  /// Backward pointer to basis (inverse of pivotVariable_)
+  inline int * basicRow() const
+  { return basicRow_;};
+  /// Set if Sj variable is implied
+  inline int * impliedSj() const
+  { return impliedSj_;};
   //@}
     
 private:
@@ -207,14 +201,10 @@ private:
   //@{
   /// Objective
   ClpQuadraticObjective * originalObjective_;
-  /// Quadratic sequence
-  int * quadraticSequence_;
-  /// Which ones are quadratic
-  int * backSequence_;
-  /// Quadratic Row sequence
-  int * quadraticRowSequence_;
-  /// Which rows are quadratic
-  int * backRowSequence_;
+  /// Backward pointer to basis (inverse of pivotVariable_)
+  int * basicRow_;
+  /// Set if Sj variable is implied
+  int * impliedSj_;
   /// Current sequenceIn
   int currentSequenceIn_;
   /// Crucial Sj
