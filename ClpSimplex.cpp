@@ -3572,7 +3572,9 @@ ClpSimplex::borrowModel(ClpSimplex & otherModel)
   dualBound_ = otherModel.dualBound_;
   dualTolerance_ = otherModel.dualTolerance_;
   primalTolerance_ = otherModel.primalTolerance_;
+  delete dualRowPivot_;
   dualRowPivot_ = otherModel.dualRowPivot_->clone(true);
+  delete primalColumnPivot_;
   primalColumnPivot_ = otherModel.primalColumnPivot_->clone(true);
   scalingFlag_ = otherModel.scalingFlag_;
   perturbation_ = otherModel.perturbation_;
