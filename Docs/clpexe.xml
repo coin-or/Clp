@@ -5,7 +5,7 @@
   </title>
   <para>
   The result of <userinput>make unitTest</userinput> (executed in 
-  <filename>COIN/Clp</filename> is an executable
+  <filename>COIN/Clp</filename>) is an executable
   <filename>clp</filename> as well as the CLP and COIN libraries.
   This can be used to do various unit tests, but can also be used as a standalone
   solver.  As it only has a very simple solution file format the user may wish to
