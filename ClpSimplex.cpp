@@ -4779,24 +4779,32 @@ int ClpSimplex::pivot()
   valueIn_ = solution_[sequenceIn_];
   upperIn_ = upper_[sequenceIn_];
   dualIn_ = dj_[sequenceIn_];
-  if (sequenceOut_>=0&&sequenceIn_!=sequenceIn_) {
-    assert (pivotRow_>=0&&pivotRow_<numberRows_);
-    assert (pivotVariable_[pivotRow_]==sequenceOut_);
-    lowerOut_ = lower_[sequenceOut_];
-    valueOut_ = solution_[sequenceOut_];
-    upperOut_ = upper_[sequenceOut_];
-    // for now assume primal is feasible (or in dual)
-    dualOut_ = dj_[sequenceOut_];
-    assert(fabs(dualOut_)<1.0e-6);
-  } else {
-    assert (pivotRow_<0);
-  }
+  lowerOut_ = lower_[sequenceOut_];
+  valueOut_ = solution_[sequenceOut_];
+  upperOut_ = upper_[sequenceOut_];
+  // for now assume primal is feasible (or in dual)
+  dualOut_ = dj_[sequenceOut_];
+  assert(fabs(dualOut_)<1.0e-6);
   bool roundAgain = true;
   int returnCode=0;
   while (roundAgain) {
     roundAgain=false;
     unpack(rowArray_[1]);
     factorization_->updateColumnFT(rowArray_[2],rowArray_[1]);
+    alpha_=0.0;
+    int i;
+    int * index = rowArray_[1]->getIndices();
+    int number = rowArray_[1]->getNumElements();
+    double * element = rowArray_[1]->denseVector();
+    for (i=0;i<number;i++) {
+      int ii = index[i];
+      if ( pivotVariable_[ii]==sequenceOut_) {
+	pivotRow_=ii;
+	alpha_=element[pivotRow_];
+	break;
+      }
+    }
+    assert (fabs(alpha_)>1.0e-12);
     // we are going to subtract movement from current basic
     double movement;
     // see where incoming will go to
@@ -4805,49 +4813,43 @@ int ClpSimplex::pivot()
       movement  = ((directionIn_>0) ? upperIn_ : lowerIn_) - valueIn_;
     } else {
       // get where outgoing needs to get to
-      double outValue = (directionOut_>0) ? upperOut_ : lowerOut_;
+      double outValue = (directionOut_<0) ? upperOut_ : lowerOut_;
       // solutionOut_ - movement*alpha_ == outValue
-      movement = (outValue-valueOut_)/alpha_;
+      movement = (valueOut_-outValue)/alpha_;
       // set directionIn_ correctly
       directionIn_ = (movement>0) ? 1 :-1;
     }
     // update primal solution
-    {
-      int i;
-      int * index = rowArray_[1]->getIndices();
-      int number = rowArray_[1]->getNumElements();
-      double * element = rowArray_[1]->denseVector();
-      for (i=0;i<number;i++) {
-	int ii = index[i];
-	// get column
-	ii = pivotVariable_[ii];
-	solution_[ii] -= movement*element[i];
-	element[i]=0.0;
-      }
-      // see where something went to
-      if (sequenceOut_<0) {
-	if (directionIn_<0) {
-	  assert (fabs(solution_[sequenceIn_]-upperIn_)<1.0e-7);
-	  solution_[sequenceIn_]=upperIn_;
-	} else {
-	  assert (fabs(solution_[sequenceIn_]-lowerIn_)<1.0e-7);
-	  solution_[sequenceIn_]=lowerIn_;
-	}
+    for (i=0;i<number;i++) {
+      int ii = index[i];
+      // get column
+      int ij = pivotVariable_[ii];
+      solution_[ij] -= movement*element[ii];
+      element[ii]=0.0;
+    }
+    rowArray_[1]->setNumElements(0);
+    // see where something went to
+    if (sequenceOut_<0) {
+      if (directionIn_<0) {
+	assert (fabs(solution_[sequenceIn_]-upperIn_)<1.0e-7);
+	solution_[sequenceIn_]=upperIn_;
       } else {
-	if (directionOut_<0) {
-	  assert (fabs(solution_[sequenceOut_]-upperOut_)<1.0e-7);
-	  solution_[sequenceOut_]=upperOut_;
-	} else {
-	  assert (fabs(solution_[sequenceOut_]-lowerOut_)<1.0e-7);
-	  solution_[sequenceOut_]=lowerOut_;
-	}
-	solution_[sequenceIn_]=valueIn_+movement;
+	assert (fabs(solution_[sequenceIn_]-lowerIn_)<1.0e-7);
+	solution_[sequenceIn_]=lowerIn_;
       }
-    }    
+    } else {
+      if (directionOut_<0) {
+	assert (fabs(solution_[sequenceOut_]-upperOut_)<1.0e-7);
+	solution_[sequenceOut_]=upperOut_;
+      } else {
+	assert (fabs(solution_[sequenceOut_]-lowerOut_)<1.0e-7);
+	solution_[sequenceOut_]=lowerOut_;
+      }
+      solution_[sequenceIn_]=valueIn_+movement;
+    }
     double objectiveChange = dualIn_*movement;
     // update duals
     if (pivotRow_>=0) {
-      alpha_ = rowArray_[1]->denseVector()[pivotRow_];
       assert (fabs(alpha_)>1.0e-8);
       double multiplier = dualIn_/alpha_;
       rowArray_[0]->insert(pivotRow_,multiplier);
