@@ -47,13 +47,17 @@ class ClpSimplex : public ClpModel {
 
 public:
 
-  /// enums for status of various sorts (matches CoinWarmStartBasis)
+  /** enums for status of various sorts.
+      First 4 match CoinWarmStartBasis,
+      isFixed means fixed at lower bound and out of basis
+  */
   enum Status {
     isFree = 0x00,
     basic = 0x01,
     atUpperBound = 0x02,
     atLowerBound = 0x03,
-    superBasic = 0x04
+    superBasic = 0x04,
+    isFixed = 0x05
   };
 
   enum FakeBound {
@@ -597,12 +601,6 @@ public:
   };
   inline Status getColumnStatus(int sequence) const
   {return static_cast<Status> (status_[sequence]&7);};
-  inline void setFixed( int sequence)
-  { status_[sequence] |= 32;};
-  inline void clearFixed( int sequence)
-  { status_[sequence] &= ~32; };
-  inline bool fixed(int sequence) const
-  {return (((status_[sequence]>>5)&1)!=0);};
   inline void setFlagged( int sequence)
   {
     status_[sequence] |= 64;
@@ -616,6 +614,8 @@ public:
   /** Set up status array (can be used by OsiClp).
       Also can be used to set up all slack basis */
   void createStatus() ;
+  inline void allSlackBasis()
+  { createStatus();};
     
   /// So we know when to be cautious
   inline int lastBadIteration() const
