@@ -1041,7 +1041,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 #if 0
   double thisObj = progress->lastObjective(0);
   double lastObj = progress->lastObjective(1);
-  if (lastObj<thisObj-1.0e-7*max(fabs(thisObj),fabs(lastObj))-1.0e-8
+  if (lastObj<thisObj-1.0e-7*CoinMax(fabs(thisObj),fabs(lastObj))-1.0e-8
       &&firstFree_<0) {
     int maxFactor = factorization_->maximumPivots();
     if (maxFactor>10) {
@@ -1167,7 +1167,7 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
 
   double dualCheck = fabs(dualIn_);
   // but make a bit more pessimistic
-  dualCheck=max(dualCheck-100.0*dualTolerance_,0.99*dualCheck);
+  dualCheck=CoinMax(dualCheck-100.0*dualTolerance_,0.99*dualCheck);
 
   int iIndex;
   int pivotOne=-1;
@@ -1380,7 +1380,7 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
 	       primalTolerance_,largestInfeasibility);
 #endif
 //#undef CLP_DEBUG
-      primalTolerance_ = max(primalTolerance_,largestInfeasibility);
+      primalTolerance_ = CoinMax(primalTolerance_,largestInfeasibility);
     }
     // Need to look at all in some cases
     if (theta_>tentativeTheta) {
@@ -1425,7 +1425,7 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
     }
   }
 
-  double theta1 = max(theta_,1.0e-12);
+  double theta1 = CoinMax(theta_,1.0e-12);
   double theta2 = numberIterations_*nonLinearCost_->averageTheta();
   // Set average theta
   nonLinearCost_->setAverageTheta((theta1+theta2)/((double) (numberIterations_+1)));
@@ -1695,7 +1695,7 @@ ClpSimplexPrimal::perturb(int type)
   matrix_->rangeOfElements(smallestNegative, largestNegative,
 			   smallestPositive, largestPositive);
   smallestPositive = CoinMin(fabs(smallestNegative),smallestPositive);
-  largestPositive = max(fabs(largestNegative),largestPositive);
+  largestPositive = CoinMax(fabs(largestNegative),largestPositive);
   double elementRatio = largestPositive/smallestPositive;
   if (!numberIterations_&&perturbation_==50) {
     // See if we need to perturb
@@ -1749,7 +1749,7 @@ ClpSimplexPrimal::perturb(int type)
 	  upperValue = fabs(upper_[i]);
 	else
 	  upperValue=0.0;
-	double value = max(fabs(lowerValue),fabs(upperValue));
+	double value = CoinMax(fabs(lowerValue),fabs(upperValue));
 	value = CoinMin(value,upper_[i]-lower_[i]);
 #if 1
 	if (value) {
@@ -1757,7 +1757,7 @@ ClpSimplexPrimal::perturb(int type)
 	  numberNonZero++;
 	}
 #else
-	perturbation = max(perturbation,value);
+	perturbation = CoinMax(perturbation,value);
 #endif
       }
     }
@@ -1829,11 +1829,11 @@ ClpSimplexPrimal::perturb(int type)
 	    printf("col %d lower from %g to %g, upper from %g to %g\n",
 		   iSequence,lower_[iSequence],lowerValue,upper_[iSequence],upperValue);
 	  if (solutionValue) {
-	    largest = max(largest,value);
+	    largest = CoinMax(largest,value);
 	    if (value>(fabs(solutionValue)+1.0)*largestPerCent)
 	      largestPerCent=value/(fabs(solutionValue)+1.0);
 	  } else {
-	    largestZero = max(largestZero,value);
+	    largestZero = CoinMax(largestZero,value);
 	  } 
 	}
       }
@@ -1850,11 +1850,11 @@ ClpSimplexPrimal::perturb(int type)
 	  if (fabs(value)<=primalTolerance_)
 	    value=0.0;
 	  if (lowerValue>-1.0e20&&lowerValue)
-	    lowerValue -= value * (max(1.0e-2,1.0e-5*fabs(lowerValue))); 
+	    lowerValue -= value * (CoinMax(1.0e-2,1.0e-5*fabs(lowerValue))); 
 	  if (upperValue<1.0e20&&upperValue)
-	    upperValue += value * (max(1.0e-2,1.0e-5*fabs(upperValue))); 
+	    upperValue += value * (CoinMax(1.0e-2,1.0e-5*fabs(upperValue))); 
 	} else if (value) {
-	  double valueL =value *(max(1.0e-2,1.0e-5*fabs(lowerValue)));
+	  double valueL =value *(CoinMax(1.0e-2,1.0e-5*fabs(lowerValue)));
 	  // get in range 
 	  if (valueL<=tolerance) {
 	    valueL *= 10.0;
@@ -1867,7 +1867,7 @@ ClpSimplexPrimal::perturb(int type)
 	  }
 	  if (lowerValue>-1.0e20&&lowerValue)
 	    lowerValue -= valueL;
-	  double valueU =value *(max(1.0e-2,1.0e-5*fabs(upperValue)));
+	  double valueU =value *(CoinMax(1.0e-2,1.0e-5*fabs(upperValue)));
 	  // get in range 
 	  if (valueU<=tolerance) {
 	    valueU *= 10.0;
@@ -1883,13 +1883,13 @@ ClpSimplexPrimal::perturb(int type)
 	}
 	if (lowerValue!=lower_[i]) {
 	  double difference = fabs(lowerValue-lower_[i]);
-	  largest = max(largest,difference);
+	  largest = CoinMax(largest,difference);
 	  if (difference>fabs(lower_[i])*largestPerCent)
 	    largestPerCent=fabs(difference/lower_[i]);
 	} 
 	if (upperValue!=upper_[i]) {
 	  double difference = fabs(upperValue-upper_[i]);
-	  largest = max(largest,difference);
+	  largest = CoinMax(largest,difference);
 	  if (difference>fabs(upper_[i])*largestPerCent)
 	    largestPerCent=fabs(difference/upper_[i]);
 	} 
@@ -1910,11 +1910,11 @@ ClpSimplexPrimal::perturb(int type)
 	  if (fabs(value)<=primalTolerance_)
 	    value=0.0;
 	  if (lowerValue>-1.0e20&&lowerValue)
-	    lowerValue -= value * (max(1.0e-2,1.0e-5*fabs(lowerValue))); 
+	    lowerValue -= value * (CoinMax(1.0e-2,1.0e-5*fabs(lowerValue))); 
 	  if (upperValue<1.0e20&&upperValue)
-	    upperValue += value * (max(1.0e-2,1.0e-5*fabs(upperValue))); 
+	    upperValue += value * (CoinMax(1.0e-2,1.0e-5*fabs(upperValue))); 
 	} else if (value) {
-	  double valueL =value *(max(1.0e-2,1.0e-5*fabs(lowerValue)));
+	  double valueL =value *(CoinMax(1.0e-2,1.0e-5*fabs(lowerValue)));
 	  // get in range 
 	  if (valueL<=tolerance) {
 	    valueL *= 10.0;
@@ -1927,7 +1927,7 @@ ClpSimplexPrimal::perturb(int type)
 	  }
 	  if (lowerValue>-1.0e20&&lowerValue)
 	    lowerValue -= valueL;
-	  double valueU =value *(max(1.0e-2,1.0e-5*fabs(upperValue)));
+	  double valueU =value *(CoinMax(1.0e-2,1.0e-5*fabs(upperValue)));
 	  // get in range 
 	  if (valueU<=tolerance) {
 	    valueU *= 10.0;
@@ -1942,22 +1942,22 @@ ClpSimplexPrimal::perturb(int type)
 	    upperValue += valueU;
 	}
       } else if (upperValue>0.0) {
-	upperValue -= value * (max(1.0e-2,1.0e-5*fabs(lowerValue))); 
-	lowerValue -= value * (max(1.0e-2,1.0e-5*fabs(lowerValue))); 
+	upperValue -= value * (CoinMax(1.0e-2,1.0e-5*fabs(lowerValue))); 
+	lowerValue -= value * (CoinMax(1.0e-2,1.0e-5*fabs(lowerValue))); 
       } else if (upperValue<0.0) {
-	upperValue += value * (max(1.0e-2,1.0e-5*fabs(lowerValue))); 
-	lowerValue += value * (max(1.0e-2,1.0e-5*fabs(lowerValue))); 
+	upperValue += value * (CoinMax(1.0e-2,1.0e-5*fabs(lowerValue))); 
+	lowerValue += value * (CoinMax(1.0e-2,1.0e-5*fabs(lowerValue))); 
       } else {
       }
       if (lowerValue!=lower_[i]) {
 	double difference = fabs(lowerValue-lower_[i]);
-	largest = max(largest,difference);
+	largest = CoinMax(largest,difference);
 	if (difference>fabs(lower_[i])*largestPerCent)
 	  largestPerCent=fabs(difference/lower_[i]);
       } 
       if (upperValue!=upper_[i]) {
 	double difference = fabs(upperValue-upper_[i]);
-	largest = max(largest,difference);
+	largest = CoinMax(largest,difference);
 	if (difference>fabs(upper_[i])*largestPerCent)
 	  largestPerCent=fabs(difference/upper_[i]);
       } 
@@ -2117,7 +2117,7 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	    int iPivot=pivotVariable_[iRow];
 	    djval -= alpha*cost_[iPivot];
 	  }
-	  double comp = 1.0e-8 + 1.0e-7*(max(fabs(dj_[iSeq]),fabs(djval)));
+	  double comp = 1.0e-8 + 1.0e-7*(CoinMax(fabs(dj_[iSeq]),fabs(djval)));
 	  if (fabs(djval-dj_[iSeq])>comp)
 	    printf("Bad dj %g for %d - true is %g\n",
 		   dj_[iSeq],iSeq,djval);
