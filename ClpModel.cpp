@@ -1380,13 +1380,13 @@ ClpModel::ClpModel ( const ClpModel * rhs,
     columnNames_ = std::vector<std::string> ();
     rowNames_.reserve(numberRows_);
     for (iRow=0;iRow<numberRows_;iRow++) {
-      rowNames_[iRow] = rhs->rowNames_[whichRow[iRow]];
+      rowNames_.push_back(rhs->rowNames_[whichRow[iRow]]);
       maxLength = max(maxLength,(unsigned int) strlen(rowNames_[iRow].c_str()));
     }
     int iColumn;
     columnNames_.reserve(numberColumns_);
     for (iColumn=0;iColumn<numberColumns_;iColumn++) {
-      columnNames_[iColumn] = rhs->columnNames_[whichColumn[iColumn]];
+      columnNames_.push_back(rhs->columnNames_[whichColumn[iColumn]]);
       maxLength = max(maxLength,(unsigned int) strlen(columnNames_[iColumn].c_str()));
     }
     lengthNames_=(int) maxLength;
