@@ -7,46 +7,19 @@
 #include "CoinPragma.hpp"
 
 #include <math.h>
+#include <string.h>
+
+/* 04-07-08 bobe including extras.h to get strdup() */
+#if defined(__MWERKS__) 
+#include <extras.h>
+#endif
 
 #include "CoinHelperFunctions.hpp"
 #include "ClpSimplex.hpp"
 #include <cfloat>
-// This sections needs to match Clp_C_defines.h but with extern C
-#define ClpSimplexCDefine_H
-
-/** This has #defines etc for the "C" interface to Clp.
-
-*/
-
-/* Plus infinity */
-#ifndef COIN_DBL_MAX
-#define COIN_DBL_MAX DBL_MAX
-#endif
-
-/* We need to allow for Microsoft */
-#ifndef CLPLIBAPI
-
-#if defined (CLPMSDLL)
-#   define CLPLIBAPI __declspec(dllexport) extern "C"
-#   define CLPLINKAGE  __stdcall
-#   define CLPLINKAGE_CB  __cdecl
-#else
-#   define CLPLIBAPI extern "C"
-#   define CLPLINKAGE
-#   define CLPLINKAGE_CB 
-#endif
-
-#endif
-class CMessageHandler;
-// Real typedef for structure
-typedef struct {
-  ClpSimplex * model_;
-  CMessageHandler * handler_;
-} Clp_Simplex;
-/** typedef for user call back */
-typedef  void (CLPLINKAGE_CB *clp_callback) (Clp_Simplex * model,int  msgno, int ndouble,
-                            const double * dvec, int nint, const int * ivec,
-                            int nchar,  char ** cvec);
+// Get C stuff but with extern C
+#define CLP_EXTERN_C
+#include "Coin_C_defines.h"
 
 // To allow call backs
 class CMessageHandler : public CoinMessageHandler {
@@ -223,7 +196,7 @@ CMessageHandler::setCallBack(clp_callback callback)
 #include <iostream>
 
 /* Default constructor */
-CLPLIBAPI Clp_Simplex *  CLPLINKAGE 
+COINLIBAPI Clp_Simplex *  COINLINKAGE 
 Clp_newModel()
 {
   Clp_Simplex * model = new Clp_Simplex;
@@ -232,7 +205,7 @@ Clp_newModel()
   return model;
 }
 /* Destructor */
-CLPLIBAPI void CLPLINKAGE 
+COINLIBAPI void COINLINKAGE 
 Clp_deleteModel(Clp_Simplex * model)
 {
   delete model->model_;
@@ -253,7 +226,7 @@ Clp_deleteModel(Clp_Simplex * model)
 */
 /* Just like the other loadProblem() method except that the matrix is
    given in a standard column major ordered format (without gaps). */
-CLPLIBAPI void CLPLINKAGE 
+COINLIBAPI void COINLINKAGE 
 Clp_loadProblem (Clp_Simplex * model,  const int numcols, const int numrows,
 		 const CoinBigIndex * start, const int* index,
 		 const double* value,
@@ -261,11 +234,21 @@ Clp_loadProblem (Clp_Simplex * model,  const int numcols, const int numrows,
 		 const double* obj,
 		 const double* rowlb, const double* rowub)
 {
+  const char prefix[] = "Clp_c_Interface::Clp_loadProblem(): ";
+  const int  verbose = 0;
+  if (verbose > 1) {
+    printf("%s numcols = %i, numrows = %i\n", 
+      prefix, numcols, numrows);
+    printf("%s model = %p, start = %p, index = %p, value = %p\n",
+      prefix, model, start, index, value);
+    printf("%s collb = %p, colub = %p, obj = %p, rowlb = %p, rowub = %p\n",
+      prefix, collb, colub, obj, rowlb, rowub);
+  }
   model->model_->loadProblem(numcols,numrows,start,index,value,
 			     collb,colub,obj,rowlb,rowub);
 }
 /* Read an mps file from the given filename */
-CLPLIBAPI int CLPLINKAGE 
+COINLIBAPI int COINLINKAGE 
 Clp_readMps(Clp_Simplex * model,const char *filename,
 	    int keepNames,
 	    int ignoreErrors)
@@ -273,31 +256,31 @@ Clp_readMps(Clp_Simplex * model,const char *filename,
   return model->model_->readMps(filename,keepNames!=0,ignoreErrors!=0);
 }
 /* Copy in integer informations */
-CLPLIBAPI void CLPLINKAGE 
+COINLIBAPI void COINLINKAGE 
 Clp_copyInIntegerInformation(Clp_Simplex * model,const char * information)
 {
   model->model_->copyInIntegerInformation(information);
 }
 /* Drop integer informations */
-CLPLIBAPI void CLPLINKAGE 
+COINLIBAPI void COINLINKAGE 
 Clp_deleteIntegerInformation(Clp_Simplex * model)
 {
   model->model_->deleteIntegerInformation();
 }
 /* Resizes rim part of model  */
-CLPLIBAPI void CLPLINKAGE 
+COINLIBAPI void COINLINKAGE 
 Clp_resize (Clp_Simplex * model, int newNumberRows, int newNumberColumns)
 {
   model->model_->resize(newNumberRows,newNumberColumns);
 }
 /* Deletes rows */
-CLPLIBAPI void CLPLINKAGE 
+COINLIBAPI void COINLINKAGE 
 Clp_deleteRows(Clp_Simplex * model, int number, const int * which)
 {
   model->model_->deleteRows(number,which);
 }
 /* Add rows */
-CLPLIBAPI void CLPLINKAGE 
+COINLIBAPI void COINLINKAGE 
 Clp_addRows(Clp_Simplex * model, int number, const double * rowLower, 
 	       const double * rowUpper,
 	       const int * rowStarts, const int * columns,
@@ -307,13 +290,13 @@ Clp_addRows(Clp_Simplex * model, int number, const double * rowLower,
 }
 
 /* Deletes columns */
-CLPLIBAPI void CLPLINKAGE 
+COINLIBAPI void COINLINKAGE 
 Clp_deleteColumns(Clp_Simplex * model, int number, const int * which)
 {
   model->model_->deleteColumns(number,which);
 }
 /* Add columns */
-CLPLIBAPI void CLPLINKAGE 
+COINLIBAPI void COINLINKAGE 
 Clp_addColumns(Clp_Simplex * model, int number, const double * columnLower, 
 		  const double * columnUpper,
 		  const double * objective,
@@ -324,43 +307,43 @@ Clp_addColumns(Clp_Simplex * model, int number, const double * columnLower,
 			    columnStarts,rows,elements);
 }
 /* Change row lower bounds */
-CLPLIBAPI void CLPLINKAGE 
+COINLIBAPI void COINLINKAGE 
 Clp_chgRowLower(Clp_Simplex * model, const double * rowLower) 
 {
   model->model_->chgRowLower(rowLower);
 }
 /* Change row upper bounds */
-CLPLIBAPI void CLPLINKAGE 
+COINLIBAPI void COINLINKAGE 
 Clp_chgRowUpper(Clp_Simplex * model, const double * rowUpper) 
 {
   model->model_->chgRowUpper(rowUpper);
 }
 /* Change column lower bounds */
-CLPLIBAPI void CLPLINKAGE 
+COINLIBAPI void COINLINKAGE 
 Clp_chgColumnLower(Clp_Simplex * model, const double * columnLower) 
 {
   model->model_->chgColumnLower(columnLower);
 }
 /* Change column upper bounds */
-CLPLIBAPI void CLPLINKAGE 
+COINLIBAPI void COINLINKAGE 
 Clp_chgColumnUpper(Clp_Simplex * model, const double * columnUpper) 
 {
   model->model_->chgColumnUpper(columnUpper);
 }
 /* Change objective coefficients */
-CLPLIBAPI void CLPLINKAGE 
+COINLIBAPI void COINLINKAGE 
 Clp_chgObjCoefficients(Clp_Simplex * model, const double * objIn) 
 {
   model->model_->chgObjCoefficients(objIn);
 }
 /* Drops names - makes lengthnames 0 and names empty */
-CLPLIBAPI void CLPLINKAGE 
+COINLIBAPI void COINLINKAGE 
 Clp_dropNames(Clp_Simplex * model)
 {
   model->model_->dropNames();
 }
 /* Copies in names */
-CLPLIBAPI void CLPLINKAGE 
+COINLIBAPI void COINLINKAGE 
 Clp_copyNames(Clp_Simplex * model, const char * const * rowNamesIn,
 	      const char * const * columnNamesIn)
 {
@@ -383,63 +366,63 @@ Clp_copyNames(Clp_Simplex * model, const char * const * rowNamesIn,
 }
 
 /* Number of rows */
-CLPLIBAPI int CLPLINKAGE 
+COINLIBAPI int COINLINKAGE 
 Clp_numberRows(Clp_Simplex * model)
 {
   return model->model_->numberRows();
 }
 /* Number of columns */
-CLPLIBAPI int CLPLINKAGE 
+COINLIBAPI int COINLINKAGE 
 Clp_numberColumns(Clp_Simplex * model)
 {
   return model->model_->numberColumns();
 }
 /* Primal tolerance to use */
-CLPLIBAPI double CLPLINKAGE 
+COINLIBAPI double COINLINKAGE 
 Clp_primalTolerance(Clp_Simplex * model)
 {
   return model->model_->primalTolerance();
 }
-CLPLIBAPI void CLPLINKAGE 
+COINLIBAPI void COINLINKAGE 
 Clp_setPrimalTolerance(Clp_Simplex * model,  double value) 
 {
   model->model_->setPrimalTolerance(value);
 }
 /* Dual tolerance to use */
-CLPLIBAPI double CLPLINKAGE 
+COINLIBAPI double COINLINKAGE 
 Clp_dualTolerance(Clp_Simplex * model)
 {
   return model->model_->dualTolerance();
 }
-CLPLIBAPI void CLPLINKAGE 
+COINLIBAPI void COINLINKAGE 
 Clp_setDualTolerance(Clp_Simplex * model,  double value) 
 {
   model->model_->setDualTolerance(value);
 }
 /* Dual objective limit */
-CLPLIBAPI double CLPLINKAGE 
+COINLIBAPI double COINLINKAGE 
 Clp_dualObjectiveLimit(Clp_Simplex * model)
 {
   return model->model_->dualObjectiveLimit();
 }
-CLPLIBAPI void CLPLINKAGE 
+COINLIBAPI void COINLINKAGE 
 Clp_setDualObjectiveLimit(Clp_Simplex * model, double value)
 {
   model->model_->setDualObjectiveLimit(value);
 }
 /* Objective offset */
-CLPLIBAPI double CLPLINKAGE 
+COINLIBAPI double COINLINKAGE 
 Clp_objectiveOffset(Clp_Simplex * model)
 {
   return model->model_->objectiveOffset();
 }
-CLPLIBAPI void CLPLINKAGE 
+COINLIBAPI void COINLINKAGE 
 Clp_setObjectiveOffset(Clp_Simplex * model, double value)
 {
   model->model_->setObjectiveOffset(value);
 }
 /* Fills in array with problem name  */
-CLPLIBAPI void CLPLINKAGE 
+COINLIBAPI void COINLINKAGE 
 Clp_problemName(Clp_Simplex * model, int maxNumberCharacters, char * array)
 {
   std::string name = model->model_->problemName();
@@ -447,40 +430,46 @@ Clp_problemName(Clp_Simplex * model, int maxNumberCharacters, char * array)
   strncpy(array,name.c_str(),maxNumberCharacters-1);
   array[maxNumberCharacters-1]='\0';
 }
+/* Sets problem name.  Must have \0 at end.  */
+COINLIBAPI bool COINLINKAGE 
+Clp_setProblemName(Clp_Simplex * model, int maxNumberCharacters, char * array)
+{
+  return model->model_->setStrParam(ClpProbName, array);
+}
 /* Number of iterations */
-CLPLIBAPI int CLPLINKAGE 
+COINLIBAPI int COINLINKAGE 
 Clp_numberIterations(Clp_Simplex * model)
 {
   return model->model_->numberIterations();
 }
-CLPLIBAPI void CLPLINKAGE 
+COINLIBAPI void COINLINKAGE 
 Clp_setNumberIterations(Clp_Simplex * model, int numberIterations)
 {
   model->model_->setNumberIterations(numberIterations);
 }
 /* Maximum number of iterations */
-CLPLIBAPI int maximumIterations(Clp_Simplex * model)
+COINLIBAPI int maximumIterations(Clp_Simplex * model)
 {
   return model->model_->maximumIterations();
 }
-CLPLIBAPI void CLPLINKAGE 
+COINLIBAPI void COINLINKAGE 
 Clp_setMaximumIterations(Clp_Simplex * model, int value)
 {
   model->model_->setMaximumIterations(value);
 }
 /* Maximum time in seconds (from when set called) */
-CLPLIBAPI double CLPLINKAGE 
+COINLIBAPI double COINLINKAGE 
 Clp_maximumSeconds(Clp_Simplex * model)
 {
   return model->model_->maximumSeconds();
 }
-CLPLIBAPI void CLPLINKAGE 
+COINLIBAPI void COINLINKAGE 
 Clp_setMaximumSeconds(Clp_Simplex * model, double value)
 {
   model->model_->setMaximumSeconds(value);
 }
 /* Returns true if hit maximum iteratio`ns (or time) */
-CLPLIBAPI int CLPLINKAGE 
+COINLIBAPI int COINLINKAGE 
 Clp_hitMaximumIterations(Clp_Simplex * model)
 {
   return model->model_->hitMaximumIterations() ? 1 : 0;
@@ -492,13 +481,13 @@ Clp_hitMaximumIterations(Clp_Simplex * model)
    3 - stopped on iterations etc
    4 - stopped due to errors
 */
-CLPLIBAPI int CLPLINKAGE 
+COINLIBAPI int COINLINKAGE 
 Clp_status(Clp_Simplex * model)
 {
   return model->model_->status();
 }
 /* Set problem status */
-CLPLIBAPI void CLPLINKAGE 
+COINLIBAPI void COINLINKAGE 
 Clp_setProblemStatus(Clp_Simplex * model, int problemStatus)
 {
   model->model_->setProblemStatus(problemStatus);
@@ -510,143 +499,171 @@ Clp_setProblemStatus(Clp_Simplex * model, int problemStatus)
    3 - scaled problem optimal - unscaled has dual infeasibilities
    4 - scaled problem optimal - unscaled has both dual and primal infeasibilities
 */
-CLPLIBAPI int CLPLINKAGE 
+COINLIBAPI int COINLINKAGE 
 Clp_secondaryStatus(Clp_Simplex * model)
 {
   return model->model_->secondaryStatus();
 }
-CLPLIBAPI void CLPLINKAGE 
+COINLIBAPI void COINLINKAGE 
 Clp_setSecondaryStatus(Clp_Simplex * model, int status)
 {
   model->model_->setSecondaryStatus(status);
 }
 /* Direction of optimization (1 - minimize, -1 - maximize, 0 - ignore */
-CLPLIBAPI double CLPLINKAGE 
+COINLIBAPI double COINLINKAGE 
 Clp_optimizationDirection(Clp_Simplex * model)
 {
   return model->model_->optimizationDirection();
 }
-CLPLIBAPI void CLPLINKAGE 
+COINLIBAPI void COINLINKAGE 
 Clp_setOptimizationDirection(Clp_Simplex * model, double value)
 {
   model->model_->setOptimizationDirection(value);
 }
 /* Primal row solution */
-CLPLIBAPI double * CLPLINKAGE 
+COINLIBAPI double * COINLINKAGE 
 Clp_primalRowSolution(Clp_Simplex * model)
 {
   return model->model_->primalRowSolution();
 }
 /* Primal column solution */
-CLPLIBAPI double * CLPLINKAGE 
+COINLIBAPI double * COINLINKAGE 
 Clp_primalColumnSolution(Clp_Simplex * model)
 {
   return model->model_->primalColumnSolution();
 }
 /* Dual row solution */
-CLPLIBAPI double * CLPLINKAGE 
+COINLIBAPI double * COINLINKAGE 
 Clp_dualRowSolution(Clp_Simplex * model)
 {
   return model->model_->dualRowSolution();
 }
 /* Reduced costs */
-CLPLIBAPI double * CLPLINKAGE 
+COINLIBAPI double * COINLINKAGE 
 Clp_dualColumnSolution(Clp_Simplex * model)
 {
   return model->model_->dualColumnSolution();
 }
 /* Row lower */
-CLPLIBAPI double* CLPLINKAGE 
+COINLIBAPI double* COINLINKAGE 
 Clp_rowLower(Clp_Simplex * model)
 {
   return model->model_->rowLower();
 }
 /* Row upper  */
-CLPLIBAPI double* CLPLINKAGE 
+COINLIBAPI double* COINLINKAGE 
 Clp_rowUpper(Clp_Simplex * model)
 {
   return model->model_->rowUpper();
 }
 /* Objective */
-CLPLIBAPI double * CLPLINKAGE 
+COINLIBAPI double * COINLINKAGE 
 Clp_objective(Clp_Simplex * model)
 {
   return model->model_->objective();
 }
 /* Column Lower */
-CLPLIBAPI double * CLPLINKAGE 
+COINLIBAPI double * COINLINKAGE 
 Clp_columnLower(Clp_Simplex * model)
 {
   return model->model_->columnLower();
 }
 /* Column Upper */
-CLPLIBAPI double * CLPLINKAGE 
+COINLIBAPI double * COINLINKAGE 
 Clp_columnUpper(Clp_Simplex * model)
 {
   return model->model_->columnUpper();
 }
 /* Number of elements in matrix */
-CLPLIBAPI int CLPLINKAGE 
+COINLIBAPI int COINLINKAGE 
 Clp_getNumElements(Clp_Simplex * model)
 {
   return model->model_->getNumElements();
 }
+// Column starts in matrix 
+COINLIBAPI const CoinBigIndex * COINLINKAGE Clp_getVectorStarts(Clp_Simplex * model)
+{
+  CoinPackedMatrix * matrix;
+  matrix = model->model_->matrix();
+  return (matrix == NULL) ? NULL : matrix->getVectorStarts();
+}
+
+// Row indices in matrix 
+COINLIBAPI const int * COINLINKAGE Clp_getIndices(Clp_Simplex * model)
+{
+  CoinPackedMatrix * matrix = model->model_->matrix();
+  return (matrix == NULL) ? NULL : matrix->getIndices();
+} 
+
+// Column vector lengths in matrix 
+COINLIBAPI const int * COINLINKAGE Clp_getVectorLengths(Clp_Simplex * model)
+{
+  CoinPackedMatrix * matrix = model->model_->matrix();
+  return (matrix == NULL) ? NULL : matrix->getVectorLengths();
+} 
+  
+// Element values in matrix 
+COINLIBAPI const double * COINLINKAGE Clp_getElements(Clp_Simplex * model)
+{
+  CoinPackedMatrix * matrix = model->model_->matrix();
+  return (matrix == NULL) ? NULL : matrix->getElements();
+}
 /* Objective value */
-CLPLIBAPI double CLPLINKAGE 
+COINLIBAPI double COINLINKAGE 
 Clp_objectiveValue(Clp_Simplex * model)
 {
   return model->model_->objectiveValue();
 }
 /* Integer information */
-CLPLIBAPI char * CLPLINKAGE 
+COINLIBAPI char * COINLINKAGE 
 Clp_integerInformation(Clp_Simplex * model)
 {
   return model->model_->integerInformation();
 }
 /* Infeasibility/unbounded ray (NULL returned if none/wrong)
    Up to user to use delete [] on these arrays.  */
-CLPLIBAPI double * CLPLINKAGE 
+COINLIBAPI double * COINLINKAGE 
 Clp_infeasibilityRay(Clp_Simplex * model)
 {
   return model->model_->infeasibilityRay();
 }
-CLPLIBAPI double * CLPLINKAGE 
+COINLIBAPI double * COINLINKAGE 
 Clp_unboundedRay(Clp_Simplex * model)
 {
   return model->model_->unboundedRay();
 }
 /* See if status array exists (partly for OsiClp) */
-CLPLIBAPI int CLPLINKAGE 
+COINLIBAPI int COINLINKAGE 
 Clp_statusExists(Clp_Simplex * model)
 {
   return model->model_->statusExists() ? 1 : 0;
 }
 /* Return address of status array (char[numberRows+numberColumns]) */
-CLPLIBAPI unsigned char *  CLPLINKAGE 
+COINLIBAPI unsigned char *  COINLINKAGE 
 Clp_statusArray(Clp_Simplex * model)
 {
   return model->model_->statusArray();
 }
 /* Copy in status vector */
-CLPLIBAPI void CLPLINKAGE 
+COINLIBAPI void COINLINKAGE 
 Clp_copyinStatus(Clp_Simplex * model, const unsigned char * statusArray)
 {
   model->model_->copyinStatus(statusArray);
 }
 
 /* User pointer for whatever reason */
-CLPLIBAPI void CLPLINKAGE 
+COINLIBAPI void COINLINKAGE 
 Clp_setUserPointer (Clp_Simplex * model, void * pointer)
 {
   model->model_->setUserPointer(pointer);
 }
-CLPLIBAPI void * CLPLINKAGE 
+COINLIBAPI void * COINLINKAGE 
 Clp_getUserPointer (Clp_Simplex * model)
 {
   return model->model_->getUserPointer();
 }
 /* Pass in Callback function */
-CLPLIBAPI void CLPLINKAGE 
+COINLIBAPI void COINLINKAGE 
 Clp_registerCallBack(Clp_Simplex * model, 
 		     clp_callback userCallBack)
 {
@@ -658,7 +675,7 @@ Clp_registerCallBack(Clp_Simplex * model,
   model->model_->passInMessageHandler(model->handler_);
 }
 /* Unset Callback function */
-CLPLIBAPI void CLPLINKAGE 
+COINLIBAPI void COINLINKAGE 
 Clp_clearCallBack(Clp_Simplex * model)
 {
   delete model->handler_;
@@ -672,31 +689,31 @@ Clp_clearCallBack(Clp_Simplex * model)
    4 - verbose
    above that 8,16,32 etc just for selective debug
 */
-CLPLIBAPI void CLPLINKAGE 
+COINLIBAPI void COINLINKAGE 
 Clp_setLogLevel(Clp_Simplex * model, int value)
 {
   model->model_->setLogLevel(value);
 }
-CLPLIBAPI int CLPLINKAGE 
+COINLIBAPI int COINLINKAGE 
 Clp_logLevel(Clp_Simplex * model)
 {
   return model->model_->logLevel();
 }
 /* length of names (0 means no names0 */
-CLPLIBAPI int CLPLINKAGE 
+COINLIBAPI int COINLINKAGE 
 Clp_lengthNames(Clp_Simplex * model)
 {
   return model->model_->lengthNames();
 }
 /* Fill in array (at least lengthNames+1 long) with a row name */
-CLPLIBAPI void CLPLINKAGE 
+COINLIBAPI void COINLINKAGE 
 Clp_rowName(Clp_Simplex * model, int iRow, char * name)
 {
   std::string rowName=model->model_->rowName(iRow);
   strcpy(name,rowName.c_str());
 }
 /* Fill in array (at least lengthNames+1 long) with a column name */
-CLPLIBAPI void CLPLINKAGE 
+COINLIBAPI void COINLINKAGE 
 Clp_columnName(Clp_Simplex * model, int iColumn, char * name)
 {
   std::string columnName= model->model_->columnName(iColumn);
@@ -706,43 +723,43 @@ Clp_columnName(Clp_Simplex * model, int iColumn, char * name)
 /* General solve algorithm which can do presolve.
    See  ClpSolve.hpp for options
 */
-CLPLIBAPI int CLPLINKAGE 
+COINLIBAPI int COINLINKAGE 
 Clp_initialSolve(Clp_Simplex * model)
 {
   return model->model_->initialSolve();
 }
 /* Dual initial solve */
-CLPLIBAPI int CLPLINKAGE 
+COINLIBAPI int COINLINKAGE 
 Clp_initialDualSolve(Clp_Simplex * model)
 {
   return model->model_->initialDualSolve();
 }
 /* Primal initial solve */
-CLPLIBAPI int CLPLINKAGE 
+COINLIBAPI int COINLINKAGE 
 Clp_initialPrimalSolve(Clp_Simplex * model)
 {
   return model->model_->initialPrimalSolve();
 }
 /* Dual algorithm - see ClpSimplexDual.hpp for method */
-CLPLIBAPI int CLPLINKAGE 
+COINLIBAPI int COINLINKAGE 
 Clp_dual(Clp_Simplex * model, int ifValuesPass)
 {
   return model->model_->dual(ifValuesPass);
 }
 /* Primal algorithm - see ClpSimplexPrimal.hpp for method */
-CLPLIBAPI int CLPLINKAGE 
+COINLIBAPI int COINLINKAGE 
 Clp_primal(Clp_Simplex * model, int ifValuesPass)
 {
   return model->model_->primal(ifValuesPass);
 }
 /* Sets or unsets scaling, 0 -off, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic(later) */
-CLPLIBAPI void CLPLINKAGE 
+COINLIBAPI void COINLINKAGE 
 Clp_scaling(Clp_Simplex * model, int mode)
 {
   model->model_->scaling(mode);
 }
 /* Gets scalingFlag */
-CLPLIBAPI int CLPLINKAGE 
+COINLIBAPI int COINLINKAGE 
 Clp_scalingFlag(Clp_Simplex * model)
 {
   return model->model_->scalingFlag();
@@ -761,41 +778,41 @@ Clp_scalingFlag(Clp_Simplex * model)
    1 Simple pivoting e.g. gub
    2 Mini iterations
 */
-CLPLIBAPI int CLPLINKAGE 
+COINLIBAPI int COINLINKAGE 
 Clp_crash(Clp_Simplex * model, double gap,int pivot)
 {
   return model->model_->crash(gap,pivot);
 }
 /* If problem is primal feasible */
-CLPLIBAPI int CLPLINKAGE 
+COINLIBAPI int COINLINKAGE 
 Clp_primalFeasible(Clp_Simplex * model)
 {
   return model->model_->primalFeasible() ? 1 : 0;
 }
 /* If problem is dual feasible */
-CLPLIBAPI int CLPLINKAGE 
+COINLIBAPI int COINLINKAGE 
 Clp_dualFeasible(Clp_Simplex * model)
 {
   return model->model_->dualFeasible() ? 1 : 0;
 }
 /* Dual bound */
-CLPLIBAPI double CLPLINKAGE 
+COINLIBAPI double COINLINKAGE 
 Clp_dualBound(Clp_Simplex * model)
 {
   return model->model_->dualBound();
 }
-CLPLIBAPI void CLPLINKAGE 
+COINLIBAPI void COINLINKAGE 
 Clp_setDualBound(Clp_Simplex * model, double value)
 {
   model->model_->setDualBound(value);
 }
 /* Infeasibility cost */
-CLPLIBAPI double CLPLINKAGE 
+COINLIBAPI double COINLINKAGE 
 Clp_infeasibilityCost(Clp_Simplex * model)
 {
   return model->model_->infeasibilityCost();
 }
-CLPLIBAPI void CLPLINKAGE 
+COINLIBAPI void COINLINKAGE 
 Clp_setInfeasibilityCost(Clp_Simplex * model, double value)
 {
   model->model_->setInfeasibilityCost(value);
@@ -808,48 +825,48 @@ Clp_setInfeasibilityCost(Clp_Simplex * model, double value)
    default is 100
    others are for playing
 */
-CLPLIBAPI int CLPLINKAGE 
+COINLIBAPI int COINLINKAGE 
 Clp_perturbation(Clp_Simplex * model)
 {
   return model->model_->perturbation();
 }
-CLPLIBAPI void CLPLINKAGE 
+COINLIBAPI void COINLINKAGE 
 Clp_setPerturbation(Clp_Simplex * model, int value)
 {
   model->model_->setPerturbation(value);
 }
 /* Current (or last) algorithm */
-CLPLIBAPI int CLPLINKAGE 
+COINLIBAPI int COINLINKAGE 
 Clp_algorithm(Clp_Simplex * model)
 {
   return model->model_->algorithm();
 }
 /* Set algorithm */
-CLPLIBAPI void CLPLINKAGE 
+COINLIBAPI void COINLINKAGE 
 Clp_setAlgorithm(Clp_Simplex * model, int value)
 {
   model->model_->setAlgorithm(value);
 }
 /* Sum of dual infeasibilities */
-CLPLIBAPI double CLPLINKAGE 
+COINLIBAPI double COINLINKAGE 
 Clp_sumDualInfeasibilities(Clp_Simplex * model)
 {
   return model->model_->sumDualInfeasibilities();
 }
 /* Number of dual infeasibilities */
-CLPLIBAPI int CLPLINKAGE 
+COINLIBAPI int COINLINKAGE 
 Clp_numberDualInfeasibilities(Clp_Simplex * model)
 {
   return model->model_->numberDualInfeasibilities();
 }
 /* Sum of primal infeasibilities */
-CLPLIBAPI double CLPLINKAGE 
+COINLIBAPI double COINLINKAGE 
 Clp_sumPrimalInfeasibilities(Clp_Simplex * model)
 {
   return model->model_->sumPrimalInfeasibilities();
 }
 /* Number of primal infeasibilities */
-CLPLIBAPI int CLPLINKAGE 
+COINLIBAPI int COINLINKAGE 
 Clp_numberPrimalInfeasibilities(Clp_Simplex * model)
 {
   return model->model_->numberPrimalInfeasibilities();
@@ -860,14 +877,14 @@ Clp_numberPrimalInfeasibilities(Clp_Simplex * model)
    Does not save scaling values.
    It does not know about all types of virtual functions.
 */
-CLPLIBAPI int CLPLINKAGE 
+COINLIBAPI int COINLINKAGE 
 Clp_saveModel(Clp_Simplex * model, const char * fileName)
 {
   return model->model_->saveModel(fileName);
 }
 /* Restore model from file, returns 0 if success,
    deletes current model */
-CLPLIBAPI int CLPLINKAGE 
+COINLIBAPI int COINLINKAGE 
 Clp_restoreModel(Clp_Simplex * model, const char * fileName)
 {
   return model->model_->restoreModel(fileName);
@@ -875,164 +892,208 @@ Clp_restoreModel(Clp_Simplex * model, const char * fileName)
   
 /* Just check solution (for external use) - sets sum of
    infeasibilities etc */
-CLPLIBAPI void CLPLINKAGE 
+COINLIBAPI void COINLINKAGE 
 Clp_checkSolution(Clp_Simplex * model)
 {
   model->model_->checkSolution();
 }
 /* Number of rows */
-CLPLIBAPI int CLPLINKAGE 
+COINLIBAPI int COINLINKAGE 
 Clp_getNumRows(Clp_Simplex * model)
 {
   return model->model_->getNumRows();
 }
 /* Number of columns */
-CLPLIBAPI int CLPLINKAGE 
+COINLIBAPI int COINLINKAGE 
 Clp_getNumCols(Clp_Simplex * model)
 {
   return model->model_->getNumCols();
 }
 /* Number of iterations */
-CLPLIBAPI int CLPLINKAGE 
+COINLIBAPI int COINLINKAGE 
 Clp_getIterationCount(Clp_Simplex * model)
 {
   return model->model_->getIterationCount();
 }
 /* Are there a numerical difficulties? */
-CLPLIBAPI int CLPLINKAGE 
+COINLIBAPI int COINLINKAGE 
 Clp_isAbandoned(Clp_Simplex * model)
 {
   return model->model_->isAbandoned() ? 1 : 0;
 }
 /* Is optimality proven? */
-CLPLIBAPI int CLPLINKAGE 
+COINLIBAPI int COINLINKAGE 
 Clp_isProvenOptimal(Clp_Simplex * model)
 {
   return model->model_->isProvenOptimal() ? 1 : 0;
 }
 /* Is primal infeasiblity proven? */
-CLPLIBAPI int CLPLINKAGE 
+COINLIBAPI int COINLINKAGE 
 Clp_isProvenPrimalInfeasible(Clp_Simplex * model)
 {
   return model->model_->isProvenPrimalInfeasible() ? 1 : 0;
 }
 /* Is dual infeasiblity proven? */
-CLPLIBAPI int CLPLINKAGE 
+COINLIBAPI int COINLINKAGE 
 Clp_isProvenDualInfeasible(Clp_Simplex * model)
 {
   return model->model_->isProvenDualInfeasible() ? 1 : 0;
 }
 /* Is the given primal objective limit reached? */
-CLPLIBAPI int CLPLINKAGE 
+COINLIBAPI int COINLINKAGE 
 Clp_isPrimalObjectiveLimitReached(Clp_Simplex * model) 
 {
   return model->model_->isPrimalObjectiveLimitReached() ? 1 : 0;
 }
 /* Is the given dual objective limit reached? */
-CLPLIBAPI int CLPLINKAGE 
+COINLIBAPI int COINLINKAGE 
 Clp_isDualObjectiveLimitReached(Clp_Simplex * model) 
 {
   return model->model_->isDualObjectiveLimitReached() ? 1 : 0;
 }
 /* Iteration limit reached? */
-CLPLIBAPI int CLPLINKAGE 
+COINLIBAPI int COINLINKAGE 
 Clp_isIterationLimitReached(Clp_Simplex * model)
 {
   return model->model_->isIterationLimitReached() ? 1 : 0;
 }
 /* Direction of optimization (1 - minimize, -1 - maximize, 0 - ignore */
-CLPLIBAPI double CLPLINKAGE 
+COINLIBAPI double COINLINKAGE 
 Clp_getObjSense(Clp_Simplex * model)
 {
   return model->model_->getObjSense();
 }
 /* Primal row solution */
-CLPLIBAPI const double * CLPLINKAGE 
+COINLIBAPI const double * COINLINKAGE 
 Clp_getRowActivity(Clp_Simplex * model)
 {
   return model->model_->getRowActivity();
 }
 /* Primal column solution */
-CLPLIBAPI const double * CLPLINKAGE 
+COINLIBAPI const double * COINLINKAGE 
 Clp_getColSolution(Clp_Simplex * model)
 {
   return model->model_->getColSolution();
 }
-CLPLIBAPI void CLPLINKAGE 
+COINLIBAPI void COINLINKAGE 
 Clp_setColSolution(Clp_Simplex * model, const double * input)
 {
   model->model_->setColSolution(input);
 }
 /* Dual row solution */
-CLPLIBAPI const double * CLPLINKAGE 
+COINLIBAPI const double * COINLINKAGE 
 Clp_getRowPrice(Clp_Simplex * model)
 {
   return model->model_->getRowPrice();
 }
 /* Reduced costs */
-CLPLIBAPI const double * CLPLINKAGE 
+COINLIBAPI const double * COINLINKAGE 
 Clp_getReducedCost(Clp_Simplex * model)
 {
   return model->model_->getReducedCost();
 }
 /* Row lower */
-CLPLIBAPI const double* CLPLINKAGE 
+COINLIBAPI const double* COINLINKAGE 
 Clp_getRowLower(Clp_Simplex * model)
 {
   return model->model_->getRowLower();
 }
 /* Row upper  */
-CLPLIBAPI const double* CLPLINKAGE 
+COINLIBAPI const double* COINLINKAGE 
 Clp_getRowUpper(Clp_Simplex * model)
 {
   return model->model_->getRowUpper();
 }
 /* Objective */
-CLPLIBAPI const double * CLPLINKAGE 
+COINLIBAPI const double * COINLINKAGE 
 Clp_getObjCoefficients(Clp_Simplex * model)
 {
   return model->model_->getObjCoefficients();
 }
 /* Column Lower */
-CLPLIBAPI const double * CLPLINKAGE 
+COINLIBAPI const double * COINLINKAGE 
 Clp_getColLower(Clp_Simplex * model)
 {
   return model->model_->getColLower();
 }
 /* Column Upper */
-CLPLIBAPI const double * CLPLINKAGE 
+COINLIBAPI const double * COINLINKAGE 
 Clp_getColUpper(Clp_Simplex * model)
 {
   return model->model_->getColUpper();
 }
 /* Objective value */
-CLPLIBAPI double CLPLINKAGE 
+COINLIBAPI double COINLINKAGE 
 Clp_getObjValue(Clp_Simplex * model)
 {
   return model->model_->getObjValue();
 }
 /* Get variable basis info */
-CLPLIBAPI const int CLPLINKAGE
+COINLIBAPI const int COINLINKAGE
 Clp_getColumnStatus(Clp_Simplex * model,int sequence)
 {
   return (int) model->model_->getColumnStatus(sequence);
 }
 /* Get row basis info */
-CLPLIBAPI const int CLPLINKAGE
+COINLIBAPI const int COINLINKAGE
 Clp_getRowStatus(Clp_Simplex * model,int sequence)
 {
   return (int) model->model_->getRowStatus(sequence);
 }
 /* Small element value - elements less than this set to zero,
    default is 1.0e-20 */
-CLPLIBAPI double CLPLINKAGE 
+COINLIBAPI double COINLINKAGE 
 Clp_getSmallElementValue(Clp_Simplex * model)
 {
   return model->model_->getSmallElementValue();
 }
-CLPLIBAPI void CLPLINKAGE 
+COINLIBAPI void COINLINKAGE 
 Clp_setSmallElementValue(Clp_Simplex * model,double value)
 {
   model->model_->setSmallElementValue(value);
+}
+/* Print model */
+COINLIBAPI void COINLINKAGE 
+Clp_printModel(Clp_Simplex * model, const char * prefix)
+{
+  ClpSimplex *clp_simplex = model->model_;
+  int numrows    = clp_simplex->numberRows();
+  int numcols    = clp_simplex->numberColumns();
+  int numelem    = clp_simplex->getNumElements();
+  const CoinBigIndex *start = clp_simplex->matrix()->getVectorStarts();
+  const int *index     = clp_simplex->matrix()->getIndices();
+  const double *value  = clp_simplex->matrix()->getElements();
+  const double *collb  = model->model_->columnLower();
+  const double *colub  = model->model_->columnUpper();
+  const double *obj    = model->model_->objective();
+  const double *rowlb  = model->model_->rowLower();
+  const double *rowub  = model->model_->rowUpper();
+  printf("%s numcols = %i, numrows = %i, numelem = %i\n", 
+    prefix, numcols, numrows, numelem);
+  printf("%s model = %p, start = %p, index = %p, value = %p\n",
+    prefix, model, start, index, value);
+  clp_simplex->matrix()->dumpMatrix(NULL);
+  {
+    int i;
+    for (i=0; i<=numcols; i++) 
+      printf("%s start[%i] = %i\n", prefix, i, start[i]);
+    for (i=0; i< numelem; i++)
+      printf("%s index[%i] = %i, value[%i] = %g\n",
+        prefix, i, index[i], i, value[i]);
+  }
+  
+  printf("%s collb = %p, colub = %p, obj = %p, rowlb = %p, rowub = %p\n",
+    prefix, collb, colub, obj, rowlb, rowub);
+  printf("%s optimization direction = %g\n",prefix, Clp_optimizationDirection(model));
+  printf("  (1 - minimize, -1 - maximize, 0 - ignore)\n");
+  {
+    int i;
+    for (i=0; i<numcols; i++) 
+      printf("%s collb[%i] = %g, colub[%i] = %g, obj[%i] = %g\n",
+        prefix, i, collb[i], i, colub[i], i, obj[i]);
+    for (i=0; i< numrows; i++)
+      printf("%s rowlb[%i] = %g, rowub[%i] = %g\n",
+        prefix, i, rowlb[i], i, rowub[i]);
+  }
 }
 
