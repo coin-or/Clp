@@ -48,6 +48,17 @@ static Clp_message us_english[]=
   {CLP_SIMPLEX_PIVOTROW,105,32,"Pivot row %d"},
   {CLP_DUAL_CHECK,106,4,"Btran alpha %g, ftran alpha %g"},
   {CLP_PRIMAL_DJ,107,4,"Btran dj %g, ftran dj %g"},
+  {CLP_PRESOLVE_COLINFEAS,501,2,"Problem is infeasible due to column %d, %g %g"},
+  {CLP_PRESOLVE_ROWINFEAS,502,2,"Problem is infeasible due to row %d, %g %g"},
+  {CLP_PRESOLVE_COLUMNBOUNDA,503,2,"Problem looks unbounded above due to column %d, %g %g"},
+  {CLP_PRESOLVE_COLUMNBOUNDB,504,2,"Problem looks unbounded below due to column %d, %g %g"},
+  {CLP_PRESOLVE_NONOPTIMAL,505,1,"Problem not optimal, resolve after postsolve"},
+  {CLP_PRESOLVE_STATS,506,1,"Presolve %d (%d) rows, %d (%d) columns and %d (%d) elements"},
+  {CLP_PRESOLVE_INFEAS,507,0,"Presolve determined that the problem was infeasible with tolerance of %g"},
+  {CLP_PRESOLVE_UNBOUND,508,0,"Presolve thinks problem is unbounded"},
+  {CLP_PRESOLVE_INFEASUNBOUND,509,0,"Presolve thinks problem is infeasible AND unbounded???"},
+  {CLP_PRESOLVE_INTEGERMODS,510,1,"Presolve is modifying %d integer bounds and re-presolving"},
+  {CLP_PRESOLVE_POSTSOLVE,511,0,"After Postsolve, objective %g, infeasibilities - dual %g (%d), primal %g (%d)"},
   {CLP_PACKEDSCALE_INITIAL,1001,2,"Initial range of elements is %g to %g"},
   {CLP_PACKEDSCALE_WHILE,1002,3,"Range of elements is %g to %g"},
   {CLP_PACKEDSCALE_FINAL,1003,2,"Final range of elements is %g to %g"},
@@ -59,6 +70,7 @@ static Clp_message us_english[]=
   {CLP_LOOP,6004,0,"Can't get out of loop - stopping"},
   {CLP_IMPORT_RESULT,18,1,"Model was imported from %s in %g seconds"},
   {CLP_IMPORT_ERRORS,3001,1," There were %d errors when importing model from %s"},
+  {CLP_EMPTY_PROBLEM,3002,0,"Not solving empty problem - %d rows, %d columns and %d elements"},
   {CLP_DUMMY_END,999999,0,""}
 };
 static Clp_message uk_english[]=

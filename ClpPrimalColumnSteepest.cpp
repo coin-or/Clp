@@ -953,4 +953,9 @@ ClpPrimalColumnSteepest::clearArrays()
   savedWeights_ = NULL;
   delete [] reference_;
   reference_ = NULL;
+  pivotSequence_=-1;
+  state_ = -1;
+  savedPivotSequence_ = -1;
+  savedSequenceOut_ = -1;  
+  devex_ = 0.0;
 }

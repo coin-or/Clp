@@ -29,6 +29,8 @@
 #include "ClpDualRowDantzig.hpp"
 #include "ClpPrimalColumnSteepest.hpp"
 #include "ClpPrimalColumnDantzig.hpp"
+
+#include "Presolve.hpp"
 // For Branch and bound
 //  #include "OsiClpSolverInterface.hpp"
 //  #include "OsiCuts.hpp"
@@ -65,7 +67,7 @@ static double cpuTime()
 #endif
 
 int mainTest (int argc, const char *argv[],bool doDual,
-	      ClpSimplex empty);
+	      ClpSimplex empty, bool doPresolve);
 enum ClpParameterType {
   GENERALQUERY=-100,
   
@@ -74,7 +76,7 @@ enum ClpParameterType {
   LOGLEVEL=101,MAXFACTOR,PERTURBATION,MAXITERATION,
   
   DIRECTION=201,DUALPIVOT,SCALING,ERRORSALLOWED,KEEPNAMES,SPARSEFACTOR,
-  PRIMALPIVOT,
+  PRIMALPIVOT,PRESOLVE,
   
   DIRECTORY=301,IMPORT,EXPORT,RESTORE,SAVE,DUALSIMPLEX,PRIMALSIMPLEX,BAB,
   MAXIMIZE,MINIMIZE,EXIT,STDIN,UNITTEST,NETLIB_DUAL,NETLIB_PRIMAL,SOLUTION,
@@ -793,6 +795,10 @@ stopping",
 	      "on",SCALING);
     parameters[numberParameters-1].append("off");
     parameters[numberParameters++]=
+      ClpItem("presolve","Whether to presolve problem",
+	      "off",PRESOLVE);
+    parameters[numberParameters-1].append("on");
+    parameters[numberParameters++]=
       ClpItem("spars!eFactor","Whether factorization treated as sparse",
 	      "on",SPARSEFACTOR);
     parameters[numberParameters-1].append("off");
@@ -887,6 +893,7 @@ stopping",
     // default action on import
     int allowImportErrors=0;
     int keepImportNames=1;
+    int preSolve=0;
     
     int iModel=0;
     goodModels[0]=false;
@@ -1049,6 +1056,9 @@ stopping",
 	    case KEEPNAMES:
 	      keepImportNames = 1-action;
 	      break;
+	    case PRESOLVE:
+	      preSolve = action;
+	      break;
 	    default:
 	      abort();
 	    }
@@ -1062,13 +1072,29 @@ stopping",
 	  case PRIMALSIMPLEX:
 	    if (goodModels[iModel]) {
 	      int saveMaxIterations = models[iModel].maximumIterations();
+	      Presolve pinfo;
+	      ClpSimplex * model2 = models+iModel;
+	      if (preSolve) 
+		model2 = pinfo.presolvedModel(models[iModel],1.0e-8);
+
 #ifdef READLINE     
-	      currentModel = models+iModel;
+	      currentModel = model2;
 #endif
 	      if (type==DUALSIMPLEX)
-		models[iModel].dual();
+		model2->dual();
 	      else
-		models[iModel].primal();
+		model2->primal();
+	      if (preSolve) {
+		pinfo.postsolve(true);
+		
+		delete model2;
+		printf("Resolving from postsolved model\n");
+		
+#ifdef READLINE     
+		currentModel = models+iModel;
+#endif
+		models[iModel].primal(1);
+	      }
 	      models[iModel].setMaximumIterations(saveMaxIterations);
 	      time2 = cpuTime();
 	      totalTime += time2-time1;
@@ -1321,7 +1347,8 @@ stopping",
 		std::cerr<<"Doing netlib with dual agorithm"<<std::endl;
 	      else
 		std::cerr<<"Doing netlib with primal agorithm"<<std::endl;
-	      mainTest(nFields,fields,(type==NETLIB_DUAL),models[iModel]);
+	      mainTest(nFields,fields,(type==NETLIB_DUAL),models[iModel],
+		       (preSolve!=0));
 	    }
 	    break;
 	  case UNITTEST:
@@ -1335,7 +1362,7 @@ stopping",
 		fields[2]=directory.c_str();
 		nFields=3;
 	      }
-	      mainTest(nFields,fields,false,models[iModel]);
+	      mainTest(nFields,fields,false,models[iModel],(preSolve!=0));
 	    }
 	    break;
 	  case FAKEBOUND:

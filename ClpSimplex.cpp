@@ -3090,6 +3090,8 @@ ClpSimplex::checkSolution()
 {
   // put in standard form
   createRim(7+8+16);
+  dualTolerance_=dblParam_[ClpDualTolerance];
+  primalTolerance_=dblParam_[ClpPrimalTolerance];
   checkPrimalSolution( rowActivityWork_, columnActivityWork_);
   checkDualSolution();
   // release extra memory

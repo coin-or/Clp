@@ -443,6 +443,7 @@ ClpSimplexDual::whileIterating()
     }
 #endif
     // choose row to go out
+    // dualRow will go to virtual row pivot choice algorithm
     dualRow();
     if (pivotRow_>=0) {
       // we found a pivot row

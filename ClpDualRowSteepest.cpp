@@ -492,5 +492,6 @@ ClpDualRowSteepest::clearArrays()
   alternateWeights_ = NULL;
   delete savedWeights_;
   savedWeights_ = NULL;
+  state_ =-1;
 }
 

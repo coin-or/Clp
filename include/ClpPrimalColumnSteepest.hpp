@@ -4,6 +4,7 @@
 #define ClpPrimalColumnSteepest_H
 
 #include "ClpPrimalColumnPivot.hpp"
+#include <bitset>
 
 //#############################################################################
 

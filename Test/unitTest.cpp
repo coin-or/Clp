@@ -30,6 +30,8 @@
 #include "ClpPrimalColumnDantzig.hpp"
 #include "ClpParameters.hpp"
 
+#include "Presolve.hpp"
+
 //#############################################################################
 
 #ifdef NDEBUG
@@ -54,7 +56,7 @@ void testingMessage( const char * const msg );
 //----------------------------------------------------------------
 
 int mainTest (int argc, const char *argv[],bool doDual,
-	      ClpSimplex empty)
+	      ClpSimplex empty, bool doPresolve)
 {
   int i;
 
@@ -251,36 +253,45 @@ int mainTest (int argc, const char *argv[],bool doDual,
 			   mps.getObjCoefficients(),
 			   mps.getRowLower(),mps.getRowUpper());
 
-      if (doDual) {
-#if 0
-	solution.scaling(1);
-	solution.setDualBound(1.0e6);
-	solution.setDualTolerance(1.0e-7);
-	// set objective sense,
-	if(min[m]) 
-	  solution.setOptimizationDirection(1);
-	else       
-	  solution.setOptimizationDirection(-1);
-	ClpDualRowSteepest steep;
-	solution.setDualRowPivotAlgorithm(steep);
-#endif
-	solution.setDblParam(ClpObjOffset,mps.objectiveOffset());
-	solution.dual();
+      solution.setDblParam(ClpObjOffset,mps.objectiveOffset());
+      if (doPresolve) {
+	Presolve pinfo;
+	ClpSimplex * model2 = pinfo.presolvedModel(solution,1.0e-8);
+	if (doDual)
+	  model2->dual();
+	else
+	  model2->primal();
+	pinfo.postsolve(true);
+	
+	delete model2;
+	printf("Resolving from postsolved model\n");
+	// later try without (1) and check duals before solve
+	solution.primal(1);
+	if (solution.numberIterations())
+	  printf("****** iterated %d\n",solution.numberIterations());
+	solution.checkSolution();
+	printf("%g dual %g(%d) Primal %g(%d)\n",
+	       solution.objectiveValue(),
+	       solution.sumDualInfeasibilities(),
+	       solution.numberDualInfeasibilities(),
+	       solution.sumPrimalInfeasibilities(),
+	       solution.numberPrimalInfeasibilities());
+	{
+	  Presolve pinfoA;
+	  model2 = pinfoA.presolvedModel(solution,1.0e-8);
+
+	  printf("Resolving from presolved optimal solution\n");
+	  model2->primal(1);
+		
+	  delete model2;
+	}
+
       } else {
-#if 0
-	solution.setPrimalTolerance(1.0e-8);
-	solution.scaling(1);
-	ClpPrimalColumnSteepest steep;
-	solution.setPrimalColumnPivotAlgorithm(steep);
-	// set objective sense,
-	if(min[m]) 
-	  solution.setOptimizationDirection(1);
-	else       
-	  solution.setOptimizationDirection(-1);
-	solution.setInfeasibilityCost(1.0e6);
-#endif
-	solution.setDblParam(ClpObjOffset,mps.objectiveOffset());
-	solution.primal();
+	if (doDual) {
+	  solution.dual();
+	} else {
+	  solution.primal();
+	}
       }
       // Test objective solution value
       {
