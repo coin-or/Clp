@@ -34,10 +34,7 @@ LIBSRC += ClpSimplexDual.cpp
 LIBSRC += ClpSimplexPrimal.cpp
 LIBSRC += ClpSimplexPrimalQuadratic.cpp
 LIBSRC += ClpSolve.cpp
-#LIBSRC += ClpInterior.cpp
-#LIBSRC += ClpPdco.cpp
-#LIBSRC += ClpPdcoBase.cpp
-#LIBSRC += ClpLsqr.cpp
+LIBSRC += Clp_C_Interface.cpp
 # and Presolve stuff
 LIBSRC += ClpPresolve.cpp
 
