@@ -507,7 +507,7 @@ ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
 	  if (fabs(value-upperValue)<=oldTolerance*1.0001) {
 	    if  (fabs(value-upperValue)>primalTolerance)
 	      solution[iSequence]=upperValue;
-	    model_->setStatus(iSequence,ClpSimplex::atLowerBound);
+	    model_->setStatus(iSequence,ClpSimplex::atUpperBound);
 	  } else {
 	    model_->setStatus(iSequence,ClpSimplex::superBasic);
 	  }
@@ -563,6 +563,7 @@ ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
     feasibleCost_ += thisFeasibleCost*solution[iSequence];
     //assert (iRange==whichRange_[iSequence]);
   }
+  assert (model_->getStatus(1759)!=ClpSimplex::atLowerBound||lower[1759]>-1.0e30);
 }
 /* Goes through one bound for each variable.
    If array[i]*multiplier>0 goes down, otherwise up.
