@@ -136,6 +136,12 @@ MyMessageHandler::print()
       return 0; // skip printing
     }
   }
+
+  // If one wants access to the message text,
+  // it is available using method messageBuffer().
+  // For example, one could code:
+  // std::cout <<messageBuffer() <<std::endl;
+
   return CoinMessageHandler::print();
 }
 const ClpSimplex *
