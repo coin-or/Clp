@@ -3627,6 +3627,7 @@ ClpSimplexDual::perturb()
    (>1.0e50 infeasible).
    Return code is 0 if nothing interesting, -1 if infeasible both
    ways and +1 if infeasible one way (check values to see which one(s))
+   Returns -2 if bad factorization
 */
 int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
 				    double * newLower, double * newUpper,
@@ -3666,7 +3667,7 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
 #ifndef NDEBUG
     printf("***** ClpDual strong branching factorization error - debug\n");
 #endif
-    return 0;
+    return -2;
   }
   else if (factorizationStatus)
     handler_->message(CLP_SINGULARITIES,messages_)
@@ -4044,7 +4045,7 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
     if (problemStatus_<0) {
       double * givenPi=NULL;
       returnCode = whileIterating(givenPi);
-      if (!alwaysFinish&&(returnCode<1||returnCode==3)) {
+      if ((!alwaysFinish&&(returnCode<1)||returnCode==3)) {
 	double limit = 0.0;
 	getDblParam(ClpDualObjectiveLimit, limit);
 	if(fabs(limit)>1.0e30||objectiveValue()*optimizationDirection_<
