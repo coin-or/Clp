@@ -1427,7 +1427,7 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
       if (fabs(theta_)>1.0e-6||(specialOptions_&4)!=0) {
 	upperOut_ = nonLinearCost_->nearest(sequenceOut_,newValue);
       } else {
-	  upperOut_ = newValue;
+        upperOut_ = newValue;
       }
     } else {
       directionOut_=1;      // to lower bound

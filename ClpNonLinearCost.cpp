@@ -43,13 +43,21 @@ ClpNonLinearCost::ClpNonLinearCost () :
 {
 
 }
+//#define VALIDATE
+#ifdef VALIDATE
+static double * saveLowerV=NULL;
+static double * saveUpperV=NULL;
+#ifdef NDEBUG
+Validate sgould not be set if no debug
+#endif
+#endif
 /* Constructor from simplex.
    This will just set up wasteful arrays for linear, but
    later may do dual analysis and even finding duplicate columns 
 */
 ClpNonLinearCost::ClpNonLinearCost ( ClpSimplex * model,int method)
 {
-  //method=2;
+  method=2;
   model_ = model;
   numberRows_ = model_->numberRows();
   //if (numberRows_==402) {
@@ -191,6 +199,12 @@ ClpNonLinearCost::ClpNonLinearCost ( ClpSimplex * model,int method)
     bound_ = new double[numberTotal];
     cost2_ = new double[numberTotal];
     status_ = new unsigned char[numberTotal];
+#ifdef VALIDATE
+    delete [] saveLowerV;
+    saveLowerV = CoinCopyOfArray(model_->lowerRegion(),numberTotal);
+    delete [] saveUpperV;
+    saveUpperV = CoinCopyOfArray(model_->upperRegion(),numberTotal);
+#endif
     for (iSequence=0;iSequence<numberTotal;iSequence++) {
       bound_[iSequence]=0.0;
       cost2_[iSequence]=cost[iSequence];
@@ -1765,6 +1779,14 @@ ClpNonLinearCost::nearest(int iSequence, double solutionValue)
     const double * lower = model_->lowerRegion();
     double lowerValue=lower[iSequence];
     double upperValue=upper[iSequence];
+    int iWhere = originalStatus(status_[iSequence]);
+    if (iWhere==CLP_BELOW_LOWER) {
+      lowerValue=upperValue;
+      upperValue=bound_[iSequence];
+    } else if (iWhere==CLP_ABOVE_UPPER) {
+      upperValue=lowerValue;
+      lowerValue=bound_[iSequence];
+    }
     if (fabs(solutionValue-lowerValue)<fabs(solutionValue-upperValue))
       nearest = lowerValue;
     else
@@ -1807,14 +1829,11 @@ ClpNonLinearCost::zapCosts()
   if (CLP_METHOD2) {
   }
 }
-#if 0
+#ifdef VALIDATE
 // For debug
 void 
 ClpNonLinearCost::validate()
 {
-  const double * rowScale = model_->rowScale();
-  //const double * columnScale = model_->columnScale();
-  bool scaled = rowScale!=NULL;
   double primalTolerance = model_->currentPrimalTolerance();
   int iSequence;
   const double * solution = model_->solutionRegion();
@@ -1822,66 +1841,43 @@ ClpNonLinearCost::validate()
   const double * lower = model_->lowerRegion();
   const double * cost = model_->costRegion();
   double infeasibilityCost = model_->infeasibilityCost();
-  const double * columnLower = model_->columnLower();
-  const double * columnUpper = model_->columnUpper();
-  const double * rowLower = model_->rowLower();
-  const double * rowUpper = model_->rowUpper();
-  if (!scaled) {
-    int offset=0;
-    for (iSequence=0;iSequence<numberColumns_;iSequence++) {
-      double value=solution[iSequence+offset];
-      int iStatus = status_[iSequence+offset];
-      assert (currentStatus(iStatus)==CLP_SAME);
-      double lowerValue=lower[iSequence+offset];
-      double upperValue=upper[iSequence+offset];
-      double costValue = cost2_[iSequence+offset];
-      int iWhere = originalStatus(iStatus);
-      if (iWhere==CLP_BELOW_LOWER) {
-        lowerValue=upperValue;
-        upperValue=bound_[iSequence+offset];
-        costValue -= infeasibilityCost;
-        assert (value<=lowerValue-primalTolerance);
-      } else if (iWhere==CLP_ABOVE_UPPER) {
-        upperValue=lowerValue;
-        lowerValue=bound_[iSequence+offset];
-        costValue += infeasibilityCost;
-        assert (value>=upperValue+primalTolerance);
-      } else {
-        assert (value>=lowerValue-primalTolerance&&value<=upperValue+primalTolerance);
-      }
-      assert (lowerValue==columnLower[iSequence]);
-      assert (upperValue==columnUpper[iSequence]);
-      assert (costValue==cost[iSequence+offset]);
+  int numberTotal = numberRows_+numberColumns_;
+  int numberInfeasibilities=0;
+  double sumInfeasibilities = 0.0;
+  
+  for (iSequence=0;iSequence<numberTotal;iSequence++) {
+    double value=solution[iSequence];
+    int iStatus = status_[iSequence];
+    assert (currentStatus(iStatus)==CLP_SAME);
+    double lowerValue=lower[iSequence];
+    double upperValue=upper[iSequence];
+    double costValue = cost2_[iSequence];
+    int iWhere = originalStatus(iStatus);
+    if (iWhere==CLP_BELOW_LOWER) {
+      lowerValue=upperValue;
+      upperValue=bound_[iSequence];
+      costValue -= infeasibilityCost;
+      assert (value<=lowerValue-primalTolerance);
+      numberInfeasibilities++;
+      sumInfeasibilities += lowerValue-value-primalTolerance;
+      assert (model_->getStatus(iSequence)==ClpSimplex::basic);
+    } else if (iWhere==CLP_ABOVE_UPPER) {
+      upperValue=lowerValue;
+      lowerValue=bound_[iSequence];
+      costValue += infeasibilityCost;
+      assert (value>=upperValue+primalTolerance);
+      numberInfeasibilities++;
+      sumInfeasibilities += value -upperValue-primalTolerance;
+      assert (model_->getStatus(iSequence)==ClpSimplex::basic);
+    } else {
+      assert (value>=lowerValue-primalTolerance&&value<=upperValue+primalTolerance);
     }
-    offset=numberColumns_;
-    for (iSequence=0;iSequence<numberRows_;iSequence++) {
-      double value=solution[iSequence+offset];
-      int iStatus = status_[iSequence+offset];
-      assert (currentStatus(iStatus)==CLP_SAME);
-      double lowerValue=lower[iSequence+offset];
-      double upperValue=upper[iSequence+offset];
-      double costValue = cost2_[iSequence+offset];
-      int iWhere = originalStatus(iStatus);
-      if (iWhere==CLP_BELOW_LOWER) {
-        lowerValue=upperValue;
-        upperValue=bound_[iSequence+offset];
-        costValue -= infeasibilityCost;
-        assert (value<=lowerValue-0.9*primalTolerance);
-      } else if (iWhere==CLP_ABOVE_UPPER) {
-        upperValue=lowerValue;
-        lowerValue=bound_[iSequence+offset];
-        costValue += infeasibilityCost;
-        assert (value>=upperValue+0.9*primalTolerance);
-      } else {
-        assert (value>=lowerValue-1.1*primalTolerance&&value<=upperValue+1.1*primalTolerance);
-      }
-      assert (lowerValue==rowLower[iSequence]);
-      assert (upperValue==rowUpper[iSequence]);
-      assert (costValue==cost[iSequence+offset]);
-    }
-  } else {
-    // scaled
-    abort();
+    assert (lowerValue==saveLowerV[iSequence]);
+    assert (upperValue==saveUpperV[iSequence]);
+    assert (costValue==cost[iSequence]);
   }
+  if (numberInfeasibilities)
+    printf("JJ %d infeasibilities summing to %g\n",
+           numberInfeasibilities,sumInfeasibilities);
 }
 #endif
