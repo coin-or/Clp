@@ -78,6 +78,16 @@ extern "C"{
 		  const double * objective,
 		  const int * columnStarts, const int * rows,
 		  const double * elements);
+  /** Change row lower bounds */
+  CLPLIBAPI void CLPLINKAGE Clp_chgRowLower(Clp_Simplex * model, const double * rowLower);
+  /** Change row upper bounds */
+  CLPLIBAPI void CLPLINKAGE Clp_chgRowUpper(Clp_Simplex * model, const double * rowUpper); 
+  /** Change column lower bounds */
+  CLPLIBAPI void CLPLINKAGE Clp_chgColumnLower(Clp_Simplex * model, const double * columnLower); 
+  /** Change column upper bounds */
+  CLPLIBAPI void CLPLINKAGE Clp_chgColumnUpper(Clp_Simplex * model, const double * columnUpper); 
+  /** Change objective coefficients */
+  CLPLIBAPI void CLPLINKAGE Clp_chgObjCoefficients(Clp_Simplex * model, const double * objIn); 
   /** Drops names - makes lengthnames 0 and names empty */
   CLPLIBAPI void CLPLINKAGE Clp_dropNames(Clp_Simplex * model);
   /** Copies in names */

@@ -156,6 +156,16 @@ public:
 	       const double * columnUpper,
 		  const double * objective,
 	       const CoinPackedVectorBase * const * columns);
+  /** Change row lower bounds */
+  void chgRowLower(const double * rowLower);
+  /** Change row upper bounds */
+  void chgRowUpper(const double * rowUpper);
+  /** Change column lower bounds */
+  void chgColumnLower(const double * columnLower);
+  /** Change column upper bounds */
+  void chgColumnUpper(const double * columnUpper);
+  /** Change objective coefficients */
+  void chgObjCoefficients(const double * objIn); 
   /** Borrow model.  This is so we don't have to copy large amounts
       of data around.  It assumes a derived class wants to overwrite
       an empty model with a real one - while it does an algorithm */

@@ -323,6 +323,36 @@ Clp_addColumns(Clp_Simplex * model, int number, const double * columnLower,
   model->model_->addColumns(number,columnLower,columnUpper,objective,
 			    columnStarts,rows,elements);
 }
+/* Change row lower bounds */
+CLPLIBAPI void CLPLINKAGE 
+Clp_chgRowLower(Clp_Simplex * model, const double * rowLower) 
+{
+  model->model_->chgRowLower(rowLower);
+}
+/* Change row upper bounds */
+CLPLIBAPI void CLPLINKAGE 
+Clp_chgRowUpper(Clp_Simplex * model, const double * rowUpper) 
+{
+  model->model_->chgRowUpper(rowUpper);
+}
+/* Change column lower bounds */
+CLPLIBAPI void CLPLINKAGE 
+Clp_chgColumnLower(Clp_Simplex * model, const double * columnLower) 
+{
+  model->model_->chgColumnLower(columnLower);
+}
+/* Change column upper bounds */
+CLPLIBAPI void CLPLINKAGE 
+Clp_chgColumnUpper(Clp_Simplex * model, const double * columnUpper) 
+{
+  model->model_->chgColumnUpper(columnUpper);
+}
+/* Change objective coefficients */
+CLPLIBAPI void CLPLINKAGE 
+Clp_chgObjCoefficients(Clp_Simplex * model, const double * objIn) 
+{
+  model->model_->chgObjCoefficients(objIn);
+}
 /* Drops names - makes lengthnames 0 and names empty */
 CLPLIBAPI void CLPLINKAGE 
 Clp_dropNames(Clp_Simplex * model)

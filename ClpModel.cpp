@@ -1105,6 +1105,99 @@ ClpModel::addColumns(int number, const double * columnLower,
   delete [] columnScale_;
   columnScale_ = NULL;
 }
+// chgRowLower
+void 
+ClpModel::chgRowLower(const double * rowLower) 
+{
+  int numberRows = numberRows_;
+  int iRow;
+  if (rowLower) {
+    for (iRow = 0; iRow < numberRows; iRow++) {
+      double value = rowLower[iRow];
+      if (value<-1.0e20)
+		 value = -COIN_DBL_MAX;
+      rowLower_[iRow]= value;
+    }
+  } else {
+    for (iRow = 0; iRow < numberRows; iRow++) {
+      rowLower_[iRow]= -COIN_DBL_MAX;
+    }
+  }
+}
+// chgRowUpper
+void 
+ClpModel::chgRowUpper(const double * rowUpper) 
+{
+  int numberRows = numberRows_;
+  int iRow;
+  if (rowUpper) {
+    for (iRow = 0; iRow < numberRows; iRow++) {
+      double value = rowUpper[iRow];
+      if (value>1.0e20)
+		 value = COIN_DBL_MAX;
+      rowUpper_[iRow]= value;
+    }
+  } else {
+    for (iRow = 0; iRow < numberRows; iRow++) {
+      rowUpper_[iRow]= COIN_DBL_MAX;;
+    }
+  }
+}
+// chgColumnLower
+void 
+ClpModel::chgColumnLower(const double * columnLower) 
+{
+  int numberColumns = numberColumns_;
+  int iColumn;
+  if (columnLower) {
+    for (iColumn = 0; iColumn < numberColumns; iColumn++) {
+      double value = columnLower[iColumn];
+      if (value<-1.0e20)
+		 value = -COIN_DBL_MAX;
+      columnLower_[iColumn]= value;
+    }
+  } else {
+    for (iColumn = 0; iColumn < numberColumns; iColumn++) {
+      columnLower_[iColumn]= 0.0;
+    }
+  }
+}
+// chgColumnUpper
+void 
+ClpModel::chgColumnUpper(const double * columnUpper) 
+{
+  int numberColumns = numberColumns_;
+  int iColumn;
+  if (columnUpper) {
+    for (iColumn = 0; iColumn < numberColumns; iColumn++) {
+      double value = columnUpper[iColumn];
+      if (value>1.0e20)
+		 value = COIN_DBL_MAX;
+      columnUpper_[iColumn]= value;
+    }
+  } else {
+    for (iColumn = 0; iColumn < numberColumns; iColumn++) {
+      columnUpper_[iColumn]= COIN_DBL_MAX;;
+    }
+  }
+}
+// chgObjCoefficients
+void 
+ClpModel::chgObjCoefficients(const double * objIn) 
+{
+  double * obj = objective();
+  int numberColumns = numberColumns_;
+  int iColumn;
+  if (objIn) {
+    for (iColumn = 0; iColumn < numberColumns; iColumn++) {
+      obj[iColumn] = objIn[iColumn];
+    }
+  } else {
+    for (iColumn = 0; iColumn < numberColumns; iColumn++) {
+      obj[iColumn]= 0.0;
+    }
+  }
+}
 // Infeasibility/unbounded ray (NULL returned if none/wrong)
 double * 
 ClpModel::infeasibilityRay() const
