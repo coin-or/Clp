@@ -530,7 +530,7 @@ ClpInterior::createWorkingData()
     cost_[i] = direction*obj[i];
   memset(cost_+numberColumns_,0,numberRows_*sizeof(double));
   // do scaling if needed
-  if (scalingFlag_>0&&!rowScale_&&1) {
+  if (scalingFlag_>0&&!rowScale_&&0) {
     if (matrix_->scale(this))
       scalingFlag_=-scalingFlag_; // not scaled after all
   }
