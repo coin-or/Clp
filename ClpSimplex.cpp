@@ -6794,7 +6794,7 @@ void
 ClpSimplex::getBInvACol(int col, double* vec)
 {
   if (!rowArray_[0]) {
-    printf("ClpSimplexPrimal or ClpSimplexDual must have been called with correct startFinishOption\n");
+    printf("ClpSimplexPrimal or ClpSimplexDual should have been called with correct startFinishOption\n");
     abort();
   }
   CoinIndexedVector * rowArray0 = rowArray(0);

@@ -698,9 +698,14 @@ ClpPackedMatrix::transposeTimesByColumn(const ClpSimplex * model, double scalar,
       }
     }
     // zero out
-    for (i=0;i<numberInRowArray;i++) {
-      int iRow = whichRow[i];
-      pi[iRow]=0.0;
+    int numberRows = model->numberRows();
+    if (numberInRowArray*4<numberRows) {
+      for (i=0;i<numberInRowArray;i++) {
+        int iRow = whichRow[i];
+        pi[iRow]=0.0;
+      }
+    } else {
+      CoinZeroN(pi,numberRows);
     }
   } else {
     if (!rowScale) {
@@ -1396,9 +1401,14 @@ ClpPackedMatrix::transposeTimes2(const ClpSimplex * model,
       }
     }
     // zero out
-    for (i=0;i<numberInRowArray;i++) {
-      int iRow = whichRow[i];
-      pi[iRow]=0.0;
+    int numberRows = model->numberRows();
+    if (numberInRowArray*4<numberRows) {
+      for (i=0;i<numberInRowArray;i++) {
+        int iRow = whichRow[i];
+        pi[iRow]=0.0;
+      }
+    } else {
+      CoinZeroN(pi,numberRows);
     }
   } else {
     if (!rowScale) {

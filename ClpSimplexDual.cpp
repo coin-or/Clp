@@ -116,6 +116,12 @@ static int force_in=-1;
 static int force_out=-1;
 static int force_iteration=0;
 #endif
+//#define VUB
+#ifdef VUB
+extern int * vub;
+extern int * toVub;
+extern int * nextDescendent;
+#endif
 // dual 
 int ClpSimplexDual::dual (int ifValuesPass , int startFinishOptions)
 {
@@ -667,9 +673,11 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
     dualRow(candidate);
     if (pivotRow_>=0) {
       // we found a pivot row
-      handler_->message(CLP_SIMPLEX_PIVOTROW,messages_)
-	<<pivotRow_
-	<<CoinMessageEol;
+      if (handler_->detail(CLP_SIMPLEX_PIVOTROW,messages_)<100) {
+        handler_->message(CLP_SIMPLEX_PIVOTROW,messages_)
+          <<pivotRow_
+          <<CoinMessageEol;
+      }
       // check accuracy of weights
       dualRowPivot_->checkAccuracy();
       // Get good size for pivot
@@ -980,6 +988,48 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
 	}
 	solution_[sequenceOut_]=valueOut_;
 	int whatNext=housekeeping(objectiveChange);
+#ifdef VUB
+        {
+          if ((sequenceIn_<numberColumns_&&vub[sequenceIn_]>=0)||toVub[sequenceIn_]>=0||
+              (sequenceOut_<numberColumns_&&vub[sequenceOut_]>=0)||toVub[sequenceOut_]>=0) {
+            int inSequence = sequenceIn_;
+            int inVub = -1;
+            if (sequenceIn_<numberColumns_)
+              inVub = vub[sequenceIn_];
+            int inBack = toVub[inSequence];
+            int inSlack=-1;
+            if (inSequence>=numberColumns_&&inBack>=0) {
+              inSlack = inSequence-numberColumns_;
+              inSequence = inBack;
+              inBack = toVub[inSequence];
+            }
+            if (inVub>=0)
+              printf("Vub %d in ",inSequence);
+            if (inBack>=0&&inSlack<0)
+              printf("%d (descendent of %d) in ",inSequence,inBack);
+            if (inSlack>=0)
+              printf("slack for row %d -> %d (descendent of %d) in ",inSlack,inSequence,inBack);
+            int outSequence = sequenceOut_;
+            int outVub = -1;
+            if (sequenceOut_<numberColumns_)
+              outVub = vub[sequenceOut_];
+            int outBack = toVub[outSequence];
+            int outSlack=-1;
+            if (outSequence>=numberColumns_&&outBack>=0) {
+              outSlack = outSequence-numberColumns_;
+              outSequence = outBack;
+              outBack = toVub[outSequence];
+            }
+            if (outVub>=0)
+              printf("Vub %d out ",outSequence);
+            if (outBack>=0&&outSlack<0)
+              printf("%d (descendent of %d) out ",outSequence,outBack);
+            if (outSlack>=0)
+              printf("slack for row %d -> %d (descendent of %d) out ",outSlack,outSequence,outBack);
+            printf("\n");
+          }
+        }
+#endif
 #if 0
 	if (numberIterations_>206033)
 	  handler_->setLogLevel(63);
@@ -2814,16 +2864,18 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
     situationChanged=2;
   }
   progressFlag_ = 0; //reset progress flag
-  handler_->message(CLP_SIMPLEX_STATUS,messages_)
-    <<numberIterations_<<objectiveValue();
-  handler_->printing(sumPrimalInfeasibilities_>0.0)
-    <<sumPrimalInfeasibilities_<<numberPrimalInfeasibilities_;
-  handler_->printing(sumDualInfeasibilities_>0.0)
-    <<sumDualInfeasibilities_<<numberDualInfeasibilities_;
-  handler_->printing(numberDualInfeasibilitiesWithoutFree_
-		     <numberDualInfeasibilities_)
-		       <<numberDualInfeasibilitiesWithoutFree_;
-  handler_->message()<<CoinMessageEol;
+  if (handler_->detail(CLP_SIMPLEX_STATUS,messages_)<100) {
+    handler_->message(CLP_SIMPLEX_STATUS,messages_)
+      <<numberIterations_<<objectiveValue();
+    handler_->printing(sumPrimalInfeasibilities_>0.0)
+      <<sumPrimalInfeasibilities_<<numberPrimalInfeasibilities_;
+    handler_->printing(sumDualInfeasibilities_>0.0)
+      <<sumDualInfeasibilities_<<numberDualInfeasibilities_;
+    handler_->printing(numberDualInfeasibilitiesWithoutFree_
+                       <numberDualInfeasibilities_)
+                         <<numberDualInfeasibilitiesWithoutFree_;
+    handler_->message()<<CoinMessageEol;
+  }
   realDualInfeasibilities=sumDualInfeasibilities_;
   double saveTolerance =dualTolerance_;
   /* If we are primal feasible and any dual infeasibilities are on
