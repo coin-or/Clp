@@ -3346,6 +3346,16 @@ ClpSimplex::tightenPrimalBounds(double factor)
 int ClpSimplex::dual (int ifValuesPass )
 {
   assert (ifValuesPass>=0&&ifValuesPass<3);
+  /*  Note use of "down casting".  The only class the user sees is ClpSimplex.
+      Classes ClpSimplexDual, ClpSimplexPrimal, (ClpSimplexPrimalQuadratic) 
+      and ClpSimplexOther all exist and inherit from ClpSimplex but have no
+      additional data and have no destructor or (non-default) constructor.
+
+      This is to stop classes becoming too unwieldy and so I (JJF) can use e.g. "perturb"
+      in primal and dual.
+
+      As far as I can see this is perfectly safe.
+  */
   int returnCode = ((ClpSimplexDual *) this)->dual(ifValuesPass);
   if (problemStatus_==10) {
     //printf("Cleaning up with primal\n");
@@ -3420,6 +3430,16 @@ int ClpSimplex::dual (int ifValuesPass )
 int ClpSimplex::primal (int ifValuesPass )
 {
   assert (ifValuesPass>=0&&ifValuesPass<3);
+  /*  Note use of "down casting".  The only class the user sees is ClpSimplex.
+      Classes ClpSimplexDual, ClpSimplexPrimal, (ClpSimplexPrimalQuadratic) 
+      and ClpSimplexOther all exist and inherit from ClpSimplex but have no
+      additional data and have no destructor or (non-default) constructor.
+
+      This is to stop classes becoming too unwieldy and so I (JJF) can use e.g. "perturb"
+      in primal and dual.
+
+      As far as I can see this is perfectly safe.
+  */
   int returnCode = ((ClpSimplexPrimal *) this)->primal(ifValuesPass);
   if (problemStatus_==10) {
     //printf("Cleaning up with dual\n");

@@ -7,24 +7,38 @@
 
 /** Base class for Clp event handling
     
-This is just here to allow for event handling
+This is just here to allow for event handling.  By event I mean a Clp event
+e.g. end of values pass.
+
+One use would be to let a user handle a system event e.g. Control-C.  This could be done
+by deriving a class MyEventHandler which knows about such events.  If one occurs 
+MyEventHandler::event() could clear event status and return 3 (stopped).
+
+Clp would then return to user code.
+
+As it is called every iteration this should be fine grained enough.
     
 */
 
 class ClpEventHandler  {
   
 public:
-  /** enums for what sort of event
+  /** enums for what sort of event.
+
+      These will also be returned in ClpModel::secondaryStatus() as int
   */
   enum Event {
     endOfIteration = 100, // used to set secondary status
     endOfFactorization,
     endOfValuesPass
   };
-  /**@name Virtual methods that the derived classes must provide */
+  /**@name Virtual method that the derived classe should provide.
+   The base class instance does nothing and as event() is only useful method
+   it would not be very useful NOT providing one!
+  */
   //@{
   /** This can do whatever it likes.  If return code -1 then carries on
-      if >=0 sets status and exits
+      if >=0 sets ClpModel::status() to that value and will return to user
   */
   virtual int event(Event whichEvent);
   //@}
