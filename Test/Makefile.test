@@ -27,7 +27,6 @@ CXXFLAGS += -DUSE_PRESOLVE
 CXXFLAGS += -DCLP_IDIOT
 # Pick up any include files in Test
 CXXFLAGS += -I.
-#CXXFLAGS += -DQUADRATIC
 #ifeq ($(OPTFLAG),-g)
 #    CXXFLAGS += -DCLP_DEBUG -DPRESOLVE_SUMMARY=1 
 #endif

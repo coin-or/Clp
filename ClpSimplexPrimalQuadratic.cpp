@@ -7,9 +7,7 @@
 
 #include "CoinHelperFunctions.hpp"
 #include "ClpSimplexPrimalQuadratic.hpp"
-#ifdef QUADRATIC
 #include "ClpPrimalQuadraticDantzig.hpp"
-#endif
 #include "ClpFactorization.hpp"
 #include "ClpNonLinearCost.hpp"
 #include "CoinPackedMatrix.hpp"

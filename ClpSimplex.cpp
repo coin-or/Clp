@@ -2786,7 +2786,6 @@ int ClpSimplex::primal (int ifValuesPass )
 {
   return ((ClpSimplexPrimal *) this)->primal(ifValuesPass);
 }
-#ifdef QUADRATIC
 #include "ClpSimplexPrimalQuadratic.hpp"
 /* Solves quadratic problem using SLP - may be used as crash
    for other algorithms when number of iterations small
@@ -2802,7 +2801,6 @@ ClpSimplex::quadraticPrimal(int phase)
 {
   return ((ClpSimplexPrimalQuadratic *) this)->primalQuadratic(phase);
 }
-#endif
 /* For strong branching.  On input lower and upper are new bounds
    while on output they are objective function values (>1.0e50 infeasible).
    Return code is 0 if nothing interesting, -1 if infeasible both
