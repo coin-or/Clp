@@ -586,7 +586,7 @@ int ClpSimplexDual::dual ( )
 	  if (handler_->logLevel()&32)
 	    printf("** no column pivot\n");
 #endif
-	  if (!factorization_->pivots()) {
+	  if (factorization_->pivots()<5) {
 	    problemStatus_=-4; //say looks infeasible
 	    // create ray anyway
 	    delete [] ray_;
@@ -615,9 +615,14 @@ int ClpSimplexDual::dual ( )
 	      break;
 	  }
 	  if (iRow<numberRows_) {
-	    std::cerr<<"Flagged variables at end"<<std::endl;
-	    // what do I do now
-	    abort();
+#ifdef CLP_DEBUG
+	    std::cerr<<"Flagged variables at end - infeasible?"<<std::endl;
+#endif
+	    problemStatus_=-4; //say looks infeasible
+	    // create ray anyway
+	    delete [] ray_;
+	    ray_ = new double [ numberRows_];
+	    CoinDisjointCopyN(rowArray_[0]->denseVector(),numberRows_,ray_);
 	  }
 	}
 	break;
@@ -1811,12 +1816,13 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type)
 	  <<dualBound_
 	  <<OsiMessageEol;
 	numberChangedBounds=changeBounds(false,NULL,changeCost);
-	if (numberChangedBounds<=0) {
+	if (numberChangedBounds<=0||dualBound_>1.0e20||
+	    (largestPrimalError_>1.0&&dualBound_>1.0e17)) {
 	  problemStatus_=1; // infeasible
 	} else {
 	  problemStatus_=-1; //iterate
 	  cleanDuals=true;
-	  doOriginalTolerance=1;
+	  doOriginalTolerance=2;
 	  // and delete ray which has been created
 	  delete [] ray_;
 	  ray_ = NULL;

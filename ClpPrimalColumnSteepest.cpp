@@ -890,10 +890,13 @@ ClpPrimalColumnSteepest::initializeWeights()
   if (!mode_) {
     // initialize to 1.0 
     // and set reference framework
-    if (!reference_)
-      reference_ = new unsigned int[(numberRows+numberColumns+31)>>5];
-    assert (sizeof(unsigned int)==4);
-    
+    if (!reference_) {
+      int nWords = (number+31)>>5;
+      reference_ = new unsigned int[nWords];
+      assert (sizeof(unsigned int)==4);
+      // tiny overhead to zero out (stops valgrind complaining)
+      memset(reference_,0,nWords*sizeof(int));
+    }
     
     for (iSequence=0;iSequence<number;iSequence++) {
       weights_[iSequence]=1.0;

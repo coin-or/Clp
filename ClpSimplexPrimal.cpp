@@ -583,6 +583,8 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
 	if (handler_->logLevel()&32)
 	  printf("** no column pivot\n");
 #endif
+	if (nonLinearCost_->numberInfeasibilities())
+	  problemStatus_=-4; // might be infeasible 
 	break;
       }
     }
@@ -644,7 +646,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type)
   }
   int tentativeStatus = problemStatus_;
 
-  if (problemStatus_>-3) {
+  if (problemStatus_>-3||problemStatus_==-4) {
     // factorize
     // later on we will need to recover from singularities
     // also we could skip if first time
@@ -665,7 +667,8 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type)
       assert (internalFactorize(1)==0);
       changeMade_++; // say change made
     }
-    problemStatus_=-3;
+    if (problemStatus_!=-4)
+      problemStatus_=-3;
   }
   // at this stage status is -3 or -5 if looks unbounded
   // get primal and dual solutions
@@ -686,7 +689,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type)
   assert (primalFeasible());
   // we may wish to say it is optimal even if infeasible
   bool alwaysOptimal = (specialOptions_&1)!=0;
-  if (dualFeasible()) {
+  if (dualFeasible()||problemStatus_==-4) {
     if (nonLinearCost_->numberInfeasibilities()&&!alwaysOptimal) {
       //may need infeasiblity cost changed
       // we can see if we can construct a ray
