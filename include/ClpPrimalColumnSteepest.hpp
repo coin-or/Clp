@@ -225,6 +225,8 @@ private:
   int savedPivotSequence_;  
   // This is saved outgoing variable
   int savedSequenceOut_;  
+  // Iteration when last rectified
+  int lastRectified_;
   // Size of factorization at invert (used to decide algorithm)
   int sizeFactorization_;
   //@}

@@ -412,6 +412,7 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
     }
 #endif
   }
+  int numberBaseTrys=0; // for first time
   int numberAway=-1;
   iterationTotal = lastResult.iteration;
   firstInfeas=lastResult.infeas;
@@ -478,7 +479,6 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
       if (lastInfeas!=bestInfeas&&CoinMin(result.infeas,lastInfeas)>0.95*bestInfeas)
 	majorIterations_ = CoinMin(majorIterations_,iteration); // not getting feasible
     }
-    bestInfeas=CoinMin(bestInfeas,result.infeas);
     lastInfeas = result.infeas;
     numberAway=n;
     keepinfeas = result.infeas;
@@ -490,22 +490,31 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
       if (result.infeas>firstInfeas*0.9
 	  &&result.infeas>reasonableInfeas) {
 	iteration--;
-	memcpy(colsol,saveSol,ncols*sizeof(double));
 	if (majorIterations_<50)
 	  mu*=1.0e-1;
 	else
 	  mu*=0.7;
 	bestFeasible=1.0e31;
         bestWeighted=1.0e60;
-        if (mu<1.0e-30) break;
+        numberBaseTrys++;
+        if (mu<1.0e-30||(numberBaseTrys>10&&lightWeight_)) {
+          // back to all slack basis
+          lightWeight_=2;
+          break;
+        }
+	memcpy(colsol,saveSol,ncols*sizeof(double));
       } else {
-	delete [] saveSol;
-	saveSol=0;
+        // Save best solution
+        memcpy(saveSol,colsol,ncols*sizeof(double));
 	maxIts=maxIts2;
 	checkIteration=0;
 	if ((strategy_&1024)!=0) mu *= 1.0e-1;
       }
+    } else if (result.infeas<bestInfeas) {
+      // Save best solution
+      memcpy(saveSol,colsol,ncols*sizeof(double));
     }
+    bestInfeas=CoinMin(bestInfeas,result.infeas);
     if (iteration) {
       /* this code is in to force it to terminate sometime */
       double changeMu=factor;
@@ -630,6 +639,8 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
     }
   }
   majorIterations_ = saveMajorIterations;
+  // put back best solution
+  memcpy(colsol,saveSol,ncols*sizeof(double));
 #ifndef OSI_IDIOT
   if (scaled) {
     // Scale solution and free arrays
@@ -778,6 +789,11 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
 void
 Idiot::crossOver(int mode)
 {
+  if (lightWeight_==2) {
+    // total failure
+    model_->allSlackBasis();
+    return;
+  }
   double fixTolerance=IDIOT_FIX_TOLERANCE;
   double startTime = CoinCpuTime();
   ClpSimplex * saveModel=NULL;

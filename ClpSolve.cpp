@@ -301,6 +301,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
     if(numberElements>10000&&(doIdiot||doSprint)) 
       plusMinus=true;
   }
+  // Statistics (+1,-1, other) - used to decide on strategy if not +-1
+  CoinBigIndex statistics[3]={-1,0,0};
   if (plusMinus) {
     saveMatrix = model2->clpMatrix();
 #ifndef NO_RTTI
@@ -320,6 +322,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	handler_->message(CLP_MATRIX_CHANGE,messages_)
 	  <<"+- 1"
 	  <<CoinMessageEol;
+        CoinMemcpyN(newMatrix->startPositive(),3,statistics);
 	saveMatrix=NULL;
 	plusMinus=false;
 	delete newMatrix;
@@ -532,20 +535,39 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	    largestGap = value2-value1;
 	}
       }
-      if (numberRows>200&&numberColumns>5000&&numberColumns>2*numberRows) {
-	if (plusMinus) {
+      bool increaseSprint=plusMinus;
+      if (!plusMinus) {
+        // If 90% +- 1 then go for sprint
+        if (statistics[0]>=0&&10*statistics[2]<statistics[0]+statistics[1])
+          increaseSprint=true;
+      }
+      bool tryIt= numberRows>200&&numberColumns>2000&&numberColumns>2*numberRows;
+      if (numberRows<1000&&numberColumns<3000)
+        tryIt=false;
+      if (tryIt) {
+	if (increaseSprint) {
+	  info.setStartingWeight(1.0e3);
+	  info.setReduceIterations(6);
+	  // also be more lenient on infeasibilities
+	  info.setDropEnoughFeasibility(0.5*info.getDropEnoughFeasibility());
+	  info.setDropEnoughWeighted(-2.0);
 	  if (largest/smallest>2.0) {
 	    nPasses = 10+numberColumns/100000;
 	    nPasses = CoinMin(nPasses,50);
 	    nPasses = CoinMax(nPasses,15);
-	    if (numberRows>25000&&nPasses>5) {
+	    if (numberRows>20000&&nPasses>5) {
 	      // Might as well go for it
 	      nPasses = CoinMax(nPasses,71);
+	    } else if (numberRows>2000&&nPasses>5) {
+	      nPasses = CoinMax(nPasses,50);
 	    } else if (numberElements<3*numberColumns) {
 	      nPasses=CoinMin(nPasses,10); // probably not worh it
-	    }
-	    if (doIdiot<0)
-	      info.setLightweight(1); // say lightweight idiot
+              if (doIdiot<0)
+                info.setLightweight(1); // say lightweight idiot
+	    } else {
+              if (doIdiot<0)
+                info.setLightweight(1); // say lightweight idiot
+            }
 	  } else if (largest/smallest>1.01||numberElements<=3*numberColumns) {
 	    nPasses = 10+numberColumns/1000;
 	    nPasses = CoinMin(nPasses,100);
@@ -572,7 +594,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	} else {
 	  if (doIdiot<0)
 	    info.setLightweight(1); // say lightweight idiot
-	  if (largest/smallest>1.01||numberNotE) {
+	  if (largest/smallest>1.01||numberNotE||statistics[2]>statistics[0]+statistics[1]) {
 	    if (numberRows>25000||numberColumns>5*numberRows) {
 	      nPasses = 50;
 	    } else if (numberColumns>4*numberRows) {
@@ -590,19 +612,20 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	      nPasses=15;
 	    }
 	  }
-	  if (numberElements<3*numberColumns) { 
-	    nPasses=(int) ((2.0*(double) nPasses)/ratio); // probably not worh it
+	  if (ratio<3.0) { 
+	    nPasses=(int) ((ratio*(double) nPasses)/4.0); // probably not worh it
 	  } else {
 	    nPasses = CoinMax(nPasses,5);
-	    nPasses = (int) (((double) nPasses)*5.0/ratio); // reduce if lots of elements per column
 	  }
 	  if (numberRows>25000&&nPasses>5) {
 	    // Might as well go for it
 	    nPasses = CoinMax(nPasses,71);
-	  } else if (plusMinus) {
+	  } else if (increaseSprint) {
 	    nPasses *= 2;
 	    nPasses=CoinMin(nPasses,71);
-	  }
+	  } else if (nPasses==5&&ratio>5.0) {
+	    nPasses = (int) (((double) nPasses)*(ratio/5.0)); // increase if lots of elements per column
+          }
 	  if (nPasses<=5)
 	    nPasses=0;
 	  //info.setStartingWeight(1.0e-1);
@@ -625,6 +648,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	if (nPasses<70&&(nPasses%10)>0&&(nPasses%10)<4) {
 	  info.setStartingWeight(1.0e3);
 	  info.setLightweight(nPasses%10); // special testing
+          printf("warning - odd lightweight %d\n",nPasses%10);
 	  //info.setReduceIterations(6);
 	}
       }
@@ -656,7 +680,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	delete [] saveUpper;
 #else
 	// Allow for crossover
-	info.setStrategy(512|info.getStrategy());
+        //if (doIdiot>0)
+          info.setStrategy(512|info.getStrategy());
 	// Allow for scaling
 	info.setStrategy(32|info.getStrategy());
 	info.crash(nPasses,model2->messageHandler(),model2->messagesPointer());
