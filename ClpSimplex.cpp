@@ -2147,7 +2147,10 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
     for (iColumn=0;iColumn<2;iColumn++) {
       if (!columnArray_[iColumn]) {
 	columnArray_[iColumn]=new CoinIndexedVector();
-	columnArray_[iColumn]->reserve(numberColumns_);
+	if (!iColumn)
+	  columnArray_[iColumn]->reserve(numberColumns_);
+	else
+	  columnArray_[iColumn]->reserve(max(numberRows_,numberColumns_));
       }
     }    
   }
