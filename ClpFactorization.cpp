@@ -3,6 +3,7 @@
 
 #include "CoinPragma.hpp"
 #include "ClpFactorization.hpp"
+#include "ClpQuadraticObjective.hpp"
 #include "CoinHelperFunctions.hpp"
 #include "CoinIndexedVector.hpp"
 #include "ClpSimplex.hpp"
@@ -72,176 +73,324 @@ ClpFactorization::operator=(const ClpFactorization& rhs)
   return *this;
 }
 int 
-ClpFactorization::factorize ( const ClpSimplex * model,
-			      const ClpMatrixBase * matrix, 
-			      int numberRows, int numberColumns,
-			      int rowIsBasic[], int columnIsBasic[] , 
-			      double areaFactor )
+ClpFactorization::factorize ( ClpSimplex * model,
+			      int solveType, bool valuesPass)
 {
+  const ClpMatrixBase * matrix = model->clpMatrix(); 
+  int numberRows = model->numberRows();
+  int numberColumns = model->numberColumns();
+  // If too many compressions increase area
+  if (numberPivots_>1&&numberCompressions_*10 > numberPivots_+10) {
+    areaFactor_ *= 1.1;
+  }
   if (!networkBasis_||doCheck) {
-    // see if matrix a network
-    ClpNetworkMatrix* networkMatrix =
-      dynamic_cast< ClpNetworkMatrix*>(model->clpMatrix());
-    // If network - still allow ordinary factorization first time for laziness
-    int saveMaximumPivots = maximumPivots();
-    delete networkBasis_;
-    networkBasis_ = NULL;
-    if (networkMatrix&&!doCheck)
-      maximumPivots(1);
-    // maybe for speed will be better to leave as many regions as possible
-    gutsOfDestructor();
-    gutsOfInitialize(2);
-    if (areaFactor)
-      areaFactor_ = areaFactor;
-    int numberBasic = 0;
-    CoinBigIndex numberElements=0;
-    int numberRowBasic=0;
-    
-    // compute how much in basis
-    
-    int i;
-    
-    for (i=0;i<numberRows;i++) {
-      if (rowIsBasic[i]>=0)
-	numberRowBasic++;
-    }
-    
-    numberBasic = numberRowBasic;
-    for (i=0;i<numberColumns;i++) {
-      if (columnIsBasic[i]>=0) {
-	numberBasic++;
-      }
-    }
-    numberElements += matrix->numberInBasis(columnIsBasic);
-    if ( numberBasic > numberRows ) {
-    return -2; // say too many in basis
-    }
-    numberElements = 3 * numberBasic + 3 * numberElements + 10000;
-    getAreas ( numberRows, numberBasic, numberElements,
-	       2 * numberElements );
-    //fill
-    //copy
-    numberBasic=0;
-    numberElements=0;
-    for (i=0;i<numberRows;i++) {
-      if (rowIsBasic[i]>=0) {
-	indexRowU_[numberElements]=i;
-	indexColumnU_[numberElements]=numberBasic;
-	elementU_[numberElements++]=slackValue_;
-	numberBasic++;
-      }
-    }
-    numberElements +=matrix->fillBasis(model, columnIsBasic, numberBasic, 
-				       indexRowU_+numberElements, 
-				       indexColumnU_+numberElements,
-				       elementU_+numberElements);
-    lengthU_ = numberElements;
-    
-    preProcess ( 0 );
-    factor (  );
-    numberBasic=0;
-    if (status_ == 0) {
-      int * permuteBack = permuteBack_;
-      int * back = pivotColumnBack_;
+    status_=-99;
+    int * pivotVariable = model->pivotVariable();
+    //returns 0 -okay, -1 singular, -2 too many in basis, -99 memory */
+    while (status_<-98) {
+      
+      int i;
+      int numberBasic=0;
+      int numberRowBasic;
       for (i=0;i<numberRows;i++) {
-	if (rowIsBasic[i]>=0) {
-	  rowIsBasic[i]=permuteBack[back[numberBasic++]];
-	}
+	if (model->getRowStatus(i) == ClpSimplex::basic) 
+	  pivotVariable[numberBasic++]=i;
       }
+      numberRowBasic=numberBasic;
       for (i=0;i<numberColumns;i++) {
-	if (columnIsBasic[i]>=0) {
-	  columnIsBasic[i]=permuteBack[back[numberBasic++]];
-	}
+	if (model->getColumnStatus(i) == ClpSimplex::basic) 
+	  pivotVariable[numberBasic++]=i;
       }
-      if (increasingRows_>1) {
-	// Set up permutation vector
-	if (increasingRows_<3) {
-	  // these arrays start off as copies of permute
-	  // (and we could use permute_ instead of pivotColumn (not back though))
-	  ClpDisjointCopyN ( permute_, numberRows_ , pivotColumn_  );
-	  ClpDisjointCopyN ( permuteBack_, numberRows_ , pivotColumnBack_  );
-	}
-      } else {
-	// Set up permutation vector
-	// (we could use permute_ instead of pivotColumn (not back though))
-	for (i=0;i<numberRows_;i++) {
-	  int k=pivotColumn_[i];
-	  pivotColumn_[i]=pivotColumnBack_[i];
-	  pivotColumnBack_[i]=k;
-	}
-      }
-    } else if (status_ == -1) {
-      // mark as basic or non basic
-      for (i=0;i<numberRows_;i++) {
-	if (rowIsBasic[i]>=0) {
-	  if (pivotColumn_[numberBasic]>=0) 
-	    rowIsBasic[i]=pivotColumn_[numberBasic];
-	  else
-	    rowIsBasic[i]=-1;
-	  numberBasic++;
-	}
-      }
-      for (i=0;i<numberColumns;i++) {
-	if (columnIsBasic[i]>=0) {
-	  if (pivotColumn_[numberBasic]>=0) 
-	    columnIsBasic[i]=pivotColumn_[numberBasic];
-	  else
-	    columnIsBasic[i]=-1;
-	  numberBasic++;
-	}
-      }
-    }
-    if (networkMatrix) {
-      maximumPivots(saveMaximumPivots);
-      if (!status_) {
-	// create network factorization
-	if (doCheck)
-	  delete networkBasis_; // temp
-        networkBasis_ = new ClpNetworkBasis(model,numberRows_,
-					    pivotRegion_,
-					    permuteBack_,
-					    startColumnU_,
-					    numberInColumn_,
-					    indexRowU_,
-					    elementU_);
-	// kill off arrays in ordinary factorization
-	if (!doCheck)
-	  gutsOfDestructor();
-      }
-    }
-    if (!status_&&!networkBasis_) {
-      // See if worth going sparse and when
-      if (numberFtranCounts_>100) {
-	ftranAverageAfterL_ = max(ftranCountAfterL_/ftranCountInput_,1.0);
-	ftranAverageAfterR_ = max(ftranCountAfterR_/ftranCountAfterL_,1.0);
-	ftranAverageAfterU_ = max(ftranCountAfterU_/ftranCountAfterR_,1.0);
-        if (btranCountInput_) {
-	  btranAverageAfterU_ = max(btranCountAfterU_/btranCountInput_,1.0);
-	  btranAverageAfterR_ = max(btranCountAfterR_/btranCountAfterU_,1.0);
-	  btranAverageAfterL_ = max(btranCountAfterL_/btranCountAfterR_,1.0);
-	} else {
-	  // odd - we have not done any btrans
-	  btranAverageAfterU_ = 1.0;
-	  btranAverageAfterR_ = 1.0;
-	  btranAverageAfterL_ = 1.0;
-	}
-      }
-      // scale back
+      assert (numberBasic<=numberRows);
+      // see if matrix a network
+      ClpNetworkMatrix* networkMatrix =
+	dynamic_cast< ClpNetworkMatrix*>(model->clpMatrix());
+      // If network - still allow ordinary factorization first time for laziness
+      int saveMaximumPivots = maximumPivots();
+      delete networkBasis_;
+      networkBasis_ = NULL;
+      if (networkMatrix&&!doCheck)
+	maximumPivots(1);
+      while (status_==-99) {
+	// maybe for speed will be better to leave as many regions as possible
+	gutsOfDestructor();
+	gutsOfInitialize(2);
+	CoinBigIndex numberElements=numberRowBasic;
 
-      ftranCountInput_ *= 0.8;
-      ftranCountAfterL_ *= 0.8;
-      ftranCountAfterR_ *= 0.8;
-      ftranCountAfterU_ *= 0.8;
-      btranCountInput_ *= 0.8;
-      btranCountAfterU_ *= 0.8;
-      btranCountAfterR_ *= 0.8;
-      btranCountAfterL_ *= 0.8;
+	// compute how much in basis
+
+	int i;
+
+	numberElements +=matrix->fillBasis(model,
+					   pivotVariable+numberRowBasic, 
+					   numberRowBasic,
+					   numberBasic-numberRowBasic,
+					   NULL,NULL,NULL);
+
+	numberElements = 3 * numberBasic + 3 * numberElements + 10000;
+	getAreas ( numberRows, numberBasic, numberElements,
+		   2 * numberElements );
+	//fill
+	//copy
+	numberElements=numberRowBasic;
+	for (i=0;i<numberRowBasic;i++) {
+	  int iRow = pivotVariable[i];
+	  indexRowU_[i]=iRow;
+	  indexColumnU_[i]=i;
+	  elementU_[i]=slackValue_;
+	}
+	numberElements +=matrix->fillBasis(model, 
+					   pivotVariable+numberRowBasic, 
+					   numberRowBasic, 
+					   numberBasic-numberRowBasic,
+					   indexRowU_+numberElements, 
+					   indexColumnU_+numberElements,
+					   elementU_+numberElements);
+	lengthU_ = numberElements;
+
+	preProcess ( 0 );
+	factor (  );
+	if (status_==-99) {
+	  // get more memory
+	  areaFactor(2.0*areaFactor());
+	}
+      }
+      // If we get here status is 0 or -1
+      if (status_ == 0) {
+	int * permuteBack = permuteBack_;
+	int * back = pivotColumnBack_;
+	int * pivotTemp = pivotColumn_;
+	ClpDisjointCopyN ( pivotVariable, numberRows_ , pivotTemp  );
+	// Redo pivot order
+	for (i=0;i<numberRowBasic;i++) {
+	  int k = pivotTemp[i];
+	  // so rowIsBasic[k] would be permuteBack[back[i]]
+	  pivotVariable[permuteBack[back[i]]]=k+numberColumns;
+	}
+	for (;i<numberRows;i++) {
+	  int k = pivotTemp[i];
+	  // so rowIsBasic[k] would be permuteBack[back[i]]
+	  pivotVariable[permuteBack[back[i]]]=k;
+	}
+	// Set up permutation vector
+	// these arrays start off as copies of permute
+	// (and we could use permute_ instead of pivotColumn (not back though))
+	ClpDisjointCopyN ( permute_, numberRows_ , pivotColumn_  );
+	ClpDisjointCopyN ( permuteBack_, numberRows_ , pivotColumnBack_  );
+	if (networkMatrix) {
+	  maximumPivots(saveMaximumPivots);
+	  // create network factorization
+	  if (doCheck)
+	    delete networkBasis_; // temp
+	  networkBasis_ = new ClpNetworkBasis(model,numberRows_,
+					      pivotRegion_,
+					      permuteBack_,
+					      startColumnU_,
+					      numberInColumn_,
+					      indexRowU_,
+					      elementU_);
+	  // kill off arrays in ordinary factorization
+	  if (!doCheck) {
+	    gutsOfDestructor();
+#if 0
+	    // but put back permute arrays so odd things will work
+	    int numberRows = model->numberRows();
+	    pivotColumnBack_ = new int [numberRows];
+	    permute_ = new int [numberRows];
+	    int i;
+	    for (i=0;i<numberRows;i++) {
+	      pivotColumnBack_[i]=i;
+	      permute_[i]=i;
+	    }
+#endif
+	  }
+	} else {
+	  // See if worth going sparse and when
+	  if (numberFtranCounts_>100) {
+	    ftranAverageAfterL_ = max(ftranCountAfterL_/ftranCountInput_,1.0);
+	    ftranAverageAfterR_ = max(ftranCountAfterR_/ftranCountAfterL_,1.0);
+	    ftranAverageAfterU_ = max(ftranCountAfterU_/ftranCountAfterR_,1.0);
+	    assert (ftranCountInput_&&ftranCountAfterL_&&ftranCountAfterR_);
+	    if (btranCountInput_&&btranCountAfterU_&&btranCountAfterR_) {
+	      btranAverageAfterU_ = max(btranCountAfterU_/btranCountInput_,1.0);
+	      btranAverageAfterR_ = max(btranCountAfterR_/btranCountAfterU_,1.0);
+	      btranAverageAfterL_ = max(btranCountAfterL_/btranCountAfterR_,1.0);
+	    } else {
+	      // we have not done any useful btrans (values pass?)
+	      btranAverageAfterU_ = 1.0;
+	      btranAverageAfterR_ = 1.0;
+	      btranAverageAfterL_ = 1.0;
+	    }
+	  }
+	  // scale back
+	  
+	  ftranCountInput_ *= 0.8;
+	  ftranCountAfterL_ *= 0.8;
+	  ftranCountAfterR_ *= 0.8;
+	  ftranCountAfterU_ *= 0.8;
+	  btranCountInput_ *= 0.8;
+	  btranCountAfterU_ *= 0.8;
+	  btranCountAfterR_ *= 0.8;
+	  btranCountAfterL_ *= 0.8;
+	}
+      } else if (status_ == -1&&(solveType==0||solveType==2)) {
+	// This needs redoing as it was merged coding - does not need array
+	int numberTotal = numberRows+numberColumns;
+	int * isBasic = new int [numberTotal];
+	int * rowIsBasic = isBasic+numberColumns;
+	int * columnIsBasic = isBasic;
+	for (i=0;i<numberTotal;i++) 
+	  isBasic[i]=-1;
+	for (i=0;i<numberRowBasic;i++) {
+	  int iRow = pivotVariable[i];
+	  rowIsBasic[iRow]=1;
+	}
+	for (;i<numberBasic;i++) {
+	  int iColumn = pivotVariable[i];
+	  columnIsBasic[iColumn]=1;
+	}
+	numberBasic=0;
+	for (i=0;i<numberRows;i++) 
+	  pivotVariable[i]=-1;
+	// mark as basic or non basic
+	for (i=0;i<numberRows;i++) {
+	  if (rowIsBasic[i]>=0) {
+	    if (pivotColumn_[numberBasic]>=0) 
+	      rowIsBasic[i]=pivotColumn_[numberBasic];
+	    else
+	      rowIsBasic[i]=-1;
+	    numberBasic++;
+	  }
+	}
+	for (i=0;i<numberColumns;i++) {
+	  if (columnIsBasic[i]>=0) {
+	    if (pivotColumn_[numberBasic]>=0) 
+	      columnIsBasic[i]=pivotColumn_[numberBasic];
+	    else
+	      columnIsBasic[i]=-1;
+	    numberBasic++;
+	  }
+	}
+	// leave pivotVariable in useful form for cleaning basis
+	int * pivotVariable = model->pivotVariable();
+	for (i=0;i<numberRows;i++) {
+	  pivotVariable[i]=-1;
+	}
+	for (i=0;i<numberRows;i++) {
+	  if (model->getRowStatus(i) == ClpSimplex::basic) {
+	    int iPivot = rowIsBasic[i];
+	    if (iPivot>=0) 
+	      pivotVariable[iPivot]=i+numberColumns;
+	  }
+	}
+	for (i=0;i<numberColumns;i++) {
+	  if (model->getColumnStatus(i) == ClpSimplex::basic) {
+	    int iPivot = columnIsBasic[i];
+	    if (iPivot>=0) 
+	      pivotVariable[iPivot]=i;
+	  }
+	}
+	delete [] isBasic;
+	double * columnLower = model->lowerRegion();
+	double * columnUpper = model->upperRegion();
+	double * columnActivity = model->solutionRegion();
+	double * rowLower = model->lowerRegion(0);
+	double * rowUpper = model->upperRegion(0);
+	double * rowActivity = model->solutionRegion(0);
+	//redo basis - first take ALL columns out
+	int iColumn;
+	double largeValue = model->largeValue();
+	for (iColumn=0;iColumn<numberColumns;iColumn++) {
+	  if (model->getColumnStatus(iColumn)==ClpSimplex::basic) {
+	    // take out
+	    if (!valuesPass) {
+	      double lower=columnLower[iColumn];
+	      double upper=columnUpper[iColumn];
+	      double value=columnActivity[iColumn];
+	      if (lower>-largeValue||upper<largeValue) {
+		if (fabs(value-lower)<fabs(value-upper)) {
+		  model->setColumnStatus(iColumn,ClpSimplex::atLowerBound);
+		  columnActivity[iColumn]=lower;
+		} else {
+		  model->setColumnStatus(iColumn,ClpSimplex::atUpperBound);
+		  columnActivity[iColumn]=upper;
+		}
+	      } else {
+		model->setColumnStatus(iColumn,ClpSimplex::isFree);
+	      }
+	    } else {
+	      model->setColumnStatus(iColumn,ClpSimplex::superBasic);
+	    }
+	  }
+	}
+	int iRow;
+	for (iRow=0;iRow<numberRows;iRow++) {
+	  int iSequence=pivotVariable[iRow];
+	  if (iSequence>=0) {
+	    // basic
+	    if (iSequence>=numberColumns) {
+	      // slack in - leave
+	      //assert (iSequence-numberColumns==iRow);
+	    } else {
+	      // put back structural
+	      model->setColumnStatus(iSequence,ClpSimplex::basic);
+	    }
+	  } else {
+	    // put in slack
+	    model->setRowStatus(iRow,ClpSimplex::basic);
+	  }
+	}
+	// signal repeat
+	status_=-99;
+	// set fixed if they are
+	for (iRow=0;iRow<numberRows;iRow++) {
+	  if (model->getRowStatus(iRow)!=ClpSimplex::basic ) {
+	    if (rowLower[iRow]==rowUpper[iRow]) {
+	      rowActivity[iRow]=rowLower[iRow];
+	      model->setRowStatus(iRow,ClpSimplex::isFixed);
+	    }
+	  }
+	}
+	for (iColumn=0;iColumn<numberColumns;iColumn++) {
+	  if (model->getColumnStatus(iColumn)!=ClpSimplex::basic ) {
+	    if (columnLower[iColumn]==columnUpper[iColumn]) {
+	      columnActivity[iColumn]=columnLower[iColumn];
+	      model->setColumnStatus(iColumn,ClpSimplex::isFixed);
+	    }
+	  }
+	}
+      } 
     }
   } else {
     // network - fake factorization - do nothing
     status_=0;
   }
 
+  if (!status_) {
+    // take out part if quadratic
+    if (model->algorithm()==2) {
+      ClpObjective * obj = model->objectiveAsObject();
+      ClpQuadraticObjective * quadraticObj = (dynamic_cast< ClpQuadraticObjective*>(obj));
+      assert (quadraticObj);
+      CoinPackedMatrix * quadratic = quadraticObj->quadraticObjective();
+      int numberXColumns = quadratic->getNumCols();
+      assert (numberXColumns<numberColumns);
+      int base = numberColumns-numberXColumns;
+      int * which = new int [numberXColumns];
+      int * pivotVariable = model->pivotVariable();
+      int * permute = pivotColumn();
+      int i;
+      int n=0;
+      for (i=0;i<numberRows;i++) {
+	int iSj = pivotVariable[i]-base;
+	if (iSj>=0&&iSj<numberXColumns) 
+	  which[n++]=permute[i];
+      }
+      if (n)
+	emptyRows(n,which);
+      delete [] which;
+    }
+  }
   return status_;
 }
 /* Replaces one Column to basis,
@@ -284,24 +433,23 @@ ClpFactorization::replaceColumn ( CoinIndexedVector * regionSparse,
    number returned is negative if no room
    region1 starts as zero and is zero at end */
 int 
-ClpFactorization::updateColumn ( CoinIndexedVector * regionSparse,
-				 CoinIndexedVector * regionSparse2,
-				 bool FTUpdate) 
+ClpFactorization::updateColumnFT ( CoinIndexedVector * regionSparse,
+				   CoinIndexedVector * regionSparse2)
 {
 #ifdef CLP_DEBUG
   regionSparse->checkClear();
 #endif
   if (!networkBasis_) {
     collectStatistics_ = true;
-    return CoinFactorization::updateColumn(regionSparse,
-					   regionSparse2,
-					   FTUpdate);
+    int returnValue= CoinFactorization::updateColumnFT(regionSparse,
+						       regionSparse2);
     collectStatistics_ = false;
+    return returnValue;
   } else {
 #ifdef CHECK_NETWORK
     CoinIndexedVector * save = new CoinIndexedVector(*regionSparse2);
-    int returnCode = CoinFactorization::updateColumn(regionSparse,
-						     regionSparse2, FTUpdate);
+    int returnCode = CoinFactorization::updateColumnFT(regionSparse,
+						       regionSparse2);
     networkBasis_->updateColumn(regionSparse,save);
     int i;
     double * array = regionSparse2->denseVector();
@@ -314,68 +462,50 @@ ClpFactorization::updateColumn ( CoinIndexedVector * regionSparse,
     delete save;
     return returnCode;
 #else
-    return networkBasis_->updateColumn(regionSparse,regionSparse2);
+    networkBasis_->updateColumn(regionSparse,regionSparse2,-1);
+    return 1;
 #endif
   }
 }
-/* Updates one column (FTRAN) to/from array 
+/* Updates one column (FTRAN) from region2
    number returned is negative if no room
-   ** For large problems you should ALWAYS know where the nonzeros
-   are, so please try and migrate to previous method after you
-   have got code working using this simple method - thank you!
-   (the only exception is if you know input is dense e.g. rhs)
-   region starts as zero and is zero at end */
+   region1 starts as zero and is zero at end */
 int 
 ClpFactorization::updateColumn ( CoinIndexedVector * regionSparse,
-			double array[] ) const
+				 CoinIndexedVector * regionSparse2,
+				 bool noPermute) const
 {
-  if (!networkBasis_) {
-    return CoinFactorization::updateColumn(regionSparse,
-					   array);
-  } else {
-#ifdef CHECK_NETWORK
-    double * save = new double [numberRows_+1];
-    memcpy(save,array,(numberRows_+1)*sizeof(double));
-    int returnCode = CoinFactorization::updateColumn(regionSparse,
-						     array);
-    networkBasis_->updateColumn(regionSparse, save);
-    int i;
-    for (i=0;i<numberRows_;i++)
-      assert (fabs(save[i]-array[i])<1.0e-8*(1.0+fabs(array[i])));
-    delete [] save;
-    return returnCode;
-#else
-    return networkBasis_->updateColumn(regionSparse, array);
+#ifdef CLP_DEBUG
+  if (!noPermute)
+    regionSparse->checkClear();
 #endif
-  }
-}
-/* Updates one column transpose (BTRAN)
-   For large problems you should ALWAYS know where the nonzeros
-   are, so please try and migrate to previous method after you
-   have got code working using this simple method - thank you!
-   (the only exception is if you know input is dense e.g. dense objective)
-   returns number of nonzeros */
-int 
-ClpFactorization::updateColumnTranspose ( CoinIndexedVector * regionSparse,
-					  double array[] ) const
-{
   if (!networkBasis_) {
-    return CoinFactorization::updateColumnTranspose(regionSparse,
-						    array);
+    collectStatistics_ = true;
+    int returnValue= CoinFactorization::updateColumn(regionSparse,
+						     regionSparse2,
+						     noPermute);
+    collectStatistics_ = false;
+    return returnValue;
   } else {
 #ifdef CHECK_NETWORK
-    double * save = new double [numberRows_+1];
-    memcpy(save,array,(numberRows_+1)*sizeof(double));
-    int returnCode = CoinFactorization::updateColumnTranspose(regionSparse,
-							      array);
-    networkBasis_->updateColumnTranspose(regionSparse, save);
+    CoinIndexedVector * save = new CoinIndexedVector(*regionSparse2);
+    int returnCode = CoinFactorization::updateColumn(regionSparse,
+						     regionSparse2,
+						     noPermute);
+    networkBasis_->updateColumn(regionSparse,save);
     int i;
-    for (i=0;i<numberRows_;i++)
-      assert (fabs(save[i]-array[i])<1.0e-8*(1.0+fabs(array[i])));
-    delete [] save;
+    double * array = regionSparse2->denseVector();
+    double * array2 = save->denseVector();
+    for (i=0;i<numberRows_;i++) {
+      double value1 = array[i];
+      double value2 = array2[i];
+      assert (value1==value2);
+    }
+    delete save;
     return returnCode;
 #else
-    return networkBasis_->updateColumnTranspose(regionSparse, array);
+    networkBasis_->updateColumn(regionSparse,regionSparse2,-1);
+    return 1;
 #endif
   }
 }

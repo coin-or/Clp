@@ -40,10 +40,8 @@ public:
   /** Constructor from simplex.
       This will just set up wasteful arrays for linear, but
       later may do dual analysis and even finding duplicate columns .
-      If for quadratic then free variables get extra 0,0 bits
-      (flagged by numberOriginalColumns)
   */
-  ClpNonLinearCost(ClpSimplex * model,int numberOriginalColumns=-1);
+  ClpNonLinearCost(ClpSimplex * model);
   /** Constructor from simplex and list of non-linearities (columns only)
       First lower of each column has to match real lower
       Last lower has to be <= upper (if == then cost ignored)
@@ -64,8 +62,9 @@ public:
   //@{
   /** Changes infeasible costs and computes number and cost of infeas
       Puts all non-basic (non free) variables to bounds
-      and all free variables to zero if toNearest true*/
-  void checkInfeasibilities(bool toNearest=false);
+      and all free variables to zero if oldTolerance is non-zero
+      - but does not move those <= oldTolerance away*/
+  void checkInfeasibilities(double oldTolerance=0.0);
   /** Changes infeasible costs for each variable
       The indices are row indices and need converting to sequences
   */
@@ -100,6 +99,10 @@ public:
       Returns change in cost
    May need to be inline for speed */
   double setOne(int sequence, double solutionValue);
+  /** Sets bounds and cost for outgoing variable 
+      may change value
+      Returns direction */
+  int setOneOutgoing(int sequence, double &solutionValue);
   /// Returns nearest bound
   double nearest(int sequence, double solutionValue);
   /** Returns change in cost - one down if alpha >0.0, up if <0.0
@@ -138,8 +141,6 @@ public:
   /// Returns current cost
   inline double cost(int sequence) const
   { return cost_[whichRange_[sequence]+offset_[sequence]];};
-  /// Sets inside bounds (i.e. non infinite - used in QP
-  void setBounds(int sequence, double lower, double upper);
   //@}
 
 

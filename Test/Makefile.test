@@ -27,7 +27,6 @@ CXXFLAGS += -DUSE_PRESOLVE
 CXXFLAGS += -DCLP_IDIOT
 # Pick up any include files in Test
 CXXFLAGS += -I.
-#CXXFLAGS += -DQUADRATIC
 #ifeq ($(OPTFLAG),-g)
 #    CXXFLAGS += -DCLP_DEBUG -DPRESOLVE_SUMMARY=1 
 #endif
@@ -63,7 +62,13 @@ ifeq ($(findstring Linux,${UNAME}),Linux)
 	LDFLAGS += -lhistory -lreadline -ltermcap
 endif
 #LDFLAGS += -lefence
-
+#LDFLAGS += -static
+CXXFLAGS += -pg
+#if DENSE and using ATLAS
+#LDFLAGS += -L/home/forrest/ATLAS/lib/Linux_P4SSE2 -llapack -lcblas -latlas -lf77blas -lg2c
+#if DENSE and using given libraries
+LDFLAGS += -llapack -lblas -lg2c
+#LDFLAGS += -Wl,-M
 ###############################################################################
 
 TESTOBJ := $(addprefix $(TARGETDIR)/, $(TESTSRC:.cpp=.o))

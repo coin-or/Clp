@@ -73,6 +73,9 @@ public:
   {way=0;return -2;};
   /// Gets rid of all arrays (may be empty)
   virtual void clearArrays();
+  /// Returns true if would not find any column
+  virtual bool looksOptimal() const
+  { return false;};
   //@}
   
   
@@ -104,6 +107,13 @@ public:
   /// Returns type (above 63 is extra information)
   inline int type()
   { return type_;};
+
+  /** Returns number of extra columns for sprint algorithm - 0 means off.
+      Also number of iterations before recompute
+  */
+  virtual int numberSprintColumns(int & numberIterations) const;
+  /// Switch off sprint idea
+  virtual void switchOffSprint();
   
   //@}
 

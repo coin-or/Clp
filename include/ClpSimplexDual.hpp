@@ -119,9 +119,13 @@ public:
       (>1.0e50 infeasible).
       Return code is 0 if nothing interesting, -1 if infeasible both
       ways and +1 if infeasible one way (check values to see which one(s))
+      Solutions are filled in as well - even down, odd up - also
+      status and number of iterations
   */
   int strongBranching(int numberVariables,const int * variables,
 		      double * newLower, double * newUpper,
+		      double ** outputSolution,
+		      int * outputStatus, int * outputIterations,
 		      bool stopOnFirstInfeasible=true,
 		      bool alwaysFinish=false);
   //@}
@@ -153,7 +157,8 @@ public:
 		  CoinIndexedVector * columnArray,
 		  CoinIndexedVector * outputArray,
 		  double theta,
-		  double & objectiveChange);
+		  double & objectiveChange,
+			bool fullRecompute);
   /** The duals are updated by the given arrays.
       This is in values pass - so no changes to primal is made
   */
@@ -182,7 +187,8 @@ public:
 		  CoinIndexedVector * columnArray,
 		  CoinIndexedVector * spareArray,
 		  CoinIndexedVector * spareArray2,
-		  double accpetablePivot);
+		  double accpetablePivot,
+		  CoinBigIndex * dubiousWeights);
   /** 
       Row array has row part of pivot row
       Column array has column part.
@@ -192,7 +198,8 @@ public:
   */
   int checkPossibleValuesMove(CoinIndexedVector * rowArray,
 			       CoinIndexedVector * columnArray,
-			       double acceptablePivot);
+			      double acceptablePivot,
+			      CoinBigIndex * dubiousWeights);
   /** 
       This sees if we can move duals in dual values pass.
       This is done before any pivoting
@@ -237,7 +244,7 @@ public:
 	    - 2 restoring from saved 
   */
   void statusOfProblemInDual(int & lastCleaned, int type,
-			     ClpSimplexProgress & progress,
+			     ClpSimplexProgress * progress,
 			     double * givenDjs);
   /// Perturbs problem (method depends on perturbation())
   void perturb();
@@ -257,6 +264,8 @@ public:
       Return codes as before but -1 means no acceptable pivot
   */
   int pivotResult();
+  /** Get next free , -1 if none */
+  int nextSuperBasic();
   
   //@}
 };

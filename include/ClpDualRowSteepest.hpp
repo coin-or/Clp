@@ -25,8 +25,8 @@ public:
   /// Returns pivot row, -1 if none
   virtual int pivotRow();
   
-  /// Updates weights (may be empty)
-  virtual void updateWeights(CoinIndexedVector * input,
+  /// Updates weights and returns pivot alpha
+  virtual double updateWeights(CoinIndexedVector * input,
 			     CoinIndexedVector * spare,
 			     CoinIndexedVector * updatedColumn);
   
@@ -53,15 +53,21 @@ public:
   virtual void unrollWeights();
   /// Gets rid of all arrays
   virtual void clearArrays();
+  /// Returns true if would not find any row
+  virtual bool looksOptimal() const;
   //@}
   
   
   ///@name Constructors and destructors
   //@{
   /** Default Constructor 
-      0 is unintialized, 1 full
+      0 is uninitialized, 1 full, 2 is partial uninitialized,
+      3 starts as 2 but may switch to 1.
+      By partial is meant that the weights are updated as normal
+      but only part of the infeasible basic variables are scanned.  
+      This can be faster on very easy problems.
   */
-  ClpDualRowSteepest(int mode=0); 
+  ClpDualRowSteepest(int mode=3); 
   
   /// Copy constructor 
   ClpDualRowSteepest(const ClpDualRowSteepest &);
@@ -93,7 +99,8 @@ private:
       1) Weights are stored by sequence number
   */
   int state_;
-  /// If 0 then we are using uninitialized weights, 1 then full
+  /** If 0 then we are using uninitialized weights, 1 then full,
+      if 2 then uninitialized partial, 3 switchable */
   int mode_;
   /// weight array 
   double * weights_;
@@ -103,6 +110,8 @@ private:
   CoinIndexedVector * alternateWeights_;
   /// save weight array (so we can use checkpoint)
   CoinIndexedVector * savedWeights_;
+  /// Dubious weights
+  int * dubiousWeights_;
   //@}
 };
 

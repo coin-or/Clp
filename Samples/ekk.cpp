@@ -52,7 +52,8 @@ int main (int argc, const char *argv[])
   const char * name;
   // problem is actually scaled for osl, dynamically for clp (slows clp)
   // default is primal, no presolve, minimise and use clp
-  bool    primal=true,presolve=false, useosl=0;
+  bool    primal=true,presolve=false;
+  int useosl=0;
   bool freeFormat=false;
 
   EKKModel * model;

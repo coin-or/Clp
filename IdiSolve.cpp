@@ -266,8 +266,8 @@ Idiot::IdiSolve(
         if (solExtra[extraBlock]>difference) solExtra[extraBlock]=difference;
 	costExtra[extraBlock]=lambda[i]*value;
 	upperExtra[extraBlock]=difference;
-	rowExtra[extraBlock++]=i;
 	rowsol[i]+=value*solExtra[extraBlock];
+	rowExtra[extraBlock++]=i;
       }
     }
   }
@@ -828,7 +828,7 @@ Idiot::IdiSolve(
 	}
 	obj[DROP-1]=best;
 	if (test-best<drop&&(strategy&8)==0) {
-	  if ((logLevel_&2)!=0) {
+	  if ((logLevel_&8)!=0) {
 	  printf("Exiting as drop in %d its is %g after %d iterations\n",
 		 DROP*checkFrequency_,test-best,iter);
 	  }
@@ -1028,7 +1028,7 @@ Idiot::IdiSolve(
       }
       maxDj = maxDj/(double) DJTEST;
       if (maxDj<djExit&&iter>50) {
-	printf("Exiting on low dj %g after %d iterations\n",maxDj,iter);
+	//printf("Exiting on low dj %g after %d iterations\n",maxDj,iter);
 	break;
       }
       if (nChange<100) {
@@ -1101,10 +1101,5 @@ Idiot::IdiSolve(
   result.iteration=iter;
   result.objval-=saveOffset;
   result.weighted=result.objval+weight*result.sumSquared;
-  if ((logLevel_&1)!=0) {
-    printf("%d Final infeas %g, obj %g - wtObj %g\n",
-	       iter,result.infeas,result.objval,
-	   result.weighted);
-  }
   return result;
 }

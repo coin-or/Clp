@@ -118,6 +118,12 @@ public:
   /// Do not change infeasibility cost and always say optimal
   void alwaysOptimal(bool onOff);
   bool alwaysOptimal() const;
+  /** Normally outgoing variables can go out to slightly negative
+      values (but within tolerance) - this is to help stability and
+      and degeneracy.  This can be switched off
+  */
+  void exactOutgoing(bool onOff);
+  bool exactOutgoing() const;
   //@}
 
   /**@name Functions used in primal */
@@ -131,8 +137,10 @@ public:
       -4 Looks optimal/infeasible
       -5 Looks unbounded
       +3 max iterations 
+      
+      valuesOption has original value of valuesPass
    */
-  int whileIterating(); 
+  int whileIterating(int valuesOption); 
 
   /** Do last half of an iteration.  This is split out so people can
       force incoming variable.  If solveType_ is 2 then this may
@@ -201,15 +209,24 @@ public:
        type - 0 initial so set up save arrays etc
             - 1 normal -if good update save
 	    - 2 restoring from saved 
+       saveModel is normally NULL but may not be if doing Sprint
   */
   void statusOfProblemInPrimal(int & lastCleaned, int type,
-			     ClpSimplexProgress & progress);
+			     ClpSimplexProgress * progress,
+			       bool doFactorization,
+			       ClpSimplex * saveModel=NULL);
   /// Perturbs problem (method depends on perturbation())
-  void perturb();
-  /// Take off effect of perturbation
-  void unPerturb();
+  void perturb(int type);
+  /// Take off effect of perturbation and say whether to try dual
+  bool unPerturb();
   /// Unflag all variables and return number unflagged
   int unflag();
+  /** Get next superbasic -1 if none,
+      Normal type is 1
+      If type is 3 then initializes sorted list
+      if 2 uses list.
+  */
+  int nextSuperBasic(int superBasicType,CoinIndexedVector * columnArray);
 
   /// Create primal ray
   void primalRay(CoinIndexedVector * rowArray);

@@ -46,3 +46,14 @@ ClpObjective::operator=(const ClpObjective& rhs)
   }
   return *this;
 }
+/* Subset clone.  Duplicates are allowed
+   and order is as given.
+*/
+ClpObjective * 
+ClpObjective::subsetClone (int numberColumns, 
+			   const int * whichColumns) const
+{
+  std::cerr<<"subsetClone not supported - ClpObjective"<<std::endl;
+  abort();
+}
+

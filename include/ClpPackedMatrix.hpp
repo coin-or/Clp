@@ -57,6 +57,12 @@ public:
     /** Delete the rows whose indices are listed in <code>indDel</code>. */
     virtual void deleteRows(const int numDel, const int * indDel)
   { matrix_->deleteRows(numDel,indDel);};
+  /// Append Columns
+  virtual void appendCols(int number, const CoinPackedVectorBase * const * columns)
+  { matrix_->appendCols(number,columns);};
+  /// Append Rows
+  virtual void appendRows(int number, const CoinPackedVectorBase * const * rows)
+  { matrix_->appendRows(number,rows);};
   /** Replace the elements of a vector.  The indices remain the same.
       This is only needed if scaling and a row copy is used.
       At most the number specified will be replaced.
@@ -74,6 +80,14 @@ public:
 				const int * columnIsBasic, int & numberBasic,
 				int * row, int * column,
 				double * element) const ;
+  /** If element NULL returns number of elements in column part of basis,
+      If not NULL fills in as well */
+  virtual CoinBigIndex fillBasis(const ClpSimplex * model,
+				 const int * whichColumn, 
+				 int numberRowBasic,
+				 int numberColumnBasic,
+				 int * row, int * column,
+				 double * element) const ;
   /** Creates scales for column copy (rowCopy in model may be modified)
       returns non-zero if no scaling done */
   virtual int scale(ClpSimplex * model) const ;
@@ -82,20 +96,36 @@ public:
       probably expect no zeros.  Code can modify matrix to get rid of
       small elements.
   */
-  virtual bool allElementsInRange(ClpSimplex * model,
+  virtual bool allElementsInRange(ClpModel * model,
 				  double smallest, double largest);
+  /** Returns largest and smallest elements of both signs.
+      Largest refers to largest absolute value.
+  */
+  virtual void rangeOfElements(double & smallestNegative, double & largestNegative,
+		       double & smallestPositive, double & largestPositive);
 
   /** Unpacks a column into an CoinIndexedvector
-      Note that model is NOT const.  Bounds and objective could
-      be modified if doing column generation */
+   */
   virtual void unpack(const ClpSimplex * model,CoinIndexedVector * rowArray,
 		   int column) const ;
+  /** Unpacks a column into an CoinIndexedvector
+   ** in packed foramt
+      Note that model is NOT const.  Bounds and objective could
+      be modified if doing column generation (just for this variable) */
+  virtual void unpackPacked(ClpSimplex * model,
+			    CoinIndexedVector * rowArray,
+			    int column) const;
   /** Adds multiple of a column into an CoinIndexedvector
       You can use quickAdd to add to vector */
   virtual void add(const ClpSimplex * model,CoinIndexedVector * rowArray,
 		   int column, double multiplier) const ;
    /// Allow any parts of a created CoinPackedMatrix to be deleted
    virtual void releasePackedMatrix() const { };
+  /** Given positive integer weights for each row fills in sum of weights
+      for each column (and slack).
+      Returns weights vector
+  */
+  virtual CoinBigIndex * dubiousWeights(const ClpSimplex * model,int * inputWeights) const;
    //@}
 
   /**@name Matrix times vector methods */
@@ -122,6 +152,7 @@ public:
 				const double * columnScale) const;
     /** Return <code>x * scalar * A + y</code> in <code>z</code>. 
 	Can use y as temporary array (will be empty at end)
+	Note - If x packed mode - then z packed mode
 	Squashes small elements and knows about ClpSimplex */
   virtual void transposeTimes(const ClpSimplex * model, double scalar,
 			      const CoinIndexedVector * x,
@@ -129,6 +160,7 @@ public:
 			      CoinIndexedVector * z) const;
     /** Return <code>x * scalar * A + y</code> in <code>z</code>. 
 	Can use y as temporary array (will be empty at end)
+	Note - If x packed mode - then z packed mode
 	Squashes small elements and knows about ClpSimplex.
     This version uses row copy*/
   virtual void transposeTimesByRow(const ClpSimplex * model, double scalar,
@@ -137,6 +169,7 @@ public:
 			      CoinIndexedVector * z) const;
     /** Return <code>x *A</code> in <code>z</code> but
 	just for indices in y.
+	Note - If x packed mode - then z packed mode
 	Squashes small elements and knows about ClpSimplex */
   virtual void subsetTransposeTimes(const ClpSimplex * model,
 				    const CoinIndexedVector * x,
@@ -165,6 +198,14 @@ public:
    ClpPackedMatrix(const ClpPackedMatrix&);
    /** The copy constructor from an CoinPackedMatrix. */
    ClpPackedMatrix(const CoinPackedMatrix&);
+  /** Subset constructor (without gaps).  Duplicates are allowed
+      and order is as given */
+  ClpPackedMatrix (const ClpPackedMatrix & wholeModel,
+		    int numberRows, const int * whichRows,
+		    int numberColumns, const int * whichColumns);
+  ClpPackedMatrix (const CoinPackedMatrix & wholeModel,
+		    int numberRows, const int * whichRows,
+		    int numberColumns, const int * whichColumns);
 
   /** This takes over ownership (for space reasons) */
    ClpPackedMatrix(CoinPackedMatrix * matrix);
@@ -172,6 +213,11 @@ public:
    ClpPackedMatrix& operator=(const ClpPackedMatrix&);
   /// Clone
   virtual ClpMatrixBase * clone() const ;
+  /** Subset clone (without gaps).  Duplicates are allowed
+      and order is as given */
+  virtual ClpMatrixBase * subsetClone (
+		    int numberRows, const int * whichRows,
+		    int numberColumns, const int * whichColumns) const ;
    //@}
    
     

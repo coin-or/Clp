@@ -13,32 +13,34 @@
 #include "CoinPackedMatrix.hpp"
 #include "ClpSimplex.hpp"
 
-#include "Presolve.hpp"
-#include "PresolveMatrix.hpp"
+#include "ClpPresolve.hpp"
+#include "CoinPresolveMatrix.hpp"
 
-#include "PresolveEmpty.hpp"
-#include "PresolveFixed.hpp"
-#include "PresolvePsdebug.hpp"
-#include "PresolveSingleton.hpp"
-#include "PresolveDoubleton.hpp"
-#include "PresolveZeros.hpp"
-#include "PresolveSubst.hpp"
-#include "PresolveForcing.hpp"
-#include "PresolveDual.hpp"
-#include "PresolveTighten.hpp"
-#include "PresolveUseless.hpp"
-#include "PresolveDupcol.hpp"
-#include "PresolveImpliedFree.hpp"
-#include "PresolveIsolated.hpp"
-#include "ClpMessage.hpp"
+#include "CoinPresolveEmpty.hpp"
+#include "CoinPresolveFixed.hpp"
+#include "CoinPresolvePsdebug.hpp"
+#include "CoinPresolveSingleton.hpp"
+#include "CoinPresolveDoubleton.hpp"
+#include "CoinPresolveTripleton.hpp"
+#include "CoinPresolveZeros.hpp"
+#include "CoinPresolveSubst.hpp"
+#include "CoinPresolveForcing.hpp"
+#include "CoinPresolveDual.hpp"
+#include "CoinPresolveTighten.hpp"
+#include "CoinPresolveUseless.hpp"
+#include "CoinPresolveDupcol.hpp"
+#include "CoinPresolveImpliedFree.hpp"
+#include "CoinPresolveIsolated.hpp"
+#include "CoinMessage.hpp"
 
 
 
-Presolve::Presolve() :
+ClpPresolve::ClpPresolve() :
   originalModel_(NULL),
   presolvedModel_(NULL),
   nonLinearValue_(0.0),
   originalColumn_(NULL),
+  originalRow_(NULL),
   paction_(0),
   ncols_(0),
   nrows_(0),
@@ -47,137 +49,32 @@ Presolve::Presolve() :
 {
 }
 
-Presolve::~Presolve()
+ClpPresolve::~ClpPresolve()
 {
   gutsOfDestroy();
 }
 // Gets rid of presolve actions (e.g.when infeasible)
 void 
-Presolve::gutsOfDestroy()
+ClpPresolve::gutsOfDestroy()
 {
- const PresolveAction *paction = paction_;
+ const CoinPresolveAction *paction = paction_;
   while (paction) {
-    const PresolveAction *next = paction->next;
+    const CoinPresolveAction *next = paction->next;
     delete paction;
     paction = next;
   }
   delete [] originalColumn_;
+  delete [] originalRow_;
   paction_=NULL;
   originalColumn_=NULL;
+  originalRow_=NULL;
 }
 
-#if 0
-void Presolve::presolve(ClpSimplex& si)
-{
-  ncols_ = si.getNumCols();
-  nrows_ = si.getNumRows();
-  nelems_ = si.getNumElements();
-
-  double maxmin = si.getObjSense();
-
-  delete presolvedModel_;
-  presolvedModel_ = NULL;
-  originalModel_ = NULL;
-
-  PresolveMatrix prob(ncols_,
-			 maxmin,
-			 si,
-			 nrows_, nelems_,false);
-  prob.originalModel_ = originalModel_;
-
-  paction_ = presolve(&prob);
-
-  prob.update_model(si, nrows_, ncols_, nelems_);
-  int ncolsNow = si.getNumCols();
-  originalColumn_ = new int[ncolsNow];
-  memcpy(originalColumn_,prob.originalColumn_,ncolsNow*sizeof(int));
-}
-  
-
-// This is the toplevel postsolving routine.
-void Presolve::postsolve(ClpSimplex& si,
-			    unsigned char *colstat,
-			    unsigned char *rowstat)
-{
-  if (!si.isProvenOptimal()) {
-    throw CoinError("solution not optimal",
-		    "postsolve",
-		    "Presolve");
-  }
-
-  // this is the size of the original problem
-  const int ncols0  = ncols_;
-  const int nrows0  = nrows_;
-  const CoinBigIndex nelems0 = nelems_;
-
-  double *acts = new double[nrows0];
-  double *sol  = new double[ncols0];
-
-  {
-    // put this in a block to make sure it gets deleted early
-    PostsolveMatrix prob(si,
-			    ncols0,
-			    nrows0,
-			    nelems0,
-			    si.getObjSense(),
-			    // end prepost
-
-			    sol, acts,
-			 colstat, rowstat);
-    prob.originalModel_ = originalModel_;
-
-    postsolve(prob);
-
-    // Postsolve does not use a standard matrix format, since row
-    // and col numbers change rapidly.
-    // The col rep is just a linked list.
-    int *hrow = new int[nelems0];
-    int *mcstrt = new int[ncols0+1];
-    double *colels = new double[nelems0];
-
-    {
-      const int *link = prob.link_;
-      CoinBigIndex start = 0;
-      
-      for (int j=0; j<ncols0; j++) {
-	CoinBigIndex k = prob.mcstrt_[j];
-	int n = prob.hincol_[j];
-
-	mcstrt[j] = start;
-	for (int i=0; i<n; i++) {
-	  hrow[start] = prob.hrow_[k];
-	  colels[start] = prob.colels_[k];
-	  k = link[k];
-	  start++;
-	}
-      }
-      mcstrt[ncols0] = start;
-    }
-    
-    si.loadProblem(ncols0, nrows0,
-		   mcstrt, hrow, colels,
-		   
-		   prob.clo_, prob.cup_,
-		   prob.cost_,
-		   prob.rlo_, prob.rup_);
-
-    delete[]hrow;
-    delete[]mcstrt;
-    delete[]colels;
-  }
-
-
-  si.setColSolution(sol);
-  delete[]acts;
-
-  delete[]sol;
-}
-#endif
 /* This version of presolve returns a pointer to a new presolved 
    model.  NULL if infeasible
 */
 ClpSimplex * 
-Presolve::presolvedModel(ClpSimplex & si,
+ClpPresolve::presolvedModel(ClpSimplex & si,
 			 double feasibilityTolerance,
 			 bool keepIntegers,
 			 int numberPasses,
@@ -192,6 +89,8 @@ Presolve::presolvedModel(ClpSimplex & si,
   originalModel_ = &si;
   delete [] originalColumn_;
   originalColumn_ = new int[ncols_];
+  delete [] originalRow_;
+  originalRow_ = new int[nrows_];
 
   // Check matrix
   if (!si.clpMatrix()->allElementsInRange(&si,si.getSmallElementValue(),
@@ -203,23 +102,23 @@ Presolve::presolvedModel(ClpSimplex & si,
   
   // User may have deleted - its their responsibility
   presolvedModel_=NULL;
-
+  // Messages
+  CoinMessages messages = CoinMessage(si.messages().language());
   while (result==-1) {
 
     // make new copy
     delete presolvedModel_;
     presolvedModel_ = new ClpSimplex(si);
-    if (dropNames)
-      presolvedModel_->dropNames();
+    presolvedModel_->dropNames();
 
     // drop integer information if wanted
     if (!keepIntegers)
       presolvedModel_->deleteIntegerInformation();
 
     
-    PresolveMatrix prob(ncols_,
+    CoinPresolveMatrix prob(ncols_,
 			maxmin,
-			*presolvedModel_,
+			presolvedModel_,
 			nrows_, nelems_,true,nonLinearValue_);
     // make sure row solution correct
     {
@@ -248,7 +147,7 @@ Presolve::presolvedModel(ClpSimplex & si,
       }
     }
     prob.handler_ = presolvedModel_->messageHandler();
-    prob.messages_ = presolvedModel_->messages();
+    prob.messages_ = CoinMessage(presolvedModel_->messages().language());
 
     // move across feasibility tolerance
     prob.feasibilityTolerance_ = feasibilityTolerance;
@@ -295,7 +194,7 @@ Presolve::presolvedModel(ClpSimplex & si,
     if (prob.status_==0&&paction_) {
       // feasible
     
-      prob.update_model(*presolvedModel_, nrows_, ncols_, nelems_);
+      prob.update_model(presolvedModel_, nrows_, ncols_, nelems_);
       // copy status and solution
       memcpy(presolvedModel_->primalColumnSolution(),
 	     prob.sol_,prob.ncols_*sizeof(double));
@@ -314,6 +213,31 @@ Presolve::presolvedModel(ClpSimplex & si,
       
       int ncolsNow = presolvedModel_->getNumCols();
       memcpy(originalColumn_,prob.originalColumn_,ncolsNow*sizeof(int));
+      delete [] prob.originalColumn_;
+      prob.originalColumn_=NULL;
+      int nrowsNow = presolvedModel_->getNumRows();
+      memcpy(originalRow_,prob.originalRow_,nrowsNow*sizeof(int));
+      delete [] prob.originalRow_;
+      prob.originalRow_=NULL;
+      if (!dropNames&&si.lengthNames()) {
+	// Redo names
+	int iRow;
+	std::vector<std::string> rowNames;
+	rowNames.reserve(nrowsNow);
+	for (iRow=0;iRow<nrowsNow;iRow++) {
+	  int kRow = originalRow_[iRow];
+	  rowNames.push_back(si.rowName(kRow));
+	}
+      
+	int iColumn;
+	std::vector<std::string> columnNames;
+	columnNames.reserve(ncolsNow);
+	for (iColumn=0;iColumn<ncolsNow;iColumn++) {
+	  int kColumn = originalColumn_[iColumn];
+	  columnNames.push_back(si.columnName(kColumn));
+	}
+	presolvedModel_->copyNames(rowNames,columnNames);
+      }
       // now clean up integer variables.  This can modify original
       int i;
       const char * information = presolvedModel_->integerInformation();
@@ -335,8 +259,8 @@ Presolve::presolvedModel(ClpSimplex & si,
 	  upper[i]=upperValue;
 	  if (lowerValue>upperValue) {
 	    numberChanges++;
-	    presolvedModel_->messageHandler()->message(CLP_PRESOLVE_COLINFEAS,
-						       presolvedModel_->messages())
+	    presolvedModel_->messageHandler()->message(COIN_PRESOLVE_COLINFEAS,
+						       messages)
 							 <<iOriginal
 							 <<lowerValue
 							 <<upperValue
@@ -354,8 +278,8 @@ Presolve::presolvedModel(ClpSimplex & si,
 	  }	  
 	}
 	if (numberChanges) {
-	  presolvedModel_->messageHandler()->message(CLP_PRESOLVE_INTEGERMODS,
-						     presolvedModel_->messages())
+	  presolvedModel_->messageHandler()->message(COIN_PRESOLVE_INTEGERMODS,
+						     messages)
 						       <<numberChanges
 						       <<CoinMessageEol;
 	  if (!result) {
@@ -375,8 +299,8 @@ Presolve::presolvedModel(ClpSimplex & si,
     int nrowsAfter = presolvedModel_->getNumRows();
     int ncolsAfter = presolvedModel_->getNumCols();
     CoinBigIndex nelsAfter = presolvedModel_->getNumElements();
-    presolvedModel_->messageHandler()->message(CLP_PRESOLVE_STATS,
-					       presolvedModel_->messages())
+    presolvedModel_->messageHandler()->message(COIN_PRESOLVE_STATS,
+					       messages)
 						 <<nrowsAfter<< -(nrows_ - nrowsAfter)
 						 << ncolsAfter<< -(ncols_ - ncolsAfter)
 						 <<nelsAfter<< -(nelems_ - nelsAfter)
@@ -391,22 +315,24 @@ Presolve::presolvedModel(ClpSimplex & si,
 
 // Return pointer to presolved model
 ClpSimplex * 
-Presolve::model() const
+ClpPresolve::model() const
 {
   return presolvedModel_;
 }
 // Return pointer to original model
 ClpSimplex * 
-Presolve::originalModel() const
+ClpPresolve::originalModel() const
 {
   return originalModel_;
 }
 void 
-Presolve::postsolve(bool updateStatus)
+ClpPresolve::postsolve(bool updateStatus)
 {
+  // Messages
+  CoinMessages messages = CoinMessage(presolvedModel_->messages().language());
   if (!presolvedModel_->isProvenOptimal()) {
-    presolvedModel_->messageHandler()->message(CLP_PRESOLVE_NONOPTIMAL,
-					     presolvedModel_->messages())
+    presolvedModel_->messageHandler()->message(COIN_PRESOLVE_NONOPTIMAL,
+					     messages)
 					       <<CoinMessageEol;
   }
 
@@ -437,7 +363,7 @@ Presolve::postsolve(bool updateStatus)
   }
 
 
-  PostsolveMatrix prob(*presolvedModel_,
+  CoinPostsolveMatrix prob(presolvedModel_,
 		       ncols0,
 		       nrows0,
 		       nelems0,
@@ -453,13 +379,19 @@ Presolve::postsolve(bool updateStatus)
 
 // return pointer to original columns
 const int * 
-Presolve::originalColumns() const
+ClpPresolve::originalColumns() const
 {
   return originalColumn_;
 }
+// return pointer to original rows
+const int * 
+ClpPresolve::originalRows() const
+{
+  return originalRow_;
+}
 // Set pointer to original model
 void 
-Presolve::setOriginalModel(ClpSimplex * model)
+ClpPresolve::setOriginalModel(ClpSimplex * model)
 {
   originalModel_=model;
 }
@@ -487,7 +419,7 @@ static int ATOI(const char *name)
 #endif
 //#define DEBUG_PRESOLVE 1
 #if DEBUG_PRESOLVE
-void check_sol(PresolveMatrix *prob,double tol)
+void check_sol(CoinPresolveMatrix *prob,double tol)
 {
   double *colels	= prob->colels_;
   int *hrow		= prob->hrow_;
@@ -550,8 +482,8 @@ void check_sol(PresolveMatrix *prob,double tol)
 #endif
 // This is the presolve loop.
 // It is a separate virtual function so that it can be easily
-// customized by subclassing Presolve.
-const PresolveAction *Presolve::presolve(PresolveMatrix *prob)
+// customized by subclassing CoinPresolve.
+const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
 {
   paction_ = 0;
 
@@ -579,24 +511,26 @@ const PresolveAction *Presolve::presolve(PresolveMatrix *prob)
     const bool dual = ATOI("off")!=0;
 #else
     // normal
-#if 1
+#if 0
+    const bool slackd = true;
+    const bool doubleton = false;
+    const bool tripleton = true;
+    const bool forcing = false;
+    const bool ifree = true;
+    const bool zerocost = true;
+    const bool dupcol = false;
+    const bool duprow = false;
+    const bool dual = doDualStuff;
+#else
     const bool slackd = true;
     const bool doubleton = true;
+    const bool tripleton = true;
     const bool forcing = true;
     const bool ifree = true;
     const bool zerocost = true;
     const bool dupcol = true;
     const bool duprow = true;
     const bool dual = doDualStuff;
-#else
-    const bool slackd = false;
-    const bool doubleton = true;
-    const bool forcing = true;
-    const bool ifree = false;
-    const bool zerocost = false;
-    const bool dupcol = false;
-    const bool duprow = false;
-    const bool dual = false;
 #endif
 #endif
     
@@ -622,7 +556,7 @@ const PresolveAction *Presolve::presolve(PresolveMatrix *prob)
 	if (!prob->colProhibited(i))
 	    prob->colsToDo_[prob->numberColsToDo_++]=i;
     }
-	
+
 
     int iLoop;
 #if	DEBUG_PRESOLVE
@@ -635,7 +569,7 @@ const PresolveAction *Presolve::presolve(PresolveMatrix *prob)
 #ifdef PRESOLVE_SUMMARY
       printf("Starting major pass %d\n",iLoop+1);
 #endif
-      const PresolveAction * const paction0 = paction_;
+      const CoinPresolveAction * const paction0 = paction_;
       // look for substitutions with no fill
       int fill_level=2;
       //fill_level=10;
@@ -643,8 +577,8 @@ const PresolveAction *Presolve::presolve(PresolveMatrix *prob)
       int whichPass=0;
       while (1) {
 	whichPass++;
-	const PresolveAction * const paction1 = paction_;
-	
+	const CoinPresolveAction * const paction1 = paction_;
+
 	if (slackd) {
 	  bool notFinished = true;
 	  while (notFinished) 
@@ -653,31 +587,37 @@ const PresolveAction *Presolve::presolve(PresolveMatrix *prob)
 	  if (prob->status_)
 	    break;
 	}
-	
+
 	if (doubleton) {
 	  paction_ = doubleton_action::presolve(prob, paction_);
 	  if (prob->status_)
 	    break;
 	}
-	
+
+	if (tripleton) {
+	  paction_ = tripleton_action::presolve(prob, paction_);
+	  if (prob->status_)
+	    break;
+	}
+
 	if (zerocost) {
 	  paction_ = do_tighten_action::presolve(prob, paction_);
 	  if (prob->status_)
 	    break;
 	}
-	
+
 	if (forcing) {
 	  paction_ = forcing_constraint_action::presolve(prob, paction_);
 	  if (prob->status_)
 	    break;
 	}
-	
+
 	if (ifree) {
 	  paction_ = implied_free_action::presolve(prob, paction_,fill_level);
 	  if (prob->status_)
 	    break;
 	}
-	
+
 #if	DEBUG_PRESOLVE
 	check_sol(prob,1.0e0);
 #endif
@@ -686,7 +626,7 @@ const PresolveAction *Presolve::presolve(PresolveMatrix *prob)
 	presolve_links_ok(prob->rlink_, prob->mrstrt_, prob->hinrow_, 
 			  prob->nrows_);
 #endif
-	
+
 #if	DEBUG_PRESOLVE
 	presolve_no_zeros(prob->mcstrt_, prob->colels_, prob->hincol_, 
 			  prob->ncols_);
@@ -694,7 +634,7 @@ const PresolveAction *Presolve::presolve(PresolveMatrix *prob)
 #if	CHECK_CONSISTENCY
 	prob->consistent();
 #endif
-	
+
 	  
 	// set up for next pass
 	// later do faster if many changes i.e. memset and memcpy
@@ -763,7 +703,7 @@ const PresolveAction *Presolve::presolve(PresolveMatrix *prob)
       if (dual) {
 	int itry;
 	for (itry=0;itry<5;itry++) {
-	  const PresolveAction * const paction2 = paction_;
+	  const CoinPresolveAction * const paction2 = paction_;
 	  paction_ = remove_dual_action::presolve(prob, paction_);
 	  if (prob->status_)
 	    break;
@@ -828,19 +768,21 @@ const PresolveAction *Presolve::presolve(PresolveMatrix *prob)
 #endif
   }
   
+  // Messages
+  CoinMessages messages = CoinMessage(prob->messages().language());
   if (prob->status_) {
     if (prob->status_==1)
-	  presolvedModel_->messageHandler()->message(CLP_PRESOLVE_INFEAS,
-					     presolvedModel_->messages())
+	  prob->messageHandler()->message(COIN_PRESOLVE_INFEAS,
+					     messages)
 					       <<prob->feasibilityTolerance_
 					       <<CoinMessageEol;
     else if (prob->status_==2)
-	  presolvedModel_->messageHandler()->message(CLP_PRESOLVE_UNBOUND,
-					     presolvedModel_->messages())
+	  prob->messageHandler()->message(COIN_PRESOLVE_UNBOUND,
+					     messages)
 					       <<CoinMessageEol;
     else
-	  presolvedModel_->messageHandler()->message(CLP_PRESOLVE_INFEASUNBOUND,
-					     presolvedModel_->messages())
+	  prob->messageHandler()->message(COIN_PRESOLVE_INFEASUNBOUND,
+					     messages)
 					       <<CoinMessageEol;
     // get rid of data
     gutsOfDestroy();
@@ -848,14 +790,14 @@ const PresolveAction *Presolve::presolve(PresolveMatrix *prob)
   return (paction_);
 }
 
-void check_djs(PostsolveMatrix *prob);
+void check_djs(CoinPostsolveMatrix *prob);
 
 
 // We could have implemented this by having each postsolve routine
 // directly call the next one, but this may make it easier to add debugging checks.
-void Presolve::postsolve(PostsolveMatrix &prob)
+void ClpPresolve::postsolve(CoinPostsolveMatrix &prob)
 {
-  const PresolveAction *paction = paction_;
+  const CoinPresolveAction *paction = paction_;
 
   if (prob.colstat_)
     prob.check_nbasic();
@@ -887,7 +829,7 @@ void Presolve::postsolve(PostsolveMatrix &prob)
     if (!cdone[i]) {
       printf("!cdone[%d]\n", i);
       abort();
-    }	
+    }
   }
   
   for (i=0; i<nrows0; i++) {
@@ -919,16 +861,16 @@ void Presolve::postsolve(PostsolveMatrix &prob)
       int n = hincol[i];
       for (int k=0; k<n; k++) {
 	CoinBigIndex k1 = presolve_find_row1(&prob->hrow0[kcs0+k], kcs, kcs+n, hrow);
-	
+
 	if (k1 == kcs+n) {
 	  printf("ROW %d NOT IN COL %d\n", &prob->hrow0[kcs0+k], i);
 	  abort();
 	}
-	
+
 	if (colels[k1] != &prob->dels0[kcs0+k])
 	  printf("BAD COLEL[%d %d %d]:  %g\n",
 		 k1, i, &prob->hrow0[kcs0+k], colels[k1] - &prob->dels0[kcs0+k]);
-	
+
 	if (kcs0+k != k1)
 	  identical=0;
       }
@@ -957,8 +899,10 @@ void Presolve::postsolve(PostsolveMatrix &prob)
   originalModel_->times(1.0,originalModel_->primalColumnSolution(),
 			originalModel_->primalRowSolution());
   originalModel_->checkSolution();
-  presolvedModel_->messageHandler()->message(CLP_PRESOLVE_POSTSOLVE,
-					    presolvedModel_->messages())
+  // Messages
+  CoinMessages messages = CoinMessage(presolvedModel_->messages().language());
+  presolvedModel_->messageHandler()->message(COIN_PRESOLVE_POSTSOLVE,
+					    messages)
 					      <<originalModel_->objectiveValue()
 					      <<originalModel_->sumDualInfeasibilities()
 					      <<originalModel_->numberDualInfeasibilities()
@@ -974,8 +918,8 @@ void Presolve::postsolve(PostsolveMatrix &prob)
       originalModel_->setProblemStatus( 0);
     } else {
       originalModel_->setProblemStatus( -1);
-      presolvedModel_->messageHandler()->message(CLP_PRESOLVE_NEEDS_CLEANING,
-					    presolvedModel_->messages())
+      presolvedModel_->messageHandler()->message(COIN_PRESOLVE_NEEDS_CLEANING,
+					    messages)
 					      <<CoinMessageEol;
     }
   } else {
@@ -991,9 +935,9 @@ void Presolve::postsolve(PostsolveMatrix &prob)
 
 
 #if	DEBUG_PRESOLVE
-void check_djs(PostsolveMatrix *prob)
+void check_djs(CoinPostsolveMatrix *prob)
 {
-  return;
+  //return;
   double *colels	= prob->colels_;
   int *hrow		= prob->hrow_;
   int *mcstrt		= prob->mcstrt_;
@@ -1034,11 +978,10 @@ void check_djs(PostsolveMatrix *prob)
 	int row = hrow[k];
 	double coeff = colels[k];
 	k = link[k];
-	
 	dj -= rowduals[row] * coeff;
 	rsol[row] += solutionValue*coeff;
       }
-      if (! (fabs(rcosts[colx] - dj) < 100*ZTOLDP))
+      if (! (fabs(rcosts[colx] - dj) < 1.0e-4))
 	printf("BAD DJ:  %d %g %g\n",
 	       colx, rcosts[colx], dj);
       if (cup[colx]-clo[colx]>1.0e-6) {
@@ -1064,15 +1007,15 @@ void check_djs(PostsolveMatrix *prob)
       if (rup[rowx]-rlo[rowx]>1.0e-6) {
 	double dj = rowduals[rowx];
 	if (rsol[rowx]<rlo[rowx]+1.0e-6) {
-	  if (dj <-1.0e-6)
+	  if (dj <-1.0e-5)
 	    printf("neg rDJ:  %d %g  - %g %g %g\n",
 		   rowx, dj, rlo[rowx], rsol[rowx], rup[rowx]);
 	} else if (rsol[rowx]>rup[rowx]-1.0e-6) {
-	  if (dj > 1.0e-6)
+	  if (dj > 1.0e-5)
 	    printf("pos rDJ:  %d %g  - %g %g %g\n",
 		   rowx, dj, rlo[rowx], rsol[rowx], rup[rowx]);
 	} else {
-	  if (fabs(dj) >1.0e-6)
+	  if (fabs(dj) >1.0e-5)
 	    printf("nonzero rDJ:  %d %g  - %g %g %g\n",
 		   rowx, dj, rlo[rowx], rsol[rowx], rup[rowx]);
 	}
@@ -1082,5 +1025,407 @@ void check_djs(PostsolveMatrix *prob)
   delete [] rsol;
 }
 #endif
+
+static inline double getTolerance(const ClpSimplex  *si, ClpDblParam key)
+{
+  double tol;
+  if (! si->getDblParam(key, tol)) {
+    CoinPresolveAction::throwCoinError("getDblParam failed",
+				      "CoinPrePostsolveMatrix::CoinPrePostsolveMatrix");
+  }
+  return (tol);
+}
+
+
+// Assumptions:
+// 1. nrows>=m.getNumRows()
+// 2. ncols>=m.getNumCols()
+//
+// In presolve, these values are equal.
+// In postsolve, they may be inequal, since the reduced problem
+// may be smaller, but we need room for the large problem.
+// ncols may be larger than si.getNumCols() in postsolve,
+// this at that point si will be the reduced problem,
+// but we need to reserve enough space for the original problem.
+CoinPrePostsolveMatrix::CoinPrePostsolveMatrix(const ClpSimplex * si,
+					     int ncols_in,
+					     int nrows_in,
+					     CoinBigIndex nelems_in) :
+  ncols_(si->getNumCols()),
+  ncols0_(ncols_in),
+  nelems_(si->getNumElements()),
+
+  mcstrt_(new CoinBigIndex[ncols_in+1]),
+  hincol_(new int[ncols_in+1]),
+  hrow_  (new int   [2*nelems_in]),
+  colels_(new double[2*nelems_in]),
+
+  cost_(new double[ncols_in]),
+  clo_(new double[ncols_in]),
+  cup_(new double[ncols_in]),
+  rlo_(new double[nrows_in]),
+  rup_(new double[nrows_in]),
+  originalColumn_(new int[ncols_in]),
+  originalRow_(new int[nrows_in]),
+
+  ztolzb_(getTolerance(si, ClpPrimalTolerance)),
+  ztoldj_(getTolerance(si, ClpDualTolerance)),
+
+  maxmin_(si->getObjSense())
+
+{
+  si->getDblParam(ClpObjOffset,originalOffset_);
+  int ncols = si->getNumCols();
+  int nrows = si->getNumRows();
+
+  ClpDisjointCopyN(si->getColLower(), ncols, clo_);
+  ClpDisjointCopyN(si->getColUpper(), ncols, cup_);
+  ClpDisjointCopyN(si->getObjCoefficients(), ncols, cost_);
+  ClpDisjointCopyN(si->getRowLower(), nrows,  rlo_);
+  ClpDisjointCopyN(si->getRowUpper(), nrows,  rup_);
+  int i;
+  for (i=0;i<ncols_in;i++) 
+    originalColumn_[i]=i;
+  for (i=0;i<nrows_in;i++) 
+    originalRow_[i]=i;
+  sol_=NULL;
+  rowduals_=NULL;
+  acts_=NULL;
+
+  rcosts_=NULL;
+  colstat_=NULL;
+  rowstat_=NULL;
+}
+
+// I am not familiar enough with CoinPackedMatrix to be confident
+// that I will implement a row-ordered version of toColumnOrderedGapFree
+// properly.
+static bool isGapFree(const CoinPackedMatrix& matrix)
+{
+  const CoinBigIndex * start = matrix.getVectorStarts();
+  const int * length = matrix.getVectorLengths();
+  int i;
+  for (i = matrix.getSizeVectorLengths() - 1; i >= 0; --i) {
+    if (start[i+1] - start[i] != length[i])
+      break;
+  }
+  return (! (i >= 0));
+}
+#if	DEBUG_PRESOLVE
+static void matrix_bounds_ok(const double *lo, const double *up, int n)
+{
+  int i;
+  for (i=0; i<n; i++) {
+    PRESOLVEASSERT(lo[i] <= up[i]);
+    PRESOLVEASSERT(lo[i] < PRESOLVE_INF);
+    PRESOLVEASSERT(-PRESOLVE_INF < up[i]);
+  }
+}
+#endif
+CoinPresolveMatrix::CoinPresolveMatrix(int ncols0_in,
+				     double maxmin_,
+				     // end prepost members
+
+				     ClpSimplex * si,
+
+				     // rowrep
+				     int nrows_in,
+				     CoinBigIndex nelems_in,
+			       bool doStatus,
+			       double nonLinearValue) :
+
+  CoinPrePostsolveMatrix(si,
+			ncols0_in, nrows_in, nelems_in),
+  clink_(new presolvehlink[ncols0_in+1]),
+  rlink_(new presolvehlink[nrows_in+1]),
+
+  dobias_(0.0),
+
+  nrows_(si->getNumRows()),
+
+  // temporary init
+  mrstrt_(new CoinBigIndex[nrows_in+1]),
+  hinrow_(new int[nrows_in+1]),
+  rowels_(new double[2*nelems_in]),
+  hcol_(new int[2*nelems_in]),
+  integerType_(new char[ncols0_in]),
+  feasibilityTolerance_(0.0),
+  status_(-1),
+  rowsToDo_(new int [nrows_in]),
+  numberRowsToDo_(0),
+  nextRowsToDo_(new int[nrows_in]),
+  numberNextRowsToDo_(0),
+  colsToDo_(new int [ncols0_in]),
+  numberColsToDo_(0),
+  nextColsToDo_(new int[ncols0_in]),
+  numberNextColsToDo_(0)
+
+{
+  const int bufsize = 2*nelems_in;
+
+  // Set up change bits etc
+  rowChanged_ = new unsigned char[nrows_];
+  memset(rowChanged_,0,nrows_);
+  colChanged_ = new unsigned char[ncols_];
+  memset(colChanged_,0,ncols_);
+  CoinPackedMatrix * m = si->matrix();
+
+  // The coefficient matrix is a big hunk of stuff.
+  // Do the copy here to try to avoid running out of memory.
+
+  const CoinBigIndex * start = m->getVectorStarts();
+  const int * length = m->getVectorLengths();
+  const int * row = m->getIndices();
+  const double * element = m->getElements();
+  int icol,nel=0;
+  mcstrt_[0]=0;
+  for (icol=0;icol<ncols_;icol++) {
+    int j;
+    for (j=start[icol];j<start[icol]+length[icol];j++) {
+      hrow_[nel]=row[j];
+      colels_[nel++]=element[j];
+    }
+    mcstrt_[icol+1]=nel;
+  }
+  assert(mcstrt_[ncols_] == nelems_);
+  ClpDisjointCopyN(m->getVectorLengths(),ncols_,  hincol_);
+
+  // same thing for row rep
+  m = new CoinPackedMatrix();
+  m->reverseOrderedCopyOf(*si->matrix());
+  m->removeGaps();
+
+
+  ClpDisjointCopyN(m->getVectorStarts(),  nrows_,  mrstrt_);
+  mrstrt_[nrows_] = nelems_;
+  ClpDisjointCopyN(m->getVectorLengths(), nrows_,  hinrow_);
+  ClpDisjointCopyN(m->getIndices(),       nelems_, hcol_);
+  ClpDisjointCopyN(m->getElements(),      nelems_, rowels_);
+
+  delete m;
+  if (si->integerInformation()) {
+    memcpy(integerType_,si->integerInformation(),ncols_*sizeof(char));
+  } else {
+    ClpFillN<char>(integerType_, ncols_, 0);
+  }
+
+  // Set up prohibited bits if needed
+  if (nonLinearValue) {
+    anyProhibited_ = true;
+    for (icol=0;icol<ncols_;icol++) {
+      int j;
+      bool nonLinearColumn = false;
+      if (cost_[icol]==nonLinearValue)
+	nonLinearColumn=true;
+      for (j=mcstrt_[icol];j<mcstrt_[icol+1];j++) {
+	if (colels_[j]==nonLinearValue) {
+	  nonLinearColumn=true;
+	  setRowProhibited(hrow_[j]);
+	}
+      }
+      if (nonLinearColumn)
+	setColProhibited(icol);
+    }
+  } else {
+    anyProhibited_ = false;
+  }
+
+  if (doStatus) {
+    // allow for status and solution
+    sol_ = new double[ncols_];
+    memcpy(sol_,si->primalColumnSolution(),ncols_*sizeof(double));;
+    acts_ = new double [nrows_];
+    memcpy(acts_,si->primalRowSolution(),nrows_*sizeof(double));
+    if (!si->statusArray())
+      si->createStatus();
+    colstat_ = new unsigned char [nrows_+ncols_];
+    memcpy(colstat_,si->statusArray(),
+	   (nrows_+ncols_)*sizeof(unsigned char));
+    rowstat_ = colstat_+ncols_;
+  }
+
+  // the original model's fields are now unneeded - free them
+  
+  si->resize(0,0);
+
+#if	DEBUG_PRESOLVE
+  matrix_bounds_ok(rlo_, rup_, nrows_);
+  matrix_bounds_ok(clo_, cup_, ncols_);
+#endif
+
+#if 0
+  for (i=0; i<nrows; ++i)
+    printf("NR: %6d\n", hinrow[i]);
+  for (int i=0; i<ncols; ++i)
+    printf("NC: %6d\n", hincol[i]);
+#endif
+
+  presolve_make_memlists(mcstrt_, hincol_, clink_, ncols_);
+  presolve_make_memlists(mrstrt_, hinrow_, rlink_, nrows_);
+
+  // this allows last col/row to expand up to bufsize-1 (22);
+  // this must come after the calls to presolve_prefix
+  mcstrt_[ncols_] = bufsize-1;
+  mrstrt_[nrows_] = bufsize-1;
+
+#if	CHECK_CONSISTENCY
+  consistent(false);
+#endif
+}
+
+void CoinPresolveMatrix::update_model(ClpSimplex * si,
+				     int nrows0,
+				     int ncols0,
+				     CoinBigIndex nelems0)
+{
+  si->loadProblem(ncols_, nrows_, mcstrt_, hrow_, colels_, hincol_,
+		 clo_, cup_, cost_, rlo_, rup_);
+
+  delete [] si->integerInformation();
+  int numberIntegers=0;
+  for (int i=0; i<ncols_; i++) {
+    if (integerType_[i])
+      numberIntegers++;
+  }
+  if (numberIntegers) 
+    si->copyInIntegerInformation(integerType_);
+  else
+    si->copyInIntegerInformation(NULL);
+
+#if	PRESOLVE_SUMMARY
+  printf("NEW NCOL/NROW/NELS:  %d(-%d) %d(-%d) %d(-%d)\n",
+	 ncols_, ncols0-ncols_,
+	 nrows_, nrows0-nrows_,
+	 si->getNumElements(), nelems0-si->getNumElements());
+#endif
+  si->setDblParam(ClpObjOffset,originalOffset_-dobias_);
+
+}
+
+
+
+
+
+
+
+
+
+
+
+////////////////  POSTSOLVE
+
+CoinPostsolveMatrix::CoinPostsolveMatrix(ClpSimplex*  si,
+				       int ncols0_in,
+				       int nrows0_in,
+				       CoinBigIndex nelems0,
+				   
+				       double maxmin_,
+				       // end prepost members
+
+				       double *sol_in,
+				       double *acts_in,
+
+				       unsigned char *colstat_in,
+				       unsigned char *rowstat_in) :
+  CoinPrePostsolveMatrix(si,
+			ncols0_in, nrows0_in, nelems0),
+
+  free_list_(0),
+  // link, free_list, maxlink
+  maxlink_(2*nelems0),
+  link_(new int[/*maxlink*/ 2*nelems0]),
+      
+  cdone_(new char[ncols0_]),
+  rdone_(new char[nrows0_in]),
+
+  nrows_(si->getNumRows()),
+  nrows0_(nrows0_in)
+{
+
+  sol_=sol_in;
+  rowduals_=NULL;
+  acts_=acts_in;
+
+  rcosts_=NULL;
+  colstat_=colstat_in;
+  rowstat_=rowstat_in;
+
+  // this is the *reduced* model, which is probably smaller
+  int ncols1 = si->getNumCols();
+  int nrows1 = si->getNumRows();
+
+  const CoinPackedMatrix * m = si->matrix();
+
+  if (! isGapFree(*m)) {
+    CoinPresolveAction::throwCoinError("Matrix not gap free",
+				      "CoinPostsolveMatrix");
+  }
+
+  const CoinBigIndex nelemsr = m->getNumElements();
+
+  ClpDisjointCopyN(m->getVectorStarts(), ncols1, mcstrt_);
+  mcstrt_[ncols_] = nelems0;	// ??
+  ClpDisjointCopyN(m->getVectorLengths(),ncols1,  hincol_);
+  ClpDisjointCopyN(m->getIndices(),      nelemsr, hrow_);
+  ClpDisjointCopyN(m->getElements(),     nelemsr, colels_);
+
+
+#if	0 && DEBUG_PRESOLVE
+  presolve_check_costs(model, &colcopy);
+#endif
+
+  // This determines the size of the data structure that contains
+  // the matrix being postsolved.  Links are taken from the free_list
+  // to recreate matrix entries that were presolved away,
+  // and links are added to the free_list when entries created during
+  // presolve are discarded.  There is never a need to gc this list.
+  // Naturally, it should contain
+  // exactly nelems0 entries "in use" when postsolving is done,
+  // but I don't know whether the matrix could temporarily get
+  // larger during postsolving.  Substitution into more than two
+  // rows could do that, in principle.  I am being very conservative
+  // here by reserving much more than the amount of space I probably need.
+  // If this guess is wrong, check_free_list may be called.
+  //  int bufsize = 2*nelems0;
+
+  memset(cdone_, -1, ncols0_);
+  memset(rdone_, -1, nrows0_);
+
+  rowduals_ = new double[nrows0_];
+  ClpDisjointCopyN(si->getRowPrice(), nrows1, rowduals_);
+
+  rcosts_ = new double[ncols0_];
+  ClpDisjointCopyN(si->getReducedCost(), ncols1, rcosts_);
+  if (maxmin_<0.0) {
+    // change so will look as if minimize
+    int i;
+    for (i=0;i<nrows1;i++)
+      rowduals_[i] = - rowduals_[i];
+    for (i=0;i<ncols1;i++) {
+      rcosts_[i] = - rcosts_[i];
+    }
+  }
+
+  //ClpDisjointCopyN(si->getRowUpper(), nrows1, rup_);
+  //ClpDisjointCopyN(si->getRowLower(), nrows1, rlo_);
+
+  ClpDisjointCopyN(si->getColSolution(), ncols1, sol_);
+  si->setDblParam(ClpObjOffset,originalOffset_);
+
+  for (int j=0; j<ncols1; j++) {
+    CoinBigIndex kcs = mcstrt_[j];
+    CoinBigIndex kce = kcs + hincol_[j];
+    for (CoinBigIndex k=kcs; k<kce; ++k) {
+      link_[k] = k+1;
+    }
+  }
+  {
+    int ml = maxlink_;
+    for (CoinBigIndex k=nelemsr; k<ml; ++k)
+      link_[k] = k+1;
+    link_[ml-1] = NO_LINK;
+  }
+  free_list_ = nelemsr;
+}
 
 

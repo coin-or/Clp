@@ -1,5 +1,9 @@
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
+// "Idiot" as the name of this algorithm is copylefted.  If you want to change
+// the name then it should be something equally stupid (but not "Stupid") or
+// even better something witty.
+
 #ifndef Idiot_H
 #define Idiot_H
 #ifdef CLP_IDIOT
@@ -9,6 +13,8 @@
 #include "OsiSolverInterface.hpp"
 typedef int CoinBigIndex;
 #endif
+class CoinMessageHandler;
+class CoinMessages;
 // for use internally
 typedef struct {
   double infeas;
@@ -64,7 +70,7 @@ public:
   /// Get an approximate solution with the idiot code
   void solve();
   /// Lightweight "crash"
-  void crash(int numberPass=0);
+  void crash(int numberPass,CoinMessageHandler * handler ,const CoinMessages * messages);
   /** Use simplex to get an optimal solution
       mode is how many steps the simplex crossover should take to
       arrive to an extreme point:
@@ -136,11 +142,16 @@ public:
   { return maxBigIts_;};
   inline void setReduceIterations(int value)
   { maxBigIts_ = value;};
-  /// Amount of information - default of 1 should be okay */
+  /// Amount of information - default of 1 should be okay 
   inline int getLogLevel() const
   { return logLevel_;};
   inline void setLogLevel(int value)
   { logLevel_ = value;};
+  /// How lightweight - 0 not, 1 yes, 2 very lightweight
+  inline int getLightweight() const
+  { return lightWeight_;};
+  inline void setLightweight(int value)
+  { lightWeight_ = value;};
   //@}
 
 
@@ -148,7 +159,7 @@ public:
 private:
 
   /// Does actual work
-  void solve2();
+  void solve2(CoinMessageHandler * handler,const CoinMessages *messages);
 IdiotResult IdiSolve(
 		     int nrows, int ncols, double * rowsol , double * colsol,
 		     double * pi, double * djs, const double * origcost , 
@@ -208,5 +219,6 @@ private:
                     32 - "intelligent?" reduction of mu and reasonableInfeas
                   2048 - keep lambda across mu change
 		  4096 - return best solution (not last found) */
+  int lightWeight_; // 0 - normal, 1 lightweight
 };
 #endif

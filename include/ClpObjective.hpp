@@ -21,8 +21,9 @@ public:
   
   /** Returns gradient.  If Linear then solution may be NULL,
       also returns an offset (to be added to current one)
+      If refresh is false then uses last solution
   */
-  virtual double * gradient(const double * solution, double & offset) = 0;
+  virtual double * gradient(const double * solution, double & offset,bool refresh) = 0;
   /// Resize objective
   virtual void resize(int newNumberColumns) = 0; 
   /// Delete columns in  objective
@@ -46,6 +47,12 @@ public:
 
   /// Clone
   virtual ClpObjective * clone() const = 0;
+  /** Subset clone.  Duplicates are allowed
+      and order is as given.
+      Derived classes need not provide this as it may not always make
+      sense */
+  virtual ClpObjective * subsetClone (int numberColumns, 
+				      const int * whichColumns) const;
  
   //@}
 

@@ -1,12 +1,12 @@
 # Static or shared libraries should be built (STATIC or SHARED)?
 LibType := SHARED
+#LibType := STATIC
 
 # Select optimization (-O or -g). -O will be automatically bumped up to the 
 # highest level of optimization the compiler supports. If want something in
 # between then specify the exact level you want, e.g., -O1 or -O2
 OptLevel := -g
-OptLevel := -O3
-
+OptLevel := -O1
 
 LIBNAME := Clp
 LIBSRC :=
@@ -24,31 +24,22 @@ LIBSRC += ClpObjective.cpp
 LIBSRC += ClpLinearObjective.cpp
 LIBSRC += ClpPackedMatrix.cpp
 LIBSRC += ClpPlusMinusOneMatrix.cpp
+LIBSRC += ClpDummyMatrix.cpp
 LIBSRC += ClpPrimalColumnDantzig.cpp
 LIBSRC += ClpPrimalColumnPivot.cpp
 LIBSRC += ClpPrimalColumnSteepest.cpp
+LIBSRC += ClpQuadraticObjective.cpp
 LIBSRC += ClpSimplex.cpp
 LIBSRC += ClpSimplexDual.cpp
 LIBSRC += ClpSimplexPrimal.cpp
 LIBSRC += ClpSimplexPrimalQuadratic.cpp
-#LIBSRC += ClpPrimalQuadraticDantzig.cpp
+LIBSRC += ClpSolve.cpp
+#LIBSRC += ClpInterior.cpp
+#LIBSRC += ClpPdco.cpp
+#LIBSRC += ClpPdcoBase.cpp
+#LIBSRC += ClpLsqr.cpp
 # and Presolve stuff
-LIBSRC += Presolve.cpp
-LIBSRC += PresolveDoubleton.cpp
-LIBSRC += PresolveEmpty.cpp
-LIBSRC += PresolveFixed.cpp
-LIBSRC += PresolveMatrix.cpp
-LIBSRC += PresolvePsdebug.cpp
-LIBSRC += PresolveSingleton.cpp
-LIBSRC += PresolveZeros.cpp
-LIBSRC += PresolveDual.cpp		    
-LIBSRC += PresolveDupcol.cpp		    
-LIBSRC += PresolveForcing.cpp		    
-LIBSRC += PresolveImpliedFree.cpp	    
-LIBSRC += PresolveIsolated.cpp	    
-LIBSRC += PresolveSubst.cpp		    
-LIBSRC += PresolveTighten.cpp		    
-LIBSRC += PresolveUseless.cpp             
+LIBSRC += ClpPresolve.cpp
 
 LIBSRC += Idiot.cpp
 LIBSRC += IdiSolve.cpp
@@ -63,14 +54,13 @@ include ${MakefileDir}/Makefile.location
 # Say Idiot code can use Clp interface
 CXXFLAGS += -DCLP_IDIOT 
 CXXFLAGS += -DUSE_PRESOLVE
-#CXXFLAGS += -DQUADRATIC
+#CXXFLAGS += -DCORRECT_COLUMN_COUNTS
 ifeq ($(OptLevel),-g)
 #     CXXFLAGS += -DCLP_DEBUG
-#    CXXFLAGS += -DPRESOLVE_SUMMARY=1 -DDEBUG_PRESOLVE -DCHECK_CONSISTENCY=1
+#CXXFLAGS += -DDEBUG_PRESOLVE
 endif
 ifeq ($(OptLevel),-O2)
 #     CXXFLAGS += -DNDEBUG
-#    CXXFLAGS += -DPRESOLVE_SUMMARY=1 -DDEBUG_PRESOLVE -DCHECK_CONSISTENCY=1
 endif
 
 export ExtraIncDir  := ${CoinIncDir} ${zlibIncDir} ${bzlibIncDir}

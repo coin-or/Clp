@@ -560,9 +560,10 @@ ClpNetworkBasis::replaceColumn ( CoinIndexedVector * regionSparse,
 }
 
 /* Updates one column (FTRAN) from region2 */
-int 
+double
 ClpNetworkBasis::updateColumn (  CoinIndexedVector * regionSparse,
-				 CoinIndexedVector * regionSparse2)
+				 CoinIndexedVector * regionSparse2,
+				 int pivotRow)
 {
   regionSparse->clear (  );
   double *region = regionSparse->denseVector (  );
@@ -572,105 +573,271 @@ ClpNetworkBasis::updateColumn (  CoinIndexedVector * regionSparse,
   int *regionIndex = regionSparse->getIndices (  );
   int i;
   bool doTwo = (numberNonZero==2);
-  int i0;
-  int i1;
+  int i0=-1;
+  int i1=-1;
   if (doTwo) {
     i0 = regionIndex2[0];
     i1 = regionIndex2[1];
-    doTwo =  (region2[i0]*region2[i1]<0.0);
   }
-  if (doTwo) {
-    // If just +- 1 then could go backwards on depth until join
-    region[i0] = region2[i0];
-    region2[i0]=0.0;
-    region[i1] = region2[i1];
-    region2[i1]=0.0;
-    int iDepth0 = depth_[i0];
-    int iDepth1 = depth_[i1];
-    if (iDepth1>iDepth0) {
-      int temp = i0;
-      i0 = i1;
-      i1 = temp;
-      temp = iDepth0;
-      iDepth0 = iDepth1;
-      iDepth1 = temp;
-    }
-    numberNonZero=0;
-    while (iDepth0>iDepth1) {
-      double pivotValue = region[i0];
-      // put back now ?
-      int iBack = permuteBack_[i0];
-      regionIndex2[numberNonZero++] = iBack;
-      int otherRow = parent_[i0];
-      region2[iBack] = pivotValue*sign_[i0];
-      region[i0] =0.0;
-      region[otherRow] += pivotValue;
-      iDepth0--;
-      i0 = otherRow;
-    }
-    while (i0!=i1) {
-      double pivotValue = region[i0];
-      // put back now ?
-      int iBack = permuteBack_[i0];
-      regionIndex2[numberNonZero++] = iBack;
-      int otherRow = parent_[i0];
-      region2[iBack] = pivotValue*sign_[i0];
-      region[i0] =0.0;
-      region[otherRow] += pivotValue;
-      i0 = otherRow;
-      double pivotValue1 = region[i1];
-      // put back now ?
-      int iBack1 = permuteBack_[i1];
-      regionIndex2[numberNonZero++] = iBack1;
-      int otherRow1 = parent_[i1];
-      region2[iBack1] = pivotValue1*sign_[i1];
-      region[i1] =0.0;
-      region[otherRow1] += pivotValue1;
-      i1 = otherRow1;
+  double returnValue=0.0;
+  bool packed = regionSparse2->packedMode();
+  if (packed) {
+    if (doTwo&&region2[0]*region2[1]<0.0) {
+      region[i0] = region2[0];
+      region2[0]=0.0;
+      region[i1] = region2[1];
+      region2[1]=0.0;
+      int iDepth0 = depth_[i0];
+      int iDepth1 = depth_[i1];
+      if (iDepth1>iDepth0) {
+	int temp = i0;
+	i0 = i1;
+	i1 = temp;
+	temp = iDepth0;
+	iDepth0 = iDepth1;
+	iDepth1 = temp;
+      }
+      numberNonZero=0;
+      if (pivotRow<0) {
+	while (iDepth0>iDepth1) {
+	  double pivotValue = region[i0];
+	  // put back now ?
+	  int iBack = permuteBack_[i0];
+	  region2[numberNonZero] = pivotValue*sign_[i0];
+	  regionIndex2[numberNonZero++] = iBack;
+	  int otherRow = parent_[i0];
+	  region[i0] =0.0;
+	  region[otherRow] += pivotValue;
+	  iDepth0--;
+	  i0 = otherRow;
+	}
+	while (i0!=i1) {
+	  double pivotValue = region[i0];
+	  // put back now ?
+	  int iBack = permuteBack_[i0];
+	  region2[numberNonZero] = pivotValue*sign_[i0];
+	  regionIndex2[numberNonZero++] = iBack;
+	  int otherRow = parent_[i0];
+	  region[i0] =0.0;
+	  region[otherRow] += pivotValue;
+	  i0 = otherRow;
+	  double pivotValue1 = region[i1];
+	  // put back now ?
+	  int iBack1 = permuteBack_[i1];
+	  region2[numberNonZero] = pivotValue1*sign_[i1];
+	  regionIndex2[numberNonZero++] = iBack1;
+	  int otherRow1 = parent_[i1];
+	  region[i1] =0.0;
+	  region[otherRow1] += pivotValue1;
+	  i1 = otherRow1;
+	}
+      } else {
+	while (iDepth0>iDepth1) {
+	  double pivotValue = region[i0];
+	  // put back now ?
+	  int iBack = permuteBack_[i0];
+	  double value = pivotValue*sign_[i0];
+	  region2[numberNonZero] = value;
+	  regionIndex2[numberNonZero++] = iBack;
+	  if (iBack==pivotRow)
+	    returnValue = value;
+	  int otherRow = parent_[i0];
+	  region[i0] =0.0;
+	  region[otherRow] += pivotValue;
+	  iDepth0--;
+	  i0 = otherRow;
+	}
+	while (i0!=i1) {
+	  double pivotValue = region[i0];
+	  // put back now ?
+	  int iBack = permuteBack_[i0];
+	  double value = pivotValue*sign_[i0];
+	  region2[numberNonZero] = value;
+	  regionIndex2[numberNonZero++] = iBack;
+	  if (iBack==pivotRow)
+	    returnValue = value;
+	  int otherRow = parent_[i0];
+	  region[i0] =0.0;
+	  region[otherRow] += pivotValue;
+	  i0 = otherRow;
+	  double pivotValue1 = region[i1];
+	  // put back now ?
+	  int iBack1 = permuteBack_[i1];
+	  value = pivotValue1*sign_[i1];
+	  region2[numberNonZero] = value;
+	  regionIndex2[numberNonZero++] = iBack1;
+	  if (iBack1==pivotRow)
+	    returnValue = value;
+	  int otherRow1 = parent_[i1];
+	  region[i1] =0.0;
+	  region[otherRow1] += pivotValue1;
+	  i1 = otherRow1;
+	}
+      }
+    } else {
+      // set up linked lists at each depth
+      // stack2 is start, stack is next
+      int greatestDepth=-1;
+      //mark_[numberRows_]=1;
+      for (i=0;i<numberNonZero;i++) {
+	int j = regionIndex2[i];
+	double value = region2[i];
+	region2[i]=0.0;
+	region[j]=value;
+	regionIndex[i]=j;
+	int iDepth = depth_[j];
+	if (iDepth>greatestDepth) 
+	  greatestDepth = iDepth;
+	// and back until marked
+	while (!mark_[j]) {
+	  int iNext = stack2_[iDepth];
+	  stack2_[iDepth]=j;
+	  stack_[j]=iNext;
+	  mark_[j]=1;
+	  iDepth--;
+	  j=parent_[j];
+	}
+      }
+      numberNonZero=0;
+      if (pivotRow<0) {
+	for (;greatestDepth>=0; greatestDepth--) {
+	  int iPivot = stack2_[greatestDepth];
+	  stack2_[greatestDepth]=-1;
+	  while (iPivot>=0) {
+	    mark_[iPivot]=0;
+	    double pivotValue = region[iPivot];
+	    if (pivotValue) {
+	      // put back now ?
+	      int iBack = permuteBack_[iPivot];
+	      region2[numberNonZero] = pivotValue*sign_[iPivot];
+	      regionIndex2[numberNonZero++] = iBack;
+	      int otherRow = parent_[iPivot];
+	      region[iPivot] =0.0;
+	    region[otherRow] += pivotValue;
+	    }
+	    iPivot = stack_[iPivot];
+	  }
+	}
+      } else {
+	for (;greatestDepth>=0; greatestDepth--) {
+	  int iPivot = stack2_[greatestDepth];
+	  stack2_[greatestDepth]=-1;
+	  while (iPivot>=0) {
+	    mark_[iPivot]=0;
+	    double pivotValue = region[iPivot];
+	    if (pivotValue) {
+	      // put back now ?
+	      int iBack = permuteBack_[iPivot];
+	      double value = pivotValue*sign_[iPivot];
+	      region2[numberNonZero] = value;
+	      regionIndex2[numberNonZero++] = iBack;
+	      if (iBack==pivotRow)
+		returnValue = value;
+	      int otherRow = parent_[iPivot];
+	      region[iPivot] =0.0;
+	      region[otherRow] += pivotValue;
+	    }
+	    iPivot = stack_[iPivot];
+	  }
+	}
+      }
     }
   } else {
-    // set up linked lists at each depth
-    // stack2 is start, stack is next
-    int greatestDepth=-1;
-    //mark_[numberRows_]=1;
-    for (i=0;i<numberNonZero;i++) {
-      int j = regionIndex2[i];
-      double value = region2[j];
-      region2[j]=0.0;
-      region[j]=value;
-      regionIndex[i]=j;
-      int iDepth = depth_[j];
-      if (iDepth>greatestDepth) 
-	greatestDepth = iDepth;
-      // and back until marked
-      while (!mark_[j]) {
-	int iNext = stack2_[iDepth];
-	stack2_[iDepth]=j;
-	stack_[j]=iNext;
-	mark_[j]=1;
-	iDepth--;
-	j=parent_[j];
+    if (doTwo&&region2[i0]*region2[i1]<0.0) {
+      // If just +- 1 then could go backwards on depth until join
+      region[i0] = region2[i0];
+      region2[i0]=0.0;
+      region[i1] = region2[i1];
+      region2[i1]=0.0;
+      int iDepth0 = depth_[i0];
+      int iDepth1 = depth_[i1];
+      if (iDepth1>iDepth0) {
+	int temp = i0;
+	i0 = i1;
+	i1 = temp;
+	temp = iDepth0;
+	iDepth0 = iDepth1;
+	iDepth1 = temp;
       }
-    }
-    numberNonZero=0;
-    for (;greatestDepth>=0; greatestDepth--) {
-      int iPivot = stack2_[greatestDepth];
-      stack2_[greatestDepth]=-1;
-      while (iPivot>=0) {
-	mark_[iPivot]=0;
-	double pivotValue = region[iPivot];
-	if (pivotValue) {
-	  // put back now ?
-	  int iBack = permuteBack_[iPivot];
-	  regionIndex2[numberNonZero++] = iBack;
-	  int otherRow = parent_[iPivot];
-	  region2[iBack] = pivotValue*sign_[iPivot];
-	  region[iPivot] =0.0;
-	  region[otherRow] += pivotValue;
+      numberNonZero=0;
+      while (iDepth0>iDepth1) {
+	double pivotValue = region[i0];
+	// put back now ?
+	int iBack = permuteBack_[i0];
+	regionIndex2[numberNonZero++] = iBack;
+	int otherRow = parent_[i0];
+	region2[iBack] = pivotValue*sign_[i0];
+	region[i0] =0.0;
+	region[otherRow] += pivotValue;
+	iDepth0--;
+	i0 = otherRow;
+      }
+      while (i0!=i1) {
+	double pivotValue = region[i0];
+	// put back now ?
+	int iBack = permuteBack_[i0];
+	regionIndex2[numberNonZero++] = iBack;
+	int otherRow = parent_[i0];
+	region2[iBack] = pivotValue*sign_[i0];
+	region[i0] =0.0;
+	region[otherRow] += pivotValue;
+	i0 = otherRow;
+	double pivotValue1 = region[i1];
+	// put back now ?
+	int iBack1 = permuteBack_[i1];
+	regionIndex2[numberNonZero++] = iBack1;
+	int otherRow1 = parent_[i1];
+	region2[iBack1] = pivotValue1*sign_[i1];
+	region[i1] =0.0;
+	region[otherRow1] += pivotValue1;
+	i1 = otherRow1;
+      }
+    } else {
+      // set up linked lists at each depth
+      // stack2 is start, stack is next
+      int greatestDepth=-1;
+      //mark_[numberRows_]=1;
+      for (i=0;i<numberNonZero;i++) {
+	int j = regionIndex2[i];
+	double value = region2[j];
+	region2[j]=0.0;
+	region[j]=value;
+	regionIndex[i]=j;
+	int iDepth = depth_[j];
+	if (iDepth>greatestDepth) 
+	  greatestDepth = iDepth;
+	// and back until marked
+	while (!mark_[j]) {
+	  int iNext = stack2_[iDepth];
+	  stack2_[iDepth]=j;
+	  stack_[j]=iNext;
+	  mark_[j]=1;
+	  iDepth--;
+	  j=parent_[j];
 	}
-	iPivot = stack_[iPivot];
+      }
+      numberNonZero=0;
+      for (;greatestDepth>=0; greatestDepth--) {
+	int iPivot = stack2_[greatestDepth];
+	stack2_[greatestDepth]=-1;
+	while (iPivot>=0) {
+	  mark_[iPivot]=0;
+	  double pivotValue = region[iPivot];
+	  if (pivotValue) {
+	    // put back now ?
+	    int iBack = permuteBack_[iPivot];
+	    regionIndex2[numberNonZero++] = iBack;
+	    int otherRow = parent_[iPivot];
+	    region2[iBack] = pivotValue*sign_[iPivot];
+	    region[iPivot] =0.0;
+	    region[otherRow] += pivotValue;
+	  }
+	  iPivot = stack_[iPivot];
+	}
       }
     }
+    if (pivotRow>=0)
+      returnValue = region2[pivotRow];
   }
   region[numberRows_]=0.0;
   regionSparse2->setNumElements(numberNonZero);
@@ -683,7 +850,7 @@ ClpNetworkBasis::updateColumn (  CoinIndexedVector * regionSparse,
    }
  }
 #endif
-  return numberNonZero;
+  return returnValue;
 }
 /* Updates one column (FTRAN) to/from array 
     ** For large problems you should ALWAYS know where the nonzeros
@@ -831,79 +998,161 @@ ClpNetworkBasis::updateColumnTranspose (  CoinIndexedVector * regionSparse,
   int *regionIndex = regionSparse->getIndices (  );
   int i;
   int numberNonZero=0;
-  for (i=0;i<numberNonZero2;i++) {
-    int k = regionIndex2[i];
-    int j = permute_[k];
-    double value = region2[k];
-    region2[k]=0.0;
-    region[j]=value;
-    mark_[j]=1;
-    regionIndex[numberNonZero++]=j;
-  }
-  // copy back
-  // set up linked lists at each depth
-  // stack2 is start, stack is next
-  int greatestDepth=-1;
-  int smallestDepth=numberRows_;
-  //mark_[numberRows_]=1;
-  for (i=0;i<numberNonZero2;i++) {
-    int j = regionIndex[i];
-    double value = region[j];
-    region[j]=0.0;
-    region2[j]=value;
-    regionIndex2[i]=j;
-    // add in
-    int iDepth = depth_[j];
-    smallestDepth = min(iDepth,smallestDepth) ;
-    greatestDepth = max(iDepth,greatestDepth) ;
-    int jNext = stack2_[iDepth];
-    stack2_[iDepth]=j;
-    stack_[j]=jNext;
-    // and put all descendants on list
-    int iChild = descendant_[j];
-    while (iChild>=0) {
-      if (!mark_[iChild]) {
-	regionIndex2[numberNonZero++] = iChild;
-	mark_[iChild]=1;
-      }
-      iChild = rightSibling_[iChild];
+  bool packed = regionSparse2->packedMode();
+  if (packed) {
+    for (i=0;i<numberNonZero2;i++) {
+      int k = regionIndex2[i];
+      int j = permute_[k];
+      double value = region2[i];
+      region2[i]=0.0;
+      region[j]=value;
+      mark_[j]=1;
+      regionIndex[numberNonZero++]=j;
     }
-  }
-  for (;i<numberNonZero;i++) {
-    int j = regionIndex2[i];
-    // add in
-    int iDepth = depth_[j];
-    smallestDepth = min(iDepth,smallestDepth) ;
-    greatestDepth = max(iDepth,greatestDepth) ;
-    int jNext = stack2_[iDepth];
-    stack2_[iDepth]=j;
-    stack_[j]=jNext;
-    // and put all descendants on list
-    int iChild = descendant_[j];
-    while (iChild>=0) {
-      if (!mark_[iChild]) {
-	regionIndex2[numberNonZero++] = iChild;
-	mark_[iChild]=1;
+    // set up linked lists at each depth
+    // stack2 is start, stack is next
+    int greatestDepth=-1;
+    int smallestDepth=numberRows_;
+    //mark_[numberRows_]=1;
+    for (i=0;i<numberNonZero2;i++) {
+      int j = regionIndex[i];
+      regionIndex2[i]=j;
+      // add in
+      int iDepth = depth_[j];
+      smallestDepth = min(iDepth,smallestDepth) ;
+      greatestDepth = max(iDepth,greatestDepth) ;
+      int jNext = stack2_[iDepth];
+      stack2_[iDepth]=j;
+      stack_[j]=jNext;
+      // and put all descendants on list
+      int iChild = descendant_[j];
+      while (iChild>=0) {
+	if (!mark_[iChild]) {
+	  regionIndex2[numberNonZero++] = iChild;
+	  mark_[iChild]=1;
+	}
+	iChild = rightSibling_[iChild];
       }
-      iChild = rightSibling_[iChild];
     }
-  }
-  numberNonZero2=0;
-  region2[numberRows_]=0.0;
-  int iDepth;
-  for (iDepth=smallestDepth;iDepth<=greatestDepth; iDepth++) {
-    int iPivot = stack2_[iDepth];
-    stack2_[iDepth]=-1;
-    while (iPivot>=0) {
-      mark_[iPivot]=0;
-      double pivotValue = region2[iPivot];
-      int otherRow = parent_[iPivot];
-      double otherValue = region2[otherRow];
-      pivotValue = sign_[iPivot]*pivotValue+otherValue;
-      region2[iPivot]=pivotValue;
-      if (pivotValue) 
-	regionIndex2[numberNonZero2++]=iPivot;
-      iPivot = stack_[iPivot];
+    for (;i<numberNonZero;i++) {
+      int j = regionIndex2[i];
+      // add in
+      int iDepth = depth_[j];
+      smallestDepth = min(iDepth,smallestDepth) ;
+      greatestDepth = max(iDepth,greatestDepth) ;
+      int jNext = stack2_[iDepth];
+      stack2_[iDepth]=j;
+      stack_[j]=jNext;
+      // and put all descendants on list
+      int iChild = descendant_[j];
+      while (iChild>=0) {
+	if (!mark_[iChild]) {
+	  regionIndex2[numberNonZero++] = iChild;
+	  mark_[iChild]=1;
+	}
+	iChild = rightSibling_[iChild];
+      }
+    }
+    numberNonZero2=0;
+    region[numberRows_]=0.0;
+    int iDepth;
+    for (iDepth=smallestDepth;iDepth<=greatestDepth; iDepth++) {
+      int iPivot = stack2_[iDepth];
+      stack2_[iDepth]=-1;
+      while (iPivot>=0) {
+	mark_[iPivot]=0;
+	double pivotValue = region[iPivot];
+	int otherRow = parent_[iPivot];
+	double otherValue = region[otherRow];
+	pivotValue = sign_[iPivot]*pivotValue+otherValue;
+	region[iPivot]=pivotValue;
+	if (pivotValue) {
+	  region2[numberNonZero2]=pivotValue;
+	  regionIndex2[numberNonZero2++]=iPivot;
+	}
+	iPivot = stack_[iPivot];
+      }
+    }
+    // zero out
+    for (i=0;i<numberNonZero2;i++) {
+      int k = regionIndex2[i];
+      region[k]=0.0;
+    }
+  } else {
+    for (i=0;i<numberNonZero2;i++) {
+      int k = regionIndex2[i];
+      int j = permute_[k];
+      double value = region2[k];
+      region2[k]=0.0;
+      region[j]=value;
+      mark_[j]=1;
+      regionIndex[numberNonZero++]=j;
+    }
+    // copy back
+    // set up linked lists at each depth
+    // stack2 is start, stack is next
+    int greatestDepth=-1;
+    int smallestDepth=numberRows_;
+    //mark_[numberRows_]=1;
+    for (i=0;i<numberNonZero2;i++) {
+      int j = regionIndex[i];
+      double value = region[j];
+      region[j]=0.0;
+      region2[j]=value;
+      regionIndex2[i]=j;
+      // add in
+      int iDepth = depth_[j];
+      smallestDepth = min(iDepth,smallestDepth) ;
+      greatestDepth = max(iDepth,greatestDepth) ;
+      int jNext = stack2_[iDepth];
+      stack2_[iDepth]=j;
+      stack_[j]=jNext;
+      // and put all descendants on list
+      int iChild = descendant_[j];
+      while (iChild>=0) {
+	if (!mark_[iChild]) {
+	  regionIndex2[numberNonZero++] = iChild;
+	  mark_[iChild]=1;
+	}
+	iChild = rightSibling_[iChild];
+      }
+    }
+    for (;i<numberNonZero;i++) {
+      int j = regionIndex2[i];
+      // add in
+      int iDepth = depth_[j];
+      smallestDepth = min(iDepth,smallestDepth) ;
+      greatestDepth = max(iDepth,greatestDepth) ;
+      int jNext = stack2_[iDepth];
+      stack2_[iDepth]=j;
+      stack_[j]=jNext;
+      // and put all descendants on list
+      int iChild = descendant_[j];
+      while (iChild>=0) {
+	if (!mark_[iChild]) {
+	  regionIndex2[numberNonZero++] = iChild;
+	  mark_[iChild]=1;
+	}
+	iChild = rightSibling_[iChild];
+      }
+    }
+    numberNonZero2=0;
+    region2[numberRows_]=0.0;
+    int iDepth;
+    for (iDepth=smallestDepth;iDepth<=greatestDepth; iDepth++) {
+      int iPivot = stack2_[iDepth];
+      stack2_[iDepth]=-1;
+      while (iPivot>=0) {
+	mark_[iPivot]=0;
+	double pivotValue = region2[iPivot];
+	int otherRow = parent_[iPivot];
+	double otherValue = region2[otherRow];
+	pivotValue = sign_[iPivot]*pivotValue+otherValue;
+	region2[iPivot]=pivotValue;
+	if (pivotValue) 
+	  regionIndex2[numberNonZero2++]=iPivot;
+	iPivot = stack_[iPivot];
+      }
     }
   }
   regionSparse2->setNumElements(numberNonZero2);

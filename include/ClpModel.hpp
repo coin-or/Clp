@@ -15,7 +15,6 @@
 #include "ClpObjective.hpp"
 
 // Plus infinity
-// Plus infinity
 #ifndef COIN_DBL_MAX
 #define COIN_DBL_MAX DBL_MAX
 #endif
@@ -46,6 +45,14 @@ public:
     ClpModel(const ClpModel &);
     /// Assignment operator. This copies the data
     ClpModel & operator=(const ClpModel & rhs);
+  /** Subproblem constructor.  A subset of whole model is created from the 
+      row and column lists given.  The new order is given by list order and
+      duplicates are allowed.  Name and integer information can be dropped
+  */
+    ClpModel (const ClpModel * wholeModel,
+      int numberRows, const int * whichRows,
+      int numberColumns, const int * whichColumns,
+	      bool dropNames=true, bool dropIntegers=true);
     /// Destructor
     ~ClpModel (  );
   //@}
@@ -91,8 +98,9 @@ public:
 		     const double* obj,
 		      const double* rowlb, const double* rowub,
 		      const double * rowObjective=NULL);
-  /// Load up quadratic objective 
-  void loadQuadraticObjective(const int numberColumns, const CoinBigIndex * start,
+  /** Load up quadratic objective.  This is stored as a CoinPackedMatrix */
+  void loadQuadraticObjective(const int numberColumns, 
+			      const CoinBigIndex * start,
 			      const int * column, const double * element);
   void loadQuadraticObjective (  const CoinPackedMatrix& matrix);
   /// Get rid of quadratic objective
@@ -116,6 +124,12 @@ public:
 	       const double * rowUpper,
 	       const int * rowStarts, const int * columns,
 	       const double * elements);
+  /// Add rows
+  void addRows(int number, const double * rowLower, 
+	       const double * rowUpper,
+	       const int * rowStarts, const int * rowLengths,
+	       const int * columns,
+	       const double * elements);
   void addRows(int number, const double * rowLower, 
 	       const double * rowUpper,
 	       const CoinPackedVectorBase * const * rows);
@@ -124,15 +138,21 @@ public:
   void deleteColumns(int number, const int * which);
   /// Add columns
   void addColumns(int number, const double * columnLower, 
-	       const double * columnUpper,
+		  const double * columnUpper,
 		  const double * objective,
-	       const int * columnStarts, const int * rows,
-	       const double * elements);
+		  const int * columnStarts, const int * rows,
+		  const double * elements);
+  void addColumns(int number, const double * columnLower, 
+		  const double * columnUpper,
+		  const double * objective,
+		  const int * columnStarts, const int * columnLengths,
+		  const int * rows,
+		  const double * elements);
   void addColumns(int number, const double * columnLower, 
 	       const double * columnUpper,
 		  const double * objective,
 	       const CoinPackedVectorBase * const * columns);
-  /** Borrow model.  This is so we dont have to copy large amounts
+  /** Borrow model.  This is so we don't have to copy large amounts
       of data around.  It assumes a derived class wants to overwrite
       an empty model with a real one - while it does an algorithm */
   void borrowModel(ClpModel & otherModel);
@@ -144,6 +164,9 @@ public:
   void createEmptyMatrix();
   /// Drops names - makes lengthnames 0 and names empty
   void dropNames();
+  /// Copies in names
+  void copyNames(std::vector<std::string> & rowNames,
+		 std::vector<std::string> & columnNames);
   
   //@}
   /**@name gets and sets */
@@ -199,6 +222,13 @@ public:
   /// Set problem status
   inline void setProblemStatus(int problemStatus)
   { problemStatus_ = problemStatus;};
+   /** Secondary status of problem - may get extended
+       0 - none
+       1 - primal infeasible because dual limit reached
+   */
+   inline int secondaryStatus() const            { return secondaryStatus_; }
+  inline void setSecondaryStatus(int status)
+  { secondaryStatus_ = status;};
    /// Are there a numerical difficulties?
    bool isAbandoned() const             { return problemStatus_==4; }
    /// Is optimality proven?
@@ -214,11 +244,11 @@ public:
    /// Iteration limit reached?
    bool isIterationLimitReached() const { return problemStatus_==3; }
    /// Direction of optimization (1 - minimize, -1 - maximize, 0 - ignore
-   inline int optimizationDirection() const {
-      return (int) optimizationDirection_;
+   inline double optimizationDirection() const {
+      return  optimizationDirection_;
    }
    inline double getObjSense() const    { return optimizationDirection_; }
-   void setOptimizationDirection(int value);
+   void setOptimizationDirection(double value);
    /// Primal row solution
    inline double * primalRowSolution() const    { return rowActivity_; }
    inline const double * getRowActivity() const { return rowActivity_; }
@@ -244,7 +274,16 @@ public:
   {
     if (objective_) {
       double offset; 
-      return objective_->gradient(NULL,offset);
+      return objective_->gradient(NULL,offset,false);
+    } else {
+      return NULL;
+    }
+  }
+   inline double * objective(const double * solution, double & offset,bool refresh=true) const            
+  {
+    offset=0.0;
+    if (objective_) {
+      return objective_->gradient(solution,offset,refresh);
     } else {
       return NULL;
     }
@@ -253,7 +292,7 @@ public:
   { 
     if (objective_) {
       double offset; 
-      return objective_->gradient(NULL,offset);
+      return objective_->gradient(NULL,offset,false);
     } else {
       return NULL;
     }
@@ -287,8 +326,10 @@ public:
    inline ClpMatrixBase * rowCopy() const       { return rowCopy_; }
    /// Clp Matrix 
    inline ClpMatrixBase * clpMatrix() const     { return matrix_; }
-   /// Quadratic objective
-   inline CoinPackedMatrix * quadraticObjective() const     { return quadraticObjective_; }
+  /** Replace Clp Matrix (current is not deleted and new is used)
+      So up to user to delete one
+  */
+   void replaceMatrix(ClpMatrixBase * matrix);
    /// Objective value
    inline double objectiveValue() const {
       return objectiveValue_*optimizationDirection_ - dblParam_[ClpObjOffset];
@@ -347,6 +388,12 @@ public:
    const std::string& columnName(int iColumn) const {
       return columnNames_[iColumn];
    }
+  /// Objective methods
+  inline ClpObjective * objectiveAsObject() const
+  { return objective_;};
+  void setObjective(ClpObjective * objective);
+  void setObjectivePointer(ClpObjective * objective)
+  { objective_ = objective;};
   //@}
 
 
@@ -463,8 +510,6 @@ protected:
   ClpMatrixBase * matrix_;
   /// Row copy if wanted
   ClpMatrixBase * rowCopy_;
-  /// Quadratic objective if any
-  CoinPackedMatrix * quadraticObjective_;
   /// Infeasible/unbounded ray
   double * ray_;
   /** Status Region.  I know that not all algorithms need a status
@@ -485,6 +530,8 @@ protected:
   int solveType_;
   /// Status of problem
   int problemStatus_;
+  /// Secondary status of problem
+  int secondaryStatus_;
   /// length of names (0 means no names)
   int lengthNames_;
   /// Message handler

@@ -8,6 +8,7 @@
 #include "CoinPackedMatrix.hpp"
 class CoinIndexedVector;
 class ClpSimplex;
+class ClpModel;
 
 /** Abstract base class for Clp Matrices
 
@@ -57,11 +58,16 @@ public:
     virtual void deleteCols(const int numDel, const int * indDel) = 0;
     /** Delete the rows whose indices are listed in <code>indDel</code>. */
     virtual void deleteRows(const int numDel, const int * indDel) = 0;
+  /// Append Columns
+  virtual void appendCols(int number, const CoinPackedVectorBase * const * columns);
+  /// Append Rows
+  virtual void appendRows(int number, const CoinPackedVectorBase * const * rows);
 
   /** Returns a new matrix in reverse order without gaps
       Is allowed to return NULL if doesn't want to have row copy */
   virtual ClpMatrixBase * reverseOrderedCopy() const {return NULL;};
 
+  // OLD - out soon
   /** Returns number of elements in basis
       column is basic if entry >=0 */
   virtual CoinBigIndex numberInBasis(const int * columnIsBasic) const = 0;
@@ -70,6 +76,14 @@ public:
 				const int * columnIsBasic, int & numberBasic,
 				int * row, int * column,
 				double * element) const = 0;
+  /** If element NULL returns number of elements in column part of basis,
+      If not NULL fills in as well */
+  virtual CoinBigIndex fillBasis(const ClpSimplex * model,
+				 const int * whichColumn, 
+				 int numberRowBasic,
+				 int numberColumnBasic,
+				 int * row, int * column,
+				 double * element) const = 0;
   /** Creates scales for column copy (rowCopy in model may be modified)
       default does not allow scaling
       returns non-zero if no scaling done */
@@ -81,22 +95,38 @@ public:
       probably expect no zeros.  Code can modify matrix to get rid of
       small elements.
   */
-  virtual bool allElementsInRange(ClpSimplex * model,
+  virtual bool allElementsInRange(ClpModel * model,
 				  double smallest, double largest)
   { return true;};
+  /** Returns largest and smallest elements of both signs.
+      Largest refers to largest absolute value.
+      If returns zeros then can't tell anything */
+  virtual void rangeOfElements(double & smallestNegative, double & largestNegative,
+		       double & smallestPositive, double & largestPositive);
 
   /** Unpacks a column into an CoinIndexedvector
-      Note that model is NOT const.  Bounds and objective could
-      be modified if doing column generation (just for this variable) */
+   */
   virtual void unpack(const ClpSimplex * model,CoinIndexedVector * rowArray,
 		   int column) const =0;
+  /** Unpacks a column into an CoinIndexedvector
+   ** in packed foramt
+      Note that model is NOT const.  Bounds and objective could
+      be modified if doing column generation (just for this variable) */
+  virtual void unpackPacked(ClpSimplex * model,
+			    CoinIndexedVector * rowArray,
+			    int column) const =0;
   /** Purely for column generation and similar ideas.  Allows
       matrix and any bounds or costs to be updated (sensibly).
       Returns non-zero if any changes.
   */
   int refresh(ClpSimplex * model)
     { return 0;};
-
+  /** Given positive integer weights for each row fills in sum of weights
+      for each column (and slack).
+      Returns weights vector
+      Default returns vector of ones
+  */
+  virtual CoinBigIndex * dubiousWeights(const ClpSimplex * model,int * inputWeights) const;
   /** Adds multiple of a column into an CoinIndexedvector
       You can use quickAdd to add to vector */
   virtual void add(const ClpSimplex * model,CoinIndexedVector * rowArray,
@@ -115,7 +145,9 @@ public:
         @pre <code>y</code> must be of size <code>numRows()</code> */
   virtual void times(double scalar,
 		       const double * x, double * y) const=0;
-  /// And for scaling - default aborts for when scaling not supported
+  /** And for scaling - default aborts for when scaling not supported
+      (unless pointers NULL when as normal)
+  */
   virtual void times(double scalar,
 		     const double * x, double * y,
 		     const double * rowScale, 
@@ -125,13 +157,16 @@ public:
         @pre <code>y</code> must be of size <code>numColumns()</code> */
     virtual void transposeTimes(double scalar,
 				const double * x, double * y) const = 0;
-  /// And for scaling - default aborts for when scaling not supported
-    virtual void transposeTimes(double scalar,
+  /** And for scaling - default aborts for when scaling not supported
+      (unless pointers NULL when as normal)
+  */
+  virtual void transposeTimes(double scalar,
 				const double * x, double * y,
 				const double * rowScale, 
 				const double * columnScale) const;
     /** Return <code>x * scalar *A + y</code> in <code>z</code>. 
 	Can use y as temporary array (will be empty at end)
+	Note - If x packed mode - then z packed mode
 	Squashes small elements and knows about ClpSimplex */
   virtual void transposeTimes(const ClpSimplex * model, double scalar,
 			      const CoinIndexedVector * x,
@@ -140,6 +175,7 @@ public:
     /** Return <code>x *A</code> in <code>z</code> but
 	just for indices in y.
 	This is only needed for primal steepest edge.
+	Note - If x packed mode - then z packed mode
 	Squashes small elements and knows about ClpSimplex */
   virtual void subsetTransposeTimes(const ClpSimplex * model,
 			      const CoinIndexedVector * x,
@@ -150,6 +186,13 @@ public:
   ///@name Other
   /// Clone
   virtual ClpMatrixBase * clone() const = 0;
+  /** Subset clone (without gaps).  Duplicates are allowed
+      and order is as given.
+      Derived classes need not provide this as it may not always make
+      sense */
+  virtual ClpMatrixBase * subsetClone (
+		    int numberRows, const int * whichRows,
+		    int numberColumns, const int * whichColumns) const;
  
   /// Returns type
   inline int type() const

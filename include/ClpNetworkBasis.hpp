@@ -68,9 +68,12 @@ public:
   /**@name various uses of factorization (return code number elements) 
    which user may want to know about */
   //@{
-  /** Updates one column (FTRAN) from region */
-  int updateColumn ( CoinIndexedVector * regionSparse, 
-		     CoinIndexedVector * regionSparse2);
+  /** Updates one column (FTRAN) from region,
+      Returns pivot value if "pivotRow" >=0
+  */
+  double updateColumn ( CoinIndexedVector * regionSparse, 
+			CoinIndexedVector * regionSparse2,
+			int pivotRow);
   /** Updates one column (FTRAN) to/from array 
       ** For large problems you should ALWAYS know where the nonzeros
       are, so please try and migrate to previous method after you

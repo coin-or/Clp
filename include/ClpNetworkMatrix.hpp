@@ -61,11 +61,35 @@ public:
 				const int * columnIsBasic, int & numberBasic,
 				int * row, int * column,
 				double * element) const ;
+  /** If element NULL returns number of elements in column part of basis,
+      If not NULL fills in as well */
+  virtual CoinBigIndex fillBasis(const ClpSimplex * model,
+				 const int * whichColumn, 
+				 int numberRowBasic,
+				 int numberColumnBasic,
+				 int * row, int * column,
+				 double * element) const ;
+  /** Given positive integer weights for each row fills in sum of weights
+      for each column (and slack).
+      Returns weights vector
+  */
+  virtual CoinBigIndex * dubiousWeights(const ClpSimplex * model,int * inputWeights) const;
+  /** Returns largest and smallest elements of both signs.
+      Largest refers to largest absolute value.
+  */
+  virtual void rangeOfElements(double & smallestNegative, double & largestNegative,
+		       double & smallestPositive, double & largestPositive);
   /** Unpacks a column into an CoinIndexedvector
-      Note that model is NOT const.  Bounds and objective could
-      be modified if doing column generation */
+   */
   virtual void unpack(const ClpSimplex * model,CoinIndexedVector * rowArray,
 		   int column) const ;
+  /** Unpacks a column into an CoinIndexedvector
+   ** in packed format
+      Note that model is NOT const.  Bounds and objective could
+      be modified if doing column generation (just for this variable) */
+  virtual void unpackPacked(ClpSimplex * model,
+			    CoinIndexedVector * rowArray,
+			    int column) const;
   /** Adds multiple of a column into an CoinIndexedvector
       You can use quickAdd to add to vector */
   virtual void add(const ClpSimplex * model,CoinIndexedVector * rowArray,
@@ -98,6 +122,7 @@ public:
 				const double * columnScale) const;
     /** Return <code>x * scalar * A + y</code> in <code>z</code>. 
 	Can use y as temporary array (will be empty at end)
+	Note - If x packed mode - then z packed mode
 	Squashes small elements and knows about ClpSimplex */
   virtual void transposeTimes(const ClpSimplex * model, double scalar,
 			      const CoinIndexedVector * x,
@@ -105,6 +130,7 @@ public:
 			      CoinIndexedVector * z) const;
     /** Return <code>x *A</code> in <code>z</code> but
 	just for indices in y.
+	Note - If x packed mode - then z packed mode
 	Squashes small elements and knows about ClpSimplex */
   virtual void subsetTransposeTimes(const ClpSimplex * model,
 				    const CoinIndexedVector * x,

@@ -1,51 +1,23 @@
-// Copyright (C) 2002, International Business Machines
+// Copyright (C) 2002,2003 International Business Machines
 // Corporation and others.  All Rights Reserved.
 
 #include "ClpSimplex.hpp"
-#include "ClpPrimalColumnSteepest.hpp"
+#include "ClpPresolve.hpp"
+#include "CoinHelperFunctions.hpp"
+#include "CoinTime.hpp"
 #include "ClpDualRowSteepest.hpp"
-#include "ClpFactorization.hpp"
-#include "Presolve.hpp"
+#include "ClpPrimalColumnSteepest.hpp"
 #include <iomanip>
-
-// Time
-
-#include  <time.h>
-#if !defined(_MSC_VER)
-#include <sys/times.h>
-#include <sys/resource.h>
-#include <unistd.h>
-#endif
-static double cpuTime()
-{
-  double cpu_temp;
-#if defined(_MSC_VER)
-  unsigned int ticksnow;        /* clock_t is same as int */
-  
-  ticksnow = (unsigned int)clock();
-  
-  cpu_temp = (double)((double)ticksnow/CLOCKS_PER_SEC);
-#else
-  struct rusage usage;
-  getrusage(RUSAGE_SELF,&usage);
-  cpu_temp = usage.ru_utime.tv_sec;
-  cpu_temp += 1.0e-6*((double) usage.ru_utime.tv_usec);
-#endif
-  return cpu_temp;
-}
 
 int main (int argc, const char *argv[])
 {
   ClpSimplex  model;
   int status;
-  // Keep names
+  // Keep names when reading an mps file
   if (argc<2)
     status=model.readMps("../../Mps/Sample/p0033.mps",true);
   else
     status=model.readMps(argv[1],true);
-  /*
-    This driver show how to do presolve
-  */
 
   if (status) {
     fprintf(stderr,"Bad readMps %s\n",argv[1]);
@@ -53,54 +25,18 @@ int main (int argc, const char *argv[])
     exit(1);
   }
 
-  double time1 = cpuTime();
-  ClpSimplex * model2;
-  Presolve pinfo;
-  int numberPasses=5; // can change this
-  model2 = pinfo.presolvedModel(model,1.0e-8,false,numberPasses);
-  if (!model2) {
-    fprintf(stderr,"Presolve says %s is infeasible with tolerance of %g\n",
-	    argv[1],1.0e-8);
-    fprintf(stdout,"Presolve says %s is infeasible with tolerance of %g\n",
-	    argv[1],1.0e-8);
-    model2 = pinfo.presolvedModel(model,1.0e-7,false,numberPasses);
-    if (!model2) {
-      fprintf(stderr,"Presolve says %s is infeasible with tolerance of %g\n",
-	      argv[1],1.0e-7);
-      fprintf(stdout,"Presolve says %s is infeasible with tolerance of %g\n",
-	      argv[1],1.0e-7);
-      exit(2);
-    }
-  }
-  model2->checkSolution();
-  // change from 200
-  model2->factorization()->maximumPivots(100+model2->numberRows()/50);
+  double time1 = CoinCpuTime();
   if (argc<3 ||!strstr(argv[2],"primal")) {
-    // faster if bounds tightened
-    int numberInfeasibilities = model2->tightenPrimalBounds();
-    if (numberInfeasibilities)
-      std::cout<<"** Analysis indicates model infeasible"
-	       <<std::endl;
-    // up dual bound for safety
-    model2->setDualBound(1.0e10);
-    model2->dual();
+    // Use the dual algorithm unless user said "primal"
+    model.initialDualSolve();
   } else {
-    // up infeasibility cost for safety
-    model2->setInfeasibilityCost(1.0e10);
-    model2->primal();
+    model.initialPrimalSolve();
   }
-  pinfo.postsolve(true);
-		
-  int numberIterations=model2->numberIterations();;
-  delete model2;
-  printf("Resolving from postsolved model\n");
-  model.primal(1);
-
-  numberIterations += model.numberIterations();;
   // for running timing tests
   std::cout<<argv[1]<<" Objective "<<model.objectiveValue()<<" took "<<
-    numberIterations<<" iterations and "<<cpuTime()-time1<<" seconds"<<std::endl;
-
+    model.numberIterations()<<" iterations and "<<
+    CoinCpuTime()-time1<<" seconds"<<std::endl;
+  
   std::string modelName;
   model.getStrParam(ClpProbName,modelName);
   std::cout<<"Model "<<modelName<<" has "<<model.numberRows()<<" rows and "<<

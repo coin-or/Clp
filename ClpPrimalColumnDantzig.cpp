@@ -84,7 +84,8 @@ ClpPrimalColumnDantzig::pivotColumn(CoinIndexedVector * updates,
     // sub flip - nothing to do
     anyUpdates=false;
   }
-
+  if (!updates->getNumElements())
+    anyUpdates=false; // in case dj 0.0 (for quadratic)
   if (anyUpdates) {
     model_->factorization()->updateColumnTranspose(spareRow2,updates);
     // put row of tableau in rowArray and columnArray
@@ -138,31 +139,34 @@ ClpPrimalColumnDantzig::pivotColumn(CoinIndexedVector * updates,
   reducedCost=model_->djRegion();
 
   for (iSequence=0;iSequence<number;iSequence++) {
-    double value = reducedCost[iSequence];
-    ClpSimplex::Status status = model_->getStatus(iSequence);
-    
-    switch(status) {
+    // check flagged variable
+    if (!model_->flagged(iSequence)) {
+      double value = reducedCost[iSequence];
+      ClpSimplex::Status status = model_->getStatus(iSequence);
       
-    case ClpSimplex::basic:
-    case ClpSimplex::isFixed:
-      break;
-    case ClpSimplex::isFree:
-    case ClpSimplex::superBasic:
-      if (fabs(value)>bestFreeDj) { 
-	bestFreeDj = fabs(value);
-	bestFreeSequence = iSequence;
-      }
-      break;
-    case ClpSimplex::atUpperBound:
-      if (value>bestDj) {
-	bestDj = value;
-	bestSequence = iSequence;
-      }
-      break;
-    case ClpSimplex::atLowerBound:
-      if (value<-bestDj) {
-	bestDj = -value;
-	bestSequence = iSequence;
+      switch(status) {
+
+      case ClpSimplex::basic:
+      case ClpSimplex::isFixed:
+	break;
+      case ClpSimplex::isFree:
+      case ClpSimplex::superBasic:
+	if (fabs(value)>bestFreeDj) { 
+	  bestFreeDj = fabs(value);
+	  bestFreeSequence = iSequence;
+	}
+	break;
+      case ClpSimplex::atUpperBound:
+	if (value>bestDj) {
+	  bestDj = value;
+	  bestSequence = iSequence;
+	}
+	break;
+      case ClpSimplex::atLowerBound:
+	if (value<-bestDj) {
+	  bestDj = -value;
+	  bestSequence = iSequence;
+	}
       }
     }
   }

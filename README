@@ -1,6 +1,6 @@
 To build Clp see INSTALL file
 
-To use Clp you need the Clp and Osi libraries
+To use Clp you need the Clp and Coin libraries
 
 To make the unitTest and standalone executable do
 
@@ -25,7 +25,7 @@ clp -presolve on -dualbound 1.0e10 -netlib
 works well.
 
 There are samples in ./Samples.  Use the corresponding Makefile to 
-create an executable - testit.
+create an executable - testit.  For later ones do "make DRIVER=sprint" etc.
 
 At present there are only three useful samples.
 
