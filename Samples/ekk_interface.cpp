@@ -253,7 +253,8 @@ extern "C" int ekk_preSolveClp(EKKModel * model, bool keepIntegers,
   if (!pass)
     pass=5;
   // very wasteful - create a clp copy of osl model
-  ClpSimplex * clp = clpmodel(model,0);
+  // 1 to keep solution as is
+  ClpSimplex * clp = clpmodel(model,1);
   // could get round with tailored version of Presolve.cpp
   ClpSimplex * newModel = presolveInfo->presolvedModel(*clp,
 						       ekk_getRtolpinf(model),
