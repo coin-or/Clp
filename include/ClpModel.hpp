@@ -162,8 +162,6 @@ public:
   */
   int addRows(const CoinBuild & buildObject,bool tryPlusMinusOne=false,
                bool checkDuplicates=true);
-  int addRowsTest(const CoinBuild & buildObject,bool tryPlusMinusOne=false,
-               bool checkDuplicates=true);
   /** Add rows from a model object.  returns
       -1 if object in bad state (i.e. has column information)
       otherwise number of errors.
@@ -173,8 +171,6 @@ public:
       if no matrix exists.
   */
   int addRows(CoinModel & modelObject,bool tryPlusMinusOne=false,
-              bool checkDuplicates=true);
-  int addRowsTest(CoinModel & modelObject,bool tryPlusMinusOne=false,
               bool checkDuplicates=true);
 
   /// Deletes columns
@@ -209,8 +205,6 @@ public:
   */
   int addColumns(const CoinBuild & buildObject,bool tryPlusMinusOne=false,
                   bool checkDuplicates=true);
-  int addColumnsTest(const CoinBuild & buildObject,bool tryPlusMinusOne=false,
-                  bool checkDuplicates=true);
   /** Add columns from a model object.  returns
       -1 if object in bad state (i.e. has row information)
       otherwise number of errors
@@ -219,8 +213,6 @@ public:
       if no matrix exists.
   */
   int addColumns(CoinModel & modelObject,bool tryPlusMinusOne=false,
-                 bool checkDuplicates=true);
-  int addColumnsTest(CoinModel & modelObject,bool tryPlusMinusOne=false,
                  bool checkDuplicates=true);
   /** Change row lower bounds */
   void chgRowLower(const double * rowLower);
