@@ -399,7 +399,8 @@ PresolveMatrix::PresolveMatrix(int ncols0_in,
 				     // rowrep
 				     int nrows_in,
 				     CoinBigIndex nelems_in,
-			       bool doStatus) :
+			       bool doStatus,
+			       double nonLinearValue) :
 
   PrePostsolveMatrix(si,
 			ncols0_in, nrows_in, nelems_in),
@@ -476,6 +477,31 @@ PresolveMatrix::PresolveMatrix(int ncols0_in,
     ClpFillN<char>(integerType_, ncols_, 0);
   }
 
+  // Set up prohibited bits if needed
+  if (nonLinearValue) {
+    rowProhibited_ = new unsigned int[(nrows_+31)>>5];
+    memset(rowProhibited_,0,((nrows_+31)>>5)*sizeof(unsigned int));
+    colProhibited_ = new unsigned int[(ncols_+31)>>5];
+    memset(colProhibited_,0,((ncols_+31)>>5)*sizeof(unsigned int));
+    for (icol=0;icol<ncols_;icol++) {
+      int j;
+      bool nonLinearColumn = false;
+      if (cost_[icol]==nonLinearValue)
+	nonLinearColumn=true;
+      for (j=mcstrt_[icol];j<mcstrt_[icol+1];j++) {
+	if (colels_[j]==nonLinearValue) {
+	  nonLinearColumn=true;
+	  setRowProhibited(hrow_[j]);
+	}
+      }
+      if (nonLinearColumn)
+	setColProhibited(icol);
+    }
+  } else {
+    rowProhibited_ = NULL;
+    colProhibited_ = NULL;
+  }
+
   if (doStatus) {
     // allow for status and solution
     sol_ = new double[ncols_];
@@ -536,6 +562,8 @@ PresolveMatrix::~PresolveMatrix()
   delete[] colChanged_;
   delete[] colsToDo_;
   delete[] nextColsToDo_;
+  delete[] rowProhibited_;
+  delete[] colProhibited_;
 }
 
 
@@ -544,19 +572,6 @@ void PresolveMatrix::update_model(ClpSimplex& si,
 				     int ncols0,
 				     CoinBigIndex nelems0)
 {
-#if 0
-  // out as it was hardware error !!
-  {
-    // temporary sanity check (for funny nw04 bug)
-    int icol;
-    for (icol=0;icol<ncols_;icol++) {
-      int j;
-      for (j=mcstrt_[icol];j<mcstrt_[icol]+hincol_[icol];j++) {
-	assert(hrow_[j]>=0&&hrow_[j]<nrows_);
-      }
-    }
-  }
-#endif
   si.loadProblem(ncols_, nrows_, mcstrt_, hrow_, colels_, hincol_,
 		 clo_, cup_, cost_, rlo_, rup_);
 

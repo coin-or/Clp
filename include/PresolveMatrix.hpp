@@ -390,6 +390,44 @@ class PresolveMatrix : public PrePostsolveMatrix {
     int bit = i&31;
     value &= ~(1<<bit);
   }
+  // Bits to say if row can not be touched
+  unsigned int * rowProhibited_;
+  inline bool anyProhibited() const
+  { return rowProhibited_!=NULL;};
+
+  inline bool rowProhibited(int i) const {
+    return (rowProhibited_[i>>5]>>(i&31))!=0;
+  }
+  // This one for lazy testing
+  inline bool rowProhibited2(int i) const {
+    if (!rowProhibited_)
+      return false;
+    else
+      return (rowProhibited_[i>>5]>>(i&31))!=0;
+  }
+  inline void setRowProhibited(int i) {
+    unsigned int & value = rowProhibited_[i>>5];
+    int bit = i&31;
+    value |= (1<<bit);
+  }
+  // Columns
+  // Bits to say if column can not be touched
+  unsigned int * colProhibited_;
+  inline bool colProhibited(int i) const {
+    return (colProhibited_[i>>5]>>(i&31))!=0;
+  }
+  // This one for lazy testing
+  inline bool colProhibited2(int i) const {
+    if (!colProhibited_)
+      return false;
+    else
+      return (colProhibited_[i>>5]>>(i&31))!=0;
+  }
+  inline void setColProhibited(int i) {
+    unsigned int & value = colProhibited_[i>>5];
+    int bit = i&31;
+    value |= (1<<bit);
+  }
   PresolveMatrix(int ncols0,
 		    double maxmin,
 		    // end prepost members
@@ -399,7 +437,8 @@ class PresolveMatrix : public PrePostsolveMatrix {
 		    // rowrep
 		    int nrows,
 		    CoinBigIndex nelems,
-		 bool doStatus);
+		 bool doStatus,
+		 double nonLinearVariable);
 
   ~PresolveMatrix();
 

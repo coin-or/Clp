@@ -131,14 +131,22 @@ const PresolveAction *drop_zero_coefficients_action::presolve(PresolveMatrix *pr
 const PresolveAction *drop_zero_coefficients(PresolveMatrix *prob,
 					      const PresolveAction *next)
 {
-  int ncols		= prob->ncols_;
-  int *checkcols	= new int[ncols];
+  int ncheck		= prob->ncols_;
+  int *checkcols	= new int[ncheck];
 
-  for (int i=0; i<ncols; i++)
-    checkcols[i] = i;
+  if (!prob->anyProhibited()) {
+    for (int i=0; i<ncheck; i++)
+      checkcols[i] = i;
+  } else {
+    // some prohibited
+    ncheck=0;
+    for (int i=0; i<prob->ncols_; i++)
+      if (!prob->colProhibited(i))
+	checkcols[ncheck++] = i;
+  }
 
   const PresolveAction *retval = drop_zero_coefficients_action::presolve(prob,
-							 checkcols, ncols,
+							 checkcols, ncheck,
 							 next);
   delete[]checkcols;
   return (retval);

@@ -247,7 +247,7 @@ const PresolveAction *remove_fixed(PresolveMatrix *prob,
   double *cup	= prob->cup_;
 
   for (int i=0; i<ncols; i++)
-    if (hincol[i] > 0 && clo[i] == cup[i])
+    if (hincol[i] > 0 && clo[i] == cup[i]&&!prob->colProhibited2(i))
       fcols[nfcols++] = i;
 
   next = remove_fixed_action::presolve(prob, fcols, nfcols, next);
@@ -356,7 +356,7 @@ const PresolveAction *make_fixed(PresolveMatrix *prob,
   double *cup	= prob->cup_;
 
   for (int i=0; i<ncols; i++)
-    if (hincol[i] > 0 && fabs(cup[i] - clo[i]) < ZTOLDP) 
+    if (hincol[i] > 0 && fabs(cup[i] - clo[i]) < ZTOLDP&&!prob->colProhibited2(i)) 
       fcols[nfcols++] = i;
 
   next = make_fixed_action::presolve(prob, fcols, nfcols,

@@ -84,7 +84,14 @@ public:
     
   /// return pointer to original columns
   const int * originalColumns() const;
-
+  /** "Magic" number. If this is non-zero then any elements with this value
+      may change and so presolve is very limited in what can be done
+      to the row and column.  This is for non-linear problems.
+  */
+  inline void setNonLinearValue(double value)
+  { nonLinearValue_ = value;};
+  inline double nonLinearValue() const
+    { return nonLinearValue_;};
 
   /**@name postsolve - postsolve the problem.  If the problem 
     has not been solved to optimality, there are no guarantees.
@@ -103,6 +110,12 @@ private:
 
   /// Presolved model - up to user to destroy by deletePresolvedModel
   ClpSimplex * presolvedModel_;
+  /** "Magic" number. If this is non-zero then any elements with this value
+      may change and so presolve is very limited in what can be done
+      to the row and column.  This is for non-linear problems.
+      One could also allow for cases where sign of coefficient is known.
+  */
+  double nonLinearValue_;
   /// Original column numbers
   int * originalColumn_;
   /// The list of transformations applied.

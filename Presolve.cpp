@@ -37,6 +37,7 @@
 Presolve::Presolve() :
   originalModel_(NULL),
   presolvedModel_(NULL),
+  nonLinearValue_(0.0),
   originalColumn_(NULL),
   paction_(0),
   ncols_(0),
@@ -216,7 +217,7 @@ Presolve::presolvedModel(ClpSimplex & si,
     PresolveMatrix prob(ncols_,
 			maxmin,
 			*presolvedModel_,
-			nrows_, nelems_,true);
+			nrows_, nelems_,true,nonLinearValue_);
     // make sure row solution correct
     {
       double *colels	= prob.colels_;
@@ -555,12 +556,24 @@ const PresolveAction *Presolve::presolve(PresolveMatrix *prob)
 
     int i;
     // say look at all
-    for (i=0;i<nrows_;i++) 
-      prob->rowsToDo_[i]=i;
-    prob->numberRowsToDo_=nrows_;
-    for (i=0;i<ncols_;i++) 
-      prob->colsToDo_[i]=i;
-    prob->numberColsToDo_=ncols_;
+    if (!prob->anyProhibited()) {
+      for (i=0;i<nrows_;i++) 
+	prob->rowsToDo_[i]=i;
+      prob->numberRowsToDo_=nrows_;
+      for (i=0;i<ncols_;i++) 
+	prob->colsToDo_[i]=i;
+      prob->numberColsToDo_=ncols_;
+    } else {
+      // some stuff must be left alone
+      prob->numberRowsToDo_=0;
+      for (i=0;i<nrows_;i++) 
+	if (!prob->rowProhibited(i))
+	    prob->rowsToDo_[prob->numberRowsToDo_++]=i;
+      prob->numberColsToDo_=0;
+      for (i=0;i<ncols_;i++) 
+	if (!prob->colProhibited(i))
+	    prob->colsToDo_[prob->numberColsToDo_++]=i;
+    }
 	
 
     int iLoop;
@@ -674,12 +687,24 @@ const PresolveAction *Presolve::presolve(PresolveMatrix *prob)
       }
       // say look at all
       int i;
-      for (i=0;i<nrows_;i++) 
-	prob->rowsToDo_[i]=i;
-      prob->numberRowsToDo_=nrows_;
-      for (i=0;i<ncols_;i++) 
-	prob->colsToDo_[i]=i;
-      prob->numberColsToDo_=ncols_;
+      if (!prob->anyProhibited()) {
+	for (i=0;i<nrows_;i++) 
+	  prob->rowsToDo_[i]=i;
+	prob->numberRowsToDo_=nrows_;
+	for (i=0;i<ncols_;i++) 
+	  prob->colsToDo_[i]=i;
+	prob->numberColsToDo_=ncols_;
+      } else {
+	// some stuff must be left alone
+	prob->numberRowsToDo_=0;
+	for (i=0;i<nrows_;i++) 
+	  if (!prob->rowProhibited(i))
+	    prob->rowsToDo_[prob->numberRowsToDo_++]=i;
+	prob->numberColsToDo_=0;
+	for (i=0;i<ncols_;i++) 
+	  if (!prob->colProhibited(i))
+	    prob->colsToDo_[prob->numberColsToDo_++]=i;
+      }
       // now expensive things
       // this caused world.mps to run into numerical difficulties
 #ifdef PRESOLVE_SUMMARY

@@ -186,7 +186,7 @@ const PresolveAction *dupcol_action::presolve(PresolveMatrix *prob,
       CoinBigIndex kcs = mcstrt[ithis];
       CoinBigIndex kce = kcs + hincol[ithis];
 
-      if (hincol[ithis] == hincol[ilast]) {
+      if (hincol[ithis] == hincol[ilast]&&!prob->colProhibited2(ithis)) {
 	int ishift = mcstrt[ilast] - kcs;
 	CoinBigIndex k;
 	for (k=kcs;k<kce;k++) {

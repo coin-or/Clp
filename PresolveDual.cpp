@@ -166,7 +166,7 @@ const PresolveAction *remove_dual_action::presolve(PresolveMatrix *prob,
 	djmax[j] = (iflagu ? -PRESOLVE_INF : ddjhi);
 #endif
 
-	if (ddjlo > ZTOLDP && iflagl == 0) {
+	if (ddjlo > ZTOLDP && iflagl == 0&&!prob->colProhibited2(j)) {
 	  // dj>0 at optimality ==> must be at lower bound
 	  if (clo[j] <= -ekkinf) {
 	    prob->messageHandler()->message(CLP_PRESOLVE_COLUMNBOUNDB,
@@ -178,7 +178,7 @@ const PresolveAction *remove_dual_action::presolve(PresolveMatrix *prob,
 	  } else {
 	    fixdown_cols[nfixdown_cols++] = j;
 	  }
-	} else if (ddjhi < -ZTOLDP && iflagu == 0) {
+	} else if (ddjhi < -ZTOLDP && iflagu == 0&&!prob->colProhibited2(j)) {
 	  // dj<0 at optimality ==> must be at upper bound
 	  if (cup[j] >= ekkinf) {
 	    prob->messageHandler()->message(CLP_PRESOLVE_COLUMNBOUNDA,

@@ -317,117 +317,6 @@ void copyrep(const int * mrstrt, const int *hcol, const double *rowels,
   }
 }
 
-#if 0
-// variant of function of same name in ekk_7.c
-// exactly the same, with some code #if'ed out
-int ekk_makeColumnOrdered(int * indexRow , int * indexColumn , double * element ,
-			  int * rowCount , int * columnCount , CoinBigIndex * startColumn ,
-			  int numberRows , int numberColumns,
-			  CoinBigIndex numberElements, double tolerance)
-{
-  int iColumn,i,k;
-#if 0
-  for (i=0;i<numberRows;i++) {
-    rowCount[i]=0;
-  }
-  for (i=0;i<numberColumns;i++) {
-    columnCount[i]=0;
-  }
-  for (i=0;i<numberElements;i++) {
-    int iRow=indexRow[i];
-    int iColumn=indexColumn[i];
-    rowCount[iRow]++;
-    columnCount[iColumn]++;
-  }
-#endif
-
-  i=0;
-  for (iColumn=0;iColumn<numberColumns;iColumn++) {
-    /* position after end of Column */
-    i+=columnCount[iColumn];
-    startColumn[iColumn]=i;
-  } /* endfor */
-  startColumn[iColumn]=i;
-
-  for (k=numberElements-1;k>=0;k--) {
-    iColumn=indexColumn[k];
-    if (iColumn>=0) {
-      /* pick up the entry with your right hand */
-      double value = element[k];
-      int iRow=indexRow[k];
-      int iColumnSave=0;
-      indexColumn[k]=-2;	/* the hole */
-
-      while (1) {
-	/* pick this up with your left */
-        int iLook=startColumn[iColumn]-1;
-        double valueSave=element[iLook];
-        int iColumnSave=indexColumn[iLook];
-        int iRowSave=indexRow[iLook];
-
-	/* put the right-hand entry where it wanted to go */
-        startColumn[iColumn]=iLook;
-        element[iLook]=value;
-        indexRow[iLook]=iRow;
-        indexColumn[iLook]=-1;	/* mark it as being where it wants to be */
-	
-	/* there was something there */
-        if (iColumnSave>=0) {
-          iColumn=iColumnSave;
-          value=valueSave;
-          iRow=iRowSave;
-	} else if (iColumnSave = -2)	/* that was the hole */
-          break;
-	else
-	  ekkmesg_no(158);	/* should never happen */
-	/* endif */
-      } /* endwhile */
-    } /* endif */
-  } /* endfor */
-
-#if 0
-  /* now pack the elements and combine entries with the same row and column */
-  /* also, drop entries with "small" coefficients */
-  numberElements=0;
-  for (iColumn=0;iColumn<numberColumns;iColumn++) {
-    CoinBigIndex start=startColumn[iColumn];
-    CoinBigIndex end =startColumn[iColumn+1];
-    startColumn[iColumn]=numberElements;
-    if (end>start) {
-      int lastRow;
-      double lastValue;
-      CoinSort_2(indexRow+start,indexRow+end,element+start);
-      //ekk_sort2(indexRow+start,element+start,end-start);
-      lastRow=indexRow[start];
-      lastValue=element[start];
-      for (i=start+1;i<end;i++) {
-        int iRow=indexRow[i];
-        double value=element[i];
-        if (iRow>lastRow) {
-          if(fabs(lastValue)>tolerance) {
-            indexRow[numberElements]=lastRow;
-            element[numberElements]=lastValue;
-            numberElements++;
-          }
-          lastRow=iRow;
-          lastValue=value;
-        } else {
-          lastValue+=value;
-        } /* endif */
-      } /* endfor */
-      if(fabs(lastValue)>tolerance) {
-        indexRow[numberElements]=lastRow;
-        element[numberElements]=lastValue;
-        numberElements++;
-      }
-    }
-  } /* endfor */
-#endif
-
-  startColumn[numberColumns]=numberElements;
-  return numberElements;
-}
-#endif
 
 
 // add -x/y times row y to row x, thus cancelling out one column of rowx;
@@ -524,9 +413,17 @@ const PresolveAction *subst_constraint_action::presolve(PresolveMatrix *prob,
     try_fill_level=fill_level;
     look2 = new int[ncols];
     look=look2;
-    for (iLook=0;iLook<ncols;iLook++) 
-      look[iLook]=iLook;
-    numberLook=ncols;
+    if (!prob->anyProhibited()) {
+      for (iLook=0;iLook<ncols;iLook++) 
+	look[iLook]=iLook;
+      numberLook=ncols;
+    } else {
+      // some prohibited
+      numberLook=0;
+      for (iLook=0;iLook<ncols;iLook++) 
+	if (!prob->colProhibited(iLook))
+	  look[numberLook++]=iLook;
+    }
  }
  
 

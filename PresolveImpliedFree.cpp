@@ -125,9 +125,17 @@ const PresolveAction *implied_free_action::presolve(PresolveMatrix *prob,
   if (fill_level<0) {
     look2 = new int[ncols];
     look=look2;
-    for (iLook=0;iLook<ncols;iLook++) 
-      look[iLook]=iLook;
-    numberLook=ncols;
+    if (!prob->anyProhibited()) {
+      for (iLook=0;iLook<ncols;iLook++) 
+	look[iLook]=iLook;
+      numberLook=ncols;
+    } else {
+      // some prohibited
+      numberLook=0;
+      for (iLook=0;iLook<ncols;iLook++) 
+	if (!prob->colProhibited(iLook))
+	  look[numberLook++]=iLook;
+    }
  }
 
   for (iLook=0;iLook<numberLook;iLook++) {
