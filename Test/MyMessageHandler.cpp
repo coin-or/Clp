@@ -52,7 +52,7 @@ MyMessageHandler::MyMessageHandler(ClpSimplex * model,
                FILE * userPointer)
   : CoinMessageHandler(),
     model_(model),
-    feasibleExtremePoints_(feasibleExtremePoints_),
+    feasibleExtremePoints_(),
     iterationNumber_(-1)
 {
 }
