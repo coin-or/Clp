@@ -463,7 +463,7 @@ ClpSimplexOther::writeBasis(const char *filename,
     }
     if (printit&&writeValues) {
       // add value
-      CoinConvertDouble(formatType,columnActivity_[iColumn],number);
+      CoinConvertDouble(0,formatType,columnActivity_[iColumn],number);
       fprintf(fp,"     %s",number);
     }
     if (printit)
