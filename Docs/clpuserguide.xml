@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<!DOCTYPE book SYSTEM "/usr/share/docbook-xml42/docbookx.dtd" [
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.2//EN"
+                  "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd" [
   <!ENTITY authors SYSTEM "authors.xml">
   <!ENTITY legal SYSTEM "legal.xml">
   <!ENTITY intro SYSTEM "intro.xml">
@@ -8,8 +9,10 @@
   <!ENTITY moresamples SYSTEM "moresamples.xml">
   <!ENTITY clpexe SYSTEM "clpexe.xml">
   <!ENTITY messages SYSTEM "messages.xml">
-  <!ENTITY revhist SYSTEM "revhist.xml">
+  <!ENTITY faq SYSTEM "faq.xml">
+  <!ENTITY faqcontent SYSTEM "faqcontent.xml">
   <!ENTITY doxygen SYSTEM "doxygen.xml">
+  <!ENTITY revhist SYSTEM "revhist.xml">
 ]>
 <book id="clpuserguide" lang="en">
 <bookinfo>
@@ -23,6 +26,7 @@
   &moresamples;
   &clpexe;
   &messages;
+  &faq;
   &doxygen;
   &revhist;
 </book>
