@@ -87,6 +87,7 @@ $(TARGETDIR)/clp : $(TESTOBJ)
 	@echo Creating clp
 	@mkdir -p $(TARGETDIR)
 	@rm -f $@
+#	$(CXX) -static $(CXXFLAGS) -o $@ $(TESTOBJ) $(LDFLAGS) $(SYSLD) -lm
 	$(CXX) $(CXXFLAGS) -o $@ $(TESTOBJ) $(LDFLAGS) $(SYSLD) -lm
 	${CP} $@ ..
 

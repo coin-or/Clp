@@ -1,5 +1,6 @@
 # Static or shared libraries should be built (STATIC or SHARED)?
 LibType := SHARED
+#LibType := STATIC
 
 # Select optimization (-O or -g). -O will be automatically bumped up to the 
 # highest level of optimization the compiler supports. If want something in

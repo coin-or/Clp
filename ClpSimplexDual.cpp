@@ -2868,64 +2868,107 @@ ClpSimplexDual::perturb()
 {
   if (perturbation_>100)
     return; //perturbed already
-  int iRow,iColumn;
+  bool modifyRowCosts=true;
   // dual perturbation
   double perturbation=1.0e-20;
   // maximum fraction of cost to perturb
   double maximumFraction = 1.0e-4;
+  double factor=1.0e-8;
+  // If > 70 then do not do rows
+  if (perturbation_>70) {
+    modifyRowCosts=false;
+    perturbation_ -= 20;
+    //printf("Row costs not modified, ");
+  }
+  if (perturbation_>50) {
+    // Experiment
+    // factor could be 1.0e-8 to 1.0 (51,56,61,66 are 1.0e-8)
+    // maximumFraction could be 1.0e-6 to 1.0e-3 (51-55 are 1.0e-6)
+    double f[]={1.0e-8,1.0e-6,1.0e-4,1.0e-2,1.0};
+    double m[]={1.0e-6,1.0e-5,1.0e-4,1.0e-3};
+    factor = f[((perturbation_-1)%5)];
+    maximumFraction = m[(perturbation_-51)/5];
+  }
+  int iRow,iColumn;
   if (perturbation_>=50) {
-    perturbation = 1.0e-4;
+    perturbation = 1.0e-8;
     for (iRow=0;iRow<numberRows_;iRow++) {
-      double value = fabs(rowObjectiveWork_[iRow]);
-      perturbation = max(perturbation,value);
+      if (rowLowerWork_[iRow]<rowUpperWork_[iRow]) {
+	double value = fabs(rowObjectiveWork_[iRow]);
+	perturbation = max(perturbation,value);
+	if (value)
+	  modifyRowCosts=true;
+      }
     }
     for (iColumn=0;iColumn<numberColumns_;iColumn++) { 
-      double value = 
-	fabs(objectiveWork_[iColumn]);
-      perturbation = max(perturbation,value);
+      if (columnLowerWork_[iColumn]<columnUpperWork_[iColumn]) {
+	double value = 
+	  fabs(objectiveWork_[iColumn]);
+	perturbation = max(perturbation,value);
+      }
     }
-    perturbation *= 1.0e-8;
-  } else if (perturbation_<100) {
-    perturbation = pow(10.0,perturbation_);
+    perturbation *= factor;
+  } else {
     // user is in charge
     maximumFraction = 1.0e100;
+    // but some experiments
+    if (perturbation_<=-900) {
+      modifyRowCosts=false;
+      perturbation_ += 1000;
+      //printf("Row costs not modified, ");
+    }
+    if (perturbation_<-50) {
+      maximumFraction = 1.0;
+      while (perturbation_<-50) {
+	perturbation_ += 100;
+	maximumFraction *= 1.0e-1;
+      }
+    }
+    perturbation = pow(10.0,perturbation_);
   }
+  //printf("factor %g, maximumFraction %g\n",factor,maximumFraction);
   // modify costs
   handler_->message(CLP_SIMPLEX_PERTURB,messages_)
     <<perturbation
     <<CoinMessageEol;
-  for (iRow=0;iRow<numberRows_;iRow++) {
-    double value = perturbation;
-    double currentValue = rowObjectiveWork_[iRow];
-    value = min(value,maximumFraction*fabs(currentValue)+1.0e-6);
-    if (rowLowerWork_[iRow]>-largeValue_) {
-      if (fabs(rowLowerWork_[iRow])<fabs(rowUpperWork_[iRow])) 
-	value *= CoinDrand48();
-      else
-	value *= -CoinDrand48();
-    } else if (rowUpperWork_[iRow]<largeValue_) {
-      value *= -CoinDrand48();
-    } else {
-      value=0.0;
+  if (modifyRowCosts) {
+    for (iRow=0;iRow<numberRows_;iRow++) {
+      if (rowLowerWork_[iRow]<rowUpperWork_[iRow]) {
+	double value = perturbation;
+	double currentValue = rowObjectiveWork_[iRow];
+	value = min(value,maximumFraction*fabs(currentValue)+1.0e-6);
+	if (rowLowerWork_[iRow]>-largeValue_) {
+	  if (fabs(rowLowerWork_[iRow])<fabs(rowUpperWork_[iRow])) 
+	    value *= CoinDrand48();
+	  else
+	    value *= -CoinDrand48();
+	} else if (rowUpperWork_[iRow]<largeValue_) {
+	  value *= -CoinDrand48();
+	} else {
+	  value=0.0;
+	}
+	rowObjectiveWork_[iRow] += value;
+      }
     }
-    rowObjectiveWork_[iRow] += value;
   }
   for (iColumn=0;iColumn<numberColumns_;iColumn++) {
-    double value = perturbation;
-    double currentValue = objectiveWork_[iColumn];
-    value = min(value,maximumFraction*fabs(currentValue)+1.0e-6);
-    if (columnLowerWork_[iColumn]>-largeValue_) {
-      if (fabs(columnLowerWork_[iColumn])<
-	  fabs(columnUpperWork_[iColumn])) 
-	value *= CoinDrand48();
-      else
+    if (columnLowerWork_[iColumn]<columnUpperWork_[iColumn]) {
+      double value = perturbation;
+      double currentValue = objectiveWork_[iColumn];
+      value = min(value,maximumFraction*fabs(currentValue)+1.0e-6);
+      if (columnLowerWork_[iColumn]>-largeValue_) {
+	if (fabs(columnLowerWork_[iColumn])<
+	    fabs(columnUpperWork_[iColumn])) 
+	  value *= CoinDrand48();
+	else
+	  value *= -CoinDrand48();
+      } else if (columnUpperWork_[iColumn]<largeValue_) {
 	value *= -CoinDrand48();
-    } else if (columnUpperWork_[iColumn]<largeValue_) {
-      value *= -CoinDrand48();
-    } else {
-      value=0.0;
+      } else {
+	value=0.0;
+      }
+      objectiveWork_[iColumn] += value;
     }
-    objectiveWork_[iColumn] += value;
   }
   // and zero changes
   //int nTotal = numberRows_+numberColumns_;

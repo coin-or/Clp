@@ -1128,7 +1128,6 @@ ClpSimplex::housekeeping(double objectiveChange)
   numberIterations_++;
   changeMade_++; // something has happened
   // incoming variable
-
   handler_->message(CLP_SIMPLEX_HOUSE1,messages_)
     <<directionOut_
     <<directionIn_<<theta_

@@ -1261,6 +1261,12 @@ unsigned char * whichUnsignedChar(unsigned char * array ,
   }
   return newArray;
 }
+// Replace Clp Matrix (current is not deleted)
+void 
+ClpModel::replaceMatrix( ClpMatrixBase * matrix)
+{
+  matrix_=matrix;
+}
 // Subproblem constructor
 ClpModel::ClpModel ( const ClpModel * rhs,
 		     int numberRows, const int * whichRow,

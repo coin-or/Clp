@@ -1324,6 +1324,7 @@ ClpSimplexPrimal::perturb()
 	else
 	  upperValue=0.0;
 	double value = max(lowerValue,upperValue);
+	value = min(value,upper_[i]-lower_[i]);
 	perturbation = max(perturbation,value);
       }
     }
@@ -1337,14 +1338,33 @@ ClpSimplexPrimal::perturb()
   handler_->message(CLP_SIMPLEX_PERTURB,messages_)
     <<perturbation
     <<CoinMessageEol;
-  for (i=0;i<numberColumns_+numberRows_;i++) {
+  for (i=0;i<numberColumns_;i++) {
     double lowerValue=lower_[i], upperValue=upper_[i];
     if (upperValue>lowerValue+primalTolerance_) {
       double value = CoinDrand48()*perturbation;
+      if (lowerValue>-1.0e20&&lowerValue)
+	lowerValue -= value * (max(1.0,1.0e-5*fabs(lowerValue))); 
+      if (upperValue<1.0e20&&upperValue)
+	upperValue += value * (max(1.0,1.0e-5*fabs(upperValue))); 
+    }
+    lower_[i]=lowerValue;
+    upper_[i]=upperValue;
+  }
+  for (;i<numberColumns_+numberRows_;i++) {
+    double lowerValue=lower_[i], upperValue=upper_[i];
+    double value = CoinDrand48()*perturbation;
+    if (upperValue>lowerValue+primalTolerance_) {
       if (lowerValue>-1.0e20)
-	lowerValue -= value * (max(1.0,1.0e-3*fabs(lowerValue))); 
+	lowerValue -= value * (max(1.0,1.0e-5*fabs(lowerValue))); 
       if (upperValue<1.0e20)
-	upperValue += value * (max(1.0,1.0e-3*fabs(upperValue))); 
+	upperValue += value * (max(1.0,1.0e-5*fabs(upperValue))); 
+    } else if (upperValue>0.0) {
+	lowerValue -= value * (max(1.0,1.0e-5*fabs(lowerValue))); 
+	upperValue -= value * (max(1.0,1.0e-5*fabs(lowerValue))); 
+    } else if (upperValue<0.0) {
+	lowerValue += value * (max(1.0,1.0e-5*fabs(lowerValue))); 
+	upperValue += value * (max(1.0,1.0e-5*fabs(lowerValue))); 
+    } else {
     }
     lower_[i]=lowerValue;
     upper_[i]=upperValue;

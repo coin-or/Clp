@@ -316,6 +316,10 @@ public:
    inline ClpMatrixBase * rowCopy() const       { return rowCopy_; }
    /// Clp Matrix 
    inline ClpMatrixBase * clpMatrix() const     { return matrix_; }
+  /** Replace Clp Matrix (current is not deleted and new is used)
+      So up to user to delete one
+  */
+   void replaceMatrix(ClpMatrixBase * matrix);
    /// Objective value
    inline double objectiveValue() const {
       return objectiveValue_*optimizationDirection_ - dblParam_[ClpObjOffset];

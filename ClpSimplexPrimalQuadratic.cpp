@@ -531,6 +531,7 @@ int ClpSimplexPrimalQuadratic::primalQuadratic2 (ClpQuadraticInfo * info,
   // initialize - values pass coding and algorithm_ is +1
   ClpObjective * saveObj = objectiveAsObject();
   setObjectivePointer(info->originalObjective());
+  factorization_->setBiasLU(0);
   if (!startup(1)) {
 
     //setObjectivePointer(saveObj);
@@ -997,7 +998,7 @@ ClpSimplexPrimalQuadratic::whileIterating(
 	  lowerIn_=lower_[sequenceIn_];
 	  upperIn_=upper_[sequenceIn_];
 	  dualIn_=dj_[sequenceIn_];
-	  valueIn_=solution_[sequenceIn_];
+          valueIn_=solution_[sequenceIn_];
 	  if (dualIn_>0.0)
 	    directionIn_ = -1;
 	  else 

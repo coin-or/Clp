@@ -19,6 +19,9 @@
 
 #include "ClpFactorization.hpp"
 #include "ClpSimplex.hpp"
+#include "ClpPackedMatrix.hpp"
+#include "ClpPlusMinusOneMatrix.hpp"
+#include "ClpNetworkMatrix.hpp"
 #include "ClpDualRowSteepest.hpp"
 #include "ClpDualRowDantzig.hpp"
 #include "ClpPrimalColumnSteepest.hpp"
@@ -56,11 +59,11 @@ enum ClpParameterType {
   LOGLEVEL=101,MAXFACTOR,PERTURBATION,MAXITERATION,PRESOLVEPASS,IDIOT,
   
   DIRECTION=201,DUALPIVOT,SCALING,ERRORSALLOWED,KEEPNAMES,SPARSEFACTOR,
-  PRIMALPIVOT,PRESOLVE,CRASH,
+  PRIMALPIVOT,PRESOLVE,CRASH,BIASLU,
   
   DIRECTORY=301,IMPORT,EXPORT,RESTORE,SAVE,DUALSIMPLEX,PRIMALSIMPLEX,BAB,
   MAXIMIZE,MINIMIZE,EXIT,STDIN,UNITTEST,NETLIB_DUAL,NETLIB_PRIMAL,SOLUTION,
-  TIGHTEN,FAKEBOUND,VERSION,
+  TIGHTEN,FAKEBOUND,VERSION,PLUSMINUS,NETWORK,
 
   INVALID=1000
 };
@@ -757,7 +760,7 @@ stopping",
 	      0,99999999,MAXITERATION);
     parameters[numberParameters++]=
       ClpItem("pert!urbation","Method of perturbation",
-	      -50,102,PERTURBATION);
+	      -5000,102,PERTURBATION);
     parameters[numberParameters++]=
       ClpItem("direction","Minimize or Maximize",
 	      "min!imize",DIRECTION);
@@ -795,6 +798,12 @@ stopping",
 	      "on",SPARSEFACTOR);
     parameters[numberParameters-1].append("off");
     parameters[numberParameters++]=
+      ClpItem("biasLU","Whether factorization biased towards U",
+	      "UU",BIASLU);
+    parameters[numberParameters-1].append("UX");
+    parameters[numberParameters-1].append("LX");
+    parameters[numberParameters-1].append("LL");
+    parameters[numberParameters++]=
       ClpItem("error!sAllowed","Whether to allow import errors",
 	      "off",ERRORSALLOWED);
     parameters[numberParameters-1].append("on");
@@ -829,6 +838,12 @@ stopping",
     parameters[numberParameters++]=
       ClpItem("tight!en","Poor person's preSolve for now",
 	      TIGHTEN);
+    parameters[numberParameters++]=
+      ClpItem("plus!Minus","Tries to make +- 1",
+	      PLUSMINUS);
+    parameters[numberParameters++]=
+      ClpItem("network","Tries to make network",
+	      NETWORK);
     parameters[numberParameters++]=
       ClpItem("sol!ution","Prints solution to file",
 	      SOLUTION);
@@ -875,7 +890,8 @@ stopping",
     //int numberModels=1;
     ClpSimplex * models = new ClpSimplex[1];
     bool * goodModels = new bool[1];
-    
+    int getNewMatrix=0;
+    models->setPerturbation(73);
 #ifdef READLINE     
     currentModel = models;
     // register signal handler
@@ -1052,6 +1068,9 @@ stopping",
 	    case SPARSEFACTOR:
 	      models[iModel].setSparseFactorization((1-action)!=0);
 	      break;
+	    case BIASLU:
+	      models[iModel].factorization()->setBiasLU(action);
+	      break;
 	    case ERRORSALLOWED:
 	      allowImportErrors = action;
 	      break;
@@ -1077,7 +1096,9 @@ stopping",
 	  case PRIMALSIMPLEX:
 	    if (goodModels[iModel]) {
 	      int saveMaxIterations = models[iModel].maximumIterations();
+	      int numberIterations=0;
 	      time1 = CoinCpuTime();
+	      ClpMatrixBase * saveMatrix=NULL;
 #ifdef USE_PRESOLVE
 	      ClpSimplex * model2 = models+iModel;
 	      ClpPresolve pinfo;
@@ -1115,6 +1136,40 @@ stopping",
 		  preSolve=0;
 		}
 	      }
+	      if (getNewMatrix) {
+		saveMatrix = model2->clpMatrix();
+		ClpPackedMatrix* clpMatrix =
+		  dynamic_cast< ClpPackedMatrix*>(saveMatrix);
+		if (clpMatrix) {
+		  if (getNewMatrix==1) {
+		    ClpPlusMinusOneMatrix * newMatrix = new ClpPlusMinusOneMatrix(*(clpMatrix->matrix()));
+		    if (newMatrix->getIndices()) {
+		      std::cout<<"** Matrix is valid +- one"<<std::endl;
+		      model2->replaceMatrix(newMatrix);
+		    } else {
+		      std::cout<<"** Matrix is NOT valid +- one"<<std::endl;
+		      saveMatrix=NULL;
+		      delete newMatrix;
+		    }
+		  } else if (getNewMatrix==2) {
+		    ClpNetworkMatrix * newMatrix = new ClpNetworkMatrix(*(clpMatrix->matrix()));
+		    if (newMatrix->getIndices()) {
+		      std::cout<<"** Matrix is valid network"<<std::endl;
+		      model2->replaceMatrix(newMatrix);
+		    } else {
+		      std::cout<<"** Matrix is NOT valid network"<<std::endl;
+		      saveMatrix=NULL;
+		      delete newMatrix;
+		    }
+		  }
+		} else {
+		  saveMatrix=NULL;
+		}
+	      }
+	      if (model2->factorizationFrequency()==200) {
+		// User did not touch preset
+		model2->setFactorizationFrequency(100+model2->numberRows()/100);
+	      }
 	      if (type==DUALSIMPLEX) {
 		if (doIdiot<0)
 		  model2->crash(1000,1);
@@ -1128,8 +1183,18 @@ stopping",
 		  info.crash(doIdiot);
 		}
 #endif
+		int savePerturbation = model2->perturbation();
+		if (savePerturbation==73)
+		  model2->setPerturbation(100);
 		model2->primal(1);
+		model2->setPerturbation(savePerturbation);
 	      }
+	      if (saveMatrix) {
+		// delete and replace
+		delete model2->clpMatrix();
+		model2->replaceMatrix(saveMatrix);
+	      }
+	      numberIterations = model2->numberIterations();
 	      if (preSolve) {
 #if 0
 		{
@@ -1262,6 +1327,7 @@ stopping",
 		  models[iModel].setPerturbation(100);
 		  models[iModel].primal(1);
 		  models[iModel].setPerturbation(savePerturbation);
+		  numberIterations += models[iModel].numberIterations();
 		}
 #ifdef CLP_DEBUG_not
 		models[iModel].checkSolution();
@@ -1297,7 +1363,7 @@ stopping",
 	      totalTime += time2-time1;
 	      std::cout<<"Result "<<models[iModel].status()<<
 		" - "<<models[iModel].objectiveValue()<<
-		" iterations "<<models[iModel].numberIterations()<<
+		" iterations "<<numberIterations<<
 		" took "<<time2-time1<<" seconds - total "<<totalTime<<std::endl;
 	      if (models[iModel].status())
 		std::cerr<<"Non zero status "<<models[iModel].status()<<
@@ -1315,6 +1381,12 @@ stopping",
 	    } else {
 	      std::cout<<"** Current model not valid"<<std::endl;
 	    }
+	    break;
+	  case PLUSMINUS:
+	    getNewMatrix=1;
+	    break;
+	  case NETWORK:
+	    getNewMatrix=2;
 	    break;
 	  case BAB:
 #if 0
