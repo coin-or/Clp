@@ -5,9 +5,9 @@ LibType := SHARED
 # highest level of optimization the compiler supports. If want something in
 # between then specify the exact level you want, e.g., -O1 or -O2
 OptLevel := -O2
-# I seem to need this at present
-OPTFLAG := -O2
 #OptLevel := -g
+# I seem to need this at present
+#OPTFLAG := -O2
 #OPTFLAG := -g
 ifeq ($(OptLevel),-g)
     CXXFLAGS += -DCLP_DEBUG
@@ -40,8 +40,8 @@ export CoinDir = $(shell cd ..; pwd)
 export MakefileDir := ../Common/make
 include ${MakefileDir}/Makefile.coin
 include ${MakefileDir}/Makefile.location
-#This modification seems to be needed
-export ExtraIncDir := ../Osi/include
+# This modification seems to be needed
+# export ExtraIncDir := ../Osi/include
 export ExtraLibDir := 
 export ExtraLibName :=
 export ExtraDefine := 
