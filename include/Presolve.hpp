@@ -115,7 +115,7 @@ private:
   /// These fields give the size of the original problem.
   int ncols_;
   int nrows_;
-  int nelems_;
+  CoinBigIndex nelems_;
   /// Number of major passes
   int numberPasses_;
 

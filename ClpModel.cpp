@@ -230,7 +230,7 @@ ClpModel::loadProblem (  const CoinPackedMatrix& matrix,
 void
 ClpModel::loadProblem ( 
 			      const int numcols, const int numrows,
-			      const int* start, const int* index,
+			      const CoinBigIndex* start, const int* index,
 			      const double* value,
 			      const double* collb, const double* colub,   
 			      const double* obj,
@@ -246,7 +246,7 @@ ClpModel::loadProblem (
 void
 ClpModel::loadProblem ( 
 			      const int numcols, const int numrows,
-			      const int* start, const int* index,
+			      const CoinBigIndex* start, const int* index,
 			      const double* value,const int* length,
 			      const double* collb, const double* colub,   
 			      const double* obj,

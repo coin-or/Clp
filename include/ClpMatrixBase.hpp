@@ -13,7 +13,6 @@ using std::max;
 #include "CoinPackedMatrix.hpp"
 class CoinIndexedVector;
 class ClpSimplex;
-typedef int ClpBigIndex;
 
 /** Abstract base class for Clp Matrices
 
@@ -38,7 +37,7 @@ public:
     /** Whether the packed matrix is column major ordered or not. */
   virtual bool isColOrdered() const = 0;
    /** Number of entries in the packed matrix. */
-  virtual int getNumElements() const = 0;
+  virtual CoinBigIndex getNumElements() const = 0;
    /** Number of columns. */
   virtual int getNumCols() const = 0;
    /** Number of rows. */
@@ -56,7 +55,7 @@ public:
         vectorLengths. */
    virtual const int * getIndices() const = 0;
 
-   virtual const int * getVectorStarts() const = 0;
+   virtual const CoinBigIndex * getVectorStarts() const = 0;
    /** The lengths of the major-dimension vectors. */
    virtual const int * getVectorLengths() const = 0 ;
     /** Delete the columns whose indices are listed in <code>indDel</code>. */
@@ -70,9 +69,9 @@ public:
 
   /** Returns number of elements in basis
       column is basic if entry >=0 */
-  virtual ClpBigIndex numberInBasis(const int * columnIsBasic) const = 0;
+  virtual CoinBigIndex numberInBasis(const int * columnIsBasic) const = 0;
   /// Fills in basis (Returns number of elements and updates numberBasic)
-  virtual ClpBigIndex fillBasis(const ClpSimplex * model,
+  virtual CoinBigIndex fillBasis(const ClpSimplex * model,
 				const int * columnIsBasic, int & numberBasic,
 				int * row, int * column,
 				double * element) const = 0;

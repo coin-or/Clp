@@ -107,7 +107,7 @@ void Presolve::postsolve(ClpSimplex& si,
   // this is the size of the original problem
   const int ncols0  = ncols_;
   const int nrows0  = nrows_;
-  const int nelems0 = nelems_;
+  const CoinBigIndex nelems0 = nelems_;
 
   double *acts = new double[nrows0];
   double *sol  = new double[ncols0];
@@ -136,10 +136,10 @@ void Presolve::postsolve(ClpSimplex& si,
 
     {
       const int *link = prob.link_;
-      int start = 0;
+      CoinBigIndex start = 0;
       
       for (int j=0; j<ncols0; j++) {
-	int k = prob.mcstrt_[j];
+	CoinBigIndex k = prob.mcstrt_[j];
 	int n = prob.hincol_[j];
 
 	mcstrt[j] = start;
@@ -217,7 +217,7 @@ Presolve::presolvedModel(ClpSimplex & si,
     {
       double *colels	= prob.colels_;
       int *hrow		= prob.hrow_;
-      int *mcstrt		= prob.mcstrt_;
+      CoinBigIndex *mcstrt		= prob.mcstrt_;
       int *hincol		= prob.hincol_;
       int ncols		= prob.ncols_;
       
@@ -333,7 +333,7 @@ Presolve::presolvedModel(ClpSimplex & si,
   if (!result) {
     int nrowsAfter = presolvedModel_->getNumRows();
     int ncolsAfter = presolvedModel_->getNumCols();
-    int nelsAfter = presolvedModel_->getNumElements();
+    CoinBigIndex nelsAfter = presolvedModel_->getNumElements();
     presolvedModel_->messageHandler()->message(CLP_PRESOLVE_STATS,
 					       presolvedModel_->messages())
 						 <<nrowsAfter<< -(nrows_ - nrowsAfter)
@@ -372,7 +372,7 @@ Presolve::postsolve(bool updateStatus)
   // this is the size of the original problem
   const int ncols0  = ncols_;
   const int nrows0  = nrows_;
-  const int nelems0 = nelems_;
+  const CoinBigIndex nelems0 = nelems_;
 
   // reality check
   assert(ncols0==originalModel_->getNumCols());
@@ -470,7 +470,7 @@ void check_sol(PresolveMatrix *prob,double tol)
 
   for (colx = 0; colx < ncols; ++colx) {
     if (1) {
-      int k = mcstrt[colx];
+      CoinBigIndex k = mcstrt[colx];
       int nx = hincol[colx];
       double solutionValue = csol[colx];
       for (int i=0; i<nx; ++i) {
@@ -815,11 +815,11 @@ void Presolve::postsolve(PostsolveMatrix &prob)
     
     for (int i=0; i<ncols0; i++) {
       PRESOLVEASSERT(hincol[i] == &prob->mcstrt0[i+1] - &prob->mcstrt0[i]);
-      int kcs0 = &prob->mcstrt0[i];
-      int kcs = mcstrt[i];
+      CoinBigIndex kcs0 = &prob->mcstrt0[i];
+      CoinBigIndex kcs = mcstrt[i];
       int n = hincol[i];
       for (int k=0; k<n; k++) {
-	int k1 = presolve_find_row1(&prob->hrow0[kcs0+k], kcs, kcs+n, hrow);
+	CoinBigIndex k1 = presolve_find_row1(&prob->hrow0[kcs0+k], kcs, kcs+n, hrow);
 	
 	if (k1 == kcs+n) {
 	  printf("ROW %d NOT IN COL %d\n", &prob->hrow0[kcs0+k], i);
@@ -927,7 +927,7 @@ void check_djs(PostsolveMatrix *prob)
 
   for (colx = 0; colx < ncols; ++colx) {
     if (cdone[colx]) {
-      int k = mcstrt[colx];
+      CoinBigIndex k = mcstrt[colx];
       int nx = hincol[colx];
       double dj = maxmin * dcost[colx];
       double solutionValue = csol[colx];

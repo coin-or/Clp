@@ -38,7 +38,7 @@ class forcing_constraint_action : public PresolveAction {
 
 
 // HACK - from doubleton.cpp
-void compact_rep(double *elems, int *indices, int *starts, const int *lengths, int n,
+void compact_rep(double *elems, int *indices, CoinBigIndex *starts, const int *lengths, int n,
 		 const presolvehlink *link);
 
 #endif

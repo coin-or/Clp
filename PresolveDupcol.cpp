@@ -33,7 +33,7 @@ void init_random_vec(double *work, int n)
   }
 }
 
-int compute_sums(const int *len, const int *starts,
+int compute_sums(const int *len, const CoinBigIndex *starts,
 		 /*const*/ int *index, /*const*/ double *elems,	// index/elems are sorted
 		 const double *work,
 		 double *sums, int *sorted, int n)
@@ -41,8 +41,8 @@ int compute_sums(const int *len, const int *starts,
   int nlook=0;
   for (int i = 0; i < n; ++i)
     if (len[i] > 0 /*1?*/) {
-      int kcs = starts[i];
-      int kce = kcs + len[i];
+      CoinBigIndex kcs = starts[i];
+      CoinBigIndex kce = kcs + len[i];
 
       double value=0.0;
 
@@ -50,7 +50,7 @@ int compute_sums(const int *len, const int *starts,
       CoinSort_2(index+kcs,index+kcs+len[i],elems+kcs);
       //ekk_sort2(index+kcs, elems+kcs, len[i]);
 
-      for (int k=kcs;k<kce;k++) {
+      for (CoinBigIndex k=kcs;k<kce;k++) {
 	int irow=index[k];
 	value += work[irow]*elems[k];
       }
@@ -77,7 +77,7 @@ const PresolveAction *dupcol_action::presolve(PresolveMatrix *prob,
 {
   double *colels	= prob->colels_;
   int *hrow		= prob->hrow_;
-  int *mcstrt		= prob->mcstrt_;
+  CoinBigIndex *mcstrt		= prob->mcstrt_;
   int *hincol		= prob->hincol_;
   int ncols		= prob->ncols_;
 
@@ -87,7 +87,7 @@ const PresolveAction *dupcol_action::presolve(PresolveMatrix *prob,
 
   double *rowels	= prob->rowels_;
   int *hcol	= prob->hcol_;
-  const int *mrstrt	= prob->mrstrt_;
+  const CoinBigIndex *mrstrt	= prob->mrstrt_;
   int *hinrow		= prob->hinrow_;
   int nrows		= prob->nrows_;
 
@@ -125,8 +125,8 @@ const PresolveAction *dupcol_action::presolve(PresolveMatrix *prob,
   int nlook=0;
   for (int i = 0; i < ncols; ++i)
     if (hincol[i] > 0 /*1?*/) {
-      int kcs = mcstrt[i];
-      int kce = kcs + hincol[i];
+      CoinBigIndex kcs = mcstrt[i];
+      CoinBigIndex kce = kcs + hincol[i];
 
       double value=0.0;
 
@@ -134,7 +134,7 @@ const PresolveAction *dupcol_action::presolve(PresolveMatrix *prob,
       CoinSort_2(hrow+kcs,hrow+kcs+hincol[i],colels+kcs);
       //ekk_sort2(hrow+kcs, colels+kcs, hincol[i]);
 
-      for (int k=kcs;k<kce;k++) {
+      for (CoinBigIndex k=kcs;k<kce;k++) {
 	int irow=hrow[k];
 	value += workrow[irow]*colels[k];
       }
@@ -184,12 +184,12 @@ const PresolveAction *dupcol_action::presolve(PresolveMatrix *prob,
     if (workcol[jj]==workcol[jj-1]) {
       int ithis=sort[jj];
       int ilast=sort[jj-1];
-      int kcs = mcstrt[ithis];
-      int kce = kcs + hincol[ithis];
+      CoinBigIndex kcs = mcstrt[ithis];
+      CoinBigIndex kce = kcs + hincol[ithis];
 
       if (hincol[ithis] == hincol[ilast]) {
 	int ishift = mcstrt[ilast] - kcs;
-	int k;
+	CoinBigIndex k;
 	for (k=kcs;k<kce;k++) {
 	  if (hrow[k] != hrow[k+ishift] ||
 	      colels[k] != colels[k+ishift]) {
@@ -276,9 +276,9 @@ const PresolveAction *dupcol_action::presolve(PresolveMatrix *prob,
 	    dcost[ithis] = 0.0;
 	    sol[ithis]=clo2;
 	    {
-	      int kcs = mcstrt[ithis];
-	      int kce = kcs + hincol[ithis];
-	      for (int k=kcs; k<kce; ++k)
+	      CoinBigIndex kcs = mcstrt[ithis];
+	      CoinBigIndex kce = kcs + hincol[ithis];
+	      for (CoinBigIndex k=kcs; k<kce; ++k)
 		// delete ithis from its rows
 		presolve_delete_from_row(hrow[k], ithis, mrstrt, hinrow, hcol, rowels);
 	    }
@@ -435,13 +435,13 @@ const PresolveAction *dupcol_action::presolve(PresolveMatrix *prob,
 }
 
 void create_col(int col, int n, int *rows, double *els,
-		int *mcstrt, double *colels, int *hrow, int *link,
-		int *free_listp)
+		CoinBigIndex *mcstrt, double *colels, int *hrow, int *link,
+		CoinBigIndex *free_listp)
 {
-  int free_list = *free_listp;
+  CoinBigIndex free_list = *free_listp;
   int xstart = NO_LINK;
   for (int i=0; i<n; ++i) {
-    int k = free_list;
+    CoinBigIndex k = free_list;
     free_list = link[free_list];
 
     check_free_list(free_list);
@@ -469,13 +469,13 @@ void dupcol_action::postsolve(PostsolveMatrix *prob) const
   
   double *colels	= prob->colels_;
   int *hrow		= prob->hrow_;
-  int *mcstrt		= prob->mcstrt_;
+  CoinBigIndex *mcstrt		= prob->mcstrt_;
   int *hincol		= prob->hincol_;
   int *link		= prob->link_;
 
   double *rcosts	= prob->rcosts_;
 
-  int free_list		= prob->free_list_;
+  CoinBigIndex free_list		= prob->free_list_;
 
   for (const action *f = &actions[nactions-1]; actions<=f; f--) {
     int icol  = f->ithis;	// was fixed
@@ -568,7 +568,7 @@ const PresolveAction *duprow_action::presolve(PresolveMatrix *prob,
 {
   double *colels	= prob->colels_;
   int *hrow		= prob->hrow_;
-  int *mcstrt		= prob->mcstrt_;
+  CoinBigIndex *mcstrt		= prob->mcstrt_;
   int *hincol		= prob->hincol_;
   int ncols		= prob->ncols_;
 
@@ -577,7 +577,7 @@ const PresolveAction *duprow_action::presolve(PresolveMatrix *prob,
 
   double *rowels	= prob->rowels_;
   /*const*/ int *hcol	= prob->hcol_;
-  const int *mrstrt	= prob->mrstrt_;
+  const CoinBigIndex *mrstrt	= prob->mrstrt_;
   int *hinrow		= prob->hinrow_;
   int nrows		= prob->nrows_;
 
@@ -603,8 +603,8 @@ const PresolveAction *duprow_action::presolve(PresolveMatrix *prob,
   for (i = 1; i <= nrow; ++i) {
     if (mpre[i] == 0) {
       double value=0.0;
-      int krs=mrstrt[i];
-      int kre=mrstrt[i+1];
+      CoinBigIndex krs=mrstrt[i];
+      CoinBigIndex kre=mrstrt[i+1];
       CoinSort_2(hcol+krs,hcol+kre,dels+krs);
       //ekk_sort2(hcol+krs,dels+krs,kre-krs);
       for (k=krs;k<kre;k++) {
@@ -624,12 +624,12 @@ const PresolveAction *duprow_action::presolve(PresolveMatrix *prob,
     if (workrow[jj]==dval) {
       int ithis=sort[jj];
       int ilast=sort[jj-1];
-      int krs = mrstrt[ithis];
-      int kre = krs + hinrow[ithis];
+      CoinBigIndex krs = mrstrt[ithis];
+      CoinBigIndex kre = krs + hinrow[ithis];
       int ishift = mrstrt[ilast];
       if (hinrow[ithis] == hinrow[ilast]) {
 	int ishift = mrstrt[ilast] - krs;
-	int k;
+	CoinBigIndex k;
 	for (k=krs;k<kre;k++) {
 	  if (hcol[k] != hrow[k+ishift] ||
 	      rowels[k] != rowels[k+ishift]) {

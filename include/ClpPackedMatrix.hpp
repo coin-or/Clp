@@ -26,7 +26,8 @@ public:
     /** Whether the packed matrix is column major ordered or not. */
     virtual bool isColOrdered() const { return matrix_->isColOrdered(); }
    /** Number of entries in the packed matrix. */
-  virtual  int getNumElements() const { return matrix_->getNumElements(); }
+  virtual  CoinBigIndex getNumElements() const 
+  { return matrix_->getNumElements(); }
    /** Number of columns. */
    virtual int getNumCols() const { return matrix_->getNumCols(); }
    /** Number of rows. */
@@ -46,7 +47,7 @@ public:
    virtual const int * getIndices() const 
   { return matrix_->getIndices();};
 
-   virtual const int * getVectorStarts() const 
+   virtual const CoinBigIndex * getVectorStarts() const 
   { return matrix_->getVectorStarts();};
    /** The lengths of the major-dimension vectors. */
    virtual const int * getVectorLengths() const 
@@ -69,9 +70,9 @@ public:
   virtual ClpMatrixBase * reverseOrderedCopy() const;
   /** Returns number of elements in basis
       column is basic if entry >=0 */
-  virtual ClpBigIndex numberInBasis(const int * columnIsBasic) const ;
+  virtual CoinBigIndex numberInBasis(const int * columnIsBasic) const ;
   /// Fills in basis (Returns number of elements and updates numberBasic)
-  virtual ClpBigIndex fillBasis(const ClpSimplex * model,
+  virtual CoinBigIndex fillBasis(const ClpSimplex * model,
 				const int * columnIsBasic, int & numberBasic,
 				int * row, int * column,
 				double * element) const ;

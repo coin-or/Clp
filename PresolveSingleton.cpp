@@ -28,7 +28,7 @@ slack_doubleton_action::presolve(PresolveMatrix *prob,
 {
   double *colels	= prob->colels_;
   int *hrow		= prob->hrow_;
-  int *mcstrt		= prob->mcstrt_;
+  CoinBigIndex *mcstrt		= prob->mcstrt_;
   int *hincol		= prob->hincol_;
   int ncols		= prob->ncols_;
 
@@ -37,7 +37,7 @@ slack_doubleton_action::presolve(PresolveMatrix *prob,
 
   double *rowels	= prob->rowels_;
   const int *hcol	= prob->hcol_;
-  const int *mrstrt	= prob->mrstrt_;
+  const CoinBigIndex *mrstrt	= prob->mrstrt_;
   int *hinrow		= prob->hinrow_;
   int nrows		= prob->nrows_;
 
@@ -225,7 +225,7 @@ void slack_doubleton_action::postsolve(PostsolveMatrix *prob) const
 
   double *colels	= prob->colels_;
   int *hrow		= prob->hrow_;
-  int *mcstrt		= prob->mcstrt_;
+  CoinBigIndex *mcstrt		= prob->mcstrt_;
   int *hincol		= prob->hincol_;
   int *link		= prob->link_;
   int ncols		= prob->ncols_;
@@ -247,7 +247,7 @@ void slack_doubleton_action::postsolve(PostsolveMatrix *prob) const
 
   char *cdone		= prob->cdone_;
   char *rdone		= prob->rdone_;
-  int free_list		= prob->free_list_;
+  CoinBigIndex free_list		= prob->free_list_;
 
   const double ztolzb	= prob->ztolzb_;
 
@@ -271,7 +271,7 @@ void slack_doubleton_action::postsolve(PostsolveMatrix *prob) const
 
     // copy col to end to make room for new element
     {
-      int k = free_list;
+      CoinBigIndex k = free_list;
       free_list = link[free_list];
 
       check_free_list(free_list);

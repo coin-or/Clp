@@ -26,7 +26,7 @@ inline double min(double x, double y)
   return (x < y) ? x : y;
 }
 
-void compact_rep(double *elems, int *indices, int *starts, const int *lengths, int n,
+void compact_rep(double *elems, int *indices, CoinBigIndex *starts, const int *lengths, int n,
 			const presolvehlink *link)
 {
 #if	PRESOLVE_SUMMARY
@@ -40,12 +40,12 @@ void compact_rep(double *elems, int *indices, int *starts, const int *lengths, i
 
   int j = 0;
   for (; i != n; i = link[i].suc) {
-    int s = starts[i];
-    int e = starts[i] + lengths[i];
+    CoinBigIndex s = starts[i];
+    CoinBigIndex e = starts[i] + lengths[i];
 
     // because of the way link is organized, j <= s
     starts[i] = j;
-    for (int k = s; k < e; k++) {
+    for (CoinBigIndex k = s; k < e; k++) {
       elems[j] = elems[k];
       indices[j] = indices[k];
       j++;
@@ -54,7 +54,7 @@ void compact_rep(double *elems, int *indices, int *starts, const int *lengths, i
 }
 
 // returns true if ran out of memory
-static bool expand_col(int *mcstrt, 
+static bool expand_col(CoinBigIndex *mcstrt, 
 		       double *colels,
 		       int *hrow,
 		       int *hincol,
@@ -62,8 +62,8 @@ static bool expand_col(int *mcstrt,
 
 		       int icolx)
 {
-  int kcsx = mcstrt[icolx];
-  int kcex = kcsx + hincol[icolx];
+  CoinBigIndex kcsx = mcstrt[icolx];
+  CoinBigIndex kcex = kcsx + hincol[icolx];
 
   const int maxk = mcstrt[ncols];	// (22)
 
@@ -138,17 +138,17 @@ static bool reject_doubleton(int *mcstrt,
 			     double max_coeff_ratio,
 			     int row0, int icolx, int icoly)
 {
-  int kcs = mcstrt[icoly];
-  int kce = kcs + hincol[icoly];
-  int kcsx = mcstrt[icolx];
-  int kcex = kcsx + hincol[icolx];
+  CoinBigIndex kcs = mcstrt[icoly];
+  CoinBigIndex kce = kcs + hincol[icoly];
+  CoinBigIndex kcsx = mcstrt[icolx];
+  CoinBigIndex kcex = kcsx + hincol[icolx];
 
-  for (int kcoly=kcs; kcoly<kce; kcoly++) {
+  for (CoinBigIndex kcoly=kcs; kcoly<kce; kcoly++) {
     int row = hrow[kcoly];
 
     if (row != row0) {
       // see if row appears in colx
-      int kcolx = presolve_find_row1(row, kcsx, kcex, hrow);
+      CoinBigIndex kcolx = presolve_find_row1(row, kcsx, kcex, hrow);
 
       if (kcolx<kcex) {
 	// we will add these two terms
@@ -221,22 +221,22 @@ static bool reject_doubleton(int *mcstrt,
  * icoly is removed from the rows it occurs in.
  */
 static bool elim_doubleton(const char *msg,
-			   int *mcstrt, 
+			   CoinBigIndex *mcstrt, 
 			   double *rlo, double * acts, double *rup,
 			   double *colels,
 			   int *hrow, int *hcol,
 			   int *hinrow, int *hincol,
 			   presolvehlink *clink, int ncols,
-			   int *mrstrt, double *rowels,
+			   CoinBigIndex *mrstrt, double *rowels,
 			   //double a, double b, double c,
 			   double coeff_factor,
 			   double bounds_factor,
 			   int row0, int icolx, int icoly)
 {
-  int kcs = mcstrt[icoly];
-  int kce = kcs + hincol[icoly];
-  int kcsx = mcstrt[icolx];
-  int kcex = kcsx + hincol[icolx];
+  CoinBigIndex kcs = mcstrt[icoly];
+  CoinBigIndex kce = kcs + hincol[icoly];
+  CoinBigIndex kcsx = mcstrt[icolx];
+  CoinBigIndex kcex = kcsx + hincol[icolx];
 
   //printf("%s %d x=%d y=%d cf=%g bf=%g nx=%d\n", msg,
   // row0, icolx, icoly, coeff_factor, bounds_factor, hincol[icolx]);
@@ -244,7 +244,7 @@ static bool elim_doubleton(const char *msg,
   printf("%s %d x=%d y=%d cf=%g bf=%g nx=%d yrows=(", msg,
 	 row0, icolx, icoly, coeff_factor, bounds_factor, hincol[icolx]);
 #endif
-  for (int kcoly=kcs; kcoly<kce; kcoly++) {
+  for (CoinBigIndex kcoly=kcs; kcoly<kce; kcoly++) {
     int row = hrow[kcoly];
 
     // even though these values are updated, they remain consistent
@@ -253,7 +253,7 @@ static bool elim_doubleton(const char *msg,
     // we don't need to update the row being eliminated 
     if (row != row0/* && hinrow[row] > 0*/) {
       // see if row appears in colx
-      int kcolx = presolve_find_row1(row, kcsx, kcex, hrow);
+      CoinBigIndex kcolx = presolve_find_row1(row, kcsx, kcex, hrow);
 
       if (bounds_factor != 0.0) {
 	// (1)
@@ -283,7 +283,7 @@ static bool elim_doubleton(const char *msg,
 
 	// update row rep
 	// first, copy new value for col x into proper place in rowels
-	int k2 = presolve_find_row(icolx, mrstrt[row], mrstrt[row]+hinrow[row], hcol);
+	CoinBigIndex k2 = presolve_find_row(icolx, mrstrt[row], mrstrt[row]+hinrow[row], hcol);
 	rowels[k2] = colels[kcolx];
 
 	// now delete col y from the row; this changes hinrow[row]
@@ -295,7 +295,7 @@ static bool elim_doubleton(const char *msg,
 	// update entry corresponding to icolx in row rep 
 	// by just overwriting the icoly entry
 	{
-	  int k2 = presolve_find_row(icoly, mrstrt[row], mrstrt[row]+hinrow[row], hcol);
+	  CoinBigIndex k2 = presolve_find_row(icoly, mrstrt[row], mrstrt[row]+hinrow[row], hcol);
 	  hcol[k2] = icolx;
 	  rowels[k2] = colels[kcoly] * coeff_factor;
 	}
@@ -342,15 +342,15 @@ void update_other_rep_quick(int col,
 
 			    const int *mrstrt, int *hcol, double *rowels, int *hinrow)
 {
-  int kcs = mcstrt[col];
-  int kce = kcs + hincol[col];
+  CoinBigIndex kcs = mcstrt[col];
+  CoinBigIndex kce = kcs + hincol[col];
 
-  for (int k=kcs; k<kce; ++k) {
+  for (CoinBigIndex k=kcs; k<kce; ++k) {
     int row = hrow[k];
     double coeff = colels[k];
 
-    int krs = mrstrt[row];
-    int kre = krs + hinrow[row];
+    CoinBigIndex krs = mrstrt[row];
+    CoinBigIndex kre = krs + hinrow[row];
 
     // the "quick" refers to the assumption that there will be enough room,
     // and that col does not already occur in the row.
@@ -375,7 +375,7 @@ const PresolveAction *doubleton_action::presolve(PresolveMatrix *prob,
 {
   double *colels	= prob->colels_;
   int *hrow		= prob->hrow_;
-  int *mcstrt		= prob->mcstrt_;
+  CoinBigIndex *mcstrt		= prob->mcstrt_;
   int *hincol		= prob->hincol_;
   int ncols		= prob->ncols_;
 
@@ -384,7 +384,7 @@ const PresolveAction *doubleton_action::presolve(PresolveMatrix *prob,
 
   double *rowels	= prob->rowels_;
   int *hcol		= prob->hcol_;
-  int *mrstrt		= prob->mrstrt_;
+  CoinBigIndex *mrstrt		= prob->mrstrt_;
   int *hinrow		= prob->hinrow_;
   int nrows		= prob->nrows_;
 
@@ -429,10 +429,10 @@ const PresolveAction *doubleton_action::presolve(PresolveMatrix *prob,
     if (hinrow[irow] == 2 &&
 	fabs(rup[irow] - rlo[irow]) <= ZTOLDP) {
       double rhs = rlo[irow];
-      int krs = mrstrt[irow];
-      int kre = krs + hinrow[irow];
+      CoinBigIndex krs = mrstrt[irow];
+      CoinBigIndex kre = krs + hinrow[irow];
       int icolx, icoly;
-      int k;
+      CoinBigIndex k;
       
       /* locate first column */
       for (k=krs; k<kre; k++) {
@@ -461,8 +461,8 @@ const PresolveAction *doubleton_action::presolve(PresolveMatrix *prob,
 	  !fabs(cup[icoly] - clo[icoly]) < ZTOLDP) {
 	double coeffx, coeffy;
 	/* find this row in each of the columns */
-	int krowx = presolve_find_row(irow, mcstrt[icolx], mcstrt[icolx] + hincol[icolx], hrow);
-	int krowy = presolve_find_row(irow, mcstrt[icoly], mcstrt[icoly] + hincol[icoly], hrow);
+	CoinBigIndex krowx = presolve_find_row(irow, mcstrt[icolx], mcstrt[icolx] + hincol[icolx], hrow);
+	CoinBigIndex krowy = presolve_find_row(irow, mcstrt[icoly], mcstrt[icoly] + hincol[icoly], hrow);
 	
 	/* don't do if both integers for now - unless a variant
 	   of x=y and 0-1 variables */
@@ -528,8 +528,8 @@ const PresolveAction *doubleton_action::presolve(PresolveMatrix *prob,
 #endif
 	
 	{
-	  int kcs = mcstrt[icoly];
-	  int kce = kcs + hincol[icoly];
+	  CoinBigIndex kcs = mcstrt[icoly];
+	  CoinBigIndex kce = kcs + hincol[icoly];
 	  for (k=kcs; k<kce; k++) {
 	    if (hinrow[hrow[k]] == 1) {
 	      break;
@@ -806,7 +806,7 @@ void doubleton_action::postsolve(PostsolveMatrix *prob) const
 
   double *colels	= prob->colels_;
   int *hrow		= prob->hrow_;
-  int *mcstrt		= prob->mcstrt_;
+  CoinBigIndex *mcstrt		= prob->mcstrt_;
   int *hincol		= prob->hincol_;
   int *link		= prob->link_;
 
@@ -832,7 +832,7 @@ void doubleton_action::postsolve(PostsolveMatrix *prob) const
   char *cdone	= prob->cdone_;
   char *rdone	= prob->rdone_;
 
-  int free_list = prob->free_list_;
+  CoinBigIndex free_list = prob->free_list_;
 
   const double ztolzb	= prob->ztolzb_;
   const double ztoldj	= prob->ztoldj_;
@@ -895,7 +895,7 @@ void doubleton_action::postsolve(PostsolveMatrix *prob) const
 
     {
       // find the tail
-      int k=mcstrt[jcolx];
+      CoinBigIndex k=mcstrt[jcolx];
       for (int i=0; i<hincol[jcolx]-1; ++i) {
 	k = link[k];
       }
@@ -908,7 +908,7 @@ void doubleton_action::postsolve(PostsolveMatrix *prob) const
     {
       int xstart = NO_LINK;
       for (int i=0; i<f->ncolx; ++i) {
-	int k = free_list;
+	CoinBigIndex k = free_list;
 	free_list = link[free_list];
 
 	check_free_list(free_list);
@@ -924,7 +924,7 @@ void doubleton_action::postsolve(PostsolveMatrix *prob) const
     {
       int ystart = NO_LINK;
       for (int i=0; i<f->ncoly; ++i) {
-	int k = free_list;
+	CoinBigIndex k = free_list;
 	free_list = link[free_list];
 
 	check_free_list(free_list);
@@ -966,7 +966,7 @@ void doubleton_action::postsolve(PostsolveMatrix *prob) const
     // therefore, we must increase the row bounds by colels[kcoly] * rhs/coeffy,
     // which is similar to the bias
     {
-      int k = mcstrt[jcoly];
+      CoinBigIndex k = mcstrt[jcoly];
       int ny = hincol[jcoly];
       double dj = maxmin * dcost[jcoly];
       double bounds_factor = rhs/coeffy;
@@ -1030,7 +1030,7 @@ void doubleton_action::postsolve(PostsolveMatrix *prob) const
       // DEBUG CHECK
 #if	DEBUG_PRESOLVE
       {
-	int k = mcstrt[jcolx];
+	CoinBigIndex k = mcstrt[jcolx];
 	int nx = hincol[jcolx];
 	double dj = maxmin * dcost[jcolx];
 
@@ -1046,7 +1046,7 @@ void doubleton_action::postsolve(PostsolveMatrix *prob) const
 		 irow, jcolx, rcosts[jcolx], dj);
       }
       {
-	int k = mcstrt[jcoly];
+	CoinBigIndex k = mcstrt[jcoly];
 	int ny = hincol[jcoly];
 	double dj = maxmin * dcost[jcoly];
 

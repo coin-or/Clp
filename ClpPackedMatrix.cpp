@@ -106,13 +106,13 @@ ClpPackedMatrix::times(double scalar,
   int iRow,iColumn;
   // get matrix data pointers
   const int * row = matrix_->getIndices();
-  const int * columnStart = matrix_->getVectorStarts();
+  const CoinBigIndex * columnStart = matrix_->getVectorStarts();
   const int * columnLength = matrix_->getVectorLengths(); 
   const double * elementByColumn = matrix_->getElements();
   int numberColumns = matrix_->getNumCols();
   //memset(y,0,matrix_->getNumRows()*sizeof(double));
   for (iColumn=0;iColumn<numberColumns;iColumn++) {
-    int j;
+    CoinBigIndex j;
     double value = scalar*x[iColumn];
     if (value) {
       for (j=columnStart[iColumn];
@@ -130,13 +130,13 @@ ClpPackedMatrix::transposeTimes(double scalar,
   int iColumn;
   // get matrix data pointers
   const int * row = matrix_->getIndices();
-  const int * columnStart = matrix_->getVectorStarts();
+  const CoinBigIndex * columnStart = matrix_->getVectorStarts();
   const int * columnLength = matrix_->getVectorLengths(); 
   const double * elementByColumn = matrix_->getElements();
   int numberColumns = matrix_->getNumCols();
   //memset(y,0,numberColumns*sizeof(double));
   for (iColumn=0;iColumn<numberColumns;iColumn++) {
-    int j;
+    CoinBigIndex j;
     double value=0.0;
     for (j=columnStart[iColumn];
 	 j<columnStart[iColumn]+columnLength[iColumn];j++) {
@@ -155,13 +155,13 @@ ClpPackedMatrix::times(double scalar,
   int iRow,iColumn;
   // get matrix data pointers
   const int * row = matrix_->getIndices();
-  const int * columnStart = matrix_->getVectorStarts();
+  const CoinBigIndex * columnStart = matrix_->getVectorStarts();
   const int * columnLength = matrix_->getVectorLengths(); 
   const double * elementByColumn = matrix_->getElements();
   int numberColumns = matrix_->getNumCols();
   //memset(y,0,matrix_->getNumRows()*sizeof(double));
   for (iColumn=0;iColumn<numberColumns;iColumn++) {
-    int j;
+    CoinBigIndex j;
     double value = x[iColumn];
     if (value) {
       // scaled
@@ -187,13 +187,13 @@ ClpPackedMatrix::transposeTimes( double scalar,
   int iColumn;
   // get matrix data pointers
   const int * row = matrix_->getIndices();
-  const int * columnStart = matrix_->getVectorStarts();
+  const CoinBigIndex * columnStart = matrix_->getVectorStarts();
   const int * columnLength = matrix_->getVectorLengths(); 
   const double * elementByColumn = matrix_->getElements();
   int numberColumns = matrix_->getNumCols();
   //memset(y,0,numberColumns*sizeof(double));
   for (iColumn=0;iColumn<numberColumns;iColumn++) {
-    int j;
+    CoinBigIndex j;
     double value=0.0;
     // scaled
     for (j=columnStart[iColumn];
@@ -230,7 +230,7 @@ ClpPackedMatrix::transposeTimes(const ClpSimplex * model, double scalar,
     int iColumn;
     // get matrix data pointers
     const int * row = matrix_->getIndices();
-    const int * columnStart = matrix_->getVectorStarts();
+    const CoinBigIndex * columnStart = matrix_->getVectorStarts();
     const int * columnLength = matrix_->getVectorLengths(); 
     const double * elementByColumn = matrix_->getElements();
     double * markVector = y->denseVector(); // probably empty
@@ -241,7 +241,7 @@ ClpPackedMatrix::transposeTimes(const ClpSimplex * model, double scalar,
 	double value = markVector[iColumn];
 	markVector[iColumn]=0.0;
 	double value2 = 0.0;
-	int j;
+	CoinBigIndex j;
 	for (j=columnStart[iColumn];
 	     j<columnStart[iColumn]+columnLength[iColumn];j++) {
 	  int iRow = row[j];
@@ -258,7 +258,7 @@ ClpPackedMatrix::transposeTimes(const ClpSimplex * model, double scalar,
       for (iColumn=0;iColumn<numberColumns;iColumn++) {
 	double value = markVector[iColumn];
 	markVector[iColumn]=0.0;
-	int j;
+	CoinBigIndex j;
 	const double * columnScale = model->columnScale();
 	double value2 = 0.0;
 	for (j=columnStart[iColumn];
@@ -296,13 +296,13 @@ ClpPackedMatrix::transposeTimes(const ClpSimplex * model, double scalar,
     }
 
     const int * column = rowCopy->getIndices();
-    const int * rowStart = rowCopy->getVectorStarts();
+    const CoinBigIndex * rowStart = rowCopy->getVectorStarts();
     const double * element = rowCopy->getElements();
     const int * whichRow = rowArray->getIndices();
     for (i=0;i<numberInRowArray;i++) {
       iRow = whichRow[i]; 
       double value = pi[iRow]*scalar;
-      int j;
+      CoinBigIndex j;
       for (j=rowStart[iRow];j<rowStart[iRow+1];j++) {
 	int iColumn = column[j];
 	if (!marked[iColumn]) {
@@ -332,13 +332,13 @@ ClpPackedMatrix::transposeTimes(const ClpSimplex * model, double scalar,
     numberNonZero=0;
 
     const int * column = rowCopy->getIndices();
-    const int * rowStart = rowCopy->getVectorStarts();
+    const CoinBigIndex * rowStart = rowCopy->getVectorStarts();
     const double * element = rowCopy->getElements();
     const int * whichRow = rowArray->getIndices();
     double value;
     iRow = whichRow[0]; 
     value = pi[iRow]*scalar;
-    int j;
+    CoinBigIndex j;
     for (j=rowStart[iRow];j<rowStart[iRow+1];j++) {
       int iColumn = column[j];
       double value2 = value*element[j];
@@ -373,10 +373,10 @@ ClpPackedMatrix::transposeTimes(const ClpSimplex * model, double scalar,
     int iRow=rowArray->getIndices()[0];
     numberNonZero=0;
     const int * column = rowCopy->getIndices();
-    const int * rowStart = rowCopy->getVectorStarts();
+    const CoinBigIndex * rowStart = rowCopy->getVectorStarts();
     const double * element = rowCopy->getElements();
     double value = pi[iRow]*scalar;
-    int j;
+    CoinBigIndex j;
     for (j=rowStart[iRow];j<rowStart[iRow+1];j++) {
       int iColumn = column[j];
       double value2 = value*element[j];
@@ -408,7 +408,7 @@ ClpPackedMatrix::subsetTransposeTimes(const ClpSimplex * model,
   int jColumn;
   // get matrix data pointers
   const int * row = matrix_->getIndices();
-  const int * columnStart = matrix_->getVectorStarts();
+  const CoinBigIndex * columnStart = matrix_->getVectorStarts();
   const int * columnLength = matrix_->getVectorLengths(); 
   const double * elementByColumn = matrix_->getElements();
   const double * rowScale = model->rowScale();
@@ -418,7 +418,7 @@ ClpPackedMatrix::subsetTransposeTimes(const ClpSimplex * model,
     for (jColumn=0;jColumn<numberToDo;jColumn++) {
       int iColumn = which[jColumn];
       double value = 0.0;
-      int j;
+      CoinBigIndex j;
       for (j=columnStart[iColumn];
 	   j<columnStart[iColumn]+columnLength[iColumn];j++) {
 	int iRow = row[j];
@@ -434,7 +434,7 @@ ClpPackedMatrix::subsetTransposeTimes(const ClpSimplex * model,
     for (jColumn=0;jColumn<numberToDo;jColumn++) {
       int iColumn = which[jColumn];
       double value = 0.0;
-      int j;
+      CoinBigIndex j;
       const double * columnScale = model->columnScale();
       for (j=columnStart[iColumn];
 	   j<columnStart[iColumn]+columnLength[iColumn];j++) {
@@ -451,13 +451,13 @@ ClpPackedMatrix::subsetTransposeTimes(const ClpSimplex * model,
 }
 /* Returns number of elements in basis
    column is basic if entry >=0 */
-ClpBigIndex 
+CoinBigIndex 
 ClpPackedMatrix::numberInBasis(const int * columnIsBasic) const 
 {
   int i;
   int numberColumns = getNumCols();
   const int * columnLength = matrix_->getVectorLengths(); 
-  ClpBigIndex numberElements=0;
+  CoinBigIndex numberElements=0;
   for (i=0;i<numberColumns;i++) {
     if (columnIsBasic[i]>=0) {
       numberElements += columnLength[i];
@@ -466,7 +466,7 @@ ClpPackedMatrix::numberInBasis(const int * columnIsBasic) const
   return numberElements;
 }
 // Fills in basis (Returns number of elements and updates numberBasic)
-ClpBigIndex 
+CoinBigIndex 
 ClpPackedMatrix::fillBasis(const ClpSimplex * model,
 				const int * columnIsBasic, int & numberBasic,
 				int * indexRowU, int * indexColumnU,
@@ -474,17 +474,17 @@ ClpPackedMatrix::fillBasis(const ClpSimplex * model,
 {
   const double * rowScale = model->rowScale();
   const int * row = matrix_->getIndices();
-  const int * columnStart = matrix_->getVectorStarts();
+  const CoinBigIndex * columnStart = matrix_->getVectorStarts();
   const int * columnLength = matrix_->getVectorLengths(); 
   const double * elementByColumn = matrix_->getElements();
   int i;
   int numberColumns = getNumCols();
-  ClpBigIndex numberElements=0;
+  CoinBigIndex numberElements=0;
   if (!rowScale) {
     // no scaling
     for (i=0;i<numberColumns;i++) {
       if (columnIsBasic[i]>=0) {
-	int j;
+	CoinBigIndex j;
 	for (j=columnStart[i];j<columnStart[i]+columnLength[i];j++) {
 	  indexRowU[numberElements]=row[j];
 	  indexColumnU[numberElements]=numberBasic;
@@ -498,7 +498,7 @@ ClpPackedMatrix::fillBasis(const ClpSimplex * model,
     const double * columnScale = model->columnScale();
     for (i=0;i<numberColumns;i++) {
       if (columnIsBasic[i]>=0) {
-	int j;
+	CoinBigIndex j;
 	double scale = columnScale[i];
 	for (j=columnStart[i];j<columnStart[i]+columnLength[i];j++) {
 	  int iRow = row[j];
@@ -529,7 +529,7 @@ ClpPackedMatrix::scale(ClpSimplex * model) const
   int numberRows = model->numberRows();
   int numberColumns = model->numberColumns();
   const int * column = rowCopy->getIndices();
-  const int * rowStart = rowCopy->getVectorStarts();
+  const CoinBigIndex * rowStart = rowCopy->getVectorStarts();
   const double * element = rowCopy->getElements();
   double * rowScale = new double [numberRows];
   double * columnScale = new double [numberColumns];
@@ -555,11 +555,11 @@ ClpPackedMatrix::scale(ClpSimplex * model) const
   double smallest=1.0e50;
   // get matrix data pointers
   const int * row = matrix_->getIndices();
-  const int * columnStart = matrix_->getVectorStarts();
+  const CoinBigIndex * columnStart = matrix_->getVectorStarts();
   const int * columnLength = matrix_->getVectorLengths(); 
   const double * elementByColumn = matrix_->getElements();
   for (iColumn=0;iColumn<numberColumns;iColumn++) {
-    int j;
+    CoinBigIndex j;
     char useful=0;
     if (columnUpper[iColumn]>
 	columnLower[iColumn]+1.0e-9) {
@@ -591,7 +591,7 @@ ClpPackedMatrix::scale(ClpSimplex * model) const
     // and see if there any empty rows
     for (iRow=0;iRow<numberRows;iRow++) {
       if (usefulRow[iRow]) {
-	int j;
+	CoinBigIndex j;
 	int useful=0;
 	for (j=rowStart[iRow];j<rowStart[iRow+1];j++) {
 	  int iColumn = column[j];
@@ -615,7 +615,7 @@ ClpPackedMatrix::scale(ClpSimplex * model) const
       // Geometric mean on row scales
       for (iRow=0;iRow<numberRows;iRow++) {
 	if (usefulRow[iRow]) {
-	  int j;
+	  CoinBigIndex j;
 	  largest=1.0e-20;
 	  smallest=1.0e50;
 	  for (j=rowStart[iRow];j<rowStart[iRow+1];j++) {
@@ -641,7 +641,7 @@ ClpPackedMatrix::scale(ClpSimplex * model) const
       // Geometric mean on column scales
       for (iColumn=0;iColumn<numberColumns;iColumn++) {
 	if (usefulColumn[iColumn]) {
-	  int j;
+	  CoinBigIndex j;
 	  largest=1.0e-20;
 	  smallest=1.0e50;
 	  for (j=columnStart[iColumn];
@@ -662,7 +662,7 @@ ClpPackedMatrix::scale(ClpSimplex * model) const
     overallSmallest=1.0e50;
     for (iColumn=0;iColumn<numberColumns;iColumn++) {
       if (usefulColumn[iColumn]) {
-	int j;
+	CoinBigIndex j;
 	largest=1.0e-20;
 	smallest=1.0e50;
 	for (j=columnStart[iColumn];
@@ -732,7 +732,7 @@ ClpPackedMatrix::scaledRowCopy(ClpSimplex * model) const
     int numberRows = model->numberRows();
     int numberColumns = model->numberColumns();
     const int * column = rowCopy->getIndices();
-    const int * rowStart = rowCopy->getVectorStarts();
+    const CoinBigIndex * rowStart = rowCopy->getVectorStarts();
     const double * element = rowCopy->getElements();
     int iRow;
     // need to replace row by row
@@ -764,10 +764,10 @@ ClpPackedMatrix::unpack(ClpSimplex * model,CoinIndexedVector * rowArray,
 {
   const double * rowScale = model->rowScale();
   const int * row = matrix_->getIndices();
-  const int * columnStart = matrix_->getVectorStarts();
+  const CoinBigIndex * columnStart = matrix_->getVectorStarts();
   const int * columnLength = matrix_->getVectorLengths(); 
   const double * elementByColumn = matrix_->getElements();
-  int i;
+  CoinBigIndex i;
   if (!rowScale) {
     for (i=columnStart[iColumn];
 	 i<columnStart[iColumn]+columnLength[iColumn];i++) {
@@ -791,10 +791,10 @@ ClpPackedMatrix::add(const ClpSimplex * model,CoinIndexedVector * rowArray,
 {
   const double * rowScale = model->rowScale();
   const int * row = matrix_->getIndices();
-  const int * columnStart = matrix_->getVectorStarts();
+  const CoinBigIndex * columnStart = matrix_->getVectorStarts();
   const int * columnLength = matrix_->getVectorLengths(); 
   const double * elementByColumn = matrix_->getElements();
-  int i;
+  CoinBigIndex i;
   if (!rowScale) {
     for (i=columnStart[iColumn];
 	 i<columnStart[iColumn]+columnLength[iColumn];i++) {
@@ -821,19 +821,19 @@ ClpPackedMatrix::allElementsInRange(ClpSimplex * model,
 				    double smallest, double largest)
 {
   int iColumn;
-  int numberLarge=0;;
-  int numberSmall=0;;
+  CoinBigIndex numberLarge=0;;
+  CoinBigIndex numberSmall=0;;
   int firstBadColumn=-1;
   int firstBadRow=-1;
   double firstBadElement=0.0;
   // get matrix data pointers
   const int * row = matrix_->getIndices();
-  const int * columnStart = matrix_->getVectorStarts();
+  const CoinBigIndex * columnStart = matrix_->getVectorStarts();
   const int * columnLength = matrix_->getVectorLengths(); 
   const double * elementByColumn = matrix_->getElements();
   int numberColumns = matrix_->getNumCols();
   for (iColumn=0;iColumn<numberColumns;iColumn++) {
-    int j;
+    CoinBigIndex j;
     for (j=columnStart[iColumn];
 	 j<columnStart[iColumn]+columnLength[iColumn];j++) {
       double value = fabs(elementByColumn[j]);

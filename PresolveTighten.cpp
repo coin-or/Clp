@@ -56,7 +56,7 @@ const PresolveAction *do_tighten_action::presolve(PresolveMatrix *prob,
 {
   double *colels	= prob->colels_;
   int *hrow		= prob->hrow_;
-  int *mcstrt		= prob->mcstrt_;
+  CoinBigIndex *mcstrt		= prob->mcstrt_;
   int *hincol		= prob->hincol_;
   int ncols		= prob->ncols_;
 
@@ -95,11 +95,11 @@ const PresolveAction *do_tighten_action::presolve(PresolveMatrix *prob,
     if (dcost[j]==0.0) {
       int iflag=0; /* 1 - up is towards feasibility, -1 down is towards */
 
-      int kcs = mcstrt[j];
-      int kce = kcs + hincol[j];
+      CoinBigIndex kcs = mcstrt[j];
+      CoinBigIndex kce = kcs + hincol[j];
 
       // check constraints
-      for (int k=kcs; k<kce; ++k) {
+      for (CoinBigIndex k=kcs; k<kce; ++k) {
 	int i = hrow[k];
 	double coeff = colels[k];
 	double rlb = rlo[i];
@@ -168,13 +168,13 @@ const PresolveAction *do_tighten_action::presolve(PresolveMatrix *prob,
   int *hcol		= prob->hcol_;
   int *mrstrt		= prob->mrstrt_;
   int *hinrow		= prob->hinrow_;
-	  for (int k=kcs; k<kce; ++k) {
+	  for (CoinBigIndex k=kcs; k<kce; ++k) {
 	    int irow = hrow[k];
-	    int krs = mrstrt[irow];
-	    int kre = krs + hinrow[irow];
+	    CoinBigIndex krs = mrstrt[irow];
+	    CoinBigIndex kre = krs + hinrow[irow];
 	    printf("%d  %g %g %g:  ",
 		   irow, rlo[irow], rup[irow], colels[irow]);
-	    for (int kk=krs; kk<kre; ++kk)
+	    for (CoinBigIndex kk=krs; kk<kre; ++kk)
 	      printf("%d(%g) ", hcol[kk], rowels[kk]);
 	    printf("\n");
 	  }
@@ -194,7 +194,7 @@ const PresolveAction *do_tighten_action::presolve(PresolveMatrix *prob,
 #endif
 	    int nr = 0;
             prob->addCol(j);
-	    for (int k=kcs; k<kce; ++k) {
+	    for (CoinBigIndex k=kcs; k<kce; ++k) {
 	      int irow = hrow[k];
 	      // ignore this if we've already made it useless
 	      if (! (rlo[irow] == -PRESOLVE_INF && rup[irow] == PRESOLVE_INF)) {
@@ -266,7 +266,7 @@ void do_tighten_action::postsolve(PostsolveMatrix *prob) const
 
   double *colels	= prob->colels_;
   int *hrow		= prob->hrow_;
-  int *mcstrt		= prob->mcstrt_;
+  CoinBigIndex *mcstrt		= prob->mcstrt_;
   int *hincol		= prob->hincol_;
   int *link		= prob->link_;
   int ncols		= prob->ncols_;
@@ -319,7 +319,7 @@ void do_tighten_action::postsolve(PostsolveMatrix *prob) const
     double correction = 0.0;
     
     int last_corrected = -1;
-    int k = mcstrt[jcol];
+    CoinBigIndex k = mcstrt[jcol];
     int nk = hincol[jcol];
     for (int i=0; i<nk; ++i) {
       int irow = hrow[k];

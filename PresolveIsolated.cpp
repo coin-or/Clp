@@ -17,7 +17,7 @@ const PresolveAction *isolated_constraint_action::presolve(PresolveMatrix *prob,
 							    const PresolveAction *next)
 {
   int *hincol	= prob->hincol_;
-  const int *mcstrt	= prob->mcstrt_;
+  const CoinBigIndex *mcstrt	= prob->mcstrt_;
   int *hrow	= prob->hrow_;
   double *colels	= prob->colels_;
 
@@ -26,7 +26,7 @@ const PresolveAction *isolated_constraint_action::presolve(PresolveMatrix *prob,
 
   const double *rowels	= prob->rowels_;
   const int *hcol	= prob->hcol_;
-  const int *mrstrt	= prob->mrstrt_;
+  const CoinBigIndex *mrstrt	= prob->mrstrt_;
 
   // may be written by useless constraint
   int *hinrow	= prob->hinrow_;
@@ -34,14 +34,14 @@ const PresolveAction *isolated_constraint_action::presolve(PresolveMatrix *prob,
   double *rlo	= prob->rlo_;
   double *rup	= prob->rup_;
 
-  int krs = mrstrt[irow];
-  int kre = krs + hinrow[irow];
+  CoinBigIndex krs = mrstrt[irow];
+  CoinBigIndex kre = krs + hinrow[irow];
   
   double *dcost	= prob->cost_;
 
 #if	DEBUG_PRESOLVE
   printf("ISOLATED:  %d - ", irow);
-  for (int k = krs; k<kre; ++k)
+  for (CoinBigIndex k = krs; k<kre; ++k)
     printf("%d ", hcol[k]);
   printf("\n");
 #endif
@@ -52,7 +52,7 @@ const PresolveAction *isolated_constraint_action::presolve(PresolveMatrix *prob,
 #endif
     return NULL;
   }
-  for (int k = krs; k<kre; ++k) {
+  for (CoinBigIndex k = krs; k<kre; ++k) {
     int jcol = hcol[k];
     if (clo[jcol] != 0.0 && cup[jcol] != 0.0) {
 #if	DEBUG_PRESOLVE
@@ -83,7 +83,7 @@ const PresolveAction *isolated_constraint_action::presolve(PresolveMatrix *prob,
 
   // HACK - set costs to 0.0 so empty.cpp doesn't complain
   double *costs = new double[nc];
-  for (int k = krs; k<kre; ++k) {
+  for (CoinBigIndex k = krs; k<kre; ++k) {
     costs[k-krs] = dcost[hcol[k]];
     dcost[hcol[k]] = 0.0;
   }
@@ -95,7 +95,7 @@ const PresolveAction *isolated_constraint_action::presolve(PresolveMatrix *prob,
 					costs,
 					next);
 
-  for (int k=krs; k<kre; k++)
+  for (CoinBigIndex k=krs; k<kre; k++)
     presolve_delete_from_row(hcol[k], irow, mcstrt, hincol, hrow, colels);
   hinrow[irow] = 0;
 
@@ -115,7 +115,7 @@ void isolated_constraint_action::postsolve(PostsolveMatrix *prob) const
 {
   double *colels	= prob->colels_;
   int *hrow		= prob->hrow_;
-  int *mcstrt		= prob->mcstrt_;
+  CoinBigIndex *mcstrt		= prob->mcstrt_;
   int *link		= prob->link_;
   int *hincol		= prob->hincol_;
   
@@ -123,7 +123,7 @@ void isolated_constraint_action::postsolve(PostsolveMatrix *prob) const
   double *rowacts	= prob->acts_;
   double *sol		= prob->sol_;
 
-  int free_list		= prob->free_list_;
+  CoinBigIndex free_list		= prob->free_list_;
 
 
   // hides fields
@@ -142,7 +142,7 @@ void isolated_constraint_action::postsolve(PostsolveMatrix *prob) const
 
     sol[jcol] = 0.0;	// ONLY ACCEPTED SUCH CONSTRAINTS
 
-    int kk = free_list;
+    CoinBigIndex kk = free_list;
     free_list = link[free_list];
 
     check_free_list(free_list);

@@ -23,7 +23,7 @@ const PresolveAction *useless_constraint_action::presolve(PresolveMatrix * prob,
   // may be modified by useless constraint
         int *hrow	= prob->hrow_;
 
-  const int *mcstrt	= prob->mcstrt_;
+  const CoinBigIndex *mcstrt	= prob->mcstrt_;
 
   // may be modified by useless constraint
         int *hincol	= prob->hincol_;
@@ -33,7 +33,7 @@ const PresolveAction *useless_constraint_action::presolve(PresolveMatrix * prob,
 
   const double *rowels	= prob->rowels_;
   const int *hcol	= prob->hcol_;
-  const int *mrstrt	= prob->mrstrt_;
+  const CoinBigIndex *mrstrt	= prob->mrstrt_;
 
   // may be written by useless constraint
         int *hinrow	= prob->hinrow_;
@@ -50,8 +50,8 @@ const PresolveAction *useless_constraint_action::presolve(PresolveMatrix * prob,
 
   for (int i=0; i<nuseless_rows; ++i) {
     int irow = useless_rows[i];
-    int krs = mrstrt[irow];
-    int kre = krs + hinrow[irow];
+    CoinBigIndex krs = mrstrt[irow];
+    CoinBigIndex kre = krs + hinrow[irow];
 
     action *f = &actions[i];
 
@@ -62,7 +62,7 @@ const PresolveAction *useless_constraint_action::presolve(PresolveMatrix * prob,
     f->rowcols = copyOfArray(&hcol[krs], hinrow[irow]);
     f->rowels  = copyOfArray(&rowels[krs], hinrow[irow]);
 
-    for (int k=krs; k<kre; k++)
+    for (CoinBigIndex k=krs; k<kre; k++)
       presolve_delete_from_row(hcol[k], irow, mcstrt, hincol, hrow, colels);
     hinrow[irow] = 0;
 
@@ -89,7 +89,7 @@ void useless_constraint_action::postsolve(PostsolveMatrix *prob) const
 
   double *colels	= prob->colels_;
   int *hrow		= prob->hrow_;
-  int *mcstrt		= prob->mcstrt_;
+  CoinBigIndex *mcstrt		= prob->mcstrt_;
   int *link		= prob->link_;
   int *hincol		= prob->hincol_;
   
@@ -98,7 +98,7 @@ void useless_constraint_action::postsolve(PostsolveMatrix *prob) const
   const double *sol	= prob->sol_;
 
 
-  int free_list		= prob->free_list_;
+  CoinBigIndex free_list		= prob->free_list_;
 
   double *rlo	= prob->rlo_;
   double *rup	= prob->rup_;
@@ -114,13 +114,13 @@ void useless_constraint_action::postsolve(PostsolveMatrix *prob) const
     rup[irow] = f->rup;
     rlo[irow] = f->rlo;
 
-    for (int k=0; k<ninrow; k++) {
+    for (CoinBigIndex k=0; k<ninrow; k++) {
       int jcol = rowcols[k];
-      int kk = mcstrt[jcol];
+      CoinBigIndex kk = mcstrt[jcol];
 
       // append deleted row element to each col
       {
-	int kk = free_list;
+	CoinBigIndex kk = free_list;
 	free_list = link[free_list];
 
 	check_free_list(free_list);

@@ -30,12 +30,12 @@ const remove_fixed_action *remove_fixed_action::presolve(PresolveMatrix *prob,
 {
   double *colels	= prob->colels_;
   int *hrow		= prob->hrow_;
-  int *mcstrt		= prob->mcstrt_;
+  CoinBigIndex *mcstrt		= prob->mcstrt_;
   int *hincol		= prob->hincol_;
 
   double *rowels	= prob->rowels_;
   int *hcol		= prob->hcol_;
-  int *mrstrt		= prob->mrstrt_;
+  CoinBigIndex *mrstrt		= prob->mrstrt_;
   int *hinrow		= prob->hinrow_;
   int nrows		= prob->nrows_;
 
@@ -57,9 +57,9 @@ const remove_fixed_action *remove_fixed_action::presolve(PresolveMatrix *prob,
     PRESOLVEASSERT(/*hincol[j] > 0 &&*/ cup[j] == clo[j]);
 
     double sol = clo[j];
-    int kcs = mcstrt[j];
-    int kce = kcs + hincol[j];
-    int k;
+    CoinBigIndex kcs = mcstrt[j];
+    CoinBigIndex kce = kcs + hincol[j];
+    CoinBigIndex k;
 
     {
       action &f = actions[ckc];
@@ -87,9 +87,9 @@ const remove_fixed_action *remove_fixed_action::presolve(PresolveMatrix *prob,
 
       // mark
       prob->addRow(row);
-      int krs = mrstrt[row];
-      int kre = krs + hinrow[row];
-      for (int k=krs; k<kre; k++) {
+      CoinBigIndex krs = mrstrt[row];
+      CoinBigIndex kre = krs + hinrow[row];
+      for (CoinBigIndex k=krs; k<kre; k++) {
 	int jcol = hcol[k];
 	prob->addCol(jcol);
       }
@@ -152,11 +152,11 @@ void remove_fixed_action::postsolve(PostsolveMatrix *prob) const
 
   double *colels	= prob->colels_;
   int *hrow		= prob->hrow_;
-  int *mcstrt		= prob->mcstrt_;
+  CoinBigIndex *mcstrt		= prob->mcstrt_;
   int *hincol		= prob->hincol_;
   int *link		= prob->link_;
   int ncols		= prob->ncols_;
-  int free_list		= prob->free_list_;
+  CoinBigIndex free_list		= prob->free_list_;
 
   double *clo	= prob->clo_;
   double *cup	= prob->cup_;
@@ -198,7 +198,7 @@ void remove_fixed_action::postsolve(PostsolveMatrix *prob) const
 	double coeff = f->colels[i];
 
 	// pop free_list
-	int k = free_list;
+	CoinBigIndex k = free_list;
 	free_list = link[free_list];
 	
 	check_free_list(free_list);
@@ -279,7 +279,7 @@ const PresolveAction *make_fixed_action::presolve(PresolveMatrix *prob,
 
   double *colels	= prob->colels_;
   int *hrow	= prob->hrow_;
-  int *mcstrt	= prob->mcstrt_;
+  CoinBigIndex *mcstrt	= prob->mcstrt_;
   int *hincol	= prob->hincol_;
 
   double *acts	= prob->acts_;
@@ -305,7 +305,7 @@ const PresolveAction *make_fixed_action::presolve(PresolveMatrix *prob,
       csol[j] = cup[j];
     }
     if (movement) {
-      int k;
+      CoinBigIndex k;
       for (k=mcstrt[j];k<mcstrt[j]+hincol[j];k++) {
 	int row = hrow[k];
 	acts[row] += movement*colels[k];

@@ -25,13 +25,13 @@ void PresolveAction::throwCoinError(const char *error,
 
   class presolvehlink;
 
-void presolve_make_memlists(int *starts, int *lengths,
+void presolve_make_memlists(CoinBigIndex *starts, int *lengths,
 		       presolvehlink *link,
 		       int n);
 
 /*static*/ void presolve_prefix(const int *starts, int *diffs, int n, int limit);
 
-/*static*/ void presolve_prefix(const int *starts, int *diffs, int n, int limit)
+/*static*/ void presolve_prefix(const CoinBigIndex *starts, int *diffs, int n, int limit)
 {
   int i;
 
@@ -49,7 +49,7 @@ void presolve_make_memlists(int *starts, int *lengths,
 // columns or rows, we can quickly determine what column/row precedes a given
 // column/row in the memory region hrow/hcol.
 // Note that n itself has a pre and a suc.
-void presolve_make_memlists(int *starts, int *lengths, presolvehlink *link, int n)
+void presolve_make_memlists(CoinBigIndex *starts, int *lengths, presolvehlink *link, int n)
 {
   int i;
   int pre = NO_LINK;
@@ -143,9 +143,9 @@ int *presolve_duparray(const int *d, int n, int n2, char **end_mmapp)
 #endif
 
 
-int presolve_find_row(int row, int kcs, int kce, const int *hrow)
+int presolve_find_row(int row, CoinBigIndex kcs, CoinBigIndex kce, const int *hrow)
 {
-  int k;
+  CoinBigIndex k;
   for (k=kcs; k<kce; k++)
     if (hrow[k] == row)
       return (k);
@@ -153,16 +153,16 @@ int presolve_find_row(int row, int kcs, int kce, const int *hrow)
   return (0);
 }
 
-int presolve_find_row1(int row, int kcs, int kce, const int *hrow)
+int presolve_find_row1(int row, CoinBigIndex kcs, CoinBigIndex kce, const int *hrow)
 {
-  int k;
+  CoinBigIndex k;
   for (k=kcs; k<kce; k++)
     if (hrow[k] == row)
       return (k);
   return (kce);
 }
 
-int presolve_find_row2(int irow, int ks, int nc, const int *hrow, const int *link)
+int presolve_find_row2(int irow, CoinBigIndex ks, int nc, const int *hrow, const int *link)
 {
   for (int i=0; i<nc; ++i) {
     if (hrow[ks] == irow)
@@ -172,7 +172,7 @@ int presolve_find_row2(int irow, int ks, int nc, const int *hrow, const int *lin
   abort();
 }
 
-int presolve_find_row3(int irow, int ks, int nc, const int *hrow, const int *link)
+int presolve_find_row3(int irow, CoinBigIndex ks, int nc, const int *hrow, const int *link)
 {
   for (int i=0; i<nc; ++i) {
     if (hrow[ks] == irow)
@@ -187,13 +187,13 @@ int presolve_find_row3(int irow, int ks, int nc, const int *hrow, const int *lin
 // this keeps the row loosely packed
 // if we didn't want to maintain that property, we could just decrement hinrow[row].
 void presolve_delete_from_row(int row, int col /* thing to delete */,
-		     const int *mrstrt,
+		     const CoinBigIndex *mrstrt,
 		     int *hinrow, int *hcol, double *dels)
 {
-  int krs = mrstrt[row];
-  int kre = krs + hinrow[row];
+  CoinBigIndex krs = mrstrt[row];
+  CoinBigIndex kre = krs + hinrow[row];
 
-  int kcol = presolve_find_row(col, krs, kre, hcol);
+  CoinBigIndex kcol = presolve_find_row(col, krs, kre, hcol);
 
   swap(hcol[kcol], hcol[kre-1]);
   swap(dels[kcol], dels[kre-1]);
@@ -202,10 +202,11 @@ void presolve_delete_from_row(int row, int col /* thing to delete */,
 
 
 void presolve_delete_from_row2(int row, int col /* thing to delete */,
-		      int *mrstrt,
-		     int *hinrow, int *hcol, double *dels, int *link, int *free_listp)
+		      CoinBigIndex *mrstrt,
+		     int *hinrow, int *hcol, double *dels, int *link, 
+			       CoinBigIndex *free_listp)
 {
-  int k = mrstrt[row];
+  CoinBigIndex k = mrstrt[row];
 
   if (hcol[k] == col) {
     mrstrt[row] = link[k];
@@ -215,7 +216,7 @@ void presolve_delete_from_row2(int row, int col /* thing to delete */,
     hinrow[row]--;
   } else {
     int n = hinrow[row] - 1;
-    int k0 = k;
+    CoinBigIndex k0 = k;
     k = link[k];
     for (int i=0; i<n; ++i) {
       if (hcol[k] == col) {
@@ -263,12 +264,12 @@ PresolveAction::~PresolveAction()
 PrePostsolveMatrix::PrePostsolveMatrix(const ClpSimplex& si,
 					     int ncols_in,
 					     int nrows_in,
-					     int nelems_in) :
+					     CoinBigIndex nelems_in) :
   ncols_(si.getNumCols()),
   ncols0_(ncols_in),
   nelems_(si.getNumElements()),
 
-  mcstrt_(new int[ncols_in+1]),
+  mcstrt_(new CoinBigIndex[ncols_in+1]),
   hincol_(new int[ncols_in+1]),
   hrow_  (new int   [2*nelems_in]),
   colels_(new double[2*nelems_in]),
@@ -365,7 +366,7 @@ PrePostsolveMatrix::setColumnStatusUsingValue(int iColumn)
 // properly.
 static bool isGapFree(const CoinPackedMatrix& matrix)
 {
-  const int * start = matrix.getVectorStarts();
+  const CoinBigIndex * start = matrix.getVectorStarts();
   const int * length = matrix.getVectorLengths();
   int i;
   for (i = matrix.getSizeVectorLengths() - 1; i >= 0; --i) {
@@ -396,7 +397,7 @@ PresolveMatrix::PresolveMatrix(int ncols0_in,
 
 				     // rowrep
 				     int nrows_in,
-				     int nelems_in,
+				     CoinBigIndex nelems_in,
 			       bool doStatus) :
 
   PrePostsolveMatrix(si,
@@ -409,7 +410,7 @@ PresolveMatrix::PresolveMatrix(int ncols0_in,
   nrows_(si.getNumRows()),
 
   // temporary init
-  mrstrt_(new int[nrows_in+1]),
+  mrstrt_(new CoinBigIndex[nrows_in+1]),
   hinrow_(new int[nrows_in+1]),
   rowels_(new double[2*nelems_in]),
   hcol_(new int[2*nelems_in]),
@@ -438,7 +439,7 @@ PresolveMatrix::PresolveMatrix(int ncols0_in,
   // The coefficient matrix is a big hunk of stuff.
   // Do the copy here to try to avoid running out of memory.
 
-  const int * start = m->getVectorStarts();
+  const CoinBigIndex * start = m->getVectorStarts();
   const int * length = m->getVectorLengths();
   const int * row = m->getIndices();
   const double * element = m->getElements();
@@ -540,7 +541,7 @@ PresolveMatrix::~PresolveMatrix()
 void PresolveMatrix::update_model(ClpSimplex& si,
 				     int nrows0,
 				     int ncols0,
-				     int nelems0)
+				     CoinBigIndex nelems0)
 {
   si.loadProblem(ncols_, nrows_, mcstrt_, hrow_, colels_, hincol_,
 		 clo_, cup_, cost_, rlo_, rup_);
@@ -581,8 +582,8 @@ void PresolveMatrix::update_model(ClpSimplex& si,
 //
 // Note that there may be entries in a row that correspond to empty columns
 // and vice-versa.  --- HUH???
-static void matrix_consistent(const int *mrstrt, const int *hinrow, const int *hcol,
-			      const int *mcstrt, const int *hincol, const int *hrow,
+static void matrix_consistent(const CoinBigIndex *mrstrt, const int *hinrow, const int *hcol,
+			      const CoinBigIndex *mcstrt, const int *hincol, const int *hrow,
 			      const double *rowels,
 			      const double *colels,
 			      int nrows, int testvals,
@@ -591,15 +592,15 @@ static void matrix_consistent(const int *mrstrt, const int *hinrow, const int *h
 #if	CHECK_CONSISTENCY
   for (int irow=0; irow<nrows; irow++) {
     if (hinrow[irow] > 0) {
-      int krs = mrstrt[irow];
-      int kre = krs + hinrow[irow];
+      CoinBigIndex krs = mrstrt[irow];
+      CoinBigIndex kre = krs + hinrow[irow];
 
-      for (int k=krs; k<kre; k++) {
+      for (CoinBigIndex k=krs; k<kre; k++) {
 	int jcol = hcol[k];
-	int kcs = mcstrt[jcol];
-	int kce = kcs + hincol[jcol];
+	CoinBigIndex kcs = mcstrt[jcol];
+	CoinBigIndex kce = kcs + hincol[jcol];
 
-	int kk = presolve_find_row1(irow, kcs, kce, hrow);
+	CoinBigIndex kk = presolve_find_row1(irow, kcs, kce, hrow);
 	if (kk == kce) {
 	  printf("MATRIX INCONSISTENT:  can't find %s %d in %s %d\n",
 		 ROW, irow, COL, jcol);
@@ -650,7 +651,7 @@ void PresolveMatrix::consistent(bool testvals)
 PostsolveMatrix::PostsolveMatrix(ClpSimplex& si,
 				       int ncols0_in,
 				       int nrows0_in,
-				       int nelems0,
+				       CoinBigIndex nelems0,
 				   
 				       double maxmin_,
 				       // end prepost members
@@ -694,7 +695,7 @@ PostsolveMatrix::PostsolveMatrix(ClpSimplex& si,
 				      "PostsolveMatrix");
   }
 
-  const int nelemsr = m->getNumElements();
+  const CoinBigIndex nelemsr = m->getNumElements();
 
   ClpDisjointCopyN(m->getVectorStarts(), ncols1, mcstrt_);
   mcstrt_[ncols_] = nelems0;	// ??
@@ -746,15 +747,15 @@ PostsolveMatrix::PostsolveMatrix(ClpSimplex& si,
   si.setDblParam(ClpObjOffset,originalOffset_);
 
   for (int j=0; j<ncols1; j++) {
-    int kcs = mcstrt_[j];
-    int kce = kcs + hincol_[j];
-    for (int k=kcs; k<kce; ++k) {
+    CoinBigIndex kcs = mcstrt_[j];
+    CoinBigIndex kce = kcs + hincol_[j];
+    for (CoinBigIndex k=kcs; k<kce; ++k) {
       link_[k] = k+1;
     }
   }
   {
     int ml = maxlink_;
-    for (int k=nelemsr; k<ml; ++k)
+    for (CoinBigIndex k=nelemsr; k<ml; ++k)
       link_[k] = k+1;
     link_[ml-1] = NO_LINK;
   }

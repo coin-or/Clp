@@ -25,7 +25,7 @@ const PresolveAction *remove_dual_action::presolve(PresolveMatrix *prob,
 {
   double *colels	= prob->colels_;
   int *hrow		= prob->hrow_;
-  int *mcstrt		= prob->mcstrt_;
+  CoinBigIndex *mcstrt		= prob->mcstrt_;
   int *hincol		= prob->hincol_;
   int ncols		= prob->ncols_;
 
@@ -34,7 +34,7 @@ const PresolveAction *remove_dual_action::presolve(PresolveMatrix *prob,
 
   double *rowels	= prob->rowels_;
   int *hcol		= prob->hcol_;
-  int *mrstrt		= prob->mrstrt_;
+  CoinBigIndex *mrstrt		= prob->mrstrt_;
   int *hinrow		= prob->hinrow_;
   int nrows		= prob->nrows_;
 
@@ -126,14 +126,14 @@ const PresolveAction *remove_dual_action::presolve(PresolveMatrix *prob,
 	//if (cup[j] - clo[j] <= ztolzb && cup[j] - clo[j] > ZTOLDP) {
 	//  cup[j] = clo[j];
 	//}
-	int kcs = mcstrt[j];
-	int kce = kcs + hincol[j];
+	CoinBigIndex kcs = mcstrt[j];
+	CoinBigIndex kce = kcs + hincol[j];
 	int iflagu = 0;
 	int iflagl = 0;
 	double ddjlo = maxmin * dcost[j];
 	double ddjhi = ddjlo;
 
-	for (int k = kcs; k < kce; k++) {
+	for (CoinBigIndex k = kcs; k < kce; k++) {
 	  int i = hrow[k];
 	  double coeff = colels[k];
 
@@ -204,8 +204,8 @@ const PresolveAction *remove_dual_action::presolve(PresolveMatrix *prob,
       bool no_lb = (rlo[i] <= -ekkinf);
       
       if ((no_ub ^ no_lb) == true) {
-	int krs = mrstrt[i];
-	int kre = krs + hinrow[i];
+	CoinBigIndex krs = mrstrt[i];
+	CoinBigIndex kre = krs + hinrow[i];
 	double rmax  = rdmax[i];
 	double rmin  = rdmin[i];
 
@@ -215,7 +215,7 @@ const PresolveAction *remove_dual_action::presolve(PresolveMatrix *prob,
 	double rmin0 = rmin;
 
 	// all row columns are non-empty
-	for (int k=krs; k<kre; k++) {
+	for (CoinBigIndex k=krs; k<kre; k++) {
 	  double coeff = rowels[k];
 	  double djmax0 = djmax[hcol[k]];
 	  double djmin0 = djmin[hcol[k]];

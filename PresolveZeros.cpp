@@ -18,7 +18,7 @@ inline double min(double x, double y)
 // creates a dropped_zero entry for each one; doesn't check for out-of-memory.
 // returns number of zeros found.
 static int drop_col_zeros(int ncheckcols, int *checkcols,
-			   const int *mcstrt, double *colels, int *hrow,
+			   const CoinBigIndex *mcstrt, double *colels, int *hrow,
 			   int *hincol,
 			   dropped_zero *actions)
 {
@@ -27,9 +27,9 @@ static int drop_col_zeros(int ncheckcols, int *checkcols,
 
   for (int i=0; i<ncheckcols; i++) {
     int col = checkcols[i];
-    int kcs = mcstrt[col];
-    int kce = mcstrt[col] + hincol[col];
-    int k;
+    CoinBigIndex kcs = mcstrt[col];
+    CoinBigIndex kce = mcstrt[col] + hincol[col];
+    CoinBigIndex k;
 
     for (k=kcs; k<kce; ++k) {
       if (fabs(colels[k]) < ZTOLDP) {
@@ -64,14 +64,14 @@ static int drop_col_zeros(int ncheckcols, int *checkcols,
 // very similar to col, but without the buffer and reads zeros
 // didn't bother to change the param names
 void drop_row_zeros(int nzeros, const dropped_zero *zeros,
-		    const int *mcstrt, double *colels, int *hrow,
+		    const CoinBigIndex *mcstrt, double *colels, int *hrow,
 		    int *hincol)
 {
   for (int i=0; i<nzeros; i++) {
     int col = zeros[i].row;
-    int kcs = mcstrt[col];
-    int kce = mcstrt[col] + hincol[col];
-    int k;
+    CoinBigIndex kcs = mcstrt[col];
+    CoinBigIndex kce = mcstrt[col] + hincol[col];
+    CoinBigIndex k;
 
     for (k=kcs; k<kce; k++) {
       if (fabs(colels[k]) < ZTOLDP) {
@@ -94,7 +94,7 @@ const PresolveAction *drop_zero_coefficients_action::presolve(PresolveMatrix *pr
 {
   double *colels	= prob->colels_;
   int *hrow		= prob->hrow_;
-  int *mcstrt		= prob->mcstrt_;
+  CoinBigIndex *mcstrt		= prob->mcstrt_;
   int *hincol		= prob->hincol_;
   int ncols		= prob->ncols_;
 
@@ -111,7 +111,7 @@ const PresolveAction *drop_zero_coefficients_action::presolve(PresolveMatrix *pr
   } else {
     double *rowels	= prob->rowels_;
     int *hcol		= prob->hcol_;
-    int *mrstrt		= prob->mrstrt_;
+    CoinBigIndex *mrstrt		= prob->mrstrt_;
     int *hinrow		= prob->hinrow_;
     int nrows		= prob->nrows_;
 
@@ -154,17 +154,17 @@ void drop_zero_coefficients_action::postsolve(PostsolveMatrix *prob) const
 
   double *colels	= prob->colels_;
   int *hrow		= prob->hrow_;
-  int *mcstrt		= prob->mcstrt_;
+  CoinBigIndex *mcstrt		= prob->mcstrt_;
   int *hincol		= prob->hincol_;
   int *link		= prob->link_;
-  int free_list		= prob->free_list_;
+  CoinBigIndex free_list		= prob->free_list_;
 
   for (const dropped_zero *z = &zeros[nzeros-1]; zeros<=z; z--) {
     int irow	= z->row;
     int jcol	= z->col;
 
     {
-      int k = free_list;
+      CoinBigIndex k = free_list;
       free_list = link[free_list];
       check_free_list(free_list);
 

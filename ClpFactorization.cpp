@@ -59,7 +59,7 @@ ClpFactorization::factorize ( const ClpSimplex * model,
   if (areaFactor)
     areaFactor_ = areaFactor;
   int numberBasic = 0;
-  ClpBigIndex numberElements=0;
+  CoinBigIndex numberElements=0;
   int numberRowBasic=0;
 
   // compute how much in basis

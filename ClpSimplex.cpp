@@ -1977,7 +1977,7 @@ ClpSimplex::tightenPrimalBounds()
   copy.reverseOrderedCopyOf(*matrix());
   // get matrix data pointers
   const int * column = copy.getIndices();
-  const int * rowStart = copy.getVectorStarts();
+  const CoinBigIndex * rowStart = copy.getVectorStarts();
   const int * rowLength = copy.getVectorLengths(); 
   const double * element = copy.getElements();
   int numberChanged=1,iPass=0;
@@ -2018,9 +2018,9 @@ ClpSimplex::tightenPrimalBounds()
 	double maximumUp = 0.0;
 	double maximumDown = 0.0;
 	double newBound;
-	int rStart = rowStart[iRow];
-	int rEnd = rowStart[iRow]+rowLength[iRow];
-	int j;
+	CoinBigIndex rStart = rowStart[iRow];
+	CoinBigIndex rEnd = rowStart[iRow]+rowLength[iRow];
+	CoinBigIndex j;
 
 	// Compute possible lower and upper ranges
 
@@ -2291,7 +2291,8 @@ ClpSimplex::saveModel(const char * fileName)
   FILE * fp = fopen(fileName,"wb");
   if (fp) {
     Clp_scalars scalars;
-    int i, numberWritten;
+    int i;
+    CoinBigIndex numberWritten;
     // Fill in scalars
     scalars.optimizationDirection = optimizationDirection_;
     memcpy(scalars.dblParam, dblParam_,ClpLastDblParam * sizeof(double));
@@ -2326,7 +2327,7 @@ ClpSimplex::saveModel(const char * fileName)
     if (numberWritten!=1)
       return 1;
     // strings
-    int length;
+    CoinBigIndex length;
     for (i=0;i<ClpLastStrParam;i++) {
       length = strParam_[i].size();
       numberWritten = fwrite(&length,sizeof(int),1,fp);
@@ -2479,7 +2480,7 @@ ClpSimplex::restoreModel(const char * fileName)
     // Say sparse
     factorization_->sparseThreshold(1);
     Clp_scalars scalars;
-    int numberRead;
+    CoinBigIndex numberRead;
 
     // get scalars
     numberRead = fread(&scalars,sizeof(Clp_scalars),1,fp);
@@ -2511,7 +2512,7 @@ ClpSimplex::restoreModel(const char * fileName)
     algorithm_ = scalars.algorithm;
     specialOptions_ = scalars.specialOptions;
     // strings
-    int length;
+    CoinBigIndex length;
     for (i=0;i<ClpLastStrParam;i++) {
       numberRead = fread(&length,sizeof(int),1,fp);
       if (numberRead!=1)
@@ -2635,7 +2636,7 @@ ClpSimplex::restoreModel(const char * fileName)
       return 1;
     double * elements = new double[length];
     int * indices = new int[length];
-    int * starts = new int[numberColumns_];
+    CoinBigIndex * starts = new CoinBigIndex[numberColumns_];
     int * lengths = new int[numberColumns_];
     numberRead = fread(elements, sizeof(double),length,fp);
     if (numberRead!=length)
@@ -2739,6 +2740,14 @@ ClpSimplexProgress::operator=(const ClpSimplexProgress & rhs)
   }
   return *this;
 }
+// Seems to be something odd about exact comparison of doubles on linux
+static bool equalDouble(double value1, double value2)
+{
+  assert(sizeof(unsigned int)*2==sizeof(double));
+  unsigned int *i1 = (unsigned int *) &value1;
+  unsigned int *i2 = (unsigned int *) &value2;
+  return (i1[0]==i2[0]&&i1[1]==i2[1]);
+}
 int
 ClpSimplexProgress::looping()
 {
@@ -2760,13 +2769,18 @@ ClpSimplexProgress::looping()
   int matched=0;
 
   for (i=0;i<CLP_PROGRESS;i++) {
-    bool matchedOnObjective = (objective==objective_[i]);
-    bool matchedOnInfeasibility = (infeasibility==infeasibility_[i]);
+    bool matchedOnObjective = equalDouble(objective,objective_[i]);
+    bool matchedOnInfeasibility = equalDouble(infeasibility,infeasibility_[i]);
     bool matchedOnInfeasibilities = 
       (numberInfeasibilities==numberInfeasibilities_[i]);
     if (matchedOnObjective&&matchedOnInfeasibility&&matchedOnInfeasibilities) {
       matched |= (1<<i);
       numberMatched++;
+      // here mainly to get over compiler bug?
+      if (model_->messageHandler()->logLevel()>10)
+	printf("%d %d %d %d %d loop check\n",i,numberMatched,
+	       matchedOnObjective, matchedOnInfeasibility, 
+	       matchedOnInfeasibilities);
     }
     if (i) {
       objective_[i-1] = objective_[i];
@@ -2774,8 +2788,6 @@ ClpSimplexProgress::looping()
       numberInfeasibilities_[i-1]=numberInfeasibilities_[i]; 
     }
   }
-  if (numberMatched) 
-    printf("%d loop check\n",numberMatched);
   objective_[CLP_PROGRESS-1] = objective;
   infeasibility_[CLP_PROGRESS-1] = infeasibility;
   numberInfeasibilities_[CLP_PROGRESS-1]=numberInfeasibilities;
@@ -3041,7 +3053,7 @@ ClpSimplex::loadProblem (  const CoinPackedMatrix& matrix,
    given in a standard column major ordered format (without gaps). */
 void 
 ClpSimplex::loadProblem (  const int numcols, const int numrows,
-		    const int* start, const int* index,
+		    const CoinBigIndex* start, const int* index,
 		    const double* value,
 		    const double* collb, const double* colub,   
 		    const double* obj,
@@ -3055,7 +3067,7 @@ ClpSimplex::loadProblem (  const int numcols, const int numrows,
 }
 void 
 ClpSimplex::loadProblem (  const int numcols, const int numrows,
-			   const int* start, const int* index,
+			   const CoinBigIndex* start, const int* index,
 			   const double* value,const int * length,
 			   const double* collb, const double* colub,   
 			   const double* obj,

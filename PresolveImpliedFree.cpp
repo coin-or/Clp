@@ -48,7 +48,7 @@ const PresolveAction *implied_free_action::presolve(PresolveMatrix *prob,
 {
   double *colels	= prob->colels_;
   int *hrow	= prob->hrow_;
-  const int *mcstrt	= prob->mcstrt_;
+  const CoinBigIndex *mcstrt	= prob->mcstrt_;
   int *hincol	= prob->hincol_;
   const int ncols	= prob->ncols_;
 
@@ -57,7 +57,7 @@ const PresolveAction *implied_free_action::presolve(PresolveMatrix *prob,
 
   const double *rowels	= prob->rowels_;
   const int *hcol	= prob->hcol_;
-  const int *mrstrt	= prob->mrstrt_;
+  const CoinBigIndex *mrstrt	= prob->mrstrt_;
   int *hinrow	= prob->hinrow_;
   const int nrows	= prob->nrows_;
 
@@ -135,10 +135,10 @@ const PresolveAction *implied_free_action::presolve(PresolveMatrix *prob,
     int j=look[iLook];
     if ((hincol[j] >= 1 && hincol[j] <= 3) &&
 	!integerType[j]) {
-      int kcs = mcstrt[j];
-      int kce = kcs + hincol[j];
+      CoinBigIndex kcs = mcstrt[j];
+      CoinBigIndex kce = kcs + hincol[j];
 
-      for (int k=kcs; k<kce; ++k) {
+      for (CoinBigIndex k=kcs; k<kce; ++k) {
 	int row = hrow[k];
 	double coeffj = colels[k];
 
@@ -151,8 +151,8 @@ const PresolveAction *implied_free_action::presolve(PresolveMatrix *prob,
 
 	    fabs(coeffj) > ZTOLDP) {
 
-	  int krs = mrstrt[row];
-	  int kre = krs + hinrow[row];
+	  CoinBigIndex krs = mrstrt[row];
+	  CoinBigIndex kre = krs + hinrow[row];
 
 	  double maxup, maxdown, ilow, iup;
 	  implied_bounds(rowels, clo, cup, hcol,
@@ -213,12 +213,12 @@ const PresolveAction *implied_free_action::presolve(PresolveMatrix *prob,
   for (iLook=0;iLook<numberLook;iLook++) {
     int j=look[iLook];
     if (hincol[j] == 1 && implied_free[j] == 1) {
-      int kcs = mcstrt[j];
+      CoinBigIndex kcs = mcstrt[j];
       int row = hrow[kcs];
       double coeffj = colels[kcs];
 
-      int krs = mrstrt[row];
-      int kre = krs + hinrow[row];
+      CoinBigIndex krs = mrstrt[row];
+      CoinBigIndex kre = krs + hinrow[row];
 
 #if 0
       if (nfree >= maxfree)
@@ -229,7 +229,7 @@ const PresolveAction *implied_free_action::presolve(PresolveMatrix *prob,
       // isolated rows are weird
       {
 	int n = 0;
-	for (int k=krs; k<kre; ++k)
+	for (CoinBigIndex k=krs; k<kre; ++k)
 	  n += hincol[hcol[k]];
 	if (n==hinrow[row]) {
 	  isolated_row = row;
@@ -265,7 +265,7 @@ const PresolveAction *implied_free_action::presolve(PresolveMatrix *prob,
 #if	DEBUG_PRESOLVE
 	printf("FREE COSTS:  %g  ", costj);
 #endif
-	for (int k=krs; k<kre; k++) {
+	for (CoinBigIndex k=krs; k<kre; k++) {
 	  int jcol = hcol[k];
 	  save_costs[k-krs] = cost[jcol];
 
@@ -297,7 +297,7 @@ const PresolveAction *implied_free_action::presolve(PresolveMatrix *prob,
       }
 
       /* remove the row from the columns in the row */
-      for (int k=krs; k<kre; k++) {
+      for (CoinBigIndex k=krs; k<kre; k++) {
 	int jcol=hcol[k];
 	prob->addCol(jcol);
 	presolve_delete_from_row(jcol, row, mcstrt, hincol, hrow, colels);
@@ -359,7 +359,7 @@ void implied_free_action::postsolve(PostsolveMatrix *prob) const
 
   double *colels	= prob->colels_;
   int *hrow		= prob->hrow_;
-  int *mcstrt		= prob->mcstrt_;
+  CoinBigIndex *mcstrt		= prob->mcstrt_;
   int *hincol		= prob->hincol_;
   int *link		= prob->link_;
 
@@ -384,7 +384,7 @@ void implied_free_action::postsolve(PostsolveMatrix *prob) const
 
   char *cdone	= prob->cdone_;
   char *rdone	= prob->rdone_;
-  int free_list = prob->free_list_;
+  CoinBigIndex free_list = prob->free_list_;
 
   for (const action *f = &actions[nactions-1]; actions<=f; f--) {
 
@@ -407,7 +407,7 @@ void implied_free_action::postsolve(PostsolveMatrix *prob) const
 	  dcost[jcol] = save_costs[k];
 
 	{
-	  int kk = free_list;
+	  CoinBigIndex kk = free_list;
 	  free_list = link[free_list];
 
 	  check_free_list(free_list);
@@ -447,7 +447,7 @@ void implied_free_action::postsolve(PostsolveMatrix *prob) const
 	  coeff = rowels[k];
 	else {
 	  int jcol = rowcols[k];
-	  PRESOLVE_STMT(int kk = presolve_find_row2(irow, mcstrt[jcol], hincol[jcol], hrow, link));
+	  PRESOLVE_STMT(CoinBigIndex kk = presolve_find_row2(irow, mcstrt[jcol], hincol[jcol], hrow, link));
 	  PRESOLVEASSERT(colels[kk] == rowels[k]);
 	  act += rowels[k] * sol[jcol];
 	}

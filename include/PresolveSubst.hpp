@@ -55,7 +55,7 @@ class subst_constraint_action : public PresolveAction {
 /*static*/ void implied_bounds(const double *els,
 			   const double *clo, const double *cup,
 			   const int *hcol,
-			   int krs, int kre,
+			   CoinBigIndex krs, CoinBigIndex kre,
 			   double *maxupp, double *maxdownp,
 			   int jcol,
 			   double rlo, double rup,

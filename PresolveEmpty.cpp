@@ -17,7 +17,7 @@ const PresolveAction *drop_empty_cols_action::presolve(PresolveMatrix *prob,
 							const PresolveAction *next)
 {
   int ncols		= prob->ncols_;
-  int *mcstrt		= prob->mcstrt_;
+  CoinBigIndex *mcstrt		= prob->mcstrt_;
   int *hincol		= prob->hincol_;
   int *hcol		= prob->hcol_;
 
@@ -168,9 +168,9 @@ void drop_empty_cols_action::postsolve(PostsolveMatrix *prob) const
   const action *const actions = actions_;
 
   int ncols		= prob->ncols_;
-  int nelems		= prob->nelems_;
+  CoinBigIndex nelems		= prob->nelems_;
 
-  int *mcstrt	= prob->mcstrt_;
+  CoinBigIndex *mcstrt	= prob->mcstrt_;
   int *hincol	= prob->hincol_;
   int *hrow	= prob->hrow_;
 
@@ -250,7 +250,7 @@ const PresolveAction *drop_empty_rows_action::presolve(PresolveMatrix *prob,
 				       const PresolveAction *next)
 {
   int ncols	= prob->ncols_;
-  int *mcstrt	= prob->mcstrt_;
+  CoinBigIndex *mcstrt	= prob->mcstrt_;
   int *hincol	= prob->hincol_;
   int *hrow	= prob->hrow_;
 
@@ -351,7 +351,7 @@ void drop_empty_rows_action::postsolve(PostsolveMatrix *prob) const
   const action *const actions = actions_;
 
   int ncols	= prob->ncols_;
-  int *mcstrt	= prob->mcstrt_;
+  CoinBigIndex *mcstrt	= prob->mcstrt_;
   int *hincol	= prob->hincol_;
 
   int *hrow	= prob->hrow_;
@@ -399,10 +399,10 @@ void drop_empty_rows_action::postsolve(PostsolveMatrix *prob) const
   }
 
   for (int j=0; j<ncols; j++) {
-    int start = mcstrt[j];
-    int end   = start + hincol[j];
+    CoinBigIndex start = mcstrt[j];
+    CoinBigIndex end   = start + hincol[j];
     
-    for (int k=start; k<end; ++k) {
+    for (CoinBigIndex k=start; k<end; ++k) {
       hrow[k] = rowmapping[hrow[k]];
     }
   }

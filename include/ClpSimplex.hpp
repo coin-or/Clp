@@ -102,7 +102,7 @@ public:
   /** Just like the other loadProblem() method except that the matrix is
 	given in a standard column major ordered format (without gaps). */
   void loadProblem (  const int numcols, const int numrows,
-		     const int* start, const int* index,
+		     const CoinBigIndex* start, const int* index,
 		     const double* value,
 		     const double* collb, const double* colub,   
 		     const double* obj,
@@ -110,7 +110,7 @@ public:
 		      const double * rowObjective=NULL);
   /// This one is for after presolve to save memory
   void loadProblem (  const int numcols, const int numrows,
-		     const int* start, const int* index,
+		     const CoinBigIndex* start, const int* index,
 		      const double* value,const int * length,
 		     const double* collb, const double* colub,   
 		     const double* obj,

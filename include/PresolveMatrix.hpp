@@ -22,11 +22,11 @@ char *presolve_duparray(const char *d, int n, int n2);
 char *presolve_duparray(const char *d, int n);
 
 void presolve_delete_from_row(int row, int col /* thing to delete */,
-		     const int *mrstrt,
+		     const CoinBigIndex *mrstrt,
 		     int *hinrow, int *hcol, double *dels);
 
-int presolve_find_row(int row, int kcs, int kce, const int *hrow);
-int presolve_find_row1(int row, int kcs, int kce, const int *hrow);
+int presolve_find_row(int row, CoinBigIndex kcs, CoinBigIndex kce, const int *hrow);
+int presolve_find_row1(int row, CoinBigIndex kcs, CoinBigIndex kce, const int *hrow);
 
 //#define	DEBUG_PRESOLVE	1
 
@@ -150,9 +150,9 @@ class PrePostsolveMatrix {
   int ncols_;
   const int ncols0_;
 
-  int nelems_;
+  CoinBigIndex nelems_;
 
-  int *mcstrt_;
+  CoinBigIndex *mcstrt_;
   int *hincol_;
   int *hrow_;
   double *colels_;
@@ -176,7 +176,7 @@ class PrePostsolveMatrix {
   PrePostsolveMatrix(const ClpSimplex& si,
 			int ncols_,
 			int nrows_,
-			int nelems_);
+			CoinBigIndex nelems_);
 
   ~PrePostsolveMatrix();
   // Status stuff
@@ -305,7 +305,7 @@ class PresolveMatrix : public PrePostsolveMatrix {
 
   // rowrep
   int nrows_;	// note 77
-  int *mrstrt_;
+  CoinBigIndex *mrstrt_;
   int *hinrow_;
   double *rowels_;
   int *hcol_;
@@ -387,7 +387,7 @@ class PresolveMatrix : public PrePostsolveMatrix {
 
 		    // rowrep
 		    int nrows,
-		    int nelems,
+		    CoinBigIndex nelems,
 		 bool doStatus);
 
   ~PresolveMatrix();
@@ -399,7 +399,7 @@ class PresolveMatrix : public PrePostsolveMatrix {
   void update_model(ClpSimplex& si,
 			    int nrows0,
 			    int ncols0,
-			    int nelems0);
+			    CoinBigIndex nelems0);
 };
 
 
@@ -409,7 +409,7 @@ class PostsolveMatrix : public PrePostsolveMatrix {
  public:
 
 
-  int free_list_;
+  CoinBigIndex free_list_;
   int maxlink_;
   int *link_;
 
@@ -425,7 +425,7 @@ class PostsolveMatrix : public PrePostsolveMatrix {
 
 		   int ncols0,
 		   int nrows0,
-		   int nelems0,
+		   CoinBigIndex nelems0,
 		     
 		   double maxmin_,
 		   // end prepost members
@@ -458,6 +458,7 @@ void PresolveMatrix::change_bias(double change_amount)
 // useful functions
 inline void swap(int &x, int &y) { int temp = x; x = y; y = temp; }
 inline void swap(double &x, double &y) { double temp = x; x = y; y = temp; }
+inline void swap(long &x, long &y) { long temp = x; x = y; y = temp; }
 
 inline void swap(int *&x, int *&y) { int *temp = x; x = y; y = temp; }
 inline void swap(double *&x, double *&y) { double *temp = x; x = y; y = temp; }
@@ -490,15 +491,15 @@ copyOfArray( const T * array, const int size)
   }
 }
 #define	PRESOLVEFINITE(n)	(-PRESOLVE_INF < (n) && (n) < PRESOLVE_INF)
-int presolve_find_row2(int irow, int ks, int nc, const int *hrow, const int *link);
-void presolve_make_memlists(int *starts, int *lengths,
+int presolve_find_row2(int irow, CoinBigIndex ks, int nc, const int *hrow, const int *link);
+void presolve_make_memlists(CoinBigIndex *starts, int *lengths,
 		       presolvehlink *link,
 		       int n);
-int presolve_find_row3(int irow, int ks, int nc, const int *hrow, const int *link);
+int presolve_find_row3(int irow, CoinBigIndex ks, int nc, const int *hrow, const int *link);
 void presolve_delete_from_row(int row, int col /* thing to delete */,
-		     const int *mrstrt,
+		     const CoinBigIndex *mrstrt,
 			      int *hinrow, int *hcol, double *dels);
 void presolve_delete_from_row2(int row, int col /* thing to delete */,
-		      int *mrstrt,
-			       int *hinrow, int *hcol, double *dels, int *link, int *free_listp);
+		      CoinBigIndex *mrstrt,
+			       int *hinrow, int *hcol, double *dels, int *link, CoinBigIndex *free_listp);
 #endif

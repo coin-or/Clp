@@ -37,7 +37,7 @@ static void implied_bounds1(PresolveMatrix * prob,const double *rowels,
 /*static*/ void implied_bounds(const double *els,
 			   const double *clo, const double *cup,
 			   const int *hcol,
-			   int krs, int kre,
+			   CoinBigIndex krs, CoinBigIndex kre,
 			   double *maxupp, double *maxdownp,
 			   int jcol,
 			   double rlo, double rup,
@@ -56,7 +56,7 @@ static void implied_bounds1(PresolveMatrix * prob,const double *rowels,
   int jcolk = -1;
 
   // compute sum of all bounds except for jcol
-  int kk;
+  CoinBigIndex kk;
   for (kk=krs; kk<kre; kk++) {
     if (hcol[kk] == jcol)
       jcolk = kk;
@@ -64,7 +64,7 @@ static void implied_bounds1(PresolveMatrix * prob,const double *rowels,
     // swap jcol with hcol[kre-1];
     // that is, consider jcol last
     // this assumes that jcol occurs in this row
-    int k = (hcol[kk] == jcol
+    CoinBigIndex k = (hcol[kk] == jcol
 	     ? kre-1
 	     : kk == kre-1
 	     ? jcolk
@@ -145,7 +145,7 @@ static void implied_bounds1(PresolveMatrix * prob,const double *rowels,
 static void implied_row_bounds(const double *els,
 			       const double *clo, const double *cup,
 			       const int *hcol,
-			       int krs, int kre,
+			       CoinBigIndex krs, CoinBigIndex kre,
 			       double *maxupp, double *maxdownp)
 {
   int jcol;
@@ -160,11 +160,11 @@ const char *forcing_constraint_action::name() const
   return ("forcing_constraint_action");
 }
 
-static bool some_col_was_fixed(const int *hcol, int krs, int kre,
+static bool some_col_was_fixed(const int *hcol, CoinBigIndex krs, CoinBigIndex kre,
 			       const double *clo, 
 			       const double *cup)
 {
-  int k;
+  CoinBigIndex k;
   for (k=krs; k<kre; k++) {
     int jcol = hcol[k];
     if (clo[jcol] == cup[jcol])
@@ -211,7 +211,7 @@ const PresolveAction *forcing_constraint_action::presolve(PresolveMatrix *prob,
 
   const double *rowels	= prob->rowels_;
   const int *hcol	= prob->hcol_;
-  const int *mrstrt	= prob->mrstrt_;
+  const CoinBigIndex *mrstrt	= prob->mrstrt_;
   const int *hinrow	= prob->hinrow_;
   const int nrows	= prob->nrows_;
 
@@ -240,8 +240,8 @@ const PresolveAction *forcing_constraint_action::presolve(PresolveMatrix *prob,
   for (iLook=0;iLook<numberLook;iLook++) {
     int irow = look[iLook];
     if (hinrow[irow] > 0) {
-      int krs = mrstrt[irow];
-      int kre = krs + hinrow[irow];
+      CoinBigIndex krs = mrstrt[irow];
+      CoinBigIndex kre = krs + hinrow[irow];
 
       double maxup, maxdown;
       implied_row_bounds(rowels, clo, cup, hcol, krs, kre,
@@ -311,7 +311,7 @@ const PresolveAction *forcing_constraint_action::presolve(PresolveMatrix *prob,
 	int lk = krs;	// load fix-to-down in front
 	int uk = kre;	// load fix-to-up in back
 
-	for (int k=krs; k<kre; k++) {
+	for (CoinBigIndex k=krs; k<kre; k++) {
 	  int jcol = hcol[k];
 	  prob->addCol(jcol);
 	  double coeff = rowels[k];
@@ -380,11 +380,11 @@ void forcing_constraint_action::postsolve(PostsolveMatrix *prob) const
 
   const double *colels	= prob->colels_;
   const int *hrow		= prob->hrow_;
-  const int *mcstrt		= prob->mcstrt_;
+  const CoinBigIndex *mcstrt		= prob->mcstrt_;
   const int *hincol		= prob->hincol_;
   const int *link		= prob->link_;
 
-  int free_list = prob->free_list_;
+  CoinBigIndex free_list = prob->free_list_;
 
   double *clo	= prob->clo_;
   double *cup	= prob->cup_;
@@ -435,7 +435,7 @@ void forcing_constraint_action::postsolve(PostsolveMatrix *prob) const
     double whack = 0.0;
     for (int k=0; k<ninrow; k++) {
       int jcol = rowcols[k];
-      int kk = presolve_find_row2(irow, mcstrt[jcol], hincol[jcol], hrow, link);
+      CoinBigIndex kk = presolve_find_row2(irow, mcstrt[jcol], hincol[jcol], hrow, link);
 
       // choose rowdual to cancel out reduced cost
       double whack0 = rcosts[jcol] / colels[kk];
@@ -455,7 +455,7 @@ void forcing_constraint_action::postsolve(PostsolveMatrix *prob) const
 
       for (int k=0; k<ninrow; k++) {
 	int jcol = rowcols[k];
-	int kk = presolve_find_row2(irow, mcstrt[jcol], hincol[jcol], hrow, link);
+	CoinBigIndex kk = presolve_find_row2(irow, mcstrt[jcol], hincol[jcol], hrow, link);
 	      
 	rcosts[jcol] -= (rowduals[irow] * colels[kk]);
       }
@@ -487,8 +487,8 @@ static void implied_bounds1(PresolveMatrix * prob, const double *rowels,
   const double tol = prob->feasibilityTolerance_;
 
   for (int irow=0; irow<nrows; irow++) {
-    int krs = mrstrt[irow];
-    int kre = krs + hinrow[irow];
+    CoinBigIndex krs = mrstrt[irow];
+    CoinBigIndex kre = krs + hinrow[irow];
 
     double irlo = rlo[irow];
     double irup = rup[irow];
@@ -504,7 +504,7 @@ static void implied_bounds1(PresolveMatrix * prob, const double *rowels,
     double maxup = 0.0;
     double maxdown = 0.0;
 
-    for (int k=krs; k<kre; k++) {
+    for (CoinBigIndex k=krs; k<kre; k++) {
       int jcol = hcol[k];
       double coeff = rowels[k];
       double lb = clo[jcol];
@@ -597,7 +597,7 @@ static void implied_bounds1(PresolveMatrix * prob, const double *rowels,
 	break;
     }
 
-    for (int k = krs; k<kre; ++k) {
+    for (CoinBigIndex k = krs; k<kre; ++k) {
       int jcol = hcol[k];
       double coeff = rowels[k];
 
@@ -635,7 +635,7 @@ static void implied_bounds1(PresolveMatrix * prob, const double *rowels,
       }
     }
 
-    for (int k = krs; k<kre; ++k) {
+    for (CoinBigIndex k = krs; k<kre; ++k) {
       int jcol = hcol[k];
       double coeff = rowels[k];
 
@@ -735,7 +735,7 @@ postsolve for implied_bound
 
 	    double rdual_adjust;
 	    {
-	      int kk = presolve_find_row(irow, mcstrt[jcol], mcstrt[jcol] + hincol[jcol], hrow);
+	      CoinBigIndex kk = presolve_find_row(irow, mcstrt[jcol], mcstrt[jcol] + hincol[jcol], hrow);
 	      // adjust rowdual to cancel out reduced cost
 	      // should probably search for col with largest factor
 	      rdual_adjust = (rcosts[jcol] / colels[kk]);
@@ -745,7 +745,7 @@ postsolve for implied_bound
 
 	    for (int k=0; k<ninrow; k++) {
 	      int jcol = rowcols[k];
-	      int kk = presolve_find_row(irow, mcstrt[jcol], mcstrt[jcol] + hincol[jcol], hrow);
+	      CoinBigIndex kk = presolve_find_row(irow, mcstrt[jcol], mcstrt[jcol] + hincol[jcol], hrow);
 	      
 	      rcosts[jcol] -= (rdual_adjust * colels[kk]);
 	    }
