@@ -918,7 +918,6 @@ ClpSimplex::initialSolve(ClpSolve & options)
       barrierOptions &= ~4;
       scale=true;
     }
-#ifdef REAL_BARRIER
     // If quadratic force KKT
 #ifndef NO_RTTI
     ClpQuadraticObjective * quadraticObj = (dynamic_cast< ClpQuadraticObjective*>(barrier.objectiveAsObject()));
@@ -927,6 +926,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
     if (objective_->type()==2)
       quadraticObj = (static_cast< ClpQuadraticObjective*>(objective_));
 #endif
+#ifdef REAL_BARRIER
     if (quadraticObj) {
       barrierOptions = 2;
     }
