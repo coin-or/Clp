@@ -9,10 +9,10 @@
 #include "PresolveMatrix.hpp"
 
 
-static const double *lookup_by_col(const int *mcstrt, const int *hrow,
-			    const int *hincol,
-			    const int *hinrow, const double *colels,
-			    int row, int col)
+static inline const double *
+lookup_by_col(const int *mcstrt, const int *hrow,
+	      const int *hincol, const int *hinrow, const double *colels,
+	      int row, int col)
 {
   int kcs = mcstrt[col];
   int kce = kcs + hincol[col];
@@ -29,8 +29,9 @@ static const double *lookup_by_col(const int *mcstrt, const int *hrow,
   return (0);
 }
 
-static void no_dups(const char *done,
-	     const int *mcstrt, const int *hrow, const int *hincol, int ncols)
+static inline void
+no_dups(const char *done,
+	const int *mcstrt, const int *hrow, const int *hincol, int ncols)
 {
 #if	DEBUG_PRESOLVE
   for (int jcol=0; jcol<ncols; jcol++) 
@@ -185,7 +186,7 @@ void check_pivots(const int *mrstrt, const int *hinrow, const int *hcol, int nro
 
 
 
-static void a_ok(PostsolveMatrix *prob)
+static inline void a_ok(PostsolveMatrix *prob)
 {
 #if 0
   static int warned = 0;

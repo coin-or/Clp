@@ -416,7 +416,7 @@ const PresolveAction *doubleton_action::presolve(PresolveMatrix *prob,
   unsigned char *rowstat	= prob->rowstat_;
   double *acts	= prob->acts_;
   double * sol = prob->sol_;
-  unsigned char * colstat = prob->colstat_;
+  //  unsigned char * colstat = prob->colstat_;
 
 
 #if	CHECK_CONSISTENCY

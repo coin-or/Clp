@@ -71,7 +71,7 @@ const PresolveAction *do_tighten_action::presolve(PresolveMatrix *prob,
   double *dcost	= prob->cost_;
 
   // NEED TO THINK MORE ABOUT INTEGER VARS
-  const char *integerType = prob->integerType_;
+  //  const char *integerType = prob->integerType_;
 
   int *fixup_cols	= new int[ncols];
   int nfixup_cols	= 0;
@@ -269,7 +269,7 @@ void do_tighten_action::postsolve(PostsolveMatrix *prob) const
   CoinBigIndex *mcstrt		= prob->mcstrt_;
   int *hincol		= prob->hincol_;
   int *link		= prob->link_;
-  int ncols		= prob->ncols_;
+  //  int ncols		= prob->ncols_;
 
   double *clo	= prob->clo_;
   double *cup	= prob->cup_;
@@ -277,21 +277,21 @@ void do_tighten_action::postsolve(PostsolveMatrix *prob) const
   double *rup	= prob->rup_;
 
   double *sol	= prob->sol_;
-  double *dcost	= prob->cost_;
-  double *rcosts	= prob->rcosts_;
+  //  double *dcost	= prob->cost_;
+  //  double *rcosts	= prob->rcosts_;
 
   double *acts	= prob->acts_;
-  double *rowduals = prob->rowduals_;
+  //  double *rowduals = prob->rowduals_;
 
 
-  const double ztolzb	= prob->ztolzb_;
+  //  const double ztolzb	= prob->ztolzb_;
 
-  char *cdone	= prob->cdone_;
-  char *rdone	= prob->rdone_;
+  //  char *cdone	= prob->cdone_;
+  //  char *rdone	= prob->rdone_;
 
   for (const action *f = &actions[nactions-1]; actions<=f; f--) {
     int jcol = f->col;
-    int iflag = f->direction;
+    //    int iflag = f->direction;
     int nr   = f->nrows;
     const int *rows = f->rows;
     const double *lbound = f->lbound;
@@ -315,7 +315,7 @@ void do_tighten_action::postsolve(PostsolveMatrix *prob) const
 
     // Each constraint has exactly one bound.
     // The correction should only ever be forced to move in one direction.
-    double orig_sol = sol[jcol];
+    //    double orig_sol = sol[jcol];
     double correction = 0.0;
     
     int last_corrected = -1;
@@ -363,7 +363,7 @@ void do_tighten_action::postsolve(PostsolveMatrix *prob) const
       int irow = hrow[k];
       double coeff = colels[k];
       k = link[k];
-      double activity = acts[irow];
+      //      double activity = acts[irow];
 
       acts[irow] += correction * coeff;
 

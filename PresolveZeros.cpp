@@ -98,7 +98,7 @@ const PresolveAction *drop_zero_coefficients_action::presolve(PresolveMatrix *pr
   int *hincol		= prob->hincol_;
   int ncols		= prob->ncols_;
 
-  int i;
+  //  int i;
   dropped_zero * zeros = new dropped_zero[ncols];
 
   int nzeros = drop_col_zeros(ncheckcols, checkcols,
@@ -113,7 +113,7 @@ const PresolveAction *drop_zero_coefficients_action::presolve(PresolveMatrix *pr
     int *hcol		= prob->hcol_;
     CoinBigIndex *mrstrt		= prob->mrstrt_;
     int *hinrow		= prob->hinrow_;
-    int nrows		= prob->nrows_;
+    //    int nrows		= prob->nrows_;
 
 #if	PRESOLVE_SUMMARY
     printf("NZEROS:  %d\n", nzeros);

@@ -148,7 +148,7 @@ static void implied_row_bounds(const double *els,
 			       CoinBigIndex krs, CoinBigIndex kre,
 			       double *maxupp, double *maxdownp)
 {
-  int jcol;
+   //  int jcol;
   double iclb, icub;
 
   implied_bounds(els, clo, cup, hcol, krs, kre, maxupp, maxdownp,
@@ -218,7 +218,7 @@ const PresolveAction *forcing_constraint_action::presolve(PresolveMatrix *prob,
   const double *rlo	= prob->rlo_;
   const double *rup	= prob->rup_;
 
-  const char *integerType = prob->integerType_;
+  //  const char *integerType = prob->integerType_;
 
   const double tol	= ZTOLDP;
   const double inftol	= prob->feasibilityTolerance_;
@@ -384,7 +384,7 @@ void forcing_constraint_action::postsolve(PostsolveMatrix *prob) const
   const int *hincol		= prob->hincol_;
   const int *link		= prob->link_;
 
-  CoinBigIndex free_list = prob->free_list_;
+  //  CoinBigIndex free_list = prob->free_list_;
 
   double *clo	= prob->clo_;
   double *cup	= prob->cup_;

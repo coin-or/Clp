@@ -59,7 +59,7 @@ const PresolveAction *implied_free_action::presolve(PresolveMatrix *prob,
   const int *hcol	= prob->hcol_;
   const CoinBigIndex *mrstrt	= prob->mrstrt_;
   int *hinrow	= prob->hinrow_;
-  const int nrows	= prob->nrows_;
+  //  const int nrows	= prob->nrows_;
 
   /*const*/ double *rlo	= prob->rlo_;
   /*const*/ double *rup	= prob->rup_;
@@ -73,7 +73,7 @@ const PresolveAction *implied_free_action::presolve(PresolveMatrix *prob,
 
   const double tol = prob->feasibilityTolerance_;
 
-  int nbounds = 0;
+  //  int nbounds = 0;
 
   action *actions	= new action [ncols];
   int nactions = 0;
@@ -377,8 +377,8 @@ void implied_free_action::postsolve(PostsolveMatrix *prob) const
   double *acts	= prob->acts_;
   double *rowduals = prob->rowduals_;
 
-  const double ztoldj	= prob->ztoldj_;
-  const double ztolzb	= prob->ztolzb_;
+  //  const double ztoldj	= prob->ztoldj_;
+  //  const double ztolzb	= prob->ztolzb_;
 
   const double maxmin	= prob->maxmin_;
 
@@ -440,7 +440,7 @@ void implied_free_action::postsolve(PostsolveMatrix *prob) const
     // compute solution
     {
       double act = 0.0;
-      double coeff;
+      double coeff = 0.0;
 
       for (int k = 0; k<ninrow; k++)
 	if (rowcols[k] == icol)

@@ -25,6 +25,6 @@ unitTest: libdepend
 	${MAKE} -f Makefile.test $*
 
 clean:
-	rm -rf Junk
-	rm -rf dep
-	rm -rf $(UNAME)*
+	@rm -rf Junk
+	@rm -rf $(UNAME)
+	@rm -rf dep

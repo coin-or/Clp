@@ -19,7 +19,7 @@ const PresolveAction *drop_empty_cols_action::presolve(PresolveMatrix *prob,
   int ncols		= prob->ncols_;
   CoinBigIndex *mcstrt		= prob->mcstrt_;
   int *hincol		= prob->hincol_;
-  int *hcol		= prob->hcol_;
+  //  int *hcol		= prob->hcol_;
 
   // We know we are not going to need row copy again
   //presolvehlink *clink	= prob->clink_;
@@ -133,8 +133,8 @@ const PresolveAction *drop_empty_cols_action::presolve(PresolveMatrix *prob,
 							  const PresolveAction *next)
 {
   const int *hincol	= prob->hincol_;
-  const double *clo	= prob->clo_;
-  const double *cup	= prob->cup_;
+  //  const double *clo	= prob->clo_;
+  //  const double *cup	= prob->cup_;
   int ncols		= prob->ncols_;
   int i;
   int nempty		= 0;
@@ -168,11 +168,11 @@ void drop_empty_cols_action::postsolve(PostsolveMatrix *prob) const
   const action *const actions = actions_;
 
   int ncols		= prob->ncols_;
-  CoinBigIndex nelems		= prob->nelems_;
+  //  CoinBigIndex nelems		= prob->nelems_;
 
   CoinBigIndex *mcstrt	= prob->mcstrt_;
   int *hincol	= prob->hincol_;
-  int *hrow	= prob->hrow_;
+  //  int *hrow	= prob->hrow_;
 
   double *clo	= prob->clo_;
   double *cup	= prob->cup_;

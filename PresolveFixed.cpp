@@ -37,15 +37,15 @@ const remove_fixed_action *remove_fixed_action::presolve(PresolveMatrix *prob,
   int *hcol		= prob->hcol_;
   CoinBigIndex *mrstrt		= prob->mrstrt_;
   int *hinrow		= prob->hinrow_;
-  int nrows		= prob->nrows_;
+  //  int nrows		= prob->nrows_;
 
   double *clo	= prob->clo_;
-  double *cup	= prob->cup_;
+  //  double *cup	= prob->cup_;
   double *rlo	= prob->rlo_;
   double *rup	= prob->rup_;
   double *acts	= prob->acts_;
 
-  double *dcost	= prob->cost_;
+  //  double *dcost	= prob->cost_;
 
   presolvehlink *clink = prob->clink_;
 
@@ -155,7 +155,7 @@ void remove_fixed_action::postsolve(PostsolveMatrix *prob) const
   CoinBigIndex *mcstrt		= prob->mcstrt_;
   int *hincol		= prob->hincol_;
   int *link		= prob->link_;
-  int ncols		= prob->ncols_;
+  //  int ncols		= prob->ncols_;
   CoinBigIndex free_list		= prob->free_list_;
 
   double *clo	= prob->clo_;
@@ -171,12 +171,12 @@ void remove_fixed_action::postsolve(PostsolveMatrix *prob) const
   double *rowduals = prob->rowduals_;
 
   unsigned char *colstat	= prob->colstat_;
-  unsigned char *rowstat	= prob->rowstat_;
+  //  unsigned char *rowstat	= prob->rowstat_;
 
   const double maxmin	= prob->maxmin_;
 
   char *cdone	= prob->cdone_;
-  char *rdone	= prob->rdone_;
+  //  char *rdone	= prob->rdone_;
 
   for (const action *f = &actions[nactions-1]; actions<=f; f--) {
     int icol = f->col;
@@ -326,7 +326,7 @@ const PresolveAction *make_fixed_action::presolve(PresolveMatrix *prob,
 void make_fixed_action::postsolve(PostsolveMatrix *prob) const
 {
   const action *const actions = actions_;
-  const int nactions	= nactions_;
+  //  const int nactions	= nactions_;
   const bool fix_to_lower	= fix_to_lower_;
 
   double *clo	= prob->clo_;

@@ -31,9 +31,9 @@ int presolve_find_row1(int row, CoinBigIndex kcs, CoinBigIndex kce, const int *h
 //#define	DEBUG_PRESOLVE	1
 
 #ifdef	DEBUG_PRESOLVE
-inline void	DIE(char *s)	{ std::cout<<s; abort(); }
+inline void	DIE(const char *s)	{ std::cout<<s; abort(); }
 #else
-  inline void	DIE(char *s)	{}
+  inline void	DIE(const char *s)	{}
 #endif
 
 #if	DEBUG_PRESOLVE
@@ -283,7 +283,7 @@ static inline void PRESOLVE_MOVE_LINK(presolvehlink *link, int i, int j)
 // this really should never happen.
 // it will if there isn't enough space to postsolve the matrix.
 // see the note below.
-static void check_free_list(int free_list)
+static inline void check_free_list(int free_list)
 {
   if (free_list < 0) {
     printf("RAN OUT OF LINKS!!\n");

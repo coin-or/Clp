@@ -28,8 +28,8 @@ const PresolveAction *useless_constraint_action::presolve(PresolveMatrix * prob,
   // may be modified by useless constraint
         int *hincol	= prob->hincol_;
 
-  double *clo	= prob->clo_;
-  double *cup	= prob->cup_;
+	//  double *clo	= prob->clo_;
+	//  double *cup	= prob->cup_;
 
   const double *rowels	= prob->rowels_;
   const int *hcol	= prob->hcol_;
@@ -37,7 +37,7 @@ const PresolveAction *useless_constraint_action::presolve(PresolveMatrix * prob,
 
   // may be written by useless constraint
         int *hinrow	= prob->hinrow_;
-  const int nrows	= prob->nrows_;
+	//  const int nrows	= prob->nrows_;
 
   double *rlo	= prob->rlo_;
   double *rup	= prob->rup_;
@@ -93,7 +93,7 @@ void useless_constraint_action::postsolve(PostsolveMatrix *prob) const
   int *link		= prob->link_;
   int *hincol		= prob->hincol_;
   
-  double *rowduals	= prob->rowduals_;
+  //  double *rowduals	= prob->rowduals_;
   double *rowacts	= prob->acts_;
   const double *sol	= prob->sol_;
 
@@ -116,7 +116,7 @@ void useless_constraint_action::postsolve(PostsolveMatrix *prob) const
 
     for (CoinBigIndex k=0; k<ninrow; k++) {
       int jcol = rowcols[k];
-      CoinBigIndex kk = mcstrt[jcol];
+      //      CoinBigIndex kk = mcstrt[jcol];
 
       // append deleted row element to each col
       {

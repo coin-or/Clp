@@ -39,18 +39,18 @@ slack_doubleton_action::presolve(PresolveMatrix *prob,
   const int *hcol	= prob->hcol_;
   const CoinBigIndex *mrstrt	= prob->mrstrt_;
   int *hinrow		= prob->hinrow_;
-  int nrows		= prob->nrows_;
+  //  int nrows		= prob->nrows_;
 
   double *rlo		= prob->rlo_;
   double *rup		= prob->rup_;
 
   // If rowstat exists then all do
   unsigned char *rowstat	= prob->rowstat_;
-  double *acts	= prob->acts_;
+  //  double *acts	= prob->acts_;
   double * sol = prob->sol_;
-  unsigned char * colstat = prob->colstat_;
+  //  unsigned char * colstat = prob->colstat_;
 
-  const char *integerType = prob->integerType_;
+  //  const char *integerType = prob->integerType_;
 
   const double ztolzb	= prob->ztolzb_;
 
@@ -76,7 +76,7 @@ slack_doubleton_action::presolve(PresolveMatrix *prob,
       double lo = rlo[irow];
       double up = rup[irow];
       double acoeff = fabs(coeff);
-      const bool singleton_col = (hincol[jcol] == 1);
+      //      const bool singleton_col = (hincol[jcol] == 1);
 
       if (acoeff < ZTOLDP)
 	continue;
@@ -228,7 +228,7 @@ void slack_doubleton_action::postsolve(PostsolveMatrix *prob) const
   CoinBigIndex *mcstrt		= prob->mcstrt_;
   int *hincol		= prob->hincol_;
   int *link		= prob->link_;
-  int ncols		= prob->ncols_;
+  //  int ncols		= prob->ncols_;
 
   double *clo		= prob->clo_;
   double *cup		= prob->cup_;
@@ -243,9 +243,9 @@ void slack_doubleton_action::postsolve(PostsolveMatrix *prob) const
   double *rowduals 	= prob->rowduals_;
 
   unsigned char *colstat		= prob->colstat_;
-  unsigned char *rowstat		= prob->rowstat_;
+  //  unsigned char *rowstat		= prob->rowstat_;
 
-  char *cdone		= prob->cdone_;
+  //  char *cdone		= prob->cdone_;
   char *rdone		= prob->rdone_;
   CoinBigIndex free_list		= prob->free_list_;
 

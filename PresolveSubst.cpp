@@ -151,7 +151,7 @@ void add_row(CoinBigIndex *mrstrt,
   CoinBigIndex kre = krs + hinrow[irowy];
   CoinBigIndex krsx = mrstrt[irowx];
   CoinBigIndex krex = krsx + hinrow[irowx];
-  const int maxk = mrstrt[nrows];	// (22)
+  //  const int maxk = mrstrt[nrows];	// (22)
 
   // if irowx is very long, the searching gets very slow,
   // so we always sort.
@@ -506,7 +506,7 @@ const PresolveAction *subst_constraint_action::presolve(PresolveMatrix *prob,
   // and resync at the end of the function.
 
   // DEBUGGING
-  int nt = 0;
+  //  int nt = 0;
   int ngood = 0;
   int nsubst = 0;
 #ifdef	DEBUG_PRESOLVEx
@@ -755,7 +755,7 @@ const PresolveAction *subst_constraint_action::presolve(PresolveMatrix *prob,
 	    for (CoinBigIndex k=kcs; k<kce; ++k) {
 	      int irow = hrow[k];
 	      CoinBigIndex krs = mrstrt[irow];
-	      CoinBigIndex kre = krs + hinrow[irow];
+	      //	      CoinBigIndex kre = krs + hinrow[irow];
 
 	      prob->addRow(irow);
 	      ap->rows[k-kcs] = irow;
@@ -829,7 +829,7 @@ const PresolveAction *subst_constraint_action::presolve(PresolveMatrix *prob,
 
 	    if (hincol[jcoly] != 2) {
 	      CoinBigIndex krs = mrstrt[rowy];
-	      CoinBigIndex kre = krs + hinrow[rowy];
+	      //	      CoinBigIndex kre = krs + hinrow[rowy];
 	      CoinSort_2(hcol+krs,hcol+krs+hinrow[rowy],rowels+krs);
 	      //ekk_sort2(hcol+krs,  rowels+krs,  hinrow[rowy]);
 	    }
@@ -897,11 +897,11 @@ const PresolveAction *subst_constraint_action::presolve(PresolveMatrix *prob,
 		// from the row rep to the col rep
 		{
 		  CoinBigIndex krs = mrstrt[rowy];
-		  CoinBigIndex kre = krs + hinrow[rowy];
+		  //		  CoinBigIndex kre = krs + hinrow[rowy];
 		  int niny = hinrow[rowy];
 		  
 		  CoinBigIndex krsx = mrstrt[rowx];
-		  CoinBigIndex krex = krsx + hinrow[rowx];
+		  //		  CoinBigIndex krex = krsx + hinrow[rowx];
 		  for (CoinBigIndex ki=0; ki<niny; ++ki) {
 		    CoinBigIndex k = krs + ki;
 		    int jcol = hcol[k];
@@ -1054,7 +1054,7 @@ void subst_constraint_action::postsolve(PostsolveMatrix *prob) const
   CoinBigIndex *mcstrt		= prob->mcstrt_;
   int *hincol		= prob->hincol_;
   int *link		= prob->link_;
-  int ncols		= prob->ncols_;
+  //  int ncols		= prob->ncols_;
 
   double *clo	= prob->clo_;
   double *cup	= prob->cup_;
@@ -1075,7 +1075,7 @@ void subst_constraint_action::postsolve(PostsolveMatrix *prob) const
   CoinBigIndex free_list = prob->free_list_;
 
   const double ztolzb	= prob->ztolzb_;
-  const double ztoldj	= prob->ztoldj_;
+  //  const double ztoldj	= prob->ztoldj_;
   const double maxmin = prob->maxmin_;
 
   for (const action *f = &actions[nactions-1]; actions<=f; f--) {
@@ -1263,7 +1263,7 @@ void subst_constraint_action::postsolve(PostsolveMatrix *prob) const
     // I assume that any of them will do.
 
     {
-      CoinBigIndex k;
+       //      CoinBigIndex k;
       double dj = maxmin*dcost[icol];
       double bounds_factor = rhsy/coeffy;
       for (int i=0; i<nincoly; ++i)

@@ -32,10 +32,10 @@ const PresolveAction *remove_dual_action::presolve(PresolveMatrix *prob,
   double *clo	= prob->clo_;
   double *cup	= prob->cup_;
 
-  double *rowels	= prob->rowels_;
-  int *hcol		= prob->hcol_;
-  CoinBigIndex *mrstrt		= prob->mrstrt_;
-  int *hinrow		= prob->hinrow_;
+  //  double *rowels	= prob->rowels_;
+  //  int *hcol		= prob->hcol_;
+  //  CoinBigIndex *mrstrt		= prob->mrstrt_;
+  //  int *hinrow		= prob->hinrow_;
   int nrows		= prob->nrows_;
 
   double *rlo	= prob->rlo_;

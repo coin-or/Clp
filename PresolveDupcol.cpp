@@ -91,8 +91,8 @@ const PresolveAction *dupcol_action::presolve(PresolveMatrix *prob,
   int *hinrow		= prob->hinrow_;
   int nrows		= prob->nrows_;
 
-  double *rlo	= prob->rlo_;
-  double *rup	= prob->rup_;
+  //  double *rlo	= prob->rlo_;
+  //  double *rup	= prob->rup_;
 
   double *dcost	= prob->cost_;
 
@@ -497,7 +497,7 @@ void dupcol_action::postsolve(PostsolveMatrix *prob) const
 		   (fabs(f->lastup) < PRESOLVE_INF));
 
     if (nfinite > 1) {
-      double l_j = f->thislo;
+       //      double l_j = f->thislo;
       double u_j = f->thisup;
       double l_k = f->lastlo;
       double u_k = f->lastup;
@@ -566,14 +566,14 @@ void dupcol_action::postsolve(PostsolveMatrix *prob) const
 const PresolveAction *duprow_action::presolve(PresolveMatrix *prob,
 					       const PresolveAction *next)
 {
-  double *colels	= prob->colels_;
+   //  double *colels	= prob->colels_;
   int *hrow		= prob->hrow_;
-  CoinBigIndex *mcstrt		= prob->mcstrt_;
-  int *hincol		= prob->hincol_;
+  //  CoinBigIndex *mcstrt		= prob->mcstrt_;
+  //  int *hincol		= prob->hincol_;
   int ncols		= prob->ncols_;
 
-  double *clo	= prob->clo_;
-  double *cup	= prob->cup_;
+  //  double *clo	= prob->clo_;
+  //  double *cup	= prob->cup_;
 
   double *rowels	= prob->rowels_;
   /*const*/ int *hcol	= prob->hcol_;
@@ -584,9 +584,9 @@ const PresolveAction *duprow_action::presolve(PresolveMatrix *prob,
   double *rlo	= prob->rlo_;
   double *rup	= prob->rup_;
 
-  const char *integerType = prob->integerType_;
+  //  const char *integerType = prob->integerType_;
 
-  double maxmin	= prob->maxmin_;
+  //  double maxmin	= prob->maxmin_;
 
   action *actions	= new action [nrows];
   int nactions = 0;
@@ -626,7 +626,7 @@ const PresolveAction *duprow_action::presolve(PresolveMatrix *prob,
       int ilast=sort[jj-1];
       CoinBigIndex krs = mrstrt[ithis];
       CoinBigIndex kre = krs + hinrow[ithis];
-      int ishift = mrstrt[ilast];
+      //      int ishift = mrstrt[ilast];
       if (hinrow[ithis] == hinrow[ilast]) {
 	int ishift = mrstrt[ilast] - krs;
 	CoinBigIndex k;

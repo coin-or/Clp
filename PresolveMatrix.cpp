@@ -720,7 +720,7 @@ PostsolveMatrix::PostsolveMatrix(ClpSimplex& si,
   // rows could do that, in principle.  I am being very conservative
   // here by reserving much more than the amount of space I probably need.
   // If this guess is wrong, check_free_list may be called.
-  int bufsize = 2*nelems0;
+  //  int bufsize = 2*nelems0;
 
   memset(cdone_, -1, ncols0_);
   memset(rdone_, -1, nrows0_);
