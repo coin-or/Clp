@@ -77,8 +77,8 @@ ClpModel::ClpModel () :
   intParam_[ClpMaxNumIteration] = 99999999;
   intParam_[ClpMaxNumIterationHotStart] = 9999999;
 
-  dblParam_[ClpDualObjectiveLimit] = DBL_MAX;
-  dblParam_[ClpPrimalObjectiveLimit] = DBL_MAX;
+  dblParam_[ClpDualObjectiveLimit] = COIN_DBL_MAX;
+  dblParam_[ClpPrimalObjectiveLimit] = COIN_DBL_MAX;
   dblParam_[ClpDualTolerance] = 1e-7;
   dblParam_[ClpPrimalTolerance] = 1e-7;
   dblParam_[ClpObjOffset] = 0.0;
@@ -167,14 +167,14 @@ ClpModel::gutsOfLoadModel (int numberRows, int numberColumns,
   ClpFillN(reducedCost_,numberColumns_,0.0);
   int iRow,iColumn;
 
-  rowLower_=ClpCopyOfArray(rowlb,numberRows_,-DBL_MAX);
-  rowUpper_=ClpCopyOfArray(rowub,numberRows_,DBL_MAX);
+  rowLower_=ClpCopyOfArray(rowlb,numberRows_,-COIN_DBL_MAX);
+  rowUpper_=ClpCopyOfArray(rowub,numberRows_,COIN_DBL_MAX);
   double * objective=ClpCopyOfArray(obj,numberColumns_,0.0);
   objective_ = new ClpLinearObjective(objective,numberColumns_);
   delete [] objective;
   rowObjective_=ClpCopyOfArray(rowObjective,numberRows_);
   columnLower_=ClpCopyOfArray(collb,numberColumns_,0.0);
-  columnUpper_=ClpCopyOfArray(colub,numberColumns_,DBL_MAX);
+  columnUpper_=ClpCopyOfArray(colub,numberColumns_,COIN_DBL_MAX);
   // set default solution
   for (iRow=0;iRow<numberRows_;iRow++) {
     if (rowLower_[iRow]>0.0) {
@@ -271,8 +271,8 @@ ClpModel::loadProblem (
 void
 ClpModel::getRowBound(int iRow, double& lower, double& upper) const
 {
-  lower=-DBL_MAX;
-  upper=DBL_MAX;
+  lower=-COIN_DBL_MAX;
+  upper=COIN_DBL_MAX;
   if (rowUpper_)
     upper=rowUpper_[iRow];
   if (rowLower_)
@@ -625,18 +625,21 @@ ClpModel::resize (int newNumberRows, int newNumberColumns)
   rowObjective_ = resizeDouble(rowObjective_,numberRows_,
 			       newNumberRows,0.0,false);
   rowLower_ = resizeDouble(rowLower_,numberRows_,
-			   newNumberRows,-DBL_MAX,true);
+			   newNumberRows,-COIN_DBL_MAX,true);
   rowUpper_ = resizeDouble(rowUpper_,numberRows_,
-			   newNumberRows,DBL_MAX,true);
+			   newNumberRows,COIN_DBL_MAX,true);
   columnActivity_ = resizeDouble(columnActivity_,numberColumns_,
 				 newNumberColumns,0.0,true);
   reducedCost_ = resizeDouble(reducedCost_,numberColumns_,
 			      newNumberColumns,0.0,true);
-  objective_->resize(newNumberColumns);
+  if (objective_)
+    objective_->resize(newNumberColumns);
+  else 
+    objective_ = new ClpLinearObjective(NULL,newNumberColumns);
   columnLower_ = resizeDouble(columnLower_,numberColumns_,
 			      newNumberColumns,0.0,true);
   columnUpper_ = resizeDouble(columnUpper_,numberColumns_,
-			      newNumberColumns,DBL_MAX,true);
+			      newNumberColumns,COIN_DBL_MAX,true);
   if (newNumberRows<numberRows_) {
     int * which = new int[numberRows_-newNumberRows];
     int i;

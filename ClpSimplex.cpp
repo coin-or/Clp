@@ -134,7 +134,7 @@ ClpSimplex::~ClpSimplex ()
 //#############################################################################
 void ClpSimplex::setLargeValue( double value) 
 {
-  if (value>0.0&&value<DBL_MAX)
+  if (value>0.0&&value<COIN_DBL_MAX)
     largeValue_=value;
 }
 int
@@ -269,7 +269,7 @@ ClpSimplex::computePrimals ( const double * rowActivities,
   }
 
   // Ftran adjusted RHS and iterate to improve accuracy
-  double lastError=DBL_MAX;
+  double lastError=COIN_DBL_MAX;
   int iRefine;
   double * work = workSpace->denseVector();
   factorization_->updateColumn(workSpace,array);
@@ -358,7 +358,7 @@ ClpSimplex::computeDuals()
   ClpDisjointCopyN ( array, numberRows_ , save);
 
   // Btran basic costs and get as accurate as possible
-  double lastError=DBL_MAX;
+  double lastError=COIN_DBL_MAX;
   int iRefine;
   double * work = workSpace->denseVector();
   factorization_->updateColumnTranspose(workSpace,array);
@@ -1748,16 +1748,16 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
     // clean up any mismatches on infinity
     for (i=0;i<numberColumns_;i++) {
       if (columnLowerWork_[i]<-1.0e30)
-	columnLowerWork_[i] = -DBL_MAX;
+	columnLowerWork_[i] = -COIN_DBL_MAX;
       if (columnUpperWork_[i]>1.0e30)
-	columnUpperWork_[i] = DBL_MAX;
+	columnUpperWork_[i] = COIN_DBL_MAX;
     }
     // clean up any mismatches on infinity
     for (i=0;i<numberRows_;i++) {
       if (rowLowerWork_[i]<-1.0e30)
-	rowLowerWork_[i] = -DBL_MAX;
+	rowLowerWork_[i] = -COIN_DBL_MAX;
       if (rowUpperWork_[i]>1.0e30)
-	rowUpperWork_[i] = DBL_MAX;
+	rowUpperWork_[i] = COIN_DBL_MAX;
     }
   }
   // do scaling if needed
@@ -2123,8 +2123,8 @@ ClpSimplex::tightenPrimalBounds(double factor)
 	    maximumDown >= rowLower_[iRow] - tolerance) {
 
 	  // Row is redundant - make totally free
-	  rowLower_[iRow]=-DBL_MAX;
-	  rowUpper_[iRow]=DBL_MAX;
+	  rowLower_[iRow]=-COIN_DBL_MAX;
+	  rowUpper_[iRow]=COIN_DBL_MAX;
 
 	} else {
 	  if (maximumUp < rowLower_[iRow] -tolerance ||
@@ -3370,8 +3370,8 @@ ClpSimplex::crash(double gap,int pivot)
 	      // see if we can find a column to pivot on
 	      int j;
 	      // down is amount pi can go down
-	      double maximumDown = DBL_MAX;
-	      double maximumUp = DBL_MAX;
+	      double maximumDown = COIN_DBL_MAX;
+	      double maximumUp = COIN_DBL_MAX;
 	      double minimumDown =0.0;
 	      double minimumUp =0.0;
 	      int iUp=-1;

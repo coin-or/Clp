@@ -1305,7 +1305,7 @@ stopping",
 
 		ClpSimplex& m = models[iModel];
 		CoinMpsIO writer;
-		writer.setMpsData(*m.matrix(), CLP_INFINITY,
+		writer.setMpsData(*m.matrix(), COIN_DBL_MAX,
 				  m.getColLower(), m.getColUpper(),
 				  m.getObjCoefficients(),
 				  (const char*) 0 /*integrality*/,

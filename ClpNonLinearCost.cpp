@@ -81,7 +81,7 @@ ClpNonLinearCost::ClpNonLinearCost ( ClpSimplex * model)
 
   for (iSequence=0;iSequence<numberTotal;iSequence++) {
 
-    lower_[put] = -DBL_MAX;
+    lower_[put] = -COIN_DBL_MAX;
     setInfeasible(put,true);
 
     cost_[put++] = cost[iSequence]-infeasibilityCost;
@@ -91,7 +91,7 @@ ClpNonLinearCost::ClpNonLinearCost ( ClpSimplex * model)
     lower_[put] = upper[iSequence];
     cost_[put++] = cost[iSequence]+infeasibilityCost;
     if (upper[iSequence]<1.0e20) {
-      lower_[put] = DBL_MAX;
+      lower_[put] = COIN_DBL_MAX;
       setInfeasible(put-1,true);
       cost_[put++] = 1.0e50;
     }
@@ -149,7 +149,7 @@ ClpNonLinearCost::ClpNonLinearCost(ClpSimplex * model,const int * starts,
   start_[0]=0;
 
   for (iSequence=0;iSequence<numberTotal;iSequence++) {
-    lower_[put] = -DBL_MAX;
+    lower_[put] = -COIN_DBL_MAX;
     setInfeasible(put,true);
     cost_[put++] = cost[iSequence]-infeasibilityCost;
     whichRange_[iSequence]=put;
@@ -164,7 +164,7 @@ ClpNonLinearCost::ClpNonLinearCost(ClpSimplex * model,const int * starts,
       int iIndex = starts[iSequence];
       int end = starts[iSequence+1];
       assert (fabs(lower[iSequence]-lowerNon[iIndex])<1.0e-8);
-      thisCost = -DBL_MAX;
+      thisCost = -COIN_DBL_MAX;
       for (;iIndex<end;iIndex++) {
 	if (lowerNon[iIndex]<upper[iSequence]-1.0e-8) {
 	  lower_[put] = lowerNon[iIndex];
@@ -181,7 +181,7 @@ ClpNonLinearCost::ClpNonLinearCost(ClpSimplex * model,const int * starts,
     lower_[put] = upper[iSequence];
     cost_[put++] = thisCost+infeasibilityCost;
     if (upper[iSequence]<1.0e20) {
-      lower_[put] = DBL_MAX;
+      lower_[put] = COIN_DBL_MAX;
       setInfeasible(put-1,true);
       cost_[put++] = 1.0e50;
     }
@@ -654,7 +654,7 @@ ClpNonLinearCost::nearest(int sequence, double solutionValue)
   int start = start_[sequence];
   int end = start_[sequence+1];
   int jRange=-1;
-  double nearest=DBL_MAX;
+  double nearest=COIN_DBL_MAX;
   for (iRange=start; iRange<end;iRange++) {
     if (fabs(solutionValue-lower_[iRange])<nearest) {
       jRange=iRange;

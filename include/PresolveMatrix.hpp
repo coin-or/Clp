@@ -233,7 +233,11 @@ class PrePostsolveMatrix {
  */
 //  static const int	NO_LINK	= -66666666;
 #define NO_LINK -66666666
-#define	PRESOLVE_INF DBL_MAX
+// Plus infinity
+#ifndef COIN_DBL_MAX
+#define COIN_DBL_MAX DBL_MAX
+#endif
+#define PRESOLVE_INF COIN_DBL_MAX
 
 class presolvehlink {
 public:

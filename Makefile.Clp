@@ -5,7 +5,7 @@ LibType := SHARED
 # highest level of optimization the compiler supports. If want something in
 # between then specify the exact level you want, e.g., -O1 or -O2
 OptLevel := -g
-OptLevel := -O2
+OptLevel := -O3
 
 
 LIBNAME := Clp

@@ -14,7 +14,11 @@
 #include "ClpParameters.hpp"
 #include "ClpObjective.hpp"
 
-#define CLP_INFINITY 1e30
+// Plus infinity
+// Plus infinity
+#ifndef COIN_DBL_MAX
+#define COIN_DBL_MAX DBL_MAX
+#endif
 
 /** This is the base class for Linear Models
     This knows nothing about the algorithm, but it seems to
@@ -206,9 +210,23 @@ public:
    inline const double* getRowUpper() const     { return rowUpper_; }
    /// Objective
    inline double * objective() const            
-  { double offset; return objective_->gradient(NULL,offset); }
+  {
+    if (objective_) {
+      double offset; 
+      return objective_->gradient(NULL,offset);
+    } else {
+      return NULL;
+    }
+  }
    inline const double * getObjCoefficients() const 
-  { double offset; return objective_->gradient(NULL,offset); }
+  { 
+    if (objective_) {
+      double offset; 
+      return objective_->gradient(NULL,offset);
+    } else {
+      return NULL;
+    }
+  }
    /// Row Objective
    inline double * rowObjective() const         { return rowObjective_; }
    inline const double * getRowObjCoefficients() const {
