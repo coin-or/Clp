@@ -666,7 +666,8 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     double * binvA = (double*) malloc((n_cols+n_rows) * sizeof(double));
     
     printf("B-1 A by row\n");
-    for(int i = 0; i < n_rows; i++){
+    int i;
+    for( i = 0; i < n_rows; i++){
       model.getBInvARow(i, binvA,binvA+n_cols);
       printf("row: %d -> ",i);
       for(int j=0; j < n_cols+n_rows; j++){
@@ -678,7 +679,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     model.primal(0,3+4); // keep factorization
     // And do by column
     printf("B-1 A by column\n");
-    for(int i = 0; i < n_rows+n_cols; i++){
+    for( i = 0; i < n_rows+n_cols; i++){
       model.getBInvACol(i, binvA);
       printf("column: %d -> ",i);
       for(int j=0; j < n_rows; j++){
