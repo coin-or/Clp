@@ -609,14 +609,14 @@ const PresolveAction *doubleton_action::presolve(PresolveMatrix *prob,
 	  //PRESOLVEASSERT((coeffx < 0) == (coeffy/-coeffx < 0));
 	  // (coeffy/-coeffx < 0) == (coeffy<0 == coeffx<0) 
 	  if (-PRESOLVE_INF < clo[icoly]) {
-	    if ((coeffx < 0) != (coeffy < 0))
+	    if (coeffx * coeffy < 0)
 	      lo1 = (coeffy * clo[icoly] - rhs) / -coeffx;
 	    else 
 	      up1 = (coeffy * clo[icoly] - rhs) / -coeffx;
 	  }
 	  
 	  if (cup[icoly] < PRESOLVE_INF) {
-	    if ((coeffx < 0) != (coeffy < 0))
+	    if (coeffx * coeffy < 0)
 	      up1 = (coeffy * cup[icoly] - rhs) / -coeffx;
 	    else 
 	      lo1 = (coeffy * cup[icoly] - rhs) / -coeffx;
