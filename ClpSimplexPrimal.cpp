@@ -280,7 +280,6 @@ ClpSimplexPrimal::whileIterating()
   // status stays at -1 while iterating, >=0 finished, -2 to invert
   // status -3 to go to top without an invert
   while (problemStatus_==-1) {
-#define CLP_DEBUG 1
 #ifdef CLP_DEBUG
     {
       int i;
