@@ -1079,7 +1079,7 @@ void ClpPredictorCorrector::createSolution()
   handler_->message(CLP_BARRIER_SAFE,messages_)
     <<initialValue<<objectiveNorm_
     <<CoinMessageEol;
-  int strategy=0;
+  int strategy=1;
   double extra=1.0e-10;
   double largeGap=1.0e15;
   double safeObjectiveValue=2.0*objectiveNorm_;

@@ -870,13 +870,15 @@ ClpSimplex::initialSolve(ClpSolve & options)
     ClpInterior barrier(*model2);
     if (interrupt) 
       currentModel2 = &barrier;
+#ifdef REAL_BARRIER
     // uncomment this if you have Anshul Gupta's wsmp package
     ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp();
     barrier.setCholesky(cholesky);
     // uncomment this if you have Sivan Toledo's Taucs package
     //ClpCholeskyTaucs * cholesky = new ClpCholeskyTaucs();
     //barrier.setCholesky(cholesky);
-    //#define SAVEIT
+#endif
+    //#define SAVEIT 2
 #ifndef SAVEIT
     barrier.primalDual();
 #elif SAVEIT==1
@@ -965,30 +967,45 @@ ClpSimplex::initialSolve(ClpSolve & options)
     CoinMemcpyN(barrier.dualColumnSolution(),
 		model2->numberColumns(),model2->dualColumnSolution());
     //model2->primal(1);
-    // clean up reduced costs
+    // clean up reduced costs and flag variables
     {
       int numberColumns = model2->numberColumns();
       double * dj = model2->dualColumnSolution();
       double * cost = model2->objective();
       double * saveCost = new double[numberColumns];
       memcpy(saveCost,cost,numberColumns*sizeof(double));
+      double * saveLower = new double[numberColumns];
+      double * lower = model2->columnLower();
+      memcpy(saveLower,lower,numberColumns*sizeof(double));
+      double * saveUpper = new double[numberColumns];
+      double * upper = model2->columnUpper();
+      memcpy(saveUpper,upper,numberColumns*sizeof(double));
       int i;
+      double tolerance = 10.0*dualTolerance_;
       for ( i=0;i<numberColumns;i++) {
 	if (model2->getStatus(i)==basic) {
 	  dj[i]=0.0;
 	} else if (model2->getStatus(i)==atLowerBound) {
-	  if (optimizationDirection_*dj[i]<0.0) {
-	    //if (dj[i]<-1.0e-3)
-	    //printf("bad dj at lb %d %g\n",i,dj[i]);
-	    cost[i] -= dj[i];
-	    dj[i]=0.0;
+	  if (optimizationDirection_*dj[i]<tolerance) {
+	    if (optimizationDirection_*dj[i]<0.0) {
+	      //if (dj[i]<-1.0e-3)
+	      //printf("bad dj at lb %d %g\n",i,dj[i]);
+	      cost[i] -= dj[i];
+	      dj[i]=0.0;
+	    }
+	  } else {
+	    upper[i]=lower[i];
 	  }
 	} else if (model2->getStatus(i)==atUpperBound) {
-	  if (optimizationDirection_*dj[i]>0.0) {
-	    //if (dj[i]>1.0e-3)
-	    //printf("bad dj at ub %d %g\n",i,dj[i]);
-	    cost[i] -= dj[i];
-	    dj[i]=0.0;
+	  if (optimizationDirection_*dj[i]>tolerance) {
+	    if (optimizationDirection_*dj[i]>0.0) {
+	      //if (dj[i]>1.0e-3)
+	      //printf("bad dj at ub %d %g\n",i,dj[i]);
+	      cost[i] -= dj[i];
+	      dj[i]=0.0;
+	    }
+	  } else {
+	    lower[i]=upper[i];
 	  }
 	}
       }
@@ -998,6 +1015,10 @@ ClpSimplex::initialSolve(ClpSolve & options)
       model2->dual(2);
       memcpy(cost,saveCost,numberColumns*sizeof(double));
       delete [] saveCost;
+      memcpy(lower,saveLower,numberColumns*sizeof(double));
+      delete [] saveLower;
+      memcpy(upper,saveUpper,numberColumns*sizeof(double));
+      delete [] saveUpper;
     }
     // and finish
     // move solutions

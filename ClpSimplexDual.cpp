@@ -446,8 +446,10 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
       if (flagged(iPivot))
 	continue;
       if (fabs(dj_[iPivot])>dualTolerance_) {
-	if (pivoted(iPivot)) 
-	  candidateList[numberCandidates++]=iRow;
+	// for now safer to ignore free ones
+	if (lower_[iPivot]>-1.0e50||upper_[iPivot]<1.0e50) 
+	  if (pivoted(iPivot)) 
+	    candidateList[numberCandidates++]=iRow;
       } else {
 	clearPivoted(iPivot);
       }

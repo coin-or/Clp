@@ -1,3 +1,4 @@
+#ifdef REAL_BARRIER
 // Copyright (C) 2004, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
@@ -392,3 +393,4 @@ ClpCholeskyTaucs::solve (double * region)
   delete [] out;
   delete [] in;
 }
+#endif

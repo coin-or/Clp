@@ -1,3 +1,4 @@
+#ifdef REAL_BARRIER
 // Copyright (C) 2003, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
@@ -457,3 +458,4 @@ ClpCholeskyWssmp::solve (double * region)
   std::cout<<doubleParameters_[6]<<std::endl;
 #endif
 }
+#endif
