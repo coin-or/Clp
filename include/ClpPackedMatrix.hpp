@@ -96,7 +96,7 @@ public:
       probably expect no zeros.  Code can modify matrix to get rid of
       small elements.
   */
-  virtual bool allElementsInRange(ClpSimplex * model,
+  virtual bool allElementsInRange(ClpModel * model,
 				  double smallest, double largest);
 
   /** Unpacks a column into an CoinIndexedvector

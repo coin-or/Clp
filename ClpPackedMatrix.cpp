@@ -1546,7 +1546,7 @@ ClpPackedMatrix::add(const ClpSimplex * model,CoinIndexedVector * rowArray,
    small elements.
 */
 bool 
-ClpPackedMatrix::allElementsInRange(ClpSimplex * model,
+ClpPackedMatrix::allElementsInRange(ClpModel * model,
 				    double smallest, double largest)
 {
   int iColumn;

@@ -8,6 +8,7 @@
 #include "CoinPackedMatrix.hpp"
 class CoinIndexedVector;
 class ClpSimplex;
+class ClpModel;
 
 /** Abstract base class for Clp Matrices
 
@@ -94,7 +95,7 @@ public:
       probably expect no zeros.  Code can modify matrix to get rid of
       small elements.
   */
-  virtual bool allElementsInRange(ClpSimplex * model,
+  virtual bool allElementsInRange(ClpModel * model,
 				  double smallest, double largest)
   { return true;};
 

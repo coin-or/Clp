@@ -33,6 +33,7 @@ LIBSRC += ClpSimplexDual.cpp
 LIBSRC += ClpSimplexPrimal.cpp
 LIBSRC += ClpSimplexPrimalQuadratic.cpp
 LIBSRC += ClpSolve.cpp
+LIBSRC += ClpInterior.cpp
 # and Presolve stuff
 LIBSRC += ClpPresolve.cpp
 
