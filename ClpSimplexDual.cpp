@@ -1800,6 +1800,11 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
   bool situationChanged=false;
   if (loop>=0) {
     problemStatus_ = loop; //exit if in loop
+    if (!problemStatus_) {
+      // declaring victory
+      numberPrimalInfeasibilities_ = 0;
+      sumPrimalInfeasibilities_ = 0.0;
+    }
     return;
   } else if (loop<-1) {
     // something may have changed
