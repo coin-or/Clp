@@ -209,6 +209,21 @@ public:
   /** Solves non-linear using reduced gradient.  Phase = 0 get feasible,
       =1 use solution */
   int reducedGradient(int phase=0);
+  /**
+     When scaling is on it is possible that the scaled problem
+     is feasible but the unscaled is not.  Clp returns a secondary
+     status code to that effect.  This option allows for a cleanup.
+     If you use it I would suggest 1.
+     This only affects actions when scaled optimal
+     0 - no action
+     1 - clean up using dual if primal infeasibility
+     2 - clean up using dual if dual infeasibility
+     3 - clean up using dual if primal or dual infeasibility
+     11,12,13 - as 1,2,3 but use primal
+
+     return code as dual/primal
+  */
+  int cleanup(int cleanupScaling);
   /** Dual ranging.
       This computes increase/decrease in cost for each given variable and corresponding
       sequence numbers which would change basis.  Sequence numbers are 0..numberColumns 

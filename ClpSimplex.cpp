@@ -7280,3 +7280,61 @@ void ClpSimplex::setColumnSetBounds(const int* indexFirst,
     }
   }
 }
+/*
+  When scaling is on it is possible that the scaled problem
+  is feasible but the unscaled is not.  Clp returns a secondary
+  status code to that effect.  This option allows for a cleanup.
+  If you use it I would suggest 1.
+  This only affects actions when scaled optimal
+  0 - no action
+  1 - clean up using dual if primal infeasibility
+  2 - clean up using dual if dual infeasibility
+  3 - clean up using dual if primal or dual infeasibility
+  11,12,13 - as 1,2,3 but use primal
+*/
+#ifdef COUNT_CLEANUPS
+static int n1=0;
+static int n2=0;
+static int n3=0;
+#endif
+int
+ClpSimplex::cleanup(int cleanupScaling)
+{
+#ifdef COUNT_CLEANUPS
+  n1++;
+#endif
+  int returnCode=0;
+  if (!problemStatus_&&cleanupScaling) {
+    int check = cleanupScaling%10;
+    bool primal = (secondaryStatus_==2||secondaryStatus_==4);
+    bool dual = (secondaryStatus_==3||secondaryStatus_==4);
+    if (((check&1)!=0&&primal)||((check&2)!=0)&&dual) {
+      // need cleanup
+      int saveScalingFlag = scalingFlag_;
+      // say matrix changed
+      whatsChanged_ |= 1;
+      scaling(0);
+      if (cleanupScaling<10) {
+        // dual
+        returnCode = this->dual();
+      } else {
+        // primal
+        returnCode = this->primal();
+      }
+#ifdef COUNT_CLEANUPS
+      n2++;
+      n3+= numberIterations_;
+      //printf("**cleanup took %d iterations\n",numberIterations_);
+#endif
+      scaling(saveScalingFlag);
+    }
+  }
+  return returnCode;
+}
+#ifdef COUNT_CLEANUPS
+void printHowMany()
+{
+  printf("There were %d cleanups out of %d solves and %d iterations\n",
+         n2,n1,n3);
+}
+#endif
