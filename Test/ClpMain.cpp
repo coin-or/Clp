@@ -13,7 +13,7 @@
 
 #include "CoinPragma.hpp"
 #include "CoinHelperFunctions.hpp"
-#define CLPVERSION "0.99.7"
+#define CLPVERSION "0.99.8"
 
 #include "CoinMpsIO.hpp"
 
