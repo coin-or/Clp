@@ -43,6 +43,7 @@ LibDir += ${bzlibLibDir}
 LibDir += ${readlineLibDir}
 LibDir += ${lapackLibDir}
 #LibDir += ${taucsLibDir}
+LibDir += $(GlpkLibDir)
 
 LibName :=
 LibName += ${ClpLibName}
@@ -52,6 +53,7 @@ LibName += ${bzlibLibName}
 LibName += ${readlineLibName}
 LibName += ${lapackLibName}
 #LibName += ${taucsLibName}
+LibName += $(GlpkLibName)
 
 Define :=
 Define += ${ClpDefine}
