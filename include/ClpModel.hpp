@@ -264,7 +264,16 @@ public:
   {
     if (objective_) {
       double offset; 
-      return objective_->gradient(NULL,offset);
+      return objective_->gradient(NULL,offset,false);
+    } else {
+      return NULL;
+    }
+  }
+   inline double * objective(const double * solution, double & offset,bool refresh=true) const            
+  {
+    offset=0.0;
+    if (objective_) {
+      return objective_->gradient(solution,offset,refresh);
     } else {
       return NULL;
     }
@@ -273,7 +282,7 @@ public:
   { 
     if (objective_) {
       double offset; 
-      return objective_->gradient(NULL,offset);
+      return objective_->gradient(NULL,offset,false);
     } else {
       return NULL;
     }

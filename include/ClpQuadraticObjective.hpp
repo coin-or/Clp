@@ -21,8 +21,9 @@ public:
   
   /** Returns gradient.  If Quadratic then solution may be NULL,
       also returns an offset (to be added to current one)
+      If refresh is false then uses last solution
   */
-  virtual double * gradient(const double * solution, double & offset);
+  virtual double * gradient(const double * solution, double & offset,bool refresh);
   /// Resize objective
   virtual void resize(int newNumberColumns) ; 
   /// Delete columns in  objective

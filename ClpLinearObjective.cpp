@@ -109,7 +109,7 @@ ClpLinearObjective::operator=(const ClpLinearObjective& rhs)
 
 // Returns gradient
 double *  
-ClpLinearObjective::gradient(const double * solution, double & offset)
+ClpLinearObjective::gradient(const double * solution, double & offset,bool refresh)
 {
   offset=0.0;
   return objective_;

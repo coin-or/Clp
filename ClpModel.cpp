@@ -1193,7 +1193,7 @@ ClpModel::loadQuadraticObjective(const int numberColumns, const CoinBigIndex * s
   assert (numberColumns==numberColumns_);
   assert ((dynamic_cast< ClpLinearObjective*>(objective_)));
   double offset;
-  ClpObjective * obj = new ClpQuadraticObjective(objective_->gradient(NULL,offset),numberColumns,
+  ClpObjective * obj = new ClpQuadraticObjective(objective_->gradient(NULL,offset,false),numberColumns,
 					     start,column,element);
   delete objective_;
   objective_ = obj;
@@ -1206,7 +1206,7 @@ ClpModel::loadQuadraticObjective (  const CoinPackedMatrix& matrix)
   assert ((dynamic_cast< ClpLinearObjective*>(objective_)));
   double offset;
   ClpQuadraticObjective * obj = 
-    new ClpQuadraticObjective(objective_->gradient(NULL,offset),numberColumns_,
+    new ClpQuadraticObjective(objective_->gradient(NULL,offset,false),numberColumns_,
 						 NULL,NULL,NULL);
   delete objective_;
   objective_ = obj;

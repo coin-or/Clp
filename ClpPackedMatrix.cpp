@@ -1258,15 +1258,53 @@ ClpPackedMatrix::scale(ClpSimplex * model) const
     if (quadraticObj) {
       CoinPackedMatrix * quadratic = quadraticObj->quadraticObjective();
       int numberXColumns = quadratic->getNumCols();
-      int numberXRows = numberRows-numberXColumns;
       if (numberXColumns<numberColumns) {
+	// we assume symmetric
+	int numberQuadraticColumns=0;
 	int i;
-	for (i=0;i<numberXColumns;i++) 
-	  rowScale[i+numberXRows] = columnScale[i];
-	for (i=0;i<numberXRows;i++) 
-	  columnScale[i+numberXColumns] = rowScale[i];
+	//const int * columnQuadratic = quadratic->getIndices();
+	//const int * columnQuadraticStart = quadratic->getVectorStarts();
+	const int * columnQuadraticLength = quadratic->getVectorLengths();
+	for (i=0;i<numberXColumns;i++) {
+	  int length=columnQuadraticLength[i];
+#ifndef CORRECT_COLUMN_COUNTS
+	  length=1;
+#endif
+	  if (length)
+	    numberQuadraticColumns++;
+	}
+	int numberXRows = numberRows-numberQuadraticColumns;
+	numberQuadraticColumns=0;
+	for (i=0;i<numberXColumns;i++) { 
+	  int length=columnQuadraticLength[i];
+#ifndef CORRECT_COLUMN_COUNTS
+	  length=1;
+#endif
+	  if (length) {
+	    rowScale[numberQuadraticColumns+numberXRows] = columnScale[i];
+	    numberQuadraticColumns++;
+	  }
+	}    
+	int numberQuadraticRows=0;
+	for (i=0;i<numberXRows;i++) {
+	  // See if any in row quadratic
+	  int j;
+	  int numberQ=0;
+	  for (j=rowStart[i];j<rowStart[i+1];j++) {
+	    int iColumn = column[j];
+	    if (columnQuadraticLength[iColumn])
+	      numberQ++;
+	  }
+#ifndef CORRECT_ROW_COUNTS
+	  numberQ=1;
+#endif
+	  if (numberQ) {
+	    columnScale[numberQuadraticRows+numberXColumns] = rowScale[i];
+	    numberQuadraticRows++;
+	  }
+	}
 	// and make sure Sj okay
-	for (iColumn=numberRows;iColumn<numberColumns;iColumn++) {
+	for (iColumn=numberQuadraticRows+numberXColumns;iColumn<numberColumns;iColumn++) {
 	  CoinBigIndex j=columnStart[iColumn];
 	  assert(columnLength[iColumn]==1);
 	  int iRow=row[j];
@@ -1329,8 +1367,8 @@ ClpPackedMatrix::unpack(const ClpSimplex * model,CoinIndexedVector * rowArray,
     }
   }
 }
-/* Unpacks a column into an CoinIndexedvector
-** in packed foramt
+/* Unpacks a column into a CoinIndexedVector
+** in packed format
 Note that model is NOT const.  Bounds and objective could
 be modified if doing column generation (just for this variable) */
 void 

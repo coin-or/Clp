@@ -49,6 +49,7 @@ include ${MakefileDir}/Makefile.location
 # Say Idiot code can use Clp interface
 CXXFLAGS += -DCLP_IDIOT 
 CXXFLAGS += -DUSE_PRESOLVE
+CXXFLAGS += -DCORRECT_COLUMN_COUNTS
 ifeq ($(OptLevel),-g)
 #     CXXFLAGS += -DCLP_DEBUG
 #    CXXFLAGS += -DPRESOLVE_SUMMARY=1 -DDEBUG_PRESOLVE -DCHECK_CONSISTENCY=1

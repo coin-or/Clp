@@ -171,37 +171,39 @@ ClpQuadraticObjective::operator=(const ClpQuadraticObjective& rhs)
 
 // Returns gradient
 double *  
-ClpQuadraticObjective::gradient(const double * solution, double & offset)
+ClpQuadraticObjective::gradient(const double * solution, double & offset,bool refresh)
 {
   offset=0.0;
   if (!quadraticObjective_||!solution) {
     return objective_;
   } else {
-    if (!gradient_) 
-      gradient_ = new double[numberExtendedColumns_];
-    const int * columnQuadratic = quadraticObjective_->getIndices();
-    const int * columnQuadraticStart = quadraticObjective_->getVectorStarts();
-    const int * columnQuadraticLength = quadraticObjective_->getVectorLengths();
-    const double * quadraticElement = quadraticObjective_->getElements();
-    double offset=0.0;
-    memcpy(gradient_,objective_,numberExtendedColumns_*sizeof(double));
-    int iColumn;
-    for (iColumn=0;iColumn<numberColumns_;iColumn++) {
-      double valueI = solution[iColumn];
-      int j;
-      for (j=columnQuadraticStart[iColumn];
-	   j<columnQuadraticStart[iColumn]+columnQuadraticLength[iColumn];j++) {
-	int jColumn = columnQuadratic[j];
-	double valueJ = solution[jColumn];
-	double elementValue = quadraticElement[j];
-	elementValue *= 0.5;
-	offset += valueI*valueJ*elementValue;
-	double gradientI = valueJ*elementValue;
-	double gradientJ = valueI*elementValue;
-	offset -= gradientI*valueI;
-	gradient_[iColumn] += gradientI;
-	offset -= gradientJ*valueJ;
-	gradient_[jColumn] += gradientJ;
+    if (refresh||!gradient_) {
+      if (!gradient_) 
+	gradient_ = new double[numberExtendedColumns_];
+      const int * columnQuadratic = quadraticObjective_->getIndices();
+      const int * columnQuadraticStart = quadraticObjective_->getVectorStarts();
+      const int * columnQuadraticLength = quadraticObjective_->getVectorLengths();
+      const double * quadraticElement = quadraticObjective_->getElements();
+      double offset=0.0;
+      memcpy(gradient_,objective_,numberExtendedColumns_*sizeof(double));
+      int iColumn;
+      for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+	double valueI = solution[iColumn];
+	int j;
+	for (j=columnQuadraticStart[iColumn];
+	     j<columnQuadraticStart[iColumn]+columnQuadraticLength[iColumn];j++) {
+	  int jColumn = columnQuadratic[j];
+	  double valueJ = solution[jColumn];
+	  double elementValue = quadraticElement[j];
+	  elementValue *= 0.5;
+	  offset += valueI*valueJ*elementValue;
+	  double gradientI = valueJ*elementValue;
+	  double gradientJ = valueI*elementValue;
+	  offset -= gradientI*valueI;
+	  gradient_[iColumn] += gradientI;
+	  offset -= gradientJ*valueJ;
+	  gradient_[jColumn] += gradientJ;
+	}
       }
     }
     return gradient_;

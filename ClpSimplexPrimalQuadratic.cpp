@@ -489,6 +489,11 @@ ClpSimplexPrimalQuadratic::primalQuadratic(int phase)
     return 1;
   ClpQuadraticInfo info;
   ClpSimplexPrimalQuadratic * model2 = makeQuadratic(info);
+  if (!model2) {
+    printf("** Not quadratic\n");
+    primal(1);
+    return 0;
+  }
 #if 0
   CoinMpsIO writer;
   writer.setMpsData(*model2->matrix(), COIN_DBL_MAX,
@@ -551,6 +556,7 @@ int ClpSimplexPrimalQuadratic::primalQuadratic2 (ClpQuadraticInfo * info,
       const int * columnLength = quadratic->getVectorLengths(); 
       const double * elementByColumn = quadratic->getElements();
       double direction = optimizationDirection_;
+      const int * which = info->quadraticSequence();
       // direction is actually scale out not scale in
       if (direction)
 	direction = 1.0/direction;
@@ -564,6 +570,8 @@ int ClpSimplexPrimalQuadratic::primalQuadratic2 (ClpQuadraticInfo * info,
 	assert (number<=numberXColumns);
 	for (j=0;j<number;j++) {
 	  int iColumn2 = columnsInThisColumn[j];
+	  iColumn2 = which[iColumn2];
+	  assert (iColumn2>=0);
 	  newElement[j] = elementsInThisColumn[j]*scale*rowScale_[iColumn2+numberXRows];
 	}
 	quadratic->replaceVector(iColumn,number,newElement);
@@ -651,19 +659,19 @@ int ClpSimplexPrimalQuadratic::primalQuadratic2 (ClpQuadraticInfo * info,
 	phase=0;
 	int nextSequenceIn=-1;
 	for (iColumn=0;iColumn<numberXColumns;iColumn++) {
-	  if (which[iColumn]>=0) {
-	    double value = solution_[iColumn];
-	    double lower = lower_[iColumn];
-	    double upper = upper_[iColumn];
-	    if ((value>lower+primalTolerance_&&value<upper-primalTolerance_)
-		||getColumnStatus(iColumn)==superBasic) {
-	      if (getColumnStatus(iColumn)!=basic&&!flagged(iColumn)) {
-		if (phase!=2) {
-		  phase=2;
-		  nextSequenceIn=iColumn;
-		}
+	  double value = solution_[iColumn];
+	  double lower = lower_[iColumn];
+	  double upper = upper_[iColumn];
+	  if ((value>lower+primalTolerance_&&value<upper-primalTolerance_)
+	      ||getColumnStatus(iColumn)==superBasic) {
+	    if (getColumnStatus(iColumn)!=basic&&!flagged(iColumn)) {
+	      if (phase!=2) {
+		phase=2;
+		nextSequenceIn=iColumn;
 	      }
 	    }
+	  }
+	  if (which[iColumn]>=0) {
 	    if (getColumnStatus(iColumn)==basic) {
 	      int iS = which[iColumn]+numberRows_;
 	      assert (getColumnStatus(iS)!=basic);
@@ -676,7 +684,7 @@ int ClpSimplexPrimalQuadratic::primalQuadratic2 (ClpQuadraticInfo * info,
 	    }
 	  }
 	}
-	int offset=numberXColumns-numberColumns_;
+	const int * whichRow = info->quadraticRowSequence();
 	for (iColumn=numberColumns_;iColumn<numberColumns_+numberXRows;iColumn++) {
 	  double value = solution_[iColumn];
 	  double lower = lower_[iColumn];
@@ -690,13 +698,16 @@ int ClpSimplexPrimalQuadratic::primalQuadratic2 (ClpQuadraticInfo * info,
 	      }
 	    }
 	  }
-	  if (getColumnStatus(iColumn)==basic) {
-	    int iS = iColumn+offset;
-	    assert (getColumnStatus(iS)!=basic);
-	    if(fabs(solution_[iS])>dualTolerance_) {
-	      if (phase==0) {
-		phase=1;
-		nextSequenceIn=iS;
+	  int iRow = iColumn-numberColumns_;
+	  if (whichRow[iRow]>=0) {
+	    if (getColumnStatus(iColumn)==basic) {
+	      int iS = whichRow[iRow]+numberXColumns;;
+	      assert (getColumnStatus(iS)!=basic);
+	      if(fabs(solution_[iS])>dualTolerance_) {
+		if (phase==0) {
+		  phase=1;
+		  nextSequenceIn=iS;
+		}
 	      }
 	    }
 	  }
@@ -753,8 +764,14 @@ ClpSimplexPrimalQuadratic::whileIterating(
   int phase = info->currentPhase();
   double saveObjective = objectiveValue_;
   int numberXColumns = info->numberXColumns();
-  const int * which = info->quadraticSequence();
-  const double * pi = solution_+numberXColumns;
+  int numberXRows = info->numberXRows();
+  int numberQuadraticRows = info->numberQuadraticRows();
+  int numberQuadraticColumns = info->numberQuadraticColumns();
+  const int * whichRow = info->quadraticRowSequence();
+  const int * whichColumn = info->quadraticSequence();
+  const int * backRow = info->backRowSequence();
+  const int * backColumn = info->backSequence();
+  //const double * pi = solution_+numberXColumns;
   int nextSequenceIn=info->sequenceIn();
   int oldSequenceIn=nextSequenceIn;
   int saveSequenceIn = sequenceIn_;
@@ -823,6 +840,7 @@ ClpSimplexPrimalQuadratic::whileIterating(
 	saveSequenceIn=sequenceIn_;
 	createDjs(info,rowArray_[3],rowArray_[2]);
 	dualIn_=0.0; // so no updates
+        rowArray_[1]->clear();
 	primalColumn(rowArray_[1],rowArray_[2],rowArray_[3],
 		     columnArray_[0],columnArray_[1]);
       }
@@ -860,9 +878,12 @@ ClpSimplexPrimalQuadratic::whileIterating(
 	sequenceIn_=chosen;
 	chosen=-1;
 	unpack(rowArray_[1]);
+#if 1
 	// compute dj in case linear
 	{
-	  dualIn_=cost_[sequenceIn_];
+	  info->createGradient(this);
+	  double * gradient = info->gradient();
+	  dualIn_=gradient[sequenceIn_];
 	  int j;
 	  const double * element = rowArray_[1]->denseVector();
 	  int numberNonZero=rowArray_[1]->getNumElements();
@@ -871,15 +892,18 @@ ClpSimplexPrimalQuadratic::whileIterating(
 	  if (packed) {
 	    for (j=0;j<numberNonZero; j++) {
 	      int iRow = whichRow[j];
-	      dualIn_ -= element[j]*pi[iRow];
+	      dualIn_ -= element[j]*dual_[iRow];
 	    }
 	  } else {
 	    for (j=0;j<numberNonZero; j++) {
 	      int iRow = whichRow[j];
-	      dualIn_ -= element[iRow]*pi[iRow];
+	      dualIn_ -= element[iRow]*dual_[iRow];
 	    }
 	  }
 	}
+#else
+	dualIn_=dj_[sequenceIn_];
+#endif
 	factorization_->updateColumnFT(rowArray_[2],rowArray_[1]);
 	if (cleanupIteration) {
 	  // move back to a version of primalColumn?
@@ -934,9 +958,9 @@ ClpSimplexPrimalQuadratic::whileIterating(
 	  lowerIn_=lower_[sequenceIn_];
 	  upperIn_=upper_[sequenceIn_];
 	  if (sequenceIn_<numberXColumns) {
-	    int jSequence = which[sequenceIn_];
+	    int jSequence = whichColumn[sequenceIn_];
 	    if (jSequence>=0) {
-	      dualIn_ = solution_[jSequence+numberRows_]; 
+	      dualIn_ = solution_[jSequence+numberXColumns+numberQuadraticRows]; 
 	    } else {
 	      // need coding
 	      //dualIn_=cost_[sequenceIn_];
@@ -947,7 +971,10 @@ ClpSimplexPrimalQuadratic::whileIterating(
 	      //}
 	    }
 	  } else {
-	    dualIn_ = solution_[sequenceIn_-numberColumns_+numberXColumns];
+	    int iRow = sequenceIn_-numberColumns_;
+	    assert (iRow>=0);
+	    if (whichRow[iRow]>=0)
+	      dualIn_ = solution_[numberXColumns+whichRow[iRow]];
 	  }
 	  valueIn_=solution_[sequenceIn_];
 	  if (dualIn_>0.0)
@@ -956,14 +983,16 @@ ClpSimplexPrimalQuadratic::whileIterating(
 	    directionIn_ = 1;
 	  if (sequenceIn_<numberColumns_) {
 	    // Set dj as value of slack
-	    const int * which = info->quadraticSequence();
-	    crucialSj = which[sequenceIn_];
+	    crucialSj = whichColumn[sequenceIn_];
 	    if (crucialSj>=0)
-	      crucialSj += numberRows_; // sj which should go to 0.0
+	      crucialSj += numberQuadraticRows+numberXColumns; // sj which should go to 0.0
 	  } else {
 	    // Set dj as value of pi
-	    crucialSj = sequenceIn_-numberColumns_+numberXColumns; // pi which should go to 0.0
-	    //dualIn_=solution_[crucialSj];
+	    int iRow = whichRow[sequenceIn_-numberColumns_];
+	    if (iRow>=0)
+	      crucialSj = iRow+numberXColumns; // pi which should go to 0.0
+	    else
+	      crucialSj=-1;
 	  }
 	  info->setCrucialSj(crucialSj);
 	}
@@ -1199,12 +1228,14 @@ ClpSimplexPrimalQuadratic::whileIterating(
 	if (result&&(returnCode==-1||returnCode==-2||returnCode==-3)) {
 	  int crucialSj=info->crucialSj();
 	  if (sequenceOut_<numberXColumns) {
-	    chosen =sequenceOut_ + numberRows_; // sj variable
+	    chosen =whichColumn[sequenceOut_] + numberQuadraticRows + numberXColumns; // sj variable
 	  } else if (sequenceOut_>=numberColumns_) {
 	    // Does this mean we can change pi
 	    int iRow = sequenceOut_-numberColumns_;
-	    if (iRow<numberRows_-numberXColumns) {
-	      int iPi = iRow+numberXColumns;
+	    if (iRow<numberXRows) {
+	      int jRow = whichRow[iRow];
+	      assert (jRow>=0);
+	      int iPi = jRow+numberXColumns;
 	      //printf("pi for row %d is %g\n",
 	      //     iRow,solution_[iPi]);
 	      chosen=iPi;
@@ -1212,18 +1243,153 @@ ClpSimplexPrimalQuadratic::whileIterating(
 	      printf("Row %d is in column part\n",iRow);
 	      abort();
 	    }
-	  } else if (sequenceOut_<numberRows_) {
+	  } else if (sequenceOut_<numberQuadraticRows+numberXColumns) {
 	    // pi out
-	    chosen = sequenceOut_-numberXColumns+numberColumns_;
+	    chosen = backRow[sequenceOut_-numberXColumns]+numberColumns_;
 	  } else {
 	    // sj out
-	    chosen = sequenceOut_-numberRows_;
+	    chosen = backColumn[sequenceOut_-numberQuadraticRows-numberXColumns];
 	  }
 	  // But double check as original incoming might have gone out
 	  if (chosen==crucialSj) {
 	    chosen=-1;
 	    break; // means original has gone out
 	  }
+	  // In certain circumstances need to look further to see what to come in
+	  // Think further
+	  if (numberXColumns>numberQuadraticColumns) {
+	    // this should be pre-computed
+	    int iSjRow=-1;
+	    int iRow;
+	    for (iRow=0;iRow<numberRows_;iRow++) {
+	      if (pivotVariable_[iRow]==crucialSj) {
+		iSjRow=iRow;
+		break;
+	      }
+	    }
+	    assert (iSjRow>=0); 
+	    double direction;
+	    if (solution_[crucialSj]>0)
+	      direction=-1.0;
+	    else
+	      direction=1.0;
+	    rowArray_[0]->createPacked(1,&iSjRow,&direction);
+	    factorization_->updateColumnTranspose(rowArray_[1],rowArray_[0]);
+	    // put row of tableau in rowArray[0] and columnArray[0]
+	    matrix_->transposeTimes(this,-1.0,
+				    rowArray_[0],rowArray_[3],columnArray_[0]);
+	    int k;
+	    // all packed
+	    // Column
+	    int number=columnArray_[0]->getNumElements();
+	    int * which = columnArray_[0]->getIndices();
+	    double * element = columnArray_[0]->denseVector();
+	    int best=-1;
+	    double bestAlpha=1.0e-6;
+	    if (numberIterations_==29)
+	      printf("iteration %d coming up\n",numberIterations_);
+	    for (k=0;k<number;k++) {
+	      int iSequence=which[k];
+	      double value=element[k];
+	      // choose chosen if possible
+	      if (iSequence==chosen) {
+		if (value>0.0)
+		  printf("chosen %d going up alpha %g, sol %g\n",iSequence,value,solution_[crucialSj]);
+		else
+		  printf("chosen %d going down alpha %g, sol %g\n",iSequence,value,solution_[crucialSj]);
+		value = fabs(value)*1.0e5;
+	      } else if (iSequence<numberXColumns) {
+		double djValue = dj_[iSequence];
+		if (value>0.0)
+		  printf("X%d going up alpha %g, sol %g, dj %g\n",iSequence,value,solution_[crucialSj],djValue);
+		else
+		  printf("X%d going down alpha %g, sol %g, dj %g\n",iSequence,value,solution_[crucialSj],djValue);
+		ClpSimplex::Status status = getColumnStatus(iSequence);
+		
+		switch(status) {
+		  
+		case ClpSimplex::basic:
+		  if (fabs(value)>1.0e-3)
+		    abort();
+		  break;
+		case ClpSimplex::isFixed:
+		  value=0.0;
+		  break;
+		case ClpSimplex::isFree:
+		case ClpSimplex::superBasic:
+		  value=fabs(value);
+		  break;
+		case ClpSimplex::atUpperBound:
+		  value = -value;
+		  break;
+		case ClpSimplex::atLowerBound:
+		  break;
+		}
+	      } else {
+		value=0.0;
+	      }
+	      if (value>bestAlpha) {
+		bestAlpha=value;
+		best=iSequence;
+	      }
+	    }
+	    // Row
+	    number=rowArray_[0]->getNumElements();
+	    which = rowArray_[0]->getIndices();
+	    element = rowArray_[0]->denseVector();
+	    for (k=0;k<number;k++) {
+	      int iSequence=which[k];
+	      double value=element[k];
+	      // choose chosen if possible
+	      if (iSequence==chosen) {
+		if (value>0.0)
+		  printf("chosen row %d going up alpha %g, sol %g\n",iSequence,value,solution_[crucialSj]);
+		else
+		  printf("chosen row %d going down alpha %g, sol %g\n",iSequence,value,solution_[crucialSj]);
+		value = fabs(value)*1.0e5;
+	      } else if (iSequence<numberXRows) {
+		double djValue = dj_[iSequence+numberColumns_];
+		if (value>0.0)
+		  printf("R%d going up alpha %g, sol %g, dj %g\n",iSequence,value,solution_[crucialSj],djValue);
+		else
+		  printf("R%d going down alpha %g, sol %g, dj %g\n",iSequence,value,solution_[crucialSj],djValue);
+		ClpSimplex::Status status = getRowStatus(iSequence);
+		
+		switch(status) {
+		  
+		case ClpSimplex::basic:
+		  if (fabs(value)>1.0e-3)
+		    abort();
+		  break;
+		case ClpSimplex::isFixed:
+		  value=0.0;
+		  break;
+		case ClpSimplex::isFree:
+		case ClpSimplex::superBasic:
+		  value=fabs(value);
+		  break;
+		case ClpSimplex::atUpperBound:
+		  value = -value;
+		  break;
+		case ClpSimplex::atLowerBound:
+		  break;
+		}
+	      } else {
+		value=0.0;
+	      }
+	      if (value>bestAlpha) {
+		bestAlpha=value;
+		best=iSequence+numberColumns_;
+	      }
+	    }
+	    assert (best>=0);
+	    if (best!=chosen)
+	      printf("** chosen changed from %d to %d\n",chosen,best);
+	    chosen=best;
+	  }
+	  rowArray_[0]->clear();
+	  rowArray_[3]->checkClear();
+	  columnArray_[0]->clear();
 	  if (returnCode==-2) {
 	    // factorization
 	    nextSequenceIn = chosen;
@@ -1371,7 +1537,11 @@ ClpSimplexPrimalQuadratic::primalRow(CoinIndexedVector * rowArray,
     if (crucialSj2>=0)
       crucialSj2 += numberRows_; // sj2 which should go to 0.0
   } else if (sequenceIn_>=numberColumns_) {
-    crucialSj2 = sequenceIn_-numberColumns_+numberXColumns; // pi which should go to 0.0
+    const int * which = info->quadraticRowSequence();
+    int iRow=sequenceIn_-numberColumns_;
+    crucialSj2 = which[iRow];
+    if (crucialSj2>=0)
+      crucialSj2 += numberXColumns; // sj2 which should go to 0.0
   }
   double tj = 0.0;
   // Change in objective will be theta*coeff1 + theta*theta*coeff2
@@ -1525,7 +1695,7 @@ ClpSimplexPrimalQuadratic::primalRow(CoinIndexedVector * rowArray,
   double tentativeTheta = maximumMovement;
   double upperTheta = maximumMovement;
   bool throwAway=false;
-  if (numberIterations_==1395) {
+  if (numberIterations_==1453) {
     printf("Bad iteration coming up after iteration %d\n",numberIterations_);
   }
 
@@ -2358,16 +2528,20 @@ ClpSimplexPrimalQuadratic::statusOfProblemInPrimal(int & lastCleaned,int type,
 }
 // Fills in reduced costs
 void 
-ClpSimplexPrimalQuadratic::createDjs (const ClpQuadraticInfo * info,
+ClpSimplexPrimalQuadratic::createDjs (ClpQuadraticInfo * info,
 			    CoinIndexedVector * array1, CoinIndexedVector * array2)
 {
   const int * which = info->quadraticSequence();
+  const int * whichRow = info->quadraticRowSequence();
+  const int * backRow = info->backRowSequence();
+  int numberQuadraticRows = info->numberQuadraticRows();
+  //const int * back = info->backSequence();
+  //int numberQuadraticColumns = info->numberQuadraticColumns();
   int numberXColumns = info->numberXColumns();
   int numberXRows = info->numberXRows();
   const double * pi = solution_+numberXColumns;
   int iSequence;
   int start=numberXColumns+numberXRows;
-  int jSequence;
   const double * djWeight = info->djWeight();
   // Actually only need to do this after invert (use extra parameter to createDjs)
   // or when infeasibilities change
@@ -2392,10 +2566,9 @@ ClpSimplexPrimalQuadratic::createDjs (const ClpQuadraticInfo * info,
       solution_[iPivot] = 0.0;
     }
     // And make sure pi is zero if slack basic
-    for (iRow=0;iRow<numberXRows;iRow++) {
-      //if (getRowStatus(iRow)==basic) 
-      //assert(!solution_[iRow+numberXColumns]);
-      if (getRowStatus(iRow)==basic) 
+    for (iRow=0;iRow<numberQuadraticRows;iRow++) {
+      int jRow = backRow[iRow];
+      if (getRowStatus(jRow)==basic) 
 	solution_[iRow+numberXColumns]=0.0;
     }
     matrix_->times(-1.0,columnActivityWork_,modifiedCost,rowScale_,columnScale_);
@@ -2403,20 +2576,23 @@ ClpSimplexPrimalQuadratic::createDjs (const ClpQuadraticInfo * info,
     int number=0;
     // Now costs
     for (iSequence=0;iSequence<numberXColumns;iSequence++) {
-      iRow = iSequence+numberXRows;
-      double value=cost_[iSequence];
-      if (fabs(value)>1.0e5) {
-	assert (getColumnStatus(iSequence)==basic);
-      }
-      storedCost[iSequence]=value;
-      storedUpper[iSequence]=value;
-      storedValue[iSequence]=value;
-      value += modifiedCost[iRow];
-      if (value) {
-	modifiedCost[iRow]=value;
-	index[number++]=iRow;
-      } else {
-	modifiedCost[iRow]=0.0;
+      int jSequence = which[iSequence];
+      if (jSequence>=0) {
+	iRow = jSequence+numberXRows;
+	double value=cost_[iSequence];
+	if (fabs(value)>1.0e5) {
+	  assert (getColumnStatus(iSequence)==basic);
+	}
+	storedCost[jSequence]=value;
+	storedUpper[jSequence]=value;
+	storedValue[jSequence]=value;
+	value += modifiedCost[iRow];
+	if (value) {
+	  modifiedCost[iRow]=value;
+	  index[number++]=iRow;
+	} else {
+	  modifiedCost[iRow]=0.0;
+	}
       }
     }
     for (iRow=0;iRow<numberXRows;iRow++) {
@@ -2431,8 +2607,10 @@ ClpSimplexPrimalQuadratic::createDjs (const ClpQuadraticInfo * info,
     array1->setNumElements(number);
     // And slacks
     // sign? - or does any of this make sense
-    for (iRow=0;iRow<numberXRows;iRow++) {
-      int iSequence  = iRow + numberColumns_;
+    assert (numberQuadraticRows==numberXRows);
+    for (iRow=0;iRow<numberQuadraticRows;iRow++) {
+      int jRow = backRow[iRow];
+      int iSequence  = jRow + numberColumns_;
       double value = cost_[iSequence];
       // Its possible a fixed vector may have had this set
       if (value&&getRowStatus(iRow)==basic) {
@@ -2458,16 +2636,18 @@ ClpSimplexPrimalQuadratic::createDjs (const ClpQuadraticInfo * info,
     array1->clear();
     // Now modify pi values by slack costs to make djs
     // Later save matrix_->add results
-    for (iRow=0;iRow<numberXRows;iRow++) {
-      int iSequence  = iRow + numberColumns_;
+    for (iRow=0;iRow<numberQuadraticRows;iRow++) {
+      int jRow = backRow[iRow];
+      int iSequence  = jRow + numberColumns_;
       int iPi = iRow+numberXColumns;
       solution_[iPi]-=cost_[iSequence];
     }
     // check looks okay
     matrix_->times(1.0,solution_,modifiedCost,rowScale_,columnScale_);
     // Back to pi
-    for (iRow=0;iRow<numberXRows;iRow++) {
-      int iSequence  = iRow + numberColumns_;
+    for (iRow=0;iRow<numberQuadraticRows;iRow++) {
+      int jRow = backRow[iRow];
+      int iSequence  = jRow + numberColumns_;
       int iPi = iRow+numberXColumns;
       solution_[iPi]+=cost_[iSequence];
     }
@@ -2480,50 +2660,92 @@ ClpSimplexPrimalQuadratic::createDjs (const ClpQuadraticInfo * info,
 	rowSolution[k]=modifiedCost[k];
 	lower_[k+numberColumns_]=modifiedCost[k];
 	upper_[k+numberColumns_]=modifiedCost[k];
+	//cost_[k+numberColumns_]=0.0;
       }
       modifiedCost[k]=0.0;
     }
-  }
-  // fill in linear ones
-  memcpy(dj_,cost_,numberXColumns*sizeof(double));
-  matrix_->transposeTimes(-1.0,pi,dj_,rowScale_,columnScale_);
-  memset(dj_+numberXColumns,0,(numberXRows+info->numberQuadraticColumns())*sizeof(double));
-  for (iSequence=0;iSequence<numberXColumns;iSequence++) {
-    int jSequence = which[iSequence];
-    double value;
-    if (jSequence>=0) {
-      jSequence += start;
-      value = solution_[jSequence];
-    } else {
-      value=dj_[iSequence];
+    memcpy(dj_,cost_,numberColumns_*sizeof(double));
+    matrix_->transposeTimes(-1.0,pi,dj_,rowScale_,columnScale_);
+    info->createGradient(this);
+    double * gradient = info->gradient();
+    // fill in as if linear
+    // will not be correct unless complementary - but that should not matter
+    number=0;
+    for (iRow=0;iRow<numberRows_;iRow++) {
+      int iPivot=pivotVariable_[iRow];
+      if (gradient[iPivot]) {
+	modifiedCost[iRow] = gradient[iPivot];
+	index[number++]=iRow;
+      }
     }
-    double value2 = value*djWeight[iSequence];
-    if (fabs(value2)>dualTolerance_)
-      value=value2;
-    else if (value<-dualTolerance_)
-      value = -1.001*dualTolerance_;
-    else if (value>dualTolerance_)
-      value = 1.001*dualTolerance_;
-    if (djWeight[iSequence]<1.0e-6)
-      value=value2;
-    dj_[iSequence]=value;
+    array1->setNumElements(number);
+    factorization_->updateColumnTranspose(array2,array1);
+    memcpy(dual_,modifiedCost,numberRows_*sizeof(double));
+    matrix_->transposeTimes(-1.0,modifiedCost,gradient,rowScale_,columnScale_);
+    
+    array1->clear();
+    memset(dj_+numberXColumns,0,(numberXRows+info->numberQuadraticColumns())*sizeof(double));
+    for (iSequence=0;iSequence<numberXColumns;iSequence++) {
+      int jSequence = which[iSequence];
+      double value;
+      if (jSequence>=0) {
+	jSequence += start;
+	value = solution_[jSequence];
+      } else {
+	value=dj_[iSequence];
+	value=gradient[iSequence];
+      }
+      double value2 = value*djWeight[iSequence];
+      if (fabs(value2)>dualTolerance_)
+	value=value2;
+      else if (value<-dualTolerance_)
+	value = -1.001*dualTolerance_;
+      else if (value>dualTolerance_)
+	value = 1.001*dualTolerance_;
+      if (djWeight[iSequence]<1.0e-6)
+	value=value2;
+      dj_[iSequence]=value;
+    }
+#if 0
+    if (numberIterations_<20) {
+      for (iSequence=0;iSequence<min(20,numberXColumns);iSequence++) 
+	printf("%d %g %g\n",iSequence,dj_[iSequence],gradient[iSequence]);
+    } else {
+      exit(22);
+    }
+#endif
+    // And slacks
+    // Value of sj is - value of pi
+    for (iSequence=numberColumns_;iSequence<numberColumns_+numberXRows;iSequence++) {
+      int jSequence = whichRow[iSequence-numberColumns_];
+      double value;
+      if (jSequence>=0) {
+	int iPi = jSequence+numberXColumns;
+	value = solution_[iPi]+cost_[iSequence];
+      } else {
+	value=dj_[iSequence];
+	value=gradient[iSequence];
+      }
+      double value2 = value*djWeight[iSequence];
+      if (fabs(value2)>dualTolerance_)
+	value=value2;
+      else if (value<-dualTolerance_)
+	value = -1.001*dualTolerance_;
+      else if (value>dualTolerance_)
+	value = 1.001*dualTolerance_;
+      if (djWeight[iSequence]<1.0e-6)
+	value=value2;
+      dj_[iSequence]=value;
+    }
   }
-  // And slacks
-  // Value of sj is - value of pi
-  for (jSequence=0;jSequence<numberXRows;jSequence++) {
-    int iSequence  = jSequence + numberColumns_;
-    int iPi = jSequence+numberXColumns;
-    double value = solution_[iPi]+cost_[iSequence];
-    double value2 = value*djWeight[iSequence];
-    if (fabs(value2)>dualTolerance_)
-      value=value2;
-    else if (value<-dualTolerance_)
-      value = -1.001*dualTolerance_;
-    else if (value>dualTolerance_)
-      value = 1.001*dualTolerance_;
-    if (djWeight[iSequence]<1.0e-6)
-      value=value2;
-    dj_[iSequence]=value;
+  if (info->crucialSj()<0) {
+    int i;
+    for (i=0;i<numberXRows;i++) {
+      double pi1 = dual_[i];
+      double pi2 = solution_[numberXColumns+i];
+      if (fabs(pi1-pi2)>1.0e-3)
+	printf("row %d, dual %g sol %g\n",i,pi1,pi2);
+    }
   }
 }
 
@@ -2759,6 +2981,7 @@ ClpSimplexPrimalQuadratic::makeQuadratic(ClpQuadraticInfo & info)
   // Create larger problem
   // First workout how many rows extra
   info=ClpQuadraticInfo(this);
+  quadratic = info.quadraticObjective();
   int numberQuadratic = info.numberQuadraticColumns();
   int newNumberRows = numberRows+numberQuadratic;
   int newNumberColumns = numberColumns + numberRows + numberQuadratic;
@@ -2843,6 +3066,7 @@ ClpSimplexPrimalQuadratic::makeQuadratic(ClpQuadraticInfo & info)
   }
   newNumberColumns=numberColumns;
   // pi
+  int numberQuadraticRows = info.numberQuadraticRows();
   // Get a row copy in standard format
   CoinPackedMatrix copy;
   copy.reverseOrderedCopyOf(*(this->matrix()));
@@ -2861,13 +3085,22 @@ ClpSimplexPrimalQuadratic::makeQuadratic(ClpQuadraticInfo & info)
 	 j<rowStart[iRow]+rowLength[iRow];
 	 j++) {
       double elementValue=elementByRow[j];
-      int jColumn = column[j];
-      elements2[numberElements]=elementValue;
-      row2[numberElements++]=jColumn+numberRows;
+      int jColumn = which[column[j]];
+      if (jColumn>=0) {
+	elements2[numberElements]=elementValue;
+	row2[numberElements++]=jColumn+numberRows;
+      }
       dj[jColumn]-= value*elementValue;
     }
+#ifndef CORRECT_ROW_COUNTS
     newNumberColumns++;
     start2[newNumberColumns]=numberElements;
+#else
+    if (numberElements>start2[newNumberColumns]) {
+      newNumberColumns++;
+      start2[newNumberColumns]=numberElements;
+    }
+#endif
   }
   // djs 
   for (iColumn=0;iColumn<numberQuadratic;iColumn++) {
@@ -2875,7 +3108,7 @@ ClpSimplexPrimalQuadratic::makeQuadratic(ClpQuadraticInfo & info)
     columnUpper2[newNumberColumns]=COIN_DBL_MAX;
     solution2[newNumberColumns]=dj[iColumn];
     elements2[numberElements]=1.0;
-    row2[numberElements++]=back[iColumn]+numberRows;
+    row2[numberElements++]=iColumn+numberRows;
     newNumberColumns++;
     start2[newNumberColumns]=numberElements;
   }
@@ -2935,7 +3168,8 @@ ClpSimplexPrimalQuadratic::makeQuadratic(ClpQuadraticInfo & info)
   delete [] row2;
   delete [] elements2;
   model2->allSlackBasis();
-  //model2->scaling(false);
+  model2->scaling(false);
+  printf("scaling off\n");
   model2->setLogLevel(this->logLevel());
   // Move solution across
   memcpy(model2->primalColumnSolution(),solution2,
@@ -2982,22 +3216,26 @@ ClpSimplexPrimalQuadratic::makeQuadratic(ClpQuadraticInfo & info)
     solution2[iRow+numberColumns]=0.0;
   }
 #else
+  const int * whichQuadraticRow = info.quadraticRowSequence();
   for (iRow=0;iRow<numberRows;iRow++) {
     assert (rowSolution2[iRow]>=rowLower2[iRow]-primalTolerance_);
     assert (rowSolution2[iRow]<=rowUpper2[iRow]+primalTolerance_);
     model2->setRowStatus(iRow,basic);
-    model2->setColumnStatus(iRow+numberColumns,superBasic);
-    solution2[iRow+numberColumns]=0.0;
+    int jRow = whichQuadraticRow[iRow];
+    if (jRow>=0) {
+      model2->setColumnStatus(jRow+numberColumns,superBasic);
+      solution2[jRow+numberColumns]=0.0;
+    }
   }
-  for (iColumn=numberRows+numberColumns;iColumn<newNumberColumns;iColumn++) {
+  for (iColumn=numberQuadraticRows+numberColumns;iColumn<newNumberColumns;iColumn++) {
     model2->setColumnStatus(iColumn,basic);
-    model2->setRowStatus(iColumn-numberColumns,isFixed);
+    model2->setRowStatus(iColumn-numberQuadraticRows-numberColumns+numberRows,isFixed);
   }
 #endif
   memset(rowSolution2,0,newNumberRows*sizeof(double));
   model2->times(1.0,solution2,rowSolution2);
   for (iColumn=0;iColumn<numberQuadratic;iColumn++) {
-    int iS = back[iColumn]+newNumberRows;
+    int iS = iColumn+numberColumns+numberQuadraticRows;
     int iRow = iColumn+numberRows;
     double value = rowSolution2[iRow];
     if (value>rowUpper2[iRow]) {
@@ -3038,16 +3276,13 @@ int
 ClpSimplexPrimalQuadratic::endQuadratic(ClpSimplexPrimalQuadratic * quadraticModel,
 		   ClpQuadraticInfo & info)
 {
-  memcpy(dualRowSolution(),quadraticModel->primalColumnSolution()+numberColumns_,numberRows_*sizeof(double));
+  memcpy(dualRowSolution(),quadraticModel->dualRowSolution(),numberRows_*sizeof(double));
   const double * solution2 = quadraticModel->primalColumnSolution();
   memcpy(primalColumnSolution(),solution2,numberColumns_*sizeof(double));
   memset(quadraticModel->primalRowSolution(),0,
 	 quadraticModel->numberRows()*sizeof(double));
   quadraticModel->times(1.0,quadraticModel->primalColumnSolution(),
 	       quadraticModel->primalRowSolution());
-  memcpy(dualColumnSolution(),
-	 quadraticModel->primalColumnSolution()+numberRows_+numberColumns_,
-	 numberColumns_*sizeof(double));
 
   int iColumn;
   double objectiveOffset;
@@ -3072,7 +3307,7 @@ ClpSimplexPrimalQuadratic::endQuadratic(ClpSimplexPrimalQuadratic * quadraticMod
     const int * columnQuadraticLength = quadratic->getVectorLengths();
     const double * quadraticElement = quadratic->getElements();
     const int * which = info.quadraticSequence();
-    int start = numberRows_+numberColumns_;
+    int start = info.numberQuadraticRows()+numberColumns_;
     for (iColumn=0;iColumn<numberColumns_;iColumn++) {
       int jColumn = which[iColumn];
       double valueI=solution2[iColumn];
@@ -3133,6 +3368,8 @@ ClpQuadraticInfo::ClpQuadraticInfo()
   : originalObjective_(NULL),
     quadraticSequence_(NULL),
     backSequence_(NULL),
+    quadraticRowSequence_(NULL),
+    backRowSequence_(NULL),
     currentSequenceIn_(-1),
     crucialSj_(-1),
     validSequenceIn_(-1),
@@ -3142,9 +3379,11 @@ ClpQuadraticInfo::ClpQuadraticInfo()
     validPhase_(-1),
     validSolution_(NULL),
     djWeight_(NULL),
+    gradient_(NULL),
     numberXRows_(-1),
     numberXColumns_(-1),
     numberQuadraticColumns_(0),
+    numberQuadraticRows_(0),
     infeasCost_(0.0)
 {
 }
@@ -3153,6 +3392,8 @@ ClpQuadraticInfo::ClpQuadraticInfo(const ClpSimplex * model)
   : originalObjective_(NULL),
     quadraticSequence_(NULL),
     backSequence_(NULL),
+    quadraticRowSequence_(NULL),
+    backRowSequence_(NULL),
     currentSequenceIn_(-1),
     crucialSj_(-1),
     validSequenceIn_(-1),
@@ -3162,25 +3403,86 @@ ClpQuadraticInfo::ClpQuadraticInfo(const ClpSimplex * model)
     validPhase_(-1),
     validSolution_(NULL),
     djWeight_(NULL),
+    gradient_(NULL),
     numberXRows_(-1),
     numberXColumns_(-1),
     numberQuadraticColumns_(0),
+    numberQuadraticRows_(0),
     infeasCost_(0.0)
 {
   if (model) {
     numberXRows_ = model->numberRows();
     numberXColumns_ = model->numberColumns();
+    //ClpQuadraticObjective *originalObjective = (dynamic_cast< ClpQuadraticObjective*>(model->objectiveAsObject()));
+    //assert (originalObjective);
     originalObjective_ = (dynamic_cast< ClpQuadraticObjective*>(model->objectiveAsObject()));
     assert (originalObjective_);
     quadraticSequence_ = new int[numberXColumns_];
     backSequence_ = new int[numberXColumns_];
+    quadraticRowSequence_ = new int[numberXRows_];
+    backRowSequence_ = new int[numberXRows_];
     int i;
-    numberQuadraticColumns_=numberXColumns_;
+    const CoinPackedMatrix * quadratic = 
+      originalObjective_->quadraticObjective();
+    //const int * columnQuadratic = quadratic->getIndices();
+    //const int * columnQuadraticStart = quadratic->getVectorStarts();
+    const int * columnQuadraticLength = quadratic->getVectorLengths();
+    //const double * quadraticElement = quadratic->getElements();
+    memset(quadraticRowSequence_,0,numberXRows_*sizeof(int));
+    numberQuadraticColumns_=0;
+    assert (numberXColumns_==quadratic->getNumCols());
+    const int * row = model->matrix()->getIndices();
+    const int * columnStart = model->matrix()->getVectorStarts();
+    const int * columnLength = model->matrix()->getVectorLengths();
     for (i=0;i<numberXColumns_;i++) {
-      quadraticSequence_[i]=i;
-      backSequence_[i]=i;
+      int length = columnQuadraticLength[i];
+#ifndef CORRECT_COLUMN_COUNTS
+      length=1;
+#endif
+      if (length) {
+	int j;
+	for (j=columnStart[i];j<columnStart[i]+columnLength[i];j++) {
+	  int iRow=row[j];
+	  quadraticRowSequence_[iRow]++;
+	}
+	quadraticSequence_[i]=numberQuadraticColumns_;
+	backSequence_[numberQuadraticColumns_]=i;
+	numberQuadraticColumns_++;
+      } else {
+	quadraticSequence_[i]=-1;
+      }
     }
-    int numberColumns = numberXRows_+numberXColumns_+numberQuadraticColumns_;
+    // Do counts of quadratic rows
+    numberQuadraticRows_=0;
+    for (i=0;i<numberXRows_;i++) {
+#ifndef CORRECT_ROW_COUNTS
+      quadraticRowSequence_[i]=1;
+#endif
+      if (quadraticRowSequence_[i]>0) {
+	quadraticRowSequence_[i]=numberQuadraticRows_;
+	backRowSequence_[numberQuadraticRows_++]=i;
+      } else {
+	quadraticRowSequence_[i]=-1;
+      }
+    }
+#if 0
+    for (i=0;i<numberXColumns_;i++) {
+      int j;
+      int next = columnQuadraticStart[i]+columnQuadraticLength[i];
+      assert (next==columnQuadraticStart[i+1]);
+      for (j=columnQuadraticStart[i];j<next;j++) {
+	int iColumn = columnQuadratic[j];
+	iColumn = quadraticSequence_[iColumn];
+	assert (iColumn>=0);
+	newIndices[j]=iColumn;
+      }
+    }
+    originalObjective_ = new ClpQuadraticObjective(originalObjective->linearObjective(),
+						   originalObjective->numberColumns(),
+						   columnQuadraticStart,newIndices,quadraticElement,
+						   originalObjective->numberExtendedColumns());
+#endif
+    int numberColumns = numberQuadraticRows_+numberXColumns_+numberQuadraticColumns_;
     int numberRows = numberXRows_+numberQuadraticColumns_;
     int size = numberRows+numberColumns;
     djWeight_ = new double [size];
@@ -3193,24 +3495,34 @@ ClpQuadraticInfo:: ~ClpQuadraticInfo()
 {
   delete [] quadraticSequence_;
   delete [] backSequence_;
+  delete [] quadraticRowSequence_;
+  delete [] backRowSequence_;
   delete [] currentSolution_;
   delete [] validSolution_;
   delete [] djWeight_;
+  delete [] gradient_;
 }
 // Copy
 ClpQuadraticInfo::ClpQuadraticInfo(const ClpQuadraticInfo& rhs)
   : originalObjective_(rhs.originalObjective_),
     quadraticSequence_(NULL),
     backSequence_(NULL),
+    quadraticRowSequence_(NULL),
+    backRowSequence_(NULL),
     currentSequenceIn_(rhs.currentSequenceIn_),
     crucialSj_(rhs.crucialSj_),
     validSequenceIn_(rhs.validSequenceIn_),
     validCrucialSj_(rhs.validCrucialSj_),
     currentPhase_(rhs.currentPhase_),
+    currentSolution_(NULL),
     validPhase_(rhs.validPhase_),
+    validSolution_(NULL),
+    djWeight_(NULL),
+    gradient_(NULL),
     numberXRows_(rhs.numberXRows_),
     numberXColumns_(rhs.numberXColumns_),
     numberQuadraticColumns_(rhs.numberQuadraticColumns_),
+    numberQuadraticRows_(rhs.numberQuadraticRows_),
     infeasCost_(rhs.infeasCost_)
 {
   if (numberXColumns_) {
@@ -3220,7 +3532,13 @@ ClpQuadraticInfo::ClpQuadraticInfo(const ClpQuadraticInfo& rhs)
     backSequence_ = new int[numberXColumns_];
     memcpy(backSequence_,rhs.backSequence_,
 	   numberXColumns_*sizeof(int));
-    int numberColumns = numberXRows_+numberXColumns_+numberQuadraticColumns_;
+    quadraticRowSequence_ = new int[numberXRows_];
+    memcpy(quadraticRowSequence_,rhs.quadraticRowSequence_,
+	   numberXRows_*sizeof(int));
+    backRowSequence_ = new int[numberXRows_];
+    memcpy(backRowSequence_,rhs.backRowSequence_,
+	   numberXRows_*sizeof(int));
+    int numberColumns = numberQuadraticRows_+numberXColumns_+numberQuadraticColumns_;
     int numberRows = numberXRows_+numberQuadraticColumns_;
     int size = numberRows+numberColumns;
     if (rhs.currentSolution_) {
@@ -3240,6 +3558,12 @@ ClpQuadraticInfo::ClpQuadraticInfo(const ClpQuadraticInfo& rhs)
       memcpy(djWeight_,rhs.djWeight_,size*sizeof(double));
     } else {
       djWeight_ = NULL;
+    }
+    if (rhs.gradient_) {
+      gradient_ = new double [size];
+      memcpy(gradient_,rhs.gradient_,size*sizeof(double));
+    } else {
+      gradient_ = NULL;
     }
   }
 }
@@ -3251,9 +3575,12 @@ ClpQuadraticInfo::operator=(const ClpQuadraticInfo&rhs)
     originalObjective_ = rhs.originalObjective_;
     delete [] quadraticSequence_;
     delete [] backSequence_;
+    delete [] quadraticRowSequence_;
+    delete [] backRowSequence_;
     delete [] currentSolution_;
     delete [] validSolution_;
     delete [] djWeight_;
+    delete [] gradient_;
     currentSequenceIn_ = rhs.currentSequenceIn_;
     crucialSj_ = rhs.crucialSj_;
     validSequenceIn_ = rhs.validSequenceIn_;
@@ -3264,6 +3591,7 @@ ClpQuadraticInfo::operator=(const ClpQuadraticInfo&rhs)
     numberXColumns_ = rhs.numberXColumns_;
     infeasCost_=rhs.infeasCost_;
     numberQuadraticColumns_=rhs.numberQuadraticColumns_;
+    numberQuadraticRows_=rhs.numberQuadraticRows_;
     if (numberXColumns_) {
       quadraticSequence_ = new int[numberXColumns_];
       memcpy(quadraticSequence_,rhs.quadraticSequence_,
@@ -3271,11 +3599,19 @@ ClpQuadraticInfo::operator=(const ClpQuadraticInfo&rhs)
       backSequence_ = new int[numberXColumns_];
       memcpy(backSequence_,rhs.backSequence_,
 	     numberXColumns_*sizeof(int));
+      quadraticRowSequence_ = new int[numberXRows_];
+      memcpy(quadraticRowSequence_,rhs.quadraticRowSequence_,
+	     numberXRows_*sizeof(int));
+      backRowSequence_ = new int[numberXRows_];
+      memcpy(backRowSequence_,rhs.backRowSequence_,
+	   numberXRows_*sizeof(int));
     } else {
       quadraticSequence_ = NULL;
       backSequence_ = NULL;
+      quadraticRowSequence_ = NULL;
+      backRowSequence_ = NULL;
     }
-    int numberColumns = numberXRows_+numberXColumns_+numberQuadraticColumns_;
+    int numberColumns = numberQuadraticRows_+numberXColumns_+numberQuadraticColumns_;
     int numberRows = numberXRows_+numberQuadraticColumns_;
     int size = numberRows+numberColumns;
     if (rhs.currentSolution_) {
@@ -3296,6 +3632,12 @@ ClpQuadraticInfo::operator=(const ClpQuadraticInfo&rhs)
     } else {
       djWeight_ = NULL;
     }
+    if (rhs.gradient_) {
+      gradient_ = new double [size];
+      memcpy(gradient_,rhs.gradient_,size*sizeof(double));
+    } else {
+      gradient_ = NULL;
+    }
   }
   return *this;
 }
@@ -3306,7 +3648,7 @@ ClpQuadraticInfo::saveStatus()
   validSequenceIn_ = currentSequenceIn_;
   validCrucialSj_ = crucialSj_;
   validPhase_ = currentPhase_;
-  int numberColumns = numberXRows_+numberXColumns_+numberQuadraticColumns_;
+  int numberColumns = numberQuadraticRows_+numberXColumns_+numberQuadraticColumns_;
   int numberRows = numberXRows_+numberQuadraticColumns_;
   int size = numberRows+numberColumns;
   if (currentSolution_) {
@@ -3330,7 +3672,7 @@ void
 ClpQuadraticInfo::setCurrentSolution(const double * solution)
 {
   if (currentPhase_) {
-    int numberColumns = numberXRows_+numberXColumns_+numberQuadraticColumns_;
+    int numberColumns = numberQuadraticRows_+numberXColumns_+numberQuadraticColumns_;
     int numberRows = numberXRows_+numberQuadraticColumns_;
     int size = numberRows+numberColumns;
     if (!currentSolution_) 
@@ -3352,4 +3694,38 @@ double *
 ClpQuadraticInfo::linearObjective() const     
 { 
   return originalObjective_->linearObjective();
+}
+void 
+ClpQuadraticInfo::createGradient(ClpSimplex * model)
+{
+  int numberColumns = numberQuadraticRows_+numberXColumns_+numberQuadraticColumns_;
+  int numberRows = numberXRows_+numberQuadraticColumns_;
+  int size = numberRows+numberColumns;
+  if (!gradient_)
+    gradient_= new double[size];
+  memcpy(gradient_,model->costRegion(),size*sizeof(double));
+  double * solution = model->solutionRegion();
+  const CoinPackedMatrix * quadratic = quadraticObjective();
+  const int * columnQuadratic = quadratic->getIndices();
+  const int * columnQuadraticStart = quadratic->getVectorStarts();
+  const int * columnQuadraticLength = quadratic->getVectorLengths();
+  const double * quadraticElement = quadratic->getElements();
+  // get current costs
+  int jSequence;
+  for (jSequence=0;jSequence<numberQuadraticColumns_;jSequence++) {
+    int iSequence = backSequence_[jSequence];
+    // get current gradient
+    double coeff1=gradient_[iSequence];
+    int j;
+    for (j=columnQuadraticStart[iSequence];
+	 j<columnQuadraticStart[iSequence]+columnQuadraticLength[iSequence];j++) {
+      int jColumn = columnQuadratic[j];
+      double valueJ = solution[jColumn];
+      // maybe this is just if jColumn basic ??
+      double elementValue = quadraticElement[j];
+      double addValue = valueJ*elementValue;
+      coeff1 += addValue;
+    }
+    gradient_[iSequence]=coeff1;
+  }
 }

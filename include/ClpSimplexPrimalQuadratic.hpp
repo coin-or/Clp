@@ -63,7 +63,7 @@ public:
   int checkComplementarity (ClpQuadraticInfo * info,
 			    CoinIndexedVector * array1, CoinIndexedVector * array2);
   /// Fills in reduced costs
-  void createDjs (const ClpQuadraticInfo * info,
+  void createDjs (ClpQuadraticInfo * info,
 		  CoinIndexedVector * array1, CoinIndexedVector * array2);
   /** Main part.
       phase - 0 normal, 1 getting complementary solution,
@@ -139,6 +139,9 @@ public:
   /// Number of Original rows
   inline int numberXRows() const
   {return numberXRows_;};
+  /// Number of Quadratic rows
+  inline int numberQuadraticRows() const
+  {return numberQuadraticRows_;};
   /// Sequence number incoming
   inline int sequenceIn() const
   {return currentSequenceIn_;};
@@ -164,6 +167,12 @@ public:
   /// Which ones are quadratic
   inline const int * backSequence() const
   {return backSequence_;};
+  /// Row Quadratic sequence or -1 if linear
+  inline const int * quadraticRowSequence() const
+  {return quadraticRowSequence_;};
+  /// Which rows are quadratic
+  inline const int * backRowSequence() const
+  {return backRowSequence_;};
   /// Returns pointer to original objective
   inline ClpQuadraticObjective * originalObjective() const
   { return originalObjective_;};
@@ -180,6 +189,11 @@ public:
   ///Dj weights
   inline double * djWeight() const
   { return djWeight_;};
+  /// create gradient
+  void createGradient(ClpSimplex * model);
+  /// Current gradient
+  inline double * gradient() const
+  { return gradient_;};
   /// Infeas cost
   inline double infeasCost() const
   { return infeasCost_;};
@@ -196,6 +210,10 @@ private:
   int * quadraticSequence_;
   /// Which ones are quadratic
   int * backSequence_;
+  /// Quadratic Row sequence
+  int * quadraticRowSequence_;
+  /// Which rows are quadratic
+  int * backRowSequence_;
   /// Current sequenceIn
   int currentSequenceIn_;
   /// Crucial Sj
@@ -214,12 +232,16 @@ private:
   double * validSolution_;
   /// Dj weights to stop looping
   double * djWeight_;
+  /// Current gradient
+  double * gradient_;
   /// Number of original rows
   int numberXRows_;
   /// Number of original columns 
   int numberXColumns_;
   /// Number of quadratic columns 
   int numberQuadraticColumns_;
+  /// Number of quadratic rows 
+  int numberQuadraticRows_;
   /// Infeasibility cost
   double infeasCost_;
   //@}
