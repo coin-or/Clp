@@ -57,6 +57,12 @@ public:
   virtual bool looksOptimal() const;
   //@}
   
+  /** enums for persistence
+  */
+  enum Persistence {
+    normal = 0x00, // create (if necessary) and destroy
+    keep = 0x01 // create (if necessary) and leave
+  };
   
   ///@name Constructors and destructors
   //@{
@@ -87,6 +93,11 @@ public:
   /// Mode
   inline int mode() const
     { return mode_;};
+  /// Set/ get persistence
+  inline void setPersistence(Persistence life)
+  { persistence_ = life;};
+  inline Persistence persistence() const
+  { return persistence_ ;};
  //@}
 
   //---------------------------------------------------------------------------
@@ -102,6 +113,8 @@ private:
   /** If 0 then we are using uninitialized weights, 1 then full,
       if 2 then uninitialized partial, 3 switchable */
   int mode_;
+  /// Life of weights
+  Persistence persistence_;
   /// weight array 
   double * weights_;
   /// square of infeasibility array (just for infeasible rows)

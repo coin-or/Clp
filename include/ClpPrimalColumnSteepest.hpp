@@ -125,6 +125,12 @@ public:
   
  //@}
 
+  /** enums for persistence
+  */
+  enum Persistence {
+    normal = 0x00, // create (if necessary) and destroy
+    keep = 0x01 // create (if necessary) and leave
+  };
   
   ///@name Constructors and destructors
   //@{
@@ -149,7 +155,7 @@ public:
 
   /// Clone
   virtual ClpPrimalColumnPivot * clone(bool copyData = true) const;
- 
+
   //@}
 
   ///@name Private functions to deal with devex 
@@ -167,6 +173,12 @@ public:
     else
       value &= ~(1<<bit);
   }
+  /// Set/ get persistence
+  inline void setPersistence(Persistence life)
+  { persistence_ = life;};
+  inline Persistence persistence() const
+  { return persistence_ ;};
+ 
   //@}
   //---------------------------------------------------------------------------
   
@@ -203,6 +215,8 @@ private:
 
   */
   int mode_;
+  /// Life of weights
+  Persistence persistence_;
   /// Number of times switched from partial dantzig to 0/2
   int numberSwitched_;
   // This is pivot row (or pivot sequence round re-factorization)

@@ -19,6 +19,7 @@ ClpDualRowSteepest::ClpDualRowSteepest (int mode)
   : ClpDualRowPivot(),
     state_(-1),
     mode_(mode),
+    persistence_(normal),
     weights_(NULL),
     infeasible_(NULL),
     alternateWeights_(NULL),
@@ -36,6 +37,7 @@ ClpDualRowSteepest::ClpDualRowSteepest (const ClpDualRowSteepest & rhs)
 {  
   state_=rhs.state_;
   mode_ = rhs.mode_;
+  persistence_ = rhs.persistence_;
   model_ = rhs.model_;
   if (rhs.infeasible_) {
     infeasible_= new CoinIndexedVector(rhs.infeasible_);
@@ -92,6 +94,7 @@ ClpDualRowSteepest::operator=(const ClpDualRowSteepest& rhs)
     ClpDualRowPivot::operator=(rhs);
     state_=rhs.state_;
     mode_ = rhs.mode_;
+    persistence_ = rhs.persistence_;
     model_ = rhs.model_;
     delete [] weights_;
     delete [] dubiousWeights_;
@@ -268,7 +271,7 @@ k
 	  }
 	  int iSequence = pivotVariable[iRow];
 	  if (!model_->flagged(iSequence)) {
-	    //#define CLP_DEBUG 1
+	    //#define CLP_DEBUG 3
 #ifdef CLP_DEBUG
 	    double value2=0.0;
 	    if (solution[iSequence]>upper[iSequence]+tolerance) 
@@ -331,8 +334,11 @@ ClpDualRowSteepest::updateWeights(CoinIndexedVector * input,
 	array[iRow]=0.0;
       }
       alternateWeights_->setNumElements(0);
-      if (fabs(weights_[i]-value)>1.0e-4)
+      double w = max(weights_[i],value)*.1;
+      if (fabs(weights_[i]-value)>w) {
 	printf("%d old %g, true %g\n",i,weights_[i],value);
+	weights_[i]=value; // to reduce printout
+      }
       //else 
       //printf("%d matches %g\n",i,value);
     }
@@ -833,16 +839,18 @@ ClpDualRowPivot * ClpDualRowSteepest::clone(bool CopyData) const
 void 
 ClpDualRowSteepest::clearArrays()
 {
-  delete [] weights_;
-  weights_=NULL;
-  delete [] dubiousWeights_;
-  dubiousWeights_=NULL;
-  delete infeasible_;
-  infeasible_ = NULL;
-  delete alternateWeights_;
-  alternateWeights_ = NULL;
-  delete savedWeights_;
-  savedWeights_ = NULL;
+  if (persistence_==normal) {
+    delete [] weights_;
+    weights_=NULL;
+    delete [] dubiousWeights_;
+    dubiousWeights_=NULL;
+    delete infeasible_;
+    infeasible_ = NULL;
+    delete alternateWeights_;
+    alternateWeights_ = NULL;
+    delete savedWeights_;
+    savedWeights_ = NULL;
+  }
   state_ =-1;
 }
 // Returns true if would not find any row

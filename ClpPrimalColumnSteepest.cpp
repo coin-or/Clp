@@ -11,7 +11,7 @@
 #include "ClpMessage.hpp"
 #include "CoinHelperFunctions.hpp"
 #include <stdio.h>
-
+//#define CLP_DEBUG
 //#############################################################################
 // Constructors / Destructor / Assignment
 //#############################################################################
@@ -29,6 +29,7 @@ ClpPrimalColumnSteepest::ClpPrimalColumnSteepest (int mode)
     reference_(NULL),
     state_(-1),
     mode_(mode),
+    persistence_(normal),
     numberSwitched_(0),
     pivotSequence_(-1),
     savedPivotSequence_(-1),
@@ -46,6 +47,7 @@ ClpPrimalColumnSteepest::ClpPrimalColumnSteepest (const ClpPrimalColumnSteepest 
 {  
   state_=rhs.state_;
   mode_ = rhs.mode_;
+  persistence_ = rhs.persistence_;
   numberSwitched_ = rhs.numberSwitched_;
   model_ = rhs.model_;
   pivotSequence_ = rhs.pivotSequence_;
@@ -103,6 +105,7 @@ ClpPrimalColumnSteepest::operator=(const ClpPrimalColumnSteepest& rhs)
     ClpPrimalColumnPivot::operator=(rhs);
     state_=rhs.state_;
     mode_ = rhs.mode_;
+    persistence_ = rhs.persistence_;
     numberSwitched_ = rhs.numberSwitched_;
     model_ = rhs.model_;
     pivotSequence_ = rhs.pivotSequence_;
@@ -3300,16 +3303,18 @@ ClpPrimalColumnSteepest::initializeWeights()
 void 
 ClpPrimalColumnSteepest::clearArrays()
 {
-  delete [] weights_;
-  weights_=NULL;
-  delete infeasible_;
-  infeasible_ = NULL;
-  delete alternateWeights_;
-  alternateWeights_ = NULL;
-  delete [] savedWeights_;
-  savedWeights_ = NULL;
-  delete [] reference_;
-  reference_ = NULL;
+  if (persistence_==normal) {
+    delete [] weights_;
+    weights_=NULL;
+    delete infeasible_;
+    infeasible_ = NULL;
+    delete alternateWeights_;
+    alternateWeights_ = NULL;
+    delete [] savedWeights_;
+    savedWeights_ = NULL;
+    delete [] reference_;
+    reference_ = NULL;
+  }
   pivotSequence_=-1;
   state_ = -1;
   savedPivotSequence_ = -1;

@@ -835,18 +835,30 @@ ClpDynamicMatrix::updatePivot(ClpSimplex * model,double oldInValue, double oldOu
   if (sequenceOut>=numberColumns+numberStaticRows_) {
     int iDynamic = sequenceOut-numberColumns-numberStaticRows_;
     int iSet = fromIndex_[iDynamic];
-    setStatus(iSet,model->getStatus(sequenceOut));
+    // out may have gone through barrier - so check
+    double valueOut = model->lowerRegion()[sequenceOut];
+    if (fabs(valueOut -(double) lowerSet_[iSet])<
+	fabs(valueOut -(double) upperSet_[iSet]))
+      setStatus(iSet,ClpSimplex::atLowerBound);
+    else
+      setStatus(iSet,ClpSimplex::atUpperBound);
+    if (getStatus(iSet)!=model->getStatus(sequenceOut))
+      printf("** set %d status %d, var status %d\n",iSet,
+	     getStatus(iSet),model->getStatus(sequenceOut));
   }
   ClpMatrixBase::updatePivot(model,oldInValue,oldOutValue);
 #ifdef CLP_DEBUG
   char * inSmall = new char [numberGubColumns_];
   memset(inSmall,0,numberGubColumns_);
+  const double * solution = model->solutionRegion();
   for (int i=0;i<numberGubColumns_;i++)
     if (getDynamicStatus(i)==ClpDynamicMatrix::inSmall)
       inSmall[i]=1;
   for (int i=firstDynamic_;i<firstAvailable_;i++) {
     int k=id_[i-firstDynamic_];
     inSmall[k]=0;
+    //if (k>=23289&&k<23357&&solution[i])
+    //printf("var %d (in small %d) has value %g\n",k,i,solution[i]);
   }
   for (int i=0;i<numberGubColumns_;i++)
     assert (!inSmall[i]);
@@ -855,7 +867,14 @@ ClpDynamicMatrix::updatePivot(ClpSimplex * model,double oldInValue, double oldOu
   for (int i=0;i<numberActiveSets_;i++) {
     int iSet = fromIndex_[i];
     assert (toIndex_[iSet]==i);
-    assert (model->getRowStatus(i+numberStaticRows_)==getStatus(iSet));
+    //if (getStatus(iSet)!=model->getRowStatus(i+numberStaticRows_))
+    //printf("*** set %d status %d, var status %d\n",iSet,
+    //     getStatus(iSet),model->getRowStatus(i+numberStaticRows_));
+    //assert (model->getRowStatus(i+numberStaticRows_)==getStatus(iSet));
+    //if (iSet==1035) {
+    //printf("rhs for set %d (%d) is %g %g - cost %g\n",iSet,i,model->lowerRegion(0)[i+numberStaticRows_],
+    //     model->upperRegion(0)[i+numberStaticRows_],model->costRegion(0)[i+numberStaticRows_]);
+    }
   }
 #endif
 #endif
@@ -1125,10 +1144,20 @@ ClpDynamicMatrix::generalExpanded(ClpSimplex * model,int mode,int &number)
 	    columnUpper[iSequence]=COIN_DBL_MAX;
 	}
 	if (doCosts) {
-	  if (model->nonLinearCost())
+	  if (model->nonLinearCost()) {
+	    double trueLower;
+	    if (lowerSet_[iSet]>-1.0e20)
+	      trueLower = lowerSet_[iSet];
+	    else
+	      trueLower=-COIN_DBL_MAX;
+	    double trueUpper;
+	    if (upperSet_[iSet]<1.0e20)
+	      trueUpper = upperSet_[iSet];
+	    else
+	      trueUpper=COIN_DBL_MAX;
 	    model->nonLinearCost()->setOne(iSequence,solution[iSequence],
-					   columnLower[iSequence],
-					   columnUpper[iSequence],0.0);
+					   trueLower,trueUpper,0.0);
+	  }
 	}
       }
     }
@@ -1354,9 +1383,18 @@ ClpDynamicMatrix::refresh(ClpSimplex * model)
       columnLower[out]=columnLower[in];
       columnUpper[out]=columnUpper[in];
       cost[out]=cost[in];
+      double trueLower;
+      if (lowerSet_[iSet]>-1.0e20)
+	trueLower = lowerSet_[iSet];
+      else
+	trueLower=-COIN_DBL_MAX;
+      double trueUpper;
+      if (upperSet_[iSet]<1.0e20)
+	trueUpper = upperSet_[iSet];
+      else
+	trueUpper=COIN_DBL_MAX;
       model->nonLinearCost()->setOne(out,solution[out],
-					 columnLower[out],
-					 columnUpper[out],0.0);
+				     trueLower,trueUpper,0.0);
       model->setStatus(out,model->getStatus(in));
       toIndex_[iSet]=numberActiveSets_;
       rhsOffset_[numberActiveSets_+numberStaticRows_]= rhsOffset_[i+numberStaticRows_];
