@@ -12,7 +12,7 @@
   <ulink url="http://opensource.org/licenses/cpl.php">Common Public License</ulink>.
   CLP is written in C++, and is primarily intended to be used as a callable
   library (though a rudimentary stand-alone executable exists).
-  The first release was version .90.  The current release is version .99.9.
+  The first release was version .90.  The current release is version 1.00.2.
   </para>
   </answer>
 </qandaentry>
@@ -62,10 +62,10 @@
   <para>
   (DN 09/07/04) CLP has been tested on many problems of up to 1.5 million
   constraints and has shown itself as reliable as OSL. It is also being tested
-  in the context of
-  <ulink url="http://www.coin-or.org/faqs.html#SBB">SBB</ulink>
-  (&quot;Simple Branch and Bound&quot;, which is used to solve integer
-  programs), but more testing is needed before it can get to version 1.0.
+  in the context of developing
+  <ulink url="http://www.coin-or.org/faqs.html#CBC">CBC</ulink>
+  (&quot;Coin Branch and Cut&quot;, which is used to solve integer
+  programs); it is now considered reliable enough to be at version 1.0.
   </para>
   </answer>
 </qandaentry>
@@ -142,7 +142,7 @@
   </question>
   <answer>
   <para>
-  (DN 08/27/04) It is expected that version 1.0 will be released in time for the 2004
+  (DN 08/27/04) Version 1.0 was released in time for the 2004
   <ulink url="http://www.informs.org">INFORMS</ulink>
   <ulink url="http://www.informs.org/Conf/Denver2004/">Annual Meeting</ulink>
   (24-27 October, 2004).
