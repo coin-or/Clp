@@ -3454,9 +3454,14 @@ int ClpSimplex::dual (int ifValuesPass , int startFinishOptions)
       As far as I can see this is perfectly safe.
   */
   int returnCode = ((ClpSimplexDual *) this)->dual(ifValuesPass, startFinishOptions);
+  if ((specialOptions_&2048)!=0&&problemStatus_==10&&!numberPrimalInfeasibilities_
+      &&sumDualInfeasibilities_<1000.0*dualTolerance_&&perturbation_>=100)
+    problemStatus_=0; // ignore
   if (problemStatus_==10) {
     //printf("Cleaning up with primal\n");
     int savePerturbation = perturbation_;
+    int saveLog = handler_->logLevel();
+    //handler_->setLogLevel(63);
     perturbation_=100;
     bool denseFactorization = initialDenseFactorization();
     // It will be safe to allow dense
@@ -3472,7 +3477,8 @@ int ClpSimplex::dual (int ifValuesPass , int startFinishOptions)
     else
       returnCode = ((ClpSimplexDual *) this)->dual(0,startFinishOptions);
     if (problemStatus_==3&&numberIterations_<saveMax) {
-      //printf("looks like trouble - too many iterations in clean up - trying again\n");
+      if (handler_->logLevel()==63)
+	printf("looks like trouble - too many iterations in clean up - trying again\n");
       // flatten solution and try again
       int iRow,iColumn;
       for (iRow=0;iRow<numberRows_;iRow++) {
@@ -3520,6 +3526,7 @@ int ClpSimplex::dual (int ifValuesPass , int startFinishOptions)
     perturbation_=savePerturbation;
     if (problemStatus_==10) 
       problemStatus_=0;
+    handler_->setLogLevel(saveLog);
   }
   objective_->setActivated(saveQuadraticActivated);
   return returnCode;
