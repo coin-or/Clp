@@ -23,6 +23,7 @@
 #include "CoinIndexedVector.hpp"
 #include "CoinMpsIO.hpp"
 #include "ClpMessage.hpp"
+#include "ClpLinearObjective.hpp"
 
 static double cpuTime()
 {
@@ -116,7 +117,7 @@ void ClpModel::gutsOfDelete()
   rowObjective_=NULL;
   delete [] columnLower_;
   delete [] columnUpper_;
-  delete [] objective_;
+  delete objective_;
   columnLower_=NULL;
   columnUpper_=NULL;
   objective_=NULL;
@@ -168,7 +169,9 @@ ClpModel::gutsOfLoadModel (int numberRows, int numberColumns,
 
   rowLower_=ClpCopyOfArray(rowlb,numberRows_,-DBL_MAX);
   rowUpper_=ClpCopyOfArray(rowub,numberRows_,DBL_MAX);
-  objective_=ClpCopyOfArray(obj,numberColumns_,0.0);
+  double * objective=ClpCopyOfArray(obj,numberColumns_,0.0);
+  objective_ = new ClpLinearObjective(objective,numberColumns_);
+  delete [] objective;
   rowObjective_=ClpCopyOfArray(rowObjective,numberRows_);
   columnLower_=ClpCopyOfArray(collb,numberColumns_,0.0);
   columnUpper_=ClpCopyOfArray(colub,numberColumns_,DBL_MAX);
@@ -361,7 +364,10 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
     rowUpper_ = ClpCopyOfArray ( rhs.rowUpper_, numberRows_ );
     columnLower_ = ClpCopyOfArray ( rhs.columnLower_, numberColumns_ );
     columnUpper_ = ClpCopyOfArray ( rhs.columnUpper_, numberColumns_ );
-    objective_ = ClpCopyOfArray ( rhs.objective_, numberColumns_ );
+    if (rhs.objective_)
+      objective_  = rhs.objective_->clone();
+    else
+      objective_ = NULL;
     rowObjective_ = ClpCopyOfArray ( rhs.rowObjective_, numberRows_ );
     status_ = ClpCopyOfArray( rhs.status_,numberColumns_+numberRows_);
     ray_ = NULL;
@@ -626,8 +632,7 @@ ClpModel::resize (int newNumberRows, int newNumberColumns)
 				 newNumberColumns,0.0,true);
   reducedCost_ = resizeDouble(reducedCost_,numberColumns_,
 			      newNumberColumns,0.0,true);
-  objective_ = resizeDouble(objective_,numberColumns_,
-			    newNumberColumns,0.0,true);
+  objective_->resize(newNumberColumns);
   columnLower_ = resizeDouble(columnLower_,numberColumns_,
 			      newNumberColumns,0.0,true);
   columnUpper_ = resizeDouble(columnUpper_,numberColumns_,
@@ -725,8 +730,7 @@ ClpModel::deleteColumns(int number, const int * which)
 			      number, which, newSize);
   reducedCost_ = deleteDouble(reducedCost_,numberColumns_,
 			      number, which, newSize);
-  objective_ = deleteDouble(objective_,numberColumns_,
-			      number, which, newSize);
+  objective_->deleteSome(number, which);
   columnLower_ = deleteDouble(columnLower_,numberColumns_,
 			      number, which, newSize);
   columnUpper_ = deleteDouble(columnUpper_,numberColumns_,

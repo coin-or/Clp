@@ -88,7 +88,7 @@ public:
   /** Unpacks a column into an CoinIndexedvector
       Note that model is NOT const.  Bounds and objective could
       be modified if doing column generation (just for this variable) */
-  virtual void unpack(ClpSimplex * model,CoinIndexedVector * rowArray,
+  virtual void unpack(const ClpSimplex * model,CoinIndexedVector * rowArray,
 		   int column) const =0;
   /** Purely for column generation and similar ideas.  Allows
       matrix and any bounds or costs to be updated (sensibly).

@@ -11,6 +11,7 @@
 
 #include "ClpSimplex.hpp"
 #include "ClpFactorization.hpp"
+#include "ClpNetworkMatrix.hpp"
 #include <stdio.h>
 #include <assert.h>
 #include <cmath>
@@ -138,9 +139,15 @@ int main (int argc, const char *argv[])
     upperColumn[i]=ub[i];
     objective[i]=cost[i];
   }
+    // Create Packed Matrix
+  CoinPackedMatrix matrix;
+  int * lengths = NULL;
+  matrix.assignMatrix(true,numberRows,numberColumns,
+		      2*numberColumns,element,row,start,lengths);
+  ClpNetworkMatrix network(matrix);
   // load model
 
-  model.loadProblem(numberColumns,numberRows,start,row,element,
+  model.loadProblem(network,
 		    lowerColumn,upperColumn,objective,
 		    lower,upper);
 
@@ -157,6 +164,8 @@ int main (int argc, const char *argv[])
   delete [] start;
   delete [] row;
   model.factorization()->maximumPivots(200+model.numberRows()/100);
+  model.factorization()->maximumPivots(2);
+  model.messageHandler()->setLogLevel(63);
   model.dual();
   return 0;
 }    

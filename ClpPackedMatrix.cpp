@@ -729,7 +729,7 @@ ClpPackedMatrix::scale(ClpSimplex * model) const
       Note that model is NOT const.  Bounds and objective could
       be modified if doing column generation */
 void 
-ClpPackedMatrix::unpack(ClpSimplex * model,CoinIndexedVector * rowArray,
+ClpPackedMatrix::unpack(const ClpSimplex * model,CoinIndexedVector * rowArray,
 		   int iColumn) const 
 {
   const double * rowScale = model->rowScale();

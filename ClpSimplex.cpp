@@ -19,6 +19,7 @@
 #include "ClpPrimalColumnSteepest.hpp"
 #include "ClpNonLinearCost.hpp"
 #include "ClpMessage.hpp"
+#include "ClpLinearObjective.hpp"
 #include <cfloat>
 
 #include <string>
@@ -242,7 +243,7 @@ ClpSimplex::computePrimals ( const double * rowActivities,
   //work space
   CoinIndexedVector  * workSpace = rowArray_[0];
 
-  double * array = new double [numberRows_];
+  double * array = new double [numberRows_+1]; // +1 for network
   double * save = new double [numberRows_];
   double * previous = new double [numberRows_];
 
@@ -342,7 +343,7 @@ ClpSimplex::computeDuals()
   //work space
   CoinIndexedVector  * workSpace = rowArray_[0];
 
-  double * array = new double [numberRows_];
+  double * array = new double [numberRows_+1]; // +1 for network
   double * save = new double [numberRows_];
   double * previous = new double [numberRows_];
 
@@ -1640,7 +1641,7 @@ ClpSimplex::checkDualSolution()
   Unpacks one column of the matrix into indexed array 
 */
 void 
-ClpSimplex::unpack(CoinIndexedVector * rowArray)
+ClpSimplex::unpack(CoinIndexedVector * rowArray) const
 {
   rowArray->clear();
   if (sequenceIn_>=numberColumns_) {
@@ -1652,7 +1653,7 @@ ClpSimplex::unpack(CoinIndexedVector * rowArray)
   }
 }
 void 
-ClpSimplex::unpack(CoinIndexedVector * rowArray,int sequence)
+ClpSimplex::unpack(CoinIndexedVector * rowArray,int sequence) const
 {
   rowArray->clear();
   if (sequence>=numberColumns_) {
@@ -1725,7 +1726,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
     cost_ = new double[numberColumns_+numberRows_];
     objectiveWork_ = cost_;
     rowObjectiveWork_ = cost_+numberColumns_;
-    memcpy(objectiveWork_,objective_,numberColumns_*sizeof(double));
+    memcpy(objectiveWork_,objective(),numberColumns_*sizeof(double));
     if (rowObjective_)
       memcpy(rowObjectiveWork_,rowObjective_,numberRows_*sizeof(double));
     else
@@ -2427,7 +2428,7 @@ ClpSimplex::saveModel(const char * fileName)
 	return 1;
     if (outDoubleArray(rowUpper_,numberRows_,fp))
 	return 1;
-    if (outDoubleArray(objective_,numberColumns_,fp))
+    if (outDoubleArray(objective(),numberColumns_,fp))
 	return 1;
     if (outDoubleArray(rowObjective_,numberRows_,fp))
 	return 1;
@@ -2615,8 +2616,12 @@ ClpSimplex::restoreModel(const char * fileName)
 	return 1;
     if (inDoubleArray(rowUpper_,numberRows_,fp))
 	return 1;
-    if (inDoubleArray(objective_,numberColumns_,fp))
+    double * objective;
+    if (inDoubleArray(objective,numberColumns_,fp))
 	return 1;
+    delete objective_;
+    objective_ = new ClpLinearObjective(objective,numberColumns_);
+    delete [] objective;
     if (inDoubleArray(rowObjective_,numberRows_,fp))
 	return 1;
     if (inDoubleArray(columnLower_,numberColumns_,fp))
@@ -3229,10 +3234,11 @@ ClpSimplex::crash(double gap,int pivot)
   } else {
     double * dj = new double [numberColumns_];
     double * solution = columnActivity_;
+    const double * linearObjective = objective();
     //double objectiveValue=0.0;
     int iColumn;
     for (iColumn=0;iColumn<numberColumns_;iColumn++)
-      dj[iColumn] = optimizationDirection_*objective_[iColumn];
+      dj[iColumn] = optimizationDirection_*linearObjective[iColumn];
     for (iColumn=0;iColumn<numberColumns_;iColumn++) {
       // assume natural place is closest to zero
       double lowerBound = columnLower_[iColumn];

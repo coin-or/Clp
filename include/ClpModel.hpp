@@ -12,6 +12,7 @@
 #include "ClpMatrixBase.hpp"
 #include "CoinMessageHandler.hpp"
 #include "ClpParameters.hpp"
+#include "ClpObjective.hpp"
 
 #define CLP_INFINITY 1e30
 
@@ -204,8 +205,10 @@ public:
    inline double* rowUpper() const              { return rowUpper_; }
    inline const double* getRowUpper() const     { return rowUpper_; }
    /// Objective
-   inline double * objective() const            { return objective_; }
-   inline const double * getObjCoefficients() const { return objective_; }
+   inline double * objective() const            
+  { double offset; return objective_->gradient(NULL,offset); }
+   inline const double * getObjCoefficients() const 
+  { double offset; return objective_->gradient(NULL,offset); }
    /// Row Objective
    inline double * rowObjective() const         { return rowObjective_; }
    inline const double * getRowObjCoefficients() const {
@@ -398,7 +401,7 @@ protected:
   /// Row upper 
   double* rowUpper_;
   /// Objective
-  double * objective_;
+  ClpObjective * objective_;
   /// Row Objective (? sign)  - may be NULL
   double * rowObjective_;
   /// Column Lower

@@ -329,13 +329,13 @@ public:
      Uses sequenceIn_
      Also applies scaling if needed
   */
-  void unpack(CoinIndexedVector * rowArray);
+  void unpack(CoinIndexedVector * rowArray) const ;
   /**
      Unpacks one column of the matrix into indexed array 
      Slack if sequence>= numberColumns
      Also applies scaling if needed
   */
-  void unpack(CoinIndexedVector * rowArray,int sequence);
+  void unpack(CoinIndexedVector * rowArray,int sequence) const;
   
   /** 
       This does basis housekeeping and does values for in/out variables.

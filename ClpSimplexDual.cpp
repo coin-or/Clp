@@ -1,4 +1,4 @@
-
+ 
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
@@ -99,6 +99,7 @@
 #include "CoinIndexedVector.hpp"
 #include "CoinWarmStartBasis.hpp"
 #include "ClpDualRowDantzig.hpp"
+#include "ClpPlusMinusOneMatrix.hpp"
 #include "ClpMessage.hpp"
 #include <cfloat>
 #include <cassert>
@@ -195,7 +196,6 @@ int ClpSimplexDual::dual ( )
      feasibility tolerance.
 
   */
-
   algorithm_ = -1;
 
   // save data
@@ -1861,7 +1861,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 #ifdef CLP_DEBUG
   if (!rowScale_&&(handler_->logLevel()&32)) {
     double * objectiveSimplex 
-      = ClpCopyOfArray(objective_,numberColumns_,0.0);
+      = ClpCopyOfArray(objective(),numberColumns_,0.0);
     double * rowObjectiveSimplex 
       = ClpCopyOfArray(rowObjective_,numberRows_,0.0);
     int i;

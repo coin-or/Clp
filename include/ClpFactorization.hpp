@@ -105,6 +105,12 @@ public:
 			      CoinIndexedVector * regionSparse2) const;
   //@}
     
+  /**@name other stuff */
+  //@{ 
+  /** makes a row copy of L for speed and to allow very sparse problems */
+  void goSparse();
+  //@}
+
 ////////////////// data //////////////////
 private:
 
