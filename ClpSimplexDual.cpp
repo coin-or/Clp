@@ -262,7 +262,7 @@ int ClpSimplexDual::dual ( )
     
     // number of times we have declared optimality
     numberTimesOptimal_=0;
-    
+
     // Progress indicator
     ClpSimplexProgress progress(this);
     
@@ -541,6 +541,7 @@ ClpSimplexDual::whileIterating()
 	    break;
 	  }
 	}
+	assert(fabs(dualOut_)<1.0e30);
 	// if stable replace in basis
 	int updateStatus = factorization_->replaceColumn(rowArray_[2],
 							 pivotRow_,
@@ -875,9 +876,18 @@ ClpSimplexDual::dualRow()
     if (valueOut_>upperOut_) {
       directionOut_ = -1;
       dualOut_ = valueOut_ - upperOut_;
-    } else {
+    } else if (valueOut_<lowerOut_) {
       directionOut_ = 1;
       dualOut_ = lowerOut_ - valueOut_;
+    } else {
+      // odd - it's feasible - go to nearest
+      if (valueOut_-lowerOut_<upperOut_-valueOut_) {
+	directionOut_ = 1;
+	dualOut_ = lowerOut_ - valueOut_;
+      } else {
+	directionOut_ = -1;
+	dualOut_ = valueOut_ - upperOut_;
+      }
     }
 #ifdef CLP_DEBUG
     assert(dualOut_>=0.0);
@@ -1758,6 +1768,13 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	int i;
 	for (i=0;i<4;i++) 
 	  rowArray_[i]->clear();
+	// need to reject something
+	char x = isColumn(sequenceOut_) ? 'C' :'R';
+	handler_->message(CLP_SIMPLEX_FLAG,messages_)
+	  <<x<<sequenceWithin(sequenceOut_)
+	  <<CoinMessageEol;
+	setFlagged(sequenceOut_);
+        
 	forceFactorization_=1; // a bit drastic but ..
 	type = 2;
 	//assert (internalFactorize(1)==0);
@@ -1830,6 +1847,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 
   while (problemStatus_<=-3) {
     bool cleanDuals=situationChanged;
+    situationChanged=false;
     int numberChangedBounds=0;
     int doOriginalTolerance=0;
     if ( lastCleaned==numberIterations_)
@@ -2012,10 +2030,20 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
   else
     dualRowPivot_->saveWeights(this,3);
   // unflag all variables (we may want to wait a bit?)
-  int iRow;
-  for (iRow=0;iRow<numberRows_;iRow++) {
-    int iPivot=pivotVariable_[iRow];
-    clearFlagged(iPivot);
+  if (tentativeStatus!=-2) {
+    int iRow;
+    for (iRow=0;iRow<numberRows_;iRow++) {
+      int iPivot=pivotVariable_[iRow];
+      clearFlagged(iPivot);
+    }
+  }
+  // see if cutoff reached
+  double limit = 0.0;
+  getDblParam(ClpDualObjectiveLimit, limit);
+  if(fabs(limit)<1.0e30&&objectiveValue()*optimizationDirection_>
+	   optimizationDirection_*limit&&
+	   !numberAtFakeBound()) {
+    problemStatus_=1;
   }
   if (problemStatus_<0&&!changeMade_) {
     problemStatus_=4; // unknown

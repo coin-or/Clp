@@ -2109,6 +2109,9 @@ ClpSimplex::tightenPrimalBounds()
 	      maximumDown > rowUpper_[iRow]+tolerance) {
 	    // problem is infeasible - exit at once
 	    numberInfeasible++;
+	    if (handler_->logLevel()>3)
+	      printf("a %g %g %g %g\n",maximumUp,rowLower_[iRow],
+		     maximumDown,rowUpper_[iRow]);
 	    break;
 	  }
 
@@ -2128,8 +2131,11 @@ ClpSimplex::tightenPrimalBounds()
 
 		    // check infeasible (relaxed)
 		    if (columnUpper_[iColumn] - columnLower_[iColumn] < 
-			-100.0*tolerance) 
+			-100.0*tolerance) {
 		      numberInfeasible++;
+		      if (handler_->logLevel()>3)
+			printf("b %g %g \n",columnLower_[iColumn],columnUpper_[iColumn]);
+		    }
 		    infiniteLower=1; // skip looking at other bound
 		  }
 		}
@@ -2145,8 +2151,11 @@ ClpSimplex::tightenPrimalBounds()
 
 		    // check infeasible (relaxed)
 		    if (columnUpper_[iColumn] - columnLower_[iColumn] < 
-			-100.0*tolerance) 
+			-100.0*tolerance) {
 		      numberInfeasible++;
+		      if (handler_->logLevel()>3)
+			printf("c %g %g \n",columnLower_[iColumn],columnUpper_[iColumn]);
+		    }
 		    infiniteLower=1; // skip looking at other bound
 		  }
 		}
@@ -2171,8 +2180,11 @@ ClpSimplex::tightenPrimalBounds()
 
 		    // check infeasible (relaxed)
 		    if (columnUpper_[iColumn] - columnLower_[iColumn] < 
-			-100.0*tolerance) 
+			-100.0*tolerance) {
 		      numberInfeasible++;
+		      if (handler_->logLevel()>3)
+			printf("d %g %g \n",columnLower_[iColumn],columnUpper_[iColumn]);
+		    }
 		  }
 		} 
 	      } else {
@@ -2187,8 +2199,11 @@ ClpSimplex::tightenPrimalBounds()
 
 		    // check infeasible (relaxed)
 		    if (columnUpper_[iColumn] - columnLower_[iColumn] < 
-			-100.0*tolerance) 
+			-100.0*tolerance) {
 		      numberInfeasible++;
+		      if (handler_->logLevel()>3)
+			printf("e %g %g \n",columnLower_[iColumn],columnUpper_[iColumn]);
+		    }
 		  }
 		}
 	      }

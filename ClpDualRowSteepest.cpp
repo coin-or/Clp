@@ -127,19 +127,68 @@ ClpDualRowSteepest::pivotRow()
   int number = infeasible_->getNumElements();
   const int * pivotVariable =model_->pivotVariable();
   int chosenRow=-1;
+  int lastPivotRow = model_->pivotRow();
   double tolerance=model_->currentPrimalTolerance();
   // we can't really trust infeasibilities if there is primal error
   if (model_->largestPrimalError()>1.0e-8)
     tolerance *= model_->largestPrimalError()/1.0e-8;
   tolerance *= tolerance; // as we are using squares
+  double * solution = model_->solutionRegion();
+  double * lower = model_->lowerRegion();
+  double * upper = model_->upperRegion();
+  // do last pivot row one here
+  if (lastPivotRow>=0) {
+    int iPivot=model_->sequenceIn();
+    if (iPivot>=0) {
+      double value = solution[iPivot];
+      double lower = model_->lower(iPivot);
+      double upper = model_->upper(iPivot);
+      if (value>upper+tolerance) {
+	// store square in list
+	if (infeas[lastPivotRow])
+	  infeas[lastPivotRow] = (value-upper)*(value-upper); // already there
+	else
+	  infeasible_->quickAdd(lastPivotRow,(value-upper)*(value-upper));
+      } else if (value<lower-tolerance) {
+	// store square in list
+	if (infeas[lastPivotRow])
+	  infeas[lastPivotRow] = (value-lower)*(value-lower); // already there
+	else
+	  infeasible_->add(lastPivotRow,(value-lower)*(value-lower));
+      } else {
+	// feasible - was it infeasible - if so set tiny
+	if (infeas[lastPivotRow])
+	  infeas[lastPivotRow] = 1.0e-100;
+      }
+    }
+  }
   for (i=0;i<number;i++) {
     iRow = index[i];
     double value = infeas[iRow];
     if (value>largest*weights_[iRow]&&value>tolerance) {
+      // make last pivot row last resort choice
+      if (iRow==lastPivotRow) {
+	if (value*1.0e-10<largest*weights_[iRow]) 
+	  continue;
+	else 
+	  value *= 1.0e-10;
+      }
       int iSequence = pivotVariable[iRow];
       if (!model_->flagged(iSequence)) {
-	chosenRow=iRow;
-	largest=value/weights_[iRow];
+	//#define CLP_DEBUG 1
+#ifdef CLP_DEBUG
+	double value2=0.0;
+	if (solution[iSequence]>upper[iSequence]+tolerance) 
+	  value2=solution[iSequence]-upper[iSequence];
+	else if (solution[iSequence]<lower[iSequence]-tolerance) 
+	  value2=solution[iSequence]-lower[iSequence];
+	assert(fabs(value2*value2-infeas[iRow])<1.0e-8*min(value2*value2,infeas[iRow]));
+#endif
+	if (solution[iSequence]>upper[iSequence]+tolerance||
+	    solution[iSequence]<lower[iSequence]-tolerance) {
+	  chosenRow=iRow;
+	  largest=value/weights_[iRow];
+	}
       }
     }
   }
@@ -286,12 +335,13 @@ ClpDualRowSteepest::updatePrimalSolution(
     double lower = model_->lower(iPivot);
     double upper = model_->upper(iPivot);
     // But if pivot row then use value of incoming
+    // Although it is safer to recompute before next selection
+    // in case something odd happens
     if (iRow==pivotRow) {
       iPivot = model_->sequenceIn();
-      // make last resort choice
-      lower = 1.0e-6*model_->lower(iPivot);
-      upper = 1.0e-6*model_->upper(iPivot);
-      value = 1.0e-6*model_->valueIncomingDual();
+      lower = model_->lower(iPivot);
+      upper = model_->upper(iPivot);
+      value = model_->valueIncomingDual();
     }
     if (value>upper+tolerance) {
       // store square in list
