@@ -120,12 +120,14 @@ public:
   */
   virtual int updatePivot(ClpSimplex * model,double oldInValue, double oldOutValue);
   /// Sets up an effective RHS and does gub crash if needed
-  void useEffectiveRhs(ClpSimplex * model,bool cheapest=true);
+  virtual void useEffectiveRhs(ClpSimplex * model,bool cheapest=true);
   /** Returns effective RHS if it is being used.  This is used for long problems
       or big gub or anywhere where going through full columns is
       expensive.  This may re-compute */
   virtual double * effectiveRhs(ClpSimplex * model,bool forceRefresh=false,
 				bool check=false);
+  /// This is local to Gub to allow synchronization when status is good
+  virtual void synchronize(ClpSimplex * model);
   //@}
 
 
@@ -171,6 +173,8 @@ public:
   virtual ClpMatrixBase * subsetClone (
 		    int numberRows, const int * whichRows,
 		    int numberColumns, const int * whichColumns) const ;
+  /** redoes next_ for a set.  */
+  void redoSet(ClpSimplex * model,int newKey, int oldKey, int iSet); 
   //@}
   /**@name gets and sets */
   //@{
@@ -256,8 +260,9 @@ protected:
   double * changeCost_;
   /// Key variable of set
   mutable int * keyVariable_;
-  /** Next basic variable in set - starts at key and end with -(set+1) */
-  // May be easier to get rid of next_ - think when starts working
+  /** Next basic variable in set - starts at key and end with -(set+1).
+      Now changes to -(nonbasic+1).
+      next_ has extra space for 2* longest set */
   mutable int * next_;
   /// Backward pointer to index in CoinIndexedVector
   int * toIndex_;
