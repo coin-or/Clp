@@ -3747,6 +3747,9 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
   int useFactorization=false;
   if ((startFinishOptions&2)!=0&&(whatsChanged_&(2+512))==2+512)
     useFactorization=true; // Keep factorization if possible
+  // switch off factorization if bad
+  if (pivotVariable_[0]<0)
+    useFactorization=false;
   if (!useFactorization||factorization_->numberRows()!=numberRows_) {
     useFactorization = false;
     factorization_->increasingRows(2);

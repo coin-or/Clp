@@ -296,7 +296,8 @@ public:
 		      double ** outputSolution,
 		      int * outputStatus, int * outputIterations,
 		      bool stopOnFirstInfeasible=true,
-		      bool alwaysFinish=false);
+		      bool alwaysFinish=false,
+		      int startFinishOptions=0);
   //@}
 
   /**@name Needed for functionality of OsiSimplexInterface */

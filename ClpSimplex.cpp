@@ -4023,13 +4023,14 @@ int ClpSimplex::strongBranching(int numberVariables,const int * variables,
 				double ** outputSolution,
 				int * outputStatus, int * outputIterations,
 				bool stopOnFirstInfeasible,
-				bool alwaysFinish)
+				bool alwaysFinish,
+				int startFinishOptions)
 {
   return ((ClpSimplexDual *) this)->strongBranching(numberVariables,variables,
 						    newLower,  newUpper,outputSolution,
 						    outputStatus, outputIterations,
 						    stopOnFirstInfeasible,
-						    alwaysFinish);
+						    alwaysFinish,startFinishOptions);
 }
 /* Borrow model.  This is so we dont have to copy large amounts
    of data around.  It assumes a derived class wants to overwrite
