@@ -2022,6 +2022,7 @@ ClpDataSave::operator=(const ClpDataSave& rhs)
 // Solve a problem with no elements - return status
 int ClpModel::emptyProblem(int * infeasNumber, double * infeasSum,bool printMessage)
 {
+  secondaryStatus_=6; // so user can see something odd
   if (printMessage)
     handler_->message(CLP_EMPTY_PROBLEM,messages_)
       <<numberRows_

@@ -859,6 +859,7 @@ public:
       1024 - In branch and bound
       2048 - Don't bother to re-factorize if < 20 iterations
       4096 - Skip some optimality checks
+      8192 - Do Primal when cleaning up primal
   */
   inline unsigned int specialOptions() const
   { return specialOptions_;};

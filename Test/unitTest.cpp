@@ -619,6 +619,18 @@ ClpSimplexUnitTest(const std::string & mpsDir,
       assert (sequenceIncrease[i]==sequenceDecrease2[i]);
       assert (sequenceDecrease[i]==sequenceIncrease2[i]);
     }
+    // Now delete all rows and see what happens
+    model.deleteRows(model.numberRows(),which);
+    model.primal();
+    // ranging
+    if (!model.dualRanging(8,which,costIncrease,sequenceIncrease,
+                           costDecrease,sequenceDecrease)) {
+      for (i=0;i<8;i++) {
+        printf("%d increase %g %d, decrease %g %d\n",
+               i,costIncrease[i],sequenceIncrease[i],
+               costDecrease[i],sequenceDecrease[i]);
+      }
+    }
   }
   // Test primal ranging
   {    

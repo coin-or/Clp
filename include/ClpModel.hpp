@@ -275,6 +275,7 @@ public:
        3 - scaled problem optimal - unscaled problem has dual infeasibilities
        4 - scaled problem optimal - unscaled problem has primal and dual infeasibilities
        5 - giving up in primal with flagged variables
+       6 - failed due to empty problem check
        100 up - translation of enum from ClpEventHandler
    */
    inline int secondaryStatus() const            { return secondaryStatus_; }

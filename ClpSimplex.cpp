@@ -3628,7 +3628,7 @@ int ClpSimplex::primal (int ifValuesPass , int startFinishOptions)
     setInitialDenseFactorization(true);
     // check which algorithms allowed
     int dummy;
-    if ((matrix_->generalExpanded(this,4,dummy)&2)!=0) {
+    if ((matrix_->generalExpanded(this,4,dummy)&2)!=0&&(specialOptions_&8192)==0) {
       double saveBound = dualBound_;
       // upperOut_ has largest away from bound
       dualBound_=CoinMin(2.0*upperOut_,dualBound_);
@@ -3684,7 +3684,7 @@ int ClpSimplex::dualRanging(int numberCheck,const int * which,
       problemStatus_=0;
   }
   perturbation_=savePerturbation;
-  if (problemStatus_) {
+  if (problemStatus_||secondaryStatus_==6) {
     finish(); // get rid of arrays
     return 1; // odd status
   }
@@ -3733,7 +3733,7 @@ int ClpSimplex::primalRanging(int numberCheck,const int * which,
       problemStatus_=0;
   }
   perturbation_=savePerturbation;
-  if (problemStatus_) {
+  if (problemStatus_||secondaryStatus_==6) {
     finish(); // get rid of arrays
     return 1; // odd status
   }
