@@ -3634,19 +3634,19 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
 				    double ** outputSolution,
 				    int * outputStatus, int * outputIterations,
 				    bool stopOnFirstInfeasible,
-				    bool alwaysFinish)
+				    bool alwaysFinish,
+				    int startFinishOptions)
 {
   int i;
   int returnCode=0;
   double saveObjectiveValue = objectiveValue_;
-#if 1
   algorithm_ = -1;
 
   //scaling(false);
 
   // put in standard form (and make row copy)
   // create modifiable copies of model rim and do optional scaling
-  createRim(7+8+16+32,true);
+  createRim(7+8+16+32,true,startFinishOptions);
 
   // change newLower and newUpper if scaled
 
@@ -3655,25 +3655,30 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
   // We can either set increasing rows so ...IsBasic gives pivot row
   // or we can just increment iBasic one by one
   // for now let ...iBasic give pivot row
-  factorization_->increasingRows(2);
-  // row activities have negative sign
-  factorization_->slackValue(-1.0);
-  factorization_->zeroTolerance(1.0e-13);
+  int useFactorization=false;
+  if ((startFinishOptions&2)!=0)
+    useFactorization=true; // Keep factorization if possible
+  if (!useFactorization||factorization_->numberRows()!=numberRows_) {
+    useFactorization = false;
+    factorization_->increasingRows(2);
+    // row activities have negative sign
+    factorization_->slackValue(-1.0);
+    factorization_->zeroTolerance(1.0e-13);
 
-  int factorizationStatus = internalFactorize(0);
-  if (factorizationStatus<0) {
-    // some error
-    // we should either debug or ignore 
+    int factorizationStatus = internalFactorize(0);
+    if (factorizationStatus<0) {
+      // some error
+      // we should either debug or ignore 
 #ifndef NDEBUG
-    printf("***** ClpDual strong branching factorization error - debug\n");
+      printf("***** ClpDual strong branching factorization error - debug\n");
 #endif
-    return -2;
+      return -2;
+    } else if (factorizationStatus) {
+      handler_->message(CLP_SINGULARITIES,messages_)
+	<<factorizationStatus
+	<<CoinMessageEol;
+    }
   }
-  else if (factorizationStatus)
-    handler_->message(CLP_SINGULARITIES,messages_)
-      <<factorizationStatus
-      <<CoinMessageEol;
-  
   // save stuff
   ClpFactorization saveFactorization(*factorization_);
   // save basis and solution 
@@ -3858,111 +3863,17 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
   delete [] saveObjective;
   delete [] saveStatus;
   delete [] savePivot;
-
-  // Get rid of some arrays and empty factorization
-  deleteRim();
-#else
-  // save basis and solution 
-  double * rowSolution = new double[numberRows_];
-  memcpy(rowSolution,rowActivity_,numberRows_*sizeof(double));
-  double * columnSolution = new double[numberColumns_];
-  memcpy(columnSolution,columnActivity_,numberColumns_*sizeof(double));
-  unsigned char * saveStatus = 
-    new unsigned char [numberRows_+numberColumns_];
-  if (!status_) {
-    // odd but anyway setup all slack basis
-    status_ = new unsigned char [numberColumns_+numberRows_];
-    memset(status_,0,(numberColumns_+numberRows_)*sizeof(char));
+  if ((startFinishOptions&1)==0) {
+    deleteRim(1);
+    whatsChanged_=0;
+  } else {
+    // Put back original factorization
+    delete factorization_;
+    factorization_ = new ClpFactorization(saveFactorization);
+    deleteRim(0);
+    // mark all as current
+    whatsChanged_ = 0xffff;
   }
-  memcpy(saveStatus,status_,(numberColumns_+numberRows_)*sizeof(char));
-  int iSolution =0;
-  for (i=0;i<numberVariables;i++) {
-    int iColumn = variables[i];
-    double objectiveChange;
-    
-    // try down
-    
-    double saveUpper = columnUpper_[iColumn];
-    columnUpper_[iColumn] = newUpper[i];
-    int status=dual(0);
-    memcpy(outputSolution[iSolution],columnActivity_,numberColumns_*sizeof(double));
-    outputStatus[iSolution]=status;
-    outputIterations[iSolution]=numberIterations_;
-    iSolution++;
-
-    // restore
-    columnUpper_[iColumn] = saveUpper;
-    memcpy(rowActivity_,rowSolution,numberRows_*sizeof(double));
-    memcpy(columnActivity_,columnSolution,numberColumns_*sizeof(double));
-    memcpy(status_,saveStatus,(numberColumns_+numberRows_)*sizeof(char));
-
-    if (problemStatus_==0&&!isDualObjectiveLimitReached()) {
-      objectiveChange = objectiveValue_-saveObjectiveValue;
-    } else {
-      objectiveChange = 1.0e100;
-    }
-    newUpper[i]=objectiveChange;
-#ifdef CLP_DEBUG
-    printf("down on %d costs %g\n",iColumn,objectiveChange);
-#endif
-	  
-    // try up
-    
-    double saveLower = columnLower_[iColumn];
-    columnLower_[iColumn] = newLower[i];
-    status=dual(0);
-    memcpy(outputSolution[iSolution],columnActivity_,numberColumns_*sizeof(double));
-    outputStatus[iSolution]=status;
-    outputIterations[iSolution]=numberIterations_;
-    iSolution++;
-
-    // restore
-    columnLower_[iColumn] = saveLower;
-    memcpy(rowActivity_,rowSolution,numberRows_*sizeof(double));
-    memcpy(columnActivity_,columnSolution,numberColumns_*sizeof(double));
-    memcpy(status_,saveStatus,(numberColumns_+numberRows_)*sizeof(char));
-
-    if (problemStatus_==0&&!isDualObjectiveLimitReached()) {
-      objectiveChange = objectiveValue_-saveObjectiveValue;
-    } else {
-      objectiveChange = 1.0e100;
-    }
-    newLower[i]=objectiveChange;
-#ifdef CLP_DEBUG
-    printf("up on %d costs %g\n",iColumn,objectiveChange);
-#endif
-	  
-    /* Possibilities are:
-       Both sides feasible - store
-       Neither side feasible - set objective high and exit
-       One side feasible - change bounds and resolve
-    */
-    if (newUpper[i]<1.0e100) {
-      if(newLower[i]<1.0e100) {
-	// feasible - no action
-      } else {
-	// up feasible, down infeasible
-	returnCode=1;
-	if (stopOnFirstInfeasible)
-	  break;
-      }
-    } else {
-      if(newLower[i]<1.0e100) {
-	// down feasible, up infeasible
-	returnCode=1;
-	if (stopOnFirstInfeasible)
-	  break;
-      } else {
-	// neither side feasible
-	returnCode=-1;
-	break;
-      }
-    }
-  }
-  delete [] rowSolution;
-  delete [] columnSolution;
-  delete [] saveStatus;
-#endif
   objectiveValue_ = saveObjectiveValue;
   return returnCode;
 }
