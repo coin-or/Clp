@@ -260,9 +260,13 @@ public:
   /// Row names
   const std::vector<std::string> * rowNames() const
   {return &rowNames_;};
+  const std::string rowName(int iRow) const
+  {return rowNames_[iRow];};
   /// Column names
   const std::vector<std::string> * columnNames() const
   {return &columnNames_;};
+  const std::string columnName(int iColumn) const
+  {return columnNames_[iColumn];};
   //@}
 
 

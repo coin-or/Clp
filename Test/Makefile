@@ -62,6 +62,7 @@ CXXFLAGS += $(addprefix -D,${Define})
 
 LIBDIRS := ${LibDir}
 LIBS    := ${LibName}
+LIBS    += libOsiClp
 
 LDFLAGS := $(addprefix -L,$(LIBDIRS))
 LDFLAGS += $(call ifprefix,$(SHLINKPREFIX),$(LIBDIRS))

@@ -6,7 +6,7 @@
 #endif
 
 #include <cassert>
-#define CLPVERSION "0.90"
+#define CLPVERSION "0.92"
 
 #include "ClpFactorization.hpp"
 #include "OsiMpsReader.hpp"
@@ -18,6 +18,13 @@
 #include "OsiPackedMatrix.hpp"
 #include "OsiPackedVector.hpp"
 #include "OsiWarmStartBasis.hpp"
+// For Branch and bound
+#include "OsiClpSolverInterface.hpp"
+#include "OsiCuts.hpp"
+#include "OsiRowCut.hpp"
+#include "OsiColCut.hpp"
+#include "OsiOsiMessage.hpp"
+
 #include <stdio.h>
 
 #include <cmath>
@@ -70,7 +77,7 @@ enum ClpParameterType {
   DIRECTION=201,DUALPIVOT,SCALING,ERRORSALLOWED,KEEPNAMES,SPARSEFACTOR,
   PRIMALPIVOT,
   
-  DIRECTORY=301,IMPORT,DUALSIMPLEX,PRIMALSIMPLEX,
+  DIRECTORY=301,IMPORT,EXPORT,RESTORE,SAVE,DUALSIMPLEX,PRIMALSIMPLEX,BAB,
   MAXIMIZE,MINIMIZE,EXIT,STDIN,UNITTEST,NETLIB_DUAL,NETLIB_PRIMAL,SOLUTION,
   TIGHTEN,FAKEBOUND,VERSION,
 
@@ -805,11 +812,23 @@ stopping",
       ClpItem("import","Import model from mps file",
 	      IMPORT);
     parameters[numberParameters++]=
+      ClpItem("export","Export model as mps file",
+	      EXPORT);
+    parameters[numberParameters++]=
+      ClpItem("save!Model","Save model to binary file",
+	      SAVE);
+    parameters[numberParameters++]=
+      ClpItem("restore!Model","Restore model from binary file",
+	      RESTORE);
+    parameters[numberParameters++]=
       ClpItem("dualS!implex","Do dual simplex algorithm",
 	      DUALSIMPLEX);
     parameters[numberParameters++]=
       ClpItem("primalS!implex","Do primal simplex algorithm",
 	      PRIMALSIMPLEX);
+    parameters[numberParameters++]=
+      ClpItem("branch!Andbound","Do Branch and Bound",
+	      BAB);
     parameters[numberParameters++]=
       ClpItem("tight!en","Poor person's preSolve for now",
 	      TIGHTEN);
@@ -1075,6 +1094,38 @@ stopping",
 	      std::cout<<"** Current model not valid"<<std::endl;
 	    }
 	    break;
+	  case BAB:
+#if 0
+	    if (goodModels[iModel]) {
+	      int saveMaxIterations = models[iModel].maximumIterations();
+#ifdef READLINE     
+	      currentModel = models+iModel;
+#endif
+	      {
+		// get OsiClp stuff 
+		OsiClpSolverInterface m(models+iModel);
+		m.getModelPtr()->messageHandler()->setLogLevel(0);
+		m.branchAndBound();
+		m.resolve();
+		std::cout<<"Optimal solution "<<m.getObjValue()<<std::endl;
+		m.releaseClp();
+	      }
+	      models[iModel].setMaximumIterations(saveMaxIterations);
+	      time2 = cpuTime();
+	      totalTime += time2-time1;
+	      std::cout<<"Result "<<models[iModel].status()<<
+		" - "<<models[iModel].objectiveValue()<<
+		" iterations "<<models[iModel].numberIterations()<<
+		" took "<<time2-time1<<" seconds - total "<<totalTime<<std::endl;
+	      if (models[iModel].status())
+		std::cerr<<"Non zero status "<<models[iModel].status()<<
+		  std::endl;
+	      time1=time2;
+	    } else {
+	      std::cout<<"** Current model not valid"<<std::endl;
+	    }
+#endif
+	    break;
 	  case IMPORT:
 	    {
 	      // get next field
@@ -1104,7 +1155,7 @@ stopping",
 						   keepImportNames,
 						   allowImportErrors);
 		if (!status||(status>0&&allowImportErrors)) {
-		  // I don't think there is any need for ths but ..
+		  // I don't think there is any need for this but ..
 		  OsiWarmStartBasis allSlack;
 		  goodModels[iModel]=true;
 		  models[iModel].setBasis(allSlack);
@@ -1115,6 +1166,126 @@ stopping",
 		  // errors
 		  std::cout<<"There were "<<status<<
 		    " errors on input"<<std::endl;
+		}
+	      }
+	    }
+	    break;
+	  case EXPORT:
+	    {
+	      // get next field
+	      field = getString(argc,argv);
+	      std::string fileName;
+	      bool canOpen=false;
+	      if (field[0]=='/'||field[0]=='~')
+		fileName = field;
+	      else
+		fileName = directory+field;
+	      FILE *fp=fopen(fileName.c_str(),"w");
+	      if (fp) {
+		// can open - lets go for it
+		fclose(fp);
+		canOpen=true;
+	      } else {
+		std::cout<<"Unable to open file "<<fileName<<std::endl;
+	      }
+	      if (canOpen) {
+		// get OsiClp stuff 
+		OsiClpSolverInterface m(models+iModel);
+		// Convert names
+		int iRow;
+		int numberRows=models[iModel].numberRows();
+
+		char ** rowNames = new char * [numberRows];
+		for (iRow=0;iRow<numberRows;iRow++) {
+		  rowNames[iRow] = 
+		    strdup(models[iModel].rowName(iRow).c_str());
+		}
+		int iColumn;
+		int numberColumns=models[iModel].numberColumns();
+
+		char ** columnNames = new char * [numberColumns];
+		for (iColumn=0;iColumn<numberColumns;iColumn++) {
+		  columnNames[iColumn] = 
+		    strdup(models[iModel].columnName(iColumn).c_str());
+		}
+		m.writeMps(fileName.c_str(),
+			   (const char **) rowNames,
+			   (const char **) columnNames);
+		for (iRow=0;iRow<numberRows;iRow++) {
+		  free(rowNames[iRow]);
+		}
+		delete [] rowNames;
+		for (iColumn=0;iColumn<numberColumns;iColumn++) {
+		  free(columnNames[iColumn]);
+		}
+		delete [] columnNames;
+		m.releaseClp();
+		time2 = cpuTime();
+		totalTime += time2-time1;
+		time1=time2;
+	      }
+	    }
+	    break;
+	  case SAVE:
+	    {
+	      // get next field
+	      field = getString(argc,argv);
+	      std::string fileName;
+	      bool canOpen=false;
+	      if (field[0]=='/'||field[0]=='~')
+		fileName = field;
+	      else
+		fileName = directory+field;
+	      FILE *fp=fopen(fileName.c_str(),"wb");
+	      if (fp) {
+		// can open - lets go for it
+		fclose(fp);
+		canOpen=true;
+	      } else {
+		std::cout<<"Unable to open file "<<fileName<<std::endl;
+	      }
+	      if (canOpen) {
+		int status =models[iModel].saveModel(fileName.c_str());
+		if (!status) {
+		  goodModels[iModel]=true;
+		  time2 = cpuTime();
+		  totalTime += time2-time1;
+		  time1=time2;
+		} else {
+		  // errors
+		  std::cout<<"There were errors on output"<<std::endl;
+		}
+	      }
+	    }
+	    break;
+	  case RESTORE:
+	    {
+	      // get next field
+	      field = getString(argc,argv);
+	      std::string fileName;
+	      bool canOpen=false;
+	      if (field[0]=='/'||field[0]=='~')
+		fileName = field;
+	      else
+		fileName = directory+field;
+	      FILE *fp=fopen(fileName.c_str(),"rb");
+	      if (fp) {
+		// can open - lets go for it
+		fclose(fp);
+		canOpen=true;
+	      } else {
+		std::cout<<"Unable to open file "<<fileName<<std::endl;
+	      }
+	      if (canOpen) {
+		int status =models[iModel].restoreModel(fileName.c_str());
+		if (!status) {
+		  goodModels[iModel]=true;
+		  time2 = cpuTime();
+		  totalTime += time2-time1;
+		  time1=time2;
+		} else {
+		  // errors
+		  std::cout<<"There were errors on input"<<std::endl;
 		}
 	      }
 	    }

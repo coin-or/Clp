@@ -43,7 +43,7 @@ include ${MakefileDir}/Makefile.location
 # This modification seems to be needed
 export ExtraIncDir := ../Osi/include
 export ExtraLibDir := 
-export ExtraLibName :=
+export ExtraLibName := 
 export ExtraDefine := 
 
 export LibType OptLevel LIBNAME LIBSRC
