@@ -2877,6 +2877,8 @@ int ClpSimplex::dual (int ifValuesPass )
     returnCode = ((ClpSimplexPrimal *) this)->primal(1);
     setInitialDenseFactorization(denseFactorization);
     perturbation_=savePerturbation;
+    if (problemStatus_==10) 
+      problemStatus_=0;
   }
   return returnCode;
 }
@@ -2895,6 +2897,8 @@ int ClpSimplex::primal (int ifValuesPass )
     returnCode = ((ClpSimplexDual *) this)->dual(0);
     setInitialDenseFactorization(denseFactorization);
     perturbation_=savePerturbation;
+    if (problemStatus_==10) 
+      problemStatus_=0;
   }
   return returnCode;
 }

@@ -1522,8 +1522,6 @@ ClpPackedMatrix::allElementsInRange(ClpModel * model,
   int firstBadColumn=-1;
   int firstBadRow=-1;
   double firstBadElement=0.0;
-  if (!matrix_)
-    return false; // No matrix?
   // get matrix data pointers
   const int * row = matrix_->getIndices();
   const CoinBigIndex * columnStart = matrix_->getVectorStarts();
