@@ -82,7 +82,14 @@ public:
 				 double * element)  ;
   /** Creates scales for column copy (rowCopy in model may be modified)
       returns non-zero if no scaling done */
-  virtual int scale(ClpSimplex * model) const ;
+  virtual int scale(ClpModel * model) const ;
+  /** Scales rowCopy if column copy scaled
+      Only called if scales already exist */
+  virtual void scaleRowCopy(ClpModel * model) const ;
+  /** Realy really scales column copy 
+      Only called if scales already exist.
+      Up to user ro delete */
+  virtual ClpMatrixBase * scaledColumnCopy(ClpModel * model) const ;
   /** Checks if all elements are in valid range.  Can just
       return true if you are not paranoid.  For Clp I will
       probably expect no zeros.  Code can modify matrix to get rid of

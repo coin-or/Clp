@@ -45,6 +45,9 @@ ClpModel::ClpModel () :
   matrix_(NULL),
   rowCopy_(NULL),
   ray_(NULL),
+  rowScale_(NULL),
+  columnScale_(NULL),
+  scalingFlag_(3),
   status_(NULL),
   integerType_(NULL),
   userPointer_(NULL),
@@ -113,6 +116,10 @@ void ClpModel::gutsOfDelete()
   rowCopy_=NULL;
   delete [] ray_;
   ray_ = NULL;
+  delete [] rowScale_;
+  rowScale_ = NULL;
+  delete [] columnScale_;
+  columnScale_ = NULL;
   delete [] integerType_;
   integerType_ = NULL;
   delete [] status_;
@@ -335,6 +342,7 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
   numberRows_ = rhs.numberRows_;
   numberColumns_ = rhs.numberColumns_;
   userPointer_ = rhs.userPointer_;
+  scalingFlag_ = rhs.scalingFlag_;
   if (trueCopy) {
     lengthNames_ = rhs.lengthNames_;
     rowNames_ = rhs.rowNames_;
@@ -368,6 +376,8 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
     rowUpper_ = ClpCopyOfArray ( rhs.rowUpper_, numberRows_ );
     columnLower_ = ClpCopyOfArray ( rhs.columnLower_, numberColumns_ );
     columnUpper_ = ClpCopyOfArray ( rhs.columnUpper_, numberColumns_ );
+    rowScale_ = ClpCopyOfArray(rhs.rowScale_,numberRows_);
+    columnScale_ = ClpCopyOfArray(rhs.columnScale_,numberColumns_);
     if (rhs.objective_)
       objective_  = rhs.objective_->clone();
     else
@@ -402,6 +412,8 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
     matrix_ = rhs.matrix_;
     rowCopy_ = NULL;
     ray_ = rhs.ray_;
+    rowScale_ = rhs.rowScale_;
+    columnScale_ = rhs.columnScale_;
     lengthNames_ = 0;
     rowNames_ = std::vector<std::string> ();
     columnNames_ = std::vector<std::string> ();
@@ -450,6 +462,8 @@ ClpModel::returnModel(ClpModel & otherModel)
   delete [] otherModel.ray_;
   otherModel.ray_ = ray_;
   ray_ = NULL;
+  rowScale_=NULL;
+  columnScale_=NULL;
   // do status
   if (otherModel.status_!=status_) {
     delete [] otherModel.status_;
@@ -667,6 +681,10 @@ ClpModel::resize (int newNumberRows, int newNumberColumns)
     delete [] ray_;
     ray_ = NULL;
   }
+  delete [] rowScale_;
+  rowScale_ = NULL;
+  delete [] columnScale_;
+  columnScale_ = NULL;
   if (status_) {
     unsigned char * tempC = new unsigned char [newNumberColumns+newNumberRows];
     unsigned char * tempR = tempC + newNumberColumns;
@@ -755,6 +773,10 @@ ClpModel::deleteRows(int number, const int * which)
   secondaryStatus_ = 0;
   delete [] ray_;
   ray_ = NULL;
+  delete [] rowScale_;
+  rowScale_ = NULL;
+  delete [] columnScale_;
+  columnScale_ = NULL;
 }
 // Deletes columns
 void 
@@ -814,6 +836,10 @@ ClpModel::deleteColumns(int number, const int * which)
   secondaryStatus_ = 0;
   delete [] ray_;
   ray_ = NULL;
+  delete [] rowScale_;
+  rowScale_ = NULL;
+  delete [] columnScale_;
+  columnScale_ = NULL;
 }
 // Add rows
 void 
@@ -839,6 +865,10 @@ ClpModel::addRows(int number, const double * rowLower,
       delete rows[iRow];
     delete [] rows;
   }
+  delete [] rowScale_;
+  rowScale_ = NULL;
+  delete [] columnScale_;
+  columnScale_ = NULL;
 }
 // Add rows
 void 
@@ -865,6 +895,10 @@ ClpModel::addRows(int number, const double * rowLower,
       delete rows[iRow];
     delete [] rows;
   }
+  delete [] rowScale_;
+  rowScale_ = NULL;
+  delete [] columnScale_;
+  columnScale_ = NULL;
 }
 void 
 ClpModel::addRows(int number, const double * rowLower, 
@@ -909,6 +943,10 @@ ClpModel::addRows(int number, const double * rowLower,
   if (!matrix_)
     createEmptyMatrix();
   matrix_->appendRows(number,rows);
+  delete [] rowScale_;
+  rowScale_ = NULL;
+  delete [] columnScale_;
+  columnScale_ = NULL;
 }
 // Add columns
 void 
@@ -936,6 +974,10 @@ ClpModel::addColumns(int number, const double * columnLower,
     delete [] columns;
 
   }
+  delete [] rowScale_;
+  rowScale_ = NULL;
+  delete [] columnScale_;
+  columnScale_ = NULL;
 }
 // Add columns
 void 
@@ -964,6 +1006,10 @@ ClpModel::addColumns(int number, const double * columnLower,
     delete [] columns;
 
   }
+  delete [] rowScale_;
+  rowScale_ = NULL;
+  delete [] columnScale_;
+  columnScale_ = NULL;
 }
 void 
 ClpModel::addColumns(int number, const double * columnLower, 
@@ -1019,6 +1065,10 @@ ClpModel::addColumns(int number, const double * columnLower,
   if (!matrix_)
     createEmptyMatrix();
   matrix_->appendCols(number,columns);
+  delete [] rowScale_;
+  rowScale_ = NULL;
+  delete [] columnScale_;
+  columnScale_ = NULL;
 }
 // Infeasibility/unbounded ray (NULL returned if none/wrong)
 double * 
@@ -1457,6 +1507,9 @@ ClpModel::ClpModel ( const ClpModel * rhs,
     ray_ = whichDouble (rhs->ray_,numberRows,whichRow);
   else if (problemStatus_==2)
     ray_ = whichDouble (rhs->ray_,numberColumns,whichColumn);
+  rowScale_ = NULL;
+  columnScale_ = NULL;
+  scalingFlag_ = rhs->scalingFlag_;
   if (rhs->rowCopy_) {
     rowCopy_ = rhs->rowCopy_->subsetClone(numberRows,whichRow,
 					  numberColumns,whichColumn);
@@ -1763,4 +1816,36 @@ ClpModel::passInEventHandler(const ClpEventHandler * eventHandler)
 {
   delete eventHandler_;
   eventHandler_ = eventHandler->clone();
+}
+// Sets or unsets scaling, 0 -off, 1 on, 2 dynamic(later)
+void 
+ClpModel::scaling(int mode)
+{
+  if (mode>0&&mode<4) {
+    scalingFlag_=mode;
+  } else if (!mode) {
+    scalingFlag_=0;
+    delete [] rowScale_;
+    rowScale_ = NULL;
+    delete [] columnScale_;
+    columnScale_ = NULL;
+  }
+}
+void 
+ClpModel::times(double scalar,
+		  const double * x, double * y) const
+{
+  if (rowScale_)
+    matrix_->times(scalar,x,y,rowScale_,columnScale_);
+  else
+    matrix_->times(scalar,x,y);
+}
+void 
+ClpModel::transposeTimes(double scalar,
+			   const double * x, double * y) const 
+{
+  if (rowScale_)
+    matrix_->transposeTimes(scalar,x,y,rowScale_,columnScale_);
+  else
+    matrix_->transposeTimes(scalar,x,y);
 }

@@ -193,10 +193,6 @@ public:
 		  double * costDecrease, int * sequenceDecrease);
   /// Passes in factorization
   void setFactorization( ClpFactorization & factorization);
-  /// Sets or unsets scaling, 0 -off, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic(later)
-  void scaling(int mode=1);
-  /// Gets scalingFlag
-  inline int scalingFlag() const {return scalingFlag_;};
   /** Tightens primal bounds to make dual faster.  Unless
       fixed, bounds are slightly looser than they could be.
       This is to make dual go faster and is probably not needed
@@ -476,23 +472,6 @@ public:
   void setValuesPassAction(float incomingInfeasibility,
 			   float allowedInfeasibility);
   //@}
-  /**@name Matrix times vector methods 
-     They can be faster if scalar is +- 1
-     These are covers so user need not worry about scaling
-     Also for simplex I am not using basic/non-basic split */
-  //@{
-    /** Return <code>y + A * x * scalar</code> in <code>y</code>.
-        @pre <code>x</code> must be of size <code>numColumns()</code>
-        @pre <code>y</code> must be of size <code>numRows()</code> */
-   void times(double scalar,
-		       const double * x, double * y) const;
-    /** Return <code>y + x * scalar * A</code> in <code>y</code>.
-        @pre <code>x</code> must be of size <code>numRows()</code>
-        @pre <code>y</code> must be of size <code>numColumns()</code> */
-    void transposeTimes(double scalar,
-				const double * x, double * y) const ;
-  //@}
-
   /**@name most useful gets and sets */
   //@{ 
   /// Worst column primal infeasibility
@@ -719,11 +698,6 @@ public:
   /// Theta (pivot change)
   inline double theta() const
   { return theta_;};
-  /// Scaling
-  const double * rowScale() const {return rowScale_;};
-  const double * columnScale() const {return columnScale_;};
-  void setRowScale(double * scale) { rowScale_ = scale;};
-  void setColumnScale(double * scale) { columnScale_ = scale;};
   /// Return pointer to details of costs
   inline ClpNonLinearCost * nonLinearCost() const
   { return nonLinearCost_;};
@@ -959,16 +933,8 @@ protected:
   int * pivotVariable_;
   /// factorization 
   ClpFactorization * factorization_;
-  /// Row scale factors for matrix
-  // ****** get working simply then make coding more efficient
-  // on full matrix operations
-  double * rowScale_;
   /// Saved version of solution
   double * savedSolution_;
-  /// Column scale factors 
-  double * columnScale_;
-  /// Scale flag, 0 none, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic
-  int scalingFlag_;
   /// Number of times code has tentatively thought optimal
   int numberTimesOptimal_;
   /// If change has been made (first attempt at stopping looping)

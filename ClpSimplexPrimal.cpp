@@ -765,7 +765,9 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
   }
   // had ||(type==3&&problemStatus_!=-5) -- ??? why ????
   if ((dualFeasible()||problemStatus_==-4)&&!ifValuesPass) {
-    if (nonLinearCost_->numberInfeasibilities()
+    // see if extra helps
+    if (nonLinearCost_->numberInfeasibilities()&&
+	 (nonLinearCost_->sumInfeasibilities()>1.0e-3||sumOfRelaxedPrimalInfeasibilities_)
 	&&!alwaysOptimal) {
       //may need infeasiblity cost changed
       // we can see if we can construct a ray

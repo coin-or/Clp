@@ -1238,7 +1238,7 @@ ClpPackedMatrix::fillBasis(ClpSimplex * model,
 }
 // Creates scales for column copy (rowCopy in model may be modified)
 int 
-ClpPackedMatrix::scale(ClpSimplex * model) const 
+ClpPackedMatrix::scale(ClpModel * model) const 
 {
   int numberRows = model->numberRows();
   int numberColumns = matrix_->getNumCols();
@@ -2179,3 +2179,80 @@ ClpPackedMatrix::refresh(ClpSimplex * model)
   return 0;
 }
 
+/* Scales rowCopy if column copy scaled
+   Only called if scales already exist */
+void 
+ClpPackedMatrix::scaleRowCopy(ClpModel * model) const 
+{
+  if (model->rowCopy()) {
+    // need to replace row by row
+    int numberRows = model->numberRows();
+    int numberColumns = matrix_->getNumCols();
+    double * newElement = new double[numberColumns];
+    ClpMatrixBase * rowCopyBase=model->rowCopy();
+#ifndef NO_RTTI
+    ClpPackedMatrix* rowCopy =
+      dynamic_cast< ClpPackedMatrix*>(rowCopyBase);
+    // Make sure it is really a ClpPackedMatrix
+    assert (rowCopy!=NULL);
+#else
+    ClpPackedMatrix* rowCopy =
+      static_cast< ClpPackedMatrix*>(rowCopyBase);
+#endif
+
+    const int * column = rowCopy->getIndices();
+    const CoinBigIndex * rowStart = rowCopy->getVectorStarts();
+    const double * element = rowCopy->getElements();
+    const double * rowScale = model->rowScale();
+    const double * columnScale = model->columnScale();
+    // scale row copy
+    for (int iRow=0;iRow<numberRows;iRow++) {
+      CoinBigIndex j;
+      double scale = rowScale[iRow];
+      const double * elementsInThisRow = element + rowStart[iRow];
+      const int * columnsInThisRow = column + rowStart[iRow];
+      int number = rowStart[iRow+1]-rowStart[iRow];
+      assert (number<=numberColumns);
+      for (j=0;j<number;j++) {
+	int iColumn = columnsInThisRow[j];
+	newElement[j] = elementsInThisRow[j]*scale*columnScale[iColumn];
+      }
+      rowCopy->replaceVector(iRow,number,newElement);
+    }
+    delete [] newElement;
+  }
+}
+/* Realy really scales column copy 
+   Only called if scales already exist.
+   Up to user ro delete */
+ClpMatrixBase * 
+ClpPackedMatrix::scaledColumnCopy(ClpModel * model) const 
+{
+  // need to replace column by column
+  int numberRows = model->numberRows();
+  int numberColumns = matrix_->getNumCols();
+  double * newElement = new double[numberRows];
+  ClpPackedMatrix * copy = new ClpPackedMatrix(*this);
+  const int * row = copy->getIndices();
+  const CoinBigIndex * columnStart = copy->getVectorStarts();
+  const int * length = copy->getVectorLengths();
+  const double * element = copy->getElements();
+  const double * rowScale = model->rowScale();
+  const double * columnScale = model->columnScale();
+  // scale column copy
+  for (int iColumn=0;iColumn<numberColumns;iColumn++) {
+    CoinBigIndex j;
+    double scale = columnScale[iColumn];
+    const double * elementsInThisColumn = element + columnStart[iColumn];
+    const int * rowsInThisColumn = row + columnStart[iColumn];
+    int number = length[iColumn];
+    assert (number<=numberRows);
+    for (j=0;j<number;j++) {
+      int iRow = rowsInThisColumn[j];
+      newElement[j] = elementsInThisColumn[j]*scale*rowScale[iRow];
+    }
+    copy->replaceVector(iColumn,number,newElement);
+  }
+  delete [] newElement;
+  return copy;
+}

@@ -681,8 +681,8 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
 	if (directionOut_<0&&fabs(valueOut_-upperOut_)>dualBound_+primalTolerance_) {
 	  if (fabs(valueOut_-upperOut_)>fabs(valueOut_-lowerOut_))
 	    directionOut_=1;
-	} else if (directionOut_>0&&fabs(valueOut_-upperOut_)<dualBound_+primalTolerance_) {
-	  if (fabs(valueOut_-upperOut_)>fabs(valueOut_-lowerOut_))
+	} else if (directionOut_>0&&fabs(valueOut_-lowerOut_)>dualBound_+primalTolerance_) {
+	  if (fabs(valueOut_-upperOut_)<fabs(valueOut_-lowerOut_))
 	    directionOut_=-1;
 	}
 	double direction=directionOut_;

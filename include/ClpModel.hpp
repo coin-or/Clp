@@ -297,6 +297,15 @@ public:
    /// Row upper 
    inline double* rowUpper() const              { return rowUpper_; }
    inline const double* getRowUpper() const     { return rowUpper_; }
+   /// Scaling
+   inline const double * rowScale() const {return rowScale_;};
+   inline const double * columnScale() const {return columnScale_;};
+   inline void setRowScale(double * scale) { rowScale_ = scale;};
+   inline void setColumnScale(double * scale) { columnScale_ = scale;};
+   /// Sets or unsets scaling, 0 -off, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic(later)
+   void scaling(int mode=1);
+   /// Gets scalingFlag
+   inline int scalingFlag() const {return scalingFlag_;};
    /// Objective
    inline double * objective() const            
   {
@@ -447,6 +456,23 @@ public:
   
   //@}
 
+  /**@name Matrix times vector methods 
+     They can be faster if scalar is +- 1
+     These are covers so user need not worry about scaling
+     Also for simplex I am not using basic/non-basic split */
+  //@{
+    /** Return <code>y + A * x * scalar</code> in <code>y</code>.
+        @pre <code>x</code> must be of size <code>numColumns()</code>
+        @pre <code>y</code> must be of size <code>numRows()</code> */
+   void times(double scalar,
+		       const double * x, double * y) const;
+    /** Return <code>y + x * scalar * A</code> in <code>y</code>.
+        @pre <code>x</code> must be of size <code>numRows()</code>
+        @pre <code>y</code> must be of size <code>numColumns()</code> */
+    void transposeTimes(double scalar,
+				const double * x, double * y) const ;
+  //@}
+
 
   //---------------------------------------------------------------------------
   /**@name Parameter set/get methods
@@ -563,6 +589,12 @@ protected:
   ClpMatrixBase * rowCopy_;
   /// Infeasible/unbounded ray
   double * ray_;
+  /// Row scale factors for matrix
+  double * rowScale_;
+  /// Column scale factors 
+  double * columnScale_;
+  /// Scale flag, 0 none, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic
+  int scalingFlag_;
   /** Status Region.  I know that not all algorithms need a status
       array, but it made sense for things like crossover and put
       all permanent stuff in one place.  No assumption is made

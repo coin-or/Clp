@@ -529,6 +529,11 @@ ClpInterior::createWorkingData()
   for (i=0;i<numberColumns_;i++)
     cost_[i] = direction*obj[i];
   memset(cost_+numberColumns_,0,numberRows_*sizeof(double));
+  // do scaling if needed
+  if (scalingFlag_>0&&!rowScale_&&1) {
+    if (matrix_->scale(this))
+      scalingFlag_=-scalingFlag_; // not scaled after all
+  }
   delete [] lower_;
   delete [] upper_;
   lower_ = new double[nTotal];
@@ -558,6 +563,25 @@ ClpInterior::createWorkingData()
   // check rim of problem okay
   if (!sanityCheck())
     goodMatrix=false;
+  if (rowScale_) {
+    for (i=0;i<numberColumns_;i++)
+      cost_[i] *= columnScale_[i];
+    for (i=0;i<numberColumns_;i++) {
+      double multiplier = 1.0/columnScale_[i];
+      if (columnLowerWork_[i]>-1.0e50)
+	columnLowerWork_[i] *= multiplier;
+      if (columnUpperWork_[i]<1.0e50)
+	columnUpperWork_[i] *= multiplier;
+      
+    }
+    for (i=0;i<numberRows_;i++) {
+      double multiplier = rowScale_[i];
+      if (rowLowerWork_[i]>-1.0e50)
+	rowLowerWork_[i] *= multiplier;
+      if (rowUpperWork_[i]<1.0e50)
+	rowUpperWork_[i] *= multiplier;
+    }
+  }
   assert (!errorRegion_);
   errorRegion_ = new double [numberRows_];
   assert (!rhsFixRegion_);
@@ -630,6 +654,18 @@ ClpInterior::deleteWorkingData()
       reducedCost_[i] = optimizationDirection_*dj_[i];
     for (i=0;i<numberRows_;i++) 
       dual_[i] *= optimizationDirection_;
+  }
+  if (rowScale_) {
+    for (i=0;i<numberColumns_;i++) {
+      double scaleFactor = columnScale_[i];
+      columnActivity_[i] *= scaleFactor;
+      reducedCost_[i] /= scaleFactor;
+    }
+    for (i=0;i<numberRows_;i++) {
+      double scaleFactor = rowScale_[i];
+      rowActivity_[i] /= scaleFactor;
+      dual_[i] *= scaleFactor;
+    }
   }
   delete [] cost_;
   cost_ = NULL;

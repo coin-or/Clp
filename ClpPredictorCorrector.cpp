@@ -5,7 +5,7 @@
    Implements crude primal dual predictor corrector algorithm
 
  */
-
+#define SOME_DEBUG
 
 #include "CoinPragma.hpp"
 #include <math.h>
@@ -43,6 +43,12 @@ int ClpPredictorCorrector::solve ( )
     problemStatus_=4;
     return 2;
   }
+  ClpMatrixBase * saveMatrix = NULL;
+  // If scaled then really scale matrix
+  if (scalingFlag_>0&&rowScale_) {
+    saveMatrix = matrix_;
+    matrix_ = matrix_->scaledColumnCopy(this);
+  }
   //initializeFeasible(); - this just set fixed flag
   smallestInfeasibility_=COIN_DBL_MAX;
   int i;
@@ -54,6 +60,13 @@ int ClpPredictorCorrector::solve ( )
   if (cholesky_->order(this)) {
     printf("Not enough memory\n");
     problemStatus_=4;
+    //delete all temporary regions
+    deleteWorkingData();
+    if (saveMatrix) {
+      // restore normal copy
+      delete matrix_;
+      matrix_ = saveMatrix;
+    }
     return -1;
   }
   mu_=1.0e10;
@@ -65,6 +78,13 @@ int ClpPredictorCorrector::solve ( )
   if(createSolution()<0) {
     printf("Not enough memory\n");
     problemStatus_=4;
+    //delete all temporary regions
+    deleteWorkingData();
+    if (saveMatrix) {
+      // restore normal copy
+      delete matrix_;
+      matrix_ = saveMatrix;
+    }
     return -1;
   }
   //firstFactorization(false);
@@ -91,6 +111,8 @@ int ClpPredictorCorrector::solve ( )
   const double beta2 = 0.99995;
   const double tau   = 0.00002;
   double lastComplementarityGap=COIN_DBL_MAX;
+  // use to see if to take affine
+  double checkGap = COIN_DBL_MAX;
   int lastGoodIteration=0;
   double bestObjectiveGap=COIN_DBL_MAX;
   int saveIteration=-1;
@@ -102,6 +124,8 @@ int ClpPredictorCorrector::solve ( )
   double * saveY = new double[numberRows_];
   double * saveZ = new double[numberTotal];
   double * saveT = new double[numberTotal];
+  // Save smallest mu used in primal dual moves
+  double smallestPrimalDualMu=COIN_DBL_MAX;
   while (problemStatus_<0) {
     //#define FULL_DEBUG
 #ifdef FULL_DEBUG
@@ -302,21 +326,30 @@ int ClpPredictorCorrector::solve ( )
 		diagonalScaleFactor_);
     int * rowsDroppedThisTime = new int [numberRows_];
     newDropped=cholesky_->factorize(diagonal_,rowsDroppedThisTime);
-    if (newDropped>0) {
-      //int newDropped2=cholesky_->factorize(diagonal_,rowsDroppedThisTime);
-      //assert(!newDropped2);
-      if (newDropped<0) {
-	//replace dropped
-	newDropped=-newDropped;
-	//off 1 to allow for reset all
-	newDropped--;
-	//set all bits false
-	cholesky_->resetRowsDropped();
-      } 
-    } else if (newDropped==-1) {
-      printf("Out of memory\n");
-      problemStatus_=4;
-      return -1;
+    if (newDropped) {
+      if (newDropped==-1) {
+	printf("Out of memory\n");
+	problemStatus_=4;
+	//delete all temporary regions
+	deleteWorkingData();
+	if (saveMatrix) {
+	  // restore normal copy
+	  delete matrix_;
+	  matrix_ = saveMatrix;
+	}
+	return -1;
+      } else {
+	//int newDropped2=cholesky_->factorize(diagonal_,rowsDroppedThisTime);
+	//assert(!newDropped2);
+	if (newDropped<0&&0) {
+	  //replace dropped
+	  newDropped=-newDropped;
+	  //off 1 to allow for reset all
+	  newDropped--;
+	  //set all bits false
+	  cholesky_->resetRowsDropped();
+	} 
+      }
     } 
     delete [] rowsDroppedThisTime;
     if (cholesky_->status()) {
@@ -340,6 +373,7 @@ int ClpPredictorCorrector::solve ( )
     double bestNextGap=nextGap;
     // ?
     bestNextGap=max(nextGap,0.8*complementarityGap_);
+    bestNextGap=max(nextGap,0.9*complementarityGap_);
     if (complementarityGap_>1.0e-4*numberComplementarityPairs_) {
       //std::cout <<"predicted duality gap "<<nextGap<<std::endl;
       double part1=nextGap/numberComplementarityPairs_;
@@ -456,12 +490,34 @@ int ClpPredictorCorrector::solve ( )
 #ifdef SOME_DEBUG
 	    printf("checkGoodMove failed\n");
 #endif
-	    if (affineGap<0.5*complementarityGap_) {
-	      //||(affineGap<0.95*complementarityGap_&&(numberIterations_%3)==0)) {
+	    if ((affineGap<0.5*complementarityGap_&&complementarityGap_>0.9*checkGap)
+	      ||(affineGap<0.95*complementarityGap_&&
+		 complementarityGap_>0.99*checkGap)) {
 	      // Back to affine
-	      setupForSolve(0);
-	      directionAccuracy=findDirectionVector(0);
-	      findStepLength(0);
+	      phase=0;
+	      // Try primal dual step instead - but with small mu
+	      phase=2;
+	      double floatNumber;
+	      floatNumber = 2.0*numberComplementarityPairs_;
+	      mu_=complementarityGap_/floatNumber;
+	      double mu1=mu_;
+	      double phi;
+	      if (numberComplementarityPairs_<=500) {
+		phi=pow((double) numberComplementarityPairs_,2.0);
+	      } else {
+		phi=pow((double) numberComplementarityPairs_,1.5);
+		if (phi<500.0*500.0) {
+		  phi=500.0*500.0;
+		} 
+	      }
+	      mu_=complementarityGap_/phi;
+	      printf("pd mu %g, alternate %g, smallest %g\n",
+		     mu_,mu1,smallestPrimalDualMu);
+	      mu_ = sqrt(mu_*mu1);
+	      mu_=mu1*0.8;
+	      setupForSolve(phase);
+	      directionAccuracy=findDirectionVector(phase);
+	      findStepLength(phase);
 	      nextGap=complementarityGap(nextNumber,nextNumberItems,1);
 	      goodMove=true;
 	    }
@@ -471,40 +527,52 @@ int ClpPredictorCorrector::solve ( )
 	} 
 #endif
       }
-    } 
+    }
+    //bestPhase=-1;
+    //goodMove=false;
     if (!goodMove) {
       // Just primal dual step
       double floatNumber;
-      floatNumber = 2.0*numberComplementarityPairs_;
-      //floatNumber = 1.1*numberComplementarityPairs_;
+      floatNumber = 2.5*numberComplementarityPairs_;
+      //floatNumber = 1.5*numberComplementarityItems_;
       mu_=complementarityGap_/floatNumber;
+      double mu1=mu_;
+      double phi;
+      if (numberComplementarityPairs_<=500) {
+	phi=pow((double) numberComplementarityPairs_,2.0);
+      } else {
+	phi=pow((double) numberComplementarityPairs_,1.5);
+	if (phi<500.0*500.0) {
+	  phi=500.0*500.0;
+	} 
+      }
+      mu_=complementarityGap_/phi;
+      //printf("pd mu %g, alternate %g, smallest %g\n",
+      //     mu_,mu1,smallestPrimalDualMu);
+      mu_ = sqrt(mu_*mu1);
+      mu_=mu1;
+      mu_=min(smallestPrimalDualMu*0.95,mu_);
+      smallestPrimalDualMu = mu_;
       //set up for next step
       setupForSolve(2);
-      double directionAccuracy=findDirectionVector(2);
-      if (directionAccuracy>worstDirectionAccuracy_) {
-	worstDirectionAccuracy_=directionAccuracy;
-      } 
-      double testValue=1.0e2*directionAccuracy;
-      if (1.0e2*projectionTolerance_>testValue) {
-	testValue=1.0e2*projectionTolerance_;
-      } 
-      if (primalTolerance()>testValue) {
-	testValue=primalTolerance();
-      } 
-      if (maximumRHSError_>testValue) {
-	testValue=maximumRHSError_;
-      } 
+      findDirectionVector(2);
       findStepLength(2);
       // just for debug
       nextGap=complementarityGap(nextNumber,nextNumberItems,2);
-      if (nextGap>bestNextGap&&bestPhase==0&&0) {
+      if (nextGap>0.99*complementarityGap_&&bestPhase==0&&affineGap<nextGap) {
 	// Back to affine
-	setupForSolve(0);
-	directionAccuracy=findDirectionVector(0);
-	findStepLength(0);
+	phase=0;
+	// no
+	phase=2;
+	mu_ *= 0.5;
+	setupForSolve(phase);
+	directionAccuracy=findDirectionVector(phase);
+	findStepLength(phase);
 	nextGap=complementarityGap(nextNumber,nextNumberItems,1);
       }
     }
+    if (numberIterations_==0)
+      smallestPrimalDualMu=mu_;
     if (!goodMove)
       mu_=nextGap / ((double) 1.1*nextNumber);
     goodMove=true;
@@ -514,7 +582,9 @@ int ClpPredictorCorrector::solve ( )
     int numberGoodTries=0;
     double originalDualStep=actualDualStep_;
     double originalPrimalStep=actualPrimalStep_;
-    while (goodMove&&numberTries<4) {
+    if (actualDualStep_>0.9&&actualPrimalStep_>0.9)
+      goodMove=false; // don't bother
+    while (goodMove&&numberTries<10) {
       goodMove=false;
       numberTries++;
       memcpy(saveX,deltaX_,numberTotal*sizeof(double));
@@ -539,8 +609,8 @@ int ClpPredictorCorrector::solve ( )
       //if (actualPrimalStep_<checkPrimal||
       //  actualDualStep_<checkDual||
       //  (xGap>nextGap&&xGap>0.9*complementarityGap_)) {
-      if (actualPrimalStep_<checkPrimal||
-	  actualDualStep_<checkDual) {
+      if (actualPrimalStep_<=checkPrimal||
+	  actualDualStep_<=checkDual) {
 #ifdef SOME_DEBUG
 	printf("PP rejected gap %g, steps %g %g, 2 gap %g, steps %g %g\n",xGap,
 	       actualPrimalStep_,actualDualStep_,nextGap,savePrimalStep,saveDualStep);
@@ -574,6 +644,8 @@ int ClpPredictorCorrector::solve ( )
 	     numberGoodTries,nextGap,originalDualStep,originalPrimalStep,
 	     nextCenterGap, actualDualStep_,actualPrimalStep_);
     }
+    // save last gap
+    checkGap = complementarityGap_;
     numberFixed=updateSolution();
     numberFixedTotal+=numberFixed;
   } /* endwhile */
@@ -617,6 +689,11 @@ int ClpPredictorCorrector::solve ( )
   //std::cout<<"maximum complementarity "<<worstComplementarity_<<std::endl;
   //delete all temporary regions
   deleteWorkingData();
+  if (saveMatrix) {
+    // restore normal copy
+    delete matrix_;
+    matrix_ = saveMatrix;
+  }
   return problemStatus_;
 }
 // findStepLength.
@@ -688,7 +765,7 @@ double ClpPredictorCorrector::findStepLength( int phase)
 	double gap=fabs(value);
 	double multiplier=1.0/gap;
 	if (gap<1.0) {
-	  multiplier=1,0;
+	  multiplier=1.0;
 	} 
 	z1 = -zVec[iColumn]-multiplier*directionElement*zVec[iColumn];
 	t1 = -tVec[iColumn] + multiplier*directionElement*tVec[iColumn];
@@ -1098,7 +1175,7 @@ double ClpPredictorCorrector::findDirectionVector(const int phase)
 	double gap=fabs(solution_[iColumn]);
 	double multiplier=1.0/gap;
 	if (gap<1.0) {
-	  multiplier=1,0;
+	  multiplier=1.0;
 	} 
 	deltaZ_[iColumn] = -zVec[iColumn] - multiplier*deltaX*zVec[iColumn];
 	deltaT_[iColumn] = -tVec[iColumn] + multiplier*deltaX*tVec[iColumn];
@@ -1300,7 +1377,6 @@ int ClpPredictorCorrector::createSolution()
   double largeGap=1.0e15;
   double safeObjectiveValue=2.0*objectiveNorm_;
   double safeFree=1.0e-1*initialValue;
-  //safeFree=1.0;
   //printf("normal safe dual value of %g, primal value of %g\n",
   // safeObjectiveValue,initialValue);
   //safeObjectiveValue=max(2.0,1.0e-1*safeObjectiveValue);
@@ -1469,7 +1545,154 @@ int ClpPredictorCorrector::createSolution()
       tVec_[iColumn]=0.0;
       diagonal_[iColumn]=0.0;
     } 
-  } 
+  }
+#if 1 
+  //initialValue=max(10.0,0.01*initialValue);
+  //safeObjectiveValue=max(10.0,0.1*safeObjectiveValue);
+  for ( iColumn=0;iColumn<numberTotal;iColumn++) {
+    if (!flagged(iColumn)) {
+      double lowerValue=lower_[iColumn];
+      double upperValue=upper_[iColumn];
+      double objectiveValue = cost_[iColumn];
+      double newValue;
+      double low;
+      double high;
+      double setPrimal=initialValue;
+      if (lowerBound(iColumn)) {
+        if (upperBound(iColumn)) {
+          //upper and lower bounds
+          if (upperValue-lowerValue>=2.0*setPrimal) {
+            newValue=0.5*(upperValue+lowerValue);
+            low=newValue-lowerValue;
+            high=upperValue-newValue;
+          } else {
+            newValue=0.5*(upperValue+lowerValue);
+            low=setPrimal;
+            high=setPrimal;
+          } 
+          double s = low+extra;
+          double ratioZ;
+          if (s<zwLarge) {
+            ratioZ=1.0;
+          } else {
+            ratioZ=sqrt(zwLarge/s);
+          } 
+          double t = high+extra;
+          double ratioW;
+          if (t<zwLarge) {
+            ratioW=1.0;
+          } else {
+            ratioW=sqrt(zwLarge/t);
+          } 
+          //modify s and t
+          if (s>largeGap) {
+            s=largeGap;
+          } 
+          if (t>largeGap) {
+            t=largeGap;
+          } 
+          //modify if long long way away from bound
+          if (objectiveValue>=0.0) {
+            zVec_[iColumn]=objectiveValue + safeObjectiveValue*ratioZ;
+            tVec_[iColumn]=safeObjectiveValue*ratioW;
+          } else {
+            zVec_[iColumn]=safeObjectiveValue*ratioZ;
+            tVec_[iColumn]=-objectiveValue + safeObjectiveValue*ratioW;
+          }
+#define EXACT
+#ifdef EXACT 
+	  zVec_[iColumn] = (initialValue*safeObjectiveValue)/s;
+	  tVec_[iColumn] = (initialValue*safeObjectiveValue)/t;
+#endif
+          diagonal_[iColumn] = (t*s)/(s*tVec_[iColumn]+t*zVec_[iColumn]);
+        } else {
+          //just lower bound
+          newValue=lowerValue+setPrimal;
+          low=newValue-lowerValue;
+          high=0.0;
+          double s = low+extra;
+          double ratioZ;
+          if (s<zwLarge) {
+            ratioZ=1.0;
+          } else {
+            ratioZ=sqrt(zwLarge/s);
+          } 
+          //modify s
+          if (s>largeGap) {
+            s=largeGap;
+          } 
+          if (objectiveValue>=0.0) {
+            zVec_[iColumn]=objectiveValue + safeObjectiveValue*ratioZ;
+            tVec_[iColumn]=0.0;
+          } else {
+            zVec_[iColumn]=safeObjectiveValue*ratioZ;
+            tVec_[iColumn]=0.0;
+          } 
+#ifdef EXACT 
+	  zVec_[iColumn] = (initialValue*safeObjectiveValue)/s;
+#endif
+          diagonal_[iColumn] = s/zVec_[iColumn];
+        } 
+      } else {
+        if (upperBound(iColumn)) {
+          //just upper bound
+          newValue=upperValue-setPrimal;
+          low=0.0;
+          high=upperValue-newValue;
+          double t = high+extra;
+          double ratioW;
+          if (t<zwLarge) {
+            ratioW=1.0;
+          } else {
+            ratioW=sqrt(zwLarge/t);
+          } 
+          //modify t
+          if (t>largeGap) {
+            t=largeGap;
+          } 
+          if (objectiveValue>=0.0) {
+            zVec_[iColumn]=0.0;
+            tVec_[iColumn]=safeObjectiveValue*ratioW;
+          } else {
+            zVec_[iColumn]=0.0;
+            tVec_[iColumn]=-objectiveValue + safeObjectiveValue*ratioW;
+          } 
+#ifdef EXACT 
+	  tVec_[iColumn] = (initialValue*safeObjectiveValue)/t;
+#endif
+          diagonal_[iColumn] =  t/tVec_[iColumn];
+        } else {
+          //free
+          zVec_[iColumn]=safeObjectiveValue;
+          tVec_[iColumn]=safeObjectiveValue;
+          newValue=fakeSolution[iColumn];
+          if (newValue>=0.0) {
+	    newValue=safeFree;
+          } else {
+	    newValue=-safeFree;
+          } 
+          if (fabs(newValue)>1.0) {
+            diagonal_[iColumn]=fabs(newValue)/(zVec_[iColumn]+tVec_[iColumn]);
+          } else {
+            diagonal_[iColumn]=1.0/(zVec_[iColumn]+tVec_[iColumn]);
+          } 
+          low=0.0;
+          high=0.0;
+        } 
+      } 
+      lowerSlack_[iColumn]=low;
+      upperSlack_[iColumn]=high;
+      solution_[iColumn]=newValue;
+    } else {
+      lowerSlack_[iColumn]=0.0;
+      upperSlack_[iColumn]=0.0;
+      solution_[iColumn]=lower_[iColumn];
+      zVec_[iColumn]=0.0;
+      tVec_[iColumn]=0.0;
+      diagonal_[iColumn]=0.0;
+    } 
+  }
+#endif
   solutionNorm_ =  maximumAbsElement(solution_,numberTotal);
   return 0;
 }
@@ -1814,7 +2037,7 @@ bool ClpPredictorCorrector::checkGoodMove(const bool doCorrector,double & bestNe
   int numberTotal = numberRows_+numberColumns_;
   double returnGap=bestNextGap;
   double nextGap=complementarityGap(nextNumber,nextNumberItems,2);
-  if (nextGap>bestNextGap&&nextGap>-0.99*complementarityGap_) {
+  if (nextGap>bestNextGap&&nextGap>-0.9*complementarityGap_) {
 #ifdef SOME_DEBUG
     printf("checkGood phase 1 next gap %g, phase 0 %g, old gap %g\n",
 	   nextGap,bestNextGap,complementarityGap_);
@@ -2062,9 +2285,10 @@ int ClpPredictorCorrector::updateSolution()
   CoinMemcpyN(cost_,numberColumns_,dj_);
   matrix_->transposeTimes(-1.0,dual_,dj_);
   double extra=eExtra;
-  double largeGap=1.0e2*solutionNorm_;
-  if (largeGap<1.0e2) {
-    largeGap=1.0e2;
+  const double largeFactor=1.0e2;
+  double largeGap=largeFactor*solutionNorm_;
+  if (largeGap<largeFactor) {
+    largeGap=largeFactor;
   } 
   double dualFake=0.0;
   double dualTolerance =  dblParam_[ClpDualTolerance];
@@ -2080,6 +2304,7 @@ int ClpPredictorCorrector::updateSolution()
   } else {
     qDiagonal=1.0e-8*mu_;
   } 
+  qDiagonal *= 100.0;
   double widenGap=1.0e1;
   //largest allowable ratio of lowerSlack/zVec (etc)
   double largestRatio;
@@ -2114,6 +2339,251 @@ int ClpPredictorCorrector::updateSolution()
   //direction vector in deltaX
   double * deltaX = deltaX_;
   double * cost = cost_;
+  if (numberIterations_<0-1) {
+    // put change to errorRegion in deltaY as we have finished with it
+    multiplyAdd(deltaX_+numberColumns_,numberRows_,-1.0,deltaY_,0.0);
+    matrix_->times(1.0,deltaX_,deltaY_);
+    const char * dropped = cholesky_->rowsDropped();
+    double maximumRHSError1=0.0;
+    double maximumRHSError2=0.0;
+    double maximumBoundInfeasibility=0.0;
+    double maximumDualError=1.0e-12;
+    int iRow;
+    for (iRow=0;iRow<numberRows_;iRow++) {
+      double value=errorRegion_[iRow]+deltaY_[iRow];
+      if (!dropped[iRow]) {
+	if (fabs(value)>maximumRHSError1) {
+	  maximumRHSError1=fabs(value);
+	} 
+      } else {
+	if (fabs(value)>maximumRHSError2) {
+	  maximumRHSError2=fabs(value);
+	} 
+      } 
+    } 
+    double largestL=0.0;
+    double smallestL=COIN_DBL_MAX;
+    double largestU=0.0;
+    double smallestU=COIN_DBL_MAX;
+    double sumL=0.0;
+    double sumU=0.0;
+    int nL=0;
+    int nU=0;
+    int iColumn;
+    for (iColumn=0;iColumn<numberRows_+numberColumns_;iColumn++) {
+      if (!flagged(iColumn)) {
+	double reducedCost=dual[iColumn];
+        double dualInfeasibility=fabs(reducedCost-zVec[iColumn]+tVec[iColumn]);
+        if (dualInfeasibility>maximumDualError) {
+          maximumDualError=dualInfeasibility;
+        } 
+	double oldPrimal = primal[iColumn];
+	double newPrimal=primal[iColumn]+actualPrimalStep_*deltaX_[iColumn];
+	if (lowerBound(iColumn)) {
+	  double change = rhsL_[iColumn] + deltaX_[iColumn];
+	  double dualValue=zVec[iColumn]+actualDualStep_*deltaZ_[iColumn];
+	  double oldSlack = lowerSlack[iColumn];
+          double newSlack=
+	    lowerSlack[iColumn]+actualPrimalStep_*(oldPrimal-oldSlack
+						   + deltaX_[iColumn]-lower[iColumn]);
+	  double primalValue=lowerSlack[iColumn]+actualPrimalStep_*change;
+	  double gapProduct=dualValue*primalValue;
+	  largestL = max(largestL,gapProduct);
+	  smallestL = min(smallestL,gapProduct);
+	  nL++;
+	  sumL += gapProduct;
+	  if (!fakeLower(iColumn)) {
+	    double infeasibility = fabs(newPrimal-newSlack-lower[iColumn]);
+	    if (infeasibility>maximumBoundInfeasibility) {
+	      maximumBoundInfeasibility=infeasibility;
+	    } 
+	  } 
+	}  
+	if (upperBound(iColumn)) {
+	  double change = rhsU_[iColumn]-deltaX_[iColumn];
+	  double dualValue=tVec[iColumn]+actualDualStep_*deltaT_[iColumn];
+	  double oldSlack = upperSlack[iColumn];
+	  double newSlack =
+	    upperSlack[iColumn]+actualPrimalStep_*(-oldPrimal-oldSlack
+						   - deltaX_[iColumn]+upper[iColumn]);
+	  double primalValue=upperSlack[iColumn]+actualPrimalStep_*change;
+	  double gapProduct=dualValue*primalValue;
+	  largestU = max(largestU,gapProduct);
+	  smallestU = min(smallestU,gapProduct);
+	  nU++;
+	  sumU += gapProduct;
+	  if (!fakeUpper(iColumn)) {
+	    double infeasibility = fabs(newPrimal+newSlack-upper[iColumn]);
+	    if (infeasibility>maximumBoundInfeasibility) {
+	      maximumBoundInfeasibility=infeasibility;
+	    } 
+	  } 
+	} 
+      } 
+    }
+    double mu = (sumL+sumU)/((double) (nL+nU));
+    
+    double minBeta = 0.1*mu;
+    double maxBeta = 10.0*mu;
+    int nBL=0;
+    int nAL=0;
+    int nBU=0;
+    int nAU=0;
+    // Allow changes of up to part of infeasibility
+    double primalDelta=max(maximumRHSError1, maximumBoundInfeasibility);
+    double dualDelta = maximumDualError * 0.3;
+    primalDelta *= 0.3;
+    if (dualDelta<1.0e-3)
+      dualDelta=0.0;
+    if (primalDelta<1.0e-1)
+      primalDelta=0.0;
+    double product = dualDelta*primalDelta;
+    for (iColumn=0;iColumn<numberRows_+numberColumns_;iColumn++) {
+      if (!flagged(iColumn)) {
+	if (lowerBound(iColumn)) {
+	  double change = rhsL_[iColumn] + deltaX_[iColumn];
+	  double dualValue=zVec[iColumn]+actualDualStep_*deltaZ_[iColumn];
+	  double primalValue=lowerSlack[iColumn]+actualPrimalStep_*change;
+	  double gapProduct=dualValue*primalValue;
+	  if (gapProduct<minBeta) {
+	    nBL++;
+	    // increase
+	    if (gapProduct+product +(dualValue*primalDelta+primalValue*dualDelta)
+		<=minBeta) {
+	      zVec[iColumn] += dualDelta;
+	      lowerSlack[iColumn] += primalDelta;
+	    } else {
+	      double ratio;
+	      if (product>1.0e-5) { 
+		double c = (gapProduct-minBeta)/product;
+		double b = (dualDelta+primalDelta)/(2.0*product);
+		assert (b*b-c>=0.0);
+		ratio = sqrt(b*b-c)-b;
+	      } else {
+		ratio = (minBeta-gapProduct)/(dualDelta+primalDelta);
+	      }
+	      zVec[iColumn] += ratio*dualDelta;
+	      lowerSlack[iColumn] += ratio*primalDelta;
+	    }
+	    assert (zVec[iColumn]>0.0);
+	    assert (lowerSlack[iColumn]>0.0);
+	  } else if (gapProduct>maxBeta) {
+	    nAL++;
+	  }
+	}  
+	if (upperBound(iColumn)) {
+	  double change = rhsU_[iColumn]-deltaX_[iColumn];
+	  double dualValue=tVec[iColumn]+actualDualStep_*deltaT_[iColumn];
+	  double primalValue=upperSlack[iColumn]+actualPrimalStep_*change;
+	  double gapProduct=dualValue*primalValue;
+	  if (gapProduct<minBeta) {
+	    nBU++;
+	    // increase
+	    if (gapProduct+product +(dualValue*primalDelta+primalValue*dualDelta)
+		<=minBeta) {
+	      tVec[iColumn] += dualDelta;
+	      upperSlack[iColumn] += primalDelta;
+	    } else {
+	      double ratio;
+	      if (product>1.0e-5) { 
+		double c = (gapProduct-minBeta)/product;
+		double b = (dualDelta+primalDelta)/(2.0*product);
+		assert (b*b-c>=0.0);
+		ratio = sqrt(b*b-c)-b;
+	      } else {
+		ratio = (minBeta-gapProduct)/(dualDelta+primalDelta);
+	      }
+	      tVec[iColumn] += ratio*dualDelta;
+	      upperSlack[iColumn] += ratio*primalDelta;
+	    }
+	    assert (tVec[iColumn]>0.0);
+	    assert (upperSlack[iColumn]>0.0);
+	  } else if (gapProduct>maxBeta) {
+	    nAU++;
+	  }
+	} 
+      } 
+    }
+    printf("update new mu %g new gap %g\n",mu,sumL+sumU);
+    printf("          %d lower, smallest %g, %d below - largest %g, %d above\n",
+	   nL,smallestL,nBL,largestL,nAL);
+    printf("          %d upper, smallest %g, %d below - largest %g, %d above\n",
+	   nU,smallestU,nBU,largestU,nAU);
+  }
+  if (numberIterations_<=0-2) {
+    double largestL=0.0;
+    double smallestL=COIN_DBL_MAX;
+    double largestU=0.0;
+    double smallestU=COIN_DBL_MAX;
+    double sumL=0.0;
+    double sumU=0.0;
+    int nL=0;
+    int nU=0;
+    int iColumn;
+    for (iColumn=0;iColumn<numberRows_+numberColumns_;iColumn++) {
+      if (!flagged(iColumn)) {
+	if (lowerBound(iColumn)) {
+	  double change = rhsL_[iColumn] + deltaX_[iColumn];
+	  double dualValue=zVec[iColumn]+actualDualStep_*deltaZ_[iColumn];
+	  double primalValue=lowerSlack[iColumn]+actualPrimalStep_*change;
+	  double gapProduct=dualValue*primalValue;
+	  largestL = max(largestL,gapProduct);
+	  smallestL = min(smallestL,gapProduct);
+	  nL++;
+	  sumL += gapProduct;
+	}  
+	if (upperBound(iColumn)) {
+	  double change = rhsU_[iColumn]-deltaX_[iColumn];
+	  double dualValue=tVec[iColumn]+actualDualStep_*deltaT_[iColumn];
+	  double primalValue=upperSlack[iColumn]+actualPrimalStep_*change;
+	  double gapProduct=dualValue*primalValue;
+	  largestU = max(largestU,gapProduct);
+	  smallestU = min(smallestU,gapProduct);
+	  nU++;
+	  sumU += gapProduct;
+	} 
+      } 
+    }
+    double mu = (sumL+sumU)/((double) (nL+nU));
+    
+    double minBeta = 0.1*mu;
+    double maxBeta = 10.0*mu;
+    int nBL=0;
+    int nAL=0;
+    int nBU=0;
+    int nAU=0;
+    for (iColumn=0;iColumn<numberRows_+numberColumns_;iColumn++) {
+      if (!flagged(iColumn)) {
+	if (lowerBound(iColumn)) {
+	  double change = rhsL_[iColumn] + deltaX_[iColumn];
+	  double dualValue=zVec[iColumn]+actualDualStep_*deltaZ_[iColumn];
+	  double primalValue=lowerSlack[iColumn]+actualPrimalStep_*change;
+	  double gapProduct=dualValue*primalValue;
+	  if (gapProduct<minBeta) {
+	    nBL++;
+	  } else if (gapProduct>maxBeta) {
+	    nAL++;
+	  }
+	}  
+	if (upperBound(iColumn)) {
+	  double change = rhsU_[iColumn]-deltaX_[iColumn];
+	  double dualValue=tVec[iColumn]+actualDualStep_*deltaT_[iColumn];
+	  double primalValue=upperSlack[iColumn]+actualPrimalStep_*change;
+	  double gapProduct=dualValue*primalValue;
+	  if (gapProduct<minBeta) {
+	    nBU++;
+	  } else if (gapProduct>maxBeta) {
+	    nAU++;
+	  }
+	} 
+      } 
+    }
+    printf("update2 new mu %g new gap %g\n",mu,sumL+sumU);
+    printf("          %d lower, smallest %g, %d below - largest %g, %d above\n",
+	   nL,smallestL,nBL,largestL,nAL);
+    printf("          %d upper, smallest %g, %d below - largest %g, %d above\n",
+	   nU,smallestU,nBU,largestU,nAU);
+  }
   for (int iColumn=0;iColumn<numberRows_+numberColumns_;iColumn++) {
     if (!flagged(iColumn)) {
       double reducedCost=dual[iColumn];
@@ -2502,6 +2972,10 @@ int ClpPredictorCorrector::updateSolution()
 	<<maximumRHSError2
 	<<CoinMessageEol;
     } 
+    //if (maximumRHSError2>1.0e-1) {
+      //set all bits false
+      //cholesky_->resetRowsDropped();
+    //}
   } 
   objectiveNorm_=maximumAbsElement(dual_,numberRows_);
   if (objectiveNorm_<1.0e-12) {

@@ -78,8 +78,17 @@ public:
   /** Creates scales for column copy (rowCopy in model may be modified)
       default does not allow scaling
       returns non-zero if no scaling done */
-  virtual int scale(ClpSimplex * model) const 
+  virtual int scale(ClpModel * model) const 
   { return 1;};
+  /** Scales rowCopy if column copy scaled
+      Only called if scales already exist */
+  virtual void scaleRowCopy(ClpModel * model) const 
+  { };
+  /** Realy really scales column copy 
+      Only called if scales already exist.
+      Up to user ro delete */
+  inline virtual ClpMatrixBase * scaledColumnCopy(ClpModel * model) const 
+  { return this->clone();};
   
   /** Checks if all elements are in valid range.  Can just
       return true if you are not paranoid.  For Clp I will
