@@ -3461,9 +3461,9 @@ int ClpSimplex::dual (int ifValuesPass , int startFinishOptions)
     // check which algorithms allowed
     int dummy;
     if ((matrix_->generalExpanded(this,4,dummy)&1)!=0)
-      returnCode = ((ClpSimplexPrimal *) this)->primal(1);
+      returnCode = ((ClpSimplexPrimal *) this)->primal(1,startFinishOptions);
     else
-      returnCode = ((ClpSimplexDual *) this)->dual(0);
+      returnCode = ((ClpSimplexDual *) this)->dual(0,startFinishOptions);
     if (problemStatus_==3&&numberIterations_<saveMax) {
       printf("looks like trouble - too many iterations in clean up - trying again\n");
       // flatten solution and try again
@@ -3550,10 +3550,10 @@ int ClpSimplex::primal (int ifValuesPass , int startFinishOptions)
       double saveBound = dualBound_;
       // upperOut_ has largest away from bound
       dualBound_=CoinMin(2.0*upperOut_,dualBound_);
-      returnCode = ((ClpSimplexDual *) this)->dual(0);
+      returnCode = ((ClpSimplexDual *) this)->dual(0,startFinishOptions);
       dualBound_=saveBound;
     } else {
-      returnCode = ((ClpSimplexPrimal *) this)->primal(0);
+      returnCode = ((ClpSimplexPrimal *) this)->primal(0,startFinishOptions);
     }
     setInitialDenseFactorization(denseFactorization);
     perturbation_=savePerturbation;
