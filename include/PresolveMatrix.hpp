@@ -16,8 +16,6 @@
 #if !defined(max)
 #define max(a,b)  (((a) > (b)) ? (a) : (b))
 #endif
-#define bcopy(dest, src, count) memcpy(dest, src, count)
-#define bzero(dest, count) memset(dest, 0, count)
 // Visual C++ has bad bug on delete []
 #define deleteAction(array) delete [] (void *) array
 #else

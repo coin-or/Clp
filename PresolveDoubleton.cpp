@@ -112,8 +112,8 @@ static bool expand_col(CoinBigIndex *mcstrt,
     }
 
     // move the column - 1:  copy the entries
-    bcopy((void*)&hrow[kcsx], (void*)&hrow[newkcsx], hincol[icolx] * sizeof(int));
-    bcopy((void*)&colels[kcsx], (void*)&colels[newkcsx], hincol[icolx] * sizeof(double));
+    memcpy((void*)&hrow[kcsx], (void*)&hrow[newkcsx], hincol[icolx] * sizeof(int));
+    memcpy((void*)&colels[kcsx], (void*)&colels[newkcsx], hincol[icolx] * sizeof(double));
 
     // move the column - 2:  update the memory-order linked list
     PRESOLVE_REMOVE_LINK(clink, icolx);

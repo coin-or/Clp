@@ -431,7 +431,7 @@ Presolve::setOriginalModel(ClpSimplex * model)
 // during debugging.
 static int ATOI(const char *name)
 {
-  return true;
+ return true;
 #if	DEBUG_PRESOLVE || PRESOLVE_SUMMARY
   if (getenv(name)) {
     int val = atoi(getenv(name));

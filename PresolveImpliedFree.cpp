@@ -78,7 +78,7 @@ const PresolveAction *implied_free_action::presolve(PresolveMatrix *prob,
   int nactions = 0;
 
   char *implied_free = new char[ncols];
-  bzero(implied_free, ncols*sizeof(char));
+  memset(implied_free, 0, ncols*sizeof(char));
 
   double *ilbound = new double[ncols];
   double *iubound = new double[ncols];
