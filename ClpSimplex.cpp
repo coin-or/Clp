@@ -374,21 +374,25 @@ ClpSimplex::computePrimals ( const double * rowActivities,
 
   int iRow;
   // order is this way for scaling
-  // Use whole matrix every time to make it easier for ClpMatrixBase
-  // So zero out basic
   if (columnActivities!=columnActivityWork_)
     ClpDisjointCopyN(columnActivities,numberColumns_,columnActivityWork_);
   if (rowActivities!=rowActivityWork_)
     ClpDisjointCopyN(rowActivities,numberRows_,rowActivityWork_);
-  for (iRow=0;iRow<numberRows_;iRow++) {
-    int iPivot=pivotVariable_[iRow];
-    solution_[iPivot] = 0.0;
-  }
-  // Extended solution before "update"
-  matrix_->primalExpanded(this,0);
   double * array = arrayVector.denseVector();
-  times(-1.0,columnActivityWork_,array);
-
+  if (!matrix_->effectiveRhs(this)) {
+    // Use whole matrix every time to make it easier for ClpMatrixBase
+    // So zero out basic
+    for (iRow=0;iRow<numberRows_;iRow++) {
+      int iPivot=pivotVariable_[iRow];
+      solution_[iPivot] = 0.0;
+    }
+    // Extended solution before "update"
+    matrix_->primalExpanded(this,0);
+    times(-1.0,columnActivityWork_,array);
+  } else {
+    // we have an effective rhs lying around
+    CoinCopyN(matrix_->effectiveRhs(this),numberRows_,array);
+  }
   int * index = arrayVector.getIndices();
   int number=0;
   for (iRow=0;iRow<numberRows_;iRow++) {
@@ -1153,6 +1157,8 @@ int ClpSimplex::internalFactorize ( int solveType)
 int 
 ClpSimplex::housekeeping(double objectiveChange)
 {
+  // save value of incoming
+  double oldIn = solution_[sequenceIn_];
   numberIterations_++;
   changeMade_++; // something has happened
   // incoming variable
@@ -1203,6 +1209,15 @@ ClpSimplex::housekeeping(double objectiveChange)
     } else {
       // as if from lower bound
       setStatus(sequenceIn_, atUpperBound);
+    }
+  }
+  if (matrix_->effectiveRhs(this)) {
+    // update effective rhs
+    if (sequenceIn_==sequenceOut_) {
+      matrix_->add(this,matrix_->effectiveRhs(this),sequenceIn_,solution_[sequenceIn_]-oldIn);
+    } else {
+      matrix_->add(this,matrix_->effectiveRhs(this),sequenceIn_,-oldIn);
+      matrix_->add(this,matrix_->effectiveRhs(this),sequenceOut_,solution_[sequenceOut_]);
     }
   }
   objectiveValue_ += objectiveChange;
@@ -1716,28 +1731,56 @@ ClpSimplex::checkPrimalSolution(const double * rowActivities,
   // Check any infeasibilities from dynamic rows
   matrix_->primalExpanded(this,2);
   solution = columnActivityWork_;
-  for (iColumn=0;iColumn<numberColumns_;iColumn++) {
-    //assert (fabs(solution[iColumn])<1.0e15||getColumnStatus(iColumn) == basic);
-    double infeasibility=0.0;
-    objectiveValue_ += objectiveWork_[iColumn]*solution[iColumn];
-    if (solution[iColumn]>columnUpperWork_[iColumn]) {
-      infeasibility=solution[iColumn]-columnUpperWork_[iColumn];
-    } else if (solution[iColumn]<columnLowerWork_[iColumn]) {
-      infeasibility=columnLowerWork_[iColumn]-solution[iColumn];
+  if (!matrix_->effectiveRhs(this)) {
+    for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+      //assert (fabs(solution[iColumn])<1.0e15||getColumnStatus(iColumn) == basic);
+      double infeasibility=0.0;
+      objectiveValue_ += objectiveWork_[iColumn]*solution[iColumn];
+      if (solution[iColumn]>columnUpperWork_[iColumn]) {
+	infeasibility=solution[iColumn]-columnUpperWork_[iColumn];
+      } else if (solution[iColumn]<columnLowerWork_[iColumn]) {
+	infeasibility=columnLowerWork_[iColumn]-solution[iColumn];
+      }
+      if (infeasibility>columnPrimalInfeasibility_) {
+	columnPrimalInfeasibility_=infeasibility;
+	columnPrimalSequence_=iColumn;
+      }
+      if (infeasibility>primalTolerance) {
+	sumPrimalInfeasibilities_ += infeasibility-primalTolerance_;
+	if (infeasibility>relaxedTolerance) 
+	  sumOfRelaxedPrimalInfeasibilities_ += infeasibility-relaxedTolerance;
+	numberPrimalInfeasibilities_ ++;
+      }
+      infeasibility = fabs(columnActivities[iColumn]-solution[iColumn]);
+      if (infeasibility>largestSolutionError_)
+	largestSolutionError_=infeasibility;
     }
-    if (infeasibility>columnPrimalInfeasibility_) {
-      columnPrimalInfeasibility_=infeasibility;
-      columnPrimalSequence_=iColumn;
+  } else {
+    // as we are using effective rhs we only check basics
+    for (int j=0;j<numberRows_;j++) {
+      int iColumn = pivotVariable_[j];
+      //assert (fabs(solution[iColumn])<1.0e15||getColumnStatus(iColumn) == basic);
+      double infeasibility=0.0;
+      objectiveValue_ += objectiveWork_[iColumn]*solution[iColumn];
+      if (solution[iColumn]>columnUpperWork_[iColumn]) {
+	infeasibility=solution[iColumn]-columnUpperWork_[iColumn];
+      } else if (solution[iColumn]<columnLowerWork_[iColumn]) {
+	infeasibility=columnLowerWork_[iColumn]-solution[iColumn];
+      }
+      if (infeasibility>columnPrimalInfeasibility_) {
+	columnPrimalInfeasibility_=infeasibility;
+	columnPrimalSequence_=iColumn;
+      }
+      if (infeasibility>primalTolerance) {
+	sumPrimalInfeasibilities_ += infeasibility-primalTolerance_;
+	if (infeasibility>relaxedTolerance) 
+	  sumOfRelaxedPrimalInfeasibilities_ += infeasibility-relaxedTolerance;
+	numberPrimalInfeasibilities_ ++;
+      }
+      infeasibility = fabs(columnActivities[iColumn]-solution[iColumn]);
+      if (infeasibility>largestSolutionError_)
+	largestSolutionError_=infeasibility;
     }
-    if (infeasibility>primalTolerance) {
-      sumPrimalInfeasibilities_ += infeasibility-primalTolerance_;
-      if (infeasibility>relaxedTolerance) 
-	sumOfRelaxedPrimalInfeasibilities_ += infeasibility-relaxedTolerance;
-      numberPrimalInfeasibilities_ ++;
-    }
-    infeasibility = fabs(columnActivities[iColumn]-solution[iColumn]);
-    if (infeasibility>largestSolutionError_)
-      largestSolutionError_=infeasibility;
   }
 }
 void 
@@ -1750,6 +1793,13 @@ ClpSimplex::checkDualSolution()
   numberDualInfeasibilitiesWithoutFree_=0;
   columnDualInfeasibility_=0.0;
   columnDualSequence_=-1;
+  if (matrix_->skipDualCheck()&&algorithm_>0&&problemStatus_==-2) {
+    // pretend we found dual infeasibilities
+    sumOfRelaxedDualInfeasibilities_ = 1.0;
+    sumDualInfeasibilities_=1.0;
+    numberDualInfeasibilities_=1;
+    return;
+  }
   rowDualInfeasibility_=0.0;
   rowDualSequence_=-1;
   int firstFreePrimal = -1;

@@ -239,7 +239,7 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
       } else if (ratio<4.0) {
 	numberWanted = 1000;
 	numberWanted = max(numberWanted,numberLook/10);
-      } else {
+      } else if (mode_!=5) {
 	switchType=4;
 	// initialize
 	numberSwitched_++;
@@ -366,7 +366,7 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
     } else if (ratio<4.0-3.0) {
       numberWanted = max(2000,number/10);
       numberWanted = max(numberWanted,numberColumns/30);
-    } else {
+    } else if (mode_!=5) {
       switchType=4;
       // initialize
       numberSwitched_++;
@@ -2387,7 +2387,7 @@ ClpPrimalColumnSteepest::pivotColumnOldMethod(CoinIndexedVector * updates,
     } else if (ratio<0.5) {
       numberWanted = max(2000,number/10);
       numberWanted = max(numberWanted,numberColumns/30);
-    } else {
+    } else if (mode_!=5) {
       switchType=4;
       // initialize
       numberSwitched_++;
@@ -2734,7 +2734,7 @@ void
 ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model,int mode)
 {
   model_ = model;
-  if (mode_==4) {
+  if (mode_==4||mode_==5) {
     if (mode==1&&!weights_) 
       numberSwitched_=0; // Reset
   }
@@ -2759,7 +2759,7 @@ ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model,int mode)
     // restore
     if (!weights_||state_==-1||mode==5) {
       // Partial is only allowed with certain types of matrix
-      if (mode_!=4||numberSwitched_||!model_->clpMatrix()->canDoPartialPricing()) {
+      if ((mode_!=4&&mode_!=5)||numberSwitched_||!model_->clpMatrix()->canDoPartialPricing()) {
 	// initialize weights
 	delete [] weights_;
 	delete alternateWeights_;
@@ -2950,7 +2950,7 @@ ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model,int mode)
 void 
 ClpPrimalColumnSteepest::unrollWeights()
 {
-  if (mode_==4&&!numberSwitched_)
+  if ((mode_==4||mode_==5)&&!numberSwitched_)
     return;
   double * saved = alternateWeights_->denseVector();
   int number = alternateWeights_->getNumElements();
@@ -2982,7 +2982,7 @@ ClpPrimalColumnSteepest::updateWeights(CoinIndexedVector * input)
   int switchType = mode_;
   if (mode_==4&&numberSwitched_)
     switchType=3;
-  else if (mode_==4)
+  else if (mode_==4||mode_==5)
     return;
   int number=input->getNumElements();
   int * which = input->getIndices();
@@ -3014,7 +3014,7 @@ ClpPrimalColumnSteepest::updateWeights(CoinIndexedVector * input)
 	memcpy(newWhich,which,number*sizeof(int));
 	alternateWeights_->setNumElements(number);
       } else {
-	if (mode_!=4||numberSwitched_>1) {
+	if ((mode_!=4&&mode_!=5)||numberSwitched_>1) {
 	  for (i=0;i<number;i++) {
 	    int iRow = which[i];
 	    int iPivot = pivotVariable[iRow];
@@ -3080,7 +3080,7 @@ ClpPrimalColumnSteepest::updateWeights(CoinIndexedVector * input)
 	memcpy(newWhich,which,number*sizeof(int));
 	alternateWeights_->setNumElements(number);
       } else {
-	if (mode_!=4||numberSwitched_>1) {
+	if ((mode_!=4&&mode_!=5)||numberSwitched_>1) {
 	  for (i=0;i<number;i++) {
 	    int iRow = which[i];
 	    int iPivot = pivotVariable[iRow];
@@ -3174,7 +3174,7 @@ ClpPrimalColumnSteepest::checkAccuracy(int sequence,
 				       CoinIndexedVector * rowArray1,
 				       CoinIndexedVector * rowArray2)
 {
-  if (mode_==4&&!numberSwitched_)
+  if ((mode_==4||mode_==5)&&!numberSwitched_)
     return;
   model_->unpack(rowArray1,sequence);
   model_->factorization()->updateColumn(rowArray2,rowArray1);

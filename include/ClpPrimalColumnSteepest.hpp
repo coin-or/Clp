@@ -193,11 +193,13 @@ private:
       0 is exact devex, 1 full steepest, 2 is partial exact devex
       3 switches between 0 and 2 depending on factorization
       4 starts as partial dantzig/devex but then may switch between 0 and 2.
+      5 is always partial dantzig
       By partial exact devex is meant that the weights are updated as normal
       but only part of the nonbasic variables are scanned.  
       This can be faster on very easy problems.
 
       New dubious option is >=10 which does mini-sprint
+
   */
   int mode_;
   /// Number of times switched from partial dantzig to 0/2
