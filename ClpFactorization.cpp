@@ -16,7 +16,6 @@ const static bool doCheck=true;
 #else
 const static bool doCheck=false;
 #endif
-
 //#############################################################################
 // Constructors / Destructor / Assignment
 //#############################################################################
@@ -157,6 +156,8 @@ ClpFactorization::factorize ( ClpSimplex * model,
 	static_cast< ClpNetworkMatrix*>(model->clpMatrix());
 #endif
       // If network - still allow ordinary factorization first time for laziness
+      if (networkMatrix)
+	biasLU_=0; // All to U if network
       int saveMaximumPivots = maximumPivots();
       delete networkBasis_;
       networkBasis_ = NULL;
@@ -272,6 +273,8 @@ ClpFactorization::factorize ( ClpSimplex * model,
 	  // kill off arrays in ordinary factorization
 	  if (!doCheck) {
 	    gutsOfDestructor();
+	    // but make sure numberRows_ set
+	    numberRows_ = model->numberRows();
 	    status_=0;
 #if 0
 	    // but put back permute arrays so odd things will work
@@ -541,18 +544,36 @@ ClpFactorization::updateColumnFT ( CoinIndexedVector * regionSparse,
   } else {
 #ifdef CHECK_NETWORK
     CoinIndexedVector * save = new CoinIndexedVector(*regionSparse2);
+    double * check = new double[numberRows_];
     int returnCode = CoinFactorization::updateColumnFT(regionSparse,
 						       regionSparse2);
-    networkBasis_->updateColumn(regionSparse,save);
+    networkBasis_->updateColumn(regionSparse,save,-1);
     int i;
     double * array = regionSparse2->denseVector();
+    int * indices = regionSparse2->getIndices();
+    int n=regionSparse2->getNumElements();
+    memset(check,0,numberRows_*sizeof(double));
     double * array2 = save->denseVector();
-    for (i=0;i<numberRows_;i++) {
-      double value1 = array[i];
-      double value2 = array2[i];
-      assert (value1==value2);
+    int * indices2 = save->getIndices();
+    int n2=save->getNumElements();
+    assert (n==n2);
+    if (save->packedMode()) {
+      for (i=0;i<n;i++) {
+	check[indices[i]]=array[i];
+      }
+      for (i=0;i<n;i++) {
+	double value2 = array2[i];
+	assert (check[indices2[i]]==value2);
+      }
+    } else {
+      for (i=0;i<numberRows_;i++) {
+	double value1 = array[i];
+	double value2 = array2[i];
+	assert (value1==value2);
+      }
     }
     delete save;
+    delete [] check;
     return returnCode;
 #else
     networkBasis_->updateColumn(regionSparse,regionSparse2,-1);
@@ -584,19 +605,37 @@ ClpFactorization::updateColumn ( CoinIndexedVector * regionSparse,
   } else {
 #ifdef CHECK_NETWORK
     CoinIndexedVector * save = new CoinIndexedVector(*regionSparse2);
+    double * check = new double[numberRows_];
     int returnCode = CoinFactorization::updateColumn(regionSparse,
 						     regionSparse2,
 						     noPermute);
-    networkBasis_->updateColumn(regionSparse,save);
+    networkBasis_->updateColumn(regionSparse,save,-1);
     int i;
     double * array = regionSparse2->denseVector();
+    int * indices = regionSparse2->getIndices();
+    int n=regionSparse2->getNumElements();
+    memset(check,0,numberRows_*sizeof(double));
     double * array2 = save->denseVector();
-    for (i=0;i<numberRows_;i++) {
-      double value1 = array[i];
-      double value2 = array2[i];
-      assert (value1==value2);
+    int * indices2 = save->getIndices();
+    int n2=save->getNumElements();
+    assert (n==n2);
+    if (save->packedMode()) {
+      for (i=0;i<n;i++) {
+	check[indices[i]]=array[i];
+      }
+      for (i=0;i<n;i++) {
+	double value2 = array2[i];
+	assert (check[indices2[i]]==value2);
+      }
+    } else {
+      for (i=0;i<numberRows_;i++) {
+	double value1 = array[i];
+	double value2 = array2[i];
+	assert (value1==value2);
+      }
     }
     delete save;
+    delete [] check;
     return returnCode;
 #else
     networkBasis_->updateColumn(regionSparse,regionSparse2,-1);
@@ -619,22 +658,40 @@ ClpFactorization::updateColumnTranspose ( CoinIndexedVector * regionSparse,
     collectStatistics_ = false;
   } else {
 #ifdef CHECK_NETWORK
-      CoinIndexedVector * save = new CoinIndexedVector(*regionSparse2);
-      int returnCode = CoinFactorization::updateColumnTranspose(regionSparse,
-								regionSparse2);
-      networkBasis_->updateColumnTranspose(regionSparse,save);
-      int i;
-      double * array = regionSparse2->denseVector();
-      double * array2 = save->denseVector();
+    CoinIndexedVector * save = new CoinIndexedVector(*regionSparse2);
+    double * check = new double[numberRows_];
+    int returnCode = CoinFactorization::updateColumnTranspose(regionSparse,
+							      regionSparse2);
+    networkBasis_->updateColumnTranspose(regionSparse,save);
+    int i;
+    double * array = regionSparse2->denseVector();
+    int * indices = regionSparse2->getIndices();
+    int n=regionSparse2->getNumElements();
+    memset(check,0,numberRows_*sizeof(double));
+    double * array2 = save->denseVector();
+    int * indices2 = save->getIndices();
+    int n2=save->getNumElements();
+    assert (n==n2);
+    if (save->packedMode()) {
+      for (i=0;i<n;i++) {
+	check[indices[i]]=array[i];
+      }
+      for (i=0;i<n;i++) {
+	double value2 = array2[i];
+	assert (check[indices2[i]]==value2);
+      }
+    } else {
       for (i=0;i<numberRows_;i++) {
 	double value1 = array[i];
 	double value2 = array2[i];
 	assert (value1==value2);
       }
-      delete save;
-      return returnCode;
+    }
+    delete save;
+    delete [] check;
+    return returnCode;
 #else
-      return networkBasis_->updateColumnTranspose(regionSparse,regionSparse2);
+    return networkBasis_->updateColumnTranspose(regionSparse,regionSparse2);
 #endif
   }
 }
@@ -664,4 +721,52 @@ ClpFactorization::needToReorder() const
     return true;
   else
     return false;
+}
+// Get weighted row list 
+void
+ClpFactorization::getWeights(int * weights) const
+{
+  if (networkBasis_) {
+    // Network - just unit
+    for (int i=0;i<numberRows_;i++) 
+      weights[i]=1;
+    return;
+  }
+  int * permuteBack = pivotColumnBack_;
+  if (!startRowL_||!numberInRow_) {
+    int * temp = new int[numberRows_];
+    memset(temp,0,numberRows_*sizeof(int));
+    int i;
+    for (i=0;i<numberRows_;i++) {
+      // one for pivot
+      temp[i]++;
+      CoinBigIndex j;
+      for (j=startColumnU_[i];j<startColumnU_[i]+numberInColumn_[i];j++) {
+	int iRow=indexRowU_[j];
+	temp[iRow]++;
+      }
+    }
+    for (i=baseL_;i<baseL_+numberL_;i++) {
+      CoinBigIndex j;
+      for (j=startColumnL_[i];j<startColumnL_[i+1];j++) {
+	int iRow = indexRowL_[j];
+	temp[iRow]++;
+      }
+    }
+    for (i=0;i<numberRows_;i++) {
+      int number = temp[i];
+      int iPermute = permuteBack[i];
+      weights[iPermute]=number;
+    }
+    delete [] temp;
+  } else {
+    int i;
+    for (i=0;i<numberRows_;i++) {
+      int number = startRowL_[i+1]-startRowL_[i]+numberInRow_[i]+1;
+      //number = startRowL_[i+1]-startRowL_[i]+1;
+      //number = numberInRow_[i]+1;
+      int iPermute = permuteBack[i];
+      weights[iPermute]=number;
+    }
+  }
 }

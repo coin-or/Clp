@@ -100,6 +100,8 @@ public:
   /// Says if a network basis
   bool inline networkBasis() const
   { return (networkBasis_!=NULL);};
+  /// Fills weighted row list 
+  void getWeights(int * weights) const;
   //@}
 
 ////////////////// data //////////////////
