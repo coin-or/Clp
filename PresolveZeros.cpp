@@ -94,9 +94,10 @@ const PresolveAction *drop_zero_coefficients_action::presolve(PresolveMatrix *pr
   CoinBigIndex *mcstrt		= prob->mcstrt_;
   int *hincol		= prob->hincol_;
   int ncols		= prob->ncols_;
+  int nrows		= prob->nrows_;
 
   //  int i;
-  dropped_zero * zeros = new dropped_zero[ncols];
+  dropped_zero * zeros = new dropped_zero[ncols+nrows];
 
   int nzeros = drop_col_zeros(ncheckcols, checkcols,
 			      mcstrt, colels, hrow, hincol,
