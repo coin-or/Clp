@@ -472,7 +472,7 @@ int main (int argc, const char *argv[])
 	      if(preSolveFile)
 		presolveOptions |= 0x40000000;
 	      solveOptions.setSpecialOption(4,presolveOptions);
-	      solveOptions.setSpecialOption(5,printOptions);
+	      solveOptions.setSpecialOption(5,printOptions&1);
 	      if (method==ClpSolve::useDual) {
 		// dual
 		if (doCrash)
@@ -1232,10 +1232,11 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 		double * rowLower = models[iModel].rowLower();
 		double * rowUpper = models[iModel].rowUpper();
 		double primalTolerance = models[iModel].primalTolerance();
+		int printAll = (printOptions>>1)&3;
 		char format[6];
 		sprintf(format,"%%-%ds",CoinMax(lengthName,8));
 		for (iRow=0;iRow<numberRows;iRow++) {
-		  int type=0;
+		  int type=printAll;
 		  if (primalRowSolution[iRow]>rowUpper[iRow]+primalTolerance||
 		      primalRowSolution[iRow]<rowLower[iRow]-primalTolerance) {
 		    fprintf(fp,"** ");
@@ -1244,7 +1245,7 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 		    type=1;
 		  } else if (numberRows<50) {
 		    type=3;
-		  }
+		  } 
 		  if (type) {
 		    fprintf(fp,"%7d ",iRow);
 		    if (lengthName)
@@ -1262,7 +1263,7 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 		double * columnLower = models[iModel].columnLower();
 		double * columnUpper = models[iModel].columnUpper();
 		for (iColumn=0;iColumn<numberColumns;iColumn++) {
-		  int type=0;
+		  int type=printAll;
 		  if (primalColumnSolution[iColumn]>columnUpper[iColumn]+primalTolerance||
 		      primalColumnSolution[iColumn]<columnLower[iColumn]-primalTolerance) {
 		    fprintf(fp,"** ");
