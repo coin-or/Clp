@@ -1050,7 +1050,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
       // Solve 
       if (interrupt)
 	currentModel = &small;
-      small.primal();
+      small.primal(1);
       totalIterations += small.numberIterations();
       // move solution back
       const double * solution = small.primalColumnSolution();
