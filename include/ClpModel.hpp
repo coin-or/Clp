@@ -225,6 +225,12 @@ public:
    /// Number of elements in matrix
    inline int getNumElements() const 
      { return matrix_->getNumElements();};
+   /** Small element value - elements less than this set to zero,
+      default is 1.0e-20 */
+   inline double getSmallElementValue() const
+  { return smallElement_;}; 
+  inline void setSmallElementValue(double value)
+  { smallElement_=value;}; 
    /// Row Matrix 
    inline ClpMatrixBase * rowCopy() const       { return rowCopy_; }
    /// Clp Matrix 
@@ -407,6 +413,8 @@ protected:
   std::string strParam_[ClpLastStrParam];
   /// Objective value
   double objectiveValue_;
+  /// Small element value
+  double smallElement_;
   /// Number of iterations
   int numberIterations_;
   /// Solve type - 1 simplex, 2 simplex interface

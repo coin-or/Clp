@@ -43,7 +43,7 @@ ClpSimplex::ClpSimplex () :
   largestPrimalError_(0.0),
   largestDualError_(0.0),
   largestSolutionError_(0.0),
-  dualBound_(1.0e6),
+  dualBound_(1.0e10),
   lower_(NULL),
   rowLowerWork_(NULL),
   columnLowerWork_(NULL),
@@ -94,7 +94,7 @@ ClpSimplex::ClpSimplex () :
   algorithm_(0),
   forceFactorization_(-1),
   perturbation_(100),
-  infeasibilityCost_(1.0e7),
+  infeasibilityCost_(1.0e10),
   nonLinearCost_(NULL),
   specialOptions_(0),
   lastBadIteration_(-999999),
@@ -1032,7 +1032,7 @@ ClpSimplex::ClpSimplex(const ClpSimplex &rhs) :
   largestPrimalError_(0.0),
   largestDualError_(0.0),
   largestSolutionError_(0.0),
-  dualBound_(1.0e7),
+  dualBound_(1.0e10),
   lower_(NULL),
   rowLowerWork_(NULL),
   columnLowerWork_(NULL),
@@ -1083,7 +1083,7 @@ ClpSimplex::ClpSimplex(const ClpSimplex &rhs) :
   algorithm_(0),
   forceFactorization_(-1),
   perturbation_(100),
-  infeasibilityCost_(1.0e7),
+  infeasibilityCost_(1.0e10),
   nonLinearCost_(NULL),
   specialOptions_(0),
   lastBadIteration_(-999999),
@@ -1123,7 +1123,7 @@ ClpSimplex::ClpSimplex(const ClpModel &rhs) :
   largestPrimalError_(0.0),
   largestDualError_(0.0),
   largestSolutionError_(0.0),
-  dualBound_(1.0e7),
+  dualBound_(1.0e10),
   lower_(NULL),
   rowLowerWork_(NULL),
   columnLowerWork_(NULL),
@@ -1174,7 +1174,7 @@ ClpSimplex::ClpSimplex(const ClpModel &rhs) :
   algorithm_(0),
   forceFactorization_(-1),
   perturbation_(100),
-  infeasibilityCost_(1.0e7),
+  infeasibilityCost_(1.0e10),
   nonLinearCost_(NULL),
   specialOptions_(0),
   lastBadIteration_(-999999),
@@ -1692,7 +1692,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
 	     numberRows_*sizeof(double));
     }
     //check matrix
-    if (!matrix_->allElementsInRange(this,1.0e-20,1.0e20)) {
+    if (!matrix_->allElementsInRange(this,smallElement_,1.0e20)) {
       problemStatus_=4;
       goodMatrix= false;
     }

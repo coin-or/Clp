@@ -151,7 +151,7 @@ public:
       feasible - will not go through a bound.  Returns step length in theta
       Returns ray in ray_
   */
-  int pivotResult();
+  int pivotResult(int ifValuesPass=0);
 
 
   /** The primals are updated by the given array.

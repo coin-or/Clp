@@ -332,32 +332,21 @@ ClpSimplexPrimal::whileIterating()
 		   columnArray_[0],columnArray_[1]);
     } else {
       // in values pass
-      if (ifValuesPass>0) {
-	int sequenceIn=nextSuperBasic();
-	if (sequenceIn<0) {
-	  ifValuesPass=-1; // signal end of values pass after this
-	} else {
-	  // normal
-	  sequenceIn_ = sequenceIn;
-	  valueIn_=solution_[sequenceIn_];
-	  lowerIn_=lower_[sequenceIn_];
-	  upperIn_=upper_[sequenceIn_];
-	  dualIn_=dj_[sequenceIn_];
-	}
-      } else {
+      int sequenceIn=nextSuperBasic();
+      if (sequenceIn<0) {
 	// end of values pass - initialize weights etc
 	primalColumnPivot_->saveWeights(this,5);
-	ifValuesPass=0;
-	if(lastGoodIteration_ != numberIterations_) {
-	  problemStatus_=-2; // factorize now
-	  pivotRow_=-1; // say no weights update
-	  returnCode=-4;
-	  break;
-	}
-
-	// and get variable
-	primalColumn(rowArray_[1],rowArray_[2],rowArray_[3],
-		     columnArray_[0],columnArray_[1]);
+	problemStatus_=-2; // factorize now
+	pivotRow_=-1; // say no weights update
+	returnCode=-4;
+	break;
+      } else {
+	// normal
+	sequenceIn_ = sequenceIn;
+	valueIn_=solution_[sequenceIn_];
+	lowerIn_=lower_[sequenceIn_];
+	upperIn_=upper_[sequenceIn_];
+	dualIn_=dj_[sequenceIn_];
       }
     }
     pivotRow_=-1;
@@ -373,7 +362,7 @@ ClpSimplexPrimal::whileIterating()
       }
 #endif
       // do second half of iteration
-      returnCode = pivotResult();
+      returnCode = pivotResult(ifValuesPass);
       if (returnCode<-1&&returnCode>-5) {
 	problemStatus_=-2; // 
       } else if (returnCode==-5) {
@@ -1259,11 +1248,9 @@ ClpSimplexPrimal::alwaysOptimal(bool onOff)
   +3 max iterations (iteration done)
 */
 int
-ClpSimplexPrimal::pivotResult()
+ClpSimplexPrimal::pivotResult(int ifValuesPass)
 {
 
-  // Say if values pass
-  int ifValuesPass=(firstFree_>=0) ? 1 : 0;
   bool roundAgain=true;
   int returnCode=-1;
 

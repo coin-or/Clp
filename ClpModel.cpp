@@ -62,6 +62,7 @@ ClpModel::ClpModel () :
   rowCopy_(NULL),
   ray_(NULL),
   objectiveValue_(0.0),
+  smallElement_(1.0e-20),
   numberIterations_(0),
   solveType_(0),
   problemStatus_(-1),
@@ -323,6 +324,7 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
   strParam_[ClpProbName] = rhs.strParam_[ClpProbName];
 
   objectiveValue_=rhs.objectiveValue_;
+  smallElement_ = rhs.smallElement_;
   numberIterations_ = rhs.numberIterations_;
   solveType_ = rhs.solveType_;
   problemStatus_ = rhs.problemStatus_;
