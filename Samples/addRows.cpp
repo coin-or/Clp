@@ -6,7 +6,7 @@
 #include "ClpSimplex.hpp"
 #include "CoinHelperFunctions.hpp"
 #include "CoinTime.hpp"
-#include "ClpBuild.hpp"
+#include "CoinBuild.hpp"
 #include <iomanip>
 #include <cassert>
 
@@ -73,7 +73,7 @@ int main (int argc, const char *argv[])
   model.dual();
   model=modelSave;
   // Now use build
-  ClpBuild buildObject;
+  CoinBuild buildObject;
   time1 = CoinCpuTime();
   for ( k=0;k<10000;k++) {
     int row2Index[] = {0,1,2};

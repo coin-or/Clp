@@ -29,7 +29,7 @@ class ClpEventHandler;
     very similar.
 
 */
-class ClpBuild;
+class CoinBuild;
 class ClpModel {
 
 public:
@@ -146,7 +146,7 @@ public:
 	       const double * rowUpper,
 	       const CoinPackedVectorBase * const * rows);
   /// Add rows from a build object
-  void addRows(ClpBuild & buildObject);
+  void addRows(CoinBuild & buildObject);
 
   /// Deletes columns
   void deleteColumns(int number, const int * which);

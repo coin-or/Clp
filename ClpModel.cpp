@@ -22,7 +22,7 @@
 #include "ClpMessage.hpp"
 #include "ClpLinearObjective.hpp"
 #include "ClpQuadraticObjective.hpp"
-#include "ClpBuild.hpp"
+#include "CoinBuild.hpp"
 
 //#############################################################################
 
@@ -1197,7 +1197,7 @@ ClpModel::addRows(int number, const double * rowLower,
 }
 // Add rows from a build object
 void 
-ClpModel::addRows(ClpBuild & buildObject)
+ClpModel::addRows(CoinBuild & buildObject)
 {
   int number = buildObject.numberRows();
   if (number) {
