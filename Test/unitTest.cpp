@@ -1025,7 +1025,6 @@ ClpSimplexUnitTest(const std::string & mpsDir,
 #endif
   // test network 
 #define QUADRATIC
-#ifndef QUADRATIC
   if (1) {    
     std::string fn = mpsDir+"input.130";
     int numberColumns;
@@ -1153,7 +1152,6 @@ ClpSimplexUnitTest(const std::string & mpsDir,
       model.loadProblem(matrix,
 			lowerColumn,upperColumn,objective,
 			lower,upper);
-      
       model.factorization()->maximumPivots(200+model.numberRows()/100);
       model.createStatus();
       double time1 = CoinCpuTime();
@@ -1191,7 +1189,6 @@ ClpSimplexUnitTest(const std::string & mpsDir,
       delete [] upperColumn;
     }
   }
-#endif
 #ifdef QUADRATIC
   // Test quadratic to solve linear
   if (1) {    

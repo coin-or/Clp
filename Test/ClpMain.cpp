@@ -13,7 +13,7 @@
 
 #include "CoinPragma.hpp"
 #include "CoinHelperFunctions.hpp"
-#define CLPVERSION "0.99.9"
+#define CLPVERSION "0.99.99"
 
 #include "CoinMpsIO.hpp"
 
@@ -67,7 +67,7 @@ enum ClpParameterType {
   RHSSCALE,
 
   LOGLEVEL=101,MAXFACTOR,PERTVALUE,MAXITERATION,PRESOLVEPASS,IDIOT,SPRINT,
-  OUTPUTFORMAT,SLPVALUE,
+  OUTPUTFORMAT,SLPVALUE,PRESOLVEOPTIONS,PRINTOPTIONS,
   
   DIRECTION=201,DUALPIVOT,SCALING,ERRORSALLOWED,KEEPNAMES,SPARSEFACTOR,
   PRIMALPIVOT,PRESOLVE,CRASH,BIASLU,PERTURBATION,MESSAGES,AUTOSCALE,
@@ -890,6 +890,8 @@ int main (int argc, const char *argv[])
     int doIdiot=-1;
     int outputFormat=2;
     int slpValue=-1;
+    int printOptions=0;
+    int presolveOptions=0;
     int doCrash=0;
     int doSprint=-1;
     // set reasonable defaults
@@ -1295,6 +1297,9 @@ specialized network code."
  see if it can convert the problem so you should not need to use this."
        ); 
     parameters[numberParameters++]=
+      ClpItem("preO!pt","Presolve options",
+	      0,INT_MAX,PRESOLVEOPTIONS,false);
+    parameters[numberParameters++]=
       ClpItem("presolve","Whether to presolve problem",
 	      "on",PRESOLVE);
     parameters[numberParameters-1].append("off");
@@ -1358,6 +1363,9 @@ costs this much to be infeasible",
  adjust bounds, maybe we need that here."
        ); 
     parameters[numberParameters-1].setDoubleValue(models->infeasibilityCost());
+    parameters[numberParameters++]=
+      ClpItem("printO!ptions","Print options",
+	      0,INT_MAX,PRINTOPTIONS,false);
     parameters[numberParameters++]=
       ClpItem("quit","Stops clp execution",
 	      EXIT);
@@ -1654,6 +1662,10 @@ costs this much to be infeasible",
 	      outputFormat = value;
 	    else if (parameters[iParam].type()==SLPVALUE)
 	      slpValue = value;
+	    else if (parameters[iParam].type()==PRESOLVEOPTIONS)
+	      presolveOptions = value;
+	    else if (parameters[iParam].type()==PRINTOPTIONS)
+	      printOptions = value;
 	    else
 	      parameters[iParam].setIntParameter(models+iModel,value);
 	  } else if (valid==1) {
@@ -1823,6 +1835,8 @@ costs this much to be infeasible",
 		}
 	      }
 	      solveOptions.setSolveType(method);
+	      solveOptions.setSpecialOption(4,presolveOptions);
+	      solveOptions.setSpecialOption(5,printOptions);
 	      if (method==ClpSolve::useDual) {
 		// dual
 		if (doCrash)
