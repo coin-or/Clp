@@ -681,14 +681,14 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
       // check accuracy of weights
       dualRowPivot_->checkAccuracy();
       // Get good size for pivot
-      double acceptablePivot=1.0e-7;
+      double acceptablePivot=1.0e-9;
       if (factorization_->pivots()>10||
 	  (factorization_->pivots()&&saveSumDual))
 	acceptablePivot=1.0e-5; // if we have iterated be more strict
       else if (factorization_->pivots()>5)
 	acceptablePivot=1.0e-6; // if we have iterated be slightly more strict
-      //if ((specialOptions_&64)!=0) 
-      //acceptablePivot=1.0e-7; // relax
+      else if (factorization_->pivots())
+        acceptablePivot=1.0e-8; // relax
       // get sign for finding row of tableau
       if (candidate<0) {
 	// normal iteration
