@@ -6,6 +6,8 @@
 
 export CoinDir := $(shell cd ../..; pwd)
 export MakefileDir := $(CoinDir)/Makefiles
+include ${MakefileDir}/Makefile.coin
+include ${MakefileDir}/Makefile.location
 
 ###############################################################################
 
