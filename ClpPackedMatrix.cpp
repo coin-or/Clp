@@ -2312,7 +2312,7 @@ ClpPackedMatrix::allElementsInRange(ClpModel * model,
 	zeroElements_ = true; // there are zero elements
       if (value<smallest) {
 	numberSmall++;
-      } else if (value>largest) {
+      } else if (!(value<=largest)) {
 	numberLarge++;
 	if (firstBadColumn<0) {
 	  firstBadColumn=iColumn;
