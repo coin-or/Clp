@@ -232,9 +232,6 @@ int ClpSimplexDual::dual ( )
   assert(rowLower_);
   assert(rowUpper_);
 
-#ifdef CLP_DEBUG
-  int debugIteration=-1;
-#endif
 
   algorithm_ = -1;
   dualTolerance_=dblParam_[ClpDualTolerance];
@@ -366,6 +363,9 @@ int ClpSimplexDual::dual ( )
 int
 ClpSimplexDual::whileIterating()
 {
+#ifdef CLP_DEBUG
+  int debugIteration=-1;
+#endif
   // status stays at -1 while iterating, >=0 finished, -2 to invert
   // status -3 to go to top without an invert
   int returnCode = -1;

@@ -870,3 +870,29 @@ bool ClpModel::isDualObjectiveLimitReached() const
     return false;
 
 }
+void 
+ClpModel::copyInIntegerInformation(const char * information)
+{
+  delete [] integerType_;
+  if (information) {
+    integerType_ = new char[numberColumns_];
+    memcpy(integerType_,information,numberColumns_*sizeof(char));
+  } else {
+    integerType_ = NULL;
+  }
+}
+// Drops names - makes lengthnames 0 and names empty
+void 
+ClpModel::dropNames()
+{
+  lengthNames_=0;
+  rowNames_ = std::vector<std::string> ();
+  columnNames_ = std::vector<std::string> ();
+}
+// Drop integer informations
+void 
+ClpModel::deleteIntegerInformation()
+{
+  delete [] integerType_;
+  integerType_ = NULL;
+}

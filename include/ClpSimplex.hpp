@@ -227,6 +227,9 @@ public:
       deletes current model */
   int restoreModel(const char * fileName);
   
+  /** Just check solution (for external use) - sets sum of
+      infeasibilities etc */
+  void checkSolution();
   //@}
 
   /******************** End of most useful part **************/

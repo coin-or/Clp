@@ -90,6 +90,10 @@ public:
   int readMps(const char *filename,
 	      bool keepNames=false,
 	      bool ignoreErrors = false);
+  /// Copy in integer informations
+  void copyInIntegerInformation(const char * information);
+  /// Drop integer informations
+  void deleteIntegerInformation();
   /// Resizes rim part of model 
   void resize (int newNumberRows, int newNumberColumns);
   /// Deletes rows
@@ -104,6 +108,9 @@ public:
   /** Return model - nulls all arrays so can be deleted safely
       also updates any scalars */
   void returnModel(ClpModel & otherModel);
+
+  /// Drops names - makes lengthnames 0 and names empty
+  void dropNames();
   
   //@}
   /**@name gets and sets */

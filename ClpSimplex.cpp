@@ -571,7 +571,31 @@ int ClpSimplex::internalFactorize ( int solveType)
 	    }
 	    break;
 	  case superBasic:
-	    abort();
+	    if (rowUpperWork_[iRow]>largeValue_) {
+	      if (rowLowerWork_[iRow]>-largeValue_) {
+		rowActivityWork_[iRow]=rowLowerWork_[iRow];
+		setRowStatus(iRow,atLowerBound);
+	      } else {
+		// say free
+		setRowStatus(iRow,isFree);
+		rowActivityWork_[iRow]=0.0;
+	      }
+	    } else {
+	      if (rowLowerWork_[iRow]>-largeValue_) {
+		// set to nearest
+		if (fabs(rowActivityWork_[iRow]-rowLowerWork_[iRow])
+		    <fabs(rowActivityWork_[iRow]-rowLowerWork_[iRow])) {
+		  rowActivityWork_[iRow]=rowLowerWork_[iRow];
+		  setRowStatus(iRow,atLowerBound);
+		} else {
+		  rowActivityWork_[iRow]=rowUpperWork_[iRow];
+		  setRowStatus(iRow,atUpperBound);
+		}
+	      } else {
+		rowActivityWork_[iRow]=rowUpperWork_[iRow];
+		setRowStatus(iRow,atUpperBound);
+	      }
+	    }
 	    break;
 	  }
 	}
@@ -622,7 +646,31 @@ int ClpSimplex::internalFactorize ( int solveType)
 	    }
 	    break;
 	  case superBasic:
-	    abort();
+	    if (columnUpperWork_[iColumn]>largeValue_) {
+	      if (columnLowerWork_[iColumn]>-largeValue_) {
+		columnActivityWork_[iColumn]=columnLowerWork_[iColumn];
+		setColumnStatus(iColumn,atLowerBound);
+	      } else {
+		// say free
+		setColumnStatus(iColumn,isFree);
+		columnActivityWork_[iColumn]=0.0;
+	      }
+	    } else {
+	      if (columnLowerWork_[iColumn]>-largeValue_) {
+		// set to nearest
+		if (fabs(columnActivityWork_[iColumn]-columnLowerWork_[iColumn])
+		    <fabs(columnActivityWork_[iColumn]-columnLowerWork_[iColumn])) {
+		  columnActivityWork_[iColumn]=columnLowerWork_[iColumn];
+		  setColumnStatus(iColumn,atLowerBound);
+		} else {
+		  columnActivityWork_[iColumn]=columnUpperWork_[iColumn];
+		  setColumnStatus(iColumn,atUpperBound);
+		}
+	      } else {
+		columnActivityWork_[iColumn]=columnUpperWork_[iColumn];
+		setColumnStatus(iColumn,atUpperBound);
+	      }
+	    }
 	    break;
 	  }
 	}
@@ -1636,6 +1684,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
       reducedCostWork_ = dj_;
       rowReducedCost_ = dj_+numberColumns_;
       memcpy(reducedCostWork_,reducedCost_,numberColumns_*sizeof(double));
+      memcpy(rowReducedCost_,dual_,numberRows_*sizeof(double));
     }
     if (!solution_) {
       solution_ = new double[numberRows_+numberColumns_];
@@ -1747,6 +1796,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
     for (i=0;i<numberRows_;i++) {
       rowActivityWork_[i] *= rowScale_[i];
       dual_[i] /= rowScale_[i];
+      rowReducedCost_[i] = dual_[i];
     }
   }
  
@@ -2785,6 +2835,16 @@ ClpSimplexProgress::looping()
 bool 
 ClpSimplex::sanityCheck()
 {
+  // bad if empty
+  if (!numberRows_||!numberColumns_||!matrix_->getNumElements()) {
+    handler_->message(CLP_EMPTY_PROBLEM,messages_)
+      <<numberRows_
+      <<numberColumns_
+      <<matrix_->getNumElements()
+      <<CoinMessageEol;
+    problemStatus_=4;
+    return false;
+  }
   int numberBad , numberBadBounds;
   double largestBound, smallestBound, minimumGap;
   double smallestObj, largestObj;
@@ -3023,4 +3083,15 @@ ClpSimplex::readMps(const char *filename,
   int status = ClpModel::readMps(filename,keepNames,ignoreErrors);
   createStatus();
   return status;
+}
+// Just check solution (for external use)
+void 
+ClpSimplex::checkSolution()
+{
+  // put in standard form
+  createRim(7+8+16);
+  checkPrimalSolution( rowActivityWork_, columnActivityWork_);
+  checkDualSolution();
+  // release extra memory
+  deleteRim(false);
 }
