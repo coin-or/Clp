@@ -30,7 +30,7 @@
 
 #include "CoinSignal.hpp"
 static ClpSimplex * currentModel = NULL;
-static void signal_handler(int whichSignal)
+extern "C" static void signal_handler(int whichSignal)
 {
   if (currentModel!=NULL) 
     currentModel->setMaximumIterations(0); // stop at next iterations
