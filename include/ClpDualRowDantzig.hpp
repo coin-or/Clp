@@ -27,7 +27,7 @@ public:
       Uses input vector which it deletes
       Computes change in objective function
   */
-  virtual void updatePrimalSolution(OsiIndexedVector * input,
+  virtual void updatePrimalSolution(CoinIndexedVector * input,
 				    double theta,
 				    double & changeInObjective);
   //@}

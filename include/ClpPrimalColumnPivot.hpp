@@ -4,7 +4,7 @@
 #define ClpPrimalcolumnPivot_H
 
 class ClpSimplex;
-class OsiIndexedVector;
+class CoinIndexedVector;
 
 //#############################################################################
 
@@ -27,14 +27,14 @@ public:
       updateArray has cost updates (also use pivotRow_ from last iteration)
       We can use other arrays to help updates
   */
-  virtual int pivotColumn(OsiIndexedVector * updates,
-			  OsiIndexedVector * spareRow1,
-			  OsiIndexedVector * spareRow2,
-			  OsiIndexedVector * spareColumn1,
-			  OsiIndexedVector * spareColumn2) = 0;
+  virtual int pivotColumn(CoinIndexedVector * updates,
+			  CoinIndexedVector * spareRow1,
+			  CoinIndexedVector * spareRow2,
+			  CoinIndexedVector * spareColumn1,
+			  CoinIndexedVector * spareColumn2) = 0;
   
   /// Updates weights - part 1 (may be empty)
-  virtual void updateWeights(OsiIndexedVector * input);
+  virtual void updateWeights(CoinIndexedVector * input);
   
   /** Saves any weights round factorization as pivot rows may change
       Will be empty unless steepest edge (will save model)

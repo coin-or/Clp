@@ -10,10 +10,10 @@
 using std::min;
 using std::max;
 
-#include "OsiPackedMatrix.hpp"
-class OsiIndexedVector;
+#include "CoinPackedMatrix.hpp"
+class CoinIndexedVector;
 class ClpSimplex;
-typedef int OsiBigIndex; // synchronize with OsiFactorization.hpp
+typedef int ClpBigIndex;
 
 /** Abstract base class for Clp Matrices
 
@@ -33,8 +33,8 @@ class ClpMatrixBase  {
 public:
    /**@name Virtual methods that the derived classes must provide */
    //@{
-   /// Return a complete OsiPackedMatrix
-   virtual OsiPackedMatrix * getPackedMatrix() const = 0;
+   /// Return a complete CoinPackedMatrix
+   virtual CoinPackedMatrix * getPackedMatrix() const = 0;
     /** Whether the packed matrix is column major ordered or not. */
   virtual bool isColOrdered() const = 0;
    /** Number of entries in the packed matrix. */
@@ -70,9 +70,9 @@ public:
 
   /** Returns number of elements in basis
       column is basic if entry >=0 */
-  virtual OsiBigIndex numberInBasis(const int * columnIsBasic) const = 0;
+  virtual ClpBigIndex numberInBasis(const int * columnIsBasic) const = 0;
   /// Fills in basis (Returns number of elements and updates numberBasic)
-  virtual OsiBigIndex fillBasis(const ClpSimplex * model,
+  virtual ClpBigIndex fillBasis(const ClpSimplex * model,
 				const int * columnIsBasic, int & numberBasic,
 				int * row, int * column,
 				double * element) const = 0;
@@ -82,10 +82,10 @@ public:
   virtual int scale(ClpSimplex * model) const 
   { return 1;};
 
-  /** Unpacks a column into an OsiIndexedvector
+  /** Unpacks a column into an CoinIndexedvector
       Note that model is NOT const.  Bounds and objective could
       be modified if doing column generation (just for this variable) */
-  virtual void unpack(ClpSimplex * model,OsiIndexedVector * rowArray,
+  virtual void unpack(ClpSimplex * model,CoinIndexedVector * rowArray,
 		   int column) const =0;
   /** Purely for column generation and similar ideas.  Allows
       matrix and any bounds or costs to be updated (sensibly).
@@ -94,11 +94,11 @@ public:
   int refresh(ClpSimplex * model)
     { return 0;};
 
-  /** Adds multiple of a column into an OsiIndexedvector
+  /** Adds multiple of a column into an CoinIndexedvector
       You can use quickAdd to add to vector */
-  virtual void add(const ClpSimplex * model,OsiIndexedVector * rowArray,
+  virtual void add(const ClpSimplex * model,CoinIndexedVector * rowArray,
 		   int column, double multiplier) const =0;
-   /// Allow any parts of a created OsiPackedMatrix to be deleted
+   /// Allow any parts of a created CoinPackedMatrix to be deleted
    virtual void releasePackedMatrix() const {};
    //@}
 
@@ -131,17 +131,17 @@ public:
 	Can use y as temporary array (will be empty at end)
 	Squashes small elements and knows about ClpSimplex */
   virtual void transposeTimes(const ClpSimplex * model, double scalar,
-			      const OsiIndexedVector * x,
-			      OsiIndexedVector * y,
-			      OsiIndexedVector * z) const = 0;
+			      const CoinIndexedVector * x,
+			      CoinIndexedVector * y,
+			      CoinIndexedVector * z) const = 0;
     /** Return <code>x *A in <code>z</code> but
 	just for indices in y.
 	This is only needed for primal steepest edge.
 	Squashes small elements and knows about ClpSimplex */
   virtual void subsetTransposeTimes(const ClpSimplex * model,
-			      const OsiIndexedVector * x,
-			      const OsiIndexedVector * y,
-			      OsiIndexedVector * z) const = 0;
+			      const CoinIndexedVector * x,
+			      const CoinIndexedVector * y,
+			      CoinIndexedVector * z) const = 0;
   //@}
   //@{
   ///@name Other

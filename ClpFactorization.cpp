@@ -18,32 +18,22 @@
 //-------------------------------------------------------------------
 // Default Constructor 
 //-------------------------------------------------------------------
-ClpFactorization::ClpFactorization () 
-  : OsiFactorization()
-{
-}
+ClpFactorization::ClpFactorization () :
+   CoinFactorization() {}
 
 //-------------------------------------------------------------------
 // Copy constructor 
 //-------------------------------------------------------------------
-ClpFactorization::ClpFactorization (const ClpFactorization & rhs) 
-: OsiFactorization(rhs)
-{  
-  
-}
+ClpFactorization::ClpFactorization (const ClpFactorization & rhs) :
+   CoinFactorization(rhs) {}
 
-ClpFactorization::ClpFactorization (const OsiFactorization & rhs) 
-: OsiFactorization(rhs)
-{  
-  
-}
+ClpFactorization::ClpFactorization (const CoinFactorization & rhs) :
+   CoinFactorization(rhs) {}
 
 //-------------------------------------------------------------------
 // Destructor 
 //-------------------------------------------------------------------
-ClpFactorization::~ClpFactorization ()
-{
-}
+ClpFactorization::~ClpFactorization () {}
 
 //----------------------------------------------------------------
 // Assignment operator 
@@ -52,7 +42,7 @@ ClpFactorization &
 ClpFactorization::operator=(const ClpFactorization& rhs)
 {
   if (this != &rhs) {
-    OsiFactorization::operator=(rhs);
+    CoinFactorization::operator=(rhs);
   }
   return *this;
 }
@@ -69,7 +59,7 @@ ClpFactorization::factorize ( const ClpSimplex * model,
   if (areaFactor)
     areaFactor_ = areaFactor;
   int numberBasic = 0;
-  OsiBigIndex numberElements=0;
+  ClpBigIndex numberElements=0;
   int numberRowBasic=0;
 
   // compute how much in basis

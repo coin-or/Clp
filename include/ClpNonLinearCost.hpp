@@ -9,7 +9,7 @@
 #endif
 
 class ClpSimplex;
-class OsiIndexedVector;
+class CoinIndexedVector;
 
 /** Trivial class to deal with non linear costs
 
@@ -74,9 +74,9 @@ public:
       The input indices are row indices and need converting to sequences
       for costs.
       On input array is empty (but indices exist).  On exit just
-      changed costs will be stored as normal OsiIndexedVector
+      changed costs will be stored as normal CoinIndexedVector
   */
-  void checkChanged(int numberInArray, OsiIndexedVector * update);
+  void checkChanged(int numberInArray, CoinIndexedVector * update);
   /** Goes through one bound for each variable.
       If multiplier*work[iRow]>0 goes down, otherwise up.
       The indices are row indices and need converting to sequences
@@ -95,7 +95,7 @@ public:
       for costs.
       At the end of this all temporary offsets are zero
   */
-  void goBackAll(const OsiIndexedVector * update);
+  void goBackAll(const CoinIndexedVector * update);
   /** Sets bounds and cost for one variable 
       Returns change in cost
    May need to be inline for speed */

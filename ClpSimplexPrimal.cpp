@@ -87,9 +87,9 @@
 #include "ClpSimplexPrimal.hpp"
 #include "ClpFactorization.hpp"
 #include "ClpNonLinearCost.hpp"
-#include "OsiPackedMatrix.hpp"
-#include "OsiIndexedVector.hpp"
-#include "OsiWarmStartBasis.hpp"
+#include "CoinPackedMatrix.hpp"
+#include "CoinIndexedVector.hpp"
+#include "CoinWarmStartBasis.hpp"
 #include "ClpPrimalColumnPivot.hpp"
 #include "ClpMessage.hpp"
 #include <cfloat>
@@ -217,8 +217,8 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
 
 
   algorithm_ = +1;
-  primalTolerance_=dblParam_[OsiPrimalTolerance];
-  dualTolerance_=dblParam_[OsiDualTolerance];
+  primalTolerance_=dblParam_[ClpPrimalTolerance];
+  dualTolerance_=dblParam_[ClpDualTolerance];
 
   // put in standard form (and make row copy)
   // create modifiable copies of model rim and do optional scaling
@@ -282,7 +282,7 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
   if (totalNumberThrownOut)
     handler_->message(CLP_SINGULARITIES,messages_)
     <<totalNumberThrownOut
-    <<OsiMessageEol;
+    <<CoinMessageEol;
 
   problemStatus_ = -1;
   numberIterations_=0;
@@ -368,7 +368,7 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
   deleteRim();
   handler_->message(CLP_SIMPLEX_FINISHED+problemStatus_,messages_)
     <<objectiveValue()
-    <<OsiMessageEol;
+    <<CoinMessageEol;
   // Restore any saved stuff
   perturbation_ = savePerturbation;
   factorization_->sparseThreshold(saveSparse);
@@ -504,7 +504,7 @@ ClpSimplexPrimal::whileIterating(int & firstSuperBasic)
 	    char x = isColumn(sequenceIn_) ? 'C' :'R';
 	    handler_->message(CLP_SIMPLEX_FLAG,messages_)
 	      <<x<<sequenceWithin(sequenceIn_)
-	      <<OsiMessageEol;
+	      <<CoinMessageEol;
 	    setFlagged(sequenceIn_);
 	    lastBadIteration_ = numberIterations_; // say be more cautious
 	    rowArray_[1]->clear();
@@ -522,7 +522,7 @@ ClpSimplexPrimal::whileIterating(int & firstSuperBasic)
 	  fabs(saveDj-dualIn_)>1.0e-5*(1.0+fabs(saveDj))) {
 	handler_->message(CLP_PRIMAL_DJ,messages_)
 	  <<saveDj<<dualIn_
-	  <<OsiMessageEol;
+	  <<CoinMessageEol;
 	if(saveNumber != numberIterations_) {
 	  problemStatus_=-2; // factorize now
 	  rowArray_[1]->clear();
@@ -537,7 +537,7 @@ ClpSimplexPrimal::whileIterating(int & firstSuperBasic)
 	    char x = isColumn(sequenceIn_) ? 'C' :'R';
 	    handler_->message(CLP_SIMPLEX_FLAG,messages_)
 	      <<x<<sequenceWithin(sequenceIn_)
-	      <<OsiMessageEol;
+	      <<CoinMessageEol;
 	    setFlagged(sequenceIn_);
 	    lastBadIteration_ = numberIterations_; // say be more cautious
 	    rowArray_[1]->clear();
@@ -569,7 +569,7 @@ ClpSimplexPrimal::whileIterating(int & firstSuperBasic)
 	    char x = isColumn(sequenceIn_) ? 'C' :'R';
 	    handler_->message(CLP_SIMPLEX_FLAG,messages_)
 	      <<x<<sequenceWithin(sequenceIn_)
-	      <<OsiMessageEol;
+	      <<CoinMessageEol;
 	    setFlagged(sequenceIn_);
 	    lastBadIteration_ = numberIterations_; // say be more cautious
 	    rowArray_[1]->clear();
@@ -719,7 +719,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type)
 		     <numberDualInfeasibilities_)
 		       <<numberDualInfeasibilities_-
     numberDualInfeasibilitiesWithoutFree_;
-  handler_->message()<<OsiMessageEol;
+  handler_->message()<<CoinMessageEol;
   assert (primalFeasible());
   // we may wish to say it is optimal even if infeasible
   bool alwaysOptimal = (specialOptions_&1)!=0;
@@ -763,7 +763,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type)
 	changeMade_++; // say change made
 	handler_->message(CLP_PRIMAL_WEIGHT,messages_)
 	  <<infeasibilityCost_
-	  <<OsiMessageEol;
+	  <<CoinMessageEol;
 	// put back original bounds and then check
 	createRim(7);
 	nonLinearCost_->checkInfeasibilities(true);
@@ -778,7 +778,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type)
       if ( lastCleaned!=numberIterations_) {
 	handler_->message(CLP_PRIMAL_OPTIMAL,messages_)
 	  <<primalTolerance_
-	  <<OsiMessageEol;
+	  <<CoinMessageEol;
 	if (numberTimesOptimal_<4) {
 	  numberTimesOptimal_++;
 	  changeMade_++; // say change made
@@ -788,8 +788,8 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type)
 	  }
 	  lastCleaned=numberIterations_;
 	  handler_->message(CLP_PRIMAL_ORIGINAL,messages_)
-	    <<OsiMessageEol;
-	  primalTolerance_=dblParam_[OsiPrimalTolerance];
+	    <<CoinMessageEol;
+	  primalTolerance_=dblParam_[ClpPrimalTolerance];
 	  
 	  // put back original bounds and then check
 	  createRim(7);
@@ -800,7 +800,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type)
 	  problemStatus_=0; // optimal
 	  if (lastCleaned<numberIterations_) {
 	    handler_->message(CLP_SIMPLEX_GIVINGUP,messages_)
-	      <<OsiMessageEol;
+	      <<CoinMessageEol;
 	  }
 	}
       } else {
@@ -817,7 +817,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type)
 	  changeMade_++; // say change made
 	  handler_->message(CLP_PRIMAL_WEIGHT,messages_)
 	    <<infeasibilityCost_
-	    <<OsiMessageEol;
+	    <<CoinMessageEol;
 	  // put back original bounds and then check
 	  createRim(7);
 	  gutsOfSolution(rowActivityWork_, columnActivityWork_);
@@ -866,10 +866,10 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type)
    On exit rhsArray will have changes in costs of basic variables
 */
 void 
-ClpSimplexPrimal::primalRow(OsiIndexedVector * rowArray,
-			    OsiIndexedVector * rhsArray,
-			    OsiIndexedVector * spareArray,
-			    OsiIndexedVector * spareArray2,
+ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
+			    CoinIndexedVector * rhsArray,
+			    CoinIndexedVector * spareArray,
+			    CoinIndexedVector * spareArray2,
 			    int valuesPass)
 {
   if (valuesPass) {
@@ -1273,11 +1273,11 @@ ClpSimplexPrimal::primalRow(OsiIndexedVector * rowArray,
    For easy problems we can just choose one of the first columns we look at
 */
 void 
-ClpSimplexPrimal::primalColumn(OsiIndexedVector * updates,
-			       OsiIndexedVector * spareRow1,
-			       OsiIndexedVector * spareRow2,
-			       OsiIndexedVector * spareColumn1,
-			       OsiIndexedVector * spareColumn2)
+ClpSimplexPrimal::primalColumn(CoinIndexedVector * updates,
+			       CoinIndexedVector * spareRow1,
+			       CoinIndexedVector * spareRow2,
+			       CoinIndexedVector * spareColumn1,
+			       CoinIndexedVector * spareColumn2)
 {
   sequenceIn_ = primalColumnPivot_->pivotColumn(updates,spareRow1,
 					       spareRow2,spareColumn1,
@@ -1300,7 +1300,7 @@ ClpSimplexPrimal::primalColumn(OsiIndexedVector * updates,
    After rowArray will have list of cost changes
 */
 int 
-ClpSimplexPrimal::updatePrimalsInPrimal(OsiIndexedVector * rowArray,
+ClpSimplexPrimal::updatePrimalsInPrimal(CoinIndexedVector * rowArray,
 		  double theta,
 		  double & objectiveChange)
 {

@@ -8,7 +8,7 @@
 
 #include "ClpSimplex.hpp"
 #include "ClpPrimalColumnSteepest.hpp"
-#include "OsiIndexedVector.hpp"
+#include "CoinIndexedVector.hpp"
 #include "ClpFactorization.hpp"
 #include "ClpMessage.hpp"
 #include "CoinHelperFunctions.hpp"
@@ -51,7 +51,7 @@ ClpPrimalColumnSteepest::ClpPrimalColumnSteepest (const ClpPrimalColumnSteepest 
   savedSequenceOut_ = rhs.savedSequenceOut_;
   devex_ = rhs.devex_;
   if (rhs.infeasible_) {
-    infeasible_= new OsiIndexedVector(rhs.infeasible_);
+    infeasible_= new CoinIndexedVector(rhs.infeasible_);
   } else {
     infeasible_=NULL;
   }
@@ -72,7 +72,7 @@ ClpPrimalColumnSteepest::ClpPrimalColumnSteepest (const ClpPrimalColumnSteepest 
     savedWeights_=NULL;
   }
   if (rhs.alternateWeights_) {
-    alternateWeights_= new OsiIndexedVector(rhs.alternateWeights_);
+    alternateWeights_= new CoinIndexedVector(rhs.alternateWeights_);
   } else {
     alternateWeights_=NULL;
   }
@@ -113,7 +113,7 @@ ClpPrimalColumnSteepest::operator=(const ClpPrimalColumnSteepest& rhs)
     delete [] savedWeights_;
     savedWeights_ = NULL;
     if (rhs.infeasible_!=NULL) {
-      infeasible_= new OsiIndexedVector(rhs.infeasible_);
+      infeasible_= new CoinIndexedVector(rhs.infeasible_);
     } else {
       infeasible_=NULL;
     }
@@ -133,7 +133,7 @@ ClpPrimalColumnSteepest::operator=(const ClpPrimalColumnSteepest& rhs)
       weights_=NULL;
     }
     if (rhs.alternateWeights_!=NULL) {
-      alternateWeights_= new OsiIndexedVector(rhs.alternateWeights_);
+      alternateWeights_= new CoinIndexedVector(rhs.alternateWeights_);
     } else {
       alternateWeights_=NULL;
     }
@@ -145,11 +145,11 @@ ClpPrimalColumnSteepest::operator=(const ClpPrimalColumnSteepest& rhs)
 #define ADD_ONE 1.0
 // Returns pivot column, -1 if none
 int 
-ClpPrimalColumnSteepest::pivotColumn(OsiIndexedVector * updates,
-				    OsiIndexedVector * spareRow1,
-				    OsiIndexedVector * spareRow2,
-				    OsiIndexedVector * spareColumn1,
-				    OsiIndexedVector * spareColumn2)
+ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
+				    CoinIndexedVector * spareRow1,
+				    CoinIndexedVector * spareRow2,
+				    CoinIndexedVector * spareColumn1,
+				    CoinIndexedVector * spareColumn2)
 {
   assert(model_);
   int iSection,j;
@@ -605,7 +605,7 @@ ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model,int mode)
       delete [] weights_;
       delete alternateWeights_;
       weights_ = new double[numberRows+numberColumns];
-      alternateWeights_ = new OsiIndexedVector();
+      alternateWeights_ = new CoinIndexedVector();
       // enough space so can use it for factorization
       alternateWeights_->reserve(numberRows+
 				 model_->factorization()->maximumPivots());
@@ -635,7 +635,7 @@ ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model,int mode)
     state_=0;
     // set up infeasibilities
     if (!infeasible_) {
-      infeasible_ = new OsiIndexedVector();
+      infeasible_ = new CoinIndexedVector();
       infeasible_->reserve(numberColumns+numberRows);
     }
   }
@@ -737,7 +737,7 @@ ClpPrimalColumnPivot * ClpPrimalColumnSteepest::clone(bool CopyData) const
   }
 }
 void
-ClpPrimalColumnSteepest::updateWeights(OsiIndexedVector * input)
+ClpPrimalColumnSteepest::updateWeights(CoinIndexedVector * input)
 {
   int number=input->getNumElements();
   int * which = input->getIndices();
@@ -827,7 +827,7 @@ ClpPrimalColumnSteepest::updateWeights(OsiIndexedVector * input)
       model_->messageHandler()->message(CLP_INITIALIZE_STEEP,
 					*model_->messagesPointer())
 					  <<oldDevex<<devex_
-					  <<OsiMessageEol;
+					  <<CoinMessageEol;
       initializeWeights();
     }
   }
@@ -840,8 +840,8 @@ ClpPrimalColumnSteepest::updateWeights(OsiIndexedVector * input)
 void 
 ClpPrimalColumnSteepest::checkAccuracy(int sequence,
 				       double relativeTolerance,
-				       OsiIndexedVector * rowArray1,
-				       OsiIndexedVector * rowArray2)
+				       CoinIndexedVector * rowArray1,
+				       CoinIndexedVector * rowArray2)
 {
   model_->unpack(rowArray1,sequence);
   model_->factorization()->updateColumn(rowArray2,rowArray1);
@@ -911,7 +911,7 @@ ClpPrimalColumnSteepest::initializeWeights()
       }
     }
   } else {
-    OsiIndexedVector * temp = new OsiIndexedVector();
+    CoinIndexedVector * temp = new CoinIndexedVector();
     temp->reserve(numberRows+
 		  model_->factorization()->maximumPivots());
     double * array = alternateWeights_->denseVector();

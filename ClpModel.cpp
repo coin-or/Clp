@@ -5,24 +5,25 @@
 #  pragma warning(disable:4786)
 #endif
 
-#include <math.h>
+#include <cmath>
+#include <cassert>
+#include <cfloat>
+#include <string>
+#include <cstdio>
+#include <iostream>
+
+#include <time.h>
+#include <sys/times.h>
+#include <sys/resource.h>
+#include <unistd.h>
 
 #include "CoinHelperFunctions.hpp"
 #include "ClpModel.hpp"
 #include "ClpPackedMatrix.hpp"
-#include "OsiIndexedVector.hpp"
-#include "OsiMpsReader.hpp"
+#include "CoinIndexedVector.hpp"
+#include "CoinMpsIO.hpp"
 #include "ClpMessage.hpp"
-#include <cassert>
-#include <cfloat>
 
-#include <string>
-#include <stdio.h>
-#include <iostream>
-#include  <time.h>
-#include <sys/times.h>
-#include <sys/resource.h>
-#include <unistd.h>
 // This returns a non const array filled with input from scalar
 // or actual array
 template <class T> inline T*
@@ -95,17 +96,17 @@ ClpModel::ClpModel () :
   columnNames_(),
   integerType_(NULL)
 {
-  intParam_[OsiMaxNumIteration] = 9999999;
-  intParam_[OsiMaxNumIterationHotStart] = 9999999;
+  intParam_[ClpMaxNumIteration] = 9999999;
+  intParam_[ClpMaxNumIterationHotStart] = 9999999;
 
-  dblParam_[OsiDualObjectiveLimit] = DBL_MAX;
-  dblParam_[OsiPrimalObjectiveLimit] = DBL_MAX;
-  dblParam_[OsiDualTolerance] = 1e-7;
-  dblParam_[OsiPrimalTolerance] = 1e-7;
-  dblParam_[OsiObjOffset] = 0.0;
+  dblParam_[ClpDualObjectiveLimit] = DBL_MAX;
+  dblParam_[ClpPrimalObjectiveLimit] = DBL_MAX;
+  dblParam_[ClpDualTolerance] = 1e-7;
+  dblParam_[ClpPrimalTolerance] = 1e-7;
+  dblParam_[ClpObjOffset] = 0.0;
 
-  strParam_[OsiProbName] = "OsiDefaultName";
-  handler_ = new OsiMessageHandler();
+  strParam_[ClpProbName] = "ClpDefaultName";
+  handler_ = new CoinMessageHandler();
   handler_->setLogLevel(2);
   messages_ = ClpMessage();
 }
@@ -155,12 +156,12 @@ void ClpModel::gutsOfDelete()
 void ClpModel::setPrimalTolerance( double value) 
 {
   if (value>0.0&&value<1.0e10)
-    dblParam_[OsiPrimalTolerance]=value;
+    dblParam_[ClpPrimalTolerance]=value;
 }
 void ClpModel::setDualTolerance( double value) 
 {
   if (value>0.0&&value<1.0e10)
-    dblParam_[OsiDualTolerance]=value;
+    dblParam_[ClpDualTolerance]=value;
 }
 void ClpModel::setOptimizationDirection( int value) 
 {
@@ -225,14 +226,14 @@ ClpModel::loadProblem (  const ClpMatrixBase& matrix,
     matrix_=matrix.clone();
   } else {
     // later may want to keep as unknown class
-    OsiPackedMatrix matrix2;
+    CoinPackedMatrix matrix2;
     matrix2.reverseOrderedCopyOf(*matrix.getPackedMatrix());
     matrix.releasePackedMatrix();
     matrix_=new ClpPackedMatrix(matrix2);
   }    
 }
 void
-ClpModel::loadProblem (  const OsiPackedMatrix& matrix,
+ClpModel::loadProblem (  const CoinPackedMatrix& matrix,
 		     const double* collb, const double* colub,   
 		     const double* obj,
 		     const double* rowlb, const double* rowub,
@@ -243,7 +244,7 @@ ClpModel::loadProblem (  const OsiPackedMatrix& matrix,
   if (matrix.isColOrdered()) {
     matrix_=new ClpPackedMatrix(matrix);
   } else {
-    OsiPackedMatrix matrix2;
+    CoinPackedMatrix matrix2;
     matrix2.reverseOrderedCopyOf(matrix);
     matrix_=new ClpPackedMatrix(matrix2);
   }    
@@ -260,7 +261,7 @@ ClpModel::loadProblem (
 {
   gutsOfLoadModel(numrows, numcols,
 		  collb, colub, obj, rowlb, rowub, rowObjective);
-  OsiPackedMatrix matrix(true,numrows,numcols,start[numcols],
+  CoinPackedMatrix matrix(true,numrows,numcols,start[numcols],
 			      value,index,start,NULL);
   matrix_ = new ClpPackedMatrix(matrix);
 }
@@ -306,21 +307,21 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
 {
   defaultHandler_ = rhs.defaultHandler_;
   if (defaultHandler_) 
-    handler_ = new OsiMessageHandler(*rhs.handler_);
+    handler_ = new CoinMessageHandler(*rhs.handler_);
    else 
     handler_ = rhs.handler_;
   messages_ = rhs.messages_;
-  intParam_[OsiMaxNumIteration] = rhs.intParam_[OsiMaxNumIteration];
-  intParam_[OsiMaxNumIterationHotStart] = 
-    rhs.intParam_[OsiMaxNumIterationHotStart];
+  intParam_[ClpMaxNumIteration] = rhs.intParam_[ClpMaxNumIteration];
+  intParam_[ClpMaxNumIterationHotStart] = 
+    rhs.intParam_[ClpMaxNumIterationHotStart];
 
-  dblParam_[OsiDualObjectiveLimit] = rhs.dblParam_[OsiDualObjectiveLimit];
-  dblParam_[OsiPrimalObjectiveLimit] = rhs.dblParam_[OsiPrimalObjectiveLimit];
-  dblParam_[OsiDualTolerance] = rhs.dblParam_[OsiDualTolerance];
-  dblParam_[OsiPrimalTolerance] = rhs.dblParam_[OsiPrimalTolerance];
-  dblParam_[OsiObjOffset] = rhs.dblParam_[OsiObjOffset];
+  dblParam_[ClpDualObjectiveLimit] = rhs.dblParam_[ClpDualObjectiveLimit];
+  dblParam_[ClpPrimalObjectiveLimit] = rhs.dblParam_[ClpPrimalObjectiveLimit];
+  dblParam_[ClpDualTolerance] = rhs.dblParam_[ClpDualTolerance];
+  dblParam_[ClpPrimalTolerance] = rhs.dblParam_[ClpPrimalTolerance];
+  dblParam_[ClpObjOffset] = rhs.dblParam_[ClpObjOffset];
 
-  strParam_[OsiProbName] = rhs.strParam_[OsiProbName];
+  strParam_[ClpProbName] = rhs.strParam_[ClpProbName];
 
   objectiveValue_=rhs.objectiveValue_;
   numberIterations_ = rhs.numberIterations_;
@@ -441,18 +442,18 @@ ClpModel::returnModel(ClpModel & otherModel)
 //#############################################################################
 
 bool
-ClpModel::setIntParam(OsiIntParam key, int value)
+ClpModel::setIntParam(ClpIntParam key, int value)
 {
   switch (key) {
-  case OsiMaxNumIteration:
+  case ClpMaxNumIteration:
     if (value < 0)
       return false;
     break;
-  case OsiMaxNumIterationHotStart:
+  case ClpMaxNumIterationHotStart:
     if (value < 0)
       return false;
     break;
-  case OsiLastIntParam:
+  case ClpLastIntParam:
     return false;
   }
   intParam_[key] = value;
@@ -462,30 +463,30 @@ ClpModel::setIntParam(OsiIntParam key, int value)
 //-----------------------------------------------------------------------------
 
 bool
-ClpModel::setDblParam(OsiDblParam key, double value)
+ClpModel::setDblParam(ClpDblParam key, double value)
 {
 
   switch (key) {
-  case OsiDualObjectiveLimit:
+  case ClpDualObjectiveLimit:
     break;
 
-  case OsiPrimalObjectiveLimit:
+  case ClpPrimalObjectiveLimit:
     break;
 
-  case OsiDualTolerance: 
+  case ClpDualTolerance: 
     if (value<=0.0||value>1.0e10)
       return false;
     break;
     
-  case OsiPrimalTolerance: 
+  case ClpPrimalTolerance: 
     if (value<=0.0||value>1.0e10)
       return false;
     break;
     
-  case OsiObjOffset: 
+  case ClpObjOffset: 
     break;
 
-  case OsiLastDblParam:
+  case ClpLastDblParam:
     return false;
   }
   dblParam_[key] = value;
@@ -495,14 +496,14 @@ ClpModel::setDblParam(OsiDblParam key, double value)
 //-----------------------------------------------------------------------------
 
 bool
-ClpModel::setStrParam(OsiStrParam key, const std::string & value)
+ClpModel::setStrParam(ClpStrParam key, const std::string & value)
 {
 
   switch (key) {
-  case OsiProbName:
+  case ClpProbName:
     break;
 
-  case OsiLastStrParam:
+  case ClpLastStrParam:
     return false;
   }
   strParam_[key] = value;
@@ -722,14 +723,14 @@ ClpModel::setMaximumIterations(int value)
 }
 // Pass in Message handler (not deleted at end)
 void 
-ClpModel::passInMessageHandler(OsiMessageHandler * handler)
+ClpModel::passInMessageHandler(CoinMessageHandler * handler)
 {
   defaultHandler_=false;
   handler_=handler;
 }
 // Set language
 void 
-ClpModel::newLanguage(OsiMessages::Language language)
+ClpModel::newLanguage(CoinMessages::Language language)
 {
   messages_ = ClpMessage(language);
 }
@@ -752,11 +753,11 @@ ClpModel::readMps(const char *fileName,
       canOpen=true;
     } else {
       handler_->message(CLP_UNABLE_OPEN,messages_)
-	<<fileName<<OsiMessageEol;
+	<<fileName<<CoinMessageEol;
       return -1;
     }
   }
-  OsiMpsReader m;
+  CoinMpsIO m;
   double time1 = cpuTime(),time2;
   int status=m.readMps(fileName,"");
   if (!status||ignoreErrors) {
@@ -771,7 +772,7 @@ ClpModel::readMps(const char *fileName,
       integerType_ = NULL;
     }
     // set problem name
-    setStrParam(OsiProbName,m.getProblemName());
+    setStrParam(ClpProbName,m.getProblemName());
     // do names
     if (keepNames) {
       unsigned int maxLength=0;
@@ -794,15 +795,15 @@ ClpModel::readMps(const char *fileName,
     } else {
       lengthNames_=0;
     }
-    setDblParam(OsiObjOffset,m.objectiveOffset());
+    setDblParam(ClpObjOffset,m.objectiveOffset());
     time2 = cpuTime();
     handler_->message(CLP_IMPORT_RESULT,messages_)
       <<fileName
-      <<time2-time1<<OsiMessageEol;
+      <<time2-time1<<CoinMessageEol;
   } else {
     // errors
     handler_->message(CLP_IMPORT_ERRORS,messages_)
-      <<status<<fileName<<OsiMessageEol;
+      <<status<<fileName<<CoinMessageEol;
   }
 
   return status;
@@ -810,7 +811,7 @@ ClpModel::readMps(const char *fileName,
 bool ClpModel::isPrimalObjectiveLimitReached() const
 {
   double limit = 0.0;
-  getDblParam(OsiPrimalObjectiveLimit, limit);
+  getDblParam(ClpPrimalObjectiveLimit, limit);
   if (limit > 1e30) {
     // was not ever set
     return false;
@@ -831,7 +832,7 @@ bool ClpModel::isDualObjectiveLimitReached() const
 {
 
   double limit = 0.0;
-  getDblParam(OsiDualObjectiveLimit, limit);
+  getDblParam(ClpDualObjectiveLimit, limit);
   if (limit > 1e30) {
     // was not ever set
     return false;

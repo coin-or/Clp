@@ -6,28 +6,29 @@
 #endif
 
 #include <cassert>
+#include <cstdio>
+#include <cmath>
+#include <cfloat>
+#include <string>
+#include <iostream>
+
+#include <time.h>
+#include <sys/times.h>
+#include <sys/resource.h>
+#include <unistd.h>
+
+#include "CoinMpsIO.hpp"
+#include "CoinPackedMatrix.hpp"
+#include "CoinPackedVector.hpp"
+#include "CoinWarmStartBasis.hpp"
 
 #include "ClpFactorization.hpp"
-#include "OsiMpsReader.hpp"
 #include "ClpSimplex.hpp"
 #include "ClpDualRowSteepest.hpp"
 #include "ClpDualRowDantzig.hpp"
 #include "ClpPrimalColumnSteepest.hpp"
 #include "ClpPrimalColumnDantzig.hpp"
-#include "OsiPackedMatrix.hpp"
-#include "OsiPackedVector.hpp"
-#include "OsiWarmStartBasis.hpp"
-#include <stdio.h>
-
-#include <cmath>
-#include <cfloat>
-
-#include <string>
-#include <iostream>
-#include  <time.h>
-#include <sys/times.h>
-#include <sys/resource.h>
-#include <unistd.h>
+#include "ClpParameters.hpp"
 
 //#############################################################################
 
@@ -242,7 +243,7 @@ int mainTest (int argc, const char *argv[],bool doDual,
     
       // Read data mps file,
       std::string fn = netlibDir+mpsName[m];
-      OsiMpsReader mps;
+      CoinMpsIO mps;
       mps.readMps(fn.c_str(),"mps");
       ClpSimplex solution=empty;
       solution.loadProblem(*mps.getMatrixByCol(),mps.getColLower(),
@@ -263,7 +264,7 @@ int mainTest (int argc, const char *argv[],bool doDual,
 	ClpDualRowSteepest steep;
 	solution.setDualRowPivotAlgorithm(steep);
 #endif
-	solution.setDblParam(OsiObjOffset,mps.objectiveOffset());
+	solution.setDblParam(ClpObjOffset,mps.objectiveOffset());
 	solution.dual();
       } else {
 #if 0
@@ -278,13 +279,13 @@ int mainTest (int argc, const char *argv[],bool doDual,
 	  solution.setOptimizationDirection(-1);
 	solution.setInfeasibilityCost(1.0e6);
 #endif
-	solution.setDblParam(OsiObjOffset,mps.objectiveOffset());
+	solution.setDblParam(ClpObjOffset,mps.objectiveOffset());
 	solution.primal();
       }
       // Test objective solution value
       {
         double soln = solution.objectiveValue();
-        OsiRelFltEq eq(objValueTol[m]);
+        CoinRelFltEq eq(objValueTol[m]);
         std::cerr <<soln <<",  " <<objValue[m] <<" diff "<<
 	  soln-objValue[m]<<std::endl;
         if(!eq(soln,objValue[m]))
@@ -318,7 +319,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
 		   const std::string & netlibDir)
 {
   
-  OsiRelFltEq eq(0.000001);
+  CoinRelFltEq eq(0.000001);
 
   {
     ClpSimplex solution;
@@ -329,7 +330,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     int length[5]={2,3,1,1,1};
     int rows[11]={0,2,-1,-1,0,1,2,0,1,2};
     double elements[11]={7.0,2.0,1.0e10,1.0e10,-2.0,1.0,-2.0,1,1,1};
-    OsiPackedMatrix matrix(true,3,5,8,elements,rows,start,length);
+    CoinPackedMatrix matrix(true,3,5,8,elements,rows,start,length);
     
     // rim data
     double objective[7]={-4.0,1.0,0.0,0.0,0.0,0.0,0.0};
@@ -342,20 +343,20 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     int rowBasis1[3]={-1,-1,-1};
     int colBasis1[5]={1,1,-1,-1,1};
     int i;
-    OsiWarmStartBasis warm;
+    CoinWarmStartBasis warm;
     warm.setSize(5,3);
     for (i=0;i<3;i++) {
       if (rowBasis1[i]<0) {
-	warm.setArtifStatus(i,OsiWarmStartBasis::atLowerBound);
+	warm.setArtifStatus(i,CoinWarmStartBasis::atLowerBound);
       } else {
-	warm.setArtifStatus(i,OsiWarmStartBasis::basic);
+	warm.setArtifStatus(i,CoinWarmStartBasis::basic);
       }
     }
     for (i=0;i<5;i++) {
       if (colBasis1[i]<0) {
-	warm.setStructStatus(i,OsiWarmStartBasis::atLowerBound);
+	warm.setStructStatus(i,CoinWarmStartBasis::atLowerBound);
       } else {
-	warm.setStructStatus(i,OsiWarmStartBasis::basic);
+	warm.setStructStatus(i,CoinWarmStartBasis::basic);
       }
     }
     solution.loadProblem(matrix,colLower,colUpper,objective,
@@ -400,7 +401,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     solution.dual();
   }
   {    
-    OsiMpsReader m;
+    CoinMpsIO m;
     std::string fn = mpsDir+"exmip1";
     m.readMps(fn.c_str(),"mps");
     ClpSimplex solution;
@@ -411,7 +412,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
   }
   // test steepest edge
   {    
-    OsiMpsReader m;
+    CoinMpsIO m;
     std::string fn = netlibDir+"finnis";
     m.readMps(fn.c_str(),"mps");
     ClpModel model;
@@ -429,12 +430,12 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     // set objective sense,
     ClpDualRowSteepest steep;
     solution.setDualRowPivotAlgorithm(steep);
-    solution.setDblParam(OsiObjOffset,m.objectiveOffset());
+    solution.setDblParam(ClpObjOffset,m.objectiveOffset());
     solution.dual();
   }
   // test normal solution
   {    
-    OsiMpsReader m;
+    CoinMpsIO m;
     std::string fn = netlibDir+"afiro";
     m.readMps(fn.c_str(),"mps");
     ClpSimplex solution;
@@ -460,10 +461,10 @@ ClpSimplexUnitTest(const std::string & mpsDir,
       assert (solution.status()==0);
       int numberColumns = solution.numberColumns();
       int numberRows = solution.numberRows();
-      OsiPackedVector colsol(numberColumns,solution.primalColumnSolution());
+      CoinPackedVector colsol(numberColumns,solution.primalColumnSolution());
       double * objective = solution.objective();
       double objValue = colsol.dotProduct(objective);
-      OsiRelFltEq eq(1.0e-8);
+      CoinRelFltEq eq(1.0e-8);
       assert(eq(objValue,-4.6475314286e+02));
       double * lower = solution.columnLower();
       double * upper = solution.columnUpper();
@@ -500,7 +501,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
       double * rowObjective = solution.rowObjective();
       CoinDisjointCopyN(solution.dualRowSolution(),numberRows,rowObjective);
       CoinDisjointCopyN(solution.dualColumnSolution(),numberColumns,objective);
-      OsiWarmStartBasis basis;
+      CoinWarmStartBasis basis;
       solution.setBasis(basis);
       solution.dual();
       CoinFillN(rowObjective,numberRows,0.0);
@@ -510,7 +511,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
   }
   // test unbounded
   {    
-    OsiMpsReader m;
+    CoinMpsIO m;
     std::string fn = netlibDir+"brandy";
     m.readMps(fn.c_str(),"mps");
     ClpSimplex solution;
@@ -582,7 +583,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
   }
   // test infeasible
   {    
-    OsiMpsReader m;
+    CoinMpsIO m;
     std::string fn = netlibDir+"brandy";
     m.readMps(fn.c_str(),"mps");
     ClpSimplex solution;

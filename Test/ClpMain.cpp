@@ -6,36 +6,36 @@
 #endif
 
 #include <cassert>
+#include <cstdio>
+#include <cmath>
+#include <cfloat>
+#include <string>
+#include <iostream>
+
+#include <time.h>
+#include <sys/times.h>
+#include <sys/resource.h>
+#include <unistd.h>
+
 #define CLPVERSION "0.92"
 
+//#include "CoinPackedMatrix.hpp"
+//#include "CoinPackedVector.hpp"
+#include "CoinWarmStartBasis.hpp"
+#include "CoinMpsIO.hpp"
+
 #include "ClpFactorization.hpp"
-#include "OsiMpsReader.hpp"
 #include "ClpSimplex.hpp"
 #include "ClpDualRowSteepest.hpp"
 #include "ClpDualRowDantzig.hpp"
 #include "ClpPrimalColumnSteepest.hpp"
 #include "ClpPrimalColumnDantzig.hpp"
-#include "OsiPackedMatrix.hpp"
-#include "OsiPackedVector.hpp"
-#include "OsiWarmStartBasis.hpp"
 // For Branch and bound
-#include "OsiClpSolverInterface.hpp"
-#include "OsiCuts.hpp"
-#include "OsiRowCut.hpp"
-#include "OsiColCut.hpp"
-#include "OsiOsiMessage.hpp"
+//  #include "OsiClpSolverInterface.hpp"
+//  #include "OsiCuts.hpp"
+//  #include "OsiRowCut.hpp"
+//  #include "OsiColCut.hpp"
 
-#include <stdio.h>
-
-#include <cmath>
-#include <cfloat>
-
-#include <string>
-#include <iostream>
-#include  <time.h>
-#include <sys/times.h>
-#include <sys/resource.h>
-#include <unistd.h>
 #ifdef DMALLOC
 #include "dmalloc.h"
 #endif
@@ -1156,7 +1156,7 @@ stopping",
 						   allowImportErrors);
 		if (!status||(status>0&&allowImportErrors)) {
 		  // I don't think there is any need for this but ..
-		  OsiWarmStartBasis allSlack;
+		  CoinWarmStartBasis allSlack;
 		  goodModels[iModel]=true;
 		  models[iModel].setBasis(allSlack);
 		  time2 = cpuTime();
@@ -1189,8 +1189,6 @@ stopping",
 		std::cout<<"Unable to open file "<<fileName<<std::endl;
 	      }
 	      if (canOpen) {
-		// get OsiClp stuff 
-		OsiClpSolverInterface m(models+iModel);
 		// Convert names
 		int iRow;
 		int numberRows=models[iModel].numberRows();
@@ -1208,9 +1206,16 @@ stopping",
 		  columnNames[iColumn] = 
 		    strdup(models[iModel].columnName(iColumn).c_str());
 		}
-		m.writeMps(fileName.c_str(),
-			   (const char **) rowNames,
-			   (const char **) columnNames);
+
+		ClpSimplex& m = models[iModel];
+		CoinMpsIO writer;
+		writer.setMpsData(*m.matrix(), CLP_INFINITY,
+				  m.getColLower(), m.getColUpper(),
+				  m.getObjCoefficients(),
+				  (const char*) 0 /*integrality*/,
+				  m.getRowLower(), m.getRowUpper(),
+				  columnNames, rowNames);
+		writer.writeMps(fileName.c_str());
 		for (iRow=0;iRow<numberRows;iRow++) {
 		  free(rowNames[iRow]);
 		}
@@ -1219,7 +1224,6 @@ stopping",
 		  free(columnNames[iColumn]);
 		}
 		delete [] columnNames;
-		m.releaseClp();
 		time2 = cpuTime();
 		totalTime += time2-time1;
 		time1=time2;

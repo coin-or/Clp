@@ -4,11 +4,9 @@ LibType := SHARED
 # Select optimization (-O or -g). -O will be automatically bumped up to the 
 # highest level of optimization the compiler supports. If want something in
 # between then specify the exact level you want, e.g., -O1 or -O2
-OptLevel := -O2
-#OptLevel := -g
-# I seem to need this at present
-#OPTFLAG := -O2
-#OPTFLAG := -g
+#OptLevel := -O2
+OptLevel := -g
+
 ifeq ($(OptLevel),-g)
     CXXFLAGS += -DCLP_DEBUG
 endif
@@ -37,14 +35,15 @@ export CoinDir = $(shell cd ..; pwd)
 # You should not need to edit below this line.
 ##############################################################################
 # The location of the customized Makefiles
-export MakefileDir := ../Common/make
+export CoinDir = $(shell cd ..; pwd)
+export MakefileDir := $(CoinDir)/Makefiles
 include ${MakefileDir}/Makefile.coin
 include ${MakefileDir}/Makefile.location
-# This modification seems to be needed
-export ExtraIncDir := ../Osi/include
-export ExtraLibDir := 
-export ExtraLibName := 
-export ExtraDefine := 
+
+export ExtraIncDir  := ${CoinIncDir} ${zlibIncDir} ${bzlibIncDir}
+export ExtraLibDir  := ${CoinLibDir} ${zlibLibDir} ${bzlibLibDir}
+export ExtraLibName := ${CoinLibName} ${zlibLibName} ${bzlibLibName}
+export ExtraDefine  := ${CoinDefine} ${zlibDefine} ${bzlibDefine}
 
 export LibType OptLevel LIBNAME LIBSRC
 
@@ -54,13 +53,14 @@ export LibType OptLevel LIBNAME LIBSRC
 
 .PHONY: default install libClp library clean doc
 
+default: install
+
 unitTest : install
 	(cd Test && ${MAKE} unitTest)
 
-default: install
-
-install clean doc library: % :
+install clean doc: % :
 	$(MAKE) -f ${MakefileDir}/Makefile.lib $*
 
 libClp:
+	(cd $(CoinDir)/Coin && $(MAKE))
 	$(MAKE) -f ${MakefileDir}/Makefile.lib library

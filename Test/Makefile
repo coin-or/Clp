@@ -7,34 +7,16 @@ OptLevel := -g
 # You should not need to edit below this line.
 ##############################################################################
 # The location of the customized Makefiles
-export MakefileDir := $(CoinDir)/Common/make
+# also inherited from the parent Makefile
+export CoinDir = $(shell cd ../..; pwd)
+export MakefileDir := $(CoinDir)/Makefiles
 include ${MakefileDir}/Makefile.coin
 include ${MakefileDir}/Makefile.location
 
-IncDir :=
-IncDir += ${OsiSolverIncDir}
-IncDir += ${OsiIncDir}
-IncDir += ${ClpIncDir}
-IncDir += ${zlibIncDir}
-IncDir += ${bzlibIncDir}
-
-LibDir :=
-LibDir += ${OsiLibDir}
-LibDir += ${ClpLibDir}
-LibDir += ${zlibLibDir}
-LibDir += ${bzlibLibDir}
-
-LibName :=
-LibName += ${OsiLibName}
-LibName += ${ClpLibName}
-LibName += ${zlibLibName}
-LibName += ${bzlibLibName}
-
-Define :=
-Define += ${ClpDefine}
-Define += ${OsiDefine}
-Define += ${zlibDefine}
-Define += ${bzlibDefine}
+IncDir := ${ClpIncDir} ${CoinIncDir} ${bzlibIncDir} ${zlibIncDir}
+LibDir := ${ClpLibDir} ${CoinLibDir} ${bzlibLibDir} ${zlibLibDir}
+LibName := ${ClpLibName} ${CoinLibName} ${bzlibLibName} ${zlibLibName}
+Define := ${ClpDefine} ${CoinDefine} ${bzlibDefine} ${zlibDefine}
 
 ##############################################################################
 # You should not need to edit below this line.
@@ -44,6 +26,9 @@ CXXFLAGS += $(OPTFLAG)
 ifeq ($(OptLevel),-g)
     CXXFLAGS += -DOSI_DEBUG
 endif
+
+TESTSRC := ClpMain.cpp
+TESTSRC += unitTest.cpp
 
 ###############################################################################
 
@@ -62,7 +47,6 @@ CXXFLAGS += $(addprefix -D,${Define})
 
 LIBDIRS := ${LibDir}
 LIBS    := ${LibName}
-LIBS    += libOsiClp
 
 LDFLAGS := $(addprefix -L,$(LIBDIRS))
 LDFLAGS += $(call ifprefix,$(SHLINKPREFIX),$(LIBDIRS))
@@ -75,8 +59,6 @@ endif
 
 ###############################################################################
 
-TESTSRC := ClpMain.cpp
-TESTSRC += unitTest.cpp
 TESTOBJ := $(addprefix $(TARGETDIR)/, $(TESTSRC:.cpp=.o))
 TESTDEP := $(addprefix $(DEPDIR)/, $(TESTSRC:.cpp=.d))
 

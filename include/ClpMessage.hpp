@@ -11,7 +11,7 @@
 /** This deals with Clp messages (as against Osi messages etc)
  */
 
-#include "OsiMessageHandler.hpp"
+#include "CoinMessageHandler.hpp"
 enum CLP_Message
 {
   CLP_SIMPLEX_FINISHED,
@@ -52,7 +52,7 @@ enum CLP_Message
   CLP_DUMMY_END
 };
 
-class ClpMessage : public OsiMessages {
+class ClpMessage : public CoinMessages {
 
 public:
 

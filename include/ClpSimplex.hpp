@@ -17,8 +17,8 @@
 class ClpDualRowPivot;
 class ClpPrimalColumnPivot;
 class ClpFactorization;
-class OsiWarmStartBasis;
-class OsiIndexedVector;
+class CoinWarmStartBasis;
+class CoinIndexedVector;
 class ClpNonLinearCost;
 
 /** This solves LPs using the simplex method
@@ -45,7 +45,7 @@ class ClpSimplex : public ClpModel {
 
 public:
 
-  /// enums for status of various sorts (matches OsiWarmStartBasis)
+  /// enums for status of various sorts (matches CoinWarmStartBasis)
   enum Status {
     isFree = 0x00,
     basic = 0x01,
@@ -88,7 +88,7 @@ public:
   /** Primal algorithm - see ClpSimplexPrimal.hpp for method */
   int primal(int ifValuesPass=0);
   /// Sets up working basis as a copy of input
-  void setBasis( const OsiWarmStartBasis & basis);
+  void setBasis( const CoinWarmStartBasis & basis);
   /// Passes in factorization
   void setFactorization( ClpFactorization & factorization);
   /// Sets or unsets scaling, 0 -off, 1 on, 2 dynamic(later)
@@ -173,7 +173,7 @@ public:
   inline int numberPrimalInfeasibilities() const 
           { return numberPrimalInfeasibilities_;} ;
   /// Warm start
-  OsiWarmStartBasis getBasis() const;
+  CoinWarmStartBasis getBasis() const;
   /** Save model to file, returns 0 if success.  This is designed for
       use outside algorithms so does not save iterating arrays etc.
   It does not save any messaging information. 
@@ -218,13 +218,13 @@ public:
      Uses sequenceIn_
      Also applies scaling if needed
   */
-  void unpack(OsiIndexedVector * rowArray);
+  void unpack(CoinIndexedVector * rowArray);
   /**
      Unpacks one column of the matrix into indexed array 
      Slack if sequence>= numberColumns
      Also applies scaling if needed
   */
-  void unpack(OsiIndexedVector * rowArray,int sequence);
+  void unpack(CoinIndexedVector * rowArray,int sequence);
   
   /** 
       This does basis housekeeping and does values for in/out variables.
@@ -534,9 +534,9 @@ protected:
   /// Column objective - working copy
   double * objectiveWork_;
   /// Useful row length arrays 
-  OsiIndexedVector * rowArray_[6];
+  CoinIndexedVector * rowArray_[6];
   /// Useful column length arrays 
-  OsiIndexedVector * columnArray_[6];
+  CoinIndexedVector * columnArray_[6];
   /// Alpha (pivot element)
   double alpha_;
   /// Theta (pivot change)

@@ -139,7 +139,7 @@ public:
       Returns number of infeasibilities.
       After rowArray will have cost changes for use next iteration
   */
-  int updatePrimalsInPrimal(OsiIndexedVector * rowArray,
+  int updatePrimalsInPrimal(CoinIndexedVector * rowArray,
 		  double theta,
 		  double & objectiveChange);
   /** 
@@ -151,10 +151,10 @@ public:
       On exit rhsArray will have changes in costs of basic variables
       If valuesPass non-zero then compute dj for direction
   */
-  void primalRow(OsiIndexedVector * rowArray,
-		 OsiIndexedVector * rhsArray,
-		 OsiIndexedVector * spareArray,
-		 OsiIndexedVector * spareArray2,
+  void primalRow(CoinIndexedVector * rowArray,
+		 CoinIndexedVector * rhsArray,
+		 CoinIndexedVector * spareArray,
+		 CoinIndexedVector * spareArray2,
 		 int valuesPass);
   /** 
       Chooses primal pivot column
@@ -163,15 +163,15 @@ public:
       and will have this (with square of infeasibility) when steepest
       For easy problems we can just choose one of the first columns we look at
   */
-  void primalColumn(OsiIndexedVector * updateArray,
-		    OsiIndexedVector * spareRow1,
-		    OsiIndexedVector * spareRow2,
-		    OsiIndexedVector * spareColumn1,
-		    OsiIndexedVector * spareColumn2);
+  void primalColumn(CoinIndexedVector * updateArray,
+		    CoinIndexedVector * spareRow1,
+		    CoinIndexedVector * spareRow2,
+		    CoinIndexedVector * spareColumn1,
+		    CoinIndexedVector * spareColumn2);
 
   /** Checks if tentative optimal actually means unbounded in primal
       Returns -3 if not, 2 if is unbounded */
-  int checkUnbounded(OsiIndexedVector * ray,OsiIndexedVector * spare,
+  int checkUnbounded(CoinIndexedVector * ray,CoinIndexedVector * spare,
 		     double changeCost);
   /**  Refactorizes if necessary 
        Checks if finished.  Updates status.

@@ -13,7 +13,7 @@ See Forrest-Goldfarb paper for algorithm
 
 */
 
-class OsiIndexedVector;
+class CoinIndexedVector;
 
 class ClpDualRowSteepest : public ClpDualRowPivot {
   
@@ -26,15 +26,15 @@ public:
   virtual int pivotRow();
   
   /// Updates weights (may be empty)
-  virtual void updateWeights(OsiIndexedVector * input,
-			     OsiIndexedVector * spare,
-			     OsiIndexedVector * updatedColumn);
+  virtual void updateWeights(CoinIndexedVector * input,
+			     CoinIndexedVector * spare,
+			     CoinIndexedVector * updatedColumn);
   
   /** Updates primal solution (and maybe list of candidates)
       Uses input vector which it deletes
       Computes change in objective function
   */
-  virtual void updatePrimalSolution(OsiIndexedVector * input,
+  virtual void updatePrimalSolution(CoinIndexedVector * input,
 				    double theta,
 				    double & changeInObjective);
 
@@ -96,11 +96,11 @@ private:
   /// weight array 
   double * weights_;
   /// square of infeasibility array (just for infeasible rows)
-  OsiIndexedVector * infeasible_;
+  CoinIndexedVector * infeasible_;
   /// alternate weight array (so we can unroll)
-  OsiIndexedVector * alternateWeights_;
+  CoinIndexedVector * alternateWeights_;
   /// save weight array (so we can use checkpoint)
-  OsiIndexedVector * savedWeights_;
+  CoinIndexedVector * savedWeights_;
   //@}
 };
 

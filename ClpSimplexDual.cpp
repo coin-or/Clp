@@ -96,9 +96,9 @@
 #include "CoinHelperFunctions.hpp"
 #include "ClpSimplexDual.hpp"
 #include "ClpFactorization.hpp"
-#include "OsiPackedMatrix.hpp"
-#include "OsiIndexedVector.hpp"
-#include "OsiWarmStartBasis.hpp"
+#include "CoinPackedMatrix.hpp"
+#include "CoinIndexedVector.hpp"
+#include "CoinWarmStartBasis.hpp"
 #include "ClpDualRowDantzig.hpp"
 #include "ClpMessage.hpp"
 #include <cfloat>
@@ -236,8 +236,8 @@ int ClpSimplexDual::dual ( )
 #endif
 
   algorithm_ = -1;
-  dualTolerance_=dblParam_[OsiDualTolerance];
-  primalTolerance_=dblParam_[OsiPrimalTolerance];
+  dualTolerance_=dblParam_[ClpDualTolerance];
+  primalTolerance_=dblParam_[ClpPrimalTolerance];
 
   // put in standard form (and make row copy)
   // create modifiable copies of model rim and do optional scaling
@@ -265,7 +265,7 @@ int ClpSimplexDual::dual ( )
   else if (factorizationStatus)
     handler_->message(CLP_SINGULARITIES,messages_)
     <<factorizationStatus
-    <<OsiMessageEol;
+    <<CoinMessageEol;
 
   // If user asked for perturbation - do it
   int savePerturbation = perturbation_;
@@ -341,7 +341,7 @@ int ClpSimplexDual::dual ( )
   deleteRim();
   handler_->message(CLP_SIMPLEX_FINISHED+problemStatus_,messages_)
     <<objectiveValue()
-    <<OsiMessageEol;
+    <<CoinMessageEol;
   // Restore any saved stuff
   perturbation_ = savePerturbation;
   factorization_->sparseThreshold(saveSparse);
@@ -441,7 +441,7 @@ ClpSimplexDual::whileIterating()
       // we found a pivot row
       handler_->message(CLP_SIMPLEX_PIVOTROW,messages_)
 	<<pivotRow_
-	<<OsiMessageEol;
+	<<CoinMessageEol;
       // check accuracy of weights
       dualRowPivot_->checkAccuracy();
       // get sign for finding row of tableau
@@ -474,7 +474,7 @@ ClpSimplexDual::whileIterating()
 	  handler_->message(CLP_DUAL_CHECK,messages_)
 	    <<btranAlpha
 	    <<alpha_
-	    <<OsiMessageEol;
+	    <<CoinMessageEol;
 	  dualRowPivot_->unrollWeights();
 	  if (factorization_->pivots()) {
 	    problemStatus_=-2; // factorize now
@@ -491,7 +491,7 @@ ClpSimplexDual::whileIterating()
 	      char x = isColumn(sequenceOut_) ? 'C' :'R';
 	      handler_->message(CLP_SIMPLEX_FLAG,messages_)
 		<<x<<sequenceWithin(sequenceOut_)
-		<<OsiMessageEol;
+		<<CoinMessageEol;
 	      setFlagged(sequenceOut_);
 	      lastBadIteration_ = numberIterations_; // say be more cautious
 	      rowArray_[0]->clear();
@@ -583,7 +583,7 @@ ClpSimplexDual::whileIterating()
 	    char x = isColumn(sequenceOut_) ? 'C' :'R';
 	    handler_->message(CLP_SIMPLEX_FLAG,messages_)
 	      <<x<<sequenceWithin(sequenceOut_)
-	      <<OsiMessageEol;
+	      <<CoinMessageEol;
 	    setFlagged(sequenceOut_);
 	    lastBadIteration_ = numberIterations_; // say be more cautious
 	    rowArray_[0]->clear();
@@ -690,9 +690,9 @@ ClpSimplexDual::whileIterating()
    rowArray and columnarray will have flipped
    The output vector has movement (row length array) */
 int
-ClpSimplexDual::updateDualsInDual(OsiIndexedVector * rowArray,
-				  OsiIndexedVector * columnArray,
-				  OsiIndexedVector * outputArray,
+ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
+				  CoinIndexedVector * columnArray,
+				  CoinIndexedVector * outputArray,
 				  double theta,
 				  double & objectiveChange)
 {
@@ -914,7 +914,7 @@ ClpSimplexDual::dualRow()
 // and cost of change vector
 int
 ClpSimplexDual::changeBounds(bool initialize,
-				 OsiIndexedVector * outputArray,
+				 CoinIndexedVector * outputArray,
 				 double & changeCost)
 {
   if (!initialize) {
@@ -1045,10 +1045,10 @@ ClpSimplexDual::changeBounds(bool initialize,
    If necessary will modify costs
 */
 void
-ClpSimplexDual::dualColumn(OsiIndexedVector * rowArray,
-		       OsiIndexedVector * columnArray,
-		       OsiIndexedVector * spareArray,
-		       OsiIndexedVector * spareArray2)
+ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
+		       CoinIndexedVector * columnArray,
+		       CoinIndexedVector * spareArray,
+		       CoinIndexedVector * spareArray2)
 {
   double * work;
   int number;
@@ -1632,7 +1632,7 @@ ClpSimplexDual::dualColumn(OsiIndexedVector * rowArray,
     }
   }
   if (thisIncrease) {
-    newTolerance = dualTolerance_+1.0e-4*dblParam_[OsiDualTolerance];
+    newTolerance = dualTolerance_+1.0e-4*dblParam_[ClpDualTolerance];
   }
 
   // clear arrays
@@ -1646,8 +1646,8 @@ ClpSimplexDual::dualColumn(OsiIndexedVector * rowArray,
 /* Checks if tentative optimal actually means unbounded
    Returns -3 if not, 2 if is unbounded */
 int 
-ClpSimplexDual::checkUnbounded(OsiIndexedVector * ray,
-				   OsiIndexedVector * spare,
+ClpSimplexDual::checkUnbounded(CoinIndexedVector * ray,
+				   CoinIndexedVector * spare,
 				   double changeCost)
 {
   int status=2; // say unbounded
@@ -1791,7 +1791,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type)
 		     <numberDualInfeasibilities_)
 		       <<numberDualInfeasibilities_-
     numberDualInfeasibilitiesWithoutFree_;
-  handler_->message()<<OsiMessageEol;
+  handler_->message()<<CoinMessageEol;
   while (problemStatus_<=-3) {
     bool cleanDuals=false;
     int numberChangedBounds=0;
@@ -1804,7 +1804,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type)
 	// may be optimal - or may be bounds are wrong
 	handler_->message(CLP_DUAL_BOUNDS,messages_)
 	  <<dualBound_
-	  <<OsiMessageEol;
+	  <<CoinMessageEol;
 	// save solution in case unbounded
 	CoinDisjointCopyN(columnActivityWork_,numberColumns_,
 			  columnArray_[0]->denseVector());
@@ -1826,7 +1826,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type)
 	    problemStatus_=0; // optimal
 	    if (lastCleaned<numberIterations_) {
 	      handler_->message(CLP_SIMPLEX_GIVINGUP,messages_)
-		<<OsiMessageEol;
+		<<CoinMessageEol;
 	    }
 	  }
 	} else {
@@ -1861,7 +1861,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type)
 	// may be infeasible - or may be bounds are wrong
 	handler_->message(CLP_DUAL_CHECKB,messages_)
 	  <<dualBound_
-	  <<OsiMessageEol;
+	  <<CoinMessageEol;
 	numberChangedBounds=changeBounds(false,NULL,changeCost);
 	if (numberChangedBounds<=0||dualBound_>1.0e20||
 	    (largestPrimalError_>1.0&&dualBound_>1.0e17)) {
@@ -1883,7 +1883,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type)
 	// put back original tolerance
 	lastCleaned=numberIterations_;
 	handler_->message(CLP_DUAL_ORIGINAL,messages_)
-	  <<OsiMessageEol;
+	  <<CoinMessageEol;
 
 	perturbation_=102; // stop any perturbations
 	createRim(4);
@@ -1961,8 +1961,8 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type)
    If change >0.0 then value in array >0.0 => from lower to upper
 */
 void 
-ClpSimplexDual::flipBounds(OsiIndexedVector * rowArray,
-		  OsiIndexedVector * columnArray,
+ClpSimplexDual::flipBounds(CoinIndexedVector * rowArray,
+		  CoinIndexedVector * columnArray,
 		  double change)
 {
   double * work;
@@ -2115,7 +2115,7 @@ ClpSimplexDual::perturb()
   // modify costs
   handler_->message(CLP_SIMPLEX_PERTURB,messages_)
     <<perturbation
-    <<OsiMessageEol;
+    <<CoinMessageEol;
   for (iRow=0;iRow<numberRows_;iRow++) {
     double value = perturbation;
     double currentValue = rowObjectiveWork_[iRow];
@@ -2196,7 +2196,7 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
   else if (factorizationStatus)
     handler_->message(CLP_SINGULARITIES,messages_)
       <<factorizationStatus
-      <<OsiMessageEol;
+      <<CoinMessageEol;
   if (saveSparse) {
     // use default at present
     factorization_->sparseThreshold(0);
@@ -2435,8 +2435,8 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
 int ClpSimplexDual::fastDual(bool alwaysFinish)
 {
   algorithm_ = -1;
-  dualTolerance_=dblParam_[OsiDualTolerance];
-  primalTolerance_=dblParam_[OsiPrimalTolerance];
+  dualTolerance_=dblParam_[ClpDualTolerance];
+  primalTolerance_=dblParam_[ClpPrimalTolerance];
 
   // save dual bound
   double saveDualBound = dualBound_;
@@ -2508,7 +2508,7 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
       returnCode = whileIterating();
       if (!alwaysFinish&&returnCode<1) {
 	double limit = 0.0;
-	getDblParam(OsiDualObjectiveLimit, limit);
+	getDblParam(ClpDualObjectiveLimit, limit);
 	if(objectiveValue()*optimizationDirection_<limit|| 
 	   numberAtFakeBound()) {
 	  // can't say anything interesting - might as well return

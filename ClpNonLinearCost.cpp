@@ -7,9 +7,10 @@
 
 #include <iostream>
 
+#include "CoinIndexedVector.hpp"
+
 #include "ClpNonLinearCost.hpp"
 #include "ClpSimplex.hpp"
-#include "OsiIndexedVector.hpp"
 
 //#############################################################################
 // Constructors / Destructor / Assignment
@@ -446,7 +447,7 @@ ClpNonLinearCost::goBack(int numberInArray, const int * index,
   }
 }
 void 
-ClpNonLinearCost::goBackAll(const OsiIndexedVector * update)
+ClpNonLinearCost::goBackAll(const CoinIndexedVector * update)
 {
   assert (model_!=NULL);
   const int * pivotVariable = model_->pivotVariable();
@@ -501,10 +502,10 @@ ClpNonLinearCost::checkInfeasibilities(int numberInArray, const int * index)
    The input indices are row indices and need converting to sequences
    for costs.
    On input array is empty (but indices exist).  On exit just
-   changed costs will be stored as normal OsiIndexedVector
+   changed costs will be stored as normal CoinIndexedVector
 */
 void 
-ClpNonLinearCost::checkChanged(int numberInArray, OsiIndexedVector * update)
+ClpNonLinearCost::checkChanged(int numberInArray, CoinIndexedVector * update)
 {
   assert (model_!=NULL);
   double primalTolerance = model_->currentPrimalTolerance();

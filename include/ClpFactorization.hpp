@@ -8,15 +8,15 @@
 #  pragma warning(disable:4786)
 #endif
 
-#include "OsiFactorization.hpp"
+#include "CoinFactorization.hpp"
 
-/** This just implements OsiFactorization when an ClpMatrixBase object
+/** This just implements CoinFactorization when an ClpMatrixBase object
     is passed.  It has no data.
 */
 class ClpMatrixBase;
 class ClpSimplex;
 
-class ClpFactorization : public OsiFactorization {
+class ClpFactorization : public CoinFactorization {
   
 public:
   /**@name factorization */
@@ -50,8 +50,8 @@ public:
    //@{
    /** The copy constructor. */
    ClpFactorization(const ClpFactorization&);
-   /** The copy constructor from an OsiFactorization. */
-   ClpFactorization(const OsiFactorization&);
+   /** The copy constructor from an CoinFactorization. */
+   ClpFactorization(const CoinFactorization&);
 
    ClpFactorization& operator=(const ClpFactorization&);
    //@}

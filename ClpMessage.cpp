@@ -60,17 +60,17 @@ static Clp_message uk_english[]=
 };
 /* Constructor */
 ClpMessage::ClpMessage(Language language) :
-  OsiMessages(sizeof(us_english)/sizeof(Clp_message))
+  CoinMessages(sizeof(us_english)/sizeof(Clp_message))
 {
   language_=language;
   strcpy(source_,"Clp");
   Clp_message * message = us_english;
 
   while (message->internalNumber!=CLP_DUMMY_END) {
-      OsiOneMessage oneMessage(message->externalNumber,message->detail,
-		message->message);
-    addMessage(message->internalNumber,oneMessage);
-    message ++;
+     CoinOneMessage oneMessage(message->externalNumber,message->detail,
+			       message->message);
+     addMessage(message->internalNumber,oneMessage);
+     message ++;
 }
 
   // now override any language ones

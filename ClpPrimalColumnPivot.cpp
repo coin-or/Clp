@@ -61,7 +61,7 @@ ClpPrimalColumnPivot::saveWeights(ClpSimplex * model,int mode)
 // checks accuracy and may re-initialize (may be empty)
 
 void 
-ClpPrimalColumnPivot::updateWeights(OsiIndexedVector * input)
+ClpPrimalColumnPivot::updateWeights(CoinIndexedVector * input)
 {
 }
 

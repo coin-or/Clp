@@ -8,7 +8,7 @@
 
 #include "ClpSimplex.hpp"
 #include "ClpDualRowDantzig.hpp"
-#include "OsiIndexedVector.hpp"
+#include "CoinIndexedVector.hpp"
 
 //#############################################################################
 // Constructors / Destructor / Assignment
@@ -85,8 +85,7 @@ ClpDualRowDantzig::pivotRow()
    Computes change in objective function
 */
 void 
-ClpDualRowDantzig::updatePrimalSolution(
-					OsiIndexedVector * primalUpdate,
+ClpDualRowDantzig::updatePrimalSolution(CoinIndexedVector * primalUpdate,
 					double primalRatio,
 					double & objectiveChange)
 {

@@ -147,17 +147,17 @@ public:
       Variables may be flipped between bounds to stay dual feasible.
       The output vector has movement of primal
       solution (row length array) */
-  int updateDualsInDual(OsiIndexedVector * rowArray,
-		  OsiIndexedVector * columnArray,
-		  OsiIndexedVector * outputArray,
+  int updateDualsInDual(CoinIndexedVector * rowArray,
+		  CoinIndexedVector * columnArray,
+		  CoinIndexedVector * outputArray,
 		  double theta,
 		  double & objectiveChange);
   /** While updateDualsInDual sees what effect is of flip
       this does actuall flipping.
       If change >0.0 then value in array >0.0 => from lower to upper
   */
-  void flipBounds(OsiIndexedVector * rowArray,
-		  OsiIndexedVector * columnArray,
+  void flipBounds(CoinIndexedVector * rowArray,
+		  CoinIndexedVector * columnArray,
 		  double change);
   /** 
       Row array has row part of pivot row
@@ -169,10 +169,10 @@ public:
       For speed, we may need to go to a bucket approach when many
       variables are being flipped
   */
-  void dualColumn(OsiIndexedVector * rowArray,
-		  OsiIndexedVector * columnArray,
-		  OsiIndexedVector * spareArray,
-		  OsiIndexedVector * spareArray2);
+  void dualColumn(CoinIndexedVector * rowArray,
+		  CoinIndexedVector * columnArray,
+		  CoinIndexedVector * spareArray,
+		  CoinIndexedVector * spareArray2);
   /** 
       Chooses dual pivot row
       Would be faster with separate region to scan
@@ -188,7 +188,7 @@ public:
       Fills in changeVector which can be used to see if unbounded
       and cost of change vector
   */
-  int changeBounds(bool initialize,OsiIndexedVector * outputArray,
+  int changeBounds(bool initialize,CoinIndexedVector * outputArray,
 		   double & changeCost);
   /** As changeBounds but just changes new bounds for a single variable.
       Returns true if change */
@@ -197,7 +197,7 @@ public:
   void originalBound(int iSequence);
   /** Checks if tentative optimal actually means unbounded in dual
       Returns -3 if not, 2 if is unbounded */
-  int checkUnbounded(OsiIndexedVector * ray,OsiIndexedVector * spare,
+  int checkUnbounded(CoinIndexedVector * ray,CoinIndexedVector * spare,
 		     double changeCost);
   /**  Refactorizes if necessary 
        Checks if finished.  Updates status.

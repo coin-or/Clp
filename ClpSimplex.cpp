@@ -14,8 +14,8 @@
 #include "ClpSimplex.hpp"
 #include "ClpFactorization.hpp"
 #include "ClpPackedMatrix.hpp"
-#include "OsiIndexedVector.hpp"
-#include "OsiWarmStartBasis.hpp"
+#include "CoinIndexedVector.hpp"
+#include "CoinWarmStartBasis.hpp"
 #include "ClpDualRowDantzig.hpp"
 #include "ClpDualRowSteepest.hpp"
 #include "ClpPrimalColumnDantzig.hpp"
@@ -196,7 +196,7 @@ ClpSimplex::gutsOfSolution ( const double * rowActivities,
       handler_->message(CLP_SIMPLEX_NONLINEAR,messages_)
 	<<nonLinearCost_->changeInCost()
 	<<nonLinearCost_->numberInfeasibilities()
-	<<OsiMessageEol;
+	<<CoinMessageEol;
   }
   if (valuesPass) {
 #ifdef CLP_DEBUG
@@ -255,7 +255,7 @@ ClpSimplex::gutsOfSolution ( const double * rowActivities,
     handler_->message(CLP_SIMPLEX_ACCURACY,messages_)
       <<largestPrimalError_
       <<largestDualError_
-      <<OsiMessageEol;
+      <<CoinMessageEol;
   return 0;
 }
 void
@@ -264,7 +264,7 @@ ClpSimplex::computePrimals ( const double * rowActivities,
 {
 
   //work space
-  OsiIndexedVector  * workSpace = rowArray_[0];
+  CoinIndexedVector  * workSpace = rowArray_[0];
 
   double * array = new double [numberRows_];
   double * save = new double [numberRows_];
@@ -364,7 +364,7 @@ ClpSimplex::computeDuals()
 {
   double slackValue = factorization_->slackValue();
   //work space
-  OsiIndexedVector  * workSpace = rowArray_[0];
+  CoinIndexedVector  * workSpace = rowArray_[0];
 
   double * array = new double [numberRows_];
   double * save = new double [numberRows_];
@@ -837,7 +837,7 @@ int ClpSimplex::internalFactorize ( int solveType)
   if (status) {
     handler_->message(CLP_SIMPLEX_BADFACTOR,messages_)
       <<status
-      <<OsiMessageEol;
+      <<CoinMessageEol;
     return -1;
   } else if (!solveType) {
     // Initial basis - return number of singularities
@@ -873,11 +873,11 @@ ClpSimplex::housekeeping(double objectiveChange)
     <<directionOut_
     <<directionIn_<<theta_
     <<dualOut_<<dualIn_<<alpha_
-    <<OsiMessageEol;
+    <<CoinMessageEol;
   if (getStatus(sequenceIn_)==ClpSimplex::isFree) {
     handler_->message(CLP_SIMPLEX_FREEIN,messages_)
       <<sequenceIn_
-      <<OsiMessageEol;
+      <<CoinMessageEol;
   }
   // change of incoming
   if (algorithm_<0) {
@@ -980,7 +980,7 @@ ClpSimplex::housekeeping(double objectiveChange)
     <<rowcol[isColumn(sequenceOut_)]<<sequenceWithin(sequenceOut_);
   handler_->printing(algorithm_<0)<<theta_<<dualOut_;
   handler_->printing(algorithm_>0)<<dualIn_<<theta_;
-  handler_->message()<<OsiMessageEol;
+  handler_->message()<<CoinMessageEol;
 
   if (numberIterations_>=maximumIterations_)
     return 2;
@@ -1227,10 +1227,10 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
   for (i=0;i<6;i++) {
     rowArray_[i]=NULL;
     if (rhs.rowArray_[i]) 
-      rowArray_[i] = new OsiIndexedVector(*rhs.rowArray_[i]);
+      rowArray_[i] = new CoinIndexedVector(*rhs.rowArray_[i]);
     columnArray_[i]=NULL;
     if (rhs.columnArray_[i]) 
-      columnArray_[i] = new OsiIndexedVector(*rhs.columnArray_[i]);
+      columnArray_[i] = new CoinIndexedVector(*rhs.columnArray_[i]);
   }
   if (rhs.status_) {
     status_ = copyOfArray( rhs.status_,numberColumns_+numberRows_);
@@ -1553,7 +1553,7 @@ ClpSimplex::checkDualSolution()
   Unpacks one column of the matrix into indexed array 
 */
 void 
-ClpSimplex::unpack(OsiIndexedVector * rowArray)
+ClpSimplex::unpack(CoinIndexedVector * rowArray)
 {
   rowArray->clear();
   if (sequenceIn_>=numberColumns_) {
@@ -1565,7 +1565,7 @@ ClpSimplex::unpack(OsiIndexedVector * rowArray)
   }
 }
 void 
-ClpSimplex::unpack(OsiIndexedVector * rowArray,int sequence)
+ClpSimplex::unpack(CoinIndexedVector * rowArray,int sequence)
 {
   rowArray->clear();
   if (sequence>=numberColumns_) {
@@ -1631,9 +1631,9 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
     memcpy(columnUpperWork_,columnUpper_,numberColumns_*sizeof(double));
     // clean up any mismatches on infinity
     for (i=0;i<numberColumns_;i++) {
-      if (columnLowerWork_[i]<-1.0e30)
+      if (columnLowerWork_[i]<-CLP_INFINITY)
 	columnLowerWork_[i] = -DBL_MAX;
-      if (columnUpperWork_[i]>1.0e30)
+      if (columnUpperWork_[i]>CLP_INFINITY)
 	columnUpperWork_[i] = DBL_MAX;
     }
     // clean up any mismatches on infinity
@@ -1712,7 +1712,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
     *********************************************************/
     for (iRow=0;iRow<4;iRow++) {
       if (!rowArray_[iRow]) {
-	rowArray_[iRow]=new OsiIndexedVector();
+	rowArray_[iRow]=new CoinIndexedVector();
 	int length =numberRows_+factorization_->maximumPivots();
 	if (iRow==3)
 	  length = max(length,numberColumns_);
@@ -1722,7 +1722,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
     
     for (iColumn=0;iColumn<2;iColumn++) {
       if (!columnArray_[iColumn]) {
-	columnArray_[iColumn]=new OsiIndexedVector();
+	columnArray_[iColumn]=new CoinIndexedVector();
 	columnArray_[iColumn]->reserve(numberColumns_);
       }
     }    
@@ -1820,20 +1820,20 @@ ClpSimplex::scaling(int mode)
 }
 // Sets up basis
 void 
-ClpSimplex::setBasis ( const OsiWarmStartBasis & basis)
+ClpSimplex::setBasis ( const CoinWarmStartBasis & basis)
 {
   // transform basis to status arrays
   int iRow,iColumn;
   if (!status_) {
     /*
       get status arrays
-      OsiWarmStartBasis would seem to have overheads and we will need
+      CoinWarmStartBasis would seem to have overheads and we will need
       extra bits anyway.
     */
     status_ = new unsigned char [numberColumns_+numberRows_];
     memset(status_,0,(numberColumns_+numberRows_)*sizeof(char));
   }
-  OsiWarmStartBasis basis2 = basis;
+  CoinWarmStartBasis basis2 = basis;
   // resize if necessary
   basis2.resize(numberRows_,numberColumns_);
   // move status
@@ -1854,21 +1854,21 @@ ClpSimplex::setFactorization( ClpFactorization & factorization)
   factorization_= new ClpFactorization(factorization);
 }
 // Warm start
-OsiWarmStartBasis  
+CoinWarmStartBasis  
 ClpSimplex::getBasis() const
 {
   int iRow,iColumn;
-  OsiWarmStartBasis basis;
+  CoinWarmStartBasis basis;
   basis.setSize(numberColumns_,numberRows_);
 
   if(status_) {
     for (iRow=0;iRow<numberRows_;iRow++) {
       basis.setArtifStatus(iRow,
-			   (OsiWarmStartBasis::Status) getRowStatus(iRow));
+			   (CoinWarmStartBasis::Status) getRowStatus(iRow));
     }
     for (iColumn=0;iColumn<numberColumns_;iColumn++) {
       basis.setStructStatus(iColumn,
-		       (OsiWarmStartBasis::Status) getColumnStatus(iColumn));
+		       (CoinWarmStartBasis::Status) getColumnStatus(iColumn));
     }
   }
   return basis;
@@ -1931,7 +1931,7 @@ ClpSimplex::tightenPrimalBounds()
 {
   
   // Get a row copy in standard format
-  OsiPackedMatrix copy;
+  CoinPackedMatrix copy;
   copy.reverseOrderedCopyOf(*matrix());
   // get matrix data pointers
   const int * column = copy.getIndices();
@@ -2119,7 +2119,7 @@ ClpSimplex::tightenPrimalBounds()
   if (!numberInfeasible) {
     handler_->message(CLP_SIMPLEX_BOUNDTIGHTEN,messages_)
       <<totalTightened
-      <<OsiMessageEol;
+      <<CoinMessageEol;
     // Set bounds slightly loose
     for (iColumn=0;iColumn<numberColumns_;iColumn++) {
       if (columnUpper_[iColumn]-columnLower_[iColumn]<tolerance) {
@@ -2144,7 +2144,7 @@ ClpSimplex::tightenPrimalBounds()
   } else {
     handler_->message(CLP_SIMPLEX_INFEASIBILITIES,messages_)
       <<numberInfeasible
-      <<OsiMessageEol;
+      <<CoinMessageEol;
     // restore column bounds
     memcpy(columnLower_,saveLower,numberColumns_*sizeof(double));
     memcpy(columnUpper_,saveUpper,numberColumns_*sizeof(double));
@@ -2196,7 +2196,7 @@ ClpSimplex::borrowModel(ClpModel & otherModel)
 }
 typedef struct {
   double optimizationDirection;
-  double dblParam[OsiLastDblParam];
+  double dblParam[ClpLastDblParam];
   double objectiveValue;
   double dualBound;
   double dualTolerance;
@@ -2206,7 +2206,7 @@ typedef struct {
   double infeasibilityCost;
   int numberRows;
   int numberColumns;
-  int intParam[OsiLastIntParam];
+  int intParam[ClpLastIntParam];
   int numberIterations;
   int problemStatus;
   int maximumIterations;
@@ -2251,7 +2251,7 @@ ClpSimplex::saveModel(const char * fileName)
     int i, numberWritten;
     // Fill in scalars
     scalars.optimizationDirection = optimizationDirection_;
-    memcpy(scalars.dblParam, dblParam_,OsiLastDblParam * sizeof(double));
+    memcpy(scalars.dblParam, dblParam_,ClpLastDblParam * sizeof(double));
     scalars.objectiveValue = objectiveValue_;
     scalars.dualBound = dualBound_;
     scalars.dualTolerance = dualTolerance_;
@@ -2261,7 +2261,7 @@ ClpSimplex::saveModel(const char * fileName)
     scalars.infeasibilityCost = infeasibilityCost_;
     scalars.numberRows = numberRows_;
     scalars.numberColumns = numberColumns_;
-    memcpy(scalars.intParam, intParam_,OsiLastIntParam * sizeof(double));
+    memcpy(scalars.intParam, intParam_,ClpLastIntParam * sizeof(double));
     scalars.numberIterations = numberIterations_;
     scalars.problemStatus = problemStatus_;
     scalars.maximumIterations = maximumIterations_;
@@ -2284,7 +2284,7 @@ ClpSimplex::saveModel(const char * fileName)
       return 1;
     // strings
     int length;
-    for (i=0;i<OsiLastStrParam;i++) {
+    for (i=0;i<ClpLastStrParam;i++) {
       length = strParam_[i].size();
       numberWritten = fwrite(&length,sizeof(int),1,fp);
       if (numberWritten!=1)
@@ -2444,7 +2444,7 @@ ClpSimplex::restoreModel(const char * fileName)
       return 1;
     // Fill in scalars
     optimizationDirection_ = scalars.optimizationDirection;
-    memcpy(dblParam_, scalars.dblParam, OsiLastDblParam * sizeof(double));
+    memcpy(dblParam_, scalars.dblParam, ClpLastDblParam * sizeof(double));
     objectiveValue_ = scalars.objectiveValue;
     dualBound_ = scalars.dualBound;
     dualTolerance_ = scalars.dualTolerance;
@@ -2454,7 +2454,7 @@ ClpSimplex::restoreModel(const char * fileName)
     infeasibilityCost_ = scalars.infeasibilityCost;
     numberRows_ = scalars.numberRows;
     numberColumns_ = scalars.numberColumns;
-    memcpy(intParam_, scalars.intParam,OsiLastIntParam * sizeof(double));
+    memcpy(intParam_, scalars.intParam,ClpLastIntParam * sizeof(double));
     numberIterations_ = scalars.numberIterations;
     problemStatus_ = scalars.problemStatus;
     maximumIterations_ = scalars.maximumIterations;
@@ -2469,7 +2469,7 @@ ClpSimplex::restoreModel(const char * fileName)
     specialOptions_ = scalars.specialOptions;
     // strings
     int length;
-    for (i=0;i<OsiLastStrParam;i++) {
+    for (i=0;i<ClpLastStrParam;i++) {
       numberRead = fread(&length,sizeof(int),1,fp);
       if (numberRead!=1)
 	return 1;
@@ -2607,7 +2607,7 @@ ClpSimplex::restoreModel(const char * fileName)
     if (numberRead!=numberColumns_)
       return 1;
     // assign matrix
-    OsiPackedMatrix * matrix = new OsiPackedMatrix();
+    CoinPackedMatrix * matrix = new CoinPackedMatrix();
     matrix->assignMatrix(true, numberRows_, numberColumns_,
 			 length, elements, indices, starts, lengths);
     // and transfer to Clp
