@@ -27,6 +27,7 @@
 #include "ClpNetworkMatrix.hpp"
 #include "ClpPlusMinusOneMatrix.hpp"
 #include "MyMessageHandler.hpp"
+#include "MyEventHandler.hpp"
 
 #include "ClpPresolve.hpp"
 #include "Idiot.hpp"
@@ -493,6 +494,15 @@ ClpSimplexUnitTest(const std::string & mpsDir,
 			 m.getObjCoefficients(),
 			 m.getRowLower(),m.getRowUpper());
     solution.dual();
+    // Test event handling
+    MyEventHandler handler;
+    solution.passInEventHandler(&handler);
+    int numberRows=solution.numberRows();
+    // make sure values pass has something to do
+    for (int i=0;i<numberRows;i++)
+      solution.setRowStatus(i,ClpSimplex::basic);
+    solution.primal(1);
+    assert (solution.secondaryStatus()==102); // Came out at end of pass
   }
   // Test Message handler
   {    

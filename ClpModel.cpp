@@ -14,6 +14,7 @@
 #include "CoinHelperFunctions.hpp"
 #include "CoinTime.hpp"
 #include "ClpModel.hpp"
+#include "ClpEventHandler.hpp"
 #include "ClpPackedMatrix.hpp"
 #include "CoinPackedVector.hpp"
 #include "CoinIndexedVector.hpp"
@@ -69,6 +70,7 @@ ClpModel::ClpModel () :
   strParam_[ClpProbName] = "ClpDefaultName";
   handler_ = new CoinMessageHandler();
   handler_->setLogLevel(1);
+  eventHandler_ = new ClpEventHandler();
   messages_ = ClpMessage();
   CoinSeedRandom(1234567);
 }
@@ -115,6 +117,8 @@ void ClpModel::gutsOfDelete()
   integerType_ = NULL;
   delete [] status_;
   status_=NULL;
+  delete eventHandler_;
+  eventHandler_=NULL;
 }
 //#############################################################################
 void ClpModel::setPrimalTolerance( double value) 
@@ -138,7 +142,10 @@ ClpModel::gutsOfLoadModel (int numberRows, int numberColumns,
 		     const double* rowlb, const double* rowub,
 				const double * rowObjective)
 {
+  // save event handler in case already set
+  ClpEventHandler * handler = eventHandler_->clone();
   gutsOfDelete();
+  eventHandler_ = handler;
   numberRows_=numberRows;
   numberColumns_=numberColumns;
   rowActivity_=new double[numberRows_];
@@ -303,6 +310,7 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
     handler_ = new CoinMessageHandler(*rhs.handler_);
    else 
     handler_ = rhs.handler_;
+  eventHandler_ = rhs.eventHandler_->clone();
   messages_ = rhs.messages_;
   intParam_[ClpMaxNumIteration] = rhs.intParam_[ClpMaxNumIteration];
   intParam_[ClpMaxNumIterationHotStart] = 
@@ -1321,47 +1329,12 @@ ClpModel::ClpModel ( const ClpModel * rhs,
 		     int numberColumns, const int * whichColumn,
 		     bool dropNames, bool dropIntegers)
 {
-#if 0
-  // Could be recoded to be faster and take less memory
-  // and to allow re-ordering and duplicates etc
-  gutsOfCopy(*rhs,true);
-  int numberRowsWhole = rhs->numberRows();
-  int * delRow = new int[numberRowsWhole];
-  memset(delRow,0,numberRowsWhole*sizeof(int));
-  int i;
-  for (i=0;i<numberRows;i++) {
-    int iRow=whichRow[i];
-    assert (iRow>=0&&iRow<numberRowsWhole);
-    delRow[iRow]=1;
-  }
-  numberRows=0;
-  for (i=0;i<numberRowsWhole;i++) {
-    if (delRow[i]==0)
-      delRow[numberRows++]=i;
-  }
-  deleteRows(numberRows,delRow);
-  delete [] delRow;
-  int numberColumnsWhole = rhs->numberColumns();
-  int * delColumn = new int[numberColumnsWhole];
-  memset(delColumn,0,numberColumnsWhole*sizeof(int));
-  for (i=0;i<numberColumns;i++) {
-    int iColumn=whichColumn[i];
-    assert (iColumn>=0&&iColumn<numberColumnsWhole);
-    delColumn[iColumn]=1;
-  }
-  numberColumns=0;
-  for (i=0;i<numberColumnsWhole;i++) {
-    if (delColumn[i]==0)
-      delColumn[numberColumns++]=i;
-  }
-  deleteColumns(numberColumns,delColumn);
-  delete [] delColumn;
-#else
   defaultHandler_ = rhs->defaultHandler_;
   if (defaultHandler_) 
     handler_ = new CoinMessageHandler(*rhs->handler_);
    else 
     handler_ = rhs->handler_;
+  eventHandler_ = rhs->eventHandler_->clone();
   messages_ = rhs->messages_;
   intParam_[ClpMaxNumIteration] = rhs->intParam_[ClpMaxNumIteration];
   intParam_[ClpMaxNumIterationHotStart] = 
@@ -1475,7 +1448,6 @@ ClpModel::ClpModel ( const ClpModel * rhs,
     matrix_ = rhs->matrix_->subsetClone(numberRows,whichRow,
 					numberColumns,whichColumn);
   }
-#endif
   CoinSeedRandom(1234567);
 }
 // Copies in names
@@ -1764,4 +1736,11 @@ ClpModel::writeMps(const char *filename,
     }
     delete [] columnNames;
   }
+}
+// Pass in Event handler (cloned and deleted at end)
+void 
+ClpModel::passInEventHandler(const ClpEventHandler * eventHandler)
+{
+  delete eventHandler_;
+  eventHandler_ = eventHandler->clone();
 }

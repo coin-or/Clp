@@ -247,6 +247,7 @@ ClpDynamicMatrix::ClpDynamicMatrix(ClpSimplex * model, int numberSets,
   originalMatrix->reserve(numberNeeded+1,numberElements_,false);
   originalMatrix->getMutableVectorStarts()[numberColumns]=originalMatrix->getNumElements();
   originalMatrix->setDimensions(newRowSize,-1);
+  numberActiveColumns_=firstDynamic_;
   // redo number of columns
   numberColumns = matrix_->getNumCols();
   backToPivotRow_ = new int[numberNeeded];
@@ -842,6 +843,8 @@ ClpDynamicMatrix::updatePivot(ClpSimplex * model,double oldInValue, double oldOu
       setStatus(iSet,ClpSimplex::atLowerBound);
     else
       setStatus(iSet,ClpSimplex::atUpperBound);
+    if (lowerSet_[iSet]==upperSet_[iSet])
+      setStatus(iSet,ClpSimplex::isFixed);
     if (getStatus(iSet)!=model->getStatus(sequenceOut))
       printf("** set %d status %d, var status %d\n",iSet,
 	     getStatus(iSet),model->getStatus(sequenceOut));
@@ -874,7 +877,7 @@ ClpDynamicMatrix::updatePivot(ClpSimplex * model,double oldInValue, double oldOu
     //if (iSet==1035) {
     //printf("rhs for set %d (%d) is %g %g - cost %g\n",iSet,i,model->lowerRegion(0)[i+numberStaticRows_],
     //     model->upperRegion(0)[i+numberStaticRows_],model->costRegion(0)[i+numberStaticRows_]);
-    }
+    //}
   }
 #endif
 #endif
@@ -1509,7 +1512,7 @@ ClpDynamicMatrix::refresh(ClpSimplex * model)
   int n=numberActiveSets_;
   for (i=0;i<numberSets_;i++) {
     if (toIndex_[i]<0) {
-      assert(keyValue(i)>=lowerSet_[i]&&keyValue(i)<=upperSet_[i]);
+      //assert(keyValue(i)>=lowerSet_[i]&&keyValue(i)<=upperSet_[i]);
       n++;
     }
   }
@@ -1910,7 +1913,7 @@ ClpDynamicMatrix::gubCrash()
       if (!columnUpper_) 
 	upper[numberInSet]=COIN_DBL_MAX;
       else
-	lower[numberInSet]= columnUpper_[j];
+	upper[numberInSet]= columnUpper_[j];
       back[numberInSet++]=j;
       j = next_[j];
     }

@@ -88,6 +88,7 @@
 #include "CoinIndexedVector.hpp"
 #include "ClpPrimalColumnPivot.hpp"
 #include "ClpMessage.hpp"
+#include "ClpEventHandler.hpp"
 #include <cfloat>
 #include <cassert>
 #include <string>
@@ -383,8 +384,27 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
 	break;
       }
 
-      if (firstFree_<0)
-	ifValuesPass=0;
+      if (firstFree_<0) {
+	if (ifValuesPass) {
+	  // end of values pass
+	  ifValuesPass=0;
+	  int status = eventHandler_->event(ClpEventHandler::endOfValuesPass);
+	  if (status>=0) {
+	    problemStatus_=status;
+	    secondaryStatus_=ClpEventHandler::endOfValuesPass;
+	    break;
+	  }
+	}
+      }
+      // Check event
+      {
+	int status = eventHandler_->event(ClpEventHandler::endOfFactorization);
+	if (status>=0) {
+	  problemStatus_=status;
+	  secondaryStatus_=ClpEventHandler::endOfFactorization;
+	  break;
+	}
+      }
       // Iterate
       whileIterating(ifValuesPass ? 1 : 0);
     }
@@ -2366,6 +2386,15 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	      + 2 * factorization_->maximumPivots()) {
       // done a lot of flips - be safe
       returnCode =-2; // refactorize
+    }
+    // Check event
+    {
+      int status = eventHandler_->event(ClpEventHandler::endOfIteration);
+      if (status>=0) {
+	problemStatus_=status;
+	secondaryStatus_=ClpEventHandler::endOfIteration;
+	returnCode=4;
+      }
     }
   }
   if (solveType_==2&&(returnCode == -2||returnCode==-3)) {

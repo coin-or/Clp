@@ -147,6 +147,8 @@ public:
       This is same as ClpModel one, but sets scaling on etc. */
   void borrowModel(ClpModel & otherModel);
   void borrowModel(ClpSimplex & otherModel);
+   /// Pass in Event handler (cloned and deleted at end)
+   void passInEventHandler(const ClpEventHandler * eventHandler);
   //@}
 
   /**@name Functions most useful to user */

@@ -19,6 +19,7 @@
 #include "ClpPrimalColumnSteepest.hpp"
 #include "ClpNonLinearCost.hpp"
 #include "ClpMessage.hpp"
+#include "ClpEventHandler.hpp"
 #include "ClpLinearObjective.hpp"
 #include "ClpHelperFunctions.hpp"
 #include <cfloat>
@@ -1266,6 +1267,7 @@ ClpSimplex::housekeeping(double objectiveChange)
     }
     solution_[sequenceOut_]=valueOut_;
   } else {
+    assert (fabs(theta_)>1.0e-13);
     // flip from bound to bound
     // As Nonlinear costs may have moved bounds (to more feasible)
     // Redo using value
@@ -5968,4 +5970,12 @@ ClpSimplex::originalModel(ClpSimplex * miniModel)
     assert (xxxx->getStatus(iPivot)==basic);
   }
 #endif
+}
+// Pass in Event handler (cloned and deleted at end)
+void 
+ClpSimplex::passInEventHandler(const ClpEventHandler * eventHandler)
+{
+  delete eventHandler_;
+  eventHandler_ = eventHandler->clone();
+  eventHandler_->setSimplex(this);
 }

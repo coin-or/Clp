@@ -13,6 +13,7 @@
 #include "CoinMessageHandler.hpp"
 #include "ClpParameters.hpp"
 #include "ClpObjective.hpp"
+class ClpEventHandler;
 
 // Plus infinity
 #ifndef COIN_DBL_MAX
@@ -250,6 +251,7 @@ public:
        2 - scaled problem optimal - unscaled problem has primal infeasibilities
        3 - scaled problem optimal - unscaled problem has dual infeasibilities
        4 - scaled problem optimal - unscaled problem has primal and dual infeasibilities
+       100 up - translation of enum from ClpEventHandler
    */
    inline int secondaryStatus() const            { return secondaryStatus_; }
   inline void setSecondaryStatus(int status)
@@ -409,6 +411,8 @@ public:
   */
    void setLogLevel(int value)    { handler_->setLogLevel(value); }
    int logLevel() const           { return handler_->logLevel(); }
+   /// Pass in Event handler (cloned and deleted at end)
+   void passInEventHandler(const ClpEventHandler * eventHandler);
    /// length of names (0 means no names0
    inline int lengthNames() const { return lengthNames_; }
    /// Row names
@@ -581,6 +585,8 @@ protected:
   CoinMessageHandler * handler_;
   /// Flag to say if default handler (so delete)
   bool defaultHandler_;
+  /// Event handler
+  ClpEventHandler * eventHandler_;
   /// Row names
   std::vector<std::string> rowNames_;
   /// Column names

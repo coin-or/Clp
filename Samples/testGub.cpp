@@ -30,51 +30,6 @@ int main (int argc, const char *argv[])
   } else {
     printf("Using ClpDynamicExampleMatrix\n");
   }
-  FILE * fp;
-  if ((fp=fopen("in.sol","r"))) {
-    double * solution = model.primalColumnSolution();
-    int numberColumns = model.numberColumns();
-    int numberRows = model.numberRows();
-    char * status = new char [numberColumns];
-    char * rowStatus = new char[numberRows];
-    int n;
-    n = fread(solution,sizeof(double),numberColumns,fp);
-    assert (n==numberColumns);
-    n = fread(status,sizeof(char),numberColumns,fp);
-    assert (n==numberColumns);
-    n = fread(model.primalRowSolution(),sizeof(double),numberRows,fp);
-    assert (n==numberRows);
-    n = fread(rowStatus,sizeof(char),numberRows,fp);
-    assert (n==numberRows);
-#if 0
-    int i;
-    for (i=0;i<numberColumns;i++) {
-      if (status[i]==0)
-	model.setStatus(i,ClpSimplex::basic);
-      else if (status[i]==1)
-	model.setStatus(i,ClpSimplex::atLowerBound);
-      else if (status[i]==2)
-	model.setStatus(i,ClpSimplex::atUpperBound);
-      else if (status[i]==3)
-	model.setStatus(i,ClpSimplex::isFixed);
-    }
-    for (i=0;i<numberRows;i++) {
-      if (rowStatus[i]==0)
-	model.setRowStatus(i,ClpSimplex::basic);
-      else if (rowStatus[i]==1)
-	model.setRowStatus(i,ClpSimplex::atLowerBound);
-      else if (rowStatus[i]==2)
-	model.setRowStatus(i,ClpSimplex::atUpperBound);
-      else if (rowStatus[i]==3)
-	model.setRowStatus(i,ClpSimplex::isFixed);
-    }
-#endif
-    fclose(fp);
-    delete [] status;
-    delete [] rowStatus;
-    printf("checking solution\n");
-    model.primal(1);
-  }
   // find gub
   int numberRows = model.numberRows();
   int * gubStart = new int[numberRows+1];
@@ -97,16 +52,6 @@ int main (int argc, const char *argv[])
     numberColumns -= numberDelete;
     columnLower = model.columnLower();
     columnUpper = model.columnUpper();
-#if 0
-    CoinMpsIO writer;
-    writer.setMpsData(*model.matrix(), COIN_DBL_MAX,
-		      model.getColLower(), model.getColUpper(),
-		      model.getObjCoefficients(),
-		      (const char*) 0 /*integrality*/,
-		      model.getRowLower(), model.getRowUpper(),
-		      NULL, NULL);
-    writer.writeMps("cza.mps",0,0,1);
-#endif
   }
   double * lower = new double[numberRows];
   double * upper = new double[numberRows];
@@ -270,6 +215,8 @@ int main (int argc, const char *argv[])
 	iStart = gubStart[iSet+1];
       gubStart[iSet+1]=numberColumns;
     }
+    printf("** Before adding matrix there are %d rows and %d columns\n",
+	   model2.numberRows(),model2.numberColumns());
     if (argc>3) {
       ClpDynamicMatrix * newMatrix = new ClpDynamicMatrix(&model2,numberGub,
 									numberColumns,gubStart,
@@ -289,6 +236,8 @@ int main (int argc, const char *argv[])
       newMatrix->switchOffCheck();
       newMatrix->setRefreshFrequency(1000);
     }
+    printf("** While after adding matrix there are %d rows and %d columns\n",
+	   model2.numberRows(),model2.numberColumns());
     model2.setSpecialOptions(4); // exactly to bound
     // For now scaling off
     model2.scaling(0);
@@ -452,6 +401,7 @@ int main (int argc, const char *argv[])
 	else
 	  abort();
       }
+      // Coding below may not work if gub rows not at end
       FILE * fp=fopen ("xx.sol","w");
       fwrite(gubSolution,sizeof(double),numberTotalColumns,fp);
       fwrite(status,sizeof(char),numberTotalColumns,fp);

@@ -93,6 +93,7 @@
 
 #include "CoinHelperFunctions.hpp"
 #include "ClpSimplexDual.hpp"
+#include "ClpEventHandler.hpp"
 #include "ClpFactorization.hpp"
 #include "CoinPackedMatrix.hpp"
 #include "CoinIndexedVector.hpp"
@@ -372,7 +373,25 @@ int ClpSimplexDual::dual (int ifValuesPass , int startFinishOptions)
 	problemStatus_=3;
 	break;
       }
-
+      if (ifValuesPass&&!saveDuals) {
+	// end of values pass
+	ifValuesPass=0;
+	int status = eventHandler_->event(ClpEventHandler::endOfValuesPass);
+	if (status>=0) {
+	  problemStatus_=status;
+	  secondaryStatus_=ClpEventHandler::endOfValuesPass;
+	  break;
+	}
+      }
+      // Check event
+      {
+	int status = eventHandler_->event(ClpEventHandler::endOfFactorization);
+	if (status>=0) {
+	  problemStatus_=status;
+	  secondaryStatus_=ClpEventHandler::endOfFactorization;
+	  break;
+	}
+      }
       // Do iterations
       whileIterating(saveDuals);
     }
@@ -956,6 +975,16 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
 	  problemStatus_= 3;
 	  returnCode=3;
 	  break;
+	}
+	// Check event
+	{
+	  int status = eventHandler_->event(ClpEventHandler::endOfIteration);
+	  if (status>=0) {
+	    problemStatus_=status;
+	    secondaryStatus_=ClpEventHandler::endOfIteration;
+	    returnCode=4;
+	    break;
+	  }
 	}
       } else {
 	// no incoming column is valid
