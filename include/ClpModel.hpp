@@ -234,11 +234,11 @@ public:
    /// Iteration limit reached?
    bool isIterationLimitReached() const { return problemStatus_==3; }
    /// Direction of optimization (1 - minimize, -1 - maximize, 0 - ignore
-   inline int optimizationDirection() const {
-      return (int) optimizationDirection_;
+   inline double optimizationDirection() const {
+      return  optimizationDirection_;
    }
    inline double getObjSense() const    { return optimizationDirection_; }
-   void setOptimizationDirection(int value);
+   void setOptimizationDirection(double value);
    /// Primal row solution
    inline double * primalRowSolution() const    { return rowActivity_; }
    inline const double * getRowActivity() const { return rowActivity_; }

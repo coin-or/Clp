@@ -59,6 +59,11 @@ ClpSimplexPrimalQuadratic::primalSLP(int numberPasses, double deltaTolerance)
 {
   // Are we minimizing or maximizing
   double whichWay=optimizationDirection();
+  if (whichWay<0.0)
+    whichWay=-1.0;
+  else if (whichWay>0.0)
+    whichWay=1.0;
+
   // This is as a user would see
 
   int numberColumns = this->numberColumns();
@@ -460,7 +465,7 @@ ClpSimplexPrimalQuadratic::primalSLP(int numberPasses, double deltaTolerance)
   this->primal(1);
   // redo values
   setDblParam(ClpObjOffset,objectiveOffset);
-  objectiveValue_ += optimizationDirection_*offset;
+  objectiveValue_ += whichWay*offset;
   for (jNon=0;jNon<numberNonLinearColumns;jNon++) {
     iColumn=listNonLinearColumn[jNon];
     columnLower[iColumn]= trueLower[jNon];

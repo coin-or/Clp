@@ -361,6 +361,9 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
   double averagePrimalInfeasibility = sumPrimalInfeasibilities_/
     ((double ) (numberPrimalInfeasibilities_+1));
 
+  // Get dubious weights
+  factorization_->getWeights(rowArray_[0]->getIndices());
+  CoinBigIndex * dubiousWeights = matrix_->dubiousWeights(this,rowArray_[0]->getIndices());
   // If values pass then get list of candidates
   int * candidateList = NULL;
   int numberCandidates = 0;
@@ -583,7 +586,7 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
 			      rowArray_[0],rowArray_[3],columnArray_[0]);
 	// do ratio test for normal iteration
 	dualColumn(rowArray_[0],columnArray_[0],columnArray_[1],
-		 rowArray_[3],acceptablePivot);
+		 rowArray_[3],acceptablePivot,dubiousWeights);
       } else {
 	double direction=directionOut_;
         rowArray_[0]->createPacked(1,&pivotRow_,&direction);
@@ -594,7 +597,7 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
 	acceptablePivot *= 10.0;
 	// do ratio test
 	checkPossibleValuesMove(rowArray_[0],columnArray_[0],
-					    acceptablePivot);
+					    acceptablePivot,NULL);
 
 	// recompute true dualOut_
 	if (directionOut_<0) {
@@ -926,6 +929,7 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
     // get rid of any values pass array
     delete [] candidateList;
   }
+  delete [] dubiousWeights;
   return returnCode;
 }
 /* The duals are updated by the given arrays.
@@ -1565,7 +1569,8 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 			   CoinIndexedVector * columnArray,
 			   CoinIndexedVector * spareArray,
 			   CoinIndexedVector * spareArray2,
-			   double acceptablePivot)
+			   double acceptablePivot,
+			   CoinBigIndex * dubiousWeights)
 {
   double * work;
   int number;
@@ -1907,7 +1912,10 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 	  }
 	  bestPivot=acceptablePivot;
 	  sequenceIn_=-1;
+	  double bestWeight=COIN_DBL_MAX;
+	  double largestPivot=acceptablePivot;
 	  // now choose largest and sum all ones which will go through
+	  //printf("XX it %d number %d\n",numberIterations_,interesting[iFlip]);
 	  for (i=0;i<interesting[iFlip];i++) {
 	    int iSequence=index[i];
 	    double alpha=spare[i];
@@ -1950,10 +1958,32 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 	      spare2[--numberPossiblySwapped]=alpha;
 	      index2[numberPossiblySwapped]=iSequence;
 	      // select if largest pivot
-	      if (fabs(alpha)>bestPivot) {
+	      bool take=false;
+	      double absAlpha = fabs(alpha);
+	      double weight;
+	      if (dubiousWeights)
+		weight=dubiousWeights[iSequence];
+	      else
+		weight=1.0;
+	      weight += CoinDrand48()*1.0e-2;
+	      if (absAlpha>2.0*bestPivot) {
+		take=true;
+	      } else if (absAlpha>0.5*largestPivot) {
+		// could multiply absAlpha and weight
+		if (weight*bestPivot<bestWeight*absAlpha)
+		  take=true;
+	      }
+	      if (take) {
 		sequenceIn_ = numberPossiblySwapped;
-		bestPivot =  fabs(alpha);
+		bestPivot =  absAlpha;
 		theta_ = dj_[iSequence]/alpha;
+		largestPivot = max(largestPivot,bestPivot);
+		bestWeight = weight;
+		//printf(" taken seq %d alpha %g weight %d\n",
+		//   iSequence,absAlpha,dubiousWeights[iSequence]);
+	      } else {
+		//printf(" not taken seq %d alpha %g weight %d\n",
+		//   iSequence,absAlpha,dubiousWeights[iSequence]);
 	      }
 	      double range = upper[iSequence] - lower[iSequence];
 	      thruThis += range*fabs(alpha);
@@ -2006,7 +2036,7 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 	      bestEverPivot=bestPivot;
 	    iFlip = 1 -iFlip;
 	    modifyCosts=true; // fine grain - we can modify costs
-	}
+	  }
 	}
 	if (iTry==MAXTRY)
 	  iFlip = 1-iFlip; // flip back
@@ -2345,14 +2375,17 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
     int i;
     double largest;
     largest=0.0;
+    // direction is actually scale out not scale in
+    if (direction)
+      direction = 1.0/direction;
     for (i=0;i<numberRows_;i++) {
-      rowObjectiveSimplex[i] *= optimizationDirection_;
+      rowObjectiveSimplex[i] *= direction;
       double difference = fabs(rowObjectiveWork_[i]-rowObjectiveSimplex[i]);
       if (difference>largest)
 	largest=difference;
     }
     for (i=0;i<numberColumns_;i++) {
-      objectiveSimplex[i] *= optimizationDirection_;
+      objectiveSimplex[i] *= direction;
       double difference = fabs(objectiveWork_[i]-objectiveSimplex[i]);
       if (difference>largest)
 	largest=difference;
@@ -2868,17 +2901,17 @@ ClpSimplexDual::perturb()
 {
   if (perturbation_>100)
     return; //perturbed already
-  bool modifyRowCosts=true;
+  bool modifyRowCosts=false;
   // dual perturbation
   double perturbation=1.0e-20;
   // maximum fraction of cost to perturb
   double maximumFraction = 1.0e-4;
   double factor=1.0e-8;
-  // If > 70 then do not do rows
+  // If > 70 then do rows
   if (perturbation_>70) {
-    modifyRowCosts=false;
+    modifyRowCosts=true;
     perturbation_ -= 20;
-    //printf("Row costs not modified, ");
+    //printf("Row costs modified, ");
   }
   if (perturbation_>50) {
     // Experiment
@@ -2913,9 +2946,9 @@ ClpSimplexDual::perturb()
     maximumFraction = 1.0e100;
     // but some experiments
     if (perturbation_<=-900) {
-      modifyRowCosts=false;
+      modifyRowCosts=true;
       perturbation_ += 1000;
-      //printf("Row costs not modified, ");
+      //printf("Row costs modified, ");
     }
     if (perturbation_<-50) {
       maximumFraction = 1.0;
@@ -3474,7 +3507,8 @@ ClpSimplexDual::pivotResult()
 int
 ClpSimplexDual::checkPossibleValuesMove(CoinIndexedVector * rowArray,
 					CoinIndexedVector * columnArray,
-					double acceptablePivot)
+					double acceptablePivot,
+					CoinBigIndex * dubiousWeights)
 {
   double * work;
   int number;

@@ -1519,5 +1519,35 @@ ClpPackedMatrix::allElementsInRange(ClpSimplex * model,
     zeroElements_=false;
   return true;
 }
+/* Given positive integer weights for each row fills in sum of weights
+   for each column (and slack).
+   Returns weights vector
+*/
+CoinBigIndex * 
+ClpPackedMatrix::dubiousWeights(const ClpSimplex * model,int * inputWeights) const
+{
+  int numberRows = model->numberRows();
+  int numberColumns =model->numberColumns();
+  int number = numberRows+numberColumns;
+  CoinBigIndex * weights = new CoinBigIndex[number];
+  // get matrix data pointers
+  const int * row = matrix_->getIndices();
+  const CoinBigIndex * columnStart = matrix_->getVectorStarts();
+  const int * columnLength = matrix_->getVectorLengths(); 
+  int i;
+  for (i=0;i<numberColumns;i++) {
+    CoinBigIndex j;
+    CoinBigIndex count=0;
+    for (j=columnStart[i];j<columnStart[i]+columnLength[i];j++) {
+      int iRow=row[j];
+      count += inputWeights[iRow];
+    }
+    weights[i]=count;
+  }
+  for (i=0;i<numberRows;i++) {
+    weights[i+numberColumns]=inputWeights[i];
+  }
+  return weights;
+}
 
 

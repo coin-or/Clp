@@ -187,7 +187,8 @@ public:
 		  CoinIndexedVector * columnArray,
 		  CoinIndexedVector * spareArray,
 		  CoinIndexedVector * spareArray2,
-		  double accpetablePivot);
+		  double accpetablePivot,
+		  CoinBigIndex * dubiousWeights);
   /** 
       Row array has row part of pivot row
       Column array has column part.
@@ -197,7 +198,8 @@ public:
   */
   int checkPossibleValuesMove(CoinIndexedVector * rowArray,
 			       CoinIndexedVector * columnArray,
-			       double acceptablePivot);
+			      double acceptablePivot,
+			      CoinBigIndex * dubiousWeights);
   /** 
       This sees if we can move duals in dual values pass.
       This is done before any pivoting

@@ -109,6 +109,8 @@ private:
   CoinIndexedVector * alternateWeights_;
   /// save weight array (so we can use checkpoint)
   CoinIndexedVector * savedWeights_;
+  /// Dubious weights
+  int * dubiousWeights_;
   //@}
 };
 

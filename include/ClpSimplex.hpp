@@ -481,6 +481,11 @@ public:
   /// Basic variables pivoting on which rows
   inline int * pivotVariable() const
           { return pivotVariable_;};
+  /// Scaling of objective 12345.0 (auto), 0.0 (off), other user
+  inline double objectiveScale() const 
+          { return objectiveScale_;} ;
+  inline void setObjectiveScale(double value)
+          { objectiveScale_ = value;} ;
   /// Current dual tolerance
   inline double currentDualTolerance() const 
           { return dualTolerance_;} ;
@@ -736,6 +741,8 @@ protected:
   double remainingDualInfeasibility_;
   /// Large bound value (for complementarity etc)
   double largeValue_;
+  /// Scaling of objective
+  double objectiveScale_;
   /// Largest error on Ax-b
   double largestPrimalError_;
   /// Largest error on basic duals

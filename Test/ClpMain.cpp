@@ -13,7 +13,7 @@
 
 #include "CoinPragma.hpp"
 #include "CoinHelperFunctions.hpp"
-#define CLPVERSION "0.97.4"
+#define CLPVERSION "0.98.1"
 
 #include "CoinMpsIO.hpp"
 
@@ -54,14 +54,14 @@ int mainTest (int argc, const char *argv[],bool doDual,
 enum ClpParameterType {
   GENERALQUERY=-100,
   
-  DUALTOLERANCE=1,PRIMALTOLERANCE,DUALBOUND,PRIMALWEIGHT,
+  DUALTOLERANCE=1,PRIMALTOLERANCE,DUALBOUND,PRIMALWEIGHT,MAXTIME,OBJSCALE,
 
   LOGLEVEL=101,MAXFACTOR,PERTURBATION,MAXITERATION,PRESOLVEPASS,IDIOT,
   
   DIRECTION=201,DUALPIVOT,SCALING,ERRORSALLOWED,KEEPNAMES,SPARSEFACTOR,
   PRIMALPIVOT,PRESOLVE,CRASH,BIASLU,
   
-  DIRECTORY=301,IMPORT,EXPORT,RESTORE,SAVE,DUALSIMPLEX,PRIMALSIMPLEX,BAB,
+  DIRECTORY=301,IMPORT,EXPORT,RESTORE,SAVE,DUALSIMPLEX,PRIMALSIMPLEX,
   MAXIMIZE,MINIMIZE,EXIT,STDIN,UNITTEST,NETLIB_DUAL,NETLIB_PRIMAL,SOLUTION,
   TIGHTEN,FAKEBOUND,VERSION,PLUSMINUS,NETWORK,
 
@@ -77,15 +77,15 @@ public:
   /// Constructors
   ClpItem (  );
   ClpItem (std::string name, std::string help,
-	   double lower, double upper, ClpParameterType type);
+	   double lower, double upper, ClpParameterType type,bool display=true);
   ClpItem (std::string name, std::string help,
-	   int lower, int upper, ClpParameterType type);
+	   int lower, int upper, ClpParameterType type,bool display=true);
   // Other strings will be added by insert
   ClpItem (std::string name, std::string help, std::string defaultValue,
-	   ClpParameterType type);
+	   ClpParameterType type,bool display=true);
   // Action
   ClpItem (std::string name, std::string help,
-	   ClpParameterType type);
+	   ClpParameterType type,bool display=true);
   /// Copy constructor. 
   ClpItem(const ClpItem &);
   /// Assignment operator. This copies the data
@@ -133,6 +133,9 @@ public:
   /// type
   inline ClpParameterType type() const
   { return type_;};
+  /// whether to display
+  inline bool displayThis() const
+  { return display_;};
 private:
   /// gutsOfConstructor
   void gutsOfConstructor();
@@ -168,6 +171,8 @@ private:
   ClpParameterType action_;
   /// Current keyWord (if a keyword parameter)
   int currentKeyWord_;
+  /// Display on ?
+  bool display_;
   //@}
 };
 //#############################################################################
@@ -190,12 +195,13 @@ ClpItem::ClpItem ()
     shortHelp_(),
     longHelp_(),
     action_(INVALID),
-    currentKeyWord_(-1)
+    currentKeyWord_(-1),
+    display_(false)
 {
 }
 // Other constructors
 ClpItem::ClpItem (std::string name, std::string help,
-	   double lower, double upper, ClpParameterType type)
+	   double lower, double upper, ClpParameterType type,bool display)
   : type_(type),
     lowerIntValue_(0),
     upperIntValue_(0),
@@ -204,14 +210,15 @@ ClpItem::ClpItem (std::string name, std::string help,
     shortHelp_(help),
     longHelp_(),
     action_(type),
-    currentKeyWord_(-1)
+    currentKeyWord_(-1),
+    display_(display)
 {
   lowerDoubleValue_ = lower;
   upperDoubleValue_ = upper;
   gutsOfConstructor();
 }
 ClpItem::ClpItem (std::string name, std::string help,
-	   int lower, int upper, ClpParameterType type)
+	   int lower, int upper, ClpParameterType type,bool display)
   : type_(type),
     lowerDoubleValue_(0.0),
     upperDoubleValue_(0.0),
@@ -220,7 +227,8 @@ ClpItem::ClpItem (std::string name, std::string help,
     shortHelp_(help),
     longHelp_(),
     action_(type),
-    currentKeyWord_(-1)
+    currentKeyWord_(-1),
+    display_(display)
 {
   gutsOfConstructor();
   lowerIntValue_ = lower;
@@ -229,7 +237,7 @@ ClpItem::ClpItem (std::string name, std::string help,
 // Other strings will be added by append
 ClpItem::ClpItem (std::string name, std::string help, 
 		  std::string defaultValue,
-		  ClpParameterType type)
+		  ClpParameterType type,bool display)
   : type_(type),
     lowerDoubleValue_(0.0),
     upperDoubleValue_(0.0),
@@ -240,14 +248,15 @@ ClpItem::ClpItem (std::string name, std::string help,
     shortHelp_(help),
     longHelp_(),
     action_(type),
-    currentKeyWord_(0)
+    currentKeyWord_(0),
+    display_(display)
 {
   gutsOfConstructor();
   definedKeyWords_.push_back(defaultValue);
 }
 // Action
 ClpItem::ClpItem (std::string name, std::string help,
-	   ClpParameterType type)
+	   ClpParameterType type,bool display)
   : type_(type),
     lowerDoubleValue_(0.0),
     upperDoubleValue_(0.0),
@@ -258,7 +267,8 @@ ClpItem::ClpItem (std::string name, std::string help,
     shortHelp_(help),
     longHelp_(),
     action_(type),
-    currentKeyWord_(-1)
+    currentKeyWord_(-1),
+    display_(display)
 {
   gutsOfConstructor();
 }
@@ -281,7 +291,7 @@ ClpItem::ClpItem (const ClpItem & rhs)
   longHelp_ = rhs.longHelp_;
   action_ = rhs.action_;
   currentKeyWord_ = rhs.currentKeyWord_;
-  
+  display_=rhs.display_;
 }
 
 //-------------------------------------------------------------------
@@ -311,6 +321,7 @@ ClpItem::operator=(const ClpItem& rhs)
     longHelp_ = rhs.longHelp_;
     action_ = rhs.action_;
     currentKeyWord_ = rhs.currentKeyWord_;
+    display_=rhs.display_;
   }
   return *this;
 }
@@ -452,6 +463,12 @@ ClpItem::setDoubleParameter (ClpSimplex * model,double value) const
     case PRIMALWEIGHT:
       model->setInfeasibilityCost(value);
       break;
+    case MAXTIME:
+      model->setMaximumSeconds(value);
+      break;
+    case OBJSCALE:
+      model->setOptimizationDirection(value);
+      break;
     default:
       abort();
     }
@@ -474,6 +491,12 @@ ClpItem::doubleParameter (ClpSimplex * model) const
     break;
   case PRIMALWEIGHT:
     value=model->infeasibilityCost();
+    break;
+  case MAXTIME:
+    value=model->maximumSeconds();
+    break;
+  case OBJSCALE:
+    value=model->optimizationDirection();
     break;
   default:
     abort();
@@ -526,7 +549,15 @@ ClpItem::intParameter (ClpSimplex * model) const
     value=model->factorization()->maximumPivots();
     break;
   case DIRECTION:
-    value=model->optimizationDirection();
+    {
+      double value2=model->optimizationDirection();
+      if (value2>0.0)
+	value=1;
+      else if (value2<0.0)
+	value=-1;
+      else
+	value=0;
+    }
     break;
   case PERTURBATION:
     value=model->perturbation();
@@ -730,26 +761,74 @@ int main (int argc, const char *argv[])
     ClpItem parameters[MAXPARAMETERS];
     int numberParameters=0;
     parameters[numberParameters++]=
-      ClpItem("?","For help",GENERALQUERY);
+      ClpItem("?","For help",GENERALQUERY,false);
     parameters[numberParameters++]=
-      ClpItem("dualT!olerance","For an optimal solution \
-no dual infeasibility may exceed this value",
-	      1.0e-20,1.0e12,DUALTOLERANCE);
+      ClpItem("-","From stdin",
+	      STDIN,false);
     parameters[numberParameters++]=
-      ClpItem("primalT!olerance","For an optimal solution \
-no primal infeasibility may exceed this value",
-	      1.0e-20,1.0e12,PRIMALTOLERANCE);
+      ClpItem("biasLU","Whether factorization biased towards U",
+	      "UU",BIASLU,false);
+    parameters[numberParameters-1].append("UX");
+    parameters[numberParameters-1].append("LX");
+    parameters[numberParameters-1].append("LL");
+    parameters[numberParameters++]=
+      ClpItem("crash","Whether to create basis for problem",
+	      "off",CRASH);
+    parameters[numberParameters-1].append("on");
+    parameters[numberParameters++]=
+      ClpItem("direction","Minimize or Maximize",
+	      "min!imize",DIRECTION);
+    parameters[numberParameters-1].append("max!imize");
+    parameters[numberParameters++]=
+      ClpItem("directory","Set Default import directory",
+	      DIRECTORY);
     parameters[numberParameters++]=
       ClpItem("dualB!ound","Initially algorithm acts as if no \
 gap between bounds exceeds this value",
 	      1.0e-20,1.0e12,DUALBOUND);
     parameters[numberParameters++]=
-      ClpItem("primalW!eight","Initially algorithm acts as if it \
-costs this much to be infeasible",
-	      1.0e-20,1.0e12,PRIMALWEIGHT);
+      ClpItem("dualP!ivot","Dual pivot choice algorithm",
+	      "steep!est",DUALPIVOT);
+    parameters[numberParameters-1].append("dant!zig");
+    parameters[numberParameters-1].append("partial");
+    parameters[numberParameters++]=
+      ClpItem("dualS!implex","Do dual simplex algorithm",
+	      DUALSIMPLEX);
+    parameters[numberParameters++]=
+      ClpItem("dualT!olerance","For an optimal solution \
+no dual infeasibility may exceed this value",
+	      1.0e-20,1.0e12,DUALTOLERANCE);
+    parameters[numberParameters++]=
+      ClpItem("end","Stops clp execution",
+	      EXIT);
+    parameters[numberParameters++]=
+      ClpItem("error!sAllowed","Whether to allow import errors",
+	      "off",ERRORSALLOWED);
+    parameters[numberParameters++]=
+      ClpItem("exit","Stops clp execution",
+	      EXIT);
+    parameters[numberParameters++]=
+      ClpItem("export","Export model as mps file",
+	      EXPORT);
+    parameters[numberParameters++]=
+      ClpItem("fakeB!ound","All bounds <= this value - DEBUG",
+	      1.0,1.0e15,FAKEBOUND,false);
+    parameters[numberParameters++]=
+      ClpItem("idiot!Crash","Whether to try idiot crash",
+	      0,200,IDIOT);
+    parameters[numberParameters++]=
+      ClpItem("import","Import model from mps file",
+	      IMPORT);
+    parameters[numberParameters++]=
+      ClpItem("keepN!ames","Whether to keep names from import",
+	      "on",KEEPNAMES);
+    parameters[numberParameters-1].append("off");
     parameters[numberParameters++]=
       ClpItem("log!Level","Level of detail in output",
 	      0,63,LOGLEVEL);
+    parameters[numberParameters++]=
+      ClpItem("max!imize","Set optimization direction to maximize",
+	      MAXIMIZE);
     parameters[numberParameters++]=
       ClpItem("maxF!actor","Maximum number of iterations between \
 refactorizations",
@@ -759,118 +838,8 @@ refactorizations",
 stopping",
 	      0,99999999,MAXITERATION);
     parameters[numberParameters++]=
-      ClpItem("pert!urbation","Method of perturbation",
-	      -5000,102,PERTURBATION);
-    parameters[numberParameters++]=
-      ClpItem("direction","Minimize or Maximize",
-	      "min!imize",DIRECTION);
-    parameters[numberParameters-1].append("max!imize");
-    parameters[numberParameters++]=
-      ClpItem("dualP!ivot","Dual pivot choice algorithm",
-	      "steep!est",DUALPIVOT);
-    parameters[numberParameters-1].append("dant!zig");
-    parameters[numberParameters-1].append("partial");
-    parameters[numberParameters++]=
-      ClpItem("primalP!ivot","Primal pivot choice algorithm",
-	      "steep!est",PRIMALPIVOT);
-    parameters[numberParameters-1].append("exa!ct");
-    parameters[numberParameters-1].append("dant!zig");
-    parameters[numberParameters++]=
-      ClpItem("scal!ing","Whether to scale problem",
-	      "on",SCALING);
-    parameters[numberParameters-1].append("off");
-    parameters[numberParameters++]=
-      ClpItem("presolve","Whether to presolve problem",
-	      "off",PRESOLVE);
-    parameters[numberParameters-1].append("on");
-    parameters[numberParameters++]=
-      ClpItem("crash","Whether to create basis for problem",
-	      "off",CRASH);
-    parameters[numberParameters-1].append("on");
-    parameters[numberParameters++]=
-      ClpItem("idiot!Crash","Whether to try idiot crash",
-	      0,200,IDIOT);
-    parameters[numberParameters++]=
-      ClpItem("passP!resolve","How many passes in presolve",
-	      0,100,PRESOLVEPASS);
-    parameters[numberParameters++]=
-      ClpItem("spars!eFactor","Whether factorization treated as sparse",
-	      "on",SPARSEFACTOR);
-    parameters[numberParameters-1].append("off");
-    parameters[numberParameters++]=
-      ClpItem("biasLU","Whether factorization biased towards U",
-	      "UU",BIASLU);
-    parameters[numberParameters-1].append("UX");
-    parameters[numberParameters-1].append("LX");
-    parameters[numberParameters-1].append("LL");
-    parameters[numberParameters++]=
-      ClpItem("error!sAllowed","Whether to allow import errors",
-	      "off",ERRORSALLOWED);
-    parameters[numberParameters-1].append("on");
-    parameters[numberParameters++]=
-      ClpItem("keepN!ames","Whether to keep names from import",
-	      "on",KEEPNAMES);
-    parameters[numberParameters-1].append("off");
-    parameters[numberParameters++]=
-      ClpItem("directory","Set Default import directory",
-	      DIRECTORY);
-    parameters[numberParameters++]=
-      ClpItem("import","Import model from mps file",
-	      IMPORT);
-    parameters[numberParameters++]=
-      ClpItem("export","Export model as mps file",
-	      EXPORT);
-    parameters[numberParameters++]=
-      ClpItem("save!Model","Save model to binary file",
-	      SAVE);
-    parameters[numberParameters++]=
-      ClpItem("restore!Model","Restore model from binary file",
-	      RESTORE);
-    parameters[numberParameters++]=
-      ClpItem("dualS!implex","Do dual simplex algorithm",
-	      DUALSIMPLEX);
-    parameters[numberParameters++]=
-      ClpItem("primalS!implex","Do primal simplex algorithm",
-	      PRIMALSIMPLEX);
-    parameters[numberParameters++]=
-      ClpItem("branch!Andbound","Do Branch and Bound",
-	      BAB);
-    parameters[numberParameters++]=
-      ClpItem("tight!en","Poor person's preSolve for now",
-	      TIGHTEN);
-    parameters[numberParameters++]=
-      ClpItem("plus!Minus","Tries to make +- 1",
-	      PLUSMINUS);
-    parameters[numberParameters++]=
-      ClpItem("network","Tries to make network",
-	      NETWORK);
-    parameters[numberParameters++]=
-      ClpItem("sol!ution","Prints solution to file",
-	      SOLUTION);
-    parameters[numberParameters++]=
-      ClpItem("max!imize","Set optimization direction to maximize",
-	      MAXIMIZE);
-    parameters[numberParameters++]=
       ClpItem("min!imize","Set optimization direction to minimize",
 	      MINIMIZE);
-    parameters[numberParameters++]=
-      ClpItem("exit","Stops clp execution",
-	      EXIT);
-    parameters[numberParameters++]=
-      ClpItem("stop","Stops clp execution",
-	      EXIT);
-    parameters[numberParameters++]=
-      ClpItem("quit","Stops clp execution",
-	      EXIT);
-    parameters[numberParameters++]=
-      ClpItem("-","From stdin",
-	      STDIN);
-    parameters[numberParameters++]=
-      ClpItem("stdin","From stdin",
-	      STDIN);
-    parameters[numberParameters++]=
-      ClpItem("unitTest","Do unit test",
-	      UNITTEST);
     parameters[numberParameters++]=
       ClpItem("netlib","Solve entire netlib test set",
 	      NETLIB_DUAL);
@@ -878,10 +847,78 @@ stopping",
       ClpItem("netlibP!rimal","Solve entire netlib test set (primal)",
 	      NETLIB_PRIMAL);
     parameters[numberParameters++]=
-      ClpItem("fakeB!ound","All bounds <= this value - DEBUG",
-	      1.0,1.0e15,FAKEBOUND);
+      ClpItem("network","Tries to make network matrix",
+	      NETWORK);
     parameters[numberParameters++]=
-      ClpItem("ver!sion","Print out version",
+      ClpItem("objective!Scale","Scale factor to apply to objective",
+	      -1.0e20,1.0e20,OBJSCALE);
+    parameters[numberParameters++]=
+      ClpItem("passP!resolve","How many passes in presolve",
+	      0,100,PRESOLVEPASS);
+    parameters[numberParameters++]=
+      ClpItem("pert!urbation","Method of perturbation",
+	      -5000,102,PERTURBATION);
+    parameters[numberParameters++]=
+      ClpItem("plus!Minus","Tries to make +- 1 matrix",
+	      PLUSMINUS);
+    parameters[numberParameters++]=
+      ClpItem("presolve","Whether to presolve problem",
+	      "on",PRESOLVE);
+    parameters[numberParameters-1].append("off");
+    parameters[numberParameters++]=
+      ClpItem("primalP!ivot","Primal pivot choice algorithm",
+	      "steep!est",PRIMALPIVOT);
+    parameters[numberParameters-1].append("exa!ct");
+    parameters[numberParameters-1].append("dant!zig");
+    parameters[numberParameters++]=
+      ClpItem("primalS!implex","Do primal simplex algorithm",
+	      PRIMALSIMPLEX);
+    parameters[numberParameters++]=
+      ClpItem("primalT!olerance","For an optimal solution \
+no primal infeasibility may exceed this value",
+	      1.0e-20,1.0e12,PRIMALTOLERANCE);
+    parameters[numberParameters++]=
+      ClpItem("primalW!eight","Initially algorithm acts as if it \
+costs this much to be infeasible",
+	      1.0e-20,1.0e12,PRIMALWEIGHT);
+    parameters[numberParameters++]=
+      ClpItem("quit","Stops clp execution",
+	      EXIT);
+    parameters[numberParameters++]=
+      ClpItem("restore!Model","Restore model from binary file",
+	      RESTORE);
+    parameters[numberParameters++]=
+      ClpItem("save!Model","Save model to binary file",
+	      SAVE);
+    parameters[numberParameters++]=
+      ClpItem("scal!ing","Whether to scale problem",
+	      "on",SCALING);
+    parameters[numberParameters-1].append("off");
+    parameters[numberParameters++]=
+      ClpItem("sec!onds","maximum seconds",
+	      0.0,1.0e12,MAXTIME);
+    parameters[numberParameters++]=
+      ClpItem("sol!ution","Prints solution to file",
+	      SOLUTION);
+    parameters[numberParameters++]=
+      ClpItem("spars!eFactor","Whether factorization treated as sparse",
+	      "on",SPARSEFACTOR,false);
+    parameters[numberParameters-1].append("off");
+    parameters[numberParameters-1].append("on");
+    parameters[numberParameters++]=
+      ClpItem("stdin","From stdin",
+	      STDIN,false);
+    parameters[numberParameters++]=
+      ClpItem("stop","Stops clp execution",
+	      EXIT);
+    parameters[numberParameters++]=
+      ClpItem("tight!en","Poor person's preSolve for now",
+	      TIGHTEN);
+    parameters[numberParameters++]=
+      ClpItem("unitTest","Do unit test",
+	      UNITTEST);
+    parameters[numberParameters++]=
+      ClpItem("ver!sion","Print out version and non-standard options",
 	      VERSION);
     assert(numberParameters<MAXPARAMETERS);
     
@@ -891,7 +928,6 @@ stopping",
     ClpSimplex * models = new ClpSimplex[1];
     bool * goodModels = new bool[1];
     int getNewMatrix=0;
-    models->setPerturbation(73);
 #ifdef READLINE     
     currentModel = models;
     // register signal handler
@@ -901,20 +937,21 @@ stopping",
     // default action on import
     int allowImportErrors=0;
     int keepImportNames=1;
-    int preSolve=0;
     int doIdiot=0;
     
     int iModel=0;
     goodModels[0]=false;
     // set reasonable defaults
+    int preSolve=5;
+    models->setPerturbation(53);
     //models[0].scaling(1);
     //models[0].setDualBound(1.0e6);
     //models[0].setDualTolerance(1.0e-7);
-    ClpDualRowSteepest steep;
-    models[0].setDualRowPivotAlgorithm(steep);
+    //ClpDualRowSteepest steep;
+    //models[0].setDualRowPivotAlgorithm(steep);
     //models[0].setPrimalTolerance(1.0e-7);
-    ClpPrimalColumnSteepest steepP;
-    models[0].setPrimalColumnPivotAlgorithm(steepP);
+    //ClpPrimalColumnSteepest steepP;
+    //models[0].setPrimalColumnPivotAlgorithm(steepP);
     std::string directory ="./";
     std::string field;
     
@@ -925,11 +962,8 @@ stopping",
       // exit if null or similar
       if (!field.length()) {
 	if (numberGoodCommands==1&&goodModels[0]) {
-	  // we just had file name
-	  models[0].scaling(1);
-	  int saveMaxIterations = models[0].maximumIterations();
-	  models[0].dual();
-	  models[0].setMaximumIterations(saveMaxIterations);
+	  // we just had file name - do dual
+	  field="duals";
 	} else if (!numberGoodCommands) {
 	  // let's give the sucker a hint
 	  std::cout
@@ -937,8 +971,10 @@ stopping",
 	    <<std::endl
 	    <<"Enter ? for list of commands, (-)unitTest or (-)netlib"
 	    <<" for tests"<<std::endl;
+	  break;
+	} else {
+	  break;
 	}
-	break;
       }
       
       // see if ? at end
@@ -981,12 +1017,20 @@ stopping",
 	  std::cout<<"abcd without value (where expected) gives current value"<<std::endl;
 	  std::cout<<"abcd value or abcd = value sets value"<<std::endl;
 	  std::cout<<"Commands are:"<<std::endl;
-	  for ( iParam=0; iParam<numberParameters; iParam+=4 ) {
-	    int i;
-	    for (i=iParam;i<min(numberParameters,iParam+4);i++) 
-	      std::cout<<parameters[i].matchName()<<"  ";
-	    std::cout<<std::endl;
+	  int across=0;
+	  int maxAcross=4;
+	  for ( iParam=0; iParam<numberParameters; iParam++ ) {
+	    if (parameters[iParam].displayThis()) {
+	      std::cout<<parameters[iParam].matchName()<<"  ";
+	      across++;
+	      if (across==maxAcross) {
+		std::cout<<std::endl;
+		across=0;
+	      }
+	    }
 	  }
+	  if (across)
+	    std::cout<<std::endl;
 	} else if (type<101) {
 	  // get next field as double
 	  double value = getDoubleField(argc,argv,&valid);
@@ -1078,7 +1122,7 @@ stopping",
 	      keepImportNames = 1-action;
 	      break;
 	    case PRESOLVE:
-	      preSolve = action*5;
+	      preSolve = (1-action)*5;
 	      break;
 	    case CRASH:
 	      doIdiot=-1;
@@ -1096,26 +1140,21 @@ stopping",
 	  case PRIMALSIMPLEX:
 	    if (goodModels[iModel]) {
 	      int saveMaxIterations = models[iModel].maximumIterations();
+	      int finalStatus=-1;
 	      int numberIterations=0;
 	      time1 = CoinCpuTime();
 	      ClpMatrixBase * saveMatrix=NULL;
-#ifdef USE_PRESOLVE
 	      ClpSimplex * model2 = models+iModel;
 	      ClpPresolve pinfo;
+	      double timePresolve=0.0;
 	      if (preSolve) {
 		model2 = pinfo.presolvedModel(models[iModel],1.0e-8,
 					      false,preSolve,true);
+		timePresolve = CoinCpuTime()-time1;
+		
+		std::cout<<"Presolve took "<<timePresolve<<" seconds"<<std::endl;
 		if (model2) {
-		  model2->checkSolution();
-#ifdef CLP_DEBUG
-		  printf("%g %g (%d) %g (%d)\n"
-			 ,model2->objectiveValue()
-			 ,model2->sumDualInfeasibilities()
-			 ,model2->numberDualInfeasibilities()
-			 ,model2->sumPrimalInfeasibilities()
-			 ,model2->numberPrimalInfeasibilities());
-#endif
-#if 1
+		  //model2->checkSolution();
 		  if (type==DUALSIMPLEX) {
 		    int numberInfeasibilities = model2->tightenPrimalBounds();
 		    if (numberInfeasibilities) {
@@ -1125,7 +1164,6 @@ stopping",
 		      preSolve=0;
 		    }
 		  }
-#endif
 #ifdef READLINE     
 		currentModel = model2;
 #endif
@@ -1184,7 +1222,7 @@ stopping",
 		}
 #endif
 		int savePerturbation = model2->perturbation();
-		if (savePerturbation==73)
+		if (savePerturbation==53)
 		  model2->setPerturbation(100);
 		model2->primal(1);
 		model2->setPerturbation(savePerturbation);
@@ -1195,124 +1233,11 @@ stopping",
 		model2->replaceMatrix(saveMatrix);
 	      }
 	      numberIterations = model2->numberIterations();
+	      finalStatus=model2->status();
 	      if (preSolve) {
-#if 0
-		{
-		  int numberRows = model2->numberRows();
-		  double * rowPrimal = model2->primalRowSolution();
-		  double * rowDual = model2->dualRowSolution();
-		  double * rowLower = model2->rowLower();
-		  double * rowUpper = model2->rowUpper();
-		  
-		  int iRow;
-		  double largest;
-		  largest=0.0;
-		  
-		  for (iRow=0;iRow<numberRows;iRow++) {
-		    double value1 = rowPrimal[iRow];
-		    double value2 = min(value1-rowLower[iRow],
-					rowUpper[iRow]-value1);
-		    if (value1-rowLower[iRow]>50000.0)
-		      rowLower[iRow] = value1-50000.0;
-		    if (rowUpper[iRow]-value1>50000.0)
-		      rowUpper[iRow] = value1+50000.0;
-		    largest = max(largest,value2);
-#if 0
-		    double value2 = rowDual[iRow];
-		    if (fabs(value1)<1.0e-9)
-		      value1=0.0;
-		    if (fabs(value2)<1.0e-9)
-		      value2=0.0;
-		    printf("%d stat %d primal %g dual %g\n",
-			   iRow,model2->getRowStatus(iRow),
-			   value1,value2);
-#endif
-		  }
-		  printf("largest away %g\n",largest);
-		  int numberColumns = model2->numberColumns();
-		  double * columnPrimal = model2->primalColumnSolution();
-		  double * columnDual = model2->dualColumnSolution();
-		  //double * originalUpper = models->columnUpper();
-		  //double * originalLower = models->columnLower();
-		  double * columnLower = model2->columnLower();
-		  double * columnUpper = model2->columnUpper();
-		  
-		  int iColumn;
-		  
-		  for (iColumn=0;iColumn<numberColumns;iColumn++) {
-		    double value1 = columnPrimal[iColumn];
-		    double value2 = min(value1-columnLower[iColumn],
-					columnUpper[iColumn]-value1);
-		    if (value1-columnLower[iColumn]>50000.0)
-		      columnLower[iColumn] = value1-50000.0;
-		    if (columnUpper[iColumn]-value1>50000.0)
-		      columnUpper[iColumn] = value1+50000.0;
-		    largest = max(largest,value2);
-#if 0
-		    double value2 = columnDual[iColumn];
-		    if (fabs(value1)<1.0e-9)
-		      value1=0.0;
-		    if (fabs(value2)<1.0e-9)
-		      value2=0.0;
-		    printf("%d stat %d primal %g dual %g\n",
-			   iColumn,model2->getColumnStatus(iColumn),
-			   value1,value2);
-#endif
-		    if (model2->getColumnStatus(iColumn)!=ClpSimplex::basic) {
-		      //assert (fabs(value1-originalLower[iColumn])<1.01e-7||
-		      //      fabs(value1-originalUpper[iColumn])<1.01e-7);
-		    }
-		  }
-		  printf("largest away %g\n",largest);
-		  CoinMpsIO writer;
-		  writer.setMpsData(*model2->matrix(), COIN_DBL_MAX,
-				    model2->getColLower(), model2->getColUpper(),
-				    model2->getObjCoefficients(),
-				    (const char*) 0 /*integrality*/,
-				    model2->getRowLower(), model2->getRowUpper(),
-				    NULL,NULL);
-		  writer.writeMps("pilotx.mps");
-		}
-#endif
-		//model2->primal(1);
+		double timeX=CoinCpuTime();
 		pinfo.postsolve(true);
-		if (0) {
-		  ClpSimplex * model2 = models+iModel;
-		  int numberRows = model2->numberRows();
-		  double * rowPrimal = model2->primalRowSolution();
-		  double * rowDual = model2->dualRowSolution();
-		  
-		  int iRow;
-		  
-		  for (iRow=0;iRow<numberRows;iRow++) {
-		    double value1 = rowPrimal[iRow];
-		    double value2 = rowDual[iRow];
-		    if (fabs(value1)<1.0e-9)
-		      value1=0.0;
-		    if (fabs(value2)<1.0e-9)
-		      value2=0.0;
-		    printf("%d stat %d primal %g dual %g\n",
-			   iRow,model2->getRowStatus(iRow),
-			   value1,value2);
-		  }
-		  int numberColumns = model2->numberColumns();
-		  double * columnPrimal = model2->primalColumnSolution();
-		  double * columnDual = model2->dualColumnSolution();
-		  
-		  int iColumn;
-		  
-		  for (iColumn=0;iColumn<numberColumns;iColumn++) {
-		    double value1 = columnPrimal[iColumn];
-		    double value2 = columnDual[iColumn];
-		    if (fabs(value1)<1.0e-9)
-		      value1=0.0;
-		    if (fabs(value2)<1.0e-9)
-		      value2=0.0;
-		    printf("%d stat %d primal %g dual %g\n",
-			   iColumn,model2->getColumnStatus(iColumn),
-			   value1,value2);
-		  }
-		}
+		timePresolve += CoinCpuTime()-timeX;
 
 		delete model2;
 
@@ -1320,7 +1245,7 @@ stopping",
 		currentModel = models+iModel;
 #endif
 		models[iModel].checkSolution();
-		if (!models[iModel].isProvenOptimal()) {
+		if (!finalStatus&&finalStatus!=3) {
 		  printf("Resolving from postsolved model\n");
 		  
 		  int savePerturbation = models[iModel].perturbation();
@@ -1328,45 +1253,21 @@ stopping",
 		  models[iModel].primal(1);
 		  models[iModel].setPerturbation(savePerturbation);
 		  numberIterations += models[iModel].numberIterations();
+		  finalStatus=models[iModel].status();
 		}
-#ifdef CLP_DEBUG_not
-		models[iModel].checkSolution();
-		printf("%g dual %g(%d) Primal %g(%d)\n",
-		       models[iModel].objectiveValue(),
-		       models[iModel].sumDualInfeasibilities(),
-		       models[iModel].numberDualInfeasibilities(),
-		       models[iModel].sumPrimalInfeasibilities(),
-		       models[iModel].numberPrimalInfeasibilities());
-		{
-		  ClpPresolve pinfoA;
-		  model2 = pinfoA.presolvedModel(models[iModel],1.0e-8);
-		  
-		  printf("Resolving from presolved optimal solution\n");
-		  model2->primal(1);
-		  
-		  delete model2;
-		}
-#endif
 	      }
-#else
-#ifdef READLINE     
-	      currentModel = models+iModel;
-#endif
-	      if (type==DUALSIMPLEX) {
-		models[iModel].dual();
-	      } else {
-		models[iModel].primal(1);
-	      }
-#endif
 	      models[iModel].setMaximumIterations(saveMaxIterations);
 	      time2 = CoinCpuTime();
 	      totalTime += time2-time1;
-	      std::cout<<"Result "<<models[iModel].status()<<
+	      std::cout<<"Result "<<finalStatus<<
 		" - "<<models[iModel].objectiveValue()<<
 		" iterations "<<numberIterations<<
-		" took "<<time2-time1<<" seconds - total "<<totalTime<<std::endl;
-	      if (models[iModel].status())
-		std::cerr<<"Non zero status "<<models[iModel].status()<<
+		" took "<<time2-time1<<" seconds - total "<<totalTime;
+	      if (preSolve)
+		std::cout<<" (Presolve took "<<timePresolve<<")";
+	      std::cout<<std::endl;
+	      if (finalStatus)
+		std::cerr<<"Non zero status "<<finalStatus<<
 		  std::endl;
 	      time1=time2;
 	    } else {
@@ -1387,38 +1288,6 @@ stopping",
 	    break;
 	  case NETWORK:
 	    getNewMatrix=2;
-	    break;
-	  case BAB:
-#if 0
-	    if (goodModels[iModel]) {
-	      int saveMaxIterations = models[iModel].maximumIterations();
-#ifdef READLINE     
-	      currentModel = models+iModel;
-#endif
-	      {
-		// get OsiClp stuff 
-		OsiClpSolverInterface m(models+iModel);
-		m.getModelPtr()->messageHandler()->setLogLevel(0);
-		m.branchAndBound();
-		m.resolve();
-		std::cout<<"Optimal solution "<<m.getObjValue()<<std::endl;
-		m.releaseClp();
-	      }
-	      models[iModel].setMaximumIterations(saveMaxIterations);
-	      time2 = CoinCpuTime();
-	      totalTime += time2-time1;
-	      std::cout<<"Result "<<models[iModel].status()<<
-		" - "<<models[iModel].objectiveValue()<<
-		" iterations "<<models[iModel].numberIterations()<<
-		" took "<<time2-time1<<" seconds - total "<<totalTime<<std::endl;
-	      if (models[iModel].status())
-		std::cerr<<"Non zero status "<<models[iModel].status()<<
-		  std::endl;
-	      time1=time2;
-	    } else {
-	      std::cout<<"** Current model not valid"<<std::endl;
-	    }
-#endif
 	    break;
 	  case IMPORT:
 	    {
@@ -1742,6 +1611,9 @@ stopping",
 	  case VERSION:
 	    std::cout<<"Coin LP version "<<CLPVERSION
 		     <<", build "<<__DATE__<<std::endl;
+	    std::cout<<"Non default values:-"<<std::endl;
+	    std::cout<<"Perturbation "<<models[0].perturbation()
+		     <<" (default 100), Presolve being done with 5 passes"<<std::endl;
 	    break;
 	  case SOLUTION:
 	    if (goodModels[iModel]) {
@@ -1831,7 +1703,7 @@ stopping",
 		   <<std::endl;
 	  for ( iParam=0; iParam<numberParameters; iParam++ ) {
 	    int match = parameters[iParam].matches(field);
-	    if (match) 
+	    if (match&&parameters[iParam].displayThis()) 
 	      std::cout<<parameters[iParam].matchName()<<std::endl;
 	  }
 	} else if (numberQuery) {
@@ -1839,7 +1711,7 @@ stopping",
 		   <<std::endl;
 	  for ( iParam=0; iParam<numberParameters; iParam++ ) {
 	    int match = parameters[iParam].matches(field);
-	    if (match) {
+	    if (match&&parameters[iParam].displayThis()) {
 	      std::cout<<parameters[iParam].matchName()<<" : ";
 	      std::cout<<parameters[iParam].shortHelp()<<std::endl;
 	    }
@@ -1853,7 +1725,7 @@ stopping",
 	  std::cout<<"Completions of "<<field<<":"<<std::endl;
 	for ( iParam=0; iParam<numberParameters; iParam++ ) {
 	  int match = parameters[iParam].matches(field);
-	  if (match) {
+	  if (match&&parameters[iParam].displayThis()) {
 	    std::cout<<parameters[iParam].matchName();
 	    if (numberQuery>=2) 
 	      std::cout<<" : "<<parameters[iParam].shortHelp();

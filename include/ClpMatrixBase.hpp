@@ -111,7 +111,12 @@ public:
   */
   int refresh(ClpSimplex * model)
     { return 0;};
-
+  /** Given positive integer weights for each row fills in sum of weights
+      for each column (and slack).
+      Returns weights vector
+      Default returns vector of ones
+  */
+  virtual CoinBigIndex * dubiousWeights(const ClpSimplex * model,int * inputWeights) const;
   /** Adds multiple of a column into an CoinIndexedvector
       You can use quickAdd to add to vector */
   virtual void add(const ClpSimplex * model,CoinIndexedVector * rowArray,

@@ -110,6 +110,11 @@ public:
 		   int column, double multiplier) const ;
    /// Allow any parts of a created CoinPackedMatrix to be deleted
    virtual void releasePackedMatrix() const { };
+  /** Given positive integer weights for each row fills in sum of weights
+      for each column (and slack).
+      Returns weights vector
+  */
+  virtual CoinBigIndex * dubiousWeights(const ClpSimplex * model,int * inputWeights) const;
    //@}
 
   /**@name Matrix times vector methods */

@@ -1933,12 +1933,16 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
   int i;
   if ((what&(16+32))!=0) {
     // move information to work arrays
-    if (optimizationDirection_<0.0) {
+    double direction = optimizationDirection_;
+    // direction is actually scale out not scale in
+    if (direction)
+      direction = 1.0/direction;
+    if (direction!=1.0) {
       // reverse all dual signs
       for (i=0;i<numberColumns_;i++) 
-	reducedCost_[i] = -reducedCost_[i];
+	reducedCost_[i] *= direction;
       for (i=0;i<numberRows_;i++) 
-	dual_[i] = -dual_[i];
+	dual_[i] *= direction;
     }
     // row reduced costs
     if (!dj_) {
@@ -2190,16 +2194,12 @@ ClpSimplex::deleteRim(int getRidOfFactorizationData)
       rowActivity_[i] = rowActivityWork_[i];
     }
   }
-  // direction may have been modified by scaling - clean up
-  if (optimizationDirection_>0.0) {
-    optimizationDirection_ = 1.0;
-  }  else if (optimizationDirection_<0.0) {
-    optimizationDirection_ = -1.0;
-    // and reverse all dual signs
+  if (optimizationDirection_!=1.0) {
+    // and modify all dual signs
     for (i=0;i<numberColumns_;i++) 
-      reducedCost_[i] = -reducedCost_[i];
+      reducedCost_[i] *= optimizationDirection_;
     for (i=0;i<numberRows_;i++) 
-      dual_[i] = -dual_[i];
+      dual_[i] *= optimizationDirection_;
   }
   // scaling may have been turned off
   scalingFlag_ = abs(scalingFlag_);
@@ -3475,8 +3475,12 @@ ClpSimplex::crash(double gap,int pivot)
     const double * linearObjective = objective();
     //double objectiveValue=0.0;
     int iColumn;
+    double direction = optimizationDirection_;
+    // direction is actually scale out not scale in
+    if (direction)
+      direction = 1.0/direction;
     for (iColumn=0;iColumn<numberColumns_;iColumn++)
-      dj[iColumn] = optimizationDirection_*linearObjective[iColumn];
+      dj[iColumn] = direction*linearObjective[iColumn];
     for (iColumn=0;iColumn<numberColumns_;iColumn++) {
       // assume natural place is closest to zero
       double lowerBound = columnLower_[iColumn];

@@ -123,10 +123,9 @@ void ClpModel::setDualTolerance( double value)
   if (value>0.0&&value<1.0e10)
     dblParam_[ClpDualTolerance]=value;
 }
-void ClpModel::setOptimizationDirection( int value) 
+void ClpModel::setOptimizationDirection( double value) 
 {
-  if (value>=-1&&value<=1)
-    optimizationDirection_=value;
+  optimizationDirection_=value;
 }
 void
 ClpModel::gutsOfLoadModel (int numberRows, int numberColumns, 
@@ -1108,7 +1107,7 @@ bool ClpModel::isPrimalObjectiveLimitReached() const
   }
    
   const double obj = objectiveValue();
-  const int maxmin = optimizationDirection();
+  const double maxmin = optimizationDirection();
 
   if (problemStatus_ == 0) // optimal
     return maxmin > 0 ? (obj < limit) /*minim*/ : (obj > limit) /*maxim*/;
@@ -1129,7 +1128,7 @@ bool ClpModel::isDualObjectiveLimitReached() const
   }
    
   const double obj = objectiveValue();
-  const int maxmin = optimizationDirection();
+  const double maxmin = optimizationDirection();
 
   if (problemStatus_ == 0) // optimal
     return maxmin > 0 ? (obj > limit) /*minim*/ : (obj < limit) /*maxim*/;

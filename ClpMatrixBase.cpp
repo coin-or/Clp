@@ -6,6 +6,7 @@
 #include <iostream>
 
 #include "ClpMatrixBase.hpp"
+#include "ClpSimplex.hpp"
 
 //#############################################################################
 // Constructors / Destructor / Assignment
@@ -89,4 +90,19 @@ ClpMatrixBase::subsetClone (
 {
   std::cerr<<"subsetClone not supported - ClpMatrixBase"<<std::endl;
   abort();
+}
+/* Given positive integer weights for each row fills in sum of weights
+   for each column (and slack).
+   Returns weights vector
+   Default returns vector of ones
+*/
+CoinBigIndex * 
+ClpMatrixBase::dubiousWeights(const ClpSimplex * model,int * inputWeights) const
+{
+  int number = model->numberRows()+model->numberColumns();
+  CoinBigIndex * weights = new CoinBigIndex[number];
+  int i;
+  for (i=0;i<number;i++)
+    weights[i]=1;
+  return weights;
 }
