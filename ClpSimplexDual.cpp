@@ -1030,14 +1030,17 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
 	      break;
 	    }
 	  }
-	  // If special option set - put off as long as possible
-	  if ((specialOptions_&64)==0) {
-	    problemStatus_=-4; //say looks infeasible
+          // If not in branch and bound etc save ray
+          if ((specialOptions_&(1024|4096))==0) {
 	    // create ray anyway
 	    delete [] ray_;
 	    ray_ = new double [ numberRows_];
 	    rowArray_[0]->expand(); // in case packed
 	    ClpDisjointCopyN(rowArray_[0]->denseVector(),numberRows_,ray_);
+          }
+	  // If special option set - put off as long as possible
+	  if ((specialOptions_&64)==0) {
+	    problemStatus_=-4; //say looks infeasible
 	  } else {
 	    // flag
 	    char x = isColumn(sequenceOut_) ? 'C' :'R';
