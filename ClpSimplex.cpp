@@ -68,6 +68,7 @@ ClpSimplex::ClpSimplex () :
   sequenceOut_(-1),
   directionOut_(-1),
   pivotRow_(-1),
+  lastGoodIteration_(-100),
   dj_(NULL),
   rowReducedCost_(NULL),
   reducedCostWork_(NULL),
@@ -721,11 +722,14 @@ int ClpSimplex::internalFactorize ( int solveType)
 	    setRowStatus(iRow,superBasic);
 	    // but put to bound if close
 	    if (fabs(rowActivityWork_[iRow]-rowLowerWork_[iRow])
-		<=primalTolerance_)
+		<=primalTolerance_) {
 	      rowActivityWork_[iRow]=rowLowerWork_[iRow];
-	    else if (fabs(rowActivityWork_[iRow]-rowUpperWork_[iRow])
-		<=primalTolerance_)
+	      setRowStatus(iRow,atLowerBound);
+	    } else if (fabs(rowActivityWork_[iRow]-rowUpperWork_[iRow])
+		       <=primalTolerance_) {
 	      rowActivityWork_[iRow]=rowUpperWork_[iRow];
+	      setRowStatus(iRow,atUpperBound);
+	    }
 	  }
 	  
 	}
@@ -737,24 +741,30 @@ int ClpSimplex::internalFactorize ( int solveType)
 	      setColumnStatus(iColumn,superBasic);
 	      // but put to bound if close
 	      if (fabs(columnActivityWork_[iColumn]-columnLowerWork_[iColumn])
-		  <=primalTolerance_)
+		  <=primalTolerance_) {
 		columnActivityWork_[iColumn]=columnLowerWork_[iColumn];
-	      else if (fabs(columnActivityWork_[iColumn]
+		setColumnStatus(iColumn,atLowerBound);
+	      } else if (fabs(columnActivityWork_[iColumn]
 			    -columnUpperWork_[iColumn])
-		       <=primalTolerance_)
+			 <=primalTolerance_) {
 		columnActivityWork_[iColumn]=columnUpperWork_[iColumn];
+		setColumnStatus(iColumn,atUpperBound);
+	      }
 	    } else 
 	      numberBasic++;
 	  } else {
 	    setColumnStatus(iColumn,superBasic);
 	    // but put to bound if close
 	    if (fabs(columnActivityWork_[iColumn]-columnLowerWork_[iColumn])
-		<=primalTolerance_)
+		<=primalTolerance_) {
 	      columnActivityWork_[iColumn]=columnLowerWork_[iColumn];
-	    else if (fabs(columnActivityWork_[iColumn]
+	      setColumnStatus(iColumn,atLowerBound);
+	    } else if (fabs(columnActivityWork_[iColumn]
 			  -columnUpperWork_[iColumn])
-		     <=primalTolerance_)
+		       <=primalTolerance_) {
 	      columnActivityWork_[iColumn]=columnUpperWork_[iColumn];
+	      setColumnStatus(iColumn,atUpperBound);
+	    }
 	  }
 	}
       } else {
@@ -771,12 +781,15 @@ int ClpSimplex::internalFactorize ( int solveType)
 	  setColumnStatus(iColumn,superBasic);
 	  // but put to bound if close
 	  if (fabs(columnActivityWork_[iColumn]-columnLowerWork_[iColumn])
-	      <=primalTolerance_)
+	      <=primalTolerance_) {
 	    columnActivityWork_[iColumn]=columnLowerWork_[iColumn];
-	  else if (fabs(columnActivityWork_[iColumn]
+	    setColumnStatus(iColumn,atLowerBound);
+	  } else if (fabs(columnActivityWork_[iColumn]
 			-columnUpperWork_[iColumn])
-		   <=primalTolerance_)
+		     <=primalTolerance_) {
 	    columnActivityWork_[iColumn]=columnUpperWork_[iColumn];
+	    setColumnStatus(iColumn,atUpperBound);
+	  }
 	}
       }
     }
@@ -1044,6 +1057,7 @@ ClpSimplex::ClpSimplex(const ClpSimplex &rhs) :
   sequenceOut_(-1),
   directionOut_(-1),
   pivotRow_(-1),
+  lastGoodIteration_(-100),
   dj_(NULL),
   rowReducedCost_(NULL),
   reducedCostWork_(NULL),
@@ -1134,6 +1148,7 @@ ClpSimplex::ClpSimplex(const ClpModel &rhs) :
   sequenceOut_(-1),
   directionOut_(-1),
   pivotRow_(-1),
+  lastGoodIteration_(-100),
   dj_(NULL),
   rowReducedCost_(NULL),
   reducedCostWork_(NULL),
@@ -1272,6 +1287,7 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
   sequenceOut_ = rhs.sequenceOut_;
   directionOut_ = rhs.directionOut_;
   pivotRow_ = rhs.pivotRow_;
+  lastGoodIteration_ = rhs.lastGoodIteration_;
   numberRefinements_ = rhs.numberRefinements_;
   dualTolerance_ = rhs.dualTolerance_;
   primalTolerance_ = rhs.primalTolerance_;
@@ -1989,9 +2005,13 @@ ClpSimplex::setSparseFactorization(bool value)
    fixed, bounds are slightly looser than they could be.
    This is to make dual go faster and is probably not needed
    with a presolve.  Returns non-zero if problem infeasible
+
+   Fudge for branch and bound - put bounds on columns of factor *
+   largest value (at continuous) - should improve stability
+   in branch and bound on infeasible branches (0.0 is off)
 */
 int 
-ClpSimplex::tightenPrimalBounds()
+ClpSimplex::tightenPrimalBounds(double factor)
 {
   
   // Get a row copy in standard format
@@ -2015,13 +2035,31 @@ ClpSimplex::tightenPrimalBounds()
   memcpy(saveLower,columnLower_,numberColumns_*sizeof(double));
   double * saveUpper = new double [numberColumns_];
   memcpy(saveUpper,columnUpper_,numberColumns_*sizeof(double));
+
+  int iRow, iColumn;
+
+  // If wanted - tighten column bounds using solution
+  if (factor) {
+    assert (factor>1.0);
+    double largest=0.0;
+    for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+      if (columnUpper_[iColumn]-columnLower_[iColumn]>tolerance) {
+	largest = max(largest,fabs(columnActivity_[iColumn]));
+      }
+    }
+    largest *= factor;
+    for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+      if (columnUpper_[iColumn]-columnLower_[iColumn]>tolerance) {
+	columnUpper_[iColumn] = min(columnUpper_[iColumn],largest);
+	columnLower_[iColumn] = max(columnLower_[iColumn],-largest);
+      }
+    }
+  }
 #define MAXPASS 10  
 
   // Loop round seeing if we can tighten bounds
   // Would be faster to have a stack of possible rows
   // and we put altered rows back on stack
-
-  int iRow, iColumn;
 
   while(numberChanged) {
 
@@ -3652,101 +3690,146 @@ int ClpSimplex::pivot()
   } else {
     assert (pivotRow_<0);
   }
-  unpack(rowArray_[1]);
-  factorization_->updateColumn(rowArray_[2],rowArray_[1],true);
-  // we are going to subtract movement from current basic
-  double movement;
-  // see where incoming will go to
-  if (sequenceOut_<0||sequenceIn_==sequenceOut_) {
-    // flip so go to bound
-    movement  = ((directionIn_>0) ? upperIn_ : lowerIn_) - valueIn_;
-  } else {
-    // get where outgoing needs to get to
-    double outValue = (directionOut_>0) ? upperOut_ : lowerOut_;
-    // solutionOut_ - movement*alpha_ == outValue
-    movement = (outValue-valueOut_)/alpha_;
-    // set directionIn_ correctly
-    directionIn_ = (movement>0) ? 1 :-1;
-  }
-  // update primal solution
-  {
-    int i;
-    int * index = rowArray_[1]->getIndices();
-    int number = rowArray_[1]->getNumElements();
-    double * element = rowArray_[1]->denseVector();
-    for (i=0;i<number;i++) {
-      int ii = index[i];
-      // get column
-      ii = pivotVariable_[ii];
-      solution_[ii] -= movement*element[i];
-      element[i]=0.0;
-    }
-    // see where something went to
-    if (sequenceOut_<0) {
-      if (directionIn_<0) {
-	assert (fabs(solution_[sequenceIn_]-upperIn_)<1.0e-7);
-	solution_[sequenceIn_]=upperIn_;
-      } else {
-	assert (fabs(solution_[sequenceIn_]-lowerIn_)<1.0e-7);
-	solution_[sequenceIn_]=lowerIn_;
-      }
+  bool roundAgain = true;
+  int returnCode=0;
+  while (roundAgain) {
+    roundAgain=false;
+    unpack(rowArray_[1]);
+    factorization_->updateColumn(rowArray_[2],rowArray_[1],true);
+    // we are going to subtract movement from current basic
+    double movement;
+    // see where incoming will go to
+    if (sequenceOut_<0||sequenceIn_==sequenceOut_) {
+      // flip so go to bound
+      movement  = ((directionIn_>0) ? upperIn_ : lowerIn_) - valueIn_;
     } else {
-      if (directionOut_<0) {
-	assert (fabs(solution_[sequenceOut_]-upperOut_)<1.0e-7);
-	solution_[sequenceOut_]=upperOut_;
-      } else {
-	assert (fabs(solution_[sequenceOut_]-lowerOut_)<1.0e-7);
-	solution_[sequenceOut_]=lowerOut_;
+      // get where outgoing needs to get to
+      double outValue = (directionOut_>0) ? upperOut_ : lowerOut_;
+      // solutionOut_ - movement*alpha_ == outValue
+      movement = (outValue-valueOut_)/alpha_;
+      // set directionIn_ correctly
+      directionIn_ = (movement>0) ? 1 :-1;
+    }
+    // update primal solution
+    {
+      int i;
+      int * index = rowArray_[1]->getIndices();
+      int number = rowArray_[1]->getNumElements();
+      double * element = rowArray_[1]->denseVector();
+      for (i=0;i<number;i++) {
+	int ii = index[i];
+	// get column
+	ii = pivotVariable_[ii];
+	solution_[ii] -= movement*element[i];
+	element[i]=0.0;
       }
-      solution_[sequenceIn_]=valueIn_+movement;
+      // see where something went to
+      if (sequenceOut_<0) {
+	if (directionIn_<0) {
+	  assert (fabs(solution_[sequenceIn_]-upperIn_)<1.0e-7);
+	  solution_[sequenceIn_]=upperIn_;
+	} else {
+	  assert (fabs(solution_[sequenceIn_]-lowerIn_)<1.0e-7);
+	  solution_[sequenceIn_]=lowerIn_;
+	}
+      } else {
+	if (directionOut_<0) {
+	  assert (fabs(solution_[sequenceOut_]-upperOut_)<1.0e-7);
+	  solution_[sequenceOut_]=upperOut_;
+	} else {
+	  assert (fabs(solution_[sequenceOut_]-lowerOut_)<1.0e-7);
+	  solution_[sequenceOut_]=lowerOut_;
+	}
+	solution_[sequenceIn_]=valueIn_+movement;
+      }
+    }    
+    double objectiveChange = dualIn_*movement;
+    // update duals
+    if (pivotRow_>=0) {
+      alpha_ = rowArray_[1]->denseVector()[pivotRow_];
+      assert (fabs(alpha_)>1.0e-8);
+      double multiplier = dualIn_/alpha_;
+      rowArray_[0]->insert(pivotRow_,multiplier);
+      factorization_->updateColumnTranspose(rowArray_[2],rowArray_[0]);
+      // put row of tableau in rowArray[0] and columnArray[0]
+      matrix_->transposeTimes(this,-1.0,
+			      rowArray_[0],columnArray_[1],columnArray_[0]);
+      // update column djs
+      int i;
+      int * index = columnArray_[0]->getIndices();
+      int number = columnArray_[0]->getNumElements();
+      double * element = columnArray_[0]->denseVector();
+      for (i=0;i<number;i++) {
+	int ii = index[i];
+	dj_[ii] -= element[i];
+	element[i]=0.0;
+      }
+      columnArray_[0]->setNumElements(0);
+      // and row djs
+      index = rowArray_[0]->getIndices();
+      number = rowArray_[0]->getNumElements();
+      element = rowArray_[0]->denseVector();
+      for (i=0;i<number;i++) {
+	int ii = index[i];
+	dj_[ii+numberRows_] -= element[i];
+	element[i]=0.0;
+      }
+      rowArray_[0]->setNumElements(0);
+      // check incoming
+      assert (fabs(dj_[sequenceIn_])<1.0e-6);
     }
-  }    
-  // update duals
-  if (pivotRow_>=0) {
-    alpha_ = rowArray_[1]->denseVector()[pivotRow_];
-    assert (fabs(alpha_)>1.0e-8);
-    double multiplier = dualIn_/alpha_;
-    rowArray_[0]->insert(pivotRow_,multiplier);
-    factorization_->updateColumnTranspose(rowArray_[2],rowArray_[0]);
-    // put row of tableau in rowArray[0] and columnArray[0]
-    matrix_->transposeTimes(this,-1.0,
-			    rowArray_[0],columnArray_[1],columnArray_[0]);
-    // update column djs
-    int i;
-    int * index = columnArray_[0]->getIndices();
-    int number = columnArray_[0]->getNumElements();
-    double * element = columnArray_[0]->denseVector();
-    for (i=0;i<number;i++) {
-      int ii = index[i];
-      dj_[ii] -= element[i];
-      element[i]=0.0;
+    
+    // if stable replace in basis
+    int updateStatus = factorization_->replaceColumn(rowArray_[2],
+						   pivotRow_,
+						     alpha_);
+    bool takePivot=true;
+    // if no pivots, bad update but reasonable alpha - take and invert
+    if (updateStatus==2&&
+	lastGoodIteration_==numberIterations_&&fabs(alpha_)>1.0e-5)
+      updateStatus=4;
+    if (updateStatus==1||updateStatus==4) {
+      // slight error
+      if (factorization_->pivots()>5||updateStatus==4) {
+	returnCode=-1;
+      }
+    } else if (updateStatus==2) {
+      // major error
+      rowArray_[1]->clear();
+      takePivot=false;
+      if (factorization_->pivots()) {
+	// refactorize here
+	statusOfProblem();
+	roundAgain=true;
+      } else {
+	returnCode=1;
+      }
+    } else if (updateStatus==3) {
+      // out of memory
+      // increase space if not many iterations
+      if (factorization_->pivots()<
+	  0.5*factorization_->maximumPivots()&&
+	  factorization_->pivots()<200)
+	factorization_->areaFactor(
+				   factorization_->areaFactor() * 1.1);
+      returnCode =-1; // factorize now
     }
-    columnArray_[0]->setNumElements(0);
-    // and row djs
-    index = rowArray_[0]->getIndices();
-    number = rowArray_[0]->getNumElements();
-    element = rowArray_[0]->denseVector();
-    for (i=0;i<number;i++) {
-      int ii = index[i];
-      dj_[ii+numberRows_] -= element[i];
-      element[i]=0.0;
+    if (takePivot) {
+      int save = algorithm_;
+      // make simple so always primal
+      algorithm_=1;
+      housekeeping(objectiveChange);
+      algorithm_=save;
     }
-    rowArray_[0]->setNumElements(0);
-    // check incoming
-    assert (fabs(dj_[sequenceIn_])<1.0e-6);
   }
-#if 0
-  sol update
-    eta update
-  int save = algorithm_;
-  // make simple so always primal
-  algorithm_=1;
-  housekeeping();
-  algorithm_=save;
-  checksol
-#endif
-  abort();
-  return 0;
+  if (returnCode == -1) {
+    // refactorize here
+    statusOfProblem();
+  } else {
+    // just for now - recompute anyway
+    gutsOfSolution(rowActivityWork_,columnActivityWork_);
+  }
+  return returnCode;
 }
 
 /* Pivot in a variable and choose an outgoing one.  Assumes primal
@@ -3885,4 +3968,15 @@ ClpSimplex::restoreData(ClpDataSave saved)
   perturbation_ = saved.perturbation_;
   infeasibilityCost_ = saved.infeasibilityCost_;
   dualBound_ = saved.dualBound_;
+}
+/* Factorizes and returns true if optimal.  Used by user */
+bool
+ClpSimplex::statusOfProblem()
+{
+  // is factorization okay?
+  assert (internalFactorize(1)==0);
+  // put back original costs and then check
+  createRim(4);
+  gutsOfSolution(rowActivityWork_, columnActivityWork_);
+  return (primalFeasible()&&dualFeasible());
 }

@@ -2128,6 +2128,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
   if (problemStatus_<0&&!changeMade_) {
     problemStatus_=4; // unknown
   }
+  lastGoodIteration_ = numberIterations_;
 
 }
 /* While updateDualsInDual sees what effect is of flip

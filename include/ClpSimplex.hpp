@@ -142,9 +142,13 @@ public:
   /** Tightens primal bounds to make dual faster.  Unless
       fixed, bounds are slightly looser than they could be.
       This is to make dual go faster and is probably not needed
-      with a presolve.  Returns non-zero if problem infeasible
+      with a presolve.  Returns non-zero if problem infeasible.
+
+      Fudge for branch and bound - put bounds on columns of factor *
+      largest value (at continuous) - should improve stability
+      in branch and bound on infeasible branches (0.0 is off)
   */
-  int tightenPrimalBounds();
+  int tightenPrimalBounds(double factor=0.0);
   /** Crash - at present just aimed at dual, returns
       -2 if dual preferred and crash basis created
       -1 if dual preferred and all slack basis preferred
@@ -206,6 +210,8 @@ public:
   int startup(int ifValuesPass);
   void finish();
   
+  /** Factorizes and returns true if optimal.  Used by user */
+  bool statusOfProblem();
   //@}
 
   /**@name most useful gets and sets */
@@ -697,6 +703,8 @@ protected:
   int directionOut_;
   /// Pivot Row
   int pivotRow_;
+  /// Last good iteration (immediately after a re-factorization)
+  int lastGoodIteration_;
   /// Working copy of reduced costs (Owner of arrays below)
   double * dj_;
   /// Reduced costs of slacks not same as duals (or - duals)

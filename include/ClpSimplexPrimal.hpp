@@ -123,16 +123,37 @@ public:
   //@{
   /** This has the flow between re-factorizations
 
-      Reasons to come out:
-      -1 iterations etc
-      -2 inaccuracy 
-      -3 slight inaccuracy (and done iterations)
-      -4 end of values pass and done iterations
-      +0 looks optimal (might be infeasible - but we will investigate)
-      +2 looks unbounded
+      Returns a code to say where decision to exit was made
+      Problem status set to:
+
+      -2 re-factorize
+      -4 Looks optimal/infeasible
+      -5 Looks unbounded
       +3 max iterations 
    */
   int whileIterating(); 
+
+  /** Do last half of an iteration.  This is split out so people can
+      force incoming variable.  If solveType_ is 2 then this may
+      re-factorize while normally it would exit to re-factorize.
+      Return codes
+      Reasons to come out (normal mode/user mode):
+      -1 normal
+      -2 factorize now - good iteration/ NA
+      -3 slight inaccuracy - refactorize - iteration done/ same but factor done
+      -4 inaccuracy - refactorize - no iteration/ NA
+      -5 something flagged - go round again/ pivot not possible
+      +2 looks unbounded
+      +3 max iterations (iteration done)
+
+      With solveType_ ==2 this should
+      Pivot in a variable and choose an outgoing one.  Assumes primal
+      feasible - will not go through a bound.  Returns step length in theta
+      Returns ray in ray_
+  */
+  int pivotResult();
+
+
   /** The primals are updated by the given array.
       Returns number of infeasibilities.
       After rowArray will have cost changes for use next iteration
@@ -189,12 +210,8 @@ public:
   /// Unflag all variables and return number unflagged
   int unflag();
 
-  /** Pivot in a variable and choose an outgoing one.  Assumes primal
-      feasible - will not go through a bound.  Returns step length in theta
-      Returns ray in ray_ (or NULL if no pivot)
-      Return codes as before but -1 means no acceptable pivot
-  */
-  int pivotResult();
+  /// Create primal ray
+  void primalRay(CoinIndexedVector * rowArray);
   
   //@}
 };

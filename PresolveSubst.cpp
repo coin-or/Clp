@@ -1023,7 +1023,7 @@ const PresolveAction *subst_constraint_action::presolve(PresolveMatrix *prob,
   if (nactions) {
 #if	PRESOLVE_SUMMARY
     printf("NSUBSTS:  %d\n", nactions);
-    // printf("NT: %d  NGOOD:  %d FILL_LEVEL:  %d\n", nt, ngood, fill_level);
+    //printf("NT: %d  NGOOD:  %d FILL_LEVEL:  %d\n", nt, ngood, fill_level);
 #endif
     next = new subst_constraint_action(nactions, copyOfArray(actions,nactions), next);
 

@@ -426,7 +426,7 @@ Presolve::setOriginalModel(ClpSimplex * model)
 {
   originalModel_=model;
 }
-
+#if 0
 // A lazy way to restrict which transformations are applied
 // during debugging.
 static int ATOI(const char *name)
@@ -447,6 +447,7 @@ static int ATOI(const char *name)
   return (true);
 #endif
 }
+#endif
 //#define DEBUG_PRESOLVE 1
 #if DEBUG_PRESOLVE
 void check_sol(PresolveMatrix *prob,double tol)
@@ -520,12 +521,16 @@ const PresolveAction *Presolve::presolve(PresolveMatrix *prob)
   prob->status_=0; // say feasible
 
   paction_ = make_fixed(prob, paction_);
+  // if integers then switch off dual stuff
+  // later just do individually
+  bool doDualStuff = (presolvedModel_->integerInformation()==NULL);
 
 #if	CHECK_CONSISTENCY
   presolve_links_ok(prob->rlink_, prob->mrstrt_, prob->hinrow_, prob->nrows_);
 #endif
 
   if (!prob->status_) {
+#if 0
     const bool slackd = ATOI("SLACKD")!=0;
     //const bool forcing = ATOI("FORCING")!=0;
     const bool doubleton = ATOI("DOUBLETON")!=0;
@@ -535,6 +540,16 @@ const PresolveAction *Presolve::presolve(PresolveMatrix *prob)
     const bool dupcol = ATOI("off")!=0;
     const bool duprow = ATOI("off")!=0;
     const bool dual = ATOI("off")!=0;
+#else
+    const bool slackd = true;
+    const bool doubleton = true;
+    const bool forcing = true;
+    const bool ifree = true;
+    const bool zerocost = true;
+    const bool dupcol = true;
+    const bool duprow = true;
+    const bool dual = doDualStuff;
+#endif
     
     // some things are expensive so just do once (normally)
 

@@ -198,8 +198,6 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
     
     // This says whether to restore things etc
     int factorType=0;
-    // Save iteration number
-    int saveNumber = -1;
     /*
       Status of problem:
       0 - optimal
@@ -232,24 +230,16 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
 	perturb();
 #endif
       // If we have done no iterations - special
-      if (saveNumber==numberIterations_)
+      if (lastGoodIteration_==numberIterations_)
 	factorType=3;
       // may factorize, checks if problem finished
       statusOfProblemInPrimal(lastCleaned,factorType,progress);
       
       // Say good factorization
       factorType=1;
-      if (data.sparseThreshold_) {
-	// use default at present
-	factorization_->sparseThreshold(0);
-	factorization_->goSparse();
-      }
       
       // Say no pivot has occurred (for steepest edge and updates)
       pivotRow_=-2;
-      
-      // Save iteration number
-      saveNumber = numberIterations_;
       
       // Iterate
       whileIterating();
@@ -287,8 +277,6 @@ ClpSimplexPrimal::whileIterating()
   // Say if values pass
   int ifValuesPass=(firstFree_>=0) ? 1 : 0;
   int returnCode=-1;
-  int startIteration = numberIterations_;
-  int saveNumber = numberIterations_;
   // status stays at -1 while iterating, >=0 finished, -2 to invert
   // status -3 to go to top without an invert
   while (problemStatus_==-1) {
@@ -360,7 +348,7 @@ ClpSimplexPrimal::whileIterating()
 	// end of values pass - initialize weights etc
 	primalColumnPivot_->saveWeights(this,5);
 	ifValuesPass=0;
-	if(saveNumber != numberIterations_) {
+	if(lastGoodIteration_ != numberIterations_) {
 	  problemStatus_=-2; // factorize now
 	  pivotRow_=-1; // say no weights update
 	  returnCode=-4;
@@ -384,241 +372,19 @@ ClpSimplexPrimal::whileIterating()
 	  x<<sequenceWithin(sequenceIn_)<<std::endl;
       }
 #endif
-      // update the incoming column
-      unpack(rowArray_[1]);
-      // save reduced cost
-      double saveDj = dualIn_;
-      factorization_->updateColumn(rowArray_[2],rowArray_[1],true);
-      // do ratio test and re-compute dj
-      primalRow(rowArray_[1],rowArray_[3],rowArray_[2],rowArray_[0],
-		ifValuesPass);
-      if (ifValuesPass) {
-	saveDj=dualIn_;
-	if (pivotRow_==-1||(pivotRow_>=0&&fabs(alpha_)<1.0e-5)) {
-	  if(fabs(dualIn_)<1.0e2*dualTolerance_) {
-	    // try other way
-	    directionIn_=-directionIn_;
-	    primalRow(rowArray_[1],rowArray_[3],rowArray_[2],rowArray_[0],
-		      0);
-	  }
-	  if (pivotRow_==-1||(pivotRow_>=0&&fabs(alpha_)<1.0e-5)) {
-	    // reject it
-	    char x = isColumn(sequenceIn_) ? 'C' :'R';
-	    handler_->message(CLP_SIMPLEX_FLAG,messages_)
-	      <<x<<sequenceWithin(sequenceIn_)
-	      <<CoinMessageEol;
-	    setFlagged(sequenceIn_);
-	    lastBadIteration_ = numberIterations_; // say be more cautious
-	    rowArray_[1]->clear();
-	    pivotRow_=-1;
-	    continue;
-	  }
-	}
-      }
-      
-#ifdef CLP_DEBUG
-      if ((handler_->logLevel()&32))
-	printf("btran dj %g, ftran dj %g\n",saveDj,dualIn_);
-#endif
-      if ((saveDj*dualIn_<1.0e-20&&!ifValuesPass)||
-	  fabs(saveDj-dualIn_)>1.0e-3*(1.0+fabs(saveDj))) {
-	handler_->message(CLP_PRIMAL_DJ,messages_)
-	  <<saveDj<<dualIn_
-	  <<CoinMessageEol;
-	if(saveNumber != numberIterations_) {
-	  problemStatus_=-2; // factorize now
-	  rowArray_[1]->clear();
-	  pivotRow_=-1; // say no weights update
-	  returnCode=-2;
-	  if(saveNumber+1 == numberIterations_) {
-	    // not looking wonderful - try cleaning bounds
-	    // put non-basics to bounds in case tolerance moved
-	    nonLinearCost_->checkInfeasibilities(true);
-	  }
-	  break;
-	} else {
-	  // take on more relaxed criterion
-	  if (saveDj*dualIn_<1.0e-20||
-	      fabs(saveDj-dualIn_)>1.0e-1*(1.0+fabs(dualIn_))) {
-	    // need to reject something
-	    char x = isColumn(sequenceIn_) ? 'C' :'R';
-	    handler_->message(CLP_SIMPLEX_FLAG,messages_)
-	      <<x<<sequenceWithin(sequenceIn_)
-	      <<CoinMessageEol;
-	    setFlagged(sequenceIn_);
-	    lastBadIteration_ = numberIterations_; // say be more cautious
-	    rowArray_[1]->clear();
-	    pivotRow_=-1;
-	    continue;
-	  }
-	}
-      }
-      if (pivotRow_>=0) {
-	// if stable replace in basis
-	int updateStatus = factorization_->replaceColumn(rowArray_[2],
-							 pivotRow_,
-							 alpha_);
-	// if no pivots, bad update but reasonable alpha - take and invert
-	if (updateStatus==2&&
-		   saveNumber==numberIterations_&&fabs(alpha_)>1.0e-5)
-	  updateStatus=4;
-	if (updateStatus==1||updateStatus==4) {
-	  // slight error
-	  if (factorization_->pivots()>5||updateStatus==4) {
-	    problemStatus_=-2; // factorize now
-	    returnCode=-3;
-	  }
-	} else if (updateStatus==2) {
-	  // major error
-	  // later we may need to unwind more e.g. fake bounds
-	  if(saveNumber != numberIterations_) {
-	    problemStatus_=-2; // factorize now
-	    returnCode=-2;
-	    break;
-	  } else {
-	    // need to reject something
-	    char x = isColumn(sequenceIn_) ? 'C' :'R';
-	    handler_->message(CLP_SIMPLEX_FLAG,messages_)
-	      <<x<<sequenceWithin(sequenceIn_)
-	      <<CoinMessageEol;
-	    setFlagged(sequenceIn_);
-	    lastBadIteration_ = numberIterations_; // say be more cautious
-	    rowArray_[1]->clear();
-	    pivotRow_=-1;
-	    continue;
-	  }
-	} else if (updateStatus==3) {
-	  // out of memory
-	  // increase space if not many iterations
-	  if (factorization_->pivots()<
-	      0.5*factorization_->maximumPivots()&&
-	      factorization_->pivots()<200)
-	    factorization_->areaFactor(
-				       factorization_->areaFactor() * 1.1);
-	  problemStatus_=-2; // factorize now
-	}
-	// here do part of steepest - ready for next iteration
-	primalColumnPivot_->updateWeights(rowArray_[1]);
-      } else {
-	if (pivotRow_==-1) {
-	  // no outgoing row is valid
-#ifdef CLP_DEBUG
-	  if (handler_->logLevel()&32)
-	    printf("** no row pivot\n");
-#endif
-	  if (!factorization_->pivots()) {
-	    problemStatus_=-5; //say looks unbounded
-	    // do ray
-	    delete [] ray_;
-	    ray_ = new double [numberColumns_];
-	    ClpFillN(ray_,numberColumns_,0.0);
-	    int number=rowArray_[1]->getNumElements();
-	    int * index = rowArray_[1]->getIndices();
-	    double * array = rowArray_[1]->denseVector();
-	    double way=-directionIn_;
-	    int i;
-	    double zeroTolerance=1.0e-12;
-	    if (sequenceIn_<numberColumns_)
-	      ray_[sequenceIn_]=directionIn_;
-	    for (i=0;i<number;i++) {
-	      int iRow=index[i];
-	      int iPivot=pivotVariable_[iRow];
-	      double arrayValue = array[iRow];
-	      if (iPivot<numberColumns_&&fabs(arrayValue)>=zeroTolerance)
-		ray_[iPivot] = way* array[iRow];
-	    }
-	  }
-	  rowArray_[0]->clear();
-	  returnCode=2;
-	  break;
-	} else {
-	  // flipping from bound to bound
-	}
-      }
-      
-      // update primal solution
-      
-      double objectiveChange=0.0;
-      // Cost on pivot row may change - may need to change dualIn
-      double oldCost=0.0;
-      if (pivotRow_>=0)
-	oldCost = cost(pivotVariable_[pivotRow_]);
-      // rowArray_[1] is not empty - used to update djs
-      updatePrimalsInPrimal(rowArray_[1],theta_, objectiveChange);
-      if (pivotRow_>=0)
-	dualIn_ += (oldCost-cost(pivotVariable_[pivotRow_]));
-      double oldValue = valueIn_;
-      if (directionIn_==-1) {
-	// as if from upper bound
-	if (sequenceIn_!=sequenceOut_) {
-	  // variable becoming basic
-	  //setStatus(sequenceIn_,basic);
-	  valueIn_ -= fabs(theta_);
-	} else {
-	  valueIn_=lowerIn_;
-	  //setStatus(sequenceIn_, atLowerBound);
-	}
-      } else {
-	// as if from lower bound
-	if (sequenceIn_!=sequenceOut_) {
-	  // variable becoming basic
-	  //setStatus(sequenceIn_,basic);
-	  valueIn_ += fabs(theta_);
-	} else {
-	  valueIn_=upperIn_;
-	  //setStatus(sequenceIn_, atUpperBound);
-	}
-      }
-      objectiveChange += dualIn_*(valueIn_-oldValue);
-      // outgoing
-      if (sequenceIn_!=sequenceOut_) {
-	if (directionOut_>0) {
-	  valueOut_ = lowerOut_;
-	} else {
-	  valueOut_ = upperOut_;
-	}
-	double lowerValue = lower_[sequenceOut_];
-	double upperValue = upper_[sequenceOut_];
-	assert(valueOut_>=lowerValue-primalTolerance_&&
-	       valueOut_<=upperValue+primalTolerance_);
-	// may not be exactly at bound and bounds may have changed
-	if (valueOut_<=lowerValue+primalTolerance_) {
-	  //setStatus(sequenceOut_,atLowerBound);
-	  directionOut_=1;
-	} else if (valueOut_>=upperValue-primalTolerance_) {
-	  //setStatus(sequenceOut_,atUpperBound);
-	  directionOut_=-1;
-	} else {
-	  printf("*** variable wandered off bound %g %g %g!\n",
-		 lowerValue,valueOut_,upperValue);
-	  if (valueOut_-lowerValue<=upperValue-valueOut_) {
-	    //setStatus(sequenceOut_,atLowerBound);
-	    valueOut_=lowerValue;
-	    directionOut_=1;
-	  } else {
-	    //setStatus(sequenceOut_,atUpperBound);
-	    valueOut_=upperValue;
-	    directionOut_=-1;
-	  }
-	}
-	solution_[sequenceOut_]=valueOut_;
-	nonLinearCost_->setOne(sequenceOut_,valueOut_);
-      }
-      // change cost and bounds on incoming if primal
-      nonLinearCost_->setOne(sequenceIn_,valueIn_); 
-      int whatNext=housekeeping(objectiveChange);
-      
-      if (whatNext==1) {
-	problemStatus_ =-2; // refactorize
-      } else if (whatNext==2) {
-	// maximum iterations or equivalent
-	problemStatus_= 3;
-	returnCode=3;
-	break;
-      } else if(numberIterations_ == startIteration
-		+ 2 * factorization_->maximumPivots()) {
-	// done a lot of flips - be safe
-	problemStatus_ =-2; // refactorize
+      // do second half of iteration
+      returnCode = pivotResult();
+      if (returnCode<-1&&returnCode>-5) {
+	problemStatus_=-2; // 
+      } else if (returnCode==-5) {
+	// something flagged - continue;
+      } else if (returnCode==2) {
+	problemStatus_=-5; // looks unbounded
+      } else if (returnCode==4) {
+	problemStatus_=-2; // looks unbounded but has iterated
+      } else if (returnCode!=-1) {
+	assert(returnCode==3);
+	problemStatus_=3;
       }
     } else {
       // no pivot column
@@ -650,6 +416,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
     pivotRow_=-1; // say no weights update
     changeMade_++; // say change made
   }
+  int saveThreshold = factorization_->sparseThreshold();
   int tentativeStatus = problemStatus_;
   if (problemStatus_>-3||problemStatus_==-4) {
     // factorize
@@ -882,6 +649,12 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
   if (problemStatus_<0&&!changeMade_) {
     problemStatus_=4; // unknown
   }
+  if (saveThreshold) {
+    // use default at present
+    factorization_->sparseThreshold(0);
+    factorization_->goSparse();
+  }
+  lastGoodIteration_ = numberIterations_;
 }
 /* 
    Row array has pivot column
@@ -1475,16 +1248,305 @@ ClpSimplexPrimal::alwaysOptimal(bool onOff)
   else
     specialOptions_ &= ~1;
 }
-/* Pivot in a variable and choose an outgoing one.  Assumes primal
-   feasible - will not go through a bound.  Returns step length in theta
-   Returns ray in ray_ (or NULL if no pivot)
-   Return codes as before but -1 means no acceptable pivot
+/*
+  Reasons to come out (normal mode/user mode):
+  -1 normal
+  -2 factorize now - good iteration/ NA
+  -3 slight inaccuracy - refactorize - iteration done/ same but factor done
+  -4 inaccuracy - refactorize - no iteration/ NA
+  -5 something flagged - go round again/ pivot not possible
+  +2 looks unbounded
+  +3 max iterations (iteration done)
 */
-int 
+int
 ClpSimplexPrimal::pivotResult()
 {
-  abort();
-  return 0;
+
+  // Say if values pass
+  int ifValuesPass=(firstFree_>=0) ? 1 : 0;
+  bool roundAgain=true;
+  int returnCode=-1;
+
+  // loop round if user setting and doing refactorization
+  while (roundAgain) {
+    roundAgain=false;
+    returnCode=-1;
+    pivotRow_=-1;
+    sequenceOut_=-1;
+    rowArray_[1]->clear();
+    // we found a pivot column
+    // update the incoming column
+    unpack(rowArray_[1]);
+    // save reduced cost
+    double saveDj = dualIn_;
+    factorization_->updateColumn(rowArray_[2],rowArray_[1],true);
+    // do ratio test and re-compute dj
+    primalRow(rowArray_[1],rowArray_[3],rowArray_[2],rowArray_[0],
+	      ifValuesPass);
+    if (ifValuesPass) {
+      saveDj=dualIn_;
+      if (pivotRow_==-1||(pivotRow_>=0&&fabs(alpha_)<1.0e-5)) {
+	if(fabs(dualIn_)<1.0e2*dualTolerance_) {
+	  // try other way
+	  directionIn_=-directionIn_;
+	  primalRow(rowArray_[1],rowArray_[3],rowArray_[2],rowArray_[0],
+		    0);
+	}
+	if (pivotRow_==-1||(pivotRow_>=0&&fabs(alpha_)<1.0e-5)) {
+	  if (solveType_==1) {
+	    // reject it
+	    char x = isColumn(sequenceIn_) ? 'C' :'R';
+	    handler_->message(CLP_SIMPLEX_FLAG,messages_)
+	      <<x<<sequenceWithin(sequenceIn_)
+	      <<CoinMessageEol;
+	    setFlagged(sequenceIn_);
+	    lastBadIteration_ = numberIterations_; // say be more cautious
+	    rowArray_[1]->clear();
+	    pivotRow_=-1;
+	  }
+	  returnCode=-5;
+	  break;
+	}
+      }
+    }
+    if ((saveDj*dualIn_<1.0e-20&&!ifValuesPass&&solveType_==1)||
+	fabs(saveDj-dualIn_)>1.0e-3*(1.0+fabs(saveDj))) {
+      handler_->message(CLP_PRIMAL_DJ,messages_)
+	<<saveDj<<dualIn_
+	<<CoinMessageEol;
+      if(lastGoodIteration_ != numberIterations_) {
+	rowArray_[1]->clear();
+	pivotRow_=-1; // say no weights update
+	returnCode=-4;
+	if(lastGoodIteration_+1 == numberIterations_) {
+	  // not looking wonderful - try cleaning bounds
+	  // put non-basics to bounds in case tolerance moved
+	  nonLinearCost_->checkInfeasibilities(true);
+	}
+	break;
+      } else {
+	// take on more relaxed criterion
+	if (saveDj*dualIn_<1.0e-20||
+	    fabs(saveDj-dualIn_)>1.0e-1*(1.0+fabs(dualIn_))) {
+	  // need to reject something
+	  char x = isColumn(sequenceIn_) ? 'C' :'R';
+	  handler_->message(CLP_SIMPLEX_FLAG,messages_)
+	    <<x<<sequenceWithin(sequenceIn_)
+	    <<CoinMessageEol;
+	  setFlagged(sequenceIn_);
+	  lastBadIteration_ = numberIterations_; // say be more cautious
+	  rowArray_[1]->clear();
+	  pivotRow_=-1;
+	  returnCode=-5;
+	  break;
+	}
+      }
+    }
+    if (pivotRow_>=0) {
+      if (solveType_==2) {
+	// do ray
+	primalRay(rowArray_[1]);
+      }
+      // if stable replace in basis
+      int updateStatus = factorization_->replaceColumn(rowArray_[2],
+						       pivotRow_,
+						       alpha_);
+      // if no pivots, bad update but reasonable alpha - take and invert
+      if (updateStatus==2&&
+	  lastGoodIteration_==numberIterations_&&fabs(alpha_)>1.0e-5)
+	updateStatus=4;
+      if (updateStatus==1||updateStatus==4) {
+	// slight error
+	if (factorization_->pivots()>5||updateStatus==4) {
+	  returnCode=-3;
+	}
+      } else if (updateStatus==2) {
+	// major error
+	// later we may need to unwind more e.g. fake bounds
+	if(lastGoodIteration_ != numberIterations_) {
+	  rowArray_[1]->clear();
+	  pivotRow_=-1;
+	  if (solveType_==1) {
+	    returnCode=-4;
+	    break;
+	  } else {
+	    // user in charge - re-factorize
+	    int lastCleaned;
+	    ClpSimplexProgress dummyProgress;
+	    statusOfProblemInPrimal(lastCleaned,1,dummyProgress);
+	    roundAgain=true;
+	    continue;
+	  }
+	} else {
+	  // need to reject something
+	  if (solveType_==1) {
+	    char x = isColumn(sequenceIn_) ? 'C' :'R';
+	    handler_->message(CLP_SIMPLEX_FLAG,messages_)
+	      <<x<<sequenceWithin(sequenceIn_)
+	      <<CoinMessageEol;
+	    setFlagged(sequenceIn_);
+	  }
+	  lastBadIteration_ = numberIterations_; // say be more cautious
+	  rowArray_[1]->clear();
+	  pivotRow_=-1;
+	  returnCode = -5;
+	  break;
+
+	}
+      } else if (updateStatus==3) {
+	// out of memory
+	// increase space if not many iterations
+	if (factorization_->pivots()<
+	    0.5*factorization_->maximumPivots()&&
+	    factorization_->pivots()<200)
+	  factorization_->areaFactor(
+				     factorization_->areaFactor() * 1.1);
+	returnCode =-2; // factorize now
+      }
+      // here do part of steepest - ready for next iteration
+      primalColumnPivot_->updateWeights(rowArray_[1]);
+    } else {
+      if (pivotRow_==-1) {
+	// no outgoing row is valid
+	rowArray_[0]->clear();
+	if (!factorization_->pivots()) {
+	  returnCode = 2; //say looks unbounded
+	  // do ray
+	  primalRay(rowArray_[1]);
+	} else if (solveType_==2) {
+	  // refactorize
+	  int lastCleaned;
+	  ClpSimplexProgress dummyProgress;
+	  statusOfProblemInPrimal(lastCleaned,1,dummyProgress);
+	  roundAgain=true;
+	  continue;
+	} else {
+	  returnCode = 4; //say looks unbounded but has iterated
+	}
+	break;
+      } else {
+	// flipping from bound to bound
+      }
+    }
+    
+    // update primal solution
+    
+    double objectiveChange=0.0;
+    // Cost on pivot row may change - may need to change dualIn
+    double oldCost=0.0;
+    if (pivotRow_>=0)
+      oldCost = cost(pivotVariable_[pivotRow_]);
+    // rowArray_[1] is not empty - used to update djs
+    updatePrimalsInPrimal(rowArray_[1],theta_, objectiveChange);
+    if (pivotRow_>=0)
+      dualIn_ += (oldCost-cost(pivotVariable_[pivotRow_]));
+    double oldValue = valueIn_;
+    if (directionIn_==-1) {
+      // as if from upper bound
+      if (sequenceIn_!=sequenceOut_) {
+	// variable becoming basic
+	valueIn_ -= fabs(theta_);
+      } else {
+	valueIn_=lowerIn_;
+      }
+    } else {
+      // as if from lower bound
+      if (sequenceIn_!=sequenceOut_) {
+	// variable becoming basic
+	valueIn_ += fabs(theta_);
+      } else {
+	valueIn_=upperIn_;
+      }
+    }
+    objectiveChange += dualIn_*(valueIn_-oldValue);
+    // outgoing
+    if (sequenceIn_!=sequenceOut_) {
+      if (directionOut_>0) {
+	valueOut_ = lowerOut_;
+      } else {
+	valueOut_ = upperOut_;
+      }
+      double lowerValue = lower_[sequenceOut_];
+      double upperValue = upper_[sequenceOut_];
+      assert(valueOut_>=lowerValue-primalTolerance_&&
+	     valueOut_<=upperValue+primalTolerance_);
+      // may not be exactly at bound and bounds may have changed
+      if (valueOut_<=lowerValue+primalTolerance_) {
+	directionOut_=1;
+      } else if (valueOut_>=upperValue-primalTolerance_) {
+	directionOut_=-1;
+      } else {
+	printf("*** variable wandered off bound %g %g %g!\n",
+	       lowerValue,valueOut_,upperValue);
+	if (valueOut_-lowerValue<=upperValue-valueOut_) {
+	  valueOut_=lowerValue;
+	  directionOut_=1;
+	} else {
+	  valueOut_=upperValue;
+	  directionOut_=-1;
+	}
+      }
+      solution_[sequenceOut_]=valueOut_;
+      nonLinearCost_->setOne(sequenceOut_,valueOut_);
+    }
+    // change cost and bounds on incoming if primal
+    nonLinearCost_->setOne(sequenceIn_,valueIn_); 
+    int whatNext=housekeeping(objectiveChange);
+    
+    if (whatNext==1) {
+	returnCode =-2; // refactorize
+    } else if (whatNext==2) {
+      // maximum iterations or equivalent
+      returnCode=3;
+    } else if(numberIterations_ == lastGoodIteration_
+	      + 2 * factorization_->maximumPivots()) {
+      // done a lot of flips - be safe
+      returnCode =-2; // refactorize
+    }
+  }
+  if (solveType_==2&&(returnCode == -2||returnCode==-3)) {
+    // refactorize here
+    int lastCleaned;
+    ClpSimplexProgress dummyProgress;
+    statusOfProblemInPrimal(lastCleaned,1,dummyProgress);
+  }
+#ifdef CLP_DEBUG
+  {
+    int i;
+    // not [1] as may have information
+    for (i=0;i<4;i++) {
+      if (i!=1)
+	rowArray_[i]->checkClear();
+    }    
+    for (i=0;i<2;i++) {
+      columnArray_[i]->checkClear();
+    }    
+  }      
+#endif
+  return returnCode;
+}
+// Create primal ray
+void 
+ClpSimplexPrimal::primalRay(CoinIndexedVector * rowArray)
+{
+  delete [] ray_;
+  ray_ = new double [numberColumns_];
+  ClpFillN(ray_,numberColumns_,0.0);
+  int number=rowArray->getNumElements();
+  int * index = rowArray->getIndices();
+  double * array = rowArray->denseVector();
+  double way=-directionIn_;
+  int i;
+  double zeroTolerance=1.0e-12;
+  if (sequenceIn_<numberColumns_)
+    ray_[sequenceIn_]=directionIn_;
+  for (i=0;i<number;i++) {
+    int iRow=index[i];
+    int iPivot=pivotVariable_[iRow];
+    double arrayValue = array[iRow];
+    if (iPivot<numberColumns_&&fabs(arrayValue)>=zeroTolerance)
+      ray_[iPivot] = way* array[iRow];
+  }
 }
   
 
