@@ -111,6 +111,22 @@ public:
     else
       return cost_[iRange]-cost_[iRange+1];
   }
+  inline double changeUpInCost(int sequence) const
+  {
+    int iRange = whichRange_[sequence]+offset_[sequence];
+    if (iRange+1!=start_[sequence+1]&&!infeasible(iRange+1))
+      return cost_[iRange]-cost_[iRange+1];
+    else
+      return -1.0e100;
+  }
+  inline double changeDownInCost(int sequence) const
+  {
+    int iRange = whichRange_[sequence]+offset_[sequence];
+    if (iRange!=start_[sequence]&&!infeasible(iRange-1))
+      return cost_[iRange]-cost_[iRange-1];
+    else
+      return 1.0e100;
+  }
   /// Returns current lower bound
   inline double lower(int sequence) const
   { return lower_[whichRange_[sequence]+offset_[sequence]];};
@@ -139,6 +155,9 @@ public:
   {return largestInfeasibility_;};
   inline void setChangeInCost(double value) 
   {changeCost_ = value;};
+  /// See if may want to look both ways
+  inline bool lookBothWays() const
+  { return bothWays_;};
   //@}
   ///@name Private functions to deal with infeasible regions 
   inline bool infeasible(int i) const {
@@ -187,6 +206,8 @@ private:
   int numberInfeasibilities_;
   /// If all non-linear costs convex
   bool convex_;
+  /// If we should look both ways for djs
+  bool bothWays_;
   //@}
 };
 

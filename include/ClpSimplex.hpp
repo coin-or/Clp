@@ -597,6 +597,9 @@ public:
   const double * columnScale() const {return columnScale_;};
   void setRowScale(double * scale) { rowScale_ = scale;};
   void setColumnScale(double * scale) { columnScale_ = scale;};
+  /// Return pointer to details of costs
+  inline ClpNonLinearCost * nonLinearCost() const
+  { return nonLinearCost_;};
   //@}
   /**@name status methods */
   //@{

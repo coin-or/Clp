@@ -495,7 +495,8 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
     numberPrimalInfeasibilities_ = 0;
     sumPrimalInfeasibilities_ = 0.0;
   }
-  if (dualFeasible()||problemStatus_==-4||(type==3&&problemStatus_!=-5)) {
+  // had ||(type==3&&problemStatus_!=-5) -- ??? why ????
+  if (dualFeasible()||problemStatus_==-4) {
     
     if (nonLinearCost_->numberInfeasibilities()&&!alwaysOptimal) {
       //may need infeasiblity cost changed
@@ -1097,9 +1098,42 @@ ClpSimplexPrimal::primalColumn(CoinIndexedVector * updates,
 					       spareColumn2);
   if (sequenceIn_>=0) {
     valueIn_=solution_[sequenceIn_];
+    dualIn_=dj_[sequenceIn_];
+    if (nonLinearCost_->lookBothWays()) {
+      // double check 
+      ClpSimplex::Status status = getStatus(sequenceIn_);
+      
+      switch(status) {
+      case ClpSimplex::atUpperBound:
+	if (dualIn_<0.0) {
+	  // move to other side
+	  printf("For %d U (%g, %g, %g) dj changed from %g",
+		 sequenceIn_,lower_[sequenceIn_],solution_[sequenceIn_],
+		 upper_[sequenceIn_],dualIn_);
+	  dualIn_ -= nonLinearCost_->changeUpInCost(sequenceIn_);
+	  printf(" to %g\n",dualIn_);
+	  nonLinearCost_->setOne(sequenceIn_,upper_[sequenceIn_]+2.0*currentPrimalTolerance());
+	  setStatus(sequenceIn_,ClpSimplex::atLowerBound);
+	}
+	break;
+      case ClpSimplex::atLowerBound:
+	if (dualIn_>0.0) {
+	  // move to other side
+	  printf("For %d L (%g, %g, %g) dj changed from %g",
+		 sequenceIn_,lower_[sequenceIn_],solution_[sequenceIn_],
+		 upper_[sequenceIn_],dualIn_);
+	  dualIn_ -= nonLinearCost_->changeDownInCost(sequenceIn_);
+	  printf(" to %g\n",dualIn_);
+	  nonLinearCost_->setOne(sequenceIn_,lower_[sequenceIn_]-2.0*currentPrimalTolerance());
+	  setStatus(sequenceIn_,ClpSimplex::atUpperBound);
+	}
+	break;
+      default:
+	break;
+      }
+    }
     lowerIn_=lower_[sequenceIn_];
     upperIn_=upper_[sequenceIn_];
-    dualIn_=dj_[sequenceIn_];
     if (dualIn_>0.0)
       directionIn_ = -1;
     else 

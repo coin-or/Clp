@@ -7,6 +7,7 @@
 #include "ClpPrimalColumnSteepest.hpp"
 #include "CoinIndexedVector.hpp"
 #include "ClpFactorization.hpp"
+#include "ClpNonLinearCost.hpp"
 #include "ClpMessage.hpp"
 #include "CoinHelperFunctions.hpp"
 #include <stdio.h>
@@ -207,6 +208,7 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
     // put row of tableau in rowArray and columnArray
     model_->clpMatrix()->transposeTimes(model_,-1.0,
 					updates,spareColumn2,spareColumn1);
+    // normal
     for (iSection=0;iSection<2;iSection++) {
       
       reducedCost=model_->djRegion(iSection);
@@ -223,54 +225,129 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
 	updateBy = spareColumn1->denseVector();
 	addSequence = 0;
       }
-
-      for (j=0;j<number;j++) {
-	int iSequence = index[j];
-	double value = reducedCost[iSequence];
-	value -= updateBy[iSequence];
-	reducedCost[iSequence] = value;
-	ClpSimplex::Status status = model_->getStatus(iSequence+addSequence);
-
-	switch(status) {
+      if (!model_->nonLinearCost()->lookBothWays()) {
+	
+	for (j=0;j<number;j++) {
+	  int iSequence = index[j];
+	  double value = reducedCost[iSequence];
+	  value -= updateBy[iSequence];
+	  reducedCost[iSequence] = value;
+	  ClpSimplex::Status status = model_->getStatus(iSequence+addSequence);
 	  
-	case ClpSimplex::basic:
-	  infeasible_->zero(iSequence+addSequence);
-	case ClpSimplex::isFixed:
-	  break;
-	case ClpSimplex::isFree:
-	case ClpSimplex::superBasic:
-	  if (fabs(value)>1.0e2*tolerance) {
-	    // we are going to bias towards free (but only if reasonable)
-	    value *= FREE_BIAS;
-	    // store square in list
-	    if (infeas[iSequence+addSequence])
-	      infeas[iSequence+addSequence] = value*value; // already there
-	    else
-	      infeasible_->quickAdd(iSequence+addSequence,value*value);
-	  } else {
+	  switch(status) {
+	    
+	  case ClpSimplex::basic:
 	    infeasible_->zero(iSequence+addSequence);
+	  case ClpSimplex::isFixed:
+	    break;
+	  case ClpSimplex::isFree:
+	  case ClpSimplex::superBasic:
+	    if (fabs(value)>1.0e2*tolerance) {
+	      // we are going to bias towards free (but only if reasonable)
+	      value *= FREE_BIAS;
+	      // store square in list
+	      if (infeas[iSequence+addSequence])
+		infeas[iSequence+addSequence] = value*value; // already there
+	      else
+		infeasible_->quickAdd(iSequence+addSequence,value*value);
+	    } else {
+	      infeasible_->zero(iSequence+addSequence);
+	    }
+	    break;
+	  case ClpSimplex::atUpperBound:
+	    if (value>tolerance) {
+	      // store square in list
+	      if (infeas[iSequence+addSequence])
+		infeas[iSequence+addSequence] = value*value; // already there
+	      else
+		infeasible_->quickAdd(iSequence+addSequence,value*value);
+	    } else {
+	      infeasible_->zero(iSequence+addSequence);
+	    }
+	    break;
+	  case ClpSimplex::atLowerBound:
+	    if (value<-tolerance) {
+	      // store square in list
+	      if (infeas[iSequence+addSequence])
+		infeas[iSequence+addSequence] = value*value; // already there
+	      else
+		infeasible_->quickAdd(iSequence+addSequence,value*value);
+	    } else {
+	      infeasible_->zero(iSequence+addSequence);
+	    }
 	  }
-	  break;
-	case ClpSimplex::atUpperBound:
-	  if (value>tolerance) {
-	    // store square in list
-	    if (infeas[iSequence+addSequence])
-	      infeas[iSequence+addSequence] = value*value; // already there
-	    else
-	      infeasible_->quickAdd(iSequence+addSequence,value*value);
-	  } else {
+	}
+      } else {
+	ClpNonLinearCost * nonLinear = model_->nonLinearCost(); 
+	// We can go up OR down
+	for (j=0;j<number;j++) {
+	  int iSequence = index[j];
+	  double value = reducedCost[iSequence];
+	  value -= updateBy[iSequence];
+	  reducedCost[iSequence] = value;
+	  ClpSimplex::Status status = model_->getStatus(iSequence+addSequence);
+	  
+	  switch(status) {
+	    
+	  case ClpSimplex::basic:
 	    infeasible_->zero(iSequence+addSequence);
-	  }
-	  break;
-	case ClpSimplex::atLowerBound:
-	  if (value<-tolerance) {
-	    // store square in list
-	    if (infeas[iSequence+addSequence])
-	      infeas[iSequence+addSequence] = value*value; // already there
-	    else
-	      infeasible_->quickAdd(iSequence+addSequence,value*value);
-	  } else {
-	    infeasible_->zero(iSequence+addSequence);
+	  case ClpSimplex::isFixed:
+	    break;
+	  case ClpSimplex::isFree:
+	  case ClpSimplex::superBasic:
+	    if (fabs(value)>1.0e2*tolerance) {
+	      // we are going to bias towards free (but only if reasonable)
+	      value *= FREE_BIAS;
+	      // store square in list
+	      if (infeas[iSequence+addSequence])
+		infeas[iSequence+addSequence] = value*value; // already there
+	      else
+		infeasible_->quickAdd(iSequence+addSequence,value*value);
+	    } else {
+	      infeasible_->zero(iSequence+addSequence);
+	    }
+	    break;
+	  case ClpSimplex::atUpperBound:
+	    if (value>tolerance) {
+	      // store square in list
+	      if (infeas[iSequence+addSequence])
+		infeas[iSequence+addSequence] = value*value; // already there
+	      else
+		infeasible_->quickAdd(iSequence+addSequence,value*value);
+	    } else {
+	      // look other way - change up should be negative
+	      value -= nonLinear->changeUpInCost(iSequence+addSequence);
+	      if (value>-tolerance) {
+		infeasible_->zero(iSequence+addSequence);
+	      } else {
+		// store square in list
+		if (infeas[iSequence+addSequence])
+		  infeas[iSequence+addSequence] = value*value; // already there
+		else
+		  infeasible_->quickAdd(iSequence+addSequence,value*value);
+	      }
+	    }
+	    break;
+	  case ClpSimplex::atLowerBound:
+	    if (value<-tolerance) {
+	      // store square in list
+	      if (infeas[iSequence+addSequence])
+		infeas[iSequence+addSequence] = value*value; // already there
+	      else
+		infeasible_->quickAdd(iSequence+addSequence,value*value);
+	    } else {
+	      // look other way - change down should be positive
+	      value -= nonLinear->changeDownInCost(iSequence+addSequence);
+	      if (value<tolerance) {
+		infeasible_->zero(iSequence+addSequence);
+	      } else {
+		// store square in list
+		if (infeas[iSequence+addSequence])
+		  infeas[iSequence+addSequence] = value*value; // already there
+		else
+		  infeasible_->quickAdd(iSequence+addSequence,value*value);
+	      }
+	    }
 	  }
 	}
       }
@@ -350,49 +427,120 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
       addSequence = 0;
     }
 
-    for (iSequence=0;iSequence<number;iSequence++) {
-      double value = reducedCost[iSequence];
-      ClpSimplex::Status status = model_->getStatus(iSequence+addSequence);
-      
-      switch(status) {
-
-      case ClpSimplex::basic:
-	infeasible_->zero(iSequence+addSequence);
-      case ClpSimplex::isFixed:
-	break;
-      case ClpSimplex::isFree:
-	if (fabs(value)>tolerance) {
-	  // we are going to bias towards free (but only if reasonable)
-	  value *= FREE_BIAS;
-	  // store square in list
-	  if (infeas[iSequence+addSequence])
-	    infeas[iSequence+addSequence] = value*value; // already there
-	  else
-	    infeasible_->quickAdd(iSequence+addSequence,value*value);
+    if (!model_->nonLinearCost()->lookBothWays()) {
+      for (iSequence=0;iSequence<number;iSequence++) {
+	double value = reducedCost[iSequence];
+	ClpSimplex::Status status = model_->getStatus(iSequence+addSequence);
+	
+	switch(status) {
+	  
+	case ClpSimplex::basic:
+	  infeasible_->zero(iSequence+addSequence);
+	case ClpSimplex::isFixed:
+	  break;
+	case ClpSimplex::isFree:
+	  if (fabs(value)>tolerance) {
+	    // we are going to bias towards free (but only if reasonable)
+	    value *= FREE_BIAS;
+	    // store square in list
+	    if (infeas[iSequence+addSequence])
+	      infeas[iSequence+addSequence] = value*value; // already there
+	    else
+	      infeasible_->quickAdd(iSequence+addSequence,value*value);
 	  } else {
 	    infeasible_->zero(iSequence+addSequence);
 	  }
-	break;
-      case ClpSimplex::atUpperBound:
-	if (value>tolerance) {
+	  break;
+	case ClpSimplex::atUpperBound:
+	  if (value>tolerance) {
 	    // store square in list
-	  if (infeas[iSequence+addSequence])
-	    infeas[iSequence+addSequence] = value*value; // already there
-	  else
-	    infeasible_->quickAdd(iSequence+addSequence,value*value);
-	} else {
-	  infeasible_->zero(iSequence+addSequence);
+	    if (infeas[iSequence+addSequence])
+	      infeas[iSequence+addSequence] = value*value; // already there
+	    else
+	      infeasible_->quickAdd(iSequence+addSequence,value*value);
+	  } else {
+	    infeasible_->zero(iSequence+addSequence);
+	  }
+	  break;
+	case ClpSimplex::atLowerBound:
+	  if (value<-tolerance) {
+	    // store square in list
+	    if (infeas[iSequence+addSequence])
+	      infeas[iSequence+addSequence] = value*value; // already there
+	    else
+	      infeasible_->quickAdd(iSequence+addSequence,value*value);
+	  } else {
+	    infeasible_->zero(iSequence+addSequence);
+	  }
 	}
-	break;
-      case ClpSimplex::atLowerBound:
-	if (value<-tolerance) {
-	  // store square in list
-	  if (infeas[iSequence+addSequence])
-	    infeas[iSequence+addSequence] = value*value; // already there
-	  else
-	    infeasible_->quickAdd(iSequence+addSequence,value*value);
-	} else {
+      }
+    } else {
+      // we can go both ways
+      ClpNonLinearCost * nonLinear = model_->nonLinearCost(); 
+      for (iSequence=0;iSequence<number;iSequence++) {
+	double value = reducedCost[iSequence];
+	ClpSimplex::Status status = model_->getStatus(iSequence+addSequence);
+	
+	switch(status) {
+	  
+	case ClpSimplex::basic:
 	  infeasible_->zero(iSequence+addSequence);
+	case ClpSimplex::isFixed:
+	  break;
+	case ClpSimplex::isFree:
+	  if (fabs(value)>tolerance) {
+	    // we are going to bias towards free (but only if reasonable)
+	    value *= FREE_BIAS;
+	    // store square in list
+	    if (infeas[iSequence+addSequence])
+	      infeas[iSequence+addSequence] = value*value; // already there
+	    else
+	      infeasible_->quickAdd(iSequence+addSequence,value*value);
+	  } else {
+	    infeasible_->zero(iSequence+addSequence);
+	  }
+	  break;
+	case ClpSimplex::atUpperBound:
+	  if (value>tolerance) {
+	    // store square in list
+	    if (infeas[iSequence+addSequence])
+	      infeas[iSequence+addSequence] = value*value; // already there
+	    else
+	      infeasible_->quickAdd(iSequence+addSequence,value*value);
+	  } else {
+	    // look other way - change up should be negative
+	    value -= nonLinear->changeUpInCost(iSequence+addSequence);
+	    if (value>-tolerance) {
+	      infeasible_->zero(iSequence+addSequence);
+	    } else {
+	      // store square in list
+	      if (infeas[iSequence+addSequence])
+		infeas[iSequence+addSequence] = value*value; // already there
+	      else
+		infeasible_->quickAdd(iSequence+addSequence,value*value);
+	    }
+	  }
+	  break;
+	case ClpSimplex::atLowerBound:
+	  if (value<-tolerance) {
+	    // store square in list
+	    if (infeas[iSequence+addSequence])
+	      infeas[iSequence+addSequence] = value*value; // already there
+	    else
+	      infeasible_->quickAdd(iSequence+addSequence,value*value);
+	  } else {
+	    // look other way - change down should be positive
+	    value -= nonLinear->changeDownInCost(iSequence+addSequence);
+	    if (value<tolerance) {
+	      infeasible_->zero(iSequence+addSequence);
+	    } else {
+	      // store square in list
+	      if (infeas[iSequence+addSequence])
+		infeas[iSequence+addSequence] = value*value; // already there
+	      else
+		infeasible_->quickAdd(iSequence+addSequence,value*value);
+	    }
+	  }
 	}
       }
     }
@@ -682,32 +830,80 @@ ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model,int mode)
 
     double * reducedCost = model_->djRegion();
       
-    for (iSequence=0;iSequence<number;iSequence++) {
-      double value = reducedCost[iSequence];
-      ClpSimplex::Status status = model_->getStatus(iSequence);
-      
-      switch(status) {
-
-      case ClpSimplex::basic:
-      case ClpSimplex::isFixed:
-	break;
-      case ClpSimplex::isFree:
-      case ClpSimplex::superBasic:
-	if (fabs(value)>1.0e2*tolerance) { 
-	  // we are going to bias towards free (but only if reasonable)
-	  value *= FREE_BIAS;
-	  // store square in list
-	  infeasible_->quickAdd(iSequence,value*value);
+    if (!model_->nonLinearCost()->lookBothWays()) {
+      for (iSequence=0;iSequence<number;iSequence++) {
+	double value = reducedCost[iSequence];
+	ClpSimplex::Status status = model_->getStatus(iSequence);
+	
+	switch(status) {
+	  
+	case ClpSimplex::basic:
+	case ClpSimplex::isFixed:
+	  break;
+	case ClpSimplex::isFree:
+	case ClpSimplex::superBasic:
+	  if (fabs(value)>1.0e2*tolerance) { 
+	    // we are going to bias towards free (but only if reasonable)
+	    value *= FREE_BIAS;
+	    // store square in list
+	    infeasible_->quickAdd(iSequence,value*value);
+	  }
+	  break;
+	case ClpSimplex::atUpperBound:
+	  if (value>tolerance) {
+	    infeasible_->quickAdd(iSequence,value*value);
+	  }
+	  break;
+	case ClpSimplex::atLowerBound:
+	  if (value<-tolerance) {
+	    infeasible_->quickAdd(iSequence,value*value);
+	  }
 	}
-	break;
-      case ClpSimplex::atUpperBound:
-	if (value>tolerance) {
-	  infeasible_->quickAdd(iSequence,value*value);
-	}
-	break;
-      case ClpSimplex::atLowerBound:
-	if (value<-tolerance) {
-	  infeasible_->quickAdd(iSequence,value*value);
+      }
+    } else {
+      ClpNonLinearCost * nonLinear = model_->nonLinearCost(); 
+      // can go both ways
+      for (iSequence=0;iSequence<number;iSequence++) {
+	double value = reducedCost[iSequence];
+	ClpSimplex::Status status = model_->getStatus(iSequence);
+	
+	switch(status) {
+	  
+	case ClpSimplex::basic:
+	case ClpSimplex::isFixed:
+	  break;
+	case ClpSimplex::isFree:
+	case ClpSimplex::superBasic:
+	  if (fabs(value)>1.0e2*tolerance) { 
+	    // we are going to bias towards free (but only if reasonable)
+	    value *= FREE_BIAS;
+	    // store square in list
+	    infeasible_->quickAdd(iSequence,value*value);
+	  }
+	  break;
+	case ClpSimplex::atUpperBound:
+	  if (value>tolerance) {
+	    infeasible_->quickAdd(iSequence,value*value);
+	  } else {
+	    // look other way - change up should be negative
+	    value -= nonLinear->changeUpInCost(iSequence);
+	    if (value<-tolerance) {
+	      // store square in list
+	      infeasible_->quickAdd(iSequence,value*value);
+	    }
+	  }
+	  break;
+	case ClpSimplex::atLowerBound:
+	  if (value<-tolerance) {
+	    infeasible_->quickAdd(iSequence,value*value);
+	  } else {
+	    // look other way - change down should be positive
+	    value -= nonLinear->changeDownInCost(iSequence);
+	    if (value>tolerance) {
+	      // store square in list
+	      infeasible_->quickAdd(iSequence,value*value);
+	    }
+	  }
 	}
       }
     }
@@ -928,8 +1124,7 @@ ClpPrimalColumnSteepest::initializeWeights()
 	model_->unpack(alternateWeights_,iSequence);
 	double value=ADD_ONE;
 	model_->factorization()->updateColumn(temp,alternateWeights_);
-	int number = alternateWeights_->getNumElements();
-	int j;
+	int number = alternateWeights_->getNumElements();	int j;
 	for (j=0;j<number;j++) {
 	  int iRow=which[j];
 	  value+=array[iRow]*array[iRow];

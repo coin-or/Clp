@@ -4,7 +4,6 @@
 /* This simple example takes a matrix read in by CoinMpsIo,
    deletes every second column and solves the resulting problem */
 
-void sortSegments(int, int*, double*, double*);
 #include "ClpSimplex.hpp"
 #include "ClpNonLinearCost.hpp"
 #include "CoinMpsIO.hpp"
@@ -73,55 +72,68 @@ int main (int argc, const char *argv[])
   const double * oldSolution = model1.primalColumnSolution();
 
   int iColumn;
+  for (iColumn=0;iColumn<numberColumns;iColumn++)
+    printf("%g ",oldSolution[iColumn]);
+  printf("\n");
+    
   numberColumns2=0;
   numberElements=0;
   start2[0]=0;
   int segptr=0;
-  int numseg=0;
 
-  // treat first column separately
-  iColumn=0;
   segstart[0]=0;
-  columnLower2[numberColumns2] = columnLower1[iColumn];
-  columnUpper2[numberColumns2] = columnUpper1[iColumn];
-  objective2[numberColumns2] = objective1[iColumn];
-  breakpt[segptr] = columnLower1[iColumn];
-  slope[segptr++] = objective1[iColumn];
-  double maxUpper = columnUpper1[iColumn];
-  numseg=1;
-  for (int j=start1[iColumn];j<start1[iColumn]+length1[iColumn];j++) {
-    row2[numberElements]=row1[j];
-    element2[numberElements++] = element1[j];
-  }
-  newSolution[0]=oldSolution[0];
-  start2[++numberColumns2]=numberElements;
 
   // Now check for duplicates
-  for (iColumn=1;iColumn<numberColumns;iColumn++) {
-    maxUpper = max(maxUpper, columnUpper1[iColumn]);
-    // test if column identical to previous column
+  for (iColumn=0;iColumn<numberColumns;iColumn++) {
+    // test if column identical to next column
     bool ifcopy=1;
-    int  joff = length1[iColumn-1];
-    for (int j=start1[iColumn];j<start1[iColumn]+length1[iColumn];j++) {
-      if (row1[j] != row1[j-joff]){
-	ifcopy=0;
-	break;
+    if (iColumn<numberColumns-1) {
+      int  joff = length1[iColumn];
+      for (int j=start1[iColumn];j<start1[iColumn]+length1[iColumn];j++) {
+	if (row1[j] != row1[j+joff]){
+	  ifcopy=0;
+	  break;
+	}
+	if (element1[j] != element1[j+joff]){
+	  ifcopy=0;
+	  break;
+	}
       }
-      if (element1[j] != element1[j-joff]){
-	ifcopy=0;
-	break;
-      }
+    } else {
+      ifcopy=0;
     }
+    //if (iColumn>47||iColumn<45)
+    //ifcopy=0;
     if (ifcopy) {
-      // subtract out from rhs
-      double fixed = columnLower1[iColumn];
-      if(fabs(fixed-columnUpper1[iColumn-1])>1.0e-8) {
+      double lo1 = columnLower1[iColumn];
+      double up1 = columnUpper1[iColumn];
+      double obj1 = objective1[iColumn];
+      double sol1 = oldSolution[iColumn];
+      double lo2 = columnLower1[iColumn+1];
+      double up2 = columnUpper1[iColumn+1];
+      double obj2 = objective1[iColumn+1];
+      double sol2 = oldSolution[iColumn+1];
+      if(fabs(up1-lo2)>1.0e-8) {
 	// try other way
-	fixed = columnUpper1[iColumn];
-	assert(fabs(fixed-columnLower1[iColumn-1])<1.0e-8);
+	double temp;
+	temp = lo1;
+	lo1=lo2;
+	lo2=temp;
+	temp = up1;
+	up1=up2;
+	up2=temp;
+	temp = obj1;
+	obj1=obj2;
+	obj2=temp;
+	temp = sol1;
+	sol1=sol2;
+	sol2=temp;
+	assert(fabs(up1-lo2)<1.0e-8);
       }
+      // subtract out from rhs
+      double fixed = up1;
       // do offset
-      objectiveOffset += fixed*objective1[iColumn];
+      objectiveOffset += fixed*obj2;
       for (int j=start1[iColumn];j<start1[iColumn]+length1[iColumn];j++) {
 	int iRow = row1[j];
 	double value = element1[j];
@@ -130,48 +142,51 @@ int main (int argc, const char *argv[])
 	if (rowUpper2[iRow]<1.0e30)
 	  rowUpper2[iRow] -= value*fixed;
       }
-      if (fabs(oldSolution[iColumn]-fixed)>1.0e-8)
-	newSolution[numberColumns2-1]=oldSolution[iColumn]; 
+      newSolution[numberColumns2]=fixed;
+      if (fabs(sol1-fixed)>1.0e-8)
+	newSolution[numberColumns2]=sol1;
+      if (fabs(sol2-fixed)>1.0e-8)
+	newSolution[numberColumns2]=sol2;
+      columnLower2[numberColumns2] = lo1;
+      columnUpper2[numberColumns2] = up2;
+      objective2[numberColumns2] = 0.0;
+      breakpt[segptr] = lo1;
+      slope[segptr++] = obj1;
+      breakpt[segptr] = lo2;
+      slope[segptr++] = obj2;
+      for (int j=start1[iColumn];j<start1[iColumn]+length1[iColumn];j++) {
+	row2[numberElements]=row1[j];
+	element2[numberElements++] = element1[j];
+      }
+      start2[++numberColumns2]=numberElements;
+      breakpt[segptr] = up2;
+      slope[segptr++] = COIN_DBL_MAX;
+      segstart[numberColumns2] = segptr;
+      iColumn++; // skip next column
+    } else {
+      // normal column
+      columnLower2[numberColumns2] = columnLower1[iColumn];
+      columnUpper2[numberColumns2] = columnUpper1[iColumn];
+      objective2[numberColumns2] = objective1[iColumn];
       breakpt[segptr] = columnLower1[iColumn];
       slope[segptr++] = objective1[iColumn];
-      numseg++;
-      continue;
+      for (int j=start1[iColumn];j<start1[iColumn]+length1[iColumn];j++) {
+	row2[numberElements]=row1[j];
+	element2[numberElements++] = element1[j];
+      }
+      newSolution[numberColumns2]=oldSolution[iColumn]; 
+      start2[++numberColumns2]=numberElements;
+      breakpt[segptr] = columnUpper1[iColumn];
+      slope[segptr++] = COIN_DBL_MAX;
+      segstart[numberColumns2] = segptr;
     }
-    breakpt[segptr] = maxUpper;
-    slope[segptr++] = COIN_DBL_MAX;
-    segstart[numberColumns2] = segptr;
-    // new column found
-    columnLower2[numberColumns2] = columnLower1[iColumn];
-    columnUpper2[numberColumns2] = columnUpper1[iColumn];
-    objective2[numberColumns2] = objective1[iColumn];
-    breakpt[segptr] = columnLower1[iColumn];
-    slope[segptr++] = objective1[iColumn];
-    maxUpper = columnUpper1[iColumn];
-    for (int j=start1[iColumn];j<start1[iColumn]+length1[iColumn];j++) {
-      row2[numberElements]=row1[j];
-      element2[numberElements++] = element1[j];
-    }
-    newSolution[numberColumns2]=oldSolution[iColumn]; 
-    start2[++numberColumns2]=numberElements;
   }
-  breakpt[segptr] = maxUpper;
-  slope[segptr++] = COIN_DBL_MAX;
-  segstart[numberColumns2] = segptr;
 
   // print new number of columns, elements
   printf("New number of columns  = %d\n",numberColumns2);
   printf("New number of elements = %d\n",numberElements);
   printf("Objective offset is %g\n",objectiveOffset);
 
-  /*  for (int k=0; k<20; k++)
-    printf("%d  %e %e\n",segstart[k],breakpt[k],slope[k]);
-  */
-  sortSegments(numberColumns2, segstart, breakpt, slope);
-
-  printf("After sorting\n");
-  /*  for (int k=0; k<20; k++)
-    printf("%d  %e %e\n",segstart[k],breakpt[k],slope[k]);
-  */
 
   ClpSimplex  model; 
 
@@ -182,6 +197,7 @@ int main (int argc, const char *argv[])
 		    objective2,
 		    rowLower2,rowUpper2);
   model.scaling(0);
+  model.setDblParam(ClpObjOffset,-objectiveOffset);
   // Create nonlinear objective
   int returnCode= model.createPiecewiseLinearCosts(segstart, breakpt, slope);
   assert (!returnCode);
@@ -206,52 +222,50 @@ int main (int argc, const char *argv[])
   //memcpy(model.columnLower(),newSolution,numberColumns2*sizeof(double));
   //memcpy(model.columnUpper(),newSolution,numberColumns2*sizeof(double));
   delete [] newSolution;
+  //model.setLogLevel(63);
 
   const double * solution = model.primalColumnSolution();
+  double * saveSol = new double[numberColumns2];
+  memcpy(saveSol,solution,numberColumns2*sizeof(double));
   for (iColumn=0;iColumn<numberColumns2;iColumn++)
     printf("%g ",solution[iColumn]);
   printf("\n");
   // solve
   model.primal(1);
-  for (iColumn=0;iColumn<numberColumns2;iColumn++)
+  for (iColumn=0;iColumn<numberColumns2;iColumn++) {
+    if (fabs(solution[iColumn]-saveSol[iColumn])>1.0e-3)
+      printf(" ** was %g ",saveSol[iColumn]);
     printf("%g ",solution[iColumn]);
+  }
   printf("\n");
   model.primal(1);
-  for (iColumn=0;iColumn<numberColumns2;iColumn++)
+  for (iColumn=0;iColumn<numberColumns2;iColumn++) {
+    if (fabs(solution[iColumn]-saveSol[iColumn])>1.0e-3)
+      printf(" ** was %g ",saveSol[iColumn]);
     printf("%g ",solution[iColumn]);
+  }
   printf("\n");
   model.primal();
-  for (iColumn=0;iColumn<numberColumns2;iColumn++)
+  for (iColumn=0;iColumn<numberColumns2;iColumn++) {
+    if (fabs(solution[iColumn]-saveSol[iColumn])>1.0e-3)
+      printf(" ** was %g ",saveSol[iColumn]);
     printf("%g ",solution[iColumn]);
+  }
   printf("\n");
   model.allSlackBasis();
-  for (iColumn=0;iColumn<numberColumns2;iColumn++)
+  for (iColumn=0;iColumn<numberColumns2;iColumn++) {
+    if (fabs(solution[iColumn]-saveSol[iColumn])>1.0e-3)
+      printf(" ** was %g ",saveSol[iColumn]);
     printf("%g ",solution[iColumn]);
+  }
   printf("\n");
+  model.setLogLevel(63);
   model.primal();
-  for (iColumn=0;iColumn<numberColumns2;iColumn++)
+  for (iColumn=0;iColumn<numberColumns2;iColumn++) {
+    if (fabs(solution[iColumn]-saveSol[iColumn])>1.0e-3)
+      printf(" ** was %g ",saveSol[iColumn]);
     printf("%g ",solution[iColumn]);
+  }
   printf("\n");
   return 0;
 }    
-
-// Quick and dirty sort for 2 segments only
-void sortSegments(int n_, int* ptr_, double* breakpt_, double* slope_){
-  for (int i=0; i<n_; i++){
-    if ( (ptr_[i+1] - ptr_[i]) <= 2)
-      continue;
-    if ( (ptr_[i+1] - ptr_[i]) > 3){
-      printf("More than 2 real segments not implemented %d\n", i);
-      exit(2);
-    }
-    if (breakpt_[ptr_[i]] < breakpt_[ptr_[i]+1])
-      continue;
-    double bsave = breakpt_[ptr_[i]];
-    double ssave = slope_[ptr_[i]];
-    breakpt_[ptr_[i]] = breakpt_[ptr_[i]+1];
-    slope_[ptr_[i]] = slope_[ptr_[i]+1];
-    breakpt_[ptr_[i]+1] = bsave;
-    slope_[ptr_[i]+1] = ssave;
-  }
-  return;
-}

@@ -29,6 +29,7 @@ ClpSimplexPrimalQuadratic::primalSLP(int numberPasses, double deltaTolerance)
   // This is as a user would see
 
   int numberColumns = this->numberColumns();
+  int numberRows = this->numberRows();
   double * columnLower = this->columnLower();
   double * columnUpper = this->columnUpper();
   double * objective = this->objective();
@@ -95,6 +96,8 @@ ClpSimplexPrimalQuadratic::primalSLP(int numberPasses, double deltaTolerance)
   int iPass;
   double lastObjective=1.0e31;
   double * saveSolution = new double [numberColumns];
+  double * savePi = new double [numberRows];
+  unsigned char * saveStatus = new unsigned char[numberRows+numberColumns];
   double targetDrop=1.0e31;
   double objectiveOffset;
   getDblParam(ClpObjOffset,objectiveOffset);
@@ -105,6 +108,7 @@ ClpSimplexPrimalQuadratic::primalSLP(int numberPasses, double deltaTolerance)
       last[iPass][jNon]=0;
   }
   double goodMove=false;
+  char * statusCheck = new char[numberColumns];
   for (iPass=0;iPass<numberPasses;iPass++) {
     // redo objective
     double offset=0.0;
@@ -114,6 +118,19 @@ ClpSimplexPrimalQuadratic::primalSLP(int numberPasses, double deltaTolerance)
       objValue += objective[iColumn]*solution[iColumn];
     for (jNon=0;jNon<numberNonLinearColumns;jNon++) {
       iColumn=listNonLinearColumn[jNon];
+      if (getColumnStatus(iColumn)==basic) {
+	if (solution[iColumn]<columnLower[iColumn]+1.0e-8)
+	  statusCheck[iColumn]='l';
+	else if (solution[iColumn]>columnUpper[iColumn]-1.0e-8)
+	  statusCheck[iColumn]='u';
+	else
+	  statusCheck[iColumn]='B';
+      } else {
+	if (solution[iColumn]<columnLower[iColumn]+1.0e-8)
+	  statusCheck[iColumn]='L';
+	else
+	  statusCheck[iColumn]='U';
+      }
       double valueI = solution[iColumn];
       int j;
       for (j=columnQuadraticStart[iColumn];
@@ -184,12 +201,12 @@ ClpSimplexPrimalQuadratic::primalSLP(int numberPasses, double deltaTolerance)
       double drop = lastObjective-objValue;
       std::cout<<"True drop was "<<drop<<std::endl;
       std::cout<<"largest delta is "<<maxDelta<<std::endl;
-      if (maxDelta<deltaTolerance&&drop<1.0e-4) {
+      if (maxDelta<deltaTolerance&&drop<1.0e-4&&goodMove) {
 	std::cout<<"Exiting"<<std::endl;
 	break;
       }
     } else {
-      lastObjective += 1.0e-3; // to stop exit
+      //lastObjective += 1.0e-3; // to stop exit
     }
     for (jNon=0;jNon<numberNonLinearColumns;jNon++) {
       iColumn=listNonLinearColumn[jNon];
@@ -202,16 +219,19 @@ ClpSimplexPrimalQuadratic::primalSLP(int numberPasses, double deltaTolerance)
     }
     if (goodMove) {
       memcpy(saveSolution,solution,numberColumns*sizeof(double));
+      memcpy(savePi,this->dualRowSolution(),numberRows*sizeof(double));
+      memcpy(saveStatus,status_,numberRows+numberColumns);
       
       targetDrop=0.0;
       if (iPass) {
 	// get reduced costs
-	this->matrix()->transposeTimes(this->dualRowSolution(),
-				       this->dualColumnSolution());
+	this->matrix()->transposeTimes(savePi,
+				     this->dualColumnSolution());
 	double * r = this->dualColumnSolution();
 	for (jNon=0;jNon<numberNonLinearColumns;jNon++) {
 	  iColumn=listNonLinearColumn[jNon];
 	  double dj = objective[iColumn]-r[iColumn];
+	  r[iColumn]=dj;
 	  if (dj<0.0) 
 	    targetDrop -= dj*(columnUpper[iColumn]-solution[iColumn]);
 	  else
@@ -222,10 +242,27 @@ ClpSimplexPrimalQuadratic::primalSLP(int numberPasses, double deltaTolerance)
 	       <<", target drop is "<<targetDrop
 	       <<std::endl;
       lastObjective = objValue;
+      if (targetDrop<1.0e-5&&goodMove&&iPass) {
+	printf("Exiting on target drop %g\n",targetDrop);
+	break;
+      }
+      {
+	double * r = this->dualColumnSolution();
+	for (jNon=0;jNon<numberNonLinearColumns;jNon++) {
+	  iColumn=listNonLinearColumn[jNon];
+	  printf("Trust %d %g - solution %d %g obj %g dj %g state %c\n",
+		 jNon,trust[jNon],iColumn,solution[iColumn],objective[iColumn],
+		 r[iColumn],statusCheck[iColumn]);
+	}
+      }
+      setLogLevel(63);
       this->primal(1);
     } else {
       // bad pass - restore solution
+      printf("Backtracking\n");
       memcpy(solution,saveSolution,numberColumns*sizeof(double));
+      memcpy(this->dualRowSolution(),savePi,numberRows*sizeof(double));
+      memcpy(status_,saveStatus,numberRows+numberColumns);
       iPass--;
     }
   }
@@ -238,6 +275,9 @@ ClpSimplexPrimalQuadratic::primalSLP(int numberPasses, double deltaTolerance)
     columnUpper[iColumn]=min(solution[iColumn],
 			     trueUpper[jNon]);
   }
+  delete [] statusCheck;
+  delete [] savePi;
+  delete [] saveStatus;
   // redo objective
   double offset=0.0;
   double objValue=-objectiveOffset;
@@ -332,7 +372,7 @@ ClpSimplexPrimalQuadratic::primalBeale()
   // For now assume worst
   int newNumberColumns = 3*numberColumns+ numberRows;
   int numberElements = 2*matrix->getNumElements()
-    +quadratic->getNumElements()
+    +2*quadratic->getNumElements()
     + 2*numberColumns;
   double * elements2 = new double[numberElements];
   int * start2 = new int[newNumberColumns+1];

@@ -30,7 +30,8 @@ ClpNonLinearCost::ClpNonLinearCost () :
   model_(NULL),
   infeasible_(NULL),
   numberInfeasibilities_(-1),
-  convex_(true)
+  convex_(true),
+  bothWays_(false)
 {
 
 }
@@ -45,6 +46,7 @@ ClpNonLinearCost::ClpNonLinearCost ( ClpSimplex * model)
   numberColumns_ = model_->numberColumns();
   int numberTotal = numberRows_+numberColumns_;
   convex_ = true;
+  bothWays_ = false;
   start_ = new int [numberTotal+1];
   whichRange_ = new int [numberTotal];
   offset_ = new int [numberTotal];
@@ -110,6 +112,7 @@ ClpNonLinearCost::ClpNonLinearCost(ClpSimplex * model,const int * starts,
   numberColumns_ = model_->numberColumns();
   int numberTotal = numberRows_+numberColumns_;
   convex_ = true;
+  bothWays_ = true;
   start_ = new int [numberTotal+1];
   whichRange_ = new int [numberTotal];
   offset_ = new int [numberTotal];
@@ -170,6 +173,7 @@ ClpNonLinearCost::ClpNonLinearCost(ClpSimplex * model,const int * starts,
       lowerValue = rowLower[iSequence-numberColumns_];
       upperValue = rowUpper[iSequence-numberColumns_];
       if (lowerValue>-1.0e30) {
+	setInfeasible(put,true);
 	cost_[put++] = -infeasibilityCost;
 	lower_[put] = lowerValue;
       }
@@ -180,6 +184,7 @@ ClpNonLinearCost::ClpNonLinearCost(ClpSimplex * model,const int * starts,
       lowerValue = columnLower[iSequence];
       upperValue = columnUpper[iSequence];
       if (lowerValue>-1.0e30) {
+	setInfeasible(put,true);
 	cost_[put++] = whichWay*cost[iSequence]-infeasibilityCost;
 	lower_[put] = lowerValue;
       }
@@ -201,10 +206,10 @@ ClpNonLinearCost::ClpNonLinearCost(ClpSimplex * model,const int * starts,
       }
     }
     lower_[put] = upperValue;
+    setInfeasible(put,true);
     cost_[put++] = thisCost+infeasibilityCost;
     if (upperValue<1.0e20) {
       lower_[put] = COIN_DBL_MAX;
-      setInfeasible(put-1,true);
       cost_[put++] = 1.0e50;
     }
     int iFirst = start_[iSequence];
@@ -237,7 +242,8 @@ ClpNonLinearCost::ClpNonLinearCost (const ClpNonLinearCost & rhs) :
   model_(NULL),
   infeasible_(NULL),
   numberInfeasibilities_(-1),
-  convex_(true)
+  convex_(true),
+  bothWays_(rhs.bothWays_)
 {  
   if (numberRows_) {
     int numberTotal = numberRows_+numberColumns_;
@@ -320,6 +326,7 @@ ClpNonLinearCost::operator=(const ClpNonLinearCost& rhs)
     largestInfeasibility_ = rhs.largestInfeasibility_;
     sumInfeasibilities_ = rhs.sumInfeasibilities_;
     convex_ = rhs.convex_;
+    bothWays_ = rhs.bothWays_;
   }
   return *this;
 }
@@ -361,7 +368,7 @@ ClpNonLinearCost::checkInfeasibilities(bool toNearest)
     for (iRange=start; iRange<end;iRange++) {
       if (value<lower_[iRange+1]+primalTolerance) {
 	// put in better range if infeasible
-	if (value>=lower_[iRange+1]-primalTolerance&&iRange==start) 
+	if (value>=lower_[iRange+1]-primalTolerance&&infeasible(iRange)&&iRange==start) 
 	  iRange++;
 	whichRange_[iSequence]=iRange;
 	break;
@@ -408,9 +415,9 @@ ClpNonLinearCost::checkInfeasibilities(bool toNearest)
 	  }
 	}
       }
-      lower[iSequence] = lower_[iRange];
-      upper[iSequence] = lower_[iRange+1];
-      cost[iSequence] = cost_[iRange];
+      //lower[iSequence] = lower_[iRange];
+      //upper[iSequence] = lower_[iRange+1];
+      //cost[iSequence] = cost_[iRange];
       break;
     case ClpSimplex::isFree:
       if (toNearest)
@@ -451,6 +458,9 @@ ClpNonLinearCost::checkInfeasibilities(bool toNearest)
     case ClpSimplex::isFixed:
       break;
     }
+    lower[iSequence] = lower_[iRange];
+    upper[iSequence] = lower_[iRange+1];
+    cost[iSequence] = cost_[iRange];
   }
 }
 /* Goes through one bound for each variable.
@@ -561,7 +571,7 @@ ClpNonLinearCost::checkInfeasibilities(int numberInArray, const int * index)
     for (iRange=start; iRange<end;iRange++) {
       if (value<lower_[iRange+1]+primalTolerance) {
 	// put in better range
-	if (value>=lower_[iRange+1]-primalTolerance&&iRange==start) 
+	if (value>=lower_[iRange+1]-primalTolerance&&infeasible(iRange)&&iRange==start) 
 	  iRange++;
 	break;
       }
@@ -604,7 +614,7 @@ ClpNonLinearCost::checkChanged(int numberInArray, CoinIndexedVector * update)
     for (iRange=start; iRange<end;iRange++) {
       if (value<lower_[iRange+1]+primalTolerance) {
 	// put in better range
-	if (value>=lower_[iRange+1]-primalTolerance&&iRange==start) 
+	if (value>=lower_[iRange+1]-primalTolerance&&infeasible(iRange)&&iRange==start) 
 	  iRange++;
 	break;
       }
@@ -637,12 +647,27 @@ ClpNonLinearCost::setOne(int iPivot, double value)
   int iRange;
   int start = start_[iPivot];
   int end = start_[iPivot+1]-1;
-  for (iRange=start; iRange<end;iRange++) {
-    if (value<lower_[iRange+1]+primalTolerance) {
-      // put in better range
-      if (value>=lower_[iRange+1]-primalTolerance&&iRange==start) 
-	iRange++;
-      break;
+  if (!bothWays_) {
+    for (iRange=start; iRange<end;iRange++) {
+      if (value<lower_[iRange+1]+primalTolerance) {
+	// put in better range
+	if (value>=lower_[iRange+1]-primalTolerance&&infeasible(iRange)&&iRange==start) 
+	  iRange++;
+	break;
+      }
+    }
+  } else {
+    // leave in current if possible
+    iRange = whichRange_[iPivot];
+    if (value<lower_[iRange]-primalTolerance||value>lower_[iRange+1]+primalTolerance) {
+      for (iRange=start; iRange<end;iRange++) {
+	if (value<lower_[iRange+1]+primalTolerance) {
+	  // put in better range
+	  if (value>=lower_[iRange+1]-primalTolerance&&infeasible(iRange)&&iRange==start) 
+	    iRange++;
+	  break;
+	}
+      }
     }
   }
   assert(iRange<end);
