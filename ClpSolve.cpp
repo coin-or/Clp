@@ -446,10 +446,10 @@ ClpSimplex::initialSolve(ClpSolve & options)
               nPasses *= 2;
           }
         }
-        printf("%d rows %d cols plus %c tryIt %c largest %g smallest %g largestGap %g npasses %d sprint %c\n",
-               numberRows,numberColumns,plusMinus ? 'Y' : 'N',
-               tryIt ? 'Y' :'N',largest,smallest,largestGap,nPasses,doSprint ? 'Y' :'N');
-        exit(0);
+        //printf("%d rows %d cols plus %c tryIt %c largest %g smallest %g largestGap %g npasses %d sprint %c\n",
+        //     numberRows,numberColumns,plusMinus ? 'Y' : 'N',
+        //     tryIt ? 'Y' :'N',largest,smallest,largestGap,nPasses,doSprint ? 'Y' :'N');
+        //exit(0);
         if (!tryIt||nPasses<=5)
           doIdiot=0;
         if (doSprint) {
