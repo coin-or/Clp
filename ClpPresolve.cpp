@@ -720,7 +720,7 @@ void ClpPresolve::postsolve(CoinPostsolveMatrix &prob)
   const CoinPresolveAction *paction = paction_;
 
   if (prob.colstat_)
-    prob.check_nbasic();
+   prob.check_nbasic();
   
 #if	DEBUG_PRESOLVE
   check_djs(&prob);

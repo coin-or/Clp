@@ -136,6 +136,13 @@ public:
   int readMps(const char *filename,
 	      bool keepNames=false,
 	      bool ignoreErrors = false);
+  /** Borrow model.  This is so we dont have to copy large amounts
+      of data around.  It assumes a derived class wants to overwrite
+      an empty model with a real one - while it does an algorithm.
+      This is same as ClpModel one. */
+  void borrowModel(ClpModel & otherModel);
+  /** Return model - updates any scalars */
+  void returnModel(ClpModel & otherModel);
   //@}
 
   /**@name Functions most useful to user */
@@ -181,6 +188,9 @@ public:
   { return diagonalPerturbation_;};
   inline void setDiagonalPerturbation(double value)
   { diagonalPerturbation_=value;};
+  /// ComplementarityGap
+  inline double complementarityGap() const 
+          { return complementarityGap_;} ;
   //@}
 
   /**@name most useful gets and sets */

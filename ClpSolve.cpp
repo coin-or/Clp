@@ -894,7 +894,10 @@ ClpSimplex::initialSolve(ClpSolve & options)
     model2->setNumberIterations(model2->numberIterations()+totalIterations);
   } else if (method==ClpSolve::useBarrier) {
     //printf("***** experimental pretty crude barrier\n");
-    //#define BORROW
+    //#define SAVEIT 1
+#ifndef SAVEIT
+#define BORROW
+#endif
 #ifdef BORROW
     ClpInterior barrier;
     barrier.borrowModel(*model2);
@@ -912,7 +915,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
     //ClpCholeskyTaucs * cholesky = new ClpCholeskyTaucs();
     barrier.setCholesky(cholesky);
 #endif
-    //#define SAVEIT 1
+    int numberRows = model2->numberRows();
+    int numberColumns = model2->numberColumns();
 #ifndef SAVEIT
     barrier.primalDual();
     //printf("********** Stopping as this is debug run\n");
@@ -923,13 +927,13 @@ ClpSimplex::initialSolve(ClpSolve & options)
     model2->restoreModel("xx.save");
     // move solutions
     CoinMemcpyN(model2->primalRowSolution(),
-		barrier.numberRows(),barrier.primalRowSolution());
+		numberRows,barrier.primalRowSolution());
     CoinMemcpyN(model2->dualRowSolution(),
-		barrier.numberRows(),barrier.dualRowSolution());
+		numberRows,barrier.dualRowSolution());
     CoinMemcpyN(model2->primalColumnSolution(),
-		barrier.numberColumns(),barrier.primalColumnSolution());
+		numberColumns,barrier.primalColumnSolution());
     CoinMemcpyN(model2->dualColumnSolution(),
-		barrier.numberColumns(),barrier.dualColumnSolution());
+		numberColumns,barrier.dualColumnSolution());
 #endif
     time2 = CoinCpuTime();
     timeCore = time2-timeX;
@@ -937,17 +941,42 @@ ClpSimplex::initialSolve(ClpSolve & options)
       <<"Barrier"<<timeCore<<time2-time1
       <<CoinMessageEol;
     timeX=time2;
-    if (barrier.maximumBarrierIterations()&&barrier.status()<4) {
+    int maxIts = barrier.maximumBarrierIterations();
+    int barrierStatus=barrier.status();
+    double gap = barrier.complementarityGap();
+    // could get which variables are fixed - would help crossover *****
+#ifdef BORROW    
+    barrier.returnModel(*model2);
+    double * rowPrimal = new double [numberRows];
+    double * columnPrimal = new double [numberColumns];
+    double * rowDual = new double [numberRows];
+    double * columnDual = new double [numberColumns];
+    // move solutions other way
+    CoinMemcpyN(model2->primalRowSolution(),
+		numberRows,rowPrimal);
+    CoinMemcpyN(model2->dualRowSolution(),
+		numberRows,rowDual);
+    CoinMemcpyN(model2->primalColumnSolution(),
+		numberColumns,columnPrimal);
+    CoinMemcpyN(model2->dualColumnSolution(),
+		  numberColumns,columnDual);
+#else
+    double * rowPrimal = barrier.primalRowSolution();
+    double * columnPrimal = barrier.primalColumnSolution();
+    double * rowDual = barrier.dualRowSolution();
+    double * columnDual = barrier.dualColumnSolution();
+    // move solutions
+    CoinMemcpyN(rowPrimal,
+		numberRows,model2->primalRowSolution());
+    CoinMemcpyN(rowDual,
+		numberRows,model2->dualRowSolution());
+    CoinMemcpyN(columnPrimal,
+		numberColumns,model2->primalColumnSolution());
+    CoinMemcpyN(columnDual,
+		  numberColumns,model2->dualColumnSolution());
+#endif
+    if (maxIts&&barrierStatus<4) {
       printf("***** crossover - needs more thought on difficult models\n");
-      // move solutions
-      CoinMemcpyN(barrier.primalRowSolution(),
-		  model2->numberRows(),model2->primalRowSolution());
-      CoinMemcpyN(barrier.dualRowSolution(),
-		  model2->numberRows(),model2->dualRowSolution());
-      CoinMemcpyN(barrier.primalColumnSolution(),
-		  model2->numberColumns(),model2->primalColumnSolution());
-      CoinMemcpyN(barrier.dualColumnSolution(),
-		  model2->numberColumns(),model2->dualColumnSolution());
 #if SAVEIT==1
       model2->ClpSimplex::saveModel("xx.save");
 #endif
@@ -958,8 +987,6 @@ ClpSimplex::initialSolve(ClpSolve & options)
 #if 1
       // throw some into basis 
       {
-	int numberColumns = model2->numberColumns();
-	int numberRows = model2->numberRows();
 	double * dsort = new double[numberColumns];
 	int * sort = new int[numberColumns];
 	int n=0;
@@ -994,90 +1021,94 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	delete [] sort;
 	delete [] dsort;
       }
-      // just primal values pass
-      model2->primal(2);
-      // move solutions
-      CoinMemcpyN(model2->primalRowSolution(),
-		  model2->numberRows(),barrier.primalRowSolution());
-      CoinMemcpyN(barrier.dualRowSolution(),
-		  model2->numberRows(),model2->dualRowSolution());
-      CoinMemcpyN(model2->primalColumnSolution(),
-		  model2->numberColumns(),barrier.primalColumnSolution());
-      CoinMemcpyN(barrier.dualColumnSolution(),
-		  model2->numberColumns(),model2->dualColumnSolution());
-      //model2->primal(1);
-      // clean up reduced costs and flag variables
-      {
-	int numberColumns = model2->numberColumns();
-	double * dj = model2->dualColumnSolution();
-	double * cost = model2->objective();
-	double * saveCost = new double[numberColumns];
-	memcpy(saveCost,cost,numberColumns*sizeof(double));
-	double * saveLower = new double[numberColumns];
-	double * lower = model2->columnLower();
-	memcpy(saveLower,lower,numberColumns*sizeof(double));
-	double * saveUpper = new double[numberColumns];
-	double * upper = model2->columnUpper();
-	memcpy(saveUpper,upper,numberColumns*sizeof(double));
-	int i;
-	double tolerance = 10.0*dualTolerance_;
-	for ( i=0;i<numberColumns;i++) {
-	  if (model2->getStatus(i)==basic) {
-	    dj[i]=0.0;
-	  } else if (model2->getStatus(i)==atLowerBound) {
-	    if (optimizationDirection_*dj[i]<tolerance) {
-	      if (optimizationDirection_*dj[i]<0.0) {
-		//if (dj[i]<-1.0e-3)
-		//printf("bad dj at lb %d %g\n",i,dj[i]);
-		cost[i] -= dj[i];
-		dj[i]=0.0;
+      if (gap<1.0e-3*((double) (numberRows+numberColumns))) {
+	// just primal values pass
+	model2->primal(2);
+	// save primal solution and copy back dual
+	CoinMemcpyN(model2->primalRowSolution(),
+		    numberRows,rowPrimal);
+	CoinMemcpyN(rowDual,
+		    numberRows,model2->dualRowSolution());
+	CoinMemcpyN(model2->primalColumnSolution(),
+		    numberColumns,columnPrimal);
+	CoinMemcpyN(columnDual,
+		    numberColumns,model2->dualColumnSolution());
+	//model2->primal(1);
+	// clean up reduced costs and flag variables
+	{
+	  double * dj = model2->dualColumnSolution();
+	  double * cost = model2->objective();
+	  double * saveCost = new double[numberColumns];
+	  memcpy(saveCost,cost,numberColumns*sizeof(double));
+	  double * saveLower = new double[numberColumns];
+	  double * lower = model2->columnLower();
+	  memcpy(saveLower,lower,numberColumns*sizeof(double));
+	  double * saveUpper = new double[numberColumns];
+	  double * upper = model2->columnUpper();
+	  memcpy(saveUpper,upper,numberColumns*sizeof(double));
+	  int i;
+	  double tolerance = 10.0*dualTolerance_;
+	  for ( i=0;i<numberColumns;i++) {
+	    if (model2->getStatus(i)==basic) {
+	      dj[i]=0.0;
+	    } else if (model2->getStatus(i)==atLowerBound) {
+	      if (optimizationDirection_*dj[i]<tolerance) {
+		if (optimizationDirection_*dj[i]<0.0) {
+		  //if (dj[i]<-1.0e-3)
+		  //printf("bad dj at lb %d %g\n",i,dj[i]);
+		  cost[i] -= dj[i];
+		  dj[i]=0.0;
+		}
+	      } else {
+		upper[i]=lower[i];
 	      }
-	    } else {
-	      upper[i]=lower[i];
-	    }
-	  } else if (model2->getStatus(i)==atUpperBound) {
-	    if (optimizationDirection_*dj[i]>tolerance) {
-	      if (optimizationDirection_*dj[i]>0.0) {
-		//if (dj[i]>1.0e-3)
-		//printf("bad dj at ub %d %g\n",i,dj[i]);
-		cost[i] -= dj[i];
-		dj[i]=0.0;
+	    } else if (model2->getStatus(i)==atUpperBound) {
+	      if (optimizationDirection_*dj[i]>tolerance) {
+		if (optimizationDirection_*dj[i]>0.0) {
+		  //if (dj[i]>1.0e-3)
+		  //printf("bad dj at ub %d %g\n",i,dj[i]);
+		  cost[i] -= dj[i];
+		  dj[i]=0.0;
+		}
+	      } else {
+		lower[i]=upper[i];
 	      }
-	    } else {
-	      lower[i]=upper[i];
 	    }
 	  }
+	  // just dual values pass
+	  //model2->setLogLevel(63);
+	  //model2->setFactorizationFrequency(1);
+	  model2->dual(2);
+	  memcpy(cost,saveCost,numberColumns*sizeof(double));
+	  delete [] saveCost;
+	  memcpy(lower,saveLower,numberColumns*sizeof(double));
+	  delete [] saveLower;
+	  memcpy(upper,saveUpper,numberColumns*sizeof(double));
+	  delete [] saveUpper;
 	}
-	// just dual values pass
-	//model2->setLogLevel(63);
-	//model2->setFactorizationFrequency(1);
-	model2->dual(2);
-	memcpy(cost,saveCost,numberColumns*sizeof(double));
-	delete [] saveCost;
-	memcpy(lower,saveLower,numberColumns*sizeof(double));
-	delete [] saveLower;
-	memcpy(upper,saveUpper,numberColumns*sizeof(double));
-	delete [] saveUpper;
+	// and finish
+	// move solutions
+	CoinMemcpyN(rowPrimal,
+		    numberRows,model2->primalRowSolution());
+	CoinMemcpyN(columnPrimal,
+		    numberColumns,model2->primalColumnSolution());
       }
-      // and finish
-      // move solutions
-      CoinMemcpyN(barrier.primalRowSolution(),
-		  model2->numberRows(),model2->primalRowSolution());
-      CoinMemcpyN(barrier.primalColumnSolution(),
-		  model2->numberColumns(),model2->primalColumnSolution());
       model2->primal(1);
 #else
       // just primal
       model2->primal(1);
 #endif
-    } else if (barrier.status()==4) {
+    } else if (barrierStatus==4) {
       // memory problems
       model2->setPerturbation(savePerturbation);
       model2->createStatus();
       model2->dual();
     }
 #ifdef BORROW
-    barrier.returnModel(*model2);
+    delete [] rowPrimal;
+    delete [] columnPrimal;
+    delete [] rowDual;
+    delete [] columnDual;
 #endif
     model2->setPerturbation(savePerturbation);
     time2 = CoinCpuTime();

@@ -639,8 +639,8 @@ ClpInterior::createWorkingData()
   CoinZeroN(tVec_,nTotal);
   assert (!dj_);
   dj_ = new double [nTotal];
-  delete [] status_;
-  status_ = new unsigned char [numberRows_+numberColumns_];
+  if (!status_)
+    status_ = new unsigned char [numberRows_+numberColumns_];
   memset(status_,0,numberRows_+numberColumns_);
   return goodMatrix;
 }
@@ -942,7 +942,7 @@ ClpInterior::checkSolution()
   // now look at solution
   sumPrimalInfeasibilities_=0.0;
   sumDualInfeasibilities_=0.0;
-  double dualTolerance =  dblParam_[ClpDualTolerance];
+  double dualTolerance =  10.0*dblParam_[ClpDualTolerance];
   double primalTolerance =  dblParam_[ClpPrimalTolerance];
   worstComplementarity_=0.0;
   complementarityGap_=0.0;
@@ -1025,4 +1025,19 @@ ClpInterior::setCholesky(ClpCholeskyBase * cholesky)
 {
   delete cholesky_;
   cholesky_= cholesky;
+}
+/* Borrow model.  This is so we dont have to copy large amounts
+   of data around.  It assumes a derived class wants to overwrite
+   an empty model with a real one - while it does an algorithm.
+   This is same as ClpModel one. */
+void 
+ClpInterior::borrowModel(ClpModel & otherModel) 
+{
+  ClpModel::borrowModel(otherModel);
+}
+/* Return model - updates any scalars */
+void 
+ClpInterior::returnModel(ClpModel & otherModel)
+{
+  ClpModel::returnModel(otherModel);
 }
