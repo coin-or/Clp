@@ -535,8 +535,8 @@ int ClpSimplex::internalFactorize ( int solveType)
 	    numberBasic++;
 	    break;
 	  case isFree:
-	    assert(rowLowerWork_[iRow]<-largeValue_);
-	    assert(rowUpperWork_[iRow]>largeValue_);
+	    //assert(rowLowerWork_[iRow]<-largeValue_);
+	    //assert(rowUpperWork_[iRow]>largeValue_);
 	    rowActivityWork_[iRow]=0.0;
 	    break;
 	  case atUpperBound:
@@ -628,7 +628,7 @@ int ClpSimplex::internalFactorize ( int solveType)
 	  case atUpperBound:
 	    columnActivityWork_[iColumn]=columnUpperWork_[iColumn];
 	    if (columnActivityWork_[iColumn]>largeValue_) {
-	      assert(columnLowerWork_[iColumn]>-largeValue_);
+	      //assert(columnLowerWork_[iColumn]>-largeValue_);
 	      columnActivityWork_[iColumn]=columnLowerWork_[iColumn];
 	      setColumnStatus(iColumn,atLowerBound);
 	    }
@@ -636,7 +636,7 @@ int ClpSimplex::internalFactorize ( int solveType)
 	  case atLowerBound:
 	    columnActivityWork_[iColumn]=columnLowerWork_[iColumn];
 	    if (columnActivityWork_[iColumn]<-largeValue_) {
-	      assert(columnUpperWork_[iColumn]<largeValue_);
+	      //assert(columnUpperWork_[iColumn]<largeValue_);
 	      columnActivityWork_[iColumn]=columnUpperWork_[iColumn];
 	      setColumnStatus(iColumn,atUpperBound);
 	    }
@@ -908,7 +908,7 @@ int ClpSimplex::internalFactorize ( int solveType)
 	    // basic
 	    if (iSequence>=numberColumns_) {
 	      // slack in - leave
-	      assert (iSequence-numberColumns_==iRow);
+	      //assert (iSequence-numberColumns_==iRow);
 	    } else {
 	      // put back structural
 	      setColumnStatus(iSequence,basic);

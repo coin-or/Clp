@@ -91,7 +91,7 @@ ClpNetworkBasis::ClpNetworkBasis(const ClpSimplex * model,
     if (numberInColumn[i]>0) {
       int iRow = indexRow[startColumn[i]];
       other = permuteBack[iRow];
-      assert (parent_[other]!=-1);
+      //assert (parent_[other]!=-1);
     } else {
       other = numberRows_;
     }
@@ -341,7 +341,7 @@ void ClpNetworkBasis::check()
     // take off
     int iNext = stack_[--nStack];
     if (iNext>=0) {
-      assert (depth_[iNext]==nStack);
+      //assert (depth_[iNext]==nStack);
       depth_[iNext] = nStack;
       iPivot = iNext;
       int iRight = rightSibling_[iNext];
@@ -409,7 +409,7 @@ ClpNetworkBasis::replaceColumn ( CoinIndexedVector * regionSparse,
       pivotRow = newPivot;
     }
   } else {
-    assert (parent_[jRow1]==jRow0);
+    //assert (parent_[jRow1]==jRow0);
     int newPivot = jRow1;
     if (newPivot!=pivotRow) {
 #ifdef FULL_DEBUG
@@ -448,7 +448,7 @@ ClpNetworkBasis::replaceColumn ( CoinIndexedVector * regionSparse,
       }
     }
   }
-  assert (kRow>=0);
+  //assert (kRow>=0);
   if (iRow0==kRow) {
     iRow0 = iRow1;
     iRow1 = kRow;

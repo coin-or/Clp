@@ -209,6 +209,28 @@ ClpFactorization::factorize ( const ClpSimplex * model,
 	  gutsOfDestructor();
       }
     }
+    if (!status_&&!networkBasis_) {
+      // See if worth going sparse and when
+      if (numberFtranCounts_>100) {
+	ftranAverageAfterL_ = max(ftranCountAfterL_/ftranCountInput_,1.0);
+	ftranAverageAfterR_ = max(ftranCountAfterR_/ftranCountAfterL_,1.0);
+	ftranAverageAfterU_ = max(ftranCountAfterU_/ftranCountAfterR_,1.0);
+
+	btranAverageAfterU_ = max(btranCountAfterU_/btranCountInput_,1.0);
+	btranAverageAfterR_ = max(btranCountAfterR_/btranCountAfterU_,1.0);
+	btranAverageAfterL_ = max(btranCountAfterL_/btranCountAfterR_,1.0);
+      }
+      // scale back
+
+      ftranCountInput_ *= 0.8;
+      ftranCountAfterL_ *= 0.8;
+      ftranCountAfterR_ *= 0.8;
+      ftranCountAfterU_ *= 0.8;
+      btranCountInput_ *= 0.8;
+      btranCountAfterU_ *= 0.8;
+      btranCountAfterR_ *= 0.8;
+      btranCountAfterL_ *= 0.8;
+    }
   } else {
     // network - fake factorization - do nothing
     status_=0;
@@ -260,11 +282,15 @@ ClpFactorization::updateColumn ( CoinIndexedVector * regionSparse,
 				 CoinIndexedVector * regionSparse2,
 				 bool FTUpdate) 
 {
+#ifdef CLP_DEBUG
   regionSparse->checkClear();
+#endif
   if (!networkBasis_) {
+    collectStatistics_ = true;
     return CoinFactorization::updateColumn(regionSparse,
 					   regionSparse2,
 					   FTUpdate);
+    collectStatistics_ = false;
   } else {
 #ifdef CHECK_NETWORK
     CoinIndexedVector * save = new CoinIndexedVector(*regionSparse2);
@@ -354,8 +380,10 @@ ClpFactorization::updateColumnTranspose ( CoinIndexedVector * regionSparse,
     			  CoinIndexedVector * regionSparse2) const
 {
   if (!networkBasis_) {
+    collectStatistics_ = true;
     return CoinFactorization::updateColumnTranspose(regionSparse,
 						    regionSparse2);
+    collectStatistics_ = false;
   } else {
 #ifdef CHECK_NETWORK
       CoinIndexedVector * save = new CoinIndexedVector(*regionSparse2);
@@ -390,6 +418,7 @@ ClpFactorization::cleanUp()
 {
   delete networkBasis_;
   networkBasis_=NULL;
+  resetStatistics();
 }
 /// Says whether to redo pivot order
 bool 
