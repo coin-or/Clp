@@ -95,7 +95,7 @@ ClpFactorization::factorize ( ClpSimplex * model,
       // Move pivot variables across if they look good
       int * pivotTemp = model->rowArray(0)->getIndices();
       assert (!model->rowArray(0)->getNumElements());
-      if (!matrix->effectiveRhs(model)) {
+      if (!matrix->rhsOffset(model)) {
 	// Seems to prefer things in order so quickest
 	// way is to go though like this
 	for (i=0;i<numberRows;i++) {

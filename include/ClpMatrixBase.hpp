@@ -249,15 +249,15 @@ public:
   void setType(int type) {type_=type;};
   /// Sets up an effective RHS
   void useEffectiveRhs(ClpSimplex * model);
-  /** Returns effective RHS if it is being used.  This is used for long problems
+  /** Returns effective RHS offset if it is being used.  This is used for long problems
       or big gub or anywhere where going through full columns is
       expensive.  This may re-compute */
-  virtual double * effectiveRhs(ClpSimplex * model,bool forceRefresh=false,
+  virtual double * rhsOffset(ClpSimplex * model,bool forceRefresh=false,
 				bool check=false);
-  /// If effectiveRhs used this is iteration last refreshed
+  /// If rhsOffset used this is iteration last refreshed
   inline int lastRefresh() const
   { return lastRefresh_;};
-  /// If effectiveRhs used this is refresh frequency (0==off)
+  /// If rhsOffset used this is refresh frequency (0==off)
   inline int refreshFrequency() const
   { return refreshFrequency_;};
   inline void setRefreshFrequency(int value)
@@ -293,15 +293,15 @@ protected:
   /**@name Data members
      The data members are protected to allow access for derived classes. */
   //@{
-  /** Effective RHS if it is being used.  This is used for long problems
+  /** Effective RHS offset if it is being used.  This is used for long problems
       or big gub or anywhere where going through full columns is
       expensive */
-  double * effectiveRhs_;
+  double * rhsOffset_;
   /// type (may be useful)
   int type_;
-  /// If effectiveRhs used this is iteration last refreshed
+  /// If rhsOffset used this is iteration last refreshed
   int lastRefresh_;
-  /// If effectiveRhs used this is refresh frequency (0==off)
+  /// If rhsOffset used this is refresh frequency (0==off)
   int refreshFrequency_;
   /// whether to skip dual checks most of time
   bool skipDualCheck_;

@@ -384,7 +384,8 @@ ClpSimplex::computePrimals ( const double * rowActivities,
   double * array = arrayVector.denseVector();
   int * index = arrayVector.getIndices();
   int number=0;
-  if (!matrix_->effectiveRhs(this,false,true)) {
+  const double * rhsOffset = matrix_->rhsOffset(this,false,true);
+  if (!rhsOffset) {
     // Use whole matrix every time to make it easier for ClpMatrixBase
     // So zero out basic
     for (iRow=0;iRow<numberRows_;iRow++) {
@@ -405,11 +406,19 @@ ClpSimplex::computePrimals ( const double * rowActivities,
     }
   } else {
     // we have an effective rhs lying around
-    CoinCopyN(matrix_->effectiveRhs(this),numberRows_,array);
+    // zero out basic (really just for slacks)
     for (iRow=0;iRow<numberRows_;iRow++) {
-      double value = array[iRow];
-      if (value) 
+      int iPivot=pivotVariable_[iRow];
+      solution_[iPivot] = 0.0;
+    }
+    for (iRow=0;iRow<numberRows_;iRow++) {
+      double value = rhsOffset[iRow] + rowActivityWork_[iRow];
+      if (value) {
+	array[iRow]=value;
 	index[number++]=iRow;
+      } else {
+	array[iRow]=0.0;
+      }
     }
   }
   arrayVector.setNumElements(number);
@@ -428,7 +437,7 @@ ClpSimplex::computePrimals ( const double * rowActivities,
     int * indexIn = thisVector->getIndices();
     double * arrayIn = thisVector->denseVector();
     // put solution in correct place
-    if (!matrix_->effectiveRhs(this)) {
+    if (!rhsOffset) {
       int j;
       for (j=0;j<numberIn;j++) {
 	iRow = indexIn[j];
@@ -444,7 +453,11 @@ ClpSimplex::computePrimals ( const double * rowActivities,
     // Extended solution after "update"
     matrix_->primalExpanded(this,1);
     // check Ax == b  (for all)
+    // signal column generated matrix to just do basic (and gub)
+    unsigned int saveOptions = specialOptions();
+    setSpecialOptions(16);
     times(-1.0,columnActivityWork_,work);
+    setSpecialOptions(saveOptions);
     largestPrimalError_=0.0;
     double multiplier = 131072.0;
     for (iRow=0;iRow<numberRows_;iRow++) {
@@ -1746,7 +1759,7 @@ ClpSimplex::checkPrimalSolution(const double * rowActivities,
   // Check any infeasibilities from dynamic rows
   matrix_->primalExpanded(this,2);
   solution = columnActivityWork_;
-  if (!matrix_->effectiveRhs(this)) {
+  if (!matrix_->rhsOffset(this)) {
     for (iColumn=0;iColumn<numberColumns_;iColumn++) {
       //assert (fabs(solution[iColumn])<1.0e15||getColumnStatus(iColumn) == basic);
       double infeasibility=0.0;

@@ -26,6 +26,8 @@ public:
       mode=1 when variable is flagged
       mode=2 when all variables unflagged (returns number flagged)
       mode=3 just reset costs (primal)
+      mode=4 correct number of dual infeasibilities
+      mode=5 return 4 if time to re-factorize
   */
   virtual int synchronize(ClpSimplex * model,int mode);
   /// Sets up an effective RHS and does gub crash if needed
@@ -36,6 +38,16 @@ public:
   virtual int updatePivot(ClpSimplex * model,double oldInValue, double oldOutValue);
   /// Add a new variable to a set
   void insertNonBasic(int sequence, int iSet);
+  /** Returns effective RHS offset if it is being used.  This is used for long problems
+      or big gub or anywhere where going through full columns is
+      expensive.  This may re-compute */
+  virtual double * rhsOffset(ClpSimplex * model,bool forceRefresh=false,
+				bool check=false);
+    /** Return <code>y + A * scalar *x</code> in <code>y</code>.
+        @pre <code>x</code> must be of size <code>numColumns()</code>
+        @pre <code>y</code> must be of size <code>numRows()</code> */
+  virtual void times(double scalar,
+		       const double * x, double * y) const;
   //@}
 
   
@@ -61,6 +73,7 @@ public:
 		      const double * lower, const double * upper,
 		      const int * startColumn, const int * row,
 		      const double * element, const double * cost,
+		      const double * lowerColumn=NULL, const double * upperColumn=NULL,
 		      const unsigned char * status=NULL);
   
   ClpGubDynamicMatrix& operator=(const ClpGubDynamicMatrix&);
@@ -85,6 +98,27 @@ public:
     int bit = i & COINFACTORIZATION_MASK_PER_INT;
     flagged_[word]  &= ~(1<<bit);;
   }
+  /// Which bound
+  inline bool atUpperBound(int i) const {
+    int word = i >> COINFACTORIZATION_SHIFT_PER_INT;
+    int bit = i & COINFACTORIZATION_MASK_PER_INT;
+    return (whichBound_[word]&(1<<bit))!=0;
+  }
+  inline bool atLowerBound(int i) const {
+    int word = i >> COINFACTORIZATION_SHIFT_PER_INT;
+    int bit = i & COINFACTORIZATION_MASK_PER_INT;
+    return (whichBound_[word]&(1<<bit))==0;
+  }
+  inline void setAtUpperBound(int i) {
+    int word = i >> COINFACTORIZATION_SHIFT_PER_INT;
+    int bit = i & COINFACTORIZATION_MASK_PER_INT;
+    whichBound_[word] |= (1<<bit);
+  }
+  inline void setAtLowerBound(int i) {
+    int word = i >> COINFACTORIZATION_SHIFT_PER_INT;
+    int bit = i & COINFACTORIZATION_MASK_PER_INT;
+    whichBound_[word]  &= ~(1<<bit);;
+  }
   //@}
    
     
@@ -92,6 +126,8 @@ protected:
   /**@name Data members
      The data members are protected to allow access for derived classes. */
   //@{
+  /// Saved value of objective offset
+  double objectiveOffset_;
   /// Starts of each column
   int * startColumn_;
   /// rows
@@ -106,6 +142,18 @@ protected:
   int * id_;
   /// for flagging variables
   unsigned int * flagged_;
+  /// for saying which bound nonbasic variables are at
+  unsigned int * whichBound_;
+  /// Optional lower bounds on columns
+  float * lowerColumn_;
+  /// Optional upper bounds on columns
+  float * upperColumn_;
+  /// Optional true lower bounds on sets
+  float * lowerSet_;
+  /// Optional true upper bounds on sets
+  float * upperSet_;
+  /// Pointer back to model
+  ClpSimplex * model_;
   /// size
   int numberGubColumns_;
   /// first free

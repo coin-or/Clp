@@ -124,16 +124,18 @@ public:
   virtual int updatePivot(ClpSimplex * model,double oldInValue, double oldOutValue);
   /// Sets up an effective RHS and does gub crash if needed
   virtual void useEffectiveRhs(ClpSimplex * model,bool cheapest=true);
-  /** Returns effective RHS if it is being used.  This is used for long problems
+  /** Returns effective RHS offset if it is being used.  This is used for long problems
       or big gub or anywhere where going through full columns is
       expensive.  This may re-compute */
-  virtual double * effectiveRhs(ClpSimplex * model,bool forceRefresh=false,
+  virtual double * rhsOffset(ClpSimplex * model,bool forceRefresh=false,
 				bool check=false);
   /** This is local to Gub to allow synchronization:
       mode=0 when status of basis is good 
       mode=1 when variable is flagged
       mode=2 when all variables unflagged (returns number flagged)
       mode=3 just reset costs (primal)
+      mode=4 correct number of dual infeasibilities
+      mode=5 return 4 if time to re-factorize
   */
   virtual int synchronize(ClpSimplex * model,int mode);
   //@}

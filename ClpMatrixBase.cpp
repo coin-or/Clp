@@ -18,7 +18,7 @@
 // Default Constructor 
 //-------------------------------------------------------------------
 ClpMatrixBase::ClpMatrixBase () :
-  effectiveRhs_(NULL),
+  rhsOffset_(NULL),
   type_(-1),
   lastRefresh_(-1),
   refreshFrequency_(0),
@@ -38,10 +38,10 @@ ClpMatrixBase::ClpMatrixBase (const ClpMatrixBase & rhs) :
   refreshFrequency_ = rhs.refreshFrequency_;
   skipDualCheck_ = rhs.skipDualCheck_;
   int numberRows = rhs.getNumRows();
-  if (rhs.effectiveRhs_&&numberRows) {
-    effectiveRhs_ = ClpCopyOfArray(rhs.effectiveRhs_,numberRows);
+  if (rhs.rhsOffset_&&numberRows) {
+    rhsOffset_ = ClpCopyOfArray(rhs.rhsOffset_,numberRows);
   } else {
-    effectiveRhs_=NULL;
+    rhsOffset_=NULL;
   }
 }
 
@@ -50,7 +50,7 @@ ClpMatrixBase::ClpMatrixBase (const ClpMatrixBase & rhs) :
 //-------------------------------------------------------------------
 ClpMatrixBase::~ClpMatrixBase ()
 {
-  delete [] effectiveRhs_;
+  delete [] rhsOffset_;
 }
 
 //----------------------------------------------------------------
@@ -61,12 +61,12 @@ ClpMatrixBase::operator=(const ClpMatrixBase& rhs)
 {
   if (this != &rhs) {
     type_ = rhs.type_;
-    delete [] effectiveRhs_;
+    delete [] rhsOffset_;
     int numberRows = rhs.getNumRows();
-    if (rhs.effectiveRhs_&&numberRows) {
-      effectiveRhs_ = ClpCopyOfArray(rhs.effectiveRhs_,numberRows);
+    if (rhs.rhsOffset_&&numberRows) {
+      rhsOffset_ = ClpCopyOfArray(rhs.rhsOffset_,numberRows);
     } else {
-      effectiveRhs_=NULL;
+      rhsOffset_=NULL;
     }
     lastRefresh_ = rhs.lastRefresh_;
     refreshFrequency_ = rhs.refreshFrequency_;
@@ -257,9 +257,9 @@ ClpMatrixBase::useEffectiveRhs(ClpSimplex * model)
    or big gub or anywhere where going through full columns is
    expensive.  This may re-compute */
 double * 
-ClpMatrixBase::effectiveRhs(ClpSimplex * model,bool forceRefresh,bool check)
+ClpMatrixBase::rhsOffset(ClpSimplex * model,bool forceRefresh,bool check)
 {
-  if (effectiveRhs_) {
+  if (rhsOffset_) {
 #ifdef CLP_DEBUG
     if (check) {
       // no need - but check anyway
@@ -284,8 +284,8 @@ ClpMatrixBase::effectiveRhs(ClpSimplex * model,bool forceRefresh,bool check)
       times(-1.0,solution,rhs);
       delete [] solution;
       for (iRow=0;iRow<numberRows;iRow++) {
-	if (fabs(rhs[iRow]-effectiveRhs_[iRow])>1.0e-3)
-	  printf("** bad effective %d - true %g old %g\n",iRow,rhs[iRow],effectiveRhs_[iRow]);
+	if (fabs(rhs[iRow]-rhsOffset_[iRow])>1.0e-3)
+	  printf("** bad effective %d - true %g old %g\n",iRow,rhs[iRow],rhsOffset_[iRow]);
       }
     }
 #endif
@@ -299,20 +299,20 @@ ClpMatrixBase::effectiveRhs(ClpSimplex * model,bool forceRefresh,bool check)
       CoinMemcpyN(model->solutionRegion(),numberColumns,solution);
       for (int iRow=0;iRow<numberRows;iRow++) {
 	if (model->getRowStatus(iRow)!=ClpSimplex::basic)
-	  effectiveRhs_[iRow]=solutionSlack[iRow];
+	  rhsOffset_[iRow]=solutionSlack[iRow];
 	else
-	  effectiveRhs_[iRow]=0.0;
+	  rhsOffset_[iRow]=0.0;
       }
       for (int iColumn=0;iColumn<numberColumns;iColumn++) {
 	if (model->getColumnStatus(iColumn)==ClpSimplex::basic)
 	  solution[iColumn]=0.0;
       }
-      times(-1.0,solution,effectiveRhs_);
+      times(-1.0,solution,rhsOffset_);
       delete [] solution;
       lastRefresh_ = model->numberIterations();
     }
   }
-  return effectiveRhs_;
+  return rhsOffset_;
 }
 /* 
    update information for a pivot (and effective rhs)
@@ -320,7 +320,7 @@ ClpMatrixBase::effectiveRhs(ClpSimplex * model,bool forceRefresh,bool check)
 int 
 ClpMatrixBase::updatePivot(ClpSimplex * model,double oldInValue, double oldOutValue)
 {
-  if (effectiveRhs_) {
+  if (rhsOffset_) {
     // update effective rhs
     int sequenceIn = model->sequenceIn();
     int sequenceOut = model->sequenceOut();
@@ -328,18 +328,12 @@ ClpMatrixBase::updatePivot(ClpSimplex * model,double oldInValue, double oldOutVa
     int numberColumns = model->numberColumns();
     if (sequenceIn==sequenceOut) {
       if (sequenceIn<numberColumns)
-	add(model,effectiveRhs_,sequenceIn,oldInValue-solution[sequenceIn]);
-      else
-	effectiveRhs_[sequenceIn-numberColumns] -= oldInValue-solution[sequenceIn];
+	add(model,rhsOffset_,sequenceIn,oldInValue-solution[sequenceIn]);
     } else {
       if (sequenceIn<numberColumns)
-	add(model,effectiveRhs_,sequenceIn,oldInValue);
-      else
-	effectiveRhs_[sequenceIn-numberColumns] -= oldInValue;
+	add(model,rhsOffset_,sequenceIn,oldInValue);
       if (sequenceOut<numberColumns)
-	add(model,effectiveRhs_,sequenceOut,-solution[sequenceOut]);
-      else
-	effectiveRhs_[sequenceOut-numberColumns] -= -solution[sequenceOut];
+	add(model,rhsOffset_,sequenceOut,-solution[sequenceOut]);
     }
   }
   return 0;

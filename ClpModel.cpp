@@ -70,6 +70,7 @@ ClpModel::ClpModel () :
   handler_ = new CoinMessageHandler();
   handler_->setLogLevel(1);
   messages_ = ClpMessage();
+  CoinSeedRandom(1234567);
 }
 
 //-----------------------------------------------------------------------------
@@ -274,6 +275,7 @@ ClpModel::ClpModel(const ClpModel &rhs) :
   numberColumns_(rhs.numberColumns_)
 {
   gutsOfCopy(rhs);
+  CoinSeedRandom(1234567);
 }
 // Assignment operator. This copies the data
 ClpModel & 
@@ -1474,6 +1476,7 @@ ClpModel::ClpModel ( const ClpModel * rhs,
 					numberColumns,whichColumn);
   }
 #endif
+  CoinSeedRandom(1234567);
 }
 // Copies in names
 void 

@@ -79,10 +79,10 @@ ClpNetworkMatrix::ClpNetworkMatrix (const ClpNetworkMatrix & rhs)
     memcpy(indices_,rhs.indices_,2*numberColumns_*sizeof(int));
   }
   int numberRows = getNumRows();
-  if (rhs.effectiveRhs_&&numberRows) {
-    effectiveRhs_ = ClpCopyOfArray(rhs.effectiveRhs_,numberRows);
+  if (rhs.rhsOffset_&&numberRows) {
+    rhsOffset_ = ClpCopyOfArray(rhs.rhsOffset_,numberRows);
   } else {
-    effectiveRhs_=NULL;
+    rhsOffset_=NULL;
   }
 }
 

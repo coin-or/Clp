@@ -39,10 +39,10 @@ ClpPackedMatrix::ClpPackedMatrix (const ClpPackedMatrix & rhs)
   matrix_ = new CoinPackedMatrix(*(rhs.matrix_));
   zeroElements_ = rhs.zeroElements_;
   int numberRows = getNumRows();
-  if (rhs.effectiveRhs_&&numberRows) {
-    effectiveRhs_ = ClpCopyOfArray(rhs.effectiveRhs_,numberRows);
+  if (rhs.rhsOffset_&&numberRows) {
+    rhsOffset_ = ClpCopyOfArray(rhs.rhsOffset_,numberRows);
   } else {
-    effectiveRhs_=NULL;
+    rhsOffset_=NULL;
   }
   
 }
@@ -1811,9 +1811,9 @@ ClpPackedMatrix::partialPricing(ClpSimplex * model, int start, int end,
 void 
 ClpPackedMatrix::useEffectiveRhs(ClpSimplex * model)
 {
-  delete [] effectiveRhs_;
+  delete [] rhsOffset_;
   int numberRows = model->numberRows();
-  effectiveRhs_ = new double[numberRows];
-  effectiveRhs(model,true);
+  rhsOffset_ = new double[numberRows];
+  rhsOffset(model,true);
 }
 

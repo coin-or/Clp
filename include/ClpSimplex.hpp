@@ -777,6 +777,17 @@ public:
   */
   inline int maximumBasic() const
   { return maximumBasic_;};
+  /** For advanced options
+      1 - Don't keep changing infeasibility weight
+      2 - Keep nonLinearCost round solves
+      4 - Force outgoing variables to exact bound (primal)
+      8 - Safe to use dense initial factorization
+      16 -Just use basic variables for operation if column generation
+  */
+  inline unsigned int specialOptions() const
+  { return specialOptions_;};
+  inline void setSpecialOptions(unsigned int value)
+  { specialOptions_=value;};
   //@}
 
 ////////////////// data //////////////////
@@ -955,6 +966,7 @@ protected:
       2 - Keep nonLinearCost round solves
       4 - Force outgoing variables to exact bound (primal)
       8 - Safe to use dense initial factorization
+      16 -Just use basic variables for operation
   */
   unsigned int specialOptions_;
   /// So we know when to be cautious
