@@ -1252,7 +1252,7 @@ ClpPackedMatrix::scale(ClpSimplex * model) const
 	int numberQuadraticRows=0;
 	for (i=0;i<numberXRows;i++) {
 	  // See if any in row quadratic
-	  int j;
+	  CoinBigIndex j;
 	  int numberQ=0;
 	  for (j=rowStart[i];j<rowStart[i+1];j++) {
 	    int iColumn = column[j];
@@ -1284,7 +1284,7 @@ ClpPackedMatrix::scale(ClpSimplex * model) const
       double * newElement = new double[numberColumns];
       // scale row copy
       for (iRow=0;iRow<numberRows;iRow++) {
-	int j;
+	CoinBigIndex j;
 	double scale = rowScale[iRow];
 	const double * elementsInThisRow = element + rowStart[iRow];
 	const int * columnsInThisRow = column + rowStart[iRow];
@@ -1347,7 +1347,7 @@ ClpPackedMatrix::unpackPacked(ClpSimplex * model,
   const double * elementByColumn = matrix_->getElements();
   CoinBigIndex i;
   if (!rowScale) {
-    int j=columnStart[iColumn];
+    CoinBigIndex j=columnStart[iColumn];
     rowArray->createPacked(columnLength[iColumn],
 			   row+j,elementByColumn+j);
   } else {
@@ -1592,7 +1592,8 @@ ClpPackedMatrix::partialPricing(ClpSimplex * model, int start, int end,
   const int * length = matrix_->getVectorLengths();
   const double * rowScale = model->rowScale();
   const double * columnScale = model->columnScale();
-  int iSequence,j;
+  int iSequence;
+  CoinBigIndex j;
   double tolerance=model->currentDualTolerance();
   double * reducedCost = model->djRegion();
   const double * duals = model->dualRowSolution();

@@ -827,7 +827,8 @@ ClpGubMatrix::partialPricing(ClpSimplex * model, int start, int end,
     const int * length = matrix_->getVectorLengths();
     const double * rowScale = model->rowScale();
     const double * columnScale = model->columnScale();
-    int iSequence,j;
+    int iSequence;
+    CoinBigIndex j;
     double tolerance=model->currentDualTolerance();
     double * reducedCost = model->djRegion();
     const double * duals = model->dualRowSolution();
@@ -1266,7 +1267,7 @@ ClpGubMatrix::dualExpanded(ClpSimplex * model,
 	if (kColumn<numberColumns) {
 	  // dj without set
 	  double value = cost[kColumn];
-	  for (int j=columnStart[kColumn];
+	  for (CoinBigIndex j=columnStart[kColumn];
 	       j<columnStart[kColumn]+columnLength[kColumn];j++) {
 	    int iRow = row[j];
 	    value -= dual[iRow]*elementByColumn[j];
@@ -1315,7 +1316,7 @@ ClpGubMatrix::dualExpanded(ClpSimplex * model,
 	if (kColumn<numberColumns) {
 	  // dj without set
 	  double value = cost[kColumn];
-	  for (int j=columnStart[kColumn];
+	  for (CoinBigIndex j=columnStart[kColumn];
 	       j<columnStart[kColumn]+columnLength[kColumn];j++) {
 	    int iRow = row[j];
 	    value -= dual[iRow]*elementByColumn[j];

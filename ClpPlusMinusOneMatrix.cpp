@@ -679,7 +679,7 @@ ClpPlusMinusOneMatrix::transposeTimesByRow(const ClpSimplex * model, double scal
        and shorter first if packed */
     int iRow0 = whichRow[0];
     int iRow1 = whichRow[1];
-    int j;
+    CoinBigIndex j;
     if (packed) {
       double pi0 = pi[0];
       double pi1 = pi[1];
@@ -1094,8 +1094,8 @@ ClpPlusMinusOneMatrix::deleteCols(const int numDel, const int * indDel)
   newSize=0;
   for (iColumn=0;iColumn<numberColumns_;iColumn++) {
     if (!which[iColumn]) {
-      int start,end;
-      int i;
+      CoinBigIndex start,end;
+      CoinBigIndex i;
       start = startPositive_[iColumn];
       end=startNegative_[iColumn];
       newPositive[newNumber]=newSize;
@@ -1141,9 +1141,9 @@ ClpPlusMinusOneMatrix::deleteRows(const int numDel, const int * indDel)
   }
   if (numberBad)
     throw CoinError("Indices out of range", "deleteCols", "ClpPlusMinusOneMatrix");
-  int iElement;
-  int numberElements=startPositive_[numberColumns_];
-  int newSize=0;
+  CoinBigIndex iElement;
+  CoinBigIndex numberElements=startPositive_[numberColumns_];
+  CoinBigIndex newSize=0;
   for (iElement=0;iElement<numberElements;iElement++) {
     iRow = indices_[iElement];
     if (!which[iRow])
@@ -1159,8 +1159,8 @@ ClpPlusMinusOneMatrix::deleteRows(const int numDel, const int * indDel)
   newSize=0;
   int iColumn;
   for (iColumn=0;iColumn<numberColumns_;iColumn++) {
-    int start,end;
-    int i;
+    CoinBigIndex start,end;
+    CoinBigIndex i;
     start = startPositive_[iColumn];
     end=startNegative_[iColumn];
     startPositive_[newNumber]=newSize;
@@ -1243,7 +1243,7 @@ void
 ClpPlusMinusOneMatrix::appendCols(int number, const CoinPackedVectorBase * const * columns)
 {
   int iColumn;
-  int size=0;
+  CoinBigIndex size=0;
   int numberBad=0;
   for (iColumn=0;iColumn<number;iColumn++) {
     int n=columns[iColumn]->getNumElements();
@@ -1307,7 +1307,7 @@ ClpPlusMinusOneMatrix::appendRows(int number, const CoinPackedVectorBase * const
   int * countNegative = new int [numberColumns_];
   memset(countNegative,0,numberColumns_*sizeof(int));
   int iRow;
-  int size=0;
+  CoinBigIndex size=0;
   int numberBad=0;
   for (iRow=0;iRow<number;iRow++) {
     int n=rows[iRow]->getNumElements();
@@ -1337,9 +1337,10 @@ ClpPlusMinusOneMatrix::appendRows(int number, const CoinPackedVectorBase * const
   // Update starts and turn counts into positions
   // also move current indices
   int iColumn;
-  int numberAdded=0;
+  CoinBigIndex numberAdded=0;
   for (iColumn=0;iColumn<numberColumns_;iColumn++) {
-    int n,now,move;
+    int n,move;
+    CoinBigIndex now;
     now = startPositive_[iColumn];
     move = startNegative_[iColumn]-now;
     n = countPositive[iColumn];
@@ -1424,7 +1425,7 @@ void
 ClpPlusMinusOneMatrix::partialPricing(ClpSimplex * model, int start, int end,
 			      int & bestSequence, int & numberWanted)
 {
-  int j;
+  CoinBigIndex j;
   double tolerance=model->currentDualTolerance();
   double * reducedCost = model->djRegion();
   const double * duals = model->dualRowSolution();
