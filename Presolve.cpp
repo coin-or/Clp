@@ -594,7 +594,7 @@ void check_djs(PostsolveMatrix *prob);
 void Presolve::postsolve(PostsolveMatrix &prob)
 {
   const PresolveAction *paction = paction_;
-  
+
   if (prob.colstat_)
     prob.check_nbasic();
   
@@ -677,11 +677,18 @@ void Presolve::postsolve(PostsolveMatrix &prob)
   // put back duals
   memcpy(originalModel_->dualRowSolution(),prob.rowduals_,
 	 nrows_*sizeof(double));
-  // Now check solution
   double maxmin = originalModel_->getObjSense();
+  if (maxmin<0.0) {
+    // swap signs
+    int i;
+    double * pi = originalModel_->dualRowSolution();
+    for (i=0;i<nrows_;i++)
+      pi[i] = -pi[i];
+  }
+  // Now check solution
   memcpy(originalModel_->dualColumnSolution(),
 	 originalModel_->objective(),ncols_*sizeof(double));
-  originalModel_->transposeTimes(-maxmin,
+  originalModel_->transposeTimes(-1.0,
 				 originalModel_->dualRowSolution(),
 				 originalModel_->dualColumnSolution());
   memset(originalModel_->primalRowSolution(),0,nrows_*sizeof(double));

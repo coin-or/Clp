@@ -723,6 +723,15 @@ PostsolveMatrix::PostsolveMatrix(ClpSimplex& si,
 
   rcosts_ = new double[ncols0_];
   CoinDisjointCopyN(si.getReducedCost(), ncols1, rcosts_);
+  if (maxmin_<0.0) {
+    // change so will look as if minimize
+    int i;
+    for (i=0;i<nrows1;i++)
+      rowduals_[i] = - rowduals_[i];
+    for (i=0;i<ncols1;i++) {
+      rcosts_[i] = - rcosts_[i];
+    }
+  }
 
   //CoinDisjointCopyN(si.getRowUpper(), nrows1, rup_);
   //CoinDisjointCopyN(si.getRowLower(), nrows1, rlo_);

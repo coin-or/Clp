@@ -221,11 +221,7 @@ const PresolveAction *forcing_constraint_action::presolve(PresolveMatrix *prob,
   const char *integerType = prob->integerType_;
 
   const double tol	= ZTOLDP;
-#if	TOLEXP
-  const double inftol	= prob->ztolzb_;
-#else
-  const double inftol	= ZTOLDP;
-#endif
+  const double inftol	= prob->feasibilityTolerance_;
   const int ncols	= prob->ncols_;
 
   int *fixed_cols	= new int[ncols];

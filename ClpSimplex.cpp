@@ -1676,8 +1676,16 @@ bool
 ClpSimplex::createRim(int what,bool makeRowCopy)
 {
   bool goodMatrix=true;
+  int i;
   if ((what&16)!=0) {
     // move information to work arrays
+    if (optimizationDirection_<0.0) {
+      // reverse all dual signs
+      for (i=0;i<numberColumns_;i++) 
+	reducedCost_[i] = -reducedCost_[i];
+      for (i=0;i<numberRows_;i++) 
+	dual_[i] = -dual_[i];
+    }
     // row reduced costs
     if (!dj_) {
       dj_ = new double[numberRows_+numberColumns_];
@@ -1706,7 +1714,6 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
       rowCopy_ = matrix_->reverseOrderedCopy();
     }
   }
-  int i;
   if ((what&4)!=0) {
     delete [] cost_;
     cost_ = new double[numberColumns_+numberRows_];
@@ -1873,10 +1880,16 @@ ClpSimplex::deleteRim(bool getRidOfFactorizationData)
     }
   }
   // direction may have been modified by scaling - clean up
-  if (optimizationDirection_>0.0)
+  if (optimizationDirection_>0.0) {
     optimizationDirection_ = 1.0;
-  else if (optimizationDirection_<0.0)
+  }  else if (optimizationDirection_<0.0) {
     optimizationDirection_ = -1.0;
+    // and reverse all dual signs
+    for (i=0;i<numberColumns_;i++) 
+      reducedCost_[i] = -reducedCost_[i];
+    for (i=0;i<numberRows_;i++) 
+      dual_[i] = -dual_[i];
+  }
   // scaling may have been turned off
   scalingFlag_ = abs(scalingFlag_);
   if(getRidOfFactorizationData)
@@ -3094,6 +3107,13 @@ ClpSimplex::checkSolution()
   primalTolerance_=dblParam_[ClpPrimalTolerance];
   checkPrimalSolution( rowActivityWork_, columnActivityWork_);
   checkDualSolution();
+#ifdef CLP_DEBUG
+  int i;
+  double value=0.0;
+  for (i=0;i<numberRows_+numberColumns_;i++)
+    value += dj_[i]*solution_[i];
+  printf("dual value %g, primal %g\n",value,objectiveValue_);
+#endif
   // release extra memory
   deleteRim(false);
 }

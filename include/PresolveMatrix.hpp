@@ -162,7 +162,7 @@ class PrePostsolveMatrix {
   const double ztolzb_;
   const double ztoldj_;
 
-  const double maxmin_;
+  double maxmin_;
 
   int whichpass_;	// mostly for debugging
 

@@ -832,178 +832,184 @@ const PresolveAction *subst_constraint_action::presolve(PresolveMatrix *prob,
 	      //ekk_sort2(hcol+krs,  rowels+krs,  hinrow[rowy]);
 	    }
 
-	// substitute away jcoly in the other rows
-	for (int k=kcs; k<kce; ++k)
-	  if (hrow[k] != rowy) {
-	    int rowx = hrow[k];
-	    double coeffx = colels[k];
-	    double coeff_factor = -coeffx / coeffy;	// backwards from doubleton
+	    // substitute away jcoly in the other rows
+	    // Use ap as mcstrt etc may move if compacted
+	    kce = hincol[jcoly];
+	    int k;
+	    action *ap = &actions[nactions-1];
+	    for (k=0; k<kce; ++k) {
+	      int rowx = ap->rows[k];
+	      //assert(rowx==hrow[k+kcs]);
+	      //assert(ap->coeffxs[k]==colels[k+kcs]);
+	      if (rowx != rowy) {
+		double coeffx = ap->coeffxs[k];
+		double coeff_factor = -coeffx / coeffy;	// backwards from doubleton
 
 #if	DEBUG_PRESOLVE
-	    {
-	      int krs = mrstrt[rowx];
-	      int kre = krs + hinrow[rowx];
-	      printf("HROW (%d %d %d):  ", rowx, hinrow[rowx], jcoly);
-	      for (int k=krs; k<kre; ++k) {
-		int jcol = hcol[k];
-		double coeff = rowels[k];
-		printf("%d ", jcol);
-	      }
-	      printf("\n");
+		{
+		  int krs = mrstrt[rowx];
+		  int kre = krs + hinrow[rowx];
+		  printf("HROW (%d %d %d):  ", rowx, hinrow[rowx], jcoly);
+		  for (int k=krs; k<kre; ++k) {
+		    int jcol = hcol[k];
+		    double coeff = rowels[k];
+		    printf("%d ", jcol);
+		  }
+		  printf("\n");
 #if 0
-	      for (int k=krs; k<kre; ++k) {
-		int jcol = hcol[k];
-		prob->addCol(jcol);
-		double coeff = rowels[k];
-		printf("%g ", coeff);
+		  for (int k=krs; k<kre; ++k) {
+		    int jcol = hcol[k];
+		    prob->addCol(jcol);
+		    double coeff = rowels[k];
+		    printf("%g ", coeff);
+		  }
+		  printf("\n");
+#endif
+		}
+#endif
+		{
+		  int krsx = mrstrt[rowx];
+		  int krex = krsx + hinrow[rowx];
+		  int i;
+		  for (i=krsx;i<krex;i++) 
+		    prob->addCol(hcol[i]);
+		  if (hincol[jcoly] != 2) 
+		    CoinSort_2(hcol+krsx,hcol+krsx+hinrow[rowx],rowels+krsx);
+		  //ekk_sort2(hcol+krsx, rowels+krsx, hinrow[rowx]);
+		}
+		
+		// add (coeff_factor * <rowy>) to rowx
+		// does not affect rowy
+		// may introduce (or cancel) elements in rowx
+		add_row(mrstrt,
+			rlo, rup,
+			rowels, hcol,
+			hinrow,
+			rlink, nrows,
+			coeff_factor,
+			rowx, rowy,
+			x_to_y);
+		
+		// update col rep of rowx from row rep:
+		// for every col in rowy, copy the elem for that col in rowx
+		// from the row rep to the col rep
+		{
+		  int krs = mrstrt[rowy];
+		  int kre = krs + hinrow[rowy];
+		  int niny = hinrow[rowy];
+		  
+		  int krsx = mrstrt[rowx];
+		  int krex = krsx + hinrow[rowx];
+		  for (int ki=0; ki<niny; ++ki) {
+		    int k = krs + ki;
+		    int jcol = hcol[k];
+		    prob->addCol(jcol);
+		    int kcs = mcstrt[jcol];
+		    int kce = kcs + hincol[jcol];
+		    
+		    //double coeff = rowels[presolve_find_row(jcol, krsx, krex, hcol)];
+		    if (hcol[krsx + x_to_y[ki]] != jcol)
+		      abort();
+		    double coeff = rowels[krsx + x_to_y[ki]];
+		    
+		    // see if rowx appeared in jcol in the col rep
+		    int k2 = presolve_find_row1(rowx, kcs, kce, hrow);
+		    
+		    //PRESOLVEASSERT(fabs(coeff) > ZTOLDP);
+		    
+		    if (k2 < kce) {
+		      // yes - just update the entry
+		      colels[k2] = coeff;
+		    } else {
+		      // no - make room, then append
+		      expand_row(mcstrt, colels, hrow, hincol, clink, ncols, jcol);
+		      kcs = mcstrt[jcol];
+		      kce = kcs + hincol[jcol];
+		      
+		      hrow[kce] = rowx;
+		      colels[kce] = coeff;
+		      hincol[jcol]++;
+		    }
+		  }
+		}
+		// now colels[k] == 0.0
+
+#if 1
+		// now remove jcoly from rowx in the row rep
+		// better if this were first
+		presolve_delete_from_row(rowx, jcoly, mrstrt, hinrow, hcol, rowels);
+#endif
+#if	DEBUG_PRESOLVE
+		{
+		  int krs = mrstrt[rowx];
+		  int kre = krs + hinrow[rowx];
+		  printf("HROW (%d %d %d):  ", rowx, hinrow[rowx], jcoly);
+		  for (int k=krs; k<kre; ++k) {
+		    int jcol = hcol[k];
+		    double coeff = rowels[k];
+		    printf("%d ", jcol);
+		  }
+		  printf("\n");
+#if 0
+		  for (int k=krs; k<kre; ++k) {
+		    int jcol = hcol[k];
+		    double coeff = rowels[k];
+		    printf("%g ", coeff);
+		  }
+		  printf("\n");
+#endif
+		}
+#endif
+		
+		// don't have to update col rep, since entire col deleted later
 	      }
-	      printf("\n");
-#endif
-	    }
-#endif
-	    {
-	        int krsx = mrstrt[rowx];
-		int krex = krsx + hinrow[rowx];
-		int i;
-		for (i=krsx;i<krex;i++) 
-		  prob->addCol(hcol[i]);
-		if (hincol[jcoly] != 2) 
-		  CoinSort_2(hcol+krsx,hcol+krsx+hinrow[rowx],rowels+krsx);
-		//ekk_sort2(hcol+krsx, rowels+krsx, hinrow[rowx]);
 	    }
 
-	    // add (coeff_factor * <rowy>) to rowx
-	    // does not affect rowy
-	    // may introduce (or cancel) elements in rowx
-	    add_row(mrstrt,
-		    rlo, rup,
-		    rowels, hcol,
-		    hinrow,
-		    rlink, nrows,
-		    coeff_factor,
-		    rowx, rowy,
-		    x_to_y);
+#if	DEBUG_PRESOLVE
+	    printf("\n");
+#endif
 
-	    // update col rep of rowx from row rep:
-	    // for every col in rowy, copy the elem for that col in rowx
-	    // from the row rep to the col rep
+	    // the addition of rows may have created zero coefficients
+	    bcopy(&hcol[mrstrt[rowy]], &zerocols[nzerocols], hinrow[rowy]*sizeof(int));
+	    nzerocols += hinrow[rowy];
+	    
+	    // delete rowy in col rep
 	    {
 	      int krs = mrstrt[rowy];
 	      int kre = krs + hinrow[rowy];
-	      int niny = hinrow[rowy];
-
-	      int krsx = mrstrt[rowx];
-	      int krex = krsx + hinrow[rowx];
-	      for (int ki=0; ki<niny; ++ki) {
-		int k = krs + ki;
-		int jcol = hcol[k];
-		prob->addCol(jcol);
-		int kcs = mcstrt[jcol];
-		int kce = kcs + hincol[jcol];
-
-		//double coeff = rowels[presolve_find_row(jcol, krsx, krex, hcol)];
-		if (hcol[krsx + x_to_y[ki]] != jcol)
-		  abort();
-		double coeff = rowels[krsx + x_to_y[ki]];
-
-		// see if rowx appeared in jcol in the col rep
-		int k2 = presolve_find_row1(rowx, kcs, kce, hrow);
-
-		//PRESOLVEASSERT(fabs(coeff) > ZTOLDP);
-
-		if (k2 < kce) {
-		  // yes - just update the entry
-		  colels[k2] = coeff;
-		} else {
-		  // no - make room, then append
-		  expand_row(mcstrt, colels, hrow, hincol, clink, ncols, jcol);
-		  kcs = mcstrt[jcol];
-		  kce = kcs + hincol[jcol];
-
-		  hrow[kce] = rowx;
-		  colels[kce] = coeff;
-		  hincol[jcol]++;
-		}
-	      }
-	    }
-	    // now colels[k] == 0.0
-
-#if 1
-	    // now remove jcoly from rowx in the row rep
-	    // better if this were first
-	    presolve_delete_from_row(rowx, jcoly, mrstrt, hinrow, hcol, rowels);
-#endif
-#if	DEBUG_PRESOLVE
-{
-	      int krs = mrstrt[rowx];
-	      int kre = krs + hinrow[rowx];
-	      printf("HROW (%d %d %d):  ", rowx, hinrow[rowx], jcoly);
 	      for (int k=krs; k<kre; ++k) {
 		int jcol = hcol[k];
-		double coeff = rowels[k];
-		printf("%d ", jcol);
+		
+		// delete rowy from the jcol
+		presolve_delete_from_row(jcol, rowy, mcstrt, hincol, hrow, colels);
 	      }
-	      printf("\n");
-#if 0
-	      for (int k=krs; k<kre; ++k) {
-		int jcol = hcol[k];
-		double coeff = rowels[k];
-		printf("%g ", coeff);
-	      }
-	      printf("\n");
-#endif
 	    }
-#endif
-
-	    // don't have to update col rep, since entire col deleted later
-	  }
-
-#if	DEBUG_PRESOLVE
-	printf("\n");
-#endif
-
-	// the addition of rows may have created zero coefficients
-	bcopy(&hcol[mrstrt[rowy]], &zerocols[nzerocols], hinrow[rowy]*sizeof(int));
-	nzerocols += hinrow[rowy];
-
-	// delete rowy in col rep
-	{
-	  int krs = mrstrt[rowy];
-	  int kre = krs + hinrow[rowy];
-	  for (int k=krs; k<kre; ++k) {
-	    int jcol = hcol[k];
-
-	    // delete rowy from the jcol
-	    presolve_delete_from_row(jcol, rowy, mcstrt, hincol, hrow, colels);
-	  }
-	}
-	// delete rowy in row rep
-	hinrow[rowy] = 0;
-    
-	// This last is entirely dual to doubleton, but for the cost adjustment
-
-	// eliminate col entirely from the col rep
-	PRESOLVE_REMOVE_LINK(clink, jcoly);
-	hincol[jcoly] = 0;
-
-	// eliminate rowy entirely from the row rep
-	PRESOLVE_REMOVE_LINK(rlink, rowy);
-	//cost[irowy] = 0.0;
-
-	rlo[rowy] = 0.0;
-	rup[rowy] = 0.0;
-
+	    // delete rowy in row rep
+	    hinrow[rowy] = 0;
+	    
+	    // This last is entirely dual to doubleton, but for the cost adjustment
+	    
+	    // eliminate col entirely from the col rep
+	    PRESOLVE_REMOVE_LINK(clink, jcoly);
+	    hincol[jcoly] = 0;
+	    
+	    // eliminate rowy entirely from the row rep
+	    PRESOLVE_REMOVE_LINK(rlink, rowy);
+	    //cost[irowy] = 0.0;
+	    
+	    rlo[rowy] = 0.0;
+	    rup[rowy] = 0.0;
+	    
 #if	0 && DEBUG_PRESOLVE
-	printf("ROWY COLS:  ");
-	for (int k=0; k<save_ninrowy; ++k)
-	  if (rowycols[k] != col) {
-	    printf("%d ", rowycols[k]);
-	    (void)presolve_find_row(rowycols[k], mrstrt[rowx], mrstrt[rowx]+hinrow[rowx],
-			   hcol);
-	  }
-	printf("\n");
+	    printf("ROWY COLS:  ");
+	    for (int k=0; k<save_ninrowy; ++k)
+	      if (rowycols[k] != col) {
+		printf("%d ", rowycols[k]);
+		(void)presolve_find_row(rowycols[k], mrstrt[rowx], mrstrt[rowx]+hinrow[rowx],
+					hcol);
+	      }
+	    printf("\n");
 #endif
-
 #if 0
 	presolve_links_ok(clink, mcstrt, hincol, ncols);
 	presolve_links_ok(rlink, mrstrt, hinrow, nrows);
@@ -1068,6 +1074,7 @@ void subst_constraint_action::postsolve(PostsolveMatrix *prob) const
 
   const double ztolzb	= prob->ztolzb_;
   const double ztoldj	= prob->ztoldj_;
+  const double maxmin = prob->maxmin_;
 
   for (const action *f = &actions[nactions-1]; actions<=f; f--) {
     int icol = f->col;
@@ -1254,7 +1261,7 @@ void subst_constraint_action::postsolve(PostsolveMatrix *prob) const
 
     {
       int k;
-      double dj = dcost[icol];
+      double dj = maxmin*dcost[icol];
       double bounds_factor = rhsy/coeffy;
       for (int i=0; i<nincoly; ++i)
 	if (rows[i] != jrowy) {

@@ -291,7 +291,7 @@ const PresolveAction *implied_free_action::presolve(PresolveMatrix *prob,
 	       costj * rhs / coeffj,
 	       costj, rhs, coeffj);
 #endif
-
+	prob->change_bias(costj * rhs / coeffj);
 	// ??
 	cost[j] = 0.0;
       }
@@ -448,7 +448,13 @@ void implied_free_action::postsolve(PostsolveMatrix *prob) const
 	}
 	    
       PRESOLVEASSERT(fabs(coeff) > ZTOLDP);
-      if (rlo[irow] < rup[irow] && dcost[icol] * maxmin < 0.0) {
+      // choose rowdual to make this col basic
+      rowduals[irow] = maxmin*dcost[icol] / coeff;
+      rcosts[icol] = 0.0;
+      if ((rlo[irow] < rup[irow] && rowduals[irow] < 0.0)
+	  || rlo[irow]< -1.0e20) {
+	if (rlo[irow]<-1.0e20&&rowduals[irow]>=0.0)
+	  printf("IMP %g %g %g\n",rlo[irow],rup[irow],rowduals[irow]);
 	sol[icol] = (rup[irow] - act) / coeff;
 	acts[irow] = rup[irow];
       } else {
@@ -456,9 +462,6 @@ void implied_free_action::postsolve(PostsolveMatrix *prob) const
 	acts[irow] = rlo[irow];
       }
 
-      // choose rowdual to make this col basic
-      rowduals[irow] = dcost[icol] / coeff;
-      rcosts[icol] = 0.0;
 
       prob->setRowStatus(irow,PrePostsolveMatrix::atLowerBound);
       prob->setColumnStatus(icol,PrePostsolveMatrix::basic);

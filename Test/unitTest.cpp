@@ -142,6 +142,7 @@ int mainTest (int argc, const char *argv[],bool doDual,
     objValue.push_back(5.5018458883E+03);
 
 #if 1
+    mpsName.push_back("80bau3b");min.push_back(true);nRows.push_back(2263);nCols.push_back(9799);objValueTol.push_back(1.e-10);objValue.push_back(9.8722419241E+05);
     mpsName.push_back("blend");min.push_back(true);nRows.push_back(75);nCols.push_back(83);objValueTol.push_back(1.e-10);objValue.push_back(-3.0812149846e+01);
     mpsName.push_back("pilotnov");min.push_back(true);nRows.push_back(976);nCols.push_back(2172);objValueTol.push_back(1.e-10);objValue.push_back(-4.4972761882e+03);
     mpsName.push_back("maros-r7");min.push_back(true);nRows.push_back(3137);nCols.push_back(9408);objValueTol.push_back(1.e-10);objValue.push_back(1.4971851665e+06);
@@ -149,7 +150,6 @@ int mainTest (int argc, const char *argv[],bool doDual,
     mpsName.push_back("pilot");min.push_back(true);nRows.push_back(1442);nCols.push_back(3652);objValueTol.push_back(1.e-5);objValue.push_back(/*-5.5740430007e+02*/-557.48972927292);
     mpsName.push_back("pilot4");min.push_back(true);nRows.push_back(411);nCols.push_back(1000);objValueTol.push_back(1.e-8);objValue.push_back(-2.5811392641e+03);
     mpsName.push_back("pilot87");min.push_back(true);nRows.push_back(2031);nCols.push_back(4883);objValueTol.push_back(1.e-4);objValue.push_back(3.0171072827e+02);
-    mpsName.push_back("80bau3b");min.push_back(true);nRows.push_back(2263);nCols.push_back(9799);objValueTol.push_back(1.e-10);objValue.push_back(9.8722419241E+05);
     mpsName.push_back("adlittle");min.push_back(true);nRows.push_back(57);nCols.push_back(97);objValueTol.push_back(1.e-10);objValue.push_back(2.2549496316e+05);
     mpsName.push_back("afiro");min.push_back(true);nRows.push_back(28);nCols.push_back(32);objValueTol.push_back(1.e-10);objValue.push_back(-4.6475314286e+02);
     mpsName.push_back("agg");min.push_back(true);nRows.push_back(489);nCols.push_back(163);objValueTol.push_back(1.e-10);objValue.push_back(-3.5991767287e+07);
@@ -254,6 +254,16 @@ int mainTest (int argc, const char *argv[],bool doDual,
 			   mps.getRowLower(),mps.getRowUpper());
 
       solution.setDblParam(ClpObjOffset,mps.objectiveOffset());
+#if 0
+      solution.setOptimizationDirection(-1);
+      {
+	int j;
+	double * obj = solution.objective();
+	int n=solution.numberColumns();
+	for (j=0;j<n;j++) 
+	  obj[j] *= -1.0;
+      }
+#endif
       if (doPresolve) {
 #ifdef USE_PRESOLVE
 	Presolve pinfo;

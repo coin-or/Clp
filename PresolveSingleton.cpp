@@ -62,7 +62,7 @@ slack_doubleton_action::presolve(PresolveMatrix *prob,
   int nactions = 0;
   notFinished = false;
 
-  int fixed_cols[ncols];
+  int * fixed_cols = new int [ncols];
   int nfixed_cols	= 0;
 
   // this loop can apparently create new singleton rows;
@@ -214,6 +214,7 @@ slack_doubleton_action::presolve(PresolveMatrix *prob,
 					 true, // arbitrary
 					 next);
   }
+  delete [] fixed_cols;
   return (next);
 }
 

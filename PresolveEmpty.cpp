@@ -181,6 +181,7 @@ void drop_empty_cols_action::postsolve(PostsolveMatrix *prob) const
   double *cost	= prob->cost_;
   double *rcosts	= prob->rcosts_;
   unsigned char *colstat	= prob->colstat_;
+  const double maxmin = prob->maxmin_;
 
   int ncols2 = ncols+nactions;
   int * colmapping = new int [ncols2];
@@ -231,7 +232,7 @@ void drop_empty_cols_action::postsolve(PostsolveMatrix *prob) const
     sol[jcol] = e->sol;
     cost[jcol] = e->cost;
 
-    rcosts[jcol] = cost[jcol];
+    rcosts[jcol] = maxmin*cost[jcol];
 
     hincol[jcol] = 0;
 
