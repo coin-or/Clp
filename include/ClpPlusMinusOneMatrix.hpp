@@ -170,7 +170,12 @@ public:
    //@{
    /** The copy constructor. */
    ClpPlusMinusOneMatrix(const ClpPlusMinusOneMatrix&);
-   /** The copy constructor from an CoinPlusMinusOneMatrix. */
+   /** The copy constructor from an CoinPlusMinusOneMatrix.
+       If not a valid matrix then getIndices will be NULL and
+       startPositive[0] will have number of +1,
+       startPositive[1] will have number of -1,
+       startPositive[2] will have number of others,
+   */
    ClpPlusMinusOneMatrix(const CoinPackedMatrix&);
   /// Constructor from arrays 
   ClpPlusMinusOneMatrix(int numberRows, int numberColumns,

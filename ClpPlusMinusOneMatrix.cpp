@@ -102,13 +102,15 @@ ClpPlusMinusOneMatrix::ClpPlusMinusOneMatrix (const CoinPackedMatrix & rhs)
   const int * columnLength = rhs.getVectorLengths(); 
   const double * elementByColumn = rhs.getElements();
   numberColumns_ = rhs.getNumCols();
-  bool goodPlusMinusOne=true;
   numberRows_=-1;
   indices_ = new int[rhs.getNumElements()];
   startPositive_ = new CoinBigIndex [numberColumns_+1];
   startNegative_ = new CoinBigIndex [numberColumns_];
   int * temp = new int [rhs.getNumRows()];
   CoinBigIndex j=0;
+  CoinBigIndex numberGoodP=0;
+  CoinBigIndex numberGoodM=0;
+  CoinBigIndex numberBad=0;
   for (iColumn=0;iColumn<numberColumns_;iColumn++) {
     CoinBigIndex k;
     int iNeg=0;
@@ -120,35 +122,36 @@ ClpPlusMinusOneMatrix::ClpPlusMinusOneMatrix (const CoinPackedMatrix & rhs)
 	iRow = row[k];
 	numberRows_ = CoinMax(numberRows_,iRow);
 	indices_[j++]=iRow;
+        numberGoodP++;
       } else if (fabs(elementByColumn[k]+1.0)<1.0e-10) {
 	iRow = row[k];
 	numberRows_ = CoinMax(numberRows_,iRow);
 	temp[iNeg++]=iRow;
+        numberGoodM++;
       } else {
-	goodPlusMinusOne = false; // not a network
+        numberBad++;
       }
     }
-    if (goodPlusMinusOne) {
-      // move negative
-      startNegative_[iColumn]=j;
-      for (k=0;k<iNeg;k++) {
-	indices_[j++] = temp[k];
-      }
-    } else {
-      break;
+    // move negative
+    startNegative_[iColumn]=j;
+    for (k=0;k<iNeg;k++) {
+      indices_[j++] = temp[k];
     }
   }
   startPositive_[numberColumns_]=j;
   delete [] temp;
-  if (!goodPlusMinusOne) {
+  if (numberBad) {
     delete [] indices_;
-    // put in message
     indices_=NULL;
     numberRows_=0;
     numberColumns_=0;
     delete [] startPositive_;
     delete [] startNegative_;
-    startPositive_ = NULL;
+    // Put in statistics
+    startPositive_ = new CoinBigIndex [3];
+    startPositive_[0]=numberGoodP;
+    startPositive_[1]=numberGoodM;
+    startPositive_[2]=numberBad;
     startNegative_ = NULL;
   } else {
     numberRows_ ++; //  correct
