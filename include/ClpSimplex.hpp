@@ -855,7 +855,7 @@ public:
       64 -Treat problem as feasible until last minute (i.e. minimize infeasibilities)
       128 - Switch off all matrix sanity checks
       256 - No row copy
-      512 - Not values pass, solution guaranteed, skip as much as possible
+      512 - If not in values pass, solution guaranteed, skip as much as possible
       1024 - In branch and bound
       2048 - Don't bother to re-factorize if < 20 iterations
       4096 - Skip some optimality checks

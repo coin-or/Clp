@@ -1113,6 +1113,31 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
               objectiveValue_ = innerProduct(cost_,numberColumns_+numberRows_,solution_);
               objectiveValue_ += objective_->nonlinearOffset();
               objectiveValue_ /= (objectiveScale_*rhsScale_);
+              // and dual_ may be wrong (i.e. for fixed or basic)
+              CoinIndexedVector * arrayVector = rowArray_[1];
+              arrayVector->clear();
+              int iRow;
+              double * array = arrayVector->denseVector();
+              // Use dual_ instead of array
+              arrayVector->setDenseVector(dual_);
+              int * index = arrayVector->getIndices();
+              int number=0;
+              for (iRow=0;iRow<numberRows_;iRow++) {
+                int iPivot=pivotVariable_[iRow];
+                double value = cost_[iPivot];
+                dual_[iRow]=value;
+                if (value) {
+                  index[number++]=iRow;
+                }
+              }
+              arrayVector->setNumElements(number);
+              // Extended duals before "updateTranspose"
+              matrix_->dualExpanded(this,arrayVector,false,0);
+              // Btran basic costs
+              rowArray_[2]->clear();
+              factorization_->updateColumnTranspose(rowArray_[2],arrayVector);
+              // and return vector
+              arrayVector->setDenseVector(array);
             }
 	    problemStatus_=0;
 	    sumPrimalInfeasibilities_=0.0;
@@ -1155,8 +1180,12 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
   int numberInfeasibilities=0;
   int numberRowInfeasibilities=0;
   
-  // use a tighter tolerance except for all being okay
+  // get a tolerance
   double tolerance = dualTolerance_;
+  // we can't really trust infeasibilities if there is dual error
+  double error = CoinMin(1.0e-3,largestDualError_);
+  // allow tolerance at least slightly bigger than standard
+  tolerance = tolerance +  error;
   
   double changeObj=0.0;
 
@@ -3966,9 +3995,9 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
     deleteRim(1);
     whatsChanged_=0;
   } else {
-    // Put back original factorization
-    delete factorization_;
-    factorization_ = new ClpFactorization(saveFactorization);
+    // Original factorization will have been put back by last loop
+    //delete factorization_;
+    //factorization_ = new ClpFactorization(saveFactorization);
     deleteRim(0);
     // mark all as current
     whatsChanged_ = 0xffff;

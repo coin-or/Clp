@@ -2243,7 +2243,10 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
       factorization_->messageLevel(0);
     else
       factorization_->messageLevel(CoinMax(3,factorization_->messageLevel()));
-    if ((startFinishOptions&2)!=0&&factorization_->numberRows()==numberRows_)
+    /* Faster to keep pivots rather than re-scan matrix.  Matrix may have changed
+       i.e. oldMatrix false but okay as long as same number rows and status array exists
+    */
+    if ((startFinishOptions&2)!=0&&factorization_->numberRows()==numberRows_&&status_)
       keepPivots=true;
   }
   numberExtraRows_ = matrix_->generalExpanded(this,2,maximumBasic_);
@@ -2628,7 +2631,8 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
     // check pivots
     for (int i=0;i<numberRows2;i++) {
       int iSequence = pivotVariable_[i];
-      if (getStatus(iSequence)!=basic) {
+      if (iSequence<numberRows_+numberColumns_&&
+          getStatus(iSequence)!=basic) {
 	keepPivots =false;
 	break;
       }

@@ -2247,6 +2247,9 @@ ClpModel::passInEventHandler(const ClpEventHandler * eventHandler)
 void 
 ClpModel::scaling(int mode)
 {
+  // If mode changes then we treat as new matrix (need new row copy)
+  if (mode!=scalingFlag_)
+    whatsChanged_ &= ~(2+4+8);
   if (mode>0&&mode<4) {
     scalingFlag_=mode;
   } else if (!mode) {
