@@ -64,7 +64,7 @@ endif
 #LDFLAGS += -lefence
 #LDFLAGS += -static
 CXXFLAGS += -pg
-#LDFLAGS += -Wl,-M
+#LDFLAGS += -lwsmp -lpthread
 ###############################################################################
 
 TESTOBJ := $(addprefix $(TARGETDIR)/, $(TESTSRC:.cpp=.o))

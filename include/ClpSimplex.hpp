@@ -935,6 +935,10 @@ protected:
   int progressFlag_;
   /// First free/super-basic variable (-1 if none)
   int firstFree_;
+  /** Number of extra rows.  These are ones which will be dynamically created
+      each iteration.  This is for GUB but may have other uses.
+  */
+  int numberExtraRows_;
   /** For advanced use.  When doing iterative solves things can get
       nasty so on values pass if incoming solution has largest
       infeasibility < incomingInfeasibility throw out variables

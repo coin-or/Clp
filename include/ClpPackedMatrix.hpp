@@ -8,11 +8,11 @@
 
 #include "ClpMatrixBase.hpp"
 
-/** This implements OsiPackedMatrix as derived from ClpMatrixBase.
+/** This implements CoinPackedMatrix as derived from ClpMatrixBase.
 
     It adds a few methods that know about model as well as matrix
 
-    For details see OsiPackedMatrix */
+    For details see CoinPackedMatrix */
 
 class ClpPackedMatrix : public ClpMatrixBase {
   
@@ -67,7 +67,7 @@ public:
       This is only needed if scaling and a row copy is used.
       At most the number specified will be replaced.
       The index is between 0 and major dimension of matrix */
-  void replaceVector(const int index,
+  virtual void replaceVector(const int index,
 		       const int numReplace, const double * newElements)
       {matrix_->replaceVector(index,numReplace,newElements);};
   /** Returns a new matrix in reverse order without gaps */

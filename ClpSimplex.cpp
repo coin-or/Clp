@@ -104,6 +104,7 @@ ClpSimplex::ClpSimplex () :
   numberFake_(0),
   progressFlag_(0),
   firstFree_(-1),
+  numberExtraRows_(0),
   incomingInfeasibility_(1.0),
   allowedInfeasibility_(10.0),
   progress_(NULL)
@@ -207,6 +208,7 @@ ClpSimplex::ClpSimplex ( const ClpModel * rhs,
   numberFake_(0),
   progressFlag_(0),
   firstFree_(-1),
+  numberExtraRows_(0),
   incomingInfeasibility_(1.0),
   allowedInfeasibility_(10.0),
   progress_(NULL)
@@ -1331,6 +1333,7 @@ ClpSimplex::ClpSimplex(const ClpSimplex &rhs) :
   numberFake_(0),
   progressFlag_(0),
   firstFree_(-1),
+  numberExtraRows_(0),
   incomingInfeasibility_(1.0),
   allowedInfeasibility_(10.0),
   progress_(NULL)
@@ -1428,6 +1431,7 @@ ClpSimplex::ClpSimplex(const ClpModel &rhs) :
   numberFake_(0),
   progressFlag_(0),
   firstFree_(-1),
+  numberExtraRows_(0),
   incomingInfeasibility_(1.0),
   allowedInfeasibility_(10.0),
   progress_(NULL)
@@ -1464,29 +1468,33 @@ ClpSimplex::operator=(const ClpSimplex & rhs)
 void 
 ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
 {
-  lower_ = ClpCopyOfArray(rhs.lower_,numberColumns_+numberRows_);
+  assert (numberRows_==rhs.numberRows_);
+  assert (numberColumns_==rhs.numberColumns_);
+  numberExtraRows_ = rhs.numberExtraRows_;
+  int numberRows2 = numberRows_+numberExtraRows_;
+  lower_ = ClpCopyOfArray(rhs.lower_,numberColumns_+numberRows2);
   rowLowerWork_ = lower_+numberColumns_;
   columnLowerWork_ = lower_;
-  upper_ = ClpCopyOfArray(rhs.upper_,numberColumns_+numberRows_);
+  upper_ = ClpCopyOfArray(rhs.upper_,numberColumns_+numberRows2);
   rowUpperWork_ = upper_+numberColumns_;
   columnUpperWork_ = upper_;
   //cost_ = ClpCopyOfArray(rhs.cost_,2*(numberColumns_+numberRows_));
-  cost_ = ClpCopyOfArray(rhs.cost_,(numberColumns_+numberRows_));
+  cost_ = ClpCopyOfArray(rhs.cost_,(numberColumns_+numberRows2));
   objectiveWork_ = cost_;
   rowObjectiveWork_ = cost_+numberColumns_;
-  dj_ = ClpCopyOfArray(rhs.dj_,numberRows_+numberColumns_);
+  dj_ = ClpCopyOfArray(rhs.dj_,numberRows2+numberColumns_);
   if (dj_) {
     reducedCostWork_ = dj_;
     rowReducedCost_ = dj_+numberColumns_;
   }
-  solution_ = ClpCopyOfArray(rhs.solution_,numberRows_+numberColumns_);
+  solution_ = ClpCopyOfArray(rhs.solution_,numberRows2+numberColumns_);
   if (solution_) {
     columnActivityWork_ = solution_;
     rowActivityWork_ = solution_+numberColumns_;
   }
   if (rhs.pivotVariable_) {
-    pivotVariable_ = new int[numberRows_];
-    ClpDisjointCopyN ( rhs.pivotVariable_, numberRows_ , pivotVariable_);
+    pivotVariable_ = new int[numberRows2];
+    CoinMemcpyN ( rhs.pivotVariable_, numberRows2 , pivotVariable_);
   } else {
     pivotVariable_=NULL;
   }
@@ -1496,7 +1504,7 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
     factorization_=NULL;
   }
   rowScale_ = ClpCopyOfArray(rhs.rowScale_,numberRows_);
-  savedSolution_ = ClpCopyOfArray(rhs.savedSolution_,numberColumns_+numberRows_);
+  savedSolution_ = ClpCopyOfArray(rhs.savedSolution_,numberColumns_+numberRows2);
   columnScale_ = ClpCopyOfArray(rhs.columnScale_,numberColumns_);
   int i;
   for (i=0;i<6;i++) {
@@ -1508,7 +1516,7 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
       columnArray_[i] = new CoinIndexedVector(*rhs.columnArray_[i]);
   }
   if (rhs.saveStatus_) {
-    saveStatus_ = ClpCopyOfArray( rhs.saveStatus_,numberColumns_+numberRows_);
+    saveStatus_ = ClpCopyOfArray( rhs.saveStatus_,numberColumns_+numberRows2);
   }
   columnPrimalInfeasibility_ = rhs.columnPrimalInfeasibility_;
   columnPrimalSequence_ = rhs.columnPrimalSequence_;
@@ -1977,6 +1985,19 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
     else
       factorization_->messageLevel(3);
   }
+  numberExtraRows_ = matrix_->extendUpdated(NULL,NULL,NULL,NULL);
+  if (numberExtraRows_) {
+    // make sure status array large enough
+    assert (status_);
+    int numberOld = numberRows_+numberColumns_;
+    int numberNew = numberRows_+numberColumns_+numberExtraRows_;
+    unsigned char * newStatus = new unsigned char [numberNew];
+    memset(newStatus+numberOld,0,numberExtraRows_);
+    memcpy(newStatus,status_,numberOld);
+    delete [] status_;
+    status_=newStatus;
+  }
+  int numberRows2 = numberRows_+numberExtraRows_;
   int i;
   if ((what&(16+32))!=0) {
     // move information to work arrays
@@ -1993,7 +2014,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
     }
     // row reduced costs
     if (!dj_) {
-      dj_ = new double[numberRows_+numberColumns_];
+      dj_ = new double[numberRows2+numberColumns_];
       reducedCostWork_ = dj_;
       rowReducedCost_ = dj_+numberColumns_;
       memcpy(reducedCostWork_,reducedCost_,numberColumns_*sizeof(double));
@@ -2001,7 +2022,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
     }
     if (!solution_||(what&32)!=0) {
       if (!solution_)
-	solution_ = new double[numberRows_+numberColumns_];
+	solution_ = new double[numberRows2+numberColumns_];
       columnActivityWork_ = solution_;
       rowActivityWork_ = solution_+numberColumns_;
       memcpy(columnActivityWork_,columnActivity_,
@@ -2042,7 +2063,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
   if ((what&4)!=0) {
     delete [] cost_;
     // extra copy with original costs
-    int nTotal = numberRows_+numberColumns_;
+    int nTotal = numberRows2+numberColumns_;
     //cost_ = new double[2*nTotal];
     cost_ = new double[nTotal];
     objectiveWork_ = cost_;
@@ -2058,8 +2079,8 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
   if ((what&1)!=0) {
     delete [] lower_;
     delete [] upper_;
-    lower_ = new double[numberColumns_+numberRows_];
-    upper_ = new double[numberColumns_+numberRows_];
+    lower_ = new double[numberColumns_+numberRows2];
+    upper_ = new double[numberColumns_+numberRows2];
     rowLowerWork_ = lower_+numberColumns_;
     columnLowerWork_ = lower_;
     rowUpperWork_ = upper_+numberColumns_;
@@ -2146,7 +2167,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
   // we need to treat matrix as if each element by rowScaleIn and columnScaleout??
   // maybe we need to move scales to SimplexModel for factorization?
   if ((what&8)!=0&&!pivotVariable_) {
-    pivotVariable_=new int[numberRows_];
+    pivotVariable_=new int[numberRows2];
   }
 
   if ((what&16)!=0&&!rowArray_[2]) {
@@ -2159,7 +2180,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
     for (iRow=0;iRow<4;iRow++) {
       if (!rowArray_[iRow]) {
 	rowArray_[iRow]=new CoinIndexedVector();
-	int length =numberRows_+factorization_->maximumPivots();
+	int length =numberRows2+factorization_->maximumPivots();
 	if (iRow==3)
 	  length += numberColumns_;
 	rowArray_[iRow]->reserve(length);
@@ -2172,7 +2193,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
 	if (!iColumn)
 	  columnArray_[iColumn]->reserve(numberColumns_);
 	else
-	  columnArray_[iColumn]->reserve(max(numberRows_,numberColumns_));
+	  columnArray_[iColumn]->reserve(max(numberRows2,numberColumns_));
       }
     }    
   }

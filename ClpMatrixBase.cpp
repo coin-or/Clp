@@ -147,3 +147,15 @@ ClpMatrixBase::partialPricing(ClpSimplex * model, int start, int end,
   std::cerr<<"partialPricing not supported - ClpMatrixBase"<<std::endl;
   abort();
 }
+/* expands an updated column to allow for extra rows which the main
+   solver does not know about and returns number added.  If the arrays are NULL 
+   then returns number of extra entries needed.
+   
+   This will normally be a no-op - it is in for GUB!
+*/
+int 
+ClpMatrixBase::extendUpdated(CoinIndexedVector * update, double * lower,
+			     double * solution, double * upper)
+{
+  return 0;
+}

@@ -138,6 +138,15 @@ public:
   /// Partial pricing 
   virtual void partialPricing(ClpSimplex * model, int start, int end,
 		      int & bestSequence, int & numberWanted);
+  /** expands an updated column to allow for extra rows which the main
+      solver does not know about and returns number added.  If the arrays are NULL 
+      then returns number of extra entries needed.
+
+      This will normally be a no-op - it is in for GUB but may get extended to
+      general non-overlapping and embedded networks
+  */
+  virtual int extendUpdated(CoinIndexedVector * update, double * lower,
+			    double * solution, double * upper);
    //@}
 
   //---------------------------------------------------------------------------
