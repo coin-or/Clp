@@ -541,8 +541,8 @@ const PresolveAction *subst_constraint_action::presolve(PresolveMatrix *prob,
       int bestrowy_row=-1;
       int bestrowy_k=-1;
       double bestrowy_coeff=0.0;
-
-      for (CoinBigIndex k=kcs; k<kce; ++k) {
+      CoinBigIndex k;
+      for (k=kcs; k<kce; ++k) {
 	int row = hrow[k];
 	double coeffj = colels[k];
 
@@ -621,7 +621,8 @@ const PresolveAction *subst_constraint_action::presolve(PresolveMatrix *prob,
 	// compute fill-in
 	int row1 = -1;
 	int row2=-1;
-	for (CoinBigIndex kk=kcs; kk<kce; ++kk) 
+	CoinBigIndex kk;
+	for (kk=kcs; kk<kce; ++kk) 
 	  if (kk != bestrowy_k) {
 	    if (row1 == -1)
 	      row1 = hrow[kk];
@@ -718,7 +719,7 @@ const PresolveAction *subst_constraint_action::presolve(PresolveMatrix *prob,
 	double *costsx = nonzero_cost ? new double[hinrow[rowy]] : 0;
 
 	int ntotels = 0;
-	for (CoinBigIndex k=kcs; k<kce; ++k) {
+	for (k=kcs; k<kce; ++k) {
 	  int irow = hrow[k];
 	  ntotels += hinrow[irow];
 	}
@@ -1345,5 +1346,6 @@ subst_constraint_action::~subst_constraint_action()
     delete[]actions[i].costsx;
   }
 
-  deleteAction(actions_);
+  //deleteAction(actions_);
+  delete [] (subst_constraint_action::action *) actions_;
 }
