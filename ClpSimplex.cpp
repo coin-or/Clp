@@ -2429,12 +2429,14 @@ ClpSimplex::deleteRim(int getRidOfFactorizationData)
       }
     }
   } else {
-    for (i=0;i<numberColumns_;i++) {
-      columnActivity_[i] = columnActivityWork_[i];
-      reducedCost_[i] = reducedCostWork_[i];
-    }
-    for (i=0;i<numberRows_;i++) {
-      rowActivity_[i] = rowActivityWork_[i];
+    if (columnActivityWork_) {
+      for (i=0;i<numberColumns_;i++) {
+	columnActivity_[i] = columnActivityWork_[i];
+	reducedCost_[i] = reducedCostWork_[i];
+      }
+      for (i=0;i<numberRows_;i++) {
+	rowActivity_[i] = rowActivityWork_[i];
+      }
     }
   }
   if (optimizationDirection_!=1.0) {
@@ -3568,12 +3570,13 @@ ClpSimplex::sanityCheck()
 {
   // bad if empty
   if (!numberRows_||!numberColumns_||!matrix_->getNumElements()) {
-    handler_->message(CLP_EMPTY_PROBLEM,messages_)
-      <<numberRows_
-      <<numberColumns_
-      <<matrix_->getNumElements()
-      <<CoinMessageEol;
-    problemStatus_=4;
+    int infeasNumber[2];
+    double infeasSum[2];
+    problemStatus_=emptyProblem(infeasNumber,infeasSum,false);
+    numberDualInfeasibilities_=infeasNumber[0];
+    sumDualInfeasibilities_=infeasSum[0];
+    numberPrimalInfeasibilities_=infeasNumber[1];
+    sumPrimalInfeasibilities_=infeasSum[1];
     return false;
   }
   int numberBad ;
@@ -4518,12 +4521,13 @@ ClpSimplex::startup(int ifValuesPass)
   // sanity check
   // bad if empty (trap here to avoid using bad matrix_)
   if (!matrix_||!matrix_->getNumElements()) {
-    handler_->message(CLP_EMPTY_PROBLEM,messages_)
-      <<numberRows_
-      <<numberColumns_
-      <<0
-      <<CoinMessageEol;
-    problemStatus_=4;
+    int infeasNumber[2];
+    double infeasSum[2];
+    problemStatus_=emptyProblem(infeasNumber,infeasSum);
+    numberDualInfeasibilities_=infeasNumber[0];
+    sumDualInfeasibilities_=infeasSum[0];
+    numberPrimalInfeasibilities_=infeasNumber[1];
+    sumPrimalInfeasibilities_=infeasSum[1];
     return 2;
   }
   pivotRow_=-1;
@@ -4621,6 +4625,8 @@ ClpSimplex::finish()
   deleteRim();
   // Skip message if changing algorithms
   if (problemStatus_!=10) {
+    if (problemStatus_==-1)
+      problemStatus_=4;
     assert(problemStatus_>=0&&problemStatus_<5);
     handler_->message(CLP_SIMPLEX_FINISHED+problemStatus_,messages_)
       <<objectiveValue()

@@ -58,7 +58,7 @@ static Clp_message us_english[]=
   {CLP_DUPLICATEELEMENTS,26,1,"Matrix will be packed to eliminate %d duplicate elements"},
   {CLP_IMPORT_RESULT,27,1,"Model was imported from %s in %g seconds"},
   {CLP_IMPORT_ERRORS,3001,1," There were %d errors when importing model from %s"},
-  {CLP_EMPTY_PROBLEM,3002,0,"Not solving empty problem - %d rows, %d columns and %d elements"},
+  {CLP_EMPTY_PROBLEM,3002,0,"Empty problem - %d rows, %d columns and %d elements"},
   {CLP_CRASH,28,1,"Crash put %d variables in basis, %d dual infeasibilities"},
   {CLP_END_VALUES_PASS,29,1,"End of values pass after %d iterations"},
   {CLP_QUADRATIC_BOTH,108,32,"%s %d (%g) and %d (%g) both basic"},

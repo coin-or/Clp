@@ -596,12 +596,7 @@ ClpInterior::sanityCheck()
 {
   // bad if empty
   if (!numberRows_||!numberColumns_||!matrix_->getNumElements()) {
-    handler_->message(CLP_EMPTY_PROBLEM,messages_)
-      <<numberRows_
-      <<numberColumns_
-      <<matrix_->getNumElements()
-      <<CoinMessageEol;
-    problemStatus_=4;
+    problemStatus_=emptyProblem();
     return false;
   }
   int numberBad ;

@@ -1560,3 +1560,121 @@ ClpDataSave::operator=(const ClpDataSave& rhs)
   }
   return *this;
 }
+// Solve a problem with no elements - return status
+int ClpModel::emptyProblem(int * infeasNumber, double * infeasSum,bool printMessage)
+{
+  if (printMessage)
+    handler_->message(CLP_EMPTY_PROBLEM,messages_)
+      <<numberRows_
+      <<numberColumns_
+      <<0
+      <<CoinMessageEol;
+  int returnCode=0;
+  if (numberRows_||numberColumns_) {
+    if (!status_) {
+      status_ = new unsigned char[numberRows_+numberColumns_];
+      memset(status_,0,numberRows_+numberColumns_);
+    }
+  }
+  // status is set directly (as can be used by Interior methods)
+  // check feasible
+  int numberPrimalInfeasibilities=0;
+  double sumPrimalInfeasibilities=0.0;
+  int numberDualInfeasibilities=0;
+  double sumDualInfeasibilities=0.0;
+  if (numberRows_) {
+    for (int i=0;i<numberRows_;i++) {
+      dual_[i]=0.0;
+      if (rowLower_[i]<=rowUpper_[i]) {
+	if (rowLower_[i]>-1.0e30||rowUpper_[i]<1.0e30) {
+	  if (fabs(rowLower_[i])<fabs(rowUpper_[i]))
+	    rowActivity_[i]=rowLower_[i];
+	  else
+	    rowActivity_[i]=rowUpper_[i];
+	} else {
+	  rowActivity_[i]=0.0;
+	}
+      } else {
+	rowActivity_[i]=0.0;
+	numberPrimalInfeasibilities++;
+	sumPrimalInfeasibilities += rowLower_[i]-rowUpper_[i];
+	returnCode=1;
+      }
+      status_[i+numberColumns_]=1;
+    }
+  }
+  objectiveValue_=0.0;
+  if (numberColumns_) {
+    const double * cost = objective();
+    for (int i=0;i<numberColumns_;i++) {
+      reducedCost_[i]=cost[i];
+      double objValue = cost[i]*optimizationDirection_;
+      if (columnLower_[i]<=columnUpper_[i]) {
+	if (columnLower_[i]>-1.0e30||columnUpper_[i]<1.0e30) {
+	  if (!objValue) {
+	    if (fabs(columnLower_[i])<fabs(columnUpper_[i])) {
+	      columnActivity_[i]=columnLower_[i];
+	      status_[i]=3;
+	    } else {
+	      columnActivity_[i]=columnUpper_[i];
+	      status_[i]=2;
+	    }
+	  } else if (objValue>0.0) {
+	    if (columnLower_[i]>-1.0e30) {
+	      columnActivity_[i]=columnLower_[i];
+	      status_[i]=3;
+	    } else {
+	      columnActivity_[i]=columnUpper_[i];
+	      status_[i]=2;
+	      numberDualInfeasibilities++;;
+	      sumDualInfeasibilities += fabs(objValue);
+	      returnCode |= 2;
+	    }
+	    objectiveValue_ += columnActivity_[i]*objValue;
+	  } else {
+	    if (columnUpper_[i]<1.0e30) {
+	      columnActivity_[i]=columnUpper_[i];
+	      status_[i]=2;
+	    } else {
+	      columnActivity_[i]=columnLower_[i];
+	      status_[i]=3;
+	      numberDualInfeasibilities++;;
+	      sumDualInfeasibilities += fabs(objValue);
+	      returnCode |= 2;
+	    }
+	    objectiveValue_ += columnActivity_[i]*objValue;
+	  }
+	} else {
+	  columnActivity_[i]=0.0;
+	  if (objValue) {
+	    numberDualInfeasibilities++;;
+	    sumDualInfeasibilities += fabs(objValue);
+	    returnCode |= 2;
+	  }
+	  status_[i]=0;
+	}
+      } else {
+	if (fabs(columnLower_[i])<fabs(columnUpper_[i])) {
+	  columnActivity_[i]=columnLower_[i];
+	  status_[i]=3;
+	} else {
+	  columnActivity_[i]=columnUpper_[i];
+	  status_[i]=2;
+	}
+	numberPrimalInfeasibilities++;
+	sumPrimalInfeasibilities += columnLower_[i]-columnUpper_[i];
+	returnCode |= 1;
+      }
+    }
+  }
+  objectiveValue_ *= optimizationDirection_;
+  if (infeasNumber) {
+    infeasNumber[0]=numberDualInfeasibilities;
+    infeasSum[0]=sumDualInfeasibilities;
+    infeasNumber[1]=numberPrimalInfeasibilities;
+    infeasSum[1]=sumPrimalInfeasibilities;
+  }
+  if (returnCode==3) 
+    returnCode=4;
+  return returnCode;
+}

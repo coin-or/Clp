@@ -55,6 +55,8 @@ public:
   /// setupForSolve.
   //phase 0=affine , 1 = corrector , 2 = primal-dual
   void setupForSolve(const int phase);
+  /** Does solve. region1 is for deltaX (columns+rows), region2 for deltaPi (rows) */
+  double solveSystem(double * region1, double * region2,int numberRefinements);
   //method: sees if looks plausible change in complementarity
   bool checkGoodMove(const bool doCorrector,double & bestNextGap);
   ///:  checks for one step size

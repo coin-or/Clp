@@ -776,6 +776,160 @@ double ClpPredictorCorrector::findStepLength(const int phase)
   } 
   return directionNorm;
 }
+/* Does solve. region1 is for deltaX (columns+rows), region2 for deltaPi (rows) */
+double 
+ClpPredictorCorrector::solveSystem(double * region1, double * region2,int numberRefinements)
+{
+  double projectionTolerance=projectionTolerance_;
+  double errorCheck=0.9*maximumRHSError_/solutionNorm_;
+  if (errorCheck>primalTolerance()) {
+    if (errorCheck<projectionTolerance) {
+      projectionTolerance=errorCheck;
+    } 
+  } else {
+    if (primalTolerance()<projectionTolerance) {
+      projectionTolerance=primalTolerance();
+    } 
+  } 
+  double * newError = new double [numberRows_];
+  double * work2 = deltaW_;
+  int iColumn;
+  int numberTotal = numberRows_+numberColumns_;
+  //if flagged then entries zero so can do
+  for (iColumn=0;iColumn<numberTotal;iColumn++)
+    weights_[iColumn] = work2[iColumn] - solution_[iColumn];
+  multiplyAdd(weights_+numberColumns_,numberRows_,-1.0,updateRegion_,0.0);
+  matrix_->times(1.0,weights_,updateRegion_);
+  bool goodSolve=false;
+  double * regionSave=NULL;//for refinement
+  int numberTries=0;
+  double relativeError=COIN_DBL_MAX;
+  double tryError=1.0e31;
+  while (!goodSolve&&numberTries<30) {
+    double lastError=relativeError;
+    goodSolve=true;
+    double maximumRHS = maximumAbsElement(updateRegion_,numberRows_);
+    double scale=1.0;
+    double unscale=1.0;
+    if (maximumRHS>1.0e-30) {
+      if (maximumRHS<=0.5) {
+        double factor=2.0;
+        while (maximumRHS<=0.5) {
+          maximumRHS*=factor;
+          scale*=factor;
+        } /* endwhile */
+      } else if (maximumRHS>=2.0&&maximumRHS<=COIN_DBL_MAX) {
+        double factor=0.5;
+        while (maximumRHS>=2.0) {
+          maximumRHS*=factor;
+          scale*=factor;
+        } /* endwhile */
+      } 
+      unscale=diagonalScaleFactor_/scale;
+    } else {
+      //effectively zero
+      scale=0.0;
+      unscale=0.0;
+    } 
+    //printf("--putting scales to 1.0\n");
+    //scale=1.0;
+    //unscale=1.0;
+    multiplyAdd(NULL,numberRows_,0.0,updateRegion_,scale);
+    cholesky_->solve(updateRegion_);
+    multiplyAdd(NULL,numberRows_,0.0,updateRegion_,unscale);
+    if (numberTries) {
+      //refine?
+      double scaleX=1.0;
+      if (lastError>1.0e-5) 
+        scaleX=0.8;
+      multiplyAdd(regionSave,numberRows_,1.0,updateRegion_,scaleX);
+    } 
+    numberTries++;
+    CoinZeroN(newError,numberRows_);
+    multiplyAdd(updateRegion_,numberRows_,-1.0,weights_+numberColumns_,0.0);
+    CoinZeroN(weights_,numberColumns_);
+    matrix_->transposeTimes(1.0,updateRegion_,weights_);
+    //if flagged then entries zero so can do
+    for (iColumn=0;iColumn<numberTotal;iColumn++)
+      weights_[iColumn] = weights_[iColumn]*diagonal_[iColumn]
+	-work2[iColumn];
+    multiplyAdd(weights_+numberColumns_,numberRows_,-1.0,newError,1.0);
+    matrix_->times(1.0,weights_,newError);
+    
+    //now add in old Ax - doing extra checking
+    double maximumRHSError=0.0;
+    double maximumRHSChange=0.0;
+    int iRow;
+    char * dropped = cholesky_->rowsDropped();
+    for (iRow=0;iRow<numberRows_;iRow++) {
+      if (!dropped[iRow]) {
+	double newValue=newError[iRow];
+	double oldValue=errorRegion_[iRow];
+	//severity of errors depend on signs
+	//**later                                                             */
+	if (fabs(newValue)>maximumRHSChange) {
+	  maximumRHSChange=fabs(newValue);
+	} 
+	double result=newValue+oldValue;
+	if (fabs(result)>maximumRHSError) {
+	  maximumRHSError=fabs(result);
+	} 
+	newError[iRow]=result;
+      } else {
+	double newValue=newError[iRow];
+	double oldValue=errorRegion_[iRow];
+	if (fabs(newValue)>maximumRHSChange) {
+	  maximumRHSChange=fabs(newValue);
+	} 
+	double result=newValue+oldValue;
+	newError[iRow]=result;
+	//newError[iRow]=0.0;
+	//assert(updateRegion_[iRow]==0.0);
+	updateRegion_[iRow]=0.0;
+      } 
+    } 
+    relativeError = maximumRHSError/solutionNorm_;
+    if (relativeError>tryError) 
+      relativeError=tryError;
+    if (relativeError<lastError) {
+      maximumRHSChange_= maximumRHSChange;
+      if (relativeError>1.0e-9
+	  ||numberTries>1) {
+	//handler_->message(CLP_BARRIER_ACCURACY,messages_)
+	//<<phase<<numberTries<<relativeError
+	//<<CoinMessageEol;
+      } 
+      if (relativeError>projectionTolerance&&numberTries<=3) {
+        //try and refine
+        goodSolve=false;
+      } 
+      //*** extra test here
+      if (!goodSolve) {
+        if (!regionSave) {
+          regionSave = new double [numberRows_];
+        } 
+        CoinMemcpyN(updateRegion_,numberRows_,regionSave);
+	multiplyAdd(newError,numberRows_,-1.0,updateRegion_,0.0);
+      } 
+    } else {
+      //std::cout <<" worse residual = "<<relativeError;
+      //bring back previous
+      relativeError=lastError;
+      CoinMemcpyN(regionSave,numberRows_,updateRegion_);
+      multiplyAdd(updateRegion_,numberRows_,-1.0,weights_+numberColumns_,0.0);
+      CoinZeroN(weights_,numberColumns_);
+      matrix_->transposeTimes(1.0,updateRegion_,weights_);
+      //if flagged then entries zero so can do
+      for (iColumn=0;iColumn<numberTotal;iColumn++)
+	weights_[iColumn] = weights_[iColumn]*diagonal_[iColumn]
+	  -work2[iColumn];
+    } 
+  } /* endwhile */
+  delete [] regionSave;
+  delete [] newError;
+  return relativeError;
+
+}
 // findDirectionVector.
 double ClpPredictorCorrector::findDirectionVector(const int phase)
 {
@@ -797,8 +951,12 @@ double ClpPredictorCorrector::findDirectionVector(const int phase)
   int iColumn;
   int numberTotal = numberRows_+numberColumns_;
   //if flagged then entries zero so can do
-  for (iColumn=0;iColumn<numberTotal;iColumn++)
-    weights_[iColumn] = work2[iColumn] - solution_[iColumn];
+  if (numberIterations_<10)
+    for (iColumn=0;iColumn<numberTotal;iColumn++)
+      weights_[iColumn] = work2[iColumn];
+  else
+    for (iColumn=0;iColumn<numberTotal;iColumn++)
+      weights_[iColumn] = work2[iColumn] - solution_[iColumn];
   multiplyAdd(weights_+numberColumns_,numberRows_,-1.0,updateRegion_,0.0);
   matrix_->times(1.0,weights_,updateRegion_);
   bool goodSolve=false;

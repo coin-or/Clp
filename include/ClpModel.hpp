@@ -416,6 +416,10 @@ public:
   void setObjective(ClpObjective * objective);
   void setObjectivePointer(ClpObjective * objective)
   { objective_ = objective;};
+  /** Solve a problem with no elements - return status and
+      dual and primal infeasibilites */
+  int emptyProblem(int * infeasNumber=NULL, double * infeasSum=NULL,bool printMessage=true);
+  
   //@}
 
 

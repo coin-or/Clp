@@ -874,8 +874,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
       currentModel2 = &barrier;
 #ifdef REAL_BARRIER
     // uncomment this if you have Anshul Gupta's wsmp package
-    ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp(max(100,model2->numberRows()/10));
-    barrier.setCholesky(cholesky);
+    //ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp(max(100,model2->numberRows()/10));
+    //barrier.setCholesky(cholesky);
     // uncomment this if you have Sivan Toledo's Taucs package
     //ClpCholeskyTaucs * cholesky = new ClpCholeskyTaucs();
     //barrier.setCholesky(cholesky);
@@ -1084,8 +1084,9 @@ ClpSimplex::initialSolve(ClpSolve & options)
     }
   }
   setMaximumIterations(saveMaxIterations);
-  std::string statusMessage[]={"Unknown","Optimal","PrimalInfeasible","DualInfeasible","Stopped"};
-  assert (finalStatus>=-1&&finalStatus<=3);
+  std::string statusMessage[]={"Unknown","Optimal","PrimalInfeasible","DualInfeasible","Stopped",
+			       "Errors"};
+  assert (finalStatus>=-1&&finalStatus<=4);
   handler_->message(CLP_TIMING,messages_)
     <<statusMessage[finalStatus+1]<<objectiveValue()<<numberIterations<<time2-time1;
   handler_->printing(presolve==ClpSolve::presolveOn)
