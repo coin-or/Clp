@@ -28,8 +28,9 @@
 #endif
 /** User does not need to see structure of model */
 typedef void Clp_Simplex;
-/** typedef for user call back */
+/** typedef for user call back.
+ The cvec are constructed so don't need to be const*/
 typedef  void (CLPLINKAGE_CB *clp_callback) (Clp_Simplex * model,int  msgno, int ndouble,
-                            double * dvec, int nint, int * ivec,
+                            const double * dvec, int nint, const int * ivec,
                             int nchar, char ** cvec);
 #endif

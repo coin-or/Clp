@@ -37,16 +37,186 @@
 #endif
 
 #endif
+class CMessageHandler;
 // Real typedef for structure
 typedef struct {
   ClpSimplex * model_;
-  CoinMessageHandler * handler_;
+  CMessageHandler * handler_;
 } Clp_Simplex;
-
 /** typedef for user call back */
 typedef  void (CLPLINKAGE_CB *clp_callback) (Clp_Simplex * model,int  msgno, int ndouble,
-                            double * dvec, int nint, int * ivec,
-                            int nchar, char ** cvec);
+                            const double * dvec, int nint, const int * ivec,
+                            int nchar,  char ** cvec);
+
+// To allow call backs
+class CMessageHandler : public CoinMessageHandler {
+  
+public:
+  /**@name Overrides */
+  //@{
+  virtual int print();
+  //@}
+  /**@name set and get */
+  //@{
+  /// Model
+  const Clp_Simplex * model() const;
+  void setModel(Clp_Simplex * model);
+  /// Call back
+  void setCallBack(clp_callback callback);
+  //@}
+
+  /**@name Constructors, destructor */
+  //@{
+  /** Default constructor. */
+  CMessageHandler();
+  /// Constructor with pointer to model
+  CMessageHandler(Clp_Simplex * model,
+			   FILE * userPointer=NULL);
+  /** Destructor */
+  virtual ~CMessageHandler();
+  //@}
+
+  /**@name Copy method */
+  //@{
+  /** The copy constructor. */
+  CMessageHandler(const CMessageHandler&);
+  /** The copy constructor from an CoinSimplexMessageHandler. */
+  CMessageHandler(const CoinMessageHandler&);
+  
+  CMessageHandler& operator=(const CMessageHandler&);
+  /// Clone
+  virtual CoinMessageHandler * clone() const ;
+  //@}
+   
+    
+protected:
+  /**@name Data members
+     The data members are protected to allow access for derived classes. */
+  //@{
+  /// Pointer back to model
+  Clp_Simplex * model_;
+  /// call back
+  clp_callback callback_;
+  //@}
+};
+
+
+//-------------------------------------------------------------------
+// Default Constructor 
+//-------------------------------------------------------------------
+CMessageHandler::CMessageHandler () 
+  : CoinMessageHandler(),
+    model_(NULL),
+    callback_(NULL)
+{
+}
+
+//-------------------------------------------------------------------
+// Copy constructor 
+//-------------------------------------------------------------------
+CMessageHandler::CMessageHandler (const CMessageHandler & rhs) 
+: CoinMessageHandler(rhs),
+    model_(rhs.model_),
+    callback_(rhs.callback_)
+{  
+}
+
+CMessageHandler::CMessageHandler (const CoinMessageHandler & rhs) 
+  : CoinMessageHandler(),
+    model_(NULL),
+    callback_(NULL)
+{  
+}
+
+// Constructor with pointer to model
+CMessageHandler::CMessageHandler(Clp_Simplex * model,
+               FILE * userPointer)
+  : CoinMessageHandler(),
+    model_(model),
+    callback_(NULL)
+{
+}
+
+//-------------------------------------------------------------------
+// Destructor 
+//-------------------------------------------------------------------
+CMessageHandler::~CMessageHandler ()
+{
+}
+
+//----------------------------------------------------------------
+// Assignment operator 
+//-------------------------------------------------------------------
+CMessageHandler &
+CMessageHandler::operator=(const CMessageHandler& rhs)
+{
+  if (this != &rhs) {
+    CoinMessageHandler::operator=(rhs);
+    model_ = rhs.model_;
+    callback_ = rhs.callback_;
+  }
+  return *this;
+}
+//-------------------------------------------------------------------
+// Clone
+//-------------------------------------------------------------------
+CoinMessageHandler * CMessageHandler::clone() const
+{
+  return new CMessageHandler(*this);
+}
+
+int 
+CMessageHandler::print()
+{
+  if (callback_) {
+    int messageNumber = currentMessage().externalNumber();
+    if (currentSource()!="Clp")
+      messageNumber += 1000000;
+    int i;
+    int nDouble=numberDoubleFields();
+    assert (nDouble<=10);
+    double vDouble[10];
+    for (i=0;i<nDouble;i++)
+      vDouble[i]=doubleValue(i);
+    int nInt=numberIntFields();
+    assert (nInt<=10);
+    int vInt[10];
+    for (i=0;i<nInt;i++)
+      vInt[i]=intValue(i);
+    int nString=numberStringFields();
+    assert (nString<=10);
+    char * vString[10];
+    for (i=0;i<nString;i++) {
+      std::string value = stringValue(i);
+      vString[i]=strdup(value.c_str());
+    }
+    callback_(model_,messageNumber,
+	      nDouble,vDouble,
+	      nInt,vInt,
+	      nString,vString);
+    for (i=0;i<nString;i++) 
+      free(vString[i]);
+    
+  }
+  return CoinMessageHandler::print();
+}
+const Clp_Simplex *
+CMessageHandler::model() const
+{
+  return model_;
+}
+void 
+CMessageHandler::setModel(Clp_Simplex * model)
+{
+  model_ = model;
+}
+// Call back
+void 
+CMessageHandler::setCallBack(clp_callback callback)
+{
+  callback_ = callback;
+}
+
 #include "Clp_C_Interface.h"
 #include <string>
 #include <stdio.h>
@@ -450,8 +620,12 @@ CLPLIBAPI void CLPLINKAGE
 Clp_registerCallBack(Clp_Simplex * model, 
 		     clp_callback userCallBack)
 {
+  // Will be copy of users one
   delete model->handler_;
-  //model->model_->;
+  model->handler_ = new CMessageHandler(*(model->model_->messageHandler()));
+  model->handler_->setCallBack(userCallBack);
+  model->handler_->setModel(model);
+  model->model_->passInMessageHandler(model->handler_);
 }
 /* Unset Callback function */
 CLPLIBAPI void CLPLINKAGE 

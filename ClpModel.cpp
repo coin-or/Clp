@@ -1054,6 +1054,7 @@ ClpModel::readMps(const char *fileName,
     }
   }
   CoinMpsIO m;
+  m.passInMessageHandler(handler_);
   bool savePrefix =m.messageHandler()->prefix();
   m.messageHandler()->setPrefix(handler_->prefix());
   double time1 = CoinCpuTime(),time2;

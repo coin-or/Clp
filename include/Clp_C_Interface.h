@@ -179,7 +179,8 @@ extern "C"{
   /*@}*/
   /**@name Message handling.  Call backs are handled by ONE function */
   /*@{*/
-  /** Pass in Callback function */
+  /** Pass in Callback function.
+   Message numbers up to 1000000 are Clp, Coin ones have 1000000 added */
   CLPLIBAPI void CLPLINKAGE Clp_registerCallBack(Clp_Simplex * model, 
 						   clp_callback userCallBack);
   /** Unset Callback function */
