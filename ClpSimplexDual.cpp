@@ -1064,15 +1064,16 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
 	  if (iRow<numberRows_) {
 #ifdef CLP_DEBUG
 	    std::cerr<<"Flagged variables at end - infeasible?"<<std::endl;
-	    printf("Probably infeasible - pivot was %g\n",alpha_);
+	    //printf("Probably infeasible - pivot was %g\n",alpha_);
 #endif
-	    if (fabs(alpha_)<1.0e-4) {
-	      problemStatus_=1;
-	    } else {
+	    //if (fabs(alpha_)<1.0e-4) {
+	    //problemStatus_=1;
+	    //} else {
 #ifdef CLP_DEBUG
-	      abort();
+	    abort();
 #endif
-	    }
+	    //}
+	    problemStatus_=-5;
 	  } else {
 	    problemStatus_=0;
 	  }

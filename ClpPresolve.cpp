@@ -1115,7 +1115,7 @@ void CoinPresolveMatrix::update_model(ClpSimplex * si,
 {
   si->loadProblem(ncols_, nrows_, mcstrt_, hrow_, colels_, hincol_,
 		 clo_, cup_, cost_, rlo_, rup_);
-  delete [] si->integerInformation();
+  //delete [] si->integerInformation();
   int numberIntegers=0;
   for (int i=0; i<ncols_; i++) {
     if (integerType_[i])
