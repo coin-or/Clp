@@ -3015,7 +3015,7 @@ ClpSimplex::tightenPrimalBounds(double factor)
 #include "ClpSimplexPrimal.hpp"
 int ClpSimplex::dual (int ifValuesPass )
 {
-  assert (ifValuesPass>=0&&ifValuesPass<2);
+  assert (ifValuesPass>=0&&ifValuesPass<3);
   int returnCode = ((ClpSimplexDual *) this)->dual(ifValuesPass);
   if (problemStatus_==10) {
     //printf("Cleaning up with primal\n");
@@ -3041,7 +3041,7 @@ int ClpSimplex::dual (int ifValuesPass )
 // primal 
 int ClpSimplex::primal (int ifValuesPass )
 {
-  assert (ifValuesPass>=0&&ifValuesPass<2);
+  assert (ifValuesPass>=0&&ifValuesPass<3);
   int returnCode = ((ClpSimplexPrimal *) this)->primal(ifValuesPass);
   if (problemStatus_==10) {
     //printf("Cleaning up with dual\n");
@@ -4577,7 +4577,7 @@ ClpSimplex::startup(int ifValuesPass)
     int numberThrownOut = -1;
     int totalNumberThrownOut=0;
     while(numberThrownOut) {
-      int status = internalFactorize(0+10*ifValuesPass);
+      int status = internalFactorize(ifValuesPass ? 10 : 0);
       if (status<0)
 	return 1; // some error
       else

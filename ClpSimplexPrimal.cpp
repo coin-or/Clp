@@ -376,7 +376,7 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
 	break;
       
       // test for maximum iterations
-      if (hitMaximumIterations()) {
+      if (hitMaximumIterations()||(ifValuesPass==2&&firstFree_<0)) {
 	problemStatus_=3;
 	break;
       }
@@ -593,61 +593,68 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
   }
   int saveThreshold = factorization_->sparseThreshold();
   int tentativeStatus = problemStatus_;
-  if (problemStatus_>-3||problemStatus_==-4) {
-    // factorize
-    // later on we will need to recover from singularities
-    // also we could skip if first time
-    // do weights
-    // This may save pivotRow_ for use 
-    if (doFactorization)
-    primalColumnPivot_->saveWeights(this,1);
-
-    if (type&&doFactorization) {
-      // is factorization okay?
-      int factorStatus = internalFactorize(1);
-      if (factorStatus) {
-	if (solveType_==2) {
-	  // say odd
-	  problemStatus_=5;
-	  return;
-	}
+  int numberThrownOut=1; // to loop round on bad factorization in values pass
+  while (numberThrownOut) {
+    if (problemStatus_>-3||problemStatus_==-4) {
+      // factorize
+      // later on we will need to recover from singularities
+      // also we could skip if first time
+      // do weights
+      // This may save pivotRow_ for use 
+      if (doFactorization)
+	primalColumnPivot_->saveWeights(this,1);
+      
+      if (type&&doFactorization) {
+	// is factorization okay?
+	int factorStatus = internalFactorize(1);
+	if (factorStatus) {
+	  if (solveType_==2) {
+	    // say odd
+	    problemStatus_=5;
+	    return;
+	  }
 #if 1
-	// switch off dense
-	int saveDense = factorization_->denseThreshold();
-	factorization_->setDenseThreshold(0);
-	internalFactorize(2);
-	factorization_->setDenseThreshold(saveDense);
-	// restore extra stuff
-	matrix_->generalExpanded(this,6,dummy);
+	  // switch off dense
+	  int saveDense = factorization_->denseThreshold();
+	  factorization_->setDenseThreshold(0);
+	  internalFactorize(2);
+	  factorization_->setDenseThreshold(saveDense);
+	  // restore extra stuff
+	  matrix_->generalExpanded(this,6,dummy);
 #else
-
-	// no - restore previous basis
-	assert (type==1);
-	memcpy(status_ ,saveStatus_,(numberColumns_+numberRows_)*sizeof(char));
-	memcpy(rowActivityWork_,savedSolution_+numberColumns_ ,
-	       numberRows_*sizeof(double));
-	memcpy(columnActivityWork_,savedSolution_ ,
-	       numberColumns_*sizeof(double));
-	// restore extra stuff
-	matrix_->generalExpanded(this,6,dummy);
-	matrix_->generalExpanded(this,5,dummy);
-	forceFactorization_=1; // a bit drastic but ..
-	type = 2;
-	assert (internalFactorize(1)==0);
+	  
+	  // no - restore previous basis
+	  assert (type==1);
+	  memcpy(status_ ,saveStatus_,(numberColumns_+numberRows_)*sizeof(char));
+	  memcpy(rowActivityWork_,savedSolution_+numberColumns_ ,
+		 numberRows_*sizeof(double));
+	  memcpy(columnActivityWork_,savedSolution_ ,
+		 numberColumns_*sizeof(double));
+	  // restore extra stuff
+	  matrix_->generalExpanded(this,6,dummy);
+	  matrix_->generalExpanded(this,5,dummy);
+	  forceFactorization_=1; // a bit drastic but ..
+	  type = 2;
+	  assert (internalFactorize(1)==0);
 #endif
-	changeMade_++; // say change made
+	  changeMade_++; // say change made
+	}
       }
+      if (problemStatus_!=-4)
+	problemStatus_=-3;
     }
-    if (problemStatus_!=-4)
-      problemStatus_=-3;
+    // at this stage status is -3 or -5 if looks unbounded
+    // get primal and dual solutions
+    // put back original costs and then check
+    createRim(4);
+    // May need to do more if column generation
+    matrix_->generalExpanded(this,9,dummy);
+    numberThrownOut=gutsOfSolution(NULL,NULL,(firstFree_>=0));
+    if (numberThrownOut) {
+      problemStatus_=tentativeStatus;
+      doFactorization=true;
+    }
   }
-  // at this stage status is -3 or -5 if looks unbounded
-  // get primal and dual solutions
-  // put back original costs and then check
-  createRim(4);
-  // May need to do more if column generation
-  matrix_->generalExpanded(this,9,dummy);
-  gutsOfSolution(NULL,NULL,(firstFree_>=0));
   // Double check reduced costs if no action
   if (progress->lastIterationNumber(0)==numberIterations_) {
     if (primalColumnPivot_->looksOptimal()) {

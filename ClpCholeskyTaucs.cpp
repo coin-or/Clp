@@ -1,4 +1,4 @@
-// Copyright (C) 2003, International Business Machines
+// Copyright (C) 2004, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
 
@@ -8,7 +8,7 @@
 #include "ClpHelperFunctions.hpp"
 
 #include "ClpInterior.hpp"
-#include "ClpCholeskyWssmp.hpp"
+#include "ClpCholeskyTaucs.hpp"
 #include "ClpMessage.hpp"
 
 //#############################################################################
@@ -18,32 +18,45 @@
 //-------------------------------------------------------------------
 // Default Constructor 
 //-------------------------------------------------------------------
-ClpCholeskyWssmp::ClpCholeskyWssmp () 
+ClpCholeskyTaucs::ClpCholeskyTaucs () 
   : ClpCholeskyBase(),
+    matrix_(NULL),
+    factorization_(NULL),
     sparseFactor_(NULL),
     choleskyStart_(NULL),
     choleskyRow_(NULL),
     sizeFactor_(0),
     rowCopy_(NULL)
 {
-  type_=12;
-  memset(integerParameters_,0,64*sizeof(int));
-  memset(doubleParameters_,0,64*sizeof(double));
+  type_=13;
 }
 
 //-------------------------------------------------------------------
 // Copy constructor 
 //-------------------------------------------------------------------
-ClpCholeskyWssmp::ClpCholeskyWssmp (const ClpCholeskyWssmp & rhs) 
+ClpCholeskyTaucs::ClpCholeskyTaucs (const ClpCholeskyTaucs & rhs) 
 : ClpCholeskyBase(rhs)
 {
   type_=rhs.type_;
-  sparseFactor_ = ClpCopyOfArray(rhs.sparseFactor_,rhs.sizeFactor_);
-  choleskyStart_ = ClpCopyOfArray(rhs.choleskyStart_,numberRows_+1);
-  choleskyRow_ = ClpCopyOfArray(rhs.choleskyRow_,rhs.sizeFactor_);
+  // For Taucs stuff is done by malloc
+  matrix_ = rhs.matrix_;
   sizeFactor_=rhs.sizeFactor_;
-  memcpy(integerParameters_,rhs.integerParameters_,64*sizeof(int));
-  memcpy(doubleParameters_,rhs.doubleParameters_,64*sizeof(double));
+  if (matrix_) {
+    choleskyStart_ = (int *) malloc((numberRows_+1)*sizeof(int));
+    memcpy(choleskyStart_,rhs.choleskyStart_,(numberRows_+1)*sizeof(int));
+    choleskyRow_ = (int *) malloc(sizeFactor_*sizeof(int));
+    memcpy(choleskyRow_,rhs.choleskyRow_,sizeFactor_*sizeof(int));
+    sparseFactor_ = (double *) malloc(sizeFactor_*sizeof(double));
+    memcpy(sparseFactor_,rhs.sparseFactor_,sizeFactor_*sizeof(double));
+    matrix_->colptr = choleskyStart_;
+    matrix_->rowind = choleskyRow_;
+    matrix_->values.d = sparseFactor_;
+  } else {
+    sparseFactor_=NULL;
+    choleskyStart_=NULL;
+    choleskyRow_=NULL;
+  }
+  factorization_=NULL,
   rowCopy_ = rhs.rowCopy_->clone();
 }
 
@@ -51,29 +64,43 @@ ClpCholeskyWssmp::ClpCholeskyWssmp (const ClpCholeskyWssmp & rhs)
 //-------------------------------------------------------------------
 // Destructor 
 //-------------------------------------------------------------------
-ClpCholeskyWssmp::~ClpCholeskyWssmp ()
+ClpCholeskyTaucs::~ClpCholeskyTaucs ()
 {
-  delete [] sparseFactor_;
-  delete [] choleskyStart_;
-  delete [] choleskyRow_;
+  taucs_ccs_free(matrix_);
+  if (factorization_)
+    taucs_supernodal_factor_free(factorization_);
   delete rowCopy_;
 }
 
 //----------------------------------------------------------------
 // Assignment operator 
 //-------------------------------------------------------------------
-ClpCholeskyWssmp &
-ClpCholeskyWssmp::operator=(const ClpCholeskyWssmp& rhs)
+ClpCholeskyTaucs &
+ClpCholeskyTaucs::operator=(const ClpCholeskyTaucs& rhs)
 {
   if (this != &rhs) {
     ClpCholeskyBase::operator=(rhs);
-    delete [] sparseFactor_;
-    delete [] choleskyStart_;
-    delete [] choleskyRow_;
-    sparseFactor_ = ClpCopyOfArray(rhs.sparseFactor_,rhs.sizeFactor_);
-    choleskyStart_ = ClpCopyOfArray(rhs.choleskyStart_,numberRows_+1);
-    choleskyRow_ = ClpCopyOfArray(rhs.choleskyRow_,rhs.sizeFactor_);
+    taucs_ccs_free(matrix_);
+    if (factorization_)
+      taucs_supernodal_factor_free(factorization_);
+    factorization_=NULL;
     sizeFactor_=rhs.sizeFactor_;
+    matrix_ = rhs.matrix_;
+    if (matrix_) {
+      choleskyStart_ = (int *) malloc((numberRows_+1)*sizeof(int));
+      memcpy(choleskyStart_,rhs.choleskyStart_,(numberRows_+1)*sizeof(int));
+      choleskyRow_ = (int *) malloc(sizeFactor_*sizeof(int));
+      memcpy(choleskyRow_,rhs.choleskyRow_,sizeFactor_*sizeof(int));
+      sparseFactor_ = (double *) malloc(sizeFactor_*sizeof(double));
+      memcpy(sparseFactor_,rhs.sparseFactor_,sizeFactor_*sizeof(double));
+      matrix_->colptr = choleskyStart_;
+      matrix_->rowind = choleskyRow_;
+      matrix_->values.d = sparseFactor_;
+    } else {
+      sparseFactor_=NULL;
+      choleskyStart_=NULL;
+      choleskyRow_=NULL;
+    }
     delete rowCopy_;
     rowCopy_ = rhs.rowCopy_->clone();
   }
@@ -82,60 +109,13 @@ ClpCholeskyWssmp::operator=(const ClpCholeskyWssmp& rhs)
 //-------------------------------------------------------------------
 // Clone
 //-------------------------------------------------------------------
-ClpCholeskyBase * ClpCholeskyWssmp::clone() const
+ClpCholeskyBase * ClpCholeskyTaucs::clone() const
 {
-  return new ClpCholeskyWssmp(*this);
+  return new ClpCholeskyTaucs(*this);
 }
-// At present I can't get wssmp to work as my libraries seem to be out of sync
-// so I have linked in ekkwssmp which is an older version
-#if 0
-  extern "C" void wssmp(int * n,
-                        int * columnStart , int * rowIndex , double * element,
-                        double * diagonal , int * perm , int * invp ,
-                        double * rhs , int * ldb , int * nrhs ,
-                        double * aux , int * naux ,
-                        int   * mrp , int * iparm , double * dparm);
-#else
-/* minimum needed for user */
-typedef struct EKKModel EKKModel;
-typedef struct EKKContext EKKContext;
-
-
-extern "C"{
-   EKKContext *  ekk_initializeContext();
-   void ekk_endContext(EKKContext * context);
-   EKKModel *  ekk_newModel(EKKContext * env,const char * name);
-   int ekk_deleteModel(EKKModel * model);
-}
-static  EKKModel * model=NULL;
-static  EKKContext * context=NULL;
-extern "C" void ekkwssmp(EKKModel *, int * n,
-			 int * columnStart , int * rowIndex , double * element,
-			 double * diagonal , int * perm , int * invp ,
-			 double * rhs , int * ldb , int * nrhs ,
-			 double * aux , int * naux ,
-			 int   * mrp , int * iparm , double * dparm);
-static void wssmp( int *n, int *ia, int *ja,
-		   double *avals, double *diag, int *perm, int *invp,
-		   double *b, int *ldb, int *nrhs, double *aux, int *
-		   naux, int *mrp, int *iparm, double *dparm)
-{
-  if (!context) {
-    /* initialize OSL environment */
-    context=ekk_initializeContext();
-    model=ekk_newModel(context,"");
-  }
-  ekkwssmp(model,n, ia, ja,
-	   avals, diag, perm, invp,
-	   b, ldb, nrhs, aux, 
-	   naux, mrp, iparm, dparm);
-  //ekk_deleteModel(model);
-  //ekk_endContext(context);
-}
-#endif
 /* Orders rows and saves pointer to matrix.and model */
 int 
-ClpCholeskyWssmp::order(ClpInterior * model) 
+ClpCholeskyTaucs::order(ClpInterior * model) 
 {
   numberRows_ = model->numberRows();
   rowsDropped_ = new char [numberRows_];
@@ -143,8 +123,6 @@ ClpCholeskyWssmp::order(ClpInterior * model)
   numberRowsDropped_=0;
   model_=model;
   rowCopy_ = model->clpMatrix()->reverseOrderedCopy();
-  // Space for starts
-  choleskyStart_ = new CoinBigIndex[numberRows_+1];
   const CoinBigIndex * columnStart = model_->clpMatrix()->getVectorStarts();
   const int * columnLength = model_->clpMatrix()->getVectorLengths();
   const int * row = model_->clpMatrix()->getIndices();
@@ -187,8 +165,12 @@ ClpCholeskyWssmp::order(ClpInterior * model)
   }
   delete [] which;
   // Now we have size - create arrays and fill in
-  choleskyRow_ = new int [sizeFactor_];
-  sparseFactor_ = new double[sizeFactor_];
+  matrix_ = taucs_ccs_create(numberRows_,numberRows_,sizeFactor_,
+			     TAUCS_DOUBLE|TAUCS_SYMMETRIC|TAUCS_LOWER); 
+  // Space for starts
+  choleskyStart_ = matrix_->colptr;
+  choleskyRow_ = matrix_->rowind;
+  sparseFactor_ = matrix_->values.d;
   sizeFactor_=0;
   which = choleskyRow_;
   for (iRow=0;iRow<numberRows_;iRow++) {
@@ -228,48 +210,23 @@ ClpCholeskyWssmp::order(ClpInterior * model)
   delete [] used;
   permuteIn_ = new int [numberRows_];
   permuteOut_ = new int[numberRows_];
-  integerParameters_[0]=0;
-  int i0=0;
-  int i1=1;
-  wssmp(&numberRows_,choleskyStart_,choleskyRow_,sparseFactor_,
-         NULL,permuteOut_,permuteIn_,0,&numberRows_,&i1,
-         NULL,&i0,NULL,integerParameters_,doubleParameters_);
-  integerParameters_[1]=1;//order and symbolic
-  integerParameters_[2]=2;
-  integerParameters_[3]=0;//CSR
-  integerParameters_[4]=0;//C style
-  integerParameters_[13]=1;//reuse initial factorization space
-  integerParameters_[15+0]=1;//ordering
-  integerParameters_[15+1]=0;
-  integerParameters_[15+2]=1;
-  integerParameters_[15+3]=0;
-  integerParameters_[15+4]=1;
-  doubleParameters_[10]=1.0e-20;
-  doubleParameters_[11]=1.0e-15;
-  wssmp(&numberRows_,choleskyStart_,choleskyRow_,sparseFactor_,
-         NULL,permuteOut_,permuteIn_,NULL,&numberRows_,&i1,
-         NULL,&i0,NULL,integerParameters_,doubleParameters_);
-  //std::cout<<"Ordering and symbolic factorization took "<<doubleParameters_[0]<<std::endl;
-  if (integerParameters_[63]) {
-    std::cout<<"wssmp returning error code of "<<integerParameters_[63]<<std::endl;
-    abort();
-  }
-  std::cout<<integerParameters_[23]<<" elements in sparse Cholesky"<<std::endl;
-  if (!integerParameters_[23]) {
-    std::cout<<"wssmp says no elements - fully dense? - switching to dense"<<std::endl;
-    integerParameters_[1]=2;
-    integerParameters_[2]=2;
-    integerParameters_[7]=1; // no permute
-    wssmp(&numberRows_,choleskyStart_,choleskyRow_,sparseFactor_,
-	  NULL,permuteOut_,permuteIn_,NULL,&numberRows_,&i1,
-	  NULL,&i0,NULL,integerParameters_,doubleParameters_);
-    std::cout<<integerParameters_[23]<<" elements in dense Cholesky"<<std::endl;
-  }
+  int * perm, *invp;
+  //taucs_ccs_order(matrix_,&perm,&invp,"identity");
+  taucs_ccs_order(matrix_,&perm,&invp,"genmmd");
+  memcpy(permuteIn_,perm,numberRows_*sizeof(int));
+  free(perm);
+  memcpy(permuteOut_,invp,numberRows_*sizeof(int));
+  free(invp);
+  // need to permute
+  taucs_ccs_matrix * permuted = taucs_ccs_permute_symmetrically(matrix_,permuteIn_,permuteOut_);
+  // symbolic
+  factorization_ = taucs_ccs_factor_llt_symbolic(permuted);
+  taucs_ccs_free(permuted);
   return 0;
 }
 /* Factorize - filling in rowsDropped and returning number dropped */
 int 
-ClpCholeskyWssmp::factorize(const double * diagonal, int * rowsDropped) 
+ClpCholeskyTaucs::factorize(const double * diagonal, int * rowsDropped) 
 {
   const CoinBigIndex * columnStart = model_->clpMatrix()->getVectorStarts();
   const int * columnLength = model_->clpMatrix()->getVectorLengths();
@@ -286,7 +243,6 @@ ClpCholeskyWssmp::factorize(const double * diagonal, int * rowsDropped)
   const double * diagonalSlack = diagonal + numberColumns;
   int newDropped=0;
   double largest;
-  double smallest;
   //perturbation
   double perturbation=model_->diagonalPerturbation()*model_->diagonalNorm();
   perturbation=perturbation*perturbation;
@@ -354,36 +310,24 @@ ClpCholeskyWssmp::factorize(const double * diagonal, int * rowsDropped)
 	numberDroppedBefore++;
       } 
     } 
-  } 
-  int i1=1;
-  int i0=0;
-  integerParameters_[1]=3;
-  integerParameters_[2]=3;
-  integerParameters_[10]=2;
-  //integerParameters_[11]=1;
-  integerParameters_[12]=2;
-  wssmp(&numberRows_,choleskyStart_,choleskyRow_,sparseFactor_,
-	NULL,permuteOut_,permuteIn_,NULL,&numberRows_,&i1,
-	NULL,&i0,rowsDropped,integerParameters_,doubleParameters_);
-  //    NULL,&i0,(int *) diagonal,integerParameters_,doubleParameters_);
-  //std::cout<<"factorization took "<<doubleParameters_[0]<<std::endl;
-  if (integerParameters_[9]) {
-    std::cout<<"scaling applied"<<std::endl;
-  } 
-  newDropped=integerParameters_[20]+numberDroppedBefore;
-  if (integerParameters_[20]) 
-    std::cout<<integerParameters_[20]<<" rows dropped"<<std::endl;
-  largest=doubleParameters_[3];
-  smallest=doubleParameters_[4];
+  }
+  taucs_supernodal_factor_free_numeric(factorization_);
+  // need to permute
+  taucs_ccs_matrix * permuted = taucs_ccs_permute_symmetrically(matrix_,permuteIn_,permuteOut_);
+  int rCode=taucs_ccs_factor_llt_numeric(permuted,factorization_);
+  taucs_ccs_free(permuted);
+  if (rCode)
+    printf("return code of %d from factor\n",rCode);
   delete [] work;
-  if (model_->messageHandler()->logLevel()>1) 
-    std::cout<<"Cholesky - largest "<<largest<<" smallest "<<smallest<<std::endl;
-  choleskyCondition_=largest/smallest;
+  choleskyCondition_=1.0;
   bool cleanCholesky;
   if (model_->numberIterations()<200) 
     cleanCholesky=true;
   else 
     cleanCholesky=false;
+  /*
+    How do I find out where 1.0e100's are in cholesky?
+  */
   if (cleanCholesky) {
     //drop fresh makes some formADAT easier
     int oldDropped=numberRowsDropped_;
@@ -436,24 +380,15 @@ ClpCholeskyWssmp::factorize(const double * diagonal, int * rowsDropped)
 }
 /* Uses factorization to solve. */
 void 
-ClpCholeskyWssmp::solve (double * region) 
+ClpCholeskyTaucs::solve (double * region) 
 {
-  int i1=1;
-  int i0=0;
-  integerParameters_[1]=4;
-  integerParameters_[2]=4;
-#if 0
-  integerParameters_[5]=3;
-  doubleParameters_[5]=1.0e-10;
-  integerParameters_[6]=6;
-#endif
-  wssmp(&numberRows_,choleskyStart_,choleskyRow_,sparseFactor_,
-       NULL,permuteOut_,permuteIn_,region,&numberRows_,&i1,
-       NULL,&i0,NULL,integerParameters_,doubleParameters_);
-#if 0
-  if (integerParameters_[5]) {
-    std::cout<<integerParameters_[5]<<" refinements ";
-  } 
-  std::cout<<doubleParameters_[6]<<std::endl;
-#endif
+  double * in = new double[numberRows_];
+  double * out = new double[numberRows_];
+  taucs_vec_permute(numberRows_,TAUCS_DOUBLE,region,in,permuteIn_);
+  int rCode=taucs_supernodal_solve_llt(factorization_,out,in);
+  if (rCode)
+    printf("return code of %d from solve\n",rCode);
+  taucs_vec_permute(numberRows_,TAUCS_DOUBLE,out,region,permuteOut_);
+  delete [] out;
+  delete [] in;
 }

@@ -105,7 +105,6 @@
 #include <stdio.h>
 #include <iostream>
 //#define CLP_DEBUG 1
-#define CHECK_DJ
 // dual 
 int ClpSimplexDual::dual (int ifValuesPass )
 {
@@ -241,6 +240,22 @@ int ClpSimplexDual::dual (int ifValuesPass )
       }
       ClpDisjointCopyN(objectiveWork_,numberColumns_,saveDuals);
       transposeTimes(-1.0,dual_,saveDuals);
+      // make reduced costs okay
+      for (i=0;i<numberColumns_;i++) {
+	if (getStatus(i)==atLowerBound) {
+	  if (saveDuals[i]<0.0) {
+	    if (saveDuals[i]<-1.0e-3)
+	      printf("bad dj at lb %d %g\n",i,saveDuals[i]);
+	    saveDuals[i]=0.0;
+	  }
+	} else if (getStatus(i)==atUpperBound) {
+	  if (saveDuals[i]>0.0) {
+	    if (saveDuals[i]>1.0e-3)
+	      printf("bad dj at ub %d %g\n",i,saveDuals[i]);
+	    saveDuals[i]=0.0;
+	  }
+	}
+      }
       memcpy(dj_,saveDuals,(numberColumns_+numberRows_)*sizeof(double));
       // set up possible ones
       for (i=0;i<numberRows_+numberColumns_;i++)
@@ -353,7 +368,7 @@ int ClpSimplexDual::dual (int ifValuesPass )
 	break;
       
       // test for maximum iterations
-      if (hitMaximumIterations()) {
+      if (hitMaximumIterations()||(ifValuesPass==2&&!saveDuals)) {
 	problemStatus_=3;
 	break;
       }
@@ -774,9 +789,6 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
 	  factorization_->updateColumn(rowArray_[3],rowArray_[2]);
 	  dualRowPivot_->updatePrimalSolution(rowArray_[2],
 					      1.0,objectiveChange);
-#ifdef CLP_DEBUG
-	  double saveDualOut = dualOut_;
-#endif
 	  // recompute dualOut_
 	  valueOut_ = solution_[sequenceOut_];
 	  if (directionOut_<0) {
@@ -2482,6 +2494,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 		     <numberDualInfeasibilities_)
 		       <<numberDualInfeasibilitiesWithoutFree_;
   handler_->message()<<CoinMessageEol;
+  double saveTolerance =dualTolerance_;
 
   // dual bound coming in
   //double saveDualBound = dualBound_;
@@ -2507,7 +2520,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
     if (dualFeasible()||problemStatus_==-4) {
       progress->modifyObjective(objectiveValue_
 			       -sumDualInfeasibilities_*dualBound_);
-      if (primalFeasible()) {
+      if (primalFeasible()&&!givenDuals) {
 	normalType=false;
 	// may be optimal - or may be bounds are wrong
 	handler_->message(CLP_DUAL_BOUNDS,messages_)
@@ -2758,8 +2771,11 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	memcpy(xdj,dj_,(numberRows_+numberColumns_)*sizeof(double));
 	memcpy(xsolution,solution_,(numberRows_+numberColumns_)*sizeof(double));
 #endif
+	if (givenDuals)
+	  dualTolerance_=1.0e50;
 	updateDualsInDual(rowArray_[0],columnArray_[0],rowArray_[1],
 	  0.0,objectiveChange,true);
+	dualTolerance_=saveTolerance;
 #if 0
 	int i;
 	for (i=0;i<numberRows_+numberColumns_;i++) {
@@ -2787,8 +2803,11 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 #endif
 	// for now - recompute all
 	gutsOfSolution(NULL,NULL);
+	if (givenDuals)
+	  dualTolerance_=1.0e50;
 	updateDualsInDual(rowArray_[0],columnArray_[0],rowArray_[1],
-		  0.0,objectiveChange,true);
+	  0.0,objectiveChange,true);
+	dualTolerance_=saveTolerance;
 	//assert(numberDualInfeasibilitiesWithoutFree_==0);
 
 	if (numberDualInfeasibilities_||situationChanged==2) 
@@ -3875,7 +3894,7 @@ ClpSimplexDual::checkPossibleValuesMove(CoinIndexedVector * rowArray,
 
       switch(getStatus(iSequence2)) {
 	  
-      case basic:
+      case basic: 
 	break;
       case ClpSimplex::isFixed:
 	alpha = work[i];
@@ -3966,9 +3985,11 @@ ClpSimplexDual::checkPossibleValuesMove(CoinIndexedVector * rowArray,
     }
   }
   // choose
+  sequenceIn_=-1;
   if (changeDown>changeUp&&sequenceDown>=0) {
     theta_ = thetaDown;
-    sequenceIn_ = sequenceDown;
+    if (fabs(changeDown)<1.0e30)
+      sequenceIn_ = sequenceDown;
     alpha_ = alphaDown;
 #ifdef CLP_DEBUG
     if ((handler_->logLevel()&32))
@@ -3978,7 +3999,8 @@ ClpSimplexDual::checkPossibleValuesMove(CoinIndexedVector * rowArray,
     returnCode = 0;
   } else {
     theta_ = thetaUp;
-    sequenceIn_ = sequenceUp;
+    if (fabs(changeUp)<1.0e30)
+      sequenceIn_ = sequenceUp;
     alpha_ = alphaUp;
     if (sequenceIn_!=sequenceOut_) {
 #ifdef CLP_DEBUG
@@ -3994,6 +4016,22 @@ ClpSimplexDual::checkPossibleValuesMove(CoinIndexedVector * rowArray,
 	       directionOut_,changeDown,changeUp,theta_);
 #endif
       returnCode = 1;
+    }
+  }
+  if (sequenceIn_>=0) {
+    lowerIn_ = lower_[sequenceIn_];
+    upperIn_ = upper_[sequenceIn_];
+    valueIn_ = solution_[sequenceIn_];
+    dualIn_ = dj_[sequenceIn_];
+
+    if (alpha_<0.0) {
+      // as if from upper bound
+      directionIn_=-1;
+      upperIn_=valueIn_;
+    } else {
+      // as if from lower bound
+      directionIn_=1;
+      lowerIn_=valueIn_;
     }
   }
   return returnCode;

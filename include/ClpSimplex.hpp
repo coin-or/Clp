@@ -160,9 +160,11 @@ public:
   int initialDualSolve();
   /// Primal initial solve
   int initialPrimalSolve();
-  /** Dual algorithm - see ClpSimplexDual.hpp for method */
+  /** Dual algorithm - see ClpSimplexDual.hpp for method.
+      ifValuesPass==2 just does values pass and then stops */
   int dual(int ifValuesPass=0);
-  /** Primal algorithm - see ClpSimplexPrimal.hpp for method */
+  /** Primal algorithm - see ClpSimplexPrimal.hpp for method.
+      ifValuesPass==2 just does values pass and then stops */
   int primal(int ifValuesPass=0);
   /** Solves quadratic problem using SLP - may be used as crash
       for other algorithms when number of iterations small.

@@ -354,10 +354,12 @@ int ClpPredictorCorrector::solve ( )
           } else {
             //std::cout<<" bad by any standards"<<std::endl;
           } 
+	  //printf("product %g mu %g\n",product,mu_);
           if (complementarityGap_*(beta2-tau)+product-mu_*numberComplementarityPairs_<0.0) {
             doCorrector=false;
             double floatNumber = numberComplementarityPairs_;
-            mu_=complementarityGap_/(floatNumber*floatNumber);
+	    if (product>0.0)
+	      mu_=complementarityGap_/(floatNumber*floatNumber);
             //? if small we should be stopping
             //if (mu_<1.0e-4/(numberComplementarityPairs_*numberComplementarityPairs_)) {
 	    //mu_=1.0e-4/(totalVariables*totalVariables);
@@ -1077,7 +1079,7 @@ void ClpPredictorCorrector::createSolution()
   handler_->message(CLP_BARRIER_SAFE,messages_)
     <<initialValue<<objectiveNorm_
     <<CoinMessageEol;
-  long strategy=1;
+  int strategy=0;
   double extra=1.0e-10;
   double largeGap=1.0e15;
   double safeObjectiveValue=2.0*objectiveNorm_;
