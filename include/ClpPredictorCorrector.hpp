@@ -66,7 +66,7 @@ public:
   bool checkGoodMove2(const double move,double & bestNextGap);
   /// updateSolution.  Updates solution at end of iteration
   //returns number fixed
-  int updateSolution();
+  int updateSolution(double nextGap);
   ///  Save info on products of affine deltaT*deltaW and deltaS*deltaZ
   double affineProduct();
   //@}

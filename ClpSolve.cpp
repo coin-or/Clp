@@ -16,7 +16,7 @@
 #include "ClpInterior.hpp"
 #ifdef REAL_BARRIER
 #include "ClpCholeskyWssmp.hpp"
-//#include "ClpCholeskyWssmpKKT.hpp"
+#include "ClpCholeskyWssmpKKT.hpp"
 //#include "ClpCholeskyTaucs.hpp"
 #endif
 #include "ClpSolve.hpp"
@@ -899,12 +899,10 @@ ClpSimplex::initialSolve(ClpSolve & options)
     // uncomment this if you have Anshul Gupta's wsmp package
     ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp(max(100,model2->numberRows()/10));
     //ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp();
-    barrier.setCholesky(cholesky);
     //ClpCholeskyWssmpKKT * cholesky = new ClpCholeskyWssmpKKT(max(100,model2->numberRows()/10));
-    //barrier.setCholesky(cholesky);
     // uncomment this if you have Sivan Toledo's Taucs package
     //ClpCholeskyTaucs * cholesky = new ClpCholeskyTaucs();
-    //barrier.setCholesky(cholesky);
+    barrier.setCholesky(cholesky);
 #endif
     //#define SAVEIT 2
 #ifndef SAVEIT

@@ -5,7 +5,7 @@
    Implements crude primal dual predictor corrector algorithm
 
  */
-#define SOME_DEBUG
+//#define SOME_DEBUG
 
 #include "CoinPragma.hpp"
 #include <math.h>
@@ -87,6 +87,7 @@ int ClpPredictorCorrector::solve ( )
     }
     return -1;
   }
+  // Could try centering steps without any original step i.e. just center
   //firstFactorization(false);
   CoinZeroN(dual_,numberRows_);
   multiplyAdd(solution_+numberColumns_,numberRows_,-1.0,errorRegion_,0.0);
@@ -102,7 +103,7 @@ int ClpPredictorCorrector::solve ( )
   //bool hadGoodSolution=false;
   diagonalNorm_=solutionNorm_;
   mu_=solutionNorm_;
-  int numberFixed=updateSolution();
+  int numberFixed=updateSolution(-COIN_DBL_MAX);
   int numberFixedTotal=numberFixed;
   //int numberRows_DroppedBefore=0;
   //double extra=eExtra;
@@ -243,19 +244,27 @@ int ClpPredictorCorrector::solve ( )
 	  <<saveIteration
 	  <<CoinMessageEol;
         break;
-      } else {
-        //lastComplementarityGap=complementarityGap_;
+      } else if (numberIterations_-lastGoodIteration>=5&&
+		 complementarityGap_<1.0e-6) {
+	break; // not doing very well - give up
       } 
     } else if (complementarityGap_<goodGapChange*lastComplementarityGap) {
       lastGoodIteration=numberIterations_;
       lastComplementarityGap=complementarityGap_;
-    } else if (numberIterations_-lastGoodIteration>=5&&complementarityGap_<1.0e-3) {
+    } else if (numberIterations_-lastGoodIteration>=5&&
+	       complementarityGap_<1.0e-3) {
       handler_->message(CLP_BARRIER_COMPLEMENTARITY,messages_)
 	<<complementarityGap_<<"not decreasing"
 	<<CoinMessageEol;
       if (gapO>0.75*lastGood) {
         break;
       } 
+    } else if (numberIterations_-lastGoodIteration>=2&&
+	       complementarityGap_<1.0e-6) {
+      handler_->message(CLP_BARRIER_COMPLEMENTARITY,messages_)
+	<<complementarityGap_<<"not decreasing"
+	<<CoinMessageEol;
+      break;
     } 
     if (numberIterations_>maximumBarrierIterations_) {
       handler_->message(CLP_BARRIER_STOPPING,messages_)
@@ -373,10 +382,11 @@ int ClpPredictorCorrector::solve ( )
     double bestNextGap=nextGap;
     // ?
     bestNextGap=max(nextGap,0.8*complementarityGap_);
-    bestNextGap=max(nextGap,0.9*complementarityGap_);
+    bestNextGap=max(nextGap,0.99*complementarityGap_);
     if (complementarityGap_>1.0e-4*numberComplementarityPairs_) {
       //std::cout <<"predicted duality gap "<<nextGap<<std::endl;
       double part1=nextGap/numberComplementarityPairs_;
+      part1=nextGap/numberComplementarityItems_;
       double part2=nextGap/complementarityGap_;
       mu_=part1*part2*part2;
 #if 0
@@ -404,6 +414,7 @@ int ClpPredictorCorrector::solve ( )
     double product=affineProduct();
     //#define ALWAYS
 #ifndef ALWAYS
+#if 0
     //can we do corrector step?
     double xx= complementarityGap_*(beta2-tau) +product;
     if (xx>0.0) {
@@ -430,10 +441,11 @@ int ClpPredictorCorrector::solve ( )
 	<<CoinMessageEol;
     } else {
       //std::cout<<" bad by any standards"<<std::endl;
-    } 
+    }
+#endif 
     if (complementarityGap_*(beta2-tau)+product-mu_*numberComplementarityPairs_<0.0) {
 #ifdef SOME_DEBUG
-      printf("failed 1 product %g mu %g - %g < 0.0, nextGap %g\n",product,mu_,
+      printf("failed 1 product %.18g mu %.18g - %.18g < 0.0, nextGap %.18g\n",product,mu_,
 	     complementarityGap_*(beta2-tau)+product-mu_*numberComplementarityPairs_,
 	     nextGap);
 #endif
@@ -481,7 +493,6 @@ int ClpPredictorCorrector::solve ( )
       } 
       if (goodMove) {
 	findStepLength(phase);
-	// just for debug
 	nextGap = complementarityGap(nextNumber,nextNumberItems,1);
 #ifndef ALWAYS
 	if (numberIterations_>=-77) {
@@ -511,8 +522,8 @@ int ClpPredictorCorrector::solve ( )
 		} 
 	      }
 	      mu_=complementarityGap_/phi;
-	      printf("pd mu %g, alternate %g, smallest %g\n",
-		     mu_,mu1,smallestPrimalDualMu);
+	      //printf("pd mu %g, alternate %g, smallest %g\n",
+	      //     mu_,mu1,smallestPrimalDualMu);
 	      mu_ = sqrt(mu_*mu1);
 	      mu_=mu1*0.8;
 	      setupForSolve(phase);
@@ -535,6 +546,7 @@ int ClpPredictorCorrector::solve ( )
       double floatNumber;
       floatNumber = 2.5*numberComplementarityPairs_;
       //floatNumber = 1.5*numberComplementarityItems_;
+      double saveMu=mu_; // use one from predictor corrector
       mu_=complementarityGap_/floatNumber;
       double mu1=mu_;
       double phi;
@@ -551,6 +563,7 @@ int ClpPredictorCorrector::solve ( )
       //     mu_,mu1,smallestPrimalDualMu);
       mu_ = sqrt(mu_*mu1);
       mu_=mu1;
+      mu_=saveMu;
       mu_=min(smallestPrimalDualMu*0.95,mu_);
       smallestPrimalDualMu = mu_;
       //set up for next step
@@ -576,6 +589,7 @@ int ClpPredictorCorrector::solve ( )
     if (!goodMove)
       mu_=nextGap / ((double) 1.1*nextNumber);
     goodMove=true;
+    //goodMove=false; //TEMP
     // Do centering steps
     int numberTries=0;
     double nextCenterGap=0.0;
@@ -612,7 +626,7 @@ int ClpPredictorCorrector::solve ( )
       if (actualPrimalStep_<=checkPrimal||
 	  actualDualStep_<=checkDual) {
 #ifdef SOME_DEBUG
-	printf("PP rejected gap %g, steps %g %g, 2 gap %g, steps %g %g\n",xGap,
+	printf("PP rejected gap %.18g, steps %.18g %.18g, 2 gap %.18g, steps %.18g %.18g\n",xGap,
 	       actualPrimalStep_,actualDualStep_,nextGap,savePrimalStep,saveDualStep);
 #endif
 	mu_=saveMu;
@@ -624,11 +638,12 @@ int ClpPredictorCorrector::solve ( )
 	memcpy(deltaT_,saveT,numberTotal*sizeof(double));
       } else {
 #ifdef SOME_DEBUG
-	printf("PPphase 3 gap %g, steps %g %g, 2 gap %g, steps %g %g\n",xGap,
+	printf("PPphase 3 gap %.18g, steps %.18g %.18g, 2 gap %.18g, steps %.18g %.18g\n",xGap,
 	       actualPrimalStep_,actualDualStep_,nextGap,savePrimalStep,saveDualStep);
 #endif
 	numberGoodTries++;
 	nextCenterGap=xGap;
+	nextGap = xGap;
 	// See if big enough change
 	if (actualPrimalStep_<1.01*checkPrimal||
 	    actualDualStep_<1.01*checkDual) {
@@ -640,13 +655,13 @@ int ClpPredictorCorrector::solve ( )
       }
     }
     if (numberGoodTries&&handler_->logLevel()>1) {
-      printf("%d centering steps moved from (gap %g, dual %g, primal %g) to (gap %g, dual %g, primal %g)\n",
+      printf("%d centering steps moved from (gap %.18g, dual %.18g, primal %.18g) to (gap %.18g, dual %.18g, primal %.18g)\n",
 	     numberGoodTries,nextGap,originalDualStep,originalPrimalStep,
 	     nextCenterGap, actualDualStep_,actualPrimalStep_);
     }
     // save last gap
     checkGap = complementarityGap_;
-    numberFixed=updateSolution();
+    numberFixed=updateSolution(nextGap);
     numberFixedTotal+=numberFixed;
   } /* endwhile */
   delete [] saveX;
@@ -775,8 +790,8 @@ double ClpPredictorCorrector::findStepLength( int phase)
     } 
   }
 #ifdef SOME_DEBUG
-  printf("new step - phase %d, norm %g, dual step %g, primal step %g\n",
-	 phase,directionNorm,maximumPrimalStep,maximumDualStep);
+  printf("new step - phase %d, norm %.18g, dual step %.18g, primal step %.18g\n",
+	 phase,directionNorm,maximumDualStep,maximumPrimalStep);
 #endif
   actualPrimalStep_=stepLength_*maximumPrimalStep;
   if (phase>=0&&actualPrimalStep_>1.0) {
@@ -867,6 +882,9 @@ double ClpPredictorCorrector::findStepLength( int phase)
 	    nBL++;
 	  else if (gapProduct>maxBeta)
 	    nAL++;
+	  //if (gapProduct<0.1*minBeta)
+	  //printf("Lsmall one %d dual %g primal %g\n",iColumn,
+	  //   dualValue,primalValue);
 	}  
 	if (upperBound(iColumn)) {
 	  double change = rhsU_[iColumn]-deltaX_[iColumn];
@@ -877,13 +895,16 @@ double ClpPredictorCorrector::findStepLength( int phase)
 	    nBU++;
 	  else if (gapProduct>maxBeta)
 	    nAU++;
+	  //if (gapProduct<0.1*minBeta)
+	  //printf("Usmall one %d dual %g primal %g\n",iColumn,
+	  //   dualValue,primalValue);
 	} 
       } 
     }
-    printf("phase %d new mu %g new gap %g\n",phase,mu,sumL+sumU);
-    printf("          %d lower, smallest %g, %d below - largest %g, %d above\n",
+    printf("phase %d new mu %.18g new gap %.18g\n",phase,mu,sumL+sumU);
+    printf("          %d lower, smallest %.18g, %d below - largest %.18g, %d above\n",
 	   nL,smallestL,nBL,largestL,nAL);
-    printf("          %d upper, smallest %g, %d below - largest %g, %d above\n",
+    printf("          %d upper, smallest %.18g, %d below - largest %.18g, %d above\n",
 	   nU,smallestU,nBU,largestU,nAU);
   }
 #endif
@@ -1001,9 +1022,9 @@ double ClpPredictorCorrector::findDirectionVector(const int phase)
   while (!goodSolve&&numberTries<30) {
     double lastError=relativeError;
     goodSolve=true;
-#ifndef KKT
     double maximumRHS = maximumAbsElement(deltaY_,numberRows_);
     double saveMaximum = maximumRHS;
+#ifndef KKT
     double scale=1.0;
     double unscale=1.0;
     if (maximumRHS>1.0e-30) {
@@ -1032,6 +1053,14 @@ double ClpPredictorCorrector::findDirectionVector(const int phase)
     multiplyAdd(NULL,numberRows_,0.0,deltaY_,scale);
     cholesky_->solve(deltaY_);
     multiplyAdd(NULL,numberRows_,0.0,deltaY_,unscale);
+#if 0
+ {
+   printf("deltay\n");
+   for (int i=0;i<numberRows_;i++) 
+     printf("%d %.18g\n",i,deltaY_[i]);
+   }
+    exit(66);
+#endif
     if (numberTries) {
       //refine?
       double scaleX=1.0;
@@ -1141,6 +1170,7 @@ double ClpPredictorCorrector::findDirectionVector(const int phase)
   delete [] regionSave;
 #ifdef KKT
   delete [] region1Save;
+  int iColumn;
 #endif
   delete [] newError;
   // now rest
@@ -1187,6 +1217,352 @@ double ClpPredictorCorrector::findDirectionVector(const int phase)
 // createSolution.  Creates solution from scratch
 int ClpPredictorCorrector::createSolution()
 {
+#if 0
+  int numberTotal = numberRows_+numberColumns_;
+  int iColumn;
+  double tolerance = primalTolerance();
+  for (iColumn=0;iColumn<numberTotal;iColumn++) {
+    if (upper_[iColumn]-lower_[iColumn]>tolerance) 
+      clearFixed(iColumn);
+    else
+      setFixed(iColumn);
+  }
+  double initialValue =1.0e-12;
+
+  double maximumObjective=1.0e-12;
+  double objectiveNorm2=0.0;
+  getNorms(cost_,numberTotal,maximumObjective,objectiveNorm2);
+  if (maximumObjective<1.0e-12) {
+    maximumObjective=1.0e-12;
+  } 
+  objectiveNorm2=sqrt(objectiveNorm2)/(double) numberTotal;
+  objectiveNorm_=maximumObjective;
+  scaleFactor_=1.0;
+  if (maximumObjective>0.0) {
+    if (maximumObjective<1.0) {
+      scaleFactor_=maximumObjective;
+    } else if (maximumObjective>1.0e4) {
+      scaleFactor_=maximumObjective/1.0e4;
+    } 
+  } 
+  if (scaleFactor_!=1.0) {
+    objectiveNorm2*=scaleFactor_;
+    multiplyAdd(NULL,numberTotal,0.0,cost_,1.0/scaleFactor_);
+    objectiveNorm_=maximumObjective/scaleFactor_;
+  } 
+  baseObjectiveNorm_=objectiveNorm_;
+  //accumulate fixed in dj region (as spare)
+  //acumulate primal solution in primal region
+  //DZ in lowerDual
+  //DW in upperDual
+  double infiniteCheck=1.0e40;
+  //double     fakeCheck=1.0e10;
+  //use deltaX region for work region
+  for (iColumn=0;iColumn<numberTotal;iColumn++) {
+    double primalValue = solution_[iColumn];
+    clearFlagged(iColumn);
+    clearFixedOrFree(iColumn);
+    clearLowerBound(iColumn);
+    clearUpperBound(iColumn);
+    clearFakeLower(iColumn);
+    clearFakeUpper(iColumn);
+    if (!fixed(iColumn)) {
+      dj_[iColumn]=0.0;
+      diagonal_[iColumn]=1.0;
+      deltaX_[iColumn]=1.0;
+      double lowerValue=lower_[iColumn];
+      double upperValue=upper_[iColumn];
+#if 0
+      //fake it
+      if (lowerValue<-fakeCheck&&upperValue>fakeCheck) {
+        lowerValue=-1.0e5;
+        upperValue=1.0e5;
+        lower_[iColumn]=lowerValue;
+        upper_[iColumn]=upperValue;
+        std::cout<<"faking free variable "<<iColumn<<std::endl;
+      } 
+#endif
+      if (lowerValue>-infiniteCheck) {
+        if (upperValue<infiniteCheck) {
+          //upper and lower bounds
+          setLowerBound(iColumn);
+          setUpperBound(iColumn);
+          if (lowerValue>=0.0) {
+            solution_[iColumn]=lowerValue;
+          } else if (upperValue<=0.0) {
+            solution_[iColumn]=upperValue;
+          } else {
+            solution_[iColumn]=0.0;
+          } 
+        } else {
+          //just lower bound
+          setLowerBound(iColumn);
+          if (lowerValue>=0.0) {
+            solution_[iColumn]=lowerValue;
+          } else {
+            solution_[iColumn]=0.0;
+          } 
+        } 
+      } else {
+        if (upperValue<infiniteCheck) {
+          //just upper bound
+          setUpperBound(iColumn);
+          if (upperValue<=0.0) {
+            solution_[iColumn]=upperValue;
+          } else {
+            solution_[iColumn]=0.0;
+          } 
+        } else {
+          //free
+          setFixedOrFree(iColumn);
+          solution_[iColumn]=0.0;
+          //std::cout<<" free "<<i<<std::endl;
+        } 
+      } 
+    } else {
+      setFlagged(iColumn);
+      setFixedOrFree(iColumn);
+      setLowerBound(iColumn);
+      setUpperBound(iColumn);
+      dj_[iColumn]=primalValue;;
+      solution_[iColumn]=lower_[iColumn];
+      diagonal_[iColumn]=0.0;
+      deltaX_[iColumn]=0.0;
+    } 
+  } 
+  //   modify fixed RHS
+  multiplyAdd(solution_+numberColumns_,numberRows_,1.0,errorRegion_,0.0);
+  multiplyAdd(dj_+numberColumns_,numberRows_,-1.0,rhsFixRegion_,0.0);
+  matrix_->times(-1.0,solution_,errorRegion_);
+  //   create plausible RHS?
+  matrix_->times(-1.0,dj_,rhsFixRegion_);
+  rhsNorm_=maximumAbsElement(errorRegion_,numberRows_);
+  if (rhsNorm_<1.0) {
+    rhsNorm_=1.0;
+  } 
+  int * rowsDropped = new int [numberRows_];
+  cholesky_->factorize(diagonal_,rowsDropped);
+  if (cholesky_->status()) {
+    std::cout << "singular on initial cholesky?" <<std::endl;
+    cholesky_->resetRowsDropped();
+    //cholesky_->factorize(rowDropped_);
+    //if (cholesky_->status()) {
+      //std::cout << "bad cholesky??? (after retry)" <<std::endl;
+      //abort();
+    //} 
+  } 
+  delete [] rowsDropped;
+  cholesky_->solve(errorRegion_);
+  //create information for solution
+  multiplyAdd(errorRegion_,numberRows_,-1.0,deltaX_+numberColumns_,0.0);
+  CoinZeroN(deltaX_,numberColumns_);
+  matrix_->transposeTimes(1.0,errorRegion_,deltaX_);
+  //do reduced costs
+  CoinZeroN(dj_+numberColumns_,numberRows_);
+  for ( iColumn=0;iColumn<numberColumns_;iColumn++) {
+    double value=cost_[iColumn];
+    if (lowerBound(iColumn)) {
+      value+=linearPerturbation_;
+    } 
+    if (upperBound(iColumn)) {
+      value-=linearPerturbation_;
+    } 
+    dj_[iColumn]=value;
+  } 
+  initialValue=1.0e2;
+  if (rhsNorm_*1.0e-2>initialValue) {
+    initialValue=rhsNorm_*1.0e-2;
+  } 
+  double smallestBoundDifference=COIN_DBL_MAX;
+  double * fakeSolution = deltaX_;
+  for ( iColumn=0;iColumn<numberTotal;iColumn++) {
+    if (!flagged(iColumn)) {
+      if (lower_[iColumn]-fakeSolution[iColumn]>initialValue) {
+        initialValue=lower_[iColumn]-fakeSolution[iColumn];
+      } 
+      if (fakeSolution[iColumn]-upper_[iColumn]>initialValue) {
+        initialValue=fakeSolution[iColumn]-upper_[iColumn];
+      } 
+      if (upper_[iColumn]-lower_[iColumn]<smallestBoundDifference) {
+        smallestBoundDifference=upper_[iColumn]-lower_[iColumn];
+      } 
+    } 
+  } 
+  solutionNorm_=1.0e-12;
+  handler_->message(CLP_BARRIER_SAFE,messages_)
+    <<initialValue<<objectiveNorm_
+    <<CoinMessageEol;
+  long strategy=0;
+  double extra=1.0e-10;
+  double largeGap=1.0e15;
+  double safeObjectiveValue=2.0*objectiveNorm_;
+  double safeFree=1.0e-1*initialValue;
+  safeFree=1.0;
+  double zwLarge=1.0e2*initialValue;
+  //zwLarge=1.0e40;
+  for ( iColumn=0;iColumn<numberTotal;iColumn++) {
+    if (!flagged(iColumn)) {
+      double lowerValue=lower_[iColumn];
+      double upperValue=upper_[iColumn];
+      double objectiveValue = cost_[iColumn];
+      double newValue;
+      double low;
+      double high;
+      double randomZ =0.5*CoinDrand48()+0.5;
+      double randomW =0.5*CoinDrand48()+0.5;
+      double setPrimal=initialValue;
+      if (strategy==0) {
+        randomZ=1.0;
+        randomW=1.0;
+      } 
+      if (lowerBound(iColumn)) {
+        if (upperBound(iColumn)) {
+          //upper and lower bounds
+          if (upperValue-lowerValue>2.0*setPrimal) {
+            double fakeValue=fakeSolution[iColumn];
+            if (fakeValue<lowerValue+setPrimal) {
+              fakeValue=lowerValue+setPrimal;
+            } 
+            if (fakeValue>upperValue-setPrimal) {
+              fakeValue=upperValue-setPrimal;
+            } 
+            newValue=fakeValue;
+            low=fakeValue-lowerValue;
+            high=upperValue-fakeValue;
+          } else {
+            newValue=0.5*(upperValue+lowerValue);
+            low=setPrimal;
+            high=setPrimal;
+          } 
+          low *= randomZ;
+          high *= randomW;
+          double s = low+extra;
+          double ratioZ;
+          if (s<zwLarge) {
+            ratioZ=1.0;
+          } else {
+            ratioZ=sqrt(zwLarge/s);
+          } 
+          double t = high+extra;
+          double ratioW;
+          if (t<zwLarge) {
+            ratioW=1.0;
+          } else {
+            ratioW=sqrt(zwLarge/t);
+          } 
+          //modify s and t
+          if (s>largeGap) {
+            s=largeGap;
+          } 
+          if (t>largeGap) {
+            t=largeGap;
+          } 
+          //modify if long long way away from bound
+          if (objectiveValue>=0.0) {
+            zVec_[iColumn]=objectiveValue + safeObjectiveValue*ratioZ;
+            tVec_[iColumn]=safeObjectiveValue*ratioW;
+          } else {
+            zVec_[iColumn]=safeObjectiveValue*ratioZ;
+            tVec_[iColumn]=-objectiveValue + safeObjectiveValue*ratioW;
+          } 
+          diagonal_[iColumn] = (t*s)/(s*tVec_[iColumn]+t*zVec_[iColumn]);
+        } else {
+          //just lower bound
+          double fakeValue=fakeSolution[iColumn];
+          if (fakeValue<lowerValue+setPrimal) {
+            fakeValue=lowerValue+setPrimal;
+          } 
+          newValue=fakeValue;
+          low=fakeValue-lowerValue;
+          low *= randomZ;
+          high=0.0;
+          double s = low+extra;
+          double ratioZ;
+          if (s<zwLarge) {
+            ratioZ=1.0;
+          } else {
+            ratioZ=sqrt(zwLarge/s);
+          } 
+          //modify s
+          if (s>largeGap) {
+            s=largeGap;
+          } 
+          if (objectiveValue>=0.0) {
+            zVec_[iColumn]=objectiveValue + safeObjectiveValue*ratioZ;
+            tVec_[iColumn]=0.0;
+          } else {
+            zVec_[iColumn]=safeObjectiveValue*ratioZ;
+            tVec_[iColumn]=0.0;
+          } 
+          diagonal_[iColumn] = s/zVec_[iColumn];
+        } 
+      } else {
+        if (upperBound(iColumn)) {
+          //just upper bound
+          double fakeValue=fakeSolution[iColumn];
+          if (fakeValue>upperValue-setPrimal) {
+            fakeValue=upperValue-setPrimal;
+          } 
+          newValue=fakeValue;
+          low=0.0;
+          high=upperValue-fakeValue;
+          high*=randomW;
+          double t = high+extra;
+          double ratioW;
+          if (t<zwLarge) {
+            ratioW=1.0;
+          } else {
+            ratioW=sqrt(zwLarge/t);
+          } 
+          //modify t
+          if (t>largeGap) {
+            t=largeGap;
+          } 
+          if (objectiveValue>=0.0) {
+            zVec_[iColumn]=0.0;
+            tVec_[iColumn]=safeObjectiveValue*ratioW;
+          } else {
+            zVec_[iColumn]=0.0;
+            tVec_[iColumn]=-objectiveValue + safeObjectiveValue*ratioW;
+          } 
+          diagonal_[iColumn] =  t/tVec_[iColumn];
+        } else {
+          //free
+          zVec_[iColumn]=safeObjectiveValue;
+          tVec_[iColumn]=safeObjectiveValue;
+          newValue=fakeSolution[iColumn];
+          if (newValue>=0.0) {
+            if (newValue<safeFree) {
+              newValue=safeFree;
+            } 
+          } else {
+            if (newValue>-safeFree) {
+              newValue=-safeFree;
+            } 
+          } 
+          if (fabs(newValue)>1.0) {
+            diagonal_[iColumn]=fabs(newValue)/(zVec_[iColumn]+tVec_[iColumn]);
+          } else {
+            diagonal_[iColumn]=1.0/(zVec_[iColumn]+tVec_[iColumn]);
+          } 
+          low=0.0;
+          high=0.0;
+        } 
+      } 
+      lowerSlack_[iColumn]=low;
+      upperSlack_[iColumn]=high;
+      solution_[iColumn]=newValue;
+    } else {
+      lowerSlack_[iColumn]=0.0;
+      upperSlack_[iColumn]=0.0;
+      solution_[iColumn]=lower_[iColumn];
+      zVec_[iColumn]=0.0;
+      tVec_[iColumn]=0.0;
+      diagonal_[iColumn]=0.0;
+    } 
+  } 
+  solutionNorm_ =  maximumAbsElement(solution_,numberTotal);
+#else
   int numberTotal = numberRows_+numberColumns_;
   int iColumn;
   double tolerance = primalTolerance();
@@ -1300,11 +1676,11 @@ int ClpPredictorCorrector::createSolution()
     } 
   } 
   //   modify fixed RHS
-  multiplyAdd(dj_+numberColumns_,numberRows_,1.0,rhsFixRegion_,0.0);
+  multiplyAdd(dj_+numberColumns_,numberRows_,-1.0,rhsFixRegion_,0.0);
   //   create plausible RHS?
   matrix_->times(-1.0,dj_,rhsFixRegion_);
-  multiplyAdd(solution_+numberColumns_,numberRows_,-1.0,errorRegion_,0.0);
-  matrix_->times(1.0,solution_,errorRegion_);
+  multiplyAdd(solution_+numberColumns_,numberRows_,1.0,errorRegion_,0.0);
+  matrix_->times(-1.0,solution_,errorRegion_);
   rhsNorm_=maximumAbsElement(errorRegion_,numberRows_);
   if (rhsNorm_<1.0) {
     rhsNorm_=1.0;
@@ -1349,7 +1725,7 @@ int ClpPredictorCorrector::createSolution()
     } 
     dj_[iColumn]=value;
   } 
-  initialValue=1.0e1;
+  initialValue=1.0e2;
   if (rhsNorm_*1.0e-2>initialValue) {
     initialValue=rhsNorm_*1.0e-2;
   } 
@@ -1546,7 +1922,7 @@ int ClpPredictorCorrector::createSolution()
       diagonal_[iColumn]=0.0;
     } 
   }
-#if 1 
+#if 0 
   //initialValue=max(10.0,0.01*initialValue);
   //safeObjectiveValue=max(10.0,0.1*safeObjectiveValue);
   for ( iColumn=0;iColumn<numberTotal;iColumn++) {
@@ -1694,6 +2070,23 @@ int ClpPredictorCorrector::createSolution()
   }
 #endif
   solutionNorm_ =  maximumAbsElement(solution_,numberTotal);
+#if 0
+  if (solution_[0]>0.0) {
+    for (int i=0;i<numberTotal;i++)
+      printf("%d %.18g %.18g %.18g %.18g %.18g %.18g %.18g\n",i,fabs(solution_[i]),
+	     diagonal_[i],fabs(dj_[i]),
+	     lowerSlack_[i],zVec_[i],
+	     upperSlack_[i],tVec_[i]);
+  } else {
+    for (int i=0;i<numberTotal;i++)
+      printf("%d %.18g %.18g %.18g %.18g %.18g %.18g %.18g\n",i,fabs(solution_[i]),
+	     diagonal_[i],fabs(dj_[i]),
+	     upperSlack_[i],tVec_[i],
+	     lowerSlack_[i],zVec_[i] );
+  }
+  exit(66);
+#endif
+#endif
   return 0;
 }
 // complementarityGap.  Computes gap
@@ -1839,15 +2232,15 @@ void ClpPredictorCorrector::setupForSolve(const int phase)
   double * lowerSlack = lowerSlack_;
   double * upperSlack = upperSlack_;
   double * workArray = workArray_;
-
+  int numberTotal = numberRows_ + numberColumns_;
   int iColumn;
 #ifdef SOME_DEBUG
-  printf("phase %d in setupForSolve, mu %g\n",phase,mu_);
+  printf("phase %d in setupForSolve, mu %.18g\n",phase,mu_);
 #endif
   switch (phase) {
   case 0:
     CoinMemcpyN(errorRegion_,numberRows_,rhsB_);
-    for (iColumn=0;iColumn<numberRows_+numberColumns_;iColumn++) {
+    for (iColumn=0;iColumn<numberTotal;iColumn++) {
       rhsC_[iColumn]=0.0;
       rhsU_[iColumn]=0.0;
       rhsL_[iColumn]=0.0;
@@ -1858,21 +2251,68 @@ void ClpPredictorCorrector::setupForSolve(const int phase)
         if (lowerBound(iColumn)) {
           if (!fakeLower(iColumn)) {
 	    rhsZ_[iColumn] = -zVec[iColumn]*(lowerSlack[iColumn]+extra);
-	    rhsL_[iColumn] = primal[iColumn]-lowerSlack[iColumn]-lower[iColumn];
-          } 
+	    rhsL_[iColumn] = min(0.0,primal[iColumn]-lowerSlack[iColumn]-lower[iColumn]);
+          }
+	} else if (upperBound(iColumn)){
+	  assert (!zVec[iColumn]);
         } 
         if (upperBound(iColumn)) {
           if (!fakeUpper(iColumn)) {
 	    rhsT_[iColumn] = -tVec[iColumn]*(upperSlack[iColumn]+extra);
-            rhsU_[iColumn] = -(primal[iColumn] + upperSlack[iColumn] - upper[iColumn]); 
+            rhsU_[iColumn] = min(0.0,-(primal[iColumn] + upperSlack[iColumn] - upper[iColumn])); 
           } 
+	} else if (lowerBound(iColumn)) {
+	  assert (!tVec[iColumn]);
         }
       }
     } 
+    if (0) {
+      int i=1324;
+      printf("%d %.18g %.18g %.18g %.18g %.18g %.18g %.18g\n",i,solution_[i],
+	     diagonal_[i],dj_[i],
+	     lowerSlack_[i],zVec_[i],
+	     upperSlack_[i],tVec_[i]);
+      printf("%d %.18g %.18g %.18g %.18g %.18g\n",i,rhsC_[i],
+	     rhsZ_[i],rhsL_[i],
+	     rhsT_[i],rhsU_[i]);
+    }
+#if 0
+    for (int i=0;i<3;i++) {
+      if (!fabs(rhsZ_[i]))
+	rhsZ_[i]=0.0;
+      if (!fabs(rhsT_[i]))
+	rhsT_[i]=0.0;
+      if (!fabs(rhsU_[i]))
+	rhsU_[i]=0.0;
+      if (!fabs(rhsL_[i]))
+	rhsL_[i]=0.0;
+    }
+    if (solution_[0]>0.0) {
+      for (int i=0;i<3;i++)
+	printf("%d %.18g %.18g %.18g %.18g %.18g %.18g %.18g\n",i,solution_[i],
+	       diagonal_[i],dj_[i],
+	       lowerSlack_[i],zVec_[i],
+	       upperSlack_[i],tVec_[i]);
+      for (int i=0;i<3;i++)
+	printf("%d %.18g %.18g %.18g %.18g %.18g\n",i,rhsC_[i],
+	       rhsZ_[i],rhsL_[i],
+	       rhsT_[i],rhsU_[i]);
+    } else {
+      for (int i=0;i<3;i++)
+	printf("%d %.18g %.18g %.18g %.18g %.18g %.18g %.18g\n",i,solution_[i],
+	       diagonal_[i],dj_[i],
+	       lowerSlack_[i],zVec_[i],
+	       upperSlack_[i],tVec_[i]);
+      for (int i=0;i<3;i++)
+	printf("%d %.18g %.18g %.18g %.18g %.18g\n",i,rhsC_[i],
+	       rhsZ_[i],rhsL_[i],
+	       rhsT_[i],rhsU_[i]);
+    }
+#endif
     break;
   case 1:
     // could be stored in delta2?
-    for (iColumn=0;iColumn<numberRows_+numberColumns_;iColumn++) {
+    for (iColumn=0;iColumn<numberTotal;iColumn++) {
       rhsC_[iColumn]=0.0;
       //rhsU_[iColumn]=0.0;
       //rhsL_[iColumn]=0.0;
@@ -1884,23 +2324,61 @@ void ClpPredictorCorrector::setupForSolve(const int phase)
 	  rhsZ_[iColumn] = mu_ -zVec[iColumn]*(lowerSlack[iColumn]+extra)
 	    - deltaZ_[iColumn]*deltaX_[iColumn];
 	  // To bring in line with OSL
-	  //rhsZ_[iColumn] -= deltaZ_[iColumn]*rhsL_[iColumn];
+	  rhsZ_[iColumn] -= deltaZ_[iColumn]*rhsL_[iColumn];
+	  //rhsZ_[iColumn] = mu_ -deltaZ_[iColumn]*rhsL_[iColumn]
+	  //- deltaZ_[iColumn]*deltaX_[iColumn];
         } 
         if (upperBound(iColumn)) {
 	  rhsT_[iColumn] = mu_ -tVec[iColumn]*(upperSlack[iColumn]+extra)
 	    +deltaT_[iColumn]*deltaX_[iColumn];
 	  // To bring in line with OSL
-	  //rhsT_[iColumn] += deltaT_[iColumn]*rhsU_[iColumn];
+	  rhsT_[iColumn] -= deltaT_[iColumn]*rhsU_[iColumn];
+	  //rhsT_[iColumn] = mu_ -deltaT_[iColumn]*rhsU_[iColumn]
+	  //+deltaT_[iColumn]*deltaX_[iColumn];
         } 
       } 
     } 
+#if 0
+    for (int i=0;i<numberTotal;i++) {
+      if (!fabs(rhsZ_[i]))
+	rhsZ_[i]=0.0;
+      if (!fabs(rhsT_[i]))
+	rhsT_[i]=0.0;
+      if (!fabs(rhsU_[i]))
+	rhsU_[i]=0.0;
+      if (!fabs(rhsL_[i]))
+	rhsL_[i]=0.0;
+    }
+    if (solution_[0]>0.0) {
+      for (int i=0;i<numberTotal;i++)
+	printf("%d %.18g %.18g %.18g %.18g %.18g %.18g %.18g\n",i,fabs(solution_[i]),
+	       diagonal_[i],fabs(dj_[i]),
+	       lowerSlack_[i],zVec_[i],
+	       upperSlack_[i],tVec_[i]);
+      for (int i=0;i<numberTotal;i++)
+	printf("%d %.18g %.18g %.18g %.18g %.18g\n",i,fabs(rhsC_[i]),
+	       rhsZ_[i],rhsL_[i],
+	       rhsT_[i],rhsU_[i]);
+    } else {
+      for (int i=0;i<numberTotal;i++)
+	printf("%d %.18g %.18g %.18g %.18g %.18g %.18g %.18g\n",i,fabs(solution_[i]),
+	       diagonal_[i],fabs(dj_[i]),
+	       upperSlack_[i],tVec_[i],
+	       lowerSlack_[i],zVec_[i] );
+      for (int i=0;i<numberTotal;i++)
+	printf("%d %.18g %.18g %.18g %.18g %.18g\n",i,fabs(rhsC_[i]),
+	       rhsT_[i],rhsU_[i],
+	       rhsZ_[i],rhsL_[i]);
+    }
+    exit(66);
+#endif
     break;
   case 2:
     CoinMemcpyN(errorRegion_,numberRows_,rhsB_);
-    for (iColumn=0;iColumn<numberRows_+numberColumns_;iColumn++) {
+    for (iColumn=0;iColumn<numberTotal;iColumn++) {
       rhsC_[iColumn]=0.0;
-      rhsU_[iColumn]=0.0;
-      rhsL_[iColumn]=0.0;
+      //rhsU_[iColumn]=0.0;
+      //rhsL_[iColumn]=0.0;
       rhsZ_[iColumn]=0.0;
       rhsT_[iColumn]=0.0;
       if (!flagged(iColumn)) {
@@ -1908,13 +2386,13 @@ void ClpPredictorCorrector::setupForSolve(const int phase)
         if (lowerBound(iColumn)) {
           if (!fakeLower(iColumn)) {
 	    rhsZ_[iColumn] = mu_ - zVec[iColumn]*(lowerSlack[iColumn]+extra);
-	    rhsL_[iColumn] = primal[iColumn]-lowerSlack[iColumn]-lower[iColumn];
+	    //rhsL_[iColumn] = primal[iColumn]-lowerSlack[iColumn]-lower[iColumn];
           } 
         } 
         if (upperBound(iColumn)) {
           if (!fakeUpper(iColumn)) {
 	    rhsT_[iColumn] = mu_ - tVec[iColumn]*(upperSlack[iColumn]+extra);
-            rhsU_[iColumn] = -(primal[iColumn] + upperSlack[iColumn] - upper[iColumn]); 
+            //rhsU_[iColumn] = -(primal[iColumn] + upperSlack[iColumn] - upper[iColumn]); 
           } 
         }
       }
@@ -1931,7 +2409,7 @@ void ClpPredictorCorrector::setupForSolve(const int phase)
 #endif
       //minBeta=0.0;
       //maxBeta=COIN_DBL_MAX;
-      for (iColumn=0;iColumn<numberRows_+numberColumns_;iColumn++) {
+      for (iColumn=0;iColumn<numberTotal;iColumn++) {
 	if (!flagged(iColumn)) {
 	  if (lowerBound(iColumn)) {
 	    double change = rhsL_[iColumn] + deltaX_[iColumn];
@@ -2000,20 +2478,47 @@ void ClpPredictorCorrector::setupForSolve(const int phase)
     break;
   } /* endswitch */
 #ifndef KKT
-  for (iColumn=0;iColumn<numberRows_+numberColumns_;iColumn++) {
+  for (iColumn=0;iColumn<numberTotal;iColumn++) {
     double value = rhsC_[iColumn];
+    double zValue = rhsZ_[iColumn];
+    double tValue = rhsT_[iColumn];
+#if 1
+    if (phase==0) {
+      // more accurate
+      value = dj[iColumn];
+      zValue=0.0;
+      tValue=0.0;
+    } else if (phase==2) {
+      // more accurate
+      value = dj[iColumn];
+      zValue=mu_;
+      tValue=mu_;
+    }
+#endif
+    assert (rhsL_[iColumn]<=0.0);
+    assert (rhsU_[iColumn]<=0.0);
     if (lowerBound(iColumn)) {
-      value -= rhsZ_[iColumn]/(lowerSlack[iColumn]+extra);
-      value += zVec[iColumn]*rhsL_[iColumn]/(lowerSlack[iColumn]+extra);
+      value += (zVec[iColumn]*rhsL_[iColumn]-zValue)/
+	(lowerSlack[iColumn]+extra);
     }
     if (upperBound(iColumn)) {
-      value += rhsT_[iColumn]/(upperSlack[iColumn]+extra);
-      value -= tVec[iColumn]*rhsU_[iColumn]/(upperSlack[iColumn]+extra);
+      value += (tValue-tVec[iColumn]*rhsU_[iColumn])/
+	(upperSlack[iColumn]+extra);
     }
     workArray[iColumn]=diagonal_[iColumn]*value;
   } 
+#if 0
+    if (solution_[0]>0.0) {
+      for (int i=0;i<numberTotal;i++)
+	printf("%d %.18g\n",i,workArray[i]);
+    } else {
+      for (int i=0;i<numberTotal;i++)
+	printf("%d %.18g\n",i,workArray[i]);
+    }
+    exit(66);
+#endif
 #else
-  for (iColumn=0;iColumn<numberRows_+numberColumns_;iColumn++) {
+  for (iColumn=0;iColumn<numberTotal;iColumn++) {
     double value = rhsC_[iColumn];
     if (lowerBound(iColumn)) {
       value -= rhsZ_[iColumn]/(lowerSlack[iColumn]+extra);
@@ -2039,7 +2544,7 @@ bool ClpPredictorCorrector::checkGoodMove(const bool doCorrector,double & bestNe
   double nextGap=complementarityGap(nextNumber,nextNumberItems,2);
   if (nextGap>bestNextGap&&nextGap>-0.9*complementarityGap_) {
 #ifdef SOME_DEBUG
-    printf("checkGood phase 1 next gap %g, phase 0 %g, old gap %g\n",
+    printf("checkGood phase 1 next gap %.18g, phase 0 %.18g, old gap %.18g\n",
 	   nextGap,bestNextGap,complementarityGap_);
 #endif
     return false;
@@ -2251,7 +2756,7 @@ bool ClpPredictorCorrector::checkGoodMove2(const double move,double & bestNextGa
 }
 // updateSolution.  Updates solution at end of iteration
 //returns number fixed
-int ClpPredictorCorrector::updateSolution()
+int ClpPredictorCorrector::updateSolution(double nextGap)
 {
   //update pi
   multiplyAdd(deltaY_,numberRows_,actualDualStep_,dual_,1.0);
@@ -2273,7 +2778,7 @@ int ClpPredictorCorrector::updateSolution()
     freeMultiplier=1.0e12;
   } 
   freeMultiplier=0.5/freeMultiplier;
-  double condition = cholesky_->choleskyCondition();
+  double condition = fabs(cholesky_->choleskyCondition());
   bool caution;
   if ((condition<1.0e10&&trueNorm<1.0e12)||numberIterations_<20) {
     caution=false;
@@ -2304,7 +2809,7 @@ int ClpPredictorCorrector::updateSolution()
   } else {
     qDiagonal=1.0e-8*mu_;
   } 
-  qDiagonal *= 100.0;
+  //qDiagonal *= 1.0e2;
   double widenGap=1.0e1;
   //largest allowable ratio of lowerSlack/zVec (etc)
   double largestRatio;
@@ -2504,7 +3009,7 @@ int ClpPredictorCorrector::updateSolution()
 	} 
       } 
     }
-    printf("update new mu %g new gap %g\n",mu,sumL+sumU);
+    printf("update new mu %.18g new gap %.18g\n",mu,sumL+sumU);
     printf("          %d lower, smallest %g, %d below - largest %g, %d above\n",
 	   nL,smallestL,nBL,largestL,nAL);
     printf("          %d upper, smallest %g, %d below - largest %g, %d above\n",
@@ -2578,10 +3083,10 @@ int ClpPredictorCorrector::updateSolution()
 	} 
       } 
     }
-    printf("update2 new mu %g new gap %g\n",mu,sumL+sumU);
+    printf("update2 new mu %.18g new gap %.18g\n",mu,sumL+sumU);
     printf("          %d lower, smallest %g, %d below - largest %g, %d above\n",
 	   nL,smallestL,nBL,largestL,nAL);
-    printf("          %d upper, smallest %g, %d below - largest %g, %d above\n",
+    printf("          %d upper, smallest %g, %d below - largest %g %d above\n",
 	   nU,smallestU,nBU,largestU,nAU);
   }
   for (int iColumn=0;iColumn<numberRows_+numberColumns_;iColumn++) {
@@ -2821,7 +3326,17 @@ int ClpPredictorCorrector::updateSolution()
         s=1.0;
         t=1.0;
         tValue=0.0;
-        zValue=2.0*freeMultiplier+qDiagonal;
+	// If dual infeasible then adjust more
+        double dualInfeasibility=reducedCost-zVec[iColumn]+tVec[iColumn];
+        if (fabs(dualInfeasibility)>2.0*dualTolerance&&
+	    fabs(dualInfeasibility)>0.1*sumDualInfeasibilities_) {
+	  zValue=2.0*freeMultiplier+max(qDiagonal,1.0e-4);
+	  zValue=2.0*freeMultiplier+max(qDiagonal*1.0e-5,1.0e-4);
+	} else {
+	  zValue=2.0*freeMultiplier+qDiagonal;
+	}
+	// take out of infeasibility
+        //reducedCost=zVec[iColumn]-tVec[iColumn];
       } 
       primal[iColumn]=newPrimal;
       if (fabs(newPrimal)>solutionNorm) {
