@@ -1402,7 +1402,10 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	    // user in charge - re-factorize
 	    int lastCleaned;
 	    ClpSimplexProgress dummyProgress;
-	    statusOfProblemInPrimal(lastCleaned,1,dummyProgress);
+	    if (saveStatus_)
+	      statusOfProblemInPrimal(lastCleaned,1,dummyProgress);
+	    else
+	      statusOfProblemInPrimal(lastCleaned,0,dummyProgress);
 	    roundAgain=true;
 	    continue;
 	  }
@@ -1446,7 +1449,10 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	  // refactorize
 	  int lastCleaned;
 	  ClpSimplexProgress dummyProgress;
-	  statusOfProblemInPrimal(lastCleaned,1,dummyProgress);
+	  if (saveStatus_)
+	    statusOfProblemInPrimal(lastCleaned,1,dummyProgress);
+	  else
+	    statusOfProblemInPrimal(lastCleaned,0,dummyProgress);
 	  roundAgain=true;
 	  continue;
 	} else {
@@ -1538,7 +1544,10 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
     // refactorize here
     int lastCleaned;
     ClpSimplexProgress dummyProgress;
-    statusOfProblemInPrimal(lastCleaned,1,dummyProgress);
+    if (saveStatus_)
+      statusOfProblemInPrimal(lastCleaned,1,dummyProgress);
+    else
+      statusOfProblemInPrimal(lastCleaned,0,dummyProgress);
     if (problemStatus_==5) {
       printf("Singular basis\n");
       problemStatus_=-1;
