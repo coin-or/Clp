@@ -59,9 +59,11 @@ public:
   int endQuadratic(ClpSimplexPrimalQuadratic * quadraticModel,
 		   ClpQuadraticInfo & info);
   /// Checks complementarity and computes infeasibilities
-  int checkComplementarity (const ClpQuadraticInfo * info);
+  int checkComplementarity (const ClpQuadraticInfo * info,
+			    CoinIndexedVector * array1, CoinIndexedVector * array2);
   /// Fills in reduced costs
-  void createDjs (const ClpQuadraticInfo * info);
+  void createDjs (const ClpQuadraticInfo * info,
+		  CoinIndexedVector * array1, CoinIndexedVector * array2);
   /** Main part.
       phase - 0 normal, 1 getting complementary solution,
       2 getting basic solution. */

@@ -16,6 +16,7 @@
 
 #include "ClpFactorization.hpp"
 #include "ClpSimplex.hpp"
+#include "ClpLinearObjective.hpp"
 #include "ClpDualRowSteepest.hpp"
 #include "ClpDualRowDantzig.hpp"
 #include "ClpPrimalColumnSteepest.hpp"
@@ -1117,7 +1118,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     for (i=0;i<numberColumns;i++) {
       start[i+1]=i+1;
       column[i]=i;
-      element[i]=1.0e-6;
+      element[i]=1.0e-1;
       element[i]=0.0;
     }
     // Load up objective
@@ -1141,25 +1142,36 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     std::string fn = mpsDir+"share2qp";
     //fn = "share2qpb";
     m.readMps(fn.c_str(),"mps");
-    ClpSimplex solution;
-    solution.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
+    ClpSimplex model;
+    model.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
 			 m.getObjCoefficients(),
 			 m.getRowLower(),m.getRowUpper());
-    solution.dual();
+    model.dual();
     // get quadratic part
     int * start=NULL;
     int * column = NULL;
     double * element = NULL;
     m.readQuadraticMps(NULL,start,column,element,2);
     // Load up objective
-    solution.loadQuadraticObjective(solution.numberColumns(),start,column,element);
+    model.loadQuadraticObjective(model.numberColumns(),start,column,element);
     delete [] start;
     delete [] column;
     delete [] element;
-    solution.quadraticSLP(50,1.0e-4);
-    solution.setLogLevel(63);
-    solution.quadraticPrimal(1);
-    double objValue = solution.getObjValue();
+#if 0
+    model.quadraticSLP(50,1.0e-4);
+#else
+    // Get feasible
+    ClpObjective * saveObjective = model.objectiveAsObject()->clone();
+    int numberColumns=model.numberColumns();
+    ClpLinearObjective zeroObjective(NULL,numberColumns);
+    model.setObjective(&zeroObjective);
+    model.dual();
+    model.setObjective(saveObjective);
+    delete saveObjective;
+#endif
+    model.setLogLevel(63);
+    model.quadraticPrimal(1);
+    double objValue = model.getObjValue();
     CoinRelFltEq eq(1.0e-4);
     assert(eq(objValue,-400.92));
   }

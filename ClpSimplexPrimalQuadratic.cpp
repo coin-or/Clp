@@ -690,7 +690,7 @@ int
 ClpSimplexPrimalQuadratic::whileIterating(
 		      ClpQuadraticInfo * info)
 {
-  checkComplementarity (info);
+  checkComplementarity (info,rowArray_[0],rowArray_[1]);
   int crucialSj = info->crucialSj();
   int returnCode=-1;
   int phase = info->currentPhase();
@@ -766,6 +766,8 @@ ClpSimplexPrimalQuadratic::whileIterating(
       oldSequenceIn=nextSequenceIn;
       sequenceIn_ = nextSequenceIn;
       cleanupIteration=false;
+      lowerIn_=lower_[sequenceIn_];
+      upperIn_=upper_[sequenceIn_];
       if (sequenceIn_<numberXColumns) {
 	int jSequence = which[sequenceIn_];
 	if (jSequence>=0) {
@@ -886,14 +888,18 @@ ClpSimplexPrimalQuadratic::whileIterating(
 	saveObjective = objectiveValue_;
 	if (pivotRow_>=0) {
 	  // if stable replace in basis
-	  int updateStatus = factorization_->replaceColumn(rowArray_[2],
-							   pivotRow_,
-							   alpha_);
+	  int updateStatus = 0;
+	  if (result<20)
+	    updateStatus=factorization_->replaceColumn(rowArray_[2],
+						       pivotRow_,
+						       alpha_);
 	  if (result>=10) {
 	    updateStatus = max(updateStatus,result/10);
 	    result = result%10;
-	    if (updateStatus>1)
+	    if (updateStatus>1) {
 	      alpha_=0.0; // force re-factorization
+	      info->setSequenceIn(sequenceIn_);
+	    }
 	  }
 	  // if no pivots, bad update but reasonable alpha - take and invert
 	  if (updateStatus==2&&
@@ -1038,7 +1044,7 @@ ClpSimplexPrimalQuadratic::whileIterating(
 	  // really free but going to zero
 	  setStatus(sequenceOut_,isFree);
 	}
-	checkComplementarity (info);
+	checkComplementarity (info,rowArray_[2],rowArray_[3]);
 
 	if (whatNext==1) {
 	  returnCode =-2; // refactorize
@@ -1196,7 +1202,7 @@ ClpSimplexPrimalQuadratic::primalRow(CoinIndexedVector * rowArray,
   const int * columnQuadraticStart = quadratic->getVectorStarts();
   const int * columnQuadraticLength = quadratic->getVectorLengths();
   const double * quadraticElement = quadratic->getElements();
-  const double * originalCost = info->originalObjective();
+  //const double * originalCost = info->originalObjective();
   // Use rhsArray
   rhsArray->clear();
   int * index2 = rhsArray->getIndices();
@@ -1206,6 +1212,10 @@ ClpSimplexPrimalQuadratic::primalRow(CoinIndexedVector * rowArray,
   // sj 
   int iSjRow=-1;
   double tj = 0.0;
+  // Change in objective will be theta*coeff1 + theta*theta*coeff2
+  double coeff1 = 0.0;
+  double coeff2 = 0.0;
+  double coeffSlack=0.0;
   for (iIndex=0;iIndex<number;iIndex++) {
     int iRow = which[iIndex];
     double alpha = -work[iRow]*way;
@@ -1213,8 +1223,10 @@ ClpSimplexPrimalQuadratic::primalRow(CoinIndexedVector * rowArray,
     if (iPivot<numberXColumns) {
       index2[number2++]=iPivot;
       rhs[iPivot]=alpha;
+      coeff1 += alpha*cost_[iPivot];
       //printf("col %d alpha %g solution %g\n",iPivot,alpha,solution_[iPivot]);
     } else {
+      coeffSlack += alpha*cost_[iPivot];
       //printf("new col %d alpha %g solution %g\n",iPivot,alpha,solution_[iPivot]);
       if (iPivot==crucialSj) {
 	tj = alpha;
@@ -1227,19 +1239,17 @@ ClpSimplexPrimalQuadratic::primalRow(CoinIndexedVector * rowArray,
     index2[number2++]=sequenceIn_;
     rhs[sequenceIn_]=way;
     printf("incoming col %d alpha %g solution %g\n",sequenceIn_,way,valueIn_);
+    coeff1 += way*cost_[sequenceIn_];
   } else {
     printf("incoming new col %d alpha %g solution %g\n",sequenceIn_,way,valueIn_);
+    coeffSlack += way*cost_[sequenceIn_];
   }
   rhsArray->setNumElements(number2);
-  // Change in objective will be theta*coeff1 + theta*theta*coeff2
-  double coeff1 = 0.0;
-  double coeff2 = 0.0;
   if (numberIterations_>=0||cleanupIteration) {
     for (iIndex=0;iIndex<number2;iIndex++) {
       int iColumn=index2[iIndex];
       //double valueI = solution_[iColumn];
       double alphaI = rhs[iColumn];
-      coeff1 += alphaI*originalCost[iColumn];
       int j;
       for (j=columnQuadraticStart[iColumn];
 	   j<columnQuadraticStart[iColumn]+columnQuadraticLength[iColumn];j++) {
@@ -1278,9 +1288,8 @@ ClpSimplexPrimalQuadratic::primalRow(CoinIndexedVector * rowArray,
       double alphaI = rhs[iColumn];
       //rhs[iColumn]=0.0;
       printf("Column %d, alpha %g sol %g cost %g, contr %g\n",
-	     iColumn,alphaI,valueI,originalCost[iColumn],
-	     alphaI*originalCost[iColumn]);
-      coeff1 += alphaI*originalCost[iColumn];
+	     iColumn,alphaI,valueI,cost_[iColumn],
+	     alphaI*cost_[iColumn]);
       int j;
       for (j=columnQuadraticStart[iColumn];
 	   j<columnQuadraticStart[iColumn]+columnQuadraticLength[iColumn];j++) {
@@ -1297,9 +1306,15 @@ ClpSimplexPrimalQuadratic::primalRow(CoinIndexedVector * rowArray,
     }
   }
   coeff2 *= 0.5;
-  printf("coefficients %g %g - dualIn %g\n",coeff1,coeff2,dualIn_);
+  printf("coefficients %g %g %g - dualIn %g\n",coeff1,coeff2,coeffSlack,dualIn_);
+  if (coeffSlack)
+    printf("trouble\n");
+  coeff1 += coeffSlack;
+  //coeff1 = way*dualIn_;
   int accuracyFlag=0;
   if (!cleanupIteration) {
+    assert (fabs(way*coeff1-dualIn_)<1.0e-4*(1.0+fabs(dualIn_)));
+    assert (way*coeff1*dualIn_>0.0);
     if (way*coeff1*dualIn_<0.0) {
       // bad
       accuracyFlag=2;
@@ -1314,6 +1329,12 @@ ClpSimplexPrimalQuadratic::primalRow(CoinIndexedVector * rowArray,
     if (crucialSj>=0) {
       solution_[crucialSj]=dualIn_;
     }
+  } else if (dualIn_<0.0&&way*coeff1>1.0e-2) {
+    printf("bad pair\n");
+    accuracyFlag=1;
+  } else if (dualIn_>0.0&&way*coeff1<-1.0e-2) {
+    accuracyFlag=1;
+    printf("bad pair\n");
   }
   // interesting places are where derivative zero or sj goes to zero
   double d1,d2=1.0e50;
@@ -1340,9 +1361,11 @@ ClpSimplexPrimalQuadratic::primalRow(CoinIndexedVector * rowArray,
     // maybe we should have done dual iteration to force sj to 0.0
     printf("linear variable\n");
   }
-  maximumMovement = min(maximumMovement,d1);
   maximumMovement = min(maximumMovement,d2);
-  d2 = min(d1,d2);
+  if (d1>=0.0) {
+    maximumMovement = min(maximumMovement,d1);
+    d2 = min(d1,d2);
+  }
     
   rhsArray->clear();
   double tentativeTheta = maximumMovement;
@@ -1437,6 +1460,7 @@ ClpSimplexPrimalQuadratic::primalRow(CoinIndexedVector * rowArray,
       double dualCheck = - 2.0*coeff2*tentativeTheta - coeff1 - 99999999;
       // but make a bit more pessimistic
       dualCheck=max(dualCheck-100.0*dualTolerance_,0.99*dualCheck);
+      //dualCheck=0.0;
       if (totalThru+thruThis>=dualCheck) {
 	// We should be pivoting in this batch
 	// so compress down to this lot
@@ -1515,6 +1539,7 @@ ClpSimplexPrimalQuadratic::primalRow(CoinIndexedVector * rowArray,
 	    break;
 	  } else {
 	    dualCheck = - 2.0*coeff2*theta_ - coeff1-9999999;
+	    //dualCheck =0.0;
 	    if (totalThru>=dualCheck) {
 	      break; // no point trying another loop
 	    } else {
@@ -1656,7 +1681,7 @@ ClpSimplexPrimalQuadratic::primalRow(CoinIndexedVector * rowArray,
       dualOut_ = reducedCost(sequenceOut_);
     } else {
       // need to do something
-      abort();
+      accuracyFlag=2;
     }
   }
 
@@ -1698,7 +1723,12 @@ ClpSimplexPrimalQuadratic::primalRow(CoinIndexedVector * rowArray,
     }
     printf("Objective value %g\n",objectiveValue());
   }
-  return result+10*accuracyFlag;
+  if (accuracyFlag<2) {
+    return result+10*accuracyFlag;
+  } else {
+    pivotRow_=1; // make sure correct path
+    return 20;
+  }
 }
 /* Checks if finished.  Updates status */
 void 
@@ -1759,7 +1789,7 @@ ClpSimplexPrimalQuadratic::statusOfProblemInPrimal(int & lastCleaned,int type,
   // put back original costs and then check
   createRim(4);
   gutsOfSolution(NULL,NULL);
-  checkComplementarity(info);
+  checkComplementarity(info,rowArray_[2],rowArray_[3]);
   // Double check reduced costs if no action
   if (progress->lastIterationNumber(0)==numberIterations_) {
     if (primalColumnPivot_->looksOptimal()) {
@@ -1779,7 +1809,7 @@ ClpSimplexPrimalQuadratic::statusOfProblemInPrimal(int & lastCleaned,int type,
   } else if (loop<-1) {
     // something may have changed
     gutsOfSolution(NULL,NULL);
-    checkComplementarity(info);
+    checkComplementarity(info,rowArray_[2],rowArray_[3]);
   }
   // really for free variables in
   //if((progressFlag_&2)!=0)
@@ -1823,7 +1853,7 @@ ClpSimplexPrimalQuadratic::statusOfProblemInPrimal(int & lastCleaned,int type,
       createRim(4);
       nonLinearCost_->checkInfeasibilities(primalTolerance_);
       gutsOfSolution(NULL,NULL);
-      checkComplementarity(info);
+      checkComplementarity(info,rowArray_[2],rowArray_[3]);
 
       infeasibilityCost_=1.0e100;
       // put back original costs
@@ -1841,7 +1871,6 @@ ClpSimplexPrimalQuadratic::statusOfProblemInPrimal(int & lastCleaned,int type,
 	for (i=0;i<numberRows_+numberColumns_;i++) 
 	  cost_[i] *= 1.0e-100;
 	gutsOfSolution(NULL,NULL);
-	checkComplementarity(info);
 	nonLinearCost_=nonLinear;
 	infeasibilityCost_=saveWeight;
 	if ((infeasibilityCost_>=1.0e18||
@@ -1860,7 +1889,7 @@ ClpSimplexPrimalQuadratic::statusOfProblemInPrimal(int & lastCleaned,int type,
 	  createRim(4);
 	  nonLinearCost_->checkInfeasibilities(primalTolerance_);
 	  gutsOfSolution(NULL,NULL);
-	  checkComplementarity(info);
+	  checkComplementarity(info,rowArray_[2],rowArray_[3]);
 	  // so will exit
 	  infeasibilityCost_=1.0e30;
 	  // reset infeasibilities
@@ -1878,7 +1907,7 @@ ClpSimplexPrimalQuadratic::statusOfProblemInPrimal(int & lastCleaned,int type,
 	  createRim(4);
 	  nonLinearCost_->checkInfeasibilities(0.0);
 	  gutsOfSolution(NULL,NULL);
-	  checkComplementarity(info);
+	  checkComplementarity(info,rowArray_[2],rowArray_[3]);
 	  problemStatus_=-1; //continue
 	} else {
 	  // say infeasible
@@ -1912,7 +1941,7 @@ ClpSimplexPrimalQuadratic::statusOfProblemInPrimal(int & lastCleaned,int type,
 	  createRim(4);
 	  nonLinearCost_->checkInfeasibilities(oldTolerance);
 	  gutsOfSolution(NULL,NULL);
-	  checkComplementarity(info);
+	  checkComplementarity(info,rowArray_[2],rowArray_[3]);
 	  problemStatus_ = -1;
 	} else {
 	  problemStatus_=0; // optimal
@@ -1944,7 +1973,7 @@ ClpSimplexPrimalQuadratic::statusOfProblemInPrimal(int & lastCleaned,int type,
 	  // put back original costs and then check
 	  createRim(4);
 	  gutsOfSolution(NULL,NULL);
-	  checkComplementarity(info);
+	  checkComplementarity(info,rowArray_[2],rowArray_[3]);
 	  problemStatus_=-1; //continue
 	} else {
 	  // say unbounded
@@ -1993,7 +2022,8 @@ ClpSimplexPrimalQuadratic::statusOfProblemInPrimal(int & lastCleaned,int type,
 }
 // Fills in reduced costs
 void 
-ClpSimplexPrimalQuadratic::createDjs (const ClpQuadraticInfo * info)
+ClpSimplexPrimalQuadratic::createDjs (const ClpQuadraticInfo * info,
+			    CoinIndexedVector * array1, CoinIndexedVector * array2)
 {
   const int * which = info->quadraticSequence();
   // Matrix for linear stuff
@@ -2006,6 +2036,123 @@ ClpSimplexPrimalQuadratic::createDjs (const ClpQuadraticInfo * info)
   const double * pi = solution_+numberXColumns;
   int iSequence;
   int start=numberXColumns+numberXRows;
+  int jSequence;
+  // Actually only need to do this after invert (use extra parameter to createDjs)
+  // or when infeasibilities change
+  // recode to do this later and update rather than recompute
+  // When it is "change" then we don't need b (original rhs)
+  if (nonLinearCost_->numberInfeasibilities()<-1) {
+  } else {
+    array1->checkClear();
+    array2->checkClear();
+    // update costs
+    double * storedCost = lower_+numberColumns_+numberXRows;
+    double * storedUpper = upper_ + numberColumns_+numberXRows;
+    double * storedValue = solution_ + numberColumns_+numberXRows;
+    int * index = array1->getIndices();
+    double * modifiedCost = array1->denseVector();
+    // zero out basic values
+    int iRow;
+    double * save = new double [numberRows_];
+    for (iRow=0;iRow<numberRows_;iRow++) {
+      int iPivot=pivotVariable_[iRow];
+      save[iRow]=solution_[iPivot];
+      solution_[iPivot] = 0.0;
+    }
+    // And make sure pi is zero if slack basic
+    for (iRow=0;iRow<numberXRows;iRow++) {
+      //if (getRowStatus(iRow)==basic) 
+      //assert(!solution_[iRow+numberXColumns]);
+      if (getRowStatus(iRow)==basic) 
+	solution_[iRow+numberXColumns]=0.0;
+    }
+    times(-1.0,columnActivityWork_,modifiedCost);
+    
+    int number=0;
+    // Now costs
+    for (iSequence=0;iSequence<numberXColumns;iSequence++) {
+      iRow = iSequence+numberXRows;
+      double value=cost_[iSequence];
+      if (fabs(value)>1.0e5) {
+	assert (getColumnStatus(iSequence)==basic);
+      }
+      storedCost[iSequence]=value;
+      storedUpper[iSequence]=value;
+      storedValue[iSequence]=value;
+      value += modifiedCost[iRow];
+      if (value) {
+	modifiedCost[iRow]=value;
+	index[number++]=iRow;
+      } else {
+	modifiedCost[iRow]=0.0;
+      }
+    }
+    for (iRow=0;iRow<numberXRows;iRow++) {
+      double value = modifiedCost[iRow]+rowActivityWork_[iRow];;
+      if (value) {
+	modifiedCost[iRow]=value;
+	index[number++]=iRow;
+      } else {
+	modifiedCost[iRow]=0.0;
+      }
+    }
+    array1->setNumElements(number);
+    // And slacks
+    // sign? - or does any of this make sense
+    for (iRow=0;iRow<numberXRows;iRow++) {
+      int iSequence  = iRow + numberColumns_;
+      double value = cost_[iSequence];
+      if (value) {
+	assert(getRowStatus(iRow)==basic);
+	// add in pi column
+	matrix_->add(this,array1,iRow+numberXColumns,value);
+      }
+    }
+    // create pricing vector
+    int k;
+    factorization_->updateColumn(array2,array1);
+    int n=array1->getNumElements();
+    for (k=0;k<n;k++) { 
+      int iRow = index[k];
+      double value=modifiedCost[iRow];
+      int iSequence = pivotVariable_[iRow];
+      if (iSequence>=numberXColumns&&iSequence<numberColumns_)
+	solution_[iSequence] = value;
+      else
+	solution_[iSequence] = save[iRow];
+      //solution_[iSequence] = value;
+      
+    }
+    delete [] save;
+    array1->clear();
+    // Now modify pi values by slack costs to make djs
+    // Later save matrix_->add results
+    for (iRow=0;iRow<numberXRows;iRow++) {
+      int iSequence  = iRow + numberColumns_;
+      int iPi = iRow+numberXColumns;
+      solution_[iPi]-=cost_[iSequence];
+    }
+    // check looks okay
+    matrix_->times(1.0,solution_,modifiedCost);
+    // Back to pi
+    for (iRow=0;iRow<numberXRows;iRow++) {
+      int iSequence  = iRow + numberColumns_;
+      int iPi = iRow+numberXColumns;
+      solution_[iPi]+=cost_[iSequence];
+    }
+    double * rowSolution = solution_+numberColumns_;
+    for (k=0;k<numberRows_;k++) {
+      if (k<numberXRows) {
+	if (fabs(modifiedCost[k]-rowSolution[k])>1.0e-3*(1.0+fabs(rowSolution[k])))
+	  printf("bad row %d %g %g\n",k,modifiedCost[k],rowSolution[k]);
+      } else {
+	rowSolution[k]=modifiedCost[k];
+	lower_[k+numberColumns_]=modifiedCost[k];
+	upper_[k+numberColumns_]=modifiedCost[k];
+      }
+      modifiedCost[k]=0.0;
+    }
+  }
   for (iSequence=0;iSequence<numberXColumns;iSequence++) {
     int jSequence = which[iSequence];
     double value;
@@ -2013,7 +2160,8 @@ ClpSimplexPrimalQuadratic::createDjs (const ClpQuadraticInfo * info)
       jSequence += start;
       value = solution_[jSequence];
     } else {
-      value=cost_[iSequence];
+      value=0.0;
+      //value=cost_[iSequence];
       int j;
       for (j=columnStart[iSequence];j<columnStart[iSequence]+columnLength[iSequence]; j++) {
 	int iRow = row[j];
@@ -2024,21 +2172,19 @@ ClpSimplexPrimalQuadratic::createDjs (const ClpQuadraticInfo * info)
   }
   // And slacks
   // Value of sj is - value of pi
-  int firstSlack = numberColumns_;
-  int jSequence;
   for (jSequence=0;jSequence<numberXRows;jSequence++) {
-    int iSequence  = jSequence + firstSlack;
+    int iSequence  = jSequence + numberColumns_;
     int iPi = jSequence+numberXColumns;
     double value = solution_[iPi];
-    dj_[iSequence]=value;
+    dj_[iSequence]=value+cost_[iSequence];
   }
 }
 
 int 
-ClpSimplexPrimalQuadratic::checkComplementarity (const 
-					       ClpQuadraticInfo * info)
+ClpSimplexPrimalQuadratic::checkComplementarity (const  ClpQuadraticInfo * info,
+			    CoinIndexedVector * array1, CoinIndexedVector * array2)
 {
-  createDjs(info);
+  createDjs(info,array1,array2);
   int numberXColumns = info->numberXColumns();
   int numberXRows = info->numberXRows();
   int iSequence;
@@ -2092,7 +2238,7 @@ ClpSimplexPrimalQuadratic::checkComplementarity (const
     switch(status) {
       
     case ClpSimplex::basic:
-      if (getRowStatus(jSequence)==basic)
+      if (getColumnStatus(jSequence)==basic)
 	printf("Row %d (%g) and %d (%g) both basic\n",
 	       iSequence,solution_[iSequence],jSequence,solution_[jSequence]);
       break;
@@ -2232,6 +2378,8 @@ ClpSimplexPrimalQuadratic::makeQuadratic(ClpQuadraticInfo & info)
     columnLower2[iColumn]=columnLower[iColumn];
     columnUpper2[iColumn]=columnUpper[iColumn];
     solution2[iColumn]=solution[iColumn];
+    // Put in cost so we know it
+    objective2[iColumn]=objective[iColumn];
     int j;
     for (j=columnStart[iColumn];
 	 j<columnStart[iColumn]+columnLength[iColumn];
@@ -2450,8 +2598,8 @@ ClpSimplexPrimalQuadratic::makeQuadratic(ClpQuadraticInfo & info)
     }
   }
   printf("Objective value %g\n",objValue);
-  for (iColumn=0;iColumn<newNumberColumns;iColumn++) 
-    printf("%d %g\n",iColumn,solution2[iColumn]);
+  //for (iColumn=0;iColumn<newNumberColumns;iColumn++) 
+  //printf("%d %g\n",iColumn,solution2[iColumn]);
   return (ClpSimplexPrimalQuadratic *) model2;
 }
 

@@ -81,14 +81,6 @@ public:
   int updateColumn ( CoinIndexedVector * regionSparse,
 		     CoinIndexedVector * regionSparse2,
 		     bool noPermute=false) const;
-  /** Updates one column transpose (BTRAN)
-      ** For large problems you should ALWAYS know where the nonzeros
-      are, so please try and migrate to previous method after you
-      have got code working using this simple method - thank you!
-      (the only exception is if you know input is dense e.g. dense objective)
-      returns number of nonzeros */
-  int updateColumnTranspose ( CoinIndexedVector * regionSparse,
-				 double array[] ) const;
   /** Updates one column (BTRAN) from region2
       region1 starts as zero and is zero at end */
   int updateColumnTranspose ( CoinIndexedVector * regionSparse,
