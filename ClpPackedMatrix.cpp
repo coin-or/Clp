@@ -620,7 +620,7 @@ ClpPackedMatrix::transposeTimesByColumn(const ClpSimplex * model, double scalar,
 	  CoinBigIndex start = end;
 	  end = columnStart[iColumn+2];
 	  if (fabs(value)>zeroTolerance) {
-	    array[numberNonZero]=-value;
+	    array[iColumn]=-value;
 	    index[numberNonZero++]=iColumn;
 	  }
 	  value = 0.0;
@@ -630,7 +630,7 @@ ClpPackedMatrix::transposeTimesByColumn(const ClpSimplex * model, double scalar,
 	  }
 	}
 	if (fabs(value)>zeroTolerance) {
-	  array[numberNonZero]=-value;
+	  array[iColumn]=-value;
 	  index[numberNonZero++]=iColumn;
 	}
       } else if (scalar==1.0) {
@@ -645,7 +645,7 @@ ClpPackedMatrix::transposeTimesByColumn(const ClpSimplex * model, double scalar,
 	  CoinBigIndex start = end;
 	  end = columnStart[iColumn+2];
 	  if (fabs(value)>zeroTolerance) {
-	    array[numberNonZero]=value;
+	    array[iColumn]=value;
 	    index[numberNonZero++]=iColumn;
 	  }
 	  value = 0.0;
@@ -655,7 +655,7 @@ ClpPackedMatrix::transposeTimesByColumn(const ClpSimplex * model, double scalar,
 	  }
 	}
 	if (fabs(value)>zeroTolerance) {
-	  array[numberNonZero]=value;
+	  array[iColumn]=value;
 	  index[numberNonZero++]=iColumn;
 	}
       } else {
@@ -671,7 +671,7 @@ ClpPackedMatrix::transposeTimesByColumn(const ClpSimplex * model, double scalar,
 	  CoinBigIndex start = end;
 	  end = columnStart[iColumn+2];
 	  if (fabs(value)>zeroTolerance) {
-	    array[numberNonZero]=value;
+	    array[iColumn]=value;
 	    index[numberNonZero++]=iColumn;
 	  }
 	  value = 0.0;
@@ -682,12 +682,12 @@ ClpPackedMatrix::transposeTimesByColumn(const ClpSimplex * model, double scalar,
 	}
 	value *= scalar;
 	if (fabs(value)>zeroTolerance) {
-	  array[numberNonZero]=value;
+	  array[iColumn]=value;
 	  index[numberNonZero++]=iColumn;
 	}
       }
     } else {
-      // scaled
+      // unscaled
       if (scalar==-1.0) {
 	const double * columnScale = model->columnScale();
 	double value = 0.0;
@@ -704,7 +704,7 @@ ClpPackedMatrix::transposeTimesByColumn(const ClpSimplex * model, double scalar,
 	  end = columnStart[iColumn+2];
 	  scale = columnScale[iColumn+1];
 	  if (fabs(value)>zeroTolerance) {
-	    array[numberNonZero]=-value;
+	    array[iColumn]=-value;
 	    index[numberNonZero++]=iColumn;
 	  }
 	  value = 0.0;
@@ -715,7 +715,7 @@ ClpPackedMatrix::transposeTimesByColumn(const ClpSimplex * model, double scalar,
 	}
 	value *= scale;
 	if (fabs(value)>zeroTolerance) {
-	  array[numberNonZero]=-value;
+	  array[iColumn]=-value;
 	  index[numberNonZero++]=iColumn;
 	}
       } else if (scalar==1.0) {
@@ -734,7 +734,7 @@ ClpPackedMatrix::transposeTimesByColumn(const ClpSimplex * model, double scalar,
 	  end = columnStart[iColumn+2];
 	  scale = columnScale[iColumn+1];
 	  if (fabs(value)>zeroTolerance) {
-	    array[numberNonZero]=value;
+	    array[iColumn]=value;
 	    index[numberNonZero++]=iColumn;
 	  }
 	  value = 0.0;
@@ -745,7 +745,7 @@ ClpPackedMatrix::transposeTimesByColumn(const ClpSimplex * model, double scalar,
 	}
 	value *= scale;
 	if (fabs(value)>zeroTolerance) {
-	  array[numberNonZero]=value;
+	  array[iColumn]=value;
 	  index[numberNonZero++]=iColumn;
 	}
       } else {
@@ -764,7 +764,7 @@ ClpPackedMatrix::transposeTimesByColumn(const ClpSimplex * model, double scalar,
 	  end = columnStart[iColumn+2];
 	  scale = columnScale[iColumn+1]*scalar;
 	  if (fabs(value)>zeroTolerance) {
-	    array[numberNonZero]=value;
+	    array[iColumn]=value;
 	    index[numberNonZero++]=iColumn;
 	  }
 	  value = 0.0;
@@ -775,7 +775,7 @@ ClpPackedMatrix::transposeTimesByColumn(const ClpSimplex * model, double scalar,
 	}
 	value *= scale;
 	if (fabs(value)>zeroTolerance) {
-	  array[numberNonZero]=value;
+	  array[iColumn]=value;
 	  index[numberNonZero++]=iColumn;
 	}
       }
