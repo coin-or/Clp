@@ -196,6 +196,8 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
      5 - dantzig
      10 - can go to mini-sprint
   */
+  // Look at gub
+  model_->clpMatrix()->dualExpanded(model_,updates,NULL,4);
   if (updates->getNumElements()>1) {
     // would have to have two goes for devex, three for steepest
     anyUpdates=2;

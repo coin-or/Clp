@@ -432,6 +432,28 @@ ClpSimplexPrimal::whileIterating(int valuesOption)
       }    
     }      
 #endif
+#if 0
+    {
+      int iPivot;
+      double * array = rowArray_[3]->denseVector();
+      int * index = rowArray_[3]->getIndices();
+      int i;
+      for (iPivot=0;iPivot<numberRows_;iPivot++) {
+	int iSequence = pivotVariable_[iPivot];
+	unpackPacked(rowArray_[3],iSequence);
+	factorization_->updateColumn(rowArray_[2],rowArray_[3]);
+	int number = rowArray_[3]->getNumElements();
+	for (i=0;i<number;i++) {
+	  int iRow = index[i];
+	  if (iRow==iPivot)
+	    assert (fabs(array[i]-1.0)<1.0e-4);
+	  else
+	    assert (fabs(array[i])<1.0e-4);
+	}
+	rowArray_[3]->clear();
+      }
+    }
+#endif
 #if CLP_DEBUG>2
     // very expensive
     if (numberIterations_>0&&numberIterations_<-2534) {
@@ -2224,7 +2246,12 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
     
     double objectiveChange=0.0;
     // after this rowArray_[1] is not empty - used to update djs
+    // If pivot row >= numberRows then may be gub
+    int savePivot = pivotRow_;
+    if (pivotRow_>=numberRows_)
+      pivotRow_=-1;
     updatePrimalsInPrimal(rowArray_[1],theta_, objectiveChange,ifValuesPass);
+    pivotRow_=savePivot;
     
     double oldValue = valueIn_;
     if (directionIn_==-1) {
