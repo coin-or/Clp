@@ -84,7 +84,7 @@ public:
       but I prefer to keep modularity.
   */
   inline bool reference(int i) const {
-    return (reference_[i>>5]>>(i&31))!=0;
+    return ((reference_[i>>5]>>(i&31))&1)!=0;
   }
   inline void setReference(int i,bool trueFalse) {
     unsigned int & value = reference_[i>>5];
