@@ -266,7 +266,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
     ClpPackedMatrix* clpMatrix = NULL;
     if (saveMatrix->type()==1)
       clpMatrix =
-	dynamic_cast< ClpPackedMatrix*>(saveMatrix);
+	static_cast< ClpPackedMatrix*>(saveMatrix);
 #endif
     if (clpMatrix) {
       ClpPlusMinusOneMatrix * newMatrix = new ClpPlusMinusOneMatrix(*(clpMatrix->matrix()));
