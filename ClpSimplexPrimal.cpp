@@ -391,14 +391,6 @@ ClpSimplexPrimal::whileIterating(int & firstSuperBasic)
       }    
     }      
 #endif
-#if 0 // *MERGE*
-	if (nonLinearCost_->numberInfeasibilities())
-	  problemStatus_=-4; // might be infeasible 
-	break;
-      }
-    }
-#else // devel-1
-#endif
 #if CLP_DEBUG>2
     // very expensive
     if (numberIterations_>0&&numberIterations_<-2534) {
@@ -733,9 +725,6 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
   assert (primalFeasible());
   // we may wish to say it is optimal even if infeasible
   bool alwaysOptimal = (specialOptions_&1)!=0;
-#if 0 // *MERGE*
-  if (dualFeasible()||problemStatus_==-4) {
-#else // devel-1
   // give code benefit of doubt
   if (sumOfRelaxedDualInfeasibilities_ == 0.0&&
       sumOfRelaxedPrimalInfeasibilities_ == 0.0) {
@@ -746,7 +735,6 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
     sumPrimalInfeasibilities_ = 0.0;
   }
   if (dualFeasible()||problemStatus_==-4||(type==3&&problemStatus_!=-5)) {
-#endif
     if (nonLinearCost_->numberInfeasibilities()&&!alwaysOptimal) {
       //may need infeasiblity cost changed
       // we can see if we can construct a ray

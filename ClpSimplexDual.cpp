@@ -618,24 +618,12 @@ ClpSimplexDual::whileIterating()
 	  printf("obj backwards %g %g\n",objectiveValue_,oldobj);
 #endif
 
-#if 0 // *MERGE*
-	  if (factorization_->pivots()<5) {
-	    problemStatus_=-4; //say looks infeasible
-	    // create ray anyway
-	    delete [] ray_;
-	    ray_ = new double [ numberRows_];
-	    CoinDisjointCopyN(rowArray_[0]->denseVector(),numberRows_,ray_);
-	  }
-          rowArray_[0]->clear();
-          columnArray_[0]->clear();
-#else // devel-1
 	if (whatNext==1) {
 	  problemStatus_ =-2; // refactorize
 	} else if (whatNext==2) {
 	  // maximum iterations or equivalent
 	  problemStatus_= 3;
 	  returnCode=3;
-#endif
 	  break;
 	}
       } else {
@@ -644,36 +632,12 @@ ClpSimplexDual::whileIterating()
 	if (handler_->logLevel()&32)
 	  printf("** no column pivot\n");
 #endif
-#if 0 // *MERGE*
-	if (!factorization_->pivots()) {
-	  // may have crept through - so may be optimal
-	  //problemStatus_=-5; //say looks unbounded
-	  problemStatus_=0;
-	  // check any flagged variables
-	  int iRow;
-	  for (iRow=0;iRow<numberRows_;iRow++) {
-	    int iPivot=pivotVariable_[iRow];
-	    if (flagged(iPivot))
-	      break;
-	  }
-	  if (iRow<numberRows_) {
-#ifdef CLP_DEBUG
-	    std::cerr<<"Flagged variables at end - infeasible?"<<std::endl;
-#endif
-	    problemStatus_=-4; //say looks infeasible
-	    // create ray anyway
-	    delete [] ray_;
-	    ray_ = new double [ numberRows_];
-	    CoinDisjointCopyN(rowArray_[0]->denseVector(),numberRows_,ray_);
-	  }
-#else // devel-1
 	if (factorization_->pivots()<5) {
 	  problemStatus_=-4; //say looks infeasible
 	  // create ray anyway
 	  delete [] ray_;
 	  ray_ = new double [ numberRows_];
 	  ClpDisjointCopyN(rowArray_[0]->denseVector(),numberRows_,ray_);
-#endif
 	}
 	rowArray_[0]->clear();
 	columnArray_[0]->clear();

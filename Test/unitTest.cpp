@@ -144,12 +144,7 @@ int mainTest (int argc, const char *argv[],bool doDual,
     objValueTol.push_back(1.E-10);
     objValue.push_back(5.5018458883E+03);
 
-#if 0 // *MERGE*
-#if 0
-#else // devel-1
-#if 1
     mpsName.push_back("80bau3b");min.push_back(true);nRows.push_back(2263);nCols.push_back(9799);objValueTol.push_back(1.e-10);objValue.push_back(9.8722419241E+05);
-#endif
     mpsName.push_back("blend");min.push_back(true);nRows.push_back(75);nCols.push_back(83);objValueTol.push_back(1.e-10);objValue.push_back(-3.0812149846e+01);
     mpsName.push_back("pilotnov");min.push_back(true);nRows.push_back(976);nCols.push_back(2172);objValueTol.push_back(1.e-10);objValue.push_back(-4.4972761882e+03);
     mpsName.push_back("maros-r7");min.push_back(true);nRows.push_back(3137);nCols.push_back(9408);objValueTol.push_back(1.e-10);objValue.push_back(1.4971851665e+06);
@@ -189,7 +184,6 @@ int mainTest (int argc, const char *argv[],bool doDual,
     mpsName.push_back("forplan");min.push_back(true);nRows.push_back(162);nCols.push_back(421);objValueTol.push_back(1.e-6);objValue.push_back(-6.6421873953e+02);
     mpsName.push_back("ganges");min.push_back(true);nRows.push_back(1310);nCols.push_back(1681);objValueTol.push_back(1.e-5);objValue.push_back(-1.0958636356e+05);
     mpsName.push_back("gfrd-pnc");min.push_back(true);nRows.push_back(617);nCols.push_back(1092);objValueTol.push_back(1.e-10);objValue.push_back(6.9022359995e+06);
-#endif
     mpsName.push_back("greenbea");min.push_back(true);nRows.push_back(2393);nCols.push_back(5405);objValueTol.push_back(1.e-10);objValue.push_back(/*-7.2462405908e+07*/-72555248.129846);
     mpsName.push_back("greenbeb");min.push_back(true);nRows.push_back(2393);nCols.push_back(5405);objValueTol.push_back(1.e-10);objValue.push_back(/*-4.3021476065e+06*/-4302260.2612066);
     mpsName.push_back("grow15");min.push_back(true);nRows.push_back(301);nCols.push_back(645);objValueTol.push_back(1.e-10);objValue.push_back(-1.0687094129e+08);
