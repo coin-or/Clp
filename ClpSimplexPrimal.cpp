@@ -713,7 +713,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type)
   assert (primalFeasible());
   // we may wish to say it is optimal even if infeasible
   bool alwaysOptimal = (specialOptions_&1)!=0;
-  if (dualFeasible()||problemStatus_==-4||type==3) {
+  if (dualFeasible()||problemStatus_==-4||(type==3&&problemStatus_!=-5)) {
     if (nonLinearCost_->numberInfeasibilities()&&!alwaysOptimal) {
       //may need infeasiblity cost changed
       // we can see if we can construct a ray
