@@ -752,48 +752,55 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
       // put back original costs
       createRim(4);
       nonLinearCost_->checkInfeasibilities(true);
-      nonLinearCost_=NULL;
-      // scale
-      int i;
-      for (i=0;i<numberRows_+numberColumns_;i++) 
-	cost_[i] *= 1.0e-100;
-      gutsOfSolution(rowActivityWork_, columnActivityWork_);
-      nonLinearCost_=nonLinear;
-      infeasibilityCost_=saveWeight;
-      if ((infeasibilityCost_>=1.0e18||
-	  numberDualInfeasibilities_==0)&&perturbation_==101) {
-	unPerturb(); // stop any further perturbation
-	numberDualInfeasibilities_=1; // carry on
-      }
-      if (infeasibilityCost_>=1.0e20||
-	  numberDualInfeasibilities_==0) {
-	// we are infeasible - use as ray
-	delete [] ray_;
-	ray_ = new double [numberRows_];
-	memcpy(ray_,dual_,numberRows_*sizeof(double));
-	// and get feasible duals
-	infeasibilityCost_=0.0;
-	createRim(4);
-	nonLinearCost_->checkInfeasibilities(true);
-	gutsOfSolution(rowActivityWork_, columnActivityWork_);
-	// so will exit
-	infeasibilityCost_=1.0e30;
-      }
-
-      if (infeasibilityCost_<1.0e20) {
-	infeasibilityCost_ *= 5.0;
-	changeMade_++; // say change made
-	handler_->message(CLP_PRIMAL_WEIGHT,messages_)
-	  <<infeasibilityCost_
-	  <<CoinMessageEol;
-	// put back original costs and then check
-	createRim(4);
-	nonLinearCost_->checkInfeasibilities(true);
-	gutsOfSolution(rowActivityWork_, columnActivityWork_);
-	problemStatus_=-1; //continue
+      // may have fixed infeasibilities - double check
+      if (nonLinearCost_->numberInfeasibilities()==0) {
+	// carry on
+	problemStatus_ = -1;
+	infeasibilityCost_=saveWeight;
       } else {
-	// say infeasible
-	problemStatus_ = 1;
+	nonLinearCost_=NULL;
+	// scale
+	int i;
+	for (i=0;i<numberRows_+numberColumns_;i++) 
+	  cost_[i] *= 1.0e-100;
+	gutsOfSolution(rowActivityWork_, columnActivityWork_);
+	nonLinearCost_=nonLinear;
+	infeasibilityCost_=saveWeight;
+	if ((infeasibilityCost_>=1.0e18||
+	     numberDualInfeasibilities_==0)&&perturbation_==101) {
+	  unPerturb(); // stop any further perturbation
+	  numberDualInfeasibilities_=1; // carry on
+	}
+	if (infeasibilityCost_>=1.0e20||
+	    numberDualInfeasibilities_==0) {
+	  // we are infeasible - use as ray
+	  delete [] ray_;
+	  ray_ = new double [numberRows_];
+	  memcpy(ray_,dual_,numberRows_*sizeof(double));
+	  // and get feasible duals
+	  infeasibilityCost_=0.0;
+	  createRim(4);
+	  nonLinearCost_->checkInfeasibilities(true);
+	  gutsOfSolution(rowActivityWork_, columnActivityWork_);
+	  // so will exit
+	  infeasibilityCost_=1.0e30;
+	}
+	
+	if (infeasibilityCost_<1.0e20) {
+	  infeasibilityCost_ *= 5.0;
+	  changeMade_++; // say change made
+	  handler_->message(CLP_PRIMAL_WEIGHT,messages_)
+	    <<infeasibilityCost_
+	    <<CoinMessageEol;
+	  // put back original costs and then check
+	  createRim(4);
+	  nonLinearCost_->checkInfeasibilities(true);
+	  gutsOfSolution(rowActivityWork_, columnActivityWork_);
+	  problemStatus_=-1; //continue
+	} else {
+	  // say infeasible
+	  problemStatus_ = 1;
+	}
       }
     } else {
       // may be optimal
