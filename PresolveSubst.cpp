@@ -112,8 +112,8 @@ static void expand_row(CoinBigIndex *mcstrt,
     }
 
     // move the column - 1:  copy the entries
-    memcpy((void*)&hrow[kcsx], (void*)&hrow[newkcsx], hincol[icolx] * sizeof(int));
-    memcpy((void*)&colels[kcsx], (void*)&colels[newkcsx], hincol[icolx] * sizeof(double));
+    memcpy((void*)&hrow[newkcsx], (void*)&hrow[kcsx], hincol[icolx] * sizeof(int));
+    memcpy((void*)&colels[newkcsx], (void*)&colels[kcsx], hincol[icolx] * sizeof(double));
 
     // move the column - 2:  update the memory-order linked list
     PRESOLVE_REMOVE_LINK(clink, icolx);
@@ -765,8 +765,8 @@ const PresolveAction *subst_constraint_action::presolve(PresolveMatrix *prob,
 
 	      ap->coeffxs[k-kcs] = colels[k];
 
-	      memcpy(&hcol[krs], &ap->rowcolsxs[nel], hinrow[irow]*sizeof(int));
-	      memcpy(&rowels[krs], &ap->rowelsxs[nel], hinrow[irow]*sizeof(double));
+	      memcpy( &ap->rowcolsxs[nel], &hcol[krs],hinrow[irow]*sizeof(int));
+	      memcpy( &ap->rowelsxs[nel], &rowels[krs],hinrow[irow]*sizeof(double));
 	      nel += hinrow[irow];
 	    }
 	  }
@@ -972,7 +972,7 @@ const PresolveAction *subst_constraint_action::presolve(PresolveMatrix *prob,
 #endif
 
 	    // the addition of rows may have created zero coefficients
-	    memcpy(&hcol[mrstrt[rowy]], &zerocols[nzerocols], hinrow[rowy]*sizeof(int));
+	    memcpy( &zerocols[nzerocols], &hcol[mrstrt[rowy]],hinrow[rowy]*sizeof(int));
 	    nzerocols += hinrow[rowy];
 	    
 	    // delete rowy in col rep

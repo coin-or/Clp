@@ -114,14 +114,14 @@ char *presolve_duparray(const char *d, int n)
 double *presolve_duparray(const double *d, int n, char **end_mmapp)
 {
   double *d1 = (double*)*end_mmapp;
-  memcpy(d, d1, n*sizeof(double));
+  memcpy(d1, d, n*sizeof(double));
   *end_mmapp += ALIGN_DOUBLE(n*sizeof(double));
   return (d1);
 }
 int *presolve_duparray(const int *d, int n, char **end_mmapp)
 {
   int *d1 = (int*)*end_mmapp;
-  memcpy(d, d1, n*sizeof(int));
+  memcpy(d1, d, n*sizeof(int));
   *end_mmapp += ALIGN_DOUBLE(n*sizeof(int));
   return (d1);
 }
@@ -129,14 +129,14 @@ int *presolve_duparray(const int *d, int n, char **end_mmapp)
 double *presolve_duparray(const double *d, int n, int n2, char **end_mmapp)
 {
   double *d1 = (double*)*end_mmapp;
-  memcpy(d, d1, n*sizeof(double));
+  memcpy(d1, d, n*sizeof(double));
   *end_mmapp += ALIGN_DOUBLE(n2*sizeof(double));
   return (d1);
 }
 int *presolve_duparray(const int *d, int n, int n2, char **end_mmapp)
 {
   int *d1 = (int*)*end_mmapp;
-  memcpy(d, d1, n*sizeof(int));
+  memcpy(d1, d, n*sizeof(int));
   *end_mmapp += ALIGN_DOUBLE(n2*sizeof(int));
   return (d1);
 }
