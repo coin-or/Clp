@@ -63,7 +63,7 @@ static Clp_message us_english[]=
   {CLP_PACKEDSCALE_FORGET,1004,2,"Not bothering to scale as good enough"},
   {CLP_INITIALIZE_STEEP,1005,1,"Initializing steepest edge weights - old %g, new %g"},
   {CLP_UNABLE_OPEN,6001,0,"Unable to open file %s for reading"},
-  {CLP_BAD_BOUNDS,6002,0,"%d bad bound pairs were found - first at %c%d"},
+  {CLP_BAD_BOUNDS,6002,0,"%d bad bound pairs or bad objectives were found - first at %c%d"},
   {CLP_BAD_MATRIX,6003,0,"Matrix has %d large values, first at column %d, row %d is %g"},
   {CLP_LOOP,6004,0,"Can't get out of loop - stopping (Debug) (Don't panic, OsiClpSolverInterface will resolve)"},
   {CLP_DUPLICATEELEMENTS,26,0,"Matrix will be packed to eliminate %d duplicate elements"},
