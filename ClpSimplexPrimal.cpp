@@ -743,6 +743,8 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
       ClpNonLinearCost * nonLinear = nonLinearCost_;
       // do twice to make sure Primal solution has settled
       // put non-basics to bounds in case tolerance moved
+      // put back original bounds
+      createRim(7);
       nonLinearCost_->checkInfeasibilities(true);
       gutsOfSolution(rowActivityWork_, columnActivityWork_);
 
