@@ -2469,6 +2469,15 @@ int ClpPredictorCorrector::updateSolution(double nextGap)
 	if (infeasibility>maximumBoundInfeasibility) {
 	  maximumBoundInfeasibility=infeasibility;
 	} 
+        if (lowerSlack[iColumn]<=1.0e5*kill&&fabs(newPrimal-lower[iColumn])<=1.0e5*kill) {
+	  double step = min(actualPrimalStep_*1.1,1.0);
+	  double newPrimal2=primal[iColumn]+step*thisWeight;
+	  if (newPrimal2<newPrimal&&dj_[iColumn]>1.0e-5&&numberIterations_>50-40) {
+	    newPrimal=lower[iColumn];
+	    lowerSlack[iColumn]=0.0;
+	    printf("fixing %d to lower\n",iColumn);
+	  }
+	}
         if (lowerSlack[iColumn]<=kill&&fabs(newPrimal-lower[iColumn])<=kill) {
           //may be better to leave at value?
           newPrimal=lower[iColumn];
@@ -2532,6 +2541,15 @@ int ClpPredictorCorrector::updateSolution(double nextGap)
 	if (infeasibility>maximumBoundInfeasibility) {
 	  maximumBoundInfeasibility=infeasibility;
         } 
+        if (upperSlack[iColumn]<=1.0e5*kill&&fabs(newPrimal-upper[iColumn])<=1.0e5*kill) {
+	  double step = min(actualPrimalStep_*1.1,1.0);
+	  double newPrimal2=primal[iColumn]+step*thisWeight;
+	  if (newPrimal2>newPrimal&&dj_[iColumn]<-1.0e-5&&numberIterations_>50-40) {
+	    newPrimal=upper[iColumn];
+	    upperSlack[iColumn]=0.0;
+	    printf("fixing %d to upper\n",iColumn);
+	  }
+	}
         if (upperSlack[iColumn]<=kill&&fabs(newPrimal-upper[iColumn])<=kill) {
           //may be better to leave at value?
           newPrimal=upper[iColumn];
