@@ -1050,6 +1050,7 @@ int main (int argc, const char *argv[])
 		models[iModel].dualRowSolution();
 	      for (iRow=0;iRow<numberRows;iRow++) 
 		dualRowSolution[iRow] = dualRowSolution[iRow];
+              models[iModel].setObjectiveOffset(models[iModel].objectiveOffset());
 	    }
 	    break;
 	  case DIRECTORY:

@@ -95,7 +95,10 @@ public:
 		     const double* obj,
 		      const double* rowlb, const double* rowub,
 		      const double * rowObjective=NULL);
-  /// This loads a model from a coinModel object - returns number of errors
+  /** This loads a model from a coinModel object - returns number of errors.
+
+      modelObject not const as may be changed as part of process
+  */
   int loadProblem (  CoinModel & modelObject);
   /// This one is for after presolve to save memory
   void loadProblem (  const int numcols, const int numrows,
@@ -321,19 +324,19 @@ public:
   inline void setSecondaryStatus(int status)
   { secondaryStatus_ = status;};
    /// Are there a numerical difficulties?
-   bool isAbandoned() const             { return problemStatus_==4; }
+   inline bool isAbandoned() const             { return problemStatus_==4; }
    /// Is optimality proven?
-   bool isProvenOptimal() const         { return problemStatus_==0; }
+   inline bool isProvenOptimal() const         { return problemStatus_==0; }
    /// Is primal infeasiblity proven?
-   bool isProvenPrimalInfeasible() const { return problemStatus_==1; }
+   inline bool isProvenPrimalInfeasible() const { return problemStatus_==1; }
    /// Is dual infeasiblity proven?
-   bool isProvenDualInfeasible() const  { return problemStatus_==2; }
+   inline bool isProvenDualInfeasible() const  { return problemStatus_==2; }
    /// Is the given primal objective limit reached?
    bool isPrimalObjectiveLimitReached() const ;
    /// Is the given dual objective limit reached?
    bool isDualObjectiveLimitReached() const ;
    /// Iteration limit reached?
-   bool isIterationLimitReached() const { return problemStatus_==3; }
+   inline bool isIterationLimitReached() const { return problemStatus_==3; }
    /// Direction of optimization (1 - minimize, -1 - maximize, 0 - ignore
    inline double optimizationDirection() const {
       return  optimizationDirection_;
@@ -576,13 +579,13 @@ public:
   void popMessageHandler(CoinMessageHandler * oldHandler,bool oldDefault);
    /// Set language
    void newLanguage(CoinMessages::Language language);
-   void setLanguage(CoinMessages::Language language) { newLanguage(language); }
+   inline void setLanguage(CoinMessages::Language language) { newLanguage(language); }
    /// Return handler
-   CoinMessageHandler * messageHandler() const       { return handler_; }
+   inline CoinMessageHandler * messageHandler() const       { return handler_; }
    /// Return messages
-   CoinMessages messages() const                     { return messages_; }
+   inline CoinMessages messages() const                     { return messages_; }
    /// Return pointer to messages
-   CoinMessages * messagesPointer()                  { return & messages_; }
+   inline CoinMessages * messagesPointer()                  { return & messages_; }
   /** Amount of print out:
       0 - none
       1 - just final
@@ -591,31 +594,31 @@ public:
       4 - verbose
       above that 8,16,32 etc just for selective debug
   */
-   void setLogLevel(int value)    { handler_->setLogLevel(value); }
-   int logLevel() const           { return handler_->logLevel(); }
+   inline void setLogLevel(int value)    { handler_->setLogLevel(value); }
+   inline int logLevel() const           { return handler_->logLevel(); }
    /// Pass in Event handler (cloned and deleted at end)
    void passInEventHandler(const ClpEventHandler * eventHandler);
    /// length of names (0 means no names0
    inline int lengthNames() const { return lengthNames_; }
    /// Row names
-   const std::vector<std::string> * rowNames() const {
+   inline const std::vector<std::string> * rowNames() const {
       return &rowNames_;
    }
-   const std::string& rowName(int iRow) const {
+   inline const std::string& rowName(int iRow) const {
       return rowNames_[iRow];
    }
    /// Column names
-   const std::vector<std::string> * columnNames() const {
+   inline const std::vector<std::string> * columnNames() const {
       return &columnNames_;
    }
-   const std::string& columnName(int iColumn) const {
+   inline const std::string& columnName(int iColumn) const {
       return columnNames_[iColumn];
    }
   /// Objective methods
   inline ClpObjective * objectiveAsObject() const
   { return objective_;};
   void setObjective(ClpObjective * objective);
-  void setObjectivePointer(ClpObjective * objective)
+  inline void setObjectivePointer(ClpObjective * objective)
   { objective_ = objective;};
   /** Solve a problem with no elements - return status and
       dual and primal infeasibilites */
@@ -712,6 +715,10 @@ protected:
 		      const double * rowObjective=NULL);
   /// Does much of scaling
   void gutsOfScaling();
+   /// Objective value - always minimize
+   inline double rawObjectiveValue() const {
+      return objectiveValue_;
+   }
   //@}
 
 
