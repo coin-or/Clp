@@ -31,12 +31,15 @@
 
 #include "CoinSignal.hpp"
 static ClpSimplex * currentModel = NULL;
+static ClpInterior * currentModel2 = NULL;
 
 extern "C" {
    static void signal_handler(int whichSignal)
    {
       if (currentModel!=NULL) 
 	 currentModel->setMaximumIterations(0); // stop at next iterations
+      if (currentModel2!=NULL) 
+	 currentModel2->setMaximumIterations(0); // stop at next iterations
       return;
    }
 }
@@ -864,6 +867,9 @@ ClpSimplex::initialSolve(ClpSolve & options)
   } else if (method==ClpSolve::useBarrier) {
     printf("***** experimental pretty crude barrier\n");
     ClpInterior barrier(*model2);
+    if (interrupt) 
+      currentModel2 = &barrier;
+    // uncomment this if you have Anshul Gupta's wsmp package
     //ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp();
     //barrier.setCholesky(cholesky);
     barrier.primalDual();

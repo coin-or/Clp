@@ -110,4 +110,42 @@ getNorms(const double * region, int size, double & norm1, double & norm2)
     norm1 = std::max(norm1,fabs(region[i]));
   }
 }
+#ifdef DEBUG_MEMORY
+#include <malloc.h>
+#include <stdio.h>
+#include <stdlib.h>
 
+typedef void (*NEW_HANDLER)();
+static NEW_HANDLER new_handler;                        // function to call if `new' fails (cf. ARM p. 281)
+
+// Allocate storage.
+void *
+operator new(size_t size)
+{
+  void * p;
+  for (;;)
+    {
+      p = malloc(size);
+      if      (p)           break;        // success
+      else if (new_handler) new_handler();   // failure - try again (allow user to release some storage first)
+      else                  break;        // failure - no retry
+    }
+  if (size>1000000)
+    printf("Allocating memory of size %d\n",size);
+  return p;
+}
+
+// Deallocate storage.
+void
+operator delete(void *p)
+{
+  free(p);
+  return;
+}
+void
+operator delete [] (void *p)
+{
+  free(p);
+  return;
+}
+#endif

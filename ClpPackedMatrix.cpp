@@ -38,6 +38,12 @@ ClpPackedMatrix::ClpPackedMatrix (const ClpPackedMatrix & rhs)
 {  
   matrix_ = new CoinPackedMatrix(*(rhs.matrix_));
   zeroElements_ = rhs.zeroElements_;
+  int numberRows = getNumRows();
+  if (rhs.effectiveRhs_&&numberRows) {
+    effectiveRhs_ = ClpCopyOfArray(rhs.effectiveRhs_,numberRows);
+  } else {
+    effectiveRhs_=NULL;
+  }
   
 }
 
@@ -813,12 +819,12 @@ ClpPackedMatrix::subsetTransposeTimes(const ClpSimplex * model,
 /* If element NULL returns number of elements in column part of basis,
    If not NULL fills in as well */
 CoinBigIndex 
-ClpPackedMatrix::fillBasis(const ClpSimplex * model,
+ClpPackedMatrix::fillBasis(ClpSimplex * model,
 			   const int * whichColumn, 
 			   int numberBasic,
 			   int numberColumnBasic,
 			   int * indexRowU, int * indexColumnU,
-			   double * elementU) const 
+			   double * elementU)
 {
   const int * columnLength = matrix_->getVectorLengths(); 
   int i;
@@ -1385,6 +1391,33 @@ ClpPackedMatrix::add(const ClpSimplex * model,CoinIndexedVector * rowArray,
 	 i<columnStart[iColumn]+columnLength[iColumn];i++) {
       int iRow = row[i];
       rowArray->quickAdd(iRow,elementByColumn[i]*scale*rowScale[iRow]);
+    }
+  }
+}
+/* Adds multiple of a column into an array */
+void 
+ClpPackedMatrix::add(const ClpSimplex * model,double * array,
+		    int iColumn, double multiplier) const
+{
+  const double * rowScale = model->rowScale();
+  const int * row = matrix_->getIndices();
+  const CoinBigIndex * columnStart = matrix_->getVectorStarts();
+  const int * columnLength = matrix_->getVectorLengths(); 
+  const double * elementByColumn = matrix_->getElements();
+  CoinBigIndex i;
+  if (!rowScale) {
+    for (i=columnStart[iColumn];
+	 i<columnStart[iColumn]+columnLength[iColumn];i++) {
+      int iRow = row[i];
+      array[iRow] += multiplier*elementByColumn[i];
+    }
+  } else {
+    // apply scaling
+    double scale = model->columnScale()[iColumn]*multiplier;
+    for (i=columnStart[iColumn];
+	 i<columnStart[iColumn]+columnLength[iColumn];i++) {
+      int iRow = row[i];
+      array[iRow] += elementByColumn[i]*scale*rowScale[iRow];
     }
   }
 }

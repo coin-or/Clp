@@ -151,12 +151,12 @@ ClpDummyMatrix::subsetTransposeTimes(const ClpSimplex * model,
 /* If element NULL returns number of elements in column part of basis,
    If not NULL fills in as well */
 CoinBigIndex 
-ClpDummyMatrix::fillBasis(const ClpSimplex * model,
+ClpDummyMatrix::fillBasis(ClpSimplex * model,
 				 const int * whichColumn, 
 				 int numberBasic,
 				 int numberColumnBasic,
 				 int * indexRowU, int * indexColumnU,
-				 double * elementU) const 
+				 double * elementU) 
 {
   std::cerr<<"fillBasis not supported - ClpDummyMatrix"<<std::endl;
   abort();
@@ -188,6 +188,14 @@ ClpDummyMatrix::unpackPacked(ClpSimplex * model,
 void 
 ClpDummyMatrix::add(const ClpSimplex * model,CoinIndexedVector * rowArray,
 		   int iColumn, double multiplier) const 
+{
+  std::cerr<<"add not supported - ClpDummyMatrix"<<std::endl;
+  abort();
+}
+/* Adds multiple of a column into an array */
+void 
+ClpDummyMatrix::add(const ClpSimplex * model,double * array,
+		    int column, double multiplier) const
 {
   std::cerr<<"add not supported - ClpDummyMatrix"<<std::endl;
   abort();

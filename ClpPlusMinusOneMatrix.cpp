@@ -58,6 +58,12 @@ ClpPlusMinusOneMatrix::ClpPlusMinusOneMatrix (const ClpPlusMinusOneMatrix & rhs)
     startNegative_ = new int [ numberColumns_];
     memcpy(startNegative_,rhs.startNegative_,numberColumns_*sizeof(int));
   }
+  int numberRows = getNumRows();
+  if (rhs.effectiveRhs_&&numberRows) {
+    effectiveRhs_ = ClpCopyOfArray(rhs.effectiveRhs_,numberRows);
+  } else {
+    effectiveRhs_=NULL;
+  }
 }
 
 ClpPlusMinusOneMatrix::ClpPlusMinusOneMatrix (const CoinPackedMatrix & rhs) 
@@ -883,12 +889,12 @@ ClpPlusMinusOneMatrix::subsetTransposeTimes(const ClpSimplex * model,
 /* If element NULL returns number of elements in column part of basis,
    If not NULL fills in as well */
 CoinBigIndex 
-ClpPlusMinusOneMatrix::fillBasis(const ClpSimplex * model,
+ClpPlusMinusOneMatrix::fillBasis(ClpSimplex * model,
 				 const int * whichColumn, 
 				 int numberBasic,
 				 int numberColumnBasic,
 				 int * indexRowU, int * indexColumnU,
-				 double * elementU) const 
+				 double * elementU) 
 {
   int i;
   CoinBigIndex numberElements=0;
@@ -976,6 +982,21 @@ ClpPlusMinusOneMatrix::add(const ClpSimplex * model,CoinIndexedVector * rowArray
   for (;j<startPositive_[iColumn+1];j++) {
     int iRow = indices_[j];
     rowArray->quickAdd(iRow,-multiplier);
+  }
+}
+/* Adds multiple of a column into an array */
+void 
+ClpPlusMinusOneMatrix::add(const ClpSimplex * model,double * array,
+		    int iColumn, double multiplier) const
+{
+  CoinBigIndex j=startPositive_[iColumn];
+  for (;j<startNegative_[iColumn];j++) {
+    int iRow = indices_[j];
+    array[iRow] += multiplier;
+  }
+  for (;j<startPositive_[iColumn+1];j++) {
+    int iRow = indices_[j];
+    array[iRow] -= multiplier;
   }
 }
 
@@ -1525,4 +1546,13 @@ ClpPlusMinusOneMatrix::partialPricing(ClpSimplex * model, int start, int end,
     }
     reducedCost[bestSequence] = value;
   }
+}
+// Allow any parts of a created CoinMatrix to be deleted
+void 
+ClpPlusMinusOneMatrix::releasePackedMatrix() const 
+{
+  delete [] elements_;
+  delete [] lengths_;
+  elements_=NULL;
+  lengths_=NULL;
 }

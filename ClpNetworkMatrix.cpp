@@ -78,6 +78,12 @@ ClpNetworkMatrix::ClpNetworkMatrix (const ClpNetworkMatrix & rhs)
     indices_ = new int [ 2*numberColumns_];
     memcpy(indices_,rhs.indices_,2*numberColumns_*sizeof(int));
   }
+  int numberRows = getNumRows();
+  if (rhs.effectiveRhs_&&numberRows) {
+    effectiveRhs_ = ClpCopyOfArray(rhs.effectiveRhs_,numberRows);
+  } else {
+    effectiveRhs_=NULL;
+  }
 }
 
 ClpNetworkMatrix::ClpNetworkMatrix (const CoinPackedMatrix & rhs) 
@@ -517,12 +523,12 @@ ClpNetworkMatrix::subsetTransposeTimes(const ClpSimplex * model,
 /* If element NULL returns number of elements in column part of basis,
    If not NULL fills in as well */
 CoinBigIndex 
-ClpNetworkMatrix::fillBasis(const ClpSimplex * model,
+ClpNetworkMatrix::fillBasis(ClpSimplex * model,
 				 const int * whichColumn, 
 				 int numberBasic,
 				 int numberColumnBasic,
 				 int * indexRowU, int * indexColumnU,
-				 double * elementU) const 
+				 double * elementU)  
 {
   int i;
   CoinBigIndex numberElements=0;
@@ -632,6 +638,19 @@ ClpNetworkMatrix::add(const ClpSimplex * model,CoinIndexedVector * rowArray,
     rowArray->quickAdd(iRowM,-multiplier);
   if (iRowP>=0) 
     rowArray->quickAdd(iRowP,multiplier);
+}
+/* Adds multiple of a column into an array */
+void 
+ClpNetworkMatrix::add(const ClpSimplex * model,double * array,
+		    int iColumn, double multiplier) const
+{
+  CoinBigIndex j=iColumn<<1;
+  int iRowM = indices_[j];
+  int iRowP = indices_[j+1];
+  if (iRowM>=0) 
+    array[iRowM] -= multiplier;
+  if (iRowP>=0) 
+    array[iRowP] += multiplier;
 }
 
 // Return a complete CoinPackedMatrix
@@ -974,4 +993,13 @@ ClpNetworkMatrix::partialPricing(ClpSimplex * model, int start, int end,
       reducedCost[bestSequence] = value;
     }
   }
+}
+// Allow any parts of a created CoinMatrix to be deleted
+void 
+ClpNetworkMatrix::releasePackedMatrix() const 
+{
+  delete [] elements_;
+  delete [] lengths_;
+  elements_=NULL;
+  lengths_=NULL;
 }

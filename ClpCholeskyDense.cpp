@@ -87,15 +87,15 @@ int
 ClpCholeskyDense::factorize(const double * diagonal, int * rowsDropped) 
 {
   int iColumn;
-  const CoinBigIndex * columnStart = model_->matrix()->getVectorStarts();
-  const int * columnLength = model_->matrix()->getVectorLengths();
-  const int * row = model_->matrix()->getIndices();
-  const double * element = model_->matrix()->getElements();
+  const CoinBigIndex * columnStart = model_->clpMatrix()->getVectorStarts();
+  const int * columnLength = model_->clpMatrix()->getVectorLengths();
+  const int * row = model_->clpMatrix()->getIndices();
+  const double * element = model_->clpMatrix()->getElements();
   const CoinBigIndex * rowStart = rowCopy_->getVectorStarts();
   const int * rowLength = rowCopy_->getVectorLengths();
   const int * column = rowCopy_->getIndices();
   const double * elementByRow = rowCopy_->getElements();
-  int numberColumns=model_->matrix()->getNumCols();
+  int numberColumns=model_->clpMatrix()->getNumCols();
   CoinZeroN(work_,numberRows_*numberRows_);
   int iRow;
   double * work = work_;
@@ -122,6 +122,8 @@ ClpCholeskyDense::factorize(const double * diagonal, int * rowsDropped)
     work += numberRows_;
   }
   work = work_;
+  // Get rid of any odd copies
+  // model_->clpMatrix()->releasePackedMatrix();
 #ifdef CLP_DEBUG
   double * save = NULL;
   if (numberRows_<20) {

@@ -5,6 +5,7 @@
 
 #include <iostream>
 
+#include "CoinIndexedVector.hpp"
 #include "ClpMatrixBase.hpp"
 #include "ClpSimplex.hpp"
 
@@ -16,7 +17,11 @@
 // Default Constructor 
 //-------------------------------------------------------------------
 ClpMatrixBase::ClpMatrixBase () :
-  type_(-1)
+  effectiveRhs_(NULL),
+  type_(-1),
+  lastRefresh_(-1),
+  refreshFrequency_(0),
+  skipDualCheck_(false)
 {
 
 }
@@ -24,10 +29,13 @@ ClpMatrixBase::ClpMatrixBase () :
 //-------------------------------------------------------------------
 // Copy constructor 
 //-------------------------------------------------------------------
-ClpMatrixBase::ClpMatrixBase (const ClpMatrixBase & source) :
-  type_(source.type_)
+ClpMatrixBase::ClpMatrixBase (const ClpMatrixBase & rhs) :
+  type_(rhs.type_),
+  skipDualCheck_(rhs.skipDualCheck_)
 {  
-
+  lastRefresh_ = rhs.lastRefresh_;
+  refreshFrequency_ = rhs.refreshFrequency_;
+  skipDualCheck_ = rhs.skipDualCheck_;
 }
 
 //-------------------------------------------------------------------
@@ -35,7 +43,7 @@ ClpMatrixBase::ClpMatrixBase (const ClpMatrixBase & source) :
 //-------------------------------------------------------------------
 ClpMatrixBase::~ClpMatrixBase ()
 {
-
+  delete [] effectiveRhs_;
 }
 
 //----------------------------------------------------------------
@@ -46,6 +54,16 @@ ClpMatrixBase::operator=(const ClpMatrixBase& rhs)
 {
   if (this != &rhs) {
     type_ = rhs.type_;
+    delete [] effectiveRhs_;
+    int numberRows = getNumRows();
+    if (rhs.effectiveRhs_&&numberRows) {
+      effectiveRhs_ = ClpCopyOfArray(rhs.effectiveRhs_,numberRows);
+    } else {
+      effectiveRhs_=NULL;
+    }
+    lastRefresh_ = rhs.lastRefresh_;
+    refreshFrequency_ = rhs.refreshFrequency_;
+    skipDualCheck_ = rhs.skipDualCheck_;
   }
   return *this;
 }
@@ -159,3 +177,63 @@ ClpMatrixBase::extendUpdated(CoinIndexedVector * update, double * lower,
 {
   return 0;
 }
+/*
+     utility primal function for dealing with dynamic constraints
+     mode=n see ClpGubMatrix.hpp for definition
+     Remember to update here when settled down
+*/
+void 
+ClpMatrixBase::primalExpanded(ClpSimplex * model,int mode)
+{
+}
+/*
+     utility dual function for dealing with dynamic constraints
+     mode=n see ClpGubMatrix.hpp for definition
+     Remember to update here when settled down
+*/
+void 
+ClpMatrixBase::dualExpanded(ClpSimplex * model,
+			    CoinIndexedVector * array,
+			    double * other,int mode)
+{
+}
+/*
+     general utility function for dealing with dynamic constraints
+     mode=n see ClpGubMatrix.hpp for definition
+     Remember to update here when settled down
+*/
+int
+ClpMatrixBase::generalExpanded(ClpSimplex * model,int mode, int &number)
+{
+  if (mode)
+    return 0;
+  // Fill pivotVariable_ with basics
+  int numberColumns = model->numberColumns();
+  int i;
+  int numberBasic=number;
+  // Use different array so can build from true pivotVariable_
+  //int * pivotVariable = model->pivotVariable();
+  int * pivotVariable = model->rowArray(0)->getIndices();
+  for (i=0;i<numberColumns;i++) {
+    if (model->getColumnStatus(i) == ClpSimplex::basic) 
+      pivotVariable[numberBasic++]=i;
+  }
+  number = numberBasic;
+  return 0;
+}
+// Sets up an effective RHS
+void 
+ClpMatrixBase::useEffectiveRhs(ClpSimplex * model)
+{
+  std::cerr<<"useEffectiveRhs not supported - ClpMatrixBase"<<std::endl;
+  abort();
+}
+/* Returns effective RHS if it is being used.  This is used for long problems
+   or big gub or anywhere where going through full columns is
+   expensive.  This may re-compute */
+double * 
+ClpMatrixBase::effectiveRhs(ClpSimplex * model,bool forceRefresh)
+{
+  return NULL;
+}
+

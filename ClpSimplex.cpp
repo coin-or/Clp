@@ -384,6 +384,8 @@ ClpSimplex::computePrimals ( const double * rowActivities,
     int iPivot=pivotVariable_[iRow];
     solution_[iPivot] = 0.0;
   }
+  // Extended solution before "update"
+  matrix_->primalExpanded(this,0);
   double * array = arrayVector.denseVector();
   times(-1.0,columnActivityWork_,array);
 
@@ -407,6 +409,8 @@ ClpSimplex::computePrimals ( const double * rowActivities,
   CoinIndexedVector * thisVector = &arrayVector;
   CoinIndexedVector * lastVector = &previousVector;
   factorization_->updateColumn(workSpace,thisVector);
+  // Extended solution after "update"
+  matrix_->primalExpanded(this,1);
   bool goodSolution=true;
   for (iRefine=0;iRefine<numberRefinements_+1;iRefine++) {
 
@@ -533,6 +537,8 @@ ClpSimplex::computeDuals(double * givenDjs)
     }
   }
   arrayVector.setNumElements(number);
+  // Extended duals before "updateTranspose"
+  matrix_->dualExpanded(this,&arrayVector,givenDjs,0);
 
   // Btran basic costs and get as accurate as possible
   double lastError=COIN_DBL_MAX;
@@ -548,6 +554,8 @@ ClpSimplex::computeDuals(double * givenDjs)
     // would be faster to do just for basic but this reduces code
     ClpDisjointCopyN(objectiveWork_,numberColumns_,reducedCostWork_);
     transposeTimes(-1.0,array,reducedCostWork_);
+    // update by duals on sets
+    matrix_->dualExpanded(this,NULL,NULL,1);
     if (!givenDjs) {
       for (iRow=0;iRow<numberRows_;iRow++) {
 	int iPivot=pivotVariable_[iRow];
@@ -644,6 +652,8 @@ ClpSimplex::computeDuals(double * givenDjs)
   }
   ClpDisjointCopyN(objectiveWork_,numberColumns_,reducedCostWork_);
   transposeTimes(-1.0,dual_,reducedCostWork_);
+  // Extended duals and check dual infeasibility
+  matrix_->dualExpanded(this,NULL,NULL,2);
   // If necessary - override results
   if (givenDjs) {
     // restore accurate duals
@@ -1703,6 +1713,8 @@ ClpSimplex::checkPrimalSolution(const double * rowActivities,
     if (infeasibility>largestSolutionError_)
       largestSolutionError_=infeasibility;
   }
+  // Check any infeasibilities from dynamic rows
+  matrix_->primalExpanded(this,2);
   solution = columnActivityWork_;
   for (iColumn=0;iColumn<numberColumns_;iColumn++) {
     //assert (fabs(solution[iColumn])<1.0e15||getColumnStatus(iColumn) == basic);
@@ -1753,6 +1765,8 @@ ClpSimplex::checkDualSolution()
   relaxedTolerance = relaxedTolerance +  error;
   sumOfRelaxedDualInfeasibilities_ = 0.0;
 
+  // Check any djs from dynamic rows
+  matrix_->dualExpanded(this,NULL,NULL,3);
   for (iColumn=0;iColumn<numberColumns_;iColumn++) {
     if (getColumnStatus(iColumn) != basic&&!flagged(iColumn)) {
       // not basic
@@ -2168,6 +2182,8 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
   // maybe we need to move scales to SimplexModel for factorization?
   if ((what&8)!=0&&!pivotVariable_) {
     pivotVariable_=new int[numberRows2];
+    for (int i=0;i<numberRows2;i++)
+      pivotVariable_[i]=-1;
   }
 
   if ((what&16)!=0&&!rowArray_[2]) {

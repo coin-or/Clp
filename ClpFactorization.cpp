@@ -76,7 +76,7 @@ int
 ClpFactorization::factorize ( ClpSimplex * model,
 			      int solveType, bool valuesPass)
 {
-  const ClpMatrixBase * matrix = model->clpMatrix(); 
+  ClpMatrixBase * matrix = model->clpMatrix(); 
   int numberRows = model->numberRows();
   int numberColumns = model->numberColumns();
   // If too many compressions increase area
@@ -92,14 +92,56 @@ ClpFactorization::factorize ( ClpSimplex * model,
       int i;
       int numberBasic=0;
       int numberRowBasic;
-      for (i=0;i<numberRows;i++) {
-	if (model->getRowStatus(i) == ClpSimplex::basic) 
-	  pivotVariable[numberBasic++]=i;
-      }
-      numberRowBasic=numberBasic;
-      for (i=0;i<numberColumns;i++) {
-	if (model->getColumnStatus(i) == ClpSimplex::basic) 
-	  pivotVariable[numberBasic++]=i;
+      // Move pivot variables across if they look good
+      int * pivotTemp = model->rowArray(0)->getIndices();
+      assert (!model->rowArray(0)->getNumElements());
+      if (!matrix->effectiveRhs(model)) {
+	// Seems to prefer things in order so quickest
+	// way is to go though like this
+	for (i=0;i<numberRows;i++) {
+	  if (model->getRowStatus(i) == ClpSimplex::basic) 
+	    pivotTemp[numberBasic++]=i;
+	}
+	numberRowBasic=numberBasic;
+	/* Put column basic variables into pivotVariable
+	   This is done by ClpMatrixBase to allow override for gub
+	*/
+	matrix->generalExpanded(model,0,numberBasic);
+      } else {
+	// Long matrix - do a different way
+	bool fullSearch=false;
+	for (i=0;i<numberRows;i++) {
+	  int iPivot = pivotVariable[i];
+	  if (iPivot>=numberColumns) {
+	    pivotTemp[numberBasic++]=iPivot-numberColumns;
+	  }
+	}
+	numberRowBasic=numberBasic;
+	for (i=0;i<numberRows;i++) {
+	  int iPivot = pivotVariable[i];
+	  if (iPivot<numberColumns) {
+	    if (iPivot>=0) {
+	      pivotTemp[numberBasic++]=iPivot;
+	    } else {
+	      // not full basis
+	      fullSearch=true;
+	      break;
+	    }
+	  }
+	}
+	if (fullSearch) {
+	  // do slow way
+	  numberBasic=0;
+	  for (i=0;i<numberRows;i++) {
+	    if (model->getRowStatus(i) == ClpSimplex::basic) 
+	      pivotTemp[numberBasic++]=i;
+	  }
+	  numberRowBasic=numberBasic;
+	  /* Put column basic variables into pivotVariable
+	     This is done by ClpMatrixBase to allow override for gub
+	  */
+	  matrix->generalExpanded(model,0,numberBasic);
+	}
       }
       assert (numberBasic<=numberRows);
       // see if matrix a network
@@ -122,7 +164,7 @@ ClpFactorization::factorize ( ClpSimplex * model,
 	int i;
 
 	numberElements +=matrix->fillBasis(model,
-					   pivotVariable+numberRowBasic, 
+					   pivotTemp+numberRowBasic, 
 					   numberRowBasic,
 					   numberBasic-numberRowBasic,
 					   NULL,NULL,NULL);
@@ -134,13 +176,13 @@ ClpFactorization::factorize ( ClpSimplex * model,
 	//copy
 	numberElements=numberRowBasic;
 	for (i=0;i<numberRowBasic;i++) {
-	  int iRow = pivotVariable[i];
+	  int iRow = pivotTemp[i];
 	  indexRowU_[i]=iRow;
 	  indexColumnU_[i]=i;
 	  elementU_[i]=slackValue_;
 	}
 	numberElements +=matrix->fillBasis(model, 
-					   pivotVariable+numberRowBasic, 
+					   pivotTemp+numberRowBasic, 
 					   numberRowBasic, 
 					   numberBasic-numberRowBasic,
 					   indexRowU_+numberElements, 
@@ -159,8 +201,8 @@ ClpFactorization::factorize ( ClpSimplex * model,
       if (status_ == 0) {
 	int * permuteBack = permuteBack_;
 	int * back = pivotColumnBack_;
-	int * pivotTemp = pivotColumn_;
-	ClpDisjointCopyN ( pivotVariable, numberRows_ , pivotTemp  );
+	//int * pivotTemp = pivotColumn_;
+	//ClpDisjointCopyN ( pivotVariable, numberRows_ , pivotTemp  );
 	// Redo pivot order
 	for (i=0;i<numberRowBasic;i++) {
 	  int k = pivotTemp[i];
@@ -242,11 +284,11 @@ ClpFactorization::factorize ( ClpSimplex * model,
 	for (i=0;i<numberTotal;i++) 
 	  isBasic[i]=-1;
 	for (i=0;i<numberRowBasic;i++) {
-	  int iRow = pivotVariable[i];
+	  int iRow = pivotTemp[i];
 	  rowIsBasic[iRow]=1;
 	}
 	for (;i<numberBasic;i++) {
-	  int iColumn = pivotVariable[i];
+	  int iColumn = pivotTemp[i];
 	  columnIsBasic[iColumn]=1;
 	}
 	numberBasic=0;
@@ -340,6 +382,8 @@ ClpFactorization::factorize ( ClpSimplex * model,
 	    model->setRowStatus(iRow,ClpSimplex::basic);
 	  }
 	}
+	// Put back any key variables for gub (status_ not touched)
+	matrix->generalExpanded(model,1,status_);
 	// signal repeat
 	status_=-99;
 	// set fixed if they are

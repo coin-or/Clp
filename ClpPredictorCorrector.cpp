@@ -15,7 +15,7 @@
 #include "ClpPredictorCorrector.hpp"
 #include "CoinPackedMatrix.hpp"
 #include "ClpMessage.hpp"
-#include "ClpCholeskyDense.hpp"
+#include "ClpCholeskyBase.hpp"
 #include "ClpHelperFunctions.hpp"
 #include <cfloat>
 #include <cassert>
@@ -855,7 +855,8 @@ double ClpPredictorCorrector::findDirectionVector(const int phase)
 	double result=newValue+oldValue;
 	newError[iRow]=result;
 	//newError[iRow]=0.0;
-	assert(updateRegion_[iRow]==0.0);
+	//assert(updateRegion_[iRow]==0.0);
+	updateRegion_[iRow]=0.0;
       } 
     } 
     relativeError = maximumRHSError/solutionNorm_;

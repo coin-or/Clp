@@ -24,6 +24,10 @@
 //-------------------------------------------------------------------
 ClpGubMatrix::ClpGubMatrix () 
   : ClpPackedMatrix(),
+    sumDualInfeasibilities_(0.0),
+    sumPrimalInfeasibilities_(0.0),
+    sumOfRelaxedDualInfeasibilities_(0.0),
+    sumOfRelaxedPrimalInfeasibilities_(0.0),
     start_(NULL),
     end_(NULL),
     lower_(NULL),
@@ -32,7 +36,12 @@ ClpGubMatrix::ClpGubMatrix ()
     backward_(NULL),
     keyVariable_(NULL),
     next_(NULL),
-    numberSets_(0)
+    numberDualInfeasibilities_(0),
+    numberPrimalInfeasibilities_(0),
+    numberSets_(0),
+    firstGub_(0),
+    lastGub_(0),
+    gubType_(0)
 {
   setType(11);
 }
@@ -53,6 +62,15 @@ ClpGubMatrix::ClpGubMatrix (const ClpGubMatrix & rhs)
   backward_ = ClpCopyOfArray(rhs.backward_,numberColumns);
   keyVariable_ = ClpCopyOfArray(rhs.keyVariable_,numberSets_);
   next_ = ClpCopyOfArray(rhs.next_,numberColumns+numberSets_);
+  sumDualInfeasibilities_ = rhs. sumDualInfeasibilities_;
+  sumPrimalInfeasibilities_ = rhs.sumPrimalInfeasibilities_;
+  sumOfRelaxedDualInfeasibilities_ = rhs.sumOfRelaxedDualInfeasibilities_;
+  sumOfRelaxedPrimalInfeasibilities_ = rhs.sumOfRelaxedPrimalInfeasibilities_;
+  numberDualInfeasibilities_ = rhs.numberDualInfeasibilities_;
+  numberPrimalInfeasibilities_ = rhs.numberPrimalInfeasibilities_;
+  firstGub_ = rhs.firstGub_;
+  lastGub_ = rhs.lastGub_;
+  gubType_ = rhs.gubType_;
 }
 
 //-------------------------------------------------------------------
@@ -60,6 +78,10 @@ ClpGubMatrix::ClpGubMatrix (const ClpGubMatrix & rhs)
 //-------------------------------------------------------------------
 ClpGubMatrix::ClpGubMatrix (CoinPackedMatrix * rhs) 
   : ClpPackedMatrix(rhs),
+    sumDualInfeasibilities_(0.0),
+    sumPrimalInfeasibilities_(0.0),
+    sumOfRelaxedDualInfeasibilities_(0.0),
+    sumOfRelaxedPrimalInfeasibilities_(0.0),
     start_(NULL),
     end_(NULL),
     lower_(NULL),
@@ -68,7 +90,12 @@ ClpGubMatrix::ClpGubMatrix (CoinPackedMatrix * rhs)
     backward_(NULL),
     keyVariable_(NULL),
     next_(NULL),
-    numberSets_(0)
+    numberDualInfeasibilities_(0),
+    numberPrimalInfeasibilities_(0),
+    numberSets_(0),
+    firstGub_(0),
+    lastGub_(0),
+    gubType_(0)
 {  
   setType(11);
 }
@@ -79,7 +106,13 @@ ClpGubMatrix::ClpGubMatrix(ClpPackedMatrix * matrix, int numberSets,
 			   const int * start, const int * end,
 			   const double * lower, const double * upper,
 			   const unsigned char * status)
-  : ClpPackedMatrix(matrix->matrix())
+  : ClpPackedMatrix(matrix->matrix()),
+    sumDualInfeasibilities_(0.0),
+    sumPrimalInfeasibilities_(0.0),
+    sumOfRelaxedDualInfeasibilities_(0.0),
+    sumOfRelaxedPrimalInfeasibilities_(0.0),
+    numberDualInfeasibilities_(0),
+    numberPrimalInfeasibilities_(0)
 {
   numberSets_ = numberSets;
   start_ = ClpCopyOfArray(start,numberSets_);
@@ -92,12 +125,12 @@ ClpGubMatrix::ClpGubMatrix(ClpPackedMatrix * matrix, int numberSets,
   backward_ = new int[numberColumns];
   keyVariable_ = new int[numberSets_];
   // signal to need new ordering
-  delete [] next_;
   next_ = NULL;
   for (int iColumn=0;iColumn<numberColumns;iColumn++) 
     backward_[iColumn]=-1;
 
-  for (int iSet=0;iSet<numberSets_;iSet++) {
+  int iSet;
+  for (iSet=0;iSet<numberSets_;iSet++) {
     if (start_[iSet]<0||start_[iSet]>=numberColumns)
       throw CoinError("Index out of range","constructor","ClpGubMatrix");
     if (end_[iSet]<0||end_[iSet]>numberColumns)
@@ -110,6 +143,23 @@ ClpGubMatrix::ClpGubMatrix(ClpPackedMatrix * matrix, int numberSets,
     int j;
     for (j=start_[iSet];j<end_[iSet];j++)
       backward_[j]=iSet;
+  }
+  // Find type of gub
+  firstGub_=numberColumns+1;
+  lastGub_=-1;
+  int i;
+  for (i=0;i<numberColumns;i++) {
+    if (backward_[i]>=0) {
+      firstGub_ = min(firstGub_,i);
+      lastGub_ = max(lastGub_,i);
+    }
+  }
+  gubType_=0;
+  for (i=firstGub_;i<lastGub_;i++) {
+    if (backward_[i]<0) {
+      gubType_=1;
+      break;
+    }
   }
   if (status) {
     status_ = ClpCopyOfArray(status,numberSets_);
@@ -125,6 +175,10 @@ ClpGubMatrix::ClpGubMatrix(ClpPackedMatrix * matrix, int numberSets,
 
 ClpGubMatrix::ClpGubMatrix (const CoinPackedMatrix & rhs) 
   : ClpPackedMatrix(rhs),
+    sumDualInfeasibilities_(0.0),
+    sumPrimalInfeasibilities_(0.0),
+    sumOfRelaxedDualInfeasibilities_(0.0),
+    sumOfRelaxedPrimalInfeasibilities_(0.0),
     start_(NULL),
     end_(NULL),
     lower_(NULL),
@@ -133,7 +187,12 @@ ClpGubMatrix::ClpGubMatrix (const CoinPackedMatrix & rhs)
     backward_(NULL),
     keyVariable_(NULL),
     next_(NULL),
-    numberSets_(0)
+    numberDualInfeasibilities_(0),
+    numberPrimalInfeasibilities_(0),
+    numberSets_(0),
+    firstGub_(0),
+    lastGub_(0),
+    gubType_(0)
 {  
   setType(11);
   
@@ -179,6 +238,15 @@ ClpGubMatrix::operator=(const ClpGubMatrix& rhs)
     backward_ = ClpCopyOfArray(rhs.backward_,numberColumns);
     keyVariable_ = ClpCopyOfArray(rhs.keyVariable_,numberSets_);
     next_ = ClpCopyOfArray(rhs.next_,numberColumns+numberSets_);
+    sumDualInfeasibilities_ = rhs. sumDualInfeasibilities_;
+    sumPrimalInfeasibilities_ = rhs.sumPrimalInfeasibilities_;
+    sumOfRelaxedDualInfeasibilities_ = rhs.sumOfRelaxedDualInfeasibilities_;
+    sumOfRelaxedPrimalInfeasibilities_ = rhs.sumOfRelaxedPrimalInfeasibilities_;
+    numberDualInfeasibilities_ = rhs.numberDualInfeasibilities_;
+    numberPrimalInfeasibilities_ = rhs.numberPrimalInfeasibilities_;
+    firstGub_ = rhs.firstGub_;
+    lastGub_ = rhs.lastGub_;
+    gubType_ = rhs.gubType_;
   }
   return *this;
 }
@@ -257,12 +325,34 @@ ClpGubMatrix::ClpGubMatrix (
     }
   }
   numberSets_++; // adjust
+  // Find type of gub
+  firstGub_=numberColumns+1;
+  lastGub_=-1;
+  for (i=0;i<numberColumns;i++) {
+    if (backward_[i]>=0) {
+      firstGub_ = min(firstGub_,i);
+      lastGub_ = max(lastGub_,i);
+    }
+  }
+  gubType_=0;
+  for (i=firstGub_;i<lastGub_;i++) {
+    if (backward_[i]<0) {
+      gubType_=1;
+      break;
+    }
+  }
+
+  // Make sure key is feasible if only key in set
 }
 ClpGubMatrix::ClpGubMatrix (
 		       const CoinPackedMatrix & rhs,
 		       int numberRows, const int * whichRows,
 		       int numberColumns, const int * whichColumns)
   : ClpPackedMatrix(rhs, numberRows, whichRows, numberColumns, whichColumns),
+    sumDualInfeasibilities_(0.0),
+    sumPrimalInfeasibilities_(0.0),
+    sumOfRelaxedDualInfeasibilities_(0.0),
+    sumOfRelaxedPrimalInfeasibilities_(0.0),
     start_(NULL),
     end_(NULL),
     lower_(NULL),
@@ -270,7 +360,12 @@ ClpGubMatrix::ClpGubMatrix (
     backward_(NULL),
     keyVariable_(NULL),
     next_(NULL),
-    numberSets_(0)
+    numberDualInfeasibilities_(0),
+    numberPrimalInfeasibilities_(0),
+    numberSets_(0),
+    firstGub_(0),
+    lastGub_(0),
+    gubType_(0)
 {
   setType(11);
 }
@@ -333,12 +428,12 @@ ClpGubMatrix::subsetTransposeTimes(const ClpSimplex * model,
 /* If element NULL returns number of elements in column part of basis,
    If not NULL fills in as well */
 CoinBigIndex 
-ClpGubMatrix::fillBasis(const ClpSimplex * model,
+ClpGubMatrix::fillBasis(ClpSimplex * model,
 			   const int * whichColumn, 
 			   int numberBasic,
 			   int numberColumnBasic,
 			   int * indexRowU, int * indexColumnU,
-			   double * elementU) const 
+			   double * elementU) 
 {
   int i;
   int numberColumns = getNumCols();
@@ -347,6 +442,9 @@ ClpGubMatrix::fillBasis(const ClpSimplex * model,
   assert (next_ ||!elementU) ;
   if (!next_ ) {
     // do ordering
+    assert (!effectiveRhs_);
+    // create and do gub crash
+    useEffectiveRhs(model,false);
     next_ = new int[numberColumns+numberSets_];
     char * mark = new char[numberColumns];
     memset(mark,0,numberColumns);
@@ -417,6 +515,77 @@ ClpGubMatrix::fillBasis(const ClpSimplex * model,
   if (elementU!=NULL) {
     // fill
     if (!rowScale) {
+      // no scaling
+      for (i=0;i<numberColumnBasic;i++) {
+	int iColumn = whichColumn[i];
+	int iSet = backward_[iColumn];
+	int length = columnLength[iColumn];
+	CoinBigIndex j;
+	if (iSet<0||keyVariable_[iSet]>=numberColumns) {
+	  for (j=columnStart[iColumn];j<columnStart[iColumn]+columnLength[iColumn];j++) {
+	    double value = elementByColumn[j];
+	    if (fabs(value)>1.0e-20) {
+	      int iRow = row[j];
+	      indexRowU[numberElements]=iRow;
+	      indexColumnU[numberElements]=numberBasic;
+	      elementU[numberElements++]=value;
+	    }
+	  }
+	  numberBasic++;
+	} else {
+	  // in gub set
+	  if (iColumn!=keyVariable_[iSet]) {
+	    // not key 
+	    if (lastSet<iSet) {
+	      // erase work
+	      if (key>=0) {
+		for (j=columnStart[key];j<columnStart[key]+keyLength;j++) {
+		  int iRow=row[j];
+		  work[iRow]=0.0;
+		  mark[iRow]=0;
+		}
+	      }
+	      key=keyVariable_[iSet];
+	      lastSet=iSet;
+	      keyLength = columnLength[key];
+	      for (j=columnStart[key];j<columnStart[key]+keyLength;j++) {
+		int iRow=row[j];
+		work[iRow]=elementByColumn[j];
+		mark[iRow]=1;
+	      }
+	    }
+	    for (j=columnStart[iColumn];j<columnStart[iColumn]+length;j++) {
+	      int iRow = row[j];
+	      double value=elementByColumn[j];
+	      if (mark[iRow]) {
+		mark[iRow]=0;
+		double keyValue = work[iRow];
+		value -= keyValue;
+	      }
+	      if (fabs(value)>1.0e-20) {
+		indexRowU[numberElements]=iRow;
+		indexColumnU[numberElements]=numberBasic;
+		elementU[numberElements++]=value;
+	      }
+	    }
+	    for (j=columnStart[key];j<columnStart[key]+keyLength;j++) {
+	      int iRow = row[j];
+	      if (mark[iRow]) {
+		double value = -work[iRow];
+		if (fabs(value)>1.0e-20) {
+		  indexRowU[numberElements]=iRow;
+		  indexColumnU[numberElements]=numberBasic;
+		  elementU[numberElements++]=value;
+		}
+	      } else {
+		// just put back mark
+		mark[iRow]=1;
+	      }
+	    }
+	    numberBasic++;
+	  }
+	}
+      }
     } else {
       // scaling
       const double * columnScale = model->columnScale();
@@ -428,12 +597,12 @@ ClpGubMatrix::fillBasis(const ClpSimplex * model,
 	if (iSet<0||keyVariable_[iSet]>=numberColumns) {
 	  double scale = columnScale[iColumn];
 	  for (j=columnStart[iColumn];j<columnStart[iColumn]+columnLength[iColumn];j++) {
-	    double value = elementByColumn[j];
+	    int iRow = row[j];
+	    double value = elementByColumn[j]*scale*rowScale[iRow];
 	    if (fabs(value)>1.0e-20) {
-	      int iRow = row[j];
 	      indexRowU[numberElements]=iRow;
 	      indexColumnU[numberElements]=numberBasic;
-	      elementU[numberElements++]=value*scale*rowScale[iRow];
+	      elementU[numberElements++]=value;
 	    }
 	  }
 	  numberBasic++;
@@ -472,7 +641,7 @@ ClpGubMatrix::fillBasis(const ClpSimplex * model,
 	      if (fabs(value)>1.0e-20) {
 		indexRowU[numberElements]=iRow;
 		indexColumnU[numberElements]=numberBasic;
-		elementU[numberElements++]=value*scale*rowScale[iRow];
+		elementU[numberElements++]=value;
 	      }
 	    }
 	    for (j=columnStart[key];j<columnStart[key]+keyLength;j++) {
@@ -482,7 +651,7 @@ ClpGubMatrix::fillBasis(const ClpSimplex * model,
 		if (fabs(value)>1.0e-20) {
 		  indexRowU[numberElements]=iRow;
 		  indexColumnU[numberElements]=numberBasic;
-		  elementU[numberElements++]=value*scale*rowScale[iRow];
+		  elementU[numberElements++]=value;
 		}
 	      } else {
 		// just put back mark
@@ -654,6 +823,571 @@ ClpGubMatrix::extendUpdated(CoinIndexedVector * update, double * lower,
 {
   assert(!update);
   return getNumRows();
+}
+/*
+     utility primal function for dealing with dynamic constraints
+     mode=n see ClpGubMatrix.hpp for definition
+     Remember to update here when settled down
+*/
+void 
+ClpGubMatrix::primalExpanded(ClpSimplex * model,int mode)
+{
+  int numberColumns = model->numberColumns();
+  switch (mode) {
+    // If key variable then slot in gub rhs so will get correct contribution
+  case 0:
+    {
+      int i;
+      double * solution = model->solutionRegion();
+      ClpSimplex::Status iStatus;
+      for (i=0;i<numberSets_;i++) {
+	int iColumn = keyVariable_[i];
+	if (iColumn<numberColumns) {
+	  // key is structural - where is slack
+	  iStatus = getStatus(i);
+	  assert (iStatus!=ClpSimplex::basic);
+	  if (iStatus==ClpSimplex::atLowerBound)
+	    solution[iColumn]=lower_[i];
+	  else
+	    solution[iColumn]=upper_[i];
+	}
+      }
+    }
+    break;
+    // Compute values of key variables
+  case 1:
+    {
+      int i;
+      double * solution = model->solutionRegion();
+      ClpSimplex::Status iStatus;
+      //const int * columnLength = matrix_->getVectorLengths(); 
+      //const CoinBigIndex * columnStart = matrix_->getVectorStarts();
+      //const int * row = matrix_->getIndices();
+      //const double * elementByColumn = matrix_->getElements();
+      //int * pivotVariable = model->pivotVariable();
+      sumPrimalInfeasibilities_=0.0;
+      numberPrimalInfeasibilities_=0;
+      double primalTolerance = model->primalTolerance();
+      double relaxedTolerance=primalTolerance;
+      // we can't really trust infeasibilities if there is primal error
+      double error = min(1.0e-3,model->largestPrimalError());
+      // allow tolerance at least slightly bigger than standard
+      relaxedTolerance = relaxedTolerance +  error;
+      // but we will be using difference
+      relaxedTolerance -= primalTolerance;
+      sumOfRelaxedPrimalInfeasibilities_ = 0.0;
+      for (i=0;i<numberSets_;i++) {
+	int kColumn = keyVariable_[i];
+	int iColumn =next_[kColumn];
+	// sum all non-key variables
+	double value=0.0;
+	while(iColumn>=0) {
+	  value+=solution[iColumn];
+	  iColumn=next_[iColumn];
+	}
+	if (kColumn<numberColumns) {
+	  // feasibility will be done later
+	  solution[kColumn] -= value;
+	} else {
+	  // slack is key
+	  iStatus = getStatus(i);
+	  assert (iStatus==ClpSimplex::basic);
+	  double infeasibility=0.0;
+	  if (value>upper_[i]+primalTolerance) {
+	    infeasibility=value-upper_[i]-primalTolerance;
+	    setAbove(i);
+	  } else if (value<lower_[i]-primalTolerance) {
+	    infeasibility=lower_[i]-value-primalTolerance ;
+	    setBelow(i);
+	  } else {
+	    setFeasible(i);
+	  }
+	  if (infeasibility>0.0) {
+	    sumPrimalInfeasibilities_ += infeasibility;
+	    if (infeasibility>relaxedTolerance) 
+	      sumOfRelaxedPrimalInfeasibilities_ += infeasibility;
+	    numberPrimalInfeasibilities_ ++;
+	  }
+	}
+      }
+    }
+    break;
+    // Report on infeasibilities of key variables
+  case 2:
+    {
+      model->setSumPrimalInfeasibilities(model->sumPrimalInfeasibilities()+
+					 sumPrimalInfeasibilities_);
+      model->setNumberPrimalInfeasibilities(model->numberPrimalInfeasibilities()+
+					 numberPrimalInfeasibilities_);
+      model->setSumOfRelaxedPrimalInfeasibilities(model->sumOfRelaxedPrimalInfeasibilities()+
+					 sumOfRelaxedPrimalInfeasibilities_);
+    }
+    break;
+  }
+}
+/*
+     utility dual function for dealing with dynamic constraints
+     mode=n see ClpGubMatrix.hpp for definition
+     Remember to update here when settled down
+*/
+void 
+ClpGubMatrix::dualExpanded(ClpSimplex * model,
+			    CoinIndexedVector * array,
+			    double * other,int mode)
+{
+  switch (mode) {
+    // modify costs before transposeUpdate
+  case 0:
+    {
+      int i;
+      double * cost = model->costRegion();
+      ClpSimplex::Status iStatus;
+      // not dual values yet
+      assert (!other);
+      double * work = array->denseVector();
+      double infeasibilityCost = model->infeasibilityCost();
+      int * pivotVariable = model->pivotVariable();
+      int numberRows = model->numberRows();
+      int numberColumns = model->numberColumns();
+      for (i=0;i<numberRows;i++) {
+	int iPivot = pivotVariable[i];
+	if (iPivot<numberColumns) {
+	  int iSet = backward_[iPivot];
+	  if (iSet>=0) {
+	    int kColumn = keyVariable_[iSet];
+	    double costValue;
+	    if (kColumn<numberColumns) {
+	      // structural has cost
+	      costValue = cost[kColumn];
+	    } else {
+	      // slack is key
+	      iStatus = getStatus(iSet);
+	      assert (iStatus==ClpSimplex::basic);
+	      costValue=weight(iSet)*infeasibilityCost;
+	    }
+	    array->add(i,work[i]-costValue);
+	  }
+	}
+      }
+    }
+    break;
+    // create duals for key variables (without check on dual infeasible)
+  case 1:
+    {
+      // If key slack then dual 0.0
+      // dj for key is zero so that defines dual on set
+      int i;
+      double * dj = model->djRegion();
+      double * dual = model->dualRowSolution();
+      double * cost = model->costRegion();
+      const int * columnLength = matrix_->getVectorLengths(); 
+      const CoinBigIndex * columnStart = matrix_->getVectorStarts();
+      const int * row = matrix_->getIndices();
+      const double * elementByColumn = matrix_->getElements();
+      int numberColumns = model->numberColumns();
+      for (i=0;i<numberSets_;i++) {
+	int kColumn = keyVariable_[i];
+	// If slack key we need not do anything
+	if (kColumn<numberColumns) {
+	  // dj without set
+	  double value = cost[kColumn];
+	  for (int j=columnStart[kColumn];
+	       j<columnStart[kColumn]+columnLength[kColumn];j++) {
+	    int iRow = row[j];
+	    value -= dual[iRow]*elementByColumn[j];
+	  }
+	  // Now subtract out from all 
+	  dj[kColumn] -= value;
+	  int iColumn =next_[kColumn];
+	  // modify all non-key variables
+	  while(iColumn>=0) {
+	  dj[iColumn]-=value;
+	  iColumn=next_[iColumn];
+	  }
+	}
+      }
+    }
+    // as 1 but check slacks
+  case 2:
+    {
+      // If key slack then dual 0.0
+      // If not then slack could be dual infeasible
+      // dj for key is zero so that defines dual on set
+      int i;
+      double * dj = model->djRegion();
+      double * dual = model->dualRowSolution();
+      double * cost = model->costRegion();
+      ClpSimplex::Status iStatus;
+      const int * columnLength = matrix_->getVectorLengths(); 
+      const CoinBigIndex * columnStart = matrix_->getVectorStarts();
+      const int * row = matrix_->getIndices();
+      const double * elementByColumn = matrix_->getElements();
+      int numberColumns = model->numberColumns();
+      sumDualInfeasibilities_=0.0;
+      numberDualInfeasibilities_=0;
+      double dualTolerance = model->dualTolerance();
+      double relaxedTolerance=dualTolerance;
+      // we can't really trust infeasibilities if there is dual error
+      double error = min(1.0e-3,model->largestDualError());
+      // allow tolerance at least slightly bigger than standard
+      relaxedTolerance = relaxedTolerance +  error;
+      // but we will be using difference
+      relaxedTolerance -= dualTolerance;
+      sumOfRelaxedDualInfeasibilities_ = 0.0;
+      for (i=0;i<numberSets_;i++) {
+	int kColumn = keyVariable_[i];
+	// If slack key we need not do anything
+	if (kColumn<numberColumns) {
+	  // dj without set
+	  double value = cost[kColumn];
+	  for (int j=columnStart[kColumn];
+	       j<columnStart[kColumn]+columnLength[kColumn];j++) {
+	    int iRow = row[j];
+	    value -= dual[iRow]*elementByColumn[j];
+	  }
+	  // Now subtract out from all 
+	  dj[kColumn] -= value;
+	  int iColumn =next_[kColumn];
+	  // modify all non-key variables
+	  while(iColumn>=0) {
+	  dj[iColumn]-=value;
+	  iColumn=next_[iColumn];
+	  }
+	  // check slack
+	  iStatus = getStatus(i);
+	  assert (iStatus!=ClpSimplex::basic);
+	  double infeasibility=0.0;
+	  // dj of slack is -(-1.0)value
+	  if (iStatus==ClpSimplex::atLowerBound) {
+	    if (value>-dualTolerance) 
+	      infeasibility=-value-dualTolerance;
+	  } else {
+	    // at upper bound
+	    if (value>dualTolerance) 
+	      infeasibility=value-dualTolerance;
+	  }
+	  if (infeasibility>0.0) {
+	    sumDualInfeasibilities_ += infeasibility;
+	    if (infeasibility>relaxedTolerance) 
+	      sumOfRelaxedDualInfeasibilities_ += infeasibility;
+	    numberDualInfeasibilities_ ++;
+	  }
+	}
+      }
+    }
+    // Report on infeasibilities of key variables
+  case 3:
+    {
+      model->setSumDualInfeasibilities(model->sumDualInfeasibilities()+
+					 sumDualInfeasibilities_);
+      model->setNumberDualInfeasibilities(model->numberDualInfeasibilities()+
+					 numberDualInfeasibilities_);
+      model->setSumOfRelaxedDualInfeasibilities(model->sumOfRelaxedDualInfeasibilities()+
+					 sumOfRelaxedDualInfeasibilities_);
+    }
+    break;
+  }
+}
+/*
+     general utility function for dealing with dynamic constraints
+     mode=n see ClpGubMatrix.hpp for definition
+     Remember to update here when settled down
+*/
+int
+ClpGubMatrix::generalExpanded(ClpSimplex * model,int mode,int &number)
+{
+  int returnCode=0;
+  int numberColumns = model->numberColumns();
+  switch (mode) {
+    // Fill in pivotVariable but not for key variables
+  case 0:
+    {
+      int i;
+      int numberBasic=number;
+      // Use different array so can build from true pivotVariable_
+      //int * pivotVariable = model->pivotVariable();
+      int * pivotVariable = model->rowArray(0)->getIndices();
+      for (i=0;i<numberColumns;i++) {
+	if (model->getColumnStatus(i) == ClpSimplex::basic) {
+	  int iSet = backward_[i];
+	  if (iSet<0||i!=keyVariable_[iSet])
+	    pivotVariable[numberBasic++]=i;
+	}
+      }
+      number = numberBasic;
+    }
+    break;
+    // Make all key variables basic
+  case 1:
+    {
+      int i;
+      for (i=0;i<numberSets_;i++) {
+	int iColumn = keyVariable_[i];
+	if (iColumn<numberColumns)
+	  model->setColumnStatus(iColumn,ClpSimplex::basic);
+      }
+    }
+    break;
+  }
+  return returnCode;
+}
+// Sets up an effective RHS and does gub crash if needed
+void 
+ClpGubMatrix::useEffectiveRhs(ClpSimplex * model, bool cheapest)
+{
+  // Do basis - cheapest or slack if feasible (unless cheapest set)
+  int longestSet=0;
+  int iSet;
+  for (iSet=0;iSet<numberSets_;iSet++) 
+    longestSet = max(longestSet,end_[iSet]-start_[iSet]);
+    
+  double * upper = new double[longestSet+1];
+  double * cost = new double[longestSet+1];
+  double * lower = new double[longestSet+1];
+  double * solution = new double[longestSet+1];
+  assert (!next_);
+  int numberColumns = getNumCols();
+  const int * columnLength = matrix_->getVectorLengths(); 
+  const double * columnLower = model->lowerRegion();
+  const double * columnUpper = model->upperRegion();
+  double * columnSolution = model->solutionRegion();
+  const double * objective = model->costRegion();
+  int numberRows = getNumRows();
+  next_ = new int[numberColumns+numberSets_];
+  for (int iColumn=0;iColumn<numberColumns;iColumn++) 
+    next_[iColumn]=INT_MAX;
+  double tolerance = model->primalTolerance();
+  for (iSet=0;iSet<numberSets_;iSet++) {
+    int j;
+    int numberBasic=0;
+    int iBasic=-1;
+    int iStart = start_[iSet];
+    int iEnd=end_[iSet];
+    // find one with smallest length
+    int smallest=numberRows+1;
+    double value=0.0;
+    for (j=iStart;j<iEnd;j++) {
+      if (model->getStatus(j)== ClpSimplex::basic) {
+	if (columnLength[j]<smallest) {
+	  smallest=columnLength[j];
+	  iBasic=j;
+	}
+	numberBasic++;
+      }
+      value += columnSolution[j];
+    }
+    bool done=false;
+    if (numberBasic>1||(numberBasic==1&&getStatus(iSet)==ClpSimplex::basic)) {
+      if (getStatus(iSet)==ClpSimplex::basic) 
+	iBasic = iSet+numberColumns;// slack key - use
+      done=true;
+    } else if (numberBasic==1) {
+      // see if can be key
+      double thisSolution = columnSolution[iBasic];
+      if (thisSolution>columnUpper[iBasic]) {
+	value -= thisSolution-columnUpper[iBasic];
+	thisSolution = columnUpper[iBasic];
+	solution[iBasic]=thisSolution;
+      }
+      if (thisSolution<columnLower[iBasic]) {
+	value -= thisSolution-columnLower[iBasic];
+	thisSolution = columnLower[iBasic];
+	solution[iBasic]=thisSolution;
+      }
+      // try setting slack to a bound
+      assert (upper_[iSet]<1.0e20||lower_[iSet]>-1.0e20);
+      double cost1 = COIN_DBL_MAX;
+      int whichBound=-1;
+      if (upper_[iSet]<1.0e20) {
+	// try slack at ub
+	double newBasic = thisSolution +upper_[iSet]-value;
+	if (newBasic>=columnLower[iBasic]-tolerance&&
+	    newBasic<=columnUpper[iBasic]+tolerance) {
+	  // can go
+	  whichBound=1;
+	  cost1 = newBasic*objective[iBasic];
+	  // But if exact then may be good solution
+	  if (fabs(upper_[iSet]-value)<tolerance)
+	    cost1=-COIN_DBL_MAX;
+	}
+      }
+      if (lower_[iSet]>-1.0e20) {
+	// try slack at lb
+	double newBasic = thisSolution +lower_[iSet]-value;
+	if (newBasic>=columnLower[iBasic]-tolerance&&
+	    newBasic<=columnUpper[iBasic]+tolerance) {
+	  // can go but is it cheaper
+	  double cost2 = newBasic*objective[iBasic];
+	  // But if exact then may be good solution
+	  if (fabs(lower_[iSet]-value)<tolerance)
+	    cost2=-COIN_DBL_MAX;
+	  if (cost2<cost1)
+	    whichBound=0;
+	}
+      }
+      if (whichBound!=-1) {
+	// key
+	done=true;
+	if (whichBound) {
+	  // slack to upper
+	  columnSolution[iBasic]=thisSolution + upper_[iSet]-value;
+	  setStatus(iSet,ClpSimplex::atUpperBound);
+	} else {
+	  // slack to lower
+	  columnSolution[iBasic]=thisSolution + lower_[iSet]-value;
+	  setStatus(iSet,ClpSimplex::atLowerBound);
+	}
+      }
+    }
+    if (!done) {
+      if (!cheapest) {
+	// see if slack can be key
+	if (value>=lower_[iSet]-tolerance&&value<=upper_[iSet]+tolerance) {
+	  done=true;
+	  setStatus(iSet,ClpSimplex::basic);
+	  iBasic=iSet+numberColumns;
+	}
+      }
+      if (!done) {
+	// find cheapest
+	int numberInSet = iEnd-iStart;
+	CoinMemcpyN(columnLower+iStart,numberInSet,lower);
+	CoinMemcpyN(columnUpper+iStart,numberInSet,upper);
+	CoinMemcpyN(columnSolution+iStart,numberInSet,solution);
+	// and slack
+	iBasic=numberInSet;
+	solution[iBasic]=-value;
+	lower[iBasic]=-upper_[iSet];
+	upper[iBasic]=-lower_[iSet];
+	int kphase;
+	if (value>=lower_[iSet]-tolerance&&value<=upper_[iSet]+tolerance) {
+	  // feasible
+	  kphase=1;
+	  cost[iBasic]=0.0;
+	  CoinMemcpyN(objective+iStart,numberInSet,cost);
+	} else {
+	  // infeasible
+	  kphase=0;
+	  if (value<lower_[iSet]-tolerance)
+	    cost[iBasic]=-1.0;
+	  else
+	    cost[iBasic]=1.0;
+	  CoinZeroN(cost,numberInSet);
+	}
+	double dualTolerance =model->dualTolerance();
+	for (int iphase =kphase;iphase<2;iphase++) {
+	  if (iphase) {
+	    cost[iBasic]=0.0;
+	    CoinMemcpyN(objective+iStart,numberInSet,cost);
+	  }
+	  // now do one row lp
+	  bool improve=true;
+	  while (improve) {
+	    improve=false;
+	    double dual = cost[iBasic];
+	    int chosen =-1;
+	    double best=dualTolerance;
+	    int way=0;
+	    for (int i=0;i<=numberInSet;i++) {
+	      double dj = cost[i]-dual;
+	      double improvement =0.0;
+	      double distance=0.0;
+	      if (iphase||i<numberInSet)
+		assert (solution[i]>=lower[i]&&solution[i]<=upper[i]);
+	      if (dj>dualTolerance)
+		improvement = dj*(solution[i]-lower[i]);
+	      else if (dj<-dualTolerance)
+		improvement = dj*(solution[i]-upper[i]);
+	      if (improvement>best) {
+		best=improvement;
+		chosen=i;
+		if (dj<0.0) {
+		  way = 1;
+		  distance = upper[i]-solution[i];
+		} else {
+		  way = -1;
+		  distance = solution[i]-lower[i];
+		}
+	      }
+	    }
+	    if (chosen>=0) {
+	      // now see how far
+	      if (way>0) {
+		// incoming increasing so basic decreasing
+		// if phase 0 then go to nearest bound
+		double distance=upper[chosen]-solution[chosen];
+		double basicDistance;
+		if (!iphase) {
+		  assert (iBasic==numberInSet);
+		  assert (solution[iBasic]>upper[iBasic]);
+		  basicDistance = solution[iBasic]-upper[iBasic];
+		} else {
+		  basicDistance = solution[iBasic]-lower[iBasic];
+		}
+		// need extra coding for unbounded
+		assert (min(distance,basicDistance)<1.0e20);
+		if (distance>basicDistance) {
+		  // incoming becomes basic
+		  solution[chosen] += basicDistance;
+		  if (!iphase) 
+		    solution[iBasic]=upper[iBasic];
+		  else 
+		    solution[iBasic]=lower[iBasic];
+		  iBasic = chosen;
+		} else {
+		  // flip
+		  solution[chosen]=upper[chosen];
+		  solution[iBasic] -= distance;
+		}
+	      } else {
+		// incoming decreasing so basic increasing
+		// if phase 0 then go to nearest bound
+		double distance=solution[chosen]-lower[chosen];
+		double basicDistance;
+		if (!iphase) {
+		  assert (iBasic==numberInSet);
+		  assert (solution[iBasic]<lower[iBasic]);
+		  basicDistance = lower[iBasic]-solution[iBasic];
+		} else {
+		  basicDistance = upper[iBasic]-solution[iBasic];
+		}
+		// need extra coding for unbounded
+		assert (min(distance,basicDistance)<1.0e20);
+		if (distance>basicDistance) {
+		  // incoming becomes basic
+		  solution[chosen] -= basicDistance;
+		  if (!iphase) 
+		    solution[iBasic]=lower[iBasic];
+		  else 
+		    solution[iBasic]=upper[iBasic];
+		  iBasic = chosen;
+		} else {
+		  // flip
+		  solution[chosen]=lower[chosen];
+		  solution[iBasic] += distance;
+		}
+	      }
+	    }
+	  }
+	}
+      }
+    } 
+    keyVariable_[iSet]=iBasic;
+    int lastMarker = -(iBasic+1);
+    next_[iBasic]=lastMarker;
+    int last = iBasic;
+    for (j=iStart;j<iEnd;j++) {
+      if (model->getStatus(j)==ClpSimplex::basic&&j!=iBasic) {
+	next_[last]=j;
+	next_[j]=lastMarker;
+      }
+    }
+  }
+  delete [] lower;
+  delete [] solution;
+  delete [] upper;
+  delete [] cost;
+  // create effective rhs
 }
 
 

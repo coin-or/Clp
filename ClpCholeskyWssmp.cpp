@@ -86,12 +86,53 @@ ClpCholeskyBase * ClpCholeskyWssmp::clone() const
 {
   return new ClpCholeskyWssmp(*this);
 }
+// At present I can't get wssmp to work as my libraries seem to be out of sync
+// so I have linked in ekkwssmp which is an older version
+#if 0
   extern "C" void wssmp(int * n,
                         int * columnStart , int * rowIndex , double * element,
                         double * diagonal , int * perm , int * invp ,
                         double * rhs , int * ldb , int * nrhs ,
                         double * aux , int * naux ,
                         int   * mrp , int * iparm , double * dparm);
+#else
+/* minimum needed for user */
+typedef struct EKKModel EKKModel;
+typedef struct EKKContext EKKContext;
+
+
+extern "C"{
+   EKKContext *  ekk_initializeContext();
+   void ekk_endContext(EKKContext * context);
+   EKKModel *  ekk_newModel(EKKContext * env,const char * name);
+   int ekk_deleteModel(EKKModel * model);
+}
+static  EKKModel * model=NULL;
+static  EKKContext * context=NULL;
+extern "C" void ekkwssmp(EKKModel *, int * n,
+			 int * columnStart , int * rowIndex , double * element,
+			 double * diagonal , int * perm , int * invp ,
+			 double * rhs , int * ldb , int * nrhs ,
+			 double * aux , int * naux ,
+			 int   * mrp , int * iparm , double * dparm);
+static void wssmp( int *n, int *ia, int *ja,
+		   double *avals, double *diag, int *perm, int *invp,
+		   double *b, int *ldb, int *nrhs, double *aux, int *
+		   naux, int *mrp, int *iparm, double *dparm)
+{
+  if (!context) {
+    /* initialize OSL environment */
+    context=ekk_initializeContext();
+    model=ekk_newModel(context,"");
+  }
+  ekkwssmp(model,n, ia, ja,
+	   avals, diag, perm, invp,
+	   b, ldb, nrhs, aux, 
+	   naux, mrp, iparm, dparm);
+  //ekk_deleteModel(model);
+  //ekk_endContext(context);
+}
+#endif
 /* Orders rows and saves pointer to matrix.and model */
 int 
 ClpCholeskyWssmp::order(ClpInterior * model) 
@@ -104,9 +145,9 @@ ClpCholeskyWssmp::order(ClpInterior * model)
   rowCopy_ = model->clpMatrix()->reverseOrderedCopy();
   // Space for starts
   choleskyStart_ = new CoinBigIndex[numberRows_+1];
-  const CoinBigIndex * columnStart = model_->matrix()->getVectorStarts();
-  const int * columnLength = model_->matrix()->getVectorLengths();
-  const int * row = model_->matrix()->getIndices();
+  const CoinBigIndex * columnStart = model_->clpMatrix()->getVectorStarts();
+  const int * columnLength = model_->clpMatrix()->getVectorLengths();
+  const int * row = model_->clpMatrix()->getIndices();
   const CoinBigIndex * rowStart = rowCopy_->getVectorStarts();
   const int * rowLength = rowCopy_->getVectorLengths();
   const int * column = rowCopy_->getIndices();
@@ -171,6 +212,8 @@ ClpCholeskyWssmp::order(ClpInterior * model)
       int j;
       for (j=0;j<number;j++)
 	used[which[j]]=0;
+      // Sort
+      std::sort(which,which+number);
       // move which on
       which += number;
     }
@@ -200,23 +243,37 @@ ClpCholeskyWssmp::order(ClpInterior * model)
   wssmp(&numberRows_,choleskyStart_,choleskyRow_,sparseFactor_,
          NULL,permuteOut_,permuteIn_,NULL,&numberRows_,&i1,
          NULL,&i0,NULL,integerParameters_,doubleParameters_);
-  std::cout<<"Ordering and symbolic factorization took "<<doubleParameters_[0]<<std::endl;
+  //std::cout<<"Ordering and symbolic factorization took "<<doubleParameters_[0]<<std::endl;
+  if (integerParameters_[63]) {
+    std::cout<<"wssmp returning error code of "<<integerParameters_[63]<<std::endl;
+    abort();
+  }
   std::cout<<integerParameters_[23]<<" elements in sparse Cholesky"<<std::endl;
+  if (!integerParameters_[23]) {
+    std::cout<<"wssmp says no elements - fully dense? - switching to dense"<<std::endl;
+    integerParameters_[1]=2;
+    integerParameters_[2]=2;
+    integerParameters_[7]=1; // no permute
+    wssmp(&numberRows_,choleskyStart_,choleskyRow_,sparseFactor_,
+	  NULL,permuteOut_,permuteIn_,NULL,&numberRows_,&i1,
+	  NULL,&i0,NULL,integerParameters_,doubleParameters_);
+    std::cout<<integerParameters_[23]<<" elements in dense Cholesky"<<std::endl;
+  }
   return 0;
 }
 /* Factorize - filling in rowsDropped and returning number dropped */
 int 
 ClpCholeskyWssmp::factorize(const double * diagonal, int * rowsDropped) 
 {
-  const CoinBigIndex * columnStart = model_->matrix()->getVectorStarts();
-  const int * columnLength = model_->matrix()->getVectorLengths();
-  const int * row = model_->matrix()->getIndices();
-  const double * element = model_->matrix()->getElements();
+  const CoinBigIndex * columnStart = model_->clpMatrix()->getVectorStarts();
+  const int * columnLength = model_->clpMatrix()->getVectorLengths();
+  const int * row = model_->clpMatrix()->getIndices();
+  const double * element = model_->clpMatrix()->getElements();
   const CoinBigIndex * rowStart = rowCopy_->getVectorStarts();
   const int * rowLength = rowCopy_->getVectorLengths();
   const int * column = rowCopy_->getIndices();
   const double * elementByRow = rowCopy_->getElements();
-  int numberColumns=model_->matrix()->getNumCols();
+  int numberColumns=model_->clpMatrix()->getNumCols();
   int iRow;
   double * work = new double[numberRows_];
   CoinZeroN(work,numberRows_);
@@ -260,6 +317,12 @@ ClpCholeskyWssmp::factorize(const double * diagonal, int * rowsDropped)
 	put[j]=work[jRow];
 	work[jRow]=0.0;
       }
+    } else {
+      // dropped
+      int j;
+      for (j=0;j<number;j++) {
+	put[j]=0.0;
+      }
     }
   }
   //check sizes
@@ -294,7 +357,7 @@ ClpCholeskyWssmp::factorize(const double * diagonal, int * rowsDropped)
 	NULL,permuteOut_,permuteIn_,NULL,&numberRows_,&i1,
 	NULL,&i0,rowsDropped,integerParameters_,doubleParameters_);
   //    NULL,&i0,(int *) diagonal,integerParameters_,doubleParameters_);
-  std::cout<<"factorization took "<<doubleParameters_[0]<<std::endl;
+  //std::cout<<"factorization took "<<doubleParameters_[0]<<std::endl;
   if (integerParameters_[9]) {
     std::cout<<"scaling applied"<<std::endl;
   } 
@@ -304,11 +367,11 @@ ClpCholeskyWssmp::factorize(const double * diagonal, int * rowsDropped)
   largest=doubleParameters_[3];
   smallest=doubleParameters_[4];
   delete [] work;
-  //if (model_->model()->logLevel()&1) 
+  if (model_->messageHandler()->logLevel()>1) 
     std::cout<<"Cholesky - largest "<<largest<<" smallest "<<smallest<<std::endl;
   choleskyCondition_=largest/smallest;
   bool cleanCholesky;
-  if (model_->numberIterations()<10000) 
+  if (model_->numberIterations()<10) 
     cleanCholesky=true;
   else 
     cleanCholesky=false;
