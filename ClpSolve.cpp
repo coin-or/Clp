@@ -351,8 +351,10 @@ ClpSimplex::initialSolve(ClpSolve & options)
       } 
       if (doIdiot>0) {
 	nPasses=max(nPasses,doIdiot);
-	if (nPasses>70) 
+	if (nPasses>70) {
 	  info.setStartingWeight(1.0e3);
+	  info.setDropEnoughFeasibility(0.01);
+	}
       }
       if (nPasses) {
 	info.setReduceIterations(5);
@@ -892,19 +894,25 @@ ClpSimplex::initialSolve(ClpSolve & options)
     model2->setNumberIterations(model2->numberIterations()+totalIterations);
   } else if (method==ClpSolve::useBarrier) {
     //printf("***** experimental pretty crude barrier\n");
+    //#define BORROW
+#ifdef BORROW
+    ClpInterior barrier;
+    barrier.borrowModel(*model2);
+#else
     ClpInterior barrier(*model2);
+#endif
     if (interrupt) 
       currentModel2 = &barrier;
 #ifdef REAL_BARRIER
     // uncomment this if you have Anshul Gupta's wsmp package
-    ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp(max(100,model2->numberRows()/10));
-    //ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp();
+    //ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp(max(100,model2->numberRows()/10));
+    ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp();
     //ClpCholeskyWssmpKKT * cholesky = new ClpCholeskyWssmpKKT(max(100,model2->numberRows()/10));
     // uncomment this if you have Sivan Toledo's Taucs package
     //ClpCholeskyTaucs * cholesky = new ClpCholeskyTaucs();
     barrier.setCholesky(cholesky);
 #endif
-    //#define SAVEIT 2
+    //#define SAVEIT 1
 #ifndef SAVEIT
     barrier.primalDual();
     //printf("********** Stopping as this is debug run\n");
@@ -1068,6 +1076,9 @@ ClpSimplex::initialSolve(ClpSolve & options)
       model2->createStatus();
       model2->dual();
     }
+#ifdef BORROW
+    barrier.returnModel(*model2);
+#endif
     model2->setPerturbation(savePerturbation);
     time2 = CoinCpuTime();
     timeCore = time2-timeX;
