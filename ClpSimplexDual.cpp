@@ -314,6 +314,8 @@ int ClpSimplexDual::dual (int ifValuesPass , int startFinishOptions)
     int factorType=0;
     // Start check for cycles
     progress_->startCheck();
+    // Say change made on first iteration
+    changeMade_=1;
     /*
       Status of problem:
       0 - optimal
