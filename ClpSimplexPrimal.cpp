@@ -458,7 +458,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
   // get primal and dual solutions
   // put back original costs and then check
   createRim(4);
-  gutsOfSolution(NULL,NULL);
+  gutsOfSolution(NULL,NULL,(firstFree_>=0));
   // Double check reduced costs if no action
   if (progress->lastIterationNumber(0)==numberIterations_) {
     if (primalColumnPivot_->looksOptimal()) {
@@ -1086,7 +1086,7 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
     else
       minimumTheta=0.0;
     // will we need to increase tolerance
-#define CLP_DEBUG
+    //#define CLP_DEBUG
 #ifdef CLP_DEBUG
     bool found=false;
 #endif

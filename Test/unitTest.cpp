@@ -517,7 +517,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
   {    
     CoinMpsIO m;
     std::string fn = mpsDir+"exmip1";
-    fn = "Test/subGams4";
+    //fn = "Test/subGams4";
     m.readMps(fn.c_str(),"mps");
     ClpSimplex model;
     model.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),

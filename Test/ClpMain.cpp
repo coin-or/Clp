@@ -937,7 +937,7 @@ costs this much to be infeasible",
     // default action on import
     int allowImportErrors=0;
     int keepImportNames=1;
-    int doIdiot=0;
+    int doIdiot=-2;
     
     int iModel=0;
     goodModels[0]=false;
@@ -1209,16 +1209,63 @@ costs this much to be infeasible",
 		model2->setFactorizationFrequency(100+model2->numberRows()/100);
 	      }
 	      if (type==DUALSIMPLEX) {
-		if (doIdiot<0)
+		if (doIdiot==-1)
 		  model2->crash(1000,1);
 		//int status =model2->saveModel("xx.save");
 		model2->dual();
 		//int status =model2->saveModel("xx.save");
 	      } else {
 #ifdef CLP_IDIOT
-		if (doIdiot>0) {
-		  Idiot info(*model2);
-		  info.crash(doIdiot);
+		if (doIdiot==-2||doIdiot>0) {
+		  if (doIdiot==-2) {
+		    int numberColumns = model2->numberColumns();
+		    int numberRows = model2->numberRows();
+		    if (numberRows>2000&&numberColumns>2*numberRows) {
+		      ClpPackedMatrix* clpMatrix =
+			dynamic_cast< ClpPackedMatrix*>(saveMatrix);
+		      if (clpMatrix) {
+			ClpPlusMinusOneMatrix * newMatrix = new ClpPlusMinusOneMatrix(*(clpMatrix->matrix()));
+			if (newMatrix->getIndices()) {
+			  saveMatrix = model2->clpMatrix();
+			  std::cout<<"** Matrix is valid +- one"<<std::endl;
+			  model2->replaceMatrix(newMatrix);
+			  int nPasses = 10+numberColumns/1000;
+			  nPasses = min(nPasses,100);
+			  Idiot info(*model2);
+			  info.crash(nPasses);
+			} else {
+			  delete newMatrix;
+			  int nPasses = 10+numberColumns/100000;
+			  if (numberColumns>4*numberRows) 
+			    nPasses = min(nPasses,50);
+			  else
+			    nPasses=5;
+			  Idiot info(*model2);
+			  info.crash(nPasses);
+			}
+		      } else {
+			ClpPlusMinusOneMatrix* clpMatrix =
+			  dynamic_cast< ClpPlusMinusOneMatrix*>(saveMatrix);
+			if (clpMatrix) {
+			  int nPasses = 10+numberColumns/1000;
+			  nPasses = min(nPasses,100);
+			  Idiot info(*model2);
+			  info.crash(nPasses);
+			} else {
+			  int nPasses = 10+numberColumns/100000;
+			  if (numberColumns>4*numberRows) 
+			    nPasses = min(nPasses,50);
+			  else
+			    nPasses=5;
+			  Idiot info(*model2);
+			  info.crash(nPasses);
+			}
+		      }
+		    }
+		  } else {
+		    Idiot info(*model2);
+		    info.crash(doIdiot);
+		  }
 		}
 #endif
 		int savePerturbation = model2->perturbation();
