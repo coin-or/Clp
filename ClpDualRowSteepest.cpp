@@ -29,7 +29,7 @@ ClpDualRowSteepest::ClpDualRowSteepest (int mode)
     alternateWeights_(NULL),
     savedWeights_(NULL)
 {
-  type_=2;
+  type_=2+64*mode;
 }
 
 //-------------------------------------------------------------------
@@ -244,7 +244,9 @@ ClpDualRowSteepest::updateWeights(OsiIndexedVector * input,
 	weights_[iRow]=devex;
       }
     }
+#ifdef CLP_DEBUG
     assert(work3[pivotRow]&&work[pivotRow]);
+#endif
     alternateWeights_->setNumElements(nSave);
     if (norm < TRY_NORM) 
       norm = TRY_NORM;
@@ -274,15 +276,27 @@ ClpDualRowSteepest::updatePrimalSolution(
   double tolerance=model_->currentPrimalTolerance();
   const int * pivotVariable = model_->pivotVariable();
   double * infeas = infeasible_->denseVector();
+  int pivotRow = model_->pivotRow();
+  double * solution = model_->solutionRegion();
   for (i=0;i<number;i++) {
     int iRow=which[i];
     int iPivot=pivotVariable[iRow];
-    double & value = model_->solutionAddress(iPivot);
+    double value = solution[iPivot];
     double cost = model_->cost(iPivot);
     double change = primalRatio*work[iRow];
     value -= change;
+    changeObj -= change*cost;
+    solution[iPivot] = value;
     double lower = model_->lower(iPivot);
     double upper = model_->upper(iPivot);
+    // But if pivot row then use value of incoming
+    if (iRow==pivotRow) {
+      iPivot = model_->sequenceIn();
+      // make last resort choice
+      lower = 1.0e-6*model_->lower(iPivot);
+      upper = 1.0e-6*model_->upper(iPivot);
+      value = 1.0e-6*model_->valueIncomingDual();
+    }
     if (value>upper+tolerance) {
       // store square in list
       if (infeas[iRow])
@@ -300,7 +314,6 @@ ClpDualRowSteepest::updatePrimalSolution(
       if (infeas[iRow])
 	infeas[iRow] = 1.0e-100;
     }
-    changeObj -= change*cost;
     work[iRow]=0.0;
   }
   infeasible_->stopQuickAdd();
@@ -331,9 +344,9 @@ ClpDualRowSteepest::saveWeights(ClpSimplex * model,int mode)
       which[i]=iPivot;
     }
     state_=1;
-  } else if (mode==2||mode==4) {
+  } else if (mode==2||mode==4||mode==5) {
     // restore
-    if (!weights_||state_==-1) {
+    if (!weights_||state_==-1||mode==5) {
       // initialize weights
       delete [] weights_;
       delete alternateWeights_;
@@ -342,7 +355,7 @@ ClpDualRowSteepest::saveWeights(ClpSimplex * model,int mode)
       // enough space so can use it for factorization
       alternateWeights_->reserve(numberRows+
 				 model_->factorization()->maximumPivots());
-      if (!mode_) {
+      if (!mode_||mode==5) {
 	// initialize to 1.0 (can we do better?)
 	for (i=0;i<numberRows;i++) {
 	  weights_[i]=1.0;

@@ -13,9 +13,10 @@
 #include "CoinHelperFunctions.hpp"
 #include "ClpSimplex.hpp"
 #include "ClpFactorization.hpp"
-#include "OsiPackedMatrix.hpp"
+#include "ClpPackedMatrix.hpp"
 #include "OsiIndexedVector.hpp"
 #include "OsiWarmStartBasis.hpp"
+#include "ClpDualRowDantzig.hpp"
 #include "ClpDualRowSteepest.hpp"
 #include "ClpPrimalColumnDantzig.hpp"
 #include "ClpPrimalColumnSteepest.hpp"
@@ -125,7 +126,8 @@ ClpSimplex::ClpSimplex () :
   infeasibilityCost_(1.0e7),
   nonLinearCost_(NULL),
   specialOptions_(0),
-  lastBadIteration_(-999999)
+  lastBadIteration_(-999999),
+  numberFake_(0)
 
 {
   int i;
@@ -844,7 +846,7 @@ int ClpSimplex::internalFactorize ( int solveType)
       if (getRowStatus(iRow) == ClpSimplex::basic)
 	numberSlacks++;
     }
-    status= numberSlacks-totalSlacks;
+    status= max(numberSlacks-totalSlacks,0);
   }
 
   // sparse methods
@@ -1071,7 +1073,8 @@ ClpSimplex::ClpSimplex(const ClpSimplex &rhs) :
   infeasibilityCost_(1.0e7),
   nonLinearCost_(NULL),
   specialOptions_(0),
-  lastBadIteration_(-999999)
+  lastBadIteration_(-999999),
+  numberFake_(0)
 {
   int i;
   for (i=0;i<6;i++) {
@@ -1156,7 +1159,8 @@ ClpSimplex::ClpSimplex(const ClpModel &rhs) :
   infeasibilityCost_(1.0e7),
   nonLinearCost_(NULL),
   specialOptions_(0),
-  lastBadIteration_(-999999)
+  lastBadIteration_(-999999),
+  numberFake_(0)
 {
   int i;
   for (i=0;i<6;i++) {
@@ -1284,6 +1288,7 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
   infeasibilityCost_ = rhs.infeasibilityCost_;
   specialOptions_ = rhs.specialOptions_;
   lastBadIteration_ = rhs.lastBadIteration_;
+  numberFake_ = rhs.numberFake_;
   if (rhs.nonLinearCost_!=NULL)
     nonLinearCost_ = new ClpNonLinearCost(*rhs.nonLinearCost_);
 }
@@ -2159,4 +2164,471 @@ int ClpSimplex::dual ( )
 int ClpSimplex::primal (int ifValuesPass )
 {
   return ((ClpSimplexPrimal *) this)->primal(ifValuesPass);
+}
+/* For strong branching.  On input lower and upper are new bounds
+   while on output they are objective function values (>1.0e50 infeasible).
+   Return code is 0 if nothing interesting, -1 if infeasible both
+   ways and +1 if infeasible one way (check values to see which one(s))
+*/
+int ClpSimplex::strongBranching(int numberVariables,const int * variables,
+				double * newLower, double * newUpper,
+				bool stopOnFirstInfeasible,
+				bool alwaysFinish)
+{
+  return ((ClpSimplexDual *) this)->strongBranching(numberVariables,variables,
+						    newLower,  newUpper,
+						    stopOnFirstInfeasible,
+						    alwaysFinish);
+}
+/* Borrow model.  This is so we dont have to copy large amounts
+   of data around.  It assumes a derived class wants to overwrite
+   an empty model with a real one - while it does an algorithm.
+   This is same as ClpModel one, but sets scaling on etc. */
+void 
+ClpSimplex::borrowModel(ClpModel & otherModel) 
+{
+  ClpModel::borrowModel(otherModel);
+  scaling();
+  ClpDualRowSteepest steep1;
+  setDualRowPivotAlgorithm(steep1);
+  ClpPrimalColumnSteepest steep2;
+  setPrimalColumnPivotAlgorithm(steep2);
+}
+typedef struct {
+  double optimizationDirection;
+  double dblParam[OsiLastDblParam];
+  double objectiveValue;
+  double dualBound;
+  double dualTolerance;
+  double primalTolerance;
+  double sumDualInfeasibilities;
+  double sumPrimalInfeasibilities;
+  double infeasibilityCost;
+  int numberRows;
+  int numberColumns;
+  int intParam[OsiLastIntParam];
+  int numberIterations;
+  int problemStatus;
+  int maximumIterations;
+  int lengthNames;
+  int numberDualInfeasibilities;
+  int numberDualInfeasibilitiesWithoutFree;
+  int numberPrimalInfeasibilities;
+  int numberRefinements;
+  int scalingFlag;
+  int algorithm;
+  unsigned int specialOptions;
+  int dualPivotChoice;
+  int primalPivotChoice;
+  int matrixStorageChoice;
+} Clp_scalars;
+
+int outDoubleArray(double * array, int length, FILE * fp)
+{
+  int numberWritten;
+  if (array&&length) {
+    numberWritten = fwrite(&length,sizeof(int),1,fp);
+    if (numberWritten!=1)
+      return 1;
+    numberWritten = fwrite(array,sizeof(double),length,fp);
+    if (numberWritten!=length)
+      return 1;
+  } else {
+    length = 0;
+    numberWritten = fwrite(&length,sizeof(int),1,fp);
+    if (numberWritten!=1)
+      return 1;
+  }
+  return 0;
+}
+// Save model to file, returns 0 if success
+int
+ClpSimplex::saveModel(const char * fileName)
+{
+  FILE * fp = fopen(fileName,"wb");
+  if (fp) {
+    Clp_scalars scalars;
+    int i, numberWritten;
+    // Fill in scalars
+    scalars.optimizationDirection = optimizationDirection_;
+    memcpy(scalars.dblParam, dblParam_,OsiLastDblParam * sizeof(double));
+    scalars.objectiveValue = objectiveValue_;
+    scalars.dualBound = dualBound_;
+    scalars.dualTolerance = dualTolerance_;
+    scalars.primalTolerance = primalTolerance_;
+    scalars.sumDualInfeasibilities = sumDualInfeasibilities_;
+    scalars.sumPrimalInfeasibilities = sumPrimalInfeasibilities_;
+    scalars.infeasibilityCost = infeasibilityCost_;
+    scalars.numberRows = numberRows_;
+    scalars.numberColumns = numberColumns_;
+    memcpy(scalars.intParam, intParam_,OsiLastIntParam * sizeof(double));
+    scalars.numberIterations = numberIterations_;
+    scalars.problemStatus = problemStatus_;
+    scalars.maximumIterations = maximumIterations_;
+    scalars.lengthNames = lengthNames_;
+    scalars.numberDualInfeasibilities = numberDualInfeasibilities_;
+    scalars.numberDualInfeasibilitiesWithoutFree 
+      = numberDualInfeasibilitiesWithoutFree_;
+    scalars.numberPrimalInfeasibilities = numberPrimalInfeasibilities_;
+    scalars.numberRefinements = numberRefinements_;
+    scalars.scalingFlag = scalingFlag_;
+    scalars.algorithm = algorithm_;
+    scalars.specialOptions = specialOptions_;
+    scalars.dualPivotChoice = dualRowPivot_->type();
+    scalars.primalPivotChoice = primalColumnPivot_->type();
+    scalars.matrixStorageChoice = matrix_->type();
+
+    // put out scalars
+    numberWritten = fwrite(&scalars,sizeof(Clp_scalars),1,fp);
+    if (numberWritten!=1)
+      return 1;
+    // strings
+    int length;
+    for (i=0;i<OsiLastStrParam;i++) {
+      length = strParam_[i].size();
+      numberWritten = fwrite(&length,sizeof(int),1,fp);
+      if (numberWritten!=1)
+	return 1;
+      numberWritten = fwrite(strParam_[i].c_str(),length,1,fp);
+      if (numberWritten!=1)
+	return 1;
+    }
+    // arrays - in no particular order
+    if (outDoubleArray(rowActivity_,numberRows_,fp))
+	return 1;
+    if (outDoubleArray(columnActivity_,numberColumns_,fp))
+	return 1;
+    if (outDoubleArray(dual_,numberRows_,fp))
+	return 1;
+    if (outDoubleArray(reducedCost_,numberColumns_,fp))
+	return 1;
+    if (outDoubleArray(rowLower_,numberRows_,fp))
+	return 1;
+    if (outDoubleArray(rowUpper_,numberRows_,fp))
+	return 1;
+    if (outDoubleArray(objective_,numberColumns_,fp))
+	return 1;
+    if (outDoubleArray(rowObjective_,numberRows_,fp))
+	return 1;
+    if (outDoubleArray(columnLower_,numberColumns_,fp))
+	return 1;
+    if (outDoubleArray(columnUpper_,numberColumns_,fp))
+	return 1;
+    if (ray_) {
+      if (problemStatus_==1)
+	if (outDoubleArray(ray_,numberRows_,fp))
+	  return 1;
+      else if (problemStatus_==2)
+	if (outDoubleArray(ray_,numberColumns_,fp))
+	  return 1;
+      else
+	if (outDoubleArray(NULL,0,fp))
+	  return 1;
+    } else {
+      if (outDoubleArray(NULL,0,fp))
+	return 1;
+    }
+    if (status_&&(numberRows_+numberColumns_)>0) {
+      length = numberRows_+numberColumns_;
+      numberWritten = fwrite(&length,sizeof(int),1,fp);
+      if (numberWritten!=1)
+	return 1;
+      numberWritten = fwrite(status_,sizeof(char),length, fp);
+      if (numberWritten!=length)
+	return 1;
+    } else {
+      length = 0;
+      numberWritten = fwrite(&length,sizeof(int),1,fp);
+      if (numberWritten!=1)
+	return 1;
+    }
+    if (lengthNames_) {
+      assert (numberRows_ == (int) rowNames_.size());
+      for (i=0;i<numberRows_;i++) {
+	length = rowNames_[i].size();
+	numberWritten = fwrite(&length,sizeof(int),1,fp);
+	if (numberWritten!=1)
+	  return 1;
+	numberWritten = fwrite(rowNames_[i].c_str(),length,1,fp);
+	if (numberWritten!=1)
+	  return 1;
+      }
+      assert (numberColumns_ == (int) columnNames_.size());
+      for (i=0;i<numberColumns_;i++) {
+	length = columnNames_[i].size();
+	numberWritten = fwrite(&length,sizeof(int),1,fp);
+	if (numberWritten!=1)
+	  return 1;
+	numberWritten = fwrite(columnNames_[i].c_str(),length,1,fp);
+	if (numberWritten!=1)
+	  return 1;
+      }
+    }
+    // just standard type at present
+    assert (matrix_->type()==1);
+    assert (matrix_->getNumCols() == numberColumns_);
+    assert (matrix_->getNumRows() == numberRows_);
+    // we are going to save with gaps
+    length = matrix_->getVectorStarts()[numberColumns_-1]
+      + matrix_->getVectorLengths()[numberColumns_-1];
+    numberWritten = fwrite(&length,sizeof(int),1,fp);
+    if (numberWritten!=1)
+      return 1;
+    numberWritten = fwrite(matrix_->getElements(),
+			   sizeof(double),length,fp);
+    if (numberWritten!=length)
+      return 1;
+    numberWritten = fwrite(matrix_->getIndices(),
+			   sizeof(int),length,fp);
+    if (numberWritten!=length)
+      return 1;
+    numberWritten = fwrite(matrix_->getVectorStarts(),
+			   sizeof(int),numberColumns_,fp);
+    if (numberWritten!=numberColumns_)
+      return 1;
+    numberWritten = fwrite(matrix_->getVectorLengths(),
+			   sizeof(int),numberColumns_,fp);
+    if (numberWritten!=numberColumns_)
+      return 1;
+    // finished
+    fclose(fp);
+    return 0;
+  } else {
+    return -1;
+  }
+}
+
+int inDoubleArray(double * &array, int length, FILE * fp)
+{
+  int numberRead;
+  int length2;
+  numberRead = fread(&length2,sizeof(int),1,fp);
+  if (numberRead!=1)
+    return 1;
+  if (length2) {
+    // lengths must match
+    if (length!=length2)
+      return 2;
+    array = new double[length];
+    numberRead = fread(array,sizeof(double),length,fp);
+    if (numberRead!=length)
+      return 1;
+  } 
+  return 0;
+}
+/* Restore model from file, returns 0 if success,
+   deletes current model */
+int 
+ClpSimplex::restoreModel(const char * fileName)
+{
+  FILE * fp = fopen(fileName,"rb");
+  if (fp) {
+    // Get rid of current model
+    ClpModel::gutsOfDelete();
+    gutsOfDelete(0);
+    int i;
+    for (i=0;i<6;i++) {
+      rowArray_[i]=NULL;
+      columnArray_[i]=NULL;
+    }
+    // get an empty factorization so we can set tolerances etc
+    factorization_ = new ClpFactorization();
+    // Say sparse
+    factorization_->sparseThreshold(1);
+    Clp_scalars scalars;
+    int numberRead;
+
+    // get scalars
+    numberRead = fread(&scalars,sizeof(Clp_scalars),1,fp);
+    if (numberRead!=1)
+      return 1;
+    // Fill in scalars
+    optimizationDirection_ = scalars.optimizationDirection;
+    memcpy(dblParam_, scalars.dblParam, OsiLastDblParam * sizeof(double));
+    objectiveValue_ = scalars.objectiveValue;
+    dualBound_ = scalars.dualBound;
+    dualTolerance_ = scalars.dualTolerance;
+    primalTolerance_ = scalars.primalTolerance;
+    sumDualInfeasibilities_ = scalars.sumDualInfeasibilities;
+    sumPrimalInfeasibilities_ = scalars.sumPrimalInfeasibilities;
+    infeasibilityCost_ = scalars.infeasibilityCost;
+    numberRows_ = scalars.numberRows;
+    numberColumns_ = scalars.numberColumns;
+    memcpy(intParam_, scalars.intParam,OsiLastIntParam * sizeof(double));
+    numberIterations_ = scalars.numberIterations;
+    problemStatus_ = scalars.problemStatus;
+    maximumIterations_ = scalars.maximumIterations;
+    lengthNames_ = scalars.lengthNames;
+    numberDualInfeasibilities_ = scalars.numberDualInfeasibilities;
+    numberDualInfeasibilitiesWithoutFree_ 
+      = scalars.numberDualInfeasibilitiesWithoutFree;
+    numberPrimalInfeasibilities_ = scalars.numberPrimalInfeasibilities;
+    numberRefinements_ = scalars.numberRefinements;
+    scalingFlag_ = scalars.scalingFlag;
+    algorithm_ = scalars.algorithm;
+    specialOptions_ = scalars.specialOptions;
+    // strings
+    int length;
+    for (i=0;i<OsiLastStrParam;i++) {
+      numberRead = fread(&length,sizeof(int),1,fp);
+      if (numberRead!=1)
+	return 1;
+      char * array = new char[length+1];
+      numberRead = fread(array,length,1,fp);
+      if (numberRead!=1)
+	return 1;
+      array[length]='\0';
+      strParam_[i]=array;
+      delete [] array;
+    }
+    // arrays - in no particular order
+    if (inDoubleArray(rowActivity_,numberRows_,fp))
+	return 1;
+    if (inDoubleArray(columnActivity_,numberColumns_,fp))
+	return 1;
+    if (inDoubleArray(dual_,numberRows_,fp))
+	return 1;
+    if (inDoubleArray(reducedCost_,numberColumns_,fp))
+	return 1;
+    if (inDoubleArray(rowLower_,numberRows_,fp))
+	return 1;
+    if (inDoubleArray(rowUpper_,numberRows_,fp))
+	return 1;
+    if (inDoubleArray(objective_,numberColumns_,fp))
+	return 1;
+    if (inDoubleArray(rowObjective_,numberRows_,fp))
+	return 1;
+    if (inDoubleArray(columnLower_,numberColumns_,fp))
+	return 1;
+    if (inDoubleArray(columnUpper_,numberColumns_,fp))
+	return 1;
+    if (problemStatus_==1) {
+      if (inDoubleArray(ray_,numberRows_,fp))
+	return 1;
+    } else if (problemStatus_==2) {
+      if (inDoubleArray(ray_,numberColumns_,fp))
+	return 1;
+    } else {
+      // ray should be null
+      numberRead = fread(&length,sizeof(int),1,fp);
+      if (numberRead!=1)
+	return 1;
+      if (length)
+	return 2;
+    }
+    delete [] status_;
+    status_=NULL;
+    // status region
+    numberRead = fread(&length,sizeof(int),1,fp);
+    if (numberRead!=1)
+	return 1;
+    if (length) {
+      if (length!=numberRows_+numberColumns_)
+	return 1;
+      status_ = new char unsigned[length];
+      numberRead = fread(status_,sizeof(char),length, fp);
+      if (numberRead!=length)
+	return 1;
+    }
+    if (lengthNames_) {
+      char * array = new char[lengthNames_+1];
+      rowNames_.resize(0);
+      for (i=0;i<numberRows_;i++) {
+	numberRead = fread(&length,sizeof(int),1,fp);
+	if (numberRead!=1)
+	  return 1;
+	numberRead = fread(array,length,1,fp);
+	if (numberRead!=1)
+	  return 1;
+	rowNames_[i]=array;
+      }
+      columnNames_.resize(0);
+      for (i=0;i<numberColumns_;i++) {
+	numberRead = fread(&length,sizeof(int),1,fp);
+	if (numberRead!=1)
+	  return 1;
+	numberRead = fread(array,length,1,fp);
+	if (numberRead!=1)
+	  return 1;
+	columnNames_[i]=array;
+      }
+      delete [] array;
+    }
+    // Pivot choices
+    assert(scalars.dualPivotChoice>0&&(scalars.dualPivotChoice&63)<3);
+    delete dualRowPivot_;
+    switch ((scalars.dualPivotChoice&63)) {
+    case 1:
+      // Dantzig
+      dualRowPivot_ = new ClpDualRowDantzig();
+      break;
+    case 2:
+      // Steepest - use mode
+      dualRowPivot_ = new ClpDualRowSteepest(scalars.dualPivotChoice>>6);
+      break;
+    default:
+      abort();
+    }
+    assert(scalars.primalPivotChoice>0&&(scalars.primalPivotChoice&63)<3);
+    delete primalColumnPivot_;
+    switch ((scalars.primalPivotChoice&63)) {
+    case 1:
+      // Dantzig
+      primalColumnPivot_ = new ClpPrimalColumnDantzig();
+      break;
+    case 2:
+      // Steepest - use mode
+      primalColumnPivot_ 
+	= new ClpPrimalColumnSteepest(scalars.primalPivotChoice>>6);
+      break;
+    default:
+      abort();
+    }
+    assert(scalars.matrixStorageChoice==1);
+    delete matrix_;
+    // get arrays
+    numberRead = fread(&length,sizeof(int),1,fp);
+    if (numberRead!=1)
+      return 1;
+    double * elements = new double[length];
+    int * indices = new int[length];
+    int * starts = new int[numberColumns_];
+    int * lengths = new int[numberColumns_];
+    numberRead = fread(elements, sizeof(double),length,fp);
+    if (numberRead!=length)
+      return 1;
+    numberRead = fread(indices, sizeof(int),length,fp);
+    if (numberRead!=length)
+      return 1;
+    numberRead = fread(starts, sizeof(int),numberColumns_,fp);
+    if (numberRead!=numberColumns_)
+      return 1;
+    numberRead = fread(lengths, sizeof(int),numberColumns_,fp);
+    if (numberRead!=numberColumns_)
+      return 1;
+    // assign matrix
+    OsiPackedMatrix * matrix = new OsiPackedMatrix();
+    matrix->assignMatrix(true, numberRows_, numberColumns_,
+			 length, elements, indices, starts, lengths);
+    // and transfer to Clp
+    matrix_ = new ClpPackedMatrix(matrix);
+    // finished
+    fclose(fp);
+    return 0;
+  } else {
+    return -1;
+  }
+  return 0;
+}
+// value of incoming variable (in Dual)
+double 
+ClpSimplex::valueIncomingDual() const
+{
+  // Need value of incoming for list of infeasibilities as may be infeasible
+  double valueIncoming = (dualOut_/alpha_)*directionOut_;
+  if (directionIn_==-1)
+    valueIncoming = upperIn_-valueIncoming;
+  else
+    valueIncoming = lowerIn_-valueIncoming;
+  return valueIncoming;
 }

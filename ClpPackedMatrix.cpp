@@ -38,6 +38,17 @@ ClpPackedMatrix::ClpPackedMatrix (const ClpPackedMatrix & rhs)
   
 }
 
+//-------------------------------------------------------------------
+// assign matrix (for space reasons)
+//-------------------------------------------------------------------
+ClpPackedMatrix::ClpPackedMatrix (OsiPackedMatrix * rhs) 
+: ClpMatrixBase()
+{  
+  matrix_ = rhs;
+  setType(1);
+  
+}
+
 ClpPackedMatrix::ClpPackedMatrix (const OsiPackedMatrix & rhs) 
 : ClpMatrixBase()
 {  

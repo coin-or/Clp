@@ -148,11 +148,9 @@ public:
   bool isProvenDualInfeasible() const 
   { return problemStatus_==2;};
   /// Is the given primal objective limit reached?
-  bool isPrimalObjectiveLimitReached() const 
-  { return false;}; // not implemented yet
+  bool isPrimalObjectiveLimitReached() const ;
   /// Is the given dual objective limit reached?
-  bool isDualObjectiveLimitReached() const 
-  { return false;}; // not implememented yet
+  bool isDualObjectiveLimitReached() const ;
   /// Iteration limit reached?
   bool isIterationLimitReached() const 
   { return problemStatus_==3;};
@@ -226,6 +224,9 @@ public:
   { return objectiveValue_*optimizationDirection_ - dblParam_[OsiObjOffset];};
   inline double getObjValue() const
   { return objectiveValue_*optimizationDirection_ - dblParam_[OsiObjOffset];};
+  /// Integer information
+  inline char * integerInformation() const
+  {return integerType_;};
   /** Infeasibility/unbounded ray (NULL returned if none/wrong)
       Up to user to use delete [] on these arrays.  */
   double * infeasibilityRay() const;
@@ -320,13 +321,12 @@ public:
 
   /**@name private or protected methods */
   //@{
-private:
+protected:
   /// Does most of deletion
   void gutsOfDelete();
   /** Does most of copying
       If trueCopy false then just points to arrays */
   void gutsOfCopy(const ClpModel & rhs, bool trueCopy=true);
-protected:
   /// gets lower and upper bounds on rows
   void getRowBound(int iRow, double& lower, double& upper) const;
   /// puts in format I like - 4 array matrix - may make row copy 
@@ -380,7 +380,7 @@ protected:
   /// Array of double parameters
   double dblParam_[OsiLastDblParam];
   /// Array of string parameters
-  std::string strParam_[OsiLastDblParam];
+  std::string strParam_[OsiLastStrParam];
   /// Objective value
   double objectiveValue_;
   /// Number of iterations
@@ -395,12 +395,14 @@ protected:
   bool defaultHandler_;
   /// Messages
   OsiMessages messages_;
-  /// length of names (0 means no names0
+  /// length of names (0 means no names)
   int lengthNames_;
   /// Row names
   std::vector<std::string> rowNames_;
   /// Column names
   std::vector<std::string> columnNames_;
+  /// Integer information
+  char * integerType_;
   //@}
 };
 #endif

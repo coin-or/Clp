@@ -124,8 +124,17 @@ public:
   /** This has the flow between re-factorizations
       firstSuperBasic == number rows + columns normally,
       otherwise first super basic variable
+
+      Reasons to come out:
+      -1 iterations etc
+      -2 inaccuracy 
+      -3 slight inaccuracy (and done iterations)
+      -4 end of values pass and done iterations
+      +0 looks optimal (might be infeasible - but we will investigate)
+      +2 looks unbounded
+      +3 max iterations 
    */
-  void whileIterating(int & firstSuperBasic); 
+  int whileIterating(int & firstSuperBasic); 
   /** The primals are updated by the given array.
       Returns number of infeasibilities.
       After rowArray will have cost changes for use next iteration

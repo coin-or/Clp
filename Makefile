@@ -41,7 +41,7 @@ export MakefileDir := ../Common/make
 include ${MakefileDir}/Makefile.coin
 include ${MakefileDir}/Makefile.location
 # This modification seems to be needed
-# export ExtraIncDir := ../Osi/include
+export ExtraIncDir := ../Osi/include
 export ExtraLibDir := 
 export ExtraLibName :=
 export ExtraDefine := 

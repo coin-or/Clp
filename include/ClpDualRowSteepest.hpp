@@ -46,6 +46,7 @@ public:
       3) after something happened but no factorization 
          (e.g. check for infeasible)
       4) as 2 but restore weights from previous snapshot
+      5) for strong branching - initialize (uninitialized) , infeasibilities
   */
   virtual void saveWeights(ClpSimplex * model, int mode);
   /// Gets rid of last update
@@ -72,7 +73,13 @@ public:
   /// Clone
   virtual ClpDualRowPivot * clone(bool copyData = true) const;
  
-  //@}
+   //@}
+  /**@name gets and sets */
+  //@{ 
+  /// Mode
+  inline int mode() const
+    { return mode_;};
+ //@}
 
   //---------------------------------------------------------------------------
   

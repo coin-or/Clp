@@ -92,7 +92,8 @@ ClpModel::ClpModel () :
   defaultHandler_(true),
   lengthNames_(0),
   rowNames_(),
-  columnNames_()
+  columnNames_(),
+  integerType_(NULL)
 {
   intParam_[OsiMaxNumIteration] = 9999999;
   intParam_[OsiMaxNumIterationHotStart] = 9999999;
@@ -147,6 +148,8 @@ void ClpModel::gutsOfDelete()
   rowCopy_=NULL;
   delete [] ray_;
   ray_ = NULL;
+  delete [] integerType_;
+  integerType_ = NULL;
 }
 //#############################################################################
 void ClpModel::setPrimalTolerance( double value) 
@@ -327,6 +330,12 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
     lengthNames_ = rhs.lengthNames_;
     rowNames_ = rhs.rowNames_;
     columnNames_ = rhs.columnNames_;
+    if (rhs.integerType_) {
+      integerType_ = new char[numberColumns_];
+      memcpy(integerType_,rhs.integerType_,numberColumns_*sizeof(char));
+    } else {
+      integerType_ = NULL;
+    }
     if (rhs.rowActivity_) {
       rowActivity_=new double[numberRows_];
       columnActivity_=new double[numberColumns_];
@@ -383,6 +392,7 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
     lengthNames_ = 0;
     rowNames_ = std::vector<std::string> ();
     columnNames_ = std::vector<std::string> ();
+    integerType_ = NULL;
   }
 }
 /* Borrow model.  This is so we dont have to copy large amounts
@@ -399,6 +409,8 @@ ClpModel::borrowModel(ClpModel & rhs)
   optimizationDirection_ = rhs.optimizationDirection_;
   numberRows_ = rhs.numberRows_;
   numberColumns_ = rhs.numberColumns_;
+  delete [] rhs.ray_;
+  rhs.ray_=NULL;
   gutsOfCopy(rhs,false);
 }
 // Return model - nulls all arrays so can be deleted safely
@@ -420,6 +432,8 @@ ClpModel::returnModel(ClpModel & otherModel)
   columnUpper_ = NULL;
   matrix_ = NULL;
   rowCopy_ = NULL;
+  delete [] otherModel.ray_;
+  otherModel.ray_ = ray_;
   ray_ = NULL;
 }
 //#############################################################################
@@ -539,6 +553,35 @@ double * deleteDouble(double * array , int size,
   }
   return array;
 }
+char * deleteChar(char * array , int size, 
+		      int number, const int * which,int & newSize)
+{
+  if (array) {
+    int i ;
+    char * deleted = new char[size];
+    int numberDeleted=0;
+    memset(deleted,0,size*sizeof(char));
+    for (i=0;i<number;i++) {
+      int j = which[i];
+      if (j>=0&&j<size&&!deleted[j]) {
+	numberDeleted++;
+	deleted[j]=1;
+      }
+    }
+    newSize = size-numberDeleted;
+    char * newArray = new char[newSize];
+    int put=0;
+    for (i=0;i<size;i++) {
+      if (!deleted[i]) {
+	newArray[put++]=array[i];
+      }
+    }
+    delete [] array;
+    array = newArray;
+    delete [] deleted;
+  }
+  return array;
+}
 // Resizes 
 void 
 ClpModel::resize (int newNumberRows, int newNumberColumns)
@@ -585,6 +628,14 @@ ClpModel::resize (int newNumberRows, int newNumberColumns)
       which[i-newNumberColumns]=i;
     matrix_->deleteCols(numberColumns_-newNumberColumns,which);
     delete [] which;
+  }
+  if (integerType_) {
+    char * temp = new char [newNumberColumns];
+    memset(temp,0,newNumberColumns*sizeof(char));
+    memcpy(temp,integerType_,
+	   min(newNumberColumns,numberColumns_)*sizeof(char));
+    delete [] integerType_;
+    integerType_ = temp;
   }
   numberColumns_ = newNumberColumns;
   // for now gets rid of names
@@ -643,6 +694,8 @@ ClpModel::deleteColumns(int number, const int * which)
   lengthNames_ = 0;
   rowNames_ = std::vector<std::string> ();
   columnNames_ = std::vector<std::string> ();
+  integerType_ = deleteChar(integerType_,numberColumns_,
+			    number, which, newSize);
 }
 // Infeasibility/unbounded ray (NULL returned if none/wrong)
 double * 
@@ -711,6 +764,12 @@ ClpModel::readMps(const char *fileName,
 		m.getColLower(),m.getColUpper(),
 		m.getObjCoefficients(),
 		m.getRowLower(),m.getRowUpper());
+    if (m.integerColumns()) {
+      integerType_ = new char[numberColumns_];
+      memcpy(integerType_,m.integerColumns(),numberColumns_*sizeof(char));
+    } else {
+      integerType_ = NULL;
+    }
     // set problem name
     setStrParam(OsiProbName,m.getProblemName());
     // do names
@@ -747,4 +806,45 @@ ClpModel::readMps(const char *fileName,
   }
 
   return status;
+}
+bool ClpModel::isPrimalObjectiveLimitReached() const
+{
+  double limit = 0.0;
+  getDblParam(OsiPrimalObjectiveLimit, limit);
+  if (limit > 1e30) {
+    // was not ever set
+    return false;
+  }
+   
+  const double obj = objectiveValue();
+  const int maxmin = optimizationDirection();
+
+  if (problemStatus_ == 0) // optimal
+    return maxmin > 0 ? (obj < limit) /*minim*/ : (obj > limit) /*maxim*/;
+  else if (problemStatus_==2)
+    return true;
+  else
+    return false;
+}
+
+bool ClpModel::isDualObjectiveLimitReached() const
+{
+
+  double limit = 0.0;
+  getDblParam(OsiDualObjectiveLimit, limit);
+  if (limit > 1e30) {
+    // was not ever set
+    return false;
+  }
+   
+  const double obj = objectiveValue();
+  const int maxmin = optimizationDirection();
+
+  if (problemStatus_ == 0) // optimal
+    return maxmin > 0 ? (obj > limit) /*minim*/ : (obj < limit) /*maxim*/;
+  else if (problemStatus_==1)
+    return true;
+  else
+    return false;
+
 }

@@ -49,6 +49,13 @@ public:
   virtual void unrollWeights();
   //@}
   
+  /**@name gets and sets */
+  //@{ 
+  /// Mode
+  inline int mode() const
+    { return mode_;};
+ //@}
+
   
   ///@name Constructors and destructors
   //@{

@@ -74,6 +74,11 @@ public:
     ClpSimplex & operator=(const ClpSimplex & rhs);
   /// Destructor
    ~ClpSimplex (  );
+  /** Borrow model.  This is so we dont have to copy large amounts
+      of data around.  It assumes a derived class wants to overwrite
+      an empty model with a real one - while it does an algorithm.
+      This is same as ClpModel one, but sets scaling on etc. */
+  void borrowModel(ClpModel & otherModel);
   //@}
 
   /**@name Functions most useful to user */
@@ -100,6 +105,16 @@ public:
   void setDualRowPivotAlgorithm(ClpDualRowPivot & choice);
   /// Sets column pivot choice algorithm in primal
   void setPrimalColumnPivotAlgorithm(ClpPrimalColumnPivot & choice);
+  /** For strong branching.  On input lower and upper are new bounds
+      while on output they are change in objective function values 
+      (>1.0e50 infeasible).
+      Return code is 0 if nothing interesting, -1 if infeasible both
+      ways and +1 if infeasible one way (check values to see which one(s))
+  */
+  int strongBranching(int numberVariables,const int * variables,
+		      double * newLower, double * newUpper,
+		      bool stopOnFirstInfeasible=true,
+		      bool alwaysFinish=false);
   //@}
 
   /**@name most useful gets and sets */
@@ -159,6 +174,17 @@ public:
           { return numberPrimalInfeasibilities_;} ;
   /// Warm start
   OsiWarmStartBasis getBasis() const;
+  /** Save model to file, returns 0 if success.  This is designed for
+      use outside algorithms so does not save iterating arrays etc.
+  It does not save any messaging information. 
+  Does not save scaling values.
+  It does not know about all types of virtual functions.
+  */
+  int saveModel(const char * fileName);
+  /** Restore model from file, returns 0 if success,
+      deletes current model */
+  int restoreModel(const char * fileName);
+  
   //@}
 
   /******************** End of most useful part **************/
@@ -295,6 +321,8 @@ public:
   inline double dualIn() const { return dualIn_;};
   /// Pivot Row for use by classes e.g. steepestedge
   inline int pivotRow() const{ return pivotRow_;};
+  /// value of incoming variable (in Dual)
+  double valueIncomingDual() const;
   //@}
 
   protected:
@@ -617,6 +645,8 @@ protected:
   unsigned int specialOptions_;
   /// So we know when to be cautious
   int lastBadIteration_;
+  /// Can be used for count of fake bounds (dual) or fake costs (primal)
+  int numberFake_;
   //@}
 };
 //#############################################################################

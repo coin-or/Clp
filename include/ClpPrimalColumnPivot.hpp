@@ -83,7 +83,7 @@ public:
   inline ClpSimplex * model()
   { return model_;};
   
-  /// Returns type
+  /// Returns type (above 63 is extra information)
   inline int type()
   { return type_;};
   

@@ -114,14 +114,32 @@ public:
   */
 
   int dual();
+  /** For strong branching.  On input lower and upper are new bounds
+      while on output they are change in objective function values 
+      (>1.0e50 infeasible).
+      Return code is 0 if nothing interesting, -1 if infeasible both
+      ways and +1 if infeasible one way (check values to see which one(s))
+  */
+  int strongBranching(int numberVariables,const int * variables,
+		      double * newLower, double * newUpper,
+		      bool stopOnFirstInfeasible=true,
+		      bool alwaysFinish=false);
   //@}
 
   /**@name Functions used in dual */
   //@{
   /** This has the flow between re-factorizations
       Broken out for clarity and will be used by strong branching
+
+      Reasons to come out:
+      -1 iterations etc
+      -2 inaccuracy 
+      -3 slight inaccuracy (and done iterations)
+      +0 looks optimal (might be unbounded - but we will investigate)
+      +1 looks infeasible
+      +3 max iterations 
    */
-  void whileIterating(); 
+  int whileIterating(); 
   /** The duals are updated by the given arrays.
       Returns number of infeasibilities.
       After rowArray and columnArray will just have those which 
@@ -193,6 +211,15 @@ public:
   void statusOfProblemInDual(int & lastCleaned, int type);
   /// Perturbs problem (method depends on perturbation())
   void perturb();
+  /** Fast iterations.  Misses out a lot of initialization.
+      Normally stops on maximum iterations, first re-factorization
+      or tentative optimum.  If looks interesting then continues as
+      normal.  Returns 0 if finished properly, 1 otherwise.
+  */
+  int fastDual(bool alwaysFinish=false);
+  /** Checks number of variables at fake bounds.  This is used by fastDual
+      so can exit gracefully before end */
+  int numberAtFakeBound();
   //@}
 };
 #endif

@@ -34,7 +34,7 @@ ClpPrimalColumnSteepest::ClpPrimalColumnSteepest (int mode)
     reference_(NULL),
     devex_(0.0)
 {
-  type_=2;
+  type_=2+64*mode;
 }
 
 //-------------------------------------------------------------------

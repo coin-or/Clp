@@ -375,12 +375,23 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
   infeasibilityCost_ = saveInfeasibilityCost;
   return problemStatus_;
 }
-void
+/*
+  Reasons to come out:
+  -1 iterations etc
+  -2 inaccuracy 
+  -3 slight inaccuracy (and done iterations)
+  -4 end of values pass and done iterations
+  +0 looks optimal (might be infeasible - but we will investigate)
+  +2 looks unbounded
+  +3 max iterations 
+*/
+int
 ClpSimplexPrimal::whileIterating(int & firstSuperBasic)
 {
 
   // Say if values pass
   int ifValuesPass=0;
+  int returnCode=-1;
   if (firstSuperBasic<numberRows_+numberColumns_)
     ifValuesPass=1;
   int saveNumber = numberIterations_;
@@ -450,6 +461,7 @@ ClpSimplexPrimal::whileIterating(int & firstSuperBasic)
 	if(saveNumber != numberIterations_) {
 	  problemStatus_=-2; // factorize now
 	  pivotRow_=-1; // say no weights update
+	  returnCode=-4;
 	  break;
 	}
 
@@ -515,6 +527,7 @@ ClpSimplexPrimal::whileIterating(int & firstSuperBasic)
 	  problemStatus_=-2; // factorize now
 	  rowArray_[1]->clear();
 	  pivotRow_=-1; // say no weights update
+	  returnCode=-2;
 	  break;
 	} else {
 	  // take on more relaxed criterion
@@ -540,13 +553,16 @@ ClpSimplexPrimal::whileIterating(int & firstSuperBasic)
 							 alpha_);
 	if (updateStatus==1) {
 	  // slight error
-	  if (factorization_->pivots()>5)
+	  if (factorization_->pivots()>5) {
 	    problemStatus_=-2; // factorize now
+	    returnCode=-3;
+	  }
 	} else if (updateStatus==2) {
 	  // major error
 	  // later we may need to unwind more e.g. fake bounds
 	  if(saveNumber != numberIterations_) {
 	    problemStatus_=-2; // factorize now
+	    returnCode=-2;
 	    break;
 	  } else {
 	    // need to reject something
@@ -602,6 +618,7 @@ ClpSimplexPrimal::whileIterating(int & firstSuperBasic)
 	    }
 	  }
 	  rowArray_[0]->clear();
+	  returnCode=2;
 	  break;
 	} else {
 	  // flipping from bound to bound
@@ -627,6 +644,7 @@ ClpSimplexPrimal::whileIterating(int & firstSuperBasic)
       } else if (whatNext==2) {
 	// maximum iterations or equivalent
 	problemStatus_= 3;
+	returnCode=3;
 	break;
       }
     } else {
@@ -637,9 +655,11 @@ ClpSimplexPrimal::whileIterating(int & firstSuperBasic)
 #endif
       if (nonLinearCost_->numberInfeasibilities())
 	problemStatus_=-4; // might be infeasible 
+      returnCode=0;
       break;
     }
   }
+  return returnCode;
 }
 /* Checks if finished.  Updates status */
 void 
@@ -657,7 +677,6 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type)
     changeMade_++; // say change made
   }
   int tentativeStatus = problemStatus_;
-
   if (problemStatus_>-3||problemStatus_==-4) {
     // factorize
     // later on we will need to recover from singularities
@@ -665,19 +684,22 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type)
     // do weights
     // This may save pivotRow_ for use 
     primalColumnPivot_->saveWeights(this,1);
-    // is factorization okay?
-    if (internalFactorize(1)) {
-      // no - restore previous basis
-      assert (type==1);
-      memcpy(status_ ,saveStatus_,(numberColumns_+numberRows_)*sizeof(char));
-      memcpy(rowActivityWork_,savedSolution_+numberColumns_ ,
-	     numberRows_*sizeof(double));
-      memcpy(columnActivityWork_,savedSolution_ ,
-	     numberColumns_*sizeof(double));
-      forceFactorization_=1; // a bit drastic but ..
-      type = 2;
-      assert (internalFactorize(1)==0);
-      changeMade_++; // say change made
+
+    if (type) {
+      // is factorization okay?
+      if (internalFactorize(1)) {
+	// no - restore previous basis
+	assert (type==1);
+	memcpy(status_ ,saveStatus_,(numberColumns_+numberRows_)*sizeof(char));
+	memcpy(rowActivityWork_,savedSolution_+numberColumns_ ,
+	       numberRows_*sizeof(double));
+	memcpy(columnActivityWork_,savedSolution_ ,
+	       numberColumns_*sizeof(double));
+	forceFactorization_=1; // a bit drastic but ..
+	type = 2;
+	assert (internalFactorize(1)==0);
+	changeMade_++; // say change made
+      }
     }
     if (problemStatus_!=-4)
       problemStatus_=-3;
@@ -983,7 +1005,7 @@ ClpSimplexPrimal::primalRow(OsiIndexedVector * rowArray,
       rhs[iRow]=oldValue;
       index[numberRemaining++]=iRow;
       double value=oldValue-upperTheta*fabs(alpha);
-      if (value<-primalTolerance_)
+      if (value<-primalTolerance_&&fabs(alpha)>=acceptablePivot)
 	upperTheta = (oldValue+primalTolerance_)/fabs(alpha);
     }
   }
@@ -1118,8 +1140,9 @@ ClpSimplexPrimal::primalRow(OsiIndexedVector * rowArray,
 	    if (lastPivot>acceptablePivot) {
 	      // back to previous one
 	      goBackOne = true;
+	      //break;
 	    } else {
-	      // can only get here if all pivots too small
+	      // can only get here if all pivots so far too small
 	    }
 	    break;
 	  } else if (totalThru>=dualCheck) {

@@ -151,6 +151,9 @@ public:
    /** The copy constructor from an OsiPackedMatrix. */
    ClpPackedMatrix(const OsiPackedMatrix&);
 
+  /** This takes over ownership (for space reasons) */
+   ClpPackedMatrix(OsiPackedMatrix * matrix);
+
    ClpPackedMatrix& operator=(const ClpPackedMatrix&);
   /// Clone
   virtual ClpMatrixBase * clone() const ;
