@@ -1125,7 +1125,7 @@ stopping",
 #endif
 	      if (type==DUALSIMPLEX) {
 		if (doIdiot<0)
-		  model2->crash(1000,2);
+		  model2->crash(1000,0);
 		model2->dual();
 	      } else {
 #ifdef CLP_IDIOT
