@@ -830,7 +830,7 @@ double ClpPredictorCorrector::findStepLength( int phase)
   // If done many iterations then allow to hit boundary
   double hitTolerance;
   //printf("objective norm %g\n",objectiveNorm_);
-  if (numberIterations_<80|!gonePrimalFeasible_)
+  if (numberIterations_<80||!gonePrimalFeasible_)
     hitTolerance = COIN_DBL_MAX;
   else
     hitTolerance = max(1.0e3,1.0e-3*objectiveNorm_);
@@ -3511,7 +3511,7 @@ int ClpPredictorCorrector::updateSolution(double nextGap)
   numberIterations_++;
   return numberKilled;
 }
-//  Save info on products of affine deltaW*deltaW and deltaS*deltaZ
+//  Save info on products of affine deltaSU*deltaW and deltaSL*deltaZ
 double 
 ClpPredictorCorrector::affineProduct()
 {
