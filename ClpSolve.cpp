@@ -30,11 +30,14 @@
 
 #include "CoinSignal.hpp"
 static ClpSimplex * currentModel = NULL;
-extern "C" static void signal_handler(int whichSignal)
-{
-  if (currentModel!=NULL) 
-    currentModel->setMaximumIterations(0); // stop at next iterations
-  return;
+
+extern "C" {
+   static void signal_handler(int whichSignal)
+   {
+      if (currentModel!=NULL) 
+	 currentModel->setMaximumIterations(0); // stop at next iterations
+      return;
+   }
 }
 
 /** General solve algorithm which can do presolve
