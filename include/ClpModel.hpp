@@ -214,7 +214,8 @@ public:
    inline const double * getColUpper() const    { return columnUpper_; }
    /// Matrix (if not ClpPackedmatrix be careful about memory leak
    inline CoinPackedMatrix * matrix() const {
-      return matrix_->getPackedMatrix();
+     if ( matrix_ == NULL ) return NULL;
+     else return matrix_->getPackedMatrix();
    }
    /// Number of elements in matrix
    inline int getNumElements() const 
