@@ -47,7 +47,7 @@ extern "C"{
   /** Just like the other loadProblem() method except that the matrix is
 	given in a standard column major ordered format (without gaps). */
   CLPLIBAPI void CLPLINKAGE Clp_loadProblem (Clp_Simplex * model,  const int numcols, const int numrows,
-		      const int* start, const int* index,
+		      const CoinBigIndex * start, const int* index,
 		      const double* value,
 		      const double* collb, const double* colub,   
 		      const double* obj,

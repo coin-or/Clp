@@ -83,7 +83,9 @@ LDFLAGS += $(call ifprefix,$(SHLINKPREFIX),$(LIBDIRS))
 LDFLAGS += $(patsubst lib%,-l%,$(basename $(LIBS)))
 
 #LDFLAGS += -lefence
-
+#LDFLAGS += -lwsmpP4 -lpthread
+#OSL_LIB_DIR = /home/forrest/osl/lib
+#LDFLAGS += -L $(OSL_LIB_DIR) -Wl,-rpath,$(OSL_LIB_DIR) -losl-g-nolic-native-32
 ###############################################################################
 
 ifeq ($(DRIVER),driverC)

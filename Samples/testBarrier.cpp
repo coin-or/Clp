@@ -3,7 +3,7 @@
 
 #include "ClpInterior.hpp"
 #include "ClpSimplex.hpp"
-//#include "ClpCholeskyWssmp.hpp"
+#include "ClpCholeskyWssmp.hpp"
 int main (int argc, const char *argv[])
 {
   ClpInterior  model;
@@ -17,8 +17,8 @@ int main (int argc, const char *argv[])
     exit(77);
   }
   // ** note this does not have presolve
-  //ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp();
-  //model.setCholesky(cholesky);
+  ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp();
+  model.setCholesky(cholesky);
   model.primalDual();
   // Do crossover
   ClpSimplex model2(model);
