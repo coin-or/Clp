@@ -143,7 +143,6 @@ Idiot::crash(int numberPass)
   maxIts_=20;
   maxIts2_=105;
   if (numberPass<=0)
-    // Cast to avoid gcc compiler warning
     // Cast to double to avoid VACPP complaining
     majorIterations_=(int)(2+log10((double)(numberColumns+1)));
   else
