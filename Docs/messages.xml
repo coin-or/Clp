@@ -4,8 +4,9 @@
   Messages
   </title>
   <para>
-  The messages and codes passed by CLP are listed in the tables below.  The
-  notation is as for printf from &quot;C&quot;:
+  Some of the more common messages and codes passed by CLP are listed in the
+  tables below.  This is list is not meant to exhaustive.  The notation is as
+  for printf from &quot;C&quot;:
   </para>
   <itemizedlist>
     <listitem>
