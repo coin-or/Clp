@@ -908,8 +908,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
       currentModel2 = &barrier;
 #ifdef REAL_BARRIER
     // uncomment this if you have Anshul Gupta's wsmp package
-    //ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp(max(100,model2->numberRows()/10));
-    ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp();
+    ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp(max(100,model2->numberRows()/10));
+    //ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp();
     //ClpCholeskyWssmpKKT * cholesky = new ClpCholeskyWssmpKKT(max(100,model2->numberRows()/10));
     // uncomment this if you have Sivan Toledo's Taucs package
     //ClpCholeskyTaucs * cholesky = new ClpCholeskyTaucs();
@@ -917,6 +917,11 @@ ClpSimplex::initialSolve(ClpSolve & options)
 #endif
     int numberRows = model2->numberRows();
     int numberColumns = model2->numberColumns();
+    int saveMaxIts = model2->maximumIterations();
+    if (saveMaxIts<1000) {
+      barrier.setMaximumBarrierIterations(saveMaxIts);
+      model2->setMaximumIterations(1000000);
+    }
 #ifndef SAVEIT
     barrier.primalDual();
     //printf("********** Stopping as this is debug run\n");
@@ -1104,6 +1109,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
       model2->createStatus();
       model2->dual();
     }
+    model2->setMaximumIterations(saveMaxIts);
 #ifdef BORROW
     delete [] rowPrimal;
     delete [] columnPrimal;
