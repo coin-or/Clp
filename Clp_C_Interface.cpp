@@ -195,6 +195,9 @@ CMessageHandler::setCallBack(clp_callback callback)
 #include <stdio.h>
 #include <iostream>
 
+#if defined(__MWERKS__) 
+#pragma export on
+#endif
 /* Default constructor */
 COINLIBAPI Clp_Simplex *  COINLINKAGE 
 Clp_newModel()
@@ -1096,4 +1099,7 @@ Clp_printModel(Clp_Simplex * model, const char * prefix)
         prefix, i, rowlb[i], i, rowub[i]);
   }
 }
+#if defined(__MWERKS__) 
+#pragma export off
+#endif
 
