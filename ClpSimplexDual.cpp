@@ -860,7 +860,6 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
   if (fullRecompute&&numberAtFake&&(handler_->logLevel()&16)!=0) 
     printf("%d fake after full update\n",numberAtFake);
 #endif
-  outputArray->stopQuickAdd();
   // set number of infeasibilities
   columnArray->setNumElements(numberInfeasibilities);
   numberInfeasibilities += numberRowInfeasibilities;
@@ -1062,8 +1061,6 @@ ClpSimplexDual::changeBounds(bool initialize,
 	}
       }
       dualBound_ = newBound;
-      if (outputArray)
-	outputArray->stopQuickAdd();
     } else {
       numberInfeasibilities=-1;
     }

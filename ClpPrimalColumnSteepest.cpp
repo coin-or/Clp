@@ -528,8 +528,6 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
     updates->setNumElements(0);
     spareColumn1->setNumElements(0);
   }
-  infeasible_->stopQuickAdd();
-
 
   // update of duals finished - now do pricing
 
@@ -727,7 +725,6 @@ ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model,int mode)
 	}
       }
     }
-    infeasible_->stopQuickAdd();
   }
 }
 // Gets rid of last update

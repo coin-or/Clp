@@ -363,7 +363,6 @@ ClpDualRowSteepest::updatePrimalSolution(
     }
     work[iRow]=0.0;
   }
-  infeasible_->stopQuickAdd();
   primalUpdate->setNumElements(0);
   objectiveChange += changeObj;
 }
@@ -498,7 +497,6 @@ ClpDualRowSteepest::saveWeights(ClpSimplex * model,int mode)
 	infeasible_->quickAdd(iRow,value*value);
       }
     }
-    infeasible_->stopQuickAdd();
   }
 }
 // Gets rid of last update
