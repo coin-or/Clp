@@ -146,21 +146,32 @@ public:
   virtual int extendUpdated(ClpSimplex * model,CoinIndexedVector * update,int mode);
   /**
      utility primal function for dealing with dynamic constraints
-     mode=n see ClpGubMatrix.hpp for definition
-     Remember to update here and cpp files when settled down
+     mode=0  - Set up before "update" and "times" for primal solution using extended rows
+     mode=1  - Cleanup primal solution after "times" using extended rows.
+     mode=2  - Check (or report on) primal infeasibilities
   */
   virtual void primalExpanded(ClpSimplex * model,int mode);
   /** 
       utility dual function for dealing with dynamic constraints
-      mode=n see ClpGubMatrix.hpp for definition
-      Remember to update here and cpp files when settled down
+      mode=0  - Set up before "updateTranspose" and "transposeTimes" for duals using extended
+                updates array (and may use other if dual values pass)
+      mode=1  - Update dual solution after "transposeTimes" using extended rows.
+      mode=2  - Compute all djs and compute key dual infeasibilities
+      mode=3  - Report on key dual infeasibilities
+      mode=4  - Modify before updateTranspose in partial pricing
   */
   virtual void dualExpanded(ClpSimplex * model,CoinIndexedVector * array,
 			    double * other,int mode);
   /** 
       general utility function for dealing with dynamic constraints
-      mode=n see ClpGubMatrix.hpp for definition
-      Remember to update here and cpp files when settled down
+      mode=0  - Create list of non-key basics in pivotVariable_ using
+                number as numberBasic in and out
+      mode=1  - Set all key variables as basic
+      mode=2  - return number extra rows needed, number gives maximum number basic
+      mode=3  - before replaceColumn
+      mode=4  - return 1 if can do primal, 2 if dual, 3 if both
+      mode=5  - save any status stuff (when in good state)
+      mode=6  - restore status stuff
   */
   virtual int generalExpanded(ClpSimplex * model,int mode,int & number);
   /** 

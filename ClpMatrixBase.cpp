@@ -212,13 +212,13 @@ int
 ClpMatrixBase::generalExpanded(ClpSimplex * model,int mode, int &number)
 {
   int returnCode=0;
-  int numberColumns = model->numberColumns();
   switch (mode) {
     // Fill in pivotVariable but not for key variables
   case 0:
     {
       int i;
       int numberBasic=number;
+      int numberColumns = model->numberColumns();
       // Use different array so can build from true pivotVariable_
       //int * pivotVariable = model->pivotVariable();
       int * pivotVariable = model->rowArray(0)->getIndices();
@@ -229,17 +229,19 @@ ClpMatrixBase::generalExpanded(ClpSimplex * model,int mode, int &number)
       number = numberBasic;
     }
     break;
-    // Make all key variables basic
-  case 1:
-    {
-    }
-    break;
     // Do initial extra rows + maximum basic
   case 2:
     {
-      returnCode= 0;
       number = model->numberRows();
     }
+    break;
+    // To see if can dual or primal
+  case 4:
+    {
+      returnCode= 3;
+    }
+    break;
+  default:
     break;
   }
   return returnCode;

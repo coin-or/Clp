@@ -74,6 +74,9 @@ public:
   This version updates original*/
   virtual void postsolve(bool updateStatus=true);
 
+  /// Gets rid of presolve actions (e.g.when infeasible)
+  void destroyPresolve();
+
   /**@name private or protected data */
 private:
   /// Original model - must not be destroyed before postsolve
@@ -119,8 +122,6 @@ protected:
   /// if you want to add code to test for consistency
   /// while debugging new presolve techniques.
   virtual void postsolve(CoinPostsolveMatrix &prob);
-  /// Gets rid of presolve actions (e.g.when infeasible)
-  void gutsOfDestroy();
   /** This is main part of Presolve */
   virtual ClpSimplex * gutsOfPresolvedModel(ClpSimplex * originalModel
 					    ,double feasibilityTolerance,

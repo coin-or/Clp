@@ -35,6 +35,7 @@ ClpGubMatrix::ClpGubMatrix ()
     lower_(NULL),
     upper_(NULL),
     status_(NULL),
+    saveStatus_(NULL),
     backward_(NULL),
     backToPivotRow_(NULL),
     changeCost_(NULL),
@@ -70,6 +71,7 @@ ClpGubMatrix::ClpGubMatrix (const ClpGubMatrix & rhs)
   lower_ = ClpCopyOfArray(rhs.lower_,numberSets_);
   upper_ = ClpCopyOfArray(rhs.upper_,numberSets_);
   status_ = ClpCopyOfArray(rhs.status_,numberSets_);
+  saveStatus_ = ClpCopyOfArray(rhs.saveStatus_,numberSets_);
   int numberColumns = getNumCols();
   backward_ = ClpCopyOfArray(rhs.backward_,numberColumns);
   backToPivotRow_ = ClpCopyOfArray(rhs.backToPivotRow_,numberColumns);
@@ -103,6 +105,7 @@ ClpGubMatrix::ClpGubMatrix (CoinPackedMatrix * rhs)
     lower_(NULL),
     upper_(NULL),
     status_(NULL),
+    saveStatus_(NULL),
     backward_(NULL),
     backToPivotRow_(NULL),
     changeCost_(NULL),
@@ -205,6 +208,8 @@ ClpGubMatrix::ClpGubMatrix(ClpPackedMatrix * matrix, int numberSets,
       setStatus(i,ClpSimplex::basic);
     }
   }
+  saveStatus_= new unsigned char [numberSets_];
+  memset(saveStatus_,0,numberSets_);
 }
 
 ClpGubMatrix::ClpGubMatrix (const CoinPackedMatrix & rhs) 
@@ -218,6 +223,7 @@ ClpGubMatrix::ClpGubMatrix (const CoinPackedMatrix & rhs)
     lower_(NULL),
     upper_(NULL),
     status_(NULL),
+    saveStatus_(NULL),
     backward_(NULL),
     backToPivotRow_(NULL),
     changeCost_(NULL),
@@ -249,6 +255,7 @@ ClpGubMatrix::~ClpGubMatrix ()
   delete [] lower_;
   delete [] upper_;
   delete [] status_;
+  delete [] saveStatus_;
   delete [] backward_;
   delete [] backToPivotRow_;
   delete [] changeCost_;
@@ -271,6 +278,7 @@ ClpGubMatrix::operator=(const ClpGubMatrix& rhs)
     delete [] lower_;
     delete [] upper_;
     delete [] status_;
+    delete [] saveStatus_;
     delete [] backward_;
     delete [] backToPivotRow_;
     delete [] changeCost_;
@@ -287,6 +295,7 @@ ClpGubMatrix::operator=(const ClpGubMatrix& rhs)
     lower_ = ClpCopyOfArray(rhs.lower_,numberSets_);
     upper_ = ClpCopyOfArray(rhs.upper_,numberSets_);
     status_ = ClpCopyOfArray(rhs.status_,numberSets_);
+    saveStatus_ = ClpCopyOfArray(rhs.saveStatus_,numberSets_);
     int numberColumns = getNumCols();
     backward_ = ClpCopyOfArray(rhs.backward_,numberColumns);
     backToPivotRow_ = ClpCopyOfArray(rhs.backToPivotRow_,numberColumns);
@@ -456,10 +465,312 @@ ClpGubMatrix::transposeTimes(const ClpSimplex * model, double scalar,
 			      CoinIndexedVector * y,
 			      CoinIndexedVector * columnArray) const
 {
-  // Do packed part
-  ClpPackedMatrix::transposeTimes(model, scalar, rowArray, y, columnArray);
-  if (numberSets_) {
-    abort();
+  columnArray->clear();
+  double * pi = rowArray->denseVector();
+  int numberNonZero=0;
+  int * index = columnArray->getIndices();
+  double * array = columnArray->denseVector();
+  int numberInRowArray = rowArray->getNumElements();
+  // maybe I need one in OsiSimplex
+  double zeroTolerance = model->factorization()->zeroTolerance();
+  int numberRows = model->numberRows();
+  ClpPackedMatrix* rowCopy =
+    dynamic_cast< ClpPackedMatrix*>(model->rowCopy());
+  bool packed = rowArray->packedMode();
+  double factor = 0.3;
+  // We may not want to do by row if there may be cache problems
+  int numberColumns = model->numberColumns();
+  // It would be nice to find L2 cache size - for moment 512K
+  // Be slightly optimistic
+  if (numberColumns*sizeof(double)>1000000) {
+    if (numberRows*10<numberColumns)
+      factor=0.1;
+    else if (numberRows*4<numberColumns)
+      factor=0.15;
+    else if (numberRows*2<numberColumns)
+      factor=0.2;
+    //if (model->numberIterations()%50==0)
+    //printf("%d nonzero\n",numberInRowArray);
+  }
+  // reduce for gub
+  factor *= 0.5;
+  if (numberInRowArray>factor*numberRows||!rowCopy) {
+    // do by column
+    int iColumn;
+    // get matrix data pointers
+    const int * row = matrix_->getIndices();
+    const CoinBigIndex * columnStart = matrix_->getVectorStarts();
+    const int * columnLength = matrix_->getVectorLengths(); 
+    const double * elementByColumn = matrix_->getElements();
+    const double * rowScale = model->rowScale();
+    int numberColumns = model->numberColumns();
+    int iSet = -1;
+    double djMod=0.0;
+    if (!y->getNumElements()) {
+      if (packed) {
+	// need to expand pi into y
+	assert(y->capacity()>=numberRows);
+	double * piOld = pi;
+	pi = y->denseVector();
+	const int * whichRow = rowArray->getIndices();
+	int i;
+	if (!rowScale) {
+	  // modify pi so can collapse to one loop
+	  for (i=0;i<numberInRowArray;i++) {
+	    int iRow = whichRow[i];
+	    pi[iRow]=scalar*piOld[i];
+	  }
+	  for (iColumn=0;iColumn<numberColumns;iColumn++) {
+	    if (backward_[iColumn]!=iSet) {
+	      // get pi on gub row
+	      iSet = backward_[iColumn];
+	      if (iSet>=0) {
+		int iBasic = keyVariable_[iSet];
+		if (iBasic<numberColumns) {
+		  // get dj without 
+		  assert (model->getStatus(iBasic)==ClpSimplex::basic);
+		  djMod=0.0;
+		  for (int j=columnStart[iBasic];
+		       j<columnStart[iBasic]+columnLength[iBasic];j++) {
+		    int jRow=row[j];
+		    djMod -= pi[jRow]*elementByColumn[j];
+		  }
+		} else {
+		  djMod = 0.0;
+		}
+	      } else {
+		djMod = 0.0;
+	      }
+	    }
+	    double value = -djMod;
+	    CoinBigIndex j;
+	    for (j=columnStart[iColumn];
+		 j<columnStart[iColumn]+columnLength[iColumn];j++) {
+	      int iRow = row[j];
+	      value += pi[iRow]*elementByColumn[j];
+	    }
+	    if (fabs(value)>zeroTolerance) {
+	      array[numberNonZero]=value;
+	      index[numberNonZero++]=iColumn;
+	    }
+	  }
+	} else {
+	  // scaled
+	  // modify pi so can collapse to one loop
+	  for (i=0;i<numberInRowArray;i++) {
+	    int iRow = whichRow[i];
+	    pi[iRow]=scalar*piOld[i]*rowScale[iRow];
+	  }
+	  for (iColumn=0;iColumn<numberColumns;iColumn++) {
+	    if (backward_[iColumn]!=iSet) {
+	      // get pi on gub row
+	      iSet = backward_[iColumn];
+	      if (iSet>=0) {
+		int iBasic = keyVariable_[iSet];
+		if (iBasic<numberColumns) {
+		  // get dj without 
+		  assert (model->getStatus(iBasic)==ClpSimplex::basic);
+		  djMod=0.0;
+		  // scaled
+		  for (int j=columnStart[iBasic];
+		       j<columnStart[iBasic]+columnLength[iBasic];j++) {
+		    int jRow=row[j];
+		    djMod -= pi[jRow]*elementByColumn[j]*rowScale[jRow];
+		  }
+		} else {
+		  djMod = 0.0;
+		}
+	      } else {
+		djMod = 0.0;
+	      }
+	    }
+	    double value = -djMod;
+	    CoinBigIndex j;
+	    const double * columnScale = model->columnScale();
+	    for (j=columnStart[iColumn];
+		 j<columnStart[iColumn]+columnLength[iColumn];j++) {
+	      int iRow = row[j];
+	      value += pi[iRow]*elementByColumn[j];
+	    }
+	    value *= columnScale[iColumn];
+	    if (fabs(value)>zeroTolerance) {
+	      array[numberNonZero]=value;
+	      index[numberNonZero++]=iColumn;
+	    }
+	  }
+	}
+	// zero out
+	for (i=0;i<numberInRowArray;i++) {
+	  int iRow = whichRow[i];
+	  pi[iRow]=0.0;
+	}
+      } else {
+	// code later
+	assert (packed);
+	if (!rowScale) {
+	  if (scalar==-1.0) {
+	    for (iColumn=0;iColumn<numberColumns;iColumn++) {
+	      double value = 0.0;
+	      CoinBigIndex j;
+	      for (j=columnStart[iColumn];
+		   j<columnStart[iColumn]+columnLength[iColumn];j++) {
+		int iRow = row[j];
+		value += pi[iRow]*elementByColumn[j];
+	      }
+	      if (fabs(value)>zeroTolerance) {
+		index[numberNonZero++]=iColumn;
+		array[iColumn]=-value;
+	      }
+	    }
+	  } else if (scalar==1.0) {
+	    for (iColumn=0;iColumn<numberColumns;iColumn++) {
+	      double value = 0.0;
+	      CoinBigIndex j;
+	      for (j=columnStart[iColumn];
+		   j<columnStart[iColumn]+columnLength[iColumn];j++) {
+		int iRow = row[j];
+		value += pi[iRow]*elementByColumn[j];
+	      }
+	      if (fabs(value)>zeroTolerance) {
+		index[numberNonZero++]=iColumn;
+		array[iColumn]=value;
+	      }
+	    }
+	  } else {
+	    for (iColumn=0;iColumn<numberColumns;iColumn++) {
+	      double value = 0.0;
+	      CoinBigIndex j;
+	      for (j=columnStart[iColumn];
+		   j<columnStart[iColumn]+columnLength[iColumn];j++) {
+		int iRow = row[j];
+		value += pi[iRow]*elementByColumn[j];
+	      }
+	      value *= scalar;
+	      if (fabs(value)>zeroTolerance) {
+		index[numberNonZero++]=iColumn;
+		array[iColumn]=value;
+	      }
+	    }
+	  }
+	} else {
+	  // scaled
+	  if (scalar==-1.0) {
+	    for (iColumn=0;iColumn<numberColumns;iColumn++) {
+	      double value = 0.0;
+	      CoinBigIndex j;
+	      const double * columnScale = model->columnScale();
+	      for (j=columnStart[iColumn];
+		   j<columnStart[iColumn]+columnLength[iColumn];j++) {
+		int iRow = row[j];
+		value += pi[iRow]*elementByColumn[j]*rowScale[iRow];
+	      }
+	      value *= columnScale[iColumn];
+	      if (fabs(value)>zeroTolerance) {
+		index[numberNonZero++]=iColumn;
+		array[iColumn]=-value;
+	      }
+	    }
+	  } else if (scalar==1.0) {
+	    for (iColumn=0;iColumn<numberColumns;iColumn++) {
+	      double value = 0.0;
+	      CoinBigIndex j;
+	      const double * columnScale = model->columnScale();
+	      for (j=columnStart[iColumn];
+		   j<columnStart[iColumn]+columnLength[iColumn];j++) {
+		int iRow = row[j];
+		value += pi[iRow]*elementByColumn[j]*rowScale[iRow];
+	      }
+	      value *= columnScale[iColumn];
+	      if (fabs(value)>zeroTolerance) {
+		index[numberNonZero++]=iColumn;
+		array[iColumn]=value;
+	      }
+	    }
+	  } else {
+	    for (iColumn=0;iColumn<numberColumns;iColumn++) {
+	      double value = 0.0;
+	      CoinBigIndex j;
+	      const double * columnScale = model->columnScale();
+	      for (j=columnStart[iColumn];
+		   j<columnStart[iColumn]+columnLength[iColumn];j++) {
+		int iRow = row[j];
+		value += pi[iRow]*elementByColumn[j]*rowScale[iRow];
+	      }
+	      value *= scalar*columnScale[iColumn];
+	      if (fabs(value)>zeroTolerance) {
+		index[numberNonZero++]=iColumn;
+		array[iColumn]=value;
+	      }
+	    }
+	  }
+	}
+      }
+    } else {
+      assert(!packed);
+      // code later
+      assert (!y->getNumElements());
+      double * markVector = y->denseVector(); // not empty
+      if (!rowScale) {
+	for (iColumn=0;iColumn<numberColumns;iColumn++) {
+	  double value = markVector[iColumn];
+	  markVector[iColumn]=0.0;
+	  double value2 = 0.0;
+	  CoinBigIndex j;
+	  for (j=columnStart[iColumn];
+	       j<columnStart[iColumn]+columnLength[iColumn];j++) {
+	    int iRow = row[j];
+	    value2 += pi[iRow]*elementByColumn[j];
+	  }
+	  value += value2*scalar;
+	  if (fabs(value)>zeroTolerance) {
+	    index[numberNonZero++]=iColumn;
+	    array[iColumn]=value;
+	  }
+	}
+      } else {
+	// scaled
+	for (iColumn=0;iColumn<numberColumns;iColumn++) {
+	  double value = markVector[iColumn];
+	  markVector[iColumn]=0.0;
+	  CoinBigIndex j;
+	  const double * columnScale = model->columnScale();
+	  double value2 = 0.0;
+	  for (j=columnStart[iColumn];
+	       j<columnStart[iColumn]+columnLength[iColumn];j++) {
+	    int iRow = row[j];
+	    value2 += pi[iRow]*elementByColumn[j]*rowScale[iRow];
+	  }
+	  value += value2*scalar*columnScale[iColumn];
+	  if (fabs(value)>zeroTolerance) {
+	    index[numberNonZero++]=iColumn;
+	    array[iColumn]=value;
+	  }
+	}
+      }
+    }
+    columnArray->setNumElements(numberNonZero);
+    y->setNumElements(0);
+  } else {
+    // do by row
+    transposeTimesByRow(model, scalar, rowArray, y, columnArray);
+  }
+  if (packed)
+    columnArray->setPackedMode(true);
+  if (0) {
+    columnArray->checkClean();
+    int numberNonZero=columnArray->getNumElements();;
+    int * index = columnArray->getIndices();
+    double * array = columnArray->denseVector();
+    int i;
+    for (i=0;i<numberNonZero;i++) {
+      int j=index[i];
+      double value;
+      if (packed)
+	value=array[i];
+      else
+	value=array[j];
+      printf("Ti %d %d %g\n",i,j,value);
+    }
   }
 }
 /* Return <code>x * A + y</code> in <code>z</code>. 
@@ -473,6 +784,8 @@ ClpGubMatrix::transposeTimesByRow(const ClpSimplex * model, double scalar,
   // Do packed part
   ClpPackedMatrix::transposeTimesByRow(model, scalar, rowArray, y, columnArray);
   if (numberSets_) {
+    /* what we need to do is do by row as normal but get list of sets touched
+       and then update those ones */
     abort();
   }
 }
@@ -485,10 +798,85 @@ ClpGubMatrix::subsetTransposeTimes(const ClpSimplex * model,
 			      const CoinIndexedVector * y,
 			      CoinIndexedVector * columnArray) const
 {
-  // Do packed part
-  ClpPackedMatrix::subsetTransposeTimes(model, rowArray, y, columnArray);
-  if (numberSets_) {
-    abort();
+  columnArray->clear();
+  double * pi = rowArray->denseVector();
+  double * array = columnArray->denseVector();
+  int jColumn;
+  // get matrix data pointers
+  const int * row = matrix_->getIndices();
+  const CoinBigIndex * columnStart = matrix_->getVectorStarts();
+  const int * columnLength = matrix_->getVectorLengths(); 
+  const double * elementByColumn = matrix_->getElements();
+  const double * rowScale = model->rowScale();
+  int numberToDo = y->getNumElements();
+  const int * which = y->getIndices();
+  assert (!rowArray->packedMode());
+  columnArray->setPacked();
+  int numberTouched=0;
+  if (!rowScale) {
+    for (jColumn=0;jColumn<numberToDo;jColumn++) {
+      int iColumn = which[jColumn];
+      double value = 0.0;
+      CoinBigIndex j;
+      for (j=columnStart[iColumn];
+	   j<columnStart[iColumn]+columnLength[iColumn];j++) {
+	int iRow = row[j];
+	value += pi[iRow]*elementByColumn[j];
+      }
+      array[jColumn]=value;
+      if (value) {
+	int iSet = backward_[iColumn];
+	if (iSet>=0) {
+	  int iBasic = keyVariable_[iSet];
+	  if (iBasic==iColumn) {
+	    toIndex_[iSet]=jColumn;
+	    fromIndex_[numberTouched++]=iSet;
+	  }	
+	}
+      }
+    }
+  } else {
+    // scaled
+    for (jColumn=0;jColumn<numberToDo;jColumn++) {
+      int iColumn = which[jColumn];
+      double value = 0.0;
+      CoinBigIndex j;
+      const double * columnScale = model->columnScale();
+      for (j=columnStart[iColumn];
+	   j<columnStart[iColumn]+columnLength[iColumn];j++) {
+	int iRow = row[j];
+	value += pi[iRow]*elementByColumn[j]*rowScale[iRow];
+      }
+      value *= columnScale[iColumn];
+      array[jColumn]=value;
+      if (value) {
+	int iSet = backward_[iColumn];
+	if (iSet>=0) {
+	  int iBasic = keyVariable_[iSet];
+	  if (iBasic==iColumn) {
+	    toIndex_[iSet]=jColumn;
+	    fromIndex_[numberTouched++]=iSet;
+	  }	
+	}
+      }
+    }
+  }
+  // adjust djs
+  for (jColumn=0;jColumn<numberToDo;jColumn++) {
+    int iColumn = which[jColumn];
+    int iSet = backward_[iColumn];
+    if (iSet>=0) {
+      int kColumn = toIndex_[iSet];
+      if (kColumn>=0)
+	array[jColumn] -= array[kColumn];
+    }
+  }
+  // and clear basic
+  for (int j=0;j<numberTouched;j++) {
+    int iSet = fromIndex_[j];
+    int kColumn = toIndex_[iSet];
+    toIndex_[iSet]=-1;
+    array[kColumn]=0.0;
   }
 }
 /* If element NULL returns number of elements in column part of basis,
@@ -818,7 +1206,6 @@ ClpGubMatrix::unpackPacked(ClpSimplex * model,
 	double * array = rowArray->denseVector();
 	int * index = rowArray->getIndices();
 	CoinBigIndex i;
-	assert(number);
 	int numberOld=number;
 	int lastIndex=0;
 	int next=index[lastIndex];
@@ -1045,7 +1432,7 @@ ClpGubMatrix::partialPricing(ClpSimplex * model, int start, int end,
 	      break;
 	    case ClpSimplex::isFree:
 	    case ClpSimplex::superBasic:
-	      value=djMod;
+	      value=-djMod;
 	      // scaled
 	      for (j=startColumn[iSequence];
 		   j<startColumn[iSequence]+length[iSequence];j++) {
@@ -1071,7 +1458,7 @@ ClpGubMatrix::partialPricing(ClpSimplex * model, int start, int end,
 	      }
 	      break;
 	    case ClpSimplex::atUpperBound:
-	      value=djMod;
+	      value=-djMod;
 	      // scaled
 	      for (j=startColumn[iSequence];
 		   j<startColumn[iSequence]+length[iSequence];j++) {
@@ -1095,7 +1482,7 @@ ClpGubMatrix::partialPricing(ClpSimplex * model, int start, int end,
 	      }
 	      break;
 	    case ClpSimplex::atLowerBound:
-	      value=djMod;
+	      value=-djMod;
 	      // scaled
 	      for (j=startColumn[iSequence];
 		   j<startColumn[iSequence]+length[iSequence];j++) {
@@ -1359,12 +1746,15 @@ ClpGubMatrix::extendUpdated(ClpSimplex * model,CoinIndexedVector * update, int m
   int sequenceIn = model->sequenceIn();
   int returnCode=0;
   int iSetIn;
-  if (sequenceIn<numberColumns)
+  if (sequenceIn<numberColumns) {
     iSetIn = backward_[sequenceIn];
-  else if (sequenceIn<numberRows+numberColumns)
+    gubSlackIn_ = -1; // in case set
+  } else if (sequenceIn<numberRows+numberColumns) {
     iSetIn = -1;
-  else
+    gubSlackIn_ = -1; // in case set
+  } else {
     iSetIn = gubSlackIn_;
+  }
   double * lower = model->lowerRegion();
   double * upper = model->upperRegion();
   double * cost = model->costRegion();
@@ -1389,19 +1779,13 @@ ClpGubMatrix::extendUpdated(ClpSimplex * model,CoinIndexedVector * update, int m
 	    toIndex_[iSet]=number2;
 	    int iNew = number2-number;
 	    fromIndex_[number2-number]=iSet;
-	    // Save current cost of key
-	    double currentCost;
-	    int key=keyVariable_[iSet];
-	    if (key<numberColumns) 
-	      currentCost = cost[key];
-	    else
-	      currentCost = -weight(iSet)*infeasibilityCost;
-	    changeCost_[number2-number]=currentCost;
 	    iIndex=number2;
 	    index[number2]=numberRows+iNew;
 	    // do key stuff
 	    int iKey = keyVariable_[iSet];
 	    if (iKey<numberColumns) {
+	      // Save current cost of key
+	      changeCost_[number2-number] = cost[iKey];
 	      if (iSet!=iSetIn)
 		value = 0.0;
 	      else if (iSetIn!=gubSlackIn_)
@@ -1426,6 +1810,8 @@ ClpGubMatrix::extendUpdated(ClpSimplex * model,CoinIndexedVector * update, int m
 	      //assert (fabs(sol-solution[iKey])<1.0e-3);
 	    } else {
 	      // gub slack is basic
+	      // Save current cost of key
+	      changeCost_[number2-number]= -weight(iSet)*infeasibilityCost;
 	      otherValue = - otherValue; //allow for - sign on slack
 	      if (iSet!=iSetIn)
 		value = 0.0;
@@ -1458,6 +1844,9 @@ ClpGubMatrix::extendUpdated(ClpSimplex * model,CoinIndexedVector * update, int m
 	    number2++;
 	  } else {
 	    value = array[iIndex];
+	    int iKey = keyVariable_[iSet];
+	    if (iKey>=numberColumns) 
+	      otherValue = - otherValue; //allow for - sign on slack
 	  }
 	  value -= otherValue;
 	  array[iIndex]=value;
@@ -2045,6 +2434,8 @@ ClpGubMatrix::generalExpanded(ClpSimplex * model,int mode,int &number)
       int numberColumns = model->numberColumns();
       int numberRows = model->numberRows();
       int pivotRow = model->pivotRow();
+      if (gubSlackIn_>=0)
+	assert (sequenceIn>numberRows+numberColumns);
       if (sequenceIn==sequenceOut) 
 	return -1;
       int iSetIn=-1;
@@ -2128,28 +2519,34 @@ ClpGubMatrix::generalExpanded(ClpSimplex * model,int mode,int &number)
 		unpack(model,model->rowArray(3),iColumn);
 		model->factorization()->updateColumnFT(model->rowArray(2),model->rowArray(3));
 		double alpha = model->rowArray(3)->denseVector()[iRow];
-		assert (alpha);
+		//if (!alpha)
+		//printf("zero alpha a\n");
 		int updateStatus = model->factorization()->replaceColumn(model->rowArray(2),
 									 iRow, alpha);
 		returnCode = max (updateStatus, returnCode);
 		model->rowArray(3)->clear();
+		if (returnCode)
+		  break;
 	      }
 	      iColumn=next_[iColumn];
 	    }
-	    // now factorization looks as if key is out
-	    // pivot back in
+	    if (!returnCode) {
+	      // now factorization looks as if key is out
+	      // pivot back in
 #ifdef CLP_DEBUG_PRINT
-	    printf("TTTTTry 6\n");
+	      printf("TTTTTry 6\n");
 #endif
-	    unpack(model,model->rowArray(3),key);
-	    model->factorization()->updateColumnFT(model->rowArray(2),model->rowArray(3));
-	    pivotRow = possiblePivotKey_;
-	    double alpha = model->rowArray(3)->denseVector()[pivotRow];
-	    assert (alpha);
-	    int updateStatus = model->factorization()->replaceColumn(model->rowArray(2),
-								     pivotRow, alpha);
-	    returnCode = max (updateStatus, returnCode);
-	    model->rowArray(3)->clear();
+	      unpack(model,model->rowArray(3),key);
+	      model->factorization()->updateColumnFT(model->rowArray(2),model->rowArray(3));
+	      pivotRow = possiblePivotKey_;
+	      double alpha = model->rowArray(3)->denseVector()[pivotRow];
+	      //if (!alpha)
+	      //printf("zero alpha b\n");
+	      int updateStatus = model->factorization()->replaceColumn(model->rowArray(2),
+								       pivotRow, alpha);
+	      returnCode = max (updateStatus, returnCode);
+	      model->rowArray(3)->clear();
+	    }
 	    // restore key
 	    keyVariable_[iSetIn]=key;
 	    // now alternate column can replace key on out 
@@ -2161,7 +2558,6 @@ ClpGubMatrix::generalExpanded(ClpSimplex * model,int mode,int &number)
 	    int updateStatus = model->factorization()->replaceColumn(model->rowArray(2),
 								     possiblePivotKey_, 
 								   bestAlpha);
-	    assert (!updateStatus);
 	    returnCode = max (updateStatus, returnCode);
 	    incomingColumn = pivotVariable[possiblePivotKey_];
 	  }
@@ -2176,9 +2572,23 @@ ClpGubMatrix::generalExpanded(ClpSimplex * model,int mode,int &number)
 	  assert(key==sequenceOut);
 	// check if any other basic
 	int iColumn = next_[key];
+	if (returnCode)
+	  iColumn = -1; // skip if error on previous
 	// set new key to be used by unpack
-	keyVariable_[iSetOut]=incomingColumn;
+	if (incomingColumn<numberColumns)
+	  keyVariable_[iSetOut]=incomingColumn;
+	else
+	  keyVariable_[iSetOut]=iSetIn+numberColumns;
 	double * cost = model->costRegion();
+	if (possiblePivotKey_<0) {
+	  if (sequenceIn>=numberColumns)
+	    printf("test this\n");
+	  double dj = model->djRegion()[sequenceIn]-cost[sequenceIn];
+	  changeCost_[iExtra] = -dj;
+#ifdef CLP_DEBUG_PRINT
+	  printf("modifying changeCost %d by %g - cost %g\n",iExtra, dj,cost[sequenceIn]);
+#endif
+	}
 	while (iColumn>=0) {
 	  if (iColumn!=incomingColumn) {
 	    number=-2;
@@ -2187,36 +2597,19 @@ ClpGubMatrix::generalExpanded(ClpSimplex * model,int mode,int &number)
 	    printf("TTTTTTry 1\n");
 #endif
 	    int iRow = backToPivotRow_[iColumn];
-	    assert (iRow>=0);
+	    assert (iRow>=0&&iRow<numberRows);
 	    unpack(model,model->rowArray(3),iColumn);
 	    model->factorization()->updateColumnFT(model->rowArray(2),model->rowArray(3));
-	    int n=model->rowArray(3)->getNumElements();
-	    int * which = model->rowArray(3)->getIndices();
 	    double * array = model->rowArray(3)->denseVector();
 	    double alpha = array[iRow];
-	    assert (alpha);
-	    if (possiblePivotKey_<0) {
-	      // modify cost by new reduced cost?
-	      double dj = cost[iColumn];
-	      for (int i=0;i<n;i++) {
-		int jRow = which[i];
-		int jPivot = pivotVariable[jRow];
-		dj -= array[jRow]*cost[jPivot];
-#ifdef CLP_DEBUG_PRINT
-		if (cost[jPivot])
-		  printf("row %d pivot %d alpha %g cost %g\n",
-			 jRow,jPivot,array[jRow],cost[jPivot]);
-#endif
-	      }
-	      changeCost_[iExtra] += dj;
-#ifdef CLP_DEBUG_PRINT
-	      printf("modifying changeCost %d by %g - cost of %d is %g\n",iExtra, dj,iColumn,cost[iColumn]);
-#endif
-	    }
+	    //if (!alpha)
+	    //printf("zero alpha d\n");
 	    int updateStatus = model->factorization()->replaceColumn(model->rowArray(2),
 								     iRow, alpha);
 	    returnCode = max (updateStatus, returnCode);
 	    model->rowArray(3)->clear();
+	    if (returnCode)
+	      break;
 	  }
 	  iColumn=next_[iColumn];
 	}
@@ -2256,27 +2649,33 @@ ClpGubMatrix::generalExpanded(ClpSimplex * model,int mode,int &number)
 	    unpack(model,model->rowArray(3),iColumn);
 	    model->factorization()->updateColumnFT(model->rowArray(2),model->rowArray(3));
 	    double alpha = model->rowArray(3)->denseVector()[iRow];
-	    assert (alpha);
+	    //if (!alpha)
+	    //printf("zero alpha e\n");
 	    int updateStatus = model->factorization()->replaceColumn(model->rowArray(2),
 								     iRow, alpha);
 	    returnCode = max (updateStatus, returnCode);
 	    model->rowArray(3)->clear();
+	    if (returnCode)
+	      break;
 	  }
 	  iColumn=next_[iColumn];
 	}
-	// now factorization looks as if key is out
-	// pivot back in
+	if (!returnCode) {
+	  // now factorization looks as if key is out
+	  // pivot back in
 #ifdef CLP_DEBUG_PRINT
-	printf("TTTTTry 3\n");
+	  printf("TTTTTry 3\n");
 #endif
-	unpack(model,model->rowArray(3),key);
-	model->factorization()->updateColumnFT(model->rowArray(2),model->rowArray(3));
-	double alpha = model->rowArray(3)->denseVector()[pivotRow];
-	assert (alpha);
-	int updateStatus = model->factorization()->replaceColumn(model->rowArray(2),
-								 pivotRow, alpha);
-	returnCode = max (updateStatus, returnCode);
-	model->rowArray(3)->clear();
+	  unpack(model,model->rowArray(3),key);
+	  model->factorization()->updateColumnFT(model->rowArray(2),model->rowArray(3));
+	  double alpha = model->rowArray(3)->denseVector()[pivotRow];
+	  //if (!alpha)
+	  //printf("zero alpha f\n");
+	  int updateStatus = model->factorization()->replaceColumn(model->rowArray(2),
+								   pivotRow, alpha);
+	  returnCode = max (updateStatus, returnCode);
+	  model->rowArray(3)->clear();
+	}
 	// restore key
 	keyVariable_[iSetIn]=key;
       } else {
@@ -2291,6 +2690,26 @@ ClpGubMatrix::generalExpanded(ClpSimplex * model,int mode,int &number)
 	   number,returnCode,model->pivotRow());
 #endif
     number=-1; // say no need for normal replaceColumn
+    break;
+    // To see if can dual or primal
+  case 4:
+    {
+      returnCode= 1;
+    }
+    break;
+    // save status
+  case 5:
+    {
+      memcpy(saveStatus_,status_,numberSets_);
+      returnCode= 0;
+    }
+    break;
+    // restore status
+  case 6:
+    {
+      memcpy(status_,saveStatus_,numberSets_);
+      returnCode= 0;
+    }
     break;
   }
   return returnCode;
@@ -2552,8 +2971,13 @@ ClpGubMatrix::useEffectiveRhs(ClpSimplex * model, bool cheapest)
 		  solution[iBasic] += distance;
 		}
 	      }
-	      if (!iphase&&iBasic<numberInSet)
-		break; // feasible
+	      if (!iphase) {
+		if(iBasic<numberInSet)
+		  break; // feasible
+		else if (solution[iBasic]>=lower[iBasic]&&
+			 solution[iBasic]<=upper[iBasic])
+		  break; // feasible (on flip)
+	      }
 	    }
 	  }
 	}
@@ -2565,12 +2989,13 @@ ClpGubMatrix::useEffectiveRhs(ClpSimplex * model, bool cheapest)
 	} else {
 	  iBasic += start_[iSet];
 	  model->setStatus(iBasic,ClpSimplex::basic);
+	  // remember bounds flipped
 	  if (upper[numberInSet]==lower[numberInSet]) 
 	    setStatus(iSet,ClpSimplex::isFixed);
 	  else if (solution[numberInSet]==upper[numberInSet])
-	    setStatus(iSet,ClpSimplex::atUpperBound);
-	  else if (solution[numberInSet]==lower[numberInSet])
 	    setStatus(iSet,ClpSimplex::atLowerBound);
+	  else if (solution[numberInSet]==lower[numberInSet])
+	    setStatus(iSet,ClpSimplex::atUpperBound);
 	  else 
 	    abort();
 	}
@@ -2957,7 +3382,6 @@ ClpGubMatrix::updatePivot(ClpSimplex * model,double oldInValue, double oldOutVal
       if (sequenceIn>=numberRows+numberColumns) {
 	key = numberColumns+iSetIn;
 	setStatus(iSetIn,ClpSimplex::basic);
-	printf("what should value be?\n");
       } else {
 	key = sequenceIn;
       }
@@ -2974,7 +3398,7 @@ ClpGubMatrix::updatePivot(ClpSimplex * model,double oldInValue, double oldOutVal
       }
     } else {
       // key was chosen
-      assert (possiblePivotKey_>=0);
+      assert (possiblePivotKey_>=0&&possiblePivotKey_<numberRows);
       int j;
       int key=pivotVariable[possiblePivotKey_];
       // and set incoming here
@@ -3002,19 +3426,47 @@ ClpGubMatrix::updatePivot(ClpSimplex * model,double oldInValue, double oldOutVal
 	}
       }
     }
-  } else if (sequenceOut<numberColumns) {
-    if (iSetOut>=0) {
-      // just redo set
-      int j;
-      int key=keyVariable_[iSetOut];;
-      int lastMarker = -(key+1);
-      next_[key]=lastMarker;
-      int last = key;
-      for (j=start_[iSetOut];j<end_[iSetOut];j++) {
-	if (j!=key&&model->getStatus(j)==ClpSimplex::basic) {
-	  next_[last]=j;
-	  next_[j]=lastMarker;
-	  last = j;
+  } else {
+    if (sequenceOut<numberColumns) {
+      if (iSetIn>=0&&iSetOut==iSetIn) {
+	// key not out - only problem is if slack in
+	int key;
+	if (sequenceIn>=numberRows+numberColumns) {
+	  key = numberColumns+iSetIn;
+	  setStatus(iSetIn,ClpSimplex::basic);
+	  assert (pivotRow<numberRows);
+	  // must swap with current key
+	  int key=keyVariable_[iSetIn];
+	  model->setStatus(key,ClpSimplex::basic);
+	  pivotVariable[pivotRow]=key;
+	  backToPivotRow_[key]=pivotRow;
+	} else {
+	  key = keyVariable_[iSetIn];
+	}
+	keyVariable_[iSetIn]=key;
+	int lastMarker = -(key+1);
+	next_[key]=lastMarker;
+	int last = key;
+	for (int j=start_[iSetOut];j<end_[iSetOut];j++) {
+	  if (j!=key&&model->getStatus(j)==ClpSimplex::basic) {
+	    next_[last]=j;
+	    next_[j]=lastMarker;
+	    last = j;
+	  }
+	}
+      } else if (iSetOut>=0) {
+	// just redo set
+	int j;
+	int key=keyVariable_[iSetOut];;
+	int lastMarker = -(key+1);
+	next_[key]=lastMarker;
+	int last = key;
+	for (j=start_[iSetOut];j<end_[iSetOut];j++) {
+	  if (j!=key&&model->getStatus(j)==ClpSimplex::basic) {
+	    next_[last]=j;
+	    next_[j]=lastMarker;
+	    last = j;
+	  }
 	}
       }
     }
@@ -3051,6 +3503,7 @@ ClpGubMatrix::updatePivot(ClpSimplex * model,double oldInValue, double oldOutVal
       backToPivotRow_[sequenceIn]=pivotRow;
     } else {
       if (possiblePivotKey_>=0) {
+	assert (possiblePivotKey_<numberRows);
 	backToPivotRow_[sequenceIn]=possiblePivotKey_;
 	pivotVariable[possiblePivotKey_]=sequenceIn;
       }
@@ -3190,7 +3643,7 @@ ClpGubMatrix::updatePivot(ClpSimplex * model,double oldInValue, double oldOutVal
   // debug
   {
     int i;
-    char xxxx[20000];
+    char * xxxx = new char[numberColumns];
     memset(xxxx,0,numberColumns);
     for (i=0;i<numberRows;i++) {
       int iPivot = pivotVariable[i];
@@ -3245,6 +3698,7 @@ ClpGubMatrix::updatePivot(ClpSimplex * model,double oldInValue, double oldOutVal
 	assert (!xxxx[i]||i==keyVariable_[backward_[i]]);
       }
     }
+    delete [] xxxx;
   }
 #endif
   return 0;

@@ -259,8 +259,10 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
 	printf("switching to devex %d nel ratio %g\n",sizeFactorization_,ratio);
       }
       if (switchType==5) {
+	numberLook *= 5; // needs tuning for gub
 	if (model_->numberIterations()%1000==0)
-	  printf("numels %d ratio %g wanted %d\n",sizeFactorization_,ratio,numberWanted);
+	  printf("numels %d ratio %g wanted %d look %d\n",
+		 sizeFactorization_,ratio,numberWanted,numberLook);
 	// Update duals and row djs
 	// Do partial pricing
 	return partialPricing(updates,spareRow2,
@@ -3512,7 +3514,7 @@ ClpPrimalColumnSteepest::partialPricing(CoinIndexedVector * updates,
     }
   }
 #endif
-  //#undef CLP_DEBUG
+#undef CLP_DEBUG
   double bestDj = tolerance;
   int bestSequence=-1;
 

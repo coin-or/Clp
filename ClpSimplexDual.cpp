@@ -2365,6 +2365,9 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	   numberRows_*sizeof(double));
     memcpy(columnActivityWork_,savedSolution_ ,
 	   numberColumns_*sizeof(double));
+    // restore extra stuff
+    int dummy;
+    matrix_->generalExpanded(this,6,dummy);
     forceFactorization_=1; // a bit drastic but ..
     changeMade_++; // say something changed
   }
@@ -2389,6 +2392,9 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	       numberRows_*sizeof(double));
 	memcpy(columnActivityWork_,savedSolution_ ,
 	       numberColumns_*sizeof(double));
+	// restore extra stuff
+	int dummy;
+	matrix_->generalExpanded(this,6,dummy);
 	// get correct bounds on all variables
 	double dummyChangeCost=0.0;
 	changeBounds(true,rowArray_[2],dummyChangeCost);
@@ -2413,6 +2419,9 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 		 numberRows_*sizeof(double));
 	  memcpy(columnActivityWork_,savedSolution_ ,
 		 numberColumns_*sizeof(double));
+	  // restore extra stuff
+	  int dummy;
+	  matrix_->generalExpanded(this,6,dummy);
 	  // debug
 #ifndef NDEBUG
 	  int returnCode = internalFactorize(1);
@@ -2807,6 +2816,9 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
     memcpy(savedSolution_+numberColumns_ ,rowActivityWork_,
 	   numberRows_*sizeof(double));
     memcpy(savedSolution_ ,columnActivityWork_,numberColumns_*sizeof(double));
+    // save extra stuff
+    int dummy;
+    matrix_->generalExpanded(this,5,dummy);
   }
 
   // restore weights (if saved) - also recompute infeasibility list

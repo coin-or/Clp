@@ -83,8 +83,7 @@ public:
 				    CoinIndexedVector * z) const;
   /** expands an updated column to allow for extra rows which the main
       solver does not know about and returns number added if mode 0.
-      If mode 1 cleans up, predicts update action.  Returns 0 for normal replaceColumn,
-      >0  for replaceColumn + more, -1 for no replaceColumn  + more (key flip).
+      If mode 1 deletes extra entries
 
       This active in Gub
   */
@@ -111,6 +110,9 @@ public:
       mode=1  - Set all key variables as basic
       mode=2  - return number extra rows needed, number gives maximum number basic
       mode=3  - before replaceColumn
+      mode=4  - return 1 if can do primal, 2 if dual, 3 if both
+      mode=5  - save any status stuff (when in good state)
+      mode=6  - restore status stuff
   */
   virtual int generalExpanded(ClpSimplex * model,int mode,int & number);
   /** 
@@ -244,6 +246,8 @@ protected:
   double * upper_;
   /// Status of slacks
   mutable unsigned char * status_;
+  /// Saved status of slacks
+  unsigned char * saveStatus_;
   /// Backward pointer to set number
   int * backward_;
   /// Backward pointer to pivot row !!!

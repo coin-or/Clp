@@ -52,11 +52,11 @@ ClpPresolve::ClpPresolve() :
 
 ClpPresolve::~ClpPresolve()
 {
-  gutsOfDestroy();
+  destroyPresolve();
 }
 // Gets rid of presolve actions (e.g.when infeasible)
 void 
-ClpPresolve::gutsOfDestroy()
+ClpPresolve::destroyPresolve()
 {
  const CoinPresolveAction *paction = paction_;
   while (paction) {
@@ -670,7 +670,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
 					     messages)
 					       <<CoinMessageEol;
     // get rid of data
-    gutsOfDestroy();
+    destroyPresolve();
   }
   return (paction_);
 }
@@ -1531,7 +1531,7 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
 						 <<nelsAfter<< -(nelems_ - nelsAfter)
 						 <<CoinMessageEol;
   } else {
-    gutsOfDestroy();
+    destroyPresolve();
     delete presolvedModel_;
     presolvedModel_=NULL;
   }

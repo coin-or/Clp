@@ -584,6 +584,9 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	   numberRows_*sizeof(double));
     memcpy(columnActivityWork_,savedSolution_ ,
 	   numberColumns_*sizeof(double));
+    // restore extra stuff
+    int dummy;
+    matrix_->generalExpanded(this,6,dummy);
     forceFactorization_=1; // a bit drastic but ..
     pivotRow_=-1; // say no weights update
     changeMade_++; // say change made
@@ -622,6 +625,9 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	       numberRows_*sizeof(double));
 	memcpy(columnActivityWork_,savedSolution_ ,
 	       numberColumns_*sizeof(double));
+	// restore extra stuff
+	int dummy;
+	matrix_->generalExpanded(this,6,dummy);
 	forceFactorization_=1; // a bit drastic but ..
 	type = 2;
 	assert (internalFactorize(1)==0);
@@ -931,6 +937,9 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
     memcpy(savedSolution_+numberColumns_ ,rowActivityWork_,
 	   numberRows_*sizeof(double));
     memcpy(savedSolution_ ,columnActivityWork_,numberColumns_*sizeof(double));
+    // save extra stuff
+    int dummy;
+    matrix_->generalExpanded(this,5,dummy);
   }
   if (doFactorization) {
     // restore weights (if saved) - also recompute infeasibility list

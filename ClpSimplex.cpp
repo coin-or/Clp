@@ -1544,7 +1544,7 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
     factorization_=NULL;
   }
   rowScale_ = ClpCopyOfArray(rhs.rowScale_,numberRows_);
-  savedSolution_ = ClpCopyOfArray(rhs.savedSolution_,numberColumns_+numberRows2);
+  savedSolution_ = ClpCopyOfArray(rhs.savedSolution_,numberColumns_+numberRows_);
   columnScale_ = ClpCopyOfArray(rhs.columnScale_,numberColumns_);
   int i;
   for (i=0;i<6;i++) {
@@ -1556,7 +1556,7 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
       columnArray_[i] = new CoinIndexedVector(*rhs.columnArray_[i]);
   }
   if (rhs.saveStatus_) {
-    saveStatus_ = ClpCopyOfArray( rhs.saveStatus_,numberColumns_+numberRows2);
+    saveStatus_ = ClpCopyOfArray( rhs.saveStatus_,numberColumns_+numberRows_);
   }
   columnPrimalInfeasibility_ = rhs.columnPrimalInfeasibility_;
   columnPrimalSequence_ = rhs.columnPrimalSequence_;
@@ -3011,7 +3011,13 @@ int ClpSimplex::dual (int ifValuesPass )
     bool denseFactorization = initialDenseFactorization();
     // It will be safe to allow dense
     setInitialDenseFactorization(true);
-    returnCode = ((ClpSimplexPrimal *) this)->primal(1);
+    // check which algorithms allowed
+    int dummy;
+    if ((matrix_->generalExpanded(this,4,dummy)&1)!=0)
+      returnCode = ((ClpSimplexPrimal *) this)->primal(1);
+    else
+      returnCode = ((ClpSimplexDual *) this)->dual(0);
+	
     setInitialDenseFactorization(denseFactorization);
     perturbation_=savePerturbation;
     if (problemStatus_==10) 
@@ -3031,7 +3037,12 @@ int ClpSimplex::primal (int ifValuesPass )
     bool denseFactorization = initialDenseFactorization();
     // It will be safe to allow dense
     setInitialDenseFactorization(true);
-    returnCode = ((ClpSimplexDual *) this)->dual(0);
+    // check which algorithms allowed
+    int dummy;
+    if ((matrix_->generalExpanded(this,4,dummy)&2)!=0)
+      returnCode = ((ClpSimplexPrimal *) this)->dual(0);
+    else
+      returnCode = ((ClpSimplexDual *) this)->primal(0);
     setInitialDenseFactorization(denseFactorization);
     perturbation_=savePerturbation;
     if (problemStatus_==10) 
