@@ -310,17 +310,33 @@ public:
   /// Sum of dual infeasibilities
   inline double sumDualInfeasibilities() const 
           { return sumDualInfeasibilities_;} ;
+  inline void setSumDualInfeasibilities(double value)
+          { sumDualInfeasibilities_=value;} ;
+  /// Sum of relaxed dual infeasibilities
+  inline double sumOfRelaxedDualInfeasibilities() const 
+          { return sumOfRelaxedDualInfeasibilities_;} ;
+  inline void setSumOfRelaxedDualInfeasibilities(double value)
+          { sumOfRelaxedDualInfeasibilities_=value;} ;
   /// Number of dual infeasibilities
   inline int numberDualInfeasibilities() const 
           { return numberDualInfeasibilities_;} ;
+  inline void setNumberDualInfeasibilities(int value)
+          { numberDualInfeasibilities_=value;} ;
   /// Sum of primal infeasibilities
   inline double sumPrimalInfeasibilities() const 
           { return sumPrimalInfeasibilities_;} ;
   inline void setSumPrimalInfeasibilities(double value)
           { sumPrimalInfeasibilities_=value;} ;
+  /// Sum of relaxed primal infeasibilities
+  inline double sumOfRelaxedPrimalInfeasibilities() const 
+          { return sumOfRelaxedPrimalInfeasibilities_;} ;
+  inline void setSumOfRelaxedPrimalInfeasibilities(double value)
+          { sumOfRelaxedPrimalInfeasibilities_=value;} ;
   /// Number of primal infeasibilities
   inline int numberPrimalInfeasibilities() const 
           { return numberPrimalInfeasibilities_;} ;
+  inline void setNumberPrimalInfeasibilities(int value)
+          { numberPrimalInfeasibilities_=value;} ;
   /** Save model to file, returns 0 if success.  This is designed for
       use outside algorithms so does not save iterating arrays etc.
   It does not save any messaging information. 

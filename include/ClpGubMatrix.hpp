@@ -23,12 +23,12 @@ public:
   //virtual ClpMatrixBase * reverseOrderedCopy() const;
   /** If element NULL returns number of elements in column part of basis,
       If not NULL fills in as well */
-  virtual CoinBigIndex fillBasis(const ClpSimplex * model,
+  virtual CoinBigIndex fillBasis(ClpSimplex * model,
 				 const int * whichColumn, 
 				 int numberRowBasic,
 				 int numberColumnBasic,
 				 int * row, int * column,
-				 double * element) const ;
+				 double * element)  ;
   /** Unpacks a column into an CoinIndexedvector
    */
   virtual void unpack(const ClpSimplex * model,CoinIndexedVector * rowArray,
@@ -84,6 +84,28 @@ public:
   */
   virtual int extendUpdated(CoinIndexedVector * update, double * lower,
 			    double * solution, double * upper);
+  /**
+     mode=0  - Set up before "update" and "times" for primal solution using extended rows
+     mode=1  - Cleanup primal solution after "times" using extended rows.
+     mode=2  - Check (or report on) primal infeasibilities
+  */
+  virtual void primalExpanded(ClpSimplex * model,int mode);
+  /** 
+      mode=0  - Set up before "updateTranspose" and "transposeTimes" for duals using extended
+                updates array (and may use other if dual values pass)
+      mode=1  - Update dual solution after "transposeTimes" using extended rows.
+      mode=2  - Check (or report on) dual infeasibilities
+  */
+  virtual void dualExpanded(ClpSimplex * model,CoinIndexedVector * array,
+			    double * other,int mode);
+  /** 
+      mode=0  - Create list of non-key basics in pivotVariable_ using
+                number as numberBasic in and out
+      mode=1  - Set all key variables as basic
+  */
+  virtual int generalExpanded(ClpSimplex * model,int mode,int & number);
+  /// Sets up an effective RHS and does gub crash if needed
+  void useEffectiveRhs(ClpSimplex * model,bool cheapest=true);
   //@}
 
 
@@ -141,6 +163,33 @@ public:
     st_byte &= ~7;
     st_byte |= status;
   };
+  /// To say key is above ub
+  inline void setAbove( int sequence)
+  {
+    unsigned char iStat = status_[sequence];
+    iStat &= ~24;
+    status_[sequence] = iStat|16;
+  };
+  /// To say key is feasible
+  inline void setFeasible( int sequence)
+  {
+    unsigned char iStat = status_[sequence];
+    iStat &= ~24;
+    status_[sequence] = iStat|8;
+  };
+  /// To say key is below lb
+  inline void setBelow( int sequence)
+  {
+    unsigned char iStat = status_[sequence];
+    iStat &= ~24;
+    status_[sequence] = iStat;
+  };
+  inline double weight( int sequence) const
+  {
+    int iStat = status_[sequence]&31;
+    iStat = iStat>>3;
+    return (double) (iStat-1);
+  };
    //@}
    
     
@@ -148,6 +197,14 @@ protected:
    /**@name Data members
       The data members are protected to allow access for derived classes. */
    //@{
+  /// Sum of dual infeasibilities
+  double sumDualInfeasibilities_;
+  /// Sum of primal infeasibilities
+  double sumPrimalInfeasibilities_;
+  /// Sum of Dual infeasibilities using tolerance based on error in duals
+  double sumOfRelaxedDualInfeasibilities_;
+  /// Sum of Primal infeasibilities using tolerance based on error in primals
+  double sumOfRelaxedPrimalInfeasibilities_;
   /// Starts
   int * start_;
   /// End
@@ -164,8 +221,18 @@ protected:
   mutable int * keyVariable_;
   /** Next basic variable in set - starts at key and end with -(set+1) */
   mutable int * next_;
+  /// Number of dual infeasibilities
+  int numberDualInfeasibilities_;
+  /// Number of primal infeasibilities
+  int numberPrimalInfeasibilities_;
   /// Number of sets (gub rows)
   int numberSets_;
+  /// First gub variables (same as start_[0] at present)
+  int firstGub_;
+  /// last gub variable (same as end_[numberSets_-1] at present)
+  int lastGub_;
+  /// type of gub - 0 not contiguous, 1 contiguous
+  int gubType_;
    //@}
 };
 

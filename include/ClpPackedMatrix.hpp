@@ -74,12 +74,12 @@ public:
   virtual ClpMatrixBase * reverseOrderedCopy() const;
   /** If element NULL returns number of elements in column part of basis,
       If not NULL fills in as well */
-  virtual CoinBigIndex fillBasis(const ClpSimplex * model,
+  virtual CoinBigIndex fillBasis(ClpSimplex * model,
 				 const int * whichColumn, 
 				 int numberRowBasic,
 				 int numberColumnBasic,
 				 int * row, int * column,
-				 double * element) const ;
+				 double * element)  ;
   /** Creates scales for column copy (rowCopy in model may be modified)
       returns non-zero if no scaling done */
   virtual int scale(ClpSimplex * model) const ;
@@ -111,6 +111,9 @@ public:
       You can use quickAdd to add to vector */
   virtual void add(const ClpSimplex * model,CoinIndexedVector * rowArray,
 		   int column, double multiplier) const ;
+  /** Adds multiple of a column into an array */
+  virtual void add(const ClpSimplex * model,double * array,
+		   int column, double multiplier) const;
    /// Allow any parts of a created CoinPackedMatrix to be deleted
    virtual void releasePackedMatrix() const { };
   /** Given positive integer weights for each row fills in sum of weights
