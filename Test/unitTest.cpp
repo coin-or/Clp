@@ -693,7 +693,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     model.dual(0,2); // hopefully will not use factorization
     model.primal(0,3+4); // keep factorization
     // but say basis has changed
-    model.setWhatsChanged(model.whatsChanged()&(~2));
+    model.setWhatsChanged(model.whatsChanged()&(~512));
     model.dual(0,2); // hopefully will not use factorization
   }
   // test steepest edge
