@@ -1,14 +1,11 @@
 # Look at and if necessary edit the following files:
 # - ../Makefiles/Makefile.location
-# - Makefile.Osi 
-# - Osi*/Makefile for the libs you have specified above
+# - Makefile.test
 
 ###############################################################################
 
 export CoinDir := $(shell cd ../..; pwd)
 export MakefileDir := $(CoinDir)/Makefiles
-include ${MakefileDir}/Makefile.coin
-include ${MakefileDir}/Makefile.location
 
 ###############################################################################
 
