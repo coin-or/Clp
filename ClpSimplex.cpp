@@ -3819,7 +3819,10 @@ ClpSimplex::restoreModel(const char * fileName)
   FILE * fp = fopen(fileName,"rb");
   if (fp) {
     // Get rid of current model
+    // save event handler in case already set
+    ClpEventHandler * handler = eventHandler_->clone();
     ClpModel::gutsOfDelete();
+    eventHandler_ = handler;
     gutsOfDelete(0);
     int i;
     for (i=0;i<6;i++) {
