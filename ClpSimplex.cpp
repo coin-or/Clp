@@ -1992,6 +1992,8 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
   }
   if ((what&16)!=0) {
     //check matrix
+    if (!matrix_)
+      matrix_=new ClpPackedMatrix();
     if (!matrix_->allElementsInRange(this,smallElement_,1.0e20)) {
       problemStatus_=4;
       goodMatrix= false;
@@ -2257,8 +2259,6 @@ ClpSimplex::deleteRim(int getRidOfFactorizationData)
     }
     if (!problemStatus_&&!secondaryStatus_) {
       // See if we need to set secondary status
-      // assert (!numberPrimalScaled);
-      // assert (!numberDualScaled);
       if (numberPrimalUnscaled) {
 	if (numberDualUnscaled) 
 	  secondaryStatus_=4;
@@ -4351,13 +4351,16 @@ int
 ClpSimplex::startup(int ifValuesPass)
 {
   // sanity check
-  assert (numberRows_==matrix_->getNumRows());
-  assert (numberColumns_==matrix_->getNumCols());
-  // for moment all arrays must exist
-  assert(columnLower_);
-  assert(columnUpper_);
-  assert(rowLower_);
-  assert(rowUpper_);
+  // bad if empty (trap here to avoid using bad matrix_)
+  if (!matrix_||!matrix_->getNumElements()) {
+    handler_->message(CLP_EMPTY_PROBLEM,messages_)
+      <<numberRows_
+      <<numberColumns_
+      <<0
+      <<CoinMessageEol;
+    problemStatus_=4;
+    return 2;
+  }
   pivotRow_=-1;
   sequenceIn_=-1;
   sequenceOut_=-1;
@@ -4616,6 +4619,7 @@ ClpSimplexProgress::ClpSimplexProgress ()
   numberTimes_ = 0;
   numberBadTimes_ = 0;
   model_ = NULL;
+  oddState_=0;
 }
 
 
@@ -4642,6 +4646,7 @@ ClpSimplexProgress::ClpSimplexProgress(const ClpSimplexProgress &rhs)
   numberTimes_ = rhs.numberTimes_;
   numberBadTimes_ = rhs.numberBadTimes_;
   model_ = rhs.model_;
+  oddState_=rhs.oddState_;
 }
 // Copy constructor.from model
 ClpSimplexProgress::ClpSimplexProgress(ClpSimplex * model) 
@@ -4664,6 +4669,7 @@ ClpSimplexProgress::ClpSimplexProgress(ClpSimplex * model)
   }
   numberTimes_ = 0;
   numberBadTimes_ = 0;
+  oddState_=0;
 }
 // Assignment operator. This copies the data
 ClpSimplexProgress & 
@@ -4685,6 +4691,7 @@ ClpSimplexProgress::operator=(const ClpSimplexProgress & rhs)
     numberTimes_ = rhs.numberTimes_;
     numberBadTimes_ = rhs.numberBadTimes_;
     model_ = rhs.model_;
+    oddState_=rhs.oddState_;
   }
   return *this;
 }
@@ -4776,14 +4783,16 @@ ClpSimplexProgress::looping()
 	// dual - change tolerance
 	model_->setCurrentDualTolerance(model_->currentDualTolerance()*1.05);
 	// if infeasible increase dual bound
-	if (model_->dualBound()<1.0e19) {
+	if (model_->dualBound()<1.0e17) {
 	  model_->setDualBound(model_->dualBound()*1.1);
 	}
       } else {
-	// primal - change tolerance	model_->setCurrentPrimalTolerance(model_->currentPrimalTolerance()*1.05);
+	// primal - change tolerance	
+	if (numberBadTimes_>3)
+	  model_->setCurrentPrimalTolerance(model_->currentPrimalTolerance()*1.05);
 	// if infeasible increase infeasibility cost
 	if (model_->nonLinearCost()->numberInfeasibilities()&&
-	    model_->infeasibilityCost()<1.0e19) {
+	    model_->infeasibilityCost()<1.0e17) {
 	  model_->setInfeasibilityCost(model_->infeasibilityCost()*1.1);
 	}
       }
