@@ -49,8 +49,8 @@ include ${MakefileDir}/Makefile.coin
 include ${MakefileDir}/Makefile.location
 
 # Say Idiot code can use Clp interface
-CXXFLAGS += -DCLP_IDIOT 
-CXXFLAGS += -DUSE_PRESOLVE
+#CXXFLAGS += -DCLP_IDIOT 
+#CXXFLAGS += -DUSE_PRESOLVE
 #CXXFLAGS += -DCORRECT_COLUMN_COUNTS
 ifeq ($(OptLevel),-g)
 #     CXXFLAGS += -DCLP_DEBUG

@@ -1757,7 +1757,6 @@ costs this much to be infeasible",
 		// If presolve on then save presolved
 		bool deleteModel2=false;
 		ClpSimplex * model2 = models+iModel;
-#ifdef USE_PRESOLVE
 		if (preSolve) {
 		  ClpPresolve pinfo;
 		  model2 = 
@@ -1775,12 +1774,9 @@ costs this much to be infeasible",
 
 		  }
 		} else {
-#endif
 		  printf("Saving model on %s\n",
 			   fileName.c_str());
-#ifdef USE_PRESOLVE
 		}
-#endif
 		// Convert names
 		int iRow;
 		int numberRows=model2->numberRows();
@@ -1884,7 +1880,6 @@ costs this much to be infeasible",
 		// If presolve on then save presolved
 		bool deleteModel2=false;
 		ClpSimplex * model2 = models+iModel;
-#ifdef USE_PRESOLVE
 		if (preSolve) {
 		  ClpPresolve pinfo;
 		  model2 = 
@@ -1902,12 +1897,9 @@ costs this much to be infeasible",
 
 		  }
 		} else {
-#endif
 		  printf("Saving model on %s\n",
 			   fileName.c_str());
-#ifdef USE_PRESOLVE
 		}
-#endif
 		status =model2->saveModel(fileName.c_str());
 		if (deleteModel2)
 		  delete model2;

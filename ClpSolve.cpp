@@ -20,9 +20,7 @@
 #include "CoinTime.hpp"
 
 #include "ClpPresolve.hpp"
-#ifdef CLP_IDIOT
 #include "Idiot.hpp"
-#endif
 
 //#############################################################################
 // Allow for interrupts
@@ -397,7 +395,6 @@ ClpSimplex::initialSolve(ClpSolve & options)
       <<CoinMessageEol;
     timeX=time2;
   } else if (method==ClpSolve::usePrimal) {
-#ifdef CLP_IDIOT
     if (doIdiot) {
       int nPasses=0;
       Idiot info(*model2);
@@ -532,7 +529,6 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	timeX=time2;
       }
     }
-#endif
     // ?
     if (doCrash)
       model2->crash(1000,1);

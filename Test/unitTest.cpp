@@ -28,9 +28,7 @@
 #include "MyMessageHandler.hpp"
 
 #include "ClpPresolve.hpp"
-#ifdef CLP_IDIOT
 #include "Idiot.hpp"
-#endif
 
 
 //#############################################################################
@@ -265,7 +263,6 @@ int mainTest (int argc, const char *argv[],bool doDual,
       }
 #endif
       if (doPresolve) {
-#ifdef USE_PRESOLVE
 	ClpPresolve pinfo;
 	double a=CoinCpuTime();
 	ClpSimplex * model2 = pinfo.presolvedModel(solution,1.0e-8,
@@ -285,12 +282,10 @@ int mainTest (int argc, const char *argv[],bool doDual,
 	  //model2->crash(1000,1);
 	  model2->dual();
 	} else {
-#ifdef CLP_IDIOT
 	  if (doIdiot>0) {
 	    Idiot info(*model2);
 	    info.crash(doIdiot,model2->messageHandler(),model2->messagesPointer());
 	  }
-#endif
 	  model2->primal(1);
 	}
 	pinfo.postsolve(true);
@@ -323,33 +318,16 @@ int mainTest (int argc, const char *argv[],bool doDual,
 
 	  delete model2;
 	}
-#else
-	if (doDual) {
-	  if (doIdiot<0)
-	    solution.crash(1000,1);
-	  solution.dual();
-	} else {
-#ifdef CLP_IDIOT
-	  if (doIdiot>0) {
-	    Idiot info(solution);
-	    info.crash(doIdiot);
-	  }
-#endif
-	  solution.primal(1);
-	}
-#endif
       } else {
 	if (doDual) {
 	  if (doIdiot<0)
 	    solution.crash(1000,1);
 	  solution.dual();
 	} else {
-#ifdef CLP_IDIOT
 	  if (doIdiot>0) {
 	    Idiot info(solution);
 	    info.crash(doIdiot,solution.messageHandler(),solution.messagesPointer());
 	  }
-#endif
 	  solution.primal(1);
 	}
       }

@@ -6,7 +6,7 @@
 
 #ifndef Idiot_H
 #define Idiot_H
-#ifdef CLP_IDIOT
+#ifndef OSI_IDIOT
 #include "ClpSimplex.hpp"
 #define OsiSolverInterface ClpSimplex
 #else

@@ -11,7 +11,7 @@
 #include "CoinTime.hpp"
 #include "CoinMessageHandler.hpp"
 // Redefine stuff for Clp
-#ifdef CLP_IDIOT
+#ifndef OSI_IDIOT
 #include "ClpMessage.hpp"
 #define OsiObjOffset ClpObjOffset
 #endif
@@ -64,7 +64,7 @@ Idiot::dropping(IdiotResult result,
 /* returns -1 or start of costed slacks */
  static int countCostedSlacks(OsiSolverInterface * model)
 {
-#ifndef CLP_IDIOT
+#ifdef OSI_IDIOT
   const CoinPackedMatrix * matrix = model->getMatrixByCol();
 #else
   ClpMatrixBase * matrix = model->clpMatrix();
@@ -142,7 +142,7 @@ Idiot::crash(int numberPass, CoinMessageHandler * handler,const CoinMessages *me
   }
   //printf("setting mu to %g and doing %d passes\n",mu_,majorIterations_);
   solve2(handler,messages);
-#ifdef CLP_IDIOT
+#ifndef OSI_IDIOT
   crossOver(3); // make basis ?
 #endif
 }
@@ -203,7 +203,7 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
   if ((saveStrategy&128)!=0) {
     fixTolerance=SMALL_IDIOT_FIX_TOLERANCE;
   }
-#ifndef CLP_IDIOT
+#ifdef OSI_IDIOT
   const CoinPackedMatrix * matrix = model_->getMatrixByCol();
 #else
   ClpMatrixBase * matrix = model_->clpMatrix();
@@ -216,7 +216,7 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
   int ncols=model_->getNumCols();
   double * rowsol, * colsol;
   double * pi, * dj;
-#ifdef CLP_IDIOT
+#ifndef OSI_IDIOT
   double * cost = model_->objective();
 #else
   double * cost = new double [ncols];
@@ -340,12 +340,12 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
     }
   }
   if ((logLevel_&1)!=0) {
-#ifdef CLP_IDIOT
+#ifndef OSI_IDIOT
     if (!handler) {
 #endif
       printf("Iteration %d infeasibility %g, objective %g - mu %g, its %d, %d interior\n", 
 	     iteration,lastResult.infeas,lastResult.objval,mu,lastResult.iteration,n);
-#ifdef CLP_IDIOT
+#ifndef OSI_IDIOT
     } else {
       handler->message(CLP_IDIOT_ITERATION,*messages)
 	<<iteration<<lastResult.infeas<<lastResult.objval<<mu<<lastResult.iteration<<n
@@ -400,12 +400,12 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
       }
     }
     if ((logLevel_&1)!=0) {
-#ifdef CLP_IDIOT
+#ifndef OSI_IDIOT
       if (!handler) {
 #endif
 	printf("Iteration %d infeasibility %g, objective %g - mu %g, its %d, %d interior\n", 
 	       iteration,result.infeas,result.objval,mu,result.iteration,n);
-#ifdef CLP_IDIOT
+#ifndef OSI_IDIOT
       } else {
 	handler->message(CLP_IDIOT_ITERATION,*messages)
 	  <<iteration<<result.infeas<<result.objval<<mu<<result.iteration<<n
@@ -658,7 +658,7 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
   delete [] lambda;
   // save solution 
   // duals not much use - but save anyway
-#ifdef CLP_IDIOT
+#ifndef OSI_IDIOT
   memcpy(model_->primalRowSolution(),rowsol,nrows*sizeof(double));
   memcpy(model_->primalColumnSolution(),colsol,ncols*sizeof(double));
   memcpy(model_->dualRowSolution(),pi,nrows*sizeof(double));
@@ -674,7 +674,7 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
   delete [] dj;
   return ;
 }
-#ifdef CLP_IDIOT
+#ifndef OSI_IDIOT
 void
 Idiot::crossOver(int mode)
 {

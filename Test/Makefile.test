@@ -23,8 +23,8 @@ Define := ${ClpDefine} ${CoinDefine} ${bzlibDefine} ${zlibDefine} $(lapackLibDef
 ##############################################################################
 
 CXXFLAGS += $(OPTFLAG) 
-CXXFLAGS += -DUSE_PRESOLVE
-CXXFLAGS += -DCLP_IDIOT
+#CXXFLAGS += -DUSE_PRESOLVE
+#CXXFLAGS += -DCLP_IDIOT
 # Pick up any include files in Test
 CXXFLAGS += -I.
 #ifeq ($(OPTFLAG),-g)
