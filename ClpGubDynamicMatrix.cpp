@@ -768,15 +768,32 @@ ClpGubDynamicMatrix::synchronize(ClpSimplex * model,int mode)
       }
     }
     break;
-    //  just reset costs (primal)
+    //  just reset costs and bounds (primal)
   case 3:
     {
       double * cost = model->costRegion();
       double * solution = model->solutionRegion();
+      double * lowerColumn = model->columnLower();
+      double * upperColumn = model->columnUpper();
       for (int i=firstDynamic_;i<firstAvailable_;i++) {
 	int jColumn = id_[i-firstDynamic_];
 	cost[i]=cost_[jColumn];
-	model->nonLinearCost()->setOne(i,solution[i],0.0,COIN_DBL_MAX,cost_[jColumn]);
+	if (!lowerColumn_&&!upperColumn_) {
+	  lowerColumn[i] = 0.0;
+	  upperColumn[i] = COIN_DBL_MAX;
+	}  else {
+	  if (lowerColumn_) 
+	    lowerColumn[i] = lowerColumn_[jColumn];
+	  else
+	    lowerColumn[i] = 0.0;
+	  if (upperColumn_)
+	    upperColumn[i] = upperColumn_[jColumn];
+	  else
+	    upperColumn[i] = COIN_DBL_MAX;
+	}
+	model->nonLinearCost()->setOne(i,solution[i],
+				       lowerColumn[i],
+				       upperColumn[i],cost_[jColumn]);
       }
     }
     break;
@@ -1474,7 +1491,7 @@ double *
 ClpGubDynamicMatrix::rhsOffset(ClpSimplex * model,bool forceRefresh,
 		      bool check)
 {
-  forceRefresh=true;
+  //forceRefresh=true;
   //check=false;
 #ifdef CLP_DEBUG
   double * saveE=NULL;

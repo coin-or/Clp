@@ -54,13 +54,19 @@ int ClpPredictorCorrector::solve ( )
   //firstFactorization(true);
   if (cholesky_->order(this)) {
     printf("Not enough memory\n");
+    problemStatus_=4;
     return -1;
   }
   mu_=1.0e10;
+  diagonalScaleFactor_=1.0;
   //set iterations
   numberIterations_=-1;
   //initialize solution here
-  createSolution();
+  if(createSolution()<0) {
+    printf("Not enough memory\n");
+    problemStatus_=4;
+    return -1;
+  }
   //firstFactorization(false);
   CoinZeroN(dual_,numberRows_);
   multiplyAdd(solution_+numberColumns_,numberRows_,-1.0,errorRegion_,0.0);
@@ -74,7 +80,6 @@ int ClpPredictorCorrector::solve ( )
   gonePrimalFeasible_=false;
   goneDualFeasible_=false;
   //bool hadGoodSolution=false;
-  diagonalScaleFactor_=1.0;
   diagonalNorm_=solutionNorm_;
   mu_=solutionNorm_;
   int numberFixed=updateSolution();
@@ -280,7 +285,7 @@ int ClpPredictorCorrector::solve ( )
 		      diagonalScaleFactor_);
         int * rowsDroppedThisTime = new int [numberRows_];
         newDropped=cholesky_->factorize(diagonal_,rowsDroppedThisTime);
-        if (newDropped) {
+        if (newDropped>0) {
 	  //int newDropped2=cholesky_->factorize(diagonal_,rowsDroppedThisTime);
 	  //assert(!newDropped2);
           if (newDropped<0) {
@@ -291,7 +296,11 @@ int ClpPredictorCorrector::solve ( )
             //set all bits false
             cholesky_->resetRowsDropped();
           } 
-        } 
+        } else if (newDropped==-1) {
+	  printf("Out of memory\n");
+	  problemStatus_=4;
+	  return -1;
+	} 
         delete [] rowsDroppedThisTime;
         if (cholesky_->status()) {
           std::cout << "bad cholesky?" <<std::endl;
@@ -353,7 +362,8 @@ int ClpPredictorCorrector::solve ( )
           //can we do corrector step?
           double xx= complementarityGap_*(beta2-tau) +product;
           //std::cout<<"gap part "<<
-          //complementarityGap_*(beta2-tau)<<" after adding product = "<<xx;
+	  //complementarityGap_*(beta2-tau)<<" after adding product = "<<xx<<std::endl;
+	  //xx=-1.0;
           if (xx>0.0) {
 	    double saveMu = mu_;
             double mu2=numberComplementarityPairs_;
@@ -371,7 +381,7 @@ int ClpPredictorCorrector::solve ( )
             } else {
               //std::cout<<" should decrease to "<<mu2<<std::endl;
               mu_=0.5*mu2;
-              std::cout<<" changing mu to "<<mu_<<std::endl;
+              //std::cout<<" changing mu to "<<mu_<<std::endl;
             } 
 	    handler_->message(CLP_BARRIER_MU,messages_)
 	      <<saveMu<<mu_
@@ -776,159 +786,75 @@ double ClpPredictorCorrector::findStepLength(const int phase)
   } 
   return directionNorm;
 }
+//#define KKT 2
 /* Does solve. region1 is for deltaX (columns+rows), region2 for deltaPi (rows) */
-double 
-ClpPredictorCorrector::solveSystem(double * region1, double * region2,int numberRefinements)
+void 
+ClpPredictorCorrector::solveSystem(double * region1, double * region2,
+				   const double * region1In, const double * region2In,
+				   const double * saveRegion1, const double * saveRegion2,
+				   bool gentleRefine)
 {
-  double projectionTolerance=projectionTolerance_;
-  double errorCheck=0.9*maximumRHSError_/solutionNorm_;
-  if (errorCheck>primalTolerance()) {
-    if (errorCheck<projectionTolerance) {
-      projectionTolerance=errorCheck;
-    } 
-  } else {
-    if (primalTolerance()<projectionTolerance) {
-      projectionTolerance=primalTolerance();
-    } 
-  } 
-  double * newError = new double [numberRows_];
-  double * work2 = deltaW_;
-  int iColumn;
+  int iRow;
   int numberTotal = numberRows_+numberColumns_;
-  //if flagged then entries zero so can do
+  if (region2In) {
+    // normal
+    for (iRow=0;iRow<numberRows_;iRow++)
+      region2[iRow] = region2In[iRow];
+  } else {
+    // initial solution - (diagonal is 1 or 0)
+    CoinZeroN(region2,numberRows_);
+  }
+  int iColumn;
+#if KKT<2
   for (iColumn=0;iColumn<numberTotal;iColumn++)
-    weights_[iColumn] = work2[iColumn] - solution_[iColumn];
-  multiplyAdd(weights_+numberColumns_,numberRows_,-1.0,updateRegion_,0.0);
-  matrix_->times(1.0,weights_,updateRegion_);
-  bool goodSolve=false;
-  double * regionSave=NULL;//for refinement
-  int numberTries=0;
-  double relativeError=COIN_DBL_MAX;
-  double tryError=1.0e31;
-  while (!goodSolve&&numberTries<30) {
-    double lastError=relativeError;
-    goodSolve=true;
-    double maximumRHS = maximumAbsElement(updateRegion_,numberRows_);
-    double scale=1.0;
-    double unscale=1.0;
-    if (maximumRHS>1.0e-30) {
-      if (maximumRHS<=0.5) {
-        double factor=2.0;
-        while (maximumRHS<=0.5) {
-          maximumRHS*=factor;
-          scale*=factor;
-        } /* endwhile */
-      } else if (maximumRHS>=2.0&&maximumRHS<=COIN_DBL_MAX) {
-        double factor=0.5;
-        while (maximumRHS>=2.0) {
-          maximumRHS*=factor;
-          scale*=factor;
-        } /* endwhile */
-      } 
-      unscale=diagonalScaleFactor_/scale;
-    } else {
-      //effectively zero
-      scale=0.0;
-      unscale=0.0;
+    region1[iColumn] = region1In[iColumn]*diagonal_[iColumn];
+  multiplyAdd(region1+numberColumns_,numberRows_,-1.0,region2,1.0);
+  matrix_->times(1.0,region1,region2);
+  double maximumRHS = maximumAbsElement(region2,numberRows_);
+  double scale=1.0;
+  double unscale=1.0;
+  if (maximumRHS>1.0e-30) {
+    if (maximumRHS<=0.5) {
+      double factor=2.0;
+      while (maximumRHS<=0.5) {
+	maximumRHS*=factor;
+	scale*=factor;
+      } /* endwhile */
+    } else if (maximumRHS>=2.0&&maximumRHS<=COIN_DBL_MAX) {
+      double factor=0.5;
+      while (maximumRHS>=2.0) {
+	maximumRHS*=factor;
+	scale*=factor;
+      } /* endwhile */
     } 
-    //printf("--putting scales to 1.0\n");
-    //scale=1.0;
-    //unscale=1.0;
-    multiplyAdd(NULL,numberRows_,0.0,updateRegion_,scale);
-    cholesky_->solve(updateRegion_);
-    multiplyAdd(NULL,numberRows_,0.0,updateRegion_,unscale);
-    if (numberTries) {
-      //refine?
-      double scaleX=1.0;
-      if (lastError>1.0e-5) 
-        scaleX=0.8;
-      multiplyAdd(regionSave,numberRows_,1.0,updateRegion_,scaleX);
-    } 
-    numberTries++;
-    CoinZeroN(newError,numberRows_);
-    multiplyAdd(updateRegion_,numberRows_,-1.0,weights_+numberColumns_,0.0);
-    CoinZeroN(weights_,numberColumns_);
-    matrix_->transposeTimes(1.0,updateRegion_,weights_);
-    //if flagged then entries zero so can do
-    for (iColumn=0;iColumn<numberTotal;iColumn++)
-      weights_[iColumn] = weights_[iColumn]*diagonal_[iColumn]
-	-work2[iColumn];
-    multiplyAdd(weights_+numberColumns_,numberRows_,-1.0,newError,1.0);
-    matrix_->times(1.0,weights_,newError);
-    
-    //now add in old Ax - doing extra checking
-    double maximumRHSError=0.0;
-    double maximumRHSChange=0.0;
-    int iRow;
-    char * dropped = cholesky_->rowsDropped();
-    for (iRow=0;iRow<numberRows_;iRow++) {
-      if (!dropped[iRow]) {
-	double newValue=newError[iRow];
-	double oldValue=errorRegion_[iRow];
-	//severity of errors depend on signs
-	//**later                                                             */
-	if (fabs(newValue)>maximumRHSChange) {
-	  maximumRHSChange=fabs(newValue);
-	} 
-	double result=newValue+oldValue;
-	if (fabs(result)>maximumRHSError) {
-	  maximumRHSError=fabs(result);
-	} 
-	newError[iRow]=result;
-      } else {
-	double newValue=newError[iRow];
-	double oldValue=errorRegion_[iRow];
-	if (fabs(newValue)>maximumRHSChange) {
-	  maximumRHSChange=fabs(newValue);
-	} 
-	double result=newValue+oldValue;
-	newError[iRow]=result;
-	//newError[iRow]=0.0;
-	//assert(updateRegion_[iRow]==0.0);
-	updateRegion_[iRow]=0.0;
-      } 
-    } 
-    relativeError = maximumRHSError/solutionNorm_;
-    if (relativeError>tryError) 
-      relativeError=tryError;
-    if (relativeError<lastError) {
-      maximumRHSChange_= maximumRHSChange;
-      if (relativeError>1.0e-9
-	  ||numberTries>1) {
-	//handler_->message(CLP_BARRIER_ACCURACY,messages_)
-	//<<phase<<numberTries<<relativeError
-	//<<CoinMessageEol;
-      } 
-      if (relativeError>projectionTolerance&&numberTries<=3) {
-        //try and refine
-        goodSolve=false;
-      } 
-      //*** extra test here
-      if (!goodSolve) {
-        if (!regionSave) {
-          regionSave = new double [numberRows_];
-        } 
-        CoinMemcpyN(updateRegion_,numberRows_,regionSave);
-	multiplyAdd(newError,numberRows_,-1.0,updateRegion_,0.0);
-      } 
-    } else {
-      //std::cout <<" worse residual = "<<relativeError;
-      //bring back previous
-      relativeError=lastError;
-      CoinMemcpyN(regionSave,numberRows_,updateRegion_);
-      multiplyAdd(updateRegion_,numberRows_,-1.0,weights_+numberColumns_,0.0);
-      CoinZeroN(weights_,numberColumns_);
-      matrix_->transposeTimes(1.0,updateRegion_,weights_);
-      //if flagged then entries zero so can do
-      for (iColumn=0;iColumn<numberTotal;iColumn++)
-	weights_[iColumn] = weights_[iColumn]*diagonal_[iColumn]
-	  -work2[iColumn];
-    } 
-  } /* endwhile */
-  delete [] regionSave;
-  delete [] newError;
-  return relativeError;
-
+    unscale=diagonalScaleFactor_/scale;
+  } else {
+    //effectively zero
+    scale=0.0;
+    unscale=0.0;
+  } 
+  multiplyAdd(NULL,numberRows_,0.0,region2,scale);
+  cholesky_->solve(region2);
+  multiplyAdd(NULL,numberRows_,0.0,region2,unscale);
+  multiplyAdd(region2,numberRows_,-1.0,region1+numberColumns_,0.0);
+  CoinZeroN(region1,numberColumns_);
+  matrix_->transposeTimes(1.0,region2,region1);
+  for (iColumn=0;iColumn<numberTotal;iColumn++)
+    region1[iColumn] = (region1[iColumn]-region1In[iColumn])*diagonal_[iColumn];
+#else
+  for (iColumn=0;iColumn<numberTotal;iColumn++)
+    region1[iColumn] = region1In[iColumn];
+  cholesky_->solveKKT(region1,region2,diagonal_,diagonalScaleFactor_);
+#endif
+  if (saveRegion2) {
+    //refine?
+    double scaleX=1.0;
+    if (gentleRefine) 
+      scaleX=0.8;
+    multiplyAdd(saveRegion2,numberRows_,1.0,region2,scaleX);
+    assert (saveRegion1);
+    multiplyAdd(saveRegion1,numberTotal,1.0,region1,scaleX);
+  } 
 }
 // findDirectionVector.
 double ClpPredictorCorrector::findDirectionVector(const int phase)
@@ -948,17 +874,22 @@ double ClpPredictorCorrector::findDirectionVector(const int phase)
   } 
   double * newError = new double [numberRows_];
   double * work2 = deltaW_;
-  int iColumn;
   int numberTotal = numberRows_+numberColumns_;
   //if flagged then entries zero so can do
-  if (numberIterations_<10)
-    for (iColumn=0;iColumn<numberTotal;iColumn++)
-      weights_[iColumn] = work2[iColumn];
-  else
-    for (iColumn=0;iColumn<numberTotal;iColumn++)
-      weights_[iColumn] = work2[iColumn] - solution_[iColumn];
+  // For KKT separate out
+#ifndef KKT
+  int iColumn;
+  for (iColumn=0;iColumn<numberTotal;iColumn++)
+    weights_[iColumn] = work2[iColumn] - solution_[iColumn];
   multiplyAdd(weights_+numberColumns_,numberRows_,-1.0,updateRegion_,0.0);
   matrix_->times(1.0,weights_,updateRegion_);
+#else
+  // regions in will be work2 and newError
+  // regions out weights_ and updateRegion_
+  multiplyAdd(solution_+numberColumns_,numberRows_,1.0,newError,0.0);
+  matrix_->times(-1.0,solution_,newError);
+  double * region1Save=NULL;//for refinement
+#endif
   bool goodSolve=false;
   double * regionSave=NULL;//for refinement
   int numberTries=0;
@@ -967,6 +898,7 @@ double ClpPredictorCorrector::findDirectionVector(const int phase)
   while (!goodSolve&&numberTries<30) {
     double lastError=relativeError;
     goodSolve=true;
+#ifndef KKT
     double maximumRHS = maximumAbsElement(updateRegion_,numberRows_);
     double scale=1.0;
     double unscale=1.0;
@@ -1003,8 +935,7 @@ double ClpPredictorCorrector::findDirectionVector(const int phase)
         scaleX=0.8;
       multiplyAdd(regionSave,numberRows_,1.0,updateRegion_,scaleX);
     } 
-    numberTries++;
-    CoinZeroN(newError,numberRows_);
+    //CoinZeroN(newError,numberRows_);
     multiplyAdd(updateRegion_,numberRows_,-1.0,weights_+numberColumns_,0.0);
     CoinZeroN(weights_,numberColumns_);
     matrix_->transposeTimes(1.0,updateRegion_,weights_);
@@ -1012,8 +943,13 @@ double ClpPredictorCorrector::findDirectionVector(const int phase)
     for (iColumn=0;iColumn<numberTotal;iColumn++)
       weights_[iColumn] = weights_[iColumn]*diagonal_[iColumn]
 	-work2[iColumn];
-    multiplyAdd(weights_+numberColumns_,numberRows_,-1.0,newError,1.0);
+#else
+    solveSystem(weights_, updateRegion_,
+		work2,newError,region1Save,regionSave,lastError>1.0e-5);
+#endif
+    multiplyAdd(weights_+numberColumns_,numberRows_,-1.0,newError,0.0);
     matrix_->times(1.0,weights_,newError);
+    numberTries++;
     
     //now add in old Ax - doing extra checking
     double maximumRHSError=0.0;
@@ -1066,15 +1002,25 @@ double ClpPredictorCorrector::findDirectionVector(const int phase)
       if (!goodSolve) {
         if (!regionSave) {
           regionSave = new double [numberRows_];
+#ifdef KKT
+	  region1Save = new double [numberTotal];
+#endif
         } 
         CoinMemcpyN(updateRegion_,numberRows_,regionSave);
+#ifndef KKT
 	multiplyAdd(newError,numberRows_,-1.0,updateRegion_,0.0);
+#else
+        CoinMemcpyN(weights_,numberTotal,region1Save);
+	// and back to input region
+        CoinMemcpyN(updateRegion_,numberRows_,newError);
+#endif
       } 
     } else {
       //std::cout <<" worse residual = "<<relativeError;
       //bring back previous
       relativeError=lastError;
       CoinMemcpyN(regionSave,numberRows_,updateRegion_);
+#ifndef KKT
       multiplyAdd(updateRegion_,numberRows_,-1.0,weights_+numberColumns_,0.0);
       CoinZeroN(weights_,numberColumns_);
       matrix_->transposeTimes(1.0,updateRegion_,weights_);
@@ -1082,14 +1028,20 @@ double ClpPredictorCorrector::findDirectionVector(const int phase)
       for (iColumn=0;iColumn<numberTotal;iColumn++)
 	weights_[iColumn] = weights_[iColumn]*diagonal_[iColumn]
 	  -work2[iColumn];
+#else
+        CoinMemcpyN(region1Save,numberTotal,weights_);
+#endif
     } 
   } /* endwhile */
   delete [] regionSave;
+#ifdef KKT
+  delete [] region1Save;
+#endif
   delete [] newError;
   return relativeError;
 }
 // createSolution.  Creates solution from scratch
-void ClpPredictorCorrector::createSolution()
+int ClpPredictorCorrector::createSolution()
 {
   int numberTotal = numberRows_+numberColumns_;
   int iColumn;
@@ -1204,17 +1156,22 @@ void ClpPredictorCorrector::createSolution()
     } 
   } 
   //   modify fixed RHS
-  multiplyAdd(solution_+numberColumns_,numberRows_,1.0,errorRegion_,0.0);
   multiplyAdd(dj_+numberColumns_,numberRows_,-1.0,rhsFixRegion_,0.0);
-  matrix_->times(-1.0,solution_,errorRegion_);
   //   create plausible RHS?
   matrix_->times(-1.0,dj_,rhsFixRegion_);
+  multiplyAdd(solution_+numberColumns_,numberRows_,1.0,errorRegion_,0.0);
+  matrix_->times(-1.0,solution_,errorRegion_);
   rhsNorm_=maximumAbsElement(errorRegion_,numberRows_);
   if (rhsNorm_<1.0) {
     rhsNorm_=1.0;
   } 
   int * rowsDropped = new int [numberRows_];
-  cholesky_->factorize(diagonal_,rowsDropped);
+  int returnCode=cholesky_->factorize(diagonal_,rowsDropped);
+  if (returnCode==-1) {
+    printf("Out of memory\n");
+    problemStatus_=4;
+    return -1;
+  }
   if (cholesky_->status()) {
     std::cout << "singular on initial cholesky?" <<std::endl;
     cholesky_->resetRowsDropped();
@@ -1225,11 +1182,17 @@ void ClpPredictorCorrector::createSolution()
     //} 
   } 
   delete [] rowsDropped;
+#ifndef KKT
   cholesky_->solve(errorRegion_);
   //create information for solution
   multiplyAdd(errorRegion_,numberRows_,-1.0,weights_+numberColumns_,0.0);
   CoinZeroN(weights_,numberColumns_);
   matrix_->transposeTimes(1.0,errorRegion_,weights_);
+#else
+  // reverse sign on solution
+  multiplyAdd(NULL,numberRows_+numberColumns_,0.0,solution_,-1.0);
+  solveSystem(weights_,errorRegion_,solution_,NULL,NULL,NULL,false);
+#endif
   //do reduced costs
   CoinZeroN(dj_+numberColumns_,numberRows_);
   for ( iColumn=0;iColumn<numberColumns_;iColumn++) {
@@ -1435,6 +1398,7 @@ void ClpPredictorCorrector::createSolution()
     } 
   } 
   solutionNorm_ =  maximumAbsElement(solution_,numberTotal);
+  return 0;
 }
 // complementarityGap.  Computes gap
 //phase 0=as is , 1 = after predictor , 2 after corrector
@@ -1573,7 +1537,6 @@ void ClpPredictorCorrector::setupForSolve(const int phase)
   double * work2 = deltaW_;
   double * work3 = deltaS_;
   double * work4 = deltaT_;
-  double * diagonal = diagonal_;
 
   int iColumn;
   switch (phase) {
@@ -1595,7 +1558,11 @@ void ClpPredictorCorrector::setupForSolve(const int phase)
                  (upperSlack[iColumn]+extra);
           } 
         } 
-        work2[iColumn]=diagonal[iColumn]*value;
+#ifndef KKT
+        work2[iColumn]=diagonal_[iColumn]*value;
+#else
+        work2[iColumn]=value;
+#endif
       } else {
         work2[iColumn]=0.0;
       } 
@@ -1623,7 +1590,11 @@ void ClpPredictorCorrector::setupForSolve(const int phase)
             value+=(mu_-work4[iColumn])/(upperSlack[iColumn]+extra);
           } 
         } 
-        work2[iColumn]=diagonal[iColumn]*(dual[iColumn]+value);
+#ifndef KKT
+        work2[iColumn]=diagonal_[iColumn]*(dual[iColumn]+value);
+#else
+        work2[iColumn]=dual[iColumn]+value;
+#endif
       } else {
         work2[iColumn]=0.0;
       } 
@@ -1651,7 +1622,11 @@ void ClpPredictorCorrector::setupForSolve(const int phase)
             value+=(mu_+wVec[iColumn])/ (upperSlack[iColumn]+extra);
           } 
         } 
-        work2[iColumn]=diagonal[iColumn]*(dual[iColumn]+value);
+#ifndef KKT
+        work2[iColumn]=diagonal_[iColumn]*(dual[iColumn]+value);
+#else
+        work2[iColumn]=dual[iColumn]+value;
+#endif
       } else {
         work2[iColumn]=0.0;
       } 

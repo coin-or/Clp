@@ -192,6 +192,14 @@ ClpFactorization::factorize ( ClpSimplex * model,
 					   indexRowU_+numberElements, 
 					   indexColumnU_+numberElements,
 					   elementU_+numberElements);
+#if 0
+	{
+	  printf("%d row basic, %d column basic\n",numberRowBasic,numberColumnBasic);
+	  for (int i=0;i<numberElements;i++) 
+	    printf("row %d col %d value %g\n",indexRowU_[i],indexColumnU_[i],
+		   elementU_[i]);
+	}
+#endif
 	// recompute number basic
         numberBasic = numberRowBasic+numberColumnBasic;
 	lengthU_ = numberElements;

@@ -255,8 +255,27 @@ ClpCholeskyWssmp::order(ClpInterior * model)
   }
   delete [] which;
   // Now we have size - create arrays and fill in
-  choleskyRow_ = new int [sizeFactor_];
-  sparseFactor_ = new double[sizeFactor_];
+  try { 
+    choleskyRow_ = new int [sizeFactor_];
+  }
+  catch (...) {
+    // no memory
+    delete [] choleskyStart_;
+    choleskyStart_=NULL;
+    return -1;
+  }
+  try {
+    sparseFactor_ = new double[sizeFactor_];
+  }
+  catch (...) {
+    // no memory
+    delete [] choleskyRow_;
+    choleskyRow_=NULL;
+    delete [] choleskyStart_;
+    choleskyStart_=NULL;
+    return -1;
+  }
+  
   sizeFactor_=0;
   which = choleskyRow_;
   for (iRow=0;iRow<numberRows_;iRow++) {
@@ -464,20 +483,21 @@ ClpCholeskyWssmp::factorize(const double * diagonal, int * rowsDropped)
   wssmp(&numberRows_,choleskyStart_,choleskyRow_,sparseFactor_,
 	NULL,permuteOut_,permuteIn_,NULL,&numberRows_,&i1,
 	NULL,&i0,rowsDropped,integerParameters_,doubleParameters_);
-  //    NULL,&i0,(int *) diagonal,integerParameters_,doubleParameters_);
   //std::cout<<"factorization took "<<doubleParameters_[0]<<std::endl;
   if (integerParameters_[9]) {
     std::cout<<"scaling applied"<<std::endl;
   } 
   newDropped=integerParameters_[20]+numberDroppedBefore;
-  if (integerParameters_[20]) 
-    std::cout<<integerParameters_[20]<<" rows dropped"<<std::endl;
+  //if (integerParameters_[20]) 
+  //std::cout<<integerParameters_[20]<<" rows dropped"<<std::endl;
   largest=doubleParameters_[3];
   smallest=doubleParameters_[4];
   delete [] work;
   if (model_->messageHandler()->logLevel()>1) 
     std::cout<<"Cholesky - largest "<<largest<<" smallest "<<smallest<<std::endl;
   choleskyCondition_=largest/smallest;
+  if (integerParameters_[63]<0)
+    return -1; // out of memory
   if (whichDense_) {
     // Update dense columns (just L)
     // Zero out dropped rows
@@ -522,13 +542,13 @@ ClpCholeskyWssmp::factorize(const double * diagonal, int * rowsDropped)
     cleanCholesky=false;
   if (cleanCholesky) {
     //drop fresh makes some formADAT easier
-    int oldDropped=numberRowsDropped_;
+    //int oldDropped=numberRowsDropped_;
     if (newDropped||numberRowsDropped_) {
-      std::cout <<"Rank "<<numberRows_-newDropped<<" ( "<<
-          newDropped<<" dropped)";
-      if (newDropped>oldDropped) 
-        std::cout<<" ( "<<newDropped-oldDropped<<" dropped this time)";
-      std::cout<<std::endl;
+      //std::cout <<"Rank "<<numberRows_-newDropped<<" ( "<<
+      //  newDropped<<" dropped)";
+      //if (newDropped>oldDropped) 
+      //std::cout<<" ( "<<newDropped-oldDropped<<" dropped this time)";
+      //std::cout<<std::endl;
       newDropped=0;
       for (int i=0;i<numberRows_;i++) {
 	char dropped = rowsDropped[i];
@@ -540,7 +560,7 @@ ClpCholeskyWssmp::factorize(const double * diagonal, int * rowsDropped)
         } 
       } 
       numberRowsDropped_=newDropped;
-      newDropped=-(1+newDropped);
+      newDropped=-(2+newDropped);
     } 
   } else {
     if (newDropped) {
@@ -556,7 +576,7 @@ ClpCholeskyWssmp::factorize(const double * diagonal, int * rowsDropped)
       } 
     } 
     numberRowsDropped_+=newDropped;
-    if (numberRowsDropped_) {
+    if (numberRowsDropped_&&0) {
       std::cout <<"Rank "<<numberRows_-numberRowsDropped_<<" ( "<<
           numberRowsDropped_<<" dropped)";
       if (newDropped) {

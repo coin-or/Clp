@@ -343,4 +343,18 @@ ClpMatrixBase::hiddenRows() const
 { 
   return 0;
 }
+/* Creates a variable.  This is called after partial pricing and may modify matrix.
+   May update bestSequence.
+*/
+void 
+ClpMatrixBase::createVariable(ClpSimplex * model, int & bestSequence)
+{
+}
+// Returns reduced cost of a variable
+double 
+ClpMatrixBase::reducedCost(ClpSimplex * model,int sequence) const
+{
+  return model->djRegion()[sequence];
+}
+
 

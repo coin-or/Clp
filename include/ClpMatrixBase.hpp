@@ -110,7 +110,7 @@ public:
       matrix and any bounds or costs to be updated (sensibly).
       Returns non-zero if any changes.
   */
-  int refresh(ClpSimplex * model)
+  virtual int refresh(ClpSimplex * model)
   { return 0;};
   /** Given positive integer weights for each row fills in sum of weights
       for each column (and slack).
@@ -174,7 +174,7 @@ public:
       mode=6  - restore status stuff
       mode=7  - flag given variable (normally sequenceIn)
       mode=8  - unflag all variables
-      mode=9  - synchronize costs
+      mode=9  - synchronize costs and bounds
       mode=10  - return 1 if there may be changing bounds on variable (column generation)
       mode=11  - make sure set is clean (used when a variable rejected - but not flagged)
   */
@@ -183,6 +183,12 @@ public:
      update information for a pivot (and effective rhs)
   */
   virtual int updatePivot(ClpSimplex * model,double oldInValue, double oldOutValue);
+  /** Creates a variable.  This is called after partial pricing and may modify matrix.
+      May update bestSequence.
+  */
+  virtual void createVariable(ClpSimplex * model, int & bestSequence);
+  /// Returns reduced cost of a variable
+  virtual double reducedCost(ClpSimplex * model,int sequence) const;
   //@}
   
   //---------------------------------------------------------------------------

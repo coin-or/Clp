@@ -20,10 +20,15 @@ public:
   /** Orders rows and saves pointer to matrix.and model.
    returns non-zero if not enough memory */
   virtual int order(ClpInterior * model) = 0;
-  /** Factorize - filling in rowsDropped and returning number dropped */
+  /** Factorize - filling in rowsDropped and returning number dropped.
+      If return code negative then out of memory */
   virtual int factorize(const double * diagonal, int * rowsDropped) =0;
   /** Uses factorization to solve. */
   virtual void solve (double * region) = 0;
+  /** Uses factorization to solve. - given as if KKT.
+   region1 is rows+columns, region2 is rows */
+  virtual void solveKKT (double * region1, double * region2, const double * diagonal,
+			 double diagonalScaleFactor);
   //@}
 
   /**@name Gets */

@@ -61,7 +61,8 @@ public:
   /** Orders rows and saves pointer to matrix.and model.
    Returns non-zero if not enough memory */
   virtual int order(ClpInterior * model) ;
-  /** Factorize - filling in rowsDropped and returning number dropped */
+  /** Factorize - filling in rowsDropped and returning number dropped.
+      If return code negative then out of memory */
   virtual int factorize(const double * diagonal, int * rowsDropped) ;
   /** Uses factorization to solve. */
   virtual void solve (double * region) ;

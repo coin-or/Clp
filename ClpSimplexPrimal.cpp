@@ -183,6 +183,7 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
 
   // save data
   ClpDataSave data = saveData();
+  matrix_->refresh(this); // make sure matrix okay
   
   // Save so can see if doing after dual
   int initialStatus=problemStatus_;
@@ -251,9 +252,11 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
       matrix_->refresh(this);
       // If getting nowhere - why not give it a kick
 #if 1
-      if (perturbation_<101&&numberIterations_>2*(numberRows_+numberColumns_)
-	  &&initialStatus!=10) 
+      if (perturbation_<101&&numberIterations_>2*(numberRows_+numberColumns_)&&(specialOptions_&4)==0
+	  &&initialStatus!=10) {
 	perturb(1);
+	matrix_->rhsOffset(this,true,false);
+      }
 #endif
       // If we have done no iterations - special
       if (lastGoodIteration_==numberIterations_&&factorType)
@@ -620,6 +623,8 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	  // switch off dense
 	  int saveDense = factorization_->denseThreshold();
 	  factorization_->setDenseThreshold(0);
+	  // make sure will do safe factorization
+	  pivotVariable_[0]=-1;
 	  internalFactorize(2);
 	  factorization_->setDenseThreshold(saveDense);
 	  // restore extra stuff
@@ -1461,7 +1466,7 @@ ClpSimplexPrimal::updatePrimalsInPrimal(CoinIndexedVector * rowArray,
       solution_[iPivot]=value;
 #ifndef NDEBUG
       // check if not active then okay
-      if (!active(iRow)) {
+      if (!active(iRow)&&(specialOptions_&4)==0) {
 	// But make sure one going out is feasible
 	if (change>0.0) {
 	  // going down

@@ -100,18 +100,31 @@ ClpNonLinearCost::ClpNonLinearCost ( ClpSimplex * model)
   start_[0]=0;
 
   for (iSequence=0;iSequence<numberTotal1;iSequence++) {
-
-    if (lower[iSequence]>-COIN_DBL_MAX) {
+    if (!always4) {
+      if (lower[iSequence]>-COIN_DBL_MAX) {
+	lower_[put] = -COIN_DBL_MAX;
+	setInfeasible(put,true);
+	cost_[put++] = cost[iSequence]-infeasibilityCost;
+      }
+      whichRange_[iSequence]=put;
+      lower_[put] = lower[iSequence];
+      cost_[put++] = cost[iSequence];
+      lower_[put] = upper[iSequence];
+      cost_[put++] = cost[iSequence]+infeasibilityCost;
+      if (upper[iSequence]<1.0e20) {
+	lower_[put] = COIN_DBL_MAX;
+	setInfeasible(put-1,true);
+	cost_[put++] = 1.0e50;
+      }
+    } else {
       lower_[put] = -COIN_DBL_MAX;
       setInfeasible(put,true);
       cost_[put++] = cost[iSequence]-infeasibilityCost;
-    }
-    whichRange_[iSequence]=put;
-    lower_[put] = lower[iSequence];
-    cost_[put++] = cost[iSequence];
-    lower_[put] = upper[iSequence];
-    cost_[put++] = cost[iSequence]+infeasibilityCost;
-    if (upper[iSequence]<1.0e20) {
+      whichRange_[iSequence]=put;
+      lower_[put] = lower[iSequence];
+      cost_[put++] = cost[iSequence];
+      lower_[put] = upper[iSequence];
+      cost_[put++] = cost[iSequence]+infeasibilityCost;
       lower_[put] = COIN_DBL_MAX;
       setInfeasible(put-1,true);
       cost_[put++] = 1.0e50;

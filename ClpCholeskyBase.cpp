@@ -7,6 +7,8 @@
 
 #include "ClpCholeskyBase.hpp"
 #include "ClpInterior.hpp"
+#include "ClpHelperFunctions.hpp"
+#include "CoinHelperFunctions.hpp"
 
 //#############################################################################
 // Constructors / Destructor / Assignment
@@ -92,4 +94,53 @@ ClpCholeskyBase::resetRowsDropped()
 {
   numberRowsDropped_=0;
   memset(rowsDropped_,0,numberRows_);
+}
+/* Uses factorization to solve. - given as if KKT.
+   region1 is rows+columns, region2 is rows */
+void 
+ClpCholeskyBase::solveKKT (double * region1, double * region2, const double * diagonal,
+			   double diagonalScaleFactor)
+{
+  int iColumn;
+  int numberColumns = model_->numberColumns();
+  int numberTotal = numberRows_+numberColumns;
+  double * region1Save = new double[numberTotal];
+  for (iColumn=0;iColumn<numberTotal;iColumn++) {
+    region1[iColumn] *= diagonal[iColumn];
+    region1Save[iColumn]=region1[iColumn];
+  }
+  multiplyAdd(region1+numberColumns,numberRows_,-1.0,region2,1.0);
+  model_->clpMatrix()->times(1.0,region1,region2);
+  double maximumRHS = maximumAbsElement(region2,numberRows_);
+  double scale=1.0;
+  double unscale=1.0;
+  if (maximumRHS>1.0e-30) {
+    if (maximumRHS<=0.5) {
+      double factor=2.0;
+      while (maximumRHS<=0.5) {
+	maximumRHS*=factor;
+	scale*=factor;
+      } /* endwhile */
+    } else if (maximumRHS>=2.0&&maximumRHS<=COIN_DBL_MAX) {
+      double factor=0.5;
+      while (maximumRHS>=2.0) {
+	maximumRHS*=factor;
+	scale*=factor;
+      } /* endwhile */
+    } 
+    unscale=diagonalScaleFactor/scale;
+  } else {
+    //effectively zero
+    scale=0.0;
+    unscale=0.0;
+  } 
+  multiplyAdd(NULL,numberRows_,0.0,region2,scale);
+  solve(region2);
+  multiplyAdd(NULL,numberRows_,0.0,region2,unscale);
+  multiplyAdd(region2,numberRows_,-1.0,region1+numberColumns,0.0);
+  CoinZeroN(region1,numberColumns);
+  model_->clpMatrix()->transposeTimes(1.0,region2,region1);
+  for (iColumn=0;iColumn<numberTotal;iColumn++)
+    region1[iColumn] = region1[iColumn]*diagonal[iColumn]-region1Save[iColumn];
+  delete [] region1Save;
 }

@@ -1604,7 +1604,7 @@ ClpPackedMatrix::partialPricing(ClpSimplex * model, int start, int end,
   const double * cost = model->costRegion();
   double bestDj;
   if (bestSequence>=0)
-    bestDj = fabs(reducedCost[bestSequence]);
+    bestDj = fabs(model->clpMatrix()->reducedCost(model,bestSequence));
   else
     bestDj=tolerance;
   int sequenceOut = model->sequenceOut();

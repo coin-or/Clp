@@ -16,7 +16,8 @@
 #include "ClpInterior.hpp"
 #ifdef REAL_BARRIER
 #include "ClpCholeskyWssmp.hpp"
-#include "ClpCholeskyTaucs.hpp"
+//#include "ClpCholeskyWssmpKKT.hpp"
+//#include "ClpCholeskyTaucs.hpp"
 #endif
 #include "ClpSolve.hpp"
 #include "ClpPackedMatrix.hpp"
@@ -875,6 +876,9 @@ ClpSimplex::initialSolve(ClpSolve & options)
 #ifdef REAL_BARRIER
     // uncomment this if you have Anshul Gupta's wsmp package
     //ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp(max(100,model2->numberRows()/10));
+    ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp();
+    barrier.setCholesky(cholesky);
+    //ClpCholeskyWssmpKKT * cholesky = new ClpCholeskyWssmpKKT(max(100,model2->numberRows()/10));
     //barrier.setCholesky(cholesky);
     // uncomment this if you have Sivan Toledo's Taucs package
     //ClpCholeskyTaucs * cholesky = new ClpCholeskyTaucs();
@@ -903,7 +907,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
       <<"Barrier"<<timeCore<<time2-time1
       <<CoinMessageEol;
     timeX=time2;
-    if (barrier.maximumBarrierIterations()) {
+    if (barrier.maximumBarrierIterations()&&barrier.status()!=4) {
       printf("***** crossover - needs more thought on difficult models\n");
       // move solutions
       CoinMemcpyN(barrier.primalRowSolution(),
@@ -957,6 +961,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	  int iColumn = sort[i];
 	  model2->setStatus(iColumn,basic);
 	}
+	delete [] sort;
+	delete [] dsort;
       }
       // just primal values pass
       model2->primal(2);
@@ -1034,6 +1040,11 @@ ClpSimplex::initialSolve(ClpSolve & options)
       // just primal
       model2->primal(1);
 #endif
+    } else if (barrier.status()==4) {
+      // memory problems
+      model2->setPerturbation(savePerturbation);
+      model2->createStatus();
+      model2->dual();
     }
     model2->setPerturbation(savePerturbation);
     time2 = CoinCpuTime();

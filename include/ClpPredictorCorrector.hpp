@@ -46,8 +46,8 @@ public:
   double findStepLength(const int phase);
   /// findDirectionVector.
   double findDirectionVector(const int phase);
-  /// createSolution.  Creates solution from scratch
-  void createSolution();
+  /// createSolution.  Creates solution from scratch (- code if no memory)
+  int createSolution();
   /// complementarityGap.  Computes gap
   //phase 0=as is , 1 = after predictor , 2 after corrector
   double complementarityGap(int & numberComplementarityPairs,
@@ -56,7 +56,10 @@ public:
   //phase 0=affine , 1 = corrector , 2 = primal-dual
   void setupForSolve(const int phase);
   /** Does solve. region1 is for deltaX (columns+rows), region2 for deltaPi (rows) */
-  double solveSystem(double * region1, double * region2,int numberRefinements);
+  void solveSystem(double * region1, double * region2,
+		   const double * region1In, const double * region2In,
+		   const double * saveRegion1, const double * saveRegion2,
+		   bool gentleRefine);
   //method: sees if looks plausible change in complementarity
   bool checkGoodMove(const bool doCorrector,double & bestNextGap);
   ///:  checks for one step size

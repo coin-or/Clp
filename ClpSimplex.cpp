@@ -1220,9 +1220,11 @@ ClpSimplex::housekeeping(double objectiveChange)
       if (fabs(valueOut_-lower_[sequenceOut_])<fabs(valueOut_-upper_[sequenceOut_])) {
 	// going to lower
 	setStatus(sequenceOut_,atLowerBound);
+	oldOut = lower_[sequenceOut_];
       } else {
 	// going to upper
 	setStatus(sequenceOut_,atUpperBound);
+	oldOut = upper_[sequenceOut_];
       }
     } else {
       // fixed
@@ -2090,7 +2092,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
     if (handler_->logLevel()<3)
       factorization_->messageLevel(0);
     else
-      factorization_->messageLevel(3);
+      factorization_->messageLevel(max(3,factorization_->messageLevel()));
   }
   numberExtraRows_ = matrix_->generalExpanded(this,2,maximumBasic_);
   if (numberExtraRows_) {
@@ -2338,6 +2340,8 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
     problemStatus_=-1;
     handler_->setLogLevel(saveLevel); // switch back messages
   }
+  if ((what&5)!=0) 
+    matrix_->generalExpanded(this,9,what); // update costs and bounds if necessary
   return goodMatrix;
 }
 void

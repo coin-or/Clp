@@ -3664,7 +3664,7 @@ ClpPrimalColumnSteepest::partialPricing(CoinIndexedVector * updates,
 	numberWanted=0; // give up
       if (saveSequence!=bestSequence) {
 	// dj
-	bestDj=fabs(reducedCost[bestSequence]);
+	bestDj=fabs(model_->clpMatrix()->reducedCost(model_,bestSequence));
       }
       if (!numberWanted)
 	break;
@@ -3684,6 +3684,8 @@ ClpPrimalColumnSteepest::partialPricing(CoinIndexedVector * updates,
 
   // Restore tolerance
   model_->setCurrentDualTolerance(saveTolerance);
+  // Now create variable if column generation
+  model_->clpMatrix()->createVariable(model_,bestSequence);
 #ifndef NDEBUG
   if (bestSequence>=0) {
     if (model_->getStatus(bestSequence)==ClpSimplex::atLowerBound)
