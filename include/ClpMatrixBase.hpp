@@ -75,9 +75,6 @@ public:
       returns non-zero if no scaling done */
   virtual int scale(ClpSimplex * model) const 
   { return 1;};
-  /// Creates row copy and scales if necessary
-  virtual ClpMatrixBase * scaledRowCopy(ClpSimplex * model) const
-  { return reverseOrderedCopy();};
 
   /** Checks if all elements are in valid range.  Can just
       return true if you are not paranoid.  For Clp I will

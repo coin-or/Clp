@@ -219,10 +219,8 @@ ClpPackedMatrix::transposeTimes(const ClpSimplex * model, double scalar,
   // maybe I need one in OsiSimplex
   double zeroTolerance = model->factorization()->zeroTolerance();
   int numberRows = model->numberRows();
-  const ClpMatrixBase * rowCopy = model->rowCopy();
-  // make sure row copy is of correct type
-  // if not we would have to have another transposeTimes
-  assert (!rowCopy||rowCopy->type()==1);
+  ClpPackedMatrix* rowCopy =
+    dynamic_cast< ClpPackedMatrix*>(model->rowCopy());
   if (numberInRowArray>0.3*numberRows||!rowCopy) {
     // do by column
     int iColumn;
@@ -271,7 +269,34 @@ ClpPackedMatrix::transposeTimes(const ClpSimplex * model, double scalar,
 	}
       }
     }
-  } else if (numberInRowArray>2||y->getNumElements()) {
+    columnArray->setNumElements(numberNonZero);
+    y->setNumElements(0);
+  } else {
+    // do by row
+    rowCopy->transposeTimesByRow(model, scalar, rowArray, y, columnArray);
+  }
+}
+/* Return <code>x * A + y</code> in <code>z</code>. 
+	Squashes small elements and knows about ClpSimplex */
+void 
+ClpPackedMatrix::transposeTimesByRow(const ClpSimplex * model, double scalar,
+			      const CoinIndexedVector * rowArray,
+			      CoinIndexedVector * y,
+			      CoinIndexedVector * columnArray) const
+{
+  columnArray->clear();
+  double * pi = rowArray->denseVector();
+  int numberNonZero=0;
+  int * index = columnArray->getIndices();
+  double * array = columnArray->denseVector();
+  int numberInRowArray = rowArray->getNumElements();
+  // maybe I need one in OsiSimplex
+  double zeroTolerance = model->factorization()->zeroTolerance();
+  const int * column = getIndices();
+  const CoinBigIndex * rowStart = getVectorStarts();
+  const double * element = getElements();
+  const int * whichRow = rowArray->getIndices();
+  if (numberInRowArray>2||y->getNumElements()) {
     // do by rows
     // ** Row copy is already scaled
     int iRow;
@@ -293,10 +318,6 @@ ClpPackedMatrix::transposeTimes(const ClpSimplex * model, double scalar,
       marked[iColumn]=0;
     }
 
-    const int * column = rowCopy->getIndices();
-    const CoinBigIndex * rowStart = rowCopy->getVectorStarts();
-    const double * element = rowCopy->getElements();
-    const int * whichRow = rowArray->getIndices();
     for (i=0;i<numberInRowArray;i++) {
       iRow = whichRow[i]; 
       double value = pi[iRow]*scalar;
@@ -329,10 +350,6 @@ ClpPackedMatrix::transposeTimes(const ClpSimplex * model, double scalar,
     int i;
     numberNonZero=0;
 
-    const int * column = rowCopy->getIndices();
-    const CoinBigIndex * rowStart = rowCopy->getVectorStarts();
-    const double * element = rowCopy->getElements();
-    const int * whichRow = rowArray->getIndices();
     double value;
     iRow = whichRow[0]; 
     value = pi[iRow]*scalar;
@@ -370,9 +387,6 @@ ClpPackedMatrix::transposeTimes(const ClpSimplex * model, double scalar,
     // Just one row
     int iRow=rowArray->getIndices()[0];
     numberNonZero=0;
-    const int * column = rowCopy->getIndices();
-    const CoinBigIndex * rowStart = rowCopy->getVectorStarts();
-    const double * element = rowCopy->getElements();
     double value = pi[iRow]*scalar;
     CoinBigIndex j;
     for (j=rowStart[iRow];j<rowStart[iRow+1];j++) {
@@ -710,48 +724,6 @@ ClpPackedMatrix::scale(ClpSimplex * model) const
     }
     return 0;
   }
-}
-// Creates row copy and scales if necessary
-ClpMatrixBase * 
-ClpPackedMatrix::scaledRowCopy(ClpSimplex * model) const
-{
-  ClpMatrixBase * rowCopyBase = reverseOrderedCopy();
-  ClpPackedMatrix* rowCopy =
-    dynamic_cast< ClpPackedMatrix*>(rowCopyBase);
-
-  // Make sure it is really a ClpPackedMatrix
-  assert (rowCopy!=NULL);
-
-  const double * rowScale = model->rowScale();
-  const double * columnScale = model->columnScale();
-
-  if (rowScale) {
-    // scale row copy
-    int numberRows = model->numberRows();
-    int numberColumns = model->numberColumns();
-    const int * column = rowCopy->getIndices();
-    const CoinBigIndex * rowStart = rowCopy->getVectorStarts();
-    const double * element = rowCopy->getElements();
-    int iRow;
-    // need to replace row by row
-    double * newElement = new double[numberColumns];
-    // scale row copy
-    for (iRow=0;iRow<numberRows;iRow++) {
-      int j;
-      double scale = rowScale[iRow];
-      const double * elementsInThisRow = element + rowStart[iRow];
-      const int * columnsInThisRow = column + rowStart[iRow];
-      int number = rowStart[iRow+1]-rowStart[iRow];
-      assert (number<=numberColumns);
-      for (j=0;j<number;j++) {
-	int iColumn = columnsInThisRow[j];
-	newElement[j] = elementsInThisRow[j]*scale*columnScale[iColumn];
-      }
-      rowCopy->replaceVector(iRow,number,newElement);
-    }
-    delete [] newElement;
-  }
-  return rowCopyBase;
 }
 /* Unpacks a column into an CoinIndexedvector
       Note that model is NOT const.  Bounds and objective could

@@ -6,6 +6,7 @@
 #include "CoinHelperFunctions.hpp"
 #include "ClpSimplex.hpp"
 #include "ClpMatrixBase.hpp"
+#include "ClpNetworkBasis.hpp"
 
 
 //#############################################################################
@@ -16,21 +17,36 @@
 // Default Constructor 
 //-------------------------------------------------------------------
 ClpFactorization::ClpFactorization () :
-   CoinFactorization() {}
+   CoinFactorization() 
+{
+  networkBasis_ = NULL;
+}
 
 //-------------------------------------------------------------------
 // Copy constructor 
 //-------------------------------------------------------------------
 ClpFactorization::ClpFactorization (const ClpFactorization & rhs) :
-   CoinFactorization(rhs) {}
+   CoinFactorization(rhs) 
+{
+  if (rhs.networkBasis_)
+    networkBasis_ = new ClpNetworkBasis(*(rhs.networkBasis_));
+  else
+    networkBasis_=NULL;
+}
 
 ClpFactorization::ClpFactorization (const CoinFactorization & rhs) :
-   CoinFactorization(rhs) {}
+   CoinFactorization(rhs) 
+{
+  networkBasis_=NULL;
+}
 
 //-------------------------------------------------------------------
 // Destructor 
 //-------------------------------------------------------------------
-ClpFactorization::~ClpFactorization () {}
+ClpFactorization::~ClpFactorization () 
+{
+  delete networkBasis_;
+}
 
 //----------------------------------------------------------------
 // Assignment operator 
@@ -40,6 +56,11 @@ ClpFactorization::operator=(const ClpFactorization& rhs)
 {
   if (this != &rhs) {
     CoinFactorization::operator=(rhs);
+    delete networkBasis_;
+    if (rhs.networkBasis_)
+      networkBasis_ = new ClpNetworkBasis(*(rhs.networkBasis_));
+    else
+      networkBasis_=NULL;
   }
   return *this;
 }
@@ -155,4 +176,96 @@ ClpFactorization::factorize ( const ClpSimplex * model,
   }
 
   return status_;
+}
+/* Replaces one Column to basis,
+   returns 0=OK, 1=Probably OK, 2=singular, 3=no room
+   If checkBeforeModifying is true will do all accuracy checks
+   before modifying factorization.  Whether to set this depends on
+   speed considerations.  You could just do this on first iteration
+   after factorization and thereafter re-factorize
+   partial update already in U */
+int 
+ClpFactorization::replaceColumn ( CoinIndexedVector * regionSparse,
+		      int pivotRow,
+		      double pivotCheck ,
+		      bool checkBeforeModifying)
+{
+  if (!networkBasis_) {
+    return CoinFactorization::replaceColumn(regionSparse,
+					    pivotRow,
+					    pivotCheck,
+					    checkBeforeModifying);
+  } else {
+    return networkBasis_->replaceColumn(regionSparse,
+					pivotRow);
+  }
+}
+
+/* Updates one column (FTRAN) from region2
+   number returned is negative if no room
+   region1 starts as zero and is zero at end */
+int 
+ClpFactorization::updateColumn ( CoinIndexedVector * regionSparse,
+				 CoinIndexedVector * regionSparse2,
+				 bool FTUpdate) 
+{
+  if (!networkBasis_) {
+    return CoinFactorization::updateColumn(regionSparse,
+					   regionSparse2,
+					   FTUpdate);
+  } else {
+    return networkBasis_->updateColumn(regionSparse,
+				       regionSparse2);
+  }
+}
+/* Updates one column (FTRAN) to/from array 
+   number returned is negative if no room
+   ** For large problems you should ALWAYS know where the nonzeros
+   are, so please try and migrate to previous method after you
+   have got code working using this simple method - thank you!
+   (the only exception is if you know input is dense e.g. rhs)
+   region starts as zero and is zero at end */
+int 
+ClpFactorization::updateColumn ( CoinIndexedVector * regionSparse,
+			double array[] ) const
+{
+  if (!networkBasis_) {
+    return CoinFactorization::updateColumn(regionSparse,
+					   array);
+  } else {
+    return networkBasis_->updateColumn(regionSparse,
+						    array);
+  }
+}
+/* Updates one column transpose (BTRAN)
+   For large problems you should ALWAYS know where the nonzeros
+   are, so please try and migrate to previous method after you
+   have got code working using this simple method - thank you!
+   (the only exception is if you know input is dense e.g. dense objective)
+   returns number of nonzeros */
+int 
+ClpFactorization::updateColumnTranspose ( CoinIndexedVector * regionSparse,
+					  double array[] ) const
+{
+  if (!networkBasis_) {
+    return CoinFactorization::updateColumnTranspose(regionSparse,
+						    array);
+  } else {
+    return networkBasis_->updateColumnTranspose(regionSparse,
+						    array);
+  }
+}
+/* Updates one column (BTRAN) from region2
+   region1 starts as zero and is zero at end */
+int 
+ClpFactorization::updateColumnTranspose ( CoinIndexedVector * regionSparse,
+    			  CoinIndexedVector * regionSparse2) const
+{
+  if (!networkBasis_) {
+    return CoinFactorization::updateColumnTranspose(regionSparse,
+						    regionSparse2);
+  } else {
+    return networkBasis_->updateColumnTranspose(regionSparse,
+						    regionSparse2);
+  }
 }

@@ -23,6 +23,8 @@
 #include "ClpPrimalColumnSteepest.hpp"
 #include "ClpPrimalColumnDantzig.hpp"
 #include "ClpParameters.hpp"
+#include "ClpNetworkMatrix.hpp"
+#include "ClpPlusMinusOneMatrix.hpp"
 
 #include "Presolve.hpp"
 #ifdef CLP_IDIOT
@@ -789,6 +791,169 @@ ClpSimplexUnitTest(const std::string & mpsDir,
       delete [] result;
       delete [] ray;
     }
+  }
+  
+  // test network
+  {    
+    std::string fn = mpsDir+"input.130";
+    int numberColumns;
+    int numberRows;
+    
+    FILE * fp = fopen(fn.c_str(),"r");
+
+    if (!fp) {
+      fprintf(stderr,"Unable to open file input.130 in mpsDir directory\n");
+      exit(1);
+    }
+    int problem;
+    char temp[100];
+    // read and skip 
+    fscanf(fp,"%s",temp);
+    assert (!strcmp(temp,"BEGIN"));
+    fscanf(fp,"%*s %*s %d %d %*s %*s %d %*s",&problem, &numberRows, 
+	   &numberColumns);
+    // scan down to SUPPLY
+    while (fgets(temp,100,fp)) {
+      if (!strncmp(temp,"SUPPLY",6))
+	break;
+    }
+    if (strncmp(temp,"SUPPLY",6)) {
+      fprintf(stderr,"Unable to find SUPPLY\n");
+      exit(2);
+    }
+    // get space for rhs
+    double * lower = new double[numberRows];
+    double * upper = new double[numberRows];
+    int i;
+    for (i=0;i<numberRows;i++) {
+      lower[i]=0.0;
+      upper[i]=0.0;
+    }
+    // ***** Remember to convert to C notation
+    while (fgets(temp,100,fp)) {
+      int row;
+      int value;
+      if (!strncmp(temp,"ARCS",4))
+	break;
+      sscanf(temp,"%d %d",&row,&value);
+      upper[row-1]=-value;
+      lower[row-1]=-value;
+    }
+    if (strncmp(temp,"ARCS",4)) {
+      fprintf(stderr,"Unable to find ARCS\n");
+      exit(2);
+    }
+    // number of columns may be underestimate
+    int * head = new int[2*numberColumns];
+    int * tail = new int[2*numberColumns];
+    int * ub = new int[2*numberColumns];
+    int * cost = new int[2*numberColumns];
+    // ***** Remember to convert to C notation
+    numberColumns=0;
+    while (fgets(temp,100,fp)) {
+      int iHead;
+      int iTail;
+      int iUb;
+      int iCost;
+      if (!strncmp(temp,"DEMAND",6))
+	break;
+      sscanf(temp,"%d %d %d %d",&iHead,&iTail,&iCost,&iUb);
+      iHead--;
+      iTail--;
+      head[numberColumns]=iHead;
+      tail[numberColumns]=iTail;
+      ub[numberColumns]=iUb;
+      cost[numberColumns]=iCost;
+      numberColumns++;
+    }
+    if (strncmp(temp,"DEMAND",6)) {
+      fprintf(stderr,"Unable to find DEMAND\n");
+      exit(2);
+    }
+    // ***** Remember to convert to C notation
+    while (fgets(temp,100,fp)) {
+      int row;
+      int value;
+      if (!strncmp(temp,"END",3))
+	break;
+      sscanf(temp,"%d %d",&row,&value);
+      upper[row-1]=value;
+      lower[row-1]=value;
+    }
+    if (strncmp(temp,"END",3)) {
+      fprintf(stderr,"Unable to find END\n");
+      exit(2);
+    }
+    printf("Problem %d has %d rows and %d columns\n",problem,
+	   numberRows,numberColumns);
+    fclose(fp);
+    ClpSimplex  model;
+    // now build model
+    
+    double * objective =new double[numberColumns];
+    double * lowerColumn = new double[numberColumns];
+    double * upperColumn = new double[numberColumns];
+    
+    double * element = new double [2*numberColumns];
+    int * start = new int[numberColumns+1];
+    int * row = new int[2*numberColumns];
+    start[numberColumns]=2*numberColumns;
+    for (i=0;i<numberColumns;i++) {
+      start[i]=2*i;
+      element[2*i]=-1.0;
+      element[2*i+1]=1.0;
+      row[2*i]=head[i];
+      row[2*i+1]=tail[i];
+      lowerColumn[i]=0.0;
+      upperColumn[i]=ub[i];
+      objective[i]=cost[i];
+    }
+    // Create Packed Matrix
+    CoinPackedMatrix matrix;
+    int * lengths = NULL;
+    matrix.assignMatrix(true,numberRows,numberColumns,
+			2*numberColumns,element,row,start,lengths);
+    // load model
+    
+    model.loadProblem(matrix,
+		      lowerColumn,upperColumn,objective,
+		      lower,upper);
+    
+    model.factorization()->maximumPivots(200+model.numberRows()/100);
+    model.createStatus();
+    double time1 = cpuTime();
+    model.dual();
+    std::cout<<"Network problem, ClpPackedMatrix took "<<cpuTime()-time1<<" seconds"<<std::endl;
+    ClpPlusMinusOneMatrix plusMinus(matrix);
+    assert (plusMinus.getIndices()); // would be zero if not +- one
+    model.loadProblem(plusMinus,
+		      lowerColumn,upperColumn,objective,
+		      lower,upper);
+    
+    model.factorization()->maximumPivots(200+model.numberRows()/100);
+    model.createStatus();
+    time1 = cpuTime();
+    model.dual();
+    std::cout<<"Network problem, ClpPlusMinusOneMatrix took "<<cpuTime()-time1<<" seconds"<<std::endl;
+    ClpNetworkMatrix network(numberColumns,head,tail);
+    model.loadProblem(network,
+		      lowerColumn,upperColumn,objective,
+		      lower,upper);
+    
+    model.factorization()->maximumPivots(200+model.numberRows()/100);
+    model.createStatus();
+    time1 = cpuTime();
+    model.dual();
+    std::cout<<"Network problem, ClpNetworkMatrix took "<<cpuTime()-time1<<" seconds"<<std::endl;
+    delete [] lower;
+    delete [] upper;
+    delete [] head;
+    delete [] tail;
+    delete [] ub;
+    delete [] cost;
+    delete [] objective;
+    delete [] lowerColumn;
+    delete [] upperColumn;
   }
   
 }

@@ -9,10 +9,12 @@
 #include "CoinFactorization.hpp"
 
 /** This just implements CoinFactorization when an ClpMatrixBase object
-    is passed.  It has no data.
+    is passed.  If a network then has a dummy CoinFactorization and
+    a genuine ClpNetworkBasis object
 */
 class ClpMatrixBase;
 class ClpSimplex;
+class ClpNetworkBasis;
 
 class ClpFactorization : public CoinFactorization {
   
@@ -54,7 +56,63 @@ public:
    ClpFactorization& operator=(const ClpFactorization&);
    //@}
    
+  /*  **** below here is so can use networkish basis */
+  /**@name rank one updates which do exist */
+  //@{
+
+  /** Replaces one Column to basis,
+   returns 0=OK, 1=Probably OK, 2=singular, 3=no room
+      If checkBeforeModifying is true will do all accuracy checks
+      before modifying factorization.  Whether to set this depends on
+      speed considerations.  You could just do this on first iteration
+      after factorization and thereafter re-factorize
+   partial update already in U */
+  int replaceColumn ( CoinIndexedVector * regionSparse,
+		      int pivotRow,
+		      double pivotCheck ,
+		      bool checkBeforeModifying=false);
+  //@}
+
+  /**@name various uses of factorization (return code number elements) 
+   which user may want to know about */
+  //@{
+  /** Updates one column (FTRAN) from region2
+      number returned is negative if no room
+      region1 starts as zero and is zero at end */
+  int updateColumn ( CoinIndexedVector * regionSparse,
+			CoinIndexedVector * regionSparse2,
+			bool FTUpdate = false ) ;
+  /** Updates one column (FTRAN) to/from array 
+      number returned is negative if no room
+      ** For large problems you should ALWAYS know where the nonzeros
+      are, so please try and migrate to previous method after you
+      have got code working using this simple method - thank you!
+      (the only exception is if you know input is dense e.g. rhs)
+      region starts as zero and is zero at end */
+  int updateColumn ( CoinIndexedVector * regionSparse,
+			double array[] ) const;
+  /** Updates one column transpose (BTRAN)
+      ** For large problems you should ALWAYS know where the nonzeros
+      are, so please try and migrate to previous method after you
+      have got code working using this simple method - thank you!
+      (the only exception is if you know input is dense e.g. dense objective)
+      returns number of nonzeros */
+  int updateColumnTranspose ( CoinIndexedVector * regionSparse,
+				 double array[] ) const;
+  /** Updates one column (BTRAN) from region2
+      region1 starts as zero and is zero at end */
+  int updateColumnTranspose ( CoinIndexedVector * regionSparse,
+			      CoinIndexedVector * regionSparse2) const;
+  //@}
     
+////////////////// data //////////////////
+private:
+
+  /**@name data */
+  //@{
+  /// Pointer to network basis
+  ClpNetworkBasis * networkBasis_;
+  //@}
 };
 
 #endif

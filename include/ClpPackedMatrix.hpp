@@ -77,8 +77,6 @@ public:
   /** Creates scales for column copy (rowCopy in model may be modified)
       returns non-zero if no scaling done */
   virtual int scale(ClpSimplex * model) const ;
-  /// Creates row copy and scales if necessary
-  virtual ClpMatrixBase * scaledRowCopy(ClpSimplex * model) const;
   /** Checks if all elements are in valid range.  Can just
       return true if you are not paranoid.  For Clp I will
       probably expect no zeros.  Code can modify matrix to get rid of
@@ -126,6 +124,14 @@ public:
 	Can use y as temporary array (will be empty at end)
 	Squashes small elements and knows about ClpSimplex */
   virtual void transposeTimes(const ClpSimplex * model, double scalar,
+			      const CoinIndexedVector * x,
+			      CoinIndexedVector * y,
+			      CoinIndexedVector * z) const;
+    /** Return <code>x * scalar * A + y</code> in <code>z</code>. 
+	Can use y as temporary array (will be empty at end)
+	Squashes small elements and knows about ClpSimplex.
+    This version uses row copy*/
+  virtual void transposeTimesByRow(const ClpSimplex * model, double scalar,
 			      const CoinIndexedVector * x,
 			      CoinIndexedVector * y,
 			      CoinIndexedVector * z) const;
