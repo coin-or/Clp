@@ -1830,6 +1830,7 @@ costs this much to be infeasible",
 		  printf("Saving model on %s\n",
 			   fileName.c_str());
 		}
+#if 0
 		// Convert names
 		int iRow;
 		int numberRows=model2->numberRows();
@@ -1873,7 +1874,6 @@ costs this much to be infeasible",
 #endif
 		  }
 		}
-
 		CoinMpsIO writer;
 		writer.setMpsData(*model2->matrix(), COIN_DBL_MAX,
 				  model2->getColLower(), model2->getColUpper(),
@@ -1883,7 +1883,8 @@ costs this much to be infeasible",
 				  columnNames, rowNames);
 		// Pass in array saying if each variable integer
 		writer.copyInIntegerInformation(model2->integerInformation());
-		writer.writeMps(fileName.c_str(),0,0,1);
+		writer.setObjectiveOffset(model2->objectiveOffset());
+		writer.writeMps(fileName.c_str(),0,1,1);
 		if (rowNames) {
 		  for (iRow=0;iRow<numberRows;iRow++) {
 		    free(rowNames[iRow]);
@@ -1894,6 +1895,9 @@ costs this much to be infeasible",
 		  }
 		  delete [] columnNames;
 		}
+#else
+		model2->writeMps(fileName.c_str(),2,2);
+#endif
 		if (deleteModel2)
 		  delete model2;
 		time2 = CoinCpuTime();

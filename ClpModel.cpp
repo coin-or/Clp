@@ -1751,8 +1751,9 @@ ClpModel::writeMps(const char *filename,
 		    columnNames, rowNames);
   // Pass in array saying if each variable integer
   writer.copyInIntegerInformation(integerInformation());
+  writer.setObjectiveOffset(objectiveOffset());
   delete [] objective;
-  return writer.writeMps(filename, 1 /*gzip it*/, formatType, numberAcross);
+  return writer.writeMps(filename, 0 /* do not gzip it*/, formatType, numberAcross);
   if (rowNames) {
     for (int iRow=0;iRow<numberRows_;iRow++) {
       free(rowNames[iRow]);
