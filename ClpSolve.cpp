@@ -23,10 +23,9 @@
 #ifdef CLP_IDIOT
 #include "Idiot.hpp"
 #endif
-
 //#############################################################################
 // Allow for interrupts
-// But is this threadsafe ? (so switched off by option)
+// But is this threadsafe ? (so switched off by option
 #include <csignal>
 static ClpSimplex * currentModel = NULL;
 static void signal_handler(int whichSignal)
@@ -35,6 +34,7 @@ static void signal_handler(int whichSignal)
     currentModel->setMaximumIterations(0); // stop at next iterations
   return;
 }
+
 /** General solve algorithm which can do presolve
     special options (bits)
     1 - do not perturb
@@ -58,7 +58,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
   ClpMatrixBase * saveMatrix=NULL;
   ClpSimplex * model2 = this;
   bool interrupt = (options.getSpecialOption(2)==0);
-  typeof(SIG_DFL) saveSignal=SIG_DFL;
+  sighandler_t saveSignal=SIG_DFL;
   if (interrupt) {
     currentModel = model2;
     // register signal handler

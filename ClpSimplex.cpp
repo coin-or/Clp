@@ -2195,13 +2195,74 @@ ClpSimplex::deleteRim(int getRidOfFactorizationData)
   }
   // ray may be null if in branch and bound
   if (rowScale_) {
+    // Collect infeasibilities
+    int numberPrimalScaled=0;
+    int numberPrimalUnscaled=0;
+    int numberDualScaled=0;
+    int numberDualUnscaled=0;
     for (i=0;i<numberColumns_;i++) {
-      columnActivity_[i] = columnActivityWork_[i]*columnScale_[i];
-      reducedCost_[i] = reducedCostWork_[i]/columnScale_[i];
+      double scaleFactor = columnScale_[i];
+      double valueScaled = columnActivityWork_[i];
+      if (valueScaled<columnLowerWork_[i]-primalTolerance_)
+	numberPrimalScaled++;
+      else if (valueScaled>columnUpperWork_[i]+primalTolerance_)
+	numberPrimalScaled++;
+      columnActivity_[i] = valueScaled*scaleFactor;
+      double value = columnActivity_[i];
+      if (value<columnLower_[i]-primalTolerance_)
+	numberPrimalUnscaled++;
+      else if (value>columnUpper_[i]+primalTolerance_)
+	numberPrimalUnscaled++;
+      double valueScaledDual = reducedCostWork_[i];
+      if (valueScaled>columnLowerWork_[i]+primalTolerance_&&valueScaledDual>dualTolerance_)
+	numberDualScaled++;
+      if (valueScaled<columnUpperWork_[i]-primalTolerance_&&valueScaledDual<-dualTolerance_)
+	numberDualScaled++;
+      reducedCost_[i] = valueScaledDual/scaleFactor;
+      double valueDual = reducedCost_[i];
+      if (value>columnLower_[i]+primalTolerance_&&valueDual>dualTolerance_)
+	numberDualUnscaled++;
+      if (value<columnUpper_[i]-primalTolerance_&&valueDual<-dualTolerance_)
+	numberDualUnscaled++;
     }
     for (i=0;i<numberRows_;i++) {
-      rowActivity_[i] = rowActivityWork_[i]/rowScale_[i];
-      dual_[i] *= rowScale_[i];
+      double scaleFactor = rowScale_[i];
+      double valueScaled = rowActivityWork_[i];
+      if (valueScaled<rowLowerWork_[i]-primalTolerance_)
+	numberPrimalScaled++;
+      else if (valueScaled>rowUpperWork_[i]+primalTolerance_)
+	numberPrimalScaled++;
+      rowActivity_[i] = valueScaled/scaleFactor;
+      double value = rowActivity_[i];
+      if (value<rowLower_[i]-primalTolerance_)
+	numberPrimalUnscaled++;
+      else if (value>rowUpper_[i]+primalTolerance_)
+	numberPrimalUnscaled++;
+      double valueScaledDual = dual_[i];
+      if (valueScaled>rowLowerWork_[i]+primalTolerance_&&valueScaledDual>dualTolerance_)
+	numberDualScaled++;
+      if (valueScaled<rowUpperWork_[i]-primalTolerance_&&valueScaledDual<-dualTolerance_)
+	numberDualScaled++;
+      dual_[i] = valueScaledDual*scaleFactor;
+      double valueDual = dual_[i]; 
+      if (value>rowLower_[i]+primalTolerance_&&valueDual>dualTolerance_)
+	numberDualUnscaled++;
+      if (value<rowUpper_[i]-primalTolerance_&&valueDual<-dualTolerance_)
+	numberDualUnscaled++;
+    }
+    if (!problemStatus_&&!secondaryStatus_) {
+      // See if we need to set secondary status
+      assert (!numberPrimalScaled);
+      assert (!numberDualScaled);
+      if (numberPrimalUnscaled) {
+	if (numberDualUnscaled) 
+	  secondaryStatus_=4;
+	else
+	  secondaryStatus_=2;
+      } else {
+	if (numberDualUnscaled) 
+	  secondaryStatus_=3;
+      }
     }
     if (problemStatus_==2) {
       for (i=0;i<numberColumns_;i++) {

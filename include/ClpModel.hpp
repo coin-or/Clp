@@ -193,6 +193,13 @@ public:
    /// Dual tolerance to use
    inline double dualTolerance() const  { return dblParam_[ClpDualTolerance]; }
    void setDualTolerance( double value) ;
+  /// Dual objective limit
+  inline double dualObjectiveLimit() const { return dblParam_[ClpDualObjectiveLimit];}
+  void setDualObjectiveLimit(double value);
+  /// Objective offset
+  inline double objectiveOffset() const { return dblParam_[ClpObjOffset];}
+  void setObjectiveOffset(double value);
+  inline std::string problemName() const { return strParam_[ClpProbName]; };
    /// Number of iterations
    inline int numberIterations() const  { return numberIterations_; }
    inline int getIterationCount() const { return numberIterations_; }
@@ -225,6 +232,9 @@ public:
    /** Secondary status of problem - may get extended
        0 - none
        1 - primal infeasible because dual limit reached
+       2 - scaled problem optimal - unscaled problem has primal infeasibilities
+       3 - scaled problem optimal - unscaled problem has dual infeasibilities
+       4 - scaled problem optimal - unscaled problem has primal and dual infeasibilities
    */
    inline int secondaryStatus() const            { return secondaryStatus_; }
   inline void setSecondaryStatus(int status)
@@ -374,7 +384,14 @@ public:
    CoinMessages messages() const                     { return messages_; }
    /// Return pointer to messages
    CoinMessages * messagesPointer()                  { return & messages_; }
-   /// Log level
+  /** Amount of print out:
+      0 - none
+      1 - just final
+      2 - just factorizations
+      3 - as 2 plus a bit more
+      4 - verbose
+      above that 8,16,32 etc just for selective debug
+  */
    void setLogLevel(int value)    { handler_->setLogLevel(value); }
    int logLevel() const           { return handler_->logLevel(); }
    /// length of names (0 means no names0

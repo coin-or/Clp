@@ -55,5 +55,6 @@ ClpObjective::subsetClone (int numberColumns,
 {
   std::cerr<<"subsetClone not supported - ClpObjective"<<std::endl;
   abort();
+  return NULL;
 }
 

@@ -355,7 +355,6 @@ ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
   sumInfeasibilities_ = 0.0;
   double primalTolerance = model_->currentPrimalTolerance();
   int iSequence;
-  bool fakeCosts=false;
   double * solution = model_->solutionRegion();
   double * upper = model_->upperRegion();
   double * lower = model_->lowerRegion();
@@ -376,18 +375,10 @@ ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
     double thisFeasibleCost=0.0;
     if (infeasible(start)) {
       thisFeasibleCost = cost_[start+1];
-      if (fakeCosts) {
-	thisFeasibleCost=0.0;
-	cost_[start+1]=0.0;
-      }
       cost_[start] = thisFeasibleCost-infeasibilityCost;
     }
     if (infeasible(end-1)) {
       thisFeasibleCost = cost_[end-2];
-      if (fakeCosts) {
-	thisFeasibleCost=0.0;
-	cost_[end-2]=0.0;
-      }
       cost_[end-1] = thisFeasibleCost+infeasibilityCost;
     }
     for (iRange=start; iRange<end;iRange++) {

@@ -90,6 +90,7 @@ ClpMatrixBase::subsetClone (
 {
   std::cerr<<"subsetClone not supported - ClpMatrixBase"<<std::endl;
   abort();
+  return NULL;
 }
 /* Given positive integer weights for each row fills in sum of weights
    for each column (and slack).

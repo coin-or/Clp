@@ -46,6 +46,7 @@ ClpModel::ClpModel () :
   ray_(NULL),
   status_(NULL),
   integerType_(NULL),
+  userPointer_(NULL),
   numberIterations_(0),
   solveType_(0),
   problemStatus_(-1),
@@ -323,6 +324,7 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
   secondaryStatus_ = rhs.secondaryStatus_;
   numberRows_ = rhs.numberRows_;
   numberColumns_ = rhs.numberColumns_;
+  userPointer_ = rhs.userPointer_;
   if (trueCopy) {
     lengthNames_ = rhs.lengthNames_;
     rowNames_ = rhs.rowNames_;
@@ -1360,6 +1362,7 @@ ClpModel::ClpModel ( const ClpModel * rhs,
     throw CoinError("bad column list", "subproblem constructor", "ClpModel");
   numberRows_ = numberRows;
   numberColumns_ = numberColumns;
+  userPointer_ = rhs->userPointer_;
   if (!dropNames) {
     unsigned int maxLength=0;
     int iRow;
@@ -1448,16 +1451,28 @@ ClpModel::copyNames(std::vector<std::string> & rowNames,
   columnNames_ = std::vector<std::string> ();
   rowNames_.reserve(numberRows_);
   for (iRow=0;iRow<numberRows_;iRow++) {
-    rowNames_[iRow] = rowNames[iRow];
+    rowNames_.push_back(rowNames[iRow]);
     maxLength = max(maxLength,(unsigned int) strlen(rowNames_[iRow].c_str()));
   }
   int iColumn;
   columnNames_.reserve(numberColumns_);
   for (iColumn=0;iColumn<numberColumns_;iColumn++) {
-    columnNames_[iColumn] = columnNames[iColumn];
+    columnNames_.push_back(columnNames[iColumn]);
     maxLength = max(maxLength,(unsigned int) strlen(columnNames_[iColumn].c_str()));
   }
   lengthNames_=(int) maxLength;
+}
+// Dual objective limit
+void 
+ClpModel::setDualObjectiveLimit(double value)
+{
+  dblParam_[ClpDualObjectiveLimit]=value;
+}
+// Objective offset
+void 
+ClpModel::setObjectiveOffset(double value)
+{
+  dblParam_[ClpObjOffset]=value;
 }
 //#############################################################################
 // Constructors / Destructor / Assignment
