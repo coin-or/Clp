@@ -393,6 +393,11 @@ public:
   //@{
    /// Pass in Message handler (not deleted at end)
    void passInMessageHandler(CoinMessageHandler * handler);
+  /// Pass in Message handler (not deleted at end) and return current
+  CoinMessageHandler * pushMessageHandler(CoinMessageHandler * handler,
+					  bool & oldDefault);
+  /// back to previous message handler
+  void popMessageHandler(CoinMessageHandler * oldHandler,bool oldDefault);
    /// Set language
    void newLanguage(CoinMessages::Language language);
    void setLanguage(CoinMessages::Language language) { newLanguage(language); }

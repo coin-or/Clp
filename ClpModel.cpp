@@ -1069,6 +1069,26 @@ ClpModel::passInMessageHandler(CoinMessageHandler * handler)
   defaultHandler_=false;
   handler_=handler;
 }
+// Pass in Message handler (not deleted at end) and return current
+CoinMessageHandler *
+ClpModel::pushMessageHandler(CoinMessageHandler * handler,
+			     bool & oldDefault)
+{
+  CoinMessageHandler * returnValue = handler_;
+  oldDefault = defaultHandler_;
+  defaultHandler_=false;
+  handler_=handler;
+  return returnValue;
+}
+// back to previous message handler
+void
+ClpModel::popMessageHandler(CoinMessageHandler * oldHandler,bool oldDefault)
+{
+  if (defaultHandler_)
+    delete handler_;
+  defaultHandler_=oldDefault;
+  handler_=oldHandler;
+}
 // Set language
 void 
 ClpModel::newLanguage(CoinMessages::Language language)
