@@ -5,7 +5,7 @@
 #include "OsiWarmStartBasis.hpp"
 #include "ClpPrimalColumnSteepest.hpp"
 #include "ClpDualRowSteepest.hpp"
-#include <iomanip.h>
+#include <iomanip>
 
 int main (int argc, const char *argv[])
 {
@@ -210,33 +210,33 @@ int main (int argc, const char *argv[])
 
   for (iRow=0;iRow<numberRows;iRow++) {
     double value;
-    std::cout<<setw(6)<<iRow<<" "<<setw(8)<<(*rowNames)[iRow];
+    std::cout<<std::setw(6)<<iRow<<" "<<std::setw(8)<<(*rowNames)[iRow];
     value = rowPrimal[iRow];
     if (fabs(value)<1.0e5)
-      std::cout<<setiosflags(ios::fixed|ios::showpoint)<<setw(14)<<value;
+      std::cout<<setiosflags(std::ios::fixed|std::ios::showpoint)<<std::setw(14)<<value;
     else
-      std::cout<<setiosflags(ios::scientific)<<setw(14)<<value;
+      std::cout<<setiosflags(std::ios::scientific)<<std::setw(14)<<value;
     value = rowDual[iRow];
     if (fabs(value)<1.0e5)
-      std::cout<<setiosflags(ios::fixed|ios::showpoint)<<setw(14)<<value;
+      std::cout<<setiosflags(std::ios::fixed|std::ios::showpoint)<<std::setw(14)<<value;
     else
-      std::cout<<setiosflags(ios::scientific)<<setw(14)<<value;
+      std::cout<<setiosflags(std::ios::scientific)<<std::setw(14)<<value;
     value = rowLower[iRow];
     if (fabs(value)<1.0e5)
-      std::cout<<setiosflags(ios::fixed|ios::showpoint)<<setw(14)<<value;
+      std::cout<<setiosflags(std::ios::fixed|std::ios::showpoint)<<std::setw(14)<<value;
     else
-      std::cout<<setiosflags(ios::scientific)<<setw(14)<<value;
+      std::cout<<setiosflags(std::ios::scientific)<<std::setw(14)<<value;
     value = rowUpper[iRow];
     if (fabs(value)<1.0e5)
-      std::cout<<setiosflags(ios::fixed|ios::showpoint)<<setw(14)<<value;
+      std::cout<<setiosflags(std::ios::fixed|std::ios::showpoint)<<std::setw(14)<<value;
     else
-      std::cout<<setiosflags(ios::scientific)<<setw(14)<<value;
+      std::cout<<setiosflags(std::ios::scientific)<<std::setw(14)<<value;
     if (rowObjective) {
       value = rowObjective[iRow];
       if (fabs(value)<1.0e5)
-	std::cout<<setiosflags(ios::fixed|ios::showpoint)<<setw(14)<<value;
+	std::cout<<setiosflags(std::ios::fixed|std::ios::showpoint)<<std::setw(14)<<value;
       else
-	std::cout<<setiosflags(ios::scientific)<<setw(14)<<value;
+	std::cout<<setiosflags(std::ios::scientific)<<std::setw(14)<<value;
     }
     std::cout<<std::endl;
   }
@@ -271,38 +271,38 @@ int main (int argc, const char *argv[])
 
   for (iColumn=0;iColumn<numberColumns;iColumn++) {
     double value;
-    std::cout<<setw(6)<<iColumn<<" "<<setw(8)<<(*columnNames)[iColumn];
+    std::cout<<std::setw(6)<<iColumn<<" "<<std::setw(8)<<(*columnNames)[iColumn];
     value = columnPrimal[iColumn];
     if (fabs(value)<1.0e5)
-      std::cout<<setiosflags(ios::fixed|ios::showpoint)<<setw(14)<<value;
+      std::cout<<setiosflags(std::ios::fixed|std::ios::showpoint)<<std::setw(14)<<value;
     else
-      std::cout<<setiosflags(ios::scientific)<<setw(14)<<value;
+      std::cout<<setiosflags(std::ios::scientific)<<std::setw(14)<<value;
     value = columnDual[iColumn];
     if (fabs(value)<1.0e5)
-      std::cout<<setiosflags(ios::fixed|ios::showpoint)<<setw(14)<<value;
+      std::cout<<setiosflags(std::ios::fixed|std::ios::showpoint)<<std::setw(14)<<value;
     else
-      std::cout<<setiosflags(ios::scientific)<<setw(14)<<value;
+      std::cout<<setiosflags(std::ios::scientific)<<std::setw(14)<<value;
     value = columnLower[iColumn];
     if (fabs(value)<1.0e5)
-      std::cout<<setiosflags(ios::fixed|ios::showpoint)<<setw(14)<<value;
+      std::cout<<setiosflags(std::ios::fixed|std::ios::showpoint)<<std::setw(14)<<value;
     else
-      std::cout<<setiosflags(ios::scientific)<<setw(14)<<value;
+      std::cout<<setiosflags(std::ios::scientific)<<std::setw(14)<<value;
     value = columnUpper[iColumn];
     if (fabs(value)<1.0e5)
-      std::cout<<setiosflags(ios::fixed|ios::showpoint)<<setw(14)<<value;
+      std::cout<<setiosflags(std::ios::fixed|std::ios::showpoint)<<std::setw(14)<<value;
     else
-      std::cout<<setiosflags(ios::scientific)<<setw(14)<<value;
+      std::cout<<setiosflags(std::ios::scientific)<<std::setw(14)<<value;
     value = columnObjective[iColumn];
     if (fabs(value)<1.0e5)
-      std::cout<<setiosflags(ios::fixed|ios::showpoint)<<setw(14)<<value;
+      std::cout<<setiosflags(std::ios::fixed|std::ios::showpoint)<<std::setw(14)<<value;
     else
-      std::cout<<setiosflags(ios::scientific)<<setw(14)<<value;
+      std::cout<<setiosflags(std::ios::scientific)<<std::setw(14)<<value;
 
     std::cout<<std::endl;
   }
   std::cout<<"--------------------------------------"<<std::endl;
 
-  std::cout<<resetiosflags(ios::fixed|ios::showpoint|ios::scientific);
+  std::cout<<resetiosflags(std::ios::fixed|std::ios::showpoint|std::ios::scientific);
 
   // Now matrix
   OsiPackedMatrix * matrix = model2.matrix();
