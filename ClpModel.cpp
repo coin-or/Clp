@@ -55,6 +55,7 @@ ClpModel::ClpModel () :
   userPointer_(NULL),
   numberIterations_(0),
   solveType_(0),
+  whatsChanged_(0),
   problemStatus_(-1),
   secondaryStatus_(0),
   lengthNames_(0),
@@ -128,6 +129,7 @@ void ClpModel::gutsOfDelete()
   status_=NULL;
   delete eventHandler_;
   eventHandler_=NULL;
+  whatsChanged_=0;
 }
 //#############################################################################
 void ClpModel::setPrimalTolerance( double value) 
@@ -207,6 +209,7 @@ void ClpModel::setRowObjective(const double * rowObjective)
 {
   delete [] rowObjective_;
   rowObjective_=ClpCopyOfArray(rowObjective,numberRows_);
+  whatsChanged_=0;
 }
 void
 ClpModel::loadProblem (  const ClpMatrixBase& matrix,
@@ -312,6 +315,7 @@ ClpModel::setObjectiveCoefficient( int elementIndex, double elementValue )
   }
 #endif
   objective()[elementIndex] = elementValue;
+  whatsChanged_ = 0; // Can't be sure (use ClpSimplex to keep)
 }
 /* Set a single row lower bound<br>
    Use -DBL_MAX for -infinity. */
@@ -320,6 +324,7 @@ ClpModel::setRowLower( int elementIndex, double elementValue ) {
   if (elementValue<-1.0e27)
     elementValue=-COIN_DBL_MAX;
   rowLower_[elementIndex] = elementValue;
+  whatsChanged_ = 0; // Can't be sure (use ClpSimplex to keep)
 }
       
 /* Set a single row upper bound<br>
@@ -329,6 +334,7 @@ ClpModel::setRowUpper( int elementIndex, double elementValue ) {
   if (elementValue>1.0e27)
     elementValue=COIN_DBL_MAX;
   rowUpper_[elementIndex] = elementValue;
+  whatsChanged_ = 0; // Can't be sure (use ClpSimplex to keep)
 }
     
 /* Set a single row lower and upper bound */
@@ -342,6 +348,7 @@ ClpModel::setRowBounds( int elementIndex,
   assert (upper>=lower);
   rowLower_[elementIndex] = lower;
   rowUpper_[elementIndex] = upper;
+  whatsChanged_ = 0; // Can't be sure (use ClpSimplex to keep)
 }
 void ClpModel::setRowSetBounds(const int* indexFirst,
 					    const int* indexLast,
@@ -352,6 +359,7 @@ void ClpModel::setRowSetBounds(const int* indexFirst,
 #endif
   double * lower = rowLower_;
   double * upper = rowUpper_;
+  whatsChanged_ = 0; // Can't be sure (use ClpSimplex to keep)
   while (indexFirst != indexLast) {
     const int iRow=*indexFirst++;
 #ifndef NDEBUG
@@ -383,6 +391,7 @@ ClpModel::setColumnLower( int elementIndex, double elementValue )
   if (elementValue<-1.0e27)
     elementValue=-COIN_DBL_MAX;
   columnLower_[elementIndex] = elementValue;
+  whatsChanged_ = 0; // Can't be sure (use ClpSimplex to keep)
 }
       
 /* Set a single column upper bound<br>
@@ -399,6 +408,7 @@ ClpModel::setColumnUpper( int elementIndex, double elementValue )
   if (elementValue>1.0e27)
     elementValue=COIN_DBL_MAX;
   columnUpper_[elementIndex] = elementValue;
+  whatsChanged_ = 0; // Can't be sure (use ClpSimplex to keep)
 }
 
 /* Set a single column lower and upper bound */
@@ -419,6 +429,7 @@ ClpModel::setColumnBounds( int elementIndex,
   columnLower_[elementIndex] = lower;
   columnUpper_[elementIndex] = upper;
   assert (upper>=lower);
+  whatsChanged_ = 0; // Can't be sure (use ClpSimplex to keep)
 }
 void ClpModel::setColumnSetBounds(const int* indexFirst,
 					    const int* indexLast,
@@ -426,6 +437,7 @@ void ClpModel::setColumnSetBounds(const int* indexFirst,
 {
   double * lower = columnLower_;
   double * upper = columnUpper_;
+  whatsChanged_ = 0; // Can't be sure (use ClpSimplex to keep)
 #ifndef NDEBUG
   int n = numberColumns_;
 #endif
@@ -522,6 +534,7 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
   rhsScale_ = rhs.rhsScale_;
   numberIterations_ = rhs.numberIterations_;
   solveType_ = rhs.solveType_;
+  whatsChanged_ = rhs.whatsChanged_;
   problemStatus_ = rhs.problemStatus_;
   secondaryStatus_ = rhs.secondaryStatus_;
   numberRows_ = rhs.numberRows_;
@@ -822,6 +835,7 @@ void
 ClpModel::createEmptyMatrix()
 {
   delete matrix_;
+  whatsChanged_ = 0;
   CoinPackedMatrix matrix2;
   matrix_=new ClpPackedMatrix(matrix2);
 }
@@ -829,6 +843,10 @@ ClpModel::createEmptyMatrix()
 void 
 ClpModel::resize (int newNumberRows, int newNumberColumns)
 {
+  if (newNumberRows==numberRows_&&
+      newNumberColumns==numberColumns_)
+    return; // nothing to do
+  whatsChanged_ = 0;
   rowActivity_ = resizeDouble(rowActivity_,numberRows_,
 			      newNumberRows,0.0,true);
   dual_ = resizeDouble(dual_,numberRows_,
@@ -912,6 +930,9 @@ ClpModel::resize (int newNumberRows, int newNumberColumns)
 void 
 ClpModel::deleteRows(int number, const int * which)
 {
+  if (!number)
+    return; // nothing to do
+  whatsChanged_ &= ~(1+2+4+8+16+32); // all except columns changed
   int newSize=0;
   rowActivity_ = deleteDouble(rowActivity_,numberRows_,
 			      number, which, newSize);
@@ -980,6 +1001,9 @@ ClpModel::deleteRows(int number, const int * which)
 void 
 ClpModel::deleteColumns(int number, const int * which)
 {
+  if (!number)
+    return; // nothing to do
+  whatsChanged_ &= ~(1+2+4+8+64+128+256); // all except rows changed
   int newSize=0;
   columnActivity_ = deleteDouble(columnActivity_,numberColumns_,
 			      number, which, newSize);
@@ -1067,6 +1091,7 @@ ClpModel::addRows(int number, const double * rowLower,
 {
   // Create a list of CoinPackedVectors
   if (number) {
+    whatsChanged_ &= ~(1+2+8+16+32); // all except columns changed
     CoinPackedVectorBase ** rows=
       new CoinPackedVectorBase * [number];
     int iRow;
@@ -1097,6 +1122,7 @@ ClpModel::addRows(int number, const double * rowLower,
 {
   // Create a list of CoinPackedVectors
   if (number) {
+    whatsChanged_ &= ~(1+2+8+16+32); // all except columns changed
     CoinPackedVectorBase ** rows=
       new CoinPackedVectorBase * [number];
     int iRow;
@@ -1124,6 +1150,7 @@ ClpModel::addRows(int number, const double * rowLower,
 {
   if (!number)
     return;
+  whatsChanged_ &= ~(1+2+8+16+32); // all except columns changed
   int numberRowsNow = numberRows_;
   resize(numberRowsNow+number,numberColumns_);
   double * lower = rowLower_+numberRowsNow;
@@ -1175,6 +1202,7 @@ ClpModel::addColumns(int number, const double * columnLower,
 {
   // Create a list of CoinPackedVectors
   if (number) {
+    whatsChanged_ &= ~(1+2+4+64+128+256); // all except rows changed
     CoinPackedVectorBase ** columns=
       new CoinPackedVectorBase * [number];
     int iColumn;
@@ -1207,6 +1235,7 @@ ClpModel::addColumns(int number, const double * columnLower,
 {
   // Create a list of CoinPackedVectors
   if (number) {
+    whatsChanged_ &= ~(1+2+4+64+128+256); // all except rows changed
     CoinPackedVectorBase ** columns=
       new CoinPackedVectorBase * [number];
     int iColumn;
@@ -1236,6 +1265,7 @@ ClpModel::addColumns(int number, const double * columnLower,
 {
   if (!number)
     return;
+  whatsChanged_ &= ~(1+2+4+64+128+256); // all except rows changed
   int numberColumnsNow = numberColumns_;
   resize(numberRows_,numberColumnsNow+number);
   double * lower = columnLower_+numberColumnsNow;
@@ -1293,6 +1323,7 @@ ClpModel::chgRowLower(const double * rowLower)
 {
   int numberRows = numberRows_;
   int iRow;
+  whatsChanged_ = 0; // Use ClpSimplex stuff to keep
   if (rowLower) {
     for (iRow = 0; iRow < numberRows; iRow++) {
       double value = rowLower[iRow];
@@ -1310,6 +1341,7 @@ ClpModel::chgRowLower(const double * rowLower)
 void 
 ClpModel::chgRowUpper(const double * rowUpper) 
 {
+  whatsChanged_ = 0; // Use ClpSimplex stuff to keep
   int numberRows = numberRows_;
   int iRow;
   if (rowUpper) {
@@ -1329,6 +1361,7 @@ ClpModel::chgRowUpper(const double * rowUpper)
 void 
 ClpModel::chgColumnLower(const double * columnLower) 
 {
+  whatsChanged_ = 0; // Use ClpSimplex stuff to keep
   int numberColumns = numberColumns_;
   int iColumn;
   if (columnLower) {
@@ -1348,6 +1381,7 @@ ClpModel::chgColumnLower(const double * columnLower)
 void 
 ClpModel::chgColumnUpper(const double * columnUpper) 
 {
+  whatsChanged_ = 0; // Use ClpSimplex stuff to keep
   int numberColumns = numberColumns_;
   int iColumn;
   if (columnUpper) {
@@ -1367,6 +1401,7 @@ ClpModel::chgColumnUpper(const double * columnUpper)
 void 
 ClpModel::chgObjCoefficients(const double * objIn) 
 {
+  whatsChanged_ = 0; // Use ClpSimplex stuff to keep
   double * obj = objective();
   int numberColumns = numberColumns_;
   int iColumn;
@@ -1639,6 +1674,7 @@ void
 ClpModel::loadQuadraticObjective(const int numberColumns, const CoinBigIndex * start,
 			      const int * column, const double * element)
 {
+  whatsChanged_ = 0; // Use ClpSimplex stuff to keep
   assert (numberColumns==numberColumns_);
   assert ((dynamic_cast< ClpLinearObjective*>(objective_)));
   double offset;
@@ -1652,6 +1688,7 @@ ClpModel::loadQuadraticObjective(const int numberColumns, const CoinBigIndex * s
 void 
 ClpModel::loadQuadraticObjective (  const CoinPackedMatrix& matrix)
 {
+  whatsChanged_ = 0; // Use ClpSimplex stuff to keep
   assert (matrix.getNumCols()==numberColumns_);
   assert ((dynamic_cast< ClpLinearObjective*>(objective_)));
   double offset;
@@ -1667,6 +1704,7 @@ ClpModel::loadQuadraticObjective (  const CoinPackedMatrix& matrix)
 void 
 ClpModel::deleteQuadraticObjective()
 {
+  whatsChanged_ = 0; // Use ClpSimplex stuff to keep
   ClpQuadraticObjective * obj = (dynamic_cast< ClpQuadraticObjective*>(objective_));
   if (obj)
     obj->deleteQuadraticObjective();
@@ -1674,6 +1712,7 @@ ClpModel::deleteQuadraticObjective()
 void 
 ClpModel::setObjective(ClpObjective * objective)
 {
+  whatsChanged_ = 0; // Use ClpSimplex stuff to keep
   delete objective_;
   objective_=objective->clone();
 }
@@ -1719,6 +1758,7 @@ ClpModel::replaceMatrix( ClpMatrixBase * matrix,bool deleteCurrent)
   if (deleteCurrent)
     delete matrix_;
   matrix_=matrix;
+  whatsChanged_ = 0; // Too big a change
 }
 // Subproblem constructor
 ClpModel::ClpModel ( const ClpModel * rhs,
@@ -1753,6 +1793,7 @@ ClpModel::ClpModel ( const ClpModel * rhs,
   rhsScale_ = rhs->rhsScale_;
   numberIterations_ = rhs->numberIterations_;
   solveType_ = rhs->solveType_;
+  whatsChanged_ = 0; // Too big a change
   problemStatus_ = rhs->problemStatus_;
   secondaryStatus_ = rhs->secondaryStatus_;
   // check valid lists

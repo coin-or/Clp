@@ -737,6 +737,21 @@ protected:
   int numberIterations_;
   /** Solve type - 1 simplex, 2 simplex interface, 3 Interior.*/
   int solveType_;
+  /** Whats changed since last solve.  This is a work in progress
+      It is designed so careful people can make go faster.
+      It is only used when startFinishOptions used in dual or primal.
+      Bit 1 - number of rows/columns has not changed (so work arrays valid)
+          2 - matrix has not changed
+          4 - if matrix has changed only by adding rows
+          8 - if matrix has changed only by adding columns
+         16 - row lbs not changed
+         32 - row ubs not changed
+         64 - column objective not changed
+        128 - column lbs not changed
+        256 - column ubs not changed
+	      top bits may be used internally
+  */
+  unsigned int whatsChanged_;
   /// Status of problem
   int problemStatus_;
   /// Secondary status of problem

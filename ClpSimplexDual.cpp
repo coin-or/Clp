@@ -226,7 +226,7 @@ int ClpSimplexDual::dual (int ifValuesPass , int startFinishOptions)
   // If problem looks okay
   // Do initial factorization
   // If user asked for perturbation - do it
-  if (!startup(0)) {
+  if (!startup(0,startFinishOptions)) {
     // looks okay
     // Superbasic variables not allowed
     // If values pass then scale pi 
@@ -310,6 +310,7 @@ int ClpSimplexDual::dual (int ifValuesPass , int startFinishOptions)
     }
 	
     // This says whether to restore things etc
+    // startup will have factorized so can skip
     int factorType=0;
     // Start check for cycles
     progress_->startCheck();
@@ -409,8 +410,7 @@ int ClpSimplexDual::dual (int ifValuesPass , int startFinishOptions)
   assert (problemStatus_||!sumPrimalInfeasibilities_);
 
   // clean up
-  if (!startFinishOptions)
-    finish();
+  finish(startFinishOptions);
   delete [] saveDuals;
 
   // Restore any saved stuff
@@ -3645,7 +3645,7 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
 
   // put in standard form (and make row copy)
   // create modifiable copies of model rim and do optional scaling
-  createRim(7+8+16,true);
+  createRim(7+8+16+32,true);
 
   // change newLower and newUpper if scaled
 

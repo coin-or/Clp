@@ -188,7 +188,7 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
   // Save so can see if doing after dual
   int initialStatus=problemStatus_;
   // initialize - maybe values pass and algorithm_ is +1
-  if (!startup(ifValuesPass)) {
+  if (!startup(ifValuesPass,startFinishOptions)) {
     
     // Set average theta
     nonLinearCost_->setAverageTheta(1.0e3);
@@ -421,8 +421,7 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
   }
   // clean up
   unflag();
-  if (!startFinishOptions)
-    finish();
+  finish(startFinishOptions);
   restoreData(data);
   return problemStatus_;
 }

@@ -170,11 +170,27 @@ public:
   /// Primal initial solve
   int initialPrimalSolve();
   /** Dual algorithm - see ClpSimplexDual.hpp for method.
-      ifValuesPass==2 just does values pass and then stops */
-  int dual(int ifValuesPass=0);
+      ifValuesPass==2 just does values pass and then stops.
+
+      startFinishOptions - bits
+      1 - do not delete work areas and factorization at end
+      2 - use old factorization if same number of rows
+      4 - skip as much initialization of work areas as possible
+          (based on whatsChanged in clpmodel.hpp) ** work in progress
+      maybe other bits later
+  */
+  int dual(int ifValuesPass=0, int startFinishOptions=0);
   /** Primal algorithm - see ClpSimplexPrimal.hpp for method.
-      ifValuesPass==2 just does values pass and then stops */
-  int primal(int ifValuesPass=0);
+      ifValuesPass==2 just does values pass and then stops.
+
+      startFinishOptions - bits
+      1 - do not delete work areas and factorization at end
+      2 - use old factorization if same number of rows
+      4 - skip as much initialization of work areas as possible
+          (based on whatsChanged in clpmodel.hpp) ** work in progress
+      maybe other bits later
+  */
+  int primal(int ifValuesPass=0, int startFinishOptions=0);
   /** Solves nonlinear problem using SLP - may be used as crash
       for other algorithms when number of iterations small.
       Also exits if all problematical variables are changing
@@ -287,11 +303,19 @@ public:
   */
   int dualPivotResult();
 
-  /** Common bits of coding for dual and primal.  Return s0 if okay,
+  /** Common bits of coding for dual and primal.  Return 0 if okay,
       1 if bad matrix, 2 if very bad factorization
+
+      startFinishOptions - bits
+      1 - do not delete work areas and factorization at end
+      2 - use old factorization if same number of rows
+      4 - skip as much initialization of work areas as possible
+          (based on whatsChanged in clpmodel.hpp) ** work in progress
+      maybe other bits later
+      
   */
-  int startup(int ifValuesPass);
-  void finish();
+  int startup(int ifValuesPass,int startFinishOptions=0);
+  void finish(int startFinishOptions=0);
   
   /** Factorizes and returns true if optimal.  Used by user */
   bool statusOfProblem(bool initial=false);
@@ -807,12 +831,118 @@ public:
       64 -Treat problem as feasible until last minute (i.e. minimize infeasibilities)
       128 - Switch off all matrix sanity checks
       256 - No row copy
+      512 - Not values pass, solution guaranteed, skip as much as possible
   */
   inline unsigned int specialOptions() const
   { return specialOptions_;};
   inline void setSpecialOptions(unsigned int value)
   { specialOptions_=value;};
   //@}
+
+  ///@name Basis handling 
+  // These are only to be used using startFinishOptions (ClpSimplexDual, ClpSimplexPrimal)
+  // *** At present only without scaling
+  // *** Slacks havve -1.0 element (so == row activity) - take care
+  ///Get a row of the tableau (slack part in slack if not NULL)
+  void getBInvARow(int row, double* z, double * slack=NULL);
+  
+  ///Get a row of the basis inverse
+  void getBInvRow(int row, double* z);
+  
+  ///Get a column of the tableau
+  void getBInvACol(int col, double* vec);
+  
+  ///Get a column of the basis inverse
+  void getBInvCol(int col, double* vec);
+  
+  /** Get basic indices (order of indices corresponds to the
+      order of elements in a vector retured by getBInvACol() and
+      getBInvCol()).
+  */
+  void getBasics(int* index);
+  
+  //@}
+    //-------------------------------------------------------------------------
+    /**@name Changing bounds on variables and constraints */
+    //@{
+       /** Set an objective function coefficient */
+       void setObjectiveCoefficient( int elementIndex, double elementValue );
+       /** Set an objective function coefficient */
+       inline void setObjCoeff( int elementIndex, double elementValue )
+       { setObjectiveCoefficient( elementIndex, elementValue);};
+
+      /** Set a single column lower bound<br>
+    	  Use -DBL_MAX for -infinity. */
+       void setColumnLower( int elementIndex, double elementValue );
+      
+      /** Set a single column upper bound<br>
+    	  Use DBL_MAX for infinity. */
+       void setColumnUpper( int elementIndex, double elementValue );
+
+      /** Set a single column lower and upper bound */
+      void setColumnBounds( int elementIndex,
+	double lower, double upper );
+
+      /** Set the bounds on a number of columns simultaneously<br>
+    	  The default implementation just invokes setColLower() and
+    	  setColUpper() over and over again.
+    	  @param indexFirst,indexLast pointers to the beginning and after the
+	         end of the array of the indices of the variables whose
+		 <em>either</em> bound changes
+    	  @param boundList the new lower/upper bound pairs for the variables
+      */
+      void setColumnSetBounds(const int* indexFirst,
+				   const int* indexLast,
+				   const double* boundList);
+      
+      /** Set a single column lower bound<br>
+    	  Use -DBL_MAX for -infinity. */
+       inline void setColLower( int elementIndex, double elementValue )
+       { setColumnLower(elementIndex, elementValue);};
+      /** Set a single column upper bound<br>
+    	  Use DBL_MAX for infinity. */
+       inline void setColUpper( int elementIndex, double elementValue )
+       { setColumnUpper(elementIndex, elementValue);};
+
+      /** Set a single column lower and upper bound */
+      inline void setColBounds( int elementIndex,
+	double lower, double upper )
+       { setColumnBounds(elementIndex, lower, upper);};
+
+      /** Set the bounds on a number of columns simultaneously<br>
+    	  @param indexFirst,indexLast pointers to the beginning and after the
+	         end of the array of the indices of the variables whose
+		 <em>either</em> bound changes
+    	  @param boundList the new lower/upper bound pairs for the variables
+      */
+      inline void setColSetBounds(const int* indexFirst,
+				   const int* indexLast,
+				   const double* boundList)
+      { setColumnSetBounds(indexFirst, indexLast, boundList);};
+      
+      /** Set a single row lower bound<br>
+    	  Use -DBL_MAX for -infinity. */
+      void setRowLower( int elementIndex, double elementValue );
+      
+      /** Set a single row upper bound<br>
+    	  Use DBL_MAX for infinity. */
+      void setRowUpper( int elementIndex, double elementValue ) ;
+    
+      /** Set a single row lower and upper bound */
+      void setRowBounds( int elementIndex,
+    				 double lower, double upper ) ;
+    
+      /** Set the bounds on a number of rows simultaneously<br>
+    	  @param indexFirst,indexLast pointers to the beginning and after the
+	         end of the array of the indices of the constraints whose
+		 <em>either</em> bound changes
+    	  @param boundList the new lower/upper bound pairs for the constraints
+      */
+      void setRowSetBounds(const int* indexFirst,
+    				   const int* indexLast,
+    				   const double* boundList);
+    
+    //@}
 
 ////////////////// data //////////////////
 protected:

@@ -111,6 +111,7 @@ public:
      different implications of scaling for accuracy, iteration count and
      feasibility tolerance.
 
+     for use of exotic parameter startFinishoptions see Clpsimplex.hpp
   */
 
   int dual(int ifValuesPass,int startFinishOptions=0);
