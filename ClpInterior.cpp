@@ -76,20 +76,28 @@ ClpInterior::ClpInterior () :
   maximumRHSChange_(0.0),
   errorRegion_(NULL),
   rhsFixRegion_(NULL),
-  updateRegion_(NULL),
   upperSlack_(NULL),
   lowerSlack_(NULL),
   diagonal_(NULL),
-  weights_(NULL),
   solution_(NULL),
+  workArray_(NULL),
+  deltaX_(NULL),
+  deltaY_(NULL),
   deltaZ_(NULL),
-  deltaW_(NULL),
-  deltaS_(NULL),
   deltaT_(NULL),
+  deltaSU_(NULL),
+  deltaSL_(NULL),
+  rhsB_(NULL),
+  rhsU_(NULL),
+  rhsL_(NULL),
+  rhsZ_(NULL),
+  rhsT_(NULL),
+  rhsC_(NULL),
   zVec_(NULL),
-  wVec_(NULL),
+  tVec_(NULL),
   cholesky_(NULL),
   numberComplementarityPairs_(0),
+  numberComplementarityItems_(0),
   maximumBarrierIterations_(200),
   gonePrimalFeasible_(false),
   goneDualFeasible_(false),
@@ -153,20 +161,28 @@ ClpInterior::ClpInterior ( const ClpModel * rhs,
     maximumRHSChange_(0.0),
     errorRegion_(NULL),
     rhsFixRegion_(NULL),
-    updateRegion_(NULL),
     upperSlack_(NULL),
     lowerSlack_(NULL),
     diagonal_(NULL),
-    weights_(NULL),
     solution_(NULL),
+    workArray_(NULL),
+    deltaX_(NULL),
+    deltaY_(NULL),
     deltaZ_(NULL),
-    deltaW_(NULL),
-    deltaS_(NULL),
     deltaT_(NULL),
+    deltaSU_(NULL),
+    deltaSL_(NULL),
+    rhsB_(NULL),
+    rhsU_(NULL),
+    rhsL_(NULL),
+    rhsZ_(NULL),
+    rhsT_(NULL),
+    rhsC_(NULL),
     zVec_(NULL),
-    wVec_(NULL),
+    tVec_(NULL),
     cholesky_(NULL),
     numberComplementarityPairs_(0),
+    numberComplementarityItems_(0),
     maximumBarrierIterations_(200),
     gonePrimalFeasible_(false),
     goneDualFeasible_(false),
@@ -218,18 +234,25 @@ ClpInterior::ClpInterior(const ClpInterior &rhs) :
   pdcoStuff_(NULL),
   errorRegion_(NULL),
   rhsFixRegion_(NULL),
-  updateRegion_(NULL),
   upperSlack_(NULL),
   lowerSlack_(NULL),
   diagonal_(NULL),
-  weights_(NULL),
   solution_(NULL),
+  workArray_(NULL),
+  deltaX_(NULL),
+  deltaY_(NULL),
   deltaZ_(NULL),
-  deltaW_(NULL),
-  deltaS_(NULL),
   deltaT_(NULL),
+  deltaSU_(NULL),
+  deltaSL_(NULL),
+  rhsB_(NULL),
+  rhsU_(NULL),
+  rhsL_(NULL),
+  rhsZ_(NULL),
+  rhsT_(NULL),
+  rhsC_(NULL),
   zVec_(NULL),
-  wVec_(NULL),
+  tVec_(NULL),
   cholesky_(NULL)
 {
   gutsOfDelete();
@@ -285,20 +308,28 @@ ClpInterior::ClpInterior(const ClpModel &rhs) :
   maximumRHSChange_(0.0),
   errorRegion_(NULL),
   rhsFixRegion_(NULL),
-  updateRegion_(NULL),
   upperSlack_(NULL),
   lowerSlack_(NULL),
   diagonal_(NULL),
-  weights_(NULL),
   solution_(NULL),
+  workArray_(NULL),
+  deltaX_(NULL),
+  deltaY_(NULL),
   deltaZ_(NULL),
-  deltaW_(NULL),
-  deltaS_(NULL),
   deltaT_(NULL),
+  deltaSU_(NULL),
+  deltaSL_(NULL),
+  rhsB_(NULL),
+  rhsU_(NULL),
+  rhsL_(NULL),
+  rhsZ_(NULL),
+  rhsT_(NULL),
+  rhsC_(NULL),
   zVec_(NULL),
-  wVec_(NULL),
+  tVec_(NULL),
   cholesky_(NULL),
   numberComplementarityPairs_(0),
+  numberComplementarityItems_(0),
   maximumBarrierIterations_(200),
   gonePrimalFeasible_(false),
   goneDualFeasible_(false),
@@ -372,20 +403,28 @@ ClpInterior::gutsOfCopy(const ClpInterior & rhs)
   maximumRHSChange_ = rhs.maximumRHSChange_;
   errorRegion_ = ClpCopyOfArray(rhs.errorRegion_,numberRows_);
   rhsFixRegion_ = ClpCopyOfArray(rhs.rhsFixRegion_,numberRows_);
-  updateRegion_ = ClpCopyOfArray(rhs.updateRegion_,numberRows_);
+  deltaY_ = ClpCopyOfArray(rhs.deltaY_,numberRows_);
   upperSlack_ = ClpCopyOfArray(rhs.upperSlack_,numberRows_+numberColumns_);
   lowerSlack_ = ClpCopyOfArray(rhs.lowerSlack_,numberRows_+numberColumns_);
   diagonal_ = ClpCopyOfArray(rhs.diagonal_,numberRows_+numberColumns_);
-  weights_ = ClpCopyOfArray(rhs.weights_,numberRows_+numberColumns_);
-  solution_ = ClpCopyOfArray(rhs.solution_,numberRows_+numberColumns_);
+  deltaX_ = ClpCopyOfArray(rhs.deltaX_,numberRows_+numberColumns_);
   deltaZ_ = ClpCopyOfArray(rhs.deltaZ_,numberRows_+numberColumns_);
-  deltaW_ = ClpCopyOfArray(rhs.deltaW_,numberRows_+numberColumns_);
-  deltaS_ = ClpCopyOfArray(rhs.deltaS_,numberRows_+numberColumns_);
   deltaT_ = ClpCopyOfArray(rhs.deltaT_,numberRows_+numberColumns_);
+  deltaSU_ = ClpCopyOfArray(rhs.deltaSU_,numberRows_+numberColumns_);
+  deltaSL_ = ClpCopyOfArray(rhs.deltaSL_,numberRows_+numberColumns_);
+  rhsB_ = ClpCopyOfArray(rhs.rhsB_,numberRows_);
+  rhsU_ = ClpCopyOfArray(rhs.rhsU_,numberRows_+numberColumns_);
+  rhsL_ = ClpCopyOfArray(rhs.rhsL_,numberRows_+numberColumns_);
+  rhsZ_ = ClpCopyOfArray(rhs.rhsZ_,numberRows_+numberColumns_);
+  rhsT_ = ClpCopyOfArray(rhs.rhsT_,numberRows_+numberColumns_);
+  rhsC_ = ClpCopyOfArray(rhs.rhsC_,numberRows_+numberColumns_);
+  solution_ = ClpCopyOfArray(rhs.solution_,numberRows_+numberColumns_);
+  workArray_ = ClpCopyOfArray(rhs.workArray_,numberRows_+numberColumns_);
   zVec_ = ClpCopyOfArray(rhs.zVec_,numberRows_+numberColumns_);
-  wVec_ = ClpCopyOfArray(rhs.wVec_,numberRows_+numberColumns_);
+  tVec_ = ClpCopyOfArray(rhs.tVec_,numberRows_+numberColumns_);
   cholesky_ = rhs.cholesky_->clone();
   numberComplementarityPairs_ = rhs.numberComplementarityPairs_;
+  numberComplementarityItems_ = rhs.numberComplementarityItems_;
   maximumBarrierIterations_ = rhs.maximumBarrierIterations_;
   gonePrimalFeasible_ = rhs.gonePrimalFeasible_;
   goneDualFeasible_ = rhs.goneDualFeasible_;
@@ -423,30 +462,44 @@ ClpInterior::gutsOfDelete()
   errorRegion_ = NULL;
   delete [] rhsFixRegion_;
   rhsFixRegion_ = NULL;
-  delete [] updateRegion_;
-  updateRegion_ = NULL;
+  delete [] deltaY_;
+  deltaY_ = NULL;
   delete [] upperSlack_;
   upperSlack_ = NULL;
   delete [] lowerSlack_;
   lowerSlack_ = NULL;
   delete [] diagonal_;
   diagonal_ = NULL;
-  delete [] weights_;
-  weights_ = NULL;
-  delete [] solution_;
-  solution_ = NULL;
+  delete [] deltaX_;
+  deltaX_ = NULL;
   delete [] deltaZ_;
   deltaZ_ = NULL;
-  delete [] deltaW_;
-  deltaW_ = NULL;
-  delete [] deltaS_;
-  deltaS_ = NULL;
   delete [] deltaT_;
   deltaT_ = NULL;
+  delete [] deltaSU_;
+  deltaSU_ = NULL;
+  delete [] deltaSL_;
+  deltaSL_ = NULL;
+  delete [] rhsB_;
+  rhsB_ = NULL;
+  delete [] rhsU_;
+  rhsU_ = NULL;
+  delete [] rhsL_;
+  rhsL_ = NULL;
+  delete [] rhsZ_;
+  rhsZ_ = NULL;
+  delete [] rhsT_;
+  rhsT_ = NULL;
+  delete [] rhsC_;
+  rhsC_ = NULL;
+  delete [] solution_;
+  solution_ = NULL;
+  delete [] workArray_;
+  workArray_ = NULL;
   delete [] zVec_;
   zVec_ = NULL;
-  delete [] wVec_;
-  wVec_ = NULL;
+  delete [] tVec_;
+  tVec_ = NULL;
   delete cholesky_;
 }
 bool
@@ -509,32 +562,57 @@ ClpInterior::createWorkingData()
   errorRegion_ = new double [numberRows_];
   assert (!rhsFixRegion_);
   rhsFixRegion_ = new double [numberRows_];
-  assert (!updateRegion_);
-  updateRegion_ = new double [numberRows_];
+  assert (!deltaY_);
+  deltaY_ = new double [numberRows_];
+  CoinZeroN(deltaY_,numberRows_);
   assert (!upperSlack_);
   upperSlack_ = new double [nTotal];
   assert (!lowerSlack_);
   lowerSlack_ = new double [nTotal];
   assert (!diagonal_);
   diagonal_ = new double [nTotal];
-  assert (!weights_);
-  weights_ = new double [nTotal];
+  assert (!deltaX_);
+  deltaX_ = new double [nTotal];
+  CoinZeroN(deltaX_,nTotal);
   assert (!deltaZ_);
   deltaZ_ = new double [nTotal];
   CoinZeroN(deltaZ_,nTotal);
-  assert (!deltaW_);
-  deltaW_ = new double [nTotal];
-  CoinZeroN(deltaW_,nTotal);
-  assert (!deltaS_);
-  deltaS_ = new double [nTotal];
   assert (!deltaT_);
   deltaT_ = new double [nTotal];
+  CoinZeroN(deltaT_,nTotal);
+  assert (!deltaSU_);
+  deltaSU_ = new double [nTotal];
+  CoinZeroN(deltaSU_,nTotal);
+  assert (!deltaSL_);
+  deltaSL_ = new double [nTotal];
+  CoinZeroN(deltaSL_,nTotal);
+  assert (!rhsB_);
+  rhsB_ = new double [numberRows_];
+  CoinZeroN(rhsB_,numberRows_);
+  assert (!rhsU_);
+  rhsU_ = new double [nTotal];
+  CoinZeroN(rhsU_,nTotal);
+  assert (!rhsL_);
+  rhsL_ = new double [nTotal];
+  CoinZeroN(rhsL_,nTotal);
+  assert (!rhsZ_);
+  rhsZ_ = new double [nTotal];
+  CoinZeroN(rhsZ_,nTotal);
+  assert (!rhsT_);
+  rhsT_ = new double [nTotal];
+  CoinZeroN(rhsT_,nTotal);
+  assert (!rhsC_);
+  rhsC_ = new double [nTotal];
+  CoinZeroN(rhsC_,nTotal);
+  assert (!workArray_);
+  workArray_ = new double [nTotal];
+  CoinZeroN(workArray_,nTotal);
   assert (!zVec_);
   zVec_ = new double [nTotal];
   CoinZeroN(zVec_,nTotal);
-  assert (!wVec_);
-  wVec_ = new double [nTotal];
-  CoinZeroN(wVec_,nTotal);
+  assert (!tVec_);
+  tVec_ = new double [nTotal];
+  CoinZeroN(tVec_,nTotal);
   assert (!dj_);
   dj_ = new double [nTotal];
   delete [] status_;
@@ -565,28 +643,22 @@ ClpInterior::deleteWorkingData()
   errorRegion_ = NULL;
   delete [] rhsFixRegion_;
   rhsFixRegion_ = NULL;
-  delete [] updateRegion_;
-  updateRegion_ = NULL;
+  delete [] deltaY_;
+  deltaY_ = NULL;
   delete [] upperSlack_;
   upperSlack_ = NULL;
   delete [] lowerSlack_;
   lowerSlack_ = NULL;
   delete [] diagonal_;
   diagonal_ = NULL;
-  delete [] weights_;
-  weights_ = NULL;
-  delete [] deltaZ_;
-  deltaZ_ = NULL;
-  delete [] deltaW_;
-  deltaW_ = NULL;
-  delete [] deltaS_;
-  deltaS_ = NULL;
-  delete [] deltaT_;
-  deltaT_ = NULL;
+  delete [] deltaX_;
+  deltaX_ = NULL;
+  delete [] workArray_;
+  workArray_ = NULL;
   delete [] zVec_;
   zVec_ = NULL;
-  delete [] wVec_;
-  wVec_ = NULL;
+  delete [] tVec_;
+  tVec_ = NULL;
   delete [] dj_;
   dj_ = NULL;
 }

@@ -7,6 +7,9 @@
    John Tomlin (pdco)
    John Forrest (standard predictor-corrector)
 
+   Note JJF has added arrays - this takes more memory but makes
+   flow easier to understand and hopefully easier to extend
+
  */
 #ifndef ClpInterior_H
 #define ClpInterior_H
@@ -417,34 +420,49 @@ protected:
   double * errorRegion_;
   /// rhsFixRegion.
   double * rhsFixRegion_;
-  /// updateRegion.
-  double * updateRegion_;
   /// upperSlack
   double * upperSlack_;
   /// lowerSlack
   double * lowerSlack_;
   /// diagonal
   double * diagonal_;
-  /// weights
-  double * weights_;
   /// solution
   double * solution_;
-  /// work1 or deltaZ.
+  /// work array
+  double * workArray_;
+  /// delta X
+  double * deltaX_;
+  /// delta Y
+  double * deltaY_;
+  /// deltaZ.
   double * deltaZ_;
-  /// work2 or deltaW.
-  double * deltaW_;
-  /// work3 or deltaS.
-  double * deltaS_;
-  /// work4 or deltaT.
+  /// deltaT.
   double * deltaT_;
+  /// deltaS.
+  double * deltaSU_;
+  double * deltaSL_;
+  /// rhs B
+  double * rhsB_;
+  /// rhsU.
+  double * rhsU_;
+  /// rhsL.
+  double * rhsL_;
+  /// rhsZ.
+  double * rhsZ_;
+  /// rhsT.
+  double * rhsT_;
+  /// rhs C
+  double * rhsC_;
   /// zVec
   double * zVec_;
-  /// wVec
-  double * wVec_;
+  /// tVec
+  double * tVec_;
   /// cholesky.
   ClpCholeskyBase * cholesky_;
-  /// numberComplementarityPairs;
+  /// numberComplementarityPairs i.e. ones with lower and/or upper bounds (not fixed)
   int numberComplementarityPairs_;
+  /// numberComplementarityItems_ i.e. number of active bounds
+  int numberComplementarityItems_;
   /// Maximum iterations
   int maximumBarrierIterations_;
   /// gonePrimalFeasible.

@@ -43,14 +43,14 @@ public:
   //phase  - 0 predictor
   //         1 corrector
   //         2 primal dual
-  double findStepLength(const int phase,const double * oldWeight);
+  double findStepLength( int phase);
   /// findDirectionVector.
   double findDirectionVector(const int phase);
   /// createSolution.  Creates solution from scratch (- code if no memory)
   int createSolution();
   /// complementarityGap.  Computes gap
   //phase 0=as is , 1 = after predictor , 2 after corrector
-  double complementarityGap(int & numberComplementarityPairs,
+  double complementarityGap(int & numberComplementarityPairs,int & numberComplementarityItems,
 			    const int phase);
   /// setupForSolve.
   //phase 0=affine , 1 = corrector , 2 = primal-dual

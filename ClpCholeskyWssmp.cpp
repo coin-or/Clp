@@ -536,7 +536,7 @@ ClpCholeskyWssmp::factorize(const double * diagonal, int * rowsDropped)
     delete [] dropped;
   }
   bool cleanCholesky;
-  if (model_->numberIterations()<200) 
+  if (model_->numberIterations()<2000) 
     cleanCholesky=true;
   else 
     cleanCholesky=false;

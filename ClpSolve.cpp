@@ -891,14 +891,14 @@ ClpSimplex::initialSolve(ClpSolve & options)
     timeX=time2;
     model2->setNumberIterations(model2->numberIterations()+totalIterations);
   } else if (method==ClpSolve::useBarrier) {
-    printf("***** experimental pretty crude barrier\n");
+    //printf("***** experimental pretty crude barrier\n");
     ClpInterior barrier(*model2);
     if (interrupt) 
       currentModel2 = &barrier;
 #ifdef REAL_BARRIER
     // uncomment this if you have Anshul Gupta's wsmp package
-    //ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp(max(100,model2->numberRows()/10));
-    ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp();
+    ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp(max(100,model2->numberRows()/10));
+    //ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp();
     barrier.setCholesky(cholesky);
     //ClpCholeskyWssmpKKT * cholesky = new ClpCholeskyWssmpKKT(max(100,model2->numberRows()/10));
     //barrier.setCholesky(cholesky);
@@ -909,6 +909,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
     //#define SAVEIT 2
 #ifndef SAVEIT
     barrier.primalDual();
+    //printf("********** Stopping as this is debug run\n");
+    //exit(99);
 #elif SAVEIT==1
     barrier.primalDual();
 #else
@@ -929,7 +931,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
       <<"Barrier"<<timeCore<<time2-time1
       <<CoinMessageEol;
     timeX=time2;
-    if (barrier.maximumBarrierIterations()&&barrier.status()!=4) {
+    if (barrier.maximumBarrierIterations()&&barrier.status()<4) {
       printf("***** crossover - needs more thought on difficult models\n");
       // move solutions
       CoinMemcpyN(barrier.primalRowSolution(),
