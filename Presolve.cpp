@@ -723,7 +723,7 @@ void Presolve::postsolve(PostsolveMatrix &prob)
   originalModel_->setNumberIterations(presolvedModel_->numberIterations());
   if (!presolvedModel_->status()) {
     if (!originalModel_->numberDualInfeasibilities()&&
-	originalModel_->numberPrimalInfeasibilities()) {
+	!originalModel_->numberPrimalInfeasibilities()) {
       originalModel_->setProblemStatus( 0);
     } else {
       originalModel_->setProblemStatus( -1);
