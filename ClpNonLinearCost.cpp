@@ -592,6 +592,7 @@ ClpNonLinearCost::checkInfeasibilities(int numberInArray, const int * index)
     int iPivot = pivotVariable[iRow];
     // get where in bound sequence
     int iRange;
+    int currentRange = whichRange_[iPivot];
     double value = model_->solution(iPivot);
     int start = start_[iPivot];
     int end = start_[iPivot+1]-1;
@@ -609,6 +610,12 @@ ClpNonLinearCost::checkInfeasibilities(int numberInArray, const int * index)
     double & upper = model_->upperAddress(iPivot);
     double & cost = model_->costAddress(iPivot);
     whichRange_[iPivot]=iRange;
+    if (iRange!=currentRange) {
+      if (infeasible(iRange))
+	numberInfeasibilities_++;
+      if (infeasible(currentRange))
+	numberInfeasibilities_--;
+    }
     lower = lower_[iRange];
     upper = lower_[iRange+1];
     cost = cost_[iRange];
@@ -657,6 +664,10 @@ ClpNonLinearCost::checkChanged(int numberInArray, CoinIndexedVector * update)
       double & upper = model_->upperAddress(iPivot);
       double & cost = model_->costAddress(iPivot);
       whichRange_[iPivot]=iRange;
+      if (infeasible(iRange))
+	numberInfeasibilities_++;
+      if (infeasible(jRange))
+	numberInfeasibilities_--;
       lower = lower_[iRange];
       upper = lower_[iRange+1];
       cost = cost_[iRange];
@@ -672,6 +683,7 @@ ClpNonLinearCost::setOne(int iPivot, double value)
   double primalTolerance = model_->currentPrimalTolerance();
   // get where in bound sequence
   int iRange;
+  int currentRange = whichRange_[iPivot];
   int start = start_[iPivot];
   int end = start_[iPivot+1]-1;
   if (!bothWays_) {
@@ -699,6 +711,12 @@ ClpNonLinearCost::setOne(int iPivot, double value)
   }
   assert(iRange<end);
   whichRange_[iPivot]=iRange;
+  if (iRange!=currentRange) {
+    if (infeasible(iRange))
+      numberInfeasibilities_++;
+    if (infeasible(currentRange))
+      numberInfeasibilities_--;
+  }
   double & lower = model_->lowerAddress(iPivot);
   double & upper = model_->upperAddress(iPivot);
   double & cost = model_->costAddress(iPivot);
