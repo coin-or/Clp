@@ -1859,6 +1859,7 @@ ClpSimplex::deleteRim(bool getRidOfFactorizationData)
     delete [] ray_;
     ray_=NULL;
   }
+  // ray may be null if in branch and bound
   if (rowScale_) {
     for (i=0;i<numberColumns_;i++) {
       columnActivity_[i] = columnActivityWork_[i]*columnScale_[i];
@@ -1872,7 +1873,7 @@ ClpSimplex::deleteRim(bool getRidOfFactorizationData)
       for (i=0;i<numberColumns_;i++) {
 	ray_[i] *= columnScale_[i];
       }
-    } else if (problemStatus_==1) {
+    } else if (problemStatus_==1&&ray_) {
       for (i=0;i<numberRows_;i++) {
 	ray_[i] *= rowScale_[i];
       }
@@ -2866,6 +2867,7 @@ ClpSimplexProgress::looping()
 	  model_->setInfeasibilityCost(model_->infeasibilityCost()*1.1);
 	}
       }
+      return -2;
     } else {
       model_->messageHandler()->message(CLP_LOOP,model_->messages())
 	<<CoinMessageEol;
