@@ -1075,7 +1075,7 @@ no dual infeasibility may exceed this value",
        ); 
     parameters[numberParameters++]=
       ClpItem("log!Level","Level of detail in output",
-	      0,63,LOGLEVEL);
+	      -1,63,LOGLEVEL);
     parameters[numberParameters-1].setLonghelp
       (
        "If 0 then there should be no output in normal circumstances.  1 is probably the best\
