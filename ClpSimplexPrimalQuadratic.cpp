@@ -1314,7 +1314,7 @@ ClpSimplexPrimalQuadratic::primalRow(CoinIndexedVector * rowArray,
   int accuracyFlag=0;
   if (!cleanupIteration) {
     assert (fabs(way*coeff1-dualIn_)<1.0e-4*(1.0+fabs(dualIn_)));
-    assert (way*coeff1*dualIn_>0.0);
+    assert (way*coeff1*dualIn_>=0.0);
     if (way*coeff1*dualIn_<0.0) {
       // bad
       accuracyFlag=2;
