@@ -101,9 +101,10 @@ ClpSimplex::initialSolve(ClpSolve & options)
       model2 = this;
       presolve=ClpSolve::presolveOff;
     }
-    // We may be better off using original
+    // We may be better off using original (but if dual leave because of bounds)
     if (presolve!=ClpSolve::presolveOff&&
-	numberRows_<1.01*model2->numberRows_&&numberColumns_<1.01*model2->numberColumns_) {
+	numberRows_<1.01*model2->numberRows_&&numberColumns_<1.01*model2->numberColumns_
+	&&method!=ClpSolve::useDual) {
       delete model2;
       model2 = this;
       presolve=ClpSolve::presolveOff;

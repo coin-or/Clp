@@ -121,6 +121,8 @@ int main (int argc, const char *argv[])
   int * whichRows = new int [numberRows];
   for (int iRow=0;iRow<numberRows;iRow++)
     whichRows[iRow]=iRow;
+  double originalOffset;
+  model2->getDblParam(ClpObjOffset,originalOffset);
 
   for (iPass=0;iPass<maxPass;iPass++) {
     printf("Start of pass %d\n",iPass);
@@ -137,6 +139,12 @@ int main (int argc, const char *argv[])
       int kColumn = sort[iColumn];
       fullSolution[kColumn]=0.0;
     }
+    // Get objective offset
+    double offset=0.0;
+    const double * objective = model2->objective();
+    for (iColumn=0;iColumn<numberColumns_;iColumn++) 
+      offset += fullSolution[iColumn]*objective[iColumn];
+    small.setDblParam(ClpObjOffset,originalOffset-offset);
     model.times(1.0,fullSolution,rowSolution);
 
     double * lower = small.rowLower();

@@ -478,7 +478,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
     // normal
 #if 1
     const bool slackd = true;
-    const bool doubleton = false;
+    const bool doubleton = true;
     const bool tripleton = true;
     const bool forcing = true;
     const bool ifree = true;
