@@ -150,7 +150,6 @@ ClpNonLinearCost::ClpNonLinearCost(ClpSimplex * model,const int * starts,
       put++;
     put +=2;
   }
-  printf("put %d\n",put);
   lower_ = new double [put];
   cost_ = new double [put];
   infeasible_ = new unsigned int[(put+31)>>5];
@@ -211,7 +210,6 @@ ClpNonLinearCost::ClpNonLinearCost(ClpSimplex * model,const int * starts,
     }
     start_[iSequence+1]=put;
   }
-  printf("put %d\n",put);
   // can't handle non-convex at present
   assert(convex_);
 }
