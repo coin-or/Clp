@@ -363,6 +363,8 @@ ClpSimplexUnitTest(const std::string & mpsDir,
 			 rowLower,rowUpper);
     solution.setLogLevel(3+4+8+16+32);
     solution.primal();
+    // intricate stuff does not work with scaling
+    solution.scaling(0);
     solution.setBasis(warm);
     assert(!solution.factorize ( ));
     const double * colsol = solution.primalColumnSolution();
@@ -377,6 +379,8 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     ClpSimplex solution2 = solution;
     solution2.setFactorization(factorization2);
     solution2.setBasis(warm);
+    // intricate stuff does not work with scaling
+    solution2.scaling(0);
     solution2.getSolution(rowsol,colsol);
     colsol = solution2.primalColumnSolution();
     rowsol = solution2.primalRowSolution();

@@ -182,7 +182,8 @@ public:
             - 1 normal -if good update save
 	    - 2 restoring from saved 
   */
-  void statusOfProblemInPrimal(int & lastCleaned, int type);
+  void statusOfProblemInPrimal(int & lastCleaned, int type,
+			     ClpSimplexProgress & progress);
   /// Perturbs problem (method depends on perturbation())
   void perturb();
   /// Sets sequenceIn_ to next superBasic (input by first..) and updates

@@ -289,6 +289,9 @@ int ClpSimplexDual::dual ( )
   // number of times we have declared optimality
   numberTimesOptimal_=0;
 
+  // Progress indicator
+  ClpSimplexProgress progress(this);
+
   // This says whether to restore things etc
   int factorType=0;
   /*
@@ -321,7 +324,7 @@ int ClpSimplexDual::dual ( )
       perturb();
 #endif
     // may factorize, checks if problem finished
-    statusOfProblemInDual(lastCleaned,factorType);
+    statusOfProblemInDual(lastCleaned,factorType,progress);
 
     // Say good factorization
     factorType=1;
@@ -335,7 +338,7 @@ int ClpSimplexDual::dual ( )
     whileIterating();
   }
 
-  assert(!numberFake_||problemStatus_); // all bounds should be okay
+  //assert(!numberFake_||problemStatus_); // all bounds should be okay
   // at present we are leaving factorization around
   // maybe we should empty it
   deleteRim();
@@ -1525,6 +1528,15 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
       sequenceIn_ = indices[iFlip][sequenceIn_];
       oldValue = dj_[sequenceIn_];
       theta_ = oldValue/alpha;
+#if 0
+      if (numberIterations_>2000)
+	exit(99);
+      if (numberIterations_>2000-20) 
+	handler_->setLogLevel(63);
+      if (numberIterations_>2000-20) 
+	printf("theta %g oldValue %g tol %g %g\n",theta_,oldValue,dualTolerance_,
+	       newTolerance);
+#endif
       if (theta_<MINIMUMTHETA) {
 	// can't pivot to zero
 	if (oldValue-MINIMUMTHETA*alpha>=-dualTolerance_) {
@@ -1551,6 +1563,10 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 	  else
 	    alpha=workColumn[iSequence];
 	  double value = dj_[iSequence]-theta_*alpha;
+#if 0
+	  if (numberIterations_>2000-20) 
+	    printf("%d alpha %g value %g\n",iSequence,alpha,value);
+#endif
 	    
 	  // can't be free here
 	  
@@ -1567,6 +1583,11 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 	      //assert (fabs(modification)<1.0e-7);
 	      dj_[iSequence] += modification;
 	      cost_[iSequence] +=  modification;
+#if 0
+	      if (numberIterations_>2000-20) 
+		printf("%d acost %g mod %g\n",iSequence,cost_[iSequence],
+		       modification);
+#endif
 #endif
 	    }
 	  } else {
@@ -1581,6 +1602,11 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 	      //assert (fabs(modification)<1.0e-7);
 	      dj_[iSequence] += modification;
 	      cost_[iSequence] +=  modification;
+#if 0
+	      if (numberIterations_>2000-20) 
+		printf("%d bcost %g mod %g\n",iSequence,cost_[iSequence],
+		       modification);
+#endif
 #endif
 	    }
 	  }
@@ -1707,7 +1733,8 @@ ClpSimplexDual::checkUnbounded(CoinIndexedVector * ray,
 }
 /* Checks if finished.  Updates status */
 void 
-ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type)
+ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
+			       ClpSimplexProgress &progress)
 {
   if (type==2) {
     // trouble - restore solution
@@ -1754,6 +1781,18 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type)
   // at this stage status is -3 or -4 if looks infeasible
   // get primal and dual solutions
   gutsOfSolution(rowActivityWork_,columnActivityWork_);
+  // Check if looping
+  int loop = progress.looping();
+  bool situationChanged=false;
+  if (loop>=0) {
+    problemStatus_ = loop; //exit if in loop
+    return;
+  } else if (loop<-1) {
+    // something may have changed
+    gutsOfSolution(rowActivityWork_,columnActivityWork_);
+    situationChanged=true;
+  }
+  progressFlag_ = 0; //reset progress flag
 #ifdef CLP_DEBUG
   if (!rowScale_&&(handler_->logLevel()&32)) {
     double * objectiveSimplex 
@@ -1792,6 +1831,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type)
 		       <<numberDualInfeasibilities_-
     numberDualInfeasibilitiesWithoutFree_;
   handler_->message()<<CoinMessageEol;
+
   while (problemStatus_<=-3) {
     bool cleanDuals=false;
     int numberChangedBounds=0;
@@ -1799,6 +1839,15 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type)
     if ( lastCleaned==numberIterations_)
       doOriginalTolerance=1;
     // check optimal
+    // give code benefit of doubt
+    if (sumOfRelaxedDualInfeasibilities_ == 0.0&&
+	sumOfRelaxedPrimalInfeasibilities_ == 0.0) {
+      // say optimal (with these bounds etc)
+      numberDualInfeasibilities_ = 0;
+      sumDualInfeasibilities_ = 0.0;
+      numberPrimalInfeasibilities_ = 0;
+      sumPrimalInfeasibilities_ = 0.0;
+    }
     if (dualFeasible()||problemStatus_==-4) {
       if (primalFeasible()) {
 	// may be optimal - or may be bounds are wrong
@@ -1822,6 +1871,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type)
 	      // better to have small tolerance even if slower
 	      factorization_->zeroTolerance(1.0e-15);
 	    }
+	    cleanDuals=true;
 	  } else {
 	    problemStatus_=0; // optimal
 	    if (lastCleaned<numberIterations_) {
@@ -1856,7 +1906,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type)
 	}
 	CoinFillN(columnArray_[0]->denseVector(),numberColumns_,0.0);
 	CoinFillN(rowArray_[2]->denseVector(),numberRows_,0.0);
-      }
+      } 
       if (problemStatus_==-4) {
 	// may be infeasible - or may be bounds are wrong
 	handler_->message(CLP_DUAL_CHECKB,messages_)
@@ -2166,7 +2216,7 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
 {
   int i;
   int returnCode=0;
-  double saveObjective = objectiveValue_;
+  double saveObjectiveValue = objectiveValue_;
 #if 1
   algorithm_ = -1;
 
@@ -2219,6 +2269,9 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
   double * saveUpper = new double[numberRows_+numberColumns_];
   memcpy(saveUpper,upper_,
 	 (numberRows_+numberColumns_)*sizeof(double));
+  double * saveObjective = new double[numberRows_+numberColumns_];
+  memcpy(saveObjective,cost_,
+	 (numberRows_+numberColumns_)*sizeof(double));
   int * savePivot = new int [numberRows_];
   memcpy(savePivot, pivotVariable_, numberRows_*sizeof(int));
   // need to save/restore weights.
@@ -2248,13 +2301,15 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
 	   (numberRows_+numberColumns_)*sizeof(double));
     memcpy(upper_,saveUpper,
 	   (numberRows_+numberColumns_)*sizeof(double));
+    memcpy(cost_,saveObjective,
+	 (numberRows_+numberColumns_)*sizeof(double));
     columnUpper_[iColumn] = saveBound;
     memcpy(pivotVariable_, savePivot, numberRows_*sizeof(int));
     delete factorization_;
     factorization_ = new ClpFactorization(saveFactorization);
 
     if (status||(problemStatus_==0&&!isDualObjectiveLimitReached())) {
-      objectiveChange = objectiveValue_-saveObjective;
+      objectiveChange = objectiveValue_-saveObjectiveValue;
     } else {
       objectiveChange = 1.0e100;
     }
@@ -2283,13 +2338,15 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
 	   (numberRows_+numberColumns_)*sizeof(double));
     memcpy(upper_,saveUpper,
 	   (numberRows_+numberColumns_)*sizeof(double));
+    memcpy(cost_,saveObjective,
+	 (numberRows_+numberColumns_)*sizeof(double));
     columnLower_[iColumn] = saveBound;
     memcpy(pivotVariable_, savePivot, numberRows_*sizeof(int));
     delete factorization_;
     factorization_ = new ClpFactorization(saveFactorization);
 
     if (status||(problemStatus_==0&&!isDualObjectiveLimitReached())) {
-      objectiveChange = objectiveValue_-saveObjective;
+      objectiveChange = objectiveValue_-saveObjectiveValue;
     } else {
       objectiveChange = 1.0e100;
     }
@@ -2328,6 +2385,7 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
   delete [] saveSolution;
   delete [] saveLower;
   delete [] saveUpper;
+  delete [] saveObjective;
   delete [] saveStatus;
   delete [] savePivot;
 
@@ -2366,7 +2424,7 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
     memcpy(status_,saveStatus,(numberColumns_+numberRows_)*sizeof(char));
 
     if (problemStatus_==0&&!isDualObjectiveLimitReached()) {
-      objectiveChange = objectiveValue_-saveObjective;
+      objectiveChange = objectiveValue_-saveObjectiveValue;
     } else {
       objectiveChange = 1.0e100;
     }
@@ -2388,7 +2446,7 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
     memcpy(status_,saveStatus,(numberColumns_+numberRows_)*sizeof(char));
 
     if (problemStatus_==0&&!isDualObjectiveLimitReached()) {
-      objectiveChange = objectiveValue_-saveObjective;
+      objectiveChange = objectiveValue_-saveObjectiveValue;
     } else {
       objectiveChange = 1.0e100;
     }
@@ -2428,7 +2486,7 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
   delete [] columnSolution;
   delete [] saveStatus;
 #endif
-  objectiveValue_ = saveObjective;
+  objectiveValue_ = saveObjectiveValue;
   return returnCode;
 }
 // treat no pivot as finished (unless interesting)
@@ -2455,6 +2513,9 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
 
   // number of times we have declared optimality
   numberTimesOptimal_=0;
+
+  // Progress indicator
+  ClpSimplexProgress progress(this);
 
   // This says whether to restore things etc
   int factorType=0;
@@ -2497,14 +2558,13 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
     matrix_->refresh(this);
     // may factorize, checks if problem finished
     // should be able to speed this up on first time
-    statusOfProblemInDual(lastCleaned,factorType);
+    statusOfProblemInDual(lastCleaned,factorType,progress);
 
     // Say good factorization
     factorType=1;
 
     // Do iterations
     if (problemStatus_<0) {
-#if 1
       returnCode = whileIterating();
       if (!alwaysFinish&&returnCode<1) {
 	double limit = 0.0;
@@ -2521,9 +2581,6 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
 	}
       }
       returnCode=0;
-#else
-      whileIterating();
-#endif
     }
   }
 
@@ -2558,5 +2615,6 @@ ClpSimplexDual::numberAtFakeBound()
       break;
     }
   }
+  numberFake_ = numberFake;
   return numberFake;
 }

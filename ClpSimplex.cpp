@@ -72,7 +72,7 @@ ClpSimplex::ClpSimplex () :
   largestPrimalError_(0.0),
   largestDualError_(0.0),
   largestSolutionError_(0.0),
-  dualBound_(1.0e7),
+  dualBound_(1.0e6),
   lower_(NULL),
   rowLowerWork_(NULL),
   columnLowerWork_(NULL),
@@ -117,7 +117,7 @@ ClpSimplex::ClpSimplex () :
   rowScale_(NULL),
   savedSolution_(NULL),
   columnScale_(NULL),
-  scalingFlag_(0),
+  scalingFlag_(1),
   numberTimesOptimal_(0),
   changeMade_(1),
   algorithm_(0),
@@ -127,7 +127,10 @@ ClpSimplex::ClpSimplex () :
   nonLinearCost_(NULL),
   specialOptions_(0),
   lastBadIteration_(-999999),
-  numberFake_(0)
+  numberFake_(0),
+  progressFlag_(0),
+  sumOfRelaxedDualInfeasibilities_(0.0),
+  sumOfRelaxedPrimalInfeasibilities_(0.0)
 
 {
   int i;
@@ -545,17 +548,27 @@ int ClpSimplex::internalFactorize ( int solveType)
 	  case ClpSimplex::atUpperBound:
 	    rowActivityWork_[iRow]=rowUpperWork_[iRow];
 	    if (rowActivityWork_[iRow]>largeValue_) {
-	      assert(rowLowerWork_[iRow]>-largeValue_);
-	      rowActivityWork_[iRow]=rowLowerWork_[iRow];
-	      setRowStatus(iRow,ClpSimplex::atLowerBound);
+	      if (rowLowerWork_[iRow]>-largeValue_) {
+		rowActivityWork_[iRow]=rowLowerWork_[iRow];
+		setRowStatus(iRow,ClpSimplex::atLowerBound);
+	      } else {
+		// say free
+		setRowStatus(iRow,ClpSimplex::isFree);
+		rowActivityWork_[iRow]=0.0;
+	      }
 	    }
 	    break;
 	  case ClpSimplex::atLowerBound:
 	    rowActivityWork_[iRow]=rowLowerWork_[iRow];
 	    if (rowActivityWork_[iRow]<-largeValue_) {
-	      assert(rowUpperWork_[iRow]<largeValue_);
-	      rowActivityWork_[iRow]=rowUpperWork_[iRow];
-	      setRowStatus(iRow,ClpSimplex::atUpperBound);
+	      if (rowUpperWork_[iRow]<largeValue_) {
+		rowActivityWork_[iRow]=rowUpperWork_[iRow];
+		setRowStatus(iRow,ClpSimplex::atUpperBound);
+	      } else {
+		// say free
+		setRowStatus(iRow,ClpSimplex::isFree);
+		rowActivityWork_[iRow]=0.0;
+	      }
 	    }
 	    break;
 	  case ClpSimplex::superBasic:
@@ -929,6 +942,8 @@ ClpSimplex::housekeeping(double objectiveChange)
   // outgoing
   if (sequenceIn_!=sequenceOut_) {
     assert( getStatus(sequenceOut_)== ClpSimplex::basic);
+    if (upper_[sequenceOut_]-lower_[sequenceOut_]<1.0e-12)
+      progressFlag_ |= 1; // making real progress
     if (algorithm_<0) {
       if (directionOut_>0) {
 	value = lowerOut_;
@@ -1074,7 +1089,10 @@ ClpSimplex::ClpSimplex(const ClpSimplex &rhs) :
   nonLinearCost_(NULL),
   specialOptions_(0),
   lastBadIteration_(-999999),
-  numberFake_(0)
+  numberFake_(0),
+  progressFlag_(0),
+  sumOfRelaxedDualInfeasibilities_(0.0),
+  sumOfRelaxedPrimalInfeasibilities_(0.0)
 {
   int i;
   for (i=0;i<6;i++) {
@@ -1160,7 +1178,10 @@ ClpSimplex::ClpSimplex(const ClpModel &rhs) :
   nonLinearCost_(NULL),
   specialOptions_(0),
   lastBadIteration_(-999999),
-  numberFake_(0)
+  numberFake_(0),
+  progressFlag_(0),
+  sumOfRelaxedDualInfeasibilities_(0.0),
+  sumOfRelaxedPrimalInfeasibilities_(0.0)
 {
   int i;
   for (i=0;i<6;i++) {
@@ -1289,6 +1310,9 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
   specialOptions_ = rhs.specialOptions_;
   lastBadIteration_ = rhs.lastBadIteration_;
   numberFake_ = rhs.numberFake_;
+  progressFlag_ = rhs.progressFlag_;
+  sumOfRelaxedDualInfeasibilities_ = rhs.sumOfRelaxedDualInfeasibilities_;
+  sumOfRelaxedPrimalInfeasibilities_ = rhs.sumOfRelaxedPrimalInfeasibilities_;
   if (rhs.nonLinearCost_!=NULL)
     nonLinearCost_ = new ClpNonLinearCost(*rhs.nonLinearCost_);
 }
@@ -1367,6 +1391,13 @@ ClpSimplex::checkPrimalSolution(const double * rowActivities,
   solution = rowActivityWork_;
   sumPrimalInfeasibilities_=0.0;
   numberPrimalInfeasibilities_=0;
+  double primalTolerance = primalTolerance_;
+  double relaxedTolerance=dualTolerance_;
+  // we can't really trust infeasibilities if there is primal error
+  double error = min(1.0e-3,largestPrimalError_);
+  relaxedTolerance = max(relaxedTolerance, error);
+  sumOfRelaxedPrimalInfeasibilities_ = 0.0;
+
   for (iRow=0;iRow<numberRows_;iRow++) {
     double infeasibility=0.0;
     objectiveValue_ += solution[iRow]*rowObjectiveWork_[iRow];
@@ -1375,8 +1406,10 @@ ClpSimplex::checkPrimalSolution(const double * rowActivities,
     } else if (solution[iRow]<rowLowerWork_[iRow]) {
       infeasibility=rowLowerWork_[iRow]-solution[iRow];
     }
-    if (infeasibility>primalTolerance_) {
+    if (infeasibility>primalTolerance) {
       sumPrimalInfeasibilities_ += infeasibility-primalTolerance_;
+      if (infeasibility>relaxedTolerance) 
+	sumOfRelaxedPrimalInfeasibilities_ += infeasibility-relaxedTolerance;
       numberPrimalInfeasibilities_ ++;
     }
     if (infeasibility>rowPrimalInfeasibility_) {
@@ -1404,8 +1437,10 @@ ClpSimplex::checkPrimalSolution(const double * rowActivities,
       columnPrimalInfeasibility_=infeasibility;
       columnPrimalSequence_=iColumn;
     }
-    if (infeasibility>primalTolerance_) {
+    if (infeasibility>primalTolerance) {
       sumPrimalInfeasibilities_ += infeasibility-primalTolerance_;
+      if (infeasibility>relaxedTolerance) 
+	sumOfRelaxedPrimalInfeasibilities_ += infeasibility-relaxedTolerance;
       numberPrimalInfeasibilities_ ++;
     }
     infeasibility = fabs(columnActivities[iColumn]-solution[iColumn]);
@@ -1434,13 +1469,12 @@ ClpSimplex::checkDualSolution()
 				   columnPrimalInfeasibility_);
   remainingDualInfeasibility_=0.0;
   solution = rowActivityWork_;
-  double dualTolerance=dualTolerance_;
-  if (algorithm_>0) {
-    // primal
-    // we can't really trust infeasibilities if there is dual error
-    if (largestDualError_>1.0e-6)
-      dualTolerance *= largestDualError_/1.0e-6;
-  }
+  double relaxedTolerance=dualTolerance_;
+  // we can't really trust infeasibilities if there is dual error
+  double error = min(1.0e-3,largestDualError_);
+  relaxedTolerance = max(relaxedTolerance, error);
+  sumOfRelaxedDualInfeasibilities_ = 0.0;
+
   for (iRow=0;iRow<numberRows_;iRow++) {
     if (getRowStatus(iRow) != ClpSimplex::basic) {
       // not basic
@@ -1455,8 +1489,10 @@ ClpSimplex::checkDualSolution()
 	    rowDualInfeasibility_=value;
 	    rowDualSequence_=iRow;
 	  }
-	  if (value>dualTolerance) {
-	    sumDualInfeasibilities_ += value-dualTolerance;
+	  if (value>dualTolerance_) {
+	    sumDualInfeasibilities_ += value-dualTolerance_;
+	    if (value>relaxedTolerance) 
+	      sumOfRelaxedDualInfeasibilities_ += value-relaxedTolerance;
 	    numberDualInfeasibilities_ ++;
 	    if (getRowStatus(iRow) != ClpSimplex::isFree) 
 	      numberDualInfeasibilitiesWithoutFree_ ++;
@@ -1480,8 +1516,10 @@ ClpSimplex::checkDualSolution()
 	    rowDualInfeasibility_=value;
 	    rowDualSequence_=iRow;
 	  }
-	  if (value>dualTolerance) {
-	    sumDualInfeasibilities_ += value-dualTolerance;
+	  if (value>dualTolerance_) {
+	    sumDualInfeasibilities_ += value-dualTolerance_;
+	    if (value>relaxedTolerance) 
+	      sumOfRelaxedDualInfeasibilities_ += value-relaxedTolerance;
 	    numberDualInfeasibilities_ ++;
 	    if (getRowStatus(iRow) != ClpSimplex::isFree) 
 	      numberDualInfeasibilitiesWithoutFree_ ++;
@@ -1509,8 +1547,10 @@ ClpSimplex::checkDualSolution()
 	    columnDualInfeasibility_=value;
 	    columnDualSequence_=iColumn;
 	  }
-	  if (value>dualTolerance) {
-	    sumDualInfeasibilities_ += value-dualTolerance;
+	  if (value>dualTolerance_) {
+	    sumDualInfeasibilities_ += value-dualTolerance_;
+	    if (value>relaxedTolerance) 
+	      sumOfRelaxedDualInfeasibilities_ += value-relaxedTolerance;
 	    numberDualInfeasibilities_ ++;
 	    if (getColumnStatus(iColumn) != ClpSimplex::isFree) 
 	      numberDualInfeasibilitiesWithoutFree_ ++;
@@ -1534,8 +1574,10 @@ ClpSimplex::checkDualSolution()
 	    columnDualInfeasibility_=value;
 	    columnDualSequence_=iColumn;
 	  }
-	  if (value>dualTolerance) {
-	    sumDualInfeasibilities_ += value-dualTolerance;
+	  if (value>dualTolerance_) {
+	    sumDualInfeasibilities_ += value-dualTolerance_;
+	    if (value>relaxedTolerance) 
+	      sumOfRelaxedDualInfeasibilities_ += value-relaxedTolerance;
 	    numberDualInfeasibilities_ ++;
 	    if (getColumnStatus(iColumn) != ClpSimplex::isFree) 
 	      numberDualInfeasibilitiesWithoutFree_ ++;
@@ -1631,9 +1673,9 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
     memcpy(columnUpperWork_,columnUpper_,numberColumns_*sizeof(double));
     // clean up any mismatches on infinity
     for (i=0;i<numberColumns_;i++) {
-      if (columnLowerWork_[i]<-CLP_INFINITY)
+      if (columnLowerWork_[i]<-1.0e30)
 	columnLowerWork_[i] = -DBL_MAX;
-      if (columnUpperWork_[i]>CLP_INFINITY)
+      if (columnUpperWork_[i]>1.0e30)
 	columnUpperWork_[i] = DBL_MAX;
     }
     // clean up any mismatches on infinity
@@ -2631,4 +2673,134 @@ ClpSimplex::valueIncomingDual() const
   else
     valueIncoming = lowerIn_-valueIncoming;
   return valueIncoming;
+}
+//#############################################################################
+
+ClpSimplexProgress::ClpSimplexProgress () 
+{
+  int i;
+  for (i=0;i<CLP_PROGRESS;i++) {
+    objective_[i] = 0.0;
+    infeasibility_[i] = -1.0; // set to an impossible value
+    numberInfeasibilities_[i]=-1; 
+  }
+  numberTimes_ = 0;
+  numberBadTimes_ = 0;
+  model_ = NULL;
+}
+
+
+//-----------------------------------------------------------------------------
+
+ClpSimplexProgress::~ClpSimplexProgress ()
+{
+}
+// Copy constructor. 
+ClpSimplexProgress::ClpSimplexProgress(const ClpSimplexProgress &rhs) 
+{
+  int i;
+  for (i=0;i<CLP_PROGRESS;i++) {
+    objective_[i] = rhs.objective_[i];
+    infeasibility_[i] = rhs.infeasibility_[i];
+    numberInfeasibilities_[i]=rhs.numberInfeasibilities_[i]; 
+  }
+  numberTimes_ = rhs.numberTimes_;
+  numberBadTimes_ = rhs.numberBadTimes_;
+  model_ = rhs.model_;
+}
+// Copy constructor.from model
+ClpSimplexProgress::ClpSimplexProgress(ClpSimplex * model) 
+{
+  int i;
+  for (i=0;i<CLP_PROGRESS;i++) {
+    objective_[i] = 0.0;
+    infeasibility_[i] = -1.0; // set to an impossible value
+    numberInfeasibilities_[i]=-1; 
+  }
+  numberTimes_ = 0;
+  numberBadTimes_ = 0;
+  model_ = model;
+}
+// Assignment operator. This copies the data
+ClpSimplexProgress & 
+ClpSimplexProgress::operator=(const ClpSimplexProgress & rhs)
+{
+  if (this != &rhs) {
+    int i;
+    for (i=0;i<CLP_PROGRESS;i++) {
+      objective_[i] = rhs.objective_[i];
+      infeasibility_[i] = rhs.infeasibility_[i];
+      numberInfeasibilities_[i]=rhs.numberInfeasibilities_[i]; 
+    }
+    numberTimes_ = rhs.numberTimes_;
+    numberBadTimes_ = rhs.numberBadTimes_;
+    model_ = rhs.model_;
+  }
+  return *this;
+}
+int
+ClpSimplexProgress::looping()
+{
+  assert(model_);
+  double objective = model_->objectiveValue();
+  double infeasibility;
+  int numberInfeasibilities;
+  if (model_->algorithm()<0) {
+    // dual
+    infeasibility = model_->sumPrimalInfeasibilities();
+    numberInfeasibilities = model_->numberPrimalInfeasibilities();
+  } else {
+    //primal
+    infeasibility = model_->sumDualInfeasibilities();
+    numberInfeasibilities = model_->numberDualInfeasibilities();
+  }
+  int i;
+  int numberMatched=0;
+  int matched=0;
+
+  for (i=0;i<CLP_PROGRESS;i++) {
+    if (objective==objective_[i]&&
+	infeasibility==infeasibility_[i]&&
+	numberInfeasibilities==numberInfeasibilities_[i]) {
+      matched |= (1<<i);
+      numberMatched++;
+    }
+    if (i) {
+      objective_[i-1] = objective_[i];
+      infeasibility_[i-1] = infeasibility_[i];
+      numberInfeasibilities_[i-1]=numberInfeasibilities_[i]; 
+    }
+  }
+  objective_[CLP_PROGRESS-1] = objective;
+  infeasibility_[CLP_PROGRESS-1] = infeasibility;
+  numberInfeasibilities_[CLP_PROGRESS-1]=numberInfeasibilities;
+  if (model_->progressFlag())
+    numberMatched=0;
+  numberTimes_++;
+  if (numberTimes_<10)
+    numberMatched=0;
+  // skip if just last time as may be checking something
+  if (matched==(1<<(CLP_PROGRESS-1)))
+    numberMatched=0;
+  if (numberMatched) {
+    printf("Possible loop - %d matches (%x) after %d checks\n",
+	   numberMatched,matched,numberTimes_);
+    numberBadTimes_++;
+    if (numberBadTimes_<10) {
+      if (model_->algorithm()<0) {
+	// dual - change tolerance
+	model_->setCurrentDualTolerance(model_->currentDualTolerance()*1.05);
+      } else {
+	// primal - change tolerance
+	model_->setCurrentPrimalTolerance(model_->currentPrimalTolerance()*1.05);
+      }
+    } else {
+      // look at solution and maybe declare victory
+      if (infeasibility<1.0e-4)
+	return 0;
+      else
+	return 3;
+    }
+  }
+  return -1;
 }

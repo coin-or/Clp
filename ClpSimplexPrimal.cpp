@@ -292,6 +292,9 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
   // number of times we have declared optimality
   numberTimesOptimal_=0;
 
+  // Progress indicator
+  ClpSimplexProgress progress(this);
+
   // Say no pivot has occurred (for steepest edge and updates)
   pivotRow_=-2;
 
@@ -333,7 +336,7 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
     if (saveNumber==numberIterations_)
       factorType=3;
     // may factorize, checks if problem finished
-    statusOfProblemInPrimal(lastCleaned,factorType);
+    statusOfProblemInPrimal(lastCleaned,factorType,progress);
 
     // Say good factorization
     factorType=1;
@@ -663,7 +666,8 @@ ClpSimplexPrimal::whileIterating(int & firstSuperBasic)
 }
 /* Checks if finished.  Updates status */
 void 
-ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type)
+ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
+			       ClpSimplexProgress &progress)
 {
   if (type==2) {
     // trouble - restore solution
@@ -709,6 +713,17 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type)
   // put back original bounds and then check
   createRim(7);
   gutsOfSolution(rowActivityWork_, columnActivityWork_);
+  // Check if looping
+  int loop = progress.looping();
+  if (loop>=0) {
+    problemStatus_ = loop; //exit if in loop
+    return ;
+  } else if (loop<-1) {
+    // something may have changed
+    gutsOfSolution(rowActivityWork_, columnActivityWork_);
+  }
+  progressFlag_ = 0; //reset progress flag
+
   handler_->message(CLP_SIMPLEX_STATUS,messages_)
     <<numberIterations_<<objectiveValue();
   handler_->printing(sumPrimalInfeasibilities_>0.0)
@@ -723,6 +738,15 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type)
   assert (primalFeasible());
   // we may wish to say it is optimal even if infeasible
   bool alwaysOptimal = (specialOptions_&1)!=0;
+  // give code benefit of doubt
+  if (sumOfRelaxedDualInfeasibilities_ == 0.0&&
+      sumOfRelaxedPrimalInfeasibilities_ == 0.0) {
+    // say optimal (with these bounds etc)
+    numberDualInfeasibilities_ = 0;
+    sumDualInfeasibilities_ = 0.0;
+    numberPrimalInfeasibilities_ = 0;
+    sumPrimalInfeasibilities_ = 0.0;
+  }
   if (dualFeasible()||problemStatus_==-4||(type==3&&problemStatus_!=-5)) {
     if (nonLinearCost_->numberInfeasibilities()&&!alwaysOptimal) {
       //may need infeasiblity cost changed

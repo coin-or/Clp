@@ -208,7 +208,8 @@ public:
             - 1 normal -if good update save
 	    - 2 restoring from saved 
   */
-  void statusOfProblemInDual(int & lastCleaned, int type);
+  void statusOfProblemInDual(int & lastCleaned, int type,
+			     ClpSimplexProgress & progress);
   /// Perturbs problem (method depends on perturbation())
   void perturb();
   /** Fast iterations.  Misses out a lot of initialization.

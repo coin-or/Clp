@@ -37,6 +37,9 @@ class ClpNonLinearCost;
     There is an algorithm data member.  + for primal variations
     and - for dual variations
 
+    This file also includes (at end) a very simple class ClpSimplexProgress
+    which is where anti-looping stuff should migrate to
+
 */
 
 class ClpSimplex : public ClpModel {
@@ -308,9 +311,13 @@ public:
   /// Current dual tolerance
   inline double currentDualTolerance() const 
           { return dualTolerance_;} ;
+  inline void setCurrentDualTolerance(double value)
+          { dualTolerance_ = value;} ;
   /// Current primal tolerance
   inline double currentPrimalTolerance() const 
           { return primalTolerance_;} ;
+  inline void setCurrentPrimalTolerance(double value)
+          { primalTolerance_ = value;} ;
   /// How many iterative refinements to do
   inline int numberRefinements() const 
           { return numberRefinements_;} ;
@@ -474,6 +481,9 @@ public:
   /// So we know when to be cautious
   inline int lastBadIteration() const
   {return lastBadIteration_;};
+  /// Progress flag - at present 0 bit says artificials out
+  inline int progressFlag() const
+  {return progressFlag_;};
   //@}
 
 ////////////////// data //////////////////
@@ -647,6 +657,12 @@ protected:
   int lastBadIteration_;
   /// Can be used for count of fake bounds (dual) or fake costs (primal)
   int numberFake_;
+  /// Progress flag - at present 0 bit says artificials out
+  int progressFlag_;
+  /// Sum of Dual infeasibilities using tolerance based on error in duals
+  double sumOfRelaxedDualInfeasibilities_;
+  /// Sum of Primal infeasibilities using tolerance based on error in primals
+  double sumOfRelaxedPrimalInfeasibilities_;
   //@}
 };
 //#############################################################################
@@ -661,4 +677,54 @@ protected:
 void
 ClpSimplexUnitTest(const std::string & mpsDir,
 		   const std::string & netlibDir);
+
+
+/// For saving extra information to see if looping. not worth a Class
+class ClpSimplexProgress {
+
+public:
+
+
+  /**@name Constructors and destructor and copy */
+  //@{
+  /// Default constructor
+    ClpSimplexProgress (  );
+
+  /// Constructor from model
+    ClpSimplexProgress ( ClpSimplex * model );
+
+  /// Copy constructor. 
+  ClpSimplexProgress(const ClpSimplexProgress &);
+
+  /// Assignment operator. This copies the data
+    ClpSimplexProgress & operator=(const ClpSimplexProgress & rhs);
+  /// Destructor
+   ~ClpSimplexProgress (  );
+  //@}
+
+  /**@name Check progress */
+  //@{
+  /** Returns -1 if okay, -n+1 (n number of times bad) if bad but action taken,
+      >=0 if give up and use as problem status
+  */
+    int looping (  );
+
+  //@}
+  /**@name Data  */
+#define CLP_PROGRESS 4
+  //@{
+  /// Objective values
+  double objective_[CLP_PROGRESS];
+  /// Sum of infeasibilities for algorithm
+  double infeasibility_[CLP_PROGRESS];
+  /// Number of infeasibilities
+  int numberInfeasibilities_[CLP_PROGRESS];
+  /// Number of times checked (so won't stop too early)
+  int numberTimes_;
+  /// Number of times it looked like loop
+  int numberBadTimes_;
+  /// Pointer back to model so we can get information
+  ClpSimplex * model_;
+  //@}
+};
 #endif
