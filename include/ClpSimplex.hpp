@@ -469,7 +469,7 @@ public:
      Also applies scaling if needed
   */
   void unpackPacked(CoinIndexedVector * rowArray,int sequence);
-  
+protected:  
   /** 
       This does basis housekeeping and does values for in/out variables.
       Can also decide to re-factorize
@@ -482,6 +482,7 @@ public:
   /** This sets largest infeasibility and most infeasible and sum
       and number of infeasibilities (Dual) */
   void checkDualSolution();
+public:
   /** For advanced use.  When doing iterative solves things can get
       nasty so on values pass if incoming solution has largest
       infeasibility < incomingInfeasibility throw out variables
