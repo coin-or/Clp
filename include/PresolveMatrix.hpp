@@ -445,10 +445,12 @@ class PostsolveMatrix : public PrePostsolveMatrix {
   ////virtual void postsolve(const PresolveAction *paction);
 };
 
-
 void PresolveMatrix::change_bias(double change_amount)
 {
   dobias_ += change_amount;
+#if DEBUG_PRESOLVE
+  assert(fabs(change_amount)<1.0e50);
+#endif
   if (change_amount)
     PRESOLVE_STMT(printf("changing bias by %g to %g\n",
 		    change_amount, dobias_));  

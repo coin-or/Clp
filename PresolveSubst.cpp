@@ -138,7 +138,7 @@ static void expand_row(int *mcstrt,
 
 // add coeff_factor * rowy to rowx
 void add_row(int *mrstrt, 
-	     double *rlo, double *rup,
+	     double *rlo, double * acts, double *rup,
 	     double *rowels,
 	     int *hcol,
 	     int *hinrow,
@@ -205,6 +205,7 @@ void add_row(int *mrstrt,
 #endif
       rup[irowx] += rhsy * coeff_factor;
     }
+    acts[irowx] += rhsy * coeff_factor;
   }
 
   int kcolx = krsx;
@@ -463,6 +464,7 @@ const PresolveAction *subst_constraint_action::presolve(PresolveMatrix *prob,
 
   double *rlo	= prob->rlo_;
   double *rup	= prob->rup_;
+  double *acts	= prob->acts_;
 
   double *dcost		= prob->cost_;
 
@@ -882,7 +884,7 @@ const PresolveAction *subst_constraint_action::presolve(PresolveMatrix *prob,
 		// does not affect rowy
 		// may introduce (or cancel) elements in rowx
 		add_row(mrstrt,
-			rlo, rup,
+			rlo, acts, rup,
 			rowels, hcol,
 			hinrow,
 			rlink, nrows,

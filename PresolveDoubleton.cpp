@@ -222,7 +222,7 @@ static bool reject_doubleton(int *mcstrt,
  */
 static bool elim_doubleton(const char *msg,
 			   int *mcstrt, 
-			   double *rlo, double *rup,
+			   double *rlo, double * acts, double *rup,
 			   double *colels,
 			   int *hrow, int *hcol,
 			   int *hinrow, int *hincol,
@@ -263,6 +263,9 @@ static bool elim_doubleton(const char *msg,
 	// (2)
 	if (rup[row] < PRESOLVE_INF)
 	  rup[row] -= colels[kcoly] * bounds_factor;
+
+	// and solution
+	acts[row] -= colels[kcoly] * bounds_factor;
       }
 
 #if	DEBUG_PRESOLVE
@@ -729,7 +732,7 @@ const PresolveAction *doubleton_action::presolve(PresolveMatrix *prob,
 	
 	/* transfer the colx factors to coly */
 	bool no_mem = elim_doubleton("ELIMD",
-				     mcstrt, rlo, rup, colels,
+				     mcstrt, rlo, acts, rup, colels,
 				     hrow, hcol, hinrow, hincol,
 				     clink, ncols, 
 				     mrstrt, rowels,

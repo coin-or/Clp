@@ -1,7 +1,7 @@
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
-#define	CHECK_CONSISTENCY	1
+//#define	CHECK_CONSISTENCY	1
 
 #include <stdio.h>
 
@@ -203,6 +203,7 @@ Presolve::presolvedModel(ClpSimplex & si,
     delete presolvedModel_;
     presolvedModel_ = new ClpSimplex(si);
     
+
     // drop integer information if wanted
     if (!keepIntegers)
       presolvedModel_->deleteIntegerInformation();
@@ -212,6 +213,32 @@ Presolve::presolvedModel(ClpSimplex & si,
 			maxmin,
 			*presolvedModel_,
 			nrows_, nelems_,true);
+    // make sure row solution correct
+    {
+      double *colels	= prob.colels_;
+      int *hrow		= prob.hrow_;
+      int *mcstrt		= prob.mcstrt_;
+      int *hincol		= prob.hincol_;
+      int ncols		= prob.ncols_;
+      
+      
+      double * csol = prob.sol_;
+      double * acts = prob.acts_;
+      int nrows = prob.nrows_;
+
+      int colx;
+
+      memset(acts,0,nrows*sizeof(double));
+      
+      for (colx = 0; colx < ncols; ++colx) {
+	double solutionValue = csol[colx];
+	for (int i=mcstrt[colx]; i<mcstrt[colx]+hincol[colx]; ++i) {
+	  int row = hrow[i];
+	  double coeff = colels[i];
+	  acts[row] += solutionValue*coeff;
+	}
+      }
+    }
     prob.handler_ = presolvedModel_->messageHandler();
     prob.messages_ = presolvedModel_->messages();
 
@@ -416,18 +443,20 @@ static int ATOI(const char *name)
   return (true);
 #endif
 }
-
-#ifdef	DEBUG_PRESOLVE
-void check_sol(PresolveMatrix *prob)
+//#define DEBUG_PRESOLVE 1
+#if DEBUG_PRESOLVE
+void check_sol(PresolveMatrix *prob,double tol)
 {
   double *colels	= prob->colels_;
   int *hrow		= prob->hrow_;
   int *mcstrt		= prob->mcstrt_;
   int *hincol		= prob->hincol_;
+  int *hinrow		= prob->hinrow_;
   int ncols		= prob->ncols_;
 
 
   double * csol = prob->sol_;
+  double * acts = prob->acts_;
   double * clo = prob->clo_;
   double * cup = prob->cup_;
   int nrows = prob->nrows_;
@@ -450,10 +479,10 @@ void check_sol(PresolveMatrix *prob)
 	k++;
 	rsol[row] += solutionValue*coeff;
       }
-      if (csol[colx]<clo[colx]-1.0e-4) {
+      if (csol[colx]<clo[colx]-tol) {
 	printf("low CSOL:  %d  - %g %g %g\n",
 		   colx, clo[colx], csol[colx], cup[colx]);
-      } else if (csol[colx]>cup[colx]+1.0e-4) {
+      } else if (csol[colx]>cup[colx]+tol) {
 	printf("high CSOL:  %d  - %g %g %g\n",
 		   colx, clo[colx], csol[colx], cup[colx]);
       } 
@@ -461,11 +490,14 @@ void check_sol(PresolveMatrix *prob)
   }
   int rowx;
   for (rowx = 0; rowx < nrows; ++rowx) {
-    if (1) {
-      if (rsol[rowx]<rlo[rowx]-1.0e-4) {
+    if (hinrow[rowx]) {
+      if (fabs(rsol[rowx]-acts[rowx])>tol)
+	printf("inacc RSOL:  %d - %g %g (acts_ %g) %g\n",
+		   rowx,  rlo[rowx], rsol[rowx], acts[rowx], rup[rowx]);
+      if (rsol[rowx]<rlo[rowx]-tol) {
 	printf("low RSOL:  %d - %g %g %g\n",
 		   rowx,  rlo[rowx], rsol[rowx], rup[rowx]);
-      } else if (rsol[rowx]>rup[rowx]+1.0e-4) {
+      } else if (rsol[rowx]>rup[rowx]+tol ) {
 	printf("high RSOL:  %d - %g %g %g\n",
 		   rowx,  rlo[rowx], rsol[rowx], rup[rowx]);
       } 
@@ -513,6 +545,9 @@ const PresolveAction *Presolve::presolve(PresolveMatrix *prob)
 	
 
     int iLoop;
+#if	DEBUG_PRESOLVE
+	check_sol(prob,1.0e0);
+#endif
 
     for (iLoop=0;iLoop<numberPasses_;iLoop++) {
 #ifdef PRESOLVE_SUMMARY
@@ -557,9 +592,8 @@ const PresolveAction *Presolve::presolve(PresolveMatrix *prob)
 	    break;
 	}
 	
-	
 #if	DEBUG_PRESOLVE
-	check_sol(prob);
+	check_sol(prob,1.0e0);
 #endif
 
 #if	CHECK_CONSISTENCY
@@ -575,9 +609,7 @@ const PresolveAction *Presolve::presolve(PresolveMatrix *prob)
 	prob->consistent();
 #endif
 	
-#if	PRESOLVE_SUMMARY
 	prob->whichpass_++;
-#endif
 	  
 	// set up for next pass
 	// later do faster if many changes i.e. memset and memcpy
@@ -631,7 +663,6 @@ const PresolveAction *Presolve::presolve(PresolveMatrix *prob)
 #ifdef PRESOLVE_SUMMARY
       printf("Starting expensive\n");
 #endif
-
       if (dual) {
 	int itry;
 	for (itry=0;itry<5;itry++) {
@@ -655,11 +686,26 @@ const PresolveAction *Presolve::presolve(PresolveMatrix *prob)
 	if (prob->status_)
 	  break;
       }
+#if	DEBUG_PRESOLVE
+	check_sol(prob,1.0e0);
+#endif
       
       if (duprow) {
 	paction_ = duprow_action::presolve(prob, paction_);
 	if (prob->status_)
 	  break;
+      }
+#if	DEBUG_PRESOLVE
+      check_sol(prob,1.0e0);
+#endif
+      {
+	int * hinrow = prob->hinrow_;
+	int numberDropped=0;
+	for (i=0;i<nrows_;i++) 
+	  if (!hinrow[i])
+	    numberDropped++;
+	printf("%d rows dropped after pass %d\n",numberDropped,
+	       prob->whichpass_+1);
       }
       if (paction_ == paction0)
 	break;
@@ -668,9 +714,15 @@ const PresolveAction *Presolve::presolve(PresolveMatrix *prob)
   }
   if (!prob->status_) {
     paction_ = drop_zero_coefficients(prob, paction_);
+#if	DEBUG_PRESOLVE
+	check_sol(prob,1.0e0);
+#endif
 
     paction_ = drop_empty_cols_action::presolve(prob, paction_);
     paction_ = drop_empty_rows_action::presolve(prob, paction_);
+#if	DEBUG_PRESOLVE
+	check_sol(prob,1.0e0);
+#endif
   }
   
   if (prob->status_) {
@@ -838,6 +890,7 @@ void Presolve::postsolve(PostsolveMatrix &prob)
 #if	DEBUG_PRESOLVE
 void check_djs(PostsolveMatrix *prob)
 {
+  return;
   double *colels	= prob->colels_;
   int *hrow		= prob->hrow_;
   int *mcstrt		= prob->mcstrt_;

@@ -1081,8 +1081,24 @@ stopping",
 	      ClpSimplex * model2 = models+iModel;
 #ifdef USE_PRESOLVE
 	      Presolve pinfo;
-	      if (preSolve) 
+	      if (preSolve) {
 		model2 = pinfo.presolvedModel(models[iModel],1.0e-8,preSolve);
+		model2->checkSolution();
+#ifdef CLP_DEBUG
+		printf("%g %g (%d) %g (%d)\n"
+		       ,model2->objectiveValue()
+		       ,model2->sumDualInfeasibilities()
+		       ,model2->numberDualInfeasibilities()
+		       ,model2->sumPrimalInfeasibilities()
+		       ,model2->numberPrimalInfeasibilities());
+#endif
+		if (type==DUALSIMPLEX) {
+		  int numberInfeasibilities = model2->tightenPrimalBounds();
+		  if (numberInfeasibilities)
+		    std::cout<<"** Analysis indicates model infeasible"
+			     <<std::endl;
+		}
+	      }
 #endif
 #ifdef READLINE     
 	      currentModel = model2;
@@ -1102,6 +1118,24 @@ stopping",
 		currentModel = models+iModel;
 #endif
 		models[iModel].primal(1);
+#ifdef CLP_DEBUG
+		models[iModel].checkSolution();
+		printf("%g dual %g(%d) Primal %g(%d)\n",
+		       models[iModel].objectiveValue(),
+		       models[iModel].sumDualInfeasibilities(),
+		       models[iModel].numberDualInfeasibilities(),
+		       models[iModel].sumPrimalInfeasibilities(),
+		       models[iModel].numberPrimalInfeasibilities());
+		{
+		  Presolve pinfoA;
+		  model2 = pinfoA.presolvedModel(models[iModel],1.0e-8);
+		  
+		  printf("Resolving from presolved optimal solution\n");
+		  model2->primal(1);
+		  
+		  delete model2;
+		}
+#endif
 	      }
 #endif
 	      models[iModel].setMaximumIterations(saveMaxIterations);
@@ -1121,7 +1155,7 @@ stopping",
 	    break;
 	  case TIGHTEN:
 	    if (goodModels[iModel]) {
-	      int numberInfeasibilities = models[iModel].tightenPrimalBounds();
+     	      int numberInfeasibilities = models[iModel].tightenPrimalBounds();
 	      if (numberInfeasibilities)
 		std::cout<<"** Analysis indicates model infeasible"<<std::endl;
 	    } else {

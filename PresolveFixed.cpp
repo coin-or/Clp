@@ -43,6 +43,7 @@ const remove_fixed_action *remove_fixed_action::presolve(PresolveMatrix *prob,
   double *cup	= prob->cup_;
   double *rlo	= prob->rlo_;
   double *rup	= prob->rup_;
+  double *acts	= prob->acts_;
 
   double *dcost	= prob->cost_;
 
@@ -79,6 +80,7 @@ const remove_fixed_action *remove_fixed_action::presolve(PresolveMatrix *prob,
 
       rlo[row] -= sol * coeff;
       rup[row] -= sol * coeff;
+      acts[row] -= sol * coeff;
 
       // remove this column from all rows it occurs in in the row rep
       presolve_delete_from_row(row, j, mrstrt, hinrow, hcol, rowels);

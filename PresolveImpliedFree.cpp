@@ -237,7 +237,7 @@ const PresolveAction *implied_free_action::presolve(PresolveMatrix *prob,
 	}
       }
 
-      const bool nonzero_cost = (cost[j] != 0.0);
+      const bool nonzero_cost = (cost[j] != 0.0&&fabs(rup[row]-rlo[row])<=tol);
 
       double *save_costs = nonzero_cost ? new double[hinrow[row]] : NULL;
 

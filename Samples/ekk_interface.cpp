@@ -152,6 +152,7 @@ static int solve(EKKModel * model, int  startup,int algorithm,
     presolveInfo->postsolve(true);
     delete clp;
     delete presolveInfo;
+    presolveInfo=NULL;
     clp = clpOriginal;
     if (presolve==3||(presolve==2&&clp->status())) {
       printf("Resolving from postsolved model\n");
