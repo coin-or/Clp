@@ -25,11 +25,9 @@
 #endif
 
 //#############################################################################
-#ifndef NO_INTERRUPT
 // Allow for interrupts
 // But is this threadsafe ? (so switched off by option)
 #include <csignal>
-
 static ClpSimplex * currentModel = NULL;
 static void signal_handler(int whichSignal)
 {
@@ -37,9 +35,6 @@ static void signal_handler(int whichSignal)
     currentModel->setMaximumIterations(0); // stop at next iterations
   return;
 }
-#endif
-
-//#############################################################################
 /** General solve algorithm which can do presolve
     special options (bits)
     1 - do not perturb
@@ -62,7 +57,6 @@ ClpSimplex::initialSolve(ClpSolve & options)
   double time2;
   ClpMatrixBase * saveMatrix=NULL;
   ClpSimplex * model2 = this;
-#ifndef NO_INTERRUPT
   bool interrupt = (options.getSpecialOption(2)==0);
   typeof(SIG_DFL) saveSignal=SIG_DFL;
   if (interrupt) {
@@ -70,7 +64,6 @@ ClpSimplex::initialSolve(ClpSolve & options)
     // register signal handler
     saveSignal = signal(SIGINT,signal_handler);
   }
-#endif
   ClpPresolve pinfo;
   double timePresolve=0.0;
   double timeIdiot=0.0;
@@ -168,6 +161,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
   }
   // Just do this number of passes in Sprint
   int maxSprintPass=100;
+  // PreSolve to file - not fully tested
+  bool presolveToFile=false;
 
   if (presolve!=ClpSolve::presolveOff) {
     int numberPasses=5;
@@ -175,8 +170,15 @@ ClpSimplex::initialSolve(ClpSolve & options)
       numberPasses=options.getPresolvePasses();
       presolve = ClpSolve::presolveOn;
     }
-    model2 = pinfo.presolvedModel(*this,1.0e-8,
-				  false,numberPasses,true);
+    if (presolveToFile) {
+      printf("***** temp test\n");
+      pinfo.presolvedModel(*this,"ss.sav",1.0e-8,
+			   false,numberPasses);
+      model2=this;
+    } else {
+      model2 = pinfo.presolvedModel(*this,1.0e-8,
+				    false,numberPasses,true);
+    }
     time2 = CoinCpuTime();
     timePresolve = time2-timeX;
     handler_->message(CLP_INTERVAL_TIMING,messages_)
@@ -193,16 +195,14 @@ ClpSimplex::initialSolve(ClpSolve & options)
     // We may be better off using original (but if dual leave because of bounds)
     if (presolve!=ClpSolve::presolveOff&&
 	numberRows_<1.01*model2->numberRows_&&numberColumns_<1.01*model2->numberColumns_
-	&&method!=ClpSolve::useDual) {
+	&&method!=ClpSolve::useDual&&model2!=this) {
       delete model2;
       model2 = this;
       presolve=ClpSolve::presolveOff;
     }
   }
-#ifndef NO_INTERRUPT
   if (interrupt)
     currentModel = model2;
-#endif
   // See if worth trying +- one matrix
   bool plusMinus=false;
   int numberElements=model2->getNumElements();
@@ -332,12 +332,14 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	timeX=time2;
       }
     }
-    int numberInfeasibilities = model2->tightenPrimalBounds();
-    if (numberInfeasibilities) {
-      handler_->message(CLP_INFEASIBLE,messages_)
-	<<CoinMessageEol;
-      model2 = this;
-      presolve=ClpSolve::presolveOff;
+    if (presolve==ClpSolve::presolveOn) {
+      int numberInfeasibilities = model2->tightenPrimalBounds();
+      if (numberInfeasibilities) {
+	handler_->message(CLP_INFEASIBLE,messages_)
+	  <<CoinMessageEol;
+	model2 = this;
+	presolve=ClpSolve::presolveOff;
+      }
     }
     if (options.getSpecialOption(0)==1)
       model2->crash(1000,1);
@@ -694,7 +696,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
     //smallNumberColumns = max(smallNumberColumns,numberRows+1000);
     // We will be using all rows
     int * whichRows = new int [numberRows];
-    for (iRow=0;iRow<numberRows;iRow++)
+    for (int iRow=0;iRow<numberRows;iRow++)
       whichRows[iRow]=iRow;
     double originalOffset;
     model2->getDblParam(ClpObjOffset,originalOffset);
@@ -709,6 +711,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
       double * rowSolution = model2->primalRowSolution();
       double * sumFixed = new double[numberRows];
       memset (sumFixed,0,numberRows*sizeof(double));
+      int iRow,iColumn;
       // zero out ones in small problem
       for (iColumn=0;iColumn<numberSort;iColumn++) {
 	int kColumn = sort[iColumn];
@@ -733,10 +736,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
       }
       delete [] sumFixed;
       // Solve 
-#ifndef NO_INTERRUPT
       if (interrupt)
 	currentModel = &small;
-#endif
       small.primal();
       totalIterations += small.numberIterations();
       // move solution back
@@ -792,10 +793,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	numberSort = smallNumberColumns;
       }
     }
-#ifndef NO_INTERRUPT
     if (interrupt) 
       currentModel = model2;
-#endif
     for (i=0;i<numberArtificials;i++)
       sort[i] = i + originalNumberColumns;
     model2->deleteColumns(numberArtificials,sort);
@@ -849,11 +848,10 @@ ClpSimplex::initialSolve(ClpSolve & options)
       <<"Postsolve"<<time2-timeX<<time2-time1
       <<CoinMessageEol;
     timeX=time2;
-    delete model2;
-#ifndef NO_INTERRUPT
+    if (!presolveToFile)
+      delete model2;
     if (interrupt)
       currentModel = this;
-#endif
     checkSolution();
     setLogLevel(saveLevel);
     if (finalStatus!=3&&(finalStatus||status()==-1)) {
@@ -878,13 +876,11 @@ ClpSimplex::initialSolve(ClpSolve & options)
     <<statusMessage[finalStatus+1]<<objectiveValue()<<numberIterations<<time2-time1;
   handler_->printing(presolve==ClpSolve::presolveOn)
     <<timePresolve;
-  handler_->printing(timeIdiot!=0.0)
+  handler_->printing(timeIdiot)
     <<timeIdiot;
   handler_->message()<<CoinMessageEol;
-#ifndef NO_INTERRUPT
   if (interrupt) 
     signal(SIGINT,saveSignal);
-#endif
   perturbation_=savePerturbation;
   scalingFlag_=saveScaling;
   return finalStatus;

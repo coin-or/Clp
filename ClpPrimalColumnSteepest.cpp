@@ -446,6 +446,8 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
     saveOutInfeasibility = infeas[sequenceOut];
     infeas[sequenceOut]=0.0;
   }
+  if (model_->factorization()->pivots()&&model_->numberPrimalInfeasibilities())
+    tolerance = max(tolerance,1.0e-10*model_->infeasibilityCost());
   tolerance *= tolerance; // as we are using squares
 
   int iPass;

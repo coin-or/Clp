@@ -633,9 +633,9 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
   progressFlag_ = 0; //reset progress flag
 
   handler_->message(CLP_SIMPLEX_STATUS,messages_)
-    <<numberIterations_<<objectiveValue();
-  handler_->printing(sumPrimalInfeasibilities_>0.0)
-    <<sumPrimalInfeasibilities_<<numberPrimalInfeasibilities_;
+    <<numberIterations_<<nonLinearCost_->feasibleReportCost();
+  handler_->printing(nonLinearCost_->numberInfeasibilities()>0)
+    <<nonLinearCost_->sumInfeasibilities()<<nonLinearCost_->numberInfeasibilities();
   handler_->printing(sumDualInfeasibilities_>0.0)
     <<sumDualInfeasibilities_<<numberDualInfeasibilities_;
   handler_->printing(numberDualInfeasibilitiesWithoutFree_
@@ -675,7 +675,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
       // put non-basics to bounds in case tolerance moved
       // put back original costs
       createRim(4);
-      nonLinearCost_->checkInfeasibilities(primalTolerance_);
+      nonLinearCost_->checkInfeasibilities(0.0);
       gutsOfSolution(NULL,NULL);
 
       infeasibilityCost_=1.0e100;
@@ -687,19 +687,24 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	// carry on
 	problemStatus_ = -1;
 	infeasibilityCost_=saveWeight;
+	nonLinearCost_->checkInfeasibilities(primalTolerance_);
       } else {
 	nonLinearCost_=NULL;
 	// scale
 	int i;
 	for (i=0;i<numberRows_+numberColumns_;i++) 
-	  cost_[i] *= 1.0e-100;
+	  cost_[i] *= 1.0e-95;
 	gutsOfSolution(NULL,NULL);
 	nonLinearCost_=nonLinear;
 	infeasibilityCost_=saveWeight;
 	if ((infeasibilityCost_>=1.0e18||
 	     numberDualInfeasibilities_==0)&&perturbation_==101) {
 	  goToDual=unPerturb(); // stop any further perturbation
+	  if (nonLinearCost_->sumInfeasibilities()>1.0e-1)
+	    goToDual=false;
+	  nonLinearCost_->checkInfeasibilities(primalTolerance_);
 	  numberDualInfeasibilities_=1; // carry on
+	  problemStatus_=-1;
 	}
 	if (infeasibilityCost_>=1.0e20||
 	    numberDualInfeasibilities_==0) {
@@ -742,7 +747,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	goToDual=unPerturb(); // stop any further perturbation
 	lastCleaned=-1; // carry on
       }
-      bool unflagged = unflag()!=0;
+      bool unflagged = unflag();
       if ( lastCleaned!=numberIterations_||unflagged) {
 	handler_->message(CLP_PRIMAL_OPTIMAL,messages_)
 	  <<primalTolerance_
@@ -1589,6 +1594,8 @@ ClpSimplexPrimal::perturb(int type)
   if (number!=numberRows_)
     type=1;
   // modify bounds
+  // Change so at least 1.0e-5 and no more than 0.1
+  // For now just no more than 0.1
   if (type==1) {
     double multiplier = perturbation*maximumFraction;
     for (iSequence=0;iSequence<numberRows_+numberColumns_;iSequence++) {
@@ -1599,7 +1606,9 @@ ClpSimplexPrimal::perturb(int type)
 	double difference = upperValue-lowerValue;
 	difference = min(difference,perturbation);
 	difference = min(difference,fabs(solutionValue)+1.0);
-	double value = CoinDrand48()*multiplier*(difference+1.0);
+	double value = multiplier*(difference+1.0);
+	value = min(value,0.1);
+	value *= CoinDrand48();
 	if (solutionValue-lowerValue<=primalTolerance_) {
 	  lower_[iSequence] -= value;
 	} else if (upperValue-solutionValue<=primalTolerance_) {
@@ -1637,7 +1646,9 @@ ClpSimplexPrimal::perturb(int type)
     for (i=0;i<numberColumns_;i++) {
       double lowerValue=lower_[i], upperValue=upper_[i];
       if (upperValue>lowerValue+primalTolerance_) {
-	double value = CoinDrand48()*perturbation*maximumFraction;
+	double value = perturbation*maximumFraction;
+	value = min(value,0.1);
+	value *= CoinDrand48();
 	if (lowerValue>-1.0e20&&lowerValue)
 	  lowerValue -= value * (max(1.0,1.0e-5*fabs(lowerValue))); 
 	if (upperValue<1.0e20&&upperValue)
@@ -1663,7 +1674,9 @@ ClpSimplexPrimal::perturb(int type)
     }
     for (;i<numberColumns_+numberRows_;i++) {
       double lowerValue=lower_[i], upperValue=upper_[i];
-      double value = CoinDrand48()*perturbation*maximumFraction;
+      double value = perturbation*maximumFraction;
+      value = min(value,0.1);
+      value *= CoinDrand48();
       if (upperValue>lowerValue+primalTolerance_) {
 	if (lowerValue>-1.0e20&&lowerValue)
 	  lowerValue -= value * (max(1.0,1.0e-5*fabs(lowerValue))); 
@@ -1730,6 +1743,7 @@ ClpSimplexPrimal::unPerturb()
     return false;
   // put back original bounds and costs
   createRim(7);
+  sanityCheck();
   // unflag
   unflag();
   // get a valid nonlinear cost function

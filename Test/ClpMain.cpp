@@ -1205,7 +1205,7 @@ no primal infeasibility may exceed this value",
     parameters[numberParameters++]=
       ClpItem("primalW!eight","Initially algorithm acts as if it \
 costs this much to be infeasible",
-	      1.0e-20,1.0e12,PRIMALWEIGHT);
+	      1.0e-20,1.0e20,PRIMALWEIGHT);
     parameters[numberParameters-1].setLonghelp
       (
        "The primal algorithm in Clp is a single phase algorithm as opposed to a two phase\

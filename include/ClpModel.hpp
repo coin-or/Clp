@@ -355,6 +355,11 @@ public:
   /// Copy in status vector
   void copyinStatus(const unsigned char * statusArray);
 
+  /// User pointer for whatever reason
+  inline void setUserPointer (void * pointer)
+  { userPointer_=pointer;};
+  inline void * getUserPointer () const
+  { return userPointer_;};
   //@}
   /**@name Message handling */
   //@{
@@ -522,6 +527,8 @@ protected:
   unsigned char * status_;
   /// Integer information
   char * integerType_;
+  /// User pointer for whatever reason
+  void * userPointer_;
   /// Array of integer parameters
   int intParam_[ClpLastIntParam];
   /// Number of iterations

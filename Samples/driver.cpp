@@ -2,10 +2,6 @@
 // Corporation and others.  All Rights Reserved.
 
 #include "ClpSimplex.hpp"
-#include "ClpPresolve.hpp"
-#include "CoinHelperFunctions.hpp"
-#include "ClpDualRowSteepest.hpp"
-#include "ClpPrimalColumnSteepest.hpp"
 #include <iomanip>
 
 int main (int argc, const char *argv[])
@@ -38,7 +34,7 @@ int main (int argc, const char *argv[])
 
   // remove this to print solution
 
-  exit(0);
+  //exit(0);
 
   /*
     Now to print out solution.  The methods used return modifiable

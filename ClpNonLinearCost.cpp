@@ -18,6 +18,7 @@
 //-------------------------------------------------------------------
 ClpNonLinearCost::ClpNonLinearCost () :
   changeCost_(0.0),
+  feasibleCost_(0.0),
   largestInfeasibility_(0.0),
   sumInfeasibilities_(0.0),
   numberRows_(0),
@@ -54,6 +55,7 @@ ClpNonLinearCost::ClpNonLinearCost ( ClpSimplex * model)
 
   numberInfeasibilities_=0;
   changeCost_=0.0;
+  feasibleCost_=0.0;
   double infeasibilityCost = model_->infeasibilityCost();
   sumInfeasibilities_=0.0;
   largestInfeasibility_=0.0;
@@ -127,6 +129,7 @@ ClpNonLinearCost::ClpNonLinearCost(ClpSimplex * model,const int * starts,
 
   numberInfeasibilities_=0;
   changeCost_=0.0;
+  feasibleCost_=0.0;
   double infeasibilityCost = model_->infeasibilityCost();
   largestInfeasibility_=0.0;
   sumInfeasibilities_=0.0;
@@ -234,6 +237,7 @@ ClpNonLinearCost::ClpNonLinearCost(ClpSimplex * model,const int * starts,
 //-------------------------------------------------------------------
 ClpNonLinearCost::ClpNonLinearCost (const ClpNonLinearCost & rhs) :
   changeCost_(0.0),
+  feasibleCost_(0.0),
   largestInfeasibility_(0.0),
   sumInfeasibilities_(0.0),
   numberRows_(rhs.numberRows_),
@@ -265,6 +269,7 @@ ClpNonLinearCost::ClpNonLinearCost (const ClpNonLinearCost & rhs) :
     model_ = rhs.model_;
     numberInfeasibilities_=rhs.numberInfeasibilities_;
     changeCost_ = rhs.changeCost_;
+    feasibleCost_ = rhs.feasibleCost_;
     largestInfeasibility_ = rhs.largestInfeasibility_;
     sumInfeasibilities_ = rhs.sumInfeasibilities_;
     convex_ = rhs.convex_;
@@ -327,6 +332,7 @@ ClpNonLinearCost::operator=(const ClpNonLinearCost& rhs)
     model_ = rhs.model_;
     numberInfeasibilities_=rhs.numberInfeasibilities_;
     changeCost_ = rhs.changeCost_;
+    feasibleCost_ = rhs.feasibleCost_;
     largestInfeasibility_ = rhs.largestInfeasibility_;
     sumInfeasibilities_ = rhs.sumInfeasibilities_;
     convex_ = rhs.convex_;
@@ -349,11 +355,13 @@ ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
   sumInfeasibilities_ = 0.0;
   double primalTolerance = model_->currentPrimalTolerance();
   int iSequence;
+  bool fakeCosts=false;
   double * solution = model_->solutionRegion();
   double * upper = model_->upperRegion();
   double * lower = model_->lowerRegion();
   double * cost = model_->costRegion();
   bool toNearest = oldTolerance<=0.0;
+  feasibleCost_=0.0;
     
   // nonbasic should be at a valid bound
   for (iSequence=0;iSequence<numberColumns_+numberRows_;iSequence++) {
@@ -365,10 +373,23 @@ ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
     int start = start_[iSequence];
     int end = start_[iSequence+1]-1;
     // correct costs for this infeasibility weight
-    if (infeasible(start))
-      cost_[start] = cost_[start+1]-infeasibilityCost;
-    if (infeasible(end-1))
-      cost_[end-1] = cost_[end-2]+infeasibilityCost;
+    double thisFeasibleCost=0.0;
+    if (infeasible(start)) {
+      thisFeasibleCost = cost_[start+1];
+      if (fakeCosts) {
+	thisFeasibleCost=0.0;
+	cost_[start+1]=0.0;
+      }
+      cost_[start] = thisFeasibleCost-infeasibilityCost;
+    }
+    if (infeasible(end-1)) {
+      thisFeasibleCost = cost_[end-2];
+      if (fakeCosts) {
+	thisFeasibleCost=0.0;
+	cost_[end-2]=0.0;
+      }
+      cost_[end-1] = thisFeasibleCost+infeasibilityCost;
+    }
     for (iRange=start; iRange<end;iRange++) {
       if (value<lower_[iRange+1]+primalTolerance) {
 	// put in better range if infeasible
@@ -493,6 +514,21 @@ ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
 	  if (lower_[iRange]==lower_[iRange+1])
 	    break;
 	}
+	if (iRange==end) {
+	  // Odd - but make sensible
+	  // Set to nearest and make at lower bound
+	  int kRange;
+	  iRange=-1;
+	  double nearest = COIN_DBL_MAX;
+	  for (kRange=start; kRange<end;kRange++) {
+	    if (fabs(lower_[kRange]-value)<nearest) {
+	      nearest = fabs(lower_[kRange]-value);
+	      iRange=kRange;
+	    }
+	  }
+	  assert (iRange>=0);
+	  model_->setStatus(iSequence,ClpSimplex::atLowerBound);
+	}
 	solution[iSequence]=lower_[iRange];
       }
       break;
@@ -500,6 +536,7 @@ ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
     lower[iSequence] = lower_[iRange];
     upper[iSequence] = lower_[iRange+1];
     cost[iSequence] = cost_[iRange];
+    feasibleCost_ += thisFeasibleCost*solution[iSequence];
   }
 }
 /* Goes through one bound for each variable.
@@ -873,5 +910,13 @@ ClpNonLinearCost::nearest(int sequence, double solutionValue)
   }
   assert(jRange<end);
   return lower_[jRange];
+}
+/// Feasible cost with offset and direction (i.e. or reporting)
+double 
+ClpNonLinearCost::feasibleReportCost() const
+{ 
+  double value;
+  model_->getDblParam(ClpObjOffset,value);
+  return feasibleCost_*model_->optimizationDirection()-value;
 }
 

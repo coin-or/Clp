@@ -166,7 +166,6 @@ ClpDummyMatrix::fillBasis(const ClpSimplex * model,
 {
   std::cerr<<"fillBasis not supported - ClpDummyMatrix"<<std::endl;
   abort();
-  return (0) ;
 }
 /* If element NULL returns number of elements in column part of basis,
    If not NULL fills in as well */

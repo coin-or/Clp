@@ -152,6 +152,11 @@ public:
   /// Change in cost
   inline double changeInCost() const
   {return changeCost_;};
+  /// Feasible cost
+  inline double feasibleCost() const
+  {return feasibleCost_;};
+  /// Feasible cost with offset and direction (i.e. for reporting)
+  double feasibleReportCost() const;
   /// Sum of infeasibilities
   inline double sumInfeasibilities() const
   {return sumInfeasibilities_;};
@@ -183,6 +188,8 @@ private:
   //@{
   /// Change in cost because of infeasibilities
   double changeCost_;
+  /// Feasible cost
+  double feasibleCost_;
   /// Largest infeasibility
   double largestInfeasibility_;
   /// Sum of infeasibilities

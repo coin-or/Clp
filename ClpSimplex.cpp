@@ -2333,6 +2333,65 @@ ClpSimplex::setSparseFactorization(bool value)
     factorization_->sparseThreshold(0);
   }
 }
+void checkCorrect(ClpSimplex * model,int iRow,
+		  const double * element,const int * rowStart,const int * rowLength,
+		  const int * column,
+		  const double * columnLower_, const double * columnUpper_,
+		  int infiniteUpperC,
+		  int infiniteLowerC,
+		  double &maximumUpC,
+		  double &maximumDownC)
+{
+  int infiniteUpper = 0;
+  int infiniteLower = 0;
+  double maximumUp = 0.0;
+  double maximumDown = 0.0;
+  CoinBigIndex rStart = rowStart[iRow];
+  CoinBigIndex rEnd = rowStart[iRow]+rowLength[iRow];
+  CoinBigIndex j;
+  double large=1.0e15;
+  int iColumn;
+  // Compute possible lower and upper ranges
+  
+  for (j = rStart; j < rEnd; ++j) {
+    double value=element[j];
+    iColumn = column[j];
+    if (value > 0.0) {
+      if (columnUpper_[iColumn] >= large) {
+	++infiniteUpper;
+      } else {
+	maximumUp += columnUpper_[iColumn] * value;
+      }
+      if (columnLower_[iColumn] <= -large) {
+	++infiniteLower;
+      } else {
+	maximumDown += columnLower_[iColumn] * value;
+      }
+    } else if (value<0.0) {
+      if (columnUpper_[iColumn] >= large) {
+	++infiniteLower;
+      } else {
+	maximumDown += columnUpper_[iColumn] * value;
+      }
+      if (columnLower_[iColumn] <= -large) {
+	++infiniteUpper;
+      } else {
+	maximumUp += columnLower_[iColumn] * value;
+      }
+    }
+  }
+  assert (infiniteLowerC==infiniteLower);
+  assert (infiniteUpperC==infiniteUpper);
+  if (fabs(maximumUp-maximumUpC)>1.0e-12*max(fabs(maximumUp),fabs(maximumUpC)))
+    printf("row %d comp up %g, true up %g\n",iRow,
+	   maximumUpC,maximumUp);
+  if (fabs(maximumDown-maximumDownC)>1.0e-12*max(fabs(maximumDown),fabs(maximumDownC)))
+    printf("row %d comp down %g, true down %g\n",iRow,
+	   maximumDownC,maximumDown);
+  maximumUpC=maximumUp;
+  maximumDownC=maximumDown;
+}
+
 /* Tightens primal bounds to make dual faster.  Unless
    fixed, bounds are slightly looser than they could be.
    This is to make dual go faster and is probably not needed
@@ -2356,6 +2415,9 @@ ClpSimplex::tightenPrimalBounds(double factor)
   const double * element = copy.getElements();
   int numberChanged=1,iPass=0;
   double large = largeValue(); // treat bounds > this as infinite
+#ifndef NDEBUG
+  double large2= 1.0e10*large;
+#endif
   int numberInfeasible=0;
   int totalTightened = 0;
 
@@ -2442,6 +2504,9 @@ ClpSimplex::tightenPrimalBounds(double factor)
 	    }
 	  }
 	}
+	// Build in a margin of error
+	maximumUp += 1.0e-8*fabs(maximumUp);
+	maximumDown -= 1.0e-8*fabs(maximumDown);
 	double maxUp = maximumUp+infiniteUpper*1.0e31;
 	double maxDown = maximumDown-infiniteLower*1.0e31;
 	if (maxUp <= rowUpper_[iRow] + tolerance && 
@@ -2454,8 +2519,8 @@ ClpSimplex::tightenPrimalBounds(double factor)
 	  //printf("Redundant row in presolveX %d\n",iRow);
 
 	} else {
-	  if (maxUp < rowLower_[iRow] -tolerance ||
-	      maxDown > rowUpper_[iRow]+tolerance) {
+	  if (maxUp < rowLower_[iRow] -100.0*tolerance ||
+	      maxDown > rowUpper_[iRow]+100.0*tolerance) {
 	    // problem is infeasible - exit at once
 	    numberInfeasible++;
 	    break;
@@ -2471,15 +2536,21 @@ ClpSimplex::tightenPrimalBounds(double factor)
 	      // positive value
 	      if (lower>-large) {
 		if (!infiniteUpper) {
-		  assert(nowUpper < large);
+		  assert(nowUpper < large2);
 		  newBound = nowUpper + 
 		    (lower - maximumUp) / value;
+		  // relax if original was large
+		  if (fabs(maximumUp)>1.0e8)
+		    newBound -= 1.0e-12*fabs(maximumUp);
 		} else if (infiniteUpper==1&&nowUpper>large) {
 		  newBound = (lower -maximumUp) / value;
+		  // relax if original was large
+		  if (fabs(maximumUp)>1.0e8)
+		    newBound -= 1.0e-12*fabs(maximumUp);
 		} else {
 		  newBound = -COIN_DBL_MAX;
 		}
-		if (newBound > nowLower + 1.0e-12) {
+		if (newBound > nowLower + 1.0e-12&&newBound>-large) {
 		  // Tighten the lower bound 
 		  columnLower_[iColumn] = newBound;
 		  numberChanged++;
@@ -2498,19 +2569,35 @@ ClpSimplex::tightenPrimalBounds(double factor)
 		  }
 		  maximumDown += (newBound-now) * value;
 		  nowLower = newBound;
+#ifdef DEBUG
+		  checkCorrect(this,iRow,
+			       element, rowStart, rowLength,
+			       column,
+			       columnLower_,  columnUpper_,
+			       infiniteUpper,
+			       infiniteLower,
+			       maximumUp,
+			       maximumDown);
+#endif
 		}
 	      } 
 	      if (upper <large) {
 		if (!infiniteLower) {
-		  assert(nowLower >- large);
+		  assert(nowLower >- large2);
 		  newBound = nowLower + 
 		    (upper - maximumDown) / value;
+		  // relax if original was large
+		  if (fabs(maximumDown)>1.0e8)
+		    newBound += 1.0e-12*fabs(maximumDown);
 		} else if (infiniteLower==1&&nowLower<-large) {
 		  newBound =   (upper - maximumDown) / value;
+		  // relax if original was large
+		  if (fabs(maximumDown)>1.0e8)
+		    newBound += 1.0e-12*fabs(maximumDown);
 		} else {
 		  newBound = COIN_DBL_MAX;
 		}
-		if (newBound < nowUpper - 1.0e-12) {
+		if (newBound < nowUpper - 1.0e-12&&newBound<large) {
 		  // Tighten the upper bound 
 		  columnUpper_[iColumn] = newBound;
 		  numberChanged++;
@@ -2529,21 +2616,37 @@ ClpSimplex::tightenPrimalBounds(double factor)
 		  }
 		  maximumUp += (newBound-now) * value;
 		  nowUpper = newBound;
+#ifdef DEBUG
+		  checkCorrect(this,iRow,
+			       element, rowStart, rowLength,
+			       column,
+			       columnLower_,  columnUpper_,
+			       infiniteUpper,
+			       infiniteLower,
+			       maximumUp,
+			       maximumDown);
+#endif
 		}
 	      }
 	    } else {
 	      // negative value
 	      if (lower>-large) {
 		if (!infiniteUpper) {
-		  assert(nowLower >- large);
+		  assert(nowLower < large2);
 		  newBound = nowLower + 
 		    (lower - maximumUp) / value;
+		  // relax if original was large
+		  if (fabs(maximumUp)>1.0e8)
+		    newBound += 1.0e-12*fabs(maximumUp);
 		} else if (infiniteUpper==1&&nowLower<-large) {
 		  newBound = (lower -maximumUp) / value;
+		  // relax if original was large
+		  if (fabs(maximumUp)>1.0e8)
+		    newBound += 1.0e-12*fabs(maximumUp);
 		} else {
 		  newBound = COIN_DBL_MAX;
 		}
-		if (newBound < nowUpper - 1.0e-12) {
+		if (newBound < nowUpper - 1.0e-12&&newBound<large) {
 		  // Tighten the upper bound 
 		  columnUpper_[iColumn] = newBound;
 		  numberChanged++;
@@ -2562,19 +2665,35 @@ ClpSimplex::tightenPrimalBounds(double factor)
 		  }
 		  maximumDown += (newBound-now) * value;
 		  nowUpper = newBound;
+#ifdef DEBUG
+		  checkCorrect(this,iRow,
+			       element, rowStart, rowLength,
+			       column,
+			       columnLower_,  columnUpper_,
+			       infiniteUpper,
+			       infiniteLower,
+			       maximumUp,
+			       maximumDown);
+#endif
 		}
 	      }
 	      if (upper <large) {
 		if (!infiniteLower) {
-		  assert(nowUpper < large);
+		  assert(nowUpper < large2);
 		  newBound = nowUpper + 
 		    (upper - maximumDown) / value;
+		  // relax if original was large
+		  if (fabs(maximumDown)>1.0e8)
+		    newBound -= 1.0e-12*fabs(maximumDown);
 		} else if (infiniteLower==1&&nowUpper>large) {
 		  newBound =   (upper - maximumDown) / value;
+		  // relax if original was large
+		  if (fabs(maximumDown)>1.0e8)
+		    newBound -= 1.0e-12*fabs(maximumDown);
 		} else {
 		  newBound = -COIN_DBL_MAX;
 		}
-		if (newBound > nowLower + 1.0e-12) {
+		if (newBound > nowLower + 1.0e-12&&newBound>-large) {
 		  // Tighten the lower bound 
 		  columnLower_[iColumn] = newBound;
 		  numberChanged++;
@@ -2593,6 +2712,16 @@ ClpSimplex::tightenPrimalBounds(double factor)
 		  }
 		  maximumUp += (newBound-now) * value;
 		  nowLower = newBound;
+#ifdef DEBUG
+		  checkCorrect(this,iRow,
+			       element, rowStart, rowLength,
+			       column,
+			       columnLower_,  columnUpper_,
+			       infiniteUpper,
+			       infiniteLower,
+			       maximumUp,
+			       maximumDown);
+#endif
 		}
 	      }
 	    }
@@ -3108,7 +3237,7 @@ ClpSimplex::restoreModel(const char * fileName)
       rowNames_ = std::vector<std::string> ();
       rowNames_.resize(numberRows_);
       for (i=0;i<numberRows_;i++) {
-	rowNames_[i]=get;
+	rowNames_.push_back(get);
 	get += lengthNames_+1;
       }
       get = array;
@@ -3118,7 +3247,7 @@ ClpSimplex::restoreModel(const char * fileName)
       columnNames_ = std::vector<std::string> ();
       columnNames_.resize(numberColumns_);
       for (i=0;i<numberColumns_;i++) {
-	columnNames_[i]=get;
+	columnNames_.push_back(get);
 	get += lengthNames_+1;
       }
       delete [] array;
@@ -3162,7 +3291,7 @@ ClpSimplex::restoreModel(const char * fileName)
       return 1;
     double * elements = new double[length];
     int * indices = new int[length];
-    CoinBigIndex * starts = new CoinBigIndex[numberColumns_];
+    CoinBigIndex * starts = new CoinBigIndex[numberColumns_+1];
     int * lengths = new int[numberColumns_];
     numberRead = fread(elements, sizeof(double),length,fp);
     if (numberRead!=length)

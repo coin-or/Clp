@@ -15,57 +15,34 @@ public:
   /// Virtual destructor
   virtual ~ClpPresolve();
   //@}
-  // taken out for now
-#if 0
   /**@name presolve - presolves a model, transforming the model
    * and saving information in the ClpPresolve object needed for postsolving.
-   * This is method is virtual; the idea is that in the future,
-   * one could override this method to customize how the various
-   * presolve techniques are applied.
-   */
-  virtual void presolve(ClpSimplex& si);
-
-  /**@name postsolve - postsolve the problem.  The problem must
-    have been solved to optimality.
-   If you are using an algorithm like simplex that has a concept
-   of "basic" rows/cols, then pass in two arrays
-   that indicate which cols/rows are basic in the problem passed in (si);
-   on return, they will indicate which rows/cols in the original
-   problem are basic in the solution.
-   These two arrays must have enough room for ncols/nrows in the
-   *original* problem, not the problem being passed in.
-   If you aren't interested in this information, or it doesn't make
-   sense, then pass in 0 for each array.
-  
-   Note that if you modified the problem after presolving it,
-   then you must ``undo'' these modifications before calling postsolve.
-  */
-  virtual void postsolve(ClpSimplex& si,
-			 unsigned char *colstat,
-			 unsigned char *rowstat);
-#endif
-  /**@name presolve - presolves a model, transforming the model
-   * and saving information in the ClpPresolve object needed for postsolving.
-   * This is method is virtual; the idea is that in the future,
+   * This underlying (protected) method is virtual; the idea is that in the future,
    * one could override this method to customize how the various
    * presolve techniques are applied.
 
    This version of presolve returns a pointer to a new presolved 
       model.  NULL if infeasible or unbounded.  
       This should be paired with postsolve
-      below.  The adavantage of going back to original model is that it
+      below.  The advantage of going back to original model is that it
       will be exactly as it was i.e. 0.0 will not become 1.0e-19.
       If keepIntegers is true then bounds may be tightened in
       original.  Bounds will be moved by up to feasibilityTolerance
       to try and stay feasible.
       Names will be dropped in presolved model if asked
   */
-  virtual ClpSimplex * presolvedModel(ClpSimplex & si,
+  ClpSimplex * presolvedModel(ClpSimplex & si,
 				      double feasibilityTolerance=0.0,
 				      bool keepIntegers=true,
 				      int numberPasses=5,
 				      bool dropNames=false);
-
+  /** This version saves data in a file.  The passed in model
+      is updated to be presolved model.  names are always dropped.
+      Returns non-zero if infeasible*/
+  int presolvedModel(ClpSimplex &si,std::string fileName,
+			      double feasibilityTolerance=0.0,
+			      bool keepIntegers=true,
+			      int numberPasses=5);
   /** Return pointer to presolved model,
       Up to user to destroy */
   ClpSimplex * model() const;
@@ -127,6 +104,8 @@ private:
   CoinBigIndex nelems_;
   /// Number of major passes
   int numberPasses_;
+  /// Name of saved model file
+  std::string saveFile_;
 
 protected:
   /// If you want to apply the individual presolve routines differently,
@@ -142,5 +121,11 @@ protected:
   virtual void postsolve(CoinPostsolveMatrix &prob);
   /// Gets rid of presolve actions (e.g.when infeasible)
   void gutsOfDestroy();
+  /** This is main part of Presolve */
+  virtual ClpSimplex * gutsOfPresolvedModel(ClpSimplex * originalModel
+					    ,double feasibilityTolerance,
+					    bool keepIntegers,
+					    int numberPasses,
+					    bool dropNames);
 };
 #endif
