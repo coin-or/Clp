@@ -68,4 +68,21 @@ MyEventHandler::event(Event whichEvent)
     return 0; // say optimal
   else
     return -1; // carry on
+
+#if 0
+  // This is how one can get some progress information at the end of each iteration.
+  if (whichEvent==endOfIteration) {
+    int numIter = model_->getIterationCount();
+    double sumDualInfeas = model_->sumDualInfeasibilities();
+    double sumPrimalInfeas = model_->sumPrimalInfeasibilities();
+    double obj = model_->getObjValue();
+  }
+
+  // This is how one can tell CLP to stop now.
+  // The value of cancelAsap needs to come from the application using CLP.
+  if ( cancelAsap ) return 5;
+  else return -1;
+#endif
+
+  
 }
