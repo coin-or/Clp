@@ -633,7 +633,14 @@ ClpSimplexUnitTest(const std::string & mpsDir,
   {    
     CoinMpsIO m;
     std::string fn = netlibDir+"finnis";
-    m.readMps(fn.c_str(),"mps");
+    int returnCode = m.readMps(fn.c_str(),"mps");
+    if (returnCode) {
+      // probable cause is that gz not there
+      fprintf(stderr,"Unable to open finnis.mps in COIN/Mps/Netlib!\n");
+      fprintf(stderr,"Most probable cause is finnis.mps is gzipped i.e. finnis.mps.gz and libz has not been activated\n");
+      fprintf(stderr,"Either gunzip files or edit Makefiles/Makefile.location to get libz\n");
+      exit(999);
+    }
     ClpModel model;
     model.loadProblem(*m.getMatrixByCol(),m.getColLower(),
 		    m.getColUpper(),
