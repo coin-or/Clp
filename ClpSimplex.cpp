@@ -375,11 +375,10 @@ ClpSimplex::computePrimals ( const double * rowActivities,
   //work space
   CoinIndexedVector  * workSpace = rowArray_[0];
 
-  CoinIndexedVector arrayVector;
-  arrayVector.reserve(numberRows_+1);
-  CoinIndexedVector previousVector;
-  previousVector.reserve(numberRows_+1);
-
+  CoinIndexedVector * arrayVector = rowArray_[1];
+  arrayVector->clear();
+  CoinIndexedVector * previousVector = rowArray_[2];
+  previousVector->clear();
   // accumulate non basic stuff 
 
   int iRow;
@@ -388,8 +387,8 @@ ClpSimplex::computePrimals ( const double * rowActivities,
     ClpDisjointCopyN(columnActivities,numberColumns_,columnActivityWork_);
   if (rowActivities!=rowActivityWork_)
     ClpDisjointCopyN(rowActivities,numberRows_,rowActivityWork_);
-  double * array = arrayVector.denseVector();
-  int * index = arrayVector.getIndices();
+  double * array = arrayVector->denseVector();
+  int * index = arrayVector->getIndices();
   int number=0;
   const double * rhsOffset = matrix_->rhsOffset(this,false,true);
   if (!rhsOffset) {
@@ -428,7 +427,7 @@ ClpSimplex::computePrimals ( const double * rowActivities,
       }
     }
   }
-  arrayVector.setNumElements(number);
+  arrayVector->setNumElements(number);
 #ifdef CLP_DEBUG
   if (numberIterations_==-3840) {
     int i;
@@ -449,8 +448,8 @@ ClpSimplex::computePrimals ( const double * rowActivities,
   double lastError=COIN_DBL_MAX;
   int iRefine;
   double * work = workSpace->denseVector();
-  CoinIndexedVector * thisVector = &arrayVector;
-  CoinIndexedVector * lastVector = &previousVector;
+  CoinIndexedVector * thisVector = arrayVector;
+  CoinIndexedVector * lastVector = previousVector;
   factorization_->updateColumn(workSpace,thisVector);
 #ifdef CLP_DEBUG
   if (numberIterations_==-3840) {
@@ -555,6 +554,8 @@ ClpSimplex::computePrimals ( const double * rowActivities,
       solution_[iPivot] = array[iRow];
     }
   }
+  arrayVector->clear();
+  previousVector->clear();
 #ifdef CLP_DEBUG
   if (numberIterations_==-3840) {
     exit(77);
@@ -570,18 +571,17 @@ ClpSimplex::computeDuals(double * givenDjs)
     //work space
     CoinIndexedVector  * workSpace = rowArray_[0];
     
-    CoinIndexedVector arrayVector;
-    arrayVector.reserve(numberRows_+1);
-    CoinIndexedVector previousVector;
-    previousVector.reserve(numberRows_+1);
-    
+    CoinIndexedVector * arrayVector = rowArray_[1];
+    arrayVector->clear();
+    CoinIndexedVector * previousVector = rowArray_[2];
+    previousVector->clear();
     
     int iRow;
 #ifdef CLP_DEBUG
     workSpace->checkClear();
 #endif
-    double * array = arrayVector.denseVector();
-    int * index = arrayVector.getIndices();
+    double * array = arrayVector->denseVector();
+    int * index = arrayVector->getIndices();
     int number=0;
     if (!givenDjs) {
       for (iRow=0;iRow<numberRows_;iRow++) {
@@ -606,16 +606,16 @@ ClpSimplex::computeDuals(double * givenDjs)
 	}
       }
     }
-    arrayVector.setNumElements(number);
+    arrayVector->setNumElements(number);
     // Extended duals before "updateTranspose"
-    matrix_->dualExpanded(this,&arrayVector,givenDjs,0);
+    matrix_->dualExpanded(this,arrayVector,givenDjs,0);
     
     // Btran basic costs and get as accurate as possible
     double lastError=COIN_DBL_MAX;
     int iRefine;
     double * work = workSpace->denseVector();
-    CoinIndexedVector * thisVector = &arrayVector;
-    CoinIndexedVector * lastVector = &previousVector;
+    CoinIndexedVector * thisVector = arrayVector;
+    CoinIndexedVector * lastVector = previousVector;
     factorization_->updateColumnTranspose(workSpace,thisVector);
     
     for (iRefine=0;iRefine<numberRefinements_+1;iRefine++) {
@@ -799,6 +799,8 @@ ClpSimplex::computeDuals(double * givenDjs)
       // restore accurate duals
       memcpy(givenDjs,dj_,(numberRows_+numberColumns_)*sizeof(double));
     }
+    arrayVector->clear();
+    previousVector->clear();
   } else {
     // Nonlinear
     objective_->reducedGradient(this,dj_,false);

@@ -719,7 +719,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
     addStarts[0]=0;
     int numberArtificials=0;
     double * addCost = new double [numberRows];
-    const double penalty=1.0e8;
+    const double penalty=1.0e8*optimizationDirection_;
     int iRow;
     for (iRow=0;iRow<numberRows;iRow++) {
       if (lower[iRow]>rowSolution[iRow]) {
@@ -818,6 +818,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
     // Just take this number of columns in small problem
     int smallNumberColumns = CoinMin(3*numberRows,numberColumns);
     smallNumberColumns = CoinMax(smallNumberColumns,3000);
+    smallNumberColumns = CoinMin(smallNumberColumns,numberColumns);
     //int smallNumberColumns = CoinMin(12*numberRows/10,numberColumns);
     //smallNumberColumns = CoinMax(smallNumberColumns,3000);
     //smallNumberColumns = CoinMax(smallNumberColumns,numberRows+1000);

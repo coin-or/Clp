@@ -1160,7 +1160,6 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
   dualCheck=max(dualCheck-100.0*dualTolerance_,0.99*dualCheck);
 
   int iIndex;
-  bool gotList=false;
   int pivotOne=-1;
   //#define CLP_DEBUG
 #ifdef CLP_DEBUG
@@ -1179,7 +1178,7 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
     }
   }
 #endif
-  while (!gotList) {
+  while (true) {
     pivotOne=-1;
     totalThru=0.0;
     // We also re-compute reduced cost
@@ -1229,12 +1228,12 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
     }
     if (upperTheta<maximumMovement&&totalThru*infeasibilityCost_>=1.0001*dualCheck) {
       // Can pivot here
-      gotList=true;
+      break;
     } else if (tentativeTheta<maximumMovement) {
       //printf("Going round with average theta of %g\n",averageTheta);
       tentativeTheta=maximumMovement;
     } else {
-      gotList=true;
+      break;
     }
   }
   totalThru=0.0;

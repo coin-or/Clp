@@ -457,8 +457,11 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
 #endif
 
   // Get dubious weights
+  CoinBigIndex * dubiousWeights = NULL;
+#ifdef DUBIOUS_WEIGHTS
   factorization_->getWeights(rowArray_[0]->getIndices());
-  CoinBigIndex * dubiousWeights = matrix_->dubiousWeights(this,rowArray_[0]->getIndices());
+  dubiousWeights = matrix_->dubiousWeights(this,rowArray_[0]->getIndices());
+#endif
   // If values pass then get list of candidates
   int * candidateList = NULL;
   int numberCandidates = 0;
@@ -707,7 +710,7 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
 	acceptablePivot *= 10.0;
 	// do ratio test
 	checkPossibleValuesMove(rowArray_[0],columnArray_[0],
-					    acceptablePivot,NULL);
+					    acceptablePivot);
 
 	// recompute true dualOut_
 	if (directionOut_<0) {
@@ -4121,8 +4124,7 @@ ClpSimplexDual::pivotResult()
 int
 ClpSimplexDual::checkPossibleValuesMove(CoinIndexedVector * rowArray,
 					CoinIndexedVector * columnArray,
-					double acceptablePivot,
-					CoinBigIndex * dubiousWeights)
+					double acceptablePivot)
 {
   double * work;
   int number;
