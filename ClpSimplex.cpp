@@ -477,11 +477,11 @@ int ClpSimplex::getSolution ( const double * rowActivities,
 {
   if (!factorization_->status()) {
     // put in standard form
-    createRim(7+8+16);
+    createRim(7+8+16+32);
     // do work
     gutsOfSolution ( rowActivities, columnActivities,NULL,NULL);
     // release extra memory
-    deleteRim(false);
+    deleteRim(0);
   }
   return factorization_->status();
 }
@@ -504,11 +504,11 @@ int ClpSimplex::getSolution ( )
 int ClpSimplex::factorize ()
 {
   // put in standard form
-  createRim(7+8+16);
+  createRim(7+8+16+32,false);
   // do work
   int status = internalFactorize(-1);
   // release extra memory
-  deleteRim(false);
+  deleteRim(0);
 
   return status;
 }
@@ -1784,7 +1784,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
 {
   bool goodMatrix=true;
   int i;
-  if ((what&16)!=0) {
+  if ((what&(16+32))!=0) {
     // move information to work arrays
     if (optimizationDirection_<0.0) {
       // reverse all dual signs
@@ -1801,8 +1801,9 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
       memcpy(reducedCostWork_,reducedCost_,numberColumns_*sizeof(double));
       memcpy(rowReducedCost_,dual_,numberRows_*sizeof(double));
     }
-    if (!solution_) {
-      solution_ = new double[numberRows_+numberColumns_];
+    if (!solution_||(what&32)!=0) {
+      if (!solution_)
+	solution_ = new double[numberRows_+numberColumns_];
       columnActivityWork_ = solution_;
       rowActivityWork_ = solution_+numberColumns_;
       memcpy(columnActivityWork_,columnActivity_,
@@ -1810,6 +1811,8 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
       memcpy(rowActivityWork_,rowActivity_,
 	     numberRows_*sizeof(double));
     }
+  }
+  if ((what&16)!=0) {
     //check matrix
     if (!matrix_->allElementsInRange(this,smallElement_,1.0e20)) {
       problemStatus_=4;
@@ -1901,7 +1904,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
 	objectiveWork_[i] *= direction*columnScale_[i];
     }
   }
-  if ((what&1)!=0&&rowScale_) {
+  if ((what&(1+32))!=0&&rowScale_) {
     for (i=0;i<numberColumns_;i++) {
       double multiplier = 1.0/columnScale_[i];
       if (columnLowerWork_[i]>-1.0e50)
@@ -1916,7 +1919,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
 	rowUpperWork_[i] *= rowScale_[i];
     }
   }
-  if ((what&8)!=0&&rowScale_) {
+  if ((what&(8+32))!=0&&rowScale_) {
     // on entry
     for (i=0;i<numberColumns_;i++) {
       columnActivityWork_[i] /= columnScale_[i];
@@ -1967,7 +1970,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
   return goodMatrix;
 }
 void
-ClpSimplex::deleteRim(bool getRidOfFactorizationData)
+ClpSimplex::deleteRim(int getRidOfFactorizationData)
 {
   int i;
   if (problemStatus_!=1&&problemStatus_!=2) {
@@ -2015,10 +2018,8 @@ ClpSimplex::deleteRim(bool getRidOfFactorizationData)
   }
   // scaling may have been turned off
   scalingFlag_ = abs(scalingFlag_);
-  if(getRidOfFactorizationData)
-    gutsOfDelete(2);
-  else
-    gutsOfDelete(1);
+  if(getRidOfFactorizationData>=0)
+    gutsOfDelete(getRidOfFactorizationData+1);
 }
 void 
 ClpSimplex::setDualBound(double value)
@@ -3325,7 +3326,7 @@ ClpSimplex::checkSolution()
   printf("dual value %g, primal %g\n",value,objectiveValue());
 #endif
   // release extra memory
-  deleteRim(false);
+  deleteRim(0);
 }
 /* Crash - at present just aimed at dual, returns
    -2 if dual preferred and crash basis created
@@ -4152,8 +4153,16 @@ ClpSimplex::statusOfProblem()
   // is factorization okay?
   assert (internalFactorize(1)==0);
   // put back original costs and then check
-  createRim(4);
+  // also move to work arrays
+  createRim(4+32);
+  abort();
+  //memcpy(rowActivityWork_,rowActivity_,numberRows_*sizeof(double));
+  //memcpy(columnActivityWork_,columnActivity_,numberColumns_*sizeof(double));
   gutsOfSolution(rowActivityWork_, columnActivityWork_,NULL,NULL);
+  //memcpy(rowActivity_,rowActivityWork_,numberRows_*sizeof(double));
+  //memcpy(columnActivity_,columnActivityWork_,numberColumns_*sizeof(double));
+  //memcpy(reducedCost_,dj_,numberColumns_*sizeof(double));
+  deleteRim(-1);
   return (primalFeasible()&&dualFeasible());
 }
 /* Return model - updates any scalars */

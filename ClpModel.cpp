@@ -20,6 +20,7 @@
 #include "CoinHelperFunctions.hpp"
 #include "ClpModel.hpp"
 #include "ClpPackedMatrix.hpp"
+#include "CoinPackedVector.hpp"
 #include "CoinIndexedVector.hpp"
 #include "CoinMpsIO.hpp"
 #include "ClpMessage.hpp"
@@ -778,7 +779,7 @@ ClpModel::deleteColumns(int number, const int * which)
 					numberColumns_,
 					number, which, newSize,false);
     unsigned char * temp = new unsigned char [numberRows_+newSize];
-    memcpy(temp,status_,newSize*sizeof(unsigned char));
+    memcpy(temp,tempC,newSize*sizeof(unsigned char));
     memcpy(temp+newSize,status_+numberColumns_,
 	   numberRows_*sizeof(unsigned char));
     delete [] tempC;
@@ -796,6 +797,159 @@ ClpModel::deleteColumns(int number, const int * which)
   columnNames_ = std::vector<std::string> ();
   integerType_ = deleteChar(integerType_,numberColumns_,
 			    number, which, newSize,true);
+}
+// Add rows
+void 
+ClpModel::addRows(int number, const double * rowLower, 
+		  const double * rowUpper,
+		  const int * rowStarts, const int * columns,
+		  const double * elements)
+{
+  // Create a list of CoinPackedVectors
+  if (number) {
+    CoinPackedVectorBase ** rows=
+      new CoinPackedVectorBase * [number];
+    int iRow;
+    for (iRow=0;iRow<number;iRow++) {
+      int iStart = rowStarts[iRow];
+      rows[iRow] = 
+	new CoinPackedVector(rowStarts[iRow+1]-iStart,
+			     columns+iStart,elements+iStart);
+    }
+    addRows(number, rowLower, rowUpper,
+	    rows);
+    for (iRow=0;iRow<number;iRow++) 
+      delete rows[iRow];
+    delete [] rows;
+  }
+}
+void 
+ClpModel::addRows(int number, const double * rowLower, 
+		  const double * rowUpper,
+		  const CoinPackedVectorBase * const * rows)
+{
+  if (!number)
+    return;
+  int numberRowsNow = numberRows_;
+  resize(numberRowsNow+number,numberColumns_);
+  double * lower = rowLower_+numberRowsNow;
+  double * upper = rowUpper_+numberRowsNow;
+  int iRow;
+  if (rowLower) {
+    for (iRow = 0; iRow < number; iRow++) {
+      double value = rowLower[iRow];
+      if (value<-1.0e20)
+	value = -COIN_DBL_MAX;
+      lower[iRow]= value;
+    }
+  } else {
+    for (iRow = 0; iRow < number; iRow++) {
+      lower[iRow]= -COIN_DBL_MAX;
+    }
+  }
+  if (rowUpper) {
+    for (iRow = 0; iRow < number; iRow++) {
+      double value = rowUpper[iRow];
+      if (value>1.0e20)
+	value = COIN_DBL_MAX;
+      upper[iRow]= value;
+    }
+  } else {
+    for (iRow = 0; iRow < number; iRow++) {
+      upper[iRow]= COIN_DBL_MAX;
+    }
+  }
+  // Deal with matrix
+
+  delete rowCopy_;
+  rowCopy_=NULL;
+  if (!matrix_)
+    createEmptyMatrix();
+  // Use matrix() to get round virtual problem
+  matrix()->appendRows(number,rows);
+}
+// Add columns
+void 
+ClpModel::addColumns(int number, const double * columnLower, 
+		     const double * columnUpper,
+		     const double * objIn,
+		     const int * columnStarts, const int * rows,
+		     const double * elements)
+{
+  // Create a list of CoinPackedVectors
+  if (number) {
+    CoinPackedVectorBase ** columns=
+      new CoinPackedVectorBase * [number];
+    int iColumn;
+    for (iColumn=0;iColumn<number;iColumn++) {
+      int iStart = columnStarts[iColumn];
+      columns[iColumn] = 
+	new CoinPackedVector(columnStarts[iColumn+1]-iStart,
+			     rows+iStart,elements+iStart);
+    }
+    addColumns(number, columnLower, columnUpper,
+	       objIn, columns);
+    for (iColumn=0;iColumn<number;iColumn++) 
+      delete columns[iColumn];
+    delete [] columns;
+
+  }
+}
+void 
+ClpModel::addColumns(int number, const double * columnLower, 
+		     const double * columnUpper,
+		     const double * objIn,
+		     const CoinPackedVectorBase * const * columns)
+{
+  if (!number)
+    return;
+  int numberColumnsNow = numberColumns_;
+  resize(numberRows_,numberColumnsNow+number);
+  double * lower = columnLower_+numberColumnsNow;
+  double * upper = columnUpper_+numberColumnsNow;
+  double * obj = objective()+numberColumnsNow;
+  int iColumn;
+  if (columnLower) {
+    for (iColumn = 0; iColumn < number; iColumn++) {
+      double value = columnLower[iColumn];
+      if (value<-1.0e20)
+	value = -COIN_DBL_MAX;
+      lower[iColumn]= value;
+    }
+  } else {
+    for (iColumn = 0; iColumn < number; iColumn++) {
+      lower[iColumn]= 0.0;
+    }
+  }
+  if (columnUpper) {
+    for (iColumn = 0; iColumn < number; iColumn++) {
+      double value = columnUpper[iColumn];
+      if (value>1.0e20)
+	value = COIN_DBL_MAX;
+      upper[iColumn]= value;
+    }
+  } else {
+    for (iColumn = 0; iColumn < number; iColumn++) {
+      upper[iColumn]= COIN_DBL_MAX;
+    }
+  }
+  if (objIn) {
+    for (iColumn = 0; iColumn < number; iColumn++) {
+      obj[iColumn] = objIn[iColumn];
+    }
+  } else {
+    for (iColumn = 0; iColumn < number; iColumn++) {
+      obj[iColumn]= 0.0;
+    }
+  }
+  // Deal with matrix
+
+  delete rowCopy_;
+  rowCopy_=NULL;
+  if (!matrix_)
+    createEmptyMatrix();
+  // Use matrix() to get round virtual problem
+  matrix()->appendCols(number,columns);
 }
 // Infeasibility/unbounded ray (NULL returned if none/wrong)
 double * 

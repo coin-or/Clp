@@ -489,8 +489,10 @@ public:
   */
   bool createRim(int what,bool makeRowCopy=false);
   /** releases above arrays and does solution scaling out.  May also 
-      get rid of factorization data */
-  void deleteRim(bool getRidOfFactorizationData=true);
+      get rid of factorization data -
+      0 get rid of nothing, 1 get rid of arrays, 2 also factorization
+  */
+  void deleteRim(int getRidOfFactorizationData=2);
   /// Sanity check on input rim data (after scaling) - returns true if okay
   bool sanityCheck();
   /** Get next superbasic (primal) or next free (dual), -1 if none */
