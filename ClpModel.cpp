@@ -91,6 +91,7 @@ ClpModel::ClpModel () :
   problemStatus_(-1),
   maximumIterations_(1000000000),
   defaultHandler_(true),
+  status_(NULL),
   lengthNames_(0),
   rowNames_(),
   columnNames_(),
@@ -151,6 +152,8 @@ void ClpModel::gutsOfDelete()
   ray_ = NULL;
   delete [] integerType_;
   integerType_ = NULL;
+  delete [] status_;
+  status_=NULL;
 }
 //#############################################################################
 void ClpModel::setPrimalTolerance( double value) 
@@ -383,6 +386,10 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
     columnUpper_ = copyOfArray ( rhs.columnUpper_, numberColumns_ );
     objective_ = copyOfArray ( rhs.objective_, numberColumns_ );
     rowObjective_ = copyOfArray ( rhs.rowObjective_, numberRows_ );
+    if (rhs.status_) 
+      status_ = copyOfArray( rhs.status_,numberColumns_+numberRows_);
+    else
+      status_ = NULL;
     ray_ = NULL;
     if (problemStatus_==1)
       ray_ = copyOfArray (rhs.ray_,numberRows_);
@@ -415,6 +422,7 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
     rowNames_ = std::vector<std::string> ();
     columnNames_ = std::vector<std::string> ();
     integerType_ = NULL;
+    status_ = rhs.status_;
   }
 }
 /* Borrow model.  This is so we dont have to copy large amounts
@@ -457,6 +465,12 @@ ClpModel::returnModel(ClpModel & otherModel)
   delete [] otherModel.ray_;
   otherModel.ray_ = ray_;
   ray_ = NULL;
+  // do status
+  if (otherModel.status_!=status_) {
+    delete [] otherModel.status_;
+    otherModel.status_ = status_;
+  }
+  status_ = NULL;
 }
 //#############################################################################
 // Parameter related methods
@@ -576,7 +590,8 @@ double * deleteDouble(double * array , int size,
   return array;
 }
 char * deleteChar(char * array , int size, 
-		      int number, const int * which,int & newSize)
+		  int number, const int * which,int & newSize,
+		  bool ifDelete)
 {
   if (array) {
     int i ;
@@ -598,7 +613,8 @@ char * deleteChar(char * array , int size,
 	newArray[put++]=array[i];
       }
     }
-    delete [] array;
+    if (ifDelete)
+      delete [] array;
     array = newArray;
     delete [] deleted;
   }
@@ -641,6 +657,15 @@ ClpModel::resize (int newNumberRows, int newNumberColumns)
     problemStatus_ = -1;
     delete [] ray_;
     ray_ = NULL;
+  }
+  if (status_) {
+    unsigned char * tempC = new unsigned char [newNumberColumns+newNumberRows];
+    unsigned char * tempR = tempC + newNumberColumns;
+    memset(tempC,0,(newNumberColumns+newNumberRows)*sizeof(unsigned char));
+    memcpy(tempC,status_,min(newNumberColumns,numberColumns_)*sizeof(unsigned char));
+    memcpy(tempR,status_+numberColumns_,min(newNumberRows,numberRows_)*sizeof(unsigned char));
+    delete [] status_;
+    status_ = tempC;
   }
   numberRows_ = newNumberRows;
   if (newNumberColumns<numberColumns_) {
@@ -690,6 +715,18 @@ ClpModel::deleteRows(int number, const int * which)
   lengthNames_ = 0;
   rowNames_ = std::vector<std::string> ();
   columnNames_ = std::vector<std::string> ();
+  // status
+  if (status_) {
+    unsigned char * tempR  = (unsigned char *) deleteChar((char *)status_+numberColumns_,
+					numberRows_,
+					number, which, newSize,false);
+    unsigned char * tempC = new unsigned char [numberColumns_+newSize];
+    memcpy(tempC,status_,numberColumns_*sizeof(unsigned char));
+    memcpy(tempC+numberColumns_,tempR,newSize*sizeof(unsigned char));
+    delete [] tempR;
+    delete [] status_;
+    status_ = tempC;
+  }
 }
 // Deletes columns
 void 
@@ -717,7 +754,20 @@ ClpModel::deleteColumns(int number, const int * which)
   rowNames_ = std::vector<std::string> ();
   columnNames_ = std::vector<std::string> ();
   integerType_ = deleteChar(integerType_,numberColumns_,
-			    number, which, newSize);
+			    number, which, newSize,true);
+  // status
+  if (status_) {
+    unsigned char * tempC  = (unsigned char *) deleteChar((char *)status_,
+					numberColumns_,
+					number, which, newSize,false);
+    unsigned char * temp = new unsigned char [numberRows_+newSize];
+    memcpy(temp,status_,newSize*sizeof(unsigned char));
+    memcpy(temp+newSize,status_+numberColumns_,
+	   numberRows_*sizeof(unsigned char));
+    delete [] tempC;
+    delete [] status_;
+    status_ = temp;
+  }
 }
 // Infeasibility/unbounded ray (NULL returned if none/wrong)
 double * 
@@ -895,4 +945,23 @@ ClpModel::deleteIntegerInformation()
 {
   delete [] integerType_;
   integerType_ = NULL;
+}
+/* Return copy of status array (char[numberRows+numberColumns]),
+   use delete [] */
+unsigned char *  
+ClpModel::statusCopy() const
+{
+  return copyOfArray(status_,numberRows_+numberColumns_);
+}
+// Copy in status vector
+void 
+ClpModel::copyinStatus(const unsigned char * statusArray)
+{
+  delete [] status_;
+  if (statusArray) {
+    status_ = new unsigned char [numberRows_+numberColumns_];
+    memcpy(status_,statusArray,(numberRows_+numberColumns_)*sizeof(unsigned char));
+  } else {
+    status_=NULL;
+  }
 }

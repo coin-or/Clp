@@ -524,12 +524,6 @@ public:
   };
   inline bool flagged(int sequence) const
   {return (((status_[sequence]>>6)&1)!=0);};
-  /// See if status array exists (partly for OsiClp)
-  inline bool statusExists() const
-  { return (status_!=NULL);};
-  /// Return address of status array (char[numberRows+numberColumns])
-  inline unsigned char *  statusArray() 
-  { return status_;};
   /** Set up status array (can be used by OsiClp).
       Also can be used to set up all slack basis */
   void createStatus() ;
@@ -633,8 +627,6 @@ protected:
   int directionOut_;
   /// Pivot Row
   int pivotRow_;
-  /// Status Region (Owner of array below)
-  unsigned char * status_;
   /// Working copy of reduced costs (Owner of arrays below)
   double * dj_;
   /// Reduced costs of slacks not same as duals (or - duals)

@@ -229,6 +229,18 @@ public:
        Up to user to use delete [] on these arrays.  */
    double * infeasibilityRay() const;
    double * unboundedRay() const;
+  /// See if status array exists (partly for OsiClp)
+  inline bool statusExists() const
+  { return (status_!=NULL);};
+  /// Return address of status array (char[numberRows+numberColumns])
+  inline unsigned char *  statusArray() const
+  { return status_;};
+  /** Return copy of status array (char[numberRows+numberColumns]),
+      use delete [] */
+  unsigned char *  statusCopy() const;
+  /// Copy in status vector
+  void copyinStatus(const unsigned char * statusArray);
+
   //@}
   /**@name Message handling */
   //@{
@@ -394,6 +406,14 @@ protected:
   bool defaultHandler_;
   /// Messages
   CoinMessages messages_;
+  /** Status Region.  I know that not all algorithms need a status
+      array, but it made sense for things like crossover and put
+      all permanent stuff in one place.  No assumption is made
+      about what is in status array (although it might be good to reserve
+      bottom 3 bits (i.e. 0-7 numeric) for classic status).  This
+      is number of columns + number of rows long (in that order).
+  */
+  unsigned char * status_;
   /// length of names (0 means no names)
   int lengthNames_;
   /// Row names

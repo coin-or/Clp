@@ -239,7 +239,7 @@ const PresolveAction *implied_free_action::presolve(PresolveMatrix *prob,
 
       const bool nonzero_cost = (cost[j] != 0.0);
 
-      double *save_costs = nonzero_cost ? new double[hinrow[row]] : 0;
+      double *save_costs = nonzero_cost ? new double[hinrow[row]] : NULL;
 
       {
 	action *s = &actions[nactions++];
@@ -430,6 +430,7 @@ void implied_free_action::postsolve(PostsolveMatrix *prob) const
       rlo[irow] = f->rlo;
       rup[irow] = f->rup;
     }
+    delete [] save_costs;
     // coeff has now been initialized
 
     // compute solution

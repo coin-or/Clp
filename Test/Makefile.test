@@ -22,7 +22,11 @@ Define := ${ClpDefine} ${CoinDefine} ${bzlibDefine} ${zlibDefine}
 # You should not need to edit below this line.
 ##############################################################################
 
-CXXFLAGS += $(OPTFLAG)
+CXXFLAGS += $(OPTFLAG) 
+CXXFLAGS += -DUSE_PRESOLVE
+#ifeq ($(OPTFLAG),-g)
+    CXXFLAGS += -DCLP_DEBUG -DPRESOLVE_SUMMARY=1 
+#endif
 
 TESTSRC := ClpMain.cpp
 TESTSRC += unitTest.cpp
@@ -53,6 +57,7 @@ ifeq ($(findstring Linux,${UNAME}),Linux)
 	CXXFLAGS +=	-DREADLINE
 	LDFLAGS += -lhistory -lreadline -ltermcap
 endif
+#LDFLAGS += -lefence
 
 ###############################################################################
 

@@ -63,7 +63,8 @@ public:
   */
   virtual ClpSimplex * presolvedModel(ClpSimplex & si,
 				      double feasibilityTolerance=0.0,
-				      bool keepIntegers=true);
+				      bool keepIntegers=true,
+				      int numberPasses=5);
 
   /** Return pointer to presolved model,
       Up to user to destroy */
@@ -97,6 +98,8 @@ private:
   int ncols_;
   int nrows_;
   int nelems_;
+  /// Number of major passes
+  int numberPasses_;
 
 protected:
   /// If you want to apply the individual presolve routines differently,

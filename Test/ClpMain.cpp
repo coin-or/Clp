@@ -73,10 +73,10 @@ enum ClpParameterType {
   
   DUALTOLERANCE=1,PRIMALTOLERANCE,DUALBOUND,PRIMALWEIGHT,
 
-  LOGLEVEL=101,MAXFACTOR,PERTURBATION,MAXITERATION,
+  LOGLEVEL=101,MAXFACTOR,PERTURBATION,MAXITERATION,PRESOLVE,
   
   DIRECTION=201,DUALPIVOT,SCALING,ERRORSALLOWED,KEEPNAMES,SPARSEFACTOR,
-  PRIMALPIVOT,PRESOLVE,
+  PRIMALPIVOT,
   
   DIRECTORY=301,IMPORT,EXPORT,RESTORE,SAVE,DUALSIMPLEX,PRIMALSIMPLEX,BAB,
   MAXIMIZE,MINIMIZE,EXIT,STDIN,UNITTEST,NETLIB_DUAL,NETLIB_PRIMAL,SOLUTION,
@@ -795,9 +795,8 @@ stopping",
 	      "on",SCALING);
     parameters[numberParameters-1].append("off");
     parameters[numberParameters++]=
-      ClpItem("presolve","Whether to presolve problem",
-	      "off",PRESOLVE);
-    parameters[numberParameters-1].append("on");
+      ClpItem("presolve","Whether to presolve problem - how many passes",
+	      0,100,PRESOLVE);
     parameters[numberParameters++]=
       ClpItem("spars!eFactor","Whether factorization treated as sparse",
 	      "on",SPARSEFACTOR);
@@ -993,7 +992,10 @@ stopping",
 	  // get next field as int
 	  int value = getIntField(argc,argv,&valid);
 	  if (!valid) {
-	    parameters[iParam].setIntParameter(models+iModel,value);
+	    if (parameters[iParam].type()==PRESOLVE)
+	      preSolve = value;
+	    else
+	      parameters[iParam].setIntParameter(models+iModel,value);
 	  } else if (valid==1) {
 	    abort();
 	  } else {
@@ -1056,9 +1058,6 @@ stopping",
 	    case KEEPNAMES:
 	      keepImportNames = 1-action;
 	      break;
-	    case PRESOLVE:
-	      preSolve = action;
-	      break;
 	    default:
 	      abort();
 	    }
@@ -1076,7 +1075,7 @@ stopping",
 #ifdef USE_PRESOLVE
 	      Presolve pinfo;
 	      if (preSolve) 
-		model2 = pinfo.presolvedModel(models[iModel],1.0e-8);
+		model2 = pinfo.presolvedModel(models[iModel],1.0e-8,preSolve);
 #endif
 #ifdef READLINE     
 	      currentModel = model2;

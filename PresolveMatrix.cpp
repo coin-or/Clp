@@ -476,6 +476,8 @@ PresolveMatrix::PresolveMatrix(int ncols0_in,
     memcpy(sol_,si.primalColumnSolution(),ncols_*sizeof(double));;
     acts_ = new double [nrows_];
     memcpy(acts_,si.primalRowSolution(),nrows_*sizeof(double));
+    if (!si.statusArray())
+      si.createStatus();
     colstat_ = new unsigned char [nrows_+ncols_];
     memcpy(colstat_,si.statusArray(),
 	   (nrows_+ncols_)*sizeof(unsigned char));

@@ -41,7 +41,8 @@ Presolve::Presolve() :
   paction_(0),
   ncols_(0),
   nrows_(0),
-  nelems_(0)
+  nelems_(0),
+  numberPasses_(5)
 {
 }
 
@@ -165,11 +166,13 @@ void Presolve::postsolve(ClpSimplex& si,
 ClpSimplex * 
 Presolve::presolvedModel(ClpSimplex & si,
 			 double feasibilityTolerance,
-			 bool keepIntegers)
+			 bool keepIntegers,
+			 int numberPasses)
 {
   ncols_ = si.getNumCols();
   nrows_ = si.getNumRows();
   nelems_ = si.getNumElements();
+  numberPasses_ = numberPasses;
 
   double maxmin = si.getObjSense();
   originalModel_ = &si;
@@ -413,10 +416,10 @@ const PresolveAction *Presolve::presolve(PresolveMatrix *prob)
     prob->numberColsToDo_=ncols_;
 	
 
-    int iLoop1,numberLoops1 = 10;
+    int iLoop;
 
-    for (iLoop1=0;iLoop1<numberLoops1;iLoop1++) {
-      printf("Starting major pass %d\n",iLoop1+1);
+    for (iLoop=0;iLoop<numberPasses_;iLoop++) {
+      printf("Starting major pass %d\n",iLoop+1);
       const PresolveAction * const paction0 = paction_;
       // look for substitutions with no fill
       int fill_level=2;

@@ -7,9 +7,6 @@ LibType := SHARED
 OptLevel := -g
 OptLevel := -O2
 
-ifeq ($(OptLevel),-g)
-    CXXFLAGS += -DCLP_DEBUG
-endif
 
 LIBNAME := Clp
 LIBSRC :=
@@ -28,6 +25,23 @@ LIBSRC += ClpPrimalColumnSteepest.cpp
 LIBSRC += ClpSimplex.cpp
 LIBSRC += ClpSimplexDual.cpp
 LIBSRC += ClpSimplexPrimal.cpp
+# and Presolve stuff
+LIBSRC += Presolve.cpp
+LIBSRC += PresolveDoubleton.cpp
+LIBSRC += PresolveEmpty.cpp
+LIBSRC += PresolveFixed.cpp
+LIBSRC += PresolveMatrix.cpp
+LIBSRC += PresolvePsdebug.cpp
+LIBSRC += PresolveSingleton.cpp
+LIBSRC += PresolveZeros.cpp
+LIBSRC += PresolveDual.cpp		    
+LIBSRC += PresolveDupcol.cpp		    
+LIBSRC += PresolveForcing.cpp		    
+LIBSRC += PresolveImpliedFree.cpp	    
+LIBSRC += PresolveIsolated.cpp	    
+LIBSRC += PresolveSubst.cpp		    
+LIBSRC += PresolveTighten.cpp		    
+LIBSRC += PresolveUseless.cpp             
 
 ##############################################################################
 # You should not need to edit below this line.
@@ -37,6 +51,12 @@ export CoinDir = $(shell cd ..; pwd)
 export MakefileDir := $(CoinDir)/Makefiles
 include ${MakefileDir}/Makefile.coin
 include ${MakefileDir}/Makefile.location
+
+CXXFLAGS += -DUSE_PRESOLVE
+ifeq ($(OptLevel),-g)
+     CXXFLAGS += -DCLP_DEBUG
+#    CXXFLAGS += -DPRESOLVE_SUMMARY=1 -DDEBUG_PRESOLVE
+endif
 
 export ExtraIncDir  := ${CoinIncDir} ${zlibIncDir} ${bzlibIncDir}
 export ExtraLibDir  := ${CoinLibDir} ${zlibLibDir} ${bzlibLibDir}

@@ -96,7 +96,6 @@ ClpSimplex::ClpSimplex () :
   sequenceOut_(-1),
   directionOut_(-1),
   pivotRow_(-1),
-  status_(NULL),
   dj_(NULL),
   rowReducedCost_(NULL),
   reducedCostWork_(NULL),
@@ -1104,7 +1103,6 @@ ClpSimplex::ClpSimplex(const ClpSimplex &rhs) :
   sequenceOut_(-1),
   directionOut_(-1),
   pivotRow_(-1),
-  status_(NULL),
   dj_(NULL),
   rowReducedCost_(NULL),
   reducedCostWork_(NULL),
@@ -1193,7 +1191,6 @@ ClpSimplex::ClpSimplex(const ClpModel &rhs) :
   sequenceOut_(-1),
   directionOut_(-1),
   pivotRow_(-1),
-  status_(NULL),
   dj_(NULL),
   rowReducedCost_(NULL),
   reducedCostWork_(NULL),
@@ -1297,9 +1294,6 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
     columnArray_[i]=NULL;
     if (rhs.columnArray_[i]) 
       columnArray_[i] = new CoinIndexedVector(*rhs.columnArray_[i]);
-  }
-  if (rhs.status_) {
-    status_ = copyOfArray( rhs.status_,numberColumns_+numberRows_);
   }
   if (rhs.saveStatus_) {
     saveStatus_ = copyOfArray( rhs.saveStatus_,numberColumns_+numberRows_);
@@ -1414,7 +1408,7 @@ ClpSimplex::gutsOfDelete(int type)
     dualRowPivot_ = NULL;
     delete primalColumnPivot_;
     primalColumnPivot_ = NULL;
-    delete status_;
+    delete [] status_;
     status_=NULL;
   } else {
     // delete any size information in methods
@@ -2996,8 +2990,8 @@ ClpSimplex::sanityCheck()
 void 
 ClpSimplex::createStatus() 
 {
-  delete [] status_;
-  status_ = new unsigned char [numberColumns_+numberRows_];
+  if(!status_)
+    status_ = new unsigned char [numberColumns_+numberRows_];
   memset(status_,0,(numberColumns_+numberRows_)*sizeof(char));
   int i;
   // set column status to one nearest zero
