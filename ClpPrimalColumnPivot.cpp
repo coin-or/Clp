@@ -65,3 +65,8 @@ ClpPrimalColumnPivot::updateWeights(CoinIndexedVector * input)
 {
 }
 
+// Gets rid of all arrays
+void 
+ClpPrimalColumnPivot::clearArrays()
+{
+}

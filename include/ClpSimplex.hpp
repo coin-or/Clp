@@ -108,6 +108,14 @@ public:
 		     const double* obj,
 		      const double* rowlb, const double* rowub,
 		      const double * rowObjective=NULL);
+  /// This one is for after presolve to save memory
+  void loadProblem (  const int numcols, const int numrows,
+		     const int* start, const int* index,
+		      const double* value,const int * length,
+		     const double* collb, const double* colub,   
+		     const double* obj,
+		      const double* rowlb, const double* rowub,
+		      const double * rowObjective=NULL);
   /// Read an mps file from the given filename
   int readMps(const char *filename,
 	      bool keepNames=false,
@@ -370,7 +378,7 @@ public:
   int gutsOfSolution ( const double * rowActivities,
 		       const double * columnActivities,
 		       bool valuesPass=false);
-  /// Does most of deletion (0 = all, 1 = most)
+  /// Does most of deletion (0 = all, 1 = most, 2 most + factorization)
   void gutsOfDelete(int type);
   /// Does most of copying
   void gutsOfCopy(const ClpSimplex & rhs);
@@ -384,8 +392,9 @@ public:
       On 16 returns false if problem "bad" i.e. matrix or bounds bad
   */
   bool createRim(int what,bool makeRowCopy=false);
-  /// releases above arrays and does solution scaling out
-  void deleteRim();
+  /** releases above arrays and does solution scaling out.  May also 
+      get rid of factorization data */
+  void deleteRim(bool getRidOfFactorizationData=true);
   /// Sanity check on input rim data (after scaling) - returns true if okay
   bool sanityCheck();
   //@}
@@ -515,6 +524,9 @@ public:
   /// See if status array exists (partly for OsiClp)
   inline bool statusExists() const
   { return (status_!=NULL);};
+  /// Return address of status array (char[numberRows+numberColumns])
+  inline unsigned char *  statusArray() 
+  { return status_;};
   /** Set up status array (can be used by OsiClp).
       Also can be used to set up all slack basis */
   void createStatus() ;

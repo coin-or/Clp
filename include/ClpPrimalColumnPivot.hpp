@@ -55,6 +55,8 @@ public:
   */
   virtual int pivotRow(double & way)
   {way=0;return -2;};
+  /// Gets rid of all arrays (may be empty)
+  virtual void clearArrays();
   //@}
   
   

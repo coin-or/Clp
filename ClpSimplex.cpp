@@ -469,7 +469,7 @@ int ClpSimplex::getSolution ( const double * rowActivities,
     // do work
     gutsOfSolution ( rowActivities, columnActivities);
     // release extra memory
-    deleteRim();
+    deleteRim(false);
   }
   return factorization_->status();
 }
@@ -496,7 +496,7 @@ int ClpSimplex::factorize ()
   // do work
   int status = internalFactorize(-1);
   // release extra memory
-  deleteRim();
+  deleteRim(false);
 
   return status;
 }
@@ -1313,7 +1313,7 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
   if (rhs.nonLinearCost_!=NULL)
     nonLinearCost_ = new ClpNonLinearCost(*rhs.nonLinearCost_);
 }
-// type == 0 do everything
+// type == 0 do everything, most + pivot data, 2 factorization data as well
 void 
 ClpSimplex::gutsOfDelete(int type)
 {
@@ -1354,20 +1354,29 @@ ClpSimplex::gutsOfDelete(int type)
   }
   delete rowCopy_;
   rowCopy_=NULL;
+  delete [] saveStatus_;
+  saveStatus_=NULL;
   if (!type) {
     // delete everything
-    delete [] pivotVariable_;
-    pivotVariable_=NULL;
     delete factorization_;
     factorization_ = NULL;
+    delete [] pivotVariable_;
+    pivotVariable_=NULL;
     delete dualRowPivot_;
     dualRowPivot_ = NULL;
     delete primalColumnPivot_;
     primalColumnPivot_ = NULL;
-    delete [] saveStatus_;
-    saveStatus_=NULL;
     delete status_;
     status_=NULL;
+  } else {
+    // delete any size information in methods
+    if (type>1) {
+      factorization_->clearArrays();
+      delete [] pivotVariable_;
+      pivotVariable_=NULL;
+    }
+    dualRowPivot_->clearArrays();
+    primalColumnPivot_->clearArrays();
   }
 }
 // This sets largest infeasibility and most infeasible
@@ -1779,7 +1788,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
   return goodMatrix;
 }
 void
-ClpSimplex::deleteRim()
+ClpSimplex::deleteRim(bool getRidOfFactorizationData)
 {
   int i;
   if (problemStatus_!=1&&problemStatus_!=2) {
@@ -1820,7 +1829,10 @@ ClpSimplex::deleteRim()
     optimizationDirection_ = -1.0;
   // scaling may have been turned off
   scalingFlag_ = abs(scalingFlag_);
-  gutsOfDelete(1);
+  if(getRidOfFactorizationData)
+    gutsOfDelete(2);
+  else
+    gutsOfDelete(1);
 }
 void 
 ClpSimplex::setDualBound(double value)
@@ -2984,6 +2996,20 @@ ClpSimplex::loadProblem (  const int numcols, const int numrows,
 		    const double * rowObjective)
 {
   ClpModel::loadProblem(numcols, numrows, start, index, value,
+			  collb, colub, obj, rowlb, rowub,
+			  rowObjective);
+  createStatus();
+}
+void 
+ClpSimplex::loadProblem (  const int numcols, const int numrows,
+			   const int* start, const int* index,
+			   const double* value,const int * length,
+			   const double* collb, const double* colub,   
+			   const double* obj,
+			   const double* rowlb, const double* rowub,
+			   const double * rowObjective)
+{
+  ClpModel::loadProblem(numcols, numrows, start, index, value, length,
 			  collb, colub, obj, rowlb, rowub,
 			  rowObjective);
   createStatus();

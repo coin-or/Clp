@@ -368,15 +368,14 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
     // and get good feasible duals
     computeDuals();
   }
-  // at present we are leaving factorization around
-  // maybe we should empty it
+  factorization_->sparseThreshold(saveSparse);
+  // Get rid of some arrays and empty factorization
   deleteRim();
   handler_->message(CLP_SIMPLEX_FINISHED+problemStatus_,messages_)
     <<objectiveValue()
     <<CoinMessageEol;
   // Restore any saved stuff
   perturbation_ = savePerturbation;
-  factorization_->sparseThreshold(saveSparse);
   infeasibilityCost_ = saveInfeasibilityCost;
   return problemStatus_;
 }

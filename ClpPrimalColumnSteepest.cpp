@@ -939,3 +939,18 @@ ClpPrimalColumnSteepest::initializeWeights()
     delete temp;
   }
 }
+// Gets rid of all arrays
+void 
+ClpPrimalColumnSteepest::clearArrays()
+{
+  delete [] weights_;
+  weights_=NULL;
+  delete infeasible_;
+  infeasible_ = NULL;
+  delete alternateWeights_;
+  alternateWeights_ = NULL;
+  delete [] savedWeights_;
+  savedWeights_ = NULL;
+  delete [] reference_;
+  reference_ = NULL;
+}

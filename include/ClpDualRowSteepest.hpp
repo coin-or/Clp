@@ -51,6 +51,8 @@ public:
   virtual void saveWeights(ClpSimplex * model, int mode);
   /// Gets rid of last update
   virtual void unrollWeights();
+  /// Gets rid of all arrays
+  virtual void clearArrays();
   //@}
   
   

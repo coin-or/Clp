@@ -56,6 +56,8 @@ public:
   virtual void checkAccuracy();
   /// Gets rid of last update (may be empty)
   virtual void unrollWeights();
+  /// Gets rid of all arrays (may be empty)
+  virtual void clearArrays();
   //@}
   
   

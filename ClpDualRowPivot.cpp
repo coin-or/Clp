@@ -74,3 +74,8 @@ void
 ClpDualRowPivot::unrollWeights()
 {
 }
+// Gets rid of all arrays
+void 
+ClpDualRowPivot::clearArrays()
+{
+}

@@ -266,6 +266,27 @@ ClpModel::loadProblem (
   matrix_ = new ClpPackedMatrix(matrix);
 }
 void
+ClpModel::loadProblem ( 
+			      const int numcols, const int numrows,
+			      const int* start, const int* index,
+			      const double* value,const int* length,
+			      const double* collb, const double* colub,   
+			      const double* obj,
+			      const double* rowlb, const double* rowub,
+			      const double * rowObjective)
+{
+  gutsOfLoadModel(numrows, numcols,
+		  collb, colub, obj, rowlb, rowub, rowObjective);
+  // Compute number of elements
+  int numberElements = 0;
+  int i;
+  for (i=0;i<numcols;i++) 
+    numberElements += length[i];
+  CoinPackedMatrix matrix(true,numrows,numcols,numberElements,
+			      value,index,start,length);
+  matrix_ = new ClpPackedMatrix(matrix);
+}
+void
 ClpModel::getRowBound(int iRow, double& lower, double& upper) const
 {
   lower=-DBL_MAX;

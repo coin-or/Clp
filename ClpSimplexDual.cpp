@@ -344,15 +344,14 @@ int ClpSimplexDual::dual ( )
   }
 
   //assert(!numberFake_||problemStatus_); // all bounds should be okay
-  // at present we are leaving factorization around
-  // maybe we should empty it
+  factorization_->sparseThreshold(saveSparse);
+  // Get rid of some arrays and empty factorization
   deleteRim();
   handler_->message(CLP_SIMPLEX_FINISHED+problemStatus_,messages_)
     <<objectiveValue()
     <<CoinMessageEol;
   // Restore any saved stuff
   perturbation_ = savePerturbation;
-  factorization_->sparseThreshold(saveSparse);
   dualBound_ = saveDualBound_;
   return problemStatus_;
 }
@@ -2412,10 +2411,9 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
   delete [] saveStatus;
   delete [] savePivot;
 
-  // at present we are leaving factorization around
-  // maybe we should empty it
-  deleteRim();
   factorization_->sparseThreshold(saveSparse);
+  // Get rid of some arrays and empty factorization
+  deleteRim();
 #else
   // save basis and solution 
   double * rowSolution = new double[numberRows_];

@@ -78,6 +78,14 @@ public:
 		     const double* obj,
 		      const double* rowlb, const double* rowub,
 		      const double * rowObjective=NULL);
+  /// This one is for after presolve to save memory
+  void loadProblem (  const int numcols, const int numrows,
+		     const int* start, const int* index,
+		      const double* value,const int * length,
+		     const double* collb, const double* colub,   
+		     const double* obj,
+		      const double* rowlb, const double* rowub,
+		      const double * rowObjective=NULL);
   /// Read an mps file from the given filename
   int readMps(const char *filename,
 	      bool keepNames=false,
@@ -162,6 +170,8 @@ public:
    /// Primal column solution
    inline double * primalColumnSolution() const { return columnActivity_; }
    inline const double * getColSolution() const { return columnActivity_; }
+   inline void setColSolution(const double * input)
+   { memcpy(columnActivity_,input,numberColumns_*sizeof(double));};
    /// Dual row solution
    inline double * dualRowSolution() const      { return dual_; }
    inline const double * getRowPrice() const    { return dual_; }
@@ -192,6 +202,9 @@ public:
    inline CoinPackedMatrix * matrix() const {
       return matrix_->getPackedMatrix();
    }
+   /// Number of elements in matrix
+   inline int getNumElements() const 
+     { return matrix_->getNumElements();};
    /// Row Matrix 
    inline ClpMatrixBase * rowCopy() const       { return rowCopy_; }
    /// Clp Matrix 
