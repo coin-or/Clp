@@ -1081,7 +1081,8 @@ void doubleton_action::postsolve(PostsolveMatrix *prob) const
       double bounds_factor = rhs/coeffy;
       // this probably doesn't work (???)
 	    
-      for (int i=0; i<ny; ++i) {
+      int i;
+      for ( i=0; i<ny; ++i) {
 	int row = hrow[k];
 	double coeff = colels[k];
 	k = link[k];
@@ -1109,7 +1110,7 @@ void doubleton_action::postsolve(PostsolveMatrix *prob) const
       k = mcstrt[jcolx];
       int nx = hincol[jcolx];
 	    
-      for (int i=0; i<nx; ++i) {
+      for ( i=0; i<nx; ++i) {
 	int row = hrow[k];
 	double coeff = colels[k];
 	k = link[k];
