@@ -151,8 +151,10 @@ ClpPackedMatrix::reverseOrderedCopy() const
 {
   ClpPackedMatrix * copy = new ClpPackedMatrix();
   copy->matrix_= new CoinPackedMatrix();
+  copy->matrix_->setExtraGap(0.0);
+  copy->matrix_->setExtraMajor(0.0);
   copy->matrix_->reverseOrderedCopyOf(*matrix_);
-  copy->matrix_->removeGaps();
+  //copy->matrix_->removeGaps();
   copy->numberActiveColumns_ = copy->matrix_->getNumCols();
   copy->hasGaps_=false;
   return copy;
@@ -1773,6 +1775,8 @@ ClpPackedMatrix::allElementsInRange(ClpModel * model,
 				    double smallest, double largest)
 {
   int iColumn;
+  // make sure matrix correct size
+  matrix_->setDimensions(model->numberRows(),model->numberColumns());
   CoinBigIndex numberLarge=0;;
   CoinBigIndex numberSmall=0;;
   CoinBigIndex numberDuplicate=0;;

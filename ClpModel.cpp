@@ -174,7 +174,7 @@ ClpModel::gutsOfLoadModel (int numberRows, int numberColumns,
   rowObjective_=ClpCopyOfArray(rowObjective,numberRows_);
   columnLower_=ClpCopyOfArray(collb,numberColumns_,0.0);
   columnUpper_=ClpCopyOfArray(colub,numberColumns_,COIN_DBL_MAX);
-  // set default solution
+  // set default solution and clean bounds
   for (iRow=0;iRow<numberRows_;iRow++) {
     if (rowLower_[iRow]>0.0) {
       rowActivity_[iRow]=rowLower_[iRow];
@@ -183,6 +183,10 @@ ClpModel::gutsOfLoadModel (int numberRows, int numberColumns,
     } else {
       rowActivity_[iRow]=0.0;
     }
+    if (rowLower_[iRow]<-1.0e27)
+      rowLower_[iRow]=-COIN_DBL_MAX;
+    if (rowUpper_[iRow]>1.0e27)
+      rowUpper_[iRow]=COIN_DBL_MAX;
   }
   for (iColumn=0;iColumn<numberColumns_;iColumn++) {
     if (columnLower_[iColumn]>0.0) {
@@ -192,6 +196,10 @@ ClpModel::gutsOfLoadModel (int numberRows, int numberColumns,
     } else {
       columnActivity_[iColumn]=0.0;
     }
+    if (columnLower_[iColumn]<-1.0e27)
+      columnLower_[iColumn]=-COIN_DBL_MAX;
+    if (columnUpper_[iColumn]>1.0e27)
+      columnUpper_[iColumn]=COIN_DBL_MAX;
   }
 }
 // This just loads up a row objective
