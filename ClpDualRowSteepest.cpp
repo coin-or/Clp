@@ -122,7 +122,7 @@ ClpDualRowSteepest::pivotRow()
   assert(model_);
   int i,iRow;
   double * infeas = infeasible_->denseVector();
-  double largest=1.0e-20;
+  double largest=1.0e-50;
   int * index = infeasible_->getIndices();
   int number = infeasible_->getNumElements();
   const int * pivotVariable =model_->pivotVariable();
