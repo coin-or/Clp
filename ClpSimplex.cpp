@@ -5098,7 +5098,7 @@ ClpSimplex::finish()
   if (problemStatus_!=10) {
     if (problemStatus_==-1)
       problemStatus_=4;
-    assert(problemStatus_>=0&&problemStatus_<5);
+    assert(problemStatus_>=0&&problemStatus_<6);
     handler_->message(CLP_SIMPLEX_FINISHED+problemStatus_,messages_)
       <<objectiveValue()
       <<CoinMessageEol;

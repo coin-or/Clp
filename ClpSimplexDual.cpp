@@ -378,7 +378,7 @@ int ClpSimplexDual::dual (int ifValuesPass , int startFinishOptions)
 	ifValuesPass=0;
 	int status = eventHandler_->event(ClpEventHandler::endOfValuesPass);
 	if (status>=0) {
-	  problemStatus_=status;
+	  problemStatus_=5;
 	  secondaryStatus_=ClpEventHandler::endOfValuesPass;
 	  break;
 	}
@@ -387,7 +387,7 @@ int ClpSimplexDual::dual (int ifValuesPass , int startFinishOptions)
       {
 	int status = eventHandler_->event(ClpEventHandler::endOfFactorization);
 	if (status>=0) {
-	  problemStatus_=status;
+	  problemStatus_=5;
 	  secondaryStatus_=ClpEventHandler::endOfFactorization;
 	  break;
 	}
@@ -980,7 +980,7 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
 	{
 	  int status = eventHandler_->event(ClpEventHandler::endOfIteration);
 	  if (status>=0) {
-	    problemStatus_=status;
+	    problemStatus_=5;
 	    secondaryStatus_=ClpEventHandler::endOfIteration;
 	    returnCode=4;
 	    break;

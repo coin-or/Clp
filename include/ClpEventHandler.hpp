@@ -38,7 +38,8 @@ public:
   */
   //@{
   /** This can do whatever it likes.  If return code -1 then carries on
-      if >=0 sets ClpModel::status() to that value and will return to user
+      if 0 sets ClpModel::status() to 5 (stopped by event) and will return to user.
+      At present if <-1 carries on and if >0 acts as if 0 - this may change
   */
   virtual int event(Event whichEvent);
   //@}

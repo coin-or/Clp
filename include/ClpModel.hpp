@@ -238,8 +238,9 @@ public:
        0 - optimal
        1 - primal infeasible
        2 - dual infeasible
-       3 - stopped on iterations etc
+       3 - stopped on iterations or time
        4 - stopped due to errors
+       5 - stopped by event handler (virtual int ClpEventHandler::event())
    */
    inline int status() const            { return problemStatus_; }
   /// Set problem status
