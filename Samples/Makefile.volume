@@ -60,7 +60,7 @@ ifeq ($(findstring Linux,${UNAME}),Linux)
 endif
 #LDFLAGS += -lefence
 #if DENSE and using given libraries
-LDFLAGS += -llapack -lblas -lg2c
+#LDFLAGS += -llapack -lblas -lg2c
 LDFLAGS += -lVol
 ###############################################################################
 

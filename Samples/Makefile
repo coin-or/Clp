@@ -59,7 +59,7 @@ ifeq ($(findstring Linux,${UNAME}),Linux)
 #	LDFLAGS += -lhistory -lreadline -ltermcap
 endif
 #if DENSE and using given libraries
-LDFLAGS += -llapack -lblas -lg2c
+#LDFLAGS += -llapack -lblas -lg2c
 #LDFLAGS += -lefence
 ###############################################################################
 
