@@ -2788,7 +2788,8 @@ bool ClpPredictorCorrector::checkGoodMove2(double move,
     return false;
   double lowerBoundGap = gamma*nextGap*complementarityMultiplier;
   bool goodMove=true;
-  for (int iColumn=0;iColumn<numberRows_+numberColumns_;iColumn++) {
+  int iColumn;
+  for ( iColumn=0;iColumn<numberRows_+numberColumns_;iColumn++) {
     if (!flagged(iColumn)) {
       if (lowerBound(iColumn)) {
 	double part1=lowerSlack_[iColumn]+actualPrimalStep_*deltaSL_[iColumn];
@@ -2824,7 +2825,7 @@ bool ClpPredictorCorrector::checkGoodMove2(double move,
     nextDj = new double [numberColumns_];
     double * nextSolution = new double [numberColumns_];
     // put next primal into nextSolution
-    for (int iColumn=0;iColumn<numberColumns_;iColumn++) {
+    for ( iColumn=0;iColumn<numberColumns_;iColumn++) {
       if (!flagged(iColumn)) {
 	nextSolution[iColumn]=solution_[iColumn]+
 	  actualPrimalStep_*deltaX_[iColumn];
@@ -3582,7 +3583,7 @@ ClpPredictorCorrector::debugMove(int phase,double primalStep, double dualStep)
   double gamma2 = gamma_*gamma_; // gamma*gamma will be added to diagonal
   double gammaOffset=0.0;
   double maximumDjInfeasibility=0.0;
-  for (int iColumn=0;iColumn<numberTotal;iColumn++) {
+  for ( iColumn=0;iColumn<numberTotal;iColumn++) {
     if (!flagged(iColumn)) {
       double reducedCost=djNew[iColumn];
       double zValue = zVec_[iColumn] + dualStep*deltaZ_[iColumn];
