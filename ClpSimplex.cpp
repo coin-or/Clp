@@ -2641,6 +2641,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
 	if (status!=basic) {
 	  if (upper_[i]==lower_[i]) {
 	    setStatus(i,isFixed);
+	    solution_[i]=lower_[i];
 	  } else if (status==atLowerBound) {
 	    assert (lower_[i]>-1.0e20);
 	    solution_[i]=lower_[i];
