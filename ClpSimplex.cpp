@@ -2134,10 +2134,23 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
 	solution_ = new double[numberRows2+numberColumns_];
       columnActivityWork_ = solution_;
       rowActivityWork_ = solution_+numberColumns_;
-      memcpy(columnActivityWork_,columnActivity_,
-	     numberColumns_*sizeof(double));
-      memcpy(rowActivityWork_,rowActivity_,
-	     numberRows_*sizeof(double));
+      if (status_) {
+	for (i=0;i<numberColumns_;i++) {
+	  columnActivityWork_[i] = columnActivity_[i];
+	  setFakeBound(i,noFake);
+	}
+	for (i=0;i<numberRows_;i++) {
+	  rowActivityWork_[i] = rowActivity_[i];
+	  setFakeBound(i+numberColumns_,noFake);
+	}
+      } else {
+	for (i=0;i<numberColumns_;i++) {
+	  columnActivityWork_[i] = columnActivity_[i];
+	}
+	for (i=0;i<numberRows_;i++) {
+	  rowActivityWork_[i] = rowActivity_[i];
+	}
+      }
     }
   }
   if ((what&16)!=0) {

@@ -1586,12 +1586,12 @@ ClpSimplexPrimal::updatePrimalsInPrimal(CoinIndexedVector * rowArray,
   }
 #else
   if (pivotRow_>=0) {
-    dualIn_ += (oldCost-cost_[sequenceOut_]);
+    double dualIn = dualIn_+(oldCost-cost_[sequenceOut_]);
     // update change vector to include pivot
     if (pivotPosition>=0) {
-      work[pivotPosition] -= dualIn_;
+      work[pivotPosition] -= dualIn;
     } else {
-      work[newNumber]=-dualIn_;
+      work[newNumber]=-dualIn;
       which[newNumber++]=pivotRow_;
     }
   }
