@@ -268,7 +268,7 @@ public:
   inline int numberSets() const
   { return numberSets_;};
   /// Switches off dj checking each factorization (for BIG models)
-  void ClpGubMatrix::switchOffCheck();
+  void switchOffCheck();
    //@}
    
     
