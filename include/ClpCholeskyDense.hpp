@@ -5,6 +5,7 @@
 
 #include "ClpCholeskyBase.hpp"
 
+typedef double longDouble;
 
 /** Dense class for Clp Cholesky factorization
 
@@ -22,6 +23,18 @@ public:
   virtual int factorize(const double * diagonal, int * rowsDropped) ;
   /** Uses factorization to solve. */
   virtual void solve (double * region) ;
+  //@}
+
+   /**@name Non virtual methods for ClpCholeskyDense  */
+   //@{
+  /** Reserves space..
+   Returns non-zero if not enough memory */
+   int reserveSpace(int numberRows) ;
+  /** part 2 of Factorize - filling in rowsDropped and returning number dropped */
+  int factorizePart2(int * rowsDropped) ;
+  /// A
+  inline double * aMatrix() const
+  { return work_;}
   //@}
 
 

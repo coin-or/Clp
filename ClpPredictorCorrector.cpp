@@ -150,9 +150,32 @@ int ClpPredictorCorrector::solve ( )
       if (saveIteration>=0) {
 	handler_->message(CLP_BARRIER_GONE_INFEASIBLE,messages_)
 	  <<CoinMessageEol;
+	if (sloppyOptimal) {
+	  // vaguely optimal
+	  double scaledRHSError=maximumRHSError_/solutionNorm_;
+	  if (maximumBoundInfeasibility_>1.0e-2||
+	      scaledRHSError>1.0e-2||
+	      maximumDualError_>objectiveNorm_*1.0e-2) {
+	    handler_->message(CLP_BARRIER_EXIT2,messages_)
+	      <<saveIteration
+	      <<CoinMessageEol;
+	    break;
+	  }
+	} else {
+	  // not close to optimal but check if getting bad
+	  double scaledRHSError=maximumRHSError_/solutionNorm_;
+	  if (maximumBoundInfeasibility_>1.0e-1||
+	      scaledRHSError>1.0e-1||
+	      maximumDualError_>objectiveNorm_*1.0e-1) {
+	    handler_->message(CLP_BARRIER_EXIT2,messages_)
+	      <<saveIteration
+	      <<CoinMessageEol;
+	    break;
+	  }
+	}
       } 
     } 
-    if (gapO<1.0e-7&&!sloppyOptimal) {
+    if ((gapO<1.0e-6||(gapO<1.0e-4&&complementarityGap_<0.1))&&!sloppyOptimal) {
       sloppyOptimal=true;
       handler_->message(CLP_BARRIER_CLOSE_TO_OPTIMAL,messages_)
 	<<numberIterations_<<complementarityGap_
@@ -783,7 +806,7 @@ double ClpPredictorCorrector::findDirectionVector(const int phase)
   int numberTries=0;
   double relativeError=COIN_DBL_MAX;
   double tryError=1.0e31;
-  while (!goodSolve) {
+  while (!goodSolve&&numberTries<30) {
     double lastError=relativeError;
     goodSolve=true;
     double maximumRHS = maximumAbsElement(updateRegion_,numberRows_);
@@ -796,7 +819,7 @@ double ClpPredictorCorrector::findDirectionVector(const int phase)
           maximumRHS*=factor;
           scale*=factor;
         } /* endwhile */
-      } else if (maximumRHS>=2.0) {
+      } else if (maximumRHS>=2.0&&maximumRHS<=COIN_DBL_MAX) {
         double factor=0.5;
         while (maximumRHS>=2.0) {
           maximumRHS*=factor;

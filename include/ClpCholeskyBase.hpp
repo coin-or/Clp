@@ -45,6 +45,9 @@ public:
   /// rank.  Returns rank
   inline int rank() const 
   {return numberRows_-numberRowsDropped_;};
+  /// Return number of rows
+  inline int numberRows() const 
+  {return numberRows_;};
    //@}
   
   

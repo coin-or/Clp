@@ -10,6 +10,7 @@
 
 */
 class ClpMatrixBase;
+class ClpCholeskyDense;
 class ClpCholeskyWssmp : public ClpCholeskyBase {
   
 public:
@@ -27,8 +28,9 @@ public:
 
   /**@name Constructors, destructor */
   //@{
-  /** Default constructor. */
-  ClpCholeskyWssmp();
+  /** Constructor which has dense columns activated.
+      Default is off. */
+  ClpCholeskyWssmp(int denseThreshold=-1);
   /** Destructor  */
   virtual ~ClpCholeskyWssmp();
   // Copy
@@ -57,6 +59,14 @@ private:
   double doubleParameters_[64];
   /// Row copy of matrix
   ClpMatrixBase * rowCopy_;
+  /// Dense indicators
+  char * whichDense_;
+  /// Dense columns (updated)
+  double * denseColumn_;
+  /// Dense square cholesky
+  ClpCholeskyDense * dense_;
+  /// Dense threshold
+  int denseThreshold_;
   //@}
 };
 

@@ -214,6 +214,7 @@ public:
   void statusOfProblemInPrimal(int & lastCleaned, int type,
 			     ClpSimplexProgress * progress,
 			       bool doFactorization,
+			       int ifValuesPass,
 			       ClpSimplex * saveModel=NULL);
   /// Perturbs problem (method depends on perturbation())
   void perturb(int type);

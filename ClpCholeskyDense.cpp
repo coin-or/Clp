@@ -68,25 +68,30 @@ ClpCholeskyBase * ClpCholeskyDense::clone() const
 {
   return new ClpCholeskyDense(*this);
 }
-/* Orders rows and saves pointer to matrix.and model */
+/* Gets space */
 int 
-ClpCholeskyDense::order(ClpInterior * model) 
+ClpCholeskyDense::reserveSpace(int numberRows) 
 {
-  numberRows_ = model->numberRows();
+  numberRows_ = numberRows;
   work_ = new double [numberRows_*numberRows_];
   rowsDropped_ = new char [numberRows_];
   memset(rowsDropped_,0,numberRows_);
   numberRowsDropped_=0;
+  return 0;
+}
+/* Orders rows and saves pointer to matrix.and model */
+int 
+ClpCholeskyDense::order(ClpInterior * model) 
+{
+  reserveSpace(model->numberRows());
   model_=model;
   rowCopy_ = model->clpMatrix()->reverseOrderedCopy();
   return 0;
 }
-//#define CLP_DEBUG
 /* Factorize - filling in rowsDropped and returning number dropped */
 int 
 ClpCholeskyDense::factorize(const double * diagonal, int * rowsDropped) 
 {
-  int iColumn;
   const CoinBigIndex * columnStart = model_->clpMatrix()->getVectorStarts();
   const int * columnLength = model_->clpMatrix()->getVectorLengths();
   const int * row = model_->clpMatrix()->getIndices();
@@ -121,9 +126,15 @@ ClpCholeskyDense::factorize(const double * diagonal, int * rowsDropped)
     }
     work += numberRows_;
   }
-  work = work_;
-  // Get rid of any odd copies
-  // model_->clpMatrix()->releasePackedMatrix();
+  return factorizePart2(rowsDropped);
+}
+//#define CLP_DEBUG
+/* Factorize - filling in rowsDropped and returning number dropped */
+int 
+ClpCholeskyDense::factorizePart2( int * rowsDropped) 
+{
+  int iColumn;
+  double * work = work_;
 #ifdef CLP_DEBUG
   double * save = NULL;
   if (numberRows_<20) {

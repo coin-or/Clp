@@ -273,7 +273,7 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
       }
 	  
       // may factorize, checks if problem finished
-      statusOfProblemInPrimal(lastCleaned,factorType,progress_,true,saveModel);
+      statusOfProblemInPrimal(lastCleaned,factorType,progress_,true,ifValuesPass,saveModel);
       // See if sprint says redo beacuse of problems
       if (numberDualInfeasibilities_==-776) {
 	// Need new set of variables
@@ -282,7 +282,7 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
 	saveModel=NULL;
 	//lastSprintIteration=numberIterations_;
 	printf("End small model after\n");
-	statusOfProblemInPrimal(lastCleaned,factorType,progress_,true,saveModel);
+	statusOfProblemInPrimal(lastCleaned,factorType,progress_,true,ifValuesPass,saveModel);
       } 
       int numberSprintIterations=0;
       int numberSprintColumns = primalColumnPivot_->numberSprintColumns(numberSprintIterations);
@@ -293,7 +293,7 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
 	saveModel=NULL;
 	// Skip factorization
 	//statusOfProblemInPrimal(lastCleaned,factorType,progress_,false,saveModel);
-	statusOfProblemInPrimal(lastCleaned,factorType,progress_,true,saveModel);
+	statusOfProblemInPrimal(lastCleaned,factorType,progress_,true,ifValuesPass,saveModel);
       } else if (problemStatus_<0&&!saveModel&&numberSprintColumns&&firstFree_<0) {
 	int numberSort=0;
 	int numberFixed=0;
@@ -575,6 +575,7 @@ void
 ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 					  ClpSimplexProgress * progress,
 					  bool doFactorization,
+					  int ifValuesPass,
 					  ClpSimplex * originalModel)
 {
   int dummy; // for use in generalExpanded
@@ -664,7 +665,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
   }
   // Check if looping
   int loop;
-  if (type!=2) 
+  if (type!=2&&!ifValuesPass) 
     loop = progress->looping();
   else
     loop=-1;
@@ -687,7 +688,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
       nonLinearCost_->zapCosts();
     }
     // something may have changed
-    gutsOfSolution(NULL,NULL);
+    gutsOfSolution(NULL,NULL,ifValuesPass!=0);
   }
   // If progress then reset costs
   if (loop==-1&&!nonLinearCost_->numberInfeasibilities()&&progress->oddState()<0) {
@@ -695,7 +696,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
     delete nonLinearCost_;
     nonLinearCost_ = new ClpNonLinearCost(this);
     progress->endOddState();
-    gutsOfSolution(NULL,NULL);
+    gutsOfSolution(NULL,NULL,ifValuesPass!=0);
   }
   // Flag to say whether to go to dual to clean up
   bool goToDual=false;
@@ -716,7 +717,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
   handler_->message()<<CoinMessageEol;
   if (!primalFeasible()) {
     nonLinearCost_->checkInfeasibilities(primalTolerance_);
-    gutsOfSolution(NULL,NULL);
+    gutsOfSolution(NULL,NULL,ifValuesPass!=0);
   }
   // we may wish to say it is optimal even if infeasible
   bool alwaysOptimal = (specialOptions_&1)!=0;
@@ -748,7 +749,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
       // put back original costs
       createRim(4);
       nonLinearCost_->checkInfeasibilities(0.0);
-      gutsOfSolution(NULL,NULL);
+      gutsOfSolution(NULL,NULL,ifValuesPass!=0);
 
       infeasibilityCost_=1.0e100;
       // put back original costs
@@ -766,7 +767,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	int i;
 	for (i=0;i<numberRows_+numberColumns_;i++) 
 	  cost_[i] *= 1.0e-95;
-	gutsOfSolution(NULL,NULL);
+	gutsOfSolution(NULL,NULL,ifValuesPass!=0);
 	nonLinearCost_=nonLinear;
 	infeasibilityCost_=saveWeight;
 	if ((infeasibilityCost_>=1.0e18||
@@ -788,7 +789,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	  infeasibilityCost_=0.0;
 	  createRim(4);
 	  nonLinearCost_->checkInfeasibilities(primalTolerance_);
-	  gutsOfSolution(NULL,NULL);
+	  gutsOfSolution(NULL,NULL,ifValuesPass!=0);
 	  // so will exit
 	  infeasibilityCost_=1.0e30;
 	  // reset infeasibilities
@@ -805,7 +806,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	  // put back original costs and then check
 	  createRim(4);
 	  nonLinearCost_->checkInfeasibilities(0.0);
-	  gutsOfSolution(NULL,NULL);
+	  gutsOfSolution(NULL,NULL,ifValuesPass!=0);
 	  problemStatus_=-1; //continue
 	  goToDual=false;
 	} else {
@@ -877,7 +878,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	  delete [] xdj;
 	  delete [] xsolution;
 #endif
-	  gutsOfSolution(NULL,NULL);
+	  gutsOfSolution(NULL,NULL,ifValuesPass!=0);
 	  if (sumOfRelaxedDualInfeasibilities_ == 0.0&&
 	      sumOfRelaxedPrimalInfeasibilities_ == 0.0) {
 	    // say optimal (with these bounds etc)
@@ -919,7 +920,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	    <<CoinMessageEol;
 	  // put back original costs and then check
 	  createRim(4);
-	  gutsOfSolution(NULL,NULL);
+	  gutsOfSolution(NULL,NULL,ifValuesPass!=0);
 	  problemStatus_=-1; //continue
 	} else {
 	  // say unbounded
@@ -1915,7 +1916,7 @@ ClpSimplexPrimal::unPerturb()
   // Try using dual
   return true;
 #else
-  gutsOfSolution(NULL,NULL);
+  gutsOfSolution(NULL,NULL,ifValuesPass!=0);
   return false;
 #endif
   
@@ -2193,9 +2194,9 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	    int lastCleaned;
 	    ClpSimplexProgress dummyProgress;
 	    if (saveStatus_)
-	      statusOfProblemInPrimal(lastCleaned,1,&dummyProgress,true);
+	      statusOfProblemInPrimal(lastCleaned,1,&dummyProgress,true,ifValuesPass);
 	    else
-	      statusOfProblemInPrimal(lastCleaned,0,&dummyProgress,true);
+	      statusOfProblemInPrimal(lastCleaned,0,&dummyProgress,true,ifValuesPass);
 	    roundAgain=true;
 	    continue;
 	  }
@@ -2245,9 +2246,9 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	  int lastCleaned;
 	  ClpSimplexProgress dummyProgress;
 	  if (saveStatus_)
-	    statusOfProblemInPrimal(lastCleaned,1,&dummyProgress,true);
+	    statusOfProblemInPrimal(lastCleaned,1,&dummyProgress,true,ifValuesPass);
 	  else
-	    statusOfProblemInPrimal(lastCleaned,0,&dummyProgress,true);
+	    statusOfProblemInPrimal(lastCleaned,0,&dummyProgress,true,ifValuesPass);
 	  roundAgain=true;
 	  continue;
 	} else {
@@ -2332,9 +2333,9 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
     int lastCleaned;
     ClpSimplexProgress dummyProgress;
     if (saveStatus_)
-      statusOfProblemInPrimal(lastCleaned,1,&dummyProgress,true);
+      statusOfProblemInPrimal(lastCleaned,1,&dummyProgress,true,ifValuesPass);
     else
-      statusOfProblemInPrimal(lastCleaned,0,&dummyProgress,true);
+      statusOfProblemInPrimal(lastCleaned,0,&dummyProgress,true,ifValuesPass);
     if (problemStatus_==5) {
       printf("Singular basis\n");
       problemStatus_=-1;
