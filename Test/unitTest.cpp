@@ -659,26 +659,34 @@ ClpSimplexUnitTest(const std::string & mpsDir,
 
     ClpSimplex model;
     model.loadProblem(M, collb, colub, obj, rowlb, rowub);
-    // For now - without scaling
-    model.scaling(0);
     model.dual(0,1); // keep factorization
     
     //check that the tableau matches wolsey (B-1 A)
     // slacks in second part of binvA
     double * binvA = (double*) malloc((n_cols+n_rows) * sizeof(double));
     
-    printf("B-1 A");
+    printf("B-1 A by row\n");
     for(int i = 0; i < n_rows; i++){
       model.getBInvARow(i, binvA,binvA+n_cols);
-      printf("\nrow: %d -> ",i);
+      printf("row: %d -> ",i);
       for(int j=0; j < n_cols+n_rows; j++){
 	printf("%g, ", binvA[j]);
       }
+      printf("\n");
     }
-    printf("\n");
-    free(binvA);
     // See if can re-use factorization
     model.primal(0,3); // keep factorization
+    // And do by column
+    printf("B-1 A by column\n");
+    for(int i = 0; i < n_rows+n_cols; i++){
+      model.getBInvACol(i, binvA);
+      printf("column: %d -> ",i);
+      for(int j=0; j < n_rows; j++){
+	printf("%g, ", binvA[j]);
+      }
+      printf("\n");
+    }
+    free(binvA);
     model.dual(0,2); // use factorization
     model.dual(0,2); // hopefully will not use factorization
   }

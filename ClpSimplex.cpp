@@ -6519,7 +6519,6 @@ ClpSimplex::getBInvARow(int row, double* z, double * slack)
     printf("ClpSimplexPrimal or ClpSimplexDual must have been called with correct startFinishOption\n");
     abort();
   }
-  ClpFactorization * factorization = factorization_;
   CoinIndexedVector * rowArray0 = rowArray(0);
   CoinIndexedVector * rowArray1 = rowArray(1);
   CoinIndexedVector * columnArray0 = columnArray(0);
@@ -6528,23 +6527,44 @@ ClpSimplex::getBInvARow(int row, double* z, double * slack)
   rowArray1->clear();
   columnArray0->clear();
   columnArray1->clear();
-  // put +1 in row
-  rowArray1->insert(row,1.0);
-  factorization->updateColumnTranspose(rowArray0,rowArray1);
+  // put +1 in row 
+  // But swap if pivot variable was slack as clp stores slack as -1.0
+  int pivot = pivotVariable_[row];
+  double value;
+  // And if scaled then adjust
+  if (!rowScale_) {
+    if (pivot<numberColumns_)
+      value = 1.0;
+    else
+      value = -1.0;
+  } else {
+    if (pivot<numberColumns_)
+      value = columnScale_[pivot];
+    else
+      value = -1.0/rowScale_[pivot-numberColumns_];
+  }
+  rowArray1->insert(row,value);
+  factorization_->updateColumnTranspose(rowArray0,rowArray1);
   // put row of tableau in rowArray1 and columnArray0
   clpMatrix()->transposeTimes(this,1.0,
 			    rowArray1,columnArray1,columnArray0);
-  memcpy(z,columnArray0->denseVector(),
-	 numberColumns()*sizeof(double));
+  if (!rowScale_) {
+    memcpy(z,columnArray0->denseVector(),
+	   numberColumns_*sizeof(double));
+  } else {
+    double * array = columnArray0->denseVector();
+    for (int i=0;i<numberColumns_;i++)
+      z[i] = array[i]/columnScale_[i];
+  }
   if (slack) {
-    int n = numberRows();
-    double * array = rowArray1->denseVector();
-    for (int i=0;i<n;i++) {
-      // clp stores slacks as -1.0  (Does not seem to matter - basics should be 1.0)
-      slack[i] =  array[i];
+    if (!rowScale_) {
+      memcpy(slack,rowArray1->denseVector(),
+	     numberRows_*sizeof(double));
+    } else {
+      double * array = rowArray1->denseVector();
+      for (int i=0;i<numberRows_;i++)
+	slack[i] = array[i]*rowScale_[i];
     }
-    //memcpy(slack,rowArray1->denseVector(),
-    //   numberRows()*sizeof(double));
   }
   // don't need to clear everything always, but doesn't cost
   rowArray0->clear();
@@ -6574,7 +6594,10 @@ ClpSimplex::getBInvRow(int row, double* z)
   rowArray0->clear();
   rowArray1->clear();
   // put +1 in row
-  rowArray1->insert(row,1.0);
+  // But swap if pivot variable was slack as clp stores slack as -1.0
+  double value = (pivotVariable_[row]<numberColumns_) ? 1.0 : -1.0;
+  // What about scaling ?
+  rowArray1->insert(row,value);
   factorization->updateColumnTranspose(rowArray0,rowArray1);
   memcpy(z,rowArray1->denseVector(),numberRows()*sizeof(double));
   rowArray1->clear();
@@ -6588,21 +6611,57 @@ ClpSimplex::getBInvACol(int col, double* vec)
     printf("ClpSimplexPrimal or ClpSimplexDual must have been called with correct startFinishOption\n");
     abort();
   }
-  ClpFactorization * factorization = factorization_;
   CoinIndexedVector * rowArray0 = rowArray(0);
   CoinIndexedVector * rowArray1 = rowArray(1);
   rowArray0->clear();
   rowArray1->clear();
   // get column of matrix
 #ifndef NDEBUG
-  int n = numberColumns();
+  int n = numberColumns_+numberRows_;
   if (col<0||col>=n) {
     indexError(col,"getBInvACol");
   }
 #endif
-  unpack(rowArray1,col);
-  factorization->updateColumn(rowArray0,rowArray1,false);
-  memcpy(vec,rowArray1->denseVector(),numberRows()*sizeof(double));
+  if (!rowScale_) {
+    if (col<numberColumns_) {
+      unpack(rowArray1,col);
+    } else {
+      rowArray1->insert(col-numberColumns_,1.0);
+    }
+  } else {
+    if (col<numberColumns_) {
+      unpack(rowArray1,col);
+      double multiplier = 1.0/columnScale_[col];
+      int number = rowArray1->getNumElements();
+      int * index = rowArray1->getIndices();
+      double * array = rowArray1->denseVector();
+      for (int i=0;i<number;i++) {
+	int iRow = index[i];
+	// make sure not packed
+	assert (array[iRow]);
+	array[iRow] *= multiplier;
+      }
+    } else {
+      rowArray1->insert(col-numberColumns_,rowScale_[col-numberColumns_]);
+    }
+  }
+  factorization_->updateColumn(rowArray0,rowArray1,false);
+  // But swap if pivot variable was slack as clp stores slack as -1.0
+  double * array = rowArray1->denseVector();
+  if (!rowScale_) {
+    for (int i=0;i<numberRows_;i++) {
+      double multiplier = (pivotVariable_[i]<numberColumns_) ? 1.0 : -1.0;
+      vec[i] = multiplier * array[i];
+    }
+  } else {
+    for (int i=0;i<numberRows_;i++) {
+      int pivot = pivotVariable_[i];
+      if (pivot<numberColumns_)
+	vec[i] = array[i] * columnScale_[pivot];
+      else
+	vec[i] = - array[i] / rowScale_[pivot-numberColumns_];
+    }
+  }
   rowArray1->clear();
 }
 
@@ -6626,7 +6685,10 @@ ClpSimplex::getBInvCol(int col, double* vec)
   }
 #endif
   // put +1 in row
-  rowArray1->insert(col,1.0);
+  // But swap if pivot variable was slack as clp stores slack as -1.0
+  double value = (pivotVariable_[col]<numberColumns_) ? 1.0 : -1.0;
+  // What about scaling ?
+  rowArray1->insert(col,value);
   factorization->updateColumn(rowArray0,rowArray1,false);
   memcpy(vec,rowArray1->denseVector(),numberRows()*sizeof(double));
   rowArray1->clear();
