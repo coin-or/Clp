@@ -2113,16 +2113,13 @@ ClpModel::readMps(const char *fileName,
 		  bool keepNames,
 		  bool ignoreErrors)
 {
-  bool canOpen=false;
   if (!strcmp(fileName,"-")||!strcmp(fileName,"stdin")) {
     // stdin
-    canOpen=true;
   } else {
     FILE *fp=fopen(fileName,"r");
     if (fp) {
       // can open - lets go for it
       fclose(fp);
-      canOpen=true;
     } else {
       handler_->message(CLP_UNABLE_OPEN,messages_)
 	<<fileName<<CoinMessageEol;
@@ -2196,6 +2193,86 @@ ClpModel::readMps(const char *fileName,
       <<status<<fileName<<CoinMessageEol;
   }
 
+  return status;
+}
+// Read GMPL files from the given filenames
+int 
+ClpModel::readGMPL(const char *fileName,const char * dataName,
+                   bool keepNames)
+{
+  FILE *fp=fopen(fileName,"r");
+  if (fp) {
+    // can open - lets go for it
+    fclose(fp);
+    if (dataName) {
+      fp=fopen(dataName,"r");
+      if (fp) {
+        fclose(fp);
+      } else {
+        handler_->message(CLP_UNABLE_OPEN,messages_)
+          <<dataName<<CoinMessageEol;
+        return -1;
+      }
+    }
+  } else {
+    handler_->message(CLP_UNABLE_OPEN,messages_)
+      <<fileName<<CoinMessageEol;
+    return -1;
+  }
+  CoinMpsIO m;
+  m.passInMessageHandler(handler_);
+  bool savePrefix =m.messageHandler()->prefix();
+  m.messageHandler()->setPrefix(handler_->prefix());
+  double time1 = CoinCpuTime(),time2;
+  int status=m.readGMPL(fileName,dataName,keepNames);
+  m.messageHandler()->setPrefix(savePrefix);
+  if (!status) {
+    loadProblem(*m.getMatrixByCol(),
+		m.getColLower(),m.getColUpper(),
+		m.getObjCoefficients(),
+		m.getRowLower(),m.getRowUpper());
+    if (m.integerColumns()) {
+      integerType_ = new char[numberColumns_];
+      memcpy(integerType_,m.integerColumns(),numberColumns_*sizeof(char));
+    } else {
+      integerType_ = NULL;
+    }
+    // set problem name
+    setStrParam(ClpProbName,m.getProblemName());
+    // do names
+    if (keepNames) {
+      unsigned int maxLength=0;
+      int iRow;
+      rowNames_ = std::vector<std::string> ();
+      columnNames_ = std::vector<std::string> ();
+      rowNames_.reserve(numberRows_);
+      for (iRow=0;iRow<numberRows_;iRow++) {
+	const char * name = m.rowName(iRow);
+	maxLength = CoinMax(maxLength,(unsigned int) strlen(name));
+	  rowNames_.push_back(name);
+      }
+      
+      int iColumn;
+      columnNames_.reserve(numberColumns_);
+      for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+	const char * name = m.columnName(iColumn);
+	maxLength = CoinMax(maxLength,(unsigned int) strlen(name));
+	columnNames_.push_back(name);
+      }
+      lengthNames_=(int) maxLength;
+    } else {
+      lengthNames_=0;
+    }
+    setDblParam(ClpObjOffset,m.objectiveOffset());
+    time2 = CoinCpuTime();
+    handler_->message(CLP_IMPORT_RESULT,messages_)
+      <<fileName
+      <<time2-time1<<CoinMessageEol;
+  } else {
+    // errors
+    handler_->message(CLP_IMPORT_ERRORS,messages_)
+      <<status<<fileName<<CoinMessageEol;
+  }
   return status;
 }
 bool ClpModel::isPrimalObjectiveLimitReached() const

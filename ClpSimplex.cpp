@@ -5179,6 +5179,15 @@ ClpSimplex::readMps(const char *filename,
   createStatus();
   return status;
 }
+// Read GMPL files from the given filenames
+int 
+ClpSimplex::readGMPL(const char *filename,const char * dataName,
+                     bool keepNames)
+{
+  int status = ClpModel::readGMPL(filename,dataName,keepNames);
+  createStatus();
+  return status;
+}
 // Just check solution (for external use)
 void 
 ClpSimplex::checkSolution()

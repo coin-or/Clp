@@ -122,6 +122,9 @@ public:
   int readMps(const char *filename,
 	      bool keepNames=false,
 	      bool ignoreErrors = false);
+  /// Read GMPL files from the given filenames
+  int readGMPL(const char *filename,const char * dataName,
+               bool keepNames=false);
   /// Copy in integer informations
   void copyInIntegerInformation(const char * information);
   /// Drop integer informations

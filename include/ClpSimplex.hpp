@@ -153,6 +153,9 @@ public:
   int readMps(const char *filename,
 	      bool keepNames=false,
 	      bool ignoreErrors = false);
+  /// Read GMPL files from the given filenames
+  int readGMPL(const char *filename,const char * dataName,
+               bool keepNames=false);
   /** Borrow model.  This is so we dont have to copy large amounts
       of data around.  It assumes a derived class wants to overwrite
       an empty model with a real one - while it does an algorithm.

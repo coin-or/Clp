@@ -232,6 +232,7 @@ ClpFactorization::factorize ( ClpSimplex * model,
 	else
 	  numberElements=0;
 	lengthU_ = numberElements;
+        //saveFactorization("dump.d");
 	if (biasLU_>=3||numberRows_!=numberColumns_)
 	  preProcess ( 2 );
 	else

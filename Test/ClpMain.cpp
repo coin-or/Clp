@@ -592,6 +592,9 @@ int main (int argc, const char *argv[])
 	      }
 	      std::string fileName;
 	      bool canOpen=false;
+              // See if gmpl file
+              int gmpl=0;
+              std::string gmplData;
 	      if (field=="-") {
 		// stdin
 		canOpen=true;
@@ -610,20 +613,47 @@ int main (int argc, const char *argv[])
 		  }
 		} else {
 		  fileName = directory+field;
+                  // See if gmpl (model & data)
+                  int length = field.size();
+                  int percent = field.find('%');
+                  if (percent<length&&percent>0) {
+                    gmpl=1;
+                    fileName = directory+field.substr(0,percent);
+                    gmplData = directory+field.substr(percent+1);
+                    if (percent<length-1)
+                      gmpl=2; // two files
+                    printf("GMPL model file %s and data file %s\n",
+                           fileName.c_str(),gmplData.c_str());
+                  }
 		}
 		FILE *fp=fopen(fileName.c_str(),"r");
 		if (fp) {
 		  // can open - lets go for it
 		  fclose(fp);
 		  canOpen=true;
+                  if (gmpl==2) {
+                    fp=fopen(gmplData.c_str(),"r");
+                    if (fp) {
+                      fclose(fp);
+                    } else {
+                      canOpen=false;
+                      std::cout<<"Unable to open file "<<gmplData<<std::endl;
+                    }
+                  }
 		} else {
 		  std::cout<<"Unable to open file "<<fileName<<std::endl;
 		}
 	      }
 	      if (canOpen) {
-		int status =models[iModel].readMps(fileName.c_str(),
-						   keepImportNames!=0,
-						   allowImportErrors!=0);
+                int status;
+                if (!gmpl)
+                  status =models[iModel].readMps(fileName.c_str(),
+                                                 keepImportNames!=0,
+                                                 allowImportErrors!=0);
+                else
+                  status= models[iModel].readGMPL(fileName.c_str(),
+                                                  (gmpl==2) ? gmplData.c_str() : NULL,
+                                                  keepImportNames!=0);
 		if (!status||(status>0&&allowImportErrors)) {
 		  goodModels[iModel]=true;
 		  // sets to all slack (not necessary?)
