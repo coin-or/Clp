@@ -58,14 +58,14 @@ public:
   /// This moves solution back
   int endQuadratic(ClpSimplexPrimalQuadratic * quadraticModel,
 		   ClpQuadraticInfo & info);
-  /// Just for debug
-  int checkComplementary (const ClpQuadraticInfo * info);
+  /// Checks complementarity and computes infeasibilities
+  int checkComplementarity (const ClpQuadraticInfo * info);
+  /// Fills in reduced costs
+  void createDjs (const ClpQuadraticInfo * info);
   /** Main part.
       phase - 0 normal, 1 getting complementary solution,
       2 getting basic solution. */
-  int whileIterating (int & sequenceIn,
-		      ClpQuadraticInfo * info,
-		      int phase);
+  int whileIterating (ClpQuadraticInfo * info);
   /** 
       Row array has pivot column
       This chooses pivot row.
@@ -83,6 +83,18 @@ public:
 		CoinIndexedVector * spareArray2,
 		ClpQuadraticInfo * info,
 		bool cleanupIteration);
+  /**  Refactorizes if necessary 
+       Checks if finished.  Updates status.
+       lastCleaned refers to iteration at which some objective/feasibility
+       cleaning too place.
+
+       type - 0 initial so set up save arrays etc
+            - 1 normal -if good update save
+	    - 2 restoring from saved 
+  */
+  void statusOfProblemInPrimal(int & lastCleaned, int type,
+			       ClpSimplexProgress * progress,
+			       ClpQuadraticInfo * info);
   //@}
 
 };
@@ -124,11 +136,25 @@ public:
   /// Number of Original rows
   inline int numberXRows() const
   {return numberXRows_;};
+  /// Sequence number incoming
+  inline int sequenceIn() const
+  {return currentSequenceIn_;};
+  inline void setSequenceIn(int sequence) 
+  {currentSequenceIn_=sequence;};
   /// Sequence number of binding Sj
   inline int crucialSj() const
   {return crucialSj_;};
   inline void setCrucialSj(int sequence) 
   {crucialSj_=sequence;};
+  /// Current phase
+  inline int currentPhase() const
+  {return currentPhase_;};
+  inline void setCurrentPhase(int phase) 
+  {currentPhase_=phase;};
+  /// Current saved solution
+  inline const double * currentSolution() const
+  {return currentSolution_;};
+  void setCurrentSolution(const double * solution);
   /// Original objective
   inline const double * originalObjective() const
   {return originalModel_->objective();};
@@ -141,6 +167,10 @@ public:
   /// Returns pointer to original model
   inline const ClpSimplex * originalModel() const
   { return originalModel_;};
+  /// Save current In and Sj status
+  void saveStatus();
+  /// Restore previous
+  void restoreStatus();
   //@}
     
 private:
@@ -152,8 +182,22 @@ private:
   int * quadraticSequence_;
   /// Which ones are quadratic
   int * backSequence_;
+  /// Current sequenceIn
+  int currentSequenceIn_;
   /// Crucial Sj
   int crucialSj_;
+  /// Valid sequenceIn (for valid factorization)
+  int validSequenceIn_;
+  /// Valid crucial Sj
+  int validCrucialSj_;
+  /// Current phase
+  int currentPhase_;
+  /// Current saved solution
+  double * currentSolution_;
+  /// Valid phase
+  int validPhase_;
+  /// Valid saved solution
+  double * validSolution_;
   /// Number of original rows
   int numberXRows_;
   /// Number of original columns 
