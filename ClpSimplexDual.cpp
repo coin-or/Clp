@@ -2571,7 +2571,8 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
       if (!alwaysFinish&&returnCode<1) {
 	double limit = 0.0;
 	getDblParam(ClpDualObjectiveLimit, limit);
-	if(objectiveValue()*optimizationDirection_<limit|| 
+	if(fabs(limit)>1.0e30||objectiveValue()*optimizationDirection_<
+	   optimizationDirection_*limit|| 
 	   numberAtFakeBound()) {
 	  // can't say anything interesting - might as well return
 #ifdef CLP_DEBUG

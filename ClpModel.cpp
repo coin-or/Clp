@@ -443,6 +443,10 @@ ClpModel::returnModel(ClpModel & otherModel)
     otherModel.status_ = status_;
   }
   status_ = NULL;
+  if (defaultHandler_) {
+    delete handler_;
+    handler_ = NULL;
+  }
 }
 //#############################################################################
 // Parameter related methods
@@ -768,6 +772,8 @@ ClpModel::setMaximumIterations(int value)
 void 
 ClpModel::passInMessageHandler(CoinMessageHandler * handler)
 {
+  if (defaultHandler_)
+    delete handler_;
   defaultHandler_=false;
   handler_=handler;
 }
