@@ -40,6 +40,11 @@ public:
   
   /// Copy constructor 
   ClpLinearObjective(const ClpLinearObjective &);
+  /** Subset constructor.  Duplicates are allowed
+      and order is as given.
+  */
+  ClpLinearObjective (const ClpLinearObjective &rhs,int numberColumns, 
+				      const int * whichColumns) ;
   
   /// Assignment operator 
   ClpLinearObjective & operator=(const ClpLinearObjective& rhs);
@@ -49,6 +54,11 @@ public:
 
   /// Clone
   virtual ClpObjective * clone() const;
+  /** Subset clone.  Duplicates are allowed
+      and order is as given.
+  */
+  virtual ClpObjective * subsetClone (int numberColumns, 
+				      const int * whichColumns) const;
  
   //@}
 

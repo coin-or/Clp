@@ -26,10 +26,10 @@ public:
   /// Returns pivot row, -1 if none
   virtual int pivotRow() = 0;
   
-  /// Updates weights (may be empty)
-  virtual void updateWeights(CoinIndexedVector * input,
+  /// Updates weights and returns pivot alpha
+  virtual double updateWeights(CoinIndexedVector * input,
 			     CoinIndexedVector * spare,
-			     CoinIndexedVector * updatedColumn);
+			     CoinIndexedVector * updatedColumn) = 0;
   
   /** Updates primal solution (and maybe list of candidates)
       Uses input vector which it deletes
@@ -58,6 +58,9 @@ public:
   virtual void unrollWeights();
   /// Gets rid of all arrays (may be empty)
   virtual void clearArrays();
+  /// Returns true if would not find any row
+  virtual bool looksOptimal() const
+  { return false;};
   //@}
   
   

@@ -363,7 +363,7 @@ ClpNonLinearCost::operator=(const ClpNonLinearCost& rhs)
 // We will also need a 2 bit per variable array for some
 // purpose which will come to me later
 void 
-ClpNonLinearCost::checkInfeasibilities(bool toNearest)
+ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
 {
   numberInfeasibilities_=0;
   double infeasibilityCost = model_->infeasibilityCost();
@@ -371,12 +371,12 @@ ClpNonLinearCost::checkInfeasibilities(bool toNearest)
   largestInfeasibility_ = 0.0;
   sumInfeasibilities_ = 0.0;
   double primalTolerance = model_->currentPrimalTolerance();
-  
   int iSequence;
   double * solution = model_->solutionRegion();
   double * upper = model_->upperRegion();
   double * lower = model_->lowerRegion();
   double * cost = model_->costRegion();
+  bool toNearest = oldTolerance<=0.0;
     
   // nonbasic should be at a valid bound
   for (iSequence=0;iSequence<numberColumns_+numberRows_;iSequence++) {
@@ -453,9 +453,13 @@ ClpNonLinearCost::checkInfeasibilities(bool toNearest)
     case ClpSimplex::atUpperBound:
       if (!toNearest) {
 	// With increasing tolerances - we may be at wrong place
-	if (fabs(value-upperValue)>primalTolerance*1.0001) {
-	  assert(fabs(value-lowerValue)<=primalTolerance*1.0001); 
+	if (fabs(value-upperValue)>oldTolerance*1.0001) {
+	  assert(fabs(value-lowerValue)<=oldTolerance*1.0001); 
+	  if  (fabs(value-lowerValue)>primalTolerance)
+	    solution[iSequence]=lowerValue;
 	  model_->setStatus(iSequence,ClpSimplex::atLowerBound);
+	} else if  (fabs(value-upperValue)>primalTolerance) {
+	  solution[iSequence]=upperValue;
 	}
       } else {
 	if (fabs(value-upperValue)<=fabs(value-lowerValue)) {
@@ -469,9 +473,13 @@ ClpNonLinearCost::checkInfeasibilities(bool toNearest)
     case ClpSimplex::atLowerBound:
       if (!toNearest) {
 	// With increasing tolerances - we may be at wrong place
-	if (fabs(value-lowerValue)>primalTolerance*1.0001) {
-	  assert(fabs(value-upperValue)<=primalTolerance*1.0001); 
-	  model_->setStatus(iSequence,ClpSimplex::atUpperBound);
+	if (fabs(value-lowerValue)>oldTolerance*1.0001) {
+	  assert(fabs(value-upperValue)<=oldTolerance*1.0001); 
+	  if  (fabs(value-upperValue)>primalTolerance)
+	    solution[iSequence]=upperValue;
+	  model_->setStatus(iSequence,ClpSimplex::atLowerBound);
+	} else if  (fabs(value-lowerValue)>primalTolerance) {
+	  solution[iSequence]=lowerValue;
 	}
       } else {
 	if (fabs(value-lowerValue)<=fabs(value-upperValue)) {

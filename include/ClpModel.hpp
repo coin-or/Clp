@@ -15,7 +15,6 @@
 #include "ClpObjective.hpp"
 
 // Plus infinity
-// Plus infinity
 #ifndef COIN_DBL_MAX
 #define COIN_DBL_MAX DBL_MAX
 #endif
@@ -46,6 +45,14 @@ public:
     ClpModel(const ClpModel &);
     /// Assignment operator. This copies the data
     ClpModel & operator=(const ClpModel & rhs);
+  /** Subproblem constructor.  A subset of whole model is created from the 
+      row and column lists given.  The new order is given by list order and
+      duplicates are allowed.  Name and integer information can be dropped
+  */
+    ClpModel (const ClpModel * wholeModel,
+      int numberRows, const int * whichRows,
+      int numberColumns, const int * whichColumns,
+	      bool dropNames=true, bool dropIntegers=true);
     /// Destructor
     ~ClpModel (  );
   //@}
@@ -91,8 +98,9 @@ public:
 		     const double* obj,
 		      const double* rowlb, const double* rowub,
 		      const double * rowObjective=NULL);
-  /// Load up quadratic objective 
-  void loadQuadraticObjective(const int numberColumns, const CoinBigIndex * start,
+  /** Load up quadratic objective.  This is stored as a CoinPackedMatrix */
+  void loadQuadraticObjective(const int numberColumns, 
+			      const CoinBigIndex * start,
 			      const int * column, const double * element);
   void loadQuadraticObjective (  const CoinPackedMatrix& matrix);
   /// Get rid of quadratic objective
@@ -116,6 +124,12 @@ public:
 	       const double * rowUpper,
 	       const int * rowStarts, const int * columns,
 	       const double * elements);
+  /// Add rows
+  void addRows(int number, const double * rowLower, 
+	       const double * rowUpper,
+	       const int * rowStarts, const int * rowLengths,
+	       const int * columns,
+	       const double * elements);
   void addRows(int number, const double * rowLower, 
 	       const double * rowUpper,
 	       const CoinPackedVectorBase * const * rows);
@@ -124,15 +138,21 @@ public:
   void deleteColumns(int number, const int * which);
   /// Add columns
   void addColumns(int number, const double * columnLower, 
-	       const double * columnUpper,
+		  const double * columnUpper,
 		  const double * objective,
-	       const int * columnStarts, const int * rows,
-	       const double * elements);
+		  const int * columnStarts, const int * rows,
+		  const double * elements);
+  void addColumns(int number, const double * columnLower, 
+		  const double * columnUpper,
+		  const double * objective,
+		  const int * columnStarts, const int * columnLengths,
+		  const int * rows,
+		  const double * elements);
   void addColumns(int number, const double * columnLower, 
 	       const double * columnUpper,
 		  const double * objective,
 	       const CoinPackedVectorBase * const * columns);
-  /** Borrow model.  This is so we dont have to copy large amounts
+  /** Borrow model.  This is so we don't have to copy large amounts
       of data around.  It assumes a derived class wants to overwrite
       an empty model with a real one - while it does an algorithm */
   void borrowModel(ClpModel & otherModel);

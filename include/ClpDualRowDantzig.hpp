@@ -23,6 +23,10 @@ public:
   /// Returns pivot row, -1 if none
   virtual int pivotRow();
   
+  /// Updates weights and returns pivot alpha
+  virtual double updateWeights(CoinIndexedVector * input,
+			     CoinIndexedVector * spare,
+			     CoinIndexedVector * updatedColumn);
   /** Updates primal solution (and maybe list of candidates)
       Uses input vector which it deletes
       Computes change in objective function

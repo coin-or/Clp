@@ -68,4 +68,17 @@ ClpMatrixBase::transposeTimes(double scalar,
   std::cerr<<"Scaling not supported - ClpMatrixBase"<<std::endl;
   abort();
 }
+/* Subset clone (without gaps).  Duplicates are allowed
+   and order is as given.
+   Derived classes need not provide this as it may not always make
+   sense */
+ClpMatrixBase * 
+ClpMatrixBase::subsetClone (
+			    int numberRows, const int * whichRows,
+			    int numberColumns, const int * whichColumns) const
+ 
 
+{
+  std::cerr<<"subsetClone not supported - ClpMatrixBase"<<std::endl;
+  abort();
+}

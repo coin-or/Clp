@@ -30,11 +30,7 @@ public:
   If status is singular, then basic variables have pivot row
   and ones thrown out have -1
   returns 0 -okay, -1 singular, -2 too many in basis, -99 memory */
-  int factorize (const ClpSimplex * model, 
-		 const ClpMatrixBase * matrix, 
-		  int numberRows, int numberColumns,
-		  int rowIsBasic[], int columnIsBasic[] , 
-		 double areaFactor = 0.0);
+  int factorize (ClpSimplex * model,int solveType, bool valuesPass);
    //@}
 
 
@@ -77,20 +73,14 @@ public:
    which user may want to know about */
   //@{
   /** Updates one column (FTRAN) from region2
+      Tries to do FT update
       number returned is negative if no room
       region1 starts as zero and is zero at end */
+  int updateColumnFT ( CoinIndexedVector * regionSparse,
+		       CoinIndexedVector * regionSparse2);
   int updateColumn ( CoinIndexedVector * regionSparse,
-			CoinIndexedVector * regionSparse2,
-			bool FTUpdate = false ) ;
-  /** Updates one column (FTRAN) to/from array 
-      number returned is negative if no room
-      ** For large problems you should ALWAYS know where the nonzeros
-      are, so please try and migrate to previous method after you
-      have got code working using this simple method - thank you!
-      (the only exception is if you know input is dense e.g. rhs)
-      region starts as zero and is zero at end */
-  int updateColumn ( CoinIndexedVector * regionSparse,
-			double array[] ) const;
+		     CoinIndexedVector * regionSparse2,
+		     bool noPermute=false) const;
   /** Updates one column transpose (BTRAN)
       ** For large problems you should ALWAYS know where the nonzeros
       are, so please try and migrate to previous method after you
@@ -113,6 +103,9 @@ public:
   void cleanUp();
   /// Says whether to redo pivot order
   bool needToReorder() const;
+  /// Says if a network basis
+  bool inline networkBasis() const
+  { return (networkBasis_!=NULL);};
   //@}
 
 ////////////////// data //////////////////

@@ -52,6 +52,33 @@ ClpLinearObjective::ClpLinearObjective (const ClpLinearObjective & rhs)
     objective_=NULL;
   }
 }
+/* Subset constructor.  Duplicates are allowed
+   and order is as given.
+*/
+ClpLinearObjective::ClpLinearObjective (const ClpLinearObjective &rhs,
+					int numberColumns, 
+					const int * whichColumn) 
+: ClpObjective(rhs)
+{
+  objective_=NULL;
+  numberColumns_=0;
+  if (numberColumns>0) {
+    // check valid lists
+    int numberBad=0;
+    int i;
+    for (i=0;i<numberColumns;i++)
+      if (whichColumn[i]<0||whichColumn[i]>=rhs.numberColumns_)
+	numberBad++;
+    if (numberBad)
+      throw CoinError("bad column list", "subset constructor", 
+		      "ClpLinearObjective");
+    numberColumns_ = numberColumns;
+    objective_ = new double[numberColumns_];
+    for (i=0;i<numberColumns_;i++) 
+      objective_[i]=rhs.objective_[whichColumn[i]];
+  }
+}
+  
 
 //-------------------------------------------------------------------
 // Destructor 
@@ -94,6 +121,15 @@ ClpLinearObjective::gradient(const double * solution, double & offset)
 ClpObjective * ClpLinearObjective::clone() const
 {
   return new ClpLinearObjective(*this);
+}
+/* Subset clone.  Duplicates are allowed
+   and order is as given.
+*/
+ClpObjective * 
+ClpLinearObjective::subsetClone (int numberColumns, 
+			   const int * whichColumns) const
+{
+  return new ClpLinearObjective(*this, numberColumns, whichColumns);
 }
 // Resize objective
 void 

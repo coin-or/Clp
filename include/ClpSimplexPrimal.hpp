@@ -118,6 +118,12 @@ public:
   /// Do not change infeasibility cost and always say optimal
   void alwaysOptimal(bool onOff);
   bool alwaysOptimal() const;
+  /** Normally outgoing variables can go out to slightly negative
+      values (but within tolerance) - this is to help stability and
+      and degeneracy.  This can be switched off
+  */
+  void exactOutgoing(bool onOff);
+  bool exactOutgoing() const;
   //@}
 
   /**@name Functions used in primal */
@@ -203,7 +209,7 @@ public:
 	    - 2 restoring from saved 
   */
   void statusOfProblemInPrimal(int & lastCleaned, int type,
-			     ClpSimplexProgress & progress);
+			     ClpSimplexProgress * progress);
   /// Perturbs problem (method depends on perturbation())
   void perturb();
   /// Take off effect of perturbation

@@ -59,13 +59,6 @@ void
 ClpDualRowPivot::checkAccuracy()
 {
 }
-
-void 
-ClpDualRowPivot::updateWeights(CoinIndexedVector * input,
-			       CoinIndexedVector * spare,
-			       CoinIndexedVector * updatedColumn)
-{
-}
 void 
 ClpDualRowPivot::unrollWeights()
 {

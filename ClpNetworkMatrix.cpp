@@ -368,43 +368,87 @@ ClpNetworkMatrix::transposeTimes(const ClpSimplex * model, double scalar,
   int numberRows = model->numberRows();
   ClpPlusMinusOneMatrix* rowCopy =
     dynamic_cast< ClpPlusMinusOneMatrix*>(model->rowCopy());
+  bool packed = rowArray->packedMode();
   if (numberInRowArray>0.3*numberRows||!rowCopy) {
     // do by column
     int iColumn;
-    double * markVector = y->denseVector(); // probably empty
+    assert (!y->getNumElements());
     CoinBigIndex j=0;
-    if (trueNetwork_) {
-      for (iColumn=0;iColumn<numberColumns_;iColumn++,j+=2) {
-	double value = markVector[iColumn];
-	markVector[iColumn]=0.0;
-	int iRowM = indices_[j];
-	int iRowP = indices_[j+1];
-	value -= scalar*pi[iRowM];
-	value += scalar*pi[iRowP];
-	if (fabs(value)>zeroTolerance) {
-	  index[numberNonZero++]=iColumn;
-	  array[iColumn]=value;
+    if (packed) {
+      // need to expand pi into y
+      assert(y->capacity()>=numberRows);
+      double * piOld = pi;
+      pi = y->denseVector();
+      const int * whichRow = rowArray->getIndices();
+      int i;
+      // modify pi so can collapse to one loop
+      for (i=0;i<numberInRowArray;i++) {
+	int iRow = whichRow[i];
+	pi[iRow]=scalar*piOld[i];
+      }
+      if (trueNetwork_) {
+	for (iColumn=0;iColumn<numberColumns_;iColumn++,j+=2) {
+	  double value = 0.0;
+	  int iRowM = indices_[j];
+	  int iRowP = indices_[j+1];
+	  value -= pi[iRowM];
+	  value += pi[iRowP];
+	  if (fabs(value)>zeroTolerance) {
+	    array[numberNonZero]=value;
+	    index[numberNonZero++]=iColumn;
+	  }
+	}
+      } else {
+	// skip negative rows
+	for (iColumn=0;iColumn<numberColumns_;iColumn++,j+=2) {
+	  double value = 0.0;
+	  int iRowM = indices_[j];
+	  int iRowP = indices_[j+1];
+	  if (iRowM>=0)
+	    value -= pi[iRowM];
+	  if (iRowP>=0)
+	    value += pi[iRowP];
+	  if (fabs(value)>zeroTolerance) {
+	    array[numberNonZero]=value;
+	    index[numberNonZero++]=iColumn;
+	  }
 	}
       }
+      for (i=0;i<numberInRowArray;i++) {
+	int iRow = whichRow[i];
+	pi[iRow]=0.0;
+      }
     } else {
-      // skip negative rows
-      for (iColumn=0;iColumn<numberColumns_;iColumn++,j+=2) {
-	double value = markVector[iColumn];
-	markVector[iColumn]=0.0;
-	int iRowM = indices_[j];
-	int iRowP = indices_[j+1];
-	if (iRowM>=0)
+      if (trueNetwork_) {
+	for (iColumn=0;iColumn<numberColumns_;iColumn++,j+=2) {
+	  double value = 0.0;
+	  int iRowM = indices_[j];
+	  int iRowP = indices_[j+1];
 	  value -= scalar*pi[iRowM];
-	if (iRowP>=0)
 	  value += scalar*pi[iRowP];
-	if (fabs(value)>zeroTolerance) {
-	  index[numberNonZero++]=iColumn;
-	  array[iColumn]=value;
+	  if (fabs(value)>zeroTolerance) {
+	    index[numberNonZero++]=iColumn;
+	    array[iColumn]=value;
+	  }
+	}
+      } else {
+	// skip negative rows
+	for (iColumn=0;iColumn<numberColumns_;iColumn++,j+=2) {
+	  double value = 0.0;
+	  int iRowM = indices_[j];
+	  int iRowP = indices_[j+1];
+	  if (iRowM>=0)
+	    value -= scalar*pi[iRowM];
+	  if (iRowP>=0)
+	    value += scalar*pi[iRowP];
+	  if (fabs(value)>zeroTolerance) {
+	    index[numberNonZero++]=iColumn;
+	    array[iColumn]=value;
+	  }
 	}
       }
     }
     columnArray->setNumElements(numberNonZero);
-    y->setNumElements(0);
   } else {
     // do by row
     rowCopy->transposeTimesByRow(model, scalar, rowArray, y, columnArray);
@@ -429,35 +473,81 @@ ClpNetworkMatrix::subsetTransposeTimes(const ClpSimplex * model,
   int jColumn;
   int numberToDo = y->getNumElements();
   const int * which = y->getIndices();
-  if (trueNetwork_) {
-    for (jColumn=0;jColumn<numberToDo;jColumn++) {
-      int iColumn = which[jColumn];
-      double value = 0.0;
-      CoinBigIndex j=iColumn<<1;
-      int iRowM = indices_[j];
-      int iRowP = indices_[j+1];
-      value -= pi[iRowM];
-      value += pi[iRowP];
-      if (fabs(value)>zeroTolerance) {
-	index[numberNonZero++]=iColumn;
-	array[iColumn]=value;
+  bool packed = rowArray->packedMode();
+  if (packed) {
+    // Must line up with y
+    // need to expand pi into y
+    int numberInRowArray = rowArray->getNumElements();
+    assert(y->capacity()>=model->numberRows());
+    double * piOld = pi;
+    pi = y->denseVector();
+    const int * whichRow = rowArray->getIndices();
+    int i;
+    for (i=0;i<numberInRowArray;i++) {
+      int iRow = whichRow[i];
+      pi[iRow]=piOld[i];
+    }
+    if (trueNetwork_) {
+      for (jColumn=0;jColumn<numberToDo;jColumn++) {
+	int iColumn = which[jColumn];
+	double value = 0.0;
+	CoinBigIndex j=iColumn<<1;
+	int iRowM = indices_[j];
+	int iRowP = indices_[j+1];
+	value -= pi[iRowM];
+	value += pi[iRowP];
+	array[jColumn]=value;
+      }
+    } else {
+      // skip negative rows
+      for (jColumn=0;jColumn<numberToDo;jColumn++) {
+	int iColumn = which[jColumn];
+	double value = 0.0;
+	CoinBigIndex j=iColumn<<1;
+	int iRowM = indices_[j];
+	int iRowP = indices_[j+1];
+	if (iRowM>=0)
+	  value -= pi[iRowM];
+	if (iRowP>=0)
+	  value += pi[iRowP];
+	array[jColumn]=value;
       }
     }
+    for (i=0;i<numberInRowArray;i++) {
+      int iRow = whichRow[i];
+      pi[iRow]=0.0;
+    }
   } else {
-    // skip negative rows
-    for (jColumn=0;jColumn<numberToDo;jColumn++) {
-      int iColumn = which[jColumn];
-      double value = 0.0;
-      CoinBigIndex j=iColumn<<1;
-      int iRowM = indices_[j];
-      int iRowP = indices_[j+1];
-      if (iRowM>=0)
+    if (trueNetwork_) {
+      for (jColumn=0;jColumn<numberToDo;jColumn++) {
+	int iColumn = which[jColumn];
+	double value = 0.0;
+	CoinBigIndex j=iColumn<<1;
+	int iRowM = indices_[j];
+	int iRowP = indices_[j+1];
 	value -= pi[iRowM];
-      if (iRowP>=0)
 	value += pi[iRowP];
-      if (fabs(value)>zeroTolerance) {
-	index[numberNonZero++]=iColumn;
-	array[iColumn]=value;
+	if (fabs(value)>zeroTolerance) {
+	  index[numberNonZero++]=iColumn;
+	  array[iColumn]=value;
+	}
+      }
+    } else {
+      // skip negative rows
+      for (jColumn=0;jColumn<numberToDo;jColumn++) {
+	int iColumn = which[jColumn];
+	double value = 0.0;
+	CoinBigIndex j=iColumn<<1;
+	int iRowM = indices_[j];
+	int iRowP = indices_[j+1];
+	if (iRowM>=0)
+	  value -= pi[iRowM];
+	if (iRowP>=0)
+	  value += pi[iRowP];
+	if (fabs(value)>zeroTolerance) {
+	  index[numberNonZero++]=iColumn;
+	  array[iColumn]=value;
+	}
       }
     }
   }
@@ -541,9 +631,73 @@ ClpNetworkMatrix::fillBasis(const ClpSimplex * model,
   }
   return numberElements;
 }
+/* If element NULL returns number of elements in column part of basis,
+   If not NULL fills in as well */
+CoinBigIndex 
+ClpNetworkMatrix::fillBasis(const ClpSimplex * model,
+				 const int * whichColumn, 
+				 int numberBasic,
+				 int numberColumnBasic,
+				 int * indexRowU, int * indexColumnU,
+				 double * elementU) const 
+{
+  int i;
+  CoinBigIndex numberElements=0;
+  if (elementU!=NULL) {
+    if (trueNetwork_) {
+      for (i=0;i<numberColumnBasic;i++) {
+	int iColumn = whichColumn[i];
+	CoinBigIndex j=iColumn<<1;
+	int iRowM = indices_[j];
+	int iRowP = indices_[j+1];
+	indexRowU[numberElements]=iRowM;
+	indexColumnU[numberElements]=numberBasic;
+	elementU[numberElements]=-1.0;
+	indexRowU[numberElements+1]=iRowP;
+	indexColumnU[numberElements+1]=numberBasic;
+	elementU[numberElements+1]=1.0;
+	numberElements+=2;
+	numberBasic++;
+      }
+    } else {
+      for (i=0;i<numberColumnBasic;i++) {
+	int iColumn = whichColumn[i];
+	CoinBigIndex j=iColumn<<1;
+	int iRowM = indices_[j];
+	int iRowP = indices_[j+1];
+	if (iRowM>=0) {
+	  indexRowU[numberElements]=iRowM;
+	  indexColumnU[numberElements]=numberBasic;
+	  elementU[numberElements++]=-1.0;
+	}
+	if (iRowP>=0) {
+	  indexRowU[numberElements]=iRowP;
+	  indexColumnU[numberElements]=numberBasic;
+	  elementU[numberElements++]=1.0;
+	}
+	numberBasic++;
+      }
+    }
+  } else {
+    if (trueNetwork_) {
+      numberElements = 2*numberColumnBasic;
+    } else {
+      for (i=0;i<numberColumnBasic;i++) {
+	int iColumn = whichColumn[i];
+	CoinBigIndex j=iColumn<<1;
+	int iRowM = indices_[j];
+	int iRowP = indices_[j+1];
+	if (iRowM>=0)
+	  numberElements ++;
+	if (iRowP>=0)
+	  numberElements ++;
+      }
+    }
+  }
+  return numberElements;
+}
 /* Unpacks a column into an CoinIndexedvector
-      Note that model is NOT const.  Bounds and objective could
-      be modified if doing column generation */
+ */
 void 
 ClpNetworkMatrix::unpack(const ClpSimplex * model,CoinIndexedVector * rowArray,
 		   int iColumn) const 
@@ -555,6 +709,32 @@ ClpNetworkMatrix::unpack(const ClpSimplex * model,CoinIndexedVector * rowArray,
     rowArray->add(iRowM,-1.0);
   if (iRowP>=0) 
     rowArray->add(iRowP,1.0);
+}
+/* Unpacks a column into an CoinIndexedvector
+** in packed foramt
+Note that model is NOT const.  Bounds and objective could
+be modified if doing column generation (just for this variable) */
+void 
+ClpNetworkMatrix::unpackPacked(ClpSimplex * model,
+			    CoinIndexedVector * rowArray,
+			    int iColumn) const
+{
+  int * index = rowArray->getIndices();
+  double * array = rowArray->denseVector();
+  int number = 0;
+  CoinBigIndex j=iColumn<<1;
+  int iRowM = indices_[j];
+  int iRowP = indices_[j+1];
+  if (iRowM>=0) {
+    array[number]=-1.0;
+    index[number++]=iRowM;
+  }
+  if (iRowP>=0) {
+    array[number]=1.0;
+    index[number++]=iRowP;
+  }
+  rowArray->setNumElements(number);
+  rowArray->setPackedMode(true);
 }
 /* Adds multiple of a column into an CoinIndexedvector
       You can use quickAdd to add to vector */

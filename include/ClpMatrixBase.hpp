@@ -62,6 +62,7 @@ public:
       Is allowed to return NULL if doesn't want to have row copy */
   virtual ClpMatrixBase * reverseOrderedCopy() const {return NULL;};
 
+  // OLD - out soon
   /** Returns number of elements in basis
       column is basic if entry >=0 */
   virtual CoinBigIndex numberInBasis(const int * columnIsBasic) const = 0;
@@ -70,6 +71,14 @@ public:
 				const int * columnIsBasic, int & numberBasic,
 				int * row, int * column,
 				double * element) const = 0;
+  /** If element NULL returns number of elements in column part of basis,
+      If not NULL fills in as well */
+  virtual CoinBigIndex fillBasis(const ClpSimplex * model,
+				 const int * whichColumn, 
+				 int numberRowBasic,
+				 int numberColumnBasic,
+				 int * row, int * column,
+				 double * element) const = 0;
   /** Creates scales for column copy (rowCopy in model may be modified)
       default does not allow scaling
       returns non-zero if no scaling done */
@@ -86,10 +95,16 @@ public:
   { return true;};
 
   /** Unpacks a column into an CoinIndexedvector
-      Note that model is NOT const.  Bounds and objective could
-      be modified if doing column generation (just for this variable) */
+   */
   virtual void unpack(const ClpSimplex * model,CoinIndexedVector * rowArray,
 		   int column) const =0;
+  /** Unpacks a column into an CoinIndexedvector
+   ** in packed foramt
+      Note that model is NOT const.  Bounds and objective could
+      be modified if doing column generation (just for this variable) */
+  virtual void unpackPacked(ClpSimplex * model,
+			    CoinIndexedVector * rowArray,
+			    int column) const =0;
   /** Purely for column generation and similar ideas.  Allows
       matrix and any bounds or costs to be updated (sensibly).
       Returns non-zero if any changes.
@@ -132,6 +147,7 @@ public:
 				const double * columnScale) const;
     /** Return <code>x * scalar *A + y</code> in <code>z</code>. 
 	Can use y as temporary array (will be empty at end)
+	Note - If x packed mode - then z packed mode
 	Squashes small elements and knows about ClpSimplex */
   virtual void transposeTimes(const ClpSimplex * model, double scalar,
 			      const CoinIndexedVector * x,
@@ -140,6 +156,7 @@ public:
     /** Return <code>x *A</code> in <code>z</code> but
 	just for indices in y.
 	This is only needed for primal steepest edge.
+	Note - If x packed mode - then z packed mode
 	Squashes small elements and knows about ClpSimplex */
   virtual void subsetTransposeTimes(const ClpSimplex * model,
 			      const CoinIndexedVector * x,
@@ -150,6 +167,13 @@ public:
   ///@name Other
   /// Clone
   virtual ClpMatrixBase * clone() const = 0;
+  /** Subset clone (without gaps).  Duplicates are allowed
+      and order is as given.
+      Derived classes need not provide this as it may not always make
+      sense */
+  virtual ClpMatrixBase * subsetClone (
+		    int numberRows, const int * whichRows,
+		    int numberColumns, const int * whichColumns) const;
  
   /// Returns type
   inline int type() const

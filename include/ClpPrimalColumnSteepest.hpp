@@ -50,6 +50,8 @@ public:
   virtual void unrollWeights();
   /// Gets rid of all arrays
   virtual void clearArrays();
+  /// Returns true if would not find any column
+  virtual bool looksOptimal() const;
   //@}
   
   /**@name gets and sets */

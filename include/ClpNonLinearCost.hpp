@@ -64,8 +64,9 @@ public:
   //@{
   /** Changes infeasible costs and computes number and cost of infeas
       Puts all non-basic (non free) variables to bounds
-      and all free variables to zero if toNearest true*/
-  void checkInfeasibilities(bool toNearest=false);
+      and all free variables to zero if oldTolerance is non-zero
+      - but does not move those <= oldTolerance away*/
+  void checkInfeasibilities(double oldTolerance=0.0);
   /** Changes infeasible costs for each variable
       The indices are row indices and need converting to sequences
   */

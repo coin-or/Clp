@@ -6,36 +6,13 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <math.h>
+#include "ClpPresolve.hpp"
 #include "Idiot.hpp"
+#include "CoinHelperFunctions.hpp"
 // Redefine stuff for Clp
 #ifdef CLP_IDIOT
 #define OsiObjOffset ClpObjOffset
 #endif
-#include "Presolve.hpp"
-#include <time.h>
-
-#ifndef _MSC_VER
-#include <sys/times.h>
-#include <sys/resource.h>
-#include <unistd.h>
-#endif
-static double cpuTime()
-{
-  double cpu_temp;
-#if defined(_MSC_VER)
-  unsigned int ticksnow;        /* clock_t is same as int */
-  
-  ticksnow = (unsigned int)clock();
-  
-  cpu_temp = (double)((double)ticksnow/CLOCKS_PER_SEC);
-#else
-  struct rusage usage;
-  getrusage(RUSAGE_SELF,&usage);
-  cpu_temp = usage.ru_utime.tv_sec;
-  cpu_temp += 1.0e-6*((double) usage.ru_utime.tv_usec);
-#endif
-  return cpu_temp;
-}
 /**** strategy 4 - drop, exitDrop and djTolerance all relative:
 For first two major iterations these are small.  Then:
 
@@ -166,7 +143,7 @@ Idiot::solve2()
 {
   int strategy=0;
   double d2;
-  double startTime = cpuTime();
+  double startTime = CoinCpuTime();
   int i,n;
   int allOnes=1;
   int iteration=0;
@@ -625,7 +602,7 @@ Idiot::solve2()
   delete [] colsol;
   delete [] pi;
   delete [] dj;
-  printf("Idiot took %g seconds\n", cpuTime()-startTime);
+  printf("Idiot took %g seconds\n", CoinCpuTime()-startTime);
   return ;
 }
 #ifdef CLP_IDIOT
@@ -633,7 +610,7 @@ void
 Idiot::crossOver(int mode)
 {
   double fixTolerance=IDIOT_FIX_TOLERANCE;
-  double startTime = cpuTime();
+  double startTime = CoinCpuTime();
   ClpSimplex * saveModel=NULL;
   ClpMatrixBase * matrix = model_->clpMatrix();
   const int * row = matrix->getIndices();
@@ -826,7 +803,7 @@ Idiot::crossOver(int mode)
     /*printf("%d in basis\n",ninbas);*/
   }
   if (addAll<3) {
-    Presolve pinfo;
+    ClpPresolve pinfo;
     if (presolve) {
       saveModel = model_;
       model_ = pinfo.presolvedModel(*model_,1.0e-8,false,5);
@@ -862,7 +839,7 @@ Idiot::crossOver(int mode)
 	}
       }
       printf("Time so far %g, %d now added from previous iterations\n",
-	     cpuTime()-startTime,n);
+	     CoinCpuTime()-startTime,n);
       if (presolve) {
 	saveModel = model_;
 	model_ = pinfo.presolvedModel(*model_,1.0e-8,false,5);
@@ -886,7 +863,7 @@ Idiot::crossOver(int mode)
 	  }
 	}
 	printf("Time so far %g, %d now added from previous iterations\n",
-	       cpuTime()-startTime,n);
+	       CoinCpuTime()-startTime,n);
       }
       if (presolve) {
 	saveModel = model_;
@@ -902,7 +879,7 @@ Idiot::crossOver(int mode)
 	saveModel=NULL;
       }
     }
-    printf("Total time in crossover %g\n", cpuTime()-startTime);
+    printf("Total time in crossover %g\n", CoinCpuTime()-startTime);
     delete [] saveUpper;
     delete [] saveLower;
   }

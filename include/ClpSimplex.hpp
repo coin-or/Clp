@@ -19,6 +19,7 @@ class ClpPrimalColumnPivot;
 class ClpFactorization;
 class CoinIndexedVector;
 class ClpNonLinearCost;
+class ClpSimplexProgress;
 
 /** This solves LPs using the simplex method
 
@@ -76,6 +77,14 @@ public:
   ClpSimplex(const ClpSimplex &);
   /// Copy constructor from model. 
   ClpSimplex(const ClpModel &);
+  /** Subproblem constructor.  A subset of whole model is created from the 
+      row and column lists given.  The new order is given by list order and
+      duplicates are allowed.  Name and integer information can be dropped
+  */
+  ClpSimplex (const ClpModel * wholeModel,
+	      int numberRows, const int * whichRows,
+	      int numberColumns, const int * whichColumns,
+	      bool dropNames=true, bool dropIntegers=true);
   /// Assignment operator. This copies the data
     ClpSimplex & operator=(const ClpSimplex & rhs);
   /// Destructor
@@ -143,8 +152,8 @@ public:
       less than deltaTolerance
   */
   int quadraticSLP(int numberPasses,double deltaTolerance);
-  /// Solves quadratic using Wolfe's algorithm - primal
-  int quadraticWolfe();
+  /// Solves quadratic using Dantzig's algorithm - primal
+  int quadraticPrimal(int phase=2);
   /// Passes in factorization
   void setFactorization( ClpFactorization & factorization);
   /// Sets or unsets scaling, 0 -off, 1 on, 2 dynamic(later)
@@ -240,6 +249,9 @@ public:
   /// Sparsity on or off
   bool sparseFactorization() const;
   void setSparseFactorization(bool value);
+  /// Factorization frequency
+  int factorizationFrequency() const;
+  void setFactorizationFrequency(int value);
   /// Dual bound
   inline double dualBound() const
           { return dualBound_;};
@@ -335,7 +347,7 @@ public:
       when total number of singularities is returned
   */
     /// Save data
-    ClpDataSave saveData() const;
+    ClpDataSave saveData() ;
     /// Restore data
     void restoreData(ClpDataSave saved);
   int internalFactorize(int solveType);
@@ -359,6 +371,20 @@ public:
      Also applies scaling if needed
   */
   void unpack(CoinIndexedVector * rowArray,int sequence) const;
+  /**
+     Unpacks one column of the matrix into indexed array 
+     ** as packed vector
+     Uses sequenceIn_
+     Also applies scaling if needed
+  */
+  void unpackPacked(CoinIndexedVector * rowArray) ;
+  /**
+     Unpacks one column of the matrix into indexed array 
+     ** as packed vector
+     Slack if sequence>= numberColumns
+     Also applies scaling if needed
+  */
+  void unpackPacked(CoinIndexedVector * rowArray,int sequence);
   
   /** 
       This does basis housekeeping and does values for in/out variables.
@@ -372,6 +398,18 @@ public:
   /** This sets largest infeasibility and most infeasible and sum
       and number of infeasibilities (Dual) */
   void checkDualSolution();
+  /** For advanced use.  When doing iterative solves things can get
+      nasty so on values pass if incoming solution has largest
+      infeasibility < incomingInfeasibility throw out variables
+      from basis until largest infeasibility < allowedInfeasibility
+      or incoming largest infeasibility.
+      If allowedInfeasibility>= incomingInfeasibility this is
+      always possible altough you may end up with an all slack basis.
+
+      Defaults are 1.0,10.0
+  */
+  void setValuesPassAction(float incomingInfeasibility,
+			   float allowedInfeasibility);
   //@}
   /**@name Matrix times vector methods 
      They can be faster if scalar is +- 1
@@ -437,7 +475,7 @@ public:
   inline double largestSolutionError() const
           { return largestSolutionError_;} ;
   /// Basic variables pivoting on which rows
-  inline const int * pivotVariable() const
+  inline int * pivotVariable() const
           { return pivotVariable_;};
   /// Current dual tolerance
   inline double currentDualTolerance() const 
@@ -452,7 +490,7 @@ public:
   /// How many iterative refinements to do
   inline int numberRefinements() const 
           { return numberRefinements_;} ;
-  void setnumberRefinements( int value) ;
+  void setNumberRefinements( int value) ;
   /// Alpha (pivot element) for use by classes e.g. steepestedge
   inline double alpha() const { return alpha_;};
   /// Reduced cost of last incoming for use by classes e.g. steepestedge
@@ -469,9 +507,7 @@ public:
   /** May change basis and then returns number changed.
       Computation of solutions may be overriden by given pi and solution
   */
-  int gutsOfSolution ( const double * rowActivities,
-		       const double * columnActivities,
-		       double * givenDuals,
+  int gutsOfSolution ( double * givenDuals,
 		       const double * givenPrimals,
 		       bool valuesPass=false);
   /// Does most of deletion (0 = all, 1 = most, 2 most + factorization)
@@ -660,6 +696,9 @@ public:
   /// Force re-factorization early 
   inline void forceFactorization(int value)
   { forceFactorization_ = value;};
+  /// Raw objective value (so always minimize in primal)
+  inline double rawObjectiveValue() const
+  { return objectiveValue_;};
   //@}
 
 ////////////////// data //////////////////
@@ -833,7 +872,8 @@ protected:
   ClpNonLinearCost * nonLinearCost_;
   /** For advanced options
       1 - Don't keep changing infeasibility weight
-      2 - keep nonLinearCost round solves
+      2 - Keep nonLinearCost round solves
+      4 - Force outgoing variables to exact bound (primal)
   */
   unsigned int specialOptions_;
   /// So we know when to be cautious
@@ -844,6 +884,19 @@ protected:
   int progressFlag_;
   /// First free/super-basic variable (-1 if none)
   int firstFree_;
+  /** For advanced use.  When doing iterative solves things can get
+      nasty so on values pass if incoming solution has largest
+      infeasibility < incomingInfeasibility throw out variables
+      from basis until largest infeasibility < allowedInfeasibility.
+      if allowedInfeasibility>= incomingInfeasibility this is
+      always possible altough you may end up with an all slack basis.
+
+      Defaults are 1.0,10.0
+  */
+  float incomingInfeasibility_;
+  float allowedInfeasibility_;
+  /// For dealing with all issues of cycling etc
+  ClpSimplexProgress * progress_;
   //@}
 };
 //#############################################################################
@@ -860,7 +913,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
 		   const std::string & netlibDir);
 
 
-/// For saving extra information to see if looping. not worth a Class
+/// For saving extra information to see if looping.
 class ClpSimplexProgress {
 
 public:
@@ -889,6 +942,17 @@ public:
       >=0 if give up and use as problem status
   */
     int looping (  );
+  /// Start check at beginning of whileIterating
+  void startCheck();
+  /// Returns cycle length in whileIterating
+  int cycle(int in, int out,int wayIn,int wayOut); 
+
+  /// Returns previous objective (if -1) - current if (0)
+  double lastObjective(int back=1) const;
+  /// Modify objective e.g. if dual infeasible in dual
+  void modifyObjective(double value);
+  /// Returns previous iteration number (if -1) - current if (0)
+  int lastIterationNumber(int back=1) const;
 
   //@}
   /**@name Data  */
@@ -902,10 +966,17 @@ public:
   ClpSimplex * model_;
   /// Number of infeasibilities
   int numberInfeasibilities_[CLP_PROGRESS];
+  /// Iteration number at which occurred
+  int iterationNumber_[CLP_PROGRESS];
   /// Number of times checked (so won't stop too early)
   int numberTimes_;
   /// Number of times it looked like loop
   int numberBadTimes_;
+#define CLP_CYCLE 12
+  /// For cycle checking
+  int in_[CLP_CYCLE];
+  int out_[CLP_CYCLE];
+  char way_[CLP_CYCLE];
   //@}
 };
 #endif

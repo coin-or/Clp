@@ -9,8 +9,6 @@
 #include <string>
 #include <iostream>
 
-#include <time.h>
-
 #include "CoinMpsIO.hpp"
 #include "CoinPackedMatrix.hpp"
 #include "CoinPackedVector.hpp"
@@ -25,38 +23,12 @@
 #include "ClpParameters.hpp"
 #include "ClpNetworkMatrix.hpp"
 #include "ClpPlusMinusOneMatrix.hpp"
-#include "MyMessageHandler.hpp" 
+#include "MyMessageHandler.hpp"
 
-#include "Presolve.hpp"
+#include "ClpPresolve.hpp"
 #ifdef CLP_IDIOT
 #include "Idiot.hpp"
 #endif
-
-
-#include <time.h>
-#ifndef _MSC_VER
-#include <sys/times.h>
-#include <sys/resource.h>
-#include <unistd.h>
-#endif
-
-static double cpuTime()
-{
-  double cpu_temp;
-#if defined(_MSC_VER)
-  unsigned int ticksnow;        /* clock_t is same as int */
-  
-  ticksnow = (unsigned int)clock();
-  
-  cpu_temp = (double)((double)ticksnow/CLOCKS_PER_SEC);
-#else
-  struct rusage usage;
-  getrusage(RUSAGE_SELF,&usage);
-  cpu_temp = usage.ru_utime.tv_sec;
-  cpu_temp += 1.0e-6*((double) usage.ru_utime.tv_usec);
-#endif
-  return cpu_temp;
-}
 
 
 //#############################################################################
@@ -166,7 +138,6 @@ int mainTest (int argc, const char *argv[],bool doDual,
     nCols.push_back(1571);
     objValueTol.push_back(1.E-10);
     objValue.push_back(5.5018458883E+03);
-
     mpsName.push_back("80bau3b");min.push_back(true);nRows.push_back(2263);nCols.push_back(9799);objValueTol.push_back(1.e-10);objValue.push_back(9.8722419241E+05);
     mpsName.push_back("blend");min.push_back(true);nRows.push_back(75);nCols.push_back(83);objValueTol.push_back(1.e-10);objValue.push_back(-3.0812149846e+01);
     mpsName.push_back("pilotnov");min.push_back(true);nRows.push_back(976);nCols.push_back(2172);objValueTol.push_back(1.e-10);objValue.push_back(-4.4972761882e+03);
@@ -273,7 +244,7 @@ int mainTest (int argc, const char *argv[],bool doDual,
       std::string fn = netlibDir+mpsName[m];
       CoinMpsIO mps;
       mps.readMps(fn.c_str(),"mps");
-      double time1 = cpuTime();
+      double time1 = CoinCpuTime();
       ClpSimplex solution=empty;
       solution.loadProblem(*mps.getMatrixByCol(),mps.getColLower(),
 			   mps.getColUpper(),
@@ -293,10 +264,14 @@ int mainTest (int argc, const char *argv[],bool doDual,
 #endif
       if (doPresolve) {
 #ifdef USE_PRESOLVE
-	Presolve pinfo;
-	ClpSimplex * model2 = pinfo.presolvedModel(solution,1.0e-8);
+	ClpPresolve pinfo;
+	double a=CoinCpuTime();
+	ClpSimplex * model2 = pinfo.presolvedModel(solution,1.0e-8,
+						   false,5,true);
+	printf("Presolve took %g seconds\n",CoinCpuTime()-a);
 	// change from 200 (unless user has changed)
-	if (model2->factorization()->maximumPivots()==200)
+	if (model2->factorization()->maximumPivots()==200&&
+	    model2->numberRows()>-5000)
 	  model2->factorization()->maximumPivots(100+model2->numberRows()/100);
 	if (doDual) {
 	  // faster if bounds tightened
@@ -317,14 +292,19 @@ int mainTest (int argc, const char *argv[],bool doDual,
 	  model2->primal(1);
 	}
 	pinfo.postsolve(true);
-	
+
 	delete model2;
-#if 1
-	printf("Resolving from postsolved model\n");
-	// later try without (1) and check duals before solve
-	solution.primal(1);
-	if (solution.numberIterations())
-	  printf("****** iterated %d\n",solution.numberIterations());
+	solution.checkSolution();
+	if (!solution.isProvenOptimal()) {
+	  printf("Resolving from postsolved model\n");
+	  
+	  int savePerturbation = solution.perturbation();
+	  solution.setPerturbation(100);
+	  solution.primal(1);
+	  solution.setPerturbation(savePerturbation);
+	  if (solution.numberIterations())
+	    printf("****** iterated %d\n",solution.numberIterations());
+	}
 	/*solution.checkSolution();
 	printf("%g dual %g(%d) Primal %g(%d)\n",
 	       solution.objectiveValue(),
@@ -332,14 +312,13 @@ int mainTest (int argc, const char *argv[],bool doDual,
 	       solution.numberDualInfeasibilities(),
 	       solution.sumPrimalInfeasibilities(),
 	       solution.numberPrimalInfeasibilities());*/
-#endif
 	if (0) {
-	  Presolve pinfoA;
+	  ClpPresolve pinfoA;
 	  model2 = pinfoA.presolvedModel(solution,1.0e-8);
 
 	  printf("Resolving from presolved optimal solution\n");
 	  model2->primal(1);
-		
+
 	  delete model2;
 	}
 #else
@@ -372,7 +351,7 @@ int mainTest (int argc, const char *argv[],bool doDual,
 	  solution.primal(1);
 	}
       }
-      double time2 = cpuTime()-time1;
+      double time2 = CoinCpuTime()-time1;
       timeTaken += time2;
       printf("Took %g seconds\n",time2);
       // Test objective solution value
@@ -901,14 +880,6 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     solution.dual();
     assert(eq(solution.objectiveValue(),1.5185098965e+03));
 
-    CoinMpsIO writer;
-    writer.setMpsData(*solution.matrix(), COIN_DBL_MAX,
-		      solution.getColLower(), solution.getColUpper(),
-		      solution.getObjCoefficients(),
-		      (const char*) 0 /*integrality*/,
-		      solution.getRowLower(), solution.getRowUpper(),
-		      NULL,NULL);
-    writer.writeMps("a.mps");
     // reload with original
     solution.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
 			 m.getObjCoefficients(),
@@ -938,24 +909,14 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     }
     solution.deleteRows(n,which);
     solution.dual();
-    writer.setMpsData(*solution.matrix(), COIN_DBL_MAX,
-		      solution.getColLower(), solution.getColUpper(),
-		      solution.getObjCoefficients(),
-		      (const char*) 0 /*integrality*/,
-		      solution.getRowLower(), solution.getRowUpper(),
-		      NULL,NULL);
-    writer.writeMps("b.mps");
     // Put back
     solution.addRows(n,saveLower,saveUpper,
 			starts,index,element);
-    writer.setMpsData(*solution.matrix(), COIN_DBL_MAX,
-		      solution.getColLower(), solution.getColUpper(),
-		      solution.getObjCoefficients(),
-		      (const char*) 0 /*integrality*/,
-		      solution.getRowLower(), solution.getRowUpper(),
-		      NULL,NULL);
-    writer.writeMps("c.mps");
     solution.dual();
+    assert(eq(solution.objectiveValue(),1.5185098965e+03));
+    // Zero out status array to give some interest
+    memset(solution.statusArray()+numberColumns,0,numberRows);
+    solution.primal(1);
     assert(eq(solution.objectiveValue(),1.5185098965e+03));
 
     delete [] saveObj;
@@ -966,8 +927,9 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     delete [] index;
     delete [] element;
   }
-  // test network
-  if (0) {    
+  // test network 
+#ifndef QUADRATIC
+  if (1) {    
     std::string fn = mpsDir+"input.130";
     int numberColumns;
     int numberRows;
@@ -1093,9 +1055,9 @@ ClpSimplexUnitTest(const std::string & mpsDir,
       
       model.factorization()->maximumPivots(200+model.numberRows()/100);
       model.createStatus();
-      double time1 = cpuTime();
+      double time1 = CoinCpuTime();
       model.dual();
-      std::cout<<"Network problem, ClpPackedMatrix took "<<cpuTime()-time1<<" seconds"<<std::endl;
+      std::cout<<"Network problem, ClpPackedMatrix took "<<CoinCpuTime()-time1<<" seconds"<<std::endl;
       ClpPlusMinusOneMatrix plusMinus(matrix);
       assert (plusMinus.getIndices()); // would be zero if not +- one
       model.loadProblem(plusMinus,
@@ -1104,9 +1066,9 @@ ClpSimplexUnitTest(const std::string & mpsDir,
       
       model.factorization()->maximumPivots(200+model.numberRows()/100);
       model.createStatus();
-      time1 = cpuTime();
+      time1 = CoinCpuTime();
       model.dual();
-      std::cout<<"Network problem, ClpPlusMinusOneMatrix took "<<cpuTime()-time1<<" seconds"<<std::endl;
+      std::cout<<"Network problem, ClpPlusMinusOneMatrix took "<<CoinCpuTime()-time1<<" seconds"<<std::endl;
       ClpNetworkMatrix network(numberColumns,head,tail);
       model.loadProblem(network,
 			lowerColumn,upperColumn,objective,
@@ -1114,9 +1076,9 @@ ClpSimplexUnitTest(const std::string & mpsDir,
       
       model.factorization()->maximumPivots(200+model.numberRows()/100);
       model.createStatus();
-      time1 = cpuTime();
+      time1 = CoinCpuTime();
       model.dual();
-      std::cout<<"Network problem, ClpNetworkMatrix took "<<cpuTime()-time1<<" seconds"<<std::endl;
+      std::cout<<"Network problem, ClpNetworkMatrix took "<<CoinCpuTime()-time1<<" seconds"<<std::endl;
       delete [] lower;
       delete [] upper;
       delete [] head;
@@ -1128,11 +1090,12 @@ ClpSimplexUnitTest(const std::string & mpsDir,
       delete [] upperColumn;
     }
   }
+#endif
 #ifdef QUADRATIC
   // Test quadratic to solve linear
   if (1) {    
     CoinMpsIO m;
-    std::string fn = "tiny2";
+    std::string fn = "tiny2a";
     m.readMps(fn.c_str(),"mps");
     ClpSimplex solution;
     solution.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
@@ -1160,18 +1123,18 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     //solution.quadraticSLP(50,1.0e-4);
     double objValue = solution.getObjValue();
     CoinRelFltEq eq(1.0e-4);
-    //assert(eq(objValue,-8.42857));
+    //assert(eq(objValue,820.0));
     solution.setLogLevel(63);
-    solution.quadraticWolfe();
+    solution.quadraticPrimal(1);
     objValue = solution.getObjValue();
-    assert(eq(objValue,-8.42857));
-    exit(77);
+    assert(eq(objValue,820.0));
+    //exit(77);
   }
   // Test quadratic
   if (1) {    
     CoinMpsIO m;
     std::string fn = mpsDir+"share2qp";
-    fn = "share2qpb";
+    //fn = "share2qpb";
     m.readMps(fn.c_str(),"mps");
     ClpSimplex solution;
     solution.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
@@ -1188,14 +1151,14 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     delete [] start;
     delete [] column;
     delete [] element;
-    //solution.quadraticSLP(50,1.0e-4);
+    solution.quadraticSLP(50,1.0e-4);
     solution.setLogLevel(63);
-    solution.quadraticWolfe();
+    solution.quadraticPrimal(1);
     double objValue = solution.getObjValue();
     CoinRelFltEq eq(1.0e-4);
     assert(eq(objValue,-400.92));
   }
-  if (1) {    
+  if (0) {    
     CoinMpsIO m;
     std::string fn = "./beale";
     //fn = "./jensen";
@@ -1216,12 +1179,12 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     delete [] start;
     delete [] column;
     delete [] element;
-    solution.quadraticWolfe();
+    solution.quadraticPrimal(1);
     solution.quadraticSLP(50,1.0e-4);
     double objValue = solution.getObjValue();
     CoinRelFltEq eq(1.0e-4);
     assert(eq(objValue,0.5));
-    solution.quadraticWolfe();
+    solution.quadraticPrimal();
     objValue = solution.getObjValue();
     assert(eq(objValue,0.5));
   }

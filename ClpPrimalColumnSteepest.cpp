@@ -14,8 +14,9 @@
 
 
 // bias for free variables
-
 #define FREE_BIAS 1.0e1
+// Acceptance criteria for free variables
+#define FREE_ACCEPT 1.0e2
 //#############################################################################
 // Constructors / Destructor / Assignment
 //#############################################################################
@@ -226,7 +227,7 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
 	addSequence = 0;
       }
       if (!model_->nonLinearCost()->lookBothWays()) {
-	
+
 	for (j=0;j<number;j++) {
 	  int iSequence = index[j];
 	  double value = reducedCost[iSequence];
@@ -242,7 +243,7 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
 	    break;
 	  case ClpSimplex::isFree:
 	  case ClpSimplex::superBasic:
-	    if (fabs(value)>1.0e2*tolerance) {
+	    if (fabs(value)>FREE_ACCEPT*tolerance) {
 	      // we are going to bias towards free (but only if reasonable)
 	      value *= FREE_BIAS;
 	      // store square in list
@@ -295,7 +296,7 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
 	    break;
 	  case ClpSimplex::isFree:
 	  case ClpSimplex::superBasic:
-	    if (fabs(value)>1.0e2*tolerance) {
+	    if (fabs(value)>FREE_ACCEPT*tolerance) {
 	      // we are going to bias towards free (but only if reasonable)
 	      value *= FREE_BIAS;
 	      // store square in list
@@ -376,7 +377,7 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
       break;
     case ClpSimplex::isFree:
     case ClpSimplex::superBasic:
-      if (fabs(value)>1.0e2*tolerance) { 
+      if (fabs(value)>FREE_ACCEPT*tolerance) { 
 	// we are going to bias towards free (but only if reasonable)
 	value *= FREE_BIAS;
 	// store square in list
@@ -431,7 +432,7 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
       for (iSequence=0;iSequence<number;iSequence++) {
 	double value = reducedCost[iSequence];
 	ClpSimplex::Status status = model_->getStatus(iSequence+addSequence);
-	
+
 	switch(status) {
 	  
 	case ClpSimplex::basic:
@@ -480,7 +481,7 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
       for (iSequence=0;iSequence<number;iSequence++) {
 	double value = reducedCost[iSequence];
 	ClpSimplex::Status status = model_->getStatus(iSequence+addSequence);
-	
+
 	switch(status) {
 	  
 	case ClpSimplex::basic:
@@ -680,7 +681,15 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
       checkTolerance = 1.0e-6;
     if (model_->largestDualError()>checkTolerance)
       tolerance *= model_->largestDualError()/checkTolerance;
+    // But cap
+    tolerance = min(1000.0,tolerance);
   }
+#ifdef CLP_DEBUG
+  if (model_->numberDualInfeasibilities()==1) 
+    printf("** %g %g %g %x %x %d\n",tolerance,model_->dualTolerance(),
+	   model_->largestDualError(),model_,model_->messageHandler(),
+	   number);
+#endif
   // stop last one coming immediately
   double saveOutInfeasibility=0.0;
   if (sequenceOut>=0) {
@@ -692,8 +701,6 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
     iSequence = index[i];
     double value = infeas[iSequence];
     double weight = weights_[iSequence];
-    /*if (model_->numberIterations()%100==0)
-      printf("%d inf %g wt %g\n",iSequence,value,weight);*/
     //weight=1.0;
     if (value>bestDj*weight&&value>tolerance) {
       // check flagged variable
@@ -760,6 +767,7 @@ ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model,int mode)
 				 model_->factorization()->maximumPivots());
       initializeWeights();
       // create saved weights 
+      delete [] savedWeights_;
       savedWeights_ = new double[numberRows+numberColumns];
       memcpy(savedWeights_,weights_,(numberRows+numberColumns)*
 	     sizeof(double));
@@ -827,14 +835,14 @@ ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model,int mode)
     double tolerance=model_->currentDualTolerance();
     int number = model_->numberRows() + model_->numberColumns();
     int iSequence;
-
+   
     double * reducedCost = model_->djRegion();
       
     if (!model_->nonLinearCost()->lookBothWays()) {
       for (iSequence=0;iSequence<number;iSequence++) {
 	double value = reducedCost[iSequence];
 	ClpSimplex::Status status = model_->getStatus(iSequence);
-	
+
 	switch(status) {
 	  
 	case ClpSimplex::basic:
@@ -842,7 +850,7 @@ ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model,int mode)
 	  break;
 	case ClpSimplex::isFree:
 	case ClpSimplex::superBasic:
-	  if (fabs(value)>1.0e2*tolerance) { 
+	  if (fabs(value)>FREE_ACCEPT*tolerance) { 
 	    // we are going to bias towards free (but only if reasonable)
 	    value *= FREE_BIAS;
 	    // store square in list
@@ -866,7 +874,7 @@ ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model,int mode)
       for (iSequence=0;iSequence<number;iSequence++) {
 	double value = reducedCost[iSequence];
 	ClpSimplex::Status status = model_->getStatus(iSequence);
-	
+
 	switch(status) {
 	  
 	case ClpSimplex::basic:
@@ -874,7 +882,7 @@ ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model,int mode)
 	  break;
 	case ClpSimplex::isFree:
 	case ClpSimplex::superBasic:
-	  if (fabs(value)>1.0e2*tolerance) { 
+	  if (fabs(value)>FREE_ACCEPT*tolerance) { 
 	    // we are going to bias towards free (but only if reasonable)
 	    value *= FREE_BIAS;
 	    // store square in list
@@ -1156,4 +1164,95 @@ ClpPrimalColumnSteepest::clearArrays()
   savedPivotSequence_ = -1;
   savedSequenceOut_ = -1;  
   devex_ = 0.0;
+}
+// Returns true if would not find any column
+bool 
+ClpPrimalColumnSteepest::looksOptimal() const
+{
+  //**** THIS MUST MATCH the action coding above
+  double tolerance=model_->currentDualTolerance();
+  // we can't really trust infeasibilities if there is dual error
+  // this coding has to mimic coding in checkDualSolution
+  double error = min(1.0e-3,model_->largestDualError());
+  // allow tolerance at least slightly bigger than standard
+  tolerance = tolerance +  error;
+  if(model_->numberIterations()<model_->lastBadIteration()+200) {
+    // we can't really trust infeasibilities if there is dual error
+    double checkTolerance = 1.0e-8;
+    if (!model_->factorization()->pivots())
+      checkTolerance = 1.0e-6;
+    if (model_->largestDualError()>checkTolerance)
+      tolerance *= model_->largestDualError()/checkTolerance;
+    // But cap
+    tolerance = min(1000.0,tolerance);
+  }
+  int number = model_->numberRows() + model_->numberColumns();
+  int iSequence;
+  
+  double * reducedCost = model_->djRegion();
+  int numberInfeasible=0;
+  if (!model_->nonLinearCost()->lookBothWays()) {
+    for (iSequence=0;iSequence<number;iSequence++) {
+      double value = reducedCost[iSequence];
+      ClpSimplex::Status status = model_->getStatus(iSequence);
+      
+      switch(status) {
+
+      case ClpSimplex::basic:
+      case ClpSimplex::isFixed:
+	break;
+      case ClpSimplex::isFree:
+      case ClpSimplex::superBasic:
+	if (fabs(value)>FREE_ACCEPT*tolerance) 
+	  numberInfeasible++;
+	break;
+      case ClpSimplex::atUpperBound:
+	if (value>tolerance) 
+	  numberInfeasible++;
+	break;
+      case ClpSimplex::atLowerBound:
+	if (value<-tolerance) 
+	  numberInfeasible++;
+      }
+    }
+  } else {
+    ClpNonLinearCost * nonLinear = model_->nonLinearCost(); 
+    // can go both ways
+    for (iSequence=0;iSequence<number;iSequence++) {
+      double value = reducedCost[iSequence];
+      ClpSimplex::Status status = model_->getStatus(iSequence);
+      
+      switch(status) {
+
+      case ClpSimplex::basic:
+      case ClpSimplex::isFixed:
+	break;
+      case ClpSimplex::isFree:
+      case ClpSimplex::superBasic:
+	if (fabs(value)>FREE_ACCEPT*tolerance) 
+	  numberInfeasible++;
+	break;
+      case ClpSimplex::atUpperBound:
+	if (value>tolerance) {
+	  numberInfeasible++;
+	} else {
+	  // look other way - change up should be negative
+	  value -= nonLinear->changeUpInCost(iSequence);
+	  if (value<-tolerance) 
+	    numberInfeasible++;
+	}
+	break;
+      case ClpSimplex::atLowerBound:
+	if (value<-tolerance) {
+	  numberInfeasible++;
+	} else {
+	  // look other way - change down should be positive
+	  value -= nonLinear->changeDownInCost(iSequence);
+	  if (value>tolerance) 
+	    numberInfeasible++;
+	}
+      }
+    }
+  }
+  return numberInfeasible==0;
 }

@@ -75,6 +75,34 @@ ClpDualRowDantzig::pivotRow()
   }
   return chosenRow;
 }
+// Returns pivot alpha
+double
+ClpDualRowDantzig::updateWeights(CoinIndexedVector * input,
+				  CoinIndexedVector * spare,
+				  CoinIndexedVector * updatedColumn)
+{
+  // pivot element
+  double alpha=0.0;
+  // look at updated column
+  double * work = updatedColumn->denseVector();
+  int number = updatedColumn->getNumElements();
+  int * which = updatedColumn->getIndices();
+  int i;
+  int pivotRow = model_->pivotRow();
+
+  if (updatedColumn->packedMode()) {
+    for (i =0; i < number; i++) {
+      int iRow = which[i];
+      if (iRow==pivotRow) {
+	alpha = work[i];
+	break;
+      }
+    }
+  } else {
+    alpha = work[pivotRow];
+  }
+  return alpha;
+}
   
 /* Updates primal solution (and maybe list of candidates)
    Uses input vector which it deletes
@@ -91,15 +119,28 @@ ClpDualRowDantzig::updatePrimalSolution(CoinIndexedVector * primalUpdate,
   int i;
   double changeObj=0.0;
   const int * pivotVariable = model_->pivotVariable();
-  for (i=0;i<number;i++) {
-    int iRow=which[i];
-    int iPivot=pivotVariable[iRow];
-    double & value = model_->solutionAddress(iPivot);
-    double cost = model_->cost(iPivot);
-    double change = primalRatio*work[iRow];
-    value -= change;
-    changeObj -= change*cost;
-    work[iRow]=0.0;
+  if (primalUpdate->packedMode()) {
+    for (i=0;i<number;i++) {
+      int iRow=which[i];
+      int iPivot=pivotVariable[iRow];
+      double & value = model_->solutionAddress(iPivot);
+      double cost = model_->cost(iPivot);
+      double change = primalRatio*work[i];
+      value -= change;
+      changeObj -= change*cost;
+      work[i]=0.0;
+    }
+  } else {
+    for (i=0;i<number;i++) {
+      int iRow=which[i];
+      int iPivot=pivotVariable[iRow];
+      double & value = model_->solutionAddress(iPivot);
+      double cost = model_->cost(iPivot);
+      double change = primalRatio*work[iRow];
+      value -= change;
+      changeObj -= change*cost;
+      work[iRow]=0.0;
+    }
   }
   primalUpdate->setNumElements(0);
   objectiveChange += changeObj;

@@ -2,7 +2,7 @@
 
 #include "ClpSimplexPrimal.hpp"
 #include "ClpFactorization.hpp"
-#include "Presolve.hpp"
+#include "ClpPresolve.hpp"
 #include "ekk_c_api.h"
 //#include "ekk_c_api_undoc.h"
  extern "C"{
@@ -11,7 +11,7 @@
 						void * compressInfo);
  }
 
-static Presolve * presolveInfo=NULL;
+static ClpPresolve * presolveInfo=NULL;
 
 static ClpSimplex * clpmodel(EKKModel * model,int startup)
 {
@@ -246,7 +246,7 @@ extern "C" int ekk_preSolveClp(EKKModel * model, bool keepIntegers,
 			       int pass)
 {
   delete presolveInfo;
-  presolveInfo = new Presolve();
+  presolveInfo = new ClpPresolve();
   bool scaled = ekk_scaling(model)==1;
   if (scaled)
       ekk_scaleRim(model,1);
@@ -255,10 +255,11 @@ extern "C" int ekk_preSolveClp(EKKModel * model, bool keepIntegers,
   // very wasteful - create a clp copy of osl model
   // 1 to keep solution as is
   ClpSimplex * clp = clpmodel(model,1);
-  // could get round with tailored version of Presolve.cpp
-  ClpSimplex * newModel = presolveInfo->presolvedModel(*clp,
-						       ekk_getRtolpinf(model),
-						       keepIntegers,pass);
+  // could get round with tailored version of ClpPresolve.cpp
+  ClpSimplex * newModel = 
+    presolveInfo->presolvedModel(*clp,
+				 ekk_getRtolpinf(model),
+				 keepIntegers,pass,true);
   delete clp;
   presolveInfo->setOriginalModel(NULL);
   if (scaled)

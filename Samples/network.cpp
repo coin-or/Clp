@@ -169,12 +169,10 @@ int main (int argc, const char *argv[])
 
      For practical use just one call e.g. model.dual(); would be used.
 
-     As ClpNetworkMatrix not even announced, maybe I should say that 
-     at on etime I was also testing ClpPlusMinusOne.  That is purely
-     a storage scheme.  If network then factorization scheme is changed
+     If network then factorization scheme is changed
      to be much faster.
      
-     Still not as fast as a real newtoek code, but more flexible
+     Still not as fast as a real network code, but more flexible
   */
   model.factorization()->maximumPivots(200+model.numberRows()/100);
   model.factorization()->maximumPivots(1000);

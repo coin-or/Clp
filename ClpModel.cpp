@@ -8,14 +8,8 @@
 #include <cstdio>
 #include <iostream>
 
-#include <time.h>
 
 #include "CoinPragma.hpp"
-#ifndef _MSC_VER
-#include <sys/times.h>
-#include <sys/resource.h>
-#include <unistd.h>
-#endif
 
 #include "CoinHelperFunctions.hpp"
 #include "ClpModel.hpp"
@@ -26,23 +20,6 @@
 #include "ClpMessage.hpp"
 #include "ClpLinearObjective.hpp"
 
-static double cpuTime()
-{
-  double cpu_temp;
-#if defined(_MSC_VER)
-  unsigned int ticksnow;        /* clock_t is same as int */
-  
-  ticksnow = (unsigned int)clock();
-  
-  cpu_temp = (double)((double)ticksnow/CLOCKS_PER_SEC);
-#else
-  struct rusage usage;
-  getrusage(RUSAGE_SELF,&usage);
-  cpu_temp = usage.ru_utime.tv_sec;
-  cpu_temp += 1.0e-6*((double) usage.ru_utime.tv_usec);
-#endif
-  return cpu_temp;
-}
 //#############################################################################
 
 ClpModel::ClpModel () :
@@ -338,11 +315,14 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
 
   strParam_[ClpProbName] = rhs.strParam_[ClpProbName];
 
+  optimizationDirection_ = rhs.optimizationDirection_;
   objectiveValue_=rhs.objectiveValue_;
   smallElement_ = rhs.smallElement_;
   numberIterations_ = rhs.numberIterations_;
   solveType_ = rhs.solveType_;
   problemStatus_ = rhs.problemStatus_;
+  numberRows_ = rhs.numberRows_;
+  numberColumns_ = rhs.numberColumns_;
   if (trueCopy) {
     lengthNames_ = rhs.lengthNames_;
     rowNames_ = rhs.rowNames_;
@@ -526,7 +506,7 @@ ClpModel::setDblParam(ClpDblParam key, double value)
 
   case ClpMaxSeconds: 
     if(value>=0)
-      value += cpuTime();
+      value += CoinCpuTime();
     else
       value = -1.0;
     break;
@@ -732,6 +712,7 @@ ClpModel::deleteRows(int number, const int * which)
   rowUpper_ = deleteDouble(rowUpper_,numberRows_,
 			      number, which, newSize);
   matrix_->deleteRows(number,which);
+  //matrix_->removeGaps();
   // status
   if (status_) {
     unsigned char * tempR  = (unsigned char *) deleteChar((char *)status_+numberColumns_,
@@ -769,6 +750,7 @@ ClpModel::deleteColumns(int number, const int * which)
   columnUpper_ = deleteDouble(columnUpper_,numberColumns_,
 			      number, which, newSize);
   matrix_->deleteCols(number,which);
+  //matrix_->removeGaps();
   if (quadraticObjective_) {
     quadraticObjective_->deleteCols(number,which);
     quadraticObjective_->deleteRows(number,which);
@@ -786,6 +768,8 @@ ClpModel::deleteColumns(int number, const int * which)
     delete [] status_;
     status_ = temp;
   }
+  integerType_ = deleteChar(integerType_,numberColumns_,
+			    number, which, newSize,true);
   numberColumns_=newSize;
   // set state back to unknown
   problemStatus_ = -1;
@@ -795,8 +779,6 @@ ClpModel::deleteColumns(int number, const int * which)
   lengthNames_ = 0;
   rowNames_ = std::vector<std::string> ();
   columnNames_ = std::vector<std::string> ();
-  integerType_ = deleteChar(integerType_,numberColumns_,
-			    number, which, newSize,true);
 }
 // Add rows
 void 
@@ -814,6 +796,32 @@ ClpModel::addRows(int number, const double * rowLower,
       int iStart = rowStarts[iRow];
       rows[iRow] = 
 	new CoinPackedVector(rowStarts[iRow+1]-iStart,
+			     columns+iStart,elements+iStart);
+    }
+    addRows(number, rowLower, rowUpper,
+	    rows);
+    for (iRow=0;iRow<number;iRow++) 
+      delete rows[iRow];
+    delete [] rows;
+  }
+}
+// Add rows
+void 
+ClpModel::addRows(int number, const double * rowLower, 
+		  const double * rowUpper,
+		  const int * rowStarts, 
+		  const int * rowLengths, const int * columns,
+		  const double * elements)
+{
+  // Create a list of CoinPackedVectors
+  if (number) {
+    CoinPackedVectorBase ** rows=
+      new CoinPackedVectorBase * [number];
+    int iRow;
+    for (iRow=0;iRow<number;iRow++) {
+      int iStart = rowStarts[iRow];
+      rows[iRow] = 
+	new CoinPackedVector(rowLengths[iRow],
 			     columns+iStart,elements+iStart);
     }
     addRows(number, rowLower, rowUpper,
@@ -885,6 +893,34 @@ ClpModel::addColumns(int number, const double * columnLower,
       int iStart = columnStarts[iColumn];
       columns[iColumn] = 
 	new CoinPackedVector(columnStarts[iColumn+1]-iStart,
+			     rows+iStart,elements+iStart);
+    }
+    addColumns(number, columnLower, columnUpper,
+	       objIn, columns);
+    for (iColumn=0;iColumn<number;iColumn++) 
+      delete columns[iColumn];
+    delete [] columns;
+
+  }
+}
+// Add columns
+void 
+ClpModel::addColumns(int number, const double * columnLower, 
+		     const double * columnUpper,
+		     const double * objIn,
+		     const int * columnStarts, 
+		     const int * columnLengths, const int * rows,
+		     const double * elements)
+{
+  // Create a list of CoinPackedVectors
+  if (number) {
+    CoinPackedVectorBase ** columns=
+      new CoinPackedVectorBase * [number];
+    int iColumn;
+    for (iColumn=0;iColumn<number;iColumn++) {
+      int iStart = columnStarts[iColumn];
+      columns[iColumn] = 
+	new CoinPackedVector(columnLengths[iColumn],
 			     rows+iStart,elements+iStart);
     }
     addColumns(number, columnLower, columnUpper,
@@ -978,7 +1014,7 @@ void
 ClpModel::setMaximumSeconds(double value)
 {
   if(value>=0)
-    dblParam_[ClpMaxSeconds]=value+cpuTime();
+    dblParam_[ClpMaxSeconds]=value+CoinCpuTime();
   else
     dblParam_[ClpMaxSeconds]=-1.0;
 }
@@ -988,7 +1024,7 @@ ClpModel::hitMaximumIterations() const
 {
   bool hitMax= (numberIterations_>=maximumIterations());
   if (dblParam_[ClpMaxSeconds]>=0.0&&!hitMax)
-    hitMax = (cpuTime()>=dblParam_[ClpMaxSeconds]);
+    hitMax = (CoinCpuTime()>=dblParam_[ClpMaxSeconds]);
   return hitMax;
 }
 // Pass in Message handler (not deleted at end)
@@ -1029,7 +1065,7 @@ ClpModel::readMps(const char *fileName,
     }
   }
   CoinMpsIO m;
-  double time1 = cpuTime(),time2;
+  double time1 = CoinCpuTime(),time2;
   int status=m.readMps(fileName,"");
   if (!status||ignoreErrors) {
     loadProblem(*m.getMatrixByCol(),
@@ -1067,7 +1103,7 @@ ClpModel::readMps(const char *fileName,
       lengthNames_=0;
     }
     setDblParam(ClpObjOffset,m.objectiveOffset());
-    time2 = cpuTime();
+    time2 = CoinCpuTime();
     handler_->message(CLP_IMPORT_RESULT,messages_)
       <<fileName
       <<time2-time1<<CoinMessageEol;
@@ -1187,6 +1223,206 @@ ClpModel::deleteQuadraticObjective()
 {
   delete quadraticObjective_;
   quadraticObjective_ = NULL;
+}
+// Returns resized array and updates size
+double * whichDouble(double * array , int number, const int * which)
+{
+  double * newArray=NULL;
+  if (array&&number) {
+    int i ;
+    newArray = new double[number];
+    for (i=0;i<number;i++) 
+      newArray[i]=array[which[i]];
+  }
+  return newArray;
+}
+char * whichChar(char * array , int number, const int * which)
+{
+  char * newArray=NULL;
+  if (array&&number) {
+    int i ;
+    newArray = new char[number];
+    for (i=0;i<number;i++) 
+      newArray[i]=array[which[i]];
+  }
+  return newArray;
+}
+unsigned char * whichUnsignedChar(unsigned char * array , 
+				  int number, const int * which)
+{
+  unsigned char * newArray=NULL;
+  if (array&&number) {
+    int i ;
+    newArray = new unsigned char[number];
+    for (i=0;i<number;i++) 
+      newArray[i]=array[which[i]];
+  }
+  return newArray;
+}
+// Subproblem constructor
+ClpModel::ClpModel ( const ClpModel * rhs,
+		     int numberRows, const int * whichRow,
+		     int numberColumns, const int * whichColumn,
+		     bool dropNames, bool dropIntegers)
+{
+#if 0
+  // Could be recoded to be faster and take less memory
+  // and to allow re-ordering and duplicates etc
+  gutsOfCopy(*rhs,true);
+  int numberRowsWhole = rhs->numberRows();
+  int * delRow = new int[numberRowsWhole];
+  memset(delRow,0,numberRowsWhole*sizeof(int));
+  int i;
+  for (i=0;i<numberRows;i++) {
+    int iRow=whichRow[i];
+    assert (iRow>=0&&iRow<numberRowsWhole);
+    delRow[iRow]=1;
+  }
+  numberRows=0;
+  for (i=0;i<numberRowsWhole;i++) {
+    if (delRow[i]==0)
+      delRow[numberRows++]=i;
+  }
+  deleteRows(numberRows,delRow);
+  delete [] delRow;
+  int numberColumnsWhole = rhs->numberColumns();
+  int * delColumn = new int[numberColumnsWhole];
+  memset(delColumn,0,numberColumnsWhole*sizeof(int));
+  for (i=0;i<numberColumns;i++) {
+    int iColumn=whichColumn[i];
+    assert (iColumn>=0&&iColumn<numberColumnsWhole);
+    delColumn[iColumn]=1;
+  }
+  numberColumns=0;
+  for (i=0;i<numberColumnsWhole;i++) {
+    if (delColumn[i]==0)
+      delColumn[numberColumns++]=i;
+  }
+  deleteColumns(numberColumns,delColumn);
+  delete [] delColumn;
+#else
+  defaultHandler_ = rhs->defaultHandler_;
+  if (defaultHandler_) 
+    handler_ = new CoinMessageHandler(*rhs->handler_);
+   else 
+    handler_ = rhs->handler_;
+  messages_ = rhs->messages_;
+  intParam_[ClpMaxNumIteration] = rhs->intParam_[ClpMaxNumIteration];
+  intParam_[ClpMaxNumIterationHotStart] = 
+    rhs->intParam_[ClpMaxNumIterationHotStart];
+
+  dblParam_[ClpDualObjectiveLimit] = rhs->dblParam_[ClpDualObjectiveLimit];
+  dblParam_[ClpPrimalObjectiveLimit] = rhs->dblParam_[ClpPrimalObjectiveLimit];
+  dblParam_[ClpDualTolerance] = rhs->dblParam_[ClpDualTolerance];
+  dblParam_[ClpPrimalTolerance] = rhs->dblParam_[ClpPrimalTolerance];
+  dblParam_[ClpObjOffset] = rhs->dblParam_[ClpObjOffset];
+  dblParam_[ClpMaxSeconds] = rhs->dblParam_[ClpMaxSeconds];
+
+  strParam_[ClpProbName] = rhs->strParam_[ClpProbName];
+
+  optimizationDirection_ = rhs->optimizationDirection_;
+  objectiveValue_=rhs->objectiveValue_;
+  smallElement_ = rhs->smallElement_;
+  numberIterations_ = rhs->numberIterations_;
+  solveType_ = rhs->solveType_;
+  problemStatus_ = rhs->problemStatus_;
+  // check valid lists
+  int numberBad=0;
+  int i;
+  for (i=0;i<numberRows;i++)
+    if (whichRow[i]<0||whichRow[i]>=rhs->numberRows_)
+      numberBad++;
+  if (numberBad)
+    throw CoinError("bad row list", "subproblem constructor", "ClpModel");
+  numberBad=0;
+  for (i=0;i<numberColumns;i++)
+    if (whichColumn[i]<0||whichColumn[i]>=rhs->numberColumns_)
+      numberBad++;
+  if (numberBad)
+    throw CoinError("bad column list", "subproblem constructor", "ClpModel");
+  numberRows_ = numberRows;
+  numberColumns_ = numberColumns;
+  if (!dropNames) {
+    unsigned int maxLength=0;
+    int iRow;
+    rowNames_.reserve(numberRows_);
+    for (iRow=0;iRow<numberRows_;iRow++) {
+      rowNames_[iRow] = rhs->rowNames_[whichRow[iRow]];
+      maxLength = max(maxLength,(unsigned int) strlen(rowNames_[iRow].c_str()));
+    }
+    int iColumn;
+    columnNames_.reserve(numberColumns_);
+    for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+      columnNames_[iColumn] = rhs->columnNames_[whichColumn[iColumn]];
+      maxLength = max(maxLength,(unsigned int) strlen(columnNames_[iColumn].c_str()));
+    }
+    lengthNames_=(int) maxLength;
+  } else {
+    lengthNames_ = 0;
+    rowNames_ = std::vector<std::string> ();
+    columnNames_ = std::vector<std::string> ();
+  }
+  if (rhs->integerType_&&!dropIntegers) {
+    integerType_ = whichChar(rhs->integerType_,numberColumns,whichColumn);
+  } else {
+    integerType_ = NULL;
+  }
+  if (rhs->rowActivity_) {
+    rowActivity_=whichDouble(rhs->rowActivity_,numberRows,whichRow);
+    dual_=whichDouble(rhs->dual_,numberRows,whichRow);
+    columnActivity_=whichDouble(rhs->columnActivity_,numberColumns,
+				whichColumn);
+    reducedCost_=whichDouble(rhs->reducedCost_,numberColumns,
+				whichColumn);
+  } else {
+    rowActivity_=NULL;
+    columnActivity_=NULL;
+    dual_=NULL;
+    reducedCost_=NULL;
+  }
+  rowLower_=whichDouble(rhs->rowLower_,numberRows,whichRow);
+  rowUpper_=whichDouble(rhs->rowUpper_,numberRows,whichRow);
+  columnLower_=whichDouble(rhs->columnLower_,numberColumns,whichColumn);
+  columnUpper_=whichDouble(rhs->columnUpper_,numberColumns,whichColumn);
+  if (rhs->objective_)
+    objective_  = rhs->objective_->subsetClone(numberColumns,whichColumn);
+  else
+    objective_ = NULL;
+  rowObjective_=whichDouble(rhs->rowObjective_,numberRows,whichRow);
+  // status has to be done in two stages
+  status_ = new unsigned char[numberColumns_+numberRows_];
+  unsigned char * rowStatus = whichUnsignedChar(rhs->status_+rhs->numberColumns_,
+						numberRows_,whichRow);
+  unsigned char * columnStatus = whichUnsignedChar(rhs->status_,
+						numberColumns_,whichColumn);
+  memcpy(status_+numberColumns_,rowStatus,numberRows_);
+  delete [] rowStatus;
+  memcpy(status_,columnStatus,numberColumns_);
+  delete [] columnStatus;
+  ray_ = NULL;
+  if (problemStatus_==1)
+    ray_ = whichDouble (rhs->ray_,numberRows,whichRow);
+  else if (problemStatus_==2)
+    ray_ = whichDouble (rhs->ray_,numberColumns,whichColumn);
+  if (rhs->rowCopy_) {
+    rowCopy_ = rhs->rowCopy_->subsetClone(numberRows,whichRow,
+					  numberColumns,whichColumn);
+  } else {
+    rowCopy_=NULL;
+  }
+  if (rhs->quadraticObjective_) {
+    quadraticObjective_ = new CoinPackedMatrix(*rhs->quadraticObjective_,
+					       numberColumns,whichColumn,
+					       numberColumns,whichColumn);
+  } else {
+    quadraticObjective_=NULL;
+  }
+  matrix_=NULL;
+  if (rhs->matrix_) {
+    matrix_ = rhs->matrix_->subsetClone(numberRows,whichRow,
+					numberColumns,whichColumn);
+  }
+#endif
 }
 //#############################################################################
 // Constructors / Destructor / Assignment

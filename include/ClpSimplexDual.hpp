@@ -153,7 +153,8 @@ public:
 		  CoinIndexedVector * columnArray,
 		  CoinIndexedVector * outputArray,
 		  double theta,
-		  double & objectiveChange);
+		  double & objectiveChange,
+			bool fullRecompute);
   /** The duals are updated by the given arrays.
       This is in values pass - so no changes to primal is made
   */
@@ -237,7 +238,7 @@ public:
 	    - 2 restoring from saved 
   */
   void statusOfProblemInDual(int & lastCleaned, int type,
-			     ClpSimplexProgress & progress,
+			     ClpSimplexProgress * progress,
 			     double * givenDjs);
   /// Perturbs problem (method depends on perturbation())
   void perturb();

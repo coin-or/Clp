@@ -10,18 +10,11 @@
 #include <string>
 #include <iostream>
 
-#include <time.h>
 
 #include "CoinPragma.hpp"
-#ifndef _MSC_VER
-#include <sys/times.h>
-#include <sys/resource.h>
-#include <unistd.h>
-#endif
-#define CLPVERSION "0.96.1"
+#include "CoinHelperFunctions.hpp"
+#define CLPVERSION "0.97.4"
 
-//#include "CoinPackedMatrix.hpp"
-//#include "CoinPackedVector.hpp"
 #include "CoinMpsIO.hpp"
 
 #include "ClpFactorization.hpp"
@@ -31,7 +24,7 @@
 #include "ClpPrimalColumnSteepest.hpp"
 #include "ClpPrimalColumnDantzig.hpp"
 
-#include "Presolve.hpp"
+#include "ClpPresolve.hpp"
 #ifdef CLP_IDIOT
 #include "Idiot.hpp"
 #endif
@@ -44,25 +37,8 @@
 #ifdef DMALLOC
 #include "dmalloc.h"
 #endif
-static double totalTime=0.0;
-static double cpuTime()
-{
-  double cpu_temp;
-#if defined(_MSC_VER)
-  unsigned int ticksnow;        /* clock_t is same as int */
-  
-  ticksnow = (unsigned int)clock();
-  
-  cpu_temp = (double)((double)ticksnow/CLOCKS_PER_SEC);
-#else
-  struct rusage usage;
-  getrusage(RUSAGE_SELF,&usage);
-  cpu_temp = usage.ru_utime.tv_sec;
-  cpu_temp += 1.0e-6*((double) usage.ru_utime.tv_usec);
-#endif
-  return cpu_temp;
-}
 
+static double totalTime=0.0;
 
 //#############################################################################
 
@@ -746,7 +722,7 @@ int main (int argc, const char *argv[])
 {
   // next {} is just to make sure all memory should be freed - for debug
   {
-    double time1 = cpuTime(),time2;
+    double time1 = CoinCpuTime(),time2;
 #define MAXPARAMETERS 100
     ClpItem parameters[MAXPARAMETERS];
     int numberParameters=0;
@@ -790,6 +766,7 @@ stopping",
       ClpItem("dualP!ivot","Dual pivot choice algorithm",
 	      "steep!est",DUALPIVOT);
     parameters[numberParameters-1].append("dant!zig");
+    parameters[numberParameters-1].append("partial");
     parameters[numberParameters++]=
       ClpItem("primalP!ivot","Primal pivot choice algorithm",
 	      "steep!est",PRIMALPIVOT);
@@ -1048,9 +1025,13 @@ stopping",
 	      if (action==0) {
 		ClpDualRowSteepest steep;
 		models[iModel].setDualRowPivotAlgorithm(steep);
-	      } else {
+	      } else if (action==1) {
 		ClpDualRowDantzig dantzig;
 		models[iModel].setDualRowPivotAlgorithm(dantzig);
+	      } else {
+		// partial steep
+		ClpDualRowSteepest steep(2);
+		models[iModel].setDualRowPivotAlgorithm(steep);
 	      }
 	      break;
 	    case PRIMALPIVOT:
@@ -1096,12 +1077,13 @@ stopping",
 	  case PRIMALSIMPLEX:
 	    if (goodModels[iModel]) {
 	      int saveMaxIterations = models[iModel].maximumIterations();
-	      time1 = cpuTime();
+	      time1 = CoinCpuTime();
 #ifdef USE_PRESOLVE
 	      ClpSimplex * model2 = models+iModel;
-	      Presolve pinfo;
+	      ClpPresolve pinfo;
 	      if (preSolve) {
-		model2 = pinfo.presolvedModel(models[iModel],1.0e-8,false,preSolve);
+		model2 = pinfo.presolvedModel(models[iModel],1.0e-8,
+					      false,preSolve,true);
 		if (model2) {
 		  model2->checkSolution();
 #ifdef CLP_DEBUG
@@ -1136,7 +1118,9 @@ stopping",
 	      if (type==DUALSIMPLEX) {
 		if (doIdiot<0)
 		  model2->crash(1000,1);
+		//int status =model2->saveModel("xx.save");
 		model2->dual();
+		//int status =model2->saveModel("xx.save");
 	      } else {
 #ifdef CLP_IDIOT
 		if (doIdiot>0) {
@@ -1147,18 +1131,138 @@ stopping",
 		model2->primal(1);
 	      }
 	      if (preSolve) {
+#if 0
+		{
+		  int numberRows = model2->numberRows();
+		  double * rowPrimal = model2->primalRowSolution();
+		  double * rowDual = model2->dualRowSolution();
+		  double * rowLower = model2->rowLower();
+		  double * rowUpper = model2->rowUpper();
+		  
+		  int iRow;
+		  double largest;
+		  largest=0.0;
+		  
+		  for (iRow=0;iRow<numberRows;iRow++) {
+		    double value1 = rowPrimal[iRow];
+		    double value2 = min(value1-rowLower[iRow],
+					rowUpper[iRow]-value1);
+		    if (value1-rowLower[iRow]>50000.0)
+		      rowLower[iRow] = value1-50000.0;
+		    if (rowUpper[iRow]-value1>50000.0)
+		      rowUpper[iRow] = value1+50000.0;
+		    largest = max(largest,value2);
+#if 0
+		    double value2 = rowDual[iRow];
+		    if (fabs(value1)<1.0e-9)
+		      value1=0.0;
+		    if (fabs(value2)<1.0e-9)
+		      value2=0.0;
+		    printf("%d stat %d primal %g dual %g\n",
+			   iRow,model2->getRowStatus(iRow),
+			   value1,value2);
+#endif
+		  }
+		  printf("largest away %g\n",largest);
+		  int numberColumns = model2->numberColumns();
+		  double * columnPrimal = model2->primalColumnSolution();
+		  double * columnDual = model2->dualColumnSolution();
+		  //double * originalUpper = models->columnUpper();
+		  //double * originalLower = models->columnLower();
+		  double * columnLower = model2->columnLower();
+		  double * columnUpper = model2->columnUpper();
+		  
+		  int iColumn;
+		  
+		  for (iColumn=0;iColumn<numberColumns;iColumn++) {
+		    double value1 = columnPrimal[iColumn];
+		    double value2 = min(value1-columnLower[iColumn],
+					columnUpper[iColumn]-value1);
+		    if (value1-columnLower[iColumn]>50000.0)
+		      columnLower[iColumn] = value1-50000.0;
+		    if (columnUpper[iColumn]-value1>50000.0)
+		      columnUpper[iColumn] = value1+50000.0;
+		    largest = max(largest,value2);
+#if 0
+		    double value2 = columnDual[iColumn];
+		    if (fabs(value1)<1.0e-9)
+		      value1=0.0;
+		    if (fabs(value2)<1.0e-9)
+		      value2=0.0;
+		    printf("%d stat %d primal %g dual %g\n",
+			   iColumn,model2->getColumnStatus(iColumn),
+			   value1,value2);
+#endif
+		    if (model2->getColumnStatus(iColumn)!=ClpSimplex::basic) {
+		      //assert (fabs(value1-originalLower[iColumn])<1.01e-7||
+		      //      fabs(value1-originalUpper[iColumn])<1.01e-7);
+		    }
+		  }
+		  printf("largest away %g\n",largest);
+		  CoinMpsIO writer;
+		  writer.setMpsData(*model2->matrix(), COIN_DBL_MAX,
+				    model2->getColLower(), model2->getColUpper(),
+				    model2->getObjCoefficients(),
+				    (const char*) 0 /*integrality*/,
+				    model2->getRowLower(), model2->getRowUpper(),
+				    NULL,NULL);
+		  writer.writeMps("pilotx.mps");
+		}
+#endif
+		//model2->primal(1);
 		pinfo.postsolve(true);
-		
+		if (0) {
+		  ClpSimplex * model2 = models+iModel;
+		  int numberRows = model2->numberRows();
+		  double * rowPrimal = model2->primalRowSolution();
+		  double * rowDual = model2->dualRowSolution();
+		  
+		  int iRow;
+		  
+		  for (iRow=0;iRow<numberRows;iRow++) {
+		    double value1 = rowPrimal[iRow];
+		    double value2 = rowDual[iRow];
+		    if (fabs(value1)<1.0e-9)
+		      value1=0.0;
+		    if (fabs(value2)<1.0e-9)
+		      value2=0.0;
+		    printf("%d stat %d primal %g dual %g\n",
+			   iRow,model2->getRowStatus(iRow),
+			   value1,value2);
+		  }
+		  int numberColumns = model2->numberColumns();
+		  double * columnPrimal = model2->primalColumnSolution();
+		  double * columnDual = model2->dualColumnSolution();
+		  
+		  int iColumn;
+		  
+		  for (iColumn=0;iColumn<numberColumns;iColumn++) {
+		    double value1 = columnPrimal[iColumn];
+		    double value2 = columnDual[iColumn];
+		    if (fabs(value1)<1.0e-9)
+		      value1=0.0;
+		    if (fabs(value2)<1.0e-9)
+		      value2=0.0;
+		    printf("%d stat %d primal %g dual %g\n",
+			   iColumn,model2->getColumnStatus(iColumn),
+			   value1,value2);
+		  }
+		}
+
 		delete model2;
-		printf("Resolving from postsolved model\n");
-		
+
 #ifdef READLINE     
 		currentModel = models+iModel;
 #endif
-		int savePerturbation = models[iModel].perturbation();
-		models[iModel].setPerturbation(100);
-		models[iModel].primal(1);
-		models[iModel].setPerturbation(savePerturbation);
+		models[iModel].checkSolution();
+		if (!models[iModel].isProvenOptimal()) {
+		  printf("Resolving from postsolved model\n");
+		  
+		  int savePerturbation = models[iModel].perturbation();
+		  models[iModel].setPerturbation(100);
+		  models[iModel].primal(1);
+		  models[iModel].setPerturbation(savePerturbation);
+		}
 #ifdef CLP_DEBUG_not
 		models[iModel].checkSolution();
 		printf("%g dual %g(%d) Primal %g(%d)\n",
@@ -1168,7 +1272,7 @@ stopping",
 		       models[iModel].sumPrimalInfeasibilities(),
 		       models[iModel].numberPrimalInfeasibilities());
 		{
-		  Presolve pinfoA;
+		  ClpPresolve pinfoA;
 		  model2 = pinfoA.presolvedModel(models[iModel],1.0e-8);
 		  
 		  printf("Resolving from presolved optimal solution\n");
@@ -1189,7 +1293,7 @@ stopping",
 	      }
 #endif
 	      models[iModel].setMaximumIterations(saveMaxIterations);
-	      time2 = cpuTime();
+	      time2 = CoinCpuTime();
 	      totalTime += time2-time1;
 	      std::cout<<"Result "<<models[iModel].status()<<
 		" - "<<models[iModel].objectiveValue()<<
@@ -1229,7 +1333,7 @@ stopping",
 		m.releaseClp();
 	      }
 	      models[iModel].setMaximumIterations(saveMaxIterations);
-	      time2 = cpuTime();
+	      time2 = CoinCpuTime();
 	      totalTime += time2-time1;
 	      std::cout<<"Result "<<models[iModel].status()<<
 		" - "<<models[iModel].objectiveValue()<<
@@ -1276,7 +1380,7 @@ stopping",
 		  goodModels[iModel]=true;
 		  // sets to all slack (not necessary?)
 		  models[iModel].createStatus();
-		  time2 = cpuTime();
+		  time2 = CoinCpuTime();
 		  totalTime += time2-time1;
 		  time1=time2;
 		} else {
@@ -1306,44 +1410,78 @@ stopping",
 		std::cout<<"Unable to open file "<<fileName<<std::endl;
 	      }
 	      if (canOpen) {
+		// If presolve on then save presolved
+		bool deleteModel2=false;
+		ClpSimplex * model2 = models+iModel;
+#ifdef USE_PRESOLVE
+		if (preSolve) {
+		  ClpPresolve pinfo;
+		  model2 = 
+		    pinfo.presolvedModel(models[iModel],1.0e-8,
+					 false,preSolve);
+		  if (model2) {
+		    printf("Saving presolved model on %s\n",
+			   fileName.c_str());
+		    deleteModel2=true;
+		  } else {
+		    printf("Presolved model looks infeasible - saving original on %s\n",
+			   fileName.c_str());
+		    deleteModel2=false;
+		    model2 = models+iModel;
+
+		  }
+		} else {
+#endif
+		  printf("Saving model on %s\n",
+			   fileName.c_str());
+#ifdef USE_PRESOLVE
+		}
+#endif
 		// Convert names
 		int iRow;
-		int numberRows=models[iModel].numberRows();
-
-		char ** rowNames = new char * [numberRows];
-		for (iRow=0;iRow<numberRows;iRow++) {
-		  rowNames[iRow] = 
-		    strdup(models[iModel].rowName(iRow).c_str());
-		}
+		int numberRows=model2->numberRows();
 		int iColumn;
-		int numberColumns=models[iModel].numberColumns();
+		int numberColumns=model2->numberColumns();
 
-		char ** columnNames = new char * [numberColumns];
-		for (iColumn=0;iColumn<numberColumns;iColumn++) {
-		  columnNames[iColumn] = 
-		    strdup(models[iModel].columnName(iColumn).c_str());
+		char ** rowNames = NULL;
+		char ** columnNames = NULL;
+		if (model2->lengthNames()) {
+		  rowNames = new char * [numberRows];
+		  for (iRow=0;iRow<numberRows;iRow++) {
+		    rowNames[iRow] = 
+		      strdup(model2->rowName(iRow).c_str());
+		  }
+		  
+		  columnNames = new char * [numberColumns];
+		  for (iColumn=0;iColumn<numberColumns;iColumn++) {
+		    columnNames[iColumn] = 
+		      strdup(model2->columnName(iColumn).c_str());
+		  }
 		}
 
-		ClpSimplex& m = models[iModel];
 		CoinMpsIO writer;
-		writer.setMpsData(*m.matrix(), COIN_DBL_MAX,
-				  m.getColLower(), m.getColUpper(),
-				  m.getObjCoefficients(),
+		writer.setMpsData(*model2->matrix(), COIN_DBL_MAX,
+				  model2->getColLower(), model2->getColUpper(),
+				  model2->getObjCoefficients(),
 				  (const char*) 0 /*integrality*/,
-				  m.getRowLower(), m.getRowUpper(),
+				  model2->getRowLower(), model2->getRowUpper(),
 				  columnNames, rowNames);
 		// Pass in array saying if each variable integer
-		writer.copyInIntegerInformation(m.integerInformation());
+		writer.copyInIntegerInformation(model2->integerInformation());
 		writer.writeMps(fileName.c_str());
-		for (iRow=0;iRow<numberRows;iRow++) {
-		  free(rowNames[iRow]);
+		if (rowNames) {
+		  for (iRow=0;iRow<numberRows;iRow++) {
+		    free(rowNames[iRow]);
+		  }
+		  delete [] rowNames;
+		  for (iColumn=0;iColumn<numberColumns;iColumn++) {
+		    free(columnNames[iColumn]);
+		  }
+		  delete [] columnNames;
 		}
-		delete [] rowNames;
-		for (iColumn=0;iColumn<numberColumns;iColumn++) {
-		  free(columnNames[iColumn]);
-		}
-		delete [] columnNames;
-		time2 = cpuTime();
+		if (deleteModel2)
+		  delete model2;
+		time2 = CoinCpuTime();
 		totalTime += time2-time1;
 		time1=time2;
 	      }
@@ -1368,10 +1506,40 @@ stopping",
 		std::cout<<"Unable to open file "<<fileName<<std::endl;
 	      }
 	      if (canOpen) {
-		int status =models[iModel].saveModel(fileName.c_str());
+		int status;
+		// If presolve on then save presolved
+		bool deleteModel2=false;
+		ClpSimplex * model2 = models+iModel;
+#ifdef USE_PRESOLVE
+		if (preSolve) {
+		  ClpPresolve pinfo;
+		  model2 = 
+		    pinfo.presolvedModel(models[iModel],1.0e-8,
+					 false,preSolve);
+		  if (model2) {
+		    printf("Saving presolved model on %s\n",
+			   fileName.c_str());
+		    deleteModel2=true;
+		  } else {
+		    printf("Presolved model looks infeasible - saving original on %s\n",
+			   fileName.c_str());
+		    deleteModel2=false;
+		    model2 = models+iModel;
+
+		  }
+		} else {
+#endif
+		  printf("Saving model on %s\n",
+			   fileName.c_str());
+#ifdef USE_PRESOLVE
+		}
+#endif
+		status =model2->saveModel(fileName.c_str());
+		if (deleteModel2)
+		  delete model2;
 		if (!status) {
 		  goodModels[iModel]=true;
-		  time2 = cpuTime();
+		  time2 = CoinCpuTime();
 		  totalTime += time2-time1;
 		  time1=time2;
 		} else {
@@ -1403,7 +1571,7 @@ stopping",
 		int status =models[iModel].restoreModel(fileName.c_str());
 		if (!status) {
 		  goodModels[iModel]=true;
-		  time2 = cpuTime();
+		  time2 = CoinCpuTime();
 		  totalTime += time2-time1;
 		  time1=time2;
 		} else {

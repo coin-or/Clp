@@ -46,6 +46,12 @@ public:
 
   /// Clone
   virtual ClpObjective * clone() const = 0;
+  /** Subset clone.  Duplicates are allowed
+      and order is as given.
+      Derived classes need not provide this as it may not always make
+      sense */
+  virtual ClpObjective * subsetClone (int numberColumns, 
+				      const int * whichColumns) const;
  
   //@}
 
