@@ -1003,6 +1003,14 @@ ClpSimplex::initialSolve(ClpSolve & options)
       // do presolve
       model2 = pinfo2.presolvedModel(*model2,1.0e-8,
 				    false,5,true);
+      if (!model2) {
+	model2=saveModel2;
+	saveModel2=NULL;
+	delete [] saveLower;
+	saveLower=NULL;
+	delete [] saveUpper;
+	saveUpper=NULL;
+      }
     }
     if (maxIts&&barrierStatus<4) {
       printf("***** crossover - needs more thought on difficult models\n");
@@ -1023,7 +1031,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	int n=0;
 	const double * columnLower = model2->columnLower();
 	const double * columnUpper = model2->columnUpper();
-	const double * primalSolution = model2->primalColumnSolution();
+	double * primalSolution = model2->primalColumnSolution();
+	const double * dualSolution = model2->dualColumnSolution();
 	double tolerance = 10.0*primalTolerance_;
 	int i;
 	for ( i=0;i<numberRows;i++) 
@@ -1032,6 +1041,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	  double distance = min(columnUpper[i]-primalSolution[i],
 				primalSolution[i]-columnLower[i]);
 	  if (distance>tolerance) {
+	    if (fabs(dualSolution[i])<1.0e-5)
+	      distance *= 100.0;
 	    dsort[n]=-distance;
 	    sort[n++]=i;
 	    model2->setStatus(i,superBasic);
@@ -1039,8 +1050,10 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	    model2->setStatus(i,superBasic);
 	  } else if (primalSolution[i]<=columnLower[i]+primalTolerance_) {
 	    model2->setStatus(i,atLowerBound);
+	    primalSolution[i]=columnLower[i];
 	  } else {
 	    model2->setStatus(i,atUpperBound);
+	    primalSolution[i]=columnUpper[i];
 	  }
 	}
 	CoinSort_2(dsort,dsort+n,sort);
