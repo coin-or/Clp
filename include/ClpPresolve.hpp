@@ -167,7 +167,9 @@ private:
   int numberPasses_;
   /// Name of saved model file
   std::string saveFile_;
-  /// Whether we want to skip dual part of presolve etc
+  /** Whether we want to skip dual part of presolve etc.
+      512 bit allows duplicate column processing on integer columns
+  */
   int presolveActions_;
 protected:
   /// If you want to apply the individual presolve routines differently,

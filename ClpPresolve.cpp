@@ -621,6 +621,9 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
       check_sol(prob,1.0e0);
 #endif
       if (dupcol) {
+        // maybe allow integer columns to be checked
+        if ((presolveActions_&512)!=0)
+          prob->setPresolveOptions(prob->presolveOptions()|1);
 	paction_ = dupcol_action::presolve(prob, paction_);
 	if (prob->status_)
 	  break;
