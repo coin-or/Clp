@@ -62,6 +62,7 @@ ifeq ($(OptLevel),-g)
 endif
 ifeq ($(OptLevel),-O2)
 #     CXXFLAGS += -DNDEBUG
+#    CXXFLAGS += -DPRESOLVE_SUMMARY=1 -DDEBUG_PRESOLVE -DCHECK_CONSISTENCY=1
 endif
 
 export ExtraIncDir  := ${CoinIncDir} ${zlibIncDir} ${bzlibIncDir}

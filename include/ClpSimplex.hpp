@@ -176,6 +176,38 @@ public:
 		      bool alwaysFinish=false);
   //@}
 
+  /**@name Needed for functionality of OsiSimplexInterface */
+  //@{ 
+  /** Pivot in a variable and out a variable.  Returns 0 if okay,
+      1 if inaccuracy forced re-factorization, -1 if would be singular.
+      Also updates primal/dual infeasibilities.
+      Assumes sequenceIn_ and pivotRow_ set and also directionIn and Out.
+  */
+  int pivot();
+
+  /** Pivot in a variable and choose an outgoing one.  Assumes primal
+      feasible - will not go through a bound.  Returns step length in theta
+      Returns ray in ray_ (or NULL if no pivot)
+      Return codes as before but -1 means no acceptable pivot
+  */
+  int primalPivotResult();
+  
+  /** Pivot out a variable and choose an incoing one.  Assumes dual
+      feasible - will not go through a reduced cost.  
+      Returns step length in theta
+      Returns ray in ray_ (or NULL if no pivot)
+      Return codes as before but -1 means no acceptable pivot
+  */
+  int dualPivotResult();
+
+  /** Common bits of coding for dual and primal.  Return s0 if okay,
+      1 if bad matrix, 2 if very bad factorization
+  */
+  int startup(int ifValuesPass);
+  void finish();
+  
+  //@}
+
   /**@name most useful gets and sets */
   //@{ 
   /// If problem is primal feasible
@@ -245,6 +277,12 @@ public:
   /** Just check solution (for external use) - sets sum of
       infeasibilities etc */
   void checkSolution();
+  /// Useful row length arrays (0,1,2,3,4,5)
+  inline CoinIndexedVector * rowArray(int index) const
+  { return rowArray_[index];};
+  /// Useful column length arrays (0,1,2,3,4,5)
+  inline CoinIndexedVector * columnArray(int index) const
+  { return columnArray_[index];};
   //@}
 
   /******************** End of most useful part **************/
@@ -265,6 +303,10 @@ public:
       Return codes are as from ClpFactorization unless initial factorization
       when total number of singularities is returned
   */
+    /// Save data
+    ClpDataSave saveData() const;
+    /// Restore data
+    void restoreData(ClpDataSave saved);
   int internalFactorize(int solveType);
   /// Factorizes using current basis. For external use
   int factorize();

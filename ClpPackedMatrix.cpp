@@ -842,6 +842,10 @@ ClpPackedMatrix::allElementsInRange(ClpSimplex * model,
 	 j<columnStart[iColumn]+columnLength[iColumn];j++) {
       double value = fabs(elementByColumn[j]);
       int iRow = row[j];
+      if (iRow<0||iRow>=numberRows) {
+	printf("Out of range %d %d %d %g\n",iColumn,j,row[j],elementByColumn[j]);
+	return false;
+      }
       if (mark[iRow]==-1) {
 	mark[iRow]=j;
       } else {

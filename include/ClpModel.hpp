@@ -144,6 +144,11 @@ public:
    inline int getIterationCount() const { return numberIterations_; }
   inline void setNumberIterations(int numberIterations)
   { numberIterations_ = numberIterations;};
+  /// Solve type - 1 simplex, 2 simplex interface
+  inline int solveType() const
+  { return solveType_;};
+  inline void setSolveType(int type)
+  { solveType_=type;};
    /// Maximum number of iterations
    inline int maximumIterations() const { return intParam_[ClpMaxNumIteration]; }
    void setMaximumIterations(int value);
@@ -404,6 +409,8 @@ protected:
   double objectiveValue_;
   /// Number of iterations
   int numberIterations_;
+  /// Solve type - 1 simplex, 2 simplex interface
+  int solveType_;
   /// Status of problem
   int problemStatus_;
   /// Message handler
@@ -430,4 +437,36 @@ protected:
   char * integerType_;
   //@}
 };
+/** This is a tiny class where data can be saved round calls */
+class ClpDataSave {
+
+public:
+  /**@name Constructors and destructor 
+   */
+  //@{
+    /// Default constructor
+    ClpDataSave (  );
+
+    /// Copy constructor. 
+    ClpDataSave(const ClpDataSave &);
+    /// Assignment operator. This copies the data
+    ClpDataSave & operator=(const ClpDataSave & rhs);
+    /// Destructor
+    ~ClpDataSave (  );
+
+  //@}
+
+////////////////// data //////////////////
+public:
+
+  /**@name data - with same names as in other classes*/
+  //@{
+  double dualBound_;
+  double infeasibilityCost_;
+  int sparseThreshold_;
+  int perturbation_;
+
+  //@}
+};
+
 #endif

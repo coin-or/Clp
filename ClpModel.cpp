@@ -63,6 +63,7 @@ ClpModel::ClpModel () :
   ray_(NULL),
   objectiveValue_(0.0),
   numberIterations_(0),
+  solveType_(0),
   problemStatus_(-1),
   defaultHandler_(true),
   status_(NULL),
@@ -323,6 +324,7 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
 
   objectiveValue_=rhs.objectiveValue_;
   numberIterations_ = rhs.numberIterations_;
+  solveType_ = rhs.solveType_;
   problemStatus_ = rhs.problemStatus_;
   if (trueCopy) {
     lengthNames_ = rhs.lengthNames_;
@@ -950,4 +952,52 @@ ClpModel::copyinStatus(const unsigned char * statusArray)
   } else {
     status_=NULL;
   }
+}
+//#############################################################################
+// Constructors / Destructor / Assignment
+//#############################################################################
+
+//-------------------------------------------------------------------
+// Default Constructor 
+//-------------------------------------------------------------------
+ClpDataSave::ClpDataSave () 
+{
+  dualBound_ = 0.0;
+  infeasibilityCost_ = 0.0;
+  sparseThreshold_ = 0;
+  perturbation_ = 0;
+}
+
+//-------------------------------------------------------------------
+// Copy constructor 
+//-------------------------------------------------------------------
+ClpDataSave::ClpDataSave (const ClpDataSave & rhs) 
+{  
+  dualBound_ = rhs.dualBound_;
+  infeasibilityCost_ = rhs.infeasibilityCost_;
+  sparseThreshold_ = rhs.sparseThreshold_;
+  perturbation_ = rhs.perturbation_;
+}
+
+//-------------------------------------------------------------------
+// Destructor 
+//-------------------------------------------------------------------
+ClpDataSave::~ClpDataSave ()
+{
+
+}
+
+//----------------------------------------------------------------
+// Assignment operator 
+//-------------------------------------------------------------------
+ClpDataSave &
+ClpDataSave::operator=(const ClpDataSave& rhs)
+{
+  if (this != &rhs) {
+    dualBound_ = rhs.dualBound_;
+    infeasibilityCost_ = rhs.infeasibilityCost_;
+    sparseThreshold_ = rhs.sparseThreshold_;
+    perturbation_ = rhs.perturbation_;
+  }
+  return *this;
 }

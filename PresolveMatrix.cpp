@@ -1,7 +1,7 @@
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
-#define	CHECK_CONSISTENCY	1
+//#define	CHECK_CONSISTENCY	1
 
 #include <stdio.h>
 
@@ -544,6 +544,19 @@ void PresolveMatrix::update_model(ClpSimplex& si,
 				     int ncols0,
 				     CoinBigIndex nelems0)
 {
+#if 0
+  // out as it was hardware error !!
+  {
+    // temporary sanity check (for funny nw04 bug)
+    int icol;
+    for (icol=0;icol<ncols_;icol++) {
+      int j;
+      for (j=mcstrt_[icol];j<mcstrt_[icol]+hincol_[icol];j++) {
+	assert(hrow_[j]>=0&&hrow_[j]<nrows_);
+      }
+    }
+  }
+#endif
   si.loadProblem(ncols_, nrows_, mcstrt_, hrow_, colels_, hincol_,
 		 clo_, cup_, cost_, rlo_, rup_);
 
@@ -568,6 +581,7 @@ void PresolveMatrix::update_model(ClpSimplex& si,
 
 }
 
+#if	CHECK_CONSISTENCY
 
 // The matrix is represented redundantly in both row and column format,
 // in what I call "loosely packed" format.
@@ -590,7 +604,6 @@ static void matrix_consistent(const CoinBigIndex *mrstrt, const int *hinrow, con
 			      int nrows, int testvals,
 			      const char *ROW, const char *COL)
 {
-#if	CHECK_CONSISTENCY
   for (int irow=0; irow<nrows; irow++) {
     if (hinrow[irow] > 0) {
       CoinBigIndex krs = mrstrt[irow];
@@ -617,8 +630,8 @@ static void matrix_consistent(const CoinBigIndex *mrstrt, const int *hinrow, con
       }
     }
   }
-#endif
 }
+#endif
 
 
 void PresolveMatrix::consistent(bool testvals)

@@ -196,76 +196,27 @@ int ClpSimplexDual::dual ( )
 
   */
 
+  algorithm_ = -1;
+
+  // save data
+  ClpDataSave data = saveData();
 
   // sanity check
-  assert (numberRows_==matrix_->getNumRows());
-  assert (numberColumns_==matrix_->getNumCols());
-  // for moment all arrays must exist
-  assert(columnLower_);
-  assert(columnUpper_);
-  assert(rowLower_);
-  assert(rowUpper_);
-
-
-  algorithm_ = -1;
-  dualTolerance_=dblParam_[ClpDualTolerance];
-  primalTolerance_=dblParam_[ClpPrimalTolerance];
-
+  // initialize - no values pass and algorithm_ is -1
   // put in standard form (and make row copy)
   // create modifiable copies of model rim and do optional scaling
-  bool goodMatrix = createRim(7+8+16,true);
-
-  // save dual bound
-  double saveDualBound_ = dualBound_;
-  // save perturbation
-  int savePerturbation = perturbation_;
-  // save if sparse factorization wanted
-  int saveSparse = factorization_->sparseThreshold();
-
-  if (goodMatrix) {
-    // Problem looks okay
-    int iRow,iColumn;
-    // Do initial factorization
-    // and set certain stuff
-    // We can either set increasing rows so ...IsBasic gives pivot row
-    // or we can just increment iBasic one by one
-    // for now let ...iBasic give pivot row
-    factorization_->increasingRows(2);
-    // row activities have negative sign
-    factorization_->slackValue(-1.0);
-    factorization_->zeroTolerance(1.0e-13);
-    // might want to do first time - factorization_->pivotTolerance(0.99);
-
-    // Do Initial factorization
-    int factorizationStatus = internalFactorize(0);
-
-    if (factorizationStatus<0)
-      return 1; // some error
-    else if (factorizationStatus)
-      handler_->message(CLP_SINGULARITIES,messages_)
-	<<factorizationStatus
-	<<CoinMessageEol;
-    
-    // If user asked for perturbation - do it
-    
-    if (perturbation_<100) 
-      perturb();
-    
-    // for dual we will change bounds using dualBound_
-    // for this we need clean basis so it is after factorize
-    gutsOfSolution(rowActivityWork_,columnActivityWork_);
+  // If problem looks okay
+  // Do initial factorization
+  // If user asked for perturbation - do it
+  if (!startup(0)) {
+    // looks okay
     
     double objectiveChange;
     numberFake_ =0; // Number of variables at fake bounds
     changeBounds(true,NULL,objectiveChange);
     
-    problemStatus_ = -1;
-    numberIterations_=0;
-    
     int lastCleaned=0; // last time objective or bounds cleaned up
     
-    // number of times we have declared optimality
-    numberTimesOptimal_=0;
 
     // Progress indicator
     ClpSimplexProgress progress(this);
@@ -283,6 +234,7 @@ int ClpSimplexDual::dual ( )
       -4 - looks infeasible
     */
     while (problemStatus_<0) {
+      int iRow, iColumn;
       // clear
       for (iRow=0;iRow<4;iRow++) {
 	rowArray_[iRow]->clear();
@@ -306,7 +258,7 @@ int ClpSimplexDual::dual ( )
       
       // Say good factorization
       factorType=1;
-      if (saveSparse) {
+      if (data.sparseThreshold_) {
 	// use default at present
 	factorization_->sparseThreshold(0);
 	factorization_->goSparse();
@@ -318,17 +270,12 @@ int ClpSimplexDual::dual ( )
   }
 
   assert (problemStatus_||!sumPrimalInfeasibilities_);
-  //assert(!numberFake_||problemStatus_); // all bounds should be okay
-  factorization_->sparseThreshold(saveSparse);
-  // Get rid of some arrays and empty factorization
-  deleteRim();
-  handler_->message(CLP_SIMPLEX_FINISHED+problemStatus_,messages_)
-    <<objectiveValue()
-    <<CoinMessageEol;
+
+  // clean up
+  finish();
+
   // Restore any saved stuff
-  perturbation_ = savePerturbation;
-  dualBound_ = saveDualBound_;
-  factorization_->relaxAccuracyCheck(1.0);
+  restoreData(data);
   return problemStatus_;
 }
 /* Reasons to come out:
@@ -629,6 +576,31 @@ ClpSimplexDual::whileIterating()
 #ifdef CLP_DEBUG
 	double oldobj=objectiveValue_;
 #endif
+	// modify dualout
+	dualOut_ /= alpha_;
+	dualOut_ *= -directionOut_;
+	//setStatus(sequenceIn_,basic);
+	dj_[sequenceIn_]=0.0;
+	double oldValue=valueIn_;
+	if (directionIn_==-1) {
+	  // as if from upper bound
+	  valueIn_ = upperIn_+dualOut_;
+	} else {
+	  // as if from lower bound
+	  valueIn_ = lowerIn_+dualOut_;
+	}
+	objectiveChange += cost_[sequenceIn_]*(valueIn_-oldValue);
+	// outgoing
+	if (directionOut_>0) {
+	  valueOut_ = lowerOut_;
+	  //setStatus(sequenceOut_,atLowerBound);
+	  dj_[sequenceOut_]=theta_;
+	} else {
+	  valueOut_ = upperOut_;
+	  //setStatus(sequenceOut_,atUpperBound);
+	  dj_[sequenceOut_]=-theta_;
+	}
+	solution_[sequenceOut_]=valueOut_;
 	int whatNext=housekeeping(objectiveChange);
 	// and set bounds correctly
 	originalBound(sequenceIn_); 
@@ -895,17 +867,13 @@ void
 ClpSimplexDual::dualRow()
 {
   // get pivot row using whichever method it is
-#if 1
-  // Doesnt seem to help - think harder about free variables
   // first see if any free variables and put them in basis
   int nextFree = nextSuperBasic();
   int chosenRow=-1;
   //nextFree=-1; //off
   if (nextFree>=0) {
     // unpack vector and find a good pivot
-    int saveIn=sequenceIn_;
-    sequenceIn_=nextFree;
-    unpack(rowArray_[1]);
+    unpack(rowArray_[1],nextFree);
     factorization_->updateColumn(rowArray_[2],rowArray_[1],false);
 
     double * work=rowArray_[1]->denseVector();
@@ -948,11 +916,9 @@ ClpSimplexDual::dualRow()
       chosenRow = bestFeasibleRow;
     if (chosenRow>=0)
       pivotRow_=chosenRow;
-    sequenceIn_=saveIn;
     rowArray_[1]->clear();
   } 
   if (chosenRow<0) 
-#endif
     pivotRow_=dualRowPivot_->pivotRow();
 
   if (pivotRow_>=0) {
@@ -1818,6 +1784,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
   }
   int tentativeStatus = problemStatus_;
   double changeCost;
+  bool unflagVariables = true;
 
   if (problemStatus_>-3||factorization_->pivots()) {
     // factorize
@@ -1829,6 +1796,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
       // is factorization okay?
       if (internalFactorize(1)) {
 	// no - restore previous basis
+	unflagVariables = false;
 	assert (type==1);
 	changeMade_++; // say something changed
 	memcpy(status_ ,saveStatus_,(numberColumns_+numberRows_)*sizeof(char));
@@ -2142,7 +2110,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
   else
     dualRowPivot_->saveWeights(this,3);
   // unflag all variables (we may want to wait a bit?)
-  if (tentativeStatus!=-2) {
+  if (tentativeStatus!=-2&&unflagVariables) {
     int iRow;
     for (iRow=0;iRow<numberRows_;iRow++) {
       int iPivot=pivotVariable_[iRow];
@@ -2773,4 +2741,16 @@ ClpSimplexDual::numberAtFakeBound()
   }
   numberFake_ = numberFake;
   return numberFake;
+}
+/* Pivot out a variable and choose an incoing one.  Assumes dual
+   feasible - will not go through a reduced cost.  
+   Returns step length in theta
+   Returns ray in ray_ (or NULL if no pivot)
+   Return codes as before but -1 means no acceptable pivot
+*/
+int 
+ClpSimplexDual::pivotResult()
+{
+  abort();
+  return 0;
 }

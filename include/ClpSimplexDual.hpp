@@ -221,6 +221,14 @@ public:
   /** Checks number of variables at fake bounds.  This is used by fastDual
       so can exit gracefully before end */
   int numberAtFakeBound();
+
+  /** Pivot in a variable and choose an outgoing one.  Assumes dual
+      feasible - will not go through a reduced cost.  Returns step length in theta
+      Returns ray in ray_ (or NULL if no pivot)
+      Return codes as before but -1 means no acceptable pivot
+  */
+  int pivotResult();
+  
   //@}
 };
 #endif

@@ -122,8 +122,6 @@ public:
   /**@name Functions used in primal */
   //@{
   /** This has the flow between re-factorizations
-      firstSuperBasic == number rows + columns normally,
-      otherwise first super basic variable
 
       Reasons to come out:
       -1 iterations etc
@@ -134,7 +132,7 @@ public:
       +2 looks unbounded
       +3 max iterations 
    */
-  int whileIterating(int & firstSuperBasic); 
+  int whileIterating(); 
   /** The primals are updated by the given array.
       Returns number of infeasibilities.
       After rowArray will have cost changes for use next iteration
@@ -190,8 +188,14 @@ public:
   void unPerturb();
   /// Unflag all variables and return number unflagged
   int unflag();
-  /// Sets sequenceIn_ to next superBasic (input by first..) and updates
-  void nextSuperBasic(int & firstSuperBasic);
+
+  /** Pivot in a variable and choose an outgoing one.  Assumes primal
+      feasible - will not go through a bound.  Returns step length in theta
+      Returns ray in ray_ (or NULL if no pivot)
+      Return codes as before but -1 means no acceptable pivot
+  */
+  int pivotResult();
+  
   //@}
 };
 #endif

@@ -945,103 +945,35 @@ ClpSimplex::housekeeping(double objectiveChange)
       <<CoinMessageEol;
   }
   // change of incoming
-  if (algorithm_<0) {
-    dualOut_ /= alpha_;
-    dualOut_ *= -directionOut_;
-  }
   char rowcol[]={'R','C'};
-  double cost = cost_[sequenceIn_];
-  double value=valueIn_;
   if (pivotRow_>=0)
     pivotVariable_[pivotRow_]=sequenceIn();
-  if (directionIn_==-1) {
-    // as if from upper bound
-    if (sequenceIn_!=sequenceOut_) {
-      // variable becoming basic
-      setStatus(sequenceIn_,basic);
-      if (algorithm_<0) {
-	value = upperIn_+dualOut_;
-	dj_[sequenceIn_]=0.0;
-      } else {
-	value = valueIn_-fabs(theta_);
-      }
+  if (upper_[sequenceIn_]>1.0e20&&lower_[sequenceIn_]<-1.0e20)
+    progressFlag_ |= 2; // making real progress
+  solution_[sequenceIn_]=valueIn_;
+  if (upper_[sequenceOut_]-lower_[sequenceOut_]<1.0e-12)
+    progressFlag_ |= 1; // making real progress
+  if (sequenceIn_!=sequenceOut_) {
+    //assert( getStatus(sequenceOut_)== basic);
+    setStatus(sequenceIn_,basic);
+    if (directionOut_>0) {
+      // going to lower
+      setStatus(sequenceOut_,atLowerBound);
     } else {
-      value=lowerIn_;
-      setStatus(sequenceIn_, atLowerBound);
+      // going to upper
+      setStatus(sequenceOut_,atUpperBound);
     }
+    solution_[sequenceOut_]=valueOut_;
   } else {
-    // as if from lower bound
-    if (sequenceIn_!=sequenceOut_) {
-      // variable becoming basic
-      setStatus(sequenceIn_,basic);
-      if (algorithm_<0) {
-	value = lowerIn_+dualOut_;
-	dj_[sequenceIn_]=0.0;
-      } else {
-	value = valueIn_+fabs(theta_);
-      }
+    // flip from bound to bound
+    if (directionIn_==-1) {
+      // as if from upper bound
+      setStatus(sequenceIn_, atLowerBound);
     } else {
-      value=upperIn_;
+      // as if from lower bound
       setStatus(sequenceIn_, atUpperBound);
     }
   }
-  if (upper_[sequenceIn_]>1.0e20&&lower_[sequenceIn_]<-1.0e20)
-    progressFlag_ |= 2; // making real progress
-  if (algorithm_<0)
-    objectiveChange += cost*(value-valueIn_);
-  else
-    objectiveChange += dualIn_*(value-valueIn_);
-  solution_[sequenceIn_]=value;
-
-  // outgoing
-  if (sequenceIn_!=sequenceOut_) {
-    assert( getStatus(sequenceOut_)== basic);
-    if (upper_[sequenceOut_]-lower_[sequenceOut_]<1.0e-12)
-      progressFlag_ |= 1; // making real progress
-    if (algorithm_<0) {
-      if (directionOut_>0) {
-	value = lowerOut_;
-	setStatus(sequenceOut_,atLowerBound);
-	dj_[sequenceOut_]=theta_;
-      } else {
-	value = upperOut_;
-	setStatus(sequenceOut_,atUpperBound);
-	dj_[sequenceOut_]=-theta_;
-      }
-      solution_[sequenceOut_]=value;
-    } else {
-      if (directionOut_>0) {
-	value = lowerOut_;
-      } else {
-	value = upperOut_;
-      }
-      double lowerValue = lower_[sequenceOut_];
-      double upperValue = upper_[sequenceOut_];
-      assert(value>=lowerValue-primalTolerance_&&
-	     value<=upperValue+primalTolerance_);
-      // may not be exactly at bound and bounds may have changed
-      if (value<=lowerValue+primalTolerance_) {
-	setStatus(sequenceOut_,atLowerBound);
-      } else if (value>=upperValue-primalTolerance_) {
-	setStatus(sequenceOut_,atUpperBound);
-      } else {
-	printf("*** variable wandered off bound %g %g %g!\n",
-	       lowerValue,value,upperValue);
-	if (value-lowerValue<=upperValue-value) {
-	  setStatus(sequenceOut_,atLowerBound);
-	  value=lowerValue;
-	} else {
-	  setStatus(sequenceOut_,atUpperBound);
-	  value=upperValue;
-	}
-      }
-      solution_[sequenceOut_]=value;
-      nonLinearCost_->setOne(sequenceOut_,value);
-    }
-  }
-  // change cost and bounds on incoming if primal
-  if (algorithm_>0)
-    nonLinearCost_->setOne(sequenceIn_,solution_[sequenceIn_]); 
   objectiveValue_ += objectiveChange;
   handler_->message(CLP_SIMPLEX_HOUSE2,messages_)
     <<numberIterations_<<objectiveValue()
@@ -1158,6 +1090,7 @@ ClpSimplex::ClpSimplex(const ClpSimplex &rhs) :
   primalColumnPivot_ = NULL;
   gutsOfDelete(0);
   gutsOfCopy(rhs);
+  solveType_=1; // say simplex based life form
 }
 // Copy constructor from model
 ClpSimplex::ClpSimplex(const ClpModel &rhs) :
@@ -2335,7 +2268,6 @@ ClpSimplex::borrowModel(ClpModel & otherModel)
 {
   ClpModel::borrowModel(otherModel);
   createStatus();
-  scaling();
   ClpDualRowSteepest steep1;
   setDualRowPivotAlgorithm(steep1);
   ClpPrimalColumnSteepest steep2;
@@ -3671,6 +3603,7 @@ ClpSimplex::nextSuperBasic()
 	    setStatus(iColumn,atUpperBound);
 	  } else if (lower_[iColumn]<-1.0e20&&upper_[iColumn]>1.0e20) {
 	    setStatus(iColumn,isFree);
+	    break;
 	  } else {
 	    break;
 	  }
@@ -3691,4 +3624,265 @@ ClpSimplex::nextSuperBasic()
   } else {
     return -1;
   }
+}
+/* Pivot in a variable and out a variable.  Returns 0 if okay,
+   1 if inaccuracy forced re-factorization, -1 if would be singular.
+   Also updates primal/dual infeasibilities.
+   Assumes sequenceIn_ and pivotRow_ set and also directionIn and Out.
+*/
+int ClpSimplex::pivot()
+{
+  // scaling not allowed
+  assert (!scalingFlag_);
+  // assume In_ and Out_ are correct and directionOut_ set
+  // (or In_ if flip
+  lowerIn_ = lower_[sequenceIn_];
+  valueIn_ = solution_[sequenceIn_];
+  upperIn_ = upper_[sequenceIn_];
+  dualIn_ = dj_[sequenceIn_];
+  if (sequenceOut_>=0) {
+    assert (pivotRow_>=0&&pivotRow_<numberRows_);
+    assert (pivotVariable_[pivotRow_]==sequenceOut_);
+    lowerOut_ = lower_[sequenceOut_];
+    valueOut_ = solution_[sequenceOut_];
+    upperOut_ = upper_[sequenceOut_];
+    // for now assume primal is feasible (or in dual)
+    dualOut_ = dj_[sequenceOut_];
+    assert(fabs(dualOut_)<1.0e-6);
+  } else {
+    assert (pivotRow_<0);
+  }
+  unpack(rowArray_[1]);
+  factorization_->updateColumn(rowArray_[2],rowArray_[1],true);
+  // we are going to subtract movement from current basic
+  double movement;
+  // see where incoming will go to
+  if (sequenceOut_<0||sequenceIn_==sequenceOut_) {
+    // flip so go to bound
+    movement  = ((directionIn_>0) ? upperIn_ : lowerIn_) - valueIn_;
+  } else {
+    // get where outgoing needs to get to
+    double outValue = (directionOut_>0) ? upperOut_ : lowerOut_;
+    // solutionOut_ - movement*alpha_ == outValue
+    movement = (outValue-valueOut_)/alpha_;
+    // set directionIn_ correctly
+    directionIn_ = (movement>0) ? 1 :-1;
+  }
+  // update primal solution
+  {
+    int i;
+    int * index = rowArray_[1]->getIndices();
+    int number = rowArray_[1]->getNumElements();
+    double * element = rowArray_[1]->denseVector();
+    for (i=0;i<number;i++) {
+      int ii = index[i];
+      // get column
+      ii = pivotVariable_[ii];
+      solution_[ii] -= movement*element[i];
+      element[i]=0.0;
+    }
+    // see where something went to
+    if (sequenceOut_<0) {
+      if (directionIn_<0) {
+	assert (fabs(solution_[sequenceIn_]-upperIn_)<1.0e-7);
+	solution_[sequenceIn_]=upperIn_;
+      } else {
+	assert (fabs(solution_[sequenceIn_]-lowerIn_)<1.0e-7);
+	solution_[sequenceIn_]=lowerIn_;
+      }
+    } else {
+      if (directionOut_<0) {
+	assert (fabs(solution_[sequenceOut_]-upperOut_)<1.0e-7);
+	solution_[sequenceOut_]=upperOut_;
+      } else {
+	assert (fabs(solution_[sequenceOut_]-lowerOut_)<1.0e-7);
+	solution_[sequenceOut_]=lowerOut_;
+      }
+      solution_[sequenceIn_]=valueIn_+movement;
+    }
+  }    
+  // update duals
+  if (pivotRow_>=0) {
+    alpha_ = rowArray_[1]->denseVector()[pivotRow_];
+    assert (fabs(alpha_)>1.0e-8);
+    double multiplier = dualIn_/alpha_;
+    rowArray_[0]->insert(pivotRow_,multiplier);
+    factorization_->updateColumnTranspose(rowArray_[2],rowArray_[0]);
+    // put row of tableau in rowArray[0] and columnArray[0]
+    matrix_->transposeTimes(this,-1.0,
+			    rowArray_[0],columnArray_[1],columnArray_[0]);
+    // update column djs
+    int i;
+    int * index = columnArray_[0]->getIndices();
+    int number = columnArray_[0]->getNumElements();
+    double * element = columnArray_[0]->denseVector();
+    for (i=0;i<number;i++) {
+      int ii = index[i];
+      dj_[ii] -= element[i];
+      element[i]=0.0;
+    }
+    columnArray_[0]->setNumElements(0);
+    // and row djs
+    index = rowArray_[0]->getIndices();
+    number = rowArray_[0]->getNumElements();
+    element = rowArray_[0]->denseVector();
+    for (i=0;i<number;i++) {
+      int ii = index[i];
+      dj_[ii+numberRows_] -= element[i];
+      element[i]=0.0;
+    }
+    rowArray_[0]->setNumElements(0);
+    // check incoming
+    assert (fabs(dj_[sequenceIn_])<1.0e-6);
+  }
+#if 0
+  sol update
+    eta update
+  int save = algorithm_;
+  // make simple so always primal
+  algorithm_=1;
+  housekeeping();
+  algorithm_=save;
+  checksol
+#endif
+  abort();
+  return 0;
+}
+
+/* Pivot in a variable and choose an outgoing one.  Assumes primal
+   feasible - will not go through a bound.  Returns step length in theta
+   Returns ray in ray_ (or NULL if no pivot)
+   Return codes as before but -1 means no acceptable pivot
+*/
+int ClpSimplex::primalPivotResult()
+{
+  return ((ClpSimplexPrimal *) this)->pivotResult();
+}
+  
+/* Pivot out a variable and choose an incoing one.  Assumes dual
+   feasible - will not go through a reduced cost.  
+   Returns step length in theta
+   Returns ray in ray_ (or NULL if no pivot)
+   Return codes as before but -1 means no acceptable pivot
+*/
+int 
+ClpSimplex::dualPivotResult()
+{
+  return ((ClpSimplexDual *) this)->pivotResult();
+}
+// Common bits of coding for dual and primal
+int 
+ClpSimplex::startup(int ifValuesPass)
+{
+  // sanity check
+  assert (numberRows_==matrix_->getNumRows());
+  assert (numberColumns_==matrix_->getNumCols());
+  // for moment all arrays must exist
+  assert(columnLower_);
+  assert(columnUpper_);
+  assert(rowLower_);
+  assert(rowUpper_);
+
+
+  primalTolerance_=dblParam_[ClpPrimalTolerance];
+  dualTolerance_=dblParam_[ClpDualTolerance];
+
+  // put in standard form (and make row copy)
+  // create modifiable copies of model rim and do optional scaling
+  bool goodMatrix=createRim(7+8+16,true);
+
+  if (goodMatrix) {
+    // Model looks okay
+    // Do initial factorization
+    // and set certain stuff
+    // We can either set increasing rows so ...IsBasic gives pivot row
+    // or we can just increment iBasic one by one
+    // for now let ...iBasic give pivot row
+    factorization_->increasingRows(2);
+    // row activities have negative sign
+    factorization_->slackValue(-1.0);
+    factorization_->zeroTolerance(1.0e-13);
+
+    // do perturbation if asked for
+
+    if (perturbation_<100) {
+      if (algorithm_>0) {
+	((ClpSimplexPrimal *) this)->perturb();
+      } else if (algorithm_<0) {
+	((ClpSimplexDual *) this)->perturb();
+      }
+    }
+    // for primal we will change bounds using infeasibilityCost_
+    if (nonLinearCost_==NULL&&algorithm_>0) {
+      // get a valid nonlinear cost function
+      delete nonLinearCost_;
+      nonLinearCost_= new ClpNonLinearCost(this);
+    }
+    
+    // loop round to clean up solution if values pass
+    int numberThrownOut = -1;
+    int totalNumberThrownOut=0;
+    while(numberThrownOut) {
+      int status = internalFactorize(0+10*ifValuesPass);
+      if (status<0)
+	return 1; // some error
+      else
+	totalNumberThrownOut+= status;
+      
+      // for this we need clean basis so it is after factorize
+      numberThrownOut=gutsOfSolution(rowActivityWork_,columnActivityWork_,
+				     ifValuesPass!=0);
+      totalNumberThrownOut+= numberThrownOut;
+      
+    }
+    
+    if (totalNumberThrownOut)
+      handler_->message(CLP_SINGULARITIES,messages_)
+	<<totalNumberThrownOut
+	<<CoinMessageEol;
+    
+    problemStatus_ = -1;
+    numberIterations_=0;
+    
+    // number of times we have declared optimality
+    numberTimesOptimal_=0;
+
+    return 0;
+  } else {
+    // bad matrix
+    return 2;
+  }
+    
+}
+
+
+void 
+ClpSimplex::finish()
+{
+  // Get rid of some arrays and empty factorization
+  deleteRim();
+  handler_->message(CLP_SIMPLEX_FINISHED+problemStatus_,messages_)
+    <<objectiveValue()
+    <<CoinMessageEol;
+  factorization_->relaxAccuracyCheck(1.0);
+}
+// Save data
+ClpDataSave 
+ClpSimplex::saveData() const
+{
+  ClpDataSave saved;
+  saved.dualBound_ = dualBound_;
+  saved.infeasibilityCost_ = infeasibilityCost_;
+  saved.sparseThreshold_ = factorization_->sparseThreshold();
+  saved.perturbation_ = perturbation_;
+  return saved;
+}
+// Restore data
+void 
+ClpSimplex::restoreData(ClpDataSave saved)
+{
+  factorization_->sparseThreshold(saved.sparseThreshold_);
+  perturbation_ = saved.perturbation_;
+  infeasibilityCost_ = saved.infeasibilityCost_;
+  dualBound_ = saved.dualBound_;
 }
