@@ -116,6 +116,7 @@ public:
       mode=7  - flag given variable (normally sequenceIn)
       mode=8  - unflag all variables
       mode=9  - synchronize costs
+      mode=10  - return 1 if there may be changing bounds on variable (column generation)
   */
   virtual int generalExpanded(ClpSimplex * model,int mode,int & number);
   /** 
@@ -136,6 +137,8 @@ public:
       mode=3 just reset costs (primal)
       mode=4 correct number of dual infeasibilities
       mode=5 return 4 if time to re-factorize
+      mode=6  - return 1 if there may be changing bounds on variable (column generation)
+      mode=7  - do extra restores for column generation
   */
   virtual int synchronize(ClpSimplex * model,int mode);
   //@}
@@ -262,6 +265,8 @@ protected:
   mutable unsigned char * status_;
   /// Saved status of slacks
   unsigned char * saveStatus_;
+  /// Saved key variables
+  int * savedKeyVariable_;
   /// Backward pointer to set number
   int * backward_;
   /// Backward pointer to pivot row !!!

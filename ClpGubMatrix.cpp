@@ -15,7 +15,7 @@
 // at end to get min/max!
 #include "ClpGubMatrix.hpp"
 #include "ClpMessage.hpp"
-//#define CLP_DEBUG
+#define CLP_DEBUG
 //#define CLP_DEBUG_PRINT
 //#############################################################################
 // Constructors / Destructor / Assignment
@@ -36,6 +36,7 @@ ClpGubMatrix::ClpGubMatrix ()
     upper_(NULL),
     status_(NULL),
     saveStatus_(NULL),
+    savedKeyVariable_(NULL),
     backward_(NULL),
     backToPivotRow_(NULL),
     changeCost_(NULL),
@@ -72,6 +73,7 @@ ClpGubMatrix::ClpGubMatrix (const ClpGubMatrix & rhs)
   upper_ = ClpCopyOfArray(rhs.upper_,numberSets_);
   status_ = ClpCopyOfArray(rhs.status_,numberSets_);
   saveStatus_ = ClpCopyOfArray(rhs.saveStatus_,numberSets_);
+  savedKeyVariable_ = ClpCopyOfArray(rhs.savedKeyVariable_,numberSets_);
   int numberColumns = getNumCols();
   backward_ = ClpCopyOfArray(rhs.backward_,numberColumns);
   backToPivotRow_ = ClpCopyOfArray(rhs.backToPivotRow_,numberColumns);
@@ -118,6 +120,7 @@ ClpGubMatrix::ClpGubMatrix (CoinPackedMatrix * rhs)
     upper_(NULL),
     status_(NULL),
     saveStatus_(NULL),
+    savedKeyVariable_(NULL),
     backward_(NULL),
     backToPivotRow_(NULL),
     changeCost_(NULL),
@@ -222,6 +225,8 @@ ClpGubMatrix::ClpGubMatrix(ClpPackedMatrix * matrix, int numberSets,
   }
   saveStatus_= new unsigned char [numberSets_];
   memset(saveStatus_,0,numberSets_);
+  savedKeyVariable_= new int [numberSets_];
+  memset(savedKeyVariable_,0,numberSets_*sizeof(int));
 }
 
 ClpGubMatrix::ClpGubMatrix (const CoinPackedMatrix & rhs) 
@@ -236,6 +241,7 @@ ClpGubMatrix::ClpGubMatrix (const CoinPackedMatrix & rhs)
     upper_(NULL),
     status_(NULL),
     saveStatus_(NULL),
+    savedKeyVariable_(NULL),
     backward_(NULL),
     backToPivotRow_(NULL),
     changeCost_(NULL),
@@ -268,6 +274,7 @@ ClpGubMatrix::~ClpGubMatrix ()
   delete [] upper_;
   delete [] status_;
   delete [] saveStatus_;
+  delete [] savedKeyVariable_;
   delete [] backward_;
   delete [] backToPivotRow_;
   delete [] changeCost_;
@@ -291,6 +298,7 @@ ClpGubMatrix::operator=(const ClpGubMatrix& rhs)
     delete [] upper_;
     delete [] status_;
     delete [] saveStatus_;
+    delete [] savedKeyVariable_;
     delete [] backward_;
     delete [] backToPivotRow_;
     delete [] changeCost_;
@@ -308,6 +316,7 @@ ClpGubMatrix::operator=(const ClpGubMatrix& rhs)
     upper_ = ClpCopyOfArray(rhs.upper_,numberSets_);
     status_ = ClpCopyOfArray(rhs.status_,numberSets_);
     saveStatus_ = ClpCopyOfArray(rhs.saveStatus_,numberSets_);
+    savedKeyVariable_ = ClpCopyOfArray(rhs.savedKeyVariable_,numberSets_);
     int numberColumns = getNumCols();
     backward_ = ClpCopyOfArray(rhs.backward_,numberColumns);
     backToPivotRow_ = ClpCopyOfArray(rhs.backToPivotRow_,numberColumns);
@@ -932,6 +941,20 @@ ClpGubMatrix::fillBasis(ClpSimplex * model,
   const double * elementByColumn = matrix_->getElements();
   const double * rowScale = model->rowScale();
   if (elementU!=NULL) {
+    if (0) {
+      printf("%d basic, %d columns\n",numberBasic,numberColumnBasic);
+      int i;
+      for (i=0;i<numberSets_;i++) {
+	int k=keyVariable_[i];
+	if (k<numberColumns) {
+	  printf("key %d on set %d, %d elements\n",k,i,columnStart[k+1]-columnStart[k]);
+	  for (int j=columnStart[k];j<columnStart[k+1];j++)
+	    printf("row %d el %g\n",row[j],elementByColumn[j]);
+	} else {
+	  printf("slack key on set %d\n",i);
+	}
+      }
+    }
     // fill
     if (!rowScale) {
       // no scaling
@@ -939,6 +962,12 @@ ClpGubMatrix::fillBasis(ClpSimplex * model,
 	int iColumn = whichColumn[i];
 	int iSet = backward_[iColumn];
 	int length = columnLength[iColumn];
+	if (0) {
+	  int k=iColumn;
+	  printf("column %d in set %d, %d elements\n",k,iSet,columnStart[k+1]-columnStart[k]);
+	  for (int j=columnStart[k];j<columnStart[k+1];j++)
+	    printf("row %d el %g\n",row[j],elementByColumn[j]);
+	}
 	CoinBigIndex j;
 	if (iSet<0||keyVariable_[iSet]>=numberColumns) {
 	  for (j=columnStart[iColumn];j<columnStart[iColumn]+columnLength[iColumn];j++) {
@@ -1956,6 +1985,8 @@ ClpGubMatrix::extendUpdated(ClpSimplex * model,CoinIndexedVector * update, int m
 	  }
 	}
 	solution[iKey]=sol;
+	if (model->algorithm()>0)
+	  model->nonLinearCost()->setOne(iKey,sol);
 	//assert (fabs(sol-solution[iKey])<1.0e-3);
       } else {
 	// gub slack is basic
@@ -2861,14 +2892,72 @@ ClpGubMatrix::generalExpanded(ClpSimplex * model,int mode,int &number)
     // save status
   case 5:
     {
-      memcpy(saveStatus_,status_,numberSets_);
       synchronize(model,0);
+      memcpy(saveStatus_,status_,numberSets_);
+      memcpy(savedKeyVariable_,keyVariable_,numberSets_*sizeof(int));
     }
     break;
     // restore status
   case 6:
     {
       memcpy(status_,saveStatus_,numberSets_);
+      memcpy(keyVariable_,savedKeyVariable_,numberSets_*sizeof(int));
+      // restore firstAvailable_
+      synchronize(model,7);
+      // redo next_
+      int i;
+      int * last = new int[numberSets_];
+      for (i=0;i<numberSets_;i++) {
+	int iKey=keyVariable_[i];
+	assert(iKey>=numberColumns||backward_[iKey]==i);
+	last[i]=iKey;
+	// make sure basic
+	//if (iKey<numberColumns)
+	//model->setStatus(iKey,ClpSimplex::basic);
+      }
+      for (i=0;i<numberColumns;i++){
+	int iSet = backward_[i];
+	if (iSet>=0) {
+	  next_[last[iSet]]=i;
+	  last[iSet]=i;
+	}
+      }
+      for (i=0;i<numberSets_;i++) {
+	next_[last[i]]=-(keyVariable_[i]+1);
+	redoSet(model,keyVariable_[i],keyVariable_[i],i);
+      }
+      delete [] last;
+      // redo pivotVariable
+      int * pivotVariable = model->pivotVariable();
+      int iRow;
+      int numberBasic=0;
+      int numberRows = model->numberRows();
+      for (iRow=0;iRow<numberRows;iRow++) {
+	if (model->getRowStatus(iRow)==ClpSimplex::basic) {
+	  numberBasic++;
+	  pivotVariable[iRow]=iRow+numberColumns;
+	} else {
+	  pivotVariable[iRow]=-1;
+	}
+      }
+      i=0;
+      int iColumn;
+      for (iColumn=0;iColumn<numberColumns;iColumn++) {
+	if (model->getStatus(iColumn)==ClpSimplex::basic) {
+	  int iSet = backward_[iColumn];
+	  if (iSet<0||keyVariable_[iSet]!=iColumn) {
+	    while (pivotVariable[i]>=0) {
+	      i++;
+	      assert (i<numberRows);
+	    }
+	    pivotVariable[i]=iColumn;
+	    backToPivotRow_[iColumn]=i;
+	    numberBasic++;
+	  }
+	}
+      }
+      assert (numberBasic==numberRows);
+      rhsOffset(model,true);
     }
     break;
     // flag a variable
@@ -2888,6 +2977,12 @@ ClpGubMatrix::generalExpanded(ClpSimplex * model,int mode,int &number)
   case 9:
     {
       returnCode=synchronize(model,3);
+    }
+    break;
+    // return 1 if there may be changing bounds on variable (column generation)
+  case 10:
+    {
+      returnCode=synchronize(model,6);
     }
     break;
   }

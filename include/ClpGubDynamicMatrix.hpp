@@ -158,6 +158,8 @@ protected:
   int numberGubColumns_;
   /// first free
   int firstAvailable_;
+  /// saved first free
+  int savedFirstAvailable_;
   /// first dynamic
   int firstDynamic_;
   /// number of columns in dynamic model
