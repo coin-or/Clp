@@ -182,7 +182,7 @@ public:
           { return reducedCost_;} ;
   inline const double * getReducedCost() const 
           { return reducedCost_;} ;
-  /// Row lower or rhs
+  /// Row lower
   inline double* rowLower() const
           { return rowLower_;};
   inline const double* getRowLower() const
@@ -199,6 +199,8 @@ public:
           { return objective_;};
   /// Row Objective
   inline double * rowObjective() const
+          { return rowObjective_;};
+  inline const double * getRowObjCoefficients() const
           { return rowObjective_;};
   /// Column Lower
   inline double * columnLower() const
@@ -224,7 +226,8 @@ public:
   { return objectiveValue_*optimizationDirection_ - dblParam_[OsiObjOffset];};
   inline double getObjValue() const
   { return objectiveValue_*optimizationDirection_ - dblParam_[OsiObjOffset];};
-  /// Infeasibility/unbounded ray (NULL returned if none/wrong)
+  /** Infeasibility/unbounded ray (NULL returned if none/wrong)
+      Up to user to use delete [] on these arrays.  */
   double * infeasibilityRay() const;
   double * unboundedRay() const;
   //@}

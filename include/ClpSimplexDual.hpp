@@ -118,6 +118,10 @@ public:
 
   /**@name Functions used in dual */
   //@{
+  /** This has the flow between re-factorizations
+      Broken out for clarity and will be used by strong branching
+   */
+  void whileIterating(); 
   /** The duals are updated by the given arrays.
       Returns number of infeasibilities.
       After rowArray and columnArray will just have those which 

@@ -533,14 +533,14 @@ ClpPrimalColumnSteepest::pivotColumn(OsiIndexedVector * updates,
   int i,iSequence;
   index = infeasible_->getIndices();
   number = infeasible_->getNumElements();
-  // we can't really trust infeasibilities if there is dual error
-  double checkTolerance = 1.0e-8;
-  if (!model_->factorization()->pivots()&&
-      model_->numberIterations()<model_->lastBadIteration()+200)
-    checkTolerance = 1.0e-6;
-  if (model_->largestDualError()>checkTolerance)
-    tolerance *= model_->largestDualError()/checkTolerance;
-
+  if(model_->numberIterations()<model_->lastBadIteration()+200) {
+    // we can't really trust infeasibilities if there is dual error
+    double checkTolerance = 1.0e-8;
+    if (!model_->factorization()->pivots())
+      checkTolerance = 1.0e-6;
+    if (model_->largestDualError()>checkTolerance)
+      tolerance *= model_->largestDualError()/checkTolerance;
+  }
   tolerance *= tolerance; // as we are using squares
   for (i=0;i<number;i++) {
     iSequence = index[i];

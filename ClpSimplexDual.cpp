@@ -324,320 +324,8 @@ int ClpSimplexDual::dual ( )
       factorization_->goSparse();
     }
 
-    // status stays at -1 while iterating, >=0 finished, -2 to invert
-    // status -3 to go to top without an invert
-    while (problemStatus_==-1) {
-#ifdef CLP_DEBUG
-      {
-	int i;
-	for (i=0;i<4;i++) {
-	  rowArray_[i]->checkClear();
-	}    
-	for (i=0;i<2;i++) {
-	  columnArray_[i]->checkClear();
-	}    
-      }      
-#endif
-#if CLP_DEBUG>2
-      // very expensive
-      if (numberIterations_>0&&numberIterations_<-801) {
-	handler_->setLogLevel(63);
-	double saveValue = objectiveValue_;
-	double * saveRow1 = new double[numberRows_];
-	double * saveRow2 = new double[numberRows_];
-	memcpy(saveRow1,rowReducedCost_,numberRows_*sizeof(double));
-	memcpy(saveRow2,rowActivityWork_,numberRows_*sizeof(double));
-	double * saveColumn1 = new double[numberColumns_];
-	double * saveColumn2 = new double[numberColumns_];
-	memcpy(saveColumn1,reducedCostWork_,numberColumns_*sizeof(double));
-	memcpy(saveColumn2,columnActivityWork_,numberColumns_*sizeof(double));
-	gutsOfSolution(rowActivityWork_,columnActivityWork_);
-	printf("xxx %d old obj %g, recomputed %g, sum dual inf %g\n",
-	       numberIterations_,
-	       saveValue,objectiveValue_,sumDualInfeasibilities_);
-	if (saveValue>objectiveValue_+1.0e-2)
-	  printf("**bad**\n");
-	memcpy(rowReducedCost_,saveRow1,numberRows_*sizeof(double));
-	memcpy(rowActivityWork_,saveRow2,numberRows_*sizeof(double));
-	memcpy(reducedCostWork_,saveColumn1,numberColumns_*sizeof(double));
-	memcpy(columnActivityWork_,saveColumn2,numberColumns_*sizeof(double));
-	delete [] saveRow1;
-	delete [] saveRow2;
-	delete [] saveColumn1;
-	delete [] saveColumn2;
-	objectiveValue_=saveValue;
-      }
-#endif
-#ifdef CLP_DEBUG
-      {
-	int iSequence, number=numberRows_+numberColumns_;
-	for (iSequence=0;iSequence<number;iSequence++) {
-	  double lowerValue=lower_[iSequence];
-	  double upperValue=upper_[iSequence];
-	  double value=solution_[iSequence];
-	  if(getStatus(iSequence)!=ClpSimplex::basic) {
-	    assert(lowerValue>-1.0e20);
-	    assert(upperValue<1.0e20);
-	  }
-	  switch(getStatus(iSequence)) {
-	    
-	  case ClpSimplex::basic:
-	    break;
-	  case ClpSimplex::isFree:
-	  case ClpSimplex::superBasic:
-	    break;
-	  case ClpSimplex::atUpperBound:
-	    assert (fabs(value-upperValue)<=primalTolerance_) ;
-	    break;
-	  case ClpSimplex::atLowerBound:
-	    assert (fabs(value-lowerValue)<=primalTolerance_) ;
-	      break;
-	  }
-	}
-      }
-      if(numberIterations_==debugIteration) {
-	printf("dodgy iteration coming up\n");
-      }
-#endif
-      // choose row to go out
-      dualRow();
-      if (pivotRow_>=0) {
-	// we found a pivot row
-	handler_->message(CLP_SIMPLEX_PIVOTROW,messages_)
-	  <<pivotRow_
-	  <<OsiMessageEol;
-	// check accuracy of weights
-	dualRowPivot_->checkAccuracy();
-	// get sign for finding row of tableau
-	rowArray_[0]->insert(pivotRow_,directionOut_);
-	factorization_->updateColumnTranspose(rowArray_[1],rowArray_[0]);
-	// put row of tableau in rowArray[0] and columnArray[0]
-	matrix_->transposeTimes(this,-1.0,
-				rowArray_[0],columnArray_[1],columnArray_[0]);
-	// rowArray has pi equivalent
-	// do ratio test
-	dualColumn(rowArray_[0],columnArray_[0],columnArray_[1],
-		   rowArray_[3]);
-	if (sequenceIn_>=0) {
-	  // normal iteration
-	  // update the incoming column
-	  unpack(rowArray_[1]);
-	  factorization_->updateColumn(rowArray_[2],rowArray_[1],true);
-	  // and update dual weights (can do in parallel - with extra array)
-	  dualRowPivot_->updateWeights(rowArray_[0],rowArray_[2],
-				       rowArray_[1]);
-	  // see if update stable
-	  double btranAlpha = -alpha_*directionOut_; // for check
-	  alpha_=(*rowArray_[1])[pivotRow_];
-#ifdef CLP_DEBUG
-	  if ((handler_->logLevel()&32))
-	    printf("btran alpha %g, ftran alpha %g\n",btranAlpha,alpha_);
-#endif
-	  if (fabs(btranAlpha)<1.0e-12||fabs(alpha_)<1.0e-12||
-	      fabs(btranAlpha-alpha_)>1.0e-7*(1.0+fabs(alpha_))) {
-	    handler_->message(CLP_DUAL_CHECK,messages_)
-	      <<btranAlpha
-	      <<alpha_
-	      <<OsiMessageEol;
-	    dualRowPivot_->unrollWeights();
-	    if (factorization_->pivots()) {
-	      problemStatus_=-2; // factorize now
-	      rowArray_[0]->clear();
-	      rowArray_[1]->clear();
-	      columnArray_[0]->clear();
-	      break;
-	    } else {
-	      // take on more relaxed criterion
-	      if (fabs(btranAlpha)<1.0e-12||fabs(alpha_)<1.0e-12||
-		  fabs(btranAlpha-alpha_)>1.0e-4*(1.0+fabs(alpha_))) {
-		// need to reject something
-		char x = isColumn(sequenceOut_) ? 'C' :'R';
-		handler_->message(CLP_SIMPLEX_FLAG,messages_)
-		  <<x<<sequenceWithin(sequenceOut_)
-		  <<OsiMessageEol;
-		setFlagged(sequenceOut_);
-		lastBadIteration_ = numberIterations_; // say be more cautious
-		rowArray_[0]->clear();
-		rowArray_[1]->clear();
-		columnArray_[0]->clear();
-		continue;
-	      }
-	    }
-	  }
-	  // update duals BEFORE replaceColumn so can do updateColumn
-	  objectiveChange=0.0;
-	  // do duals first as variables may flip bounds
-	  // rowArray_[0] and columnArray_[0] may have flips
-	  // so use rowArray_[3] for work array from here on
-	  int nswapped = 
-	    updateDualsInDual(rowArray_[0],columnArray_[0],rowArray_[2],theta_,
-			objectiveChange);
-	  // which will change basic solution
-	  if (nswapped) {
-#ifdef CLP_DEBUG
-	  if ((handler_->logLevel()&16))
-	    printf("old dualOut_ %g, v %g, l %g, u %g - new ",
-		   dualOut_,valueOut_,lowerOut_,upperOut_);
-	    double oldOut=dualOut_;
-#endif
-	    factorization_->updateColumn(rowArray_[3],rowArray_[2],false);
-	    dualRowPivot_->updatePrimalSolution(rowArray_[2],
-						1.0,objectiveChange);
-
-	    // recompute dualOut_
-	    valueOut_ = solution_[sequenceOut_];
-	    if (directionOut_<0) {
-	      dualOut_ = valueOut_ - upperOut_;
-	    } else {
-	      dualOut_ = lowerOut_ - valueOut_;
-	    }
-#ifdef CLP_DEBUG
-	    if ((handler_->logLevel()&16))
-	      printf("%g\n",dualOut_);
-	    assert(dualOut_<=oldOut);
-#endif
-	    if(dualOut_<0.0&&factorization_->pivots()) {
-	      // going backwards - factorize
-	      dualRowPivot_->unrollWeights();
-	      problemStatus_=-2; // factorize now
-	      break;
-	    }
-	  }
-	  // amount primal will move
-          double movement = -dualOut_*directionOut_/alpha_;
-	  // so objective should increase by fabs(dj)*movement
-          // but we already have objective change - so check will be good
-          if (objectiveChange+fabs(movement*dualIn_)<-1.0e-5) {
-#ifdef CLP_DEBUG
-	    if (handler_->logLevel()&32)
-	      printf("movement %g, swap change %g, rest %g  * %g\n",
-		     objectiveChange+fabs(movement*dualIn_),
-		     objectiveChange,movement,dualIn_);
-#endif
-	    if(factorization_->pivots()>5) {
-	      // going backwards - factorize
-	      dualRowPivot_->unrollWeights();
-	      problemStatus_=-2; // factorize now
-	      break;
-	    }
-	  }
-	  // if stable replace in basis
-	  int updateStatus = factorization_->replaceColumn(rowArray_[2],
-							   pivotRow_,
-							   alpha_);
-	  if (updateStatus==1) {
-	    // slight error
-	    if (factorization_->pivots()>5)
-	      problemStatus_=-2; // factorize now
-	  } else if (updateStatus==2) {
-	    // major error
-	    dualRowPivot_->unrollWeights();
-	    // later we may need to unwind more e.g. fake bounds
-	    if (factorization_->pivots()) {
-	      problemStatus_=-2; // factorize now
-	      break;
-	    } else {
-	      // need to reject something
-	      char x = isColumn(sequenceOut_) ? 'C' :'R';
-	      handler_->message(CLP_SIMPLEX_FLAG,messages_)
-		<<x<<sequenceWithin(sequenceOut_)
-		<<OsiMessageEol;
-	      setFlagged(sequenceOut_);
-	      lastBadIteration_ = numberIterations_; // say be more cautious
-	      rowArray_[0]->clear();
-	      rowArray_[1]->clear();
-	      columnArray_[0]->clear();
-	      continue;
-	    }
-	  } else if (updateStatus==3) {
-	    // out of memory
-	    // increase space if not many iterations
-	    if (factorization_->pivots()<
-		0.5*factorization_->maximumPivots()&&
-		factorization_->pivots()<200)
-	      factorization_->areaFactor(
-					 factorization_->areaFactor() * 1.1);
-	    problemStatus_=-2; // factorize now
-	  } 
-	  // update primal solution
-	  if (theta_<0.0) {
-#ifdef CLP_DEBUG
-	    if (handler_->logLevel()&32)
-	      printf("negative theta %g\n",theta_);
-#endif
-	    theta_=0.0;
-	  }
-	  // do actual flips
-	  flipBounds(rowArray_[0],columnArray_[0],theta_);
-	  dualRowPivot_->updatePrimalSolution(rowArray_[1],
-					      movement,
-					      objectiveChange);
-#ifdef CLP_DEBUG
-	  double oldobj=objectiveValue_;
-#endif
-	  int whatNext=housekeeping(objectiveChange);
-	  // and set bounds correctly
-	  originalBound(sequenceIn_); 
-	  changeBound(sequenceOut_);
-#ifdef CLP_DEBUG
-	  if (objectiveValue_<oldobj-1.0e-5&&(handler_->logLevel()&16))
-	    printf("obj backwards %g %g\n",objectiveValue_,oldobj);
-#endif
-	  if (whatNext==1) {
-	    problemStatus_ =-2; // refactorize
-	  } else if (whatNext==2) {
-	    // maximum iterations or equivalent
-	    problemStatus_= 3;
-	    break;
-	  }
-	} else {
-	  // no incoming column is valid
-#ifdef CLP_DEBUG
-	  if (handler_->logLevel()&32)
-	    printf("** no column pivot\n");
-#endif
-	  if (factorization_->pivots()<5) {
-	    problemStatus_=-4; //say looks infeasible
-	    // create ray anyway
-	    delete [] ray_;
-	    ray_ = new double [ numberRows_];
-	    CoinDisjointCopyN(rowArray_[0]->denseVector(),numberRows_,ray_);
-	  }
-          rowArray_[0]->clear();
-          columnArray_[0]->clear();
-	  break;
-	}
-      } else {
-	// no pivot row
-#ifdef CLP_DEBUG
-	if (handler_->logLevel()&32)
-	  printf("** no row pivot\n");
-#endif
-	if (!factorization_->pivots()) {
-	  // may have crept through - so may be optimal
-	  //problemStatus_=-5; //say looks unbounded
-	  problemStatus_=0;
-	  // check any flagged variables
-	  int iRow;
-	  for (iRow=0;iRow<numberRows_;iRow++) {
-	    int iPivot=pivotVariable_[iRow];
-	    if (flagged(iPivot))
-	      break;
-	  }
-	  if (iRow<numberRows_) {
-#ifdef CLP_DEBUG
-	    std::cerr<<"Flagged variables at end - infeasible?"<<std::endl;
-#endif
-	    problemStatus_=-4; //say looks infeasible
-	    // create ray anyway
-	    delete [] ray_;
-	    ray_ = new double [ numberRows_];
-	    CoinDisjointCopyN(rowArray_[0]->denseVector(),numberRows_,ray_);
-	  }
-	}
-	break;
-      }
-    }
+    // Do iterations
+    whileIterating();
   }
 
   // at present we are leaving factorization around
@@ -652,18 +340,336 @@ int ClpSimplexDual::dual ( )
   dualBound_ = saveDualBound_;
   return problemStatus_;
 }
+void
+ClpSimplexDual::whileIterating()
+{
+  // status stays at -1 while iterating, >=0 finished, -2 to invert
+  // status -3 to go to top without an invert
+  while (problemStatus_==-1) {
+#ifdef CLP_DEBUG
+    {
+      int i;
+      for (i=0;i<4;i++) {
+	rowArray_[i]->checkClear();
+      }    
+      for (i=0;i<2;i++) {
+	columnArray_[i]->checkClear();
+      }    
+    }      
+#endif
+#if CLP_DEBUG>2
+    // very expensive
+    if (numberIterations_>0&&numberIterations_<-801) {
+      handler_->setLogLevel(63);
+      double saveValue = objectiveValue_;
+      double * saveRow1 = new double[numberRows_];
+      double * saveRow2 = new double[numberRows_];
+      memcpy(saveRow1,rowReducedCost_,numberRows_*sizeof(double));
+      memcpy(saveRow2,rowActivityWork_,numberRows_*sizeof(double));
+      double * saveColumn1 = new double[numberColumns_];
+      double * saveColumn2 = new double[numberColumns_];
+      memcpy(saveColumn1,reducedCostWork_,numberColumns_*sizeof(double));
+      memcpy(saveColumn2,columnActivityWork_,numberColumns_*sizeof(double));
+      gutsOfSolution(rowActivityWork_,columnActivityWork_);
+      printf("xxx %d old obj %g, recomputed %g, sum dual inf %g\n",
+	     numberIterations_,
+	     saveValue,objectiveValue_,sumDualInfeasibilities_);
+      if (saveValue>objectiveValue_+1.0e-2)
+	printf("**bad**\n");
+      memcpy(rowReducedCost_,saveRow1,numberRows_*sizeof(double));
+      memcpy(rowActivityWork_,saveRow2,numberRows_*sizeof(double));
+      memcpy(reducedCostWork_,saveColumn1,numberColumns_*sizeof(double));
+      memcpy(columnActivityWork_,saveColumn2,numberColumns_*sizeof(double));
+      delete [] saveRow1;
+      delete [] saveRow2;
+      delete [] saveColumn1;
+      delete [] saveColumn2;
+      objectiveValue_=saveValue;
+    }
+#endif
+#ifdef CLP_DEBUG
+    {
+      int iSequence, number=numberRows_+numberColumns_;
+      for (iSequence=0;iSequence<number;iSequence++) {
+	double lowerValue=lower_[iSequence];
+	double upperValue=upper_[iSequence];
+	double value=solution_[iSequence];
+	if(getStatus(iSequence)!=ClpSimplex::basic) {
+	  assert(lowerValue>-1.0e20);
+	  assert(upperValue<1.0e20);
+	}
+	switch(getStatus(iSequence)) {
+	  
+	case ClpSimplex::basic:
+	  break;
+	case ClpSimplex::isFree:
+	case ClpSimplex::superBasic:
+	  break;
+	case ClpSimplex::atUpperBound:
+	  assert (fabs(value-upperValue)<=primalTolerance_) ;
+	  break;
+	case ClpSimplex::atLowerBound:
+	  assert (fabs(value-lowerValue)<=primalTolerance_) ;
+	  break;
+	}
+      }
+    }
+    if(numberIterations_==debugIteration) {
+      printf("dodgy iteration coming up\n");
+    }
+#endif
+    // choose row to go out
+    dualRow();
+    if (pivotRow_>=0) {
+      // we found a pivot row
+      handler_->message(CLP_SIMPLEX_PIVOTROW,messages_)
+	<<pivotRow_
+	<<OsiMessageEol;
+      // check accuracy of weights
+      dualRowPivot_->checkAccuracy();
+      // get sign for finding row of tableau
+      rowArray_[0]->insert(pivotRow_,directionOut_);
+      factorization_->updateColumnTranspose(rowArray_[1],rowArray_[0]);
+      // put row of tableau in rowArray[0] and columnArray[0]
+      matrix_->transposeTimes(this,-1.0,
+			      rowArray_[0],columnArray_[1],columnArray_[0]);
+      // rowArray has pi equivalent
+      // do ratio test
+      dualColumn(rowArray_[0],columnArray_[0],columnArray_[1],
+		 rowArray_[3]);
+      if (sequenceIn_>=0) {
+	// normal iteration
+	// update the incoming column
+	unpack(rowArray_[1]);
+	factorization_->updateColumn(rowArray_[2],rowArray_[1],true);
+	// and update dual weights (can do in parallel - with extra array)
+	dualRowPivot_->updateWeights(rowArray_[0],rowArray_[2],
+				     rowArray_[1]);
+	// see if update stable
+	double btranAlpha = -alpha_*directionOut_; // for check
+	alpha_=(*rowArray_[1])[pivotRow_];
+#ifdef CLP_DEBUG
+	if ((handler_->logLevel()&32))
+	  printf("btran alpha %g, ftran alpha %g\n",btranAlpha,alpha_);
+#endif
+	if (fabs(btranAlpha)<1.0e-12||fabs(alpha_)<1.0e-12||
+	    fabs(btranAlpha-alpha_)>1.0e-7*(1.0+fabs(alpha_))) {
+	  handler_->message(CLP_DUAL_CHECK,messages_)
+	    <<btranAlpha
+	    <<alpha_
+	    <<OsiMessageEol;
+	  dualRowPivot_->unrollWeights();
+	  if (factorization_->pivots()) {
+	    problemStatus_=-2; // factorize now
+	    rowArray_[0]->clear();
+	    rowArray_[1]->clear();
+	    columnArray_[0]->clear();
+	    break;
+	  } else {
+	    // take on more relaxed criterion
+	    if (fabs(btranAlpha)<1.0e-12||fabs(alpha_)<1.0e-12||
+		fabs(btranAlpha-alpha_)>1.0e-4*(1.0+fabs(alpha_))) {
+	      // need to reject something
+	      char x = isColumn(sequenceOut_) ? 'C' :'R';
+	      handler_->message(CLP_SIMPLEX_FLAG,messages_)
+		<<x<<sequenceWithin(sequenceOut_)
+		<<OsiMessageEol;
+	      setFlagged(sequenceOut_);
+	      lastBadIteration_ = numberIterations_; // say be more cautious
+	      rowArray_[0]->clear();
+	      rowArray_[1]->clear();
+	      columnArray_[0]->clear();
+	      continue;
+	    }
+	  }
+	}
+	// update duals BEFORE replaceColumn so can do updateColumn
+	double objectiveChange=0.0;
+	// do duals first as variables may flip bounds
+	// rowArray_[0] and columnArray_[0] may have flips
+	// so use rowArray_[3] for work array from here on
+	int nswapped = 
+	  updateDualsInDual(rowArray_[0],columnArray_[0],rowArray_[2],theta_,
+			    objectiveChange);
+	// which will change basic solution
+	if (nswapped) {
+#ifdef CLP_DEBUG
+	  if ((handler_->logLevel()&16))
+	    printf("old dualOut_ %g, v %g, l %g, u %g - new ",
+		   dualOut_,valueOut_,lowerOut_,upperOut_);
+	  double oldOut=dualOut_;
+#endif
+	  factorization_->updateColumn(rowArray_[3],rowArray_[2],false);
+	  dualRowPivot_->updatePrimalSolution(rowArray_[2],
+					      1.0,objectiveChange);
+	  
+	  // recompute dualOut_
+	  valueOut_ = solution_[sequenceOut_];
+	  if (directionOut_<0) {
+	    dualOut_ = valueOut_ - upperOut_;
+	  } else {
+	    dualOut_ = lowerOut_ - valueOut_;
+	  }
+#ifdef CLP_DEBUG
+	  if ((handler_->logLevel()&16))
+	    printf("%g\n",dualOut_);
+	  assert(dualOut_<=oldOut);
+#endif
+	  if(dualOut_<0.0&&factorization_->pivots()) {
+	    // going backwards - factorize
+	    dualRowPivot_->unrollWeights();
+	    problemStatus_=-2; // factorize now
+	    break;
+	  }
+	}
+	// amount primal will move
+	double movement = -dualOut_*directionOut_/alpha_;
+	// so objective should increase by fabs(dj)*movement
+	// but we already have objective change - so check will be good
+	if (objectiveChange+fabs(movement*dualIn_)<-1.0e-5) {
+#ifdef CLP_DEBUG
+	  if (handler_->logLevel()&32)
+	    printf("movement %g, swap change %g, rest %g  * %g\n",
+		   objectiveChange+fabs(movement*dualIn_),
+		   objectiveChange,movement,dualIn_);
+#endif
+	  if(factorization_->pivots()>5) {
+	    // going backwards - factorize
+	    dualRowPivot_->unrollWeights();
+	    problemStatus_=-2; // factorize now
+	    break;
+	  }
+	}
+	// if stable replace in basis
+	int updateStatus = factorization_->replaceColumn(rowArray_[2],
+							 pivotRow_,
+							 alpha_);
+	if (updateStatus==1) {
+	  // slight error
+	  if (factorization_->pivots()>5)
+	    problemStatus_=-2; // factorize now
+	} else if (updateStatus==2) {
+	  // major error
+	  dualRowPivot_->unrollWeights();
+	  // later we may need to unwind more e.g. fake bounds
+	  if (factorization_->pivots()) {
+	    problemStatus_=-2; // factorize now
+	    break;
+	  } else {
+	    // need to reject something
+	    char x = isColumn(sequenceOut_) ? 'C' :'R';
+	    handler_->message(CLP_SIMPLEX_FLAG,messages_)
+	      <<x<<sequenceWithin(sequenceOut_)
+	      <<OsiMessageEol;
+	    setFlagged(sequenceOut_);
+	    lastBadIteration_ = numberIterations_; // say be more cautious
+	    rowArray_[0]->clear();
+	    rowArray_[1]->clear();
+	    columnArray_[0]->clear();
+	    continue;
+	  }
+	} else if (updateStatus==3) {
+	  // out of memory
+	  // increase space if not many iterations
+	  if (factorization_->pivots()<
+	      0.5*factorization_->maximumPivots()&&
+	      factorization_->pivots()<200)
+	    factorization_->areaFactor(
+				       factorization_->areaFactor() * 1.1);
+	  problemStatus_=-2; // factorize now
+	} 
+	// update primal solution
+	if (theta_<0.0) {
+#ifdef CLP_DEBUG
+	  if (handler_->logLevel()&32)
+	    printf("negative theta %g\n",theta_);
+#endif
+	  theta_=0.0;
+	}
+	// do actual flips
+	flipBounds(rowArray_[0],columnArray_[0],theta_);
+	dualRowPivot_->updatePrimalSolution(rowArray_[1],
+					    movement,
+					    objectiveChange);
+#ifdef CLP_DEBUG
+	double oldobj=objectiveValue_;
+#endif
+	int whatNext=housekeeping(objectiveChange);
+	// and set bounds correctly
+	originalBound(sequenceIn_); 
+	changeBound(sequenceOut_);
+#ifdef CLP_DEBUG
+	if (objectiveValue_<oldobj-1.0e-5&&(handler_->logLevel()&16))
+	  printf("obj backwards %g %g\n",objectiveValue_,oldobj);
+#endif
+	if (whatNext==1) {
+	  problemStatus_ =-2; // refactorize
+	} else if (whatNext==2) {
+	  // maximum iterations or equivalent
+	  problemStatus_= 3;
+	  break;
+	}
+      } else {
+	// no incoming column is valid
+#ifdef CLP_DEBUG
+	if (handler_->logLevel()&32)
+	  printf("** no column pivot\n");
+#endif
+	if (factorization_->pivots()<5) {
+	  problemStatus_=-4; //say looks infeasible
+	  // create ray anyway
+	  delete [] ray_;
+	  ray_ = new double [ numberRows_];
+	  CoinDisjointCopyN(rowArray_[0]->denseVector(),numberRows_,ray_);
+	}
+	rowArray_[0]->clear();
+	columnArray_[0]->clear();
+	break;
+      }
+    } else {
+      // no pivot row
+#ifdef CLP_DEBUG
+      if (handler_->logLevel()&32)
+	printf("** no row pivot\n");
+#endif
+      if (!factorization_->pivots()) {
+	// may have crept through - so may be optimal
+	//problemStatus_=-5; //say looks unbounded
+	problemStatus_=0;
+	// check any flagged variables
+	int iRow;
+	for (iRow=0;iRow<numberRows_;iRow++) {
+	  int iPivot=pivotVariable_[iRow];
+	  if (flagged(iPivot))
+	    break;
+	}
+	if (iRow<numberRows_) {
+#ifdef CLP_DEBUG
+	  std::cerr<<"Flagged variables at end - infeasible?"<<std::endl;
+#endif
+	  problemStatus_=-4; //say looks infeasible
+	  // create ray anyway
+	  delete [] ray_;
+	  ray_ = new double [ numberRows_];
+	  CoinDisjointCopyN(rowArray_[0]->denseVector(),numberRows_,ray_);
+	}
+      }
+      break;
+    }
+  }
+}
 /* The duals are updated by the given arrays.
-    Returns number of infeasibilities.
-    rowArray and columnarray will have flipped
-    The output vector has movement (row length array) */
+   Returns number of infeasibilities.
+   rowArray and columnarray will have flipped
+   The output vector has movement (row length array) */
 int
 ClpSimplexDual::updateDualsInDual(OsiIndexedVector * rowArray,
-				OsiIndexedVector * columnArray,
-				OsiIndexedVector * outputArray,
-				double theta,
-				double & objectiveChange)
+				  OsiIndexedVector * columnArray,
+				  OsiIndexedVector * outputArray,
+				  double theta,
+				  double & objectiveChange)
 {
-
+  
   outputArray->clear();
   
   double * work;
@@ -677,12 +683,12 @@ ClpSimplexDual::updateDualsInDual(OsiIndexedVector * rowArray,
   bool fullRecompute= (rowArray->getNumElements()==numberRows_&&
 		       columnArray->getNumElements()==numberColumns_);
   int numberAtFake=0;
-
+  
   // use a tighter tolerance except for all being okay
   double tolerance = dualTolerance_;
-
+  
   double changeObj=0.0;
-
+  
   int iSection;
   
   for (iSection=0;iSection<2;iSection++) {

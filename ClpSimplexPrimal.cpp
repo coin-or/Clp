@@ -215,9 +215,6 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
   assert(rowLower_);
   assert(rowUpper_);
 
-#ifdef CLP_DEBUG
-  int debugIteration=-1;
-#endif
 
   algorithm_ = +1;
   primalTolerance_=dblParam_[OsiPrimalTolerance];
@@ -248,7 +245,6 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
   if (perturbation_<100) 
     perturb();
 
-  double objectiveChange;
   // for primal we will change bounds using infeasibilityCost_
   if (nonLinearCost_==NULL) {
     // get a valid nonlinear cost function
@@ -342,269 +338,60 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
     // Save iteration number
     saveNumber = numberIterations_;
 
-    // status stays at -1 while iterating, >=0 finished, -2 to invert
-    // status -3 to go to top without an invert
-    while (problemStatus_==-1) {
-#ifdef CLP_DEBUG
-      {
-	int i;
-	// not [1] as has information
-	for (i=0;i<4;i++) {
-	  if (i!=1)
-	    rowArray_[i]->checkClear();
-	}    
-	for (i=0;i<2;i++) {
-	  columnArray_[i]->checkClear();
-	}    
-      }      
-#endif
-#if CLP_DEBUG>2
-      // very expensive
-      if (numberIterations_>0&&numberIterations_<-2534) {
-	handler_->setLogLevel(63);
-	double saveValue = objectiveValue_;
-	double * saveRow1 = new double[numberRows_];
-	double * saveRow2 = new double[numberRows_];
-	memcpy(saveRow1,rowReducedCost_,numberRows_*sizeof(double));
-	memcpy(saveRow2,rowActivityWork_,numberRows_*sizeof(double));
-	double * saveColumn1 = new double[numberColumns_];
-	double * saveColumn2 = new double[numberColumns_];
-	memcpy(saveColumn1,reducedCostWork_,numberColumns_*sizeof(double));
-	memcpy(saveColumn2,columnActivityWork_,numberColumns_*sizeof(double));
-	createRim(7);
-	gutsOfSolution(rowActivityWork_,columnActivityWork_);
-	printf("xxx %d old obj %g, recomputed %g, sum primal inf %g\n",
-	       numberIterations_,
-	       saveValue,objectiveValue_,sumPrimalInfeasibilities_);
-	memcpy(rowReducedCost_,saveRow1,numberRows_*sizeof(double));
-	memcpy(rowActivityWork_,saveRow2,numberRows_*sizeof(double));
-	memcpy(reducedCostWork_,saveColumn1,numberColumns_*sizeof(double));
-	memcpy(columnActivityWork_,saveColumn2,numberColumns_*sizeof(double));
-	delete [] saveRow1;
-	delete [] saveRow2;
-	delete [] saveColumn1;
-	delete [] saveColumn2;
-	objectiveValue_=saveValue;
-      }
-#endif
-#ifdef CLP_DEBUG
-      if(numberIterations_==debugIteration) {
-	printf("dodgy iteration coming up\n");
-      }
-#endif
-      if (!ifValuesPass) {
-	// choose column to come in
-	// can use pivotRow_ to update weights
-	// pass in list of cost changes so can do row updates (rowArray_[1])
-	// NOTE rowArray_[0] is used by computeDuals which is a 
-	// slow way of getting duals but might be used 
-	primalColumn(rowArray_[1],rowArray_[2],rowArray_[3],
-		     columnArray_[0],columnArray_[1]);
-      } else {
-	// in values pass
-	if (ifValuesPass>0) {
-	  nextSuperBasic(firstSuperBasic);
-	  if (firstSuperBasic==numberRows_+numberColumns_)
-	    ifValuesPass=-1; // signal end of values pass after this
-	} else {
-	  // end of values pass - initialize weights etc
-	  primalColumnPivot_->saveWeights(this,5);
-	  ifValuesPass=0;
-	  if(saveNumber != numberIterations_) {
-	    problemStatus_=-2; // factorize now
-	    pivotRow_=-1; // say no weights update
-	    break;
-	  }
-	    
-	  // and get variable
-	  primalColumn(rowArray_[1],rowArray_[2],rowArray_[3],
-		     columnArray_[0],columnArray_[1]);
-	}
-      }
-      pivotRow_=-1;
-      sequenceOut_=-1;
-      rowArray_[1]->clear();
-      if (sequenceIn_>=0) {
-	// we found a pivot column
-#ifdef CLP_DEBUG
-	if ((handler_->logLevel()&32)) {
-	  char x = isColumn(sequenceIn_) ? 'C' :'R';
-	  std::cout<<"pivot column "<<
-		  x<<sequenceWithin(sequenceIn_)<<std::endl;
-	}
-#endif
-	// update the incoming column
-	unpack(rowArray_[1]);
-	// save reduced cost
-	double saveDj = dualIn_;
-	factorization_->updateColumn(rowArray_[2],rowArray_[1],true);
-	// do ratio test and re-compute dj
-	primalRow(rowArray_[1],rowArray_[3],rowArray_[2],rowArray_[0],
-		  ifValuesPass);
-	if (ifValuesPass) {
-	  saveDj=dualIn_;
-	  if (pivotRow_==-1||(pivotRow_>=0&&fabs(alpha_)<1.0e-5)) {
-	    if(fabs(dualIn_)<1.0e2*dualTolerance_) {
-	      // try other way
-	      directionIn_=-directionIn_;
-	      primalRow(rowArray_[1],rowArray_[3],rowArray_[2],rowArray_[0],
-			0);
-	    }
-	    if (pivotRow_==-1||(pivotRow_>=0&&fabs(alpha_)<1.0e-5)) {
-	      // reject it
-	      char x = isColumn(sequenceIn_) ? 'C' :'R';
-	      handler_->message(CLP_SIMPLEX_FLAG,messages_)
-		<<x<<sequenceWithin(sequenceIn_)
-		<<OsiMessageEol;
-	      setFlagged(sequenceIn_);
-	      lastBadIteration_ = numberIterations_; // say be more cautious
-	      rowArray_[1]->clear();
-	      pivotRow_=-1;
-	      continue;
-	    }
-	  }
-	}
-	      
-#ifdef CLP_DEBUG
-	if ((handler_->logLevel()&32))
-	  printf("btran dj %g, ftran dj %g\n",saveDj,dualIn_);
-#endif
-	if (saveDj*dualIn_<1.0e-20||
-	    fabs(saveDj-dualIn_)>1.0e-5*(1.0+fabs(saveDj))) {
-	  handler_->message(CLP_PRIMAL_DJ,messages_)
-	    <<saveDj<<dualIn_
-	    <<OsiMessageEol;
-	  if(saveNumber != numberIterations_) {
-	    problemStatus_=-2; // factorize now
-	    rowArray_[1]->clear();
-	    pivotRow_=-1; // say no weights update
-	    break;
-	  } else {
-	    // take on more relaxed criterion
-	    if (saveDj*dualIn_<1.0e-20||
-		fabs(saveDj-dualIn_)>1.0e-4*(1.0+fabs(dualIn_))) {
-	      // need to reject something
-	      char x = isColumn(sequenceIn_) ? 'C' :'R';
-	      handler_->message(CLP_SIMPLEX_FLAG,messages_)
-		<<x<<sequenceWithin(sequenceIn_)
-		<<OsiMessageEol;
-	      setFlagged(sequenceIn_);
-	      lastBadIteration_ = numberIterations_; // say be more cautious
-	      rowArray_[1]->clear();
-	      pivotRow_=-1;
-	      continue;
-	    }
-	  }
-	}
-	if (pivotRow_>=0) {
-	  // if stable replace in basis
-	  int updateStatus = factorization_->replaceColumn(rowArray_[2],
-							   pivotRow_,
-							   alpha_);
-	  if (updateStatus==1) {
-	    // slight error
-	    if (factorization_->pivots()>5)
-	      problemStatus_=-2; // factorize now
-	  } else if (updateStatus==2) {
-	    // major error
-	    // later we may need to unwind more e.g. fake bounds
-	    if(saveNumber != numberIterations_) {
-	      problemStatus_=-2; // factorize now
-	      break;
-	    } else {
-	      // need to reject something
-	      char x = isColumn(sequenceIn_) ? 'C' :'R';
-	      handler_->message(CLP_SIMPLEX_FLAG,messages_)
-		<<x<<sequenceWithin(sequenceIn_)
-		<<OsiMessageEol;
-	      setFlagged(sequenceIn_);
-	      lastBadIteration_ = numberIterations_; // say be more cautious
-	      rowArray_[1]->clear();
-	      pivotRow_=-1;
-	      continue;
-	    }
-	  } else if (updateStatus==3) {
-	    // out of memory
-	    // increase space if not many iterations
-	    if (factorization_->pivots()<
-		0.5*factorization_->maximumPivots()&&
-		factorization_->pivots()<200)
-	      factorization_->areaFactor(
-					 factorization_->areaFactor() * 1.1);
-	    problemStatus_=-2; // factorize now
-	  }
-	  // here do part of steepest - ready for next iteration
-	  primalColumnPivot_->updateWeights(rowArray_[1]);
-	} else {
-	  if (pivotRow_==-1) {
-	    // no outgoing row is valid
-#ifdef CLP_DEBUG
-	    if (handler_->logLevel()&32)
-	      printf("** no row pivot\n");
-#endif
-	    if (!factorization_->pivots()) {
-	      problemStatus_=-5; //say looks unbounded
-	      // do ray
-	      delete [] ray_;
-	      ray_ = new double [numberColumns_];
-	      CoinFillN(ray_,numberColumns_,0.0);
-	      int number=rowArray_[1]->getNumElements();
-	      int * index = rowArray_[1]->getIndices();
-	      double * array = rowArray_[1]->denseVector();
-	      double way=-directionIn_;
-	      int i;
-	      double zeroTolerance=1.0e-12;
-	      if (sequenceIn_<numberColumns_)
-		ray_[sequenceIn_]=directionIn_;
-	      for (i=0;i<number;i++) {
-		int iRow=index[i];
-		int iPivot=pivotVariable_[iRow];
-		double arrayValue = array[iRow];
-		if (iPivot<numberColumns_&&fabs(arrayValue)>=zeroTolerance)
-		  ray_[iPivot] = way* array[iRow];
-	      }
-	    }
-	    rowArray_[0]->clear();
-	    break;
-	  } else {
-	    // flipping from bound to bound
-	  }
-	}
+    // Iterate
+    whileIterating(firstSuperBasic);
+  }
 
-	// update primal solution
-	
-	objectiveChange=0.0;
-	// Cost on pivot row may change - may need to change dualIn
-	double oldCost=0.0;
-	if (pivotRow_>=0)
-	  oldCost = cost(pivotVariable_[pivotRow_]);
-	// rowArray_[1] is not empty - used to update djs
-	updatePrimalsInPrimal(rowArray_[1],theta_, objectiveChange);
-	if (pivotRow_>=0)
-	  dualIn_ += (oldCost-cost(pivotVariable_[pivotRow_]));
-	
-	int whatNext=housekeeping(objectiveChange);
-	
-	if (whatNext==1) {
-	  problemStatus_ =-2; // refactorize
-	} else if (whatNext==2) {
-	  // maximum iterations or equivalent
-	  problemStatus_= 3;
-	  break;
-	}
-      } else {
-	// no pivot column
+  // if infeasible get real values
+  if (problemStatus_) {
+    infeasibilityCost_=0.0;
+    createRim(7);
+    nonLinearCost_->checkInfeasibilities(true);
+    sumPrimalInfeasibilities_=nonLinearCost_->sumInfeasibilities();
+    numberPrimalInfeasibilities_= nonLinearCost_->numberInfeasibilities();
+    // and get good feasible duals
+    computeDuals();
+  }
+  // at present we are leaving factorization around
+  // maybe we should empty it
+  deleteRim();
+  handler_->message(CLP_SIMPLEX_FINISHED+problemStatus_,messages_)
+    <<objectiveValue()
+    <<OsiMessageEol;
+  // Restore any saved stuff
+  perturbation_ = savePerturbation;
+  factorization_->sparseThreshold(saveSparse);
+  infeasibilityCost_ = saveInfeasibilityCost;
+  return problemStatus_;
+}
+void
+ClpSimplexPrimal::whileIterating(int firstSuperBasic)
+{
+
+  // Say if values pass
+  int ifValuesPass=0;
+  if (firstSuperBasic<numberRows_+numberColumns_)
+    ifValuesPass=1;
+  int saveNumber = numberIterations_;
+  // status stays at -1 while iterating, >=0 finished, -2 to invert
+  // status -3 to go to top without an invert
+  while (problemStatus_==-1) {
 #ifdef CLP_DEBUG
-	if (handler_->logLevel()&32)
-	  printf("** no column pivot\n");
+    {
+      int i;
+      // not [1] as has information
+      for (i=0;i<4;i++) {
+	if (i!=1)
+	  rowArray_[i]->checkClear();
+      }    
+      for (i=0;i<2;i++) {
+	columnArray_[i]->checkClear();
+      }    
+    }      
 #endif
-	if (nonLinearCost_->numberInfeasibilities())
-	  problemStatus_=-4; // might be infeasible 
-	break;
-      }
-    }
 #if CLP_DEBUG>2
-    if (numberIterations_>620&&numberIterations_<-2534) {
+    // very expensive
+    if (numberIterations_>0&&numberIterations_<-2534) {
       handler_->setLogLevel(63);
       double saveValue = objectiveValue_;
       double * saveRow1 = new double[numberRows_];
@@ -631,27 +418,217 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
       objectiveValue_=saveValue;
     }
 #endif
+    if (!ifValuesPass) {
+      // choose column to come in
+      // can use pivotRow_ to update weights
+      // pass in list of cost changes so can do row updates (rowArray_[1])
+      // NOTE rowArray_[0] is used by computeDuals which is a 
+      // slow way of getting duals but might be used 
+      primalColumn(rowArray_[1],rowArray_[2],rowArray_[3],
+		   columnArray_[0],columnArray_[1]);
+    } else {
+      // in values pass
+      if (ifValuesPass>0) {
+	nextSuperBasic(firstSuperBasic);
+	if (firstSuperBasic==numberRows_+numberColumns_)
+	  ifValuesPass=-1; // signal end of values pass after this
+      } else {
+	// end of values pass - initialize weights etc
+	primalColumnPivot_->saveWeights(this,5);
+	ifValuesPass=0;
+	if(saveNumber != numberIterations_) {
+	  problemStatus_=-2; // factorize now
+	  pivotRow_=-1; // say no weights update
+	  break;
+	}
+	
+	// and get variable
+	primalColumn(rowArray_[1],rowArray_[2],rowArray_[3],
+		     columnArray_[0],columnArray_[1]);
+      }
+    }
+    pivotRow_=-1;
+    sequenceOut_=-1;
+    rowArray_[1]->clear();
+    if (sequenceIn_>=0) {
+      // we found a pivot column
+#ifdef CLP_DEBUG
+      if ((handler_->logLevel()&32)) {
+	char x = isColumn(sequenceIn_) ? 'C' :'R';
+	std::cout<<"pivot column "<<
+	  x<<sequenceWithin(sequenceIn_)<<std::endl;
+      }
+#endif
+      // update the incoming column
+      unpack(rowArray_[1]);
+      // save reduced cost
+      double saveDj = dualIn_;
+      factorization_->updateColumn(rowArray_[2],rowArray_[1],true);
+      // do ratio test and re-compute dj
+      primalRow(rowArray_[1],rowArray_[3],rowArray_[2],rowArray_[0],
+		ifValuesPass);
+      if (ifValuesPass) {
+	saveDj=dualIn_;
+	if (pivotRow_==-1||(pivotRow_>=0&&fabs(alpha_)<1.0e-5)) {
+	  if(fabs(dualIn_)<1.0e2*dualTolerance_) {
+	    // try other way
+	    directionIn_=-directionIn_;
+	    primalRow(rowArray_[1],rowArray_[3],rowArray_[2],rowArray_[0],
+		      0);
+	  }
+	  if (pivotRow_==-1||(pivotRow_>=0&&fabs(alpha_)<1.0e-5)) {
+	    // reject it
+	    char x = isColumn(sequenceIn_) ? 'C' :'R';
+	    handler_->message(CLP_SIMPLEX_FLAG,messages_)
+	      <<x<<sequenceWithin(sequenceIn_)
+	      <<OsiMessageEol;
+	    setFlagged(sequenceIn_);
+	    lastBadIteration_ = numberIterations_; // say be more cautious
+	    rowArray_[1]->clear();
+	    pivotRow_=-1;
+	    continue;
+	  }
+	}
+      }
+      
+#ifdef CLP_DEBUG
+      if ((handler_->logLevel()&32))
+	printf("btran dj %g, ftran dj %g\n",saveDj,dualIn_);
+#endif
+      if (saveDj*dualIn_<1.0e-20||
+	  fabs(saveDj-dualIn_)>1.0e-5*(1.0+fabs(saveDj))) {
+	handler_->message(CLP_PRIMAL_DJ,messages_)
+	  <<saveDj<<dualIn_
+	  <<OsiMessageEol;
+	if(saveNumber != numberIterations_) {
+	  problemStatus_=-2; // factorize now
+	  rowArray_[1]->clear();
+	  pivotRow_=-1; // say no weights update
+	  break;
+	} else {
+	  // take on more relaxed criterion
+	  if (saveDj*dualIn_<1.0e-20||
+	      fabs(saveDj-dualIn_)>1.0e-4*(1.0+fabs(dualIn_))) {
+	    // need to reject something
+	    char x = isColumn(sequenceIn_) ? 'C' :'R';
+	    handler_->message(CLP_SIMPLEX_FLAG,messages_)
+	      <<x<<sequenceWithin(sequenceIn_)
+	      <<OsiMessageEol;
+	    setFlagged(sequenceIn_);
+	    lastBadIteration_ = numberIterations_; // say be more cautious
+	    rowArray_[1]->clear();
+	    pivotRow_=-1;
+	    continue;
+	  }
+	}
+      }
+      if (pivotRow_>=0) {
+	// if stable replace in basis
+	int updateStatus = factorization_->replaceColumn(rowArray_[2],
+							 pivotRow_,
+							 alpha_);
+	if (updateStatus==1) {
+	  // slight error
+	  if (factorization_->pivots()>5)
+	    problemStatus_=-2; // factorize now
+	} else if (updateStatus==2) {
+	  // major error
+	  // later we may need to unwind more e.g. fake bounds
+	  if(saveNumber != numberIterations_) {
+	    problemStatus_=-2; // factorize now
+	    break;
+	  } else {
+	    // need to reject something
+	    char x = isColumn(sequenceIn_) ? 'C' :'R';
+	    handler_->message(CLP_SIMPLEX_FLAG,messages_)
+	      <<x<<sequenceWithin(sequenceIn_)
+	      <<OsiMessageEol;
+	    setFlagged(sequenceIn_);
+	    lastBadIteration_ = numberIterations_; // say be more cautious
+	    rowArray_[1]->clear();
+	    pivotRow_=-1;
+	    continue;
+	  }
+	} else if (updateStatus==3) {
+	  // out of memory
+	  // increase space if not many iterations
+	  if (factorization_->pivots()<
+	      0.5*factorization_->maximumPivots()&&
+	      factorization_->pivots()<200)
+	    factorization_->areaFactor(
+				       factorization_->areaFactor() * 1.1);
+	  problemStatus_=-2; // factorize now
+	}
+	// here do part of steepest - ready for next iteration
+	primalColumnPivot_->updateWeights(rowArray_[1]);
+      } else {
+	if (pivotRow_==-1) {
+	  // no outgoing row is valid
+#ifdef CLP_DEBUG
+	  if (handler_->logLevel()&32)
+	    printf("** no row pivot\n");
+#endif
+	  if (!factorization_->pivots()) {
+	    problemStatus_=-5; //say looks unbounded
+	    // do ray
+	    delete [] ray_;
+	    ray_ = new double [numberColumns_];
+	    CoinFillN(ray_,numberColumns_,0.0);
+	    int number=rowArray_[1]->getNumElements();
+	    int * index = rowArray_[1]->getIndices();
+	    double * array = rowArray_[1]->denseVector();
+	    double way=-directionIn_;
+	    int i;
+	    double zeroTolerance=1.0e-12;
+	    if (sequenceIn_<numberColumns_)
+	      ray_[sequenceIn_]=directionIn_;
+	    for (i=0;i<number;i++) {
+	      int iRow=index[i];
+	      int iPivot=pivotVariable_[iRow];
+	      double arrayValue = array[iRow];
+	      if (iPivot<numberColumns_&&fabs(arrayValue)>=zeroTolerance)
+		ray_[iPivot] = way* array[iRow];
+	    }
+	  }
+	  rowArray_[0]->clear();
+	  break;
+	} else {
+	  // flipping from bound to bound
+	}
+      }
+      
+      // update primal solution
+      
+      double objectiveChange=0.0;
+      // Cost on pivot row may change - may need to change dualIn
+      double oldCost=0.0;
+      if (pivotRow_>=0)
+	oldCost = cost(pivotVariable_[pivotRow_]);
+      // rowArray_[1] is not empty - used to update djs
+      updatePrimalsInPrimal(rowArray_[1],theta_, objectiveChange);
+      if (pivotRow_>=0)
+	dualIn_ += (oldCost-cost(pivotVariable_[pivotRow_]));
+      
+      int whatNext=housekeeping(objectiveChange);
+      
+      if (whatNext==1) {
+	problemStatus_ =-2; // refactorize
+      } else if (whatNext==2) {
+	// maximum iterations or equivalent
+	problemStatus_= 3;
+	break;
+      }
+    } else {
+      // no pivot column
+#ifdef CLP_DEBUG
+      if (handler_->logLevel()&32)
+	printf("** no column pivot\n");
+#endif
+      if (nonLinearCost_->numberInfeasibilities())
+	problemStatus_=-4; // might be infeasible 
+      break;
+    }
   }
-
-  // if infeasible get real values
-  if (problemStatus_) {
-    infeasibilityCost_=0.0;
-    createRim(7);
-    nonLinearCost_->checkInfeasibilities(true);
-    sumPrimalInfeasibilities_=nonLinearCost_->sumInfeasibilities();
-    numberPrimalInfeasibilities_= nonLinearCost_->numberInfeasibilities();
-  }
-  // at present we are leaving factorization around
-  // maybe we should empty it
-  deleteRim();
-  handler_->message(CLP_SIMPLEX_FINISHED+problemStatus_,messages_)
-    <<objectiveValue()
-    <<OsiMessageEol;
-  // Restore any saved stuff
-  perturbation_ = savePerturbation;
-  factorization_->sparseThreshold(saveSparse);
-  infeasibilityCost_ = saveInfeasibilityCost;
-  return problemStatus_;
 }
 /* Checks if finished.  Updates status */
 void 
