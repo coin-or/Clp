@@ -5,6 +5,8 @@
 #include "PresolveFixed.hpp"
 #include "PresolveDupcol.hpp"
 #include "CoinSort.hpp"
+#include "PresolveUseless.hpp"
+#include "ClpMessage.hpp"
 
 #define DSEED2 2147483647.0
 
@@ -120,28 +122,6 @@ const PresolveAction *dupcol_action::presolve(PresolveMatrix *prob,
   // To weed most of them out, we multiply the coefficients
   // by the random value associated with the row.
   int nlook = compute_sums(hincol, mcstrt, hrow, colels, workrow, workcol, sort, ncols);
-#if 0
-  int nlook=0;
-  for (int i = 0; i < ncols; ++i)
-    if (hincol[i] > 0 /*1?*/) {
-      CoinBigIndex kcs = mcstrt[i];
-      CoinBigIndex kce = kcs + hincol[i];
-
-      double value=0.0;
-
-      // sort all columns for easy comparison in next loop
-      CoinSort_2(hrow+kcs,hrow+kcs+hincol[i],colels+kcs);
-      //ekk_sort2(hrow+kcs, colels+kcs, hincol[i]);
-
-      for (CoinBigIndex k=kcs;k<kce;k++) {
-	int irow=hrow[k];
-	value += workrow[irow]*colels[k];
-      }
-      workcol[nlook]=value;
-      sort[nlook]=i;
-      ++nlook;
-    }
-#endif
 
 #if 1
   // not tested yet
@@ -564,14 +544,9 @@ void dupcol_action::postsolve(PostsolveMatrix *prob) const
 const PresolveAction *duprow_action::presolve(PresolveMatrix *prob,
 					       const PresolveAction *next)
 {
-   //  double *colels	= prob->colels_;
-  int *hrow		= prob->hrow_;
   //  CoinBigIndex *mcstrt		= prob->mcstrt_;
   //  int *hincol		= prob->hincol_;
   int ncols		= prob->ncols_;
-
-  //  double *clo	= prob->clo_;
-  //  double *cup	= prob->cup_;
 
   double *rowels	= prob->rowels_;
   /*const*/ int *hcol	= prob->hcol_;
@@ -582,12 +557,7 @@ const PresolveAction *duprow_action::presolve(PresolveMatrix *prob,
   double *rlo	= prob->rlo_;
   double *rup	= prob->rup_;
 
-  //  const char *integerType = prob->integerType_;
-
-  //  double maxmin	= prob->maxmin_;
-
-  action *actions	= new action [nrows];
-  int nactions = 0;
+  int nuseless_rows = 0;
 
   double * workcol = new double[ncols];
   double * workrow = new double[nrows];
@@ -596,26 +566,7 @@ const PresolveAction *duprow_action::presolve(PresolveMatrix *prob,
   init_random_vec(workcol, ncols);
 
   int nlook = compute_sums(hinrow, mrstrt, hcol, rowels, workcol, workrow, sort, nrows);
-#if 0
-  nlook=0;
-  for (i = 1; i <= nrow; ++i) {
-    if (mpre[i] == 0) {
-      double value=0.0;
-      CoinBigIndex krs=mrstrt[i];
-      CoinBigIndex kre=mrstrt[i+1];
-      CoinSort_2(hcol+krs,hcol+kre,dels+krs);
-      //ekk_sort2(hcol+krs,dels+krs,kre-krs);
-      for (k=krs;k<kre;k++) {
-	int icol=hcol[k];
-	value += workcol[icol]*dels[k];
-      }
-      workrow[nlook]=value;
-      sort[nlook++]=i;
-    }
-  }
-#endif
   CoinSort_2(workrow,workrow+nlook,sort);
-  //ekk_sortonDouble(workrow,sort,nlook);
 
   double dval = workrow[0];
   for (int jj = 1; jj < nlook; jj++) {
@@ -624,12 +575,11 @@ const PresolveAction *duprow_action::presolve(PresolveMatrix *prob,
       int ilast=sort[jj-1];
       CoinBigIndex krs = mrstrt[ithis];
       CoinBigIndex kre = krs + hinrow[ithis];
-      //      int ishift = mrstrt[ilast];
       if (hinrow[ithis] == hinrow[ilast]) {
 	int ishift = mrstrt[ilast] - krs;
 	CoinBigIndex k;
 	for (k=krs;k<kre;k++) {
-	  if (hcol[k] != hrow[k+ishift] ||
+	  if (hcol[k] != hcol[k+ishift] ||
 	      rowels[k] != rowels[k+ishift]) {
 	    break;
 	  }
@@ -641,46 +591,66 @@ const PresolveAction *duprow_action::presolve(PresolveMatrix *prob,
 	  double rlo2=rlo[ithis];
 	  double rup2=rup[ithis];
 
-	  int idelete=0;
-	  if (rlo1<rlo2) {
+	  int idelete=-1;
+	  if (rlo1<=rlo2) {
 	    if (rup2<=rup1) {
 	      /* this is strictly tighter than last */
 	      idelete=ilast;
+	    } else if (fabs(rlo1-rlo2)<1.0e-12) {
+	      /* last is strictly tighter than this */
+	      idelete=ithis;
+	      // swap so can carry on deleting
+	      sort[jj-1]=ithis;
+	      sort[jj]=ilast;
 	    } else {
 	      /* overlapping - could merge */
 #ifdef PRINT_DEBUG
 	      printf("overlapping duplicate row %g %g, %g %g\n",
 		     rlo1,rup1,rlo2,rup2);
 #endif
+	      if (rup1<rlo2) {
+		// infeasible
+		prob->status_|= 1;
+		// wrong message - correct if works
+		prob->messageHandler()->message(CLP_PRESOLVE_ROWINFEAS,
+						prob->messages())
+						  <<ithis
+						  <<rlo[ithis]
+						  <<rup[ithis]
+						  <<CoinMessageEol;
+		break;
+	      }
 	    }
 	  } else {
 	    // rlo2<=rlo1
 	    if (rup1<=rup2) {
 	      /* last is strictly tighter than this */
 	      idelete=ithis;
+	      // swap so can carry on deleting
+	      sort[jj-1]=ithis;
+	      sort[jj]=ilast;
 	    } else {
 	      /* overlapping - could merge */
 #ifdef PRINT_DEBUG
 	      printf("overlapping duplicate row %g %g, %g %g\n",
 		     rlo1,rup1,rlo2,rup2);
 #endif
+	      if (rup2<rlo1) {
+		// infeasible
+		prob->status_|= 1;
+		// wrong message - correct if works
+		prob->messageHandler()->message(CLP_PRESOLVE_ROWINFEAS,
+						prob->messages())
+						  <<ithis
+						  <<rlo[ithis]
+						  <<rup[ithis]
+						  <<CoinMessageEol;
+		break;
+	      }
 	    }
 	  }
-	  if (idelete) {
-	    {
-	      action *s = &actions[nactions];	  
-	      nactions++;
-
-	      s->row    = idelete;
-	      s->lbound = rlo[idelete];
-	      s->ubound = rup[idelete];
-	    }
-	    // lazy way - let some other transform eliminate the row
-	    rup[idelete] = PRESOLVE_INF;
-	    rlo[idelete] = PRESOLVE_INF;
-
-	    nactions++;
-	  }
+	  if (idelete>=0) 
+	    sort[nuseless_rows++]=idelete;
 	}
       }
     }
@@ -689,16 +659,18 @@ const PresolveAction *duprow_action::presolve(PresolveMatrix *prob,
 
   delete[]workrow;
   delete[]workcol;
+
+
+  if (nuseless_rows) {
+#if	PRESOLVE_SUMMARY
+    printf("DUPLICATE ROWS:  %d\n", nuseless_rows);
+#endif
+    next = useless_constraint_action::presolve(prob,
+					       sort, nuseless_rows,
+					       next);
+  }
   delete[]sort;
 
-
-  if (nactions) {
-#if	PRESOLVE_SUMMARY
-    printf("DUPLICATE ROWS:  %d\n", nactions);
-#endif
-    next = new duprow_action(nactions, copyOfArray(actions,nactions), next);
-  }
-  deleteAction(actions,action*);
   return (next);
 }
 

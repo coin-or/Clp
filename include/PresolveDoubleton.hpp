@@ -28,12 +28,9 @@ class doubleton_action : public PresolveAction {
     double coeffy;
 
     int ncolx;
-    double *colx;
-    int *indx;
+    double *colel;
 
     int ncoly;
-    double *coly;
-    int *indy;
   };
 
   const int nactions_;

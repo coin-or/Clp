@@ -27,6 +27,7 @@ const PresolveAction *drop_empty_cols_action::presolve(PresolveMatrix *prob,
   double *cup		= prob->cup_;
   double *dcost		= prob->cost_;
 
+  const double ztoldj	= prob->ztoldj_;
   //int *mrstrt		= prob->mrstrt_;
   //int *hinrow		= prob->hinrow_;
   //int *hrow		= prob->hrow_;
@@ -56,7 +57,8 @@ const PresolveAction *drop_empty_cols_action::presolve(PresolveMatrix *prob,
 
     // there are no more constraints on this variable, 
     // so we had better be able to compute the answer now
-
+    if (fabs(dcost[jcol])<ztoldj)
+      dcost[jcol]=0.0;
     if (dcost[jcol] * maxmin == 0.0) {
       // hopefully, we can make this non-basic
       // what does OSL currently do in this case???

@@ -5,6 +5,7 @@
 #include "PresolveFixed.hpp"
 #include "PresolveDual.hpp"
 #include "ClpMessage.hpp"
+//#define PRESOLVE_TIGHTEN_DUALS 1
 
 // this looks for "dominated columns"
 // following ekkredc
@@ -197,6 +198,10 @@ const PresolveAction *remove_dual_action::presolve(PresolveMatrix *prob,
 
     // I don't know why I stopped doing this.
 #if	PRESOLVE_TIGHTEN_DUALS
+    const double *rowels	= prob->rowels_;
+    const int *hcol	= prob->hcol_;
+    const CoinBigIndex *mrstrt	= prob->mrstrt_;
+    int *hinrow	= prob->hinrow_;
     // tighten row dual bounds, as described on p. 229
     for (int i = 0; i < nrows; i++) {
       bool no_ub = (rup[i] >= ekkinf);
@@ -227,7 +232,7 @@ const PresolveAction *remove_dual_action::presolve(PresolveMatrix *prob,
 		printf("MAX TIGHT[%d,%d]:  %g --> %g\n", i,hrow[k], rdmax[i], bnd);
 #endif
 		rdmax[i] = rmax = bnd;
-		tightened = 1;
+		tightened ++;;
 	      }
 	    } else if (coeff < -ZTOLDP && djmax0 > -PRESOLVE_INF && rmax0 > -PRESOLVE_INF) {
 	      double bnd = djmax0 / coeff + rmax0;
@@ -236,7 +241,7 @@ const PresolveAction *remove_dual_action::presolve(PresolveMatrix *prob,
 		printf("MIN TIGHT[%d,%d]:  %g --> %g\n", i, hrow[k], rdmin[i], bnd);
 #endif
 		rdmin[i] = rmin = bnd;
-		tightened = 1;
+		tightened ++;;
 	      }		
 	    }
 	  } else {	// no_lb
@@ -247,7 +252,7 @@ const PresolveAction *remove_dual_action::presolve(PresolveMatrix *prob,
 		printf("MIN1 TIGHT[%d,%d]:  %g --> %g\n", i, hrow[k], rdmin[i], bnd);
 #endif
 		rdmin[i] = rmin = bnd;
-		tightened = 1;
+		tightened ++;;
 	      }
 	    } else if (coeff < -ZTOLDP && djmin0 < PRESOLVE_INF && rmin0 < PRESOLVE_INF) {
 	      double bnd = djmin0 / coeff + rmin0;
@@ -256,7 +261,7 @@ const PresolveAction *remove_dual_action::presolve(PresolveMatrix *prob,
 		printf("MAX TIGHT1[%d,%d]:  %g --> %g\n", i,hrow[k], rdmax[i], bnd);
 #endif
 		rdmax[i] = rmax = bnd;
-		tightened = 1;
+		tightened ++;;
 	      }
 	    }
 	  }
@@ -269,7 +274,7 @@ const PresolveAction *remove_dual_action::presolve(PresolveMatrix *prob,
       break;
 #if	PRESOLVE_TIGHTEN_DUALS
     else
-      printf("DUAL TIGHTENED!  %d\n", nactions);
+      printf("DUAL TIGHTENED!  %d\n", tightened);
 #endif
   }
 

@@ -68,11 +68,13 @@ public:
       If keepIntegers is true then bounds may be tightened in
       original.  Bounds will be moved by up to feasibilityTolerance
       to try and stay feasible.
+      Names will be dropped in presolved model if asked
   */
   virtual ClpSimplex * presolvedModel(ClpSimplex & si,
 				      double feasibilityTolerance=0.0,
 				      bool keepIntegers=true,
-				      int numberPasses=5);
+				      int numberPasses=5,
+				      bool dropNames=false);
 
   /** Return pointer to presolved model,
       Up to user to destroy */

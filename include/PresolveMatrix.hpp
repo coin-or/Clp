@@ -27,6 +27,9 @@ int *presolve_duparray(const int *d, int n, int n2);
 int *presolve_duparray(const int *d, int n);
 char *presolve_duparray(const char *d, int n, int n2);
 char *presolve_duparray(const char *d, int n);
+// This one saves in one go to save [] memory
+double * presolve_duparray(const double * element, const int * index,
+			   int length, int offset);
 
 void presolve_delete_from_row(int row, int col /* thing to delete */,
 		     const CoinBigIndex *mrstrt,

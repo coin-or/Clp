@@ -317,8 +317,6 @@ void copyrep(const int * mrstrt, const int *hcol, const double *rowels,
   }
 }
 
-
-
 // add -x/y times row y to row x, thus cancelling out one column of rowx;
 // afterwards, that col will be singleton for rowy, so we drop the row.
 //
@@ -327,7 +325,7 @@ void copyrep(const int * mrstrt, const int *hcol, const double *rowels,
 //
 // This implements the functionality of ekkrdc3.
 const PresolveAction *subst_constraint_action::presolve(PresolveMatrix *prob,
-					 char *implied_free,
+					 int *implied_free,
 					const PresolveAction *next,
 							int &try_fill_level)
 {
@@ -336,9 +334,6 @@ const PresolveAction *subst_constraint_action::presolve(PresolveMatrix *prob,
   CoinBigIndex *mcstrt	= prob->mcstrt_;
   int *hincol	= prob->hincol_;
   const int ncols	= prob->ncols_;
-
-  const double *clo	= prob->clo_;
-  const double *cup	= prob->cup_;
 
   double *rowels	= prob->rowels_;
   int *hcol	= prob->hcol_;
@@ -390,8 +385,6 @@ const PresolveAction *subst_constraint_action::presolve(PresolveMatrix *prob,
   // and resync at the end of the function.
 
   // DEBUGGING
-  //  int nt = 0;
-  int ngood = 0;
   int nsubst = 0;
 #ifdef	DEBUG_PRESOLVEx
   int maxsubst = atoi(getenv("MAXSUBST"));
@@ -429,11 +422,13 @@ const PresolveAction *subst_constraint_action::presolve(PresolveMatrix *prob,
 
   for (iLook=0;iLook<numberLook;iLook++) {
     int jcoly=look[iLook];
+    bool looksGood=false;
     if (hincol[jcoly] > 1 && hincol[jcoly] <= fill_level &&
-	implied_free[jcoly] == hincol[jcoly]) {
+	implied_free[jcoly] >=0) {
+      looksGood=true;
       CoinBigIndex kcs = mcstrt[jcoly];
       CoinBigIndex kce = kcs + hincol[jcoly];
-
+      
       int bestrowy_size = 0;
       int bestrowy_row=-1;
       int bestrowy_k=-1;
@@ -442,63 +437,26 @@ const PresolveAction *subst_constraint_action::presolve(PresolveMatrix *prob,
       for (k=kcs; k<kce; ++k) {
 	int row = hrow[k];
 	double coeffj = colels[k];
-
+	
 	// we don't clean up zeros in the middle of the routine.
 	// if there is one, skip this candidate.
 	if (fabs(coeffj) <= ZTOLDP) {
 	  bestrowy_size = 0;
 	  break;
 	}
-
-	// if its row is an equality constraint...
-	if (hinrow[row] > 1 &&	// don't bother with singleton rows
-
-	    fabs(rlo[row] - rup[row]) < tol) {
-	  CoinBigIndex krs = mrstrt[row];
-	  CoinBigIndex kre = krs + hinrow[row];
-
-	  double maxup, maxdown, ilow, iup;
-
-	  implied_bounds(rowels, clo, cup, hcol,
-			 krs, kre,
-			 &maxup, &maxdown,
-			 jcoly, rlo[row], rup[row], &ilow, &iup);
-
-	  if (maxup < PRESOLVE_INF && maxup + tol < rlo[row]) {
-	    prob->status_|= 1;
-	    prob->messageHandler()->message(CLP_PRESOLVE_ROWINFEAS,
-					     prob->messages())
-					       <<row
-					       <<rlo[row]
-					       <<rup[row]
-					       <<CoinMessageEol;
-	    break;
-	  } else if (-PRESOLVE_INF < maxdown && rup[row] < maxdown - tol) {
-	    prob->status_|= 1;
-	    prob->messageHandler()->message(CLP_PRESOLVE_ROWINFEAS,
-					     prob->messages())
-					       <<row
-					       <<rlo[row]
-					       <<rup[row]
-					       <<CoinMessageEol;
-	    break;
-	  } else {
-	    // the row has an implied upper or a lower bound 
-
-	    if (clo[jcoly] <= ilow && iup <= cup[jcoly]) {
-	      // both column bounds implied by the constraint bounds
-
-	      // we want coeffy to be smaller than x, BACKWARDS from in doubleton
-	      if (bestrowy_size == 0 ||
-		  fabs(coeffj) > fabs(bestrowy_coeff) ||
-		  (fabs(coeffj) == fabs(bestrowy_coeff) &&
-		   hinrow[row] < bestrowy_size)) {
-		bestrowy_size = hinrow[row];
-		bestrowy_row = row;
-		bestrowy_coeff = coeffj;
-		bestrowy_k = k;
-	      }
-	    }
+	  
+	if (row==implied_free[jcoly]) {
+	  // if its row is an equality constraint...
+	  if (hinrow[row] > 1 &&	// don't bother with singleton rows
+	      
+	      fabs(rlo[row] - rup[row]) < tol) {
+	    // both column bounds implied by the constraint bounds
+	    
+	    // we want coeffy to be smaller than x, BACKWARDS from in doubleton
+	    bestrowy_size = hinrow[row];
+	    bestrowy_row = row;
+	    bestrowy_coeff = coeffj;
+	    bestrowy_k = k;
 	  }
 	}
       }
@@ -509,10 +467,10 @@ const PresolveAction *subst_constraint_action::presolve(PresolveMatrix *prob,
       bool all_ok = true;
       for (k=kcs; k<kce; ++k) {
 	double coeff_factor = fabs(colels[k] / bestrowy_coeff);
-	if (fabs(coeff_factor) > 1.3)
+	if (fabs(coeff_factor) > 10.0)
 	  all_ok = false;
       }
-
+#if 0
       // check fill-in
       if (all_ok && hincol[jcoly] == 3) {
 	// compute fill-in
@@ -584,7 +542,7 @@ const PresolveAction *subst_constraint_action::presolve(PresolveMatrix *prob,
 	  nt++;
 #endif
       }
-
+#endif
       // probably never happens
       if (all_ok && nzerocols + hinrow[bestrowy_row] >= ncols)
 	all_ok = false;
@@ -910,13 +868,13 @@ const PresolveAction *subst_constraint_action::presolve(PresolveMatrix *prob,
 	prob->consistent();
 #endif
       }
+      
     }
   }
 
   // general idea - only do doubletons until there are almost none left
   if (nactions < 30&&fill_level==2)
     try_fill_level = -3;
-
   if (nactions) {
 #if	PRESOLVE_SUMMARY
     printf("NSUBSTS:  %d\n", nactions);
@@ -934,7 +892,6 @@ const PresolveAction *subst_constraint_action::presolve(PresolveMatrix *prob,
 
   return (next);
 }
-
 
 void subst_constraint_action::postsolve(PostsolveMatrix *prob) const
 {
@@ -1201,7 +1158,8 @@ void subst_constraint_action::postsolve(PostsolveMatrix *prob) const
 	      actx += rowelsx[k] * sol[col];
 	    }
 #if	DEBUG_PRESOLVE
-	    PRESOLVEASSERT(rlo[jrowx] - ztolzb <= actx && actx <= rup[jrowx] + ztolzb);
+	    PRESOLVEASSERT(rlo[jrowx] - prob->ztolzb_ <= actx 
+			   && actx <= rup[jrowx] + prob->ztolzb_);
 #endif
 	    acts[jrowx] = actx;
 	  }

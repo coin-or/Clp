@@ -180,7 +180,8 @@ ClpSimplex *
 Presolve::presolvedModel(ClpSimplex & si,
 			 double feasibilityTolerance,
 			 bool keepIntegers,
-			 int numberPasses)
+			 int numberPasses,
+			 bool dropNames)
 {
   ncols_ = si.getNumCols();
   nrows_ = si.getNumRows();
@@ -193,7 +194,8 @@ Presolve::presolvedModel(ClpSimplex & si,
   originalColumn_ = new int[ncols_];
 
   // Check matrix
-  if (!si.clpMatrix()->allElementsInRange(&si,1.0e-20,1.0e20))
+  if (!si.clpMatrix()->allElementsInRange(&si,si.getSmallElementValue(),
+					  1.0e20))
     return NULL;
 
   // result is 0 - okay, 1 infeasible, -1 go round again
@@ -207,7 +209,8 @@ Presolve::presolvedModel(ClpSimplex & si,
     // make new copy
     delete presolvedModel_;
     presolvedModel_ = new ClpSimplex(si);
-    
+    if (dropNames)
+      presolvedModel_->dropNames();
 
     // drop integer information if wanted
     if (!keepIntegers)
@@ -575,6 +578,8 @@ const PresolveAction *Presolve::presolve(PresolveMatrix *prob)
     const bool duprow = ATOI("off")!=0;
     const bool dual = ATOI("off")!=0;
 #else
+    // normal
+#if 1
     const bool slackd = true;
     const bool doubleton = true;
     const bool forcing = true;
@@ -583,6 +588,16 @@ const PresolveAction *Presolve::presolve(PresolveMatrix *prob)
     const bool dupcol = true;
     const bool duprow = true;
     const bool dual = doDualStuff;
+#else
+    const bool slackd = false;
+    const bool doubleton = true;
+    const bool forcing = true;
+    const bool ifree = false;
+    const bool zerocost = false;
+    const bool dupcol = false;
+    const bool duprow = false;
+    const bool dual = false;
+#endif
 #endif
     
     // some things are expensive so just do once (normally)
@@ -623,6 +638,8 @@ const PresolveAction *Presolve::presolve(PresolveMatrix *prob)
       const PresolveAction * const paction0 = paction_;
       // look for substitutions with no fill
       int fill_level=2;
+      //fill_level=10;
+      //printf("** fill_level == 10 !\n");
       int whichPass=0;
       while (1) {
 	whichPass++;
@@ -683,9 +700,8 @@ const PresolveAction *Presolve::presolve(PresolveMatrix *prob)
 	// later do faster if many changes i.e. memset and memcpy
 	prob->numberRowsToDo_ = prob->numberNextRowsToDo_;
 	int kcheck;
-	bool found;
+	bool found=false;
 	kcheck=-1;
-	found=false;
 	for (i=0;i<prob->numberNextRowsToDo_;i++) {
 	  int index = prob->nextRowsToDo_[i];
 	  prob->unsetRowChanged(index);

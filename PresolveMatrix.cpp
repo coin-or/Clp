@@ -75,6 +75,18 @@ void presolve_make_memlists(CoinBigIndex *starts, int *lengths, presolvehlink *l
   link[n].suc = NO_LINK;
 }
 
+// This one saves in one go to save [] memory
+double * presolve_duparray(const double * element, const int * index,
+			   int length, int offset)
+{
+  assert (sizeof(double)==2*sizeof(int));
+  int n = (3*length+1)>>1;
+  double * dArray = new double [n];
+  int * iArray = (int *) (dArray+length);
+  memcpy(dArray,element+offset,length*sizeof(double));
+  memcpy(iArray,index+offset,length*sizeof(int));
+  return dArray;
+}
 
 
 double *presolve_duparray(const double *d, int n, int n2)

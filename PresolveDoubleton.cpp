@@ -582,12 +582,17 @@ const PresolveAction *doubleton_action::presolve(PresolveMatrix *prob,
 	  s->coeffy = coeffy;
 	  
 	  s->ncolx	= hincol[icolx];
-	  s->colx	= presolve_duparray(&colels[mcstrt[icolx]], hincol[icolx]);
-	  s->indx	= presolve_duparray(&hrow[mcstrt[icolx]], hincol[icolx]);
 	  
 	  s->ncoly	= hincol[icoly];
-	  s->coly	= presolve_duparray(&colels[mcstrt[icoly]], hincol[icoly]);
-	  s->indy	= presolve_duparray(&hrow[mcstrt[icoly]], hincol[icoly]);
+	  if (s->ncoly<s->ncolx) {
+	    s->colel	= presolve_duparray(colels, hrow, hincol[icoly],
+					    mcstrt[icoly]);
+	    s->ncolx=0;
+	  } else {
+	    s->colel	= presolve_duparray(colels, hrow, hincol[icolx],
+					    mcstrt[icolx]);
+	    s->ncoly=0;
+	  }
 	}
 	
 	/*
@@ -826,6 +831,12 @@ void doubleton_action::postsolve(PostsolveMatrix *prob) const
   const double ztolzb	= prob->ztolzb_;
   const double ztoldj	= prob->ztoldj_;
 
+  // Space for accumulating two columns
+  int nrows = prob->nrows_;
+  int * index1 = new int[nrows];
+  double * element1 = new double[nrows];
+  memset(element1,0,nrows*sizeof(double));
+
   for (const action *f = &actions[nactions-1]; actions<=f; f--) {
     int irow = f->row;
     double lo0 = f->clox;
@@ -881,54 +892,160 @@ void doubleton_action::postsolve(PostsolveMatrix *prob) const
       prob->setRowStatus(irow,PrePostsolveMatrix::atLowerBound);
 
 
-
-    {
+    if (f->ncoly) {
+      // y is shorter so was saved - need to reconstruct x
+      double multiplier = coeffx/coeffy;
+      //printf("Current colx %d\n",jcolx);
+      int * indy = (int *) (f->colel+f->ncoly);
       // find the tail
       CoinBigIndex k=mcstrt[jcolx];
-      for (int i=0; i<hincol[jcolx]-1; ++i) {
+      int nX=0;
+      int i,iRow;
+      for (i=0; i<hincol[jcolx]-1; ++i) {
+	if (colels[k]) {
+	  iRow = hrow[k];
+	  index1[nX++]=iRow;
+	  element1[iRow]=colels[k];
+	}
+	//printf("%d %d %g\n",i,hrow[k],colels[k]);
 	k = link[k];
       }
+      iRow = hrow[k];
+      index1[nX++]=iRow;
+      element1[iRow]=colels[k];
+      //printf("%d %d %g\n",i,hrow[k],colels[k]);
       // append the old x column to the free list, freeing all links
       link[k] = free_list;
       free_list = mcstrt[jcolx];
-    }
-
-    // use create_row??
-    {
-      int xstart = NO_LINK;
-      for (int i=0; i<f->ncolx; ++i) {
-	CoinBigIndex k = free_list;
-	free_list = link[free_list];
-
-	check_free_list(free_list);
-
-	hrow[k] = f->indx[i];
-	PRESOLVEASSERT(rdone[hrow[k]] || hrow[k] == irow);
-	colels[k] = f->colx[i];
-	link[k] = xstart;
-	xstart = k;
-      }
-      mcstrt[jcolx] = xstart;
-    }
-    {
+      //printf("Coly is %d row %d coeffx %g coeffy %g\n",
+      //     jcoly,f->row,f->coeffx,f->coeffy);
       int ystart = NO_LINK;
-      for (int i=0; i<f->ncoly; ++i) {
+      for (i=0; i<f->ncoly; ++i) {
+	int iRow = indy[i];
+	double yValue = f->colel[i];
+	//printf("y %d %d %g\n",i,indy[i],f->colel[i]);
 	CoinBigIndex k = free_list;
 	free_list = link[free_list];
-
+	
 	check_free_list(free_list);
-
-	hrow[k] = f->indy[i];
+	
+	hrow[k] = iRow;
 	PRESOLVEASSERT(rdone[hrow[k]] || hrow[k] == irow);
-	colels[k] = f->coly[i];
+	colels[k] = yValue;
 	link[k] = ystart;
 	ystart = k;
+	yValue *= multiplier;
+	if (!element1[iRow]) {
+	  element1[iRow]=yValue;
+	  index1[nX++]=iRow;
+	} else {
+	  element1[iRow]+=yValue;
+	}
       }
       mcstrt[jcoly] = ystart;
+      hincol[jcoly] = f->ncoly;
+      int xstart = NO_LINK;
+      int n=0;
+      for (i=0;i<nX;i++) {
+	int iRow = index1[i];
+	double xValue = element1[iRow];
+	element1[iRow]=0.0;
+	if (fabs(xValue)>=1.0e-12) {
+	  n++;
+	  CoinBigIndex k = free_list;
+	  free_list = link[free_list];
+	  
+	  check_free_list(free_list);
+	  
+	  hrow[k] = iRow;
+	  PRESOLVEASSERT(rdone[hrow[k]] || hrow[k] == irow);
+	  colels[k] = xValue;
+	  link[k] = xstart;
+	  xstart = k;
+	}
+      }
+      mcstrt[jcolx] = xstart;
+      assert(n);
+      hincol[jcolx] = n;
+      
+    } else {
+      // will use x
+      double multiplier = -coeffy/coeffx;
+      int * indx = (int *) (f->colel+f->ncolx);
+      //printf("Current colx %d\n",jcolx);
+      // find the tail 
+      CoinBigIndex k=mcstrt[jcolx];
+      int nX=0;
+      int i,iRow;
+      for (i=0; i<hincol[jcolx]-1; ++i) {
+	if (colels[k]) {
+	  iRow = hrow[k];
+	  index1[nX++]=iRow;
+	  element1[iRow]=multiplier*colels[k];
+	}
+	//printf("%d %d %g\n",i,hrow[k],colels[k]);
+	k = link[k];
+      }
+      iRow = hrow[k];
+      index1[nX++]=iRow;
+      element1[iRow]=multiplier*colels[k];
+      multiplier = - multiplier;
+      //printf("%d %d %g\n",i,hrow[k],colels[k]);
+      // append the old x column to the free list, freeing all links
+      link[k] = free_list;
+      free_list = mcstrt[jcolx];
+      //printf("Coly is %d row %d coeffx %g coeffy %g\n",
+      //     jcoly,f->row,f->coeffx,f->coeffy);
+      int xstart = NO_LINK;
+      for (i=0; i<f->ncolx; ++i) {
+	int iRow = indx[i];
+	double xValue = f->colel[i];
+	//printf("x %d %d %g\n",i,indx[i],f->colel[i]);
+	CoinBigIndex k = free_list;
+	free_list = link[free_list];
+	
+	check_free_list(free_list);
+	
+	hrow[k] = iRow;
+	PRESOLVEASSERT(rdone[hrow[k]] || hrow[k] == irow);
+	colels[k] = xValue;
+	link[k] = xstart;
+	xstart = k;
+	xValue *= multiplier;
+	if (!element1[iRow]) {
+	  element1[iRow]=xValue;
+	  index1[nX++]=iRow;
+	} else {
+	  element1[iRow]+=xValue;
+	}
+      }
+      mcstrt[jcolx] = xstart;
+      hincol[jcolx] = f->ncolx;
+      int ystart = NO_LINK;
+      int n=0;
+      for (i=0;i<nX;i++) {
+	int iRow = index1[i];
+	double yValue = element1[iRow];
+	element1[iRow]=0.0;
+	if (fabs(yValue)>=1.0e-12) {
+	  n++;
+	  CoinBigIndex k = free_list;
+	  free_list = link[free_list];
+	  
+	  check_free_list(free_list);
+	  
+	  hrow[k] = iRow;
+	  PRESOLVEASSERT(rdone[hrow[k]] || hrow[k] == irow);
+	  colels[k] = yValue;
+	  link[k] = ystart;
+	  ystart = k;
+	}
+      }
+      mcstrt[jcoly] = ystart;
+      assert(n);
+      hincol[jcoly] = n;
+	
     }
-
-    hincol[jcolx] = f->ncolx;
-    hincol[jcoly] = f->ncoly;
 
 
 
@@ -954,12 +1071,14 @@ void doubleton_action::postsolve(PostsolveMatrix *prob) const
     //
     // therefore, we must increase the row bounds by colels[kcoly] * rhs/coeffy,
     // which is similar to the bias
+    double djy = maxmin * dcost[jcoly];
+    coeffy=0.0;
+    double djx = maxmin * dcost[jcolx];
+    coeffx=0.0;
     {
       CoinBigIndex k = mcstrt[jcoly];
       int ny = hincol[jcoly];
-      double dj = maxmin * dcost[jcoly];
       double bounds_factor = rhs/coeffy;
-
       // this probably doesn't work (???)
 	    
       for (int i=0; i<ny; ++i) {
@@ -980,21 +1099,36 @@ void doubleton_action::postsolve(PostsolveMatrix *prob) const
 
 	  acts[row] += coeff * bounds_factor;
 
-	  dj -= rowduals[row] * coeff;
+	  djy -= rowduals[row] * coeff;
+	  //printf("a %d coeff %g dual %g dj %g\n",
+	  // row,coeff,rowduals[row],dj);
+	} else {
+	  coeffy=coeff;
+	}
+      }
+      k = mcstrt[jcolx];
+      int nx = hincol[jcolx];
+	    
+      for (int i=0; i<nx; ++i) {
+	int row = hrow[k];
+	double coeff = colels[k];
+	k = link[k];
+
+	if (row != irow) {
+	  djx -= rowduals[row] * coeff;
+	  //printf("a %d coeff %g dual %g dj %g\n",
+	  // row,coeff,rowduals[row],dj);
+	} else {
+	  coeffx=coeff;
 	}
       }
 
-      // this is the coefficient we need to force col y's reduced cost to 0.0;
-      // for example, this is obviously true if y is a singleton column
-      rowduals[irow] = dj / coeffy;
-      rcosts[jcoly] = 0.0;
-
-      // furthermore, this should leave rcosts[jcolx] unchanged.
     }
 
     // The only problem with keeping the reduced costs the way they were
     // was that the variable's bound may have moved, requiring it
     // to become basic.
+    //printf("djs x - %g (%g), y - %g (%g)\n",djx,coeffx,djy,coeffy);
     if (colstat) {
       if (prob->columnIsBasic(jcolx) ||
 	  (fabs(lo0 - sol[jcolx]) < ztolzb && rcosts[jcolx] >= -ztoldj) ||
@@ -1002,18 +1136,28 @@ void doubleton_action::postsolve(PostsolveMatrix *prob) const
 	// colx is fine as it is - make coly basic
 	
 	prob->setColumnStatus(jcoly,PrePostsolveMatrix::basic);
-	// col y's reduced costs has already been set to 0.0
+	// this is the coefficient we need to force col y's reduced cost to 0.0;
+	// for example, this is obviously true if y is a singleton column
+	rowduals[irow] = djy / coeffy;
+	rcosts[jcolx] = djx - rowduals[irow] * coeffx;
+	if (prob->columnIsBasic(jcolx))
+	  assert (fabs(rcosts[jcolx])<1.0e-5);
+	rcosts[jcoly] = 0.0;
       } else {
 	prob->setColumnStatus(jcolx,PrePostsolveMatrix::basic);
 	prob->setColumnStatusUsingValue(jcoly);
 
-	if (rcosts[jcolx] != 0.0) {
-	  // change rowduals[jcolx] enough to cancel out rcosts[jcolx]
-	  rowduals[irow] += (rcosts[jcolx] / coeffx);
-	  rcosts[jcoly] -= ((rcosts[jcolx] / coeffx) * coeffy);
-	  rcosts[jcolx] = 0.0;
-	}
+	// change rowduals[jcolx] enough to cancel out rcosts[jcolx]
+	rowduals[irow] = djx / coeffx;
+	rcosts[jcoly] = djy - rowduals[irow] * coeffy;
+	rcosts[jcolx] = 0.0;
       }
+    } else {
+      // No status array
+      // this is the coefficient we need to force col y's reduced cost to 0.0;
+      // for example, this is obviously true if y is a singleton column
+      rowduals[irow] = djy / coeffy;
+      rcosts[jcoly] = 0.0;
     }
 
       // DEBUG CHECK
@@ -1033,6 +1177,7 @@ void doubleton_action::postsolve(PostsolveMatrix *prob) const
 	if (! (fabs(rcosts[jcolx] - dj) < 100*ZTOLDP))
 	  printf("BAD DOUBLE X DJ:  %d %d %g %g\n",
 		 irow, jcolx, rcosts[jcolx], dj);
+	rcosts[jcolx]=dj;
       }
       {
 	CoinBigIndex k = mcstrt[jcoly];
@@ -1045,16 +1190,22 @@ void doubleton_action::postsolve(PostsolveMatrix *prob) const
 	  k = link[k];
 
 	  dj -= rowduals[row] * coeff;
+	  //printf("b %d coeff %g dual %g dj %g\n",
+	  // row,coeff,rowduals[row],dj);
 	}
 	if (! (fabs(rcosts[jcoly] - dj) < 100*ZTOLDP))
 	  printf("BAD DOUBLE Y DJ:  %d %d %g %g\n",
 		 irow, jcoly, rcosts[jcoly], dj);
+	rcosts[jcoly]=dj;
+	//exit(0);
       }
 #endif
 
     cdone[jcoly] = DOUBLETON;
     rdone[irow] = DOUBLETON;
   }
+  delete [] index1;
+  delete [] element1;
   prob->free_list_ = free_list;
 }
 
@@ -1062,10 +1213,7 @@ void doubleton_action::postsolve(PostsolveMatrix *prob) const
 doubleton_action::~doubleton_action()
 {
   for (int i=nactions_-1; i>=0; i--) {
-    delete[]actions_[i].colx;
-    delete[]actions_[i].indx;
-    delete[]actions_[i].coly;
-    delete[]actions_[i].indy;
+    delete[]actions_[i].colel;
   }
   deleteAction(actions_,action*);
 }

@@ -7,6 +7,7 @@
 
 
 class subst_constraint_action : public PresolveAction {
+public:
   struct action {
     int col;
     int rowx;
@@ -39,9 +40,12 @@ class subst_constraint_action : public PresolveAction {
   const char *name() const;
 
   static const PresolveAction *presolve(PresolveMatrix * prob,
-					 char *implied_free,
+					 int *implied_free,
 					 const PresolveAction *next,
 					int & fill_level);
+  static const PresolveAction *presolveX(PresolveMatrix * prob,
+				  const PresolveAction *next,
+				  int fillLevel);
 
   void postsolve(PostsolveMatrix *prob) const;
 
