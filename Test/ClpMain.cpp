@@ -672,7 +672,7 @@ ClpItem::printLongHelp() const
     printit(longHelp_.c_str());
   }
 }
-#ifdef READLINE     
+#ifdef COIN_USE_READLINE     
 #include <readline/readline.h>
 #include <readline/history.h>
 #endif
@@ -687,7 +687,7 @@ nextField()
   std::string field;
   if (!where) {
     // need new line
-#ifdef READLINE     
+#ifdef COIN_USE_READLINE     
     // Get a line from the user. 
     where = readline ("Clp:");
      
