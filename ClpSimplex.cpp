@@ -3559,10 +3559,10 @@ ClpSimplex::borrowModel(ClpModel & otherModel)
 {
   ClpModel::borrowModel(otherModel);
   createStatus();
-  ClpDualRowSteepest steep1;
-  setDualRowPivotAlgorithm(steep1);
-  ClpPrimalColumnSteepest steep2;
-  setPrimalColumnPivotAlgorithm(steep2);
+  //ClpDualRowSteepest steep1;
+  //setDualRowPivotAlgorithm(steep1);
+  //ClpPrimalColumnSteepest steep2;
+  //setPrimalColumnPivotAlgorithm(steep2);
 }
 void 
 ClpSimplex::borrowModel(ClpSimplex & otherModel) 

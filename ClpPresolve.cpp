@@ -1235,7 +1235,7 @@ CoinPostsolveMatrix::CoinPostsolveMatrix(ClpSimplex*  si,
   const CoinBigIndex nelemsr = m->getNumElements();
 
   ClpDisjointCopyN(m->getVectorStarts(), ncols1, mcstrt_);
-  CoinZeroN(mcstrt_+ncols_,ncols0_-ncols1);
+  CoinZeroN(mcstrt_+ncols1,ncols0_-ncols1);
   mcstrt_[ncols_] = nelems0;	// ??
   ClpDisjointCopyN(m->getVectorLengths(),ncols1,  hincol_);
   ClpDisjointCopyN(m->getIndices(),      nelemsr, hrow_);
