@@ -232,8 +232,10 @@ ClpFactorization::factorize ( ClpSimplex * model,
 	else
 	  numberElements=0;
 	lengthU_ = numberElements;
-	//CoinFillN(indexColumnU_,numberElements,-1);
-	preProcess ( 2 );
+	if (biasLU_>=3||numberRows_!=numberColumns_)
+	  preProcess ( 2 );
+	else
+	  preProcess ( 3 ); // no row copy
 	factor (  );
 	if (status_==-99) {
 	  // get more memory
