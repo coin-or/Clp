@@ -519,6 +519,11 @@ public:
   { userPointer_=pointer;};
   inline void * getUserPointer () const
   { return userPointer_;};
+  /// What has changed in model (only for masochistic users)
+  inline int whatsChanged() const 
+          { return whatsChanged_;} ;
+  inline void setWhatsChanged(int value)
+          { whatsChanged_ = value;} ;
   //@}
   /**@name Message handling */
   //@{
@@ -753,6 +758,7 @@ protected:
          64 - column objective not changed
         128 - column lbs not changed
         256 - column ubs not changed
+	512 - basis not changed (up to user to set this to 0)
 	      top bits may be used internally
   */
   unsigned int whatsChanged_;

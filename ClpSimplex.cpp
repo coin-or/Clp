@@ -5462,7 +5462,7 @@ ClpSimplex::startup(int ifValuesPass, int startFinishOptions)
 {
   // Get rid of some arrays and empty factorization
   int useFactorization=false;
-  if ((startFinishOptions&2)!=0)
+  if ((startFinishOptions&2)!=0&&(whatsChanged_&(2+512))==2+512)
     useFactorization=true; // Keep factorization if possible
   // sanity check
   // bad if empty (trap here to avoid using bad matrix_)

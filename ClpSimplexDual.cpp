@@ -3656,7 +3656,7 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
   // or we can just increment iBasic one by one
   // for now let ...iBasic give pivot row
   int useFactorization=false;
-  if ((startFinishOptions&2)!=0)
+  if ((startFinishOptions&2)!=0&&(whatsChanged_&(2+512))==2+512)
     useFactorization=true; // Keep factorization if possible
   if (!useFactorization||factorization_->numberRows()!=numberRows_) {
     useFactorization = false;
