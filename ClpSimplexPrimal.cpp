@@ -988,10 +988,21 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	problemStatus_ = 2;
       } 
     } else {
-      if(type==3&&problemStatus_!=-5)
-	unflag(); // odd
       // carry on
       problemStatus_ = -1;
+      if(type==3&&problemStatus_!=-5) {
+	//bool unflagged = 
+	unflag();
+	if (sumDualInfeasibilities_<1.0e-3&&!numberPrimalInfeasibilities_) {
+	  if (numberTimesOptimal_<4) {
+	    numberTimesOptimal_++;
+	    changeMade_++; // say change made
+	  } else {
+	    problemStatus_=0;
+	    secondaryStatus_=5;
+	  }
+	}
+      }
     }
   }
   // save extra stuff
