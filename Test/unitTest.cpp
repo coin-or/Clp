@@ -431,7 +431,8 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     }
     // intricate stuff does not work with scaling
     solution.scaling(0);
-    assert(!solution.factorize ( ));
+    int returnCode = solution.factorize ( );
+    assert(!returnCode);
     const double * colsol = solution.primalColumnSolution();
     const double * rowsol = solution.primalRowSolution();
     solution.getSolution(rowsol,colsol);
