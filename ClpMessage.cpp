@@ -54,7 +54,7 @@ static Clp_message us_english[]=
   {CLP_UNABLE_OPEN,6001,0,"Unable to open file %s for reading"},
   {CLP_BAD_BOUNDS,6002,0,"%d bad bound pairs or bad objectives were found - first at %c%d"},
   {CLP_BAD_MATRIX,6003,0,"Matrix has %d large values, first at column %d, row %d is %g"},
-  {CLP_LOOP,6004,0,"Can't get out of loop - stopping (Debug)"},
+  {CLP_LOOP,6004,0,"Can't get out of loop - stopping"},
   {CLP_DUPLICATEELEMENTS,26,1,"Matrix will be packed to eliminate %d duplicate elements"},
   {CLP_IMPORT_RESULT,27,1,"Model was imported from %s in %g seconds"},
   {CLP_IMPORT_ERRORS,3001,1," There were %d errors when importing model from %s"},

@@ -622,7 +622,15 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
   else
     loop=-1;
   if (loop>=0) {
-    problemStatus_ = loop; //exit if in loop
+    if (!problemStatus_) {
+      // declaring victory
+      numberPrimalInfeasibilities_ = 0;
+      sumPrimalInfeasibilities_ = 0.0;
+    } else {
+      problemStatus_ = loop; //exit if in loop 
+      problemStatus_ = 10; // instead - try other algorithm
+    }
+    problemStatus_ = 10; // instead - try other algorithm
     return ;
   } else if (loop<-1) {
     // Is it time for drastic measures
