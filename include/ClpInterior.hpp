@@ -21,13 +21,14 @@
 #include "ClpSolve.hpp"
 class ClpLsqr;
 class ClpPdcoBase;
-// ******** DATA to be moved into protected section of ClpInterior
+/// ******** DATA to be moved into protected section of ClpInterior
 typedef struct{
   double  atolmin;
   double  r3norm;
   double  LSdamp;
   double* deltay;
 } Info;
+/// ******** DATA to be moved into protected section of ClpInterior
 
 typedef struct{
   double  atolold;
@@ -36,6 +37,7 @@ typedef struct{
   int   istop;
   int   itncg;
 } Outfo;
+/// ******** DATA to be moved into protected section of ClpInterior
   
 typedef struct{
 double  gamma;
