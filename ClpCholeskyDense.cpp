@@ -222,7 +222,7 @@ ClpCholeskyDense::solve (double * region)
       double value = region[iColumn];
       for (int iRow=iColumn+1;iRow<numberRows_;iRow++)
 	value -= region[iRow]*work[iRow];
-      for (iRow=iColumn+1;iRow<numberRows_;iRow++)
+      for (int iRow=iColumn+1;iRow<numberRows_;iRow++)
 	if (rowsDropped_[iRow])
 	  assert(!work[iRow]||!region[iRow]);
       region[iColumn]=value/work[iColumn];
