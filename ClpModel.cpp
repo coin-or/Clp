@@ -412,7 +412,7 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
     columnLower_ = rhs.columnLower_;
     columnUpper_ = rhs.columnUpper_;
     matrix_ = rhs.matrix_;
-    rowCopy_ = rhs.rowCopy_;
+    rowCopy_ = NULL;
     quadraticObjective_ = rhs.quadraticObjective_;
     ray_ = rhs.ray_;
     lengthNames_ = 0;

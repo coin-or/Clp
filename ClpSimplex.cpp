@@ -669,18 +669,26 @@ int ClpSimplex::internalFactorize ( int solveType)
 	  case atUpperBound:
 	    columnActivityWork_[iColumn]=columnUpperWork_[iColumn];
 	    if (columnActivityWork_[iColumn]>largeValue_) {
-	      //assert(columnLowerWork_[iColumn]>-largeValue_);
-	      columnActivityWork_[iColumn]=columnLowerWork_[iColumn];
-	      setColumnStatus(iColumn,atLowerBound);
+	      if (columnLowerWork_[iColumn]<-largeValue_) {
+		columnActivityWork_[iColumn]=0.0;
+		setColumnStatus(iColumn,isFree);
+	      } else {
+		columnActivityWork_[iColumn]=columnLowerWork_[iColumn];
+		setColumnStatus(iColumn,atLowerBound);
+	      }
 	    }
 	    break;
 	  case atLowerBound:
 	  case ClpSimplex::isFixed:
 	    columnActivityWork_[iColumn]=columnLowerWork_[iColumn];
 	    if (columnActivityWork_[iColumn]<-largeValue_) {
-	      //assert(columnUpperWork_[iColumn]<largeValue_);
-	      columnActivityWork_[iColumn]=columnUpperWork_[iColumn];
-	      setColumnStatus(iColumn,atUpperBound);
+	      if (columnUpperWork_[iColumn]>largeValue_) {
+		columnActivityWork_[iColumn]=0.0;
+		setColumnStatus(iColumn,isFree);
+	      } else {
+		columnActivityWork_[iColumn]=columnUpperWork_[iColumn];
+		setColumnStatus(iColumn,atUpperBound);
+	      }
 	    }
 	    break;
 	  case isFree:
@@ -984,6 +992,23 @@ int ClpSimplex::internalFactorize ( int solveType)
 	}
 	// signal repeat
 	status=-99;
+	// set fixed if they are
+	for (iRow=0;iRow<numberRows_;iRow++) {
+	  if (getRowStatus(iRow)!=basic ) {
+	    if (rowLowerWork_[iRow]==rowUpperWork_[iRow]) {
+	      rowActivityWork_[iRow]=rowLowerWork_[iRow];
+	      setRowStatus(iRow,isFixed);
+	    }
+	  }
+	}
+	for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+	  if (getColumnStatus(iColumn)!=basic ) {
+	    if (columnLowerWork_[iColumn]==columnUpperWork_[iColumn]) {
+	      columnActivityWork_[iColumn]=columnLowerWork_[iColumn];
+	      setColumnStatus(iColumn,isFixed);
+	    }
+	  }
+	}
       }
     }
   } 
@@ -4090,6 +4115,7 @@ ClpSimplex::finish()
 {
   // Get rid of some arrays and empty factorization
   deleteRim();
+  assert(problemStatus_>=0&&problemStatus_<5);
   handler_->message(CLP_SIMPLEX_FINISHED+problemStatus_,messages_)
     <<objectiveValue()
     <<CoinMessageEol;
