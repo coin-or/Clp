@@ -266,8 +266,8 @@ Idiot::IdiSolve(
         if (solExtra[extraBlock]>difference) solExtra[extraBlock]=difference;
 	costExtra[extraBlock]=lambda[i]*value;
 	upperExtra[extraBlock]=difference;
-	rowExtra[extraBlock++]=i;
 	rowsol[i]+=value*solExtra[extraBlock];
+	rowExtra[extraBlock++]=i;
       }
     }
   }

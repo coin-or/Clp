@@ -210,6 +210,8 @@ int main (int argc, const char *argv[])
       abort();
     }
   }
+  // Can't use read_param as private
+  // anyway I want automatic use - so maybe this is problem
 #if 0
   FILE* infile = fopen("parameters", "r");
   if (!infile) {
@@ -218,16 +220,23 @@ int main (int argc, const char *argv[])
     volprob.read_params("parameters");
   }
 #endif
-  // should save and restore
+#if 0
+  // should save and restore bounds
   model.tightenPrimalBounds();
+#else
+  double * colUpper = model.columnUpper();
+  for (i=0;i<psize;i++)
+    colUpper[i]=1.0;
+#endif
   lpHook myHook(model.getColLower(), model.getColUpper(),
 		model.getObjCoefficients(),
 		rhs, sense, *mat);
-
   // move duals
   double * pi = model.dualRowSolution();
   memcpy(volprob.dsol.v,pi,dsize*sizeof(double));
   volprob.solve(myHook,  false /* not warmstart */);
+  // For now stop as not doing any good
+  exit(77);
   // create objectives
   int numberRows = model.numberRows();
   int numberColumns = model.numberColumns();

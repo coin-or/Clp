@@ -58,7 +58,9 @@ public:
   /** which translation is:
       which:
       0 - startup in Dual  (nothing if basis exists).:
-                   0 - no basis, 1 crash
+                   0 - no basis
+		   1 - crash
+		   2 - use initiative about idiot! but no crash
       1 - startup in Primal (nothing if basis exists):
                    0 - use initiative
 		   1 - use crash

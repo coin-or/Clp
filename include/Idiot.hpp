@@ -143,7 +143,7 @@ public:
   { return logLevel_;};
   inline void setLogLevel(int value)
   { logLevel_ = value;};
-  /// How lightweight - 0 not, 1 yes
+  /// How lightweight - 0 not, 1 yes, 2 very lightweight
   inline int getLightweight() const
   { return lightWeight_;};
   inline void setLightweight(int value)

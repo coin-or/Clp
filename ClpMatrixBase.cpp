@@ -120,3 +120,15 @@ ClpMatrixBase::appendRows(int number, const CoinPackedVectorBase * const * rows)
   std::cerr<<"appendRows not supported - ClpMatrixBase"<<std::endl;
   abort();
 }
+/* Returns largest and smallest elements of both signs.
+   Largest refers to largest absolute value.
+*/
+void 
+ClpMatrixBase::rangeOfElements(double & smallestNegative, double & largestNegative,
+		       double & smallestPositive, double & largestPositive)
+{
+  smallestNegative=0.0;
+  largestNegative=0.0;
+  smallestPositive=0.0;
+  largestPositive=0.0;
+}

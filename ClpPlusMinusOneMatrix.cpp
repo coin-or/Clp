@@ -221,6 +221,16 @@ ClpPlusMinusOneMatrix::ClpPlusMinusOneMatrix (
     int numberMajor = (columnOrdered_) ? numberColumns_ : numberRows_;
     int numberMinor1 = (!columnOrdered_) ? rhs.numberColumns_ : rhs.numberRows_;
     int numberMajor1 = (columnOrdered_) ? rhs.numberColumns_ : rhs.numberRows_;
+    // Also swap incoming if not column ordered
+    if (!columnOrdered_) {
+      int temp1 = numberRows;
+      numberRows = numberColumns;
+      numberColumns = temp1;
+      const int * temp2;
+      temp2 = whichRow;
+      whichRow = whichColumn;
+      whichColumn = temp2;
+    }
     // Throw exception if rhs empty
     if (numberMajor1 <= 0 || numberMinor1 <= 0)
       throw CoinError("empty rhs", "subset constructor", "ClpPlusMinusOneMatrix");
@@ -1437,4 +1447,35 @@ ClpPlusMinusOneMatrix::appendRows(int number, const CoinPackedVectorBase * const
   delete [] countPositive;
   delete [] countNegative;
   numberRows_ += number;
+}
+/* Returns largest and smallest elements of both signs.
+   Largest refers to largest absolute value.
+*/
+void 
+ClpPlusMinusOneMatrix::rangeOfElements(double & smallestNegative, double & largestNegative,
+		       double & smallestPositive, double & largestPositive)
+{
+  int iColumn;
+  bool plusOne=false;
+  bool minusOne=false;
+  for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+    if (startNegative_[iColumn]>startPositive_[iColumn])
+      plusOne=true;
+    if (startPositive_[iColumn+1]>startNegative_[iColumn])
+      minusOne=true;
+  }
+  if (minusOne) {
+    smallestNegative=-1.0;
+    largestNegative=-1.0;
+  } else {
+    smallestNegative=0.0;
+    largestNegative=0.0;
+  }
+  if (plusOne) {
+    smallestPositive=1.0;
+    largestPositive=1.0;
+  } else {
+    smallestPositive=0.0;
+    largestPositive=0.0;
+  }
 }

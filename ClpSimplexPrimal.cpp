@@ -188,8 +188,8 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
   // Save so can see if doing after dual
   int initialStatus=problemStatus_;
   // initialize - maybe values pass and algorithm_ is +1
-    if (!startup(ifValuesPass)) {
-
+  if (!startup(ifValuesPass)) {
+    
     int lastCleaned=0; // last time objective or bounds cleaned up
     
     // Say no pivot has occurred (for steepest edge and updates)
@@ -215,6 +215,12 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
 	handler_->message()<<CoinMessageEol;
       }
     }
+    ClpSimplex * saveModel=NULL;
+    int stopSprint=-1;
+    int sprintPass=0;
+    int reasonableSprintIteration=0;
+    int lastSprintIteration=0;
+    double lastObjectiveValue=COIN_DBL_MAX;
     /*
       Status of problem:
       0 - optimal
@@ -249,8 +255,112 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
       // If we have done no iterations - special
       if (lastGoodIteration_==numberIterations_&&factorType)
 	factorType=3;
+      if (saveModel) {
+	// Doing sprint
+	if (sequenceIn_<0||numberIterations_>=stopSprint) {
+	  problemStatus_=-1;
+	  originalModel(saveModel);
+	  saveModel=NULL;
+	  if (sequenceIn_<0&&numberIterations_<reasonableSprintIteration&&
+	      sprintPass>100)
+	    primalColumnPivot_->switchOffSprint();
+	  //lastSprintIteration=numberIterations_;
+	  printf("End small model\n");
+	}
+      }
+	  
       // may factorize, checks if problem finished
-      statusOfProblemInPrimal(lastCleaned,factorType,progress_);
+      statusOfProblemInPrimal(lastCleaned,factorType,progress_,true,saveModel);
+      // See if sprint says redo beacuse of problems
+      if (numberDualInfeasibilities_==-776) {
+	// Need new set of variables
+	problemStatus_=-1;
+	originalModel(saveModel);
+	saveModel=NULL;
+	//lastSprintIteration=numberIterations_;
+	printf("End small model after\n");
+	statusOfProblemInPrimal(lastCleaned,factorType,progress_,true,saveModel);
+      } 
+      int numberSprintIterations=0;
+      int numberSprintColumns = primalColumnPivot_->numberSprintColumns(numberSprintIterations);
+      if (problemStatus_==777) {
+	// problems so do one pass with normal
+	problemStatus_=-1;
+	originalModel(saveModel);
+	saveModel=NULL;
+	// Skip factorization
+	//statusOfProblemInPrimal(lastCleaned,factorType,progress_,false,saveModel);
+	statusOfProblemInPrimal(lastCleaned,factorType,progress_,true,saveModel);
+      } else if (problemStatus_<0&&!saveModel&&numberSprintColumns&&firstFree_<0) {
+	int numberSort=0;
+	int numberFixed=0;
+	int numberBasic=0;
+	reasonableSprintIteration = numberIterations_ + 100;
+	int * whichColumns = new int[numberColumns_];
+	double * weight = new double[numberColumns_];
+	int numberNegative=0;
+	double sumNegative = 0.0;
+	// now massage weight so all basic in plus good djs
+	for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+	  double dj = dj_[iColumn];
+	  switch(getColumnStatus(iColumn)) {
+	    
+	  case basic:
+	    dj = -1.0e50;
+	    numberBasic++;
+	    break;
+	  case atUpperBound:
+	    dj = -dj;
+	    break;
+	  case isFixed:
+	    dj=1.0e50;
+	    numberFixed++;
+	    break;
+	  case atLowerBound:
+	    dj = dj;
+	    break;
+	  case isFree:
+	    dj = -100.0*fabs(dj);
+	      break;
+	  case superBasic:
+	    dj = -100.0*fabs(dj);
+	    break;
+	  }
+	  if (dj<-dualTolerance_&&dj>-1.0e50) {
+	    numberNegative++;
+	    sumNegative -= dj;
+	  }
+	  weight[iColumn]=dj;
+	  whichColumns[iColumn] = iColumn;
+	}
+	handler_->message(CLP_SPRINT,messages_)
+	  <<sprintPass<<numberIterations_-lastSprintIteration<<objectiveValue()<<sumNegative
+	  <<numberNegative
+	  <<CoinMessageEol;
+	sprintPass++;
+	lastSprintIteration=numberIterations_;
+	if (objectiveValue()*optimizationDirection_>lastObjectiveValue-1.0e-7&&sprintPass>5) {
+	  // switch off
+	  printf("Switching off sprint\n");
+	  primalColumnPivot_->switchOffSprint();
+	} else {
+	  lastObjectiveValue = objectiveValue()*optimizationDirection_;
+	  // sort
+	  CoinSort_2(weight,weight+numberColumns_,whichColumns);
+	  numberSort = min(numberColumns_-numberFixed,numberBasic+numberSprintColumns);
+	  // Sort to make consistent ?
+	  std::sort(whichColumns,whichColumns+numberSort);
+	  saveModel = new ClpSimplex(this,numberSort,whichColumns);
+	  delete [] whichColumns;
+	  delete [] weight;
+	  // Skip factorization
+	  //statusOfProblemInPrimal(lastCleaned,factorType,progress_,false,saveModel);
+	  //statusOfProblemInPrimal(lastCleaned,factorType,progress_,true,saveModel);
+	  stopSprint = numberIterations_+numberSprintIterations;
+	  printf("Sprint with %d columns for %d iterations\n",
+		 numberSprintColumns,numberSprintIterations);
+	}
+      }
       
       // Say good factorization
       factorType=1;
@@ -432,6 +542,7 @@ ClpSimplexPrimal::whileIterating(int valuesOption)
 void 
 ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 					  ClpSimplexProgress * progress,
+					  bool doFactorization,
 					  ClpSimplex * originalModel)
 {
   if (type==2) {
@@ -453,9 +564,10 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
     // also we could skip if first time
     // do weights
     // This may save pivotRow_ for use 
+    if (doFactorization)
     primalColumnPivot_->saveWeights(this,1);
 
-    if (type) {
+    if (type&&doFactorization) {
       // is factorization okay?
       if (internalFactorize(1)) {
 	if (solveType_==2) {
@@ -544,6 +656,11 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
     sumDualInfeasibilities_ = 0.0;
     numberPrimalInfeasibilities_ = 0;
     sumPrimalInfeasibilities_ = 0.0;
+    // But check if in sprint
+    if (originalModel) {
+      // Carry on and re-do
+      numberDualInfeasibilities_ = -776;
+    }
   }
   // had ||(type==3&&problemStatus_!=-5) -- ??? why ????
   if (dualFeasible()||problemStatus_==-4) {
@@ -756,18 +873,20 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	   numberRows_*sizeof(double));
     memcpy(savedSolution_ ,columnActivityWork_,numberColumns_*sizeof(double));
   }
-  // restore weights (if saved) - also recompute infeasibility list
-  if (tentativeStatus>-3) 
-    primalColumnPivot_->saveWeights(this,(type <2) ? 2 : 4);
-  else
-    primalColumnPivot_->saveWeights(this,3);
+  if (doFactorization) {
+    // restore weights (if saved) - also recompute infeasibility list
+    if (tentativeStatus>-3) 
+      primalColumnPivot_->saveWeights(this,(type <2) ? 2 : 4);
+    else
+      primalColumnPivot_->saveWeights(this,3);
+    if (saveThreshold) {
+      // use default at present
+      factorization_->sparseThreshold(0);
+      factorization_->goSparse();
+    }
+  }
   if (problemStatus_<0&&!changeMade_) {
     problemStatus_=4; // unknown
-  }
-  if (saveThreshold) {
-    // use default at present
-    factorization_->sparseThreshold(0);
-    factorization_->goSparse();
   }
   lastGoodIteration_ = numberIterations_;
   if (goToDual) 
@@ -1411,8 +1530,10 @@ ClpSimplexPrimal::perturb(int type)
       last=sort[i];
     }
     delete [] sort;
-    if (number*4>numberRows_)
+    if (number*4>numberRows_) {
+      perturbation_=100;
       return; // good enough
+    }
   }
   // primal perturbation
   double perturbation=1.0e-20;
@@ -1842,9 +1963,9 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	    int lastCleaned;
 	    ClpSimplexProgress dummyProgress;
 	    if (saveStatus_)
-	      statusOfProblemInPrimal(lastCleaned,1,&dummyProgress);
+	      statusOfProblemInPrimal(lastCleaned,1,&dummyProgress,true);
 	    else
-	      statusOfProblemInPrimal(lastCleaned,0,&dummyProgress);
+	      statusOfProblemInPrimal(lastCleaned,0,&dummyProgress,true);
 	    roundAgain=true;
 	    continue;
 	  }
@@ -1893,9 +2014,9 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	  int lastCleaned;
 	  ClpSimplexProgress dummyProgress;
 	  if (saveStatus_)
-	    statusOfProblemInPrimal(lastCleaned,1,&dummyProgress);
+	    statusOfProblemInPrimal(lastCleaned,1,&dummyProgress,true);
 	  else
-	    statusOfProblemInPrimal(lastCleaned,0,&dummyProgress);
+	    statusOfProblemInPrimal(lastCleaned,0,&dummyProgress,true);
 	  roundAgain=true;
 	  continue;
 	} else {
@@ -1977,9 +2098,9 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
     int lastCleaned;
     ClpSimplexProgress dummyProgress;
     if (saveStatus_)
-      statusOfProblemInPrimal(lastCleaned,1,&dummyProgress);
+      statusOfProblemInPrimal(lastCleaned,1,&dummyProgress,true);
     else
-      statusOfProblemInPrimal(lastCleaned,0,&dummyProgress);
+      statusOfProblemInPrimal(lastCleaned,0,&dummyProgress,true);
     if (problemStatus_==5) {
       printf("Singular basis\n");
       problemStatus_=-1;

@@ -132,8 +132,12 @@ Idiot::crash(int numberPass, CoinMessageHandler * handler,const CoinMessages *me
     mu_= max(1.0e-3,sum*1.0e-5);
   if (!lightWeight_) {
     maxIts2_=105;
-  } else {
+  } else if (lightWeight_==1) {
     mu_ *= 10.0;
+    maxIts2_=23;
+  } else if (lightWeight_==2) {
+    maxIts2_=11;
+  } else {
     maxIts2_=23;
   }
   //printf("setting mu to %g and doing %d passes\n",mu_,majorIterations_);
@@ -411,7 +415,7 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
     }
     if (iteration>50&&n==numberAway&&result.infeas<1.0e-4)
       break; // not much happening
-    if (lightWeight_&&iteration>10&&result.infeas>1.0) {
+    if (lightWeight_==1&&iteration>10&&result.infeas>1.0) {
       if (lastInfeas!=bestInfeas&&min(result.infeas,lastInfeas)>0.95*bestInfeas)
 	break; // not getting feasible
     }
@@ -986,6 +990,7 @@ Idiot::Idiot()
   baseIts *= 10;
   maxIts2_ =200+baseIts+5;
   reasonableInfeas_ =((double) nrows)*0.05;
+  lightWeight_=0;
 }
 // Constructor from model
 Idiot::Idiot(OsiSolverInterface &model)
@@ -1024,6 +1029,7 @@ Idiot::Idiot(OsiSolverInterface &model)
   baseIts *= 10;
   maxIts2_ =200+baseIts+5;
   reasonableInfeas_ =((double) nrows)*0.05;
+  lightWeight_=0;
 }
 // Copy constructor. 
 Idiot::Idiot(const Idiot &rhs)
@@ -1057,6 +1063,7 @@ Idiot::Idiot(const Idiot &rhs)
   lambdaIterations_ = rhs.lambdaIterations_;
   maxIts2_ = rhs.maxIts2_;
   strategy_ = rhs.strategy_;
+  lightWeight_=rhs.lightWeight_;
 }
 // Assignment operator. This copies the data
 Idiot & 
@@ -1093,6 +1100,7 @@ Idiot::operator=(const Idiot & rhs)
     lambdaIterations_ = rhs.lambdaIterations_;
     maxIts2_ = rhs.maxIts2_;
     strategy_ = rhs.strategy_;
+    lightWeight_=rhs.lightWeight_;
   }
   return *this;
 }

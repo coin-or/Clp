@@ -27,7 +27,7 @@ int main (int argc, const char *argv[])
 
   double time1 = CoinCpuTime();
   /*
-    This driver show how to do presolve.
+    This driver shows how to do presolve.
   */
   ClpSimplex * model2;
   ClpPresolve pinfo;

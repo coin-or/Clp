@@ -182,6 +182,8 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
   int switchType;
   if (mode_==4) 
     switchType = 5-numberSwitched_;
+  else if (mode_>=10)
+    switchType=3;
   else
     switchType = mode_;
   /* switchType - 
@@ -191,6 +193,7 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
      3 - auto some exact devex
      4 - devex
      5 - dantzig
+     10 - can go to mini-sprint
   */
   if (updates->getNumElements()) {
     // would have to have two goes for devex, three for steepest
@@ -348,7 +351,7 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
     // Go to steepest if lot of iterations?
     if (ratio<1.0) {
       numberWanted = max(2000,number/20);
-    } else if (ratio<2.0) {
+    } else if (ratio<4.0) {
       numberWanted = max(2000,number/10);
       numberWanted = max(numberWanted,numberColumns/20);
     } else {
@@ -394,9 +397,9 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
 	}
       }
     }
-    if (model_->numberIterations()%1000==0)
-    printf("numels %d ratio %g wanted %d type %d\n",numberElements,ratio,numberWanted,
-    switchType);
+    //if (model_->numberIterations()%1000==0)
+    //printf("numels %d ratio %g wanted %d type %d\n",numberElements,ratio,numberWanted,
+    //switchType);
   }
 
 
@@ -510,7 +513,7 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
   /*if (model_->numberIterations()%100==0)
     printf("%d best %g\n",bestSequence,bestDj);*/
   
-#ifdef CLP_DEBUG
+#ifndef NDEBUG
   if (bestSequence>=0) {
     if (model_->getStatus(bestSequence)==ClpSimplex::atLowerBound)
       assert(model_->reducedCost(bestSequence)<0.0);
@@ -1298,93 +1301,94 @@ ClpPrimalColumnSteepest::djsAndDevex2(CoinIndexedVector * updates,
   int sequenceIn = model_->sequenceIn();
   infeasible_->zero(sequenceIn);
   // for weights update we use pivotSequence
-  assert (pivotSequence_>=0);
-  pivotRow = pivotSequence_;
-  // unset in case sub flip
-  pivotSequence_=-1;
-  // make sure infeasibility on incoming is 0.0
-  const int * pivotVariable = model_->pivotVariable();
-  sequenceIn = pivotVariable[pivotRow];
-  infeasible_->zero(sequenceIn);
-  // and we can see if reference
-  double referenceIn=0.0;
-  if (mode_!=1&&reference(sequenceIn))
-    referenceIn=1.0;
-  // save outgoing weight round update
-  double outgoingWeight=0.0;
-  int sequenceOut = model_->sequenceOut();
-  if (sequenceOut>=0)
-    outgoingWeight=weights_[sequenceOut];
-  // update weights
-  updates->setNumElements(0);
-  spareColumn1->setNumElements(0);
-  // might as well set dj to 1
-  dj = 1.0;
-  updates->insert(pivotRow,-dj);
-  model_->factorization()->updateColumnTranspose(spareRow2,updates);
-  // put row of tableau in rowArray and columnArray
-  model_->clpMatrix()->transposeTimes(model_,-1.0,
-				      updates,spareColumn2,spareColumn1);
-  double * weight;
-  int numberColumns = model_->numberColumns();
-  double scaleFactor = -1.0/dj; // as formula is with 1.0
-  // rows
-  number = updates->getNumElements();
-  index = updates->getIndices();
-  updateBy = updates->denseVector();
-  weight = weights_+numberColumns;
-  
-  assert (devex_>0.0);
-  for (j=0;j<number;j++) {
-    int iSequence = index[j];
-    double thisWeight = weight[iSequence];
-    // row has -1 
-    double pivot = updateBy[iSequence]*scaleFactor;
-    updateBy[iSequence]=0.0;
-    double value = pivot * pivot*devex_;
-    if (reference(iSequence+numberColumns))
-      value += 1.0;
-    weight[iSequence] = max(0.99*thisWeight,value);
-  }
-  
-  // columns
-  weight = weights_;
-  
-  scaleFactor = -scaleFactor;
-  
-  number = spareColumn1->getNumElements();
-  index = spareColumn1->getIndices();
-  updateBy = spareColumn1->denseVector();
-  for (j=0;j<number;j++) {
-    int iSequence = index[j];
-    double thisWeight = weight[iSequence];
-    // row has -1 
-    double pivot = updateBy[iSequence]*scaleFactor;
-    updateBy[iSequence]=0.0;
-    double value = pivot * pivot*devex_;
-    if (reference(iSequence))
-      value += 1.0;
-    weight[iSequence] = max(0.99*thisWeight,value);
-  }
-  // restore outgoing weight
-  if (sequenceOut>=0)
-    weights_[sequenceOut]=outgoingWeight;
-  spareColumn2->setNumElements(0);
-  //#define SOME_DEBUG_1
+  if (pivotSequence_>=0) {
+    pivotRow = pivotSequence_;
+    // unset in case sub flip
+    pivotSequence_=-1;
+    // make sure infeasibility on incoming is 0.0
+    const int * pivotVariable = model_->pivotVariable();
+    sequenceIn = pivotVariable[pivotRow];
+    infeasible_->zero(sequenceIn);
+    // and we can see if reference
+    double referenceIn=0.0;
+    if (mode_!=1&&reference(sequenceIn))
+      referenceIn=1.0;
+    // save outgoing weight round update
+    double outgoingWeight=0.0;
+    int sequenceOut = model_->sequenceOut();
+    if (sequenceOut>=0)
+      outgoingWeight=weights_[sequenceOut];
+    // update weights
+    updates->setNumElements(0);
+    spareColumn1->setNumElements(0);
+    // might as well set dj to 1
+    dj = 1.0;
+    updates->insert(pivotRow,-dj);
+    model_->factorization()->updateColumnTranspose(spareRow2,updates);
+    // put row of tableau in rowArray and columnArray
+    model_->clpMatrix()->transposeTimes(model_,-1.0,
+					updates,spareColumn2,spareColumn1);
+    double * weight;
+    int numberColumns = model_->numberColumns();
+    double scaleFactor = -1.0/dj; // as formula is with 1.0
+    // rows
+    number = updates->getNumElements();
+    index = updates->getIndices();
+    updateBy = updates->denseVector();
+    weight = weights_+numberColumns;
+    
+    assert (devex_>0.0);
+    for (j=0;j<number;j++) {
+      int iSequence = index[j];
+      double thisWeight = weight[iSequence];
+      // row has -1 
+      double pivot = updateBy[iSequence]*scaleFactor;
+      updateBy[iSequence]=0.0;
+      double value = pivot * pivot*devex_;
+      if (reference(iSequence+numberColumns))
+	value += 1.0;
+      weight[iSequence] = max(0.99*thisWeight,value);
+    }
+    
+    // columns
+    weight = weights_;
+    
+    scaleFactor = -scaleFactor;
+    
+    number = spareColumn1->getNumElements();
+    index = spareColumn1->getIndices();
+    updateBy = spareColumn1->denseVector();
+    for (j=0;j<number;j++) {
+      int iSequence = index[j];
+      double thisWeight = weight[iSequence];
+      // row has -1 
+      double pivot = updateBy[iSequence]*scaleFactor;
+      updateBy[iSequence]=0.0;
+      double value = pivot * pivot*devex_;
+      if (reference(iSequence))
+	value += 1.0;
+      weight[iSequence] = max(0.99*thisWeight,value);
+    }
+    // restore outgoing weight
+    if (sequenceOut>=0)
+      weights_[sequenceOut]=outgoingWeight;
+    spareColumn2->setNumElements(0);
+    //#define SOME_DEBUG_1
 #ifdef SOME_DEBUG_1
-  // check for accuracy
-  int iCheck=229;
-  //printf("weight for iCheck is %g\n",weights_[iCheck]);
-  int numberRows = model_->numberRows();
-  //int numberColumns = model_->numberColumns();
-  for (iCheck=0;iCheck<numberRows+numberColumns;iCheck++) {
-    if (model_->getStatus(iCheck)!=ClpSimplex::basic&&
-	!model_->getStatus(iCheck)!=ClpSimplex::isFixed)
-      checkAccuracy(iCheck,1.0e-1,updates,spareRow2);
-  }
+    // check for accuracy
+    int iCheck=229;
+    //printf("weight for iCheck is %g\n",weights_[iCheck]);
+    int numberRows = model_->numberRows();
+    //int numberColumns = model_->numberColumns();
+    for (iCheck=0;iCheck<numberRows+numberColumns;iCheck++) {
+      if (model_->getStatus(iCheck)!=ClpSimplex::basic&&
+	  !model_->getStatus(iCheck)!=ClpSimplex::isFixed)
+	checkAccuracy(iCheck,1.0e-1,updates,spareRow2);
+    }
 #endif
-  updates->setNumElements(0);
-  spareColumn1->setNumElements(0);
+    updates->setNumElements(0);
+    spareColumn1->setNumElements(0);
+  }
 }
 // Update djs, weights for Steepest
 void 
@@ -1530,7 +1534,7 @@ ClpPrimalColumnSteepest::djsAndSteepest2(CoinIndexedVector * updates,
     updateBy = updates->denseVector();
     weight = weights_+numberColumns;
     
-    if (mode_<4||numberSwitched_>1) {
+    if (mode_<4||numberSwitched_>1||mode_>=10) {
       // Exact
       // now update weight update array
       model_->factorization()->updateColumnTranspose(spareRow2,
@@ -1583,7 +1587,7 @@ ClpPrimalColumnSteepest::djsAndSteepest2(CoinIndexedVector * updates,
     number = spareColumn1->getNumElements();
     index = spareColumn1->getIndices();
     updateBy = spareColumn1->denseVector();
-    if (mode_<4||numberSwitched_>1) {
+    if (mode_<4||numberSwitched_>1||mode_>=10) {
       // Exact
       // get subset which have nonzero tableau elements
       model_->clpMatrix()->subsetTransposeTimes(model_,alternateWeights_,
@@ -1940,6 +1944,8 @@ ClpPrimalColumnSteepest::pivotColumnOldMethod(CoinIndexedVector * updates,
   int switchType;
   if (mode_==4) 
     switchType = 5-numberSwitched_;
+  else if (mode_>=10)
+    switchType=3;
   else
     switchType = mode_;
   /* switchType - 
@@ -3255,10 +3261,27 @@ ClpPrimalColumnSteepest::looksOptimal() const
 int 
 ClpPrimalColumnSteepest::numberSprintColumns(int & numberIterations) const
 {
-  return 0;
+  numberIterations=0;
+  int numberAdd=0;
+  if (!numberSwitched_&&mode_>=10) {
+    numberIterations = min(2000,model_->numberRows()/5);
+    numberIterations = max(numberIterations,model_->factorizationFrequency());
+    numberIterations = max(numberIterations,500);
+    if (mode_==10) {
+      numberAdd=max(300,model_->numberColumns()/10);
+      numberAdd=max(numberAdd,model_->numberRows()/5);
+      // fake all
+      //numberAdd=1000000;
+      numberAdd = min(numberAdd,model_->numberColumns());
+    } else {
+      abort();
+    }
+  }
+  return numberAdd;
 }
 // Switch off sprint idea
 void 
 ClpPrimalColumnSteepest::switchOffSprint()
 {
+  numberSwitched_=10;
 }

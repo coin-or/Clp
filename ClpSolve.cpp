@@ -75,6 +75,92 @@ ClpSimplex::initialSolve(ClpSolve & options)
     // network - switch off stuff
     presolve = ClpSolve::presolveOff;
   }
+  // For below >0 overrides
+  // 0 means no, -1 means maybe
+  int doIdiot=0;
+  int doCrash=0;
+  int doSprint=0;
+  if (method!=ClpSolve::useDual) {
+    switch (options.getSpecialOption(1)) {
+    case 0:
+      doIdiot=-1;
+      doCrash=-1;
+      doSprint=-1;
+      break;
+    case 1:
+      doIdiot=0;
+      doCrash=1;
+      doSprint=0;
+      break;
+    case 2:
+      doIdiot=1;
+      doCrash=0;
+      doSprint=0;
+      break;
+    case 3:
+      doIdiot=0;
+      doCrash=0;
+      doSprint=1;
+      break;
+    case 4:
+      doIdiot=0;
+      doCrash=0;
+      doSprint=0;
+      break;
+    case 5:
+      doIdiot=0;
+      doCrash=-1;
+      doSprint=-1;
+      break;
+    case 6:
+      doIdiot=-1;
+      doCrash=-1;
+      doSprint=0;
+      break;
+    case 7:
+      doIdiot=-1;
+      doCrash=0;
+      doSprint=-1;
+      break;
+    case 8:
+      doIdiot=-1;
+      doCrash=0;
+      doSprint=0;
+      break;
+    case 9:
+      doIdiot=0;
+      doCrash=0;
+      doSprint=-1;
+      break;
+    default:
+      abort();
+    }
+  } else {
+    // Dual
+    switch (options.getSpecialOption(0)) {
+    case 0:
+      doIdiot=0;
+      doCrash=0;
+      doSprint=0;
+      break;
+    case 1:
+      doIdiot=0;
+      doCrash=1;
+      doSprint=0;
+      break;
+    case 2:
+      doIdiot=-1;
+      if (options.getExtraInfo(0)>0)
+	doIdiot = options.getExtraInfo(0);
+      doCrash=0;
+      doSprint=0;
+      break;
+    default:
+      abort();
+    }
+  }
+  // Just do this number of passes in Sprint
+  int maxSprintPass=100;
 
   if (presolve!=ClpSolve::presolveOff) {
     int numberPasses=5;
@@ -91,15 +177,6 @@ ClpSimplex::initialSolve(ClpSolve & options)
       <<CoinMessageEol;
     timeX=time2;
     if (model2) {
-      if (method==ClpSolve::useDual) {
-	int numberInfeasibilities = model2->tightenPrimalBounds();
-	if (numberInfeasibilities) {
-	  handler_->message(CLP_INFEASIBLE,messages_)
-	    <<CoinMessageEol;
-	  model2 = this;
-	  presolve=ClpSolve::presolveOff;
-	}
-      }
     } else {
       handler_->message(CLP_INFEASIBLE,messages_)
 	<<CoinMessageEol;
@@ -120,65 +197,6 @@ ClpSimplex::initialSolve(ClpSolve & options)
   // See if worth trying +- one matrix
   bool plusMinus=false;
   int numberElements=model2->getNumElements();
-  // For below >0 overrides
-  // 0 means no, -1 means maybe
-  int doIdiot=0;
-  int doCrash=0;
-  int doSprint=0;
-  switch (options.getSpecialOption(1)) {
-  case 0:
-    doIdiot=-1;
-    doCrash=-1;
-    doSprint=-1;
-    break;
-  case 1:
-    doIdiot=0;
-    doCrash=1;
-    doSprint=0;
-    break;
-  case 2:
-    doIdiot=1;
-    doCrash=0;
-    doSprint=0;
-    break;
-  case 3:
-    doIdiot=0;
-    doCrash=0;
-    doSprint=1;
-    break;
-  case 4:
-    doIdiot=0;
-    doCrash=0;
-    doSprint=0;
-    break;
-  case 5:
-    doIdiot=0;
-    doCrash=-1;
-    doSprint=-1;
-    break;
-  case 6:
-    doIdiot=-1;
-    doCrash=-1;
-    doSprint=0;
-    break;
-  case 7:
-    doIdiot=-1;
-    doCrash=0;
-    doSprint=-1;
-    break;
-  case 8:
-    doIdiot=-1;
-    doCrash=0;
-    doSprint=0;
-    break;
-  case 9:
-    doIdiot=0;
-    doCrash=0;
-    doSprint=-1;
-    break;
-  default:
-    abort();
-  }
   if (dynamic_cast< ClpNetworkMatrix*>(matrix_)) {
     // network - switch off stuff
     doIdiot=0;
@@ -200,7 +218,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
   if (options.getSpecialOption(3)==0) {
     if(numberElements>100000)
       plusMinus=true;
-    if(numberElements>10000&&((doIdiot||doSprint)&&method==ClpSolve::usePrimal)) 
+    if(numberElements>10000&&(doIdiot||doSprint)) 
       plusMinus=true;
   }
   if (plusMinus) {
@@ -230,17 +248,132 @@ ClpSimplex::initialSolve(ClpSolve & options)
   }
   if (method==ClpSolve::usePrimalorSprint) {
     if (doSprint<0) { 
-      if(numberRows*10>numberColumns||numberColumns<6000
-	 ||(numberRows*20>numberColumns&&!plusMinus))
-	method=ClpSolve::usePrimal; // switch off sprint
+      if (numberElements<500000) {
+	// Small problem
+	if(numberRows*10>numberColumns||numberColumns<6000
+	   ||(numberRows*20>numberColumns&&!plusMinus))
+	  method=ClpSolve::usePrimal; // switch off sprint
+      } else {
+	// larger problem
+	if(numberRows*8>numberColumns)
+	  method=ClpSolve::usePrimal; // switch off sprint
+	// but make lightweight
+	if(numberRows*10>numberColumns||numberColumns<6000
+	   ||(numberRows*20>numberColumns&&!plusMinus))
+	  maxSprintPass=5;
+      }
     } else if (doSprint==0) {
       method=ClpSolve::usePrimal; // switch off sprint
     }
   }
   if (method==ClpSolve::useDual) {
-    if (options.getSpecialOption(0)!=0)
+    // pick up number passes
+    int nPasses=0;
+    int numberNotE=0;
+    if ((doIdiot<0&&plusMinus)||doIdiot>0) {
+      // See if candidate for idiot
+      nPasses=0;
+      Idiot info(*model2);
+      // Get average number of elements per column
+      double ratio  = ((double) numberElements/(double) numberColumns);
+      // look at rhs
+      int iRow;
+      double largest=0.0;
+      double smallest = 1.0e30;
+      double largestGap=0.0;
+      for (iRow=0;iRow<numberRows;iRow++) {
+	double value1 = model2->rowLower_[iRow];
+	if (value1&&value1>-1.0e31) {
+	  largest = max(largest,fabs(value1));
+	  smallest=min(smallest,fabs(value1));
+	}
+	double value2 = model2->rowUpper_[iRow];
+	if (value2&&value2<1.0e31) {
+	  largest = max(largest,fabs(value2));
+	  smallest=min(smallest,fabs(value2));
+	}
+	if (value2>value1) {
+	  numberNotE++;
+	  if (value2>1.0e31||value1<-1.0e31)
+	    largestGap = COIN_DBL_MAX;
+	  else
+	    largestGap = value2-value1;
+	}
+      }
+      if (doIdiot<0) {
+	if (numberRows>200&&numberColumns>5000&&ratio>=3.0&&
+	    largest/smallest<1.1&&!numberNotE) {
+	  nPasses = 71;
+	}
+      } 
+      if (doIdiot>0) {
+	nPasses=max(nPasses,doIdiot);
+	if (nPasses>70) 
+	  info.setStartingWeight(1.0e3);
+      }
+      if (nPasses) {
+	info.setReduceIterations(5);
+	doCrash=0;
+	info.crash(nPasses,model2->messageHandler(),model2->messagesPointer());
+	time2 = CoinCpuTime();
+	timeIdiot = time2-timeX;
+	handler_->message(CLP_INTERVAL_TIMING,messages_)
+	  <<"Idiot Crash"<<timeIdiot<<time2-time1
+	  <<CoinMessageEol;
+	timeX=time2;
+      }
+    }
+    int numberInfeasibilities = model2->tightenPrimalBounds();
+    if (numberInfeasibilities) {
+      handler_->message(CLP_INFEASIBLE,messages_)
+	<<CoinMessageEol;
+      model2 = this;
+      presolve=ClpSolve::presolveOff;
+    }
+    if (options.getSpecialOption(0)==1)
       model2->crash(1000,1);
-    model2->dual();
+    if (!nPasses) {
+      model2->dual(0);
+    } else if (!numberNotE&&0) {
+      // E so we can do in another way
+      double * pi = model2->dualRowSolution();
+      int i;
+      int numberColumns = model2->numberColumns();
+      int numberRows = model2->numberRows();
+      double * saveObj = new double[numberColumns];
+      memcpy(saveObj,model2->objective(),numberColumns*sizeof(double));
+      memcpy(model2->dualColumnSolution(),model2->objective(),
+	     numberColumns*sizeof(double));
+      model2->clpMatrix()->transposeTimes(-1.0,pi,model2->dualColumnSolution());
+      memcpy(model2->objective(),model2->dualColumnSolution(),
+	     numberColumns*sizeof(double));
+      const double * rowsol = model2->primalRowSolution();
+      double offset=0.0;
+      for (i=0;i<numberRows;i++) {
+	offset += pi[i]*rowsol[i];
+      }
+      double value2;
+      model2->getDblParam(ClpObjOffset,value2);
+      printf("Offset %g %g\n",offset,value2);
+      model2->setRowObjective(pi);
+      // zero out pi
+      memset(pi,0,numberRows*sizeof(double));
+      // Could put some in basis - only partially tested
+      model2->allSlackBasis(); 
+      model2->factorization()->maximumPivots(200);
+      //model2->setLogLevel(63);
+      // solve
+      model2->dual(1);
+      memcpy(model2->objective(),saveObj,numberColumns*sizeof(double));
+      // zero out pi
+      memset(pi,0,numberRows*sizeof(double));
+      model2->setRowObjective(pi);
+      delete [] saveObj;
+      model2->primal();
+    } else {
+      // solve
+      model2->dual(1);
+    }
     time2 = CoinCpuTime();
     timeCore = time2-timeX;
     handler_->message(CLP_INTERVAL_TIMING,messages_)
@@ -361,6 +494,15 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	if (nPasses>70) {
 	  info.setStartingWeight(1.0e3);
 	  info.setReduceIterations(6);
+	} else if (nPasses>=50) {
+	  info.setStartingWeight(1.0e3);
+	  //info.setReduceIterations(6);
+	} 
+	// For experimenting
+	if (nPasses<70&&(nPasses%10)>0&&(nPasses%10)<4) {
+	  info.setStartingWeight(1.0e3);
+	  info.setLightweight(nPasses%10); // special testing
+	  //info.setReduceIterations(6);
 	}
       }
       if (nPasses) {
@@ -378,7 +520,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
     // ?
     if (doCrash)
       model2->crash(1000,1);
-    model2->primal(2);
+    model2->primal(1);
     time2 = CoinCpuTime();
     timeCore = time2-timeX;
     timeSimplex = timeCore;
@@ -527,10 +669,9 @@ ClpSimplex::initialSolve(ClpSolve & options)
     int numberColumns = model2->numberColumns();
     double * fullSolution = model2->primalColumnSolution();
     
-    // Just do this number of passes
-    int maxPass=100;
+    // Just do this number of passes in Sprint
     if (doSprint>0)
-      maxPass=options.getExtraInfo(1);
+      maxSprintPass=options.getExtraInfo(1);
     int iPass;
     double lastObjective=1.0e31;
     // It will be safe to allow dense
@@ -549,7 +690,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
     double originalOffset;
     model2->getDblParam(ClpObjOffset,originalOffset);
     int totalIterations=0;
-    for (iPass=0;iPass<maxPass;iPass++) {
+    for (iPass=0;iPass<maxSprintPass;iPass++) {
       //printf("Bug until submodel new version\n");
       //CoinSort_2(sort,sort+numberSort,weight);
       // Create small problem
@@ -631,7 +772,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	<<CoinMessageEol;
       if ((small.objectiveValue()*optimizationDirection_>lastObjective-1.0e-7&&iPass>5)||
 	  !small.numberIterations()||
-	  iPass==maxPass-1||small.status()==3) {
+	  iPass==maxSprintPass-1||small.status()==3) {
 	
 	break; // finished
       } else {

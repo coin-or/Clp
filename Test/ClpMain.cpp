@@ -1172,6 +1172,7 @@ specialized network code."
     parameters[numberParameters-1].append("part!ial");
     parameters[numberParameters-1].append("steep!est");
     parameters[numberParameters-1].append("change");
+    parameters[numberParameters-1].append("sprint");
     parameters[numberParameters-1].setLonghelp
       (
        "Clp can use any pivot selection algorithm which the user codes as long as it\
@@ -1253,8 +1254,8 @@ costs this much to be infeasible",
     parameters[numberParameters-1].setStringValue(saveFile);
     parameters[numberParameters++]=
       ClpItem("scal!ing","Whether to scale problem",
-	      "on",SCALING);
-    parameters[numberParameters-1].append("off");
+	      "off",SCALING);
+    parameters[numberParameters-1].append("equi!librium");
     parameters[numberParameters-1].append("geo!metric");
     parameters[numberParameters-1].append("auto!matic");
     parameters[numberParameters-1].setLonghelp
@@ -1264,6 +1265,7 @@ costs this much to be infeasible",
  of elements is small.  When unscaled it is possible that there may be small primal and/or\
  infeasibilities."
        ); 
+    parameters[numberParameters-1].setCurrentOption(3); // say auto
     parameters[numberParameters++]=
       ClpItem("sec!onds","maximum seconds",
 	      0.0,1.0e12,MAXTIME);
@@ -1520,13 +1522,13 @@ costs this much to be infeasible",
 	      } else if (action==5) {
 		ClpPrimalColumnSteepest steep(4);
 		models[iModel].setPrimalColumnPivotAlgorithm(steep);
+	      } else if (action==6) {
+		ClpPrimalColumnSteepest steep(10);
+		models[iModel].setPrimalColumnPivotAlgorithm(steep);
 	      }
 	      break;
 	    case SCALING:
-	      if (action<2)
-		models[iModel].scaling(1-action);
-	      else
-		models[iModel].scaling(action);
+	      models[iModel].scaling(action);
 	      break;
 	    case SPARSEFACTOR:
 	      models[iModel].setSparseFactorization((1-action)!=0);
@@ -1592,6 +1594,8 @@ costs this much to be infeasible",
 		// dual
 		if (doCrash)
 		  solveOptions.setSpecialOption(0,1); // crash
+		else if (doIdiot)
+		  solveOptions.setSpecialOption(0,2,doIdiot); // possible idiot
 	      } else {
 		// primal
 		if (doCrash) {

@@ -76,6 +76,11 @@ public:
       Returns weights vector
   */
   virtual CoinBigIndex * dubiousWeights(const ClpSimplex * model,int * inputWeights) const;
+  /** Returns largest and smallest elements of both signs.
+      Largest refers to largest absolute value.
+  */
+  virtual void rangeOfElements(double & smallestNegative, double & largestNegative,
+		       double & smallestPositive, double & largestPositive);
   /** Unpacks a column into an CoinIndexedvector
    */
   virtual void unpack(const ClpSimplex * model,CoinIndexedVector * rowArray,

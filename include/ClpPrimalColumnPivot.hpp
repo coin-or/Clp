@@ -111,9 +111,9 @@ public:
   /** Returns number of extra columns for sprint algorithm - 0 means off.
       Also number of iterations before recompute
   */
-  int numberSprintColumns(int & numberIterations) const;
+  virtual int numberSprintColumns(int & numberIterations) const;
   /// Switch off sprint idea
-  void switchOffSprint();
+  virtual void switchOffSprint();
   
   //@}
 

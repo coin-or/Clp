@@ -112,9 +112,9 @@ public:
   /** Returns number of extra columns for sprint algorithm - 0 means off.
       Also number of iterations before recompute
   */
-  int numberSprintColumns(int & numberIterations) const;
+  virtual int numberSprintColumns(int & numberIterations) const;
   /// Switch off sprint idea
-  void switchOffSprint();
+  virtual void switchOffSprint();
   
  //@}
 
@@ -189,7 +189,10 @@ private:
       4 starts as partial dantzig/devex but then may switch between 0 and 2.
       By partial exact devex is meant that the weights are updated as normal
       but only part of the nonbasic variables are scanned.  
-      This can be faster on very easy problems.*/
+      This can be faster on very easy problems.
+
+      New dubious option is >=10 which does mini-sprint
+  */
   int mode_;
   /// Number of times switched from partial dantzig to 0/2
   int numberSwitched_;

@@ -98,6 +98,11 @@ public:
   virtual bool allElementsInRange(ClpModel * model,
 				  double smallest, double largest)
   { return true;};
+  /** Returns largest and smallest elements of both signs.
+      Largest refers to largest absolute value.
+      If returns zeros then can't tell anything */
+  virtual void rangeOfElements(double & smallestNegative, double & largestNegative,
+		       double & smallestPositive, double & largestPositive);
 
   /** Unpacks a column into an CoinIndexedvector
    */

@@ -60,7 +60,7 @@ public:
     superBasic = 0x04,
     isFixed = 0x05
   };
-
+  // For Dual
   enum FakeBound {
     noFake = 0x00,
     bothFake = 0x01,
@@ -704,6 +704,7 @@ public:
   { status_[sequence] &= ~32; };
   inline bool pivoted(int sequence) const
   {return (((status_[sequence]>>5)&1)!=0);};
+  /// To flag a variable
   inline void setFlagged( int sequence)
   {
     status_[sequence] |= 64;
@@ -713,7 +714,18 @@ public:
     status_[sequence] &= ~64;
   };
   inline bool flagged(int sequence) const
-  {return (((status_[sequence]>>6)&1)!=0);};
+  {return ((status_[sequence]&64)!=0);};
+  /// To say variable active in primal pivot row choice
+  inline void setActive( int sequence)
+  {
+    status_[sequence] |= 128;
+  };
+  inline void clearActive( int sequence)
+  {
+    status_[sequence] &= ~128;
+  };
+  inline bool active(int sequence) const
+  {return ((status_[sequence]&128)!=0);};
   /** Set up status array (can be used by OsiClp).
       Also can be used to set up all slack basis */
   void createStatus() ;

@@ -2670,6 +2670,7 @@ ClpSimplex::tightenPrimalBounds(double factor)
 #include "ClpSimplexPrimal.hpp"
 int ClpSimplex::dual (int ifValuesPass )
 {
+  assert (ifValuesPass>=0&&ifValuesPass<2);
   int returnCode = ((ClpSimplexDual *) this)->dual(ifValuesPass);
   if (problemStatus_==10) {
     //printf("Cleaning up with primal\n");
@@ -2687,6 +2688,7 @@ int ClpSimplex::dual (int ifValuesPass )
 // primal 
 int ClpSimplex::primal (int ifValuesPass )
 {
+  assert (ifValuesPass>=0&&ifValuesPass<2);
   int returnCode = ((ClpSimplexPrimal *) this)->primal(ifValuesPass);
   if (problemStatus_==10) {
     //printf("Cleaning up with dual\n");
@@ -3228,7 +3230,7 @@ ClpSimplex::sanityCheck()
   smallestObj=1.0e100;
   largestObj=0.0;
   // If bounds are too close - fix
-  double fixTolerance = 1.1*primalTolerance_;
+  double fixTolerance = 10.0*primalTolerance_;
   for (i=numberColumns_;i<numberColumns_+numberRows_;i++) {
     double value;
     value = fabs(cost_[i]);
@@ -3501,7 +3503,7 @@ ClpSimplex::crash(double gap,int pivot)
   int numberBasic=0;
   double dualTolerance=dblParam_[ClpDualTolerance];
   //double primalTolerance=dblParam_[ClpPrimalTolerance];
-
+  int returnCode=0;
   // If no basis then make all slack one
   if (!status_)
     createStatus();
@@ -3510,10 +3512,8 @@ ClpSimplex::crash(double gap,int pivot)
     if (getColumnStatus(iColumn)==basic)
       numberBasic++;
   }
-  if (numberBasic) {
-    // not all slack
-    return 0;
-  } else {
+  if (!numberBasic) {
+    // all slack
     double * dj = new double [numberColumns_];
     double * solution = columnActivity_;
     const double * linearObjective = objective();
@@ -3573,7 +3573,7 @@ ClpSimplex::crash(double gap,int pivot)
     if (numberBad||pivot) {
       if (!pivot) {
 	delete [] dj;
-	return 1;
+	returnCode = 1;
       } else {
 	// see if can be made dual feasible with gubs etc
 	double * pi = new double[numberRows_];
@@ -3922,13 +3922,15 @@ ClpSimplex::crash(double gap,int pivot)
 	  <<numberIn
 	  <<numberBad
 	  <<CoinMessageEol;
-	return -1;
+	returnCode =  -1;
       }
     } else {
       delete [] dj;
-      return -1;
+      returnCode =  -1;
     }
+    //cleanStatus();
   }
+  return returnCode;
 }
 /* Pivot in a variable and out a variable.  Returns 0 if okay,
    1 if inaccuracy forced re-factorization, -1 if would be singular.
@@ -4704,6 +4706,7 @@ ClpSimplex::ClpSimplex (ClpSimplex * wholeModel,
 {
 
   // Set up dummy row selection list
+  numberRows_ = wholeModel->numberRows_;
   int * whichRow = new int [numberRows_];
   int iRow;
   for (iRow=0;iRow<numberRows_;iRow++)
@@ -4712,6 +4715,7 @@ ClpSimplex::ClpSimplex (ClpSimplex * wholeModel,
   matrix_ = wholeModel->matrix_;
   rowCopy_ = wholeModel->rowCopy_;
   if (wholeModel->rowCopy_) {
+    // note reversal of order
     wholeModel->rowCopy_ = wholeModel->rowCopy_->subsetClone(numberRows_,whichRow,
 							     numberColumns,whichColumns);
   } else {
@@ -4721,23 +4725,32 @@ ClpSimplex::ClpSimplex (ClpSimplex * wholeModel,
   wholeModel->matrix_ = wholeModel->matrix_->subsetClone(numberRows_,whichRow,
 					numberColumns,whichColumns);
   delete [] whichRow;
+  numberColumns_ = wholeModel->numberColumns_;
   // Now ClpSimplex stuff and status_
   ClpPrimalColumnSteepest * steep =
     dynamic_cast< ClpPrimalColumnSteepest*>(wholeModel->primalColumnPivot_);
+#ifdef NDEBUG
+  if (!steep)
+    abort();
+#else
   assert (steep);
-  primalColumnPivot_ = wholeModel->primalColumnPivot_;
+#endif
+  delete  wholeModel->primalColumnPivot_;
   wholeModel->primalColumnPivot_ = new ClpPrimalColumnSteepest(0);
   nonLinearCost_ = wholeModel->nonLinearCost_;
 
   // Now main arrays
   int iColumn;
   int numberTotal = numberRows_+numberColumns;
+  printf("%d %d %d\n",numberTotal,numberRows_,numberColumns);
   // mapping 
   int * mapping = new int[numberRows_+numberColumns_];
   for (iColumn=0;iColumn<numberColumns_;iColumn++) 
     mapping[iColumn]=-1;
   for (iRow=0;iRow<numberRows_;iRow++) 
     mapping[iRow+numberColumns_] = iRow+numberColumns;
+  // Redo costs and bounds of whole model
+  wholeModel->createRim(5,false);
   lower_ = wholeModel->lower_;
   wholeModel->lower_ = new double [numberTotal];
   memcpy(wholeModel->lower_+numberColumns,lower_+numberColumns_,numberRows_*sizeof(double));
@@ -4747,16 +4760,28 @@ ClpSimplex::ClpSimplex (ClpSimplex * wholeModel,
     // and pointer back 
     mapping[jColumn]=iColumn;
   }
+#ifdef CLP_DEBUG
+  for (iColumn=0;iColumn<numberRows_+numberColumns_;iColumn++) 
+    printf("mapx %d %d\n",iColumn,mapping[iColumn]);
+#endif
   // Re-define pivotVariable_
   for (iRow=0;iRow<numberRows_;iRow++) {
-    int iPivot = pivotVariable_[iRow];
-    pivotVariable_[iRow]=mapping[iPivot];
+    int iPivot = wholeModel->pivotVariable_[iRow];
+    wholeModel->pivotVariable_[iRow]=mapping[iPivot];
+#ifdef CLP_DEBUG
+    printf("p row %d, pivot %d -> %d\n",iRow,iPivot,mapping[iPivot]);
+#endif
+    assert (wholeModel->pivotVariable_[iRow]>=0);
   }
   // Reverse mapping (so extended version of whichColumns)
-  int iBig;
-  for (iColumn=0;iColumn<numberTotal;iColumn++) 
-    if (mapping[iColumn]>=0)
-      mapping[iBig++]=iColumn;
+  for (iColumn=0;iColumn<numberColumns;iColumn++) 
+    mapping[iColumn]=whichColumns[iColumn];
+  for (;iColumn<numberRows_+numberColumns;iColumn++) 
+    mapping[iColumn] = iColumn + (numberColumns_-numberColumns);
+#ifdef CLP_DEBUG
+  for (iColumn=0;iColumn<numberRows_+numberColumns;iColumn++) 
+    printf("map %d %d\n",iColumn,mapping[iColumn]);
+#endif
   // Save mapping somewhere - doesn't matter
   rowUpper_ = (double *) mapping;
   upper_ = wholeModel->upper_;
@@ -4783,10 +4808,44 @@ ClpSimplex::ClpSimplex (ClpSimplex * wholeModel,
     int jColumn = mapping[iColumn];
     wholeModel->solution_[iColumn]=solution_[jColumn];
   }
+  // now see what variables left out do to row solution
+  double * rowSolution = wholeModel->solution_+numberColumns;
+  double * fullSolution = solution_;
+  double * sumFixed = new double[numberRows_];
+  memset (sumFixed,0,numberRows_*sizeof(double));
+  // zero out ones in small problem
+  for (iColumn=0;iColumn<numberColumns;iColumn++) {
+    int jColumn = mapping[iColumn];
+    fullSolution[jColumn]=0.0;
+  }
+  // Get objective offset
+  double originalOffset;
+  wholeModel->getDblParam(ClpObjOffset,originalOffset);
+  double offset=0.0;
+  const double * cost = cost_;
+  for (iColumn=0;iColumn<numberColumns_;iColumn++) 
+    offset += fullSolution[iColumn]*cost[iColumn];
+  wholeModel->setDblParam(ClpObjOffset,originalOffset-offset);
+  setDblParam(ClpObjOffset,originalOffset);
+  matrix_->times(1.0,fullSolution,sumFixed,wholeModel->rowScale_,wholeModel->columnScale_);
+      
+  double * lower = lower_+numberColumns;
+  double * upper = upper_+numberColumns;
+  double fixed=0.0;
+  for (iRow=0;iRow<numberRows_;iRow++) {
+    fixed += fabs(sumFixed[iRow]);
+    if (lower[iRow]>-1.0e50) 
+      lower[iRow] -= sumFixed[iRow];
+    if (upper[iRow]<1.0e50)
+      upper[iRow] -= sumFixed[iRow];
+    rowSolution[iRow] -= sumFixed[iRow];
+  }
+  printf("offset %g sumfixed %g\n",offset,fixed);
+  delete [] sumFixed;
   columnScale_ = wholeModel->columnScale_;
   if (columnScale_) {
     wholeModel->columnScale_ = new double [numberTotal];
-    for (iColumn=0;iColumn<numberTotal;iColumn++) {
+    for (iColumn=0;iColumn<numberColumns;iColumn++) {
       int jColumn = mapping[iColumn];
       wholeModel->columnScale_[iColumn]=columnScale_[jColumn];
     }
@@ -4814,78 +4873,189 @@ ClpSimplex::ClpSimplex (ClpSimplex * wholeModel,
     }
   }
   
-  
-  numberColumns_ = wholeModel->numberColumns_;
   wholeModel->numberColumns_ = numberColumns;
   // Initialize weights
-  wholeModel->primalColumnPivot_->saveWeights(wholeModel,5);
+  wholeModel->primalColumnPivot_->saveWeights(wholeModel,2);
   // Costs
   wholeModel->nonLinearCost_ = new ClpNonLinearCost(wholeModel);
+  wholeModel->nonLinearCost_->checkInfeasibilities();
+  printf("after contraction %d infeasibilities summing to %g\n",
+	 nonLinearCost_->numberInfeasibilities(),nonLinearCost_->sumInfeasibilities());
+  // Redo some stuff
+  wholeModel->reducedCostWork_ = wholeModel->dj_;
+  wholeModel->rowReducedCost_ = wholeModel->dj_+wholeModel->numberColumns_;
+  wholeModel->columnActivityWork_ = wholeModel->solution_;
+  wholeModel->rowActivityWork_ = wholeModel->solution_+wholeModel->numberColumns_;
+  wholeModel->objectiveWork_ = wholeModel->cost_;
+  wholeModel->rowObjectiveWork_ = wholeModel->cost_+wholeModel->numberColumns_;
+  wholeModel->rowLowerWork_ = wholeModel->lower_+wholeModel->numberColumns_;
+  wholeModel->columnLowerWork_ = wholeModel->lower_;
+  wholeModel->rowUpperWork_ = wholeModel->upper_+wholeModel->numberColumns_;
+  wholeModel->columnUpperWork_ = wholeModel->upper_;
+#ifndef NDEBUG
+  // Check status
+  ClpSimplex * xxxx = wholeModel;
+  int nBasic=0;
+  for (iColumn=0;iColumn<xxxx->numberRows_+xxxx->numberColumns_;iColumn++)
+    if (xxxx->getStatus(iColumn)==basic)
+      nBasic++;
+  assert (nBasic==xxxx->numberRows_);
+  for (iRow=0;iRow<xxxx->numberRows_;iRow++) {
+    int iPivot=xxxx->pivotVariable_[iRow];
+    assert (xxxx->getStatus(iPivot)==basic);
+  }
+#endif
 }
 /* This copies back stuff from miniModel and then deletes miniModel.
    Only to be used with mini constructor */
 void 
 ClpSimplex::originalModel(ClpSimplex * miniModel)
 {
-  int numberSmall = miniModel->numberColumns_;
+  int numberSmall = numberColumns_;
+  numberColumns_ = miniModel->numberColumns_;
   int numberTotal = numberSmall+numberRows_;
   // copy back
   int iColumn;
   int * mapping = (int *) miniModel->rowUpper_;
+#ifdef CLP_DEBUG
+  for (iColumn=0;iColumn<numberRows_+numberColumns_;iColumn++) 
+    printf("mapb %d %d\n",iColumn,mapping[iColumn]);
+#endif
+  // miniModel actually has full arrays
+  // now see what variables left out do to row solution
+  double * fullSolution = miniModel->solution_;
+  double * sumFixed = new double[numberRows_];
+  memset (sumFixed,0,numberRows_*sizeof(double));
+  miniModel->matrix_->times(1.0,fullSolution,sumFixed,rowScale_,miniModel->columnScale_);
+      
   for (iColumn=0;iColumn<numberTotal;iColumn++) {
     int jColumn = mapping[iColumn];
-    lower_[jColumn]=miniModel->lower_[iColumn];
+    miniModel->lower_[jColumn]=lower_[iColumn];
+    miniModel->upper_[jColumn]=upper_[iColumn];
+    miniModel->cost_[jColumn]=cost_[iColumn];
+    miniModel->dj_[jColumn]=dj_[iColumn];
+    miniModel->solution_[jColumn]=solution_[iColumn];
+    miniModel->status_[jColumn]=status_[iColumn];
+#ifdef CLP_DEBUG
+    printf("%d in small -> %d in original\n",iColumn,jColumn);
+#endif
   }
-  delete [] miniModel->lower_;
-  for (iColumn=0;iColumn<numberTotal;iColumn++) {
-    int jColumn = mapping[iColumn];
-    upper_[jColumn]=miniModel->upper_[iColumn];
-  }
-  delete [] miniModel->upper_;
-  for (iColumn=0;iColumn<numberTotal;iColumn++) {
-    int jColumn = mapping[iColumn];
-    cost_[jColumn]=miniModel->cost_[iColumn];
-  }
-  delete [] miniModel->cost_;
-  for (iColumn=0;iColumn<numberTotal;iColumn++) {
-    int jColumn = mapping[iColumn];
-    dj_[jColumn]=miniModel->dj_[iColumn];
-  }
-  delete [] miniModel->dj_;
-  for (iColumn=0;iColumn<numberTotal;iColumn++) {
-    int jColumn = mapping[iColumn];
-    solution_[jColumn]=miniModel->solution_[iColumn];
-  }
-  delete [] miniModel->solution_;
-  for (iColumn=0;iColumn<numberTotal;iColumn++) {
-    int jColumn = mapping[iColumn];
-    status_[jColumn]=miniModel->status_[iColumn];
-  }
-  delete [] miniModel->status_;
+  delete [] lower_;
+  lower_ =  miniModel->lower_;
+  delete [] upper_;
+  upper_ =  miniModel->upper_;
+  delete [] cost_;
+  cost_ =  miniModel->cost_;
+  delete [] dj_;
+  dj_ =  miniModel->dj_;
+  delete [] solution_;
+  solution_ =  miniModel->solution_;
+  delete [] status_;
+  status_ =  miniModel->status_;
   if (columnScale_) {
-    for (iColumn=0;iColumn<numberTotal;iColumn++) {
+    for (iColumn=0;iColumn<numberSmall;iColumn++) {
       int jColumn = mapping[iColumn];
-      columnScale_[jColumn]=miniModel->columnScale_[iColumn];
+      miniModel->columnScale_[jColumn]=columnScale_[iColumn];
     }
-    delete [] miniModel->columnScale_;
+    delete [] columnScale_;
+    columnScale_ =  miniModel->columnScale_;
   }
   if (savedSolution_) {
-    for (iColumn=0;iColumn<numberTotal;iColumn++) {
-      int jColumn = mapping[iColumn];
-      savedSolution_[jColumn]=miniModel->savedSolution_[iColumn];
+    if (!miniModel->savedSolution_) {
+      miniModel->savedSolution_ = ClpCopyOfArray(solution_,numberColumns_+numberRows_);
+    } else {
+      for (iColumn=0;iColumn<numberTotal;iColumn++) {
+	int jColumn = mapping[iColumn];
+	miniModel->savedSolution_[jColumn]=savedSolution_[iColumn];
+      }
     }
+    delete [] savedSolution_;
+    savedSolution_ =  miniModel->savedSolution_;
   }
-  delete [] miniModel->savedSolution_;
   if (saveStatus_) {
-    for (iColumn=0;iColumn<numberTotal;iColumn++) {
-      int jColumn = mapping[iColumn];
-      saveStatus_[jColumn]=miniModel->saveStatus_[iColumn];
+    if (!miniModel->saveStatus_) {
+      miniModel->saveStatus_ = ClpCopyOfArray(status_,numberColumns_+numberRows_);
+    } else {
+      for (iColumn=0;iColumn<numberTotal;iColumn++) {
+	int jColumn = mapping[iColumn];
+	miniModel->saveStatus_[jColumn]=saveStatus_[iColumn];
+      }
+    }
+    delete [] saveStatus_;
+    saveStatus_ =  miniModel->saveStatus_;
+  }
+  // Re-define pivotVariable_
+  int iRow;
+  for (iRow=0;iRow<numberRows_;iRow++) {
+    int iPivot = pivotVariable_[iRow];
+#ifdef CLP_DEBUG
+    printf("pb row %d, pivot %d -> %d\n",iRow,iPivot,mapping[iPivot]);
+#endif
+    pivotVariable_[iRow]=mapping[iPivot];
+    assert (pivotVariable_[iRow]>=0);
+  }
+  // delete stuff and move back
+  delete matrix_;
+  delete rowCopy_;
+  delete primalColumnPivot_;
+  delete nonLinearCost_;
+  matrix_ = miniModel->matrix_;
+  rowCopy_ = miniModel->rowCopy_;
+  nonLinearCost_ = miniModel->nonLinearCost_;
+  double originalOffset;
+  miniModel->getDblParam(ClpObjOffset,originalOffset);
+  setDblParam(ClpObjOffset,originalOffset);
+  // Redo some stuff
+  reducedCostWork_ = dj_;
+  rowReducedCost_ = dj_+numberColumns_;
+  columnActivityWork_ = solution_;
+  rowActivityWork_ = solution_+numberColumns_;
+  objectiveWork_ = cost_;
+  rowObjectiveWork_ = cost_+numberColumns_;
+  rowLowerWork_ = lower_+numberColumns_;
+  columnLowerWork_ = lower_;
+  rowUpperWork_ = upper_+numberColumns_;
+  columnUpperWork_ = upper_;
+  // Cleanup
+  for (iRow=0;iRow<numberRows_;iRow++) {
+    double value = rowActivityWork_[iRow] + sumFixed[iRow];
+    rowActivityWork_[iRow] = value;
+    switch(getRowStatus(iRow)) {
+      
+    case basic:
+      break;
+    case atUpperBound:
+      //rowActivityWork_[iRow]=rowUpperWork_[iRow];
+      break;
+    case ClpSimplex::isFixed:
+    case atLowerBound:
+      //rowActivityWork_[iRow]=rowLowerWork_[iRow];
+      break;
+    case isFree:
+      break;
+      // superbasic
+    case superBasic:
+      break;
     }
   }
-  delete [] miniModel->saveStatus_;
-  // delete stuff
-  delete miniModel->matrix_;
-  delete miniModel->rowCopy_;
-  delete miniModel->primalColumnPivot_;
-  delete miniModel->nonLinearCost_;
+  delete [] sumFixed;
+  nonLinearCost_->checkInfeasibilities();
+  printf("in original %d infeasibilities summing to %g\n",
+	 nonLinearCost_->numberInfeasibilities(),nonLinearCost_->sumInfeasibilities());
+  // Initialize weights
+  primalColumnPivot_ = new ClpPrimalColumnSteepest(10);
+  primalColumnPivot_->saveWeights(this,2);
+#ifndef NDEBUG
+  // Check status
+  ClpSimplex * xxxx = this;
+  int nBasic=0;
+  for (iColumn=0;iColumn<xxxx->numberRows_+xxxx->numberColumns_;iColumn++)
+    if (xxxx->getStatus(iColumn)==basic)
+      nBasic++;
+  assert (nBasic==xxxx->numberRows_);
+  for (iRow=0;iRow<xxxx->numberRows_;iRow++) {
+    int iPivot=xxxx->pivotVariable_[iRow];
+    assert (xxxx->getStatus(iPivot)==basic);
+  }
+#endif
 }

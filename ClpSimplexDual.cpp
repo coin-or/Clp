@@ -629,6 +629,15 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
 	dualColumn(rowArray_[0],columnArray_[0],columnArray_[1],
 		 rowArray_[3],acceptablePivot,dubiousWeights);
       } else {
+	// Make sure direction plausible
+	assert (upperOut_<1.0e50||lowerOut_>-1.0e50);
+	if (directionOut_<0&&fabs(valueOut_-upperOut_)>dualBound_+primalTolerance_) {
+	  if (fabs(valueOut_-upperOut_)>fabs(valueOut_-lowerOut_))
+	    directionOut_=1;
+	} else if (directionOut_>0&&fabs(valueOut_-upperOut_)<dualBound_+primalTolerance_) {
+	  if (fabs(valueOut_-upperOut_)>fabs(valueOut_-lowerOut_))
+	    directionOut_=-1;
+	}
 	double direction=directionOut_;
         rowArray_[0]->createPacked(1,&pivotRow_,&direction);
 	factorization_->updateColumnTranspose(rowArray_[1],rowArray_[0]);
@@ -2928,9 +2937,11 @@ ClpSimplexDual::perturb()
   if (!numberIterations_&&perturbation_==50) {
     // See if we need to perturb
     double * sort = new double[numberColumns_];
+    // Use objective BEFORE scaling
+    const double * obj = objective();
     int i;
     for (i=0;i<numberColumns_;i++) {
-      double value = fabs(objectiveWork_[i]);
+      double value = fabs(obj[i]);
       sort[i]=value;
     }
     std::sort(sort,sort+numberColumns_);
@@ -2942,8 +2953,18 @@ ClpSimplexDual::perturb()
       last=sort[i];
     }
     delete [] sort;
+#if 0
+    printf("nnz %d percent %d",number,(number*100)/numberColumns_);
     if (number*4>numberColumns_)
+      printf(" - Would not perturb\n");
+    else
+      printf(" - Would perturb\n");
+    exit(0);
+#endif
+    if (number*4>numberColumns_) {
+      perturbation_=100;
       return; // good enough
+    }
   }
   int iColumn;
   for (iColumn=0;iColumn<numberColumns_;iColumn++) {
@@ -2970,6 +2991,7 @@ ClpSimplexDual::perturb()
   }
   int iRow;
   double smallestNonZero=1.0e100;
+  int numberNonZero=0;
   if (perturbation_>=50) {
     perturbation = 1.0e-8;
     bool allSame=true;
@@ -2986,6 +3008,7 @@ ClpSimplexDual::perturb()
 	}
       } 
       if (lo&&lo>-1.0e10) {
+	numberNonZero++;
 	lo=fabs(lo);
 	if (!lastValue) 
 	  lastValue=lo;
@@ -2993,6 +3016,7 @@ ClpSimplexDual::perturb()
 	  allSame=false;
       }
       if (up&&up<1.0e10) {
+	numberNonZero++;
 	up=fabs(up);
 	if (!lastValue) 
 	  lastValue=up;
@@ -3000,6 +3024,7 @@ ClpSimplexDual::perturb()
 	  allSame=false;
       }
     }
+    double lastValue2=0.0;
     for (iColumn=0;iColumn<numberColumns_;iColumn++) { 
       double lo = columnLowerWork_[iColumn];
       double up = columnUpperWork_[iColumn];
@@ -3012,23 +3037,35 @@ ClpSimplexDual::perturb()
 	}
       }
       if (lo&&lo>-1.0e10) {
+	//numberNonZero++;
 	lo=fabs(lo);
-	if (!lastValue) 
-	  lastValue=lo;
-	else if (fabs(lo-lastValue)>1.0e-7)
+	if (!lastValue2) 
+	  lastValue2=lo;
+	else if (fabs(lo-lastValue2)>1.0e-7)
 	  allSame=false;
       }
       if (up&&up<1.0e10) {
+	//numberNonZero++;
 	up=fabs(up);
-	if (!lastValue) 
-	  lastValue=up;
-	else if (fabs(up-lastValue)>1.0e-7)
+	if (!lastValue2) 
+	  lastValue2=up;
+	else if (fabs(up-lastValue2)>1.0e-7)
 	  allSame=false;
       }
     }
     if (allSame) {
-      // Really hit perturbation
-      maximumFraction = max(1.0e-2*lastValue,maximumFraction);
+      // Check elements
+      double smallestNegative;
+      double largestNegative;
+      double smallestPositive;
+      double largestPositive;
+      matrix_->rangeOfElements(smallestNegative,largestNegative,
+			       smallestPositive,largestPositive);
+      if (smallestNegative==largestNegative&&
+	  smallestPositive==largestPositive) {
+	// Really hit perturbation
+	maximumFraction = max(1.0e-3*max(lastValue,lastValue2),maximumFraction);
+      }
     }
     perturbation = min(perturbation,smallestNonZero/maximumFraction);
   } else {

@@ -209,11 +209,12 @@ public:
        type - 0 initial so set up save arrays etc
             - 1 normal -if good update save
 	    - 2 restoring from saved 
-       originalModel is normally NULL but may not be if doing Sprint
+       saveModel is normally NULL but may not be if doing Sprint
   */
   void statusOfProblemInPrimal(int & lastCleaned, int type,
 			     ClpSimplexProgress * progress,
-			       ClpSimplex * originalModel=NULL);
+			       bool doFactorization,
+			       ClpSimplex * saveModel=NULL);
   /// Perturbs problem (method depends on perturbation())
   void perturb(int type);
   /// Take off effect of perturbation and say whether to try dual

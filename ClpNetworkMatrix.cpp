@@ -865,3 +865,15 @@ ClpNetworkMatrix::dubiousWeights(const ClpSimplex * model,int * inputWeights) co
   }
   return weights;
 }
+/* Returns largest and smallest elements of both signs.
+   Largest refers to largest absolute value.
+*/
+void 
+ClpNetworkMatrix::rangeOfElements(double & smallestNegative, double & largestNegative,
+		       double & smallestPositive, double & largestPositive)
+{
+  smallestNegative=-1.0;
+  largestNegative=-1.0;
+  smallestPositive=1.0;
+  largestPositive=1.0;
+}

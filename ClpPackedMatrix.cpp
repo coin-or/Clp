@@ -1163,6 +1163,7 @@ ClpPackedMatrix::scale(ClpSimplex * model) const
     delete [] usefulColumn;
     return 1;
   } else {
+      // need to scale 
     int scalingMethod = model->scalingFlag();
     if (scalingMethod==3) {
       // Choose between 1 and 2
@@ -1300,6 +1301,20 @@ ClpPackedMatrix::scale(ClpSimplex * model) const
       printf("obj scale %g - use it if you want\n",objScale);
 #endif
     }
+    // If ranges will make horrid then scale
+    double tolerance = 5.0*model->primalTolerance();
+    for (iRow=0;iRow<numberRows;iRow++) {
+      if (usefulRow[iRow]) {
+	double difference = rowUpper[iRow]-rowLower[iRow];
+	double scaledDifference = difference*rowScale[iRow];
+	if (scaledDifference>tolerance&&scaledDifference<1.0e-4) {
+	  // make gap larger
+	  rowScale[iRow] *= 1.0e-4/scaledDifference;
+	  //printf("Row %d difference %g scaled diff %g => %g\n",iRow,difference,
+	  // scaledDifference,difference*rowScale[iRow]);
+	}
+      }
+    }
     // final pass to scale columns so largest is reasonable
     // See what smallest will be if largest is 1.0
     overallSmallest=1.0e50;
@@ -1353,6 +1368,14 @@ ClpPackedMatrix::scale(ClpSimplex * model) const
 	double value = 0.5-CoinDrand48();//between -0.5 to + 0.5
 	columnScale[iColumn] *= (1.0+0.1*value);
 #endif
+	double difference = columnUpper[iColumn]-columnLower[iColumn];
+	double scaledDifference = difference*columnScale[iColumn];
+	if (scaledDifference>tolerance&&scaledDifference<1.0e-4) {
+	  // make gap larger
+	  columnScale[iColumn] *= 1.0e-4/scaledDifference;
+	  //printf("Column %d difference %g scaled diff %g => %g\n",iColumn,difference,
+	  // scaledDifference,difference*columnScale[iColumn]);
+	}
 	overallSmallest = min(overallSmallest,smallest*columnScale[iColumn]);
       }
     }
@@ -1658,6 +1681,37 @@ ClpPackedMatrix::dubiousWeights(const ClpSimplex * model,int * inputWeights) con
     weights[i+numberColumns]=inputWeights[i];
   }
   return weights;
+}
+/* Returns largest and smallest elements of both signs.
+   Largest refers to largest absolute value.
+*/
+void 
+ClpPackedMatrix::rangeOfElements(double & smallestNegative, double & largestNegative,
+		       double & smallestPositive, double & largestPositive)
+{
+  smallestNegative=-COIN_DBL_MAX;
+  largestNegative=0.0;
+  smallestPositive=COIN_DBL_MAX;
+  largestPositive=0.0;
+  int numberColumns = matrix_->getNumCols();
+  // get matrix data pointers
+  const double * elementByColumn = matrix_->getElements();
+  const CoinBigIndex * columnStart = matrix_->getVectorStarts();
+  const int * columnLength = matrix_->getVectorLengths(); 
+  int i;
+  for (i=0;i<numberColumns;i++) {
+    CoinBigIndex j;
+    for (j=columnStart[i];j<columnStart[i]+columnLength[i];j++) {
+      double value = elementByColumn[j];
+      if (value>0.0) {
+	smallestPositive = min(smallestPositive,value);
+	largestPositive = max(largestPositive,value);
+      } else if (value<0.0) {
+	smallestNegative = max(smallestNegative,value);
+	largestNegative = min(largestNegative,value);
+      }
+    }
+  }
 }
 
 
