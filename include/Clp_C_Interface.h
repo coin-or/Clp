@@ -172,6 +172,10 @@ extern "C"{
   CLPLIBAPI unsigned char *  CLPLINKAGE Clp_statusArray(Clp_Simplex * model);
   /** Copy in status vector */
   CLPLIBAPI void CLPLINKAGE Clp_copyinStatus(Clp_Simplex * model, const unsigned char * statusArray);
+  /* Get variable basis info */
+  CLPLIBAPI const int CLPLINKAGE Clp_getColumnStatus(Clp_Simplex * model,int sequence);
+  /* Get row basis info */
+  CLPLIBAPI const int CLPLINKAGE Clp_getRowStatus(Clp_Simplex * model,int sequence);
   
   /** User pointer for whatever reason */
   CLPLIBAPI void CLPLINKAGE Clp_setUserPointer (Clp_Simplex * model, void * pointer);
@@ -337,6 +341,10 @@ extern "C"{
   CLPLIBAPI const double * CLPLINKAGE Clp_getColUpper(Clp_Simplex * model);
   /** Objective value */
   CLPLIBAPI double CLPLINKAGE Clp_getObjValue(Clp_Simplex * model);
+  /* Small element value - elements less than this set to zero,
+     default is 1.0e-20 */
+  CLPLIBAPI double CLPLINKAGE Clp_getSmallElementValue(Clp_Simplex * model);
+  CLPLIBAPI void CLPLINKAGE Clp_setSmallElementValue(Clp_Simplex * model,double value);
   /*@}*/
 #ifdef __cplusplus
           }

@@ -2407,6 +2407,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 				      double * givenDuals)
 {
   bool normalType=true;
+  int numberPivots = factorization_->pivots();
   double realDualInfeasibilities=0.0;
   if (type==2) {
     // trouble - restore solution
@@ -2912,9 +2913,25 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
   // unflag all variables (we may want to wait a bit?)
   if (tentativeStatus!=-2&&unflagVariables) {
     int iRow;
+    int numberFlagged=0;
     for (iRow=0;iRow<numberRows_;iRow++) {
       int iPivot=pivotVariable_[iRow];
+      if (flagged(iPivot))
+	numberFlagged++;
       clearFlagged(iPivot);
+    }
+    unflagVariables = numberFlagged>0;
+    if (numberFlagged&&!numberPivots) {
+      /* looks like trouble as we have not done any iterations.
+	 Try changing pivot tolerance then give it a few goes and give up */
+      if (factorization_->pivotTolerance()<0.9) {
+	factorization_->pivotTolerance(0.99);
+      } else if (numberTimesOptimal_<10) {
+	numberTimesOptimal_++;
+      } else {
+	unflagVariables=false;
+	changeMade_=false;
+      }
     }
   }
   // see if cutoff reached

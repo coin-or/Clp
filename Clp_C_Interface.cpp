@@ -981,4 +981,28 @@ Clp_getObjValue(Clp_Simplex * model)
 {
   return model->model_->getObjValue();
 }
+/* Get variable basis info */
+CLPLIBAPI const int CLPLINKAGE
+Clp_getColumnStatus(Clp_Simplex * model,int sequence)
+{
+  return (int) model->model_->getColumnStatus(sequence);
+}
+/* Get row basis info */
+CLPLIBAPI const int CLPLINKAGE
+Clp_getRowStatus(Clp_Simplex * model,int sequence)
+{
+  return (int) model->model_->getRowStatus(sequence);
+}
+/* Small element value - elements less than this set to zero,
+   default is 1.0e-20 */
+CLPLIBAPI double CLPLINKAGE 
+Clp_getSmallElementValue(Clp_Simplex * model)
+{
+  return model->model_->getSmallElementValue();
+}
+CLPLIBAPI void CLPLINKAGE 
+Clp_setSmallElementValue(Clp_Simplex * model,double value)
+{
+  model->model_->setSmallElementValue(value);
+}
 
