@@ -711,6 +711,8 @@ ClpModel::readMps(const char *fileName,
 		m.getColLower(),m.getColUpper(),
 		m.getObjCoefficients(),
 		m.getRowLower(),m.getRowUpper());
+    // set problem name
+    setStrParam(OsiProbName,m.getProblemName());
     // do names
     if (keepNames) {
       unsigned int maxLength=0;
