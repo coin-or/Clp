@@ -16,6 +16,7 @@
 #include "ClpModel.hpp"
 #include "ClpEventHandler.hpp"
 #include "ClpPackedMatrix.hpp"
+#include "ClpPlusMinusOneMatrix.hpp"
 #include "CoinPackedVector.hpp"
 #include "CoinIndexedVector.hpp"
 #include "CoinMpsIO.hpp"
@@ -288,8 +289,9 @@ ClpModel::loadProblem (
 }
 // This loads a model from a coinModel object - returns number of errors
 int 
-ClpModel::loadProblem (  CoinModel & modelObject)
+ClpModel::loadProblem (  CoinModel & modelObject,bool tryPlusMinusOne)
 {
+  assert (!tryPlusMinusOne);
   int numberErrors = 0;
   // Set arrays for normal use
   double * rowLower = modelObject.rowLowerArray();
@@ -1246,7 +1248,8 @@ ClpModel::addRows(int number, const double * rowLower,
   rowCopy_=NULL;
   if (!matrix_)
     createEmptyMatrix();
-  matrix_->appendRows(number,rows);
+  if (rows)
+    matrix_->appendRows(number,rows);
   delete [] rowScale_;
   rowScale_ = NULL;
   delete [] columnScale_;
@@ -1254,8 +1257,9 @@ ClpModel::addRows(int number, const double * rowLower,
 }
 // Add rows from a build object
 void 
-ClpModel::addRows(const CoinBuild & buildObject)
+ClpModel::addRows(const CoinBuild & buildObject,bool tryPlusMinusOne)
 {
+  assert (!tryPlusMinusOne);
   assert (buildObject.type()==0); // check correct
   int number = buildObject.numberRows();
   if (number) {
@@ -1284,8 +1288,9 @@ ClpModel::addRows(const CoinBuild & buildObject)
 }
 // Add rows from a model object
 int 
-ClpModel::addRows( CoinModel & modelObject)
+ClpModel::addRows( CoinModel & modelObject,bool tryPlusMinusOne)
 {
+  assert (!tryPlusMinusOne);
   bool goodState=true;
   if (modelObject.columnLowerArray()) {
     // some column information exists
@@ -1516,7 +1521,8 @@ ClpModel::addColumns(int number, const double * columnLower,
   rowCopy_=NULL;
   if (!matrix_)
     createEmptyMatrix();
-  matrix_->appendCols(number,columns);
+  if (columns)
+    matrix_->appendCols(number,columns);
   delete [] rowScale_;
   rowScale_ = NULL;
   delete [] columnScale_;
@@ -1524,31 +1530,103 @@ ClpModel::addColumns(int number, const double * columnLower,
 }
 // Add columns from a build object
 void 
-ClpModel::addColumns(const CoinBuild & buildObject)
+ClpModel::addColumns(const CoinBuild & buildObject,bool tryPlusMinusOne)
 {
   assert (buildObject.type()==1); // check correct
   int number = buildObject.numberColumns();
+  CoinBigIndex size=0;
+  int maximumLength=0;
   if (number) {
-    CoinPackedVectorBase ** columns=
-      new CoinPackedVectorBase * [number];
-    int iColumn;
-    double * objective = new double [number];
     double * lower = new double [number];
     double * upper = new double [number];
-    for (iColumn=0;iColumn<number;iColumn++) {
-      const int * rows;
-      const double * elements;
-      int numberElements = buildObject.column(iColumn,lower[iColumn],
-                                              upper[iColumn],objective[iColumn],
-                                              rows,elements);
-      columns[iColumn] = 
-	new CoinPackedVector(numberElements,
-			     rows,elements);
+    int iColumn;
+    double * objective = new double [number];
+    if (!matrix_->getNumElements()&&tryPlusMinusOne) {
+      // See if can be +-1
+      for (iColumn=0;iColumn<number;iColumn++) {
+        const int * rows;
+        const double * elements;
+        int numberElements = buildObject.column(iColumn,lower[iColumn],
+                                                upper[iColumn],objective[iColumn],
+                                                rows,elements);
+        maximumLength = CoinMax(maximumLength,numberElements);
+        for (int i=0;i<numberElements;i++) {
+          // allow for zero elements
+          if (elements[i]) {
+            if (fabs(elements[i])==1.0) {
+              size++;
+            } else {
+              // bad
+              tryPlusMinusOne=false;
+            }
+          }
+        }
+        if (!tryPlusMinusOne)
+          break;
+      }
+    } else {
+      // Will add to whatever sort of matrix exists
+      tryPlusMinusOne=false;
     }
-    addColumns(number, lower, upper,objective,columns);
-    for (iColumn=0;iColumn<number;iColumn++) 
-      delete columns[iColumn];
-    delete [] columns;
+    if (!tryPlusMinusOne) {
+      CoinPackedVectorBase ** columns=
+        new CoinPackedVectorBase * [number];
+      for (iColumn=0;iColumn<number;iColumn++) {
+        const int * rows;
+        const double * elements;
+        int numberElements = buildObject.column(iColumn,lower[iColumn],
+                                                upper[iColumn],objective[iColumn],
+                                                rows,elements);
+        columns[iColumn] = 
+          new CoinPackedVector(numberElements,
+                               rows,elements);
+      }
+      addColumns(number, lower, upper,objective,columns);
+      for (iColumn=0;iColumn<number;iColumn++) 
+        delete columns[iColumn];
+      delete [] columns;
+    } else {
+      // build +-1 matrix
+      // arrays already filled in
+      addColumns(number, lower, upper,objective,NULL);
+      CoinBigIndex * startPositive = new CoinBigIndex [number+1];
+      CoinBigIndex * startNegative = new CoinBigIndex [number];
+      int * indices = new int [size];
+      int * neg = new int[maximumLength];
+      startPositive[0]=0;
+      size=0;
+      int maxRow=-1;
+      for (iColumn=0;iColumn<number;iColumn++) {
+        const int * rows;
+        const double * elements;
+        int numberElements = buildObject.column(iColumn,lower[iColumn],
+                                                upper[iColumn],objective[iColumn],
+                                                rows,elements);
+        int nNeg=0;
+        for (int i=0;i<numberElements;i++) {
+          int iRow=rows[i];
+          maxRow = CoinMax(maxRow,iRow);
+          if (elements[i]==1.0) {
+            indices[size++]=iRow;
+          } else if (elements[i]==-1.0) {
+            neg[nNeg++]=iRow;
+          }
+        }
+        startNegative[iColumn]=size;
+        memcpy(indices+size,neg,nNeg*sizeof(int));
+        size += nNeg;
+        startPositive[iColumn+1]=size;
+      }
+      delete [] neg;
+      // check size
+      int numberRows = maxRow+1;
+      assert (numberRows<=numberRows_);
+      // Get good object
+      delete matrix_;
+      ClpPlusMinusOneMatrix * matrix = new ClpPlusMinusOneMatrix();
+      matrix->passInCopy(numberRows_,number,true,indices,startPositive,startNegative);
+      matrix_=matrix;
+    }
     delete [] objective;
     delete [] lower;
     delete [] upper;
@@ -1557,8 +1635,9 @@ ClpModel::addColumns(const CoinBuild & buildObject)
 }
 // Add columns from a model object
 int 
-ClpModel::addColumns( CoinModel & modelObject)
+ClpModel::addColumns( CoinModel & modelObject,bool tryPlusMinusOne)
 {
+  assert (!tryPlusMinusOne);
   bool goodState=true;
   if (modelObject.rowLowerArray()) {
     // some row information exists

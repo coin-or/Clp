@@ -98,8 +98,9 @@ public:
   /** This loads a model from a coinModel object - returns number of errors.
 
       modelObject not const as may be changed as part of process
+      If tryPlusMinusOne then will try adding as +-1 matrix
   */
-  int loadProblem (  CoinModel & modelObject);
+  int loadProblem (  CoinModel & modelObject,bool tryPlusMinusOne=false);
   /// This one is for after presolve to save memory
   void loadProblem (  const int numcols, const int numrows,
 		     const CoinBigIndex* start, const int* index,
@@ -151,15 +152,20 @@ public:
   void addRows(int number, const double * rowLower, 
 	       const double * rowUpper,
 	       const CoinPackedVectorBase * const * rows);
-  /// Add rows from a build object
-  void addRows(const CoinBuild & buildObject);
+  /** Add rows from a build object.
+      If tryPlusMinusOne then will try adding as +-1 matrix
+      if no matrix exists.
+  */
+  void addRows(const CoinBuild & buildObject,bool tryPlusMinusOne=false);
   /** Add rows from a model object.  returns
       -1 if object in bad state (i.e. has column information)
       otherwise number of errors.
 
       modelObject non const as can be regularized as part of build
+      If tryPlusMinusOne then will try adding as +-1 matrix
+      if no matrix exists.
   */
-  int addRows(CoinModel & modelObject);
+  int addRows(CoinModel & modelObject,bool tryPlusMinusOne=false);
 
   /// Deletes columns
   void deleteColumns(int number, const int * which);
@@ -186,14 +192,19 @@ public:
 	       const double * columnUpper,
 		  const double * objective,
 	       const CoinPackedVectorBase * const * columns);
-  /// Add columns from a build object
-  void addColumns(const CoinBuild & buildObject);
+  /** Add columns from a build object
+      If tryPlusMinusOne then will try adding as +-1 matrix
+      if no matrix exists.
+  */
+  void addColumns(const CoinBuild & buildObject,bool tryPlusMinusOne=false);
   /** Add columns from a model object.  returns
       -1 if object in bad state (i.e. has row information)
       otherwise number of errors
       modelObject non const as can be regularized as part of build
+      If tryPlusMinusOne then will try adding as +-1 matrix
+      if no matrix exists.
   */
-  int addColumns(CoinModel & modelObject);
+  int addColumns(CoinModel & modelObject,bool tryPlusMinusOne=false);
   /** Change row lower bounds */
   void chgRowLower(const double * rowLower);
   /** Change row upper bounds */
