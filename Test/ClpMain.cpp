@@ -981,6 +981,7 @@ no dual infeasibility may exceed this value",
     parameters[numberParameters++]=
       ClpItem("error!sAllowed","Whether to allow import errors",
 	      "off",ERRORSALLOWED);
+    parameters[numberParameters-1].append("on");
     parameters[numberParameters-1].setLonghelp
       (
        "The default is not to use any model which had errors when reading the mps file.\
