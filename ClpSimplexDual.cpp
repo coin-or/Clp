@@ -3366,6 +3366,12 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
       } 
       status=problemStatus_;
     }
+    if (status||(problemStatus_==0&&!isDualObjectiveLimitReached())) {
+      objectiveChange = objectiveValue_-saveObjectiveValue;
+    } else {
+      objectiveChange = 1.0e100;
+      status=1;
+    }
 
     if (scalingFlag_<=0) {
       memcpy(outputSolution[iSolution],solution_,numberColumns_*sizeof(double));
@@ -3393,11 +3399,6 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
     delete factorization_;
     factorization_ = new ClpFactorization(saveFactorization);
 
-    if (status||(problemStatus_==0&&!isDualObjectiveLimitReached())) {
-      objectiveChange = objectiveValue_-saveObjectiveValue;
-    } else {
-      objectiveChange = 1.0e100;
-    }
     newUpper[i]=objectiveChange;
 #ifdef CLP_DEBUG
     printf("down on %d costs %g\n",iColumn,objectiveChange);
@@ -3424,6 +3425,12 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
 	problemStatus_=0;
       } 
       status=problemStatus_;
+    }
+    if (status||(problemStatus_==0&&!isDualObjectiveLimitReached())) {
+      objectiveChange = objectiveValue_-saveObjectiveValue;
+    } else {
+      objectiveChange = 1.0e100;
+      status=1;
     }
     if (scalingFlag_<=0) {
       memcpy(outputSolution[iSolution],solution_,numberColumns_*sizeof(double));
@@ -3452,11 +3459,6 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
     delete factorization_;
     factorization_ = new ClpFactorization(saveFactorization);
 
-    if (status||(problemStatus_==0&&!isDualObjectiveLimitReached())) {
-      objectiveChange = objectiveValue_-saveObjectiveValue;
-    } else {
-      objectiveChange = 1.0e100;
-    }
     newLower[i]=objectiveChange;
 #ifdef CLP_DEBUG
     printf("up on %d costs %g\n",iColumn,objectiveChange);

@@ -1,13 +1,13 @@
 
-inline double pdxxxmerit(int nlow, int nupp, int *low, int *upp, CoinDenseVector &r1,
-		CoinDenseVector &r2, CoinDenseVector &rL,
-		CoinDenseVector &rU, CoinDenseVector &cL,
-		CoinDenseVector &cU ){
+inline double pdxxxmerit(int nlow, int nupp, int *low, int *upp, CoinDenseVector <double> &r1,
+		CoinDenseVector <double> &r2, CoinDenseVector <double> &rL,
+		CoinDenseVector <double> &rU, CoinDenseVector <double> &cL,
+		CoinDenseVector <double> &cU ){
 
 // Evaluate the merit function for Newton's method.
 // It is the 2-norm of the three sets of residuals.
   double sum1, sum2;
-  CoinDenseVector f(6);
+  CoinDenseVector <double> f(6);
   f[0] = r1.twoNorm();
   f[1] = r2.twoNorm();
   sum1 = sum2 = 0.0;
@@ -39,13 +39,13 @@ inline double pdxxxmerit(int nlow, int nupp, int *low, int *upp, CoinDenseVector
 
 inline void pdxxxresid1(ClpPdco *model, const int nlow, const int nupp, const int nfix,
 		 int *low, int *upp, int *fix,
-		 CoinDenseVector &b, double *bl, double *bu, double d1, double d2,
-		 CoinDenseVector &grad, CoinDenseVector &rL,
-		 CoinDenseVector &rU, CoinDenseVector &x,
-		 CoinDenseVector &x1, CoinDenseVector &x2,
-		 CoinDenseVector &y,  CoinDenseVector &z1,
-		 CoinDenseVector &z2, CoinDenseVector &r1,
-		 CoinDenseVector &r2, double *Pinf, double *Dinf){
+		 CoinDenseVector <double> &b, double *bl, double *bu, double d1, double d2,
+		 CoinDenseVector <double> &grad, CoinDenseVector <double> &rL,
+		 CoinDenseVector <double> &rU, CoinDenseVector <double> &x,
+		 CoinDenseVector <double> &x1, CoinDenseVector <double> &x2,
+		 CoinDenseVector <double> &y,  CoinDenseVector <double> &z1,
+		 CoinDenseVector <double> &z2, CoinDenseVector <double> &r1,
+		 CoinDenseVector <double> &r2, double *Pinf, double *Dinf){
 
 // Form residuals for the primal and dual equations.
 // rL, rU are output, but we input them as full vectors
@@ -53,10 +53,6 @@ inline void pdxxxresid1(ClpPdco *model, const int nlow, const int nupp, const in
 
 // Get some element pointers for efficiency
   double *x_elts  = x.getElements();
-  double *x1_elts = x2.getElements();
-  double *x2_elts = x2.getElements();
-  double *z1_elts = z1.getElements();
-  double *z2_elts = z2.getElements();
   double *r2_elts = r2.getElements();
   
   for (int k=0; k<nfix; k++)
@@ -103,9 +99,9 @@ inline void pdxxxresid1(ClpPdco *model, const int nlow, const int nupp, const in
 //      pdxxxresid2( mu,low,upp,cL,cU,x1,x2,z1,z2 )
 
 inline void pdxxxresid2(double mu, int nlow, int nupp, int *low, int *upp,
-		 CoinDenseVector &cL, CoinDenseVector &cU,
-		 CoinDenseVector &x1, CoinDenseVector &x2,
-		 CoinDenseVector &z1, CoinDenseVector &z2,
+		 CoinDenseVector <double> &cL, CoinDenseVector <double> &cU,
+		 CoinDenseVector <double> &x1, CoinDenseVector <double> &x2,
+		 CoinDenseVector <double> &z1, CoinDenseVector <double> &z2,
 		 double *center, double *Cinf, double *Cinf0){
 
 // Form residuals for the complementarity equations.
@@ -154,7 +150,7 @@ inline void pdxxxresid2(double mu, int nlow, int nupp, int *low, int *upp,
 // End private function pdxxxresid2
 //-----------------------------------------------------------------------
 
-inline double  pdxxxstep( CoinDenseVector &x, CoinDenseVector &dx ){
+inline double  pdxxxstep( CoinDenseVector <double> &x, CoinDenseVector <double> &dx ){
 
 // Assumes x > 0.
 // Finds the maximum step such that x + step*dx >= 0.
@@ -174,7 +170,7 @@ inline double  pdxxxstep( CoinDenseVector &x, CoinDenseVector &dx ){
 // End private function pdxxxstep
 //-----------------------------------------------------------------------
 
-inline double  pdxxxstep(int nset, int *set, CoinDenseVector &x, CoinDenseVector &dx ){
+inline double  pdxxxstep(int nset, int *set, CoinDenseVector <double> &x, CoinDenseVector <double> &dx ){
 
 // Assumes x > 0.
 // Finds the maximum step such that x + step*dx >= 0.

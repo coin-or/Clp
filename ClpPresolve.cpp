@@ -358,6 +358,8 @@ void check_sol(CoinPresolveMatrix *prob,double tol)
 // customized by subclassing CoinPresolve.
 const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
 {
+  // Messages
+  CoinMessages messages = CoinMessage(prob->messages().language());
   paction_ = 0;
 
   prob->status_=0; // say feasible
@@ -623,6 +625,11 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
 	for (i=0;i<nrows_;i++) 
 	  if (!hinrow[i])
 	    numberDropped++;
+	
+	prob->messageHandler()->message(COIN_PRESOLVE_PASS,
+					messages)
+					  <<numberDropped<<iLoop+1
+					  <<CoinMessageEol;
 	//printf("%d rows dropped after pass %d\n",numberDropped,
 	//     iLoop+1);
 	if (numberDropped==lastDropped)
@@ -648,8 +655,6 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
 #endif
   }
   
-  // Messages
-  CoinMessages messages = CoinMessage(prob->messages().language());
   if (prob->status_) {
     if (prob->status_==1)
 	  prob->messageHandler()->message(COIN_PRESOLVE_INFEAS,
