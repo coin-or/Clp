@@ -875,10 +875,10 @@ stopping",
       ClpItem("unitTest","Do unit test",
 	      UNITTEST);
     parameters[numberParameters++]=
-      ClpItem("netlib","Solev entlib test set",
+      ClpItem("netlib","Solve entire netlib test set",
 	      NETLIB_DUAL);
     parameters[numberParameters++]=
-      ClpItem("netlibP!rimal","Solev entlib test set",
+      ClpItem("netlibP!rimal","Solve entire netlib test set (primal)",
 	      NETLIB_PRIMAL);
     parameters[numberParameters++]=
       ClpItem("fakeB!ound","All bounds <= this value - DEBUG",
