@@ -55,8 +55,23 @@
   The next abstract class of interest is <function>ClpMatrixBase</function>.
   CLP encapsulates its knowledge of how a matrix is stored in this class.  The
   default instance of this is the <function>ClpPackedMatrix</function> class.
-  This is identical in format to <function>CoinPackedMatrix</function>.  The
-  important new methods implemented are for filling a basis, checking validity
+  This is identical in format to <function>CoinPackedMatrix</function>.  Below
+  is a diagram summarizing the hierarchy of the most important matrix classes:
+  </para>
+  <mediaobject>
+    <!-- Caption doesn't line-up nicely in HTML, leave out for now
+    <caption align="top">
+      <para>
+  	CLP Matrix Classes
+      </para>
+    </caption>
+    -->
+    <imageobject>
+      <imagedata fileref="figures/clpbasicmatrixhier.gif" format="GIF"/>
+    </imageobject>
+  </mediaobject>
+  <para>
+  The important new methods implemented are for filling a basis, checking validity
   of elements and faster &quot;times&quot; and &quot;transposeTimes&quot; when
   the input array is sparse and/or we have a row copy of the matrix.  Advanced
   users should note that not all methods have to be implemented.  In particular,
@@ -75,7 +90,7 @@
   etc.
   </para>
   <para>
-  The use <function>ClpPlusMinusOneMatrix</function> involves some work as one
+  The use of <function>ClpPlusMinusOneMatrix</function> involves some work as one
   cannot simply read-in an MPS file.  The key is to use
   <function>loadProblem</function> to pass in a matrix.  So if
   <varname>matrix</varname> was a <function>CoinPackedMatrix</function> one
