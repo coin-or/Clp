@@ -948,9 +948,6 @@ void subst_constraint_action::postsolve(PostsolveMatrix *prob) const
   int *link		= prob->link_;
   //  int ncols		= prob->ncols_;
 
-  double *clo	= prob->clo_;
-  double *cup	= prob->cup_;
-
   double *rlo	= prob->rlo_;
   double *rup	= prob->rup_;
 
@@ -966,7 +963,6 @@ void subst_constraint_action::postsolve(PostsolveMatrix *prob) const
   char *rdone	= prob->rdone_;
   CoinBigIndex free_list = prob->free_list_;
 
-  const double ztolzb	= prob->ztolzb_;
   //  const double ztoldj	= prob->ztoldj_;
   const double maxmin = prob->maxmin_;
   int k;
@@ -1061,9 +1057,16 @@ void subst_constraint_action::postsolve(PostsolveMatrix *prob) const
       }
       sol[icol] = sol0 / coeffy;
 
+#ifdef	DEBUG_PRESOLVE
+      const double ztolzb	= prob->ztolzb_;
+      double *clo	= prob->clo_;
+      double *cup	= prob->cup_;
+
       if (! (sol[icol] > clo[icol] - ztolzb &&
 	     cup[icol] + ztolzb > sol[icol]))
-	printf("NEW SOL OUT-OF-TOL:  %g %g %g\n", clo[icol], sol[icol], cup[icol]);
+	printf("NEW SOL OUT-OF-TOL:  %g %g %g\n", clo[icol], 
+	       sol[icol], cup[icol]);
+#endif
     }
 
     // since this row is fixed 
