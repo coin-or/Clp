@@ -37,7 +37,7 @@ inline double pdxxxmerit(int nlow, int nupp, int *low, int *upp, CoinDenseVector
 //      pdxxxresid1( Aname,fix,low,upp, ...
 //                   b,bl,bu,d1,d2,grad,rL,rU,x,x1,x2,y,z1,z2 )
 
-inline void pdxxxresid1(Model *model, const int nlow, const int nupp, const int nfix,
+inline void pdxxxresid1(ClpPdco *model, const int nlow, const int nupp, const int nfix,
 		 int *low, int *upp, int *fix,
 		 CoinDenseVector &b, double *bl, double *bu, double d1, double d2,
 		 CoinDenseVector &grad, CoinDenseVector &rL,

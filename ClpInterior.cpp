@@ -10,8 +10,10 @@
 
 #include "CoinHelperFunctions.hpp"
 #include "ClpInterior.hpp"
-#include "ClpPackedMatrix.hpp"
-#include "CoinIndexedVector.hpp"
+#include "ClpMatrixBase.hpp"
+#include "ClpLsqr.hpp"
+#include "ClpPdcoBase.hpp"
+#include "CoinDenseVector.hpp"
 #include "ClpMessage.hpp"
 #include "ClpLinearObjective.hpp"
 #include <cfloat>
@@ -28,35 +30,51 @@ ClpInterior::ClpInterior () :
   largestDualError_(0.0),
   sumDualInfeasibilities_(0.0),
   sumPrimalInfeasibilities_(0.0),
+  xsize_(0.0),
+  zsize_(0.0),
   lower_(NULL),
   rowLowerWork_(NULL),
   columnLowerWork_(NULL),
   upper_(NULL),
   rowUpperWork_(NULL),
   columnUpperWork_(NULL),
-  cost_(NULL)
+  cost_(NULL),
+  rhs_(NULL),
+   x_(NULL),
+   y_(NULL),
+  dj_(NULL),
+  lsqrObject_(NULL),
+  pdcoStuff_(NULL)
 {
   solveType_=2; // say interior based life form
 }
 
 // Subproblem constructor
 ClpInterior::ClpInterior ( const ClpModel * rhs,
-		     int numberRows, const int * whichRow,
-		     int numberColumns, const int * whichColumn,
-		     bool dropNames, bool dropIntegers)
+			   int numberRows, const int * whichRow,
+			   int numberColumns, const int * whichColumn,
+			   bool dropNames, bool dropIntegers)
   : ClpModel(rhs, numberRows, whichRow,
 	     numberColumns,whichColumn,dropNames,dropIntegers),
-  largestPrimalError_(0.0),
-  largestDualError_(0.0),
-  sumDualInfeasibilities_(0.0),
-  sumPrimalInfeasibilities_(0.0),
-  lower_(NULL),
-  rowLowerWork_(NULL),
-  columnLowerWork_(NULL),
-  upper_(NULL),
-  rowUpperWork_(NULL),
-  columnUpperWork_(NULL),
-  cost_(NULL)
+    largestPrimalError_(0.0),
+    largestDualError_(0.0),
+    sumDualInfeasibilities_(0.0),
+    sumPrimalInfeasibilities_(0.0),
+    xsize_(0.0),
+    zsize_(0.0),
+    lower_(NULL),
+    rowLowerWork_(NULL),
+    columnLowerWork_(NULL),
+    upper_(NULL),
+    rowUpperWork_(NULL),
+    columnUpperWork_(NULL),
+    cost_(NULL),
+    rhs_(NULL),
+    x_(NULL),
+    y_(NULL),
+    dj_(NULL),
+    lsqrObject_(NULL),
+    pdcoStuff_(NULL)
 {
   solveType_=2; // say interior based life form
   
@@ -85,13 +103,21 @@ ClpInterior::ClpInterior(const ClpInterior &rhs) :
   largestDualError_(0.0),
   sumDualInfeasibilities_(0.0),
   sumPrimalInfeasibilities_(0.0),
+  xsize_(0.0),
+  zsize_(0.0),
   lower_(NULL),
   rowLowerWork_(NULL),
   columnLowerWork_(NULL),
   upper_(NULL),
   rowUpperWork_(NULL),
   columnUpperWork_(NULL),
-  cost_(NULL)
+  cost_(NULL),
+  rhs_(NULL),
+   x_(NULL),
+   y_(NULL),
+  dj_(NULL),
+  lsqrObject_(NULL),
+  pdcoStuff_(NULL)
 {
   gutsOfDelete();
   gutsOfCopy(rhs);
@@ -104,13 +130,21 @@ ClpInterior::ClpInterior(const ClpModel &rhs) :
   largestDualError_(0.0),
   sumDualInfeasibilities_(0.0),
   sumPrimalInfeasibilities_(0.0),
+  xsize_(0.0),
+  zsize_(0.0),
   lower_(NULL),
   rowLowerWork_(NULL),
   columnLowerWork_(NULL),
   upper_(NULL),
   rowUpperWork_(NULL),
   columnUpperWork_(NULL),
-  cost_(NULL)
+  cost_(NULL),
+  rhs_(NULL),
+   x_(NULL),
+   y_(NULL),
+  dj_(NULL),
+  lsqrObject_(NULL),
+  pdcoStuff_(NULL)
 {
   solveType_=2; // say interior based life form
 }
@@ -136,10 +170,18 @@ ClpInterior::gutsOfCopy(const ClpInterior & rhs)
   columnUpperWork_ = upper_;
   //cost_ = ClpCopyOfArray(rhs.cost_,2*(numberColumns_+numberRows_));
   cost_ = ClpCopyOfArray(rhs.cost_,numberColumns_);
+  rhs_ = ClpCopyOfArray(rhs.rhs_,numberRows_);
+   x_ = ClpCopyOfArray(rhs.x_,numberColumns_);
+   y_ = ClpCopyOfArray(rhs.y_,numberRows_);
+  dj_ = ClpCopyOfArray(rhs.dj_,numberColumns_);
+  lsqrObject_= new ClpLsqr(*rhs.lsqrObject_);
+  pdcoStuff_ = rhs.pdcoStuff_->clone();
   largestPrimalError_ = rhs.largestPrimalError_;
   largestDualError_ = rhs.largestDualError_;
   sumDualInfeasibilities_ = rhs.sumDualInfeasibilities_;
   sumPrimalInfeasibilities_ = rhs.sumPrimalInfeasibilities_;
+  xsize_ = rhs.xsize_;
+  zsize_ = rhs.zsize_;
   solveType_=rhs.solveType_;
 }
 // type == 0 do everything, most + pivot data, 2 factorization data as well
@@ -156,6 +198,18 @@ ClpInterior::gutsOfDelete()
   columnUpperWork_=NULL;
   delete [] cost_;
   cost_=NULL;
+  delete [] rhs_;
+  rhs_ = NULL;
+  delete [] x_;
+  x_ = NULL;
+  delete [] y_;
+  y_ = NULL;
+  delete [] dj_;
+  dj_ = NULL;
+  delete lsqrObject_;
+  lsqrObject_ = NULL;
+  delete pdcoStuff_;
+  pdcoStuff_=NULL;
 }
 bool
 ClpInterior::createWorkingData()
@@ -401,7 +455,7 @@ ClpInterior::pdco()
 }
 // ** Temporary version
 int  
-ClpInterior::pdco( Lsqr *lsqr, Options &options, Info &info, Outfo &outfo)
+ClpInterior::pdco( ClpPdcoBase * stuff, Options &options, Info &info, Outfo &outfo)
 {
-  return ((ClpPdco *) this)->pdco(lsqr,options,info,outfo);
+  return ((ClpPdco *) this)->pdco(stuff,options,info,outfo);
 }

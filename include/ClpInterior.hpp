@@ -15,12 +15,8 @@
 #include "ClpModel.hpp"
 #include "ClpMatrixBase.hpp"
 #include "ClpSolve.hpp"
-class ClpDualRowPivot;
-class ClpPrimalColumnPivot;
-class ClpFactorization;
-class CoinIndexedVector;
-class ClpNonLinearCost;
-class ClpInteriorProgress;
+class ClpLsqr;
+class ClpPdcoBase;
 // ******** DATA to be moved into protected section of ClpInterior
 typedef struct{
   double  atolmin;
@@ -142,7 +138,7 @@ public:
   /** Pdco algorithm - see ClpPdco.hpp for method */
   int pdco();
   // ** Temporary version
-  int  pdco( Lsqr *lsqr, Options &options, Info &info, Outfo &outfo);
+  int  pdco( ClpPdcoBase * stuff, Options &options, Info &info, Outfo &outfo);
   //@}
 
   /**@name most useful gets and sets */
@@ -244,6 +240,10 @@ protected:
   double sumDualInfeasibilities_;
   /// Sum of primal infeasibilities
   double sumPrimalInfeasibilities_;
+public:
+  double xsize_;
+  double zsize_;
+protected:
   /// Working copy of lower bounds (Owner of arrays below)
   double * lower_;
   /// Row lower bounds - working copy
@@ -258,6 +258,17 @@ protected:
   double * columnUpperWork_;
   /// Working copy of objective 
   double * cost_;
+public:
+  /// Rhs
+  double * rhs_;
+  double * x_;
+  double * y_;
+  double * dj_;
+protected:
+  /// Pointer to Lsqr object
+  ClpLsqr * lsqrObject_;
+  /// Pointer to stuff
+  ClpPdcoBase * pdcoStuff_;
   /// Which algorithm being used
   int algorithm_;
   //@}

@@ -18,7 +18,6 @@
     is never created - only cast from a ClpInterior object at algorithm time. 
 
 */
-
 class ClpPdco : public ClpInterior {
 
 public:
@@ -34,14 +33,39 @@ public:
 
   int pdco();
   // ** Temporary version
-  int  pdco( Lsqr *lsqr, Options &options, Info &info, Outfo &outfo);
+  int  pdco( ClpPdcoBase * stuff, Options &options, Info &info, Outfo &outfo);
 
   //@}
 
-  /**@name Functions used in dual */
+  /**@name Functions used in pdco */
   //@{
   /// LSQR
   void lsqr();
+
+  void matVecMult( int, double *, double *);
+  
+  void matVecMult( int, CoinDenseVector &, double *);
+  
+  void matVecMult( int, CoinDenseVector &, CoinDenseVector &);
+  
+  void matVecMult( int, CoinDenseVector *, CoinDenseVector *);
+  
+  void getBoundTypes( int *, int *, int *, int**);
+  
+  void getGrad(CoinDenseVector &x, CoinDenseVector &grad);
+  
+  void getHessian(CoinDenseVector &x, CoinDenseVector &H);
+  
+  double getObj(CoinDenseVector &x);
+  
+  void matPrecon( double, double *, double *);
+  
+  void matPrecon( double, CoinDenseVector &, double *);
+  
+  void matPrecon( double, CoinDenseVector &, CoinDenseVector &);
+  
+  void matPrecon( double, CoinDenseVector *, CoinDenseVector *);
   //@}
+
 };
 #endif
