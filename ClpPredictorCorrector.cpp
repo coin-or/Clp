@@ -650,10 +650,11 @@ double ClpPredictorCorrector::findStepLength(const int phase,const double * oldW
   double * work4 = deltaT_;
   //direction vector in weights
   double * weights = weights_;
+  int iColumn;
   switch (phase) {
   case 0:
     //Now get affine deltas for Z(duals on LBds) and W (duals on UBds)
-    for (int iColumn=0;iColumn<numberTotal;iColumn++) {
+    for (iColumn=0;iColumn<numberTotal;iColumn++) {
       if (!flagged(iColumn)) {
         double z1=-zVec[iColumn];
         double w1=-wVec[iColumn];
@@ -736,7 +737,7 @@ double ClpPredictorCorrector::findStepLength(const int phase,const double * oldW
     break;
   case 1:
     //corrector step
-    for (int iColumn=0;iColumn<numberTotal;iColumn++) {
+    for ( iColumn=0;iColumn<numberTotal;iColumn++) {
       if (!flagged(iColumn)) {
         double z1=-zVec[iColumn];
         double w1=-wVec[iColumn];
@@ -821,7 +822,7 @@ double ClpPredictorCorrector::findStepLength(const int phase,const double * oldW
     break;
   case 2:
     //just primal dual
-    for (int iColumn=0;iColumn<numberTotal;iColumn++) {
+    for ( iColumn=0;iColumn<numberTotal;iColumn++) {
       if (!flagged(iColumn)) {
         double z1=-zVec[iColumn];
         double w1=-wVec[iColumn];
@@ -904,7 +905,7 @@ double ClpPredictorCorrector::findStepLength(const int phase,const double * oldW
     break;
   case 3:
     //centering step
-    for (int iColumn=0;iColumn<numberTotal;iColumn++) {
+    for ( iColumn=0;iColumn<numberTotal;iColumn++) {
       if (!flagged(iColumn)) {
 	// old deltas from previous step
         double z1=work1[iColumn];
