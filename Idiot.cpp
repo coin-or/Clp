@@ -354,11 +354,13 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
   firstInfeas=lastResult.infeas;
   if ((strategy_&1024)!=0) reasonableInfeas=0.5*firstInfeas;
   if (lastResult.infeas<reasonableInfeas) lastResult.infeas=reasonableInfeas;
+  double keepinfeas=1.0e31;
+  double lastInfeas=1.0e31;
+  double bestInfeas=1.0e31;
   while ((mu>stopMu&&lastResult.infeas>smallInfeas)||
          (lastResult.infeas<=smallInfeas&&
 	 dropping(lastResult,exitDrop,smallInfeas,&badIts))||
 	 checkIteration<2||lambdaIteration<lambdaIterations_) {
-    double keepinfeas;
     if (lastResult.infeas<=exitFeasibility_)
       break; 
     iteration++;
@@ -409,6 +411,12 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
     }
     if (iteration>50&&n==numberAway&&result.infeas<1.0e-4)
       break; // not much happening
+    if (lightWeight_&&iteration>10&&result.infeas>1.0) {
+      if (lastInfeas!=bestInfeas&&min(result.infeas,lastInfeas)>0.95*bestInfeas)
+	break; // not getting feasible
+    }
+    bestInfeas=min(bestInfeas,result.infeas);
+    lastInfeas = result.infeas;
     numberAway=n;
     keepinfeas = result.infeas;
     lastWeighted=result.weighted;
@@ -420,7 +428,10 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
 	  &&result.infeas>reasonableInfeas) {
 	iteration--;
 	memcpy(colsol,saveSol,ncols*sizeof(double));
-	mu*=1.0e-1;
+	if (majorIterations_<50)
+	  mu*=1.0e-1;
+	else
+	  mu*=0.7;
 	bestFeasible=1.0e31;
         bestWeighted=1.0e60;
         if (mu<1.0e-30) break;

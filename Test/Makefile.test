@@ -68,7 +68,7 @@ CXXFLAGS += -pg
 #LDFLAGS += -L/home/forrest/ATLAS/lib/Linux_P4SSE2 -llapack -lcblas -latlas -lf77blas -lg2c
 #if DENSE and using given libraries
 LDFLAGS += -llapack -lblas -lg2c
-
+#LDFLAGS += -Wl,-M
 ###############################################################################
 
 TESTOBJ := $(addprefix $(TARGETDIR)/, $(TESTSRC:.cpp=.o))

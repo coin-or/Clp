@@ -15,6 +15,7 @@
 #include "ClpSolve.hpp"
 #include "ClpPackedMatrix.hpp"
 #include "ClpPlusMinusOneMatrix.hpp"
+#include "ClpNetworkMatrix.hpp"
 #include "ClpMessage.hpp"
 #include "CoinTime.hpp"
 
@@ -70,6 +71,10 @@ ClpSimplex::initialSolve(ClpSolve & options)
   double timeSimplex=0.0;
   int savePerturbation=perturbation_;
   int saveScaling = scalingFlag_;
+  if (dynamic_cast< ClpNetworkMatrix*>(matrix_)) {
+    // network - switch off stuff
+    presolve = ClpSolve::presolveOff;
+  }
 
   if (presolve!=ClpSolve::presolveOff) {
     int numberPasses=5;
@@ -174,6 +179,11 @@ ClpSimplex::initialSolve(ClpSolve & options)
   default:
     abort();
   }
+  if (dynamic_cast< ClpNetworkMatrix*>(matrix_)) {
+    // network - switch off stuff
+    doIdiot=0;
+    doSprint=0;
+  }
   int numberColumns = model2->numberColumns();
   int numberRows = model2->numberRows();
   // If not all slack basis - switch off all
@@ -242,59 +252,105 @@ ClpSimplex::initialSolve(ClpSolve & options)
     if (doIdiot) {
       int nPasses=0;
       Idiot info(*model2);
-      // Get ratio of average number of elements per column to 5
-      double ratio  = ((double) numberElements/(double) numberColumns)/5.0;
+      // Get average number of elements per column
+      double ratio  = ((double) numberElements/(double) numberColumns);
+      // look at rhs
+      int iRow;
+      double largest=0.0;
+      double smallest = 1.0e30;
+      double largestGap=0.0;
+      int numberNotE=0;
+      for (iRow=0;iRow<numberRows;iRow++) {
+	double value1 = model2->rowLower_[iRow];
+	if (value1&&value1>-1.0e31) {
+	  largest = max(largest,fabs(value1));
+	  smallest=min(smallest,fabs(value1));
+	}
+	double value2 = model2->rowUpper_[iRow];
+	if (value2&&value2<1.0e31) {
+	  largest = max(largest,fabs(value2));
+	  smallest=min(smallest,fabs(value2));
+	}
+	if (value2>value1) {
+	  numberNotE++;
+	  if (value2>1.0e31||value1<-1.0e31)
+	    largestGap = COIN_DBL_MAX;
+	  else
+	    largestGap = value2-value1;
+	}
+      }
       if (numberRows>200&&numberColumns>5000&&numberColumns>2*numberRows) {
 	if (plusMinus) {
-	  // look at rhs
-	  int iRow;
-	  double largest=0.0;
-	  double smallest = 1.0e30;
-	  for (iRow=0;iRow<numberRows;iRow++) {
-	    double value;
-	    value = model2->rowLower_[iRow];
-	    if (value) {
-	      largest = max(largest,fabs(value));
-	      smallest=min(smallest,fabs(value));
-	    }
-	    value = model2->rowUpper_[iRow];
-	    if (value) {
-	      largest = max(largest,fabs(value));
-	      smallest=min(smallest,fabs(value));
-	    }
-	  }
 	  if (largest/smallest>2.0) {
 	    nPasses = 10+numberColumns/100000;
 	    nPasses = min(nPasses,50);
 	    nPasses = max(nPasses,15);
-	    if (numberElements<3*numberColumns) 
-	      nPasses=10; // probably not worh it
-	    info.setLightweight(1); // say lightweight idiot
+	    if (numberRows>25000&&nPasses>5) {
+	      // Might as well go for it
+	      nPasses = max(nPasses,71);
+	    } else if (numberElements<3*numberColumns) {
+	      nPasses=min(nPasses,10); // probably not worh it
+	    }
+	    if (doIdiot<0)
+	      info.setLightweight(1); // say lightweight idiot
 	  } else if (largest/smallest>1.01||numberElements<=3*numberColumns) {
 	    nPasses = 10+numberColumns/1000;
 	    nPasses = min(nPasses,100);
 	    nPasses = max(nPasses,30);
+	    if (numberRows>25000) {
+	      // Might as well go for it
+	      nPasses = max(nPasses,71);
+	    }
+	    if (!largestGap)
+	      nPasses *= 2;
 	  } else {
 	    nPasses = 10+numberColumns/1000;
 	    nPasses = min(nPasses,200);
 	    nPasses = max(nPasses,100);
 	    info.setStartingWeight(1.0e-1);
 	    info.setReduceIterations(6);
+	    if (!largestGap)
+	      nPasses *= 2;
 	    //info.setFeasibilityTolerance(1.0e-7);
 	  }
+	  // If few passes - don't bother
+	  if (nPasses<=5)
+	    nPasses=0;
 	} else {
-	  nPasses = 10+numberColumns/100000;
-	  if (numberColumns>4*numberRows) 
-	    nPasses = min(nPasses,50);
-	  else
-	    nPasses=5;
-	  info.setLightweight(1); // say lightweight idiot
-	  if (numberElements<3*numberColumns) 
-	    nPasses=2; // probably not worh it
-	  else
+	  if (doIdiot<0)
+	    info.setLightweight(1); // say lightweight idiot
+	  if (largest/smallest>1.01||numberNotE) {
+	    if (numberRows>25000||numberColumns>5*numberRows) {
+	      nPasses = 50;
+	    } else if (numberColumns>4*numberRows) {
+	      nPasses = 20;
+	    } else {
+	      nPasses=5;
+	    }
+	  } else {
+	    if (numberRows>25000||numberColumns>5*numberRows) {
+	      nPasses = 50;
+	      info.setLightweight(0); // say not lightweight idiot
+	    } else if (numberColumns>4*numberRows) {
+	      nPasses = 20;
+	    } else {
+	      nPasses=15;
+	    }
+	  }
+	  if (numberElements<3*numberColumns) { 
+	    nPasses=(int) ((2.0*(double) nPasses)/ratio); // probably not worh it
+	  } else {
 	    nPasses = max(nPasses,5);
-	  nPasses = (int) (((double) nPasses)/ratio); // reduce if lots of elements per column
-	  if (nPasses<2)
+	    nPasses = (int) (((double) nPasses)*5.0/ratio); // reduce if lots of elements per column
+	  }
+	  if (numberRows>25000&&nPasses>5) {
+	    // Might as well go for it
+	    nPasses = max(nPasses,71);
+	  } else if (plusMinus) {
+	    nPasses *= 2;
+	    nPasses=min(nPasses,71);
+	  }
+	  if (nPasses<=5)
 	    nPasses=0;
 	  //info.setStartingWeight(1.0e-1);
 	}
@@ -302,8 +358,10 @@ ClpSimplex::initialSolve(ClpSolve & options)
       if (doIdiot>0) {
 	// pick up number passes
 	nPasses=options.getExtraInfo(1);
-	if (nPasses>70)
+	if (nPasses>70) {
+	  info.setStartingWeight(1.0e3);
 	  info.setReduceIterations(6);
+	}
       }
       if (nPasses) {
 	doCrash=0;
@@ -507,7 +565,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
       // Get objective offset
       double offset=0.0;
       const double * objective = model2->objective();
-      for (iColumn=0;iColumn<numberColumns_;iColumn++) 
+      for (iColumn=0;iColumn<numberColumns;iColumn++) 
 	offset += fullSolution[iColumn]*objective[iColumn];
       small.setDblParam(ClpObjOffset,originalOffset-offset);
       model2->times(1.0,fullSolution,sumFixed);
@@ -568,13 +626,13 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	<<iPass+1<<small.numberIterations()<<small.objectiveValue()<<sumNegative
 	<<numberNegative
 	<<CoinMessageEol;
-      if ((small.objectiveValue()>lastObjective-1.0e-7&&iPass>5)||
+      if ((small.objectiveValue()*optimizationDirection_>lastObjective-1.0e-7&&iPass>5)||
 	  !small.numberIterations()||
 	  iPass==maxPass-1||small.status()==3) {
 	
 	break; // finished
       } else {
-	lastObjective = small.objectiveValue();
+	lastObjective = small.objectiveValue()*optimizationDirection_;
 	// sort
 	CoinSort_2(weight,weight+numberColumns,sort);
 	numberSort = smallNumberColumns;
@@ -589,13 +647,22 @@ ClpSimplex::initialSolve(ClpSolve & options)
     delete [] sort;
     delete [] whichRows;
     if (saveLower) {
-      // unperturb
-      memcpy(model2->rowLower_,saveLower,numberRows*sizeof(double));
+      // unperturb and clean
+      for (iRow=0;iRow<numberRows;iRow++) {
+	double diffLower = saveLower[iRow]-model2->rowLower_[iRow];
+	double diffUpper = saveUpper[iRow]-model2->rowUpper_[iRow];
+	model2->rowLower_[iRow]=saveLower[iRow];
+	model2->rowUpper_[iRow]=saveUpper[iRow];
+	if (diffLower) 
+	  assert (!diffUpper||fabs(diffLower-diffUpper)<1.0e-5);
+	else
+	  diffLower = diffUpper;
+	model2->rowActivity_[iRow] += diffLower;
+      }
       delete [] saveLower;
-      memcpy(model2->rowUpper_,saveUpper,numberRows*sizeof(double));
       delete [] saveUpper;
     }
-    model2->primal(1);
+    model2->primal(0);
     model2->setPerturbation(savePerturbation);
     time2 = CoinCpuTime();
     timeCore = time2-timeX;

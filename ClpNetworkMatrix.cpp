@@ -14,6 +14,7 @@
 #include "ClpNetworkMatrix.hpp"
 #include "ClpPlusMinusOneMatrix.hpp"
 #include "ClpMessage.hpp"
+#include <iostream>
 
 //#############################################################################
 // Constructors / Destructor / Assignment
@@ -381,8 +382,8 @@ ClpNetworkMatrix::transposeTimes(const ClpSimplex * model, double scalar,
       factor=0.15;
     else if (numberRows*2<numberColumns)
       factor=0.2;
-    if (model->numberIterations()%50==0)
-      printf("%d nonzero\n",numberInRowArray);
+    //if (model->numberIterations()%50==0)
+    //printf("%d nonzero\n",numberInRowArray);
   }
   if (numberInRowArray>factor*numberRows||!rowCopy) {
     // do by column
@@ -825,11 +826,13 @@ ClpNetworkMatrix::getVectorLengths() const
 /* Delete the columns whose indices are listed in <code>indDel</code>. */
 void ClpNetworkMatrix::deleteCols(const int numDel, const int * indDel) 
 {
+  std::cerr<<"deleteCols not implemented in ClpNetworkMatrix"<<std::endl;
   abort();
 }
 /* Delete the rows whose indices are listed in <code>indDel</code>. */
 void ClpNetworkMatrix::deleteRows(const int numDel, const int * indDel) 
 {
+  std::cerr<<"deleteRows not implemented in ClpNetworkMatrix"<<std::endl;
   abort();
 }
 /* Given positive integer weights for each row fills in sum of weights

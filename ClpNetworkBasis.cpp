@@ -681,8 +681,8 @@ ClpNetworkBasis::updateColumn (  CoinIndexedVector * regionSparse,
       //mark_[numberRows_]=1;
       for (i=0;i<numberNonZero;i++) {
 	int j = regionIndex2[i];
-	double value = region2[j];
-	region2[j]=0.0;
+	double value = region2[i];
+	region2[i]=0.0;
 	region[j]=value;
 	regionIndex[i]=j;
 	int iDepth = depth_[j];

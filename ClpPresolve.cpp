@@ -40,6 +40,7 @@ ClpPresolve::ClpPresolve() :
   presolvedModel_(NULL),
   nonLinearValue_(0.0),
   originalColumn_(NULL),
+  originalRow_(NULL),
   paction_(0),
   ncols_(0),
   nrows_(0),
@@ -63,8 +64,10 @@ ClpPresolve::gutsOfDestroy()
     paction = next;
   }
   delete [] originalColumn_;
+  delete [] originalRow_;
   paction_=NULL;
   originalColumn_=NULL;
+  originalRow_=NULL;
 }
 
 /* This version of presolve returns a pointer to a new presolved 
@@ -86,6 +89,8 @@ ClpPresolve::presolvedModel(ClpSimplex & si,
   originalModel_ = &si;
   delete [] originalColumn_;
   originalColumn_ = new int[ncols_];
+  delete [] originalRow_;
+  originalRow_ = new int[nrows_];
 
   // Check matrix
   if (!si.clpMatrix()->allElementsInRange(&si,si.getSmallElementValue(),
@@ -104,8 +109,7 @@ ClpPresolve::presolvedModel(ClpSimplex & si,
     // make new copy
     delete presolvedModel_;
     presolvedModel_ = new ClpSimplex(si);
-    if (dropNames)
-      presolvedModel_->dropNames();
+    presolvedModel_->dropNames();
 
     // drop integer information if wanted
     if (!keepIntegers)
@@ -209,6 +213,31 @@ ClpPresolve::presolvedModel(ClpSimplex & si,
       
       int ncolsNow = presolvedModel_->getNumCols();
       memcpy(originalColumn_,prob.originalColumn_,ncolsNow*sizeof(int));
+      delete [] prob.originalColumn_;
+      prob.originalColumn_=NULL;
+      int nrowsNow = presolvedModel_->getNumRows();
+      memcpy(originalRow_,prob.originalRow_,nrowsNow*sizeof(int));
+      delete [] prob.originalRow_;
+      prob.originalRow_=NULL;
+      if (!dropNames&&si.lengthNames()) {
+	// Redo names
+	int iRow;
+	std::vector<std::string> rowNames;
+	rowNames.reserve(nrowsNow);
+	for (iRow=0;iRow<nrowsNow;iRow++) {
+	  int kRow = originalRow_[iRow];
+	  rowNames.push_back(si.rowName(kRow));
+	}
+      
+	int iColumn;
+	std::vector<std::string> columnNames;
+	columnNames.reserve(ncolsNow);
+	for (iColumn=0;iColumn<ncolsNow;iColumn++) {
+	  int kColumn = originalColumn_[iColumn];
+	  columnNames.push_back(si.columnName(kColumn));
+	}
+	presolvedModel_->copyNames(rowNames,columnNames);
+      }
       // now clean up integer variables.  This can modify original
       int i;
       const char * information = presolvedModel_->integerInformation();
@@ -354,6 +383,12 @@ ClpPresolve::originalColumns() const
 {
   return originalColumn_;
 }
+// return pointer to original rows
+const int * 
+ClpPresolve::originalRows() const
+{
+  return originalRow_;
+}
 // Set pointer to original model
 void 
 ClpPresolve::setOriginalModel(ClpSimplex * model)
@@ -476,7 +511,17 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
     const bool dual = ATOI("off")!=0;
 #else
     // normal
-#if 1
+#if 0
+    const bool slackd = true;
+    const bool doubleton = false;
+    const bool tripleton = true;
+    const bool forcing = false;
+    const bool ifree = true;
+    const bool zerocost = true;
+    const bool dupcol = false;
+    const bool duprow = false;
+    const bool dual = doDualStuff;
+#else
     const bool slackd = true;
     const bool doubleton = true;
     const bool tripleton = true;
@@ -486,15 +531,6 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
     const bool dupcol = true;
     const bool duprow = true;
     const bool dual = doDualStuff;
-#else
-    const bool slackd = false;
-    const bool doubleton = true;
-    const bool forcing = true;
-    const bool ifree = false;
-    const bool zerocost = false;
-    const bool dupcol = false;
-    const bool duprow = false;
-    const bool dual = false;
 #endif
 #endif
     
@@ -1030,6 +1066,7 @@ CoinPrePostsolveMatrix::CoinPrePostsolveMatrix(const ClpSimplex * si,
   rlo_(new double[nrows_in]),
   rup_(new double[nrows_in]),
   originalColumn_(new int[ncols_in]),
+  originalRow_(new int[nrows_in]),
 
   ztolzb_(getTolerance(si, ClpPrimalTolerance)),
   ztoldj_(getTolerance(si, ClpDualTolerance)),
@@ -1049,6 +1086,8 @@ CoinPrePostsolveMatrix::CoinPrePostsolveMatrix(const ClpSimplex * si,
   int i;
   for (i=0;i<ncols_in;i++) 
     originalColumn_[i]=i;
+  for (i=0;i<nrows_in;i++) 
+    originalRow_[i]=i;
   sol_=NULL;
   rowduals_=NULL;
   acts_=NULL;

@@ -210,13 +210,16 @@ int main (int argc, const char *argv[])
       abort();
     }
   }
+#if 0
   FILE* infile = fopen("parameters", "r");
   if (!infile) {
     printf("Failure to open parameter file\n");
   } else {
     volprob.read_params("parameters");
   }
-
+#endif
+  // should save and restore
+  model.tightenPrimalBounds();
   lpHook myHook(model.getColLower(), model.getColUpper(),
 		model.getObjCoefficients(),
 		rhs, sense, *mat);
@@ -258,6 +261,7 @@ int main (int argc, const char *argv[])
   //model.setLogLevel(63);
   // solve
   model.dual(1);
+  //model.primal(1);
 #ifdef MODIFYCOSTS
   memcpy(model.objective(),saveObj,numberColumns*sizeof(double));
   // zero out pi

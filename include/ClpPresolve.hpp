@@ -76,6 +76,8 @@ public:
     
   /// return pointer to original columns
   const int * originalColumns() const;
+  /// return pointer to original rows
+  const int * originalRows() const;
   /** "Magic" number. If this is non-zero then any elements with this value
       may change and so presolve is very limited in what can be done
       to the row and column.  This is for non-linear problems.
@@ -110,6 +112,8 @@ private:
   double nonLinearValue_;
   /// Original column numbers
   int * originalColumn_;
+  /// Original row numbers
+  int * originalRow_;
   /// The list of transformations applied.
   const CoinPresolveAction *paction_;
 

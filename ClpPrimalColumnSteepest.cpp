@@ -336,8 +336,8 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
       saveWeights(model_,4);
       printf("switching to devex %d nel ratio %g\n",numberElements,ratio);
     }
-    if (model_->numberIterations()%1000==0)
-      printf("numels %d ratio %g wanted %d\n",numberElements,ratio,numberWanted);
+    //if (model_->numberIterations()%1000==0)
+    //printf("numels %d ratio %g wanted %d\n",numberElements,ratio,numberWanted);
   }
   if(switchType==4) {
     // Still in devex mode
@@ -367,8 +367,8 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
       printf("switching to exact %d nel ratio %g\n",numberElements,ratio);
       updates->clear();
     }
-    if (model_->numberIterations()%1000==0)
-      printf("numels %d ratio %g wanted %d\n",numberElements,ratio,numberWanted);
+    //if (model_->numberIterations()%1000==0)
+    //printf("numels %d ratio %g wanted %d\n",numberElements,ratio,numberWanted);
   } 
   if (switchType<4) {
     if (switchType<2 ) {

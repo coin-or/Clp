@@ -164,6 +164,9 @@ public:
   void createEmptyMatrix();
   /// Drops names - makes lengthnames 0 and names empty
   void dropNames();
+  /// Copies in names
+  void copyNames(std::vector<std::string> & rowNames,
+		 std::vector<std::string> & columnNames);
   
   //@}
   /**@name gets and sets */

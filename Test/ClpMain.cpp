@@ -869,7 +869,7 @@ int main (int argc, const char *argv[])
     std::string exportFile ="default.mps";
     std::string saveFile ="default.prob";
     std::string restoreFile ="default.prob";
-    std::string solutionFile ="default.sol";
+    std::string solutionFile ="stdout";
 #define MAXPARAMETERS 100
     ClpItem parameters[MAXPARAMETERS];
     int numberParameters=0;
@@ -898,8 +898,8 @@ int main (int argc, const char *argv[])
     parameters[numberParameters-1].setLonghelp
       (
        "If crash is set on and there is an all slack basis then Clp will put structural\
-variables into basis with the aim of getting dual feasible.  On the whole dual seems to be\
-better without it and there alernative types of 'crash' for primal e.g. 'idiot' or 'sprint'."
+ variables into basis with the aim of getting dual feasible.  On the whole dual seems to be\
+ better without it and there alernative types of 'crash' for primal e.g. 'idiot' or 'sprint'."
        ); 
     parameters[numberParameters++]=
       ClpItem("direction","Minimize or Maximize",
@@ -1063,7 +1063,9 @@ refactorizations",
 	      1,999999,MAXFACTOR);
     parameters[numberParameters-1].setLonghelp
       (
-       ""
+       "If this is at its default value of 200 then in this executable clp will guess at a\
+ value to use.  Otherwise the user can set a value.  The code may decide to re-factorize\
+ earlier."
        ); 
     parameters[numberParameters-1].setIntValue(models->factorizationFrequency());
     parameters[numberParameters++]=
@@ -1072,7 +1074,9 @@ stopping",
 	      0,99999999,MAXITERATION);
     parameters[numberParameters-1].setLonghelp
       (
-       ""
+       "This can be used for testing purposes.  The corresponding library call\n\
+      \tsetMaximumIterations(value)\n can be useful.  If the code stops on\
+ seconds or by an interrupt this will be treated as stopping on maximum iterations"
        ); 
     parameters[numberParameters-1].setIntValue(models->maximumIterations());
     parameters[numberParameters++]=
@@ -1156,7 +1160,9 @@ specialized network code."
     parameters[numberParameters-1].append("more");
     parameters[numberParameters-1].setLonghelp
       (
-       ""
+       "Presolve analyzes the model to find such things as redundant equations, equations\
+ which fix some variables, equations which can be transformed into bounds etc etc.  For the\
+ initial solve of any problem this is worth doing unless you know that it will have no effect."
        ); 
     parameters[numberParameters++]=
       ClpItem("primalP!ivot","Primal pivot choice algorithm",
@@ -1168,14 +1174,22 @@ specialized network code."
     parameters[numberParameters-1].append("change");
     parameters[numberParameters-1].setLonghelp
       (
-       ""
+       "Clp can use any pivot selection algorithm which the user codes as long as it\
+ implements the features in the abstract pivot base class.  The Dantzig method is implemented\
+ to show a simple method but its use is deprecated.  Exact devex is the method of choice and there\
+ are two variants which keep all weights updated but only scan a subset each iteration.\
+ Partial switches this on while change initially does dantzig until the factorization\
+ becomes denser.  This is still a work in progress."
        ); 
     parameters[numberParameters++]=
       ClpItem("primalS!implex","Do primal simplex algorithm",
 	      PRIMALSIMPLEX);
     parameters[numberParameters-1].setLonghelp
       (
-       ""
+       "This command solves the current model using the primal algorithm.\
+  The default is to use exact devex.\
+ The time and iterations may be affected by settings such as presolve, scaling, crash\
+ and also by column selection  method, infeasibility weight and dual and primal tolerances."
        ); 
     parameters[numberParameters++]=
       ClpItem("primalT!olerance","For an optimal solution \
@@ -1183,7 +1197,8 @@ no primal infeasibility may exceed this value",
 	      1.0e-20,1.0e12,PRIMALTOLERANCE);
     parameters[numberParameters-1].setLonghelp
       (
-       ""
+       "Normally the default tolerance is fine, but you may want to increase it a\
+ bit if a primal run seems to be having a hard time"
        ); 
     parameters[numberParameters-1].setDoubleValue(models->primalTolerance());
     parameters[numberParameters++]=
@@ -1192,7 +1207,13 @@ costs this much to be infeasible",
 	      1.0e-20,1.0e12,PRIMALWEIGHT);
     parameters[numberParameters-1].setLonghelp
       (
-       ""
+       "The primal algorithm in Clp is a single phase algorithm as opposed to a two phase\
+ algorithm where you first get feasible then optimal.  So Clp is minimizing this weight times\
+ the sum of primal infeasibilities plus the true objective function (in minimization sense).\
+  Too high a value may mean more iterations, while too low a bound means\
+ the code may go all the way and then have to increase the weight in order to get feasible.\
+  OSL had a heuristic to\
+ adjust bounds, maybe we need that here."
        ); 
     parameters[numberParameters-1].setDoubleValue(models->infeasibilityCost());
     parameters[numberParameters++]=
@@ -1207,10 +1228,9 @@ costs this much to be infeasible",
 	      RESTORE);
     parameters[numberParameters-1].setLonghelp
       (
-       "This will write an MPS format file to the given file name.  It will use the default\
+       "This reads data save by saveModel from the given file.  It will use the default\
  directory given by 'directory'.  A name of '$' will use the previous value for the name.  This\
- is initialized to 'default.mps'."
-       ""
+ is initialized to 'default.prob'."
        ); 
     parameters[numberParameters-1].setStringValue(restoreFile);
     parameters[numberParameters++]=
@@ -1225,10 +1245,10 @@ costs this much to be infeasible",
 	      SAVE);
     parameters[numberParameters-1].setLonghelp
       (
-       "This will write an MPS format file to the given file name.  It will use the default\
+       "This will save the problem to the given file name for future use\
+ by restoreModel.  It will use the default\
  directory given by 'directory'.  A name of '$' will use the previous value for the name.  This\
- is initialized to 'default.mps'."
-       ""
+ is initialized to 'default.prob'."
        ); 
     parameters[numberParameters-1].setStringValue(saveFile);
     parameters[numberParameters++]=
@@ -1239,14 +1259,19 @@ costs this much to be infeasible",
     parameters[numberParameters-1].append("auto!matic");
     parameters[numberParameters-1].setLonghelp
       (
-       ""
+       "Scaling can help in solving problems which might otherwise fail because of lack of\
+ accuracy.  It can also reduce the number of iterations.  It is not applied if the range\
+ of elements is small.  When unscaled it is possible that there may be small primal and/or\
+ infeasibilities."
        ); 
     parameters[numberParameters++]=
       ClpItem("sec!onds","maximum seconds",
 	      0.0,1.0e12,MAXTIME);
     parameters[numberParameters-1].setLonghelp
       (
-       ""
+       "After this many seconds clp will act as if maximum iterations had been reached.\
+  In this program it is really only useful for testing but the library function\n\
+      \tsetMaximumSeconds(value)\n can be useful."
        ); 
     parameters[numberParameters-1].setDoubleValue(models->maximumSeconds());
     parameters[numberParameters++]=
@@ -1254,10 +1279,9 @@ costs this much to be infeasible",
 	      SOLUTION);
     parameters[numberParameters-1].setLonghelp
       (
-       "This will write an MPS format file to the given file name.  It will use the default\
+       "This will write a primitive solution file to the given file name.  It will use the default\
  directory given by 'directory'.  A name of '$' will use the previous value for the name.  This\
- is initialized to 'default.mps'."
-       ""
+ is initialized to 'stdout'."
        ); 
     parameters[numberParameters-1].setStringValue(solutionFile);
     parameters[numberParameters++]=
@@ -1267,10 +1291,13 @@ costs this much to be infeasible",
     parameters[numberParameters-1].append("on");
     parameters[numberParameters++]=
       ClpItem("sprint!Crash","Whether to try sprint crash",
-	      0,200,SPRINT);
+	      -1,500,SPRINT);
     parameters[numberParameters-1].setLonghelp
       (
-       ""
+       "For long and thin problems this program may solve a series of small problems\
+ created by taking a subset of the columns.  I introduced the idea as 'Sprint' after\
+ an LP code of that name of the 60's which tried the same tactic (not totally successfully).\
+  Cplex calls it 'sifting'.  -1 is automatic choice, 0 is off, n is number of passes"
        ); 
     parameters[numberParameters-1].setIntValue(doSprint);
       ClpItem("stdin","From stdin",
@@ -1370,7 +1397,7 @@ costs this much to be infeasible",
 	    ", -stdin or just - switches to stdin"<<std::endl;
 	  std::cout<<"One command per line (and no -)"<<std::endl;
 	  std::cout<<"abcd? gives list of possibilities, if only one + explanation"<<std::endl;
-	  std::cout<<"abcd?? adds explanation, if only one fuller help(LATER)"<<std::endl;
+	  std::cout<<"abcd?? adds explanation, if only one fuller help"<<std::endl;
 	  std::cout<<"abcd without value (where expected) gives current value"<<std::endl;
 	  std::cout<<"abcd value sets value"<<std::endl;
 	  std::cout<<"Commands are:"<<std::endl;
@@ -1802,7 +1829,7 @@ costs this much to be infeasible",
 				  columnNames, rowNames);
 		// Pass in array saying if each variable integer
 		writer.copyInIntegerInformation(model2->integerInformation());
-		writer.writeMps(fileName.c_str());
+		writer.writeMps(fileName.c_str(),0,0,1);
 		if (rowNames) {
 		  for (iRow=0;iRow<numberRows;iRow++) {
 		    free(rowNames[iRow]);
@@ -2102,9 +2129,12 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 	      }
 	      std::string fileName;
 	      FILE *fp=NULL;
-	      if (field=="-"||field=="EOL") {
+	      if (field=="-"||field=="EOL"||field=="stdout") {
 		// stdout
 		fp=stdout;
+	      } else if (field=="stderr") {
+		// stderr
+		fp=stderr;
 	      } else {
 		if (field[0]=='/'||field[0]=='~')
 		  fileName = field;

@@ -1074,6 +1074,8 @@ ClpModel::readMps(const char *fileName,
     if (keepNames) {
       unsigned int maxLength=0;
       int iRow;
+      rowNames_ = std::vector<std::string> ();
+      columnNames_ = std::vector<std::string> ();
       rowNames_.reserve(numberRows_);
       for (iRow=0;iRow<numberRows_;iRow++) {
 	const char * name = m.rowName(iRow);
@@ -1361,6 +1363,8 @@ ClpModel::ClpModel ( const ClpModel * rhs,
   if (!dropNames) {
     unsigned int maxLength=0;
     int iRow;
+    rowNames_ = std::vector<std::string> ();
+    columnNames_ = std::vector<std::string> ();
     rowNames_.reserve(numberRows_);
     for (iRow=0;iRow<numberRows_;iRow++) {
       rowNames_[iRow] = rhs->rowNames_[whichRow[iRow]];
@@ -1432,6 +1436,28 @@ ClpModel::ClpModel ( const ClpModel * rhs,
 					numberColumns,whichColumn);
   }
 #endif
+}
+// Copies in names
+void 
+ClpModel::copyNames(std::vector<std::string> & rowNames,
+		 std::vector<std::string> & columnNames)
+{
+  unsigned int maxLength=0;
+  int iRow;
+  rowNames_ = std::vector<std::string> ();
+  columnNames_ = std::vector<std::string> ();
+  rowNames_.reserve(numberRows_);
+  for (iRow=0;iRow<numberRows_;iRow++) {
+    rowNames_[iRow] = rowNames[iRow];
+    maxLength = max(maxLength,(unsigned int) strlen(rowNames_[iRow].c_str()));
+  }
+  int iColumn;
+  columnNames_.reserve(numberColumns_);
+  for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+    columnNames_[iColumn] = columnNames[iColumn];
+    maxLength = max(maxLength,(unsigned int) strlen(columnNames_[iColumn].c_str()));
+  }
+  lengthNames_=(int) maxLength;
 }
 //#############################################################################
 // Constructors / Destructor / Assignment
