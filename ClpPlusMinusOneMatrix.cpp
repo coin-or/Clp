@@ -65,6 +65,25 @@ ClpPlusMinusOneMatrix::ClpPlusMinusOneMatrix (const ClpPlusMinusOneMatrix & rhs)
     rhsOffset_=NULL;
   }
 }
+// Constructor from arrays
+ClpPlusMinusOneMatrix::ClpPlusMinusOneMatrix(int numberRows, int numberColumns,
+					     bool columnOrdered, const int * indices,
+					     const CoinBigIndex * startPositive, 
+					     const CoinBigIndex * startNegative)
+  : ClpMatrixBase()
+{
+  setType(12);
+  elements_ = NULL;
+  lengths_=NULL;
+  numberRows_=numberRows;
+  numberColumns_=numberColumns;
+  columnOrdered_=columnOrdered;
+  int numberMajor = (columnOrdered_) ? numberColumns_ : numberRows_;
+  int numberElements = startPositive[numberMajor];
+  startPositive_ = ClpCopyOfArray(startPositive,numberMajor+1);
+  startNegative_ = ClpCopyOfArray(startNegative,numberMajor);
+  indices_ = ClpCopyOfArray(indices,numberElements);
+}
 
 ClpPlusMinusOneMatrix::ClpPlusMinusOneMatrix (const CoinPackedMatrix & rhs) 
   : ClpMatrixBase()

@@ -169,6 +169,10 @@ public:
    ClpPlusMinusOneMatrix(const ClpPlusMinusOneMatrix&);
    /** The copy constructor from an CoinPlusMinusOneMatrix. */
    ClpPlusMinusOneMatrix(const CoinPackedMatrix&);
+  /// Constructor from arrays 
+  ClpPlusMinusOneMatrix(int numberRows, int numberColumns,
+			bool columnOrdered, const int * indices,
+			const CoinBigIndex * startPositive, const CoinBigIndex * startNegative);
   /** Subset constructor (without gaps).  Duplicates are allowed
       and order is as given */
   ClpPlusMinusOneMatrix (const ClpPlusMinusOneMatrix & wholeModel,
