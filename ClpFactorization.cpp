@@ -215,10 +215,16 @@ ClpFactorization::factorize ( const ClpSimplex * model,
 	ftranAverageAfterL_ = max(ftranCountAfterL_/ftranCountInput_,1.0);
 	ftranAverageAfterR_ = max(ftranCountAfterR_/ftranCountAfterL_,1.0);
 	ftranAverageAfterU_ = max(ftranCountAfterU_/ftranCountAfterR_,1.0);
-
-	btranAverageAfterU_ = max(btranCountAfterU_/btranCountInput_,1.0);
-	btranAverageAfterR_ = max(btranCountAfterR_/btranCountAfterU_,1.0);
-	btranAverageAfterL_ = max(btranCountAfterL_/btranCountAfterR_,1.0);
+        if (btranCountInput_) {
+	  btranAverageAfterU_ = max(btranCountAfterU_/btranCountInput_,1.0);
+	  btranAverageAfterR_ = max(btranCountAfterR_/btranCountAfterU_,1.0);
+	  btranAverageAfterL_ = max(btranCountAfterL_/btranCountAfterR_,1.0);
+	} else {
+	  // odd - we have not done any btrans
+	  btranAverageAfterU_ = 1.0;
+	  btranAverageAfterR_ = 1.0;
+	  btranAverageAfterL_ = 1.0;
+	}
       }
       // scale back
 
