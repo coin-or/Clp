@@ -3529,12 +3529,21 @@ ClpSimplex::crash(double gap,int pivot)
 		if (iUp>=0) {
 		  kColumn=iUp;
 		  change=maximumUp;
+		  // just do minimum if was dual infeasible
+		  // ? only if maximum large?
+		  if (minimumUp>0.0)
+		    change=minimumUp;
 		  setRowStatus(iRow,atUpperBound);
 		} else {
 		  kColumn=iDown;
 		  change=-maximumDown;
+		  // just do minimum if was dual infeasible
+		  // ? only if maximum large?
+		  if (minimumDown>0.0)
+		    change=-minimumDown;
 		  setRowStatus(iRow,atLowerBound);
 		}
+		assert (fabs(change)<1.0e20);
 		setColumnStatus(kColumn,basic);
 		numberIn++;
 		pi[iRow]=change;

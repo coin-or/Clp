@@ -551,15 +551,13 @@ ClpSimplexDual::whileIterating()
 	    continue;
 	  }
 	} else if (updateStatus==3) {
-	  // out of memory
+	  // out of memory or maximum pivots
 	  // increase space if not many iterations
 	  if (factorization_->pivots()<
 	      0.5*factorization_->maximumPivots()&&
 	      factorization_->pivots()<200)
 	    factorization_->areaFactor(
 				       factorization_->areaFactor() * 1.1);
-	  problemStatus_=-2; // factorize now
-	} else if (updateStatus==5) {
 	  problemStatus_=-2; // factorize now
 	} 
 	// update primal solution
