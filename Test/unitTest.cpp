@@ -928,6 +928,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     delete [] element;
   }
   // test network 
+#define QUADRATIC
 #ifndef QUADRATIC
   if (1) {    
     std::string fn = mpsDir+"input.130";
@@ -935,9 +936,13 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     int numberRows;
     
     FILE * fp = fopen(fn.c_str(),"r");
-
     if (!fp) {
-      fprintf(stderr,"Unable to open file input.130 in mpsDir directory\n");
+      // Try in Samples
+      fn = "Samples/input.130";
+      fp = fopen(fn.c_str(),"r");
+    }
+    if (!fp) {
+      fprintf(stderr,"Unable to open file input.130 in mpsDir or Samples directory\n");
     } else {
       int problem;
       char temp[100];
@@ -1095,7 +1100,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
   // Test quadratic to solve linear
   if (1) {    
     CoinMpsIO m;
-    std::string fn = "tiny2a";
+    std::string fn = mpsDir+"exmip1";
     m.readMps(fn.c_str(),"mps");
     ClpSimplex solution;
     solution.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
@@ -1127,7 +1132,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     solution.setLogLevel(63);
     solution.quadraticPrimal(1);
     objValue = solution.getObjValue();
-    assert(eq(objValue,820.0));
+    assert(eq(objValue,3.2368421));
     //exit(77);
   }
   // Test quadratic

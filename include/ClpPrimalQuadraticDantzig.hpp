@@ -5,6 +5,7 @@
 
 #include "ClpPrimalColumnPivot.hpp"
 class ClpSimplexPrimalQuadratic;
+class ClpQuadraticInfo;
 //#############################################################################
 
 /** Primal Column Pivot Dantzig Algorithm Class
@@ -46,8 +47,8 @@ public:
   ClpPrimalQuadraticDantzig(const ClpPrimalQuadraticDantzig &);
   
   /// Constructor from model
-  ClpPrimalQuadraticDantzig(ClpSimplexPrimalQuadratic * model, 
-			    int originalNumberRows);
+  ClpPrimalQuadraticDantzig(ClpSimplexPrimalQuadratic * model,
+			    ClpQuadraticInfo * info);
   
   /// Assignment operator 
   ClpPrimalQuadraticDantzig & operator=(const ClpPrimalQuadraticDantzig& rhs);
@@ -64,8 +65,8 @@ public:
   
 private:
   ///@name Private member data 
-  /// Number of rows in original problem
-  int originalNumberRows_;
+  /// Pointer to info
+  ClpQuadraticInfo * quadraticInfo_;
   //@}
 };
 

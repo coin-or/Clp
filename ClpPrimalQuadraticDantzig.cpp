@@ -24,7 +24,7 @@ ClpPrimalQuadraticDantzig::ClpPrimalQuadraticDantzig ()
 : ClpPrimalColumnPivot()
 {
   type_=1;
-  originalNumberRows_ = 0;
+  quadraticInfo_=NULL;
 }
 
 //-------------------------------------------------------------------
@@ -33,18 +33,19 @@ ClpPrimalQuadraticDantzig::ClpPrimalQuadraticDantzig ()
 ClpPrimalQuadraticDantzig::ClpPrimalQuadraticDantzig (const ClpPrimalQuadraticDantzig & source) 
 : ClpPrimalColumnPivot(source)
 {  
-  originalNumberRows_ = source.originalNumberRows_;
+  quadraticInfo_=source.quadraticInfo_;
 
 }
 // Constructor from model
 ClpPrimalQuadraticDantzig::ClpPrimalQuadraticDantzig(
-		  ClpSimplexPrimalQuadratic * model, int originalNumberRows)
+		  ClpSimplexPrimalQuadratic * model, 
+		  ClpQuadraticInfo * info)
   :ClpPrimalColumnPivot()
 {
   type_=1;
   // Safe as has no extra data
   model_=(ClpSimplex *) model;
-  originalNumberRows_ = originalNumberRows;
+  quadraticInfo_ = info;
 }
 
 //-------------------------------------------------------------------
@@ -63,7 +64,7 @@ ClpPrimalQuadraticDantzig::operator=(const ClpPrimalQuadraticDantzig& rhs)
 {
   if (this != &rhs) {
     ClpPrimalColumnPivot::operator=(rhs);
-    originalNumberRows_ = rhs.originalNumberRows_;
+    quadraticInfo_ = rhs.quadraticInfo_;
   }
   return *this;
 }
@@ -78,7 +79,7 @@ ClpPrimalQuadraticDantzig::pivotColumn(CoinIndexedVector * updates,
 {
   assert(model_);
   // Find out where stuff is
-  int originalNumberColumns = model_->numberRows()-originalNumberRows_;
+  int originalNumberColumns = quadraticInfo_->numberXColumns();
   int start = model_->numberRows();
   double * solution = model_->solutionRegion();
   //double * lower = model_->lowerRegion();
@@ -95,10 +96,29 @@ ClpPrimalQuadraticDantzig::pivotColumn(CoinIndexedVector * updates,
 
   int iSequence;
   assert (!model_->scalingFlag());
-
+  const double * pi = solution+quadraticInfo_->numberXColumns();
+  // Matrix for linear stuff
+  CoinPackedMatrix * matrix = model_->matrix();
+  const int * row = matrix->getIndices();
+  const int * columnStart = matrix->getVectorStarts();
+  const double * element =  matrix->getElements();
+  const int * columnLength = matrix->getVectorLengths();
+  const int * which = quadraticInfo_->quadraticSequence();
+  const double * objective = quadraticInfo_->originalObjective();
   for (iSequence=0;iSequence<originalNumberColumns;iSequence++) {
-    int jSequence = iSequence + start;
-    double value = solution[jSequence];
+    int jSequence = which[iSequence];
+    double value;
+    if (jSequence>=0) {
+      jSequence += start;
+      value = solution[jSequence];
+    } else {
+      value=objective[iSequence];
+      int j;
+      for (j=columnStart[iSequence];j<columnStart[iSequence]+columnLength[iSequence]; j++) {
+	int iRow = row[j];
+	value -= element[j]*pi[iRow];
+      }
+    }
     ClpSimplex::Status status = model_->getStatus(iSequence);
     
     switch(status) {
@@ -139,7 +159,8 @@ ClpPrimalQuadraticDantzig::pivotColumn(CoinIndexedVector * updates,
   double * lower = model_->lowerRegion()+model_->numberColumns();
   double * upper = model_->upperRegion()+model_->numberColumns();
   int jSequence;
-  for (jSequence=0;jSequence<originalNumberRows_;jSequence++) {
+  int originalNumberRows = quadraticInfo_->numberXRows();
+  for (jSequence=0;jSequence<originalNumberRows;jSequence++) {
     int iSequence  = jSequence + firstSlack;
     int iPi = jSequence+originalNumberColumns;
     // for slacks either pi zero or row at bound

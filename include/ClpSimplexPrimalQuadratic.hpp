@@ -47,8 +47,8 @@ public:
   /** This is done after first pass
       phase - 0 normal, 1 getting complementary solution,
       2 getting basic solution. */
-  int primalQuadratic2 (const ClpSimplexPrimalQuadratic * originalModel,
-		    int phase=2);
+  int primalQuadratic2 (ClpQuadraticInfo * info,
+			int phase=2);
   /** This creates the large version of QP and
       fills in quadratic information.
       Returns NULL if no quadratic information
@@ -63,10 +63,8 @@ public:
   /** Main part.
       phase - 0 normal, 1 getting complementary solution,
       2 getting basic solution. */
-  int whileIterating (const ClpSimplexPrimalQuadratic * originalModel,
-		      int & sequenceIn,
+  int whileIterating (int & sequenceIn,
 		      ClpQuadraticInfo * info,
-		      int & crucialSj,
 		      int phase);
   /** 
       Row array has pivot column
@@ -84,8 +82,7 @@ public:
 		CoinIndexedVector * spareArray,
 		CoinIndexedVector * spareArray2,
 		ClpQuadraticInfo * info,
-		const ClpSimplexPrimalQuadratic * originalModel,
-		int crucialSj,bool cleanupIteration);
+		bool cleanupIteration);
   //@}
 
 };

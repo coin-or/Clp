@@ -367,6 +367,10 @@ public:
    const std::string& columnName(int iColumn) const {
       return columnNames_[iColumn];
    }
+  /// Objective methods
+  inline ClpObjective * objectiveAsObject() const
+  { return objective_;};
+  void setObjective(const ClpObjective * objective);
   //@}
 
 

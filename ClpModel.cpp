@@ -1224,6 +1224,12 @@ ClpModel::deleteQuadraticObjective()
   delete quadraticObjective_;
   quadraticObjective_ = NULL;
 }
+void 
+ClpModel::setObjective(const ClpObjective * objective)
+{
+  delete objective_;
+  objective_=objective->clone();
+}
 // Returns resized array and updates size
 double * whichDouble(double * array , int number, const int * which)
 {
