@@ -1930,9 +1930,6 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 
   bool roundAgain=true;
   int returnCode=-1;
-  double yyyy[20000];
-  if (numberIterations_==5141)
-    memcpy(yyyy,solution_,(numberColumns_+numberRows_)*sizeof(double));
 
   // loop round if user setting and doing refactorization
   while (roundAgain) {
