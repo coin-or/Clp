@@ -282,6 +282,7 @@ int ClpSimplexDual::dual (int ifValuesPass , int startFinishOptions)
 
     double objectiveChange;
     numberFake_ =0; // Number of variables at fake bounds
+    numberChanged_ =0; // Number of variables with changed costs
     changeBounds(true,NULL,objectiveChange);
     
     int lastCleaned=0; // last time objective or bounds cleaned up
@@ -1050,7 +1051,9 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
       if (handler_->logLevel()&32)
 	printf("** no row pivot\n");
 #endif
-      if (!factorization_->pivots()) {
+      int numberPivots = factorization_->pivots();
+      if (!numberPivots||(numberPivots<20&&
+			  (specialOptions_&2048)!=0&&!numberChanged_&&perturbation_>=100)) {
 	// may have crept through - so may be optimal
 	// check any flagged variables
 	int iRow;
@@ -1058,6 +1061,11 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
 	  int iPivot=pivotVariable_[iRow];
 	  if (flagged(iPivot))
 	    break;
+	}
+	if (iRow<numberRows_&&numberPivots) {
+	  // try factorization
+	  returnCode=0;
+	  break;
 	}
 	if (numberFake_||numberDualInfeasibilities_) {
 	  // may be dual infeasible
@@ -2366,6 +2374,7 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 	      //assert (fabs(modification)<1.0e-7);
 	      dj_[iSequence] += modification;
 	      cost_[iSequence] +=  modification;
+	      numberChanged_ ++; // Say changed costs
 	      //cost_[iSequence+costOffset] += modification; // save change
 #endif
 	    }
@@ -2381,6 +2390,7 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 	      //assert (fabs(modification)<1.0e-7);
 	      dj_[iSequence] += modification;
 	      cost_[iSequence] +=  modification;
+	      numberChanged_ ++; // Say changed costs
 	      //cost_[iSequence+costOffset] += modification; // save change
 #endif
 	    }
@@ -2407,6 +2417,7 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
     dualIn_ += modification;
     dj_[sequenceIn_]=dualIn_;
     cost_[sequenceIn_] += modification;
+    numberChanged_ ++; // Say changed costs
     //int costOffset = numberRows_+numberColumns_;
     //cost_[sequenceIn_+costOffset] += modification; // save change
     //assert (fabs(modification)<1.0e-6);
@@ -2776,7 +2787,8 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	    // make sure fake bounds are back
 	    changeBounds(true,NULL,changeCost);
 	  }
-	  if (lastCleaned<numberIterations_&&numberTimesOptimal_<4) {
+	  if (lastCleaned<numberIterations_&&numberTimesOptimal_<4&&
+	      (numberChanged_||(specialOptions_&4096)==0)) {
 	    doOriginalTolerance=2;
 	    numberTimesOptimal_++;
 	    changeMade_++; // say something changed
@@ -2870,7 +2882,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	ClpFillN(columnArray_[0]->denseVector(),numberColumns_,0.0);
 	ClpFillN(rowArray_[2]->denseVector(),numberRows_,0.0);
       } 
-      if (problemStatus_==-4||problemStatus_==5) {
+      if (problemStatus_==-4||problemStatus_==-5) {
 	// may be infeasible - or may be bounds are wrong
 	numberChangedBounds=changeBounds(false,NULL,changeCost);
 	/* Should this be here as makes no difference to being feasible.
@@ -2911,6 +2923,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
       if (doOriginalTolerance==2) {
 	// put back original tolerance
 	lastCleaned=numberIterations_;
+	numberChanged_ =0; // Number of variables with changed costs
 	handler_->message(CLP_DUAL_ORIGINAL,messages_)
 	  <<CoinMessageEol;
 	perturbation_=102; // stop any perturbations
@@ -3918,6 +3931,7 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
   // for this we need clean basis so it is after factorize
   gutsOfSolution(NULL,NULL);
   numberFake_ =0; // Number of variables at fake bounds
+  numberChanged_ =0; // Number of variables with changed costs
   changeBounds(true,NULL,objectiveChange);
 
   problemStatus_ = -1;
