@@ -556,7 +556,8 @@ ClpItem::intParameter (ClpSimplex * model) const
     value=model->maximumIterations();
     break;
   default:
-    abort();
+    value=-1;
+    break;
   }
   return value;
 }

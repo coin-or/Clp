@@ -37,6 +37,8 @@ enum ClpDblParam {
   /** Objective function constant. This the value of the constant term in
       the objective function. */
   ClpObjOffset,
+  /// Maximum time in seconds - after this action is as max iterations
+  ClpMaxSeconds,
   /** Just a marker, so that we can allocate a static sized array to store
       parameters. */
   ClpLastDblParam

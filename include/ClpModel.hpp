@@ -159,6 +159,11 @@ public:
    /// Maximum number of iterations
    inline int maximumIterations() const { return intParam_[ClpMaxNumIteration]; }
    void setMaximumIterations(int value);
+  /// Maximum time in seconds (from when set called)
+   inline double maximumSeconds() const { return dblParam_[ClpMaxSeconds]; }
+   void setMaximumSeconds(double value);
+  /// Returns true if hit maximum iterations (or time)
+  bool hitMaximumIterations() const;
    /** Status of problem:
        0 - optimal
        1 - primal infeasible

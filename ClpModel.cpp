@@ -82,6 +82,7 @@ ClpModel::ClpModel () :
   dblParam_[ClpDualTolerance] = 1e-7;
   dblParam_[ClpPrimalTolerance] = 1e-7;
   dblParam_[ClpObjOffset] = 0.0;
+  dblParam_[ClpMaxSeconds] = -1.0;
 
   strParam_[ClpProbName] = "ClpDefaultName";
   handler_ = new CoinMessageHandler();
@@ -329,6 +330,7 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
   dblParam_[ClpDualTolerance] = rhs.dblParam_[ClpDualTolerance];
   dblParam_[ClpPrimalTolerance] = rhs.dblParam_[ClpPrimalTolerance];
   dblParam_[ClpObjOffset] = rhs.dblParam_[ClpObjOffset];
+  dblParam_[ClpMaxSeconds] = rhs.dblParam_[ClpMaxSeconds];
 
   strParam_[ClpProbName] = rhs.strParam_[ClpProbName];
 
@@ -509,6 +511,13 @@ ClpModel::setDblParam(ClpDblParam key, double value)
     break;
     
   case ClpObjOffset: 
+    break;
+
+  case ClpMaxSeconds: 
+    if(value>=0)
+      value += cpuTime();
+    else
+      value = -1.0;
     break;
 
   case ClpLastDblParam:
@@ -792,6 +801,23 @@ ClpModel::setMaximumIterations(int value)
 {
   if(value>=0)
     intParam_[ClpMaxNumIteration]=value;
+}
+void 
+ClpModel::setMaximumSeconds(double value)
+{
+  if(value>=0)
+    dblParam_[ClpMaxSeconds]=value+cpuTime();
+  else
+    dblParam_[ClpMaxSeconds]=-1.0;
+}
+// Returns true if hit maximum iterations (or time)
+bool 
+ClpModel::hitMaximumIterations() const
+{
+  bool hitMax= (numberIterations_>=maximumIterations());
+  if (dblParam_[ClpMaxSeconds]>=0.0&&!hitMax)
+    hitMax = (cpuTime()>=dblParam_[ClpMaxSeconds]);
+  return hitMax;
 }
 // Pass in Message handler (not deleted at end)
 void 

@@ -1076,7 +1076,7 @@ ClpSimplex::housekeeping(double objectiveChange)
   handler_->printing(algorithm_<0)<<theta_<<dualOut_;
   handler_->printing(algorithm_>0)<<dualIn_<<theta_;
   handler_->message()<<CoinMessageEol;
-  if (numberIterations_>=maximumIterations())
+  if (hitMaximumIterations())
     return 2;
   // only time to re-factorize if one before real time
   // this is so user won't be surprised that maximumPivots has exact meaning
