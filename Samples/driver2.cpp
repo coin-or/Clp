@@ -8,10 +8,177 @@
 #include "ClpDualRowSteepest.hpp"
 #include "ClpPrimalColumnSteepest.hpp"
 #include <iomanip>
+// This driver shows how to trap messages - this is just as in unitTest.cpp
+// ****** THis code is similar to MyMessageHandler.hpp and MyMessagehandler.cpp
+#include "CoinMessageHandler.hpp"
+
+/** This just adds a model to CoinMessage and a void pointer so
+    user can trap messages and do useful stuff.  
+    This is used in Clp/Test/unitTest.cpp
+
+    The file pointer is just there as an example of user stuff.
+
+*/
+class ClpSimplex;
+
+class MyMessageHandler : public CoinMessageHandler {
+  
+public:
+  /**@name Overrides */
+  //@{
+  virtual int print();
+  //@}
+  /**@name set and get */
+  //@{
+  /// Model
+  const ClpSimplex * model() const;
+  void setModel(ClpSimplex * model);
+  //@}
+
+  /**@name Constructors, destructor */
+  //@{
+  /** Default constructor. */
+  MyMessageHandler();
+  /// Constructor with pointer to model
+  MyMessageHandler(ClpSimplex * model,
+			   FILE * userPointer=NULL);
+  /** Destructor */
+  virtual ~MyMessageHandler();
+  //@}
+
+  /**@name Copy method */
+  //@{
+  /** The copy constructor. */
+  MyMessageHandler(const MyMessageHandler&);
+  /** The copy constructor from an CoinSimplexMessageHandler. */
+  MyMessageHandler(const CoinMessageHandler&);
+  
+  MyMessageHandler& operator=(const MyMessageHandler&);
+  /// Clone
+  virtual CoinMessageHandler * clone() const ;
+  //@}
+   
+    
+protected:
+  /**@name Data members
+     The data members are protected to allow access for derived classes. */
+  //@{
+  /// Pointer back to model
+  ClpSimplex * model_;
+  //@}
+};
+
+
+//#############################################################################
+// Constructors / Destructor / Assignment
+//#############################################################################
+
+//-------------------------------------------------------------------
+// Default Constructor 
+//-------------------------------------------------------------------
+MyMessageHandler::MyMessageHandler () 
+  : CoinMessageHandler(),
+    model_(NULL)
+{
+}
+
+//-------------------------------------------------------------------
+// Copy constructor 
+//-------------------------------------------------------------------
+MyMessageHandler::MyMessageHandler (const MyMessageHandler & rhs) 
+: CoinMessageHandler(rhs),
+    model_(rhs.model_)
+{  
+}
+
+MyMessageHandler::MyMessageHandler (const CoinMessageHandler & rhs) 
+  : CoinMessageHandler(),
+    model_(NULL)
+{  
+}
+
+// Constructor with pointer to model
+MyMessageHandler::MyMessageHandler(ClpSimplex * model,
+               FILE * userPointer)
+  : CoinMessageHandler(),
+    model_(model)
+{
+}
+
+//-------------------------------------------------------------------
+// Destructor 
+//-------------------------------------------------------------------
+MyMessageHandler::~MyMessageHandler ()
+{
+}
+
+//----------------------------------------------------------------
+// Assignment operator 
+//-------------------------------------------------------------------
+MyMessageHandler &
+MyMessageHandler::operator=(const MyMessageHandler& rhs)
+{
+  if (this != &rhs) {
+    CoinMessageHandler::operator=(rhs);
+    model_ = rhs.model_;
+  }
+  return *this;
+}
+//-------------------------------------------------------------------
+// Clone
+//-------------------------------------------------------------------
+CoinMessageHandler * MyMessageHandler::clone() const
+{
+  return new MyMessageHandler(*this);
+}
+// Print out values from first 20 messages
+static int times=0;
+int 
+MyMessageHandler::print()
+{
+  // You could have added a callback flag if you had wanted - see Clp_C_Interface.c
+  times++;
+  if (times<=20) {
+    int messageNumber = currentMessage().externalNumber();
+    if (currentSource()!="Clp")
+      messageNumber += 1000000;
+    int i;
+    int nDouble=numberDoubleFields();
+    printf("%d doubles - ",nDouble);
+    for (i=0;i<nDouble;i++)
+      printf("%g ",doubleValue(i));
+    printf("\n");;
+    int nInt=numberIntFields();
+    printf("%d ints - ",nInt);
+    for (i=0;i<nInt;i++)
+      printf("%d ",intValue(i));
+    printf("\n");;
+    int nString=numberStringFields();
+    printf("%d strings - ",nString);
+    for (i=0;i<nString;i++)
+      printf("%s ",stringValue(i).c_str());
+    printf("\n");;
+  }
+  return CoinMessageHandler::print();
+}
+const ClpSimplex *
+MyMessageHandler::model() const
+{
+  return model_;
+}
+void 
+MyMessageHandler::setModel(ClpSimplex * model)
+{
+  model_ = model;
+}
 
 int main (int argc, const char *argv[])
 {
   ClpSimplex  model;
+  // Message handler
+  MyMessageHandler messageHandler(&model);
+  std::cout<<"Testing derived message handler"<<std::endl;
+  model.passInMessageHandler(&messageHandler);
   int status;
   // Keep names when reading an mps file
   if (argc<2)
@@ -27,7 +194,7 @@ int main (int argc, const char *argv[])
 
   double time1 = CoinCpuTime();
   /*
-    This driver shows how to do presolve.
+    This driver shows how to do presolve.by hand (rather than with initialSolve)
   */
   ClpSimplex * model2;
   ClpPresolve pinfo;
