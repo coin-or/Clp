@@ -173,6 +173,9 @@ public:
   void saveStatus();
   /// Restore previous
   void restoreStatus();
+  ///Dj weights
+  inline double * djWeight() const
+  { return djWeight_;};
   //@}
     
 private:
@@ -200,6 +203,8 @@ private:
   int validPhase_;
   /// Valid saved solution
   double * validSolution_;
+  /// Dj weights to stop looping
+  double * djWeight_;
   /// Number of original rows
   int numberXRows_;
   /// Number of original columns 
