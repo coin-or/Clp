@@ -142,6 +142,19 @@ public:
   inline void setChangeInCost(double value) 
   {changeCost_ = value;};
   //@}
+  ///@name Private functions to deal with infeasible regions 
+  inline bool infeasible(int i) const {
+    return ((infeasible_[i>>5]>>(i&31))&1)!=0;
+  }
+  inline void setInfeasible(int i,bool trueFalse) {
+    unsigned int & value = infeasible_[i>>5];
+    int bit = i&31;
+    if (trueFalse)
+      value |= (1<<bit);
+    else
+      value &= ~(1<<bit);
+  }
+  //@}
     
 private:
   /**@name Data members */
@@ -174,6 +187,8 @@ private:
   double sumInfeasibilities_;
   /// If all non-linear costs convex
   bool convex_;
+  // Array to say which regions are infeasible
+  unsigned int * infeasible_;
   //@}
 };
 

@@ -186,6 +186,10 @@ public:
 			     ClpSimplexProgress & progress);
   /// Perturbs problem (method depends on perturbation())
   void perturb();
+  /// Take off effect of perturbation
+  void unPerturb();
+  /// Unflag all variables and return number unflagged
+  int unflag();
   /// Sets sequenceIn_ to next superBasic (input by first..) and updates
   void nextSuperBasic(int & firstSuperBasic);
   //@}

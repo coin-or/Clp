@@ -52,7 +52,7 @@
       finished we need to reset costs and try again.
       3) Degeneracy.  Gill et al helps but may not be enough.  We
       may need more.  Also it can improve speed a lot if we perturb
-      the costs significantly.  
+      the rhs and bounds significantly.  
 
   References:
      Forrest and Goldfarb, Steepest-edge simplex algorithms for
@@ -220,11 +220,12 @@ int ClpSimplexPrimal::primal (int ifValuesPass )
     factorization_->zeroTolerance(1.0e-13);
     
     
+    
     // If user asked for perturbation - do it
     
     if (perturbation_<100) 
       perturb();
-    
+
     // for primal we will change bounds using infeasibilityCost_
     if (nonLinearCost_==NULL) {
       // get a valid nonlinear cost function
@@ -667,7 +668,6 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
     changeMade_++; // say change made
   }
   int tentativeStatus = problemStatus_;
-
   if (problemStatus_>-3||problemStatus_==-4) {
     // factorize
     // later on we will need to recover from singularities
@@ -697,8 +697,8 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
   }
   // at this stage status is -3 or -5 if looks unbounded
   // get primal and dual solutions
-  // put back original bounds and then check
-  createRim(7);
+  // put back original costs and then check
+  createRim(4);
   gutsOfSolution(rowActivityWork_, columnActivityWork_);
   // Check if looping
   int loop = progress.looping();
@@ -735,6 +735,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
     sumPrimalInfeasibilities_ = 0.0;
   }
   if (dualFeasible()||problemStatus_==-4||(type==3&&problemStatus_!=-5)) {
+    
     if (nonLinearCost_->numberInfeasibilities()&&!alwaysOptimal) {
       //may need infeasiblity cost changed
       // we can see if we can construct a ray
@@ -744,14 +745,14 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
       ClpNonLinearCost * nonLinear = nonLinearCost_;
       // do twice to make sure Primal solution has settled
       // put non-basics to bounds in case tolerance moved
-      // put back original bounds
-      createRim(7);
+      // put back original costs
+      createRim(4);
       nonLinearCost_->checkInfeasibilities(true);
       gutsOfSolution(rowActivityWork_, columnActivityWork_);
 
       infeasibilityCost_=1.0e100;
-      // put back original bounds
-      createRim(7);
+      // put back original costs
+      createRim(4);
       nonLinearCost_->checkInfeasibilities(true);
       nonLinearCost_=NULL;
       // scale
@@ -761,6 +762,11 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
       gutsOfSolution(rowActivityWork_, columnActivityWork_);
       nonLinearCost_=nonLinear;
       infeasibilityCost_=saveWeight;
+      if ((infeasibilityCost_>=1.0e18||
+	  numberDualInfeasibilities_==0)&&perturbation_==101) {
+	unPerturb(); // stop any further perturbation
+	numberDualInfeasibilities_=1; // carry on
+      }
       if (infeasibilityCost_>=1.0e20||
 	  numberDualInfeasibilities_==0) {
 	// we are infeasible - use as ray
@@ -769,7 +775,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	memcpy(ray_,dual_,numberRows_*sizeof(double));
 	// and get feasible duals
 	infeasibilityCost_=0.0;
-	createRim(7);
+	createRim(4);
 	nonLinearCost_->checkInfeasibilities(true);
 	gutsOfSolution(rowActivityWork_, columnActivityWork_);
 	// so will exit
@@ -782,8 +788,8 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	handler_->message(CLP_PRIMAL_WEIGHT,messages_)
 	  <<infeasibilityCost_
 	  <<CoinMessageEol;
-	// put back original bounds and then check
-	createRim(7);
+	// put back original costs and then check
+	createRim(4);
 	nonLinearCost_->checkInfeasibilities(true);
 	gutsOfSolution(rowActivityWork_, columnActivityWork_);
 	problemStatus_=-1; //continue
@@ -793,7 +799,11 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
       }
     } else {
       // may be optimal
-      if ( lastCleaned!=numberIterations_) {
+      if (perturbation_==101) {
+	unPerturb(); // stop any further perturbation
+	lastCleaned=-1; // carry on
+      }
+      if ( lastCleaned!=numberIterations_||unflag()) {
 	handler_->message(CLP_PRIMAL_OPTIMAL,messages_)
 	  <<primalTolerance_
 	  <<CoinMessageEol;
@@ -809,8 +819,8 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	    <<CoinMessageEol;
 	  primalTolerance_=dblParam_[ClpPrimalTolerance];
 	  
-	  // put back original bounds and then check
-	  createRim(7);
+	  // put back original costs and then check
+	  createRim(4);
 	  nonLinearCost_->checkInfeasibilities(true);
 	  gutsOfSolution(rowActivityWork_, columnActivityWork_);
 	  problemStatus_ = -1;
@@ -829,6 +839,11 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
     // see if looks unbounded
     if (problemStatus_==-5) {
       if (nonLinearCost_->numberInfeasibilities()) {
+	if (infeasibilityCost_>1.0e18&&perturbation_==101) {
+	  // back off weight
+	  infeasibilityCost_ = 1.0e13;
+	  unPerturb(); // stop any further perturbation
+	}
 	//we need infeasiblity cost changed
 	if (infeasibilityCost_<1.0e20) {
 	  infeasibilityCost_ *= 5.0;
@@ -836,8 +851,8 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	  handler_->message(CLP_PRIMAL_WEIGHT,messages_)
 	    <<infeasibilityCost_
 	    <<CoinMessageEol;
-	  // put back original bounds and then check
-	  createRim(7);
+	  // put back original costs and then check
+	  createRim(4);
 	  gutsOfSolution(rowActivityWork_, columnActivityWork_);
 	  problemStatus_=-1; //continue
 	} else {
@@ -1416,7 +1431,83 @@ ClpSimplexPrimal::perturb()
 {
   if (perturbation_>100)
     return; //perturbed already
-  abort();
+  int i;
+  // primal perturbation
+  double perturbation=1.0e-20;
+  // maximum fraction of rhs/bounds to perturb
+  double maximumFraction = 1.0e-4;
+  if (perturbation_>=50) {
+    perturbation = 1.0e-4;
+    for (i=0;i<numberColumns_+numberRows_;i++) {
+      if (upper_[i]>lower_[i]+primalTolerance_) {
+	double lowerValue, upperValue;
+	if (lower_[i]>-1.0e20)
+	  lowerValue = fabs(lower_[i]);
+	else
+	  lowerValue=0.0;
+	if (upper_[i]<1.0e20)
+	  upperValue = fabs(upper_[i]);
+	else
+	  upperValue=0.0;
+	double value = max(lowerValue,upperValue);
+	perturbation = max(perturbation,value);
+      }
+    }
+    perturbation *= 1.0e-8;
+  } else if (perturbation_<100) {
+    perturbation = pow(10.0,perturbation_);
+    // user is in charge
+    maximumFraction = 1.0e100;
+  }
+  // modify bounds
+  handler_->message(CLP_SIMPLEX_PERTURB,messages_)
+    <<perturbation
+    <<CoinMessageEol;
+  for (i=0;i<numberColumns_+numberRows_;i++) {
+    double lowerValue=lower_[i], upperValue=upper_[i];
+    if (upperValue>lowerValue+primalTolerance_) {
+      double value = drand48()*perturbation;
+      if (lowerValue>-1.0e20)
+	lowerValue -= value * (max(1.0,1.0e-3*fabs(lowerValue))); 
+      if (upperValue<1.0e20)
+	upperValue += value * (max(1.0,1.0e-3*fabs(upperValue))); 
+    }
+    lower_[i]=lowerValue;
+    upper_[i]=upperValue;
+  }
+  // say perturbed
+  perturbation_=101;
+}
+// un perturb
+void
+ClpSimplexPrimal::unPerturb()
+{
+  // put back original bounds and costs
+  createRim(7);
+  // unflag
+  unflag();
+  // get a valid nonlinear cost function
+  delete nonLinearCost_;
+  nonLinearCost_= new ClpNonLinearCost(this);
+  perturbation_ = 102; // stop any further perturbation
+  // move non basic variables to new bounds
+  nonLinearCost_->checkInfeasibilities(true);
+  gutsOfSolution(rowActivityWork_, columnActivityWork_);
+}
+// Unflag all variables and return number unflagged
+int 
+ClpSimplexPrimal::unflag()
+{
+  int i;
+  int number = numberRows_+numberColumns_;
+  int numberFlagged=0;
+  for (i=0;i<number;i++) {
+    if (flagged(i)) {
+      clearFlagged(i);
+      numberFlagged++;
+    }
+  }
+  return numberFlagged;
 }
 // Do not change infeasibility cost and always say optimal
 void 

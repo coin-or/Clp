@@ -32,7 +32,8 @@ ClpNonLinearCost::ClpNonLinearCost () :
   changeCost_(0.0),
   largestInfeasibility_(0.0),
   sumInfeasibilities_(0.0),
-  convex_(true)
+  convex_(true),
+  infeasible_(NULL)
 {
 
 }
@@ -74,6 +75,8 @@ ClpNonLinearCost::ClpNonLinearCost ( ClpSimplex * model)
 
   lower_ = new double [put];
   cost_ = new double [put];
+  infeasible_ = new unsigned int[(put+31)>>5];
+  memset(infeasible_,0,((put+31)>>5)*sizeof(unsigned int));
 
   put=0;
 
@@ -82,6 +85,8 @@ ClpNonLinearCost::ClpNonLinearCost ( ClpSimplex * model)
   for (iSequence=0;iSequence<numberTotal;iSequence++) {
 
     lower_[put] = -DBL_MAX;
+    setInfeasible(put,true);
+
     cost_[put++] = cost[iSequence]-infeasibilityCost;
     whichRange_[iSequence]=put;
     lower_[put] = lower[iSequence];
@@ -90,6 +95,7 @@ ClpNonLinearCost::ClpNonLinearCost ( ClpSimplex * model)
     cost_[put++] = cost[iSequence]+infeasibilityCost;
     if (upper[iSequence]<1.0e20) {
       lower_[put] = DBL_MAX;
+      setInfeasible(put-1,true);
       cost_[put++] = 1.0e50;
     }
     start_[iSequence+1]=put;
@@ -137,6 +143,8 @@ ClpNonLinearCost::ClpNonLinearCost(ClpSimplex * model,const int * starts,
 
   lower_ = new double [put];
   cost_ = new double [put];
+  infeasible_ = new unsigned int[(put+31)>>5];
+  memset(infeasible_,0,((put+31)>>5)*sizeof(unsigned int));
 
   // now fill in 
   put=0;
@@ -145,6 +153,7 @@ ClpNonLinearCost::ClpNonLinearCost(ClpSimplex * model,const int * starts,
 
   for (iSequence=0;iSequence<numberTotal;iSequence++) {
     lower_[put] = -DBL_MAX;
+    setInfeasible(put,true);
     cost_[put++] = cost[iSequence]-infeasibilityCost;
     whichRange_[iSequence]=put;
     double thisCost;
@@ -176,6 +185,7 @@ ClpNonLinearCost::ClpNonLinearCost(ClpSimplex * model,const int * starts,
     cost_[put++] = thisCost+infeasibilityCost;
     if (upper[iSequence]<1.0e20) {
       lower_[put] = DBL_MAX;
+      setInfeasible(put-1,true);
       cost_[put++] = 1.0e50;
     }
     start_[iSequence+1]=put;
@@ -200,7 +210,8 @@ ClpNonLinearCost::ClpNonLinearCost (const ClpNonLinearCost & rhs) :
   changeCost_(0.0),
   largestInfeasibility_(0.0),
   sumInfeasibilities_(0.0),
-  convex_(true)
+  convex_(true),
+  infeasible_(NULL)
 {  
   if (numberRows_) {
     int numberTotal = numberRows_+numberColumns_;
@@ -221,6 +232,9 @@ ClpNonLinearCost::ClpNonLinearCost (const ClpNonLinearCost & rhs) :
     largestInfeasibility_ = rhs.largestInfeasibility_;
     sumInfeasibilities_ = rhs.sumInfeasibilities_;
     convex_ = rhs.convex_;
+    infeasible_ = new unsigned int[(numberEntries+31)>>5];
+    memcpy(infeasible_,rhs.infeasible_,
+	   ((numberEntries+31)>>5)*sizeof(unsigned int));
   }
 }
 
@@ -234,7 +248,7 @@ ClpNonLinearCost::~ClpNonLinearCost ()
   delete [] offset_;
   delete [] lower_;
   delete [] cost_;
-
+  delete [] infeasible_;
 }
 
 //----------------------------------------------------------------
@@ -251,10 +265,12 @@ ClpNonLinearCost::operator=(const ClpNonLinearCost& rhs)
     delete [] offset_;
     delete [] lower_;
     delete []cost_;
+    delete [] infeasible_;
     start_ = NULL;
     whichRange_ = NULL;
     lower_ = NULL;
     cost_= NULL;
+    infeasible_=NULL;
     if (numberRows_) {
       int numberTotal = numberRows_+numberColumns_;
       start_ = new int [numberTotal+1];
@@ -268,6 +284,9 @@ ClpNonLinearCost::operator=(const ClpNonLinearCost& rhs)
       memcpy(lower_,rhs.lower_,numberEntries*sizeof(double));
       cost_ = new double [numberEntries];
       memcpy(cost_,rhs.cost_,numberEntries*sizeof(double));
+      infeasible_ = new unsigned int[(numberEntries+31)>>5];
+      memcpy(infeasible_,rhs.infeasible_,
+	     ((numberEntries+31)>>5)*sizeof(unsigned int));
     }
     model_ = rhs.model_;
     numberInfeasibilities_=rhs.numberInfeasibilities_;
@@ -301,23 +320,18 @@ ClpNonLinearCost::checkInfeasibilities(bool toNearest)
     
   // nonbasic should be at a valid bound
   for (iSequence=0;iSequence<numberColumns_+numberRows_;iSequence++) {
-    double lowerValue=lower[iSequence];
-    double upperValue=upper[iSequence];
+    double lowerValue;
+    double upperValue;
     double value=solution[iSequence];
     int iRange;
-    // correct costs
-    
-    if (lowerValue>-1.0e20) {
-      iRange=start_[iSequence];
-      cost_[iRange] = cost[iSequence]-infeasibilityCost;
-    }
-    if (upperValue<1.0e20) {
-      iRange=start_[iSequence+1]-2;
-      cost_[iRange] = cost[iSequence]+infeasibilityCost;
-    }
     // get correct place
     int start = start_[iSequence];
     int end = start_[iSequence+1]-1;
+    // correct costs for this infeasibility weight
+    if (infeasible(start))
+      cost_[start] = cost_[start+1]-infeasibilityCost;
+    if (infeasible(end-1))
+      cost_[end-1] = cost_[end-2]+infeasibilityCost;
     for (iRange=start; iRange<end;iRange++) {
       if (value<lower_[iRange+1]+primalTolerance) {
 	// put in better range if infeasible
@@ -328,26 +342,40 @@ ClpNonLinearCost::checkInfeasibilities(bool toNearest)
       }
     }
     assert(iRange<end);
+    lowerValue = lower_[iRange];
+    upperValue = lower_[iRange+1];
     switch(model_->getStatus(iSequence)) {
       
     case ClpSimplex::basic:
     case ClpSimplex::superBasic:
       // iRange is in correct place
       // slot in here
-      if (value<lower[iSequence]-primalTolerance) {
-	value = lower[iSequence]-value;
-	sumInfeasibilities_ += value;
-	largestInfeasibility_ = max(largestInfeasibility_,value);
-	changeCost_ -= lower[iSequence]*
-	  (cost_[iRange]-cost[iSequence]);
-	numberInfeasibilities_++;
-      } else if (value>upper[iSequence]+primalTolerance) {
-	value = value-upper[iSequence];
-	sumInfeasibilities_ += value;
-	largestInfeasibility_ = max(largestInfeasibility_,value);
-	changeCost_ -= upper[iSequence]*
-	  (cost_[iRange]-cost[iSequence]);
-	numberInfeasibilities_++;
+      if (infeasible(iRange)) {
+	if (lower_[iRange]<-1.0e50) {
+	  //cost_[iRange] = cost_[iRange+1]-infeasibilityCost;
+	  // possibly below
+	  lowerValue = lower_[iRange+1];
+	  if (value<lowerValue-primalTolerance) {
+	    value = lowerValue-value;
+	    sumInfeasibilities_ += value;
+	    largestInfeasibility_ = max(largestInfeasibility_,value);
+	    changeCost_ -= lowerValue*
+	      (cost_[iRange]-cost[iSequence]);
+	    numberInfeasibilities_++;
+	  }
+	} else {
+	  //cost_[iRange] = cost_[iRange-1]+infeasibilityCost;
+	  // possibly above
+	  upperValue = lower_[iRange];
+	  if (value>upperValue+primalTolerance) {
+	    value = value-upperValue;
+	    sumInfeasibilities_ += value;
+	    largestInfeasibility_ = max(largestInfeasibility_,value);
+	    changeCost_ -= upperValue*
+	      (cost_[iRange]-cost[iSequence]);
+	    numberInfeasibilities_++;
+	  }
+	}
       }
       lower[iSequence] = lower_[iRange];
       upper[iSequence] = lower_[iRange+1];
@@ -365,7 +393,12 @@ ClpNonLinearCost::checkInfeasibilities(bool toNearest)
 	  model_->setStatus(iSequence,ClpSimplex::atLowerBound);
 	}
       } else {
-	solution[iSequence] = upperValue;
+	if (fabs(value-upperValue)<=fabs(value-lowerValue)) {
+	  solution[iSequence] = upperValue;
+	} else {
+	  model_->setStatus(iSequence,ClpSimplex::atLowerBound);
+	  solution[iSequence] = lowerValue;
+	}
       }
       break;
     case ClpSimplex::atLowerBound:
@@ -376,7 +409,12 @@ ClpNonLinearCost::checkInfeasibilities(bool toNearest)
 	  model_->setStatus(iSequence,ClpSimplex::atUpperBound);
 	}
       } else {
-	solution[iSequence] = lowerValue;
+	if (fabs(value-lowerValue)<=fabs(value-upperValue)) {
+	  solution[iSequence] = lowerValue;
+	} else {
+	  model_->setStatus(iSequence,ClpSimplex::atUpperBound);
+	  solution[iSequence] = upperValue;
+	}
       }
       break;
     }

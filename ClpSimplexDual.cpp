@@ -617,7 +617,6 @@ ClpSimplexDual::whileIterating()
 	if (objectiveValue_<oldobj-1.0e-5&&(handler_->logLevel()&16))
 	  printf("obj backwards %g %g\n",objectiveValue_,oldobj);
 #endif
-
 	if (whatNext==1) {
 	  problemStatus_ =-2; // refactorize
 	} else if (whatNext==2) {
@@ -869,20 +868,10 @@ ClpSimplexDual::dualRow()
   // get pivot row using whichever method it is
   pivotRow_=dualRowPivot_->pivotRow();
   if (pivotRow_>=0) {
-    int iPivot=pivotVariable_[pivotRow_];
-    sequenceOut_ = iPivot;
-    if (iPivot>=numberColumns_) {
-      // slack
-      iPivot-=numberColumns_;
-      valueOut_=rowActivityWork_[iPivot];
-      lowerOut_=rowLowerWork_[iPivot];
-      upperOut_=rowUpperWork_[iPivot];
-    } else {
-      // column
-      valueOut_=columnActivityWork_[iPivot];
-      lowerOut_=columnLowerWork_[iPivot];
-      upperOut_=columnUpperWork_[iPivot];
-    }
+    sequenceOut_ = pivotVariable_[pivotRow_];
+    valueOut_ = solution_[sequenceOut_];
+    lowerOut_ = lower_[sequenceOut_];
+    upperOut_ = upper_[sequenceOut_];
     // if we have problems we could try other way and hope we get a 
     // zero pivot?
     if (valueOut_>upperOut_) {
@@ -1177,10 +1166,6 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 	}
 	break;
       case atUpperBound:
-#ifdef CHECK_DJ
-	// For Debug so we can find out where problem is
-	perturbation_ = iSequence+addSequence;
-#endif
 	assert (oldValue<=dualTolerance_*1.0001);
 	if (value>newTolerance) {
 	  keep = 1;
@@ -1190,10 +1175,6 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 	}
 	break;
       case atLowerBound:
-#ifdef CHECK_DJ
-	// For Debug so we can find out where problem is
-	perturbation_ = iSequence+addSequence;
-#endif
 	assert (oldValue>=-dualTolerance_*1.0001);
 	if (value<-newTolerance) {
 	  keep = 1;
@@ -1367,6 +1348,10 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 	      if (value>newTolerance) {
 		if (-alpha>=acceptablePivot) {
 		  upperTheta = (oldValue-newTolerance)/alpha;
+		  // recompute value and make sure works
+		  value = oldValue-upperTheta*alpha;
+		  if (value<0)
+		    upperTheta *= 1.0 +1.0e-11; // must be large
 		}
 	      }
 	    } else {
@@ -1374,6 +1359,10 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 	      if (value<-newTolerance) {
 		if (alpha>=acceptablePivot) {
 		  upperTheta = (oldValue+newTolerance)/alpha;
+		  // recompute value and make sure works
+		  value = oldValue-upperTheta*alpha;
+		  if (value>0)
+		    upperTheta *= 1.0 +1.0e-11; // must be large
 		}
 	      }
 	    }
@@ -1860,6 +1849,11 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	numberChangedBounds=changeBounds(false,rowArray_[0],changeCost);
 	if (numberChangedBounds<=0) {
 	  //looks optimal - do we need to reset tolerance
+	  if (perturbation_==101) {
+	    perturbation_=102; // stop any perturbations
+	    cleanDuals=true;
+	    createRim(4);
+	  }
 	  if (lastCleaned<numberIterations_&&numberTimesOptimal_<4) {
 	    doOriginalTolerance=2;
 	    numberTimesOptimal_++;
@@ -1883,6 +1877,12 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	    // check unbounded
 	    problemStatus_ = checkUnbounded(rowArray_[0],rowArray_[1],
 					    changeCost);
+	    if (problemStatus_==2&&perturbation_==101) {
+	      perturbation_=102; // stop any perturbations
+	      cleanDuals=true;
+	      createRim(4);
+	      problemStatus_=-1;
+	    }
 	    if (problemStatus_==2) {
 	      // it is unbounded - restore solution
 	      // but first add in changes to non-basic
@@ -1911,6 +1911,12 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	  <<dualBound_
 	  <<CoinMessageEol;
 	numberChangedBounds=changeBounds(false,NULL,changeCost);
+	if (perturbation_==101) {
+	  perturbation_=102; // stop any perturbations
+	  cleanDuals=true;
+	  numberChangedBounds=1;
+	  createRim(4);
+	}
 	if (numberChangedBounds<=0||dualBound_>1.0e20||
 	    (largestPrimalError_>1.0&&dualBound_>1.0e17)) {
 	  problemStatus_=1; // infeasible
@@ -2144,15 +2150,15 @@ ClpSimplexDual::perturb()
   double perturbation=1.0e-20;
   // maximum fraction of cost to perturb
   double maximumFraction = 1.0e-4;
-  if (perturbation_==100) {
+  if (perturbation_>=50) {
     perturbation = 1.0e-4;
     for (iRow=0;iRow<numberRows_;iRow++) {
-      double value = fabs(rowActivityWork_[iRow]*rowObjectiveWork_[iRow]);
+      double value = fabs(rowObjectiveWork_[iRow]);
       perturbation = max(perturbation,value);
     }
     for (iColumn=0;iColumn<numberColumns_;iColumn++) { 
       double value = 
-	fabs(columnActivityWork_[iColumn]*objectiveWork_[iColumn]);
+	fabs(objectiveWork_[iColumn]);
       perturbation = max(perturbation,value);
     }
     perturbation *= 1.0e-8;
@@ -2199,7 +2205,7 @@ ClpSimplexDual::perturb()
     objectiveWork_[iColumn] += value;
   }
   // say perturbed
-  perturbation_=102;
+  perturbation_=101;
 
 }
 /* For strong branching.  On input lower and upper are new bounds
