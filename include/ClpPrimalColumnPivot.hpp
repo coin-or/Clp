@@ -107,6 +107,13 @@ public:
   /// Returns type (above 63 is extra information)
   inline int type()
   { return type_;};
+
+  /** Returns number of extra columns for sprint algorithm - 0 means off.
+      Also number of iterations before recompute
+  */
+  int numberSprintColumns(int & numberIterations) const;
+  /// Switch off sprint idea
+  void switchOffSprint();
   
   //@}
 

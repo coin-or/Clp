@@ -339,12 +339,12 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
     //if (model_->numberIterations()%1000==0)
     //printf("numels %d ratio %g wanted %d\n",numberElements,ratio,numberWanted);
   }
+  int numberElements = model_->factorization()->numberElements();
+  int numberRows = model_->numberRows();
+  // ratio is done on number of rows here
+  double ratio = (double) numberElements/(double) numberRows;
   if(switchType==4) {
     // Still in devex mode
-    int numberElements = model_->factorization()->numberElements();
-    int numberRows = model_->numberRows();
-    // ratio is done on number of rows here
-    double ratio = (double) numberElements/(double) numberRows;
     // Go to steepest if lot of iterations?
     if (ratio<1.0) {
       numberWanted = max(2000,number/20);
@@ -367,8 +367,8 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
       printf("switching to exact %d nel ratio %g\n",numberElements,ratio);
       updates->clear();
     }
-    //if (model_->numberIterations()%1000==0)
-    //printf("numels %d ratio %g wanted %d\n",numberElements,ratio,numberWanted);
+    if (model_->numberIterations()%1000==0)
+    printf("numels %d ratio %g wanted %d type x\n",numberElements,ratio,numberWanted);
   } 
   if (switchType<4) {
     if (switchType<2 ) {
@@ -376,13 +376,11 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
     } else if (switchType==2) {
       numberWanted = max(2000,number/8);
     } else {
-      int numberElements = model_->factorization()->numberElements();
-      double ratio = (double) numberElements/(double) model_->numberRows();
       if (ratio<1.0) {
 	numberWanted = max(2000,number/20);
       } else if (ratio<5.0) {
 	numberWanted = max(2000,number/10);
-	numberWanted = max(numberWanted,numberColumns/20);
+	numberWanted = max(numberWanted,numberColumns/40);
       } else if (ratio<10.0) {
 	numberWanted = max(2000,number/8);
 	numberWanted = max(numberWanted,numberColumns/20);
@@ -396,6 +394,9 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
 	}
       }
     }
+    if (model_->numberIterations()%1000==0)
+    printf("numels %d ratio %g wanted %d type %d\n",numberElements,ratio,numberWanted,
+    switchType);
   }
 
 
@@ -3247,4 +3248,17 @@ ClpPrimalColumnSteepest::looksOptimal() const
     }
   }
   return numberInfeasible==0;
+}
+/* Returns number of extra columns for sprint algorithm - 0 means off.
+   Also number of iterations before recompute
+*/
+int 
+ClpPrimalColumnSteepest::numberSprintColumns(int & numberIterations) const
+{
+  return 0;
+}
+// Switch off sprint idea
+void 
+ClpPrimalColumnSteepest::switchOffSprint()
+{
 }

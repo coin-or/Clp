@@ -4696,3 +4696,196 @@ ClpSimplex::initialDenseFactorization() const
 {
   return (specialOptions_&8)!=0;
 }
+/* This constructor modifies original ClpSimplex and stores
+   original stuff in created ClpSimplex.  It is only to be used in
+   conjunction with originalModel */
+ClpSimplex::ClpSimplex (ClpSimplex * wholeModel,
+			int numberColumns, const int * whichColumns)
+{
+
+  // Set up dummy row selection list
+  int * whichRow = new int [numberRows_];
+  int iRow;
+  for (iRow=0;iRow<numberRows_;iRow++)
+    whichRow[iRow]=iRow;
+  // ClpModel stuff (apart from numberColumns_)
+  matrix_ = wholeModel->matrix_;
+  rowCopy_ = wholeModel->rowCopy_;
+  if (wholeModel->rowCopy_) {
+    wholeModel->rowCopy_ = wholeModel->rowCopy_->subsetClone(numberRows_,whichRow,
+							     numberColumns,whichColumns);
+  } else {
+    wholeModel->rowCopy_=NULL;
+  }
+  assert (wholeModel->matrix_);
+  wholeModel->matrix_ = wholeModel->matrix_->subsetClone(numberRows_,whichRow,
+					numberColumns,whichColumns);
+  delete [] whichRow;
+  // Now ClpSimplex stuff and status_
+  ClpPrimalColumnSteepest * steep =
+    dynamic_cast< ClpPrimalColumnSteepest*>(wholeModel->primalColumnPivot_);
+  assert (steep);
+  primalColumnPivot_ = wholeModel->primalColumnPivot_;
+  wholeModel->primalColumnPivot_ = new ClpPrimalColumnSteepest(0);
+  nonLinearCost_ = wholeModel->nonLinearCost_;
+
+  // Now main arrays
+  int iColumn;
+  int numberTotal = numberRows_+numberColumns;
+  // mapping 
+  int * mapping = new int[numberRows_+numberColumns_];
+  for (iColumn=0;iColumn<numberColumns_;iColumn++) 
+    mapping[iColumn]=-1;
+  for (iRow=0;iRow<numberRows_;iRow++) 
+    mapping[iRow+numberColumns_] = iRow+numberColumns;
+  lower_ = wholeModel->lower_;
+  wholeModel->lower_ = new double [numberTotal];
+  memcpy(wholeModel->lower_+numberColumns,lower_+numberColumns_,numberRows_*sizeof(double));
+  for (iColumn=0;iColumn<numberColumns;iColumn++) {
+    int jColumn = whichColumns[iColumn];
+    wholeModel->lower_[iColumn]=lower_[jColumn];
+    // and pointer back 
+    mapping[jColumn]=iColumn;
+  }
+  // Re-define pivotVariable_
+  for (iRow=0;iRow<numberRows_;iRow++) {
+    int iPivot = pivotVariable_[iRow];
+    pivotVariable_[iRow]=mapping[iPivot];
+  }
+  // Reverse mapping (so extended version of whichColumns)
+  int iBig;
+  for (iColumn=0;iColumn<numberTotal;iColumn++) 
+    if (mapping[iColumn]>=0)
+      mapping[iBig++]=iColumn;
+  // Save mapping somewhere - doesn't matter
+  rowUpper_ = (double *) mapping;
+  upper_ = wholeModel->upper_;
+  wholeModel->upper_ = new double [numberTotal];
+  for (iColumn=0;iColumn<numberTotal;iColumn++) {
+    int jColumn = mapping[iColumn];
+    wholeModel->upper_[iColumn]=upper_[jColumn];
+  }
+  cost_ = wholeModel->cost_;
+  wholeModel->cost_ = new double [numberTotal];
+  for (iColumn=0;iColumn<numberTotal;iColumn++) {
+    int jColumn = mapping[iColumn];
+    wholeModel->cost_[iColumn]=cost_[jColumn];
+  }
+  dj_ = wholeModel->dj_;
+  wholeModel->dj_ = new double [numberTotal];
+  for (iColumn=0;iColumn<numberTotal;iColumn++) {
+    int jColumn = mapping[iColumn];
+    wholeModel->dj_[iColumn]=dj_[jColumn];
+  }
+  solution_ = wholeModel->solution_;
+  wholeModel->solution_ = new double [numberTotal];
+  for (iColumn=0;iColumn<numberTotal;iColumn++) {
+    int jColumn = mapping[iColumn];
+    wholeModel->solution_[iColumn]=solution_[jColumn];
+  }
+  columnScale_ = wholeModel->columnScale_;
+  if (columnScale_) {
+    wholeModel->columnScale_ = new double [numberTotal];
+    for (iColumn=0;iColumn<numberTotal;iColumn++) {
+      int jColumn = mapping[iColumn];
+      wholeModel->columnScale_[iColumn]=columnScale_[jColumn];
+    }
+  }
+  status_ = wholeModel->status_;
+  wholeModel->status_ = new unsigned char [numberTotal];
+  for (iColumn=0;iColumn<numberTotal;iColumn++) {
+    int jColumn = mapping[iColumn];
+    wholeModel->status_[iColumn]=status_[jColumn];
+  }
+  savedSolution_ = wholeModel->savedSolution_;
+  if (savedSolution_) {
+    wholeModel->savedSolution_ = new double [numberTotal];
+    for (iColumn=0;iColumn<numberTotal;iColumn++) {
+      int jColumn = mapping[iColumn];
+      wholeModel->savedSolution_[iColumn]=savedSolution_[jColumn];
+    }
+  }
+  saveStatus_ = wholeModel->saveStatus_;
+  if (saveStatus_) {
+    wholeModel->saveStatus_ = new unsigned char [numberTotal];
+    for (iColumn=0;iColumn<numberTotal;iColumn++) {
+      int jColumn = mapping[iColumn];
+      wholeModel->saveStatus_[iColumn]=saveStatus_[jColumn];
+    }
+  }
+  
+  
+  numberColumns_ = wholeModel->numberColumns_;
+  wholeModel->numberColumns_ = numberColumns;
+  // Initialize weights
+  wholeModel->primalColumnPivot_->saveWeights(wholeModel,5);
+  // Costs
+  wholeModel->nonLinearCost_ = new ClpNonLinearCost(wholeModel);
+}
+/* This copies back stuff from miniModel and then deletes miniModel.
+   Only to be used with mini constructor */
+void 
+ClpSimplex::originalModel(ClpSimplex * miniModel)
+{
+  int numberSmall = miniModel->numberColumns_;
+  int numberTotal = numberSmall+numberRows_;
+  // copy back
+  int iColumn;
+  int * mapping = (int *) miniModel->rowUpper_;
+  for (iColumn=0;iColumn<numberTotal;iColumn++) {
+    int jColumn = mapping[iColumn];
+    lower_[jColumn]=miniModel->lower_[iColumn];
+  }
+  delete [] miniModel->lower_;
+  for (iColumn=0;iColumn<numberTotal;iColumn++) {
+    int jColumn = mapping[iColumn];
+    upper_[jColumn]=miniModel->upper_[iColumn];
+  }
+  delete [] miniModel->upper_;
+  for (iColumn=0;iColumn<numberTotal;iColumn++) {
+    int jColumn = mapping[iColumn];
+    cost_[jColumn]=miniModel->cost_[iColumn];
+  }
+  delete [] miniModel->cost_;
+  for (iColumn=0;iColumn<numberTotal;iColumn++) {
+    int jColumn = mapping[iColumn];
+    dj_[jColumn]=miniModel->dj_[iColumn];
+  }
+  delete [] miniModel->dj_;
+  for (iColumn=0;iColumn<numberTotal;iColumn++) {
+    int jColumn = mapping[iColumn];
+    solution_[jColumn]=miniModel->solution_[iColumn];
+  }
+  delete [] miniModel->solution_;
+  for (iColumn=0;iColumn<numberTotal;iColumn++) {
+    int jColumn = mapping[iColumn];
+    status_[jColumn]=miniModel->status_[iColumn];
+  }
+  delete [] miniModel->status_;
+  if (columnScale_) {
+    for (iColumn=0;iColumn<numberTotal;iColumn++) {
+      int jColumn = mapping[iColumn];
+      columnScale_[jColumn]=miniModel->columnScale_[iColumn];
+    }
+    delete [] miniModel->columnScale_;
+  }
+  if (savedSolution_) {
+    for (iColumn=0;iColumn<numberTotal;iColumn++) {
+      int jColumn = mapping[iColumn];
+      savedSolution_[jColumn]=miniModel->savedSolution_[iColumn];
+    }
+  }
+  delete [] miniModel->savedSolution_;
+  if (saveStatus_) {
+    for (iColumn=0;iColumn<numberTotal;iColumn++) {
+      int jColumn = mapping[iColumn];
+      saveStatus_[jColumn]=miniModel->saveStatus_[iColumn];
+    }
+  }
+  delete [] miniModel->saveStatus_;
+  // delete stuff
+  delete miniModel->matrix_;
+  delete miniModel->rowCopy_;
+  delete miniModel->primalColumnPivot_;
+  delete miniModel->nonLinearCost_;
+}

@@ -3,7 +3,7 @@
 
 /* 
    Authors
-   
+ 
    John Forrest
 
  */
@@ -85,6 +85,14 @@ public:
 	      int numberRows, const int * whichRows,
 	      int numberColumns, const int * whichColumns,
 	      bool dropNames=true, bool dropIntegers=true);
+  /** This constructor modifies original ClpSimplex and stores
+      original stuff in created ClpSimplex.  It is only to be used in
+      conjunction with originalModel */
+  ClpSimplex (ClpSimplex * wholeModel,
+	      int numberColumns, const int * whichColumns);
+  /** This copies back stuff from miniModel and then deletes miniModel.
+      Only to be used with mini constructor */
+  void originalModel(ClpSimplex * miniModel);
   /// Assignment operator. This copies the data
     ClpSimplex & operator=(const ClpSimplex & rhs);
   /// Destructor
@@ -146,6 +154,12 @@ public:
       See  ClpSolve.hpp for options
    */
   int initialSolve(ClpSolve & options);
+  /// Default initial solve
+  int initialSolve();
+  /// Dual initial solve
+  int initialDualSolve();
+  /// Primal initial solve
+  int initialPrimalSolve();
   /** Dual algorithm - see ClpSimplexDual.hpp for method */
   int dual(int ifValuesPass=0);
   /** Primal algorithm - see ClpSimplexPrimal.hpp for method */

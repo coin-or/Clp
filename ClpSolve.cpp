@@ -539,6 +539,9 @@ ClpSimplex::initialSolve(ClpSolve & options)
     // Just take this number of columns in small problem
     int smallNumberColumns = min(3*numberRows,numberColumns);
     smallNumberColumns = max(smallNumberColumns,3000);
+    //int smallNumberColumns = min(12*numberRows/10,numberColumns);
+    //smallNumberColumns = max(smallNumberColumns,3000);
+    //smallNumberColumns = max(smallNumberColumns,numberRows+1000);
     // We will be using all rows
     int * whichRows = new int [numberRows];
     for (int iRow=0;iRow<numberRows;iRow++)
@@ -728,6 +731,32 @@ ClpSimplex::initialSolve(ClpSolve & options)
   perturbation_=savePerturbation;
   scalingFlag_=saveScaling;
   return finalStatus;
+}
+// General solve
+int 
+ClpSimplex::initialSolve()
+{
+  // Default so use dual
+  ClpSolve options;
+  return initialSolve(options);
+}
+// General dual solve
+int 
+ClpSimplex::initialDualSolve()
+{
+  ClpSolve options;
+  // Use dual
+  options.setSolveType(ClpSolve::useDual);
+  return initialSolve(options);
+}
+// General dual solve
+int 
+ClpSimplex::initialPrimalSolve()
+{
+  ClpSolve options;
+  // Use primal
+  options.setSolveType(ClpSolve::usePrimal);
+  return initialSolve(options);
 }
 // Default constructor
 ClpSolve::ClpSolve (  )

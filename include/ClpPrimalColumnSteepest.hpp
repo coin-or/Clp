@@ -109,6 +109,13 @@ public:
   /// Mode
   inline int mode() const
     { return mode_;};
+  /** Returns number of extra columns for sprint algorithm - 0 means off.
+      Also number of iterations before recompute
+  */
+  int numberSprintColumns(int & numberIterations) const;
+  /// Switch off sprint idea
+  void switchOffSprint();
+  
  //@}
 
   

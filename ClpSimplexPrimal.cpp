@@ -431,7 +431,8 @@ ClpSimplexPrimal::whileIterating(int valuesOption)
 /* Checks if finished.  Updates status */
 void 
 ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
-					  ClpSimplexProgress * progress)
+					  ClpSimplexProgress * progress,
+					  ClpSimplex * originalModel)
 {
   if (type==2) {
     // trouble - restore solution

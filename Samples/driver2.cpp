@@ -1,4 +1,4 @@
-// Copyright (C) 2002,2003 International Business Machines
+// Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
 #include "ClpSimplex.hpp"
@@ -26,17 +26,76 @@ int main (int argc, const char *argv[])
   }
 
   double time1 = CoinCpuTime();
+  /*
+    This driver show how to do presolve.
+  */
+  ClpSimplex * model2;
+  ClpPresolve pinfo;
+  int numberPasses=5; // can change this
+  /* Use a tolerance of 1.0e-8 for feasibility, treat problem as 
+     not being integer, do "numberpasses" passes and throw away names
+     in presolved model */
+  model2 = pinfo.presolvedModel(model,1.0e-8,false,numberPasses,false);
+  if (!model2) {
+    fprintf(stderr,"ClpPresolve says %s is infeasible with tolerance of %g\n",
+	    argv[1],1.0e-8);
+    fprintf(stdout,"ClpPresolve says %s is infeasible with tolerance of %g\n",
+	    argv[1],1.0e-8);
+    // model was infeasible - maybe try again with looser tolerances
+    model2 = pinfo.presolvedModel(model,1.0e-7,false,numberPasses,false);
+    if (!model2) {
+      fprintf(stderr,"ClpPresolve says %s is infeasible with tolerance of %g\n",
+	      argv[1],1.0e-7);
+      fprintf(stdout,"ClpPresolve says %s is infeasible with tolerance of %g\n",
+	      argv[1],1.0e-7);
+      exit(2);
+    }
+  }
+  // change factorization frequency from 200
+  model2->setFactorizationFrequency(100+model2->numberRows()/50);
   if (argc<3 ||!strstr(argv[2],"primal")) {
     // Use the dual algorithm unless user said "primal"
-    model.initialDualSolve();
+    /* faster if bounds tightened as then dual can flip variables
+	to other bound to stay dual feasible.  We can trash the bounds as 
+	this model is going to be thrown away
+    */
+    int numberInfeasibilities = model2->tightenPrimalBounds();
+    if (numberInfeasibilities)
+      std::cout<<"** Analysis indicates model infeasible"
+	       <<std::endl;
+    model2->crash(1000.0,2);
+    ClpDualRowSteepest steep(1);
+    model2->setDualRowPivotAlgorithm(steep);
+    model2->dual();
   } else {
-    model.initialPrimalSolve();
+    ClpPrimalColumnSteepest steep(1);
+    model2->setPrimalColumnPivotAlgorithm(steep);
+    model2->primal();
   }
+  pinfo.postsolve(true);
+
+  int numberIterations=model2->numberIterations();;
+  delete model2;
+  /* After this postsolve model should be optimal.
+     We can use checkSolution and test feasibility */
+  model.checkSolution();
+  if (model.numberDualInfeasibilities()||
+      model.numberPrimalInfeasibilities()) 
+    printf("%g dual %g(%d) Primal %g(%d)\n",
+	   model.objectiveValue(),
+	   model.sumDualInfeasibilities(),
+	   model.numberDualInfeasibilities(),
+	   model.sumPrimalInfeasibilities(),
+	   model.numberPrimalInfeasibilities());
+  // But resolve for safety
+  model.primal(1);
+
+  numberIterations += model.numberIterations();;
   // for running timing tests
   std::cout<<argv[1]<<" Objective "<<model.objectiveValue()<<" took "<<
-    model.numberIterations()<<" iterations and "<<
+    numberIterations<<" iterations and "<<
     CoinCpuTime()-time1<<" seconds"<<std::endl;
-  
+
   std::string modelName;
   model.getStrParam(ClpProbName,modelName);
   std::cout<<"Model "<<modelName<<" has "<<model.numberRows()<<" rows and "<<

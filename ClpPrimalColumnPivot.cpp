@@ -67,3 +67,16 @@ void
 ClpPrimalColumnPivot::clearArrays()
 {
 }
+/* Returns number of extra columns for sprint algorithm - 0 means off.
+   Also number of iterations before recompute
+*/
+int 
+ClpPrimalColumnPivot::numberSprintColumns(int & numberIterations) const
+{
+  return 0;
+}
+// Switch off sprint idea
+void 
+ClpPrimalColumnPivot::switchOffSprint()
+{
+}
