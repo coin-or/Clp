@@ -1197,7 +1197,7 @@ ClpModel::addRows(int number, const double * rowLower,
 }
 // Add rows from a build object
 void 
-ClpModel::addRows(CoinBuild & buildObject)
+ClpModel::addRows(const CoinBuild & buildObject)
 {
   int number = buildObject.numberRows();
   if (number) {
@@ -1207,8 +1207,8 @@ ClpModel::addRows(CoinBuild & buildObject)
     double * lower = new double [number];
     double * upper = new double [number];
     for (iRow=0;iRow<number;iRow++) {
-      int * columns;
-      double * elements;
+      const int * columns;
+      const double * elements;
       int numberElements = buildObject.row(iRow,lower[iRow],upper[iRow],
                                            columns,elements);
       rows[iRow] = 

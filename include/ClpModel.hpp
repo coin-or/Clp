@@ -146,7 +146,7 @@ public:
 	       const double * rowUpper,
 	       const CoinPackedVectorBase * const * rows);
   /// Add rows from a build object
-  void addRows(CoinBuild & buildObject);
+  void addRows(const CoinBuild & buildObject);
 
   /// Deletes columns
   void deleteColumns(int number, const int * which);
