@@ -117,12 +117,13 @@ int main (int argc, const char *argv[])
 
   // Just take this number of columns in small problem
   int smallNumberColumns = min(3*numberRows,numberColumns);
+  smallNumberColumns = max(smallNumberColumns,1000);
   // We will be using all rows
   int * whichRows = new int [numberRows];
   for (int iRow=0;iRow<numberRows;iRow++)
     whichRows[iRow]=iRow;
   double originalOffset;
-  model2->getDblParam(ClpObjOffset,originalOffset);
+  model.getDblParam(ClpObjOffset,originalOffset);
 
   for (iPass=0;iPass<maxPass;iPass++) {
     printf("Start of pass %d\n",iPass);
@@ -141,8 +142,8 @@ int main (int argc, const char *argv[])
     }
     // Get objective offset
     double offset=0.0;
-    const double * objective = model2->objective();
-    for (iColumn=0;iColumn<numberColumns_;iColumn++) 
+    const double * objective = model.objective();
+    for (iColumn=0;iColumn<originalNumberColumns;iColumn++) 
       offset += fullSolution[iColumn]*objective[iColumn];
     small.setDblParam(ClpObjOffset,originalOffset-offset);
     model.times(1.0,fullSolution,rowSolution);
