@@ -4,7 +4,6 @@
 #include "ClpSimplex.hpp"
 #include "ClpPresolve.hpp"
 #include "CoinHelperFunctions.hpp"
-#include "CoinTime.hpp"
 #include "ClpDualRowSteepest.hpp"
 #include "ClpPrimalColumnSteepest.hpp"
 #include <iomanip>
@@ -25,18 +24,13 @@ int main (int argc, const char *argv[])
     exit(1);
   }
 
-  double time1 = CoinCpuTime();
   if (argc<3 ||!strstr(argv[2],"primal")) {
     // Use the dual algorithm unless user said "primal"
     model.initialDualSolve();
   } else {
     model.initialPrimalSolve();
   }
-  // for running timing tests
-  std::cout<<argv[1]<<" Objective "<<model.objectiveValue()<<" took "<<
-    model.numberIterations()<<" iterations and "<<
-    CoinCpuTime()-time1<<" seconds"<<std::endl;
-  
+
   std::string modelName;
   model.getStrParam(ClpProbName,modelName);
   std::cout<<"Model "<<modelName<<" has "<<model.numberRows()<<" rows and "<<
