@@ -792,7 +792,20 @@ ClpModel::deleteColumns(int number, const int * which)
 			      number, which, newSize);
   columnUpper_ = deleteDouble(columnUpper_,numberColumns_,
 			      number, which, newSize);
-  matrix_->deleteCols(number,which);
+  // possible matrix is not full
+  if (matrix_->getNumCols()<numberColumns_) {
+    int * which2 = new int [number];
+    int n=0;
+    int nMatrix = matrix_->getNumCols();
+    for (int i=0;i<number;i++) {
+      if (which[i]<nMatrix)
+	which2[n++]=which[i];
+    }
+    matrix_->deleteCols(n,which2);
+    delete [] which2;
+  } else {
+    matrix_->deleteCols(number,which);
+  }
   //matrix_->removeGaps();
   // status
   if (status_) {
