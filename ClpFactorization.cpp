@@ -286,14 +286,14 @@ ClpFactorization::factorize ( ClpSimplex * model,
 	} else {
 	  // See if worth going sparse and when
 	  if (numberFtranCounts_>100) {
-	    ftranAverageAfterL_ = max(ftranCountAfterL_/ftranCountInput_,1.0);
-	    ftranAverageAfterR_ = max(ftranCountAfterR_/ftranCountAfterL_,1.0);
-	    ftranAverageAfterU_ = max(ftranCountAfterU_/ftranCountAfterR_,1.0);
+	    ftranAverageAfterL_ = CoinMax(ftranCountAfterL_/ftranCountInput_,1.0);
+	    ftranAverageAfterR_ = CoinMax(ftranCountAfterR_/ftranCountAfterL_,1.0);
+	    ftranAverageAfterU_ = CoinMax(ftranCountAfterU_/ftranCountAfterR_,1.0);
 	    assert (ftranCountInput_&&ftranCountAfterL_&&ftranCountAfterR_);
 	    if (btranCountInput_&&btranCountAfterU_&&btranCountAfterR_) {
-	      btranAverageAfterU_ = max(btranCountAfterU_/btranCountInput_,1.0);
-	      btranAverageAfterR_ = max(btranCountAfterR_/btranCountAfterU_,1.0);
-	      btranAverageAfterL_ = max(btranCountAfterL_/btranCountAfterR_,1.0);
+	      btranAverageAfterU_ = CoinMax(btranCountAfterU_/btranCountInput_,1.0);
+	      btranAverageAfterR_ = CoinMax(btranCountAfterR_/btranCountAfterU_,1.0);
+	      btranAverageAfterL_ = CoinMax(btranCountAfterL_/btranCountAfterR_,1.0);
 	    } else {
 	      // we have not done any useful btrans (values pass?)
 	      btranAverageAfterU_ = 1.0;

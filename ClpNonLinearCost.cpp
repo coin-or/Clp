@@ -9,6 +9,7 @@
 
 #include "ClpNonLinearCost.hpp"
 #include "ClpSimplex.hpp"
+#include "CoinHelperFunctions.hpp"
 
 //#############################################################################
 // Constructors / Destructor / Assignment
@@ -460,7 +461,7 @@ ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
 		     iSequence,lowerValue,solution[iSequence],lower_[iRange+2]);
 #endif
 	    sumInfeasibilities_ += value;
-	    largestInfeasibility_ = max(largestInfeasibility_,value);
+	    largestInfeasibility_ = CoinMax(largestInfeasibility_,value);
 	    changeCost_ -= lowerValue*
 	      (cost_[iRange]-cost[iSequence]);
 	    numberInfeasibilities_++;
@@ -477,7 +478,7 @@ ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
 		     iSequence,lower_[iRange-1],solution[iSequence],upperValue);
 #endif
 	    sumInfeasibilities_ += value;
-	    largestInfeasibility_ = max(largestInfeasibility_,value);
+	    largestInfeasibility_ = CoinMax(largestInfeasibility_,value);
 	    changeCost_ -= upperValue*
 	      (cost_[iRange]-cost[iSequence]);
 	    numberInfeasibilities_++;
@@ -951,9 +952,9 @@ ClpNonLinearCost::setOneOutgoing(int iPivot, double & value)
   } else {
     // set correctly
     if (fabs(value-lower)<=primalTolerance*1.001){
-      value = min(value,lower+primalTolerance);
+      value = CoinMin(value,lower+primalTolerance);
     } else if (fabs(value-upper)<=primalTolerance*1.001){
-      value = max(value,upper-primalTolerance);
+      value = CoinMax(value,upper-primalTolerance);
     } else {
       //printf("*** variable wandered off bound %g %g %g!\n",
       //     lower,value,upper);

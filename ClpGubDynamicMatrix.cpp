@@ -97,7 +97,7 @@ ClpGubDynamicMatrix::ClpGubDynamicMatrix(ClpSimplex * model, int numberSets,
   // Number of columns needed
   int numberGubInSmall = numberSets_+numberRows + 2*model->factorizationFrequency()+2;
   // for small problems this could be too big
-  //numberGubInSmall = min(numberGubInSmall,numberGubColumns_);
+  //numberGubInSmall = CoinMin(numberGubInSmall,numberGubColumns_);
   int numberNeeded = numberGubInSmall + numberColumns;
   firstAvailable_ = numberColumns;
   savedFirstAvailable_ = numberColumns;
@@ -164,8 +164,8 @@ ClpGubDynamicMatrix::ClpGubDynamicMatrix(ClpSimplex * model, int numberSets,
   double guess = originalMatrix->getNumElements()+10;
   guess /= (double) numberColumns;
   guess *= 2*numberGubColumns_;
-  numberElements_ = (int) min(guess,10000000.0);
-  numberElements_ = min(numberElements_,numberElements)+originalMatrix->getNumElements();
+  numberElements_ = (int) CoinMin(guess,10000000.0);
+  numberElements_ = CoinMin(numberElements_,numberElements)+originalMatrix->getNumElements();
   matrix_ = originalMatrix;
   zeroElements_ = false;
   // resize model (matrix stays same)
@@ -296,7 +296,7 @@ ClpGubDynamicMatrix::partialPricing(ClpSimplex * model, double startFraction, do
     // and do some proportion of full set
     int startG2 = (int) (startFraction*numberSets_);
     int endG2 = (int) (endFraction*numberSets_+0.1);
-    endG2 = min(endG2,numberSets_);
+    endG2 = CoinMin(endG2,numberSets_);
     //printf("gub price - set start %d end %d\n",
     //   startG2,endG2);
     double tolerance=model->currentDualTolerance();
@@ -473,7 +473,7 @@ ClpGubDynamicMatrix::partialPricing(ClpSimplex * model, double startFraction, do
 	int numberThis = startColumn_[bestSequence+1]-startColumn_[bestSequence];
 	if (numberElements+numberThis>numberElements_) {
 	  // need to redo
-	  numberElements_ = max(3*numberElements_/2,numberElements+numberThis);
+	  numberElements_ = CoinMax(3*numberElements_/2,numberElements+numberThis);
 	  matrix_->reserve(numberColumns,numberElements_);
 	  element =  matrix_->getMutableElements();
 	  row = matrix_->getMutableIndices();
@@ -697,7 +697,7 @@ ClpGubDynamicMatrix::synchronize(ClpSimplex * model,int mode)
       // move to next_
       memcpy(next_+firstDynamic_,temp+firstDynamic_,(firstAvailable_-firstDynamic_)*sizeof(int));
       // if odd iterations may be one out so adjust currentNumber
-      currentNumber=min(currentNumber+1,lastDynamic_);
+      currentNumber=CoinMin(currentNumber+1,lastDynamic_);
       // zero solution
       CoinZeroN(solution+firstAvailable_,currentNumber-firstAvailable_);
       // zero cost
@@ -832,7 +832,7 @@ ClpGubDynamicMatrix::synchronize(ClpSimplex * model,int mode)
       double dualTolerance = model->dualTolerance();
       double relaxedTolerance=dualTolerance;
       // we can't really trust infeasibilities if there is dual error
-      double error = min(1.0e-3,model->largestDualError());
+      double error = CoinMin(1.0e-3,model->largestDualError());
       // allow tolerance at least slightly bigger than standard
       relaxedTolerance = relaxedTolerance +  error;
       // but we will be using difference
@@ -1012,7 +1012,7 @@ ClpGubDynamicMatrix::useEffectiveRhs(ClpSimplex * model, bool cheapest)
   int longestSet=0;
   int iSet;
   for (iSet=0;iSet<numberSets_;iSet++) 
-    longestSet = max(longestSet,fullStart_[iSet+1]-fullStart_[iSet]);
+    longestSet = CoinMax(longestSet,fullStart_[iSet+1]-fullStart_[iSet]);
     
   double * upper = new double[longestSet+1];
   double * cost = new double[longestSet+1];
@@ -1021,7 +1021,7 @@ ClpGubDynamicMatrix::useEffectiveRhs(ClpSimplex * model, bool cheapest)
   assert (!next_);
   delete [] next_;
   int numberColumns = model->numberColumns();
-  next_ = new int[numberColumns+numberSets_+max(2*longestSet,lastDynamic_-firstDynamic_)];
+  next_ = new int[numberColumns+numberSets_+CoinMax(2*longestSet,lastDynamic_-firstDynamic_)];
   char * mark = new char[numberColumns];
   memset(mark,0,numberColumns);
   for (int iColumn=0;iColumn<numberColumns;iColumn++) 
@@ -1245,7 +1245,7 @@ ClpGubDynamicMatrix::useEffectiveRhs(ClpSimplex * model, bool cheapest)
 		  basicDistance = solution[iBasic]-lower[iBasic];
 		}
 		// need extra coding for unbounded
-		assert (min(distance,basicDistance)<1.0e20);
+		assert (CoinMin(distance,basicDistance)<1.0e20);
 		if (distance>basicDistance) {
 		  // incoming becomes basic
 		  solution[chosen] += basicDistance;
@@ -1272,7 +1272,7 @@ ClpGubDynamicMatrix::useEffectiveRhs(ClpSimplex * model, bool cheapest)
 		  basicDistance = upper[iBasic]-solution[iBasic];
 		}
 		// need extra coding for unbounded - for now just exit
-		if (min(distance,basicDistance)>1.0e20) {
+		if (CoinMin(distance,basicDistance)>1.0e20) {
 		  printf("unbounded on set %d\n",iSet);
 		  iphase=1;
 		  iBasic=numberInSet;
@@ -1335,7 +1335,7 @@ ClpGubDynamicMatrix::useEffectiveRhs(ClpSimplex * model, bool cheapest)
 	    int numberThis = startColumn_[iBasic+1]-startColumn_[iBasic];
 	    if (numberElements+numberThis>numberElements_) {
 	      // need to redo
-	      numberElements_ = max(3*numberElements_/2,numberElements+numberThis);
+	      numberElements_ = CoinMax(3*numberElements_/2,numberElements+numberThis);
 	      matrix_->reserve(numberColumns,numberElements_);
 	      element =  matrix_->getMutableElements();
 	      row = matrix_->getMutableIndices();

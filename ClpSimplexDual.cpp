@@ -433,7 +433,7 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
   }      
   // if can't trust much and long way from optimal then relax
   if (largestPrimalError_>10.0)
-    factorization_->relaxAccuracyCheck(min(1.0e2,largestPrimalError_/10.0));
+    factorization_->relaxAccuracyCheck(CoinMin(1.0e2,largestPrimalError_/10.0));
   else
     factorization_->relaxAccuracyCheck(1.0);
   // status stays at -1 while iterating, >=0 finished, -2 to invert
@@ -757,7 +757,7 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
 	double checkValue=1.0e-7;
 	// if can't trust much and long way from optimal then relax
 	if (largestPrimalError_>10.0)
-	  checkValue = min(1.0e-4,1.0e-8*largestPrimalError_);
+	  checkValue = CoinMin(1.0e-4,1.0e-8*largestPrimalError_);
 	if (fabs(btranAlpha)<1.0e-12||fabs(alpha_)<1.0e-12||
 	    fabs(btranAlpha-alpha_)>checkValue*(1.0+fabs(alpha_))) {
 	  handler_->message(CLP_DUAL_CHECK,messages_)
@@ -831,7 +831,7 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
 	    if (upperOut_==lowerOut_)
 	      dualOut_=0.0;
 	  }
-	  if(dualOut_<-max(1.0e-12*averagePrimalInfeasibility,1.0e-8)
+	  if(dualOut_<-CoinMax(1.0e-12*averagePrimalInfeasibility,1.0e-8)
 	     &&factorization_->pivots()>100&&
 	     getStatus(sequenceIn_)!=isFree) {
 	    // going backwards - factorize
@@ -1599,11 +1599,11 @@ ClpSimplexDual::changeBounds(bool initialize,
 	    status==atLowerBound) {
 	  double value = solution_[iSequence];
 	  if (value-lowerValue<=upperValue-value) {
-	    newLowerValue = max(lowerValue,value-0.666667*newBound);
-	    newUpperValue = min(upperValue,newLowerValue+newBound);
+	    newLowerValue = CoinMax(lowerValue,value-0.666667*newBound);
+	    newUpperValue = CoinMin(upperValue,newLowerValue+newBound);
 	  } else {
-	    newUpperValue = min(upperValue,value+0.666667*newBound);
-	    newLowerValue = max(lowerValue,newUpperValue-newBound);
+	    newUpperValue = CoinMin(upperValue,value+0.666667*newBound);
+	    newLowerValue = CoinMax(lowerValue,newUpperValue-newBound);
 	  }
 	  lower_[iSequence]=newLowerValue;
 	  upper_[iSequence]=newUpperValue;
@@ -1890,7 +1890,7 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 
     theta_=1.0e50;
     // now flip flop between spare arrays until reasonable theta
-    tentativeTheta = max(10.0*upperTheta,1.0e-7);
+    tentativeTheta = CoinMax(10.0*upperTheta,1.0e-7);
     
     // loops increasing tentative theta until can't go through
     
@@ -1984,8 +1984,8 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
       }
       swapped[1-iFlip]=numberPossiblySwapped;
       interesting[1-iFlip]=numberRemaining;
-      marker[1-iFlip][0]= max(marker[1-iFlip][0],numberRemaining);
-      marker[1-iFlip][1]= min(marker[1-iFlip][1],numberPossiblySwapped);
+      marker[1-iFlip][0]= CoinMax(marker[1-iFlip][0],numberRemaining);
+      marker[1-iFlip][1]= CoinMin(marker[1-iFlip][1],numberPossiblySwapped);
       
       if (totalThru+thruThis>=fabs(dualOut_)||
 	  increaseInObjective+increaseInThis<0.0) {
@@ -2064,7 +2064,7 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 	      if (value>=0.0) { 
 		addToSwapped=true;
 #if TRYBIAS==1
-		badDj = -max(dj_[iSequence],0.0);
+		badDj = -CoinMax(dj_[iSequence],0.0);
 #elif TRYBIAS==2
 		badDj = -dj_[iSequence];
 #else
@@ -2076,7 +2076,7 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 	      if (value<=0.0) {
 		addToSwapped=true;
 #if TRYBIAS==1
-		badDj = min(dj_[iSequence],0.0);
+		badDj = CoinMin(dj_[iSequence],0.0);
 #elif TRYBIAS==2
 		badDj = dj_[iSequence];
 #else
@@ -2113,7 +2113,7 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 		sequenceIn_ = numberPossiblySwapped;
 		bestPivot =  absAlpha;
 		theta_ = dj_[iSequence]/alpha;
-		largestPivot = max(largestPivot,bestPivot);
+		largestPivot = CoinMax(largestPivot,bestPivot);
 		bestWeight = weight;
 		//printf(" taken seq %d alpha %g weight %d\n",
 		//   iSequence,absAlpha,dubiousWeights[iSequence]);
@@ -2128,8 +2128,8 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 	  }
 	  swapped[1-iFlip]=numberPossiblySwapped;
 	  interesting[1-iFlip]=numberRemaining;
-	  marker[1-iFlip][0]= max(marker[1-iFlip][0],numberRemaining);
-	  marker[1-iFlip][1]= min(marker[1-iFlip][1],numberPossiblySwapped);
+	  marker[1-iFlip][0]= CoinMax(marker[1-iFlip][0],numberRemaining);
+	  marker[1-iFlip][1]= CoinMin(marker[1-iFlip][1],numberPossiblySwapped);
 	  // If we stop now this will be increase in objective (I think)
 	  double increase = (fabs(dualOut_)-totalThru)*theta_;
 	  increase += increaseInObjective;
@@ -2190,7 +2190,7 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 	  memcpy(indices[1-iFlip]+swapped[iFlip],
 		 indices[iFlip]+swapped[iFlip],
 		 (numberColumns_-swapped[iFlip])*sizeof(int));
-	  marker[1-iFlip][1] = min(marker[1-iFlip][1],swapped[iFlip]);
+	  marker[1-iFlip][1] = CoinMin(marker[1-iFlip][1],swapped[iFlip]);
 	  swapped[1-iFlip]=swapped[iFlip];
 	}
 	increaseInObjective += increaseInThis;
@@ -2260,7 +2260,7 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 	      // modify cost to hit new tolerance
 	      double modification = alpha*theta_-dj_[iSequence]
 		+newTolerance;
-	      //modification = min(modification,dualTolerance_);
+	      //modification = CoinMin(modification,dualTolerance_);
 	      //assert (fabs(modification)<1.0e-7);
 	      dj_[iSequence] += modification;
 	      cost_[iSequence] +=  modification;
@@ -2275,7 +2275,7 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 	      // modify cost to hit new tolerance
 	      double modification = alpha*theta_-dj_[iSequence]
 		-newTolerance;
-	      //modification = max(modification,-dualTolerance_);
+	      //modification = CoinMax(modification,-dualTolerance_);
 	      //assert (fabs(modification)<1.0e-7);
 	      dj_[iSequence] += modification;
 	      cost_[iSequence] +=  modification;
@@ -2917,13 +2917,13 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 #if 0
   double thisObj = progress->lastObjective(0);
   double lastObj = progress->lastObjective(1);
-  if (lastObj>thisObj+1.0e-6*max(fabs(thisObj),fabs(lastObj))+1.0e-8
+  if (lastObj>thisObj+1.0e-6*CoinMax(fabs(thisObj),fabs(lastObj))+1.0e-8
       &&givenDuals==NULL) {
     int maxFactor = factorization_->maximumPivots();
     if (maxFactor>10) {
       if (forceFactorization_<0)
 	forceFactorization_= maxFactor;
-      forceFactorization_ = max (1,(forceFactorization_>>1));
+      forceFactorization_ = CoinCoinMax(1,(forceFactorization_>>1));
       printf("Reducing factorization frequency\n");
     } 
   }
@@ -3091,8 +3091,8 @@ ClpSimplexDual::perturb()
   double largestPositive;
   matrix_->rangeOfElements(smallestNegative, largestNegative,
 			   smallestPositive, largestPositive);
-  smallestPositive = min(fabs(smallestNegative),smallestPositive);
-  largestPositive = max(fabs(largestNegative),largestPositive);
+  smallestPositive = CoinMin(fabs(smallestNegative),smallestPositive);
+  largestPositive = CoinMax(fabs(largestNegative),largestPositive);
   double elementRatio = largestPositive/smallestPositive;
   int numberNonZero=0;
   if (!numberIterations_&&perturbation_==50) {
@@ -3142,8 +3142,8 @@ ClpSimplexDual::perturb()
     if (columnLowerWork_[iColumn]<columnUpperWork_[iColumn]) {
       int length = lengths[iColumn];
       if (length>2) {
-	maxLength = max(maxLength,length);
-	minLength = min(minLength,length);
+	maxLength = CoinMax(maxLength,length);
+	minLength = CoinMin(minLength,length);
       }
     }
   }
@@ -3158,7 +3158,7 @@ ClpSimplexDual::perturb()
     // Experiment
     // maximumFraction could be 1.0e-10 to 1.0 
     double m[]={1.0e-10,1.0e-9,1.0e-8,1.0e-7,1.0e-6,1.0e-5,1.0e-4,1.0e-3,1.0e-2,1.0e-1,1.0};
-    maximumFraction = m[min(perturbation_-51,10)];
+    maximumFraction = m[CoinMin(perturbation_-51,10)];
   }
   int iRow;
   double smallestNonZero=1.0e100;
@@ -3172,10 +3172,10 @@ ClpSimplexDual::perturb()
       double up = rowUpperWork_[iRow];
       if (lo<up) {
 	double value = fabs(rowObjectiveWork_[iRow]);
-	perturbation = max(perturbation,value);
+	perturbation = CoinMax(perturbation,value);
 	if (value) {
 	  modifyRowCosts=true;
-	  smallestNonZero = min(smallestNonZero,value);
+	  smallestNonZero = CoinMin(smallestNonZero,value);
 	}
       } 
       if (lo&&lo>-1.0e10) {
@@ -3202,9 +3202,9 @@ ClpSimplexDual::perturb()
       if (lo<up) {
 	double value = 
 	  fabs(objectiveWork_[iColumn]);
-	perturbation = max(perturbation,value);
+	perturbation = CoinMax(perturbation,value);
 	if (value) {
-	  smallestNonZero = min(smallestNonZero,value);
+	  smallestNonZero = CoinMin(smallestNonZero,value);
 	}
       }
       if (lo&&lo>-1.0e10) {
@@ -3235,11 +3235,11 @@ ClpSimplexDual::perturb()
       if (smallestNegative==largestNegative&&
 	  smallestPositive==largestPositive) {
 	// Really hit perturbation
-	double adjust = min(100.0*maximumFraction,1.0e-3*max(lastValue,lastValue2));
-	maximumFraction = max(adjust,maximumFraction);
+	double adjust = CoinMin(100.0*maximumFraction,1.0e-3*CoinMax(lastValue,lastValue2));
+	maximumFraction = CoinMax(adjust,maximumFraction);
       }
     }
-    perturbation = min(perturbation,smallestNonZero/maximumFraction);
+    perturbation = CoinMin(perturbation,smallestNonZero/maximumFraction);
   } else {
     // user is in charge
     maximumFraction = 1.0e-1;
@@ -3274,7 +3274,7 @@ ClpSimplexDual::perturb()
       if (rowLowerWork_[iRow]<rowUpperWork_[iRow]) {
 	double value = perturbation;
 	double currentValue = rowObjectiveWork_[iRow];
-	value = min(value,maximumFraction*(fabs(currentValue)+1.0e-1*perturbation+1.0e-3));
+	value = CoinMin(value,maximumFraction*(fabs(currentValue)+1.0e-1*perturbation+1.0e-3));
 	if (rowLowerWork_[iRow]>-largeValue_) {
 	  if (fabs(rowLowerWork_[iRow])<fabs(rowUpperWork_[iRow])) 
 	    value *= CoinDrand48();
@@ -3286,11 +3286,11 @@ ClpSimplexDual::perturb()
 	  value=0.0;
 	}
 	if (currentValue) {
-	  largest = max(largest,fabs(value));
+	  largest = CoinMax(largest,fabs(value));
 	  if (fabs(value)>fabs(currentValue)*largestPerCent)
 	    largestPerCent=fabs(value/currentValue);
 	} else {
-	  largestZero=max(largestZero,fabs(value));
+	  largestZero=CoinMax(largestZero,fabs(value));
 	}
 	if (printOut)
 	  printf("row %d cost %g change %g\n",iRow,rowObjectiveWork_[iRow],value);
@@ -3317,14 +3317,14 @@ ClpSimplexDual::perturb()
   }
   // Make variables with more elements more expensive
   const double m1 = 0.5;
-  double smallestAllowed = min(1.0e-2*dualTolerance_,maximumFraction);
-  double largestAllowed = max(1.0e3*dualTolerance_,maximumFraction*10.0*averageCost);
+  double smallestAllowed = CoinMin(1.0e-2*dualTolerance_,maximumFraction);
+  double largestAllowed = CoinMax(1.0e3*dualTolerance_,maximumFraction*10.0*averageCost);
   for (iColumn=0;iColumn<numberColumns_;iColumn++) {
     if (columnLowerWork_[iColumn]<columnUpperWork_[iColumn]&&getStatus(iColumn)!=basic) {
       double value = perturbation;
       double currentValue = objectiveWork_[iColumn];
-      value = min(value,constantPerturbation+maximumFraction*(fabs(currentValue)+1.0e-1*perturbation+1.0e-8));
-      //value = min(value,constantPerturbation;+maximumFraction*fabs(currentValue));
+      value = CoinMin(value,constantPerturbation+maximumFraction*(fabs(currentValue)+1.0e-1*perturbation+1.0e-8));
+      //value = CoinMin(value,constantPerturbation;+maximumFraction*fabs(currentValue));
       double value2 = constantPerturbation+1.0e-1*smallestNonZero;
       if (uniformChange) {
 	value = maximumFraction;
@@ -3349,7 +3349,7 @@ ClpSimplexDual::perturb()
 	int length = lengths[iColumn];
 	if (length>3) {
 	  length = (int) ((double) length * factor);
-	  length = max(3,length);
+	  length = CoinMax(3,length);
 	}
 	double multiplier;
 #if 1
@@ -3365,7 +3365,7 @@ ClpSimplexDual::perturb()
 	multiplier *= 0.5;
 #endif
 	value *= multiplier;
-	value = min (value,value2);
+	value = CoinMin(value,value2);
 	if (savePerturbation<50||savePerturbation>60) {
 	  if (fabs(value)<=dualTolerance_)
 	    value=0.0;
@@ -3382,11 +3382,11 @@ ClpSimplexDual::perturb()
 	  }
 	}
 	if (currentValue) {
-	  largest = max(largest,fabs(value));
+	  largest = CoinMax(largest,fabs(value));
 	  if (fabs(value)>fabs(currentValue)*largestPerCent)
 	    largestPerCent=fabs(value/currentValue);
 	} else {
-	  largestZero=max(largestZero,fabs(value));
+	  largestZero=CoinMax(largestZero,fabs(value));
 	}
 	if (printOut)
 	  printf("col %d cost %g change %g\n",iColumn,objectiveWork_[iColumn],value);
@@ -3490,7 +3490,7 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
     // Start of fast iterations
     int status = fastDual(alwaysFinish);
     // make sure plausible
-    double obj = max(objectiveValue_,saveObjectiveValue);
+    double obj = CoinMax(objectiveValue_,saveObjectiveValue);
     if (status) {
       // not finished - might be optimal
       checkPrimalSolution(rowActivityWork_,columnActivityWork_);
@@ -3551,7 +3551,7 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
     // Start of fast iterations
     status = fastDual(alwaysFinish);
     // make sure plausible
-    obj = max(objectiveValue_,saveObjectiveValue);
+    obj = CoinMax(objectiveValue_,saveObjectiveValue);
     if (status) {
       // not finished - might be optimal
       checkPrimalSolution(rowActivityWork_,columnActivityWork_);
@@ -4050,7 +4050,7 @@ ClpSimplexDual::checkPossibleValuesMove(CoinIndexedVector * rowArray,
   thetaUp *= -1.0;
   double changeUp = -thetaUp * changeDown;
   changeDown = -thetaDown*changeDown;
-  if (max(fabs(thetaDown),fabs(thetaUp))<1.0e-8) {
+  if (CoinMax(fabs(thetaDown),fabs(thetaUp))<1.0e-8) {
     // largest
     if (fabs(alphaDown)<fabs(alphaUp)) {
       sequenceDown =-1;

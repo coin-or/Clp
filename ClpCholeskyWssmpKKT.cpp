@@ -295,7 +295,7 @@ ClpCholeskyWssmpKKT::factorize(const double * diagonal, int * rowsDropped)
   int numberColumns = model_->numberColumns();
   int numberTotal = numberColumns + numberRowsModel;
   int newDropped=0;
-  double largest;
+  double largest=0.0;
   double smallest;
   //perturbation
   double perturbation=model_->diagonalPerturbation()*model_->diagonalNorm();
@@ -326,7 +326,7 @@ ClpCholeskyWssmpKKT::factorize(const double * diagonal, int * rowsDropped)
       double value = diagonal[iColumn];
       if (fabs(value)>1.0e-100) {
 	value = 1.0/value;
-	largest = max(largest,fabs(value));
+	largest = CoinMax(largest,fabs(value));
 	sparseFactor_[numberElements] = -value;
 	choleskyRow_[numberElements++]=iColumn;
 	CoinBigIndex start=columnStart[iColumn];
@@ -334,7 +334,7 @@ ClpCholeskyWssmpKKT::factorize(const double * diagonal, int * rowsDropped)
 	for (CoinBigIndex j=start;j<end;j++) {
 	  choleskyRow_[numberElements]=row[j]+numberTotal;
 	  sparseFactor_[numberElements++]=element[j];
-	  largest = max(largest,fabs(element[j]));
+	  largest = CoinMax(largest,fabs(element[j]));
 	}
       } else {
 	sparseFactor_[numberElements] = -1.0e100;
@@ -364,14 +364,14 @@ ClpCholeskyWssmpKKT::factorize(const double * diagonal, int * rowsDropped)
 	    value += quadraticElement[j];
 	  }
 	}
-	largest = max(largest,fabs(value));
+	largest = CoinMax(largest,fabs(value));
 	sparseFactor_[savePosition] = -value;
 	CoinBigIndex start=columnStart[iColumn];
 	CoinBigIndex end=columnStart[iColumn]+columnLength[iColumn];
 	for (CoinBigIndex j=start;j<end;j++) {
 	  choleskyRow_[numberElements]=row[j]+numberTotal;
 	  sparseFactor_[numberElements++]=element[j];
-	  largest = max(largest,fabs(element[j]));
+	  largest = CoinMax(largest,fabs(element[j]));
 	}
       } else {
 	value = 1.0e100;
@@ -388,7 +388,7 @@ ClpCholeskyWssmpKKT::factorize(const double * diagonal, int * rowsDropped)
     double value = diagonal[iColumn];
     if (fabs(value)>1.0e-100) {
       value = 1.0/value;
-      largest = max(largest,fabs(value));
+      largest = CoinMax(largest,fabs(value));
     } else {
       value = 1.0e100;
     }
@@ -417,8 +417,8 @@ ClpCholeskyWssmpKKT::factorize(const double * diagonal, int * rowsDropped)
   integerParameters_[30]=1;
   doubleParameters_[20]=1.0e100;
   double largest2= largest*1.0e-20;
-  largest = min (largest2,1.0e-11);
-  doubleParameters_[10]=max(1.0e-20,largest);
+  largest = CoinMin(largest2,1.0e-11);
+  doubleParameters_[10]=CoinMax(1.0e-20,largest);
   if (doubleParameters_[10]>1.0e-3)
     integerParameters_[9]=1;
   else

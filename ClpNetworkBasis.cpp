@@ -948,8 +948,8 @@ ClpNetworkBasis::updateColumnTranspose (  CoinIndexedVector * regionSparse,
     int j = regionIndex[i];
     // add in
     int iDepth = depth_[j];
-    smallestDepth = min(iDepth,smallestDepth) ;
-    greatestDepth = max(iDepth,greatestDepth) ;
+    smallestDepth = CoinMin(iDepth,smallestDepth) ;
+    greatestDepth = CoinMax(iDepth,greatestDepth) ;
     int jNext = stack2_[iDepth];
     stack2_[iDepth]=j;
     stack_[j]=jNext;
@@ -1019,8 +1019,8 @@ ClpNetworkBasis::updateColumnTranspose (  CoinIndexedVector * regionSparse,
       regionIndex2[i]=j;
       // add in
       int iDepth = depth_[j];
-      smallestDepth = min(iDepth,smallestDepth) ;
-      greatestDepth = max(iDepth,greatestDepth) ;
+      smallestDepth = CoinMin(iDepth,smallestDepth) ;
+      greatestDepth = CoinMax(iDepth,greatestDepth) ;
       int jNext = stack2_[iDepth];
       stack2_[iDepth]=j;
       stack_[j]=jNext;
@@ -1038,8 +1038,8 @@ ClpNetworkBasis::updateColumnTranspose (  CoinIndexedVector * regionSparse,
       int j = regionIndex2[i];
       // add in
       int iDepth = depth_[j];
-      smallestDepth = min(iDepth,smallestDepth) ;
-      greatestDepth = max(iDepth,greatestDepth) ;
+      smallestDepth = CoinMin(iDepth,smallestDepth) ;
+      greatestDepth = CoinMax(iDepth,greatestDepth) ;
       int jNext = stack2_[iDepth];
       stack2_[iDepth]=j;
       stack_[j]=jNext;
@@ -1102,8 +1102,8 @@ ClpNetworkBasis::updateColumnTranspose (  CoinIndexedVector * regionSparse,
       regionIndex2[i]=j;
       // add in
       int iDepth = depth_[j];
-      smallestDepth = min(iDepth,smallestDepth) ;
-      greatestDepth = max(iDepth,greatestDepth) ;
+      smallestDepth = CoinMin(iDepth,smallestDepth) ;
+      greatestDepth = CoinMax(iDepth,greatestDepth) ;
       int jNext = stack2_[iDepth];
       stack2_[iDepth]=j;
       stack_[j]=jNext;
@@ -1121,8 +1121,8 @@ ClpNetworkBasis::updateColumnTranspose (  CoinIndexedVector * regionSparse,
       int j = regionIndex2[i];
       // add in
       int iDepth = depth_[j];
-      smallestDepth = min(iDepth,smallestDepth) ;
-      greatestDepth = max(iDepth,greatestDepth) ;
+      smallestDepth = CoinMin(iDepth,smallestDepth) ;
+      greatestDepth = CoinMax(iDepth,greatestDepth) ;
       int jNext = stack2_[iDepth];
       stack2_[iDepth]=j;
       stack_[j]=jNext;

@@ -10,6 +10,7 @@
 #include "Idiot.hpp"
 #include "CoinTime.hpp"
 #include "CoinMessageHandler.hpp"
+#include "CoinHelperFunctions.hpp"
 // Redefine stuff for Clp
 #ifndef OSI_IDIOT
 #include "ClpMessage.hpp"
@@ -41,7 +42,7 @@ Idiot::dropping(IdiotResult result,
                     int *nbad)
 {
   if (result.infeas<=small) {
-    double value=max(fabs(result.objval),fabs(result.dropThis))+1.0;
+    double value=CoinMax(fabs(result.objval),fabs(result.dropThis))+1.0;
     if (result.dropThis>tolerance*value) {
       *nbad=0;
       return 1;
@@ -127,7 +128,7 @@ Idiot::crash(int numberPass, CoinMessageHandler * handler,const CoinMessages *me
     majorIterations_=numberPass;
   // If mu not changed then compute
   if (mu_==1e-4)
-    mu_= max(1.0e-3,sum*1.0e-5);
+    mu_= CoinMax(1.0e-3,sum*1.0e-5);
   if (!lightWeight_) {
     maxIts2_=105;
   } else if (lightWeight_==1) {
@@ -474,10 +475,10 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
     if (iteration>50&&n==numberAway&&result.infeas<1.0e-4)
       break; // not much happening
     if (lightWeight_==1&&iteration>10&&result.infeas>1.0&&maxIts!=7) {
-      if (lastInfeas!=bestInfeas&&min(result.infeas,lastInfeas)>0.95*bestInfeas)
-	majorIterations_ = min(majorIterations_,iteration); // not getting feasible
+      if (lastInfeas!=bestInfeas&&CoinMin(result.infeas,lastInfeas)>0.95*bestInfeas)
+	majorIterations_ = CoinMin(majorIterations_,iteration); // not getting feasible
     }
-    bestInfeas=min(bestInfeas,result.infeas);
+    bestInfeas=CoinMin(bestInfeas,result.infeas);
     lastInfeas = result.infeas;
     numberAway=n;
     keepinfeas = result.infeas;
@@ -524,7 +525,7 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
 	     -dropEnoughWeighted_*fabs(lastResult.weighted))) {
 	  mu*=changeMu;
           if ((saveStrategy&32)!=0&&result.infeas<reasonableInfeas&&0) {
-	    reasonableInfeas=max(smallInfeas,reasonableInfeas*sqrt(changeMu));
+	    reasonableInfeas=CoinMax(smallInfeas,reasonableInfeas*sqrt(changeMu));
 	    printf("reasonable infeas now %g\n",reasonableInfeas);
 	  }
 	  nTry=0;
@@ -945,19 +946,19 @@ Idiot::crossOver(int mode)
 	  move=(rup-rowsol[irow])/value;
 	  if (value>0.0) {
 	    /* reduce */
-	    if (csol+move<clo) move=min(0.0,clo-csol);
+	    if (csol+move<clo) move=CoinMin(0.0,clo-csol);
 	  } else {
 	    /* increase */
-	    if (csol+move>cup) move=max(0.0,cup-csol);
+	    if (csol+move>cup) move=CoinMax(0.0,cup-csol);
 	  }
 	} else if (rowsol[irow]<rlo) {
 	  move=(rlo-rowsol[irow])/value;
 	  if (value>0.0) {
 	    /* increase */
-	    if (csol+move>cup) move=max(0.0,cup-csol);
+	    if (csol+move>cup) move=CoinMax(0.0,cup-csol);
 	  } else {
 	    /* reduce */
-	    if (csol+move<clo) move=min(0.0,clo-csol);
+	    if (csol+move<clo) move=CoinMin(0.0,clo-csol);
 	  }
 	} else {
 	  /* move to improve objective */
@@ -965,21 +966,21 @@ Idiot::crossOver(int mode)
 	    if (value>0.0) {
 	      move=(rlo-rowsol[irow])/value;
 	      /* reduce */
-	      if (csol+move<clo) move=min(0.0,clo-csol);
+	      if (csol+move<clo) move=CoinMin(0.0,clo-csol);
 	    } else {
 	      move=(rup-rowsol[irow])/value;
 	      /* increase */
-	      if (csol+move>cup) move=max(0.0,cup-csol);
+	      if (csol+move>cup) move=CoinMax(0.0,cup-csol);
 	    }
 	  } else if (cost[i]*maxmin<0.0) {
 	    if (value>0.0) {
 	      move=(rup-rowsol[irow])/value;
 	      /* increase */
-	      if (csol+move>cup) move=max(0.0,cup-csol);
+	      if (csol+move>cup) move=CoinMax(0.0,cup-csol);
 	    } else {
 	      move=(rlo-rowsol[irow])/value;
 	      /* reduce */
-	      if (csol+move<clo) move=min(0.0,clo-csol);
+	      if (csol+move<clo) move=CoinMin(0.0,clo-csol);
 	    }
 	  }
 	}

@@ -192,7 +192,7 @@ int ClpPredictorCorrector::solve ( )
     if (saveIteration+10<numberIterations_&&
 	complementarityGap_*2.0<historyInfeasibility_[0])
       saveIteration=-1;
-    lastStep = min(actualPrimalStep_,actualDualStep_);
+    lastStep = CoinMin(actualPrimalStep_,actualDualStep_);
     double goodGapChange;
     if (!sloppyOptimal) {
       goodGapChange=0.93;
@@ -440,9 +440,9 @@ int ClpPredictorCorrector::solve ( )
     int bestPhase=0;
     double bestNextGap=nextGap;
     // ?
-    bestNextGap=max(nextGap,0.8*complementarityGap_);
+    bestNextGap=CoinMax(nextGap,0.8*complementarityGap_);
     if (quadraticObj)
-      bestNextGap=max(nextGap,0.99*complementarityGap_);
+      bestNextGap=CoinMax(nextGap,0.99*complementarityGap_);
     if (complementarityGap_>1.0e-4*numberComplementarityPairs_) {
       //std::cout <<"predicted duality gap "<<nextGap<<std::endl;
       double part1=nextGap/numberComplementarityPairs_;
@@ -579,7 +579,7 @@ int ClpPredictorCorrector::solve ( )
 #ifdef HALVE
       int nHalve=0;
       // relax test
-      bestNextGap=max(bestNextGap,0.9*complementarityGap_);
+      bestNextGap=CoinMax(bestNextGap,0.9*complementarityGap_);
       while (!goodMove) {
 	mu_=saveMu;
 	actualPrimalStep_ = savePrimalStep;
@@ -642,7 +642,7 @@ int ClpPredictorCorrector::solve ( )
       mu_=mu1;
       if ((numberIterations_&1)==0||numberIterations_<10)
 	mu_=saveMu;
-      //mu_=min(smallestPrimalDualMu*0.95,mu_);
+      //mu_=CoinMin(smallestPrimalDualMu*0.95,mu_);
       smallestPrimalDualMu = mu_;
       // Try simpler
       floatNumber = numberComplementarityItems_;
@@ -833,7 +833,7 @@ double ClpPredictorCorrector::findStepLength( int phase)
   if (numberIterations_<80||!gonePrimalFeasible_)
     hitTolerance = COIN_DBL_MAX;
   else
-    hitTolerance = max(1.0e3,1.0e-3*objectiveNorm_);
+    hitTolerance = CoinMax(1.0e3,1.0e-3*objectiveNorm_);
   int iColumn;
   //printf("dual value %g\n",dual_[0]);
   //printf("     X     dX      lS     dlS     uS     dUs    dj    Z dZ     t   dT\n"); 
@@ -943,7 +943,7 @@ double ClpPredictorCorrector::findStepLength( int phase)
 #endif
   if (quadraticObj) {
     // Use smaller unless very small
-    double smallerStep=min(actualDualStep_,actualPrimalStep_);
+    double smallerStep=CoinMin(actualDualStep_,actualPrimalStep_);
     if (smallerStep>0.0001) {
       actualDualStep_=smallerStep;
       actualPrimalStep_=smallerStep;
@@ -1059,7 +1059,7 @@ double ClpPredictorCorrector::findStepLength( int phase)
       multiplier *= 0.01;
       multiplier=1.0;
       double currentInf =  multiplier*sqrt(cq);
-      double nextInf = 	multiplier*sqrt(max(cq+step*bq+step*step*aq,0.0));
+      double nextInf = 	multiplier*sqrt(CoinMax(cq+step*bq+step*step*aq,0.0));
       double allowedIncrease=1.4;
 #ifdef SOME_DEBUG
       printf("lin %g %g %g -> %g\n",a,b,c,
@@ -1076,21 +1076,21 @@ double ClpPredictorCorrector::findStepLength( int phase)
       }
       if ((phase==1||phase==2||phase==0||phase==3)&&nextInf>0.1*complementarityGap_&&
 	  nextInf>currentInf*allowedIncrease) {
-	//cq = max(cq,10.0);
+	//cq = CoinMax(cq,10.0);
 	// convert to (x+q)*(x+q) = w
 	double q = bq/(1.0*aq);
-	double w = max(q*q + (cq/aq)*(allowedIncrease-1.0),0.0);
+	double w = CoinMax(q*q + (cq/aq)*(allowedIncrease-1.0),0.0);
 	w = sqrt(w);
 	double stepX = w-q;
 	step=stepX;
 	nextInf = 
-	  multiplier*sqrt(max(cq+step*bq+step*step*aq,0.0));
+	  multiplier*sqrt(CoinMax(cq+step*bq+step*step*aq,0.0));
 #ifdef SOME_DEBUG
 	printf ("with step of %g dualInf is %g\n",
 		step,nextInf);
 #endif
-	actualDualStep_=min(step,actualDualStep_);
-	actualPrimalStep_=min(step,actualPrimalStep_);
+	actualDualStep_=CoinMin(step,actualDualStep_);
+	actualPrimalStep_=CoinMin(step,actualPrimalStep_);
       }
     }
   } else {
@@ -1128,7 +1128,7 @@ double ClpPredictorCorrector::findStepLength( int phase)
     // ? We want to minimize complementarityGap;
     // maybe use inf and do line search
     // To check see if matches at current step
-    double step=min(actualPrimalStep_,actualDualStep_);
+    double step=CoinMin(actualPrimalStep_,actualDualStep_);
     double next = c+b*step+a*step*step;
 #ifdef SOME_DEBUG
     printf("lin %g %g %g -> %g\n",a,b,c,
@@ -1169,7 +1169,7 @@ double ClpPredictorCorrector::findStepLength( int phase)
     step=actualPrimalStep_;
     double next2 = c+b*step+a*step*step;
     if (next2>next) {
-      actualPrimalStep_=min(actualPrimalStep_,actualDualStep_);
+      actualPrimalStep_=CoinMin(actualPrimalStep_,actualDualStep_);
       actualDualStep_=actualPrimalStep_;
     }
 #ifdef SOME_DEBUG
@@ -1235,8 +1235,8 @@ double ClpPredictorCorrector::findStepLength( int phase)
 	  double dualValue=zVec_[iColumn]+actualDualStep_*deltaZ_[iColumn];
 	  double primalValue=lowerSlack_[iColumn]+actualPrimalStep_*change;
 	  double gapProduct=dualValue*primalValue;
-	  largestL = max(largestL,gapProduct);
-	  smallestL = min(smallestL,gapProduct);
+	  largestL = CoinMax(largestL,gapProduct);
+	  smallestL = CoinMin(smallestL,gapProduct);
 	  nL++;
 	  sumL += gapProduct;
 	}  
@@ -1245,8 +1245,8 @@ double ClpPredictorCorrector::findStepLength( int phase)
 	  double dualValue=wVec_[iColumn]+actualDualStep_*deltaW_[iColumn];
 	  double primalValue=upperSlack_[iColumn]+actualPrimalStep_*change;
 	  double gapProduct=dualValue*primalValue;
-	  largestU = max(largestU,gapProduct);
-	  smallestU = min(smallestU,gapProduct);
+	  largestU = CoinMax(largestU,gapProduct);
+	  smallestU = CoinMin(smallestU,gapProduct);
 	  nU++;
 	  sumU += gapProduct;
 	} 
@@ -1745,7 +1745,7 @@ int ClpPredictorCorrector::createSolution()
 	    int jColumn = columnQuadratic[j];
 	    double scaleJ = columnScale_[jColumn];
 	    quadraticElement[j] *= scaleI*scaleJ;
-	    objectiveNorm_ = max(objectiveNorm_,fabs(quadraticElement[j]));
+	    objectiveNorm_ = CoinMax(objectiveNorm_,fabs(quadraticElement[j]));
 	  }
 	}
       } else {
@@ -1754,7 +1754,7 @@ int ClpPredictorCorrector::createSolution()
 	  for (CoinBigIndex j=columnQuadraticStart[iColumn];
 	       j<columnQuadraticStart[iColumn]+columnQuadraticLength[iColumn];j++) {
 	    quadraticElement[j] *= scale;
-	    objectiveNorm_ = max(objectiveNorm_,fabs(quadraticElement[j]));
+	    objectiveNorm_ = CoinMax(objectiveNorm_,fabs(quadraticElement[j]));
 	  }
 	}
       }
@@ -1874,7 +1874,7 @@ int ClpPredictorCorrector::createSolution()
   //if (rhsNorm_*1.0e-2>initialValue) {
   //initialValue=rhsNorm_*1.0e-2;
   //} 
-  initialValue = max(1.0,rhsNorm_);
+  initialValue = CoinMax(1.0,rhsNorm_);
   double smallestBoundDifference=COIN_DBL_MAX;
   double * fakeSolution = deltaX_;
   for ( iColumn=0;iColumn<numberTotal;iColumn++) {
@@ -1900,8 +1900,8 @@ int ClpPredictorCorrector::createSolution()
   double safeFree=1.0e-1*initialValue;
   //printf("normal safe dual value of %g, primal value of %g\n",
   // safeObjectiveValue,initialValue);
-  //safeObjectiveValue=max(2.0,1.0e-1*safeObjectiveValue);
-  //initialValue=max(100.0,1.0e-1*initialValue);;
+  //safeObjectiveValue=CoinMax(2.0,1.0e-1*safeObjectiveValue);
+  //initialValue=CoinMax(100.0,1.0e-1*initialValue);;
   //printf("temp safe dual value of %g, primal value of %g\n",
   // safeObjectiveValue,initialValue);
   double zwLarge=1.0e2*initialValue;
@@ -1996,7 +1996,7 @@ int ClpPredictorCorrector::createSolution()
   }
   solutionNorm_ =  maximumAbsElement(solution_,numberTotal);
   // Set bounds and do dj including quadratic
-  largeGap = max(1.0e7,1.02*solutionNorm_);
+  largeGap = CoinMax(1.0e7,1.02*solutionNorm_);
   CoinPackedMatrix * quadratic = NULL;
   const int * columnQuadratic = NULL;
   const CoinBigIndex * columnQuadraticStart = NULL;
@@ -2031,21 +2031,21 @@ int ClpPredictorCorrector::createSolution()
 	  double elementValue = quadraticElement[j];
 	  reducedCost += valueJ*elementValue;
 	}
-	quadraticNorm = max(quadraticNorm,fabs(reducedCost));
+	quadraticNorm = CoinMax(quadraticNorm,fabs(reducedCost));
       }
       dj_[iColumn]=reducedCost;
       if (primalValue>lowerValue+largeGap&&primalValue<upperValue-largeGap) {
 	clearFixedOrFree(iColumn);
 	setLowerBound(iColumn);
 	setUpperBound(iColumn);
-	lowerValue=max(lowerValue,primalValue-largeGap);
-	upperValue=min(upperValue,primalValue+largeGap);
+	lowerValue=CoinMax(lowerValue,primalValue-largeGap);
+	upperValue=CoinMin(upperValue,primalValue+largeGap);
 	lower_[iColumn]=lowerValue;
 	upper_[iColumn]=upperValue;
       }
     }
   }
-  safeObjectiveValue=max(safeObjectiveValue,quadraticNorm);
+  safeObjectiveValue=CoinMax(safeObjectiveValue,quadraticNorm);
   for ( iColumn=0;iColumn<numberTotal;iColumn++) {
     if (!flagged(iColumn)) {
       double primalValue=solution_[iColumn];
@@ -2088,12 +2088,12 @@ int ClpPredictorCorrector::createSolution()
           //modify if long long way away from bound
           if (reducedCost>=0.0) {
             zVec_[iColumn]=reducedCost + safeObjectiveValue*ratioZ;
-            zVec_[iColumn]=max(reducedCost, safeObjectiveValue*ratioZ);
+            zVec_[iColumn]=CoinMax(reducedCost, safeObjectiveValue*ratioZ);
             wVec_[iColumn]=safeObjectiveValue*ratioT;
           } else {
             zVec_[iColumn]=safeObjectiveValue*ratioZ;
             wVec_[iColumn]=-reducedCost + safeObjectiveValue*ratioT;
-            wVec_[iColumn]=max(-reducedCost , safeObjectiveValue*ratioT);
+            wVec_[iColumn]=CoinMax(-reducedCost , safeObjectiveValue*ratioT);
           }
 	  double gammaTerm = gamma2;
 	  if (primalR_)
@@ -2117,7 +2117,7 @@ int ClpPredictorCorrector::createSolution()
           } 
           if (reducedCost>=0.0) {
             zVec_[iColumn]=reducedCost + safeObjectiveValue*ratioZ;
-            zVec_[iColumn]=max(reducedCost , safeObjectiveValue*ratioZ);
+            zVec_[iColumn]=CoinMax(reducedCost , safeObjectiveValue*ratioZ);
             wVec_[iColumn]=0.0;
           } else {
             zVec_[iColumn]=safeObjectiveValue*ratioZ;
@@ -2150,7 +2150,7 @@ int ClpPredictorCorrector::createSolution()
           } else {
             zVec_[iColumn]=0.0;
             wVec_[iColumn]=-reducedCost + safeObjectiveValue*ratioT;
-            wVec_[iColumn]=max(-reducedCost , safeObjectiveValue*ratioT);
+            wVec_[iColumn]=CoinMax(-reducedCost , safeObjectiveValue*ratioT);
           } 
 	  double gammaTerm = gamma2;
 	  if (primalR_)
@@ -2243,7 +2243,7 @@ double ClpPredictorCorrector::complementarityGap(int & numberComplementarityPair
         if (gapProduct>largestGap) {
           largestGap=gapProduct;
         }
-	smallestGap = min(smallestGap,gapProduct);
+	smallestGap = CoinMin(smallestGap,gapProduct);
         if (dualValue>dualTolerance&&primalValue>primalTolerance) {
           toleranceGap+=dualValue*primalValue;
         } 
@@ -2341,11 +2341,11 @@ void ClpPredictorCorrector::setupForSolve(const int phase)
 	  rhsC_[iColumn] += primalR_[iColumn]*solution_[iColumn];
 	if (lowerBound(iColumn)) {
 	  rhsZ_[iColumn] = -zVec_[iColumn]*(lowerSlack_[iColumn]+extra);
-	  rhsL_[iColumn] = max(0.0,(lower_[iColumn]+lowerSlack_[iColumn])-solution_[iColumn]);
+	  rhsL_[iColumn] = CoinMax(0.0,(lower_[iColumn]+lowerSlack_[iColumn])-solution_[iColumn]);
 	} 
 	if (upperBound(iColumn)) {
 	  rhsW_[iColumn] = -wVec_[iColumn]*(upperSlack_[iColumn]+extra);
-	  rhsU_[iColumn] = min(0.0,(upper_[iColumn]-upperSlack_[iColumn])-solution_[iColumn]);
+	  rhsU_[iColumn] = CoinMin(0.0,(upper_[iColumn]-upperSlack_[iColumn])-solution_[iColumn]);
 	}
       }
     } 
@@ -2467,8 +2467,8 @@ void ClpPredictorCorrector::setupForSolve(const int phase)
     {
       double minBeta = 0.1*mu_;
       double maxBeta = 10.0*mu_;
-      double dualStep = min(1.0,actualDualStep_+0.1);
-      double primalStep = min(1.0,actualPrimalStep_+0.1);
+      double dualStep = CoinMin(1.0,actualDualStep_+0.1);
+      double primalStep = CoinMin(1.0,actualPrimalStep_+0.1);
 #ifdef SOME_DEBUG
       printf("good complementarity range %g to %g\n",minBeta,maxBeta);
 #endif
@@ -2496,7 +2496,7 @@ void ClpPredictorCorrector::setupForSolve(const int phase)
 	      value= (minBeta-gapProduct);
 	      assert (value>0.0);
 	    } else if (gapProduct>maxBeta) {
-	      value= max(maxBeta-gapProduct,-maxBeta);
+	      value= CoinMax(maxBeta-gapProduct,-maxBeta);
 	      assert (value<0.0);
 	    }
 	    rhsZ_[iColumn] += value;
@@ -2519,7 +2519,7 @@ void ClpPredictorCorrector::setupForSolve(const int phase)
 	      value= (minBeta-gapProduct);
 	      assert (value>0.0);
 	    } else if (gapProduct>maxBeta) {
-	      value= max(maxBeta-gapProduct,-maxBeta);
+	      value= CoinMax(maxBeta-gapProduct,-maxBeta);
 	      assert (value<0.0);
 	    }
 	    rhsW_[iColumn] += value;
@@ -2656,7 +2656,7 @@ bool ClpPredictorCorrector::checkGoodMove(const bool doCorrector,
     goodMove=checkGoodMove2(step,bestNextGap,allowIncreasingGap);
   // Say good if small
   //if (quadraticObj) {
-  if (max(actualDualStep_,actualPrimalStep_)<1.0e-6)
+  if (CoinMax(actualDualStep_,actualPrimalStep_)<1.0e-6)
     goodMove=true;
   if (!goodMove) {
     //try smaller of two
@@ -2730,14 +2730,14 @@ bool ClpPredictorCorrector::checkGoodMove(const bool doCorrector,
 	  deltaObjectiveDual-=deltaW_[iColumn]*upper_[iColumn];
 	} 
 	double change = fabs(workArray_[iColumn]-deltaZ_[iColumn]+deltaW_[iColumn]);
-	error = max (change,error);
+	error = CoinMax(change,error);
       } 
       deltaObjectivePrimal += cost_[iColumn] * deltaX_[iColumn];
     } 
     //deltaObjectivePrimal+=sumPerturbCost*linearPerturbation_;
     double testValue;
     if (error>0.0) {
-      testValue=1.0e1*max(maximumDualError_,1.0e-12)/error;
+      testValue=1.0e1*CoinMax(maximumDualError_,1.0e-12)/error;
     } else {
       testValue=1.0e1;
     } 
@@ -2754,7 +2754,7 @@ bool ClpPredictorCorrector::checkGoodMove(const bool doCorrector,
                             &&maximumRHSChange_>1.0e-16*solutionNorm_) {
     //check change in AX not too much
     //??? could be dropped row going infeasible
-    double ratio = 1.0e1*max(maximumRHSError_,1.0e-12)/maximumRHSChange_;
+    double ratio = 1.0e1*CoinMax(maximumRHSError_,1.0e-12)/maximumRHSChange_;
     if (ratio<actualPrimalStep_) {
       handler_->message(CLP_BARRIER_REDUCING,messages_)
       <<"primal"<<actualPrimalStep_
@@ -2859,8 +2859,8 @@ bool ClpPredictorCorrector::checkGoodMove2(double move,
 	  double newInfeasibility=
 	    nextDj[iColumn]-newZ+newW
 	    +gammaTerm*(solution_[iColumn]+actualPrimalStep_*deltaX_[iColumn]);
-	  maximumDualError = max(maximumDualError,newInfeasibility);
-	  //if (fabs(newInfeasibility)>max(2000.0*maximumDualError_,1.0e-2)) {
+	  maximumDualError = CoinMax(maximumDualError,newInfeasibility);
+	  //if (fabs(newInfeasibility)>CoinMax(2000.0*maximumDualError_,1.0e-2)) {
 	  //if (dualInfeasibility*newInfeasibility<0.0) {
 	  //  printf("%d current %g next %g\n",iColumn,dualInfeasibility,
 	  //       newInfeasibility);
@@ -2881,7 +2881,7 @@ bool ClpPredictorCorrector::checkGoodMove2(double move,
     errorCheck=maximumBoundInfeasibility_;
   } 
   // scale back move
-  move = min(move,0.95);
+  move = CoinMin(move,0.95);
   //scale
   if ((1.0-move)*errorCheck>primalTolerance()) {
     if (nextGap<gammap*(1.0-move)*errorCheck) {
@@ -2972,7 +2972,7 @@ int ClpPredictorCorrector::updateSolution(double nextGap)
   int numberDecreased=0;
   double largestDiagonal=0.0;
   double smallestDiagonal=1.0e50;
-  double largeGap2 = max(1.0e7,1.0e2*solutionNorm_);
+  double largeGap2 = CoinMax(1.0e7,1.0e2*solutionNorm_);
   //largeGap2 = 1.0e9;
   // When to start looking at killing (factor0
   double killFactor;
@@ -2988,13 +2988,13 @@ int ClpPredictorCorrector::updateSolution(double nextGap)
       killFactor = 1.0;
     } else if (numberIterations_<100) {
       killFactor = 10.0;
-      stepLength_=max(stepLength_,0.9995);
+      stepLength_=CoinMax(stepLength_,0.9995);
     }else if (numberIterations_<150) {
       killFactor = 100.0;
-      stepLength_=max(stepLength_,0.99995);
+      stepLength_=CoinMax(stepLength_,0.99995);
     } else {
       killFactor = 1.0e5;
-      stepLength_=max(stepLength_,0.999995);
+      stepLength_=CoinMax(stepLength_,0.999995);
     }
   } else {
     killFactor=1.0;
@@ -3063,10 +3063,10 @@ int ClpPredictorCorrector::updateSolution(double nextGap)
 	} else {
 	  lower_[iColumn]=trueLower;
 	  setLowerBound(iColumn);
-	  lowerSlack_[iColumn] = max(newPrimal-trueLower,1.0);
+	  lowerSlack_[iColumn] = CoinMax(newPrimal-trueLower,1.0);
 	  upper_[iColumn]=trueUpper;
 	  setUpperBound(iColumn);
-	  upperSlack_[iColumn] = max(trueUpper-newPrimal,1.0);
+	  upperSlack_[iColumn] = CoinMax(trueUpper-newPrimal,1.0);
 	}
       } else if (fakeNewBounds) {
 	lower_[iColumn]=newPrimal-largeGap2;
@@ -3121,7 +3121,7 @@ int ClpPredictorCorrector::updateSolution(double nextGap)
         } 
 	lowerBoundInfeasibility = fabs(newPrimal-lowerSlack_[iColumn]-lower_[iColumn]);
         if (lowerSlack_[iColumn]<=kill*killFactor&&fabs(newPrimal-lower_[iColumn])<=kill*killFactor) {
-	  double step = min(actualPrimalStep_*1.1,1.0);
+	  double step = CoinMin(actualPrimalStep_*1.1,1.0);
 	  double newPrimal2=solution_[iColumn]+step*thisWeight;
 	  if (newPrimal2<newPrimal&&dj_[iColumn]>1.0e-5&&numberIterations_>50-40) {
 	    newPrimal=lower_[iColumn];
@@ -3182,7 +3182,7 @@ int ClpPredictorCorrector::updateSolution(double nextGap)
         } 
 	upperBoundInfeasibility = fabs(newPrimal+upperSlack_[iColumn]-upper_[iColumn]);
         if (upperSlack_[iColumn]<=kill*killFactor&&fabs(newPrimal-upper_[iColumn])<=kill*killFactor) {
-	  double step = min(actualPrimalStep_*1.1,1.0);
+	  double step = CoinMin(actualPrimalStep_*1.1,1.0);
 	  double newPrimal2=solution_[iColumn]+step*thisWeight;
 	  if (newPrimal2>newPrimal&&dj_[iColumn]<-1.0e-5&&numberIterations_>50-40) {
 	    newPrimal=upper_[iColumn];
@@ -3219,28 +3219,28 @@ int ClpPredictorCorrector::updateSolution(double nextGap)
 	      double complementarity =zVec_[iColumn]*lowerSlack_[iColumn];
 	      if (complementarity<nextMu) {
 		double change=
-		  min(dualInfeasibility,
+		  CoinMin(dualInfeasibility,
 		      (nextMu-complementarity)/lowerSlack_[iColumn]);
 		dualInfeasibility -= change;
 		printf("%d lb locomp %g - dual inf from %g to %g\n",
 		       iColumn,complementarity,dualInfeasibility+change,
 		       dualInfeasibility);
 		zVec_[iColumn] += change;
-		zValue = max(zVec_[iColumn],1.0e-12);
+		zValue = CoinMax(zVec_[iColumn],1.0e-12);
 	      }
 	    }
 	    if (upperBound(iColumn)) {
 	      double complementarity =wVec_[iColumn]*upperSlack_[iColumn];
 	      if (complementarity>nextMu) {
 		double change=
-		  min(dualInfeasibility,
+		  CoinMin(dualInfeasibility,
 		      (complementarity-nextMu)/upperSlack_[iColumn]);
 		dualInfeasibility -= change;
 		printf("%d ub hicomp %g - dual inf from %g to %g\n",
 		       iColumn,complementarity,dualInfeasibility+change,
 		       dualInfeasibility);
 		wVec_[iColumn] -= change;
-		wValue = max(wVec_[iColumn],1.0e-12);
+		wValue = CoinMax(wVec_[iColumn],1.0e-12);
 	      }
 	    }
 	  } else {
@@ -3249,28 +3249,28 @@ int ClpPredictorCorrector::updateSolution(double nextGap)
 	      double complementarity =zVec_[iColumn]*lowerSlack_[iColumn];
 	      if (complementarity>nextMu) {
 		double change=
-		  max(dualInfeasibility,
+		  CoinMax(dualInfeasibility,
 		      (nextMu-complementarity)/lowerSlack_[iColumn]);
 		dualInfeasibility -= change;
 		printf("%d lb hicomp %g - dual inf from %g to %g\n",
 		       iColumn,complementarity,dualInfeasibility+change,
 		       dualInfeasibility);
 		zVec_[iColumn] += change;
-		zValue = max(zVec_[iColumn],1.0e-12);
+		zValue = CoinMax(zVec_[iColumn],1.0e-12);
 	      }
 	    }
 	    if (upperBound(iColumn)) {
 	      double complementarity =wVec_[iColumn]*upperSlack_[iColumn];
 	      if (complementarity<nextMu) {
 		double change=
-		  max(dualInfeasibility,
+		  CoinMax(dualInfeasibility,
 		      (complementarity-nextMu)/upperSlack_[iColumn]);
 		dualInfeasibility -= change;
 		printf("%d ub locomp %g - dual inf from %g to %g\n",
 		       iColumn,complementarity,dualInfeasibility+change,
 		       dualInfeasibility);
 		wVec_[iColumn] -= change;
-		wValue = max(wVec_[iColumn],1.0e-12);
+		wValue = CoinMax(wVec_[iColumn],1.0e-12);
 	      }
 	    }
 	  }

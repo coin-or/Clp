@@ -1014,9 +1014,9 @@ ClpInterior::checkSolution()
   const double * upper = upper_+numberColumns_;
   for (iRow=0;iRow<numberRows_;iRow++) {
     double infeasibility=0.0;
-    double distanceUp = min(upper[iRow]-
+    double distanceUp = CoinMin(upper[iRow]-
       rowActivity_[iRow],1.0e10);
-    double distanceDown = min(rowActivity_[iRow] -
+    double distanceDown = CoinMin(rowActivity_[iRow] -
       lower[iRow],1.0e10);
     if (distanceUp>primalTolerance2) {
       double value = dual_[iRow];
@@ -1054,9 +1054,9 @@ ClpInterior::checkSolution()
   for (iColumn=0;iColumn<numberColumns_;iColumn++) {
     double infeasibility=0.0;
     objectiveValue_ += cost_[iColumn]*columnActivity_[iColumn];
-    double distanceUp = min(upper[iColumn]-
+    double distanceUp = CoinMin(upper[iColumn]-
       columnActivity_[iColumn],1.0e10);
-    double distanceDown = min(columnActivity_[iColumn] -
+    double distanceDown = CoinMin(columnActivity_[iColumn] -
       lower[iColumn],1.0e10);
     if (distanceUp>primalTolerance2) {
       double value = reducedCost_[iColumn];

@@ -296,7 +296,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
   }
   if (model2->factorizationFrequency()==200) {
     // User did not touch preset
-    model2->setFactorizationFrequency(min(2000,100+model2->numberRows()/200));
+    model2->setFactorizationFrequency(CoinMin(2000,100+model2->numberRows()/200));
   }
   if (method==ClpSolve::usePrimalorSprint) {
     if (doSprint<0) { 
@@ -336,13 +336,13 @@ ClpSimplex::initialSolve(ClpSolve & options)
       for (iRow=0;iRow<numberRows;iRow++) {
 	double value1 = model2->rowLower_[iRow];
 	if (value1&&value1>-1.0e31) {
-	  largest = max(largest,fabs(value1));
-	  smallest=min(smallest,fabs(value1));
+	  largest = CoinMax(largest,fabs(value1));
+	  smallest=CoinMin(smallest,fabs(value1));
 	}
 	double value2 = model2->rowUpper_[iRow];
 	if (value2&&value2<1.0e31) {
-	  largest = max(largest,fabs(value2));
-	  smallest=min(smallest,fabs(value2));
+	  largest = CoinMax(largest,fabs(value2));
+	  smallest=CoinMin(smallest,fabs(value2));
 	}
 	if (value2>value1) {
 	  numberNotE++;
@@ -359,7 +359,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	}
       } 
       if (doIdiot>0) {
-	nPasses=max(nPasses,doIdiot);
+	nPasses=CoinMax(nPasses,doIdiot);
 	if (nPasses>70) {
 	  info.setStartingWeight(1.0e3);
 	  info.setDropEnoughFeasibility(0.01);
@@ -451,13 +451,13 @@ ClpSimplex::initialSolve(ClpSolve & options)
       for (iRow=0;iRow<numberRows;iRow++) {
 	double value1 = model2->rowLower_[iRow];
 	if (value1&&value1>-1.0e31) {
-	  largest = max(largest,fabs(value1));
-	  smallest=min(smallest,fabs(value1));
+	  largest = CoinMax(largest,fabs(value1));
+	  smallest=CoinMin(smallest,fabs(value1));
 	}
 	double value2 = model2->rowUpper_[iRow];
 	if (value2&&value2<1.0e31) {
-	  largest = max(largest,fabs(value2));
-	  smallest=min(smallest,fabs(value2));
+	  largest = CoinMax(largest,fabs(value2));
+	  smallest=CoinMin(smallest,fabs(value2));
 	}
 	if (value2>value1) {
 	  numberNotE++;
@@ -471,30 +471,30 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	if (plusMinus) {
 	  if (largest/smallest>2.0) {
 	    nPasses = 10+numberColumns/100000;
-	    nPasses = min(nPasses,50);
-	    nPasses = max(nPasses,15);
+	    nPasses = CoinMin(nPasses,50);
+	    nPasses = CoinMax(nPasses,15);
 	    if (numberRows>25000&&nPasses>5) {
 	      // Might as well go for it
-	      nPasses = max(nPasses,71);
+	      nPasses = CoinMax(nPasses,71);
 	    } else if (numberElements<3*numberColumns) {
-	      nPasses=min(nPasses,10); // probably not worh it
+	      nPasses=CoinMin(nPasses,10); // probably not worh it
 	    }
 	    if (doIdiot<0)
 	      info.setLightweight(1); // say lightweight idiot
 	  } else if (largest/smallest>1.01||numberElements<=3*numberColumns) {
 	    nPasses = 10+numberColumns/1000;
-	    nPasses = min(nPasses,100);
-	    nPasses = max(nPasses,30);
+	    nPasses = CoinMin(nPasses,100);
+	    nPasses = CoinMax(nPasses,30);
 	    if (numberRows>25000) {
 	      // Might as well go for it
-	      nPasses = max(nPasses,71);
+	      nPasses = CoinMax(nPasses,71);
 	    }
 	    if (!largestGap)
 	      nPasses *= 2;
 	  } else {
 	    nPasses = 10+numberColumns/1000;
-	    nPasses = min(nPasses,200);
-	    nPasses = max(nPasses,100);
+	    nPasses = CoinMin(nPasses,200);
+	    nPasses = CoinMax(nPasses,100);
 	    info.setStartingWeight(1.0e-1);
 	    info.setReduceIterations(6);
 	    if (!largestGap)
@@ -528,15 +528,15 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	  if (numberElements<3*numberColumns) { 
 	    nPasses=(int) ((2.0*(double) nPasses)/ratio); // probably not worh it
 	  } else {
-	    nPasses = max(nPasses,5);
+	    nPasses = CoinMax(nPasses,5);
 	    nPasses = (int) (((double) nPasses)*5.0/ratio); // reduce if lots of elements per column
 	  }
 	  if (numberRows>25000&&nPasses>5) {
 	    // Might as well go for it
-	    nPasses = max(nPasses,71);
+	    nPasses = CoinMax(nPasses,71);
 	  } else if (plusMinus) {
 	    nPasses *= 2;
-	    nPasses=min(nPasses,71);
+	    nPasses=CoinMin(nPasses,71);
 	  }
 	  if (nPasses<=5)
 	    nPasses=0;
@@ -700,13 +700,13 @@ ClpSimplex::initialSolve(ClpSolve & options)
       double value;
       value = fabs(model2->rowLower_[iRow]);
       if (value&&value<1.0e30) {
-	largest = max(largest,value);
-	smallest=min(smallest,value);
+	largest = CoinMax(largest,value);
+	smallest=CoinMin(smallest,value);
       }
       value = fabs(model2->rowUpper_[iRow]);
       if (value&&value<1.0e30) {
-	largest = max(largest,value);
-	smallest=min(smallest,value);
+	largest = CoinMax(largest,value);
+	smallest=CoinMin(smallest,value);
       }
     }
     double * saveLower = NULL;
@@ -747,7 +747,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
       for (i=0;i<numberSort;i++)
 	sort[i] = i+originalNumberColumns;
     } else {
-      numberSort = min(numberRows_,numberColumns_);
+      numberSort = CoinMin(numberRows_,numberColumns_);
       for (i=0;i<numberSort;i++)
 	sort[i] = i;
     }
@@ -767,11 +767,11 @@ ClpSimplex::initialSolve(ClpSolve & options)
     model2->setInitialDenseFactorization(true);
     
     // Just take this number of columns in small problem
-    int smallNumberColumns = min(3*numberRows,numberColumns);
-    smallNumberColumns = max(smallNumberColumns,3000);
-    //int smallNumberColumns = min(12*numberRows/10,numberColumns);
-    //smallNumberColumns = max(smallNumberColumns,3000);
-    //smallNumberColumns = max(smallNumberColumns,numberRows+1000);
+    int smallNumberColumns = CoinMin(3*numberRows,numberColumns);
+    smallNumberColumns = CoinMax(smallNumberColumns,3000);
+    //int smallNumberColumns = CoinMin(12*numberRows/10,numberColumns);
+    //smallNumberColumns = CoinMax(smallNumberColumns,3000);
+    //smallNumberColumns = CoinMax(smallNumberColumns,numberRows+1000);
     // We will be using all rows
     int * whichRows = new int [numberRows];
     for (iRow=0;iRow<numberRows;iRow++)
@@ -950,13 +950,13 @@ ClpSimplex::initialSolve(ClpSolve & options)
       break;
     case 1:
       {
-	ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp(max(100,model2->numberRows()/10));
+	ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp(CoinMax(100,model2->numberRows()/10));
 	barrier.setCholesky(cholesky);
       }
       break;
     case 2:
       {
-	ClpCholeskyWssmpKKT * cholesky = new ClpCholeskyWssmpKKT(max(100,model2->numberRows()/10));
+	ClpCholeskyWssmpKKT * cholesky = new ClpCholeskyWssmpKKT(CoinMax(100,model2->numberRows()/10));
 	barrier.setCholesky(cholesky);
       }
       break;
@@ -1103,7 +1103,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	for ( i=0;i<numberRows;i++) 
 	  model2->setRowStatus(i,superBasic);
 	for ( i=0;i<numberColumns;i++) {
-	  double distance = min(columnUpper[i]-primalSolution[i],
+	  double distance = CoinMin(columnUpper[i]-primalSolution[i],
 				primalSolution[i]-columnLower[i]);
 	  if (distance>tolerance) {
 	    if (fabs(dualSolution[i])<1.0e-5)
@@ -1122,7 +1122,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	  }
 	}
 	CoinSort_2(dsort,dsort+n,sort);
-	n = min(numberRows,n);
+	n = CoinMin(numberRows,n);
 	for ( i=0;i<n;i++) {
 	  int iColumn = sort[i];
 	  model2->setStatus(iColumn,basic);

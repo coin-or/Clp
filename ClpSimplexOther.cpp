@@ -73,11 +73,11 @@ void ClpSimplexOther::dualRanging(int numberCheck,const int * which,
       sequenceDecrease=iSequence;
       break;
     case atUpperBound:
-      costIncrease = max(0.0,-dj_[iSequence]);
+      costIncrease = CoinMax(0.0,-dj_[iSequence]);
       sequenceIncrease = iSequence;
       break;
     case atLowerBound:
-      costDecrease = max(0.0,dj_[iSequence]);
+      costDecrease = CoinMax(0.0,dj_[iSequence]);
       sequenceDecrease = iSequence;
       break;
     }
@@ -253,8 +253,8 @@ ClpSimplexOther::primalRanging(int numberCheck,const int * which,
     case isFree:
     case superBasic:
       // Easy
-      valueIncrease=max(0.0,upper_[iSequence]-solution_[iSequence]);
-      valueDecrease=max(0.0,solution_[iSequence]-lower_[iSequence]);
+      valueIncrease=CoinMax(0.0,upper_[iSequence]-solution_[iSequence]);
+      valueDecrease=CoinMax(0.0,solution_[iSequence]-lower_[iSequence]);
       sequenceIncrease=iSequence;
       sequenceDecrease=iSequence;
       break;
@@ -338,7 +338,7 @@ ClpSimplexOther::checkPrimalRatios(CoinIndexedVector * rowArray,
 	oldValue -= bound;
 	if (oldValue-theta_*alpha<0.0) {
 	  pivotRow_ = iRow;
-	  theta_ = max(0.0,oldValue/alpha);
+	  theta_ = CoinMax(0.0,oldValue/alpha);
 	}
       } else {
 	// basic variable going towards upper bound
@@ -346,7 +346,7 @@ ClpSimplexOther::checkPrimalRatios(CoinIndexedVector * rowArray,
 	oldValue = oldValue-bound;
 	if (oldValue-theta_*alpha>0.0) {
 	  pivotRow_ = iRow;
-	  theta_ = max(0.0,oldValue/alpha);
+	  theta_ = CoinMax(0.0,oldValue/alpha);
 	}
       }
     }

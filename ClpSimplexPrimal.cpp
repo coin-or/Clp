@@ -353,7 +353,7 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
 	  lastObjectiveValue = objectiveValue()*optimizationDirection_;
 	  // sort
 	  CoinSort_2(weight,weight+numberColumns_,whichColumns);
-	  numberSort = min(numberColumns_-numberFixed,numberBasic+numberSprintColumns);
+	  numberSort = CoinMin(numberColumns_-numberFixed,numberBasic+numberSprintColumns);
 	  // Sort to make consistent ?
 	  std::sort(whichColumns,whichColumns+numberSort);
 	  saveModel = new ClpSimplex(this,numberSort,whichColumns);
@@ -1034,7 +1034,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
     if (maxFactor>10) {
       if (forceFactorization_<0)
 	forceFactorization_= maxFactor;
-      forceFactorization_ = max (1,(forceFactorization_>>1));
+      forceFactorization_ = CoinMax(1,(forceFactorization_>>1));
       printf("Reducing factorization frequency\n");
     } 
   }
@@ -1142,12 +1142,12 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
   double way = directionIn_;
   double maximumMovement;
   if (way>0.0) 
-    maximumMovement = min(1.0e30,upperIn_-valueIn_);
+    maximumMovement = CoinMin(1.0e30,upperIn_-valueIn_);
   else
-    maximumMovement = min(1.0e30,valueIn_-lowerIn_);
+    maximumMovement = CoinMin(1.0e30,valueIn_-lowerIn_);
 
   double averageTheta = nonLinearCost_->averageTheta();
-  double tentativeTheta = min(10.0*averageTheta,maximumMovement);
+  double tentativeTheta = CoinMin(10.0*averageTheta,maximumMovement);
   double upperTheta = maximumMovement;
   if (tentativeTheta>0.5*maximumMovement)
     tentativeTheta=maximumMovement;
@@ -1358,7 +1358,7 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
     if (theta_<minimumTheta&&(specialOptions_&4)==0&&!valuesPass) {
       theta_=minimumTheta;
       for (iIndex=0;iIndex<numberRemaining-numberRemaining;iIndex++) {
-	largestInfeasibility = max (largestInfeasibility,
+	largestInfeasibility = CoinMax(largestInfeasibility,
 				    -(rhs[iIndex]-spare[iIndex]*theta_));
       }
 //#define CLP_DEBUG
@@ -1682,7 +1682,7 @@ ClpSimplexPrimal::perturb(int type)
   double largestPositive;
   matrix_->rangeOfElements(smallestNegative, largestNegative,
 			   smallestPositive, largestPositive);
-  smallestPositive = min(fabs(smallestNegative),smallestPositive);
+  smallestPositive = CoinMin(fabs(smallestNegative),smallestPositive);
   largestPositive = max(fabs(largestNegative),largestPositive);
   double elementRatio = largestPositive/smallestPositive;
   if (!numberIterations_&&perturbation_==50) {
@@ -1738,7 +1738,7 @@ ClpSimplexPrimal::perturb(int type)
 	else
 	  upperValue=0.0;
 	double value = max(fabs(lowerValue),fabs(upperValue));
-	value = min(value,upper_[i]-lower_[i]);
+	value = CoinMin(value,upper_[i]-lower_[i]);
 #if 1
 	if (value) {
 	  perturbation += value;
@@ -1788,10 +1788,10 @@ ClpSimplexPrimal::perturb(int type)
 	double lowerValue = lower_[iSequence];
 	double upperValue = upper_[iSequence];
 	double difference = upperValue-lowerValue;
-	difference = min(difference,perturbation);
-	difference = min(difference,fabs(solutionValue)+1.0);
+	difference = CoinMin(difference,perturbation);
+	difference = CoinMin(difference,fabs(solutionValue)+1.0);
 	double value = maximumFraction*(difference+1.0);
-	value = min(value,0.1);
+	value = CoinMin(value,0.1);
 	value *= CoinDrand48();
 	if (solutionValue-lowerValue<=primalTolerance_) {
 	  lower_[iSequence] -= value;
@@ -1832,7 +1832,7 @@ ClpSimplexPrimal::perturb(int type)
       double lowerValue=lower_[i], upperValue=upper_[i];
       if (upperValue>lowerValue+primalTolerance_) {
 	double value = perturbation*maximumFraction;
-	value = min(value,0.1);
+	value = CoinMin(value,0.1);
 	value *= CoinDrand48();
 	if (savePerturbation!=50) {
 	  if (fabs(value)<=primalTolerance_)
@@ -1891,7 +1891,7 @@ ClpSimplexPrimal::perturb(int type)
     for (;i<numberColumns_+numberRows_;i++) {
       double lowerValue=lower_[i], upperValue=upper_[i];
       double value = perturbation*maximumFraction;
-      value = min(value,0.1);
+      value = CoinMin(value,0.1);
       value *= CoinDrand48();
       if (upperValue>lowerValue+tolerance) {
 	if (savePerturbation!=50) {
@@ -2270,7 +2270,7 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	if (maxFactor>10) {
 	  if (forceFactorization_<0)
 	    forceFactorization_= maxFactor;
-	  forceFactorization_ = max (1,(forceFactorization_>>1));
+	  forceFactorization_ = CoinMax(1,(forceFactorization_>>1));
 	} 
 	// later we may need to unwind more e.g. fake bounds
 	if(lastGoodIteration_ != numberIterations_) {
@@ -2525,7 +2525,7 @@ ClpSimplexPrimal::nextSuperBasic(int superBasicType,CoinIndexedVector * columnAr
 		  break;
 		} else if (!flagged(iColumn)) {
 		  // put ones near bounds at end after sorting
-		  work[number]= - min(0.1*(solution_[iColumn]-lower_[iColumn]),
+		  work[number]= - CoinMin(0.1*(solution_[iColumn]-lower_[iColumn]),
 				      upper_[iColumn]-solution_[iColumn]);
 		  which[number++] = iColumn;
 		}

@@ -53,10 +53,10 @@ ClpNetworkMatrix::ClpNetworkMatrix(int numberColumns, const int * head,
   CoinBigIndex j=0;
   for (iColumn=0;iColumn<numberColumns_;iColumn++, j+=2) {
     int iRow = head[iColumn];
-    numberRows_ = max(numberRows_,iRow);
+    numberRows_ = CoinMax(numberRows_,iRow);
     indices_[j]=iRow;
     iRow = tail[iColumn];
-    numberRows_ = max(numberRows_,iRow);
+    numberRows_ = CoinMax(numberRows_,iRow);
     indices_[j+1]=iRow;
   }
   numberRows_++;
@@ -121,12 +121,12 @@ ClpNetworkMatrix::ClpNetworkMatrix (const CoinPackedMatrix & rhs)
       if (fabs(elementByColumn[k]-1.0)<1.0e-10) {
 	indices_[j] = -1;
 	iRow = row[k];
-	numberRows_ = max(numberRows_,iRow);
+	numberRows_ = CoinMax(numberRows_,iRow);
 	indices_[j+1]=iRow;
       } else if (fabs(elementByColumn[k]+1.0)<1.0e-10) {
 	indices_[j+1] = -1;
 	iRow = row[k];
-	numberRows_ = max(numberRows_,iRow);
+	numberRows_ = CoinMax(numberRows_,iRow);
 	indices_[j]=iRow;
       } else {
 	goodNetwork = 0; // not a network
@@ -137,10 +137,10 @@ ClpNetworkMatrix::ClpNetworkMatrix (const CoinPackedMatrix & rhs)
       if (fabs(elementByColumn[k]-1.0)<1.0e-10) {
 	if (fabs(elementByColumn[k+1]+1.0)<1.0e-10) {
 	  iRow = row[k];
-	  numberRows_ = max(numberRows_,iRow);
+	  numberRows_ = CoinMax(numberRows_,iRow);
 	  indices_[j+1]=iRow;
 	  iRow = row[k+1];
-	  numberRows_ = max(numberRows_,iRow);
+	  numberRows_ = CoinMax(numberRows_,iRow);
 	  indices_[j] = iRow;
 	} else {
 	  goodNetwork = 0; // not a network
@@ -148,10 +148,10 @@ ClpNetworkMatrix::ClpNetworkMatrix (const CoinPackedMatrix & rhs)
       } else if (fabs(elementByColumn[k]+1.0)<1.0e-10) {
 	if (fabs(elementByColumn[k+1]-1.0)<1.0e-10) {
 	  iRow = row[k];
-	  numberRows_ = max(numberRows_,iRow);
+	  numberRows_ = CoinMax(numberRows_,iRow);
 	  indices_[j]=iRow;
 	  iRow = row[k+1];
-	  numberRows_ = max(numberRows_,iRow);
+	  numberRows_ = CoinMax(numberRows_,iRow);
 	  indices_[j+1] = iRow;
 	} else {
 	  goodNetwork = 0; // not a network
@@ -782,7 +782,7 @@ ClpNetworkMatrix::partialPricing(ClpSimplex * model, double startFraction, doubl
   numberWanted=currentWanted_;
   int j;
   int start = (int) (startFraction*numberColumns_);
-  int end = min((int) (endFraction*numberColumns_+1),numberColumns_);
+  int end = CoinMin((int) (endFraction*numberColumns_+1),numberColumns_);
   double tolerance=model->currentDualTolerance();
   double * reducedCost = model->djRegion();
   const double * duals = model->dualRowSolution();

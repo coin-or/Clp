@@ -6,6 +6,7 @@
 #include "ClpFactorization.hpp"
 #include "ClpSimplex.hpp"
 #include "ClpLinearObjective.hpp"
+#include "CoinHelperFunctions.hpp"
 
 //#############################################################################
 // Constructors / Destructor / Assignment
@@ -237,7 +238,7 @@ ClpLinearObjective::resize(int newNumberColumns)
     double * newArray = new double[newNumberColumns];
     if (objective_)
       memcpy(newArray,objective_,
-	     min(newNumberColumns,numberColumns_)*sizeof(double));
+	     CoinMin(newNumberColumns,numberColumns_)*sizeof(double));
     delete [] objective_;
     objective_ = newArray;
     for (i=numberColumns_;i<newNumberColumns;i++) 

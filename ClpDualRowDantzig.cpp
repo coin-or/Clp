@@ -5,6 +5,7 @@
 #include "ClpSimplex.hpp"
 #include "ClpDualRowDantzig.hpp"
 #include "CoinIndexedVector.hpp"
+#include "CoinHelperFunctions.hpp"
 
 //#############################################################################
 // Constructors / Destructor / Assignment
@@ -65,11 +66,11 @@ ClpDualRowDantzig::pivotRow()
     double value = model_->solution(iPivot);
     double lower = model_->lower(iPivot);
     double upper = model_->upper(iPivot);
-    if (max(value-upper,lower-value)>largest) {
+    if (CoinMax(value-upper,lower-value)>largest) {
       int iSequence = pivotVariable[iRow];
       if (!model_->flagged(iSequence)) {
 	chosenRow=iRow;
-	largest=max(value-upper,lower-value);
+	largest=CoinMax(value-upper,lower-value);
       }
     }
   }

@@ -737,7 +737,7 @@ ClpSimplexNonlinear::directionVector (CoinIndexedVector * vectorArray,
   int number=0;
   sequenceIn_=-1;
   normFlagged=0.0;
-  double dualTolerance2 = min(1.0e-8,1.0e-2*dualTolerance_);
+  double dualTolerance2 = CoinMin(1.0e-8,1.0e-2*dualTolerance_);
   if (!numberNonBasic) {
     //if (nonLinearCost_->sumInfeasibilities()>1.0e-4)
     //printf("infeasible\n");
@@ -810,7 +810,7 @@ ClpSimplexNonlinear::directionVector (CoinIndexedVector * vectorArray,
 #ifndef ALLSUPER
 	  if (fabs(dj_[iSequence])>dualTolerance_) {
 	    nSuper++;
-	    bestSuper = max (fabs(dj_[iSequence]),bestSuper);
+	    bestSuper = CoinMax(fabs(dj_[iSequence]),bestSuper);
 	    sumSuper += fabs(dj_[iSequence]);
 	  }
 	  if (fabs(dj_[iSequence])>dualTolerance2) {
@@ -821,7 +821,7 @@ ClpSimplexNonlinear::directionVector (CoinIndexedVector * vectorArray,
 	  array[iSequence]=-dj_[iSequence];
 	  index[number++]=iSequence;
 	  if (pivotMode2>=10)
-	    bestSuper = max (fabs(dj_[iSequence]),bestSuper);
+	    bestSuper = CoinMax(fabs(dj_[iSequence]),bestSuper);
 #endif
 	  break;
 	}
@@ -933,7 +933,7 @@ ClpSimplexNonlinear::directionVector (CoinIndexedVector * vectorArray,
 	  break;
 	case atUpperBound:
 	  if (dj_[iSequence]>dualTolerance_) {
-	    double distance = min(1.0e-2,solution_[iSequence]-lower_[iSequence]);
+	    double distance = CoinMin(1.0e-2,solution_[iSequence]-lower_[iSequence]);
 	    double merit = distance*dj_[iSequence];
 	    if (pivotMode2==1)
 	      merit *= 1.0e-20; // discourage
@@ -947,7 +947,7 @@ ClpSimplexNonlinear::directionVector (CoinIndexedVector * vectorArray,
 	  break;
 	case atLowerBound:
 	  if (dj_[iSequence]<-dualTolerance_) {
-	    double distance = min(1.0e-2,upper_[iSequence]-solution_[iSequence]);
+	    double distance = CoinMin(1.0e-2,upper_[iSequence]-solution_[iSequence]);
 	    double merit = -distance*dj_[iSequence];
 	    if (pivotMode2==1)
 	      merit *= 1.0e-20; // discourage
@@ -962,8 +962,8 @@ ClpSimplexNonlinear::directionVector (CoinIndexedVector * vectorArray,
 	case isFree:
 	case superBasic:
 	  if (dj_[iSequence]>dualTolerance_) {
-	    double distance = min(1.0e-2,solution_[iSequence]-lower_[iSequence]);
-	    distance = min(solution_[iSequence]-lower_[iSequence],
+	    double distance = CoinMin(1.0e-2,solution_[iSequence]-lower_[iSequence]);
+	    distance = CoinMin(solution_[iSequence]-lower_[iSequence],
 			   upper_[iSequence]-solution_[iSequence]);
 	    double merit = distance*dj_[iSequence];
 	    if (pivotMode2==1)
@@ -975,8 +975,8 @@ ClpSimplexNonlinear::directionVector (CoinIndexedVector * vectorArray,
 	      bestDj=merit;
 	    }
 	  } else if (dj_[iSequence]<-dualTolerance_) {
-	    double distance = min(1.0e-2,upper_[iSequence]-solution_[iSequence]);
-	    distance = min(solution_[iSequence]-lower_[iSequence],
+	    double distance = CoinMin(1.0e-2,upper_[iSequence]-solution_[iSequence]);
+	    distance = CoinMin(solution_[iSequence]-lower_[iSequence],
 			   upper_[iSequence]-solution_[iSequence]);
 	    double merit = -distance*dj_[iSequence];
 	    if (pivotMode2==1)
@@ -1249,7 +1249,7 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
       conjugate = (localPivotMode<10) ? true : false;
 #endif
       if (!nPasses) {
-	djNorm0 = max(djNorm,1.0e-20);
+	djNorm0 = CoinMax(djNorm,1.0e-20);
 	memcpy(d,work,numberTotal*sizeof(double));
 	if (sequenceIn_>=0&&numberNonBasic==1) {
 	  // see if simple move
@@ -1284,7 +1284,7 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
 	      double distance = upper_[iPivot]-solution_[iPivot];
 	      if (distance<-largest*alpha) {
 		kPivot=iPivot;
-		largest=max(0.0,-distance/alpha);
+		largest=CoinMax(0.0,-distance/alpha);
 	      }
 	      if (distance<-1.0e-12*alpha) {
 		easyMove=true;
@@ -1294,7 +1294,7 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
 	      double distance = solution_[iPivot]-lower_[iPivot];
 	      if (distance<largest*alpha) {
 		kPivot=iPivot;
-		largest=max(0.0,distance/alpha);
+		largest=CoinMax(0.0,distance/alpha);
 	      }
 	      if (distance<1.0e-12*alpha) {
 		easyMove=true;
@@ -1308,7 +1308,7 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
 	    double objDrop = currentObj-predictedObj;
 	    double th = objective_->stepLength(this,solution_,work,largest,
 				   currentObj,predictedObj,simpleObjective);
-	    simpleObjective = max(simpleObjective,predictedObj);
+	    simpleObjective = CoinMax(simpleObjective,predictedObj);
 	    double easyDrop = currentObj-simpleObjective;
 	    if (easyDrop>1.0e-8&&easyDrop>0.5*objDrop) {
 	      easyMove=true;
@@ -1359,7 +1359,7 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
 	    d[iSequence] = work[iSequence];
 	}
       }
-      if (djNorm<eps*djNorm0||(nPasses>100&&djNorm<min(1.0e-1*djNorm0,1.0e-12))) {
+      if (djNorm<eps*djNorm0||(nPasses>100&&djNorm<CoinMin(1.0e-1*djNorm0,1.0e-12))) {
 #ifdef CLP_DEBUG
 	if (handler_->logLevel()&32) 
 	  printf("dj norm reduced from %g to %g\n",djNorm0,djNorm);
@@ -1504,7 +1504,7 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
 	      oldValue -= bound;
 	      if (oldValue+theta*alpha<0.0) {
 		bestSequence=iSequence;
-		theta = max(0.0,oldValue/(-alpha));
+		theta = CoinMax(0.0,oldValue/(-alpha));
 	      }
 	    } else {
 	      // variable going towards upper bound
@@ -1512,7 +1512,7 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
 	      oldValue = bound-oldValue;
 	      if (oldValue-theta*alpha<0.0) {
 		bestSequence=iSequence;
-		theta = max(0.0,oldValue/alpha);
+		theta = CoinMax(0.0,oldValue/alpha);
 	      }
 	    }
 	  }
@@ -1524,7 +1524,7 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
 	      oldValue -= bound;
 	      if (oldValue+basicTheta*alpha<-basicTolerance) {
 		bestBasicSequence=iSequence;
-		basicTheta = max(0.0,(oldValue+basicTolerance)/(-alpha));
+		basicTheta = CoinMax(0.0,(oldValue+basicTolerance)/(-alpha));
 	      }
 	    } else {
 	      // variable going towards upper bound
@@ -1532,18 +1532,18 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
 	      oldValue = bound-oldValue;
 	      if (oldValue-basicTheta*alpha<-basicTolerance) {
 		bestBasicSequence=iSequence;
-		basicTheta = max(0.0,(oldValue+basicTolerance)/alpha);
+		basicTheta = CoinMax(0.0,(oldValue+basicTolerance)/alpha);
 	      }
 	    }
 	  }
 	}
       }
-      theta_ = min(theta,basicTheta);
+      theta_ = CoinMin(theta,basicTheta);
       // Now find minimum of function
       double currentObj;
       double predictedObj;
       double thetaObj;
-      double objTheta2 =objective_->stepLength(this,solution_,d,min(theta,basicTheta),
+      double objTheta2 =objective_->stepLength(this,solution_,d,CoinMin(theta,basicTheta),
 					       currentObj,predictedObj,thetaObj);
 #ifdef CLP_DEBUG
       if (handler_->logLevel()&32) 
@@ -1589,9 +1589,9 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
       if (chooseObjTheta) {
 	theta_ = objTheta;
       } else {
-	objTheta = max(objTheta,1.00000001*theta_+1.0e-12);
+	objTheta = CoinMax(objTheta,1.00000001*theta_+1.0e-12);
 	//if (theta+1.0e-13>basicTheta) {
-	//theta = max(theta,1.00000001*basicTheta);
+	//theta = CoinMax(theta,1.00000001*basicTheta);
 	//theta_ = basicTheta;
 	//}
       }
@@ -1775,7 +1775,7 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
 	      int iSequence = which[i]+addSequence;
 	      if (flagged(iSequence))
 		continue;
-	      //double distance = min(solution_[iSequence]-lower_[iSequence],
+	      //double distance = CoinMin(solution_[iSequence]-lower_[iSequence],
 	      //		  upper_[iSequence]-solution_[iSequence]);
 	      double alpha=work2[i];
 	      double change=work[iSequence];
@@ -1808,9 +1808,9 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
 	      }
 	      if (direction) {
 		if (sequenceIn_!=lastSequenceIn||localPivotMode<10) { 
-		  if (min(solution_[iSequence]-lower_[iSequence],
+		  if (CoinMin(solution_[iSequence]-lower_[iSequence],
 			  upper_[iSequence]-solution_[iSequence])>bestValue) {
-		    bestValue=min(solution_[iSequence]-lower_[iSequence],
+		    bestValue=CoinMin(solution_[iSequence]-lower_[iSequence],
 				  upper_[iSequence]-solution_[iSequence]);
 		    sequenceIn_=iSequence;
 		    bestDirection=direction;
@@ -2023,7 +2023,7 @@ ClpSimplexNonlinear::pivotNonlinearResult()
       double alpha = work[iIndex];
       if (fabs(alpha)>1.0e-6) {
 	int iPivot = pivotVariable_[iRow];
-	double distance = min(upper_[iPivot]-solution_[iPivot],
+	double distance = CoinMin(upper_[iPivot]-solution_[iPivot],
 			      solution_[iPivot]-lower_[iPivot]);
 	if (distance<smallest) {
 	  pivotRow_=iRow;
@@ -2097,7 +2097,7 @@ ClpSimplexNonlinear::pivotNonlinearResult()
     if (maxFactor>10) {
       if (forceFactorization_<0)
 	forceFactorization_= maxFactor;
-      forceFactorization_ = max (1,(forceFactorization_>>1));
+      forceFactorization_ = CoinMax(1,(forceFactorization_>>1));
     } 
     // later we may need to unwind more e.g. fake bounds
     if(lastGoodIteration_ != numberIterations_) {
@@ -2333,14 +2333,14 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
 	    double bound = columnLower[iColumn];
 	    oldValue -= bound;
 	    if (oldValue+maxTheta*alpha<0.0) {
-	      maxTheta = max(0.0,oldValue/(-alpha));
+	      maxTheta = CoinMax(0.0,oldValue/(-alpha));
 	    }
 	  } else if (alpha>1.0e-15) {
 	    // variable going towards upper bound
 	    double bound = columnUpper[iColumn];
 	    oldValue = bound-oldValue;
 	    if (oldValue-maxTheta*alpha<0.0) {
-	      maxTheta = max(0.0,oldValue/alpha);
+	      maxTheta = CoinMax(0.0,oldValue/alpha);
 	    }
 	  }
 	} else {
@@ -2350,14 +2350,14 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
 	    double bound = trueLower[jNon];
 	    oldValue -= bound;
 	    if (oldValue+maxTheta*alpha<0.0) {
-	      maxTheta = max(0.0,oldValue/(-alpha));
+	      maxTheta = CoinMax(0.0,oldValue/(-alpha));
 	    }
 	  } else if (alpha>1.0e-15) {
 	    // variable going towards upper bound
 	    double bound = trueUpper[jNon];
 	    oldValue = bound-oldValue;
 	    if (oldValue-maxTheta*alpha<0.0) {
-	      maxTheta = max(0.0,oldValue/alpha);
+	      maxTheta = CoinMax(0.0,oldValue/alpha);
 	    }
 	  }
 	  jNon++;
@@ -2371,14 +2371,14 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
 	  double bound = rowLower_[iRow];
 	  oldValue -= bound;
 	  if (oldValue+maxTheta*alpha<0.0) {
-	    maxTheta = max(0.0,oldValue/(-alpha));
+	    maxTheta = CoinMax(0.0,oldValue/(-alpha));
 	  }
 	} else if (alpha>1.0e-15) {
 	  // variable going towards upper bound
 	  double bound = rowUpper_[iRow];
 	  oldValue = bound-oldValue;
 	  if (oldValue-maxTheta*alpha<0.0) {
-	    maxTheta = max(0.0,oldValue/alpha);
+	    maxTheta = CoinMax(0.0,oldValue/alpha);
 	  }
 	}
       }
@@ -2396,7 +2396,7 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
 					     objValue,predictedObj,thetaObj);
     
     if (goodMove>=0) {
-      theta = min(theta2,maxTheta);
+      theta = CoinMin(theta2,maxTheta);
 #ifdef CLP_DEBUG
       if (handler_->logLevel()&32) 
 	printf("theta %g, current %g, at maxtheta %g, predicted %g\n",
@@ -2424,7 +2424,7 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
 	  int numberTotal = numberRows_+numberColumns_;
 	  // resize arrays
 	  for (int i=0;i<4;i++) {
-	    rowArray_[i]->reserve(max(numberRows_+numberColumns_,rowArray_[i]->capacity()));
+	    rowArray_[i]->reserve(CoinMax(numberRows_+numberColumns_,rowArray_[i]->capacity()));
 	  }
 	  CoinIndexedVector * longArray = rowArray_[3];
 	  CoinIndexedVector * rowArray = rowArray_[0];
@@ -2503,7 +2503,7 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
 		oldValue -= bound;
 		if (oldValue+theta*alpha<0.0) {
 		  bestSequence=iSequence;
-		  theta = max(0.0,oldValue/(-alpha));
+		  theta = CoinMax(0.0,oldValue/(-alpha));
 		}
 	      } else if (alpha>1.0e-15) {
 		// variable going towards upper bound
@@ -2511,7 +2511,7 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
 		oldValue = bound-oldValue;
 		if (oldValue-theta*alpha<0.0) {
 		  bestSequence=iSequence;
-		  theta = max(0.0,oldValue/alpha);
+		  theta = CoinMax(0.0,oldValue/alpha);
 		}
 	      }
 	    }
@@ -2538,7 +2538,7 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
 	    // update one used outside
 	    objValue=currentObj;
 	    if (theta>1.0e-9&&
-		(currentObj-thetaObj<-max(1.0e-8,1.0e-15*fabs(currentObj))||jPass<5)) {
+		(currentObj-thetaObj<-CoinMax(1.0e-8,1.0e-15*fabs(currentObj))||jPass<5)) {
 	      // Update solution
 	      for (iSequence=0;iSequence<numberTotal;iSequence++) {
 		double alpha = work[iSequence];
@@ -2652,7 +2652,7 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
     int numberLarger=0;
     for (jNon=0;jNon<numberNonLinearColumns;jNon++) {
       iColumn=listNonLinearColumn[jNon];
-      maxDelta = max(maxDelta,
+      maxDelta = CoinMax(maxDelta,
 		     fabs(solution[iColumn]-saveSolution[iColumn]));
       if (goodMove>0) {
 	if (last[0][jNon]*last[1][jNon]<0) {
@@ -2662,14 +2662,14 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
 	} else {
 	  if (last[0][jNon]==last[1][jNon]&&
 	      last[0][jNon]==last[2][jNon])
-	    trust[jNon] = min(1.5*trust[jNon],1.0e6); 
+	    trust[jNon] = CoinMin(1.5*trust[jNon],1.0e6); 
 	  numberLarger++;
 	}
       } else if (goodMove!=-2&&trust[jNon]>10.0*deltaTolerance) {
 	trust[jNon] *= 0.2;
 	numberSmaller++;
       }
-      maxGap = max(maxGap,trust[jNon]);
+      maxGap = CoinMax(maxGap,trust[jNon]);
     }
 #ifdef CLP_DEBUG
 	  if (handler_->logLevel()&32) 
@@ -2706,10 +2706,10 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
     double * r = this->dualColumnSolution();
     for (jNon=0;jNon<numberNonLinearColumns;jNon++) {
       iColumn=listNonLinearColumn[jNon];
-      columnLower[iColumn]=max(solution[iColumn]
+      columnLower[iColumn]=CoinMax(solution[iColumn]
 			       -trust[jNon],
 			       trueLower[jNon]);
-      columnUpper[iColumn]=min(solution[iColumn]
+      columnUpper[iColumn]=CoinMin(solution[iColumn]
 			       +trust[jNon],
 			       trueUpper[jNon]);
     }
@@ -2733,22 +2733,22 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
     for (jNon=0;jNon<numberNonLinearColumns;jNon++) {
       iColumn=listNonLinearColumn[jNon];
       if (statusCheck[iColumn]=='L'&&r[iColumn]<-1.0e-4) {
-	columnLower[iColumn]=max(solution[iColumn],
+	columnLower[iColumn]=CoinMax(solution[iColumn],
 				 trueLower[jNon]);
-	columnUpper[iColumn]=min(solution[iColumn]
+	columnUpper[iColumn]=CoinMin(solution[iColumn]
 				 +trust[jNon],
 				 trueUpper[jNon]);
       } else if (statusCheck[iColumn]=='U'&&r[iColumn]>1.0e-4) {
-	columnLower[iColumn]=max(solution[iColumn]
+	columnLower[iColumn]=CoinMax(solution[iColumn]
 				 -trust[jNon],
 				 trueLower[jNon]);
-	columnUpper[iColumn]=min(solution[iColumn],
+	columnUpper[iColumn]=CoinMin(solution[iColumn],
 				 trueUpper[jNon]);
       } else {
-	columnLower[iColumn]=max(solution[iColumn]
+	columnLower[iColumn]=CoinMax(solution[iColumn]
 				 -trust[jNon],
 				 trueLower[jNon]);
-	columnUpper[iColumn]=min(solution[iColumn]
+	columnUpper[iColumn]=CoinMin(solution[iColumn]
 				 +trust[jNon],
 				 trueUpper[jNon]);
       }
@@ -2831,9 +2831,9 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
   memcpy(rowActivity_,saveRowSolution,numberRows*sizeof(double));
   for (jNon=0;jNon<numberNonLinearColumns;jNon++) {
     iColumn=listNonLinearColumn[jNon];
-    columnLower[iColumn]=max(solution[iColumn],
+    columnLower[iColumn]=CoinMax(solution[iColumn],
 			     trueLower[jNon]);
-    columnUpper[iColumn]=min(solution[iColumn],
+    columnUpper[iColumn]=CoinMin(solution[iColumn],
 			     trueUpper[jNon]);
   }
   delete [] markNonlinear;

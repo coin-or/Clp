@@ -413,7 +413,7 @@ CLPLIBAPI void CLPLINKAGE
 Clp_problemName(Clp_Simplex * model, int maxNumberCharacters, char * array)
 {
   std::string name = model->model_->problemName();
-  maxNumberCharacters = min(maxNumberCharacters,(int)strlen(name.c_str()));
+  maxNumberCharacters = CoinMin(maxNumberCharacters,(int)strlen(name.c_str()));
   strncpy(array,name.c_str(),maxNumberCharacters-1);
   array[maxNumberCharacters-1]='\0';
 }

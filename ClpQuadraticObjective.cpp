@@ -461,7 +461,7 @@ ClpQuadraticObjective::resize(int newNumberColumns)
     double * newArray = new double[newExtended];
     if (objective_)
       memcpy(newArray,objective_,
-	     min(newExtended,numberExtendedColumns_)*sizeof(double));
+	     CoinMin(newExtended,numberExtendedColumns_)*sizeof(double));
     delete [] objective_;
     objective_ = newArray;
     for (i=numberColumns_;i<newNumberColumns;i++) 
@@ -470,7 +470,7 @@ ClpQuadraticObjective::resize(int newNumberColumns)
       newArray = new double[newExtended];
       if (gradient_)
 	memcpy(newArray,gradient_,
-	       min(newExtended,numberExtendedColumns_)*sizeof(double));
+	       CoinMin(newExtended,numberExtendedColumns_)*sizeof(double));
       delete [] gradient_;
       gradient_ = newArray;
       for (i=numberColumns_;i<newNumberColumns;i++) 
@@ -823,7 +823,7 @@ ClpQuadraticObjective::stepLength(ClpSimplex * model,
       printf("a %g b %g c %g => %g\n",a,b,c,theta); 
     b=0.0;
   }
-  return min(theta,maximumTheta);
+  return CoinMin(theta,maximumTheta);
 }
 // Scale objective 
 void 

@@ -118,11 +118,11 @@ ClpPlusMinusOneMatrix::ClpPlusMinusOneMatrix (const CoinPackedMatrix & rhs)
       int iRow;
       if (fabs(elementByColumn[k]-1.0)<1.0e-10) {
 	iRow = row[k];
-	numberRows_ = max(numberRows_,iRow);
+	numberRows_ = CoinMax(numberRows_,iRow);
 	indices_[j++]=iRow;
       } else if (fabs(elementByColumn[k]+1.0)<1.0e-10) {
 	iRow = row[k];
-	numberRows_ = max(numberRows_,iRow);
+	numberRows_ = CoinMax(numberRows_,iRow);
 	temp[iNeg++]=iRow;
       } else {
 	goodPlusMinusOne = false; // not a network
@@ -1445,7 +1445,7 @@ ClpPlusMinusOneMatrix::partialPricing(ClpSimplex * model, double startFraction, 
 {
   numberWanted=currentWanted_;
   int start = (int) (startFraction*numberColumns_);
-  int end = min((int) (endFraction*numberColumns_+1),numberColumns_);
+  int end = CoinMin((int) (endFraction*numberColumns_+1),numberColumns_);
   CoinBigIndex j;
   double tolerance=model->currentDualTolerance();
   double * reducedCost = model->djRegion();

@@ -585,7 +585,7 @@ double * resizeDouble(double * array , int size, int newSize, double fill,
     int i;
     double * newArray = new double[newSize];
     if (array)
-      memcpy(newArray,array,min(newSize,size)*sizeof(double));
+      memcpy(newArray,array,CoinMin(newSize,size)*sizeof(double));
     delete [] array;
     array = newArray;
     for (i=size;i<newSize;i++) 
@@ -711,8 +711,8 @@ ClpModel::resize (int newNumberRows, int newNumberColumns)
     unsigned char * tempC = new unsigned char [newNumberColumns+newNumberRows];
     unsigned char * tempR = tempC + newNumberColumns;
     memset(tempC,0,(newNumberColumns+newNumberRows)*sizeof(unsigned char));
-    memcpy(tempC,status_,min(newNumberColumns,numberColumns_)*sizeof(unsigned char));
-    memcpy(tempR,status_+numberColumns_,min(newNumberRows,numberRows_)*sizeof(unsigned char));
+    memcpy(tempC,status_,CoinMin(newNumberColumns,numberColumns_)*sizeof(unsigned char));
+    memcpy(tempR,status_+numberColumns_,CoinMin(newNumberRows,numberRows_)*sizeof(unsigned char));
     delete [] status_;
     status_ = tempC;
   }
@@ -729,7 +729,7 @@ ClpModel::resize (int newNumberRows, int newNumberColumns)
     char * temp = new char [newNumberColumns];
     memset(temp,0,newNumberColumns*sizeof(char));
     memcpy(temp,integerType_,
-	   min(newNumberColumns,numberColumns_)*sizeof(char));
+	   CoinMin(newNumberColumns,numberColumns_)*sizeof(char));
     delete [] integerType_;
     integerType_ = temp;
   }
@@ -1243,7 +1243,7 @@ ClpModel::readMps(const char *fileName,
       rowNames_.reserve(numberRows_);
       for (iRow=0;iRow<numberRows_;iRow++) {
 	const char * name = m.rowName(iRow);
-	maxLength = max(maxLength,(unsigned int) strlen(name));
+	maxLength = CoinMax(maxLength,(unsigned int) strlen(name));
 	  rowNames_.push_back(name);
       }
       
@@ -1251,7 +1251,7 @@ ClpModel::readMps(const char *fileName,
       columnNames_.reserve(numberColumns_);
       for (iColumn=0;iColumn<numberColumns_;iColumn++) {
 	const char * name = m.columnName(iColumn);
-	maxLength = max(maxLength,(unsigned int) strlen(name));
+	maxLength = CoinMax(maxLength,(unsigned int) strlen(name));
 	columnNames_.push_back(name);
       }
       lengthNames_=(int) maxLength;
@@ -1502,13 +1502,13 @@ ClpModel::ClpModel ( const ClpModel * rhs,
     rowNames_.reserve(numberRows_);
     for (iRow=0;iRow<numberRows_;iRow++) {
       rowNames_.push_back(rhs->rowNames_[whichRow[iRow]]);
-      maxLength = max(maxLength,(unsigned int) strlen(rowNames_[iRow].c_str()));
+      maxLength = CoinMax(maxLength,(unsigned int) strlen(rowNames_[iRow].c_str()));
     }
     int iColumn;
     columnNames_.reserve(numberColumns_);
     for (iColumn=0;iColumn<numberColumns_;iColumn++) {
       columnNames_.push_back(rhs->columnNames_[whichColumn[iColumn]]);
-      maxLength = max(maxLength,(unsigned int) strlen(columnNames_[iColumn].c_str()));
+      maxLength = CoinMax(maxLength,(unsigned int) strlen(columnNames_[iColumn].c_str()));
     }
     lengthNames_=(int) maxLength;
   } else {
@@ -1586,13 +1586,13 @@ ClpModel::copyNames(std::vector<std::string> & rowNames,
   rowNames_.reserve(numberRows_);
   for (iRow=0;iRow<numberRows_;iRow++) {
     rowNames_.push_back(rowNames[iRow]);
-    maxLength = max(maxLength,(unsigned int) strlen(rowNames_[iRow].c_str()));
+    maxLength = CoinMax(maxLength,(unsigned int) strlen(rowNames_[iRow].c_str()));
   }
   int iColumn;
   columnNames_.reserve(numberColumns_);
   for (iColumn=0;iColumn<numberColumns_;iColumn++) {
     columnNames_.push_back(columnNames[iColumn]);
-    maxLength = max(maxLength,(unsigned int) strlen(columnNames_[iColumn].c_str()));
+    maxLength = CoinMax(maxLength,(unsigned int) strlen(columnNames_[iColumn].c_str()));
   }
   lengthNames_=(int) maxLength;
 }

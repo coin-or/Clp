@@ -106,11 +106,11 @@ inline void pdxxxresid1(ClpPdco *model, const int nlow, const int nupp, const in
   for (int k=0; k<nupp; k++)
     if (rU[upp[k]] > normU) normU = rU[upp[k]];
 
-  *Pinf    = max(normL, normU);  
-  *Pinf    = max( r1.infNorm() , *Pinf );
+  *Pinf    = CoinMax(normL, normU);  
+  *Pinf    = CoinMax( r1.infNorm() , *Pinf );
   *Dinf    = r2.infNorm();
-  *Pinf    = max( *Pinf, 1e-99 );
-  *Dinf    = max( *Dinf, 1e-99 );
+  *Pinf    = CoinMax( *Pinf, 1e-99 );
+  *Dinf    = CoinMax( *Dinf, 1e-99 );
 }
 
 //-----------------------------------------------------------------------
@@ -156,8 +156,8 @@ inline void pdxxxresid2(double mu, int nlow, int nupp, int *low, int *upp,
     if(x2z2 < minXz) minXz = x2z2;
   }
 
-  maxXz   = max( maxXz, 1e-99 );
-  minXz   = max( minXz, 1e-99 );
+  maxXz   = CoinMax( maxXz, 1e-99 );
+  minXz   = CoinMax( minXz, 1e-99 );
   *center  = maxXz / minXz;
 
   double normL = 0.0;
@@ -166,7 +166,7 @@ inline void pdxxxresid2(double mu, int nlow, int nupp, int *low, int *upp,
     if (cL_elts[low[k]] > normL) normL = cL_elts[low[k]];
   for (int k=0; k<nupp; k++)
     if (cU_elts[upp[k]] > normU) normU = cU_elts[upp[k]];
-  *Cinf    = max( normL, normU);
+  *Cinf    = CoinMax( normL, normU);
   *Cinf0   = maxXz;
 }
 //-----------------------------------------------------------------------

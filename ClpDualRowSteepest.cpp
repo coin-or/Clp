@@ -152,11 +152,11 @@ ClpDualRowSteepest::pivotRow()
   double tolerance=model_->currentPrimalTolerance();
   // we can't really trust infeasibilities if there is primal error
   // this coding has to mimic coding in checkPrimalSolution
-  double error = min(1.0e-3,model_->largestPrimalError());
+  double error = CoinMin(1.0e-3,model_->largestPrimalError());
   // allow tolerance at least slightly bigger than standard
   tolerance = tolerance +  error;
   // But cap
-  tolerance = min(1000.0,tolerance);
+  tolerance = CoinMin(1000.0,tolerance);
   tolerance *= tolerance; // as we are using squares
   double * solution = model_->solutionRegion();
   double * lower = model_->lowerRegion();
@@ -216,19 +216,19 @@ k
   if (mode_<2 ) {
     numberWanted = number+1;
   } else if (mode_==2) {
-    numberWanted = max(2000,number/8);
+    numberWanted = CoinMax(2000,number/8);
   } else {
     int numberElements = model_->factorization()->numberElements();
     double ratio = (double) numberElements/(double) model_->numberRows();
-    numberWanted = max(2000,number/8);
+    numberWanted = CoinMax(2000,number/8);
     if (ratio<1.0) {
-      numberWanted = max(2000,number/20);
+      numberWanted = CoinMax(2000,number/20);
     } else if (ratio>10.0) {
       ratio = number * (ratio/80.0);
       if (ratio>number)
 	numberWanted=number+1;
       else
-	numberWanted = max(2000,(int) ratio);
+	numberWanted = CoinMax(2000,(int) ratio);
     }
   }
   int iPass;
@@ -256,8 +256,8 @@ k
 	}
 #endif
 	double weight = weights_[iRow];
-	//largestWeight = max(largestWeight,weight);
-	//smallestWeight = min(smallestWeight,weight);
+	//largestWeight = CoinMax(largestWeight,weight);
+	//smallestWeight = CoinMin(smallestWeight,weight);
 	//double dubious = dubiousWeights_[iRow];
 	//weight *= dubious;
 	//if (value>2.0*largest*weight||(value>0.5*largest*weight&&value*largestWeight>dubious*largest*weight)) {
@@ -278,7 +278,7 @@ k
 	      value2=solution[iSequence]-upper[iSequence];
 	    else if (solution[iSequence]<lower[iSequence]-tolerance) 
 	      value2=solution[iSequence]-lower[iSequence];
-	    assert(fabs(value2*value2-infeas[iRow])<1.0e-8*min(value2*value2,infeas[iRow]));
+	    assert(fabs(value2*value2-infeas[iRow])<1.0e-8*CoinMin(value2*value2,infeas[iRow]));
 #endif
 	    if (solution[iSequence]>upper[iSequence]+tolerance||
 		solution[iSequence]<lower[iSequence]-tolerance) {
@@ -334,7 +334,7 @@ ClpDualRowSteepest::updateWeights(CoinIndexedVector * input,
 	array[iRow]=0.0;
       }
       alternateWeights_->setNumElements(0);
-      double w = max(weights_[i],value)*.1;
+      double w = CoinMax(weights_[i],value)*.1;
       if (fabs(weights_[i]-value)>w) {
 	printf("%d old %g, true %g\n",i,weights_[i],value);
 	weights_[i]=value; // to reduce printout
@@ -862,11 +862,11 @@ ClpDualRowSteepest::looksOptimal() const
   double tolerance=model_->currentPrimalTolerance();
   // we can't really trust infeasibilities if there is primal error
   // this coding has to mimic coding in checkPrimalSolution
-  double error = min(1.0e-3,model_->largestPrimalError());
+  double error = CoinMin(1.0e-3,model_->largestPrimalError());
   // allow tolerance at least slightly bigger than standard
   tolerance = tolerance +  error;
   // But cap
-  tolerance = min(1000.0,tolerance);
+  tolerance = CoinMin(1000.0,tolerance);
   int numberRows = model_->numberRows();
   int numberInfeasible=0;
   for (iRow=0;iRow<numberRows;iRow++) {
