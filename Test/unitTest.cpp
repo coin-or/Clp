@@ -570,7 +570,8 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     // ranging
     model.dualRanging(8,which,costIncrease,sequenceIncrease,
 		      costDecrease,sequenceDecrease);
-    for (int i=0;i<8;i++)
+    int i;
+    for ( i=0;i<8;i++)
       printf("%d increase %g %d, decrease %g %d\n",
 	     i,costIncrease[i],sequenceIncrease[i],
 	     costDecrease[i],sequenceDecrease[i]);
@@ -591,7 +592,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     // ranging
     model.dualRanging(8,which,costIncrease2,sequenceIncrease2,
 		      costDecrease2,sequenceDecrease2);
-    for (int i=0;i<8;i++) {
+    for (i=0;i<8;i++) {
       assert (fabs(costIncrease[i]-costDecrease2[i])<1.0e-6);
       assert (fabs(costDecrease[i]-costIncrease2[i])<1.0e-6);
       assert (sequenceIncrease[i]==sequenceDecrease2[i]);
