@@ -1942,10 +1942,20 @@ costs this much to be infeasible",
 		canOpen=true;
 		fileName = "-";
 	      } else {
-		if (field[0]=='/'||field[0]=='~'||field[0]=='\\')
+		if (field[0]=='/'||field[0]=='\\') {
 		  fileName = field;
-		else
+		} else if (field[0]=='~') {
+		  char * environ = getenv("HOME");
+		  if (environ) {
+		    std::string home(environ);
+		    field=field.erase(0,1);
+		    fileName = home+field;
+		  } else {
+		    fileName=field;
+		  }
+		} else {
 		  fileName = directory+field;
+		}
 		FILE *fp=fopen(fileName.c_str(),"r");
 		if (fp) {
 		  // can open - lets go for it
@@ -2001,10 +2011,20 @@ costs this much to be infeasible",
 	      }
 	      std::string fileName;
 	      bool canOpen=false;
-	      if (field[0]=='/'||field[0]=='~')
+	      if (field[0]=='/'||field[0]=='\\') {
 		fileName = field;
-	      else
+	      } else if (field[0]=='~') {
+		char * environ = getenv("HOME");
+		if (environ) {
+		  std::string home(environ);
+		  field=field.erase(0,1);
+		  fileName = home+field;
+		} else {
+		  fileName=field;
+		}
+	      } else {
 		fileName = directory+field;
+	      }
 	      FILE *fp=fopen(fileName.c_str(),"w");
 	      if (fp) {
 		// can open - lets go for it
@@ -2127,10 +2147,20 @@ costs this much to be infeasible",
 	      }
 	      std::string fileName;
 	      bool canOpen=false;
-	      if (field[0]=='/'||field[0]=='~')
+	      if (field[0]=='/'||field[0]=='\\') {
 		fileName = field;
-	      else
+	      } else if (field[0]=='~') {
+		char * environ = getenv("HOME");
+		if (environ) {
+		  std::string home(environ);
+		  field=field.erase(0,1);
+		  fileName = home+field;
+		} else {
+		  fileName=field;
+		}
+	      } else {
 		fileName = directory+field;
+	      }
 	      FILE *fp=fopen(fileName.c_str(),"wb");
 	      if (fp) {
 		// can open - lets go for it
@@ -2193,10 +2223,20 @@ costs this much to be infeasible",
 	      }
 	      std::string fileName;
 	      bool canOpen=false;
-	      if (field[0]=='/'||field[0]=='~')
+	      if (field[0]=='/'||field[0]=='\\') {
 		fileName = field;
-	      else
+	      } else if (field[0]=='~') {
+		char * environ = getenv("HOME");
+		if (environ) {
+		  std::string home(environ);
+		  field=field.erase(0,1);
+		  fileName = home+field;
+		} else {
+		  fileName=field;
+		}
+	      } else {
 		fileName = directory+field;
+	      }
 	      FILE *fp=fopen(fileName.c_str(),"rb");
 	      if (fp) {
 		// can open - lets go for it
@@ -2272,7 +2312,7 @@ costs this much to be infeasible",
 	      std::string name = getString(argc,argv);
 	      if (name!="EOL") {
 		int length=name.length();
-		if (name[length-1]=='/')
+		if (name[length-1]=='/'||name[length-1]=='\\')
 		  directory=name;
 		else
 		  directory = name+"/";
@@ -2413,10 +2453,20 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 		// stderr
 		fp=stderr;
 	      } else {
-		if (field[0]=='/'||field[0]=='~')
+		if (field[0]=='/'||field[0]=='\\') {
 		  fileName = field;
-		else
+		} else if (field[0]=='~') {
+		  char * environ = getenv("HOME");
+		  if (environ) {
+		    std::string home(environ);
+		    field=field.erase(0,1);
+		    fileName = home+field;
+		  } else {
+		    fileName=field;
+		  }
+		} else {
 		  fileName = directory+field;
+		}
 		fp=fopen(fileName.c_str(),"w");
 	      }
 	      if (fp) {
