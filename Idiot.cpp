@@ -646,12 +646,8 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
     }
     // Don't know why getting Microsoft problems
 #if defined (_MSC_VER)
-    delete [] ( double *)rowScale;
-    delete [] ( double *) columnScale;
     delete [] ( double *) elemXX;
 #else
-    delete [] rowScale;
-    delete [] columnScale;
     delete [] elemXX;
 #endif
     model_->setRowScale(NULL);

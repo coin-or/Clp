@@ -303,8 +303,8 @@ public:
    /// Scaling
    inline const double * rowScale() const {return rowScale_;};
    inline const double * columnScale() const {return columnScale_;};
-   inline void setRowScale(double * scale) { delete [] rowScale_; rowScale_ = scale;};
-   inline void setColumnScale(double * scale) { delete [] columnScale_; columnScale_ = scale;};
+   inline void setRowScale(double * scale) { delete [] (double *) rowScale_; rowScale_ = scale;};
+   inline void setColumnScale(double * scale) { delete [] (double *) columnScale_; columnScale_ = scale;};
   /// Scaling of objective 
   inline double objectiveScale() const 
           { return objectiveScale_;} ;
