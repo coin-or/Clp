@@ -48,7 +48,8 @@ ClpPresolve::ClpPresolve() :
   nrows_(0),
   nelems_(0),
   numberPasses_(5),
-  saveFile_("")
+  saveFile_(""),
+  presolveActions_(0)
 {
 }
 
@@ -388,7 +389,8 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
   bool doDualStuff = (presolvedModel_->integerInformation()==NULL);
   if (prob->anyProhibited()) 
     doDualStuff=false;
-
+  if ((presolveActions_&1)!=0)
+    doDualStuff=false;
 #if	PRESOLVE_CONSISTENCY
 //  presolve_links_ok(prob->rlink_, prob->mrstrt_, prob->hinrow_, prob->nrows_);
     presolve_links_ok(prob,false,true) ;
@@ -458,6 +460,9 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
 #if	PRESOLVE_DEBUG
     check_sol(prob,1.0e0);
 #endif
+    if (dupcol) {
+      //paction_ = dupcol_action::presolve(prob, paction_);
+    }
 
     // Check number rows dropped
     int lastDropped=0;

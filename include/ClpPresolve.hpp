@@ -68,6 +68,11 @@ public:
   { nonLinearValue_ = value;};
   inline double nonLinearValue() const
     { return nonLinearValue_;};
+  /// Whether we want to do dual part of presolve
+  inline bool doDualPresolve() const
+  { return (presolveActions_&1)==0;};
+  inline void setDoDualPresolve(bool doDual)
+  { if (doDual) presolveActions_  &= ~1; else presolveActions_ |= 1;};
 
   /**@name postsolve - postsolve the problem.  If the problem 
     has not been solved to optimality, there are no guarantees.
@@ -114,7 +119,8 @@ private:
   int numberPasses_;
   /// Name of saved model file
   std::string saveFile_;
-
+  /// Whether we want to skip dual part of presolve etc
+  int presolveActions_;
 protected:
   /// If you want to apply the individual presolve routines differently,
   /// or perhaps add your own to the mix,
