@@ -48,7 +48,7 @@ int ClpSimplexNonlinear::primal ()
 #endif
     // for moment only if no scaling
     // May be faster if switched off - but can't see why
-    if (!quadraticObj->fullMatrix()&&!rowScale_) {
+    if (!quadraticObj->fullMatrix()&&!rowScale_&&objectiveScale_==1.0) {
       saveObjective = objective_;
       objective_=new ClpQuadraticObjective(*quadraticObj,1);
     }
@@ -174,6 +174,7 @@ int ClpSimplexNonlinear::primal ()
   // correct objective value
   if (numberColumns_)
     objectiveValue_ = nonLinearCost_->feasibleCost()+objective_->nonlinearOffset();
+  objectiveValue_ /= (objectiveScale_*rhsScale_);
   // clean up
   unflag();
   finish();

@@ -92,6 +92,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
   }
   ClpPresolve pinfo;
   int presolveOptions = options.getSpecialOption(4);
+  bool presolveToFile = (presolveOptions&0x40000000)!=0;
+  presolveOptions &= ~0x40000000;
   if ((presolveOptions&0xffff)!=0)
     pinfo.setPresolveActions(presolveOptions);
   int printOptions = options.getSpecialOption(5);
@@ -212,8 +214,6 @@ ClpSimplex::initialSolve(ClpSolve & options)
   }
   // Just do this number of passes in Sprint
   int maxSprintPass=100;
-  // PreSolve to file - not fully tested
-  bool presolveToFile=false;
 
   if (presolve!=ClpSolve::presolveOff) {
     int numberPasses=5;
@@ -222,8 +222,9 @@ ClpSimplex::initialSolve(ClpSolve & options)
       presolve = ClpSolve::presolveOn;
     }
     if (presolveToFile) {
-      printf("***** temp test\n");
-      pinfo.presolvedModelToFile(*this,"ss.sav",1.0e-8,
+      // PreSolve to file - not fully tested
+      printf("Presolving to file - presolve.save\n");
+      pinfo.presolvedModelToFile(*this,"presolve.save",1.0e-8,
 			   false,numberPasses);
       model2=this;
     } else {

@@ -111,6 +111,7 @@ ClpPresolve::presolvedModelToFile(ClpSimplex &si,std::string fileName,
     return 0;
   } else {
     si.restoreModel(saveFile_.c_str());
+    remove(saveFile_.c_str());
     return 1;
   }
 }
@@ -203,6 +204,7 @@ ClpPresolve::postsolve(bool updateStatus)
     // From file
     assert (originalModel_==presolvedModel_);
     originalModel_->restoreModel(saveFile_.c_str());
+    remove(saveFile_.c_str());
     memcpy(originalModel_->primalRowSolution(),acts,nrows0*sizeof(double));
     // delete [] acts;
     memcpy(originalModel_->primalColumnSolution(),sol,ncols0*sizeof(double));

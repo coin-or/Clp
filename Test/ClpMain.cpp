@@ -902,6 +902,7 @@ int main (int argc, const char *argv[])
     int doSprint=-1;
     // set reasonable defaults
     int preSolve=5;
+    bool preSolveFile=false;
     models->setPerturbation(50);
     models->messageHandler()->setPrefix(false);
     std::string directory ="./";
@@ -1310,6 +1311,7 @@ specialized network code."
 	      "on",PRESOLVE);
     parameters[numberParameters-1].append("off");
     parameters[numberParameters-1].append("more");
+    parameters[numberParameters-1].append("file");
     parameters[numberParameters-1].setLonghelp
       (
        "Presolve analyzes the model to find such things as redundant equations, equations\
@@ -1777,8 +1779,10 @@ costs this much to be infeasible",
 		preSolve = 5;
 	      else if (action==1)
 		preSolve=0;
-	      else
+	      else if (action==2)
 		preSolve=10;
+	      else
+		preSolveFile=true;
 	      break;
 	    case CRASH:
 	      doCrash=action;
@@ -1843,6 +1847,8 @@ costs this much to be infeasible",
 		}
 	      }
 	      solveOptions.setSolveType(method);
+	      if(preSolveFile)
+		presolveOptions |= 0x40000000;
 	      solveOptions.setSpecialOption(4,presolveOptions);
 	      solveOptions.setSpecialOption(5,printOptions);
 	      if (method==ClpSolve::useDual) {
