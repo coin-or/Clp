@@ -1504,7 +1504,8 @@ costs this much to be infeasible",
 		ClpDualRowSteepest steep(3);
 		models[iModel].setDualRowPivotAlgorithm(steep);
 	      } else if (action==1) {
-		ClpDualRowDantzig dantzig;
+		//ClpDualRowDantzig dantzig;
+		ClpDualRowSteepest dantzig(5);
 		models[iModel].setDualRowPivotAlgorithm(dantzig);
 	      } else if (action==2) {
 		// partial steep

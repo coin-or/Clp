@@ -47,7 +47,10 @@ ClpNonLinearCost::ClpNonLinearCost ( ClpSimplex * model)
   model_ = model;
   numberRows_ = model_->numberRows();
   numberColumns_ = model_->numberColumns();
-  int numberTotal = numberRows_+numberColumns_;
+  // If gub then we need this extra
+  int numberExtra = model_->numberExtraRows();
+  int numberTotal1 = numberRows_+numberColumns_;
+  int numberTotal = numberTotal1+numberExtra;
   convex_ = true;
   bothWays_ = false;
   start_ = new int [numberTotal+1];
@@ -72,7 +75,7 @@ ClpNonLinearCost::ClpNonLinearCost ( ClpSimplex * model)
   double * cost = model_->costRegion();
 
   // For quadratic we need -inf,0,0,+inf
-  for (iSequence=0;iSequence<numberTotal;iSequence++) {
+  for (iSequence=0;iSequence<numberTotal1;iSequence++) {
     if (lower[iSequence]>-1.0e20)
       put++;
     if (upper[iSequence]<1.0e20)
@@ -80,6 +83,8 @@ ClpNonLinearCost::ClpNonLinearCost ( ClpSimplex * model)
     put += 2;
   }
 
+  // and for extra
+  put += 4*numberExtra;
   lower_ = new double [put];
   cost_ = new double [put];
   infeasible_ = new unsigned int[(put+31)>>5];
@@ -89,7 +94,7 @@ ClpNonLinearCost::ClpNonLinearCost ( ClpSimplex * model)
 
   start_[0]=0;
 
-  for (iSequence=0;iSequence<numberTotal;iSequence++) {
+  for (iSequence=0;iSequence<numberTotal1;iSequence++) {
 
     if (lower[iSequence]>-COIN_DBL_MAX) {
       lower_[put] = -COIN_DBL_MAX;
@@ -106,6 +111,21 @@ ClpNonLinearCost::ClpNonLinearCost ( ClpSimplex * model)
       setInfeasible(put-1,true);
       cost_[put++] = 1.0e50;
     }
+    start_[iSequence+1]=put;
+  }
+  for (;iSequence<numberTotal;iSequence++) {
+
+    lower_[put] = -COIN_DBL_MAX;
+    setInfeasible(put,true);
+    put++;
+    whichRange_[iSequence]=put;
+    lower_[put] = 0.0;
+    cost_[put++] = 0.0;
+    lower_[put] = 0.0;
+    cost_[put++] = 0.0;
+    lower_[put] = COIN_DBL_MAX;
+    setInfeasible(put-1,true);
+    cost_[put++] = 1.0e50;
     start_[iSequence+1]=put;
   }
 }
@@ -803,6 +823,31 @@ ClpNonLinearCost::setOne(int iPivot, double value)
   cost = cost_[iRange];
   changeCost_ += value*difference;
   return difference;
+}
+/* Sets bounds and infeasible cost for one variable 
+   This is for gub etc */
+void 
+ClpNonLinearCost::setOne(int sequence, double solutionValue, double lowerValue, double upperValue)
+{
+  int iRange=-1;
+  int start = start_[sequence];
+  double infeasibilityCost = model_->infeasibilityCost();
+  cost_[start] = -infeasibilityCost;
+  lower_[start+1]=lowerValue;
+  lower_[start+2]=upperValue;
+  cost_[start+2] = infeasibilityCost;
+  double primalTolerance = model_->currentPrimalTolerance();
+  if (solutionValue>=lowerValue-primalTolerance) {
+    if (solutionValue<=upperValue+primalTolerance) {
+      iRange=start+1;
+    } else {
+      iRange=start+2;
+    }
+  } else {
+    iRange = start;
+  }
+  whichRange_[sequence]=iRange;
+    
 }
 /* Sets bounds and cost for outgoing variable 
    may change value

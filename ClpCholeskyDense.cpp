@@ -200,11 +200,10 @@ ClpCholeskyDense::factorize(const double * diagonal, int * rowsDropped)
 void 
 ClpCholeskyDense::solve (double * region) 
 {
-  int iColumn;
+  int iRow,iColumn;
   for (iColumn=0;iColumn<numberRows_;iColumn++) {
     if (!rowsDropped_[iColumn]) {
       double value = region[iColumn];
-	  int iRow;
       for (iRow=0;iRow<iColumn;iRow++)
 	value -= region[iRow]*work_[iColumn+iRow*numberRows_];
       for (iRow=0;iRow<iColumn;iRow++)
@@ -220,9 +219,9 @@ ClpCholeskyDense::solve (double * region)
     work -= numberRows_;
     if (!rowsDropped_[iColumn]) {
       double value = region[iColumn];
-      for (int iRow=iColumn+1;iRow<numberRows_;iRow++)
+      for (iRow=iColumn+1;iRow<numberRows_;iRow++)
 	value -= region[iRow]*work[iRow];
-      for (int iRow=iColumn+1;iRow<numberRows_;iRow++)
+      for (iRow=iColumn+1;iRow<numberRows_;iRow++)
 	if (rowsDropped_[iRow])
 	  assert(!work[iRow]||!region[iRow]);
       region[iColumn]=value/work[iColumn];

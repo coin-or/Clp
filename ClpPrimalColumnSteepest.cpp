@@ -224,7 +224,7 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
       pivotRow=-1;
       // See if to switch
       int numberRows = model_->numberRows();
-      int numberWanted=0;
+      int numberWanted=10;
       int numberColumns = model_->numberColumns();
       double ratio = (double) sizeFactorization_/(double) numberRows;
       // Number of dual infeasibilities at last invert
@@ -236,7 +236,7 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
       } else if (ratio<3.0) {
 	numberWanted = 500;
 	numberWanted = max(numberWanted,numberLook/15);
-      } else if (ratio<4.0) {
+      } else if (ratio<4.0||mode_==5) {
 	numberWanted = 1000;
 	numberWanted = max(numberWanted,numberLook/10);
       } else if (mode_!=5) {
@@ -347,7 +347,7 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
   }
   // update of duals finished - now do pricing
   // See what sort of pricing
-  int numberWanted=0;
+  int numberWanted=10;
   number = infeasible_->getNumElements();
   int numberColumns = model_->numberColumns();
   if (switchType==5) {
@@ -363,7 +363,7 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
       numberWanted = max(100,number/200);
     } else if (ratio<2.0-1.0) {
       numberWanted = max(500,number/40);
-    } else if (ratio<4.0-3.0) {
+    } else if (ratio<4.0-3.0||mode_==5) {
       numberWanted = max(2000,number/10);
       numberWanted = max(numberWanted,numberColumns/30);
     } else if (mode_!=5) {
@@ -2365,7 +2365,7 @@ ClpPrimalColumnSteepest::pivotColumnOldMethod(CoinIndexedVector * updates,
     }
   }
   // See what sort of pricing
-  int numberWanted=0;
+  int numberWanted=10;
   number = infeasible_->getNumElements();
   int numberColumns = model_->numberColumns();
   if (switchType==5) {
@@ -2384,7 +2384,7 @@ ClpPrimalColumnSteepest::pivotColumnOldMethod(CoinIndexedVector * updates,
       numberWanted = max(100,number/200);
     } else if (ratio<0.3) {
       numberWanted = max(500,number/40);
-    } else if (ratio<0.5) {
+    } else if (ratio<0.5||mode_==5) {
       numberWanted = max(2000,number/10);
       numberWanted = max(numberWanted,numberColumns/30);
     } else if (mode_!=5) {

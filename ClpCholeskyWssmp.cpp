@@ -320,9 +320,10 @@ ClpCholeskyWssmp::factorize(const double * diagonal, int * rowsDropped)
     } else {
       // dropped
       int j;
-      for (j=0;j<number;j++) {
+      for (j=1;j<number;j++) {
 	put[j]=0.0;
       }
+      put[0]=1.0;
     }
   }
   //check sizes
@@ -371,7 +372,7 @@ ClpCholeskyWssmp::factorize(const double * diagonal, int * rowsDropped)
     std::cout<<"Cholesky - largest "<<largest<<" smallest "<<smallest<<std::endl;
   choleskyCondition_=largest/smallest;
   bool cleanCholesky;
-  if (model_->numberIterations()<10) 
+  if (model_->numberIterations()<200) 
     cleanCholesky=true;
   else 
     cleanCholesky=false;
@@ -402,8 +403,10 @@ ClpCholeskyWssmp::factorize(const double * diagonal, int * rowsDropped)
       newDropped=0;
       for (int i=0;i<numberRows_;i++) {
 	char dropped = rowsDropped[i];
+	int oldDropped = rowsDropped_[i];;
 	rowsDropped_[i]=dropped;
         if (dropped==2) {
+	  assert (!oldDropped);
           //dropped this time
           rowsDropped[newDropped++]=i;
           rowsDropped_[i]=1;

@@ -402,6 +402,9 @@ public:
   /// Computes primals from scratch
   void computePrimals (  const double * rowActivities,
 		     const double * columnActivities);
+  /** Adds multiple of a column into an array */
+  void add(double * array,
+		   int column, double multiplier) const;
   /**
      Unpacks one column of the matrix into indexed array 
      Uses sequenceIn_
@@ -541,10 +544,12 @@ public:
   void setNumberRefinements( int value) ;
   /// Alpha (pivot element) for use by classes e.g. steepestedge
   inline double alpha() const { return alpha_;};
+  inline void setAlpha(double value) { alpha_ = value;};
   /// Reduced cost of last incoming for use by classes e.g. steepestedge
   inline double dualIn() const { return dualIn_;};
   /// Pivot Row for use by classes e.g. steepestedge
   inline int pivotRow() const{ return pivotRow_;};
+  inline void setPivotRow(int value) { pivotRow_=value;};
   /// value of incoming variable (in Dual)
   double valueIncomingDual() const;
   //@}
@@ -763,6 +768,15 @@ public:
   /// Raw objective value (so always minimize in primal)
   inline double rawObjectiveValue() const
   { return objectiveValue_;};
+  /** Number of extra rows.  These are ones which will be dynamically created
+      each iteration.  This is for GUB but may have other uses.
+  */
+  inline int numberExtraRows() const
+  { return numberExtraRows_;};
+  /** Maximum number of basic variables - can be more than number of rows if GUB
+  */
+  inline int maximumBasic() const
+  { return maximumBasic_;};
   //@}
 
 ////////////////// data //////////////////
@@ -955,6 +969,9 @@ protected:
       each iteration.  This is for GUB but may have other uses.
   */
   int numberExtraRows_;
+  /** Maximum number of basic variables - can be more than number of rows if GUB
+  */
+  int maximumBasic_;
   /** For advanced use.  When doing iterative solves things can get
       nasty so on values pass if incoming solution has largest
       infeasibility < incomingInfeasibility throw out variables

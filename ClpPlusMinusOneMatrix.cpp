@@ -892,7 +892,7 @@ CoinBigIndex
 ClpPlusMinusOneMatrix::fillBasis(ClpSimplex * model,
 				 const int * whichColumn, 
 				 int numberBasic,
-				 int numberColumnBasic,
+				 int & numberColumnBasic,
 				 int * indexRowU, int * indexColumnU,
 				 double * elementU) 
 {

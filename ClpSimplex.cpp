@@ -20,6 +20,7 @@
 #include "ClpNonLinearCost.hpp"
 #include "ClpMessage.hpp"
 #include "ClpLinearObjective.hpp"
+#include "ClpHelperFunctions.hpp"
 #include <cfloat>
 
 #include <string>
@@ -105,6 +106,7 @@ ClpSimplex::ClpSimplex () :
   progressFlag_(0),
   firstFree_(-1),
   numberExtraRows_(0),
+  maximumBasic_(0),
   incomingInfeasibility_(1.0),
   allowedInfeasibility_(10.0),
   progress_(NULL)
@@ -209,6 +211,7 @@ ClpSimplex::ClpSimplex ( const ClpModel * rhs,
   progressFlag_(0),
   firstFree_(-1),
   numberExtraRows_(0),
+  maximumBasic_(0),
   incomingInfeasibility_(1.0),
   allowedInfeasibility_(10.0),
   progress_(NULL)
@@ -379,7 +382,9 @@ ClpSimplex::computePrimals ( const double * rowActivities,
   if (rowActivities!=rowActivityWork_)
     ClpDisjointCopyN(rowActivities,numberRows_,rowActivityWork_);
   double * array = arrayVector.denseVector();
-  if (!matrix_->effectiveRhs(this)) {
+  int * index = arrayVector.getIndices();
+  int number=0;
+  if (!matrix_->effectiveRhs(this,false,true)) {
     // Use whole matrix every time to make it easier for ClpMatrixBase
     // So zero out basic
     for (iRow=0;iRow<numberRows_;iRow++) {
@@ -389,19 +394,22 @@ ClpSimplex::computePrimals ( const double * rowActivities,
     // Extended solution before "update"
     matrix_->primalExpanded(this,0);
     times(-1.0,columnActivityWork_,array);
+    for (iRow=0;iRow<numberRows_;iRow++) {
+      double value = array[iRow] + rowActivityWork_[iRow];
+      if (value) {
+	array[iRow]=value;
+	index[number++]=iRow;
+      } else {
+	array[iRow]=0.0;
+      }
+    }
   } else {
     // we have an effective rhs lying around
     CoinCopyN(matrix_->effectiveRhs(this),numberRows_,array);
-  }
-  int * index = arrayVector.getIndices();
-  int number=0;
-  for (iRow=0;iRow<numberRows_;iRow++) {
-    double value = array[iRow] + rowActivityWork_[iRow];
-    if (value) {
-      array[iRow]=value;
-      index[number++]=iRow;
-    } else {
-      array[iRow]=0.0;
+    for (iRow=0;iRow<numberRows_;iRow++) {
+      double value = array[iRow];
+      if (value) 
+	index[number++]=iRow;
     }
   }
   arrayVector.setNumElements(number);
@@ -413,8 +421,6 @@ ClpSimplex::computePrimals ( const double * rowActivities,
   CoinIndexedVector * thisVector = &arrayVector;
   CoinIndexedVector * lastVector = &previousVector;
   factorization_->updateColumn(workSpace,thisVector);
-  // Extended solution after "update"
-  matrix_->primalExpanded(this,1);
   bool goodSolution=true;
   for (iRefine=0;iRefine<numberRefinements_+1;iRefine++) {
 
@@ -422,12 +428,21 @@ ClpSimplex::computePrimals ( const double * rowActivities,
     int * indexIn = thisVector->getIndices();
     double * arrayIn = thisVector->denseVector();
     // put solution in correct place
-    int j;
-    for (j=0;j<numberIn;j++) {
-      iRow = indexIn[j];
-      int iPivot=pivotVariable_[iRow];
-      solution_[iPivot] = arrayIn[iRow];
+    if (!matrix_->effectiveRhs(this)) {
+      int j;
+      for (j=0;j<numberIn;j++) {
+	iRow = indexIn[j];
+	int iPivot=pivotVariable_[iRow];
+	solution_[iPivot] = arrayIn[iRow];
+      }
+    } else {
+      for (iRow=0;iRow<numberRows_;iRow++) {
+	int iPivot=pivotVariable_[iRow];
+	solution_[iPivot] = arrayIn[iRow];
+      }
     }
+    // Extended solution after "update"
+    matrix_->primalExpanded(this,1);
     // check Ax == b  (for all)
     times(-1.0,columnActivityWork_,work);
     largestPrimalError_=0.0;
@@ -657,7 +672,8 @@ ClpSimplex::computeDuals(double * givenDjs)
   ClpDisjointCopyN(objectiveWork_,numberColumns_,reducedCostWork_);
   transposeTimes(-1.0,dual_,reducedCostWork_);
   // Extended duals and check dual infeasibility
-  matrix_->dualExpanded(this,NULL,NULL,2);
+  if (!matrix_->skipDualCheck()||algorithm_<0||problemStatus_!=-2) 
+    matrix_->dualExpanded(this,NULL,NULL,2);
   // If necessary - override results
   if (givenDjs) {
     // restore accurate duals
@@ -926,7 +942,7 @@ int ClpSimplex::internalFactorize ( int solveType)
 	  switch(getColumnStatus(iColumn)) {
 	    
 	  case basic:
-	    if (numberBasic==numberRows_) {
+	    if (numberBasic==maximumBasic_) {
 	      // take out of basis
 	      if (columnLowerWork_[iColumn]>-largeValue_) {
 		if (columnActivityWork_[iColumn]-columnLowerWork_[iColumn]<
@@ -1157,8 +1173,9 @@ int ClpSimplex::internalFactorize ( int solveType)
 int 
 ClpSimplex::housekeeping(double objectiveChange)
 {
-  // save value of incoming
+  // save value of incoming and outgoing
   double oldIn = solution_[sequenceIn_];
+  double oldOut = solution_[sequenceOut_];
   numberIterations_++;
   changeMade_++; // something has happened
   // incoming variable
@@ -1211,15 +1228,9 @@ ClpSimplex::housekeeping(double objectiveChange)
       setStatus(sequenceIn_, atUpperBound);
     }
   }
-  if (matrix_->effectiveRhs(this)) {
-    // update effective rhs
-    if (sequenceIn_==sequenceOut_) {
-      matrix_->add(this,matrix_->effectiveRhs(this),sequenceIn_,solution_[sequenceIn_]-oldIn);
-    } else {
-      matrix_->add(this,matrix_->effectiveRhs(this),sequenceIn_,-oldIn);
-      matrix_->add(this,matrix_->effectiveRhs(this),sequenceOut_,solution_[sequenceOut_]);
-    }
-  }
+  
+  // Update hidden stuff e.g. effective RHS and gub
+  matrix_->updatePivot(this,oldIn,oldOut);
   objectiveValue_ += objectiveChange;
   handler_->message(CLP_SIMPLEX_HOUSE2,messages_)
     <<numberIterations_<<objectiveValue()
@@ -1359,6 +1370,7 @@ ClpSimplex::ClpSimplex(const ClpSimplex &rhs) :
   progressFlag_(0),
   firstFree_(-1),
   numberExtraRows_(0),
+  maximumBasic_(0),
   incomingInfeasibility_(1.0),
   allowedInfeasibility_(10.0),
   progress_(NULL)
@@ -1457,6 +1469,7 @@ ClpSimplex::ClpSimplex(const ClpModel &rhs) :
   progressFlag_(0),
   firstFree_(-1),
   numberExtraRows_(0),
+  maximumBasic_(0),
   incomingInfeasibility_(1.0),
   allowedInfeasibility_(10.0),
   progress_(NULL)
@@ -1496,6 +1509,7 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
   assert (numberRows_==rhs.numberRows_);
   assert (numberColumns_==rhs.numberColumns_);
   numberExtraRows_ = rhs.numberExtraRows_;
+  maximumBasic_ = rhs.maximumBasic_;
   int numberRows2 = numberRows_+numberExtraRows_;
   lower_ = ClpCopyOfArray(rhs.lower_,numberColumns_+numberRows2);
   rowLowerWork_ = lower_+numberColumns_;
@@ -1757,11 +1771,12 @@ ClpSimplex::checkPrimalSolution(const double * rowActivities,
     }
   } else {
     // as we are using effective rhs we only check basics
+    // But we do need to get objective
+    objectiveValue_ += innerProduct(objectiveWork_,numberColumns_,solution);
     for (int j=0;j<numberRows_;j++) {
       int iColumn = pivotVariable_[j];
       //assert (fabs(solution[iColumn])<1.0e15||getColumnStatus(iColumn) == basic);
       double infeasibility=0.0;
-      objectiveValue_ += objectiveWork_[iColumn]*solution[iColumn];
       if (solution[iColumn]>columnUpperWork_[iColumn]) {
 	infeasibility=solution[iColumn]-columnUpperWork_[iColumn];
       } else if (solution[iColumn]<columnLowerWork_[iColumn]) {
@@ -1817,6 +1832,7 @@ ClpSimplex::checkDualSolution()
 
   // Check any djs from dynamic rows
   matrix_->dualExpanded(this,NULL,NULL,3);
+  numberDualInfeasibilitiesWithoutFree_= numberDualInfeasibilities_;
   for (iColumn=0;iColumn<numberColumns_;iColumn++) {
     if (getColumnStatus(iColumn) != basic&&!flagged(iColumn)) {
       // not basic
@@ -1971,6 +1987,19 @@ ClpSimplex::checkDualSolution()
     firstFree_=firstFreePrimal;
   }
 }
+/* Adds multiple of a column into an array */
+void 
+ClpSimplex::add(double * array,
+		int sequence, double multiplier) const
+{
+  if (sequence>=numberColumns_&&sequence<numberColumns_+numberRows_) {
+    //slack
+    array [sequence-numberColumns_] -= multiplier;
+  } else {
+    // column
+    matrix_->add(this,array,sequence,multiplier);
+  }
+}
 /*
   Unpacks one column of the matrix into indexed array 
 */
@@ -1978,7 +2007,7 @@ void
 ClpSimplex::unpack(CoinIndexedVector * rowArray) const
 {
   rowArray->clear();
-  if (sequenceIn_>=numberColumns_) {
+  if (sequenceIn_>=numberColumns_&&sequenceIn_<numberColumns_+numberRows_) {
     //slack
     rowArray->insert(sequenceIn_-numberColumns_,-1.0);
   } else {
@@ -1990,7 +2019,7 @@ void
 ClpSimplex::unpack(CoinIndexedVector * rowArray,int sequence) const
 {
   rowArray->clear();
-  if (sequence>=numberColumns_) {
+  if (sequence>=numberColumns_&&sequence<numberColumns_+numberRows_) {
     //slack
     rowArray->insert(sequence-numberColumns_,-1.0);
   } else {
@@ -2005,7 +2034,7 @@ void
 ClpSimplex::unpackPacked(CoinIndexedVector * rowArray) 
 {
   rowArray->clear();
-  if (sequenceIn_>=numberColumns_) {
+  if (sequenceIn_>=numberColumns_&&sequenceIn_<numberColumns_+numberRows_) {
     //slack
     int * index = rowArray->getIndices();
     double * array = rowArray->denseVector();
@@ -2022,7 +2051,7 @@ void
 ClpSimplex::unpackPacked(CoinIndexedVector * rowArray,int sequence)
 {
   rowArray->clear();
-  if (sequence>=numberColumns_) {
+  if (sequence>=numberColumns_&&sequence<numberColumns_+numberRows_) {
     //slack
     int * index = rowArray->getIndices();
     double * array = rowArray->denseVector();
@@ -2049,7 +2078,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy)
     else
       factorization_->messageLevel(3);
   }
-  numberExtraRows_ = matrix_->extendUpdated(NULL,NULL,NULL,NULL);
+  numberExtraRows_ = matrix_->generalExpanded(this,2,maximumBasic_);
   if (numberExtraRows_) {
     // make sure status array large enough
     assert (status_);
@@ -4938,6 +4967,7 @@ ClpSimplexProgress::looping()
 	  startCheck();
 	} else {
 	  printf("-1 sequence\n");
+	  assert (iSequence>=0);
 	}
 	// reset
 	numberBadTimes_=2;

@@ -72,7 +72,7 @@ public:
   virtual CoinBigIndex fillBasis(ClpSimplex * model,
 				 const int * whichColumn, 
 				 int numberRowBasic,
-				 int numberColumnBasic,
+				 int & numberColumnBasic,
 				 int * row, int * column,
 				 double * element)  = 0;
   /** Creates scales for column copy (rowCopy in model may be modified)
@@ -133,14 +133,15 @@ public:
   virtual void partialPricing(ClpSimplex * model, int start, int end,
 			      int & bestSequence, int & numberWanted);
   /** expands an updated column to allow for extra rows which the main
-      solver does not know about and returns number added.  If the arrays are NULL 
-      then returns number of extra entries needed.
+      solver does not know about and returns number added. 
       
       This will normally be a no-op - it is in for GUB but may get extended to
-      general non-overlapping and embedded networks
+      general non-overlapping and embedded networks.
+      
+      mode 0 - extend
+      mode 1 - delete etc
   */
-  virtual int extendUpdated(CoinIndexedVector * update, double * lower,
-			    double * solution, double * upper);
+  virtual int extendUpdated(ClpSimplex * model,CoinIndexedVector * update,int mode);
   /**
      utility primal function for dealing with dynamic constraints
      mode=n see ClpGubMatrix.hpp for definition
@@ -160,6 +161,10 @@ public:
       Remember to update here and cpp files when settled down
   */
   virtual int generalExpanded(ClpSimplex * model,int mode,int & number);
+  /** 
+     update information for a pivot (and effective rhs)
+  */
+  virtual int updatePivot(ClpSimplex * model,double oldInValue, double oldOutValue);
   //@}
   
   //---------------------------------------------------------------------------
@@ -231,7 +236,8 @@ public:
   /** Returns effective RHS if it is being used.  This is used for long problems
       or big gub or anywhere where going through full columns is
       expensive.  This may re-compute */
-  double * effectiveRhs(ClpSimplex * model,bool forceRefresh=false);
+  virtual double * effectiveRhs(ClpSimplex * model,bool forceRefresh=false,
+				bool check=false);
   /// If effectiveRhs used this is iteration last refreshed
   inline int lastRefresh() const
   { return lastRefresh_;};

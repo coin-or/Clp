@@ -77,7 +77,7 @@ public:
   virtual CoinBigIndex fillBasis(ClpSimplex * model,
 				 const int * whichColumn, 
 				 int numberRowBasic,
-				 int numberColumnBasic,
+				 int & numberColumnBasic,
 				 int * row, int * column,
 				 double * element)  ;
   /** Creates scales for column copy (rowCopy in model may be modified)
@@ -175,7 +175,9 @@ public:
 				    const CoinIndexedVector * x,
 				    const CoinIndexedVector * y,
 				    CoinIndexedVector * z) const;
-  //@}
+  /// Sets up an effective RHS
+  void useEffectiveRhs(ClpSimplex * model);
+//@}
 
   /**@name Other */
    //@{

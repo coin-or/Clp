@@ -143,7 +143,7 @@ ClpFactorization::factorize ( ClpSimplex * model,
 	  matrix->generalExpanded(model,0,numberBasic);
 	}
       }
-      assert (numberBasic<=numberRows);
+      assert (numberBasic<=model->maximumBasic());
       // see if matrix a network
       ClpNetworkMatrix* networkMatrix =
 	dynamic_cast< ClpNetworkMatrix*>(model->clpMatrix());
@@ -162,15 +162,17 @@ ClpFactorization::factorize ( ClpSimplex * model,
 	// compute how much in basis
 
 	int i;
+	// can change for gub
+	int numberColumnBasic = numberBasic-numberRowBasic;
 
 	numberElements +=matrix->fillBasis(model,
 					   pivotTemp+numberRowBasic, 
 					   numberRowBasic,
-					   numberBasic-numberRowBasic,
+					   numberColumnBasic,
 					   NULL,NULL,NULL);
 
 	numberElements = 3 * numberBasic + 3 * numberElements + 10000;
-	getAreas ( numberRows, numberBasic, numberElements,
+	getAreas ( numberRows, numberRowBasic+numberColumnBasic, numberElements,
 		   2 * numberElements );
 	//fill
 	//copy
@@ -181,13 +183,17 @@ ClpFactorization::factorize ( ClpSimplex * model,
 	  indexColumnU_[i]=i;
 	  elementU_[i]=slackValue_;
 	}
+	// can change for gub so redo
+	numberColumnBasic = numberBasic-numberRowBasic;
 	numberElements +=matrix->fillBasis(model, 
 					   pivotTemp+numberRowBasic, 
 					   numberRowBasic, 
-					   numberBasic-numberRowBasic,
+					   numberColumnBasic,
 					   indexRowU_+numberElements, 
 					   indexColumnU_+numberElements,
 					   elementU_+numberElements);
+	// recompute number basic
+        numberBasic = numberRowBasic+numberColumnBasic;
 	lengthU_ = numberElements;
 
 	preProcess ( 0 );

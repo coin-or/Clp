@@ -822,7 +822,7 @@ CoinBigIndex
 ClpPackedMatrix::fillBasis(ClpSimplex * model,
 			   const int * whichColumn, 
 			   int numberBasic,
-			   int numberColumnBasic,
+			   int & numberColumnBasic,
 			   int * indexRowU, int * indexColumnU,
 			   double * elementU)
 {
@@ -1805,5 +1805,13 @@ ClpPackedMatrix::partialPricing(ClpSimplex * model, int start, int end,
     }
   }
 }
-
+// Sets up an effective RHS 
+void 
+ClpPackedMatrix::useEffectiveRhs(ClpSimplex * model)
+{
+  delete [] effectiveRhs_;
+  int numberRows = model->numberRows();
+  effectiveRhs_ = new double[numberRows];
+  effectiveRhs(model,true);
+}
 

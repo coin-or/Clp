@@ -58,7 +58,7 @@ public:
   virtual CoinBigIndex fillBasis(ClpSimplex * model,
 				 const int * whichColumn, 
 				 int numberRowBasic,
-				 int numberColumnBasic,
+				 int & numberColumnBasic,
 				 int * row, int * column,
 				 double * element)  ;
   /** Given positive integer weights for each row fills in sum of weights

@@ -6,6 +6,7 @@
 #include <iostream>
 
 #include "CoinIndexedVector.hpp"
+#include "CoinHelperFunctions.hpp"
 #include "ClpMatrixBase.hpp"
 #include "ClpSimplex.hpp"
 
@@ -172,8 +173,7 @@ ClpMatrixBase::partialPricing(ClpSimplex * model, int start, int end,
    This will normally be a no-op - it is in for GUB!
 */
 int 
-ClpMatrixBase::extendUpdated(CoinIndexedVector * update, double * lower,
-			     double * solution, double * upper)
+ClpMatrixBase::extendUpdated(ClpSimplex * model,CoinIndexedVector * update,int mode)
 {
   return 0;
 }
@@ -205,21 +205,38 @@ ClpMatrixBase::dualExpanded(ClpSimplex * model,
 int
 ClpMatrixBase::generalExpanded(ClpSimplex * model,int mode, int &number)
 {
-  if (mode)
-    return 0;
-  // Fill pivotVariable_ with basics
+  int returnCode=0;
   int numberColumns = model->numberColumns();
-  int i;
-  int numberBasic=number;
-  // Use different array so can build from true pivotVariable_
-  //int * pivotVariable = model->pivotVariable();
-  int * pivotVariable = model->rowArray(0)->getIndices();
-  for (i=0;i<numberColumns;i++) {
-    if (model->getColumnStatus(i) == ClpSimplex::basic) 
-      pivotVariable[numberBasic++]=i;
+  switch (mode) {
+    // Fill in pivotVariable but not for key variables
+  case 0:
+    {
+      int i;
+      int numberBasic=number;
+      // Use different array so can build from true pivotVariable_
+      //int * pivotVariable = model->pivotVariable();
+      int * pivotVariable = model->rowArray(0)->getIndices();
+      for (i=0;i<numberColumns;i++) {
+	if (model->getColumnStatus(i) == ClpSimplex::basic) 
+	  pivotVariable[numberBasic++]=i;
+      }
+      number = numberBasic;
+    }
+    break;
+    // Make all key variables basic
+  case 1:
+    {
+    }
+    break;
+    // Do initial extra rows + maximum basic
+  case 2:
+    {
+      returnCode= 0;
+      number = model->numberRows();
+    }
+    break;
   }
-  number = numberBasic;
-  return 0;
+  return returnCode;
 }
 // Sets up an effective RHS
 void 
@@ -232,8 +249,91 @@ ClpMatrixBase::useEffectiveRhs(ClpSimplex * model)
    or big gub or anywhere where going through full columns is
    expensive.  This may re-compute */
 double * 
-ClpMatrixBase::effectiveRhs(ClpSimplex * model,bool forceRefresh)
+ClpMatrixBase::effectiveRhs(ClpSimplex * model,bool forceRefresh,bool check)
 {
-  return NULL;
+  if (effectiveRhs_) {
+#ifdef CLP_DEBUG
+    if (check) {
+      // no need - but check anyway
+      // zero out basic
+      int numberRows = model->numberRows();
+      int numberColumns = model->numberColumns();
+      double * solution = new double [numberColumns];
+      double * rhs = new double[numberRows];
+      const double * solutionSlack = model->solutionRegion(0);
+      CoinMemcpyN(model->solutionRegion(),numberColumns,solution);
+      int iRow;
+      for (iRow=0;iRow<numberRows;iRow++) {
+	if (model->getRowStatus(iRow)!=ClpSimplex::basic)
+	  rhs[iRow]=solutionSlack[iRow];
+	else
+	  rhs[iRow]=0.0;
+      }
+      for (int iColumn=0;iColumn<numberColumns;iColumn++) {
+	if (model->getColumnStatus(iColumn)==ClpSimplex::basic)
+	  solution[iColumn]=0.0;
+      }
+      times(-1.0,solution,rhs);
+      delete [] solution;
+      for (iRow=0;iRow<numberRows;iRow++) {
+	if (fabs(rhs[iRow]-effectiveRhs_[iRow])>1.0e-3)
+	  printf("** bad effective %d - true %g old %g\n",iRow,rhs[iRow],effectiveRhs_[iRow]);
+      }
+    }
+#endif
+    if (forceRefresh||(refreshFrequency_&&model->numberIterations()>=
+		       lastRefresh_+refreshFrequency_)) {
+      // zero out basic
+      int numberRows = model->numberRows();
+      int numberColumns = model->numberColumns();
+      double * solution = new double [numberColumns];
+      const double * solutionSlack = model->solutionRegion(0);
+      CoinMemcpyN(model->solutionRegion(),numberColumns,solution);
+      for (int iRow=0;iRow<numberRows;iRow++) {
+	if (model->getRowStatus(iRow)!=ClpSimplex::basic)
+	  effectiveRhs_[iRow]=solutionSlack[iRow];
+	else
+	  effectiveRhs_[iRow]=0.0;
+      }
+      for (int iColumn=0;iColumn<numberColumns;iColumn++) {
+	if (model->getColumnStatus(iColumn)==ClpSimplex::basic)
+	  solution[iColumn]=0.0;
+      }
+      times(-1.0,solution,effectiveRhs_);
+      delete [] solution;
+      lastRefresh_ = model->numberIterations();
+    }
+  }
+  return effectiveRhs_;
+}
+/* 
+   update information for a pivot (and effective rhs)
+*/
+int 
+ClpMatrixBase::updatePivot(ClpSimplex * model,double oldInValue, double oldOutValue)
+{
+  if (effectiveRhs_) {
+    // update effective rhs
+    int sequenceIn = model->sequenceIn();
+    int sequenceOut = model->sequenceOut();
+    double * solution = model->solutionRegion();
+    int numberColumns = model->numberColumns();
+    if (sequenceIn==sequenceOut) {
+      if (sequenceIn<numberColumns)
+	add(model,effectiveRhs_,sequenceIn,oldInValue-solution[sequenceIn]);
+      else
+	effectiveRhs_[sequenceIn-numberColumns] -= oldInValue-solution[sequenceIn];
+    } else {
+      if (sequenceIn<numberColumns)
+	add(model,effectiveRhs_,sequenceIn,oldInValue);
+      else
+	effectiveRhs_[sequenceIn-numberColumns] -= oldInValue;
+      if (sequenceOut<numberColumns)
+	add(model,effectiveRhs_,sequenceOut,-solution[sequenceOut]);
+      else
+	effectiveRhs_[sequenceOut-numberColumns] -= -solution[sequenceOut];
+    }
+  }
+  return 0;
 }
 

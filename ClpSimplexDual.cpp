@@ -3023,8 +3023,9 @@ ClpSimplexDual::perturb()
       printf(" - Would not perturb\n");
     else
       printf(" - Would perturb\n");
-    exit(0);
+    //exit(0);
 #endif
+    //number=0;
     if (number*4>numberColumns_) {
       perturbation_=100;
       return; // good enough

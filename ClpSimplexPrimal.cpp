@@ -1984,6 +1984,8 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
     // save reduced cost
     double saveDj = dualIn_;
     factorization_->updateColumnFT(rowArray_[2],rowArray_[1]);
+    // Get extra rows
+    matrix_->extendUpdated(this,rowArray_[1],0);
     // do ratio test and re-compute dj
     primalRow(rowArray_[1],rowArray_[3],rowArray_[2],rowArray_[0],
 	      ifValuesPass);
@@ -2014,6 +2016,12 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	}
       }
     }
+    // need to clear toIndex_ in gub
+    // ? when can I clear stuff
+    // Clean up any gub stuff
+    int updateType=matrix_->extendUpdated(this,rowArray_[1],1);
+    if (pivotRow_>=numberRows_)
+      printf("** danger - key out %d in %d theta %g\n",sequenceOut_,sequenceIn_,theta_);
     double checkValue=1.0e-2;
     if (largestDualError_>1.0e-5)
       checkValue=1.0e-1;
@@ -2099,9 +2107,21 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	}
       }
       // if stable replace in basis
-      int updateStatus = factorization_->replaceColumn(rowArray_[2],
-						       pivotRow_,
-						       alpha_);
+      int updateStatus = 0;
+      // If gub or odd then alpha and pivotRow may change
+      //printf("Update type before %d\n",updateType);
+      if (updateType>=0) {
+	if (updateType>0)
+	  matrix_->generalExpanded(this,3,updateType);
+	if (updateType>=0)
+	updateStatus = factorization_->replaceColumn(rowArray_[2],
+						     pivotRow_,
+						     alpha_);
+      } 
+      if (updateType)
+	updateStatus = matrix_->generalExpanded(this,4,updateStatus);
+      //printf("Update type after %d - status %d\n",updateType,updateStatus);
+
       // if no pivots, bad update but reasonable alpha - take and invert
       if (updateStatus==2&&
 	  lastGoodIteration_==numberIterations_&&fabs(alpha_)>1.0e-5)
@@ -2408,6 +2428,8 @@ ClpSimplexPrimal::nextSuperBasic(int superBasicType,CoinIndexedVector * columnAr
 void
 ClpSimplexPrimal::clearAll()
 {
+  // Clean up any gub stuff
+  matrix_->extendUpdated(this,rowArray_[1],1);
   int number=rowArray_[1]->getNumElements();
   int * which=rowArray_[1]->getIndices();
   

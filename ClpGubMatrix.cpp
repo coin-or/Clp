@@ -11,10 +11,11 @@
 #include "ClpSimplex.hpp"
 #include "ClpFactorization.hpp"
 #include "ClpQuadraticObjective.hpp"
+#include "ClpNonLinearCost.hpp"
 // at end to get min/max!
 #include "ClpGubMatrix.hpp"
 #include "ClpMessage.hpp"
-
+#define CLP_DEBUG
 //#############################################################################
 // Constructors / Destructor / Assignment
 //#############################################################################
@@ -36,9 +37,14 @@ ClpGubMatrix::ClpGubMatrix ()
     backward_(NULL),
     keyVariable_(NULL),
     next_(NULL),
+    toIndex_(NULL),
+    fromIndex_(NULL),
     numberDualInfeasibilities_(0),
     numberPrimalInfeasibilities_(0),
     numberSets_(0),
+    saveNumber_(0),
+    possiblePivotKey_(0),
+    gubSlackIn_(-1),
     firstGub_(0),
     lastGub_(0),
     gubType_(0)
@@ -53,6 +59,9 @@ ClpGubMatrix::ClpGubMatrix (const ClpGubMatrix & rhs)
 : ClpPackedMatrix(rhs)
 {  
   numberSets_ = rhs.numberSets_;
+  saveNumber_ = rhs.saveNumber_;
+  possiblePivotKey_ = rhs.possiblePivotKey_;
+  gubSlackIn_ = rhs.gubSlackIn_;
   start_ = ClpCopyOfArray(rhs.start_,numberSets_);
   end_ = ClpCopyOfArray(rhs.end_,numberSets_);
   lower_ = ClpCopyOfArray(rhs.lower_,numberSets_);
@@ -62,6 +71,8 @@ ClpGubMatrix::ClpGubMatrix (const ClpGubMatrix & rhs)
   backward_ = ClpCopyOfArray(rhs.backward_,numberColumns);
   keyVariable_ = ClpCopyOfArray(rhs.keyVariable_,numberSets_);
   next_ = ClpCopyOfArray(rhs.next_,numberColumns+numberSets_);
+  toIndex_ = ClpCopyOfArray(rhs.toIndex_,numberSets_);
+  fromIndex_ = ClpCopyOfArray(rhs.fromIndex_,getNumRows());
   sumDualInfeasibilities_ = rhs. sumDualInfeasibilities_;
   sumPrimalInfeasibilities_ = rhs.sumPrimalInfeasibilities_;
   sumOfRelaxedDualInfeasibilities_ = rhs.sumOfRelaxedDualInfeasibilities_;
@@ -90,9 +101,14 @@ ClpGubMatrix::ClpGubMatrix (CoinPackedMatrix * rhs)
     backward_(NULL),
     keyVariable_(NULL),
     next_(NULL),
+    toIndex_(NULL),
+    fromIndex_(NULL),
     numberDualInfeasibilities_(0),
     numberPrimalInfeasibilities_(0),
     numberSets_(0),
+    saveNumber_(0),
+    possiblePivotKey_(0),
+    gubSlackIn_(-1),
     firstGub_(0),
     lastGub_(0),
     gubType_(0)
@@ -112,7 +128,10 @@ ClpGubMatrix::ClpGubMatrix(ClpPackedMatrix * matrix, int numberSets,
     sumOfRelaxedDualInfeasibilities_(0.0),
     sumOfRelaxedPrimalInfeasibilities_(0.0),
     numberDualInfeasibilities_(0),
-    numberPrimalInfeasibilities_(0)
+    numberPrimalInfeasibilities_(0),
+    saveNumber_(0),
+    possiblePivotKey_(0),
+    gubSlackIn_(-1)
 {
   numberSets_ = numberSets;
   start_ = ClpCopyOfArray(start,numberSets_);
@@ -155,9 +174,13 @@ ClpGubMatrix::ClpGubMatrix(ClpPackedMatrix * matrix, int numberSets,
     }
   }
   gubType_=0;
+  // adjust lastGub_
+  if (lastGub_>0)
+    lastGub_++;
   for (i=firstGub_;i<lastGub_;i++) {
     if (backward_[i]<0) {
       gubType_=1;
+      printf("interior non gub %d\n",i);
       break;
     }
   }
@@ -165,6 +188,7 @@ ClpGubMatrix::ClpGubMatrix(ClpPackedMatrix * matrix, int numberSets,
     status_ = ClpCopyOfArray(status,numberSets_);
   } else {
     status_= new unsigned char [numberSets_];
+    memset(status_,0,numberSets_);
     int i;
     for (i=0;i<numberSets_;i++) {
       // make slack key
@@ -187,9 +211,14 @@ ClpGubMatrix::ClpGubMatrix (const CoinPackedMatrix & rhs)
     backward_(NULL),
     keyVariable_(NULL),
     next_(NULL),
+    toIndex_(NULL),
+    fromIndex_(NULL),
     numberDualInfeasibilities_(0),
     numberPrimalInfeasibilities_(0),
     numberSets_(0),
+    saveNumber_(0),
+    possiblePivotKey_(0),
+    gubSlackIn_(-1),
     firstGub_(0),
     lastGub_(0),
     gubType_(0)
@@ -211,6 +240,8 @@ ClpGubMatrix::~ClpGubMatrix ()
   delete [] backward_;
   delete [] keyVariable_;
   delete [] next_;
+  delete [] toIndex_;
+  delete [] fromIndex_;
 }
 
 //----------------------------------------------------------------
@@ -229,6 +260,12 @@ ClpGubMatrix::operator=(const ClpGubMatrix& rhs)
     delete [] backward_;
     delete [] keyVariable_;
     delete [] next_;
+    delete [] toIndex_;
+    delete [] fromIndex_;
+    numberSets_ = rhs.numberSets_;
+    saveNumber_ = rhs.saveNumber_;
+    possiblePivotKey_ = rhs.possiblePivotKey_;
+    gubSlackIn_ = rhs.gubSlackIn_;
     start_ = ClpCopyOfArray(rhs.start_,numberSets_);
     end_ = ClpCopyOfArray(rhs.end_,numberSets_);
     lower_ = ClpCopyOfArray(rhs.lower_,numberSets_);
@@ -238,6 +275,8 @@ ClpGubMatrix::operator=(const ClpGubMatrix& rhs)
     backward_ = ClpCopyOfArray(rhs.backward_,numberColumns);
     keyVariable_ = ClpCopyOfArray(rhs.keyVariable_,numberSets_);
     next_ = ClpCopyOfArray(rhs.next_,numberColumns+numberSets_);
+    toIndex_ = ClpCopyOfArray(rhs.toIndex_,numberSets_);
+    fromIndex_ = ClpCopyOfArray(rhs.fromIndex_,getNumRows());
     sumDualInfeasibilities_ = rhs. sumDualInfeasibilities_;
     sumPrimalInfeasibilities_ = rhs.sumPrimalInfeasibilities_;
     sumOfRelaxedDualInfeasibilities_ = rhs.sumOfRelaxedDualInfeasibilities_;
@@ -334,6 +373,8 @@ ClpGubMatrix::ClpGubMatrix (
       lastGub_ = max(lastGub_,i);
     }
   }
+  if (lastGub_>0)
+    lastGub_++;
   gubType_=0;
   for (i=firstGub_;i<lastGub_;i++) {
     if (backward_[i]<0) {
@@ -360,28 +401,20 @@ ClpGubMatrix::ClpGubMatrix (
     backward_(NULL),
     keyVariable_(NULL),
     next_(NULL),
+    toIndex_(NULL),
+    fromIndex_(NULL),
     numberDualInfeasibilities_(0),
     numberPrimalInfeasibilities_(0),
     numberSets_(0),
+    saveNumber_(0),
+    possiblePivotKey_(0),
+    gubSlackIn_(-1),
     firstGub_(0),
     lastGub_(0),
     gubType_(0)
 {
   setType(11);
 }
-#if 0
-/* Returns a new matrix in reverse order without gaps */
-ClpPackedMatrix * 
-ClpGubMatrix::reverseOrderedCopy() const
-{
-  ClpPackedMatrix * copy = new ClpPackedMatrix();
-  copy->matrix_= new CoinPackedMatrix();
-  copy->matrix_->reverseOrderedCopyOf(*matrix_);
-  copy->matrix_->removeGaps();
-  // Row copy does not need stuff???
-  return new ClpGubMatrix(copy,numberSets_,NULL,NULL,NULL,NULL);
-}
-#endif
 /* Return <code>x * A + y</code> in <code>z</code>. 
 	Squashes small elements and knows about ClpSimplex */
 void 
@@ -431,7 +464,7 @@ CoinBigIndex
 ClpGubMatrix::fillBasis(ClpSimplex * model,
 			   const int * whichColumn, 
 			   int numberBasic,
-			   int numberColumnBasic,
+			   int & numberColumnBasic,
 			   int * indexRowU, int * indexColumnU,
 			   double * elementU) 
 {
@@ -439,67 +472,8 @@ ClpGubMatrix::fillBasis(ClpSimplex * model,
   int numberColumns = getNumCols();
   const int * columnLength = matrix_->getVectorLengths(); 
   int numberRows = getNumRows();
+  int saveNumberBasic=numberBasic;
   assert (next_ ||!elementU) ;
-  if (!next_ ) {
-    // do ordering
-    assert (!effectiveRhs_);
-    // create and do gub crash
-    useEffectiveRhs(model,false);
-    next_ = new int[numberColumns+numberSets_];
-    char * mark = new char[numberColumns];
-    memset(mark,0,numberColumns);
-    for (int iColumn=0;iColumn<numberColumns;iColumn++) 
-      next_[iColumn]=INT_MAX;
-    for (i=0;i<numberColumnBasic;i++) 
-      mark[whichColumn[i]]=1;
-    for (i=0;i<numberSets_;i++) {
-      if (getStatus(i)!=ClpSimplex::basic) {
-	// slack not key - choose one with smallest length
-	int j;
-	int smallest=numberRows+1;
-	int key=-1;
-	for (j=start_[i];j<end_[i];j++) {
-	  if (mark[j]&&columnLength[j]<smallest) {
-	    key=j;
-	    smallest=columnLength[j];
-	  }
-	}
-	if (key>=0) {
-	  keyVariable_[i]=key;
-	  int lastMarker = -(key+1);
-	  next_[key]=lastMarker;
-	  int last = key;
-	  int j;
-	  for (j=start_[i];j<end_[i];j++) {
-	    if (mark[i]&&j!=key) {
-	      next_[last]=j;
-	      next_[j]=lastMarker;
-	    }
-	  }
-	} else {
-	  // nothing basic - make slack key
-	  //((ClpGubMatrix *)this)->setStatus(i,ClpSimplex::basic);
-	  // fudge to avoid const problem
-	  status_[i]=1;
-	}
-      }
-      if (getStatus(i)==ClpSimplex::basic) {
-	// slack key
-	keyVariable_[i]=numberColumns+i;
-	int lastMarker = -(i+numberColumns+1);
-	next_[numberColumns+i]=lastMarker;
-	int last = numberColumns+i;
-	int j;
-	for (j=start_[i];j<end_[i];j++) {
-	  if (mark[j]) {
-	    next_[last]=j;
-	    next_[j]=lastMarker;
-	  }
-	}
-      }
-    }
-    delete [] mark;
-  }
   CoinBigIndex numberElements=0;
   int lastSet=-1;
   int key=-1;
@@ -536,7 +510,7 @@ ClpGubMatrix::fillBasis(ClpSimplex * model,
 	  // in gub set
 	  if (iColumn!=keyVariable_[iSet]) {
 	    // not key 
-	    if (lastSet<iSet) {
+	    if (lastSet!=iSet) {
 	      // erase work
 	      if (key>=0) {
 		for (j=columnStart[key];j<columnStart[key]+keyLength;j++) {
@@ -672,9 +646,11 @@ ClpGubMatrix::fillBasis(ClpSimplex * model,
 	int length = columnLength[iColumn];
 	if (iSet<0||keyVariable_[iSet]>=numberColumns) {
 	  numberElements += length;
+	  numberBasic++;
 	} else {
 	  // in gub set
 	  if (iColumn!=keyVariable_[iSet]) {
+	    numberBasic++;
 	    CoinBigIndex j;
 	    // not key 
 	    if (lastSet<iSet) {
@@ -716,9 +692,11 @@ ClpGubMatrix::fillBasis(ClpSimplex * model,
 	int length = columnLength[iColumn];
 	if (iSet<0||keyVariable_[iSet]>=numberColumns) {
 	  numberElements += length;
+	  numberBasic++;
 	} else {
 	  // in gub set
 	  if (iColumn!=keyVariable_[iSet]) {
+	    numberBasic++;
 	    CoinBigIndex j;
 	    double scale = columnScale[iColumn];
 	    // not key 
@@ -759,6 +737,8 @@ ClpGubMatrix::fillBasis(ClpSimplex * model,
   }
   delete [] work;
   delete [] mark;
+  // update number of column basic
+  numberColumnBasic = numberBasic-saveNumberBasic;
   return numberElements;
 }
 /* Unpacks a column into an CoinIndexedvector
@@ -767,6 +747,7 @@ void
 ClpGubMatrix::unpack(const ClpSimplex * model,CoinIndexedVector * rowArray,
 		   int iColumn) const 
 {
+  assert (iColumn<model->numberColumns());
   // Do packed part
   ClpPackedMatrix::unpack(model,rowArray,iColumn);
   int iSet = backward_[iColumn];
@@ -786,16 +767,108 @@ ClpGubMatrix::unpackPacked(ClpSimplex * model,
 			    CoinIndexedVector * rowArray,
 			    int iColumn) const
 {
-  // Do packed part
-  ClpPackedMatrix::unpackPacked(model,rowArray,iColumn);
-  int iSet = backward_[iColumn];
-  if (iSet>=0) {
-    // column in order
-    abort();
-    int iBasic = keyVariable_[iSet];
-    if (iBasic <model->numberColumns()) {
-      add(model,rowArray,iBasic,-1.0);
+  int numberColumns = model->numberColumns();
+  if (iColumn<numberColumns) {
+    // Do packed part
+    ClpPackedMatrix::unpackPacked(model,rowArray,iColumn);
+    int iSet = backward_[iColumn];
+    if (iSet>=0) {
+      // columns are in order
+      int iBasic = keyVariable_[iSet];
+      if (iBasic <numberColumns) {
+	int number = rowArray->getNumElements();
+	const double * rowScale = model->rowScale();
+	const int * row = matrix_->getIndices();
+	const CoinBigIndex * columnStart = matrix_->getVectorStarts();
+	const int * columnLength = matrix_->getVectorLengths(); 
+	const double * elementByColumn = matrix_->getElements();
+	double * array = rowArray->denseVector();
+	int * index = rowArray->getIndices();
+	CoinBigIndex i;
+	assert(number);
+	int numberOld=number;
+	int lastIndex=0;
+	int next=index[lastIndex];
+	if (!rowScale) {
+	  for (i=columnStart[iBasic];
+	       i<columnStart[iBasic]+columnLength[iBasic];i++) {
+	    int iRow = row[i];
+	    while (iRow>next) {
+	      lastIndex++;
+	      if (lastIndex==numberOld)
+		next=matrix_->getNumRows();
+	      else
+		next=index[lastIndex];
+	    }
+	    if (iRow<next) {
+	      array[number]=-elementByColumn[i];
+	      index[number++]=iRow;
+	    } else {
+	      assert (iRow==next);
+	      array[lastIndex] -= elementByColumn[i];
+	      if (!array[lastIndex])
+		array[lastIndex]=1.0e-100;
+	    }
+	  }
+	} else {
+	  // apply scaling
+	  double scale = model->columnScale()[iBasic];
+	  for (i=columnStart[iBasic];
+	       i<columnStart[iBasic]+columnLength[iBasic];i++) {
+	    int iRow = row[i];
+	    while (iRow>next) {
+	      lastIndex++;
+	      if (lastIndex==numberOld)
+		next=matrix_->getNumRows();
+	      else
+		next=index[lastIndex];
+	    }
+	    if (iRow<next) {
+	      array[number]=-elementByColumn[i]*scale*rowScale[iRow];
+	      index[number++]=iRow;
+	    } else {
+	      assert (iRow==next);
+	      array[lastIndex] -=elementByColumn[i]*scale*rowScale[iRow];
+	      if (!array[lastIndex])
+		array[lastIndex]=1.0e-100;
+	    }
+	  }
+	}
+	rowArray->setNumElements(number);
+      }
     }
+  } else {
+    // key slack entering
+    int iBasic = keyVariable_[gubSlackIn_];
+    assert (iBasic <numberColumns);
+    int number = 0;
+    const double * rowScale = model->rowScale();
+    const int * row = matrix_->getIndices();
+    const CoinBigIndex * columnStart = matrix_->getVectorStarts();
+    const int * columnLength = matrix_->getVectorLengths(); 
+    const double * elementByColumn = matrix_->getElements();
+    double * array = rowArray->denseVector();
+    int * index = rowArray->getIndices();
+    CoinBigIndex i;
+    if (!rowScale) {
+      for (i=columnStart[iBasic];
+	   i<columnStart[iBasic]+columnLength[iBasic];i++) {
+	int iRow = row[i];
+	array[number]=elementByColumn[i];
+	index[number++]=iRow;
+      }
+    } else {
+      // apply scaling
+      double scale = model->columnScale()[iBasic];
+      for (i=columnStart[iBasic];
+	   i<columnStart[iBasic]+columnLength[iBasic];i++) {
+	int iRow = row[i];
+	array[number]=elementByColumn[i]*scale*rowScale[iRow];
+	index[number++]=iRow;
+      }
+    }
+    rowArray->setNumElements(number);
+    rowArray->setPacked();
   }
 }
 /* Adds multiple of a column into an CoinIndexedvector
@@ -804,10 +877,27 @@ void
 ClpGubMatrix::add(const ClpSimplex * model,CoinIndexedVector * rowArray,
 		   int iColumn, double multiplier) const 
 {
+  assert (iColumn<model->numberColumns());
   // Do packed part
   ClpPackedMatrix::add(model,rowArray,iColumn,multiplier);
-  if (numberSets_) {
-    abort();
+  int iSet = backward_[iColumn];
+  if (iSet>=0&&iColumn!=keyVariable_[iSet]) {
+    ClpPackedMatrix::add(model,rowArray,keyVariable_[iSet],-multiplier);
+  }
+}
+/* Adds multiple of a column into an array */
+void 
+ClpGubMatrix::add(const ClpSimplex * model,double * array,
+		   int iColumn, double multiplier) const 
+{
+  assert (iColumn<model->numberColumns());
+  // Do packed part
+  ClpPackedMatrix::add(model,array,iColumn,multiplier);
+  if (iColumn<model->numberColumns()) {
+    int iSet = backward_[iColumn];
+    if (iSet>=0&&iColumn!=keyVariable_[iSet]&&keyVariable_[iSet]<model->numberColumns()) {
+      ClpPackedMatrix::add(model,array,keyVariable_[iSet],-multiplier);
+    }
   }
 }
 // Partial pricing 
@@ -815,290 +905,611 @@ void
 ClpGubMatrix::partialPricing(ClpSimplex * model, int start, int end,
 			      int & bestSequence, int & numberWanted)
 {
-  if (numberSets_) 
-    assert(!gubType_);
-  // Do packed part before gub
-  ClpPackedMatrix::partialPricing(model,start,firstGub_,bestSequence,numberWanted);
-  if (numberWanted) {
-    // do gub
-    const double * element =matrix_->getElements();
-    const int * row = matrix_->getIndices();
-    const CoinBigIndex * startColumn = matrix_->getVectorStarts();
-    const int * length = matrix_->getVectorLengths();
-    const double * rowScale = model->rowScale();
-    const double * columnScale = model->columnScale();
-    int iSequence;
-    CoinBigIndex j;
-    double tolerance=model->currentDualTolerance();
-    double * reducedCost = model->djRegion();
-    const double * duals = model->dualRowSolution();
-    const double * cost = model->costRegion();
-    double bestDj;
-    int numberColumns = model->numberColumns();
-    if (bestSequence>=0)
-      bestDj = fabs(reducedCost[bestSequence]);
-    else
-      bestDj=tolerance;
-    int sequenceOut = model->sequenceOut();
-    int saveSequence = bestSequence;
-    start = max (start,firstGub_);
-    end = min(lastGub_,end);
-    int iSet = -1;
-    double djMod=0.0;
-    if (rowScale) {
-      // scaled
-      for (iSequence=start;iSequence<end;iSequence++) {
-	if (backward_[iSequence]!=iSet) {
-	  // get pi on gub row
-	  iSet = backward_[iSequence];
-	  int iBasic = keyVariable_[iSet];
-	  if (iBasic>numberColumns) {
-	    djMod = 0.0;
-	  } else {
-	    // get dj without 
-	    assert (model->getStatus(iBasic)==ClpSimplex::basic);
-	    djMod=0.0;
-	    // scaled
-	    for (j=startColumn[iBasic];
-		 j<startColumn[iBasic]+length[iBasic];j++) {
-	      int jRow=row[j];
-	      djMod -= duals[jRow]*element[j]*rowScale[jRow];
-	    }
-	    // allow for scaling
-	    djMod +=  cost[iBasic]/columnScale[iBasic];
-	  }
-	}
-	if (iSequence!=sequenceOut) {
-	  double value;
-	  ClpSimplex::Status status = model->getStatus(iSequence);
-	  
-	  switch(status) {
-	    
-	  case ClpSimplex::basic:
-	  case ClpSimplex::isFixed:
-	    break;
-	  case ClpSimplex::isFree:
-	  case ClpSimplex::superBasic:
-	    value=djMod;
-	    // scaled
-	    for (j=startColumn[iSequence];
-		 j<startColumn[iSequence]+length[iSequence];j++) {
-	      int jRow=row[j];
-	      value -= duals[jRow]*element[j]*rowScale[jRow];
-	    }
-	    value = fabs(cost[iSequence] +value*columnScale[iSequence]);
-	    if (value>FREE_ACCEPT*tolerance) {
-	      numberWanted--;
-	      // we are going to bias towards free (but only if reasonable)
-	      value *= FREE_BIAS;
-	      if (value>bestDj) {
-		// check flagged variable and correct dj
-		if (!model->flagged(iSequence)) {
-		  bestDj=value;
-		  bestSequence = iSequence;
-		} else {
-		  // just to make sure we don't exit before got something
-		  numberWanted++;
-		}
-	      }
-	    }
-	    break;
-	  case ClpSimplex::atUpperBound:
-	    value=djMod;
-	    // scaled
-	    for (j=startColumn[iSequence];
-		 j<startColumn[iSequence]+length[iSequence];j++) {
-	      int jRow=row[j];
-	      value -= duals[jRow]*element[j]*rowScale[jRow];
-	    }
-	    value = cost[iSequence] +value*columnScale[iSequence];
-	    if (value>tolerance) {
-	      numberWanted--;
-	      if (value>bestDj) {
-		// check flagged variable and correct dj
-		if (!model->flagged(iSequence)) {
-		  bestDj=value;
-		  bestSequence = iSequence;
-		} else {
-		  // just to make sure we don't exit before got something
-		  numberWanted++;
-		}
-	      }
-	    }
-	    break;
-	  case ClpSimplex::atLowerBound:
-	    value=djMod;
-	    // scaled
-	    for (j=startColumn[iSequence];
-		 j<startColumn[iSequence]+length[iSequence];j++) {
-	      int jRow=row[j];
-	      value -= duals[jRow]*element[j]*rowScale[jRow];
-	    }
-	    value = -(cost[iSequence] +value*columnScale[iSequence]);
-	    if (value>tolerance) {
-	      numberWanted--;
-	      if (value>bestDj) {
-		// check flagged variable and correct dj
-		if (!model->flagged(iSequence)) {
-		  bestDj=value;
-		  bestSequence = iSequence;
-		} else {
-		  // just to make sure we don't exit before got something
-		  numberWanted++;
-		}
-	      }
-	    }
-	    break;
-	  }
-	}
-	if (!numberWanted)
-	  break;
-      }
-      if (bestSequence!=saveSequence) {
-	// recompute dj
-	double value=0.0;
+  if (numberSets_) {
+    assert(!(gubType_&7));
+    // Do packed part before gub
+    ClpPackedMatrix::partialPricing(model,start,firstGub_,bestSequence,numberWanted);
+    if (numberWanted) {
+      // do gub
+      const double * element =matrix_->getElements();
+      const int * row = matrix_->getIndices();
+      const CoinBigIndex * startColumn = matrix_->getVectorStarts();
+      const int * length = matrix_->getVectorLengths();
+      const double * rowScale = model->rowScale();
+      const double * columnScale = model->columnScale();
+      int iSequence;
+      CoinBigIndex j;
+      double tolerance=model->currentDualTolerance();
+      double * reducedCost = model->djRegion();
+      const double * duals = model->dualRowSolution();
+      const double * cost = model->costRegion();
+      double bestDj;
+      int numberColumns = model->numberColumns();
+      int numberRows = model->numberRows();
+      if (bestSequence>=0)
+	bestDj = fabs(reducedCost[bestSequence]);
+      else
+	bestDj=tolerance;
+      int sequenceOut = model->sequenceOut();
+      int saveSequence = bestSequence;
+      int startG = max (start,firstGub_);
+      int endG = min(lastGub_,end);
+      int iSet = -1;
+      double djMod=0.0;
+      double infeasibilityCost = model->infeasibilityCost();
+      if (rowScale) {
+	double bestDjMod=0.0;
 	// scaled
-	for (j=startColumn[bestSequence];
-	     j<startColumn[bestSequence]+length[bestSequence];j++) {
-	  int jRow=row[j];
-	  value -= duals[jRow]*element[j]*rowScale[jRow];
-	}
-	reducedCost[bestSequence] = cost[bestSequence] +value*columnScale[bestSequence];
-      }
-    } else {
-      // not scaled
-      for (iSequence=start;iSequence<end;iSequence++) {
-	if (backward_[iSequence]!=iSet) {
-	  // get pi on gub row
-	  iSet = backward_[iSequence];
-	  int iBasic = keyVariable_[iSet];
-	  if (iBasic>numberColumns) {
-	    djMod = 0.0;
-	  } else {
-	    // get dj without 
-	    assert (model->getStatus(iBasic)==ClpSimplex::basic);
-	    djMod=0.0;
-	    // scaled
-	    for (j=startColumn[iBasic];
-		 j<startColumn[iBasic]+length[iBasic];j++) {
-	      int jRow=row[j];
-	      djMod -= duals[jRow]*element[j];
+	for (iSequence=startG;iSequence<endG;iSequence++) {
+	  if (backward_[iSequence]!=iSet) {
+	    // get pi on gub row
+	    iSet = backward_[iSequence];
+	    int iBasic = keyVariable_[iSet];
+	    if (iBasic>=numberColumns) {
+	      djMod = - weight(iSet)*infeasibilityCost;
+	    } else {
+	      // get dj without 
+	      assert (model->getStatus(iBasic)==ClpSimplex::basic);
+	      djMod=0.0;
+	      // scaled
+	      for (j=startColumn[iBasic];
+		   j<startColumn[iBasic]+length[iBasic];j++) {
+		int jRow=row[j];
+		djMod -= duals[jRow]*element[j]*rowScale[jRow];
+	      }
+	      // allow for scaling
+	      djMod +=  cost[iBasic]/columnScale[iBasic];
+	      // See if gub slack possible - dj is djMod
+	      if (getStatus(iSet)==ClpSimplex::atLowerBound) {
+		double value = -djMod;
+		if (value>tolerance) {
+		  numberWanted--;
+		  if (value>bestDj) {
+		    // check flagged variable and correct dj
+		    if (!flagged(iSet)) {
+		      bestDj=value;
+		      bestSequence = numberRows+numberColumns+iSet;
+		      bestDjMod = djMod;
+		    } else {
+		      // just to make sure we don't exit before got something
+		      numberWanted++;
+		      abort();
+		    }
+		  }
+		}
+	      } else if (getStatus(iSet)==ClpSimplex::atUpperBound) {
+		double value = djMod;
+		if (value>tolerance) {
+		  numberWanted--;
+		  if (value>bestDj) {
+		    // check flagged variable and correct dj
+		    if (!flagged(iSet)) {
+		      bestDj=value;
+		      bestSequence = numberRows+numberColumns+iSet;
+		      bestDjMod = djMod;
+		    } else {
+		      // just to make sure we don't exit before got something
+		      numberWanted++;
+		      abort();
+		    }
+		  }
+		}
+	      }
 	    }
-	    djMod += cost[iBasic];
 	  }
-	}
-	if (iSequence!=sequenceOut) {
-	  double value;
-	  ClpSimplex::Status status = model->getStatus(iSequence);
-	  
-	  switch(status) {
+	  if (iSequence!=sequenceOut) {
+	    double value;
+	    ClpSimplex::Status status = model->getStatus(iSequence);
 	    
-	  case ClpSimplex::basic:
-	  case ClpSimplex::isFixed:
-	    break;
-	  case ClpSimplex::isFree:
-	  case ClpSimplex::superBasic:
-	    value=cost[iSequence]-djMod;
-	    for (j=startColumn[iSequence];
-		 j<startColumn[iSequence]+length[iSequence];j++) {
-	      int jRow=row[j];
-	      value -= duals[jRow]*element[j];
-	    }
-	    value = fabs(value);
-	    if (value>FREE_ACCEPT*tolerance) {
-	      numberWanted--;
-	      // we are going to bias towards free (but only if reasonable)
-	      value *= FREE_BIAS;
-	      if (value>bestDj) {
-		// check flagged variable and correct dj
-		if (!model->flagged(iSequence)) {
-		  bestDj=value;
-		  bestSequence = iSequence;
-		} else {
-		  // just to make sure we don't exit before got something
-		  numberWanted++;
+	    switch(status) {
+	      
+	    case ClpSimplex::basic:
+	    case ClpSimplex::isFixed:
+	      break;
+	    case ClpSimplex::isFree:
+	    case ClpSimplex::superBasic:
+	      value=djMod;
+	      // scaled
+	      for (j=startColumn[iSequence];
+		   j<startColumn[iSequence]+length[iSequence];j++) {
+		int jRow=row[j];
+		value -= duals[jRow]*element[j]*rowScale[jRow];
+	      }
+	      value = fabs(cost[iSequence] +value*columnScale[iSequence]);
+	      if (value>FREE_ACCEPT*tolerance) {
+		numberWanted--;
+		// we are going to bias towards free (but only if reasonable)
+		value *= FREE_BIAS;
+		if (value>bestDj) {
+		  // check flagged variable and correct dj
+		  if (!model->flagged(iSequence)) {
+		    bestDj=value;
+		    bestSequence = iSequence;
+		    bestDjMod = djMod;
+		  } else {
+		    // just to make sure we don't exit before got something
+		    numberWanted++;
+		  }
 		}
 	      }
+	      break;
+	    case ClpSimplex::atUpperBound:
+	      value=djMod;
+	      // scaled
+	      for (j=startColumn[iSequence];
+		   j<startColumn[iSequence]+length[iSequence];j++) {
+		int jRow=row[j];
+		value -= duals[jRow]*element[j]*rowScale[jRow];
+	      }
+	      value = cost[iSequence] +value*columnScale[iSequence];
+	      if (value>tolerance) {
+		numberWanted--;
+		if (value>bestDj) {
+		  // check flagged variable and correct dj
+		  if (!model->flagged(iSequence)) {
+		    bestDj=value;
+		    bestSequence = iSequence;
+		    bestDjMod = djMod;
+		  } else {
+		    // just to make sure we don't exit before got something
+		    numberWanted++;
+		  }
+		}
+	      }
+	      break;
+	    case ClpSimplex::atLowerBound:
+	      value=djMod;
+	      // scaled
+	      for (j=startColumn[iSequence];
+		   j<startColumn[iSequence]+length[iSequence];j++) {
+		int jRow=row[j];
+		value -= duals[jRow]*element[j]*rowScale[jRow];
+	      }
+	      value = -(cost[iSequence] +value*columnScale[iSequence]);
+	      if (value>tolerance) {
+		numberWanted--;
+		if (value>bestDj) {
+		  // check flagged variable and correct dj
+		  if (!model->flagged(iSequence)) {
+		    bestDj=value;
+		    bestSequence = iSequence;
+		    bestDjMod = djMod;
+		  } else {
+		    // just to make sure we don't exit before got something
+		    numberWanted++;
+		  }
+		}
+	      }
+	      break;
 	    }
+	  }
+	  if (!numberWanted)
 	    break;
-	  case ClpSimplex::atUpperBound:
-	    value=cost[iSequence]-djMod;
+	}
+	if (bestSequence!=saveSequence) {
+	  if (bestSequence<numberRows+numberColumns) {
+	    // recompute dj
+	    double value=bestDjMod;
 	    // scaled
-	    for (j=startColumn[iSequence];
-		 j<startColumn[iSequence]+length[iSequence];j++) {
+	    for (j=startColumn[bestSequence];
+		 j<startColumn[bestSequence]+length[bestSequence];j++) {
 	      int jRow=row[j];
-	      value -= duals[jRow]*element[j];
+	      value -= duals[jRow]*element[j]*rowScale[jRow];
 	    }
-	    if (value>tolerance) {
-	      numberWanted--;
-	      if (value>bestDj) {
-		// check flagged variable and correct dj
-		if (!model->flagged(iSequence)) {
-		  bestDj=value;
-		  bestSequence = iSequence;
-		} else {
-		  // just to make sure we don't exit before got something
-		  numberWanted++;
-		}
-	      }
-	    }
-	    break;
-	  case ClpSimplex::atLowerBound:
-	    value=cost[iSequence]-djMod;
-	    for (j=startColumn[iSequence];
-		 j<startColumn[iSequence]+length[iSequence];j++) {
-	      int jRow=row[j];
-	      value -= duals[jRow]*element[j];
-	    }
-	    value = -value;
-	    if (value>tolerance) {
-	      numberWanted--;
-	      if (value>bestDj) {
-		// check flagged variable and correct dj
-		if (!model->flagged(iSequence)) {
-		  bestDj=value;
-		  bestSequence = iSequence;
-		} else {
-		  // just to make sure we don't exit before got something
-		  numberWanted++;
-		}
-	      }
-	    }
-	    break;
+	    reducedCost[bestSequence] = cost[bestSequence] +value*columnScale[bestSequence];
+	    gubSlackIn_=-1;
+	  } else {
+	    // slack - make last column
+	    gubSlackIn_= bestSequence - numberRows - numberColumns;
+	    bestSequence = numberColumns + 2*numberRows;
+	    reducedCost[bestSequence] = bestDjMod;
+	    model->setStatus(bestSequence,getStatus(gubSlackIn_));
+	    if (getStatus(gubSlackIn_)==ClpSimplex::atUpperBound)
+	      model->solutionRegion()[bestSequence] = upper_[gubSlackIn_];
+	    else
+	      model->solutionRegion()[bestSequence] = lower_[gubSlackIn_];
+	    model->lowerRegion()[bestSequence] = lower_[gubSlackIn_];
+	    model->upperRegion()[bestSequence] = upper_[gubSlackIn_];
+	    model->costRegion()[bestSequence] = 0.0;
 	  }
 	}
-	if (!numberWanted)
-	  break;
-      }
-      if (bestSequence!=saveSequence) {
-	// recompute dj
-	double value=cost[bestSequence];
-	for (j=startColumn[bestSequence];
-	     j<startColumn[bestSequence]+length[bestSequence];j++) {
-	  int jRow=row[j];
-	  value -= duals[jRow]*element[j];
+      } else {
+	double bestDjMod=0.0;
+	for (iSequence=startG;iSequence<endG;iSequence++) {
+	  if (backward_[iSequence]!=iSet) {
+	    // get pi on gub row
+	    iSet = backward_[iSequence];
+	    int iBasic = keyVariable_[iSet];
+	    if (iBasic>=numberColumns) {
+	      djMod = - weight(iSet)*infeasibilityCost;
+	    } else {
+	      // get dj without 
+	      assert (model->getStatus(iBasic)==ClpSimplex::basic);
+	      djMod=0.0;
+	      
+	      for (j=startColumn[iBasic];
+		   j<startColumn[iBasic]+length[iBasic];j++) {
+		int jRow=row[j];
+		djMod -= duals[jRow]*element[j];
+	      }
+	      djMod += cost[iBasic];
+	      // See if gub slack possible - dj is djMod
+	      if (getStatus(iSet)==ClpSimplex::atLowerBound) {
+		double value = -djMod;
+		if (value>tolerance) {
+		  numberWanted--;
+		  if (value>bestDj) {
+		    // check flagged variable and correct dj
+		    if (!flagged(iSet)) {
+		      bestDj=value;
+		      bestSequence = numberRows+numberColumns+iSet;
+		      bestDjMod = djMod;
+		    } else {
+		      // just to make sure we don't exit before got something
+		      numberWanted++;
+		      abort();
+		    }
+		  }
+		}
+	      } else if (getStatus(iSet)==ClpSimplex::atUpperBound) {
+		double value = djMod;
+		if (value>tolerance) {
+		  numberWanted--;
+		  if (value>bestDj) {
+		    // check flagged variable and correct dj
+		    if (!flagged(iSet)) {
+		      bestDj=value;
+		      bestSequence = numberRows+numberColumns+iSet;
+		      bestDjMod = djMod;
+		    } else {
+		      // just to make sure we don't exit before got something
+		      numberWanted++;
+		      abort();
+		    }
+		  }
+		}
+	      }
+	    }
+	  }
+	  if (iSequence!=sequenceOut) {
+	    double value;
+	    ClpSimplex::Status status = model->getStatus(iSequence);
+	    
+	    switch(status) {
+	      
+	    case ClpSimplex::basic:
+	    case ClpSimplex::isFixed:
+	      break;
+	    case ClpSimplex::isFree:
+	    case ClpSimplex::superBasic:
+	      value=cost[iSequence]-djMod;
+	      for (j=startColumn[iSequence];
+		   j<startColumn[iSequence]+length[iSequence];j++) {
+		int jRow=row[j];
+		value -= duals[jRow]*element[j];
+	      }
+	      value = fabs(value);
+	      if (value>FREE_ACCEPT*tolerance) {
+		numberWanted--;
+		// we are going to bias towards free (but only if reasonable)
+		value *= FREE_BIAS;
+		if (value>bestDj) {
+		  // check flagged variable and correct dj
+		  if (!model->flagged(iSequence)) {
+		    bestDj=value;
+		    bestSequence = iSequence;
+		    bestDjMod = djMod;
+		  } else {
+		    // just to make sure we don't exit before got something
+		    numberWanted++;
+		  }
+		}
+	      }
+	      break;
+	    case ClpSimplex::atUpperBound:
+	      value=cost[iSequence]-djMod;
+	      // scaled
+	      for (j=startColumn[iSequence];
+		   j<startColumn[iSequence]+length[iSequence];j++) {
+		int jRow=row[j];
+		value -= duals[jRow]*element[j];
+	      }
+	      if (value>tolerance) {
+		numberWanted--;
+		if (value>bestDj) {
+		  // check flagged variable and correct dj
+		  if (!model->flagged(iSequence)) {
+		    bestDj=value;
+		    bestSequence = iSequence;
+		    bestDjMod = djMod;
+		  } else {
+		    // just to make sure we don't exit before got something
+		    numberWanted++;
+		  }
+		}
+	      }
+	      break;
+	    case ClpSimplex::atLowerBound:
+	      value=cost[iSequence]-djMod;
+	      for (j=startColumn[iSequence];
+		   j<startColumn[iSequence]+length[iSequence];j++) {
+		int jRow=row[j];
+		value -= duals[jRow]*element[j];
+	      }
+	      value = -value;
+	      if (value>tolerance) {
+		numberWanted--;
+		if (value>bestDj) {
+		  // check flagged variable and correct dj
+		  if (!model->flagged(iSequence)) {
+		    bestDj=value;
+		    bestSequence = iSequence;
+		    bestDjMod = djMod;
+		  } else {
+		    // just to make sure we don't exit before got something
+		    numberWanted++;
+		  }
+		}
+	      }
+	      break;
+	    }
+	  }
+	  if (!numberWanted)
+	    break;
 	}
-	reducedCost[bestSequence] = value;
+	if (bestSequence!=saveSequence) {
+	  if (bestSequence<numberRows+numberColumns) {
+	    // recompute dj
+	    double value=cost[bestSequence]-bestDjMod;
+	    for (j=startColumn[bestSequence];
+		 j<startColumn[bestSequence]+length[bestSequence];j++) {
+	      int jRow=row[j];
+	      value -= duals[jRow]*element[j];
+	    }
+	    reducedCost[bestSequence] = value;
+	    gubSlackIn_=-1;
+	  } else {
+	    // slack - make last column
+	    gubSlackIn_= bestSequence - numberRows - numberColumns;
+	    bestSequence = numberColumns + 2*numberRows;
+	    reducedCost[bestSequence] = bestDjMod;
+	    model->setStatus(bestSequence,getStatus(gubSlackIn_));
+	    if (getStatus(gubSlackIn_)==ClpSimplex::atUpperBound)
+	      model->solutionRegion()[bestSequence] = upper_[gubSlackIn_];
+	    else
+	      model->solutionRegion()[bestSequence] = lower_[gubSlackIn_];
+	    model->lowerRegion()[bestSequence] = lower_[gubSlackIn_];
+	    model->upperRegion()[bestSequence] = upper_[gubSlackIn_];
+	    model->costRegion()[bestSequence] = 0.0;
+	  }
+	}
       }
     }
     if (numberWanted) {
       // Do packed part after gub
-      ClpPackedMatrix::partialPricing(model,lastGub_,end,bestSequence,numberWanted);
+      ClpPackedMatrix::partialPricing(model,max(lastGub_,start),end,bestSequence,numberWanted);
     }
+  } else {
+    // no gub
+    ClpPackedMatrix::partialPricing(model,start,end,bestSequence,numberWanted);
   }
 }
 /* expands an updated column to allow for extra rows which the main
-   solver does not know about and returns number added.  If the arrays are NULL 
-   then returns number of extra entries needed.
-   
-   This will normally be a no-op - it is in for GUB!
+   solver does not know about and returns number added. 
 */
 int 
-ClpGubMatrix::extendUpdated(CoinIndexedVector * update, double * lower,
-			     double * solution, double * upper)
+ClpGubMatrix::extendUpdated(ClpSimplex * model,CoinIndexedVector * update, int mode)
 {
-  assert(!update);
-  return getNumRows();
+  // I think we only need to bother about sets with two in basis or incoming set
+  int number = update->getNumElements();
+  double * array = update->denseVector();
+  int * index = update->getIndices();
+  int i;
+  assert (!number||update->packedMode());
+  int * pivotVariable = model->pivotVariable();
+  int numberRows = model->numberRows();
+  int numberColumns = model->numberColumns();
+  int numberTotal = numberRows+numberColumns;
+  int iSequence = model->sequenceIn();
+  int returnCode=0;
+  int iSetX;
+  if (iSequence<numberColumns)
+    iSetX = backward_[iSequence];
+  else if (iSequence<numberRows+numberColumns)
+    iSetX = -1;
+  else
+    iSetX = gubSlackIn_;
+  double * lower = model->lowerRegion();
+  double * upper = model->upperRegion();
+  double * cost = model->costRegion();
+  double * solution = model->solutionRegion();
+  int number2=number;
+  if (!mode) {
+    double primalTolerance = model->primalTolerance();
+    double infeasibilityCost = model->infeasibilityCost();
+    // extend
+    saveNumber_ = number;
+    for (i=0;i<number;i++) {
+      int iRow = index[i];
+      int iPivot = pivotVariable[iRow];
+      if (iPivot<numberColumns) {
+	int iSet = backward_[iPivot];
+	if (iSet>=0) {
+	  // two (or more) in set
+	  int iIndex =toIndex_[iSet];
+	  double otherValue=array[i];
+	  double value;
+	  if (iIndex<0) {
+	    toIndex_[iSet]=number2;
+	    int iNew = number2-number;
+	    fromIndex_[number2-number]=iSet;
+	    iIndex=number2;
+	    index[number2]=numberRows+iNew;
+	    // do key stuff
+	    int iKey = keyVariable_[iSet];
+	    if (iKey<numberColumns) {
+	      if (iSet!=iSetX)
+		value = 0.0;
+	      else if (iSetX!=gubSlackIn_)
+		value = 1.0;
+	      else
+		value =-1.0;
+	      pivotVariable[numberRows+iNew]=iKey;
+	      // Do I need to recompute?
+	      double sol;
+	      assert (getStatus(iSet)!=ClpSimplex::basic);
+	      if (getStatus(iSet)==ClpSimplex::atLowerBound)
+		sol = lower_[iSet];
+	      else
+		sol = upper_[iSet];
+	      for (int j=start_[iSet];j<end_[iSet];j++) {
+		if (j!=iKey)
+		  sol -= solution[j];
+	      }
+	      solution[iKey]=sol;
+	      if (model->algorithm()>0)
+		model->nonLinearCost()->setOne(iKey,sol);
+	      //assert (fabs(sol-solution[iKey])<1.0e-3);
+	    } else {
+	      // gub slack is basic
+	      otherValue = - otherValue; //allow for - sign on slack
+	      if (iSet!=iSetX)
+		value = 0.0;
+	      else
+		value = -1.0;
+	      pivotVariable[numberRows+iNew]=iNew+numberTotal;
+	      double sol=0.0;
+	      for (int j=start_[iSet];j<end_[iSet];j++) 
+		sol += solution[j];
+	      solution[iNew+numberTotal]=sol;
+	      // and do cost in nonLinearCost
+	      if (model->algorithm()>0)
+		model->nonLinearCost()->setOne(iNew+numberTotal,sol,lower_[iSet],upper_[iSet]);
+	      if (sol>upper_[iSet]+primalTolerance) {
+		setAbove(iSet);
+		lower[iNew+numberTotal]=upper_[iSet];
+		upper[iNew+numberTotal]=COIN_DBL_MAX;
+	      } else if (sol<lower_[iSet]-primalTolerance) {
+		setBelow(iSet);
+		lower[iNew+numberTotal]=-COIN_DBL_MAX;
+		upper[iNew+numberTotal]=lower_[iSet];
+	      } else {
+		setFeasible(iSet);
+		lower[iNew+numberTotal]=lower_[iSet];
+		upper[iNew+numberTotal]=upper_[iSet];
+	      }
+	      cost[iNew+numberTotal]=weight(iSet)*infeasibilityCost;
+	    }
+	    number2++;
+	  } else {
+	    value = array[iIndex];
+	  }
+	  value -= otherValue;
+	  array[iIndex]=value;
+	}
+      }
+    }
+    if (iSetX>=0&&toIndex_[iSetX]<0) {
+      // Do incoming
+      update->setPacked(); // just in case no elements
+      toIndex_[iSetX]=number2;
+      int iNew = number2-number;
+      fromIndex_[number2-number]=iSetX;
+      index[number2]=numberRows+iNew;
+      // do key stuff
+      int iKey = keyVariable_[iSetX];
+      if (iKey<numberColumns) {
+	if (gubSlackIn_<0)
+	  array[number2]=1.0;
+	else
+	  array[number2]=-1.0;
+	pivotVariable[numberRows+iNew]=iKey;
+	// Do I need to recompute?
+	double sol;
+	assert (getStatus(iSetX)!=ClpSimplex::basic);
+	if (getStatus(iSetX)==ClpSimplex::atLowerBound)
+	  sol = lower_[iSetX];
+	else
+	  sol = upper_[iSetX];
+	for (int j=start_[iSetX];j<end_[iSetX];j++) {
+	  if (j!=iKey)
+	    sol -= solution[j];
+	}
+	solution[iKey]=sol;
+	//assert (fabs(sol-solution[iKey])<1.0e-3);
+      } else {
+	// gub slack is basic
+	array[number2]=-1.0;
+	pivotVariable[numberRows+iNew]=iNew+numberTotal;
+	double sol=0.0;
+	for (int j=start_[iSetX];j<end_[iSetX];j++) 
+	  sol += solution[j];
+	solution[iNew+numberTotal]=sol;
+	// and do cost in nonLinearCost
+	if (model->algorithm()>0)
+	  model->nonLinearCost()->setOne(iNew+numberTotal,sol,lower_[iSetX],upper_[iSetX]);
+	if (sol>upper_[iSetX]+primalTolerance) {
+	  setAbove(iSetX);
+	  lower[iNew+numberTotal]=upper_[iSetX];
+	  upper[iNew+numberTotal]=COIN_DBL_MAX;
+	} else if (sol<lower_[iSetX]-primalTolerance) {
+	  setBelow(iSetX);
+	  lower[iNew+numberTotal]=-COIN_DBL_MAX;
+	  upper[iNew+numberTotal]=lower_[iSetX];
+	} else {
+	  setFeasible(iSetX);
+	  lower[iNew+numberTotal]=lower_[iSetX];
+	  upper[iNew+numberTotal]=upper_[iSetX];
+	}
+	cost[iNew+numberTotal]=weight(iSetX)*infeasibilityCost;
+      }
+      number2++;
+    }
+    returnCode = number2-number;
+  } else {
+    // take off?
+    if (number>saveNumber_) {
+      possiblePivotKey_=-1;
+      if (model->pivotRow()>=numberRows) {
+	const int * length = matrix_->getVectorLengths();
+	int iExtra = model->pivotRow()-numberRows;
+	assert (iExtra>=0);
+	int iSetOut = fromIndex_[iExtra];
+	assert (model->sequenceOut()>=numberRows+numberColumns||
+		model->sequenceOut()==keyVariable_[iSetOut]);
+	// We need to find a possible pivot for incoming
+	int shortest=numberRows+1;
+	for (i=0;i<saveNumber_;i++) {
+	  int iRow = index[i];
+	  int iPivot = pivotVariable[iRow];
+	  if (iPivot<numberColumns&&backward_[iPivot]==iSetOut) {
+	    if (length[iPivot]<shortest) {
+	      shortest = length[iPivot];
+	      possiblePivotKey_=iRow;
+	    }
+	  }
+	}
+	assert (possiblePivotKey_>=0||iSetX==iSetOut);
+	if (possiblePivotKey_>=0)
+	  returnCode=1; // need swap
+	else if (iSetX==iSetOut)
+	  returnCode = -1; // key swap - no need for update
+      } else if (iSequence>=numberRows+numberColumns) {
+	returnCode=2; // need swap as gub slack in and must become key
+      }
+      // clear
+      for (i=saveNumber_;i<number;i++) {
+	array[i]=0.0;
+	int iSet=fromIndex_[i-saveNumber_];
+	toIndex_[iSet]=-1;
+      }
+    }
+    for (i=0;i<numberSets_;i++)
+      assert(toIndex_[i]==-1);
+    number2= saveNumber_;
+  }
+  update->setNumElements(number2);
+  return returnCode;
 }
 /*
      utility primal function for dealing with dynamic constraints
@@ -1152,18 +1563,30 @@ ClpGubMatrix::primalExpanded(ClpSimplex * model,int mode)
       // but we will be using difference
       relaxedTolerance -= primalTolerance;
       sumOfRelaxedPrimalInfeasibilities_ = 0.0;
-      for (i=0;i<numberSets_;i++) {
+      for (i=0;i<numberSets_;i++) { // Could just be over basics (esp if no bounds)
 	int kColumn = keyVariable_[i];
-	int iColumn =next_[kColumn];
-	// sum all non-key variables
 	double value=0.0;
-	while(iColumn>=0) {
-	  value+=solution[iColumn];
-	  iColumn=next_[iColumn];
+	if ((gubType_&8)!=0) {
+	  int iColumn =next_[kColumn];
+	  // sum all non-key variables
+	  while(iColumn>=0) {
+	    value+=solution[iColumn];
+	    iColumn=next_[iColumn];
+	  }
+	} else {
+	  // bounds exist - sum over all except key
+	  for (int j=start_[i];j<end_[i];j++) {
+	    if (j!=kColumn)
+	      value += solution[j];
+	  }
 	}
 	if (kColumn<numberColumns) {
 	  // feasibility will be done later
-	  solution[kColumn] -= value;
+	  assert (getStatus(i)!=ClpSimplex::basic);
+	  if (getStatus(i)==ClpSimplex::atUpperBound)
+	    solution[kColumn] = upper_[i]-value;
+	  else
+	    solution[kColumn] = lower_[i]-value;
 	} else {
 	  // slack is key
 	  iStatus = getStatus(i);
@@ -1220,7 +1643,7 @@ ClpGubMatrix::dualExpanded(ClpSimplex * model,
       ClpSimplex::Status iStatus;
       // not dual values yet
       assert (!other);
-      double * work = array->denseVector();
+      //double * work = array->denseVector();
       double infeasibilityCost = model->infeasibilityCost();
       int * pivotVariable = model->pivotVariable();
       int numberRows = model->numberRows();
@@ -1241,7 +1664,7 @@ ClpGubMatrix::dualExpanded(ClpSimplex * model,
 	      assert (iStatus==ClpSimplex::basic);
 	      costValue=weight(iSet)*infeasibilityCost;
 	    }
-	    array->add(i,work[i]-costValue);
+	    array->add(i,-costValue); // was work[i]-costValue
 	  }
 	}
       }
@@ -1250,40 +1673,42 @@ ClpGubMatrix::dualExpanded(ClpSimplex * model,
     // create duals for key variables (without check on dual infeasible)
   case 1:
     {
-      // If key slack then dual 0.0
+      // If key slack then dual 0.0 (if feasible)
       // dj for key is zero so that defines dual on set
       int i;
       double * dj = model->djRegion();
-      double * dual = model->dualRowSolution();
-      double * cost = model->costRegion();
-      const int * columnLength = matrix_->getVectorLengths(); 
-      const CoinBigIndex * columnStart = matrix_->getVectorStarts();
-      const int * row = matrix_->getIndices();
-      const double * elementByColumn = matrix_->getElements();
       int numberColumns = model->numberColumns();
+      double infeasibilityCost = model->infeasibilityCost();
       for (i=0;i<numberSets_;i++) {
 	int kColumn = keyVariable_[i];
-	// If slack key we need not do anything
 	if (kColumn<numberColumns) {
 	  // dj without set
-	  double value = cost[kColumn];
-	  for (CoinBigIndex j=columnStart[kColumn];
-	       j<columnStart[kColumn]+columnLength[kColumn];j++) {
-	    int iRow = row[j];
-	    value -= dual[iRow]*elementByColumn[j];
-	  }
+	  double value = dj[kColumn];
 	  // Now subtract out from all 
-	  dj[kColumn] -= value;
+	  dj[kColumn] =0.0;
 	  int iColumn =next_[kColumn];
 	  // modify all non-key variables
 	  while(iColumn>=0) {
-	  dj[iColumn]-=value;
-	  iColumn=next_[iColumn];
+	    dj[iColumn]-=value;
+	    iColumn=next_[iColumn];
+	  }
+	} else {
+	  // slack key - may not be feasible
+	  assert (getStatus(i)==ClpSimplex::basic);
+	  double value=-weight(i)*infeasibilityCost;
+	  if (value) {
+	    int iColumn =next_[kColumn];
+	    // modify all non-key variables basic
+	    while(iColumn>=0) {
+	      dj[iColumn]-=value;
+	      iColumn=next_[iColumn];
+	    }
 	  }
 	}
       }
     }
-    // as 1 but check slacks
+    break;
+    // as 1 but check slacks and compute djs
   case 2:
     {
       // If key slack then dual 0.0
@@ -1299,6 +1724,7 @@ ClpGubMatrix::dualExpanded(ClpSimplex * model,
       const int * row = matrix_->getIndices();
       const double * elementByColumn = matrix_->getElements();
       int numberColumns = model->numberColumns();
+      double infeasibilityCost = model->infeasibilityCost();
       sumDualInfeasibilities_=0.0;
       numberDualInfeasibilities_=0;
       double dualTolerance = model->dualTolerance();
@@ -1312,7 +1738,6 @@ ClpGubMatrix::dualExpanded(ClpSimplex * model,
       sumOfRelaxedDualInfeasibilities_ = 0.0;
       for (i=0;i<numberSets_;i++) {
 	int kColumn = keyVariable_[i];
-	// If slack key we need not do anything
 	if (kColumn<numberColumns) {
 	  // dj without set
 	  double value = cost[kColumn];
@@ -1322,13 +1747,8 @@ ClpGubMatrix::dualExpanded(ClpSimplex * model,
 	    value -= dual[iRow]*elementByColumn[j];
 	  }
 	  // Now subtract out from all 
-	  dj[kColumn] -= value;
-	  int iColumn =next_[kColumn];
-	  // modify all non-key variables
-	  while(iColumn>=0) {
-	  dj[iColumn]-=value;
-	  iColumn=next_[iColumn];
-	  }
+	  for (int k=start_[i];k<end_[i];k++)
+	    dj[k] -= value;
 	  // check slack
 	  iStatus = getStatus(i);
 	  assert (iStatus!=ClpSimplex::basic);
@@ -1337,7 +1757,7 @@ ClpGubMatrix::dualExpanded(ClpSimplex * model,
 	  if (iStatus==ClpSimplex::atLowerBound) {
 	    if (value>-dualTolerance) 
 	      infeasibility=-value-dualTolerance;
-	  } else {
+	  } else if (iStatus==ClpSimplex::atUpperBound) {
 	    // at upper bound
 	    if (value>dualTolerance) 
 	      infeasibility=value-dualTolerance;
@@ -1348,9 +1768,19 @@ ClpGubMatrix::dualExpanded(ClpSimplex * model,
 	      sumOfRelaxedDualInfeasibilities_ += infeasibility;
 	    numberDualInfeasibilities_ ++;
 	  }
+	} else {
+	  // slack key - may not be feasible
+	  assert (getStatus(i)==ClpSimplex::basic);
+	  double value=-weight(i)*infeasibilityCost;
+	  if (value) {
+	    // Now subtract out from all (if that's what we are doing)
+	    for (int k=start_[i];k<end_[i];k++)
+	      dj[k] -= value;
+	  }
 	}
       }
     }
+    break;
     // Report on infeasibilities of key variables
   case 3:
     {
@@ -1378,6 +1808,12 @@ ClpGubMatrix::generalExpanded(ClpSimplex * model,int mode,int &number)
     // Fill in pivotVariable but not for key variables
   case 0:
     {
+      if (!next_ ) {
+	// do ordering
+	assert (!effectiveRhs_);
+	// create and do gub crash
+	useEffectiveRhs(model,false);
+      }
       int i;
       int numberBasic=number;
       // Use different array so can build from true pivotVariable_
@@ -1401,6 +1837,99 @@ ClpGubMatrix::generalExpanded(ClpSimplex * model,int mode,int &number)
 	int iColumn = keyVariable_[i];
 	if (iColumn<numberColumns)
 	  model->setColumnStatus(iColumn,ClpSimplex::basic);
+      }
+    }
+    break;
+    // Do initial extra rows + maximum basic
+  case 2:
+    {
+      returnCode= getNumRows()+1;
+      number = model->numberRows()+numberSets_;
+    }
+    break;
+    // Before normal replaceColumn
+  case 3:
+    {
+      int sequenceIn = model->sequenceIn();
+      int sequenceOut = model->sequenceOut();
+      int numberColumns = model->numberColumns();
+      int numberRows = model->numberRows();
+      if (sequenceIn==sequenceOut) 
+	return -1;
+      int iSetIn=-1;
+      int iSetOut=-1;
+      if (sequenceOut<numberColumns) {
+	iSetOut = backward_[sequenceOut];
+      } else if (sequenceOut>=numberRows+numberColumns) {
+	assert (model->pivotRow()>=numberRows);
+	int iExtra = model->pivotRow()-numberRows;
+	assert (iExtra>=0);
+	if (iSetOut<0)
+	  iSetOut = fromIndex_[iExtra];
+	else
+	  assert(iSetOut == fromIndex_[iExtra]);
+      }
+      if (sequenceIn<numberColumns) {
+	iSetIn = backward_[sequenceIn];
+      } else if (gubSlackIn_>=0) {
+	iSetIn = gubSlackIn_;
+      }
+      
+      if (number) {
+	if (possiblePivotKey_>=0) {
+	  returnCode=1; // need swap
+	  // change pivot row and alpha
+	} else if (iSetIn==iSetOut) {
+	  returnCode = -1; // key swap - no need for update
+	}
+      } else if (sequenceIn>=numberRows+numberColumns) {
+	returnCode=2; // need swap as gub slack in and must become key
+	// change pivot row and alpha
+      }
+      if (number)
+	number=-1; // temporary
+    }
+    break;
+    // After normal replaceColumn
+  case 4:
+    {
+      // what to do on existing error
+      assert(!number);
+      return 4; // temporary
+      int sequenceIn = model->sequenceIn();
+      int sequenceOut = model->sequenceOut();
+      int numberColumns = model->numberColumns();
+      int numberRows = model->numberRows();
+      if (sequenceIn==sequenceOut) 
+	return 0;
+      int iSetIn=-1;
+      int iSetOut=-1;
+      if (sequenceOut<numberColumns) {
+	iSetOut = backward_[sequenceOut];
+      } else if (sequenceOut>=numberRows+numberColumns) {
+	assert (model->pivotRow()>=numberRows);
+	int iExtra = model->pivotRow()-numberRows;
+	assert (iExtra>=0);
+	if (iSetOut<0)
+	  iSetOut = fromIndex_[iExtra];
+	else
+	  assert(iSetOut == fromIndex_[iExtra]);
+      }
+      if (sequenceIn<numberColumns) {
+	iSetIn = backward_[sequenceIn];
+      } else if (gubSlackIn_>=0) {
+	iSetIn = gubSlackIn_;
+      }
+      
+      if (possiblePivotKey_>=0) {
+	returnCode=1; // need swap
+	returnCode=4;
+      } else if (iSetIn==iSetOut) {
+	returnCode = -1; // key swap - no need for update
+	returnCode=4;
+      } else if (sequenceIn>=numberRows+numberColumns) {
+	returnCode=2; // need swap as gub slack in and must become key
+	returnCode=4;
       }
     }
     break;
@@ -1432,7 +1961,13 @@ ClpGubMatrix::useEffectiveRhs(ClpSimplex * model, bool cheapest)
   next_ = new int[numberColumns+numberSets_];
   for (int iColumn=0;iColumn<numberColumns;iColumn++) 
     next_[iColumn]=INT_MAX;
+  toIndex_ = new int[numberSets_];
+  for (iSet=0;iSet<numberSets_;iSet++) 
+    toIndex_[iSet]=-1;
+  fromIndex_ = new int [getNumRows()];
   double tolerance = model->primalTolerance();
+  bool noNormalBounds=true;
+  gubType_ &= ~8;
   for (iSet=0;iSet<numberSets_;iSet++) {
     int j;
     int numberBasic=0;
@@ -1443,6 +1978,10 @@ ClpGubMatrix::useEffectiveRhs(ClpSimplex * model, bool cheapest)
     int smallest=numberRows+1;
     double value=0.0;
     for (j=iStart;j<iEnd;j++) {
+      if (columnLower[j]&&columnLower[j]>-1.0e20)
+	noNormalBounds=false;
+      if (columnUpper[j]&&columnUpper[j]<1.0e20)
+	noNormalBounds=false;
       if (model->getStatus(j)== ClpSimplex::basic) {
 	if (columnLength[j]<smallest) {
 	  smallest=columnLength[j];
@@ -1463,12 +2002,12 @@ ClpGubMatrix::useEffectiveRhs(ClpSimplex * model, bool cheapest)
       if (thisSolution>columnUpper[iBasic]) {
 	value -= thisSolution-columnUpper[iBasic];
 	thisSolution = columnUpper[iBasic];
-	solution[iBasic]=thisSolution;
+	columnSolution[iBasic]=thisSolution;
       }
       if (thisSolution<columnLower[iBasic]) {
 	value -= thisSolution-columnLower[iBasic];
 	thisSolution = columnLower[iBasic];
-	solution[iBasic]=thisSolution;
+	columnSolution[iBasic]=thisSolution;
       }
       // try setting slack to a bound
       assert (upper_[iSet]<1.0e20||lower_[iSet]>-1.0e20);
@@ -1525,6 +2064,9 @@ ClpGubMatrix::useEffectiveRhs(ClpSimplex * model, bool cheapest)
 	}
       }
       if (!done) {
+	// set non basic if there was one
+	if (iBasic>=0)
+	  model->setStatus(iBasic,ClpSimplex::atLowerBound);
 	// find cheapest
 	int numberInSet = iEnd-iStart;
 	CoinMemcpyN(columnLower+iStart,numberInSet,lower);
@@ -1647,6 +2189,35 @@ ClpGubMatrix::useEffectiveRhs(ClpSimplex * model, bool cheapest)
 	    }
 	  }
 	}
+	// convert iBasic back and do bounds
+	if (iBasic==numberInSet) {
+	  // slack basic
+	  setStatus(iSet,ClpSimplex::basic);
+	  iBasic=iSet+numberColumns;
+	} else {
+	  iBasic += start_[iSet];
+	  model->setStatus(iBasic,ClpSimplex::basic);
+	  if (upper[numberInSet]==lower[numberInSet]) 
+	    setStatus(iSet,ClpSimplex::isFixed);
+	  else if (solution[numberInSet]==upper[numberInSet])
+	    setStatus(iSet,ClpSimplex::atUpperBound);
+	  else if (solution[numberInSet]==lower[numberInSet])
+	    setStatus(iSet,ClpSimplex::atLowerBound);
+	  else 
+	    abort();
+	}
+	for (j=iStart;j<iEnd;j++) {
+	  if (model->getStatus(j)!=ClpSimplex::basic) {
+	    int inSet=j-iStart;
+	    columnSolution[j]=solution[inSet];
+	    if (upper[inSet]==lower[inSet]) 
+	      model->setStatus(j,ClpSimplex::isFixed);
+	    else if (solution[inSet]==upper[inSet])
+	      model->setStatus(j,ClpSimplex::atUpperBound);
+	    else if (solution[inSet]==lower[inSet])
+	      model->setStatus(j,ClpSimplex::atLowerBound);
+	  }
+	}
       }
     } 
     keyVariable_[iSet]=iBasic;
@@ -1660,6 +2231,8 @@ ClpGubMatrix::useEffectiveRhs(ClpSimplex * model, bool cheapest)
       }
     }
   }
+  if (noNormalBounds)
+    gubType_ |= 8;
   delete [] lower;
   delete [] solution;
   delete [] upper;
@@ -1667,6 +2240,588 @@ ClpGubMatrix::useEffectiveRhs(ClpSimplex * model, bool cheapest)
   // make sure matrix is in good shape
   matrix_->orderMatrix();
   // create effective rhs
+  delete [] effectiveRhs_;
+  effectiveRhs_ = new double[numberRows];
+  effectiveRhs(model,true);
+  next_ = new int[numberColumns+numberSets_];
+  char * mark = new char[numberColumns];
+  memset(mark,0,numberColumns);
+  for (int iColumn=0;iColumn<numberColumns;iColumn++) 
+    next_[iColumn]=INT_MAX;
+  int i;
+  for (i=0;i<numberSets_;i++) {
+    int j;
+    for (j=start_[i];j<end_[i];j++) {
+      if (model->getStatus(j)==ClpSimplex::basic) 
+	mark[j]=1;
+    }
+    if (getStatus(i)!=ClpSimplex::basic) {
+      // make sure fixed if it is
+      if (upper_[i]==lower_[i])
+	setStatus(i,ClpSimplex::isFixed);
+      // slack not key - choose one with smallest length
+      int smallest=numberRows+1;
+      int key=-1;
+      for (j=start_[i];j<end_[i];j++) {
+	if (mark[j]&&columnLength[j]<smallest) {
+	  key=j;
+	  smallest=columnLength[j];
+	}
+      }
+      if (key>=0) {
+	keyVariable_[i]=key;
+	int lastMarker = -(key+1);
+	next_[key]=lastMarker;
+	int last = key;
+	int j;
+	for (j=start_[i];j<end_[i];j++) {
+	  if (mark[j]&&j!=key) {
+	    next_[last]=j;
+	    next_[j]=lastMarker;
+	    last = j;
+	  }
+	}
+      } else {
+	// nothing basic - make slack key
+	//((ClpGubMatrix *)this)->setStatus(i,ClpSimplex::basic);
+	// fudge to avoid const problem
+	status_[i]=1;
+      }
+    }
+    if (getStatus(i)==ClpSimplex::basic) {
+      // slack key
+      keyVariable_[i]=numberColumns+i;
+      int lastMarker = -(i+numberColumns+1);
+      next_[numberColumns+i]=lastMarker;
+      int last = numberColumns+i;
+      int j;
+      double sol=0.0;
+      for (j=start_[i];j<end_[i];j++) {
+	sol += columnSolution[j];
+	if (mark[j]) {
+	  next_[last]=j;
+	  next_[j]=lastMarker;
+	  last=j;
+	}
+      }
+      if (sol>upper_[i]+tolerance) {
+	setAbove(i);
+      } else if (sol<lower_[i]-tolerance) {
+	setBelow(i);
+      } else {
+	setFeasible(i);
+      }
+    }
+  }
+  delete [] mark;
+}
+/* Returns effective RHS if it is being used.  This is used for long problems
+   or big gub or anywhere where going through full columns is
+   expensive.  This may re-compute */
+double * 
+ClpGubMatrix::effectiveRhs(ClpSimplex * model,bool forceRefresh,bool check)
+{
+  if (effectiveRhs_) {
+#ifdef CLP_DEBUG
+    if (check) {
+      // no need - but check anyway
+      // zero out basic
+      int numberRows = model->numberRows();
+      int numberColumns = model->numberColumns();
+      double * solution = new double [numberColumns];
+      double * rhs = new double[numberRows];
+      const double * solutionSlack = model->solutionRegion(0);
+      CoinMemcpyN(model->solutionRegion(),numberColumns,solution);
+      int iRow;
+      for (iRow=0;iRow<numberRows;iRow++) {
+	if (model->getRowStatus(iRow)!=ClpSimplex::basic)
+	  rhs[iRow]=solutionSlack[iRow];
+	else
+	  rhs[iRow]=0.0;
+      }
+      for (int iColumn=0;iColumn<numberColumns;iColumn++) {
+	if (model->getColumnStatus(iColumn)==ClpSimplex::basic)
+	  solution[iColumn]=0.0;
+      }
+      times(-1.0,solution,rhs);
+      delete [] solution;
+      const double * columnSolution = model->solutionRegion();
+      // and now subtract out non basic
+      ClpSimplex::Status iStatus;
+      for (int iSet=0;iSet<numberSets_;iSet++) {
+	int iColumn = keyVariable_[iSet];
+	if (iColumn<numberColumns) {
+	  double b=0.0;
+	  // key is structural - where is slack
+	  iStatus = getStatus(iSet);
+	  assert (iStatus!=ClpSimplex::basic);
+	  if (iStatus==ClpSimplex::atLowerBound)
+	    b=lower_[iSet];
+	  else
+	    b=upper_[iSet];
+	  // subtract out others at bounds
+	  int j;
+	  for (j=start_[iSet];j<end_[iSet];j++) {
+	    if (model->getColumnStatus(j)!=ClpSimplex::basic) 
+	      b -= columnSolution[j];
+	  }
+	  // subtract out
+	  ClpPackedMatrix::add(model,rhs,iColumn,-b);
+	}
+      }
+      for (iRow=0;iRow<numberRows;iRow++) {
+	if (fabs(rhs[iRow]-effectiveRhs_[iRow])>1.0e-3)
+	  printf("** bad effective %d - true %g old %g\n",iRow,rhs[iRow],effectiveRhs_[iRow]);
+      }
+    }
+#endif
+    if (forceRefresh||(refreshFrequency_&&model->numberIterations()>=
+		       lastRefresh_+refreshFrequency_)) {
+      // zero out basic
+      int numberRows = model->numberRows();
+      int numberColumns = model->numberColumns();
+      double * solution = new double [numberColumns];
+      const double * solutionSlack = model->solutionRegion(0);
+      CoinMemcpyN(model->solutionRegion(),numberColumns,solution);
+      for (int iRow=0;iRow<numberRows;iRow++) {
+	if (model->getRowStatus(iRow)!=ClpSimplex::basic)
+	  effectiveRhs_[iRow]=solutionSlack[iRow];
+	else
+	  effectiveRhs_[iRow]=0.0;
+      }
+      for (int iColumn=0;iColumn<numberColumns;iColumn++) {
+	if (model->getColumnStatus(iColumn)==ClpSimplex::basic)
+	  solution[iColumn]=0.0;
+      }
+      times(-1.0,solution,effectiveRhs_);
+      delete [] solution;
+      lastRefresh_ = model->numberIterations();
+      const double * columnSolution = model->solutionRegion();
+      // and now subtract out non basic
+      ClpSimplex::Status iStatus;
+      for (int iSet=0;iSet<numberSets_;iSet++) {
+	int iColumn = keyVariable_[iSet];
+	if (iColumn<numberColumns) {
+	  double b=0.0;
+	  // key is structural - where is slack
+	  iStatus = getStatus(iSet);
+	  assert (iStatus!=ClpSimplex::basic);
+	  if (iStatus==ClpSimplex::atLowerBound)
+	    b=lower_[iSet];
+	  else
+	    b=upper_[iSet];
+	  // subtract out others at bounds
+	  int j;
+	  for (j=start_[iSet];j<end_[iSet];j++) {
+	    if (model->getColumnStatus(j)!=ClpSimplex::basic) 
+	      b -= columnSolution[j];
+	  }
+	  // subtract out
+	  ClpPackedMatrix::add(model,effectiveRhs_,iColumn,-b);
+	}
+      }
+    }
+  }
+  return effectiveRhs_;
+}
+/* 
+   update information for a pivot (and effective rhs)
+*/
+int 
+ClpGubMatrix::updatePivot(ClpSimplex * model,double oldInValue, double oldOutValue)
+{
+  int sequenceIn = model->sequenceIn();
+  int sequenceOut = model->sequenceOut();
+  double * solution = model->solutionRegion();
+  int numberColumns = model->numberColumns();
+  int numberRows = model->numberRows();
+  if (effectiveRhs_) {
+    // update effective rhs
+    if (sequenceIn==sequenceOut) {
+      assert (sequenceIn<numberRows+numberColumns); // should be easy to deal with
+      if (sequenceIn<numberColumns)
+	add(model,effectiveRhs_,sequenceIn,oldInValue-solution[sequenceIn]);
+      else
+	effectiveRhs_[sequenceIn-numberColumns] -= oldInValue-solution[sequenceIn];
+    } else {
+      int iSetIn=-1;
+      int iSetOut=-1;
+      if (sequenceOut<numberColumns) {
+	iSetOut = backward_[sequenceOut];
+      } else if (sequenceOut>=numberRows+numberColumns) {
+	assert (model->pivotRow()>=numberRows);
+	int iExtra = model->pivotRow()-numberRows;
+	assert (iExtra>=0);
+	if (iSetOut<0)
+	  iSetOut = fromIndex_[iExtra];
+	else
+	  assert(iSetOut == fromIndex_[iExtra]);
+      }
+      if (sequenceIn<numberColumns) {
+	iSetIn = backward_[sequenceIn];
+	// we need to test if WILL be key
+	ClpPackedMatrix::add(model,effectiveRhs_,sequenceIn,oldInValue);
+	if (iSetIn>=0)  {
+	  // old contribution to effectiveRhs_
+	  int key = keyVariable_[iSetIn];
+	  if (key<numberColumns) {
+	    double oldB=0.0;
+	    ClpSimplex::Status iStatus = getStatus(iSetIn);
+	    if (iStatus==ClpSimplex::atLowerBound)
+	      oldB=lower_[iSetIn];
+	    else
+	      oldB=upper_[iSetIn];
+	    // subtract out others at bounds
+	    int j;
+	    for (j=start_[iSetIn];j<end_[iSetIn];j++) {
+	      if (j == sequenceIn) 
+		oldB -= oldInValue;
+	      else if (j!=key && j != sequenceOut &&
+		  model->getColumnStatus(j)!=ClpSimplex::basic) 
+		oldB -= solution[j];
+	    }
+	    if (oldB)
+	      ClpPackedMatrix::add(model,effectiveRhs_,key,oldB);
+	  }
+	}
+      } else if (sequenceIn<numberRows+numberColumns) {
+	effectiveRhs_[sequenceIn-numberColumns] -= oldInValue;
+      } else {
+	printf("** in is key slack %d\n",sequenceIn);
+	iSetIn=gubSlackIn_;
+	// old contribution to effectiveRhs_
+	int key = keyVariable_[iSetIn];
+	if (key<numberColumns) {
+	  double oldB=0.0;
+	  ClpSimplex::Status iStatus = getStatus(iSetIn);
+	  if (iStatus==ClpSimplex::atLowerBound)
+	    oldB=lower_[iSetIn];
+	  else
+	    oldB=upper_[iSetIn];
+	  // subtract out others at bounds
+	  int j;
+	  for (j=start_[iSetIn];j<end_[iSetIn];j++) {
+	    if (j!=key && j != sequenceOut &&
+		model->getColumnStatus(j)!=ClpSimplex::basic) 
+	      oldB -= solution[j];
+	  }
+	  if (oldB)
+	    ClpPackedMatrix::add(model,effectiveRhs_,key,oldB);
+	}
+      }
+      if (sequenceOut<numberColumns) {
+	iSetOut = backward_[sequenceOut];
+	  ClpPackedMatrix::add(model,effectiveRhs_,sequenceOut,-solution[sequenceOut]);
+	if (iSetOut>=0) {
+	  // old contribution to effectiveRhs_
+	  int key = keyVariable_[iSetOut];
+	  if (key<numberColumns&&iSetIn!=iSetOut) {
+	    double oldB=0.0;
+	    ClpSimplex::Status iStatus = getStatus(iSetOut);
+	    if (iStatus==ClpSimplex::atLowerBound)
+	      oldB=lower_[iSetOut];
+	    else
+	      oldB=upper_[iSetOut];
+	    // subtract out others at bounds
+	    int j;
+	    for (j=start_[iSetOut];j<end_[iSetOut];j++) {
+	      if (j == sequenceIn) 
+		oldB -= oldInValue;
+	      else if (j!=key && j!=sequenceOut && 
+		  model->getColumnStatus(j)!=ClpSimplex::basic) 
+		oldB -= solution[j];
+	    }
+	    if (oldB)
+	      ClpPackedMatrix::add(model,effectiveRhs_,key,oldB);
+	  }
+	}
+      } else if (sequenceOut<numberRows+numberColumns) {
+	effectiveRhs_[sequenceOut-numberColumns] -= -solution[sequenceOut];
+      } else {
+	printf("** out is key slack %d\n",sequenceOut);
+	assert (model->pivotRow()>=numberRows);
+	int iExtra = model->pivotRow()-numberRows;
+	assert (iExtra>=0);
+	if (iSetOut<0)
+	  iSetOut = fromIndex_[iExtra];
+	else
+	  assert(iSetOut == fromIndex_[iExtra]);
+	// old contribution to effectiveRhs_
+	int key = keyVariable_[iSetOut];
+	if (key<numberColumns&&iSetIn!=iSetOut) {
+	  double oldB=0.0;
+	  ClpSimplex::Status iStatus = getStatus(iSetOut);
+	  if (iStatus==ClpSimplex::atLowerBound)
+	    oldB=lower_[iSetOut];
+	  else
+	    oldB=upper_[iSetOut];
+	  // subtract out others at bounds
+	  int j;
+	  for (j=start_[iSetOut];j<end_[iSetOut];j++) {
+	    if (j == sequenceIn) 
+	      oldB -= oldInValue;
+	    else if (j!=key && j!=sequenceOut && 
+		     model->getColumnStatus(j)!=ClpSimplex::basic) 
+	      oldB -= solution[j];
+	  }
+	  if (oldB)
+	    ClpPackedMatrix::add(model,effectiveRhs_,key,oldB);
+	}
+      }
+    }
+  }
+  int * pivotVariable = model->pivotVariable();
+  int iSetIn;
+  if (sequenceIn<numberColumns)
+    iSetIn = backward_[sequenceIn];
+  else if (sequenceIn<numberColumns+numberRows)
+    iSetIn = -1;
+  else
+    iSetIn = gubSlackIn_;
+  int iSetOut=-1;
+  if (sequenceOut<numberColumns) 
+    iSetOut = backward_[sequenceOut];
+  // may need to deal with key
+  // Also need coding to mark/allow key slack entering
+  if (model->pivotRow()>=numberRows) {
+    int iExtra = model->pivotRow()-numberRows;
+    assert (iExtra>=0);
+    if (iSetOut<0)
+      iSetOut = fromIndex_[iExtra];
+    else
+      assert(iSetOut == fromIndex_[iExtra]);
+    assert (sequenceOut>=numberRows+numberColumns||sequenceOut==keyVariable_[iSetOut]);
+    if (sequenceIn>=numberRows+numberColumns)
+      printf("key slack %d in, set out %d\n",gubSlackIn_,iSetOut);
+    printf("** danger - key out for set %d in %d (set %d)\n",iSetOut,sequenceIn,
+	   iSetIn);
+    // if slack out mark correctly
+    if (sequenceOut>=numberRows+numberColumns) {
+      double value;
+      if (model->directionOut()<0) {
+	setStatus(iSetOut,ClpSimplex::atUpperBound);
+	value = upper_[iSetOut];
+      } else {
+	setStatus(iSetOut,ClpSimplex::atLowerBound);
+	value = lower_[iSetOut];
+      }
+      if (upper_[iSetOut]==lower_[iSetOut])
+	setStatus(iSetOut,ClpSimplex::isFixed);
+      // subtract out bounds in set
+      for (int j=start_[iSetOut];j<end_[iSetOut];j++) {
+	if (model->getStatus(j)!=ClpSimplex::basic) {
+	  value -= solution[j];
+	}
+      }
+      setFeasible(iSetOut);
+      // also update effective rhs
+      if (effectiveRhs_) {
+	int key;
+	if (iSetOut==iSetIn) {
+	  // key swap
+	  if (next_[iSetOut+numberColumns]<0) {
+	    // nothing else there
+	    key = sequenceIn;
+	    //add( model,effectiveRhs_,key,-value);
+	  }
+	} else {
+	  key=pivotVariable[possiblePivotKey_];
+	  //add( model,effectiveRhs_,key,-value);
+	}
+      }
+    }
+    if (iSetOut==iSetIn) {
+      // key swap
+      int key;
+      if (sequenceIn>=numberRows+numberColumns) {
+	key = numberColumns+iSetIn;
+	setStatus(iSetIn,ClpSimplex::basic);
+	printf("what should value be?\n");
+      } else {
+	key = sequenceIn;
+	if (sequenceOut<numberRows+numberColumns) {
+	  if (effectiveRhs_) {
+	    if (next_[sequenceOut]<0) {
+	      // nothing else there
+	      //add( model,effectiveRhs_,key,-solution[key]);
+	    }
+	  }
+	}
+      }
+      int j;
+      keyVariable_[iSetIn]=key;
+      int lastMarker = -(key+1);
+      next_[key]=lastMarker;
+      int last = key;
+      for (j=start_[iSetOut];j<end_[iSetOut];j++) {
+	if (j!=key&&model->getStatus(j)==ClpSimplex::basic) {
+	  next_[last]=j;
+	  next_[j]=lastMarker;
+	  last = j;
+	}
+      }
+    } else {
+      // key was chosen
+      assert (possiblePivotKey_>=0);
+      int j;
+      int key=pivotVariable[possiblePivotKey_];
+      // also update effective rhs
+      if (effectiveRhs_) {
+	double value;
+	assert (getStatus(iSetOut)!=ClpSimplex::basic);
+	if (getStatus(iSetOut)==ClpSimplex::atUpperBound) {
+	  value = upper_[iSetOut];
+	} else {
+	  value = lower_[iSetOut];
+	}
+	// don't need as this is currently key add( model,effectiveRhs_,keyVariable_[iSetOut],value);
+	//add( model,effectiveRhs_,key,-value);
+      }
+      // and set incoming here
+      pivotVariable[possiblePivotKey_]=sequenceIn;
+      keyVariable_[iSetOut]=key;
+      int lastMarker = -(key+1);
+      next_[key]=lastMarker;
+      int last = key;
+      for (j=start_[iSetOut];j<end_[iSetOut];j++) {
+	if (j!=key&&model->getStatus(j)==ClpSimplex::basic) {
+	  next_[last]=j;
+	  next_[j]=lastMarker;
+	  last = j;
+	}
+      }
+    }
+  } else if (sequenceOut<numberColumns) {
+    int iSetOut = backward_[sequenceOut];
+    if (iSetOut>=0) {
+      // just redo set
+      int j;
+      int key=keyVariable_[iSetOut];;
+      int lastMarker = -(key+1);
+      next_[key]=lastMarker;
+      int last = key;
+      for (j=start_[iSetOut];j<end_[iSetOut];j++) {
+	if (j!=key&&model->getStatus(j)==ClpSimplex::basic) {
+	  next_[last]=j;
+	  next_[j]=lastMarker;
+	  last = j;
+	}
+      }
+    }
+  }
+  if (iSetIn>=0&&iSetIn!=iSetOut) {
+    if (sequenceIn == numberColumns+2*numberRows) {
+      // key slack in
+      assert (model->pivotRow()<numberRows);
+      // must swap with current key
+      int key=keyVariable_[iSetIn];
+      model->setStatus(key,ClpSimplex::basic);
+      setStatus(iSetIn,ClpSimplex::basic);
+      pivotVariable[model->pivotRow()]=key;
+      keyVariable_[iSetIn] = iSetIn+numberColumns;
+      // also update effective rhs
+      if (effectiveRhs_) {
+	double value;
+	if (model->directionIn()<0) {
+	  value = upper_[iSetIn];
+	} else {
+	  value = lower_[iSetIn];
+	}
+	//add( model,effectiveRhs_,key,value);
+      }
+    }
+    // redo set to allow for new one
+    int j;
+    int key=keyVariable_[iSetIn];;
+    int lastMarker = -(key+1);
+    next_[key]=lastMarker;
+    int last = key;
+    for (j=start_[iSetIn];j<end_[iSetIn];j++) {
+      if (j!=key&&model->getStatus(j)==ClpSimplex::basic) {
+	next_[last]=j;
+	next_[j]=lastMarker;
+	last = j;
+      }
+    }
+  }
+  if (effectiveRhs_) {
+    // update effective rhs
+    if (sequenceIn!=sequenceOut) {
+      if (sequenceIn<numberColumns) {
+	if (iSetIn>=0) {
+	  // new contribution to effectiveRhs_
+	  int key = keyVariable_[iSetIn];
+	  if (key<numberColumns) {
+	    double newB=0.0;
+	    ClpSimplex::Status iStatus = getStatus(iSetIn);
+	    if (iStatus==ClpSimplex::atLowerBound)
+	      newB=lower_[iSetIn];
+	    else
+	      newB=upper_[iSetIn];
+	    // subtract out others at bounds
+	    int j;
+	    for (j=start_[iSetIn];j<end_[iSetIn];j++) {
+	      if (j!=key && model->getColumnStatus(j)!=ClpSimplex::basic) 
+		newB -= solution[j];
+	    }
+	    if (newB)
+	      ClpPackedMatrix::add(model,effectiveRhs_,key,-newB);
+	  }
+	}
+      }
+      if (sequenceOut<numberColumns) {
+	if (iSetOut>=0) {
+	  // new contribution to effectiveRhs_
+	  int key = keyVariable_[iSetOut];
+	  if (key<numberColumns&&iSetIn!=iSetOut) {
+	    double newB=0.0;
+	    ClpSimplex::Status iStatus = getStatus(iSetOut);
+	    if (iStatus==ClpSimplex::atLowerBound)
+	      newB=lower_[iSetOut];
+	    else
+	      newB=upper_[iSetOut];
+	    // subtract out others at bounds
+	    int j;
+	    for (j=start_[iSetOut];j<end_[iSetOut];j++) {
+	      if (j!=key&&model->getColumnStatus(j)!=ClpSimplex::basic) 
+		newB -= solution[j];
+	    }
+	    if (newB)
+	      ClpPackedMatrix::add(model,effectiveRhs_,key,-newB);
+	  }
+	}
+      }
+    }
+  }
+#ifdef CLP_DEBUG
+  // debug
+  {
+    int i;
+    char xxxx[20000];
+    memset(xxxx,0,numberColumns);
+    for (i=0;i<numberRows;i++) {
+      int iPivot = pivotVariable[i];
+      assert (model->getStatus(iPivot)==ClpSimplex::basic);
+      if (iPivot<numberColumns&&backward_[iPivot]>=0)
+	xxxx[iPivot]=1;
+    }
+    for (i=0;i<numberSets_;i++) {
+      int key=keyVariable_[i];
+      int iColumn = next_[key];
+      while (iColumn>=0) {
+	assert (xxxx[iColumn]);
+	xxxx[iColumn]=0;
+	iColumn=next_[iColumn];
+      }
+    }
+    for (i=0;i<numberColumns;i++) {
+      if (i<numberColumns&&backward_[i]>=0) {
+	assert (!xxxx[i]||i==keyVariable_[backward_[i]]);
+      }
+    }
+  }
+#endif
+  return 0;
 }
 
 

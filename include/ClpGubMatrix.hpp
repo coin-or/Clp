@@ -26,7 +26,7 @@ public:
   virtual CoinBigIndex fillBasis(ClpSimplex * model,
 				 const int * whichColumn, 
 				 int numberRowBasic,
-				 int numberColumnBasic,
+				 int & numberColumnBasic,
 				 int * row, int * column,
 				 double * element)  ;
   /** Unpacks a column into an CoinIndexedvector
@@ -44,6 +44,9 @@ public:
       You can use quickAdd to add to vector */
   virtual void add(const ClpSimplex * model,CoinIndexedVector * rowArray,
 		   int column, double multiplier) const ;
+  /** Adds multiple of a column into an array */
+  virtual void add(const ClpSimplex * model,double * array,
+		   int column, double multiplier) const;
   /// Partial pricing 
   virtual void partialPricing(ClpSimplex * model, int start, int end,
 		      int & bestSequence, int & numberWanted);
@@ -77,13 +80,13 @@ public:
 				    const CoinIndexedVector * y,
 				    CoinIndexedVector * z) const;
   /** expands an updated column to allow for extra rows which the main
-      solver does not know about and returns number added.  If the arrays are NULL 
-      then returns number of extra entries needed.
+      solver does not know about and returns number added if mode 0.
+      If mode 1 cleans up, predicts update action.  Returns 0 for normal replaceColumn,
+      >0  for replaceColumn + more, -1 for no replaceColumn  + more (key flip).
 
       This active in Gub
   */
-  virtual int extendUpdated(CoinIndexedVector * update, double * lower,
-			    double * solution, double * upper);
+  virtual int extendUpdated(ClpSimplex * model,CoinIndexedVector * update,int mode);
   /**
      mode=0  - Set up before "update" and "times" for primal solution using extended rows
      mode=1  - Cleanup primal solution after "times" using extended rows.
@@ -94,7 +97,8 @@ public:
       mode=0  - Set up before "updateTranspose" and "transposeTimes" for duals using extended
                 updates array (and may use other if dual values pass)
       mode=1  - Update dual solution after "transposeTimes" using extended rows.
-      mode=2  - Check (or report on) dual infeasibilities
+      mode=2  - Compute all djs and compute key dual infeasibilities
+      mode=3  - Report on key dual infeasibilities
   */
   virtual void dualExpanded(ClpSimplex * model,CoinIndexedVector * array,
 			    double * other,int mode);
@@ -102,10 +106,22 @@ public:
       mode=0  - Create list of non-key basics in pivotVariable_ using
                 number as numberBasic in and out
       mode=1  - Set all key variables as basic
+      mode=2  - return number extra rows needed, number gives maximum number basic
+      mode=3  - before replaceColumn
+      mode=4  - after replaceColumn
   */
   virtual int generalExpanded(ClpSimplex * model,int mode,int & number);
+  /** 
+     update information for a pivot (and effective rhs)
+  */
+  virtual int updatePivot(ClpSimplex * model,double oldInValue, double oldOutValue);
   /// Sets up an effective RHS and does gub crash if needed
   void useEffectiveRhs(ClpSimplex * model,bool cheapest=true);
+  /** Returns effective RHS if it is being used.  This is used for long problems
+      or big gub or anywhere where going through full columns is
+      expensive.  This may re-compute */
+  virtual double * effectiveRhs(ClpSimplex * model,bool forceRefresh=false,
+				bool check=false);
   //@}
 
 
@@ -163,6 +179,17 @@ public:
     st_byte &= ~7;
     st_byte |= status;
   };
+  /// To flag a variable
+  inline void setFlagged( int sequence)
+  {
+    status_[sequence] |= 64;
+  };
+  inline void clearFlagged( int sequence)
+  {
+    status_[sequence] &= ~64;
+  };
+  inline bool flagged(int sequence) const
+  {return ((status_[sequence]&64)!=0);};
   /// To say key is above ub
   inline void setAbove( int sequence)
   {
@@ -220,18 +247,30 @@ protected:
   /// Key variable of set
   mutable int * keyVariable_;
   /** Next basic variable in set - starts at key and end with -(set+1) */
+  // May be easier to get rid of next_ - think when starts working
   mutable int * next_;
+  /// Backward pointer to index in CoinIndexedVector
+  int * toIndex_;
+  // Reverse pointer from index to set
+  int * fromIndex_; 
   /// Number of dual infeasibilities
   int numberDualInfeasibilities_;
   /// Number of primal infeasibilities
   int numberPrimalInfeasibilities_;
   /// Number of sets (gub rows)
   int numberSets_;
+  /// Number in vector without gub extension
+  int saveNumber_;
+  /// Pivot row of possible next key
+  int possiblePivotKey_;
+  /// Gub slack in (set number or -1)
+  int gubSlackIn_;
   /// First gub variables (same as start_[0] at present)
   int firstGub_;
   /// last gub variable (same as end_[numberSets_-1] at present)
   int lastGub_;
-  /// type of gub - 0 not contiguous, 1 contiguous
+  /** type of gub - 0 not contiguous, 1 contiguous
+      add 8 bit to say no ubs on individual variables */
   int gubType_;
    //@}
 };

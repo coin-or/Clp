@@ -1532,7 +1532,7 @@ bool ClpPredictorCorrector::checkGoodMove(const bool doCorrector)
         if (actualPrimalStep_<1.0e-5&&actualDualStep_<1.0e-5) {
           goodMove=false;
         } 
-        if (actualPrimalStep_<1.0e-5*actualDualStep_<1.0e-20) {
+        if (actualPrimalStep_*actualDualStep_<1.0e-20) {
           goodMove=false;
         } 
       } 
