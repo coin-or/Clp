@@ -269,13 +269,13 @@ ClpSimplexOther::primalRanging(int numberCheck,const int * which,
 	// Get extra rows
 	matrix_->extendUpdated(this,rowArray_[1],0);
 	// do ratio test
-	checkPrimalRatios(rowArray_[1],1);
+	checkPrimalRatios(rowArray_[1],-1);
 	if (pivotRow_>=0) {
 	  valueIncrease = theta_;
 	  sequenceIncrease=pivotVariable_[pivotRow_];
 	}
 	directionIn_=-1; // down
-	checkPrimalRatios(rowArray_[1],-1);
+	checkPrimalRatios(rowArray_[1],1);
 	if (pivotRow_>=0) {
 	  valueDecrease = theta_;
 	  sequenceDecrease=pivotVariable_[pivotRow_];
