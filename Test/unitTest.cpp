@@ -1,6 +1,7 @@
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
+#include "CoinPragma.hpp"
 #include <cassert>
 #include <cstdio>
 #include <cmath>
@@ -9,8 +10,6 @@
 #include <iostream>
 
 #include <time.h>
-
-#include "CoinPragma.hpp"
 
 #include "CoinMpsIO.hpp"
 #include "CoinPackedMatrix.hpp"
@@ -52,7 +51,6 @@ void testingMessage( const char * const msg );
 //
 // All parameters are optional.
 //----------------------------------------------------------------
-
 int mainTest (int argc, const char *argv[],bool doDual,
 	      ClpSimplex empty, bool doPresolve,int doIdiot)
 {
