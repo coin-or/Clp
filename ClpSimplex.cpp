@@ -2605,25 +2605,25 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
       pivotVariable_[i]=-1;
   }
 
-  if ((what&16)!=0&&!rowArray_[2]) {
-    // get some arrays
-    int iRow,iColumn;
-    // these are "indexed" arrays so we always know where nonzeros are
-    /**********************************************************
+  if (what==63) {
+    if (newArrays) {
+      // get some arrays
+      int iRow,iColumn;
+      // these are "indexed" arrays so we always know where nonzeros are
+      /**********************************************************
       rowArray_[3] is long enough for rows+columns
-    *********************************************************/
-    for (iRow=0;iRow<4;iRow++) {
-      if (!rowArray_[iRow]) {
+      *********************************************************/
+      for (iRow=0;iRow<4;iRow++) {
+	delete rowArray_[iRow];
 	rowArray_[iRow]=new CoinIndexedVector();
 	int length =numberRows2+factorization_->maximumPivots();
 	if (iRow==3||objective_->type()>1)
 	  length += numberColumns_;
 	rowArray_[iRow]->reserve(length);
       }
-    }
-    
-    for (iColumn=0;iColumn<2;iColumn++) {
-      if (!columnArray_[iColumn]) {
+      
+      for (iColumn=0;iColumn<2;iColumn++) {
+	delete columnArray_[iColumn];
 	columnArray_[iColumn]=new CoinIndexedVector();
 	if (!iColumn)
 	  columnArray_[iColumn]->reserve(numberColumns_);
@@ -2889,8 +2889,13 @@ ClpSimplex::deleteRim(int getRidOfFactorizationData)
   }
   // scaling may have been turned off
   scalingFlag_ = abs(scalingFlag_);
-  if(getRidOfFactorizationData>0)
+  if(getRidOfFactorizationData>0) {
     gutsOfDelete(getRidOfFactorizationData+1);
+  } else {
+    // at least get rid of nonLinearCost_
+    delete nonLinearCost_;
+    nonLinearCost_=NULL;
+  }
   // get rid of data
   matrix_->generalExpanded(this,13,scalingFlag_);
 }
@@ -5517,7 +5522,6 @@ ClpSimplex::startup(int ifValuesPass, int startFinishOptions)
     // for primal we will change bounds using infeasibilityCost_
     if (nonLinearCost_==NULL&&algorithm_>0) {
       // get a valid nonlinear cost function
-      delete nonLinearCost_;
       nonLinearCost_= new ClpNonLinearCost(this);
     }
     

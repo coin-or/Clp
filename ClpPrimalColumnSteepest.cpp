@@ -2776,19 +2776,40 @@ ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model,int mode)
   int numberColumns = model_->numberColumns();
   const int * pivotVariable = model_->pivotVariable();
   bool doInfeasibilities=true;
-  if (mode==1&&weights_) {
-    if (pivotSequence_>=0) {
-      // clean array first
-      alternateWeights_->clear();
-      // save pivot order
-      memcpy(alternateWeights_->getIndices(),pivotVariable,
-	     numberRows*sizeof(int));
-      // change from pivot row number to sequence number
-      pivotSequence_=pivotVariable[pivotSequence_];
-    } else {
-      alternateWeights_->clear();
+  if (mode==1) {
+    if(weights_) {
+      // Check if size has changed
+      if (infeasible_->capacity()==numberRows+numberColumns&&
+	alternateWeights_->capacity()==numberRows+
+	  model_->factorization()->maximumPivots()) {
+	if (pivotSequence_>=0) {
+	  // clean array first
+	  alternateWeights_->clear();
+	  // save pivot order
+	  memcpy(alternateWeights_->getIndices(),pivotVariable,
+		 numberRows*sizeof(int));
+	  // change from pivot row number to sequence number
+	  pivotSequence_=pivotVariable[pivotSequence_];
+	} else {
+	  alternateWeights_->clear();
+	}
+	state_=1;
+      } else {
+	// size has changed - clear everything
+	delete [] weights_;
+	weights_=NULL;
+	delete infeasible_;
+	infeasible_=NULL;
+	delete alternateWeights_;
+	alternateWeights_=NULL;
+	delete [] savedWeights_;
+	savedWeights_=NULL;
+	delete [] reference_;
+	reference_=NULL;
+	state_=-1;
+	pivotSequence_=-1;
+      }
     }
-    state_=1;
   } else if (mode==2||mode==4||mode==5) {
     // restore
     if (!weights_||state_==-1||mode==5) {
