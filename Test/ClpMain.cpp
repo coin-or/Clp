@@ -2248,14 +2248,23 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 		char format[6];
 		sprintf(format,"%%-%ds",max(lengthName,8));
 		for (iRow=0;iRow<numberRows;iRow++) {
+		  int type=0;
 		  if (primalRowSolution[iRow]>rowUpper[iRow]+primalTolerance||
-		      primalRowSolution[iRow]<rowLower[iRow]-primalTolerance)
+		      primalRowSolution[iRow]<rowLower[iRow]-primalTolerance) {
 		    fprintf(fp,"** ");
-		  fprintf(fp,"%7d ",iRow);
-		  if (lengthName)
-		    fprintf(fp,format,rowNames[iRow].c_str());
-		  fprintf(fp,"%15.8g        %15.8g\n",primalRowSolution[iRow],
-			  dualRowSolution[iRow]);
+		    type=2;
+		  } else if (fabs(primalRowSolution[iRow])>1.0e-8) {
+		    type=1;
+		  } else if (numberRows<50) {
+		    type=3;
+		  }
+		  if (type) {
+		    fprintf(fp,"%7d ",iRow);
+		    if (lengthName)
+		      fprintf(fp,format,rowNames[iRow].c_str());
+		    fprintf(fp,"%15.8g        %15.8g\n",primalRowSolution[iRow],
+			    dualRowSolution[iRow]);
+		  }
 		}
 		int iColumn;
 		int numberColumns=models[iModel].numberColumns();
@@ -2266,15 +2275,24 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 		double * columnLower = models[iModel].columnLower();
 		double * columnUpper = models[iModel].columnUpper();
 		for (iColumn=0;iColumn<numberColumns;iColumn++) {
+		  int type=0;
 		  if (primalColumnSolution[iColumn]>columnUpper[iColumn]+primalTolerance||
-		      primalColumnSolution[iColumn]<columnLower[iColumn]-primalTolerance)
+		      primalColumnSolution[iColumn]<columnLower[iColumn]-primalTolerance) {
 		    fprintf(fp,"** ");
-		  fprintf(fp,"%7d ",iColumn);
-		  if (lengthName)
-		    fprintf(fp,format,columnNames[iColumn].c_str());
-		  fprintf(fp,"%15.8g        %15.8g\n",
-			  primalColumnSolution[iColumn],
-			  dualColumnSolution[iColumn]);
+		    type=2;
+		  } else if (fabs(primalColumnSolution[iColumn])>1.0e-8) {
+		    type=1;
+		  } else if (numberColumns<50) {
+		    type=3;
+		  }
+		  if (type) {
+		    fprintf(fp,"%7d ",iColumn);
+		    if (lengthName)
+		      fprintf(fp,format,columnNames[iColumn].c_str());
+		    fprintf(fp,"%15.8g        %15.8g\n",
+			    primalColumnSolution[iColumn],
+			    dualColumnSolution[iColumn]);
+		  }
 		}
 		if (fp!=stdout)
 		  fclose(fp);

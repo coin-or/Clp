@@ -35,7 +35,6 @@ int main (int argc, const char *argv[])
 
   double time1 = CoinCpuTime();
   
-  
   int numberColumns = model.numberColumns();
   int originalNumberRows = model.numberRows();
   
@@ -43,6 +42,7 @@ int main (int argc, const char *argv[])
   double * weight = new double [originalNumberRows];
   int * sort = new int [originalNumberRows];
   int numberSort=0;
+  char * take = new char [originalNumberRows];
   
   const double * rowLower = model.rowLower();
   const double * rowUpper = model.rowUpper();
@@ -85,33 +85,40 @@ int main (int argc, const char *argv[])
   double * fullSolution = model.primalRowSolution();
   
   // Just do this number of passes
-  int maxPass=100;
+  int maxPass=50;
   // And take out slack rows until this pass
-  int takeOutPass=20;
+  int takeOutPass=30;
   int iPass;
   
-  // We will be using all columns
+  const int * start = model.clpMatrix()->getVectorStarts();
+  const int * length = model.clpMatrix()->getVectorLengths();
+  const int * row = model.clpMatrix()->getIndices();
   int * whichColumns = new int [numberColumns];
-  for (int iColumn=0;iColumn<numberColumns;iColumn++)
+  for (iColumn=0;iColumn<numberColumns;iColumn++) 
     whichColumns[iColumn]=iColumn;
-  
+  int numberSmallColumns=numberColumns;
   for (iPass=0;iPass<maxPass;iPass++) {
     printf("Start of pass %d\n",iPass);
     // Cleaner this way
     std::sort(sort,sort+numberSort);
     // Create small problem
-    ClpSimplex small(&model,numberSort,sort,numberColumns,whichColumns);
-    small.setFactorizationFrequency(100+numberSort/100);
+    ClpSimplex small(&model,numberSort,sort,numberSmallColumns,whichColumns);
+    small.setFactorizationFrequency(100+numberSort/200);
     //small.setPerturbation(50);
     //small.setLogLevel(63);
     // A variation is to just do N iterations
+    //if (iPass)
+    //small.setMaximumIterations(100);
     // Solve 
     small.dual();
     // move solution back
-    memcpy(model.primalColumnSolution(),small.primalColumnSolution(),numberColumns*sizeof(double));
-    for (iColumn=0;iColumn<numberColumns;iColumn++) 
-      model.setColumnStatus(iColumn,small.getColumnStatus(iColumn));
-    
+    double * solution = model.primalColumnSolution();
+    const double * smallSolution = small.primalColumnSolution();
+    for (int j=0;j<numberSmallColumns;j++) {
+      iColumn = whichColumns[j];
+      solution[iColumn]=smallSolution[j];
+      model.setColumnStatus(iColumn,small.getColumnStatus(j));
+    }
     for (iRow=0;iRow<numberSort;iRow++) {
       int kRow = sort[iRow];
       model.setRowStatus(kRow,small.getRowStatus(iRow));
@@ -127,14 +134,26 @@ int main (int argc, const char *argv[])
       int iSort;
       int numberDropped=0;
       int numberKept=0;
+      int numberBinding=0;
+      int numberInfeasibilities=0;
+      double sumInfeasibilities=0.0;
       for (iSort=0;iSort<numberSort;iSort++) {
 	iRow=sort[iSort];
 	//printf("%d %g %g\n",iRow,fullSolution[iRow],small.primalRowSolution()[iSort]);
 	if (model.getRowStatus(iRow)==ClpSimplex::basic) {
 	  // Basic - we can get rid of if early on
 	  if (iPass<takeOutPass) {
-	    weight[iRow]=1.0;
-	    numberDropped++;
+	    // may have hit max iterations so check
+	    double infeasibility = max(fullSolution[iRow]-rowUpper[iRow],
+				       rowLower[iRow]-fullSolution[iRow]);
+	    weight[iRow]=-infeasibility;
+	    if (infeasibility>1.0e-8) {
+	      numberInfeasibilities++;
+	      sumInfeasibilities += infeasibility;
+	    } else {
+	      weight[iRow]=1.0;
+	      numberDropped++;
+	    }
 	  } else {
 	    // keep
 	    weight[iRow]=-1.0e40;
@@ -144,10 +163,9 @@ int main (int argc, const char *argv[])
 	  // keep
 	  weight[iRow]=-1.0e50;
 	  numberKept++;
+	  numberBinding++;
 	}
       }
-      int numberInfeasibilities=0;
-      double sumInfeasibilities=0.0;
       // Now rest
       for (iRow=0;iRow<originalNumberRows;iRow++) {
 	sort[iRow]=iRow;
@@ -165,8 +183,22 @@ int main (int argc, const char *argv[])
       // sort
       CoinSort_2(weight,weight+originalNumberRows,sort);
       numberSort = min(originalNumberRows,smallNumberRows+numberKept);
-      printf("%d rows kept, %d rows dropped - new size %d rows\n",
-	     numberKept,numberDropped,numberSort);
+      memset(take,0,originalNumberRows);
+      for (iRow=0;iRow<numberSort;iRow++)
+      take[sort[iRow]]=1;
+      numberSmallColumns=0;
+      for (iColumn=0;iColumn<numberColumns;iColumn++) {
+	int n=0;
+	for (int j=start[iColumn];j<start[iColumn]+length[iColumn];j++) {
+	  int iRow = row[j];
+	  if (take[iRow])
+	    n++;
+	}
+	if (n)
+	  whichColumns[numberSmallColumns++]=iColumn;
+      }
+      printf("%d rows binding, %d rows kept, %d rows dropped - new size %d rows, %d columns\n",
+	     numberBinding,numberKept,numberDropped,numberSort,numberSmallColumns);
       printf("%d rows are infeasible - sum is %g\n",numberInfeasibilities,
 	       sumInfeasibilities);
       if (!numberInfeasibilities) {
@@ -188,8 +220,15 @@ int main (int argc, const char *argv[])
   delete [] weight;
   delete [] sort;
   delete [] whichColumns;
+  delete [] take;
   // If problem is big you may wish to skip this
   model.dual();
+  int numberBinding=0;
+  for (iRow=0;iRow<originalNumberRows;iRow++) {
+    if (model.getRowStatus(iRow)!=ClpSimplex::basic) 
+      numberBinding++;
+  }
+  printf("%d binding rows at end\n",numberBinding);
   printf("Solve took %g seconds\n",CoinCpuTime()-time1);
   return 0;
 }    
