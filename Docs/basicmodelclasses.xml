@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+  <chapter>
+  <title>
+  Basic Model Classes
+  </title>
+  <section>
+  <title>
+  Hierarchy
+  </title>
+  <para>
+  The basic model class hierarchy is simple.  The top three levels of the 
+  hierarchy are depicted in the figure below. The first two levels  (i.e., Clp 
+  Model, Clp Simplex, ClpInterior) contain all the problem data which defines a
+  model (aka, a problem instance). The third level is less model and more
+  algorithmic.  There is a fourth level (for models with more general
+  objectives than linear ones), but beyond the current scope of this document.  
+  </para>
+  <mediaobject>
+    <imageobject>
+      <imagedata fileref="figures/clpbasicmodelhier.gif" format="GIF"/>
+    </imageobject>
+    <caption>
+      <para>
+	CLP Basic Classes
+      </para>
+    </caption>
+  </mediaobject>
+  <para>
+  ClpModel has all problem data.  There may be a few pieces of data which could
+  be elsewhere but which are permanent and so they are here.  The main example
+  of this is a status array which makes most sense for Simplex but has use for
+  crossing over from any solution.
+  </para>
+  <para>
+  ClpSimplex inherits from ClpModel, as does ClpInterior.  Extra data is specific
+  to the simplex algorithm and can be transient  e.g., scaling arrays.  Normally
+  a user will just be dealing with the ClpSimplex class and not with the ClpModel
+  class.
+  </para>
+  <para>
+  From the point of view of most Simplex users, the ClpModel and ClpSimplex
+  classes are all you need to know about.  There are algorithm-specific classes
+  which inherit from ClpSimplex (e.g., ClpSimplexDual and ClpSimplexPrimal), but
+  they have no member data and very rarely need be visible to user.  Normally,
+  after instantiating an object of type ClpSimplex, the user would type 
+  model.dual() to invoke dual algorithm.
+  </para>
+  </section>
+  <section>
+  <title>
+  First example
+  </title>
+  <para>
+  Okay, first sample.  It is short enough to present in full (and to not be too
+  frightening!):
+  </para>
+  <programlisting>
+// Copyright (C) 2002, International Business Machines
+// Corporation and others.  All Rights Reserved.
+
+#include &quot;ClpSimplex.hpp&quot;
+int main (int argc, const char *argv[])
+{
+  ClpSimplex  model;
+  int status;
+  if (argc&lt;2)
+    status=model.readMps(&quot;../../Mps/Sample/p0033.mps&quot;);
+  else
+    status=model.readMps(argv[1]);
+  if (!status) {
+    model.primal();
+  }
+  return 0;
+}    
+  </programlisting>
+  <para>
+  This sample program creates a default ClpSimplex model, reads an mps file,
+  and if there are no errors, solves it using the primal algorithm.  Simple, but
+  not terribly useful: there is no way to see the result of the solve.  There are
+  two main results -- a status saying what happened, and then arrays filled with
+  the solution values.
+  </para>
+  </section>
+  <section>
+  <title>
+  Getting at the solution
+  </title>
+  <para>
+  It is often the case with CLP that there is more than one way to do something.
+  This is a consequence of CLP's mixed heritage as a child of OSL and a cousin of
+  OSI.  Finding the status exemplifies this situation.
+  </para>
+  <para>
+  The OSI way to check for optimality is to call model.isProvenOptimal().  Also
+  available are isProvenPrimalInfeasible(), isProvenDualInfeasible(),
+  isPrimalObjectiveLimitReached(), isDualObjectiveLimitReached(),
+  isIterationLimitReached() or the feared isAbandoned().  Should one prefer the
+  OSL way of doing things, model.status() returns as it would in OSL-land, so 0
+  means optimal, 1 means  primal infeasible etc.
+  </para>
+  <para>
+  Similarly, to pick up the solution values, we can inhabit the virtuous Osi-land or the
+  not-quite-so-virtuous Clp-land.  By this it is meant that there are const and
+  non-const forms of arrays.  It is easier to deal with the non-const versions,
+  so most of the later elaborate algorithms use them.
+  </para>
+  </section>
+  </chapter>
