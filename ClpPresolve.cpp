@@ -1293,6 +1293,12 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
   originalColumn_ = new int[ncols_];
   delete [] originalRow_;
   originalRow_ = new int[nrows_];
+  // and fill in case returns early
+  int i;
+  for (i=0;i<ncols_;i++)
+    originalColumn_[i]=i;
+  for (i=0;i<nrows_;i++)
+    originalRow_[i]=i;
 
   // result is 0 - okay, 1 infeasible, -1 go round again, 2 - original model
   int result = -1;
