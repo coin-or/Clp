@@ -1071,6 +1071,8 @@ public:
   void modifyObjective(double value);
   /// Returns previous iteration number (if -1) - current if (0)
   int lastIterationNumber(int back=1) const;
+  /// clears all iteration numbers (to switch off panic)
+  void clearIterationNumbers();
   /// Odd state
   inline void newOddState()
   { oddState_= - oddState_-1;};

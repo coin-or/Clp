@@ -696,6 +696,7 @@ public:
   //@{
   double dualBound_;
   double infeasibilityCost_;
+  double pivotTolerance_;
   int sparseThreshold_;
   int perturbation_;
 

@@ -664,6 +664,8 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
 	acceptablePivot=1.0e-5; // if we have iterated be more strict
       else if (factorization_->pivots()>5)
 	acceptablePivot=1.0e-6; // if we have iterated be slightly more strict
+      //if ((specialOptions_&64)!=0) 
+      //acceptablePivot=1.0e-7; // relax
       // get sign for finding row of tableau
       if (candidate<0) {
 	// normal iteration
@@ -995,12 +997,27 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
 	  printf("** no column pivot\n");
 #endif
 	if (factorization_->pivots()<5) {
-	  problemStatus_=-4; //say looks infeasible
-	  // create ray anyway
-	  delete [] ray_;
-	  ray_ = new double [ numberRows_];
-	  rowArray_[0]->expand(); // in case packed
-	  ClpDisjointCopyN(rowArray_[0]->denseVector(),numberRows_,ray_);
+	  // If special option set - put off as long as possible
+	  if ((specialOptions_&64)==0) {
+	    problemStatus_=-4; //say looks infeasible
+	    // create ray anyway
+	    delete [] ray_;
+	    ray_ = new double [ numberRows_];
+	    rowArray_[0]->expand(); // in case packed
+	    ClpDisjointCopyN(rowArray_[0]->denseVector(),numberRows_,ray_);
+	  } else {
+	    // flag
+	    char x = isColumn(sequenceOut_) ? 'C' :'R';
+	    handler_->message(CLP_SIMPLEX_FLAG,messages_)
+	      <<x<<sequenceWithin(sequenceOut_)
+	      <<CoinMessageEol;
+	    setFlagged(sequenceOut_);
+	    if (!factorization_->pivots()) {
+	      rowArray_[0]->clear();
+	      columnArray_[0]->clear();
+	      continue;
+	    }
+	  }
 	}
 	rowArray_[0]->clear();
 	columnArray_[0]->clear();
@@ -1044,6 +1061,9 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
 	}
       } else {
 	problemStatus_=-3;
+	// Force to re-factorize early next time
+	int numberPivots = factorization_->pivots();
+	forceFactorization_=CoinMin(forceFactorization_,(numberPivots+1)>>1);
       }
       returnCode=0;
       break;
@@ -1720,6 +1740,8 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
   int numberRemaining=0;
   
   double totalThru=0.0; // for when variables flip
+  //double saveAcceptable=acceptablePivot;
+  //acceptablePivot=1.0e-9;
 
   double bestEverPivot=acceptablePivot;
   int lastSequence = -1;
@@ -2337,6 +2359,9 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
     memset(array[i]+marker[i][1],0,
 	   (numberColumns_-marker[i][1])*sizeof(double));
   }
+  //if (fabs(alpha_)<saveAcceptable)
+  //printf("iteration %d in %d alpha %g acceptable %g\n",
+  //   numberIterations_,sequenceIn_,alpha_,saveAcceptable);
 }
 /* Checks if tentative optimal actually means unbounded
    Returns -3 if not, 2 if is unbounded */
@@ -2508,6 +2533,20 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
     if (dualRowPivot_->looksOptimal()) {
       numberPrimalInfeasibilities_ = 0;
       sumPrimalInfeasibilities_ = 0.0;
+    }
+  }
+  // Up tolerance if looks a bit odd
+  if (numberIterations_>CoinMax(1000,numberRows_>>4)&&(specialOptions_&64)!=0) {
+    if (sumPrimalInfeasibilities_&&sumPrimalInfeasibilities_<1.0e5) {
+      int backIteration = progress->lastIterationNumber(CLP_PROGRESS-1);
+      if (backIteration>0&&numberIterations_-backIteration<9*CLP_PROGRESS) {
+	if (factorization_->pivotTolerance()<0.9) {
+	  // up tolerance
+	  factorization_->pivotTolerance(CoinMin(factorization_->pivotTolerance()*1.05+0.02,0.91));
+	  //printf("tol now %g\n",factorization_->pivotTolerance());
+	  progress->clearIterationNumbers();
+	}
+      }
     }
   }
   // Check if looping
@@ -2911,15 +2950,23 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
   else
     dualRowPivot_->saveWeights(this,3);
   // unflag all variables (we may want to wait a bit?)
-  if (tentativeStatus!=-2&&unflagVariables) {
+  if ((tentativeStatus!=-2&&tentativeStatus!=-1)&&unflagVariables) {
     int iRow;
     int numberFlagged=0;
     for (iRow=0;iRow<numberRows_;iRow++) {
       int iPivot=pivotVariable_[iRow];
-      if (flagged(iPivot))
+      if (flagged(iPivot)) {
 	numberFlagged++;
-      clearFlagged(iPivot);
+	clearFlagged(iPivot);
+      }
     }
+#if 0
+    if (numberFlagged) {
+      printf("unflagging %d variables - status %d ninf %d nopt %d\n",numberFlagged,tentativeStatus,
+	     numberPrimalInfeasibilities_,
+	     numberTimesOptimal_);
+    }
+#endif
     unflagVariables = numberFlagged>0;
     if (numberFlagged&&!numberPivots) {
       /* looks like trouble as we have not done any iterations.

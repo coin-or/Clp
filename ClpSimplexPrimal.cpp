@@ -587,6 +587,9 @@ ClpSimplexPrimal::whileIterating(int valuesOption)
 #endif
       if (nonLinearCost_->numberInfeasibilities())
 	problemStatus_=-4; // might be infeasible 
+      // Force to re-factorize early next time
+      int numberPivots = factorization_->pivots();
+      forceFactorization_=CoinMin(forceFactorization_,(numberPivots+1)>>1);
       returnCode=0;
       break;
     }

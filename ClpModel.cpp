@@ -1715,6 +1715,7 @@ ClpDataSave::ClpDataSave ()
   dualBound_ = 0.0;
   infeasibilityCost_ = 0.0;
   sparseThreshold_ = 0;
+  pivotTolerance_=0.0;
   perturbation_ = 0;
 }
 
@@ -1725,6 +1726,7 @@ ClpDataSave::ClpDataSave (const ClpDataSave & rhs)
 {  
   dualBound_ = rhs.dualBound_;
   infeasibilityCost_ = rhs.infeasibilityCost_;
+  pivotTolerance_ = rhs.pivotTolerance_;
   sparseThreshold_ = rhs.sparseThreshold_;
   perturbation_ = rhs.perturbation_;
 }
@@ -1746,6 +1748,7 @@ ClpDataSave::operator=(const ClpDataSave& rhs)
   if (this != &rhs) {
     dualBound_ = rhs.dualBound_;
     infeasibilityCost_ = rhs.infeasibilityCost_;
+    pivotTolerance_ = rhs.pivotTolerance_;
     sparseThreshold_ = rhs.sparseThreshold_;
     perturbation_ = rhs.perturbation_;
   }

@@ -5418,6 +5418,7 @@ ClpSimplex::saveData()
   saved.dualBound_ = dualBound_;
   saved.infeasibilityCost_ = infeasibilityCost_;
   saved.sparseThreshold_ = factorization_->sparseThreshold();
+  saved.pivotTolerance_ = factorization_->pivotTolerance();
   saved.perturbation_ = perturbation_;
   // Progress indicator
   delete progress_;
@@ -5429,6 +5430,7 @@ void
 ClpSimplex::restoreData(ClpDataSave saved)
 {
   factorization_->sparseThreshold(saved.sparseThreshold_);
+  factorization_->pivotTolerance(saved.pivotTolerance_);
   perturbation_ = saved.perturbation_;
   infeasibilityCost_ = saved.infeasibilityCost_;
   dualBound_ = saved.dualBound_;
@@ -5877,6 +5879,13 @@ int
 ClpSimplexProgress::lastIterationNumber(int back) const
 {
   return iterationNumber_[CLP_PROGRESS-1-back];
+}
+// clears iteration numbers (to switch off panic)
+void 
+ClpSimplexProgress::clearIterationNumbers()
+{
+  for (int i=0;i<CLP_PROGRESS;i++) 
+    iterationNumber_[i]=-1;
 }
 // Start check at beginning of whileIterating
 void 

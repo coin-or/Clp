@@ -2890,7 +2890,8 @@ ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model,int mode)
 	delete [] temp;
       } else {
 	// Just clean up
-	alternateWeights_->clear();
+	if (alternateWeights_)
+	  alternateWeights_->clear();
       }
     }
     // Save size of factorization
