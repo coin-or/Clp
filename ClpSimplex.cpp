@@ -2680,11 +2680,14 @@ ClpSimplex::quadraticPrimal(int phase)
 */
 int ClpSimplex::strongBranching(int numberVariables,const int * variables,
 				double * newLower, double * newUpper,
+				double ** outputSolution,
+				int * outputStatus, int * outputIterations,
 				bool stopOnFirstInfeasible,
 				bool alwaysFinish)
 {
   return ((ClpSimplexDual *) this)->strongBranching(numberVariables,variables,
-						    newLower,  newUpper,
+						    newLower,  newUpper,outputSolution,
+						    outputStatus, outputIterations,
 						    stopOnFirstInfeasible,
 						    alwaysFinish);
 }
@@ -4483,10 +4486,12 @@ ClpSimplexProgress::operator=(const ClpSimplexProgress & rhs)
 // Seems to be something odd about exact comparison of doubles on linux
 static bool equalDouble(double value1, double value2)
 {
-  assert(sizeof(unsigned int)*2==sizeof(double));
   unsigned int *i1 = (unsigned int *) &value1;
   unsigned int *i2 = (unsigned int *) &value2;
-  return (i1[0]==i2[0]&&i1[1]==i2[1]);
+  if (sizeof(unsigned int)*2==sizeof(double)) 
+    return (i1[0]==i2[0]&&i1[1]==i2[1]);
+  else
+    return (i1[0]==i2[0]);
 }
 int
 ClpSimplexProgress::looping()
@@ -4579,16 +4584,17 @@ ClpSimplexProgress::looping()
       }
       return -2;
     } else {
-      model_->messageHandler()->message(CLP_LOOP,model_->messages())
-	<<CoinMessageEol;
-#ifndef NDEBUG
-      abort();
-#endif
       // look at solution and maybe declare victory
-      if (infeasibility<1.0e-4)
+      if (infeasibility<1.0e-4) {
 	return 0;
-      else
+      } else {
+	model_->messageHandler()->message(CLP_LOOP,model_->messages())
+	  <<CoinMessageEol;
+#ifndef NDEBUG
+	abort();
+#endif
 	return 3;
+      }
     }
   }
   return -1;

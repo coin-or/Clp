@@ -2942,6 +2942,8 @@ ClpSimplexDual::perturb()
 */
 int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
 				    double * newLower, double * newUpper,
+				    double ** outputSolution,
+				    int * outputStatus, int * outputIterations,
 				    bool stopOnFirstInfeasible,
 				    bool alwaysFinish)
 {
@@ -2968,8 +2970,6 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
   // row activities have negative sign
   factorization_->slackValue(-1.0);
   factorization_->zeroTolerance(1.0e-13);
-  // save if sparse factorization wanted
-  int saveSparse = factorization_->sparseThreshold();
 
   int factorizationStatus = internalFactorize(0);
   if (factorizationStatus<0)
@@ -2978,11 +2978,6 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
     handler_->message(CLP_SINGULARITIES,messages_)
       <<factorizationStatus
       <<CoinMessageEol;
-  if (saveSparse) {
-    // use default at present
-    factorization_->sparseThreshold(0);
-    factorization_->goSparse();
-  }
   
   // save stuff
   ClpFactorization saveFactorization(*factorization_);
@@ -3007,6 +3002,7 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
   memcpy(savePivot, pivotVariable_, numberRows_*sizeof(int));
   // need to save/restore weights.
 
+  int iSolution = 0;
   for (i=0;i<numberVariables;i++) {
     int iColumn = variables[i];
     double objectiveChange;
@@ -3023,7 +3019,29 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
       upper_[iColumn] = newUpper[i]/columnScale_[iColumn]; // scale
     // Start of fast iterations
     int status = fastDual(alwaysFinish);
+    if (status) {
+      // not finished - might be optimal
+      checkPrimalSolution(rowActivityWork_,columnActivityWork_);
+      double limit = 0.0;
+      getDblParam(ClpDualObjectiveLimit, limit);
+      if (!numberPrimalInfeasibilities_&&objectiveValue()*optimizationDirection_<
+	  optimizationDirection_*limit) { 
+	problemStatus_=0;
+      } 
+      status=problemStatus_;
+    }
 
+    if (scalingFlag_<=0) {
+      memcpy(outputSolution[iSolution],solution_,numberColumns_*sizeof(double));
+    } else {
+      int j;
+      double * sol = outputSolution[iSolution];
+      for (j=0;j<numberColumns_;j++) 
+	sol[j] = solution_[j]*columnScale_[j];
+    }
+    outputStatus[iSolution]=status;
+    outputIterations[iSolution]=numberIterations_;
+    iSolution++;
     // restore
     memcpy(solution_,saveSolution,
 	   (numberRows_+numberColumns_)*sizeof(double));
@@ -3060,6 +3078,28 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
       lower_[iColumn] = newLower[i]/columnScale_[iColumn]; // scale
     // Start of fast iterations
     status = fastDual(alwaysFinish);
+    if (status) {
+      // not finished - might be optimal
+      checkPrimalSolution(rowActivityWork_,columnActivityWork_);
+      double limit = 0.0;
+      getDblParam(ClpDualObjectiveLimit, limit);
+      if (!numberPrimalInfeasibilities_&&objectiveValue()*optimizationDirection_<
+	  optimizationDirection_*limit) { 
+	problemStatus_=0;
+      } 
+      status=problemStatus_;
+    }
+    if (scalingFlag_<=0) {
+      memcpy(outputSolution[iSolution],solution_,numberColumns_*sizeof(double));
+    } else {
+      int j;
+      double * sol = outputSolution[iSolution];
+      for (j=0;j<numberColumns_;j++) 
+	sol[j] = solution_[j]*columnScale_[j];
+    }
+    outputStatus[iSolution]=status;
+    outputIterations[iSolution]=numberIterations_;
+    iSolution++;
 
     // restore
     memcpy(solution_,saveSolution,
@@ -3120,7 +3160,6 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
   delete [] saveStatus;
   delete [] savePivot;
 
-  factorization_->sparseThreshold(saveSparse);
   // Get rid of some arrays and empty factorization
   deleteRim();
 #else
@@ -3137,6 +3176,7 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
     memset(status_,0,(numberColumns_+numberRows_)*sizeof(char));
   }
   memcpy(saveStatus,status_,(numberColumns_+numberRows_)*sizeof(char));
+  int iSolution =0;
   for (i=0;i<numberVariables;i++) {
     int iColumn = variables[i];
     double objectiveChange;
@@ -3145,7 +3185,11 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
     
     double saveUpper = columnUpper_[iColumn];
     columnUpper_[iColumn] = newUpper[i];
-    dual();
+    int status=dual(0);
+    memcpy(outputSolution[iSolution],columnActivity_,numberColumns_*sizeof(double));
+    outputStatus[iSolution]=status;
+    outputIterations[iSolution]=numberIterations_;
+    iSolution++;
 
     // restore
     columnUpper_[iColumn] = saveUpper;
@@ -3167,7 +3211,11 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
     
     double saveLower = columnLower_[iColumn];
     columnLower_[iColumn] = newLower[i];
-    dual();
+    status=dual(0);
+    memcpy(outputSolution[iSolution],columnActivity_,numberColumns_*sizeof(double));
+    outputStatus[iSolution]=status;
+    outputIterations[iSolution]=numberIterations_;
+    iSolution++;
 
     // restore
     columnLower_[iColumn] = saveLower;
@@ -3223,6 +3271,8 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
 int ClpSimplexDual::fastDual(bool alwaysFinish)
 {
   algorithm_ = -1;
+  // save data
+  ClpDataSave data = saveData();
   dualTolerance_=dblParam_[ClpDualTolerance];
   primalTolerance_=dblParam_[ClpPrimalTolerance];
 
@@ -3238,6 +3288,8 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
 
   problemStatus_ = -1;
   numberIterations_=0;
+  factorization_->sparseThreshold(0);
+  factorization_->goSparse();
 
   int lastCleaned=0; // last time objective or bounds cleaned up
 
@@ -3269,8 +3321,8 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
 
   int returnCode = 0;
 
+  int iRow,iColumn;
   while (problemStatus_<0) {
-    int iRow,iColumn;
     // clear
     for (iRow=0;iRow<4;iRow++) {
       rowArray_[iRow]->clear();
@@ -3294,18 +3346,18 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
     if (problemStatus_<0) {
       double * givenPi=NULL;
       returnCode = whileIterating(givenPi);
-      if (!alwaysFinish&&returnCode<1) {
+      if (!alwaysFinish&&(returnCode<1||returnCode==3)) {
 	double limit = 0.0;
 	getDblParam(ClpDualObjectiveLimit, limit);
 	if(fabs(limit)>1.0e30||objectiveValue()*optimizationDirection_<
 	   optimizationDirection_*limit|| 
 	   numberAtFakeBound()) {
+	  returnCode=1;
 	  // can't say anything interesting - might as well return
 #ifdef CLP_DEBUG
 	  printf("returning from fastDual after %d iterations with code %d\n",
 		 numberIterations_,returnCode);
 #endif
-	  returnCode=1;
 	  break;
 	}
       }
@@ -3313,7 +3365,17 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
     }
   }
 
+  // clear
+  for (iRow=0;iRow<4;iRow++) {
+    rowArray_[iRow]->clear();
+  }    
+  
+  for (iColumn=0;iColumn<2;iColumn++) {
+    columnArray_[iColumn]->clear();
+  }    
   assert(!numberFake_||returnCode||problemStatus_); // all bounds should be okay
+  // Restore any saved stuff
+  restoreData(data);
   dualBound_ = saveDualBound;
   return returnCode;
 }

@@ -19,6 +19,7 @@
 #include "CoinMpsIO.hpp"
 #include "ClpMessage.hpp"
 #include "ClpLinearObjective.hpp"
+#include "ClpQuadraticObjective.hpp"
 
 //#############################################################################
 
@@ -41,7 +42,6 @@ ClpModel::ClpModel () :
   columnUpper_(NULL),
   matrix_(NULL),
   rowCopy_(NULL),
-  quadraticObjective_(NULL),
   ray_(NULL),
   status_(NULL),
   integerType_(NULL),
@@ -105,8 +105,6 @@ void ClpModel::gutsOfDelete()
   matrix_=NULL;
   delete rowCopy_;
   rowCopy_=NULL;
-  delete quadraticObjective_;
-  quadraticObjective_ = NULL;
   delete [] ray_;
   ray_ = NULL;
   delete [] integerType_;
@@ -372,11 +370,6 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
     } else {
       rowCopy_=NULL;
     }
-    if (rhs.quadraticObjective_) {
-      quadraticObjective_ = new CoinPackedMatrix(*rhs.quadraticObjective_);
-    } else {
-      quadraticObjective_=NULL;
-    }
     matrix_=NULL;
     if (rhs.matrix_) {
       matrix_ = rhs.matrix_->clone();
@@ -394,7 +387,6 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
     columnUpper_ = rhs.columnUpper_;
     matrix_ = rhs.matrix_;
     rowCopy_ = NULL;
-    quadraticObjective_ = rhs.quadraticObjective_;
     ray_ = rhs.ray_;
     lengthNames_ = 0;
     rowNames_ = std::vector<std::string> ();
@@ -440,7 +432,6 @@ ClpModel::returnModel(ClpModel & otherModel)
   columnUpper_ = NULL;
   matrix_ = NULL;
   rowCopy_ = NULL;
-  quadraticObjective_=NULL,
   delete [] otherModel.ray_;
   otherModel.ray_ = ray_;
   ray_ = NULL;
@@ -676,10 +667,6 @@ ClpModel::resize (int newNumberRows, int newNumberColumns)
     for (i=newNumberColumns;i<numberColumns_;i++) 
       which[i-newNumberColumns]=i;
     matrix_->deleteCols(numberColumns_-newNumberColumns,which);
-    if (quadraticObjective_) {
-      quadraticObjective_->deleteCols(numberColumns_-newNumberColumns,which);
-      quadraticObjective_->deleteRows(numberColumns_-newNumberColumns,which);
-    }
     delete [] which;
   }
   if (integerType_) {
@@ -751,10 +738,6 @@ ClpModel::deleteColumns(int number, const int * which)
 			      number, which, newSize);
   matrix_->deleteCols(number,which);
   //matrix_->removeGaps();
-  if (quadraticObjective_) {
-    quadraticObjective_->deleteCols(number,which);
-    quadraticObjective_->deleteRows(number,which);
-  }
   // status
   if (status_) {
     unsigned char * tempC  = (unsigned char *) deleteChar((char *)status_,
@@ -1208,21 +1191,34 @@ ClpModel::loadQuadraticObjective(const int numberColumns, const CoinBigIndex * s
 			      const int * column, const double * element)
 {
   assert (numberColumns==numberColumns_);
-  quadraticObjective_ = new CoinPackedMatrix(true,numberColumns,numberColumns,
-					     start[numberColumns],element,column,start,NULL);
+  assert ((dynamic_cast< ClpLinearObjective*>(objective_)));
+  double offset;
+  ClpObjective * obj = new ClpQuadraticObjective(objective_->gradient(NULL,offset),numberColumns,
+					     start,column,element);
+  delete objective_;
+  objective_ = obj;
+
 }
 void 
 ClpModel::loadQuadraticObjective (  const CoinPackedMatrix& matrix)
 {
   assert (matrix.getNumCols()==numberColumns_);
-  quadraticObjective_ = new CoinPackedMatrix(matrix);
+  assert ((dynamic_cast< ClpLinearObjective*>(objective_)));
+  double offset;
+  ClpQuadraticObjective * obj = 
+    new ClpQuadraticObjective(objective_->gradient(NULL,offset),numberColumns_,
+						 NULL,NULL,NULL);
+  delete objective_;
+  objective_ = obj;
+  obj->loadQuadraticObjective(matrix);
 }
 // Get rid of quadratic objective
 void 
 ClpModel::deleteQuadraticObjective()
 {
-  delete quadraticObjective_;
-  quadraticObjective_ = NULL;
+  ClpQuadraticObjective * obj = (dynamic_cast< ClpQuadraticObjective*>(objective_));
+  if (obj)
+    obj->deleteQuadraticObjective();
 }
 void 
 ClpModel::setObjective(const ClpObjective * objective)
@@ -1415,13 +1411,6 @@ ClpModel::ClpModel ( const ClpModel * rhs,
 					  numberColumns,whichColumn);
   } else {
     rowCopy_=NULL;
-  }
-  if (rhs->quadraticObjective_) {
-    quadraticObjective_ = new CoinPackedMatrix(*rhs->quadraticObjective_,
-					       numberColumns,whichColumn,
-					       numberColumns,whichColumn);
-  } else {
-    quadraticObjective_=NULL;
   }
   matrix_=NULL;
   if (rhs->matrix_) {

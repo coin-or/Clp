@@ -11,6 +11,7 @@
 #define ClpSimplexPrimalQuadratic_H
 
 class ClpQuadraticInfo;
+class ClpQuadraticObjective;
 
 #include "ClpSimplexPrimal.hpp"
 
@@ -59,7 +60,7 @@ public:
   int endQuadratic(ClpSimplexPrimalQuadratic * quadraticModel,
 		   ClpQuadraticInfo & info);
   /// Checks complementarity and computes infeasibilities
-  int checkComplementarity (const ClpQuadraticInfo * info,
+  int checkComplementarity (ClpQuadraticInfo * info,
 			    CoinIndexedVector * array1, CoinIndexedVector * array2);
   /// Fills in reduced costs
   void createDjs (const ClpQuadraticInfo * info,
@@ -157,18 +158,21 @@ public:
   inline const double * currentSolution() const
   {return currentSolution_;};
   void setCurrentSolution(const double * solution);
-  /// Original objective
-  inline const double * originalObjective() const
-  {return originalModel_->objective();};
   /// Quadratic sequence or -1 if linear
   inline const int * quadraticSequence() const
   {return quadraticSequence_;};
   /// Which ones are quadratic
   inline const int * backSequence() const
   {return backSequence_;};
-  /// Returns pointer to original model
-  inline const ClpSimplex * originalModel() const
-  { return originalModel_;};
+  /// Returns pointer to original objective
+  inline const ClpQuadraticObjective * originalObjective() const
+  { return originalObjective_;};
+  inline void setOriginalObjective( ClpQuadraticObjective * obj)
+  { originalObjective_ = obj;};
+  /// Quadratic objective
+  CoinPackedMatrix * quadraticObjective() const;
+  /// Linear objective
+  double * linearObjective() const;
   /// Save current In and Sj status
   void saveStatus();
   /// Restore previous
@@ -176,13 +180,18 @@ public:
   ///Dj weights
   inline double * djWeight() const
   { return djWeight_;};
+  /// Infeas cost
+  inline double infeasCost() const
+  { return infeasCost_;};
+  inline void setInfeasCost(double value)
+  { infeasCost_ = value;};
   //@}
     
 private:
   /**@name Data members */
   //@{
-  /// Model
-  const ClpSimplex * originalModel_;
+  /// Objective
+  const ClpQuadraticObjective * originalObjective_;
   /// Quadratic sequence
   int * quadraticSequence_;
   /// Which ones are quadratic
@@ -211,6 +220,8 @@ private:
   int numberXColumns_;
   /// Number of quadratic columns 
   int numberQuadraticColumns_;
+  /// Infeasibility cost
+  double infeasCost_;
   //@}
 };
 #endif

@@ -1702,9 +1702,15 @@ stopping",
 		double * dualRowSolution = models[iModel].dualRowSolution();
 		double * primalRowSolution = 
 		  models[iModel].primalRowSolution();
+		double * rowLower = models[iModel].rowLower();
+		double * rowUpper = models[iModel].rowUpper();
+		double primalTolerance = models[iModel].primalTolerance();
 		char format[6];
 		sprintf(format,"%%-%ds",max(lengthName,8));
 		for (iRow=0;iRow<numberRows;iRow++) {
+		  if (primalRowSolution[iRow]>rowUpper[iRow]+primalTolerance||
+		      primalRowSolution[iRow]<rowLower[iRow]-primalTolerance)
+		    fprintf(fp,"** ");
 		  fprintf(fp,"%7d ",iRow);
 		  if (lengthName)
 		    fprintf(fp,format,rowNames[iRow].c_str());
@@ -1717,7 +1723,12 @@ stopping",
 		  models[iModel].dualColumnSolution();
 		double * primalColumnSolution = 
 		  models[iModel].primalColumnSolution();
+		double * columnLower = models[iModel].columnLower();
+		double * columnUpper = models[iModel].columnUpper();
 		for (iColumn=0;iColumn<numberColumns;iColumn++) {
+		  if (primalColumnSolution[iColumn]>columnUpper[iColumn]+primalTolerance||
+		      primalColumnSolution[iColumn]<columnLower[iColumn]-primalTolerance)
+		    fprintf(fp,"** ");
 		  fprintf(fp,"%7d ",iColumn);
 		  if (lengthName)
 		    fprintf(fp,format,columnNames[iColumn].c_str());

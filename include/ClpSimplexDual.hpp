@@ -119,9 +119,13 @@ public:
       (>1.0e50 infeasible).
       Return code is 0 if nothing interesting, -1 if infeasible both
       ways and +1 if infeasible one way (check values to see which one(s))
+      Solutions are filled in as well - even down, odd up - also
+      status and number of iterations
   */
   int strongBranching(int numberVariables,const int * variables,
 		      double * newLower, double * newUpper,
+		      double ** outputSolution,
+		      int * outputStatus, int * outputIterations,
 		      bool stopOnFirstInfeasible=true,
 		      bool alwaysFinish=false);
   //@}

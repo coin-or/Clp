@@ -5,7 +5,7 @@ LibType := SHARED
 # highest level of optimization the compiler supports. If want something in
 # between then specify the exact level you want, e.g., -O1 or -O2
 OptLevel := -g
-#OptLevel := -O3
+OptLevel := -O3
 
 
 LIBNAME := Clp
@@ -27,11 +27,12 @@ LIBSRC += ClpPlusMinusOneMatrix.cpp
 LIBSRC += ClpPrimalColumnDantzig.cpp
 LIBSRC += ClpPrimalColumnPivot.cpp
 LIBSRC += ClpPrimalColumnSteepest.cpp
+LIBSRC += ClpQuadraticObjective.cpp
 LIBSRC += ClpSimplex.cpp
 LIBSRC += ClpSimplexDual.cpp
 LIBSRC += ClpSimplexPrimal.cpp
 LIBSRC += ClpSimplexPrimalQuadratic.cpp
-LIBSRC += ClpPrimalQuadraticDantzig.cpp
+#LIBSRC += ClpPrimalQuadraticDantzig.cpp
 # and Presolve stuff
 LIBSRC += ClpPresolve.cpp
 

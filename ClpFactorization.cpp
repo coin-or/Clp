@@ -449,7 +449,8 @@ ClpFactorization::updateColumn ( CoinIndexedVector * regionSparse,
 				 bool noPermute) const
 {
 #ifdef CLP_DEBUG
-  regionSparse->checkClear();
+  if (!noPermute)
+    regionSparse->checkClear();
 #endif
   if (!networkBasis_) {
     collectStatistics_ = true;

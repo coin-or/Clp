@@ -89,8 +89,9 @@ ClpPrimalQuadraticDantzig::pivotColumn(CoinIndexedVector * updates,
   
   //double tolerance=model_->currentPrimalTolerance();
 
-  double bestDj = model_->dualTolerance();
-  double bestInfeasibleDj = 10.0*model_->dualTolerance();
+  double dualTolerance = model_->dualTolerance()*1000.0;
+  double bestDj = dualTolerance;
+  double bestInfeasibleDj = 10.0*dualTolerance;
   int bestSequence=-1;
   double dualIn=0.0;
 
@@ -104,7 +105,8 @@ ClpPrimalQuadraticDantzig::pivotColumn(CoinIndexedVector * updates,
   const double * element =  matrix->getElements();
   const int * columnLength = matrix->getVectorLengths();
   const int * which = quadraticInfo_->quadraticSequence();
-  const double * objective = quadraticInfo_->originalObjective();
+  const double * objective = quadraticInfo_->linearObjective();
+  const double * djWeight = quadraticInfo_->djWeight();
   for (iSequence=0;iSequence<originalNumberColumns;iSequence++) {
     if (model_->flagged(iSequence))
       continue;
@@ -121,6 +123,15 @@ ClpPrimalQuadraticDantzig::pivotColumn(CoinIndexedVector * updates,
 	value -= element[j]*pi[iRow];
       }
     }
+    double value2 = value*djWeight[iSequence];
+    if (fabs(value2)>dualTolerance)
+      value=value2;
+    else if (value<-dualTolerance)
+      value = -1.001*dualTolerance;
+    else if (value>dualTolerance)
+      value = 1.001*dualTolerance;
+    if (djWeight[iSequence]<1.0e-6)
+      value=value2;
     ClpSimplex::Status status = model_->getStatus(iSequence);
     
     switch(status) {
@@ -132,6 +143,7 @@ ClpPrimalQuadraticDantzig::pivotColumn(CoinIndexedVector * updates,
 	bestInfeasibleDj = fabs(value);
 	bestSequence = jSequence;
 	dualIn = value;
+        abort();
       }
       break;
     case ClpSimplex::isFixed:
@@ -170,6 +182,15 @@ ClpPrimalQuadraticDantzig::pivotColumn(CoinIndexedVector * updates,
     // for slacks either pi zero or row at bound
     // for L rows pi negative okay so choose if positive
     double value = solution[iPi];
+    double value2 = value*djWeight[iSequence];
+    if (fabs(value2)>dualTolerance)
+      value=value2;
+    else if (value<-dualTolerance)
+      value = -1.001*dualTolerance;
+    else if (value>dualTolerance)
+      value = 1.001*dualTolerance;
+    if (djWeight[iSequence]<1.0e-6)
+      value=value2;
     ClpSimplex::Status status = model_->getStatus(iSequence);
     switch(status) {
       
@@ -207,18 +228,6 @@ ClpPrimalQuadraticDantzig::pivotColumn(CoinIndexedVector * updates,
   }
   if (bestSequence>=0) {
     model_->djRegion()[bestSequence] = dualIn;
-#if 0
-    // free up depending which bound
-    if (solution[iSequence]<trueLower[iSequence]+tolerance) {
-      model_->setColumnStatus(iSequence,ClpSimplex::atLowerBound);
-      upper[iSequence]=trueUpper[iSequence];
-    } else if (solution[iSequence]>trueUpper[iSequence]-tolerance) {
-      model_->setColumnStatus(iSequence,ClpSimplex::atUpperBound);
-      lower[iSequence]=trueLower[iSequence];
-    } else {
-      abort();
-    }
-#endif
   }
   return bestSequence;
 }

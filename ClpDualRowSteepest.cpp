@@ -262,6 +262,7 @@ ClpDualRowSteepest::updateWeights(CoinIndexedVector * input,
 		  model_->factorization()->maximumPivots());
     double * array = alternateWeights_->denseVector();
     int * which = alternateWeights_->getIndices();
+    int i;
     for (i=0;i<numberRows;i++) {
       double value=0.0;
       array[i] = 1.0;
@@ -279,6 +280,8 @@ ClpDualRowSteepest::updateWeights(CoinIndexedVector * input,
       alternateWeights_->setNumElements(0);
       if (fabs(weights_[i]-value)>1.0e-4)
 	printf("%d old %g, true %g\n",i,weights_[i],value);
+      //else 
+      //printf("%d matches %g\n",i,value);
     }
     delete temp;
   }
@@ -311,11 +314,18 @@ ClpDualRowSteepest::updateWeights(CoinIndexedVector * input,
       which2[i] = iRow;
     }
     spare->setNumElements ( numberNonZero );
+    // Only one array active as already permuted
     model_->factorization()->updateColumn(spare,spare,true);
     // permute back
     numberNonZero = spare->getNumElements();
     // alternateWeights_ should still be empty
     int pivotRow = model_->pivotRow();
+#ifdef CLP_DEBUG
+    if ( model_->logLevel (  ) >4  && 
+	 fabs(norm-weights_[pivotRow])>1.0e-3*(1.0+norm)) 
+      printf("on row %d, true weight %g, old %g\n",
+	     pivotRow,sqrt(norm),sqrt(weights_[pivotRow]));
+#endif
     // could re-initialize here (could be expensive)
     norm /= model_->alpha() * model_->alpha();
     

@@ -307,8 +307,6 @@ public:
    inline ClpMatrixBase * rowCopy() const       { return rowCopy_; }
    /// Clp Matrix 
    inline ClpMatrixBase * clpMatrix() const     { return matrix_; }
-   /// Quadratic objective
-   inline CoinPackedMatrix * quadraticObjective() const     { return quadraticObjective_; }
    /// Objective value
    inline double objectiveValue() const {
       return objectiveValue_*optimizationDirection_ - dblParam_[ClpObjOffset];
@@ -487,8 +485,6 @@ protected:
   ClpMatrixBase * matrix_;
   /// Row copy if wanted
   ClpMatrixBase * rowCopy_;
-  /// Quadratic objective if any
-  CoinPackedMatrix * quadraticObjective_;
   /// Infeasible/unbounded ray
   double * ray_;
   /** Status Region.  I know that not all algorithms need a status

@@ -84,7 +84,8 @@ ClpPrimalColumnDantzig::pivotColumn(CoinIndexedVector * updates,
     // sub flip - nothing to do
     anyUpdates=false;
   }
-
+  if (!updates->getNumElements())
+    anyUpdates=false; // in case dj 0.0 (for quadratic)
   if (anyUpdates) {
     model_->factorization()->updateColumnTranspose(spareRow2,updates);
     // put row of tableau in rowArray and columnArray
