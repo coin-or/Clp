@@ -11,7 +11,7 @@
 #include <cfloat>
 #include <cmath>
 #include "CoinHelperFunctions.hpp"
-
+#include "CoinFinite.hpp"
 double 
 maximumAbsElement(const double * region, int size)
 {
