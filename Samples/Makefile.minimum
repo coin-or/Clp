@@ -1,7 +1,7 @@
 OptLevel := -g
 
 # The location of the customized Makefiles
-CoinDir := ../../
+CoinDir := ../..
 export MakefileDir := $(CoinDir)/Makefiles
 include ${MakefileDir}/Makefile.coin
 include ${MakefileDir}/Makefile.location
