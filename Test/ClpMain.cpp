@@ -692,7 +692,7 @@ ClpItem::printLongHelp() const
 static int read_mode=1;
 static char line[1000];
 static char * where=NULL;
-
+static FILE * readCommand=stdin;
 std::string
 nextField()
 {
@@ -700,20 +700,26 @@ nextField()
   if (!where) {
     // need new line
 #ifdef COIN_USE_READLINE     
-    // Get a line from the user. 
-    where = readline ("Clp:");
-     
-    // If the line has any text in it, save it on the history.
-    if (where) {
-      if ( *where)
-	add_history (where);
-      strcpy(line,where);
-      free(where);
+    if (readCommand==stdin) {
+      // Get a line from the user. 
+      where = readline ("Clp:");
+      
+      // If the line has any text in it, save it on the history.
+      if (where) {
+	if ( *where)
+	  add_history (where);
+	strcpy(line,where);
+	free(where);
+      }
+    } else {
+      where = fgets(line,1000,readCommand);
     }
 #else
-    fprintf(stdout,"Clp:");
-    fflush(stdout);
-    where = fgets(line,1000,stdin);
+    if (readCommand==stdin) {
+      fprintf(stdout,"Clp:");
+      fflush(stdout);
+    }
+    where = fgets(line,1000,readCommand);
 #endif
     if (!where)
       return field; // EOF
@@ -1803,6 +1809,19 @@ costs this much to be infeasible",
 		  time2 = CoinCpuTime();
 		  totalTime += time2-time1;
 		  time1=time2;
+		  // Go to canned file if just input file
+		  if (read_mode==2&&argc==2) {
+		    // only if ends .mps
+		    char * find = strstr(fileName.c_str(),".mps");
+		    if (find&&find[4]=='\0') {
+		      find[1]='p'; find[2]='a';find[3]='r';
+		      FILE *fp=fopen(fileName.c_str(),"r");
+		      if (fp) {
+			readCommand=fp; // Read from that file
+			read_mode=-1;
+		      }
+		    }
+		  }
 		} else {
 		  // errors
 		  std::cout<<"There were "<<status<<
