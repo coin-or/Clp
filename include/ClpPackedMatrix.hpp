@@ -183,6 +183,11 @@ public:
    //@{
   /// Returns CoinPackedMatrix (non const)
   inline CoinPackedMatrix * matrix() const { return matrix_;};
+  /** Just sets matrix_ to NULL so it can be used elsewhere.
+      used in GUB
+  */
+  inline void setMatrixNull()
+  { matrix_=NULL;};
    //@}
 
 

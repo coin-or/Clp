@@ -37,6 +37,12 @@ ClpMatrixBase::ClpMatrixBase (const ClpMatrixBase & rhs) :
   lastRefresh_ = rhs.lastRefresh_;
   refreshFrequency_ = rhs.refreshFrequency_;
   skipDualCheck_ = rhs.skipDualCheck_;
+  int numberRows = rhs.getNumRows();
+  if (rhs.effectiveRhs_&&numberRows) {
+    effectiveRhs_ = ClpCopyOfArray(rhs.effectiveRhs_,numberRows);
+  } else {
+    effectiveRhs_=NULL;
+  }
 }
 
 //-------------------------------------------------------------------
@@ -56,7 +62,7 @@ ClpMatrixBase::operator=(const ClpMatrixBase& rhs)
   if (this != &rhs) {
     type_ = rhs.type_;
     delete [] effectiveRhs_;
-    int numberRows = getNumRows();
+    int numberRows = rhs.getNumRows();
     if (rhs.effectiveRhs_&&numberRows) {
       effectiveRhs_ = ClpCopyOfArray(rhs.effectiveRhs_,numberRows);
     } else {

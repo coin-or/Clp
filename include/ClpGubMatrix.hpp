@@ -19,8 +19,8 @@ class ClpSimplex;
 class ClpGubMatrix : public ClpPackedMatrix {
   
 public:
-  /** Returns a new matrix in reverse order without gaps */
-  //virtual ClpMatrixBase * reverseOrderedCopy() const;
+  /** Returns a new matrix in reverse order without gaps (GUB wants NULL) */
+  virtual ClpMatrixBase * reverseOrderedCopy() const;
   /** If element NULL returns number of elements in column part of basis,
       If not NULL fills in as well */
   virtual CoinBigIndex fillBasis(ClpSimplex * model,
