@@ -284,8 +284,13 @@ ClpPackedMatrix::transposeTimes(const ClpSimplex * model, double scalar,
   // maybe I need one in OsiSimplex
   double zeroTolerance = model->factorization()->zeroTolerance();
   int numberRows = model->numberRows();
+#ifndef NO_RTTI
   ClpPackedMatrix* rowCopy =
     dynamic_cast< ClpPackedMatrix*>(model->rowCopy());
+#else
+  ClpPackedMatrix* rowCopy =
+    static_cast< ClpPackedMatrix*>(model->rowCopy());
+#endif
   bool packed = rowArray->packedMode();
   double factor = 0.3;
   // We may not want to do by row if there may be cache problems
@@ -1245,11 +1250,16 @@ ClpPackedMatrix::scale(ClpSimplex * model) const
     // temporary copy
     rowCopyBase = reverseOrderedCopy();
   }
+#ifndef NO_RTTI
   ClpPackedMatrix* rowCopy =
     dynamic_cast< ClpPackedMatrix*>(rowCopyBase);
-
   // Make sure it is really a ClpPackedMatrix
   assert (rowCopy!=NULL);
+#else
+  ClpPackedMatrix* rowCopy =
+    static_cast< ClpPackedMatrix*>(rowCopyBase);
+#endif
+
   const int * column = rowCopy->getIndices();
   const CoinBigIndex * rowStart = rowCopy->getVectorStarts();
   const double * element = rowCopy->getElements();
@@ -1536,7 +1546,13 @@ ClpPackedMatrix::scale(ClpSimplex * model) const
     delete [] usefulColumn;
     // If quadratic then make symmetric
     ClpObjective * obj = model->objectiveAsObject();
+#ifndef NO_RTTI
     ClpQuadraticObjective * quadraticObj = (dynamic_cast< ClpQuadraticObjective*>(obj));
+#else
+    ClpQuadraticObjective * quadraticObj = NULL;
+    if (obj->type()==2)
+      quadraticObj = (static_cast< ClpQuadraticObjective*>(obj));
+#endif
     if (quadraticObj) {
       CoinPackedMatrix * quadratic = quadraticObj->quadraticObjective();
       int numberXColumns = quadratic->getNumCols();

@@ -472,8 +472,13 @@ ClpPlusMinusOneMatrix::transposeTimes(const ClpSimplex * model, double scalar,
   double zeroTolerance = model->factorization()->zeroTolerance();
   int numberRows = model->numberRows();
   bool packed = rowArray->packedMode();
+#ifndef NO_RTTI
   ClpPlusMinusOneMatrix* rowCopy =
     dynamic_cast< ClpPlusMinusOneMatrix*>(model->rowCopy());
+#else
+  ClpPlusMinusOneMatrix* rowCopy =
+    static_cast< ClpPlusMinusOneMatrix*>(model->rowCopy());
+#endif
   double factor = 0.3;
   // We may not want to do by row if there may be cache problems
   int numberColumns = model->numberColumns();

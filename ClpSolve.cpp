@@ -83,10 +83,17 @@ ClpSimplex::initialSolve(ClpSolve & options)
   double timeCore=0.0;
   int savePerturbation=perturbation_;
   int saveScaling = scalingFlag_;
+#ifndef NO_RTTI
   if (dynamic_cast< ClpNetworkMatrix*>(matrix_)) {
     // network - switch off stuff
     presolve = ClpSolve::presolveOff;
   }
+#else
+  if (matrix_->type()==11) {
+    // network - switch off stuff
+    presolve = ClpSolve::presolveOff;
+  }
+#endif
   // For below >0 overrides
   // 0 means no, -1 means maybe
   int doIdiot=0;
@@ -218,11 +225,19 @@ ClpSimplex::initialSolve(ClpSolve & options)
   // See if worth trying +- one matrix
   bool plusMinus=false;
   int numberElements=model2->getNumElements();
+#ifndef NO_RTTI
   if (dynamic_cast< ClpNetworkMatrix*>(matrix_)) {
     // network - switch off stuff
     doIdiot=0;
     doSprint=0;
   }
+#else
+  if (matrix_->type()==11) {
+    // network - switch off stuff
+    doIdiot=0;
+    doSprint=0;
+  }
+#endif
   int numberColumns = model2->numberColumns();
   int numberRows = model2->numberRows();
   // If not all slack basis - switch off all
@@ -244,8 +259,15 @@ ClpSimplex::initialSolve(ClpSolve & options)
   }
   if (plusMinus) {
     saveMatrix = model2->clpMatrix();
+#ifndef NO_RTTI
     ClpPackedMatrix* clpMatrix =
       dynamic_cast< ClpPackedMatrix*>(saveMatrix);
+#else
+    ClpPackedMatrix* clpMatrix = NULL;
+    if (saveMatrix->type()==1)
+      clpMatrix =
+	dynamic_cast< ClpPackedMatrix*>(saveMatrix);
+#endif
     if (clpMatrix) {
       ClpPlusMinusOneMatrix * newMatrix = new ClpPlusMinusOneMatrix(*(clpMatrix->matrix()));
       if (newMatrix->getIndices()) {

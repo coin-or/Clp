@@ -145,8 +145,15 @@ ClpFactorization::factorize ( ClpSimplex * model,
       }
       assert (numberBasic<=model->maximumBasic());
       // see if matrix a network
+#ifndef NO_RTTI
       ClpNetworkMatrix* networkMatrix =
 	dynamic_cast< ClpNetworkMatrix*>(model->clpMatrix());
+#else
+      ClpNetworkMatrix* networkMatrix = NULL;
+      if (model->clpMatrix()->type()==11)
+	networkMatrix = 
+	static_cast< ClpNetworkMatrix*>(model->clpMatrix());
+#endif
       // If network - still allow ordinary factorization first time for laziness
       int saveMaximumPivots = maximumPivots();
       delete networkBasis_;

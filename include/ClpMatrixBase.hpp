@@ -257,7 +257,12 @@ public:
 				       int numberRows, const int * whichRows,
 				       int numberColumns, const int * whichColumns) const;
   
-  /// Returns type
+  /** Returns type.
+      The types which code may need to know about are:
+      1  - ClpPackedMatrix
+      11 - ClpNetworkMatrix
+      12 - ClpPlusMinusOneMatrix
+  */
   inline int type() const
   { return type_;};
   /// Sets type

@@ -57,7 +57,7 @@ ClpGubMatrix::ClpGubMatrix ()
     lastGub_(0),
     gubType_(0)
 {
-  setType(11);
+  setType(16);
 }
 
 //-------------------------------------------------------------------
@@ -147,7 +147,7 @@ ClpGubMatrix::ClpGubMatrix (CoinPackedMatrix * rhs)
     lastGub_(0),
     gubType_(0)
 {  
-  setType(11);
+  setType(16);
 }
 
 /* This takes over ownership (for space reasons) and is the
@@ -276,7 +276,7 @@ ClpGubMatrix::ClpGubMatrix (const CoinPackedMatrix & rhs)
     lastGub_(0),
     gubType_(0)
 {  
-  setType(11);
+  setType(16);
   
 }
 
@@ -508,7 +508,7 @@ ClpGubMatrix::ClpGubMatrix (
     lastGub_(0),
     gubType_(0)
 {
-  setType(11);
+  setType(16);
 }
 /* Return <code>x * A + y</code> in <code>z</code>. 
 	Squashes small elements and knows about ClpSimplex */
