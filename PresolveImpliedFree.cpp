@@ -169,8 +169,8 @@ const PresolveAction *implied_free_action::presolve(PresolveMatrix *prob,
 	  if (maxup < PRESOLVE_INF && maxup + tol < rlo[row]) {
 	    /* there is an upper bound and it can't be reached */
 	    prob->status_|= 1;
-	    prob->originalModel_->messageHandler()->message(CLP_PRESOLVE_ROWINFEAS,
-					     prob->originalModel_->messages())
+	    prob->messageHandler()->message(CLP_PRESOLVE_ROWINFEAS,
+					     prob->messages())
 					       <<row
 					       <<rlo[row]
 					       <<rup[row]
@@ -179,8 +179,8 @@ const PresolveAction *implied_free_action::presolve(PresolveMatrix *prob,
 	  } else if (-PRESOLVE_INF < maxdown && rup[row] < maxdown - tol) {
 	    /* there is a lower bound and it can't be reached */
 	    prob->status_|= 1;
-	    prob->originalModel_->messageHandler()->message(CLP_PRESOLVE_ROWINFEAS,
-					     prob->originalModel_->messages())
+	    prob->messageHandler()->message(CLP_PRESOLVE_ROWINFEAS,
+					     prob->messages())
 					       <<row
 					       <<rlo[row]
 					       <<rup[row]

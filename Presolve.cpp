@@ -57,6 +57,7 @@ Presolve::~Presolve()
   delete originalColumn_;
 }
 
+#if 0
 void Presolve::presolve(ClpSimplex& si)
 {
   ncols_ = si.getNumCols();
@@ -162,6 +163,7 @@ void Presolve::postsolve(ClpSimplex& si,
 
   delete[]sol;
 }
+#endif
 /* This version of presolve returns a pointer to a new presolved 
    model.  NULL if infeasible
 */
@@ -202,7 +204,8 @@ Presolve::presolvedModel(ClpSimplex & si,
 			maxmin,
 			*presolvedModel_,
 			nrows_, nelems_,true);
-    prob.originalModel_ = originalModel_;
+    prob.handler_ = presolvedModel_->messageHandler();
+    prob.messages_ = presolvedModel_->messages();
 
     // move across feasibility tolerance
     prob.feasibilityTolerance_ = feasibilityTolerance;
@@ -253,8 +256,8 @@ Presolve::presolvedModel(ClpSimplex & si,
 	upper[i]=upperValue;
 	if (lowerValue>upperValue) {
 	  numberChanges++;
-	  originalModel_->messageHandler()->message(CLP_PRESOLVE_COLINFEAS,
-					     originalModel_->messages())
+	  presolvedModel_->messageHandler()->message(CLP_PRESOLVE_COLINFEAS,
+					     presolvedModel_->messages())
 					       <<iOriginal
 					       <<lowerValue
 					       <<upperValue
@@ -272,8 +275,8 @@ Presolve::presolvedModel(ClpSimplex & si,
 	}	  
       }
       if (numberChanges) {
-	  originalModel_->messageHandler()->message(CLP_PRESOLVE_INTEGERMODS,
-					     originalModel_->messages())
+	  presolvedModel_->messageHandler()->message(CLP_PRESOLVE_INTEGERMODS,
+					     presolvedModel_->messages())
 					       <<numberChanges
 					       <<CoinMessageEol;
 	if (!result) {
@@ -285,8 +288,8 @@ Presolve::presolvedModel(ClpSimplex & si,
   int nrowsAfter = presolvedModel_->getNumRows();
   int ncolsAfter = presolvedModel_->getNumCols();
   int nelsAfter = presolvedModel_->getNumElements();
-  originalModel_->messageHandler()->message(CLP_PRESOLVE_STATS,
-				     originalModel_->messages())
+  presolvedModel_->messageHandler()->message(CLP_PRESOLVE_STATS,
+				     presolvedModel_->messages())
 				       <<nrowsAfter<< -(nrows_ - nrowsAfter)
 				       << ncolsAfter<< -(ncols_ - ncolsAfter)
 				       <<nelsAfter<< -(nelems_ - nelsAfter)
@@ -311,8 +314,8 @@ void
 Presolve::postsolve(bool updateStatus)
 {
   if (!presolvedModel_->isProvenOptimal()) {
-    originalModel_->messageHandler()->message(CLP_PRESOLVE_NONOPTIMAL,
-					     originalModel_->messages())
+    presolvedModel_->messageHandler()->message(CLP_PRESOLVE_NONOPTIMAL,
+					     presolvedModel_->messages())
 					       <<CoinMessageEol;
   }
 
@@ -352,7 +355,6 @@ Presolve::postsolve(bool updateStatus)
 		       
 		       sol, acts,
 		       colstat, rowstat);
-  prob.originalModel_ = originalModel_;
     
   postsolve(prob);
 
@@ -363,6 +365,12 @@ const int *
 Presolve::originalColumns() const
 {
   return originalColumn_;
+}
+// Set pointer to original model
+void 
+Presolve::setOriginalModel(ClpSimplex * model)
+{
+  originalModel_=model;
 }
 
 // A lazy way to restrict which transformations are applied
@@ -583,17 +591,17 @@ const PresolveAction *Presolve::presolve(PresolveMatrix *prob)
   
   if (prob->status_) {
     if (prob->status_==1)
-	  originalModel_->messageHandler()->message(CLP_PRESOLVE_INFEAS,
-					     originalModel_->messages())
+	  presolvedModel_->messageHandler()->message(CLP_PRESOLVE_INFEAS,
+					     presolvedModel_->messages())
 					       <<prob->feasibilityTolerance_
 					       <<CoinMessageEol;
     else if (prob->status_==2)
-	  originalModel_->messageHandler()->message(CLP_PRESOLVE_UNBOUND,
-					     originalModel_->messages())
+	  presolvedModel_->messageHandler()->message(CLP_PRESOLVE_UNBOUND,
+					     presolvedModel_->messages())
 					       <<CoinMessageEol;
     else
-	  originalModel_->messageHandler()->message(CLP_PRESOLVE_INFEASUNBOUND,
-					     originalModel_->messages())
+	  presolvedModel_->messageHandler()->message(CLP_PRESOLVE_INFEASUNBOUND,
+					     presolvedModel_->messages())
 					       <<CoinMessageEol;
     delete paction_;
     paction_=NULL;
@@ -710,8 +718,8 @@ void Presolve::postsolve(PostsolveMatrix &prob)
   originalModel_->times(1.0,originalModel_->primalColumnSolution(),
 			originalModel_->primalRowSolution());
   originalModel_->checkSolution();
-  originalModel_->messageHandler()->message(CLP_PRESOLVE_POSTSOLVE,
-					    originalModel_->messages())
+  presolvedModel_->messageHandler()->message(CLP_PRESOLVE_POSTSOLVE,
+					    presolvedModel_->messages())
 					      <<originalModel_->objectiveValue()
 					      <<originalModel_->sumDualInfeasibilities()
 					      <<originalModel_->numberDualInfeasibilities()
@@ -727,8 +735,8 @@ void Presolve::postsolve(PostsolveMatrix &prob)
       originalModel_->setProblemStatus( 0);
     } else {
       originalModel_->setProblemStatus( -1);
-      originalModel_->messageHandler()->message(CLP_PRESOLVE_NEEDS_CLEANING,
-					    originalModel_->messages())
+      presolvedModel_->messageHandler()->message(CLP_PRESOLVE_NEEDS_CLEANING,
+					    presolvedModel_->messages())
 					      <<CoinMessageEol;
     }
   } else {

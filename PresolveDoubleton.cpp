@@ -670,8 +670,8 @@ const PresolveAction *doubleton_action::presolve(PresolveMatrix *prob,
 		}
 	      } else {
 		prob->status_ |= 1;
-		prob->originalModel_->messageHandler()->message(CLP_PRESOLVE_COLINFEAS,
-							 prob->originalModel_->messages())
+		prob->messageHandler()->message(CLP_PRESOLVE_COLINFEAS,
+							 prob->messages())
 							   <<icolx
 							   <<lo2
 							   <<up2

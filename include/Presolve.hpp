@@ -25,7 +25,8 @@ public:
   /// Virtual destructor
   virtual ~Presolve();
   //@}
-
+  // taken out for now
+#if 0
   /**@name presolve - presolves a model, transforming the model
    * and saving information in the Presolve object needed for postsolving.
    * This is method is virtual; the idea is that in the future,
@@ -52,7 +53,14 @@ public:
   virtual void postsolve(ClpSimplex& si,
 			 unsigned char *colstat,
 			 unsigned char *rowstat);
-  /** This version of presolve returns a pointer to a new presolved 
+#endif
+  /**@name presolve - presolves a model, transforming the model
+   * and saving information in the Presolve object needed for postsolving.
+   * This is method is virtual; the idea is that in the future,
+   * one could override this method to customize how the various
+   * presolve techniques are applied.
+
+   This version of presolve returns a pointer to a new presolved 
       model.  NULL if infeasible or unbounded.  
       This should be paired with postsolve
       below.  The adavantage of going back to original model is that it
@@ -71,11 +79,21 @@ public:
   ClpSimplex * model() const;
   /// Return pointer to original model
   ClpSimplex * originalModel() const;
+  /// Set pointer to original model
+  void setOriginalModel(ClpSimplex * model);
+    
   /// return pointer to original columns
   const int * originalColumns() const;
 
 
-  /** This version updates original*/
+  /**@name postsolve - postsolve the problem.  If the problem 
+    has not been solved to optimality, there are no guarantees.
+   If you are using an algorithm like simplex that has a concept
+   of "basic" rows/cols, then set updateStatus
+  
+   Note that if you modified the original problem after presolving,
+   then you must ``undo'' these modifications before calling postsolve.
+  This version updates original*/
   virtual void postsolve(bool updateStatus=true);
 
   /**@name private or protected data */

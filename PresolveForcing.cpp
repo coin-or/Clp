@@ -250,8 +250,8 @@ const PresolveAction *forcing_constraint_action::presolve(PresolveMatrix *prob,
       if (maxup < PRESOLVE_INF && maxup + inftol < rlo[irow]) {
 	/* there is an upper bound and it can't be reached */
 	prob->status_|= 1;
-	prob->originalModel_->messageHandler()->message(CLP_PRESOLVE_ROWINFEAS,
-					     prob->originalModel_->messages())
+	prob->messageHandler()->message(CLP_PRESOLVE_ROWINFEAS,
+					     prob->messages())
 					       <<irow
 					       <<rlo[irow]
 					       <<rup[irow]
@@ -260,8 +260,8 @@ const PresolveAction *forcing_constraint_action::presolve(PresolveMatrix *prob,
       } else if (-PRESOLVE_INF < maxdown && rup[irow] < maxdown - inftol) {
 	/* there is a lower bound and it can't be reached */
 	prob->status_|= 1;
-	prob->originalModel_->messageHandler()->message(CLP_PRESOLVE_ROWINFEAS,
-					     prob->originalModel_->messages())
+	prob->messageHandler()->message(CLP_PRESOLVE_ROWINFEAS,
+					     prob->messages())
 					       <<irow
 					       <<rlo[irow]
 					       <<rup[irow]
@@ -578,8 +578,8 @@ static void implied_bounds1(PresolveMatrix * prob, const double *rowels,
     if (ub_inf_index == -1 && maxup_finite && maxup + tol < rlo[irow]) {
       /* infeasible */
 	prob->status_|= 1;
-	prob->originalModel_->messageHandler()->message(CLP_PRESOLVE_ROWINFEAS,
-					     prob->originalModel_->messages())
+	prob->messageHandler()->message(CLP_PRESOLVE_ROWINFEAS,
+					     prob->messages())
 					       <<irow
 					       <<rlo[irow]
 					       <<rup[irow]
@@ -588,8 +588,8 @@ static void implied_bounds1(PresolveMatrix * prob, const double *rowels,
     } else if (lb_inf_index == -1 && maxdown_finite && rup[irow] < maxdown - tol) {
       /* infeasible */
 	prob->status_|= 1;
-	prob->originalModel_->messageHandler()->message(CLP_PRESOLVE_ROWINFEAS,
-					     prob->originalModel_->messages())
+	prob->messageHandler()->message(CLP_PRESOLVE_ROWINFEAS,
+					     prob->messages())
 					       <<irow
 					       <<rlo[irow]
 					       <<rup[irow]

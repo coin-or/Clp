@@ -572,8 +572,8 @@ const PresolveAction *subst_constraint_action::presolve(PresolveMatrix *prob,
 
 	  if (maxup < PRESOLVE_INF && maxup + tol < rlo[row]) {
 	    prob->status_|= 1;
-	    prob->originalModel_->messageHandler()->message(CLP_PRESOLVE_ROWINFEAS,
-					     prob->originalModel_->messages())
+	    prob->messageHandler()->message(CLP_PRESOLVE_ROWINFEAS,
+					     prob->messages())
 					       <<row
 					       <<rlo[row]
 					       <<rup[row]
@@ -581,8 +581,8 @@ const PresolveAction *subst_constraint_action::presolve(PresolveMatrix *prob,
 	    break;
 	  } else if (-PRESOLVE_INF < maxdown && rup[row] < maxdown - tol) {
 	    prob->status_|= 1;
-	    prob->originalModel_->messageHandler()->message(CLP_PRESOLVE_ROWINFEAS,
-					     prob->originalModel_->messages())
+	    prob->messageHandler()->message(CLP_PRESOLVE_ROWINFEAS,
+					     prob->messages())
 					       <<row
 					       <<rlo[row]
 					       <<rup[row]

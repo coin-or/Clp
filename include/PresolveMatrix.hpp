@@ -136,8 +136,16 @@ class PrePostsolveMatrix {
 
   // Original objective offset
   double originalOffset_;
-  // Pointer back to model
-  const ClpSimplex * originalModel_;
+  // Message handler
+   CoinMessageHandler *  handler_; 
+   /// Messages
+   CoinMessages messages_; 
+
+   inline CoinMessageHandler * messageHandler() const 
+  { return handler_; }
+   /// Return messages
+   inline CoinMessages messages() const 
+  { return messages_; }
   // colrep
   int ncols_;
   const int ncols0_;

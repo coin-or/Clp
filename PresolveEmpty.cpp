@@ -70,8 +70,8 @@ const PresolveAction *drop_empty_cols_action::presolve(PresolveMatrix *prob,
       if (-PRESOLVE_INF < clo[jcol])
 	e.sol = clo[jcol];
       else {
-	  prob->originalModel_->messageHandler()->message(CLP_PRESOLVE_COLUMNBOUNDB,
-					     prob->originalModel_->messages())
+	  prob->messageHandler()->message(CLP_PRESOLVE_COLUMNBOUNDB,
+					     prob->messages())
 					       <<jcol
 					       <<CoinMessageEol;
 	prob->status_ |= 2;
@@ -81,8 +81,8 @@ const PresolveAction *drop_empty_cols_action::presolve(PresolveMatrix *prob,
       if (cup[jcol] < PRESOLVE_INF)
 	e.sol = cup[jcol];
       else {
-	  prob->originalModel_->messageHandler()->message(CLP_PRESOLVE_COLUMNBOUNDA,
-					     prob->originalModel_->messages())
+	  prob->messageHandler()->message(CLP_PRESOLVE_COLUMNBOUNDA,
+					     prob->messages())
 					       <<jcol
 					       <<CoinMessageEol;
 	prob->status_ |= 2;
@@ -301,8 +301,8 @@ const PresolveAction *drop_empty_rows_action::presolve(PresolveMatrix *prob,
 	    rup[i]=0.0;
 	  } else {
 	    prob->status_|= 1;
-	  prob->originalModel_->messageHandler()->message(CLP_PRESOLVE_ROWINFEAS,
-					     prob->originalModel_->messages())
+	  prob->messageHandler()->message(CLP_PRESOLVE_ROWINFEAS,
+					     prob->messages())
 					       <<i
 					       <<rlo[i]
 					       <<rup[i]

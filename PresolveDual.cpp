@@ -170,8 +170,8 @@ const PresolveAction *remove_dual_action::presolve(PresolveMatrix *prob,
 	if (ddjlo > ZTOLDP && iflagl == 0) {
 	  // dj>0 at optimality ==> must be at lower bound
 	  if (clo[j] <= -ekkinf) {
-	    prob->originalModel_->messageHandler()->message(CLP_PRESOLVE_COLUMNBOUNDB,
-					     prob->originalModel_->messages())
+	    prob->messageHandler()->message(CLP_PRESOLVE_COLUMNBOUNDB,
+					     prob->messages())
 					       <<j
 					       <<CoinMessageEol;
 	    prob->status_ |= 2;
@@ -182,8 +182,8 @@ const PresolveAction *remove_dual_action::presolve(PresolveMatrix *prob,
 	} else if (ddjhi < -ZTOLDP && iflagu == 0) {
 	  // dj<0 at optimality ==> must be at upper bound
 	  if (cup[j] >= ekkinf) {
-	    prob->originalModel_->messageHandler()->message(CLP_PRESOLVE_COLUMNBOUNDA,
-					     prob->originalModel_->messages())
+	    prob->messageHandler()->message(CLP_PRESOLVE_COLUMNBOUNDA,
+					     prob->messages())
 					       <<j
 					       <<CoinMessageEol;
 	    prob->status_ |= 2;
