@@ -14,8 +14,10 @@
 #include "ClpFactorization.hpp"
 #include "ClpSimplex.hpp"
 #include "ClpInterior.hpp"
+#ifdef REAL_BARRIER
 #include "ClpCholeskyWssmp.hpp"
 #include "ClpCholeskyTaucs.hpp"
+#endif
 #include "ClpSolve.hpp"
 #include "ClpPackedMatrix.hpp"
 #include "ClpPlusMinusOneMatrix.hpp"
