@@ -860,6 +860,7 @@ public:
       2048 - Don't bother to re-factorize if < 20 iterations
       4096 - Skip some optimality checks
       8192 - Do Primal when cleaning up primal
+      16384 - In fast dual (so we can switch off things)
   */
   inline unsigned int specialOptions() const
   { return specialOptions_;};

@@ -1166,31 +1166,36 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
               objectiveValue_ = innerProduct(cost_,numberColumns_+numberRows_,solution_);
               objectiveValue_ += objective_->nonlinearOffset();
               objectiveValue_ /= (objectiveScale_*rhsScale_);
-              // and dual_ may be wrong (i.e. for fixed or basic)
-              CoinIndexedVector * arrayVector = rowArray_[1];
-              arrayVector->clear();
-              int iRow;
-              double * array = arrayVector->denseVector();
-              // Use dual_ instead of array
-              arrayVector->setDenseVector(dual_);
-              int * index = arrayVector->getIndices();
-              int number=0;
-              for (iRow=0;iRow<numberRows_;iRow++) {
-                int iPivot=pivotVariable_[iRow];
-                double value = cost_[iPivot];
-                dual_[iRow]=value;
-                if (value) {
-                  index[number++]=iRow;
+              if ((specialOptions_&16384)==0) {
+                // and dual_ may be wrong (i.e. for fixed or basic)
+                CoinIndexedVector * arrayVector = rowArray_[1];
+                arrayVector->clear();
+                int iRow;
+                double * array = arrayVector->denseVector();
+                /* Use dual_ instead of array
+                   Even though dual_ is only numberRows_ long this is
+                   okay as gets permuted to longer rowArray_[2]
+                */
+                arrayVector->setDenseVector(dual_);
+                int * index = arrayVector->getIndices();
+                int number=0;
+                for (iRow=0;iRow<numberRows_;iRow++) {
+                  int iPivot=pivotVariable_[iRow];
+                  double value = cost_[iPivot];
+                  dual_[iRow]=value;
+                  if (value) {
+                    index[number++]=iRow;
+                  }
                 }
+                arrayVector->setNumElements(number);
+                // Extended duals before "updateTranspose"
+                matrix_->dualExpanded(this,arrayVector,false,0);
+                // Btran basic costs
+                rowArray_[2]->clear();
+                factorization_->updateColumnTranspose(rowArray_[2],arrayVector);
+                // and return vector
+                arrayVector->setDenseVector(array);
               }
-              arrayVector->setNumElements(number);
-              // Extended duals before "updateTranspose"
-              matrix_->dualExpanded(this,arrayVector,false,0);
-              // Btran basic costs
-              rowArray_[2]->clear();
-              factorization_->updateColumnTranspose(rowArray_[2],arrayVector);
-              // and return vector
-              arrayVector->setDenseVector(array);
             }
 	    problemStatus_=0;
 	    sumPrimalInfeasibilities_=0.0;
@@ -4063,6 +4068,8 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
 int ClpSimplexDual::fastDual(bool alwaysFinish)
 {
   algorithm_ = -1;
+  // Say in fast dual
+  specialOptions_ |= 16384;
   // save data
   ClpDataSave data = saveData();
   dualTolerance_=dblParam_[ClpDualTolerance];
@@ -4170,6 +4177,8 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
   for (iColumn=0;iColumn<2;iColumn++) {
     columnArray_[iColumn]->clear();
   }    
+  // Say not in fast dual
+  specialOptions_ &= ~16384;
   assert(!numberFake_||((specialOptions_&(2048|4096))!=0&&dualBound_>1.0e8)
          ||returnCode||problemStatus_); // all bounds should be okay
   // Restore any saved stuff

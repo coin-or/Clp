@@ -507,14 +507,16 @@ ClpFactorization::replaceColumn ( const ClpSimplex * model,
 {
   if (!networkBasis_) {
     // see if FT
-    if (doForrestTomlin_)
-      return CoinFactorization::replaceColumn(regionSparse,
+    if (doForrestTomlin_) {
+      int returnCode= CoinFactorization::replaceColumn(regionSparse,
 					      pivotRow,
 					      pivotCheck,
 					      checkBeforeModifying);
-    else
+      return returnCode;
+    } else {
       return CoinFactorization::replaceColumnPFI(tableauColumn,
 					      pivotRow,pivotCheck); // Note array
+    }
 
   } else {
     if (doCheck) {

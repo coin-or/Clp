@@ -583,7 +583,6 @@ ClpSimplex::computeDuals(double * givenDjs)
     arrayVector->clear();
     CoinIndexedVector * previousVector = rowArray_[2];
     previousVector->clear();
-    
     int iRow;
 #ifdef CLP_DEBUG
     workSpace->checkClear();
@@ -818,6 +817,8 @@ ClpSimplex::computeDuals(double * givenDjs)
   } else {
     // Nonlinear
     objective_->reducedGradient(this,dj_,false);
+    // get dual_ by moving from reduced costs for slacks
+    memcpy(dual_,dj_+numberColumns_,numberRows_*sizeof(double));
   }
 }
 /* Given an existing factorization computes and checks 

@@ -65,6 +65,13 @@ int ClpPredictorCorrector::solve ( )
   //modeSwitch |=4;
   ClpObjective * saveObjective = NULL;
   if (quadraticObj) {
+    // check KKT is on
+    if (!cholesky_->kkt()) {
+      //No!
+      handler_->message(CLP_BARRIER_KKT,messages_)
+	<<CoinMessageEol;
+      return -1;
+    }
     saveObjective=objective_;
     // We are going to make matrix full rather half
     objective_ = new ClpQuadraticObjective(*quadraticObj,1);

@@ -1912,7 +1912,7 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
 	else
 	  objTheta=COIN_DBL_MAX;
 #ifndef NDEBUG
-	if (product<-1.0e-5) 
+	if (product<-1.0e-8&&handler_->logLevel()>1) 
           printf("bad product %g\n",product);
 #endif
         product = CoinMax(product,0.0);
