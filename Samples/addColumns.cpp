@@ -80,6 +80,22 @@ int main (int argc, const char *argv[])
   printf("Time for 10000 addColumn using CoinBuild is %g\n",CoinCpuTime()-time1);
   model.dual();
   model=modelSave;
+  // Now use build +-1
+  int del[]={0,1,2};
+  model.deleteColumns(3,del);
+  CoinBuild buildObject2;
+  time1 = CoinCpuTime();
+  for ( k=0;k<10000;k++) {
+    int column2Index[] = {0,1};
+    double column2Value[]={1.0,1.0,-1.0};
+    int bias = k&1;
+    buildObject2.addColumn(2,column2Index,column2Value+bias,
+                 0.0,1.0,10000.0);
+  }
+  model.addColumns(buildObject2,true);
+  printf("Time for 10000 addColumn using CoinBuild is %g\n",CoinCpuTime()-time1);
+  model.dual();
+  model=modelSave;
   // Now use model
   CoinModel modelObject;
   time1 = CoinCpuTime();
@@ -101,8 +117,7 @@ int main (int argc, const char *argv[])
   // Alternatively getReducedCost()
   double * columnDual = model.dualColumnSolution();
   // Alternatively getColLower()
-  double * columnLower = model.columnLower();
-  // Alternatively getColUpper()
+  double * columnLower = model.columnLower();  // Alternatively getColUpper()
   double * columnUpper = model.columnUpper();
   // Alternatively getObjCoefficients()
   double * columnObjective = model.objective();
