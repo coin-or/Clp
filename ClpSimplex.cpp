@@ -2610,6 +2610,29 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
     // just reset
     for (int i=0;i<numberRows2;i++)
       pivotVariable_[i]=-1;
+  } else if (what==63) {
+    // check pivots
+    for (int i=0;i<numberRows2;i++) {
+      int iSequence = pivotVariable_[i];
+      if (getStatus(iSequence)!=basic) {
+	keepPivots =false;
+	break;
+      }
+    }
+    if (!keepPivots) {
+      // reset
+      for (int i=0;i<numberRows2;i++)
+	pivotVariable_[i]=-1;
+    } else {
+      // clean
+      for (int i=0;i<numberColumns_+numberRows_;i++) {
+	if (getStatus(i)!=basic) {
+	  if (upper_[i]==lower_[i]) {
+	    setStatus(i,isFixed);
+	  }
+	}
+      }
+    }
   }
 
   if (what==63) {
@@ -3517,7 +3540,8 @@ int ClpSimplex::dual (int ifValuesPass , int startFinishOptions)
 					  2*numberRows_+numberColumns_,saveMax);
       perturbation_=savePerturbation;
       returnCode = ((ClpSimplexPrimal *) this)->primal(0);
-      if (problemStatus_==3&&numberIterations_<saveMax) 
+      if (problemStatus_==3&&numberIterations_<saveMax&& 
+	  handler_->logLevel()>0)
 	printf("looks like real trouble - too many iterations in second clean up - giving up\n");
     }
     intParam_[ClpMaxNumIteration] = saveMax;
@@ -5505,6 +5529,9 @@ ClpSimplex::startup(int ifValuesPass, int startFinishOptions)
   bool goodMatrix=createRim(7+8+16+32,true,startFinishOptions);
 
   if (goodMatrix) {
+    // switch off factorization if bad
+    if (pivotVariable_[0]<0)
+      useFactorization=false;
     // Model looks okay
     // Do initial factorization
     // and set certain stuff
@@ -5572,6 +5599,7 @@ ClpSimplex::startup(int ifValuesPass, int startFinishOptions)
       // but we need to say not optimal
       numberPrimalInfeasibilities_=1;
       numberDualInfeasibilities_=1;
+      matrix_->rhsOffset(this,true); // redo rhs offset
     }
     if (totalNumberThrownOut)
       handler_->message(CLP_SINGULARITIES,messages_)
