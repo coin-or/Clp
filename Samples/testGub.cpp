@@ -4,6 +4,8 @@
 #include "ClpSimplex.hpp"
 #include "ClpGubMatrix.hpp"
 #include "ClpPrimalColumnSteepest.hpp"
+#include "CoinSort.hpp"
+#include "CoinTime.hpp"
 int main (int argc, const char *argv[])
 {
   ClpSimplex  model;
@@ -28,15 +30,17 @@ int main (int argc, const char *argv[])
   }
   // For now scaling off
   model.scaling(0);
-  // Do partial dantzig
-  ClpPrimalColumnSteepest dantzig(5);
-  model.setPrimalColumnPivotAlgorithm(dantzig);
-  //model.messageHandler()->setLogLevel(63);
-  model.setFactorizationFrequency(maxFactor);
-  model.setMaximumIterations(maxIts);
-  model.primal();
-  if (!model.status())
-    exit(1);
+  if (maxIts) {
+    // Do partial dantzig
+    ClpPrimalColumnSteepest dantzig(5);
+    model.setPrimalColumnPivotAlgorithm(dantzig);
+    //model.messageHandler()->setLogLevel(63);
+    model.setFactorizationFrequency(maxFactor);
+    model.setMaximumIterations(maxIts);
+    model.primal();
+    if (!model.status())
+      exit(1);
+  }
   // find gub
   int numberRows = model.numberRows();
   int * gubStart = new int[numberRows];
@@ -106,9 +110,37 @@ int main (int argc, const char *argv[])
     ClpMatrixBase * saveMatrix = model2.clpMatrix();
     ClpPackedMatrix* clpMatrix =
       dynamic_cast< ClpPackedMatrix*>(saveMatrix);
+    // sort gubs so monotonic
+    int * which = new int[numberGub];
+    int i;
+    for (i=0;i<numberGub;i++)
+      which[i]=i;
+    CoinSort_2(gubStart+putGub,gubStart+putGub+numberGub,which);
+    int * temp1 = new int [numberGub];
+    for (i=0;i<numberGub;i++) {
+      int k=which[i];
+      temp1[i]=gubEnd[putGub+k];
+    }
+    memcpy(gubEnd+putGub,temp1,numberGub*sizeof(int));
+    delete [] temp1;
+    double * temp2 = new double [numberGub];
+    for (i=0;i<numberGub;i++) {
+      int k=which[i];
+      temp2[i]=lower[putGub+k];
+    }
+    memcpy(lower+putGub,temp2,numberGub*sizeof(double));
+    for (i=0;i<numberGub;i++) {
+      int k=which[i];
+      temp2[i]=upper[putGub+k];
+    }
+    memcpy(upper+putGub,temp2,numberGub*sizeof(double));
+    delete [] temp2;
+    delete [] which;
     model2.replaceMatrix(new ClpGubMatrix(clpMatrix,numberGub,
 					 gubStart+putGub,gubEnd+putGub,
 					 lower+putGub,upper+putGub));
+    clpMatrix->setMatrixNull();
+    delete clpMatrix;
 #if 1
     saveMatrix = model2.clpMatrix();
     ClpGubMatrix* gubMatrix =
@@ -127,7 +159,159 @@ int main (int argc, const char *argv[])
     model2.setPrimalColumnPivotAlgorithm(dantzig);
     //model2.messageHandler()->setLogLevel(63);
     model2.setFactorizationFrequency(maxFactor);
-    model2.setMaximumIterations(20000);
+    model2.setMaximumIterations(4000000);
+    double time1 = CoinCpuTime();
+    FILE * fp;
+    if ((fp=fopen("in.sol","r"))) {
+      
+      ClpGubMatrix * gubMatrix =
+	dynamic_cast< ClpGubMatrix*>(model2.clpMatrix());
+      assert (gubMatrix);
+      double * solution = model2.primalColumnSolution();
+      int numberColumns = model2.numberColumns();
+      int numberRows = model2.numberRows();
+      char * status = new char [numberColumns];
+      int numberSets = gubMatrix->numberSets();
+      char * setStatus = new char[numberSets];
+      char * rowStatus = new char[numberRows];
+      int i;
+      int n;
+      n = fread(solution,sizeof(double),numberColumns,fp);
+      assert (n==numberColumns);
+      n = fread(status,sizeof(char),numberColumns,fp);
+      assert (n==numberColumns);
+      for (i=0;i<numberColumns;i++) {
+	if (status[i]==0)
+	  model2.setStatus(i,ClpSimplex::basic);
+	else if (status[i]==1)
+	  model2.setStatus(i,ClpSimplex::atLowerBound);
+	else if (status[i]==2)
+	  model2.setStatus(i,ClpSimplex::atUpperBound);
+	else if (status[i]==3)
+	  model2.setStatus(i,ClpSimplex::isFixed);
+      }
+      n = fread(model2.primalRowSolution(),sizeof(double),numberRows,fp);
+      assert (n==numberRows);
+      n = fread(rowStatus,sizeof(char),numberRows,fp);
+      assert (n==numberRows);
+      for (i=0;i<numberRows;i++) {
+	if (rowStatus[i]==0)
+	  model2.setRowStatus(i,ClpSimplex::basic);
+	else if (rowStatus[i]==1)
+	  model2.setRowStatus(i,ClpSimplex::atLowerBound);
+	else if (rowStatus[i]==2)
+	  model2.setRowStatus(i,ClpSimplex::atUpperBound);
+	else if (rowStatus[i]==3)
+	  model2.setRowStatus(i,ClpSimplex::isFixed);
+      }
+      n = fread(setStatus,sizeof(char),numberSets,fp);
+      assert (n==numberSets);
+      n = fread(gubMatrix->keyVariable(),sizeof(int),numberSets,fp);
+      assert (n==numberSets);
+      const int * keyVariable = gubMatrix->keyVariable();
+      for (i=0;i<numberSets;i++) {
+	if (setStatus[i]==0)
+	  gubMatrix->setStatus(i,ClpSimplex::basic);
+	else if (setStatus[i]==1)
+	  gubMatrix->setStatus(i,ClpSimplex::atLowerBound);
+	else if (setStatus[i]==2)
+	  gubMatrix->setStatus(i,ClpSimplex::atUpperBound);
+	else if (setStatus[i]==3)
+	  gubMatrix->setStatus(i,ClpSimplex::isFixed);
+	int iKey = keyVariable[i];
+	if (iKey<numberColumns)
+	  model2.setStatus(iKey,ClpSimplex::superBasic); // don't want in basis as make get thrown out
+      }
+      fclose(fp);
+      delete [] status;
+      delete [] setStatus;
+      delete [] rowStatus;
+    }
+    model2.primal(1);
+    printf("Primal took %g seconds\n",CoinCpuTime()-time1);
+    if (1) {
+      ClpGubMatrix * gubMatrix =
+	dynamic_cast< ClpGubMatrix*>(model2.clpMatrix());
+      assert (gubMatrix);
+      const double * solution = model2.primalColumnSolution();
+      int numberColumns = model2.numberColumns();
+      int numberRows = model2.numberRows();
+      char * status = new char [numberColumns];
+      int numberSets = gubMatrix->numberSets();
+      char * setStatus = new char[numberSets];
+      char * rowStatus = new char[numberRows];
+      const double * lowerColumn = model2.columnLower();
+      const double * upperColumn = model2.columnUpper();
+      const int * backward = gubMatrix->backward();
+      const int * keyVariable = gubMatrix->keyVariable();
+      int i;
+      FILE * fp=fopen ("xx.sol","w");
+      fwrite(solution,sizeof(double),numberColumns,fp);
+      for (i=0;i<numberColumns;i++) {
+	ClpSimplex::Status thisStatus = model2.getStatus(i);
+	if (thisStatus==ClpSimplex::basic) {
+	  status[i]=0;
+	} else if (thisStatus==ClpSimplex::atLowerBound) {
+	  status[i]=1;
+	} else if (thisStatus==ClpSimplex::atUpperBound) {
+	  status[i]=2;
+	} else if (thisStatus==ClpSimplex::isFixed) {
+	  status[i]=3;
+	} else {
+	  // see if key
+	  int iBack = backward[i];
+	  if (iBack>=0&&i==keyVariable[iBack]) {
+	    status[i]=0; // key
+	    //model2.setStatus(i,ClpSimplex::basic);
+	  } else {
+	    if (fabs(solution[i]-lowerColumn[i])<1.0e-6)
+	      status[i]=1;
+	    else if (fabs(solution[i]-upperColumn[i])<1.0e-6)
+	      status[i]=2;
+	    else
+	      abort();
+	  }
+	}
+      }
+      fwrite(status,sizeof(char),numberColumns,fp);
+      fwrite(model2.primalRowSolution(),sizeof(double),numberRows,fp);
+      for (i=0;i<numberRows;i++) {
+	ClpSimplex::Status thisStatus = model2.getRowStatus(i);
+	if (thisStatus==ClpSimplex::basic)
+	  rowStatus[i]=0;
+	else if (thisStatus==ClpSimplex::atLowerBound)
+	  rowStatus[i]=1;
+	else if (thisStatus==ClpSimplex::atUpperBound)
+	  rowStatus[i]=2;
+	else if (thisStatus==ClpSimplex::isFixed)
+	  rowStatus[i]=3;
+	else
+	  abort();
+      }
+      fwrite(rowStatus,sizeof(char),numberRows,fp);
+      for (i=0;i<numberSets;i++) {
+	// set key as non-basic
+	if (keyVariable[i]<numberColumns)
+	  model2.setStatus(keyVariable[i],ClpSimplex::superBasic);
+	ClpSimplex::Status thisStatus = gubMatrix->getStatus(i);
+	if (thisStatus==ClpSimplex::basic)
+	  setStatus[i]=0;
+	else if (thisStatus==ClpSimplex::atLowerBound)
+	  setStatus[i]=1;
+	else if (thisStatus==ClpSimplex::atUpperBound)
+	  setStatus[i]=2;
+	else if (thisStatus==ClpSimplex::isFixed)
+	  setStatus[i]=3;
+	else
+	  abort();
+      }
+      fwrite(setStatus,sizeof(char),numberSets,fp);
+      fwrite(gubMatrix->keyVariable(),sizeof(int),numberSets,fp);
+      fclose(fp);
+      delete [] status;
+      delete [] setStatus;
+      delete [] rowStatus;
+    }
     model2.primal();
   } else {
     // dummy gub
@@ -139,7 +323,9 @@ int main (int argc, const char *argv[])
     model.scaling(0);
     ClpPrimalColumnSteepest dantzig(5);
     model.setPrimalColumnPivotAlgorithm(dantzig);
+    double time1 = CoinCpuTime();
     model.primal();
+    printf("Primal took %g seconds\n",CoinCpuTime()-time1);
   }
   delete [] mark;
   delete [] gubStart;

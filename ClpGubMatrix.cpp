@@ -15,7 +15,7 @@
 // at end to get min/max!
 #include "ClpGubMatrix.hpp"
 #include "ClpMessage.hpp"
-#define CLP_DEBUG
+//#define CLP_DEBUG
 //#define CLP_DEBUG_PRINT
 //#############################################################################
 // Constructors / Destructor / Assignment
@@ -178,6 +178,8 @@ ClpGubMatrix::ClpGubMatrix(ClpPackedMatrix * matrix, int numberSets,
 
   int iSet;
   for (iSet=0;iSet<numberSets_;iSet++) {
+    // set key variable as slack
+    keyVariable_[iSet]=iSet+numberColumns;
     if (start_[iSet]<0||start_[iSet]>=numberColumns)
       throw CoinError("Index out of range","constructor","ClpGubMatrix");
     if (end_[iSet]<0||end_[iSet]>numberColumns)
@@ -2037,6 +2039,8 @@ ClpGubMatrix::extendUpdated(ClpSimplex * model,CoinIndexedVector * update, int m
     // mark end
     fromIndex_[number2-number]=-1;
     returnCode = number2-number;
+    // make sure lower_ upper_ adjusted
+    synchronize(model,9);
   } else {
     // take off?
     if (number>saveNumber_) {
@@ -2138,6 +2142,8 @@ ClpGubMatrix::primalExpanded(ClpSimplex * model,int mode)
 	  }
 	}
 	if (kColumn<numberColumns) {
+	  // make sure key is basic - so will be skipped in values pass
+	  model->setStatus(kColumn,ClpSimplex::basic);
 	  // feasibility will be done later
 	  assert (getStatus(i)!=ClpSimplex::basic);
 	  if (getStatus(i)==ClpSimplex::atUpperBound)
@@ -2965,6 +2971,7 @@ ClpGubMatrix::generalExpanded(ClpSimplex * model,int mode,int &number)
     {
       assert (number==model->sequenceIn());
       synchronize(model,1);
+      synchronize(model,8);
     }
     break;
     // unflag all variables
@@ -2983,6 +2990,13 @@ ClpGubMatrix::generalExpanded(ClpSimplex * model,int mode,int &number)
   case 10:
     {
       returnCode=synchronize(model,6);
+    }
+    break;
+    // make sure set is clean
+  case 11:
+    {
+      assert (number==model->sequenceIn());
+      returnCode=synchronize(model,8);
     }
     break;
   }
@@ -3017,276 +3031,288 @@ ClpGubMatrix::useEffectiveRhs(ClpSimplex * model, bool cheapest)
   double tolerance = model->primalTolerance();
   bool noNormalBounds=true;
   gubType_ &= ~8;
+  bool gotBasis=false;
   for (iSet=0;iSet<numberSets_;iSet++) {
-    int j;
-    int numberBasic=0;
-    int iBasic=-1;
-    int iStart = start_[iSet];
-    int iEnd=end_[iSet];
-    // find one with smallest length
-    int smallest=numberRows+1;
-    double value=0.0;
+    if (keyVariable_[iSet]<numberColumns)
+      gotBasis=true;
+    CoinBigIndex j;
+    CoinBigIndex iStart = start_[iSet];
+    CoinBigIndex iEnd=end_[iSet];
     for (j=iStart;j<iEnd;j++) {
       if (columnLower[j]&&columnLower[j]>-1.0e20)
 	noNormalBounds=false;
       if (columnUpper[j]&&columnUpper[j]<1.0e20)
 	noNormalBounds=false;
-      if (model->getStatus(j)== ClpSimplex::basic) {
-	if (columnLength[j]<smallest) {
-	  smallest=columnLength[j];
-	  iBasic=j;
-	}
-	numberBasic++;
-      }
-      value += columnSolution[j];
     }
-    bool done=false;
-    if (numberBasic>1||(numberBasic==1&&getStatus(iSet)==ClpSimplex::basic)) {
-      if (getStatus(iSet)==ClpSimplex::basic) 
-	iBasic = iSet+numberColumns;// slack key - use
-      done=true;
-    } else if (numberBasic==1) {
-      // see if can be key
-      double thisSolution = columnSolution[iBasic];
-      if (thisSolution>columnUpper[iBasic]) {
-	value -= thisSolution-columnUpper[iBasic];
-	thisSolution = columnUpper[iBasic];
-	columnSolution[iBasic]=thisSolution;
-      }
-      if (thisSolution<columnLower[iBasic]) {
-	value -= thisSolution-columnLower[iBasic];
-	thisSolution = columnLower[iBasic];
-	columnSolution[iBasic]=thisSolution;
-      }
-      // try setting slack to a bound
-      assert (upper_[iSet]<1.0e20||lower_[iSet]>-1.0e20);
-      double cost1 = COIN_DBL_MAX;
-      int whichBound=-1;
-      if (upper_[iSet]<1.0e20) {
-	// try slack at ub
-	double newBasic = thisSolution +upper_[iSet]-value;
-	if (newBasic>=columnLower[iBasic]-tolerance&&
-	    newBasic<=columnUpper[iBasic]+tolerance) {
-	  // can go
-	  whichBound=1;
-	  cost1 = newBasic*objective[iBasic];
-	  // But if exact then may be good solution
-	  if (fabs(upper_[iSet]-value)<tolerance)
-	    cost1=-COIN_DBL_MAX;
-	}
-      }
-      if (lower_[iSet]>-1.0e20) {
-	// try slack at lb
-	double newBasic = thisSolution +lower_[iSet]-value;
-	if (newBasic>=columnLower[iBasic]-tolerance&&
-	    newBasic<=columnUpper[iBasic]+tolerance) {
-	  // can go but is it cheaper
-	  double cost2 = newBasic*objective[iBasic];
-	  // But if exact then may be good solution
-	  if (fabs(lower_[iSet]-value)<tolerance)
-	    cost2=-COIN_DBL_MAX;
-	  if (cost2<cost1)
-	    whichBound=0;
-	}
-      }
-      if (whichBound!=-1) {
-	// key
-	done=true;
-	if (whichBound) {
-	  // slack to upper
-	  columnSolution[iBasic]=thisSolution + upper_[iSet]-value;
-	  setStatus(iSet,ClpSimplex::atUpperBound);
-	} else {
-	  // slack to lower
-	  columnSolution[iBasic]=thisSolution + lower_[iSet]-value;
-	  setStatus(iSet,ClpSimplex::atLowerBound);
-	}
-      }
-    }
-    if (!done) {
-      if (!cheapest) {
-	// see if slack can be key
-	if (value>=lower_[iSet]-tolerance&&value<=upper_[iSet]+tolerance) {
-	  done=true;
-	  setStatus(iSet,ClpSimplex::basic);
-	  iBasic=iSet+numberColumns;
-	}
-      }
-      if (!done) {
-	// set non basic if there was one
-	if (iBasic>=0)
-	  model->setStatus(iBasic,ClpSimplex::atLowerBound);
-	// find cheapest
-	int numberInSet = iEnd-iStart;
-	CoinMemcpyN(columnLower+iStart,numberInSet,lower);
-	CoinMemcpyN(columnUpper+iStart,numberInSet,upper);
-	CoinMemcpyN(columnSolution+iStart,numberInSet,solution);
-	// and slack
-	iBasic=numberInSet;
-	solution[iBasic]=-value;
-	lower[iBasic]=-upper_[iSet];
-	upper[iBasic]=-lower_[iSet];
-	int kphase;
-	if (value>=lower_[iSet]-tolerance&&value<=upper_[iSet]+tolerance) {
-	  // feasible
-	  kphase=1;
-	  cost[iBasic]=0.0;
-	  CoinMemcpyN(objective+iStart,numberInSet,cost);
-	} else {
-	  // infeasible
-	  kphase=0;
-	  // remember bounds are flipped so opposite to natural
-	  if (value<lower_[iSet]-tolerance)
-	    cost[iBasic]=1.0;
-	  else
-	    cost[iBasic]=-1.0;
-	  CoinZeroN(cost,numberInSet);
-	}
-	double dualTolerance =model->dualTolerance();
-	for (int iphase =kphase;iphase<2;iphase++) {
-	  if (iphase) {
-	    cost[numberInSet]=0.0;
-	    CoinMemcpyN(objective+iStart,numberInSet,cost);
-	  }
-	  // now do one row lp
-	  bool improve=true;
-	  while (improve) {
-	    improve=false;
-	    double dual = cost[iBasic];
-	    int chosen =-1;
-	    double best=dualTolerance;
-	    int way=0;
-	    for (int i=0;i<=numberInSet;i++) {
-	      double dj = cost[i]-dual;
-	      double improvement =0.0;
-	      double distance=0.0;
-	      if (iphase||i<numberInSet)
-		assert (solution[i]>=lower[i]&&solution[i]<=upper[i]);
-	      if (dj>dualTolerance)
-		improvement = dj*(solution[i]-lower[i]);
-	      else if (dj<-dualTolerance)
-		improvement = dj*(solution[i]-upper[i]);
-	      if (improvement>best) {
-		best=improvement;
-		chosen=i;
-		if (dj<0.0) {
-		  way = 1;
-		  distance = upper[i]-solution[i];
-		} else {
-		  way = -1;
-		  distance = solution[i]-lower[i];
-		}
-	      }
-	    }
-	    if (chosen>=0) {
-	      improve=true;
-	      // now see how far
-	      if (way>0) {
-		// incoming increasing so basic decreasing
-		// if phase 0 then go to nearest bound
-		double distance=upper[chosen]-solution[chosen];
-		double basicDistance;
-		if (!iphase) {
-		  assert (iBasic==numberInSet);
-		  assert (solution[iBasic]>upper[iBasic]);
-		  basicDistance = solution[iBasic]-upper[iBasic];
-		} else {
-		  basicDistance = solution[iBasic]-lower[iBasic];
-		}
-		// need extra coding for unbounded
-		assert (min(distance,basicDistance)<1.0e20);
-		if (distance>basicDistance) {
-		  // incoming becomes basic
-		  solution[chosen] += basicDistance;
-		  if (!iphase) 
-		    solution[iBasic]=upper[iBasic];
-		  else 
-		    solution[iBasic]=lower[iBasic];
-		  iBasic = chosen;
-		} else {
-		  // flip
-		  solution[chosen]=upper[chosen];
-		  solution[iBasic] -= distance;
-		}
-	      } else {
-		// incoming decreasing so basic increasing
-		// if phase 0 then go to nearest bound
-		double distance=solution[chosen]-lower[chosen];
-		double basicDistance;
-		if (!iphase) {
-		  assert (iBasic==numberInSet);
-		  assert (solution[iBasic]<lower[iBasic]);
-		  basicDistance = lower[iBasic]-solution[iBasic];
-		} else {
-		  basicDistance = upper[iBasic]-solution[iBasic];
-		}
-		// need extra coding for unbounded - for now just exit
-		if (min(distance,basicDistance)>1.0e20) {
-		  printf("unbounded on set %d\n",iSet);
-		  iphase=1;
-		  iBasic=numberInSet;
-		  break;
-		}
-		if (distance>basicDistance) {
-		  // incoming becomes basic
-		  solution[chosen] -= basicDistance;
-		  if (!iphase) 
-		    solution[iBasic]=lower[iBasic];
-		  else 
-		    solution[iBasic]=upper[iBasic];
-		  iBasic = chosen;
-		} else {
-		  // flip
-		  solution[chosen]=lower[chosen];
-		  solution[iBasic] += distance;
-		}
-	      }
-	      if (!iphase) {
-		if(iBasic<numberInSet)
-		  break; // feasible
-		else if (solution[iBasic]>=lower[iBasic]&&
-			 solution[iBasic]<=upper[iBasic])
-		  break; // feasible (on flip)
-	      }
-	    }
-	  }
-	}
-	// convert iBasic back and do bounds
-	if (iBasic==numberInSet) {
-	  // slack basic
-	  setStatus(iSet,ClpSimplex::basic);
-	  iBasic=iSet+numberColumns;
-	} else {
-	  iBasic += start_[iSet];
-	  model->setStatus(iBasic,ClpSimplex::basic);
-	  // remember bounds flipped
-	  if (upper[numberInSet]==lower[numberInSet]) 
-	    setStatus(iSet,ClpSimplex::isFixed);
-	  else if (solution[numberInSet]==upper[numberInSet])
-	    setStatus(iSet,ClpSimplex::atLowerBound);
-	  else if (solution[numberInSet]==lower[numberInSet])
-	    setStatus(iSet,ClpSimplex::atUpperBound);
-	  else 
-	    abort();
-	}
-	for (j=iStart;j<iEnd;j++) {
-	  if (model->getStatus(j)!=ClpSimplex::basic) {
-	    int inSet=j-iStart;
-	    columnSolution[j]=solution[inSet];
-	    if (upper[inSet]==lower[inSet]) 
-	      model->setStatus(j,ClpSimplex::isFixed);
-	    else if (solution[inSet]==upper[inSet])
-	      model->setStatus(j,ClpSimplex::atUpperBound);
-	    else if (solution[inSet]==lower[inSet])
-	      model->setStatus(j,ClpSimplex::atLowerBound);
-	  }
-	}
-      }
-    } 
-    keyVariable_[iSet]=iBasic;
   }
   if (noNormalBounds)
     gubType_ |= 8;
+  if (!gotBasis) {
+    for (iSet=0;iSet<numberSets_;iSet++) {
+      CoinBigIndex j;
+      int numberBasic=0;
+      int iBasic=-1;
+      CoinBigIndex iStart = start_[iSet];
+      CoinBigIndex iEnd=end_[iSet];
+      // find one with smallest length
+      int smallest=numberRows+1;
+      double value=0.0;
+      for (j=iStart;j<iEnd;j++) {
+	if (model->getStatus(j)== ClpSimplex::basic) {
+	  if (columnLength[j]<smallest) {
+	    smallest=columnLength[j];
+	    iBasic=j;
+	  }
+	  numberBasic++;
+	}
+	value += columnSolution[j];
+      }
+      bool done=false;
+      if (numberBasic>1||(numberBasic==1&&getStatus(iSet)==ClpSimplex::basic)) {
+	if (getStatus(iSet)==ClpSimplex::basic) 
+	  iBasic = iSet+numberColumns;// slack key - use
+	done=true;
+      } else if (numberBasic==1) {
+	// see if can be key
+	double thisSolution = columnSolution[iBasic];
+	if (thisSolution>columnUpper[iBasic]) {
+	  value -= thisSolution-columnUpper[iBasic];
+	  thisSolution = columnUpper[iBasic];
+	  columnSolution[iBasic]=thisSolution;
+	}
+	if (thisSolution<columnLower[iBasic]) {
+	  value -= thisSolution-columnLower[iBasic];
+	  thisSolution = columnLower[iBasic];
+	  columnSolution[iBasic]=thisSolution;
+	}
+	// try setting slack to a bound
+	assert (upper_[iSet]<1.0e20||lower_[iSet]>-1.0e20);
+	double cost1 = COIN_DBL_MAX;
+	int whichBound=-1;
+	if (upper_[iSet]<1.0e20) {
+	  // try slack at ub
+	  double newBasic = thisSolution +upper_[iSet]-value;
+	  if (newBasic>=columnLower[iBasic]-tolerance&&
+	      newBasic<=columnUpper[iBasic]+tolerance) {
+	    // can go
+	    whichBound=1;
+	    cost1 = newBasic*objective[iBasic];
+	    // But if exact then may be good solution
+	    if (fabs(upper_[iSet]-value)<tolerance)
+	      cost1=-COIN_DBL_MAX;
+	  }
+	}
+	if (lower_[iSet]>-1.0e20) {
+	  // try slack at lb
+	  double newBasic = thisSolution +lower_[iSet]-value;
+	  if (newBasic>=columnLower[iBasic]-tolerance&&
+	      newBasic<=columnUpper[iBasic]+tolerance) {
+	    // can go but is it cheaper
+	    double cost2 = newBasic*objective[iBasic];
+	    // But if exact then may be good solution
+	    if (fabs(lower_[iSet]-value)<tolerance)
+	      cost2=-COIN_DBL_MAX;
+	    if (cost2<cost1)
+	      whichBound=0;
+	  }
+	}
+	if (whichBound!=-1) {
+	  // key
+	  done=true;
+	  if (whichBound) {
+	    // slack to upper
+	    columnSolution[iBasic]=thisSolution + upper_[iSet]-value;
+	    setStatus(iSet,ClpSimplex::atUpperBound);
+	  } else {
+	    // slack to lower
+	    columnSolution[iBasic]=thisSolution + lower_[iSet]-value;
+	    setStatus(iSet,ClpSimplex::atLowerBound);
+	  }
+	}
+      }
+      if (!done) {
+	if (!cheapest) {
+	  // see if slack can be key
+	  if (value>=lower_[iSet]-tolerance&&value<=upper_[iSet]+tolerance) {
+	    done=true;
+	    setStatus(iSet,ClpSimplex::basic);
+	    iBasic=iSet+numberColumns;
+	  }
+	}
+	if (!done) {
+	  // set non basic if there was one
+	  if (iBasic>=0)
+	    model->setStatus(iBasic,ClpSimplex::atLowerBound);
+	  // find cheapest
+	  int numberInSet = iEnd-iStart;
+	  CoinMemcpyN(columnLower+iStart,numberInSet,lower);
+	  CoinMemcpyN(columnUpper+iStart,numberInSet,upper);
+	  CoinMemcpyN(columnSolution+iStart,numberInSet,solution);
+	  // and slack
+	  iBasic=numberInSet;
+	  solution[iBasic]=-value;
+	  lower[iBasic]=-upper_[iSet];
+	  upper[iBasic]=-lower_[iSet];
+	  int kphase;
+	  if (value>=lower_[iSet]-tolerance&&value<=upper_[iSet]+tolerance) {
+	    // feasible
+	    kphase=1;
+	    cost[iBasic]=0.0;
+	    CoinMemcpyN(objective+iStart,numberInSet,cost);
+	  } else {
+	    // infeasible
+	    kphase=0;
+	    // remember bounds are flipped so opposite to natural
+	    if (value<lower_[iSet]-tolerance)
+	      cost[iBasic]=1.0;
+	    else
+	      cost[iBasic]=-1.0;
+	    CoinZeroN(cost,numberInSet);
+	  }
+	  double dualTolerance =model->dualTolerance();
+	  for (int iphase =kphase;iphase<2;iphase++) {
+	    if (iphase) {
+	      cost[numberInSet]=0.0;
+	      CoinMemcpyN(objective+iStart,numberInSet,cost);
+	    }
+	    // now do one row lp
+	    bool improve=true;
+	    while (improve) {
+	      improve=false;
+	      double dual = cost[iBasic];
+	      int chosen =-1;
+	      double best=dualTolerance;
+	      int way=0;
+	      for (int i=0;i<=numberInSet;i++) {
+		double dj = cost[i]-dual;
+		double improvement =0.0;
+		double distance=0.0;
+		if (iphase||i<numberInSet)
+		  assert (solution[i]>=lower[i]&&solution[i]<=upper[i]);
+		if (dj>dualTolerance)
+		  improvement = dj*(solution[i]-lower[i]);
+		else if (dj<-dualTolerance)
+		  improvement = dj*(solution[i]-upper[i]);
+		if (improvement>best) {
+		  best=improvement;
+		  chosen=i;
+		  if (dj<0.0) {
+		    way = 1;
+		    distance = upper[i]-solution[i];
+		  } else {
+		    way = -1;
+		    distance = solution[i]-lower[i];
+		  }
+		}
+	      }
+	      if (chosen>=0) {
+		improve=true;
+		// now see how far
+		if (way>0) {
+		  // incoming increasing so basic decreasing
+		  // if phase 0 then go to nearest bound
+		  double distance=upper[chosen]-solution[chosen];
+		  double basicDistance;
+		  if (!iphase) {
+		    assert (iBasic==numberInSet);
+		    assert (solution[iBasic]>upper[iBasic]);
+		    basicDistance = solution[iBasic]-upper[iBasic];
+		  } else {
+		    basicDistance = solution[iBasic]-lower[iBasic];
+		  }
+		  // need extra coding for unbounded
+		  assert (min(distance,basicDistance)<1.0e20);
+		  if (distance>basicDistance) {
+		    // incoming becomes basic
+		    solution[chosen] += basicDistance;
+		    if (!iphase) 
+		      solution[iBasic]=upper[iBasic];
+		    else 
+		      solution[iBasic]=lower[iBasic];
+		    iBasic = chosen;
+		  } else {
+		    // flip
+		    solution[chosen]=upper[chosen];
+		    solution[iBasic] -= distance;
+		  }
+		} else {
+		  // incoming decreasing so basic increasing
+		  // if phase 0 then go to nearest bound
+		  double distance=solution[chosen]-lower[chosen];
+		  double basicDistance;
+		  if (!iphase) {
+		    assert (iBasic==numberInSet);
+		    assert (solution[iBasic]<lower[iBasic]);
+		    basicDistance = lower[iBasic]-solution[iBasic];
+		  } else {
+		    basicDistance = upper[iBasic]-solution[iBasic];
+		  }
+		  // need extra coding for unbounded - for now just exit
+		  if (min(distance,basicDistance)>1.0e20) {
+		    printf("unbounded on set %d\n",iSet);
+		    iphase=1;
+		    iBasic=numberInSet;
+		    break;
+		  }
+		  if (distance>basicDistance) {
+		    // incoming becomes basic
+		    solution[chosen] -= basicDistance;
+		    if (!iphase) 
+		      solution[iBasic]=lower[iBasic];
+		    else 
+		      solution[iBasic]=upper[iBasic];
+		    iBasic = chosen;
+		  } else {
+		    // flip
+		    solution[chosen]=lower[chosen];
+		    solution[iBasic] += distance;
+		  }
+		}
+		if (!iphase) {
+		  if(iBasic<numberInSet)
+		    break; // feasible
+		  else if (solution[iBasic]>=lower[iBasic]&&
+			   solution[iBasic]<=upper[iBasic])
+		    break; // feasible (on flip)
+		}
+	      }
+	    }
+	  }
+	  // convert iBasic back and do bounds
+	  if (iBasic==numberInSet) {
+	    // slack basic
+	    setStatus(iSet,ClpSimplex::basic);
+	    iBasic=iSet+numberColumns;
+	  } else {
+	    iBasic += start_[iSet];
+	    model->setStatus(iBasic,ClpSimplex::basic);
+	    // remember bounds flipped
+	    if (upper[numberInSet]==lower[numberInSet]) 
+	      setStatus(iSet,ClpSimplex::isFixed);
+	    else if (solution[numberInSet]==upper[numberInSet])
+	      setStatus(iSet,ClpSimplex::atLowerBound);
+	    else if (solution[numberInSet]==lower[numberInSet])
+	      setStatus(iSet,ClpSimplex::atUpperBound);
+	    else 
+	      abort();
+	  }
+	  for (j=iStart;j<iEnd;j++) {
+	    if (model->getStatus(j)!=ClpSimplex::basic) {
+	      int inSet=j-iStart;
+	      columnSolution[j]=solution[inSet];
+	      if (upper[inSet]==lower[inSet]) 
+		model->setStatus(j,ClpSimplex::isFixed);
+	      else if (solution[inSet]==upper[inSet])
+		model->setStatus(j,ClpSimplex::atUpperBound);
+	      else if (solution[inSet]==lower[inSet])
+		model->setStatus(j,ClpSimplex::atLowerBound);
+	    }
+	  }
+	}
+      } 
+      keyVariable_[iSet]=iBasic;
+    }
+  }
   delete [] lower;
   delete [] solution;
   delete [] upper;
@@ -3329,7 +3355,7 @@ ClpGubMatrix::useEffectiveRhs(ClpSimplex * model, bool cheapest)
       j = keys[i];
       if (j!=INT_MAX) {
 	while (1) {
-	  if (mark[j]&&columnLength[j]<smallest) {
+	  if (mark[j]&&columnLength[j]<smallest&&!gotBasis) {
 	    key=j;
 	    smallest=columnLength[j];
 	  }
@@ -3344,6 +3370,8 @@ ClpGubMatrix::useEffectiveRhs(ClpSimplex * model, bool cheapest)
       } else {
 	next_[i+numberColumns] = -(numberColumns+i+1);
       }  
+      if (gotBasis)
+	key =keyVariable_[i];
       if (key>=0) {
 	keyVariable_[i]=key;
       } else {
@@ -3441,6 +3469,7 @@ ClpGubMatrix::redoSet(ClpSimplex * model, int newKey, int oldKey, int iSet)
 double * 
 ClpGubMatrix::rhsOffset(ClpSimplex * model,bool forceRefresh,bool check)
 {
+  //forceRefresh=true;
   if (rhsOffset_) {
 #ifdef CLP_DEBUG
     if (check) {
@@ -3455,6 +3484,11 @@ ClpGubMatrix::rhsOffset(ClpSimplex * model,bool forceRefresh,bool check)
       int iRow;
       for (int iColumn=0;iColumn<numberColumns;iColumn++) {
 	if (model->getColumnStatus(iColumn)==ClpSimplex::basic)
+	  solution[iColumn]=0.0;
+      }
+      for (int iSet=0;iSet<numberSets_;iSet++) {
+	int iColumn = keyVariable_[iSet];
+	if (iColumn<numberColumns) 
 	  solution[iColumn]=0.0;
       }
       times(-1.0,solution,rhs);
@@ -3510,6 +3544,11 @@ ClpGubMatrix::rhsOffset(ClpSimplex * model,bool forceRefresh,bool check)
 	if (model->getColumnStatus(iColumn)==ClpSimplex::basic)
 	  solution[iColumn]=0.0;
       }
+      for (int iSet=0;iSet<numberSets_;iSet++) {
+	int iColumn = keyVariable_[iSet];
+	if (iColumn<numberColumns) 
+	  solution[iColumn]=0.0;
+      }
       times(-1.0,solution,rhsOffset_);
       delete [] solution;
       lastRefresh_ = model->numberIterations();
@@ -3542,7 +3581,8 @@ ClpGubMatrix::rhsOffset(ClpSimplex * model,bool forceRefresh,bool check)
 	    }
 	  }
 	  // subtract out
-	  ClpPackedMatrix::add(model,rhsOffset_,iColumn,-b);
+	  if (b)
+	    ClpPackedMatrix::add(model,rhsOffset_,iColumn,-b);
 	}
       }
     }

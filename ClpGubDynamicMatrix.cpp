@@ -15,7 +15,7 @@
 // at end to get min/max!
 #include "ClpGubDynamicMatrix.hpp"
 #include "ClpMessage.hpp"
-#define CLP_DEBUG
+//#define CLP_DEBUG
 //#define CLP_DEBUG_PRINT
 //#############################################################################
 // Constructors / Destructor / Assignment
@@ -33,8 +33,7 @@ ClpGubDynamicMatrix::ClpGubDynamicMatrix ()
     cost_(NULL),
     fullStart_(NULL),
     id_(NULL),
-    flagged_(NULL),
-    whichBound_(NULL),
+    dynamicStatus_(NULL),
     lowerColumn_(NULL),
     upperColumn_(NULL),
     lowerSet_(NULL),
@@ -72,14 +71,10 @@ ClpGubDynamicMatrix::ClpGubDynamicMatrix (const ClpGubDynamicMatrix & rhs)
   id_ = ClpCopyOfArray(rhs.id_,lastDynamic_-firstDynamic_);
   lowerColumn_ = ClpCopyOfArray(rhs.lowerColumn_,numberGubColumns_);
   upperColumn_ = ClpCopyOfArray(rhs.upperColumn_,numberGubColumns_);
+  dynamicStatus_ = ClpCopyOfArray(rhs.dynamicStatus_,numberGubColumns_);
   lowerSet_ = ClpCopyOfArray(rhs.lowerSet_,numberSets_);
   upperSet_ = ClpCopyOfArray(rhs.upperSet_,numberSets_);
   model_ = rhs.model_;
-  // size of flagged array and whichbound array
-  int size = (numberGubColumns_+ COINFACTORIZATION_BITS_PER_INT-1)/
-    COINFACTORIZATION_BITS_PER_INT;
-  flagged_ = ClpCopyOfArray(rhs.flagged_,size);
-  whichBound_ = ClpCopyOfArray(rhs.whichBound_,size);
 }
 
 /* This is the real constructor*/
@@ -138,10 +133,6 @@ ClpGubDynamicMatrix::ClpGubDynamicMatrix(ClpSimplex * model, int numberSets,
     upperColumn_=NULL;
   }
   if (upperColumn||lowerColumn) {
-    int size = (numberGubColumns_+ COINFACTORIZATION_BITS_PER_INT-1)/
-      COINFACTORIZATION_BITS_PER_INT;
-    whichBound_ = new unsigned int [size];
-    memset(whichBound_,0,size*sizeof(unsigned int));
     lowerSet_ = new float[numberSets_];
     for (i=0;i<numberSets_;i++) {
       if (lower[i]>-1.0e20)
@@ -157,13 +148,12 @@ ClpGubDynamicMatrix::ClpGubDynamicMatrix(ClpSimplex * model, int numberSets,
 	upperSet_[i] = 1.0e30;
     }
   } else {
-    whichBound_=NULL;
     lowerSet_=NULL;
     upperSet_=NULL;
   }
   start_=NULL;
   end_=NULL;
-  flagged_=NULL;
+  dynamicStatus_=NULL;
   id_ = new int[numberGubInSmall]; 
   for (i=0;i<numberGubInSmall;i++)
     id_[i]=-1;
@@ -181,7 +171,7 @@ ClpGubDynamicMatrix::ClpGubDynamicMatrix(ClpSimplex * model, int numberSets,
   zeroElements_ = false;
   // resize model (matrix stays same)
   model->resize(numberRows,numberNeeded);
-  if (whichBound_) {
+  if (upperColumn_) {
     // set all upper bounds so we have enough space
     double * columnUpper = model->columnUpper();
     for(i=firstDynamic_;i<lastDynamic_;i++)
@@ -205,7 +195,7 @@ ClpGubDynamicMatrix::ClpGubDynamicMatrix(ClpSimplex * model, int numberSets,
 
   firstGub_=firstDynamic_;
   lastGub_=lastDynamic_;
-  if (!whichBound_)
+  if (!lowerColumn_&&!upperColumn_)
     gubType_=8;
   if (status) {
     status_ = ClpCopyOfArray(status,numberSets_);
@@ -235,8 +225,7 @@ ClpGubDynamicMatrix::~ClpGubDynamicMatrix ()
   delete [] cost_;
   delete [] fullStart_;
   delete [] id_;
-  delete [] flagged_;
-  delete [] whichBound_;
+  delete [] dynamicStatus_;
   delete [] lowerColumn_;
   delete [] upperColumn_;
   delete [] lowerSet_;
@@ -257,8 +246,7 @@ ClpGubDynamicMatrix::operator=(const ClpGubDynamicMatrix& rhs)
     delete [] cost_;
     delete [] fullStart_;
     delete [] id_;
-    delete [] flagged_;
-    delete [] whichBound_;
+    delete [] dynamicStatus_;
     delete [] lowerColumn_;
     delete [] upperColumn_;
     delete [] lowerSet_;
@@ -279,14 +267,10 @@ ClpGubDynamicMatrix::operator=(const ClpGubDynamicMatrix& rhs)
     id_ = ClpCopyOfArray(rhs.id_,lastDynamic_-firstDynamic_);
     lowerColumn_ = ClpCopyOfArray(rhs.lowerColumn_,numberGubColumns_);
     upperColumn_ = ClpCopyOfArray(rhs.upperColumn_,numberGubColumns_);
+    dynamicStatus_ = ClpCopyOfArray(rhs.dynamicStatus_,numberGubColumns_);
     lowerSet_ = ClpCopyOfArray(rhs.lowerSet_,numberSets_);
     upperSet_ = ClpCopyOfArray(rhs.upperSet_,numberSets_);
     model_ = rhs.model_;
-    // size of flagged and whichbound array
-    int size = (numberGubColumns_+ COINFACTORIZATION_BITS_PER_INT-1)/
-      COINFACTORIZATION_BITS_PER_INT;
-    flagged_ = ClpCopyOfArray(rhs.flagged_,size);
-    whichBound_ = ClpCopyOfArray(rhs.whichBound_,size);
   }
   return *this;
 }
@@ -306,10 +290,14 @@ ClpGubDynamicMatrix::partialPricing(ClpSimplex * model, int start, int end,
   if (numberSets_) {
     // Do packed part before gub
     // always???
+    //printf("normal packed price - start %d end %d (passed end %d, first %d)\n",
+    //   start,min(end,firstAvailable_),end,firstAvailable_);
     ClpPackedMatrix::partialPricing(model,0,firstDynamic_,bestSequence,numberWanted);
+    ClpGubMatrix::partialPricing(model,start,min(firstAvailable_,end),bestSequence,numberWanted);
   } else {
     // no gub
     ClpPackedMatrix::partialPricing(model,start,end,bestSequence,numberWanted);
+    return;
   }
   if (numberWanted>0) {
     // and do some proportion of full set
@@ -319,6 +307,8 @@ ClpGubDynamicMatrix::partialPricing(ClpSimplex * model, int start, int end,
     int startG2 = (int) (ratio* (startG-firstDynamic_));
     int endG2 = ((int) (startG2 + ratio *(endG-startG)))+1;
     endG2 = min(endG2,numberSets_);
+    //printf("gub price - set start %d end %d\n",
+    //   startG2,endG2);
     double tolerance=model->currentDualTolerance();
     double * reducedCost = model->djRegion();
     const double * duals = model->dualRowSolution();
@@ -417,28 +407,31 @@ ClpGubDynamicMatrix::partialPricing(ClpSimplex * model, int start, int end,
 	}
       }
       for (int iSequence=fullStart_[iSet];iSequence<fullStart_[iSet+1];iSequence++) {
-	double value=cost_[iSequence]-djMod;
-	for (j=startColumn_[iSequence];
-	     j<startColumn_[iSequence+1];j++) {
-	  int jRow=row_[j];
-	  value -= duals[jRow]*element_[j];
-	}
-	// change sign if at lower bound
-	if (!whichBound_||atLowerBound(iSequence))
-	  value = -value;
-	if (value>tolerance) {
-	  numberWanted--;
-	  if (value>bestDj) {
-	    // check flagged variable and correct dj
-	    if (!flagged(iSequence)) {
-	      bestDj=value;
-	      bestSequence = iSequence;
-	      bestDjMod = djMod;
-	      bestType=1;
-	      bestSet = iSet;
-	    } else {
-	      // just to make sure we don't exit before got something
-	      numberWanted++;
+	DynamicStatus status = getDynamicStatus(iSequence);
+	if (status!=inSmall) {
+	  double value=cost_[iSequence]-djMod;
+	  for (j=startColumn_[iSequence];
+	       j<startColumn_[iSequence+1];j++) {
+	    int jRow=row_[j];
+	    value -= duals[jRow]*element_[j];
+	  }
+	  // change sign if at lower bound
+	  if (status==atLowerBound)
+	    value = -value;
+	  if (value>tolerance) {
+	    numberWanted--;
+	    if (value>bestDj) {
+	      // check flagged variable and correct dj
+	      if (!flagged(iSequence)) {
+		bestDj=value;
+		bestSequence = iSequence;
+		bestDjMod = djMod;
+		bestType=1;
+		bestSet = iSet;
+	      } else {
+		// just to make sure we don't exit before got something
+		numberWanted++;
+	      }
 	    }
 	  }
 	}
@@ -488,9 +481,12 @@ ClpGubDynamicMatrix::partialPricing(ClpSimplex * model, int start, int end,
 	//printf("best %d\n",bestSequence);
 	backward_[firstAvailable_]=bestSet;
 	model->solutionRegion()[firstAvailable_]=0.0;
-	if (!whichBound_) {
+	if (!lowerColumn_&&!upperColumn_) {
 	  model->setStatus(firstAvailable_,ClpSimplex::atLowerBound);
+	  lowerColumn[firstAvailable_] = 0.0;
+	  upperColumn[firstAvailable_] = COIN_DBL_MAX;
 	}  else {
+	  DynamicStatus status = getDynamicStatus(bestSequence);
 	  if (lowerColumn_) 
 	    lowerColumn[firstAvailable_] = lowerColumn_[bestSequence];
 	  else
@@ -499,19 +495,13 @@ ClpGubDynamicMatrix::partialPricing(ClpSimplex * model, int start, int end,
 	    upperColumn[firstAvailable_] = upperColumn_[bestSequence];
 	  else
 	    upperColumn[firstAvailable_] = COIN_DBL_MAX;
-	  if (atLowerBound(bestSequence)) {
+	  if (status==atLowerBound) {
 	    solution[firstAvailable_]=lowerColumn[firstAvailable_];
 	    model->setStatus(firstAvailable_,ClpSimplex::atLowerBound);
 	  } else {
 	    solution[firstAvailable_]=upperColumn[firstAvailable_];
 	    model->setStatus(firstAvailable_,ClpSimplex::atUpperBound);
 	  }
-	  if (lowerSet_[bestSet]>-1.0e20)
-	    lower_[bestSet] += solution[firstAvailable_];
-	  if (upperSet_[bestSet]<1.0e20)
-	    upper_[bestSet] += solution[firstAvailable_];
-	  model->setObjectiveOffset(model->objectiveOffset()+
-				    solution[firstAvailable_]*cost_[bestSequence]);
 	}
 	model->nonLinearCost()->setOne(firstAvailable_,solution[firstAvailable_],
 				       lowerColumn[firstAvailable_],
@@ -590,7 +580,12 @@ ClpGubDynamicMatrix::synchronize(ClpSimplex * model,int mode)
 	  }
 	  firstAvailable_++;
 	} else {
-	  if (whichBound_) {
+	  if (lowerColumn_||upperColumn_) {
+	    int jColumn = id_[iColumn-firstDynamic_];
+	    if (model->getStatus(iColumn)==ClpSimplex::atUpperBound)
+	      setDynamicStatus(jColumn,atUpperBound);
+	    else 
+	      setDynamicStatus(jColumn,atLowerBound);
 	    // treat solution as if exactly at a bound
 	    double value = solution[iColumn];
 	    if (fabs(value-lowerColumn[iColumn])<fabs(value-upperColumn[iColumn]))
@@ -608,7 +603,7 @@ ClpGubDynamicMatrix::synchronize(ClpSimplex * model,int mode)
 	  lookup[iColumn]=-1;
 	}
       }
-      model->setObjectiveOffset(model->objectiveOffset()-objectiveChange);
+      model->setObjectiveOffset(model->objectiveOffset()+objectiveChange);
       firstAvailable_ = firstDynamic_;
       for (iColumn=firstDynamic_;iColumn<currentNumber;iColumn++) {
 	if (lookup[iColumn]>=0) {
@@ -665,6 +660,19 @@ ClpGubDynamicMatrix::synchronize(ClpSimplex * model,int mode)
 	}
 	if (setTemp)
 	  temp[last]=-(keyVariable_[iSet]+1);
+	if (lowerSet_) {
+	  // we only need to get lower_ and upper_ correct
+	  double shift=0.0;
+	  for (int j=fullStart_[iSet];j<fullStart_[iSet+1];j++) 
+	    if (getDynamicStatus(j)==atUpperBound) 
+	      shift += upperColumn_[j];
+	    else if (getDynamicStatus(j)==atLowerBound&&lowerColumn_)
+	      shift += lowerColumn_[j];
+	  if (lowerSet_[iSet]>-1.0e20)
+	    lower_[iSet] = lowerSet_[iSet]-shift;
+	  if (upperSet_[iSet]<1.0e20)
+	    upper_[iSet] = upperSet_[iSet]-shift;
+	}
       }
       // move to next_
       memcpy(next_+firstDynamic_,temp+firstDynamic_,(firstAvailable_-firstDynamic_)*sizeof(int));
@@ -791,6 +799,7 @@ ClpGubDynamicMatrix::synchronize(ClpSimplex * model,int mode)
       relaxedTolerance = relaxedTolerance +  error;
       // but we will be using difference
       relaxedTolerance -= dualTolerance;
+      double objectiveOffset = 0.0;
       for (i=0;i<numberSets_;i++) {
 	int kColumn = keyVariable_[i];
 	double value=0.0;
@@ -803,28 +812,13 @@ ClpGubDynamicMatrix::synchronize(ClpSimplex * model,int mode)
 	    int iRow = row_[j];
 	    value -= dual[iRow]*element_[j];
 	  }
-	} else {
-	  // slack key - may not be feasible
-	  assert (getStatus(i)==ClpSimplex::basic);
-	  // negative as -1.0 for slack
-	  value=-weight(i)*infeasibilityCost;
-	}
-	// Now subtract out from all 
-	for (int k= fullStart_[i];k<fullStart_[i+1];k++) {
-	  double djValue = cost_[k]-value;
-	  for (CoinBigIndex j=startColumn_[k];
-	       j<startColumn_[k+1];j++) {
-	    int iRow = row_[j];
-	    djValue -= dual[iRow]*element_[j];
-	  }
-	  double infeasibility=0.0;
-	  if (!whichBound_||atLowerBound(k)) {
-	    if (djValue<-dualTolerance) 
-	      infeasibility=-djValue-dualTolerance;
-	  } else {
-	    // at upper bound
-	    if (djValue>dualTolerance) 
-	      infeasibility=djValue-dualTolerance;
+	  double infeasibility = 0.0;
+	  if (getStatus(i)==ClpSimplex::atLowerBound) {
+	    if (-value>dualTolerance) 
+	      infeasibility=-value-dualTolerance;
+	  } else if (getStatus(i)==ClpSimplex::atUpperBound) {
+	    if (value>dualTolerance) 
+	      infeasibility=value-dualTolerance;
 	  }
 	  if (infeasibility>0.0) {
 	    sumDualInfeasibilities_ += infeasibility;
@@ -832,8 +826,45 @@ ClpGubDynamicMatrix::synchronize(ClpSimplex * model,int mode)
 	      sumOfRelaxedDualInfeasibilities_ += infeasibility;
 	    numberDualInfeasibilities_ ++;
 	  }
+	} else {
+	  // slack key - may not be feasible
+	  assert (getStatus(i)==ClpSimplex::basic);
+	  // negative as -1.0 for slack
+	  value=-weight(i)*infeasibilityCost;
+	}
+	// Now subtract out from all 
+	for (CoinBigIndex k= fullStart_[i];k<fullStart_[i+1];k++) {
+	  if (getDynamicStatus(k)!=inSmall) {
+	    double djValue = cost_[k]-value;
+	    for (CoinBigIndex j=startColumn_[k];
+		 j<startColumn_[k+1];j++) {
+	      int iRow = row_[j];
+	      djValue -= dual[iRow]*element_[j];
+	    }
+	    double infeasibility=0.0;
+	    double shift=0.0;
+	    if (getDynamicStatus(k)==atLowerBound) {
+	      if (lowerColumn_) 
+		shift= lowerColumn_[k];
+	      if (djValue<-dualTolerance) 
+		infeasibility=-djValue-dualTolerance;
+	    } else {
+	      // at upper bound
+	      shift= upperColumn_[k];
+	      if (djValue>dualTolerance) 
+		infeasibility=djValue-dualTolerance;
+	    }
+	    objectiveOffset += shift*cost_[k];
+	    if (infeasibility>0.0) {
+	      sumDualInfeasibilities_ += infeasibility;
+	      if (infeasibility>relaxedTolerance) 
+		sumOfRelaxedDualInfeasibilities_ += infeasibility;
+	      numberDualInfeasibilities_ ++;
+	    }
+	  }
 	}
       }
+      model->setObjectiveOffset(objectiveOffset_-objectiveOffset);
     }
     break;
     // see if time to re-factorize
@@ -846,7 +877,7 @@ ClpGubDynamicMatrix::synchronize(ClpSimplex * model,int mode)
     // return 1 if there may be changing bounds on variable (column generation)
   case 6:
     {
-      returnNumber = (whichBound_!=NULL) ? 1 : 0;
+      returnNumber = (lowerColumn_!=NULL||upperColumn_!=NULL) ? 1 : 0;
     }
     break;
     // restore firstAvailable_
@@ -871,6 +902,54 @@ ClpGubDynamicMatrix::synchronize(ClpSimplex * model,int mode)
       }
     }
     break;
+    // make sure set is clean
+  case 8:
+    {
+      int sequenceIn = model->sequenceIn();
+      if (sequenceIn<model->numberColumns()) {
+	int iSet = backward_[sequenceIn];
+	if (iSet>=0&&lowerSet_) {
+	  // we only need to get lower_ and upper_ correct
+	  double shift=0.0;
+	  for (int j=fullStart_[iSet];j<fullStart_[iSet+1];j++) 
+	    if (getDynamicStatus(j)==atUpperBound) 
+	      shift += upperColumn_[j];
+	    else if (getDynamicStatus(j)==atLowerBound&&lowerColumn_)
+	      shift += lowerColumn_[j];
+	  if (lowerSet_[iSet]>-1.0e20)
+	    lower_[iSet] = lowerSet_[iSet]-shift;
+	  if (upperSet_[iSet]<1.0e20)
+	    upper_[iSet] = upperSet_[iSet]-shift;
+	}
+	if (sequenceIn==firstAvailable_) {
+	  // not really in small problem
+	  int iBig=id_[sequenceIn-firstDynamic_];
+	  if (model->getStatus(sequenceIn)==ClpSimplex::atLowerBound)
+	    setDynamicStatus(iBig,atLowerBound);
+	  else
+	    setDynamicStatus(iBig,atUpperBound);
+	}
+      }
+    }
+    break;
+    // adjust lower,upper
+  case 9:
+    {
+      int sequenceIn = model->sequenceIn();
+      if (sequenceIn>=firstDynamic_&&sequenceIn<lastDynamic_&&lowerSet_) {
+	int iSet = backward_[sequenceIn];
+	assert (iSet>=0);
+	int inBig = id_[sequenceIn-firstDynamic_];
+	const double * solution = model->solutionRegion();
+	setDynamicStatus(inBig,inSmall);
+	if (lowerSet_[iSet]>-1.0e20)
+	  lower_[iSet] += solution[sequenceIn];
+	if (upperSet_[iSet]<1.0e20)
+	  upper_[iSet] += solution[sequenceIn];
+	model->setObjectiveOffset(model->objectiveOffset()-
+				  solution[sequenceIn]*cost_[inBig]);
+      }
+    }
   }
   return returnNumber;
 }
@@ -891,12 +970,6 @@ ClpGubDynamicMatrix::insertNonBasic(int sequence, int iSet)
 void 
 ClpGubDynamicMatrix::useEffectiveRhs(ClpSimplex * model, bool cheapest)
 {
-  // size of flagged array
-  int size = (numberGubColumns_+ COINFACTORIZATION_BITS_PER_INT-1)/
-    COINFACTORIZATION_BITS_PER_INT;
-  delete [] flagged_;
-  flagged_ = new unsigned int [size];
-  memset(flagged_,0,size*sizeof(unsigned int));
   // Do basis - cheapest or slack if feasible (unless cheapest set)
   int longestSet=0;
   int iSet;
@@ -921,6 +994,11 @@ ClpGubDynamicMatrix::useEffectiveRhs(ClpSimplex * model, bool cheapest)
   CoinFillN(back,numberGubColumns_,-1);
   for (i=0;i<numberSets_;i++) 
     keys[i]=INT_MAX;
+  delete [] dynamicStatus_;
+  dynamicStatus_ = new unsigned char [numberGubColumns_];
+  memset(dynamicStatus_,0,numberGubColumns_); // for clarity
+  for (i=0;i<numberGubColumns_;i++)
+    setDynamicStatus(i,atLowerBound);
   // set up chains
   for (i=firstDynamic_;i<lastDynamic_;i++){
     if (id_[i-firstDynamic_]>=0) {
@@ -1187,16 +1265,18 @@ ClpGubDynamicMatrix::useEffectiveRhs(ClpSimplex * model, bool cheapest)
 	  }
 	}
 	// do solution i.e. bounds
-	if (whichBound_) {
+	if (lowerColumn_||upperColumn_) {
 	  for (int j=0;j<numberInSet;j++) {
 	    if (j!=iBasic) {
 	      objectiveOffset += solution[j]*cost[j];
 	      if (lowerColumn_&&upperColumn_) {
 		if (fabs(solution[j]-lowerColumn_[j+iStart])>
 		    fabs(solution[j]-upperColumn_[j+iStart]))
-		  setAtUpperBound(j+iStart);
+		  setDynamicStatus(j+iStart,atUpperBound);
 	      } else if (upperColumn_&&solution[j]>0.0) {
-		setAtUpperBound(j+iStart);
+		setDynamicStatus(j+iStart,atUpperBound);
+	      } else {
+		setDynamicStatus(j+iStart,atLowerBound);
 	      }
 	    }
 	  }
@@ -1394,7 +1474,7 @@ double *
 ClpGubDynamicMatrix::rhsOffset(ClpSimplex * model,bool forceRefresh,
 		      bool check)
 {
-  //forceRefresh=true;
+  forceRefresh=true;
   //check=false;
 #ifdef CLP_DEBUG
   double * saveE=NULL;
@@ -1412,16 +1492,37 @@ ClpGubDynamicMatrix::rhsOffset(ClpSimplex * model,bool forceRefresh,
       int numberColumns = model->numberColumns();
       int iRow;
       CoinZeroN(rhs,numberRows);
-      if (whichBound_) {
+      // do ones at bounds before gub
+      const double * smallSolution = model->solutionRegion();
+      const double * element =matrix_->getElements();
+      const int * row = matrix_->getIndices();
+      const CoinBigIndex * startColumn = matrix_->getVectorStarts();
+      const int * length = matrix_->getVectorLengths();
+      int iColumn;
+      for (iColumn=0;iColumn<firstDynamic_;iColumn++) {
+	if (model->getStatus(iColumn)!=ClpSimplex::basic) {
+	  double value = smallSolution[iColumn];
+	  for (CoinBigIndex j=startColumn[iColumn];
+	       j<startColumn[iColumn]+length[iColumn];j++) {
+	    int jRow=row[j];
+	    rhs[jRow] -= value*element[j];
+	  }
+	}
+      }
+      if (lowerColumn_||upperColumn_) {
 	double * solution = new double [numberGubColumns_];
-	int iColumn;
 	for (iColumn=0;iColumn<numberGubColumns_;iColumn++) {
 	  double value=0.0;
-	  if(atUpperBound(iColumn) )
+	  if(getDynamicStatus(iColumn)==atUpperBound)
 	    value = upperColumn_[iColumn];
 	  else if (lowerColumn_)
 	    value = lowerColumn_[iColumn];
 	  solution[iColumn]=value;
+	}
+	// ones at bounds in small and gub
+	for (iColumn=firstDynamic_;iColumn<firstAvailable_;iColumn++) {
+	  int jFull = id_[iColumn-firstDynamic_];
+	  solution[jFull]=smallSolution[iColumn];
 	}
 	// zero all basic in small model
 	int * pivotVariable = model->pivotVariable();
@@ -1463,20 +1564,19 @@ ClpGubDynamicMatrix::rhsOffset(ClpSimplex * model,bool forceRefresh,
 	  }
 	}
 	// now do lower and upper bounds on sets
-	// so we take out ones in small problem
-	for (iColumn=firstDynamic_;iColumn<firstAvailable_;iColumn++) {
-	  int iSequence = id_[iColumn-firstDynamic_];
-	  solution[iSequence]=0.0;
-	}
 	for (int iSet=0;iSet<numberSets_;iSet++) {
 	  iColumn = keyVariable_[iSet];
-	  if (iColumn<numberColumns) {
-	    int iSequence = id_[iColumn-firstDynamic_];
-	    solution[iSequence]=0.0;
-	  }
 	  double shift=0.0;
-	  for (int j=fullStart_[iSet];j<fullStart_[iSet+1];j++) 
-	    shift += solution[j];
+	  for (int j=fullStart_[iSet];j<fullStart_[iSet+1];j++) {
+	    if (getDynamicStatus(j)!=inSmall&&j!=iColumn) {
+	      if (getDynamicStatus(j)==atLowerBound) {
+		if (lowerColumn_)
+		  shift += lowerColumn_[j];
+	      } else {
+		shift += upperColumn_[j];
+	      }
+	    }
+	  }
 	  if (lowerSet_[iSet]>-1.0e20) 
 	    assert(fabs(lower_[iSet] - (lowerSet_[iSet]-shift))<1.0e-3);
 	  if (upperSet_[iSet]<1.0e20)
@@ -1521,16 +1621,37 @@ ClpGubDynamicMatrix::rhsOffset(ClpSimplex * model,bool forceRefresh,
       int numberColumns = model->numberColumns();
       int iRow;
       CoinZeroN(rhsOffset_,numberRows);
-      if (whichBound_) {
+      // do ones at bounds before gub
+      const double * smallSolution = model->solutionRegion();
+      const double * element =matrix_->getElements();
+      const int * row = matrix_->getIndices();
+      const CoinBigIndex * startColumn = matrix_->getVectorStarts();
+      const int * length = matrix_->getVectorLengths();
+      int iColumn;
+      for (iColumn=0;iColumn<firstDynamic_;iColumn++) {
+	if (model->getStatus(iColumn)!=ClpSimplex::basic) {
+	  double value = smallSolution[iColumn];
+	  for (CoinBigIndex j=startColumn[iColumn];
+	       j<startColumn[iColumn]+length[iColumn];j++) {
+	    int jRow=row[j];
+	    rhsOffset_[jRow] -= value*element[j];
+	  }
+	}
+      }
+      if (lowerColumn_||upperColumn_) {
 	double * solution = new double [numberGubColumns_];
-	int iColumn;
 	for (iColumn=0;iColumn<numberGubColumns_;iColumn++) {
 	  double value=0.0;
-	  if(atUpperBound(iColumn) )
+	  if(getDynamicStatus(iColumn)==atUpperBound)
 	    value = upperColumn_[iColumn];
 	  else if (lowerColumn_)
 	    value = lowerColumn_[iColumn];
 	  solution[iColumn]=value;
+	}
+	// ones in gub and in small problem
+	for (iColumn=firstDynamic_;iColumn<firstAvailable_;iColumn++) {
+	  int jFull = id_[iColumn-firstDynamic_];
+	  solution[jFull]=smallSolution[iColumn];
 	}
 	// zero all basic in small model
 	int * pivotVariable = model->pivotVariable();
@@ -1573,22 +1694,23 @@ ClpGubDynamicMatrix::rhsOffset(ClpSimplex * model,bool forceRefresh,
 	}
 	// now do lower and upper bounds on sets
 	// and offset
-	// so we take out ones in small problem
-	for (iColumn=firstDynamic_;iColumn<firstAvailable_;iColumn++) {
-	  int iSequence = id_[iColumn-firstDynamic_];
-	  solution[iSequence]=0.0;
-	}
 	double objectiveOffset = 0.0;
 	for (int iSet=0;iSet<numberSets_;iSet++) {
 	  iColumn = keyVariable_[iSet];
-	  if (iColumn<numberColumns) {
-	    int iSequence = id_[iColumn-firstDynamic_];
-	    solution[iSequence]=0.0;
-	  }
 	  double shift=0.0;
-	  for (int j=fullStart_[iSet];j<fullStart_[iSet+1];j++) {
-	    objectiveOffset += solution[j]*cost_[j];
-	    shift += solution[j];
+	  for (CoinBigIndex j=fullStart_[iSet];j<fullStart_[iSet+1];j++) {
+	    if (getDynamicStatus(j)!=inSmall) {
+	      double value=0.0;
+	      if (getDynamicStatus(j)==atLowerBound) {
+		if (lowerColumn_) 
+		  value= lowerColumn_[j];
+	      } else { 
+		value= upperColumn_[j];
+	      }
+	      if (j!=iColumn) 
+		shift += value;
+	      objectiveOffset += value*cost_[j];
+	    }
 	  }
 	  if (lowerSet_[iSet]>-1.0e20)
 	    lower_[iSet] = lowerSet_[iSet]-shift;
@@ -1644,21 +1766,85 @@ ClpGubDynamicMatrix::updatePivot(ClpSimplex * model,double oldInValue, double ol
   
   // now update working model
   int sequenceIn = model->sequenceIn();
+  int sequenceOut = model->sequenceOut();
+  bool doPrinting = (model->messageHandler()->logLevel()==63);
+  bool print=false;
+  int iSet;
   if (sequenceIn==firstAvailable_) {
-    insertNonBasic(firstAvailable_,backward_[firstAvailable_]);
-    firstAvailable_++;
+    if (doPrinting)
+      printf("New variable ");
+    if (sequenceIn!=sequenceOut) {
+      insertNonBasic(firstAvailable_,backward_[firstAvailable_]);
+      setDynamicStatus(id_[sequenceIn-firstDynamic_],inSmall);
+      firstAvailable_++;
+    } else {
+      int bigSequence = id_[sequenceIn-firstDynamic_];
+      if (model->getStatus(sequenceIn)==ClpSimplex::atUpperBound) 
+	setDynamicStatus(bigSequence,atUpperBound);
+      else
+	setDynamicStatus(bigSequence,atLowerBound);
+    }
+    synchronize(model,8);
   }
-  if (whichBound_) {
-    int sequenceOut = model->sequenceOut();
-    if (sequenceOut>=firstDynamic_&&sequenceOut<firstAvailable_) {
-      int jColumn = id_[sequenceOut-firstDynamic_];
-      if (model->getStatus(sequenceOut)==ClpSimplex::atUpperBound)
-	setAtUpperBound(jColumn);
-      else if (whichBound_)
-	setAtLowerBound(jColumn);
+  if (sequenceIn<lastDynamic_) {
+    iSet = backward_[sequenceIn];
+    if (iSet>=0) {
+      int bigSequence = id_[sequenceIn-firstDynamic_];
+      if (doPrinting)
+	printf(" incoming set %d big seq %d",iSet,bigSequence);
+      print=true;
     }
   }
+  if (sequenceOut<lastDynamic_) {
+    iSet = backward_[sequenceOut];
+    if (iSet>=0) {
+      int bigSequence = id_[sequenceOut-firstDynamic_];
+      if (model->getStatus(sequenceOut)==ClpSimplex::atUpperBound) 
+	setDynamicStatus(bigSequence,atUpperBound);
+      else
+	setDynamicStatus(bigSequence,atLowerBound);
+      if (doPrinting)
+	printf(" ,outgoing set %d big seq %d,",iSet,bigSequence);
+      print=true;
+      model->setSequenceIn(sequenceOut);
+      synchronize(model,8);
+      model->setSequenceIn(sequenceIn);
+    }
+  }
+  if (print&&doPrinting)
+    printf("\n");
   ClpGubMatrix::updatePivot(model,oldInValue,oldOutValue);
+  if (doPrinting&&0) {
+    for (int i=0;i<numberSets_;i++) {
+      printf("set %d key %d lower %g upper %g\n",i,keyVariable_[i],lower_[i],upper_[i]);
+      for (int j=fullStart_[i];j<fullStart_[i+1];j++) 
+	if (getDynamicStatus(j)==atUpperBound) {
+	  bool print=true;
+	  for (int k=firstDynamic_;k<firstAvailable_;k++) {
+	    if (id_[k-firstDynamic_]==j)
+	      print=false;
+	    if (id_[k-firstDynamic_]==j)
+	      assert(getDynamicStatus(j)==inSmall);
+	  }
+	  if (print)
+	    printf("variable %d at ub\n",j);
+	}
+    }
+  }
+#ifdef CLP_DEBUG
+  char * inSmall = new char [numberGubColumns_];
+  memset(inSmall,0,numberGubColumns_);
+  for (int i=0;i<numberGubColumns_;i++)
+    if (getDynamicStatus(i)==ClpGubDynamicMatrix::inSmall)
+      inSmall[i]=1;
+  for (int i=firstDynamic_;i<firstAvailable_;i++) {
+    int k=id_[i-firstDynamic_];
+    inSmall[k]=0;
+  }
+  for (int i=0;i<numberGubColumns_;i++)
+    assert (!inSmall[i]);
+  delete [] inSmall;
+#endif
   return 0;
 }
 void 

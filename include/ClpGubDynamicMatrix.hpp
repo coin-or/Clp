@@ -7,7 +7,6 @@
 #include "CoinPragma.hpp"
 
 #include "ClpGubMatrix.hpp"
-#include "CoinFactorization.hpp"
 /** This implements Gub rows plus a ClpPackedMatrix.
     This a dynamic version which stores the gub part and dynamically creates matrix.
     All bounds are assumed to be zero and infinity
@@ -28,6 +27,8 @@ public:
       mode=3 just reset costs (primal)
       mode=4 correct number of dual infeasibilities
       mode=5 return 4 if time to re-factorize
+      mode=8  - make sure set is clean 
+      mode=9  - adjust lower, upper on set by incoming
   */
   virtual int synchronize(ClpSimplex * model,int mode);
   /// Sets up an effective RHS and does gub crash if needed
@@ -82,43 +83,78 @@ public:
   //@}
   /**@name gets and sets */
   //@{
+  /// enums for status of various sorts
+  enum DynamicStatus {
+    inSmall = 0x01,
+    atUpperBound = 0x02,
+    atLowerBound = 0x03,
+  };
   /// Whether flagged
   inline bool flagged(int i) const {
-    int word = i >> COINFACTORIZATION_SHIFT_PER_INT;
-    int bit = i & COINFACTORIZATION_MASK_PER_INT;
-    return (flagged_[word]&(1<<bit))!=0;
-  }
+    return (dynamicStatus_[i]&8)!=0;
+  };
   inline void setFlagged(int i) {
-    int word = i >> COINFACTORIZATION_SHIFT_PER_INT;
-    int bit = i & COINFACTORIZATION_MASK_PER_INT;
-    flagged_[word] |= (1<<bit);
-  }
+    dynamicStatus_[i] |= 8;
+  };
   inline void unsetFlagged(int i) {
-    int word = i >> COINFACTORIZATION_SHIFT_PER_INT;
-    int bit = i & COINFACTORIZATION_MASK_PER_INT;
-    flagged_[word]  &= ~(1<<bit);;
-  }
-  /// Which bound
-  inline bool atUpperBound(int i) const {
-    int word = i >> COINFACTORIZATION_SHIFT_PER_INT;
-    int bit = i & COINFACTORIZATION_MASK_PER_INT;
-    return (whichBound_[word]&(1<<bit))!=0;
-  }
-  inline bool atLowerBound(int i) const {
-    int word = i >> COINFACTORIZATION_SHIFT_PER_INT;
-    int bit = i & COINFACTORIZATION_MASK_PER_INT;
-    return (whichBound_[word]&(1<<bit))==0;
-  }
-  inline void setAtUpperBound(int i) {
-    int word = i >> COINFACTORIZATION_SHIFT_PER_INT;
-    int bit = i & COINFACTORIZATION_MASK_PER_INT;
-    whichBound_[word] |= (1<<bit);
-  }
-  inline void setAtLowerBound(int i) {
-    int word = i >> COINFACTORIZATION_SHIFT_PER_INT;
-    int bit = i & COINFACTORIZATION_MASK_PER_INT;
-    whichBound_[word]  &= ~(1<<bit);;
-  }
+    dynamicStatus_[i]  &= ~8;;
+  };
+  inline void setDynamicStatus(int sequence, DynamicStatus status)
+  {
+    unsigned char & st_byte = dynamicStatus_[sequence];
+    st_byte &= ~7;
+    st_byte |= status;
+  };
+  inline DynamicStatus getDynamicStatus(int sequence) const
+  {return static_cast<DynamicStatus> (dynamicStatus_[sequence]&7);};
+  /// Saved value of objective offset
+  inline double objectiveOffset() const
+  { return objectiveOffset_;};
+  /// Starts of each column
+  inline CoinBigIndex * startColumn() const
+  { return startColumn_;};
+  /// rows
+  inline int * row() const
+  { return row_;};
+  /// elements
+  inline float * element() const
+  { return element_;};
+  /// costs
+  inline float * cost() const
+  { return cost_;};
+  /// full starts
+  inline int * fullStart() const
+  { return fullStart_;};
+  /// ids of active columns (just index here)
+  inline int * id() const
+  { return id_;};
+  /// Optional lower bounds on columns
+  inline float * lowerColumn() const
+  { return lowerColumn_;};
+  /// Optional upper bounds on columns
+  inline float * upperColumn() const
+  { return upperColumn_;};
+  /// Optional true lower bounds on sets
+  inline float * lowerSet() const
+  { return lowerSet_;};
+  /// Optional true upper bounds on sets
+  inline float * upperSet() const
+  { return upperSet_;};
+  /// size
+  inline int numberGubColumns() const
+  { return numberGubColumns_;};
+  /// first free
+  inline int firstAvailable() const
+  { return firstAvailable_;};
+  /// first dynamic
+  inline int firstDynamic() const
+  { return firstDynamic_;};
+  /// number of columns in dynamic model
+  inline int lastDynamic() const
+  { return lastDynamic_;};
+  /// size of working matrix (max)
+  inline int numberElements() const
+  { return numberElements_;};
   //@}
    
     
@@ -129,7 +165,7 @@ protected:
   /// Saved value of objective offset
   double objectiveOffset_;
   /// Starts of each column
-  int * startColumn_;
+  CoinBigIndex * startColumn_;
   /// rows
   int * row_;
   /// elements
@@ -140,10 +176,8 @@ protected:
   int * fullStart_;
   /// ids of active columns (just index here)
   int * id_;
-  /// for flagging variables
-  unsigned int * flagged_;
-  /// for saying which bound nonbasic variables are at
-  unsigned int * whichBound_;
+  /// for status and which bound
+  unsigned char * dynamicStatus_;
   /// Optional lower bounds on columns
   float * lowerColumn_;
   /// Optional upper bounds on columns

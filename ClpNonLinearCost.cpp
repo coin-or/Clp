@@ -73,14 +73,19 @@ ClpNonLinearCost::ClpNonLinearCost ( ClpSimplex * model)
   double * upper = model_->upperRegion();
   double * lower = model_->lowerRegion();
   double * cost = model_->costRegion();
-
+  bool always4 = (model_->clpMatrix()->
+		  generalExpanded(model_,10,iSequence)!=0);
   // For quadratic we need -inf,0,0,+inf
   for (iSequence=0;iSequence<numberTotal1;iSequence++) {
-    if (lower[iSequence]>-1.0e20)
-      put++;
-    if (upper[iSequence]<1.0e20)
-      put++;
-    put += 2;
+    if (!always4) {
+      if (lower[iSequence]>-1.0e20)
+	put++;
+      if (upper[iSequence]<1.0e20)
+	put++;
+      put += 2;
+    } else {
+      put += 4;
+    }
   }
 
   // and for extra
@@ -553,6 +558,7 @@ ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
     upper[iSequence] = lower_[iRange+1];
     cost[iSequence] = cost_[iRange];
     feasibleCost_ += thisFeasibleCost*solution[iSequence];
+    assert (iRange==whichRange_[iSequence]);
   }
 }
 /* Goes through one bound for each variable.

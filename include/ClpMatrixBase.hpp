@@ -175,6 +175,8 @@ public:
       mode=7  - flag given variable (normally sequenceIn)
       mode=8  - unflag all variables
       mode=9  - synchronize costs
+      mode=10  - return 1 if there may be changing bounds on variable (column generation)
+      mode=11  - make sure set is clean (used when a variable rejected - but not flagged)
   */
   virtual int generalExpanded(ClpSimplex * model,int mode,int & number);
   /** 

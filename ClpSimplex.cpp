@@ -4587,6 +4587,8 @@ ClpSimplex::startup(int ifValuesPass)
       if (!numberThrownOut)
 	numberThrownOut = gutsOfSolution(  NULL,NULL,
 					 ifValuesPass!=0);
+      else
+	matrix_->rhsOffset(this,true); // redo rhs offset
       totalNumberThrownOut+= numberThrownOut;
       
     }

@@ -604,7 +604,8 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 
     if (type&&doFactorization) {
       // is factorization okay?
-      if (internalFactorize(1)) {
+      int factorStatus = internalFactorize(1);
+      if (factorStatus) {
 	if (solveType_==2) {
 	  // say odd
 	  problemStatus_=5;
@@ -616,6 +617,8 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	factorization_->setDenseThreshold(0);
 	internalFactorize(2);
 	factorization_->setDenseThreshold(saveDense);
+	// restore extra stuff
+	matrix_->generalExpanded(this,6,dummy);
 #else
 
 	// no - restore previous basis
@@ -627,6 +630,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	       numberColumns_*sizeof(double));
 	// restore extra stuff
 	matrix_->generalExpanded(this,6,dummy);
+	matrix_->generalExpanded(this,5,dummy);
 	forceFactorization_=1; // a bit drastic but ..
 	type = 2;
 	assert (internalFactorize(1)==0);
@@ -925,6 +929,8 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
       problemStatus_ = -1;
     }
   }
+  // save extra stuff
+  matrix_->generalExpanded(this,5,dummy);
   if (type==0||type==1) {
     if (type!=1||!saveStatus_) {
       // create save arrays
@@ -938,8 +944,6 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
     memcpy(savedSolution_+numberColumns_ ,rowActivityWork_,
 	   numberRows_*sizeof(double));
     memcpy(savedSolution_ ,columnActivityWork_,numberColumns_*sizeof(double));
-    // save extra stuff
-    matrix_->generalExpanded(this,5,dummy);
   }
   if (doFactorization) {
     // restore weights (if saved) - also recompute infeasibility list
@@ -2474,5 +2478,8 @@ ClpSimplexPrimal::clearAll()
     clearActive(iRow);
   }
   rowArray_[1]->clear();
+  // make sure any gub sets are clean
+  matrix_->generalExpanded(this,11,sequenceIn_);
+  
 }
 

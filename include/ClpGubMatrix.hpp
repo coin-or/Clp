@@ -117,6 +117,7 @@ public:
       mode=8  - unflag all variables
       mode=9  - synchronize costs
       mode=10  - return 1 if there may be changing bounds on variable (column generation)
+      mode=11  - make sure set is clean (used when a variable rejected - but not flagged)
   */
   virtual int generalExpanded(ClpSimplex * model,int mode,int & number);
   /** 
@@ -139,6 +140,8 @@ public:
       mode=5 return 4 if time to re-factorize
       mode=6  - return 1 if there may be changing bounds on variable (column generation)
       mode=7  - do extra restores for column generation
+      mode=8  - make sure set is clean 
+      mode=9  - adjust lower, upper on set by incoming
   */
   virtual int synchronize(ClpSimplex * model,int mode);
   //@}
@@ -238,6 +241,27 @@ public:
     iStat = iStat>>3;
     return (double) (iStat-1);
   };
+  /// Starts
+  inline int * start() const
+  { return start_;};
+  /// End
+  inline int * end() const
+  { return end_;};
+  /// Lower bounds on sets
+  inline double * lower() const
+  { return lower_;};
+  /// Upper bounds on sets
+  inline double * upper() const
+  { return upper_;};
+  /// Key variable of set
+  inline int * keyVariable() const
+  { return keyVariable_;};
+  /// Backward pointer to set number
+  inline int * backward() const
+  { return backward_;};
+  /// Number of sets (gub rows)
+  inline int numberSets() const
+  { return numberSets_;};
    //@}
    
     
