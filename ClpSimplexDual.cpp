@@ -1967,8 +1967,10 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	if (numberDualInfeasibilities_) {
 	  // bad free variables
 	  if (primalFeasible()) {
+#ifdef DEBUG
 	    std::cerr<<"Free variable problem?"<<std::endl;
-	    abort(); // what now
+#endif
+	    //abort(); // what now
 	  }
 	  problemStatus_=-1; // carry on as normal
 	}
