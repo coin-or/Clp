@@ -72,14 +72,18 @@ public:
       {matrix_->replaceVector(index,numReplace,newElements);};
   /** Returns a new matrix in reverse order without gaps */
   virtual ClpMatrixBase * reverseOrderedCopy() const;
-  /** If element NULL returns number of elements in column part of basis,
-      If not NULL fills in as well */
-  virtual CoinBigIndex fillBasis(ClpSimplex * model,
+  /// Returns number of elements in column part of basis 
+  virtual CoinBigIndex countBasis(ClpSimplex * model,
 				 const int * whichColumn, 
 				 int numberRowBasic,
+				  int & numberColumnBasic);
+  /// Fills in column part of basis
+  virtual void fillBasis(ClpSimplex * model,
+				 const int * whichColumn, 
 				 int & numberColumnBasic,
-				 int * row, int * column,
-				 double * element)  ;
+				 int * row, int * start,
+				 int * rowCount, int * columnCount,
+				 double * element);
   /** Creates scales for column copy (rowCopy in model may be modified)
       returns non-zero if no scaling done */
   virtual int scale(ClpModel * model) const ;

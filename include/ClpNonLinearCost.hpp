@@ -217,6 +217,8 @@ private:
   double changeCost_;
   /// Feasible cost
   double feasibleCost_;
+  /// Current infeasibility weight
+  double infeasibilityWeight_;
   /// Largest infeasibility
   double largestInfeasibility_;
   /// Sum of infeasibilities

@@ -21,6 +21,7 @@
 ClpNonLinearCost::ClpNonLinearCost () :
   changeCost_(0.0),
   feasibleCost_(0.0),
+  infeasibilityWeight_(-1.0),
   largestInfeasibility_(0.0),
   sumInfeasibilities_(0.0),
   averageTheta_(0.0),
@@ -62,6 +63,7 @@ ClpNonLinearCost::ClpNonLinearCost ( ClpSimplex * model)
   numberInfeasibilities_=0;
   changeCost_=0.0;
   feasibleCost_=0.0;
+  infeasibilityWeight_ = -1.0;
   double infeasibilityCost = model_->infeasibilityCost();
   sumInfeasibilities_=0.0;
   averageTheta_=0.0;
@@ -172,6 +174,7 @@ ClpNonLinearCost::ClpNonLinearCost(ClpSimplex * model,const int * starts,
   changeCost_=0.0;
   feasibleCost_=0.0;
   double infeasibilityCost = model_->infeasibilityCost();
+  infeasibilityWeight_ = infeasibilityCost;;
   largestInfeasibility_=0.0;
   sumInfeasibilities_=0.0;
 
@@ -279,6 +282,7 @@ ClpNonLinearCost::ClpNonLinearCost(ClpSimplex * model,const int * starts,
 ClpNonLinearCost::ClpNonLinearCost (const ClpNonLinearCost & rhs) :
   changeCost_(0.0),
   feasibleCost_(0.0),
+  infeasibilityWeight_(-1.0),
   largestInfeasibility_(0.0),
   sumInfeasibilities_(0.0),
   averageTheta_(0.0),
@@ -312,6 +316,7 @@ ClpNonLinearCost::ClpNonLinearCost (const ClpNonLinearCost & rhs) :
     numberInfeasibilities_=rhs.numberInfeasibilities_;
     changeCost_ = rhs.changeCost_;
     feasibleCost_ = rhs.feasibleCost_;
+    infeasibilityWeight_ = rhs.infeasibilityWeight_;
     largestInfeasibility_ = rhs.largestInfeasibility_;
     sumInfeasibilities_ = rhs.sumInfeasibilities_;
     averageTheta_ = rhs.averageTheta_;
@@ -376,6 +381,7 @@ ClpNonLinearCost::operator=(const ClpNonLinearCost& rhs)
     numberInfeasibilities_=rhs.numberInfeasibilities_;
     changeCost_ = rhs.changeCost_;
     feasibleCost_ = rhs.feasibleCost_;
+    infeasibilityWeight_ = rhs.infeasibilityWeight_;
     largestInfeasibility_ = rhs.largestInfeasibility_;
     sumInfeasibilities_ = rhs.sumInfeasibilities_;
     averageTheta_ = rhs.averageTheta_;
@@ -404,6 +410,8 @@ ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
   double * cost = model_->costRegion();
   bool toNearest = oldTolerance<=0.0;
   feasibleCost_=0.0;
+  //bool checkCosts = (infeasibilityWeight_ != infeasibilityCost);
+  infeasibilityWeight_ = infeasibilityCost;
     
   // nonbasic should be at a valid bound
   for (iSequence=0;iSequence<numberColumns_+numberRows_;iSequence++) {

@@ -175,11 +175,10 @@ ClpFactorization::factorize ( ClpSimplex * model,
 	// can change for gub
 	int numberColumnBasic = numberBasic-numberRowBasic;
 
-	numberElements +=matrix->fillBasis(model,
+	numberElements +=matrix->countBasis(model,
 					   pivotTemp+numberRowBasic, 
 					   numberRowBasic,
-					   numberColumnBasic,
-					   NULL,NULL,NULL);
+					    numberColumnBasic);
 	// and recompute as network side say different
 	if (model->numberIterations())
 	  numberRowBasic = numberBasic - numberColumnBasic;
@@ -195,23 +194,28 @@ ClpFactorization::factorize ( ClpSimplex * model,
 		   2 * numberElements );
 #endif
 	//fill
-	//copy
-	numberElements=numberRowBasic;
+	// Fill in counts so we can skip part of preProcess
+	CoinZeroN ( numberInRow_, numberRows_ + 1 );
+	CoinZeroN ( numberInColumn_, maximumColumnsExtra_ + 1 );
 	for (i=0;i<numberRowBasic;i++) {
 	  int iRow = pivotTemp[i];
 	  indexRowU_[i]=iRow;
-	  indexColumnU_[i]=i;
+	  startColumnU_[i]=i;
 	  elementU_[i]=slackValue_;
+	  numberInRow_[iRow]=1;
+	  numberInColumn_[i]=1;
 	}
+	startColumnU_[numberRowBasic]=numberRowBasic;
 	// can change for gub so redo
 	numberColumnBasic = numberBasic-numberRowBasic;
-	numberElements +=matrix->fillBasis(model, 
-					   pivotTemp+numberRowBasic, 
-					   numberRowBasic, 
-					   numberColumnBasic,
-					   indexRowU_+numberElements, 
-					   indexColumnU_+numberElements,
-					   elementU_+numberElements);
+	matrix->fillBasis(model, 
+			  pivotTemp+numberRowBasic, 
+			  numberColumnBasic,
+			  indexRowU_, 
+			  startColumnU_+numberRowBasic,
+			  numberInRow_,
+			  numberInColumn_+numberRowBasic,
+			  elementU_);
 #if 0
 	{
 	  printf("%d row basic, %d column basic\n",numberRowBasic,numberColumnBasic);
@@ -222,9 +226,11 @@ ClpFactorization::factorize ( ClpSimplex * model,
 #endif
 	// recompute number basic
         numberBasic = numberRowBasic+numberColumnBasic;
+	numberElements = startColumnU_[numberBasic-1]
+	  +numberInColumn_[numberBasic-1];
 	lengthU_ = numberElements;
-
-	preProcess ( 0 );
+	//CoinFillN(indexColumnU_,numberElements,-1);
+	preProcess ( 2 );
 	factor (  );
 	if (status_==-99) {
 	  // get more memory

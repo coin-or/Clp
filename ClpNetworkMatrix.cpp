@@ -524,70 +524,77 @@ ClpNetworkMatrix::subsetTransposeTimes(const ClpSimplex * model,
     }
   }
 }
-/* If element NULL returns number of elements in column part of basis,
-   If not NULL fills in as well */
+/// returns number of elements in column part of basis,
 CoinBigIndex 
-ClpNetworkMatrix::fillBasis(ClpSimplex * model,
+ClpNetworkMatrix::countBasis(ClpSimplex * model,
 				 const int * whichColumn, 
 				 int numberBasic,
-				 int & numberColumnBasic,
-				 int * indexRowU, int * indexColumnU,
-				 double * elementU)  
+			     int & numberColumnBasic)
 {
   int i;
   CoinBigIndex numberElements=0;
-  if (elementU!=NULL) {
-    if (trueNetwork_) {
-      for (i=0;i<numberColumnBasic;i++) {
-	int iColumn = whichColumn[i];
-	CoinBigIndex j=iColumn<<1;
-	int iRowM = indices_[j];
-	int iRowP = indices_[j+1];
-	indexRowU[numberElements]=iRowM;
-	indexColumnU[numberElements]=numberBasic;
-	elementU[numberElements]=-1.0;
-	indexRowU[numberElements+1]=iRowP;
-	indexColumnU[numberElements+1]=numberBasic;
-	elementU[numberElements+1]=1.0;
-	numberElements+=2;
-	numberBasic++;
-      }
-    } else {
-      for (i=0;i<numberColumnBasic;i++) {
-	int iColumn = whichColumn[i];
-	CoinBigIndex j=iColumn<<1;
-	int iRowM = indices_[j];
-	int iRowP = indices_[j+1];
-	if (iRowM>=0) {
-	  indexRowU[numberElements]=iRowM;
-	  indexColumnU[numberElements]=numberBasic;
-	  elementU[numberElements++]=-1.0;
-	}
-	if (iRowP>=0) {
-	  indexRowU[numberElements]=iRowP;
-	  indexColumnU[numberElements]=numberBasic;
-	  elementU[numberElements++]=1.0;
-	}
-	numberBasic++;
-      }
-    }
+  if (trueNetwork_) {
+    numberElements = 2*numberColumnBasic;
   } else {
-    if (trueNetwork_) {
-      numberElements = 2*numberColumnBasic;
-    } else {
-      for (i=0;i<numberColumnBasic;i++) {
-	int iColumn = whichColumn[i];
-	CoinBigIndex j=iColumn<<1;
-	int iRowM = indices_[j];
-	int iRowP = indices_[j+1];
-	if (iRowM>=0)
-	  numberElements ++;
-	if (iRowP>=0)
-	  numberElements ++;
-      }
+    for (i=0;i<numberColumnBasic;i++) {
+      int iColumn = whichColumn[i];
+      CoinBigIndex j=iColumn<<1;
+      int iRowM = indices_[j];
+      int iRowP = indices_[j+1];
+      if (iRowM>=0)
+	numberElements ++;
+      if (iRowP>=0)
+	numberElements ++;
     }
   }
   return numberElements;
+}
+void
+ClpNetworkMatrix::fillBasis(ClpSimplex * model,
+			 const int * whichColumn, 
+			 int & numberColumnBasic,
+			 int * indexRowU, int * start,
+			 int * rowCount, int * columnCount,
+			 double * elementU)
+{
+  int i;
+  CoinBigIndex numberElements=start[0];
+  if (trueNetwork_) {
+    for (i=0;i<numberColumnBasic;i++) {
+      int iColumn = whichColumn[i];
+      CoinBigIndex j=iColumn<<1;
+      int iRowM = indices_[j];
+      int iRowP = indices_[j+1];
+      indexRowU[numberElements]=iRowM;
+      rowCount[iRowM++];
+      elementU[numberElements]=-1.0;
+      indexRowU[numberElements+1]=iRowP;
+      rowCount[iRowP++];
+      elementU[numberElements+1]=1.0;
+      numberElements+=2;
+      start[i+1]=numberElements;
+      columnCount[i]=2;
+    }
+  } else {
+    for (i=0;i<numberColumnBasic;i++) {
+      int iColumn = whichColumn[i];
+      CoinBigIndex j=iColumn<<1;
+      int iRowM = indices_[j];
+      int iRowP = indices_[j+1];
+      if (iRowM>=0) {
+	indexRowU[numberElements]=iRowM;
+	rowCount[iRowM++];
+	elementU[numberElements++]=-1.0;
+      }
+      if (iRowP>=0) {
+	indexRowU[numberElements]=iRowP;
+	rowCount[iRowP++];
+	elementU[numberElements++]=1.0;
+      }
+      start[i+1]=numberElements;
+      columnCount[i]=numberElements-start[i];
+    }
+  }
 }
 /* Unpacks a column into an CoinIndexedvector
  */

@@ -903,44 +903,50 @@ ClpPlusMinusOneMatrix::subsetTransposeTimes(const ClpSimplex * model,
     array[jColumn]=value;
   }
 }
-/* If element NULL returns number of elements in column part of basis,
-   If not NULL fills in as well */
+/// returns number of elements in column part of basis,
 CoinBigIndex 
-ClpPlusMinusOneMatrix::fillBasis(ClpSimplex * model,
+ClpPlusMinusOneMatrix::countBasis(ClpSimplex * model,
 				 const int * whichColumn, 
 				 int numberBasic,
-				 int & numberColumnBasic,
-				 int * indexRowU, int * indexColumnU,
-				 double * elementU) 
+				  int & numberColumnBasic)
 {
   int i;
   CoinBigIndex numberElements=0;
-  if (elementU!=NULL) {
-    assert (columnOrdered_);
-    for (i=0;i<numberColumnBasic;i++) {
-      int iColumn = whichColumn[i];
-      CoinBigIndex j=startPositive_[iColumn];
-      for (;j<startNegative_[iColumn];j++) {
-	int iRow = indices_[j];
-	indexRowU[numberElements]=iRow;
-	indexColumnU[numberElements]=numberBasic;
-	elementU[numberElements++]=1.0;
-      }
-      for (;j<startPositive_[iColumn+1];j++) {
-	int iRow = indices_[j];
-	indexRowU[numberElements]=iRow;
-	indexColumnU[numberElements]=numberBasic;
-	elementU[numberElements++]=-1.0;
-      }
-      numberBasic++;
-    }
-  } else {
-    for (i=0;i<numberColumnBasic;i++) {
-      int iColumn = whichColumn[i];
-      numberElements += startPositive_[iColumn+1]-startPositive_[iColumn];
-    }
+  for (i=0;i<numberColumnBasic;i++) {
+    int iColumn = whichColumn[i];
+    numberElements += startPositive_[iColumn+1]-startPositive_[iColumn];
   }
   return numberElements;
+}
+void
+ClpPlusMinusOneMatrix::fillBasis(ClpSimplex * model,
+			 const int * whichColumn, 
+			 int & numberColumnBasic,
+			 int * indexRowU, int * start,
+			 int * rowCount, int * columnCount,
+			 double * elementU)
+{
+  int i;
+  CoinBigIndex numberElements=start[0];
+  assert (columnOrdered_);
+  for (i=0;i<numberColumnBasic;i++) {
+    int iColumn = whichColumn[i];
+    CoinBigIndex j=startPositive_[iColumn];
+    for (;j<startNegative_[iColumn];j++) {
+      int iRow = indices_[j];
+      indexRowU[numberElements]=iRow;
+      rowCount[iRow]++;
+      elementU[numberElements++]=1.0;
+    }
+    for (;j<startPositive_[iColumn+1];j++) {
+      int iRow = indices_[j];
+      indexRowU[numberElements]=iRow;
+      rowCount[iRow]++;
+      elementU[numberElements++]=-1.0;
+    }
+    start[i+1]=numberElements;
+    columnCount[i]=numberElements-start[i];
+  }
 }
 /* Unpacks a column into an CoinIndexedvector
  */

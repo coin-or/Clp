@@ -69,10 +69,58 @@ public:
   inline double nonLinearValue() const
     { return nonLinearValue_;};
   /// Whether we want to do dual part of presolve
-  inline bool doDualPresolve() const
+  inline bool doDual() const
   { return (presolveActions_&1)==0;};
-  inline void setDoDualPresolve(bool doDual)
+  inline void setDoDual(bool doDual)
   { if (doDual) presolveActions_  &= ~1; else presolveActions_ |= 1;};
+  /// Whether we want to do singleton part of presolve
+  inline bool doSingleton() const
+  { return (presolveActions_&2)==0;};
+  inline void setDoSingleton(bool doSingleton)
+  { if (doSingleton) presolveActions_  &= ~2; else presolveActions_ |= 2;};
+  /// Whether we want to do doubleton part of presolve
+  inline bool doDoubleton() const
+  { return (presolveActions_&4)==0;};
+  inline void setDoDoubleton(bool doDoubleton)
+  { if (doDoubleton) presolveActions_  &= ~4; else presolveActions_ |= 4;};
+  /// Whether we want to do tripleton part of presolve
+  inline bool doTripleton() const
+  { return (presolveActions_&8)==0;};
+  inline void setDoTripleton(bool doTripleton)
+  { if (doTripleton) presolveActions_  &= ~8; else presolveActions_ |= 8;};
+  /// Whether we want to do tighten part of presolve
+  inline bool doTighten() const
+  { return (presolveActions_&16)==0;};
+  inline void setDoTighten(bool doTighten)
+  { if (doTighten) presolveActions_  &= ~16; else presolveActions_ |= 16;};
+  /// Whether we want to do forcing part of presolve
+  inline bool doForcing() const
+  { return (presolveActions_&32)==0;};
+  inline void setDoForcing(bool doForcing)
+  { if (doForcing) presolveActions_  &= ~32; else presolveActions_ |= 32;};
+  /// Whether we want to do impliedfree part of presolve
+  inline bool doImpliedFree() const
+  { return (presolveActions_&64)==0;};
+  inline void setDoImpliedFree(bool doImpliedfree)
+  { if (doImpliedfree) presolveActions_  &= ~64; else presolveActions_ |= 64;};
+  /// Whether we want to do dupcol part of presolve
+  inline bool doDupcol() const
+  { return (presolveActions_&128)==0;};
+  inline void setDoDupcol(bool doDupcol)
+  { if (doDupcol) presolveActions_  &= ~128; else presolveActions_ |= 128;};
+  /// Whether we want to do duprow part of presolve
+  inline bool doDuprow() const
+  { return (presolveActions_&256)==0;};
+  inline void setDoDuprow(bool doDuprow)
+  { if (doDuprow) presolveActions_  &= ~256; else presolveActions_ |= 256;};
+  /// Set whole group
+  inline bool presolveActions() const
+  { return presolveActions_&0xffff;};
+  inline void setPresolveActions(int action)
+  { presolveActions_  = (presolveActions_&0xffff0000)|(action&0xffff);};
+  /// Asks for statistics
+  inline void statistics()
+  { presolveActions_ |= 0x80000000;};
 
   /**@name postsolve - postsolve the problem.  If the problem 
     has not been solved to optimality, there are no guarantees.

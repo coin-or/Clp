@@ -91,6 +91,12 @@ ClpSimplex::initialSolve(ClpSolve & options)
     saveSignal = signal(SIGINT,signal_handler);
   }
   ClpPresolve pinfo;
+  int presolveOptions = options.getSpecialOption(4);
+  if ((presolveOptions&0xffff)!=0)
+    pinfo.setPresolveActions(presolveOptions);
+  int printOptions = options.getSpecialOption(5);
+  if ((printOptions&1)!=0)
+    pinfo.statistics();
   double timePresolve=0.0;
   double timeIdiot=0.0;
   double timeCore=0.0;
@@ -1444,9 +1450,9 @@ ClpSolve::ClpSolve (  )
   presolveType_=presolveOn;
   numberPasses_=5;
   int i;
-  for (i=0;i<4;i++)
+  for (i=0;i<6;i++)
     options_[i]=0;
-  for (i=0;i<4;i++)
+  for (i=0;i<6;i++)
     extraInfo_[i]=-1;
 }
 
@@ -1457,9 +1463,9 @@ ClpSolve::ClpSolve(const ClpSolve & rhs)
   presolveType_=rhs.presolveType_;
   numberPasses_=rhs.numberPasses_;
   int i;
-  for ( i=0;i<4;i++)
+  for ( i=0;i<6;i++)
     options_[i]=rhs.options_[i];
-  for ( i=0;i<4;i++)
+  for ( i=0;i<6;i++)
     extraInfo_[i]=rhs.extraInfo_[i];
 }
 // Assignment operator. This copies the data
@@ -1471,9 +1477,9 @@ ClpSolve::operator=(const ClpSolve & rhs)
     presolveType_=rhs.presolveType_;
     numberPasses_=rhs.numberPasses_;
     int i;
-    for (i=0;i<4;i++)
+    for (i=0;i<6;i++)
       options_[i]=rhs.options_[i];
-    for (i=0;i<4;i++)
+    for (i=0;i<6;i++)
       extraInfo_[i]=rhs.extraInfo_[i];
   }
   return *this;
@@ -1483,24 +1489,7 @@ ClpSolve::operator=(const ClpSolve & rhs)
 ClpSolve::~ClpSolve (  )
 {
 }
-/*   which translation is:
-     which:
-     0 - startup in Dual  (nothing if basis exists).:
-             0 - no basis, 1 crash
-     1 - startup in Primal (nothing if basis exists):
-        0 - use initiative
-        1 - use crash
-        2 - use idiot and look at further info
-        3 - use sprint and look at further info
-        4 - use all slack
-        5 - use initiative but no idiot
-        6 - use initiative but no sprint
-        7 - use initiative but no crash
-        8 - do allslack or idiot
-        9 - do allslack or sprint
-     2 - interrupt handling - 0 yes, 1 no (for threadsafe)
-     3 - whether to make +- 1matrix - 0 yes, 1 no
-*/
+// See header file for deatils
 void 
 ClpSolve::setSpecialOption(int which,int value,int extraInfo)
 {

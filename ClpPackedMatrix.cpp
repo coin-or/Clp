@@ -1133,104 +1133,116 @@ ClpPackedMatrix::subsetTransposeTimes(const ClpSimplex * model,
     }
   }
 }
-/* If element NULL returns number of elements in column part of basis,
-   If not NULL fills in as well */
+/// returns number of elements in column part of basis,
 CoinBigIndex 
-ClpPackedMatrix::fillBasis(ClpSimplex * model,
+ClpPackedMatrix::countBasis(ClpSimplex * model,
 			   const int * whichColumn, 
 			   int numberBasic,
-			   int & numberColumnBasic,
-			   int * indexRowU, int * indexColumnU,
-			   double * elementU)
+			    int & numberColumnBasic)
 {
   const int * columnLength = matrix_->getVectorLengths(); 
   int i;
   CoinBigIndex numberElements=0;
-  if (elementU!=NULL) {
-    // fill
-    const CoinBigIndex * columnStart = matrix_->getVectorStarts();
-    const double * rowScale = model->rowScale();
-    const int * row = matrix_->getIndices();
-    const double * elementByColumn = matrix_->getElements();
-    if (!zeroElements_) {
-      if (!rowScale) {
-	// no scaling
-	for (i=0;i<numberColumnBasic;i++) {
-	  int iColumn = whichColumn[i];
-	  CoinBigIndex j;
-	  for (j=columnStart[iColumn];
-	       j<columnStart[iColumn]+columnLength[iColumn];j++) {
-	    indexRowU[numberElements]=row[j];
-	    indexColumnU[numberElements]=numberBasic;
-	    elementU[numberElements++]=elementByColumn[j];
-	  }
-	  numberBasic++;
+  // just count - can be over so ignore zero problem
+  for (i=0;i<numberColumnBasic;i++) {
+    int iColumn = whichColumn[i];
+    numberElements += columnLength[iColumn];
+  }
+  return numberElements;
+}
+void
+ClpPackedMatrix::fillBasis(ClpSimplex * model,
+			 const int * whichColumn, 
+			 int & numberColumnBasic,
+			 int * indexRowU, int * start,
+			 int * rowCount, int * columnCount,
+			 double * elementU)
+{
+  const int * columnLength = matrix_->getVectorLengths(); 
+  int i;
+  CoinBigIndex numberElements=start[0];
+  // fill
+  const CoinBigIndex * columnStart = matrix_->getVectorStarts();
+  const double * rowScale = model->rowScale();
+  const int * row = matrix_->getIndices();
+  const double * elementByColumn = matrix_->getElements();
+  if (!zeroElements_) {
+    if (!rowScale) {
+      // no scaling
+      for (i=0;i<numberColumnBasic;i++) {
+	int iColumn = whichColumn[i];
+	CoinBigIndex j;
+	for (j=columnStart[iColumn];
+	     j<columnStart[iColumn]+columnLength[iColumn];j++) {
+	  int iRow=row[j];
+	  indexRowU[numberElements]=iRow;
+	  rowCount[iRow]++;
+	  elementU[numberElements++]=elementByColumn[j];
 	}
-      } else {
-	// scaling
-	const double * columnScale = model->columnScale();
-	for (i=0;i<numberColumnBasic;i++) {
-	  int iColumn = whichColumn[i];
-	  CoinBigIndex j;
-	  double scale = columnScale[iColumn];
-	  for (j=columnStart[iColumn];
-	       j<columnStart[iColumn]+columnLength[iColumn];j++) {
-	    int iRow = row[j];
-	    indexRowU[numberElements]=iRow;
-	    indexColumnU[numberElements]=numberBasic;
-	    elementU[numberElements++]=
-	      elementByColumn[j]*scale*rowScale[iRow];
-	  }
-	  numberBasic++;
-	}
+	start[i+1]=numberElements;
+	columnCount[i]=columnLength[iColumn];
       }
     } else {
-      // there are zero elements so need to look more closely
-      if (!rowScale) {
-	// no scaling
-	for (i=0;i<numberColumnBasic;i++) {
-	  int iColumn = whichColumn[i];
-	  CoinBigIndex j;
-	  for (j=columnStart[iColumn];
-	       j<columnStart[iColumn]+columnLength[iColumn];j++) {
-	    double value = elementByColumn[j];
-	    if (value) {
-	      indexRowU[numberElements]=row[j];
-	      indexColumnU[numberElements]=numberBasic;
-	      elementU[numberElements++]=value;
-	    }
-	  }
-	  numberBasic++;
+      // scaling
+      const double * columnScale = model->columnScale();
+      for (i=0;i<numberColumnBasic;i++) {
+	int iColumn = whichColumn[i];
+	CoinBigIndex j;
+	double scale = columnScale[iColumn];
+	for (j=columnStart[iColumn];
+	     j<columnStart[iColumn]+columnLength[iColumn];j++) {
+	  int iRow = row[j];
+	  indexRowU[numberElements]=iRow;
+	  rowCount[iRow]++;
+	  elementU[numberElements++]=
+	    elementByColumn[j]*scale*rowScale[iRow];
 	}
-      } else {
-	// scaling
-	const double * columnScale = model->columnScale();
-	for (i=0;i<numberColumnBasic;i++) {
-	  int iColumn = whichColumn[i];
-	  CoinBigIndex j;
-	  double scale = columnScale[iColumn];
-	  for (j=columnStart[iColumn];
-	       j<columnStart[iColumn]+columnLength[i];j++) {
-	    double value = elementByColumn[j];
-	    if (value) {
-	      int iRow = row[j];
-	      indexRowU[numberElements]=iRow;
-	      indexColumnU[numberElements]=numberBasic;
-	      elementU[numberElements++]=value*scale*rowScale[iRow];
-	    }
-	  }
-	  numberBasic++;
-	}
+	start[i+1]=numberElements;
+	columnCount[i]=columnLength[iColumn];
       }
     }
   } else {
-    // just count - can be over so ignore zero problem
-    for (i=0;i<numberColumnBasic;i++) {
-      int iColumn = whichColumn[i];
-      numberElements += columnLength[iColumn];
+    // there are zero elements so need to look more closely
+    if (!rowScale) {
+      // no scaling
+      for (i=0;i<numberColumnBasic;i++) {
+	int iColumn = whichColumn[i];
+	CoinBigIndex j;
+	for (j=columnStart[iColumn];
+	     j<columnStart[iColumn]+columnLength[iColumn];j++) {
+	  double value = elementByColumn[j];
+	  if (value) {
+	    int iRow = row[j];
+	    indexRowU[numberElements]=iRow;
+	    rowCount[iRow]++;
+	    elementU[numberElements++]=value;
+	  }
+	}
+	start[i+1]=numberElements;
+	columnCount[i]=numberElements-start[i];
+      }
+    } else {
+      // scaling
+      const double * columnScale = model->columnScale();
+      for (i=0;i<numberColumnBasic;i++) {
+	int iColumn = whichColumn[i];
+	CoinBigIndex j;
+	double scale = columnScale[iColumn];
+	for (j=columnStart[iColumn];
+	     j<columnStart[iColumn]+columnLength[i];j++) {
+	  double value = elementByColumn[j];
+	  if (value) {
+	    int iRow = row[j];
+	    indexRowU[numberElements]=iRow;
+	    rowCount[iRow]++;
+	    elementU[numberElements++]=value*scale*rowScale[iRow];
+	  }
+	}
+	start[i+1]=numberElements;
+	columnCount[i]=numberElements-start[i];
+      }
     }
   }
-  return numberElements;
 }
 // Creates scales for column copy (rowCopy in model may be modified)
 int 

@@ -84,6 +84,10 @@ public:
 		   3 - Wssmp using KKT
 		   4 - bit set to do scaling
 		   8 - set to be aggressive with gamma/delta?
+      5 - for presolve
+                   1 - switch off dual stuff
+      6 - for detailed printout (initially just presolve)
+                   1 - presolve statistics
   */
   void setSpecialOption(int which,int value,int extraInfo=-1);
   int getSpecialOption(int which) const;
@@ -113,9 +117,9 @@ private:
   /// Amount of presolve
   int numberPasses_;
   /// Options
-  int options_[4];
+  int options_[6];
   /// Extra information
-  int extraInfo_[4];
+  int extraInfo_[6];
   //@}
 };
 #endif

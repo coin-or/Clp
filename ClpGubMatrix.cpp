@@ -888,22 +888,18 @@ ClpGubMatrix::subsetTransposeTimes(const ClpSimplex * model,
     array[kColumn]=0.0;
   }
 }
-/* If element NULL returns number of elements in column part of basis,
-   If not NULL fills in as well */
+/// returns number of elements in column part of basis,
 CoinBigIndex 
-ClpGubMatrix::fillBasis(ClpSimplex * model,
+ClpGubMatrix::countBasis(ClpSimplex * model,
 			   const int * whichColumn, 
 			   int numberBasic,
-			   int & numberColumnBasic,
-			   int * indexRowU, int * indexColumnU,
-			   double * elementU) 
+			 int & numberColumnBasic)
 {
   int i;
   int numberColumns = getNumCols();
   const int * columnLength = matrix_->getVectorLengths(); 
   int numberRows = getNumRows();
   int saveNumberBasic=numberBasic;
-  assert (next_ ||!elementU) ;
   CoinBigIndex numberElements=0;
   int lastSet=-1;
   int key=-1;
@@ -915,273 +911,47 @@ ClpGubMatrix::fillBasis(ClpSimplex * model,
   const CoinBigIndex * columnStart = matrix_->getVectorStarts();
   const int * row = matrix_->getIndices();
   const double * elementByColumn = matrix_->getElements();
-  const double * rowScale = model->rowScale();
-  if (elementU!=NULL) {
-    if (0) {
-      printf("%d basic, %d columns\n",numberBasic,numberColumnBasic);
-      int i;
-      for (i=0;i<numberSets_;i++) {
-	int k=keyVariable_[i];
-	if (k<numberColumns) {
-	  printf("key %d on set %d, %d elements\n",k,i,columnStart[k+1]-columnStart[k]);
-	  for (int j=columnStart[k];j<columnStart[k+1];j++)
-	    printf("row %d el %g\n",row[j],elementByColumn[j]);
-	} else {
-	  printf("slack key on set %d\n",i);
-	}
-      }
-    }
-    // fill
-    if (!rowScale) {
-      // no scaling
-      for (i=0;i<numberColumnBasic;i++) {
-	int iColumn = whichColumn[i];
-	int iSet = backward_[iColumn];
-	int length = columnLength[iColumn];
-	if (0) {
-	  int k=iColumn;
-	  printf("column %d in set %d, %d elements\n",k,iSet,columnStart[k+1]-columnStart[k]);
-	  for (int j=columnStart[k];j<columnStart[k+1];j++)
-	    printf("row %d el %g\n",row[j],elementByColumn[j]);
-	}
-	CoinBigIndex j;
-	if (iSet<0||keyVariable_[iSet]>=numberColumns) {
-	  for (j=columnStart[iColumn];j<columnStart[iColumn]+columnLength[iColumn];j++) {
-	    double value = elementByColumn[j];
-	    if (fabs(value)>1.0e-20) {
-	      int iRow = row[j];
-	      indexRowU[numberElements]=iRow;
-	      indexColumnU[numberElements]=numberBasic;
-	      elementU[numberElements++]=value;
-	    }
-	  }
-	  numberBasic++;
-	} else {
-	  // in gub set
-	  if (iColumn!=keyVariable_[iSet]) {
-	    // not key 
-	    if (lastSet!=iSet) {
-	      // erase work
-	      if (key>=0) {
-		for (j=columnStart[key];j<columnStart[key]+keyLength;j++) {
-		  int iRow=row[j];
-		  work[iRow]=0.0;
-		  mark[iRow]=0;
-		}
-	      }
-	      key=keyVariable_[iSet];
-	      lastSet=iSet;
-	      keyLength = columnLength[key];
-	      for (j=columnStart[key];j<columnStart[key]+keyLength;j++) {
-		int iRow=row[j];
-		work[iRow]=elementByColumn[j];
-		mark[iRow]=1;
-	      }
-	    }
-	    for (j=columnStart[iColumn];j<columnStart[iColumn]+length;j++) {
-	      int iRow = row[j];
-	      double value=elementByColumn[j];
-	      if (mark[iRow]) {
-		mark[iRow]=0;
-		double keyValue = work[iRow];
-		value -= keyValue;
-	      }
-	      if (fabs(value)>1.0e-20) {
-		indexRowU[numberElements]=iRow;
-		indexColumnU[numberElements]=numberBasic;
-		elementU[numberElements++]=value;
-	      }
-	    }
-	    for (j=columnStart[key];j<columnStart[key]+keyLength;j++) {
-	      int iRow = row[j];
-	      if (mark[iRow]) {
-		double value = -work[iRow];
-		if (fabs(value)>1.0e-20) {
-		  indexRowU[numberElements]=iRow;
-		  indexColumnU[numberElements]=numberBasic;
-		  elementU[numberElements++]=value;
-		}
-	      } else {
-		// just put back mark
-		mark[iRow]=1;
-	      }
-	    }
-	    numberBasic++;
-	  }
-	}
-      }
+  // just count 
+  for (i=0;i<numberColumnBasic;i++) {
+    int iColumn = whichColumn[i];
+    int iSet = backward_[iColumn];
+    int length = columnLength[iColumn];
+    if (iSet<0||keyVariable_[iSet]>=numberColumns) {
+      numberElements += length;
+      numberBasic++;
     } else {
-      // scaling
-      const double * columnScale = model->columnScale();
-      for (i=0;i<numberColumnBasic;i++) {
-	int iColumn = whichColumn[i];
-	int iSet = backward_[iColumn];
-	int length = columnLength[iColumn];
+      // in gub set
+      if (iColumn!=keyVariable_[iSet]) {
+	numberBasic++;
 	CoinBigIndex j;
-	if (iSet<0||keyVariable_[iSet]>=numberColumns) {
-	  double scale = columnScale[iColumn];
-	  for (j=columnStart[iColumn];j<columnStart[iColumn]+columnLength[iColumn];j++) {
-	    int iRow = row[j];
-	    double value = elementByColumn[j]*scale*rowScale[iRow];
-	    if (fabs(value)>1.0e-20) {
-	      indexRowU[numberElements]=iRow;
-	      indexColumnU[numberElements]=numberBasic;
-	      elementU[numberElements++]=value;
-	    }
+	// not key 
+	if (lastSet<iSet) {
+	  // erase work
+	  if (key>=0) {
+	    for (j=columnStart[key];j<columnStart[key]+keyLength;j++)
+	      work[row[j]]=0.0;
 	  }
-	  numberBasic++;
-	} else {
-	  // in gub set
-	  if (iColumn!=keyVariable_[iSet]) {
-	    double scale = columnScale[iColumn];
-	    // not key 
-	    if (lastSet<iSet) {
-	      // erase work
-	      if (key>=0) {
-		for (j=columnStart[key];j<columnStart[key]+keyLength;j++) {
-		  int iRow=row[j];
-		  work[iRow]=0.0;
-		  mark[iRow]=0;
-		}
-	      }
-	      key=keyVariable_[iSet];
-	      lastSet=iSet;
-	      keyLength = columnLength[key];
-	      double scale = columnScale[key];
-	      for (j=columnStart[key];j<columnStart[key]+keyLength;j++) {
-		int iRow=row[j];
-		work[iRow]=elementByColumn[j]*scale*rowScale[iRow];
-		mark[iRow]=1;
-	      }
-	    }
-	    for (j=columnStart[iColumn];j<columnStart[iColumn]+length;j++) {
-	      int iRow = row[j];
-	      double value=elementByColumn[j]*scale*rowScale[iRow];
-	      if (mark[iRow]) {
-		mark[iRow]=0;
-		double keyValue = work[iRow];
-		value -= keyValue;
-	      }
-	      if (fabs(value)>1.0e-20) {
-		indexRowU[numberElements]=iRow;
-		indexColumnU[numberElements]=numberBasic;
-		elementU[numberElements++]=value;
-	      }
-	    }
-	    for (j=columnStart[key];j<columnStart[key]+keyLength;j++) {
-	      int iRow = row[j];
-	      if (mark[iRow]) {
-		double value = -work[iRow];
-		if (fabs(value)>1.0e-20) {
-		  indexRowU[numberElements]=iRow;
-		  indexColumnU[numberElements]=numberBasic;
-		  elementU[numberElements++]=value;
-		}
-	      } else {
-		// just put back mark
-		mark[iRow]=1;
-	      }
-	    }
-	    numberBasic++;
+	  key=keyVariable_[iSet];
+	  lastSet=iSet;
+	  keyLength = columnLength[key];
+	  for (j=columnStart[key];j<columnStart[key]+keyLength;j++)
+	    work[row[j]]=elementByColumn[j];
+	}
+	int extra=keyLength;
+	for (j=columnStart[iColumn];j<columnStart[iColumn]+length;j++) {
+	  int iRow = row[j];
+	  double keyValue = work[iRow];
+	  double value=elementByColumn[j];
+	  if (!keyValue) {
+	    if (fabs(value)>1.0e-20)
+	      extra++;
+	  } else {
+	    value -= keyValue;
+	    if (fabs(value)<=1.0e-20)
+	      extra--;
 	  }
 	}
-      }
-    }
-  } else {
-    // just count 
-    if (!rowScale) {
-      for (i=0;i<numberColumnBasic;i++) {
-	int iColumn = whichColumn[i];
-	int iSet = backward_[iColumn];
-	int length = columnLength[iColumn];
-	if (iSet<0||keyVariable_[iSet]>=numberColumns) {
-	  numberElements += length;
-	  numberBasic++;
-	} else {
-	  // in gub set
-	  if (iColumn!=keyVariable_[iSet]) {
-	    numberBasic++;
-	    CoinBigIndex j;
-	    // not key 
-	    if (lastSet<iSet) {
-	      // erase work
-	      if (key>=0) {
-		for (j=columnStart[key];j<columnStart[key]+keyLength;j++)
-		  work[row[j]]=0.0;
-	      }
-	      key=keyVariable_[iSet];
-	      lastSet=iSet;
-	      keyLength = columnLength[key];
-	      for (j=columnStart[key];j<columnStart[key]+keyLength;j++)
-		work[row[j]]=elementByColumn[j];
-	    }
-	    int extra=keyLength;
-	    for (j=columnStart[iColumn];j<columnStart[iColumn]+length;j++) {
-	      int iRow = row[j];
-	      double keyValue = work[iRow];
-	      double value=elementByColumn[j];
-	      if (!keyValue) {
-		if (fabs(value)>1.0e-20)
-		  extra++;
-	      } else {
-		value -= keyValue;
-		if (fabs(value)<=1.0e-20)
-		  extra--;
-	      }
-	    }
-	    numberElements+=extra;
-	  }
-	}
-      }
-    } else {
-      // scaled
-      const double * columnScale = model->columnScale();
-      for (i=0;i<numberColumnBasic;i++) {
-	int iColumn = whichColumn[i];
-	int iSet = backward_[iColumn];
-	int length = columnLength[iColumn];
-	if (iSet<0||keyVariable_[iSet]>=numberColumns) {
-	  numberElements += length;
-	  numberBasic++;
-	} else {
-	  // in gub set
-	  if (iColumn!=keyVariable_[iSet]) {
-	    numberBasic++;
-	    CoinBigIndex j;
-	    double scale = columnScale[iColumn];
-	    // not key 
-	    if (lastSet<iSet) {
-	      // erase work
-	      if (key>=0) {
-		for (j=columnStart[key];j<columnStart[key]+keyLength;j++)
-		  work[row[j]]=0.0;
-	      }
-	      key=keyVariable_[iSet];
-	      lastSet=iSet;
-	      keyLength = columnLength[key];
-	      double scale = columnScale[key];
-	      for (j=columnStart[key];j<columnStart[key]+keyLength;j++) {
-		int iRow = row[j];
-		work[iRow]=elementByColumn[j]*scale*rowScale[iRow];
-	      }
-	    }
-	    int extra=keyLength;
-	    for (j=columnStart[iColumn];j<columnStart[iColumn]+length;j++) {
-	      int iRow = row[j];
-	      double keyValue = work[iRow];
-	      double value=elementByColumn[j]*scale*rowScale[iRow];
-	      if (!keyValue) {
-		if (fabs(value)>1.0e-20)
-		  extra++;
-	      } else {
-		value -= keyValue;
-		if (fabs(value)<=1.0e-20)
-		  extra--;
-	      }
-	    }
-	    numberElements+=extra;
-	  }
-	}
+	numberElements+=extra;
       }
     }
   }
@@ -1190,6 +960,219 @@ ClpGubMatrix::fillBasis(ClpSimplex * model,
   // update number of column basic
   numberColumnBasic = numberBasic-saveNumberBasic;
   return numberElements;
+}
+void
+ClpGubMatrix::fillBasis(ClpSimplex * model,
+			 const int * whichColumn, 
+			 int & numberColumnBasic,
+			 int * indexRowU, int * start,
+			 int * rowCount, int * columnCount,
+			 double * elementU)
+{
+  int i;
+  int numberColumns = getNumCols();
+  const int * columnLength = matrix_->getVectorLengths(); 
+  int numberRows = getNumRows();
+  assert (next_ ||!elementU) ;
+  CoinBigIndex numberElements=start[0];
+  int lastSet=-1;
+  int key=-1;
+  int keyLength=-1;
+  double * work = new double[numberRows];
+  CoinZeroN(work,numberRows);
+  char * mark = new char[numberRows];
+  CoinZeroN(mark,numberRows);
+  const CoinBigIndex * columnStart = matrix_->getVectorStarts();
+  const int * row = matrix_->getIndices();
+  const double * elementByColumn = matrix_->getElements();
+  const double * rowScale = model->rowScale();
+  int numberBasic=0;
+  if (0) {
+    printf("%d basiccolumns\n",numberColumnBasic);
+    int i;
+    for (i=0;i<numberSets_;i++) {
+      int k=keyVariable_[i];
+      if (k<numberColumns) {
+	printf("key %d on set %d, %d elements\n",k,i,columnStart[k+1]-columnStart[k]);
+	for (int j=columnStart[k];j<columnStart[k+1];j++)
+	  printf("row %d el %g\n",row[j],elementByColumn[j]);
+      } else {
+	printf("slack key on set %d\n",i);
+      }
+    }
+  }
+  // fill
+  if (!rowScale) {
+    // no scaling
+    for (i=0;i<numberColumnBasic;i++) {
+      int iColumn = whichColumn[i];
+      int iSet = backward_[iColumn];
+      int length = columnLength[iColumn];
+      if (0) {
+	int k=iColumn;
+	printf("column %d in set %d, %d elements\n",k,iSet,columnStart[k+1]-columnStart[k]);
+	for (int j=columnStart[k];j<columnStart[k+1];j++)
+	  printf("row %d el %g\n",row[j],elementByColumn[j]);
+      }
+      CoinBigIndex j;
+      if (iSet<0||keyVariable_[iSet]>=numberColumns) {
+	for (j=columnStart[iColumn];j<columnStart[iColumn]+columnLength[iColumn];j++) {
+	  double value = elementByColumn[j];
+	  if (fabs(value)>1.0e-20) {
+	    int iRow = row[j];
+	    indexRowU[numberElements]=iRow;
+	    rowCount[iRow]++;
+	    elementU[numberElements++]=value;
+	  }
+	}
+	// end of column
+	columnCount[numberBasic]=numberElements-start[numberBasic];
+	numberBasic++;
+	start[numberBasic]=numberElements;
+      } else {
+	// in gub set
+	if (iColumn!=keyVariable_[iSet]) {
+	  // not key 
+	  if (lastSet!=iSet) {
+	    // erase work
+	    if (key>=0) {
+	      for (j=columnStart[key];j<columnStart[key]+keyLength;j++) {
+		int iRow=row[j];
+		work[iRow]=0.0;
+		mark[iRow]=0;
+	      }
+	    }
+	    key=keyVariable_[iSet];
+	    lastSet=iSet;
+	    keyLength = columnLength[key];
+	    for (j=columnStart[key];j<columnStart[key]+keyLength;j++) {
+	      int iRow=row[j];
+	      work[iRow]=elementByColumn[j];
+	      mark[iRow]=1;
+	    }
+	  }
+	  for (j=columnStart[iColumn];j<columnStart[iColumn]+length;j++) {
+	    int iRow = row[j];
+	    double value=elementByColumn[j];
+	    if (mark[iRow]) {
+	      mark[iRow]=0;
+	      double keyValue = work[iRow];
+	      value -= keyValue;
+	    }
+	    if (fabs(value)>1.0e-20) {
+	      indexRowU[numberElements]=iRow;
+	      rowCount[iRow]++;
+	      elementU[numberElements++]=value;
+	    }
+	  }
+	  for (j=columnStart[key];j<columnStart[key]+keyLength;j++) {
+	    int iRow = row[j];
+	    if (mark[iRow]) {
+	      double value = -work[iRow];
+	      if (fabs(value)>1.0e-20) {
+		indexRowU[numberElements]=iRow;
+		rowCount[iRow]++;
+		elementU[numberElements++]=value;
+	      }
+	    } else {
+	      // just put back mark
+	      mark[iRow]=1;
+	    }
+	  }
+	  // end of column
+	  columnCount[numberBasic]=numberElements-start[numberBasic];
+	  numberBasic++;
+	  start[numberBasic]=numberElements;
+	}
+      }
+    }
+  } else {
+    // scaling
+    const double * columnScale = model->columnScale();
+    for (i=0;i<numberColumnBasic;i++) {
+      int iColumn = whichColumn[i];
+      int iSet = backward_[iColumn];
+      int length = columnLength[iColumn];
+      CoinBigIndex j;
+      if (iSet<0||keyVariable_[iSet]>=numberColumns) {
+	double scale = columnScale[iColumn];
+	for (j=columnStart[iColumn];j<columnStart[iColumn]+columnLength[iColumn];j++) {
+	  int iRow = row[j];
+	  double value = elementByColumn[j]*scale*rowScale[iRow];
+	  if (fabs(value)>1.0e-20) {
+	    indexRowU[numberElements]=iRow;
+	    rowCount[iRow]++;
+	    elementU[numberElements++]=value;
+	  }
+	}
+	// end of column
+	columnCount[numberBasic]=numberElements-start[numberBasic];
+	numberBasic++;
+	start[numberBasic]=numberElements;
+      } else {
+	// in gub set
+	if (iColumn!=keyVariable_[iSet]) {
+	  double scale = columnScale[iColumn];
+	  // not key 
+	  if (lastSet<iSet) {
+	    // erase work
+	    if (key>=0) {
+	      for (j=columnStart[key];j<columnStart[key]+keyLength;j++) {
+		int iRow=row[j];
+		work[iRow]=0.0;
+		mark[iRow]=0;
+	      }
+	    }
+	    key=keyVariable_[iSet];
+	    lastSet=iSet;
+	    keyLength = columnLength[key];
+	    double scale = columnScale[key];
+	    for (j=columnStart[key];j<columnStart[key]+keyLength;j++) {
+	      int iRow=row[j];
+	      work[iRow]=elementByColumn[j]*scale*rowScale[iRow];
+	      mark[iRow]=1;
+	    }
+	  }
+	  for (j=columnStart[iColumn];j<columnStart[iColumn]+length;j++) {
+	    int iRow = row[j];
+	    double value=elementByColumn[j]*scale*rowScale[iRow];
+	    if (mark[iRow]) {
+	      mark[iRow]=0;
+	      double keyValue = work[iRow];
+	      value -= keyValue;
+	    }
+	    if (fabs(value)>1.0e-20) {
+	      indexRowU[numberElements]=iRow;
+	      rowCount[iRow]++;
+	      elementU[numberElements++]=value;
+	    }
+	  }
+	  for (j=columnStart[key];j<columnStart[key]+keyLength;j++) {
+	    int iRow = row[j];
+	    if (mark[iRow]) {
+	      double value = -work[iRow];
+	      if (fabs(value)>1.0e-20) {
+		indexRowU[numberElements]=iRow;
+		rowCount[iRow]++;
+		elementU[numberElements++]=value;
+	      }
+	    } else {
+	      // just put back mark
+	      mark[iRow]=1;
+	    }
+	  }
+	  // end of column
+	  columnCount[numberBasic]=numberElements-start[numberBasic];
+	  numberBasic++;
+	  start[numberBasic]=numberElements;
+	}
+      }
+    }
+  }
+  delete [] work;
+  delete [] mark;
+  // update number of column basic
+  numberColumnBasic = numberBasic;
 }
 /* Unpacks a column into an CoinIndexedvector
  */

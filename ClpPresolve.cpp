@@ -389,7 +389,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
   bool doDualStuff = (presolvedModel_->integerInformation()==NULL);
   if (prob->anyProhibited()) 
     doDualStuff=false;
-  if ((presolveActions_&1)!=0)
+  if (!doDual())
     doDualStuff=false;
 #if	PRESOLVE_CONSISTENCY
 //  presolve_links_ok(prob->rlink_, prob->mrstrt_, prob->hinrow_, prob->nrows_);
@@ -397,40 +397,15 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
 #endif
 
   if (!prob->status_) {
-#if 0
-    const bool slackd = ATOI("SLACKD")!=0;
-    //const bool forcing = ATOI("FORCING")!=0;
-    const bool doubleton = ATOI("DOUBLETON")!=0;
-    const bool forcing = ATOI("off")!=0;
-    const bool ifree = ATOI("off")!=0;
-    const bool zerocost = ATOI("off")!=0;
-    const bool dupcol = ATOI("off")!=0;
-    const bool duprow = ATOI("off")!=0;
-    const bool dual = ATOI("off")!=0;
-#else
-    // normal
-#if 0
-    const bool slackd = true;
-    const bool doubleton = false;
-    const bool tripleton = true;
-    const bool forcing = false;
-    const bool ifree = true;
-    const bool zerocost = true;
-    const bool dupcol = false;
-    const bool duprow = false;
+    const bool slackd = doSingleton();
+    const bool doubleton = doDoubleton();
+    const bool tripleton = doTripleton();
+    const bool forcing = doForcing();
+    const bool ifree = doImpliedFree();
+    const bool zerocost = doTighten();
+    const bool dupcol = doDupcol();
+    const bool duprow = doDuprow();
     const bool dual = doDualStuff;
-#else
-    const bool slackd = true;
-    const bool doubleton = true;
-    const bool tripleton = true;
-    const bool forcing = true;
-    const bool ifree = true;
-    const bool zerocost = true;
-    const bool dupcol = true;
-    const bool duprow = true;
-    const bool dual = doDualStuff;
-#endif
-#endif
     
     // some things are expensive so just do once (normally)
 
@@ -468,6 +443,9 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
     int lastDropped=0;
     prob->pass_=0;
     for (iLoop=0;iLoop<numberPasses_;iLoop++) {
+    // See if we want statistics
+    if ((presolveActions_&0x80000000)!=0)
+      printf("Starting major pass %d after %g seconds\n",iLoop+1,CoinCpuTime()-prob->startTime_);
 #ifdef PRESOLVE_SUMMARY
       printf("Starting major pass %d\n",iLoop+1);
 #endif
@@ -479,6 +457,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
       int whichPass=0;
       while (1) {
 	whichPass++;
+	prob->pass_++;
 	const CoinPresolveAction * const paction1 = paction_;
 
 	if (slackd) {
@@ -520,10 +499,10 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
 	    break;
 	}
 
-	if (ifree) {
-	  paction_ = implied_free_action::presolve(prob, paction_,fill_level);
-	  if (prob->status_)
-	    break;
+	if (ifree&&(whichPass%5)==1) {
+	paction_ = implied_free_action::presolve(prob, paction_,fill_level);
+	if (prob->status_)
+	  break;
 	}
 
 #if	PRESOLVE_DEBUG
@@ -616,12 +595,12 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
       if (dual) {
 	int itry;
 	for (itry=0;itry<5;itry++) {
-	  const CoinPresolveAction * const paction2 = paction_;
 	  paction_ = remove_dual_action::presolve(prob, paction_);
 	  if (prob->status_)
 	    break;
+	  const CoinPresolveAction * const paction2 = paction_;
 	  if (ifree) {
-	    int fill_level=0; // switches off substitution
+	    //int fill_level=0; // switches off substitution
 	    paction_ = implied_free_action::presolve(prob, paction_,fill_level);
 	    if (prob->status_)
 	      break;
@@ -629,6 +608,12 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
 	  if (paction_ == paction2)
 	    break;
 	}
+      } else if (ifree) {
+	// just free
+	int fill_level=0; // switches off substitution
+	paction_ = implied_free_action::presolve(prob, paction_,fill_level);
+	if (prob->status_)
+	  break;
       }
 #if	PRESOLVE_DEBUG
       check_sol(prob,1.0e0);
@@ -971,6 +956,8 @@ CoinPresolveMatrix::CoinPresolveMatrix(int ncols0_in,
   rowels_(new double[2*nelems_in]),
   hcol_(new int[2*nelems_in]),
   integerType_(new unsigned char[ncols0_in]),
+  tuning_(false),
+  startTime_(0.0),
   feasibilityTolerance_(0.0),
   status_(-1),
   colsToDo_(new int [ncols0_in]),
@@ -1332,6 +1319,9 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
 			maxmin,
 			presolvedModel_,
 			nrows_, nelems_,true,nonLinearValue_);
+    // See if we want statistics
+    if ((presolveActions_&0x80000000)!=0)
+      prob.statistics();
     // make sure row solution correct
     {
       double *colels	= prob.colels_;

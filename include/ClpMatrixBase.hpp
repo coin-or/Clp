@@ -67,14 +67,18 @@ public:
       Is allowed to return NULL if doesn't want to have row copy */
   virtual ClpMatrixBase * reverseOrderedCopy() const {return NULL;};
   
-  /** If element NULL returns number of elements in column part of basis,
-      If not NULL fills in as well */
-  virtual CoinBigIndex fillBasis(ClpSimplex * model,
+  /// Returns number of elements in column part of basis 
+  virtual CoinBigIndex countBasis(ClpSimplex * model,
 				 const int * whichColumn, 
 				 int numberRowBasic,
+				  int & numberColumnBasic)=0;
+  /// Fills in column part of basis
+  virtual void fillBasis(ClpSimplex * model,
+				 const int * whichColumn, 
 				 int & numberColumnBasic,
-				 int * row, int * column,
-				 double * element)  = 0;
+				 int * row, int * start,
+				 int * rowCount, int * columnCount,
+				 double * element)=0;
   /** Creates scales for column copy (rowCopy in model may be modified)
       default does not allow scaling
       returns non-zero if no scaling done */

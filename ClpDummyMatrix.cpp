@@ -147,19 +147,27 @@ ClpDummyMatrix::subsetTransposeTimes(const ClpSimplex * model,
   std::cerr<<"subsetTransposeTimes not supported - ClpDummyMatrix"<<std::endl;
   abort();
 }
-/* If element NULL returns number of elements in column part of basis,
-   If not NULL fills in as well */
+/// returns number of elements in column part of basis,
 CoinBigIndex 
-ClpDummyMatrix::fillBasis(ClpSimplex * model,
+ClpDummyMatrix::countBasis(ClpSimplex * model,
 				 const int * whichColumn, 
 				 int numberBasic,
-				 int & numberColumnBasic,
-				 int * indexRowU, int * indexColumnU,
-				 double * elementU) 
+			   int & numberColumnBasic)
+{
+  std::cerr<<"countBasis not supported - ClpDummyMatrix"<<std::endl;
+  abort();
+  return 0;
+}
+void
+ClpDummyMatrix::fillBasis(ClpSimplex * model,
+			 const int * whichColumn, 
+			 int & numberColumnBasic,
+			 int * row, int * start,
+			 int * rowCount, int * columnCount,
+			 double * element)
 {
   std::cerr<<"fillBasis not supported - ClpDummyMatrix"<<std::endl;
   abort();
-  return 0;
 }
 /* Unpacks a column into an CoinIndexedvector
  */

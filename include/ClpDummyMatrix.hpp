@@ -53,14 +53,18 @@ public:
   virtual void deleteRows(const int numDel, const int * indDel);
   /** Returns a new matrix in reverse order without gaps */
   virtual ClpMatrixBase * reverseOrderedCopy() const;
-  /** If element NULL returns number of elements in column part of basis,
-      If not NULL fills in as well */
-  virtual CoinBigIndex fillBasis(ClpSimplex * model,
+  /// Returns number of elements in column part of basis 
+  virtual CoinBigIndex countBasis(ClpSimplex * model,
 				 const int * whichColumn, 
 				 int numberRowBasic,
+				  int & numberColumnBasic);
+  /// Fills in column part of basis
+  virtual void fillBasis(ClpSimplex * model,
+				 const int * whichColumn, 
 				 int & numberColumnBasic,
-				 int * row, int * column,
-				 double * element)  ;
+				 int * row, int * start,
+				 int * rowCount, int * columnCount,
+				 double * element);
   /** Unpacks a column into an CoinIndexedvector
    */
   virtual void unpack(const ClpSimplex * model,CoinIndexedVector * rowArray,
