@@ -1325,6 +1325,8 @@ stopping",
 				  (const char*) 0 /*integrality*/,
 				  m.getRowLower(), m.getRowUpper(),
 				  columnNames, rowNames);
+		// Pass in array saying if each variable integer
+		writer.copyInIntegerInformation(m.integerInformation());
 		writer.writeMps(fileName.c_str());
 		for (iRow=0;iRow<numberRows;iRow++) {
 		  free(rowNames[iRow]);
