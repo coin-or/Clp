@@ -308,7 +308,7 @@ int ClpPredictorCorrector::solve ( )
           } else {
             double phi;
             if (numberComplementarityPairs_<=500) {
-              phi=pow(numberComplementarityPairs_,2);
+              phi=pow(numberComplementarityPairs_,2.0);
             } else {
               phi=pow(numberComplementarityPairs_,1.5);
               if (phi<500.0*500.0) {
