@@ -1,4 +1,4 @@
-#ifdef REAL_BARRIER
+#ifdef TAUCS_BARRIER
 // Copyright (C) 2004, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
@@ -229,6 +229,15 @@ ClpCholeskyTaucs::order(ClpInterior * model)
   factorization_ = taucs_ccs_factor_llt_symbolic(permuted);
   taucs_ccs_free(permuted);
   return factorization_ ? 0 :1;
+}
+/* Does Symbolic factorization given permutation.
+   This is called immediately after order.  If user provides this then
+   user must provide factorize and solve.  Otherwise the default factorization is used
+   returns non-zero if not enough memory */
+int 
+ClpCholeskyTaucs::symbolic()
+{
+  return 0;
 }
 /* Factorize - filling in rowsDropped and returning number dropped */
 int 

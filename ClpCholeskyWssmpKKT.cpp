@@ -1,4 +1,4 @@
-#ifdef REAL_BARRIER
+#ifdef WSSMP_BARRIER
 // Copyright (C) 2004, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
@@ -62,8 +62,7 @@ ClpCholeskyBase * ClpCholeskyWssmpKKT::clone() const
 }
 // At present I can't get wssmp to work as my libraries seem to be out of sync
 // so I have linked in ekkwssmp which is an older version
-//#define WSMP
-#ifdef WSMP
+#if WSSMP_BARRIER==2
   extern "C" void wssmp(int * n,
                         int * columnStart , int * rowIndex , double * element,
                         double * diagonal , int * perm , int * invp ,
@@ -211,7 +210,7 @@ ClpCholeskyWssmpKKT::order(ClpInterior * model)
   integerParameters_[0]=0;
   int i0=0;
   int i1=1;
-#ifdef WSMP   
+#if WSSMP_BARRIER==2
   wsetmaxthrds(&i1);
 #endif
   wssmp(&numberRows_,choleskyStart_,choleskyRow_,sparseFactor_,

@@ -61,6 +61,8 @@ public:
   /** Orders rows and saves pointer to matrix.and model.
    Returns non-zero if not enough memory */
   virtual int order(ClpInterior * model) ;
+  /// Dummy
+  virtual int symbolic();
   /** Factorize - filling in rowsDropped and returning number dropped.
       If return code negative then out of memory */
   virtual int factorize(const double * diagonal, int * rowsDropped) ;
@@ -89,7 +91,7 @@ private:
    //@{
   /// Taucs matrix (== sparseFactor etc)
   taucs_ccs_matrix * matrix_;
-  /// Taucs factot
+  /// Taucs factor
   void * factorization_;
   /// sparseFactor.
   double * sparseFactorT_;

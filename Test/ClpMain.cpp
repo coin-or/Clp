@@ -40,6 +40,15 @@
 #ifdef DMALLOC
 #include "dmalloc.h"
 #endif
+#ifdef WSSMP_BARRIER
+#define FOREIGN_BARRIER
+#endif
+#ifdef UFL_BARRIER
+#define FOREIGN_BARRIER
+#endif
+#ifdef TAUCS_BARRIER
+#define FOREIGN_BARRIER
+#endif
 
 static double totalTime=0.0;
 
@@ -941,12 +950,26 @@ corrector algorithm."
     parameters[numberParameters-1].append("on");
     parameters[numberParameters++]=
       ClpItem("chol!esky","Which cholesky algorithm",
-	      "base",CHOLESKY,false);
+	      "native",CHOLESKY,false);
     parameters[numberParameters-1].append("dense");
-#ifdef REAL_BARRIER
+#ifdef FOREIGN_BARRIER
+#ifdef WSSMP_BARRIER
     parameters[numberParameters-1].append("fudge!Long");
     parameters[numberParameters-1].append("wssmp");
+#else
+    parameters[numberParameters-1].append("fudge!Long_dummy");
+    parameters[numberParameters-1].append("wssmp_dummy");
+#endif
+#ifdef UFL_BARRIER
     parameters[numberParameters-1].append("Uni!versityOfFlorida");
+#else
+    parameters[numberParameters-1].append("Uni!versityOfFlorida_dummy");
+#endif
+#ifdef TAUCS_BARRIER
+    parameters[numberParameters-1].append("Taucs");
+#else
+    parameters[numberParameters-1].append("Taucs_dummy");
+#endif
 #endif
     parameters[numberParameters++]=
       ClpItem("crash","Whether to create basis for problem",

@@ -5,8 +5,6 @@
 
 #include "ClpCholeskyBase.hpp"
 
-typedef double longDouble;
-
 /** Dense class for Clp Cholesky factorization
 
 */
@@ -44,54 +42,70 @@ public:
   /** part 2 of Factorize - filling in rowsDropped - blocked */
   void factorizePart3(int * rowsDropped) ;
   /// Non leaf recursive factor
-  void factor(double * a, int n, int numberBlocks,
-	      double * diagonal, double * work, int * rowsDropped);
+  void factor(longDouble * a, int n, int numberBlocks,
+	      longDouble * diagonal, longDouble * work, int * rowsDropped);
   /// Non leaf recursive triangle rectangle update
-  void triRec(double * aTri, int nThis, double * aUnder, double * diagonal, double * work,
+  void triRec(longDouble * aTri, int nThis, longDouble * aUnder, longDouble * diagonal, longDouble * work,
 	      int nLeft, int iBlock, int jBlock,
 	      int numberBlocks);
   /// Non leaf recursive rectangle triangle update
-  void recTri(double * aUnder, int nTri, int nDo,
-	      int iBlock, int jBlock,double * aTri,
-	      double * diagonal, double * work, 
+  void recTri(longDouble * aUnder, int nTri, int nDo,
+	      int iBlock, int jBlock,longDouble * aTri,
+	      longDouble * diagonal, longDouble * work, 
 	      int numberBlocks);
   /** Non leaf recursive rectangle rectangle update,
       nUnder is number of rows in iBlock,
       nUnderK is number of rows in kBlock
   */
-  void recRec(double * above, int nUnder, int nUnderK,
-	      int nDo, double * aUnder, double *aOther,double * diagonal, double * work,
+  void recRec(longDouble * above, int nUnder, int nUnderK,
+	      int nDo, longDouble * aUnder, longDouble *aOther,longDouble * diagonal, longDouble * work,
 	      int kBlock,int iBlock, int jBlock,
 	      int numberBlocks);
   /// Leaf recursive factor
-  void factorLeaf(double * a, int n, 
-	      double * diagonal, double * work, int * rowsDropped);
+  void factorLeaf(longDouble * a, int n, 
+	      longDouble * diagonal, longDouble * work, int * rowsDropped);
   /// Leaf recursive triangle rectangle update
-  void triRecLeaf(double * aTri, double * aUnder,
-		  double * diagonal, double * work,
+  void triRecLeaf(longDouble * aTri, longDouble * aUnder,
+		  longDouble * diagonal, longDouble * work,
 		  int nUnder);
   /// Leaf recursive rectangle triangle update
-  void recTriLeaf(double * aUnder, double * aTri, 
-		  double * diagonal, double * work, int nUnder);
+  void recTriLeaf(longDouble * aUnder, longDouble * aTri, 
+		  longDouble * diagonal, longDouble * work, int nUnder);
   /** Leaf recursive rectangle rectangle update,
       nUnder is number of rows in iBlock,
       nUnderK is number of rows in kBlock
   */
-  void recRecLeaf(double * above, 
-		  double * aUnder, double *aOther, double * diagonal, double * work,
+  void recRecLeaf(longDouble * above, 
+		  longDouble * aUnder, longDouble *aOther, longDouble * diagonal, longDouble * work,
 		  int nUnder);
   /// Forward part of solve
-  void solveF1(double * a,int n,double * region);
-  void solveF2(double * a,int n,double * region,double * region2);
+  void solveF1(longDouble * a,int n,double * region);
+  void solveF2(longDouble * a,int n,double * region,double * region2);
   /// Backward part of solve
-  void solveB1(double * a,int n,double * region);
-  void solveB2(double * a,int n,double * region,double * region2);
-  int bNumber(const double * array,int &, int&);
+  void solveB1(longDouble * a,int n,double * region);
+  void solveB2(longDouble * a,int n,double * region,double * region2);
+  /** Uses factorization to solve. */
+  void solveLong (longDouble * region) ;
+  /// Forward part of solve
+  void solveF1Long(longDouble * a,int n,longDouble * region);
+  void solveF2Long(longDouble * a,int n,longDouble * region,longDouble * region2);
+  /// Backward part of solve
+  void solveB1Long(longDouble * a,int n,longDouble * region);
+  void solveB2Long(longDouble * a,int n,longDouble * region,longDouble * region2);
+  /** Uses factorization to solve. */
+  void solveLongWork (longWork * region) ;
+  /// Forward part of solve
+  void solveF1LongWork(longDouble * a,int n,longWork * region);
+  void solveF2LongWork(longDouble * a,int n,longWork * region,longWork * region2);
+  /// Backward part of solve
+  void solveB1LongWork(longDouble * a,int n,longWork * region);
+  void solveB2LongWork(longDouble * a,int n,longWork * region,longWork * region2);
+  int bNumber(const longDouble * array,int &, int&);
   /// A
-  inline double * aMatrix() const
+  inline longDouble * aMatrix() const
   { return sparseFactor_;}
   /// Diagonal
-  inline double * diagonal() const
+  inline longDouble * diagonal() const
   { return diagonal_;}
   //@}
 

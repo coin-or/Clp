@@ -17,14 +17,6 @@
 #include "ClpInterior.hpp"
 #include "ClpCholeskyDense.hpp"
 #include "ClpCholeskyBase.hpp"
-#ifdef REAL_BARRIER
-#include "ClpCholeskyWssmp.hpp"
-#include "ClpCholeskyWssmpKKT.hpp"
-//#include "ClpCholeskyTaucs.hpp"
-#include "ClpCholeskyUfl.hpp"
-#else
-static int numberBarrier=0;
-#endif
 #include "ClpSolve.hpp"
 #include "ClpPackedMatrix.hpp"
 #include "ClpPlusMinusOneMatrix.hpp"
@@ -34,6 +26,21 @@ static int numberBarrier=0;
 
 #include "ClpPresolve.hpp"
 #include "Idiot.hpp"
+#ifdef WSSMP_BARRIER
+#include "ClpCholeskyWssmp.hpp"
+#include "ClpCholeskyWssmpKKT.hpp"
+#define FAST_BARRIER
+#endif
+#ifdef UFL_BARRIER
+#include "ClpCholeskyUfl.hpp"
+#endif
+#ifdef TAUCS_BARRIER
+#include "ClpCholeskyTaucs.hpp"
+#define FAST_BARRIER
+#endif
+#ifndef FAST_BARRIER
+static int numberBarrier=0;
+#endif
 
 //#############################################################################
 // Allow for interrupts
@@ -948,14 +955,20 @@ ClpSimplex::initialSolve(ClpSolve & options)
     if (objective_->type()==2)
       quadraticObj = (static_cast< ClpQuadraticObjective*>(objective_));
 #endif
-#ifdef REAL_BARRIER
+#ifndef FAST_BARRIER
+    if (!numberBarrier)
+      std::cout<<"Warning - the default ordering is just on row counts! "
+	       <<"The factorization is being improved"<<std::endl;
+    numberBarrier++;
+#endif
     if (quadraticObj) {
       doKKT=true;
     }
     switch (barrierOptions) {
     case 0:
+    default:
       if (!doKKT) {
-	ClpCholeskyBase * cholesky = new ClpCholeskyBase(100);
+	ClpCholeskyBase * cholesky = new ClpCholeskyBase();
 	barrier.setCholesky(cholesky);
       } else {
 	ClpCholeskyBase * cholesky = new ClpCholeskyBase();
@@ -973,6 +986,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	barrier.setCholesky(cholesky);
       }
       break;
+#ifdef WSSMP_BARRIER
     case 2:
       {
 	ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp(CoinMax(100,model2->numberRows()/10));
@@ -989,9 +1003,11 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	barrier.setCholesky(cholesky);
       }
       break;
+#endif
+#ifdef UFL_BARRIER
     case 4:
       if (!doKKT) {
-	ClpCholeskyUfl * cholesky = new ClpCholeskyUfl(100);
+	ClpCholeskyUfl * cholesky = new ClpCholeskyUfl();
 	barrier.setCholesky(cholesky);
       } else {
 	ClpCholeskyUfl * cholesky = new ClpCholeskyUfl();
@@ -999,43 +1015,17 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	barrier.setCholesky(cholesky);
       }
       break;
-    default:
-      abort();
-    }
-    // uncomment this if you have Sivan Toledo's Taucs package
-    //ClpCholeskyTaucs * cholesky = new ClpCholeskyTaucs();
-    //barrier.setCholesky(cholesky);
-#else
-    if (quadraticObj) {
-      doKKT=true;
-    }
-    switch (barrierOptions) {
-    case 1:
-      if (!doKKT) {
-	ClpCholeskyDense * cholesky = new ClpCholeskyDense();
-	barrier.setCholesky(cholesky);
-      } else {
-	ClpCholeskyDense * cholesky = new ClpCholeskyDense();
-	cholesky->setKKT(true);
-	barrier.setCholesky(cholesky);
-      }
-      break;
-    default:
-      if (!numberBarrier)
-	std::cout<<"Warning - the default ordering is just on row counts! "
-		 <<"The factorization is being improved"<<std::endl;
-      numberBarrier++;
-      if (!doKKT) {
-	ClpCholeskyBase * cholesky = new ClpCholeskyBase(100);
-	barrier.setCholesky(cholesky);
-      } else {
-	ClpCholeskyBase * cholesky = new ClpCholeskyBase();
-	cholesky->setKKT(true);
-	barrier.setCholesky(cholesky);
-      }
-      break;
-    }
 #endif
+#ifdef TAUCS_BARRIER
+    case 5:
+      {
+	ClpCholeskyTaucs * cholesky = new ClpCholeskyTaucs();
+	barrier.setCholesky(cholesky);
+	assert (!doKKT);
+      }
+      break;
+#endif
+    }
     int numberRows = model2->numberRows();
     int numberColumns = model2->numberColumns();
     int saveMaxIts = model2->maximumIterations();

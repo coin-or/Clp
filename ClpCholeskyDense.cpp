@@ -87,16 +87,16 @@ ClpCholeskyDense::reserveSpace(const ClpCholeskyBase * factor, int numberRows)
   // allow one stripe extra
   numberBlocks = numberBlocks + ((numberBlocks*(numberBlocks+1))/2);
   sizeFactor_=numberBlocks*BLOCKSQ;
-#define CHOL_COMPARE
+  //#define CHOL_COMPARE
 #ifdef CHOL_COMPARE  
   sizeFactor_ += 95000;
 #endif
   if (!factor) {
-    sparseFactor_ = new double [sizeFactor_];
+    sparseFactor_ = new longDouble [sizeFactor_];
     rowsDropped_ = new char [numberRows_];
     memset(rowsDropped_,0,numberRows_);
-    workDouble_ = new double[numberRows_];
-    diagonal_ = new double[numberRows_];
+    workDouble_ = new longDouble[numberRows_];
+    diagonal_ = new longDouble[numberRows_];
   } else {
     borrowSpace_=true;
     int numberFull = factor->numberRows();
@@ -162,7 +162,7 @@ ClpCholeskyDense::factorize(const double * diagonal, int * rowsDropped)
   int numberColumns=model_->clpMatrix()->getNumCols();
   CoinZeroN(sparseFactor_,sizeFactor_);
   //perturbation
-  double perturbation=model_->diagonalPerturbation()*model_->diagonalNorm();
+  longDouble perturbation=model_->diagonalPerturbation()*model_->diagonalNorm();
   perturbation=perturbation*perturbation;
   if (perturbation>1.0) {
     //if (model_->model()->logLevel()&4) 
@@ -174,10 +174,10 @@ ClpCholeskyDense::factorize(const double * diagonal, int * rowsDropped)
   int newDropped=0;
   double largest=1.0;
   double smallest=COIN_DBL_MAX;
-  double delta2 = model_->delta(); // add delta*delta to diagonal
+  longDouble delta2 = model_->delta(); // add delta*delta to diagonal
   delta2 *= delta2;
   if (!doKKT_) {
-    double * work = sparseFactor_;
+    longDouble * work = sparseFactor_;
     work--; // skip diagonal
     int addOffset=numberRows_-1;
     const double * diagonalSlack = diagonal + numberColumns;
@@ -187,20 +187,20 @@ ClpCholeskyDense::factorize(const double * diagonal, int * rowsDropped)
       if (!rowsDropped_[iRow]) {
 	CoinBigIndex startRow=rowStart[iRow];
 	CoinBigIndex endRow=rowStart[iRow]+rowLength[iRow];
-	double diagonalValue = diagonalSlack[iRow]+delta2;
+	longDouble diagonalValue = diagonalSlack[iRow]+delta2;
 	for (CoinBigIndex k=startRow;k<endRow;k++) {
 	  int iColumn=column[k];
 	  CoinBigIndex start=columnStart[iColumn];
 	  CoinBigIndex end=columnStart[iColumn]+columnLength[iColumn];
-	  double multiplier = diagonal[iColumn]*elementByRow[k];
+	  longDouble multiplier = diagonal[iColumn]*elementByRow[k];
 	  for (CoinBigIndex j=start;j<end;j++) {
 	    int jRow=row[j];
 	    if (!rowsDropped_[jRow]) {
 	      if (jRow>iRow) {
-		double value=element[j]*multiplier;
+		longDouble value=element[j]*multiplier;
 		work[jRow] += value;
 	      } else if (jRow==iRow) {
-		double value=element[j]*multiplier;
+		longDouble value=element[j]*multiplier;
 		diagonalValue += value;
 	      }
 	    }
@@ -226,7 +226,7 @@ ClpCholeskyDense::factorize(const double * diagonal, int * rowsDropped)
       // Move to int array
       rowsDropped[iRow]=dropped;
       if (!dropped) {
-	double diagonal = diagonal_[iRow];
+	longDouble diagonal = diagonal_[iRow];
 	if (diagonal>largest2) {
 	  diagonal_[iRow]=diagonal+perturbation;
 	} else {
@@ -278,13 +278,13 @@ ClpCholeskyDense::factorize(const double * diagonal, int * rowsDropped)
     int numberRowsModel = model_->numberRows();
     int numberColumns = model_->numberColumns();
     int numberTotal = numberColumns + numberRowsModel;
-    double * work = sparseFactor_;
+    longDouble * work = sparseFactor_;
     work--; // skip diagonal
     int addOffset=numberRows_-1;
     int iColumn;
     if (!quadratic) {
       for (iColumn=0;iColumn<numberColumns;iColumn++) {
-	double value = diagonal[iColumn];
+	longDouble value = diagonal[iColumn];
 	if (fabs(value)>1.0e-100) {
 	  value = 1.0/value;
 	  largest = CoinMax(largest,fabs(value));
@@ -310,7 +310,7 @@ ClpCholeskyDense::factorize(const double * diagonal, int * rowsDropped)
       const int * columnQuadraticLength = quadratic->getVectorLengths();
       const double * quadraticElement = quadratic->getElements();
       for (iColumn=0;iColumn<numberColumns;iColumn++) {
-	double value = diagonal[iColumn];
+	longDouble value = diagonal[iColumn];
 	CoinBigIndex j;
 	if (fabs(value)>1.0e-100) {
 	  value = 1.0/value;
@@ -341,7 +341,7 @@ ClpCholeskyDense::factorize(const double * diagonal, int * rowsDropped)
     }
     // slacks
     for (iColumn=numberColumns;iColumn<numberTotal;iColumn++) {
-      double value = diagonal[iColumn];
+      longDouble value = diagonal[iColumn];
       if (fabs(value)>1.0e-100) {
 	value = 1.0/value;
 	largest = CoinMax(largest,fabs(value));
@@ -416,8 +416,8 @@ void
 ClpCholeskyDense::factorizePart3( int * rowsDropped) 
 {
   int iColumn;
-  double * xx = sparseFactor_;
-  double * yy = diagonal_;
+  longDouble * xx = sparseFactor_;
+  longDouble * yy = diagonal_;
   diagonal_ = sparseFactor_ + 40000;
   sparseFactor_=diagonal_ + numberRows_;
   //memcpy(sparseFactor_,xx,sizeFactor_*sizeof(double));
@@ -428,14 +428,14 @@ ClpCholeskyDense::factorizePart3( int * rowsDropped)
   double smallest=COIN_DBL_MAX;
   double dropValue = doubleParameters_[10];
   int firstPositive=integerParameters_[34];
-  double * work = sparseFactor_;
+  longDouble * work = sparseFactor_;
   // Allow for triangular
   int addOffset=numberRows_-1;
   work--;
   for (iColumn=0;iColumn<numberRows_;iColumn++) {
     int iRow;
     int addOffsetNow = numberRows_-1;;
-    double * workNow=sparseFactor_-1+iColumn;
+    longDouble * workNow=sparseFactor_-1+iColumn;
     double diagonalValue = diagonal_[iColumn];
     for (iRow=0;iRow<iColumn;iRow++) {
       double aj = *workNow;
@@ -509,10 +509,10 @@ ClpCholeskyDense::factorizePart3( int * rowsDropped)
 //#define POS_DEBUG
 #ifdef POS_DEBUG
 static int counter=0;
-int ClpCholeskyDense::bNumber(const double * array, int &iRow, int &iCol)
+int ClpCholeskyDense::bNumber(const longDouble * array, int &iRow, int &iCol)
 {
   int numberBlocks = (numberRows_+BLOCK-1)>>BLOCKSHIFT;
-  double * a = sparseFactor_+BLOCKSQ*numberBlocks;
+  longDouble * a = sparseFactor_+BLOCKSQ*numberBlocks;
   int k = array-a;
   assert ((k%BLOCKSQ)==0);
   iCol=0;
@@ -536,8 +536,8 @@ void
 ClpCholeskyDense::factorizePart2( int * rowsDropped) 
 {
   int iColumn;
-  //double * xx = sparseFactor_;
-  //double * yy = diagonal_;
+  //longDouble * xx = sparseFactor_;
+  //longDouble * yy = diagonal_;
   //diagonal_ = sparseFactor_ + 40000;
   //sparseFactor_=diagonal_ + numberRows_;
   //memcpy(sparseFactor_,xx,sizeFactor_*sizeof(double));
@@ -545,7 +545,7 @@ ClpCholeskyDense::factorizePart2( int * rowsDropped)
   //memcpy(diagonal_,yy,numberRows_*sizeof(double));
   int numberBlocks = (numberRows_+BLOCK-1)>>BLOCKSHIFT;
   // later align on boundary
-  double * a = sparseFactor_+BLOCKSQ*numberBlocks;
+  longDouble * a = sparseFactor_+BLOCKSQ*numberBlocks;
   int n=numberRows_;
   int nRound = numberRows_&(~(BLOCK-1));
   // adjust if exact
@@ -557,7 +557,7 @@ ClpCholeskyDense::factorizePart2( int * rowsDropped)
   int ifOdd;
   int rowLast;
   if (sizeLastBlock!=BLOCK) {
-    double * aa = &a[(block-1)*BLOCKSQ];
+    longDouble * aa = &a[(block-1)*BLOCKSQ];
     rowLast=nRound-1;
     ifOdd=1;
     int put = BLOCKSQ;
@@ -583,8 +583,8 @@ ClpCholeskyDense::factorizePart2( int * rowsDropped)
   // Now main loop
   int nBlock=0;
   for (;n>0;n-=BLOCK) {
-    double * aa = &a[(block-1)*BLOCKSQ];
-    double * aaLast=NULL;
+    longDouble * aa = &a[(block-1)*BLOCKSQ];
+    longDouble * aaLast=NULL;
     int put = BLOCKSQ;
     int putLast=0;
     // see if we have small block
@@ -602,7 +602,7 @@ ClpCholeskyDense::factorizePart2( int * rowsDropped)
 	}
 	putLast -= BLOCK-sizeLastBlock;
       }
-      double * aPut = aa;
+      longDouble * aPut = aa;
       int j=rowLast;
       for (int jBlock=0;jBlock<=nBlock;jBlock++) {
 	int put2 = put;
@@ -630,15 +630,15 @@ ClpCholeskyDense::factorizePart2( int * rowsDropped)
 }
 // Non leaf recursive factor
 void 
-ClpCholeskyDense::factor(double * a, int n, int numberBlocks,
-	    double * diagonal, double * work, int * rowsDropped)
+ClpCholeskyDense::factor(longDouble * a, int n, int numberBlocks,
+	    longDouble * diagonal, longDouble * work, int * rowsDropped)
 {
   if (n<=BLOCK) {
     factorLeaf(a,n,diagonal,work,rowsDropped);
   } else {
     int nb=number_blocks((n+1)>>1);
     int nThis=number_rows(nb);
-    double * aother;
+    longDouble * aother;
     int nLeft=n-nThis;
     int nintri=(nb*(nb+1))>>1;
     int nbelow=(numberBlocks-nb)*nb;
@@ -652,8 +652,8 @@ ClpCholeskyDense::factor(double * a, int n, int numberBlocks,
 }
 // Non leaf recursive triangle rectangle update
 void 
-ClpCholeskyDense::triRec(double * aTri, int nThis, double * aUnder,
-			 double * diagonal, double * work,
+ClpCholeskyDense::triRec(longDouble * aTri, int nThis, longDouble * aUnder,
+			 longDouble * diagonal, longDouble * work,
 			 int nLeft, int iBlock, int jBlock,
 			 int numberBlocks)
 {
@@ -668,7 +668,7 @@ ClpCholeskyDense::triRec(double * aTri, int nThis, double * aUnder,
   } else {
     int nb=number_blocks((nThis+1)>>1);
     int nThis2=number_rows(nb);
-    double * aother;
+    longDouble * aother;
     int kBlock=jBlock+nb;
     int i;
     int nintri=(nb*(nb+1))>>1;
@@ -687,9 +687,9 @@ ClpCholeskyDense::triRec(double * aTri, int nThis, double * aUnder,
 }
 // Non leaf recursive rectangle triangle update
 void 
-ClpCholeskyDense::recTri(double * aUnder, int nTri, int nDo,
-			 int iBlock, int jBlock,double * aTri,
-			 double * diagonal, double * work,
+ClpCholeskyDense::recTri(longDouble * aUnder, int nTri, int nDo,
+			 int iBlock, int jBlock,longDouble * aTri,
+			 longDouble * diagonal, longDouble * work,
 			 int numberBlocks)
 {
   if (nTri<=BLOCK&&nDo<=BLOCK) {
@@ -697,7 +697,7 @@ ClpCholeskyDense::recTri(double * aUnder, int nTri, int nDo,
   } else if (nTri<nDo) {
     int nb=number_blocks((nDo+1)>>1);
     int nDo2=number_rows(nb);
-    double * aother;
+    longDouble * aother;
     int i;
     recTri(aUnder,nTri,nDo2,iBlock,jBlock,aTri,diagonal,work,numberBlocks);
     i=((numberBlocks-jBlock)*(numberBlocks-jBlock-1)-
@@ -708,7 +708,7 @@ ClpCholeskyDense::recTri(double * aUnder, int nTri, int nDo,
   } else {
     int nb=number_blocks((nTri+1)>>1);
     int nTri2=number_rows(nb);
-    double * aother;
+    longDouble * aother;
     int i;
     recTri(aUnder,nTri2,nDo,iBlock,jBlock,aTri,diagonal,work,numberBlocks);
     /* and rectangular update */
@@ -726,8 +726,8 @@ ClpCholeskyDense::recTri(double * aUnder, int nTri, int nDo,
    nUnderK is number of rows in kBlock
 */
 void 
-ClpCholeskyDense::recRec(double * above, int nUnder, int nUnderK,
-			 int nDo, double * aUnder, double *aOther, double * diagonal, double * work,
+ClpCholeskyDense::recRec(longDouble * above, int nUnder, int nUnderK,
+			 int nDo, longDouble * aUnder, longDouble *aOther, longDouble * diagonal, longDouble * work,
 	    int kBlock,int iBlock, int jBlock,
 	    int numberBlocks)
 {
@@ -766,27 +766,28 @@ ClpCholeskyDense::recRec(double * above, int nUnder, int nUnderK,
 }
 // Leaf recursive factor
 void 
-ClpCholeskyDense::factorLeaf(double * a, int n, 
-		double * diagonal, double * work, int * rowsDropped)
+ClpCholeskyDense::factorLeaf(longDouble * a, int n, 
+		longDouble * diagonal, longDouble * work, int * rowsDropped)
 {
-  double largest=doubleParameters_[3];
-  double smallest=doubleParameters_[4];
+  longDouble largest=doubleParameters_[3];
+  longDouble smallest=doubleParameters_[4];
   double dropValue = doubleParameters_[10];
   int firstPositive=integerParameters_[34];
   int rowOffset=diagonal-diagonal_;
   int numberDropped=0;
   int i, j, k;
-  double t00,temp1, * aa;
+  longDouble t00,temp1;
+  longDouble * aa;
   aa = a-BLOCK;
   for (j = 0; j < n; j ++) {
     aa+=BLOCK;
     t00 = aa[j];
     for (k = 0; k < j; ++k) {
-      double multiplier = work[k];
+      longDouble multiplier = work[k];
       t00 -= a[j + k * BLOCK] * a[j + k * BLOCK] * multiplier;
     }
     bool dropColumn=false;
-    double useT00=t00;
+    longDouble useT00=t00;
     if (j+rowOffset<firstPositive) {
       // must be negative
       if (t00<=-dropValue) {
@@ -823,7 +824,7 @@ ClpCholeskyDense::factorLeaf(double * a, int n,
       for (i=j+1;i<n;i++) {
         t00=aa[i];
         for (k = 0; k < j; ++k) {
-	  double multiplier = work[k];
+	  longDouble multiplier = work[k];
           t00 -= a[i + k * BLOCK] * a[j + k * BLOCK] * multiplier;
         }
         aa[i]=t00*temp1;
@@ -846,7 +847,7 @@ ClpCholeskyDense::factorLeaf(double * a, int n,
 }
 // Leaf recursive triangle rectangle update
 void 
-ClpCholeskyDense::triRecLeaf(double * aTri, double * aUnder, double * diagonal, double * work,
+ClpCholeskyDense::triRecLeaf(longDouble * aTri, longDouble * aUnder, longDouble * diagonal, longDouble * work,
 		int nUnder)
 {
 #ifdef POS_DEBUG
@@ -860,32 +861,32 @@ ClpCholeskyDense::triRecLeaf(double * aTri, double * aUnder, double * diagonal, 
   assert (diagonal==diagonal_+ict*BLOCK);
 #endif
   int j;
-  double * aa;
+  longDouble * aa;
 #if BLOCK==16
   if (nUnder==BLOCK) {
     aa = aTri-2*BLOCK;
     for (j = 0; j < BLOCK; j +=2) {
       aa+=2*BLOCK;
-      double temp0 = diagonal[j];
-      double temp1 = diagonal[j+1];
+      longDouble temp0 = diagonal[j];
+      longDouble temp1 = diagonal[j+1];
       for (int i=0;i<BLOCK;i+=2) {
-        double t00=aUnder[i+j*BLOCK];
-        double t10=aUnder[i+ BLOCK + j*BLOCK];
-        double t01=aUnder[i+1+j*BLOCK];
-        double t11=aUnder[i+1+ BLOCK + j*BLOCK];
+        longDouble t00=aUnder[i+j*BLOCK];
+        longDouble t10=aUnder[i+ BLOCK + j*BLOCK];
+        longDouble t01=aUnder[i+1+j*BLOCK];
+        longDouble t11=aUnder[i+1+ BLOCK + j*BLOCK];
         for (int k = 0; k < j; ++k) {
-	  double multiplier=work[k];
-	  double au0 = aUnder[i + k * BLOCK]*multiplier;
-	  double au1 = aUnder[i + 1 + k * BLOCK]*multiplier;
-	  double at0 = aTri[j + k * BLOCK];
-	  double at1 = aTri[j + 1 + k * BLOCK];
+	  longDouble multiplier=work[k];
+	  longDouble au0 = aUnder[i + k * BLOCK]*multiplier;
+	  longDouble au1 = aUnder[i + 1 + k * BLOCK]*multiplier;
+	  longDouble at0 = aTri[j + k * BLOCK];
+	  longDouble at1 = aTri[j + 1 + k * BLOCK];
           t00 -= au0 * at0;
           t10 -= au0 * at1;
           t01 -= au1 * at0;
           t11 -= au1 * at1;
         }
         t00 *= temp0;
-	double at1 = aTri[j + 1 + j*BLOCK]*work[j];
+	longDouble at1 = aTri[j + 1 + j*BLOCK]*work[j];
         t10 -= t00 * at1;
         t01 *= temp0;
         t11 -= t01 * at1;
@@ -900,11 +901,11 @@ ClpCholeskyDense::triRecLeaf(double * aTri, double * aUnder, double * diagonal, 
     aa = aTri-BLOCK;
     for (j = 0; j < BLOCK; j ++) {
       aa+=BLOCK;
-      double temp1 = diagonal[j];
+      longDouble temp1 = diagonal[j];
       for (int i=0;i<nUnder;i++) {
-        double t00=aUnder[i+j*BLOCK];
+        longDouble t00=aUnder[i+j*BLOCK];
         for (int k = 0; k < j; ++k) {
-	  double multiplier=work[k];
+	  longDouble multiplier=work[k];
           t00 -= aUnder[i + k * BLOCK] * aTri[j + k * BLOCK] * multiplier;
         }
         aUnder[i+j*BLOCK]=t00*temp1;
@@ -915,8 +916,8 @@ ClpCholeskyDense::triRecLeaf(double * aTri, double * aUnder, double * diagonal, 
 #endif
 }
 // Leaf recursive rectangle triangle update
-void ClpCholeskyDense::recTriLeaf(double * aUnder, double * aTri, 
-				  double * diagonal, double * work, int nUnder)
+void ClpCholeskyDense::recTriLeaf(longDouble * aUnder, longDouble * aTri, 
+				  longDouble * diagonal, longDouble * work, int nUnder)
 {
 #ifdef POS_DEBUG
   int iru,icu;
@@ -929,24 +930,25 @@ void ClpCholeskyDense::recTriLeaf(double * aUnder, double * aTri,
   assert (diagonal==diagonal_+icu*BLOCK);
 #endif
   int i, j, k;
-  double t00, * aa;
+  longDouble t00;
+  longDouble * aa;
 #if BLOCK==16
   if (nUnder==BLOCK) {
-    double * aUnder2 = aUnder-2;
+    longDouble * aUnder2 = aUnder-2;
     aa = aTri-2*BLOCK;
     for (j = 0; j < BLOCK; j +=2) {
-      double t00,t01,t10,t11;
+      longDouble t00,t01,t10,t11;
       aa+=2*BLOCK;
       aUnder2+=2;
       t00=aa[j];
       t01=aa[j+1];
       t10=aa[j+1+BLOCK];
       for (k = 0; k < BLOCK; ++k) {
-	double multiplier = work[k];
-	double a0 = aUnder2[k * BLOCK];
-	double a1 = aUnder2[1 + k * BLOCK];
-	double x0 = a0 * multiplier;
-	double x1 = a1 * multiplier;
+	longDouble multiplier = work[k];
+	longDouble a0 = aUnder2[k * BLOCK];
+	longDouble a1 = aUnder2[1 + k * BLOCK];
+	longDouble x0 = a0 * multiplier;
+	longDouble x1 = a1 * multiplier;
         t00 -= a0 * x0;
         t01 -= a1 * x0;
         t10 -= a1 * x1;
@@ -960,9 +962,9 @@ void ClpCholeskyDense::recTriLeaf(double * aUnder, double * aTri,
         t10=aa[i+1];
         t11=aa[i+1+BLOCK];
         for (k = 0; k < BLOCK; ++k) {
-	  double multiplier = work[k];
-	  double a0 = aUnder2[k * BLOCK]*multiplier;
-	  double a1 = aUnder2[1 + k * BLOCK]*multiplier;
+	  longDouble multiplier = work[k];
+	  longDouble a0 = aUnder2[k * BLOCK]*multiplier;
+	  longDouble a1 = aUnder2[1 + k * BLOCK]*multiplier;
           t00 -= aUnder[i + k * BLOCK] * a0;
           t01 -= aUnder[i + k * BLOCK] * a1;
           t10 -= aUnder[i + 1 + k * BLOCK] * a0;
@@ -982,7 +984,7 @@ void ClpCholeskyDense::recTriLeaf(double * aUnder, double * aTri,
       for (i=j;i< nUnder;i++) {
         t00=aa[i];
         for (k = 0; k < BLOCK; ++k) {
-	  double multiplier = work[k];
+	  longDouble multiplier = work[k];
           t00 -= aUnder[i + k * BLOCK] * aUnder[j + k * BLOCK]*multiplier;
         }
         aa[i]=t00;
@@ -997,8 +999,8 @@ void ClpCholeskyDense::recTriLeaf(double * aUnder, double * aTri,
    nUnderK is number of rows in kBlock
 */
 void 
-ClpCholeskyDense::recRecLeaf(double * above, 
-			     double * aUnder, double *aOther, double * diagonal, double * work,
+ClpCholeskyDense::recRecLeaf(longDouble * above, 
+			     longDouble * aUnder, longDouble *aOther, longDouble * diagonal, longDouble * work,
 			     int nUnder)
 {
 #ifdef POS_DEBUG
@@ -1014,35 +1016,35 @@ ClpCholeskyDense::recRecLeaf(double * above,
   assert (diagonal==diagonal_+ica*BLOCK);
 #endif
   int i, j, k;
-  double * aa;
+  longDouble * aa;
 #if BLOCK==16
   aa = aOther-4*BLOCK;
   if (nUnder==BLOCK) {
     for (j = 0; j < BLOCK; j +=4) {
       aa+=4*BLOCK;
       for (i=0;i< BLOCK;i+=4) {
-	double t00=aa[i+0+0*BLOCK];
-	double t10=aa[i+0+1*BLOCK];
-	double t20=aa[i+0+2*BLOCK];
-	double t30=aa[i+0+3*BLOCK];
-	double t01=aa[i+1+0*BLOCK];
-	double t11=aa[i+1+1*BLOCK];
-	double t21=aa[i+1+2*BLOCK];
-	double t31=aa[i+1+3*BLOCK];
-	double t02=aa[i+2+0*BLOCK];
-	double t12=aa[i+2+1*BLOCK];
-	double t22=aa[i+2+2*BLOCK];
-	double t32=aa[i+2+3*BLOCK];
-	double t03=aa[i+3+0*BLOCK];
-	double t13=aa[i+3+1*BLOCK];
-	double t23=aa[i+3+2*BLOCK];
-	double t33=aa[i+3+3*BLOCK];
+	longDouble t00=aa[i+0+0*BLOCK];
+	longDouble t10=aa[i+0+1*BLOCK];
+	longDouble t20=aa[i+0+2*BLOCK];
+	longDouble t30=aa[i+0+3*BLOCK];
+	longDouble t01=aa[i+1+0*BLOCK];
+	longDouble t11=aa[i+1+1*BLOCK];
+	longDouble t21=aa[i+1+2*BLOCK];
+	longDouble t31=aa[i+1+3*BLOCK];
+	longDouble t02=aa[i+2+0*BLOCK];
+	longDouble t12=aa[i+2+1*BLOCK];
+	longDouble t22=aa[i+2+2*BLOCK];
+	longDouble t32=aa[i+2+3*BLOCK];
+	longDouble t03=aa[i+3+0*BLOCK];
+	longDouble t13=aa[i+3+1*BLOCK];
+	longDouble t23=aa[i+3+2*BLOCK];
+	longDouble t33=aa[i+3+3*BLOCK];
 	for (k=0;k<BLOCK;k++) {
-	  double multiplier = work[k];
-          double a00=aUnder[i+0+k*BLOCK]*multiplier;
-          double a01=aUnder[i+1+k*BLOCK]*multiplier;
-          double a02=aUnder[i+2+k*BLOCK]*multiplier;
-          double a03=aUnder[i+3+k*BLOCK]*multiplier;
+	  longDouble multiplier = work[k];
+          longDouble a00=aUnder[i+0+k*BLOCK]*multiplier;
+          longDouble a01=aUnder[i+1+k*BLOCK]*multiplier;
+          longDouble a02=aUnder[i+2+k*BLOCK]*multiplier;
+          longDouble a03=aUnder[i+3+k*BLOCK]*multiplier;
           t00 -= a00 * above[j + 0 + k * BLOCK];
           t10 -= a00 * above[j + 1 + k * BLOCK];
           t20 -= a00 * above[j + 2 + k * BLOCK];
@@ -1084,18 +1086,18 @@ ClpCholeskyDense::recRecLeaf(double * above,
     for (j = 0; j < BLOCK; j +=4) {
       aa+=4*BLOCK;
       for (i=0;i< n;i+=2) {
-	double t00=aa[i+0*BLOCK];
-	double t10=aa[i+1*BLOCK];
-	double t20=aa[i+2*BLOCK];
-	double t30=aa[i+3*BLOCK];
-	double t01=aa[i+1+0*BLOCK];
-	double t11=aa[i+1+1*BLOCK];
-	double t21=aa[i+1+2*BLOCK];
-	double t31=aa[i+1+3*BLOCK];
+	longDouble t00=aa[i+0*BLOCK];
+	longDouble t10=aa[i+1*BLOCK];
+	longDouble t20=aa[i+2*BLOCK];
+	longDouble t30=aa[i+3*BLOCK];
+	longDouble t01=aa[i+1+0*BLOCK];
+	longDouble t11=aa[i+1+1*BLOCK];
+	longDouble t21=aa[i+1+2*BLOCK];
+	longDouble t31=aa[i+1+3*BLOCK];
 	for (k=0;k<BLOCK;k++) {
-	  double multiplier = work[k];
-          double a00=aUnder[i+k*BLOCK]*multiplier;
-          double a01=aUnder[i+1+k*BLOCK]*multiplier;
+	  longDouble multiplier = work[k];
+          longDouble a00=aUnder[i+k*BLOCK]*multiplier;
+          longDouble a01=aUnder[i+1+k*BLOCK]*multiplier;
           t00 -= a00 * above[j + 0 + k * BLOCK];
           t10 -= a00 * above[j + 1 + k * BLOCK];
           t20 -= a00 * above[j + 2 + k * BLOCK];
@@ -1115,11 +1117,11 @@ ClpCholeskyDense::recRecLeaf(double * above,
 	aa[i+1+3*BLOCK]=t31;
       }
       if (odd) {
-	double t0=aa[n+0*BLOCK];
-	double t1=aa[n+1*BLOCK];
-	double t2=aa[n+2*BLOCK];
-	double t3=aa[n+3*BLOCK];
-	double a0;
+	longDouble t0=aa[n+0*BLOCK];
+	longDouble t1=aa[n+1*BLOCK];
+	longDouble t2=aa[n+2*BLOCK];
+	longDouble t3=aa[n+3*BLOCK];
+	longDouble a0;
 	for (k=0;k<BLOCK;k++) {
           a0=aUnder[n+k*BLOCK]*work[k];
           t0 -= a0 * above[j + 0 + k * BLOCK];
@@ -1139,9 +1141,9 @@ ClpCholeskyDense::recRecLeaf(double * above,
   for (j = 0; j < BLOCK; j ++) {
     aa+=BLOCK;
     for (i=0;i< nUnder;i++) {
-      double t00=aa[i+0*BLOCK];
+      longDouble t00=aa[i+0*BLOCK];
       for (k=0;k<BLOCK;k++) {
-	double a00=aUnder[i+k*BLOCK]*work[k];
+	longDouble a00=aUnder[i+k*BLOCK]*work[k];
 	t00 -= a00 * above[j + k * BLOCK];
       }
       aa[i]=t00;
@@ -1156,14 +1158,14 @@ ClpCholeskyDense::solve (double * region)
 #ifdef CHOL_COMPARE
   double * region2=NULL;
   if (numberRows_<200) {
-    double * xx = sparseFactor_;
-    double * yy = diagonal_;
+    longDouble * xx = sparseFactor_;
+    longDouble * yy = diagonal_;
     diagonal_ = sparseFactor_ + 40000;
     sparseFactor_=diagonal_ + numberRows_;
     region2 = ClpCopyOfArray(region,numberRows_);
     int iRow,iColumn;
     int addOffset=numberRows_-1;
-    double * work = sparseFactor_-1;
+    longDouble * work = sparseFactor_-1;
     for (iColumn=0;iColumn<numberRows_;iColumn++) {
       double value = region2[iColumn];
       for (iRow=iColumn+1;iRow<numberRows_;iRow++)
@@ -1183,15 +1185,15 @@ ClpCholeskyDense::solve (double * region)
     diagonal_=yy;
   }
 #endif
-  //double * xx = sparseFactor_;
-  //double * yy = diagonal_;
+  //longDouble * xx = sparseFactor_;
+  //longDouble * yy = diagonal_;
   //diagonal_ = sparseFactor_ + 40000;
   //sparseFactor_=diagonal_ + numberRows_;
   int numberBlocks = (numberRows_+BLOCK-1)>>BLOCKSHIFT;
   // later align on boundary
-  double * a = sparseFactor_+BLOCKSQ*numberBlocks;
+  longDouble * a = sparseFactor_+BLOCKSQ*numberBlocks;
   int iBlock;
-  double * aa = a;
+  longDouble * aa = a;
   int iColumn;
   for (iBlock=0;iBlock<numberBlocks;iBlock++) {
     int nChunk;
@@ -1256,10 +1258,10 @@ ClpCholeskyDense::solve (double * region)
 }
 // Forward part of solve 1
 void 
-ClpCholeskyDense::solveF1(double * a,int n,double * region)
+ClpCholeskyDense::solveF1(longDouble * a,int n,double * region)
 {
   int j, k;
-  double t00;
+  longDouble t00;
   for (j = 0; j < n; j ++) {
     t00 = region[j];
     for (k = 0; k < j; ++k) {
@@ -1271,16 +1273,16 @@ ClpCholeskyDense::solveF1(double * a,int n,double * region)
 }
 // Forward part of solve 2
 void 
-ClpCholeskyDense::solveF2(double * a,int n,double * region, double * region2)
+ClpCholeskyDense::solveF2(longDouble * a,int n,double * region, double * region2)
 {
   int j, k;
 #if BLOCK==16
   if (n==BLOCK) {
     for (k = 0; k < BLOCK; k+=4) {
-      double t0 = region2[0];
-      double t1 = region2[1];
-      double t2 = region2[2];
-      double t3 = region2[3];
+      longDouble t0 = region2[0];
+      longDouble t1 = region2[1];
+      longDouble t2 = region2[2];
+      longDouble t3 = region2[3];
       t0 -= region[0] * a[0 + 0 * BLOCK];
       t1 -= region[0] * a[1 + 0 * BLOCK];
       t2 -= region[0] * a[2 + 0 * BLOCK];
@@ -1371,7 +1373,7 @@ ClpCholeskyDense::solveF2(double * a,int n,double * region, double * region2)
   } else {
 #endif
     for (k = 0; k < n; ++k) {
-      double t00 = region2[k];
+      longDouble t00 = region2[k];
       for (j = 0; j < BLOCK; j ++) {
         t00 -= region[j] * a[k + j * BLOCK];
       }
@@ -1383,10 +1385,10 @@ ClpCholeskyDense::solveF2(double * a,int n,double * region, double * region2)
 }
 // Backward part of solve 1
 void 
-ClpCholeskyDense::solveB1(double * a,int n,double * region)
+ClpCholeskyDense::solveB1(longDouble * a,int n,double * region)
 {
   int j, k;
-  double t00;
+  longDouble t00;
   for (j = n-1; j >=0; j --) {
     t00 = region[j];
     for (k = j+1; k < n; ++k) {
@@ -1398,16 +1400,16 @@ ClpCholeskyDense::solveB1(double * a,int n,double * region)
 }
 // Backward part of solve 2
 void 
-ClpCholeskyDense::solveB2(double * a,int n,double * region, double * region2)
+ClpCholeskyDense::solveB2(longDouble * a,int n,double * region, double * region2)
 {
   int j, k;
 #if BLOCK==16
   if (n==BLOCK) {
     for (j = 0; j < BLOCK; j +=4) {
-      double t0 = region[0];
-      double t1 = region[1];
-      double t2 = region[2];
-      double t3 = region[3];
+      longDouble t0 = region[0];
+      longDouble t1 = region[1];
+      longDouble t2 = region[2];
+      longDouble t3 = region[3];
       t0 -= region2[0] * a[0 + 0*BLOCK];
       t1 -= region2[0] * a[0 + 1*BLOCK];
       t2 -= region2[0] * a[0 + 2*BLOCK];
@@ -1499,7 +1501,643 @@ ClpCholeskyDense::solveB2(double * a,int n,double * region, double * region2)
   } else {
 #endif
     for (j = 0; j < BLOCK; j ++) {
-      double t00 = region[j];
+      longDouble t00 = region[j];
+      for (k = 0; k < n; ++k) {
+        t00 -= region2[k] * a[k + j * BLOCK];
+      }
+      region[j] = t00;
+    }
+#if BLOCK==16
+  }
+#endif
+}
+/* Uses factorization to solve. */
+void 
+ClpCholeskyDense::solveLong (longDouble * region) 
+{
+  int numberBlocks = (numberRows_+BLOCK-1)>>BLOCKSHIFT;
+  // later align on boundary
+  longDouble * a = sparseFactor_+BLOCKSQ*numberBlocks;
+  int iBlock;
+  longDouble * aa = a;
+  int iColumn;
+  for (iBlock=0;iBlock<numberBlocks;iBlock++) {
+    int nChunk;
+    int jBlock;
+    int iDo = iBlock*BLOCK;
+    int base=iDo;
+    if (iDo+BLOCK>numberRows_) {
+      nChunk=numberRows_-iDo;
+    } else {
+      nChunk=BLOCK;
+    }
+    solveF1Long(aa,nChunk,region+iDo);
+    for (jBlock=iBlock+1;jBlock<numberBlocks;jBlock++) {
+      base+=BLOCK;
+      aa+=BLOCKSQ;
+      if (base+BLOCK>numberRows_) {
+	nChunk=numberRows_-base;
+      } else {
+	nChunk=BLOCK;
+      }
+      solveF2Long(aa,nChunk,region+iDo,region+base);
+    }
+    aa+=BLOCKSQ;
+  }
+  // do diagonal outside
+  for (iColumn=0;iColumn<numberRows_;iColumn++) 
+    region[iColumn] *= diagonal_[iColumn];
+  int offset=((numberBlocks*(numberBlocks+1))>>1);
+  aa = a+number_entries(offset-1);
+  int lBase=(numberBlocks-1)*BLOCK;
+  for (iBlock=numberBlocks-1;iBlock>=0;iBlock--) {
+    int nChunk;
+    int jBlock;
+    int triBase=iBlock*BLOCK;
+    int iBase=lBase;
+    for (jBlock=iBlock+1;jBlock<numberBlocks;jBlock++) {
+      if (iBase+BLOCK>numberRows_) {
+	nChunk=numberRows_-iBase;
+      } else {
+	nChunk=BLOCK;
+      }
+      solveB2Long(aa,nChunk,region+triBase,region+iBase);
+      iBase-=BLOCK;
+      aa-=BLOCKSQ;
+    }
+    if (triBase+BLOCK>numberRows_) {
+      nChunk=numberRows_-triBase;
+    } else {
+      nChunk=BLOCK;
+    }
+    solveB1Long(aa,nChunk,region+triBase);
+    aa-=BLOCKSQ;
+  }
+}
+// Forward part of solve 1
+void 
+ClpCholeskyDense::solveF1Long(longDouble * a,int n,longDouble * region)
+{
+  int j, k;
+  longDouble t00;
+  for (j = 0; j < n; j ++) {
+    t00 = region[j];
+    for (k = 0; k < j; ++k) {
+      t00 -= region[k] * a[j + k * BLOCK];
+    }
+    //t00*=a[j + j * BLOCK];
+    region[j] = t00;
+  }
+}
+// Forward part of solve 2
+void 
+ClpCholeskyDense::solveF2Long(longDouble * a,int n,longDouble * region, longDouble * region2)
+{
+  int j, k;
+#if BLOCK==16
+  if (n==BLOCK) {
+    for (k = 0; k < BLOCK; k+=4) {
+      longDouble t0 = region2[0];
+      longDouble t1 = region2[1];
+      longDouble t2 = region2[2];
+      longDouble t3 = region2[3];
+      t0 -= region[0] * a[0 + 0 * BLOCK];
+      t1 -= region[0] * a[1 + 0 * BLOCK];
+      t2 -= region[0] * a[2 + 0 * BLOCK];
+      t3 -= region[0] * a[3 + 0 * BLOCK];
+
+      t0 -= region[1] * a[0 + 1 * BLOCK];
+      t1 -= region[1] * a[1 + 1 * BLOCK];
+      t2 -= region[1] * a[2 + 1 * BLOCK];
+      t3 -= region[1] * a[3 + 1 * BLOCK];
+
+      t0 -= region[2] * a[0 + 2 * BLOCK];
+      t1 -= region[2] * a[1 + 2 * BLOCK];
+      t2 -= region[2] * a[2 + 2 * BLOCK];
+      t3 -= region[2] * a[3 + 2 * BLOCK];
+
+      t0 -= region[3] * a[0 + 3 * BLOCK];
+      t1 -= region[3] * a[1 + 3 * BLOCK];
+      t2 -= region[3] * a[2 + 3 * BLOCK];
+      t3 -= region[3] * a[3 + 3 * BLOCK];
+
+      t0 -= region[4] * a[0 + 4 * BLOCK];
+      t1 -= region[4] * a[1 + 4 * BLOCK];
+      t2 -= region[4] * a[2 + 4 * BLOCK];
+      t3 -= region[4] * a[3 + 4 * BLOCK];
+
+      t0 -= region[5] * a[0 + 5 * BLOCK];
+      t1 -= region[5] * a[1 + 5 * BLOCK];
+      t2 -= region[5] * a[2 + 5 * BLOCK];
+      t3 -= region[5] * a[3 + 5 * BLOCK];
+
+      t0 -= region[6] * a[0 + 6 * BLOCK];
+      t1 -= region[6] * a[1 + 6 * BLOCK];
+      t2 -= region[6] * a[2 + 6 * BLOCK];
+      t3 -= region[6] * a[3 + 6 * BLOCK];
+
+      t0 -= region[7] * a[0 + 7 * BLOCK];
+      t1 -= region[7] * a[1 + 7 * BLOCK];
+      t2 -= region[7] * a[2 + 7 * BLOCK];
+      t3 -= region[7] * a[3 + 7 * BLOCK];
+#if BLOCK>8
+      t0 -= region[8] * a[0 + 8 * BLOCK];
+      t1 -= region[8] * a[1 + 8 * BLOCK];
+      t2 -= region[8] * a[2 + 8 * BLOCK];
+      t3 -= region[8] * a[3 + 8 * BLOCK];
+
+      t0 -= region[9] * a[0 + 9 * BLOCK];
+      t1 -= region[9] * a[1 + 9 * BLOCK];
+      t2 -= region[9] * a[2 + 9 * BLOCK];
+      t3 -= region[9] * a[3 + 9 * BLOCK];
+
+      t0 -= region[10] * a[0 + 10 * BLOCK];
+      t1 -= region[10] * a[1 + 10 * BLOCK];
+      t2 -= region[10] * a[2 + 10 * BLOCK];
+      t3 -= region[10] * a[3 + 10 * BLOCK];
+
+      t0 -= region[11] * a[0 + 11 * BLOCK];
+      t1 -= region[11] * a[1 + 11 * BLOCK];
+      t2 -= region[11] * a[2 + 11 * BLOCK];
+      t3 -= region[11] * a[3 + 11 * BLOCK];
+
+      t0 -= region[12] * a[0 + 12 * BLOCK];
+      t1 -= region[12] * a[1 + 12 * BLOCK];
+      t2 -= region[12] * a[2 + 12 * BLOCK];
+      t3 -= region[12] * a[3 + 12 * BLOCK];
+
+      t0 -= region[13] * a[0 + 13 * BLOCK];
+      t1 -= region[13] * a[1 + 13 * BLOCK];
+      t2 -= region[13] * a[2 + 13 * BLOCK];
+      t3 -= region[13] * a[3 + 13 * BLOCK];
+
+      t0 -= region[14] * a[0 + 14 * BLOCK];
+      t1 -= region[14] * a[1 + 14 * BLOCK];
+      t2 -= region[14] * a[2 + 14 * BLOCK];
+      t3 -= region[14] * a[3 + 14 * BLOCK];
+
+      t0 -= region[15] * a[0 + 15 * BLOCK];
+      t1 -= region[15] * a[1 + 15 * BLOCK];
+      t2 -= region[15] * a[2 + 15 * BLOCK];
+      t3 -= region[15] * a[3 + 15 * BLOCK];
+#endif
+      region2[0] = t0;
+      region2[1] = t1;
+      region2[2] = t2;
+      region2[3] = t3;
+      region2+=4;
+      a+=4;
+    }
+  } else {
+#endif
+    for (k = 0; k < n; ++k) {
+      longDouble t00 = region2[k];
+      for (j = 0; j < BLOCK; j ++) {
+        t00 -= region[j] * a[k + j * BLOCK];
+      }
+      region2[k] = t00;
+    }
+#if BLOCK==16
+  }
+#endif
+}
+// Backward part of solve 1
+void 
+ClpCholeskyDense::solveB1Long(longDouble * a,int n,longDouble * region)
+{
+  int j, k;
+  longDouble t00;
+  for (j = n-1; j >=0; j --) {
+    t00 = region[j];
+    for (k = j+1; k < n; ++k) {
+      t00 -= region[k] * a[k + j * BLOCK];
+    }
+    //t00*=a[j + j * BLOCK];
+    region[j] = t00;
+  }
+}
+// Backward part of solve 2
+void 
+ClpCholeskyDense::solveB2Long(longDouble * a,int n,longDouble * region, longDouble * region2)
+{
+  int j, k;
+#if BLOCK==16
+  if (n==BLOCK) {
+    for (j = 0; j < BLOCK; j +=4) {
+      longDouble t0 = region[0];
+      longDouble t1 = region[1];
+      longDouble t2 = region[2];
+      longDouble t3 = region[3];
+      t0 -= region2[0] * a[0 + 0*BLOCK];
+      t1 -= region2[0] * a[0 + 1*BLOCK];
+      t2 -= region2[0] * a[0 + 2*BLOCK];
+      t3 -= region2[0] * a[0 + 3*BLOCK];
+
+      t0 -= region2[1] * a[1 + 0*BLOCK];
+      t1 -= region2[1] * a[1 + 1*BLOCK];
+      t2 -= region2[1] * a[1 + 2*BLOCK];
+      t3 -= region2[1] * a[1 + 3*BLOCK];
+
+      t0 -= region2[2] * a[2 + 0*BLOCK];
+      t1 -= region2[2] * a[2 + 1*BLOCK];
+      t2 -= region2[2] * a[2 + 2*BLOCK];
+      t3 -= region2[2] * a[2 + 3*BLOCK];
+
+      t0 -= region2[3] * a[3 + 0*BLOCK];
+      t1 -= region2[3] * a[3 + 1*BLOCK];
+      t2 -= region2[3] * a[3 + 2*BLOCK];
+      t3 -= region2[3] * a[3 + 3*BLOCK];
+
+      t0 -= region2[4] * a[4 + 0*BLOCK];
+      t1 -= region2[4] * a[4 + 1*BLOCK];
+      t2 -= region2[4] * a[4 + 2*BLOCK];
+      t3 -= region2[4] * a[4 + 3*BLOCK];
+
+      t0 -= region2[5] * a[5 + 0*BLOCK];
+      t1 -= region2[5] * a[5 + 1*BLOCK];
+      t2 -= region2[5] * a[5 + 2*BLOCK];
+      t3 -= region2[5] * a[5 + 3*BLOCK];
+
+      t0 -= region2[6] * a[6 + 0*BLOCK];
+      t1 -= region2[6] * a[6 + 1*BLOCK];
+      t2 -= region2[6] * a[6 + 2*BLOCK];
+      t3 -= region2[6] * a[6 + 3*BLOCK];
+
+      t0 -= region2[7] * a[7 + 0*BLOCK];
+      t1 -= region2[7] * a[7 + 1*BLOCK];
+      t2 -= region2[7] * a[7 + 2*BLOCK];
+      t3 -= region2[7] * a[7 + 3*BLOCK];
+#if BLOCK>8
+
+      t0 -= region2[8] * a[8 + 0*BLOCK];
+      t1 -= region2[8] * a[8 + 1*BLOCK];
+      t2 -= region2[8] * a[8 + 2*BLOCK];
+      t3 -= region2[8] * a[8 + 3*BLOCK];
+
+      t0 -= region2[9] * a[9 + 0*BLOCK];
+      t1 -= region2[9] * a[9 + 1*BLOCK];
+      t2 -= region2[9] * a[9 + 2*BLOCK];
+      t3 -= region2[9] * a[9 + 3*BLOCK];
+
+      t0 -= region2[10] * a[10 + 0*BLOCK];
+      t1 -= region2[10] * a[10 + 1*BLOCK];
+      t2 -= region2[10] * a[10 + 2*BLOCK];
+      t3 -= region2[10] * a[10 + 3*BLOCK];
+
+      t0 -= region2[11] * a[11 + 0*BLOCK];
+      t1 -= region2[11] * a[11 + 1*BLOCK];
+      t2 -= region2[11] * a[11 + 2*BLOCK];
+      t3 -= region2[11] * a[11 + 3*BLOCK];
+
+      t0 -= region2[12] * a[12 + 0*BLOCK];
+      t1 -= region2[12] * a[12 + 1*BLOCK];
+      t2 -= region2[12] * a[12 + 2*BLOCK];
+      t3 -= region2[12] * a[12 + 3*BLOCK];
+
+      t0 -= region2[13] * a[13 + 0*BLOCK];
+      t1 -= region2[13] * a[13 + 1*BLOCK];
+      t2 -= region2[13] * a[13 + 2*BLOCK];
+      t3 -= region2[13] * a[13 + 3*BLOCK];
+
+      t0 -= region2[14] * a[14 + 0*BLOCK];
+      t1 -= region2[14] * a[14 + 1*BLOCK];
+      t2 -= region2[14] * a[14 + 2*BLOCK];
+      t3 -= region2[14] * a[14 + 3*BLOCK];
+
+      t0 -= region2[15] * a[15 + 0*BLOCK];
+      t1 -= region2[15] * a[15 + 1*BLOCK];
+      t2 -= region2[15] * a[15 + 2*BLOCK];
+      t3 -= region2[15] * a[15 + 3*BLOCK];
+#endif
+      region[0] = t0;
+      region[1] = t1;
+      region[2] = t2;
+      region[3] = t3;
+      a+=4*BLOCK;
+      region+=4;
+    }
+  } else {
+#endif
+    for (j = 0; j < BLOCK; j ++) {
+      longDouble t00 = region[j];
+      for (k = 0; k < n; ++k) {
+        t00 -= region2[k] * a[k + j * BLOCK];
+      }
+      region[j] = t00;
+    }
+#if BLOCK==16
+  }
+#endif
+}
+/* Uses factorization to solve. */
+void 
+ClpCholeskyDense::solveLongWork (longWork * region) 
+{
+  int numberBlocks = (numberRows_+BLOCK-1)>>BLOCKSHIFT;
+  // later align on boundary
+  longDouble * a = sparseFactor_+BLOCKSQ*numberBlocks;
+  int iBlock;
+  longDouble * aa = a;
+  int iColumn;
+  for (iBlock=0;iBlock<numberBlocks;iBlock++) {
+    int nChunk;
+    int jBlock;
+    int iDo = iBlock*BLOCK;
+    int base=iDo;
+    if (iDo+BLOCK>numberRows_) {
+      nChunk=numberRows_-iDo;
+    } else {
+      nChunk=BLOCK;
+    }
+    solveF1LongWork(aa,nChunk,region+iDo);
+    for (jBlock=iBlock+1;jBlock<numberBlocks;jBlock++) {
+      base+=BLOCK;
+      aa+=BLOCKSQ;
+      if (base+BLOCK>numberRows_) {
+	nChunk=numberRows_-base;
+      } else {
+	nChunk=BLOCK;
+      }
+      solveF2LongWork(aa,nChunk,region+iDo,region+base);
+    }
+    aa+=BLOCKSQ;
+  }
+  // do diagonal outside
+  for (iColumn=0;iColumn<numberRows_;iColumn++) 
+    region[iColumn] *= diagonal_[iColumn];
+  int offset=((numberBlocks*(numberBlocks+1))>>1);
+  aa = a+number_entries(offset-1);
+  int lBase=(numberBlocks-1)*BLOCK;
+  for (iBlock=numberBlocks-1;iBlock>=0;iBlock--) {
+    int nChunk;
+    int jBlock;
+    int triBase=iBlock*BLOCK;
+    int iBase=lBase;
+    for (jBlock=iBlock+1;jBlock<numberBlocks;jBlock++) {
+      if (iBase+BLOCK>numberRows_) {
+	nChunk=numberRows_-iBase;
+      } else {
+	nChunk=BLOCK;
+      }
+      solveB2LongWork(aa,nChunk,region+triBase,region+iBase);
+      iBase-=BLOCK;
+      aa-=BLOCKSQ;
+    }
+    if (triBase+BLOCK>numberRows_) {
+      nChunk=numberRows_-triBase;
+    } else {
+      nChunk=BLOCK;
+    }
+    solveB1LongWork(aa,nChunk,region+triBase);
+    aa-=BLOCKSQ;
+  }
+}
+// Forward part of solve 1
+void 
+ClpCholeskyDense::solveF1LongWork(longDouble * a,int n,longWork * region)
+{
+  int j, k;
+  longWork t00;
+  for (j = 0; j < n; j ++) {
+    t00 = region[j];
+    for (k = 0; k < j; ++k) {
+      t00 -= region[k] * a[j + k * BLOCK];
+    }
+    //t00*=a[j + j * BLOCK];
+    region[j] = t00;
+  }
+}
+// Forward part of solve 2
+void 
+ClpCholeskyDense::solveF2LongWork(longDouble * a,int n,longWork * region, longWork * region2)
+{
+  int j, k;
+#if BLOCK==16
+  if (n==BLOCK) {
+    for (k = 0; k < BLOCK; k+=4) {
+      longWork t0 = region2[0];
+      longWork t1 = region2[1];
+      longWork t2 = region2[2];
+      longWork t3 = region2[3];
+      t0 -= region[0] * a[0 + 0 * BLOCK];
+      t1 -= region[0] * a[1 + 0 * BLOCK];
+      t2 -= region[0] * a[2 + 0 * BLOCK];
+      t3 -= region[0] * a[3 + 0 * BLOCK];
+
+      t0 -= region[1] * a[0 + 1 * BLOCK];
+      t1 -= region[1] * a[1 + 1 * BLOCK];
+      t2 -= region[1] * a[2 + 1 * BLOCK];
+      t3 -= region[1] * a[3 + 1 * BLOCK];
+
+      t0 -= region[2] * a[0 + 2 * BLOCK];
+      t1 -= region[2] * a[1 + 2 * BLOCK];
+      t2 -= region[2] * a[2 + 2 * BLOCK];
+      t3 -= region[2] * a[3 + 2 * BLOCK];
+
+      t0 -= region[3] * a[0 + 3 * BLOCK];
+      t1 -= region[3] * a[1 + 3 * BLOCK];
+      t2 -= region[3] * a[2 + 3 * BLOCK];
+      t3 -= region[3] * a[3 + 3 * BLOCK];
+
+      t0 -= region[4] * a[0 + 4 * BLOCK];
+      t1 -= region[4] * a[1 + 4 * BLOCK];
+      t2 -= region[4] * a[2 + 4 * BLOCK];
+      t3 -= region[4] * a[3 + 4 * BLOCK];
+
+      t0 -= region[5] * a[0 + 5 * BLOCK];
+      t1 -= region[5] * a[1 + 5 * BLOCK];
+      t2 -= region[5] * a[2 + 5 * BLOCK];
+      t3 -= region[5] * a[3 + 5 * BLOCK];
+
+      t0 -= region[6] * a[0 + 6 * BLOCK];
+      t1 -= region[6] * a[1 + 6 * BLOCK];
+      t2 -= region[6] * a[2 + 6 * BLOCK];
+      t3 -= region[6] * a[3 + 6 * BLOCK];
+
+      t0 -= region[7] * a[0 + 7 * BLOCK];
+      t1 -= region[7] * a[1 + 7 * BLOCK];
+      t2 -= region[7] * a[2 + 7 * BLOCK];
+      t3 -= region[7] * a[3 + 7 * BLOCK];
+#if BLOCK>8
+      t0 -= region[8] * a[0 + 8 * BLOCK];
+      t1 -= region[8] * a[1 + 8 * BLOCK];
+      t2 -= region[8] * a[2 + 8 * BLOCK];
+      t3 -= region[8] * a[3 + 8 * BLOCK];
+
+      t0 -= region[9] * a[0 + 9 * BLOCK];
+      t1 -= region[9] * a[1 + 9 * BLOCK];
+      t2 -= region[9] * a[2 + 9 * BLOCK];
+      t3 -= region[9] * a[3 + 9 * BLOCK];
+
+      t0 -= region[10] * a[0 + 10 * BLOCK];
+      t1 -= region[10] * a[1 + 10 * BLOCK];
+      t2 -= region[10] * a[2 + 10 * BLOCK];
+      t3 -= region[10] * a[3 + 10 * BLOCK];
+
+      t0 -= region[11] * a[0 + 11 * BLOCK];
+      t1 -= region[11] * a[1 + 11 * BLOCK];
+      t2 -= region[11] * a[2 + 11 * BLOCK];
+      t3 -= region[11] * a[3 + 11 * BLOCK];
+
+      t0 -= region[12] * a[0 + 12 * BLOCK];
+      t1 -= region[12] * a[1 + 12 * BLOCK];
+      t2 -= region[12] * a[2 + 12 * BLOCK];
+      t3 -= region[12] * a[3 + 12 * BLOCK];
+
+      t0 -= region[13] * a[0 + 13 * BLOCK];
+      t1 -= region[13] * a[1 + 13 * BLOCK];
+      t2 -= region[13] * a[2 + 13 * BLOCK];
+      t3 -= region[13] * a[3 + 13 * BLOCK];
+
+      t0 -= region[14] * a[0 + 14 * BLOCK];
+      t1 -= region[14] * a[1 + 14 * BLOCK];
+      t2 -= region[14] * a[2 + 14 * BLOCK];
+      t3 -= region[14] * a[3 + 14 * BLOCK];
+
+      t0 -= region[15] * a[0 + 15 * BLOCK];
+      t1 -= region[15] * a[1 + 15 * BLOCK];
+      t2 -= region[15] * a[2 + 15 * BLOCK];
+      t3 -= region[15] * a[3 + 15 * BLOCK];
+#endif
+      region2[0] = t0;
+      region2[1] = t1;
+      region2[2] = t2;
+      region2[3] = t3;
+      region2+=4;
+      a+=4;
+    }
+  } else {
+#endif
+    for (k = 0; k < n; ++k) {
+      longWork t00 = region2[k];
+      for (j = 0; j < BLOCK; j ++) {
+        t00 -= region[j] * a[k + j * BLOCK];
+      }
+      region2[k] = t00;
+    }
+#if BLOCK==16
+  }
+#endif
+}
+// Backward part of solve 1
+void 
+ClpCholeskyDense::solveB1LongWork(longDouble * a,int n,longWork * region)
+{
+  int j, k;
+  longWork t00;
+  for (j = n-1; j >=0; j --) {
+    t00 = region[j];
+    for (k = j+1; k < n; ++k) {
+      t00 -= region[k] * a[k + j * BLOCK];
+    }
+    //t00*=a[j + j * BLOCK];
+    region[j] = t00;
+  }
+}
+// Backward part of solve 2
+void 
+ClpCholeskyDense::solveB2LongWork(longDouble * a,int n,longWork * region, longWork * region2)
+{
+  int j, k;
+#if BLOCK==16
+  if (n==BLOCK) {
+    for (j = 0; j < BLOCK; j +=4) {
+      longWork t0 = region[0];
+      longWork t1 = region[1];
+      longWork t2 = region[2];
+      longWork t3 = region[3];
+      t0 -= region2[0] * a[0 + 0*BLOCK];
+      t1 -= region2[0] * a[0 + 1*BLOCK];
+      t2 -= region2[0] * a[0 + 2*BLOCK];
+      t3 -= region2[0] * a[0 + 3*BLOCK];
+
+      t0 -= region2[1] * a[1 + 0*BLOCK];
+      t1 -= region2[1] * a[1 + 1*BLOCK];
+      t2 -= region2[1] * a[1 + 2*BLOCK];
+      t3 -= region2[1] * a[1 + 3*BLOCK];
+
+      t0 -= region2[2] * a[2 + 0*BLOCK];
+      t1 -= region2[2] * a[2 + 1*BLOCK];
+      t2 -= region2[2] * a[2 + 2*BLOCK];
+      t3 -= region2[2] * a[2 + 3*BLOCK];
+
+      t0 -= region2[3] * a[3 + 0*BLOCK];
+      t1 -= region2[3] * a[3 + 1*BLOCK];
+      t2 -= region2[3] * a[3 + 2*BLOCK];
+      t3 -= region2[3] * a[3 + 3*BLOCK];
+
+      t0 -= region2[4] * a[4 + 0*BLOCK];
+      t1 -= region2[4] * a[4 + 1*BLOCK];
+      t2 -= region2[4] * a[4 + 2*BLOCK];
+      t3 -= region2[4] * a[4 + 3*BLOCK];
+
+      t0 -= region2[5] * a[5 + 0*BLOCK];
+      t1 -= region2[5] * a[5 + 1*BLOCK];
+      t2 -= region2[5] * a[5 + 2*BLOCK];
+      t3 -= region2[5] * a[5 + 3*BLOCK];
+
+      t0 -= region2[6] * a[6 + 0*BLOCK];
+      t1 -= region2[6] * a[6 + 1*BLOCK];
+      t2 -= region2[6] * a[6 + 2*BLOCK];
+      t3 -= region2[6] * a[6 + 3*BLOCK];
+
+      t0 -= region2[7] * a[7 + 0*BLOCK];
+      t1 -= region2[7] * a[7 + 1*BLOCK];
+      t2 -= region2[7] * a[7 + 2*BLOCK];
+      t3 -= region2[7] * a[7 + 3*BLOCK];
+#if BLOCK>8
+
+      t0 -= region2[8] * a[8 + 0*BLOCK];
+      t1 -= region2[8] * a[8 + 1*BLOCK];
+      t2 -= region2[8] * a[8 + 2*BLOCK];
+      t3 -= region2[8] * a[8 + 3*BLOCK];
+
+      t0 -= region2[9] * a[9 + 0*BLOCK];
+      t1 -= region2[9] * a[9 + 1*BLOCK];
+      t2 -= region2[9] * a[9 + 2*BLOCK];
+      t3 -= region2[9] * a[9 + 3*BLOCK];
+
+      t0 -= region2[10] * a[10 + 0*BLOCK];
+      t1 -= region2[10] * a[10 + 1*BLOCK];
+      t2 -= region2[10] * a[10 + 2*BLOCK];
+      t3 -= region2[10] * a[10 + 3*BLOCK];
+
+      t0 -= region2[11] * a[11 + 0*BLOCK];
+      t1 -= region2[11] * a[11 + 1*BLOCK];
+      t2 -= region2[11] * a[11 + 2*BLOCK];
+      t3 -= region2[11] * a[11 + 3*BLOCK];
+
+      t0 -= region2[12] * a[12 + 0*BLOCK];
+      t1 -= region2[12] * a[12 + 1*BLOCK];
+      t2 -= region2[12] * a[12 + 2*BLOCK];
+      t3 -= region2[12] * a[12 + 3*BLOCK];
+
+      t0 -= region2[13] * a[13 + 0*BLOCK];
+      t1 -= region2[13] * a[13 + 1*BLOCK];
+      t2 -= region2[13] * a[13 + 2*BLOCK];
+      t3 -= region2[13] * a[13 + 3*BLOCK];
+
+      t0 -= region2[14] * a[14 + 0*BLOCK];
+      t1 -= region2[14] * a[14 + 1*BLOCK];
+      t2 -= region2[14] * a[14 + 2*BLOCK];
+      t3 -= region2[14] * a[14 + 3*BLOCK];
+
+      t0 -= region2[15] * a[15 + 0*BLOCK];
+      t1 -= region2[15] * a[15 + 1*BLOCK];
+      t2 -= region2[15] * a[15 + 2*BLOCK];
+      t3 -= region2[15] * a[15 + 3*BLOCK];
+#endif
+      region[0] = t0;
+      region[1] = t1;
+      region[2] = t2;
+      region[3] = t3;
+      a+=4*BLOCK;
+      region+=4;
+    }
+  } else {
+#endif
+    for (j = 0; j < BLOCK; j ++) {
+      longWork t00 = region[j];
       for (k = 0; k < n; ++k) {
         t00 -= region2[k] * a[k + j * BLOCK];
       }

@@ -12,7 +12,7 @@ int main (int argc, const char *argv[])
   // Keep names
   if (argc<2) {
     //status=model.readMps("/home/forrest/data/ken-18.mps.gz",true);
-    status=model.readMps("small.mps",true);
+    status=model.readMps("../../Mps/Netlib/czprob.mps",true);
   } else {
     status=model.readMps(argv[1],true);
   }
@@ -49,6 +49,10 @@ int main (int argc, const char *argv[])
   } else if (numberRows==1503) {
     // degen3
     for (iRow=0;iRow<561;iRow++)
+      rowBlock[iRow]=-1;
+  } else if (numberRows==929) {
+    // czprob
+    for (iRow=0;iRow<39;iRow++)
       rowBlock[iRow]=-1;
   }
   CoinPackedMatrix * matrix = model.matrix();
@@ -183,7 +187,7 @@ int main (int argc, const char *argv[])
   numberRow2=0;
   numberColumn2=0;
   for (iRow=0;iRow<numberRows;iRow++)
-    if (rowBlock[iRow]==-1)
+    if (rowBlock[iRow]<0)
       whichRow[numberRow2++]=iRow;
   for (iColumn=0;iColumn<numberColumns;iColumn++)
     if (columnBlock[iColumn]==-1)

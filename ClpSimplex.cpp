@@ -3565,10 +3565,15 @@ int ClpSimplex::reducedGradient(int phase)
   return returnCode;
 }
 #include "ClpPredictorCorrector.hpp"
-#ifdef REAL_BARRIER
+#include "ClpCholeskyBase.hpp"
+// Preference is WSSMP, TAUCS, UFL (just ordering) then base
+#if WSSMP_BARRIER
 #include "ClpCholeskyWssmp.hpp"
 #include "ClpCholeskyWssmpKKT.hpp"
-//#include "ClpCholeskyTaucs.hpp"
+#elif UFL_BARRIER
+#include "ClpCholeskyUfl.hpp"
+#elif TAUCS_BARRIER
+#include "ClpCholeskyTaucs.hpp"
 #endif
 #include "ClpPresolve.hpp"
 /* Solves using barrier (assumes you have good cholesky factor code).
@@ -3580,15 +3585,19 @@ ClpSimplex::barrier(bool crossover)
   int savePerturbation=perturbation_;
   ClpInterior barrier;
   barrier.borrowModel(*model2);
-#ifdef REAL_BARRIER
-  // uncomment this if you have Anshul Gupta's wsmp package
+// Preference is WSSMP, UFL, TAUCS then base
+#ifdef WSSMP_BARRIER
   ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp(CoinMax(100,model2->numberRows()/10));
   //ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp();
   //ClpCholeskyWssmpKKT * cholesky = new ClpCholeskyWssmpKKT(CoinMax(100,model2->numberRows()/10));
-  // uncomment this if you have Sivan Toledo's Taucs package
-  //ClpCholeskyTaucs * cholesky = new ClpCholeskyTaucs();
-  barrier.setCholesky(cholesky);
+#elif UFL_BARRIER
+  ClpCholeskyUfl * cholesky = new ClpCholeskyUfl();
+#elif TAUCS_BARRIER
+  ClpCholeskyTaucs * cholesky = new ClpCholeskyTaucs();
+#else
+  ClpCholeskyBase * cholesky = new ClpCholeskyBase();
 #endif
+  barrier.setCholesky(cholesky);
   int numberRows = model2->numberRows();
   int numberColumns = model2->numberColumns();
   int saveMaxIts = model2->maximumIterations();

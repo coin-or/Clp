@@ -5,13 +5,23 @@
 
 #include "CoinPragma.hpp"
 #include "CoinFinite.hpp"
-
+#define CLP_LONG_CHOLESKY 0
+#if CLP_LONG_CHOLESKY>1
+typedef long double longDouble;
+typedef long double longWork;
+#elif CLP_LONG_CHOLESKY==1
+typedef double longDouble;
+typedef long double longWork;
+#else
+typedef double longDouble;
+typedef double longWork;
+#endif
 class ClpInterior;
 
 /** Base class for Clp Cholesky factorization
     Will do better factorization.  very crude ordering
 
-    Derived classes will be using sophisticated methods apart from ClpCholeskyDense
+    Derived classes may be using more sophisticated methods 
 */
 
 class ClpCholeskyDense;
@@ -60,6 +70,12 @@ public:
   /// choleskyCondition.
   inline double choleskyCondition() const 
   {return choleskyCondition_;};
+  /// goDense i.e. use dense factoriaztion if > this (default 0.7).
+  inline double goDense() const 
+  {return goDense_;};
+  /// goDense i.e. use dense factoriaztion if > this (default 0.7).
+  inline void setGoDense(double value)
+  {goDense_=value;};
   /// rank.  Returns rank
   inline int rank() const 
   {return numberRows_-numberRowsDropped_;};
@@ -70,13 +86,13 @@ public:
   inline CoinBigIndex size() const
   { return sizeFactor_;};
   /// Return sparseFactor
-  inline double * sparseFactor() const
+  inline longDouble * sparseFactor() const
   { return sparseFactor_;};
   /// Return diagonal
-  inline double * diagonal() const
+  inline longDouble * diagonal() const
   { return diagonal_;};
   /// Return workDouble
-  inline double * workDouble() const
+  inline longDouble * workDouble() const
   { return workDouble_;};
   /// If KKT on
   inline bool kkt() const
@@ -84,6 +100,18 @@ public:
   /// Set KKT
   inline void setKKT(bool yesNo)
   { doKKT_ = yesNo;};
+  /// Set integer parameter
+  inline void setIntegerParameter(int i,int value)
+  { integerParameters_[i]=value;};
+  /// get integer parameter
+  inline int getIntegerParameter(int i)
+  { return integerParameters_[i];};
+  /// Set double parameter
+  inline void setDoubleParameter(int i,double value)
+  { doubleParameters_[i]=value;};
+  /// get double parameter
+  inline double getDoubleParameter(int i)
+  { return doubleParameters_[i];};
    //@}
   
   
@@ -134,8 +162,11 @@ protected:
   If 1 and 2 then diagonal has sqrt of inverse otherwise inverse
   */
   void solve(double * region, int type);
+  void solveLong(longDouble * region, int type);
   /// Forms ADAT - returns nonzero if not enough memory
   int preOrder(bool lowerTriangular, bool includeDiagonal, bool doKKT);
+  /// Updates dense part (broken out for profiling)
+  void updateDense(longDouble * d, longDouble * work, int * first);
   //@}
     
 protected:
@@ -146,8 +177,8 @@ protected:
   int type_;
   /// Doing full KKT (only used if default symbolic and factorization)
   bool doKKT_;
-  /// zeroTolerance.
-  double zeroTolerance_;
+  /// Go dense at this fraction
+  double goDense_;
   /// choleskyCondition.
   double choleskyCondition_;
   /// model.
@@ -167,7 +198,7 @@ protected:
   /// numberRowsDropped.  Number of rows gone
   int numberRowsDropped_;
   /// sparseFactor.
-  double * sparseFactor_;
+  longDouble * sparseFactor_;
   /// choleskyStart - element starts
   CoinBigIndex * choleskyStart_;
   /// choleskyRow (can be shorter than sparsefactor)
@@ -175,9 +206,9 @@ protected:
   /// Index starts
   CoinBigIndex * indexStart_;
   /// Diagonal
-  double * diagonal_;
+  longDouble * diagonal_;
   /// double work array
-  double * workDouble_;
+  longDouble * workDouble_;
   /// link array
   int * link_;
   // Integer work array
@@ -199,10 +230,10 @@ protected:
   /// Dense indicators
   char * whichDense_;
   /// Dense columns (updated)
-  double * denseColumn_;
+  longDouble * denseColumn_;
   /// Dense cholesky
   ClpCholeskyDense * dense_;
-  /// Dense threshold
+  /// Dense threshold (for taking out of Cholesky)
   int denseThreshold_;
   //@}
 };
