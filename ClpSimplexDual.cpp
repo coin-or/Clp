@@ -722,7 +722,6 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
 			    objectiveChange);
 	// which will change basic solution
 	if (nswapped) {
-	  assert (candidate<0);
 	  factorization_->updateColumn(rowArray_[3],rowArray_[2],false);
 	  dualRowPivot_->updatePrimalSolution(rowArray_[2],
 					      1.0,objectiveChange);
