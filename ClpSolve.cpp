@@ -28,6 +28,10 @@
 // Allow for interrupts
 // But is this threadsafe ? (so switched off by option
 #include <signal.h>
+#ifdef __sun
+// signal.h doesn't have this typedef on Sun systems
+typedef void (*sighandler_t)(int) ;
+#endif
 static ClpSimplex * currentModel = NULL;
 static void signal_handler(int whichSignal)
 {
