@@ -199,7 +199,7 @@ k
     } else {
       // feasible - was it infeasible - if so set tiny
       if (infeas[lastPivotRow])
-	infeas[lastPivotRow] = 1.0e-100;
+	infeas[lastPivotRow] = COIN_INDEXED_REALLY_TINY_ELEMENT;
     }
     number = infeasible_->getNumElements();
   }
@@ -581,7 +581,7 @@ ClpDualRowSteepest::updatePrimalSolution(
       } else {
 	// feasible - was it infeasible - if so set tiny
 	if (infeas[iRow])
-	  infeas[iRow] = 1.0e-100;
+	  infeas[iRow] = COIN_INDEXED_REALLY_TINY_ELEMENT;
       }
     }
   } else {
@@ -640,7 +640,7 @@ ClpDualRowSteepest::updatePrimalSolution(
       } else {
 	// feasible - was it infeasible - if so set tiny
 	if (infeas[iRow])
-	  infeas[iRow] = 1.0e-100;
+	  infeas[iRow] = COIN_INDEXED_REALLY_TINY_ELEMENT;
       }
       work[iRow]=0.0;
     }
