@@ -2931,6 +2931,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
       } else {
 	unflagVariables=false;
 	changeMade_=false;
+	secondaryStatus_ = 1; // and say probably infeasible
       }
     }
   }
