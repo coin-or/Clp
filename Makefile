@@ -25,7 +25,9 @@ install library: libdepend
 
 libdepend:
 	(cd $(CoinDir)/Coin && $(MAKE) install)
-
+ifneq ($(filter COIN_libVol,$(CoinLibsDefined)),)
+	(cd $(CoinDir)/Vol && $(MAKE) install)
+endif 
 unitTest: 
 	(cd Test && ${MAKE} unitTest)
 

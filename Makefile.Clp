@@ -27,6 +27,7 @@ LIBSRC += ClpPackedMatrix.cpp
 LIBSRC += ClpPlusMinusOneMatrix.cpp
 LIBSRC += ClpDummyMatrix.cpp
 LIBSRC += ClpGubMatrix.cpp
+LIBSRC += ClpGubDynamicMatrix.cpp
 LIBSRC += ClpDynamicMatrix.cpp
 LIBSRC += ClpDynamicExampleMatrix.cpp
 LIBSRC += ClpPrimalColumnDantzig.cpp
@@ -72,10 +73,10 @@ ifeq ($(OptLevel),-O2)
 #     CXXFLAGS += -DNDEBUG
 endif
 
-export ExtraIncDir  := ${CoinIncDir} ${zlibIncDir} ${bzlibIncDir}
-export ExtraLibDir  := ${CoinLibDir} ${zlibLibDir} ${bzlibLibDir}
-export ExtraLibName := ${CoinLibName} ${zlibLibName} ${bzlibLibName}
-export ExtraDefine  := ${CoinDefine} ${zlibDefine} ${bzlibDefine}
+export ExtraIncDir  := ${CoinIncDir} ${zlibIncDir} ${bzlibIncDir} $(VolIncDir)
+export ExtraLibDir  := ${CoinLibDir} ${zlibLibDir} ${bzlibLibDir} $(VolLibDir)
+export ExtraLibName := ${CoinLibName} ${zlibLibName} ${bzlibLibName} $(VolLibName)
+export ExtraDefine  := ${CoinDefine} ${zlibDefine} ${bzlibDefine} $(VolDefine)
 
 export LibType OptLevel LIBNAME LIBSRC
 
