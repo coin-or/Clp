@@ -506,8 +506,10 @@ ClpSimplex::initialSolve(ClpSolve & options)
       abort();
     }
   }
+#ifdef COIN_HAS_VOL
   // Save number of idiot
   int saveDoIdiot=doIdiot;
+#endif
   // Just do this number of passes in Sprint
   int maxSprintPass=100;
 
