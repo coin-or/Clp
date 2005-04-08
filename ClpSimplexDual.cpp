@@ -1053,6 +1053,7 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
         if (!givenDuals&&ifValuesPass) {
 	  handler_->message(CLP_END_VALUES_PASS,messages_)
 	    <<numberIterations_;
+          whatNext=1;
         }
 	//if (numberIterations_==1890)
         //whatNext=1;
