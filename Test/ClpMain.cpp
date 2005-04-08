@@ -14,7 +14,7 @@
 #include "CoinPragma.hpp"
 #include "CoinHelperFunctions.hpp"
 // History since 1.0 at end
-#define CLPVERSION "1.00.02"
+#define CLPVERSION "1.00.03"
 
 #include "CoinMpsIO.hpp"
 
@@ -54,7 +54,7 @@ static double totalTime=0.0;
 #endif
 
 int mainTest (int argc, const char *argv[],int algorithm,
-	      ClpSimplex empty, bool doPresolve,int doIdiot);
+	      ClpSimplex empty, bool doPresolve,int switchOff);
 // Returns next valid field
 int CbcOrClpRead_mode=1;
 FILE * CbcOrClpReadCommand=stdin;
@@ -1108,6 +1108,7 @@ int main (int argc, const char *argv[])
 	  case NETLIB_EITHER:
 	  case NETLIB_BARRIER:
 	  case NETLIB_PRIMAL:
+	  case NETLIB_TUNE:
 	    {
 	      // create fields for unitTest
 	      const char * fields[4];
@@ -1121,20 +1122,27 @@ int main (int argc, const char *argv[])
 	      }
 	      int algorithm;
 	      if (type==NETLIB_DUAL) {
-		std::cerr<<"Doing netlib with dual agorithm"<<std::endl;
+		std::cerr<<"Doing netlib with dual algorithm"<<std::endl;
 		algorithm =0;
 	      } else if (type==NETLIB_BARRIER) {
-		std::cerr<<"Doing netlib with barrier agorithm"<<std::endl;
+		std::cerr<<"Doing netlib with barrier algorithm"<<std::endl;
 		algorithm =2;
 	      } else if (type==NETLIB_EITHER) {
-		std::cerr<<"Doing netlib with dual or primal agorithm"<<std::endl;
+		std::cerr<<"Doing netlib with dual or primal algorithm"<<std::endl;
 		algorithm =3;
+	      } else if (type==NETLIB_TUNE) {
+		std::cerr<<"Doing netlib with best algorithm!"<<std::endl;
+		algorithm =5;
+                // uncomment next to get active tuning
+                //algorithm=6;
 	      } else {
 		std::cerr<<"Doing netlib with primal agorithm"<<std::endl;
 		algorithm=1;
 	      }
+              int specialOptions = models[iModel].specialOptions();
+              models[iModel].setSpecialOptions(0);
 	      mainTest(nFields,fields,algorithm,models[iModel],
-		       (preSolve!=0),doIdiot);
+		       (preSolve!=0),specialOptions);
 	    }
 	    break;
 	  case UNITTEST:
@@ -1148,8 +1156,12 @@ int main (int argc, const char *argv[])
 		fields[2]=directory.c_str();
 		nFields=3;
 	      }
-	      mainTest(nFields,fields,false,models[iModel],(preSolve!=0),
-		       false);
+              int specialOptions = models[iModel].specialOptions();
+              models[iModel].setSpecialOptions(0);
+              int algorithm=-1;
+              if (models[iModel].numberRows())
+                algorithm=7;
+	      mainTest(nFields,fields,algorithm,models[iModel],(preSolve!=0),specialOptions);
 	    }
 	    break;
 	  case FAKEBOUND:
@@ -1380,4 +1392,6 @@ clp watson.mps -\nscaling off\nprimalsimplex"
   Also modifications to make faster with sbb (I hope I haven't broken anything).
   1.00.02 March 21 2005.  Redid ClpNonLinearCost to save memory also redid
   createRim to try and improve cache characteristics.
+  1.00.03 April 8 2005.  Added Volume algorithm as crash and made code more
+  robust on testing.  Also added "either" and "tune" algorithm.
  */

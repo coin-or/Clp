@@ -1290,7 +1290,7 @@ give cuts (although in this executable they are limited as to number of variable
 #ifdef COIN_USE_CLP
   parameters[numberParameters++]=
     CbcOrClpParam("idiot!Crash","Whether to try idiot crash",
-		  -1,200,IDIOT);
+		  -1,999999,IDIOT);
   parameters[numberParameters-1].setLonghelp
     (
      "This is a type of 'crash' which works well on some homogeneous problems.\
@@ -1491,6 +1491,16 @@ The user can set options before e.g. clp -presolve off -netlib"
     (
      "This exercises the unit test for clp and then solves the netlib test set using primal.\
 The user can set options before e.g. clp -presolve off -netlibp"
+     ); 
+  parameters[numberParameters++]=
+    CbcOrClpParam("netlibT!une","Solve entire netlib test set with 'best' algorithm",
+		  NETLIB_TUNE);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "This exercises the unit test for clp and then solves the netlib test set using whatever \
+works best.  I know this is cheating but it also stresses the code better by doing a \
+mixture of stuff.  The best algorithm was chosen on a Linux ThinkPad using native cholesky \
+with University of Florida ordering."
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("network","Tries to make network matrix",
@@ -1784,7 +1794,7 @@ the main thing is to think about which cuts to apply.  .. expand ..."
 		  "on",SPARSEFACTOR,0,false);
   parameters[numberParameters-1].append("off");
   parameters[numberParameters++]=
-    CbcOrClpParam("special!Options","Dubious options for Simplex - see Clpsimplex.hpp",
+    CbcOrClpParam("special!Options","Dubious options for Simplex - see ClpSimplex.hpp",
 		  0,INT_MAX,SPECIALOPTIONS,false);
   parameters[numberParameters++]=
     CbcOrClpParam("sprint!Crash","Whether to try sprint crash",
