@@ -147,7 +147,7 @@ public:
 
       If givenPi not NULL then in values pass
    */
-  int whileIterating(double * & givenPi); 
+  int whileIterating(double * & givenPi,int ifValuesPass); 
   /** The duals are updated by the given arrays.
       Returns number of infeasibilities.
       After rowArray and columnArray will just have those which 
@@ -245,7 +245,8 @@ public:
 	    - 2 restoring from saved 
   */
   void statusOfProblemInDual(int & lastCleaned, int type,
-			     double * givenDjs, ClpDataSave & saveData);
+			     double * givenDjs, ClpDataSave & saveData,
+                             int ifValuesPass);
   /// Perturbs problem (method depends on perturbation())
   void perturb();
   /** Fast iterations.  Misses out a lot of initialization.

@@ -27,7 +27,8 @@ public:
     usePrimalorSprint,
     useBarrier,
     useBarrierNoCross,
-    automatic
+    automatic,
+    notImplemented
   };
   enum PresolveType {
     presolveOn=0,

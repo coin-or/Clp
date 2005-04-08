@@ -368,10 +368,11 @@ int ClpSimplexDual::dual (int ifValuesPass , int startFinishOptions)
 	}
       }
       // may factorize, checks if problem finished
-      statusOfProblemInDual(lastCleaned,factorType,saveDuals,data);
+      statusOfProblemInDual(lastCleaned,factorType,saveDuals,data,
+                            ifValuesPass);
       // If values pass then do easy ones on first time
       if (ifValuesPass&&
-	  progress_->lastIterationNumber(0)<0) {
+	  progress_->lastIterationNumber(0)<0&&saveDuals) {
 	doEasyOnesInValuesPass(saveDuals);
       }
       
@@ -412,7 +413,7 @@ int ClpSimplexDual::dual (int ifValuesPass , int startFinishOptions)
 	}
       }
       // Do iterations
-      whileIterating(saveDuals);
+      whileIterating(saveDuals,ifValuesPass);
     }
   }
 
@@ -435,7 +436,7 @@ int ClpSimplexDual::dual (int ifValuesPass , int startFinishOptions)
    +3 max iterations 
  */
 int
-ClpSimplexDual::whileIterating(double * & givenDuals)
+ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
 {
 #ifdef CLP_DEBUG
   int debugIteration=-1;
@@ -745,8 +746,6 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
 	  delete [] givenDuals;
 	  candidate=-2; // -2 signals end 
 	  givenDuals=NULL;
-	  handler_->message(CLP_END_VALUES_PASS,messages_)
-	    <<numberIterations_;
 	  candidateList=NULL;
 	  for (iRow=0;iRow<numberRows_;iRow++) {
 	    int iPivot=pivotVariable_[iRow];
@@ -1051,6 +1050,10 @@ ClpSimplexDual::whileIterating(double * & givenDuals)
 	if (numberIterations_>210567)
 	  exit(77);
 #endif
+        if (!givenDuals&&ifValuesPass) {
+	  handler_->message(CLP_END_VALUES_PASS,messages_)
+	    <<numberIterations_;
+        }
 	//if (numberIterations_==1890)
         //whatNext=1;
 	//if (numberIterations_>2000)
@@ -2683,7 +2686,8 @@ ClpSimplexDual::checkUnbounded(CoinIndexedVector * ray,
 /* Checks if finished.  Updates status */
 void 
 ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
-                                      double * givenDuals, ClpDataSave & saveData)
+                                      double * givenDuals, ClpDataSave & saveData,
+                                      int ifValuesPass)
 {
   bool normalType=true;
   int numberPivots = factorization_->pivots();
@@ -2864,7 +2868,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
     double thisObj = objectiveValue_;
     double lastObj = progress_->lastObjective(0);
     if (lastObj>thisObj+1.0e-3*CoinMax(fabs(thisObj),fabs(lastObj))+1.0
-	&&givenDuals==NULL) {
+	&&!ifValuesPass) {
       int maxFactor = factorization_->maximumPivots();
       if (maxFactor>10&&numberPivots>1) {
 	//if (forceFactorization_<0)
@@ -4230,7 +4234,7 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
     matrix_->refresh(this);
     // may factorize, checks if problem finished
     // should be able to speed this up on first time
-    statusOfProblemInDual(lastCleaned,factorType,NULL,data);
+    statusOfProblemInDual(lastCleaned,factorType,NULL,data,0);
 
     // Say good factorization
     factorType=1;
@@ -4238,7 +4242,7 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
     // Do iterations
     if (problemStatus_<0) {
       double * givenPi=NULL;
-      returnCode = whileIterating(givenPi);
+      returnCode = whileIterating(givenPi,0);
       if ((!alwaysFinish&&returnCode<1)||returnCode==3) {
 	double limit = 0.0;
 	getDblParam(ClpDualObjectiveLimit, limit);

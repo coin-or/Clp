@@ -42,6 +42,288 @@
 #ifndef FAST_BARRIER
 static int numberBarrier=0;
 #endif
+#ifdef COIN_HAS_VOL
+#include "VolVolume.hpp"
+#include "CoinHelperFunctions.hpp"
+#include "CoinPackedMatrix.hpp"
+#include "CoinMpsIO.hpp"
+
+//#############################################################################
+
+class lpHook : public VOL_user_hooks {
+private:
+   lpHook(const lpHook&);
+   lpHook& operator=(const lpHook&);
+private:
+   /// Pointer to dense vector of structural variable upper bounds
+   double  *colupper_;
+   /// Pointer to dense vector of structural variable lower bounds
+   double  *collower_;
+   /// Pointer to dense vector of objective coefficients
+   double  *objcoeffs_;
+   /// Pointer to dense vector of right hand sides
+   double  *rhs_;
+   /// Pointer to dense vector of senses
+   char    *sense_;
+
+   /// The problem matrix in a row ordered form
+   CoinPackedMatrix rowMatrix_;
+   /// The problem matrix in a column ordered form
+   CoinPackedMatrix colMatrix_;
+
+public:
+   lpHook(double* clb, double* cub, double* obj,
+	  double* rhs, char* sense, const CoinPackedMatrix& mat);
+   virtual ~lpHook();
+   
+public:
+   // for all hooks: return value of -1 means that volume should quit
+   /** compute reduced costs    
+       @param u (IN) the dual variables
+       @param rc (OUT) the reduced cost with respect to the dual values
+   */
+   virtual int compute_rc(const VOL_dvector& u, VOL_dvector& rc);
+
+   /** Solve the subproblem for the subgradient step.
+       @param dual (IN) the dual variables
+       @param rc (IN) the reduced cost with respect to the dual values
+       @param lcost (OUT) the lagrangean cost with respect to the dual values
+       @param x (OUT) the primal result of solving the subproblem
+       @param v (OUT) b-Ax for the relaxed constraints
+       @param pcost (OUT) the primal objective value of <code>x</code>
+   */
+   virtual int solve_subproblem(const VOL_dvector& dual, const VOL_dvector& rc,
+				double& lcost, VOL_dvector& x, VOL_dvector& v,
+				double& pcost);
+   /** Starting from the primal vector x, run a heuristic to produce
+       an integer solution  
+       @param x (IN) the primal vector
+       @param heur_val (OUT) the value of the integer solution (return 
+       <code>DBL_MAX</code> here if no feas sol was found 
+   */
+   virtual int heuristics(const VOL_problem& p, 
+			  const VOL_dvector& x, double& heur_val) {
+      return 0;
+   }
+};
+ 
+//#############################################################################
+
+lpHook::lpHook(double* clb, double* cub, double* obj,
+	       double* rhs, char* sense,
+	       const CoinPackedMatrix& mat)
+{
+   colupper_ = cub;
+   collower_ = clb;
+   objcoeffs_ = obj;
+   rhs_ = rhs;
+   sense_ = sense;
+   assert (mat.isColOrdered());
+   colMatrix_.copyOf(mat);
+   rowMatrix_.reverseOrderedCopyOf(mat);
+}
+
+//-----------------------------------------------------------------------------
+
+lpHook::~lpHook()
+{
+}
+
+//#############################################################################
+
+int
+lpHook::compute_rc(const VOL_dvector& u, VOL_dvector& rc)
+{
+   rowMatrix_.transposeTimes(u.v, rc.v);
+   const int psize = rowMatrix_.getNumCols();
+
+   for (int i = 0; i < psize; ++i)
+      rc[i] = objcoeffs_[i] - rc[i];
+   return 0;
+}
+
+//-----------------------------------------------------------------------------
+
+int
+lpHook::solve_subproblem(const VOL_dvector& dual, const VOL_dvector& rc,
+			 double& lcost, VOL_dvector& x, VOL_dvector& v,
+			 double& pcost)
+{
+   int i;
+   const int psize = x.size();
+   const int dsize = v.size();
+
+   // compute the lagrangean solution corresponding to the reduced costs
+   for (i = 0; i < psize; ++i) 
+      x[i] = (rc[i] >= 0.0) ? collower_[i] : colupper_[i];
+
+   // compute the lagrangean value (rhs*dual + primal*rc)
+   lcost = 0;
+   for (i = 0; i < dsize; ++i)
+      lcost += rhs_[i] * dual[i];
+   for (i = 0; i < psize; ++i)
+      lcost += x[i] * rc[i];
+
+   // compute the rhs - lhs 
+   colMatrix_.times(x.v, v.v);
+   for (i = 0; i < dsize; ++i)
+      v[i] = rhs_[i] - v[i];
+
+   // compute the lagrangean primal objective
+   pcost = 0;
+   for (i = 0; i < psize; ++i)
+      pcost += x[i] * objcoeffs_[i];
+
+   return 0;
+}
+
+//#############################################################################
+/** A quick inlined function to convert from lb/ub style constraint
+    definition to sense/rhs/range style */
+inline void
+convertBoundToSense(const double lower, const double upper,
+					char& sense, double& right,
+					double& range) 
+{
+  range = 0.0;
+  if (lower > -1.0e20) {
+    if (upper < 1.0e20) {
+      right = upper;
+      if (upper==lower) {
+        sense = 'E';
+      } else {
+        sense = 'R';
+        range = upper - lower;
+      }
+    } else {
+      sense = 'G';
+      right = lower;
+    }
+  } else {
+    if (upper < 1.0e20) {
+      sense = 'L';
+      right = upper;
+    } else {
+      sense = 'N';
+      right = 0.0;
+    }
+  }
+}
+
+static int
+solveWithVolume(ClpSimplex * model, int numberPasses, int doIdiot)
+{
+   VOL_problem volprob;
+   volprob.parm.gap_rel_precision=0.00001;
+   volprob.parm.maxsgriters=3000;
+   if(numberPasses>3000) {
+     volprob.parm.maxsgriters=numberPasses;
+     volprob.parm.primal_abs_precision=0.0;
+     volprob.parm.minimum_rel_ascent=0.00001;
+   } else if (doIdiot>0) {
+     volprob.parm.maxsgriters=doIdiot;
+   }
+   if (model->logLevel()<2) 
+     volprob.parm.printflag=0;
+   else
+     volprob.parm.printflag=3;
+   const CoinPackedMatrix* mat = model->matrix();
+   int psize = model->numberColumns();
+   int dsize = model->numberRows();
+   char * sense = new char[dsize];
+   double * rhs = new double [dsize];
+
+   // Set the lb/ub on the duals
+   volprob.dsize = dsize;
+   volprob.psize = psize;
+   volprob.dual_lb.allocate(dsize);
+   volprob.dual_ub.allocate(dsize);
+   int i;
+   const double * rowLower = model->rowLower();
+   const double * rowUpper = model->rowUpper();
+   for (i = 0; i < dsize; ++i) {
+     double range;
+     convertBoundToSense(rowLower[i],rowUpper[i],
+                         sense[i],rhs[i],range);
+      switch (sense[i]) {
+       case 'E':
+	 volprob.dual_lb[i] = -1.0e31;
+	 volprob.dual_ub[i] = 1.0e31;
+	 break;
+       case 'L':
+	 volprob.dual_lb[i] = -1.0e31;
+	 volprob.dual_ub[i] = 0.0;
+	 break;
+       case 'G':
+	 volprob.dual_lb[i] = 0.0;
+	 volprob.dual_ub[i] = 1.0e31;
+	 break;
+       default:
+	 printf("Volume Algorithm can't work if there is a non ELG row\n");
+	 return 1;
+      }
+   }
+   // Check bounds
+   double * saveLower = model->columnLower();
+   double * saveUpper = model->columnUpper();
+   bool good=true;
+   for (i=0;i<psize;i++) {
+     if (saveLower[i]<-1.0e20||saveUpper[i]>1.0e20) {
+       good=false;
+       break;
+     }
+   }
+   if (!good) {
+     saveLower = CoinCopyOfArray(model->columnLower(),psize);
+     saveUpper = CoinCopyOfArray(model->columnUpper(),psize);
+     for (i=0;i<psize;i++) {
+       if (saveLower[i]<-1.0e20)
+         saveLower[i]=-1.0e20;
+       if(saveUpper[i]>1.0e20) 
+         saveUpper[i]=1.0e20;
+     }
+   }
+   lpHook myHook(saveLower, saveUpper,
+		 model->objective(),
+		 rhs, sense, *mat);
+
+   volprob.solve(myHook, false /* no warmstart */);
+
+   if (saveLower!=model->columnLower()) {
+     delete [] saveLower;
+     delete [] saveUpper;
+   }
+   //------------- extract the solution ---------------------------
+
+   //printf("Best lagrangean value: %f\n", volprob.value);
+
+   double avg = 0;
+   for (i = 0; i < dsize; ++i) {
+      switch (sense[i]) {
+       case 'E':
+	 avg += CoinAbs(volprob.viol[i]);
+	 break;
+       case 'L':
+	 if (volprob.viol[i] < 0)
+	    avg +=  (-volprob.viol[i]);
+	 break;
+       case 'G':
+	 if (volprob.viol[i] > 0)
+	    avg +=  volprob.viol[i];
+	 break;
+      }
+   }
+      
+   //printf("Average primal constraint violation: %f\n", avg/dsize);
+
+   // volprob.dsol contains the dual solution (dual feasible)
+   // volprob.psol contains the primal solution
+   //              (NOT necessarily primal feasible)
+   CoinMemcpyN(volprob.dsol.v,dsize,model->dualRowSolution());
+   CoinMemcpyN(volprob.psol.v,psize,model->primalColumnSolution());
+   return 0;
+}
+#endif
 
 //#############################################################################
 // Allow for interrupts
@@ -76,6 +358,7 @@ int
 ClpSimplex::initialSolve(ClpSolve & options)
 {
   ClpSolve::SolveType method=options.getSolveType();
+  //ClpSolve::SolveType originalMethod=method;
   ClpSolve::PresolveType presolve = options.getPresolveType();
   int saveMaxIterations = maximumIterations();
   int finalStatus=-1;
@@ -141,6 +424,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
       break;
     case 2:
       doIdiot=1;
+      if (options.getExtraInfo(1)>0)
+	doIdiot = options.getExtraInfo(1);
       doCrash=0;
       doSprint=0;
       break;
@@ -221,6 +506,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
       abort();
     }
   }
+  // Save number of idiot
+  int saveDoIdiot=doIdiot;
   // Just do this number of passes in Sprint
   int maxSprintPass=100;
 
@@ -483,8 +770,42 @@ ClpSimplex::initialSolve(ClpSolve & options)
     }
   }
   if (method==ClpSolve::useDual) {
-    // switch off idiot for now
+    double * saveLower=NULL;
+    double * saveUpper=NULL;
+    if (presolve==ClpSolve::presolveOn) {
+      int numberInfeasibilities = model2->tightenPrimalBounds();
+      if (numberInfeasibilities) {
+	handler_->message(CLP_INFEASIBLE,messages_)
+	  <<CoinMessageEol;
+	model2 = this;
+	presolve=ClpSolve::presolveOff;
+      }
+    } else if (numberRows_+numberColumns_>5000) {
+      // do anyway
+      saveLower = new double[numberRows_+numberColumns_];
+      CoinMemcpyN(model2->columnLower(),numberColumns_,saveLower);
+      CoinMemcpyN(model2->rowLower(),numberRows_,saveLower+numberColumns_);
+      saveUpper = new double[numberRows_+numberColumns_];
+      CoinMemcpyN(model2->columnUpper(),numberColumns_,saveUpper);
+      CoinMemcpyN(model2->rowUpper(),numberRows_,saveUpper+numberColumns_);
+      int numberInfeasibilities = model2->tightenPrimalBounds();
+      if (numberInfeasibilities) {
+	handler_->message(CLP_INFEASIBLE,messages_)
+	  <<CoinMessageEol;
+        CoinMemcpyN(saveLower,numberColumns_,model2->columnLower());
+        CoinMemcpyN(saveLower+numberColumns_,numberRows_,model2->rowLower());
+        delete [] saveLower;
+        saveLower=NULL;
+        CoinMemcpyN(saveUpper,numberColumns_,model2->columnUpper());
+        CoinMemcpyN(saveUpper+numberColumns_,numberRows_,model2->rowUpper());
+        delete [] saveUpper;
+        saveUpper=NULL;
+      }
+    }
+#ifndef COIN_HAS_VOL
+    // switch off idiot and volume for now 
     doIdiot=0;
+#endif
     // pick up number passes
     int nPasses=0;
     int numberNotE=0;
@@ -531,48 +852,24 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	  info.setDropEnoughFeasibility(0.01);
 	}
       }
-      if (nPasses) {
-	info.setReduceIterations(5);
-	doCrash=0;
-	info.crash(nPasses,model2->messageHandler(),model2->messagesPointer());
-	time2 = CoinCpuTime();
-	timeIdiot = time2-timeX;
-	handler_->message(CLP_INTERVAL_TIMING,messages_)
-	  <<"Idiot Crash"<<timeIdiot<<time2-time1
-	  <<CoinMessageEol;
-	timeX=time2;
-      }
-    }
-    double * saveLower=NULL;
-    double * saveUpper=NULL;
-    if (presolve==ClpSolve::presolveOn) {
-      int numberInfeasibilities = model2->tightenPrimalBounds();
-      if (numberInfeasibilities) {
-	handler_->message(CLP_INFEASIBLE,messages_)
-	  <<CoinMessageEol;
-	model2 = this;
-	presolve=ClpSolve::presolveOff;
-      }
-    } else if (numberRows_+numberColumns_>5000) {
-      // do anyway
-      saveLower = new double[numberRows_+numberColumns_];
-      CoinMemcpyN(model2->columnLower(),numberColumns_,saveLower);
-      CoinMemcpyN(model2->rowLower(),numberRows_,saveLower+numberColumns_);
-      saveUpper = new double[numberRows_+numberColumns_];
-      CoinMemcpyN(model2->columnUpper(),numberColumns_,saveUpper);
-      CoinMemcpyN(model2->rowUpper(),numberRows_,saveUpper+numberColumns_);
-      int numberInfeasibilities = model2->tightenPrimalBounds();
-      if (numberInfeasibilities) {
-	handler_->message(CLP_INFEASIBLE,messages_)
-	  <<CoinMessageEol;
-        CoinMemcpyN(saveLower,numberColumns_,model2->columnLower());
-        CoinMemcpyN(saveLower+numberColumns_,numberRows_,model2->rowLower());
-        delete [] saveLower;
-        saveLower=NULL;
-        CoinMemcpyN(saveUpper,numberColumns_,model2->columnUpper());
-        CoinMemcpyN(saveUpper+numberColumns_,numberRows_,model2->rowUpper());
-        delete [] saveUpper;
-        saveUpper=NULL;
+      if (nPasses>20) {
+#ifdef COIN_HAS_VOL
+        int returnCode = solveWithVolume(model2,nPasses,saveDoIdiot);
+        if (!returnCode) {
+          time2 = CoinCpuTime();
+          timeIdiot = time2-timeX;
+          handler_->message(CLP_INTERVAL_TIMING,messages_)
+            <<"Idiot Crash"<<timeIdiot<<time2-time1
+            <<CoinMessageEol;
+          timeX=time2;
+        } else {
+          nPasses=0;
+        }
+#else
+        nPasses=0;
+#endif
+      } else {
+        nPasses=0;
       }
     }
     if (doCrash) {
@@ -614,25 +911,33 @@ ClpSimplex::initialSolve(ClpSolve & options)
       }
       double value2;
       model2->getDblParam(ClpObjOffset,value2);
-      printf("Offset %g %g\n",offset,value2);
-      model2->setRowObjective(pi);
+      //printf("Offset %g %g\n",offset,value2);
+      model2->setDblParam(ClpObjOffset,value2-offset);
+      model2->setPerturbation(51);
+      //model2->setRowObjective(pi);
       // zero out pi
-      memset(pi,0,numberRows*sizeof(double));
+      //memset(pi,0,numberRows*sizeof(double));
       // Could put some in basis - only partially tested
       model2->allSlackBasis(); 
-      model2->factorization()->maximumPivots(200);
+      //model2->factorization()->maximumPivots(200);
       //model2->setLogLevel(63);
       // solve
-      model2->dual(1);
+      model2->dual(0);
+      model2->setDblParam(ClpObjOffset,value2);
       memcpy(model2->objective(),saveObj,numberColumns*sizeof(double));
       // zero out pi
-      memset(pi,0,numberRows*sizeof(double));
-      model2->setRowObjective(pi);
+      //memset(pi,0,numberRows*sizeof(double));
+      //model2->setRowObjective(pi);
       delete [] saveObj;
+      //model2->dual(0);
+      model2->setPerturbation(50);
       model2->primal();
     } else {
       // solve
-      model2->dual(1);
+      model2->setPerturbation(100);
+      model2->dual(2);
+      model2->setPerturbation(50);
+      model2->dual(0);
     }
     if (saveLower) {
       CoinMemcpyN(saveLower,numberColumns_,model2->columnLower());
