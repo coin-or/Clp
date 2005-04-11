@@ -15,7 +15,11 @@ include ${MakefileDir}/Makefile.location
 
 IncDir := ${ClpIncDir} ${CoinIncDir} ${bzlibIncDir} ${zlibIncDir} $(lapackIncDir)
 LibDir := ${ClpLibDir} ${CoinLibDir} ${bzlibLibDir} ${zlibLibDir} $(lapackLibDir) $(GlpkLibDir)
+ifeq ($(VolDefine),COIN_HAS_VOL)
 LibName := ${ClpLibName} ${CoinLibName} ${bzlibLibName} ${zlibLibName} $(lapackLibName) $(readlineLibName) $(GlpkLibName) $(VolLibName)
+else
+LibName := ${ClpLibName} ${CoinLibName} ${bzlibLibName} ${zlibLibName} $(lapackLibName) $(readlineLibName)
+endif
 Define := ${ClpDefine} ${CoinDefine} ${bzlibDefine} ${zlibDefine} $(lapackLibDefine) $(readlineDefine) $(VolDefine)
 
 ##############################################################################
