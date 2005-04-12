@@ -17,6 +17,7 @@
 #define CLPVERSION "1.01.01D"
 
 #include "CoinMpsIO.hpp"
+#include "CoinFileIO.hpp"
 
 #include "ClpFactorization.hpp"
 #include "CoinTime.hpp"
@@ -663,8 +664,8 @@ int main (int argc, const char *argv[])
                            fileName.c_str(),gmplData.c_str());
                   }
 		}
-                bool fileCoinReadableAny(const char * fileName);
-                if (fileCoinReadableAny(fileName.c_str())) {
+                std::string name=fileName;
+                if (fileCoinReadable(name)) {
 		  // can open - lets go for it
 		  canOpen=true;
                   if (gmpl==2) {
