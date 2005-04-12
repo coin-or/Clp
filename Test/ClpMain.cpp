@@ -14,7 +14,7 @@
 #include "CoinPragma.hpp"
 #include "CoinHelperFunctions.hpp"
 // History since 1.0 at end
-#define CLPVERSION "1.00.03"
+#define CLPVERSION "1.01.01"
 
 #include "CoinMpsIO.hpp"
 
@@ -1394,4 +1394,7 @@ clp watson.mps -\nscaling off\nprimalsimplex"
   createRim to try and improve cache characteristics.
   1.00.03 April 8 2005.  Added Volume algorithm as crash and made code more
   robust on testing.  Also added "either" and "tune" algorithm.
+  1.01.01 April 12 2005.  Decided to go to different numbering.  Backups will
+  be last 2 digits while middle 2 are for improvements.  Still take a long 
+  time to get to 2.00.01
  */

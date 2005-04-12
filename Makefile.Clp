@@ -72,7 +72,6 @@ endif
 ifeq ($(OptLevel),-O2)
 #     CXXFLAGS += -DNDEBUG
 endif
-
 export ExtraIncDir  := ${CoinIncDir} ${zlibIncDir} ${bzlibIncDir} $(VolIncDir)
 export ExtraLibDir  := ${CoinLibDir} ${zlibLibDir} ${bzlibLibDir} $(VolLibDir)
 export ExtraLibName := ${CoinLibName} ${zlibLibName} ${bzlibLibName} $(VolLibName)
