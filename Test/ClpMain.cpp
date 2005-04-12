@@ -1597,7 +1597,7 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
     }
   }
   // Basic statistics
-  printf("\n\nProblem has %d rows, %d columns (%d woth objective) and %d elements\n",
+  printf("\n\nProblem has %d rows, %d columns (%d with objective) and %d elements\n",
          numberRows,numberColumns,nObjective,numberElements);
   if (number[0]+number[1]) {
     printf("There are ");
