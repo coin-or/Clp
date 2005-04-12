@@ -460,10 +460,10 @@ ClpGubDynamicMatrix::partialPricing(ClpSimplex * model, double startFraction, do
       if (bestType>0) {
 	// recompute dj and create
 	double value=cost_[bestSequence]-bestDjMod;
-	for (CoinBigIndex j=startColumn_[bestSequence];
-	     j<startColumn_[bestSequence+1];j++) {
-	  int jRow=row_[j];
-	  value -= duals[jRow]*element_[j];
+	for (CoinBigIndex jBigIndex=startColumn_[bestSequence];
+	     jBigIndex<startColumn_[bestSequence+1];jBigIndex++) {
+	  int jRow=row_[jBigIndex];
+	  value -= duals[jRow]*element_[jBigIndex];
 	}
 	double * element =  matrix_->getMutableElements();
 	int * row = matrix_->getMutableIndices();
@@ -1408,8 +1408,8 @@ ClpGubDynamicMatrix::useEffectiveRhs(ClpSimplex * model, bool cheapest)
   rhsOffset_ = new double[numberRows];
   // and redo chains
   memset(mark,0,numberColumns);
-  for (int iColumn=0;iColumn<firstAvailable_;iColumn++) 
-    next_[iColumn]=INT_MAX;
+  for (int iColumnX=0;iColumnX<firstAvailable_;iColumnX++) 
+    next_[iColumnX]=INT_MAX;
   for (i=0;i<numberSets_;i++) {
     keys[i]=INT_MAX;
     int iKey = keyVariable_[i];
@@ -1703,7 +1703,8 @@ ClpGubDynamicMatrix::rhsOffset(ClpSimplex * model,bool forceRefresh,
 	}
 	// and now compute value to use for key
 	ClpSimplex::Status iStatus;
-	for (int iSet=0;iSet<numberSets_;iSet++) {
+  int iSet;
+	for ( iSet=0;iSet<numberSets_;iSet++) {
 	  iColumn = keyVariable_[iSet];
 	  if (iColumn<numberColumns) {
 	    int iSequence = id_[iColumn-firstDynamic_];
@@ -1734,7 +1735,7 @@ ClpGubDynamicMatrix::rhsOffset(ClpSimplex * model,bool forceRefresh,
 	// now do lower and upper bounds on sets
 	// and offset
 	double objectiveOffset = 0.0;
-	for (int iSet=0;iSet<numberSets_;iSet++) {
+	for ( iSet=0;iSet<numberSets_;iSet++) {
 	  iColumn = keyVariable_[iSet];
 	  double shift=0.0;
 	  for (CoinBigIndex j=fullStart_[iSet];j<fullStart_[iSet+1];j++) {
