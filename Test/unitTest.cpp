@@ -425,6 +425,8 @@ int mainTest (int argc, const char *argv[],int algorithm,
     }
 
     double timeTaken =0.0;
+    if( !barrierAvailable)
+      switchOff[0]=1;
   // Loop once for each Mps File
     for (m=0; m<mpsName.size(); m++ ) {
       std::cerr <<"  processing mps file: " <<mpsName[m] 

@@ -1806,6 +1806,15 @@ the main thing is to think about which cuts to apply.  .. expand ..."
  an LP code of that name of the 60's which tried the same tactic (not totally successfully).\
   Cplex calls it 'sifting'.  -1 is automatic choice, 0 is off, n is number of passes"
      ); 
+  parameters[numberParameters++]=
+    CbcOrClpParam("stat!istics","Print some statistics",
+		  STATISTICS);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "This command prints crude statistics for the current model.\
+ If log level >1 then more is printed.\
+ These are for presolved model if presolve on (and unscaled)."
+     );
 #endif
   CbcOrClpParam("stdin","From stdin",
 		STDIN,-1,false);
