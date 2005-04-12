@@ -2163,6 +2163,28 @@ ClpModel::newLanguage(CoinMessages::Language language)
 {
   messages_ = ClpMessage(language);
 }
+bool fileCoinReadableAny(const char * fileName)
+{
+  bool fileCoinReadable(const char * fileName);
+  bool readable = fileCoinReadable(fileName);
+#ifdef COIN_USE_ZLIB
+  if (!readable) {
+    char name[2000];
+    strcpy(name,fileName);
+    strcat(name,".gz");
+    readable = fileCoinReadable(name);
+  }
+#endif
+#ifdef COIN_USE_BZLIB
+  if (!readable) {
+    char name[2000];
+    strcpy(name,fileName);
+    strcat(name,".bz2");
+    readable = fileCoinReadable(name);
+  }
+#endif
+  return readable;
+}
 // Read an mps file from the given filename
 int 
 ClpModel::readMps(const char *fileName,
@@ -2172,11 +2194,8 @@ ClpModel::readMps(const char *fileName,
   if (!strcmp(fileName,"-")||!strcmp(fileName,"stdin")) {
     // stdin
   } else {
-    FILE *fp=fopen(fileName,"r");
-    if (fp) {
-      // can open - lets go for it
-      fclose(fp);
-    } else {
+    bool readable = fileCoinReadableAny(fileName);
+    if (!readable) {
       handler_->message(CLP_UNABLE_OPEN,messages_)
 	<<fileName<<CoinMessageEol;
       return -1;
