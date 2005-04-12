@@ -1787,10 +1787,10 @@ ClpDynamicMatrix::createVariable(ClpSimplex * model, int & bestSequence)
     if (savedBestSequence_>=structuralOffset) {
       // recompute dj and create
       double value=cost_[bestSequence2]-savedBestGubDual_;
-      for (CoinBigIndex j=startColumn_[bestSequence2];
-	   j<startColumn_[bestSequence2+1];j++) {
-	int jRow=row_[j];
-	value -= duals[jRow]*element_[j];
+      for (CoinBigIndex jBigIndex=startColumn_[bestSequence2];
+	   jBigIndex<startColumn_[bestSequence2+1];jBigIndex++) {
+	int jRow=row_[jBigIndex];
+	value -= duals[jRow]*element_[jBigIndex];
       }
       int gubRow = toIndex_[savedBestSet_] + numberStaticRows_;
       double * element =  matrix_->getMutableElements();

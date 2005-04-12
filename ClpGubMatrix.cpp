@@ -3578,7 +3578,8 @@ ClpGubMatrix::rhsOffset(ClpSimplex * model,bool forceRefresh,bool check)
 	if (model->getColumnStatus(iColumn)==ClpSimplex::basic)
 	  solution[iColumn]=0.0;
       }
-      for (int iSet=0;iSet<numberSets_;iSet++) {
+      int iSet;
+      for ( iSet=0;iSet<numberSets_;iSet++) {
 	int iColumn = keyVariable_[iSet];
 	if (iColumn<numberColumns) 
 	  solution[iColumn]=0.0;
@@ -3589,7 +3590,7 @@ ClpGubMatrix::rhsOffset(ClpSimplex * model,bool forceRefresh,bool check)
       const double * columnSolution = model->solutionRegion();
       // and now subtract out non basic
       ClpSimplex::Status iStatus;
-      for (int iSet=0;iSet<numberSets_;iSet++) {
+      for ( iSet=0;iSet<numberSets_;iSet++) {
 	int iColumn = keyVariable_[iSet];
 	if (iColumn<numberColumns) {
 	  double b=0.0;
