@@ -53,4 +53,17 @@ If you have not got these libraries then leave out dense code flags
 
 For more information see README and files in Samples
 
+IMPORTANT new note
+To address the problem of stability I have gone over to a new system of releases.
+Now a new release is a more minor thing but has its own snapshot.  To find out what
+releases have snapshots just do
 
+make restore
+
+To restore Clp and Coin files to that snapshot do
+
+make restore BACKUP=xxxx where a snapshot Clp_xxxx.tar or Clp_xxxx.tar.gz is available
+and check that it looks OK.  Then do make restore BACKUP=xxxx CONFIRM=YES to actually 
+overwrite files.  Then do make unitTest.
+
+You can also create your own snapshots with make dist or make backup.  BUT use great care.
