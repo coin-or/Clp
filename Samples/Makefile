@@ -54,6 +54,9 @@ LibName += ${readlineLibName}
 LibName += ${lapackLibName}
 #LibName += ${taucsLibName}
 LibName += $(GlpkLibName)
+ifeq ($(VolDefine),COIN_HAS_VOL)
+LibName += $(VolLibName)
+endif
 
 Define :=
 Define += ${ClpDefine}
