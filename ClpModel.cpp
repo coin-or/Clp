@@ -2186,7 +2186,14 @@ ClpModel::readMps(const char *fileName,
   bool savePrefix =m.messageHandler()->prefix();
   m.messageHandler()->setPrefix(handler_->prefix());
   double time1 = CoinCpuTime(),time2;
-  int status=m.readMps(fileName,"");
+  int status=0;
+  try {
+    status=m.readMps(fileName,"");
+  }
+  catch (CoinError e) {
+    e.print();
+    status=-1;
+  }
   m.messageHandler()->setPrefix(savePrefix);
   if (!status||ignoreErrors) {
     loadProblem(*m.getMatrixByCol(),
