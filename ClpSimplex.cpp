@@ -7626,9 +7626,10 @@ ClpSimplex::checkSolutionInternal()
 
   sumDualInfeasibilities_=0.0;
   numberDualInfeasibilities_=0;
+  double maxmin = optimizationDirection_;
 
   for (iRow=0;iRow<numberRows_;iRow++) {
-    double dualValue = dual_[iRow];
+    double dualValue = dual_[iRow]*maxmin;
     double primalValue = rowActivity_[iRow];
     double lower = rowLower_[iRow];
     double upper = rowUpper_[iRow];
@@ -7657,7 +7658,7 @@ ClpSimplex::checkSolutionInternal()
     }
   }
   for (iColumn=0;iColumn<numberColumns_;iColumn++) {
-    double dualValue = reducedCost_[iColumn];
+    double dualValue = reducedCost_[iColumn]*maxmin;
     double primalValue = columnActivity_[iColumn];
     objectiveValue_ += objective[iColumn]*primalValue;
     double lower = columnLower_[iColumn];
