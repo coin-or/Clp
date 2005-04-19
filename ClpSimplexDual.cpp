@@ -1092,6 +1092,14 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
 	  printf("** no column pivot\n");
 #endif
 	if (factorization_->pivots()<5) {
+          // If not in branch and bound etc save ray
+          if ((specialOptions_&(1024|4096))==0) {
+	    // create ray anyway
+	    delete [] ray_;
+	    ray_ = new double [ numberRows_];
+	    rowArray_[0]->expand(); // in case packed
+	    ClpDisjointCopyN(rowArray_[0]->denseVector(),numberRows_,ray_);
+          }
 	  // If we have just factorized and infeasibility reasonable say infeas
 	  if (((specialOptions_&4096)!=0||bestPossiblePivot<1.0e-11)&&dualBound_>1.0e8) {
 	    if (valueOut_>upperOut_+1.0e-3||valueOut_<lowerOut_-1.0e-3
@@ -1104,14 +1112,6 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
 	      break;
 	    }
 	  }
-          // If not in branch and bound etc save ray
-          if ((specialOptions_&(1024|4096))==0) {
-	    // create ray anyway
-	    delete [] ray_;
-	    ray_ = new double [ numberRows_];
-	    rowArray_[0]->expand(); // in case packed
-	    ClpDisjointCopyN(rowArray_[0]->denseVector(),numberRows_,ray_);
-          }
 	  // If special option set - put off as long as possible
 	  if ((specialOptions_&64)==0) {
 	    problemStatus_=-4; //say looks infeasible
