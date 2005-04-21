@@ -1728,7 +1728,7 @@ ClpNonLinearCost::setOneOutgoing(int iSequence, double & value)
       } else if (newWhere==CLP_ABOVE_UPPER) {
         bound_[iSequence]=lowerValue;
         lower[iSequence]=upperValue;
-        lower[iSequence]=COIN_DBL_MAX;
+        upper[iSequence]=COIN_DBL_MAX;
       } else {
         lower[iSequence] = lowerValue;
         upper[iSequence] = upperValue;
@@ -1741,8 +1741,8 @@ ClpNonLinearCost::setOneOutgoing(int iSequence, double & value)
     } else if (fabs(value-upperValue)<=primalTolerance*1.001){
       value = CoinMax(value,upperValue-primalTolerance);
     } else {
-      printf("*** variable wandered off bound %g %g %g!\n",
-             lowerValue,value,upperValue);
+      //printf("*** variable wandered off bound %g %g %g!\n",
+      //     lowerValue,value,upperValue);
       if (value-lowerValue<=upperValue-value) 
         value = lowerValue+primalTolerance;
       else 
