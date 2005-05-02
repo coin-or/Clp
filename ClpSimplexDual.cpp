@@ -1106,6 +1106,11 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
 		|| (specialOptions_&64)==0) {
 	      // say infeasible
 	      problemStatus_=1;
+              // unless primal feasible!!!!
+              //printf("%d %g %d %g\n",numberPrimalInfeasibilities_,sumPrimalInfeasibilities_,
+              //     numberDualInfeasibilities_,sumDualInfeasibilities_);
+              if (numberDualInfeasibilities_)
+                problemStatus_=10;
 	      rowArray_[0]->clear();
 	      columnArray_[0]->clear();
 	      returnCode=1;
@@ -3413,6 +3418,8 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
   lastGoodIteration_ = numberIterations_;
   if (problemStatus_<0)
     sumDualInfeasibilities_=realDualInfeasibilities; // back to say be careful
+    if (sumDualInfeasibilities_)
+      numberDualInfeasibilities_=1;
 #if 1
   double thisObj = progress_->lastObjective(0);
   double lastObj = progress_->lastObjective(1);
