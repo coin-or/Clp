@@ -144,7 +144,24 @@ ClpFactorization::factorize ( ClpSimplex * model,
 	  matrix->generalExpanded(model,0,numberBasic);
 	}
       }
-      assert (numberBasic<=model->maximumBasic());
+      if (numberBasic>model->maximumBasic()) {
+#ifndef NDEBUG
+        printf("%d basic - should only be %d\n",
+               numberBasic,numberRows);
+#endif
+        // Take out some
+        numberBasic=numberRowBasic;
+        for (int i=0;i<numberColumns;i++) {
+          if (model->getColumnStatus(i) == ClpSimplex::basic) {
+            if (numberBasic<numberRows)
+              numberBasic++;
+            else
+              model->setColumnStatus(i,ClpSimplex::superBasic);
+          }
+        }
+        numberBasic=numberRowBasic;
+        matrix->generalExpanded(model,0,numberBasic);
+      }
       // see if matrix a network
 #ifndef NO_RTTI
       ClpNetworkMatrix* networkMatrix =
