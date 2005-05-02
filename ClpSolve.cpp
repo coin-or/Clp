@@ -1891,6 +1891,13 @@ ClpSimplex::initialSolve(ClpSolve & options)
     if (finalStatus!=3&&(finalStatus||status()==-1)) {
       int savePerturbation = perturbation();
       setPerturbation(100);
+      if (finalStatus==2) {
+        // unbounded - get feasible first
+        double save = optimizationDirection_;
+        optimizationDirection_=0.0;
+        primal(1);
+        optimizationDirection_=save;
+      }
       primal(1);
       setPerturbation(savePerturbation);
       numberIterations += this->numberIterations();
