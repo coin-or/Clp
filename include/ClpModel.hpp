@@ -883,7 +883,7 @@ public:
   int sparseThreshold_;
   int perturbation_;
   int forceFactorization_;
-
+  int scalingFlag_;
   //@}
 };
 
