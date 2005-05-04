@@ -14,7 +14,7 @@
 #include "CoinPragma.hpp"
 #include "CoinHelperFunctions.hpp"
 // History since 1.0 at end
-#define CLPVERSION "1.01.01D"
+#define CLPVERSION "1.01.02"
 
 #include "CoinMpsIO.hpp"
 #include "CoinFileIO.hpp"
@@ -1732,4 +1732,5 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
   1.01.01 April 12 2005.  Decided to go to different numbering.  Backups will
   be last 2 digits while middle 2 are for improvements.  Still take a long 
   time to get to 2.00.01
+  1.01.02 May 4 2005.  Will be putting in many changes - so saving stable version
  */
