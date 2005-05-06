@@ -61,6 +61,8 @@ public:
   /// Returns true if would not find any row
   virtual bool looksOptimal() const
   { return false;};
+  /// Called when maximum pivots changes
+  virtual void maximumPivotsChanged() {};
   //@}
   
   

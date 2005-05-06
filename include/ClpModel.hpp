@@ -853,7 +853,8 @@ protected:
   std::string strParam_[ClpLastStrParam];
   //@}
 };
-/** This is a tiny class where data can be saved round calls */
+/** This is a tiny class where data can be saved round calls.
+ */
 class ClpDataSave {
 
 public:

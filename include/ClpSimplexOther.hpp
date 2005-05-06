@@ -85,6 +85,21 @@ public:
 		 int formatType=0) const;
     /// Read a basis from the given filename
     int readBasis(const char *filename);
+  /// Creates dual of a problem
+  ClpSimplex * dualOfModel() const;
+  /// Restores solution from dualized problem
+  void restoreFromDual(const ClpSimplex * dualProblem);
+  /** Does very cursory presolve.
+      rhs is numberRows, whichRows is 3*numberRows and whichColumns is 2*numberColumns.
+  */
+  ClpSimplex * crunch(double * rhs, int * whichRows, int * whichColumns,
+                      int & nBound, bool moreBounds=false);
+  /** After very cursory presolve.
+      rhs is numberRows, whichRows is 3*numberRows and whichColumns is 2*numberColumns.
+  */
+  void afterCrunch(const ClpSimplex & small,
+                   const int * whichRows, const int * whichColumns,
+                   int nBound);
   //@}
 };
 #endif

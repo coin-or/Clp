@@ -39,35 +39,43 @@ ClpDualRowSteepest::ClpDualRowSteepest (const ClpDualRowSteepest & rhs)
   mode_ = rhs.mode_;
   persistence_ = rhs.persistence_;
   model_ = rhs.model_;
-  if (rhs.infeasible_) {
-    infeasible_= new CoinIndexedVector(rhs.infeasible_);
+  if ((model_&&model_->whatsChanged()&1)!=0) {
+    if (rhs.infeasible_) {
+      infeasible_= new CoinIndexedVector(rhs.infeasible_);
+    } else {
+      infeasible_=NULL;
+    }
+    if (rhs.weights_) {
+      assert(model_);
+      int number = model_->numberRows();
+      weights_= new double[number];
+      ClpDisjointCopyN(rhs.weights_,number,weights_);
+    } else {
+      weights_=NULL;
+    }
+    if (rhs.alternateWeights_) {
+      alternateWeights_= new CoinIndexedVector(rhs.alternateWeights_);
+    } else {
+      alternateWeights_=NULL;
+    }
+    if (rhs.savedWeights_) {
+      savedWeights_= new CoinIndexedVector(rhs.savedWeights_);
+    } else {
+      savedWeights_=NULL;
+    }
+    if (rhs.dubiousWeights_) {
+      assert(model_);
+      int number = model_->numberRows();
+      dubiousWeights_= new int[number];
+      ClpDisjointCopyN(rhs.dubiousWeights_,number,dubiousWeights_);
+    } else {
+      dubiousWeights_=NULL;
+    }
   } else {
     infeasible_=NULL;
-  }
-  if (rhs.weights_) {
-    assert(model_);
-    int number = model_->numberRows();
-    weights_= new double[number];
-    ClpDisjointCopyN(rhs.weights_,number,weights_);
-  } else {
     weights_=NULL;
-  }
-  if (rhs.alternateWeights_) {
-    alternateWeights_= new CoinIndexedVector(rhs.alternateWeights_);
-  } else {
     alternateWeights_=NULL;
-  }
-  if (rhs.savedWeights_) {
-    savedWeights_= new CoinIndexedVector(rhs.savedWeights_);
-  } else {
     savedWeights_=NULL;
-  }
-  if (rhs.dubiousWeights_) {
-    assert(model_);
-    int number = model_->numberRows();
-    dubiousWeights_= new int[number];
-    ClpDisjointCopyN(rhs.dubiousWeights_,number,dubiousWeights_);
-  } else {
     dubiousWeights_=NULL;
   }
 }
@@ -228,6 +236,8 @@ k
 	numberWanted = CoinMax(2000,(int) ratio);
     }
   }
+  if (model_->largestPrimalError()>1.0e-3)
+    numberWanted = number+1; // be safe
   int iPass;
   // Setup two passes
   int start[4];
@@ -917,5 +927,19 @@ ClpDualRowSteepest::looksOptimal() const
     }
   }
   return (numberInfeasible==0);
+}
+// Called when maximum pivots changes
+void 
+ClpDualRowSteepest::maximumPivotsChanged()
+{
+  if (alternateWeights_&&
+      alternateWeights_->capacity()!=model_->numberRows()+
+      model_->factorization()->maximumPivots()) {
+    delete alternateWeights_;
+    alternateWeights_ = new CoinIndexedVector();
+    // enough space so can use it for factorization
+    alternateWeights_->reserve(model_->numberRows()+
+				   model_->factorization()->maximumPivots());
+  }
 }
 

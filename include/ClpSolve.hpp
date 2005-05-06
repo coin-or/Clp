@@ -33,7 +33,8 @@ public:
   enum PresolveType {
     presolveOn=0,
     presolveOff,
-    presolveNumber
+    presolveNumber,
+    presolveNumberCost
   };
 
   /**@name Constructors and destructor and copy */
@@ -106,6 +107,71 @@ public:
   int getPresolvePasses() const;
   /// Extra info for idiot (or sprint)
   int getExtraInfo(int which) const;
+  /** Say to return at once if infeasible,
+      default is to solve */
+  void setInfeasibleReturn(bool trueFalse);
+  inline bool infeasibleReturn() const
+  { return independentOptions_[0]!=0;};
+  /// Whether we want to do dual part of presolve
+  inline bool doDual() const
+  { return (independentOptions_[1]&1)==0;};
+  inline void setDoDual(bool doDual)
+  { if (doDual) independentOptions_[1]  &= ~1; else independentOptions_[1] |= 1;};
+  /// Whether we want to do singleton part of presolve
+  inline bool doSingleton() const
+  { return (independentOptions_[1]&2)==0;};
+  inline void setDoSingleton(bool doSingleton)
+  { if (doSingleton) independentOptions_[1]  &= ~2; else independentOptions_[1] |= 2;};
+  /// Whether we want to do doubleton part of presolve
+  inline bool doDoubleton() const
+  { return (independentOptions_[1]&4)==0;};
+  inline void setDoDoubleton(bool doDoubleton)
+  { if (doDoubleton) independentOptions_[1]  &= ~4; else independentOptions_[1] |= 4;};
+  /// Whether we want to do tripleton part of presolve
+  inline bool doTripleton() const
+  { return (independentOptions_[1]&8)==0;};
+  inline void setDoTripleton(bool doTripleton)
+  { if (doTripleton) independentOptions_[1]  &= ~8; else independentOptions_[1] |= 8;};
+  /// Whether we want to do tighten part of presolve
+  inline bool doTighten() const
+  { return (independentOptions_[1]&16)==0;};
+  inline void setDoTighten(bool doTighten)
+  { if (doTighten) independentOptions_[1]  &= ~16; else independentOptions_[1] |= 16;};
+  /// Whether we want to do forcing part of presolve
+  inline bool doForcing() const
+  { return (independentOptions_[1]&32)==0;};
+  inline void setDoForcing(bool doForcing)
+  { if (doForcing) independentOptions_[1]  &= ~32; else independentOptions_[1] |= 32;};
+  /// Whether we want to do impliedfree part of presolve
+  inline bool doImpliedFree() const
+  { return (independentOptions_[1]&64)==0;};
+  inline void setDoImpliedFree(bool doImpliedfree)
+  { if (doImpliedfree) independentOptions_[1]  &= ~64; else independentOptions_[1] |= 64;};
+  /// Whether we want to do dupcol part of presolve
+  inline bool doDupcol() const
+  { return (independentOptions_[1]&128)==0;};
+  inline void setDoDupcol(bool doDupcol)
+  { if (doDupcol) independentOptions_[1]  &= ~128; else independentOptions_[1] |= 128;};
+  /// Whether we want to do duprow part of presolve
+  inline bool doDuprow() const
+  { return (independentOptions_[1]&256)==0;};
+  inline void setDoDuprow(bool doDuprow)
+  { if (doDuprow) independentOptions_[1]  &= ~256; else independentOptions_[1] |= 256;};
+  /// Whether we want to do singleton column part of presolve
+  inline bool doSingletonColumn() const
+  { return (independentOptions_[1]&512)==0;};
+  inline void setDoSingletonColumn(bool doSingleton)
+  { if (doSingleton) independentOptions_[1]  &= ~512; else independentOptions_[1] |= 512;};
+  /// Set whole group
+  inline int presolveActions() const
+  { return independentOptions_[1]&0xffff;};
+  inline void setPresolveActions(int action)
+  { independentOptions_[1]  = (independentOptions_[1]&0xffff0000)|(action&0xffff);};
+  /// Largest column for substitution (normally 3)
+  inline int substitution() const
+  { return independentOptions_[2];};
+  inline void setSubstitution(int value)
+  { independentOptions_[2] = value;};
   //@}
 
 ////////////////// data //////////////////
@@ -124,6 +190,12 @@ private:
   int options_[6];
   /// Extra information
   int extraInfo_[6];
+  /** Extra algorithm dependent options
+      0 - if set return from clpsolve if infeasible
+      1 - To be copied over to presolve options
+      2 - max substitution level
+  */
+  int independentOptions_[3];
   //@}
 };
 #endif

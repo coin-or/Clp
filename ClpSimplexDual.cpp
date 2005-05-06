@@ -215,7 +215,7 @@ int ClpSimplexDual::dual (int ifValuesPass , int startFinishOptions)
 
   // save data
   ClpDataSave data = saveData();
-
+#define CLEAN_FIXED 0
   // Save so can see if doing after primal
   int initialStatus=problemStatus_;
 
@@ -282,6 +282,17 @@ int ClpSimplexDual::dual (int ifValuesPass , int startFinishOptions)
 	if (fabs(saveDuals[iPivot])>dualTolerance_) {
 	  if (getStatus(iPivot)!=isFree) 
 	    setPivoted(iPivot);
+	}
+      }
+    } else if ((specialOptions_&1024)!=0&&CLEAN_FIXED) {
+      // set up possible ones
+      for (int i=0;i<numberRows_+numberColumns_;i++)
+	clearPivoted(i);
+      int iRow;
+      for (iRow=0;iRow<numberRows_;iRow++) {
+	int iPivot=pivotVariable_[iRow];
+        if (iPivot<numberColumns_&&lower_[iPivot]==upper_[iPivot]) {
+          setPivoted(iPivot);
 	}
       }
     } 
@@ -480,6 +491,8 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
 #endif
   int candidate=-1;
   if (givenDuals) {
+    assert (ifValuesPass);
+    ifValuesPass=1;
     candidateList = new int[numberRows_];
     // move reduced costs across
     memcpy(dj_,givenDuals,(numberRows_+numberColumns_)*sizeof(double));
@@ -509,6 +522,8 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
 	clearPivoted(iPivot);
       }
     }
+  } else {
+    assert (!ifValuesPass);
   }
   while (problemStatus_==-1) {
 #ifdef CLP_DEBUG
@@ -710,6 +725,16 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
       } else {
 	// Make sure direction plausible
 	CoinAssert (upperOut_<1.0e50||lowerOut_>-1.0e50);
+        // If in integer cleanup do direction using duals
+        // may be wrong way round
+        if(ifValuesPass==2) {
+          if (dual_[pivotRow_]>0.0) {
+            // this will give a -1 in pivot row (as slacks are -1.0)
+            directionOut_ = 1;
+          } else {
+            directionOut_ = -1;
+          }
+        }
 	if (directionOut_<0&&fabs(valueOut_-upperOut_)>dualBound_+primalTolerance_) {
 	  if (fabs(valueOut_-upperOut_)>fabs(valueOut_-lowerOut_))
 	    directionOut_=1;
@@ -725,8 +750,18 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
 			      rowArray_[0],rowArray_[3],columnArray_[0]);
 	acceptablePivot *= 10.0;
 	// do ratio test
-	checkPossibleValuesMove(rowArray_[0],columnArray_[0],
-					    acceptablePivot);
+        if (ifValuesPass==1) {
+          checkPossibleValuesMove(rowArray_[0],columnArray_[0],
+                                  acceptablePivot);
+        } else {
+          checkPossibleCleanup(rowArray_[0],columnArray_[0],
+                                  acceptablePivot);
+          if (sequenceIn_<0) {
+            rowArray_[0]->clear();
+            columnArray_[0]->clear();
+            continue; // can't do anything
+          }
+        }
 
 	// recompute true dualOut_
 	if (directionOut_<0) {
@@ -747,6 +782,7 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
 	  candidate=-2; // -2 signals end 
 	  givenDuals=NULL;
 	  candidateList=NULL;
+          ifValuesPass=1;
 	  for (iRow=0;iRow<numberRows_;iRow++) {
 	    int iPivot=pivotVariable_[iRow];
 	    //assert (fabs(dj_[iPivot]),1.0e-5);
@@ -1050,7 +1086,7 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
 	if (numberIterations_>210567)
 	  exit(77);
 #endif
-        if (!givenDuals&&ifValuesPass) {
+        if (!givenDuals&&ifValuesPass&&ifValuesPass!=2) {
 	  handler_->message(CLP_END_VALUES_PASS,messages_)
 	    <<numberIterations_;
           whatNext=1;
@@ -1145,6 +1181,32 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
       if (handler_->logLevel()&32)
 	printf("** no row pivot\n");
 #endif
+      // If in branch and bound try and get rid of fixed variables
+      if ((specialOptions_&1024)!=0&&CLEAN_FIXED) {
+        assert (!candidateList);
+        candidateList = new int[numberRows_];
+        int iRow;
+        for (iRow=0;iRow<numberRows_;iRow++) {
+          int iPivot=pivotVariable_[iRow];
+          if (flagged(iPivot)||!pivoted(iPivot))
+            continue;
+          assert (iPivot<numberColumns_&&lower_[iPivot]==upper_[iPivot]);
+          candidateList[numberCandidates++]=iRow;
+        }
+        // and set first candidate
+        if (!numberCandidates) {
+          delete [] candidateList;
+          candidateList=NULL;
+          int iRow;
+          for (iRow=0;iRow<numberRows_;iRow++) {
+            int iPivot=pivotVariable_[iRow];
+            clearPivoted(iPivot);
+          }
+        } else {
+          ifValuesPass=2;
+          continue;
+        }
+      }
       int numberPivots = factorization_->pivots();
       bool specialCase;
       int useNumberFake;
@@ -1671,6 +1733,7 @@ ClpSimplexDual::dualRow(int alreadyChosen)
     }
   }
 #endif
+  double freeAlpha=0.0;
   if (alreadyChosen<0) {
     // first see if any free variables and put them in basis
     int nextFree = nextSuperBasic();
@@ -1718,8 +1781,10 @@ ClpSimplexDual::dualRow(int alreadyChosen)
 	chosenRow = bestInfeasibleRow;
       else if (bestFeasibleAlpha>1.0e-2)
 	chosenRow = bestFeasibleRow;
-      if (chosenRow>=0)
+      if (chosenRow>=0) {
 	pivotRow_=chosenRow;
+        freeAlpha=work[chosenRow];
+      }
       rowArray_[1]->clear();
     } 
   } else {
@@ -1758,6 +1823,7 @@ ClpSimplexDual::dualRow(int alreadyChosen)
 	directionOut_ = 1;
 	dualOut_ = lowerOut_ - valueOut_;
       } else {
+#if 1
 	// odd (could be free) - it's feasible - go to nearest
 	if (valueOut_-lowerOut_<upperOut_-valueOut_) {
 	  directionOut_ = 1;
@@ -1766,6 +1832,25 @@ ClpSimplexDual::dualRow(int alreadyChosen)
 	  directionOut_ = -1;
 	  dualOut_ = valueOut_ - upperOut_;
 	}
+#else
+	// odd (could be free) - it's feasible - improve obj
+        printf("direction from alpha of %g is %d\n",
+               freeAlpha,freeAlpha>0.0 ? 1 : -1);
+	if (valueOut_-lowerOut_>1.0e20)
+          freeAlpha=1.0;
+        else if(upperOut_-valueOut_>1.0e20) 
+          freeAlpha=-1.0;
+	//if (valueOut_-lowerOut_<upperOut_-valueOut_) {
+        if (freeAlpha<0.0) {
+	  directionOut_ = 1;
+	  dualOut_ = lowerOut_ - valueOut_;
+	} else {
+	  directionOut_ = -1;
+	  dualOut_ = valueOut_ - upperOut_;
+	}
+        printf("direction taken %d - bounds %g %g %g\n",
+               directionOut_,lowerOut_,valueOut_,upperOut_);
+#endif
       }
 #ifdef CLP_DEBUG
       assert(dualOut_>=0.0);
@@ -2301,7 +2386,9 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 	  }
 	  bestPivot=acceptablePivot;
 	  sequenceIn_=-1;
+#ifdef DUBIOUS_WEIGHTS
 	  double bestWeight=COIN_DBL_MAX;
+#endif
 	  double largestPivot=acceptablePivot;
 	  // now choose largest and sum all ones which will go through
 	  //printf("XX it %d number %d\n",numberIterations_,interesting[iFlip]);
@@ -2349,6 +2436,7 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 	      // select if largest pivot
 	      bool take=false;
 	      double absAlpha = fabs(alpha);
+#ifdef DUBIOUS_WEIGHTS
 	      // User could do anything to break ties here
 	      double weight;
 	      if (dubiousWeights)
@@ -2363,6 +2451,10 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 		if (weight*bestPivot<bestWeight*absAlpha)
 		  take=true;
 	      }
+#else
+	      if (absAlpha>bestPivot) 
+		take=true;
+#endif
 #ifdef FORCE_FOLLOW
 	      if (iSequence==force_in) {
 		printf("taking %d - alpha %g best %g\n",force_in,absAlpha,largestPivot);
@@ -2374,7 +2466,9 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 		bestPivot =  absAlpha;
 		theta_ = dj_[iSequence]/alpha;
 		largestPivot = CoinMax(largestPivot,0.5*bestPivot);
+#ifdef DUBIOUS_WEIGHTS
 		bestWeight = weight;
+#endif
 		//printf(" taken seq %d alpha %g weight %d\n",
 		//   iSequence,absAlpha,dubiousWeights[iSequence]);
 	      } else {
@@ -2793,7 +2887,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
   // get primal and dual solutions
   gutsOfSolution(givenDuals,NULL);
   // If bad accuracy treat as singular
-  if (largestPrimalError_>1.0e15||largestDualError_>1.0e15) {
+  if (largestPrimalError_>1.0e15||largestDualError_>1.0e15&&numberIterations_) {
     // restore previous basis
     unflagVariables = false;
     assert (type==1);
@@ -2804,7 +2898,10 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
       if (flagged(i))
         saveStatus_[i] |= 64; //say flagged
     }
-    memcpy(status_ ,saveStatus_,(numberColumns_+numberRows_)*sizeof(char));
+    //memcpy(status_ ,saveStatus_,(numberColumns_+numberRows_)*sizeof(char));
+    for (int j=0;j<numberRows_+numberColumns_;j++) {
+      status_[j]=saveStatus_[j];
+    }
     memcpy(rowActivityWork_,savedSolution_+numberColumns_ ,
            numberRows_*sizeof(double));
     memcpy(columnActivityWork_,savedSolution_ ,
@@ -2874,9 +2971,10 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
     double thisObj = objectiveValue_;
     double lastObj = progress_->lastObjective(0);
     if (lastObj>thisObj+1.0e-3*CoinMax(fabs(thisObj),fabs(lastObj))+1.0
-	&&!ifValuesPass) {
+	&&!ifValuesPass&&firstFree_<0) {
       int maxFactor = factorization_->maximumPivots();
       if (maxFactor>10&&numberPivots>1) {
+        //printf("lastobj %g thisobj %g\n",lastObj,thisObj);
 	//if (forceFactorization_<0)
 	//forceFactorization_= maxFactor;
 	//forceFactorization_ = CoinMax(1,(forceFactorization_>>1));
@@ -2986,6 +3084,19 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
   }
   realDualInfeasibilities=sumDualInfeasibilities_;
   double saveTolerance =dualTolerance_;
+  // If we need to carry on cleaning variables
+  if (!numberPrimalInfeasibilities_&&(specialOptions_&1024)!=0&&CLEAN_FIXED) {
+    for (int iRow=0;iRow<numberRows_;iRow++) {
+      int iPivot=pivotVariable_[iRow];
+      if (!flagged(iPivot)&&pivoted(iPivot)) {
+        // carry on
+        numberPrimalInfeasibilities_=-1;
+	sumOfRelaxedPrimalInfeasibilities_ = 1.0;
+        sumPrimalInfeasibilities_ = 1.0;
+        break;
+      }
+    }
+  }
   /* If we are primal feasible and any dual infeasibilities are on
      free variables then it is better to go to primal */
   if (!numberPrimalInfeasibilities_&&!numberDualInfeasibilitiesWithoutFree_&&
@@ -3416,15 +3527,16 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
     problemStatus_=4; // unknown
   }
   lastGoodIteration_ = numberIterations_;
-  if (problemStatus_<0)
+  if (problemStatus_<0) {
     sumDualInfeasibilities_=realDualInfeasibilities; // back to say be careful
     if (sumDualInfeasibilities_)
       numberDualInfeasibilities_=1;
+  }
 #if 1
   double thisObj = progress_->lastObjective(0);
   double lastObj = progress_->lastObjective(1);
   if (lastObj>thisObj+1.0e-4*CoinMax(fabs(thisObj),fabs(lastObj))+1.0e-4
-      &&givenDuals==NULL) {
+      &&givenDuals==NULL&&firstFree_<0) {
     int maxFactor = factorization_->maximumPivots();
     if (maxFactor>10) {
       if (forceFactorization_<0)
@@ -4340,7 +4452,7 @@ ClpSimplexDual::pivotResult()
    Column array has column part.
    This is used in dual values pass
 */
-int
+void
 ClpSimplexDual::checkPossibleValuesMove(CoinIndexedVector * rowArray,
 					CoinIndexedVector * columnArray,
 					double acceptablePivot)
@@ -4482,7 +4594,6 @@ ClpSimplexDual::checkPossibleValuesMove(CoinIndexedVector * rowArray,
       }
     }
   }
-  int returnCode;
   thetaUp *= -1.0;
   double changeUp = -thetaUp * changeDown;
   changeDown = -thetaDown*changeDown;
@@ -4504,7 +4615,6 @@ ClpSimplexDual::checkPossibleValuesMove(CoinIndexedVector * rowArray,
       printf("predicted way - dirout %d, change %g,%g theta %g\n",
 	     directionOut_,changeDown,changeUp,theta_);
 #endif
-    returnCode = 0;
   } else {
     theta_ = thetaUp;
     if (fabs(changeUp)<1.0e30)
@@ -4516,14 +4626,12 @@ ClpSimplexDual::checkPossibleValuesMove(CoinIndexedVector * rowArray,
 	printf("opposite way - dirout %d, change %g,%g theta %g\n",
 	       directionOut_,changeDown,changeUp,theta_);
 #endif
-      returnCode = 0;
     } else {
 #ifdef CLP_DEBUG
       if ((handler_->logLevel()&32))
 	printf("opposite way to zero dj - dirout %d, change %g,%g theta %g\n",
 	       directionOut_,changeDown,changeUp,theta_);
 #endif
-      returnCode = 1;
     }
   }
   if (sequenceIn_>=0) {
@@ -4542,7 +4650,212 @@ ClpSimplexDual::checkPossibleValuesMove(CoinIndexedVector * rowArray,
       lowerIn_=valueIn_;
     }
   }
-  return returnCode;
+}
+/* 
+   Row array has row part of pivot row
+   Column array has column part.
+   This is used in cleanup
+*/
+void
+ClpSimplexDual::checkPossibleCleanup(CoinIndexedVector * rowArray,
+					CoinIndexedVector * columnArray,
+					double acceptablePivot)
+{
+  double * work;
+  int number;
+  int * which;
+  int iSection;
+
+  double tolerance = dualTolerance_*1.001;
+
+  double thetaDown = 1.0e31;
+  double thetaUp = 1.0e31;
+  double bestAlphaDown = acceptablePivot*10.0;
+  double bestAlphaUp = acceptablePivot*10.0;
+  int sequenceDown =-1;
+  int sequenceUp = -1;
+
+  double djSlack = dj_[pivotRow_];
+  if (getRowStatus(pivotRow_)==basic)
+    djSlack=COIN_DBL_MAX;
+  if (fabs(djSlack)<tolerance)
+    djSlack=0.0;
+  int addSequence;
+
+  double alphaUp=0.0;
+  double alphaDown=0.0;
+  for (iSection=0;iSection<2;iSection++) {
+
+    int i;
+    if (!iSection) {
+      work = rowArray->denseVector();
+      number = rowArray->getNumElements();
+      which = rowArray->getIndices();
+      addSequence = numberColumns_;
+    } else {
+      work = columnArray->denseVector();
+      number = columnArray->getNumElements();
+      which = columnArray->getIndices();
+      addSequence = 0;
+    }
+    
+    for (i=0;i<number;i++) {
+      int iSequence = which[i];
+      int iSequence2 = iSequence + addSequence;
+      double alpha;
+      double oldValue;
+      double value;
+
+      switch(getStatus(iSequence2)) {
+	  
+      case basic: 
+	break;
+      case ClpSimplex::isFixed:
+	alpha = work[i];
+        if (addSequence) {
+          printf("possible - pivot row %d this %d\n",pivotRow_,iSequence);
+          oldValue = dj_[iSequence2];
+          if (alpha<=-acceptablePivot) {
+            // might do other way
+            value = oldValue+thetaUp*alpha;
+            if (value<tolerance) {
+              if (value<-tolerance||fabs(alpha)>bestAlphaUp) {
+                thetaUp = -oldValue/alpha;
+                bestAlphaUp = fabs(alpha);
+                sequenceUp = iSequence2;
+                alphaUp = alpha;
+              }
+            }
+          } else if (alpha>=acceptablePivot) {
+            // might do this way
+            value = oldValue-thetaDown*alpha;
+            if (value<tolerance) {
+              if (value<-tolerance||fabs(alpha)>bestAlphaDown) {
+                thetaDown = oldValue/alpha;
+                bestAlphaDown = fabs(alpha);
+                sequenceDown = iSequence2;
+                alphaDown = alpha;
+              }
+            }
+          }
+        }
+	break;
+      case isFree:
+      case superBasic:
+	alpha = work[i];
+	// dj must be effectively zero as dual feasible
+	if (fabs(alpha)>bestAlphaUp) {
+	  thetaDown = 0.0;
+	  thetaUp = 0.0;
+	  bestAlphaDown = fabs(alpha);
+	  bestAlphaUp = bestAlphaUp;
+	  sequenceDown =iSequence2;
+	  sequenceUp = sequenceDown;
+	  alphaUp = alpha;
+	  alphaDown = alpha;
+	}
+	break;
+      case atUpperBound:
+	alpha = work[i];
+	oldValue = dj_[iSequence2];
+	if (alpha>=acceptablePivot) {
+	  // might do other way
+	  value = oldValue+thetaUp*alpha;
+	  if (value>-tolerance) {
+	    if (value>tolerance||fabs(alpha)>bestAlphaUp) {
+	      thetaUp = -oldValue/alpha;
+	      bestAlphaUp = fabs(alpha);
+	      sequenceUp = iSequence2;
+	      alphaUp = alpha;
+	    }
+	  }
+	} else if (alpha<=-acceptablePivot) {
+	  // might do this way
+	  value = oldValue-thetaDown*alpha;
+	  if (value>-tolerance) {
+	    if (value>tolerance||fabs(alpha)>bestAlphaDown) {
+	      thetaDown = oldValue/alpha;
+	      bestAlphaDown = fabs(alpha);
+	      sequenceDown = iSequence2;
+	      alphaDown = alpha;
+	    }
+	  }
+	}
+	break;
+      case atLowerBound:
+	alpha = work[i];
+	oldValue = dj_[iSequence2];
+	if (alpha<=-acceptablePivot) {
+	  // might do other way
+	  value = oldValue+thetaUp*alpha;
+	  if (value<tolerance) {
+	    if (value<-tolerance||fabs(alpha)>bestAlphaUp) {
+	      thetaUp = -oldValue/alpha;
+	      bestAlphaUp = fabs(alpha);
+	      sequenceUp = iSequence2;
+	      alphaUp = alpha;
+	    }
+	  }
+	} else if (alpha>=acceptablePivot) {
+	  // might do this way
+	  value = oldValue-thetaDown*alpha;
+	  if (value<tolerance) {
+	    if (value<-tolerance||fabs(alpha)>bestAlphaDown) {
+	      thetaDown = oldValue/alpha;
+	      bestAlphaDown = fabs(alpha);
+	      sequenceDown = iSequence2;
+	      alphaDown = alpha;
+	    }
+	  }
+	}
+	break;
+      }
+    }
+  }
+  thetaUp *= -1.0;
+  // largest
+  if (bestAlphaDown<bestAlphaUp) 
+    sequenceDown =-1;
+  else
+    sequenceUp=-1;
+
+  sequenceIn_=-1;
+  
+  if (sequenceDown>=0) {
+    theta_ = thetaDown;
+    sequenceIn_ = sequenceDown;
+    alpha_ = alphaDown;
+#ifdef CLP_DEBUG
+    if ((handler_->logLevel()&32))
+      printf("predicted way - dirout %d, theta %g\n",
+             directionOut_,theta_);
+#endif
+  } else if (sequenceUp>=0) {
+    theta_ = thetaUp;
+    sequenceIn_ = sequenceUp;
+    alpha_ = alphaUp;
+#ifdef CLP_DEBUG
+    if ((handler_->logLevel()&32))
+      printf("opposite way - dirout %d,theta %g\n",
+             directionOut_,theta_);
+#endif
+  }
+  if (sequenceIn_>=0) {
+    lowerIn_ = lower_[sequenceIn_];
+    upperIn_ = upper_[sequenceIn_];
+    valueIn_ = solution_[sequenceIn_];
+    dualIn_ = dj_[sequenceIn_];
+
+    if (alpha_<0.0) {
+      // as if from upper bound
+      directionIn_=-1;
+      upperIn_=valueIn_;
+    } else {
+      // as if from lower bound
+      directionIn_=1;
+      lowerIn_=valueIn_;
+    }
+  }
 }
 /* 
    This sees if we can move duals in dual values pass.

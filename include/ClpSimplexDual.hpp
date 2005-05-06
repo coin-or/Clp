@@ -195,10 +195,18 @@ public:
       Row array has row part of pivot row
       Column array has column part.
       This sees what is best thing to do in dual values pass
-      Returns 0 if theta_ move will put basic variable out to bound,
-      1 if can change dual on chosen row and leave variable in basis
+      if sequenceIn==sequenceOut can change dual on chosen row and leave variable in basis
   */
-  int checkPossibleValuesMove(CoinIndexedVector * rowArray,
+  void checkPossibleValuesMove(CoinIndexedVector * rowArray,
+			       CoinIndexedVector * columnArray,
+			      double acceptablePivot);
+  /** 
+      Row array has row part of pivot row
+      Column array has column part.
+      This sees what is best thing to do in branch and bound cleanup
+      If sequenceIn_ < 0 then can't do anything
+  */
+  void checkPossibleCleanup(CoinIndexedVector * rowArray,
 			       CoinIndexedVector * columnArray,
 			      double acceptablePivot);
   /** 

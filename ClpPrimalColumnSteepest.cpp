@@ -55,30 +55,38 @@ ClpPrimalColumnSteepest::ClpPrimalColumnSteepest (const ClpPrimalColumnSteepest 
   savedSequenceOut_ = rhs.savedSequenceOut_;
   sizeFactorization_ = rhs.sizeFactorization_;
   devex_ = rhs.devex_;
-  if (rhs.infeasible_) {
-    infeasible_= new CoinIndexedVector(rhs.infeasible_);
-  } else {
-    infeasible_=NULL;
-  }
-  reference_=NULL;
-  if (rhs.weights_) {
-    assert(model_);
-    int number = model_->numberRows()+model_->numberColumns();
-    weights_= new double[number];
-    ClpDisjointCopyN(rhs.weights_,number,weights_);
-    savedWeights_= new double[number];
-    ClpDisjointCopyN(rhs.savedWeights_,number,savedWeights_);
-    if (mode_!=1) {
-      reference_ = new unsigned int[(number+31)>>5];
-      memcpy(reference_,rhs.reference_,((number+31)>>5)*sizeof(unsigned int));
+  if ((model_&&model_->whatsChanged()&1)!=0) {
+    if (rhs.infeasible_) {
+      infeasible_= new CoinIndexedVector(rhs.infeasible_);
+    } else {
+      infeasible_=NULL;
+    }
+    reference_=NULL;
+    if (rhs.weights_) {
+      assert(model_);
+      int number = model_->numberRows()+model_->numberColumns();
+      weights_= new double[number];
+      ClpDisjointCopyN(rhs.weights_,number,weights_);
+      savedWeights_= new double[number];
+      ClpDisjointCopyN(rhs.savedWeights_,number,savedWeights_);
+      if (mode_!=1) {
+        reference_ = new unsigned int[(number+31)>>5];
+        memcpy(reference_,rhs.reference_,((number+31)>>5)*sizeof(unsigned int));
+      }
+    } else {
+      weights_=NULL;
+      savedWeights_=NULL;
+    }
+    if (rhs.alternateWeights_) {
+      alternateWeights_= new CoinIndexedVector(rhs.alternateWeights_);
+    } else {
+      alternateWeights_=NULL;
     }
   } else {
+    infeasible_=NULL;
+    reference_=NULL;
     weights_=NULL;
     savedWeights_=NULL;
-  }
-  if (rhs.alternateWeights_) {
-    alternateWeights_= new CoinIndexedVector(rhs.alternateWeights_);
-  } else {
     alternateWeights_=NULL;
   }
 }
@@ -2748,6 +2756,20 @@ ClpPrimalColumnSteepest::pivotColumnOldMethod(CoinIndexedVector * updates,
   }
 #endif
   return bestSequence;
+}
+// Called when maximum pivots changes
+void 
+ClpPrimalColumnSteepest::maximumPivotsChanged()
+{
+  if (alternateWeights_&&
+      alternateWeights_->capacity()!=model_->numberRows()+
+      model_->factorization()->maximumPivots()) {
+    delete alternateWeights_;
+    alternateWeights_ = new CoinIndexedVector();
+    // enough space so can use it for factorization
+    alternateWeights_->reserve(model_->numberRows()+
+				   model_->factorization()->maximumPivots());
+  }
 }
 /* 
    1) before factorization

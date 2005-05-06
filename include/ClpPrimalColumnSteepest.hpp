@@ -113,6 +113,8 @@ public:
   virtual void clearArrays();
   /// Returns true if would not find any column
   virtual bool looksOptimal() const;
+  /// Called when maximum pivots changes
+  virtual void maximumPivotsChanged();
   //@}
   
   /**@name gets and sets */

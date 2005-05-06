@@ -53,7 +53,7 @@ ClpModel::ClpModel () :
   ray_(NULL),
   rowScale_(NULL),
   columnScale_(NULL),
-  scalingFlag_(3),
+  scalingFlag_(2),
   status_(NULL),
   integerType_(NULL),
   userPointer_(NULL),
@@ -295,6 +295,8 @@ ClpModel::loadProblem (
 int 
 ClpModel::loadProblem (  CoinModel & modelObject,bool tryPlusMinusOne)
 {
+  if (modelObject.numberElements()==0)
+    return 0;
   int numberErrors = 0;
   // Set arrays for normal use
   double * rowLower = modelObject.rowLowerArray();
@@ -1293,6 +1295,8 @@ ClpModel::addRows(int number, const double * rowLower,
 int
 ClpModel::addRows(const CoinBuild & buildObject,bool tryPlusMinusOne,bool checkDuplicates)
 {
+  if (buildObject.numberElements()==0)
+    return 0;
   CoinAssertHint (buildObject.type()==0,"Looks as if both addRows and addCols being used"); // check correct
   int number = buildObject.numberRows();
   int numberErrors=0;
@@ -1470,6 +1474,8 @@ ClpModel::addRows(const CoinBuild & buildObject,bool tryPlusMinusOne,bool checkD
 int 
 ClpModel::addRows( CoinModel & modelObject,bool tryPlusMinusOne,bool checkDuplicates)
 {
+  if (modelObject.numberElements()==0)
+    return 0;
   bool goodState=true;
   int numberErrors=0;
   if (modelObject.columnLowerArray()) {
@@ -1741,6 +1747,8 @@ ClpModel::addColumns(int number, const double * columnLower,
 int 
 ClpModel::addColumns(const CoinBuild & buildObject,bool tryPlusMinusOne,bool checkDuplicates)
 {
+  if (buildObject.numberElements()==0)
+    return 0;
   CoinAssertHint (buildObject.type()==1,"Looks as if both addRows and addCols being used"); // check correct
   int number = buildObject.numberColumns();
   int numberErrors=0;
@@ -1875,6 +1883,8 @@ ClpModel::addColumns(const CoinBuild & buildObject,bool tryPlusMinusOne,bool che
 int 
 ClpModel::addColumns( CoinModel & modelObject,bool tryPlusMinusOne,bool checkDuplicates)
 {
+  if (modelObject.numberElements()==0)
+    return 0;
   bool goodState=true;
   if (modelObject.rowLowerArray()) {
     // some row information exists
@@ -2661,12 +2671,7 @@ ClpModel::ClpModel ( const ClpModel * rhs,
   rowScale_ = NULL;
   columnScale_ = NULL;
   scalingFlag_ = rhs->scalingFlag_;
-  if (rhs->rowCopy_) {
-    rowCopy_ = rhs->rowCopy_->subsetClone(numberRows,whichRow,
-					  numberColumns,whichColumn);
-  } else {
-    rowCopy_=NULL;
-  }
+  rowCopy_=NULL;
   matrix_=NULL;
   if (rhs->matrix_) {
     matrix_ = rhs->matrix_->subsetClone(numberRows,whichRow,
@@ -2777,63 +2782,6 @@ void
 ClpModel::setObjectiveOffset(double value)
 {
   dblParam_[ClpObjOffset]=value;
-}
-//#############################################################################
-// Constructors / Destructor / Assignment
-//#############################################################################
-
-//-------------------------------------------------------------------
-// Default Constructor 
-//-------------------------------------------------------------------
-ClpDataSave::ClpDataSave () 
-{
-  dualBound_ = 0.0;
-  infeasibilityCost_ = 0.0;
-  sparseThreshold_ = 0;
-  pivotTolerance_=0.0;
-  perturbation_ = 0;
-  forceFactorization_=-1;
-  scalingFlag_=0;
-}
-
-//-------------------------------------------------------------------
-// Copy constructor 
-//-------------------------------------------------------------------
-ClpDataSave::ClpDataSave (const ClpDataSave & rhs) 
-{  
-  dualBound_ = rhs.dualBound_;
-  infeasibilityCost_ = rhs.infeasibilityCost_;
-  pivotTolerance_ = rhs.pivotTolerance_;
-  sparseThreshold_ = rhs.sparseThreshold_;
-  perturbation_ = rhs.perturbation_;
-  forceFactorization_=rhs.forceFactorization_;
-  scalingFlag_=rhs.scalingFlag_;
-}
-
-//-------------------------------------------------------------------
-// Destructor 
-//-------------------------------------------------------------------
-ClpDataSave::~ClpDataSave ()
-{
-
-}
-
-//----------------------------------------------------------------
-// Assignment operator 
-//-------------------------------------------------------------------
-ClpDataSave &
-ClpDataSave::operator=(const ClpDataSave& rhs)
-{
-  if (this != &rhs) {
-    dualBound_ = rhs.dualBound_;
-    infeasibilityCost_ = rhs.infeasibilityCost_;
-    pivotTolerance_ = rhs.pivotTolerance_;
-    sparseThreshold_ = rhs.sparseThreshold_;
-    perturbation_ = rhs.perturbation_;
-    forceFactorization_=rhs.forceFactorization_;
-    scalingFlag_=rhs.scalingFlag_;
-  }
-  return *this;
 }
 // Solve a problem with no elements - return status
 int ClpModel::emptyProblem(int * infeasNumber, double * infeasSum,bool printMessage)
@@ -3158,4 +3106,60 @@ ClpModel::unscale()
   rowScale_ = NULL;
   delete [] columnScale_;
   columnScale_ = NULL;
+}
+//#############################################################################
+// Constructors / Destructor / Assignment
+//#############################################################################
+
+//-------------------------------------------------------------------
+// Default Constructor 
+//-------------------------------------------------------------------
+ClpDataSave::ClpDataSave () 
+{
+  dualBound_ = 0.0;
+  infeasibilityCost_ = 0.0;
+  sparseThreshold_ = 0;
+  pivotTolerance_=0.0;
+  perturbation_ = 0;
+  forceFactorization_=-1;
+  scalingFlag_=0;
+}
+
+//-------------------------------------------------------------------
+// Copy constructor 
+//-------------------------------------------------------------------
+ClpDataSave::ClpDataSave (const ClpDataSave & rhs) 
+{  
+  dualBound_ = rhs.dualBound_;
+  infeasibilityCost_ = rhs.infeasibilityCost_;
+  pivotTolerance_ = rhs.pivotTolerance_;
+  sparseThreshold_ = rhs.sparseThreshold_;
+  perturbation_ = rhs.perturbation_;
+  forceFactorization_=rhs.forceFactorization_;
+  scalingFlag_=rhs.scalingFlag_;
+}
+
+//-------------------------------------------------------------------
+// Destructor 
+//-------------------------------------------------------------------
+ClpDataSave::~ClpDataSave ()
+{
+}
+
+//----------------------------------------------------------------
+// Assignment operator 
+//-------------------------------------------------------------------
+ClpDataSave &
+ClpDataSave::operator=(const ClpDataSave& rhs)
+{
+  if (this != &rhs) {
+    dualBound_ = rhs.dualBound_;
+    infeasibilityCost_ = rhs.infeasibilityCost_;
+    pivotTolerance_ = rhs.pivotTolerance_;
+    sparseThreshold_ = rhs.sparseThreshold_;
+    perturbation_ = rhs.perturbation_;
+    forceFactorization_=rhs.forceFactorization_;
+    scalingFlag_=rhs.scalingFlag_;
+  }
+  return *this;
 }

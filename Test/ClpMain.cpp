@@ -14,7 +14,7 @@
 #include "CoinPragma.hpp"
 #include "CoinHelperFunctions.hpp"
 // History since 1.0 at end
-#define CLPVERSION "1.01.02"
+#define CLPVERSION "1.02.01D"
 
 #include "CoinMpsIO.hpp"
 #include "CoinFileIO.hpp"
@@ -22,6 +22,7 @@
 #include "ClpFactorization.hpp"
 #include "CoinTime.hpp"
 #include "ClpSimplex.hpp"
+#include "ClpSimplexOther.hpp"
 #include "ClpSolve.hpp"
 #include "ClpPackedMatrix.hpp"
 #include "ClpPlusMinusOneMatrix.hpp"
@@ -89,6 +90,8 @@ int main (int argc, const char *argv[])
     std::string exportFile ="default.mps";
     std::string importBasisFile ="";
     int basisHasValues=0;
+    int substitution=3;
+    int dualize=0;
     std::string exportBasisFile ="default.bas";
     std::string saveFile ="default.prob";
     std::string restoreFile ="default.prob";
@@ -117,6 +120,8 @@ int main (int argc, const char *argv[])
     parameters[whichParam(TIMELIMIT,numberParameters,parameters)].setDoubleValue(models->maximumSeconds());
     parameters[whichParam(SOLUTION,numberParameters,parameters)].setStringValue(solutionFile);
     parameters[whichParam(SPRINT,numberParameters,parameters)].setIntValue(doSprint);
+    parameters[whichParam(SUBSTITUTION,numberParameters,parameters)].setIntValue(substitution);
+    parameters[whichParam(DUALIZE,numberParameters,parameters)].setIntValue(dualize);
     
     // total number of commands read
     int numberGoodCommands=0;
@@ -297,6 +302,10 @@ int main (int argc, const char *argv[])
 	      presolveOptions = value;
 	    else if (parameters[iParam].type()==PRINTOPTIONS)
 	      printOptions = value;
+	    else if (parameters[iParam].type()==SUBSTITUTION)
+	      substitution = value;
+	    else if (parameters[iParam].type()==DUALIZE)
+	      dualize = value;
 	    else
 	      parameters[iParam].setIntParameter(models+iModel,value);
 	  } else if (valid==1) {
@@ -446,13 +455,36 @@ int main (int argc, const char *argv[])
 	      ClpSolve::SolveType method;
 	      ClpSolve::PresolveType presolveType;
 	      ClpSimplex * model2 = models+iModel;
+              if (dualize) {
+                model2 = ((ClpSimplexOther *) model2)->dualOfModel();
+                printf("Dual of model has %d rows and %d columns\n",
+                       model2->numberRows(),model2->numberColumns());
+                model2->setOptimizationDirection(1.0);
+              }
 	      ClpSolve solveOptions;
-	      if (preSolve!=5&&preSolve)
+              solveOptions.setPresolveActions(presolveOptions);
+              solveOptions.setSubstitution(substitution);
+	      if (preSolve!=5&&preSolve) {
 		presolveType=ClpSolve::presolveNumber;
-	      else if (preSolve)
+                if (preSolve<0) {
+                  preSolve = - preSolve;
+                  if (preSolve<=100) {
+                    presolveType=ClpSolve::presolveNumber;
+                    printf("Doing %d presolve passes - picking up non-costed slacks\n",
+                           preSolve);
+                    solveOptions.setDoSingletonColumn(true);
+                  } else {
+                    preSolve -=100;
+                    presolveType=ClpSolve::presolveNumberCost;
+                    printf("Doing %d presolve passes - picking up costed slacks\n",
+                           preSolve);
+                  }
+                } 
+	      } else if (preSolve) {
 		presolveType=ClpSolve::presolveOn;
-	      else
+	      } else {
 		presolveType=ClpSolve::presolveOff;
+              }
 	      solveOptions.setPresolveType(presolveType,preSolve);
 	      if (type==DUALSIMPLEX) {
 		method=ClpSolve::useDual;
@@ -526,8 +558,20 @@ int main (int argc, const char *argv[])
 		  barrierOptions |= 32;
 		solveOptions.setSpecialOption(4,barrierOptions);
 	      }
-	      model2->initialSolve(solveOptions);
-	      basisHasValues=1;
+	      int status;
+              try {
+                status=model2->initialSolve(solveOptions);
+              }
+              catch (CoinError e) {
+                e.print();
+                status=-1;
+              }
+              if (dualize) {
+                ((ClpSimplexOther *) models+iModel)->restoreFromDual(model2);
+                delete model2;
+              }
+              if (status>=0)
+                basisHasValues=1;
 	    } else {
 	      std::cout<<"** Current model not valid"<<std::endl;
 	    }
@@ -542,6 +586,7 @@ int main (int argc, const char *argv[])
                 int presolveOptions2 = presolveOptions&~0x40000000;
                 if ((presolveOptions2&0xffff)!=0)
                   pinfo.setPresolveActions(presolveOptions2);
+                pinfo.setSubstitution(substitution);
                 if ((printOptions&1)!=0)
                   pinfo.statistics();
                 model2 = 
@@ -765,11 +810,12 @@ int main (int argc, const char *argv[])
 		  int presolveOptions2 = presolveOptions&~0x40000000;
 		  if ((presolveOptions2&0xffff)!=0)
 		    pinfo.setPresolveActions(presolveOptions2);
+                  pinfo.setSubstitution(substitution);
 		  if ((printOptions&1)!=0)
 		    pinfo.statistics();
 		  model2 = 
 		    pinfo.presolvedModel(models[iModel],1.0e-8,
-					 true,preSolve);
+					 true,preSolve,false,false);
 		  if (model2) {
 		    printf("Saving presolved model on %s\n",
 			   fileName.c_str());
@@ -851,7 +897,15 @@ int main (int argc, const char *argv[])
 		  delete [] columnNames;
 		}
 #else
-		model2->writeMps(fileName.c_str(),(outputFormat-1)/2,1+((outputFormat-1)&1));
+                if (dualize) {
+                  ClpSimplex * model3 = ((ClpSimplexOther *) model2)->dualOfModel();
+                  printf("Dual of model has %d rows and %d columns\n",
+                         model3->numberRows(),model3->numberColumns());
+                  model3->writeMps(fileName.c_str(),(outputFormat-1)/2,1+((outputFormat-1)&1));
+                  delete model3;
+                } else {
+                  model2->writeMps(fileName.c_str(),(outputFormat-1)/2,1+((outputFormat-1)&1));
+                }
 #endif
 		if (deleteModel2)
 		  delete model2;
@@ -1733,4 +1787,6 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
   be last 2 digits while middle 2 are for improvements.  Still take a long 
   time to get to 2.00.01
   1.01.02 May 4 2005.  Will be putting in many changes - so saving stable version
+  1.02.01 May 6 2005.  Lots of changes to try and make faster and more stable in
+  branch and cut.
  */

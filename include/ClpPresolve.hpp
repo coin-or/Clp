@@ -37,17 +37,19 @@ public:
       Names will be dropped in presolved model if asked
   */
   ClpSimplex * presolvedModel(ClpSimplex & si,
-				      double feasibilityTolerance=0.0,
-				      bool keepIntegers=true,
-				      int numberPasses=5,
-				      bool dropNames=false);
+                              double feasibilityTolerance=0.0,
+                              bool keepIntegers=true,
+                              int numberPasses=5,
+                              bool dropNames=false,
+                              bool doRowObjective=false);
   /** This version saves data in a file.  The passed in model
       is updated to be presolved model.  names are always dropped.
       Returns non-zero if infeasible*/
   int presolvedModelToFile(ClpSimplex &si,std::string fileName,
-			      double feasibilityTolerance=0.0,
-			      bool keepIntegers=true,
-			      int numberPasses=5);
+                           double feasibilityTolerance=0.0,
+                           bool keepIntegers=true,
+                           int numberPasses=5,
+                           bool doRowObjective=false);
   /** Return pointer to presolved model,
       Up to user to destroy */
   ClpSimplex * model() const;
@@ -113,11 +115,19 @@ public:
   { return (presolveActions_&256)==0;};
   inline void setDoDuprow(bool doDuprow)
   { if (doDuprow) presolveActions_  &= ~256; else presolveActions_ |= 256;};
+  /// Whether we want to do singleton column part of presolve
+  inline bool doSingletonColumn() const
+  { return (presolveActions_&512)==0;};
+  inline void setDoSingletonColumn(bool doSingleton)
+  { if (doSingleton) presolveActions_  &= ~512; else presolveActions_ |= 512;};
   /// Set whole group
   inline bool presolveActions() const
   { return presolveActions_&0xffff;};
   inline void setPresolveActions(int action)
   { presolveActions_  = (presolveActions_&0xffff0000)|(action&0xffff);};
+  /// Substitution level
+  inline void setSubstitution(int value)
+  { substitution_=value;};
   /// Asks for statistics
   inline void statistics()
   { presolveActions_ |= 0x80000000;};
@@ -152,6 +162,8 @@ private:
   int * originalColumn_;
   /// Original row numbers
   int * originalRow_;
+  /// Row objective 
+  double * rowObjective_;
   /// The list of transformations applied.
   const CoinPresolveAction *paction_;
 
@@ -165,6 +177,8 @@ private:
   CoinBigIndex nelems_;
   /// Number of major passes
   int numberPasses_;
+  /// Substitution level
+  int substitution_;
   /// Name of saved model file
   std::string saveFile_;
   /** Whether we want to skip dual part of presolve etc.
@@ -185,10 +199,11 @@ protected:
   /// while debugging new presolve techniques.
   virtual void postsolve(CoinPostsolveMatrix &prob);
   /** This is main part of Presolve */
-  virtual ClpSimplex * gutsOfPresolvedModel(ClpSimplex * originalModel
-					    ,double feasibilityTolerance,
+  virtual ClpSimplex * gutsOfPresolvedModel(ClpSimplex * originalModel,
+					    double feasibilityTolerance,
 					    bool keepIntegers,
 					    int numberPasses,
-					    bool dropNames);
+					    bool dropNames,
+                                            bool doRowObjective);
 };
 #endif

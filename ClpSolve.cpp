@@ -376,11 +376,14 @@ ClpSimplex::initialSolve(ClpSolve & options)
     saveSignal = signal(SIGINT,signal_handler);
   }
   ClpPresolve pinfo;
-  int presolveOptions = options.getSpecialOption(4);
+  pinfo.setSubstitution(options.substitution());
+  int presolveOptions = options.presolveActions();
   bool presolveToFile = (presolveOptions&0x40000000)!=0;
   presolveOptions &= ~0x40000000;
   if ((presolveOptions&0xffff)!=0)
     pinfo.setPresolveActions(presolveOptions);
+  // switch off singletons to slacks
+  //pinfo.setDoSingletonColumn(false); // done by bits
   int printOptions = options.getSpecialOption(5);
   if ((printOptions&1)!=0)
     pinfo.statistics();
@@ -512,12 +515,18 @@ ClpSimplex::initialSolve(ClpSolve & options)
 #endif
   // Just do this number of passes in Sprint
   int maxSprintPass=100;
-
+  bool costedSlacks=false;
   if (presolve!=ClpSolve::presolveOff) {
     int numberPasses=5;
     if (presolve==ClpSolve::presolveNumber) {
       numberPasses=options.getPresolvePasses();
       presolve = ClpSolve::presolveOn;
+    } else if (presolve==ClpSolve::presolveNumberCost) {
+      numberPasses=options.getPresolvePasses();
+      presolve = ClpSolve::presolveOn;
+      costedSlacks=true;
+      // switch on singletons to slacks
+      pinfo.setDoSingletonColumn(true);
     }
     if (presolveToFile) {
       // PreSolve to file - not fully tested
@@ -527,7 +536,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
       model2=this;
     } else {
       model2 = pinfo.presolvedModel(*this,1.0e-8,
-				    false,numberPasses,true);
+				    false,numberPasses,true,costedSlacks);
     }
     time2 = CoinCpuTime();
     timePresolve = time2-timeX;
@@ -535,11 +544,13 @@ ClpSimplex::initialSolve(ClpSolve & options)
       <<"Presolve"<<timePresolve<<time2-time1
       <<CoinMessageEol;
     timeX=time2;
-    if (model2) {
-    } else {
+    if (!model2) {
       handler_->message(CLP_INFEASIBLE,messages_)
 	<<CoinMessageEol;
       model2 = this;
+      if (options.infeasibleReturn()) {
+        return -1;
+      }
       presolve=ClpSolve::presolveOff;
     }
     // We may be better off using original (but if dual leave because of bounds)
@@ -775,7 +786,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
     double * saveLower=NULL;
     double * saveUpper=NULL;
     if (presolve==ClpSolve::presolveOn) {
-      int numberInfeasibilities = model2->tightenPrimalBounds();
+      int numberInfeasibilities = model2->tightenPrimalBounds(0.0,0);
       if (numberInfeasibilities) {
 	handler_->message(CLP_INFEASIBLE,messages_)
 	  <<CoinMessageEol;
@@ -885,6 +896,10 @@ ClpSimplex::initialSolve(ClpSolve & options)
       case 3:
 	model2->crash(model2->dualBound(),0);
 	break;
+        // Just put free in basis
+      case 4:
+        model2->crash(0.0,3);
+        break;
       }
     }
     if (!nPasses) {
@@ -1162,6 +1177,10 @@ ClpSimplex::initialSolve(ClpSolve & options)
       case 3:
 	model2->crash(model2->dualBound(),-1);
 	break;
+        // Just put free in basis
+      case 4:
+        model2->crash(0.0,3);
+        break;
       }
     }
     if (doSlp>0&&objective_->type()==2) {
@@ -1876,6 +1895,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
     int saveLevel = logLevel();
     setLogLevel(1);
     pinfo.postsolve(true);
+    factorization_->areaFactor(model2->factorization()->adjustedAreaFactor());
     time2 = CoinCpuTime();
     timePresolve += time2-timeX;
     handler_->message(CLP_INTERVAL_TIMING,messages_)
@@ -1963,6 +1983,13 @@ ClpSolve::ClpSolve (  )
     options_[i]=0;
   for (i=0;i<6;i++)
     extraInfo_[i]=-1;
+  for (i=0;i<2;i++)
+    independentOptions_[i]=0;
+  // But switch off slacks
+  independentOptions_[1]=512;
+  // Substitute up to 3
+  independentOptions_[2]=3;
+  
 }
 
 // Copy constructor. 
@@ -1976,6 +2003,8 @@ ClpSolve::ClpSolve(const ClpSolve & rhs)
     options_[i]=rhs.options_[i];
   for ( i=0;i<6;i++)
     extraInfo_[i]=rhs.extraInfo_[i];
+  for (i=0;i<3;i++)
+    independentOptions_[i]=rhs.independentOptions_[i];
 }
 // Assignment operator. This copies the data
 ClpSolve & 
@@ -1990,6 +2019,8 @@ ClpSolve::operator=(const ClpSolve & rhs)
       options_[i]=rhs.options_[i];
     for (i=0;i<6;i++)
       extraInfo_[i]=rhs.extraInfo_[i];
+    for (i=0;i<3;i++)
+      independentOptions_[i]=rhs.independentOptions_[i];
   }
   return *this;
 
@@ -2046,4 +2077,11 @@ int
 ClpSolve::getPresolvePasses() const
 {
   return numberPasses_;
+}
+/* Say to return at once if infeasible,
+   default is to solve */
+void 
+ClpSolve::setInfeasibleReturn(bool trueFalse)
+{
+  independentOptions_[0]= trueFalse ? 1 : 0;
 }

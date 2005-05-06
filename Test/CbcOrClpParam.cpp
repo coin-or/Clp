@@ -1089,6 +1089,8 @@ the main thing is to think about which cuts to apply.  .. expand ..."
   parameters[numberParameters-1].append("on");
   parameters[numberParameters-1].append("so!low_halim");
   parameters[numberParameters-1].append("ha!lim_solow(JJF mods)");
+  parameters[numberParameters-1].append("4");
+  parameters[numberParameters-1].append("5");
   parameters[numberParameters-1].setLonghelp
     (
      "If crash is set on and there is an all slack basis then Clp will flip or put structural\
@@ -1158,6 +1160,13 @@ gap between bounds exceeds this value",
  the code may go all the way and then have to increase the bounds.  OSL had a heuristic to\
  adjust bounds, maybe we need that here."
      );
+  parameters[numberParameters++]=
+    CbcOrClpParam("dualize","Solves dual reformulation",
+		  0,1,DUALIZE,false);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "Don't even think about it."
+     ); 
   parameters[numberParameters++]=
     CbcOrClpParam("dualP!ivot","Dual pivot choice algorithm",
 		  "auto!matic",DUALPIVOT);
@@ -1548,7 +1557,7 @@ values, 2 saves values, 3 with greater accuracy and 4 in IEEE."
 #ifdef COIN_USE_CLP
   parameters[numberParameters++]=
     CbcOrClpParam("passP!resolve","How many passes in presolve",
-		  0,100,PRESOLVEPASS,false);
+		  -200,100,PRESOLVEPASS,false);
   parameters[numberParameters-1].setLonghelp
     (
      "Normally Presolve does 5 passes but you may want to do less to make it\
@@ -1833,6 +1842,19 @@ the main thing is to think about which cuts to apply.  .. expand ..."
     (
      "TODO"
      ); 
+#endif
+#ifdef COIN_USE_CLP
+  parameters[numberParameters++]=
+    CbcOrClpParam("subs!titution","How long a column to substitute for in presolve",
+		  0,10000,SUBSTITUTION,false);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "Normally Presolve gets rid of 'free' variables when there are no more than 3 \
+ variables in column.  If you increase this the number of rows may decrease but number of \
+ elements may increase."
+     ); 
+#endif
+#ifdef COIN_USE_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("tighten!Factor","Tighten bounds using this times largest \
 activity at continuous solution",

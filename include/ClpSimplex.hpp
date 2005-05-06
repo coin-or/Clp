@@ -87,11 +87,14 @@ public:
   /** Subproblem constructor.  A subset of whole model is created from the 
       row and column lists given.  The new order is given by list order and
       duplicates are allowed.  Name and integer information can be dropped
+      Can optionally modify rhs to take into account variables NOT in list
+      in this case duplicates are not allowed (also see getbackSolution)
   */
   ClpSimplex (const ClpModel * wholeModel,
 	      int numberRows, const int * whichRows,
 	      int numberColumns, const int * whichColumns,
-	      bool dropNames=true, bool dropIntegers=true);
+	      bool dropNames=true, bool dropIntegers=true,
+              bool fixOthers=false);
   /** This constructor modifies original ClpSimplex and stores
       original stuff in created ClpSimplex.  It is only to be used in
       conjunction with originalModel */
@@ -164,6 +167,8 @@ public:
   void borrowModel(ClpSimplex & otherModel);
    /// Pass in Event handler (cloned and deleted at end)
    void passInEventHandler(const ClpEventHandler * eventHandler);
+  /// Puts solution back into small model
+  void getbackSolution(const ClpSimplex & smallModel,const int * whichRow, const int * whichColumn);
   //@}
 
   /**@name Functions most useful to user */
@@ -277,7 +282,7 @@ public:
   /// Passes in factorization
   void setFactorization( ClpFactorization & factorization);
   /** Tightens primal bounds to make dual faster.  Unless
-      fixed, bounds are slightly looser than they could be.
+      fixed or doTight>10, bounds are slightly looser than they could be.
       This is to make dual go faster and is probably not needed
       with a presolve.  Returns non-zero if problem infeasible.
 
@@ -285,7 +290,7 @@ public:
       largest value (at continuous) - should improve stability
       in branch and bound on infeasible branches (0.0 is off)
   */
-  int tightenPrimalBounds(double factor=0.0);
+  int tightenPrimalBounds(double factor=0.0,int doTight=0);
   /** Crash - at present just aimed at dual, returns
       -2 if dual preferred and crash basis created
       -1 if dual preferred and all slack basis preferred
@@ -899,6 +904,7 @@ public:
       4096 - Skip some optimality checks
       8192 - Do Primal when cleaning up primal
       16384 - In fast dual (so we can switch off things)
+      32678 - called from Osi
   */
   inline unsigned int specialOptions() const
   { return specialOptions_;};

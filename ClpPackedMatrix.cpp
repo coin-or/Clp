@@ -1798,13 +1798,6 @@ ClpPackedMatrix::scale(ClpModel * model) const
   } else {
       // need to scale 
     int scalingMethod = model->scalingFlag();
-    if (scalingMethod==3) {
-      // Choose between 1 and 2
-      if (smallest<1.0e-5||smallest*largest<1.0)
-	scalingMethod=1;
-      else
-	scalingMethod=2;
-    }
     // and see if there any empty rows
     for (iRow=0;iRow<numberRows;iRow++) {
       if (usefulRow[iRow]) {
@@ -1820,156 +1813,185 @@ ClpPackedMatrix::scale(ClpModel * model) const
 	usefulRow[iRow]=useful;
       }
     }
-    ClpFillN ( rowScale, numberRows,1.0);
-    ClpFillN ( columnScale, numberColumns,1.0);
+    double savedOverallRatio=0.0;
+    double tolerance = 5.0*model->primalTolerance();
     double overallLargest=-1.0e-20;
     double overallSmallest=1.0e20;
-    if (scalingMethod==1) {
-      // Maximum in each row
+    bool finished=false;
+    // if scalingMethod 3 then may change
+    while (!finished) {
+      ClpFillN ( rowScale, numberRows,1.0);
+      ClpFillN ( columnScale, numberColumns,1.0);
+      overallLargest=-1.0e-20;
+      overallSmallest=1.0e20;
+      if (scalingMethod==1||scalingMethod==3) {
+        // Maximum in each row
+        for (iRow=0;iRow<numberRows;iRow++) {
+          if (usefulRow[iRow]) {
+            CoinBigIndex j;
+            largest=1.0e-10;
+            for (j=rowStart[iRow];j<rowStart[iRow+1];j++) {
+              int iColumn = column[j];
+              if (usefulColumn[iColumn]) {
+                double value = fabs(element[j]);
+                largest = CoinMax(largest,value);
+                assert (largest<1.0e40);
+              }
+            }
+            rowScale[iRow]=1.0/largest;
+            overallLargest = CoinMax(overallLargest,largest);
+            overallSmallest = CoinMin(overallSmallest,largest);
+          }
+        }
+      } else {
+        int numberPass=3;
+#ifdef USE_OBJECTIVE
+        // This will be used to help get scale factors
+        double * objective = new double[numberColumns];
+        memcpy(objective,model->costRegion(1),numberColumns*sizeof(double));
+        double objScale=1.0;
+#endif
+        while (numberPass) {
+          overallLargest=0.0;
+          overallSmallest=1.0e50;
+          numberPass--;
+          // Geometric mean on row scales
+          for (iRow=0;iRow<numberRows;iRow++) {
+            if (usefulRow[iRow]) {
+              CoinBigIndex j;
+              largest=1.0e-20;
+              smallest=1.0e50;
+              for (j=rowStart[iRow];j<rowStart[iRow+1];j++) {
+                int iColumn = column[j];
+                if (usefulColumn[iColumn]) {
+                  double value = fabs(element[j]);
+                  // Don't bother with tiny elements
+                  if (value>1.0e-20) {
+                    value *= columnScale[iColumn];
+                    largest = CoinMax(largest,value);
+                    smallest = CoinMin(smallest,value);
+                  }
+                }
+              }
+              rowScale[iRow]=1.0/sqrt(smallest*largest);
+              rowScale[iRow]=CoinMax(1.0e-10,CoinMin(1.0e10,rowScale[iRow]));
+              overallLargest = CoinMax(largest*rowScale[iRow],overallLargest);
+              overallSmallest = CoinMin(smallest*rowScale[iRow],overallSmallest);
+            }
+          }
+#ifdef USE_OBJECTIVE
+          largest=1.0e-20;
+          smallest=1.0e50;
+          for (iColumn=0;iColumn<numberColumns;iColumn++) {
+            if (usefulColumn[iColumn]) {
+              double value = fabs(objective[iColumn]);
+              // Don't bother with tiny elements
+              if (value>1.0e-20) {
+                value *= columnScale[iColumn];
+                largest = CoinMax(largest,value);
+                smallest = CoinMin(smallest,value);
+              }
+            }
+          }
+          objScale=1.0/sqrt(smallest*largest);
+#endif
+          model->messageHandler()->message(CLP_PACKEDSCALE_WHILE,*model->messagesPointer())
+            <<overallSmallest
+            <<overallLargest
+            <<CoinMessageEol;
+          // skip last column round
+          if (numberPass==1)
+            break;
+          // Geometric mean on column scales
+          for (iColumn=0;iColumn<numberColumns;iColumn++) {
+            if (usefulColumn[iColumn]) {
+              CoinBigIndex j;
+              largest=1.0e-20;
+              smallest=1.0e50;
+              for (j=columnStart[iColumn];
+                   j<columnStart[iColumn]+columnLength[iColumn];j++) {
+                iRow=row[j];
+                double value = fabs(elementByColumn[j]);
+                // Don't bother with tiny elements
+                if (value>1.0e-20&&usefulRow[iRow]) {
+                  value *= rowScale[iRow];
+                  largest = CoinMax(largest,value);
+                  smallest = CoinMin(smallest,value);
+                }
+              }
+#ifdef USE_OBJECTIVE
+              if (fabs(objective[iColumn])>1.0e-20) {
+                double value = fabs(objective[iColumn])*objScale;
+                largest = CoinMax(largest,value);
+                smallest = CoinMin(smallest,value);
+              }
+#endif
+              columnScale[iColumn]=1.0/sqrt(smallest*largest);
+              columnScale[iColumn]=CoinMax(1.0e-10,CoinMin(1.0e10,columnScale[iColumn]));
+            }
+          }
+        }
+#ifdef USE_OBJECTIVE
+        delete [] objective;
+        printf("obj scale %g - use it if you want\n",objScale);
+#endif
+      }
+      // If ranges will make horrid then scale
       for (iRow=0;iRow<numberRows;iRow++) {
-	if (usefulRow[iRow]) {
-	  CoinBigIndex j;
-	  largest=1.0e-10;
-	  for (j=rowStart[iRow];j<rowStart[iRow+1];j++) {
-	    int iColumn = column[j];
-	    if (usefulColumn[iColumn]) {
-	      double value = fabs(element[j]);
-	      largest = CoinMax(largest,value);
-	    }
-	  }
-	  rowScale[iRow]=1.0/largest;
-	  overallLargest = CoinMax(overallLargest,largest);
-	  overallSmallest = CoinMin(overallSmallest,largest);
-	}
-      }
-    } else {
-      assert(scalingMethod==2);
-      int numberPass=3;
-#ifdef USE_OBJECTIVE
-      // This will be used to help get scale factors
-      double * objective = new double[numberColumns];
-      memcpy(objective,model->costRegion(1),numberColumns*sizeof(double));
-      double objScale=1.0;
-#endif
-      while (numberPass) {
-	overallLargest=0.0;
-	overallSmallest=1.0e50;
-	numberPass--;
-	// Geometric mean on row scales
-	for (iRow=0;iRow<numberRows;iRow++) {
-	  if (usefulRow[iRow]) {
-	    CoinBigIndex j;
-	    largest=1.0e-20;
-	    smallest=1.0e50;
-	    for (j=rowStart[iRow];j<rowStart[iRow+1];j++) {
-	      int iColumn = column[j];
-	      if (usefulColumn[iColumn]) {
-		double value = fabs(element[j]);
-		// Don't bother with tiny elements
-		if (value>1.0e-20) {
-		  value *= columnScale[iColumn];
-		  largest = CoinMax(largest,value);
-		  smallest = CoinMin(smallest,value);
-		}
-	      }
-	    }
-	    rowScale[iRow]=1.0/sqrt(smallest*largest);
+        if (usefulRow[iRow]) {
+          double difference = rowUpper[iRow]-rowLower[iRow];
+          double scaledDifference = difference*rowScale[iRow];
+          if (scaledDifference>tolerance&&scaledDifference<1.0e-4) {
+            // make gap larger
+            rowScale[iRow] *= 1.0e-4/scaledDifference;
             rowScale[iRow]=CoinMax(1.0e-10,CoinMin(1.0e10,rowScale[iRow]));
-	    overallLargest = CoinMax(largest*rowScale[iRow],overallLargest);
-	    overallSmallest = CoinMin(smallest*rowScale[iRow],overallSmallest);
-	  }
-	}
-#ifdef USE_OBJECTIVE
-	largest=1.0e-20;
-	smallest=1.0e50;
-	for (iColumn=0;iColumn<numberColumns;iColumn++) {
-	  if (usefulColumn[iColumn]) {
-	    double value = fabs(objective[iColumn]);
-	    // Don't bother with tiny elements
-	    if (value>1.0e-20) {
-	      value *= columnScale[iColumn];
-	      largest = CoinMax(largest,value);
-	      smallest = CoinMin(smallest,value);
-	    }
-	  }
-	}
-	objScale=1.0/sqrt(smallest*largest);
-#endif
-	model->messageHandler()->message(CLP_PACKEDSCALE_WHILE,*model->messagesPointer())
-	  <<overallSmallest
-	  <<overallLargest
-	  <<CoinMessageEol;
-	// skip last column round
-	if (numberPass==1)
-	  break;
-	// Geometric mean on column scales
-	for (iColumn=0;iColumn<numberColumns;iColumn++) {
-	  if (usefulColumn[iColumn]) {
-	    CoinBigIndex j;
-	    largest=1.0e-20;
-	    smallest=1.0e50;
-	    for (j=columnStart[iColumn];
-		 j<columnStart[iColumn]+columnLength[iColumn];j++) {
-	      iRow=row[j];
-	      double value = fabs(elementByColumn[j]);
-	      // Don't bother with tiny elements
-	      if (value>1.0e-20&&usefulRow[iRow]) {
-		value *= rowScale[iRow];
-		largest = CoinMax(largest,value);
-		smallest = CoinMin(smallest,value);
-	      }
-	    }
-#ifdef USE_OBJECTIVE
-	    if (fabs(objective[iColumn])>1.0e-20) {
-	      double value = fabs(objective[iColumn])*objScale;
-	      largest = CoinMax(largest,value);
-	      smallest = CoinMin(smallest,value);
-	    }
-#endif
-	    columnScale[iColumn]=1.0/sqrt(smallest*largest);
-            columnScale[iColumn]=CoinMax(1.0e-10,CoinMin(1.0e10,columnScale[iColumn]));
-	  }
-	}
+            //printf("Row %d difference %g scaled diff %g => %g\n",iRow,difference,
+            // scaledDifference,difference*rowScale[iRow]);
+          }
+        }
       }
-#ifdef USE_OBJECTIVE
-      delete [] objective;
-      printf("obj scale %g - use it if you want\n",objScale);
-#endif
-    }
-    // If ranges will make horrid then scale
-    double tolerance = 5.0*model->primalTolerance();
-    for (iRow=0;iRow<numberRows;iRow++) {
-      if (usefulRow[iRow]) {
-	double difference = rowUpper[iRow]-rowLower[iRow];
-	double scaledDifference = difference*rowScale[iRow];
-	if (scaledDifference>tolerance&&scaledDifference<1.0e-4) {
-	  // make gap larger
-	  rowScale[iRow] *= 1.0e-4/scaledDifference;
-            rowScale[iRow]=CoinMax(1.0e-10,CoinMin(1.0e10,rowScale[iRow]));
-	  //printf("Row %d difference %g scaled diff %g => %g\n",iRow,difference,
-	  // scaledDifference,difference*rowScale[iRow]);
-	}
+      // final pass to scale columns so largest is reasonable
+      // See what smallest will be if largest is 1.0
+      overallSmallest=1.0e50;
+      for (iColumn=0;iColumn<numberColumns;iColumn++) {
+        if (usefulColumn[iColumn]) {
+          CoinBigIndex j;
+          largest=1.0e-20;
+          smallest=1.0e50;
+          for (j=columnStart[iColumn];
+               j<columnStart[iColumn]+columnLength[iColumn];j++) {
+            iRow=row[j];
+            if(elementByColumn[j]&&usefulRow[iRow]) {
+              double value = fabs(elementByColumn[j]*rowScale[iRow]);
+              largest = CoinMax(largest,value);
+              smallest = CoinMin(smallest,value);
+            }
+          }
+          if (overallSmallest*largest>smallest)
+            overallSmallest = smallest/largest;
+        }
       }
-    }
-    // final pass to scale columns so largest is reasonable
-    // See what smallest will be if largest is 1.0
-    overallSmallest=1.0e50;
-    for (iColumn=0;iColumn<numberColumns;iColumn++) {
-      if (usefulColumn[iColumn]) {
-	CoinBigIndex j;
-	largest=1.0e-20;
-	smallest=1.0e50;
-	for (j=columnStart[iColumn];
-	     j<columnStart[iColumn]+columnLength[iColumn];j++) {
-	  iRow=row[j];
-	  if(elementByColumn[j]&&usefulRow[iRow]) {
-	    double value = fabs(elementByColumn[j]*rowScale[iRow]);
-	    largest = CoinMax(largest,value);
-	    smallest = CoinMin(smallest,value);
-	  }
-	}
-	if (overallSmallest*largest>smallest)
-	  overallSmallest = smallest/largest;
+      if (scalingMethod==1||scalingMethod==2) {
+        finished=true;
+      } else if (savedOverallRatio==0.0) {
+        savedOverallRatio=overallSmallest;
+        scalingMethod=4;
+      } else {
+        assert (scalingMethod==4);
+        if (overallSmallest>savedOverallRatio)
+          finished=true; // geometric was better
+        else
+          scalingMethod=1; // redo equilibrium
+#if 0
+        if (model->logLevel()>2) {
+          if (finished)
+            printf("equilibrium ratio %g, geometric ratio %g , geo chosen\n",
+                   savedOverallRatio,overallSmallest);
+          else
+            printf("equilibrium ratio %g, geometric ratio %g , equi chosen\n",
+                   savedOverallRatio,overallSmallest);
+        }
+#endif
       }
     }
     //#define RANDOMIZE
@@ -2780,6 +2802,9 @@ ClpPackedMatrix::deleteCols(const int numDel, const int * indDel)
   if (matrix_->getNumCols())
     matrix_->deleteCols(numDel,indDel);
   numberActiveColumns_ = matrix_->getNumCols();
+  // may now have gaps
+  hasGaps_=true;
+  matrix_->setExtraGap(1.0e-50);
 }
 /* Delete the rows whose indices are listed in <code>indDel</code>. */
 void 
@@ -2790,6 +2815,7 @@ ClpPackedMatrix::deleteRows(const int numDel, const int * indDel)
   numberActiveColumns_ = matrix_->getNumCols();
   // may now have gaps
   hasGaps_=true;
+  matrix_->setExtraGap(1.0e-50);
 }
 // Append Columns
 void 

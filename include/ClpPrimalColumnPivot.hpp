@@ -118,6 +118,8 @@ public:
   virtual int numberSprintColumns(int & numberIterations) const;
   /// Switch off sprint idea
   virtual void switchOffSprint();
+  /// Called when maximum pivots changes
+  virtual void maximumPivotsChanged() {};
   
   //@}
 
