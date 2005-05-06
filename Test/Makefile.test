@@ -26,7 +26,7 @@ Define := ${ClpDefine} ${CoinDefine} ${bzlibDefine} ${zlibDefine} $(lapackLibDef
 # You should not need to edit below this line.
 ##############################################################################
 
-CXXFLAGS += $(OPTFLAG) 
+CXXFLAGS += -g # $(OPTFLAG) 
 #CXXFLAGS += -DUSE_PRESOLVE
 #CXXFLAGS += -DCLP_IDIOT
 # Pick up any include files in Test
