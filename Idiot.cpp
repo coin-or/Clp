@@ -487,6 +487,8 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
     if (iteration==1) {
       if ((strategy_&1024)!=0&&mu<1.0e-10) 
 	result.infeas=firstInfeas*0.8;
+      if (majorIterations_>=50)
+        result.infeas *= 0.8;
       if (result.infeas>firstInfeas*0.9
 	  &&result.infeas>reasonableInfeas) {
 	iteration--;

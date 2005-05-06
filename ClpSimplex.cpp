@@ -2862,13 +2862,6 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
           rowUpperWork_[i]=COIN_DBL_MAX;
         }
       }
-      for (i=0;i<numberColumns_+numberRows_;i++) {
-	if (lower_[i]>-1.0e20)
-	  lower_[i] *= rhsScale_;
-	if (upper_[i]<1.0e20)
-	  upper_[i] *= rhsScale_;
-	
-      }
     } else {
       for (i=0;i<numberColumns_;i++) {
         double lowerValue = columnLower_[i];
@@ -3931,11 +3924,12 @@ ClpSimplex::tightenPrimalBounds(double factor,int doTight)
     }
     for (iColumn=0;iColumn<numberColumns_;iColumn++) {
       if (saveUpper[iColumn]>saveLower[iColumn]+useTolerance) {
-        // keep free
-        if (saveUpper[iColumn]>1.0e30&&saveLower[iColumn]<-1.0e30) {
-          columnLower_[iColumn]=-COIN_DBL_MAX;
+        // Make large bounds stay infinite
+        if (saveUpper[iColumn]>1.0e30&&columnUpper_[iColumn]>1.0e10) {
           columnUpper_[iColumn]=COIN_DBL_MAX;
-          continue;
+        }
+        if (saveLower[iColumn]<-1.0e30&&columnLower_[iColumn]<-1.0e10) {
+          columnLower_[iColumn]=-COIN_DBL_MAX;
         }
 	if (columnUpper_[iColumn]-columnLower_[iColumn]<useTolerance+1.0e-8) {
 	  // relax enough so will have correct dj
@@ -5176,7 +5170,8 @@ ClpSimplex::sanityCheck()
   handler_->message(CLP_RIMSTATISTICS1,messages_)
     <<smallestObj
     <<largestObj
-    <<CoinMessageEol;  if (largestBound)
+    <<CoinMessageEol; 
+  if (largestBound)
     handler_->message(CLP_RIMSTATISTICS2,messages_)
       <<smallestBound
       <<largestBound
