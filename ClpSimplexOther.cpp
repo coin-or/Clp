@@ -1007,6 +1007,7 @@ ClpSimplexOther::crunch(double * rhs, int * whichRow, int * whichColumn,
     // and bounds
     double * columnLower2 = small->columnLower();
     double * columnUpper2 = small->columnUpper();
+    const char * integerInformation = integerType_;
     for (jRow=nBound;jRow<2*numberRows_;jRow++) {
       iRow = whichRow[jRow];
       iColumn = whichRow[jRow+numberRows_];
@@ -1041,6 +1042,16 @@ ClpSimplexOther::crunch(double * rhs, int * whichRow, int * whichColumn,
           newLower = upperRow/value;
         if (lowerRow>-1.0e20)
           newUpper = lowerRow/value;
+      }
+      if (integerInformation&&integerInformation[iColumn]) {
+        if (newLower-floor(newLower)<10.0*tolerance) 
+          newLower=floor(newLower);
+        else
+          newLower=ceil(newLower);
+        if (ceil(newUpper)-newUpper<10.0*tolerance) 
+          newUpper=ceil(newUpper);
+        else
+          newUpper=floor(newUpper);
       }
       newLower = CoinMax(lower,newLower);
       newUpper = CoinMin(upper,newUpper);
