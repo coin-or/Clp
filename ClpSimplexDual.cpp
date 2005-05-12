@@ -1210,6 +1210,7 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
       int numberPivots = factorization_->pivots();
       bool specialCase;
       int useNumberFake;
+      returnCode=0;
       if (numberPivots<20&&
 	  (specialOptions_&2048)!=0&&!numberChanged_&&perturbation_>=100
 	  &&dualBound_>1.0e8) {
@@ -1231,9 +1232,9 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
 	}
 	if (iRow<numberRows_&&numberPivots) {
 	  // try factorization
-	  returnCode=0;
-	  break;
+	  returnCode=-2;
 	}
+        
 	if (useNumberFake||numberDualInfeasibilities_) {
 	  // may be dual infeasible
 	  problemStatus_=-5;
@@ -1290,15 +1291,44 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
             }
 	    problemStatus_=0;
 	    sumPrimalInfeasibilities_=0.0;
+            if ((specialOptions_&(1024+16384))!=0) {
+              CoinIndexedVector * arrayVector = rowArray_[1];
+              arrayVector->clear();
+              double * rhs = arrayVector->denseVector();
+              times(1.0,solution_,rhs);
+              bool bad2=false;
+              int i;
+              for ( i=0;i<numberRows_;i++) {
+                if (rhs[i]<rowLowerWork_[i]-primalTolerance_||
+                    rhs[i]>rowUpperWork_[i]+primalTolerance_) {
+                  bad2=true;
+                  break;
+                }
+              }
+              for ( i=0;i<numberColumns_;i++) {
+                if (solution_[i]<columnLowerWork_[i]-primalTolerance_||
+                    solution_[i]>columnUpperWork_[i]+primalTolerance_) {
+                  bad2=true;
+                  break;
+                }
+              }
+              if (bad2) {
+                problemStatus_=-3;
+                returnCode=-2;
+                // Force to re-factorize early next time
+                int numberPivots = factorization_->pivots();
+                forceFactorization_=CoinMin(forceFactorization_,(numberPivots+1)>>1);
+              }
+            }
 	  }
 	}
       } else {
 	problemStatus_=-3;
+        returnCode=-2;
 	// Force to re-factorize early next time
 	int numberPivots = factorization_->pivots();
 	forceFactorization_=CoinMin(forceFactorization_,(numberPivots+1)>>1);
       }
-      returnCode=0;
       break;
     }
   }
@@ -4122,10 +4152,10 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
       upper_[iColumn] = (newUpper[i]/columnScale_[iColumn])*rhsScale_; // scale
     // Start of fast iterations
     int status = fastDual(alwaysFinish);
-    CoinAssert (status_||objectiveValue_<1.0e50);
+    CoinAssert (problemStatus_||objectiveValue_<1.0e50);
     // make sure plausible
     double obj = CoinMax(objectiveValue_,saveObjectiveValue);
-    if (status) {
+    if (status&&problemStatus_!=3) {
       // not finished - might be optimal
       checkPrimalSolution(rowActivityWork_,columnActivityWork_);
       double limit = 0.0;
@@ -4141,7 +4171,8 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
       objectiveChange = 1.0e100;
       status=1;
     }
-
+    if (problemStatus_==3)
+      status=2;
     if (scalingFlag_<=0) {
       memcpy(outputSolution[iSolution],solution_,numberColumns_*sizeof(double));
     } else {
@@ -4186,7 +4217,7 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
     status = fastDual(alwaysFinish);
     // make sure plausible
     obj = CoinMax(objectiveValue_,saveObjectiveValue);
-    if (status) {
+    if (status&&problemStatus_!=3) {
       // not finished - might be optimal
       checkPrimalSolution(rowActivityWork_,columnActivityWork_);
       double limit = 0.0;
@@ -4202,6 +4233,8 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
       objectiveChange = 1.0e100;
       status=1;
     }
+    if (problemStatus_==3)
+      status=2;
     if (scalingFlag_<=0) {
       memcpy(outputSolution[iSolution],solution_,numberColumns_*sizeof(double));
     } else {
@@ -4363,23 +4396,16 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
     if (problemStatus_<0) {
       double * givenPi=NULL;
       returnCode = whileIterating(givenPi,0);
-      if ((!alwaysFinish&&returnCode<1)||returnCode==3) {
-	double limit = 0.0;
-	getDblParam(ClpDualObjectiveLimit, limit);
-	if(fabs(limit)>1.0e30||objectiveValue()*optimizationDirection_<
-	   limit|| 
-	   numberAtFakeBound()) {
-	  returnCode=1;
-	  secondaryStatus_ = 1; 
-	  // can't say anything interesting - might as well return
+      if ((!alwaysFinish&&returnCode<0)||returnCode==3) {
+        if (returnCode!=3)
+          assert (problemStatus_<0);
+        returnCode=1;
+        problemStatus_ = 3; 
+        // can't say anything interesting - might as well return
 #ifdef CLP_DEBUG
-	  printf("returning from fastDual after %d iterations with code %d\n",
-		 numberIterations_,returnCode);
+        printf("returning from fastDual after %d iterations with code %d\n",
+               numberIterations_,returnCode);
 #endif
-	} else {
-	  // looks as if it is infeasible
-	  returnCode=0;
-	}
 	break;
       }
       returnCode=0;
