@@ -55,6 +55,7 @@ int main (int argc, const char *argv[])
   bool    primal=true,presolve=false;
   int useosl=0;
   bool freeFormat=false;
+  bool exportIt=false;
 
   EKKModel * model;
   EKKContext * context;
@@ -121,6 +122,9 @@ int main (int argc, const char *argv[])
     if (!strncmp(argv[i],"both",4)) {
       useosl=2;
     }
+    if (!strncmp(argv[i],"export",6)) {
+      exportIt=true;
+    }
   }
   if (useosl) {
     // OSL
@@ -149,6 +153,24 @@ int main (int argc, const char *argv[])
       ekk_primalClp(model,1,3);
     else
       ekk_dualClp(model,3);
+  }
+  if (exportIt) {
+    ClpSimplex * clp = new ClpSimplex();;
+    int numberRows=ekk_getInumrows(model);
+    int numberColumns= ekk_getInumcols(model);
+    clp->loadProblem(numberColumns,numberRows,ekk_blockColumn(model,0),
+                     ekk_blockRow(model,0),ekk_blockElement(model,0),
+                     ekk_collower(model),ekk_colupper(model),
+                     ekk_objective(model),
+                     ekk_rowlower(model),ekk_rowupper(model));
+    // Do integer stuff
+    int * which =  ekk_listOfIntegers(model);
+    int numberIntegers =  ekk_getInumints(model);
+    for (int i=0;i<numberIntegers;i++) 
+      clp->setInteger(which[i]);
+    ekk_free(which);
+    clp->writeMps("try1.mps");
+    delete clp;
   }
   return 0;
 }    
