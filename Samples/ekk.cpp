@@ -172,5 +172,7 @@ int main (int argc, const char *argv[])
     clp->writeMps("try1.mps");
     delete clp;
   }
+  ekk_deleteModel(model);
+  ekk_endContext(context);
   return 0;
 }    
