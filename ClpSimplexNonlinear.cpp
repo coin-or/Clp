@@ -1435,6 +1435,9 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
 	      }
 	    }
 	  }
+          // But largest has to match up with change
+          assert (work[sequenceIn_]);
+          largest /= fabs(work[sequenceIn_]);
 	  if (largest<objTheta2) {
 	    easyMove=true;
 	  } else if (!easyMove) {
