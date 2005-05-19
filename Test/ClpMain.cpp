@@ -14,7 +14,7 @@
 #include "CoinPragma.hpp"
 #include "CoinHelperFunctions.hpp"
 // History since 1.0 at end
-#define CLPVERSION "1.02.01D"
+#define CLPVERSION "1.02.02"
 
 #include "CoinMpsIO.hpp"
 #include "CoinFileIO.hpp"
@@ -1789,4 +1789,5 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
   1.01.02 May 4 2005.  Will be putting in many changes - so saving stable version
   1.02.01 May 6 2005.  Lots of changes to try and make faster and more stable in
   branch and cut.
+  1.02.02 May 19 2005.  Stuff for strong branching and some improvements to simplex
  */

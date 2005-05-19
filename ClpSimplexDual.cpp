@@ -438,6 +438,10 @@ int ClpSimplexDual::dual (int ifValuesPass , int startFinishOptions)
   restoreData(data);
   return problemStatus_;
 }
+//#define CHECK_ACCURACY
+#ifdef CHECK_ACCURACY
+static double zzzzzz[100000];
+#endif
 /* Reasons to come out:
    -1 iterations etc
    -2 inaccuracy 
@@ -525,7 +529,34 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
   } else {
     assert (!ifValuesPass);
   }
+#ifdef CHECK_ACCURACY
+  {
+    if (numberIterations_) {
+      int il=-1;
+      double largest=1.0e-1;
+      int ilnb=-1;
+      double largestnb=1.0e-8;
+      for (int i=0;i<numberRows_+numberColumns_;i++) {
+        double diff = fabs(solution_[i]-zzzzzz[i]);
+        if (diff>largest) {
+          largest=diff;
+          il=i;
+        }
+        if (getColumnStatus(i)!=basic) {
+          if (diff>largestnb) {
+            largestnb=diff;
+            ilnb=i;
+          }
+        } 
+      }
+      if (il>=0&&ilnb<0)
+        printf("largest diff of %g at %d, nonbasic %g at %d\n",
+               largest,il,largestnb,ilnb);
+    }
+  }
+#endif
   while (problemStatus_==-1) {
+
 #ifdef CLP_DEBUG
     if (givenDuals) {
       double value5=0.0;
@@ -1091,6 +1122,11 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
 	    <<numberIterations_;
           whatNext=1;
         }
+#ifdef CHECK_ACCURACY
+        if (whatNext) {
+          memcpy(zzzzzz,solution_,(numberRows_+numberColumns_)*sizeof(double));
+        }
+#endif
 	//if (numberIterations_==1890)
         //whatNext=1;
 	//if (numberIterations_>2000)
@@ -1296,20 +1332,36 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
               arrayVector->clear();
               double * rhs = arrayVector->denseVector();
               times(1.0,solution_,rhs);
+#ifdef CHECK_ACCURACY
+              bool bad=false;
+#endif
               bool bad2=false;
               int i;
               for ( i=0;i<numberRows_;i++) {
                 if (rhs[i]<rowLowerWork_[i]-primalTolerance_||
                     rhs[i]>rowUpperWork_[i]+primalTolerance_) {
                   bad2=true;
-                  break;
+#ifdef CHECK_ACCURACY
+                  printf("row %d out of bounds %g, %g correct %g bad %g\n",i,
+                         rowLowerWork_[i],rowUpperWork_[i],
+                         rhs[i],rowActivityWork_[i]);
+#endif
+                } else if (fabs(rhs[i]-rowActivityWork_[i])>1.0e-3) {
+#ifdef CHECK_ACCURACY
+                  bad=true;
+                  printf("row %d correct %g bad %g\n",i,rhs[i],rowActivityWork_[i]);
+#endif
                 }
               }
               for ( i=0;i<numberColumns_;i++) {
                 if (solution_[i]<columnLowerWork_[i]-primalTolerance_||
                     solution_[i]>columnUpperWork_[i]+primalTolerance_) {
                   bad2=true;
-                  break;
+#ifdef CHECK_ACCURACY
+                  printf("column %d out of bounds %g, %g correct %g bad %g\n",i,
+                         columnLowerWork_[i],columnUpperWork_[i],
+                         solution_[i],columnActivityWork_[i]);
+#endif
                 }
               }
               if (bad2) {
@@ -2643,8 +2695,11 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 	      // modify cost to hit new tolerance
 	      double modification = alpha*theta_-dj_[iSequence]
 		+newTolerance;
-	      if ((specialOptions_&(2048+4096))!=0) {
-		if ((specialOptions_&2048)!=0) {
+	      if ((specialOptions_&(2048+4096+16384))!=0) {
+		if ((specialOptions_&16384)!=0) {
+		  if (fabs(modification)<1.0e-8)
+		    modification=0.0;
+		} else if ((specialOptions_&2048)!=0) {
 		  if (fabs(modification)<1.0e-10)
 		    modification=0.0;
 		} else {
@@ -4173,6 +4228,7 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
     }
     if (problemStatus_==3)
       status=2;
+
     if (scalingFlag_<=0) {
       memcpy(outputSolution[iSolution],solution_,numberColumns_*sizeof(double));
     } else {
@@ -4318,8 +4374,10 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
 int ClpSimplexDual::fastDual(bool alwaysFinish)
 {
   algorithm_ = -1;
+  secondaryStatus_=0;
   // Say in fast dual
   specialOptions_ |= 16384;
+  //handler_->setLogLevel(63);
   // save data
   ClpDataSave data = saveData();
   dualTolerance_=dblParam_[ClpDualTolerance];
@@ -4428,6 +4486,101 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
   restoreData(data);
   dualBound_ = saveDualBound;
   return returnCode;
+}
+// This does first part of StrongBranching
+ClpFactorization * 
+ClpSimplexDual::setupForStrongBranching(char * arrays, int numberRows, int numberColumns)
+{
+  algorithm_ = -1;
+  // put in standard form (and make row copy)
+  // create modifiable copies of model rim and do optional scaling
+  int startFinishOptions;
+  if((specialOptions_&4096)==0) {
+    startFinishOptions=0;
+  } else {
+    startFinishOptions=1+2+4;
+  }
+  createRim(7+8+16+32,true,startFinishOptions);
+  // Do initial factorization
+  // and set certain stuff
+  // We can either set increasing rows so ...IsBasic gives pivot row
+  // or we can just increment iBasic one by one
+  // for now let ...iBasic give pivot row
+  int useFactorization=false;
+  if ((startFinishOptions&2)!=0&&(whatsChanged_&(2+512))==2+512)
+    useFactorization=true; // Keep factorization if possible
+  // switch off factorization if bad
+  if (pivotVariable_[0]<0)
+    useFactorization=false;
+  if (!useFactorization||factorization_->numberRows()!=numberRows_) {
+    useFactorization = false;
+    factorization_->increasingRows(2);
+    // row activities have negative sign
+    factorization_->slackValue(-1.0);
+    factorization_->zeroTolerance(1.0e-13);
+
+    int factorizationStatus = internalFactorize(0);
+    if (factorizationStatus<0) {
+      // some error
+      // we should either debug or ignore 
+#ifndef NDEBUG
+      printf("***** ClpDual strong branching factorization error - debug\n");
+#endif
+    } else if (factorizationStatus&&factorizationStatus<=numberRows_) {
+      handler_->message(CLP_SINGULARITIES,messages_)
+	<<factorizationStatus
+	<<CoinMessageEol;
+    }
+  }
+  double * arrayD = (double *) arrays;
+  arrayD[0]=objectiveValue();
+  double * saveSolution = arrayD+1;
+  double * saveLower = saveSolution + (numberRows+numberColumns);
+  double * saveUpper = saveLower + (numberRows+numberColumns);
+  double * saveObjective = saveUpper + (numberRows+numberColumns);
+  double * saveLowerOriginal = saveObjective + (numberRows+numberColumns);
+  double * saveUpperOriginal = saveLowerOriginal + numberColumns;
+  arrayD = saveUpperOriginal + numberColumns;
+  int * savePivot = (int *) arrayD;
+  int * whichRow = savePivot+numberRows;
+  int * whichColumn = whichRow + 3*numberRows;
+  int * arrayI = whichColumn + 2*numberColumns;
+  unsigned char * saveStatus = (unsigned char *) (arrayI+1);
+  // save stuff
+  // save basis and solution 
+  memcpy(saveSolution,solution_,
+	 (numberRows_+numberColumns_)*sizeof(double));
+  memcpy(saveStatus,status_,(numberColumns_+numberRows_)*sizeof(char));
+  memcpy(saveLower,lower_,
+	 (numberRows_+numberColumns_)*sizeof(double));
+  memcpy(saveUpper,upper_,
+	 (numberRows_+numberColumns_)*sizeof(double));
+  memcpy(saveObjective,cost_,
+	 (numberRows_+numberColumns_)*sizeof(double));
+  memcpy(savePivot, pivotVariable_, numberRows_*sizeof(int));
+  return new ClpFactorization(*factorization_);
+}
+// This cleans up after strong branching
+void 
+ClpSimplexDual::cleanupAfterStrongBranching()
+{
+  int startFinishOptions;
+  if((specialOptions_&4096)==0) {
+    startFinishOptions=0;
+  } else {
+    startFinishOptions=1+2+4;
+  }
+  if ((startFinishOptions&1)==0) {
+    deleteRim(1);
+    whatsChanged_=0;
+  } else {
+    // Original factorization will have been put back by last loop
+    //delete factorization_;
+    //factorization_ = new ClpFactorization(saveFactorization);
+    deleteRim(0);
+    // mark all as current
+    whatsChanged_ = 0xffff;
+  }
 }
 /* Checks number of variables at fake bounds.  This is used by fastDual
    so can exit gracefully before end */

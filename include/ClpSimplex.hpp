@@ -22,6 +22,7 @@ class CoinIndexedVector;
 class ClpNonLinearCost;
 class ClpSimplexProgress;
 class CoinModel;
+class OsiClpSolverInterface;
 
 /** This solves LPs using the simplex method
 
@@ -1216,6 +1217,8 @@ protected:
   int automaticScale_;
   /// For dealing with all issues of cycling etc
   ClpSimplexProgress * progress_;
+  /// Allow OsiClp certain perks
+  friend class OsiClpSolverInterface;
   //@}
 };
 //#############################################################################

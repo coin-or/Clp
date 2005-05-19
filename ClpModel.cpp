@@ -2427,6 +2427,21 @@ ClpModel::setInteger(int index)
 #endif
   integerType_[index]=1;
 }
+/* Return true if the index-th variable is an integer variable */
+bool 
+ClpModel::isInteger(int index) const
+{
+  if (!integerType_) {
+    return false;
+  } else {
+#ifndef NDEBUG
+    if (index<0||index>=numberColumns_) {
+      indexError(index,"isInteger");
+    }
+#endif
+    return (integerType_[index]!=0);
+  }
+}
 // Drops names - makes lengthnames 0 and names empty
 void 
 ClpModel::dropNames()

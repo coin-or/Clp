@@ -130,6 +130,10 @@ public:
 		      bool stopOnFirstInfeasible=true,
 		      bool alwaysFinish=false,
 		      int startFinishOptions=0);
+  /// This does first part of StrongBranching
+  ClpFactorization * setupForStrongBranching(char * arrays, int numberRows, int numberColumns);
+  /// This cleans up after strong branching
+  void cleanupAfterStrongBranching();
   //@}
 
   /**@name Functions used in dual */

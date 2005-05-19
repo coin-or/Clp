@@ -969,6 +969,37 @@ ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
 #endif
   //feasibleCost_ /= (model_->rhsScale()*model_->objScale());
 }
+// Puts feasible bounds into lower and upper
+void 
+ClpNonLinearCost::feasibleBounds()
+{
+  if (CLP_METHOD2) {
+    int iSequence;
+    double * upper = model_->upperRegion();
+    double * lower = model_->lowerRegion();
+    double * cost = model_->costRegion();
+    int numberTotal = numberColumns_+numberRows_;
+    for (iSequence=0;iSequence<numberTotal;iSequence++) {
+      int iStatus = status_[iSequence];
+      assert (currentStatus(iStatus)==CLP_SAME);
+      double lowerValue=lower[iSequence];
+      double upperValue=upper[iSequence];
+      double costValue = cost2_[iSequence];
+      int iWhere = originalStatus(iStatus);
+      if (iWhere==CLP_BELOW_LOWER) {
+        lowerValue=upperValue;
+        upperValue=bound_[iSequence];
+      } else if (iWhere==CLP_ABOVE_UPPER) {
+        upperValue=lowerValue;
+        lowerValue=bound_[iSequence];
+      }
+      setOriginalStatus(status_[iSequence],CLP_FEASIBLE);
+      lower[iSequence] = lowerValue;
+      upper[iSequence] = upperValue;
+      cost[iSequence] = costValue;
+    }
+  }
+}
 /* Goes through one bound for each variable.
    If array[i]*multiplier>0 goes down, otherwise up.
    The indices are row indices and need converting to sequences

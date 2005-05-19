@@ -129,6 +129,8 @@ public:
   void zapCosts();
   /// Refreshes costs always makes row costs zero
   void refreshCosts(const double * columnCosts);
+  /// Puts feasible bounds into lower and upper
+  void feasibleBounds();
   /** Sets bounds and cost for one variable 
       Returns change in cost
    May need to be inline for speed */

@@ -1075,7 +1075,7 @@ ClpSimplexOther::crunch(double * rhs, int * whichRow, int * whichColumn,
               small->setColumnStatus(jColumn,ClpSimplex::atUpperBound);
           }
         } else {
-          printf("what now neither basic\n");
+          //printf("what now neither basic\n");
         }
       }
     }

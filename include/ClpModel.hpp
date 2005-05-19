@@ -133,6 +133,8 @@ public:
   void setContinuous(int index);
   /** Set the index-th variable to be an integer variable */
   void setInteger(int index);
+  /** Return true if the index-th variable is an integer variable */
+  bool isInteger(int index) const;
   /// Resizes rim part of model 
   void resize (int newNumberRows, int newNumberColumns);
   /// Deletes rows

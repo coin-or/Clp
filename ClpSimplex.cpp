@@ -2,7 +2,7 @@
 // Corporation and others.  All Rights Reserved.
 
 
-
+#undef NDEBUG
 
 #include "CoinPragma.hpp"
 

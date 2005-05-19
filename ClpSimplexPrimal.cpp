@@ -1773,6 +1773,9 @@ ClpSimplexPrimal::perturb(int type)
   int i;
   if (!numberIterations_)
     cleanStatus(); // make sure status okay
+  // Make sure feasible bounds
+  if (nonLinearCost_)
+    nonLinearCost_->feasibleBounds();
   // look at element range
   double smallestNegative;
   double largestNegative;
