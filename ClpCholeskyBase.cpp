@@ -1000,6 +1000,7 @@ ClpCholeskyBase::symbolic()
 	Arow[sizeFactor_++]=numberColumns+iRow;
       }
     }
+    delete rowCopy;
   }
   Astart[numberRows_]=sizeFactor_;
   firstDense_=numberRows_;
@@ -2077,6 +2078,7 @@ ClpCholeskyBase::factorize(const double * diagonal, int * rowsDropped)
 	dualR[iRow-numberTotal]=0.0;
       }
     }
+    delete [] rowsDropped2;
   }
   status_=0;
   return newDropped;
