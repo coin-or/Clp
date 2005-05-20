@@ -35,6 +35,7 @@ void ClpSimplexOther::dualRanging(int numberCheck,const int * which,
   rowArray_[1]->clear();
   rowArray_[3]->clear();
   columnArray_[0]->clear();
+  dualTolerance_ = dblParam_[ClpDualTolerance];
   for ( int i=0;i<numberCheck;i++) {
     int iSequence = which[i];
     double costIncrease=COIN_DBL_MAX;
