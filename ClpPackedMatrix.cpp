@@ -945,7 +945,7 @@ ClpPackedMatrix::transposeTimesByRow(const ClpSimplex * model, double scalar,
 	int iColumn = index[i];
 	if (marked[iColumn]) {
 	  double value = array2[iColumn];
-	  array2[iColumn]=0.0;
+	  array2[iColumn]=0.0; 
 	  marked[iColumn]=0;
 	  if (fabs(value)>zeroTolerance) {
 	    array[numberNonZero]=value;

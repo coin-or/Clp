@@ -33,10 +33,26 @@ void ClpSimplexOther::dualRanging(int numberCheck,const int * which,
 {
   rowArray_[0]->clear();
   rowArray_[1]->clear();
-  rowArray_[3]->clear();
+  columnArray_[1]->clear();
   columnArray_[0]->clear();
+  // long enough for rows+columns
+  assert(rowArray_[3]->capacity()>=numberRows_+numberColumns_);
+  rowArray_[3]->clear();
+  int * backPivot = rowArray_[3]->getIndices();
+  int i;
+  for ( i=0;i<numberRows_+numberColumns_;i++) {
+    backPivot[i]=-1;
+  }
+  for (i=0;i<numberRows_;i++) {
+    int iSequence = pivotVariable_[i];
+    backPivot[iSequence]=i;
+  }
+  // dualTolerance may be zero if from CBC.  In fact use that fact
+  bool inCBC = !dualTolerance_;
+  if (inCBC)
+    assert (integerType_);
   dualTolerance_ = dblParam_[ClpDualTolerance];
-  for ( int i=0;i<numberCheck;i++) {
+  for ( i=0;i<numberCheck;i++) {
     int iSequence = which[i];
     double costIncrease=COIN_DBL_MAX;
     double costDecrease=COIN_DBL_MAX;
@@ -48,22 +64,52 @@ void ClpSimplexOther::dualRanging(int numberCheck,const int * which,
     case basic:
       {
 	// non-trvial
-	// Find pivot row (could be faster)
-	int iRow=-1;
-	for (iRow=0;iRow<numberRows_;iRow++) {
-	  if (iSequence == pivotVariable_[iRow]) 
-	    break;
-	}
+	// Get pivot row
+	int iRow=backPivot[iSequence];
 	assert (iRow>=0);
 	double plusOne=1.0;
         rowArray_[0]->createPacked(1,&iRow,&plusOne);
 	factorization_->updateColumnTranspose(rowArray_[1],rowArray_[0]);
 	// put row of tableau in rowArray[0] and columnArray[0]
 	matrix_->transposeTimes(this,-1.0,
-				rowArray_[0],rowArray_[3],columnArray_[0]);
+				rowArray_[0],columnArray_[1],columnArray_[0]);
+        double alphaIncrease;
+        double alphaDecrease;
 	// do ratio test up and down
-	checkDualRatios(rowArray_[0],columnArray_[0],costIncrease,sequenceIncrease,
-		    costDecrease,sequenceDecrease);
+	checkDualRatios(rowArray_[0],columnArray_[0],costIncrease,sequenceIncrease,alphaIncrease,
+		    costDecrease,sequenceDecrease,alphaDecrease);
+        if (inCBC) { 
+          if (sequenceIncrease>=0) {
+            double djValue = dj_[sequenceIncrease];
+            if (fabs(djValue)>10.0*dualTolerance_) {
+              // we are going to use for cutoff so be exact
+              costIncrease = fabs(djValue/alphaIncrease); 
+              if(sequenceIncrease<numberColumns_&&integerType_[sequenceIncrease]) {
+                // can improve
+                double movement = (columnScale_==NULL) ? 1.0 : 
+                  rhsScale_/columnScale_[sequenceIncrease];
+                costIncrease = CoinMax(fabs(djValue*movement),costIncrease);
+              }
+            } else {
+              costIncrease=0.0;
+            }
+          }
+          if (sequenceDecrease>=0) {
+            double djValue = dj_[sequenceDecrease];
+            if (fabs(djValue)>10.0*dualTolerance_) {
+              // we are going to use for cutoff so be exact
+              costDecrease = fabs(djValue/alphaDecrease); 
+              if(sequenceDecrease<numberColumns_&&integerType_[sequenceDecrease]) {
+                // can improve
+                double movement = (columnScale_==NULL) ? 1.0 : 
+                  rhsScale_/columnScale_[sequenceDecrease];
+                costDecrease = CoinMax(fabs(djValue*movement),costDecrease);
+              }
+            } else {
+              costDecrease=0.0;
+            }
+          }
+        }
       }
       break;
     case isFixed:
@@ -127,9 +173,9 @@ void ClpSimplexOther::dualRanging(int numberCheck,const int * which,
 */
 void
 ClpSimplexOther::checkDualRatios(CoinIndexedVector * rowArray,
-			     CoinIndexedVector * columnArray,
-			     double & costIncrease, int & sequenceIncrease,
-			     double & costDecrease, int & sequenceDecrease)
+                                 CoinIndexedVector * columnArray,
+                                 double & costIncrease, int & sequenceIncrease, double & alphaIncrease,
+                                 double & costDecrease, int & sequenceDecrease, double & alphaDecrease)
 {
   double acceptablePivot = 1.0e-7;
   double * work;
@@ -141,6 +187,8 @@ ClpSimplexOther::checkDualRatios(CoinIndexedVector * rowArray,
   double thetaUp = 1.0e31;
   int sequenceDown =-1;
   int sequenceUp = -1;
+  double alphaDown=0.0;
+  double alphaUp=0.0;
 
   int addSequence;
 
@@ -187,12 +235,14 @@ ClpSimplexOther::checkDualRatios(CoinIndexedVector * rowArray,
 	  if (oldValue + thetaUp*alpha > dualTolerance_) {
 	    thetaUp = (dualTolerance_-oldValue)/alpha;
 	    sequenceUp = iSequence2;
+            alphaUp=alpha;
 	  }
 	} else {
 	  // test down
 	  if (oldValue - thetaDown*alpha > dualTolerance_) {
 	    thetaDown = -(dualTolerance_-oldValue)/alpha;
 	    sequenceDown = iSequence2;
+            alphaDown=alpha;
 	  }
 	}
 	break;
@@ -202,12 +252,14 @@ ClpSimplexOther::checkDualRatios(CoinIndexedVector * rowArray,
 	  if (oldValue + thetaUp*alpha <- dualTolerance_) {
 	    thetaUp = -(dualTolerance_+oldValue)/alpha;
 	    sequenceUp = iSequence2;
+            alphaUp=alpha;
 	  }
 	} else {
 	  // test down
 	  if (oldValue - thetaDown*alpha < -dualTolerance_) {
 	    thetaDown = (dualTolerance_+oldValue)/alpha;
 	    sequenceDown = iSequence2;
+            alphaDown=alpha;
 	  }
 	}
 	break;
@@ -217,10 +269,12 @@ ClpSimplexOther::checkDualRatios(CoinIndexedVector * rowArray,
   if (sequenceUp>=0) {
     costIncrease = thetaUp;
     sequenceIncrease = sequenceUp;
+    alphaIncrease = alphaUp;
   }
   if (sequenceDown>=0) {
     costDecrease = thetaDown;
     sequenceDecrease = sequenceDown;
+    alphaDecrease = alphaDown;
   }
 }
 /** Primal ranging.
@@ -984,7 +1038,7 @@ ClpSimplexOther::crunch(double * rhs, int * whichRow, int * whichColumn,
   ClpSimplex * small=NULL;
   if (!returnCode) {
     small = new ClpSimplex(this,numberRows2,whichRow,
-                     numberColumns2,whichColumn);
+                     numberColumns2,whichColumn,true,false);
     int numberElements=getNumElements();
     int numberElements2=small->getNumElements();
     small->setObjectiveOffset(objectiveOffset()-offset);

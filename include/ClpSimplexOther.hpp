@@ -58,8 +58,8 @@ public:
   */
   void checkDualRatios(CoinIndexedVector * rowArray,
 		   CoinIndexedVector * columnArray,
-		   double & costIncrease, int & sequenceIncrease,
-		   double & costDecrease, int & sequencedecrease);
+                       double & costIncrease, int & sequenceIncrease, double & alphaIncrease,
+                       double & costDecrease, int & sequenceDecrease, double & alphaDecrease);
   /** 
       Row array has pivot column
       This is used in primal ranging
