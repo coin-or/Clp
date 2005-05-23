@@ -730,6 +730,14 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
       sumDualInfeasibilities_ = 0.0;
     }
   }
+  // If in primal and small dj give up
+  if ((specialOptions_&1024)!=0&&!numberPrimalInfeasibilities_&&numberDualInfeasibilities_) {
+    double average = sumDualInfeasibilities_/((double) numberDualInfeasibilities_);
+    if (numberIterations_>300&&average<1.0e-4) {
+      numberDualInfeasibilities_ = 0;
+      sumDualInfeasibilities_ = 0.0;
+    }
+  }
   // Check if looping
   int loop;
   if (type!=2&&!ifValuesPass) 
