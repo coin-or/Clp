@@ -1043,6 +1043,34 @@ Clp_getRowStatus(Clp_Simplex * model,int sequence)
 {
   return (int) model->model_->getRowStatus(sequence);
 }
+/* Set variable basis info */
+COINLIBAPI void COINLINKAGE
+Clp_setColumnStatus(Clp_Simplex * model,int sequence, int value)
+{
+  if (value>=0&&value<=5) {
+    model->model_->setColumnStatus(sequence,(ClpSimplex::Status) value );
+    if (value==3||value==5)
+      model->model_->primalColumnSolution()[sequence]=
+	model->model_->columnLower()[sequence];
+    else if (value==2)
+      model->model_->primalColumnSolution()[sequence]=
+	model->model_->columnUpper()[sequence];
+  }
+}
+/* Set row basis info */
+COINLIBAPI void COINLINKAGE
+Clp_setRowStatus(Clp_Simplex * model,int sequence, int value)
+{
+  if (value>=0&&value<=5) {
+    model->model_->setRowStatus(sequence,(ClpSimplex::Status) value );
+    if (value==3||value==5)
+      model->model_->primalRowSolution()[sequence]=
+	model->model_->rowLower()[sequence];
+    else if (value==2)
+      model->model_->primalRowSolution()[sequence]=
+	model->model_->rowUpper()[sequence];
+  }
+}
 /* Small element value - elements less than this set to zero,
    default is 1.0e-20 */
 COINLIBAPI double COINLINKAGE 
