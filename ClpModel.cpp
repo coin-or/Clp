@@ -567,7 +567,9 @@ ClpModel::ClpModel(const ClpModel &rhs, int scalingMode) :
     rowScale_ = NULL;
     delete [] columnScale_;
     columnScale_ = NULL;
-    if (!matrix_->scale(this)) {
+    delete rowCopy_; // in case odd
+    rowCopy_=NULL;
+    if (scalingMode&&!matrix_->scale(this)) {
       // scaling worked - now apply
       gutsOfScaling();
       // pretend not scaled

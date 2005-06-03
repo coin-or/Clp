@@ -62,6 +62,11 @@ public:
   virtual void appendCols(int number, const CoinPackedVectorBase * const * columns);
   /// Append Rows
   virtual void appendRows(int number, const CoinPackedVectorBase * const * rows);
+  /** Modify one element of packed matrix.  An element may be added.
+      This works for either ordering If the new element is zero it will be 
+      deleted unless keepZero true */
+  virtual void modifyCoefficient(int row, int column, double newElement,
+                                 bool keepZero=false);
   /** Append a set of rows/columns to the end of the matrix. Returns number of errors
       i.e. if any of the new rows/columns contain an index that's larger than the
       number of columns-1/rows-1 (if numberOther>0) or duplicates

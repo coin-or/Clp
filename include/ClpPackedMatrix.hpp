@@ -73,6 +73,12 @@ public:
   virtual void replaceVector(const int index,
 		       const int numReplace, const double * newElements)
       {matrix_->replaceVector(index,numReplace,newElements);};
+  /** Modify one element of packed matrix.  An element may be added.
+      This works for either ordering If the new element is zero it will be 
+      deleted unless keepZero true */
+  virtual void modifyCoefficient(int row, int column, double newElement,
+                           bool keepZero=false)
+       {matrix_->modifyCoefficient(row, column, newElement, keepZero);}
   /** Returns a new matrix in reverse order without gaps */
   virtual ClpMatrixBase * reverseOrderedCopy() const;
   /// Returns number of elements in column part of basis 

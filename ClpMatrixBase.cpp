@@ -584,3 +584,13 @@ ClpMatrixBase::appendMatrix(int number, int type,
   return -1;
 }
 
+/* Modify one element of packed matrix.  An element may be added.
+   This works for either ordering If the new element is zero it will be 
+   deleted unless keepZero true */
+void 
+ClpMatrixBase::modifyCoefficient(int row, int column, double newElement,
+			bool keepZero)
+{ 
+  std::cerr<<"modifyCoefficient not supported - ClpMatrixBase"<<std::endl;
+  abort();
+}

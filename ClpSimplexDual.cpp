@@ -1352,6 +1352,7 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
                   printf("row %d correct %g bad %g\n",i,rhs[i],rowActivityWork_[i]);
 #endif
                 }
+                rhs[i]=0.0;
               }
               for ( i=0;i<numberColumns_;i++) {
                 if (solution_[i]<columnLowerWork_[i]-primalTolerance_||
@@ -2972,7 +2973,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
   // get primal and dual solutions
   gutsOfSolution(givenDuals,NULL);
   // If bad accuracy treat as singular
-  if (largestPrimalError_>1.0e15||largestDualError_>1.0e15&&numberIterations_) {
+  if ((largestPrimalError_>1.0e15||largestDualError_>1.0e15)&&numberIterations_) {
     // restore previous basis
     unflagVariables = false;
     assert (type==1);

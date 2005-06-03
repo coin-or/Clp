@@ -216,6 +216,10 @@ public:
   */
   int addColumns(CoinModel & modelObject,bool tryPlusMinusOne=false,
                  bool checkDuplicates=true);
+  /// Modify one element of a matrix
+  inline void modifyCoefficient(int row, int column, double newElement,
+                           bool keepZero=false)
+	{matrix_->modifyCoefficient(row,column,newElement,keepZero);}
   /** Change row lower bounds */
   void chgRowLower(const double * rowLower);
   /** Change row upper bounds */
