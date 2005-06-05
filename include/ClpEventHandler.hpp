@@ -4,7 +4,6 @@
 #define ClpEventHandler_H
 
 #include "ClpSimplex.hpp"
-
 /** Base class for Clp event handling
     
 This is just here to allow for event handling.  By event I mean a Clp event
@@ -17,6 +16,8 @@ MyEventHandler::event() could clear event status and return 3 (stopped).
 Clp would then return to user code.
 
 As it is called every iteration this should be fine grained enough.
+
+User can derive and construct from CbcModel  - not pretty
     
 */
 
@@ -30,7 +31,10 @@ public:
   enum Event {
     endOfIteration = 100, // used to set secondary status
     endOfFactorization,
-    endOfValuesPass
+    endOfValuesPass,
+    node, // for Cbc
+    treeStatus, // for Cbc
+    solution // for Cbc
   };
   /**@name Virtual method that the derived classe should provide.
    The base class instance does nothing and as event() is only useful method

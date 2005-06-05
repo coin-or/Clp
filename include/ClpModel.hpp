@@ -624,6 +624,9 @@ public:
    inline int logLevel() const           { return handler_->logLevel(); }
    /// Pass in Event handler (cloned and deleted at end)
    void passInEventHandler(const ClpEventHandler * eventHandler);
+   /// Event handler
+   inline ClpEventHandler * eventHandler() const
+  { return eventHandler_;};
    /// length of names (0 means no names0
    inline int lengthNames() const { return lengthNames_; }
    /// length of names (0 means no names0
