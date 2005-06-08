@@ -279,6 +279,13 @@ public:
   int pivotResult();
   /** Get next free , -1 if none */
   int nextSuperBasic();
+  /** Startup part of dual (may be extended to other algorithms)
+      returns 0 if good, 1 if bad */
+  int startupSolve(int ifValuesPass,double * saveDuals,int startFinishOptions);
+  void finishSolve(int startFinishOptions);
+  void gutsOfDual(int ifValuesPass,double * & saveDuals,int initialStatus,
+                  ClpDataSave & saveData);
+  //int dual2(int ifValuesPass,int startFinishOptions=0);
   
   //@}
 };

@@ -51,6 +51,56 @@ public:
   void primalRanging(int numberCheck,const int * which,
 		  double * valueIncrease, int * sequenceIncrease,
 		  double * valueDecrease, int * sequenceDecrease);
+  /** Parametrics
+      This is an initial slow version.
+      The code uses current bounds + theta * change (if change array not NULL)
+      and similarly for objective.
+      It starts at startingTheta and returns ending theta in endingTheta.
+      If reportIncrement 0.0 it will report on any movement
+      If reportIncrement >0.0 it will report at startingTheta+k*reportIncrement.
+      If it can not reach input endingTheta return code will be 1 for infeasible,
+      2 for unbounded, if error on ranges -1,  otherwise 0.
+      Normal report is just theta and objective but
+      if event handler exists it may do more
+      On exit endingTheta is maximum reached (can be used for next startingTheta)
+  */
+  int parametrics(double startingTheta, double & endingTheta,double reportIncrement,
+                  const double * changeLowerBound, const double * changeUpperBound,
+                  const double * changeLowerRhs, const double * changeUpperRhs,
+                  const double * changeObjective);
+  /** Parametrics - inner loop
+      This first attempt is when reportIncrement non zero and may
+      not report endingTheta correctly
+      If it can not reach input endingTheta return code will be 1 for infeasible,
+      2 for unbounded,  otherwise 0.
+      Normal report is just theta and objective but
+      if event handler exists it may do more
+  */
+  int parametricsLoop(double startingTheta, double & endingTheta,double reportIncrement,
+                      const double * changeLower, const double * changeUpper,
+                      const double * changeObjective, ClpDataSave & data,
+                      bool canTryQuick);
+  /**  Refactorizes if necessary 
+       Checks if finished.  Updates status.
+
+       type - 0 initial so set up save arrays etc
+            - 1 normal -if good update save
+	    - 2 restoring from saved 
+  */
+  void statusOfProblemInParametrics(int type,ClpDataSave & saveData);
+  /** This has the flow between re-factorizations
+
+      Reasons to come out:
+      -1 iterations etc
+      -2 inaccuracy 
+      -3 slight inaccuracy (and done iterations)
+      +0 looks optimal (might be unbounded - but we will investigate)
+      +1 looks infeasible
+      +3 max iterations 
+   */
+  int whileIterating(double startingTheta, double & endingTheta,double reportIncrement,
+                      const double * changeLower, const double * changeUpper,
+                      const double * changeObjective);
   /** 
       Row array has row part of pivot row
       Column array has column part.
@@ -93,13 +143,16 @@ public:
       rhs is numberRows, whichRows is 3*numberRows and whichColumns is 2*numberColumns.
   */
   ClpSimplex * crunch(double * rhs, int * whichRows, int * whichColumns,
-                      int & nBound, bool moreBounds=false);
+                      int & nBound, bool moreBounds=false, bool tightenBounds=false);
   /** After very cursory presolve.
       rhs is numberRows, whichRows is 3*numberRows and whichColumns is 2*numberColumns.
   */
   void afterCrunch(const ClpSimplex & small,
                    const int * whichRows, const int * whichColumns,
                    int nBound);
+  /** Tightens integer bounds - returns number tightened or -1 if infeasible
+  */
+  int tightenIntegerBounds(double * rhsSpace); 
   //@}
 };
 #endif

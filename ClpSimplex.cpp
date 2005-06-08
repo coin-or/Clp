@@ -86,6 +86,7 @@ ClpSimplex::ClpSimplex () :
   solution_(NULL),
   rowActivityWork_(NULL),
   columnActivityWork_(NULL),
+  auxiliaryModel_(NULL),
   numberDualInfeasibilities_(0),
   numberDualInfeasibilitiesWithoutFree_(0),
   numberPrimalInfeasibilities_(100),
@@ -191,6 +192,7 @@ ClpSimplex::ClpSimplex ( const ClpModel * rhs,
   solution_(NULL),
   rowActivityWork_(NULL),
   columnActivityWork_(NULL),
+  auxiliaryModel_(NULL),
   numberDualInfeasibilities_(0),
   numberDualInfeasibilitiesWithoutFree_(0),
   numberPrimalInfeasibilities_(100),
@@ -1614,6 +1616,7 @@ ClpSimplex::ClpSimplex(const ClpSimplex &rhs,int scalingMode) :
   solution_(NULL),
   rowActivityWork_(NULL),
   columnActivityWork_(NULL),
+  auxiliaryModel_(NULL),
   numberDualInfeasibilities_(0),
   numberDualInfeasibilitiesWithoutFree_(0),
   numberPrimalInfeasibilities_(100),
@@ -1713,6 +1716,7 @@ ClpSimplex::ClpSimplex(const ClpModel &rhs, int scalingMode) :
   solution_(NULL),
   rowActivityWork_(NULL),
   columnActivityWork_(NULL),
+  auxiliaryModel_(NULL),
   numberDualInfeasibilities_(0),
   numberDualInfeasibilitiesWithoutFree_(0),
   numberPrimalInfeasibilities_(100),
@@ -1777,6 +1781,7 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
   numberExtraRows_ = rhs.numberExtraRows_;
   maximumBasic_ = rhs.maximumBasic_;
   int numberRows2 = numberRows_+numberExtraRows_;
+  auxiliaryModel_ = NULL;
   if ((whatsChanged_&1)!=0) {
     lower_ = ClpCopyOfArray(rhs.lower_,numberColumns_+numberRows2);
     rowLowerWork_ = lower_+numberColumns_;
@@ -1960,6 +1965,8 @@ ClpSimplex::gutsOfDelete(int type)
   saveStatus_=NULL;
   if (!type) {
     // delete everything
+    delete auxiliaryModel_;
+    auxiliaryModel_ = NULL;
     delete factorization_;
     factorization_ = NULL;
     delete [] pivotVariable_;
@@ -2485,6 +2492,8 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
     keepPivots=true;
   }
   bool oldMatrix = ((startFinishOptions&4)!=0&&(whatsChanged_&1)!=0);
+  if (auxiliaryModel_)
+    oldMatrix=true; 
   if (what==63) {
     if (!status_)
       createStatus();
@@ -2524,10 +2533,10 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
     }
   }
   int numberRows2 = numberRows_+numberExtraRows_;
-  //int numberTotal = numberRows_+numberColumns_;
+  int numberTotal = numberRows2+numberColumns_;
   int i;
   bool doSanityCheck=true;
-  if (what==63) {
+  if (what==63&&!auxiliaryModel_) {
     // We may want to switch stuff off for speed
     if ((specialOptions_&256)!=0)
       makeRowCopy=false; // no row copy
@@ -2681,22 +2690,34 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
     if (newArrays) {
       delete [] cost_;
       // extra copy with original costs
-      int nTotal = numberRows2+numberColumns_;
-      //cost_ = new double[2*nTotal];
-      cost_ = new double[nTotal];
+      //cost_ = new double[2*numberTotal];
+      cost_ = new double[numberTotal];
       delete [] lower_;
       delete [] upper_;
       lower_ = new double[numberColumns_+numberRows2];
       upper_ = new double[numberColumns_+numberRows2];
       delete [] dj_;
       dj_ = new double[numberRows2+numberColumns_];
-      reducedCostWork_ = dj_;
-      rowReducedCost_ = dj_+numberColumns_;
       delete [] solution_;
       solution_ = new double[numberRows2+numberColumns_];
-      columnActivityWork_ = solution_;
-      rowActivityWork_ = solution_+numberColumns_;
+    } else if (auxiliaryModel_) {
+      assert (!cost_);
+      cost_=auxiliaryModel_->cost_;
+      assert (!lower_);
+      lower_=auxiliaryModel_->lower_;
+      assert (!upper_);
+      upper_=auxiliaryModel_->upper_;
+      assert (!dj_);
+      dj_=auxiliaryModel_->dj_;
+      assert (!solution_);
+      solution_=auxiliaryModel_->solution_;
+      assert (!rowScale_);
+      assert (!columnScale_);
     }
+    reducedCostWork_ = dj_;
+    rowReducedCost_ = dj_+numberColumns_;
+    columnActivityWork_ = solution_;
+    rowActivityWork_ = solution_+numberColumns_;
     objectiveWork_ = cost_;
     rowObjectiveWork_ = cost_+numberColumns_;
     rowLowerWork_ = lower_+numberColumns_;
@@ -2705,45 +2726,381 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
     columnUpperWork_ = upper_;
   }
   if ((what&4)!=0) {
-    double direction = optimizationDirection_*objectiveScale_;
-    const double * obj = objective();
-    // and also scale by scale factors
-    if (rowScale_) {
-      if (rowObjective_) {
-        for (i=0;i<numberRows_;i++)
-          rowObjectiveWork_[i] = rowObjective_[i]*direction/rowScale_[i];
+    if (!auxiliaryModel_||(what==63&&(auxiliaryModel_->specialOptions_&4)==0)) {
+      double direction = optimizationDirection_*objectiveScale_;
+      const double * obj = objective();
+      const double * rowScale = auxiliaryModel_ ? auxiliaryModel_->rowScale_ : rowScale_;
+      const double * columnScale = auxiliaryModel_ ? auxiliaryModel_->columnScale_ : columnScale_;
+      // and also scale by scale factors
+      if (rowScale) {
+        if (rowObjective_) {
+          for (i=0;i<numberRows_;i++)
+            rowObjectiveWork_[i] = rowObjective_[i]*direction/rowScale[i];
+        } else {
+          memset(rowObjectiveWork_,0,numberRows_*sizeof(double));
+        }
+        // If scaled then do all columns later in one loop 
+        if (what!=63||auxiliaryModel_) {
+          for (i=0;i<numberColumns_;i++) {
+            CoinAssert(fabs(obj[i])<1.0e25);
+            objectiveWork_[i] = obj[i]*direction*columnScale[i];
+          }
+        }
       } else {
-        memset(rowObjectiveWork_,0,numberRows_*sizeof(double));
-      }
-      // If scaled then do all columns later in one loop 
-      if (what!=63||!rowScale_) {
+        if (rowObjective_) {
+          for (i=0;i<numberRows_;i++)
+            rowObjectiveWork_[i] = rowObjective_[i]*direction;
+        } else {
+          memset(rowObjectiveWork_,0,numberRows_*sizeof(double));
+        }
         for (i=0;i<numberColumns_;i++) {
           CoinAssert(fabs(obj[i])<1.0e25);
-          objectiveWork_[i] = obj[i]*direction*columnScale_[i];
+          objectiveWork_[i] = obj[i]*direction;
         }
       }
+      if (auxiliaryModel_) {
+        // save costs
+        memcpy(auxiliaryModel_->cost_+numberTotal,cost_,numberTotal*sizeof(double));
+      }
     } else {
-      if (rowObjective_) {
-        for (i=0;i<numberRows_;i++)
-          rowObjectiveWork_[i] = rowObjective_[i]*direction;
-      } else {
-        memset(rowObjectiveWork_,0,numberRows_*sizeof(double));
-      }
-      for (i=0;i<numberColumns_;i++) {
-        CoinAssert(fabs(obj[i])<1.0e25);
-        objectiveWork_[i] = obj[i]*direction;
-      }
+      // just copy
+      memcpy(cost_,auxiliaryModel_->cost_+numberTotal,numberTotal*sizeof(double));
     }
   }
   if ((what&1)!=0) {
+    const double * rowScale = auxiliaryModel_ ? auxiliaryModel_->rowScale_ : rowScale_;
+    const double * columnScale = auxiliaryModel_ ? auxiliaryModel_->columnScale_ : columnScale_;
     // clean up any mismatches on infinity
     // and fix any variables with tiny gaps
     double primalTolerance=dblParam_[ClpPrimalTolerance];
-    if(rowScale_) {
-      // If scaled then do all columns later in one loop 
-      if (what!=63||!rowScale_) {
+    if (!auxiliaryModel_) {
+      if(rowScale) {
+        // If scaled then do all columns later in one loop 
+        if (what!=63) {
+          for (i=0;i<numberColumns_;i++) {
+            double multiplier = rhsScale_/columnScale[i];
+            double lowerValue = columnLower_[i];
+            double upperValue = columnUpper_[i];
+            if (lowerValue>-1.0e20) {
+              columnLowerWork_[i]=lowerValue*multiplier;
+              if (upperValue>=1.0e20) {
+                columnUpperWork_[i]=COIN_DBL_MAX;
+              } else {
+                columnUpperWork_[i]=upperValue*multiplier;
+                if (columnUpperWork_[i]-columnLowerWork_[i]<=primalTolerance) {
+                  if (columnLowerWork_[i]>=0.0) {
+                    columnUpperWork_[i] = columnLowerWork_[i];
+                  } else if (columnUpperWork_[i]<=0.0) {
+                    columnLowerWork_[i] = columnUpperWork_[i];
+                  } else {
+                    columnUpperWork_[i] = 0.0;
+                    columnLowerWork_[i] = 0.0;
+                  }
+                }
+              }
+            } else if (upperValue<1.0e20) {
+              columnLowerWork_[i]=-COIN_DBL_MAX;
+              columnUpperWork_[i]=upperValue*multiplier;
+            } else {
+              // free
+              columnLowerWork_[i]=-COIN_DBL_MAX;
+              columnUpperWork_[i]=COIN_DBL_MAX;
+            }
+          }
+        }
+        for (i=0;i<numberRows_;i++) {
+          double multiplier = rhsScale_*rowScale[i];
+          double lowerValue = rowLower_[i];
+          double upperValue = rowUpper_[i];
+          if (lowerValue>-1.0e20) {
+            rowLowerWork_[i]=lowerValue*multiplier;
+            if (upperValue>=1.0e20) {
+              rowUpperWork_[i]=COIN_DBL_MAX;
+            } else {
+              rowUpperWork_[i]=upperValue*multiplier;
+              if (rowUpperWork_[i]-rowLowerWork_[i]<=primalTolerance) {
+                if (rowLowerWork_[i]>=0.0) {
+                  rowUpperWork_[i] = rowLowerWork_[i];
+                } else if (rowUpperWork_[i]<=0.0) {
+                  rowLowerWork_[i] = rowUpperWork_[i];
+                } else {
+                  rowUpperWork_[i] = 0.0;
+                  rowLowerWork_[i] = 0.0;
+                }
+              }
+            }
+          } else if (upperValue<1.0e20) {
+            rowLowerWork_[i]=-COIN_DBL_MAX;
+            rowUpperWork_[i]=upperValue*multiplier;
+          } else {
+            // free
+            rowLowerWork_[i]=-COIN_DBL_MAX;
+            rowUpperWork_[i]=COIN_DBL_MAX;
+          }
+        }
+      } else if (rhsScale_!=1.0) {
         for (i=0;i<numberColumns_;i++) {
-          double multiplier = rhsScale_/columnScale_[i];
+          double lowerValue = columnLower_[i];
+          double upperValue = columnUpper_[i];
+          if (lowerValue>-1.0e20) {
+            columnLowerWork_[i]=lowerValue*rhsScale_;
+            if (upperValue>=1.0e20) {
+              columnUpperWork_[i]=COIN_DBL_MAX;
+            } else {
+              columnUpperWork_[i]=upperValue*rhsScale_;
+              if (columnUpperWork_[i]-columnLowerWork_[i]<=primalTolerance) {
+                if (columnLowerWork_[i]>=0.0) {
+                  columnUpperWork_[i] = columnLowerWork_[i];
+                } else if (columnUpperWork_[i]<=0.0) {
+                  columnLowerWork_[i] = columnUpperWork_[i];
+                } else {
+                  columnUpperWork_[i] = 0.0;
+                  columnLowerWork_[i] = 0.0;
+                }
+              }
+            }
+          } else if (upperValue<1.0e20) {
+            columnLowerWork_[i]=-COIN_DBL_MAX;
+            columnUpperWork_[i]=upperValue*rhsScale_;
+          } else {
+            // free
+            columnLowerWork_[i]=-COIN_DBL_MAX;
+            columnUpperWork_[i]=COIN_DBL_MAX;
+          }
+        }
+        for (i=0;i<numberRows_;i++) {
+          double lowerValue = rowLower_[i];
+          double upperValue = rowUpper_[i];
+          if (lowerValue>-1.0e20) {
+            rowLowerWork_[i]=lowerValue*rhsScale_;
+            if (upperValue>=1.0e20) {
+              rowUpperWork_[i]=COIN_DBL_MAX;
+            } else {
+              rowUpperWork_[i]=upperValue*rhsScale_;
+              if (rowUpperWork_[i]-rowLowerWork_[i]<=primalTolerance) {
+                if (rowLowerWork_[i]>=0.0) {
+                  rowUpperWork_[i] = rowLowerWork_[i];
+                } else if (rowUpperWork_[i]<=0.0) {
+                  rowLowerWork_[i] = rowUpperWork_[i];
+                } else {
+                  rowUpperWork_[i] = 0.0;
+                  rowLowerWork_[i] = 0.0;
+                }
+              }
+            }
+          } else if (upperValue<1.0e20) {
+            rowLowerWork_[i]=-COIN_DBL_MAX;
+            rowUpperWork_[i]=upperValue*rhsScale_;
+          } else {
+            // free
+            rowLowerWork_[i]=-COIN_DBL_MAX;
+            rowUpperWork_[i]=COIN_DBL_MAX;
+          }
+        }
+      } else {
+        for (i=0;i<numberColumns_;i++) {
+          double lowerValue = columnLower_[i];
+          double upperValue = columnUpper_[i];
+          if (lowerValue>-1.0e20) {
+            columnLowerWork_[i]=lowerValue;
+            if (upperValue>=1.0e20) {
+              columnUpperWork_[i]=COIN_DBL_MAX;
+            } else {
+              columnUpperWork_[i]=upperValue;
+              if (columnUpperWork_[i]-columnLowerWork_[i]<=primalTolerance) {
+                if (columnLowerWork_[i]>=0.0) {
+                  columnUpperWork_[i] = columnLowerWork_[i];
+                } else if (columnUpperWork_[i]<=0.0) {
+                  columnLowerWork_[i] = columnUpperWork_[i];
+                } else {
+                  columnUpperWork_[i] = 0.0;
+                  columnLowerWork_[i] = 0.0;
+                }
+              }
+            }
+          } else if (upperValue<1.0e20) {
+            columnLowerWork_[i]=-COIN_DBL_MAX;
+            columnUpperWork_[i]=upperValue;
+          } else {
+            // free
+            columnLowerWork_[i]=-COIN_DBL_MAX;
+            columnUpperWork_[i]=COIN_DBL_MAX;
+          }
+        }
+        for (i=0;i<numberRows_;i++) {
+          double lowerValue = rowLower_[i];
+          double upperValue = rowUpper_[i];
+          if (lowerValue>-1.0e20) {
+            rowLowerWork_[i]=lowerValue;
+            if (upperValue>=1.0e20) {
+              rowUpperWork_[i]=COIN_DBL_MAX;
+            } else {
+              rowUpperWork_[i]=upperValue;
+              if (rowUpperWork_[i]-rowLowerWork_[i]<=primalTolerance) {
+                if (rowLowerWork_[i]>=0.0) {
+                  rowUpperWork_[i] = rowLowerWork_[i];
+                } else if (rowUpperWork_[i]<=0.0) {
+                  rowLowerWork_[i] = rowUpperWork_[i];
+                } else {
+                  rowUpperWork_[i] = 0.0;
+                  rowLowerWork_[i] = 0.0;
+                }
+              }
+            }
+          } else if (upperValue<1.0e20) {
+            rowLowerWork_[i]=-COIN_DBL_MAX;
+            rowUpperWork_[i]=upperValue;
+          } else {
+            // free
+            rowLowerWork_[i]=-COIN_DBL_MAX;
+            rowUpperWork_[i]=COIN_DBL_MAX;
+          }
+        }
+      }
+    } else {
+      // auxiliary model
+      if (what!=63) {
+        // just copy
+        memcpy(lower_,auxiliaryModel_->lower_+numberTotal,numberTotal*sizeof(double));
+        memcpy(upper_,auxiliaryModel_->upper_+numberTotal,numberTotal*sizeof(double));
+      } else {
+        assert (rhsScale_==1.0);
+        assert (objectiveScale_==1.0);
+        if ((auxiliaryModel_->specialOptions_&2)==0) {
+          // need to do column bounds
+          if (columnScale) {
+            const double * inverseScale = columnScale+numberColumns_;
+            // scaled
+            for (i=0;i<numberColumns_;i++) {
+              double value;
+              value = columnLower_[i];
+              if (value>-1.0e20) 
+                value *= inverseScale[i];
+              lower_[i] = value;
+              value = columnUpper_[i];
+              if (value<1.0e20) 
+                value *= inverseScale[i];
+              upper_[i] = value;
+            }
+          } else {
+            for (i=0;i<numberColumns_;i++) {
+              lower_[i] = columnLower_[i];
+              upper_[i] = columnUpper_[i];
+            }
+          }
+          // save
+          memcpy(auxiliaryModel_->lower_+numberTotal,lower_,numberColumns_*sizeof(double));
+          memcpy(auxiliaryModel_->upper_+numberTotal,upper_,numberColumns_*sizeof(double));
+        } else {
+          // just copy
+          memcpy(lower_,auxiliaryModel_->lower_+numberTotal,numberColumns_*sizeof(double));
+          memcpy(upper_,auxiliaryModel_->upper_+numberTotal,numberColumns_*sizeof(double));
+        }
+        if ((auxiliaryModel_->specialOptions_&1)==0) {
+          // need to do row bounds
+          if (rowScale) {
+            // scaled
+            for (i=0;i<numberRows_;i++) {
+              double value;
+              value = rowLower_[i];
+              if (value>-1.0e20) 
+                value *= rowScale[i];
+              lower_[i+numberColumns_] = value;
+              value = rowUpper_[i];
+              if (value<1.0e20) 
+                value *= rowScale[i];
+              upper_[i+numberColumns_] = value;
+            }
+          } else {
+            for (i=0;i<numberRows_;i++) {
+              lower_[i+numberColumns_] = rowLower_[i];
+              upper_[i+numberColumns_] = rowUpper_[i];
+            }
+          }
+          // save
+          memcpy(auxiliaryModel_->lower_+numberTotal+numberColumns_,
+                 lower_+numberColumns_,numberRows_*sizeof(double));
+          memcpy(auxiliaryModel_->upper_+numberTotal+numberColumns_,
+                 upper_+numberColumns_,numberRows_*sizeof(double));
+        } else {
+          // just copy
+          memcpy(lower_+numberColumns_,
+                 auxiliaryModel_->lower_+numberTotal+numberColumns_,numberRows_*sizeof(double));
+          memcpy(upper_+numberColumns_,
+                 auxiliaryModel_->upper_+numberTotal+numberColumns_,numberRows_*sizeof(double));
+        }
+      }
+      if (what==63) {
+        // do basis
+        assert ((auxiliaryModel_->specialOptions_&8)!=0);
+        // clean solution trusting basis
+        for ( i=0;i<numberTotal;i++) {
+          Status status =getStatus(i);
+          double value=0.0;
+          if (status!=basic) {
+            if (upper_[i]==lower_[i]) {
+              setStatus(i,isFixed);
+              value=lower_[i];
+            } else if (status==atLowerBound) {
+              if (lower_[i]>-1.0e20) {
+                value=lower_[i];
+              } else {
+                if (upper_[i]<1.0e20) {
+                  value=upper_[i];
+                  setStatus(i,atUpperBound);
+                } else {
+                  setStatus(i,isFree);
+                }
+              }
+            } else if (status==atUpperBound) {
+              if (upper_[i]<1.0e20) {
+              value=upper_[i];
+              } else {
+                if (lower_[i]>-1.0e20) {
+                  value=lower_[i];
+                  setStatus(i,atLowerBound);
+                } else {
+                  setStatus(i,isFree);
+                }
+              }
+            }
+          }
+          solution_[i]=value;
+        }
+      }
+    }
+  }
+  if (what==63) {
+    // move information to work arrays
+    double direction = optimizationDirection_;
+    // direction is actually scale out not scale in
+    if (direction)
+      direction = 1.0/direction;
+    if (direction!=1.0&&(!auxiliaryModel_||(auxiliaryModel_->specialOptions_&8)==0)) {
+      // reverse all dual signs
+      for (i=0;i<numberColumns_;i++) 
+        reducedCost_[i] *= direction;
+      for (i=0;i<numberRows_;i++) 
+        dual_[i] *= direction;
+    }
+    for (i=0;i<numberRows_+numberColumns_;i++) {
+      setFakeBound(i,noFake);
+    }
+    if (!auxiliaryModel_) {
+      if (rowScale_) {
+        const double * obj = objective();
+        double direction = optimizationDirection_*objectiveScale_;
+        // clean up any mismatches on infinity
+        // and fix any variables with tiny gaps
+        double primalTolerance=dblParam_[ClpPrimalTolerance];
+        // on entry
+        for (i=0;i<numberColumns_;i++) {
+          CoinAssert(fabs(obj[i])<1.0e25);
+          double scaleFactor = columnScale_[i];
+          double multiplier = rhsScale_/scaleFactor;
+          scaleFactor *= direction;
+          objectiveWork_[i] = obj[i]*scaleFactor;
+          reducedCostWork_[i] = reducedCost_[i]*scaleFactor;
           double lowerValue = columnLower_[i];
           double upperValue = columnUpper_[i];
           if (lowerValue>-1.0e20) {
@@ -2771,323 +3128,115 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
             columnLowerWork_[i]=-COIN_DBL_MAX;
             columnUpperWork_[i]=COIN_DBL_MAX;
           }
-        }
-      }
-      for (i=0;i<numberRows_;i++) {
-	double multiplier = rhsScale_*rowScale_[i];
-        double lowerValue = rowLower_[i];
-        double upperValue = rowUpper_[i];
-        if (lowerValue>-1.0e20) {
-          rowLowerWork_[i]=lowerValue*multiplier;
-          if (upperValue>=1.0e20) {
-            rowUpperWork_[i]=COIN_DBL_MAX;
-          } else {
-            rowUpperWork_[i]=upperValue*multiplier;
-            if (rowUpperWork_[i]-rowLowerWork_[i]<=primalTolerance) {
-              if (rowLowerWork_[i]>=0.0) {
-                rowUpperWork_[i] = rowLowerWork_[i];
-              } else if (rowUpperWork_[i]<=0.0) {
-                rowLowerWork_[i] = rowUpperWork_[i];
-              } else {
-                rowUpperWork_[i] = 0.0;
-                rowLowerWork_[i] = 0.0;
-              }
+          double value = columnActivity_[i] * multiplier;
+          if (fabs(value)>1.0e20) {
+            //printf("bad value of %g for column %d\n",value,i);
+            setColumnStatus(i,superBasic);
+            if (columnUpperWork_[i]<0.0) {
+              value=columnUpperWork_[i];
+            } else if (columnLowerWork_[i]>0.0) {
+              value=columnLowerWork_[i];
+            } else {
+              value=0.0;
             }
           }
-        } else if (upperValue<1.0e20) {
-          rowLowerWork_[i]=-COIN_DBL_MAX;
-          rowUpperWork_[i]=upperValue*multiplier;
-        } else {
-          // free
-          rowLowerWork_[i]=-COIN_DBL_MAX;
-          rowUpperWork_[i]=COIN_DBL_MAX;
+          columnActivityWork_[i] = value;
         }
-      }
-    } else if (rhsScale_!=1.0) {
-      for (i=0;i<numberColumns_;i++) {
-        double lowerValue = columnLower_[i];
-        double upperValue = columnUpper_[i];
-        if (lowerValue>-1.0e20) {
-          columnLowerWork_[i]=lowerValue*rhsScale_;
-          if (upperValue>=1.0e20) {
-            columnUpperWork_[i]=COIN_DBL_MAX;
-          } else {
-            columnUpperWork_[i]=upperValue*rhsScale_;
-            if (columnUpperWork_[i]-columnLowerWork_[i]<=primalTolerance) {
-              if (columnLowerWork_[i]>=0.0) {
-                columnUpperWork_[i] = columnLowerWork_[i];
-              } else if (columnUpperWork_[i]<=0.0) {
-                columnLowerWork_[i] = columnUpperWork_[i];
-              } else {
-                columnUpperWork_[i] = 0.0;
-                columnLowerWork_[i] = 0.0;
-              }
+        for (i=0;i<numberRows_;i++) {
+          dual_[i] /= rowScale_[i];
+          dual_[i] *= objectiveScale_;
+          rowReducedCost_[i] = dual_[i];
+          double multiplier = rhsScale_*rowScale_[i];
+          double value = rowActivity_[i] * multiplier;
+          if (fabs(value)>1.0e20) {
+            //printf("bad value of %g for row %d\n",value,i);
+            setRowStatus(i,superBasic);
+            if (rowUpperWork_[i]<0.0) {
+              value=rowUpperWork_[i];
+            } else if (rowLowerWork_[i]>0.0) {
+              value=rowLowerWork_[i];
+            } else {
+              value=0.0;
             }
           }
-        } else if (upperValue<1.0e20) {
-          columnLowerWork_[i]=-COIN_DBL_MAX;
-          columnUpperWork_[i]=upperValue*rhsScale_;
-        } else {
-          // free
-          columnLowerWork_[i]=-COIN_DBL_MAX;
-          columnUpperWork_[i]=COIN_DBL_MAX;
+          rowActivityWork_[i] = value;
         }
-      }
-      for (i=0;i<numberRows_;i++) {
-        double lowerValue = rowLower_[i];
-        double upperValue = rowUpper_[i];
-        if (lowerValue>-1.0e20) {
-          rowLowerWork_[i]=lowerValue*rhsScale_;
-          if (upperValue>=1.0e20) {
-            rowUpperWork_[i]=COIN_DBL_MAX;
-          } else {
-            rowUpperWork_[i]=upperValue*rhsScale_;
-            if (rowUpperWork_[i]-rowLowerWork_[i]<=primalTolerance) {
-              if (rowLowerWork_[i]>=0.0) {
-                rowUpperWork_[i] = rowLowerWork_[i];
-              } else if (rowUpperWork_[i]<=0.0) {
-                rowLowerWork_[i] = rowUpperWork_[i];
-              } else {
-                rowUpperWork_[i] = 0.0;
-                rowLowerWork_[i] = 0.0;
-              }
+      } else if (objectiveScale_!=1.0||rhsScale_!=1.0) {
+        // on entry
+        for (i=0;i<numberColumns_;i++) {
+          double value = columnActivity_[i];
+          value *= rhsScale_;
+          if (fabs(value)>1.0e20) {
+            //printf("bad value of %g for column %d\n",value,i);
+            setColumnStatus(i,superBasic);
+            if (columnUpperWork_[i]<0.0) {
+              value=columnUpperWork_[i];
+            } else if (columnLowerWork_[i]>0.0) {
+              value=columnLowerWork_[i];
+            } else {
+              value=0.0;
             }
           }
-        } else if (upperValue<1.0e20) {
-          rowLowerWork_[i]=-COIN_DBL_MAX;
-          rowUpperWork_[i]=upperValue*rhsScale_;
-        } else {
-          // free
-          rowLowerWork_[i]=-COIN_DBL_MAX;
-          rowUpperWork_[i]=COIN_DBL_MAX;
+          columnActivityWork_[i] = value;
+          reducedCostWork_[i] = reducedCost_[i]*objectiveScale_;
         }
-      }
-    } else {
-      for (i=0;i<numberColumns_;i++) {
-        double lowerValue = columnLower_[i];
-        double upperValue = columnUpper_[i];
-        if (lowerValue>-1.0e20) {
-          columnLowerWork_[i]=lowerValue;
-          if (upperValue>=1.0e20) {
-            columnUpperWork_[i]=COIN_DBL_MAX;
-          } else {
-            columnUpperWork_[i]=upperValue;
-            if (columnUpperWork_[i]-columnLowerWork_[i]<=primalTolerance) {
-              if (columnLowerWork_[i]>=0.0) {
-                columnUpperWork_[i] = columnLowerWork_[i];
-              } else if (columnUpperWork_[i]<=0.0) {
-                columnLowerWork_[i] = columnUpperWork_[i];
-              } else {
-                columnUpperWork_[i] = 0.0;
-                columnLowerWork_[i] = 0.0;
-              }
+        for (i=0;i<numberRows_;i++) {
+          double value = rowActivity_[i];
+          value *= rhsScale_;
+          if (fabs(value)>1.0e20) {
+            //printf("bad value of %g for row %d\n",value,i);
+            setRowStatus(i,superBasic);
+            if (rowUpperWork_[i]<0.0) {
+              value=rowUpperWork_[i];
+            } else if (rowLowerWork_[i]>0.0) {
+              value=rowLowerWork_[i];
+            } else {
+              value=0.0;
             }
           }
-        } else if (upperValue<1.0e20) {
-          columnLowerWork_[i]=-COIN_DBL_MAX;
-          columnUpperWork_[i]=upperValue;
-        } else {
-          // free
-          columnLowerWork_[i]=-COIN_DBL_MAX;
-          columnUpperWork_[i]=COIN_DBL_MAX;
+          rowActivityWork_[i] = value;
+          dual_[i] *= objectiveScale_;
+          rowReducedCost_[i] = dual_[i];
         }
-      }
-      for (i=0;i<numberRows_;i++) {
-        double lowerValue = rowLower_[i];
-        double upperValue = rowUpper_[i];
-        if (lowerValue>-1.0e20) {
-          rowLowerWork_[i]=lowerValue;
-          if (upperValue>=1.0e20) {
-            rowUpperWork_[i]=COIN_DBL_MAX;
-          } else {
-            rowUpperWork_[i]=upperValue;
-            if (rowUpperWork_[i]-rowLowerWork_[i]<=primalTolerance) {
-              if (rowLowerWork_[i]>=0.0) {
-                rowUpperWork_[i] = rowLowerWork_[i];
-              } else if (rowUpperWork_[i]<=0.0) {
-                rowLowerWork_[i] = rowUpperWork_[i];
-              } else {
-                rowUpperWork_[i] = 0.0;
-                rowLowerWork_[i] = 0.0;
-              }
+      } else {
+        // on entry
+        for (i=0;i<numberColumns_;i++) {
+          double value = columnActivity_[i];
+          if (fabs(value)>1.0e20) {
+            //printf("bad value of %g for column %d\n",value,i);
+            setColumnStatus(i,superBasic);
+            if (columnUpperWork_[i]<0.0) {
+              value=columnUpperWork_[i];
+            } else if (columnLowerWork_[i]>0.0) {
+              value=columnLowerWork_[i];
+            } else {
+              value=0.0;
             }
           }
-        } else if (upperValue<1.0e20) {
-          rowLowerWork_[i]=-COIN_DBL_MAX;
-          rowUpperWork_[i]=upperValue;
-        } else {
-          // free
-          rowLowerWork_[i]=-COIN_DBL_MAX;
-          rowUpperWork_[i]=COIN_DBL_MAX;
+          columnActivityWork_[i] = value;
+          reducedCostWork_[i] = reducedCost_[i];
+        }
+        for (i=0;i<numberRows_;i++) {
+          double value = rowActivity_[i];
+          if (fabs(value)>1.0e20) {
+            //printf("bad value of %g for row %d\n",value,i);
+            setRowStatus(i,superBasic);
+            if (rowUpperWork_[i]<0.0) {
+              value=rowUpperWork_[i];
+            } else if (rowLowerWork_[i]>0.0) {
+              value=rowLowerWork_[i];
+            } else {
+              value=0.0;
+            }
+          }
+          rowActivityWork_[i] = value;
+          rowReducedCost_[i] = dual_[i];
         }
       }
     }
   }
-  if (what==63) {
-    // move information to work arrays
-    double direction = optimizationDirection_;
-    // direction is actually scale out not scale in
-    if (direction)
-      direction = 1.0/direction;
-    if (direction!=1.0) {
-      // reverse all dual signs
-      for (i=0;i<numberColumns_;i++) 
-	reducedCost_[i] *= direction;
-      for (i=0;i<numberRows_;i++) 
-	dual_[i] *= direction;
-    }
-    for (i=0;i<numberRows_+numberColumns_;i++) {
-      setFakeBound(i,noFake);
-    }
-    if (rowScale_) {
-      const double * obj = objective();
-      double direction = optimizationDirection_*objectiveScale_;
-      // clean up any mismatches on infinity
-      // and fix any variables with tiny gaps
-      double primalTolerance=dblParam_[ClpPrimalTolerance];
-      // on entry
-      for (i=0;i<numberColumns_;i++) {
-        CoinAssert(fabs(obj[i])<1.0e25);
-        double scaleFactor = columnScale_[i];
-	double multiplier = rhsScale_/scaleFactor;
-        scaleFactor *= direction;
-	objectiveWork_[i] = obj[i]*scaleFactor;
-	reducedCostWork_[i] = reducedCost_[i]*scaleFactor;
-        double lowerValue = columnLower_[i];
-        double upperValue = columnUpper_[i];
-        if (lowerValue>-1.0e20) {
-          columnLowerWork_[i]=lowerValue*multiplier;
-          if (upperValue>=1.0e20) {
-            columnUpperWork_[i]=COIN_DBL_MAX;
-          } else {
-            columnUpperWork_[i]=upperValue*multiplier;
-            if (columnUpperWork_[i]-columnLowerWork_[i]<=primalTolerance) {
-              if (columnLowerWork_[i]>=0.0) {
-                columnUpperWork_[i] = columnLowerWork_[i];
-              } else if (columnUpperWork_[i]<=0.0) {
-                columnLowerWork_[i] = columnUpperWork_[i];
-              } else {
-                columnUpperWork_[i] = 0.0;
-                columnLowerWork_[i] = 0.0;
-              }
-            }
-          }
-        } else if (upperValue<1.0e20) {
-          columnLowerWork_[i]=-COIN_DBL_MAX;
-          columnUpperWork_[i]=upperValue*multiplier;
-        } else {
-          // free
-          columnLowerWork_[i]=-COIN_DBL_MAX;
-          columnUpperWork_[i]=COIN_DBL_MAX;
-        }
-        double value = columnActivity_[i] * multiplier;
-        if (fabs(value)>1.0e20) {
-          //printf("bad value of %g for column %d\n",value,i);
-          setColumnStatus(i,superBasic);
-          if (columnUpperWork_[i]<0.0) {
-            value=columnUpperWork_[i];
-          } else if (columnLowerWork_[i]>0.0) {
-            value=columnLowerWork_[i];
-          } else {
-            value=0.0;
-          }
-        }
-	columnActivityWork_[i] = value;
-      }
-      for (i=0;i<numberRows_;i++) {
-	dual_[i] /= rowScale_[i];
-	dual_[i] *= objectiveScale_;
-	rowReducedCost_[i] = dual_[i];
-	double multiplier = rhsScale_*rowScale_[i];
-        double value = rowActivity_[i] * multiplier;
-        if (fabs(value)>1.0e20) {
-          //printf("bad value of %g for row %d\n",value,i);
-          setRowStatus(i,superBasic);
-          if (rowUpperWork_[i]<0.0) {
-            value=rowUpperWork_[i];
-          } else if (rowLowerWork_[i]>0.0) {
-            value=rowLowerWork_[i];
-          } else {
-            value=0.0;
-          }
-        }
-	rowActivityWork_[i] = value;
-      }
-    } else if (objectiveScale_!=1.0||rhsScale_!=1.0) {
-      // on entry
-      for (i=0;i<numberColumns_;i++) {
-        double value = columnActivity_[i];
-	value *= rhsScale_;
-        if (fabs(value)>1.0e20) {
-          //printf("bad value of %g for column %d\n",value,i);
-          setColumnStatus(i,superBasic);
-          if (columnUpperWork_[i]<0.0) {
-            value=columnUpperWork_[i];
-          } else if (columnLowerWork_[i]>0.0) {
-            value=columnLowerWork_[i];
-          } else {
-            value=0.0;
-          }
-        }
-	columnActivityWork_[i] = value;
-	reducedCostWork_[i] = reducedCost_[i]*objectiveScale_;
-      }
-      for (i=0;i<numberRows_;i++) {
-        double value = rowActivity_[i];
-	value *= rhsScale_;
-        if (fabs(value)>1.0e20) {
-          //printf("bad value of %g for row %d\n",value,i);
-          setRowStatus(i,superBasic);
-          if (rowUpperWork_[i]<0.0) {
-            value=rowUpperWork_[i];
-          } else if (rowLowerWork_[i]>0.0) {
-            value=rowLowerWork_[i];
-          } else {
-            value=0.0;
-          }
-        }
-	rowActivityWork_[i] = value;
-	dual_[i] *= objectiveScale_;
-	rowReducedCost_[i] = dual_[i];
-      }
-    } else {
-      // on entry
-      for (i=0;i<numberColumns_;i++) {
-        double value = columnActivity_[i];
-        if (fabs(value)>1.0e20) {
-          //printf("bad value of %g for column %d\n",value,i);
-          setColumnStatus(i,superBasic);
-          if (columnUpperWork_[i]<0.0) {
-            value=columnUpperWork_[i];
-          } else if (columnLowerWork_[i]>0.0) {
-            value=columnLowerWork_[i];
-          } else {
-            value=0.0;
-          }
-        }
-	columnActivityWork_[i] = value;
-	reducedCostWork_[i] = reducedCost_[i];
-      }
-      for (i=0;i<numberRows_;i++) {
-        double value = rowActivity_[i];
-        if (fabs(value)>1.0e20) {
-          //printf("bad value of %g for row %d\n",value,i);
-          setRowStatus(i,superBasic);
-          if (rowUpperWork_[i]<0.0) {
-            value=rowUpperWork_[i];
-          } else if (rowLowerWork_[i]>0.0) {
-            value=rowLowerWork_[i];
-          } else {
-            value=0.0;
-          }
-        }
-	rowActivityWork_[i] = value;
-	rowReducedCost_[i] = dual_[i];
-      }
-    }
-  }
- 
-  if (what==63&&doSanityCheck) {
+  
+  if (what==63&&doSanityCheck&&!auxiliaryModel_) {
     // check rim of problem okay
     if (!sanityCheck())
       goodMatrix=false;
@@ -3154,7 +3303,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
       }
     }
   }
-
+  
   if (what==63) {
     if (newArrays) {
       // get some arrays
@@ -3180,6 +3329,40 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
 	else
 	  columnArray_[iColumn]->reserve(CoinMax(numberRows2,numberColumns_));
       }
+    } else {
+      int iRow,iColumn;
+      if (auxiliaryModel_) {
+        for (iRow=0;iRow<4;iRow++) {
+          assert (!rowArray_[iRow]);
+          rowArray_[iRow]=auxiliaryModel_->rowArray_[iRow];
+        }
+        for (iColumn=0;iColumn<2;iColumn++) {
+          assert (!columnArray_[iColumn]);
+          columnArray_[iColumn]=auxiliaryModel_->columnArray_[iColumn];
+        }
+        // do matrices
+        rowCopy_=auxiliaryModel_->rowCopy_;
+        ClpMatrixBase * temp = matrix_;
+        matrix_=auxiliaryModel_->matrix_;
+        auxiliaryModel_->matrix_=temp;
+      }
+#ifndef NDEBUG
+      for (iRow=0;iRow<4;iRow++) {
+	int length =numberRows2+factorization_->maximumPivots();
+	if (iRow==3||objective_->type()>1)
+	  length += numberColumns_;
+	assert(rowArray_[iRow]->capacity()==length);
+        rowArray_[iRow]->checkClear();
+      }
+      
+      for (iColumn=0;iColumn<2;iColumn++) {
+	int length =numberColumns_;
+	if (iColumn)
+	  length=CoinMax(numberRows2,numberColumns_);
+	assert(columnArray_[iColumn]->capacity()==length);
+        columnArray_[iColumn]->checkClear();
+      }
+#endif
     }    
   }
   if (problemStatus_==10) {
@@ -3193,232 +3376,290 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
 void
 ClpSimplex::deleteRim(int getRidOfFactorizationData)
 {
-  int i;
-  if (problemStatus_!=1&&problemStatus_!=2) {
-    delete [] ray_;
-    ray_=NULL;
-  }
-  // set upperOut_ to furthest away from bound so can use in dual for dualBound_
-  upperOut_=1.0;
+  if (!auxiliaryModel_) {
+    int i;
+    if (problemStatus_!=1&&problemStatus_!=2) {
+      delete [] ray_;
+      ray_=NULL;
+    }
+    // set upperOut_ to furthest away from bound so can use in dual for dualBound_
+    upperOut_=1.0;
 #if 0
-  {
-    int nBad=0;
-    for (i=0;i<numberColumns_;i++) {
-      if (lower_[i]==upper_[i]&&getColumnStatus(i)==basic)
-        nBad++;
-    }
-    if (nBad)
-      printf("yy %d basic fixed\n",nBad);
-  }
-#endif
-  // ray may be null if in branch and bound
-  if (rowScale_) {
-    // Collect infeasibilities
-    int numberPrimalScaled=0;
-    int numberPrimalUnscaled=0;
-    int numberDualScaled=0;
-    int numberDualUnscaled=0;
-    double scaleC = 1.0/objectiveScale_;
-    double scaleR = 1.0/rhsScale_;
-    for (i=0;i<numberColumns_;i++) {
-      double scaleFactor = columnScale_[i];
-      double valueScaled = columnActivityWork_[i];
-      double lowerScaled = columnLowerWork_[i];
-      double upperScaled = columnUpperWork_[i];
-      if (lowerScaled>-1.0e20||upperScaled<1.0e20) {
-	if (valueScaled<lowerScaled-primalTolerance_||
-	    valueScaled>upperScaled+primalTolerance_)
-	  numberPrimalScaled++;
-	else
-	  upperOut_ = CoinMax(upperOut_,CoinMin(valueScaled-lowerScaled,upperScaled-valueScaled));
-      }
-      columnActivity_[i] = valueScaled*scaleFactor*scaleR;
-      double value = columnActivity_[i];
-      if (value<columnLower_[i]-primalTolerance_)
-	numberPrimalUnscaled++;
-      else if (value>columnUpper_[i]+primalTolerance_)
-	numberPrimalUnscaled++;
-      double valueScaledDual = reducedCostWork_[i];
-      if (valueScaled>columnLowerWork_[i]+primalTolerance_&&valueScaledDual>dualTolerance_)
-	numberDualScaled++;
-      if (valueScaled<columnUpperWork_[i]-primalTolerance_&&valueScaledDual<-dualTolerance_)
-	numberDualScaled++;
-      reducedCost_[i] = (valueScaledDual*scaleC)/scaleFactor;
-      double valueDual = reducedCost_[i];
-      if (value>columnLower_[i]+primalTolerance_&&valueDual>dualTolerance_)
-	numberDualUnscaled++;
-      if (value<columnUpper_[i]-primalTolerance_&&valueDual<-dualTolerance_)
-	numberDualUnscaled++;
-    }
-    for (i=0;i<numberRows_;i++) {
-      double scaleFactor = rowScale_[i];
-      double valueScaled = rowActivityWork_[i];
-      double lowerScaled = rowLowerWork_[i];
-      double upperScaled = rowUpperWork_[i];
-      if (lowerScaled>-1.0e20||upperScaled<1.0e20) {
-	if (valueScaled<lowerScaled-primalTolerance_||
-	    valueScaled>upperScaled+primalTolerance_)
-	  numberPrimalScaled++;
-	else
-	  upperOut_ = CoinMax(upperOut_,CoinMin(valueScaled-lowerScaled,upperScaled-valueScaled));
-      }
-      rowActivity_[i] = (valueScaled*scaleR)/scaleFactor;
-      double value = rowActivity_[i];
-      if (value<rowLower_[i]-primalTolerance_)
-	numberPrimalUnscaled++;
-      else if (value>rowUpper_[i]+primalTolerance_)
-	numberPrimalUnscaled++;
-      double valueScaledDual = dual_[i]+rowObjectiveWork_[i];;
-      if (valueScaled>rowLowerWork_[i]+primalTolerance_&&valueScaledDual>dualTolerance_)
-	numberDualScaled++;
-      if (valueScaled<rowUpperWork_[i]-primalTolerance_&&valueScaledDual<-dualTolerance_)
-	numberDualScaled++;
-      dual_[i] *= scaleFactor*scaleC;
-      double valueDual = dual_[i]; 
-      if (rowObjective_)
-	valueDual += rowObjective_[i];
-      if (value>rowLower_[i]+primalTolerance_&&valueDual>dualTolerance_)
-	numberDualUnscaled++;
-      if (value<rowUpper_[i]-primalTolerance_&&valueDual<-dualTolerance_)
-	numberDualUnscaled++;
-    }
-    if (!problemStatus_&&!secondaryStatus_) {
-      // See if we need to set secondary status
-      if (numberPrimalUnscaled) {
-	if (numberDualUnscaled) 
-	  secondaryStatus_=4;
-	else
-	  secondaryStatus_=2;
-      } else {
-	if (numberDualUnscaled) 
-	  secondaryStatus_=3;
-      }
-    }
-    if (problemStatus_==2) {
+    {
+      int nBad=0;
       for (i=0;i<numberColumns_;i++) {
-	ray_[i] *= columnScale_[i];
+        if (lower_[i]==upper_[i]&&getColumnStatus(i)==basic)
+          nBad++;
       }
-    } else if (problemStatus_==1&&ray_) {
+      if (nBad)
+        printf("yy %d basic fixed\n",nBad);
+    }
+#endif
+    // ray may be null if in branch and bound
+    if (rowScale_) {
+      // Collect infeasibilities
+      int numberPrimalScaled=0;
+      int numberPrimalUnscaled=0;
+      int numberDualScaled=0;
+      int numberDualUnscaled=0;
+      double scaleC = 1.0/objectiveScale_;
+      double scaleR = 1.0/rhsScale_;
+      for (i=0;i<numberColumns_;i++) {
+        double scaleFactor = columnScale_[i];
+        double valueScaled = columnActivityWork_[i];
+        double lowerScaled = columnLowerWork_[i];
+        double upperScaled = columnUpperWork_[i];
+        if (lowerScaled>-1.0e20||upperScaled<1.0e20) {
+          if (valueScaled<lowerScaled-primalTolerance_||
+              valueScaled>upperScaled+primalTolerance_)
+            numberPrimalScaled++;
+          else
+            upperOut_ = CoinMax(upperOut_,CoinMin(valueScaled-lowerScaled,upperScaled-valueScaled));
+        }
+        columnActivity_[i] = valueScaled*scaleFactor*scaleR;
+        double value = columnActivity_[i];
+        if (value<columnLower_[i]-primalTolerance_)
+          numberPrimalUnscaled++;
+        else if (value>columnUpper_[i]+primalTolerance_)
+          numberPrimalUnscaled++;
+        double valueScaledDual = reducedCostWork_[i];
+        if (valueScaled>columnLowerWork_[i]+primalTolerance_&&valueScaledDual>dualTolerance_)
+          numberDualScaled++;
+        if (valueScaled<columnUpperWork_[i]-primalTolerance_&&valueScaledDual<-dualTolerance_)
+          numberDualScaled++;
+        reducedCost_[i] = (valueScaledDual*scaleC)/scaleFactor;
+        double valueDual = reducedCost_[i];
+        if (value>columnLower_[i]+primalTolerance_&&valueDual>dualTolerance_)
+          numberDualUnscaled++;
+        if (value<columnUpper_[i]-primalTolerance_&&valueDual<-dualTolerance_)
+          numberDualUnscaled++;
+      }
       for (i=0;i<numberRows_;i++) {
-	ray_[i] *= rowScale_[i];
+        double scaleFactor = rowScale_[i];
+        double valueScaled = rowActivityWork_[i];
+        double lowerScaled = rowLowerWork_[i];
+        double upperScaled = rowUpperWork_[i];
+        if (lowerScaled>-1.0e20||upperScaled<1.0e20) {
+          if (valueScaled<lowerScaled-primalTolerance_||
+              valueScaled>upperScaled+primalTolerance_)
+            numberPrimalScaled++;
+          else
+            upperOut_ = CoinMax(upperOut_,CoinMin(valueScaled-lowerScaled,upperScaled-valueScaled));
+        }
+        rowActivity_[i] = (valueScaled*scaleR)/scaleFactor;
+        double value = rowActivity_[i];
+        if (value<rowLower_[i]-primalTolerance_)
+          numberPrimalUnscaled++;
+        else if (value>rowUpper_[i]+primalTolerance_)
+          numberPrimalUnscaled++;
+        double valueScaledDual = dual_[i]+rowObjectiveWork_[i];;
+        if (valueScaled>rowLowerWork_[i]+primalTolerance_&&valueScaledDual>dualTolerance_)
+          numberDualScaled++;
+        if (valueScaled<rowUpperWork_[i]-primalTolerance_&&valueScaledDual<-dualTolerance_)
+          numberDualScaled++;
+        dual_[i] *= scaleFactor*scaleC;
+        double valueDual = dual_[i]; 
+        if (rowObjective_)
+          valueDual += rowObjective_[i];
+        if (value>rowLower_[i]+primalTolerance_&&valueDual>dualTolerance_)
+          numberDualUnscaled++;
+        if (value<rowUpper_[i]-primalTolerance_&&valueDual<-dualTolerance_)
+          numberDualUnscaled++;
+      }
+      if (!problemStatus_&&!secondaryStatus_) {
+        // See if we need to set secondary status
+        if (numberPrimalUnscaled) {
+          if (numberDualUnscaled) 
+            secondaryStatus_=4;
+          else
+            secondaryStatus_=2;
+        } else {
+          if (numberDualUnscaled) 
+            secondaryStatus_=3;
+        }
+      }
+      if (problemStatus_==2) {
+        for (i=0;i<numberColumns_;i++) {
+          ray_[i] *= columnScale_[i];
+        }
+      } else if (problemStatus_==1&&ray_) {
+        for (i=0;i<numberRows_;i++) {
+          ray_[i] *= rowScale_[i];
+        }
+      }
+    } else if (rhsScale_!=1.0||objectiveScale_!=1.0) {
+      // Collect infeasibilities
+      int numberPrimalScaled=0;
+      int numberPrimalUnscaled=0;
+      int numberDualScaled=0;
+      int numberDualUnscaled=0;
+      double scaleC = 1.0/objectiveScale_;
+      double scaleR = 1.0/rhsScale_;
+      for (i=0;i<numberColumns_;i++) {
+        double valueScaled = columnActivityWork_[i];
+        double lowerScaled = columnLowerWork_[i];
+        double upperScaled = columnUpperWork_[i];
+        if (lowerScaled>-1.0e20||upperScaled<1.0e20) {
+          if (valueScaled<lowerScaled-primalTolerance_||
+              valueScaled>upperScaled+primalTolerance_)
+            numberPrimalScaled++;
+          else
+            upperOut_ = CoinMax(upperOut_,CoinMin(valueScaled-lowerScaled,upperScaled-valueScaled));
+        }
+        columnActivity_[i] = valueScaled*scaleR;
+        double value = columnActivity_[i];
+        if (value<columnLower_[i]-primalTolerance_)
+          numberPrimalUnscaled++;
+        else if (value>columnUpper_[i]+primalTolerance_)
+          numberPrimalUnscaled++;
+        double valueScaledDual = reducedCostWork_[i];
+        if (valueScaled>columnLowerWork_[i]+primalTolerance_&&valueScaledDual>dualTolerance_)
+          numberDualScaled++;
+        if (valueScaled<columnUpperWork_[i]-primalTolerance_&&valueScaledDual<-dualTolerance_)
+          numberDualScaled++;
+        reducedCost_[i] = valueScaledDual*scaleC;
+        double valueDual = reducedCost_[i];
+        if (value>columnLower_[i]+primalTolerance_&&valueDual>dualTolerance_)
+          numberDualUnscaled++;
+        if (value<columnUpper_[i]-primalTolerance_&&valueDual<-dualTolerance_)
+          numberDualUnscaled++;
+      }
+      for (i=0;i<numberRows_;i++) {
+        double valueScaled = rowActivityWork_[i];
+        double lowerScaled = rowLowerWork_[i];
+        double upperScaled = rowUpperWork_[i];
+        if (lowerScaled>-1.0e20||upperScaled<1.0e20) {
+          if (valueScaled<lowerScaled-primalTolerance_||
+              valueScaled>upperScaled+primalTolerance_)
+            numberPrimalScaled++;
+          else
+            upperOut_ = CoinMax(upperOut_,CoinMin(valueScaled-lowerScaled,upperScaled-valueScaled));
+        }
+        rowActivity_[i] = valueScaled*scaleR;
+        double value = rowActivity_[i];
+        if (value<rowLower_[i]-primalTolerance_)
+          numberPrimalUnscaled++;
+        else if (value>rowUpper_[i]+primalTolerance_)
+          numberPrimalUnscaled++;
+        double valueScaledDual = dual_[i]+rowObjectiveWork_[i];;
+        if (valueScaled>rowLowerWork_[i]+primalTolerance_&&valueScaledDual>dualTolerance_)
+          numberDualScaled++;
+        if (valueScaled<rowUpperWork_[i]-primalTolerance_&&valueScaledDual<-dualTolerance_)
+          numberDualScaled++;
+        dual_[i] *= scaleC;
+        double valueDual = dual_[i]; 
+        if (rowObjective_)
+          valueDual += rowObjective_[i];
+        if (value>rowLower_[i]+primalTolerance_&&valueDual>dualTolerance_)
+          numberDualUnscaled++;
+        if (value<rowUpper_[i]-primalTolerance_&&valueDual<-dualTolerance_)
+          numberDualUnscaled++;
+      }
+      if (!problemStatus_&&!secondaryStatus_) {
+        // See if we need to set secondary status
+        if (numberPrimalUnscaled) {
+          if (numberDualUnscaled) 
+            secondaryStatus_=4;
+          else
+            secondaryStatus_=2;
+        } else {
+          if (numberDualUnscaled) 
+            secondaryStatus_=3;
+        }
+      }
+    } else {
+      if (columnActivityWork_) {
+        for (i=0;i<numberColumns_;i++) {
+          double value = columnActivityWork_[i];
+          double lower = columnLowerWork_[i];
+          double upper = columnUpperWork_[i];
+          if (lower>-1.0e20||upper<1.0e20) {
+            if (value>lower&&value<upper)
+              upperOut_ = CoinMax(upperOut_,CoinMin(value-lower,upper-value));
+          }
+          columnActivity_[i] = columnActivityWork_[i];
+          reducedCost_[i] = reducedCostWork_[i];
+        }
+        for (i=0;i<numberRows_;i++) {
+          double value = rowActivityWork_[i];
+          double lower = rowLowerWork_[i];
+          double upper = rowUpperWork_[i];
+          if (lower>-1.0e20||upper<1.0e20) {
+            if (value>lower&&value<upper)
+              upperOut_ = CoinMax(upperOut_,CoinMin(value-lower,upper-value));
+          }
+          rowActivity_[i] = rowActivityWork_[i];
+        }
       }
     }
-  } else if (rhsScale_!=1.0||objectiveScale_!=1.0) {
-    // Collect infeasibilities
-    int numberPrimalScaled=0;
-    int numberPrimalUnscaled=0;
-    int numberDualScaled=0;
-    int numberDualUnscaled=0;
-    double scaleC = 1.0/objectiveScale_;
-    double scaleR = 1.0/rhsScale_;
-    for (i=0;i<numberColumns_;i++) {
-      double valueScaled = columnActivityWork_[i];
-      double lowerScaled = columnLowerWork_[i];
-      double upperScaled = columnUpperWork_[i];
-      if (lowerScaled>-1.0e20||upperScaled<1.0e20) {
-	if (valueScaled<lowerScaled-primalTolerance_||
-	    valueScaled>upperScaled+primalTolerance_)
-	  numberPrimalScaled++;
-	else
-	  upperOut_ = CoinMax(upperOut_,CoinMin(valueScaled-lowerScaled,upperScaled-valueScaled));
-      }
-      columnActivity_[i] = valueScaled*scaleR;
-      double value = columnActivity_[i];
-      if (value<columnLower_[i]-primalTolerance_)
-	numberPrimalUnscaled++;
-      else if (value>columnUpper_[i]+primalTolerance_)
-	numberPrimalUnscaled++;
-      double valueScaledDual = reducedCostWork_[i];
-      if (valueScaled>columnLowerWork_[i]+primalTolerance_&&valueScaledDual>dualTolerance_)
-	numberDualScaled++;
-      if (valueScaled<columnUpperWork_[i]-primalTolerance_&&valueScaledDual<-dualTolerance_)
-	numberDualScaled++;
-      reducedCost_[i] = valueScaledDual*scaleC;
-      double valueDual = reducedCost_[i];
-      if (value>columnLower_[i]+primalTolerance_&&valueDual>dualTolerance_)
-	numberDualUnscaled++;
-      if (value<columnUpper_[i]-primalTolerance_&&valueDual<-dualTolerance_)
-	numberDualUnscaled++;
+    // switch off scalefactor if auto
+    if (automaticScale_) {
+      rhsScale_=1.0;
+      objectiveScale_=1.0;
     }
-    for (i=0;i<numberRows_;i++) {
-      double valueScaled = rowActivityWork_[i];
-      double lowerScaled = rowLowerWork_[i];
-      double upperScaled = rowUpperWork_[i];
-      if (lowerScaled>-1.0e20||upperScaled<1.0e20) {
-	if (valueScaled<lowerScaled-primalTolerance_||
-	    valueScaled>upperScaled+primalTolerance_)
-	  numberPrimalScaled++;
-	else
-	  upperOut_ = CoinMax(upperOut_,CoinMin(valueScaled-lowerScaled,upperScaled-valueScaled));
-      }
-      rowActivity_[i] = valueScaled*scaleR;
-      double value = rowActivity_[i];
-      if (value<rowLower_[i]-primalTolerance_)
-	numberPrimalUnscaled++;
-      else if (value>rowUpper_[i]+primalTolerance_)
-	numberPrimalUnscaled++;
-      double valueScaledDual = dual_[i]+rowObjectiveWork_[i];;
-      if (valueScaled>rowLowerWork_[i]+primalTolerance_&&valueScaledDual>dualTolerance_)
-	numberDualScaled++;
-      if (valueScaled<rowUpperWork_[i]-primalTolerance_&&valueScaledDual<-dualTolerance_)
-	numberDualScaled++;
-      dual_[i] *= scaleC;
-      double valueDual = dual_[i]; 
-      if (rowObjective_)
-	valueDual += rowObjective_[i];
-      if (value>rowLower_[i]+primalTolerance_&&valueDual>dualTolerance_)
-	numberDualUnscaled++;
-      if (value<rowUpper_[i]-primalTolerance_&&valueDual<-dualTolerance_)
-	numberDualUnscaled++;
-    }
-    if (!problemStatus_&&!secondaryStatus_) {
-      // See if we need to set secondary status
-      if (numberPrimalUnscaled) {
-	if (numberDualUnscaled) 
-	  secondaryStatus_=4;
-	else
-	  secondaryStatus_=2;
-      } else {
-	if (numberDualUnscaled) 
-	  secondaryStatus_=3;
-      }
+    if (optimizationDirection_!=1.0) {
+      // and modify all dual signs
+      for (i=0;i<numberColumns_;i++) 
+        reducedCost_[i] *= optimizationDirection_;
+      for (i=0;i<numberRows_;i++) 
+        dual_[i] *= optimizationDirection_;
     }
   } else {
-    if (columnActivityWork_) {
-      for (i=0;i<numberColumns_;i++) {
-	double value = columnActivityWork_[i];
-	double lower = columnLowerWork_[i];
-	double upper = columnUpperWork_[i];
-	if (lower>-1.0e20||upper<1.0e20) {
-	  if (value>lower&&value<upper)
-	    upperOut_ = CoinMax(upperOut_,CoinMin(value-lower,upper-value));
-	}
-	columnActivity_[i] = columnActivityWork_[i];
-	reducedCost_[i] = reducedCostWork_[i];
+    // auxiliary model
+    cost_=NULL;
+    lower_=NULL;
+    upper_=NULL;
+    dj_=NULL;
+    solution_=NULL;
+    int iRow,iColumn;
+    for (iRow=0;iRow<4;iRow++) {
+      if (rowArray_[iRow]) {
+        rowArray_[iRow]->clear();
+        rowArray_[iRow]->checkClear();
       }
-      for (i=0;i<numberRows_;i++) {
-	double value = rowActivityWork_[i];
-	double lower = rowLowerWork_[i];
-	double upper = rowUpperWork_[i];
-	if (lower>-1.0e20||upper<1.0e20) {
-	  if (value>lower&&value<upper)
-	    upperOut_ = CoinMax(upperOut_,CoinMin(value-lower,upper-value));
-	}
-	rowActivity_[i] = rowActivityWork_[i];
+      rowArray_[iRow]=NULL;
+    }
+    for (iColumn=0;iColumn<2;iColumn++) {
+      if (columnArray_[iColumn]) {
+        columnArray_[iColumn]->clear();
+        columnArray_[iColumn]->checkClear();
+      }
+      columnArray_[iColumn]=NULL;
+    }
+    rowCopy_=NULL;
+    ClpMatrixBase * temp = matrix_;
+    matrix_=auxiliaryModel_->matrix_;
+    auxiliaryModel_->matrix_=temp;
+    assert ((auxiliaryModel_->specialOptions_&16+32)==16+32);
+    if (problemStatus_!=1) {
+      int i;
+      if (auxiliaryModel_->rowScale_) {
+        const double * scale = auxiliaryModel_->columnScale_;
+        const double * inverseScale = scale + numberColumns_;
+        for (i=0;i<numberColumns_;i++) {
+          columnActivity_[i] = auxiliaryModel_->columnActivityWork_[i]*scale[i];
+          reducedCost_[i] = auxiliaryModel_->reducedCostWork_[i]*inverseScale[i];
+        }
+        scale = auxiliaryModel_->rowScale_;
+        inverseScale = scale + numberRows_;
+        for (i=0;i<numberRows_;i++) {
+          rowActivity_[i] = auxiliaryModel_->rowActivityWork_[i]*inverseScale[i];
+        }
+      } else {
+        for (i=0;i<numberColumns_;i++) {
+          columnActivity_[i] = auxiliaryModel_->columnActivityWork_[i];
+          reducedCost_[i] = auxiliaryModel_->reducedCostWork_[i];
+        }
+        for (i=0;i<numberRows_;i++) {
+          rowActivity_[i] = auxiliaryModel_->rowActivityWork_[i];
+        }
+      }
+      if (optimizationDirection_!=1.0) {
+        // and modify reduced costs
+        for (i=0;i<numberColumns_;i++) 
+          reducedCost_[i] *= optimizationDirection_;
       }
     }
-  }
-  // switch off scalefactor if auto
-  if (automaticScale_) {
-    rhsScale_=1.0;
-    objectiveScale_=1.0;
-  }
-  if (optimizationDirection_!=1.0) {
-    // and modify all dual signs
-    for (i=0;i<numberColumns_;i++) 
-      reducedCost_[i] *= optimizationDirection_;
-    for (i=0;i<numberRows_;i++) 
-      dual_[i] *= optimizationDirection_;
   }
   // scaling may have been turned off
   scalingFlag_ = abs(scalingFlag_);
@@ -7448,6 +7689,7 @@ ClpSimplex::setObjectiveCoefficient( int elementIndex, double elementValue )
       if (!rowScale_) {
 	objectiveWork_[elementIndex] = direction*elementValue;
       } else {
+        assert (!auxiliaryModel_);
 	objectiveWork_[elementIndex] = direction*elementValue
 	  *columnScale_[elementIndex];
       }
@@ -7476,6 +7718,7 @@ ClpSimplex::setRowLower( int elementIndex, double elementValue ) {
       } else if (!rowScale_) {
 	rowLowerWork_[elementIndex] = elementValue * rhsScale_;
       } else {
+        assert (!auxiliaryModel_);
 	rowLowerWork_[elementIndex] = elementValue * rhsScale_ 
 	  * rowScale_[elementIndex];
       }
@@ -7505,6 +7748,7 @@ ClpSimplex::setRowUpper( int elementIndex, double elementValue ) {
       } else if (!rowScale_) {
 	rowUpperWork_[elementIndex] = elementValue * rhsScale_;
       } else {
+        assert (!auxiliaryModel_);
 	rowUpperWork_[elementIndex] = elementValue * rhsScale_ 
 	  * rowScale_[elementIndex];
       }
@@ -7537,6 +7781,7 @@ ClpSimplex::setRowBounds( int elementIndex,
       } else if (!rowScale_) {
 	rowLowerWork_[elementIndex] = lowerValue * rhsScale_;
       } else {
+        assert (!auxiliaryModel_);
 	rowLowerWork_[elementIndex] = lowerValue * rhsScale_ 
 	  * rowScale_[elementIndex];
       }
@@ -7552,6 +7797,7 @@ ClpSimplex::setRowBounds( int elementIndex,
       } else if (!rowScale_) {
 	rowUpperWork_[elementIndex] = upperValue * rhsScale_;
       } else {
+        assert (!auxiliaryModel_);
 	rowUpperWork_[elementIndex] = upperValue * rhsScale_ 
 	  * rowScale_[elementIndex];
       }
@@ -7601,6 +7847,7 @@ void ClpSimplex::setRowSetBounds(const int* indexFirst,
       } else if (!rowScale_) {
 	rowLowerWork_[iRow] = rowLower_[iRow] * rhsScale_;
       } else {
+        assert (!auxiliaryModel_);
 	rowLowerWork_[iRow] = rowLower_[iRow] * rhsScale_ 
 	  * rowScale_[iRow];
       }
@@ -7609,6 +7856,7 @@ void ClpSimplex::setRowSetBounds(const int* indexFirst,
       } else if (!rowScale_) {
 	rowUpperWork_[iRow] = rowUpper_[iRow] * rhsScale_;
       } else {
+        assert (!auxiliaryModel_);
 	rowUpperWork_[iRow] = rowUpper_[iRow] * rhsScale_ 
 	  * rowScale_[iRow];
       }
@@ -7639,6 +7887,7 @@ ClpSimplex::setColumnLower( int elementIndex, double elementValue )
       } else if (!columnScale_) {
 	columnLowerWork_[elementIndex] = elementValue * rhsScale_;
       } else {
+        assert (!auxiliaryModel_);
 	columnLowerWork_[elementIndex] = elementValue * rhsScale_ 
 	  / columnScale_[elementIndex];
       }
@@ -7669,6 +7918,7 @@ ClpSimplex::setColumnUpper( int elementIndex, double elementValue )
       } else if (!columnScale_) {
 	columnUpperWork_[elementIndex] = elementValue * rhsScale_;
       } else {
+        assert (!auxiliaryModel_);
 	columnUpperWork_[elementIndex] = elementValue * rhsScale_ 
 	  / columnScale_[elementIndex];
       }
@@ -7699,6 +7949,7 @@ ClpSimplex::setColumnBounds( int elementIndex,
       } else if (!columnScale_) {
 	columnLowerWork_[elementIndex] = lowerValue * rhsScale_;
       } else {
+        assert (!auxiliaryModel_);
 	columnLowerWork_[elementIndex] = lowerValue * rhsScale_ 
 	  / columnScale_[elementIndex];
       }
@@ -7717,6 +7968,7 @@ ClpSimplex::setColumnBounds( int elementIndex,
       } else if (!columnScale_) {
 	columnUpperWork_[elementIndex] = upperValue * rhsScale_;
       } else {
+        assert (!auxiliaryModel_);
 	columnUpperWork_[elementIndex] = upperValue * rhsScale_ 
 	  / columnScale_[elementIndex];
       }
@@ -7766,6 +8018,7 @@ void ClpSimplex::setColumnSetBounds(const int* indexFirst,
       } else if (!columnScale_) {
 	columnLowerWork_[iColumn] = columnLower_[iColumn] * rhsScale_;
       } else {
+        assert (!auxiliaryModel_);
 	columnLowerWork_[iColumn] = columnLower_[iColumn] * rhsScale_ 
 	  / columnScale_[iColumn];
       }
@@ -7774,6 +8027,7 @@ void ClpSimplex::setColumnSetBounds(const int* indexFirst,
       } else if (!columnScale_) {
 	columnUpperWork_[iColumn] = columnUpper_[iColumn] * rhsScale_;
       } else {
+        assert (!auxiliaryModel_);
 	columnUpperWork_[iColumn] = columnUpper_[iColumn] * rhsScale_ 
 	  / columnScale_[iColumn];
       }
@@ -7868,6 +8122,101 @@ ClpSimplex::checkSolutionInternal()
     problemStatus_=0;
   else
     problemStatus_=-1;
+}
+/*
+  If you are re-using the same matrix again and again then the setup time
+  to do scaling may be significant.  Also you may not want to initialize all values
+  or return all values (especially if infeasible).  While an auxiliary model exists
+  it will be faster.  If options -1 then model is switched off.  Otherwise switched on
+  with following options.
+  1 - rhs is constant
+  2 - bounds are constant
+  4 - objective is constant
+  8 - solution in by basis and no djs etc in
+  16 - no duals out (but reduced costs)
+  32 - no output if infeasible
+*/
+void 
+ClpSimplex::auxiliaryModel(int options)
+{
+  delete auxiliaryModel_;
+  auxiliaryModel_=NULL;
+  if (options>=0) {
+    createRim(63,true,0);
+    auxiliaryModel_ = new ClpSimplex();
+    auxiliaryModel_->specialOptions_=options;
+    int i;
+    int numberRows2 = numberRows_+numberExtraRows_;
+    int numberTotal = numberRows2+numberColumns_;
+    if (rowScale_) {
+      auxiliaryModel_->rowScale_= new double [2*numberRows_];
+      for (i=0;i<numberRows_;i++) {
+        auxiliaryModel_->rowScale_[i]=rowScale_[i];
+        auxiliaryModel_->rowScale_[numberRows_+i]=1.0/rowScale_[i];
+      }
+      auxiliaryModel_->columnScale_= new double [2*numberColumns_];
+      for (i=0;i<numberColumns_;i++) {
+        auxiliaryModel_->columnScale_[i]=columnScale_[i];
+        auxiliaryModel_->columnScale_[numberColumns_+i]=1.0/columnScale_[i];
+      }
+    }
+    // copy anyway
+    auxiliaryModel_->lower_ = new double [2*numberTotal];
+    memcpy(auxiliaryModel_->lower_,lower_,numberTotal*sizeof(double));
+    memcpy(auxiliaryModel_->lower_+numberTotal,lower_,numberTotal*sizeof(double));
+    auxiliaryModel_->upper_ = new double [2*numberTotal];
+    memcpy(auxiliaryModel_->upper_,upper_,numberTotal*sizeof(double));
+    memcpy(auxiliaryModel_->upper_+numberTotal,upper_,numberTotal*sizeof(double));
+    auxiliaryModel_->cost_ = new double [2*numberTotal];
+    memcpy(auxiliaryModel_->cost_,cost_,numberTotal*sizeof(double));
+    memcpy(auxiliaryModel_->cost_+numberTotal,cost_,numberTotal*sizeof(double));
+    auxiliaryModel_->dj_ = new double [2*numberTotal];
+    memset(auxiliaryModel_->dj_,0,2*numberTotal*sizeof(double));
+    auxiliaryModel_->solution_ = new double [2*numberTotal];
+    memset(auxiliaryModel_->solution_,0,2*numberTotal*sizeof(double));
+    auxiliaryModel_->reducedCostWork_ = auxiliaryModel_->dj_;
+    auxiliaryModel_->rowReducedCost_ = auxiliaryModel_->dj_+numberColumns_;
+    auxiliaryModel_->columnActivityWork_ = auxiliaryModel_->solution_;
+    auxiliaryModel_->rowActivityWork_ = auxiliaryModel_->solution_+numberColumns_;
+    auxiliaryModel_->objectiveWork_ = auxiliaryModel_->cost_;
+    auxiliaryModel_->rowObjectiveWork_ = auxiliaryModel_->cost_+numberColumns_;
+    auxiliaryModel_->rowLowerWork_ = auxiliaryModel_->lower_+numberColumns_;
+    auxiliaryModel_->columnLowerWork_ = auxiliaryModel_->lower_;
+    auxiliaryModel_->rowUpperWork_ = auxiliaryModel_->upper_+numberColumns_;
+    auxiliaryModel_->columnUpperWork_ = auxiliaryModel_->upper_;
+    // delete in model
+    delete [] lower_;
+    lower_=NULL;
+    delete [] upper_;
+    upper_=NULL;
+    delete [] cost_;
+    cost_=NULL;
+    delete [] dj_;
+    dj_=NULL;
+    delete [] solution_;
+    solution_=NULL;
+    auxiliaryModel_->rowCopy_=rowCopy_;
+    ClpMatrixBase * columnCopy = rowCopy_->reverseOrderedCopy();
+    rowCopy_=NULL;
+    // Point to correct as will be restored
+    auxiliaryModel_->matrix_ = matrix_;
+    int iRow,iColumn;
+    for (iRow=0;iRow<4;iRow++) {
+      auxiliaryModel_->rowArray_[iRow]=rowArray_[iRow];
+      rowArray_[iRow]=NULL;
+    }
+    for (iColumn=0;iColumn<2;iColumn++) {
+      auxiliaryModel_->columnArray_[iColumn]=columnArray_[iColumn];
+      columnArray_[iColumn]=NULL;
+    }
+    deleteRim(1);
+    auxiliaryModel_->matrix_ = columnCopy;
+    // Get rid of scaling
+    delete [] rowScale_;
+    delete [] columnScale_;
+    rowScale_=NULL;
+    columnScale_=NULL;
+  }
 }
 /*
   When scaling is on it is possible that the scaled problem

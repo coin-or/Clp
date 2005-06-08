@@ -104,6 +104,20 @@ public:
   /** This copies back stuff from miniModel and then deletes miniModel.
       Only to be used with mini constructor */
   void originalModel(ClpSimplex * miniModel);
+  /**
+     If you are re-using the same matrix again and again then the setup time
+     to do scaling may be significant.  Also you may not want to initialize all values
+     or return all values (especially if infeasible).  While an auxiliary model exists
+     it will be faster.  If options -1 then model is switched off.  Otherwise switched on
+     with following options.
+     1 - rhs is constant
+     2 - bounds are constant
+     4 - objective is constant
+     8 - solution in by basis and no djs etc in
+     16 - no duals out (but reduced costs)
+     32 - no output if infeasible
+  */
+  void auxiliaryModel(int options);
   /// Assignment operator. This copies the data
     ClpSimplex & operator=(const ClpSimplex & rhs);
   /// Destructor
@@ -1137,6 +1151,8 @@ protected:
   double * rowActivityWork_;
   /// Column activities - working copy
   double * columnActivityWork_;
+  /// Auxiliary model
+  ClpSimplex * auxiliaryModel_;
   /// Number of dual infeasibilities
   int numberDualInfeasibilities_;
   /// Number of dual infeasibilities (without free)

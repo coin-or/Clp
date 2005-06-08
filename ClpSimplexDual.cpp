@@ -123,8 +123,6 @@ extern int * toVub;
 extern int * nextDescendent;
 #endif
 // dual 
-int ClpSimplexDual::dual (int ifValuesPass , int startFinishOptions)
-{
 
   /* *** Method
      This is a vanilla version of dual simplex.
@@ -211,11 +209,263 @@ int ClpSimplexDual::dual (int ifValuesPass , int startFinishOptions)
      feasibility tolerance.
 
   */
+#define CLEAN_FIXED 0
+// Startup part of dual (may be extended to other algorithms)
+int 
+ClpSimplexDual::startupSolve(int ifValuesPass,double * saveDuals,int startFinishOptions)
+{
+  // If values pass then save given duals round check solution
+  // sanity check
+  // initialize - no values pass and algorithm_ is -1
+  // put in standard form (and make row copy)
+  // create modifiable copies of model rim and do optional scaling
+  // If problem looks okay
+  // Do initial factorization
+  // If user asked for perturbation - do it
+  if (!startup(0,startFinishOptions)) {
+    // looks okay
+    // Superbasic variables not allowed
+    // If values pass then scale pi 
+    if (ifValuesPass) {
+      if (problemStatus_&&perturbation_<100) 
+	perturb();
+      int i;
+      if (scalingFlag_>0) {
+	for (i=0;i<numberRows_;i++) {
+	  dual_[i] = saveDuals[i]/rowScale_[i];
+	}
+      } else {
+	memcpy(dual_,saveDuals,numberRows_*sizeof(double));
+      }
+      // now create my duals
+      for (i=0;i<numberRows_;i++) {
+	// slack
+	double value = dual_[i];
+	value += rowObjectiveWork_[i];
+	saveDuals[i+numberColumns_]=value;
+      }
+      ClpDisjointCopyN(objectiveWork_,numberColumns_,saveDuals);
+      transposeTimes(-1.0,dual_,saveDuals);
+      // make reduced costs okay
+      for (i=0;i<numberColumns_;i++) {
+	if (getStatus(i)==atLowerBound) {
+	  if (saveDuals[i]<0.0) {
+	    //if (saveDuals[i]<-1.0e-3)
+	    //printf("bad dj at lb %d %g\n",i,saveDuals[i]);
+	    saveDuals[i]=0.0;
+	  }
+	} else if (getStatus(i)==atUpperBound) {
+	  if (saveDuals[i]>0.0) {
+	    //if (saveDuals[i]>1.0e-3)
+	    //printf("bad dj at ub %d %g\n",i,saveDuals[i]);
+	    saveDuals[i]=0.0;
+	  }
+	}
+      }
+      memcpy(dj_,saveDuals,(numberColumns_+numberRows_)*sizeof(double));
+      // set up possible ones
+      for (i=0;i<numberRows_+numberColumns_;i++)
+	clearPivoted(i);
+      int iRow;
+      for (iRow=0;iRow<numberRows_;iRow++) {
+	int iPivot=pivotVariable_[iRow];
+	if (fabs(saveDuals[iPivot])>dualTolerance_) {
+	  if (getStatus(iPivot)!=isFree) 
+	    setPivoted(iPivot);
+	}
+      }
+    } else if ((specialOptions_&1024)!=0&&CLEAN_FIXED) {
+      // set up possible ones
+      for (int i=0;i<numberRows_+numberColumns_;i++)
+	clearPivoted(i);
+      int iRow;
+      for (iRow=0;iRow<numberRows_;iRow++) {
+	int iPivot=pivotVariable_[iRow];
+        if (iPivot<numberColumns_&&lower_[iPivot]==upper_[iPivot]) {
+          setPivoted(iPivot);
+	}
+      }
+    } 
+
+    double objectiveChange;
+    numberFake_ =0; // Number of variables at fake bounds
+    numberChanged_ =0; // Number of variables with changed costs
+    changeBounds(true,NULL,objectiveChange);
+    
+    if (!ifValuesPass) {
+      // Check optimal
+      if (!numberDualInfeasibilities_&&!numberPrimalInfeasibilities_)
+	problemStatus_=0;
+    }
+    if (problemStatus_<0&&perturbation_<100) {
+      perturb();
+      // Can't get here if values pass
+      gutsOfSolution(NULL,NULL);
+      if (handler_->logLevel()>2) {
+	handler_->message(CLP_SIMPLEX_STATUS,messages_)
+	  <<numberIterations_<<objectiveValue();
+	handler_->printing(sumPrimalInfeasibilities_>0.0)
+	  <<sumPrimalInfeasibilities_<<numberPrimalInfeasibilities_;
+	handler_->printing(sumDualInfeasibilities_>0.0)
+	  <<sumDualInfeasibilities_<<numberDualInfeasibilities_;
+	handler_->printing(numberDualInfeasibilitiesWithoutFree_
+			   <numberDualInfeasibilities_)
+			     <<numberDualInfeasibilitiesWithoutFree_;
+	handler_->message()<<CoinMessageEol;
+      }
+    }
+    return 0;
+  } else {
+    return 1;
+  }
+}
+void 
+ClpSimplexDual::finishSolve(int startFinishOptions)
+{
+  assert (problemStatus_||!sumPrimalInfeasibilities_);
+
+  // clean up
+  finish(startFinishOptions);
+}
+void 
+ClpSimplexDual::gutsOfDual(int ifValuesPass,double * & saveDuals,int initialStatus,
+                           ClpDataSave & data)
+{
+  int lastCleaned=0; // last time objective or bounds cleaned up
+  
+  // This says whether to restore things etc
+  // startup will have factorized so can skip
+  int factorType=0;
+  // Start check for cycles
+  progress_->startCheck();
+  // Say change made on first iteration
+  changeMade_=1;
+  /*
+    Status of problem:
+    0 - optimal
+    1 - infeasible
+    2 - unbounded
+    -1 - iterating
+    -2 - factorization wanted
+    -3 - redo checking without factorization
+    -4 - looks infeasible
+  */
+  while (problemStatus_<0) {
+    int iRow, iColumn;
+    // clear
+    for (iRow=0;iRow<4;iRow++) {
+      rowArray_[iRow]->clear();
+    }    
+    
+    for (iColumn=0;iColumn<2;iColumn++) {
+      columnArray_[iColumn]->clear();
+    }    
+    
+    // give matrix (and model costs and bounds a chance to be
+    // refreshed (normally null)
+    matrix_->refresh(this);
+    // If getting nowhere - why not give it a kick
+    // does not seem to work too well - do some more work
+    if (perturbation_<101&&numberIterations_>2*(numberRows_+numberColumns_)
+        &&initialStatus!=10) {
+      perturb();
+      // Can't get here if values pass
+      gutsOfSolution(NULL,NULL);
+      if (handler_->logLevel()>2) {
+        handler_->message(CLP_SIMPLEX_STATUS,messages_)
+          <<numberIterations_<<objectiveValue();
+        handler_->printing(sumPrimalInfeasibilities_>0.0)
+          <<sumPrimalInfeasibilities_<<numberPrimalInfeasibilities_;
+        handler_->printing(sumDualInfeasibilities_>0.0)
+          <<sumDualInfeasibilities_<<numberDualInfeasibilities_;
+        handler_->printing(numberDualInfeasibilitiesWithoutFree_
+                           <numberDualInfeasibilities_)
+                             <<numberDualInfeasibilitiesWithoutFree_;
+        handler_->message()<<CoinMessageEol;
+      }
+    }
+    // may factorize, checks if problem finished
+    statusOfProblemInDual(lastCleaned,factorType,saveDuals,data,
+                          ifValuesPass);
+    // If values pass then do easy ones on first time
+    if (ifValuesPass&&
+        progress_->lastIterationNumber(0)<0&&saveDuals) {
+      doEasyOnesInValuesPass(saveDuals);
+    }
+    
+    // Say good factorization
+    factorType=1;
+    if (data.sparseThreshold_) {
+      // use default at present
+      factorization_->sparseThreshold(0);
+      factorization_->goSparse();
+    }
+    
+    // exit if victory declared
+    if (problemStatus_>=0)
+      break;
+    
+    // test for maximum iterations
+    if (hitMaximumIterations()||(ifValuesPass==2&&!saveDuals)) {
+      problemStatus_=3;
+      break;
+    }
+    if (ifValuesPass&&!saveDuals) {
+      // end of values pass
+      ifValuesPass=0;
+      int status = eventHandler_->event(ClpEventHandler::endOfValuesPass);
+      if (status>=0) {
+        problemStatus_=5;
+        secondaryStatus_=ClpEventHandler::endOfValuesPass;
+        break;
+      }
+    }
+    // Check event
+    {
+      int status = eventHandler_->event(ClpEventHandler::endOfFactorization);
+      if (status>=0) {
+        problemStatus_=5;
+        secondaryStatus_=ClpEventHandler::endOfFactorization;
+        break;
+      }
+    }
+      // Do iterations
+    whileIterating(saveDuals,ifValuesPass);
+  }
+}
+int 
+ClpSimplexDual::dual(int ifValuesPass,int startFinishOptions)
+{
+  algorithm_ = -1;
+  
+  // save data
+  ClpDataSave data = saveData();
+  double * saveDuals = NULL;
+  if (ifValuesPass) {
+    saveDuals = new double [numberRows_+numberColumns_];
+    memcpy(saveDuals,dual_,numberRows_*sizeof(double));
+  }
+  int returnCode = startupSolve(ifValuesPass,saveDuals,startFinishOptions);
+  // Save so can see if doing after primal
+  int initialStatus=problemStatus_;
+  
+  if (!returnCode)
+    gutsOfDual(ifValuesPass,saveDuals,initialStatus,data);
+  finishSolve(startFinishOptions);
+  delete [] saveDuals;
+  
+  // Restore any saved stuff
+  restoreData(data);
+  return problemStatus_;
+}
+// old way
+#if 0
+int ClpSimplexDual::dual (int ifValuesPass , int startFinishOptions)
+{
   algorithm_ = -1;
 
   // save data
   ClpDataSave data = saveData();
-#define CLEAN_FIXED 0
   // Save so can see if doing after primal
   int initialStatus=problemStatus_;
 
@@ -438,6 +688,7 @@ int ClpSimplexDual::dual (int ifValuesPass , int startFinishOptions)
   restoreData(data);
   return problemStatus_;
 }
+#endif
 //#define CHECK_ACCURACY
 #ifdef CHECK_ACCURACY
 static double zzzzzz[100000];
@@ -3696,6 +3947,12 @@ ClpSimplexDual::originalBound( int iSequence)
 {
   if (getFakeBound(iSequence)!=noFake)
     numberFake_--;;
+  if (auxiliaryModel_) {
+    // just copy back
+    lower_[iSequence]=auxiliaryModel_->lowerRegion()[iSequence+numberRows_+numberColumns_];
+    upper_[iSequence]=auxiliaryModel_->upperRegion()[iSequence+numberRows_+numberColumns_];
+    return;
+  }
   if (iSequence>=numberColumns_) {
     // rows
     int iRow = iSequence-numberColumns_;
@@ -4496,7 +4753,7 @@ ClpSimplexDual::setupForStrongBranching(char * arrays, int numberRows, int numbe
   // put in standard form (and make row copy)
   // create modifiable copies of model rim and do optional scaling
   int startFinishOptions;
-  if((specialOptions_&4096)==0) {
+  if((specialOptions_&4096)==0||auxiliaryModel_) {
     startFinishOptions=0;
   } else {
     startFinishOptions=1+2+4;
@@ -4566,7 +4823,7 @@ void
 ClpSimplexDual::cleanupAfterStrongBranching()
 {
   int startFinishOptions;
-  if((specialOptions_&4096)==0) {
+  if((specialOptions_&4096)==0||auxiliaryModel_) {
     startFinishOptions=0;
   } else {
     startFinishOptions=1+2+4;
@@ -5093,6 +5350,7 @@ void ClpSimplexDual::doEasyOnesInValuesPass(double * dj)
       const double * thisElements = elementByRow + rowStart[iRow]; 
       const int * thisIndices = column+rowStart[iRow];
       if (rowScale_) {
+        assert (!auxiliaryModel_);
 	// scale row
 	double scale = rowScale_[iRow];
 	for (i = 0;i<rowLength[iRow];i++) {

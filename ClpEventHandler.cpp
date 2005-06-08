@@ -55,7 +55,10 @@ ClpEventHandler::clone() const
 int
 ClpEventHandler::event(Event whichEvent)
 {
-  return -1; // do nothing
+  if (whichEvent!=theta)
+    return -1; // do nothing
+  else
+    return 0; // say normal exit
 }
 /* set model. */
 void 
