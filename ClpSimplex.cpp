@@ -8209,7 +8209,11 @@ ClpSimplex::auxiliaryModel(int options)
       auxiliaryModel_->columnArray_[iColumn]=columnArray_[iColumn];
       columnArray_[iColumn]=NULL;
     }
+    // Set status so won't overwrite solution
+    int saveStat=problemStatus_;
+    problemStatus_=1;
     deleteRim(1);
+    problemStatus_=saveStat;
     auxiliaryModel_->matrix_ = columnCopy;
     // Get rid of scaling
     delete [] rowScale_;

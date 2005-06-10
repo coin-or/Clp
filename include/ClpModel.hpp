@@ -253,7 +253,11 @@ public:
   void copyRowNames(const char * const * rowNames,int first, int last);
   /// Copies in Column names - modifies names first .. last-1
   void copyColumnNames(const char * const * columnNames, int first, int last);
-  
+  /// Set name of row
+  void setRowName(int rowIndex, std::string & name) ;
+  /// Set name of col
+  void setColumnName(int colIndex, std::string & name) ;
+
     /** Write the problem in MPS format to the specified file.
 
 	Row and column names may be null.
@@ -638,6 +642,8 @@ public:
    inline const std::string& rowName(int iRow) const {
       return rowNames_[iRow];
    }
+   /// Return name or Rnnnnnnn
+   std::string getRowName(int iRow) const;
    /// Column names
    inline const std::vector<std::string> * columnNames() const {
       return &columnNames_;
@@ -645,6 +651,8 @@ public:
    inline const std::string& columnName(int iColumn) const {
       return columnNames_[iColumn];
    }
+   /// Return name or Cnnnnnnn
+   std::string getColumnName(int iColumn) const;
   /// Objective methods
   inline ClpObjective * objectiveAsObject() const
   { return objective_;};

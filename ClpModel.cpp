@@ -346,13 +346,16 @@ ClpModel::loadProblem (  CoinModel & modelObject,bool tryPlusMinusOne)
     matrix_=matrix;
   }
   // Do names if wanted
-  if (modelObject.rowNames()->numberItems()) {
+  int numberItems;
+  numberItems = modelObject.rowNames()->numberItems();
+  if (numberItems) {
     const char *const * rowNames=modelObject.rowNames()->names();
-    copyRowNames(rowNames,numberRows,numberRows_);
+    copyRowNames(rowNames,0,numberItems);
   }
-  if (modelObject.columnNames()->numberItems()) {
+  numberItems = modelObject.columnNames()->numberItems();
+  if (numberItems) {
     const char *const * columnNames=modelObject.columnNames()->names();
-    copyColumnNames(columnNames,numberColumns,numberColumns_);
+    copyColumnNames(columnNames,0,numberItems);
   }
   // Do integers if wanted
   assert(integerType);
@@ -2716,6 +2719,80 @@ ClpModel::copyNames(std::vector<std::string> & rowNames,
     columnNames_.push_back(columnNames[iColumn]);
     maxLength = CoinMax(maxLength,(unsigned int) strlen(columnNames_[iColumn].c_str()));
   }
+  lengthNames_=(int) maxLength;
+}
+// Return name or Rnnnnnnn
+std::string 
+ClpModel::getRowName(int iRow) const
+{
+#ifndef NDEBUG
+  if (iRow<0||iRow>=numberRows_) {
+    indexError(iRow,"getRowName");
+  }
+#endif
+  int size = rowNames_.size();
+  if (size>iRow) {
+    return rowNames_[iRow];
+  } else {
+    char name[9];
+    sprintf(name,"R%7.7d",iRow);
+    std::string rowName(name);
+    return rowName;
+  }
+}
+// Set row name
+void
+ClpModel::setRowName(int iRow, std::string &name)
+{
+#ifndef NDEBUG
+  if (iRow<0||iRow>=numberRows_) {
+    indexError(iRow,"setRowName");
+  }
+#endif
+  unsigned int maxLength=lengthNames_;
+  int size = rowNames_.size();
+  if (size<=iRow)
+    rowNames_.resize(iRow+1);
+  rowNames_[iRow]= name;
+  maxLength = CoinMax(maxLength,(unsigned int) strlen(name.c_str()));
+  // May be too big - but we would have to check both rows and columns to be exact
+  lengthNames_=(int) maxLength;
+}
+// Return name or Cnnnnnnn
+std::string 
+ClpModel::getColumnName(int iColumn) const
+{
+#ifndef NDEBUG
+  if (iColumn<0||iColumn>=numberColumns_) {
+    indexError(iColumn,"getColumnName");
+  }
+#endif
+  int size = columnNames_.size();
+  if (size>iColumn) {
+    return columnNames_[iColumn];
+  } else {
+    char name[9];
+    sprintf(name,"C%7.7d",iColumn);
+    std::string columnName(name);
+    return columnName;
+  }
+}
+// Set column name
+void
+ClpModel::setColumnName(int iColumn, std::string &name)
+{
+#ifndef NDEBUG
+  if (iColumn<0||iColumn>=numberColumns_) {
+    indexError(iColumn,"setColumnName");
+  }
+#endif
+  unsigned int maxLength=lengthNames_;
+  int size = columnNames_.size();
+  if (size<=iColumn)
+    columnNames_.resize(iColumn+1);
+  columnNames_[iColumn]= name;
+  maxLength = CoinMax(maxLength,(unsigned int) strlen(name.c_str()));
+  // May be too big - but we would have to check both columns and columns to be exact
   lengthNames_=(int) maxLength;
 }
 // Copies in Row names - modifies names first .. last-1
