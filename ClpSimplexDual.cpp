@@ -2341,6 +2341,10 @@ ClpSimplexDual::changeBounds(bool initialize,
 	    setFakeBound(iSequence,ClpSimplexDual::bothFake);
 	    numberFake_++;
 	  }
+	  if (status==atUpperBound)
+	    solution_[iSequence]=upper_[iSequence];
+	  else
+	    solution_[iSequence]=lower_[iSequence];
 	} else {
 	  // set non basic free variables to fake bounds
 	  // I don't think we should ever get here
