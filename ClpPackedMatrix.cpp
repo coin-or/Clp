@@ -1768,7 +1768,7 @@ ClpPackedMatrix::scale(ClpModel * model) const
     CoinBigIndex j;
     char useful=0;
     if (columnUpper[iColumn]>
-	columnLower[iColumn]+1.0e-9) {
+	columnLower[iColumn]+1.0e-12) {
       for (j=columnStart[iColumn];
 	   j<columnStart[iColumn]+columnLength[iColumn];j++) {
 	iRow=row[j];
@@ -2028,10 +2028,9 @@ ClpPackedMatrix::scale(ClpModel * model) const
 	columnScale[iColumn] *= (1.0+0.1*value);
 #endif
 	double difference = columnUpper[iColumn]-columnLower[iColumn];
-	double scaledDifference = difference*columnScale[iColumn];
-	if (scaledDifference>tolerance&&scaledDifference<1.0e-4) {
+	if (difference<1.0e-5*columnScale[iColumn]) {
 	  // make gap larger
-	  columnScale[iColumn] *= 1.0e-4/scaledDifference;
+	  columnScale[iColumn] = difference/1.0e-5;
 	  //printf("Column %d difference %g scaled diff %g => %g\n",iColumn,difference,
 	  // scaledDifference,difference*columnScale[iColumn]);
 	}

@@ -5299,7 +5299,9 @@ ClpSimplex::sanityCheck()
   smallestObj=1.0e100;
   largestObj=0.0;
   // If bounds are too close - fix
-  double fixTolerance = 10.0*primalTolerance_;
+  double fixTolerance = primalTolerance_;
+  if (fixTolerance<2.0e-8)
+    fixTolerance *= 1.1;
   for (i=numberColumns_;i<numberColumns_+numberRows_;i++) {
     double value;
     value = fabs(cost_[i]);
