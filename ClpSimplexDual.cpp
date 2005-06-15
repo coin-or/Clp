@@ -3231,7 +3231,6 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
   if ((largestPrimalError_>1.0e15||largestDualError_>1.0e15)&&numberIterations_) {
     // restore previous basis
     unflagVariables = false;
-    assert (type==1);
     changeMade_++; // say something changed
     // Keep any flagged variables
     int i;
