@@ -2561,6 +2561,11 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
   if (!numberRemaining&&sequenceIn_<0)
     return 0.0; // Looks infeasible
 
+  // If sum of bad small pivots too much
+#define MORE_CAREFUL
+#ifdef MORE_CAREFUL
+  bool badSumPivots=false;
+#endif
   if (sequenceIn_>=0) {
     // free variable - always choose
   } else {
@@ -2730,6 +2735,11 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 	  double largestPivot=acceptablePivot;
 	  // now choose largest and sum all ones which will go through
 	  //printf("XX it %d number %d\n",numberIterations_,interesting[iFlip]);
+  // Sum of bad small pivots
+#ifdef MORE_CAREFUL
+          double sumBadPivots=0.0;
+          badSumPivots=false;
+#endif
 	  for (i=0;i<interesting[iFlip];i++) {
 	    int iSequence=index[i];
 	    double alpha=spare[i];
@@ -2793,6 +2803,33 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 	      if (absAlpha>bestPivot) 
 		take=true;
 #endif
+#ifdef MORE_CAREFUL
+              if (absAlpha<acceptablePivot&&upperTheta<1.0e20) {
+                if (alpha < 0.0) {
+                  //at upper bound
+                  if (value>dualTolerance_) {
+                    double gap=upper_[iSequence]-lower_[iSequence];
+                    if (gap<1.0e20)
+                      sumBadPivots += value*gap; 
+                    else
+                      sumBadPivots += 1.0e20;
+                    //printf("bad %d alpha %g dj at upper %g\n",
+                    //     iSequence,alpha,value);
+                  }
+                } else {
+                  //at lower bound
+                  if (value<-dualTolerance_) {
+                    double gap=upper_[iSequence]-lower_[iSequence];
+                    if (gap<1.0e20)
+                      sumBadPivots -= value*gap; 
+                    else
+                      sumBadPivots += 1.0e20;
+                    //printf("bad %d alpha %g dj at lower %g\n",
+                    //     iSequence,alpha,value);
+                  }
+                }
+              }
+#endif
 #ifdef FORCE_FOLLOW
 	      if (iSequence==force_in) {
 		printf("taking %d - alpha %g best %g\n",force_in,absAlpha,largestPivot);
@@ -2818,6 +2855,15 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 	      increaseInThis += badDj*range;
 	    }
 	  }
+#ifdef MORE_CAREFUL
+          // If we have done pivots and things look bad set alpha_ 0.0 to force factorization
+          if (sumBadPivots>1.0e4) {
+            if (handler_->logLevel()>1)
+            printf("maybe forcing re-factorization - sum %g  %d pivots\n",sumBadPivots,
+                   factorization_->pivots());
+            badSumPivots=true;
+          }
+#endif
 	  swapped[1-iFlip]=numberPossiblySwapped;
 	  interesting[1-iFlip]=numberRemaining;
 	  marker[1-iFlip][0]= CoinMax(marker[1-iFlip][0],numberRemaining);
@@ -3003,6 +3049,14 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
   }
 
   if (sequenceIn_>=0) {
+#ifdef MORE_CAREFUL
+    // If we have done pivots and things look bad set alpha_ 0.0 to force factorization
+    if (badSumPivots&&factorization_->pivots()) {
+      if (handler_->logLevel()>1)
+        printf("forcing re-factorization\n");
+      alpha_=0.0;
+    }
+#endif
     lowerIn_ = lower_[sequenceIn_];
     upperIn_ = upper_[sequenceIn_];
     valueIn_ = solution_[sequenceIn_];
