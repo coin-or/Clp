@@ -483,9 +483,14 @@ ClpSimplexPrimal::whileIterating(int valuesOption)
       }
     }
 #endif
+#if 0
+    nonLinearCost_->checkInfeasibilities(primalTolerance_);
+    printf("suminf %g number %d\n",nonLinearCost_->sumInfeasibilities(),
+           nonLinearCost_->numberInfeasibilities());
+#endif
 #if CLP_DEBUG>2
     // very expensive
-    if (numberIterations_>0&&numberIterations_<-2534) {
+    if (numberIterations_>0&&numberIterations_<100&&!ifValuesPass) {
       handler_->setLogLevel(63);
       double saveValue = objectiveValue_;
       double * saveRow1 = new double[numberRows_];
@@ -496,8 +501,7 @@ ClpSimplexPrimal::whileIterating(int valuesOption)
       double * saveColumn2 = new double[numberColumns_];
       memcpy(saveColumn1,reducedCostWork_,numberColumns_*sizeof(double));
       memcpy(saveColumn2,columnActivityWork_,numberColumns_*sizeof(double));
-      createRim(1+4);
-      gutsOfSolution(NULL,NULL);
+      gutsOfSolution(NULL,NULL,false);
       printf("xxx %d old obj %g, recomputed %g, sum primal inf %g\n",
 	     numberIterations_,
 	     saveValue,objectiveValue_,sumPrimalInfeasibilities_);
@@ -795,6 +799,8 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
     gutsOfSolution(NULL,NULL,ifValuesPass!=0);
     nonLinearCost_->checkInfeasibilities(primalTolerance_);
   }
+  if (!nonLinearCost_->numberInfeasibilities()&&infeasibilityCost_==1.0e10)
+    infeasibilityCost_ = 1.0e8; // relax if default
   double trueInfeasibility =nonLinearCost_->sumInfeasibilities();
   if (trueInfeasibility>1.0) {
     // If infeasibility going up may change weights
@@ -1142,7 +1148,7 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
   int numberRemaining=0;
 
   double totalThru=0.0; // for when variables flip
-  double acceptablePivot=1.0e-7;
+  double acceptablePivot=0.5e-8;
   if (factorization_->pivots())
     acceptablePivot=1.0e-5; // if we have iterated be more strict
   double bestEverPivot=acceptablePivot;
@@ -1337,6 +1343,8 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
       }
       
       // now look at best in this lot
+      // But also see how infeasible small pivots will make
+      double sumInfeasibilities=0.0;
       double bestPivot=acceptablePivot;
       pivotRow_=-1;
       for (iIndex=0;iIndex<numberRemaining;iIndex++) {
@@ -1355,7 +1363,10 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
 	    bestPivot=alpha;
 	    theta_ = oldValue/bestPivot;
 	    pivotRow_=iIndex;
-	  }
+	  } else if (alpha<acceptablePivot) {
+            if (value<-primalTolerance_)
+              sumInfeasibilities += -value-primalTolerance_;
+          }
 	}
       }
       if (bestPivot<0.1*bestEverPivot&&
@@ -1372,13 +1383,23 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
 	}
 	break;
       } else if (totalThru>=dualCheck) {
+        if (sumInfeasibilities>primalTolerance_&&!nonLinearCost_->numberInfeasibilities()) {
+          // Looks a bad choice
+          if (lastPivot>acceptablePivot) {
+            goBackOne=true;
+          } else {
+            // say no good
+            dualIn_=0.0;
+          }
+        } 
 	break; // no point trying another loop
       } else {
 	lastPivotRow=pivotRow_;
 	lastTheta = theta_;
 	if (bestPivot>bestEverPivot)
 	  bestEverPivot=bestPivot;
-      }    }
+      }    
+    }
     // can get here without pivotRow_ set but with lastPivotRow
     if (goBackOne||(pivotRow_<0&&lastPivotRow>=0)) {
       // back to previous one
