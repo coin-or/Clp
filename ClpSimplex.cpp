@@ -2506,6 +2506,12 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
         oldMatrix=true;
         newArrays=false;
         keepPivots=true;
+	for (int iRow=0;iRow<4;iRow++) {
+	  rowArray_[iRow]->clear();
+	}
+	for (int iColumn=0;iColumn<2;iColumn++) {
+	  columnArray_[iColumn]->clear();
+	}
       }
     } else if (factorization_) {
       // match up factorization messages
