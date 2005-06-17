@@ -4230,10 +4230,55 @@ ClpSimplex::tightenPrimalBounds(double factor,int doTight)
   delete [] saveUpper;
   return (numberInfeasible);
 }
+//#define SAVE_AND_RESTORE
 // dual 
 #include "ClpSimplexDual.hpp"
 #include "ClpSimplexPrimal.hpp"
+#ifndef SAVE_AND_RESTORE
 int ClpSimplex::dual (int ifValuesPass , int startFinishOptions)
+#else
+int ClpSimplex::dual (int ifValuesPass , int startFinishOptions)
+{
+  // May be empty problem
+  if (numberRows_&&numberColumns_) {
+    // Save on file for debug
+    int returnCode;
+    returnCode = saveModel("debug.sav");
+    if (returnCode) {
+      printf("** Unable to save model to debug.sav\n");
+      abort();
+    }
+    ClpSimplex temp;
+    returnCode=temp.restoreModel("debug.sav");
+    if (returnCode) {
+      printf("** Unable to restore model from debug.sav\n");
+      abort();
+    }
+    temp.setLogLevel(handler_->logLevel());
+    // Now do dual
+    returnCode=temp.dualDebug(ifValuesPass,startFinishOptions);
+    // Move status and solution back
+    int numberTotal = numberRows_+numberColumns_;
+    memcpy(status_,temp.statusArray(),numberTotal);
+    memcpy(columnActivity_,temp.primalColumnSolution(),numberColumns_*sizeof(double));
+    memcpy(rowActivity_,temp.primalRowSolution(),numberRows_*sizeof(double));
+    memcpy(reducedCost_,temp.dualColumnSolution(),numberColumns_*sizeof(double));
+    memcpy(dual_,temp.dualRowSolution(),numberRows_*sizeof(double));
+    problemStatus_ = temp.problemStatus_;
+    setObjectiveValue(temp.objectiveValue());
+    setSumDualInfeasibilities(temp.sumDualInfeasibilities());
+    setNumberDualInfeasibilities(temp.numberDualInfeasibilities());
+    setSumPrimalInfeasibilities(temp.sumPrimalInfeasibilities());
+    setNumberPrimalInfeasibilities(temp.numberPrimalInfeasibilities());
+    setNumberIterations(temp.numberIterations());
+    return returnCode;
+  } else {
+    // empty
+    return dualDebug(ifValuesPass,startFinishOptions);
+  }
+}
+int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
+#endif
 {
   //double savedPivotTolerance = factorization_->pivotTolerance();
   int saveQuadraticActivated = objective_->activated();
@@ -5252,6 +5297,20 @@ ClpSimplex::restoreModel(const char * fileName)
       return 1;
     // assign matrix
     CoinPackedMatrix * matrix = new CoinPackedMatrix();
+    matrix->setExtraGap(0.0);
+    matrix->setExtraMajor(0.0);
+    // Pack down
+    length=0;
+    for (i=0;i<numberColumns_;i++) {
+      int start = starts[i];
+      starts[i]=length;
+      for (CoinBigIndex j=start;j<start+lengths[i];j++) {
+        elements[length]=elements[j];
+        indices[length++]=indices[j];
+      }
+      lengths[i]=length-starts[i];
+    }
+    starts[numberColumns_]=length;
     matrix->assignMatrix(true, numberRows_, numberColumns_,
 			 length, elements, indices, starts, lengths);
     // and transfer to Clp
