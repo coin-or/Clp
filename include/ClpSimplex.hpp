@@ -209,6 +209,8 @@ public:
       maybe other bits later
   */
   int dual(int ifValuesPass=0, int startFinishOptions=0);
+  /// For debug
+  int dualDebug(int ifValuesPass=0, int startFinishOptions=0);
   /** Primal algorithm - see ClpSimplexPrimal.hpp for method.
       ifValuesPass==2 just does values pass and then stops.
 
