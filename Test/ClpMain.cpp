@@ -1333,9 +1333,11 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 	      if (field=="-"||field=="EOL"||field=="stdout") {
 		// stdout
 		fp=stdout;
+		fprintf(fp,"\n");
 	      } else if (field=="stderr") {
 		// stderr
 		fp=stderr;
+		fprintf(fp,"\n");
 	      } else {
 		if (field[0]=='/'||field[0]=='\\') {
 		  fileName = field;
