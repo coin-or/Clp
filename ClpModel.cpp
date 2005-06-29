@@ -138,7 +138,7 @@ void ClpModel::gutsOfDelete()
 //#############################################################################
 void ClpModel::setPrimalTolerance( double value) 
 {
-  if (value>0.0&&value<1.0e10)
+  if (value>0.0&&value<1.0e10) 
     dblParam_[ClpPrimalTolerance]=value;
 }
 void ClpModel::setDualTolerance( double value) 
@@ -2806,7 +2806,7 @@ ClpModel::copyRowNames(const std::vector<std::string> & rowNames, int first, int
   int iRow;
   for (iRow=first; iRow<last;iRow++) {
     rowNames_[iRow]= rowNames[iRow-first];
-    maxLength = CoinMax(maxLength,(unsigned int) strlen(rowNames_[iRow].c_str()));
+    maxLength = CoinMax(maxLength,(unsigned int) strlen(rowNames_[iRow-first].c_str()));
   }
   // May be too big - but we would have to check both rows and columns to be exact
   lengthNames_=(int) maxLength;
@@ -2822,7 +2822,7 @@ ClpModel::copyColumnNames(const std::vector<std::string> & columnNames, int firs
   int iColumn;
   for (iColumn=first; iColumn<last;iColumn++) {
     columnNames_[iColumn]= columnNames[iColumn-first];
-    maxLength = CoinMax(maxLength,(unsigned int) strlen(columnNames_[iColumn].c_str()));
+    maxLength = CoinMax(maxLength,(unsigned int) strlen(columnNames_[iColumn-first].c_str()));
   }
   // May be too big - but we would have to check both rows and columns to be exact
   lengthNames_=(int) maxLength;
@@ -2838,7 +2838,7 @@ ClpModel::copyRowNames(const char * const * rowNames, int first, int last)
   int iRow;
   for (iRow=first; iRow<last;iRow++) {
     rowNames_[iRow]= rowNames[iRow-first];
-    maxLength = CoinMax(maxLength,(unsigned int) strlen(rowNames[iRow]));
+    maxLength = CoinMax(maxLength,(unsigned int) strlen(rowNames[iRow-first]));
   }
   // May be too big - but we would have to check both rows and columns to be exact
   lengthNames_=(int) maxLength;
@@ -2854,7 +2854,7 @@ ClpModel::copyColumnNames(const char * const * columnNames, int first, int last)
   int iColumn;
   for (iColumn=first; iColumn<last;iColumn++) {
     columnNames_[iColumn]= columnNames[iColumn-first];
-    maxLength = CoinMax(maxLength,(unsigned int) strlen(columnNames[iColumn]));
+    maxLength = CoinMax(maxLength,(unsigned int) strlen(columnNames[iColumn-first]));
   }
   // May be too big - but we would have to check both rows and columns to be exact
   lengthNames_=(int) maxLength;
