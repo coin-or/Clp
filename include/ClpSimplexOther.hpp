@@ -101,6 +101,13 @@ public:
   int whileIterating(double startingTheta, double & endingTheta,double reportIncrement,
                       const double * changeLower, const double * changeUpper,
                       const double * changeObjective);
+  /** Computes next theta and says if objective or bounds (0= bounds, 1 objective, -1 none).
+      theta is in theta_.
+      type 1 bounds, 2 objective, 3 both.
+  */
+  int nextTheta(int type, double maxTheta, double * primalChange, double * dualChange,
+                      const double * changeLower, const double * changeUpper,
+                      const double * changeObjective);
   /** 
       Row array has row part of pivot row
       Column array has column part.

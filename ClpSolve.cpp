@@ -375,6 +375,9 @@ ClpSimplex::initialSolve(ClpSolve & options)
     // register signal handler
     saveSignal = signal(SIGINT,signal_handler);
   }
+  // If no status array - set up basis
+  if (!status_)
+    allSlackBasis();
   ClpPresolve pinfo;
   pinfo.setSubstitution(options.substitution());
   int presolveOptions = options.presolveActions();

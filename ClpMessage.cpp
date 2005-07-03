@@ -113,6 +113,7 @@ ClpMessage::ClpMessage(Language language) :
 {
   language_=language;
   strcpy(source_,"Clp");
+  class_ = 1; //solver
   Clp_message * message = us_english;
 
   while (message->internalNumber!=CLP_DUMMY_END) {

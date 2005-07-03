@@ -1022,10 +1022,13 @@ ClpModel::resize (int newNumberRows, int newNumberColumns)
     integerType_ = temp;
   }
   numberColumns_ = newNumberColumns;
-  // for now gets rid of names
-  lengthNames_ = 0;
-  rowNames_ = std::vector<std::string> ();
-  columnNames_ = std::vector<std::string> ();
+  if (lengthNames_) {
+    // reduce row and column names vectors only if necessary
+    if (rowNames_.size() < (unsigned int)numberRows_)
+      rowNames_.resize(numberRows_);
+    if (columnNames_.size() < (unsigned int)numberColumns_)
+      columnNames_.resize(numberColumns_);
+  }
 }
 // Deletes rows
 void 
@@ -1067,19 +1070,20 @@ ClpModel::deleteRows(int number, const int * which)
     }
   }
 #if 1
+  // Now works if which out of order
   if (lengthNames_) {
-    int i, j, k;
-    for (k = 0, j = 0, i = 0; j < number && i < numberRows_; ++i) {
-      if (which[j] == i) {
-	++j;
-      } else {
+    char * mark = new char [numberRows_];
+    memset(mark,0,numberRows_);
+    int i;
+    for (i=0;i<number;i++)
+      mark[which[i]]=1;
+    int k=0;
+    for ( i = 0; i < numberRows_; ++i) {
+      if (!mark[i]) 
 	rowNames_[k++] = rowNames_[i];
-      }
-    }
-    for ( ; i < numberRows_; ++i) {
-      rowNames_[k++] = rowNames_[i];
     }
     rowNames_.erase(rowNames_.begin()+k, rowNames_.end());
+    delete [] mark;
   }
 #else
   // for now gets rid of names
@@ -1152,19 +1156,21 @@ ClpModel::deleteColumns(int number, const int * which)
   integerType_ = deleteChar(integerType_,numberColumns_,
 			    number, which, newSize,true);
 #if 1
+  // Now works if which out of order
   if (lengthNames_) {
-    int i, j, k;
-    for (k = 0, j = 0, i = 0; j < number && i < numberColumns_; ++i) {
-      if (which[j] == i) {
-	++j;
-      } else {
+    printf("size of names %d\n",columnNames_.size());
+    char * mark = new char [numberColumns_];
+    memset(mark,0,numberColumns_);
+    int i;
+    for (i=0;i<number;i++)
+      mark[which[i]]=1;
+    int k=0;
+    for ( i = 0; i < numberColumns_; ++i) {
+      if (!mark[i]) 
 	columnNames_[k++] = columnNames_[i];
-      }
-    }
-    for ( ; i < numberColumns_; ++i) {
-      columnNames_[k++] = columnNames_[i];
     }
     columnNames_.erase(columnNames_.begin()+k, columnNames_.end());
+    delete [] mark;
   }
 #else
   // for now gets rid of names
@@ -1295,13 +1301,14 @@ ClpModel::addRows(int number, const double * rowLower,
   rowScale_ = NULL;
   delete [] columnScale_;
   columnScale_ = NULL;
+  if (lengthNames_) {
+    rowNames_.resize(numberRows_);
+  }
 }
 // Add rows from a build object
 int
 ClpModel::addRows(const CoinBuild & buildObject,bool tryPlusMinusOne,bool checkDuplicates)
 {
-  if (buildObject.numberElements()==0)
-    return 0;
   CoinAssertHint (buildObject.type()==0,"Looks as if both addRows and addCols being used"); // check correct
   int number = buildObject.numberRows();
   int numberErrors=0;
@@ -1747,13 +1754,14 @@ ClpModel::addColumns(int number, const double * columnLower,
   rowScale_ = NULL;
   delete [] columnScale_;
   columnScale_ = NULL;
+  if (lengthNames_) {
+    columnNames_.resize(numberColumns_);
+  }
 }
 // Add columns from a build object
 int 
 ClpModel::addColumns(const CoinBuild & buildObject,bool tryPlusMinusOne,bool checkDuplicates)
 {
-  if (buildObject.numberElements()==0)
-    return 0;
   CoinAssertHint (buildObject.type()==1,"Looks as if both addRows and addCols being used"); // check correct
   int number = buildObject.numberColumns();
   int numberErrors=0;

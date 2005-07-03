@@ -204,7 +204,7 @@ ClpSimplexOther::checkDualRatios(CoinIndexedVector * rowArray,
                                  double & costIncrease, int & sequenceIncrease, double & alphaIncrease,
                                  double & costDecrease, int & sequenceDecrease, double & alphaDecrease)
 {
-  double acceptablePivot = 1.0e-7;
+  double acceptablePivot = 1.0e-9;
   double * work;
   int number;
   int * which;
@@ -2022,37 +2022,35 @@ ClpSimplexOther::whileIterating(double startingTheta, double & endingTheta,doubl
   // status -3 to go to top without an invert
   int returnCode = -1;
   double saveSumDual = sumDualInfeasibilities_; // so we know to be careful
-  //double useTheta = startingTheta;
+  double useTheta = startingTheta;
   double * primalChange = new double[numberRows_];
   double * dualChange = new double[numberColumns_];
   int numberTotal = numberColumns_+numberRows_;
-
-  while (problemStatus_==-1) {
-
-    // Get theta for bounds - we know can't crossover
-    // get change 
-    int iSequence;
-    for (iSequence=0;iSequence<numberTotal;iSequence++) {
-      primalChange[iSequence]=0.0;
-      switch(getStatus(iSequence)) {
-        
-      case basic:
-      case isFree:
-      case superBasic:
-        break;
-      case isFixed:
-      case atUpperBound:
-        primalChange[iSequence]=changeUpper[iSequence];
-        break;
-      case atLowerBound:
-        primalChange[iSequence]=changeLower[iSequence];
-        break;
-      }
+  int iSequence;
+  // See if bounds
+  int type=0;
+  for (iSequence=0;iSequence<numberTotal;iSequence++) {
+    if (changeLower[iSequence]||changeUpper[iSequence]) {
+      type=1;
+      break;
     }
-    // use rowActivity
-    memset(rowActivity_,0,numberRows_*sizeof(double));
-    times(1.0,primalChange,rowActivity_);
+  }
+  // See if objective
+  for (iSequence=0;iSequence<numberTotal;iSequence++) {
+    if (changeObjective[iSequence]) {
+      type |= 2;
+      break;
+    }
+  }
+  assert (type);
+  while (problemStatus_==-1) {
+    double increaseTheta = CoinMin(endingTheta-useTheta,1.0e50);
     
+    // Get theta for bounds - we know can't crossover
+    int pivotType = nextTheta(type,increaseTheta,primalChange,dualChange,
+                              changeLower,changeUpper,changeObjective);
+    if (pivotType)
+      abort();
     // choose row to go out
     // dualRow will go to virtual row pivot choice algorithm
     ((ClpSimplexDual *) this)->dualRow(-1);
@@ -2495,4 +2493,106 @@ ClpSimplexOther::whileIterating(double startingTheta, double & endingTheta,doubl
   delete [] primalChange;
   delete [] dualChange;
   return returnCode;
+}
+// Computes next theta and says if objective or bounds (0= bounds, 1 objective, -1 none)
+int 
+ClpSimplexOther::nextTheta(int type, double maxTheta, double * primalChange, double * dualChange,
+                           const double * changeLower, const double * changeUpper,
+                           const double * changeObjective)
+{
+  int numberTotal = numberColumns_+numberRows_;
+  int iSequence;
+  int iRow;
+  theta_=maxTheta;
+  bool toLower=false;
+  if ((type&1)!=0) {
+    // get change 
+    for (iSequence=0;iSequence<numberTotal;iSequence++) {
+      primalChange[iSequence]=0.0;
+      switch(getStatus(iSequence)) {
+        
+      case basic:
+      case isFree:
+      case superBasic:
+        break;
+      case isFixed:
+      case atUpperBound:
+        primalChange[iSequence]=changeUpper[iSequence];
+        break;
+      case atLowerBound:
+        primalChange[iSequence]=changeLower[iSequence];
+        break;
+      }
+    }
+    // use array
+    double * array = rowArray_[1]->denseVector();
+    times(1.0,primalChange,array);
+    int * index = rowArray_[1]->getIndices();
+    int number=0;
+    for (iRow=0;iRow<numberRows_;iRow++) {
+      double value = array[iRow];
+      if (value) {
+	array[iRow]=value;
+	index[number++]=iRow;
+      }
+    }
+    // ftran it
+    rowArray_[1]->setNumElements(number);
+    factorization_->updateColumn(rowArray_[0],rowArray_[1]);
+    number=rowArray_[1]->getNumElements();
+    pivotRow_=-1;
+    for (iRow=0;iRow<number;iRow++) {
+      int iPivot = index[iRow];
+      iSequence = pivotVariable_[iPivot];
+      // solution value will be sol - theta*alpha
+      // bounds will be bounds + change *theta
+      double currentSolution = solution_[iSequence];
+      double currentLower = lower_[iSequence];
+      double currentUpper = upper_[iSequence];
+      double alpha = array[iPivot];
+      assert (currentSolution>=currentLower-primalTolerance_);
+      assert (currentSolution<=currentUpper+primalTolerance_);
+      double thetaCoefficient;
+      double hitsLower = COIN_DBL_MAX;
+      thetaCoefficient = changeLower[iSequence]+alpha;
+      if (fabs(thetaCoefficient)>1.0e-8)
+        hitsLower = (currentSolution-currentLower)/thetaCoefficient;
+      if (hitsLower<0.0) {
+        // does not hit - but should we check further
+        hitsLower=COIN_DBL_MAX;
+      }
+      double hitsUpper = COIN_DBL_MAX;
+      thetaCoefficient = changeUpper[iSequence]+alpha;
+      if (fabs(thetaCoefficient)>1.0e-8)
+        hitsUpper = (currentSolution-currentUpper)/thetaCoefficient;
+      if (hitsUpper<0.0) {
+        // does not hit - but should we check further
+        hitsUpper=COIN_DBL_MAX;
+      }
+      if (CoinMin(hitsLower,hitsUpper)<theta_) {
+        theta_ = CoinMin(hitsLower,hitsUpper);
+        toLower = hitsLower<hitsUpper;
+        pivotRow_=iPivot;
+      }
+    }
+  }
+  if ((type&2)!=0) {
+    abort();
+  }
+  if (pivotRow_>=0) {
+    sequenceOut_ = pivotVariable_[pivotRow_];
+    valueOut_ = solution_[sequenceOut_];
+    lowerOut_ = lower_[sequenceOut_];
+    upperOut_ = upper_[sequenceOut_];
+    if (!toLower) {
+      directionOut_ = -1;
+      dualOut_ = valueOut_ - upperOut_;
+    } else if (valueOut_<lowerOut_) {
+      directionOut_ = 1;
+      dualOut_ = lowerOut_ - valueOut_;
+    }
+    return 0;
+  } else {
+    return -1;
+  }
 }
