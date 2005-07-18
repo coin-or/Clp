@@ -1158,7 +1158,6 @@ ClpModel::deleteColumns(int number, const int * which)
 #if 1
   // Now works if which out of order
   if (lengthNames_) {
-    printf("size of names %d\n",columnNames_.size());
     char * mark = new char [numberColumns_];
     memset(mark,0,numberColumns_);
     int i;
