@@ -16,15 +16,19 @@
 #include "ClpModel.hpp"
 #include "ClpEventHandler.hpp"
 #include "ClpPackedMatrix.hpp"
+#ifndef SLIM_CLP
 #include "ClpPlusMinusOneMatrix.hpp"
+#endif
 #include "CoinPackedVector.hpp"
 #include "CoinIndexedVector.hpp"
 #include "CoinMpsIO.hpp"
 #include "CoinFileIO.hpp"
 #include "ClpMessage.hpp"
 #include "ClpLinearObjective.hpp"
+#ifndef SLIM_CLP
 #include "ClpQuadraticObjective.hpp"
 #include "CoinBuild.hpp"
+#endif
 #include "CoinModel.hpp"
 
 //#############################################################################
@@ -329,10 +333,13 @@ ClpModel::loadProblem (  CoinModel & modelObject,bool tryPlusMinusOne)
       delete [] startNegative;
     }
   }
+#ifndef SLIM_CLP
   if (!tryPlusMinusOne) {
+#endif
     CoinPackedMatrix matrix;
     modelObject.createPackedMatrix(matrix,associated);
     matrix_ = new ClpPackedMatrix(matrix);
+#ifndef SLIM_CLP
   } else {
     // create +-1 matrix
     CoinBigIndex size = startPositive[numberColumns];
@@ -345,6 +352,7 @@ ClpModel::loadProblem (  CoinModel & modelObject,bool tryPlusMinusOne)
                        true,indices,startPositive,startNegative);
     matrix_=matrix;
   }
+#endif
   // Do names if wanted
   int numberItems;
   numberItems = modelObject.rowNames()->numberItems();
@@ -1304,6 +1312,7 @@ ClpModel::addRows(int number, const double * rowLower,
     rowNames_.resize(numberRows_);
   }
 }
+#ifndef SLIM_CLP
 // Add rows from a build object
 int
 ClpModel::addRows(const CoinBuild & buildObject,bool tryPlusMinusOne,bool checkDuplicates)
@@ -1481,6 +1490,7 @@ ClpModel::addRows(const CoinBuild & buildObject,bool tryPlusMinusOne,bool checkD
   }
   return numberErrors;
 }
+#endif
 // Add rows from a model object
 int 
 ClpModel::addRows( CoinModel & modelObject,bool tryPlusMinusOne,bool checkDuplicates)
@@ -1544,7 +1554,9 @@ ClpModel::addRows( CoinModel & modelObject,bool tryPlusMinusOne,bool checkDuplic
       }
       assert (rowLower);
       addRows(numberRows2, rowLower, rowUpper,NULL);
+#ifndef SLIM_CLP
       if (!tryPlusMinusOne) {
+#endif
         CoinPackedMatrix matrix;
         modelObject.createPackedMatrix(matrix,associated);
         assert (!matrix.getExtraGap());
@@ -1564,6 +1576,7 @@ ClpModel::addRows( CoinModel & modelObject,bool tryPlusMinusOne,bool checkDuplic
           delete matrix_;
           matrix_ = new ClpPackedMatrix(matrix);
         }
+#ifndef SLIM_CLP
       } else {
         // create +-1 matrix
         CoinBigIndex size = startPositive[numberColumns];
@@ -1582,6 +1595,7 @@ ClpModel::addRows( CoinModel & modelObject,bool tryPlusMinusOne,bool checkDuplic
         const char *const * rowNames=modelObject.rowNames()->names();
         copyRowNames(rowNames,numberRows,numberRows_);
       }
+#endif
     }
     if (rowLower!=modelObject.rowLowerArray()) {
       delete [] rowLower;
@@ -1757,6 +1771,7 @@ ClpModel::addColumns(int number, const double * columnLower,
     columnNames_.resize(numberColumns_);
   }
 }
+#ifndef SLIM_CLP
 // Add columns from a build object
 int 
 ClpModel::addColumns(const CoinBuild & buildObject,bool tryPlusMinusOne,bool checkDuplicates)
@@ -1891,6 +1906,7 @@ ClpModel::addColumns(const CoinBuild & buildObject,bool tryPlusMinusOne,bool che
   }
   return 0;
 }
+#endif
 // Add columns from a model object
 int 
 ClpModel::addColumns( CoinModel & modelObject,bool tryPlusMinusOne,bool checkDuplicates)
@@ -1947,7 +1963,9 @@ ClpModel::addColumns( CoinModel & modelObject,bool tryPlusMinusOne,bool checkDup
       }
       assert (columnLower);
       addColumns(numberColumns2, columnLower, columnUpper,objective, NULL);
+#ifndef SLIM_CLP
       if (!tryPlusMinusOne) {
+#endif
         CoinPackedMatrix matrix;
         modelObject.createPackedMatrix(matrix,associated);
         assert (!matrix.getExtraGap());
@@ -1964,6 +1982,7 @@ ClpModel::addColumns( CoinModel & modelObject,bool tryPlusMinusOne,bool checkDup
           delete matrix_;
           matrix_ = new ClpPackedMatrix(matrix);
         }
+#ifndef SLIM_CLP
       } else {
         // create +-1 matrix
         CoinBigIndex size = startPositive[numberColumns2];
@@ -1977,6 +1996,7 @@ ClpModel::addColumns( CoinModel & modelObject,bool tryPlusMinusOne,bool checkDup
         delete matrix_;
         matrix_=matrix;
       }
+#endif
       // Do names if wanted
       if (modelObject.columnNames()->numberItems()) {
         const char *const * columnNames=modelObject.columnNames()->names();
@@ -2488,7 +2508,7 @@ ClpModel::copyinStatus(const unsigned char * statusArray)
     status_=NULL;
   }
 }
-
+#ifndef SLIM_CLP
 // Load up quadratic objective 
 void 
 ClpModel::loadQuadraticObjective(const int numberColumns, const CoinBigIndex * start,
@@ -2529,6 +2549,7 @@ ClpModel::deleteQuadraticObjective()
   if (obj)
     obj->deleteQuadraticObjective();
 }
+#endif
 void 
 ClpModel::setObjective(ClpObjective * objective)
 {
@@ -3079,6 +3100,8 @@ ClpModel::writeMps(const char *filename,
   writer.copyInIntegerInformation(integerInformation());
   writer.setObjectiveOffset(objectiveOffset());
   delete [] objective;
+  CoinPackedMatrix * quadratic=NULL;
+#ifndef SLIM_CLP
   // allow for quadratic objective
 #ifndef NO_RTTI
   ClpQuadraticObjective * quadraticObj = (dynamic_cast< ClpQuadraticObjective*>(objective_));
@@ -3087,10 +3110,10 @@ ClpModel::writeMps(const char *filename,
   if (objective_->type()==2)
     quadraticObj = (static_cast< ClpQuadraticObjective*>(objective_));
 #endif
-  CoinPackedMatrix * quadratic=NULL;
   if (quadraticObj) 
     quadratic = quadraticObj->quadraticObjective();
-  return writer.writeMps(filename, 0 /* do not gzip it*/, formatType, numberAcross,
+#endif
+  int returnCode = writer.writeMps(filename, 0 /* do not gzip it*/, formatType, numberAcross,
 			 quadratic);
   if (rowNames) {
     for (int iRow=0;iRow<numberRows_;iRow++) {
@@ -3102,6 +3125,7 @@ ClpModel::writeMps(const char *filename,
     }
     delete [] columnNames;
   }
+  return returnCode;
 }
 // Pass in Event handler (cloned and deleted at end)
 void 

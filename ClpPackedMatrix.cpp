@@ -10,7 +10,9 @@
 
 #include "ClpSimplex.hpp"
 #include "ClpFactorization.hpp"
+#ifndef SLIM_CLP
 #include "ClpQuadraticObjective.hpp"
+#endif
 // at end to get min/max!
 #include "ClpPackedMatrix.hpp"
 #include "ClpMessage.hpp"
@@ -2043,6 +2045,7 @@ ClpPackedMatrix::scale(ClpModel * model) const
       <<CoinMessageEol;
     delete [] usefulRow;
     delete [] usefulColumn;
+#ifndef SLIM_CLP
     // If quadratic then make symmetric
     ClpObjective * obj = model->objectiveAsObject();
 #ifndef NO_RTTI
@@ -2110,6 +2113,7 @@ ClpPackedMatrix::scale(ClpModel * model) const
 	}
       }
     }
+#endif
     model->setRowScale(rowScale);
     model->setColumnScale(columnScale);
     if (model->rowCopy()) {

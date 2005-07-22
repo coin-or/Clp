@@ -12,19 +12,22 @@
 #include "ClpHelperFunctions.hpp"
 #include "CoinSort.hpp"
 #include "ClpFactorization.hpp"
-#include "ClpQuadraticObjective.hpp"
 #include "ClpSimplex.hpp"
+#ifndef SLIM_CLP
+#include "ClpQuadraticObjective.hpp"
 #include "ClpInterior.hpp"
 #include "ClpCholeskyDense.hpp"
 #include "ClpCholeskyBase.hpp"
-#include "ClpSolve.hpp"
-#include "ClpPackedMatrix.hpp"
 #include "ClpPlusMinusOneMatrix.hpp"
 #include "ClpNetworkMatrix.hpp"
+#endif
+#include "ClpSolve.hpp"
+#include "ClpPackedMatrix.hpp"
 #include "ClpMessage.hpp"
 #include "CoinTime.hpp"
 
 #include "ClpPresolve.hpp"
+#ifndef SLIM_CLP
 #include "Idiot.hpp"
 #ifdef WSSMP_BARRIER
 #include "ClpCholeskyWssmp.hpp"
@@ -324,22 +327,24 @@ solveWithVolume(ClpSimplex * model, int numberPasses, int doIdiot)
    return 0;
 }
 #endif
-
+static ClpInterior * currentModel2 = NULL;
+#endif
 //#############################################################################
 // Allow for interrupts
 // But is this threadsafe ? (so switched off by option)
 
 #include "CoinSignal.hpp"
 static ClpSimplex * currentModel = NULL;
-static ClpInterior * currentModel2 = NULL;
 
 extern "C" {
    static void signal_handler(int whichSignal)
    {
       if (currentModel!=NULL) 
 	 currentModel->setMaximumIterations(0); // stop at next iterations
+#ifndef SLIM_CLP
       if (currentModel2!=NULL) 
 	 currentModel2->setMaximumBarrierIterations(0); // stop at next iterations
+#endif
       return;
    }
 }
@@ -395,6 +400,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
   double timeCore=0.0;
   int savePerturbation=perturbation_;
   int saveScaling = scalingFlag_;
+#ifndef SLIM_CLP
 #ifndef NO_RTTI
   if (dynamic_cast< ClpNetworkMatrix*>(matrix_)) {
     // network - switch off stuff
@@ -405,6 +411,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
     // network - switch off stuff
     presolve = ClpSolve::presolveOff;
   }
+#endif
 #endif
   // For below >0 overrides
   // 0 means no, -1 means maybe
@@ -573,6 +580,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
   // See if worth trying +- one matrix
   bool plusMinus=false;
   int numberElements=model2->getNumElements();
+#ifndef SLIM_CLP
 #ifndef NO_RTTI
   if (dynamic_cast< ClpNetworkMatrix*>(matrix_)) {
     // network - switch off stuff
@@ -585,6 +593,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
     doIdiot=0;
     doSprint=0;
   }
+#endif
 #endif
   int numberColumns = model2->numberColumns();
   int numberRows = model2->numberRows();
@@ -605,6 +614,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
     if(numberElements>10000&&(doIdiot||doSprint)) 
       plusMinus=true;
   }
+#ifndef SLIM_CLP
   // Statistics (+1,-1, other) - used to decide on strategy if not +-1
   CoinBigIndex statistics[3]={-1,0,0};
   if (plusMinus) {
@@ -636,6 +646,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
       plusMinus=false;
     }
   }
+#endif
   if (model2->factorizationFrequency()==200) {
     // User did not touch preset
     int numberRows = model2->numberRows();
@@ -825,6 +836,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
     // pick up number passes
     int nPasses=0;
     int numberNotE=0;
+#ifndef SLIM_CLP
     if ((doIdiot<0&&plusMinus)||doIdiot>0) {
       // See if candidate for idiot
       nPasses=0;
@@ -888,6 +900,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
         nPasses=0;
       }
     }
+#endif
     if (doCrash) {
       switch(doCrash) {
 	// standard
@@ -976,6 +989,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
       <<CoinMessageEol;
     timeX=time2;
   } else if (method==ClpSolve::usePrimal) {
+#ifndef SLIM_CLP
     if (doIdiot) {
       int nPasses=0;
       Idiot info(*model2);
@@ -1165,6 +1179,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	timeX=time2;
       }
     }
+#endif
     // ?
     if (doCrash) {
       switch(doCrash) {
@@ -1485,6 +1500,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
     timeX=time2;
     model2->setNumberIterations(model2->numberIterations()+totalIterations);
   } else if (method==ClpSolve::useBarrier||method==ClpSolve::useBarrierNoCross) {
+#ifndef SLIM_CLP
     //printf("***** experimental pretty crude barrier\n");
     //#define SAVEIT 1
 #ifndef SAVEIT
@@ -1883,6 +1899,9 @@ ClpSimplex::initialSolve(ClpSolve & options)
       <<"Crossover"<<timeCore<<time2-time1
       <<CoinMessageEol;
     timeX=time2;
+#else
+    abort();
+#endif
   } else {
     assert (method!=ClpSolve::automatic); // later
     time2=0.0;

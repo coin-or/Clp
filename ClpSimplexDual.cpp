@@ -99,7 +99,6 @@
 #include "CoinPackedMatrix.hpp"
 #include "CoinIndexedVector.hpp"
 #include "ClpDualRowDantzig.hpp"
-#include "ClpPlusMinusOneMatrix.hpp"
 #include "ClpMessage.hpp"
 #include <cfloat>
 #include <cassert>

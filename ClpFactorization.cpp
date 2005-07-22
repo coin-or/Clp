@@ -3,11 +3,14 @@
 
 #include "CoinPragma.hpp"
 #include "ClpFactorization.hpp"
+#ifndef SLIM_CLP
 #include "ClpQuadraticObjective.hpp"
+#endif
 #include "CoinHelperFunctions.hpp"
 #include "CoinIndexedVector.hpp"
 #include "ClpSimplex.hpp"
 #include "ClpMatrixBase.hpp"
+#ifndef SLIM_CLP
 #include "ClpNetworkBasis.hpp"
 #include "ClpNetworkMatrix.hpp"
 //#define CHECK_NETWORK
@@ -15,6 +18,7 @@
 const static bool doCheck=true;
 #else
 const static bool doCheck=false;
+#endif
 #endif
 //#############################################################################
 // Constructors / Destructor / Assignment
@@ -26,7 +30,9 @@ const static bool doCheck=false;
 ClpFactorization::ClpFactorization () :
    CoinFactorization() 
 {
+#ifndef SLIM_CLP
   networkBasis_ = NULL;
+#endif
 }
 
 //-------------------------------------------------------------------
@@ -35,16 +41,20 @@ ClpFactorization::ClpFactorization () :
 ClpFactorization::ClpFactorization (const ClpFactorization & rhs) :
    CoinFactorization(rhs) 
 {
+#ifndef SLIM_CLP
   if (rhs.networkBasis_)
     networkBasis_ = new ClpNetworkBasis(*(rhs.networkBasis_));
   else
     networkBasis_=NULL;
+#endif
 }
 
 ClpFactorization::ClpFactorization (const CoinFactorization & rhs) :
    CoinFactorization(rhs) 
 {
+#ifndef SLIM_CLP
   networkBasis_=NULL;
+#endif
 }
 
 //-------------------------------------------------------------------
@@ -52,7 +62,9 @@ ClpFactorization::ClpFactorization (const CoinFactorization & rhs) :
 //-------------------------------------------------------------------
 ClpFactorization::~ClpFactorization () 
 {
+#ifndef SLIM_CLP
   delete networkBasis_;
+#endif
 }
 
 //----------------------------------------------------------------
@@ -63,11 +75,13 @@ ClpFactorization::operator=(const ClpFactorization& rhs)
 {
   if (this != &rhs) {
     CoinFactorization::operator=(rhs);
+#ifndef SLIM_CLP
     delete networkBasis_;
     if (rhs.networkBasis_)
       networkBasis_ = new ClpNetworkBasis(*(rhs.networkBasis_));
     else
       networkBasis_=NULL;
+#endif
   }
   return *this;
 }
@@ -100,7 +114,9 @@ ClpFactorization::factorize ( ClpSimplex * model,
   if (model->algorithm()>0)
     numberSave=-1;
 #endif
+#ifndef SLIM_CLP
   if (!networkBasis_||doCheck) {
+#endif
     status_=-99;
     int * pivotVariable = model->pivotVariable();
     //returns 0 -okay, -1 singular, -2 too many in basis, -99 memory */
@@ -246,6 +262,7 @@ ClpFactorization::factorize ( ClpSimplex * model,
         numberBasic=numberRowBasic;
         matrix->generalExpanded(model,0,numberBasic);
       }
+#ifndef SLIM_CLP
       // see if matrix a network
 #ifndef NO_RTTI
       ClpNetworkMatrix* networkMatrix =
@@ -264,6 +281,7 @@ ClpFactorization::factorize ( ClpSimplex * model,
       networkBasis_ = NULL;
       if (networkMatrix&&!doCheck)
 	maximumPivots(1);
+#endif
       //printf("L, U, R %d %d %d\n",numberElementsL(),numberElementsU(),numberElementsR());
       while (status_==-99) {
 	// maybe for speed will be better to leave as many regions as possible
@@ -387,6 +405,7 @@ ClpFactorization::factorize ( ClpSimplex * model,
 	// (and we could use permute_ instead of pivotColumn (not back though))
 	ClpDisjointCopyN ( permute_, useNumberRows , pivotColumn_  );
 	ClpDisjointCopyN ( permuteBack_, useNumberRows , pivotColumnBack_  );
+#ifndef SLIM_CLP
 	if (networkMatrix) {
 	  maximumPivots(saveMaximumPivots);
 	  // create network factorization
@@ -418,6 +437,7 @@ ClpFactorization::factorize ( ClpSimplex * model,
 #endif
 	  }
 	} else {
+#endif
 	  // See if worth going sparse and when
 	  if (numberFtranCounts_>100) {
 	    ftranCountInput_= CoinMax(ftranCountInput_,1.0);
@@ -445,7 +465,9 @@ ClpFactorization::factorize ( ClpSimplex * model,
 	  btranCountAfterU_ *= 0.8;
 	  btranCountAfterR_ *= 0.8;
 	  btranCountAfterL_ *= 0.8;
+#ifndef SLIM_CLP
 	}
+#endif
       } else if (status_ == -1&&(solveType==0||solveType==2)) {
 	// This needs redoing as it was merged coding - does not need array
 	int numberTotal = numberRows+numberColumns;
@@ -579,11 +601,13 @@ ClpFactorization::factorize ( ClpSimplex * model,
 	}
       } 
     }
+#ifndef SLIM_CLP
   } else {
     // network - fake factorization - do nothing
     status_=0;
   }
-
+#endif
+#ifndef SLIM_CLP
   if (!status_) {
     // take out part if quadratic
     if (model->algorithm()==2) {
@@ -609,6 +633,7 @@ ClpFactorization::factorize ( ClpSimplex * model,
       delete [] which;
     }
   }
+#endif
   return status_;
 }
 /* Replaces one Column to basis,
@@ -626,7 +651,9 @@ ClpFactorization::replaceColumn ( const ClpSimplex * model,
 				  double pivotCheck ,
 				  bool checkBeforeModifying)
 {
+#ifndef SLIM_CLP
   if (!networkBasis_) {
+#endif
     // see if FT
     if (doForrestTomlin_) {
       int returnCode= CoinFactorization::replaceColumn(regionSparse,
@@ -639,6 +666,7 @@ ClpFactorization::replaceColumn ( const ClpSimplex * model,
 					      pivotRow,pivotCheck); // Note array
     }
 
+#ifndef SLIM_CLP
   } else {
     if (doCheck) {
       int returnCode = CoinFactorization::replaceColumn(regionSparse,
@@ -655,6 +683,7 @@ ClpFactorization::replaceColumn ( const ClpSimplex * model,
 				   pivotRow);
     }
   }
+#endif
 }
 
 /* Updates one column (FTRAN) from region2
@@ -669,12 +698,15 @@ ClpFactorization::updateColumnFT ( CoinIndexedVector * regionSparse,
 #endif
   if (!numberRows_)
     return 0;
+#ifndef SLIM_CLP
   if (!networkBasis_) {
+#endif
     collectStatistics_ = true;
     int returnValue= CoinFactorization::updateColumnFT(regionSparse,
 						       regionSparse2);
     collectStatistics_ = false;
     return returnValue;
+#ifndef SLIM_CLP
   } else {
 #ifdef CHECK_NETWORK
     CoinIndexedVector * save = new CoinIndexedVector(*regionSparse2);
@@ -714,6 +746,7 @@ ClpFactorization::updateColumnFT ( CoinIndexedVector * regionSparse,
     return 1;
 #endif
   }
+#endif
 }
 /* Updates one column (FTRAN) from region2
    number returned is negative if no room
@@ -729,13 +762,16 @@ ClpFactorization::updateColumn ( CoinIndexedVector * regionSparse,
 #endif
   if (!numberRows_)
     return 0;
+#ifndef SLIM_CLP
   if (!networkBasis_) {
+#endif
     collectStatistics_ = true;
     int returnValue= CoinFactorization::updateColumn(regionSparse,
 						     regionSparse2,
 						     noPermute);
     collectStatistics_ = false;
     return returnValue;
+#ifndef SLIM_CLP
   } else {
 #ifdef CHECK_NETWORK
     CoinIndexedVector * save = new CoinIndexedVector(*regionSparse2);
@@ -776,6 +812,7 @@ ClpFactorization::updateColumn ( CoinIndexedVector * regionSparse,
     return 1;
 #endif
   }
+#endif
 }
 /* Updates one column (FTRAN) from region2
    number returned is negative if no room
@@ -803,11 +840,14 @@ ClpFactorization::updateColumnTranspose ( CoinIndexedVector * regionSparse,
 {
   if (!numberRows_)
     return 0;
+#ifndef SLIM_CLP
   if (!networkBasis_) {
+#endif
     collectStatistics_ = true;
     return CoinFactorization::updateColumnTranspose(regionSparse,
 						    regionSparse2);
     collectStatistics_ = false;
+#ifndef SLIM_CLP
   } else {
 #ifdef CHECK_NETWORK
     CoinIndexedVector * save = new CoinIndexedVector(*regionSparse2);
@@ -846,20 +886,25 @@ ClpFactorization::updateColumnTranspose ( CoinIndexedVector * regionSparse,
     return networkBasis_->updateColumnTranspose(regionSparse,regionSparse2);
 #endif
   }
+#endif
 }
 /* makes a row copy of L for speed and to allow very sparse problems */
 void 
 ClpFactorization::goSparse()
 {
+#ifndef SLIM_CLP
   if (!networkBasis_) 
+#endif
     CoinFactorization::goSparse();
 }
 // Cleans up i.e. gets rid of network basis 
 void 
 ClpFactorization::cleanUp()
 {
+#ifndef SLIM_CLP
   delete networkBasis_;
   networkBasis_=NULL;
+#endif
   resetStatistics();
 }
 /// Says whether to redo pivot order
@@ -869,21 +914,27 @@ ClpFactorization::needToReorder() const
 #ifdef CHECK_NETWORK
   return true;
 #endif
+#ifndef SLIM_CLP
   if (!networkBasis_)
+#endif
     return true;
+#ifndef SLIM_CLP
   else
     return false;
+#endif
 }
 // Get weighted row list 
 void
 ClpFactorization::getWeights(int * weights) const
 {
+#ifndef SLIM_CLP
   if (networkBasis_) {
     // Network - just unit
     for (int i=0;i<numberRows_;i++) 
       weights[i]=1;
     return;
   }
+#endif
   int * permuteBack = pivotColumnBack_;
   if (!startRowL_||!numberInRow_) {
     int * temp = new int[numberRows_];

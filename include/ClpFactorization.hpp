@@ -101,9 +101,15 @@ public:
   void cleanUp();
   /// Says whether to redo pivot order
   bool needToReorder() const;
+#ifndef SLIM_CLP
   /// Says if a network basis
   bool inline networkBasis() const
   { return (networkBasis_!=NULL);};
+#else
+  /// Says if a network basis
+  bool inline networkBasis() const
+  { return false;};
+#endif
   /// Fills weighted row list 
   void getWeights(int * weights) const;
   //@}
@@ -114,7 +120,9 @@ private:
   /**@name data */
   //@{
   /// Pointer to network basis
+#ifndef SLIM_CLP
   ClpNetworkBasis * networkBasis_;
+#endif
   //@}
 };
 

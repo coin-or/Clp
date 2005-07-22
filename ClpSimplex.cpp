@@ -4374,7 +4374,6 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
   //factorization_->pivotTolerance(savedPivotTolerance);
   return returnCode;
 }
-#include "ClpQuadraticObjective.hpp"
 // primal 
 int ClpSimplex::primal (int ifValuesPass , int startFinishOptions)
 {
@@ -4421,6 +4420,8 @@ int ClpSimplex::primal (int ifValuesPass , int startFinishOptions)
   //factorization_->pivotTolerance(savedPivotTolerance);
   return returnCode;
 }
+#ifndef SLIM_CLP
+#include "ClpQuadraticObjective.hpp"
 /* Dual ranging.
    This computes increase/decrease in cost for each given variable and corresponding
    sequence numbers which would change basis.  Sequence numbers are 0..numberColumns 
@@ -4835,6 +4836,7 @@ int ClpSimplex::strongBranching(int numberVariables,const int * variables,
 						    stopOnFirstInfeasible,
 						    alwaysFinish,startFinishOptions);
 }
+#endif
 /* Borrow model.  This is so we dont have to copy large amounts
    of data around.  It assumes a derived class wants to overwrite
    an empty model with a real one - while it does an algorithm.

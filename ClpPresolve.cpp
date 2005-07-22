@@ -13,7 +13,9 @@
 
 #include "CoinPackedMatrix.hpp"
 #include "ClpSimplex.hpp"
+#ifndef SLIM_CLP
 #include "ClpQuadraticObjective.hpp"
+#endif
 
 #include "ClpPresolve.hpp"
 #include "CoinPresolveMatrix.hpp"
@@ -1107,12 +1109,14 @@ CoinPresolveMatrix::CoinPresolveMatrix(int ncols0_in,
     ClpFillN<unsigned char>(integerType_, ncols_, (unsigned char) 0);
   }
 
+#ifndef SLIM_CLP
 #ifndef NO_RTTI
     ClpQuadraticObjective * quadraticObj = (dynamic_cast< ClpQuadraticObjective*>(si->objectiveAsObject()));
 #else
     ClpQuadraticObjective * quadraticObj = NULL;
     if (si->objectiveAsObject()->type()==2)
       quadraticObj = (static_cast< ClpQuadraticObjective*>(si->objectiveAsObject()));
+#endif
 #endif
   // Set up prohibited bits if needed
   if (nonLinearValue) {
@@ -1131,6 +1135,7 @@ CoinPresolveMatrix::CoinPresolveMatrix(int ncols0_in,
       if (nonLinearColumn)
 	setColProhibited(icol);
     }
+#ifndef SLIM_CLP
   } else if (quadraticObj) {
     CoinPackedMatrix * quadratic = quadraticObj->quadraticObjective();
     //const int * columnQuadratic = quadratic->getIndices();
@@ -1145,6 +1150,7 @@ CoinPresolveMatrix::CoinPresolveMatrix(int ncols0_in,
 	//printf("%d prohib\n",iColumn);
       }
     }
+#endif
   } else {
     anyProhibited_ = false;
   }
@@ -1535,6 +1541,7 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
       
       int ncolsNow = presolvedModel_->getNumCols();
       memcpy(originalColumn_,prob.originalColumn_,ncolsNow*sizeof(int));
+#ifndef SLIM_CLP
 #ifndef NO_RTTI
       ClpQuadraticObjective * quadraticObj = (dynamic_cast< ClpQuadraticObjective*>(originalModel->objectiveAsObject()));
 #else
@@ -1579,6 +1586,7 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
 	    printf("Quadratic column %d modified - may be okay\n",iColumn);
 	delete [] mark;
       }
+#endif
       delete [] prob.originalColumn_;
       prob.originalColumn_=NULL;
       int nrowsNow = presolvedModel_->getNumRows();
