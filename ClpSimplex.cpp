@@ -8,6 +8,9 @@
 
 #include <math.h>
 
+#if SLIM_CLP==2
+#define SLIM_NOIO
+#endif
 #include "CoinHelperFunctions.hpp"
 #include "ClpSimplex.hpp"
 #include "ClpFactorization.hpp"
@@ -653,7 +656,9 @@ ClpSimplex::computePrimals ( const double * rowActivities,
 void
 ClpSimplex::computeDuals(double * givenDjs)
 {
+#ifndef SLIM_CLP
   if (objective_->type()==1||!objective_->activated()) {
+#endif
     // Linear
     //work space
     CoinIndexedVector  * workSpace = rowArray_[0];
@@ -893,12 +898,14 @@ ClpSimplex::computeDuals(double * givenDjs)
     }
     arrayVector->clear();
     previousVector->clear();
+#ifndef SLIM_CLP
   } else {
     // Nonlinear
     objective_->reducedGradient(this,dj_,false);
     // get dual_ by moving from reduced costs for slacks
     memcpy(dual_,dj_+numberColumns_,numberRows_*sizeof(double));
   }
+#endif
 }
 /* Given an existing factorization computes and checks 
    primal and dual solutions.  Uses input arrays for variables at
@@ -4378,10 +4385,11 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
 int ClpSimplex::primal (int ifValuesPass , int startFinishOptions)
 {
   //double savedPivotTolerance = factorization_->pivotTolerance();
+#ifndef SLIM_CLP
   // See if nonlinear
   if (objective_->type()>1&&objective_->activated()) 
     return reducedGradient();
-  
+#endif  
   CoinAssert (ifValuesPass>=0&&ifValuesPass<3);
   /*  Note use of "down casting".  The only class the user sees is ClpSimplex.
       Classes ClpSimplexDual, ClpSimplexPrimal, (ClpSimplexNonlinear) 
@@ -5601,6 +5609,7 @@ ClpSimplex::loadProblem (  const int numcols, const int numrows,
 			  rowObjective);
   createStatus();
 }
+#ifndef SLIM_NOIO
 // This loads a model from a coinModel object - returns number of errors
 int 
 ClpSimplex::loadProblem (  CoinModel & modelObject, bool keepSolution)
@@ -5634,6 +5643,7 @@ ClpSimplex::loadProblem (  CoinModel & modelObject, bool keepSolution)
   }
   return returnCode;
 }
+#endif
 void 
 ClpSimplex::loadProblem (  const int numcols, const int numrows,
 			   const CoinBigIndex* start, const int* index,
@@ -5648,6 +5658,7 @@ ClpSimplex::loadProblem (  const int numcols, const int numrows,
 			  rowObjective);
   createStatus();
 }
+#ifndef SLIM_NOIO
 // Read an mps file from the given filename
 int 
 ClpSimplex::readMps(const char *filename,
@@ -5667,6 +5678,7 @@ ClpSimplex::readGMPL(const char *filename,const char * dataName,
   createStatus();
   return status;
 }
+#endif
 // Just check solution (for external use)
 void 
 ClpSimplex::checkSolution()

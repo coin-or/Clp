@@ -21,15 +21,20 @@
 #endif
 #include "CoinPackedVector.hpp"
 #include "CoinIndexedVector.hpp"
+#if SLIM_CLP==2
+#define SLIM_NOIO
+#endif
+#ifndef SLIM_NOIO
 #include "CoinMpsIO.hpp"
 #include "CoinFileIO.hpp"
+#include "CoinModel.hpp"
+#endif
 #include "ClpMessage.hpp"
 #include "ClpLinearObjective.hpp"
 #ifndef SLIM_CLP
 #include "ClpQuadraticObjective.hpp"
 #include "CoinBuild.hpp"
 #endif
-#include "CoinModel.hpp"
 
 //#############################################################################
 
@@ -295,6 +300,7 @@ ClpModel::loadProblem (
 			      value,index,start,length);
   matrix_ = new ClpPackedMatrix(matrix);
 }
+#ifndef SLIM_NOIO
 // This loads a model from a coinModel object - returns number of errors
 int 
 ClpModel::loadProblem (  CoinModel & modelObject,bool tryPlusMinusOne)
@@ -388,6 +394,7 @@ ClpModel::loadProblem (  CoinModel & modelObject,bool tryPlusMinusOne)
   matrix_->setDimensions(numberRows_,numberColumns_);
   return numberErrors;
 }
+#endif
 void
 ClpModel::getRowBound(int iRow, double& lower, double& upper) const
 {
@@ -1491,6 +1498,7 @@ ClpModel::addRows(const CoinBuild & buildObject,bool tryPlusMinusOne,bool checkD
   return numberErrors;
 }
 #endif
+#ifndef SLIM_NOIO
 // Add rows from a model object
 int 
 ClpModel::addRows( CoinModel & modelObject,bool tryPlusMinusOne,bool checkDuplicates)
@@ -1620,6 +1628,7 @@ ClpModel::addRows( CoinModel & modelObject,bool tryPlusMinusOne,bool checkDuplic
     return -1;
   }
 }
+#endif
 // Add one column
 void 
 ClpModel::addColumn(int numberInColumn,
@@ -1907,6 +1916,7 @@ ClpModel::addColumns(const CoinBuild & buildObject,bool tryPlusMinusOne,bool che
   return 0;
 }
 #endif
+#ifndef SLIM_NOIO
 // Add columns from a model object
 int 
 ClpModel::addColumns( CoinModel & modelObject,bool tryPlusMinusOne,bool checkDuplicates)
@@ -2032,6 +2042,7 @@ ClpModel::addColumns( CoinModel & modelObject,bool tryPlusMinusOne,bool checkDup
     return -1;
   }
 }
+#endif
 // chgRowLower
 void 
 ClpModel::chgRowLower(const double * rowLower) 
@@ -2206,6 +2217,7 @@ ClpModel::newLanguage(CoinMessages::Language language)
 {
   messages_ = ClpMessage(language);
 }
+#ifndef SLIM_NOIO
 // Read an mps file from the given filename
 int 
 ClpModel::readMps(const char *fileName,
@@ -2248,6 +2260,7 @@ ClpModel::readMps(const char *fileName,
     } else {
       integerType_ = NULL;
     }
+#ifndef SLIM_CLP
     // get quadratic part
     if (m.reader()->whichSection (  ) == COIN_QUAD_SECTION ) {
       int * start=NULL;
@@ -2260,6 +2273,7 @@ ClpModel::readMps(const char *fileName,
       delete [] column;
       delete [] element;
     }
+#endif   
     // set problem name
     setStrParam(ClpProbName,m.getProblemName());
     // do names
@@ -2379,6 +2393,7 @@ ClpModel::readGMPL(const char *fileName,const char * dataName,
   }
   return status;
 }
+#endif
 bool ClpModel::isPrimalObjectiveLimitReached() const
 {
   double limit = 0.0;
@@ -3024,6 +3039,7 @@ int ClpModel::emptyProblem(int * infeasNumber, double * infeasSum,bool printMess
     returnCode=4;
   return returnCode;
 }
+#ifndef SLIM_NOIO
 /* Write the problem in MPS format to the specified file.
    
 Row and column names may be null.
@@ -3127,6 +3143,7 @@ ClpModel::writeMps(const char *filename,
   }
   return returnCode;
 }
+#endif
 // Pass in Event handler (cloned and deleted at end)
 void 
 ClpModel::passInEventHandler(const ClpEventHandler * eventHandler)

@@ -1201,9 +1201,11 @@ ClpSimplex::initialSolve(ClpSolve & options)
         break;
       }
     }
+#ifndef SLIM_CLP
     if (doSlp>0&&objective_->type()==2) {
       model2->nonlinearSLP(doSlp,1.0e-5);
     }
+#endif
     model2->primal(primalStartup);
     time2 = CoinCpuTime();
     timeCore = time2-timeX;
