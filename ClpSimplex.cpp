@@ -8197,6 +8197,8 @@ ClpSimplex::checkSolutionInternal()
     }
   }
   objectiveValue_ += objective_->nonlinearOffset();
+  // But do direction
+  objectiveValue_ *= optimizationDirection_;
 
   if (!numberDualInfeasibilities_&&
       !numberPrimalInfeasibilities_)

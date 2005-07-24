@@ -4847,7 +4847,7 @@ ClpSimplexDual::setupForStrongBranching(char * arrays, int numberRows, int numbe
     }
   }
   double * arrayD = (double *) arrays;
-  arrayD[0]=objectiveValue();
+  arrayD[0]=objectiveValue()*optimizationDirection_;
   double * saveSolution = arrayD+1;
   double * saveLower = saveSolution + (numberRows+numberColumns);
   double * saveUpper = saveLower + (numberRows+numberColumns);
