@@ -19,7 +19,9 @@
 #ifndef SLIM_CLP
 #include "ClpPlusMinusOneMatrix.hpp"
 #endif
+#ifndef CLP_NO_VECTOR
 #include "CoinPackedVector.hpp"
+#endif
 #include "CoinIndexedVector.hpp"
 #if SLIM_CLP==2
 #define SLIM_NOIO
@@ -72,9 +74,13 @@ ClpModel::ClpModel () :
   problemStatus_(-1),
   secondaryStatus_(0),
   lengthNames_(0),
+#ifndef CLP_NO_STD
   defaultHandler_(true),
   rowNames_(),
   columnNames_()
+#else
+  defaultHandler_(true)
+#endif
 {
   intParam_[ClpMaxNumIteration] = 99999999;
   intParam_[ClpMaxNumIterationHotStart] = 9999999;
@@ -86,7 +92,9 @@ ClpModel::ClpModel () :
   dblParam_[ClpObjOffset] = 0.0;
   dblParam_[ClpMaxSeconds] = -1.0;
 
+#ifndef CLP_NO_STD
   strParam_[ClpProbName] = "ClpDefaultName";
+#endif
   handler_ = new CoinMessageHandler();
   handler_->setLogLevel(1);
   eventHandler_ = new ClpEventHandler();
@@ -359,6 +367,7 @@ ClpModel::loadProblem (  CoinModel & modelObject,bool tryPlusMinusOne)
     matrix_=matrix;
   }
 #endif
+#ifndef CLP_NO_STD
   // Do names if wanted
   int numberItems;
   numberItems = modelObject.rowNames()->numberItems();
@@ -371,6 +380,7 @@ ClpModel::loadProblem (  CoinModel & modelObject,bool tryPlusMinusOne)
     const char *const * columnNames=modelObject.columnNames()->names();
     copyColumnNames(columnNames,0,numberItems);
   }
+#endif
   // Do integers if wanted
   assert(integerType);
   for (int iColumn=0;iColumn<numberColumns;iColumn++) {
@@ -637,8 +647,10 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
   dblParam_[ClpPrimalTolerance] = rhs.dblParam_[ClpPrimalTolerance];
   dblParam_[ClpObjOffset] = rhs.dblParam_[ClpObjOffset];
   dblParam_[ClpMaxSeconds] = rhs.dblParam_[ClpMaxSeconds];
+#ifndef CLP_NO_STD
 
   strParam_[ClpProbName] = rhs.strParam_[ClpProbName];
+#endif
 
   optimizationDirection_ = rhs.optimizationDirection_;
   objectiveValue_=rhs.objectiveValue_;
@@ -655,11 +667,13 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
   userPointer_ = rhs.userPointer_;
   scalingFlag_ = rhs.scalingFlag_;
   if (trueCopy) {
+#ifndef CLP_NO_STD
     lengthNames_ = rhs.lengthNames_;
     if (lengthNames_) {
       rowNames_ = rhs.rowNames_;
       columnNames_ = rhs.columnNames_;
     }
+#endif
     if (rhs.integerType_) {
       integerType_ = new char[numberColumns_];
       memcpy(integerType_,rhs.integerType_,numberColumns_*sizeof(char));
@@ -728,8 +742,10 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
     //rowScale_ = rhs.rowScale_;
     //columnScale_ = rhs.columnScale_;
     lengthNames_ = 0;
+#ifndef CLP_NO_STD
     rowNames_ = std::vector<std::string> ();
     columnNames_ = std::vector<std::string> ();
+#endif
     integerType_ = NULL;
     status_ = rhs.status_;
   }
@@ -852,6 +868,7 @@ ClpModel::setDblParam(ClpDblParam key, double value)
 }
 
 //-----------------------------------------------------------------------------
+#ifndef CLP_NO_STD
 
 bool
 ClpModel::setStrParam(ClpStrParam key, const std::string & value)
@@ -867,6 +884,7 @@ ClpModel::setStrParam(ClpStrParam key, const std::string & value)
   strParam_[key] = value;
   return true;
 }
+#endif
 // Useful routines
 // Returns resized array and deletes incoming
 double * resizeDouble(double * array , int size, int newSize, double fill,
@@ -1037,6 +1055,7 @@ ClpModel::resize (int newNumberRows, int newNumberColumns)
     integerType_ = temp;
   }
   numberColumns_ = newNumberColumns;
+#ifndef CLP_NO_STD
   if (lengthNames_) {
     // reduce row and column names vectors only if necessary
     if (rowNames_.size() < (unsigned int)numberRows_)
@@ -1044,6 +1063,7 @@ ClpModel::resize (int newNumberRows, int newNumberColumns)
     if (columnNames_.size() < (unsigned int)numberColumns_)
       columnNames_.resize(numberColumns_);
   }
+#endif
 }
 // Deletes rows
 void 
@@ -1084,7 +1104,7 @@ ClpModel::deleteRows(int number, const int * which)
       status_ = NULL;
     }
   }
-#if 1
+#ifndef CLP_NO_STD
   // Now works if which out of order
   if (lengthNames_) {
     char * mark = new char [numberRows_];
@@ -1100,11 +1120,6 @@ ClpModel::deleteRows(int number, const int * which)
     rowNames_.erase(rowNames_.begin()+k, rowNames_.end());
     delete [] mark;
   }
-#else
-  // for now gets rid of names
-  lengthNames_ = 0;
-  rowNames_ = std::vector<std::string> ();
-  columnNames_ = std::vector<std::string> ();
 #endif
   numberRows_=newSize;
   // set state back to unknown
@@ -1170,7 +1185,7 @@ ClpModel::deleteColumns(int number, const int * which)
   }
   integerType_ = deleteChar(integerType_,numberColumns_,
 			    number, which, newSize,true);
-#if 1
+#ifndef CLP_NO_STD
   // Now works if which out of order
   if (lengthNames_) {
     char * mark = new char [numberColumns_];
@@ -1186,11 +1201,6 @@ ClpModel::deleteColumns(int number, const int * which)
     columnNames_.erase(columnNames_.begin()+k, columnNames_.end());
     delete [] mark;
   }
-#else
-  // for now gets rid of names
-  lengthNames_ = 0;
-  rowNames_ = std::vector<std::string> ();
-  columnNames_ = std::vector<std::string> ();
 #endif
   numberColumns_=newSize;
   // set state back to unknown
@@ -1208,12 +1218,10 @@ void
 ClpModel::addRow(int numberInRow, const int * columns,
                  const double * elements, double rowLower, double rowUpper)
 {
-  // Create a CoinPackedVector
-  CoinPackedVectorBase * row=
-    new CoinPackedVector(numberInRow,columns,elements);
-  addRows(1, &rowLower, &rowUpper,
-          &row);
-  delete row;
+  CoinBigIndex starts[2];
+  starts[0]=0;
+  starts[1]=numberInRow;
+  addRows(1, &rowLower, &rowUpper,starts,columns,elements);
 }
 // Add rows
 void 
@@ -1222,22 +1230,54 @@ ClpModel::addRows(int number, const double * rowLower,
 		  const int * rowStarts, const int * columns,
 		  const double * elements)
 {
-  // Create a list of CoinPackedVectors
   if (number) {
-    CoinPackedVectorBase ** rows=
-      new CoinPackedVectorBase * [number];
+    whatsChanged_ &= ~(1+2+8+16+32); // all except columns changed
+    int numberRowsNow = numberRows_;
+    resize(numberRowsNow+number,numberColumns_);
+    double * lower = rowLower_+numberRowsNow;
+    double * upper = rowUpper_+numberRowsNow;
     int iRow;
-    for (iRow=0;iRow<number;iRow++) {
-      int iStart = rowStarts[iRow];
-      rows[iRow] = 
-	new CoinPackedVector(rowStarts[iRow+1]-iStart,
-			     columns+iStart,elements+iStart);
+    if (rowLower) {
+      for (iRow = 0; iRow < number; iRow++) {
+        double value = rowLower[iRow];
+        if (value<-1.0e20)
+          value = -COIN_DBL_MAX;
+        lower[iRow]= value;
+      }
+    } else {
+      for (iRow = 0; iRow < number; iRow++) {
+        lower[iRow]= -COIN_DBL_MAX;
+      }
     }
-    addRows(number, rowLower, rowUpper,
-	    rows);
-    for (iRow=0;iRow<number;iRow++) 
-      delete rows[iRow];
-    delete [] rows;
+    if (rowUpper) {
+      for (iRow = 0; iRow < number; iRow++) {
+        double value = rowUpper[iRow];
+        if (value>1.0e20)
+          value = COIN_DBL_MAX;
+        upper[iRow]= value;
+      }
+    } else {
+      for (iRow = 0; iRow < number; iRow++) {
+        upper[iRow]= COIN_DBL_MAX;
+      }
+    }
+    // Deal with matrix
+    
+    delete rowCopy_;
+    rowCopy_=NULL;
+    if (!matrix_)
+      createEmptyMatrix();
+    delete [] rowScale_;
+    rowScale_ = NULL;
+    delete [] columnScale_;
+    columnScale_ = NULL;
+#ifndef CLP_NO_STD
+    if (lengthNames_) {
+      rowNames_.resize(numberRows_);
+    }
+#endif
+    if (elements)
+      matrix_->appendMatrix(number,0,rowStarts,columns,elements);
   }
 }
 // Add rows
@@ -1248,24 +1288,32 @@ ClpModel::addRows(int number, const double * rowLower,
 		  const int * rowLengths, const int * columns,
 		  const double * elements)
 {
-  // Create a list of CoinPackedVectors
   if (number) {
-    CoinPackedVectorBase ** rows=
-      new CoinPackedVectorBase * [number];
+    CoinBigIndex numberElements=0;
     int iRow;
+    for (iRow=0;iRow<number;iRow++) 
+      numberElements += rowLengths[iRow];
+    int * newStarts = new int[number+1];
+    int * newIndex = new int[numberElements];
+    double * newElements = new double[numberElements];
+    numberElements=0;
+    newStarts[0]=0;
     for (iRow=0;iRow<number;iRow++) {
       int iStart = rowStarts[iRow];
-      rows[iRow] = 
-	new CoinPackedVector(rowLengths[iRow],
-			     columns+iStart,elements+iStart);
+      int length = rowLengths[iRow];
+      memcpy(newIndex+numberElements,columns+iStart,length*sizeof(int));
+      memcpy(newElements+numberElements,elements+iStart,length*sizeof(double));
+      numberElements += length;
+      newStarts[iRow+1]=numberElements;
     }
     addRows(number, rowLower, rowUpper,
-	    rows);
-    for (iRow=0;iRow<number;iRow++) 
-      delete rows[iRow];
-    delete [] rows;
+	    newStarts,newIndex,newElements);
+    delete [] newStarts;
+    delete [] newIndex;
+    delete [] newElements;
   }
 }
+#ifndef CLP_NO_VECTOR
 void 
 ClpModel::addRows(int number, const double * rowLower, 
 		  const double * rowUpper,
@@ -1319,6 +1367,7 @@ ClpModel::addRows(int number, const double * rowLower,
     rowNames_.resize(numberRows_);
   }
 }
+#endif
 #ifndef SLIM_CLP
 // Add rows from a build object
 int
@@ -1561,7 +1610,7 @@ ClpModel::addRows( CoinModel & modelObject,bool tryPlusMinusOne,bool checkDuplic
         tryPlusMinusOne=false;
       }
       assert (rowLower);
-      addRows(numberRows2, rowLower, rowUpper,NULL);
+      addRows(numberRows2, rowLower, rowUpper,NULL,NULL,NULL);
 #ifndef SLIM_CLP
       if (!tryPlusMinusOne) {
 #endif
@@ -1638,18 +1687,10 @@ ClpModel::addColumn(int numberInColumn,
                  double  columnUpper,
                  double  objective)
 {
-  whatsChanged_ &= ~(1+2+4+64+128+256); // all except rows changed
-  CoinPackedVectorBase * column=
-    new CoinPackedVector(numberInColumn,
-                           rows,elements);
-  addColumns(1, &columnLower, &columnUpper,
-	       &objective, &column);
-  delete column;
-
-  delete [] rowScale_;
-  rowScale_ = NULL;
-  delete [] columnScale_;
-  columnScale_ = NULL;
+  CoinBigIndex starts[2];
+  starts[0]=0;
+  starts[1]=numberInColumn;
+  addColumns(1, &columnLower, &columnUpper,&objective,starts,rows,elements);
 }
 // Add columns
 void 
@@ -1662,26 +1703,63 @@ ClpModel::addColumns(int number, const double * columnLower,
   // Create a list of CoinPackedVectors
   if (number) {
     whatsChanged_ &= ~(1+2+4+64+128+256); // all except rows changed
-    CoinPackedVectorBase ** columns=
-      new CoinPackedVectorBase * [number];
+    int numberColumnsNow = numberColumns_;
+    resize(numberRows_,numberColumnsNow+number);
+    double * lower = columnLower_+numberColumnsNow;
+    double * upper = columnUpper_+numberColumnsNow;
+    double * obj = objective()+numberColumnsNow;
     int iColumn;
-    for (iColumn=0;iColumn<number;iColumn++) {
-      int iStart = columnStarts[iColumn];
-      columns[iColumn] = 
-	new CoinPackedVector(columnStarts[iColumn+1]-iStart,
-			     rows+iStart,elements+iStart);
+    if (columnLower) {
+      for (iColumn = 0; iColumn < number; iColumn++) {
+        double value = columnLower[iColumn];
+        if (value<-1.0e20)
+          value = -COIN_DBL_MAX;
+        lower[iColumn]= value;
+      }
+    } else {
+      for (iColumn = 0; iColumn < number; iColumn++) {
+        lower[iColumn]= 0.0;
+      }
     }
-    addColumns(number, columnLower, columnUpper,
-	       objIn, columns);
-    for (iColumn=0;iColumn<number;iColumn++) 
-      delete columns[iColumn];
-    delete [] columns;
-
+    if (columnUpper) {
+      for (iColumn = 0; iColumn < number; iColumn++) {
+        double value = columnUpper[iColumn];
+        if (value>1.0e20)
+          value = COIN_DBL_MAX;
+        upper[iColumn]= value;
+      }
+    } else {
+      for (iColumn = 0; iColumn < number; iColumn++) {
+        upper[iColumn]= COIN_DBL_MAX;
+      }
+    }
+    if (objIn) {
+      for (iColumn = 0; iColumn < number; iColumn++) {
+        obj[iColumn] = objIn[iColumn];
+      }
+    } else {
+      for (iColumn = 0; iColumn < number; iColumn++) {
+        obj[iColumn]= 0.0;
+      }
+    }
+    // Deal with matrix
+    
+    delete rowCopy_;
+    rowCopy_=NULL;
+    if (!matrix_)
+      createEmptyMatrix();
+    delete [] rowScale_;
+    rowScale_ = NULL;
+    delete [] columnScale_;
+    columnScale_ = NULL;
+#ifndef CLP_NO_STD
+    if (lengthNames_) {
+      columnNames_.resize(numberColumns_);
+    }
+#endif
+    if (elements)
+      matrix_->appendMatrix(number,1,columnStarts,rows,elements);
   }
-  delete [] rowScale_;
-  rowScale_ = NULL;
-  delete [] columnScale_;
-  columnScale_ = NULL;
 }
 // Add columns
 void 
@@ -1692,30 +1770,32 @@ ClpModel::addColumns(int number, const double * columnLower,
 		     const int * columnLengths, const int * rows,
 		     const double * elements)
 {
-  // Create a list of CoinPackedVectors
   if (number) {
-    whatsChanged_ &= ~(1+2+4+64+128+256); // all except rows changed
-    CoinPackedVectorBase ** columns=
-      new CoinPackedVectorBase * [number];
+    CoinBigIndex numberElements=0;
     int iColumn;
+    for (iColumn=0;iColumn<number;iColumn++) 
+      numberElements += columnLengths[iColumn];
+    int * newStarts = new int[number+1];
+    int * newIndex = new int[numberElements];
+    double * newElements = new double[numberElements];
+    numberElements=0;
+    newStarts[0]=0;
     for (iColumn=0;iColumn<number;iColumn++) {
       int iStart = columnStarts[iColumn];
-      columns[iColumn] = 
-	new CoinPackedVector(columnLengths[iColumn],
-			     rows+iStart,elements+iStart);
+      int length = columnLengths[iColumn];
+      memcpy(newIndex+numberElements,rows+iStart,length*sizeof(int));
+      memcpy(newElements+numberElements,elements+iStart,length*sizeof(double));
+      numberElements += length;
+      newStarts[iColumn+1]=numberElements;
     }
-    addColumns(number, columnLower, columnUpper,
-	       objIn, columns);
-    for (iColumn=0;iColumn<number;iColumn++) 
-      delete columns[iColumn];
-    delete [] columns;
-
+    addColumns(number, columnLower, columnUpper,objIn,
+	    newStarts,newIndex,newElements);
+    delete [] newStarts;
+    delete [] newIndex;
+    delete [] newElements;
   }
-  delete [] rowScale_;
-  rowScale_ = NULL;
-  delete [] columnScale_;
-  columnScale_ = NULL;
 }
+#ifndef CLP_NO_VECTOR
 void 
 ClpModel::addColumns(int number, const double * columnLower, 
 		     const double * columnUpper,
@@ -1780,6 +1860,7 @@ ClpModel::addColumns(int number, const double * columnLower,
     columnNames_.resize(numberColumns_);
   }
 }
+#endif
 #ifndef SLIM_CLP
 // Add columns from a build object
 int 
@@ -1972,7 +2053,7 @@ ClpModel::addColumns( CoinModel & modelObject,bool tryPlusMinusOne,bool checkDup
         tryPlusMinusOne=false;
       }
       assert (columnLower);
-      addColumns(numberColumns2, columnLower, columnUpper,objective, NULL);
+      addColumns(numberColumns2, columnLower, columnUpper,objective, NULL,NULL,NULL);
 #ifndef SLIM_CLP
       if (!tryPlusMinusOne) {
 #endif
@@ -2007,11 +2088,13 @@ ClpModel::addColumns( CoinModel & modelObject,bool tryPlusMinusOne,bool checkDup
         matrix_=matrix;
       }
 #endif
+#ifndef CLP_NO_STD
       // Do names if wanted
       if (modelObject.columnNames()->numberItems()) {
         const char *const * columnNames=modelObject.columnNames()->names();
         copyColumnNames(columnNames,numberColumns,numberColumns_);
       }
+#endif
       // Do integers if wanted
       assert(integerType);
       for (int iColumn=0;iColumn<numberColumns2;iColumn++) {
@@ -2273,7 +2356,8 @@ ClpModel::readMps(const char *fileName,
       delete [] column;
       delete [] element;
     }
-#endif   
+#endif
+#ifndef CLP_NO_STD   
     // set problem name
     setStrParam(ClpProbName,m.getProblemName());
     // do names
@@ -2300,6 +2384,7 @@ ClpModel::readMps(const char *fileName,
     } else {
       lengthNames_=0;
     }
+#endif
     setDblParam(ClpObjOffset,m.objectiveOffset());
     time2 = CoinCpuTime();
     handler_->message(CLP_IMPORT_RESULT,messages_)
@@ -2355,6 +2440,7 @@ ClpModel::readGMPL(const char *fileName,const char * dataName,
     } else {
       integerType_ = NULL;
     }
+#ifndef CLP_NO_STD
     // set problem name
     setStrParam(ClpProbName,m.getProblemName());
     // do names
@@ -2381,6 +2467,7 @@ ClpModel::readGMPL(const char *fileName,const char * dataName,
     } else {
       lengthNames_=0;
     }
+#endif
     setDblParam(ClpObjOffset,m.objectiveOffset());
     time2 = CoinCpuTime();
     handler_->message(CLP_IMPORT_RESULT,messages_)
@@ -2489,6 +2576,7 @@ ClpModel::isInteger(int index) const
     return (integerType_[index]!=0);
   }
 }
+#ifndef CLP_NO_STD
 // Drops names - makes lengthnames 0 and names empty
 void 
 ClpModel::dropNames()
@@ -2497,6 +2585,7 @@ ClpModel::dropNames()
   rowNames_ = std::vector<std::string> ();
   columnNames_ = std::vector<std::string> ();
 }
+#endif
 // Drop integer informations
 void 
 ClpModel::deleteIntegerInformation()
@@ -2639,8 +2728,9 @@ ClpModel::ClpModel ( const ClpModel * rhs,
   dblParam_[ClpPrimalTolerance] = rhs->dblParam_[ClpPrimalTolerance];
   dblParam_[ClpObjOffset] = rhs->dblParam_[ClpObjOffset];
   dblParam_[ClpMaxSeconds] = rhs->dblParam_[ClpMaxSeconds];
-
+#ifndef CLP_NO_STD
   strParam_[ClpProbName] = rhs->strParam_[ClpProbName];
+#endif
 
   optimizationDirection_ = rhs->optimizationDirection_;
   objectiveValue_=rhs->objectiveValue_;
@@ -2667,6 +2757,7 @@ ClpModel::ClpModel ( const ClpModel * rhs,
   numberRows_ = numberRows;
   numberColumns_ = numberColumns;
   userPointer_ = rhs->userPointer_;
+#ifndef CLP_NO_STD
   if (!dropNames) {
     unsigned int maxLength=0;
     int iRow;
@@ -2689,6 +2780,7 @@ ClpModel::ClpModel ( const ClpModel * rhs,
     rowNames_ = std::vector<std::string> ();
     columnNames_ = std::vector<std::string> ();
   }
+#endif
   if (rhs->integerType_&&!dropIntegers) {
     integerType_ = whichChar(rhs->integerType_,numberColumns,whichColumn);
   } else {
@@ -2742,6 +2834,7 @@ ClpModel::ClpModel ( const ClpModel * rhs,
   }
   CoinSeedRandom(1234567);
 }
+#ifndef CLP_NO_STD
 // Copies in names
 void 
 ClpModel::copyNames(std::vector<std::string> & rowNames,
@@ -2902,6 +2995,7 @@ ClpModel::copyColumnNames(const char * const * columnNames, int first, int last)
   // May be too big - but we would have to check both rows and columns to be exact
   lengthNames_=(int) maxLength;
 }
+#endif
 // Primal objective limit
 void 
 ClpModel::setPrimalObjectiveLimit(double value)
@@ -3069,6 +3163,7 @@ ClpModel::writeMps(const char *filename,
   
   char ** rowNames = NULL;
   char ** columnNames = NULL;
+#ifndef CLP_NO_STD
   if (lengthNames()) {
     rowNames = new char * [numberRows_];
     for (int iRow=0;iRow<numberRows_;iRow++) {
@@ -3104,6 +3199,7 @@ ClpModel::writeMps(const char *filename,
 #endif
     }
   }
+#endif
   CoinMpsIO writer;
   writer.passInMessageHandler(handler_);
   writer.setMpsData(*(matrix_->getPackedMatrix()), COIN_DBL_MAX,

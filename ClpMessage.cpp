@@ -10,7 +10,7 @@ typedef struct {
   char detail;
   const char * message;
 } Clp_message;
-static Clp_message us_english[]=
+static Clp_message clp_us_english[]=
 {
   {CLP_SIMPLEX_FINISHED,0,1,"Optimal - objective value %g"},
   {CLP_SIMPLEX_INFEASIBLE,1,1,"Primal infeasible - objective value %g"},
@@ -109,12 +109,12 @@ static Clp_message uk_english[]=
 };
 /* Constructor */
 ClpMessage::ClpMessage(Language language) :
-  CoinMessages(sizeof(us_english)/sizeof(Clp_message))
+  CoinMessages(sizeof(clp_us_english)/sizeof(Clp_message))
 {
   language_=language;
   strcpy(source_,"Clp");
   class_ = 1; //solver
-  Clp_message * message = us_english;
+  Clp_message * message = clp_us_english;
 
   while (message->internalNumber!=CLP_DUMMY_END) {
      CoinOneMessage oneMessage(message->externalNumber,message->detail,

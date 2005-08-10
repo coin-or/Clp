@@ -1259,8 +1259,10 @@ ClpPackedMatrix::canCombine(const ClpSimplex * model,
     factor *= 0.9;
   return ((numberInRowArray>factor*numberRows||!model->rowCopy())&&!hasGaps_);
 }
+#ifndef CLP_ALL_ONE_FILE
 // These have to match ClpPrimalColumnSteepest version
 #define reference(i)  (((reference[i>>5]>>(i&31))&1)!=0)
+#endif
 // Updates two arrays for steepest 
 void 
 ClpPackedMatrix::transposeTimes2(const ClpSimplex * model,
@@ -2820,6 +2822,7 @@ ClpPackedMatrix::deleteRows(const int numDel, const int * indDel)
   hasGaps_=true;
   matrix_->setExtraGap(1.0e-50);
 }
+#ifndef CLP_NO_VECTOR
 // Append Columns
 void 
 ClpPackedMatrix::appendCols(int number, const CoinPackedVectorBase * const * columns)
@@ -2836,6 +2839,7 @@ ClpPackedMatrix::appendRows(int number, const CoinPackedVectorBase * const * row
   // may now have gaps
   hasGaps_=true;
 }
+#endif
 /* Set the dimensions of the matrix. In effect, append new empty
    columns/rows to the matrix. A negative number for either dimension
    means that that dimension doesn't change. Otherwise the new dimensions
@@ -2870,3 +2874,6 @@ ClpPackedMatrix::appendMatrix(int number, int type,
   }
   return numberErrors;
 }
+#ifdef CLP_ALL_ONE_FILE
+#undef reference
+#endif

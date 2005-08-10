@@ -58,10 +58,12 @@ public:
   virtual void deleteCols(const int numDel, const int * indDel) = 0;
   /** Delete the rows whose indices are listed in <code>indDel</code>. */
   virtual void deleteRows(const int numDel, const int * indDel) = 0;
+#ifndef CLP_NO_VECTOR
   /// Append Columns
   virtual void appendCols(int number, const CoinPackedVectorBase * const * columns);
   /// Append Rows
   virtual void appendRows(int number, const CoinPackedVectorBase * const * rows);
+#endif
   /** Modify one element of packed matrix.  An element may be added.
       This works for either ordering If the new element is zero it will be 
       deleted unless keepZero true */

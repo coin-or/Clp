@@ -42,6 +42,7 @@ public:
                               int numberPasses=5,
                               bool dropNames=false,
                               bool doRowObjective=false);
+#ifndef CLP_NO_STD
   /** This version saves data in a file.  The passed in model
       is updated to be presolved model.  names are always dropped.
       Returns non-zero if infeasible*/
@@ -50,6 +51,7 @@ public:
                            bool keepIntegers=true,
                            int numberPasses=5,
                            bool doRowObjective=false);
+#endif
   /** Return pointer to presolved model,
       Up to user to destroy */
   ClpSimplex * model() const;
@@ -179,8 +181,10 @@ private:
   int numberPasses_;
   /// Substitution level
   int substitution_;
+#ifndef CLP_NO_STD
   /// Name of saved model file
   std::string saveFile_;
+#endif
   /** Whether we want to skip dual part of presolve etc.
       512 bit allows duplicate column processing on integer columns
       and dual stuff on integers

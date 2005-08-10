@@ -4904,7 +4904,7 @@ typedef struct {
   int primalPivotChoice;
   int matrixStorageChoice;
 } Clp_scalars;
-
+#ifndef SLIM_NOIO
 int outDoubleArray(double * array, int length, FILE * fp)
 {
   int numberWritten;
@@ -4930,7 +4930,6 @@ ClpSimplex::saveModel(const char * fileName)
   FILE * fp = fopen(fileName,"wb");
   if (fp) {
     Clp_scalars scalars;
-    int i;
     CoinBigIndex numberWritten;
     // Fill in scalars
     scalars.optimizationDirection = optimizationDirection_;
@@ -4965,8 +4964,10 @@ ClpSimplex::saveModel(const char * fileName)
     numberWritten = fwrite(&scalars,sizeof(Clp_scalars),1,fp);
     if (numberWritten!=1)
       return 1;
-    // strings
     CoinBigIndex length;
+#ifndef CLP_NO_STD
+    int i;
+    // strings
     for (i=0;i<ClpLastStrParam;i++) {
       length = strParam_[i].size();
       numberWritten = fwrite(&length,sizeof(int),1,fp);
@@ -4978,6 +4979,7 @@ ClpSimplex::saveModel(const char * fileName)
 	  return 1;
       }
     }
+#endif
     // arrays - in no particular order
     if (outDoubleArray(rowActivity_,numberRows_,fp))
 	return 1;
@@ -5027,6 +5029,7 @@ ClpSimplex::saveModel(const char * fileName)
       if (numberWritten!=1)
 	return 1;
     }
+#ifndef CLP_NO_STD
     if (lengthNames_) {
       char * array = 
 	new char[CoinMax(numberRows_,numberColumns_)*(lengthNames_+1)];
@@ -5052,6 +5055,7 @@ ClpSimplex::saveModel(const char * fileName)
 	return 1;
       delete [] array;
     }
+#endif
     // just standard type at present
     assert (matrix_->type()==1);
     CoinAssert (matrix_->getNumCols() == numberColumns_);
@@ -5160,6 +5164,7 @@ ClpSimplex::restoreModel(const char * fileName)
     specialOptions_ = scalars.specialOptions;
     // strings
     CoinBigIndex length;
+#ifndef CLP_NO_STD
     for (i=0;i<ClpLastStrParam;i++) {
       numberRead = fread(&length,sizeof(int),1,fp);
       if (numberRead!=1)
@@ -5174,6 +5179,7 @@ ClpSimplex::restoreModel(const char * fileName)
 	delete [] array;
       }
     }
+#endif
     // arrays - in no particular order
     if (inDoubleArray(rowActivity_,numberRows_,fp))
 	return 1;
@@ -5227,6 +5233,7 @@ ClpSimplex::restoreModel(const char * fileName)
       if (numberRead!=length)
 	return 1;
     }
+#ifndef CLP_NO_STD
     if (lengthNames_) {
       char * array = 
 	new char[CoinMax(numberRows_,numberColumns_)*(lengthNames_+1)];
@@ -5252,6 +5259,7 @@ ClpSimplex::restoreModel(const char * fileName)
       }
       delete [] array;
     }
+#endif
     // Pivot choices
     assert(scalars.dualPivotChoice>0&&(scalars.dualPivotChoice&63)<3);
     delete dualRowPivot_;
@@ -5333,6 +5341,7 @@ ClpSimplex::restoreModel(const char * fileName)
   }
   return 0;
 }
+#endif
 // value of incoming variable (in Dual)
 double 
 ClpSimplex::valueIncomingDual() const

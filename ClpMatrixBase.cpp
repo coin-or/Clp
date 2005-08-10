@@ -163,6 +163,7 @@ ClpMatrixBase::dubiousWeights(const ClpSimplex * model,int * inputWeights) const
     weights[i]=1;
   return weights;
 }
+#ifndef CLP_NO_VECTOR
 // Append Columns
 void 
 ClpMatrixBase::appendCols(int number, const CoinPackedVectorBase * const * columns)
@@ -177,6 +178,7 @@ ClpMatrixBase::appendRows(int number, const CoinPackedVectorBase * const * rows)
   std::cerr<<"appendRows not supported - ClpMatrixBase"<<std::endl;
   abort();
 }
+#endif
 /* Returns largest and smallest elements of both signs.
    Largest refers to largest absolute value.
 */

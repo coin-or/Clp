@@ -3115,6 +3115,9 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
   }
   return bestPossible;
 }
+#ifdef CLP_ALL_ONE_FILE
+#undef MAXTRY
+#endif
 /* Checks if tentative optimal actually means unbounded
    Returns -3 if not, 2 if is unbounded */
 int 

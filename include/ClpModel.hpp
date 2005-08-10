@@ -146,17 +146,19 @@ public:
   /// Add rows
   void addRows(int number, const double * rowLower, 
 	       const double * rowUpper,
-	       const int * rowStarts, const int * columns,
+	       const CoinBigIndex * rowStarts, const int * columns,
 	       const double * elements);
   /// Add rows
   void addRows(int number, const double * rowLower, 
 	       const double * rowUpper,
-	       const int * rowStarts, const int * rowLengths,
+	       const CoinBigIndex * rowStarts, const int * rowLengths,
 	       const int * columns,
 	       const double * elements);
+#ifndef CLP_NO_VECTOR
   void addRows(int number, const double * rowLower, 
 	       const double * rowUpper,
 	       const CoinPackedVectorBase * const * rows);
+#endif
   /** Add rows from a build object.
       If tryPlusMinusOne then will try adding as +-1 matrix
       if no matrix exists.
@@ -188,18 +190,20 @@ public:
   void addColumns(int number, const double * columnLower, 
 		  const double * columnUpper,
 		  const double * objective,
-		  const int * columnStarts, const int * rows,
+		  const CoinBigIndex * columnStarts, const int * rows,
 		  const double * elements);
   void addColumns(int number, const double * columnLower, 
 		  const double * columnUpper,
 		  const double * objective,
-		  const int * columnStarts, const int * columnLengths,
+		  const CoinBigIndex * columnStarts, const int * columnLengths,
 		  const int * rows,
 		  const double * elements);
+#ifndef CLP_NO_VECTOR
   void addColumns(int number, const double * columnLower, 
 	       const double * columnUpper,
 		  const double * objective,
 	       const CoinPackedVectorBase * const * columns);
+#endif
   /** Add columns from a build object
       If tryPlusMinusOne then will try adding as +-1 matrix
       if no matrix exists.
@@ -240,6 +244,7 @@ public:
 
   /// Create empty ClpPackedMatrix
   void createEmptyMatrix();
+#ifndef CLP_NO_STD
   /// Drops names - makes lengthnames 0 and names empty
   void dropNames();
   /// Copies in names
@@ -257,6 +262,7 @@ public:
   void setRowName(int rowIndex, std::string & name) ;
   /// Set name of col
   void setColumnName(int colIndex, std::string & name) ;
+#endif
 
     /** Write the problem in MPS format to the specified file.
 
@@ -307,7 +313,9 @@ public:
   /// Objective offset
   inline double objectiveOffset() const { return dblParam_[ClpObjOffset];}
   void setObjectiveOffset(double value);
+#ifndef CLP_NO_STD
   inline std::string problemName() const { return strParam_[ClpProbName]; };
+#endif
    /// Number of iterations
    inline int numberIterations() const  { return numberIterations_; }
    inline int getIterationCount() const { return numberIterations_; }
@@ -633,6 +641,7 @@ public:
   { return eventHandler_;};
    /// length of names (0 means no names0
    inline int lengthNames() const { return lengthNames_; }
+#ifndef CLP_NO_STD
    /// length of names (0 means no names0
    inline void setLengthNames(int value) { lengthNames_=value; }
    /// Row names
@@ -653,6 +662,7 @@ public:
    }
    /// Return name or Cnnnnnnn
    std::string getColumnName(int iColumn) const;
+#endif
   /// Objective methods
   inline ClpObjective * objectiveAsObject() const
   { return objective_;};
@@ -705,8 +715,10 @@ public:
     bool setIntParam(ClpIntParam key, int value) ;
     /// Set an double parameter
     bool setDblParam(ClpDblParam key, double value) ;
+#ifndef CLP_NO_STD
     /// Set an string parameter
     bool setStrParam(ClpStrParam key, const std::string & value);
+#endif
     // Get an integer parameter
     inline bool getIntParam(ClpIntParam key, int& value) const {
       if (key!=ClpLastIntParam) {
@@ -725,6 +737,7 @@ public:
 	return false;
       }
     }
+#ifndef CLP_NO_STD
     // Get a string parameter
     inline bool getStrParam(ClpStrParam key, std::string& value) const {
       if (key!=ClpLastStrParam) {
@@ -734,6 +747,7 @@ public:
 	return false;
       }
     }
+#endif
   //@}
 
   /**@name private or protected methods */
@@ -860,14 +874,18 @@ protected:
   bool defaultHandler_;
   /// Event handler
   ClpEventHandler * eventHandler_;
+#ifndef CLP_NO_STD
   /// Row names
   std::vector<std::string> rowNames_;
   /// Column names
   std::vector<std::string> columnNames_;
+#endif
   /// Messages
   CoinMessages messages_;
+#ifndef CLP_NO_STD
   /// Array of string parameters
   std::string strParam_[ClpLastStrParam];
+#endif
   //@}
 };
 /** This is a tiny class where data can be saved round calls.

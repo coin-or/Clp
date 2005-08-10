@@ -52,7 +52,9 @@ ClpPresolve::ClpPresolve() :
   nelems_(0),
   numberPasses_(5),
   substitution_(3),
+#ifndef CLP_NO_STD
   saveFile_(""),
+#endif
   presolveActions_(0)
 {
 }
@@ -99,6 +101,7 @@ ClpPresolve::presolvedModel(ClpSimplex & si,
     return gutsOfPresolvedModel(&si,feasibilityTolerance,keepIntegers,numberPasses,dropNames,
                                 doRowObjective);
 }
+#ifndef CLP_NO_STD
 /* This version of presolve updates
    model and saves original data to file.  Returns non-zero if infeasible
 */
@@ -125,7 +128,7 @@ ClpPresolve::presolvedModelToFile(ClpSimplex &si,std::string fileName,
     return 1;
   }
 }
-
+#endif
 // Return pointer to presolved model
 ClpSimplex * 
 ClpPresolve::model() const
@@ -165,7 +168,9 @@ ClpPresolve::postsolve(bool updateStatus)
   double * sol =NULL;
   unsigned char * rowstat=NULL;
   unsigned char * colstat = NULL;
+#ifndef CLP_NO_STD
   if (saveFile_=="") {
+#endif
     // reality check
     assert(ncols0==originalModel_->getNumCols());
     assert(nrows0==originalModel_->getNumRows());
@@ -188,6 +193,7 @@ ClpPresolve::postsolve(bool updateStatus)
       memcpy(colstat, presolvedModel_->statusArray(), ncols);
       memcpy(rowstat, presolvedModel_->statusArray()+ncols, nrows);
     }
+#ifndef CLP_NO_STD
   } else {
     // from file
     acts = new double[nrows0];
@@ -202,6 +208,7 @@ ClpPresolve::postsolve(bool updateStatus)
       memcpy(rowstat, presolvedModel_->statusArray()+ncols, nrows);
     }
   }
+#endif
 
   // CoinPostsolveMatrix object assumes ownership of sol, acts, colstat;
   // will be deleted by ~CoinPostsolveMatrix. delete[] operations below
@@ -220,6 +227,7 @@ ClpPresolve::postsolve(bool updateStatus)
     
   postsolve(prob);
 
+#ifndef CLP_NO_STD
   if (saveFile_!="") {
     // From file
     assert (originalModel_==presolvedModel_);
@@ -234,10 +242,13 @@ ClpPresolve::postsolve(bool updateStatus)
       // delete [] colstat;
     }
   } else {
+#endif
     prob.sol_ = 0 ;
     prob.acts_ = 0 ;
     prob.colstat_ = 0 ;
+#ifndef CLP_NO_STD
   }
+#endif
   // put back duals
   memcpy(originalModel_->dualRowSolution(),prob.rowduals_,
 	 nrows_*sizeof(double));
@@ -287,8 +298,10 @@ ClpPresolve::postsolve(bool updateStatus)
   } else {
     originalModel_->setProblemStatus( presolvedModel_->status());
   }
+#ifndef CLP_NO_STD
   if (saveFile_!="") 
     presolvedModel_=NULL;
+#endif
 }
 
 // return pointer to original columns
@@ -1419,18 +1432,24 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
   CoinMessages messages = CoinMessage(originalModel->messages().language());
   while (result==-1) {
 
+#ifndef CLP_NO_STD
     // make new copy
     if (saveFile_=="") {
+#endif
       delete presolvedModel_;
+#ifndef CLP_NO_STD
       // So won't get names
       int lengthNames = originalModel->lengthNames();
       originalModel->setLengthNames(0);
+#endif
       presolvedModel_ = new ClpSimplex(*originalModel);
+#ifndef CLP_NO_STD
       originalModel->setLengthNames(lengthNames);
     } else {
       presolvedModel_=originalModel;
     }
     presolvedModel_->dropNames();
+#endif
 
     // drop integer information if wanted
     if (!keepIntegers)
@@ -1593,6 +1612,7 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
       memcpy(originalRow_,prob.originalRow_,nrowsNow*sizeof(int));
       delete [] prob.originalRow_;
       prob.originalRow_=NULL;
+#ifndef CLP_NO_STD
       if (!dropNames&&originalModel->lengthNames()) {
 	// Redo names
 	int iRow;
@@ -1612,6 +1632,7 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
 	}
 	presolvedModel_->copyNames(rowNames,columnNames);
       }
+#endif
       if (rowObjective_) {
 	int iRow;
         int k=-1;
@@ -1684,13 +1705,17 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
       originalModel->setProblemStatus(prob.status_);
     } else {
       // no changes - model needs restoring after Lou's changes
+#ifndef CLP_NO_STD
       if (saveFile_=="") {
+#endif
 	delete presolvedModel_;
 	presolvedModel_ = new ClpSimplex(*originalModel);
+#ifndef CLP_NO_STD
       } else {
 	presolvedModel_=originalModel;
       }
       presolvedModel_->dropNames();
+#endif
       
       // drop integer information if wanted
       if (!keepIntegers)

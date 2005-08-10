@@ -538,6 +538,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
       // switch on singletons to slacks
       pinfo.setDoSingletonColumn(true);
     }
+#ifndef CLP_NO_STD
     if (presolveToFile) {
       // PreSolve to file - not fully tested
       printf("Presolving to file - presolve.save\n");
@@ -545,9 +546,12 @@ ClpSimplex::initialSolve(ClpSolve & options)
 			   false,numberPasses);
       model2=this;
     } else {
+#endif
       model2 = pinfo.presolvedModel(*this,1.0e-8,
 				    false,numberPasses,true,costedSlacks);
+#ifndef CLP_NO_STD
     }
+#endif
     time2 = CoinCpuTime();
     timePresolve = time2-timeX;
     handler_->message(CLP_INTERVAL_TIMING,messages_)

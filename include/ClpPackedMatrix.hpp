@@ -55,10 +55,12 @@ public:
   virtual void deleteCols(const int numDel, const int * indDel);
     /** Delete the rows whose indices are listed in <code>indDel</code>. */
   virtual void deleteRows(const int numDel, const int * indDel);
+#ifndef CLP_NO_VECTOR
   /// Append Columns
   virtual void appendCols(int number, const CoinPackedVectorBase * const * columns);
   /// Append Rows
   virtual void appendRows(int number, const CoinPackedVectorBase * const * rows);
+#endif
   /** Append a set of rows/columns to the end of the matrix. Returns number of errors
       i.e. if any of the new rows/columns contain an index that's larger than the
       number of columns-1/rows-1 (if numberOther>0) or duplicates
