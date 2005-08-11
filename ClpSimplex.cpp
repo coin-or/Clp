@@ -8372,3 +8372,32 @@ void printHowMany()
          n2,n1,n3);
 }
 #endif
+#ifndef SLIM_CLP
+#include "CoinWarmStartBasis.hpp"
+
+// Returns a basis (to be deleted by user)
+CoinWarmStartBasis * 
+ClpSimplex::getBasis() const
+{
+  int iRow,iColumn;
+  CoinWarmStartBasis * basis = new CoinWarmStartBasis();
+  basis->setSize(numberColumns_,numberRows_);
+
+  if (statusExists()) {
+    // Flip slacks
+    int lookupA[]={0,1,3,2,0,2};
+    for (iRow=0;iRow<numberRows_;iRow++) {
+      int iStatus = getRowStatus(iRow);
+      iStatus = lookupA[iStatus];
+      basis->setArtifStatus(iRow,(CoinWarmStartBasis::Status) iStatus);
+    }
+    int lookupS[]={0,1,2,3,0,3};
+    for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+      int iStatus = getColumnStatus(iColumn);
+      iStatus = lookupS[iStatus];
+      basis->setStructStatus(iColumn,(CoinWarmStartBasis::Status) iStatus);
+    }
+  }
+  return basis;
+}
+#endif

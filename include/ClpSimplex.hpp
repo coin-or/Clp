@@ -23,6 +23,7 @@ class ClpNonLinearCost;
 class ClpSimplexProgress;
 class CoinModel;
 class OsiClpSolverInterface;
+class CoinWarmStartBasis;
 
 /** This solves LPs using the simplex method
 
@@ -296,6 +297,8 @@ public:
   /** Read a basis from the given filename,
       returns -1 on file error, 0 if no values, 1 if values */
   int readBasis(const char *filename);
+  /// Returns a basis (to be deleted by user)
+  CoinWarmStartBasis * getBasis() const;
   /// Passes in factorization
   void setFactorization( ClpFactorization & factorization);
   /** Tightens primal bounds to make dual faster.  Unless
