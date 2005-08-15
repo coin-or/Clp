@@ -2,7 +2,7 @@
 // Corporation and others.  All Rights Reserved.
 
 
-#undef NDEBUG
+//#undef NDEBUG
 
 #include "CoinPragma.hpp"
 
@@ -3348,10 +3348,14 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
         for (iRow=0;iRow<4;iRow++) {
           assert (!rowArray_[iRow]);
           rowArray_[iRow]=auxiliaryModel_->rowArray_[iRow];
+          // For safety
+          memset(rowArray_[iRow]->denseVector(),0,rowArray_[iRow]->capacity()*sizeof(double));
         }
         for (iColumn=0;iColumn<2;iColumn++) {
           assert (!columnArray_[iColumn]);
           columnArray_[iColumn]=auxiliaryModel_->columnArray_[iColumn];
+          // For safety
+          memset(columnArray_[iColumn]->denseVector(),0,columnArray_[iColumn]->capacity()*sizeof(double));
         }
         // do matrices
         rowCopy_=auxiliaryModel_->rowCopy_;
