@@ -1460,7 +1460,7 @@ ClpSimplex::housekeeping(double objectiveChange)
     solution_[sequenceOut_]=valueOut_;
   } else {
     //if (objective_->type()<2)
-    assert (fabs(theta_)>1.0e-13);
+    //assert (fabs(theta_)>1.0e-13);
     // flip from bound to bound
     // As Nonlinear costs may have moved bounds (to more feasible)
     // Redo using value
