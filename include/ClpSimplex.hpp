@@ -119,6 +119,8 @@ public:
      32 - no output if infeasible
   */
   void auxiliaryModel(int options);
+  /// Switch off e.g. if people using presolve
+  void deleteAuxiliaryModel();
   /// Assignment operator. This copies the data
     ClpSimplex & operator=(const ClpSimplex & rhs);
   /// Destructor

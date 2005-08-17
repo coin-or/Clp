@@ -8405,3 +8405,10 @@ ClpSimplex::getBasis() const
   return basis;
 }
 #endif
+// Switch off e.g. if people using presolve
+void 
+ClpSimplex::deleteAuxiliaryModel()
+{
+  delete auxiliaryModel_;
+  auxiliaryModel_=NULL;
+}
