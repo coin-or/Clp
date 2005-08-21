@@ -2501,12 +2501,15 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 	alpha = work[i];
         bestPossible = CoinMax(bestPossible,fabs(alpha));
 	oldValue = reducedCost[iSequence];
+        // If freehas to be very large - should come in via dualRow
+        if (getStatus(iSequence+addSequence)==isFree&&fabs(alpha)<1.0e-3)
+          break;
 	if (oldValue>dualTolerance_) {
 	  keep = true;
 	} else if (oldValue<-dualTolerance_) {
 	  keep = true;
 	} else {
-	  if (fabs(alpha)>10.0*acceptablePivot) 
+	  if (fabs(alpha)>CoinMax(10.0*acceptablePivot,1.0e-5)) 
 	    keep = true;
 	  else
 	    keep=false;
