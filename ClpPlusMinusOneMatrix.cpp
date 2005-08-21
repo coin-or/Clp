@@ -6,6 +6,7 @@
 
 #include "CoinPragma.hpp"
 #include "CoinIndexedVector.hpp"
+#include "CoinPackedVector.hpp"
 #include "CoinHelperFunctions.hpp"
 
 #include "ClpSimplex.hpp"
@@ -1912,6 +1913,38 @@ ClpPlusMinusOneMatrix::setDimensions(int newnumrows, int newnumcols)
       temp[i]= end;
     startNegative_=temp;
   }
-
-  
 }
+#ifndef SLIM_CLP
+/* Append a set of rows/columns to the end of the matrix. Returns number of errors
+   i.e. if any of the new rows/columns contain an index that's larger than the
+   number of columns-1/rows-1 (if numberOther>0) or duplicates
+   If 0 then rows, 1 if columns */
+int 
+ClpPlusMinusOneMatrix::appendMatrix(int number, int type,
+                                    const CoinBigIndex * starts, const int * index,
+                                    const double * element, int numberOther)
+{
+  int numberErrors=0;
+  // make into CoinPackedVector
+  CoinPackedVectorBase ** vectors=
+    new CoinPackedVectorBase * [number];
+  int iVector;
+  for (iVector=0;iVector<number;iVector++) {
+    int iStart = starts[iVector];
+    vectors[iVector] = 
+      new CoinPackedVector(starts[iVector+1]-iStart,
+                           index+iStart,element+iStart);
+  }
+  if (type==0) {
+    // rows
+    appendRows(number,vectors);
+  } else {
+    // columns
+    appendCols(number,vectors);
+  }
+  for (iVector=0;iVector<number;iVector++) 
+    delete vectors[iVector];
+  delete [] vectors;
+  return numberErrors;
+}
+#endif

@@ -56,6 +56,15 @@ public:
   virtual void appendCols(int number, const CoinPackedVectorBase * const * columns);
   /// Append Rows
   virtual void appendRows(int number, const CoinPackedVectorBase * const * rows);
+#ifndef SLIM_CLP
+  /** Append a set of rows/columns to the end of the matrix. Returns number of errors
+      i.e. if any of the new rows/columns contain an index that's larger than the
+      number of columns-1/rows-1 (if numberOther>0) or duplicates
+      If 0 then rows, 1 if columns */
+  virtual int appendMatrix(int number, int type,
+                           const CoinBigIndex * starts, const int * index,
+                           const double * element, int numberOther=-1);
+#endif
   /** Returns a new matrix in reverse order without gaps */
   virtual ClpMatrixBase * reverseOrderedCopy() const;
   /// Returns number of elements in column part of basis 
