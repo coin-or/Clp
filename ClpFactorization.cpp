@@ -110,6 +110,7 @@ ClpFactorization::factorize ( ClpSimplex * model,
   if (numberPivots_>1&&numberCompressions_*10 > numberPivots_+10) {
     areaFactor_ *= 1.1;
   }
+  //int numberPivots=numberPivots_;
 #if 0
   if (model->algorithm()>0)
     numberSave=-1;
@@ -513,6 +514,7 @@ ClpFactorization::factorize ( ClpSimplex * model,
 	for (i=0;i<numberRows;i++) {
 	  pivotVariable[i]=-1;
 	}
+
 	for (i=0;i<numberRows;i++) {
 	  if (model->getRowStatus(i) == ClpSimplex::basic) {
 	    int iPivot = rowIsBasic[i];

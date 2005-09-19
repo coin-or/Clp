@@ -68,6 +68,7 @@ ClpSimplex::ClpSimplex () :
   infeasibilityCost_(1.0e10),
   sumOfRelaxedDualInfeasibilities_(0.0),
   sumOfRelaxedPrimalInfeasibilities_(0.0),
+  acceptablePivot_(1.0e-8),
   lower_(NULL),
   rowLowerWork_(NULL),
   columnLowerWork_(NULL),
@@ -174,6 +175,7 @@ ClpSimplex::ClpSimplex ( const ClpModel * rhs,
   infeasibilityCost_(1.0e10),
   sumOfRelaxedDualInfeasibilities_(0.0),
   sumOfRelaxedPrimalInfeasibilities_(0.0),
+  acceptablePivot_(1.0e-8),
   lower_(NULL),
   rowLowerWork_(NULL),
   columnLowerWork_(NULL),
@@ -1602,6 +1604,7 @@ ClpSimplex::ClpSimplex(const ClpSimplex &rhs,int scalingMode) :
   infeasibilityCost_(1.0e10),
   sumOfRelaxedDualInfeasibilities_(0.0),
   sumOfRelaxedPrimalInfeasibilities_(0.0),
+  acceptablePivot_(1.0e-8),
   lower_(NULL),
   rowLowerWork_(NULL),
   columnLowerWork_(NULL),
@@ -1702,6 +1705,7 @@ ClpSimplex::ClpSimplex(const ClpModel &rhs, int scalingMode) :
   infeasibilityCost_(1.0e10),
   sumOfRelaxedDualInfeasibilities_(0.0),
   sumOfRelaxedPrimalInfeasibilities_(0.0),
+  acceptablePivot_(1.0e-8),
   lower_(NULL),
   rowLowerWork_(NULL),
   columnLowerWork_(NULL),
@@ -1923,6 +1927,7 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
     progress_=NULL;
   sumOfRelaxedDualInfeasibilities_ = rhs.sumOfRelaxedDualInfeasibilities_;
   sumOfRelaxedPrimalInfeasibilities_ = rhs.sumOfRelaxedPrimalInfeasibilities_;
+  acceptablePivot_ = rhs.acceptablePivot_;
   if (rhs.nonLinearCost_!=NULL)
     nonLinearCost_ = new ClpNonLinearCost(*rhs.nonLinearCost_);
   else
@@ -6587,6 +6592,7 @@ ClpSimplex::saveData()
   saved.pivotTolerance_ = factorization_->pivotTolerance();
   saved.perturbation_ = perturbation_;
   saved.forceFactorization_=forceFactorization_;
+  saved.acceptablePivot_ = acceptablePivot_;
   // Progress indicator
   delete progress_;
   progress_ = new ClpSimplexProgress (this);
@@ -6602,6 +6608,7 @@ ClpSimplex::restoreData(ClpDataSave saved)
   infeasibilityCost_ = saved.infeasibilityCost_;
   dualBound_ = saved.dualBound_;
   forceFactorization_=saved.forceFactorization_;
+  acceptablePivot_ = saved.acceptablePivot_;
   delete progress_;
   progress_=NULL;
 }

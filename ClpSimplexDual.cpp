@@ -979,16 +979,16 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
       dualRowPivot_->checkAccuracy();
       // Get good size for pivot
       // Allow first few iterations to take tiny
-      double acceptablePivot=1.0e-9;
+      double acceptablePivot=1.0e-1*acceptablePivot_;
       if (numberIterations_>100)
-        acceptablePivot=1.0e-8;
+        acceptablePivot=acceptablePivot_;
       if (factorization_->pivots()>10||
 	  (factorization_->pivots()&&saveSumDual))
-	acceptablePivot=1.0e-5; // if we have iterated be more strict
+	acceptablePivot=1.0e+3*acceptablePivot_; // if we have iterated be more strict
       else if (factorization_->pivots()>5)
-	acceptablePivot=1.0e-6; // if we have iterated be slightly more strict
+	acceptablePivot=1.0e+2*acceptablePivot_; // if we have iterated be slightly more strict
       else if (factorization_->pivots())
-        acceptablePivot=1.0e-8; // relax
+        acceptablePivot=acceptablePivot_; // relax
       double bestPossiblePivot=1.0;
       // get sign for finding row of tableau
       if (candidate<0) {
@@ -1413,7 +1413,7 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
 	if (handler_->logLevel()&32)
 	  printf("** no column pivot\n");
 #endif
-	if (factorization_->pivots()<5) {
+	if (factorization_->pivots()<5&&acceptablePivot_<=1.0e-8) {
           // If not in branch and bound etc save ray
           if ((specialOptions_&(1024|4096))==0) {
 	    // create ray anyway
@@ -1456,6 +1456,8 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
 	    }
 	  }
 	}
+	if (factorization_->pivots()<5&&acceptablePivot_>1.0e-8) 
+          acceptablePivot_=1.0e-8;
 	rowArray_[0]->clear();
 	columnArray_[0]->clear();
 	returnCode=1;

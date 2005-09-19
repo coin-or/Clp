@@ -637,6 +637,8 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 					  ClpSimplex * originalModel)
 {
   int dummy; // for use in generalExpanded
+  // number of pivots done
+  int numberPivots = factorization_->pivots();
   if (type==2) {
     // trouble - restore solution
     memcpy(status_ ,saveStatus_,(numberColumns_+numberRows_)*sizeof(char));
@@ -690,7 +692,26 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	    matrix_->generalExpanded(this,6,dummy);
 	  } else {
 	    // no - restore previous basis
+            // Keep any flagged variables
+            int i;
+            for (i=0;i<numberRows_+numberColumns_;i++) {
+              if (flagged(i))
+                saveStatus_[i] |= 64; //say flagged
+            }
 	    memcpy(status_ ,saveStatus_,(numberColumns_+numberRows_)*sizeof(char));
+            if (numberPivots<=1) {
+              // throw out something
+              if (sequenceIn_>=0&&getStatus(sequenceIn_)!=basic) {
+                setFlagged(sequenceIn_);
+              } else if (sequenceOut_>=0&&getStatus(sequenceOut_)!=basic) {
+                setFlagged(sequenceOut_);
+              }
+              double newTolerance = 0.05 + 0.94*CoinDrand48();
+              factorization_->pivotTolerance(newTolerance);
+            } else {
+              // Go to safe 
+              factorization_->pivotTolerance(0.99);
+            }
 	    memcpy(rowActivityWork_,savedSolution_+numberColumns_ ,
 		   numberRows_*sizeof(double));
 	    memcpy(columnActivityWork_,savedSolution_ ,
@@ -700,8 +721,6 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	    matrix_->generalExpanded(this,5,dummy);
 	    forceFactorization_=1; // a bit drastic but ..
 	    type = 2;
-	    // Go to safe 
-	    factorization_->pivotTolerance(0.99);
 	    if (internalFactorize(1)!=0)
 	       largestPrimalError_=1.0e4; // force other type
 	  }
@@ -799,13 +818,17 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
     gutsOfSolution(NULL,NULL,ifValuesPass!=0);
     nonLinearCost_->checkInfeasibilities(primalTolerance_);
   }
-  if (!nonLinearCost_->numberInfeasibilities()&&infeasibilityCost_==1.0e10)
-    infeasibilityCost_ = 1.0e8; // relax if default
   double trueInfeasibility =nonLinearCost_->sumInfeasibilities();
+  if (!nonLinearCost_->numberInfeasibilities()&&infeasibilityCost_==1.0e10&&!ifValuesPass) {
+    // relax if default
+    infeasibilityCost_ = CoinMin(100.0*sumDualInfeasibilities_,1.0e7);
+    trueInfeasibility = 1.123456e10;
+  }
   if (trueInfeasibility>1.0) {
     // If infeasibility going up may change weights
     double testValue = trueInfeasibility-1.0e-4*(10.0+trueInfeasibility);
-    if(progress->lastInfeasibility()<testValue) {
+    double lastInf = progress->lastInfeasibility();
+    if(lastInf<testValue||trueInfeasibility==1.123456e10) {
       if (infeasibilityCost_<1.0e14) {
 	infeasibilityCost_ *= 1.5;
 	//printf("increasing weight to %g\n",infeasibilityCost_);
@@ -1148,9 +1171,16 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
   int numberRemaining=0;
 
   double totalThru=0.0; // for when variables flip
-  double acceptablePivot=0.5e-8;
-  if (factorization_->pivots())
-    acceptablePivot=1.0e-5; // if we have iterated be more strict
+  // Allow first few iterations to take tiny
+  double acceptablePivot=1.0e-1*acceptablePivot_;
+  if (numberIterations_>100)
+    acceptablePivot=acceptablePivot_;
+  if (factorization_->pivots()>10)
+    acceptablePivot=1.0e+3*acceptablePivot_; // if we have iterated be more strict
+  else if (factorization_->pivots()>5)
+    acceptablePivot=1.0e+2*acceptablePivot_; // if we have iterated be slightly more strict
+  else if (factorization_->pivots())
+    acceptablePivot=acceptablePivot_; // relax
   double bestEverPivot=acceptablePivot;
   int lastPivotRow = -1;
   double lastPivot=0.0;
@@ -2464,7 +2494,7 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
           solution_[sequenceIn_] += theta_;
         }
 	rowArray_[0]->clear();
-	if (!factorization_->pivots()) {
+	if (!factorization_->pivots()&&acceptablePivot_<=1.0e-8) {
 	  returnCode = 2; //say looks unbounded
 	  // do ray
 	  primalRay(rowArray_[1]);
@@ -2479,6 +2509,7 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	  roundAgain=true;
 	  continue;
 	} else {
+          acceptablePivot_=1.0e-8;
 	  returnCode = 4; //say looks unbounded but has iterated
 	}
 	break;

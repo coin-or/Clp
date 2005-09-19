@@ -3358,6 +3358,7 @@ ClpDataSave::ClpDataSave ()
   infeasibilityCost_ = 0.0;
   sparseThreshold_ = 0;
   pivotTolerance_=0.0;
+  acceptablePivot_ = 0.0;
   perturbation_ = 0;
   forceFactorization_=-1;
   scalingFlag_=0;
@@ -3371,6 +3372,7 @@ ClpDataSave::ClpDataSave (const ClpDataSave & rhs)
   dualBound_ = rhs.dualBound_;
   infeasibilityCost_ = rhs.infeasibilityCost_;
   pivotTolerance_ = rhs.pivotTolerance_;
+  acceptablePivot_ = rhs.acceptablePivot_;
   sparseThreshold_ = rhs.sparseThreshold_;
   perturbation_ = rhs.perturbation_;
   forceFactorization_=rhs.forceFactorization_;
@@ -3394,6 +3396,7 @@ ClpDataSave::operator=(const ClpDataSave& rhs)
     dualBound_ = rhs.dualBound_;
     infeasibilityCost_ = rhs.infeasibilityCost_;
     pivotTolerance_ = rhs.pivotTolerance_;
+    acceptablePivot_ = rhs.acceptablePivot_;
     sparseThreshold_ = rhs.sparseThreshold_;
     perturbation_ = rhs.perturbation_;
     forceFactorization_=rhs.forceFactorization_;

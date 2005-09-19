@@ -121,6 +121,9 @@ public:
   void auxiliaryModel(int options);
   /// Switch off e.g. if people using presolve
   void deleteAuxiliaryModel();
+  /// See if we have auxiliary model
+  inline bool usingAuxiliaryModel() const
+  { return auxiliaryModel_!=NULL;};
   /// Assignment operator. This copies the data
     ClpSimplex & operator=(const ClpSimplex & rhs);
   /// Destructor
@@ -531,7 +534,7 @@ public:
   /// Save data
   ClpDataSave saveData() ;
   /// Restore data
-    void restoreData(ClpDataSave saved);
+  void restoreData(ClpDataSave saved);
   /// Clean up status
   void cleanStatus();
   /// Factorizes using current basis. For external use
@@ -1112,6 +1115,8 @@ protected:
   double sumOfRelaxedDualInfeasibilities_;
   /// Sum of Primal infeasibilities using tolerance based on error in primals
   double sumOfRelaxedPrimalInfeasibilities_;
+  /// Acceptable pivot value just after factorization
+  double acceptablePivot_;
   /// Working copy of lower bounds (Owner of arrays below)
   double * lower_;
   /// Row lower bounds - working copy

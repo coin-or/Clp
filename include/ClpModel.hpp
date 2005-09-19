@@ -916,6 +916,7 @@ public:
   double dualBound_;
   double infeasibilityCost_;
   double pivotTolerance_;
+  double acceptablePivot_;
   int sparseThreshold_;
   int perturbation_;
   int forceFactorization_;

@@ -1751,11 +1751,14 @@ ClpPackedMatrix::scale(ClpModel * model) const
   double * columnLower = model->columnLower();
   double * columnUpper = model->columnUpper();
   int iColumn, iRow;
+  //#define LEAVE_FIXED
   // mark free rows
   for (iRow=0;iRow<numberRows;iRow++) {
+#ifndef LEAVE_FIXED
     usefulRow[iRow]=0;
     if (rowUpper[iRow]<1.0e20||
 	rowLower[iRow]>-1.0e20)
+#endif
       usefulRow[iRow]=1;
   }
   // mark empty and fixed columns
@@ -1771,8 +1774,10 @@ ClpPackedMatrix::scale(ClpModel * model) const
   for (iColumn=0;iColumn<numberColumns;iColumn++) {
     CoinBigIndex j;
     char useful=0;
+#ifndef LEAVE_FIXED
     if (columnUpper[iColumn]>
 	columnLower[iColumn]+1.0e-12) {
+#endif
       for (j=columnStart[iColumn];
 	   j<columnStart[iColumn]+columnLength[iColumn];j++) {
 	iRow=row[j];
@@ -1782,7 +1787,9 @@ ClpPackedMatrix::scale(ClpModel * model) const
 	  smallest = CoinMin(smallest,fabs(elementByColumn[j]));
 	}
       }
+#ifndef LEAVE_FIXED
     }
+#endif
     usefulColumn[iColumn]=useful;
   }
   model->messageHandler()->message(CLP_PACKEDSCALE_INITIAL,*model->messagesPointer())
@@ -2011,8 +2018,11 @@ ClpPackedMatrix::scale(ClpModel * model) const
       overallLargest = 1.0/sqrt(overallSmallest);
     overallLargest = CoinMin(100.0,overallLargest);
     overallSmallest=1.0e50;
+    //printf("scaling %d\n",model->scalingFlag());
     for (iColumn=0;iColumn<numberColumns;iColumn++) {
-      if (usefulColumn[iColumn]) {
+      if (columnUpper[iColumn]>
+	columnLower[iColumn]+1.0e-12) {
+        //if (usefulColumn[iColumn]) {
 	CoinBigIndex j;
 	largest=1.0e-20;
 	smallest=1.0e50;
