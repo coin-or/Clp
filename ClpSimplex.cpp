@@ -5701,6 +5701,9 @@ ClpSimplex::readGMPL(const char *filename,const char * dataName,
 void 
 ClpSimplex::checkSolution()
 {
+  // Just use column solution
+  CoinZeroN(rowActivity_,numberRows_);
+  matrix()->times(columnActivity_,rowActivity_) ;
   // put in standard form
   createRim(7+8+16+32);
   dualTolerance_=dblParam_[ClpDualTolerance];
