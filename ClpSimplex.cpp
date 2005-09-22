@@ -2504,8 +2504,13 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
     keepPivots=true;
   }
   bool oldMatrix = ((startFinishOptions&4)!=0&&(whatsChanged_&1)!=0);
-  if (auxiliaryModel_)
-    oldMatrix=true; 
+  if (auxiliaryModel_) {
+    if (auxiliaryModel_->numberRows_==numberRows_&&
+        auxiliaryModel_->numberColumns_==numberColumns_) 
+      oldMatrix=true; 
+    else
+      deleteAuxiliaryModel();
+  }
   if (what==63) {
     if (!status_)
       createStatus();
