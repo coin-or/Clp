@@ -8326,6 +8326,7 @@ ClpSimplex::auxiliaryModel(int options)
     delete [] columnScale_;
     rowScale_=NULL;
     columnScale_=NULL;
+    whatsChanged_ &= ~1;
   }
 }
 /*
