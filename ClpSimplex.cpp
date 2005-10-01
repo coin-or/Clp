@@ -6288,8 +6288,10 @@ int ClpSimplex::pivot()
 	assert (fabs(solution_[sequenceOut_]-lowerOut_)<1.0e-7);
 	solution_[sequenceOut_]=lowerOut_;
       }
+      valueOut_=solution_[sequenceOut_];
       solution_[sequenceIn_]=valueIn_+movement;
     }
+    valueIn_=solution_[sequenceIn_];
     double objectiveChange = dualIn_*movement;
     // update duals
     if (pivotRow_>=0) {
