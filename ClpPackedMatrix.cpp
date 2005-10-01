@@ -2314,7 +2314,7 @@ ClpPackedMatrix::allElementsInRange(ClpModel * model,
     }
     return true;
   }
-  assert (check=15);
+  assert (check==15);
   int * mark = new int [numberRows];
   int i;
   for (i=0;i<numberRows;i++)
