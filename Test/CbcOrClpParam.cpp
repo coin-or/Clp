@@ -709,6 +709,10 @@ CbcOrClpParam::setIntParameter (CbcModel &model,int value)
       oldValue=model.numberStrong();
       model.setNumberStrong(value);
       break;
+    case NUMBERBEFORE:
+      oldValue=model.numberBeforeTrust();
+      model.setNumberBeforeTrust(value);
+      break;
     default:
       oldValue=0; // to avoid compiler message
       break;
@@ -734,6 +738,9 @@ CbcOrClpParam::intParameter (CbcModel &model) const
     break;
   case STRONGBRANCHING:
     value=model.numberStrong();
+    break;
+  case NUMBERBEFORE:
+    value=model.numberBeforeTrust();
     break;
   default:
     abort();
@@ -1531,17 +1538,6 @@ specialized network code."
      ); 
   parameters[numberParameters-1].setDoubleValue(1.0);
 #endif
-#ifdef COIN_USE_CBC
-    parameters[numberParameters++]=
-      CbcOrClpParam("oddhole!Cuts","Whether to use Oddhole cuts",
-	      "off",ODDHOLECUTS);
-    parameters[numberParameters-1].append("on");
-    parameters[numberParameters-1].append("root");
-  parameters[numberParameters-1].setLonghelp
-    (
-     "TODO"
-     ); 
-#endif
   parameters[numberParameters++]=
     CbcOrClpParam("output!Format","Which output format to use",
 		  1,6,OUTPUTFORMAT);
@@ -1611,6 +1607,16 @@ values, 2 saves values, 3 with greater accuracy and 4 in IEEE."
  which fix some variables, equations which can be transformed into bounds etc etc.  For the\
  initial solve of any problem this is worth doing unless you know that it will have no effect."
      ); 
+#ifdef COIN_USE_CBC
+  parameters[numberParameters++]=
+    CbcOrClpParam("preprocess","Whether to use integer preprocessing",
+                  "on",PREPROCESS);
+  parameters[numberParameters-1].append("off");
+  parameters[numberParameters-1].setLonghelp
+    (
+     "TODO"
+     ); 
+#endif
 #ifdef COIN_USE_CLP
   parameters[numberParameters++]=
     CbcOrClpParam("primalP!ivot","Primal pivot choice algorithm",
@@ -1691,6 +1697,19 @@ costs this much to be infeasible",
   parameters[numberParameters++]=
     CbcOrClpParam("reallyS!cale","Scales model in place",
 		  REALLY_SCALE,false);
+#endif
+#ifdef COIN_USE_CBC
+    parameters[numberParameters++]=
+      CbcOrClpParam("reduce!AndSplitCuts","Whether to use Reduce-and-Split cuts",
+	      "off",REDSPLITCUTS);
+    parameters[numberParameters-1].append("on");
+    parameters[numberParameters-1].append("root");
+  parameters[numberParameters-1].setLonghelp
+    (
+     "TODO"
+     ); 
+#endif
+#ifdef COIN_USE_CLP
   parameters[numberParameters++]=
     CbcOrClpParam("restore!Model","Restore model from binary file",
 		  RESTORE);
@@ -1871,6 +1890,15 @@ activity at continuous solution",
   parameters[numberParameters++]=
     CbcOrClpParam("tightLP","Poor person's preSolve for now",
 		  TIGHTEN,-1,false);
+#endif
+#ifdef COIN_USE_CBC
+  parameters[numberParameters++]=
+    CbcOrClpParam("trust!PseudoCosts","Number of branches before we trust pseudocosts",
+		  0,999999,NUMBERBEFORE);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "TODO"
+     ); 
 #endif
 #ifdef COIN_USE_CBC
   parameters[numberParameters++]=

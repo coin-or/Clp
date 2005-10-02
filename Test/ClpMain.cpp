@@ -1685,12 +1685,13 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
     printf("\n");
   if (model->logLevel()<2)
     return ;
+  int kMax = model->logLevel()>3 ? 1000000 : 10;
   k=0;
   for (iRow=1;iRow<=numberRows;iRow++) {
     if (number[iRow]) {
       k++;
       printf("%d columns have %d entries\n",number[iRow],iRow);
-      if (k==10&&model->logLevel()<3)
+      if (k==kMax)
         break;
     }
   }
@@ -1700,7 +1701,7 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
     for (iRow=numberRows;iRow>=1;iRow--) {
       if (number[iRow]) {
         k++;
-        if (k==10)
+        if (k==kMax)
           break;
       }
     }
@@ -1712,7 +1713,7 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
         if (number[iRow]) {
           k++;
           printf("%d columns have %d entries\n",number[iRow],iRow);
-          if (k==10)
+          if (k==kMax)
             break;
         }
       }
@@ -1740,7 +1741,7 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
     if (number[iColumn]) {
       k++;
       printf("%d rows have %d entries\n",number[iColumn],iColumn);
-      if (k==10)
+      if (k==kMax)
         break;
     }
   }
@@ -1750,7 +1751,7 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
     for (iColumn=numberColumns;iColumn>=1;iColumn--) {
       if (number[iColumn]) {
         k++;
-        if (k==10)
+        if (k==kMax)
           break;
       }
     }
@@ -1762,7 +1763,7 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
         if (number[iColumn]) {
           k++;
           printf("%d rows have %d entries\n",number[iColumn],iColumn);
-          if (k==10)
+          if (k==kMax)
             break;
         }
       }

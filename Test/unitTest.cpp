@@ -17,6 +17,7 @@
 
 #include "ClpFactorization.hpp"
 #include "ClpSimplex.hpp"
+#include "ClpSimplexOther.hpp"
 #include "ClpInterior.hpp"
 #include "ClpLinearObjective.hpp"
 #include "ClpDualRowSteepest.hpp"
@@ -854,6 +855,14 @@ ClpSimplexUnitTest(const std::string & mpsDir,
 	     valueDecrease[i],sequenceDecrease[i]);
     assert (fabs(valueDecrease[3]-0.642857)<1.0e-4);
     assert (fabs(valueDecrease[8]-2.95113)<1.0e-4);
+    // Test parametrics
+    ClpSimplexOther * model2 = (ClpSimplexOther *) (&model);
+    double rhs[]={ 1.0,2.0,3.0,4.0,5.0};
+    double endingTheta=1.0;
+    model2->scaling(0);
+    model2->setLogLevel(63);
+    model2->parametrics(0.0,endingTheta,0.1,
+                        NULL,NULL,rhs,rhs,NULL);
   }
   // Test binv etc
   {    
@@ -984,6 +993,17 @@ ClpSimplexUnitTest(const std::string & mpsDir,
       double objValue = colsol.dotProduct(objective);
       CoinRelFltEq eq(1.0e-8);
       assert(eq(objValue,-4.6475314286e+02));
+      // Test auxiliary model
+      //solution.scaling(0);
+      solution.auxiliaryModel(63-2); // bounds may change
+      solution.dual();
+      solution.primal();
+      solution.allSlackBasis();
+      solution.dual();
+      assert(eq(solution.objectiveValue(),-4.6475314286e+02));
+      solution.auxiliaryModel(-1);
+      solution.dual();
+      assert(eq(solution.objectiveValue(),-4.6475314286e+02));
       double * lower = solution.columnLower();
       double * upper = solution.columnUpper();
       double * sol = solution.primalColumnSolution();
