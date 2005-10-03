@@ -85,7 +85,9 @@ int main (int argc, const char *argv[])
     bool preSolveFile=false;
     models->setPerturbation(50);
     models->messageHandler()->setPrefix(false);
-    std::string directory ="./";
+    const char dirsep =  CoinFindDirSeparator();
+    std::string directory = (dirsep == '/' ? "./" : ".\\");
+    std::string defaultDirectory = directory;
     std::string importFile ="";
     std::string exportFile ="default.mps";
     std::string importBasisFile ="";
@@ -683,7 +685,18 @@ int main (int argc, const char *argv[])
 		canOpen=true;
 		fileName = "-";
 	      } else {
-		if (field[0]=='/'||field[0]=='\\') {
+                bool absolutePath;
+                if (dirsep=='/') {
+                  // non Windows (or cygwin)
+                  absolutePath=(field[0]=='/');
+                } else {
+                  //Windows (non cycgwin)
+                  absolutePath=(field[0]=='\\');
+                  // but allow for :
+                  if (strchr(field.c_str(),':'))
+                    absolutePath=true;
+                }
+		if (absolutePath) {
 		  fileName = field;
 		} else if (field[0]=='~') {
 		  char * environ = getenv("HOME");
@@ -1204,7 +1217,7 @@ int main (int argc, const char *argv[])
 	      int nFields=2;
 	      fields[0]="fake main from unitTest";
 	      fields[1]="-netlib";
-	      if (directory!="./") {
+	      if (directory!=defaultDirectory) {
 		fields[2]="-netlibDir";
 		fields[3]=directory.c_str();
 		nFields=4;
@@ -1240,7 +1253,7 @@ int main (int argc, const char *argv[])
 	      const char * fields[3];
 	      int nFields=1;
 	      fields[0]="fake main from unitTest";
-	      if (directory!="./") {
+	      if (directory!=defaultDirectory) {
 		fields[1]="-mpsDir";
 		fields[2]=directory.c_str();
 		nFields=3;
