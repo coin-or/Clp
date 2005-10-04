@@ -11,7 +11,8 @@
 
 #include "CbcOrClpParam.hpp"
 #ifdef COIN_USE_CBC
-#include "OsiSolverInterface.hpp"
+#include "OsiClpSolverInterface.hpp"
+#include "ClpSimplex.hpp"
 #include "CbcModel.hpp"
 #endif
 #ifdef COIN_USE_CLP
@@ -651,8 +652,12 @@ CbcOrClpParam::setDoubleParameter (CbcModel &model,double value)
       break;
     case TIMELIMIT_BAB:
       oldValue = model.getDblParam(CbcModel::CbcMaximumSeconds) ;
-      model.solver()->setMaximumSeconds(value);
-      model.setDblParam(CbcModel::CbcMaximumSeconds,value) ;
+      {
+        OsiClpSolverInterface * clpSolver = dynamic_cast< OsiClpSolverInterface*> (model.solver());
+        ClpSimplex * lpSolver = clpSolver->getModelPtr();
+        lpSolver->setMaximumSeconds(value);
+        model.setDblParam(CbcModel::CbcMaximumSeconds,value) ;
+      }
       break ;
     case DUALTOLERANCE:
     case PRIMALTOLERANCE:
