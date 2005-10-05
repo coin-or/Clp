@@ -8261,6 +8261,8 @@ ClpSimplex::auxiliaryModel(int options)
     int i;
     int numberRows2 = numberRows_+numberExtraRows_;
     int numberTotal = numberRows2+numberColumns_;
+    auxiliaryModel_->numberRows_=numberRows_;
+    auxiliaryModel_->numberColumns_=numberColumns_;
     if (rowScale_) {
       auxiliaryModel_->rowScale_= new double [2*numberRows_];
       for (i=0;i<numberRows_;i++) {
