@@ -10,6 +10,8 @@
 */
 
 #include "ClpSimplex.hpp"
+#include "ClpPresolve.hpp"
+#include "ClpFactorization.hpp"
 #include "CoinSort.hpp"
 #include "CoinHelperFunctions.hpp"
 #include "CoinTime.hpp"
@@ -24,7 +26,7 @@ int main (int argc, const char *argv[])
   if (argc<2) {
     status=model.readMps("small.mps",true);
   } else {
-    status=model.readMps(argv[1],true);
+    status=model.readMps(argv[1],false);
   }
   if (status)
     exit(10);
@@ -34,9 +36,33 @@ int main (int argc, const char *argv[])
   */
 
   double time1 = CoinCpuTime();
+  ClpSimplex * model2;
+  ClpPresolve pinfo;
+  int numberPasses=5; // can change this
+  /* Use a tolerance of 1.0e-8 for feasibility, treat problem as 
+     not being integer, do "numberpasses" passes and throw away names
+     in presolved model */
+  model2 = pinfo.presolvedModel(model,1.0e-8,false,numberPasses,false);
+  if (!model2) {
+    fprintf(stderr,"ClpPresolve says %s is infeasible with tolerance of %g\n",
+	    argv[1],1.0e-8);
+    fprintf(stdout,"ClpPresolve says %s is infeasible with tolerance of %g\n",
+	    argv[1],1.0e-8);
+    // model was infeasible - maybe try again with looser tolerances
+    model2 = pinfo.presolvedModel(model,1.0e-7,false,numberPasses,false);
+    if (!model2) {
+      fprintf(stderr,"ClpPresolve says %s is infeasible with tolerance of %g\n",
+	      argv[1],1.0e-7);
+      fprintf(stdout,"ClpPresolve says %s is infeasible with tolerance of %g\n",
+	      argv[1],1.0e-7);
+      exit(2);
+    }
+  }
+  // change factorization frequency from 200
+  model2->setFactorizationFrequency(100+model2->numberRows()/50);
   
-  int numberColumns = model.numberColumns();
-  int originalNumberRows = model.numberRows();
+  int numberColumns = model2->numberColumns();
+  int originalNumberRows = model2->numberRows();
   
   // We will need arrays to choose rows to add
   double * weight = new double [originalNumberRows];
@@ -44,8 +70,8 @@ int main (int argc, const char *argv[])
   int numberSort=0;
   char * take = new char [originalNumberRows];
   
-  const double * rowLower = model.rowLower();
-  const double * rowUpper = model.rowUpper();
+  const double * rowLower = model2->rowLower();
+  const double * rowUpper = model2->rowUpper();
   int iRow,iColumn;
   // Set up initial list
   numberSort=0;
@@ -56,6 +82,7 @@ int main (int argc, const char *argv[])
       weight[iRow]=0.0;
     }
   }
+  numberSort /= 2;
   // Just add this number of rows each time in small problem
   int smallNumberRows = 2*numberColumns;
   smallNumberRows=min(smallNumberRows,originalNumberRows/20);
@@ -72,17 +99,17 @@ int main (int argc, const char *argv[])
      One way that normally works is to automatically tighten bounds.
   */
 #if 0
-  model.tightenPrimalBounds();
   // However for some we need to do anyway
-  double * columnLower = model.columnLower();
-  double * columnUpper = model.columnUpper();
+  double * columnLower = model2->columnLower();
+  double * columnUpper = model2->columnUpper();
   for (iColumn=0;iColumn<numberColumns;iColumn++) {
     columnLower[iColumn]=max(-1.0e6,columnLower[iColumn]);
     columnUpper[iColumn]=min(1.0e6,columnUpper[iColumn]);
   }
 #endif
+  model2->tightenPrimalBounds(-1.0e4,true);
   printf("%d rows in initial problem\n",numberSort);
-  double * fullSolution = model.primalRowSolution();
+  double * fullSolution = model2->primalRowSolution();
   
   // Just do this number of passes
   int maxPass=50;
@@ -90,9 +117,9 @@ int main (int argc, const char *argv[])
   int takeOutPass=30;
   int iPass;
   
-  const int * start = model.clpMatrix()->getVectorStarts();
-  const int * length = model.clpMatrix()->getVectorLengths();
-  const int * row = model.clpMatrix()->getIndices();
+  const int * start = model2->clpMatrix()->getVectorStarts();
+  const int * length = model2->clpMatrix()->getVectorLengths();
+  const int * row = model2->clpMatrix()->getIndices();
   int * whichColumns = new int [numberColumns];
   for (iColumn=0;iColumn<numberColumns;iColumn++) 
     whichColumns[iColumn]=iColumn;
@@ -102,30 +129,40 @@ int main (int argc, const char *argv[])
     // Cleaner this way
     std::sort(sort,sort+numberSort);
     // Create small problem
-    ClpSimplex small(&model,numberSort,sort,numberSmallColumns,whichColumns);
+    ClpSimplex small(model2,numberSort,sort,numberSmallColumns,whichColumns);
     small.setFactorizationFrequency(100+numberSort/200);
     //small.setPerturbation(50);
     //small.setLogLevel(63);
     // A variation is to just do N iterations
     //if (iPass)
     //small.setMaximumIterations(100);
-    // Solve 
-    small.dual();
+    // Solve
+    small.factorization()->messageLevel(8);
+    if (iPass) {
+      small.dual();
+    } else {
+      small.writeMps("continf.mps");
+      ClpSolve solveOptions;
+      solveOptions.setSolveType(ClpSolve::useDual);
+      //solveOptions.setSolveType(ClpSolve::usePrimalorSprint);
+      //solveOptions.setSpecialOption(1,2,200); // idiot
+      small.initialSolve(solveOptions);
+    }
     // move solution back
-    double * solution = model.primalColumnSolution();
+    double * solution = model2->primalColumnSolution();
     const double * smallSolution = small.primalColumnSolution();
     for (int j=0;j<numberSmallColumns;j++) {
       iColumn = whichColumns[j];
       solution[iColumn]=smallSolution[j];
-      model.setColumnStatus(iColumn,small.getColumnStatus(j));
+      model2->setColumnStatus(iColumn,small.getColumnStatus(j));
     }
     for (iRow=0;iRow<numberSort;iRow++) {
       int kRow = sort[iRow];
-      model.setRowStatus(kRow,small.getRowStatus(iRow));
+      model2->setRowStatus(kRow,small.getRowStatus(iRow));
     }
     // compute full solution
     memset(fullSolution,0,originalNumberRows*sizeof(double));
-    model.times(1.0,model.primalColumnSolution(),fullSolution);
+    model2->times(1.0,model2->primalColumnSolution(),fullSolution);
     if (iPass!=maxPass-1) {
       // Mark row as not looked at
       for (iRow=0;iRow<originalNumberRows;iRow++)
@@ -140,7 +177,7 @@ int main (int argc, const char *argv[])
       for (iSort=0;iSort<numberSort;iSort++) {
 	iRow=sort[iSort];
 	//printf("%d %g %g\n",iRow,fullSolution[iRow],small.primalRowSolution()[iSort]);
-	if (model.getRowStatus(iRow)==ClpSimplex::basic) {
+	if (model2->getRowStatus(iRow)==ClpSimplex::basic) {
 	  // Basic - we can get rid of if early on
 	  if (iPass<takeOutPass) {
 	    // may have hit max iterations so check
@@ -222,13 +259,32 @@ int main (int argc, const char *argv[])
   delete [] whichColumns;
   delete [] take;
   // If problem is big you may wish to skip this
-  model.dual();
+  model2->dual();
   int numberBinding=0;
   for (iRow=0;iRow<originalNumberRows;iRow++) {
-    if (model.getRowStatus(iRow)!=ClpSimplex::basic) 
+    if (model2->getRowStatus(iRow)!=ClpSimplex::basic) 
       numberBinding++;
   }
   printf("%d binding rows at end\n",numberBinding);
+  pinfo.postsolve(true);
+
+  int numberIterations=model2->numberIterations();;
+  delete model2;
+  /* After this postsolve model should be optimal.
+     We can use checkSolution and test feasibility */
+  model.checkSolution();
+  if (model.numberDualInfeasibilities()||
+      model.numberPrimalInfeasibilities()) 
+    printf("%g dual %g(%d) Primal %g(%d)\n",
+	   model.objectiveValue(),
+	   model.sumDualInfeasibilities(),
+	   model.numberDualInfeasibilities(),
+	   model.sumPrimalInfeasibilities(),
+	   model.numberPrimalInfeasibilities());
+  // But resolve for safety
+  model.primal(1);
+
+  numberIterations += model.numberIterations();;
   printf("Solve took %g seconds\n",CoinCpuTime()-time1);
   return 0;
 }    
