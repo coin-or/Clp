@@ -653,9 +653,9 @@ CbcOrClpParam::setDoubleParameter (CbcModel &model,double value)
     case TIMELIMIT_BAB:
       oldValue = model.getDblParam(CbcModel::CbcMaximumSeconds) ;
       {
-        OsiClpSolverInterface * clpSolver = dynamic_cast< OsiClpSolverInterface*> (model.solver());
-        ClpSimplex * lpSolver = clpSolver->getModelPtr();
-        lpSolver->setMaximumSeconds(value);
+        //OsiClpSolverInterface * clpSolver = dynamic_cast< OsiClpSolverInterface*> (model.solver());
+        //ClpSimplex * lpSolver = clpSolver->getModelPtr();
+        //lpSolver->setMaximumSeconds(value);
         model.setDblParam(CbcModel::CbcMaximumSeconds,value) ;
       }
       break ;
@@ -1109,7 +1109,7 @@ the main thing is to think about which cuts to apply.  .. expand ..."
   parameters[numberParameters-1].append("root");
   parameters[numberParameters-1].setLonghelp
     (
-     "This switches on clique cuts (either at roor or in entire tree)"
+     "This switches on clique cuts (either at root or in entire tree)"
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("cost!Strategy","How to use costs",
@@ -1296,6 +1296,14 @@ no dual infeasibility may exceed this value",
     CbcOrClpParam("fakeB!ound","All bounds <= this value - DEBUG",
 		  1.0,1.0e15,FAKEBOUND,false);
 #ifdef COIN_USE_CBC
+    parameters[numberParameters++]=
+      CbcOrClpParam("feas!ibilityPump","Whether to try Feasibility Pump",
+		    "off",FPUMP);
+    parameters[numberParameters-1].append("on");
+  parameters[numberParameters-1].setLonghelp
+    (
+     "This switches on fesaibility pump heuristic at root "
+     ); 
   parameters[numberParameters++]=
     CbcOrClpParam("fix!OnDj","Try heuristic based on fixing variables with \
 reduced costs greater than this",
@@ -1312,7 +1320,7 @@ before branch and bound - use with extreme caution!"
     parameters[numberParameters-1].append("root");
   parameters[numberParameters-1].setLonghelp
     (
-     "This switches on flow cover cuts (either at roor or in entire tree)"
+     "This switches on flow cover cuts (either at root or in entire tree)"
      ); 
 #endif
   parameters[numberParameters++]=
@@ -1341,6 +1349,15 @@ of the objective value at the root node then the search will terminate"
      "The original cuts - beware of imitations!  Having gone out of favo(u)r, they are now more \
 fashionable as LP solvers are more robust and they interact well with other cuts.  They will almost always \
 give cuts (although in this executable they are limited as to number of variables in cut)."
+     ); 
+  parameters[numberParameters++]=
+    CbcOrClpParam("greedy!Heuristic","Whether to use a greedy heuristic",
+		  "off",GREEDY);
+  parameters[numberParameters-1].append("on");
+  parameters[numberParameters-1].append("root");
+  parameters[numberParameters-1].setLonghelp
+    (
+     "Switches on a dubious greedy heuristic"
      ); 
 #endif
   parameters[numberParameters++]=
@@ -1425,7 +1442,15 @@ no integer variable may be this away from an integer value",
   parameters[numberParameters-1].append("root");
   parameters[numberParameters-1].setLonghelp
     (
-     "This switches on knapsack cuts (either at roor or in entire tree)"
+     "This switches on knapsack cuts (either at root or in entire tree)"
+     ); 
+  parameters[numberParameters++]=
+    CbcOrClpParam("local!Search","Whether to use local search",
+		  "off",LOCAL);
+  parameters[numberParameters-1].append("on");
+  parameters[numberParameters-1].setLonghelp
+    (
+     "This switches on local search (after two or more solutions)"
      ); 
 #endif
 #ifndef COIN_USE_CBC
@@ -1500,7 +1525,7 @@ You can also use the parameters 'direction minimize'."
   parameters[numberParameters-1].append("root");
   parameters[numberParameters-1].setLonghelp
     (
-     "This switches on mixed integer rounding cuts (either at roor or in entire tree)"
+     "This switches on mixed integer rounding cuts (either at root or in entire tree)"
      ); 
 #endif 
   parameters[numberParameters++]=
@@ -1595,7 +1620,17 @@ specialized network code."
  otherwise odd values gives one value per line, even two.  Values 1,2 give normal format, 3,4\
  gives greater precision, while 5,6 give IEEE values.  When used for exporting a basis 1 does not save \
 values, 2 saves values, 3 with greater accuracy and 4 in IEEE."
+     );
+#ifdef COIN_USE_CBC
+  parameters[numberParameters++]=
+    CbcOrClpParam("passF!easibilityPump","How many passes in feasibility pump",
+		  0,10000,FPUMPITS);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "This fine tunes Feasibility Pump"
      ); 
+  parameters[numberParameters-1].setIntValue(20);
+#endif 
 #ifdef COIN_USE_CLP
   parameters[numberParameters++]=
     CbcOrClpParam("passP!resolve","How many passes in presolve",
@@ -1730,7 +1765,7 @@ costs this much to be infeasible",
   parameters[numberParameters-1].append("root");
   parameters[numberParameters-1].setLonghelp
     (
-     "This switches on probing cuts (either at roor or in entire tree)"
+     "This switches on probing cuts (either at root or in entire tree)"
      ); 
 #endif
   parameters[numberParameters++]=
@@ -1753,7 +1788,7 @@ costs this much to be infeasible",
     parameters[numberParameters-1].append("root");
   parameters[numberParameters-1].setLonghelp
     (
-     "This switches on reduce and split  cuts (either at roor or in entire tree)"
+     "This switches on reduce and split  cuts (either at root or in entire tree)"
      ); 
 #endif
 #ifdef COIN_USE_CLP
@@ -1964,7 +1999,7 @@ trust the pseudo costs and do not do any more strong branching."
   parameters[numberParameters-1].append("root");
   parameters[numberParameters-1].setLonghelp
     (
-     "This switches on two phase mixed integer rounding  cuts (either at roor or in entire tree)"
+     "This switches on two phase mixed integer rounding  cuts (either at root or in entire tree)"
      ); 
 #endif
   parameters[numberParameters++]=
