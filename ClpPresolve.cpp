@@ -291,6 +291,8 @@ ClpPresolve::postsolve(bool updateStatus)
       originalModel_->setProblemStatus( 0);
     } else {
       originalModel_->setProblemStatus( -1);
+      // Say not optimal after presolve
+      originalModel_->setSecondaryStatus(7);
       presolvedModel_->messageHandler()->message(COIN_PRESOLVE_NEEDS_CLEANING,
 					    messages)
 					      <<CoinMessageEol;

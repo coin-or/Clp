@@ -335,6 +335,7 @@ public:
   /// Returns true if hit maximum iterations (or time)
   bool hitMaximumIterations() const;
    /** Status of problem:
+       -1 - unknown e.g. before solve or if postSolve says not optimal
        0 - optimal
        1 - primal infeasible
        2 - dual infeasible
@@ -356,6 +357,7 @@ public:
        4 - scaled problem optimal - unscaled problem has primal and dual infeasibilities
        5 - giving up in primal with flagged variables
        6 - failed due to empty problem check
+       7 - postSolve says not optimal
        100 up - translation of enum from ClpEventHandler
    */
    inline int secondaryStatus() const            { return secondaryStatus_; }
