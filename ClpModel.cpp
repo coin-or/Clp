@@ -82,7 +82,7 @@ ClpModel::ClpModel () :
   defaultHandler_(true)
 #endif
 {
-  intParam_[ClpMaxNumIteration] = 99999999;
+  intParam_[ClpMaxNumIteration] = 2147483647;
   intParam_[ClpMaxNumIterationHotStart] = 9999999;
 
   dblParam_[ClpDualObjectiveLimit] = COIN_DBL_MAX;

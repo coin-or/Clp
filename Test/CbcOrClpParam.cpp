@@ -1112,6 +1112,15 @@ the main thing is to think about which cuts to apply.  .. expand ..."
      "This switches on clique cuts (either at root or in entire tree)"
      ); 
   parameters[numberParameters++]=
+    CbcOrClpParam("combine!Solutions","Whether to use combine solution heuristic",
+		  "off",COMBINE);
+  parameters[numberParameters-1].append("on");
+  parameters[numberParameters-1].setLonghelp
+    (
+     "This switches on a search which uses all variables in solutions \
+found so far (after two or more solutions)"
+     ); 
+  parameters[numberParameters++]=
     CbcOrClpParam("cost!Strategy","How to use costs",
 		  "off",COSTSTRATEGY);
   parameters[numberParameters-1].append("pri!orities");
@@ -1370,13 +1379,14 @@ give cuts (although in this executable they are limited as to number of variable
      "Switches on a dubious greedy heuristic"
      ); 
   parameters[numberParameters++]=
-    CbcOrClpParam("heur!isticsOnOff","Switches all heuristics on or off",
+    CbcOrClpParam("heur!isticsOnOff","Switches most heuristics on or off",
 		  "off",HEURISTICSTRATEGY);
   parameters[numberParameters-1].append("on");
   parameters[numberParameters-1].setLonghelp
     (
      "This can be used to switch on or off all heuristics.  Then you can do \
-individual ones off or on"
+individual ones off or on.  CbcTreeLocal is not included as it dramatically \
+alters search."
      ); 
 #endif
   parameters[numberParameters++]=
@@ -1464,12 +1474,12 @@ no integer variable may be this away from an integer value",
      "This switches on knapsack cuts (either at root or in entire tree)"
      ); 
   parameters[numberParameters++]=
-    CbcOrClpParam("local!Search","Whether to use local search",
-		  "off",LOCAL);
+    CbcOrClpParam("local!TreeSearch","Whether to use local treesearch",
+		  "off",LOCALTREE);
   parameters[numberParameters-1].append("on");
   parameters[numberParameters-1].setLonghelp
     (
-     "This switches on local search (after two or more solutions)"
+     "This switches on a local search tree when a solution is found"
      ); 
 #endif
 #ifndef COIN_USE_CBC

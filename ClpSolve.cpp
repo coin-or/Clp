@@ -1921,7 +1921,10 @@ ClpSimplex::initialSolve(ClpSolve & options)
   finalStatus=model2->status();
   if (presolve==ClpSolve::presolveOn) {
     int saveLevel = logLevel();
-    setLogLevel(1);
+    if ((specialOptions_&1024)==0)
+      setLogLevel(1);
+    else
+      setLogLevel(0);
     pinfo.postsolve(true);
     factorization_->areaFactor(model2->factorization()->adjustedAreaFactor());
     time2 = CoinCpuTime();
