@@ -1171,6 +1171,16 @@ to -1 (off)."
     (
      "All solutions must be better than this value (in a minimization sense)."
      );
+  parameters[numberParameters++]=
+    CbcOrClpParam("cuts!OnOff","Switches all cuts on or off",
+		  "off",CUTSSTRATEGY);
+  parameters[numberParameters-1].append("on");
+  parameters[numberParameters-1].append("root");
+  parameters[numberParameters-1].setLonghelp
+    (
+     "This can be used to switch on or off all cuts.  Then you can do \
+individual ones off or on"
+     ); 
 #endif 
   parameters[numberParameters++]=
     CbcOrClpParam("direction","Minimize or Maximize",
@@ -1359,6 +1369,15 @@ give cuts (although in this executable they are limited as to number of variable
     (
      "Switches on a dubious greedy heuristic"
      ); 
+  parameters[numberParameters++]=
+    CbcOrClpParam("heur!isticsOnOff","Switches all heuristics on or off",
+		  "off",HEURISTICSTRATEGY);
+  parameters[numberParameters-1].append("on");
+  parameters[numberParameters-1].setLonghelp
+    (
+     "This can be used to switch on or off all heuristics.  Then you can do \
+individual ones off or on"
+     ); 
 #endif
   parameters[numberParameters++]=
     CbcOrClpParam("help","Print out version, non-standard options and some help",
@@ -1490,7 +1509,7 @@ refactorizations",
   parameters[numberParameters++]=
     CbcOrClpParam("maxIt!erations","Maximum number of iterations before \
 stopping",
-		  0,99999999,MAXITERATION);
+		  0,2147483647,MAXITERATION);
   parameters[numberParameters-1].setLonghelp
     (
      "This can be used for testing purposes.  The corresponding library call\n\
@@ -1501,7 +1520,7 @@ stopping",
 #ifdef COIN_USE_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("maxN!odes","Maximum number of nodes to do",
-		  1,99999999,MAXNODES);
+		  1,2147483647,MAXNODES);
   parameters[numberParameters-1].setLonghelp
     (
      "This is a repeatable way to limit search.  Normally using time is easier \
