@@ -1351,6 +1351,7 @@ ClpSimplexOther::afterCrunch(const ClpSimplex & small,
         } else {
           // has to be basic
           setColumnStatus(iColumn,ClpSimplex::basic);
+          reducedCost_[iColumn] = 0.0;
           double value=0.0;
           for (CoinBigIndex j = columnStart[iColumn];
                j<columnStart[iColumn]+columnLength[iColumn];j++) {
