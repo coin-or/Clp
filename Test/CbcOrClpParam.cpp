@@ -1321,7 +1321,9 @@ no dual infeasibility may exceed this value",
     parameters[numberParameters-1].append("on");
   parameters[numberParameters-1].setLonghelp
     (
-     "This switches on fesaibility pump heuristic at root "
+     "This switches on feasibility pump heuristic at root. This is due to Fischetti and Lodi \
+and uses a sequence of Lps to try and get an integer feasible solution. \
+Some fine tuning is available by passFeasibilityPump."
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("fix!OnDj","Try heuristic based on fixing variables with \
@@ -1479,7 +1481,10 @@ no integer variable may be this away from an integer value",
   parameters[numberParameters-1].append("on");
   parameters[numberParameters-1].setLonghelp
     (
-     "This switches on a local search tree when a solution is found"
+     "This switches on a local search algorithm when a solution is found.  This is from \
+Fischetti and Lodi and is not really a heuristic although it can be used as one. \
+When used from Coin solve it has limited functionality.  It is not switched on when \
+heuristics are switched on."
      ); 
 #endif
 #ifndef COIN_USE_CBC
