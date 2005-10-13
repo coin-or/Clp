@@ -1190,6 +1190,21 @@ to -1 (off)."
      "This can be used to switch on or off all cuts.  Then you can do \
 individual ones off or on"
      ); 
+  parameters[numberParameters++]=
+    CbcOrClpParam("debug!In","read valid solution from file",
+		  DEBUG,false);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "This will read a file from the given file name.  It will use the default\
+ directory given by 'directory'.  A name of '$' will use the previous value for the name.  This\
+ is initialized to '', i.e. it must be set.\n\n\
+If set to create it will create a file called debug.file  after search; if set \
+to createAfterPre it will create one suitable for use after preprocessing.\n\n\
+The idea is that if you suspect a bad cut generator and you did not use preprocessing \
+you can do a good run with debug set to 'create' and then switch on the cuts you suspect and \
+re-run with debug set to 'debug.file'  Similarly if you do use preprocessing but use \
+createAfterPre."
+     ); 
 #endif 
   parameters[numberParameters++]=
     CbcOrClpParam("direction","Minimize or Maximize",
@@ -1727,10 +1742,12 @@ values, 2 saves values, 3 with greater accuracy and 4 in IEEE."
     CbcOrClpParam("preprocess","Whether to use integer preprocessing",
                   "off",PREPROCESS);
   parameters[numberParameters-1].append("on");
+  parameters[numberParameters-1].append("save");
   parameters[numberParameters-1].setLonghelp
     (
      "This tries to reduce size of model in a similar way to presolve and \
-it also tries to strengthen the model - needs more work but can be useful."
+it also tries to strengthen the model - needs more work but can be useful. \
+ Save option saves on file presolved.mps"
      ); 
 #endif
 #ifdef COIN_USE_CLP
@@ -1792,6 +1809,21 @@ costs this much to be infeasible",
 		  0,INT_MAX,PRINTOPTIONS,false);
 #endif
 #ifdef COIN_USE_CBC
+  parameters[numberParameters++]=
+    CbcOrClpParam("printing!Options","Print options",
+		  "normal",INTPRINT);
+  parameters[numberParameters-1].append("integer");
+  parameters[numberParameters-1].append("special");
+  parameters[numberParameters-1].append("rows");
+  parameters[numberParameters-1].append("all");
+  parameters[numberParameters-1].setLonghelp
+    (
+     "normal - nonzero column variables \n\
+integer - nonzero integer column variables\n\
+special - in format suitable for OsiRowCutDebugger\n\
+rows - nonzero column variables and row activities\n\
+all - all column variables and row activities."
+     ); 
   parameters[numberParameters++]=
     CbcOrClpParam("probing!Cuts","Whether to use Probing cuts",
 		  "off",PROBINGCUTS);
