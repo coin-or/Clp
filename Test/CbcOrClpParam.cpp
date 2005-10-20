@@ -1107,6 +1107,7 @@ the main thing is to think about which cuts to apply.  .. expand ..."
 		  "off",CLIQUECUTS);
   parameters[numberParameters-1].append("on");
   parameters[numberParameters-1].append("root");
+  parameters[numberParameters-1].append("ifmove");
   parameters[numberParameters-1].setLonghelp
     (
      "This switches on clique cuts (either at root or in entire tree)"
@@ -1185,9 +1186,10 @@ to -1 (off)."
 		  "off",CUTSSTRATEGY);
   parameters[numberParameters-1].append("on");
   parameters[numberParameters-1].append("root");
+  parameters[numberParameters-1].append("ifmove");
   parameters[numberParameters-1].setLonghelp
     (
-     "This can be used to switch on or off all cuts.  Then you can do \
+     "This can be used to switch on or off all cuts (apart from Reduce and Split).  Then you can do \
 individual ones off or on"
      ); 
   parameters[numberParameters++]=
@@ -1354,6 +1356,7 @@ before branch and bound - use with extreme caution!"
 		    "off",FLOWCUTS);
     parameters[numberParameters-1].append("on");
     parameters[numberParameters-1].append("root");
+    parameters[numberParameters-1].append("ifmove");
   parameters[numberParameters-1].setLonghelp
     (
      "This switches on flow cover cuts (either at root or in entire tree)"
@@ -1380,6 +1383,7 @@ of the objective value at the root node then the search will terminate"
 		  "off",GOMORYCUTS);
   parameters[numberParameters-1].append("on");
   parameters[numberParameters-1].append("root");
+  parameters[numberParameters-1].append("ifmove");
   parameters[numberParameters-1].setLonghelp
     (
      "The original cuts - beware of imitations!  Having gone out of favo(u)r, they are now more \
@@ -1486,6 +1490,7 @@ no integer variable may be this away from an integer value",
 		  "off",KNAPSACKCUTS);
   parameters[numberParameters-1].append("on");
   parameters[numberParameters-1].append("root");
+  parameters[numberParameters-1].append("ifmove");
   parameters[numberParameters-1].setLonghelp
     (
      "This switches on knapsack cuts (either at root or in entire tree)"
@@ -1572,6 +1577,7 @@ You can also use the parameters 'direction minimize'."
 		  "off",MIXEDCUTS);
   parameters[numberParameters-1].append("on");
   parameters[numberParameters-1].append("root");
+  parameters[numberParameters-1].append("ifmove");
   parameters[numberParameters-1].setLonghelp
     (
      "This switches on mixed integer rounding cuts (either at root or in entire tree)"
@@ -1671,6 +1677,14 @@ specialized network code."
 values, 2 saves values, 3 with greater accuracy and 4 in IEEE."
      );
 #ifdef COIN_USE_CBC
+  parameters[numberParameters++]=
+    CbcOrClpParam("passC!uts","Number of cut passes at root node",
+		  -999999,999999,CUTPASS);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "The default is 100 passes if less than 500 columns, 100 passes (but \
+stop if drop small if less than 5000 columns, 20 otherwise"
+     ); 
   parameters[numberParameters++]=
     CbcOrClpParam("passF!easibilityPump","How many passes in feasibility pump",
 		  0,10000,FPUMPITS);
@@ -1829,6 +1843,7 @@ all - all column variables and row activities."
 		  "off",PROBINGCUTS);
   parameters[numberParameters-1].append("on");
   parameters[numberParameters-1].append("root");
+  parameters[numberParameters-1].append("ifmove");
   parameters[numberParameters-1].setLonghelp
     (
      "This switches on probing cuts (either at root or in entire tree)"
@@ -1852,6 +1867,7 @@ all - all column variables and row activities."
 	      "off",REDSPLITCUTS);
     parameters[numberParameters-1].append("on");
     parameters[numberParameters-1].append("root");
+    parameters[numberParameters-1].append("ifmove");
   parameters[numberParameters-1].setLonghelp
     (
      "This switches on reduce and split  cuts (either at root or in entire tree)"
@@ -2063,6 +2079,7 @@ trust the pseudo costs and do not do any more strong branching."
 		  "off",TWOMIRCUTS);
   parameters[numberParameters-1].append("on");
   parameters[numberParameters-1].append("root");
+  parameters[numberParameters-1].append("ifmove");
   parameters[numberParameters-1].setLonghelp
     (
      "This switches on two phase mixed integer rounding  cuts (either at root or in entire tree)"
