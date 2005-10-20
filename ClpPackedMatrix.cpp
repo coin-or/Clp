@@ -1718,7 +1718,7 @@ ClpPackedMatrix::fillBasis(ClpSimplex * model,
 int 
 ClpPackedMatrix::scale(ClpModel * model) const 
 {
-  int numberRows = model->numberRows();
+  int numberRows = model->numberRows(); 
   int numberColumns = matrix_->getNumCols();
   // If empty - return as sanityCheck will trap
   if (!numberRows||!numberColumns)

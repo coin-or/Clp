@@ -2950,7 +2950,7 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
       iFlip = 1-iFlip;
     }
     
-#define MINIMUMTHETA 1.0e-12
+#define MINIMUMTHETA 1.0e-18
     // Movement should be minimum for anti-degeneracy - unless
     // fixed variable out
     double minimumTheta;
@@ -2969,8 +2969,9 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
       sequenceIn_ = indices[iFlip][sequenceIn_];
       oldValue = dj_[sequenceIn_];
       theta_ = CoinMax(oldValue/alpha_,0.0);
-      if (theta_<minimumTheta&&fabs(alpha_)<1.0e5&&0) {
+      if (theta_<minimumTheta&&fabs(alpha_)<1.0e5&&1) {
 	// can't pivot to zero
+#if 0
 	if (oldValue-minimumTheta*alpha_>=-dualTolerance_) {
 	  theta_=minimumTheta;
 	} else if (oldValue-minimumTheta*alpha_>=-newTolerance) {
@@ -2979,7 +2980,10 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 	} else {
 	  theta_=CoinMax((oldValue+newTolerance)/alpha_,0.0);
 	  thisIncrease=true;
-	} 
+	}
+#else
+        theta_=minimumTheta;
+#endif 
       }
       // may need to adjust costs so all dual feasible AND pivoted is exactly 0
       //int costOffset = numberRows_+numberColumns_;
