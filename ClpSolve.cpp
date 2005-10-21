@@ -691,6 +691,17 @@ ClpSimplex::initialSolve(ClpSolve & options)
           if(numberRows*8>numberColumns)
             doSprint=0; // switch off sprint
         }
+        // switch off sprint or idiot if any free variable
+	int iColumn;
+	double * columnLower = model2->columnLower();
+	double * columnUpper = model2->columnUpper();
+	for (iColumn=0;iColumn<numberColumns;iColumn++) {
+          if (columnLower[iColumn]<-1.0e10&&columnUpper[iColumn]>1.0e10) {
+            doSprint=0;
+            doIdiot=0;
+            break;
+          }
+        }
         int nPasses=0;
         // look at rhs
         int iRow;
