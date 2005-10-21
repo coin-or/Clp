@@ -1197,7 +1197,7 @@ individual ones off or on"
 		  DEBUG,false);
   parameters[numberParameters-1].setLonghelp
     (
-     "This will read a file from the given file name.  It will use the default\
+     "This will read a solution file from the given file name.  It will use the default\
  directory given by 'directory'.  A name of '$' will use the previous value for the name.  This\
  is initialized to '', i.e. it must be set.\n\n\
 If set to create it will create a file called debug.file  after search; if set \
@@ -1205,7 +1205,7 @@ to createAfterPre it will create one suitable for use after preprocessing.\n\n\
 The idea is that if you suspect a bad cut generator and you did not use preprocessing \
 you can do a good run with debug set to 'create' and then switch on the cuts you suspect and \
 re-run with debug set to 'debug.file'  Similarly if you do use preprocessing but use \
-createAfterPre."
+createAfterPre.  The create case has same effect as saveSolution."
      ); 
 #endif 
   parameters[numberParameters++]=
@@ -1911,7 +1911,7 @@ all - all column variables and row activities."
      ); 
 #endif
   parameters[numberParameters++]=
-    CbcOrClpParam("save!Model","Save model to binary file",
+    CbcOrClpParam("saveM!odel","Save model to binary file",
 		  SAVE);
   parameters[numberParameters-1].setLonghelp
     (
@@ -1919,6 +1919,17 @@ all - all column variables and row activities."
  by restoreModel.  It will use the default\
  directory given by 'directory'.  A name of '$' will use the previous value for the name.  This\
  is initialized to 'default.prob'."
+     ); 
+  parameters[numberParameters++]=
+    CbcOrClpParam("saveS!olution","saves solution to file",
+		  SAVESOL);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "This will write a binary solution file to the given file name.  It will use the default\
+ directory given by 'directory'.  A name of '$' will use the previous value for the name.  This\
+ is initialized to 'solution.file'.  To read the file use fread(int) twice to pick up number of rows \
+and columns, then fread(double) to pick up objective value, then pick up row activities, row duals, column \
+activities and reduced costs - see bottom of CbcOrClpParam.cpp for code that writes file."
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("scal!ing","Whether to scale problem",
@@ -2106,3 +2117,28 @@ int whichParam (CbcOrClpParameterType name,
   assert (i<numberParameters);
   return i;
 }
+// Dump a solution to file
+void saveSolution(const ClpSimplex * lpSolver,std::string fileName)
+{
+  FILE * fp=fopen(fileName.c_str(),"wb");
+  if (fp) {
+    int numberRows=lpSolver->numberRows();
+    int numberColumns=lpSolver->numberColumns();
+    double objectiveValue = lpSolver->objectiveValue();
+    fwrite(&numberRows,sizeof(int),1,fp);
+    fwrite(&numberColumns,sizeof(int),1,fp);
+    fwrite(&objectiveValue,sizeof(double),1,fp);
+    double * dualRowSolution = lpSolver->dualRowSolution();
+    double * primalRowSolution = lpSolver->primalRowSolution();
+    fwrite(primalRowSolution,sizeof(double),numberRows,fp);
+    fwrite(dualRowSolution,sizeof(double),numberRows,fp);
+    double * dualColumnSolution = lpSolver->dualColumnSolution();
+    double * primalColumnSolution = lpSolver->primalColumnSolution();
+    fwrite(primalColumnSolution,sizeof(double),numberColumns,fp);
+    fwrite(dualColumnSolution,sizeof(double),numberColumns,fp);
+    fclose(fp);
+  } else {
+    std::cout<<"Unable to open file "<<fileName<<std::endl;
+  }
+}
+

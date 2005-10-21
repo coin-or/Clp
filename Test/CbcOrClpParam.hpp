@@ -72,7 +72,7 @@ enum CbcOrClpParameterType
     TWOMIRCUTS,PREPROCESS,FPUMP,GREEDY,COMBINE,LOCALTREE,INTPRINT,
     
     DIRECTORY=301,IMPORT,EXPORT,RESTORE,SAVE,DUALSIMPLEX,PRIMALSIMPLEX,EITHERSIMPLEX,
-    MAXIMIZE,MINIMIZE,EXIT,STDIN,UNITTEST,NETLIB_EITHER,NETLIB_DUAL,NETLIB_PRIMAL,SOLUTION,
+    MAXIMIZE,MINIMIZE,EXIT,STDIN,UNITTEST,NETLIB_EITHER,NETLIB_DUAL,NETLIB_PRIMAL,SOLUTION,SAVESOL,
     TIGHTEN,FAKEBOUND,HELP,PLUSMINUS,NETWORK,ALLSLACK,REVERSE,BARRIER,NETLIB_BARRIER,NETLIB_TUNE,
     REALLY_SCALE,BASISIN,BASISOUT,SOLVECONTINUOUS,CLEARCUTS,VERSION,STATISTICS,DEBUG,
 
@@ -261,4 +261,6 @@ void establishParams (int &numberParameters, CbcOrClpParam *const parameters);
 // Given a parameter type - returns its number in list
 int whichParam (CbcOrClpParameterType name, 
 		int numberParameters, CbcOrClpParam *const parameters);
+// Dump a solution to file
+void saveSolution(const ClpSimplex * lpSolver,std::string fileName);
 #endif	/* CbcOrClpParam_H */
