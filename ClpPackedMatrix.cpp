@@ -429,10 +429,17 @@ ClpPackedMatrix::transposeTimes(const ClpSimplex * model, double scalar,
       int i;
       if (!rowScale) {
 	// modify pi so can collapse to one loop
-	for (i=0;i<numberInRowArray;i++) {
-	  int iRow = whichRow[i];
-	  pi[iRow]=scalar*piOld[i];
-	}
+        if (scalar==-1.0) {
+          for (i=0;i<numberInRowArray;i++) {
+            int iRow = whichRow[i];
+            pi[iRow]=-piOld[i];
+          }
+        } else {
+          for (i=0;i<numberInRowArray;i++) {
+            int iRow = whichRow[i];
+            pi[iRow]=scalar*piOld[i];
+          }
+        }
 	for (iColumn=0;iColumn<numberActiveColumns_;iColumn++) {
 	  double value = 0.0;
 	  CoinBigIndex j;
@@ -449,10 +456,17 @@ ClpPackedMatrix::transposeTimes(const ClpSimplex * model, double scalar,
       } else {
 	// scaled
 	// modify pi so can collapse to one loop
-	for (i=0;i<numberInRowArray;i++) {
-	  int iRow = whichRow[i];
-	  pi[iRow]=scalar*piOld[i]*rowScale[iRow];
-	}
+        if (scalar==-1.0) {
+          for (i=0;i<numberInRowArray;i++) {
+            int iRow = whichRow[i];
+            pi[iRow]=-piOld[i]*rowScale[iRow];
+          }
+        } else {
+          for (i=0;i<numberInRowArray;i++) {
+            int iRow = whichRow[i];
+            pi[iRow]=scalar*piOld[i]*rowScale[iRow];
+          }
+        }
 	for (iColumn=0;iColumn<numberActiveColumns_;iColumn++) {
 	  double value = 0.0;
 	  CoinBigIndex j;
@@ -490,20 +504,6 @@ ClpPackedMatrix::transposeTimes(const ClpSimplex * model, double scalar,
 	      array[iColumn]=-value;
 	    }
 	  }
-	} else if (scalar==1.0) {
-	  for (iColumn=0;iColumn<numberActiveColumns_;iColumn++) {
-	    double value = 0.0;
-	    CoinBigIndex j;
-	    for (j=columnStart[iColumn];
-		 j<columnStart[iColumn]+columnLength[iColumn];j++) {
-	      int iRow = row[j];
-	      value += pi[iRow]*elementByColumn[j];
-	    }
-	    if (fabs(value)>zeroTolerance) {
-	      index[numberNonZero++]=iColumn;
-	      array[iColumn]=value;
-	    }
-	  }
 	} else {
 	  for (iColumn=0;iColumn<numberActiveColumns_;iColumn++) {
 	    double value = 0.0;
@@ -536,22 +536,6 @@ ClpPackedMatrix::transposeTimes(const ClpSimplex * model, double scalar,
 	    if (fabs(value)>zeroTolerance) {
 	      index[numberNonZero++]=iColumn;
 	      array[iColumn]=-value;
-	    }
-	  }
-	} else if (scalar==1.0) {
-	  for (iColumn=0;iColumn<numberActiveColumns_;iColumn++) {
-	    double value = 0.0;
-	    CoinBigIndex j;
-	    const double * columnScale = model->columnScale();
-	    for (j=columnStart[iColumn];
-		 j<columnStart[iColumn]+columnLength[iColumn];j++) {
-	      int iRow = row[j];
-	      value += pi[iRow]*elementByColumn[j]*rowScale[iRow];
-	    }
-	    value *= columnScale[iColumn];
-	    if (fabs(value)>zeroTolerance) {
-	      index[numberNonZero++]=iColumn;
-	      array[iColumn]=value;
 	    }
 	  }
 	} else {
@@ -634,9 +618,16 @@ ClpPackedMatrix::transposeTimesByColumn(const ClpSimplex * model, double scalar,
     int i;
     if (!rowScale) {
       // modify pi so can collapse to one loop
-      for (i=0;i<numberInRowArray;i++) {
-	int iRow = whichRow[i];
-	pi[iRow]=scalar*piOld[i];
+      if (scalar==-1.0) {
+        for (i=0;i<numberInRowArray;i++) {
+          int iRow = whichRow[i];
+          pi[iRow]=-piOld[i];
+        }
+      } else {
+        for (i=0;i<numberInRowArray;i++) {
+          int iRow = whichRow[i];
+          pi[iRow]=scalar*piOld[i];
+        }
       }
       double value = 0.0;
       CoinBigIndex j;
@@ -665,9 +656,16 @@ ClpPackedMatrix::transposeTimesByColumn(const ClpSimplex * model, double scalar,
     } else {
       // scaled
       // modify pi so can collapse to one loop
-      for (i=0;i<numberInRowArray;i++) {
-	int iRow = whichRow[i];
-	pi[iRow]=scalar*piOld[i]*rowScale[iRow];
+      if (scalar==-1.0) {
+        for (i=0;i<numberInRowArray;i++) {
+          int iRow = whichRow[i];
+          pi[iRow]=-piOld[i]*rowScale[iRow];
+        }
+      } else {
+        for (i=0;i<numberInRowArray;i++) {
+          int iRow = whichRow[i];
+          pi[iRow]=scalar*piOld[i]*rowScale[iRow];
+        }
       }
       const double * columnScale = model->columnScale();
       double value = 0.0;
@@ -736,31 +734,6 @@ ClpPackedMatrix::transposeTimesByColumn(const ClpSimplex * model, double scalar,
 	  array[iColumn]=-value;
 	  index[numberNonZero++]=iColumn;
 	}
-      } else if (scalar==1.0) {
-	double value = 0.0;
-	CoinBigIndex j;
-	CoinBigIndex end = columnStart[1];
-	for (j=columnStart[0]; j<end;j++) {
-	  int iRow = row[j];
-	  value += pi[iRow]*elementByColumn[j];
-	}
-	for (iColumn=0;iColumn<numberActiveColumns_-1;iColumn++) {
-	  CoinBigIndex start = end;
-	  end = columnStart[iColumn+2];
-	  if (fabs(value)>zeroTolerance) {
-	    array[iColumn]=value;
-	    index[numberNonZero++]=iColumn;
-	  }
-	  value = 0.0;
-	  for (j=start; j<end;j++) {
-	    int iRow = row[j];
-	    value += pi[iRow]*elementByColumn[j];
-	  }
-	}
-	if (fabs(value)>zeroTolerance) {
-	  array[iColumn]=value;
-	  index[numberNonZero++]=iColumn;
-	}
       } else {
 	double value = 0.0;
 	CoinBigIndex j;
@@ -819,36 +792,6 @@ ClpPackedMatrix::transposeTimesByColumn(const ClpSimplex * model, double scalar,
 	value *= scale;
 	if (fabs(value)>zeroTolerance) {
 	  array[iColumn]=-value;
-	  index[numberNonZero++]=iColumn;
-	}
-      } else if (scalar==1.0) {
-	const double * columnScale = model->columnScale();
-	double value = 0.0;
-	double scale=columnScale[0];
-	CoinBigIndex j;
-	CoinBigIndex end = columnStart[1];
-	for (j=columnStart[0]; j<end;j++) {
-	  int iRow = row[j];
-	  value += pi[iRow]*elementByColumn[j]*rowScale[iRow];
-	}
-	for (iColumn=0;iColumn<numberActiveColumns_-1;iColumn++) {
-	  value *= scale;
-	  CoinBigIndex start = end;
-	  end = columnStart[iColumn+2];
-	  scale = columnScale[iColumn+1];
-	  if (fabs(value)>zeroTolerance) {
-	    array[iColumn]=value;
-	    index[numberNonZero++]=iColumn;
-	  }
-	  value = 0.0;
-	  for (j=start; j<end;j++) {
-	    int iRow = row[j];
-	    value += pi[iRow]*elementByColumn[j]*rowScale[iRow];
-	  }
-	}
-	value *= scale;
-	if (fabs(value)>zeroTolerance) {
-	  array[iColumn]=value;
 	  index[numberNonZero++]=iColumn;
 	}
       } else {
