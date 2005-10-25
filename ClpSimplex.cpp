@@ -3059,7 +3059,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
         // clean solution trusting basis
         for ( i=0;i<numberTotal;i++) {
           Status status =getStatus(i);
-          double value=0.0;
+          double value=solution_[i]; // may as well leave if basic (values pass)
           if (status!=basic) {
             if (upper_[i]==lower_[i]) {
               setStatus(i,isFixed);
@@ -4334,6 +4334,8 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
       intParam_[ClpMaxNumIteration] = numberIterations_ + 1000 + 2*numberRows_+numberColumns_;
     // check which algorithms allowed
     int dummy;
+    if (problemStatus_==10)
+      startFinishOptions |= 2;
     if ((matrix_->generalExpanded(this,4,dummy)&1)!=0)
       returnCode = ((ClpSimplexPrimal *) this)->primal(1,startFinishOptions);
     else

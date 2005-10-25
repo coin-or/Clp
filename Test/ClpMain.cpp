@@ -98,6 +98,7 @@ int main (int argc, const char *argv[])
     std::string saveFile ="default.prob";
     std::string restoreFile ="default.prob";
     std::string solutionFile ="stdout";
+    std::string solutionSaveFile ="solution.file";
     CbcOrClpParam parameters[CBCMAXPARAMETERS];
     int numberParameters ;
     establishParams(numberParameters,parameters) ;
@@ -121,6 +122,7 @@ int main (int argc, const char *argv[])
     parameters[whichParam(SAVE,numberParameters,parameters)].setStringValue(saveFile);
     parameters[whichParam(TIMELIMIT,numberParameters,parameters)].setDoubleValue(models->maximumSeconds());
     parameters[whichParam(SOLUTION,numberParameters,parameters)].setStringValue(solutionFile);
+    parameters[whichParam(SAVESOL,numberParameters,parameters)].setStringValue(solutionSaveFile);
     parameters[whichParam(SPRINT,numberParameters,parameters)].setIntValue(doSprint);
     parameters[whichParam(SUBSTITUTION,numberParameters,parameters)].setIntValue(substitution);
     parameters[whichParam(DUALIZE,numberParameters,parameters)].setIntValue(dualize);
@@ -1441,6 +1443,39 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 	      } else {
 		std::cout<<"Unable to open file "<<fileName<<std::endl;
 	      }
+	    } else {
+	      std::cout<<"** Current model not valid"<<std::endl;
+	      
+	    }
+	    break;
+	  case SAVESOL:
+	    if (goodModels[iModel]) {
+	      // get next field
+	      field = CoinReadGetString(argc,argv);
+	      if (field=="$") {
+		field = parameters[iParam].stringValue();
+	      } else if (field=="EOL") {
+		parameters[iParam].printString();
+		break;
+	      } else {
+		parameters[iParam].setStringValue(field);
+	      }
+	      std::string fileName;
+              if (field[0]=='/'||field[0]=='\\') {
+                fileName = field;
+              } else if (field[0]=='~') {
+                char * environ = getenv("HOME");
+                if (environ) {
+                  std::string home(environ);
+                  field=field.erase(0,1);
+                  fileName = home+field;
+                } else {
+                  fileName=field;
+                }
+              } else {
+                fileName = directory+field;
+              }
+              saveSolution(models+iModel,fileName);
 	    } else {
 	      std::cout<<"** Current model not valid"<<std::endl;
 	      

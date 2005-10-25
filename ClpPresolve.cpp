@@ -419,7 +419,6 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
   paction_ = 0;
 
   prob->status_=0; // say feasible
-
   paction_ = make_fixed(prob, paction_);
   // if integers then switch off dual stuff
   // later just do individually

@@ -450,6 +450,8 @@ ClpSimplexDual::dual(int ifValuesPass,int startFinishOptions)
   
   if (!returnCode)
     gutsOfDual(ifValuesPass,saveDuals,initialStatus,data);
+  if (problemStatus_==10)
+    startFinishOptions |= 1;
   finishSolve(startFinishOptions);
   delete [] saveDuals;
   
@@ -3734,7 +3736,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	//delete [] xsolution;
 #endif
 	// put back bounds as they were if was optimal
-	if (doOriginalTolerance==2) {
+	if (doOriginalTolerance==2&&cleanDuals!=2) {
 	  changeMade_++; // say something changed
 	  /* We may have already changed some bounds in this function
 	     so save numberFake_ and add in.
@@ -3837,7 +3839,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	// iterate
 	if (cleanDuals!=2) 
 	  problemStatus_=-1;
-	else
+        else 
 	  problemStatus_ = 10; // try primal
       }
     }
