@@ -2038,6 +2038,14 @@ the main thing is to think about which cuts to apply.  .. expand ..."
      ); 
 #ifdef COIN_USE_CBC
   parameters[numberParameters++]=
+    CbcOrClpParam("strengthen","Create strengthened problem",
+		  STRENGTHEN);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "This creates a new problem by applying the root node cuts.  All tight constraints \
+will be in resulting problem"
+     ); 
+  parameters[numberParameters++]=
     CbcOrClpParam("strong!Branching","Number of variables to look at in strong branching",
 		  0,999999,STRONGBRANCHING);
   parameters[numberParameters-1].setLonghelp
@@ -2077,7 +2085,7 @@ activity at continuous solution",
 #ifdef COIN_USE_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("trust!PseudoCosts","Number of branches before we trust pseudocosts",
-		  0,999999,NUMBERBEFORE);
+		  -1,2000000,NUMBERBEFORE);
   parameters[numberParameters-1].setLonghelp
     (
      "Using strong branching computes pseudo-costs.  After this many time sfor a variable we just \
