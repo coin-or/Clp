@@ -704,6 +704,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
 			 rowLower,rowUpper,rowObjective);
     solution.primal();
   }
+#ifndef COIN_NO_CLP_MESSAGE
   {    
     CoinMpsIO m;
     std::string fn = mpsDir+"exmip1";
@@ -771,6 +772,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
       }
     }
   }
+#endif
   // Test dual ranging
   {    
     CoinMpsIO m;
