@@ -821,7 +821,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
   double trueInfeasibility =nonLinearCost_->sumInfeasibilities();
   if (!nonLinearCost_->numberInfeasibilities()&&infeasibilityCost_==1.0e10&&!ifValuesPass) {
     // relax if default
-    infeasibilityCost_ = CoinMin(100.0*sumDualInfeasibilities_,1.0e7);
+    infeasibilityCost_ = CoinMin(CoinMax(100.0*sumDualInfeasibilities_,1.0e4),1.0e7);
     trueInfeasibility = 1.123456e10;
   }
   if (trueInfeasibility>1.0) {
