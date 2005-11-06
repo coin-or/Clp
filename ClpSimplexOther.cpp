@@ -1066,6 +1066,10 @@ ClpSimplexOther::crunch(double * rhs, int * whichRow, int * whichColumn,
   if (!returnCode) {
     small = new ClpSimplex(this,numberRows2,whichRow,
                      numberColumns2,whichColumn,true,false);
+    // If no rows left then no tightening!
+    if (!numberRows2||!numberColumns2) 
+      tightenBounds=false;
+
     int numberElements=getNumElements();
     int numberElements2=small->getNumElements();
     small->setObjectiveOffset(objectiveOffset()-offset);
@@ -1164,7 +1168,7 @@ ClpSimplexOther::crunch(double * rhs, int * whichRow, int * whichColumn,
     if (returnCode) {
       delete small;
       small=NULL;
-    } else if (tightenBounds) {
+    } else if (tightenBounds&&integerInformation) {
       // See if we can tighten any bounds
       // use rhs for upper and small duals for lower
       double * up = rhs;
