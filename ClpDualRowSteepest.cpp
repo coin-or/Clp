@@ -40,14 +40,15 @@ ClpDualRowSteepest::ClpDualRowSteepest (const ClpDualRowSteepest & rhs)
   persistence_ = rhs.persistence_;
   model_ = rhs.model_;
   if ((model_&&model_->whatsChanged()&1)!=0) {
+    int number = model_->numberRows();
+    if (rhs.savedWeights_) 
+      number = CoinMin(number,rhs.savedWeights_->capacity());
     if (rhs.infeasible_) {
       infeasible_= new CoinIndexedVector(rhs.infeasible_);
     } else {
       infeasible_=NULL;
     }
     if (rhs.weights_) {
-      assert(model_);
-      int number = model_->numberRows();
       weights_= new double[number];
       ClpDisjointCopyN(rhs.weights_,number,weights_);
     } else {
@@ -109,14 +110,16 @@ ClpDualRowSteepest::operator=(const ClpDualRowSteepest& rhs)
     delete infeasible_;
     delete alternateWeights_;
     delete savedWeights_;
+    assert(model_);
+    int number = model_->numberRows();
+    if (rhs.savedWeights_) 
+      number = CoinMin(number,rhs.savedWeights_->capacity());
     if (rhs.infeasible_!=NULL) {
       infeasible_= new CoinIndexedVector(rhs.infeasible_);
     } else {
       infeasible_=NULL;
     }
     if (rhs.weights_!=NULL) {
-      assert(model_);
-      int number = model_->numberRows();
       weights_= new double[number];
       ClpDisjointCopyN(rhs.weights_,number,weights_);
     } else {
