@@ -8,7 +8,9 @@
 #include <cmath>
 #include <vector>
 #include <string>
-
+#ifndef COIN_USE_CLP
+#define COIN_USE_CLP
+#endif
 #include "ClpMatrixBase.hpp"
 #include "CoinMessageHandler.hpp"
 #include "ClpParameters.hpp"
