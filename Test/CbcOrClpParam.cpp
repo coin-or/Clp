@@ -735,6 +735,10 @@ CbcOrClpParam::setIntParameter (CbcModel &model,int value)
       oldValue=model.numberBeforeTrust();
       model.setNumberBeforeTrust(value);
       break;
+    case NUMBERANALYZE:
+      oldValue=model.numberAnalyzeIterations();
+      model.setNumberAnalyzeIterations(value);
+      break;
     default:
       oldValue=0; // to avoid compiler message
       break;
@@ -763,6 +767,9 @@ CbcOrClpParam::intParameter (CbcModel &model) const
     break;
   case NUMBERBEFORE:
     value=model.numberBeforeTrust();
+    break;
+  case NUMBERANALYZE:
+    value=model.numberAnalyzeIterations();
     break;
   default:
     abort();
@@ -1654,6 +1661,16 @@ with University of Florida ordering."
  comes from using a network factorization.  It will probably not be as fast as a \
 specialized network code."
      ); 
+#ifdef COIN_USE_CBC
+  parameters[numberParameters++]=
+    CbcOrClpParam("numberA!nalyze","Number of analysis iterations",
+		  -INT_MAX,INT_MAX,NUMBERANALYZE,false);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "This says how many iterations to spend at root node analyzing problem. \
+This is a first try and will hopefully become more sophisticated."
+     ); 
+#endif
   parameters[numberParameters++]=
     CbcOrClpParam("objective!Scale","Scale factor to apply to objective",
 		  -1.0e20,1.0e20,OBJSCALE,false);
