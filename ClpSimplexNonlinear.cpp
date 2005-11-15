@@ -2659,7 +2659,7 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
     delete [] listNonLinearColumn;
     return 0;
   }
-
+  algorithm_=1;
   int jNon;
   int * last[3];
   
@@ -3211,6 +3211,7 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
       if (saveLogLevel==1)
 	setLogLevel(0);
       ClpSimplex::primal(1);
+      algorithm_=1;
       setLogLevel(saveLogLevel);
 #ifdef CLP_DEBUG
       if (this->status()) {

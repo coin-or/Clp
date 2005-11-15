@@ -5,7 +5,6 @@
 //#undef NDEBUG
 
 #include "CoinPragma.hpp"
-
 #include <math.h>
 
 #if SLIM_CLP==2
@@ -8433,4 +8432,21 @@ ClpSimplex::deleteAuxiliaryModel()
 {
   delete auxiliaryModel_;
   auxiliaryModel_=NULL;
+}
+// Compute objective value from solution
+void
+ClpSimplex::computeObjectiveValue()
+{
+  int iSequence;
+  //double oldObj = objectiveValue_;
+  objectiveValue_ = 0.0;
+  const double * obj = objective();
+  for (iSequence=0;iSequence<numberColumns_;iSequence++) {
+    double value = columnActivity_[iSequence];
+    objectiveValue_ += value*obj[iSequence];
+  }
+  //if (fabs(objectiveValue_-oldObj)>1.0e-1) {
+  //if(problemStatus_!=3) printf("XX ");;
+  //printf("obj %g - was %g\n",objectiveValue(),objectiveValue()+(objectiveValue_-oldObj));
+  //}
 }

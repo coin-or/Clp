@@ -904,6 +904,8 @@ public:
   /// Raw objective value (so always minimize in primal)
   inline double rawObjectiveValue() const
   { return objectiveValue_;};
+   /// Compute objective value from solution and put in objectiveValue_
+  void computeObjectiveValue();
   /** Number of extra rows.  These are ones which will be dynamically created
       each iteration.  This is for GUB but may have other uses.
   */
