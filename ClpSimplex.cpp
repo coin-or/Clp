@@ -3657,7 +3657,7 @@ ClpSimplex::deleteRim(int getRidOfFactorizationData)
     matrix_=auxiliaryModel_->matrix_;
     auxiliaryModel_->matrix_=temp;
     assert ((auxiliaryModel_->specialOptions_&16+32)==16+32);
-    if (problemStatus_!=1) {
+    if (problemStatus_!=1&&problemStatus_!=10) {
       int i;
       if (auxiliaryModel_->rowScale_) {
         const double * scale = auxiliaryModel_->columnScale_;
@@ -3684,6 +3684,51 @@ ClpSimplex::deleteRim(int getRidOfFactorizationData)
         // and modify reduced costs
         for (i=0;i<numberColumns_;i++) 
           reducedCost_[i] *= optimizationDirection_;
+      }
+    } else if (problemStatus_==10) {
+      int i;
+      if (auxiliaryModel_->rowScale_) {
+        const double * scale = auxiliaryModel_->columnScale_;
+        const double * inverseScale = scale + numberColumns_;
+        for (i=0;i<numberColumns_;i++) {
+          double lower = auxiliaryModel_->columnLowerWork_[i];
+          double upper = auxiliaryModel_->columnUpperWork_[i];
+          double value = auxiliaryModel_->columnActivityWork_[i];
+          if (value>lower&&value<upper) {
+            upperOut_ = CoinMax(upperOut_,CoinMin(value-lower,upper-value));
+          }
+          columnActivity_[i] = value*scale[i];
+        }
+        scale = auxiliaryModel_->rowScale_;
+        inverseScale = scale + numberRows_;
+        for (i=0;i<numberRows_;i++) {
+          double lower = auxiliaryModel_->rowLowerWork_[i];
+          double upper = auxiliaryModel_->rowUpperWork_[i];
+          double value = auxiliaryModel_->rowActivityWork_[i];
+          if (value>lower&&value<upper) {
+            upperOut_ = CoinMax(upperOut_,CoinMin(value-lower,upper-value));
+          }
+          rowActivity_[i] = auxiliaryModel_->rowActivityWork_[i]*inverseScale[i];
+        }
+      } else {
+        for (i=0;i<numberColumns_;i++) {
+          double lower = auxiliaryModel_->columnLowerWork_[i];
+          double upper = auxiliaryModel_->columnUpperWork_[i];
+          double value = auxiliaryModel_->columnActivityWork_[i];
+          if (value>lower&&value<upper) {
+            upperOut_ = CoinMax(upperOut_,CoinMin(value-lower,upper-value));
+          }
+          columnActivity_[i] = value;
+        }
+        for (i=0;i<numberRows_;i++) {
+          double lower = auxiliaryModel_->rowLowerWork_[i];
+          double upper = auxiliaryModel_->rowUpperWork_[i];
+          double value = auxiliaryModel_->rowActivityWork_[i];
+          if (value>lower&&value<upper) {
+            upperOut_ = CoinMax(upperOut_,CoinMin(value-lower,upper-value));
+          }
+          rowActivity_[i] = value;
+        }
       }
     }
   }
@@ -4429,7 +4474,7 @@ int ClpSimplex::primal (int ifValuesPass , int startFinishOptions)
     if ((matrix_->generalExpanded(this,4,dummy)&2)!=0&&(specialOptions_&8192)==0) {
       double saveBound = dualBound_;
       // upperOut_ has largest away from bound
-      dualBound_=CoinMin(2.0*upperOut_,dualBound_);
+      dualBound_=CoinMin(CoinMax(2.0*upperOut_,1.0e3),dualBound_);
       returnCode = ((ClpSimplexDual *) this)->dual(0,startFinishOptions);
       dualBound_=saveBound;
     } else {
