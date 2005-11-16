@@ -4474,7 +4474,7 @@ int ClpSimplex::primal (int ifValuesPass , int startFinishOptions)
     if ((matrix_->generalExpanded(this,4,dummy)&2)!=0&&(specialOptions_&8192)==0) {
       double saveBound = dualBound_;
       // upperOut_ has largest away from bound
-      dualBound_=CoinMin(CoinMax(2.0*upperOut_,1.0e3),dualBound_);
+      dualBound_=CoinMin(CoinMax(2.0*upperOut_,1.0e8),dualBound_);
       returnCode = ((ClpSimplexDual *) this)->dual(0,startFinishOptions);
       dualBound_=saveBound;
     } else {
