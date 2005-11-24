@@ -1775,6 +1775,7 @@ stop if drop small if less than 5000 columns, 20 otherwise"
   parameters[numberParameters-1].append("on");
   parameters[numberParameters-1].append("save");
   parameters[numberParameters-1].append("equal");
+  parameters[numberParameters-1].append("sos");
   parameters[numberParameters-1].setLonghelp
     (
      "This tries to reduce size of model in a similar way to presolve and \
