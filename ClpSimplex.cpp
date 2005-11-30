@@ -6276,6 +6276,7 @@ int ClpSimplex::pivot()
   assert(fabs(dualOut_)<1.0e-6);
   bool roundAgain = true;
   int returnCode=0;
+  bool updateSolution=true;
   while (roundAgain) {
     roundAgain=false;
     unpack(rowArray_[1]);
@@ -6308,15 +6309,18 @@ int ClpSimplex::pivot()
       // set directionIn_ correctly
       directionIn_ = (movement>0) ? 1 :-1;
     }
+    theta_ = movement;
+    double oldValueIn = valueIn_;
     // update primal solution
     for (i=0;i<number;i++) {
       int ii = index[i];
       // get column
       int ij = pivotVariable_[ii];
-      solution_[ij] -= movement*element[ii];
-      element[ii]=0.0;
+      double value=element[ii];
+      element[ii]= solution_[ij];
+      solution_[ij] -= movement*value;
     }
-    rowArray_[1]->setNumElements(0);
+    //rowArray_[1]->setNumElements(0);
     // see where something went to
     if (sequenceOut_<0) {
       if (directionIn_<0) {
@@ -6381,6 +6385,11 @@ int ClpSimplex::pivot()
 						     pivotRow_,
 						     alpha_);
     bool takePivot=true;
+    // See if Factorization updated
+    if (updateStatus) { 
+      updateSolution=false;
+      returnCode=-1;
+    }
     // if no pivots, bad update but reasonable alpha - take and invert
     if (updateStatus==2&&
 	lastGoodIteration_==numberIterations_&&fabs(alpha_)>1.0e-5)
@@ -6391,12 +6400,29 @@ int ClpSimplex::pivot()
 	returnCode=-1;
       }
     } else if (updateStatus==2) {
-      // major error
-      rowArray_[1]->clear();
+      // major error - put back solution
+      valueIn_=oldValueIn;
+      solution_[sequenceIn_]=valueIn_;
+      int * index = rowArray_[1]->getIndices();
+      int number = rowArray_[1]->getNumElements();
+      double * element = rowArray_[1]->denseVector();
+      for (i=0;i<number;i++) {
+        int ii = index[i];
+        // get column
+        int ij = pivotVariable_[ii];
+        solution_[ij] = element[ii];
+      }
+      if (sequenceOut_>=0)
+        valueOut_=solution_[sequenceOut_];
       takePivot=false;
       if (factorization_->pivots()) {
 	// refactorize here
-	statusOfProblem();
+        int factorStatus = internalFactorize(1);
+        if (factorStatus) {
+          printf("help in user pivot\n");
+          abort();
+        }
+        gutsOfSolution(NULL,NULL);
 	roundAgain=true;
       } else {
 	returnCode=1;
@@ -6411,6 +6437,7 @@ int ClpSimplex::pivot()
 				   factorization_->areaFactor() * 1.1);
       returnCode =-1; // factorize now
     }
+    rowArray_[1]->clear();
     if (takePivot) {
       int save = algorithm_;
       // make simple so always primal
@@ -6421,8 +6448,14 @@ int ClpSimplex::pivot()
   }
   if (returnCode == -1) {
     // refactorize here
-    statusOfProblem();
-  } else {
+    int factorStatus = internalFactorize(1);
+    if (factorStatus) {
+      printf("help in user pivot\n");
+      abort();
+    }
+    updateSolution=true;
+  } 
+  if (updateSolution) {
     // just for now - recompute anyway
     gutsOfSolution(NULL,NULL);
   }
