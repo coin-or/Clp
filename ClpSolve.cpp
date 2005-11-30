@@ -651,7 +651,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
     }
   }
 #endif
-  if (model2->factorizationFrequency()==200) {
+  if (this->factorizationFrequency()==200) {
     // User did not touch preset
     int numberRows = model2->numberRows();
     const int cutoff1=10000;
@@ -669,6 +669,9 @@ ClpSimplex::initialSolve(ClpSolve & options)
     else
       frequency=base+cutoff1/freq0 + (cutoff2-cutoff1)/freq1 + (numberRows-cutoff2)/freq2;
     model2->setFactorizationFrequency(CoinMin(maximum,frequency));
+  } else if (model2!=this) {
+    // make sure model2 has correct value
+    model2->setFactorizationFrequency(this->factorizationFrequency());
   }
   if (method==ClpSolve::automatic) {
     if (doSprint==0&&doIdiot==0) {
