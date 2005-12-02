@@ -336,12 +336,20 @@ ClpQuadraticObjective::gradient(const ClpSimplex * model,
 		double elementValue = quadraticElement[j];
 		if (iColumn!=jColumn) {
 		  offset += valueI*valueJ*elementValue;
+		  //if (fabs(valueI*valueJ*elementValue)>1.0e-12)
+                  //printf("%d %d %g %g %g -> %g\n",
+                  //       iColumn,jColumn,valueI,valueJ,elementValue,
+                  //       valueI*valueJ*elementValue);
 		  double gradientI = valueJ*elementValue;
 		  double gradientJ = valueI*elementValue;
 		  gradient_[iColumn] += gradientI;
 		  gradient_[jColumn] += gradientJ;
 		} else {
 		  offset += 0.5*valueI*valueI*elementValue;
+		  //if (fabs(valueI*valueI*elementValue)>1.0e-12)
+                  //printf("XX %d %g %g -> %g\n",
+                  //       iColumn,valueI,elementValue,
+                  //       0.5*valueI*valueI*elementValue);
 		  double gradientI = valueI*elementValue;
 		  gradient_[iColumn] += gradientI;
 		}
@@ -368,7 +376,8 @@ ClpQuadraticObjective::gradient(const ClpSimplex * model,
 	  }
 	}
       }
-      offset *= model->optimizationDirection()*model->objectiveScale();
+      if (model)
+        offset *= model->optimizationDirection()*model->objectiveScale();
       return gradient_;
     }
   } else {
@@ -461,7 +470,8 @@ ClpQuadraticObjective::gradient(const ClpSimplex * model,
 	}
       }
     }
-    offset *= model->optimizationDirection();
+    if (model)
+      offset *= model->optimizationDirection();
     return gradient_;
   }
 }

@@ -18,6 +18,7 @@
 #include "ClpFactorization.hpp"
 #include "ClpSimplex.hpp"
 #include "ClpSimplexOther.hpp"
+#include "ClpSimplexNonlinear.hpp"
 #include "ClpInterior.hpp"
 #include "ClpLinearObjective.hpp"
 #include "ClpDualRowSteepest.hpp"
@@ -183,6 +184,46 @@ ClpSolve setupForSolve(int algorithm, std::string & nameAlgorithm,
       solveOptions.setSolveType(ClpSolve::notImplemented);
   }
   return solveOptions;
+}
+static void printSol(ClpSimplex & model) 
+{
+  int numberRows = model.numberRows();
+  int numberColumns = model.numberColumns();
+  
+  double * rowPrimal = model.primalRowSolution();
+  double * rowDual = model.dualRowSolution();
+  double * rowLower = model.rowLower();
+  double * rowUpper = model.rowUpper();
+  
+  int iRow;
+  double objValue = model.getObjValue();
+  printf("Objvalue %g Rows (%d)\n",objValue,numberRows);
+  for (iRow=0;iRow<numberRows;iRow++) {
+    printf("%d primal %g dual %g low %g up %g\n",
+           iRow,rowPrimal[iRow],rowDual[iRow],
+           rowLower[iRow],rowUpper[iRow]);
+  }
+  double * columnPrimal = model.primalColumnSolution();
+  double * columnDual = model.dualColumnSolution();
+  double * columnLower = model.columnLower();
+  double * columnUpper = model.columnUpper();
+  double offset;
+  //const double * gradient = model.objectiveAsObject()->gradient(&model,
+  //                                                       columnPrimal,offset,true,1);
+  const double * gradient = model.objective(columnPrimal,offset);
+  int iColumn;
+  objValue = -offset-model.objectiveOffset();
+  printf("offset %g (%g)\n",offset,model.objectiveOffset());
+  printf("Columns (%d)\n",numberColumns);
+  for (iColumn=0;iColumn<numberColumns;iColumn++) {
+    printf("%d primal %g dual %g low %g up %g\n",
+           iColumn,columnPrimal[iColumn],columnDual[iColumn],
+           columnLower[iColumn],columnUpper[iColumn]);
+    objValue += columnPrimal[iColumn]*gradient[iColumn];
+    if (fabs(columnPrimal[iColumn]*gradient[iColumn])>1.0e-8)
+      printf("obj -> %g gradient %g\n",objValue,gradient[iColumn]);
+  }
+  printf("Computed objective %g\n",objValue);
 }
 //----------------------------------------------------------------
 // unitTest [-mpsDir=V1] [-netlibDir=V2] [-test]
@@ -1615,37 +1656,11 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     delete [] column;
     delete [] element;
     //solution.quadraticSLP(50,1.0e-4);
-    double objValue = solution.getObjValue();
     CoinRelFltEq eq(1.0e-4);
     //assert(eq(objValue,820.0));
     //solution.setLogLevel(63);
     solution.primal();
-    int numberRows = solution.numberRows();
-
-    double * rowPrimal = solution.primalRowSolution();
-    double * rowDual = solution.dualRowSolution();
-    double * rowLower = solution.rowLower();
-    double * rowUpper = solution.rowUpper();
-    
-    int iRow;
-    printf("Rows\n");
-    for (iRow=0;iRow<numberRows;iRow++) {
-      printf("%d primal %g dual %g low %g up %g\n",
-	     iRow,rowPrimal[iRow],rowDual[iRow],
-	     rowLower[iRow],rowUpper[iRow]);
-    }
-    double * columnPrimal = solution.primalColumnSolution();
-    double * columnDual = solution.dualColumnSolution();
-    double * columnLower = solution.columnLower();
-    double * columnUpper = solution.columnUpper();
-    objValue = solution.getObjValue();
-    int iColumn;
-    printf("Columns\n");
-    for (iColumn=0;iColumn<numberColumns;iColumn++) {
-      printf("%d primal %g dual %g low %g up %g\n",
-	     iColumn,columnPrimal[iColumn],columnDual[iColumn],
-	     columnLower[iColumn],columnUpper[iColumn]);
-    }
+    printSol(solution);
     //assert(eq(objValue,3.2368421));
     //exit(77);
   }
@@ -1695,6 +1710,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     delete [] column;
     delete [] element;
     int numberColumns=model.numberColumns();
+    model.scaling(0);
 #if 0
     model.nonlinearSLP(50,1.0e-4);
 #else
@@ -1710,9 +1726,16 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     //exit(77);
     model.setFactorizationFrequency(10);
     model.primal();
+    printSol(model);
     double objValue = model.getObjValue();
     CoinRelFltEq eq(1.0e-4);
     assert(eq(objValue,-400.92));
+    // and again for barrier
+    model.barrier(false);
+    //printSol(model);
+    model.allSlackBasis();
+    model.primal();
+    //printSol(model);
   }
   if (0) {    
     CoinMpsIO m;

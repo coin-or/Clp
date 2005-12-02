@@ -4670,19 +4670,46 @@ ClpSimplex::barrier(bool crossover)
   int savePerturbation=perturbation_;
   ClpInterior barrier;
   barrier.borrowModel(*model2);
-// Preference is WSSMP, UFL, TAUCS then base
+  // See if quadratic objective
+  ClpQuadraticObjective * quadraticObj = NULL;
+  if (objective_->type()==2)
+    quadraticObj = (static_cast< ClpQuadraticObjective*>(objective_));
+  // If Quadratic we need KKT
+  bool doKKT = (quadraticObj!=NULL);
+  // Preference is WSSMP, UFL, TAUCS then base
 #ifdef WSSMP_BARRIER
-  ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp(CoinMax(100,model2->numberRows()/10));
+ if (!doKKT) {
+   ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp(CoinMax(100,model2->numberRows()/10));
+   barrier.setCholesky(cholesky);
+ } else {
   //ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp();
-  //ClpCholeskyWssmpKKT * cholesky = new ClpCholeskyWssmpKKT(CoinMax(100,model2->numberRows()/10));
+   ClpCholeskyWssmpKKT * cholesky = new ClpCholeskyWssmpKKT(CoinMax(100,model2->numberRows()/10));
+   barrier.setCholesky(cholesky);
+ }
 #elif UFL_BARRIER
-  ClpCholeskyUfl * cholesky = new ClpCholeskyUfl();
+ if (!doKKT) {
+   ClpCholeskyUfl * cholesky = new ClpCholeskyUfl();
+   barrier.setCholesky(cholesky);
+ } else {
+   ClpCholeskyUfl * cholesky = new ClpCholeskyUfl();
+   cholesky->setKKT(true);
+   barrier.setCholesky(cholesky);
+ }
 #elif TAUCS_BARRIER
-  ClpCholeskyTaucs * cholesky = new ClpCholeskyTaucs();
+ assert (!doKKT);
+ ClpCholeskyTaucs * cholesky = new ClpCholeskyTaucs();
+ barrier.setCholesky(cholesky);
 #else
+ if (!doKKT) {
   ClpCholeskyBase * cholesky = new ClpCholeskyBase();
-#endif
   barrier.setCholesky(cholesky);
+ } else {
+   ClpCholeskyBase * cholesky = new ClpCholeskyBase();
+   cholesky->setKKT(true);
+   barrier.setCholesky(cholesky);
+ }
+#endif
+  barrier.setDiagonalPerturbation(1.0e-14);
   int numberRows = model2->numberRows();
   int numberColumns = model2->numberColumns();
   int saveMaxIts = model2->maximumIterations();
@@ -6388,7 +6415,7 @@ int ClpSimplex::pivot()
     // See if Factorization updated
     if (updateStatus) { 
       updateSolution=false;
-      returnCode=-1;
+      returnCode=1;
     }
     // if no pivots, bad update but reasonable alpha - take and invert
     if (updateStatus==2&&
@@ -6397,7 +6424,7 @@ int ClpSimplex::pivot()
     if (updateStatus==1||updateStatus==4) {
       // slight error
       if (factorization_->pivots()>5||updateStatus==4) {
-	returnCode=-1;
+	returnCode=1;
       }
     } else if (updateStatus==2) {
       // major error - put back solution
@@ -6425,7 +6452,7 @@ int ClpSimplex::pivot()
         gutsOfSolution(NULL,NULL);
 	roundAgain=true;
       } else {
-	returnCode=1;
+	returnCode=-1;
       }
     } else if (updateStatus==3) {
       // out of memory
@@ -6435,7 +6462,7 @@ int ClpSimplex::pivot()
 	  factorization_->pivots()<200)
 	factorization_->areaFactor(
 				   factorization_->areaFactor() * 1.1);
-      returnCode =-1; // factorize now
+      returnCode =1; // factorize now
     }
     rowArray_[1]->clear();
     if (takePivot) {
@@ -6446,7 +6473,7 @@ int ClpSimplex::pivot()
       algorithm_=save;
     }
   }
-  if (returnCode == -1) {
+  if (returnCode == 1) {
     // refactorize here
     int factorStatus = internalFactorize(1);
     if (factorStatus) {
