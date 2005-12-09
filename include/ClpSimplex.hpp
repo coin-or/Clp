@@ -394,6 +394,8 @@ public:
   
   /** Factorizes and returns true if optimal.  Used by user */
   bool statusOfProblem(bool initial=false);
+  /// If user left factorization frequency then compute
+  void defaultFactorizationFrequency();
   //@}
 
   /**@name most useful gets and sets */

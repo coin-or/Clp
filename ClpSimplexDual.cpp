@@ -4834,14 +4834,14 @@ ClpSimplexDual::setupForStrongBranching(char * arrays, int numberRows, int numbe
   // We can either set increasing rows so ...IsBasic gives pivot row
   // or we can just increment iBasic one by one
   // for now let ...iBasic give pivot row
-  int useFactorization=false;
-  if ((startFinishOptions&2)!=0&&(whatsChanged_&(2+512))==2+512)
+  bool useFactorization=false;
+  if ((startFinishOptions&2)!=0&&(whatsChanged_&(2+512))==2+512) {
     useFactorization=true; // Keep factorization if possible
-  // switch off factorization if bad
-  if (pivotVariable_[0]<0)
-    useFactorization=false;
-  if (!useFactorization||factorization_->numberRows()!=numberRows_) {
-    useFactorization = false;
+    // switch off factorization if bad
+    if (pivotVariable_[0]<0||factorization_->numberRows()!=numberRows_) 
+      useFactorization=false;
+  }
+  if (!useFactorization) {
     factorization_->increasingRows(2);
     // row activities have negative sign
     factorization_->slackValue(-1.0);

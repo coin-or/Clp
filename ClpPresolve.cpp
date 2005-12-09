@@ -148,7 +148,7 @@ ClpPresolve::postsolve(bool updateStatus)
   if (!presolvedModel_)
     return;
   // Messages
-  CoinMessages messages = CoinMessage(presolvedModel_->messages().language());
+  CoinMessages messages = originalModel_->coinMessages();
   if (!presolvedModel_->isProvenOptimal()) {
     presolvedModel_->messageHandler()->message(COIN_PRESOLVE_NONOPTIMAL,
 					     messages)
@@ -1430,7 +1430,7 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
   // User may have deleted - its their responsibility
   presolvedModel_=NULL;
   // Messages
-  CoinMessages messages = CoinMessage(originalModel->messages().language());
+  CoinMessages messages = originalModel->coinMessages();
   while (result==-1) {
 
 #ifndef CLP_NO_STD

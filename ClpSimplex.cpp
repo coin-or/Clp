@@ -3372,23 +3372,27 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
         matrix_=auxiliaryModel_->matrix_;
         auxiliaryModel_->matrix_=temp;
       }
-#ifndef NDEBUG
       for (iRow=0;iRow<4;iRow++) {
+        rowArray_[iRow]->clear();
+#ifndef NDEBUG
 	int length =numberRows2+factorization_->maximumPivots();
 	if (iRow==3||objective_->type()>1)
 	  length += numberColumns_;
 	assert(rowArray_[iRow]->capacity()==length);
         rowArray_[iRow]->checkClear();
+#endif
       }
       
       for (iColumn=0;iColumn<2;iColumn++) {
+        columnArray_[iColumn]->clear();
+#ifndef NDEBUG
 	int length =numberColumns_;
 	if (iColumn)
 	  length=CoinMax(numberRows2,numberColumns_);
 	assert(columnArray_[iColumn]->capacity()==length);
         columnArray_[iColumn]->checkClear();
-      }
 #endif
+      }
     }    
   }
   if (problemStatus_==10) {
@@ -8554,4 +8558,27 @@ ClpSimplex::computeObjectiveValue()
   //if(problemStatus_!=3) printf("XX ");;
   //printf("obj %g - was %g\n",objectiveValue(),objectiveValue()+(objectiveValue_-oldObj));
   //}
+}
+// If user left factorization frequency then compute
+void 
+ClpSimplex::defaultFactorizationFrequency()
+{
+  if (factorizationFrequency()==200) {
+    // User did not touch preset
+    const int cutoff1=10000;
+    const int cutoff2=100000;
+    const int base=75;
+    const int freq0 = 50;
+    const int freq1=200;
+    const int freq2=400;
+    const int maximum=1000;
+    int frequency;
+    if (numberRows_<cutoff1)
+      frequency=base+numberRows_/freq0;
+    else if (numberRows_<cutoff2)
+      frequency=base+cutoff1/freq0 + (numberRows_-cutoff1)/freq1;
+    else
+      frequency=base+cutoff1/freq0 + (cutoff2-cutoff1)/freq1 + (numberRows_-cutoff2)/freq2;
+    setFactorizationFrequency(CoinMin(maximum,frequency));
+  }
 }

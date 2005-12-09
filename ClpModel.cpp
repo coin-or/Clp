@@ -32,6 +32,7 @@
 #include "CoinModel.hpp"
 #endif
 #include "ClpMessage.hpp"
+#include "CoinMessage.hpp"
 #include "ClpLinearObjective.hpp"
 #ifndef SLIM_CLP
 #include "ClpQuadraticObjective.hpp"
@@ -99,6 +100,7 @@ ClpModel::ClpModel () :
   handler_->setLogLevel(1);
   eventHandler_ = new ClpEventHandler();
   messages_ = ClpMessage();
+  coinMessages_ = CoinMessage();
   CoinSeedRandom(1234567);
 }
 
@@ -637,6 +639,7 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
     handler_ = rhs.handler_;
   eventHandler_ = rhs.eventHandler_->clone();
   messages_ = rhs.messages_;
+  coinMessages_ = rhs.coinMessages_;
   intParam_[ClpMaxNumIteration] = rhs.intParam_[ClpMaxNumIteration];
   intParam_[ClpMaxNumIterationHotStart] = 
     rhs.intParam_[ClpMaxNumIterationHotStart];
@@ -2320,6 +2323,7 @@ ClpModel::readMps(const char *fileName,
   }
   CoinMpsIO m;
   m.passInMessageHandler(handler_);
+  *m.messagesPointer()=coinMessages();
   bool savePrefix =m.messageHandler()->prefix();
   m.messageHandler()->setPrefix(handler_->prefix());
   double time1 = CoinCpuTime(),time2;
@@ -2424,6 +2428,7 @@ ClpModel::readGMPL(const char *fileName,const char * dataName,
   }
   CoinMpsIO m;
   m.passInMessageHandler(handler_);
+  *m.messagesPointer()=coinMessages();
   bool savePrefix =m.messageHandler()->prefix();
   m.messageHandler()->setPrefix(handler_->prefix());
   double time1 = CoinCpuTime(),time2;
@@ -2718,6 +2723,7 @@ ClpModel::ClpModel ( const ClpModel * rhs,
     handler_ = rhs->handler_;
   eventHandler_ = rhs->eventHandler_->clone();
   messages_ = rhs->messages_;
+  coinMessages_ = rhs->coinMessages_;
   intParam_[ClpMaxNumIteration] = rhs->intParam_[ClpMaxNumIteration];
   intParam_[ClpMaxNumIterationHotStart] = 
     rhs->intParam_[ClpMaxNumIterationHotStart];
@@ -3202,6 +3208,7 @@ ClpModel::writeMps(const char *filename,
 #endif
   CoinMpsIO writer;
   writer.passInMessageHandler(handler_);
+  *writer.messagesPointer()=coinMessages();
   writer.setMpsData(*(matrix_->getPackedMatrix()), COIN_DBL_MAX,
 		    getColLower(), getColUpper(),
 		    objective,

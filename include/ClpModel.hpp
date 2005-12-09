@@ -628,6 +628,10 @@ public:
    inline CoinMessages messages() const                     { return messages_; }
    /// Return pointer to messages
    inline CoinMessages * messagesPointer()                  { return & messages_; }
+   /// Return Coin messages
+   inline CoinMessages coinMessages() const                  { return coinMessages_; }
+   /// Return pointer to Coin messages
+   inline CoinMessages * coinMessagesPointer()                  { return & coinMessages_; }
   /** Amount of print out:
       0 - none
       1 - just final
@@ -886,6 +890,8 @@ protected:
 #endif
   /// Messages
   CoinMessages messages_;
+  /// Coin messages
+  CoinMessages coinMessages_;
 #ifndef CLP_NO_STD
   /// Array of string parameters
   std::string strParam_[ClpLastStrParam];
