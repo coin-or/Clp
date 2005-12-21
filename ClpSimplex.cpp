@@ -2581,7 +2581,12 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
     }
     // do scaling if needed
     if (!oldMatrix) {
-      assert (scalingFlag_>0||!rowScale_);
+      if (scalingFlag_<0&&rowScale_) {
+        if (handler_->logLevel()>0)
+          printf("How did we get scalingFlag_ %d and non NULL rowScale_? - switching off scaling\n",
+                 scalingFlag_);
+        scalingFlag_=0;
+      }
       delete [] rowScale_;
       delete [] columnScale_;
       rowScale_=NULL;
