@@ -455,6 +455,8 @@ int main (int argc, const char *argv[])
 	  case PRIMALSIMPLEX:
 	  case EITHERSIMPLEX:
 	  case BARRIER:
+            // synonym for dual
+	  case BAB:
 	    if (goodModels[iModel]) {
 	      ClpSolve::SolveType method;
 	      ClpSolve::PresolveType presolveType;
@@ -490,7 +492,7 @@ int main (int argc, const char *argv[])
 		presolveType=ClpSolve::presolveOff;
               }
 	      solveOptions.setPresolveType(presolveType,preSolve);
-	      if (type==DUALSIMPLEX) {
+	      if (type==DUALSIMPLEX||type==BAB) {
 		method=ClpSolve::useDual;
 	      } else if (type==PRIMALSIMPLEX) {
 		method=ClpSolve::usePrimalorSprint;
@@ -701,9 +703,9 @@ int main (int argc, const char *argv[])
 		if (absolutePath) {
 		  fileName = field;
 		} else if (field[0]=='~') {
-		  char * environ = getenv("HOME");
-		  if (environ) {
-		    std::string home(environ);
+		  char * environVar = getenv("HOME");
+		  if (environVar) {
+		    std::string home(environVar);
 		    field=field.erase(0,1);
 		    fileName = home+field;
 		  } else {
@@ -797,9 +799,9 @@ int main (int argc, const char *argv[])
 	      if (field[0]=='/'||field[0]=='\\') {
 		fileName = field;
 	      } else if (field[0]=='~') {
-		char * environ = getenv("HOME");
-		if (environ) {
-		  std::string home(environ);
+		char * environVar = getenv("HOME");
+		if (environVar) {
+		  std::string home(environVar);
 		  field=field.erase(0,1);
 		  fileName = home+field;
 		} else {
@@ -954,9 +956,9 @@ int main (int argc, const char *argv[])
 		if (field[0]=='/'||field[0]=='\\') {
 		  fileName = field;
 		} else if (field[0]=='~') {
-		  char * environ = getenv("HOME");
-		  if (environ) {
-		    std::string home(environ);
+		  char * environVar = getenv("HOME");
+		  if (environVar) {
+		    std::string home(environVar);
 		    field=field.erase(0,1);
 		    fileName = home+field;
 		  } else {
@@ -1002,9 +1004,9 @@ int main (int argc, const char *argv[])
 	      if (field[0]=='/'||field[0]=='\\') {
 		fileName = field;
 	      } else if (field[0]=='~') {
-		char * environ = getenv("HOME");
-		if (environ) {
-		  std::string home(environ);
+		char * environVar = getenv("HOME");
+		if (environVar) {
+		  std::string home(environVar);
 		  field=field.erase(0,1);
 		  fileName = home+field;
 		} else {
@@ -1049,9 +1051,9 @@ int main (int argc, const char *argv[])
 	      if (field[0]=='/'||field[0]=='\\') {
 		fileName = field;
 	      } else if (field[0]=='~') {
-		char * environ = getenv("HOME");
-		if (environ) {
-		  std::string home(environ);
+		char * environVar = getenv("HOME");
+		if (environVar) {
+		  std::string home(environVar);
 		  field=field.erase(0,1);
 		  fileName = home+field;
 		} else {
@@ -1125,9 +1127,9 @@ int main (int argc, const char *argv[])
 	      if (field[0]=='/'||field[0]=='\\') {
 		fileName = field;
 	      } else if (field[0]=='~') {
-		char * environ = getenv("HOME");
-		if (environ) {
-		  std::string home(environ);
+		char * environVar = getenv("HOME");
+		if (environVar) {
+		  std::string home(environVar);
 		  field=field.erase(0,1);
 		  fileName = home+field;
 		} else {
@@ -1357,9 +1359,9 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 		if (field[0]=='/'||field[0]=='\\') {
 		  fileName = field;
 		} else if (field[0]=='~') {
-		  char * environ = getenv("HOME");
-		  if (environ) {
-		    std::string home(environ);
+		  char * environVar = getenv("HOME");
+		  if (environVar) {
+		    std::string home(environVar);
 		    field=field.erase(0,1);
 		    fileName = home+field;
 		  } else {
@@ -1464,9 +1466,9 @@ clp watson.mps -\nscaling off\nprimalsimplex"
               if (field[0]=='/'||field[0]=='\\') {
                 fileName = field;
               } else if (field[0]=='~') {
-                char * environ = getenv("HOME");
-                if (environ) {
-                  std::string home(environ);
+                char * environVar = getenv("HOME");
+                if (environVar) {
+                  std::string home(environVar);
                   field=field.erase(0,1);
                   fileName = home+field;
                 } else {
