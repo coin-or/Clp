@@ -1067,6 +1067,12 @@ ClpSimplexOther::crunch(double * rhs, int * whichRow, int * whichColumn,
   if (!returnCode) {
     small = new ClpSimplex(this,numberRows2,whichRow,
                      numberColumns2,whichColumn,true,false);
+    // Set some stuff
+    small->setDualBound(dualBound_);
+    small->setInfeasibilityCost(infeasibilityCost_);
+    small->setSpecialOptions(specialOptions_);
+    small->setPerturbation(perturbation_);
+    small->defaultFactorizationFrequency();
     // If no rows left then no tightening!
     if (!numberRows2||!numberColumns2) 
       tightenBounds=false;
