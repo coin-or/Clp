@@ -739,6 +739,10 @@ CbcOrClpParam::setIntParameter (CbcModel &model,int value)
       oldValue=model.numberAnalyzeIterations();
       model.setNumberAnalyzeIterations(value);
       break;
+    case NUMBERMINI:
+      oldValue=model.sizeMiniTree();
+      model.setSizeMiniTree(value);
+      break;
     default:
       oldValue=0; // to avoid compiler message
       break;
@@ -770,6 +774,9 @@ CbcOrClpParam::intParameter (CbcModel &model) const
     break;
   case NUMBERANALYZE:
     value=model.numberAnalyzeIterations();
+    break;
+  case NUMBERMINI:
+    value=model.sizeMiniTree();
     break;
   default:
     abort();
@@ -1216,16 +1223,6 @@ createAfterPre.  The create case has same effect as saveSolution."
      ); 
 #endif 
   parameters[numberParameters++]=
-    CbcOrClpParam("direction","Minimize or Maximize",
-		  "min!imize",DIRECTION);
-  parameters[numberParameters-1].append("max!imize");
-  parameters[numberParameters-1].append("zero");
-  parameters[numberParameters-1].setLonghelp
-    (
-     "The default is minimize - use 'direction maximize' for maximization.\n\
-You can also use the parameters 'maximize' or 'minimize'."
-     ); 
-  parameters[numberParameters++]=
     CbcOrClpParam("directory","Set Default directory for import etc.",
 		  DIRECTORY,299);
   parameters[numberParameters-1].setLonghelp
@@ -1580,6 +1577,9 @@ You can also use the parameters 'direction minimize'."
      );
 #ifdef COIN_USE_CBC
   parameters[numberParameters++]=
+    CbcOrClpParam("mipO!ptions","Dubious options for mip",
+		  0,INT_MAX,MIPOPTIONS,false);
+  parameters[numberParameters++]=
     CbcOrClpParam("mixed!IntegerRoundingCuts","Whether to use Mixed Integer Rounding cuts",
 		  "off",MIXEDCUTS);
   parameters[numberParameters-1].append("on");
@@ -1601,7 +1601,25 @@ but this program turns this off to make it look more friendly.  It can be useful
  to turn them back on if you want to be able 'grep' for particular messages or if\
  you intend to override the behavior of a particular message."
      );
+  parameters[numberParameters++]=
+    CbcOrClpParam("direction","Minimize or Maximize",
+		  "min!imize",DIRECTION);
+  parameters[numberParameters-1].append("max!imize");
+  parameters[numberParameters-1].append("zero");
+  parameters[numberParameters-1].setLonghelp
+    (
+     "The default is minimize - use 'direction maximize' for maximization.\n\
+You can also use the parameters 'maximize' or 'minimize'."
+     ); 
 #ifdef COIN_USE_CBC
+  parameters[numberParameters++]=
+    CbcOrClpParam("miniT!ree","Size of fast mini tree",
+		  0,INT_MAX,NUMBERMINI,false);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "The idea is that I can do a small tree fast. \
+This is a first try and will hopefully become more sophisticated."
+     ); 
   parameters[numberParameters++]=
     CbcOrClpParam("miplib","Do some of miplib test set",
 		  MIPLIB);
@@ -1997,8 +2015,8 @@ activities and reduced costs - see bottom of CbcOrClpParam.cpp for code that wri
  directory given by 'directory'.  A name of '$' will use the previous value for the name.  This\
  is initialized to 'stdout'."
      ); 
-#ifdef COIN_USE_CBC
 #ifdef COIN_USE_CLP
+#ifdef COIN_USE_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("solv!e","Solve problem",
 		  BAB);
@@ -2015,6 +2033,15 @@ the main thing is to think about which cuts to apply.  .. expand ..."
     (
      "If 0 then there should be no output in normal circumstances.  1 is probably the best\
  value for most uses, while 2 and 3 give more information."
+     );
+#else
+  // allow solve as synonym for dual 
+  parameters[numberParameters++]=
+    CbcOrClpParam("solv!e","Solve problem using dual simplex",
+		  BAB);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "Just so can use solve for clp as well as in cbc"
      ); 
 #endif
 #endif
