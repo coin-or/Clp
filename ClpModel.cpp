@@ -187,8 +187,8 @@ ClpModel::gutsOfLoadModel (int numberRows, int numberColumns,
   dual_=new double[numberRows_];
   reducedCost_=new double[numberColumns_];
 
-  ClpFillN(dual_,numberRows_,0.0);
-  ClpFillN(reducedCost_,numberColumns_,0.0);
+  CoinZeroN(dual_,numberRows_);
+  CoinZeroN(reducedCost_,numberColumns_);
   int iRow,iColumn;
 
   rowLower_=ClpCopyOfArray(rowlb,numberRows_,-COIN_DBL_MAX);
@@ -677,12 +677,7 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
       columnNames_ = rhs.columnNames_;
     }
 #endif
-    if (rhs.integerType_) {
-      integerType_ = new char[numberColumns_];
-      memcpy(integerType_,rhs.integerType_,numberColumns_*sizeof(char));
-    } else {
-      integerType_ = NULL;
-    }
+    integerType_ = CoinCopyOfArray(rhs.integerType_,numberColumns_);
     if (rhs.rowActivity_) {
       rowActivity_=new double[numberRows_];
       columnActivity_=new double[numberColumns_];
@@ -897,7 +892,7 @@ double * resizeDouble(double * array , int size, int newSize, double fill,
     int i;
     double * newArray = new double[newSize];
     if (array)
-      memcpy(newArray,array,CoinMin(newSize,size)*sizeof(double));
+      CoinMemcpyN(array,CoinMin(newSize,size),newArray);
     delete [] array;
     array = newArray;
     for (i=size;i<newSize;i++) 
@@ -913,7 +908,7 @@ double * deleteDouble(double * array , int size,
     int i ;
     char * deleted = new char[size];
     int numberDeleted=0;
-    memset(deleted,0,size*sizeof(char));
+    CoinZeroN(deleted,size);
     for (i=0;i<number;i++) {
       int j = which[i];
       if (j>=0&&j<size&&!deleted[j]) {
@@ -943,7 +938,7 @@ char * deleteChar(char * array , int size,
     int i ;
     char * deleted = new char[size];
     int numberDeleted=0;
-    memset(deleted,0,size*sizeof(char));
+    CoinZeroN(deleted,size);
     for (i=0;i<number;i++) {
       int j = which[i];
       if (j>=0&&j<size&&!deleted[j]) {
@@ -1051,9 +1046,9 @@ ClpModel::resize (int newNumberRows, int newNumberColumns)
   }
   if (integerType_) {
     char * temp = new char [newNumberColumns];
-    memset(temp,0,newNumberColumns*sizeof(char));
-    memcpy(temp,integerType_,
-	   CoinMin(newNumberColumns,numberColumns_)*sizeof(char));
+    CoinZeroN(temp,newNumberColumns);
+    CoinMemcpyN(integerType_,
+	   CoinMin(newNumberColumns,numberColumns_),temp);
     delete [] integerType_;
     integerType_ = temp;
   }
@@ -1061,10 +1056,26 @@ ClpModel::resize (int newNumberRows, int newNumberColumns)
 #ifndef CLP_NO_STD
   if (lengthNames_) {
     // reduce row and column names vectors only if necessary
-    if (rowNames_.size() < (unsigned int)numberRows_)
+    if (rowNames_.size() < (unsigned int)numberRows_) {
+      int oldSize = rowNames_.size();
       rowNames_.resize(numberRows_);
-    if (columnNames_.size() < (unsigned int)numberColumns_)
+      lengthNames_ = CoinMax(lengthNames_,8);
+      char name[9];
+      for (int iRow = oldSize;iRow<numberRows_;iRow++) {
+        sprintf(name,"R%7.7d",iRow);
+        rowNames_[iRow]=name;
+      }
+    }
+    if (columnNames_.size() < (unsigned int)numberColumns_) {
+      int oldSize = columnNames_.size();
       columnNames_.resize(numberColumns_);
+      lengthNames_ = CoinMax(lengthNames_,8);
+      char name[9];
+      for (int iColumn = oldSize;iColumn<numberColumns_;iColumn++) {
+        sprintf(name,"C%7.7d",iColumn);
+        columnNames_[iColumn]=name;
+      }
+    }
   }
 #endif
 }
@@ -1111,7 +1122,7 @@ ClpModel::deleteRows(int number, const int * which)
   // Now works if which out of order
   if (lengthNames_) {
     char * mark = new char [numberRows_];
-    memset(mark,0,numberRows_);
+    CoinZeroN(mark,numberRows_);
     int i;
     for (i=0;i<number;i++)
       mark[which[i]]=1;
@@ -1192,7 +1203,7 @@ ClpModel::deleteColumns(int number, const int * which)
   // Now works if which out of order
   if (lengthNames_) {
     char * mark = new char [numberColumns_];
-    memset(mark,0,numberColumns_);
+    CoinZeroN(mark,numberColumns_);
     int i;
     for (i=0;i<number;i++)
       mark[which[i]]=1;
@@ -1304,8 +1315,8 @@ ClpModel::addRows(int number, const double * rowLower,
     for (iRow=0;iRow<number;iRow++) {
       int iStart = rowStarts[iRow];
       int length = rowLengths[iRow];
-      memcpy(newIndex+numberElements,columns+iStart,length*sizeof(int));
-      memcpy(newElements+numberElements,elements+iStart,length*sizeof(double));
+      CoinMemcpyN(columns+iStart,length,newIndex+numberElements);
+      CoinMemcpyN(elements+iStart,length,newElements+numberElements);
       numberElements += length;
       newStarts[iRow+1]=numberElements;
     }
@@ -1439,7 +1450,7 @@ ClpModel::addRows(const CoinBuild & buildObject,bool tryPlusMinusOne,bool checkD
       char * which=NULL; // for duplicates
       if (checkDuplicates) {
         which = new char[numberColumns_];
-        memset(which,0,numberColumns_);
+        CoinZeroN(which,numberColumns_);
       }
       // build +-1 matrix
       // arrays already filled in
@@ -1447,8 +1458,8 @@ ClpModel::addRows(const CoinBuild & buildObject,bool tryPlusMinusOne,bool checkD
       CoinBigIndex * startPositive = new CoinBigIndex [numberColumns_+1];
       CoinBigIndex * startNegative = new CoinBigIndex [numberColumns_];
       int * indices = new int [size];
-      memset(startPositive,0,numberColumns_*sizeof(int));
-      memset(startNegative,0,numberColumns_*sizeof(int));
+      CoinZeroN(startPositive,numberColumns_);
+      CoinZeroN(startNegative,numberColumns_);
       int maxColumn=-1;
       // need two passes
       for (iRow=0;iRow<number;iRow++) {
@@ -1786,8 +1797,8 @@ ClpModel::addColumns(int number, const double * columnLower,
     for (iColumn=0;iColumn<number;iColumn++) {
       int iStart = columnStarts[iColumn];
       int length = columnLengths[iColumn];
-      memcpy(newIndex+numberElements,rows+iStart,length*sizeof(int));
-      memcpy(newElements+numberElements,elements+iStart,length*sizeof(double));
+      CoinMemcpyN(rows+iStart,length,newIndex+numberElements);
+      CoinMemcpyN(elements+iStart,length,newElements+numberElements);
       numberElements += length;
       newStarts[iColumn+1]=numberElements;
     }
@@ -1937,7 +1948,7 @@ ClpModel::addColumns(const CoinBuild & buildObject,bool tryPlusMinusOne,bool che
       char * which=NULL; // for duplicates
       if (checkDuplicates) {
         which = new char[numberRows_];
-        memset(which,0,numberRows_);
+        CoinZeroN(which,numberRows_);
       }
       // build +-1 matrix
       CoinBigIndex * startPositive = new CoinBigIndex [number+1];
@@ -1979,7 +1990,7 @@ ClpModel::addColumns(const CoinBuild & buildObject,bool tryPlusMinusOne,bool che
         std::sort(indices+start,indices+size);
         std::sort(neg,neg+nNeg);
         startNegative[iColumn]=size;
-        memcpy(indices+size,neg,nNeg*sizeof(int));
+        CoinMemcpyN(neg,nNeg,indices+size);
         size += nNeg;
         startPositive[iColumn+1]=size;
       }
@@ -2343,7 +2354,7 @@ ClpModel::readMps(const char *fileName,
 		m.getRowLower(),m.getRowUpper());
     if (m.integerColumns()) {
       integerType_ = new char[numberColumns_];
-      memcpy(integerType_,m.integerColumns(),numberColumns_*sizeof(char));
+      CoinMemcpyN(m.integerColumns(),numberColumns_,integerType_);
     } else {
       integerType_ = NULL;
     }
@@ -2441,7 +2452,7 @@ ClpModel::readGMPL(const char *fileName,const char * dataName,
 		m.getRowLower(),m.getRowUpper());
     if (m.integerColumns()) {
       integerType_ = new char[numberColumns_];
-      memcpy(integerType_,m.integerColumns(),numberColumns_*sizeof(char));
+      CoinMemcpyN(m.integerColumns(),numberColumns_,integerType_);
     } else {
       integerType_ = NULL;
     }
@@ -2533,7 +2544,7 @@ ClpModel::copyInIntegerInformation(const char * information)
   delete [] integerType_;
   if (information) {
     integerType_ = new char[numberColumns_];
-    memcpy(integerType_,information,numberColumns_*sizeof(char));
+    CoinMemcpyN(information,numberColumns_,integerType_);
   } else {
     integerType_ = NULL;
   }
@@ -2557,7 +2568,7 @@ ClpModel::setInteger(int index)
 {
   if (!integerType_) {
     integerType_ = new char[numberColumns_];
-    CoinFillN ( integerType_, numberColumns_,(char) 0);
+    CoinZeroN ( integerType_, numberColumns_);
   }
 #ifndef NDEBUG
   if (index<0||index>=numberColumns_) {
@@ -2820,9 +2831,9 @@ ClpModel::ClpModel ( const ClpModel * rhs,
 						numberRows_,whichRow);
   unsigned char * columnStatus = whichUnsignedChar(rhs->status_,
 						numberColumns_,whichColumn);
-  memcpy(status_+numberColumns_,rowStatus,numberRows_);
+  CoinMemcpyN(rowStatus,numberRows_,status_+numberColumns_);
   delete [] rowStatus;
-  memcpy(status_,columnStatus,numberColumns_);
+  CoinMemcpyN(columnStatus,numberColumns_,status_);
   delete [] columnStatus;
   ray_ = NULL;
   if (problemStatus_==1&&!secondaryStatus_)
@@ -3034,7 +3045,7 @@ int ClpModel::emptyProblem(int * infeasNumber, double * infeasSum,bool printMess
   if (numberRows_||numberColumns_) {
     if (!status_) {
       status_ = new unsigned char[numberRows_+numberColumns_];
-      memset(status_,0,numberRows_+numberColumns_);
+      CoinZeroN(status_,numberRows_+numberColumns_);
     }
   }
   // status is set directly (as can be used by Interior methods)
@@ -3161,7 +3172,7 @@ ClpModel::writeMps(const char *filename,
   
   // Get multiplier for objective function - default 1.0
   double * objective = new double[numberColumns_];
-  memcpy(objective,getObjCoefficients(),numberColumns_*sizeof(double));
+  CoinMemcpyN(getObjCoefficients(),numberColumns_,objective);
   if (objSense*getObjSense()<0.0) {
     for (int i = 0; i < numberColumns_; ++i) 
       objective [i] = - objective[i];
