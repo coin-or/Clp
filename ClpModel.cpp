@@ -92,6 +92,7 @@ ClpModel::ClpModel () :
   dblParam_[ClpPrimalTolerance] = 1e-7;
   dblParam_[ClpObjOffset] = 0.0;
   dblParam_[ClpMaxSeconds] = -1.0;
+  dblParam_[ClpPresolveTolerance] = 1.0e-8;
 
 #ifndef CLP_NO_STD
   strParam_[ClpProbName] = "ClpDefaultName";
@@ -650,6 +651,7 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
   dblParam_[ClpPrimalTolerance] = rhs.dblParam_[ClpPrimalTolerance];
   dblParam_[ClpObjOffset] = rhs.dblParam_[ClpObjOffset];
   dblParam_[ClpMaxSeconds] = rhs.dblParam_[ClpMaxSeconds];
+  dblParam_[ClpPresolveTolerance] = rhs.dblParam_[ClpPresolveTolerance];
 #ifndef CLP_NO_STD
 
   strParam_[ClpProbName] = rhs.strParam_[ClpProbName];
@@ -858,6 +860,11 @@ ClpModel::setDblParam(ClpDblParam key, double value)
       value = -1.0;
     break;
 
+  case ClpPresolveTolerance: 
+    if (value<=0.0||value>1.0e10)
+      return false;
+    break;
+    
   case ClpLastDblParam:
     return false;
   }
@@ -2745,6 +2752,7 @@ ClpModel::ClpModel ( const ClpModel * rhs,
   dblParam_[ClpPrimalTolerance] = rhs->dblParam_[ClpPrimalTolerance];
   dblParam_[ClpObjOffset] = rhs->dblParam_[ClpObjOffset];
   dblParam_[ClpMaxSeconds] = rhs->dblParam_[ClpMaxSeconds];
+  dblParam_[ClpPresolveTolerance] = rhs->dblParam_[ClpPresolveTolerance];
 #ifndef CLP_NO_STD
   strParam_[ClpProbName] = rhs->strParam_[ClpProbName];
 #endif
