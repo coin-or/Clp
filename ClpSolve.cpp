@@ -542,12 +542,12 @@ ClpSimplex::initialSolve(ClpSolve & options)
     if (presolveToFile) {
       // PreSolve to file - not fully tested
       printf("Presolving to file - presolve.save\n");
-      pinfo.presolvedModelToFile(*this,"presolve.save",1.0e-8,
+      pinfo.presolvedModelToFile(*this,"presolve.save",dblParam_[ClpPresolveTolerance],
 			   false,numberPasses);
       model2=this;
     } else {
 #endif
-      model2 = pinfo.presolvedModel(*this,1.0e-8,
+      model2 = pinfo.presolvedModel(*this,dblParam_[ClpPresolveTolerance],
 				    false,numberPasses,true,costedSlacks);
 #ifndef CLP_NO_STD
     }
@@ -934,12 +934,12 @@ ClpSimplex::initialSolve(ClpSolve & options)
       int numberColumns = model2->numberColumns();
       int numberRows = model2->numberRows();
       double * saveObj = new double[numberColumns];
-      memcpy(saveObj,model2->objective(),numberColumns*sizeof(double));
-      memcpy(model2->dualColumnSolution(),model2->objective(),
-	     numberColumns*sizeof(double));
+      CoinMemcpyN(model2->objective(),numberColumns,saveObj);
+      CoinMemcpyN(model2->objective(),
+	     numberColumns,model2->dualColumnSolution());
       model2->clpMatrix()->transposeTimes(-1.0,pi,model2->dualColumnSolution());
-      memcpy(model2->objective(),model2->dualColumnSolution(),
-	     numberColumns*sizeof(double));
+      CoinMemcpyN(model2->dualColumnSolution(),
+	     numberColumns,model2->objective());
       const double * rowsol = model2->primalRowSolution();
       double offset=0.0;
       for (i=0;i<numberRows;i++) {
@@ -960,7 +960,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
       // solve
       model2->dual(0);
       model2->setDblParam(ClpObjOffset,value2);
-      memcpy(model2->objective(),saveObj,numberColumns*sizeof(double));
+      CoinMemcpyN(saveObj,numberColumns,model2->objective());
       // zero out pi
       //memset(pi,0,numberRows*sizeof(double));
       //model2->setRowObjective(pi);
@@ -1146,9 +1146,9 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	double * solution = model2->primalColumnSolution();
 	int iColumn;
 	double * saveLower = new double[numberColumns];
-	memcpy(saveLower,model2->columnLower(),numberColumns*sizeof(double));
+	CoinMemcpyN(model2->columnLower(),numberColumns,saveLower);
 	double * saveUpper = new double[numberColumns];
-	memcpy(saveUpper,model2->columnUpper(),numberColumns*sizeof(double));
+	CoinMemcpyN(model2->columnUpper(),numberColumns,saveUpper);
 	printf("doing tighten before idiot\n");
 	model2->tightenPrimalBounds();
 	// Move solution
@@ -1162,8 +1162,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	  else
 	    solution[iColumn]=0.0;
 	}
-	memcpy(columnLower,saveLower,numberColumns*sizeof(double));
-	memcpy(columnUpper,saveUpper,numberColumns*sizeof(double));
+	CoinMemcpyN(saveLower,numberColumns,columnLower);
+	CoinMemcpyN(saveUpper,numberColumns,columnUpper);
 	delete [] saveLower;
 	delete [] saveUpper;
 #else
@@ -1258,7 +1258,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
     }
     // now see what that does to row solution
     double * rowSolution = model2->primalRowSolution();
-    memset (rowSolution,0,numberRows*sizeof(double));
+    CoinZeroN (rowSolution,numberRows);
     model2->times(1.0,columnSolution,rowSolution);
     
     int * addStarts = new int [numberRows+1];
@@ -1314,9 +1314,9 @@ ClpSimplex::initialSolve(ClpSolve & options)
       // perturb - so switch off standard
       model2->setPerturbation(100);
       saveLower = new double[numberRows];
-      memcpy(saveLower,model2->rowLower_,numberRows*sizeof(double));
+      CoinMemcpyN(model2->rowLower_,numberRows,saveLower);
       saveUpper = new double[numberRows];
-      memcpy(saveUpper,model2->rowUpper_,numberRows*sizeof(double));
+      CoinMemcpyN(model2->rowUpper_,numberRows,saveUpper);
       double * lower = model2->rowLower();
       double * upper = model2->rowUpper();
       for (iRow=0;iRow<numberRows;iRow++) {
@@ -1388,7 +1388,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
       // now see what variables left out do to row solution
       double * rowSolution = model2->primalRowSolution();
       double * sumFixed = new double[numberRows];
-      memset (sumFixed,0,numberRows*sizeof(double));
+      CoinZeroN (sumFixed,numberRows);
       int iRow,iColumn;
       // zero out ones in small problem
       for (iColumn=0;iColumn<numberSort;iColumn++) {
@@ -1427,10 +1427,10 @@ ClpSimplex::initialSolve(ClpSolve & options)
       }
       for (iRow=0;iRow<numberRows;iRow++) 
 	model2->setRowStatus(iRow,small.getRowStatus(iRow));
-      memcpy(model2->primalRowSolution(),small.primalRowSolution(),
-	     numberRows*sizeof(double));
+      CoinMemcpyN(small.primalRowSolution(),
+	     numberRows,model2->primalRowSolution());
       // get reduced cost for large problem
-      memcpy(weight,model2->objective(),numberColumns*sizeof(double));
+      CoinMemcpyN(model2->objective(),numberColumns,weight);
       model2->transposeTimes(-1.0,small.dualRowSolution(),weight);
       int numberNegative=0;
       double sumNegative = 0.0;
@@ -1670,10 +1670,10 @@ ClpSimplex::initialSolve(ClpSolve & options)
       int numberTotal = numberRows+numberColumns;
       saveLower = new double [numberTotal];
       saveUpper = new double [numberTotal];
-      memcpy(saveLower,barrier.columnLower(),numberColumns*sizeof(double));
-      memcpy(saveLower+numberColumns,barrier.rowLower(),numberRows*sizeof(double));
-      memcpy(saveUpper,barrier.columnUpper(),numberColumns*sizeof(double));
-      memcpy(saveUpper+numberColumns,barrier.rowUpper(),numberRows*sizeof(double));
+      CoinMemcpyN(barrier.columnLower(),numberColumns,saveLower);
+      CoinMemcpyN(barrier.rowLower(),numberRows,saveLower+numberColumns);
+      CoinMemcpyN(barrier.columnUpper(),numberColumns,saveUpper);
+      CoinMemcpyN(barrier.rowUpper(),numberRows,saveUpper+numberColumns);
       barrier.fixFixed();
       saveModel2=model2;
     } else if (numberFixed) {
@@ -1712,7 +1712,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
 #endif
     if (saveModel2) {
       // do presolve
-      model2 = pinfo2.presolvedModel(*model2,1.0e-8,
+      model2 = pinfo2.presolvedModel(*model2,dblParam_[ClpPresolveTolerance],
 				    false,5,true);
       if (!model2) {
 	model2=saveModel2;
@@ -1800,13 +1800,13 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	    double * dj = model2->dualColumnSolution();
 	    double * cost = model2->objective();
 	    double * saveCost = new double[numberColumns];
-	    memcpy(saveCost,cost,numberColumns*sizeof(double));
+	    CoinMemcpyN(cost,numberColumns,saveCost);
 	    double * saveLower = new double[numberColumns];
 	    double * lower = model2->columnLower();
-	    memcpy(saveLower,lower,numberColumns*sizeof(double));
+	    CoinMemcpyN(lower,numberColumns,saveLower);
 	    double * saveUpper = new double[numberColumns];
 	    double * upper = model2->columnUpper();
-	    memcpy(saveUpper,upper,numberColumns*sizeof(double));
+	    CoinMemcpyN(upper,numberColumns,saveUpper);
 	    int i;
 	    double tolerance = 10.0*dualTolerance_;
 	    for ( i=0;i<numberColumns;i++) {
@@ -1840,11 +1840,11 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	    //model2->setLogLevel(63);
 	    //model2->setFactorizationFrequency(1);
 	    model2->dual(2);
-	    memcpy(cost,saveCost,numberColumns*sizeof(double));
+	    CoinMemcpyN(saveCost,numberColumns,cost);
 	    delete [] saveCost;
-	    memcpy(lower,saveLower,numberColumns*sizeof(double));
+	    CoinMemcpyN(saveLower,numberColumns,lower);
 	    delete [] saveLower;
-	    memcpy(upper,saveUpper,numberColumns*sizeof(double));
+	    CoinMemcpyN(saveUpper,numberColumns,upper);
 	    delete [] saveUpper;
 	  }
 	  // and finish
@@ -1889,11 +1889,11 @@ ClpSimplex::initialSolve(ClpSolve & options)
       model2=saveModel2;
       int numberRows = model2->numberRows();
       int numberColumns = model2->numberColumns();
-      memcpy(model2->columnLower(),saveLower,numberColumns*sizeof(double));
-      memcpy(model2->rowLower(),saveLower+numberColumns,numberRows*sizeof(double));
+      CoinMemcpyN(saveLower,numberColumns,model2->columnLower());
+      CoinMemcpyN(saveLower+numberColumns,numberRows,model2->rowLower());
       delete [] saveLower;
-      memcpy(model2->columnUpper(),saveUpper,numberColumns*sizeof(double));
-      memcpy(model2->rowUpper(),saveUpper+numberColumns,numberRows*sizeof(double));
+      CoinMemcpyN(saveUpper,numberColumns,model2->columnUpper());
+      CoinMemcpyN(saveUpper+numberColumns,numberRows,model2->rowUpper());
       delete [] saveUpper;
       model2->primal(1);
     }

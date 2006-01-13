@@ -39,6 +39,8 @@ enum ClpDblParam {
   ClpObjOffset,
   /// Maximum time in seconds - after this action is as max iterations
   ClpMaxSeconds,
+  /// Tolerance to use in presolve
+  ClpPresolveTolerance,
   /** Just a marker, so that we can allocate a static sized array to store
       parameters. */
   ClpLastDblParam

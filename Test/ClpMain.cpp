@@ -126,6 +126,7 @@ int main (int argc, const char *argv[])
     parameters[whichParam(SPRINT,numberParameters,parameters)].setIntValue(doSprint);
     parameters[whichParam(SUBSTITUTION,numberParameters,parameters)].setIntValue(substitution);
     parameters[whichParam(DUALIZE,numberParameters,parameters)].setIntValue(dualize);
+    parameters[whichParam(PRESOLVETOLERANCE,numberParameters,parameters)].setDoubleValue(1.0e-8);
     
     // total number of commands read
     int numberGoodCommands=0;
@@ -279,7 +280,6 @@ int main (int argc, const char *argv[])
 	  // get next field as double
 	  double value = CoinReadGetDoubleField(argc,argv,&valid);
 	  if (!valid) {
-	    parameters[iParam].setDoubleValue(value);
 	    parameters[iParam].setDoubleParameter(models+iModel,value);
 	  } else if (valid==1) {
 	    abort();
@@ -291,7 +291,6 @@ int main (int argc, const char *argv[])
 	  // get next field as int
 	  int value = CoinReadGetIntField(argc,argv,&valid);
 	  if (!valid) {
-	    parameters[iParam].setIntValue(value);
 	    if (parameters[iParam].type()==PRESOLVEPASS)
 	      preSolve = value;
 	    else if (parameters[iParam].type()==IDIOT)
@@ -310,8 +309,7 @@ int main (int argc, const char *argv[])
 	      substitution = value;
 	    else if (parameters[iParam].type()==DUALIZE)
 	      dualize = value;
-	    else
-	      parameters[iParam].setIntParameter(models+iModel,value);
+            parameters[iParam].setIntParameter(models+iModel,value);
 	  } else if (valid==1) {
 	    abort();
 	  } else {
@@ -595,8 +593,10 @@ int main (int argc, const char *argv[])
                 pinfo.setSubstitution(substitution);
                 if ((printOptions&1)!=0)
                   pinfo.statistics();
+                double presolveTolerance = 
+                  parameters[whichParam(PRESOLVETOLERANCE,numberParameters,parameters)].doubleValue();
                 model2 = 
-                  pinfo.presolvedModel(models[iModel],1.0e-8,
+                  pinfo.presolvedModel(models[iModel],presolveTolerance,
                                        true,preSolve);
                 if (model2) {
                   printf("Statistics for presolved model\n");
@@ -830,8 +830,10 @@ int main (int argc, const char *argv[])
                   pinfo.setSubstitution(substitution);
 		  if ((printOptions&1)!=0)
 		    pinfo.statistics();
+                  double presolveTolerance = 
+                    parameters[whichParam(PRESOLVETOLERANCE,numberParameters,parameters)].doubleValue();
 		  model2 = 
-		    pinfo.presolvedModel(models[iModel],1.0e-8,
+		    pinfo.presolvedModel(models[iModel],presolveTolerance,
 					 true,preSolve,false,false);
 		  if (model2) {
 		    printf("Saving presolved model on %s\n",
@@ -1077,8 +1079,10 @@ int main (int argc, const char *argv[])
 		ClpSimplex * model2 = models+iModel;
 		if (preSolve) {
 		  ClpPresolve pinfo;
+                  double presolveTolerance = 
+                    parameters[whichParam(PRESOLVETOLERANCE,numberParameters,parameters)].doubleValue();
 		  model2 = 
-		    pinfo.presolvedModel(models[iModel],1.0e-8,
+		    pinfo.presolvedModel(models[iModel],presolveTolerance,
 					 false,preSolve);
 		  if (model2) {
 		    printf("Saving presolved model on %s\n",

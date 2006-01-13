@@ -386,7 +386,8 @@ CbcOrClpParam::setDoubleParameter (OsiSolverInterface * model,double value)
       upperDoubleValue_<<std::endl;
     return 1;
   } else {
-    double oldValue;
+    double oldValue=doubleValue_;
+    doubleValue_=value;
     switch(type_) {
     case DUALTOLERANCE:
       model->getDblParam(OsiDualTolerance,oldValue);
@@ -397,8 +398,7 @@ CbcOrClpParam::setDoubleParameter (OsiSolverInterface * model,double value)
       model->setDblParam(OsiPrimalTolerance,value);
       break;
     default:
-      oldValue=0.0; // to avoid compiler message
-      abort();
+      break;
     }
     std::cout<<name_<<" was changed from "<<oldValue<<" to "
 	     <<value<<std::endl;
@@ -410,7 +410,7 @@ CbcOrClpParam::setDoubleParameter (OsiSolverInterface * model,double value)
 int
 CbcOrClpParam::setDoubleParameter (ClpSimplex * model,double value) 
 {
-  double oldValue = doubleParameter(model);
+  double oldValue = doubleValue_;
   if (value<lowerDoubleValue_||value>upperDoubleValue_) {
     std::cout<<value<<" was provided for "<<name_<<
       " - valid range is "<<lowerDoubleValue_<<" to "<<
@@ -419,6 +419,7 @@ CbcOrClpParam::setDoubleParameter (ClpSimplex * model,double value)
   } else {
     std::cout<<name_<<" was changed from "<<oldValue<<" to "
 	     <<value<<std::endl;
+    doubleValue_=value;
     switch(type_) {
 #ifndef COIN_USE_CBC
     case DUALTOLERANCE:
@@ -445,8 +446,11 @@ CbcOrClpParam::setDoubleParameter (ClpSimplex * model,double value)
     case RHSSCALE:
       model->setRhsScale(value);
       break;
+    case PRESOLVETOLERANCE:
+      model->setDblParam(ClpPresolveTolerance,value);
+      break;
     default:
-      abort();
+      break;
     }
     return 0;
   }
@@ -482,20 +486,22 @@ CbcOrClpParam::doubleParameter (ClpSimplex * model) const
     value=model->rhsScale();
     break;
   default:
-    abort();
+    value=doubleValue_;
+    break;
   }
   return value;
 }
 int 
 CbcOrClpParam::setIntParameter (ClpSimplex * model,int value) 
 {
-  int oldValue = intParameter(model);
+  int oldValue = intValue_;
   if (value<lowerIntValue_||value>upperIntValue_) {
     std::cout<<value<<" was provided for "<<name_<<
       " - valid range is "<<lowerIntValue_<<" to "<<
       upperIntValue_<<std::endl;
     return 1;
   } else {
+    intValue_=value;
     std::cout<<name_<<" was changed from "<<oldValue<<" to "
 	     <<value<<std::endl;
     switch(type_) {
@@ -519,7 +525,7 @@ CbcOrClpParam::setIntParameter (ClpSimplex * model,int value)
       model->setSpecialOptions(value);
       break;
     default:
-      abort();
+      break;
     }
     return 0;
   }
@@ -548,7 +554,7 @@ CbcOrClpParam::intParameter (ClpSimplex * model) const
     value=model->specialOptions();
     break;
   default:
-    value=-1;
+    value=intValue_;
     break;
   }
   return value;
@@ -579,7 +585,8 @@ CbcOrClpParam::doubleParameter (OsiSolverInterface * model) const
     assert(model->getDblParam(OsiPrimalTolerance,value));
     break;
   default:
-    abort();
+    return doubleValue_;
+    break;
   }
   return value;
 }
@@ -592,14 +599,14 @@ CbcOrClpParam::setIntParameter (OsiSolverInterface * model,int value)
       upperIntValue_<<std::endl;
     return 1;
   } else {
-    int oldValue;
+    int oldValue=intValue_;
+    intValue_=oldValue;
     switch(type_) {
     case SOLVERLOGLEVEL:
       model->messageHandler()->setLogLevel(value);
       break;
     default:
-      oldValue=0; // to avoid compiler message
-      abort();
+      break;
     }
     std::cout<<name_<<" was changed from "<<oldValue<<" to "
 	     <<value<<std::endl;
@@ -615,7 +622,8 @@ CbcOrClpParam::intParameter (OsiSolverInterface * model) const
     value=model->messageHandler()->logLevel();
     break;
   default:
-    abort();
+    value=intValue_;
+    break;
   }
   return value;
 }
@@ -628,8 +636,8 @@ CbcOrClpParam::setDoubleParameter (CbcModel &model,double value)
       upperDoubleValue_<<std::endl;
     return 1;
   } else {
-    double oldValue;
-    setDoubleValue(value);
+    double oldValue=doubleValue_;
+    doubleValue_ = value;
     switch(type_) {
     case INFEASIBILITYWEIGHT:
       oldValue=model.getDblParam(CbcModel::CbcInfeasibilityWeight);
@@ -664,7 +672,6 @@ CbcOrClpParam::setDoubleParameter (CbcModel &model,double value)
       setDoubleParameter(model.solver(),value);
       return 0; // to avoid message
     default:
-      oldValue=0.0; // to avoid compiler message
       break;
     }
     std::cout<<name_<<" was changed from "<<oldValue<<" to "
@@ -699,7 +706,8 @@ CbcOrClpParam::doubleParameter (CbcModel &model) const
     value=doubleParameter(model.solver());
     break;
   default:
-    abort();
+    value = doubleValue_;
+    break;
   }
   return value;
 }
@@ -712,8 +720,8 @@ CbcOrClpParam::setIntParameter (CbcModel &model,int value)
       upperIntValue_<<std::endl;
     return 1;
   } else {
-    setIntValue(value);
-    int oldValue;
+    int oldValue=intValue_;
+    intValue_ = value;
     switch(type_) {
     case LOGLEVEL:
       oldValue = model.messageHandler()->logLevel();
@@ -744,7 +752,6 @@ CbcOrClpParam::setIntParameter (CbcModel &model,int value)
       model.setSizeMiniTree(value);
       break;
     default:
-      oldValue=0; // to avoid compiler message
       break;
     }
     std::cout<<name_<<" was changed from "<<oldValue<<" to "
@@ -779,7 +786,8 @@ CbcOrClpParam::intParameter (CbcModel &model) const
     value=model.sizeMiniTree();
     break;
   default:
-    abort();
+    value=intValue_;
+    break;
   }
   return value;
 }
@@ -1580,6 +1588,9 @@ You can also use the parameters 'direction minimize'."
     CbcOrClpParam("mipO!ptions","Dubious options for mip",
 		  0,INT_MAX,MIPOPTIONS,false);
   parameters[numberParameters++]=
+    CbcOrClpParam("more!MipOptions","More dubious options for mip",
+		  0,INT_MAX,MOREMIPOPTIONS,false);
+  parameters[numberParameters++]=
     CbcOrClpParam("mixed!IntegerRoundingCuts","Whether to use Mixed Integer Rounding cuts",
 		  "off",MIXEDCUTS);
   parameters[numberParameters-1].append("on");
@@ -1802,6 +1813,13 @@ it also tries to strengthen the model - needs more work but can be useful. \
      ); 
 #endif
 #ifdef COIN_USE_CLP
+  parameters[numberParameters++]=
+    CbcOrClpParam("preT!olerance","Tolerance to use in presolve",
+		  1.0e-20,1.0e12,PRESOLVETOLERANCE);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "The default is 1.0e-8 - you may wish to try 1.0e-7"
+     ); 
   parameters[numberParameters++]=
     CbcOrClpParam("primalP!ivot","Primal pivot choice algorithm",
 		  "auto!matic",PRIMALPIVOT);
