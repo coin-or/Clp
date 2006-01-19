@@ -3553,6 +3553,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	    createRim(4);
 	    // make sure fake bounds are back
 	    changeBounds(true,NULL,changeCost);
+            numberChanged_=1; // force something to happen
 	  }
 	  if (lastCleaned<numberIterations_&&numberTimesOptimal_<4&&
 	      (numberChanged_||(specialOptions_&4096)==0)) {
