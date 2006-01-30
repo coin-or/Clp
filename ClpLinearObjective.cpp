@@ -32,13 +32,7 @@ ClpLinearObjective::ClpLinearObjective (const double * objective ,
 {
   type_=1;
   numberColumns_=numberColumns;
-  if (objective) {
-    objective_ = new double [numberColumns_];
-    memcpy(objective_,objective,numberColumns_*sizeof(double));
-  } else {
-    objective_ = new double [numberColumns_];
-    memset(objective_,0,numberColumns_*sizeof(double));
-  }
+  objective_ = CoinCopyOfArray(objective,numberColumns_,0.0);
 }
 
 //-------------------------------------------------------------------
@@ -48,12 +42,7 @@ ClpLinearObjective::ClpLinearObjective (const ClpLinearObjective & rhs)
 : ClpObjective(rhs)
 {  
   numberColumns_=rhs.numberColumns_;
-  if (rhs.objective_) {
-    objective_ = new double [numberColumns_];
-    memcpy(objective_,rhs.objective_,numberColumns_*sizeof(double));
-  } else {
-    objective_=NULL;
-  }
+  objective_ = CoinCopyOfArray(rhs.objective_,numberColumns_);
 }
 /* Subset constructor.  Duplicates are allowed
    and order is as given.
@@ -100,12 +89,8 @@ ClpLinearObjective::operator=(const ClpLinearObjective& rhs)
   if (this != &rhs) {
     ClpObjective::operator=(rhs);
     numberColumns_=rhs.numberColumns_;
-    if (rhs.objective_) {
-      objective_ = new double [numberColumns_];
-      memcpy(objective_,rhs.objective_,numberColumns_*sizeof(double));
-    } else {
-      objective_=NULL;
-    }
+    delete [] objective_;
+    objective_ = CoinCopyOfArray(rhs.objective_,numberColumns_);
   }
   return *this;
 }
@@ -237,8 +222,7 @@ ClpLinearObjective::resize(int newNumberColumns)
     int i;
     double * newArray = new double[newNumberColumns];
     if (objective_)
-      memcpy(newArray,objective_,
-	     CoinMin(newNumberColumns,numberColumns_)*sizeof(double));
+      CoinMemcpyN(objective_,CoinMin(newNumberColumns,numberColumns_),newArray);
     delete [] objective_;
     objective_ = newArray;
     for (i=numberColumns_;i<newNumberColumns;i++) 
@@ -255,7 +239,7 @@ ClpLinearObjective::deleteSome(int numberToDelete, const int * which)
     int i ;
     char * deleted = new char[numberColumns_];
     int numberDeleted=0;
-    memset(deleted,0,numberColumns_*sizeof(char));
+    CoinZeroN(deleted,numberColumns_);
     for (i=0;i<numberToDelete;i++) {
       int j = which[i];
       if (j>=0&&j<numberColumns_&&!deleted[j]) {

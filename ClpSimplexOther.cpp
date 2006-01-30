@@ -1013,9 +1013,9 @@ ClpSimplexOther::crunch(double * rhs, int * whichRow, int * whichColumn,
            j<columnStart[iColumn]+columnLength[iColumn];j++) {
         int iRow = row[j];
         int n=whichRow[iRow];
-        if (n==0)
+        if (n==0&&element[j])
           whichRow[iRow]=-iColumn-1;
-        else if (n<0)
+        else if (n<0) 
           whichRow[iRow]=2;
       }
     } else {

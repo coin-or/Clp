@@ -234,7 +234,7 @@ ClpSimplexDual::startupSolve(int ifValuesPass,double * saveDuals,int startFinish
 	  dual_[i] = saveDuals[i]/rowScale_[i];
 	}
       } else {
-	memcpy(dual_,saveDuals,numberRows_*sizeof(double));
+	CoinMemcpyN(saveDuals,numberRows_,dual_);
       }
       // now create my duals
       for (i=0;i<numberRows_;i++) {
@@ -243,7 +243,7 @@ ClpSimplexDual::startupSolve(int ifValuesPass,double * saveDuals,int startFinish
 	value += rowObjectiveWork_[i];
 	saveDuals[i+numberColumns_]=value;
       }
-      ClpDisjointCopyN(objectiveWork_,numberColumns_,saveDuals);
+      CoinMemcpyN(objectiveWork_,numberColumns_,saveDuals);
       transposeTimes(-1.0,dual_,saveDuals);
       // make reduced costs okay
       for (i=0;i<numberColumns_;i++) {
@@ -261,7 +261,7 @@ ClpSimplexDual::startupSolve(int ifValuesPass,double * saveDuals,int startFinish
 	  }
 	}
       }
-      memcpy(dj_,saveDuals,(numberColumns_+numberRows_)*sizeof(double));
+      CoinMemcpyN(saveDuals,(numberColumns_+numberRows_),dj_);
       // set up possible ones
       for (i=0;i<numberRows_+numberColumns_;i++)
 	clearPivoted(i);
@@ -442,7 +442,7 @@ ClpSimplexDual::dual(int ifValuesPass,int startFinishOptions)
   double * saveDuals = NULL;
   if (ifValuesPass) {
     saveDuals = new double [numberRows_+numberColumns_];
-    memcpy(saveDuals,dual_,numberRows_*sizeof(double));
+    CoinMemcpyN(dual_,numberRows_,saveDuals);
   }
   int returnCode = startupSolve(ifValuesPass,saveDuals,startFinishOptions);
   // Save so can see if doing after primal
@@ -474,7 +474,7 @@ int ClpSimplexDual::dual (int ifValuesPass , int startFinishOptions)
   double * saveDuals = NULL;
   if (ifValuesPass) {
     saveDuals = new double [numberRows_+numberColumns_];
-    memcpy(saveDuals,dual_,numberRows_*sizeof(double));
+    CoinMemcpyN(dual_,numberRows_,saveDuals);
   }
   // sanity check
   // initialize - no values pass and algorithm_ is -1
@@ -496,7 +496,7 @@ int ClpSimplexDual::dual (int ifValuesPass , int startFinishOptions)
 	  dual_[i] = saveDuals[i]/rowScale_[i];
 	}
       } else {
-	memcpy(dual_,saveDuals,numberRows_*sizeof(double));
+	CoinMemcpyN(saveDuals,numberRows_,dual_);
       }
       // now create my duals
       for (i=0;i<numberRows_;i++) {
@@ -505,7 +505,7 @@ int ClpSimplexDual::dual (int ifValuesPass , int startFinishOptions)
 	value += rowObjectiveWork_[i];
 	saveDuals[i+numberColumns_]=value;
       }
-      ClpDisjointCopyN(objectiveWork_,numberColumns_,saveDuals);
+      CoinMemcpyN(objectiveWork_,numberColumns_,saveDuals);
       transposeTimes(-1.0,dual_,saveDuals);
       // make reduced costs okay
       for (i=0;i<numberColumns_;i++) {
@@ -523,7 +523,7 @@ int ClpSimplexDual::dual (int ifValuesPass , int startFinishOptions)
 	  }
 	}
       }
-      memcpy(dj_,saveDuals,(numberColumns_+numberRows_)*sizeof(double));
+      CoinMemcpyN(saveDuals,numberColumns_+numberRows_,dj_);
       // set up possible ones
       for (i=0;i<numberRows_+numberColumns_;i++)
 	clearPivoted(i);
@@ -705,6 +705,22 @@ static double zzzzzz[100000];
 int
 ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
 {
+#if 0
+  if (!numberIterations_&&auxiliaryModel_) {
+    for (int i=0;i<numberColumns_;i++) {
+      if (!columnLower_[i]==auxiliaryModel_->lowerRegion()[i+numberRows_+numberColumns_]) 
+        {printf("%d a\n",i);break;}
+      if (!columnUpper_[i]==auxiliaryModel_->upperRegion()[i+numberRows_+numberColumns_]) 
+        {printf("%d b %g\n",i,auxiliaryModel_->upperRegion()[i+numberRows_+numberColumns_]);break;}
+    }
+    for (int i=0 ;i<numberRows_;i++) {
+      if (!rowLower_[i]==auxiliaryModel_->lowerRegion()[i+numberRows_+2*numberColumns_]) 
+        {printf("%d c\n",i);break;}
+      if (!rowUpper_[i]==auxiliaryModel_->upperRegion()[i+numberRows_+2*numberColumns_]) 
+        {printf("%d d\n",i);break;}
+    }
+  }
+#endif
 #ifdef CLP_DEBUG
   int debugIteration=-1;
 #endif
@@ -751,7 +767,7 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
     ifValuesPass=1;
     candidateList = new int[numberRows_];
     // move reduced costs across
-    memcpy(dj_,givenDuals,(numberRows_+numberColumns_)*sizeof(double));
+    CoinMemcpyN(givenDuals,numberRows_+numberColumns_,dj_);
     int iRow;
     for (iRow=0;iRow<numberRows_;iRow++) {
       int iPivot=pivotVariable_[iRow];
@@ -808,7 +824,6 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
   }
 #endif
   while (problemStatus_==-1) {
-
 #ifdef CLP_DEBUG
     if (givenDuals) {
       double value5=0.0;
@@ -1166,7 +1181,7 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
 				       objectiveChange,false);
 	else 
 	  updateDualsInValuesPass(rowArray_[0],columnArray_[0],theta_);
-
+        double oldDualOut = dualOut_;
 	// which will change basic solution
 	if (nswapped) {
 	  factorization_->updateColumn(rowArray_[3],rowArray_[2]);
@@ -1204,9 +1219,10 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
 	}
 	// amount primal will move
 	double movement = -dualOut_*directionOut_/alpha_;
+	double movementOld = oldDualOut*directionOut_/alpha_;
 	// so objective should increase by fabs(dj)*movement
 	// but we already have objective change - so check will be good
-	if (objectiveChange+fabs(movement*dualIn_)<-1.0e-5) {
+	if (objectiveChange+fabs(movementOld*dualIn_)<-CoinMax(1.0e-5,1.0e-12*fabs(objectiveValue_))) {
 #ifdef CLP_DEBUG
 	  if (handler_->logLevel()&32)
 	    printf("movement %g, swap change %g, rest %g  * %g\n",
@@ -1422,7 +1438,7 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
 	    delete [] ray_;
 	    ray_ = new double [ numberRows_];
 	    rowArray_[0]->expand(); // in case packed
-	    ClpDisjointCopyN(rowArray_[0]->denseVector(),numberRows_,ray_);
+	    CoinMemcpyN(rowArray_[0]->denseVector(),numberRows_,ray_);
           }
 	  // If we have just factorized and infeasibility reasonable say infeas
 	  if (((specialOptions_&4096)!=0||bestPossiblePivot<1.0e-11)&&dualBound_>1.0e8) {
@@ -1640,7 +1656,7 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
     }
   }
   if (givenDuals) {
-    memcpy(givenDuals,dj_,(numberRows_+numberColumns_)*sizeof(double));
+    CoinMemcpyN(dj_,numberRows_+numberColumns_,givenDuals);
     // get rid of any values pass array
     delete [] candidateList;
   }
@@ -2928,12 +2944,10 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 	  lastSequence=bestSequence;
 	} else {
 	  // keep old swapped
-	  memcpy(array[1-iFlip]+swapped[iFlip],
-		 array[iFlip]+swapped[iFlip],
-		 (numberColumns_-swapped[iFlip])*sizeof(double));
-	  memcpy(indices[1-iFlip]+swapped[iFlip],
-		 indices[iFlip]+swapped[iFlip],
-		 (numberColumns_-swapped[iFlip])*sizeof(int));
+	  CoinMemcpyN(array[iFlip]+swapped[iFlip],
+		 numberColumns_-swapped[iFlip],array[1-iFlip]+swapped[iFlip]);
+	  CoinMemcpyN(indices[iFlip]+swapped[iFlip],
+		 numberColumns_-swapped[iFlip],indices[1-iFlip]+swapped[iFlip]);
 	  marker[1-iFlip][1] = CoinMin(marker[1-iFlip][1],swapped[iFlip]);
 	  swapped[1-iFlip]=swapped[iFlip];
 	}
@@ -3081,7 +3095,11 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
     // so (dualIn_+modification)==theta_*alpha_
     double modification = theta_*alpha_-dualIn_;
     if ((specialOptions_&(2048+4096))!=0) {
-      if ((specialOptions_&2048)!=0) {
+      if ((specialOptions_&16384)!=0) {
+        // in fast dual
+	if (fabs(modification)<1.0e-7)
+	  modification=0.0;
+      } else if ((specialOptions_&2048)!=0) {
 	if (fabs(modification)<1.0e-10)
 	  modification=0.0;
       } else {
@@ -3120,9 +3138,8 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
   // clear arrays
 
   for (i=0;i<2;i++) {
-    memset(array[i],0,marker[i][0]*sizeof(double));
-    memset(array[i]+marker[i][1],0,
-	   (numberColumns_-marker[i][1])*sizeof(double));
+    CoinZeroN(array[i],marker[i][0]);
+    CoinZeroN(array[i]+marker[i][1],numberColumns_-marker[i][1]);
   }
   return bestPossible;
 }
@@ -3179,7 +3196,7 @@ ClpSimplexDual::checkUnbounded(CoinIndexedVector * ray,
     // create ray
     delete [] ray_;
     ray_ = new double [numberColumns_];
-    ClpFillN(ray_,numberColumns_,0.0);
+    CoinZeroN(ray_,numberColumns_);
     for (i=0;i<number;i++) {
       int iRow=index[i];
       int iPivot=pivotVariable_[iRow];
@@ -3202,11 +3219,11 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
   double realDualInfeasibilities=0.0;
   if (type==2) {
     // trouble - restore solution
-    memcpy(status_ ,saveStatus_,(numberColumns_+numberRows_)*sizeof(char));
-    memcpy(rowActivityWork_,savedSolution_+numberColumns_ ,
-	   numberRows_*sizeof(double));
-    memcpy(columnActivityWork_,savedSolution_ ,
-	   numberColumns_*sizeof(double));
+    CoinMemcpyN(saveStatus_,numberColumns_+numberRows_,status_);
+    CoinMemcpyN(savedSolution_+numberColumns_ ,
+	   numberRows_,rowActivityWork_);
+    CoinMemcpyN(savedSolution_ ,
+	   numberColumns_,columnActivityWork_);
     // restore extra stuff
     int dummy;
     matrix_->generalExpanded(this,6,dummy);
@@ -3235,11 +3252,11 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	  if (flagged(i))
 	    saveStatus_[i] |= 64; //say flagged
 	}
-	memcpy(status_ ,saveStatus_,(numberColumns_+numberRows_)*sizeof(char));
-	memcpy(rowActivityWork_,savedSolution_+numberColumns_ ,
-	       numberRows_*sizeof(double));
-	memcpy(columnActivityWork_,savedSolution_ ,
-	       numberColumns_*sizeof(double));
+	CoinMemcpyN(saveStatus_,numberColumns_+numberRows_,status_);
+	CoinMemcpyN(savedSolution_+numberColumns_ ,
+	       numberRows_,rowActivityWork_);
+	CoinMemcpyN(savedSolution_ ,
+	       numberColumns_,columnActivityWork_);
 	// restore extra stuff
 	int dummy;
 	matrix_->generalExpanded(this,6,dummy);
@@ -3263,11 +3280,11 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	type = 2;
 	//assert (internalFactorize(1)==0);
 	if (internalFactorize(1)) {
-	  memcpy(status_ ,saveStatus_,(numberColumns_+numberRows_)*sizeof(char));
-	  memcpy(rowActivityWork_,savedSolution_+numberColumns_ ,
-		 numberRows_*sizeof(double));
-	  memcpy(columnActivityWork_,savedSolution_ ,
-		 numberColumns_*sizeof(double));
+	  CoinMemcpyN(saveStatus_,numberColumns_+numberRows_,status_);
+	  CoinMemcpyN(savedSolution_+numberColumns_ ,
+		 numberRows_,rowActivityWork_);
+	  CoinMemcpyN(savedSolution_ ,
+		 numberColumns_,columnActivityWork_);
 	  // restore extra stuff
 	  int dummy;
 	  matrix_->generalExpanded(this,6,dummy);
@@ -3305,14 +3322,11 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
       if (flagged(i))
         saveStatus_[i] |= 64; //say flagged
     }
-    //memcpy(status_ ,saveStatus_,(numberColumns_+numberRows_)*sizeof(char));
-    for (int j=0;j<numberRows_+numberColumns_;j++) {
-      status_[j]=saveStatus_[j];
-    }
-    memcpy(rowActivityWork_,savedSolution_+numberColumns_ ,
-           numberRows_*sizeof(double));
-    memcpy(columnActivityWork_,savedSolution_ ,
-           numberColumns_*sizeof(double));
+    CoinMemcpyN(saveStatus_,numberColumns_+numberRows_,status_);
+    CoinMemcpyN(savedSolution_+numberColumns_ ,
+           numberRows_,rowActivityWork_);
+    CoinMemcpyN(savedSolution_ ,
+           numberColumns_,columnActivityWork_);
     // restore extra stuff
     int dummy;
     matrix_->generalExpanded(this,6,dummy);
@@ -3337,11 +3351,11 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
     type = 2;
     //assert (internalFactorize(1)==0);
     if (internalFactorize(1)) {
-      memcpy(status_ ,saveStatus_,(numberColumns_+numberRows_)*sizeof(char));
-      memcpy(rowActivityWork_,savedSolution_+numberColumns_ ,
-             numberRows_*sizeof(double));
-      memcpy(columnActivityWork_,savedSolution_ ,
-             numberColumns_*sizeof(double));
+      CoinMemcpyN(saveStatus_,numberColumns_+numberRows_,status_);
+      CoinMemcpyN(savedSolution_+numberColumns_ ,
+              numberRows_,rowActivityWork_);
+      CoinMemcpyN(savedSolution_ ,
+           numberColumns_,columnActivityWork_);
       // restore extra stuff
       int dummy;
       matrix_->generalExpanded(this,6,dummy);
@@ -3389,11 +3403,11 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	//printf("Reducing factorization frequency - bad backwards\n");
 	unflagVariables = false;
 	changeMade_++; // say something changed
-	memcpy(status_ ,saveStatus_,(numberColumns_+numberRows_)*sizeof(char));
-	memcpy(rowActivityWork_,savedSolution_+numberColumns_ ,
-	       numberRows_*sizeof(double));
-	memcpy(columnActivityWork_,savedSolution_ ,
-	       numberColumns_*sizeof(double));
+        CoinMemcpyN(saveStatus_,numberColumns_+numberRows_,status_);
+        CoinMemcpyN(savedSolution_+numberColumns_ ,
+                numberRows_,rowActivityWork_);
+        CoinMemcpyN(savedSolution_ ,
+                numberColumns_,columnActivityWork_);
 	// restore extra stuff
 	int dummy;
 	matrix_->generalExpanded(this,6,dummy);
@@ -3406,11 +3420,11 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	if(factorization_->pivotTolerance()<0.2)
 	  factorization_->pivotTolerance(0.2);
 	if (internalFactorize(1)) {
-	  memcpy(status_ ,saveStatus_,(numberColumns_+numberRows_)*sizeof(char));
-	  memcpy(rowActivityWork_,savedSolution_+numberColumns_ ,
-		 numberRows_*sizeof(double));
-	  memcpy(columnActivityWork_,savedSolution_ ,
-		 numberColumns_*sizeof(double));
+          CoinMemcpyN(saveStatus_,numberColumns_+numberRows_,status_);
+          CoinMemcpyN(savedSolution_+numberColumns_ ,
+                  numberRows_,rowActivityWork_);
+          CoinMemcpyN(savedSolution_ ,
+                  numberColumns_,columnActivityWork_);
 	  // restore extra stuff
 	  int dummy;
 	  matrix_->generalExpanded(this,6,dummy);
@@ -3540,9 +3554,9 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	  <<dualBound_
 	  <<CoinMessageEol;
 	// save solution in case unbounded
-	ClpDisjointCopyN(columnActivityWork_,numberColumns_,
+	CoinMemcpyN(columnActivityWork_,numberColumns_,
 			  columnArray_[0]->denseVector());
-	ClpDisjointCopyN(rowActivityWork_,numberRows_,
+	CoinMemcpyN(rowActivityWork_,numberRows_,
 			  rowArray_[2]->denseVector());
 	numberChangedBounds=changeBounds(false,rowArray_[3],changeCost);
 	if (numberChangedBounds<=0&&!numberDualInfeasibilities_) {
@@ -3550,10 +3564,16 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	  if (perturbation_==101) {
 	    perturbation_=102; // stop any perturbations
 	    cleanDuals=1;
-	    createRim(4);
 	    // make sure fake bounds are back
 	    changeBounds(true,NULL,changeCost);
-            numberChanged_=1; // force something to happen
+	    createRim(4);
+            // make sure duals are current
+            //computeDuals(givenDuals);
+            //checkDualSolution();
+            //if (numberDualInfeasibilities_)
+              numberChanged_=1; // force something to happen
+              //else
+              computeObjectiveValue();
 	  }
 	  if (lastCleaned<numberIterations_&&numberTimesOptimal_<4&&
 	      (numberChanged_||(specialOptions_&4096)==0)) {
@@ -3639,7 +3659,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 		    columnActivityWork_[iColumn]-original[iColumn];
 		columnActivityWork_[iColumn] = original[iColumn];
 	      }
-	      ClpDisjointCopyN(rowArray_[2]->denseVector(),numberRows_,
+	      CoinMemcpyN(rowArray_[2]->denseVector(),numberRows_,
 				rowActivityWork_);
 	    }
 	  } else {
@@ -3647,8 +3667,8 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	    rowArray_[0]->clear();
 	  }
 	}
-	ClpFillN(columnArray_[0]->denseVector(),numberColumns_,0.0);
-	ClpFillN(rowArray_[2]->denseVector(),numberRows_,0.0);
+	CoinZeroN(columnArray_[0]->denseVector(),numberColumns_);
+	CoinZeroN(rowArray_[2]->denseVector(),numberRows_);
       } 
       if (problemStatus_==-4||problemStatus_==-5) {
 	// may be infeasible - or may be bounds are wrong
@@ -3854,10 +3874,10 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
       savedSolution_ = new double [numberRows_+numberColumns_];
     }
     // save arrays
-    memcpy(saveStatus_,status_,(numberColumns_+numberRows_)*sizeof(char));
-    memcpy(savedSolution_+numberColumns_ ,rowActivityWork_,
-	   numberRows_*sizeof(double));
-    memcpy(savedSolution_ ,columnActivityWork_,numberColumns_*sizeof(double));
+    CoinMemcpyN(status_,numberColumns_+numberRows_,saveStatus_);
+    CoinMemcpyN(rowActivityWork_,
+	   numberRows_,savedSolution_+numberColumns_);
+    CoinMemcpyN(columnActivityWork_,numberColumns_,savedSolution_);
     // save extra stuff
     int dummy;
     matrix_->generalExpanded(this,5,dummy);
@@ -3913,21 +3933,26 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
   // If we are in trouble and in branch and bound give up
   if ((specialOptions_&1024)!=0) {
     int looksBad=0;
-    if (numberIterations_>10000&&largestPrimalError_*largestDualError_>1.0e2) {
+    if (largestPrimalError_*largestDualError_>1.0e2) {
       looksBad=1;
-    } else if (numberIterations_>10000&&largestPrimalError_>1.0e-2
-	&&objectiveValue_>CoinMin(1.0e15,limit)) {
+    } else if (largestPrimalError_>1.0e-2
+	&&objectiveValue_>CoinMin(1.0e15,1.0e3*limit)) {
       looksBad=2;
     }
     if (looksBad) {
       if (factorization_->pivotTolerance()<0.9) {
 	// up tolerance
 	factorization_->pivotTolerance(CoinMin(factorization_->pivotTolerance()*1.05+0.02,0.91));
-      } else {
+      } else if (numberIterations_>10000) {
 	if (handler_->logLevel()>0)
 	  printf("bad dual - saying infeasible %d\n",looksBad);
 	problemStatus_=1;
 	secondaryStatus_ = 1; // and say was on cutoff
+      } else if (largestPrimalError_>1.0e5) {
+        allSlackBasis();
+        problemStatus_=10;
+	//if (handler_->logLevel()>0)
+	  printf("bad dual - going to primal %d %g\n",looksBad,largestPrimalError_);
       }
     }
   }
@@ -4431,7 +4456,7 @@ ClpSimplexDual::perturb()
     <<CoinMessageEol;
   // and zero changes
   //int nTotal = numberRows_+numberColumns_;
-  //memset(cost_+nTotal,0,nTotal*sizeof(double));
+  //CoinZeroN(cost_+nTotal,nTotal);
   // say perturbed
   perturbation_=101;
 
@@ -4500,23 +4525,23 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
   ClpFactorization saveFactorization(*factorization_);
   // save basis and solution 
   double * saveSolution = new double[numberRows_+numberColumns_];
-  memcpy(saveSolution,solution_,
-	 (numberRows_+numberColumns_)*sizeof(double));
+  CoinMemcpyN(solution_,
+	 numberRows_+numberColumns_,saveSolution);
   unsigned char * saveStatus = 
     new unsigned char [numberRows_+numberColumns_];
-  memcpy(saveStatus,status_,(numberColumns_+numberRows_)*sizeof(char));
+  CoinMemcpyN(status_,numberColumns_+numberRows_,saveStatus);
   // save bounds as createRim makes clean copies
   double * saveLower = new double[numberRows_+numberColumns_];
-  memcpy(saveLower,lower_,
-	 (numberRows_+numberColumns_)*sizeof(double));
+  CoinMemcpyN(lower_,
+	 numberRows_+numberColumns_,saveLower);
   double * saveUpper = new double[numberRows_+numberColumns_];
-  memcpy(saveUpper,upper_,
-	 (numberRows_+numberColumns_)*sizeof(double));
+  CoinMemcpyN(upper_,
+	 numberRows_+numberColumns_,saveUpper);
   double * saveObjective = new double[numberRows_+numberColumns_];
-  memcpy(saveObjective,cost_,
-	 (numberRows_+numberColumns_)*sizeof(double));
+  CoinMemcpyN(cost_,
+	 numberRows_+numberColumns_,saveObjective);
   int * savePivot = new int [numberRows_];
-  memcpy(savePivot, pivotVariable_, numberRows_*sizeof(int));
+  CoinMemcpyN(pivotVariable_, numberRows_,savePivot);
   // need to save/restore weights.
 
   int iSolution = 0;
@@ -4559,7 +4584,7 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
       status=2;
 
     if (scalingFlag_<=0) {
-      memcpy(outputSolution[iSolution],solution_,numberColumns_*sizeof(double));
+      CoinMemcpyN(solution_,numberColumns_,outputSolution[iSolution]);
     } else {
       int j;
       double * sol = outputSolution[iSolution];
@@ -4570,17 +4595,17 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
     outputIterations[iSolution]=numberIterations_;
     iSolution++;
     // restore
-    memcpy(solution_,saveSolution,
-	   (numberRows_+numberColumns_)*sizeof(double));
-    memcpy(status_,saveStatus,(numberColumns_+numberRows_)*sizeof(char));
-    memcpy(lower_,saveLower,
-	   (numberRows_+numberColumns_)*sizeof(double));
-    memcpy(upper_,saveUpper,
-	   (numberRows_+numberColumns_)*sizeof(double));
-    memcpy(cost_,saveObjective,
-	 (numberRows_+numberColumns_)*sizeof(double));
+    CoinMemcpyN(saveSolution,
+            numberRows_+numberColumns_,solution_);
+    CoinMemcpyN(saveStatus,numberColumns_+numberRows_,status_);
+    CoinMemcpyN(saveLower,
+            numberRows_+numberColumns_,lower_);
+    CoinMemcpyN(saveUpper,
+            numberRows_+numberColumns_,upper_);
+    CoinMemcpyN(saveObjective,
+            numberRows_+numberColumns_,cost_);
     columnUpper_[iColumn] = saveBound;
-    memcpy(pivotVariable_, savePivot, numberRows_*sizeof(int));
+    CoinMemcpyN(savePivot, numberRows_,pivotVariable_);
     delete factorization_;
     factorization_ = new ClpFactorization(saveFactorization);
 
@@ -4621,7 +4646,7 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
     if (problemStatus_==3)
       status=2;
     if (scalingFlag_<=0) {
-      memcpy(outputSolution[iSolution],solution_,numberColumns_*sizeof(double));
+      CoinMemcpyN(solution_,numberColumns_,outputSolution[iSolution]);
     } else {
       int j;
       double * sol = outputSolution[iSolution];
@@ -4633,17 +4658,17 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
     iSolution++;
 
     // restore
-    memcpy(solution_,saveSolution,
-	   (numberRows_+numberColumns_)*sizeof(double));
-    memcpy(status_,saveStatus,(numberColumns_+numberRows_)*sizeof(char));
-    memcpy(lower_,saveLower,
-	   (numberRows_+numberColumns_)*sizeof(double));
-    memcpy(upper_,saveUpper,
-	   (numberRows_+numberColumns_)*sizeof(double));
-    memcpy(cost_,saveObjective,
-	 (numberRows_+numberColumns_)*sizeof(double));
+    CoinMemcpyN(saveSolution,
+            numberRows_+numberColumns_,solution_);
+    CoinMemcpyN(saveStatus,numberColumns_+numberRows_,status_);
+    CoinMemcpyN(saveLower,
+            numberRows_+numberColumns_,lower_);
+    CoinMemcpyN(saveUpper,
+            numberRows_+numberColumns_,upper_);
+    CoinMemcpyN(saveObjective,
+            numberRows_+numberColumns_,cost_);
     columnLower_[iColumn] = saveBound;
-    memcpy(pivotVariable_, savePivot, numberRows_*sizeof(int));
+    CoinMemcpyN(savePivot, numberRows_,pivotVariable_);
     delete factorization_;
     factorization_ = new ClpFactorization(saveFactorization);
 
@@ -4824,7 +4849,11 @@ ClpSimplexDual::setupForStrongBranching(char * arrays, int numberRows, int numbe
   // put in standard form (and make row copy)
   // create modifiable copies of model rim and do optional scaling
   int startFinishOptions;
-  if((specialOptions_&4096)==0||auxiliaryModel_) {
+  /*  COIN_CLP_VETTED
+      Looks safe for Cbc
+  */
+  bool safeOption = ((specialOptions_&COIN_CBC_USING_CLP)!=0);
+  if((specialOptions_&4096)==0||(auxiliaryModel_&&!safeOption)) {
     startFinishOptions=0;
   } else {
     startFinishOptions=1+2+4;
@@ -4877,16 +4906,16 @@ ClpSimplexDual::setupForStrongBranching(char * arrays, int numberRows, int numbe
   unsigned char * saveStatus = (unsigned char *) (arrayI+1);
   // save stuff
   // save basis and solution 
-  memcpy(saveSolution,solution_,
-	 (numberRows_+numberColumns_)*sizeof(double));
-  memcpy(saveStatus,status_,(numberColumns_+numberRows_)*sizeof(char));
-  memcpy(saveLower,lower_,
-	 (numberRows_+numberColumns_)*sizeof(double));
-  memcpy(saveUpper,upper_,
-	 (numberRows_+numberColumns_)*sizeof(double));
-  memcpy(saveObjective,cost_,
-	 (numberRows_+numberColumns_)*sizeof(double));
-  memcpy(savePivot, pivotVariable_, numberRows_*sizeof(int));
+  CoinMemcpyN(solution_,
+          numberRows_+numberColumns_,saveSolution);
+  CoinMemcpyN(status_,numberColumns_+numberRows_,saveStatus);
+  CoinMemcpyN(lower_,
+          numberRows_+numberColumns_,saveLower);
+  CoinMemcpyN(upper_,
+          numberRows_+numberColumns_,saveUpper);
+  CoinMemcpyN(cost_,
+          numberRows_+numberColumns_,saveObjective);
+  CoinMemcpyN(pivotVariable_, numberRows_,savePivot);
   return new ClpFactorization(*factorization_);
 }
 // This cleans up after strong branching
@@ -4894,7 +4923,11 @@ void
 ClpSimplexDual::cleanupAfterStrongBranching()
 {
   int startFinishOptions;
-  if((specialOptions_&4096)==0||auxiliaryModel_) {
+  /*  COIN_CLP_VETTED
+      Looks safe for Cbc
+  */
+  bool safeOption = ((specialOptions_&COIN_CBC_USING_CLP)!=0);
+  if((specialOptions_&4096)==0||(auxiliaryModel_&&!safeOption)) {
     startFinishOptions=0;
   } else {
     startFinishOptions=1+2+4;

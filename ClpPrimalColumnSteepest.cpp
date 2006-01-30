@@ -70,8 +70,7 @@ ClpPrimalColumnSteepest::ClpPrimalColumnSteepest (const ClpPrimalColumnSteepest 
       savedWeights_= new double[number];
       ClpDisjointCopyN(rhs.savedWeights_,number,savedWeights_);
       if (mode_!=1) {
-        reference_ = new unsigned int[(number+31)>>5];
-        memcpy(reference_,rhs.reference_,((number+31)>>5)*sizeof(unsigned int));
+        reference_ = CoinCopyOfArray(rhs.reference_,(number+31)>>5);
       }
     } else {
       weights_=NULL;
@@ -141,9 +140,7 @@ ClpPrimalColumnSteepest::operator=(const ClpPrimalColumnSteepest& rhs)
       savedWeights_= new double[number];
       ClpDisjointCopyN(rhs.savedWeights_,number,savedWeights_);
       if (mode_!=1) {
-	reference_ = new unsigned int[(number+31)>>5];
-	memcpy(reference_,rhs.reference_,
-	       ((number+31)>>5)*sizeof(unsigned int));
+	reference_ = CoinCopyOfArray(rhs.reference_,(number+31)>>5);
       }
     } else {
       weights_=NULL;
@@ -2799,8 +2796,8 @@ ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model,int mode)
 	  model_->factorization()->maximumPivots()) {
 	if (pivotSequence_>=0) {
 	  // save pivot order
-	  memcpy(alternateWeights_->getIndices(),pivotVariable,
-		 numberRows*sizeof(int));
+	  CoinMemcpyN(pivotVariable,
+		 numberRows,alternateWeights_->getIndices());
 	  // change from pivot row number to sequence number
 	  pivotSequence_=pivotVariable[pivotSequence_];
 	} else {
@@ -2839,9 +2836,7 @@ ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model,int mode)
 	initializeWeights();
 	// create saved weights 
 	delete [] savedWeights_;
-	savedWeights_ = new double[numberRows+numberColumns];
-	memcpy(savedWeights_,weights_,(numberRows+numberColumns)*
-	       sizeof(double));
+	savedWeights_ = CoinCopyOfArray(weights_,numberRows+numberColumns);
       } else {
 	// Partial pricing
 	// use region as somewhere to save non-fixed slacks
@@ -2869,14 +2864,12 @@ ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model,int mode)
     } else {
       if (mode!=4) {
 	// save
-	memcpy(savedWeights_,weights_,(numberRows+numberColumns)*
-	       sizeof(double));
+	CoinMemcpyN(weights_,(numberRows+numberColumns),savedWeights_);
 	savedPivotSequence_= pivotSequence_;
 	savedSequenceOut_ = model_->sequenceOut();
       } else {
 	// restore
-	memcpy(weights_,savedWeights_,(numberRows+numberColumns)*
-	       sizeof(double));
+	CoinMemcpyN(savedWeights_,(numberRows+numberColumns),weights_);
 	// was - but I think should not be
 	//pivotSequence_= savedPivotSequence_;
 	//model_->setSequenceOut(savedSequenceOut_); 
@@ -3091,7 +3084,7 @@ ClpPrimalColumnSteepest::updateWeights(CoinIndexedVector * input)
 	newWork[pivotRow] = -2.0*CoinMax(devex_,0.0);
 	devex_+=ADD_ONE;
 	weights_[sequenceOut]=1.0+ADD_ONE;
-	memcpy(newWhich,which,number*sizeof(int));
+	CoinMemcpyN(which,number,newWhich);
 	alternateWeights_->setNumElements(number);
       } else {
 	if ((mode_!=4&&mode_!=5)||numberSwitched_>1) {
@@ -3157,7 +3150,7 @@ ClpPrimalColumnSteepest::updateWeights(CoinIndexedVector * input)
 	newWork[pivotRow] = -2.0*CoinMax(devex_,0.0);
 	devex_+=ADD_ONE;
 	weights_[sequenceOut]=1.0+ADD_ONE;
-	memcpy(newWhich,which,number*sizeof(int));
+	CoinMemcpyN(which,number,newWhich);
 	alternateWeights_->setNumElements(number);
       } else {
 	if ((mode_!=4&&mode_!=5)||numberSwitched_>1) {
@@ -3310,8 +3303,7 @@ ClpPrimalColumnSteepest::initializeWeights()
     if (!reference_) {
       int nWords = (number+31)>>5;
       reference_ = new unsigned int[nWords];
-      // tiny overhead to zero out (stops valgrind complaining)
-      memset(reference_,0,nWords*sizeof(int));
+      CoinZeroN(reference_,nWords);
     }
     
     for (iSequence=0;iSequence<number;iSequence++) {

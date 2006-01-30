@@ -641,11 +641,11 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
   int numberPivots = factorization_->pivots();
   if (type==2) {
     // trouble - restore solution
-    memcpy(status_ ,saveStatus_,(numberColumns_+numberRows_)*sizeof(char));
-    memcpy(rowActivityWork_,savedSolution_+numberColumns_ ,
-	   numberRows_*sizeof(double));
-    memcpy(columnActivityWork_,savedSolution_ ,
-	   numberColumns_*sizeof(double));
+    CoinMemcpyN(saveStatus_,numberColumns_+numberRows_,status_);
+    CoinMemcpyN(savedSolution_+numberColumns_ ,
+	   numberRows_,rowActivityWork_);
+    CoinMemcpyN(savedSolution_ ,
+	   numberColumns_,columnActivityWork_);
     // restore extra stuff
     matrix_->generalExpanded(this,6,dummy);
     forceFactorization_=1; // a bit drastic but ..
@@ -698,7 +698,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
               if (flagged(i))
                 saveStatus_[i] |= 64; //say flagged
             }
-	    memcpy(status_ ,saveStatus_,(numberColumns_+numberRows_)*sizeof(char));
+	    CoinMemcpyN(saveStatus_,numberColumns_+numberRows_,status_);
             if (numberPivots<=1) {
               // throw out something
               if (sequenceIn_>=0&&getStatus(sequenceIn_)!=basic) {
@@ -712,10 +712,10 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
               // Go to safe 
               factorization_->pivotTolerance(0.99);
             }
-	    memcpy(rowActivityWork_,savedSolution_+numberColumns_ ,
-		   numberRows_*sizeof(double));
-	    memcpy(columnActivityWork_,savedSolution_ ,
-		   numberColumns_*sizeof(double));
+	    CoinMemcpyN(savedSolution_+numberColumns_ ,
+		   numberRows_,rowActivityWork_);
+	    CoinMemcpyN(savedSolution_ ,
+		   numberColumns_,columnActivityWork_);
 	    // restore extra stuff
 	    matrix_->generalExpanded(this,6,dummy);
 	    matrix_->generalExpanded(this,5,dummy);
@@ -904,7 +904,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	  // we are infeasible - use as ray
 	  delete [] ray_;
 	  ray_ = new double [numberRows_];
-	  memcpy(ray_,dual_,numberRows_*sizeof(double));
+	  CoinMemcpyN(dual_,numberRows_,ray_);
 	  // and get feasible duals
 	  infeasibilityCost_=0.0;
 	  createRim(4);
@@ -1058,14 +1058,18 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
       if(type==3&&problemStatus_!=-5) {
 	//bool unflagged = 
 	unflag();
-	if (sumDualInfeasibilities_<1.0e-3&&!numberPrimalInfeasibilities_) {
-	  if (numberTimesOptimal_<4) {
-	    numberTimesOptimal_++;
-	    changeMade_++; // say change made
-	  } else {
-	    problemStatus_=0;
-	    secondaryStatus_=5;
-	  }
+	if (sumDualInfeasibilities_<1.0e-3||
+            (sumDualInfeasibilities_/(double) numberDualInfeasibilities_)<1.0e-5||
+            progress->lastIterationNumber(0)==numberIterations_) {
+          if (!numberPrimalInfeasibilities_) {
+            if (numberTimesOptimal_<4) {
+              numberTimesOptimal_++;
+              changeMade_++; // say change made
+            } else {
+              problemStatus_=0;
+              secondaryStatus_=5;
+            }
+          }
 	}
       }
     }
@@ -1081,10 +1085,10 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
       savedSolution_ = new double [numberRows_+numberColumns_];
     }
     // save arrays
-    memcpy(saveStatus_,status_,(numberColumns_+numberRows_)*sizeof(char));
-    memcpy(savedSolution_+numberColumns_ ,rowActivityWork_,
-	   numberRows_*sizeof(double));
-    memcpy(savedSolution_ ,columnActivityWork_,numberColumns_*sizeof(double));
+    CoinMemcpyN(status_,numberColumns_+numberRows_,saveStatus_);
+    CoinMemcpyN(rowActivityWork_,
+	   numberRows_,savedSolution_+numberColumns_);
+    CoinMemcpyN(columnActivityWork_,numberColumns_,savedSolution_);
   }
   if (doFactorization) {
     // restore weights (if saved) - also recompute infeasibility list
@@ -1574,10 +1578,10 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
 
   // clear arrays
 
-  memset(spare,0,numberRemaining*sizeof(double));
+  CoinZeroN(spare,numberRemaining);
 
   // put back original bounds etc
-  memcpy(rhsArray->getIndices(),index,numberRemaining*sizeof(int));
+  CoinMemcpyN(index,numberRemaining,rhsArray->getIndices());
   rhsArray->setNumElements(numberRemaining);
   rhsArray->setPacked();
   nonLinearCost_->goBackAll(rhsArray);
@@ -2638,7 +2642,7 @@ ClpSimplexPrimal::primalRay(CoinIndexedVector * rowArray)
 {
   delete [] ray_;
   ray_ = new double [numberColumns_];
-  ClpFillN(ray_,numberColumns_,0.0);
+  CoinZeroN(ray_,numberColumns_);
   int number=rowArray->getNumElements();
   int * index = rowArray->getIndices();
   double * array = rowArray->denseVector();
@@ -2710,7 +2714,7 @@ ClpSimplexPrimal::nextSuperBasic(int superBasicType,CoinIndexedVector * columnAr
 	  }
 	  CoinSort_2(work,work+number,which);
 	  columnArray->setNumElements(number);
-	  memset(work,0,number*sizeof(double));
+	  CoinZeroN(work,number);
 	}
 	int * which=columnArray->getIndices();
 	int number = columnArray->getNumElements();

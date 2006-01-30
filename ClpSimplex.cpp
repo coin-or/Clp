@@ -8559,6 +8559,8 @@ ClpSimplex::computeObjectiveValue()
     double value = columnActivity_[iSequence];
     objectiveValue_ += value*obj[iSequence];
   }
+  // But remember direction
+  objectiveValue_ *= optimizationDirection_;
   //if (fabs(objectiveValue_-oldObj)>1.0e-1) {
   //if(problemStatus_!=3) printf("XX ");;
   //printf("obj %g - was %g\n",objectiveValue(),objectiveValue()+(objectiveValue_-oldObj));
