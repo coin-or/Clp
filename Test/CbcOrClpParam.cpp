@@ -29,6 +29,12 @@ static char coin_prompt[]="Coin:";
 #else
 static char coin_prompt[]="Clp:";
 #endif
+static bool doPrinting=true;
+std::string afterEquals="";
+void setCbcOrClpPrinting(bool yesNo)
+{
+  doPrinting=yesNo;
+}
 //#############################################################################
 // Constructors / Destructor / Assignment
 //#############################################################################
@@ -400,8 +406,9 @@ CbcOrClpParam::setDoubleParameter (OsiSolverInterface * model,double value)
     default:
       break;
     }
-    std::cout<<name_<<" was changed from "<<oldValue<<" to "
-	     <<value<<std::endl;
+    if (doPrinting)
+      std::cout<<name_<<" was changed from "<<oldValue<<" to "
+               <<value<<std::endl;
     return 0;
   }
 }
@@ -417,8 +424,9 @@ CbcOrClpParam::setDoubleParameter (ClpSimplex * model,double value)
       upperDoubleValue_<<std::endl;
     return 1;
   } else {
-    std::cout<<name_<<" was changed from "<<oldValue<<" to "
-	     <<value<<std::endl;
+    if (doPrinting)
+      std::cout<<name_<<" was changed from "<<oldValue<<" to "
+               <<value<<std::endl;
     doubleValue_=value;
     switch(type_) {
 #ifndef COIN_USE_CBC
@@ -502,8 +510,9 @@ CbcOrClpParam::setIntParameter (ClpSimplex * model,int value)
     return 1;
   } else {
     intValue_=value;
-    std::cout<<name_<<" was changed from "<<oldValue<<" to "
-	     <<value<<std::endl;
+    if (doPrinting)
+      std::cout<<name_<<" was changed from "<<oldValue<<" to "
+               <<value<<std::endl;
     switch(type_) {
     case SOLVERLOGLEVEL:
       model->setLogLevel(value);
@@ -608,8 +617,9 @@ CbcOrClpParam::setIntParameter (OsiSolverInterface * model,int value)
     default:
       break;
     }
-    std::cout<<name_<<" was changed from "<<oldValue<<" to "
-	     <<value<<std::endl;
+    if (doPrinting)
+      std::cout<<name_<<" was changed from "<<oldValue<<" to "
+               <<value<<std::endl;
     return 0;
   }
 }
@@ -674,8 +684,9 @@ CbcOrClpParam::setDoubleParameter (CbcModel &model,double value)
     default:
       break;
     }
-    std::cout<<name_<<" was changed from "<<oldValue<<" to "
-	     <<value<<std::endl;
+    if (doPrinting)
+      std::cout<<name_<<" was changed from "<<oldValue<<" to "
+               <<value<<std::endl;
     return 0;
   }
 }
@@ -754,8 +765,9 @@ CbcOrClpParam::setIntParameter (CbcModel &model,int value)
     default:
       break;
     }
-    std::cout<<name_<<" was changed from "<<oldValue<<" to "
-	     <<value<<std::endl;
+    if (doPrinting)
+      std::cout<<name_<<" was changed from "<<oldValue<<" to "
+               <<value<<std::endl;
     return 0;
   }
 }
@@ -799,6 +811,17 @@ CbcOrClpParam::setCurrentOption ( const std::string value )
   int action = parameterOption(value);
   if (action>=0)
     currentKeyWord_=action;
+}
+// Sets current parameter option
+void 
+CbcOrClpParam::setCurrentOption ( int value , bool printIt)
+{
+  if (printIt&&value!=currentKeyWord_)
+    std::cout<<"Option for "<<name_<<" changed from "
+             <<definedKeyWords_[currentKeyWord_]<<" to "
+             <<definedKeyWords_[value]<<std::endl;
+
+    currentKeyWord_=value;
 }
 void 
 CbcOrClpParam::setIntValue ( int value )
@@ -899,6 +922,8 @@ std::string
 CoinReadGetCommand(int argc, const char *argv[])
 {
   std::string field="EOL";
+  // say no =
+  afterEquals="";
   while (field=="EOL") {
     if (CbcOrClpRead_mode>0) {
       if (CbcOrClpRead_mode<argc) {
@@ -909,8 +934,8 @@ CoinReadGetCommand(int argc, const char *argv[])
 	  field=CoinReadNextField();
 	} else if (field[0]!='-') {
 	  if (CbcOrClpRead_mode!=2) {
-	    std::cout<<"skipping non-command "<<field<<std::endl;
-	    field="EOL"; // skip
+	    // now allow std::cout<<"skipping non-command "<<field<<std::endl;
+	    // field="EOL"; // skip
 	  } else {
 	    // special dispensation - taken as -import name
 	    CbcOrClpRead_mode--;
@@ -933,6 +958,12 @@ CoinReadGetCommand(int argc, const char *argv[])
       field=CoinReadNextField();
     }
   }
+  // if = then modify and save
+  unsigned int found = field.find('=');
+  if (found!=std::string::npos) {
+    afterEquals = field.substr(found+1);
+    field = field.substr(0,found);
+  }
   //std::cout<<field<<std::endl;
   return field;
 }
@@ -940,18 +971,23 @@ std::string
 CoinReadGetString(int argc, const char *argv[])
 {
   std::string field="EOL";
-  if (CbcOrClpRead_mode>0) {
-    if (CbcOrClpRead_mode<argc) {
-      if (argv[CbcOrClpRead_mode][0]!='-') { 
-	field = argv[CbcOrClpRead_mode++];
-      } else if (!strcmp(argv[CbcOrClpRead_mode],"--")) {
-	field = argv[CbcOrClpRead_mode++];
-	// -- means import from stdin
-	field = "-";
+  if (afterEquals=="") {
+    if (CbcOrClpRead_mode>0) {
+      if (CbcOrClpRead_mode<argc) {
+        if (argv[CbcOrClpRead_mode][0]!='-') { 
+          field = argv[CbcOrClpRead_mode++];
+        } else if (!strcmp(argv[CbcOrClpRead_mode],"--")) {
+          field = argv[CbcOrClpRead_mode++];
+          // -- means import from stdin
+          field = "-";
+        }
       }
+    } else {
+      field=CoinReadNextField();
     }
   } else {
-    field=CoinReadNextField();
+    field=afterEquals;
+    afterEquals = "";
   }
   //std::cout<<field<<std::endl;
   return field;
@@ -961,13 +997,18 @@ int
 CoinReadGetIntField(int argc, const char *argv[],int * valid)
 {
   std::string field="EOL";
-  if (CbcOrClpRead_mode>0) {
-    if (CbcOrClpRead_mode<argc) {
-      // may be negative value so do not check for -
-      field = argv[CbcOrClpRead_mode++];
+  if (afterEquals=="") {
+    if (CbcOrClpRead_mode>0) {
+      if (CbcOrClpRead_mode<argc) {
+        // may be negative value so do not check for -
+        field = argv[CbcOrClpRead_mode++];
+      }
+    } else {
+      field=CoinReadNextField();
     }
   } else {
-    field=CoinReadNextField();
+    field=afterEquals;
+    afterEquals = "";
   }
   int value=0;
   //std::cout<<field<<std::endl;
@@ -984,13 +1025,18 @@ double
 CoinReadGetDoubleField(int argc, const char *argv[],int * valid)
 {
   std::string field="EOL";
-  if (CbcOrClpRead_mode>0) {
-    if (CbcOrClpRead_mode<argc) {
-      // may be negative value so do not check for -
-      field = argv[CbcOrClpRead_mode++];
+  if (afterEquals=="") {
+    if (CbcOrClpRead_mode>0) {
+      if (CbcOrClpRead_mode<argc) {
+        // may be negative value so do not check for -
+        field = argv[CbcOrClpRead_mode++];
+      }
+    } else {
+      field=CoinReadNextField();
     }
   } else {
-    field=CoinReadNextField();
+    field=afterEquals;
+    afterEquals = "";
   }
   double value=0.0;
   //std::cout<<field<<std::endl;
@@ -1425,6 +1471,11 @@ alters search."
   parameters[numberParameters++]=
     CbcOrClpParam("help","Print out version, non-standard options and some help",
 		  HELP);
+#ifdef COIN_USE_CBC
+  parameters[numberParameters++]=
+    CbcOrClpParam("hot!StartMaxIts","Maximum iterations on hot start",
+		  0,INT_MAX,MAXHOTITS,false);
+#endif
 #ifdef COIN_USE_CLP
   parameters[numberParameters++]=
     CbcOrClpParam("idiot!Crash","Whether to try idiot crash",
@@ -1589,7 +1640,7 @@ You can also use the parameters 'direction minimize'."
 		  0,INT_MAX,MIPOPTIONS,false);
   parameters[numberParameters++]=
     CbcOrClpParam("more!MipOptions","More dubious options for mip",
-		  0,INT_MAX,MOREMIPOPTIONS,false);
+		  -1,INT_MAX,MOREMIPOPTIONS,false);
   parameters[numberParameters++]=
     CbcOrClpParam("mixed!IntegerRoundingCuts","Whether to use Mixed Integer Rounding cuts",
 		  "off",MIXEDCUTS);

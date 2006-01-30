@@ -58,7 +58,7 @@ enum CbcOrClpParameterType
     SUBSTITUTION,DUALIZE,FPUMPITS,CUTPASS,
 
     STRONGBRANCHING=151,CUTDEPTH, MAXNODES,NUMBERBEFORE,NUMBERANALYZE,
-    NUMBERMINI,MIPOPTIONS,MOREMIPOPTIONS,
+    NUMBERMINI,MIPOPTIONS,MOREMIPOPTIONS,MAXHOTITS,
 #ifdef COIN_USE_CBC 
     LOGLEVEL , 
 #endif
@@ -162,8 +162,7 @@ public:
   inline std::string currentOption (  ) const
   { return definedKeyWords_[currentKeyWord_]; };
   /// Sets current parameter option
-  inline void setCurrentOption ( int value )
-  { currentKeyWord_=value; };
+  void setCurrentOption ( int value , bool printIt=false);
   /// Sets current parameter option using string
   void setCurrentOption (const std::string value );
   /// Sets int value
@@ -252,7 +251,7 @@ std::string CoinReadGetString(int argc, const char *argv[]);
 int CoinReadGetIntField(int argc, const char *argv[],int * valid);
 double CoinReadGetDoubleField(int argc, const char *argv[],int * valid);
 void CoinReadPrintit(const char * input);
-
+void setCbcOrClpPrinting(bool yesNo);
 #define CBCMAXPARAMETERS 200
 /*
   Subroutine to establish the cbc parameter array. See the description of

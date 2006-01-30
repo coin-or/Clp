@@ -934,7 +934,16 @@ public:
       8192 - Do Primal when cleaning up primal
       16384 - In fast dual (so we can switch off things)
       32678 - called from Osi
+      NOTE - many applications can call Clp but there may be some short cuts
+             which are taken which are not guaranteed safe from all applications.
+             Vetted applications will have a bit set and the code may test this
+             At present I expect a few such applications - if too many I will
+             have to re-think.  It is up to application owner to change the code
+             if she/he needs these short cuts.  I will not debug unless in Coin
+             repository.  See COIN_CLP_VETTED comments.
+      0x01000000 is Cbc (and in branch and bound)
   */
+#define COIN_CBC_USING_CLP 0x01000000
   inline unsigned int specialOptions() const
   { return specialOptions_;};
   inline void setSpecialOptions(unsigned int value)
