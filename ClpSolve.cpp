@@ -519,6 +519,23 @@ ClpSimplex::initialSolve(ClpSolve & options)
       abort();
     }
   }
+#ifndef NO_RTTI
+  ClpQuadraticObjective * quadraticObj = (dynamic_cast< ClpQuadraticObjective*>(objectiveAsObject()));
+#else
+  ClpQuadraticObjective * quadraticObj = NULL;
+  if (objective_->type()==2)
+    quadraticObj = (static_cast< ClpQuadraticObjective*>(objective_));
+#endif
+  // If quadratic then primal or barrier or slp
+  if (quadraticObj) {
+    doSprint=0;
+    doIdiot=0;
+    // off
+    if (method==ClpSolve::useBarrier)
+      method=ClpSolve::useBarrierNoCross;
+    else if (method!=ClpSolve::useBarrierNoCross)
+      method=ClpSolve::usePrimal;
+  }
 #ifdef COIN_HAS_VOL
   // Save number of idiot
   int saveDoIdiot=doIdiot;
@@ -1535,20 +1552,13 @@ ClpSimplex::initialSolve(ClpSolve & options)
       barrierOptions &= ~8;
       scale=true;
     }
-    // If quadratic force KKT
-#ifndef NO_RTTI
-    ClpQuadraticObjective * quadraticObj = (dynamic_cast< ClpQuadraticObjective*>(barrier.objectiveAsObject()));
-#else
-    ClpQuadraticObjective * quadraticObj = NULL;
-    if (objective_->type()==2)
-      quadraticObj = (static_cast< ClpQuadraticObjective*>(objective_));
-#endif
 #ifndef FAST_BARRIER
     if (!numberBarrier)
       std::cout<<"Warning - the default ordering is just on row counts! "
 	       <<"The factorization is being improved"<<std::endl;
     numberBarrier++;
 #endif
+    // If quadratic force KKT
     if (quadraticObj) {
       doKKT=true;
     }
