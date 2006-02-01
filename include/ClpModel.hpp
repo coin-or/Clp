@@ -780,6 +780,12 @@ protected:
    inline double rawObjectiveValue() const {
       return objectiveValue_;
    }
+  /// Create row names as char **
+  const char * const * const rowNamesAsChar() const;
+  /// Create column names as char **
+  const char * const * const columnNamesAsChar() const;
+  /// Delete char * version of names
+  void deleteNamesAsChar(const char * const * const names,int number) const;
   //@}
 
 

@@ -3185,46 +3185,9 @@ ClpModel::writeMps(const char *filename,
     for (int i = 0; i < numberColumns_; ++i) 
       objective [i] = - objective[i];
   }
-  
-  char ** rowNames = NULL;
-  char ** columnNames = NULL;
-#ifndef CLP_NO_STD
-  if (lengthNames()) {
-    rowNames = new char * [numberRows_];
-    for (int iRow=0;iRow<numberRows_;iRow++) {
-      rowNames[iRow] = 
-	strdup(rowName(iRow).c_str());
-#ifdef STRIPBLANKS
-      char * xx = rowNames[iRow];
-      int i;
-      int length = strlen(xx);
-      int n=0;
-      for (i=0;i<length;i++) {
-	if (xx[i]!=' ')
-	  xx[n++]=xx[i];
-      }
-      xx[n]='\0';
-#endif
-    }
-    
-    columnNames = new char * [numberColumns_];
-    for (int iColumn=0;iColumn<numberColumns_;iColumn++) {
-      columnNames[iColumn] = 
-	strdup(columnName(iColumn).c_str());
-#ifdef STRIPBLANKS
-      char * xx = columnNames[iColumn];
-      int i;
-      int length = strlen(xx);
-      int n=0;
-      for (i=0;i<length;i++) {
-	if (xx[i]!=' ')
-	  xx[n++]=xx[i];
-      }
-      xx[n]='\0';
-#endif
-    }
-  }
-#endif
+  // get names
+  const char * const * const rowNames = rowNamesAsChar();
+  const char * const * const columnNames = columnNamesAsChar();
   CoinMpsIO writer;
   writer.passInMessageHandler(handler_);
   *writer.messagesPointer()=coinMessages();
@@ -3254,17 +3217,72 @@ ClpModel::writeMps(const char *filename,
   int returnCode = writer.writeMps(filename, 0 /* do not gzip it*/, formatType, numberAcross,
 			 quadratic);
   if (rowNames) {
-    for (int iRow=0;iRow<numberRows_;iRow++) {
-      free(rowNames[iRow]);
-    }
-    delete [] rowNames;
-    for (int iColumn=0;iColumn<numberColumns_;iColumn++) {
-      free(columnNames[iColumn]);
-    }
-    delete [] columnNames;
+    deleteNamesAsChar(rowNames, numberRows_);
+    deleteNamesAsChar(columnNames, numberColumns_);
   }
   return returnCode;
 }
+#ifndef CLP_NO_STD
+// Create row names as char **
+const char * const * const
+ClpModel::rowNamesAsChar() const
+{
+  char ** rowNames = NULL;
+  if (lengthNames()) {
+    rowNames = new char * [numberRows_];
+    for (int iRow=0;iRow<numberRows_;iRow++) {
+      rowNames[iRow] = 
+	strdup(rowName(iRow).c_str());
+#ifdef STRIPBLANKS
+      char * xx = rowNames[iRow];
+      int i;
+      int length = strlen(xx);
+      int n=0;
+      for (i=0;i<length;i++) {
+	if (xx[i]!=' ')
+	  xx[n++]=xx[i];
+      }
+      xx[n]='\0';
+#endif
+    }
+  }
+  return reinterpret_cast<const char * const *>(rowNames);
+}
+// Create column names as char **
+const char * const * const
+ClpModel::columnNamesAsChar() const
+{
+  char ** columnNames = NULL;
+  if (lengthNames()) {
+    columnNames = new char * [numberColumns_];
+    for (int iColumn=0;iColumn<numberColumns_;iColumn++) {
+      columnNames[iColumn] = 
+	strdup(columnName(iColumn).c_str());
+#ifdef STRIPBLANKS
+      char * xx = columnNames[iColumn];
+      int i;
+      int length = strlen(xx);
+      int n=0;
+      for (i=0;i<length;i++) {
+	if (xx[i]!=' ')
+	  xx[n++]=xx[i];
+      }
+      xx[n]='\0';
+#endif
+    }
+  }
+  return reinterpret_cast<const char * const *>(columnNames);
+}
+// Delete char * version of names
+void 
+ClpModel::deleteNamesAsChar(const char * const * const names,int number) const
+{
+  for (int i=0;i<number;i++) {
+    free(const_cast<char *>(names[i]));
+  }
+  delete [] names;
+}
+#endif
 #endif
 // Pass in Event handler (cloned and deleted at end)
 void 
