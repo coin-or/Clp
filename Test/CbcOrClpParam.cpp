@@ -2070,6 +2070,9 @@ activities and reduced costs - see bottom of CbcOrClpParam.cpp for code that wri
      "After this many seconds coin solver will act as if maximum nodes had been reached."
      );
 #endif
+  parameters[numberParameters++]=
+    CbcOrClpParam("sleep","for debug",
+		  DUMMY,false);
 #ifdef COIN_USE_CLP
   parameters[numberParameters++]=
     CbcOrClpParam("slp!Value","Number of slp passes before primal",
