@@ -3271,7 +3271,7 @@ ClpModel::columnNamesAsChar() const
 #endif
     }
   }
-  return reinterpret_cast<const char * const *>(columnNames);
+  return /*reinterpret_cast<const char * const *>*/(columnNames);
 }
 // Delete char * version of names
 void 
@@ -3280,7 +3280,7 @@ ClpModel::deleteNamesAsChar(const char * const * const names,int number) const
   for (int i=0;i<number;i++) {
     free(const_cast<char *>(names[i]));
   }
-  delete [] names;
+  delete [] const_cast<char **>(names);
 }
 #endif
 #endif
