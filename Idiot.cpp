@@ -224,18 +224,18 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
   double * cost = model_->objective();
   double * lower = model_->columnLower();
   double * upper = model_->columnUpper();
-  double * rowlower= model_->rowLower();
 #else
   double * cost = new double [ncols];
   memcpy( cost, model_->getObjCoefficients(), ncols*sizeof(double));
   const double * lower = model_->getColLower();
   const double * upper = model_->getColUpper();
-  const double * rowlower= model_->getRowLower();
 #endif
   const double *elemXX;
   double * saveSol;
   double * rowupper= new double[nrows]; // not const as modified
   memcpy(rowupper,model_->getRowUpper(),nrows*sizeof(double));
+  double * rowlower= new double[nrows]; // not const as modified
+  memcpy(rowlower,model_->getRowLower(),nrows*sizeof(double));
   int * whenUsed;
   double * lambda;
   saveSol=new double[ncols];
@@ -322,7 +322,6 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
 	colsol[icol] *= multiplier;
 	cost[icol] *= columnScale[icol];
       }
-      rowlower = new double[nrows];
       memcpy(rowlower,model_->rowLower(),nrows*sizeof(double));
       for (irow=0;irow<nrows;irow++) {
 	double multiplier = rowScale[irow];
@@ -672,7 +671,7 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
     lower = model_->columnLower();
     upper = model_->columnUpper();
     cost = model_->objective();
-    rowlower = model_->rowLower();
+    //rowlower = model_->rowLower();
   }
 #endif
 #define TRYTHIS
@@ -786,6 +785,8 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
   delete [] colsol;
   delete [] pi;
   delete [] dj;
+  delete [] rowlower;
+  delete [] rowupper;
   return ;
 }
 #ifndef OSI_IDIOT

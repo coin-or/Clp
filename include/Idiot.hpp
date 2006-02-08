@@ -178,7 +178,7 @@ private:
 IdiotResult IdiSolve(
 		     int nrows, int ncols, double * rowsol , double * colsol,
 		     double * pi, double * djs, const double * origcost , 
-		     const double * rowlower,
+		     double * rowlower,
 		     double * rowupper, const double * lower,
 		     const double * upper, const double * element, 
 		     const int * row, const CoinBigIndex * colcc,

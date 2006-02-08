@@ -1537,16 +1537,21 @@ ClpSimplex::initialSolve(ClpSolve & options)
     if (interrupt) 
       currentModel2 = &barrier;
     int barrierOptions = options.getSpecialOption(4);
-    bool aggressiveGamma=false;
+    int aggressiveGamma=0;
+    bool presolveInCrossover=false;
     bool scale=false;
     bool doKKT=false;
-    if (barrierOptions&32) {
-      barrierOptions &= ~32;
-      doKKT=true;
-    }
     if (barrierOptions&16) {
       barrierOptions &= ~16;
-      aggressiveGamma=true;
+      doKKT=true;
+    }
+    if (barrierOptions&(32+64+128)) {
+      aggressiveGamma=(barrierOptions&(32+64+128))>>5;
+      barrierOptions &= ~(32+64+128);
+    }
+    if (barrierOptions&256) {
+      barrierOptions &= ~256;
+      presolveInCrossover=true;
     }
     if (barrierOptions&8) {
       barrierOptions &= ~8;
@@ -1632,12 +1637,30 @@ ClpSimplex::initialSolve(ClpSolve & options)
       model2->setMaximumIterations(1000000);
     }
 #ifndef SAVEIT
-    //barrier.setGamma(1.0e-8);
-    //barrier.setDelta(1.0e-8);
-    barrier.setDiagonalPerturbation(1.0e-14);
+    //barrier.setDiagonalPerturbation(1.0e-25);
     if (aggressiveGamma) {
-      barrier.setGamma(1.0e-3);
-      barrier.setDelta(1.0e-3);
+      switch (aggressiveGamma) {
+      case 1:
+        barrier.setGamma(1.0e-5);
+        barrier.setDelta(1.0e-5);
+        break;
+      case 2:
+        barrier.setGamma(1.0e-5);
+        break;
+      case 3:
+        barrier.setDelta(1.0e-5);
+        break;
+      case 4:
+        barrier.setGamma(1.0e-3);
+        barrier.setDelta(1.0e-3);
+        break;
+      case 5:
+        barrier.setGamma(1.0e-3);
+        break;
+      case 6:
+        barrier.setDelta(1.0e-3);
+        break;
+      }
     }
     if (scale)
       barrier.scaling(1);
@@ -1672,9 +1695,9 @@ ClpSimplex::initialSolve(ClpSolve & options)
     double * saveUpper=NULL;
     ClpPresolve pinfo2;
     ClpSimplex * saveModel2=NULL;
+    bool extraPresolve=false;
     int numberFixed = barrier.numberFixed();
-    if (numberFixed*20>barrier.numberRows()&&numberFixed>5000&&0) {
-      // may as well do presolve
+    if (numberFixed) {
       int numberRows = barrier.numberRows();
       int numberColumns = barrier.numberColumns();
       int numberTotal = numberRows+numberColumns;
@@ -1684,8 +1707,13 @@ ClpSimplex::initialSolve(ClpSolve & options)
       CoinMemcpyN(barrier.rowLower(),numberRows,saveLower+numberColumns);
       CoinMemcpyN(barrier.columnUpper(),numberColumns,saveUpper);
       CoinMemcpyN(barrier.rowUpper(),numberRows,saveUpper+numberColumns);
+    }
+    if (numberFixed*20>barrier.numberRows()&&numberFixed>5000&&
+        presolveInCrossover) {
+      // may as well do presolve
       barrier.fixFixed();
       saveModel2=model2;
+      extraPresolve=true;
     } else if (numberFixed) {
       // Set fixed to bounds (may have restored earlier solution)
       barrier.fixFixed(false);
@@ -1727,9 +1755,15 @@ ClpSimplex::initialSolve(ClpSolve & options)
       if (!model2) {
 	model2=saveModel2;
 	saveModel2=NULL;
-	delete [] saveLower;
+        int numberRows = model2->numberRows();
+        int numberColumns = model2->numberColumns();
+        CoinMemcpyN(saveLower,numberColumns,model2->columnLower());
+        CoinMemcpyN(saveLower+numberColumns,numberRows,model2->rowLower());
+        delete [] saveLower;
+        CoinMemcpyN(saveUpper,numberColumns,model2->columnUpper());
+        CoinMemcpyN(saveUpper+numberColumns,numberRows,model2->rowUpper());
+        delete [] saveUpper;
 	saveLower=NULL;
-	delete [] saveUpper;
 	saveUpper=NULL;
       }
     }
@@ -1788,6 +1822,18 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	  delete [] dsort;
 	}
 	if (gap<1.0e-3*((double) (numberRows+numberColumns))) {
+          if (saveUpper) {
+            int numberRows = model2->numberRows();
+            int numberColumns = model2->numberColumns();
+            CoinMemcpyN(saveLower,numberColumns,model2->columnLower());
+            CoinMemcpyN(saveLower+numberColumns,numberRows,model2->rowLower());
+            delete [] saveLower;
+            CoinMemcpyN(saveUpper,numberColumns,model2->columnUpper());
+            CoinMemcpyN(saveUpper+numberColumns,numberRows,model2->rowUpper());
+            delete [] saveUpper;
+            saveLower=NULL;
+            saveUpper=NULL;
+          }
 	  int numberRows = model2->numberRows();
 	  int numberColumns = model2->numberColumns();
 	  // just primal values pass
@@ -1893,10 +1939,12 @@ ClpSimplex::initialSolve(ClpSolve & options)
     delete [] rowDual;
     delete [] columnDual;
 #endif
-    if (saveLower) {
+    if (extraPresolve) {
       pinfo2.postsolve(true);
       delete model2;
       model2=saveModel2;
+    }
+    if (saveUpper) {
       int numberRows = model2->numberRows();
       int numberColumns = model2->numberColumns();
       CoinMemcpyN(saveLower,numberColumns,model2->columnLower());
@@ -1905,6 +1953,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
       CoinMemcpyN(saveUpper,numberColumns,model2->columnUpper());
       CoinMemcpyN(saveUpper+numberColumns,numberRows,model2->rowUpper());
       delete [] saveUpper;
+      saveLower=NULL;
+      saveUpper=NULL;
       model2->primal(1);
     }
     model2->setPerturbation(savePerturbation);

@@ -1219,6 +1219,7 @@ I have also added a variant due to Solow and Halim which is as on but just flip.
 		  "on",CROSSOVER);
   parameters[numberParameters-1].append("off");
   parameters[numberParameters-1].append("maybe");
+  parameters[numberParameters-1].append("presolve");
   parameters[numberParameters-1].setLonghelp
     (
      "Interior point algorithms do not obtain a basic solution (and \
@@ -1421,9 +1422,14 @@ before branch and bound - use with extreme caution!"
      ); 
 #endif
   parameters[numberParameters++]=
-    CbcOrClpParam("gamma","Whether to regularize barrier",
+    CbcOrClpParam("gamma!(Delta)","Whether to regularize barrier",
 		  "off",GAMMA,0,false);
   parameters[numberParameters-1].append("on");
+  parameters[numberParameters-1].append("gamma");
+  parameters[numberParameters-1].append("delta");
+  parameters[numberParameters-1].append("onstrong");
+  parameters[numberParameters-1].append("gammastrong");
+  parameters[numberParameters-1].append("deltastrong");
 #endif
 #ifdef COIN_USE_CBC
   parameters[numberParameters++]=
@@ -1963,6 +1969,14 @@ all - all column variables and row activities."
      "This stops the execution of Clp, end, exit, quit and stop are synonyms"
      ); 
 #ifdef COIN_USE_CLP
+  parameters[numberParameters++]=
+    CbcOrClpParam("reallyO!bjectiveScale","Scale factor to apply to objective in place",
+		  -1.0e20,1.0e20,OBJSCALE2,false);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "You can set this to -1.0 to test maximization or other to stress code"
+     ); 
+  parameters[numberParameters-1].setDoubleValue(1.0);
   parameters[numberParameters++]=
     CbcOrClpParam("reallyS!cale","Scales model in place",
 		  REALLY_SCALE,false);

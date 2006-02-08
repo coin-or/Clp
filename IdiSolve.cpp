@@ -127,7 +127,7 @@ Idiot::objval(int nrows, int ncols, double * rowsol , double * colsol,
 IdiotResult 
 Idiot::IdiSolve(
 		    int nrows, int ncols, double * rowsol , double * colsol,
-	      double * pi, double * djs, const double * origcost , const double * rowlower,
+	      double * pi, double * djs, const double * origcost , double * rowlower,
 	      double * rowupper, const double * lower,
 	      const double * upper, const double * elemnt, 
 		    const int * row, const CoinBigIndex * columnStart,
@@ -240,6 +240,7 @@ Idiot::IdiSolve(
     costExtra=new double[extraBlock];
     saveExtra=new double[extraBlock];
     extraBlock=0;
+    int nbad=0;
     for (i=0;i<nrows;i++) {
       if (rowupper[i]-rowlower[i]>tolerance) {
 	double smaller,difference;
@@ -253,9 +254,22 @@ Idiot::IdiSolve(
 	  value=1.0;
 	}
         if (fabs(smaller)>1.0e10) {
-	  printf("Can't handle rows where both bounds >1.0e10 %d %g\n",
-		 i,smaller);
-	  abort();
+          if (!nbad)
+            printf("Can't handle rows where both bounds >1.0e10 %d %g\n",
+                   i,smaller);
+          nbad++;
+          if (rowupper[i]<0.0||rowlower[i]>0.0)
+            abort();
+          if (fabs(rowupper[i])>fabs(rowlower[i])) {
+            rowlower[i]=-0.9e10;
+            smaller = rowlower[i];
+            value=-1.0;
+          } else {
+            rowupper[i]=0.9e10;
+            saveExtra[extraBlock]=rowupper[i];
+            smaller = rowupper[i];
+            value=1.0;
+          }
 	}
 	difference=rowupper[i]-rowlower[i];
 	difference = CoinMin(difference,1.0e31);
@@ -270,6 +284,8 @@ Idiot::IdiSolve(
 	rowExtra[extraBlock++]=i;
       }
     }
+    if (nbad)
+      printf("%d bad values - results may be wrong\n",nbad);
   }
   for (i=0;i<nrows;i++) {
     offset+=lambda[i]*rowsol[i];

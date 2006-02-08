@@ -152,6 +152,13 @@ int main (int argc, const char *argv[])
     std::string field;
     std::cout<<"Coin LP version "<<CLPVERSION
 	     <<", build "<<__DATE__<<std::endl;
+    // Print command line
+    if (argc>1) {
+      printf("command line - ");
+      for (int i=0;i<argc;i++)
+        printf("%s ",argv[i]);
+      printf("\n");
+    }
     
     while (1) {
       // next command
@@ -456,6 +463,29 @@ int main (int argc, const char *argv[])
             // synonym for dual
 	  case BAB:
 	    if (goodModels[iModel]) {
+              double objScale = 
+                parameters[whichParam(OBJSCALE2,numberParameters,parameters)].doubleValue();
+              if (objScale!=1.0) {
+                int iColumn;
+                int numberColumns=models[iModel].numberColumns();
+                double * dualColumnSolution = 
+                  models[iModel].dualColumnSolution();
+                ClpObjective * obj = models[iModel].objectiveAsObject();
+                assert(dynamic_cast<ClpLinearObjective *> (obj));
+                double offset;
+                double * objective = obj->gradient(NULL,NULL,offset,true);
+                for (iColumn=0;iColumn<numberColumns;iColumn++) {
+                  dualColumnSolution[iColumn] *= objScale;
+                  objective[iColumn] *= objScale;;
+                }
+                int iRow;
+                int numberRows=models[iModel].numberRows();
+                double * dualRowSolution = 
+                  models[iModel].dualRowSolution();
+                for (iRow=0;iRow<numberRows;iRow++) 
+                  dualRowSolution[iRow] *= objScale;
+                models[iModel].setObjectiveOffset(objScale*models[iModel].objectiveOffset());
+              }
 	      ClpSolve::SolveType method;
 	      ClpSolve::PresolveType presolveType;
 	      ClpSimplex * model2 = models+iModel;
@@ -556,10 +586,12 @@ int main (int argc, const char *argv[])
 		int barrierOptions = choleskyType;
 		if (scaleBarrier)
 		  barrierOptions |= 8;
-		if (gamma)
-		  barrierOptions |= 16;
 		if (doKKT)
-		  barrierOptions |= 32;
+		  barrierOptions |= 16;
+		if (gamma)
+		  barrierOptions |= 32*gamma;
+		if (crossover==3) 
+		  barrierOptions |= 256; // try presolve in crossover
 		solveOptions.setSpecialOption(4,barrierOptions);
 	      }
 	      int status;
@@ -784,6 +816,29 @@ int main (int argc, const char *argv[])
 	    break;
 	  case EXPORT:
 	    if (goodModels[iModel]) {
+              double objScale = 
+                parameters[whichParam(OBJSCALE2,numberParameters,parameters)].doubleValue();
+              if (objScale!=1.0) {
+                int iColumn;
+                int numberColumns=models[iModel].numberColumns();
+                double * dualColumnSolution = 
+                  models[iModel].dualColumnSolution();
+                ClpObjective * obj = models[iModel].objectiveAsObject();
+                assert(dynamic_cast<ClpLinearObjective *> (obj));
+                double offset;
+                double * objective = obj->gradient(NULL,NULL,offset,true);
+                for (iColumn=0;iColumn<numberColumns;iColumn++) {
+                  dualColumnSolution[iColumn] *= objScale;
+                  objective[iColumn] *= objScale;;
+                }
+                int iRow;
+                int numberRows=models[iModel].numberRows();
+                double * dualRowSolution = 
+                  models[iModel].dualRowSolution();
+                for (iRow=0;iRow<numberRows;iRow++) 
+                  dualRowSolution[iRow] *= objScale;
+                models[iModel].setObjectiveOffset(objScale*models[iModel].objectiveOffset());
+              }
 	      // get next field
 	      field = CoinReadGetString(argc,argv);
 	      if (field=="$") {
@@ -1184,7 +1239,7 @@ int main (int argc, const char *argv[])
 	      double offset;
 	      double * objective = obj->gradient(NULL,NULL,offset,true);
 	      for (iColumn=0;iColumn<numberColumns;iColumn++) {
-		dualColumnSolution[iColumn] = dualColumnSolution[iColumn];
+		dualColumnSolution[iColumn] = -dualColumnSolution[iColumn];
 		objective[iColumn] = -objective[iColumn];
 	      }
 	      int iRow;
@@ -1192,8 +1247,8 @@ int main (int argc, const char *argv[])
 	      double * dualRowSolution = 
 		models[iModel].dualRowSolution();
 	      for (iRow=0;iRow<numberRows;iRow++) 
-		dualRowSolution[iRow] = dualRowSolution[iRow];
-              models[iModel].setObjectiveOffset(models[iModel].objectiveOffset());
+		dualRowSolution[iRow] = -dualRowSolution[iRow];
+              models[iModel].setObjectiveOffset(-models[iModel].objectiveOffset());
 	    }
 	    break;
 	  case DIRECTORY:

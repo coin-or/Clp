@@ -1165,10 +1165,12 @@ ClpInterior::fixFixed(bool reallyFix)
       if (rowUpper_[i]>rowLower_[i]) { 
 	if (fixedOrFree(i+numberColumns_)) {
 	  if (rowActivity_[i]-rowLower_[i]<rowUpper_[i]-rowActivity_[i]) {
-	    rowUpper_[i]=rowLower_[i];
+	    if (reallyFix)
+              rowUpper_[i]=rowLower_[i];
 	    rowActivity_[i]=rowLower_[i];
 	  } else {
-	    rowLower_[i]=rowUpper_[i];
+	    if (reallyFix)
+              rowLower_[i]=rowUpper_[i];
 	    rowActivity_[i]=rowUpper_[i];
 	  }
 	}
