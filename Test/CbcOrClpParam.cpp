@@ -23,7 +23,7 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #endif
-#ifdef COIN_OSI_HAS_CLP
+#ifdef COIN_HAS_OSICLP
 // from CoinSolve
 static char coin_prompt[]="Coin:";
 #else
