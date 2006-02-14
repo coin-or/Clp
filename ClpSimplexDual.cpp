@@ -1175,12 +1175,17 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
 	int nswapped = 0;
 	//rowArray_[0]->cleanAndPackSafe(1.0e-60);
 	//columnArray_[0]->cleanAndPackSafe(1.0e-60);
-	if (candidate==-1) 
+	if (candidate==-1) {
+          // make sure incoming doesn't count
+          Status saveStatus = getStatus(sequenceIn_);
+          setStatus(sequenceIn_,basic);
 	  nswapped = updateDualsInDual(rowArray_[0],columnArray_[0],
 				       rowArray_[2],theta_,
 				       objectiveChange,false);
-	else 
+          setStatus(sequenceIn_,saveStatus);
+	} else {
 	  updateDualsInValuesPass(rowArray_[0],columnArray_[0],theta_);
+        }
         double oldDualOut = dualOut_;
 	// which will change basic solution
 	if (nswapped) {
@@ -1459,7 +1464,8 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
 	  }
 	  // If special option set - put off as long as possible
 	  if ((specialOptions_&64)==0) {
-	    problemStatus_=-4; //say looks infeasible
+            if (factorization_->pivots()==0)
+              problemStatus_=-4; //say looks infeasible
 	  } else {
 	    // flag
 	    char x = isColumn(sequenceOut_) ? 'C' :'R';
@@ -3214,6 +3220,19 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
                                       double * givenDuals, ClpDataSave & saveData,
                                       int ifValuesPass)
 {
+  // If lots of iterations then adjust costs if large ones
+  if (numberIterations_>4*(numberRows_+numberColumns_)&&objectiveScale_==1.0) {
+    double largest=0.0;
+    for (int i=0;i<numberRows_;i++) {
+      int iColumn = pivotVariable_[i];
+      largest = CoinMax(largest,fabs(cost_[iColumn]));
+    }
+    if (largest>1.0e6) {
+      objectiveScale_ = 1.0e6/largest;
+      for (int i=0;i<numberRows_+numberColumns_;i++)
+        cost_[i] *= objectiveScale_;
+    }
+  }
   bool normalType=true;
   int numberPivots = factorization_->pivots();
   double realDualInfeasibilities=0.0;

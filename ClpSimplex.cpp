@@ -6718,6 +6718,7 @@ ClpSimplex::saveData()
   saved.perturbation_ = perturbation_;
   saved.forceFactorization_=forceFactorization_;
   saved.acceptablePivot_ = acceptablePivot_;
+  saved.objectiveScale_ = objectiveScale_;
   // Progress indicator
   delete progress_;
   progress_ = new ClpSimplexProgress (this);
@@ -6733,6 +6734,7 @@ ClpSimplex::restoreData(ClpDataSave saved)
   infeasibilityCost_ = saved.infeasibilityCost_;
   dualBound_ = saved.dualBound_;
   forceFactorization_=saved.forceFactorization_;
+  objectiveScale_ = saved.objectiveScale_;
   acceptablePivot_ = saved.acceptablePivot_;
   delete progress_;
   progress_=NULL;

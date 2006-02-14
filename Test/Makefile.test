@@ -34,7 +34,7 @@ CXXFLAGS += -I.
 #ifeq ($(OPTFLAG),-g)
 #    CXXFLAGS += -DCLP_DEBUG -DPRESOLVE_SUMMARY=1 
 #endif
-CXXFLAGS += -DCOIN_USE_CLP
+#CXXFLAGS += -DCOIN_USE_CLP
 TESTSRC := ClpMain.cpp
 TESTSRC += CbcOrClpParam.cpp
 TESTSRC += unitTest.cpp
