@@ -1865,11 +1865,14 @@ stop if drop small if less than 5000 columns, 20 otherwise"
   parameters[numberParameters-1].append("save");
   parameters[numberParameters-1].append("equal");
   parameters[numberParameters-1].append("sos");
+  parameters[numberParameters-1].append("trysos");
   parameters[numberParameters-1].setLonghelp
     (
      "This tries to reduce size of model in a similar way to presolve and \
 it also tries to strengthen the model - needs more work but can be useful. \
- Save option saves on file presolved.mps"
+ Save option saves on file presolved.mps.  equal will turn <= cliques into \
+==.  sos will create sos sets if all 0-1 in sets (well one extra is allowed) \
+and no overlaps.  trysos is same but allows any number extra."
      ); 
 #endif
 #ifdef COIN_USE_CLP
