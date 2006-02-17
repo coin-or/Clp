@@ -127,6 +127,7 @@ int main (int argc, const char *argv[])
     parameters[whichParam(SUBSTITUTION,numberParameters,parameters)].setIntValue(substitution);
     parameters[whichParam(DUALIZE,numberParameters,parameters)].setIntValue(dualize);
     parameters[whichParam(PRESOLVETOLERANCE,numberParameters,parameters)].setDoubleValue(1.0e-8);
+    int verbose=0;
     
     // total number of commands read
     int numberGoodCommands=0;
@@ -226,6 +227,8 @@ int main (int argc, const char *argv[])
 	  std::cout<<"abcd value sets value"<<std::endl;
 	  std::cout<<"Commands are:"<<std::endl;
 	  int maxAcross=5;
+          if (verbose)
+            maxAcross=1;
 	  int limits[]={1,101,201,301,401};
 	  std::vector<std::string> types;
 	  types.push_back("Double parameters:");
@@ -236,17 +239,35 @@ int main (int argc, const char *argv[])
 	  for (iType=0;iType<4;iType++) {
 	    int across=0;
 	    std::cout<<types[iType]<<std::endl;
+            if ((verbose&2)!=0)
+              std::cout<<std::endl;
 	    for ( iParam=0; iParam<numberParameters; iParam++ ) {
 	      int type = parameters[iParam].type();
 	      if (parameters[iParam].displayThis()&&type>=limits[iType]
 		  &&type<limits[iType+1]) {
-		if (!across)
-		  std::cout<<"  ";
-		std::cout<<parameters[iParam].matchName()<<"  ";
+		if (!across) {
+                  if ((verbose&2)==0) 
+                    std::cout<<"  ";
+                  else
+                    std::cout<<"Command ";
+                }
+                std::cout<<parameters[iParam].matchName()<<"  ";
 		across++;
 		if (across==maxAcross) {
-		  std::cout<<std::endl;
 		  across=0;
+                  if (verbose) {
+                    // put out description as well
+                    if ((verbose&1)!=0) 
+                      std::cout<<parameters[iParam].shortHelp();
+                    std::cout<<std::endl;
+                    if ((verbose&2)!=0) {
+                      std::cout<<"---- description"<<std::endl;
+                      parameters[iParam].printLongHelp();
+                      std::cout<<"----"<<std::endl;
+                    }
+                  } else {
+                    std::cout<<std::endl;
+                  }
 		}
 	      }
 	    }
@@ -316,6 +337,8 @@ int main (int argc, const char *argv[])
 	      substitution = value;
 	    else if (parameters[iParam].type()==DUALIZE)
 	      dualize = value;
+            else if (parameters[iParam].type()==VERBOSE)
+              verbose = value;
             parameters[iParam].setIntParameter(models+iModel,value);
 	  } else if (valid==1) {
 	    abort();

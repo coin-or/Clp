@@ -1084,7 +1084,7 @@ then the search will be terminated"
 #ifdef COIN_USE_CLP
   parameters[numberParameters++]=
     CbcOrClpParam("allS!lack","Set basis back to all slack and reset solution",
-		  ALLSLACK,false);
+		  ALLSLACK);
   parameters[numberParameters-1].setLonghelp
     (
      "Useful for playing around"
@@ -1150,7 +1150,7 @@ the main thing is to think about which cuts to apply.  .. expand ..."
   parameters[numberParameters-1].append("on");
   parameters[numberParameters++]=
     CbcOrClpParam("chol!esky","Which cholesky algorithm",
-		  "native",CHOLESKY,false);
+		  "native",CHOLESKY,-1,false);
   parameters[numberParameters-1].append("dense");
   //#ifdef FOREIGN_BARRIER
 #ifdef WSSMP_BARRIER
@@ -1268,7 +1268,7 @@ individual ones off or on"
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("debug!In","read valid solution from file",
-		  DEBUG,false);
+		  DEBUG,-1,false);
   parameters[numberParameters-1].setLonghelp
     (
      "This will read a solution file from the given file name.  It will use the default\
@@ -1940,7 +1940,7 @@ costs this much to be infeasible",
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("printO!ptions","Print options",
-		  0,INT_MAX,PRINTOPTIONS,false);
+		  0,INT_MAX,PRINTOPTIONS);
 #endif
 #ifdef COIN_USE_CBC
   parameters[numberParameters++]=
@@ -1987,7 +1987,7 @@ all - all column variables and row activities."
   parameters[numberParameters-1].setDoubleValue(1.0);
   parameters[numberParameters++]=
     CbcOrClpParam("reallyS!cale","Scales model in place",
-		  REALLY_SCALE,false);
+		  REALLY_SCALE,-1,false);
 #endif
 #ifdef COIN_USE_CBC
     parameters[numberParameters++]=
@@ -2013,7 +2013,7 @@ all - all column variables and row activities."
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("reverse","Reverses sign of objective",
-		  REVERSE,false);
+		  REVERSE,-1,false);
   parameters[numberParameters-1].setLonghelp
     (
      "Useful for testing if maximization works correctly"
@@ -2094,7 +2094,7 @@ activities and reduced costs - see bottom of CbcOrClpParam.cpp for code that wri
 #endif
   parameters[numberParameters++]=
     CbcOrClpParam("sleep","for debug",
-		  DUMMY,false);
+		  DUMMY,-1,false);
 #ifdef COIN_USE_CLP
   parameters[numberParameters++]=
     CbcOrClpParam("slp!Value","Number of slp passes before primal",
@@ -2251,6 +2251,14 @@ trust the pseudo costs and do not do any more strong branching."
     (
      "This exercises the unit test for clp"
      ); 
+  parameters[numberParameters++]=
+    CbcOrClpParam("verbose","Switches on longer help on single ?",
+		  0,3,VERBOSE,false);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "Set to 1 to get short help with ? list, 2 to get long help, 3 for both"
+     ); 
+  parameters[numberParameters-1].setIntValue(0);
   assert(numberParameters<CBCMAXPARAMETERS);
 }
 // Given a parameter type - returns its number in list
