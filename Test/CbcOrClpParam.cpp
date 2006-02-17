@@ -16,7 +16,9 @@
 #include "CbcModel.hpp"
 #endif
 #ifdef COIN_HAS_CLP
+#ifndef COIN_USE_CLP
 #define COIN_USE_CLP
+#endif
 #endif
 #ifdef COIN_USE_CLP
 #include "ClpSimplex.hpp"
