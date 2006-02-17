@@ -65,7 +65,7 @@ CbcOrClpParam::CbcOrClpParam ()
     intValue_(-1),
     doubleValue_(-1.0),
     stringValue_(""),
-    indexNumber_(INVALID)
+    whereUsed_(7)
 {
 }
 // Other constructors
@@ -85,7 +85,7 @@ CbcOrClpParam::CbcOrClpParam (std::string name, std::string help,
     intValue_(-1),
     doubleValue_(-1.0),
     stringValue_(""),
-    indexNumber_(type)
+    whereUsed_(7)
 {
   lowerDoubleValue_ = lower;
   upperDoubleValue_ = upper;
@@ -107,7 +107,7 @@ CbcOrClpParam::CbcOrClpParam (std::string name, std::string help,
     intValue_(-1),
     doubleValue_(-1.0),
     stringValue_(""),
-    indexNumber_(type)
+    whereUsed_(7)
 {
   gutsOfConstructor();
   lowerIntValue_ = lower;
@@ -133,14 +133,14 @@ CbcOrClpParam::CbcOrClpParam (std::string name, std::string help,
     intValue_(-1),
     doubleValue_(-1.0),
     stringValue_(""),
-    indexNumber_(type)
+    whereUsed_(7)
 {
   gutsOfConstructor();
   definedKeyWords_.push_back(firstValue);
 }
 // Action
 CbcOrClpParam::CbcOrClpParam (std::string name, std::string help,
-		    CbcOrClpParameterType type,int indexNumber,
+		    CbcOrClpParameterType type,int whereUsed,
 		    bool display)
   : type_(type),
     lowerDoubleValue_(0.0),
@@ -158,10 +158,7 @@ CbcOrClpParam::CbcOrClpParam (std::string name, std::string help,
     doubleValue_(-1.0),
     stringValue_("")
 {
-  if (indexNumber<0)
-    indexNumber_=type;
-  else
-    indexNumber_=indexNumber;
+  whereUsed_=whereUsed;
   gutsOfConstructor();
 }
 
@@ -187,7 +184,7 @@ CbcOrClpParam::CbcOrClpParam (const CbcOrClpParam & rhs)
   intValue_=rhs.intValue_;
   doubleValue_=rhs.doubleValue_;
   stringValue_=rhs.stringValue_;
-  indexNumber_=rhs.indexNumber_;
+  whereUsed_=rhs.whereUsed_;
 }
 
 //-------------------------------------------------------------------
@@ -221,7 +218,7 @@ CbcOrClpParam::operator=(const CbcOrClpParam& rhs)
     intValue_=rhs.intValue_;
     doubleValue_=rhs.doubleValue_;
     stringValue_=rhs.stringValue_;
-    indexNumber_=rhs.indexNumber_;
+    whereUsed_=rhs.whereUsed_;
   }
   return *this;
 }
@@ -1063,9 +1060,9 @@ establishParams (int &numberParameters, CbcOrClpParam *const parameters)
 {
   numberParameters=0;
   parameters[numberParameters++]=
-    CbcOrClpParam("?","For help",GENERALQUERY,-1,false);
+    CbcOrClpParam("?","For help",GENERALQUERY,7,false);
   parameters[numberParameters++]=
-    CbcOrClpParam("???","For help",FULLGENERALQUERY,-1,false);
+    CbcOrClpParam("???","For help",FULLGENERALQUERY,7,false);
   parameters[numberParameters++]=
     CbcOrClpParam("-","From stdin",
 		  STDIN,299,false);
@@ -1084,7 +1081,7 @@ then the search will be terminated"
 #ifdef COIN_USE_CLP
   parameters[numberParameters++]=
     CbcOrClpParam("allS!lack","Set basis back to all slack and reset solution",
-		  ALLSLACK);
+		  ALLSLACK,3);
   parameters[numberParameters-1].setLonghelp
     (
      "Useful for playing around"
@@ -1110,7 +1107,7 @@ corrector algorithm."
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("basisI!n","Import basis from bas file",
-		  BASISIN);
+		  BASISIN,3);
   parameters[numberParameters-1].setLonghelp
     (
      "This will read an MPS format basis file from the given file name.  It will use the default\
@@ -1268,7 +1265,7 @@ individual ones off or on"
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("debug!In","read valid solution from file",
-		  DEBUG,-1,false);
+		  DEBUG,7,false);
   parameters[numberParameters-1].setLonghelp
     (
      "This will read a solution file from the given file name.  It will use the default\
@@ -1284,7 +1281,7 @@ createAfterPre.  The create case has same effect as saveSolution."
 #endif 
   parameters[numberParameters++]=
     CbcOrClpParam("directory","Set Default directory for import etc.",
-		  DIRECTORY,299);
+		  DIRECTORY);
   parameters[numberParameters-1].setLonghelp
     (
      "This sets the directory which import, export, saveModel and restoreModel will use.\
@@ -1367,7 +1364,7 @@ no dual infeasibility may exceed this value",
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("error!sAllowed","Whether to allow import errors",
-		  "off",ERRORSALLOWED);
+		  "off",ERRORSALLOWED,3);
   parameters[numberParameters-1].append("on");
   parameters[numberParameters-1].setLonghelp
     (
@@ -1501,7 +1498,7 @@ alters search."
 #endif
   parameters[numberParameters++]=
     CbcOrClpParam("import","Import model from mps file",
-		  IMPORT);
+		  IMPORT,3);
   parameters[numberParameters-1].setLonghelp
     (
      "This will read an MPS format file from the given file name.  It will use the default\
@@ -1695,12 +1692,12 @@ This is a first try and will hopefully become more sophisticated."
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("miplib","Do some of miplib test set",
-		  MIPLIB);
+		  MIPLIB,3);
 #endif 
 #ifdef COIN_USE_CLP
   parameters[numberParameters++]=
     CbcOrClpParam("netlib","Solve entire netlib test set",
-		  NETLIB_EITHER);
+		  NETLIB_EITHER,3);
   parameters[numberParameters-1].setLonghelp
     (
      "This exercises the unit test for clp and then solves the netlib test set using dual or primal.\
@@ -1709,7 +1706,7 @@ The user can set options before e.g. clp -presolve off -netlib"
 #ifdef REAL_BARRIER
   parameters[numberParameters++]=
     CbcOrClpParam("netlibB!arrier","Solve entire netlib test set with barrier",
-		  NETLIB_BARRIER);
+		  NETLIB_BARRIER,3);
   parameters[numberParameters-1].setLonghelp
     (
      "This exercises the unit test for clp and then solves the netlib test set using barrier.\
@@ -1718,7 +1715,7 @@ The user can set options before e.g. clp -kkt on -netlib"
 #endif
   parameters[numberParameters++]=
     CbcOrClpParam("netlibD!ual","Solve entire netlib test set (dual)",
-		  NETLIB_DUAL);
+		  NETLIB_DUAL,3);
   parameters[numberParameters-1].setLonghelp
     (
      "This exercises the unit test for clp and then solves the netlib test set using dual.\
@@ -1726,7 +1723,7 @@ The user can set options before e.g. clp -presolve off -netlib"
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("netlibP!rimal","Solve entire netlib test set (primal)",
-		  NETLIB_PRIMAL);
+		  NETLIB_PRIMAL,3);
   parameters[numberParameters-1].setLonghelp
     (
      "This exercises the unit test for clp and then solves the netlib test set using primal.\
@@ -1734,7 +1731,7 @@ The user can set options before e.g. clp -presolve off -netlibp"
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("netlibT!une","Solve entire netlib test set with 'best' algorithm",
-		  NETLIB_TUNE);
+		  NETLIB_TUNE,3);
   parameters[numberParameters-1].setLonghelp
     (
      "This exercises the unit test for clp and then solves the netlib test set using whatever \
@@ -1744,7 +1741,7 @@ with University of Florida ordering."
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("network","Tries to make network matrix",
-		  NETWORK,-1,false);
+		  NETWORK,7,false);
   parameters[numberParameters-1].setLonghelp
     (
      "Clp will go faster if the matrix can be converted to a network.  The matrix\
@@ -1836,7 +1833,7 @@ stop if drop small if less than 5000 columns, 20 otherwise"
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("plus!Minus","Tries to make +- 1 matrix",
-		  PLUSMINUS,-1,false);
+		  PLUSMINUS,7,false);
   parameters[numberParameters-1].setLonghelp
     (
      "Clp will go slightly faster if the matrix can be converted so that the elements are\
@@ -1987,7 +1984,7 @@ all - all column variables and row activities."
   parameters[numberParameters-1].setDoubleValue(1.0);
   parameters[numberParameters++]=
     CbcOrClpParam("reallyS!cale","Scales model in place",
-		  REALLY_SCALE,-1,false);
+		  REALLY_SCALE,7,false);
 #endif
 #ifdef COIN_USE_CBC
     parameters[numberParameters++]=
@@ -2013,7 +2010,7 @@ all - all column variables and row activities."
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("reverse","Reverses sign of objective",
-		  REVERSE,-1,false);
+		  REVERSE,7,false);
   parameters[numberParameters-1].setLonghelp
     (
      "Useful for testing if maximization works correctly"
@@ -2094,7 +2091,7 @@ activities and reduced costs - see bottom of CbcOrClpParam.cpp for code that wri
 #endif
   parameters[numberParameters++]=
     CbcOrClpParam("sleep","for debug",
-		  DUMMY,-1,false);
+		  DUMMY,7,false);
 #ifdef COIN_USE_CLP
   parameters[numberParameters++]=
     CbcOrClpParam("slp!Value","Number of slp passes before primal",
@@ -2168,7 +2165,7 @@ the main thing is to think about which cuts to apply.  .. expand ..."
      );
 #endif
   CbcOrClpParam("stdin","From stdin",
-		STDIN,-1,false);
+		STDIN,7,false);
   parameters[numberParameters++]=
     CbcOrClpParam("stop","Stops clp execution",
 		  EXIT);
@@ -2179,7 +2176,7 @@ the main thing is to think about which cuts to apply.  .. expand ..."
 #ifdef COIN_USE_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("strengthen","Create strengthened problem",
-		  STRENGTHEN);
+		  STRENGTHEN,3);
   parameters[numberParameters-1].setLonghelp
     (
      "This creates a new problem by applying the root node cuts.  All tight constraints \
@@ -2220,7 +2217,7 @@ activity at continuous solution",
 #ifdef COIN_USE_CLP
   parameters[numberParameters++]=
     CbcOrClpParam("tightLP","Poor person's preSolve for now",
-		  TIGHTEN,-1,false);
+		  TIGHTEN,7,false);
 #endif
 #ifdef COIN_USE_CBC
   parameters[numberParameters++]=
@@ -2246,14 +2243,14 @@ trust the pseudo costs and do not do any more strong branching."
 #endif
   parameters[numberParameters++]=
     CbcOrClpParam("unitTest","Do unit test",
-		  UNITTEST);
+		  UNITTEST,3);
   parameters[numberParameters-1].setLonghelp
     (
      "This exercises the unit test for clp"
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("verbose","Switches on longer help on single ?",
-		  0,3,VERBOSE,false);
+		  0,7,VERBOSE,false);
   parameters[numberParameters-1].setLonghelp
     (
      "Set to 1 to get short help with ? list, 2 to get long help, 3 for both"

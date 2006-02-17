@@ -103,7 +103,7 @@ public:
 	   CbcOrClpParameterType type,int defaultIndex=0,bool display=true);
   // Action
   CbcOrClpParam (std::string name, std::string help,
-	   CbcOrClpParameterType type,int indexNumber=-1,bool display=true);
+	   CbcOrClpParameterType type,int whereUsed=7,bool display=true);
   /// Copy constructor. 
   CbcOrClpParam(const CbcOrClpParam &);
   /// Assignment operator. This copies the data
@@ -192,9 +192,14 @@ public:
   void printLongHelp() const;
   /// Print action and string
   void printString() const;
-  /// type for classification
-  inline int indexNumber() const
-  { return indexNumber_;};
+  /** 7 if used everywhere,
+      1 - used by clp
+      2 - used by cbc
+      4 - used by ampl
+  */
+  inline int whereUsed() const
+  { return whereUsed_;};
+  
 private:
   /// gutsOfConstructor
   void gutsOfConstructor();
@@ -238,8 +243,12 @@ private:
   double doubleValue_;
   /// String parameter - current value
   std::string stringValue_;
-  /// index number to use for display purposes
-  int indexNumber_;
+  /** 7 if used everywhere,
+      1 - used by clp
+      2 - used by cbc
+      4 - used by ampl
+  */
+  int whereUsed_;
   //@}
 };
 /// Simple read stuff
