@@ -22,6 +22,42 @@
 #include <string>
 #include <cstdio>
 #include <iostream>
+static int yyyyyy=0;
+void ClpPredictorCorrector::saveSolution(std::string fileName)
+{
+  FILE * fp=fopen(fileName.c_str(),"wb");
+  if (fp) {
+    int numberRows=numberRows_;
+    int numberColumns=numberColumns_;
+    fwrite(&numberRows,sizeof(int),1,fp);
+    fwrite(&numberColumns,sizeof(int),1,fp);
+    double dsave[20];
+    memset(dsave,0,sizeof(dsave));
+    fwrite(dsave,sizeof(double),20,fp);
+    int msave[20];
+    memset(msave,0,sizeof(msave));
+    msave[0]=numberIterations_;
+    fwrite(msave,sizeof(int),20,fp);
+    fwrite(dual_,sizeof(double),numberRows,fp);
+    fwrite(errorRegion_,sizeof(double),numberRows,fp);
+    fwrite(rhsFixRegion_,sizeof(double),numberRows,fp);
+    fwrite(solution_,sizeof(double),numberColumns,fp);
+    fwrite(solution_+numberColumns,sizeof(double),numberRows,fp);
+    fwrite(diagonal_,sizeof(double),numberColumns,fp);
+    fwrite(diagonal_+numberColumns,sizeof(double),numberRows,fp);
+    fwrite(wVec_,sizeof(double),numberColumns,fp);
+    fwrite(wVec_+numberColumns,sizeof(double),numberRows,fp);
+    fwrite(zVec_,sizeof(double),numberColumns,fp);
+    fwrite(zVec_+numberColumns,sizeof(double),numberRows,fp);
+    fwrite(upperSlack_,sizeof(double),numberColumns,fp);
+    fwrite(upperSlack_+numberColumns,sizeof(double),numberRows,fp);
+    fwrite(lowerSlack_,sizeof(double),numberColumns,fp);
+    fwrite(lowerSlack_+numberColumns,sizeof(double),numberRows,fp);
+    fclose(fp);
+  } else {
+    std::cout<<"Unable to open file "<<fileName<<std::endl;
+  }
+}
 
 static double eScale=1.0e27;
 static double eBaseCaution=1.0e-12;
@@ -43,6 +79,7 @@ int ClpPredictorCorrector::solve ( )
     problemStatus_=4;
     return 2;
   }
+  //diagonalPerturbation_=1.0e-25;
   ClpMatrixBase * saveMatrix = NULL;
   // If quadratic then make copy so we can actually scale or normalize
 #ifndef NO_RTTI
@@ -197,6 +234,11 @@ int ClpPredictorCorrector::solve ( )
       <<numberFixedTotal
       <<cholesky_->rank()
       <<CoinMessageEol;
+    if (numberIterations_==-1) {
+      saveSolution("xxx.sav");
+      if (yyyyyy)
+        exit(99);
+    }
     // move up history
     for (i=1;i<LENGTH_HISTORY;i++) 
       historyInfeasibility_[i-1]=historyInfeasibility_[i];
@@ -1887,11 +1929,11 @@ int ClpPredictorCorrector::createSolution()
     multiplyAdd(NULL,numberRows_+numberColumns_,0.0,solution_,-1.0);
     solveSystem(deltaX_,errorRegion_,solution_,NULL,NULL,NULL,false);
   }
-  //initialValue=1.0e2;
-  //if (rhsNorm_*1.0e-2>initialValue) {
-  //initialValue=rhsNorm_*1.0e-2;
-  //} 
-  initialValue = CoinMax(1.0,rhsNorm_);
+  initialValue=1.0e2;
+  if (rhsNorm_*1.0e-2>initialValue) {
+    initialValue=rhsNorm_*1.0e-2;
+  } 
+  //initialValue = CoinMax(1.0,rhsNorm_);
   double smallestBoundDifference=COIN_DBL_MAX;
   double * fakeSolution = deltaX_;
   for ( iColumn=0;iColumn<numberTotal;iColumn++) {
@@ -1913,7 +1955,8 @@ int ClpPredictorCorrector::createSolution()
     <<CoinMessageEol;
   double extra=1.0e-10;
   double largeGap=1.0e15;
-  double safeObjectiveValue=2.0*objectiveNorm_;
+  //double safeObjectiveValue=2.0*objectiveNorm_;
+  double safeObjectiveValue=objectiveNorm_+1.0;
   double safeFree=1.0e-1*initialValue;
   //printf("normal safe dual value of %g, primal value of %g\n",
   // safeObjectiveValue,initialValue);
