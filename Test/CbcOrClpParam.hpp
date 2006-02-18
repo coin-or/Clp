@@ -100,7 +100,7 @@ public:
 	   int lower, int upper, CbcOrClpParameterType type,bool display=true);
   // Other strings will be added by insert
   CbcOrClpParam (std::string name, std::string help, std::string firstValue,
-	   CbcOrClpParameterType type,int defaultIndex=0,bool display=true);
+	   CbcOrClpParameterType type,int whereUsed=7,bool display=true);
   // Action
   CbcOrClpParam (std::string name, std::string help,
 	   CbcOrClpParameterType type,int whereUsed=7,bool display=true);

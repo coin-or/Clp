@@ -116,7 +116,7 @@ CbcOrClpParam::CbcOrClpParam (std::string name, std::string help,
 // Other strings will be added by append
 CbcOrClpParam::CbcOrClpParam (std::string name, std::string help, 
 		    std::string firstValue,
-		    CbcOrClpParameterType type,int defaultIndex,
+		    CbcOrClpParameterType type,int whereUsed,
 		    bool display)
   : type_(type),
     lowerDoubleValue_(0.0),
@@ -128,12 +128,12 @@ CbcOrClpParam::CbcOrClpParam (std::string name, std::string help,
     shortHelp_(help),
     longHelp_(),
     action_(type),
-    currentKeyWord_(defaultIndex),
+    currentKeyWord_(0),
     display_(display),
     intValue_(-1),
     doubleValue_(-1.0),
     stringValue_(""),
-    whereUsed_(7)
+    whereUsed_(whereUsed)
 {
   gutsOfConstructor();
   definedKeyWords_.push_back(firstValue);
@@ -322,7 +322,7 @@ CbcOrClpParam::parameterOption ( std::string check ) const
 void 
 CbcOrClpParam::printOptions (  ) const
 {
-  std::cout<<"Possible options for "<<name_<<" are:"<<std::endl;
+  std::cout<<"<Possible options for "<<name_<<" are:";
   unsigned int it;
   for (it=0;it<definedKeyWords_.size();it++) {
     std::string thisOne = definedKeyWords_[it];
@@ -332,8 +332,17 @@ CbcOrClpParam::printOptions (  ) const
       thisOne = thisOne.substr(0,shriekPos)+
 	"("+thisOne.substr(shriekPos+1)+")";
     }
-    std::cout<<thisOne<<std::endl;
+    std::cout<<" "<<thisOne;
   }
+  assert (currentKeyWord_>=0&&currentKeyWord_<(int)definedKeyWords_.size());
+  std::string current = definedKeyWords_[currentKeyWord_];
+  std::string::size_type  shriekPos = current.find('!');
+  if ( shriekPos!=std::string::npos ) {
+    //contains '!'
+    current = current.substr(0,shriekPos)+
+      "("+current.substr(shriekPos+1)+")";
+  }
+  std::cout<<", current  "<<current<<">"<<std::endl;
 }
 // Print action and string
 void 
@@ -374,14 +383,16 @@ void
 CbcOrClpParam::printLongHelp() const
 {
   if (type_>=1&&type_<400) {
-    if (type_<LOGLEVEL) {
-      printf("Range of values is %g to %g\n",lowerDoubleValue_,upperDoubleValue_);
+    CoinReadPrintit(longHelp_.c_str());
+    if (type_<SOLVERLOGLEVEL) {
+      printf("<Range of values is %g to %g, current %g>\n",lowerDoubleValue_,upperDoubleValue_, doubleValue_);
+      assert (upperDoubleValue_>lowerDoubleValue_);
     } else if (type_<DIRECTION) {
-      printf("Range of values is %d to %d\n",lowerIntValue_,upperIntValue_);
+      printf("<Range of values is %d to %d, current %d>\n",lowerIntValue_,upperIntValue_,intValue_);
+      assert (upperIntValue_>lowerIntValue_);
     } else if (type_<DIRECTORY) {
       printOptions();
     }
-    CoinReadPrintit(longHelp_.c_str());
   }
 }
 #ifdef COIN_USE_CBC
@@ -1088,7 +1099,7 @@ then the search will be terminated"
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("auto!Scale","Whether to scale objective, rhs and bounds of problem if they look odd",
-		  "off",AUTOSCALE,0,false);
+		  "off",AUTOSCALE,7,false);
   parameters[numberParameters-1].append("on");
   parameters[numberParameters-1].setLonghelp
     (
@@ -1130,6 +1141,7 @@ corrector algorithm."
   parameters[numberParameters-1].append("UX");
   parameters[numberParameters-1].append("LX");
   parameters[numberParameters-1].append("LL");
+  parameters[numberParameters-1].setCurrentOption("LX");
 #endif
 #ifdef COIN_USE_CBC
   parameters[numberParameters++]=
@@ -1143,11 +1155,11 @@ the main thing is to think about which cuts to apply.  .. expand ..."
 #endif
   parameters[numberParameters++]=
     CbcOrClpParam("bscale","Whether to scale in barrier",
-		  "off",BARRIERSCALE,0,false);
+		  "off",BARRIERSCALE,7,false);
   parameters[numberParameters-1].append("on");
   parameters[numberParameters++]=
     CbcOrClpParam("chol!esky","Which cholesky algorithm",
-		  "native",CHOLESKY,-1,false);
+		  "native",CHOLESKY,7,false);
   parameters[numberParameters-1].append("dense");
   //#ifdef FOREIGN_BARRIER
 #ifdef WSSMP_BARRIER
@@ -1425,7 +1437,7 @@ before branch and bound - use with extreme caution!"
 #endif
   parameters[numberParameters++]=
     CbcOrClpParam("gamma!(Delta)","Whether to regularize barrier",
-		  "off",GAMMA,0,false);
+		  "off",GAMMA,7,false);
   parameters[numberParameters-1].append("on");
   parameters[numberParameters-1].append("gamma");
   parameters[numberParameters-1].append("delta");
@@ -1552,7 +1564,7 @@ no integer variable may be this away from an integer value",
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("KKT","Whether to use KKT factorization",
-		  "off",KKT,0,false);
+		  "off",KKT,7,false);
   parameters[numberParameters-1].append("on");
 #endif
 #ifdef COIN_USE_CBC
@@ -1608,7 +1620,7 @@ refactorizations",
 		  1,999999,MAXFACTOR);
   parameters[numberParameters-1].setLonghelp
     (
-     "If this is at its initial value of 201 then in this executable clp will guess at a\
+     "If this is at its initial value of 200 then in this executable clp will guess at a\
  value to use.  Otherwise the user can set a value.  The code may decide to re-factorize\
  earlier."
      ); 
@@ -1825,7 +1837,7 @@ stop if drop small if less than 5000 columns, 20 otherwise"
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("PFI","Whether to use Product Form of Inverse in simplex",
-		  "off",PFI,0,false);
+		  "off",PFI,7,false);
   parameters[numberParameters-1].append("on");
   parameters[numberParameters-1].setLonghelp
     (
@@ -1938,6 +1950,7 @@ costs this much to be infeasible",
   parameters[numberParameters++]=
     CbcOrClpParam("printO!ptions","Print options",
 		  0,INT_MAX,PRINTOPTIONS);
+  parameters[numberParameters-1].setIntValue(0);
 #endif
 #ifdef COIN_USE_CBC
   parameters[numberParameters++]=
@@ -2139,7 +2152,7 @@ the main thing is to think about which cuts to apply.  .. expand ..."
 #ifdef COIN_USE_CLP
   parameters[numberParameters++]=
     CbcOrClpParam("spars!eFactor","Whether factorization treated as sparse",
-		  "on",SPARSEFACTOR,0,false);
+		  "on",SPARSEFACTOR,7,false);
   parameters[numberParameters-1].append("off");
   parameters[numberParameters++]=
     CbcOrClpParam("special!Options","Dubious options for Simplex - see ClpSimplex.hpp",

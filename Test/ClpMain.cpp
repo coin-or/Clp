@@ -238,6 +238,8 @@ int main (int argc, const char *argv[])
 	  int iType;
 	  for (iType=0;iType<4;iType++) {
 	    int across=0;
+            if ((verbose%4)!=0)
+              std::cout<<std::endl;
 	    std::cout<<types[iType]<<std::endl;
             if ((verbose&2)!=0)
               std::cout<<std::endl;
@@ -263,7 +265,7 @@ int main (int argc, const char *argv[])
                     if ((verbose&2)!=0) {
                       std::cout<<"---- description"<<std::endl;
                       parameters[iParam].printLongHelp();
-                      std::cout<<"----"<<std::endl;
+                      std::cout<<"----"<<std::endl<<std::endl;
                     }
                   } else {
                     std::cout<<std::endl;
