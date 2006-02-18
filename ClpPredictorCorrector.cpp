@@ -22,6 +22,7 @@
 #include <string>
 #include <cstdio>
 #include <iostream>
+#if 0
 static int yyyyyy=0;
 void ClpPredictorCorrector::saveSolution(std::string fileName)
 {
@@ -58,7 +59,7 @@ void ClpPredictorCorrector::saveSolution(std::string fileName)
     std::cout<<"Unable to open file "<<fileName<<std::endl;
   }
 }
-
+#endif
 static double eScale=1.0e27;
 static double eBaseCaution=1.0e-12;
 static double eBase=1.0e-12;
@@ -234,11 +235,13 @@ int ClpPredictorCorrector::solve ( )
       <<numberFixedTotal
       <<cholesky_->rank()
       <<CoinMessageEol;
+#if 0
     if (numberIterations_==-1) {
       saveSolution("xxx.sav");
       if (yyyyyy)
         exit(99);
     }
+#endif
     // move up history
     for (i=1;i<LENGTH_HISTORY;i++) 
       historyInfeasibility_[i-1]=historyInfeasibility_[i];
