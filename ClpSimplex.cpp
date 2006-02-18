@@ -376,6 +376,7 @@ ClpSimplex::gutsOfSolution ( double * givenDuals,
       }
   }
   if (valuesPass) {
+    double badInfeasibility = nonLinearCost_->largestInfeasibility();
 #ifdef CLP_DEBUG
     std::cout<<"Largest given infeasibility "<<oldValue
 	     <<" now "<<nonLinearCost_->largestInfeasibility()<<std::endl;
@@ -384,9 +385,9 @@ ClpSimplex::gutsOfSolution ( double * givenDuals,
     // But may be very large rhs etc
     double useError = CoinMin(largestPrimalError_,
                               1.0e5/maximumAbsElement(solution_,numberRows_+numberColumns_));  
-    if (oldValue<incomingInfeasibility_
-	&&nonLinearCost_->largestInfeasibility()>
-	CoinMax(incomingInfeasibility_,allowedInfeasibility_)||
+    if ((oldValue<incomingInfeasibility_||badInfeasibility>
+         (CoinMax(10.0*allowedInfeasibility_,100.0*oldValue)))
+	&&badInfeasibility>CoinMax(incomingInfeasibility_,allowedInfeasibility_)||
 	useError>1.0e-3) {
       //printf("Original largest infeas %g, now %g, primalError %g\n",
       //     oldValue,nonLinearCost_->largestInfeasibility(),
