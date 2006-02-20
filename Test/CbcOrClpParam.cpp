@@ -342,7 +342,7 @@ CbcOrClpParam::printOptions (  ) const
     current = current.substr(0,shriekPos)+
       "("+current.substr(shriekPos+1)+")";
   }
-  std::cout<<", current  "<<current<<">"<<std::endl;
+  std::cout<<";\n\tcurrent  "<<current<<">"<<std::endl;
 }
 // Print action and string
 void 
@@ -350,6 +350,8 @@ CbcOrClpParam::printString() const
 {
   if (name_=="directory")
     std::cout<<"Current working directory is "<<stringValue_<<std::endl;
+  else if (name_=="printM!ask")
+    std::cout<<"Current value of printMask is "<<stringValue_<<std::endl;
   else
     std::cout<<"Current default (if $ as parameter) for "<<name_
 	     <<" is "<<stringValue_<<std::endl;
@@ -385,10 +387,10 @@ CbcOrClpParam::printLongHelp() const
   if (type_>=1&&type_<400) {
     CoinReadPrintit(longHelp_.c_str());
     if (type_<SOLVERLOGLEVEL) {
-      printf("<Range of values is %g to %g, current %g>\n",lowerDoubleValue_,upperDoubleValue_, doubleValue_);
+      printf("<Range of values is %g to %g;\n\tcurrent %g>\n",lowerDoubleValue_,upperDoubleValue_, doubleValue_);
       assert (upperDoubleValue_>lowerDoubleValue_);
     } else if (type_<DIRECTION) {
-      printf("<Range of values is %d to %d, current %d>\n",lowerIntValue_,upperIntValue_,intValue_);
+      printf("<Range of values is %d to %d;\n\tcurrent %d>\n",lowerIntValue_,upperIntValue_,intValue_);
       assert (upperIntValue_>lowerIntValue_);
     } else if (type_<DIRECTORY) {
       printOptions();
@@ -1076,7 +1078,7 @@ establishParams (int &numberParameters, CbcOrClpParam *const parameters)
     CbcOrClpParam("???","For help",FULLGENERALQUERY,7,false);
   parameters[numberParameters++]=
     CbcOrClpParam("-","From stdin",
-		  STDIN,299,false);
+		  STDIN,3,false);
 #ifdef COIN_USE_CBC
     parameters[numberParameters++]=
       CbcOrClpParam("allow!ableGap","Stop when gap between best possible and \
@@ -1086,7 +1088,7 @@ best less than this",
   parameters[numberParameters-1].setLonghelp
     (
      "If the gap between best solution and best possible solution is less than this \
-then the search will be terminated"
+then the search will be terminated.  Also see gapRatio."
      ); 
 #endif
 #ifdef COIN_USE_CLP
@@ -1095,7 +1097,8 @@ then the search will be terminated"
 		  ALLSLACK,3);
   parameters[numberParameters-1].setLonghelp
     (
-     "Useful for playing around"
+     "Mainly useful for tuning purposes.  Normally the first dual or primal will be using an all slack \
+basis anyway."
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("auto!Scale","Whether to scale objective, rhs and bounds of problem if they look odd",
@@ -1113,7 +1116,9 @@ then the search will be terminated"
   parameters[numberParameters-1].setLonghelp
     (
      "This command solves the current model using the  primal dual predictor \
-corrector algorithm."
+corrector algorithm.  You will probably want to link in and choose a better \
+ordering and factorization than the default ones provided.  It will also solve models \
+with quadratic objectives."
      
      ); 
   parameters[numberParameters++]=
@@ -1123,7 +1128,7 @@ corrector algorithm."
     (
      "This will read an MPS format basis file from the given file name.  It will use the default\
  directory given by 'directory'.  A name of '$' will use the previous value for the name.  This\
- is initialized to '', i.e. it must be set.  If you have libgz then it can read compressed\
+ is initialized to '', i.e. it must be set.  If you have libz then it can read compressed\
  files 'xxxxxxxx.gz'.."
      ); 
   parameters[numberParameters++]=
@@ -1150,7 +1155,12 @@ corrector algorithm."
   parameters[numberParameters-1].setLonghelp
     (
      "This does branch and cut.  Far too many parameters apply to give a full description here.  \
-the main thing is to think about which cuts to apply.  .. expand ..."
+The main thing is to think about which cuts to apply.  First just try with default settings \
+and then see if pre-processing or heuristics helped.  Look at output to see which cuts were effective. \
+Then start tuning.  You will see that the options for cuts are off, on, root and ifmove.  Off is \
+obvious, on means that this cut generator will be tried in the branch and cut tree (you can fine tune using \
+'depth').  Root means just at the root node while 'ifmove' means that cuts will be used in the tree if they \
+look as if they are doing some good and moving the objective value."
      ); 
 #endif
   parameters[numberParameters++]=
@@ -1159,7 +1169,7 @@ the main thing is to think about which cuts to apply.  .. expand ..."
   parameters[numberParameters-1].append("on");
   parameters[numberParameters++]=
     CbcOrClpParam("chol!esky","Which cholesky algorithm",
-		  "native",CHOLESKY,7,false);
+		  "native",CHOLESKY,7);
   parameters[numberParameters-1].append("dense");
   //#ifdef FOREIGN_BARRIER
 #ifdef WSSMP_BARRIER
@@ -1182,6 +1192,12 @@ the main thing is to think about which cuts to apply.  .. expand ..."
 #else
   parameters[numberParameters-1].append("Taucs_dummy");
 #endif
+  parameters[numberParameters-1].setLonghelp
+    (
+     "For a barrier code to be effective it needs a good Cholesky ordering and factorization.  \
+You will need to link in one from another source.  See Makefile.locations for some \
+possibilities."
+     ); 
   //#endif
 #ifdef COIN_USE_CBC
   parameters[numberParameters++]=
@@ -1192,7 +1208,8 @@ the main thing is to think about which cuts to apply.  .. expand ..."
   parameters[numberParameters-1].append("ifmove");
   parameters[numberParameters-1].setLonghelp
     (
-     "This switches on clique cuts (either at root or in entire tree)"
+     "This switches on clique cuts (either at root or in entire tree) \
+See branchAndCut for information on options."
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("combine!Solutions","Whether to use combine solution heuristic",
@@ -1200,17 +1217,19 @@ the main thing is to think about which cuts to apply.  .. expand ..."
   parameters[numberParameters-1].append("on");
   parameters[numberParameters-1].setLonghelp
     (
-     "This switches on a search which uses all variables in solutions \
-found so far (after two or more solutions)"
+     "This switches on a heuristic which does branch and cut on the problem given by just \
+using variables which have appeared in one or more solutions. \
+It is obviously only tries after two or more solutions."
      ); 
   parameters[numberParameters++]=
-    CbcOrClpParam("cost!Strategy","How to use costs",
+    CbcOrClpParam("cost!Strategy","How to use costs as priorities",
 		  "off",COSTSTRATEGY);
   parameters[numberParameters-1].append("pri!orities");
   parameters[numberParameters-1].append("pseudo!costs(not implemented yet)");
   parameters[numberParameters-1].setLonghelp
     (
-     "This orders the variables in order of their absolute costs - with largest cost ones being branched on first"
+     "This orders the variables in order of their absolute costs - with largest cost ones being branched on \
+first.  This primitive strategy can be surprsingly effective."
      ); 
 #endif
 #ifdef COIN_USE_CLP
@@ -1220,8 +1239,8 @@ found so far (after two or more solutions)"
   parameters[numberParameters-1].append("on");
   parameters[numberParameters-1].append("so!low_halim");
   parameters[numberParameters-1].append("ha!lim_solow(JJF mods)");
-  parameters[numberParameters-1].append("4");
-  parameters[numberParameters-1].append("5");
+  //  parameters[numberParameters-1].append("4");
+  //  parameters[numberParameters-1].append("5");
   parameters[numberParameters-1].setLonghelp
     (
      "If crash is set on and there is an all slack basis then Clp will flip or put structural\
@@ -1251,7 +1270,7 @@ presolve as well) - the option maybe does this."
     (
      "Cut generators may be - off, on only at root, on if they look possible \
 and on.  If they are done every node then that is that, but it may be worth doing them \
-every so often.  The original method was every so many node but it may be more logical \
+every so often.  The original method was every so many nodes but it is more logical \
 to do it whenever depth in tree is a multiple of K.  This option does that and defaults \
 to -1 (off)."
      );
@@ -1262,7 +1281,9 @@ to -1 (off)."
   parameters[numberParameters-1].setDoubleValue(1.0e50);
   parameters[numberParameters-1].setLonghelp
     (
-     "All solutions must be better than this value (in a minimization sense)."
+     "All solutions must be better than this value (in a minimization sense).  \
+This is also set by code whenever it obtains a solution and is set to value of \
+objective for solution minus cutoff increment."
      );
   parameters[numberParameters++]=
     CbcOrClpParam("cuts!OnOff","Switches all cuts on or off",
@@ -1273,7 +1294,8 @@ to -1 (off)."
   parameters[numberParameters-1].setLonghelp
     (
      "This can be used to switch on or off all cuts (apart from Reduce and Split).  Then you can do \
-individual ones off or on"
+individual ones off or on \
+See branchAndCut for information on options."
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("debug!In","read valid solution from file",
@@ -1292,11 +1314,21 @@ createAfterPre.  The create case has same effect as saveSolution."
      ); 
 #endif 
   parameters[numberParameters++]=
+    CbcOrClpParam("direction","Minimize or Maximize",
+		  "min!imize",DIRECTION);
+  parameters[numberParameters-1].append("max!imize");
+  parameters[numberParameters-1].append("zero");
+  parameters[numberParameters-1].setLonghelp
+    (
+     "The default is minimize - use 'direction maximize' for maximization.\n\
+You can also use the parameters 'maximize' or 'minimize'."
+     ); 
+  parameters[numberParameters++]=
     CbcOrClpParam("directory","Set Default directory for import etc.",
 		  DIRECTORY);
   parameters[numberParameters-1].setLonghelp
     (
-     "This sets the directory which import, export, saveModel and restoreModel will use.\
+     "This sets the directory which import, export, saveModel, restoreModel etc will use.\
   It is initialized to './'"
      ); 
 #ifdef COIN_USE_CLP
@@ -1343,7 +1375,7 @@ gap between bounds exceeds this value",
 		  DUALSIMPLEX);
   parameters[numberParameters-1].setLonghelp
     (
-     "This command solves the current model using the dual steepest algorithm.\
+     "This command solves the current model using the dual steepest edge algorithm.\
 The time and iterations may be affected by settings such as presolve, scaling, crash\
  and also by dual pivot method, fake bound on variables and dual and primal tolerances."
      );
@@ -1355,7 +1387,9 @@ no dual infeasibility may exceed this value",
   parameters[numberParameters-1].setLonghelp
     (
      "Normally the default tolerance is fine, but you may want to increase it a\
- bit if a dual run seems to be having a hard time"
+ bit if a dual run seems to be having a hard time.  One method which can be faster is \
+to use a large tolerance e.g. 1.0e-4 and dual and then clean up problem using primal and the \
+correct tolerance (remembering to switch off presolve for this final short clean up phase)."
      ); 
 #ifdef COIN_USE_CLP
   parameters[numberParameters++]=
@@ -1382,7 +1416,8 @@ no dual infeasibility may exceed this value",
     (
      "The default is not to use any model which had errors when reading the mps file.\
   Setting this to 'on' will allow all errors from which the code can recover\
- by ignoring the error."
+ simply by ignoring the error.  There are some errors from which the code can not recover \
+e.g. no ENDATA.  This has to be set before import i.e. -errorsAllowed on -import xxxxxx.mps."
      );
   parameters[numberParameters++]=
     CbcOrClpParam("exit","Stops clp execution",
@@ -1432,7 +1467,8 @@ before branch and bound - use with extreme caution!"
     parameters[numberParameters-1].append("ifmove");
   parameters[numberParameters-1].setLonghelp
     (
-     "This switches on flow cover cuts (either at root or in entire tree)"
+     "This switches on flow cover cuts (either at root or in entire tree) \
+See branchAndCut for information on options."
      ); 
 #endif
   parameters[numberParameters++]=
@@ -1454,7 +1490,8 @@ best less than this fraction of larger of two",
   parameters[numberParameters-1].setLonghelp
     (
      "If the gap between best solution and best possible solution is less than this fraction \
-of the objective value at the root node then the search will terminate"
+of the objective value at the root node then the search will terminate.  See 'allowableGap' for a \
+way of using absolute value rather than fraction."
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("gomory!Cuts","Whether to use Gomory cuts",
@@ -1464,9 +1501,11 @@ of the objective value at the root node then the search will terminate"
   parameters[numberParameters-1].append("ifmove");
   parameters[numberParameters-1].setLonghelp
     (
-     "The original cuts - beware of imitations!  Having gone out of favo(u)r, they are now more \
+     "The original cuts - beware of imitations!  Having gone out of favor, they are now more \
 fashionable as LP solvers are more robust and they interact well with other cuts.  They will almost always \
-give cuts (although in this executable they are limited as to number of variables in cut)."
+give cuts (although in this executable they are limited as to number of variables in cut).  \
+However the cuts may be dense so it is worth experimenting. \
+See branchAndCut for information on options."
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("greedy!Heuristic","Whether to use a greedy heuristic",
@@ -1475,7 +1514,8 @@ give cuts (although in this executable they are limited as to number of variable
   parameters[numberParameters-1].append("root");
   parameters[numberParameters-1].setLonghelp
     (
-     "Switches on a dubious greedy heuristic"
+     "Switches on a greedy heuristic which will try and obtain a solution.  It may just fix a \
+percentage of variables and then try a small branch and cut run."
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("heur!isticsOnOff","Switches most heuristics on or off",
@@ -1490,7 +1530,12 @@ alters search."
 #endif
   parameters[numberParameters++]=
     CbcOrClpParam("help","Print out version, non-standard options and some help",
-		  HELP);
+		  HELP,3);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "This prints out some help to get user started.  If you have printed this then \
+you should be past that stage:-)"
+     ); 
 #ifdef COIN_USE_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("hot!StartMaxIts","Maximum iterations on hot start",
@@ -1526,7 +1571,9 @@ much better than last integer solution",
   parameters[numberParameters-1].setLonghelp
     (
      "Whenever a solution is found the bound on solutions is set to solution (in a minimization\
-sense) plus this.  Becareful if you set this negative"
+sense) plus this.  If it is not set then the code will try and work one out e.g. if \
+all objective coefficients are multiples of 0.01 and only integer variables have entries in \
+objective then this can be set to 0.01.  Be careful if you set this negative!"
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("inf!easibilityWeight","Each integer infeasibility is expected \
@@ -1534,7 +1581,7 @@ to cost this much",
 		  0.0,1.0e20,INFEASIBILITYWEIGHT);
   parameters[numberParameters-1].setLonghelp
     (
-     "A crude way of deciding which node to explore next.  Satisfying each integer infeasibility is \
+     "A primitive way of deciding which node to explore next.  Satisfying each integer infeasibility is \
 expected to cost this much."
      ); 
   parameters[numberParameters++]=
@@ -1550,7 +1597,7 @@ no integer variable may be this away from an integer value",
 	      1.0e-20,0.5,INTEGERTOLERANCE);
   parameters[numberParameters-1].setLonghelp
     (
-     "The short help says it all"
+     "Beware of setting this smaller than the primal tolerance."
      ); 
 #endif 
 #ifdef COIN_USE_CLP
@@ -1560,7 +1607,8 @@ no integer variable may be this away from an integer value",
   parameters[numberParameters-1].append("off");
   parameters[numberParameters-1].setLonghelp
     (
-     "It saves space to get rid of names so if you need to you can set this to off."
+     "It saves space to get rid of names so if you need to you can set this to off.  \
+This needs to be set before the import of model - so -keepnames off -import xxxxx.mps."
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("KKT","Whether to use KKT factorization",
@@ -1576,7 +1624,8 @@ no integer variable may be this away from an integer value",
   parameters[numberParameters-1].append("ifmove");
   parameters[numberParameters-1].setLonghelp
     (
-     "This switches on knapsack cuts (either at root or in entire tree)"
+     "This switches on knapsack cuts (either at root or in entire tree) \
+See branchAndCut for information on options."
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("local!TreeSearch","Whether to use local treesearch",
@@ -1607,7 +1656,7 @@ heuristics are switched on."
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("max!imize","Set optimization direction to maximize",
-		  MAXIMIZE,299);
+		  MAXIMIZE,7);
   parameters[numberParameters-1].setLonghelp
     (
      "The default is minimize - use 'maximize' for maximization.\n\
@@ -1622,7 +1671,7 @@ refactorizations",
     (
      "If this is at its initial value of 200 then in this executable clp will guess at a\
  value to use.  Otherwise the user can set a value.  The code may decide to re-factorize\
- earlier."
+ earlier for accuracy."
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("maxIt!erations","Maximum number of iterations before \
@@ -1647,7 +1696,7 @@ but then the results may not be repeatable."
 #endif
   parameters[numberParameters++]=
     CbcOrClpParam("min!imize","Set optimization direction to minimize",
-		  MINIMIZE,299);
+		  MINIMIZE,7);
   parameters[numberParameters-1].setLonghelp
     (
      "The default is minimize - use 'maximize' for maximization.\n\
@@ -1669,7 +1718,8 @@ You can also use the parameters 'direction minimize'."
   parameters[numberParameters-1].append("ifmove");
   parameters[numberParameters-1].setLonghelp
     (
-     "This switches on mixed integer rounding cuts (either at root or in entire tree)"
+     "This switches on mixed integer rounding cuts (either at root or in entire tree) \
+See branchAndCut for information on options."
      ); 
 #endif 
   parameters[numberParameters++]=
@@ -1677,22 +1727,12 @@ You can also use the parameters 'direction minimize'."
 		  "off",MESSAGES);
   parameters[numberParameters-1].append("on");
   parameters[numberParameters-1].setLonghelp
-    ("The default for the Clp library is to put out messages such as:\n\
+    ("The default behavior is to put out messages such as:\n\
    Clp0005 2261  Objective 109.024 Primal infeas 944413 (758)\n\
 but this program turns this off to make it look more friendly.  It can be useful\
- to turn them back on if you want to be able 'grep' for particular messages or if\
+ to turn them back on if you want to be able to 'grep' for particular messages or if\
  you intend to override the behavior of a particular message."
      );
-  parameters[numberParameters++]=
-    CbcOrClpParam("direction","Minimize or Maximize",
-		  "min!imize",DIRECTION);
-  parameters[numberParameters-1].append("max!imize");
-  parameters[numberParameters-1].append("zero");
-  parameters[numberParameters-1].setLonghelp
-    (
-     "The default is minimize - use 'direction maximize' for maximization.\n\
-You can also use the parameters 'maximize' or 'minimize'."
-     ); 
 #ifdef COIN_USE_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("miniT!ree","Size of fast mini tree",
@@ -1807,7 +1847,7 @@ stop if drop small if less than 5000 columns, 20 otherwise"
 		  0,10000,FPUMPITS);
   parameters[numberParameters-1].setLonghelp
     (
-     "This fine tunes Feasibility Pump"
+     "This fine tunes Feasibility Pump by doing more or fewer passes."
      ); 
   parameters[numberParameters-1].setIntValue(20);
 #endif 
@@ -1819,7 +1859,7 @@ stop if drop small if less than 5000 columns, 20 otherwise"
     (
      "Normally Presolve does 5 passes but you may want to do less to make it\
  more lightweight or do more if improvements are still being made.  As Presolve will return\
- if nothing is being taken out, then you should not need to use this fine tuning."
+ if nothing is being taken out, you should not normally need to use this fine tuning."
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("pertV!alue","Method of perturbation",
@@ -1833,7 +1873,7 @@ stop if drop small if less than 5000 columns, 20 otherwise"
      "Perturbation helps to stop cycling, but Clp uses other measures for this.\
   However large problems and especially ones with unit elements and unit rhs or costs\
  benefit from perturbation.  Normally Clp tries to be intelligent, but you can switch this off.\
-  The Clp library has this off by default.  This program has it on."
+  The Clp library has this off by default.  This program has it on by default."
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("PFI","Whether to use Product Form of Inverse in simplex",
@@ -1853,6 +1893,14 @@ stop if drop small if less than 5000 columns, 20 otherwise"
  see if it can convert the problem so you should not need to use this."
      ); 
   parameters[numberParameters++]=
+    CbcOrClpParam("pO!ptions","Dubious print options",
+		  0,INT_MAX,PRINTOPTIONS,false);
+  parameters[numberParameters-1].setIntValue(0);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "If this is > 0 then presolve will give more information and branch and cut will give statistics"
+     ); 
+  parameters[numberParameters++]=
     CbcOrClpParam("preO!pt","Presolve options",
 		  0,INT_MAX,PRESOLVEOPTIONS,false);
 #endif
@@ -1866,7 +1914,9 @@ stop if drop small if less than 5000 columns, 20 otherwise"
     (
      "Presolve analyzes the model to find such things as redundant equations, equations\
  which fix some variables, equations which can be transformed into bounds etc etc.  For the\
- initial solve of any problem this is worth doing unless you know that it will have no effect."
+ initial solve of any problem this is worth doing unless you know that it will have no effect.  \
+on will normally do 5 passes while using 'more' will do 10.  If the problem is very large you may need \
+to write the original to file using 'file'."
      ); 
 #ifdef COIN_USE_CBC
   parameters[numberParameters++]=
@@ -1880,7 +1930,7 @@ stop if drop small if less than 5000 columns, 20 otherwise"
   parameters[numberParameters-1].setLonghelp
     (
      "This tries to reduce size of model in a similar way to presolve and \
-it also tries to strengthen the model - needs more work but can be useful. \
+it also tries to strengthen the model - this can be very useful and is worth trying. \
  Save option saves on file presolved.mps.  equal will turn <= cliques into \
 ==.  sos will create sos sets if all 0-1 in sets (well one extra is allowed) \
 and no overlaps.  trysos is same but allows any number extra."
@@ -1892,7 +1942,8 @@ and no overlaps.  trysos is same but allows any number extra."
 		  1.0e-20,1.0e12,PRESOLVETOLERANCE);
   parameters[numberParameters-1].setLonghelp
     (
-     "The default is 1.0e-8 - you may wish to try 1.0e-7"
+     "The default is 1.0e-8 - you may wish to try 1.0e-7 if presolve says the problem is \
+infeasible and you have awkward numbers and you are sure the problem is really feasible."
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("primalP!ivot","Primal pivot choice algorithm",
@@ -1947,27 +1998,34 @@ costs this much to be infeasible",
   OSL had a heuristic to\
  adjust bounds, maybe we need that here."
      ); 
-  parameters[numberParameters++]=
-    CbcOrClpParam("printO!ptions","Print options",
-		  0,INT_MAX,PRINTOPTIONS);
-  parameters[numberParameters-1].setIntValue(0);
 #endif
-#ifdef COIN_USE_CBC
   parameters[numberParameters++]=
-    CbcOrClpParam("printing!Options","Print options",
-		  "normal",INTPRINT);
+    CbcOrClpParam("printi!ngOptions","Print options",
+		  "normal",INTPRINT,3);
   parameters[numberParameters-1].append("integer");
   parameters[numberParameters-1].append("special");
   parameters[numberParameters-1].append("rows");
   parameters[numberParameters-1].append("all");
   parameters[numberParameters-1].setLonghelp
     (
-     "normal - nonzero column variables \n\
+     "This changes the amount and format of printing a solution:\nnormal - nonzero column variables \n\
 integer - nonzero integer column variables\n\
 special - in format suitable for OsiRowCutDebugger\n\
 rows - nonzero column variables and row activities\n\
-all - all column variables and row activities."
+all - all column variables and row activities.\n\
+\nFor non-integer problems 'integer' and 'special' act like 'normal'.  \
+Also see printMask for controlling output."
      ); 
+  parameters[numberParameters++]=
+    CbcOrClpParam("printM!ask","Control printing of solution on a  mask",
+		  PRINTMASK,3);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "If set then only those names which match mask are printed in a solution. \
+'*' matches any character.  The default is '' i.e. unset so all variables are printed. \
+This is only active if model has names."
+     ); 
+#ifdef COIN_USE_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("probing!Cuts","Whether to use Probing cuts",
 		  "off",PROBINGCUTS);
@@ -1976,7 +2034,8 @@ all - all column variables and row activities."
   parameters[numberParameters-1].append("ifmove");
   parameters[numberParameters-1].setLonghelp
     (
-     "This switches on probing cuts (either at root or in entire tree)"
+     "This switches on probing cuts (either at root or in entire tree) \
+See branchAndCut for information on options."
      ); 
 #endif
   parameters[numberParameters++]=
@@ -2008,7 +2067,8 @@ all - all column variables and row activities."
     parameters[numberParameters-1].append("ifmove");
   parameters[numberParameters-1].setLonghelp
     (
-     "This switches on reduce and split  cuts (either at root or in entire tree)"
+     "This switches on reduce and split  cuts (either at root or in entire tree) \
+See branchAndCut for information on options."
      ); 
 #endif
 #ifdef COIN_USE_CLP
@@ -2085,12 +2145,13 @@ activities and reduced costs - see bottom of CbcOrClpParam.cpp for code that wri
   parameters[numberParameters-1].setCurrentOption(3); // say auto
 #ifndef COIN_USE_CBC
   parameters[numberParameters++]=
-    CbcOrClpParam("sec!onds","maximum seconds",
+    CbcOrClpParam("sec!onds","Maximum seconds",
 		  -1.0,1.0e12,TIMELIMIT);
   parameters[numberParameters-1].setLonghelp
     (
-     "After this many seconds clp will act as if maximum iterations had been reached.\
-  In this program it is really only useful for testing but the library function\n\
+     "After this many seconds clp will act as if maximum iterations had been reached \
+(if value >=0).  \
+In this program it is really only useful for testing but the library function\n\
       \tsetMaximumSeconds(value)\n can be useful."
      );
 #else
@@ -2105,10 +2166,19 @@ activities and reduced costs - see bottom of CbcOrClpParam.cpp for code that wri
   parameters[numberParameters++]=
     CbcOrClpParam("sleep","for debug",
 		  DUMMY,7,false);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "If passed to solver fom ampl, then ampl will wait so that you can copy .nl file for debug."
+     ); 
 #ifdef COIN_USE_CLP
   parameters[numberParameters++]=
     CbcOrClpParam("slp!Value","Number of slp passes before primal",
 		  -1,50000,SLPVALUE,false);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "If you are solving a quadratic problem using primal then it may be helpful to do some \
+sequential Lps to get a good approximate solution."
+     ); 
 #endif
   parameters[numberParameters++]=
     CbcOrClpParam("solu!tion","Prints solution to file",
@@ -2117,7 +2187,7 @@ activities and reduced costs - see bottom of CbcOrClpParam.cpp for code that wri
     (
      "This will write a primitive solution file to the given file name.  It will use the default\
  directory given by 'directory'.  A name of '$' will use the previous value for the name.  This\
- is initialized to 'stdout'."
+ is initialized to 'stdout'.  The amount of output can be varied using printi!ngOptions or printMask."
      ); 
 #ifdef COIN_USE_CLP
 #ifdef COIN_USE_CBC
@@ -2127,8 +2197,7 @@ activities and reduced costs - see bottom of CbcOrClpParam.cpp for code that wri
   parameters[numberParameters-1].setLonghelp
     (
      "If there are no integer variables then this just solves LP.  If there are integer variables \
-this does branch and cut.  Far too many parameters apply to give a full description here.  \
-the main thing is to think about which cuts to apply.  .. expand ..."
+this does branch and cut."
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("slog!Level","Level of detail in Solver output",
@@ -2172,13 +2241,11 @@ the main thing is to think about which cuts to apply.  .. expand ..."
 		  STATISTICS);
   parameters[numberParameters-1].setLonghelp
     (
-     "This command prints crude statistics for the current model.\
+     "This command prints some statistics for the current model.\
  If log level >1 then more is printed.\
  These are for presolved model if presolve on (and unscaled)."
      );
 #endif
-  CbcOrClpParam("stdin","From stdin",
-		STDIN,7,false);
   parameters[numberParameters++]=
     CbcOrClpParam("stop","Stops clp execution",
 		  EXIT);
@@ -2238,7 +2305,7 @@ activity at continuous solution",
 		  -1,2000000,NUMBERBEFORE);
   parameters[numberParameters-1].setLonghelp
     (
-     "Using strong branching computes pseudo-costs.  After this many time sfor a variable we just \
+     "Using strong branching computes pseudo-costs.  After this many times for a variable we just \
 trust the pseudo costs and do not do any more strong branching."
      ); 
 #endif
@@ -2251,7 +2318,8 @@ trust the pseudo costs and do not do any more strong branching."
   parameters[numberParameters-1].append("ifmove");
   parameters[numberParameters-1].setLonghelp
     (
-     "This switches on two phase mixed integer rounding  cuts (either at root or in entire tree)"
+     "This switches on two phase mixed integer rounding  cuts (either at root or in entire tree) \
+See branchAndCut for information on options."
      ); 
 #endif
   parameters[numberParameters++]=
@@ -2266,7 +2334,7 @@ trust the pseudo costs and do not do any more strong branching."
 		  0,7,VERBOSE,false);
   parameters[numberParameters-1].setLonghelp
     (
-     "Set to 1 to get short help with ? list, 2 to get long help, 3 for both"
+     "Set to 1 to get short help with ? list, 2 to get long help, 3 for both.  (add 4 to just get ampl ones)."
      ); 
   parameters[numberParameters-1].setIntValue(0);
   assert(numberParameters<CBCMAXPARAMETERS);

@@ -48,6 +48,7 @@
 #endif
 
 static double totalTime=0.0;
+static bool maskMatches(std::string & mask, std::string & check);
 
 //#############################################################################
 
@@ -77,6 +78,7 @@ int main (int argc, const char *argv[])
     int outputFormat=2;
     int slpValue=-1;
     int printOptions=0;
+    int printMode=0;
     int presolveOptions=0;
     int doCrash=0;
     int doSprint=-1;
@@ -99,11 +101,13 @@ int main (int argc, const char *argv[])
     std::string restoreFile ="default.prob";
     std::string solutionFile ="stdout";
     std::string solutionSaveFile ="solution.file";
+    std::string printMask="";
     CbcOrClpParam parameters[CBCMAXPARAMETERS];
     int numberParameters ;
     establishParams(numberParameters,parameters) ;
     parameters[whichParam(BASISIN,numberParameters,parameters)].setStringValue(importBasisFile);
     parameters[whichParam(BASISOUT,numberParameters,parameters)].setStringValue(exportBasisFile);
+    parameters[whichParam(PRINTMASK,numberParameters,parameters)].setStringValue(printMask);
     parameters[whichParam(DIRECTORY,numberParameters,parameters)].setStringValue(directory);
     parameters[whichParam(DUALBOUND,numberParameters,parameters)].setDoubleValue(models->dualBound());
     parameters[whichParam(DUALTOLERANCE,numberParameters,parameters)].setDoubleValue(models->dualTolerance());
@@ -233,8 +237,8 @@ int main (int argc, const char *argv[])
 	  std::vector<std::string> types;
 	  types.push_back("Double parameters:");
 	  types.push_back("Int parameters:");
-	  types.push_back("Keyword parameters and others:");
-	  types.push_back("Actions:");
+	  types.push_back("Keyword parameters:");
+	  types.push_back("Actions or string parameters:");
 	  int iType;
 	  for (iType=0;iType<4;iType++) {
 	    int across=0;
@@ -435,6 +439,9 @@ int main (int argc, const char *argv[])
 	    case ERRORSALLOWED:
 	      allowImportErrors = action;
 	      break;
+            case INTPRINT:
+              printMode=action;
+              break;
 	    case KEEPNAMES:
 	      keepImportNames = 1-action;
 	      break;
@@ -1069,6 +1076,18 @@ int main (int argc, const char *argv[])
 	      std::cout<<"** Current model not valid"<<std::endl;
 	    }
 	    break;
+	  case PRINTMASK:
+            // get next field
+	    {
+	      std::string name = CoinReadGetString(argc,argv);
+	      if (name!="EOL") {
+		parameters[iParam].setStringValue(name);
+                printMask = name;
+	      } else {
+		parameters[iParam].printString();
+	      }
+	    }
+	    break;
 	  case BASISOUT:
 	    if (goodModels[iModel]) {
 	      // get next field
@@ -1474,28 +1493,32 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 		double * rowLower = models[iModel].rowLower();
 		double * rowUpper = models[iModel].rowUpper();
 		double primalTolerance = models[iModel].primalTolerance();
-		int printAll = (printOptions>>1)&3;
 		char format[6];
 		sprintf(format,"%%-%ds",CoinMax(lengthName,8));
-		for (iRow=0;iRow<numberRows;iRow++) {
-		  int type=printAll;
-		  if (primalRowSolution[iRow]>rowUpper[iRow]+primalTolerance||
-		      primalRowSolution[iRow]<rowLower[iRow]-primalTolerance) {
-		    fprintf(fp,"** ");
-		    type=2;
-		  } else if (fabs(primalRowSolution[iRow])>1.0e-8) {
-		    type=1;
-		  } else if (numberRows<50) {
-		    type=3;
-		  } 
-		  if (type) {
-		    fprintf(fp,"%7d ",iRow);
-		    if (lengthName)
-		      fprintf(fp,format,rowNames[iRow].c_str());
-		    fprintf(fp,"%15.8g        %15.8g\n",primalRowSolution[iRow],
-			    dualRowSolution[iRow]);
-		  }
-		}
+                bool doMask = (printMask!=""&&lengthName);
+                if (printMode>2) {
+                  for (iRow=0;iRow<numberRows;iRow++) {
+                    int type=printMode-3;
+                    if (primalRowSolution[iRow]>rowUpper[iRow]+primalTolerance||
+                        primalRowSolution[iRow]<rowLower[iRow]-primalTolerance) {
+                      fprintf(fp,"** ");
+                      type=2;
+                    } else if (fabs(primalRowSolution[iRow])>1.0e-8) {
+                      type=1;
+                    } else if (numberRows<50) {
+                      type=3;
+                    } 
+                    if (doMask&&!maskMatches(printMask,rowNames[iRow]))
+                      type=0;
+                    if (type) {
+                      fprintf(fp,"%7d ",iRow);
+                      if (lengthName)
+                        fprintf(fp,format,rowNames[iRow].c_str());
+                      fprintf(fp,"%15.8g        %15.8g\n",primalRowSolution[iRow],
+                              dualRowSolution[iRow]);
+                    }
+                  }
+                }
 		int iColumn;
 		int numberColumns=models[iModel].numberColumns();
 		double * dualColumnSolution = 
@@ -1505,7 +1528,7 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 		double * columnLower = models[iModel].columnLower();
 		double * columnUpper = models[iModel].columnUpper();
 		for (iColumn=0;iColumn<numberColumns;iColumn++) {
-		  int type=printAll;
+		  int type=(printMode>3) ? 1 : 0;
 		  if (primalColumnSolution[iColumn]>columnUpper[iColumn]+primalTolerance||
 		      primalColumnSolution[iColumn]<columnLower[iColumn]-primalTolerance) {
 		    fprintf(fp,"** ");
@@ -1515,6 +1538,8 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 		  } else if (numberColumns<50) {
 		    type=3;
 		  }
+                  if (doMask&&!maskMatches(printMask,columnNames[iColumn]))
+                    type =0;
 		  if (type) {
 		    fprintf(fp,"%7d ",iColumn);
 		    if (lengthName)
@@ -1911,6 +1936,36 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
   breakdown("ColumnLower",numberColumns,columnLower);
   breakdown("ColumnUpper",numberColumns,columnUpper);
   breakdown("Objective",numberColumns,objective);
+}
+static bool maskMatches(std::string & mask, std::string & check)
+{
+  // back to char as I am old fashioned
+  const char * maskC = mask.c_str();
+  const char * checkC = check.c_str();
+  int length = strlen(maskC);
+  int lengthCheck;
+  for (lengthCheck=length-1;lengthCheck>=0;lengthCheck--) {
+    if (maskC[lengthCheck]!='*')
+      break;
+  }
+  lengthCheck++;
+  int lengthC = strlen(checkC);
+  if (lengthC>length)
+    return false; // can't be true
+  if (lengthC<lengthCheck) {
+    // last lot must be blank for match
+    for (int i=lengthC;i<lengthCheck;i++) {
+      if (maskC[i]!=' ')
+        return false;
+    }
+  }
+  // need only check this much
+  lengthC = CoinMin(lengthC,lengthCheck);
+  for (int i=0;i<lengthC;i++) {
+    if (maskC[i]!='*'&&maskC[i]!=checkC[i])
+      return false;
+  }
+  return true; // matches
 }
 /*
   Version 1.00.00 October 13 2004.
