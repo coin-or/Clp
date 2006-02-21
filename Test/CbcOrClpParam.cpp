@@ -1154,13 +1154,18 @@ with quadratic objectives."
 		  BAB);
   parameters[numberParameters-1].setLonghelp
     (
-     "This does branch and cut.  Far too many parameters apply to give a full description here.  \
-The main thing is to think about which cuts to apply.  First just try with default settings \
-and then see if pre-processing or heuristics helped.  Look at output to see which cuts were effective. \
-Then start tuning.  You will see that the options for cuts are off, on, root and ifmove.  Off is \
+     "This does branch and cut.  There are many parameters which can affect the performance.  \
+First just try with default settings and look carefully at the log file.  Did cuts help?  Did they take too long?  \
+Look at output to see which cuts were effective and then do some tuning.  You will see that the \
+options for cuts are off, on, root and ifmove.  Off is \
 obvious, on means that this cut generator will be tried in the branch and cut tree (you can fine tune using \
 'depth').  Root means just at the root node while 'ifmove' means that cuts will be used in the tree if they \
-look as if they are doing some good and moving the objective value."
+look as if they are doing some good and moving the objective value.  If pre-processing reduced the size of the \
+problem or strengthened many coefficients then it is probably wise to leave it on.  Switch off heuristics \
+which did not provide solutions.  The other major area to look at is the search.  Hopefully good solutions \
+were obtained fairly early in the search so the important point is to select the best variable to branch on.  \
+See whether strong branching did a good job - or did it just take a lot of iterations.  Adjust the strongBranching \
+and trustPseudoCosts parameters."
      ); 
 #endif
   parameters[numberParameters++]=
