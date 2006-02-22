@@ -1042,6 +1042,29 @@ ClpModel::resize (int newNumberRows, int newNumberColumns)
       status_ = NULL;
     }
   }
+#ifndef CLP_NO_STD
+  if (lengthNames_) {
+    // redo row and column names
+    if (numberRows_ < newNumberRows) {
+      rowNames_.resize(newNumberRows);
+      lengthNames_ = CoinMax(lengthNames_,8);
+      char name[9];
+      for (int iRow = numberRows_;iRow<newNumberRows;iRow++) {
+        sprintf(name,"R%7.7d",iRow);
+        rowNames_[iRow]=name;
+      }
+    }
+    if (numberColumns_ < newNumberColumns) {
+      columnNames_.resize(newNumberColumns);
+      lengthNames_ = CoinMax(lengthNames_,8);
+      char name[9];
+      for (int iColumn = numberColumns_;iColumn<newNumberColumns;iColumn++) {
+        sprintf(name,"C%7.7d",iColumn);
+        columnNames_[iColumn]=name;
+      }
+    }
+  }
+#endif
   numberRows_ = newNumberRows;
   if (newNumberColumns<numberColumns_&&matrix_->getNumCols()) {
     int * which = new int[numberColumns_-newNumberColumns];
@@ -1060,31 +1083,6 @@ ClpModel::resize (int newNumberRows, int newNumberColumns)
     integerType_ = temp;
   }
   numberColumns_ = newNumberColumns;
-#ifndef CLP_NO_STD
-  if (lengthNames_) {
-    // reduce row and column names vectors only if necessary
-    if (rowNames_.size() < (unsigned int)numberRows_) {
-      int oldSize = rowNames_.size();
-      rowNames_.resize(numberRows_);
-      lengthNames_ = CoinMax(lengthNames_,8);
-      char name[9];
-      for (int iRow = oldSize;iRow<numberRows_;iRow++) {
-        sprintf(name,"R%7.7d",iRow);
-        rowNames_[iRow]=name;
-      }
-    }
-    if (columnNames_.size() < (unsigned int)numberColumns_) {
-      int oldSize = columnNames_.size();
-      columnNames_.resize(numberColumns_);
-      lengthNames_ = CoinMax(lengthNames_,8);
-      char name[9];
-      for (int iColumn = oldSize;iColumn<numberColumns_;iColumn++) {
-        sprintf(name,"C%7.7d",iColumn);
-        columnNames_[iColumn]=name;
-      }
-    }
-  }
-#endif
 }
 // Deletes rows
 void 
