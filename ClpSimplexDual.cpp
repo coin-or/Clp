@@ -2878,7 +2878,7 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 		//printf(" not taken seq %d alpha %g weight %d\n",
 		//   iSequence,absAlpha,dubiousWeights[iSequence]);
 	      }
-	      double range = upper[iSequence] - lower[iSequence];
+	      double range = upper_[iSequence] - lower_[iSequence];
 	      thruThis += range*fabs(alpha);
 	      increaseInThis += badDj*range;
 	    }
