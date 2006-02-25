@@ -974,7 +974,7 @@ CoinReadGetCommand(int argc, const char *argv[])
     }
   }
   // if = then modify and save
-  unsigned int found = field.find('=');
+  std::string::size_type found = field.find('=');
   if (found!=std::string::npos) {
     afterEquals = field.substr(found+1);
     field = field.substr(0,found);
