@@ -2623,8 +2623,8 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
       // try 3 different ways
       // 1 bias increase by ones with slightly wrong djs
       // 2 bias by all
-      // 3 bias by all - tolerance (doesn't seem very good)
-#define TRYBIAS 1
+      // 3 bias by all - tolerance
+#define TRYBIAS 3
 
 
       double increaseInThis=0.0; //objective increase in this loop
