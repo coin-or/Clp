@@ -5787,17 +5787,172 @@ ClpSimplex::readGMPL(const char *filename,const char * dataName,
 #endif
 // Just check solution (for external use)
 void 
-ClpSimplex::checkSolution()
+ClpSimplex::checkSolution(int setToBounds)
 {
-  // Just use column solution
-  CoinZeroN(rowActivity_,numberRows_);
-  matrix()->times(columnActivity_,rowActivity_) ;
-  // put in standard form
-  createRim(7+8+16+32);
-  dualTolerance_=dblParam_[ClpDualTolerance];
-  primalTolerance_=dblParam_[ClpPrimalTolerance];
-  checkPrimalSolution( rowActivityWork_, columnActivityWork_);
-  checkDualSolution();
+  if (setToBounds) {
+    // Set all ones that look at bounds to bounds
+    bool changed=false;
+    int i;
+    for (i=0;i<numberRows_;i++) {
+      double newValue=0.0;
+      switch(getRowStatus(i)) {
+        
+      case basic:
+        newValue = rowActivity_[i];
+        break;
+      case atUpperBound:
+        newValue=rowUpper_[i];
+        if (newValue>largeValue_) {
+          if (rowLower_[i]>-largeValue_) {
+            newValue=rowLower_[i];
+            setRowStatus(i,atLowerBound);
+          } else {
+            // say free
+            setRowStatus(i,isFree);
+            newValue=0.0;
+          }
+        }
+        break;
+      case ClpSimplex::isFixed:
+      case atLowerBound:
+        newValue=rowLower_[i];
+        if (newValue<-largeValue_) {
+          if (rowUpper_[i]<largeValue_) {
+            newValue=rowUpper_[i];
+            setRowStatus(i,atUpperBound);
+          } else {
+            // say free
+            setRowStatus(i,isFree);
+            newValue=0.0;
+          }
+        }
+        break;
+      case isFree:
+        newValue = rowActivity_[i];
+        break;
+        // not really free - fall through to superbasic
+      case superBasic:
+        if (rowUpper_[i]>largeValue_) {
+          if (rowLower_[i]>-largeValue_) {
+            newValue=rowLower_[i];
+            setRowStatus(i,atLowerBound);
+          } else {
+            // say free
+            setRowStatus(i,isFree);
+            newValue=0.0;
+          }
+        } else {
+          if (rowLower_[i]>-largeValue_) {
+            // set to nearest
+            if (fabs(newValue-rowLower_[i])
+                <fabs(newValue-rowLower_[i])) {
+              newValue=rowLower_[i];
+              setRowStatus(i,atLowerBound);
+            } else {
+              newValue=rowUpper_[i];
+              setRowStatus(i,atUpperBound);
+            }
+          } else {
+            newValue=rowUpper_[i];
+            setRowStatus(i,atUpperBound);
+          }
+        }
+        break;
+      }
+      if (fabs(newValue-rowActivity_[i])>1.0e-12) {
+        changed=true;
+        rowActivity_[i]=newValue;
+      }
+    }
+    for (i=0;i<numberColumns_;i++) {
+      double newValue=0.0;
+      switch(getColumnStatus(i)) {
+        
+      case basic:
+        newValue = columnActivity_[i];
+        break;
+      case atUpperBound:
+        newValue=columnUpper_[i];
+        if (newValue>largeValue_) {
+          if (columnLower_[i]>-largeValue_) {
+            newValue=columnLower_[i];
+            setColumnStatus(i,atLowerBound);
+          } else {
+            // say free
+            setColumnStatus(i,isFree);
+            newValue=0.0;
+          }
+        }
+        break;
+      case ClpSimplex::isFixed:
+      case atLowerBound:
+        newValue=columnLower_[i];
+        if (newValue<-largeValue_) {
+          if (columnUpper_[i]<largeValue_) {
+            newValue=columnUpper_[i];
+            setColumnStatus(i,atUpperBound);
+          } else {
+            // say free
+            setColumnStatus(i,isFree);
+            newValue=0.0;
+          }
+        }
+        break;
+      case isFree:
+        newValue = columnActivity_[i];
+        break;
+        // not really free - fall through to superbasic
+      case superBasic:
+        if (columnUpper_[i]>largeValue_) {
+          if (columnLower_[i]>-largeValue_) {
+            newValue=columnLower_[i];
+            setColumnStatus(i,atLowerBound);
+          } else {
+            // say free
+            setColumnStatus(i,isFree);
+            newValue=0.0;
+          }
+        } else {
+          if (columnLower_[i]>-largeValue_) {
+            // set to nearest
+            if (fabs(newValue-columnLower_[i])
+                <fabs(newValue-columnLower_[i])) {
+              newValue=columnLower_[i];
+              setColumnStatus(i,atLowerBound);
+            } else {
+              newValue=columnUpper_[i];
+              setColumnStatus(i,atUpperBound);
+            }
+          } else {
+            newValue=columnUpper_[i];
+            setColumnStatus(i,atUpperBound);
+          }
+        }
+        break;
+      }
+      if (fabs(newValue-columnActivity_[i])>1.0e-12) {
+        changed=true;
+        columnActivity_[i]=newValue;
+      }
+    }
+    if (!changed&&setToBounds==1) 
+      // no need to do anything
+      setToBounds=0;
+  }
+  if (!setToBounds) {
+    // Just use column solution
+    CoinZeroN(rowActivity_,numberRows_);
+    matrix()->times(columnActivity_,rowActivity_) ;
+    // put in standard form
+    createRim(7+8+16+32);
+    dualTolerance_=dblParam_[ClpDualTolerance];
+    primalTolerance_=dblParam_[ClpPrimalTolerance];
+    checkPrimalSolution( rowActivityWork_, columnActivityWork_);
+    checkDualSolution();
+  } else {
+    startup(0,0);
+    gutsOfSolution(NULL,NULL);
+  }
   if (!numberDualInfeasibilities_&&
       !numberPrimalInfeasibilities_)
     problemStatus_=0;

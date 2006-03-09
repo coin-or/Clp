@@ -490,8 +490,13 @@ public:
   int restoreModel(const char * fileName);
   
   /** Just check solution (for external use) - sets sum of
-      infeasibilities etc.*/
-  void checkSolution();
+      infeasibilities etc.
+      If setToBounds 0 then primal column values not changed
+      and used to compute primal row activity values.  If 1 or 2
+      then status used - so all nonbasic variables set to
+      indicated bound and if any values changed (or ==2)  basic values re-computed.
+  */
+  void checkSolution(int setToBounds=false);
   /** Just check solution (for internal use) - sets sum of
       infeasibilities etc. */
   void checkSolutionInternal();
