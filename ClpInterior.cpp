@@ -1142,41 +1142,85 @@ ClpInterior::numberFixed() const
 void 
 ClpInterior::fixFixed(bool reallyFix)
 {
+  // Arrays for change in columns and rhs
+  double * columnChange = new double[numberColumns_];
+  double * rowChange = new double[numberRows_];
+  CoinZeroN(columnChange,numberColumns_);
+  CoinZeroN(rowChange,numberRows_);
+  matrix_->times(1.0,columnChange,rowChange);
   int i;
+  double tolerance = primalTolerance();
   for (i=0;i<numberColumns_;i++) {
     if (columnUpper_[i]<1.0e20||columnLower_[i]>-1.0e20) { 
       if (columnUpper_[i]>columnLower_[i]) { 
 	if (fixedOrFree(i)) {
 	  if (columnActivity_[i]-columnLower_[i]<columnUpper_[i]-columnActivity_[i]) {
-	    if (reallyFix)
-	      columnUpper_[i]=columnLower_[i];
-	    columnActivity_[i]=columnLower_[i];
+            double change = columnLower_[i]-columnActivity_[i]; 
+            if (fabs(change)<tolerance) {
+              if (reallyFix)
+                columnUpper_[i]=columnLower_[i];
+              columnChange[i] = change;
+              columnActivity_[i]=columnLower_[i];
+            }
 	  } else {
-	    if (reallyFix)
-	      columnLower_[i]=columnUpper_[i];
-	    columnActivity_[i]=columnUpper_[i];
+            double change = columnUpper_[i]-columnActivity_[i]; 
+            if (fabs(change)<tolerance) {
+              if (reallyFix)
+                columnLower_[i]=columnUpper_[i];
+              columnChange[i] = change;
+              columnActivity_[i]=columnUpper_[i];
+            }
 	  }
 	}
       }
     }
   }
+  CoinZeroN(rowChange,numberRows_);
+  matrix_->times(1.0,columnChange,rowChange);
+  // If makes mess of things then don't do
+  double newSum=0.0;
   for (i=0;i<numberRows_;i++) {
-    if (rowUpper_[i]<1.0e20||rowLower_[i]>-1.0e20) { 
-      if (rowUpper_[i]>rowLower_[i]) { 
-	if (fixedOrFree(i+numberColumns_)) {
-	  if (rowActivity_[i]-rowLower_[i]<rowUpper_[i]-rowActivity_[i]) {
-	    if (reallyFix)
-              rowUpper_[i]=rowLower_[i];
-	    rowActivity_[i]=rowLower_[i];
-	  } else {
-	    if (reallyFix)
-              rowLower_[i]=rowUpper_[i];
-	    rowActivity_[i]=rowUpper_[i];
+    double value=rowActivity_[i]+rowChange[i];
+    if (value>rowUpper_[i]+tolerance)
+      newSum += value-rowUpper_[i]-tolerance;
+    else if (value<rowLower_[i]-tolerance)
+      newSum -= value-rowLower_[i]+tolerance;
+  }
+  if (newSum>1.0e-5+1.5*sumPrimalInfeasibilities_) {
+    // put back and skip changes
+    for (i=0;i<numberColumns_;i++) 
+      columnActivity_[i] -= columnChange[i];
+  } else {
+    CoinZeroN(rowActivity_,numberRows_);
+    matrix_->times(1.0,columnActivity_,rowActivity_);
+    if (reallyFix) {
+      for (i=0;i<numberRows_;i++) {
+        if (rowUpper_[i]<1.0e20||rowLower_[i]>-1.0e20) { 
+          if (rowUpper_[i]>rowLower_[i]) { 
+            if (fixedOrFree(i+numberColumns_)) {
+              if (rowActivity_[i]-rowLower_[i]<rowUpper_[i]-rowActivity_[i]) {
+                double change = rowLower_[i]-rowActivity_[i]; 
+                if (fabs(change)<tolerance) {
+                  if (reallyFix)
+                    rowUpper_[i]=rowLower_[i];
+                  rowActivity_[i]=rowLower_[i];
+                }
+              } else {
+                double change = rowLower_[i]-rowActivity_[i]; 
+                if (fabs(change)<tolerance) {
+                  if (reallyFix)
+                    rowLower_[i]=rowUpper_[i];
+                  rowActivity_[i]=rowUpper_[i];
+                }
+              }
+            }
 	  }
 	}
       }
     }
   }
+  delete [] rowChange;
+  delete [] columnChange;
 }
 /* Modifies djs to allow for quadratic.
    returns quadratic offset */

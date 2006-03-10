@@ -3562,6 +3562,13 @@ int ClpPredictorCorrector::updateSolution(double nextGap)
   if (maximumBoundInfeasibility_>primalTolerance()||
       scaledRHSError>primalTolerance())
     primalFeasible=false;
+  // relax dual test if obj big and gap smallish
+  double gap=fabs(primalObjective_-dualObjective_);
+  double sizeObj = CoinMin(fabs(primalObjective_),fabs(dualObjective_))+1.0e-50;
+  //printf("gap %g sizeObj %g ratio %g comp %g\n",
+  //     gap,sizeObj,gap/sizeObj,complementarityGap_);
+  if (numberIterations_>100&&gap/sizeObj<1.0e-9&&complementarityGap_<1.0e-7*sizeObj)
+    dualTolerance *= 1.0e2;
   if (maximumDualError_>objectiveNorm_*dualTolerance) 
     dualFeasible=false;
   if (!primalFeasible||!dualFeasible) {
