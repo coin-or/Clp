@@ -70,6 +70,28 @@ ClpCholeskyBase * ClpCholeskyWssmp::clone() const
                         double * aux , int * naux ,
                         int   * mrp , int * iparm , double * dparm);
 extern "C" void wsetmaxthrds(int *);
+#elif WSSMP_BARRIER==3
+  extern "C" void wssmp_(int * n,
+                        int * columnStart , int * rowIndex , double * element,
+                        double * diagonal , int * perm , int * invp ,
+                        double * rhs , int * ldb , int * nrhs ,
+                        double * aux , int * naux ,
+                        int   * mrp , int * iparm , double * dparm);
+extern "C" void wsetmaxthrds_(int *);
+static void wssmp( int *n, int *ia, int *ja,
+		   double *avals, double *diag, int *perm, int *invp,
+		   double *b, int *ldb, int *nrhs, double *aux, int *
+		   naux, int *mrp, int *iparm, double *dparm)
+{
+  wssmp_(n, ia, ja,
+	   avals, diag, perm, invp,
+	   b, ldb, nrhs, aux, 
+	   naux, mrp, iparm, dparm);
+}
+static void wsetmaxthrds(int * n)
+{
+  wsetmaxthrds_(n);
+}
 #else
 /* minimum needed for user */
 typedef struct EKKModel EKKModel;
@@ -275,7 +297,7 @@ ClpCholeskyWssmp::order(ClpInterior * model)
   integerParameters_[0]=0;
   int i0=0;
   int i1=1;
-#if WSSMP_BARRIER==2
+#if WSSMP_BARRIER>=2
   wsetmaxthrds(&i1);
 #endif
   wssmp(&numberRows_,choleskyStart_,choleskyRow_,sparseFactor_,
