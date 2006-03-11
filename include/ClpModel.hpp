@@ -609,6 +609,11 @@ public:
           { return whatsChanged_;} ;
   inline void setWhatsChanged(int value)
           { whatsChanged_ = value;} ;
+  /// Number of threads (not really being used)
+  inline int numberThreads() const 
+          { return numberThreads_;} ;
+  inline void setNumberThreads(int value)
+          { numberThreads_ = value;} ;
   //@}
   /**@name Message handling */
   //@{
@@ -882,6 +887,8 @@ protected:
   int secondaryStatus_;
   /// length of names (0 means no names)
   int lengthNames_;
+  /// Number of threads (not very operational)
+  int numberThreads_;
   /// Message handler
   CoinMessageHandler * handler_;
   /// Flag to say if default handler (so delete)

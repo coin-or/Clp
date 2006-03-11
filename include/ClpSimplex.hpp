@@ -1263,6 +1263,12 @@ protected:
   int automaticScale_;
   /// For dealing with all issues of cycling etc
   ClpSimplexProgress * progress_;
+public:
+  /// Spare int array for passing information [0]!=0 switches on
+  mutable int spareIntArray_[4];
+  /// Spare double array for passing information [0]!=0 switches on
+  mutable double spareDoubleArray_[4];
+protected:
   /// Allow OsiClp certain perks
   friend class OsiClpSolverInterface;
   //@}

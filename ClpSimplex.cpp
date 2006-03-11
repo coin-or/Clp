@@ -122,6 +122,10 @@ ClpSimplex::ClpSimplex () :
     rowArray_[i]=NULL;
     columnArray_[i]=NULL;
   }
+  for (i=0;i<4;i++) {
+    spareIntArray_[i]=0;
+    spareDoubleArray_[i]=0.0;
+  }
   saveStatus_=NULL;
   // get an empty factorization so we can set tolerances etc
   factorization_ = new ClpFactorization();
@@ -228,6 +232,10 @@ ClpSimplex::ClpSimplex ( const ClpModel * rhs,
   for (i=0;i<6;i++) {
     rowArray_[i]=NULL;
     columnArray_[i]=NULL;
+  }
+  for (i=0;i<4;i++) {
+    spareIntArray_[i]=0;
+    spareDoubleArray_[i]=0.0;
   }
   saveStatus_=NULL;
   // get an empty factorization so we can set tolerances etc
@@ -1659,6 +1667,10 @@ ClpSimplex::ClpSimplex(const ClpSimplex &rhs,int scalingMode) :
     rowArray_[i]=NULL;
     columnArray_[i]=NULL;
   }
+  for (i=0;i<4;i++) {
+    spareIntArray_[i]=0;
+    spareDoubleArray_[i]=0.0;
+  }
   saveStatus_=NULL;
   factorization_ = NULL;
   dualRowPivot_ = NULL;
@@ -1759,6 +1771,10 @@ ClpSimplex::ClpSimplex(const ClpModel &rhs, int scalingMode) :
   for (i=0;i<6;i++) {
     rowArray_[i]=NULL;
     columnArray_[i]=NULL;
+  }
+  for (i=0;i<4;i++) {
+    spareIntArray_[i]=0;
+    spareDoubleArray_[i]=0.0;
   }
   saveStatus_=NULL;
   // get an empty factorization so we can set tolerances etc
@@ -1925,6 +1941,10 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
     progress_ = new ClpSimplexProgress(*rhs.progress_);
   else
     progress_=NULL;
+  for (int i=0;i<4;i++) {
+    spareIntArray_[i]=rhs.spareIntArray_[i];
+    spareDoubleArray_[i]=rhs.spareDoubleArray_[i];
+  }
   sumOfRelaxedDualInfeasibilities_ = rhs.sumOfRelaxedDualInfeasibilities_;
   sumOfRelaxedPrimalInfeasibilities_ = rhs.sumOfRelaxedPrimalInfeasibilities_;
   acceptablePivot_ = rhs.acceptablePivot_;
@@ -2712,6 +2732,13 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
       }
     } else if (makeRowCopy&&scalingFlag_>0&&!oldMatrix) {
       matrix_->scaleRowCopy(this);
+    }
+    // See if we can try for faster row copy
+    if (makeRowCopy&&!oldMatrix) {
+      ClpPackedMatrix* clpMatrix =
+        dynamic_cast< ClpPackedMatrix*>(matrix_);
+      if (clpMatrix&&numberThreads_) 
+        clpMatrix->specialRowCopy(this,rowCopy_);
     }
   }
   if (what==63) {

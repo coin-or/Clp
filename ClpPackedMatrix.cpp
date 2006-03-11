@@ -9,13 +9,28 @@
 #include "CoinHelperFunctions.hpp"
 
 #include "ClpSimplex.hpp"
+#include "ClpSimplexDual.hpp"
 #include "ClpFactorization.hpp"
 #ifndef SLIM_CLP
 #include "ClpQuadraticObjective.hpp"
 #endif
+//#define THREAD
 // at end to get min/max!
 #include "ClpPackedMatrix.hpp"
 #include "ClpMessage.hpp"
+//#define COIN_PREFETCH
+#ifdef COIN_PREFETCH
+#if 1
+#define coin_prefetch(mem) \
+         __asm__ __volatile__ ("prefetchnta %0" : : "m" (*((char *)(mem))))
+#else
+#define coin_prefetch(mem) \
+         __asm__ __volatile__ ("prefetch %0" : : "m" (*((char *)(mem))))
+#endif
+#else
+// dummy
+#define coin_prefetch(mem)
+#endif
 
 //#############################################################################
 // Constructors / Destructor / Assignment
@@ -29,7 +44,8 @@ ClpPackedMatrix::ClpPackedMatrix ()
     matrix_(NULL),
     numberActiveColumns_(0),
     zeroElements_(false),
-    hasGaps_(true)
+    hasGaps_(true),
+    rowCopy_(NULL)
 {
   setType(1);
 }
@@ -50,7 +66,11 @@ ClpPackedMatrix::ClpPackedMatrix (const ClpPackedMatrix & rhs)
   } else {
     rhsOffset_=NULL;
   }
-  
+  if (rhs.rowCopy_) {
+    rowCopy_ = new ClpPackedMatrix2(*rhs.rowCopy_);
+  } else {
+    rowCopy_ = NULL;
+  }
 }
 
 //-------------------------------------------------------------------
@@ -63,6 +83,7 @@ ClpPackedMatrix::ClpPackedMatrix (CoinPackedMatrix * rhs)
   zeroElements_ = false;
   hasGaps_ = true;
   numberActiveColumns_ = matrix_->getNumCols();
+  rowCopy_ = NULL;
   setType(1);
   
 }
@@ -72,6 +93,7 @@ ClpPackedMatrix::ClpPackedMatrix (const CoinPackedMatrix & rhs)
 {  
   matrix_ = new CoinPackedMatrix(rhs);
   numberActiveColumns_ = matrix_->getNumCols();
+  rowCopy_ = NULL;
   zeroElements_ = false;
   hasGaps_ = true;
   setType(1);
@@ -84,6 +106,7 @@ ClpPackedMatrix::ClpPackedMatrix (const CoinPackedMatrix & rhs)
 ClpPackedMatrix::~ClpPackedMatrix ()
 {
   delete matrix_;
+  delete rowCopy_;
 }
 
 //----------------------------------------------------------------
@@ -99,6 +122,12 @@ ClpPackedMatrix::operator=(const ClpPackedMatrix& rhs)
     numberActiveColumns_ = rhs.numberActiveColumns_;
     zeroElements_ = rhs.zeroElements_;
     hasGaps_ = rhs.hasGaps_;
+    delete rowCopy_;
+    if (rhs.rowCopy_) {
+      rowCopy_ = new ClpPackedMatrix2(*rhs.rowCopy_);
+    } else {
+      rowCopy_ = NULL;
+    }
   }
   return *this;
 }
@@ -132,6 +161,7 @@ ClpPackedMatrix::ClpPackedMatrix (
   numberActiveColumns_ = matrix_->getNumCols();
   zeroElements_ = rhs.zeroElements_;
   hasGaps_ = rhs.hasGaps_;
+  rowCopy_ = NULL;
 }
 ClpPackedMatrix::ClpPackedMatrix (
 		       const CoinPackedMatrix & rhs,
@@ -144,6 +174,7 @@ ClpPackedMatrix::ClpPackedMatrix (
   numberActiveColumns_ = matrix_->getNumCols();
   zeroElements_ = false;
   hasGaps_=true;
+  rowCopy_ = NULL;
   setType(1);
 }
 
@@ -405,6 +436,13 @@ ClpPackedMatrix::transposeTimes(const ClpSimplex * model, double scalar,
   if (!packed)
     factor *= 0.9;
   assert (!y->getNumElements());
+  double multiplierX=0.8;
+  double factor2 = factor*multiplierX;
+  if (packed&&rowCopy_&&numberInRowArray>2&&numberInRowArray>factor2*numberRows&&
+      numberInRowArray<0.9*numberRows) {
+    rowCopy_->transposeTimes(model,rowCopy->getPackedMatrix(),rowArray,y,columnArray);
+    return;
+  }
   if (numberInRowArray>factor*numberRows||!rowCopy) {
     // do by column
     // If no gaps - can do a bit faster
@@ -2826,6 +2864,856 @@ ClpPackedMatrix::appendMatrix(int number, int type,
     numberErrors=matrix_->appendCols(number,starts,index,element,numberOther);
   }
   return numberErrors;
+}
+void
+ClpPackedMatrix::specialRowCopy(ClpSimplex * model,const ClpMatrixBase * rowCopy)
+{
+  delete rowCopy_;
+  rowCopy_ = new ClpPackedMatrix2(model,rowCopy->getPackedMatrix());
+  // See if anything in it
+  if (!rowCopy_->usefulInfo()) {
+    delete rowCopy_;
+    rowCopy_=NULL;
+  }
+}
+//#############################################################################
+// Constructors / Destructor / Assignment
+//#############################################################################
+
+//-------------------------------------------------------------------
+// Default Constructor 
+//-------------------------------------------------------------------
+ClpPackedMatrix2::ClpPackedMatrix2 () 
+  : numberBlocks_(0),
+    numberRows_(0),
+    offset_(NULL),
+    count_(NULL),
+    rowStart_(NULL),
+    column_(NULL),
+    work_(NULL)
+{
+#ifdef THREAD
+  threadId_ = NULL;
+  info_ = NULL;
+#endif
+}
+//-------------------------------------------------------------------
+// Useful Constructor 
+//-------------------------------------------------------------------
+ClpPackedMatrix2::ClpPackedMatrix2 (ClpSimplex * model,const CoinPackedMatrix * rowCopy) 
+  : numberBlocks_(0),
+    numberRows_(0),
+    offset_(NULL),
+    count_(NULL),
+    rowStart_(NULL),
+    column_(NULL),
+    work_(NULL)
+{
+#ifdef THREAD
+  threadId_ = NULL;
+  info_ = NULL;
+#endif
+  numberRows_ = rowCopy->getNumRows();
+  if (!numberRows_)
+    return;
+  int numberColumns = rowCopy->getNumCols();
+  const int * column = rowCopy->getIndices();
+  const CoinBigIndex * rowStart = rowCopy->getVectorStarts();
+  const int * length = rowCopy->getVectorLengths();
+  const double * element = rowCopy->getElements();
+  int chunk = 32768; // tune
+  //chunk=100;
+  // tune
+#if 0
+  int chunkY[5]={4096,8192,16384,32768,65535};
+  int its = model->maximumIterations();
+  if (its>=1000000&&its<1000999) {
+    its -= 1000000;
+    its = its/10;
+    if (its>=5) abort();
+    chunk=chunkY[its];
+    printf("chunk size %d\n",chunk);
+#define cpuid(func,ax,bx,cx,dx)\
+    __asm__ __volatile__ ("cpuid":\
+    "=a" (ax), "=b" (bx), "=c" (cx), "=d" (dx) : "a" (func));
+    unsigned int a,b,c,d;
+    int func=0;
+    cpuid(func,a,b,c,d);
+    {
+      int i;
+      unsigned int value;
+      value=b;
+      for (i=0;i<4;i++) {
+        printf("%c",(value&0xff));
+        value = value >>8;
+      }
+      value=d;
+      for (i=0;i<4;i++) {
+        printf("%c",(value&0xff));
+        value = value >>8;
+      }
+      value=c;
+      for (i=0;i<4;i++) {
+        printf("%c",(value&0xff));
+        value = value >>8;
+      }
+      printf("\n");
+      int maxfunc = a;
+      if (maxfunc>10) {
+        printf("not intel?\n");
+        abort();
+      }
+      for (func=1;func<=maxfunc;func++) {
+        cpuid(func,a,b,c,d);
+        printf("func %d, %x %x %x %x\n",func,a,b,c,d);
+      }
+    }
+#else
+    if (numberColumns>10000||chunk==100) {
+#endif
+  } else {
+    //printf("no chunk\n");
+    return;
+  }
+  // Could also analyze matrix to get natural breaks
+  numberBlocks_ = (numberColumns+chunk-1)/chunk;
+#ifdef THREAD
+  // Get work areas
+  threadId_ = new pthread_t [numberBlocks_];
+  info_ = new dualColumn0Struct[numberBlocks_];
+#endif
+  // Even out
+  chunk = (numberColumns+numberBlocks_-1)/numberBlocks_;
+  offset_ = new int[numberBlocks_+1];
+  offset_[numberBlocks_]=numberColumns;
+  int nRow = numberBlocks_*numberRows_;
+  count_ = new unsigned short[nRow];
+  memset(count_,0,nRow*sizeof(unsigned short));
+  rowStart_ = new CoinBigIndex[nRow+numberRows_+1];
+  CoinBigIndex nElement = rowStart[numberRows_];
+  rowStart_[nRow+numberRows_]=nElement;
+  column_ = new unsigned short [nElement];
+  // assumes int <= double
+  int sizeWork = 6*numberBlocks_;
+  work_ = new double[sizeWork];;
+  int iBlock;
+  int nZero=0;
+  for (iBlock=0;iBlock<numberBlocks_;iBlock++) {
+    int start = iBlock*chunk;
+    offset_[iBlock]=start;
+    int end = start+chunk;
+    for (int iRow=0;iRow<numberRows_;iRow++) {
+      if (rowStart[iRow+1]!=rowStart[iRow]+length[iRow]) {
+        printf("not packed correctly - gaps\n");
+        abort();
+      }
+      bool lastFound=false;
+      int nFound=0;
+      for (CoinBigIndex j = rowStart[iRow];
+           j<rowStart[iRow]+length[iRow];j++) {
+        int iColumn = column[j];
+        if (iColumn>=start) {
+          if (iColumn<end) {
+            if (!element[j]) {
+              printf("not packed correctly - zero element\n");
+              abort();
+            }
+            column_[j]=iColumn-start;
+            nFound++;
+            if (lastFound) {
+              printf("not packed correctly - out of order\n");
+              abort();
+            }
+          } else {
+            //can't find any more
+            lastFound=true;
+          }
+        } 
+      }
+      count_[iRow*numberBlocks_+iBlock]=nFound;
+      if (!nFound)
+        nZero++;
+    }
+  }
+  //double fraction = ((double) nZero)/((double) (numberBlocks_*numberRows_));
+  //printf("%d empty blocks, %g%%\n",nZero,100.0*fraction);
+}
+
+//-------------------------------------------------------------------
+// Copy constructor 
+//-------------------------------------------------------------------
+ClpPackedMatrix2::ClpPackedMatrix2 (const ClpPackedMatrix2 & rhs) 
+  : numberBlocks_(rhs.numberBlocks_),
+    numberRows_(rhs.numberRows_)
+{  
+  if (numberBlocks_) {
+    offset_ = CoinCopyOfArray(rhs.offset_,numberBlocks_+1);
+    int nRow = numberBlocks_*numberRows_;
+    count_ = CoinCopyOfArray(rhs.count_,nRow);
+    rowStart_ = CoinCopyOfArray(rhs.rowStart_,nRow+numberRows_+1);
+    CoinBigIndex nElement = rowStart_[nRow+numberRows_];
+    column_ = CoinCopyOfArray(rhs.column_,nElement);
+    int sizeWork = 6*numberBlocks_;
+    work_ = CoinCopyOfArray(rhs.work_,sizeWork);
+#ifdef THREAD
+    threadId_ = new pthread_t [numberBlocks_];
+    info_ = new dualColumn0Struct[numberBlocks_];
+#endif
+  } else {
+    offset_ = NULL;
+    count_ = NULL;
+    rowStart_ = NULL;
+    column_ = NULL;
+    work_ = NULL;
+#ifdef THREAD
+    threadId_ = NULL;
+    info_ = NULL;
+#endif
+  }
+}
+//-------------------------------------------------------------------
+// Destructor 
+//-------------------------------------------------------------------
+ClpPackedMatrix2::~ClpPackedMatrix2 ()
+{
+  delete [] offset_;
+  delete [] count_;
+  delete [] rowStart_;
+  delete [] column_;
+  delete [] work_;
+#ifdef THREAD
+  delete [] threadId_;
+  delete [] info_;
+#endif
+}
+
+//----------------------------------------------------------------
+// Assignment operator 
+//-------------------------------------------------------------------
+ClpPackedMatrix2 &
+ClpPackedMatrix2::operator=(const ClpPackedMatrix2& rhs)
+{
+  if (this != &rhs) {
+    numberBlocks_ = rhs.numberBlocks_;
+    numberRows_ = rhs.numberRows_;
+    delete [] offset_;
+    delete [] count_;
+    delete [] rowStart_;
+    delete [] column_;
+    delete [] work_;
+#ifdef THREAD
+    delete [] threadId_;
+    delete [] info_;
+#endif
+    if (numberBlocks_) {
+      offset_ = CoinCopyOfArray(rhs.offset_,numberBlocks_+1);
+      int nRow = numberBlocks_*numberRows_;
+      count_ = CoinCopyOfArray(rhs.count_,nRow);
+      rowStart_ = CoinCopyOfArray(rhs.rowStart_,nRow+numberRows_+1);
+      CoinBigIndex nElement = rowStart_[nRow+numberRows_];
+      column_ = CoinCopyOfArray(rhs.column_,nElement);
+      int sizeWork = 6*numberBlocks_;
+      work_ = CoinCopyOfArray(rhs.work_,sizeWork);
+#ifdef THREAD
+      threadId_ = new pthread_t [numberBlocks_];
+      info_ = new dualColumn0Struct[numberBlocks_];
+#endif
+    } else {
+      offset_ = NULL;
+      count_ = NULL;
+      rowStart_ = NULL;
+      column_ = NULL;
+      work_ = NULL;
+#ifdef THREAD
+      threadId_ = NULL;
+      info_ = NULL;
+#endif
+    }
+  }
+  return *this;
+}
+static int dualColumn0(const ClpSimplex * model,double * spare,
+                       int * spareIndex,const double * arrayTemp,
+                       const int * indexTemp,int numberIn,
+                       int offset, double acceptablePivot,double * bestPossiblePtr,
+                       double * upperThetaPtr,int * posFreePtr, double * freePivotPtr)
+{
+  // do dualColumn0
+  int i;
+  int numberRemaining=0;
+  double bestPossible=0.0;
+  double upperTheta=1.0e31;
+  double freePivot = acceptablePivot;
+  int posFree=-1;
+  const double * reducedCost=model->djRegion(1);
+  double dualTolerance = model->dualTolerance();
+  // We can also see if infeasible or pivoting on free
+  double tentativeTheta = 1.0e25;
+  for (i=0;i<numberIn;i++) {
+    double alpha = arrayTemp[i];
+    int iSequence = indexTemp[i]+offset;
+    double oldValue;
+    double value;
+    bool keep;
+    
+    switch(model->getStatus(iSequence)) {
+      
+    case ClpSimplex::basic:
+    case ClpSimplex::isFixed:
+      break;
+    case ClpSimplex::isFree:
+    case ClpSimplex::superBasic:
+      bestPossible = CoinMax(bestPossible,fabs(alpha));
+      oldValue = reducedCost[iSequence];
+      // If free has to be very large - should come in via dualRow
+      if (model->getStatus(iSequence)==ClpSimplex::isFree&&fabs(alpha)<1.0e-3)
+        break;
+      if (oldValue>dualTolerance) {
+        keep = true;
+      } else if (oldValue<-dualTolerance) {
+        keep = true;
+      } else {
+        if (fabs(alpha)>CoinMax(10.0*acceptablePivot,1.0e-5)) 
+          keep = true;
+        else
+          keep=false;
+      }
+      if (keep) {
+        // free - choose largest
+        if (fabs(alpha)>freePivot) {
+          freePivot=fabs(alpha);
+          posFree = i;
+        }
+      }
+      break;
+    case ClpSimplex::atUpperBound:
+      oldValue = reducedCost[iSequence];
+      value = oldValue-tentativeTheta*alpha;
+      //assert (oldValue<=dualTolerance*1.0001);
+      if (value>dualTolerance) {
+        bestPossible = CoinMax(bestPossible,-alpha);
+        value = oldValue-upperTheta*alpha;
+        if (value>dualTolerance && -alpha>=acceptablePivot) 
+          upperTheta = (oldValue-dualTolerance)/alpha;
+        // add to list
+        spare[numberRemaining]=alpha;
+        spareIndex[numberRemaining++]=iSequence;
+      }
+      break;
+    case ClpSimplex::atLowerBound:
+      oldValue = reducedCost[iSequence];
+      value = oldValue-tentativeTheta*alpha;
+      //assert (oldValue>=-dualTolerance*1.0001);
+      if (value<-dualTolerance) {
+        bestPossible = CoinMax(bestPossible,alpha);
+        value = oldValue-upperTheta*alpha;
+        if (value<-dualTolerance && alpha>=acceptablePivot) 
+          upperTheta = (oldValue+dualTolerance)/alpha;
+        // add to list
+        spare[numberRemaining]=alpha;
+        spareIndex[numberRemaining++]=iSequence;
+      }
+      break;
+    }
+  }
+  *bestPossiblePtr = bestPossible;
+  *upperThetaPtr = upperTheta;
+  *freePivotPtr = freePivot;
+  *posFreePtr = posFree;
+  return numberRemaining;
+}
+static int doOneBlock(double * array, int * index, 
+                      const double * pi,const CoinBigIndex * rowStart, const double * element,
+                      const unsigned short * column, int numberInRowArray, int numberLook)
+{
+  int iWhich=0;
+  int nextN=0;
+  CoinBigIndex nextStart=0;
+  double nextPi=0.0;
+  for (;iWhich<numberInRowArray;iWhich++) {
+    nextStart = rowStart[0];
+    nextN = rowStart[numberInRowArray]-nextStart;
+    rowStart++;
+    if (nextN) {
+      nextPi = pi[iWhich];
+      break;
+    }
+  }
+  int i;
+  while (iWhich<numberInRowArray) {
+    double value = nextPi;
+    CoinBigIndex j=  nextStart;
+    int n = nextN;
+    // get next
+    iWhich++;
+    for (;iWhich<numberInRowArray;iWhich++) {
+      nextStart = rowStart[0];
+      nextN = rowStart[numberInRowArray]-nextStart;
+      rowStart++;
+      if (nextN) {
+        coin_prefetch(element+nextStart);
+        nextPi = pi[iWhich];
+        break;
+      }
+    }
+    CoinBigIndex end =j+n;
+    //coin_prefetch(element+rowStart_[i+1]);
+    //coin_prefetch(column_+rowStart_[i+1]);
+    if (n<100) {
+      if ((n&1)!=0) {
+        unsigned int jColumn = column[j];
+        array[jColumn] -= value*element[j];
+        j++;
+      }      
+      coin_prefetch(column+nextStart);
+      for (;j<end;j+=2) {
+        unsigned int jColumn0 = column[j];
+        double value0 = value*element[j];
+        unsigned int jColumn1 = column[j+1];
+        double value1 = value*element[j+1];
+        array[jColumn0] -= value0;
+        array[jColumn1] -= value1;
+      }
+    } else {
+      if ((n&1)!=0) {
+        unsigned int jColumn = column[j];
+        array[jColumn] -= value*element[j];
+        j++;
+      }      
+      if ((n&2)!=0) {
+        unsigned int jColumn0 = column[j];
+        double value0 = value*element[j];
+        unsigned int jColumn1 = column[j+1];
+        double value1 = value*element[j+1];
+        array[jColumn0] -= value0;
+        array[jColumn1] -= value1;
+        j+=2;
+      }      
+      if ((n&4)!=0) {
+        unsigned int jColumn0 = column[j];
+        double value0 = value*element[j];
+        unsigned int jColumn1 = column[j+1];
+        double value1 = value*element[j+1];
+        unsigned int jColumn2 = column[j+2];
+        double value2 = value*element[j+2];
+        unsigned int jColumn3 = column[j+3];
+        double value3 = value*element[j+3];
+        array[jColumn0] -= value0;
+        array[jColumn1] -= value1;
+        array[jColumn2] -= value2;
+        array[jColumn3] -= value3;
+        j+=4;
+      }
+      //coin_prefetch(column+nextStart);
+      for (;j<end;j+=8) {
+        coin_prefetch(element+j+16);
+        unsigned int jColumn0 = column[j];
+        double value0 = value*element[j];
+        unsigned int jColumn1 = column[j+1];
+        double value1 = value*element[j+1];
+        unsigned int jColumn2 = column[j+2];
+        double value2 = value*element[j+2];
+        unsigned int jColumn3 = column[j+3];
+        double value3 = value*element[j+3];
+        array[jColumn0] -= value0;
+        array[jColumn1] -= value1;
+        array[jColumn2] -= value2;
+        array[jColumn3] -= value3;
+        coin_prefetch(column+j+16);
+        jColumn0 = column[j+4];
+        value0 = value*element[j+4];
+        jColumn1 = column[j+5];
+        value1 = value*element[j+5];
+        jColumn2 = column[j+6];
+        value2 = value*element[j+6];
+        jColumn3 = column[j+7];
+        value3 = value*element[j+7];
+        array[jColumn0] -= value0;
+        array[jColumn1] -= value1;
+        array[jColumn2] -= value2;
+        array[jColumn3] -= value3;
+      }
+    }
+  }
+  // get rid of tiny values
+  int nSmall = numberLook;
+  int numberNonZero=0;
+  for (i=0;i<nSmall;i++) {
+    double value = array[i];
+    array[i]=0.0; 
+    if (fabs(value)>1.0e-12) {
+      array[numberNonZero]=value;
+      index[numberNonZero++]=i;
+    }
+  }
+  for (;i<numberLook;i+=4) {
+    double value0 = array[i+0];
+    double value1 = array[i+1];
+    double value2 = array[i+2];
+    double value3 = array[i+3];
+    array[i+0]=0.0; 
+    array[i+1]=0.0; 
+    array[i+2]=0.0; 
+    array[i+3]=0.0; 
+    if (fabs(value0)>1.0e-12) {
+      array[numberNonZero]=value0;
+      index[numberNonZero++]=i+0;
+    }
+    if (fabs(value1)>1.0e-12) {
+      array[numberNonZero]=value1;
+      index[numberNonZero++]=i+1;
+    }
+    if (fabs(value2)>1.0e-12) {
+      array[numberNonZero]=value2;
+      index[numberNonZero++]=i+2;
+    }
+    if (fabs(value3)>1.0e-12) {
+      array[numberNonZero]=value3;
+      index[numberNonZero++]=i+3;
+    }
+  }
+  return numberNonZero;
+}
+#ifdef THREAD
+static void * doOneBlockThread(void * voidInfo)
+{
+  dualColumn0Struct * info = (dualColumn0Struct *) voidInfo;
+  *(info->numberInPtr) =  doOneBlock(info->arrayTemp,info->indexTemp,info->pi,
+                                  info->rowStart,info->element,info->column,
+                                  info->numberInRowArray,info->numberLook);
+  return NULL;
+}
+static void * doOneBlockAnd0Thread(void * voidInfo)
+{
+  dualColumn0Struct * info = (dualColumn0Struct *) voidInfo;
+  *(info->numberInPtr) =  doOneBlock(info->arrayTemp,info->indexTemp,info->pi,
+                                  info->rowStart,info->element,info->column,
+                                  info->numberInRowArray,info->numberLook);
+  *(info->numberOutPtr) =  dualColumn0(info->model,info->spare,
+                                    info->spareIndex,(const double *)info->arrayTemp,
+                                    (const int *) info->indexTemp,*(info->numberInPtr),
+                                    info->offset, info->acceptablePivot,info->bestPossiblePtr,
+                                    info->upperThetaPtr,info->posFreePtr, info->freePivotPtr);
+  return NULL;
+}
+#endif
+/* Return <code>x * scalar * A in <code>z</code>. 
+   Note - x packed and z will be packed mode
+   Squashes small elements and knows about ClpSimplex */
+void 
+ClpPackedMatrix2::transposeTimes(const ClpSimplex * model, 
+                                 const CoinPackedMatrix * rowCopy,
+                                 const CoinIndexedVector * rowArray,
+                                 CoinIndexedVector * spareArray,
+                                 CoinIndexedVector * columnArray) const
+{
+  // See if dualColumn0 coding wanted
+  bool dualColumn = model->spareIntArray_[0]==1;
+  double acceptablePivot = model->spareDoubleArray_[0];
+  double bestPossible=0.0;
+  double upperTheta=1.0e31;
+  double freePivot = acceptablePivot;
+  int posFree=-1;
+  int numberRemaining=0;
+  //if (model->numberIterations()>=200000) {
+  //printf("time %g\n",CoinCpuTime()-startTime);
+  //exit(77);
+  //}
+  double * pi = rowArray->denseVector();
+  int numberNonZero=0;
+  int * index = columnArray->getIndices();
+  double * array = columnArray->denseVector();
+  int numberInRowArray = rowArray->getNumElements();
+  const int * whichRow = rowArray->getIndices();
+  double * element = const_cast<double *>(rowCopy->getElements());
+  const CoinBigIndex * rowStart = rowCopy->getVectorStarts();
+  int i;
+  CoinBigIndex * rowStart2 = rowStart_;
+  if (!dualColumn) {
+    for (i=0;i<numberInRowArray;i++) {
+      int iRow = whichRow[i]; 
+      CoinBigIndex start = rowStart[iRow];
+      *rowStart2 = start;
+      unsigned short * count1 = count_+iRow*numberBlocks_;
+      int put=0;
+      for (int j=0;j<numberBlocks_;j++) {
+        put += numberInRowArray;
+        start += count1[j];
+        rowStart2[put]=start;
+      }
+      rowStart2 ++;
+    }
+  } else {
+    // also do dualColumn stuff
+    double * spare = spareArray->denseVector();
+    int * spareIndex = spareArray->getIndices();
+    const double * reducedCost=model->djRegion(0);
+    double dualTolerance = model->dualTolerance();
+    // We can also see if infeasible or pivoting on free
+    double tentativeTheta = 1.0e25;
+    int addSequence=model->numberColumns();
+    for (i=0;i<numberInRowArray;i++) {
+      int iRow = whichRow[i]; 
+      double alpha=pi[i];
+      double oldValue;
+      double value;
+      bool keep;
+
+      switch(model->getStatus(iRow+addSequence)) {
+	  
+      case ClpSimplex::basic:
+      case ClpSimplex::isFixed:
+	break;
+      case ClpSimplex::isFree:
+      case ClpSimplex::superBasic:
+        bestPossible = CoinMax(bestPossible,fabs(alpha));
+	oldValue = reducedCost[iRow];
+        // If free has to be very large - should come in via dualRow
+        if (model->getStatus(iRow+addSequence)==ClpSimplex::isFree&&fabs(alpha)<1.0e-3)
+          break;
+	if (oldValue>dualTolerance) {
+	  keep = true;
+	} else if (oldValue<-dualTolerance) {
+	  keep = true;
+	} else {
+	  if (fabs(alpha)>CoinMax(10.0*acceptablePivot,1.0e-5)) 
+	    keep = true;
+	  else
+	    keep=false;
+	}
+	if (keep) {
+	  // free - choose largest
+	  if (fabs(alpha)>freePivot) {
+	    freePivot=fabs(alpha);
+	    posFree = i + addSequence;
+	  }
+	}
+	break;
+      case ClpSimplex::atUpperBound:
+	oldValue = reducedCost[iRow];
+	value = oldValue-tentativeTheta*alpha;
+	//assert (oldValue<=dualTolerance*1.0001);
+	if (value>dualTolerance) {
+          bestPossible = CoinMax(bestPossible,-alpha);
+	  value = oldValue-upperTheta*alpha;
+	  if (value>dualTolerance && -alpha>=acceptablePivot) 
+	    upperTheta = (oldValue-dualTolerance)/alpha;
+	  // add to list
+	  spare[numberRemaining]=alpha;
+	  spareIndex[numberRemaining++]=iRow+addSequence;
+	}
+	break;
+      case ClpSimplex::atLowerBound:
+	oldValue = reducedCost[iRow];
+	value = oldValue-tentativeTheta*alpha;
+	//assert (oldValue>=-dualTolerance*1.0001);
+	if (value<-dualTolerance) {
+          bestPossible = CoinMax(bestPossible,alpha);
+	  value = oldValue-upperTheta*alpha;
+	  if (value<-dualTolerance && alpha>=acceptablePivot) 
+	    upperTheta = (oldValue+dualTolerance)/alpha;
+	  // add to list
+	  spare[numberRemaining]=alpha;
+	  spareIndex[numberRemaining++]=iRow+addSequence;
+	}
+	break;
+      }
+      CoinBigIndex start = rowStart[iRow];
+      *rowStart2 = start;
+      unsigned short * count1 = count_+iRow*numberBlocks_;
+      int put=0;
+      for (int j=0;j<numberBlocks_;j++) {
+        put += numberInRowArray;
+        start += count1[j];
+        rowStart2[put]=start;
+      }
+      rowStart2 ++;
+    }
+  }
+  double * spare = spareArray->denseVector();
+  int * spareIndex = spareArray->getIndices();
+  int saveNumberRemaining=numberRemaining;
+  int iBlock;
+  for (iBlock=0;iBlock<numberBlocks_;iBlock++) {
+    double * dwork = work_+6*iBlock;
+    int * iwork = (int *) (dwork+3);
+    if (!dualColumn) {
+#ifndef THREAD
+      int offset = offset_[iBlock];
+      int offset3 = offset;
+      offset = numberNonZero;
+      double * arrayTemp = array+offset;
+      int * indexTemp = index+offset; 
+      iwork[0] = doOneBlock(arrayTemp,indexTemp,pi,rowStart_+numberInRowArray*iBlock,
+                            element,column_,numberInRowArray,offset_[iBlock+1]-offset);
+      int number = iwork[0];
+      for (i=0;i<number;i++) {
+        //double value = arrayTemp[i];
+        //arrayTemp[i]=0.0; 
+        //array[numberNonZero]=value;
+        index[numberNonZero++]=indexTemp[i]+offset3;
+      }
+#else
+      int offset = offset_[iBlock];
+      double * arrayTemp = array+offset;
+      int * indexTemp = index+offset; 
+      dualColumn0Struct * infoPtr = info_+iBlock;
+      infoPtr->arrayTemp=arrayTemp;
+      infoPtr->indexTemp=indexTemp;
+      infoPtr->numberInPtr=&iwork[0];
+      infoPtr->pi=pi;
+      infoPtr->rowStart=rowStart_+numberInRowArray*iBlock;
+      infoPtr->element=element;
+      infoPtr->column=column_;
+      infoPtr->numberInRowArray=numberInRowArray;
+      infoPtr->numberLook=offset_[iBlock+1]-offset;
+      pthread_create(&threadId_[iBlock],NULL,doOneBlockThread,infoPtr);
+#endif
+    } else {
+#ifndef THREAD
+      int offset = offset_[iBlock];
+      // allow for already saved
+      int offset2 = offset + saveNumberRemaining;
+      int offset3 = offset;
+      offset = numberNonZero;
+      offset2 = numberRemaining;
+      double * arrayTemp = array+offset;
+      int * indexTemp = index+offset; 
+      iwork[0] = doOneBlock(arrayTemp,indexTemp,pi,rowStart_+numberInRowArray*iBlock,
+                            element,column_,numberInRowArray,offset_[iBlock+1]-offset);
+      iwork[1] = dualColumn0(model,spare+offset2,
+                                   spareIndex+offset2,
+                                   arrayTemp,indexTemp,
+                                   iwork[0],offset3,acceptablePivot,
+                                   &dwork[0],&dwork[1],&iwork[2],
+                                   &dwork[2]);
+      int number = iwork[0];
+      int numberLook = iwork[1];
+#if 1
+      numberRemaining += numberLook;
+#else
+      double * spareTemp = spare+offset2;
+      const int * spareIndexTemp = spareIndex+offset2; 
+      for (i=0;i<numberLook;i++) {
+        double value = spareTemp[i];
+        spareTemp[i]=0.0;
+        spare[numberRemaining] = value;
+        spareIndex[numberRemaining++] = spareIndexTemp[i];
+      }
+#endif
+      if (dwork[2]>freePivot) {
+        freePivot=dwork[2];
+        posFree = iwork[2]+numberNonZero;
+      } 
+      upperTheta =  CoinMin(dwork[1],upperTheta);
+      bestPossible = CoinMax(dwork[0],bestPossible);
+      for (i=0;i<number;i++) {
+        // double value = arrayTemp[i];
+        //arrayTemp[i]=0.0; 
+        //array[numberNonZero]=value;
+        index[numberNonZero++]=indexTemp[i]+offset3;
+      }
+#else
+      int offset = offset_[iBlock];
+      // allow for already saved
+      int offset2 = offset + saveNumberRemaining;
+      double * arrayTemp = array+offset;
+      int * indexTemp = index+offset; 
+      dualColumn0Struct * infoPtr = info_+iBlock;
+      infoPtr->model=model;
+      infoPtr->spare=spare+offset2;
+      infoPtr->spareIndex=spareIndex+offset2;
+      infoPtr->arrayTemp=arrayTemp;
+      infoPtr->indexTemp=indexTemp;
+      infoPtr->numberInPtr=&iwork[0];
+      infoPtr->offset=offset;
+      infoPtr->acceptablePivot=acceptablePivot;
+      infoPtr->bestPossiblePtr=&dwork[0];
+      infoPtr->upperThetaPtr=&dwork[1];
+      infoPtr->posFreePtr=&iwork[2];
+      infoPtr->freePivotPtr=&dwork[2];
+      infoPtr->numberOutPtr=&iwork[1];
+      infoPtr->pi=pi;
+      infoPtr->rowStart=rowStart_+numberInRowArray*iBlock;
+      infoPtr->element=element;
+      infoPtr->column=column_;
+      infoPtr->numberInRowArray=numberInRowArray;
+      infoPtr->numberLook=offset_[iBlock+1]-offset;
+      if (iBlock>=2)
+        pthread_join(threadId_[iBlock-2],NULL);
+      pthread_create(threadId_+iBlock,NULL,doOneBlockAnd0Thread,infoPtr);
+      //pthread_join(threadId_[iBlock],NULL);
+#endif
+    }
+  }
+  for ( iBlock=CoinMax(0,numberBlocks_-2);iBlock<numberBlocks_;iBlock++) {
+#ifdef THREAD
+    pthread_join(threadId_[iBlock],NULL);
+#endif
+  }
+#ifdef THREAD
+  for ( iBlock=0;iBlock<numberBlocks_;iBlock++) {
+    //pthread_join(threadId_[iBlock],NULL);
+    int offset = offset_[iBlock];
+    double * dwork = work_+6*iBlock;
+    int * iwork = (int *) (dwork+3);
+    int number = iwork[0];
+    if (dualColumn) {
+      // allow for already saved
+      int offset2 = offset + saveNumberRemaining;
+      int numberLook = iwork[1];
+      double * spareTemp = spare+offset2;
+      const int * spareIndexTemp = spareIndex+offset2; 
+      for (i=0;i<numberLook;i++) {
+        double value = spareTemp[i];
+        spareTemp[i]=0.0;
+        spare[numberRemaining] = value;
+        spareIndex[numberRemaining++] = spareIndexTemp[i];
+      }
+      if (dwork[2]>freePivot) {
+        freePivot=dwork[2];
+        posFree = iwork[2]+numberNonZero;
+      } 
+      upperTheta =  CoinMin(dwork[1],upperTheta);
+      bestPossible = CoinMax(dwork[0],bestPossible);
+    }
+    double * arrayTemp = array+offset;
+    const int * indexTemp = index+offset; 
+    for (i=0;i<number;i++) {
+      double value = arrayTemp[i];
+      arrayTemp[i]=0.0; 
+      array[numberNonZero]=value;
+      index[numberNonZero++]=indexTemp[i]+offset;
+    }
+  }
+#endif
+  columnArray->setNumElements(numberNonZero);
+  columnArray->setPackedMode(true);
+  if (dualColumn) {
+    model->spareDoubleArray_[0]=upperTheta;
+    model->spareDoubleArray_[1]=bestPossible;
+    // and theta and alpha and sequence
+    if (posFree<0) {
+      model->spareIntArray_[1]=-1;
+    } else {
+      const double * reducedCost=model->djRegion(0);
+      double alpha;
+      int numberColumns=model->numberColumns();
+      if (posFree<numberColumns) {
+        alpha = columnArray->denseVector()[posFree];
+        posFree = columnArray->getIndices()[posFree];
+      } else {
+        alpha = rowArray->denseVector()[posFree-numberColumns];
+        posFree = rowArray->getIndices()[posFree-numberColumns]+numberColumns;
+      }
+      model->spareDoubleArray_[2]=fabs(reducedCost[posFree]/alpha);;
+      model->spareDoubleArray_[3]=alpha;
+      model->spareIntArray_[1]=posFree;
+    }
+    spareArray->setNumElements(numberRemaining);
+    // signal done
+    model->spareIntArray_[0]=-1;
+  }
 }
 #ifdef CLP_ALL_ONE_FILE
 #undef reference

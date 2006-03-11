@@ -233,7 +233,12 @@ ClpCholeskyWssmpKKT::order(ClpInterior * model)
   int i0=0;
   int i1=1;
 #if WSSMP_BARRIER>=2
-  wsetmaxthrds(&i1);
+  int i2=1;
+  if (model->numberThreads()<=0)
+    i2=1;
+  else
+    i2=model->numberThreads();
+  wsetmaxthrds(&i2);
 #endif
   wssmp(&numberRows_,choleskyStart_,choleskyRow_,sparseFactor_,
          NULL,permute_,permuteInverse_,0,&numberRows_,&i1,

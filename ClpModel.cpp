@@ -75,6 +75,7 @@ ClpModel::ClpModel () :
   problemStatus_(-1),
   secondaryStatus_(0),
   lengthNames_(0),
+  numberThreads_(0),
 #ifndef CLP_NO_STD
   defaultHandler_(true),
   rowNames_(),
@@ -679,6 +680,7 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
       columnNames_ = rhs.columnNames_;
     }
 #endif
+    numberThreads_ = rhs.numberThreads_;
     integerType_ = CoinCopyOfArray(rhs.integerType_,numberColumns_);
     if (rhs.rowActivity_) {
       rowActivity_=new double[numberRows_];
@@ -742,6 +744,7 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
     //rowScale_ = rhs.rowScale_;
     //columnScale_ = rhs.columnScale_;
     lengthNames_ = 0;
+    numberThreads_ = rhs.numberThreads_;
 #ifndef CLP_NO_STD
     rowNames_ = std::vector<std::string> ();
     columnNames_ = std::vector<std::string> ();
@@ -2780,6 +2783,7 @@ ClpModel::ClpModel ( const ClpModel * rhs,
   numberRows_ = numberRows;
   numberColumns_ = numberColumns;
   userPointer_ = rhs->userPointer_;
+  numberThreads_=0;
 #ifndef CLP_NO_STD
   if (!dropNames) {
     unsigned int maxLength=0;

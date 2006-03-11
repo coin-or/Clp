@@ -14,6 +14,7 @@
 
     For details see CoinPackedMatrix */
 
+class ClpPackedMatrix2;
 class ClpPackedMatrix : public ClpMatrixBase {
   
 public:
@@ -292,6 +293,8 @@ public:
   virtual ClpMatrixBase * subsetClone (
 		    int numberRows, const int * whichRows,
 		    int numberColumns, const int * whichColumns) const ;
+  /// make special row copy
+  void specialRowCopy(ClpSimplex * model,const ClpMatrixBase * rowCopy); 
    //@}
    
     
@@ -307,6 +310,94 @@ protected:
   bool zeroElements_;
   /// Gaps flag - set true if column start and length don't say contiguous
   bool hasGaps_;
+  /// Special row copy
+  ClpPackedMatrix2 * rowCopy_;
+   //@}
+};
+#ifdef THREAD
+#include <pthread.h>
+typedef struct {
+  double acceptablePivot;
+  const ClpSimplex * model;
+  double * spare;
+  int * spareIndex;
+  double * arrayTemp;
+  int * indexTemp;
+  int * numberInPtr;
+  double * bestPossiblePtr;
+  double * upperThetaPtr;
+  int * posFreePtr;
+  double * freePivotPtr;
+  int * numberOutPtr;
+  const unsigned short * count;
+  const double * pi;
+  const CoinBigIndex * rowStart;
+  const double * element;
+  const unsigned short * column;
+  int offset;
+  int numberInRowArray;
+  int numberLook;
+} dualColumn0Struct;
+#endif
+class ClpPackedMatrix2 {
+  
+public:
+  /**@name Useful methods */
+  //@{
+    /** Return <code>x * -1 * A in <code>z</code>. 
+	Note - x packed and z will be packed mode
+	Squashes small elements and knows about ClpSimplex */
+  void transposeTimes(const ClpSimplex * model,
+                      const CoinPackedMatrix * rowCopy,
+                      const CoinIndexedVector * x,
+                      CoinIndexedVector * spareArray,
+                      CoinIndexedVector * z) const;
+  /// Returns true if copy has useful information
+  inline bool usefulInfo() const
+  { return rowStart_!=NULL;};
+  //@}
+
+
+  /**@name Constructors, destructor */
+   //@{
+   /** Default constructor. */
+   ClpPackedMatrix2();
+   /** Constructor from copy. */
+   ClpPackedMatrix2(ClpSimplex * model,const CoinPackedMatrix * rowCopy);
+   /** Destructor */
+   virtual ~ClpPackedMatrix2();
+   //@}
+
+   /**@name Copy method */
+   //@{
+   /** The copy constructor. */
+   ClpPackedMatrix2(const ClpPackedMatrix2&);
+   ClpPackedMatrix2& operator=(const ClpPackedMatrix2&);
+   //@}
+   
+    
+protected:
+   /**@name Data members
+      The data members are protected to allow access for derived classes. */
+   //@{
+  /// Number of blocks
+  int numberBlocks_;
+  /// Number of rows
+  int numberRows_;
+  /// Column offset for each block (plus one at end)
+  int * offset_;
+  /// Counts of elements in each part of row
+  mutable unsigned short * count_;
+  /// Row starts
+  mutable CoinBigIndex * rowStart_;
+  /// columns within block
+  unsigned short * column_;
+  /// work arrays
+  double * work_;
+#ifdef THREAD
+  pthread_t * threadId_;
+  dualColumn0Struct * info_;
+#endif
    //@}
 };
 

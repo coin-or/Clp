@@ -1014,12 +1014,18 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
 	double direction=directionOut_;
         rowArray_[0]->createPacked(1,&pivotRow_,&direction);
 	factorization_->updateColumnTranspose(rowArray_[1],rowArray_[0]);
+        // Allow to do dualColumn0
+        if (numberThreads_<-1)
+          spareIntArray_[0]=1;
+        spareDoubleArray_[0]=acceptablePivot;
+        rowArray_[3]->clear();
+        sequenceIn_=-1;
 	// put row of tableau in rowArray[0] and columnArray[0]
 	matrix_->transposeTimes(this,-1.0,
 			      rowArray_[0],rowArray_[3],columnArray_[0]);
 	// do ratio test for normal iteration
-	bestPossiblePivot = dualColumn(rowArray_[0],columnArray_[0],columnArray_[1],
-		 rowArray_[3],acceptablePivot,dubiousWeights);
+	bestPossiblePivot = dualColumn(rowArray_[0],columnArray_[0],rowArray_[3],
+		 columnArray_[1],acceptablePivot,dubiousWeights);
       } else {
 	// Make sure direction plausible
 	CoinAssert (upperOut_<1.0e50||lowerOut_>-1.0e50);
@@ -2387,122 +2393,38 @@ ClpSimplexDual::changeBounds(bool initialize,
     return 1;
   }
 }
-/* 
-   Row array has row part of pivot row (as duals so sign may be switched)
-   Column array has column part.
-   This chooses pivot column.
-   Spare array will be needed when we start getting clever.
-   We will check for basic so spare array will never overflow.
-   If necessary will modify costs
-*/
-double
-ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
-			   CoinIndexedVector * columnArray,
+int
+ClpSimplexDual::dualColumn0(const CoinIndexedVector * rowArray,
+			   const CoinIndexedVector * columnArray,
 			   CoinIndexedVector * spareArray,
-			   CoinIndexedVector * spareArray2,
 			   double acceptablePivot,
-			   CoinBigIndex * dubiousWeights)
+                           double & upperReturn, double &bestReturn)
 {
-  double * work;
-  int number;
-  int * which;
-  double * reducedCost;
-  int iSection;
-
-  sequenceIn_=-1;
-  int numberPossiblySwapped=0;
-  int numberRemaining=0;
-  
-  double totalThru=0.0; // for when variables flip
-  //double saveAcceptable=acceptablePivot;
-  //acceptablePivot=1.0e-9;
-
-  double bestEverPivot=acceptablePivot;
-  int lastSequence = -1;
-  double lastPivot=0.0;
-  double upperTheta;
-  double newTolerance = dualTolerance_;
-  //newTolerance = dualTolerance_+1.0e-6*dblParam_[ClpDualTolerance];
-  // will we need to increase tolerance
-  bool thisIncrease=false;
-  // If we think we need to modify costs (not if something from broad sweep)
-  bool modifyCosts=false;
-  // Increase in objective due to swapping bounds (may be negative)
-  double increaseInObjective=0.0;
-
-  // use spareArrays to put ones looked at in
-  // we are going to flip flop between
-  int iFlip = 0;
-  // Possible list of pivots
-  int interesting[2];
-  // where possible swapped ones are
-  int swapped[2];
-  // for zeroing out arrays after
-  int marker[2][2];
-  // pivot elements
-  double * array[2], * spare, * spare2;
-  // indices
-  int * indices[2], * index, * index2;
-  spareArray->clear();
-  spareArray2->clear();
-  array[0] = spareArray->denseVector();
-  indices[0] = spareArray->getIndices();
-  spare = array[0];
-  index = indices[0];
-  array[1] = spareArray2->denseVector();
-  indices[1] = spareArray2->getIndices();
-  int i;
-  const double * lower;
-  const double * upper;
-
-  // initialize lists
-  for (i=0;i<2;i++) {
-    interesting[i]=0;
-    swapped[i]=numberColumns_;
-    marker[i][0]=0;
-    marker[i][1]=numberColumns_;
-  }
-
-  /*
-    First we get a list of possible pivots.  We can also see if the
-    problem looks infeasible or whether we want to pivot in free variable.
-    This may make objective go backwards but can only happen a finite
-    number of times and I do want free variables basic.
-
-    Then we flip back and forth.  At the start of each iteration
-    interesting[iFlip] should have possible candidates and swapped[iFlip]
-    will have pivots if we decide to take a previous pivot.
-    At end of each iteration interesting[1-iFlip] should have
-    candidates if we go through this theta and swapped[1-iFlip]
-    pivots if we don't go through.
-
-    At first we increase theta and see what happens.  We start
-    theta at a reasonable guess.  If in right area then we do bit by bit.
-
-   */
-
   // do first pass to get possibles 
+  double * spare = spareArray->denseVector();
+  int * index = spareArray->getIndices();
+  const double * work;
+  int number;
+  const int * which;
+  const double * reducedCost;
   // We can also see if infeasible or pivoting on free
   double tentativeTheta = 1.0e25;
-  upperTheta = 1.0e31;
+  double upperTheta = 1.0e31;
   double freePivot = acceptablePivot;
   double bestPossible=0.0;
-
-  for (iSection=0;iSection<2;iSection++) {
+  int numberRemaining=0;
+  int i;
+  for (int iSection=0;iSection<2;iSection++) {
 
     int addSequence;
 
     if (!iSection) {
-      lower = rowLowerWork_;
-      upper = rowUpperWork_;
       work = rowArray->denseVector();
       number = rowArray->getNumElements();
       which = rowArray->getIndices();
       reducedCost = rowReducedCost_;
       addSequence = numberColumns_;
     } else {
-      lower = columnLowerWork_;
-      upper = columnUpperWork_;
       work = columnArray->denseVector();
       number = columnArray->getNumElements();
       which = columnArray->getIndices();
@@ -2555,11 +2477,11 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 	oldValue = reducedCost[iSequence];
 	value = oldValue-tentativeTheta*alpha;
 	//assert (oldValue<=dualTolerance_*1.0001);
-	if (value>newTolerance) {
+	if (value>dualTolerance_) {
           bestPossible = CoinMax(bestPossible,-alpha);
 	  value = oldValue-upperTheta*alpha;
-	  if (value>newTolerance && -alpha>=acceptablePivot) 
-	    upperTheta = (oldValue-newTolerance)/alpha;
+	  if (value>dualTolerance_ && -alpha>=acceptablePivot) 
+	    upperTheta = (oldValue-dualTolerance_)/alpha;
 	  // add to list
 	  spare[numberRemaining]=alpha;
 	  index[numberRemaining++]=iSequence+addSequence;
@@ -2570,11 +2492,11 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 	oldValue = reducedCost[iSequence];
 	value = oldValue-tentativeTheta*alpha;
 	//assert (oldValue>=-dualTolerance_*1.0001);
-	if (value<-newTolerance) {
+	if (value<-dualTolerance_) {
           bestPossible = CoinMax(bestPossible,alpha);
 	  value = oldValue-upperTheta*alpha;
-	  if (value<-newTolerance && alpha>=acceptablePivot) 
-	    upperTheta = (oldValue+newTolerance)/alpha;
+	  if (value<-dualTolerance_ && alpha>=acceptablePivot) 
+	    upperTheta = (oldValue+dualTolerance_)/alpha;
 	  // add to list
 	  spare[numberRemaining]=alpha;
 	  index[numberRemaining++]=iSequence+addSequence;
@@ -2583,6 +2505,113 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
       }
     }
   }
+  upperReturn = upperTheta;
+  bestReturn = bestPossible;
+  return numberRemaining;
+}
+/* 
+   Row array has row part of pivot row (as duals so sign may be switched)
+   Column array has column part.
+   This chooses pivot column.
+   Spare array will be needed when we start getting clever.
+   We will check for basic so spare array will never overflow.
+   If necessary will modify costs
+*/
+double
+ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
+			   CoinIndexedVector * columnArray,
+			   CoinIndexedVector * spareArray,
+			   CoinIndexedVector * spareArray2,
+			   double acceptablePivot,
+			   CoinBigIndex * dubiousWeights)
+{
+  int numberPossiblySwapped=0;
+  int numberRemaining=0;
+  
+  double totalThru=0.0; // for when variables flip
+  //double saveAcceptable=acceptablePivot;
+  //acceptablePivot=1.0e-9;
+
+  double bestEverPivot=acceptablePivot;
+  int lastSequence = -1;
+  double lastPivot=0.0;
+  double upperTheta;
+  double newTolerance = dualTolerance_;
+  //newTolerance = dualTolerance_+1.0e-6*dblParam_[ClpDualTolerance];
+  // will we need to increase tolerance
+  bool thisIncrease=false;
+  // If we think we need to modify costs (not if something from broad sweep)
+  bool modifyCosts=false;
+  // Increase in objective due to swapping bounds (may be negative)
+  double increaseInObjective=0.0;
+
+  // use spareArrays to put ones looked at in
+  // we are going to flip flop between
+  int iFlip = 0;
+  // Possible list of pivots
+  int interesting[2];
+  // where possible swapped ones are
+  int swapped[2];
+  // for zeroing out arrays after
+  int marker[2][2];
+  // pivot elements
+  double * array[2], * spare, * spare2;
+  // indices
+  int * indices[2], * index, * index2;
+  spareArray2->clear();
+  array[0] = spareArray->denseVector();
+  indices[0] = spareArray->getIndices();
+  spare = array[0];
+  index = indices[0];
+  array[1] = spareArray2->denseVector();
+  indices[1] = spareArray2->getIndices();
+  int i;
+
+  // initialize lists
+  for (i=0;i<2;i++) {
+    interesting[i]=0;
+    swapped[i]=numberColumns_;
+    marker[i][0]=0;
+    marker[i][1]=numberColumns_;
+  }
+  /*
+    First we get a list of possible pivots.  We can also see if the
+    problem looks infeasible or whether we want to pivot in free variable.
+    This may make objective go backwards but can only happen a finite
+    number of times and I do want free variables basic.
+
+    Then we flip back and forth.  At the start of each iteration
+    interesting[iFlip] should have possible candidates and swapped[iFlip]
+    will have pivots if we decide to take a previous pivot.
+    At end of each iteration interesting[1-iFlip] should have
+    candidates if we go through this theta and swapped[1-iFlip]
+    pivots if we don't go through.
+
+    At first we increase theta and see what happens.  We start
+    theta at a reasonable guess.  If in right area then we do bit by bit.
+
+   */
+
+  // do first pass to get possibles 
+  upperTheta = 1.0e31;
+  double bestPossible=0.0;
+  if (spareIntArray_[0]!=-1) {
+    numberRemaining = dualColumn0(rowArray,columnArray,spareArray,
+                                  acceptablePivot,upperTheta,bestPossible);
+  } else {
+    // already done
+    numberRemaining = spareArray->getNumElements();
+    spareArray->setNumElements(0);
+    upperTheta = spareDoubleArray_[0];
+    bestPossible = spareDoubleArray_[1];
+    theta_ = spareDoubleArray_[2];
+    alpha_ = spareDoubleArray_[3];
+    sequenceIn_ = spareIntArray_[1];
+  }
+  // switch off
+  spareIntArray_[0]=0;
+  // We can also see if infeasible or pivoting on free
+  double tentativeTheta = 1.0e25;
   interesting[0]=numberRemaining;
   marker[0][0] = numberRemaining;
 
@@ -2623,7 +2652,7 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
       // try 3 different ways
       // 1 bias increase by ones with slightly wrong djs
       // 2 bias by all
-      // 3 bias by all - tolerance
+      // 3 bias by all - tolerance 
 #define TRYBIAS 3
 
 

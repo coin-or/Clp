@@ -195,6 +195,12 @@ public:
 		  CoinIndexedVector * spareArray2,
 		  double accpetablePivot,
 		  CoinBigIndex * dubiousWeights);
+  /// Does first bit of dualColumn
+  int dualColumn0(const CoinIndexedVector * rowArray,
+                  const CoinIndexedVector * columnArray,
+                  CoinIndexedVector * spareArray,
+                  double acceptablePivot,
+                  double & upperReturn, double &bestReturn);
   /** 
       Row array has row part of pivot row
       Column array has column part.

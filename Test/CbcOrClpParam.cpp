@@ -547,6 +547,8 @@ CbcOrClpParam::setIntParameter (ClpSimplex * model,int value)
       break;
     case SPECIALOPTIONS:
       model->setSpecialOptions(value);
+    case THREADS:
+      model->setNumberThreads(value);
       break;
     default:
       break;
@@ -577,6 +579,8 @@ CbcOrClpParam::intParameter (ClpSimplex * model) const
   case SPECIALOPTIONS:
     value=model->specialOptions();
     break;
+  case THREADS:
+    value = model->numberThreads();
   default:
     value=intValue_;
     break;
@@ -2288,6 +2292,9 @@ see number before trust."
  variables in column.  If you increase this the number of rows may decrease but number of \
  elements may increase."
      ); 
+  parameters[numberParameters++]=
+    CbcOrClpParam("thread!s","Number of threads to try and use",
+		  -2,64,THREADS);
 #endif
 #ifdef COIN_USE_CBC
   parameters[numberParameters++]=
