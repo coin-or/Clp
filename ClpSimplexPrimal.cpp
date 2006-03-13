@@ -775,6 +775,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
     } else {
       problemStatus_ = loop; //exit if in loop 
       problemStatus_ = 10; // instead - try other algorithm
+      numberPrimalInfeasibilities_ = nonLinearCost_->numberInfeasibilities();
     }
     problemStatus_ = 10; // instead - try other algorithm
     return ;
