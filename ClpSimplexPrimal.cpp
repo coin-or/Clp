@@ -822,6 +822,8 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
   if (!nonLinearCost_->numberInfeasibilities()&&infeasibilityCost_==1.0e10&&!ifValuesPass) {
     // relax if default
     infeasibilityCost_ = CoinMin(CoinMax(100.0*sumDualInfeasibilities_,1.0e4),1.0e7);
+    // reset looping criterion
+    *progress = ClpSimplexProgress();
     trueInfeasibility = 1.123456e10;
   }
   if (trueInfeasibility>1.0) {
@@ -831,6 +833,8 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
     if(lastInf<testValue||trueInfeasibility==1.123456e10) {
       if (infeasibilityCost_<1.0e14) {
 	infeasibilityCost_ *= 1.5;
+        // reset looping criterion
+        *progress = ClpSimplexProgress();
 	//printf("increasing weight to %g\n",infeasibilityCost_);
 	gutsOfSolution(NULL,NULL,ifValuesPass!=0);
       }
@@ -919,6 +923,8 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	}
 	if (infeasibilityCost_<1.0e20) {
 	  infeasibilityCost_ *= 5.0;
+          // reset looping criterion
+          *progress = ClpSimplexProgress();
 	  changeMade_++; // say change made
 	  handler_->message(CLP_PRIMAL_WEIGHT,messages_)
 	    <<infeasibilityCost_
@@ -1031,11 +1037,15 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	if (infeasibilityCost_>1.0e18&&perturbation_==101) {
 	  // back off weight
 	  infeasibilityCost_ = 1.0e13;
+          // reset looping criterion
+          *progress = ClpSimplexProgress();
 	  unPerturb(); // stop any further perturbation
 	}
 	//we need infeasiblity cost changed
 	if (infeasibilityCost_<1.0e20) {
 	  infeasibilityCost_ *= 5.0;
+          // reset looping criterion
+          *progress = ClpSimplexProgress();
 	  changeMade_++; // say change made
 	  handler_->message(CLP_PRIMAL_WEIGHT,messages_)
 	    <<infeasibilityCost_
@@ -1045,8 +1055,8 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	  gutsOfSolution(NULL,NULL,ifValuesPass!=0);
 	  problemStatus_=-1; //continue
 	} else {
-	  // say unbounded
-	  problemStatus_ = 2;
+	  // say infeasible
+	  problemStatus_ = 1;
 	}
       } else {
 	// say unbounded
