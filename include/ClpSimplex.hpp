@@ -259,10 +259,16 @@ public:
       This computes increase/decrease in cost for each given variable and corresponding
       sequence numbers which would change basis.  Sequence numbers are 0..numberColumns 
       and numberColumns.. for artificials/slacks.
-      For non-basic variables the sequence number will be that of the non-basic variables.
+      For non-basic variables the information is trivial to compute and the change in cost is just minus the 
+      reduced cost and the sequence number will be that of the non-basic variables.
+      For basic variables a ratio test is between the reduced costs for non-basic variables
+      and the row of the tableau corresponding to the basic variable.
       The increase/decrease value is always >= 0.0
 
-      Up to user to provide correct length arrays.
+      Up to user to provide correct length arrays where each array is of length numberCheck.
+      which contains list of variables for which information is desired.  All other
+      arrays will be filled in by function.  If fifth entry in which is variable 7 then fifth entry in output arrays
+      will information for variable 7.
 
       Returns non-zero if infeasible unbounded etc
   */
@@ -275,7 +281,10 @@ public:
       and numberColumns.. for artificials/slacks.
       For basic variables the sequence number will be that of the basic variables.
 
-      Up to user to providen correct length arrays.
+      Up to user to provide correct length arrays where each array is of length numberCheck.
+      which contains list of variables for which information is desired.  All other
+      arrays will be filled in by function.  If fifth entry in which is variable 7 then fifth entry in output arrays
+      will information for variable 7.
 
       Returns non-zero if infeasible unbounded etc
   */
