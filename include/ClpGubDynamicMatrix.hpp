@@ -52,9 +52,9 @@ public:
   virtual void times(double scalar,
 		       const double * x, double * y) const;
   /** Just for debug 
-      Returns number of primal infeasibilities. Recomputes keys
+      Returns sum and number of primal infeasibilities. Recomputes keys
   */
-  virtual int checkFeasible(ClpSimplex * model) const;
+  virtual int checkFeasible(ClpSimplex * model,double & sum) const;
   //@}
 
   

@@ -741,9 +741,35 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
     double sumInfeasibility =  nonLinearCost_->sumInfeasibilities();
     if (numberThrownOut||
 	(sumInfeasibility>1.0e7&&sumInfeasibility>100.0*lastSumInfeasibility
-	 &&factorization_->pivotTolerance()<0.11)) {
+	 &&factorization_->pivotTolerance()<0.11)||(largestPrimalError_>1.0e10&&largestDualError_>1.0e10)) {
       problemStatus_=tentativeStatus;
       doFactorization=true;
+      if (numberPivots) {
+        // go back
+        numberThrownOut=-1;
+        // trouble - restore solution
+        CoinMemcpyN(saveStatus_,numberColumns_+numberRows_,status_);
+        CoinMemcpyN(savedSolution_+numberColumns_ ,
+                    numberRows_,rowActivityWork_);
+        CoinMemcpyN(savedSolution_ ,
+	   numberColumns_,columnActivityWork_);
+        // restore extra stuff
+        matrix_->generalExpanded(this,6,dummy);
+        forceFactorization_=1; // a bit drastic but ..
+        // Go to safe 
+        factorization_->pivotTolerance(0.99);
+        pivotRow_=-1; // say no weights update
+        changeMade_++; // say change made
+        if (numberPivots==1) {
+          // throw out something
+          if (sequenceIn_>=0&&getStatus(sequenceIn_)!=basic) {
+            setFlagged(sequenceIn_);
+          } else if (sequenceOut_>=0&&getStatus(sequenceOut_)!=basic) {
+            setFlagged(sequenceOut_);
+          }
+        }
+        numberPivots=0;
+      }
     }
   }
   // Double check reduced costs if no action
@@ -2593,7 +2619,8 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
     //nonLinearCost_->validate();
 #if CLP_DEBUG >1
     {
-      int ninf= matrix_->checkFeasible(this);
+      double sum;
+      int ninf= matrix_->checkFeasible(this,sum);
       if (ninf)
 	printf("infeas %d\n",ninf);
     }

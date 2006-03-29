@@ -1960,10 +1960,10 @@ ClpGubDynamicMatrix::times(double scalar,
   }
 }
 /* Just for debug - may be extended to other matrix types later.
-   Returns number of primal infeasibilities.
+   Returns number and sum of primal infeasibilities.
 */
 int 
-ClpGubDynamicMatrix::checkFeasible(ClpSimplex * model) const
+ClpGubDynamicMatrix::checkFeasible(ClpSimplex * model,double & sum) const
 {
   int numberRows = model_->numberRows();
   double * rhs = new double[numberRows];
@@ -1980,6 +1980,7 @@ ClpGubDynamicMatrix::checkFeasible(ClpSimplex * model) const
   int numberInfeasible=0;
   const double * rowLower = model_->rowLower();
   const double * rowUpper = model_->rowUpper();
+  sum=0.0;
   for (iRow=0;iRow<numberRows;iRow++) {
     double value=smallSolution[numberColumns+iRow];
     if (value<rowLower[iRow]-1.0e-5||
@@ -1987,6 +1988,7 @@ ClpGubDynamicMatrix::checkFeasible(ClpSimplex * model) const
       //printf("row %d %g %g %g\n",
       //     iRow,rowLower[iRow],value,rowUpper[iRow]);
       numberInfeasible++;
+      sum += CoinMax(rowLower[iRow]-value,value-rowUpper[iRow]);
     }
     rhs[iRow]=value;
   }
@@ -1999,6 +2001,7 @@ ClpGubDynamicMatrix::checkFeasible(ClpSimplex * model) const
       //printf("column %d %g %g %g\n",
       //     iColumn,columnLower[iColumn],value,columnUpper[iColumn]);
       numberInfeasible++;
+      sum += CoinMax(columnLower[iColumn]-value,value-columnUpper[iColumn]);
     }
     for (CoinBigIndex j=startColumn[iColumn];
 	 j<startColumn[iColumn]+length[iColumn];j++) {

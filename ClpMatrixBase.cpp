@@ -423,10 +423,10 @@ ClpMatrixBase::reducedCost(ClpSimplex * model,int sequence) const
     return savedBestDj_;
 }
 /* Just for debug if odd type matrix.
-   Returns number of primal infeasibilities.
+   Returns number and sum of primal infeasibilities.
 */
 int 
-ClpMatrixBase::checkFeasible(ClpSimplex * model) const 
+ClpMatrixBase::checkFeasible(ClpSimplex * model, double & sum) const 
 {
   int numberRows = model->numberRows();
   double * rhs = new double[numberRows];
@@ -442,6 +442,7 @@ ClpMatrixBase::checkFeasible(ClpSimplex * model) const
   const double * solution;
   solution = model->solutionRegion(0);
   double tolerance = model->primalTolerance()*1.01;
+  sum=0.0;
   for (iRow=0;iRow<numberRows;iRow++) {
     double value=rhs[iRow];
     double value2= solution[iRow];
@@ -452,6 +453,7 @@ ClpMatrixBase::checkFeasible(ClpSimplex * model) const
     if (value<rowLower[iRow]-tolerance||
 	value>rowUpper[iRow]+tolerance) {
       numberInfeasible++;
+      sum += CoinMax(rowLower[iRow]-value,value-rowUpper[iRow]);
     }
     if (value2>rowLower[iRow]+tolerance&&
 	value2<rowUpper[iRow]-tolerance&&
@@ -467,6 +469,7 @@ ClpMatrixBase::checkFeasible(ClpSimplex * model) const
     if (value<columnLower[iColumn]-tolerance||
 	value>columnUpper[iColumn]+tolerance) {
       numberInfeasible++;
+      sum += CoinMax(columnLower[iColumn]-value,value-columnUpper[iColumn]);
     }
     if (value>columnLower[iColumn]+tolerance&&
 	value<columnUpper[iColumn]-tolerance&&

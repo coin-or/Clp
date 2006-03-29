@@ -3188,7 +3188,7 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
 		 <<std::endl;
 #endif
       lastObjective = objValue;
-      if (targetDrop<1.0e-5&&goodMove&&iPass) {
+      if (targetDrop<CoinMax(1.0e-8,CoinMin(1.0e-6,1.0e-6*fabs(objValue)))&&goodMove&&iPass>3) {
 	if (handler_->logLevel()>1) 
 	printf("Exiting on target drop %g\n",targetDrop);
 	break;
