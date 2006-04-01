@@ -2036,6 +2036,17 @@ This is only active if model has names."
      ); 
 #ifdef COIN_USE_CBC
   parameters[numberParameters++]=
+    CbcOrClpParam("prio!rityIn","Import priorities etc from file",
+		  PRIORITYIN,3);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "This will read a file with priorities from the given file name.  It will use the default\
+ directory given by 'directory'.  A name of '$' will use the previous value for the name.  This\
+ is initialized to '', i.e. it must be set.  This can not read from compressed files. \
+File is in csv format with allowed headings - name, number, priority, direction.  Exactly one of\
+ name and number must be given."
+     ); 
+  parameters[numberParameters++]=
     CbcOrClpParam("probing!Cuts","Whether to use Probing cuts",
 		  "off",PROBINGCUTS);
   parameters[numberParameters-1].append("on");
