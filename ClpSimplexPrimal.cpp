@@ -1749,7 +1749,7 @@ ClpSimplexPrimal::updatePrimalsInPrimal(CoinIndexedVector * rowArray,
 	}
       }
 #endif    
-      if (active(iRow)) {
+      if (active(iRow)||theta_<0.0) {
 	clearActive(iRow);
 	// But make sure one going out is feasible
 	if (change>0.0) {
