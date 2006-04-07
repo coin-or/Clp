@@ -3219,7 +3219,7 @@ ClpModel::writeMps(const char *filename,
   int returnCode = writer.writeMps(filename, 0 /* do not gzip it*/, formatType, numberAcross,
 			 quadratic);
   if (rowNames) {
-    deleteNamesAsChar(rowNames, numberRows_);
+    deleteNamesAsChar(rowNames, numberRows_+1);
     deleteNamesAsChar(columnNames, numberColumns_);
   }
   return returnCode;
@@ -3231,7 +3231,7 @@ ClpModel::rowNamesAsChar() const
 {
   char ** rowNames = NULL;
   if (lengthNames()) {
-    rowNames = new char * [numberRows_];
+    rowNames = new char * [numberRows_+1];
     for (int iRow=0;iRow<numberRows_;iRow++) {
       rowNames[iRow] = 
 	strdup(rowName(iRow).c_str());
@@ -3247,6 +3247,7 @@ ClpModel::rowNamesAsChar() const
       xx[n]='\0';
 #endif
     }
+    rowNames[numberRows_] = strdup("OBJROW");
   }
   return reinterpret_cast<const char * const *>(rowNames);
 }

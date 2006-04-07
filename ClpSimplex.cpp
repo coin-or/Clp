@@ -410,6 +410,7 @@ ClpSimplex::gutsOfSolution ( double * givenDuals,
 	solution_[iPivot]=save[iRow];
 	save[iRow]=difference;
       }
+      int numberBasic=0;
       for (iRow=0;iRow<numberRows_;iRow++) {
 	int iPivot=pivotVariable_[iRow];
 
@@ -419,8 +420,14 @@ ClpSimplex::gutsOfSolution ( double * givenDuals,
 	  if (difference>1.0e-4) {
 	    sort[numberOut]=iPivot;
 	    save[numberOut++]=difference;
+            if (getStatus(iPivot)==basic)
+              numberBasic++;
 	  }
 	}
+      }
+      if (!numberBasic) {
+        //printf("no errors on basic - going to all slack - numberOut %d\n",numberOut);
+        allSlackBasis();
       }
       CoinSort_2(save, save + numberOut, sort,
 		 CoinFirstGreater_2<double, int>());

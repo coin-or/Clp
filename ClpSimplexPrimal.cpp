@@ -658,7 +658,16 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
   double lastSumInfeasibility=COIN_DBL_MAX;
   if (numberIterations_)
     lastSumInfeasibility=nonLinearCost_->sumInfeasibilities();
+  int nPass=0;
   while (numberThrownOut) {
+    int nSlackBasic=0;
+    if (nPass) {
+      for (int i=0;i<numberRows_;i++) {
+        if (getRowStatus(i)==basic)
+          nSlackBasic++;
+      }
+    }
+    nPass++;
     if (problemStatus_>-3||problemStatus_==-4) {
       // factorize
       // later on we will need to recover from singularities
@@ -668,7 +677,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
       if (doFactorization)
 	primalColumnPivot_->saveWeights(this,1);
       
-      if (type&&doFactorization) {
+      if ((type&&doFactorization)||nSlackBasic==numberRows_) {
 	// is factorization okay?
 	int factorStatus = internalFactorize(1);
 	if (factorStatus) {
