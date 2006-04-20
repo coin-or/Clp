@@ -715,7 +715,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
               } else if (sequenceOut_>=0&&getStatus(sequenceOut_)!=basic) {
                 setFlagged(sequenceOut_);
               }
-              double newTolerance = 0.05 + 0.94*CoinDrand48();
+              double newTolerance = CoinMax(0.5 + 0.499*CoinDrand48(),factorization_->pivotTolerance());
               factorization_->pivotTolerance(newTolerance);
             } else {
               // Go to safe 

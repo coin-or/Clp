@@ -65,7 +65,7 @@ ClpModel::ClpModel () :
   ray_(NULL),
   rowScale_(NULL),
   columnScale_(NULL),
-  scalingFlag_(2),
+  scalingFlag_(3),
   status_(NULL),
   integerType_(NULL),
   userPointer_(NULL),

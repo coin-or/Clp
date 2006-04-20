@@ -1970,7 +1970,7 @@ ClpPackedMatrix::scale(ClpModel * model) const
         scalingMethod=4;
       } else {
         assert (scalingMethod==4);
-        if (overallSmallest>savedOverallRatio)
+        if (overallSmallest>2.0*savedOverallRatio)
           finished=true; // geometric was better
         else
           scalingMethod=1; // redo equilibrium
