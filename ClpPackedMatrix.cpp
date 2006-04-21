@@ -1965,7 +1965,7 @@ ClpPackedMatrix::scale(ClpModel * model) const
       }
       if (scalingMethod==1||scalingMethod==2) {
         finished=true;
-      } else if (savedOverallRatio==0.0) {
+      } else if (savedOverallRatio==0.0&&scalingMethod!=4) {
         savedOverallRatio=overallSmallest;
         scalingMethod=4;
       } else {
