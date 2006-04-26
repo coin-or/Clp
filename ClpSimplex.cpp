@@ -2600,7 +2600,8 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
       checkType = 14;
     if (!matrix_->allElementsInRange(this,smallElement_,1.0e20,checkType)) {
       problemStatus_=4;
-      goodMatrix= false;
+      //goodMatrix= false;
+      return false;
     }
     if (makeRowCopy&&!oldMatrix) {
       delete rowCopy_;
@@ -8192,7 +8193,7 @@ ClpSimplex::setRowBounds( int elementIndex,
     lowerValue=-COIN_DBL_MAX;
   if (upperValue>1.0e27)
     upperValue=COIN_DBL_MAX;
-  CoinAssert (upperValue>=lowerValue);
+  //CoinAssert (upperValue>=lowerValue);
   if (rowLower_[elementIndex] != lowerValue) {
     rowLower_[elementIndex] = lowerValue;
     if ((whatsChanged_&1)!=0) {
@@ -8248,7 +8249,7 @@ void ClpSimplex::setRowSetBounds(const int* indexFirst,
       lowerValue=-COIN_DBL_MAX;
     if (upperValue>1.0e27)
       upperValue=COIN_DBL_MAX;
-    CoinAssert (upperValue>=lowerValue);
+    //CoinAssert (upperValue>=lowerValue);
     if (rowLower_[iRow] != lowerValue) {
       rowLower_[iRow] = lowerValue;
       whatsChanged_ &= ~16;
@@ -8379,7 +8380,7 @@ ClpSimplex::setColumnBounds( int elementIndex,
   }
   if (upperValue>1.0e27)
     upperValue=COIN_DBL_MAX;
-  CoinAssert (upperValue>=lowerValue);
+  //CoinAssert (upperValue>=lowerValue);
   if (columnUpper_[elementIndex] != upperValue) {
     columnUpper_[elementIndex] = upperValue;
     if ((whatsChanged_&1)!=0) {
@@ -8419,7 +8420,7 @@ void ClpSimplex::setColumnSetBounds(const int* indexFirst,
       lowerValue=-COIN_DBL_MAX;
     if (upperValue>1.0e27)
       upperValue=COIN_DBL_MAX;
-    CoinAssert (upperValue>=lowerValue);
+    //CoinAssert (upperValue>=lowerValue);
     if (columnLower_[iColumn] != lowerValue) {
       columnLower_[iColumn] = lowerValue;
       whatsChanged_ &= ~16;
