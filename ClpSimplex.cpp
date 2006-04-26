@@ -2850,7 +2850,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
                 columnUpperWork_[i]=COIN_DBL_MAX;
               } else {
                 columnUpperWork_[i]=upperValue*multiplier;
-                if (columnUpperWork_[i]-columnLowerWork_[i]<=primalTolerance) {
+                if (fabs(columnUpperWork_[i]-columnLowerWork_[i])<=primalTolerance) {
                   if (columnLowerWork_[i]>=0.0) {
                     columnUpperWork_[i] = columnLowerWork_[i];
                   } else if (columnUpperWork_[i]<=0.0) {
@@ -2881,7 +2881,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
               rowUpperWork_[i]=COIN_DBL_MAX;
             } else {
               rowUpperWork_[i]=upperValue*multiplier;
-              if (rowUpperWork_[i]-rowLowerWork_[i]<=primalTolerance) {
+              if (fabs(rowUpperWork_[i]-rowLowerWork_[i])<=primalTolerance) {
                 if (rowLowerWork_[i]>=0.0) {
                   rowUpperWork_[i] = rowLowerWork_[i];
                 } else if (rowUpperWork_[i]<=0.0) {
@@ -2911,7 +2911,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
               columnUpperWork_[i]=COIN_DBL_MAX;
             } else {
               columnUpperWork_[i]=upperValue*rhsScale_;
-              if (columnUpperWork_[i]-columnLowerWork_[i]<=primalTolerance) {
+              if (fabs(columnUpperWork_[i]-columnLowerWork_[i])<=primalTolerance) {
                 if (columnLowerWork_[i]>=0.0) {
                   columnUpperWork_[i] = columnLowerWork_[i];
                 } else if (columnUpperWork_[i]<=0.0) {
@@ -2940,7 +2940,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
               rowUpperWork_[i]=COIN_DBL_MAX;
             } else {
               rowUpperWork_[i]=upperValue*rhsScale_;
-              if (rowUpperWork_[i]-rowLowerWork_[i]<=primalTolerance) {
+              if (fabs(rowUpperWork_[i]-rowLowerWork_[i])<=primalTolerance) {
                 if (rowLowerWork_[i]>=0.0) {
                   rowUpperWork_[i] = rowLowerWork_[i];
                 } else if (rowUpperWork_[i]<=0.0) {
@@ -2970,7 +2970,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
               columnUpperWork_[i]=COIN_DBL_MAX;
             } else {
               columnUpperWork_[i]=upperValue;
-              if (columnUpperWork_[i]-columnLowerWork_[i]<=primalTolerance) {
+              if (fabs(columnUpperWork_[i]-columnLowerWork_[i])<=primalTolerance) {
                 if (columnLowerWork_[i]>=0.0) {
                   columnUpperWork_[i] = columnLowerWork_[i];
                 } else if (columnUpperWork_[i]<=0.0) {
@@ -2999,7 +2999,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
               rowUpperWork_[i]=COIN_DBL_MAX;
             } else {
               rowUpperWork_[i]=upperValue;
-              if (rowUpperWork_[i]-rowLowerWork_[i]<=primalTolerance) {
+              if (fabs(rowUpperWork_[i]-rowLowerWork_[i])<=primalTolerance) {
                 if (rowLowerWork_[i]>=0.0) {
                   rowUpperWork_[i] = rowLowerWork_[i];
                 } else if (rowUpperWork_[i]<=0.0) {
@@ -3172,7 +3172,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
               columnUpperWork_[i]=COIN_DBL_MAX;
             } else {
               columnUpperWork_[i]=upperValue*multiplier;
-              if (columnUpperWork_[i]-columnLowerWork_[i]<=primalTolerance) {
+              if (fabs(columnUpperWork_[i]-columnLowerWork_[i])<=primalTolerance) {
                 if (columnLowerWork_[i]>=0.0) {
                   columnUpperWork_[i] = columnLowerWork_[i];
                 } else if (columnUpperWork_[i]<=0.0) {
