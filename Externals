@@ -1,0 +1,4 @@
+BuildTools    https://www.coin-or.org/svn/BuildTools/trunk
+Data/Netlib   https://www.coin-or.org/svn/Data/trunk/Netlib
+Data/Sample   https://www.coin-or.org/svn/Data/trunk/Sample
+CoinBase      https://www.coin-or.org/svn/CoinBase/trunk/CoinBase

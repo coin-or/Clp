@@ -1,0 +1,137 @@
+# Copyright (C) 2006 International Business Machines and others.
+# All Rights Reserved.
+# This file is distributed under the Common Public License.
+
+## $Id$
+
+# Author:  Andreas Waechter           IBM    2006-04-13
+
+AUTOMAKE_OPTIONS = foreign
+
+########################################################################
+#                               libClp                                 #
+########################################################################
+
+# Name of the library compiled in this directory.  We want it to be installed
+# in the 'lib' directory
+lib_LTLIBRARIES = libClp.la
+
+# List all source files for this library, including headers
+libClp_la_SOURCES = \
+	ClpCholeskyBase.cpp ClpCholeskyBase.hpp \
+	ClpCholeskyDense.cpp ClpCholeskyDense.hpp \
+	ClpCholeskyUfl.cpp ClpCholeskyUfl.hpp \
+	Clp_C_Interface.cpp Clp_C_Interface.h \
+	ClpDualRowDantzig.cpp ClpDualRowDantzig.hpp \
+	ClpDualRowPivot.cpp ClpDualRowPivot.hpp \
+	ClpDualRowSteepest.cpp ClpDualRowSteepest.hpp \
+	ClpDummyMatrix.cpp ClpDummyMatrix.hpp \
+	ClpDynamicExampleMatrix.cpp ClpDynamicExampleMatrix.hpp \
+	ClpDynamicMatrix.cpp ClpDynamicMatrix.hpp \
+	ClpEventHandler.cpp ClpEventHandler.hpp \
+	ClpFactorization.cpp ClpFactorization.hpp \
+	ClpGubDynamicMatrix.cpp ClpGubDynamicMatrix.hpp \
+	ClpGubMatrix.cpp ClpGubMatrix.hpp \
+	ClpHelperFunctions.cpp ClpHelperFunctions.hpp \
+	ClpInterior.cpp ClpInterior.hpp \
+	ClpLinearObjective.cpp ClpLinearObjective.hpp \
+	ClpMatrixBase.cpp ClpMatrixBase.hpp \
+	ClpMessage.cpp ClpMessage.hpp \
+	ClpModel.cpp ClpModel.hpp \
+	ClpNetworkBasis.cpp ClpNetworkBasis.hpp \
+	ClpNetworkMatrix.cpp ClpNetworkMatrix.hpp \
+	ClpNonLinearCost.cpp ClpNonLinearCost.hpp \
+	ClpObjective.cpp ClpObjective.hpp \
+	ClpPackedMatrix.cpp ClpPackedMatrix.hpp \
+	ClpParameters.hpp \
+	ClpPlusMinusOneMatrix.cpp ClpPlusMinusOneMatrix.hpp \
+	ClpPredictorCorrector.cpp ClpPredictorCorrector.hpp \
+	ClpPresolve.cpp ClpPresolve.hpp \
+	ClpPrimalColumnDantzig.cpp ClpPrimalColumnDantzig.hpp \
+	ClpPrimalColumnPivot.cpp ClpPrimalColumnPivot.hpp \
+	ClpPrimalColumnSteepest.cpp ClpPrimalColumnSteepest.hpp \
+	ClpQuadraticObjective.cpp ClpQuadraticObjective.hpp \
+	ClpSimplex.cpp ClpSimplex.hpp \
+	ClpSimplexDual.cpp ClpSimplexDual.hpp \
+	ClpSimplexNonlinear.cpp ClpSimplexNonlinear.hpp \
+	ClpSimplexOther.cpp ClpSimplexOther.hpp \
+	ClpSimplexPrimal.cpp ClpSimplexPrimal.hpp \
+	ClpSolve.cpp ClpSolve.hpp \
+	Idiot.cpp Idiot.hpp \
+	IdiSolve.cpp
+
+# This is for libtool (on Windows)
+libClp_la_LDFLAGS = -no-undefined
+
+# Here list all include flags, relative to this "srcdir" directory.  This
+# "cygpath" stuff is necessary to compile with native compilers on Windows.
+# "top_srcdir" refers to the basic directory for the main package that is
+# being compiled.
+CXXFLAGS += \
+	-I`$(CYGPATH_W) $(COINBASESRCDIR)/src`
+
+########################################################################
+#                Headers that need to be installed                     #
+########################################################################
+
+# Here list all the header files that are required by a user of the library,
+# and that therefore should be installed in 'install'
+include_HEADERS = \
+	ClpDualRowDantzig.hpp \
+	ClpDualRowPivot.hpp \
+	ClpDualRowSteepest.hpp \
+	ClpEventHandler.hpp \
+	ClpFactorization.hpp \
+	ClpInterior.hpp \
+	ClpLinearObjective.hpp \
+	ClpMatrixBase.hpp \
+	ClpMessage.hpp \
+	ClpModel.hpp \
+	ClpNetworkMatrix.hpp \
+	ClpNonLinearCost.hpp \
+	ClpObjective.hpp \
+	ClpPackedMatrix.hpp \
+	ClpPlusMinusOneMatrix.hpp \
+	ClpParameters.hpp \
+	ClpPresolve.hpp \
+	ClpPrimalColumnDantzig.hpp \
+	ClpPrimalColumnPivot.hpp \
+	ClpPrimalColumnSteepest.hpp \
+	ClpSimplex.hpp \
+	ClpSimplexNonlinear.hpp \
+	ClpSimplexOther.hpp \
+	ClpSimplexPrimal.hpp \
+	ClpSolve.hpp \
+	Idiot.hpp
+
+########################################################################
+#     Generating the configure header that is to be distributed        #
+########################################################################
+
+# You should only need to adapt the following three lines
+CONFIG_DIST = ClpConfig.hpp
+CONFIG_H = config_clp.h
+$(libClp_la_OBJECTS): ../inc/$(CONFIG_DIST)
+
+nodist_include_HEADERS = ../inc/$(CONFIG_DIST)
+
+../inc/$(CONFIG_DIST): ../inc/$(CONFIG_H)
+	echo "/** Required defines from $(CONFIG_H) */" >bla.tmp
+	echo "#ifndef __$(CONFIG_DIST)__" | sed -e 's/\./_/g' >>bla.tmp
+	echo "#define __$(CONFIG_DIST)__" | sed -e 's/\./_/g' >>bla.tmp
+	$(EGREP) 'COIN_HAS' $< >>bla.tmp
+	echo "#endif" >>bla.tmp
+	if test -r ../inc/$(CONFIG_DIST); then \
+	  if diff ./inc/$(CONFIG_DIST) bla.tmp >/dev/null 2>1 ; then \
+	    rm -f bla.tmp; \
+	  else \
+	    rm -f ../inc/$(CONFIG_DIST); \
+	    mv bla.tmp ../inc/$(CONFIG_DIST); \
+	  fi; \
+	else \
+	  mv bla.tmp ../inc/$(CONFIG_DIST); \
+	fi
+
+CLEANFILES = bla.tmp
+
+DISTCLEANFILES = $(CONFIG_DIST)

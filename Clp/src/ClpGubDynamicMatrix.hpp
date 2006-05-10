@@ -93,7 +93,7 @@ public:
   enum DynamicStatus {
     inSmall = 0x01,
     atUpperBound = 0x02,
-    atLowerBound = 0x03,
+    atLowerBound = 0x03
   };
   /// Whether flagged
   inline bool flagged(int i) const {

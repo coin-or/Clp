@@ -1,3 +1,15 @@
 * text=auto !eol
+Clp/clp_addlibs.txt.in -text
+Clp/configure -text
+Clp/configure.ac -text
+Clp/inc/config_clp.h.in -text
 /Clp_1.01.01.tar.gz -text
 /Clp_1.01.02.tar.gz -text
+/Externals -text
+/config.guess -text
+/config.sub -text
+/configure -text
+/configure.ac -text
+/depcomp -text
+/install-sh -text
+/missing -text
