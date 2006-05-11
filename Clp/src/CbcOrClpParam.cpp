@@ -5,26 +5,27 @@
 #  pragma warning(disable:4786)
 #endif
 
+#include "ClpConfig.hpp"
 #include <string>
 #include <iostream>
 #include <cassert>
 
 #include "CbcOrClpParam.hpp"
-#ifdef COIN_USE_CBC
+#ifdef COIN_HAS_CBC
 #include "OsiClpSolverInterface.hpp"
 #include "ClpSimplex.hpp"
 #include "CbcModel.hpp"
 #endif
 #ifdef COIN_HAS_CLP
-#ifndef COIN_USE_CLP
-#define COIN_USE_CLP
+#ifndef COIN_HAS_CLP
+#define COIN_HAS_CLP
 #endif
 #endif
-#ifdef COIN_USE_CLP
+#ifdef COIN_HAS_CLP
 #include "ClpSimplex.hpp"
 #include "ClpFactorization.hpp"
 #endif
-#ifdef COIN_USE_READLINE     
+#ifdef COIN_HAS_READLINE     
 #include <readline/readline.h>
 #include <readline/history.h>
 #endif
@@ -397,7 +398,7 @@ CbcOrClpParam::printLongHelp() const
     }
   }
 }
-#ifdef COIN_USE_CBC
+#ifdef COIN_HAS_CBC
 int
 CbcOrClpParam::setDoubleParameter (OsiSolverInterface * model,double value) 
 {
@@ -428,7 +429,7 @@ CbcOrClpParam::setDoubleParameter (OsiSolverInterface * model,double value)
   }
 }
 #endif
-#ifdef COIN_USE_CLP
+#ifdef COIN_HAS_CLP
 int
 CbcOrClpParam::setDoubleParameter (ClpSimplex * model,double value) 
 {
@@ -444,7 +445,7 @@ CbcOrClpParam::setDoubleParameter (ClpSimplex * model,double value)
                <<value<<std::endl;
     doubleValue_=value;
     switch(type_) {
-#ifndef COIN_USE_CBC
+#ifndef COIN_HAS_CBC
     case DUALTOLERANCE:
       model->setDualTolerance(value);
       break;
@@ -458,7 +459,7 @@ CbcOrClpParam::setDoubleParameter (ClpSimplex * model,double value)
     case PRIMALWEIGHT:
       model->setInfeasibilityCost(value);
       break;
-#ifndef COIN_USE_CBC
+#ifndef COIN_HAS_CBC
     case TIMELIMIT:
       model->setMaximumSeconds(value);
       break;
@@ -483,7 +484,7 @@ CbcOrClpParam::doubleParameter (ClpSimplex * model) const
 {
   double value;
   switch(type_) {
-#ifndef COIN_USE_CBC
+#ifndef COIN_HAS_CBC
   case DUALTOLERANCE:
     value=model->dualTolerance();
     break;
@@ -497,7 +498,7 @@ CbcOrClpParam::doubleParameter (ClpSimplex * model) const
   case PRIMALWEIGHT:
     value=model->infeasibilityCost();
     break;
-#ifndef COIN_USE_CBC
+#ifndef COIN_HAS_CBC
   case TIMELIMIT:
     value=model->maximumSeconds();
     break;
@@ -561,7 +562,7 @@ CbcOrClpParam::intParameter (ClpSimplex * model) const
 {
   int value;
   switch(type_) {
-#ifndef COIN_USE_CBC
+#ifndef COIN_HAS_CBC
   case SOLVERLOGLEVEL:
     value=model->logLevel();
     break;
@@ -600,7 +601,7 @@ CbcOrClpParam::checkDoubleParameter (double value) const
     return 0;
   }
 }
-#ifdef COIN_USE_CBC
+#ifdef COIN_HAS_CBC
 double 
 CbcOrClpParam::doubleParameter (OsiSolverInterface * model) const
 {
@@ -880,7 +881,7 @@ CoinReadNextField()
   std::string field;
   if (!where) {
     // need new line
-#ifdef COIN_USE_READLINE     
+#ifdef COIN_HAS_READLINE     
     if (CbcOrClpReadCommand==stdin) {
       // Get a line from the user. 
       where = readline (coin_prompt);
@@ -1083,7 +1084,7 @@ establishParams (int &numberParameters, CbcOrClpParam *const parameters)
   parameters[numberParameters++]=
     CbcOrClpParam("-","From stdin",
 		  STDIN,3,false);
-#ifdef COIN_USE_CBC
+#ifdef COIN_HAS_CBC
     parameters[numberParameters++]=
       CbcOrClpParam("allow!ableGap","Stop when gap between best possible and \
 best less than this",
@@ -1095,7 +1096,7 @@ best less than this",
 then the search will be terminated.  Also see gapRatio."
      ); 
 #endif
-#ifdef COIN_USE_CLP
+#ifdef COIN_HAS_CLP
   parameters[numberParameters++]=
     CbcOrClpParam("allS!lack","Set basis back to all slack and reset solution",
 		  ALLSLACK,3);
@@ -1152,7 +1153,7 @@ with quadratic objectives."
   parameters[numberParameters-1].append("LL");
   parameters[numberParameters-1].setCurrentOption("LX");
 #endif
-#ifdef COIN_USE_CBC
+#ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("branch!AndCut","Do Branch and Cut",
 		  BAB);
@@ -1208,7 +1209,7 @@ You will need to link in one from another source.  See Makefile.locations for so
 possibilities."
      ); 
   //#endif
-#ifdef COIN_USE_CBC
+#ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("clique!Cuts","Whether to use Clique cuts",
 		  "off",CLIQUECUTS);
@@ -1241,7 +1242,7 @@ It is obviously only tries after two or more solutions."
 first.  This primitive strategy can be surprsingly effective."
      ); 
 #endif
-#ifdef COIN_USE_CLP
+#ifdef COIN_HAS_CLP
   parameters[numberParameters++]=
     CbcOrClpParam("crash","Whether to create basis for problem",
 		  "off",CRASH);
@@ -1271,7 +1272,7 @@ of quadratic it may be a good idea to switch off crossover for quadratic (and ma
 presolve as well) - the option maybe does this."
      );
 #endif
-#ifdef COIN_USE_CBC
+#ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("cutD!epth","Depth in tree at which to do cuts",
 		  -1,999999,CUTDEPTH);
@@ -1340,7 +1341,7 @@ You can also use the parameters 'maximize' or 'minimize'."
      "This sets the directory which import, export, saveModel, restoreModel etc will use.\
   It is initialized to './'"
      ); 
-#ifdef COIN_USE_CLP
+#ifdef COIN_HAS_CLP
   parameters[numberParameters++]=
     CbcOrClpParam("dualB!ound","Initially algorithm acts as if no \
 gap between bounds exceeds this value",
@@ -1400,7 +1401,7 @@ no dual infeasibility may exceed this value",
 to use a large tolerance e.g. 1.0e-4 and dual and then clean up problem using primal and the \
 correct tolerance (remembering to switch off presolve for this final short clean up phase)."
      ); 
-#ifdef COIN_USE_CLP
+#ifdef COIN_HAS_CLP
   parameters[numberParameters++]=
     CbcOrClpParam("either!Simplex","Do dual or primal simplex algorithm",
 		  EITHERSIMPLEX);
@@ -1444,11 +1445,11 @@ e.g. no ENDATA.  This has to be set before import i.e. -errorsAllowed on -import
  directory given by 'directory'.  A name of '$' will use the previous value for the name.  This\
  is initialized to 'default.mps'."
      ); 
-#ifdef COIN_USE_CLP
+#ifdef COIN_HAS_CLP
   parameters[numberParameters++]=
     CbcOrClpParam("fakeB!ound","All bounds <= this value - DEBUG",
 		  1.0,1.0e15,FAKEBOUND,false);
-#ifdef COIN_USE_CBC
+#ifdef COIN_HAS_CBC
     parameters[numberParameters++]=
       CbcOrClpParam("feas!ibilityPump","Whether to try Feasibility Pump",
 		    "off",FPUMP);
@@ -1490,7 +1491,7 @@ See branchAndCut for information on options."
   parameters[numberParameters-1].append("gammastrong");
   parameters[numberParameters-1].append("deltastrong");
 #endif
-#ifdef COIN_USE_CBC
+#ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("gap!Ratio","Stop when gap between best possible and \
 best less than this fraction of larger of two",
@@ -1545,12 +1546,12 @@ alters search."
      "This prints out some help to get user started.  If you have printed this then \
 you should be past that stage:-)"
      ); 
-#ifdef COIN_USE_CBC
+#ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("hot!StartMaxIts","Maximum iterations on hot start",
 		  0,INT_MAX,MAXHOTITS,false);
 #endif
-#ifdef COIN_USE_CLP
+#ifdef COIN_HAS_CLP
   parameters[numberParameters++]=
     CbcOrClpParam("idiot!Crash","Whether to try idiot crash",
 		  -1,999999,IDIOT);
@@ -1572,7 +1573,7 @@ you should be past that stage:-)"
  is initialized to '', i.e. it must be set.  If you have libgz then it can read compressed\
  files 'xxxxxxxx.gz'.."
      );
-#ifdef COIN_USE_CBC
+#ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("inc!rement","A valid solution must be at least this \
 much better than last integer solution",
@@ -1609,7 +1610,7 @@ no integer variable may be this away from an integer value",
      "Beware of setting this smaller than the primal tolerance."
      ); 
 #endif 
-#ifdef COIN_USE_CLP
+#ifdef COIN_HAS_CLP
   parameters[numberParameters++]=
     CbcOrClpParam("keepN!ames","Whether to keep names from import",
 		  "on",KEEPNAMES);
@@ -1624,7 +1625,7 @@ This needs to be set before the import of model - so -keepnames off -import xxxx
 		  "off",KKT,7,false);
   parameters[numberParameters-1].append("on");
 #endif
-#ifdef COIN_USE_CBC
+#ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("knapsack!Cuts","Whether to use Knapsack cuts",
 		  "off",KNAPSACKCUTS);
@@ -1648,7 +1649,7 @@ When used from Coin solve it has limited functionality.  It is not switched on w
 heuristics are switched on."
      ); 
 #endif
-#ifndef COIN_USE_CBC
+#ifndef COIN_HAS_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("log!Level","Level of detail in Solver output",
 		  -1,63,SOLVERLOGLEVEL);
@@ -1671,7 +1672,7 @@ heuristics are switched on."
      "The default is minimize - use 'maximize' for maximization.\n\
 You can also use the parameters 'direction maximize'."
      ); 
-#ifdef COIN_USE_CLP
+#ifdef COIN_HAS_CLP
   parameters[numberParameters++]=
     CbcOrClpParam("maxF!actor","Maximum number of iterations between \
 refactorizations",
@@ -1693,7 +1694,7 @@ stopping",
  seconds or by an interrupt this will be treated as stopping on maximum iterations"
      ); 
 #endif
-#ifdef COIN_USE_CBC
+#ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("maxN!odes","Maximum number of nodes to do",
 		  1,2147483647,MAXNODES);
@@ -1712,7 +1713,7 @@ but then the results may not be repeatable."
 This should only be necessary if you have previously set maximization \
 You can also use the parameters 'direction minimize'."
      );
-#ifdef COIN_USE_CBC
+#ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("mipO!ptions","Dubious options for mip",
 		  0,INT_MAX,MIPOPTIONS,false);
@@ -1742,7 +1743,7 @@ but this program turns this off to make it look more friendly.  It can be useful
  to turn them back on if you want to be able to 'grep' for particular messages or if\
  you intend to override the behavior of a particular message."
      );
-#ifdef COIN_USE_CBC
+#ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("miniT!ree","Size of fast mini tree",
 		  0,INT_MAX,NUMBERMINI,false);
@@ -1755,7 +1756,7 @@ This is a first try and will hopefully become more sophisticated."
     CbcOrClpParam("miplib","Do some of miplib test set",
 		  MIPLIB,3);
 #endif 
-#ifdef COIN_USE_CLP
+#ifdef COIN_HAS_CLP
   parameters[numberParameters++]=
     CbcOrClpParam("netlib","Solve entire netlib test set",
 		  NETLIB_EITHER,3);
@@ -1810,7 +1811,7 @@ with University of Florida ordering."
  comes from using a network factorization.  It will probably not be as fast as a \
 specialized network code."
      ); 
-#ifdef COIN_USE_CBC
+#ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("numberA!nalyze","Number of analysis iterations",
 		  -INT_MAX,INT_MAX,NUMBERANALYZE,false);
@@ -1842,7 +1843,7 @@ This is a first try and will hopefully become more sophisticated."
  gives greater precision, while 5,6 give IEEE values.  When used for exporting a basis 1 does not save \
 values, 2 saves values, 3 with greater accuracy and 4 in IEEE."
      );
-#ifdef COIN_USE_CBC
+#ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("passC!uts","Number of cut passes at root node",
 		  -999999,999999,CUTPASS);
@@ -1860,7 +1861,7 @@ stop if drop small if less than 5000 columns, 20 otherwise"
      ); 
   parameters[numberParameters-1].setIntValue(20);
 #endif 
-#ifdef COIN_USE_CLP
+#ifdef COIN_HAS_CLP
   parameters[numberParameters++]=
     CbcOrClpParam("passP!resolve","How many passes in presolve",
 		  -200,100,PRESOLVEPASS,false);
@@ -1927,7 +1928,7 @@ stop if drop small if less than 5000 columns, 20 otherwise"
 on will normally do 5 passes while using 'more' will do 10.  If the problem is very large you may need \
 to write the original to file using 'file'."
      ); 
-#ifdef COIN_USE_CBC
+#ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("preprocess","Whether to use integer preprocessing",
                   "off",PREPROCESS);
@@ -1945,7 +1946,7 @@ it also tries to strengthen the model - this can be very useful and is worth try
 and no overlaps.  trysos is same but allows any number extra."
      ); 
 #endif
-#ifdef COIN_USE_CLP
+#ifdef COIN_HAS_CLP
   parameters[numberParameters++]=
     CbcOrClpParam("preT!olerance","Tolerance to use in presolve",
 		  1.0e-20,1.0e12,PRESOLVETOLERANCE);
@@ -1992,7 +1993,7 @@ no primal infeasibility may exceed this value",
      "Normally the default tolerance is fine, but you may want to increase it a\
  bit if a primal run seems to be having a hard time"
      ); 
-#ifdef COIN_USE_CLP
+#ifdef COIN_HAS_CLP
   parameters[numberParameters++]=
     CbcOrClpParam("primalW!eight","Initially algorithm acts as if it \
 costs this much to be infeasible",
@@ -2034,7 +2035,7 @@ Also see printMask for controlling output."
 '*' matches any character.  The default is '' i.e. unset so all variables are printed. \
 This is only active if model has names."
      ); 
-#ifdef COIN_USE_CBC
+#ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("prio!rityIn","Import priorities etc from file",
 		  PRIORITYIN,3);
@@ -2065,7 +2066,7 @@ See branchAndCut for information on options."
     (
      "This stops the execution of Clp, end, exit, quit and stop are synonyms"
      ); 
-#ifdef COIN_USE_CLP
+#ifdef COIN_HAS_CLP
   parameters[numberParameters++]=
     CbcOrClpParam("reallyO!bjectiveScale","Scale factor to apply to objective in place",
 		  -1.0e20,1.0e20,OBJSCALE2,false);
@@ -2078,7 +2079,7 @@ See branchAndCut for information on options."
     CbcOrClpParam("reallyS!cale","Scales model in place",
 		  REALLY_SCALE,7,false);
 #endif
-#ifdef COIN_USE_CBC
+#ifdef COIN_HAS_CBC
     parameters[numberParameters++]=
       CbcOrClpParam("reduce!AndSplitCuts","Whether to use Reduce-and-Split cuts",
 	      "off",REDSPLITCUTS);
@@ -2091,7 +2092,7 @@ See branchAndCut for information on options."
 See branchAndCut for information on options."
      ); 
 #endif
-#ifdef COIN_USE_CLP
+#ifdef COIN_HAS_CLP
   parameters[numberParameters++]=
     CbcOrClpParam("restore!Model","Restore model from binary file",
 		  RESTORE);
@@ -2118,7 +2119,7 @@ See branchAndCut for information on options."
      ); 
   parameters[numberParameters-1].setDoubleValue(1.0);
 #endif
-#ifdef COIN_USE_CBC
+#ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("round!ingHeuristic","Whether to use Rounding heuristic",
 		  "off",ROUNDING);
@@ -2163,7 +2164,7 @@ activities and reduced costs - see bottom of CbcOrClpParam.cpp for code that wri
  infeasibilities."
      ); 
   parameters[numberParameters-1].setCurrentOption(3); // say auto
-#ifndef COIN_USE_CBC
+#ifndef COIN_HAS_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("sec!onds","Maximum seconds",
 		  -1.0,1.0e12,TIMELIMIT);
@@ -2190,7 +2191,7 @@ In this program it is really only useful for testing but the library function\n\
     (
      "If passed to solver fom ampl, then ampl will wait so that you can copy .nl file for debug."
      ); 
-#ifdef COIN_USE_CLP
+#ifdef COIN_HAS_CLP
   parameters[numberParameters++]=
     CbcOrClpParam("slp!Value","Number of slp passes before primal",
 		  -1,50000,SLPVALUE,false);
@@ -2209,8 +2210,8 @@ sequential Lps to get a good approximate solution."
  directory given by 'directory'.  A name of '$' will use the previous value for the name.  This\
  is initialized to 'stdout'.  The amount of output can be varied using printi!ngOptions or printMask."
      ); 
-#ifdef COIN_USE_CLP
-#ifdef COIN_USE_CBC
+#ifdef COIN_HAS_CLP
+#ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("solv!e","Solve problem",
 		  BAB);
@@ -2238,7 +2239,7 @@ this does branch and cut."
      ); 
 #endif
 #endif
-#ifdef COIN_USE_CLP
+#ifdef COIN_HAS_CLP
   parameters[numberParameters++]=
     CbcOrClpParam("spars!eFactor","Whether factorization treated as sparse",
 		  "on",SPARSEFACTOR,7,false);
@@ -2273,7 +2274,7 @@ this does branch and cut."
     (
      "This stops the execution of Clp, end, exit, quit and stop are synonyms"
      ); 
-#ifdef COIN_USE_CBC
+#ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("strengthen","Create strengthened problem",
 		  STRENGTHEN,3);
@@ -2293,7 +2294,7 @@ If a variable is branched on many times then the previous average up and down co
 see number before trust."
      ); 
 #endif
-#ifdef COIN_USE_CLP
+#ifdef COIN_HAS_CLP
   parameters[numberParameters++]=
     CbcOrClpParam("subs!titution","How long a column to substitute for in presolve",
 		  0,10000,SUBSTITUTION,false);
@@ -2307,7 +2308,7 @@ see number before trust."
     CbcOrClpParam("thread!s","Number of threads to try and use",
 		  -2,64,THREADS);
 #endif
-#ifdef COIN_USE_CBC
+#ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("tighten!Factor","Tighten bounds using this times largest \
 activity at continuous solution",
@@ -2317,12 +2318,12 @@ activity at continuous solution",
      "This sleazy trick can help on some problems."
      ); 
 #endif
-#ifdef COIN_USE_CLP
+#ifdef COIN_HAS_CLP
   parameters[numberParameters++]=
     CbcOrClpParam("tightLP","Poor person's preSolve for now",
 		  TIGHTEN,7,false);
 #endif
-#ifdef COIN_USE_CBC
+#ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("trust!PseudoCosts","Number of branches before we trust pseudocosts",
 		  -1,2000000,NUMBERBEFORE);
@@ -2332,7 +2333,7 @@ activity at continuous solution",
 trust the pseudo costs and do not do any more strong branching."
      ); 
 #endif
-#ifdef COIN_USE_CBC
+#ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("two!MirCuts","Whether to use Two phase Mixed Integer Rounding cuts",
 		  "off",TWOMIRCUTS);

@@ -63,6 +63,35 @@ libClp_la_SOURCES = \
 # This is for libtool (on Windows)
 libClp_la_LDFLAGS = -no-undefined
 
+########################################################################
+#                        clp_solver program                            #
+########################################################################
+
+# Name of the executable compiled in this directory.  We want it to be
+# installed in the 'bin' directory
+bin_PROGRAMS = clp_solver
+
+# List all source files for this executable, including headers
+clp_solver_SOURCES = \
+	ClpMain.cpp \
+	CbcOrClpParam.cpp CbcOrClpParam.hpp \
+	MyEventHandler.cpp MyEventHandler.hpp \
+	MyMessageHandler.cpp MyMessageHandler.hpp \
+	unitTest.cpp
+
+# List all additionally required COIN libraries
+clp_solver_LDADD = libClp.la \
+	$(COINBASEOBJDIR)/src/libCoinBase.la
+
+# And finally we add all missing libraries.  ADDLIBS is set bu configure to
+# include all libraries that are determined to be necessary (such as -lgz)
+LIBS += $(ADDLIBS) `cat $(COINBASEOBJDIR)/coinbase_addlibs.txt`
+
+########################################################################
+#                            Additional flags                          #
+########################################################################
+
+
 # Here list all include flags, relative to this "srcdir" directory.  This
 # "cygpath" stuff is necessary to compile with native compilers on Windows.
 # "top_srcdir" refers to the basic directory for the main package that is

@@ -26,6 +26,12 @@ AC_REVISION(0.9)
 # whether the package is actually there
 AC_CONFIG_SRCDIR(configure.ac)
 
+# Where should everything be installed by default?  Here, we want it
+# to be installed directly in 'bin', 'lib', 'include' subdirectories
+# of the directory where configure is run.  The default would be
+# /usr/local.
+AC_PREFIX_DEFAULT([`pwd`])
+
 #############################################################################
 #     We only need automake to generate Makefiles for the distribution      #
 #############################################################################

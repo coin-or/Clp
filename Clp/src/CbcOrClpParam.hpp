@@ -9,10 +9,10 @@
    This (and .cpp) should be copied so that it is the same in Cbc/Test and Clp/Test.
    I know this is not elegant but it seems simplest.
    
-   It uses COIN_USE_CBC for parameters wanted by CBC
-   It uses COIN_USE_CLP for parameters wanted by CLP (or CBC using CLP)
-   It could use COIN_USE_DYLP for parameters wanted by DYLP
-   It could use COIN_USE_DYLP_OR_CLP for parameters wanted by DYLP or CLP etc etc
+   It uses COIN_HAS_CBC for parameters wanted by CBC
+   It uses COIN_HAS_CLP for parameters wanted by CLP (or CBC using CLP)
+   It could use COIN_HAS_DYLP for parameters wanted by DYLP
+   It could use COIN_HAS_DYLP_OR_CLP for parameters wanted by DYLP or CLP etc etc
 
  */
 class OsiSolverInterface;
@@ -48,7 +48,7 @@ enum CbcOrClpParameterType
     DJFIX = 81, GAPRATIO,TIGHTENFACTOR,PRESOLVETOLERANCE,OBJSCALE2,
 
     SOLVERLOGLEVEL=101,
-#ifndef COIN_USE_CBC 
+#ifndef COIN_HAS_CBC 
     LOGLEVEL = 101, 
 #endif
     MAXFACTOR,PERTVALUE,MAXITERATION,PRESOLVEPASS,IDIOT,SPRINT,
@@ -57,7 +57,7 @@ enum CbcOrClpParameterType
 
     STRONGBRANCHING=151,CUTDEPTH, MAXNODES,NUMBERBEFORE,NUMBERANALYZE,
     NUMBERMINI,MIPOPTIONS,MOREMIPOPTIONS,MAXHOTITS,FPUMPITS,CUTPASS,
-#ifdef COIN_USE_CBC 
+#ifdef COIN_HAS_CBC 
     LOGLEVEL , 
 #endif
   

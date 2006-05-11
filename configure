@@ -281,6 +281,7 @@ PACKAGE_STRING='Clp 0.1'
 PACKAGE_BUGREPORT='coin-clp@lists.coin-or.org'
 
 ac_unique_file="configure.ac"
+ac_default_prefix=`pwd`
 ac_subdirs_all="$ac_subdirs_all CoinBase"
 ac_subdirs_all="$ac_subdirs_all Clp"
 ac_subdirs_all="$ac_subdirs_all Data/Netlib"
@@ -1265,6 +1266,12 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 # List one file in the package so that the configure script can test
 # whether the package is actually there
+
+
+# Where should everything be installed by default?  Here, we want it
+# to be installed directly in 'bin', 'lib', 'include' subdirectories
+# of the directory where configure is run.  The default would be
+# /usr/local.
 
 
 #############################################################################

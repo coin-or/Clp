@@ -9,34 +9,15 @@
 AUTOMAKE_OPTIONS = foreign
 
 ########################################################################
-#                         unitTest for Coin                            #
+#                         unitTest for Clp                             #
 ########################################################################
 
-noinst_PROGRAMS = unitTest
+# We are using the CLP solver executable to do the unit test
 
-unitTest_SOURCES = \
-	CbcOrClpParam.cpp CbcOrClpParam.hpp \
-	ClpMain.cpp \
-	MyEventHandler.cpp MyEventHandler.hpp \
-	MyMessageHandler.cpp MyMessageHandler.hpp \
-	unitTest.cpp
+test: ../src/clp_solver
+	../src/clp_solver -unitTest -netlib -netlibp
 
-# List libraries of COIN projects
-unitTest_LDADD = \
-	$(CLPOBJDIR)/src/libClp.la
-	$(COINBASEOBJDIR)/src/libCoinBase.la
-
-# List additional libraries
-LIBS += $(ADDLIBS) `cat $(COINBASEOBJDIR)/coin_addlibs.txt`
-
-# Here list all include flags, relative to this "srcdir" directory.  This
-# "cygpath" stuff is necessary to compile with native compilers on Windows
-CXXFLAGS += \
-        -I`$(CYGPATH_W) $(CLPSRCDIR)/src` \
-        -I`$(CYGPATH_W) $(COINBASESRCDIR)/src`
-
-test: unitTest
-	./unitTest -unitTest -netlib -netlibp
+.PHONY: test
 
 ########################################################################
 #                          Cleaning stuff                              #
