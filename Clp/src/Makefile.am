@@ -83,9 +83,14 @@ clp_solver_SOURCES = \
 clp_solver_LDADD = libClp.la \
 	$(COINBASEOBJDIR)/src/libCoinBase.la
 
-# And finally we add all missing libraries.  ADDLIBS is set bu configure to
-# include all libraries that are determined to be necessary (such as -lgz)
-LIBS += $(ADDLIBS) `cat $(COINBASEOBJDIR)/coinbase_addlibs.txt`
+# And finally we add all missing libraries.  ADDLIBS is set by configure to
+# include all libraries that are determined to be necessary (such as -lgz).
+# We also need to list the additional libraries for the other COIN libraries
+# used.  Finally, the -rpath flag is used by libtool to make sure that
+# the shared library is found (in the lib install directory) when we are
+# using dynamic libraries.
+clp_solver_LDFLAGS = $(ADDLIBS) `cat $(COINBASEOBJDIR)/coinbase_addlibs.txt` \
+	-rpath $(libdir)
 
 ########################################################################
 #                            Additional flags                          #
@@ -163,4 +168,4 @@ nodist_include_HEADERS = ../inc/$(CONFIG_DIST)
 
 CLEANFILES = bla.tmp
 
-DISTCLEANFILES = $(CONFIG_DIST)
+DISTCLEANFILES = ../inc/$(CONFIG_DIST)

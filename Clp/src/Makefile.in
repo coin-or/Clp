@@ -180,10 +180,7 @@ INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LDFLAGS = @LDFLAGS@
 LIBOBJS = @LIBOBJS@
-
-# And finally we add all missing libraries.  ADDLIBS is set bu configure to
-# include all libraries that are determined to be necessary (such as -lgz)
-LIBS = @LIBS@ $(ADDLIBS) `cat $(COINBASEOBJDIR)/coinbase_addlibs.txt`
+LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
 LIBTOOLM4 = @LIBTOOLM4@
 LN_S = @LN_S@
@@ -326,6 +323,9 @@ clp_solver_SOURCES = \
 clp_solver_LDADD = libClp.la \
 	$(COINBASEOBJDIR)/src/libCoinBase.la
 
+clp_solver_LDFLAGS = $(ADDLIBS) `cat $(COINBASEOBJDIR)/coinbase_addlibs.txt` \
+	-rpath $(libdir)
+
 
 ########################################################################
 #                Headers that need to be installed                     #
@@ -371,7 +371,7 @@ CONFIG_DIST = ClpConfig.hpp
 CONFIG_H = config_clp.h
 nodist_include_HEADERS = ../inc/$(CONFIG_DIST)
 CLEANFILES = bla.tmp
-DISTCLEANFILES = $(CONFIG_DIST)
+DISTCLEANFILES = ../inc/$(CONFIG_DIST)
 all: all-am
 
 .SUFFIXES:
