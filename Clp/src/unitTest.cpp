@@ -1,6 +1,7 @@
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
+#include "ClpConfig.hpp"
 #include "CoinPragma.hpp"
 #include <cassert>
 #include <cstdio>

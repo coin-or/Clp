@@ -3,6 +3,8 @@
 #ifndef ClpModel_H
 #define ClpModel_H
 
+#include "ClpConfig.hpp"
+
 #include <iostream>
 #include <cassert>
 #include <cmath>

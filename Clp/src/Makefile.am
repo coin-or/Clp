@@ -96,7 +96,6 @@ clp_solver_LDFLAGS = $(ADDLIBS) `cat $(COINBASEOBJDIR)/coinbase_addlibs.txt` \
 #                            Additional flags                          #
 ########################################################################
 
-
 # Here list all include flags, relative to this "srcdir" directory.  This
 # "cygpath" stuff is necessary to compile with native compilers on Windows.
 # "top_srcdir" refers to the basic directory for the main package that is
@@ -153,7 +152,7 @@ nodist_include_HEADERS = ../inc/$(CONFIG_DIST)
 	echo "/** Required defines from $(CONFIG_H) */" >bla.tmp
 	echo "#ifndef __$(CONFIG_DIST)__" | sed -e 's/\./_/g' >>bla.tmp
 	echo "#define __$(CONFIG_DIST)__" | sed -e 's/\./_/g' >>bla.tmp
-	$(EGREP) 'COIN_HAS' $< >>bla.tmp
+	$(EGREP) 'COIN_' $< >>bla.tmp
 	echo "#endif" >>bla.tmp
 	if test -r ../inc/$(CONFIG_DIST); then \
 	  if diff ./inc/$(CONFIG_DIST) bla.tmp >/dev/null 2>1 ; then \

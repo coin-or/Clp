@@ -4,6 +4,8 @@
 
 //#undef NDEBUG
 
+#include "ClpConfig.hpp"
+
 #include "CoinPragma.hpp"
 #include <math.h>
 

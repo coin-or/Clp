@@ -1,6 +1,12 @@
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
+#ifdef USE_CBCCONFIG
+# include "CbcConfig.hpp"
+#else
+# include "ClpConfig.hpp"
+#endif
+
 #ifndef CbcOrClpParam_H
 #define CbcOrClpParam_H
 /**

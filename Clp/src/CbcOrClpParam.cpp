@@ -5,12 +5,12 @@
 #  pragma warning(disable:4786)
 #endif
 
-#include "ClpConfig.hpp"
+#include "CbcOrClpParam.hpp"
+
 #include <string>
 #include <iostream>
 #include <cassert>
 
-#include "CbcOrClpParam.hpp"
 #ifdef COIN_HAS_CBC
 #include "OsiClpSolverInterface.hpp"
 #include "ClpSimplex.hpp"
