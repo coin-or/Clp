@@ -90,7 +90,7 @@ am_clp_solver_OBJECTS = ClpMain.$(OBJEXT) CbcOrClpParam.$(OBJEXT) \
 	unitTest.$(OBJEXT)
 clp_solver_OBJECTS = $(am_clp_solver_OBJECTS)
 clp_solver_DEPENDENCIES = libClp.la \
-	$(COINBASEOBJDIR)/src/libCoinBase.la
+	$(COINUTILSOBJDIR)/src/libCoinUtils.la
 DEFAULT_INCLUDES = -I. -I$(srcdir) -I$(top_builddir)/inc
 depcomp = $(SHELL) $(top_srcdir)/../depcomp
 am__depfiles_maybe = depfiles
@@ -137,14 +137,14 @@ CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
 CLPOBJDIR = @CLPOBJDIR@
 CLPSRCDIR = @CLPSRCDIR@
-COINBASEOBJDIR = @COINBASEOBJDIR@
-COINBASESRCDIR = @COINBASESRCDIR@
+COINUTILSOBJDIR = @COINUTILSOBJDIR@
+COINUTILSSRCDIR = @COINUTILSSRCDIR@
 COIN_DEBUG_FALSE = @COIN_DEBUG_FALSE@
 COIN_DEBUG_TRUE = @COIN_DEBUG_TRUE@
 COIN_HAS_CLP_FALSE = @COIN_HAS_CLP_FALSE@
 COIN_HAS_CLP_TRUE = @COIN_HAS_CLP_TRUE@
-COIN_HAS_COINBASE_FALSE = @COIN_HAS_COINBASE_FALSE@
-COIN_HAS_COINBASE_TRUE = @COIN_HAS_COINBASE_TRUE@
+COIN_HAS_COINUTILS_FALSE = @COIN_HAS_COINUTILS_FALSE@
+COIN_HAS_COINUTILS_TRUE = @COIN_HAS_COINUTILS_TRUE@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CXX = @CXX@
@@ -160,7 +160,7 @@ CXXDEPMODE = @CXXDEPMODE@
 # "cygpath" stuff is necessary to compile with native compilers on Windows.
 # "top_srcdir" refers to the basic directory for the main package that is
 # being compiled.
-CXXFLAGS = @CXXFLAGS@ -I`$(CYGPATH_W) $(COINBASESRCDIR)/src`
+CXXFLAGS = @CXXFLAGS@ -I`$(CYGPATH_W) $(COINUTILSSRCDIR)/src`
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
@@ -180,7 +180,10 @@ INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LDFLAGS = @LDFLAGS@
 LIBOBJS = @LIBOBJS@
-LIBS = @LIBS@
+
+# Here we add additional libraries
+LIBS = @LIBS@ $(ADDLIBS) `cat \
+	$(COINUTILSOBJDIR)/coinutils_addlibs.txt`
 LIBTOOL = @LIBTOOL@
 LIBTOOLM4 = @LIBTOOLM4@
 LN_S = @LN_S@
@@ -321,18 +324,13 @@ clp_solver_SOURCES = \
 
 # List all additionally required COIN libraries
 clp_solver_LDADD = libClp.la \
-	$(COINBASEOBJDIR)/src/libCoinBase.la
+	$(COINUTILSOBJDIR)/src/libCoinUtils.la
 
 
-# And finally we add all missing libraries.  ADDLIBS is set by configure to
-# include all libraries that are determined to be necessary (such as -lgz).
-# We also need to list the additional libraries for the other COIN libraries
-# used.  Finally, the -rpath flag is used by libtool to make sure that
-# the shared library is found (in the lib install directory) when we are
-# using dynamic libraries.
-clp_solver_LDFLAGS = $(ADDLIBS) `cat $(COINBASEOBJDIR)/coinbase_addlibs.txt` \
-	-rpath $(libdir)
-
+# Finally, the -rpath flag is used by libtool to make sure that the shared
+# library is found (in the lib install directory) when we are using dynamic
+# libraries.
+clp_solver_LDFLAGS = -rpath $(libdir)
 
 ########################################################################
 #                Headers that need to be installed                     #

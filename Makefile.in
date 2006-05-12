@@ -579,7 +579,7 @@ uninstall-info: uninstall-info-recursive
 #                           Extra Targets                              #
 ########################################################################
 
-test:
+test: all
 	cd Clp; make test
 
 unitTest: test
@@ -625,7 +625,12 @@ unitTests: tests
 @HAVE_EXTERNALS_TRUE@@MAINTAINER_MODE_TRUE@	cd $(srcdir); svn propset svn:externals -F Externals .
 @HAVE_EXTERNALS_TRUE@@MAINTAINER_MODE_TRUE@	touch .Externals-stamp
 
-@HAVE_EXTERNALS_TRUE@@MAINTAINER_MODE_TRUE@distclean-local:
+@HAVE_EXTERNALS_TRUE@@MAINTAINER_MODE_TRUE@update-externals: .Externals-stamp
+@HAVE_EXTERNALS_TRUE@@MAINTAINER_MODE_TRUE@	cd $(srcdir); svn update
+
+@HAVE_EXTERNALS_TRUE@@MAINTAINER_MODE_TRUE@distclean-local: clean-externals-stamp
+
+@HAVE_EXTERNALS_TRUE@@MAINTAINER_MODE_TRUE@clean-externals-stamp:
 @HAVE_EXTERNALS_TRUE@@MAINTAINER_MODE_TRUE@	rm -f .Externals-stamp
 
 ########################################################################

@@ -81,16 +81,15 @@ clp_solver_SOURCES = \
 
 # List all additionally required COIN libraries
 clp_solver_LDADD = libClp.la \
-	$(COINBASEOBJDIR)/src/libCoinBase.la
+	$(COINUTILSOBJDIR)/src/libCoinUtils.la
 
-# And finally we add all missing libraries.  ADDLIBS is set by configure to
-# include all libraries that are determined to be necessary (such as -lgz).
-# We also need to list the additional libraries for the other COIN libraries
-# used.  Finally, the -rpath flag is used by libtool to make sure that
-# the shared library is found (in the lib install directory) when we are
-# using dynamic libraries.
-clp_solver_LDFLAGS = $(ADDLIBS) `cat $(COINBASEOBJDIR)/coinbase_addlibs.txt` \
-	-rpath $(libdir)
+# Here we add additional libraries
+LIBS += $(ADDLIBS) `cat $(COINUTILSOBJDIR)/coinutils_addlibs.txt`
+
+# Finally, the -rpath flag is used by libtool to make sure that the shared
+# library is found (in the lib install directory) when we are using dynamic
+# libraries.
+clp_solver_LDFLAGS = -rpath $(libdir)
 
 ########################################################################
 #                            Additional flags                          #
@@ -101,7 +100,7 @@ clp_solver_LDFLAGS = $(ADDLIBS) `cat $(COINBASEOBJDIR)/coinbase_addlibs.txt` \
 # "top_srcdir" refers to the basic directory for the main package that is
 # being compiled.
 CXXFLAGS += \
-	-I`$(CYGPATH_W) $(COINBASESRCDIR)/src`
+	-I`$(CYGPATH_W) $(COINUTILSSRCDIR)/src`
 
 ########################################################################
 #                Headers that need to be installed                     #
