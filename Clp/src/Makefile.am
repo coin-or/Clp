@@ -64,15 +64,15 @@ libClp_la_SOURCES = \
 libClp_la_LDFLAGS = -no-undefined
 
 ########################################################################
-#                        clp_solver program                            #
+#                            clp program                               #
 ########################################################################
 
 # Name of the executable compiled in this directory.  We want it to be
 # installed in the 'bin' directory
-bin_PROGRAMS = clp_solver
+bin_PROGRAMS = clp
 
 # List all source files for this executable, including headers
-clp_solver_SOURCES = \
+clp_SOURCES = \
 	ClpMain.cpp \
 	CbcOrClpParam.cpp CbcOrClpParam.hpp \
 	MyEventHandler.cpp MyEventHandler.hpp \
@@ -80,7 +80,7 @@ clp_solver_SOURCES = \
 	unitTest.cpp
 
 # List all additionally required COIN libraries
-clp_solver_LDADD = libClp.la \
+clp_LDADD = libClp.la \
 	$(COINUTILSOBJDIR)/src/libCoinUtils.la
 
 # Here we add additional libraries
@@ -89,7 +89,7 @@ LIBS += $(ADDLIBS) `cat $(COINUTILSOBJDIR)/coinutils_addlibs.txt`
 # Finally, the -rpath flag is used by libtool to make sure that the shared
 # library is found (in the lib install directory) when we are using dynamic
 # libraries.
-clp_solver_LDFLAGS = -rpath $(libdir)
+clp_LDFLAGS = -rpath $(libdir)
 
 ########################################################################
 #                            Additional flags                          #
@@ -143,7 +143,7 @@ include_HEADERS = \
 # You should only need to adapt the following three lines
 CONFIG_DIST = ClpConfig.hpp
 CONFIG_H = config_clp.h
-$(libClp_la_OBJECTS): ../inc/$(CONFIG_DIST)
+$(libClp_la_OBJECTS) $(clp_OBJECTS): ../inc/$(CONFIG_DIST)
 
 nodist_include_HEADERS = ../inc/$(CONFIG_DIST)
 
