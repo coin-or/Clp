@@ -14,8 +14,8 @@ AUTOMAKE_OPTIONS = foreign
 
 # We are using the CLP solver executable to do the unit test
 
-test: ../src/clp_solver
-	../src/clp_solver -unitTest -netlib -netlibp
+test: ../src/clp
+	../src/clp -unitTest -netlib -netlibp
 
 .PHONY: test
 
