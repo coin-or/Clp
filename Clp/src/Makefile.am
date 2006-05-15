@@ -61,7 +61,7 @@ libClp_la_SOURCES = \
 	IdiSolve.cpp
 
 # This is for libtool (on Windows)
-libClp_la_LDFLAGS = -no-undefined
+libClp_la_LDFLAGS = # -no-undefined
 
 ########################################################################
 #                            clp program                               #

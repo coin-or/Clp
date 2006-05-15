@@ -310,7 +310,7 @@ libClp_la_SOURCES = \
 
 
 # This is for libtool (on Windows)
-libClp_la_LDFLAGS = -no-undefined
+libClp_la_LDFLAGS = # -no-undefined
 
 # List all source files for this executable, including headers
 clp_SOURCES = \
