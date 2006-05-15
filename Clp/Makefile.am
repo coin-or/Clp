@@ -59,7 +59,7 @@ clean-local:
 distclean-local:
 	if test -r test/Makefile; then cd test; make distclean; fi
 
-.PHONY: test unitTest
+.PHONY: test unitTest clean-test distclean-test
 
 ########################################################################
 #                  Installation of the addlibs file                    #
@@ -72,3 +72,12 @@ install-exec-local:
 
 uninstall-local:
 	rm -f $(DESTDIR)$(libdir)/$(addlibsfile)
+
+########################################################################
+#                         Maintainer Stuff                             #
+########################################################################
+
+# Files that are generated and should be cleaned with make distclean
+DISTCLEANFILES =
+
+include ../BuildTools/Makemain.inc
