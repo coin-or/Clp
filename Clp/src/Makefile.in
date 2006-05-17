@@ -90,7 +90,6 @@ am_clp_OBJECTS = ClpMain.$(OBJEXT) CbcOrClpParam.$(OBJEXT) \
 	unitTest.$(OBJEXT)
 clp_OBJECTS = $(am_clp_OBJECTS)
 clp_DEPENDENCIES = libClp.la $(COINUTILSOBJDIR)/src/libCoinUtils.la
-DEFAULT_INCLUDES = -I. -I$(srcdir) -I$(top_builddir)/inc
 depcomp = $(SHELL) $(top_srcdir)/../depcomp
 am__depfiles_maybe = depfiles
 CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
@@ -330,6 +329,10 @@ clp_LDADD = libClp.la \
 # library is found (in the lib install directory) when we are using dynamic
 # libraries.
 clp_LDFLAGS = -rpath $(libdir)
+
+# This line is necessary to allow VPATH compilation with MS compilers
+# on Cygwin
+DEFAULT_INCLUDES = -I. -I`$(CYGPATH_W) $(srcdir)` -I$(top_builddir)/inc
 
 ########################################################################
 #                Headers that need to be installed                     #

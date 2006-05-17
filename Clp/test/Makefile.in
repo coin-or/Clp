@@ -355,8 +355,8 @@ uninstall-am: uninstall-info-am
 ########################################################################
 
 # We are using the CLP solver executable to do the unit test
-
 test: ../src/clp$(EXEEXT)
+	cd ../../Data/Netlib; make uncompress
 	../src/clp$(EXEEXT) -unitTest -netlib -netlibp
 
 .PHONY: test
