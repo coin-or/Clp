@@ -2,9 +2,9 @@
 // Corporation and others.  All Rights Reserved.
 
 #ifdef USE_CBCCONFIG
-# include "CbcConfig.hpp"
+# include "CbcConfig.h"
 #else
-# include "ClpConfig.hpp"
+# include "ClpConfig.h"
 #endif
 
 #ifndef CbcOrClpParam_H

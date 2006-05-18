@@ -3,7 +3,7 @@
 
 // This file has higher level solve functions
 
-#include "ClpConfig.hpp"
+#include "ClpConfig.h"
 #include "CoinPragma.hpp"
 
 #include <math.h>

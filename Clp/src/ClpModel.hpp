@@ -3,7 +3,7 @@
 #ifndef ClpModel_H
 #define ClpModel_H
 
-#include "ClpConfig.hpp"
+#include "ClpConfig.h"
 
 #include <iostream>
 #include <cassert>

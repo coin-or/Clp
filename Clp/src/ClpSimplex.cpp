@@ -4,7 +4,7 @@
 
 //#undef NDEBUG
 
-#include "ClpConfig.hpp"
+#include "ClpConfig.h"
 
 #include "CoinPragma.hpp"
 #include <math.h>
