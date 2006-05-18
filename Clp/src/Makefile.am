@@ -154,6 +154,7 @@ install-exec-local:
 	echo "#endif" >> bla
 	cat $(srcdir)/$(ConfigHeader) >> bla
 	$(install_sh_DATA) bla $(DESTDIR)$(includedir)/$(ConfigHeader)
+	rm -f bla
 
 uninstall-local:
 	rm -f $(DESTDIR)$(includedir)/$(ConfigHeader)
