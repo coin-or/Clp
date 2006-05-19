@@ -186,6 +186,7 @@ LIBTOOL = @LIBTOOL@
 LIBTOOLM4 = @LIBTOOLM4@
 LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
+LT_LDFLAGS = @LT_LDFLAGS@
 MAINT = @MAINT@
 MAINTAINER_MODE_FALSE = @MAINTAINER_MODE_FALSE@
 MAINTAINER_MODE_TRUE = @MAINTAINER_MODE_TRUE@
@@ -309,7 +310,7 @@ libClp_la_SOURCES = \
 
 
 # This is for libtool (on Windows)
-libClp_la_LDFLAGS = # -no-undefined
+libClp_la_LDFLAGS = $(LT_LDFLAGS) `cygpath -w ../../CoinUtils/src/libCoinUtils.la`
 
 # List all source files for this executable, including headers
 clp_SOURCES = \
