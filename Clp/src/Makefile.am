@@ -18,6 +18,7 @@ lib_LTLIBRARIES = libClp.la
 
 # List all source files for this library, including headers
 libClp_la_SOURCES = \
+	ClpConfig.h \
 	ClpCholeskyBase.cpp ClpCholeskyBase.hpp \
 	ClpCholeskyDense.cpp ClpCholeskyDense.hpp \
 	ClpCholeskyUfl.cpp ClpCholeskyUfl.hpp \
