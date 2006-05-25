@@ -2,6 +2,7 @@
 Clp/clp_addlibs.txt.in -text
 Clp/configure -text
 Clp/configure.ac -text
+Clp/examples/Makefile.in -text
 Clp/inc/config_clp.h.in -text
 /Clp_1.01.01.tar.gz -text
 /Clp_1.01.02.tar.gz -text
