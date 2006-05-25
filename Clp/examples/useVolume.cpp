@@ -161,7 +161,7 @@ int main (int argc, const char *argv[])
   int status;
 
   if (argc<2)
-    status=model.readMps("../../Mps/Sample/p0033.mps",true);
+    status=model.readMps("../../Data/Sample/p0033.mps",true);
   else
     status=model.readMps(argv[1],true);
   /*

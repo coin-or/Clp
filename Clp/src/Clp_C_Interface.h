@@ -116,7 +116,7 @@ extern "C"{
   /** Fills in array with problem name  */
   COINLIBAPI void COINLINKAGE Clp_problemName(Clp_Simplex * model, int maxNumberCharacters, char * array);
   /* Sets problem name.  Must have \0 at end.  */
-  COINLIBAPI bool COINLINKAGE 
+  COINLIBAPI int COINLINKAGE 
     Clp_setProblemName(Clp_Simplex * model, int maxNumberCharacters, char * array);
   /** Number of iterations */
   COINLIBAPI int COINLINKAGE Clp_numberIterations(Clp_Simplex * model);

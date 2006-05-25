@@ -115,11 +115,19 @@ DEFAULT_INCLUDES = -I. -I`$(CYGPATH_W) $(srcdir)` -I$(top_builddir)/inc
 # and that therefore should be installed in 'install'
 include_HEADERS = \
 	../inc/config_clp.h \
+	Clp_C_Interface.h \
+	ClpCholeskyBase.hpp \
+	ClpCholeskyDense.hpp \
+	ClpCholeskyWssmp.hpp \
 	ClpDualRowDantzig.hpp \
 	ClpDualRowPivot.hpp \
 	ClpDualRowSteepest.hpp \
+	ClpDynamicExampleMatrix.hpp \
+	ClpDynamicMatrix.hpp \
 	ClpEventHandler.hpp \
 	ClpFactorization.hpp \
+	ClpGubDynamicMatrix.hpp \
+	ClpGubMatrix.hpp \
 	ClpInterior.hpp \
 	ClpLinearObjective.hpp \
 	ClpMatrixBase.hpp \
@@ -135,6 +143,7 @@ include_HEADERS = \
 	ClpPrimalColumnDantzig.hpp \
 	ClpPrimalColumnPivot.hpp \
 	ClpPrimalColumnSteepest.hpp \
+	ClpQuadraticObjective.hpp \
 	ClpSimplex.hpp \
 	ClpSimplexNonlinear.hpp \
 	ClpSimplexOther.hpp \

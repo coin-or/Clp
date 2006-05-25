@@ -434,7 +434,7 @@ Clp_problemName(Clp_Simplex * model, int maxNumberCharacters, char * array)
   array[maxNumberCharacters-1]='\0';
 }
 /* Sets problem name.  Must have \0 at end.  */
-COINLIBAPI bool COINLINKAGE 
+COINLIBAPI int COINLINKAGE 
 Clp_setProblemName(Clp_Simplex * model, int maxNumberCharacters, char * array)
 {
   return model->model_->setStrParam(ClpProbName, array);

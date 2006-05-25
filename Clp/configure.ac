@@ -68,12 +68,23 @@ AC_COIN_HAS_PROJECT(Clp)
 AC_COIN_CHECK_READLINE
 
 ##############################################################################
+#                   VPATH links for example input files                      #
+##############################################################################
+
+# In case this is a VPATH configuration we need to make sure that the
+# input files for the examples are available in the VPATH directory.
+
+AC_COIN_VPATH_LINK(examples/hello.mps)
+AC_COIN_VPATH_LINK(examples/input.130)
+
+##############################################################################
 #                   Finishing up by writing all the output                   #
 ##############################################################################
 
 # Here list all the files that configure should create (except for the
 # configuration header file)
 AC_CONFIG_FILES([Makefile
+                 examples/Makefile
                  src/Makefile
                  test/Makefile
 		 clp_addlibs.txt])

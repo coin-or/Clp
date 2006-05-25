@@ -40,7 +40,7 @@ int main (int argc, const char *argv[])
   Clp_registerCallBack(model,callBack);
   /* Keep names when reading an mps file */
   if (argc<2)
-    status=Clp_readMps(model,"../../Mps/Sample/p0033.mps",1,0);
+    status=Clp_readMps(model,"../../Data/Sample/p0033.mps",1,0);
   else
     status=Clp_readMps(model,argv[1],1,0);
 

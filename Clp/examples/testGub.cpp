@@ -14,10 +14,10 @@ int main (int argc, const char *argv[])
   int status;
   int maxFactor=100;
   if (argc<2) {
-    status=model.readMps("../../Mps/Netlib/czprob.mps");
+    status=model.readMps("../../Data/Netlib/czprob.mps");
     if (status) {
       printf("Unable to read matrix - trying gzipped version\n");
-      status=model.readMps("../../Mps/Netlib/czprob.mps.gz");
+      status=model.readMps("../../Data/Netlib/czprob.mps.gz");
     }
   } else {
     status=model.readMps(argv[1]);

@@ -20,7 +20,7 @@ int main (int argc, const char *argv[])
   */
   if (argc<2) {
     CoinMpsIO  m;
-    int status=m.readMps("../../Mps/Sample/share2qp","mps");
+    int status=m.readMps("../../Data/Sample/share2qp","mps");
     if (status) {
       printf("errors on input\n");
       exit(77);

@@ -34,7 +34,7 @@ int main (int argc, const char *argv[])
 {
   // Empty model
   ClpSimplex  model;
-  std::string mpsFileName = "../../Mps/Netlib/25fv47.mps";
+  std::string mpsFileName = "../../Data/Netlib/25fv47.mps";
   if (argc>=2) mpsFileName = argv[1];
   int status=model.readMps(mpsFileName.c_str(),true);
 

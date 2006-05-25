@@ -10,7 +10,7 @@ int main (int argc, const char *argv[])
   ClpInterior  model;
   int status;
   if (argc<2)
-    status=model.readMps("../../Mps/Sample/p0033.mps");
+    status=model.readMps("../../Data/Sample/p0033.mps");
   else
     status=model.readMps(argv[1]);
   if (status) {

@@ -63,7 +63,7 @@ int main (int argc, const char *argv[])
   if ( argc>1 ) {
     name=argv[1];
   } else {
-    name="../../Mps/Sample/p0033.mps";
+    name="../../Data/Sample/p0033.mps";
   }
 
   /* initialize OSL environment */

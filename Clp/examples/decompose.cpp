@@ -12,7 +12,7 @@ int main (int argc, const char *argv[])
   // Keep names
   if (argc<2) {
     //status=model.readMps("/home/forrest/data/ken-18.mps.gz",true);
-    status=model.readMps("../../Mps/Netlib/czprob.mps",true);
+    status=model.readMps("../../Data/Netlib/czprob.mps",true);
   } else {
     status=model.readMps(argv[1],true);
   }
