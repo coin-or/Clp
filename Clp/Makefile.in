@@ -242,7 +242,20 @@ EXTRA_DIST = doc/authors.xml doc/basicmodelclasses.xml doc/clpexe.xml \
 	doc/clpuserguide.xml doc/doxygen.xml doc/faqcontent.xml \
 	doc/faq.xml doc/intro.xml doc/legal.xml doc/messages.xml \
 	doc/moresamples.xml doc/notsobasic.xml doc/revhist.xml \
-	doc/Howto/docbook4clp.xml $(am__append_3)
+	doc/Howto/docbook4clp.xml examples/addBits.cpp \
+	examples/addColumns.cpp examples/addRows.cpp \
+	examples/decompose.cpp examples/defaults.cpp \
+	examples/driver2.cpp examples/driverC.c examples/driver.cpp \
+	examples/dualCuts.cpp examples/ekk.cpp \
+	examples/ekk_interface.cpp examples/hello.cpp \
+	examples/hello.mps examples/input.130 examples/INSTALL \
+	examples/makeDual.cpp examples/Makefile.in \
+	examples/minimum.cpp examples/network.cpp examples/piece.cpp \
+	examples/rowColumn.cpp examples/sprint2.cpp \
+	examples/sprint.cpp examples/testBarrier.cpp \
+	examples/testBasis.cpp examples/testGub2.cpp \
+	examples/testGub.cpp examples/testQP.cpp \
+	examples/useVolume.cpp $(am__append_3)
 
 ########################################################################
 #                  Installation of the addlibs file                    #

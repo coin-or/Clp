@@ -42,7 +42,36 @@ EXTRA_DIST = \
 	doc/moresamples.xml \
 	doc/notsobasic.xml \
 	doc/revhist.xml \
-	doc/Howto/docbook4clp.xml
+	doc/Howto/docbook4clp.xml \
+	examples/addBits.cpp \
+	examples/addColumns.cpp \
+	examples/addRows.cpp \
+	examples/decompose.cpp \
+	examples/defaults.cpp \
+	examples/driver2.cpp \
+	examples/driverC.c \
+	examples/driver.cpp \
+	examples/dualCuts.cpp \
+	examples/ekk.cpp \
+	examples/ekk_interface.cpp \
+	examples/hello.cpp \
+	examples/hello.mps \
+	examples/input.130 \
+	examples/INSTALL \
+	examples/makeDual.cpp \
+	examples/Makefile.in \
+	examples/minimum.cpp \
+	examples/network.cpp \
+	examples/piece.cpp \
+	examples/rowColumn.cpp \
+	examples/sprint2.cpp \
+	examples/sprint.cpp \
+	examples/testBarrier.cpp \
+	examples/testBasis.cpp \
+	examples/testGub2.cpp \
+	examples/testGub.cpp \
+	examples/testQP.cpp \
+	examples/useVolume.cpp
 
 ########################################################################
 #                           Extra Targets                              #
