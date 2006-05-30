@@ -717,6 +717,9 @@ uninstall-info: uninstall-info-recursive
 test: all
 	cd test; make test
 
+doc:
+	cd $(srcdir); doxygen doc/doxygen.conf
+
 unitTest: test
 
 clean-local:
@@ -725,10 +728,7 @@ clean-local:
 distclean-local:
 	if test -r test/Makefile; then cd test; make distclean; fi
 
-doc:
-	cd $(srcdir); doxygen doc/doxygen.conf
-
-.PHONY: test unitTest clean-test distclean-test doc
+.PHONY: test unitTest doc
 
 install-exec-local:
 	$(install_sh_DATA) $(addlibsfile) $(DESTDIR)$(libdir)/$(addlibsfile)
