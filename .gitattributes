@@ -5,8 +5,6 @@ Clp/configure.ac -text
 Clp/doc/doxygen.conf -text
 Clp/examples/Makefile.in -text
 Clp/inc/config_clp.h.in -text
-/Clp_1.01.01.tar.gz -text
-/Clp_1.01.02.tar.gz -text
 /Externals -text
 /config.guess -text
 /config.sub -text
