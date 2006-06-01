@@ -205,6 +205,7 @@ SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
 VERSION = @VERSION@
+VPATH_DISTCLEANFILES = @VPATH_DISTCLEANFILES@
 abs_bin_dir = @abs_bin_dir@
 abs_include_dir = @abs_include_dir@
 abs_lib_dir = @abs_lib_dir@

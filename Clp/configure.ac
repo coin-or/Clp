@@ -24,6 +24,12 @@ under the Common Public License.])
 # whether the package is actually there
 AC_CONFIG_SRCDIR(src/ClpCholeskyBase.cpp)
 
+# Where should everything be installed by default?  Here, we want it
+# to be installed directly in 'bin', 'lib', 'include' subdirectories
+# of the directory where configure is run.  The default would be
+# /usr/local.
+AC_PREFIX_DEFAULT([`pwd`])
+
 #############################################################################
 #                         Standard build tool stuff                         #
 #############################################################################
@@ -31,17 +37,11 @@ AC_CONFIG_SRCDIR(src/ClpCholeskyBase.cpp)
 # Get the system type
 AC_CANONICAL_BUILD
 
-# Where should everything be installed by default?  Here, we want it
-# to be installed directly in 'bin', 'lib', 'include' subdirectories
-# of the directory where configure is run.  The default would be
-# /usr/local.
-AC_PREFIX_DEFAULT([`pwd`])
-
 # If this project depends on external projects, the Externals file in
 # the source root directory contains definition of where to find those
 # externals.  The following macro ensures that those externals are
 # retrieved by svn if they are not there yet.
-AC_COIN_SRCDIR_INIT
+AC_COIN_PROJECTDIR_INIT
 
 # Check if user wants to produce debugging code
 AC_COIN_DEBUG_COMPILE
@@ -63,7 +63,7 @@ AC_COIN_HAS_PROJECT(Clp)
 #                             Other dependencies                            #
 #############################################################################
 
-AC_COIN_CHECK_READLINE
+AC_COIN_CHECK_GNU_READLINE
 
 ##############################################################################
 #                   VPATH links for example input files                      #
@@ -91,7 +91,4 @@ AC_CONFIG_FILES([Makefile
 AC_CONFIG_HEADER([inc/config_clp.h])
 
 # Finally, we let configure write all the output...
-AC_OUTPUT
-
-# ...and tell the user, that the configuration finished
-AC_MSG_NOTICE([Clp configuration successful])
+AC_COIN_FINALIZE

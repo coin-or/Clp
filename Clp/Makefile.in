@@ -64,8 +64,8 @@ DIST_COMMON = README $(am__configure_deps) \
 	$(srcdir)/clp_addlibs.txt.in $(top_srcdir)/configure \
 	$(top_srcdir)/examples/Makefile.in \
 	$(top_srcdir)/inc/config_clp.h.in AUTHORS INSTALL
-@HAVE_EXTERNALS_TRUE@@MAINTAINER_MODE_TRUE@am__append_2 = .Externals-stamp
-@HAVE_EXTERNALS_TRUE@@MAINTAINER_MODE_TRUE@am__append_3 = Externals
+@HAVE_EXTERNALS_TRUE@am__append_2 = Externals
+@HAVE_EXTERNALS_TRUE@am__append_3 = .Externals-stamp
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/acinclude.m4 \
@@ -76,8 +76,7 @@ am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
  configure.lineno configure.status.lineno
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/inc/config_clp.h
-CONFIG_CLEAN_FILES = examples/Makefile clp_addlibs.txt \
-	examples/hello.mps examples/input.130
+CONFIG_CLEAN_FILES = examples/Makefile clp_addlibs.txt
 SOURCES =
 DIST_SOURCES =
 RECURSIVE_TARGETS = all-recursive check-recursive dvi-recursive \
@@ -178,6 +177,7 @@ SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
 VERSION = @VERSION@
+VPATH_DISTCLEANFILES = @VPATH_DISTCLEANFILES@
 abs_bin_dir = @abs_bin_dir@
 abs_include_dir = @abs_include_dir@
 abs_lib_dir = @abs_lib_dir@
@@ -255,7 +255,7 @@ EXTRA_DIST = doc/authors.xml doc/basicmodelclasses.xml doc/clpexe.xml \
 	examples/sprint.cpp examples/testBarrier.cpp \
 	examples/testBasis.cpp examples/testGub2.cpp \
 	examples/testGub.cpp examples/testQP.cpp \
-	examples/useVolume.cpp $(am__append_3)
+	examples/useVolume.cpp $(am__append_2)
 
 ########################################################################
 #                  Installation of the addlibs file                    #
@@ -267,7 +267,7 @@ addlibsfile = clp_addlibs.txt
 ########################################################################
 
 # Files that are generated and should be cleaned with make distclean
-DISTCLEANFILES = $(am__append_2)
+DISTCLEANFILES = $(am__append_3) $(VPATH_DISTCLEANFILES)
 all: all-recursive
 
 .SUFFIXES:
