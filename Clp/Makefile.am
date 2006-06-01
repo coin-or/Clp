@@ -34,7 +34,6 @@ EXTRA_DIST = \
 	doc/clpexe.xml \
 	doc/clpuserguide.xml \
 	doc/doxygen.xml \
-	doc/doxygen.conf \
 	doc/faqcontent.xml \
 	doc/faq.xml \
 	doc/intro.xml \
@@ -81,9 +80,6 @@ EXTRA_DIST = \
 test: all
 	cd test; make test
 
-doc:
-	cd $(srcdir); doxygen doc/doxygen.conf
-
 unitTest: test
 
 clean-local:
@@ -92,7 +88,7 @@ clean-local:
 distclean-local:
 	if test -r test/Makefile; then cd test; make distclean; fi
 
-.PHONY: test unitTest doc
+.PHONY: test unitTest
 
 ########################################################################
 #                  Installation of the addlibs file                    #

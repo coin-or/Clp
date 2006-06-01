@@ -2,7 +2,6 @@
 Clp/clp_addlibs.txt.in -text
 Clp/configure -text
 Clp/configure.ac -text
-Clp/doc/doxygen.conf -text
 Clp/examples/Makefile.in -text
 Clp/inc/config_clp.h.in -text
 /Externals -text
@@ -11,5 +10,6 @@ Clp/inc/config_clp.h.in -text
 /configure -text
 /configure.ac -text
 /depcomp -text
+doxydoc/doxygen.conf -text
 /install-sh -text
 /missing -text
