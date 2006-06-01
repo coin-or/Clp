@@ -149,16 +149,7 @@ CXX = @CXX@
 CXXCPP = @CXXCPP@
 CXXDEFS = @CXXDEFS@
 CXXDEPMODE = @CXXDEPMODE@
-
-########################################################################
-#                            Additional flags                          #
-########################################################################
-
-# Here list all include flags, relative to this "srcdir" directory.  This
-# "cygpath" stuff is necessary to compile with native compilers on Windows.
-# "top_srcdir" refers to the basic directory for the main package that is
-# being compiled.
-CXXFLAGS = @CXXFLAGS@ -I`$(CYGPATH_W) $(COINUTILSSRCDIR)/src`
+CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
@@ -331,6 +322,18 @@ clp_LDADD = libClp.la \
 # library is found (in the lib install directory) when we are using dynamic
 # libraries.
 clp_LDFLAGS = -rpath $(libdir)
+
+########################################################################
+#                            Additional flags                          #
+########################################################################
+
+# Here list all include flags, relative to this "srcdir" directory.  This
+# "cygpath" stuff is necessary to compile with native compilers on Windows.
+# "top_srcdir" refers to the basic directory for the main package that is
+# being compiled.
+AM_CPPFLAGS = \
+	-I`$(CYGPATH_W) $(COINUTILSSRCDIR)/src`
+
 
 # This line is necessary to allow VPATH compilation with MS compilers
 # on Cygwin
