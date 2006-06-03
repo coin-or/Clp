@@ -33,7 +33,8 @@ VPATH = @srcdir@
 
 ##########################################################################
 #  Usually, you don't have to change anything below.  Note that if you   #
-#  change certain compiler options, you might have to recompile Ipopt.   #
+#  change certain compiler options, you might have to recompile the      #
+#  COIN package.                                                         #
 ##########################################################################
 
 # C++ Compiler command

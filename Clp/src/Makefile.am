@@ -62,7 +62,7 @@ libClp_la_SOURCES = \
 	IdiSolve.cpp
 
 # This is for libtool (on Windows)
-libClp_la_LDFLAGS = $(LT_LDFLAGS) `cygpath -w ../../CoinUtils/src/libCoinUtils.la`
+libClp_la_LDFLAGS = $(LT_LDFLAGS) `$(CYGPATH_W) ../../CoinUtils/src/libCoinUtils.la`
 
 ########################################################################
 #                            clp program                               #
@@ -98,8 +98,6 @@ clp_LDFLAGS = -rpath $(libdir)
 
 # Here list all include flags, relative to this "srcdir" directory.  This
 # "cygpath" stuff is necessary to compile with native compilers on Windows.
-# "top_srcdir" refers to the basic directory for the main package that is
-# being compiled.
 AM_CPPFLAGS = \
 	-I`$(CYGPATH_W) $(COINUTILSSRCDIR)/src`
 
