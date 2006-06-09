@@ -1697,7 +1697,7 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
   // get a tolerance
   double tolerance = dualTolerance_;
   // we can't really trust infeasibilities if there is dual error
-  double error = CoinMin(1.0e-3,largestDualError_);
+  double error = CoinMin(1.0e-2,largestDualError_);
   // allow tolerance at least slightly bigger than standard
   tolerance = tolerance +  error;
   
@@ -3613,15 +3613,17 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	    perturbation_=102; // stop any perturbations
 	    cleanDuals=1;
 	    // make sure fake bounds are back
+            //computeObjectiveValue();
 	    changeBounds(true,NULL,changeCost);
+            //computeObjectiveValue();
 	    createRim(4);
             // make sure duals are current
-            //computeDuals(givenDuals);
-            //checkDualSolution();
+            computeDuals(givenDuals);
+            checkDualSolution();
             //if (numberDualInfeasibilities_)
               numberChanged_=1; // force something to happen
-              //else
-              computeObjectiveValue();
+            //else
+            //computeObjectiveValue();
 	  }
 	  if (lastCleaned<numberIterations_&&numberTimesOptimal_<4&&
 	      (numberChanged_||(specialOptions_&4096)==0)) {
@@ -3975,6 +3977,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
   if(fabs(limit)<1.0e30&&objectiveValue()*optimizationDirection_>
 	   limit&&
 	   !numberAtFakeBound()&&!numberDualInfeasibilities_) {
+    //printf("lim %g obj %g %g\n",limit,objectiveValue_,objectiveValue());
     problemStatus_=1;
     secondaryStatus_ = 1; // and say was on cutoff
   }
@@ -4185,7 +4188,6 @@ ClpSimplexDual::perturb()
   // maximum fraction of cost to perturb
   double maximumFraction = 1.0e-5;
   double constantPerturbation = 100.0*dualTolerance_;
-  const int * lengths = matrix_->getVectorLengths();
   int maxLength=0;
   int minLength=numberRows_;
   double averageCost = 0.0;
@@ -4245,7 +4247,7 @@ ClpSimplexDual::perturb()
   int iColumn;
   for (iColumn=0;iColumn<numberColumns_;iColumn++) {
     if (columnLowerWork_[iColumn]<columnUpperWork_[iColumn]) {
-      int length = lengths[iColumn];
+      int length = matrix_->getVectorLength(iColumn);
       if (length>2) {
 	maxLength = CoinMax(maxLength,length);
 	minLength = CoinMin(minLength,length);
@@ -4451,7 +4453,7 @@ ClpSimplexDual::perturb()
 	value=0.0;
       }
       if (value) {
-	int length = lengths[iColumn];
+	int length = matrix_->getVectorLength(iColumn);
 	if (length>3) {
 	  length = (int) ((double) length * factor);
 	  length = CoinMax(3,length);

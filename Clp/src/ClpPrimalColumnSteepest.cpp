@@ -179,7 +179,7 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
   double tolerance=model_->currentDualTolerance();
   // we can't really trust infeasibilities if there is dual error
   // this coding has to mimic coding in checkDualSolution
-  double error = CoinMin(1.0e-3,model_->largestDualError());
+  double error = CoinMin(1.0e-2,model_->largestDualError());
   // allow tolerance at least slightly bigger than standard
   tolerance = tolerance +  error;
   int pivotRow = model_->pivotRow();
@@ -272,9 +272,10 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
       }
       if (switchType==5) {
 	numberLook *= 5; // needs tuning for gub
-	if (model_->numberIterations()%1000==0)
+        if (model_->numberIterations()%1000==0&&model_->logLevel()>1) {
 	  printf("numels %d ratio %g wanted %d look %d\n",
 		 sizeFactorization_,ratio,numberWanted,numberLook);
+        }
 	// Update duals and row djs
 	// Do partial pricing
 	return partialPricing(updates,spareRow2,
@@ -485,11 +486,10 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
     }
     infeasible_->setNumElements(number);
   }
-  if(model_->numberIterations()<model_->lastBadIteration()+200) {
+  if(model_->numberIterations()<model_->lastBadIteration()+200&&
+     model_->factorization()->pivots()>10) {
     // we can't really trust infeasibilities if there is dual error
     double checkTolerance = 1.0e-8;
-    if (!model_->factorization()->pivots())
-      checkTolerance = 1.0e-6;
     if (model_->largestDualError()>checkTolerance)
       tolerance *= model_->largestDualError()/checkTolerance;
     // But cap
@@ -605,7 +605,7 @@ ClpPrimalColumnSteepest::justDjs(CoinIndexedVector * updates,
   double tolerance=model_->currentDualTolerance();
   // we can't really trust infeasibilities if there is dual error
   // this coding has to mimic coding in checkDualSolution
-  double error = CoinMin(1.0e-3,model_->largestDualError());
+  double error = CoinMin(1.0e-2,model_->largestDualError());
   // allow tolerance at least slightly bigger than standard
   tolerance = tolerance +  error;
   int pivotRow = model_->pivotRow();
@@ -710,7 +710,7 @@ ClpPrimalColumnSteepest::djsAndDevex(CoinIndexedVector * updates,
   double tolerance=model_->currentDualTolerance();
   // we can't really trust infeasibilities if there is dual error
   // this coding has to mimic coding in checkDualSolution
-  double error = CoinMin(1.0e-3,model_->largestDualError());
+  double error = CoinMin(1.0e-2,model_->largestDualError());
   // allow tolerance at least slightly bigger than standard
   tolerance = tolerance +  error;
   // for weights update we use pivotSequence
@@ -950,7 +950,7 @@ ClpPrimalColumnSteepest::djsAndSteepest(CoinIndexedVector * updates,
   double tolerance=model_->currentDualTolerance();
   // we can't really trust infeasibilities if there is dual error
   // this coding has to mimic coding in checkDualSolution
-  double error = CoinMin(1.0e-3,model_->largestDualError());
+  double error = CoinMin(1.0e-2,model_->largestDualError());
   // allow tolerance at least slightly bigger than standard
   tolerance = tolerance +  error;
   // for weights update we use pivotSequence
@@ -1220,7 +1220,7 @@ ClpPrimalColumnSteepest::djsAndDevex2(CoinIndexedVector * updates,
   double tolerance=model_->currentDualTolerance();
   // we can't really trust infeasibilities if there is dual error
   // this coding has to mimic coding in checkDualSolution
-  double error = CoinMin(1.0e-3,model_->largestDualError());
+  double error = CoinMin(1.0e-2,model_->largestDualError());
   // allow tolerance at least slightly bigger than standard
   tolerance = tolerance +  error;
   int pivotRow = model_->pivotRow();
@@ -1412,7 +1412,7 @@ ClpPrimalColumnSteepest::djsAndSteepest2(CoinIndexedVector * updates,
   double tolerance=model_->currentDualTolerance();
   // we can't really trust infeasibilities if there is dual error
   // this coding has to mimic coding in checkDualSolution
-  double error = CoinMin(1.0e-3,model_->largestDualError());
+  double error = CoinMin(1.0e-2,model_->largestDualError());
   // allow tolerance at least slightly bigger than standard
   tolerance = tolerance +  error;
   int pivotRow = model_->pivotRow();
@@ -1734,7 +1734,7 @@ ClpPrimalColumnSteepest::justDevex(CoinIndexedVector * updates,
   double tolerance=model_->currentDualTolerance();
   // we can't really trust infeasibilities if there is dual error
   // this coding has to mimic coding in checkDualSolution
-  double error = CoinMin(1.0e-3,model_->largestDualError());
+  double error = CoinMin(1.0e-2,model_->largestDualError());
   // allow tolerance at least slightly bigger than standard
   tolerance = tolerance +  error;
   int pivotRow = model_->pivotRow();
@@ -1842,7 +1842,7 @@ ClpPrimalColumnSteepest::justSteepest(CoinIndexedVector * updates,
   double tolerance=model_->currentDualTolerance();
   // we can't really trust infeasibilities if there is dual error
   // this coding has to mimic coding in checkDualSolution
-  double error = CoinMin(1.0e-3,model_->largestDualError());
+  double error = CoinMin(1.0e-2,model_->largestDualError());
   // allow tolerance at least slightly bigger than standard
   tolerance = tolerance +  error;
   int pivotRow = model_->pivotRow();
@@ -1991,7 +1991,7 @@ ClpPrimalColumnSteepest::pivotColumnOldMethod(CoinIndexedVector * updates,
   double tolerance=model_->currentDualTolerance();
   // we can't really trust infeasibilities if there is dual error
   // this coding has to mimic coding in checkDualSolution
-  double error = CoinMin(1.0e-3,model_->largestDualError());
+  double error = CoinMin(1.0e-2,model_->largestDualError());
   // allow tolerance at least slightly bigger than standard
   tolerance = tolerance +  error;
   int pivotRow = model_->pivotRow();
@@ -3373,7 +3373,7 @@ ClpPrimalColumnSteepest::looksOptimal() const
   double tolerance=model_->currentDualTolerance();
   // we can't really trust infeasibilities if there is dual error
   // this coding has to mimic coding in checkDualSolution
-  double error = CoinMin(1.0e-3,model_->largestDualError());
+  double error = CoinMin(1.0e-2,model_->largestDualError());
   // allow tolerance at least slightly bigger than standard
   tolerance = tolerance +  error;
   if(model_->numberIterations()<model_->lastBadIteration()+200) {
@@ -3501,7 +3501,7 @@ ClpPrimalColumnSteepest::partialPricing(CoinIndexedVector * updates,
   double tolerance=model_->currentDualTolerance();
   // we can't really trust infeasibilities if there is dual error
   // this coding has to mimic coding in checkDualSolution
-  double error = CoinMin(1.0e-3,model_->largestDualError());
+  double error = CoinMin(1.0e-2,model_->largestDualError());
   // allow tolerance at least slightly bigger than standard
   tolerance = tolerance +  error;
   if(model_->numberIterations()<model_->lastBadIteration()+200) {
@@ -3612,7 +3612,7 @@ ClpPrimalColumnSteepest::partialPricing(CoinIndexedVector * updates,
   int sequenceOut = model_->sequenceOut();
   double * duals2 = duals-numberColumns;
   int chunk = CoinMin(1024,(numberColumns+nSlacks)/32);
-  if (model_->numberIterations()%1000==0) {
+  if (model_->numberIterations()%1000==0&&model_->logLevel()>1) {
     printf("%d wanted, nSlacks %d, chunk %d\n",numberWanted,nSlacks,chunk);
     int i;
     for (i=0;i<4;i++)

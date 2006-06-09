@@ -55,6 +55,8 @@ public:
       Returns sum and number of primal infeasibilities. Recomputes keys
   */
   virtual int checkFeasible(ClpSimplex * model,double & sum) const;
+  /// Cleans data after setWarmStart
+  void cleanData(ClpSimplex * model);
   //@}
 
   
@@ -152,6 +154,9 @@ public:
   /// first free
   inline int firstAvailable() const
   { return firstAvailable_;};
+  /// set first free
+  inline void setFirstAvailable(int value)
+  { firstAvailable_ = value;};
   /// first dynamic
   inline int firstDynamic() const
   { return firstDynamic_;};

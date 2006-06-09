@@ -553,10 +553,10 @@ ClpSimplex::computePrimals ( const double * rowActivities,
   // Ftran adjusted RHS and iterate to improve accuracy
   double lastError=COIN_DBL_MAX;
   int iRefine;
-  double * work = workSpace->denseVector();
   CoinIndexedVector * thisVector = arrayVector;
   CoinIndexedVector * lastVector = previousVector;
   factorization_->updateColumn(workSpace,thisVector);
+  double * work = workSpace->denseVector();
 #ifdef CLP_DEBUG
   if (numberIterations_==-3840) {
     int i;
@@ -1531,7 +1531,7 @@ ClpSimplex::housekeeping(double objectiveChange)
     } else {
       // need to reject something
       int iSequence;
-      if (algorithm_<0)
+      if (algorithm_>0)
 	iSequence = sequenceIn_;
       else
 	iSequence = sequenceOut_;
@@ -2050,7 +2050,7 @@ ClpSimplex::checkPrimalSolution(const double * rowActivities,
   double primalTolerance = primalTolerance_;
   double relaxedTolerance=primalTolerance_;
   // we can't really trust infeasibilities if there is primal error
-  double error = CoinMin(1.0e-3,largestPrimalError_);
+  double error = CoinMin(1.0e-2,largestPrimalError_);
   // allow tolerance at least slightly bigger than standard
   relaxedTolerance = relaxedTolerance +  error;
   sumOfRelaxedPrimalInfeasibilities_ = 0.0;
@@ -2163,7 +2163,7 @@ ClpSimplex::checkDualSolution()
   remainingDualInfeasibility_=0.0;
   double relaxedTolerance=dualTolerance_;
   // we can't really trust infeasibilities if there is dual error
-  double error = CoinMin(1.0e-3,largestDualError_);
+  double error = CoinMin(1.0e-2,largestDualError_);
   // allow tolerance at least slightly bigger than standard
   relaxedTolerance = relaxedTolerance +  error;
   sumOfRelaxedDualInfeasibilities_ = 0.0;
@@ -2344,7 +2344,7 @@ ClpSimplex::checkBothSolutions()
   double primalTolerance = primalTolerance_;
   double relaxedToleranceP=primalTolerance_;
   // we can't really trust infeasibilities if there is primal error
-  double error = CoinMin(1.0e-3,largestPrimalError_);
+  double error = CoinMin(1.0e-2,largestPrimalError_);
   // allow tolerance at least slightly bigger than standard
   relaxedToleranceP = relaxedToleranceP +  error;
   sumOfRelaxedPrimalInfeasibilities_ = 0.0;
@@ -2353,7 +2353,7 @@ ClpSimplex::checkBothSolutions()
   double dualTolerance=dualTolerance_;
   double relaxedToleranceD=dualTolerance;
   // we can't really trust infeasibilities if there is dual error
-  error = CoinMin(1.0e-3,largestDualError_);
+  error = CoinMin(1.0e-2,largestDualError_);
   // allow tolerance at least slightly bigger than standard
   relaxedToleranceD = relaxedToleranceD +  error;
   sumOfRelaxedDualInfeasibilities_ = 0.0;
@@ -2521,6 +2521,9 @@ ClpSimplex::unpackPacked(CoinIndexedVector * rowArray,int sequence)
 }
 bool
 ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
+  spareIntArray_[0]=0;
+  if (!matrix_->canGetRowCopy())
+    makeRowCopy=false; // switch off row copy if can't produce
 {
   bool goodMatrix=true;
   int saveLevel=handler_->logLevel();
@@ -4739,7 +4742,8 @@ ClpSimplex::barrier(bool crossover)
  }
 #elif UFL_BARRIER
  if (!doKKT) {
-   ClpCholeskyUfl * cholesky = new ClpCholeskyUfl();
+   ClpCholeskyBase * cholesky = new ClpCholeskyBase();
+   // not yetClpCholeskyUfl * cholesky = new ClpCholeskyUfl();
    barrier.setCholesky(cholesky);
  } else {
    ClpCholeskyUfl * cholesky = new ClpCholeskyUfl();
@@ -5006,9 +5010,9 @@ ClpSimplex::borrowModel(ClpSimplex & otherModel)
   dualTolerance_ = otherModel.dualTolerance_;
   primalTolerance_ = otherModel.primalTolerance_;
   delete dualRowPivot_;
-  dualRowPivot_ = otherModel.dualRowPivot_->clone(false);
+  dualRowPivot_ = otherModel.dualRowPivot_->clone(true);
   delete primalColumnPivot_;
-  primalColumnPivot_ = otherModel.primalColumnPivot_->clone(false);
+  primalColumnPivot_ = otherModel.primalColumnPivot_->clone(true);
   perturbation_ = otherModel.perturbation_;
   specialOptions_ = otherModel.specialOptions_;
   automaticScale_ = otherModel.automaticScale_;
@@ -7317,7 +7321,11 @@ ClpSimplexProgress::looping()
 	if (iSequence>=0) {
 	  char x = model_->isColumn(iSequence) ? 'C' :'R';
 	  if (model_->messageHandler()->logLevel()>=63)
+          // if Gub then needs to be sequenceIn_
+          int save=model_->sequenceIn();
+          model_->setSequenceIn(iSequence);
 	    model_->messageHandler()->message(CLP_SIMPLEX_FLAG,model_->messages())
+          model_->setSequenceIn(save);
 	      <<x<<model_->sequenceWithin(iSequence)
 	      <<CoinMessageEol;
 	  model_->setFlagged(iSequence);
@@ -8785,6 +8793,47 @@ ClpSimplex::defaultFactorizationFrequency()
       frequency=base+cutoff1/freq0 + (numberRows_-cutoff1)/freq1;
     else
       frequency=base+cutoff1/freq0 + (cutoff2-cutoff1)/freq1 + (numberRows_-cutoff2)/freq2;
+// Create C++ lines to get to current state
+void 
+ClpSimplex::generateCpp( FILE * fp, bool defaultFactor)
+{
+  ClpModel::generateCpp(fp);
+  ClpSimplex defaultModel;
+  ClpSimplex * other = &defaultModel;
+  int iValue1, iValue2;
+  double dValue1, dValue2;
+  // Stuff that can't be done easily
+  if (factorizationFrequency()==other->factorizationFrequency()) {
+    if (defaultFactor) {
+      fprintf(fp,"3  // For branchAndBound this may help\n");
+      fprintf(fp,"3  clpModel->defaultFactorizationFrequency();\n");
+    } else {
+      // tell user about default
+      fprintf(fp,"3  // For initialSolve you don't need below but ...\n");
+      fprintf(fp,"3  // clpModel->defaultFactorizationFrequency();\n");
+    }
+  } 
+  iValue1 = this->factorizationFrequency();
+  iValue2 = other->factorizationFrequency();
+  fprintf(fp,"%d  int save_factorizationFrequency = clpModel->factorizationFrequency();\n",iValue1==iValue2 ? 2 : 1);
+  fprintf(fp,"%d  clpModel->setFactorizationFrequency(%d);\n",iValue1==iValue2 ? 4 : 3,iValue1);
+  fprintf(fp,"%d  clpModel->setFactorizationFrequency(save_factorizationFrequency);\n",iValue1==iValue2 ? 7 : 6);
+  dValue1 = this->dualBound();
+  dValue2 = other->dualBound();
+  fprintf(fp,"%d  double save_dualBound = clpModel->dualBound();\n",dValue1==dValue2 ? 2 : 1);
+  fprintf(fp,"%d  clpModel->setDualBound(%g);\n",dValue1==dValue2 ? 4 : 3,dValue1);
+  fprintf(fp,"%d  clpModel->setDualBound(save_dualBound);\n",dValue1==dValue2 ? 7 : 6);
+  dValue1 = this->infeasibilityCost();
+  dValue2 = other->infeasibilityCost();
+  fprintf(fp,"%d  double save_infeasibilityCost = clpModel->infeasibilityCost();\n",dValue1==dValue2 ? 2 : 1);
+  fprintf(fp,"%d  clpModel->setInfeasibilityCost(%g);\n",dValue1==dValue2 ? 4 : 3,dValue1);
+  fprintf(fp,"%d  clpModel->setInfeasibilityCost(save_infeasibilityCost);\n",dValue1==dValue2 ? 7 : 6);
+  iValue1 = this->perturbation();
+  iValue2 = other->perturbation();
+  fprintf(fp,"%d  int save_perturbation = clpModel->perturbation();\n",iValue1==iValue2 ? 2 : 1);
+  fprintf(fp,"%d  clpModel->setPerturbation(%d);\n",iValue1==iValue2 ? 4 : 3,iValue1);
+  fprintf(fp,"%d  clpModel->setPerturbation(save_perturbation);\n",iValue1==iValue2 ? 7 : 6);
+}
     setFactorizationFrequency(CoinMin(maximum,frequency));
   }
 }

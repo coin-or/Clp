@@ -13,7 +13,7 @@
 //#ifndef COIN_USE_CLP
 //#define COIN_USE_CLP
 //#endif
-#include "ClpMatrixBase.hpp"
+#include "ClpPackedMatrix.hpp"
 #include "CoinMessageHandler.hpp"
 #include "ClpParameters.hpp"
 #include "ClpObjective.hpp"
@@ -570,7 +570,15 @@ public:
   /** Replace Clp Matrix (current is not deleted unless told to
       and new is used)
       So up to user to delete current.  This was used where
-      matrices were being rotated.
+      matrices were being rotated. ClpModel takes ownership.
+  /** Replace Clp Matrix (current is not deleted unless told to
+      and new is used) So up to user to delete current.  This was used where
+      matrices were being rotated.  This version changes CoinPackedMatrix
+      to ClpPackedMatrix.  ClpModel takes ownership.
+  */
+   inline void replaceMatrix(CoinPackedMatrix * matrix,
+			     bool deleteCurrent=false)
+  { replaceMatrix(new ClpPackedMatrix(matrix),deleteCurrent);};
   */
    void replaceMatrix(ClpMatrixBase * matrix,bool deleteCurrent=false);
    /// Objective value
@@ -761,6 +769,8 @@ public:
       } else {
 	return false;
       }
+    /// Create C++ lines to get to current state
+    void generateCpp( FILE * fp);
     }
 #endif
   //@}

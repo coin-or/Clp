@@ -13,8 +13,9 @@
 
 #include "CoinPragma.hpp"
 #include "CoinHelperFunctions.hpp"
+#include "CoinSort.hpp"
 // History since 1.0 at end
-#define CLPVERSION "1.02.02"
+#define CLPVERSION "1.03.01"
 
 #include "CoinMpsIO.hpp"
 #include "CoinFileIO.hpp"
@@ -48,7 +49,8 @@
 #endif
 
 static double totalTime=0.0;
-static bool maskMatches(std::string & mask, std::string & check);
+static bool maskMatches(const int * starts, char ** masks,
+			std::string & check);
 
 //#############################################################################
 
@@ -59,6 +61,7 @@ static bool maskMatches(std::string & mask, std::string & check);
 int mainTest (int argc, const char *argv[],int algorithm,
 	      ClpSimplex empty, bool doPresolve,int switchOff);
 static void statistics(ClpSimplex * originalModel, ClpSimplex * model);
+static void generateCode(const char * fileName,int type);
 // Returns next valid field
 int CbcOrClpRead_mode=1;
 FILE * CbcOrClpReadCommand=stdin;
@@ -77,6 +80,7 @@ int main (int argc, const char *argv[])
     int doIdiot=-1;
     int outputFormat=2;
     int slpValue=-1;
+    int cppValue=-1;
     int printOptions=0;
     int printMode=0;
     int presolveOptions=0;
@@ -231,6 +235,12 @@ int main (int argc, const char *argv[])
 	  std::cout<<"abcd value sets value"<<std::endl;
 	  std::cout<<"Commands are:"<<std::endl;
 	  int maxAcross=5;
+	  bool evenHidden=false;
+	  if ((verbose&8)!=0) {
+	    // even hidden
+	    evenHidden = true;
+	    verbose &= ~8;
+	  }
           if (verbose)
             maxAcross=1;
 	  int limits[]={1,101,201,301,401};
@@ -249,7 +259,8 @@ int main (int argc, const char *argv[])
               std::cout<<std::endl;
 	    for ( iParam=0; iParam<numberParameters; iParam++ ) {
 	      int type = parameters[iParam].type();
-	      if (parameters[iParam].displayThis()&&type>=limits[iType]
+	      if ((parameters[iParam].displayThis()||evenHidden)&&
+		  type>=limits[iType]
 		  &&type<limits[iType+1]) {
 		if (!across) {
                   if ((verbose&2)==0) 
@@ -335,6 +346,8 @@ int main (int argc, const char *argv[])
 	      outputFormat = value;
 	    else if (parameters[iParam].type()==SLPVALUE)
 	      slpValue = value;
+	    else if (parameters[iParam].type()==CPP)
+	      cppValue = value;
 	    else if (parameters[iParam].type()==PRESOLVEOPTIONS)
 	      presolveOptions = value;
 	    else if (parameters[iParam].type()==PRINTOPTIONS)
@@ -627,6 +640,20 @@ int main (int argc, const char *argv[])
 		solveOptions.setSpecialOption(4,barrierOptions);
 	      }
 	      int status;
+	      if (cppValue>=0) {
+                // generate code
+                FILE * fp = fopen("user_driver.cpp","w");
+	        if (fp) {
+	          // generate enough to do solveOptions
+                  model2->generateCpp(fp);
+                  solveOptions.generateCpp(fp);
+                  fclose(fp);
+                  // now call generate code
+                  generateCode("user_driver.cpp",cppValue);
+                } else {
+                  std::cout<<"Unable to open file user_driver.cpp"<<std::endl;
+                }
+              }
               try {
                 status=model2->initialSolve(solveOptions);
               }
@@ -1419,6 +1446,14 @@ int main (int argc, const char *argv[])
 	      models[iModel]=newModel;
 	    }
 	    break;
+	  case USERCLP:
+            // Replace the sample code by whatever you want
+	    if (goodModels[iModel]) {
+              ClpSimplex * thisModel = &models[iModel];
+              printf("Dummy user code - model has %d rows and %d columns\n",
+                     thisModel->numberRows(),thisModel->numberColumns());
+	    }
+	    break;
 	  case HELP:
 	    std::cout<<"Coin LP version "<<CLPVERSION
 		     <<", build "<<__DATE__<<std::endl;
@@ -1496,6 +1531,105 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 		char format[6];
 		sprintf(format,"%%-%ds",CoinMax(lengthName,8));
                 bool doMask = (printMask!=""&&lengthName);
+		int * maskStarts=NULL;
+		int maxMasks=0;
+		char ** masks =NULL;
+		if (doMask) {
+		  int nAst =0;
+		  const char * pMask2 = printMask.c_str();
+		  char pMask[100];
+		  int iChar;
+		  int lengthMask = strlen(pMask2);
+		  assert (lengthMask<100);
+		  if (*pMask2=='"') {
+		    if (pMask2[lengthMask-1]!='"') {
+		      printf("mismatched \" in mask %s\n",pMask2);
+		      break;
+		    } else {
+		      strcpy(pMask,pMask2+1);
+		      *strchr(pMask,'"')='\0';
+		    }
+		  } else if (*pMask2=='\'') {
+		    if (pMask2[lengthMask-1]!='\'') {
+		      printf("mismatched ' in mask %s\n",pMask2);
+		      break;
+		    } else {
+		      strcpy(pMask,pMask2+1);
+		      *strchr(pMask,'\'')='\0';
+		    }
+		  } else {
+		    strcpy(pMask,pMask2);
+		  }
+		  if (lengthMask>lengthName) {
+		    printf("mask %s too long - skipping\n",pMask);
+		    break;
+		  }
+		  maxMasks = 1;
+		  for (iChar=0;iChar<lengthMask;iChar++) {
+		    if (pMask[iChar]=='*') {
+		      nAst++;
+		      maxMasks *= (lengthName+1);
+		    }
+		  }
+		  int nEntries = 1;
+		  maskStarts = new int[lengthName+2];
+		  masks = new char * [maxMasks];
+		  char ** newMasks = new char * [maxMasks];
+		  int i;
+		  for (i=0;i<maxMasks;i++) {
+		    masks[i] = new char[lengthName+1];
+		    newMasks[i] = new char[lengthName+1];
+		  }
+		  strcpy(masks[0],pMask);
+		  for (int iAst=0;iAst<nAst;iAst++) {
+		    int nOldEntries = nEntries;
+		    nEntries=0;
+		    for (int iEntry = 0;iEntry<nOldEntries;iEntry++) {
+		      char * oldMask = masks[iEntry];
+		      char * ast = strchr(oldMask,'*');
+		      assert (ast);
+		      int length = strlen(oldMask)-1;
+		      int nBefore = ast-oldMask;
+		      int nAfter = length-nBefore;
+		      // and add null
+		      nAfter++;
+		      for (int i=0;i<=lengthName-length;i++) {
+			char * maskOut = newMasks[nEntries];
+			memcpy(maskOut,oldMask,nBefore);
+			for (int k=0;k<i;k++) 
+			  maskOut[k+nBefore]='?';
+			memcpy(maskOut+nBefore+i,ast+1,nAfter);
+			nEntries++;
+			assert (nEntries<=maxMasks);
+		      }
+		    }
+		    char ** temp = masks;
+		    masks = newMasks;
+		    newMasks = temp;
+		  }
+		  // Now extend and sort
+		  int * sort = new int[nEntries];
+		  for (i=0;i<nEntries;i++) {
+		    char * maskThis = masks[i];
+		    int length = strlen(maskThis);
+		    while (maskThis[length-1]==' ')
+		      length--;
+		    maskThis[length]='\0';
+		    sort[i]=length;
+		  }
+		  CoinSort_2(sort,sort+nEntries,masks);
+		  int lastLength=-1;
+		  for (i=0;i<nEntries;i++) {
+		    int length = sort[i];
+		    while (length>lastLength) 
+		      maskStarts[++lastLength] = i;
+		  }
+		  maskStarts[++lastLength]=nEntries;
+		  delete [] sort;
+		  for (i=0;i<maxMasks;i++)
+		    delete [] newMasks[i];
+		  delete [] newMasks;
+		}
                 if (printMode>2) {
                   for (iRow=0;iRow<numberRows;iRow++) {
                     int type=printMode-3;
@@ -1508,7 +1642,7 @@ clp watson.mps -\nscaling off\nprimalsimplex"
                     } else if (numberRows<50) {
                       type=3;
                     } 
-                    if (doMask&&!maskMatches(printMask,rowNames[iRow]))
+                    if (doMask&&!maskMatches(maskStarts,masks,rowNames[iRow]))
                       type=0;
                     if (type) {
                       fprintf(fp,"%7d ",iRow);
@@ -1522,9 +1656,9 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 		int iColumn;
 		int numberColumns=models[iModel].numberColumns();
 		double * dualColumnSolution = 
-		  models[iModel].dualColumnSolution();
+  models[iModel].dualColumnSolution();
 		double * primalColumnSolution = 
-		  models[iModel].primalColumnSolution();
+  models[iModel].primalColumnSolution();
 		double * columnLower = models[iModel].columnLower();
 		double * columnUpper = models[iModel].columnUpper();
 		for (iColumn=0;iColumn<numberColumns;iColumn++) {
@@ -1538,7 +1672,8 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 		  } else if (numberColumns<50) {
 		    type=3;
 		  }
-                  if (doMask&&!maskMatches(printMask,columnNames[iColumn]))
+		  if (doMask&&!maskMatches(maskStarts,masks,
+					   columnNames[iColumn]))
                     type =0;
 		  if (type) {
 		    fprintf(fp,"%7d ",iColumn);
@@ -1551,6 +1686,12 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 		}
 		if (fp!=stdout)
 		  fclose(fp);
+		if (masks) {
+		  delete [] maskStarts;
+		  for (int i=0;i<maxMasks;i++)
+		    delete [] masks[i];
+		  delete [] masks;
+		}
 	      } else {
 		std::cout<<"Unable to open file "<<fileName<<std::endl;
 	      }
@@ -1558,6 +1699,7 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 	      std::cout<<"** Current model not valid"<<std::endl;
 	      
 	    }
+	  
 	    break;
 	  case SAVESOL:
 	    if (goodModels[iModel]) {
@@ -1937,39 +2079,105 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
   breakdown("ColumnUpper",numberColumns,columnUpper);
   breakdown("Objective",numberColumns,objective);
 }
-static bool maskMatches(std::string & mask, std::string & check)
+static bool maskMatches(const int * starts, char ** masks,
+			std::string & check)
 {
   // back to char as I am old fashioned
-  const char * maskC = mask.c_str();
   const char * checkC = check.c_str();
-  int length = strlen(maskC);
-  int lengthCheck;
-  for (lengthCheck=length-1;lengthCheck>=0;lengthCheck--) {
-    if (maskC[lengthCheck]!='*')
-      break;
+  int length = strlen(checkC);
+  while (checkC[length-1]==' ')
+    length--;
+  for (int i=starts[length];i<starts[length+1];i++) {
+    char * thisMask = masks[i];
+    int k;
+    for ( k=0;k<length;k++) {
+      if (thisMask[k]!='?'&&thisMask[k]!=checkC[k]) 
+	break;
+    }
+    if (k==length)
+      return true;
   }
-  lengthCheck++;
-  int lengthC = strlen(checkC);
-  if (lengthC>length)
-    return false; // can't be true
-  if (lengthC<lengthCheck) {
-    // last lot must be blank for match
-    for (int i=lengthC;i<lengthCheck;i++) {
-      if (maskC[i]!=' ')
-        return false;
+  return false;
+}
+static void clean(char * temp)
+{
+  char * put = temp;
+  while (*put>=' ')
+    put++;
+  *put='\0';
+}
+static void generateCode(const char * fileName,int type)
+{
+  FILE * fp = fopen(fileName,"r");
+  assert (fp);
+  int numberLines=0;
+#define MAXLINES 500
+#define MAXONELINE 200
+  char line[MAXLINES][MAXONELINE];
+  while (fgets(line[numberLines],MAXONELINE,fp)) {
+    assert (numberLines<MAXLINES);
+    clean(line[numberLines]);
+    numberLines++;
+  }
+  fclose(fp);
+  // add in actual solve
+  strcpy(line[numberLines],"5  clpModel->initialSolve(clpSolve);");
+  numberLines++;
+  fp = fopen(fileName,"w");
+  assert (fp);
+  char apo='"';	  
+  char backslash = '\\';
+
+  fprintf(fp,"#include %cClpSimplex.hpp%c\n",apo,apo);
+  fprintf(fp,"#include %cClpSolve.hpp%c\n",apo,apo);
+
+  fprintf(fp,"\nint main (int argc, const char *argv[])\n{\n");
+  fprintf(fp,"  ClpSimplex  model;\n");
+  fprintf(fp,"  int status=1;\n");
+  fprintf(fp,"  if (argc<2)\n");
+  fprintf(fp,"    fprintf(stderr,%cPlease give file name%cn%c);\n",
+          apo,backslash,apo);
+  fprintf(fp,"  else\n");
+  fprintf(fp,"    status=model.readMps(argv[1],true);\n");
+  fprintf(fp,"  if (status) {\n");
+  fprintf(fp,"    fprintf(stderr,%cBad readMps %%s%cn%c,argv[1]);\n",
+                apo,backslash,apo);
+  fprintf(fp,"    exit(1);\n");
+  fprintf(fp,"  }\n\n");
+  fprintf(fp,"  // Now do requested saves and modifications\n");
+  fprintf(fp,"  ClpSimplex * clpModel = & model;\n");
+  int wanted[9];
+  memset(wanted,0,sizeof(wanted));
+  wanted[0]=wanted[3]=wanted[5]=wanted[8]=1;
+  if (type>0) 
+    wanted[1]=wanted[6]=1;
+  if (type>1) 
+    wanted[2]=wanted[4]=wanted[7]=1;
+  std::string header[9]=
+  { "","Save values","Redundant save of default values","Set changed values",
+    "Redundant set default values","Solve","Restore values","Redundant restore values","Add to model"};
+  for (int iType=0;iType<9;iType++) {
+    if (!wanted[iType])
+      continue;
+    int n=0;
+    int iLine;
+    for (iLine=0;iLine<numberLines;iLine++) {
+      if (line[iLine][0]=='0'+iType) {
+        if (!n)
+          fprintf(fp,"\n  // %s\n\n",header[iType].c_str());
+        n++;
+        fprintf(fp,"%s\n",line[iLine]+1);
+      }
     }
   }
-  // need only check this much
-  lengthC = CoinMin(lengthC,lengthCheck);
-  for (int i=0;i<lengthC;i++) {
-    if (maskC[i]!='*'&&maskC[i]!=checkC[i])
-      return false;
-  }
-  return true; // matches
+  fprintf(fp,"\n  // Now you would use solution etc etc\n\n");
+  fprintf(fp,"  return 0;\n}\n");
+  fclose(fp);
+  printf("C++ file written to %s\n",fileName);
 }
 /*
   Version 1.00.00 October 13 2004.
-  1.00.01 October 18.  Added basis handline helped/prodded by Thorsten Koch.
+  1.00.01 October 18.  Added basis handling helped/prodded by Thorsten Koch.
   Also modifications to make faster with sbb (I hope I haven't broken anything).
   1.00.02 March 21 2005.  Redid ClpNonLinearCost to save memory also redid
   createRim to try and improve cache characteristics.
@@ -1982,4 +2190,5 @@ static bool maskMatches(std::string & mask, std::string & check)
   1.02.01 May 6 2005.  Lots of changes to try and make faster and more stable in
   branch and cut.
   1.02.02 May 19 2005.  Stuff for strong branching and some improvements to simplex
+  1.03.01 May 24 2006.  Lots done but I can't remember what!
  */

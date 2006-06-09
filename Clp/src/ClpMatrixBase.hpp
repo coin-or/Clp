@@ -54,6 +54,8 @@ public:
   virtual const CoinBigIndex * getVectorStarts() const = 0;
   /** The lengths of the major-dimension vectors. */
   virtual const int * getVectorLengths() const = 0 ;
+  /** The length of a single major-dimension vector. */
+  virtual int getVectorLength(int index) const ;
   /** Delete the columns whose indices are listed in <code>indDel</code>. */
   virtual void deleteCols(const int numDel, const int * indDel) = 0;
   /** Delete the rows whose indices are listed in <code>indDel</code>. */
@@ -102,6 +104,9 @@ public:
       Only called if scales already exist */
   virtual void scaleRowCopy(ClpModel * model) const 
   { };
+  /// Returns true if can create row copy
+  virtual bool canGetRowCopy() const
+  { return true;};
   /** Realy really scales column copy 
       Only called if scales already exist.
       Up to user to delete */
@@ -127,7 +132,7 @@ public:
       means that that dimension doesn't change. Otherwise the new dimensions
       MUST be at least as large as the current ones otherwise an exception
       is thrown. */
-  virtual void setDimensions(int numrows, int numcols) throw(CoinError);
+  virtual void setDimensions(int numrows, int numcols);
   /** Returns largest and smallest elements of both signs.
       Largest refers to largest absolute value.
       If returns zeros then can't tell anything */
@@ -139,7 +144,7 @@ public:
   virtual void unpack(const ClpSimplex * model,CoinIndexedVector * rowArray,
 		      int column) const =0;
   /** Unpacks a column into an CoinIndexedvector
-   ** in packed foramt
+   ** in packed format
    Note that model is NOT const.  Bounds and objective could
    be modified if doing column generation (just for this variable) */
   virtual void unpackPacked(ClpSimplex * model,
