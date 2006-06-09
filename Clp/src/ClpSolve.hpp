@@ -40,13 +40,8 @@ public:
   /**@name Constructors and destructor and copy */
   //@{
   /// Default constructor
-  ClpSolve (  );
-  /// Constructor when you really know what you are doing
-  ClpSolve ( SolveType method, PresolveType presolveType,
-             int numberPasses, int options[6],
-             int extraInfo[6], int independentOptions[3]);
-  /// Generates code for above constructor
-  void generateCpp(FILE * fp);
+    ClpSolve (  );
+
   /// Copy constructor. 
   ClpSolve(const ClpSolve &);
   /// Assignment operator. This copies the data

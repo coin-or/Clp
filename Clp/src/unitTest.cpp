@@ -898,8 +898,6 @@ ClpSimplexUnitTest(const std::string & mpsDir,
 	     i,valueIncrease[i],sequenceIncrease[i],
 	     valueDecrease[i],sequenceDecrease[i]);
     assert (fabs(valueDecrease[3]-0.642857)<1.0e-4);
-#if 0
-    // out until I find optimization bug
     assert (fabs(valueDecrease[8]-2.95113)<1.0e-4);
 #if 0
     // out until I find optimization bug
@@ -908,7 +906,6 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     double rhs[]={ 1.0,2.0,3.0,4.0,5.0};
     double endingTheta=1.0;
     model2->scaling(0);
-#endif
     model2->setLogLevel(63);
     model2->parametrics(0.0,endingTheta,0.1,
                         NULL,NULL,rhs,rhs,NULL);

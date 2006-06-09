@@ -930,7 +930,7 @@ ClpDynamicMatrix::dualExpanded(ClpSimplex * model,
       double dualTolerance = model->dualTolerance();
       double relaxedTolerance=dualTolerance;
       // we can't really trust infeasibilities if there is dual error
-      double error = CoinMin(1.0e-2,model->largestDualError());
+      double error = CoinMin(1.0e-3,model->largestDualError());
       // allow tolerance at least slightly bigger than standard
       relaxedTolerance = relaxedTolerance +  error;
       // but we will be using difference

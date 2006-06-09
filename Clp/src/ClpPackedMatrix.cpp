@@ -2837,7 +2837,7 @@ ClpPackedMatrix::appendRows(int number, const CoinPackedVectorBase * const * row
    MUST be at least as large as the current ones otherwise an exception
    is thrown. */
 void 
-ClpPackedMatrix::setDimensions(int numrows, int numcols)
+ClpPackedMatrix::setDimensions(int numrows, int numcols) throw(CoinError)
 {
   matrix_->setDimensions(numrows,numcols);
 }

@@ -691,8 +691,8 @@ ClpQuadraticObjective::reducedGradient(ClpSimplex * model, double * region,
   arrayVector.setNumElements(number);
 
   // Btran basic costs
-  model->factorization()->updateColumnTranspose(workSpace,&arrayVector);
   double * work = workSpace->denseVector();
+  model->factorization()->updateColumnTranspose(workSpace,&arrayVector);
   ClpFillN(work,numberRows,0.0);
   // now look at dual solution
   double * rowReducedCost = region+numberColumns;

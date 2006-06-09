@@ -351,7 +351,7 @@ CbcOrClpParam::printString() const
 {
   if (name_=="directory")
     std::cout<<"Current working directory is "<<stringValue_<<std::endl;
-  else if (name_.substr(0,6)=="printM")
+  else if (name_=="printM!ask")
     std::cout<<"Current value of printMask is "<<stringValue_<<std::endl;
   else
     std::cout<<"Current default (if $ as parameter) for "<<name_
@@ -1093,7 +1093,7 @@ best less than this",
   parameters[numberParameters-1].setLonghelp
     (
      "If the gap between best solution and best possible solution is less than this \
-then the search will be terminated.  Also see ratioGap."
+then the search will be terminated.  Also see gapRatio."
      ); 
 #endif
 #ifdef COIN_HAS_CLP
@@ -1235,26 +1235,12 @@ It is obviously only tries after two or more solutions."
     CbcOrClpParam("cost!Strategy","How to use costs as priorities",
 		  "off",COSTSTRATEGY);
   parameters[numberParameters-1].append("pri!orities");
-  parameters[numberParameters-1].append("column!Order?");
+  parameters[numberParameters-1].append("pseudo!costs(not implemented yet)");
   parameters[numberParameters-1].setLonghelp
     (
      "This orders the variables in order of their absolute costs - with largest cost ones being branched on \
-first.  This primitive strategy can be surprsingly effective.  The column order\
- option is obviously not on costs but easy to code here."
+first.  This primitive strategy can be surprsingly effective."
      ); 
-#if 0
-  parameters[numberParameters++]=
-    CbcOrClpParam("cpp!Generate","Generates C++ code",
-		  -1,50000,CPP);
-  parameters[numberParameters-1].setLonghelp
-    (
-     "Once you like what the stand-alone solver does then this allows \
-you to generate user_driver.cpp which approximates the code.  \
-0 gives simplest driver, 1 generates saves and restores, 2 \
-generates saves and restores even for variables at default value. \
-4 bit in cbc generates size dependent code rather than computed values."
-     );
-#endif 
 #endif
 #ifdef COIN_HAS_CLP
   parameters[numberParameters++]=
@@ -1493,14 +1479,6 @@ before branch and bound - use with extreme caution!"
     (
      "This switches on flow cover cuts (either at root or in entire tree) \
 See branchAndCut for information on options."
-    parameters[numberParameters++]=
-      CbcOrClpParam("force!Solution","Whether to use given solution as crash for BAB",
-		    "off",USESOLUTION);
-    parameters[numberParameters-1].append("on");
-  parameters[numberParameters-1].setLonghelp
-    (
-     "If on then tries to branch to solution given by AMPL or priorities file."
-     ); 
      ); 
 #endif
   parameters[numberParameters++]=
@@ -1514,6 +1492,17 @@ See branchAndCut for information on options."
   parameters[numberParameters-1].append("deltastrong");
 #endif
 #ifdef COIN_HAS_CBC
+  parameters[numberParameters++]=
+    CbcOrClpParam("gap!Ratio","Stop when gap between best possible and \
+best less than this fraction of larger of two",
+		  0.0,1.0e20,GAPRATIO);
+  parameters[numberParameters-1].setDoubleValue(0.0);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "If the gap between best solution and best possible solution is less than this fraction \
+of the objective value at the root node then the search will terminate.  See 'allowableGap' for a \
+way of using absolute value rather than fraction."
+     ); 
   parameters[numberParameters++]=
     CbcOrClpParam("gomory!Cuts","Whether to use Gomory cuts",
 		  "off",GOMORYCUTS);
@@ -1842,11 +1831,6 @@ This is a first try and will hopefully become more sophisticated."
      ); 
   parameters[numberParameters-1].setDoubleValue(1.0);
 #endif
-#ifdef COIN_USE_CBC
-  parameters[numberParameters++]=
-    CbcOrClpParam("outDup!licates","takes duplicate rows etc out of integer model",
-		  OUTDUPROWS,7,false);
-#endif
   parameters[numberParameters++]=
     CbcOrClpParam("output!Format","Which output format to use",
 		  1,6,OUTPUTFORMAT);
@@ -1953,15 +1937,13 @@ to write the original to file using 'file'."
   parameters[numberParameters-1].append("equal");
   parameters[numberParameters-1].append("sos");
   parameters[numberParameters-1].append("trysos");
-  parameters[numberParameters-1].append("strategy");
   parameters[numberParameters-1].setLonghelp
     (
      "This tries to reduce size of model in a similar way to presolve and \
 it also tries to strengthen the model - this can be very useful and is worth trying. \
  Save option saves on file presolved.mps.  equal will turn <= cliques into \
 ==.  sos will create sos sets if all 0-1 in sets (well one extra is allowed) \
-and no overlaps.  trysos is same but allows any number extra.  strategy is as \
-on but uses CbcStrategy."
+and no overlaps.  trysos is same but allows any number extra."
      ); 
 #endif
 #ifdef COIN_HAS_CLP
@@ -2050,8 +2032,7 @@ Also see printMask for controlling output."
   parameters[numberParameters-1].setLonghelp
     (
      "If set then only those names which match mask are printed in a solution. \
-'?' matches any character and '*' matches any set of characters. \
- The default is '' i.e. unset so all variables are printed. \
+'*' matches any character.  The default is '' i.e. unset so all variables are printed. \
 This is only active if model has names."
      ); 
 #ifdef COIN_HAS_CBC
@@ -2063,7 +2044,7 @@ This is only active if model has names."
      "This will read a file with priorities from the given file name.  It will use the default\
  directory given by 'directory'.  A name of '$' will use the previous value for the name.  This\
  is initialized to '', i.e. it must be set.  This can not read from compressed files. \
-File is in csv format with allowed headings - name, number, priority, direction, up, down, solution.  Exactly one of\
+File is in csv format with allowed headings - name, number, priority, direction.  Exactly one of\
  name and number must be given."
      ); 
   parameters[numberParameters++]=
@@ -2084,19 +2065,6 @@ See branchAndCut for information on options."
   parameters[numberParameters-1].setLonghelp
     (
      "This stops the execution of Clp, end, exit, quit and stop are synonyms"
-#ifdef COIN_USE_CBC
-  parameters[numberParameters++]=
-    CbcOrClpParam("ratio!Gap","Stop when gap between best possible and \
-best less than this fraction of larger of two",
-		  0.0,1.0e20,GAPRATIO);
-  parameters[numberParameters-1].setDoubleValue(0.0);
-  parameters[numberParameters-1].setLonghelp
-    (
-     "If the gap between best solution and best possible solution is less than this fraction \
-of the objective value at the root node then the search will terminate.  See 'allowableGap' for a \
-way of using absolute value rather than fraction."
-     ); 
-#endif
      ); 
 #ifdef COIN_HAS_CLP
   parameters[numberParameters++]=
@@ -2252,16 +2220,6 @@ sequential Lps to get a good approximate solution."
      "If there are no integer variables then this just solves LP.  If there are integer variables \
 this does branch and cut."
      ); 
-    CbcOrClpParam("sos!Options","Whether to use SOS from AMPL",
-		  "off",SOS);
-  parameters[numberParameters-1].append("on");
-  parameters[numberParameters-1].setCurrentOption("on");
-  parameters[numberParameters-1].setLonghelp
-    (
-     "Normally if AMPL says there are SOS variables they should be used, but sometime sthey should\
- be turned off - this does so."
-     ); 
-  parameters[numberParameters++]=
   parameters[numberParameters++]=
     CbcOrClpParam("slog!Level","Level of detail in Solver output",
 		  -1,63,SOLVERLOGLEVEL);
@@ -2348,7 +2306,7 @@ see number before trust."
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("thread!s","Number of threads to try and use",
-		  -2,64,THREADS,false);
+		  -2,64,THREADS);
 #endif
 #ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
@@ -2396,26 +2354,8 @@ See branchAndCut for information on options."
      "This exercises the unit test for clp"
      ); 
   parameters[numberParameters++]=
-    CbcOrClpParam("userClp","Hand coded Clp stuff",
-		  USERCLP);
-  parameters[numberParameters-1].setLonghelp
-    (
-     "There are times e.g. when using AMPL interface when you may wish to do something unusual.  \
-Look for USERCLP in main driver and modify sample code."
-     ); 
-#ifdef COIN_USE_CBC
-  parameters[numberParameters++]=
-    CbcOrClpParam("userCbc","Hand coded Cbc stuff",
-		  USERCBC);
-  parameters[numberParameters-1].setLonghelp
-    (
-     "There are times e.g. when using AMPL interface when you may wish to do something unusual.  \
-Look for USERCBC in main driver and modify sample code."
-     ); 
-#endif
-  parameters[numberParameters++]=
     CbcOrClpParam("verbose","Switches on longer help on single ?",
-		  0,15,VERBOSE,false);
+		  0,7,VERBOSE,false);
   parameters[numberParameters-1].setLonghelp
     (
      "Set to 1 to get short help with ? list, 2 to get long help, 3 for both.  (add 4 to just get ampl ones)."

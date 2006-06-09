@@ -14,7 +14,6 @@
 #include "ClpNonLinearCost.hpp"
 // at end to get min/max!
 #include "ClpGubMatrix.hpp"
-//#include "ClpGubDynamicMatrix.hpp"
 #include "ClpMessage.hpp"
 //#define CLP_DEBUG
 //#define CLP_DEBUG_PRINT
@@ -912,9 +911,6 @@ ClpGubMatrix::countBasis(ClpSimplex * model,
   const CoinBigIndex * columnStart = matrix_->getVectorStarts();
   const int * row = matrix_->getIndices();
   const double * elementByColumn = matrix_->getElements();
-  //ClpGubDynamicMatrix* gubx =
-  //dynamic_cast< ClpGubDynamicMatrix*>(this);
-  //int * id = gubx->id();
   // just count 
   for (i=0;i<numberColumnBasic;i++) {
     int iColumn = whichColumn[i];
@@ -923,7 +919,6 @@ ClpGubMatrix::countBasis(ClpSimplex * model,
     if (iSet<0||keyVariable_[iSet]>=numberColumns) {
       numberElements += length;
       numberBasic++;
-      //printf("non gub - set %d id %d (column %d) nel %d\n",iSet,id[iColumn-20],iColumn,length);
     } else {
       // in gub set
       if (iColumn!=keyVariable_[iSet]) {
@@ -957,7 +952,6 @@ ClpGubMatrix::countBasis(ClpSimplex * model,
 	  }
 	}
 	numberElements+=extra;
-        //printf("gub - set %d id %d (column %d) nel %d\n",iSet,id[iColumn-20],iColumn,extra);
       }
     }
   }
@@ -2125,7 +2119,7 @@ ClpGubMatrix::primalExpanded(ClpSimplex * model,int mode)
       double primalTolerance = model->primalTolerance();
       double relaxedTolerance=primalTolerance;
       // we can't really trust infeasibilities if there is primal error
-      double error = CoinMin(1.0e-2,model->largestPrimalError());
+      double error = CoinMin(1.0e-3,model->largestPrimalError());
       // allow tolerance at least slightly bigger than standard
       relaxedTolerance = relaxedTolerance +  error;
       // but we will be using difference
@@ -2329,7 +2323,7 @@ ClpGubMatrix::dualExpanded(ClpSimplex * model,
       double dualTolerance = model->dualTolerance();
       double relaxedTolerance=dualTolerance;
       // we can't really trust infeasibilities if there is dual error
-      double error = CoinMin(1.0e-2,model->largestDualError());
+      double error = CoinMin(1.0e-3,model->largestDualError());
       // allow tolerance at least slightly bigger than standard
       relaxedTolerance = relaxedTolerance +  error;
       // but we will be using difference

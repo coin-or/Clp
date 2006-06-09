@@ -55,8 +55,8 @@ int main (int argc, const char *argv[])
   int iRow,iColumn;
   int numberExtraRows=0;
   for (iRow=0;iRow<numberRows;iRow++) {
-    if (rowLower[iRow]<=-1.0e20) {
-    } else if (rowUpper[iRow]>=1.0e20) {
+    if (rowLower[iRow]<-1.0e20) {
+    } else if (rowUpper[iRow]>1.0e20) {
     } else {
       if (rowUpper[iRow]!=rowLower[iRow])
          numberExtraRows++;
@@ -69,10 +69,10 @@ int main (int argc, const char *argv[])
   double objOffset=0.0;
   for (iColumn=0;iColumn<numberColumns;iColumn++) {
     double offset=0.0;
-    if (columnUpper[iColumn]>=1.0e20) {
+    if (columnUpper[iColumn]>1.0e20) {
       if (columnLower[iColumn]>-1.0e20)
         offset=columnLower[iColumn];
-    } else if (columnLower[iColumn]<=-1.0e20) {
+    } else if (columnLower[iColumn]<-1.0e20) {
       offset=columnUpper[iColumn];
     } else {
       // taken care of before
@@ -100,7 +100,7 @@ int main (int argc, const char *argv[])
   double * fromColumnsUpper = new double[numberColumns];
   for (iColumn=0;iColumn<numberColumns;iColumn++) {
     // Offset is already in
-    if (columnUpper[iColumn]>=1.0e20) {
+    if (columnUpper[iColumn]>1.0e20) {
       if (columnLower[iColumn]>-1.0e20) {
         fromColumnsLower[iColumn]=-COIN_DBL_MAX;
         fromColumnsUpper[iColumn]=objective[iColumn];
@@ -109,7 +109,7 @@ int main (int argc, const char *argv[])
         fromColumnsLower[iColumn]=objective[iColumn];
         fromColumnsUpper[iColumn]=objective[iColumn];
       }
-    } else if (columnLower[iColumn]<=-1.0e20) {
+    } else if (columnLower[iColumn]<-1.0e20) {
       fromColumnsLower[iColumn]=objective[iColumn];
       fromColumnsUpper[iColumn]=COIN_DBL_MAX;
     } else {
@@ -118,14 +118,14 @@ int main (int argc, const char *argv[])
   }
   int kRow=0;
   for (iRow=0;iRow<numberRows;iRow++) {
-    if (rowLower[iRow]<=-1.0e20) {
+    if (rowLower[iRow]<-1.0e20) {
       assert (rowUpper[iRow]<1.0e20);
       newObjective[kRow]=-rowUpper[iRow];
       fromRowsLower[kRow]=-COIN_DBL_MAX;
       fromRowsUpper[kRow]=0.0;
       which[kRow]=iRow;
       kRow++;
-    } else if (rowUpper[iRow]>=1.0e20) {
+    } else if (rowUpper[iRow]>1.0e20) {
       newObjective[kRow]=-rowLower[iRow];
       fromRowsLower[kRow]=0.0;
       fromRowsUpper[kRow]=COIN_DBL_MAX;

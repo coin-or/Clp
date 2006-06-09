@@ -248,7 +248,6 @@ ClpCholeskyBase::solveKKT (double * region1, double * region2, const double * di
     double * array = new double [numberRows_];
     CoinMemcpyN(region1,numberTotal,array);
     CoinMemcpyN(region2,numberRowsModel,array+numberTotal);
-    assert (numberRows_>=numberRowsModel+numberTotal);
     solve(array);
     int iRow;
     for (iRow=0;iRow<numberTotal;iRow++) { 
@@ -1410,7 +1409,7 @@ ClpCholeskyBase::symbolic2(const CoinBigIndex * Astart, const int * Arow)
     // should not be needed
     //std::sort(choleskyRow_+indexStart_[iRow]
     //      ,choleskyRow_+indexStart_[iRow]+nz);
-    //#define CLP_DEBUG
+#define CLP_DEBUG
 #ifdef CLP_DEBUG
     int last=-1;
     for ( j=indexStart_[iRow];j<indexStart_[iRow]+nz;j++) {

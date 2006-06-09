@@ -931,8 +931,6 @@ public:
   */
   inline int maximumBasic() const
   { return maximumBasic_;};
-  /// Create C++ lines to get to current state
-  void generateCpp( FILE * fp,bool defaultFactor=false);
   /** For advanced options
       1 - Don't keep changing infeasibility weight
       2 - Keep nonLinearCost round solves
