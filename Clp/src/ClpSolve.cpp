@@ -21,6 +21,7 @@
 #include "ClpPlusMinusOneMatrix.hpp"
 #include "ClpNetworkMatrix.hpp"
 #endif
+#include "ClpLinearObjective.hpp"
 #include "ClpSolve.hpp"
 #include "ClpPackedMatrix.hpp"
 #include "ClpMessage.hpp"
@@ -372,6 +373,26 @@ ClpSimplex::initialSolve(ClpSolve & options)
   double timeX = time1;
   double time2;
   ClpMatrixBase * saveMatrix=NULL;
+  ClpObjective * savedObjective=NULL;
+  if (objective_->type()>=2&&optimizationDirection_==0) {
+    // pretend linear
+    savedObjective=objective_;
+    // make up objective
+    double * obj = new double[numberColumns_];
+    for (int i=0;i<numberColumns_;i++) {
+      double l = fabs(columnLower_[i]);
+      double u = fabs(columnUpper_[i]);
+      obj[i]=0.0;
+      if (CoinMin(l,u)<1.0e20) {
+        if (l<u) 
+          obj[i]=1.0+CoinDrand48()*1.0e-2;
+        else
+          obj[i]=-1.0-CoinDrand48()*1.0e-2;
+      }
+    }
+    objective_= new ClpLinearObjective(obj,numberColumns_);
+    delete [] obj;
+  }
   ClpSimplex * model2 = this;
   bool interrupt = (options.getSpecialOption(2)==0);
   CoinSighandler_t saveSignal=SIG_DFL;
@@ -618,7 +639,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
 #endif
   int numberColumns = model2->numberColumns();
   int numberRows = model2->numberRows();
-  // If not all slack basis - switch off all
+  // If not all slack basis - switch off all except sprint
   int number=0;
   int iRow;
   for (iRow=0;iRow<numberRows;iRow++)
@@ -627,7 +648,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
   if (number<numberRows) {
     doIdiot=0;
     doCrash=0;
-    doSprint=0;
+    //doSprint=0;
   }
   if (options.getSpecialOption(3)==0) {
     if(numberElements>100000)
@@ -1254,48 +1275,113 @@ ClpSimplex::initialSolve(ClpSolve & options)
     int numberRows = model2->numberRows();
     
     // We will need arrays to choose variables.  These are too big but ..
-    double * weight = new double [numberRows+originalNumberColumns];
+    float * weight = new float [numberRows+originalNumberColumns];
     int * sort = new int [numberRows+originalNumberColumns];
     int numberSort=0;
     // We are going to add slacks to get feasible.
     // initial list will just be artificials
-    // first we will set all variables as close to zero as possible
     int iColumn;
     const double * columnLower = model2->columnLower();
     const double * columnUpper = model2->columnUpper();
     double * columnSolution = model2->primalColumnSolution();
-    
+
+    // See if we have costed slacks
+    int * negSlack = new int[numberRows];
+    int * posSlack = new int[numberRows];
+    int iRow;
+    for (iRow=0;iRow<numberRows;iRow++) {
+      negSlack[iRow]=-1;
+      posSlack[iRow]=-1;
+    }
+    const double * element = model2->matrix()->getElements();
+    const int * row = model2->matrix()->getIndices();
+    const CoinBigIndex * columnStart = model2->matrix()->getVectorStarts();
+    const int * columnLength = model2->matrix()->getVectorLengths();
     for (iColumn=0;iColumn<originalNumberColumns;iColumn++) {
-      double value =0.0;
-      if (columnLower[iColumn]>0.0)
-	value = columnLower[iColumn];
-      else if (columnUpper[iColumn]<0.0)
-	value = columnUpper[iColumn];
-      columnSolution[iColumn]=value;
+      if (!columnSolution[iColumn]||fabs(columnSolution[iColumn])>1.0e20) {
+        double value =0.0;
+        if (columnLower[iColumn]>0.0)
+          value = columnLower[iColumn];
+        else if (columnUpper[iColumn]<0.0)
+          value = columnUpper[iColumn];
+        columnSolution[iColumn]=value;
+      }
+      if (columnLength[iColumn]==1) {
+        int jRow=row[columnStart[iColumn]];
+        if (!columnLower[iColumn]) {
+          if (element[columnStart[iColumn]]>0.0&&posSlack[jRow]<0)
+            posSlack[jRow]=iColumn;
+          else if (element[columnStart[iColumn]]<0.0&&negSlack[jRow]<0)
+            negSlack[jRow]=iColumn;
+        } else if (!columnUpper[iColumn]) {
+          if (element[columnStart[iColumn]]<0.0&&posSlack[jRow]<0)
+            posSlack[jRow]=iColumn;
+          else if (element[columnStart[iColumn]]>0.0&&negSlack[jRow]<0)
+            negSlack[jRow]=iColumn;
+        }
+      }
     }
     // now see what that does to row solution
     double * rowSolution = model2->primalRowSolution();
     CoinZeroN (rowSolution,numberRows);
     model2->times(1.0,columnSolution,rowSolution);
-    
+    // See if we can adjust using costed slacks
+    double penalty=infeasibilityCost_*optimizationDirection_;
+    const double * lower = model2->rowLower();
+    const double * upper = model2->rowUpper();
+    for (iRow=0;iRow<numberRows;iRow++) {
+      if (lower[iRow]>rowSolution[iRow]+1.0e-8) {
+        int jColumn = posSlack[iRow];
+        if (jColumn>=0) {
+          if (columnSolution[jColumn])
+            continue;
+          double difference = lower[iRow]-rowSolution[iRow];
+          double elementValue = element[columnStart[jColumn]];
+          if (elementValue>0.0) {
+            double movement = CoinMin(difference/elementValue,columnUpper[jColumn]);
+            columnSolution[jColumn] = movement;
+            rowSolution[iRow] += movement*elementValue;
+          } else {
+            double movement = CoinMax(difference/elementValue,columnLower[jColumn]);
+            columnSolution[jColumn] = movement;
+            rowSolution[iRow] += movement*elementValue;
+          }
+        }
+      } else if (upper[iRow]<rowSolution[iRow]-1.0e-8) {
+        int jColumn = negSlack[iRow];
+        if (jColumn>=0) {
+          if (columnSolution[jColumn])
+            continue;
+          double difference = upper[iRow]-rowSolution[iRow];
+          double elementValue = element[columnStart[jColumn]];
+          if (elementValue<0.0) {
+            double movement = CoinMin(difference/elementValue,columnUpper[jColumn]);
+            columnSolution[jColumn] = movement;
+            rowSolution[iRow] += movement*elementValue;
+          } else {
+            double movement = CoinMax(difference/elementValue,columnLower[jColumn]);
+            columnSolution[jColumn] = movement;
+            rowSolution[iRow] += movement*elementValue;
+          }
+        }
+      }
+    }
+    delete [] negSlack;
+    delete [] posSlack;
     int * addStarts = new int [numberRows+1];
     int * addRow = new int[numberRows];
     double * addElement = new double[numberRows];
-    const double * lower = model2->rowLower();
-    const double * upper = model2->rowUpper();
     addStarts[0]=0;
     int numberArtificials=0;
     double * addCost = new double [numberRows];
-    const double penalty=1.0e8*optimizationDirection_;
-    int iRow;
     for (iRow=0;iRow<numberRows;iRow++) {
-      if (lower[iRow]>rowSolution[iRow]) {
+      if (lower[iRow]>rowSolution[iRow]+1.0e-8) {
 	addRow[numberArtificials]=iRow;
 	addElement[numberArtificials]=1.0;
 	addCost[numberArtificials]=penalty;
 	numberArtificials++;
 	addStarts[numberArtificials]=numberArtificials;
-      } else if (upper[iRow]<rowSolution[iRow]) {
+      } else if (upper[iRow]<rowSolution[iRow]-1.0e-8) {
 	addRow[numberArtificials]=iRow;
 	addElement[numberArtificials]=-1.0;
 	addCost[numberArtificials]=penalty;
@@ -1357,38 +1443,57 @@ ClpSimplex::initialSolve(ClpSolve & options)
       }
     }
     int i;
-    // Set up initial list
-    if (numberArtificials) {
-      numberSort=numberArtificials;
-      for (i=0;i<numberSort;i++)
-	sort[i] = i+originalNumberColumns;
-    } else {
-      numberSort = CoinMin(numberRows_,numberColumns_);
-      for (i=0;i<numberSort;i++)
-	sort[i] = i;
-    }
-    
-    // redo as will have changed
-    columnLower = model2->columnLower();
-    columnUpper = model2->columnUpper();
-    int numberColumns = model2->numberColumns();
-    double * fullSolution = model2->primalColumnSolution();
-    
     // Just do this number of passes in Sprint
     if (doSprint>0)
       maxSprintPass=options.getExtraInfo(1);
-    int iPass;
-    double lastObjective=1.0e31;
-    // It will be safe to allow dense
-    model2->setInitialDenseFactorization(true);
-    
+    // but if big use to get ratio
+    int ratio=3;
+    if (maxSprintPass>1000) {
+      ratio = CoinMax(maxSprintPass/1000,3);
+      maxSprintPass= maxSprintPass %1000;
+      printf("%d passes wanted with ratio of %d\n",maxSprintPass,ratio);
+    }
     // Just take this number of columns in small problem
-    int smallNumberColumns = CoinMin(3*numberRows,numberColumns);
+    int smallNumberColumns = CoinMin(ratio*numberRows,numberColumns);
     smallNumberColumns = CoinMax(smallNumberColumns,3000);
     smallNumberColumns = CoinMin(smallNumberColumns,numberColumns);
     //int smallNumberColumns = CoinMin(12*numberRows/10,numberColumns);
     //smallNumberColumns = CoinMax(smallNumberColumns,3000);
     //smallNumberColumns = CoinMax(smallNumberColumns,numberRows+1000);
+    // redo as may have changed
+    columnLower = model2->columnLower();
+    columnUpper = model2->columnUpper();
+    columnSolution = model2->primalColumnSolution();
+    // Set up initial list
+    numberSort=0;
+    if (numberArtificials) {
+      numberSort=numberArtificials;
+      for (i=0;i<numberSort;i++)
+	sort[i] = i+originalNumberColumns;
+    } 
+    // maybe a solution there already
+    for (iColumn=0;iColumn<originalNumberColumns;iColumn++) {
+      if (model2->getColumnStatus(iColumn)==basic)
+        sort[numberSort++]=iColumn;
+    }
+    for (iColumn=0;iColumn<originalNumberColumns;iColumn++) {
+      if (model2->getColumnStatus(iColumn)!=basic) {
+        if (columnSolution[iColumn]>columnLower[iColumn]&&
+            columnSolution[iColumn]<columnUpper[iColumn])
+          sort[numberSort++]=iColumn;
+      }
+    }
+    numberSort = CoinMin(numberSort,smallNumberColumns);
+    
+    int numberColumns = model2->numberColumns();
+    double * fullSolution = model2->primalColumnSolution();
+    
+    
+    int iPass;
+    double lastObjective=1.0e31;
+    // It will be safe to allow dense
+    model2->setInitialDenseFactorization(true);
+    
     // We will be using all rows
     int * whichRows = new int [numberRows];
     for (iRow=0;iRow<numberRows;iRow++)
@@ -1402,6 +1507,11 @@ ClpSimplex::initialSolve(ClpSolve & options)
       // Create small problem
       ClpSimplex small(model2,numberRows,whichRows,numberSort,sort);
       small.setPerturbation(model2->perturbation());
+      small.setInfeasibilityCost(model2->infeasibilityCost());
+      if (model2->factorizationFrequency()==200) {
+        // User did not touch preset
+        small.defaultFactorizationFrequency();
+      }
       // now see what variables left out do to row solution
       double * rowSolution = model2->primalRowSolution();
       double * sumFixed = new double[numberRows];
@@ -1447,45 +1557,66 @@ ClpSimplex::initialSolve(ClpSolve & options)
       CoinMemcpyN(small.primalRowSolution(),
 	     numberRows,model2->primalRowSolution());
       // get reduced cost for large problem
-      CoinMemcpyN(model2->objective(),numberColumns,weight);
-      model2->transposeTimes(-1.0,small.dualRowSolution(),weight);
+      double * djs = model2->dualColumnSolution();
+      CoinMemcpyN(model2->objective(),numberColumns,djs);
+      model2->transposeTimes(-1.0,small.dualRowSolution(),djs);
       int numberNegative=0;
       double sumNegative = 0.0;
       // now massage weight so all basic in plus good djs
+      // first count and do basic
+      numberSort=0;
       for (iColumn=0;iColumn<numberColumns;iColumn++) {
-	double dj = weight[iColumn]*optimizationDirection_;
+	double dj = djs[iColumn]*optimizationDirection_;
 	double value = fullSolution[iColumn];
-	if (model2->getColumnStatus(iColumn)==ClpSimplex::basic) 
-	  dj = -1.0e50;
-	else if (dj<0.0&&value<columnUpper[iColumn])
-	  dj = dj;
-	else if (dj>0.0&&value>columnLower[iColumn])
-	  dj = -dj;
-	else if (columnUpper[iColumn]>columnLower[iColumn])
-	  dj = fabs(dj);
-	else
-	  dj = 1.0e50;
-	weight[iColumn] = dj;
-	if (dj<-dualTolerance_&&dj>-1.0e50) {
+	if (model2->getColumnStatus(iColumn)==ClpSimplex::basic) {
+	  sort[numberSort++] = iColumn;
+	} else if (dj<-dualTolerance_&&value<columnUpper[iColumn]) {
 	  numberNegative++;
 	  sumNegative -= dj;
+	} else if (dj>dualTolerance_&&value>columnLower[iColumn]) {
+	  numberNegative++;
+	  sumNegative += dj;
 	}
-	sort[iColumn] = iColumn;
       }
       handler_->message(CLP_SPRINT,messages_)
 	<<iPass+1<<small.numberIterations()<<small.objectiveValue()<<sumNegative
 	<<numberNegative
 	<<CoinMessageEol;
       if ((small.objectiveValue()*optimizationDirection_>lastObjective-1.0e-7&&iPass>5)||
-	  !small.numberIterations()||
+	  (!small.numberIterations()&&iPass)||
 	  iPass==maxSprintPass-1||small.status()==3) {
 	
 	break; // finished
       } else {
 	lastObjective = small.objectiveValue()*optimizationDirection_;
+	double tolerance;
+	double averageNegDj = sumNegative/((double) (numberNegative+1));
+	if (numberNegative+numberSort>smallNumberColumns)
+	  tolerance = -dualTolerance_;
+	else 
+	  tolerance = 10.0*averageNegDj;
+	int saveN = numberSort;
+	for (iColumn=0;iColumn<numberColumns;iColumn++) {
+	  double dj = djs[iColumn]*optimizationDirection_;
+	  double value = fullSolution[iColumn];
+	  if (model2->getColumnStatus(iColumn)!=ClpSimplex::basic) {
+	    if (dj<-dualTolerance_&&value<columnUpper[iColumn])
+	      dj = dj;
+	    else if (dj>dualTolerance_&&value>columnLower[iColumn])
+	      dj = -dj;
+	    else if (columnUpper[iColumn]>columnLower[iColumn])
+	      dj = fabs(dj);
+	    else
+	      dj = 1.0e50;
+	    if (dj<tolerance) {
+	      weight[numberSort] = dj;
+	      sort[numberSort++] = iColumn;
+	    }
+	  }
+	}
 	// sort
-	CoinSort_2(weight,weight+numberColumns,sort);
-	numberSort = smallNumberColumns;
+	CoinSort_2(weight+saveN,weight+numberSort,sort+saveN);
+	numberSort = CoinMin(smallNumberColumns,numberSort);
       }
     }
     if (interrupt) 
@@ -1524,7 +1655,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
   } else if (method==ClpSolve::useBarrier||method==ClpSolve::useBarrierNoCross) {
 #ifndef SLIM_CLP
     //printf("***** experimental pretty crude barrier\n");
-    //#define SAVEIT 1
+    //#define SAVEIT 2
 #ifndef SAVEIT
 #define BORROW
 #endif
@@ -1777,6 +1908,10 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	model2->createStatus();
 	// solve
 	model2->setPerturbation(100);
+        if (model2->factorizationFrequency()==200) {
+          // User did not touch preset
+          model2->defaultFactorizationFrequency();
+        }
 #if 1
 	// throw some into basis 
 	{
@@ -1821,6 +1956,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	  delete [] sort;
 	  delete [] dsort;
 	}
+        // model2->allSlackBasis();
 	if (gap<1.0e-3*((double) (numberRows+numberColumns))) {
           if (saveUpper) {
             int numberRows = model2->numberRows();
@@ -2034,6 +2170,11 @@ ClpSimplex::initialSolve(ClpSolve & options)
     signal(SIGINT,saveSignal);
   perturbation_=savePerturbation;
   scalingFlag_=saveScaling;
+  // If faking objective - put back correct one
+  if (savedObjective) {
+    delete objective_;
+    objective_=savedObjective;
+  }
   return finalStatus;
 }
 // General solve
@@ -2080,6 +2221,22 @@ ClpSolve::ClpSolve (  )
   // Substitute up to 3
   independentOptions_[2]=3;
   
+}
+// Constructor when you really know what you are doing
+ClpSolve::ClpSolve ( SolveType method, PresolveType presolveType,
+             int numberPasses, int options[6],
+             int extraInfo[6], int independentOptions[3])
+{
+  method_ = method;
+  presolveType_=presolveType;
+  numberPasses_=numberPasses;
+  int i;
+  for (i=0;i<6;i++)
+    options_[i]=options[i];
+  for (i=0;i<6;i++)
+    extraInfo_[i]=extraInfo[i];
+  for (i=0;i<3;i++)
+    independentOptions_[i]=independentOptions[i];
 }
 
 // Copy constructor. 
@@ -2174,4 +2331,39 @@ void
 ClpSolve::setInfeasibleReturn(bool trueFalse)
 {
   independentOptions_[0]= trueFalse ? 1 : 0;
+}
+#include <string>
+// Generates code for above constructor
+void 
+ClpSolve::generateCpp(FILE * fp)
+{
+  std::string solveType[] = {
+    "ClpSolve::useDual",
+    "ClpSolve::usePrimal",
+    "ClpSolve::usePrimalorSprint",
+    "ClpSolve::useBarrier",
+    "ClpSolve::useBarrierNoCross",
+    "ClpSolve::automatic",
+    "ClpSolve::notImplemented"
+  };
+  std::string presolveType[] =  {
+    "ClpSolve::presolveOn",
+    "ClpSolve::presolveOff",
+    "ClpSolve::presolveNumber",
+    "ClpSolve::presolveNumberCost"
+  };
+  fprintf(fp,"3  ClpSolve::SolveType method = %s;\n",solveType[method_].c_str());
+  fprintf(fp,"3  ClpSolve::PresolveType presolveType = %s;\n",
+    presolveType[presolveType_].c_str());
+  fprintf(fp,"3  int numberPasses = %d;\n",numberPasses_);
+  fprintf(fp,"3  int options[] = {%d,%d,%d,%d,%d,%d};\n",
+    options_[0],options_[1],options_[2],
+    options_[3],options_[4],options_[5]);
+  fprintf(fp,"3  int extraInfo[] = {%d,%d,%d,%d,%d,%d};\n",
+    extraInfo_[0],extraInfo_[1],extraInfo_[2],
+    extraInfo_[3],extraInfo_[4],extraInfo_[5]);
+  fprintf(fp,"3  int independentOptions[] = {%d,%d,%d};\n",
+    independentOptions_[0],independentOptions_[1],independentOptions_[2]);
+  fprintf(fp,"3  ClpSolve clpSolve(method,presolveType,numberPasses,\n");
+  fprintf(fp,"3                    options,extraInfo,independentOptions);\n");
 }

@@ -42,8 +42,10 @@ ClpCholeskyUfl::ClpCholeskyUfl (const ClpCholeskyUfl & rhs)
 //-------------------------------------------------------------------
 ClpCholeskyUfl::~ClpCholeskyUfl ()
 {
+#ifdef CLP_USE_CHOLMOD
   cholmod_free_factor (&L_, &c_) ;
   cholmod_finish (&c_) ;		
+#endif
 }
 
 //----------------------------------------------------------------
@@ -105,6 +107,11 @@ int
 ClpCholeskyUfl::order(ClpInterior * model) 
 {
   numberRows_ = model->numberRows();
+  if (doKKT_) {
+    numberRows_ += numberRows_ + model->numberColumns();
+    printf("finish coding UFL KKT!\n");
+    abort();
+  }
   rowsDropped_ = new char [numberRows_];
   memset(rowsDropped_,0,numberRows_);
   numberRowsDropped_=0;

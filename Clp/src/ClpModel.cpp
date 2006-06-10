@@ -1,4 +1,4 @@
-// Copyright (C) 2002, International Business Machines
+// copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
 #include <cmath>
@@ -3453,4 +3453,73 @@ ClpDataSave::operator=(const ClpDataSave& rhs)
     scalingFlag_=rhs.scalingFlag_;
   }
   return *this;
+}
+// Create C++ lines to get to current state
+void 
+ClpModel::generateCpp( FILE * fp)
+{
+  // Stuff that can't be done easily
+  if (!lengthNames_) {
+    // no names
+    fprintf(fp,"  clpModel->dropNames();\n");
+  }
+  ClpModel defaultModel;
+  ClpModel * other = &defaultModel;
+  int iValue1, iValue2;
+  double dValue1, dValue2;
+  iValue1 = this->maximumIterations();
+  iValue2 = other->maximumIterations();
+  fprintf(fp,"%d  int save_maximumIterations = clpModel->maximumIterations();\n",iValue1==iValue2 ? 2 : 1);
+  fprintf(fp,"%d  clpModel->setMaximumIterations(%d);\n",iValue1==iValue2 ? 4 : 3,iValue1);
+  fprintf(fp,"%d  clpModel->setMaximumIterations(save_maximumIterations);\n",iValue1==iValue2 ? 7 : 6);
+  dValue1 = this->primalTolerance();
+  dValue2 = other->primalTolerance();
+  fprintf(fp,"%d  double save_primalTolerance = clpModel->primalTolerance();\n",dValue1==dValue2 ? 2 : 1);
+  fprintf(fp,"%d  clpModel->setPrimalTolerance(%g);\n",dValue1==dValue2 ? 4 : 3,dValue1);
+  fprintf(fp,"%d  clpModel->setPrimalTolerance(save_primalTolerance);\n",dValue1==dValue2 ? 7 : 6);
+  dValue1 = this->dualTolerance();
+  dValue2 = other->dualTolerance();
+  fprintf(fp,"%d  double save_dualTolerance = clpModel->dualTolerance();\n",dValue1==dValue2 ? 2 : 1);
+  fprintf(fp,"%d  clpModel->setDualTolerance(%g);\n",dValue1==dValue2 ? 4 : 3,dValue1);
+  fprintf(fp,"%d  clpModel->setDualTolerance(save_dualTolerance);\n",dValue1==dValue2 ? 7 : 6);
+  iValue1 = this->numberIterations();
+  iValue2 = other->numberIterations();
+  fprintf(fp,"%d  int save_numberIterations = clpModel->numberIterations();\n",iValue1==iValue2 ? 2 : 1);
+  fprintf(fp,"%d  clpModel->setNumberIterations(%d);\n",iValue1==iValue2 ? 4 : 3,iValue1);
+  fprintf(fp,"%d  clpModel->setNumberIterations(save_numberIterations);\n",iValue1==iValue2 ? 7 : 6);
+  dValue1 = this->maximumSeconds();
+  dValue2 = other->maximumSeconds();
+  fprintf(fp,"%d  double save_maximumSeconds = clpModel->maximumSeconds();\n",dValue1==dValue2 ? 2 : 1);
+  fprintf(fp,"%d  clpModel->setMaximumSeconds(%g);\n",dValue1==dValue2 ? 4 : 3,dValue1);
+  fprintf(fp,"%d  clpModel->setMaximumSeconds(save_maximumSeconds);\n",dValue1==dValue2 ? 7 : 6);
+  dValue1 = this->optimizationDirection();
+  dValue2 = other->optimizationDirection();
+  fprintf(fp,"%d  double save_optimizationDirection = clpModel->optimizationDirection();\n",dValue1==dValue2 ? 2 : 1);
+  fprintf(fp,"%d  clpModel->setOptimizationDirection(%g);\n",dValue1==dValue2 ? 4 : 3,dValue1);
+  fprintf(fp,"%d  clpModel->setOptimizationDirection(save_optimizationDirection);\n",dValue1==dValue2 ? 7 : 6);
+  dValue1 = this->objectiveScale();
+  dValue2 = other->objectiveScale();
+  fprintf(fp,"%d  double save_objectiveScale = clpModel->objectiveScale();\n",dValue1==dValue2 ? 2 : 1);
+  fprintf(fp,"%d  clpModel->setObjectiveScale(%g);\n",dValue1==dValue2 ? 4 : 3,dValue1);
+  fprintf(fp,"%d  clpModel->setObjectiveScale(save_objectiveScale);\n",dValue1==dValue2 ? 7 : 6);
+  dValue1 = this->rhsScale();
+  dValue2 = other->rhsScale();
+  fprintf(fp,"%d  double save_rhsScale = clpModel->rhsScale();\n",dValue1==dValue2 ? 2 : 1);
+  fprintf(fp,"%d  clpModel->setRhsScale(%g);\n",dValue1==dValue2 ? 4 : 3,dValue1);
+  fprintf(fp,"%d  clpModel->setRhsScale(save_rhsScale);\n",dValue1==dValue2 ? 7 : 6);
+  iValue1 = this->scalingFlag();
+  iValue2 = other->scalingFlag();
+  fprintf(fp,"%d  int save_scalingFlag = clpModel->scalingFlag();\n",iValue1==iValue2 ? 2 : 1);
+  fprintf(fp,"%d  clpModel->scaling(%d);\n",iValue1==iValue2 ? 4 : 3,iValue1);
+  fprintf(fp,"%d  clpModel->scaling(save_scalingFlag);\n",iValue1==iValue2 ? 7 : 6);
+  dValue1 = this->getSmallElementValue();
+  dValue2 = other->getSmallElementValue();
+  fprintf(fp,"%d  double save_getSmallElementValue = clpModel->getSmallElementValue();\n",dValue1==dValue2 ? 2 : 1);
+  fprintf(fp,"%d  clpModel->setSmallElementValue(%g);\n",dValue1==dValue2 ? 4 : 3,dValue1);
+  fprintf(fp,"%d  clpModel->setSmallElementValue(save_getSmallElementValue);\n",dValue1==dValue2 ? 7 : 6);
+  iValue1 = this->logLevel();
+  iValue2 = other->logLevel();
+  fprintf(fp,"%d  int save_logLevel = clpModel->logLevel();\n",iValue1==iValue2 ? 2 : 1);
+  fprintf(fp,"%d  clpModel->setLogLevel(%d);\n",iValue1==iValue2 ? 4 : 3,iValue1);
+  fprintf(fp,"%d  clpModel->setLogLevel(save_logLevel);\n",iValue1==iValue2 ? 7 : 6);
 }

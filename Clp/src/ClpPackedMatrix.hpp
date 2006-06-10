@@ -51,6 +51,9 @@ public:
    /** The lengths of the major-dimension vectors. */
    virtual const int * getVectorLengths() const 
   { return matrix_->getVectorLengths();} ;
+  /** The length of a single major-dimension vector. */
+  virtual int getVectorLength(int index) const 
+  { return matrix_->getVectorSize(index);};
 
     /** Delete the columns whose indices are listed in <code>indDel</code>. */
   virtual void deleteCols(const int numDel, const int * indDel);
@@ -164,7 +167,7 @@ public:
       means that that dimension doesn't change. Otherwise the new dimensions
       MUST be at least as large as the current ones otherwise an exception
       is thrown. */
-  virtual void setDimensions(int numrows, int numcols) throw(CoinError);
+  virtual void setDimensions(int numrows, int numcols);
    //@}
 
   /**@name Matrix times vector methods */

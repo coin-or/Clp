@@ -191,6 +191,12 @@ ClpMatrixBase::rangeOfElements(double & smallestNegative, double & largestNegati
   smallestPositive=0.0;
   largestPositive=0.0;
 }
+/* The length of a major-dimension vector. */
+int
+ClpMatrixBase::getVectorLength(int index) const 
+{
+  return getVectorLengths()[index];
+}
 // Says whether it can do partial pricing
 bool 
 ClpMatrixBase::canDoPartialPricing() const
@@ -571,8 +577,7 @@ ClpMatrixBase::transposeTimes2(const ClpSimplex * model,
    MUST be at least as large as the current ones otherwise an exception
    is thrown. */
 void 
-ClpMatrixBase::setDimensions(int numrows, int numcols) throw(CoinError)
-{
+ClpMatrixBase::setDimensions(int numrows, int numcols){
   // If odd matrix assume user knows what they are doing
 }
 /* Append a set of rows/columns to the end of the matrix. Returns number of errors

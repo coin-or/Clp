@@ -158,6 +158,9 @@ ClpPlusMinusOneMatrix::ClpPlusMinusOneMatrix (const CoinPackedMatrix & rhs)
     startNegative_ = NULL;
   } else {
     numberRows_ ++; //  correct
+    // but number should be same as rhs
+    assert (numberRows_<=rhs.getNumRows());
+    numberRows_ = rhs.getNumRows();
     columnOrdered_ = true;
   }
   // Check valid
@@ -1870,7 +1873,6 @@ ClpPlusMinusOneMatrix::subsetTimes2(const ClpSimplex * model,
    is thrown. */
 void 
 ClpPlusMinusOneMatrix::setDimensions(int newnumrows, int newnumcols)
-  throw(CoinError)
 {
   if (newnumrows < 0)
     newnumrows = numberRows_;

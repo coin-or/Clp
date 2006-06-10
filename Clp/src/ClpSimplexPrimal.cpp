@@ -637,6 +637,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 					  ClpSimplex * originalModel)
 {
   int dummy; // for use in generalExpanded
+  int saveFirstFree=firstFree_;
   // number of pivots done
   int numberPivots = factorization_->pivots();
   if (type==2) {
@@ -1154,6 +1155,11 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
   lastGoodIteration_ = numberIterations_;
   if (goToDual) 
     problemStatus_=10; // try dual
+  // make sure first free monotonic
+  if (firstFree_>=0&&saveFirstFree>=0) {
+    firstFree_=saveFirstFree;
+    nextSuperBasic(1,NULL);
+  }
 #if 0
   double thisObj = progress->lastObjective(0);
   double lastObj = progress->lastObjective(1);
@@ -2372,8 +2378,9 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
     double checkValue=1.0e-2;
     if (largestDualError_>1.0e-5)
       checkValue=1.0e-1;
-    if (solveType_==1&&((saveDj*dualIn_<1.0e-20&&!ifValuesPass)||
-	fabs(saveDj-dualIn_)>checkValue*(1.0+fabs(saveDj)))) {
+    if (!ifValuesPass&&solveType_==1&&(saveDj*dualIn_<1.0e-20||
+	fabs(saveDj-dualIn_)>checkValue*(1.0+fabs(saveDj))||
+			fabs(dualIn_)<dualTolerance_)) {
       char x = isColumn(sequenceIn_) ? 'C' :'R';
       handler_->message(CLP_PRIMAL_DJ,messages_)
         <<x<<sequenceWithin(sequenceIn_)
@@ -2393,7 +2400,8 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
       } else {
 	// take on more relaxed criterion
 	if (saveDj*dualIn_<1.0e-20||
-	    fabs(saveDj-dualIn_)>2.0e-1*(1.0+fabs(dualIn_))) {
+	    fabs(saveDj-dualIn_)>2.0e-1*(1.0+fabs(dualIn_))||
+	    fabs(dualIn_)<dualTolerance_) {
 	  // need to reject something
 	  char x = isColumn(sequenceIn_) ? 'C' :'R';
 	  handler_->message(CLP_SIMPLEX_FLAG,messages_)
@@ -2436,6 +2444,7 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	for (i=0;i<number;i++) {
 	  int ii = index[i];
 	  dj_[ii] += element[ii];
+	  reducedCost_[ii] = dj_[ii];
 	  element[ii]=0.0;
 	}
 	columnArray_[0]->setNumElements(0);

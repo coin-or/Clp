@@ -773,7 +773,7 @@ ClpSimplexNonlinear::directionVector (CoinIndexedVector * vectorArray,
   normFlagged=0.0;
   normUnflagged=1.0;
   double dualTolerance2 = CoinMin(1.0e-8,1.0e-2*dualTolerance_);
-  double dualTolerance3 = CoinMin(1.0e-3,1.0e3*dualTolerance_);
+  double dualTolerance3 = CoinMin(1.0e-2,1.0e3*dualTolerance_);
   if (!numberNonBasic) {
     //if (nonLinearCost_->sumInfeasibilities()>1.0e-4)
     //printf("infeasible\n");
@@ -2331,7 +2331,7 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
   }
   if (saveObj-currentObj<1.0e-5&&nTotalPasses>2000) {
     normUnflagged=0.0;
-    double dualTolerance3 = CoinMin(1.0e-3,1.0e3*dualTolerance_);
+    double dualTolerance3 = CoinMin(1.0e-2,1.0e3*dualTolerance_);
     for (int iSequence=0;iSequence<numberColumns_+numberRows_;iSequence++) {
       switch(getStatus(iSequence)) {
 	

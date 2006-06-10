@@ -162,7 +162,7 @@ ClpDualRowSteepest::pivotRow()
   double tolerance=model_->currentPrimalTolerance();
   // we can't really trust infeasibilities if there is primal error
   // this coding has to mimic coding in checkPrimalSolution
-  double error = CoinMin(1.0e-3,model_->largestPrimalError());
+  double error = CoinMin(1.0e-2,model_->largestPrimalError());
   // allow tolerance at least slightly bigger than standard
   tolerance = tolerance +  error;
   // But cap
@@ -914,7 +914,7 @@ ClpDualRowSteepest::looksOptimal() const
   double tolerance=model_->currentPrimalTolerance();
   // we can't really trust infeasibilities if there is primal error
   // this coding has to mimic coding in checkPrimalSolution
-  double error = CoinMin(1.0e-3,model_->largestPrimalError());
+  double error = CoinMin(1.0e-2,model_->largestPrimalError());
   // allow tolerance at least slightly bigger than standard
   tolerance = tolerance +  error;
   // But cap

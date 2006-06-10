@@ -73,8 +73,8 @@ ClpCholeskyBase * ClpCholeskyDense::clone() const
 #define BLOCK 16
 #define BLOCKSHIFT 4
 
-#define BLOCKSQ BLOCK*BLOCK
-#define BLOCKSQSHIFT BLOCKSHIFT+BLOCKSHIFT
+#define BLOCKSQ ( BLOCK*BLOCK )
+#define BLOCKSQSHIFT ( BLOCKSHIFT+BLOCKSHIFT )
 #define number_blocks(x) (((x)+BLOCK-1)>>BLOCKSHIFT)
 #define number_rows(x) ((x)<<BLOCKSHIFT)
 #define number_entries(x) ((x)<<BLOCKSQSHIFT)
