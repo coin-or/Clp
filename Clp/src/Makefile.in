@@ -306,7 +306,7 @@ libClp_la_SOURCES = \
 
 
 # This is for libtool (on Windows)
-libClp_la_LDFLAGS = $(LT_LDFLAGS) `$(CYGPATH_W) ../../CoinUtils/src/libCoinUtils.la`
+libClp_la_LDFLAGS = $(LT_LDFLAGS)
 
 # List all source files for this executable, including headers
 clp_SOURCES = \

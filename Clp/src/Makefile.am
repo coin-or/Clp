@@ -62,7 +62,7 @@ libClp_la_SOURCES = \
 	IdiSolve.cpp
 
 # This is for libtool (on Windows)
-libClp_la_LDFLAGS = $(LT_LDFLAGS) `$(CYGPATH_W) ../../CoinUtils/src/libCoinUtils.la`
+libClp_la_LDFLAGS = $(LT_LDFLAGS)
 
 ########################################################################
 #                            clp program                               #
