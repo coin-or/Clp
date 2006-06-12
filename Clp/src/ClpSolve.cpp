@@ -3,6 +3,7 @@
 
 // This file has higher level solve functions
 
+
 #include "ClpConfig.h"
 #include "CoinPragma.hpp"
 
@@ -1326,7 +1327,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
     CoinZeroN (rowSolution,numberRows);
     model2->times(1.0,columnSolution,rowSolution);
     // See if we can adjust using costed slacks
-    double penalty=infeasibilityCost_*optimizationDirection_;
+    double penalty=CoinMin(infeasibilityCost_,1.0e10)*optimizationDirection_;
     const double * lower = model2->rowLower();
     const double * upper = model2->rowUpper();
     for (iRow=0;iRow<numberRows;iRow++) {
@@ -1449,7 +1450,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
     // but if big use to get ratio
     int ratio=3;
     if (maxSprintPass>1000) {
-      ratio = CoinMax(maxSprintPass/1000,3);
+      ratio = CoinMax(maxSprintPass/1000,2);
       maxSprintPass= maxSprintPass %1000;
       printf("%d passes wanted with ratio of %d\n",maxSprintPass,ratio);
     }

@@ -6597,6 +6597,7 @@ int ClpSimplex::pivot()
       for (i=0;i<number;i++) {
 	int ii = index[i];
 	dj_[ii] += element[ii];
+        reducedCost_[ii] = dj_[ii];
 	element[ii]=0.0;
       }
       columnArray_[0]->setNumElements(0);

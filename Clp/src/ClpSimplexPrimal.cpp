@@ -187,6 +187,8 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
   
   // Save so can see if doing after dual
   int initialStatus=problemStatus_;
+  int initialIterations = numberIterations_;
+  int initialNegDjs=-1;
   // initialize - maybe values pass and algorithm_ is +1
   if (!startup(ifValuesPass,startFinishOptions)) {
     
@@ -277,7 +279,27 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
 	  
       // may factorize, checks if problem finished
       statusOfProblemInPrimal(lastCleaned,factorType,progress_,true,ifValuesPass,saveModel);
-      // See if sprint says redo beacuse of problems
+      if (initialStatus==10) {
+        // cleanup phase
+        if(initialIterations != numberIterations_) {
+          if (numberDualInfeasibilities_>10000&&numberDualInfeasibilities_>10*initialNegDjs) {
+            // getting worse - try perturbing
+            if (perturbation_<101&&(specialOptions_&4)==0) {
+              perturb(1);
+              matrix_->rhsOffset(this,true,false);
+              statusOfProblemInPrimal(lastCleaned,factorType,progress_,true,ifValuesPass,saveModel);
+            }
+          }
+        } else {
+          // save number of negative djs
+          if (!numberPrimalInfeasibilities_)
+            initialNegDjs=numberDualInfeasibilities_;
+          // make sure weight won't be changed
+          if (infeasibilityCost_==1.0e10)
+            infeasibilityCost_=1.000001e10;
+        }
+      }
+      // See if sprint says redo because of problems
       if (numberDualInfeasibilities_==-776) {
 	// Need new set of variables
 	problemStatus_=-1;

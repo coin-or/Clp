@@ -4425,7 +4425,8 @@ ClpSimplexDual::perturb()
   // Make variables with more elements more expensive
   const double m1 = 0.5;
   double smallestAllowed = CoinMin(1.0e-2*dualTolerance_,maximumFraction);
-  double largestAllowed = CoinMax(1.0e3*dualTolerance_,maximumFraction*10.0*averageCost);
+  //double largestAllowed = CoinMax(1.0e3*dualTolerance_,maximumFraction*10.0*averageCost);
+  double largestAllowed = CoinMax(1.0e3*dualTolerance_,maximumFraction*averageCost);
   for (iColumn=0;iColumn<numberColumns_;iColumn++) {
     if (columnLowerWork_[iColumn]<columnUpperWork_[iColumn]&&getStatus(iColumn)!=basic) {
       double value = perturbation;
