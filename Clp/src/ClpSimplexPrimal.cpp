@@ -2650,7 +2650,8 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
       //if (oldCost!=cost_[sequenceOut_])
       //printf("costchange on %d from %g to %g\n",sequenceOut_,
       //       oldCost,cost_[sequenceOut_]);
-      dj_[sequenceOut_]=cost_[sequenceOut_]-oldCost;
+      if (solveType_!=2)
+        dj_[sequenceOut_]=cost_[sequenceOut_]-oldCost;
       solution_[sequenceOut_]=valueOut_;
     }
     // change cost and bounds on incoming if primal
