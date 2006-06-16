@@ -1,4 +1,5 @@
 * text=auto !eol
+Clp/LICENSE -text
 Clp/clp_addlibs.txt.in -text
 Clp/configure -text
 Clp/configure.ac -text
