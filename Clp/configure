@@ -19901,15 +19901,26 @@ echo $ECHO_N "checking for COIN project CoinUtils... $ECHO_C" >&6
 # other locations)
 
 coin_has_coinutils=unavailable
-if test $PACKAGE_TARNAME = coinutils; then
-  coin_has_coinutils=.
-else
-  if test -d $srcdir/../CoinUtils; then
-    coin_has_coinutils=../CoinUtils
+if test x"$COIN_SKIP_PROJECTS" != x; then
+  for dir in $COIN_SKIP_PROJECTS; do
+    if test $dir = CoinUtils; then
+      coin_has_coinutils=skipping
+    fi
+  done
+fi
+
+if test $coin_has_coinutils != skipping; then
+  if test $PACKAGE_TARNAME = coinutils; then
+    coin_has_coinutils=.
+  else
+    if test -d $srcdir/../CoinUtils; then
+      coin_has_coinutils=../CoinUtils
+    fi
   fi
 fi
 
-if test $coin_has_coinutils != unavailable; then
+if test $coin_has_coinutils != unavailable &&
+   test $coin_has_coinutils != skipping; then
   # Set the #define if the component is available
 
 cat >>confdefs.h <<\_ACEOF
@@ -19927,7 +19938,8 @@ fi
   # Define the Makefile conditional
 
 
-if test $coin_has_coinutils != unavailable; then
+if test $coin_has_coinutils != unavailable &&
+                test $coin_has_coinutils != skipping; then
   COIN_HAS_COINUTILS_TRUE=
   COIN_HAS_COINUTILS_FALSE='#'
 else
@@ -19945,15 +19957,26 @@ echo $ECHO_N "checking for COIN project Clp... $ECHO_C" >&6
 # other locations)
 
 coin_has_clp=unavailable
-if test $PACKAGE_TARNAME = clp; then
-  coin_has_clp=.
-else
-  if test -d $srcdir/../Clp; then
-    coin_has_clp=../Clp
+if test x"$COIN_SKIP_PROJECTS" != x; then
+  for dir in $COIN_SKIP_PROJECTS; do
+    if test $dir = Clp; then
+      coin_has_clp=skipping
+    fi
+  done
+fi
+
+if test $coin_has_clp != skipping; then
+  if test $PACKAGE_TARNAME = clp; then
+    coin_has_clp=.
+  else
+    if test -d $srcdir/../Clp; then
+      coin_has_clp=../Clp
+    fi
   fi
 fi
 
-if test $coin_has_clp != unavailable; then
+if test $coin_has_clp != unavailable &&
+   test $coin_has_clp != skipping; then
   # Set the #define if the component is available
 
 cat >>confdefs.h <<\_ACEOF
@@ -19971,7 +19994,8 @@ fi
   # Define the Makefile conditional
 
 
-if test $coin_has_clp != unavailable; then
+if test $coin_has_clp != unavailable &&
+                test $coin_has_clp != skipping; then
   COIN_HAS_CLP_TRUE=
   COIN_HAS_CLP_FALSE='#'
 else

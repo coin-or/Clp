@@ -5,6 +5,7 @@ Clp/configure -text
 Clp/configure.ac -text
 Clp/examples/Makefile.in -text
 Clp/inc/config_clp.h.in -text
+/README -text
 /config.guess -text
 /config.sub -text
 /configure -text
