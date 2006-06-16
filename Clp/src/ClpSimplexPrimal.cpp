@@ -2253,10 +2253,15 @@ ClpSimplexPrimal::unflag()
   int i;
   int number = numberRows_+numberColumns_;
   int numberFlagged=0;
+  // we can't really trust infeasibilities if there is dual error
+  // allow tolerance bigger than standard to check on duals
+  double relaxedToleranceD=dualTolerance_ + CoinMin(1.0e-2,10.0*largestDualError_);
   for (i=0;i<number;i++) {
     if (flagged(i)) {
       clearFlagged(i);
-      numberFlagged++;
+      // only say if reasonable dj
+      if (fabs(dj_[i])>relaxedToleranceD)
+        numberFlagged++;
     }
   }
   numberFlagged += matrix_->generalExpanded(this,8,i);
@@ -2651,7 +2656,7 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
       //printf("costchange on %d from %g to %g\n",sequenceOut_,
       //       oldCost,cost_[sequenceOut_]);
       if (solveType_!=2)
-        dj_[sequenceOut_]=cost_[sequenceOut_]-oldCost;
+        dj_[sequenceOut_]=cost_[sequenceOut_]-oldCost; // normally updated next iteration
       solution_[sequenceOut_]=valueOut_;
     }
     // change cost and bounds on incoming if primal
