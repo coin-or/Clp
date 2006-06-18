@@ -17,11 +17,6 @@
 #include "CbcModel.hpp"
 #endif
 #ifdef COIN_HAS_CLP
-#ifndef COIN_HAS_CLP
-#define COIN_HAS_CLP
-#endif
-#endif
-#ifdef COIN_HAS_CLP
 #include "ClpSimplex.hpp"
 #include "ClpFactorization.hpp"
 #endif
@@ -29,7 +24,7 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #endif
-#ifdef COIN_HAS_OSICLP
+#ifdef COIN_HAS_CBC
 // from CoinSolve
 static char coin_prompt[]="Coin:";
 #else
@@ -605,7 +600,7 @@ CbcOrClpParam::checkDoubleParameter (double value) const
 double 
 CbcOrClpParam::doubleParameter (OsiSolverInterface * model) const
 {
-  double value;
+  double value=0.0;
   switch(type_) {
   case DUALTOLERANCE:
     assert(model->getDblParam(OsiDualTolerance,value));
@@ -1842,7 +1837,7 @@ This is a first try and will hopefully become more sophisticated."
      ); 
   parameters[numberParameters-1].setDoubleValue(1.0);
 #endif
-#ifdef COIN_USE_CBC
+#ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("outDup!licates","takes duplicate rows etc out of integer model",
 		  OUTDUPROWS,7,false);
@@ -2403,7 +2398,7 @@ See branchAndCut for information on options."
      "There are times e.g. when using AMPL interface when you may wish to do something unusual.  \
 Look for USERCLP in main driver and modify sample code."
      ); 
-#ifdef COIN_USE_CBC
+#ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("userCbc","Hand coded Cbc stuff",
 		  USERCBC);

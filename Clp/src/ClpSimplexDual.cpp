@@ -2753,7 +2753,6 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 	  index = indices[iFlip];
 	  spare2 = array[1-iFlip];
 	  index2 = indices[1-iFlip];
-      
 	  for (i=0;i<interesting[iFlip];i++) {
 	    int iSequence=index[i];
 	    double alpha=spare[i];
@@ -2765,10 +2764,6 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 	      if (value>newTolerance) {
 		if (-alpha>=acceptablePivot) {
 		  upperTheta = (oldValue-newTolerance)/alpha;
-		  // recompute value and make sure works
-		  value = oldValue-upperTheta*alpha;
-		  if (value<0)
-		    upperTheta *= 1.0 +1.0e-11; // must be large
 		}
 	      }
 	    } else {
@@ -2776,10 +2771,6 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 	      if (value<-newTolerance) {
 		if (alpha>=acceptablePivot) {
 		  upperTheta = (oldValue+newTolerance)/alpha;
-		  // recompute value and make sure works
-		  value = oldValue-upperTheta*alpha;
-		  if (value>0)
-		    upperTheta *= 1.0 +1.0e-11; // must be large
 		}
 	      }
 	    }
@@ -2797,6 +2788,8 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
           double sumBadPivots=0.0;
           badSumPivots=false;
 #endif
+          // Make sure upperTheta will work (-O2 and above gives problems)
+          upperTheta *= 1.0000000001;
 	  for (i=0;i<interesting[iFlip];i++) {
 	    int iSequence=index[i];
 	    double alpha=spare[i];
