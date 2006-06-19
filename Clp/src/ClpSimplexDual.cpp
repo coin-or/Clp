@@ -3971,8 +3971,19 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	   limit&&
 	   !numberAtFakeBound()&&!numberDualInfeasibilities_) {
     //printf("lim %g obj %g %g\n",limit,objectiveValue_,objectiveValue());
-    problemStatus_=1;
-    secondaryStatus_ = 1; // and say was on cutoff
+    if (perturbation_==101) {
+      // be careful
+      if (numberIterations_) {
+        computeObjectiveValue(); // value without perturbation
+        if(objectiveValue()*optimizationDirection_>limit) {
+          problemStatus_=1;
+          secondaryStatus_ = 1; // and say was on cutoff
+        }
+      }
+    } else {
+      problemStatus_=1;
+      secondaryStatus_ = 1; // and say was on cutoff
+    }
   }
   // If we are in trouble and in branch and bound give up
   if ((specialOptions_&1024)!=0) {
