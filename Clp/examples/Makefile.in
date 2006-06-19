@@ -69,6 +69,34 @@ INCL =  -I`$(CYGPATH_W) $(COININCDIR)` $(ADDINCFLAGS)
 # The following is necessary under cygwin, if native compilers are used
 CYGPATH_W = @CYGPATH_W@
 
+# Here we list all possible generated objects or executables to delete them
+CLEANFILES = \
+	addBits.@OBJEXT@ addBits@EXEEXT@ \
+	addColumns.@OBJEXT@ addColumns@EXEEXT@ \
+	addRows.@OBJEXT@ addRows@EXEEXT@ \
+	decompose.@OBJEXT@ decompose@EXEEXT@ \
+	defaults.@OBJEXT@ defaults@EXEEXT@ \
+	driver2.@OBJEXT@ driver2@EXEEXT@ \
+	driver.@OBJEXT@ driver@EXEEXT@ \
+	driverC.@OBJEXT@ driverC@EXEEXT@ \
+	dualCuts.@OBJEXT@ dualCuts@EXEEXT@ \
+	ekk.@OBJEXT@ ekk@EXEEXT@ \
+	ekk_interface.@OBJEXT@ ekk_interface@EXEEXT@ \
+	hello.@OBJEXT@ hello@EXEEXT@ \
+	makeDual.@OBJEXT@ makeDual@EXEEXT@ \
+	minimum.@OBJEXT@ minimum@EXEEXT@ \
+	network.@OBJEXT@ network@EXEEXT@ \
+	piece.@OBJEXT@ piece@EXEEXT@ \
+	rowColumn.@OBJEXT@ rowColumn@EXEEXT@ \
+	sprint2.@OBJEXT@ sprint2@EXEEXT@ \
+	sprint.@OBJEXT@ sprint@EXEEXT@ \
+	testBarrier.@OBJEXT@ testBarrier@EXEEXT@ \
+	testBasis.@OBJEXT@ testBasis@EXEEXT@ \
+	testGub2.@OBJEXT@ testGub2@EXEEXT@ \
+	testGub.@OBJEXT@ testGub@EXEEXT@ \
+	testQP.@OBJEXT@ testQP@EXEEXT@ \
+	useVolume.@OBJEXT@ useVolume@EXEEXT@
+
 all: $(EXE)
 
 .SUFFIXES: .cpp .c .o .obj
@@ -79,7 +107,7 @@ $(EXE): $(OBJS)
 	$(CXX) $(CXXLINKFLAGS) $(CXXFLAGS) -o $@ $$bla $(ADDLIBS) $(LIBS)
 
 clean:
-	rm -rf $(EXE) $(OBJS)
+	rm -rf $(CLEANFILES)
 
 .cpp.o:
 	$(CXX) $(CXXFLAGS) $(INCL) -c -o $@ `test -f '$<' || echo '$(SRCDIR)/'`$<
