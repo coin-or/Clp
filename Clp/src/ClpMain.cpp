@@ -15,7 +15,7 @@
 #include "CoinHelperFunctions.hpp"
 #include "CoinSort.hpp"
 // History since 1.0 at end
-#define CLPVERSION "1.03.02"
+#define CLPVERSION "1.03.03"
 
 #include "CoinMpsIO.hpp"
 #include "CoinFileIO.hpp"
