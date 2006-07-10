@@ -1238,7 +1238,6 @@ first.  This primitive strategy can be surprsingly effective.  The column order\
  option is obviously not on costs but easy to code here."
      ); 
 #endif
-#if 0
   parameters[numberParameters++]=
     CbcOrClpParam("cpp!Generate","Generates C++ code",
 		  -1,50000,CPP);
@@ -1250,7 +1249,6 @@ you to generate user_driver.cpp which approximates the code.  \
 generates saves and restores even for variables at default value. \
 4 bit in cbc generates size dependent code rather than computed values."
      );
-#endif 
 #ifdef COIN_HAS_CLP
   parameters[numberParameters++]=
     CbcOrClpParam("crash","Whether to create basis for problem",
