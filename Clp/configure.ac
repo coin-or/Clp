@@ -44,7 +44,7 @@ AC_CANONICAL_BUILD
 AC_COIN_PROJECTDIR_INIT
 
 # Check if user wants to produce debugging code
-AC_COIN_DEBUG_COMPILE
+AC_COIN_DEBUG_COMPILE(Clp)
 
 # Get the name of the C++ compiler and appropriate compiler options
 AC_COIN_PROG_CXX
