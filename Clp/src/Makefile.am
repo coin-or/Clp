@@ -99,7 +99,8 @@ clp_LDFLAGS = -rpath $(libdir)
 # Here list all include flags, relative to this "srcdir" directory.  This
 # "cygpath" stuff is necessary to compile with native compilers on Windows.
 AM_CPPFLAGS = \
-	-I`$(CYGPATH_W) $(COINUTILSSRCDIR)/src`
+	-I`$(CYGPATH_W) $(COINUTILSSRCDIR)/src` \
+	-I`$(CYGPATH_W) $(COINUTILSOBJDIR)/inc`
 
 # This line is necessary to allow VPATH compilation with MS compilers
 # on Cygwin

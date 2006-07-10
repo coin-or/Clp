@@ -41,8 +41,11 @@
 /*             HERE DEFINE THE CONFIGURATION SPECIFIC MACROS               */
 /***************************************************************************/
 
-/* If defined, debug sanity checks are performed during runtime */
-/* #define COIN_DEBUG 1 */
+/* Define to the debug sanity check level (0 is no test) */
+#define COIN_CLP_CHECKLEVEL 0
+
+/* Define to the debug verbosity level (0 is no output) */
+#define COIN_CLP_VERBOSITY 0
 
 /* Define to 1 if the Clp package is used */
 #define COIN_HAS_CLP 1

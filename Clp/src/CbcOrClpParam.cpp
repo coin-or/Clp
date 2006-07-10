@@ -12,8 +12,10 @@
 #include <cassert>
 
 #ifdef COIN_HAS_CBC
+#ifdef COIN_HAS_CLP
 #include "OsiClpSolverInterface.hpp"
 #include "ClpSimplex.hpp"
+#endif
 #include "CbcModel.hpp"
 #endif
 #ifdef COIN_HAS_CLP
@@ -2428,6 +2430,7 @@ int whichParam (CbcOrClpParameterType name,
   assert (i<numberParameters);
   return i;
 }
+#ifdef COIN_HAS_CLP
 // Dump a solution to file
 void saveSolution(const ClpSimplex * lpSolver,std::string fileName)
 {
@@ -2452,4 +2455,4 @@ void saveSolution(const ClpSimplex * lpSolver,std::string fileName)
     std::cout<<"Unable to open file "<<fileName<<std::endl;
   }
 }
-
+#endif
