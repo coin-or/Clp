@@ -6,11 +6,11 @@
 #include "ClpSimplex.hpp"
 #include "CoinHelperFunctions.hpp"
 #include "CoinTime.hpp"
+#include "CoinMpsIO.hpp"
 #include "CoinBuild.hpp"
 #include "CoinModel.hpp"
 #include <iomanip>
 #include <cassert>
-
 int main (int argc, const char *argv[])
 {
   try {
@@ -193,6 +193,8 @@ int main (int argc, const char *argv[])
       std::cout<<std::endl;
     }
     std::cout<<"--------------------------------------"<<std::endl;
+
+#ifndef NDEBUG
     // Test CoinAssert
     std::cout<<"If Clp compiled with -g below should give assert, if with -O1 or COIN_ASSERT CoinError"<<std::endl;
     model=modelSave;
@@ -209,11 +211,81 @@ int main (int argc, const char *argv[])
                           1.0,1.0);
     }
     model.addRows(buildObject3,true);
+#endif
   }
   catch (CoinError e) {
     e.print();
     if (e.lineNumber()>=0)
       std::cout<<"This was from a CoinAssert"<<std::endl;
+  }
+  {
+    // Get a model
+    CoinMpsIO m;
+    const char dirsep =  CoinFindDirSeparator();
+    // Set directory containing mps data files.
+    std::string mpsDir = dirsep == '/' ? "../../Data/Sample/" : "..\\..\\Data\\Sample\\";
+    std::string fn = mpsDir+"exmip1";
+    int numErr = m.readMps(fn.c_str(),"mps");
+    assert( numErr== 0 );
+    
+    int numberRows = m.getNumRows();
+    int numberColumns = m.getNumCols();
+    
+    // Build by row from scratch
+    CoinPackedMatrix matrixByRow = * m.getMatrixByRow();
+    const double * element = matrixByRow.getElements();
+    const int * column = matrixByRow.getIndices();
+    const CoinBigIndex * rowStart = matrixByRow.getVectorStarts();
+    const int * rowLength = matrixByRow.getVectorLengths();
+    const double * rowLower = m.getRowLower();
+    const double * rowUpper = m.getRowUpper();
+    const double * columnLower = m.getColLower();
+    const double * columnUpper = m.getColUpper();
+    const double * objective = m.getObjCoefficients();
+    int i;
+    CoinModel coinModel;
+    for (i=0;i<numberRows;i++) {
+      coinModel.addRow(rowLength[i],column+rowStart[i],
+		  element+rowStart[i],rowLower[i],rowUpper[i],m.rowName(i));
+    }
+    // Now do column part
+    for (i=0;i<numberColumns;i++) {
+      coinModel.setColumnBounds(i,columnLower[i],columnUpper[i]);
+      coinModel.setColumnObjective(i,objective[i]);
+      if (m.isInteger(i))
+	coinModel.setColumnIsInteger(i,true);;
+    }
+    ClpSimplex model;
+    model.loadProblem(coinModel,true);
+    model.dual();
+    double objectiveValue = model.objectiveValue();
+    // Now replace -1.0 by -1.0
+    for (i=0;i<numberRows;i++) {
+      CoinModelLink triple=coinModel.firstInRow(i);
+      while (triple.column()>=0) {
+	if (triple.value()==-1.0) {
+	  // replace by string
+	  coinModel(i,triple.column(),"minusOne");
+	}
+        triple=coinModel.next(triple);
+      }
+    }
+    // associate -1.0 with -1.0
+    coinModel.associateElement("minusOne",-1.0);
+    model.loadProblem(coinModel,true);
+    model.dual();
+    // result should be same
+    CoinRelFltEq eq;
+    assert (eq(objectiveValue,model.objectiveValue()));
+    // now go round changing -1.0 wherever it occurs
+    double value=-1.0;
+    while (model.isProvenOptimal()) {
+      value -= 0.2;
+      coinModel.associateElement("minusOne",value);
+      model.loadProblem(coinModel,true);
+      printf("solving for -1.0 -> %g\n",value);
+      model.dual();
+    }
   }
   return 0;
 }    
