@@ -2862,6 +2862,7 @@ ClpPackedMatrix::appendMatrix(int number, int type,
     if (!matrix_->isColOrdered()&&numberOther>matrix_->getNumRows())
       matrix_->setDimensions(numberOther,-1);
     numberErrors=matrix_->appendCols(number,starts,index,element,numberOther);
+    numberActiveColumns_ = matrix_->getNumCols();
   }
   return numberErrors;
 }
