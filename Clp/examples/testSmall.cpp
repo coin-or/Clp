@@ -26,7 +26,7 @@ int main (int argc, const char *argv[])
   // get small matrix
   ClpSmallMatrix * smallMatrix = new ClpSmallMatrix(*model.matrix());
   // replace and delete original
-  //model.setSpecialOptions(256); // to say no row copy
+  model.setSpecialOptions(256); // to say no row copy
   model.replaceMatrix(smallMatrix,true);
   double time1 = CoinCpuTime();
   //model.setLogLevel(63);
