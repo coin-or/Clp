@@ -68,7 +68,7 @@ int main (int argc, const char *argv[])
       rowSolution[iRow] = smallRowSolution[iRow];
     }
     // Have we finished
-    if ((small.objectiveValue()>lastObjective-1.0e-7&&iPass>5)||
+    if ((small.objectiveValue()>lastObjective-1.0e-7&&iPass>10)||
 	!small.numberIterations()||iPass==maxPass-1) {
       break; // finished
     } else {

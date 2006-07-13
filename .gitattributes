@@ -3,10 +3,13 @@ Clp/LICENSE -text
 Clp/clp_addlibs.txt.in -text
 Clp/configure -text
 Clp/configure.ac -text
+Clp/examples/ClpSmallMatrix.cpp -text
+Clp/examples/ClpSmallMatrix.hpp -text
 Clp/examples/Makefile.in -text
 Clp/examples/nw04a.mps.gz -text
 Clp/examples/sprintEasy.cpp -text
 Clp/examples/sprintEasy2.cpp -text
+Clp/examples/testSmall.cpp -text
 Clp/inc/config_clp.h.in -text
 /LICENSE -text
 /README -text
