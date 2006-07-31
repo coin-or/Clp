@@ -1116,6 +1116,10 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	} else {
 	  // say infeasible
 	  problemStatus_ = 1;
+	  // we are infeasible - use as ray
+	  delete [] ray_;
+	  ray_ = new double [numberRows_];
+	  CoinMemcpyN(dual_,numberRows_,ray_);
 	}
       } else {
 	// say unbounded
