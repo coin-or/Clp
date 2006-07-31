@@ -221,7 +221,7 @@ ClpNonLinearCost::refreshCosts(const double * columnCosts)
   memset(cost+numberColumns_,0,numberRows_*sizeof(double));
   // copy column costs
   memcpy(cost,columnCosts,numberColumns_*sizeof(double));
-  if ((method_&1!=0)) {
+  if ((method_&1)!=0) {
     for (int iSequence=0;iSequence<numberRows_+numberColumns_;iSequence++) {
       int start = start_[iSequence];
       int end = start_[iSequence+1]-1;
