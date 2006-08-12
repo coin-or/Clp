@@ -3149,7 +3149,7 @@ int ClpModel::emptyProblem(int * infeasNumber, double * infeasSum,bool printMess
       }
     }
   }
-  objectiveValue_ *= optimizationDirection_;
+  objectiveValue_ /= (objectiveScale_*rhsScale_);
   if (infeasNumber) {
     infeasNumber[0]=numberDualInfeasibilities;
     infeasSum[0]=sumDualInfeasibilities;
