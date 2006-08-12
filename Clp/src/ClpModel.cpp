@@ -2355,7 +2355,7 @@ ClpModel::readMps(const char *fileName,
     status=-1;
   }
   m.messageHandler()->setPrefix(savePrefix);
-  if (!status||ignoreErrors) {
+  if (!status||(ignoreErrors&&(status>0&&status<100000))) {
     loadProblem(*m.getMatrixByCol(),
 		m.getColLower(),m.getColUpper(),
 		m.getObjCoefficients(),
@@ -3149,7 +3149,7 @@ int ClpModel::emptyProblem(int * infeasNumber, double * infeasSum,bool printMess
       }
     }
   }
-  objectiveValue_ *= optimizationDirection_;
+  objectiveValue_ /= (objectiveScale_*rhsScale_);
   if (infeasNumber) {
     infeasNumber[0]=numberDualInfeasibilities;
     infeasSum[0]=sumDualInfeasibilities;
