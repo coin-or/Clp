@@ -12,6 +12,7 @@
 #include "CoinHelperFunctions.hpp"
 
 #include "CoinPackedMatrix.hpp"
+#include "ClpPackedMatrix.hpp"
 #include "ClpSimplex.hpp"
 #ifndef SLIM_CLP
 #include "ClpQuadraticObjective.hpp"
@@ -1711,6 +1712,12 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
 #endif
 	delete presolvedModel_;
 	presolvedModel_ = new ClpSimplex(*originalModel);
+	// but we need to remove gaps
+	ClpPackedMatrix* clpMatrix =
+	  dynamic_cast< ClpPackedMatrix*>(presolvedModel_->clpMatrix());
+	if (clpMatrix) {
+	  clpMatrix->getPackedMatrix()->removeGaps();
+	}
 #ifndef CLP_NO_STD
       } else {
 	presolvedModel_=originalModel;
