@@ -2398,7 +2398,7 @@ ClpSimplexDual::dualColumn0(const CoinIndexedVector * rowArray,
 			   const CoinIndexedVector * columnArray,
 			   CoinIndexedVector * spareArray,
 			   double acceptablePivot,
-                           double & upperReturn, double &bestReturn)
+                           double & upperReturn, double &bestReturn,double & badFree)
 {
   // do first pass to get possibles 
   double * spare = spareArray->denseVector();
@@ -2414,6 +2414,7 @@ ClpSimplexDual::dualColumn0(const CoinIndexedVector * rowArray,
   double bestPossible=0.0;
   int numberRemaining=0;
   int i;
+  badFree=0.0;
   for (int iSection=0;iSection<2;iSection++) {
 
     int addSequence;
@@ -2449,18 +2450,20 @@ ClpSimplexDual::dualColumn0(const CoinIndexedVector * rowArray,
 	alpha = work[i];
         bestPossible = CoinMax(bestPossible,fabs(alpha));
 	oldValue = reducedCost[iSequence];
-        // If freehas to be very large - should come in via dualRow
-        if (getStatus(iSequence+addSequence)==isFree&&fabs(alpha)<1.0e-3)
-          break;
+        // If free has to be very large - should come in via dualRow
+        //if (getStatus(iSequence+addSequence)==isFree&&fabs(alpha)<1.0e-3)
+	//break;
 	if (oldValue>dualTolerance_) {
 	  keep = true;
 	} else if (oldValue<-dualTolerance_) {
 	  keep = true;
 	} else {
-	  if (fabs(alpha)>CoinMax(10.0*acceptablePivot,1.0e-5)) 
+	  if (fabs(alpha)>CoinMax(10.0*acceptablePivot,1.0e-5)) {
 	    keep = true;
-	  else
+	  } else {
 	    keep=false;
+	    badFree=CoinMax(badFree,fabs(alpha));
+	  }
 	}
 	if (keep) {
 	  // free - choose largest
@@ -2595,9 +2598,10 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
   // do first pass to get possibles 
   upperTheta = 1.0e31;
   double bestPossible=0.0;
+  double badFree=0.0;
   if (spareIntArray_[0]!=-1) {
     numberRemaining = dualColumn0(rowArray,columnArray,spareArray,
-                                  acceptablePivot,upperTheta,bestPossible);
+                                  acceptablePivot,upperTheta,bestPossible,badFree);
   } else {
     // already done
     numberRemaining = spareArray->getNumElements();
@@ -3106,6 +3110,11 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
     if (badSumPivots&&factorization_->pivots()) {
       if (handler_->logLevel()>1)
         printf("forcing re-factorization\n");
+      alpha_=0.0;
+    }
+    if (fabs(theta_*badFree)>10.0*dualTolerance_&&factorization_->pivots()) {
+      if (handler_->logLevel()>1)
+        printf("forcing re-factorizationon free\n");
       alpha_=0.0;
     }
 #endif
