@@ -1432,6 +1432,8 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
   presolvedModel_=NULL;
   // Messages
   CoinMessages messages = originalModel->coinMessages();
+  // Only go round 100 times even if integer preprocessing
+  int totalPasses=100;
   while (result==-1) {
 
 #ifndef CLP_NO_STD
@@ -1456,6 +1458,7 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
     // drop integer information if wanted
     if (!keepIntegers)
       presolvedModel_->deleteIntegerInformation();
+    totalPasses--;
 
     double ratio=2.0;
     if (substitution_>3)
@@ -1696,7 +1699,7 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
 						     messages)
 						       <<numberChanges
 						       <<CoinMessageEol;
-	  if (!result) {
+	  if (!result&&totalPasses>0) {
 	    result = -1; // round again
 	  }
 	}
