@@ -2001,6 +2001,9 @@ ClpSimplexOther::statusOfProblemInParametrics(int type, ClpDataSave & saveData)
     if (sumDualInfeasibilities_)
       numberDualInfeasibilities_=1;
   }
+  // Allow matrices to be sorted etc
+  int fake=-999; // signal sort
+  matrix_->correctSequence(this,fake,fake);
 }
 /* This has the flow between re-factorizations
    Reasons to come out:

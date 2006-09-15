@@ -3000,8 +3000,15 @@ ClpModel::copyRowNames(const char * const * rowNames, int first, int last)
     rowNames_.resize(numberRows_);
   int iRow;
   for (iRow=first; iRow<last;iRow++) {
-    rowNames_[iRow]= rowNames[iRow-first];
-    maxLength = CoinMax(maxLength,(unsigned int) strlen(rowNames[iRow-first]));
+    if (rowNames[iRow-first]&&strlen(rowNames[iRow-first])) {
+      rowNames_[iRow]= rowNames[iRow-first];
+      maxLength = CoinMax(maxLength,(unsigned int) strlen(rowNames[iRow-first]));
+    } else {
+      maxLength = CoinMax(maxLength,(unsigned int) 8);
+      char name[9];
+      sprintf(name,"R%7.7d",iRow);
+      rowNames_[iRow]=name;
+    }
   }
   // May be too big - but we would have to check both rows and columns to be exact
   lengthNames_=(int) maxLength;
@@ -3016,8 +3023,15 @@ ClpModel::copyColumnNames(const char * const * columnNames, int first, int last)
     columnNames_.resize(numberColumns_);
   int iColumn;
   for (iColumn=first; iColumn<last;iColumn++) {
-    columnNames_[iColumn]= columnNames[iColumn-first];
-    maxLength = CoinMax(maxLength,(unsigned int) strlen(columnNames[iColumn-first]));
+    if (columnNames[iColumn-first]&&strlen(columnNames[iColumn-first])) {
+      columnNames_[iColumn]= columnNames[iColumn-first];
+      maxLength = CoinMax(maxLength,(unsigned int) strlen(columnNames[iColumn-first]));
+    } else {
+      maxLength = CoinMax(maxLength,(unsigned int) 8);
+      char name[9];
+      sprintf(name,"C%7.7d",iColumn);
+      columnNames_[iColumn]=name;
+    }
   }
   // May be too big - but we would have to check both rows and columns to be exact
   lengthNames_=(int) maxLength;

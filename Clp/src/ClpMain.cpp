@@ -59,7 +59,7 @@ static bool maskMatches(const int * starts, char ** masks,
 #endif
 
 int mainTest (int argc, const char *argv[],int algorithm,
-	      ClpSimplex empty, bool doPresolve,int switchOff);
+	      ClpSimplex empty, bool doPresolve,int switchOff,bool doVector);
 static void statistics(ClpSimplex * originalModel, ClpSimplex * model);
 static void generateCode(const char * fileName,int type);
 // Returns next valid field
@@ -85,6 +85,7 @@ int main (int argc, const char *argv[])
     int printMode=0;
     int presolveOptions=0;
     int doCrash=0;
+    int doVector=0;
     int doSprint=-1;
     // set reasonable defaults
     int preSolve=5;
@@ -474,6 +475,9 @@ int main (int argc, const char *argv[])
 	    case CRASH:
 	      doCrash=action;
 	      break;
+	    case VECTOR:
+	      doVector=action;
+	      break;
 	    case MESSAGES:
 	      models[iModel].messageHandler()->setPrefix(action!=0);
 	      break;
@@ -589,6 +593,13 @@ int main (int argc, const char *argv[])
 		presolveOptions |= 0x40000000;
 	      solveOptions.setSpecialOption(4,presolveOptions);
 	      solveOptions.setSpecialOption(5,printOptions&1);
+	      if (doVector) {
+		ClpMatrixBase * matrix = models[iModel].clpMatrix();
+		if (dynamic_cast< ClpPackedMatrix*>(matrix)) {
+		  ClpPackedMatrix * clpMatrix = dynamic_cast< ClpPackedMatrix*>(matrix);
+		  clpMatrix->makeSpecialColumnCopy();
+		}
+	      }
 	      if (method==ClpSolve::useDual) {
 		// dual
 		if (doCrash)
@@ -1378,7 +1389,7 @@ int main (int argc, const char *argv[])
               int specialOptions = models[iModel].specialOptions();
               models[iModel].setSpecialOptions(0);
 	      mainTest(nFields,fields,algorithm,models[iModel],
-		       (preSolve!=0),specialOptions);
+		       (preSolve!=0),specialOptions,doVector!=0);
 	    }
 	    break;
 	  case UNITTEST:
@@ -1397,7 +1408,7 @@ int main (int argc, const char *argv[])
               int algorithm=-1;
               if (models[iModel].numberRows())
                 algorithm=7;
-	      mainTest(nFields,fields,algorithm,models[iModel],(preSolve!=0),specialOptions);
+	      mainTest(nFields,fields,algorithm,models[iModel],(preSolve!=0),specialOptions,doVector!=0);
 	    }
 	    break;
 	  case FAKEBOUND:

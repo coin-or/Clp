@@ -167,7 +167,7 @@ ClpGubDynamicMatrix::ClpGubDynamicMatrix(ClpSimplex * model, int numberSets,
   numberElements_ = (int) CoinMin(guess,10000000.0);
   numberElements_ = CoinMin(numberElements_,numberElements)+originalMatrix->getNumElements();
   matrix_ = originalMatrix;
-  zeroElements_ = false;
+  flags_ &= ~1;
   // resize model (matrix stays same)
   model->resize(numberRows,numberNeeded);
   if (upperColumn_) {

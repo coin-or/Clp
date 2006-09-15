@@ -3,7 +3,6 @@
 
 // This file has higher level solve functions
 
-
 #include "ClpConfig.h"
 #include "CoinPragma.hpp"
 
@@ -964,8 +963,24 @@ ClpSimplex::initialSolve(ClpSolve & options)
       int saveOptions = model2->specialOptions();
       if (model2->numberRows()>100)
 	model2->setSpecialOptions(saveOptions|64); // go as far as possible
-      model2->dual(0);
-      model2->setSpecialOptions(saveOptions);
+      //int numberRows = model2->numberRows();
+      //int numberColumns = model2->numberColumns();
+      if (dynamic_cast< ClpPackedMatrix*>(matrix_)) {
+	// See if original wanted vector
+	ClpPackedMatrix * clpMatrixO = dynamic_cast< ClpPackedMatrix*>(matrix_);
+	ClpMatrixBase * matrix = model2->clpMatrix();
+	if (dynamic_cast< ClpPackedMatrix*>(matrix)&&clpMatrixO->wantsSpecialColumnCopy()) {
+	  ClpPackedMatrix * clpMatrix = dynamic_cast< ClpPackedMatrix*>(matrix);
+	  clpMatrix->makeSpecialColumnCopy();
+	  //model2->setSpecialOptions(model2->specialOptions()|256); // to say no row copy for comparisons
+	  model2->dual(0);
+	  clpMatrix->releaseSpecialColumnCopy();
+	} else {
+	  model2->dual(0);
+	}
+      } else {
+	model2->dual(0);
+      }
     } else if (!numberNotE&&0) {
       // E so we can do in another way
       double * pi = model2->dualRowSolution();
@@ -1248,7 +1263,22 @@ ClpSimplex::initialSolve(ClpSolve & options)
       model2->nonlinearSLP(doSlp,1.0e-5);
     }
 #endif
-    model2->primal(primalStartup);
+    if (dynamic_cast< ClpPackedMatrix*>(matrix_)) {
+      // See if original wanted vector
+      ClpPackedMatrix * clpMatrixO = dynamic_cast< ClpPackedMatrix*>(matrix_);
+      ClpMatrixBase * matrix = model2->clpMatrix();
+      if (dynamic_cast< ClpPackedMatrix*>(matrix)&&clpMatrixO->wantsSpecialColumnCopy()) {
+	ClpPackedMatrix * clpMatrix = dynamic_cast< ClpPackedMatrix*>(matrix);
+	clpMatrix->makeSpecialColumnCopy();
+	//model2->setSpecialOptions(model2->specialOptions()|256); // to say no row copy for comparisons
+	model2->primal(primalStartup);
+	clpMatrix->releaseSpecialColumnCopy();
+      } else {
+	model2->primal(primalStartup);
+      }
+    } else {
+      model2->primal(primalStartup);
+    }
     time2 = CoinCpuTime();
     timeCore = time2-timeX;
     handler_->message(CLP_INTERVAL_TIMING,messages_)
@@ -1544,7 +1574,21 @@ ClpSimplex::initialSolve(ClpSolve & options)
       // Solve 
       if (interrupt)
 	currentModel = &small;
-      small.primal(1);
+      if (dynamic_cast< ClpPackedMatrix*>(matrix_)) {
+	// See if original wanted vector
+	ClpPackedMatrix * clpMatrixO = dynamic_cast< ClpPackedMatrix*>(matrix_);
+	ClpMatrixBase * matrix = small.clpMatrix();
+	if (dynamic_cast< ClpPackedMatrix*>(matrix)&&clpMatrixO->wantsSpecialColumnCopy()) {
+	  ClpPackedMatrix * clpMatrix = dynamic_cast< ClpPackedMatrix*>(matrix);
+	  clpMatrix->makeSpecialColumnCopy();
+	  small.primal(1);
+	  clpMatrix->releaseSpecialColumnCopy();
+	} else {
+	  small.primal(1);
+	}
+      } else {
+	small.primal(1);
+      }
       totalIterations += small.numberIterations();
       // move solution back
       const double * solution = small.primalColumnSolution();
@@ -2147,7 +2191,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
       }
       primal(1);
       setPerturbation(savePerturbation);
-      numberIterations += this->numberIterations();
+      numberIterations += numberIterations_;
+      numberIterations_ = numberIterations;
       finalStatus=status();
       time2 = CoinCpuTime();
       handler_->message(CLP_INTERVAL_TIMING,messages_)

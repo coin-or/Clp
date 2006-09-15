@@ -763,6 +763,10 @@ CbcOrClpParam::setIntParameter (CbcModel &model,int value)
       oldValue=model.getIntParam(CbcModel::CbcMaxNumNode);
       model.setIntParam(CbcModel::CbcMaxNumNode,value);
       break;
+    case MAXSOLS:
+      oldValue=model.getIntParam(CbcModel::CbcMaxNumSol);
+      model.setIntParam(CbcModel::CbcMaxNumSol,value);
+      break;
     case STRONGBRANCHING:
       oldValue=model.numberStrong();
       model.setNumberStrong(value);
@@ -801,6 +805,9 @@ CbcOrClpParam::intParameter (CbcModel &model) const
       break;
   case MAXNODES:
     value = model.getIntParam(CbcModel::CbcMaxNumNode);
+    break;
+  case MAXSOLS:
+    value = model.getIntParam(CbcModel::CbcMaxNumSol);
     break;
   case STRONGBRANCHING:
     value=model.numberStrong();
@@ -1159,10 +1166,12 @@ with quadratic objectives."
      "This does branch and cut.  There are many parameters which can affect the performance.  \
 First just try with default settings and look carefully at the log file.  Did cuts help?  Did they take too long?  \
 Look at output to see which cuts were effective and then do some tuning.  You will see that the \
-options for cuts are off, on, root and ifmove.  Off is \
+options for cuts are off, on, root and ifmove, forceon.  Off is \
 obvious, on means that this cut generator will be tried in the branch and cut tree (you can fine tune using \
 'depth').  Root means just at the root node while 'ifmove' means that cuts will be used in the tree if they \
-look as if they are doing some good and moving the objective value.  If pre-processing reduced the size of the \
+look as if they are doing some good and moving the objective value.  Forceon is same as on but forces code to use \
+cut generator at every node.  For probing forceonbut just does fixing probing in tree - not strengthening etc.  \
+If pre-processing reduced the size of the \
 problem or strengthened many coefficients then it is probably wise to leave it on.  Switch off heuristics \
 which did not provide solutions.  The other major area to look at is the search.  Hopefully good solutions \
 were obtained fairly early in the search so the important point is to select the best variable to branch on.  \
@@ -1213,6 +1222,7 @@ possibilities."
   parameters[numberParameters-1].append("on");
   parameters[numberParameters-1].append("root");
   parameters[numberParameters-1].append("ifmove");
+  parameters[numberParameters-1].append("forceOn");
   parameters[numberParameters-1].setLonghelp
     (
      "This switches on clique cuts (either at root or in entire tree) \
@@ -1226,13 +1236,16 @@ See branchAndCut for information on options."
     (
      "This switches on a heuristic which does branch and cut on the problem given by just \
 using variables which have appeared in one or more solutions. \
-It is obviously only tries after two or more solutions."
+It obviously only tries after two or more solutions."
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("cost!Strategy","How to use costs as priorities",
 		  "off",COSTSTRATEGY);
   parameters[numberParameters-1].append("pri!orities");
   parameters[numberParameters-1].append("column!Order?");
+  parameters[numberParameters-1].append("01f!irst?");
+  parameters[numberParameters-1].append("01l!ast?");
+  parameters[numberParameters-1].append("length!?");
   parameters[numberParameters-1].setLonghelp
     (
      "This orders the variables in order of their absolute costs - with largest cost ones being branched on \
@@ -1310,6 +1323,7 @@ objective for solution minus cutoff increment."
   parameters[numberParameters-1].append("on");
   parameters[numberParameters-1].append("root");
   parameters[numberParameters-1].append("ifmove");
+  parameters[numberParameters-1].append("forceOn");
   parameters[numberParameters-1].setLonghelp
     (
      "This can be used to switch on or off all cuts (apart from Reduce and Split).  Then you can do \
@@ -1484,7 +1498,8 @@ before branch and bound - use with extreme caution!"
     parameters[numberParameters-1].append("on");
     parameters[numberParameters-1].append("root");
     parameters[numberParameters-1].append("ifmove");
-  parameters[numberParameters-1].setLonghelp
+    parameters[numberParameters-1].append("forceOn");
+    parameters[numberParameters-1].setLonghelp
     (
      "This switches on flow cover cuts (either at root or in entire tree) \
 See branchAndCut for information on options."
@@ -1515,6 +1530,7 @@ See branchAndCut for information on options."
   parameters[numberParameters-1].append("on");
   parameters[numberParameters-1].append("root");
   parameters[numberParameters-1].append("ifmove");
+  parameters[numberParameters-1].append("forceOn");
   parameters[numberParameters-1].setLonghelp
     (
      "The original cuts - beware of imitations!  Having gone out of favor, they are now more \
@@ -1638,9 +1654,22 @@ This needs to be set before the import of model - so -keepnames off -import xxxx
   parameters[numberParameters-1].append("on");
   parameters[numberParameters-1].append("root");
   parameters[numberParameters-1].append("ifmove");
+  parameters[numberParameters-1].append("forceOn");
   parameters[numberParameters-1].setLonghelp
     (
      "This switches on knapsack cuts (either at root or in entire tree) \
+See branchAndCut for information on options."
+     ); 
+  parameters[numberParameters++]=
+    CbcOrClpParam("lift!AndProjectCuts","Whether to use Lift and Project cuts",
+		  "off",LANDPCUTS);
+  parameters[numberParameters-1].append("on");
+  parameters[numberParameters-1].append("root");
+  parameters[numberParameters-1].append("ifmove");
+  parameters[numberParameters-1].append("forceOn");
+  parameters[numberParameters-1].setLonghelp
+    (
+     "Lift and project cuts - may be expensive to compute. \
 See branchAndCut for information on options."
      ); 
   parameters[numberParameters++]=
@@ -1709,6 +1738,13 @@ stopping",
      "This is a repeatable way to limit search.  Normally using time is easier \
 but then the results may not be repeatable."
      ); 
+  parameters[numberParameters++]=
+    CbcOrClpParam("maxS!olutions","Maximum number of solutions to get",
+		  1,2147483647,MAXSOLS);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "You may want to stop after (say) two solutions or an hour."
+     ); 
 #endif
   parameters[numberParameters++]=
     CbcOrClpParam("min!imize","Set optimization direction to minimize",
@@ -1732,6 +1768,7 @@ You can also use the parameters 'direction minimize'."
   parameters[numberParameters-1].append("on");
   parameters[numberParameters-1].append("root");
   parameters[numberParameters-1].append("ifmove");
+  parameters[numberParameters-1].append("forceOn");
   parameters[numberParameters-1].setLonghelp
     (
      "This switches on mixed integer rounding cuts (either at root or in entire tree) \
@@ -1948,6 +1985,7 @@ to write the original to file using 'file'."
   parameters[numberParameters-1].append("equal");
   parameters[numberParameters-1].append("sos");
   parameters[numberParameters-1].append("trysos");
+  parameters[numberParameters-1].append("equalall");
   parameters[numberParameters-1].append("strategy");
   parameters[numberParameters-1].setLonghelp
     (
@@ -1955,7 +1993,8 @@ to write the original to file using 'file'."
 it also tries to strengthen the model - this can be very useful and is worth trying. \
  Save option saves on file presolved.mps.  equal will turn <= cliques into \
 ==.  sos will create sos sets if all 0-1 in sets (well one extra is allowed) \
-and no overlaps.  trysos is same but allows any number extra.  strategy is as \
+and no overlaps.  trysos is same but allows any number extra.  equalall will turn all \
+valid inequalities into equalities with integer slacks.  strategy is as \
 on but uses CbcStrategy."
      ); 
 #endif
@@ -2067,6 +2106,8 @@ File is in csv format with allowed headings - name, number, priority, direction,
   parameters[numberParameters-1].append("on");
   parameters[numberParameters-1].append("root");
   parameters[numberParameters-1].append("ifmove");
+  parameters[numberParameters-1].append("forceOn");
+  parameters[numberParameters-1].append("forceOnBut");
   parameters[numberParameters-1].setLonghelp
     (
      "This switches on probing cuts (either at root or in entire tree) \
@@ -2113,7 +2154,8 @@ way of using absolute value rather than fraction."
     parameters[numberParameters-1].append("on");
     parameters[numberParameters-1].append("root");
     parameters[numberParameters-1].append("ifmove");
-  parameters[numberParameters-1].setLonghelp
+    parameters[numberParameters-1].append("forceOn");
+    parameters[numberParameters-1].setLonghelp
     (
      "This switches on reduce and split  cuts (either at root or in entire tree) \
 See branchAndCut for information on options."
@@ -2372,11 +2414,20 @@ trust the pseudo costs and do not do any more strong branching."
 #endif
 #ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
+    CbcOrClpParam("tune!PreProcess","Dubious tuning parameters",
+		  0,1000000,PROCESSTUNE,false);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "For making equality cliques this is minimumsize.  Also for adding \
+integer slacks.  May be used for more later"
+     ); 
+  parameters[numberParameters++]=
     CbcOrClpParam("two!MirCuts","Whether to use Two phase Mixed Integer Rounding cuts",
 		  "off",TWOMIRCUTS);
   parameters[numberParameters-1].append("on");
   parameters[numberParameters-1].append("root");
   parameters[numberParameters-1].append("ifmove");
+  parameters[numberParameters-1].append("forceOn");
   parameters[numberParameters-1].setLonghelp
     (
      "This switches on two phase mixed integer rounding  cuts (either at root or in entire tree) \
@@ -2408,6 +2459,14 @@ Look for USERCLP in main driver and modify sample code."
 Look for USERCBC in main driver and modify sample code."
      ); 
 #endif
+  parameters[numberParameters++]=
+    CbcOrClpParam("vector","Whether to use vector? Form of matrix in simplex",
+		  "off",VECTOR,7,false);
+  parameters[numberParameters-1].append("on");
+  parameters[numberParameters-1].setLonghelp
+    (
+     "If this is on and ClpPackedMatrix uses extra column copy in odd format."
+     ); 
   parameters[numberParameters++]=
     CbcOrClpParam("verbose","Switches on longer help on single ?",
 		  0,15,VERBOSE,false);

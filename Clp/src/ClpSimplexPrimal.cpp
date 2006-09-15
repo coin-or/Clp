@@ -432,6 +432,8 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
     }
   }
   // if infeasible get real values
+  //printf("XXXXY final cost %g\n",infeasibilityCost_);
+  progress_->initialWeight_=0.0;
   if (problemStatus_==1) {
     infeasibilityCost_=0.0;
     createRim(1+4);
@@ -877,10 +879,110 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
     gutsOfSolution(NULL,NULL,ifValuesPass!=0);
     nonLinearCost_->checkInfeasibilities(primalTolerance_);
   }
+  if (nonLinearCost_->numberInfeasibilities()>0&&!progress->initialWeight_&&!ifValuesPass&&infeasibilityCost_==1.0e10) {
+    // first time infeasible - start up weight computation
+    double * oldDj = dj_;
+    double * oldCost = cost_;
+    int numberRows2 = numberRows_+numberExtraRows_;
+    int numberTotal = numberRows2+numberColumns_;
+    dj_ = new double[numberTotal];
+    cost_ = new double[numberTotal];
+    reducedCostWork_ = dj_;
+    rowReducedCost_ = dj_+numberColumns_;
+    objectiveWork_ = cost_;
+    rowObjectiveWork_ = cost_+numberColumns_;
+    double direction = optimizationDirection_*objectiveScale_;
+    const double * obj = objective();
+    memset(rowObjectiveWork_,0,numberRows_*sizeof(double));
+    int iSequence;
+    if (columnScale_)
+      for (iSequence=0;iSequence<numberColumns_;iSequence++) 
+	cost_[iSequence] = obj[iSequence]*direction*columnScale_[iSequence];
+    else
+      for (iSequence=0;iSequence<numberColumns_;iSequence++) 
+	cost_[iSequence] = obj[iSequence]*direction;
+    computeDuals(NULL);
+    int numberSame=0;
+    int numberDifferent=0;
+    int numberZero=0;
+    int numberFreeSame=0;
+    int numberFreeDifferent=0;
+    int numberFreeZero=0;
+    int n=0;
+    for (iSequence=0;iSequence<numberTotal;iSequence++) {
+      if (getStatus(iSequence) != basic&&!flagged(iSequence)) {
+	// not basic
+	double distanceUp = upper_[iSequence]-solution_[iSequence];
+	double distanceDown = solution_[iSequence]-lower_[iSequence];
+	double feasibleDj = dj_[iSequence];
+	double infeasibleDj = oldDj[iSequence]-feasibleDj;
+	double value = feasibleDj*infeasibleDj;
+	if (distanceUp>primalTolerance_) {
+	  // Check if "free"
+	  if (distanceDown>primalTolerance_) {
+	    // free
+	    if (value>dualTolerance_) {
+	      numberFreeSame++;
+	    } else if(value<-dualTolerance_) {
+	      numberFreeDifferent++;
+	      dj_[n++] = feasibleDj/infeasibleDj;
+	    } else {
+	      numberFreeZero++;
+	    }
+	  } else {
+	    // should not be negative
+	    if (value>dualTolerance_) {
+	      numberSame++;
+	    } else if(value<-dualTolerance_) {
+	      numberDifferent++;
+	      dj_[n++] = feasibleDj/infeasibleDj;
+	    } else {
+	      numberZero++;
+	    }
+	  }
+	} else if (distanceDown>primalTolerance_) {
+	  // should not be positive
+	  if (value>dualTolerance_) {
+	      numberSame++;
+	    } else if(value<-dualTolerance_) {
+	      numberDifferent++;
+	      dj_[n++] = feasibleDj/infeasibleDj;
+	    } else {
+	      numberZero++;
+	    }
+	}
+      }
+      progress->initialWeight_=-1.0;
+    }
+    //printf("XXXX %d same, %d different, %d zero, -- free %d %d %d\n",
+    //   numberSame,numberDifferent,numberZero,
+    //   numberFreeSame,numberFreeDifferent,numberFreeZero);
+    // we want most to be same
+    if (n) {
+      double most = 0.95;
+      std::sort(dj_,dj_+n);
+      int which = (int) ((1.0-most)*((double) n));
+      double take = -dj_[which]*infeasibilityCost_;
+      //printf("XXXXZ inf cost %g take %g (range %g %g)\n",infeasibilityCost_,take,-dj_[0]*infeasibilityCost_,-dj_[n-1]*infeasibilityCost_);
+      take = -dj_[0]*infeasibilityCost_;
+      infeasibilityCost_ = CoinMin(1000.0*take,1.0000001e10);;
+      //printf("XXXX increasing weight to %g\n",infeasibilityCost_);
+    }
+    delete [] dj_;
+    delete [] cost_;
+    dj_= oldDj;
+    cost_ = oldCost;
+    reducedCostWork_ = dj_;
+    rowReducedCost_ = dj_+numberColumns_;
+    objectiveWork_ = cost_;
+    rowObjectiveWork_ = cost_+numberColumns_;
+    if (n)
+      gutsOfSolution(NULL,NULL,ifValuesPass!=0);
+  }
   double trueInfeasibility =nonLinearCost_->sumInfeasibilities();
-  if (!nonLinearCost_->numberInfeasibilities()&&infeasibilityCost_==1.0e10&&!ifValuesPass) {
+  if (!nonLinearCost_->numberInfeasibilities()&&infeasibilityCost_==1.0e10&&!ifValuesPass&&true) {
     // relax if default
-    infeasibilityCost_ = CoinMin(CoinMax(100.0*sumDualInfeasibilities_,1.0e4),1.0e7);
+    infeasibilityCost_ = CoinMin(CoinMax(100.0*sumDualInfeasibilities_,1.0e6),1.00000001e10);
     // reset looping criterion
     *progress = ClpSimplexProgress();
     trueInfeasibility = 1.123456e10;
@@ -914,7 +1016,29 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
       // Carry on and re-do
       numberDualInfeasibilities_ = -776;
     }
-  }
+    // But if real primal infeasibilities nonzero carry on
+    if (nonLinearCost_->numberInfeasibilities()) {
+      // most likely to happen if infeasible
+      double relaxedToleranceP=primalTolerance_;
+      // we can't really trust infeasibilities if there is primal error
+      double error = CoinMin(1.0e-2,largestPrimalError_);
+      // allow tolerance at least slightly bigger than standard
+      relaxedToleranceP = relaxedToleranceP +  error;
+      int ninfeas = nonLinearCost_->numberInfeasibilities();
+      double sum = nonLinearCost_->sumInfeasibilities();
+      double average = sum/ ((double) ninfeas);
+#ifdef COIN_DEVELOP
+      if (handler_->logLevel()>0)
+	printf("nonLinearCost says infeasible %d summing to %g\n",
+	       ninfeas,sum);
+#endif
+      if (average>relaxedToleranceP) {
+	sumOfRelaxedPrimalInfeasibilities_ = sum;
+	numberPrimalInfeasibilities_ = ninfeas;
+	sumPrimalInfeasibilities_ = sum;
+      }
+    }
+  } 
   // had ||(type==3&&problemStatus_!=-5) -- ??? why ????
   if ((dualFeasible()||problemStatus_==-4)&&!ifValuesPass) {
     // see if extra helps
@@ -1200,6 +1324,9 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
     } 
   }
 #endif
+  // Allow matrices to be sorted etc
+  int fake=-999; // signal sort
+  matrix_->correctSequence(this,fake,fake);
 }
 /* 
    Row array has pivot column

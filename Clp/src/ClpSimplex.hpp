@@ -10,11 +10,6 @@
 #ifndef ClpSimplex_H
 #define ClpSimplex_H
 
-#if defined(_MSC_VER)
-// Turn off compiler warning about long names
-#  pragma warning(disable:4786)
-#endif
-
 #include <iostream>
 #include <cfloat>
 #include "ClpModel.hpp"
@@ -29,6 +24,7 @@ class ClpSimplexProgress;
 class CoinModel;
 class OsiClpSolverInterface;
 class CoinWarmStartBasis;
+class ClpDisasterHandler;
 
 /** This solves LPs using the simplex method
 
@@ -477,6 +473,9 @@ public:
           { return numberDualInfeasibilities_;} ;
   inline void setNumberDualInfeasibilities(int value)
           { numberDualInfeasibilities_=value;} ;
+  /// Number of dual infeasibilities (without free)
+  inline int numberDualInfeasibilitiesWithoutFree() const 
+          { return numberDualInfeasibilitiesWithoutFree_;} ;
   /// Sum of primal infeasibilities
   inline double sumPrimalInfeasibilities() const 
           { return sumPrimalInfeasibilities_;} ;
@@ -663,6 +662,9 @@ private:
   inline double largestSolutionError() const
           { return largestSolutionError_;} ;
 public:
+  /// Disaster handler
+  inline void setDisasterHandler(ClpDisasterHandler * handler)
+  { disasterArea_= handler;};
   /// Large bound value (for complementarity etc)
   inline double largeValue() const 
           { return largeValue_;} ;
@@ -927,6 +929,8 @@ public:
   { return objectiveValue_;};
    /// Compute objective value from solution and put in objectiveValue_
   void computeObjectiveValue();
+  /// Compute minimization objective value from internal solution without perturbation
+  double computeInternalObjectiveValue();
   /** Number of extra rows.  These are ones which will be dynamically created
       each iteration.  This is for GUB but may have other uses.
   */
@@ -963,12 +967,12 @@ public:
              if she/he needs these short cuts.  I will not debug unless in Coin
              repository.  See COIN_CLP_VETTED comments.
       0x01000000 is Cbc (and in branch and bound)
+      0x02000000 is in a different branch and bound
   */
 #define COIN_CBC_USING_CLP 0x01000000
   inline unsigned int specialOptions() const
   { return specialOptions_;};
-  inline void setSpecialOptions(unsigned int value)
-  { specialOptions_=value;};
+  void setSpecialOptions(unsigned int value);
   //@}
 
   ///@name Basis handling 
@@ -1219,6 +1223,8 @@ protected:
   double * savedSolution_;
   /// Number of times code has tentatively thought optimal
   int numberTimesOptimal_;
+  /// Disaster handler
+  ClpDisasterHandler * disasterArea_;
   /// If change has been made (first attempt at stopping looping)
   int changeMade_;
   /// Algorithm >0 == Primal, <0 == Dual
@@ -1367,6 +1373,7 @@ public:
   //@}
   /**@name Data  */
 #define CLP_PROGRESS 5
+  //#define CLP_PROGRESS_WEIGHT 10
   //@{
   /// Objective values
   double objective_[CLP_PROGRESS];
@@ -1374,6 +1381,20 @@ public:
   double infeasibility_[CLP_PROGRESS];
   /// Sum of real primal infeasibilities for primal
   double realInfeasibility_[CLP_PROGRESS];
+#ifdef CLP_PROGRESS_WEIGHT
+  /// Objective values for weights
+  double objectiveWeight_[CLP_PROGRESS_WEIGHT];
+  /// Sum of infeasibilities for algorithm for weights
+  double infeasibilityWeight_[CLP_PROGRESS_WEIGHT];
+  /// Sum of real primal infeasibilities for primal for weights
+  double realInfeasibilityWeight_[CLP_PROGRESS_WEIGHT];
+  /// Drop  for weights
+  double drop_;
+  /// Best? for weights
+  double best_;
+#endif
+  /// Initial weight for weights
+  double initialWeight_;
 #define CLP_CYCLE 12
   /// For cycle checking
   //double obj_[CLP_CYCLE];
@@ -1386,6 +1407,12 @@ public:
   int numberInfeasibilities_[CLP_PROGRESS];
   /// Iteration number at which occurred
   int iterationNumber_[CLP_PROGRESS];
+#ifdef CLP_PROGRESS_WEIGHT
+  /// Number of infeasibilities for weights
+  int numberInfeasibilitiesWeight_[CLP_PROGRESS_WEIGHT];
+  /// Iteration number at which occurred for weights
+  int iterationNumberWeight_[CLP_PROGRESS_WEIGHT];
+#endif
   /// Number of times checked (so won't stop too early)
   int numberTimes_;
   /// Number of times it looked like loop

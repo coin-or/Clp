@@ -588,6 +588,9 @@ ClpSimplexNonlinear::statusOfProblemInPrimal(int & lastCleaned, int type,
   lastGoodIteration_ = numberIterations_;
   //if (goToDual) 
   //problemStatus_=10; // try dual
+  // Allow matrices to be sorted etc
+  int fake=-999; // signal sort
+  matrix_->correctSequence(this,fake,fake);
 }
 /*
   Reasons to come out:

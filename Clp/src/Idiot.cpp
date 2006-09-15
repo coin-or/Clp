@@ -1012,6 +1012,12 @@ Idiot::crossOver(int mode)
     }
     /*printf("%d in basis\n",ninbas);*/
   }
+  bool wantVector=false;
+  if (dynamic_cast< ClpPackedMatrix*>(model_->clpMatrix())) {
+    // See if original wanted vector
+    ClpPackedMatrix * clpMatrixO = dynamic_cast< ClpPackedMatrix*>(model_->clpMatrix());
+    wantVector = clpMatrixO->wantsSpecialColumnCopy();
+  }
   if (addAll<3) {
     ClpPresolve pinfo;
     if (presolve) {
@@ -1019,7 +1025,16 @@ Idiot::crossOver(int mode)
       model_ = pinfo.presolvedModel(*model_,1.0e-8,false,5);
     }
     if (model_) {
-      model_->primal(1);
+      if (!wantVector) {
+	model_->primal(1);
+      } else {
+	ClpMatrixBase * matrix = model_->clpMatrix();
+	ClpPackedMatrix * clpMatrix = dynamic_cast< ClpPackedMatrix*>(matrix);
+	assert (clpMatrix);
+	clpMatrix->makeSpecialColumnCopy();
+	model_->primal(1);
+	clpMatrix->releaseSpecialColumnCopy();
+      }
       if (presolve) {
 	pinfo.postsolve(true);
 	delete model_;
@@ -1066,7 +1081,16 @@ Idiot::crossOver(int mode)
       } else {
 	presolve=0;
       }
-      model_->primal(1);
+      if (!wantVector) {
+	model_->primal(1);
+      } else {
+	ClpMatrixBase * matrix = model_->clpMatrix();
+	ClpPackedMatrix * clpMatrix = dynamic_cast< ClpPackedMatrix*>(matrix);
+	assert (clpMatrix);
+	clpMatrix->makeSpecialColumnCopy();
+	model_->primal(1);
+	clpMatrix->releaseSpecialColumnCopy();
+      }
       if (presolve) {
 	pinfo.postsolve(true);
 	delete model_;
@@ -1091,7 +1115,16 @@ Idiot::crossOver(int mode)
       } else {
 	presolve=0;
       }
-      model_->primal(1);
+      if (!wantVector) {
+	model_->primal(1);
+      } else {
+	ClpMatrixBase * matrix = model_->clpMatrix();
+	ClpPackedMatrix * clpMatrix = dynamic_cast< ClpPackedMatrix*>(matrix);
+	assert (clpMatrix);
+	clpMatrix->makeSpecialColumnCopy();
+	model_->primal(1);
+	clpMatrix->releaseSpecialColumnCopy();
+      }
       if (presolve) {
 	pinfo.postsolve(true);
 	delete model_;

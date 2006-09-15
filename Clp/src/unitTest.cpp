@@ -240,7 +240,7 @@ static void printSol(ClpSimplex & model)
 // All parameters are optional.
 //----------------------------------------------------------------
 int mainTest (int argc, const char *argv[],int algorithm,
-	      ClpSimplex empty, bool doPresolve, int switchOffValue)
+	      ClpSimplex empty, bool doPresolve, int switchOffValue,bool doVector)
 {
   int i;
 
@@ -502,6 +502,13 @@ int mainTest (int argc, const char *argv[],int algorithm,
             ClpSimplex solution=solutionBase;
             if (solution.maximumSeconds()<0.0)
               solution.setMaximumSeconds(120.0);
+	    if (doVector) {
+	      ClpMatrixBase * matrix = solution.clpMatrix();
+	      if (dynamic_cast< ClpPackedMatrix*>(matrix)) {
+		ClpPackedMatrix * clpMatrix = dynamic_cast< ClpPackedMatrix*>(matrix);
+		clpMatrix->makeSpecialColumnCopy();
+	      }
+	    }
             solution.initialSolve(solveOptions);
             double time2 = CoinCpuTime()-time1;
             testTime[iTest]=time2;
@@ -589,6 +596,13 @@ int mainTest (int argc, const char *argv[],int algorithm,
         solveOptions=setupForSolve(iAlg,nameAlgorithm,0);
         if (presolveOff)
           solveOptions.setPresolveType(ClpSolve::presolveOff);
+      }
+      if (doVector) {
+	ClpMatrixBase * matrix = solution.clpMatrix();
+	if (dynamic_cast< ClpPackedMatrix*>(matrix)) {
+	  ClpPackedMatrix * clpMatrix = dynamic_cast< ClpPackedMatrix*>(matrix);
+	  clpMatrix->makeSpecialColumnCopy();
+	}
       }
       solution.initialSolve(solveOptions);
       double time2 = CoinCpuTime()-time1;
@@ -783,7 +797,9 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     model.messagesPointer()->setDetailMessage(1,102);
     model.setFactorizationFrequency(10);
     model.primal();
-
+    model.primal(0,3);
+    model.setObjCoeff(3,-2.9473684210526314);
+    model.primal(0,3);
     // Write saved solutions
     int nc = model.getNumCols();
     int s; 
@@ -1455,12 +1471,12 @@ ClpSimplexUnitTest(const std::string & mpsDir,
     
     FILE * fp = fopen(fn.c_str(),"r");
     if (!fp) {
-      // Try in Samples
-      fn = "Samples/input.130";
+      // Try in Data/Sample
+      fn = "Data/Sample/input.130";
       fp = fopen(fn.c_str(),"r");
     }
     if (!fp) {
-      fprintf(stderr,"Unable to open file input.130 in mpsDir or Samples directory\n");
+      fprintf(stderr,"Unable to open file input.130 in mpsDir or Data/Sample directory\n");
     } else {
       int problem;
       char temp[100];

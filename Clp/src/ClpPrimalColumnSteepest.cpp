@@ -982,11 +982,7 @@ ClpPrimalColumnSteepest::djsAndSteepest(CoinIndexedVector * updates,
   int sequenceOut = model_->sequenceOut();
   if (sequenceOut>=0)
     outgoingWeight=weights_[sequenceOut];
-    
-  // put row of tableau in rowArray and columnArray (packed)
-  // get subset which have nonzero tableau elements
-  transposeTimes2(updates,spareColumn1,alternateWeights_,spareColumn2,spareRow2,
-                  -scaleFactor);
+  // update row weights here so we can scale alternateWeights_
   // update weights
   double * weight;
   double * other = alternateWeights_->denseVector();
@@ -1007,7 +1003,6 @@ ClpPrimalColumnSteepest::djsAndSteepest(CoinIndexedVector * updates,
     double pivotSquared;
     int iSequence = index[j];
     double value2 = updateBy[j];
-    updateBy[j]=0.0;
     ClpSimplex::Status status = model_->getStatus(iSequence+addSequence);
     double value;
     
@@ -1121,6 +1116,12 @@ ClpPrimalColumnSteepest::djsAndSteepest(CoinIndexedVector * updates,
       }
     }
   }
+  // put row of tableau in rowArray and columnArray (packed)
+  // get subset which have nonzero tableau elements
+  transposeTimes2(updates,spareColumn1,alternateWeights_,spareColumn2,spareRow2,
+                  -scaleFactor);
+  // zero updateBy
+  CoinZeroN(updateBy,number);
   alternateWeights_->clear();
   // columns
   assert (scaleFactor);
@@ -1536,16 +1537,6 @@ ClpPrimalColumnSteepest::djsAndSteepest2(CoinIndexedVector * updates,
     model_->factorization()->updateColumnTranspose(spareRow2,updates);
     bool needSubset =  (mode_<4||numberSwitched_>1||mode_>=10);
 
-    if (needSubset) {
-      // now update weight update array
-      model_->factorization()->updateColumnTranspose(spareRow2,
-						     alternateWeights_);
-      transposeTimes2(updates,spareColumn1,alternateWeights_,spareColumn2,spareRow2,0.0);
-    } else {
-      // put row of tableau in rowArray and columnArray
-      model_->clpMatrix()->transposeTimes(model_,-1.0,
-                                          updates,spareColumn2,spareColumn1);
-    }
     double * weight;
     double * other = alternateWeights_->denseVector();
     int numberColumns = model_->numberColumns();
@@ -1554,15 +1545,16 @@ ClpPrimalColumnSteepest::djsAndSteepest2(CoinIndexedVector * updates,
     index = updates->getIndices();
     updateBy = updates->denseVector();
     weight = weights_+numberColumns;
-    
     if (needSubset) {
-      // Exact
+      // now update weight update array
+      model_->factorization()->updateColumnTranspose(spareRow2,
+						     alternateWeights_);
+      // do alternateWeights_ here so can scale
       for (j=0;j<number;j++) {
 	int iSequence = index[j];
 	double thisWeight = weight[iSequence];
 	// row has -1 
 	double pivot = - updateBy[j];
-	updateBy[j]=0.0;
 	double modification = other[iSequence];
 	double pivotSquared = pivot * pivot;
 	
@@ -1581,6 +1573,15 @@ ClpPrimalColumnSteepest::djsAndSteepest2(CoinIndexedVector * updates,
 	}
 	weight[iSequence] = thisWeight;
       }
+      transposeTimes2(updates,spareColumn1,alternateWeights_,spareColumn2,spareRow2,0.0);
+    } else {
+      // put row of tableau in rowArray and columnArray
+      model_->clpMatrix()->transposeTimes(model_,-1.0,
+                                          updates,spareColumn2,spareColumn1);
+    }
+    
+    if (needSubset) {
+      CoinZeroN(updateBy,number);
     } else if (mode_==4) {
       // Devex
       assert (devex_>0.0);
@@ -2794,14 +2795,13 @@ ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model,int mode)
       if (infeasible_->capacity()==numberRows+numberColumns&&
 	alternateWeights_->capacity()==numberRows+
 	  model_->factorization()->maximumPivots()) {
+	alternateWeights_->clear();
 	if (pivotSequence_>=0) {
 	  // save pivot order
 	  CoinMemcpyN(pivotVariable,
 		 numberRows,alternateWeights_->getIndices());
 	  // change from pivot row number to sequence number
 	  pivotSequence_=pivotVariable[pivotSequence_];
-	} else {
-	  alternateWeights_->clear();
 	}
 	state_=1;
       } else {

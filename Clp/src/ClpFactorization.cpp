@@ -246,7 +246,7 @@ ClpFactorization::factorize ( ClpSimplex * model,
 	}
       }
       if (numberBasic>model->maximumBasic()) {
-#ifndef NDEBUG
+#if 0 // ndef NDEBUG
         printf("%d basic - should only be %d\n",
                numberBasic,numberRows);
 #endif

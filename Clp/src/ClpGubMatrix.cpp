@@ -4072,8 +4072,10 @@ ClpGubMatrix::switchOffCheck()
 }
 // Correct sequence in and out to give true value
 void 
-ClpGubMatrix::correctSequence(int & sequenceIn, int & sequenceOut) const
+ClpGubMatrix::correctSequence(const ClpSimplex * model,int & sequenceIn, int & sequenceOut)
 {
-  sequenceIn = trueSequenceIn_;
-  sequenceOut = trueSequenceOut_;
+  if (sequenceIn!=-999) {
+    sequenceIn = trueSequenceIn_;
+    sequenceOut = trueSequenceOut_;
+  }
 }
