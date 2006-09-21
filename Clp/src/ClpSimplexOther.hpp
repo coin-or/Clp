@@ -154,8 +154,10 @@ public:
     int readBasis(const char *filename);
   /// Creates dual of a problem
   ClpSimplex * dualOfModel() const;
-  /// Restores solution from dualized problem
-  void restoreFromDual(const ClpSimplex * dualProblem);
+  /** Restores solution from dualized problem
+      non-zero return code indicates minor problems
+  */
+  int restoreFromDual(const ClpSimplex * dualProblem);
   /** Does very cursory presolve.
       rhs is numberRows, whichRows is 3*numberRows and whichColumns is 2*numberColumns.
   */

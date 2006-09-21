@@ -673,8 +673,10 @@ int main (int argc, const char *argv[])
                 status=-1;
               }
               if (dualize) {
-                ((ClpSimplexOther *) models+iModel)->restoreFromDual(model2);
+                int returnCode=((ClpSimplexOther *) models+iModel)->restoreFromDual(model2);
                 delete model2;
+		if (returnCode)
+		  models[iModel].primal(1);
               }
               if (status>=0)
                 basisHasValues=1;

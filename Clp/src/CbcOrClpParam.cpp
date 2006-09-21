@@ -2217,7 +2217,7 @@ See branchAndCut for information on options."
  directory given by 'directory'.  A name of '$' will use the previous value for the name.  This\
  is initialized to 'solution.file'.  To read the file use fread(int) twice to pick up number of rows \
 and columns, then fread(double) to pick up objective value, then pick up row activities, row duals, column \
-activities and reduced costs - see bottom of CbcOrClpParam.cpp for code that writes file."
+activities and reduced costs - see bottom of CbcOrClpParam.cpp for code that reads or writes file."
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("scal!ing","Whether to scale problem",
@@ -2509,6 +2509,64 @@ void saveSolution(const ClpSimplex * lpSolver,std::string fileName)
     double * primalColumnSolution = lpSolver->primalColumnSolution();
     fwrite(primalColumnSolution,sizeof(double),numberColumns,fp);
     fwrite(dualColumnSolution,sizeof(double),numberColumns,fp);
+    fclose(fp);
+  } else {
+    std::cout<<"Unable to open file "<<fileName<<std::endl;
+  }
+}
+/* Restore a solution from file.
+   mode 0 normal, 1 swap rows and columns and primal and dual
+   if 2 set then also change signs
+*/
+void restoreSolution(ClpSimplex * lpSolver,std::string fileName,int mode)
+{
+  FILE * fp=fopen(fileName.c_str(),"rb");
+  if (fp) {
+    int numberRows=lpSolver->numberRows();
+    int numberColumns=lpSolver->numberColumns();
+    int numberRowsFile;
+    int numberColumnsFile;
+    double objectiveValue;
+    fread(&numberRowsFile,sizeof(int),1,fp);
+    fread(&numberColumnsFile,sizeof(int),1,fp);
+    fread(&objectiveValue,sizeof(double),1,fp);
+    double * dualRowSolution = lpSolver->dualRowSolution();
+    double * primalRowSolution = lpSolver->primalRowSolution();
+    double * dualColumnSolution = lpSolver->dualColumnSolution();
+    double * primalColumnSolution = lpSolver->primalColumnSolution();
+    if (mode) {
+      // swap
+      int k=numberRows;
+      numberRows=numberColumns;
+      numberColumns=k;
+      double * temp;
+      temp = dualRowSolution;
+      dualRowSolution = primalColumnSolution;
+      primalColumnSolution=temp;
+      temp = dualColumnSolution;
+      dualColumnSolution = primalRowSolution;
+      primalRowSolution=temp;
+    }
+    if (numberRows!=numberRowsFile||numberColumns!=numberColumnsFile) {
+      std::cout<<"Mismatch on rows and/or columns"<<std::endl;
+    } else {
+      lpSolver->setObjectiveValue(objectiveValue);
+      fread(primalRowSolution,sizeof(double),numberRows,fp);
+      fread(dualRowSolution,sizeof(double),numberRows,fp);
+      fread(primalColumnSolution,sizeof(double),numberColumns,fp);
+      fread(dualColumnSolution,sizeof(double),numberColumns,fp);
+      if (mode==3) {
+	int i;
+	for (i=0;i<numberRows;i++) {
+	  primalRowSolution[i] = -primalRowSolution[i];
+	  dualRowSolution[i] = -dualRowSolution[i];
+	}
+	for (i=0;i<numberColumns;i++) {
+	  primalColumnSolution[i] = -primalColumnSolution[i];
+	  dualColumnSolution[i] = -dualColumnSolution[i];
+	}
+      }
+    }
     fclose(fp);
   } else {
     std::cout<<"Unable to open file "<<fileName<<std::endl;

@@ -789,9 +789,10 @@ ClpSimplexOther::dualOfModel() const
   return modelDual;
 }
 // Restores solution from dualized problem
-void 
+int
 ClpSimplexOther::restoreFromDual(const ClpSimplex * dualProblem)
 {
+  int returnCode=0;;
   createStatus();
   // Number of rows in dual problem was original number of columns
   assert (numberColumns_==dualProblem->numberRows());
@@ -885,7 +886,11 @@ ClpSimplexOther::restoreFromDual(const ClpSimplex * dualProblem)
         // column basic
         setColumnStatus(iColumn,basic);
         numberBasic++;
-        columnActivity_[iColumn]=-dualDual[iColumn];
+	if (columnLower_[iColumn]>-1.0e20) {
+	  columnActivity_[iColumn]=-dualDual[iColumn] + columnLower_[iColumn];
+	} else if (columnUpper_[iColumn]<1.0e20) {
+	  columnActivity_[iColumn]=-dualDual[iColumn] + columnUpper_[iColumn];
+	}
         reducedCost_[iColumn]=0.0;
       } else {
         // may be at other bound
@@ -913,6 +918,7 @@ ClpSimplexOther::restoreFromDual(const ClpSimplex * dualProblem)
   }
   // now rows
   int kRow=0;
+  int numberRanges=0;
   for (iRow=0;iRow<numberRows_;iRow++) {
     Status status = dualProblem->getColumnStatus(kRow);
     if (status==basic) {
@@ -949,13 +955,35 @@ ClpSimplexOther::restoreFromDual(const ClpSimplex * dualProblem)
         kRow++;
       } else {
         // range
-        abort();
+        numberRanges++;
+	Status statusL = dualProblem->getColumnStatus(kRow+1);
+	if (status==basic) {
+	  assert (statusL!=basic);
+	  rowActivity_[iRow]=rowUpper_[iRow];
+	  setRowStatus(iRow,atUpperBound);
+	} else if (statusL==basic) {
+	  rowActivity_[iRow]=rowLower_[iRow];
+	  setRowStatus(iRow,atLowerBound);
+	} else {
+	  rowActivity_[iRow]=rowLower_[iRow]+dualSol[kRow];
+	  // row basic
+	  setRowStatus(iRow,basic);
+	  numberBasic++;
+	  dual_[iRow]=0.0;
+	}
         kRow++;
         kRow++;
       }
     }
   }
-  assert (numberBasic==numberRows_);
+  if (numberRanges) {
+    printf("%d ranges - coding needed\n",numberRanges);
+    returnCode=1;
+  }
+  if (numberBasic!=numberRows_) {
+    printf("Bad basis - ranges?\n");
+    assert (numberRanges);
+  }
   if (optimizationDirection_<0.0) {
     for (iRow=0;iRow<numberRows_;iRow++) {
       dual_[iRow]=-dual_[iRow];
@@ -964,7 +992,12 @@ ClpSimplexOther::restoreFromDual(const ClpSimplex * dualProblem)
       reducedCost_[iColumn]=-reducedCost_[iColumn];
     }
   }
+  // redo row activities
+  memset(rowActivity_,0,numberRows_*sizeof(double));
+  matrix_->times(-1.0,columnActivity_,rowActivity_);
   checkSolutionInternal();
+  return 1; //temp
+  return returnCode;
 }
 /* Does very cursory presolve.
    rhs is numberRows, whichRows is 3*numberRows and whichColumns is 2*numberColumns

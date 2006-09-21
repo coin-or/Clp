@@ -297,7 +297,9 @@ ClpSimplexDual::startupSolve(int ifValuesPass,double * saveDuals,int startFinish
 	problemStatus_=0;
     }
     if (problemStatus_<0&&perturbation_<100) {
-      perturb();
+      bool inCbcOrOther = (specialOptions_&0x03000000)!=0;
+      if (!inCbcOrOther)
+	perturb();
       // Can't get here if values pass
       gutsOfSolution(NULL,NULL);
       if (handler_->logLevel()>2) {
@@ -311,6 +313,16 @@ ClpSimplexDual::startupSolve(int ifValuesPass,double * saveDuals,int startFinish
 			   <numberDualInfeasibilities_)
 			     <<numberDualInfeasibilitiesWithoutFree_;
 	handler_->message()<<CoinMessageEol;
+      }
+      if (inCbcOrOther) {
+	if (numberPrimalInfeasibilities_) {
+	  perturb();
+	  if (perturbation_>=101)
+	    computeDuals(NULL);
+	} else if (numberDualInfeasibilities_) {
+	  problemStatus_=10;
+	  return 1; // to primal
+	}
       }
     }
     return 0;
