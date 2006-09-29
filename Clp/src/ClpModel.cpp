@@ -1298,8 +1298,8 @@ ClpModel::addRows(int number, const double * rowLower,
       rowNames_.resize(numberRows_);
     }
 #endif
-    if (elements)
-      matrix_->appendMatrix(number,0,rowStarts,columns,elements);
+    //if (elements)
+    matrix_->appendMatrix(number,0,rowStarts,columns,elements);
   }
 }
 // Add rows
@@ -1779,8 +1779,8 @@ ClpModel::addColumns(int number, const double * columnLower,
       columnNames_.resize(numberColumns_);
     }
 #endif
-    if (elements)
-      matrix_->appendMatrix(number,1,columnStarts,rows,elements);
+    //if (elements)
+    matrix_->appendMatrix(number,1,columnStarts,rows,elements);
   }
 }
 // Add columns

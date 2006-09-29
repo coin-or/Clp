@@ -319,6 +319,7 @@ ClpSimplexDual::startupSolve(int ifValuesPass,double * saveDuals,int startFinish
 	  perturb();
 	  if (perturbation_>=101)
 	    computeDuals(NULL);
+	  //gutsOfSolution(NULL,NULL);
 	} else if (numberDualInfeasibilities_) {
 	  problemStatus_=10;
 	  return 1; // to primal

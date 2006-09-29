@@ -5799,6 +5799,13 @@ ClpSimplex::loadProblem (  CoinModel & modelObject, bool keepSolution)
     memcpy(dsol+numberColumns_,dual_,numberRows_*sizeof(double));
   }
   int returnCode = ClpModel::loadProblem(modelObject);
+  const int * integerType = modelObject.integerTypeArray();
+  if (integerType) {
+    for (int iColumn=0;iColumn<numberColumns_;iColumn++) {
+      if (integerType[iColumn])
+	setInteger(iColumn);
+    }
+  }
   createStatus();
   if (status) {
     // copy back
