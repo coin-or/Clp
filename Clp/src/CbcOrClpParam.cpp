@@ -753,7 +753,7 @@ CbcOrClpParam::setIntParameter (CbcModel &model,int value)
     switch(type_) {
     case LOGLEVEL:
       oldValue = model.messageHandler()->logLevel();
-      model.messageHandler()->setLogLevel(value);
+      model.messageHandler()->setLogLevel(CoinAbs(value));
       break;
     case SOLVERLOGLEVEL:
       oldValue = model.solver()->messageHandler()->logLevel();
@@ -1691,7 +1691,7 @@ heuristics are switched on."
 #else
   parameters[numberParameters++]=
     CbcOrClpParam("log!Level","Level of detail in Coin branch and Cut output",
-		  -1,63,LOGLEVEL);
+		  -63,63,LOGLEVEL);
   parameters[numberParameters-1].setIntValue(1);
 #endif
   parameters[numberParameters-1].setLonghelp
@@ -1855,6 +1855,20 @@ with University of Florida ordering."
 specialized network code."
      ); 
 #ifdef COIN_HAS_CBC
+  parameters[numberParameters++]=
+    CbcOrClpParam("node!Strategy","What strategy to use to select nodes",
+                  "fewest",NODESTRATEGY);
+  parameters[numberParameters-1].append("depth");
+  parameters[numberParameters-1].append("upfewest");
+  parameters[numberParameters-1].append("downfewest");
+  parameters[numberParameters-1].append("updepth");
+  parameters[numberParameters-1].append("downdepth");
+  parameters[numberParameters-1].setLonghelp
+    (
+     "Normally before a solution the code will choose node with fewest infeasibilities. \
+You can choose depth as the criterion.  You can also say if up or down branch must \
+be done first (the up down choice will carry on after solution)."
+     ); 
   parameters[numberParameters++]=
     CbcOrClpParam("numberA!nalyze","Number of analysis iterations",
 		  -INT_MAX,INT_MAX,NUMBERANALYZE,false);

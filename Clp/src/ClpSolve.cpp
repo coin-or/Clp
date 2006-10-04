@@ -1190,8 +1190,10 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	if (nPasses<70&&(nPasses%10)>0&&(nPasses%10)<4) {
 	  info.setStartingWeight(1.0e3);
 	  info.setLightweight(nPasses%10); // special testing
+#ifdef COIN_DEVELOP
           printf("warning - odd lightweight %d\n",nPasses%10);
 	  //info.setReduceIterations(6);
+#endif
 	}
       }
       if (nPasses) {
@@ -1482,7 +1484,9 @@ ClpSimplex::initialSolve(ClpSolve & options)
     if (maxSprintPass>1000) {
       ratio = CoinMax(maxSprintPass/1000,2);
       maxSprintPass= maxSprintPass %1000;
+#ifdef COIN_DEVELOP
       printf("%d passes wanted with ratio of %d\n",maxSprintPass,ratio);
+#endif
     }
     // Just take this number of columns in small problem
     int smallNumberColumns = CoinMin(ratio*numberRows,numberColumns);
