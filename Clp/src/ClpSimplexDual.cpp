@@ -4603,6 +4603,9 @@ ClpSimplexDual::perturb()
 	} else {
 	  largestZero=CoinMax(largestZero,fabs(value));
 	}
+	// but negative if at ub
+	if (getStatus(iColumn)==atUpperBound)
+	  value = -value;
 	if (printOut)
 	  printf("col %d cost %g change %g\n",iColumn,objectiveWork_[iColumn],value);
 	objectiveWork_[iColumn] += value;
