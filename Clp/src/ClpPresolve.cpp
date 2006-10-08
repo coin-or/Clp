@@ -1636,6 +1636,8 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
 	  columnNames.push_back(originalModel->columnName(kColumn));
 	}
 	presolvedModel_->copyNames(rowNames,columnNames);
+      } else {
+	presolvedModel_->setLengthNames(0);
       }
 #endif
       if (rowObjective_) {

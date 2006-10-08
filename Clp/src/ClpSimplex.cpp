@@ -2543,10 +2543,12 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
   if (auxiliaryModel_) {
     if (auxiliaryModel_->numberRows_==numberRows_&&
         auxiliaryModel_->numberColumns_==numberColumns_&&
-	(whatsChanged_&511)==511) 
+	(whatsChanged_&511)==511) {
       oldMatrix=true; 
-    else
+    } else {
       deleteAuxiliaryModel();
+      oldMatrix=false;
+    }
   }
   if (what==63) {
     if (!status_)
@@ -5205,6 +5207,17 @@ ClpSimplex::saveModel(const char * fileName)
       delete [] array;
     }
 #endif
+    // integers
+    if (integerType_) {
+      int marker=1;
+      fwrite(&marker,sizeof(int),1,fp);
+      numberWritten = fwrite(integerType_,1,numberColumns_,fp);
+      if (numberWritten!=numberColumns_)
+	return 1;
+    } else {
+      int marker=0;
+      fwrite(&marker,sizeof(int),1,fp);
+    }
     // just standard type at present
     assert (matrix_->type()==1);
     CoinAssert (matrix_->getNumCols() == numberColumns_);
@@ -5409,6 +5422,27 @@ ClpSimplex::restoreModel(const char * fileName)
       delete [] array;
     }
 #endif
+    // integers
+    int ifInteger;
+    delete [] integerType_;
+    numberRead = fread(&ifInteger,sizeof(int),1,fp);
+    // But try and stay compatible with previous version
+    bool alreadyGotLength=false;
+    if (numberRead!=1)
+      return 1;
+    if (ifInteger==1) {
+      integerType_ = new char [numberColumns_];
+      numberRead = fread(integerType_,1,numberColumns_,fp);
+      if (numberRead!=numberColumns_)
+	return 1;
+    } else {
+      integerType_=NULL;
+      if (ifInteger) {
+	// probably old style save
+	alreadyGotLength=true;
+	length=ifInteger;
+      }
+    }
     // Pivot choices
     assert(scalars.dualPivotChoice>0&&(scalars.dualPivotChoice&63)<3);
     delete dualRowPivot_;
@@ -5443,9 +5477,11 @@ ClpSimplex::restoreModel(const char * fileName)
     assert(scalars.matrixStorageChoice==1);
     delete matrix_;
     // get arrays
-    numberRead = fread(&length,sizeof(int),1,fp);
-    if (numberRead!=1)
-      return 1;
+    if (!alreadyGotLength) {
+      numberRead = fread(&length,sizeof(int),1,fp);
+      if (numberRead!=1)
+	return 1;
+    }
     double * elements = new double[length];
     int * indices = new int[length];
     CoinBigIndex * starts = new CoinBigIndex[numberColumns_+1];

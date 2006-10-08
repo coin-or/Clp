@@ -1732,7 +1732,7 @@ stopping",
 #ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("maxN!odes","Maximum number of nodes to do",
-		  1,2147483647,MAXNODES);
+		  0,2147483647,MAXNODES);
   parameters[numberParameters-1].setLonghelp
     (
      "This is a repeatable way to limit search.  Normally using time is easier \
@@ -2122,11 +2122,26 @@ File is in csv format with allowed headings - name, number, priority, direction,
   parameters[numberParameters-1].append("ifmove");
   parameters[numberParameters-1].append("forceOn");
   parameters[numberParameters-1].append("forceOnBut");
+  parameters[numberParameters-1].append("forceOnStrong");
+  parameters[numberParameters-1].append("forceOnButStrong");
   parameters[numberParameters-1].setLonghelp
     (
      "This switches on probing cuts (either at root or in entire tree) \
-See branchAndCut for information on options."
+See branchAndCut for information on options. \
+but strong options do more probing"
      ); 
+  parameters[numberParameters++]=
+    CbcOrClpParam("pumpT!une","Dubious ideas for feasibility pump",
+		  0,1000000,FPUMPTUNE);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "This fine tunes Feasibility Pump \n\
+\t>=1000 use index+2 as number of large loops, if >4 decrement by 5 and clean used array\n\
+\t>=100 use 0.05 objvalue as increment\n\
+\t>=10 use +0.1 objvalue for cutoff (add)\n\
+\t1 == fix ints at bounds, 2 fix all integral ints, 3 and continuous at bounds"
+     ); 
+  parameters[numberParameters-1].setIntValue(0);
 #endif
   parameters[numberParameters++]=
     CbcOrClpParam("quit","Stops clp execution",
@@ -2397,6 +2412,13 @@ see number before trust."
  variables in column.  If you increase this the number of rows may decrease but number of \
  elements may increase."
      ); 
+#endif
+#ifdef COIN_HAS_CBC
+  parameters[numberParameters++]=
+    CbcOrClpParam("testO!si","Test OsiObject stuff",
+		  0,INT_MAX,TESTOSI,false);
+#endif
+#ifdef COIN_HAS_CLP
   parameters[numberParameters++]=
     CbcOrClpParam("thread!s","Number of threads to try and use",
 		  -2,64,THREADS,false);

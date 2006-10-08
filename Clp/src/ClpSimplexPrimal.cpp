@@ -1036,6 +1036,11 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	sumOfRelaxedPrimalInfeasibilities_ = sum;
 	numberPrimalInfeasibilities_ = ninfeas;
 	sumPrimalInfeasibilities_ = sum;
+	bool unflagged = unflag();
+#ifdef COIN_DEVELOP
+	if (unflagged&&handler_->logLevel()>0)
+	  printf(" - but flagged variables\n");
+#endif
       }
     }
   } 
