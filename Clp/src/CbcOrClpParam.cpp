@@ -2132,11 +2132,12 @@ but strong options do more probing"
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("pumpT!une","Dubious ideas for feasibility pump",
-		  0,1000000,FPUMPTUNE);
+		  0,10000000,FPUMPTUNE);
   parameters[numberParameters-1].setLonghelp
     (
      "This fine tunes Feasibility Pump \n\
-\t>=1000 use index+2 as number of large loops, if >4 decrement by 5 and clean used array\n\
+\t>=1000000 use as accumulate switch\n\
+\t>=1000 use index+2 as number of large loops\n\
 \t>=100 use 0.05 objvalue as increment\n\
 \t>=10 use +0.1 objvalue for cutoff (add)\n\
 \t1 == fix ints at bounds, 2 fix all integral ints, 3 and continuous at bounds"
