@@ -914,7 +914,28 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
       // Carry on and re-do
       numberDualInfeasibilities_ = -776;
     }
-  }
+    // But if real primal infeasibilities nonzero carry on
+    if (nonLinearCost_->numberInfeasibilities()) {
+      // most likely to happen if infeasible
+      double relaxedToleranceP=primalTolerance_;
+      // we can't really trust infeasibilities if there is primal error
+      double error = CoinMin(1.0e-2,largestPrimalError_);
+      // allow tolerance at least slightly bigger than standard
+      relaxedToleranceP = relaxedToleranceP +  error;
+      int ninfeas = nonLinearCost_->numberInfeasibilities();
+      double sum = nonLinearCost_->sumInfeasibilities();
+      double average = sum/ ((double) ninfeas);
+#ifdef COIN_DEVELOP
+      printf("nonLinearCost says infeasible %d summing to %g\n",
+	     ninfeas,sum);
+#endif
+      if (average>relaxedToleranceP) {
+	sumOfRelaxedPrimalInfeasibilities_ = sum;
+	numberPrimalInfeasibilities_ = ninfeas;
+	sumPrimalInfeasibilities_ = sum;
+      }
+    }
+  } 
   // had ||(type==3&&problemStatus_!=-5) -- ??? why ????
   if ((dualFeasible()||problemStatus_==-4)&&!ifValuesPass) {
     // see if extra helps
