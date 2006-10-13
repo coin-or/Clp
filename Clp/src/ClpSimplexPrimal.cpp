@@ -3000,4 +3000,3 @@ ClpSimplexPrimal::clearAll()
   matrix_->generalExpanded(this,11,sequenceIn_);
   
 }
-
