@@ -3246,7 +3246,10 @@ ClpModel::rowNamesAsChar() const
   char ** rowNames = NULL;
   if (lengthNames()) {
     rowNames = new char * [numberRows_+1];
-    for (int iRow=0;iRow<numberRows_;iRow++) {
+    int numberNames = rowNames_.size();
+    numberNames = CoinMin(numberRows_,numberNames);
+    int iRow;
+    for (iRow=0;iRow<numberNames;iRow++) {
       rowNames[iRow] = 
 	strdup(rowName(iRow).c_str());
 #ifdef STRIPBLANKS
@@ -3261,6 +3264,11 @@ ClpModel::rowNamesAsChar() const
       xx[n]='\0';
 #endif
     }
+    char name[9];
+    for ( ;iRow<numberRows_;iRow++) {
+      sprintf(name,"R%7.7d",iRow);
+      rowNames[iRow]=strdup(name);
+    }
     rowNames[numberRows_] = strdup("OBJROW");
   }
   return reinterpret_cast<const char * const *>(rowNames);
@@ -3272,7 +3280,10 @@ ClpModel::columnNamesAsChar() const
   char ** columnNames = NULL;
   if (lengthNames()) {
     columnNames = new char * [numberColumns_];
-    for (int iColumn=0;iColumn<numberColumns_;iColumn++) {
+    int numberNames = columnNames_.size();
+    numberNames = CoinMin(numberColumns_,numberNames);
+    int iColumn;
+    for (iColumn=0;iColumn<numberNames;iColumn++) {
       columnNames[iColumn] = 
 	strdup(columnName(iColumn).c_str());
 #ifdef STRIPBLANKS
@@ -3286,6 +3297,11 @@ ClpModel::columnNamesAsChar() const
       }
       xx[n]='\0';
 #endif
+    }
+    char name[9];
+    for ( ;iColumn<numberColumns_;iColumn++) {
+      sprintf(name,"C%7.7d",iColumn);
+      columnNames[iColumn]=strdup(name);
     }
   }
   return /*reinterpret_cast<const char * const *>*/(columnNames);
