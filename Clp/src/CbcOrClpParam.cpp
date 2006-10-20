@@ -1240,7 +1240,7 @@ first.  This primitive strategy can be surprsingly effective.  The column order\
  option is obviously not on costs but easy to code here."
      ); 
 #endif
-#if 0
+#if 1
   parameters[numberParameters++]=
     CbcOrClpParam("cpp!Generate","Generates C++ code",
 		  -1,50000,CPP);
