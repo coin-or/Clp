@@ -1,5 +1,5 @@
 MSVisualStudio   https://projects.coin-or.org/svn/MSVisualStudio/branches/devel/ExternalsDirs/Clp
-BuildTools    https://projects.coin-or.org/svn/BuildTools/trunk
-Data/Netlib   https://projects.coin-or.org/svn/Data/trunk/Netlib
-Data/Sample   https://projects.coin-or.org/svn/Data/trunk/Sample
+BuildTools    https://projects.coin-or.org/svn/BuildTools/stable/0.5
+Data/Netlib   https://projects.coin-or.org/svn/Data/stable/1.0/Netlib
+Data/Sample   https://projects.coin-or.org/svn/Data/stable/1.0/Sample
 CoinUtils     https://projects.coin-or.org/svn/CoinUtils/branches/devel/CoinUtils
