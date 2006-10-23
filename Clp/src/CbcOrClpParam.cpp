@@ -2132,7 +2132,7 @@ but strong options do more probing"
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("pumpT!une","Dubious ideas for feasibility pump",
-		  0,10000000,FPUMPTUNE);
+		  0,100000000,FPUMPTUNE);
   parameters[numberParameters-1].setLonghelp
     (
      "This fine tunes Feasibility Pump \n\
