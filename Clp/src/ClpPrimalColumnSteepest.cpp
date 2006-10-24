@@ -2836,6 +2836,8 @@ ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model,int mode)
 	// create saved weights 
 	delete [] savedWeights_;
 	savedWeights_ = CoinCopyOfArray(weights_,numberRows+numberColumns);
+	// just do initialization
+	mode=3;
       } else {
 	// Partial pricing
 	// use region as somewhere to save non-fixed slacks
