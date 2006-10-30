@@ -191,10 +191,10 @@ private:
   PresolveType presolveType_;
   /// Amount of presolve
   int numberPasses_;
-  /// Options
-  int options_[6];
+  /// Options - last is switch for OsiClp
+  int options_[7];
   /// Extra information
-  int extraInfo_[6];
+  int extraInfo_[7];
   /** Extra algorithm dependent options
       0 - if set return from clpsolve if infeasible
       1 - To be copied over to presolve options

@@ -2251,8 +2251,20 @@ double *
 ClpModel::infeasibilityRay() const
 {
   double * array = NULL;
-  if (problemStatus_==1&&!secondaryStatus_) 
+  if (problemStatus_==1&&!secondaryStatus_) {
     array = ClpCopyOfArray(ray_,numberRows_);
+#if 0
+    // clean up
+    double largest=1.0e-30;
+    double smallest=COIN_DBL_MAX;
+    int i;
+    for (i=0;i<numberRows_;i++) {
+      double value = fabs(array[i]);
+      smallest = CoinMin(smallest,value);
+      largest = CoinMax(largest,value);
+    }
+#endif
+  }
   return array;
 }
 double * 

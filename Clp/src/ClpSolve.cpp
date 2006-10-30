@@ -13,6 +13,7 @@
 #include "CoinSort.hpp"
 #include "ClpFactorization.hpp"
 #include "ClpSimplex.hpp"
+#include "ClpSimplexOther.hpp"
 #ifndef SLIM_CLP
 #include "ClpQuadraticObjective.hpp"
 #include "ClpInterior.hpp"
@@ -640,12 +641,12 @@ ClpSimplex::initialSolve(ClpSolve & options)
   int numberColumns = model2->numberColumns();
   int numberRows = model2->numberRows();
   // If not all slack basis - switch off all except sprint
-  int number=0;
+  int numberRowsBasic=0;
   int iRow;
   for (iRow=0;iRow<numberRows;iRow++)
     if (model2->getRowStatus(iRow)==basic)
-      number++;
-  if (number<numberRows) {
+      numberRowsBasic++;
+  if (numberRowsBasic<numberRows) {
     doIdiot=0;
     doCrash=0;
     //doSprint=0;
@@ -1330,6 +1331,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
     const int * row = model2->matrix()->getIndices();
     const CoinBigIndex * columnStart = model2->matrix()->getVectorStarts();
     const int * columnLength = model2->matrix()->getVectorLengths();
+    //bool allSlack = (numberRowsBasic==numberRows);
     for (iColumn=0;iColumn<originalNumberColumns;iColumn++) {
       if (!columnSolution[iColumn]||fabs(columnSolution[iColumn])>1.0e20) {
         double value =0.0;
@@ -1357,7 +1359,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
     // now see what that does to row solution
     double * rowSolution = model2->primalRowSolution();
     CoinZeroN (rowSolution,numberRows);
-    model2->times(1.0,columnSolution,rowSolution);
+    model2->clpMatrix()->times(1.0,columnSolution,rowSolution);
     // See if we can adjust using costed slacks
     double penalty=CoinMin(infeasibilityCost_,1.0e10)*optimizationDirection_;
     const double * lower = model2->rowLower();
@@ -1480,16 +1482,17 @@ ClpSimplex::initialSolve(ClpSolve & options)
     if (doSprint>0)
       maxSprintPass=options.getExtraInfo(1);
     // but if big use to get ratio
-    int ratio=3;
+    double ratio=3;
     if (maxSprintPass>1000) {
-      ratio = CoinMax(maxSprintPass/1000,2);
+      ratio = ((double) maxSprintPass)*0.0001;
+      ratio = CoinMax(ratio,1.1);
       maxSprintPass= maxSprintPass %1000;
 #ifdef COIN_DEVELOP
-      printf("%d passes wanted with ratio of %d\n",maxSprintPass,ratio);
+      printf("%d passes wanted with ratio of %g\n",maxSprintPass,ratio);
 #endif
     }
     // Just take this number of columns in small problem
-    int smallNumberColumns = CoinMin(ratio*numberRows,numberColumns);
+    int smallNumberColumns = (int) CoinMin(ratio*numberRows,(double) numberColumns);
     smallNumberColumns = CoinMax(smallNumberColumns,3000);
     smallNumberColumns = CoinMin(smallNumberColumns,numberColumns);
     //int smallNumberColumns = CoinMin(12*numberRows/10,numberColumns);
@@ -1563,7 +1566,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
       for (iColumn=0;iColumn<numberColumns;iColumn++) 
 	offset += fullSolution[iColumn]*objective[iColumn];
       small.setDblParam(ClpObjOffset,originalOffset-offset);
-      model2->times(1.0,fullSolution,sumFixed);
+      model2->clpMatrix()->times(1.0,fullSolution,sumFixed);
       
       double * lower = small.rowLower();
       double * upper = small.rowUpper();
@@ -1588,7 +1591,35 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	  small.primal(1);
 	  clpMatrix->releaseSpecialColumnCopy();
 	} else {
+#if 0
 	  small.primal(1);
+#else
+	  int numberColumns = small.numberColumns();
+	  int numberRows = small.numberRows();
+	  // Use dual region
+	  double * rhs = small.dualRowSolution();
+	  int * whichRow = new int[3*numberRows];
+	  int * whichColumn = new int[2*numberColumns];
+	  int nBound;
+	  ClpSimplex * small2 = ((ClpSimplexOther *) (&small))->crunch(rhs,whichRow,whichColumn,
+									nBound,false,false);
+	  if (small2) {
+	    small2->primal(1);
+	    if (small2->problemStatus()==0) {
+	      small.setProblemStatus(0);
+	      ((ClpSimplexOther *) (&small))->afterCrunch(*small2,whichRow,whichColumn,nBound);
+	    } else {
+	      small2->primal(1);
+	      if (small2->problemStatus())
+		small.primal(1);
+	    }
+	    delete small2;
+	  } else {
+	    small.primal(1);
+	  }
+	  delete [] whichRow;
+	  delete [] whichColumn;
+#endif
 	}
       } else {
 	small.primal(1);
@@ -1608,7 +1639,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
       // get reduced cost for large problem
       double * djs = model2->dualColumnSolution();
       CoinMemcpyN(model2->objective(),numberColumns,djs);
-      model2->transposeTimes(-1.0,small.dualRowSolution(),djs);
+      model2->clpMatrix()->transposeTimes(-1.0,small.dualRowSolution(),djs);
       int numberNegative=0;
       double sumNegative = 0.0;
       // now massage weight so all basic in plus good djs
@@ -2260,12 +2291,11 @@ ClpSolve::ClpSolve (  )
   presolveType_=presolveOn;
   numberPasses_=5;
   int i;
-  for (i=0;i<6;i++)
+  for (i=0;i<7;i++)
     options_[i]=0;
-  for (i=0;i<6;i++)
+  for (i=0;i<7;i++)
     extraInfo_[i]=-1;
-  for (i=0;i<2;i++)
-    independentOptions_[i]=0;
+  independentOptions_[0]=0;
   // But switch off slacks
   independentOptions_[1]=512;
   // Substitute up to 3
@@ -2283,8 +2313,10 @@ ClpSolve::ClpSolve ( SolveType method, PresolveType presolveType,
   int i;
   for (i=0;i<6;i++)
     options_[i]=options[i];
+  options_[6]=0;
   for (i=0;i<6;i++)
     extraInfo_[i]=extraInfo[i];
+  extraInfo_[6]=0;
   for (i=0;i<3;i++)
     independentOptions_[i]=independentOptions[i];
 }
@@ -2296,9 +2328,9 @@ ClpSolve::ClpSolve(const ClpSolve & rhs)
   presolveType_=rhs.presolveType_;
   numberPasses_=rhs.numberPasses_;
   int i;
-  for ( i=0;i<6;i++)
+  for ( i=0;i<7;i++)
     options_[i]=rhs.options_[i];
-  for ( i=0;i<6;i++)
+  for ( i=0;i<7;i++)
     extraInfo_[i]=rhs.extraInfo_[i];
   for (i=0;i<3;i++)
     independentOptions_[i]=rhs.independentOptions_[i];
@@ -2312,9 +2344,9 @@ ClpSolve::operator=(const ClpSolve & rhs)
     presolveType_=rhs.presolveType_;
     numberPasses_=rhs.numberPasses_;
     int i;
-    for (i=0;i<6;i++)
+    for (i=0;i<7;i++)
       options_[i]=rhs.options_[i];
-    for (i=0;i<6;i++)
+    for (i=0;i<7;i++)
       extraInfo_[i]=rhs.extraInfo_[i];
     for (i=0;i<3;i++)
       independentOptions_[i]=rhs.independentOptions_[i];

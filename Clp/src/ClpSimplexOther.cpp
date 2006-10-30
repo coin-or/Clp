@@ -1505,7 +1505,7 @@ ClpSimplexOther::tightenIntegerBounds(double * rhsSpace)
   int numberTightened=0;
   if (!feasible) {
     return -1;
-  } else {
+  } else if (integerType_) {
     // and tighten
     for (int iColumn=0;iColumn<numberColumns_;iColumn++) {
       if (integerType_[iColumn]) {
