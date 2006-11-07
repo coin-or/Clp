@@ -965,7 +965,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
       double take = -dj_[which]*infeasibilityCost_;
       //printf("XXXXZ inf cost %g take %g (range %g %g)\n",infeasibilityCost_,take,-dj_[0]*infeasibilityCost_,-dj_[n-1]*infeasibilityCost_);
       take = -dj_[0]*infeasibilityCost_;
-      infeasibilityCost_ = CoinMin(1000.0*take,1.0000001e10);;
+      infeasibilityCost_ = CoinMin(CoinMax(1000.0*take,1.0e8),1.0000001e10);;
       //printf("XXXX increasing weight to %g\n",infeasibilityCost_);
     }
     delete [] dj_;
@@ -982,7 +982,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
   double trueInfeasibility =nonLinearCost_->sumInfeasibilities();
   if (!nonLinearCost_->numberInfeasibilities()&&infeasibilityCost_==1.0e10&&!ifValuesPass&&true) {
     // relax if default
-    infeasibilityCost_ = CoinMin(CoinMax(100.0*sumDualInfeasibilities_,1.0e6),1.00000001e10);
+    infeasibilityCost_ = CoinMin(CoinMax(100.0*sumDualInfeasibilities_,1.0e8),1.00000001e10);
     // reset looping criterion
     *progress = ClpSimplexProgress();
     trueInfeasibility = 1.123456e10;

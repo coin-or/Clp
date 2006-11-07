@@ -2137,7 +2137,7 @@ but strong options do more probing"
     (
      "This fine tunes Feasibility Pump \n\
 \t>=1000000 use as accumulate switch\n\
-\t>=1000 use index+2 as number of large loops\n\
+\t>=1000 use index+1 as number of large loops\n\
 \t>=100 use 0.05 objvalue as increment\n\
 \t>=10 use +0.1 objvalue for cutoff (add)\n\
 \t1 == fix ints at bounds, 2 fix all integral ints, 3 and continuous at bounds"
@@ -2358,7 +2358,7 @@ this does branch and cut."
 		  0,INT_MAX,SPECIALOPTIONS,false);
   parameters[numberParameters++]=
     CbcOrClpParam("sprint!Crash","Whether to try sprint crash",
-		  -1,500,SPRINT);
+		  -1,5000000,SPRINT);
   parameters[numberParameters-1].setLonghelp
     (
      "For long and thin problems this program may solve a series of small problems\

@@ -1424,6 +1424,10 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	addStarts[numberArtificials]=numberArtificials;
       }
     }
+    if (numberArtificials) {
+      // need copy so as not to disturb original
+      model2 = new ClpSimplex(*model2);
+    }
     model2->addColumns(numberArtificials,NULL,NULL,addCost,
 		       addStarts,addRow,addElement);
     delete [] addStarts;
@@ -1591,7 +1595,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	  small.primal(1);
 	  clpMatrix->releaseSpecialColumnCopy();
 	} else {
-#if 0
+#if 1
 	  small.primal(1);
 #else
 	  int numberColumns = small.numberColumns();
@@ -1723,7 +1727,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
       delete [] saveLower;
       delete [] saveUpper;
     }
-    model2->primal(0);
+    model2->primal(1);
     model2->setPerturbation(savePerturbation);
     time2 = CoinCpuTime();
     timeCore = time2-timeX;
@@ -2187,7 +2191,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
     assert (method!=ClpSolve::automatic); // later
     time2=0.0;
   }
-  if (saveMatrix) {
+  if (saveMatrix&&model2==this) {
     // delete and replace
     delete model2->clpMatrix();
     model2->replaceMatrix(saveMatrix);
@@ -2235,6 +2239,23 @@ ClpSimplex::initialSolve(ClpSolve & options)
       <<CoinMessageEol;
       timeX=time2;
     }
+  } else if (model2!=this) {
+    // not presolved - but different model used (sprint probably)
+    CoinMemcpyN(model2->primalRowSolution(),
+		numberRows_,this->primalRowSolution());
+    CoinMemcpyN(model2->dualRowSolution(),
+		numberRows_,this->dualRowSolution());
+    CoinMemcpyN(model2->primalColumnSolution(),
+		numberColumns_,this->primalColumnSolution());
+    CoinMemcpyN(model2->dualColumnSolution(),
+		numberColumns_,this->dualColumnSolution());
+    CoinMemcpyN(model2->statusArray(),
+		numberColumns_+numberRows_,this->statusArray());
+    objectiveValue_=model2->objectiveValue_;
+    numberIterations_ =model2->numberIterations_;
+    problemStatus_ =model2->problemStatus_;
+    secondaryStatus_ =model2->secondaryStatus_;
+    delete model2;
   }
   setMaximumIterations(saveMaxIterations);
   std::string statusMessage[]={"Unknown","Optimal","PrimalInfeasible","DualInfeasible","Stopped",
