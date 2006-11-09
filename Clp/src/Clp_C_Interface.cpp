@@ -16,6 +16,7 @@
 
 #include "CoinHelperFunctions.hpp"
 #include "ClpSimplex.hpp"
+#include "ClpInterior.hpp"
 #include <cfloat>
 // Get C stuff but with extern C
 #define CLP_EXTERN_C
@@ -249,6 +250,19 @@ Clp_loadProblem (Clp_Simplex * model,  const int numcols, const int numrows,
   }
   model->model_->loadProblem(numcols,numrows,start,index,value,
 			     collb,colub,obj,rowlb,rowub);
+}
+/* read quadratic part of the objective (the matrix part) */
+COINLIBAPI void COINLINKAGE 
+Clp_loadQuadraticObjective(Clp_Simplex * model,  
+                           const int numberColumns, 
+                           const CoinBigIndex * start,
+                           const int * column, 
+                           const double * element)
+{
+
+   model->model_->loadQuadraticObjective(numberColumns, 
+                                         start, column, element);
+
 }
 /* Read an mps file from the given filename */
 COINLIBAPI int COINLINKAGE 
@@ -730,6 +744,24 @@ COINLIBAPI int COINLINKAGE
 Clp_initialSolve(Clp_Simplex * model)
 {
   return model->model_->initialSolve();
+}
+/* Barrier initial solve */
+COINLIBAPI int COINLINKAGE 
+Clp_initialBarrierSolve(Clp_Simplex * model0)
+{
+   ClpSimplex *model = model0->model_;
+
+   return model->initialBarrierSolve();
+   
+}
+/* Barrier initial solve */
+COINLIBAPI int COINLINKAGE 
+Clp_initialBarrierNoCrossSolve(Clp_Simplex * model0)
+{
+   ClpSimplex *model = model0->model_;
+
+   return model->initialBarrierNoCrossSolve();
+   
 }
 /* Dual initial solve */
 COINLIBAPI int COINLINKAGE 

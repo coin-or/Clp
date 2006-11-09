@@ -209,6 +209,11 @@ public:
   int initialDualSolve();
   /// Primal initial solve
   int initialPrimalSolve();
+ /// Barrier initial solve
+  int initialBarrierSolve();
+  /// Barrier initial solve, not to be followed by crossover
+  int initialBarrierNoCrossSolve();
+
   /** Dual algorithm - see ClpSimplexDual.hpp for method.
       ifValuesPass==2 just does values pass and then stops.
 

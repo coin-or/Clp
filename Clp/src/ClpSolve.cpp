@@ -2208,6 +2208,27 @@ ClpSimplex::initialPrimalSolve()
   options.setSolveType(ClpSolve::usePrimal);
   return initialSolve(options);
 }
+// barrier solve, not to be followed by crossover
+int 
+ClpSimplex::initialBarrierNoCrossSolve()
+{
+  ClpSolve options;
+  // Use primal
+  options.setSolveType(ClpSolve::useBarrierNoCross);
+  return initialSolve(options);
+}
+
+// General barrier solve
+int 
+ClpSimplex::initialBarrierSolve()
+{
+  ClpSolve options;
+  // Use primal
+  options.setSolveType(ClpSolve::useBarrier);
+  return initialSolve(options);
+}
+
+
 // Default constructor
 ClpSolve::ClpSolve (  )
 {
