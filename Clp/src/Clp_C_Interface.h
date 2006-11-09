@@ -52,6 +52,14 @@ extern "C"{
 		      const double* collb, const double* colub,   
 		      const double* obj,
 		      const double* rowlb, const double* rowub);
+
+/* read quadratic part of the objective (the matrix part) */
+COINLIBAPI void COINLINKAGE 
+Clp_loadQuadraticObjective(Clp_Simplex * model,  
+                           const int numberColumns, 
+                           const CoinBigIndex * start,
+                           const int * column, 
+                           const double * element);
   /** Read an mps file from the given filename */
   COINLIBAPI int COINLINKAGE Clp_readMps(Clp_Simplex * model,const char *filename,
 	      int keepNames,
@@ -248,6 +256,10 @@ extern "C"{
   COINLIBAPI int COINLINKAGE Clp_initialDualSolve(Clp_Simplex * model);
   /** Primal initial solve */
   COINLIBAPI int COINLINKAGE Clp_initialPrimalSolve(Clp_Simplex * model);
+  /** Barrier initial solve */
+  COINLIBAPI int COINLINKAGE Clp_initialBarrierSolve(Clp_Simplex * model);
+  /** Barrier initial solve, no crossover */
+  COINLIBAPI int COINLINKAGE Clp_initialBarrierNoCrossSolve(Clp_Simplex * model);
   /** Dual algorithm - see ClpSimplexDual.hpp for method */
   COINLIBAPI int COINLINKAGE Clp_dual(Clp_Simplex * model, int ifValuesPass);
   /** Primal algorithm - see ClpSimplexPrimal.hpp for method */
