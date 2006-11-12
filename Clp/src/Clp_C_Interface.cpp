@@ -244,9 +244,9 @@ Clp_loadProblem (Clp_Simplex * model,  const int numcols, const int numrows,
     printf("%s numcols = %i, numrows = %i\n", 
       prefix, numcols, numrows);
     printf("%s model = %p, start = %p, index = %p, value = %p\n",
-      prefix, model, start, index, value);
+      prefix, (void*)model, (void*)start, (void*)index, (void*)value);
     printf("%s collb = %p, colub = %p, obj = %p, rowlb = %p, rowub = %p\n",
-      prefix, collb, colub, obj, rowlb, rowub);
+      prefix, (void*)collb, (void*)colub, (void*)obj, (void*)rowlb, (void*)rowub);
   }
   model->model_->loadProblem(numcols,numrows,start,index,value,
 			     collb,colub,obj,rowlb,rowub);
@@ -1134,7 +1134,7 @@ Clp_printModel(Clp_Simplex * model, const char * prefix)
   printf("%s numcols = %i, numrows = %i, numelem = %i\n", 
     prefix, numcols, numrows, numelem);
   printf("%s model = %p, start = %p, index = %p, value = %p\n",
-    prefix, model, start, index, value);
+    prefix, (void*)model, (void*)start, (void*)index, (void*)value);
   clp_simplex->matrix()->dumpMatrix(NULL);
   {
     int i;
@@ -1146,7 +1146,7 @@ Clp_printModel(Clp_Simplex * model, const char * prefix)
   }
   
   printf("%s collb = %p, colub = %p, obj = %p, rowlb = %p, rowub = %p\n",
-    prefix, collb, colub, obj, rowlb, rowub);
+    prefix, (void*)collb, (void*)colub, (void*)obj, (void*)rowlb, (void*)rowub);
   printf("%s optimization direction = %g\n",prefix, Clp_optimizationDirection(model));
   printf("  (1 - minimize, -1 - maximize, 0 - ignore)\n");
   {
