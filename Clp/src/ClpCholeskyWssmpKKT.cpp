@@ -310,8 +310,10 @@ ClpCholeskyWssmpKKT::factorize(const double * diagonal, int * rowsDropped)
   double perturbation=model_->diagonalPerturbation()*model_->diagonalNorm();
   perturbation=perturbation*perturbation;
   if (perturbation>1.0) {
+#ifdef COIN_DEVELOP
     //if (model_->model()->logLevel()&4) 
     std::cout <<"large perturbation "<<perturbation<<std::endl;
+#endif
     perturbation=sqrt(perturbation);;
     perturbation=1.0;
   }

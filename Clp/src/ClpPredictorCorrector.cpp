@@ -3409,7 +3409,9 @@ int ClpPredictorCorrector::updateSolution(double nextGap)
         diagonal_[iColumn]=diagonalValue;
         //FUDGE
         if (diagonalValue>diagonalLimit) {
+#ifdef COIN_DEVELOP
           std::cout<<"large diagonal "<<diagonalValue<<std::endl;
+#endif
           diagonal_[iColumn]=diagonalLimit;
         } 
         if (diagonalValue<1.0e-10) {
