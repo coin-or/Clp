@@ -2338,6 +2338,8 @@ ClpSolve::ClpSolve (  )
   int i;
   for (i=0;i<7;i++)
     options_[i]=0;
+  // say no +-1 matrix
+  options_[3]=1;
   for (i=0;i<7;i++)
     extraInfo_[i]=-1;
   independentOptions_[0]=0;
