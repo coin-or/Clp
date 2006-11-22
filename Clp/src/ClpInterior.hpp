@@ -177,6 +177,12 @@ public:
   /// Sum of primal infeasibilities
   inline double sumPrimalInfeasibilities() const 
           { return sumPrimalInfeasibilities_;} ;
+  /// dualObjective.
+  inline double dualObjective() const
+  { return dualObjective_;};
+  /// primalObjective.
+  inline double primalObjective() const
+  { return primalObjective_;};
   /// diagonalNorm
   inline double diagonalNorm() const
   { return diagonalNorm_;};
