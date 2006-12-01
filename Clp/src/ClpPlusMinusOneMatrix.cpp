@@ -481,7 +481,7 @@ void
 ClpPlusMinusOneMatrix::transposeTimes( double scalar,
 				 const double * x, double * y,
 				 const double * rowScale, 
-				 const double * columnScale) const
+				 const double * columnScale, double * spare) const
 {
   // we know it is not scaled 
   transposeTimes(scalar, x, y);
