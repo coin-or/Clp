@@ -2417,7 +2417,7 @@ see number before trust."
 #ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("testO!si","Test OsiObject stuff",
-		  0,INT_MAX,TESTOSI,false);
+		  -1,INT_MAX,TESTOSI,false);
 #endif
 #ifdef COIN_HAS_CLP
   parameters[numberParameters++]=
