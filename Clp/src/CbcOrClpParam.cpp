@@ -2220,6 +2220,14 @@ See branchAndCut for information on options."
 #endif
 #ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
+      CbcOrClpParam("Rins","Whether to try Relaxed Induced Neighborhood Search",
+		    "off",RINS);
+    parameters[numberParameters-1].append("on");
+  parameters[numberParameters-1].setLonghelp
+    (
+     "This switches on Relaxed induced neighborhood Search."
+     ); 
+  parameters[numberParameters++]=
     CbcOrClpParam("round!ingHeuristic","Whether to use Rounding heuristic",
 		  "off",ROUNDING);
   parameters[numberParameters-1].append("on");
