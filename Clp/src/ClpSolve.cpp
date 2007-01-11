@@ -375,6 +375,17 @@ ClpSimplex::initialSolve(ClpSolve & options)
   double time2;
   ClpMatrixBase * saveMatrix=NULL;
   ClpObjective * savedObjective=NULL;
+  if (!objective_||!matrix_) {
+    // totally empty
+    handler_->message(CLP_EMPTY_PROBLEM,messages_)
+      <<0
+      <<0
+      <<0
+      <<CoinMessageEol;
+    return -1;
+  } else if (!numberRows_||!numberColumns_||!getNumElements()) {
+    presolve = ClpSolve::presolveOff;
+  }
   if (objective_->type()>=2&&optimizationDirection_==0) {
     // pretend linear
     savedObjective=objective_;
