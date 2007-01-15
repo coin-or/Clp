@@ -3980,10 +3980,30 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	   limit&&
 	   !numberAtFakeBound()&&!numberDualInfeasibilities_) {
     //printf("lim %g obj %g %g\n",limit,objectiveValue_,objectiveValue());
-    if (perturbation_==101) {
+    if (true||perturbation_==101) {
       // be careful
       if (numberIterations_) {
-        computeObjectiveValue(); // value without perturbation
+	// I don't want to change calling sequences - so ...
+	int iSequence;
+	objectiveValue_ = 0.0;
+	const double * obj = objective();
+	if (!columnScale_) {
+	  for (iSequence=0;iSequence<numberColumns_;iSequence++) {
+	    double value = columnActivityWork_[iSequence];
+	    objectiveValue_ += value*obj[iSequence];
+	  }
+	} else {
+	  for (iSequence=0;iSequence<numberColumns_;iSequence++) {
+	    double scaleFactor = columnScale_[iSequence];
+	    double valueScaled = columnActivityWork_[iSequence];
+	    objectiveValue_ += valueScaled*scaleFactor*obj[iSequence];
+	  }
+	}
+	// But remember direction as we are using external objective
+	objectiveValue_ *= optimizationDirection_;
+	objectiveValue_ += objective_->nonlinearOffset();
+	objectiveValue_ /= (objectiveScale_*rhsScale_);
+        //computeObjectiveValue(); // value without perturbation
         if(objectiveValue()*optimizationDirection_>limit) {
           problemStatus_=1;
           secondaryStatus_ = 1; // and say was on cutoff
