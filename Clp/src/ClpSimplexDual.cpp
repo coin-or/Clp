@@ -3980,10 +3980,11 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	   limit&&
 	   !numberAtFakeBound()&&!numberDualInfeasibilities_) {
     //printf("lim %g obj %g %g\n",limit,objectiveValue_,objectiveValue());
-    if (perturbation_==101) {
+    // Even if not perturbed internal costs may have changed
+    if (true||perturbation_==101) {
       // be careful
       if (numberIterations_) {
-        computeObjectiveValue(); // value without perturbation
+        computeObjectiveValue(true); // value without perturbation
         if(objectiveValue()*optimizationDirection_>limit) {
           problemStatus_=1;
           secondaryStatus_ = 1; // and say was on cutoff

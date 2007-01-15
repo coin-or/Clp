@@ -8757,22 +8757,38 @@ ClpSimplex::deleteAuxiliaryModel()
 }
 // Compute objective value from solution
 void
-ClpSimplex::computeObjectiveValue()
+ClpSimplex::computeObjectiveValue(bool useInternalArrays)
 {
   int iSequence;
-  //double oldObj = objectiveValue_;
   objectiveValue_ = 0.0;
   const double * obj = objective();
-  for (iSequence=0;iSequence<numberColumns_;iSequence++) {
-    double value = columnActivity_[iSequence];
-    objectiveValue_ += value*obj[iSequence];
+  if (!useInternalArrays) {
+    for (iSequence=0;iSequence<numberColumns_;iSequence++) {
+      double value = columnActivity_[iSequence];
+      objectiveValue_ += value*obj[iSequence];
+    }
+    // But remember direction as we are using external objective
+    objectiveValue_ *= optimizationDirection_;
+  } else if (!columnScale_) {
+    for (iSequence=0;iSequence<numberColumns_;iSequence++) {
+      double value = columnActivityWork_[iSequence];
+      objectiveValue_ += value*obj[iSequence];
+    }
+    // But remember direction as we are using external objective
+    objectiveValue_ *= optimizationDirection_;
+    objectiveValue_ += objective_->nonlinearOffset();
+    objectiveValue_ /= (objectiveScale_*rhsScale_);
+  } else {
+    for (iSequence=0;iSequence<numberColumns_;iSequence++) {
+      double scaleFactor = columnScale_[iSequence];
+      double valueScaled = columnActivityWork_[iSequence];
+      objectiveValue_ += valueScaled*scaleFactor*obj[iSequence];
+    }
+    // But remember direction as we are using external objective
+    objectiveValue_ *= optimizationDirection_;
+    objectiveValue_ += objective_->nonlinearOffset();
+    objectiveValue_ /= (objectiveScale_*rhsScale_);
   }
-  // But remember direction
-  objectiveValue_ *= optimizationDirection_;
-  //if (fabs(objectiveValue_-oldObj)>1.0e-1) {
-  //if(problemStatus_!=3) printf("XX ");;
-  //printf("obj %g - was %g\n",objectiveValue(),objectiveValue()+(objectiveValue_-oldObj));
-  //}
 }
 // If user left factorization frequency then compute
 void 

@@ -931,7 +931,7 @@ public:
   inline double rawObjectiveValue() const
   { return objectiveValue_;};
    /// Compute objective value from solution and put in objectiveValue_
-  void computeObjectiveValue();
+  void computeObjectiveValue(bool useWorkingSolution=false);
   /** Number of extra rows.  These are ones which will be dynamically created
       each iteration.  This is for GUB but may have other uses.
   */
