@@ -932,7 +932,7 @@ public:
   inline double rawObjectiveValue() const
   { return objectiveValue_;};
    /// Compute objective value from solution and put in objectiveValue_
-  void computeObjectiveValue();
+  void computeObjectiveValue(bool useWorkingSolution=false);
   /// Compute minimization objective value from internal solution without perturbation
   double computeInternalObjectiveValue();
   /** Number of extra rows.  These are ones which will be dynamically created

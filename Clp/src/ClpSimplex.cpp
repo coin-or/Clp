@@ -8870,22 +8870,38 @@ ClpSimplex::deleteAuxiliaryModel()
 }
 // Compute objective value from solution
 void
-ClpSimplex::computeObjectiveValue()
+ClpSimplex::computeObjectiveValue(bool useInternalArrays)
 {
   int iSequence;
-  //double oldObj = objectiveValue_;
   objectiveValue_ = 0.0;
   const double * obj = objective();
-  for (iSequence=0;iSequence<numberColumns_;iSequence++) {
-    double value = columnActivity_[iSequence];
-    objectiveValue_ += value*obj[iSequence];
+  if (!useInternalArrays) {
+    for (iSequence=0;iSequence<numberColumns_;iSequence++) {
+      double value = columnActivity_[iSequence];
+      objectiveValue_ += value*obj[iSequence];
+    }
+    // But remember direction as we are using external objective
+    objectiveValue_ *= optimizationDirection_;
+  } else if (!columnScale_) {
+    for (iSequence=0;iSequence<numberColumns_;iSequence++) {
+      double value = columnActivityWork_[iSequence];
+      objectiveValue_ += value*obj[iSequence];
+    }
+    // But remember direction as we are using external objective
+    objectiveValue_ *= optimizationDirection_;
+    objectiveValue_ += objective_->nonlinearOffset();
+    objectiveValue_ /= (objectiveScale_*rhsScale_);
+  } else {
+    for (iSequence=0;iSequence<numberColumns_;iSequence++) {
+      double scaleFactor = columnScale_[iSequence];
+      double valueScaled = columnActivityWork_[iSequence];
+      objectiveValue_ += valueScaled*scaleFactor*obj[iSequence];
+    }
+    // But remember direction as we are using external objective
+    objectiveValue_ *= optimizationDirection_;
+    objectiveValue_ += objective_->nonlinearOffset();
+    objectiveValue_ /= (objectiveScale_*rhsScale_);
   }
-  // But remember direction
-  objectiveValue_ *= optimizationDirection_;
-  //if (fabs(objectiveValue_-oldObj)>1.0e-1) {
-  //if(problemStatus_!=3) printf("XX ");;
-  //printf("obj %g - was %g\n",objectiveValue(),objectiveValue()+(objectiveValue_-oldObj));
-  //}
 }
 // Compute minimization objective value from internal solution
 double
@@ -8893,20 +8909,21 @@ ClpSimplex::computeInternalObjectiveValue()
 {
   int iSequence;
   //double oldObj = objectiveValue_;
-  double objectiveValue = -dblParam_[ClpObjOffset];
+  double objectiveValue = 0.0;
   const double * obj = objective();
-  double scaleR = optimizationDirection_/rhsScale_;
   if (!columnScale_) {
     for (iSequence=0;iSequence<numberColumns_;iSequence++) {
-      double value = solution_[iSequence]*scaleR;
+      double value = solution_[iSequence];
       objectiveValue += value*obj[iSequence];
     }
   } else {
     for (iSequence=0;iSequence<numberColumns_;iSequence++) {
-      double value = solution_[iSequence]*scaleR*columnScale_[iSequence];
+      double value = solution_[iSequence]*columnScale_[iSequence];
       objectiveValue += value*obj[iSequence];
     }
   }
+  objectiveValue_ *= optimizationDirection_/rhsScale_;
+  objectiveValue -= dblParam_[ClpObjOffset];
   return objectiveValue;
 }
 void 

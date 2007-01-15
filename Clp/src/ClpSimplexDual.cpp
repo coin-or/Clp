@@ -4044,8 +4044,8 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	sumDualInfeasibilities_<largestDualError_&&numberIterations_>0.5*numberRows_+1000)
       looksInfeasible=true;
     if (looksInfeasible) {
-      //printf("lim %g obj %g %g\n",limit,objectiveValue_,objectiveValue());
-      if (perturbation_==101) {
+      // Even if not perturbed internal costs may have changed
+      if (true||perturbation_==101) {
 	// be careful
 	if (numberIterations_) {
 	  if(computeInternalObjectiveValue()>limit) {
