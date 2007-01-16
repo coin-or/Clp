@@ -96,6 +96,7 @@ void ClpSimplexOther::dualRanging(int numberCheck,const int * which,
 	if (valueIncrease) {
 	  if (sequenceIncrease>=0)
 	    valueIncrease[i] = primalRanging1(sequenceIncrease,iSequence);
+	  if (sequenceDecrease>=0)
 	    valueDecrease[i] = primalRanging1(sequenceDecrease,iSequence);
 	}
         if (inCBC) { 
@@ -373,13 +374,12 @@ ClpSimplexOther::primalRanging(int numberCheck,const int * which,
 	// Get extra rows
 	matrix_->extendUpdated(this,rowArray_[1],0);
 	// do ratio test
-	checkPrimalRatios(rowArray_[1],-1);
+	checkPrimalRatios(rowArray_[1],1);
 	if (pivotRow_>=0) {
 	  valueIncrease = theta_;
 	  sequenceIncrease=pivotVariable_[pivotRow_];
 	}
-	directionIn_=-1; // down
-	checkPrimalRatios(rowArray_[1],1);
+	checkPrimalRatios(rowArray_[1],-1);
 	if (pivotRow_>=0) {
 	  valueDecrease = theta_;
 	  sequenceDecrease=pivotVariable_[pivotRow_];
@@ -480,10 +480,14 @@ ClpSimplexOther::primalRanging1(int whichIn, int whichOther)
 	  }
 	}
       }
-      if (theta<1.0e30)
-	newValue -= theta*alphaOther;
-      else
-	newValue = alphaOther>0.0 ? -1.0e30 : 1.0e30;
+      if (whichIn!=whichOther) {
+	if (theta<1.0e30)
+	  newValue -= theta*alphaOther;
+	else
+	  newValue = alphaOther>0.0 ? -1.0e30 : 1.0e30;
+      } else {
+	newValue += theta*wayIn;
+      }
     }
     rowArray_[1]->clear();
     break;
@@ -497,8 +501,8 @@ ClpSimplexOther::primalRanging1(int whichIn, int whichOther)
   } else {
     scaleFactor = 1.0/rhsScale_;
   }
-  if (newValue<1.0e30)
-    if (newValue>-1.0e30)
+  if (newValue<1.0e29)
+    if (newValue>-1.0e29)
       newValue *= scaleFactor;
     else
       newValue = -COIN_DBL_MAX;

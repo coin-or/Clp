@@ -53,6 +53,7 @@ public:
       This computes increase/decrease in value for each given variable and corresponding
       sequence numbers which would change basis.  Sequence numbers are 0..numberColumns 
       and numberColumns.. for artificials/slacks.
+      This should only be used for non-basic variabls as otherwise information is pretty useless
       For basic variables the sequence number will be that of the basic variables.
 
       Up to user to provide correct length arrays where each array is of length numberCheck.
