@@ -273,13 +273,17 @@ public:
       Up to user to provide correct length arrays where each array is of length numberCheck.
       which contains list of variables for which information is desired.  All other
       arrays will be filled in by function.  If fifth entry in which is variable 7 then fifth entry in output arrays
-      will information for variable 7.
+      will be information for variable 7.
+
+      If valueIncrease/Decrease not NULL (both must be NULL or both non NULL) then these are filled with
+      the value of variable if such a change in cost were made (the existing bounds are ignored)
 
       Returns non-zero if infeasible unbounded etc
   */
   int dualRanging(int numberCheck,const int * which,
 		  double * costIncrease, int * sequenceIncrease,
-		  double * costDecrease, int * sequenceDecrease);
+		  double * costDecrease, int * sequenceDecrease,
+		  double * valueIncrease=NULL, double * valueDecrease=NULL);
   /** Primal ranging.
       This computes increase/decrease in value for each given variable and corresponding
       sequence numbers which would change basis.  Sequence numbers are 0..numberColumns 
@@ -289,7 +293,7 @@ public:
       Up to user to provide correct length arrays where each array is of length numberCheck.
       which contains list of variables for which information is desired.  All other
       arrays will be filled in by function.  If fifth entry in which is variable 7 then fifth entry in output arrays
-      will information for variable 7.
+      will be information for variable 7.
 
       Returns non-zero if infeasible unbounded etc
   */
