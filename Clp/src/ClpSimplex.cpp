@@ -4557,7 +4557,8 @@ int ClpSimplex::primal (int ifValuesPass , int startFinishOptions)
 #include "ClpSimplexOther.hpp"
 int ClpSimplex::dualRanging(int numberCheck,const int * which,
 			    double * costIncrease, int * sequenceIncrease,
-			    double * costDecrease, int * sequenceDecrease)
+			    double * costDecrease, int * sequenceDecrease,
+			    double * valueIncrease, double * valueDecrease)
 {
   int savePerturbation = perturbation_;
   perturbation_=100;
@@ -4590,7 +4591,8 @@ int ClpSimplex::dualRanging(int numberCheck,const int * which,
   }
   ((ClpSimplexOther *) this)->dualRanging(numberCheck,which,
 					  costIncrease,sequenceIncrease,
-					  costDecrease,sequenceDecrease);
+					  costDecrease,sequenceDecrease,
+					  valueIncrease, valueDecrease);
   finish(); // get rid of arrays
   return 0;
 }

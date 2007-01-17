@@ -38,23 +38,29 @@ public:
       Up to user to provide correct length arrays where each array is of length numberCheck.
       which contains list of variables for which information is desired.  All other
       arrays will be filled in by function.  If fifth entry in which is variable 7 then fifth entry in output arrays
-      will information for variable 7.
+      will be information for variable 7.
+
+      If valueIncrease/Decrease not NULL (both must be NULL or both non NULL) then these are filled with
+      the value of variable if such a change in cost were made (the existing bounds are ignored)
 
       When here - guaranteed optimal
   */
   void dualRanging(int numberCheck,const int * which,
-		  double * costIncrease, int * sequenceIncrease,
-		  double * costDecrease, int * sequenceDecrease);
+		   double * costIncrease, int * sequenceIncrease,
+		   double * costDecrease, int * sequenceDecrease,
+		   double * valueIncrease=NULL, double * valueDecrease=NULL);
+
   /** Primal ranging.
       This computes increase/decrease in value for each given variable and corresponding
       sequence numbers which would change basis.  Sequence numbers are 0..numberColumns 
       and numberColumns.. for artificials/slacks.
+      This should only be used for non-basic variabls as otherwise information is pretty useless
       For basic variables the sequence number will be that of the basic variables.
 
       Up to user to provide correct length arrays where each array is of length numberCheck.
       which contains list of variables for which information is desired.  All other
       arrays will be filled in by function.  If fifth entry in which is variable 7 then fifth entry in output arrays
-      will information for variable 7.
+      will be information for variable 7.
 
       When here - guaranteed optimal
   */
@@ -78,6 +84,7 @@ public:
                   const double * changeLowerBound, const double * changeUpperBound,
                   const double * changeLowerRhs, const double * changeUpperRhs,
                   const double * changeObjective);
+private:
   /** Parametrics - inner loop
       This first attempt is when reportIncrement non zero and may
       not report endingTheta correctly
@@ -133,6 +140,10 @@ public:
   */
   void checkPrimalRatios(CoinIndexedVector * rowArray,
 			 int direction);
+  /// Returns new value of whichOther when whichIn enters basis
+  double primalRanging1(int whichIn, int whichOther);
+
+public:
     /** Write the basis in MPS format to the specified file.
 	If writeValues true writes values of structurals
 	(and adds VALUES to end of NAME card)
