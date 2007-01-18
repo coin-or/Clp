@@ -3169,7 +3169,7 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
       }
     }
 #endif
-    if (goodMove) {
+    if (goodMove>0) {
       memcpy(saveSolution,solution,numberColumns*sizeof(double));
       memcpy(saveRowSolution,rowActivity_,numberRows*sizeof(double));
       memcpy(savePi,this->dualRowSolution(),numberRows*sizeof(double));
