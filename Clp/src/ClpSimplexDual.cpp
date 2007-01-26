@@ -4009,14 +4009,14 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	// up tolerance
 	factorization_->pivotTolerance(CoinMin(factorization_->pivotTolerance()*1.05+0.02,0.91));
       } else if (numberIterations_>10000) {
-	if (handler_->logLevel()>0)
+	if (handler_->logLevel()>2)
 	  printf("bad dual - saying infeasible %d\n",looksBad);
 	problemStatus_=1;
 	secondaryStatus_ = 1; // and say was on cutoff
       } else if (largestPrimalError_>1.0e5) {
         allSlackBasis();
         problemStatus_=10;
-	//if (handler_->logLevel()>0)
+	if (handler_->logLevel()>2)
 	  printf("bad dual - going to primal %d %g\n",looksBad,largestPrimalError_);
       }
     }
