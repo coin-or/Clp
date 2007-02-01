@@ -145,12 +145,14 @@ abs_bin_dir = @abs_bin_dir@
 abs_include_dir = @abs_include_dir@
 abs_lib_dir = @abs_lib_dir@
 abs_source_dir = @abs_source_dir@
+ac_c_preproc_warn_flag = @ac_c_preproc_warn_flag@
 ac_ct_AR = @ac_ct_AR@
 ac_ct_CC = @ac_ct_CC@
 ac_ct_CXX = @ac_ct_CXX@
 ac_ct_F77 = @ac_ct_F77@
 ac_ct_RANLIB = @ac_ct_RANLIB@
 ac_ct_STRIP = @ac_ct_STRIP@
+ac_cxx_preproc_warn_flag = @ac_cxx_preproc_warn_flag@
 am__fastdepCC_FALSE = @am__fastdepCC_FALSE@
 am__fastdepCC_TRUE = @am__fastdepCC_TRUE@
 am__fastdepCXX_FALSE = @am__fastdepCXX_FALSE@
@@ -368,7 +370,7 @@ uninstall-am: uninstall-info-am
 
 # We are using the CLP solver executable to do the unit test
 test: ../src/clp$(EXEEXT)
-	cd ../../Data/Netlib; make uncompress
+	cd ../../Data/Netlib; $(MAKE) uncompress
 	../src/clp$(EXEEXT) -unitTest -netlib -netlibp
 
 .PHONY: test
