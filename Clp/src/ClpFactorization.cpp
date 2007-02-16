@@ -246,7 +246,7 @@ ClpFactorization::factorize ( ClpSimplex * model,
 	}
       }
       if (numberBasic>model->maximumBasic()) {
-#ifndef NDEBUG
+#if 0 // ndef NDEBUG
         printf("%d basic - should only be %d\n",
                numberBasic,numberRows);
 #endif
@@ -316,40 +316,45 @@ ClpFactorization::factorize ( ClpSimplex * model,
 #endif
 	//fill
 	// Fill in counts so we can skip part of preProcess
-	CoinZeroN ( numberInRow_, numberRows_ + 1 );
-	CoinZeroN ( numberInColumn_, maximumColumnsExtra_ + 1 );
+	int * numberInRow = numberInRow_.array();
+	int * numberInColumn = numberInColumn_.array();
+	CoinZeroN ( numberInRow, numberRows_ + 1 );
+	CoinZeroN ( numberInColumn, maximumColumnsExtra_ + 1 );
+	double * elementU = elementU_.array();
+	int * indexRowU = indexRowU_.array();
+	CoinBigIndex * startColumnU = startColumnU_.array();
 	for (i=0;i<numberRowBasic;i++) {
 	  int iRow = pivotTemp[i];
-	  indexRowU_[i]=iRow;
-	  startColumnU_[i]=i;
-	  elementU_[i]=slackValue_;
-	  numberInRow_[iRow]=1;
-	  numberInColumn_[i]=1;
+	  indexRowU[i]=iRow;
+	  startColumnU[i]=i;
+	  elementU[i]=slackValue_;
+	  numberInRow[iRow]=1;
+	  numberInColumn[i]=1;
 	}
-	startColumnU_[numberRowBasic]=numberRowBasic;
+	startColumnU[numberRowBasic]=numberRowBasic;
 	// can change for gub so redo
 	numberColumnBasic = numberBasic-numberRowBasic;
 	matrix->fillBasis(model, 
 			  pivotTemp+numberRowBasic, 
 			  numberColumnBasic,
-			  indexRowU_, 
-			  startColumnU_+numberRowBasic,
-			  numberInRow_,
-			  numberInColumn_+numberRowBasic,
-			  elementU_);
+			  indexRowU_.array(), 
+			  startColumnU+numberRowBasic,
+			  numberInRow,
+			  numberInColumn+numberRowBasic,
+			  elementU_.array());
 #if 0
 	{
 	  printf("%d row basic, %d column basic\n",numberRowBasic,numberColumnBasic);
 	  for (int i=0;i<numberElements;i++) 
-	    printf("row %d col %d value %g\n",indexRowU_[i],indexColumnU_[i],
-		   elementU_[i]);
+	    printf("row %d col %d value %g\n",indexRowU_.array()[i],indexColumnU_[i],
+		   elementU_.array()[i]);
 	}
 #endif
 	// recompute number basic
         numberBasic = numberRowBasic+numberColumnBasic;
 	if (numberBasic) 
-	  numberElements = startColumnU_[numberBasic-1]
-	    +numberInColumn_[numberBasic-1];
+	  numberElements = startColumnU[numberBasic-1]
+	    +numberInColumn[numberBasic-1];
 	else
 	  numberElements=0;
 	lengthU_ = numberElements;
@@ -376,9 +381,9 @@ ClpFactorization::factorize ( ClpSimplex * model,
 	// **** we will also need to add test in dual steepest to do
 	// as we do for network
         matrix->generalExpanded(model,12,useNumberRows);
-	int * permuteBack = permuteBack_;
-	int * back = pivotColumnBack_;
-	//int * pivotTemp = pivotColumn_;
+	const int * permuteBack = permuteBack_.array();
+	const int * back = pivotColumnBack_.array();
+	//int * pivotTemp = pivotColumn_.array();
 	//ClpDisjointCopyN ( pivotVariable, numberRows , pivotTemp  );
 	// Redo pivot order
 	for (i=0;i<numberRowBasic;i++) {
@@ -396,7 +401,7 @@ ClpFactorization::factorize ( ClpSimplex * model,
           numberSave=numberDense_;
           memset(saveList,0,((numberRows_+31)>>5)*sizeof(int));
           for (i=numberRows_-numberSave;i<numberRows_;i++) {
-            int k=pivotTemp[pivotColumn_[i]];
+            int k=pivotTemp[pivotColumn_.array()[i]];
             setDense(k);
           }
         }
@@ -404,8 +409,8 @@ ClpFactorization::factorize ( ClpSimplex * model,
 	// Set up permutation vector
 	// these arrays start off as copies of permute
 	// (and we could use permute_ instead of pivotColumn (not back though))
-	ClpDisjointCopyN ( permute_, useNumberRows , pivotColumn_  );
-	ClpDisjointCopyN ( permuteBack_, useNumberRows , pivotColumnBack_  );
+	ClpDisjointCopyN ( permute_.array(), useNumberRows , pivotColumn_.array()  );
+	ClpDisjointCopyN ( permuteBack_.array(), useNumberRows , pivotColumnBack_.array()  );
 #ifndef SLIM_CLP
 	if (networkMatrix) {
 	  maximumPivots(saveMaximumPivots);
@@ -413,12 +418,12 @@ ClpFactorization::factorize ( ClpSimplex * model,
 	  if (doCheck)
 	    delete networkBasis_; // temp
 	  networkBasis_ = new ClpNetworkBasis(model,numberRows_,
-					      pivotRegion_,
-					      permuteBack_,
-					      startColumnU_,
-					      numberInColumn_,
-					      indexRowU_,
-					      elementU_);
+					      pivotRegion_.array(),
+					      permuteBack_.array(),
+					      startColumnU_.array(),
+					      numberInColumn_.array(),
+					      indexRowU_.array(),
+					      elementU_.array());
 	  // kill off arrays in ordinary factorization
 	  if (!doCheck) {
 	    gutsOfDestructor();
@@ -489,10 +494,11 @@ ClpFactorization::factorize ( ClpSimplex * model,
 	for (i=0;i<numberRows;i++) 
 	  pivotVariable[i]=-1;
 	// mark as basic or non basic
+	const int * pivotColumn = pivotColumn_.array();
 	for (i=0;i<numberRows;i++) {
 	  if (rowIsBasic[i]>=0) {
-	    if (pivotColumn_[numberBasic]>=0) {
-	      rowIsBasic[i]=pivotColumn_[numberBasic];
+	    if (pivotColumn[numberBasic]>=0) {
+	      rowIsBasic[i]=pivotColumn[numberBasic];
 	    } else {
 	      rowIsBasic[i]=-1;
               model->setRowStatus(i,ClpSimplex::superBasic);
@@ -502,8 +508,8 @@ ClpFactorization::factorize ( ClpSimplex * model,
 	}
 	for (i=0;i<numberColumns;i++) {
 	  if (columnIsBasic[i]>=0) {
-	    if (pivotColumn_[numberBasic]>=0) 
-	      columnIsBasic[i]=pivotColumn_[numberBasic];
+	    if (pivotColumn[numberBasic]>=0) 
+	      columnIsBasic[i]=pivotColumn[numberBasic];
 	    else
 	      columnIsBasic[i]=-1;
 	    numberBasic++;
@@ -937,8 +943,13 @@ ClpFactorization::getWeights(int * weights) const
     return;
   }
 #endif
-  int * permuteBack = pivotColumnBack_;
-  if (!startRowL_||!numberInRow_) {
+  int * numberInRow = numberInRow_.array();
+  int * numberInColumn = numberInColumn_.array();
+  int * permuteBack = pivotColumnBack_.array();
+  int * indexRowU = indexRowU_.array();
+  const CoinBigIndex * startColumnU = startColumnU_.array();
+  const CoinBigIndex * startRowL = startRowL_.array();
+  if (!startRowL||!numberInRow_.array()) {
     int * temp = new int[numberRows_];
     memset(temp,0,numberRows_*sizeof(int));
     int i;
@@ -946,15 +957,17 @@ ClpFactorization::getWeights(int * weights) const
       // one for pivot
       temp[i]++;
       CoinBigIndex j;
-      for (j=startColumnU_[i];j<startColumnU_[i]+numberInColumn_[i];j++) {
-	int iRow=indexRowU_[j];
+      for (j=startColumnU[i];j<startColumnU[i]+numberInColumn[i];j++) {
+	int iRow=indexRowU[j];
 	temp[iRow]++;
       }
     }
+    CoinBigIndex * startColumnL = startColumnL_.array();
+    int * indexRowL = indexRowL_.array();
     for (i=baseL_;i<baseL_+numberL_;i++) {
       CoinBigIndex j;
-      for (j=startColumnL_[i];j<startColumnL_[i+1];j++) {
-	int iRow = indexRowL_[j];
+      for (j=startColumnL[i];j<startColumnL[i+1];j++) {
+	int iRow = indexRowL[j];
 	temp[iRow]++;
       }
     }
@@ -967,9 +980,9 @@ ClpFactorization::getWeights(int * weights) const
   } else {
     int i;
     for (i=0;i<numberRows_;i++) {
-      int number = startRowL_[i+1]-startRowL_[i]+numberInRow_[i]+1;
-      //number = startRowL_[i+1]-startRowL_[i]+1;
-      //number = numberInRow_[i]+1;
+      int number = startRowL[i+1]-startRowL[i]+numberInRow[i]+1;
+      //number = startRowL[i+1]-startRowL[i]+1;
+      //number = numberInRow[i]+1;
       int iPermute = permuteBack[i];
       weights[iPermute]=number;
     }

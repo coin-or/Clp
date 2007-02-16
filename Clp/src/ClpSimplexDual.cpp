@@ -3905,8 +3905,14 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	dualTolerance_=saveTolerance;
 	//assert(numberDualInfeasibilitiesWithoutFree_==0);
 
-	if (numberDualInfeasibilities_||situationChanged==2) 
+	if (numberDualInfeasibilities_) {
+	  if (numberPrimalInfeasibilities_||numberPivots)
+	    problemStatus_=-1; // carry on as normal
+	  else
+	    problemStatus_=10; // try primal
+	} else if (situationChanged==2) {
 	  problemStatus_=-1; // carry on as normal
+	}
 	situationChanged=0;
       } else {
 	// iterate
@@ -4112,6 +4118,7 @@ ClpSimplexDual::originalBound( int iSequence)
     // just copy back
     lower_[iSequence]=auxiliaryModel_->lowerRegion()[iSequence+numberRows_+numberColumns_];
     upper_[iSequence]=auxiliaryModel_->upperRegion()[iSequence+numberRows_+numberColumns_];
+    setFakeBound(iSequence,noFake);
     return;
   }
   if (iSequence>=numberColumns_) {
@@ -5029,7 +5036,7 @@ ClpSimplexDual::numberAtFakeBound()
     case isFree:
     case superBasic:
     case ClpSimplex::isFixed:
-      assert (bound==noFake);
+      //setFakeBound (iSequence, noFake);
       break;
     case atUpperBound:
       if (bound==upperFake||bound==bothFake)
@@ -5137,7 +5144,7 @@ ClpSimplexDual::checkPossibleValuesMove(CoinIndexedVector * rowArray,
 	  thetaDown = 0.0;
 	  thetaUp = 0.0;
 	  bestAlphaDown = fabs(alpha);
-	  bestAlphaUp = bestAlphaUp;
+	  bestAlphaUp = bestAlphaDown;
 	  sequenceDown =iSequence2;
 	  sequenceUp = sequenceDown;
 	  alphaUp = alpha;
@@ -5357,7 +5364,7 @@ ClpSimplexDual::checkPossibleCleanup(CoinIndexedVector * rowArray,
 	  thetaDown = 0.0;
 	  thetaUp = 0.0;
 	  bestAlphaDown = fabs(alpha);
-	  bestAlphaUp = bestAlphaUp;
+	  bestAlphaUp = bestAlphaDown;
 	  sequenceDown =iSequence2;
 	  sequenceUp = sequenceDown;
 	  alphaUp = alpha;
