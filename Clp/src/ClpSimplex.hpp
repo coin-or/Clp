@@ -75,7 +75,7 @@ public:
   /**@name Constructors and destructor and copy */
   //@{
   /// Default constructor
-    ClpSimplex (  );
+    ClpSimplex (bool emptyMessages = false  );
 
   /** Copy constructor. May scale depending on mode
       -1 leave mode as is 
@@ -106,6 +106,12 @@ public:
   /** This copies back stuff from miniModel and then deletes miniModel.
       Only to be used with mini constructor */
   void originalModel(ClpSimplex * miniModel);
+  /** Array persistence flag
+      If 0 then as now (delete/new)
+      1 then only do arrays if bigger needed
+      2 as 1 but give a bit extra if bigger needed
+  */
+  void setPersistenceFlag(int value);
   /**
      If you are re-using the same matrix again and again then the setup time
      to do scaling may be significant.  Also you may not want to initialize all values
@@ -968,6 +974,7 @@ public:
       8192 - Do Primal when cleaning up primal
       16384 - In fast dual (so we can switch off things)
       32678 - called from Osi
+      65356 - keep arrays around as much as possible
       NOTE - many applications can call Clp but there may be some short cuts
              which are taken which are not guaranteed safe from all applications.
              Vetted applications will have a bit set and the code may test this
@@ -982,6 +989,10 @@ public:
   inline unsigned int specialOptions() const
   { return specialOptions_;};
   void setSpecialOptions(unsigned int value);
+  /// Gets clean and emptyish factorization
+  ClpFactorization * getEmptyFactorization();
+  /// May delete or may make clean and emptyish factorization
+  void setEmptyFactorization();
   //@}
 
   ///@name Basis handling 

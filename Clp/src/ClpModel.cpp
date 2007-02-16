@@ -40,8 +40,7 @@
 #endif
 
 //#############################################################################
-
-ClpModel::ClpModel () :
+ClpModel::ClpModel (bool emptyMessages) :
 
   optimizationDirection_(1),
   objectiveValue_(0.0),
@@ -101,8 +100,10 @@ ClpModel::ClpModel () :
   handler_ = new CoinMessageHandler();
   handler_->setLogLevel(1);
   eventHandler_ = new ClpEventHandler();
-  messages_ = ClpMessage();
-  coinMessages_ = CoinMessage();
+  if (!emptyMessages) {
+    messages_ = ClpMessage();
+    coinMessages_ = CoinMessage();
+  }
   CoinSeedRandom(1234567);
 }
 

@@ -45,7 +45,7 @@ public:
    */
   //@{
     /// Default constructor
-    ClpModel (  );
+    ClpModel (bool emptyMessages=false  );
 
   /** Copy constructor. May scale depending on mode
       -1 leave mode as is 

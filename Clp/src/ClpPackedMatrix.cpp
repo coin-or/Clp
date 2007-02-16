@@ -2677,7 +2677,7 @@ ClpPackedMatrix::allElementsInRange(ClpModel * model,
   int numberColumns = matrix_->getNumCols();
   // Say no gaps
   flags_ &= ~2;
-  if (check==14) {
+  if (check==14||check==10) {
     for (iColumn=0;iColumn<numberColumns;iColumn++) {
       CoinBigIndex start = columnStart[iColumn];
       CoinBigIndex end = start + columnLength[iColumn];
@@ -2688,58 +2688,95 @@ ClpPackedMatrix::allElementsInRange(ClpModel * model,
     }
     return true;
   }
-  assert (check==15);
-  int * mark = new int [numberRows];
-  int i;
-  for (i=0;i<numberRows;i++)
-    mark[i]=-1;
-  for (iColumn=0;iColumn<numberColumns;iColumn++) {
-    CoinBigIndex j;
-    CoinBigIndex start = columnStart[iColumn];
-    CoinBigIndex end = start + columnLength[iColumn];
-    if (end!=columnStart[iColumn+1])
-      flags_ |= 2;
-    for (j=start;j<end;j++) {
-      double value = fabs(elementByColumn[j]);
-      int iRow = row[j];
-      if (iRow<0||iRow>=numberRows) {
+  assert (check==15||check==11);
+  if (check==15) {
+    int * mark = new int [numberRows];
+    int i;
+    for (i=0;i<numberRows;i++)
+      mark[i]=-1;
+    for (iColumn=0;iColumn<numberColumns;iColumn++) {
+      CoinBigIndex j;
+      CoinBigIndex start = columnStart[iColumn];
+      CoinBigIndex end = start + columnLength[iColumn];
+      if (end!=columnStart[iColumn+1])
+	flags_ |= 2;
+      for (j=start;j<end;j++) {
+	double value = fabs(elementByColumn[j]);
+	int iRow = row[j];
+	if (iRow<0||iRow>=numberRows) {
 #ifndef COIN_BIG_INDEX
-	printf("Out of range %d %d %d %g\n",iColumn,j,row[j],elementByColumn[j]);
+	  printf("Out of range %d %d %d %g\n",iColumn,j,row[j],elementByColumn[j]);
 #elif COIN_BIG_INDEX==1
-	printf("Out of range %d %ld %d %g\n",iColumn,j,row[j],elementByColumn[j]);
+	  printf("Out of range %d %ld %d %g\n",iColumn,j,row[j],elementByColumn[j]);
 #else
-	printf("Out of range %d %lld %d %g\n",iColumn,j,row[j],elementByColumn[j]);
+	  printf("Out of range %d %lld %d %g\n",iColumn,j,row[j],elementByColumn[j]);
 #endif
-	return false;
+	  return false;
+	}
+	if (mark[iRow]==-1) {
+	  mark[iRow]=j;
+	} else {
+	  // duplicate
+	  numberDuplicate++;
+	}
+	//printf("%d %d %d %g\n",iColumn,j,row[j],elementByColumn[j]);
+	if (!value)
+	  flags_ |= 1; // there are zero elements
+	if (value<smallest) {
+	  numberSmall++;
+	} else if (!(value<=largest)) {
+	  numberLarge++;
+	  if (firstBadColumn<0) {
+	    firstBadColumn=iColumn;
+	    firstBadRow=row[j];
+	    firstBadElement=elementByColumn[j];
+	  }
+	}
       }
-      if (mark[iRow]==-1) {
-	mark[iRow]=j;
-      } else {
-	// duplicate
-	numberDuplicate++;
+      //clear mark
+      for (j=columnStart[iColumn];
+	   j<columnStart[iColumn]+columnLength[iColumn];j++) {
+	int iRow = row[j];
+	mark[iRow]=-1;
       }
-      //printf("%d %d %d %g\n",iColumn,j,row[j],elementByColumn[j]);
-      if (!value)
-	flags_ |= 1; // there are zero elements
-      if (value<smallest) {
-	numberSmall++;
-      } else if (!(value<=largest)) {
-	numberLarge++;
-	if (firstBadColumn<0) {
-	  firstBadColumn=iColumn;
-	  firstBadRow=row[j];
-	  firstBadElement=elementByColumn[j];
+    }
+    delete [] mark;
+  } else {
+    // just check for out of range - not for duplicates
+    for (iColumn=0;iColumn<numberColumns;iColumn++) {
+      CoinBigIndex j;
+      CoinBigIndex start = columnStart[iColumn];
+      CoinBigIndex end = start + columnLength[iColumn];
+      if (end!=columnStart[iColumn+1])
+	flags_ |= 2;
+      for (j=start;j<end;j++) {
+	double value = fabs(elementByColumn[j]);
+	int iRow = row[j];
+	if (iRow<0||iRow>=numberRows) {
+#ifndef COIN_BIG_INDEX
+	  printf("Out of range %d %d %d %g\n",iColumn,j,row[j],elementByColumn[j]);
+#elif COIN_BIG_INDEX==1
+	  printf("Out of range %d %ld %d %g\n",iColumn,j,row[j],elementByColumn[j]);
+#else
+	  printf("Out of range %d %lld %d %g\n",iColumn,j,row[j],elementByColumn[j]);
+#endif
+	  return false;
+	}
+	if (!value)
+	  flags_ |= 1; // there are zero elements
+	if (value<smallest) {
+	  numberSmall++;
+	} else if (!(value<=largest)) {
+	  numberLarge++;
+	  if (firstBadColumn<0) {
+	    firstBadColumn=iColumn;
+	    firstBadRow=iRow;
+	    firstBadElement=value;
+	  }
 	}
       }
     }
-    //clear mark
-    for (j=columnStart[iColumn];
-	 j<columnStart[iColumn]+columnLength[iColumn];j++) {
-      int iRow = row[j];
-      mark[iRow]=-1;
-    }
   }
-  delete [] mark;
   if (numberLarge) {
     model->messageHandler()->message(CLP_BAD_MATRIX,model->messages())
       <<numberLarge

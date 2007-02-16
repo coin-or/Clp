@@ -3958,9 +3958,14 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	  0.0,objectiveChange,true);
 	dualTolerance_=saveTolerance;
 	//assert(numberDualInfeasibilitiesWithoutFree_==0);
-
-	if (numberDualInfeasibilities_||situationChanged==2) 
+	if (numberDualInfeasibilities_) {
+	  if (numberPrimalInfeasibilities_||numberPivots)
+	    problemStatus_=-1; // carry on as normal
+	  else
+	    problemStatus_=10; // try primal
+	} else if (situationChanged==2) {
 	  problemStatus_=-1; // carry on as normal
+	}
 	situationChanged=0;
       } else {
 	// iterate
@@ -4198,49 +4203,49 @@ ClpSimplexDual::flipBounds(CoinIndexedVector * rowArray,
 void 
 ClpSimplexDual::originalBound( int iSequence)
 {
-  if (getFakeBound(iSequence)!=noFake)
+  if (getFakeBound(iSequence)!=noFake) {
     numberFake_--;;
-  if (auxiliaryModel_) {
-    // just copy back
-    lower_[iSequence]=auxiliaryModel_->lowerRegion()[iSequence+numberRows_+numberColumns_];
-    upper_[iSequence]=auxiliaryModel_->upperRegion()[iSequence+numberRows_+numberColumns_];
-  setFakeBound(iSequence,noFake);
-    return;
-  }
-  if (iSequence>=numberColumns_) {
-    // rows
-    int iRow = iSequence-numberColumns_;
-    rowLowerWork_[iRow]=rowLower_[iRow];
-    rowUpperWork_[iRow]=rowUpper_[iRow];
-    if (rowScale_) {
-      if (rowLowerWork_[iRow]>-1.0e50)
-	rowLowerWork_[iRow] *= rowScale_[iRow]*rhsScale_;
-      if (rowUpperWork_[iRow]<1.0e50)
-	rowUpperWork_[iRow] *= rowScale_[iRow]*rhsScale_;
-    } else if (rhsScale_!=1.0) {
-      if (rowLowerWork_[iRow]>-1.0e50)
-	rowLowerWork_[iRow] *= rhsScale_;
-      if (rowUpperWork_[iRow]<1.0e50)
-	rowUpperWork_[iRow] *= rhsScale_;
+    setFakeBound(iSequence,noFake);
+    if (auxiliaryModel_) {
+      // just copy back
+      lower_[iSequence]=auxiliaryModel_->lowerRegion()[iSequence+numberRows_+numberColumns_];
+      upper_[iSequence]=auxiliaryModel_->upperRegion()[iSequence+numberRows_+numberColumns_];
+      return;
     }
-  } else {
-    // columns
-    columnLowerWork_[iSequence]=columnLower_[iSequence];
-    columnUpperWork_[iSequence]=columnUpper_[iSequence];
-    if (rowScale_) {
-      double multiplier = 1.0/columnScale_[iSequence];
-      if (columnLowerWork_[iSequence]>-1.0e50)
-	columnLowerWork_[iSequence] *= multiplier*rhsScale_;
-      if (columnUpperWork_[iSequence]<1.0e50)
-	columnUpperWork_[iSequence] *= multiplier*rhsScale_;
-    } else if (rhsScale_!=1.0) {
-      if (columnLowerWork_[iSequence]>-1.0e50)
-	columnLowerWork_[iSequence] *= rhsScale_;
-      if (columnUpperWork_[iSequence]<1.0e50)
-	columnUpperWork_[iSequence] *= rhsScale_;
+    if (iSequence>=numberColumns_) {
+      // rows
+      int iRow = iSequence-numberColumns_;
+      rowLowerWork_[iRow]=rowLower_[iRow];
+      rowUpperWork_[iRow]=rowUpper_[iRow];
+      if (rowScale_) {
+	if (rowLowerWork_[iRow]>-1.0e50)
+	  rowLowerWork_[iRow] *= rowScale_[iRow]*rhsScale_;
+	if (rowUpperWork_[iRow]<1.0e50)
+	  rowUpperWork_[iRow] *= rowScale_[iRow]*rhsScale_;
+      } else if (rhsScale_!=1.0) {
+	if (rowLowerWork_[iRow]>-1.0e50)
+	  rowLowerWork_[iRow] *= rhsScale_;
+	if (rowUpperWork_[iRow]<1.0e50)
+	  rowUpperWork_[iRow] *= rhsScale_;
+      }
+    } else {
+      // columns
+      columnLowerWork_[iSequence]=columnLower_[iSequence];
+      columnUpperWork_[iSequence]=columnUpper_[iSequence];
+      if (rowScale_) {
+	double multiplier = 1.0/columnScale_[iSequence];
+	if (columnLowerWork_[iSequence]>-1.0e50)
+	  columnLowerWork_[iSequence] *= multiplier*rhsScale_;
+	if (columnUpperWork_[iSequence]<1.0e50)
+	  columnUpperWork_[iSequence] *= multiplier*rhsScale_;
+      } else if (rhsScale_!=1.0) {
+	if (columnLowerWork_[iSequence]>-1.0e50)
+	  columnLowerWork_[iSequence] *= rhsScale_;
+	if (columnUpperWork_[iSequence]<1.0e50)
+	  columnUpperWork_[iSequence] *= rhsScale_;
+      }
     }
   }
-  setFakeBound(iSequence,noFake);
 }
 /* As changeBounds but just changes new bounds for a single variable.
    Returns true if change */
@@ -4259,8 +4264,9 @@ ClpSimplexDual::changeBound( int iSequence)
   // back to altered values
   lower_[iSequence] = oldLower;
   upper_[iSequence] = oldUpper;
-  if (getFakeBound(iSequence)!=noFake)
-    numberFake_--;;
+  assert (getFakeBound(iSequence)==noFake);
+  //if (getFakeBound(iSequence)!=noFake)
+  //numberFake_--;;
   if (value==oldLower) {
     if (upperValue > oldLower + dualBound_) {
       upper_[iSequence]=oldLower+dualBound_;
@@ -5122,7 +5128,7 @@ ClpSimplexDual::numberAtFakeBound()
     case isFree:
     case superBasic:
     case ClpSimplex::isFixed:
-      assert (bound==noFake);
+      //setFakeBound (iSequence, noFake);
       break;
     case atUpperBound:
       if (bound==upperFake||bound==bothFake)
@@ -5230,7 +5236,7 @@ ClpSimplexDual::checkPossibleValuesMove(CoinIndexedVector * rowArray,
 	  thetaDown = 0.0;
 	  thetaUp = 0.0;
 	  bestAlphaDown = fabs(alpha);
-	  bestAlphaUp = bestAlphaUp;
+	  bestAlphaUp = bestAlphaDown;
 	  sequenceDown =iSequence2;
 	  sequenceUp = sequenceDown;
 	  alphaUp = alpha;
@@ -5450,7 +5456,7 @@ ClpSimplexDual::checkPossibleCleanup(CoinIndexedVector * rowArray,
 	  thetaDown = 0.0;
 	  thetaUp = 0.0;
 	  bestAlphaDown = fabs(alpha);
-	  bestAlphaUp = bestAlphaUp;
+	  bestAlphaUp = bestAlphaDown;
 	  sequenceDown =iSequence2;
 	  sequenceUp = sequenceDown;
 	  alphaUp = alpha;

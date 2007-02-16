@@ -34,9 +34,9 @@
 #include <iostream>
 //#############################################################################
 
-ClpSimplex::ClpSimplex () :
+ClpSimplex::ClpSimplex (bool emptyMessages) :
 
-  ClpModel(),
+  ClpModel(emptyMessages),
   columnPrimalInfeasibility_(0.0),
   rowPrimalInfeasibility_(0.0),
   columnPrimalSequence_(-2),
@@ -131,7 +131,7 @@ ClpSimplex::ClpSimplex () :
   }
   saveStatus_=NULL;
   // get an empty factorization so we can set tolerances etc
-  factorization_ = new ClpFactorization();
+  getEmptyFactorization();
   // Say sparse
   factorization_->sparseThreshold(1);
   // say Steepest pricing
@@ -243,7 +243,7 @@ ClpSimplex::ClpSimplex ( const ClpModel * rhs,
   }
   saveStatus_=NULL;
   // get an empty factorization so we can set tolerances etc
-  factorization_ = new ClpFactorization();
+  getEmptyFactorization();
   // say Steepest pricing
   dualRowPivot_ = new ClpDualRowSteepest();
   // say Steepest pricing
@@ -328,6 +328,7 @@ ClpSimplex::getbackSolution(const ClpSimplex & smallModel,const int * whichRow, 
 
 ClpSimplex::~ClpSimplex ()
 {
+  setPersistenceFlag(0);
   gutsOfDelete(0);
   delete nonLinearCost_;
 }
@@ -1791,7 +1792,7 @@ ClpSimplex::ClpSimplex(const ClpModel &rhs, int scalingMode) :
   }
   saveStatus_=NULL;
   // get an empty factorization so we can set tolerances etc
-  factorization_ = new ClpFactorization();
+  getEmptyFactorization();
   // say Steepest pricing
   dualRowPivot_ = new ClpDualRowSteepest();
   // say Steepest pricing
@@ -1888,6 +1889,7 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
     saveStatus_ = NULL;
   }
   if (rhs.factorization_) {
+    delete factorization_;
     factorization_ = new ClpFactorization(*rhs.factorization_);
   } else {
     factorization_=NULL;
@@ -1999,11 +2001,13 @@ ClpSimplex::gutsOfDelete(int type)
     nonLinearCost_ = NULL;
   }
   int i;
-  for (i=0;i<6;i++) {
-    delete rowArray_[i];
-    rowArray_[i]=NULL;
-    delete columnArray_[i];
-    columnArray_[i]=NULL;
+  if ((specialOptions_&65536)==0) {
+    for (i=0;i<6;i++) {
+      delete rowArray_[i];
+      rowArray_[i]=NULL;
+      delete columnArray_[i];
+      columnArray_[i]=NULL;
+    }
   }
   delete rowCopy_;
   rowCopy_=NULL;
@@ -2013,8 +2017,7 @@ ClpSimplex::gutsOfDelete(int type)
     // delete everything
     delete auxiliaryModel_;
     auxiliaryModel_ = NULL;
-    delete factorization_;
-    factorization_ = NULL;
+    setEmptyFactorization();
     delete [] pivotVariable_;
     pivotVariable_=NULL;
     delete dualRowPivot_;
@@ -2610,6 +2613,8 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
     int checkType=(doSanityCheck) ? 15 : 14;
     if (oldMatrix)
       checkType = 14;
+    if ((specialOptions_&0x1000000)!=0)
+      checkType -= 4; // don't check for duplicates
     if (!matrix_->allElementsInRange(this,smallElement_,1.0e20,checkType)) {
       problemStatus_=4;
       //goodMatrix= false;
@@ -2621,7 +2626,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
       rowCopy_ = matrix_->reverseOrderedCopy();
     }
     // do scaling if needed
-    if (!oldMatrix) {
+    if (!oldMatrix&&scalingFlag_<0) {
       if (scalingFlag_<0&&rowScale_) {
         if (handler_->logLevel()>0)
           printf("How did we get scalingFlag_ %d and non NULL rowScale_? - switching off scaling\n",
@@ -3390,17 +3395,21 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
       rowArray_[3] is long enough for rows+columns
       *********************************************************/
       for (iRow=0;iRow<4;iRow++) {
-	delete rowArray_[iRow];
-	rowArray_[iRow]=new CoinIndexedVector();
 	int length =numberRows2+factorization_->maximumPivots();
 	if (iRow==3||objective_->type()>1)
 	  length += numberColumns_;
+	if ((specialOptions_&65536)==0||!rowArray_[iRow]) {
+	  delete rowArray_[iRow];
+	  rowArray_[iRow]=new CoinIndexedVector();
+	}
 	rowArray_[iRow]->reserve(length);
       }
       
       for (iColumn=0;iColumn<2;iColumn++) {
-	delete columnArray_[iColumn];
-	columnArray_[iColumn]=new CoinIndexedVector();
+	if ((specialOptions_&65536)==0||!columnArray_[iColumn]) {
+	  delete columnArray_[iColumn];
+	  columnArray_[iColumn]=new CoinIndexedVector();
+	}
 	if (!iColumn)
 	  columnArray_[iColumn]->reserve(numberColumns_);
 	else
@@ -3433,7 +3442,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
 	int length =numberRows2+factorization_->maximumPivots();
 	if (iRow==3||objective_->type()>1)
 	  length += numberColumns_;
-	assert(rowArray_[iRow]->capacity()==length);
+	assert(rowArray_[iRow]->capacity()>=length);
         rowArray_[iRow]->checkClear();
 #endif
       }
@@ -3444,7 +3453,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
 	int length =numberColumns_;
 	if (iColumn)
 	  length=CoinMax(numberRows2,numberColumns_);
-	assert(columnArray_[iColumn]->capacity()==length);
+	assert(columnArray_[iColumn]->capacity()>=length);
         columnArray_[iColumn]->checkClear();
 #endif
       }
@@ -5291,7 +5300,7 @@ ClpSimplex::restoreModel(const char * fileName)
       columnArray_[i]=NULL;
     }
     // get an empty factorization so we can set tolerances etc
-    factorization_ = new ClpFactorization();
+    getEmptyFactorization();
     // Say sparse
     factorization_->sparseThreshold(1);
     Clp_scalars scalars;
@@ -8694,7 +8703,7 @@ ClpSimplex::auxiliaryModel(int options)
   auxiliaryModel_=NULL;
   if (options>=0) {
     createRim(63,true,0);
-    auxiliaryModel_ = new ClpSimplex();
+    auxiliaryModel_ = new ClpSimplex(true);
     auxiliaryModel_->specialOptions_=options;
     int i;
     int numberRows2 = numberRows_+numberExtraRows_;
@@ -8955,6 +8964,49 @@ ClpSimplex::defaultFactorizationFrequency()
       frequency=base+cutoff1/freq0 + (cutoff2-cutoff1)/freq1 + (numberRows_-cutoff2)/freq2;
     setFactorizationFrequency(CoinMin(maximum,frequency));
   }
+}
+// Gets clean and emptyish factorization
+ClpFactorization * 
+ClpSimplex::getEmptyFactorization()
+{
+  if ((specialOptions_&65536)==0) {
+    assert (!factorization_);
+    factorization_=new ClpFactorization();
+  } else if (!factorization_) {
+    factorization_=new ClpFactorization();
+    factorization_->setPersistenceFlag(1);
+  } 
+  return factorization_;
+}
+// May delete or may make clean and emptyish factorization
+void 
+ClpSimplex::setEmptyFactorization()
+{
+  if (factorization_) {
+    factorization_->cleanUp();
+    if ((specialOptions_&65536)==0) {
+      delete factorization_;
+      factorization_=NULL;
+    } else if (factorization_) {
+      factorization_->almostDestructor();
+    }
+  }
+}
+/* Array persistence flag
+   If 0 then as now (delete/new)
+   1 then only do arrays if bigger needed
+   2 as 1 but give a bit extra if bigger needed
+*/
+void 
+ClpSimplex::setPersistenceFlag(int value)
+{
+  if (value) {
+    specialOptions_|=65536;
+  } else {
+    specialOptions_&=~65536;
+  }
+  if (factorization_)
+    factorization_->setPersistenceFlag(value);
 }
 // Create C++ lines to get to current state
 void 

@@ -1468,6 +1468,24 @@ e.g. no ENDATA.  This has to be set before import i.e. -errorsAllowed on -import
  directory given by 'directory'.  A name of '$' will use the previous value for the name.  This\
  is initialized to 'default.mps'."
      ); 
+#ifdef COIN_HAS_CBC
+  parameters[numberParameters++]=
+    CbcOrClpParam("extra1","Extra integer parameter 1",
+		  -1,INT_MAX,EXTRA1,false);
+  parameters[numberParameters-1].setIntValue(-1);
+  parameters[numberParameters++]=
+    CbcOrClpParam("extra2","Extra integer parameter 2",
+		  -1,INT_MAX,EXTRA2,false);
+  parameters[numberParameters-1].setIntValue(-1);
+  parameters[numberParameters++]=
+    CbcOrClpParam("extra3","Extra integer parameter 3",
+		  -1,INT_MAX,EXTRA3,false);
+  parameters[numberParameters-1].setIntValue(-1);
+  parameters[numberParameters++]=
+    CbcOrClpParam("extra4","Extra integer parameter 4",
+		  -1,INT_MAX,EXTRA4,false);
+  parameters[numberParameters-1].setIntValue(-1);
+#endif
 #ifdef COIN_HAS_CLP
   parameters[numberParameters++]=
     CbcOrClpParam("fakeB!ound","All bounds <= this value - DEBUG",
