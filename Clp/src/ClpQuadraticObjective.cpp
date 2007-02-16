@@ -128,6 +128,7 @@ ClpQuadraticObjective::ClpQuadraticObjective (const ClpQuadraticObjective & rhs,
 	} else {
 	  printf("number above = %d, number below = %d, error\n",
 		 numberAbove,numberBelow);
+	  abort();
 	}
       } else {
 	int numberElements=numberDiagonal+2*numberBelow;

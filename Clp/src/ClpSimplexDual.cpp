@@ -4078,7 +4078,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	// up tolerance
 	factorization_->pivotTolerance(CoinMin(factorization_->pivotTolerance()*1.05+0.02,0.91));
       } else if (numberIterations_>10000) {
-	if (handler_->logLevel()>0)
+	if (handler_->logLevel()>2)
 	  printf("bad dual - saying infeasible %d\n",looksBad);
 	problemStatus_=1;
 	secondaryStatus_ = 1; // and say was on cutoff
@@ -4108,7 +4108,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 		     numberIterations_,iBigB,bigB,iBigN,bigN);
 	  }
 	}
-	if (handler_->logLevel()>0)
+	if (handler_->logLevel()>2)
 	  printf("bad dual - going to primal %d %g\n",looksBad,largestPrimalError_);
         allSlackBasis(true);
         problemStatus_=10;
