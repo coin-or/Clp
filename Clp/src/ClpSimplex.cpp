@@ -2617,6 +2617,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
       checkType -= 4; // don't check for duplicates
     if (!matrix_->allElementsInRange(this,smallElement_,1.0e20,checkType)) {
       problemStatus_=4;
+      secondaryStatus_=8;
       //goodMatrix= false;
       return false;
     }
@@ -5963,7 +5964,7 @@ ClpSimplex::checkSolution(int setToBounds)
           if (rowLower_[i]>-largeValue_) {
             // set to nearest
             if (fabs(newValue-rowLower_[i])
-                <fabs(newValue-rowLower_[i])) {
+                <fabs(newValue-rowUpper_[i])) {
               newValue=rowLower_[i];
               setRowStatus(i,atLowerBound);
             } else {
@@ -6034,7 +6035,7 @@ ClpSimplex::checkSolution(int setToBounds)
           if (columnLower_[i]>-largeValue_) {
             // set to nearest
             if (fabs(newValue-columnLower_[i])
-                <fabs(newValue-columnLower_[i])) {
+                <fabs(newValue-columnUpper_[i])) {
               newValue=columnLower_[i];
               setColumnStatus(i,atLowerBound);
             } else {

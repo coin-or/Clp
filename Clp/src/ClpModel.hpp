@@ -362,6 +362,7 @@ public:
        5 - giving up in primal with flagged variables
        6 - failed due to empty problem check
        7 - postSolve says not optimal
+       8 - failed due to bad element check 
        100 up - translation of enum from ClpEventHandler
    */
    inline int secondaryStatus() const            { return secondaryStatus_; }
