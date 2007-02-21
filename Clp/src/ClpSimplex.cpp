@@ -8934,7 +8934,7 @@ ClpSimplex::computeInternalObjectiveValue()
       objectiveValue += value*obj[iSequence];
     }
   }
-  objectiveValue_ *= optimizationDirection_/rhsScale_;
+  objectiveValue *= optimizationDirection_/rhsScale_;
   objectiveValue -= dblParam_[ClpObjOffset];
   return objectiveValue;
 }
