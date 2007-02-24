@@ -745,7 +745,7 @@ public:
 #endif
     // Get an integer parameter
     inline bool getIntParam(ClpIntParam key, int& value) const {
-      if (key!=ClpLastIntParam) {
+      if (key<ClpLastIntParam) {
 	value = intParam_[key];
 	return true;
       } else {
@@ -754,7 +754,7 @@ public:
     }
     // Get an double parameter
     inline bool getDblParam(ClpDblParam key, double& value) const {
-      if (key!=ClpLastDblParam) {
+      if (key<ClpLastDblParam) {
 	value = dblParam_[key];
 	return true;
       } else {
@@ -764,7 +764,7 @@ public:
 #ifndef CLP_NO_STD
     // Get a string parameter
     inline bool getStrParam(ClpStrParam key, std::string& value) const {
-      if (key!=ClpLastStrParam) {
+      if (key<ClpLastStrParam) {
 	value = strParam_[key];
 	return true;
       } else {

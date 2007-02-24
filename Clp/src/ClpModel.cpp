@@ -824,7 +824,7 @@ ClpModel::setIntParam(ClpIntParam key, int value)
     if (value < 0)
       return false;
     break;
-  case ClpLastIntParam:
+  default:
     return false;
   }
   intParam_[key] = value;
@@ -869,7 +869,7 @@ ClpModel::setDblParam(ClpDblParam key, double value)
       return false;
     break;
     
-  case ClpLastDblParam:
+  default:
     return false;
   }
   dblParam_[key] = value;
@@ -887,7 +887,7 @@ ClpModel::setStrParam(ClpStrParam key, const std::string & value)
   case ClpProbName:
     break;
 
-  case ClpLastStrParam:
+  default:
     return false;
   }
   strParam_[key] = value;
