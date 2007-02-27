@@ -3326,6 +3326,7 @@ ClpPackedMatrix::appendMatrix(int number, int type,
     numberErrors=matrix_->appendCols(number,starts,index,element,numberOther);
   }
   clearCopies();
+  numberActiveColumns_ = matrix_->getNumCols();
   return numberErrors;
 }
 void
