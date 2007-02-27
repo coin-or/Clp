@@ -10,48 +10,20 @@ static void sprint(ClpSimplex & model,
 		   const int * setToRow,  const int * whichGub,
 		   const int * whichColumn,  const int * startSet,
 		   const char * rowType,
-		   int numberGub,double smallFactor)
+		   int numberGub,double smallFactor,int * sort, int numberSort)
 {
   int numberColumns = model.numberColumns();
   int numberRows = model.numberRows();
 
   // We will need an array to choose variables.
-  int * sort = new int [numberColumns];
   float * weight = new float [numberColumns];
   const int * ordRow = setToRow+numberGub;
-  int numberSort=0;
-  // Set up initial list
-  numberSort=numberRows;
-  int i;
-  for (i=0;i<numberSort;i++)
-    sort[i] = i;
   // and basic
   int nOrd=numberColumns - startSet[numberGub];
-  int iRow,iColumn;
+  int i,iRow,iColumn;
   const double * columnLower = model.columnLower();
   const double * columnUpper = model.columnUpper();
   double * fullSolution = model.primalColumnSolution();
-  CoinPackedMatrix * matrix = model.matrix();
-  const int * columnStart = matrix->getVectorStarts();
-  for (iColumn=numberRows;iColumn<numberColumns;iColumn++) {
-    if(model.getColumnStatus(iColumn)==ClpSimplex::basic||
-       columnStart[iColumn+1]==columnStart[iColumn]+1) {
-      sort[numberSort++]=iColumn;
-    } else if (fullSolution[iColumn]>columnLower[iColumn]+1.0e-7&&
-	       fullSolution[iColumn]<columnUpper[iColumn]-1.0e-7) {
-      sort[numberSort++]=iColumn;
-    }
-    if (fullSolution[iColumn]>columnLower[iColumn]-1.0e-7&&
-	fullSolution[iColumn]<columnUpper[iColumn]+1.0e-7) {
-    } else {
-      printf("bad %d %g %g %g\n",iColumn,columnLower[iColumn],
-	     fullSolution[iColumn],columnUpper[iColumn]);
-    }
-    if (fullSolution[iColumn]<columnLower[iColumn])
-      fullSolution[iColumn]=columnLower[iColumn];
-    if (fullSolution[iColumn]>columnUpper[iColumn])
-      fullSolution[iColumn]=columnUpper[iColumn];
-  }
   double time1 = CoinCpuTime();
 
   // Just do this number of passes
@@ -73,7 +45,9 @@ static void sprint(ClpSimplex & model,
   int smallNumberRows=numberRows;
   // Basic counts for each set
   int * counts = new int[numberGub];
-  memset(counts,0,numberGub*sizeof(int));
+  // For first pass - say all have counts
+  for (i=0;i<numberGub;i++)
+    counts[i]=1;
   // Negative dj counts
   int * negCounts = new int[numberGub];
   // Negative dj sum
@@ -153,21 +127,23 @@ static void sprint(ClpSimplex & model,
       int kColumn = sort[iColumn];
       model.setColumnStatus(kColumn,small.getColumnStatus(iColumn));
       fullSolution[kColumn]=solution[iColumn];
-      if (fullSolution[iColumn]>columnLower[iColumn]-1.0e-7&&
-	  fullSolution[iColumn]<columnUpper[iColumn]+1.0e-7) {
+      if (fullSolution[kColumn]>columnLower[kColumn]-1.0e-7&&
+	  fullSolution[kColumn]<columnUpper[kColumn]+1.0e-7) {
       } else {
 	printf("bad2 %d\n",iColumn);
       }
     }
     model.setObjectiveValue(small.objectiveValue());
     double * rowSol1 = model.primalRowSolution();
-    double * rowSol2 = small.primalRowSolution();
+    memset (rowSol1,0,numberRows*sizeof(double));
+    model.times(1.0,model.primalColumnSolution(),rowSol1);
+    //double * rowSol2 = small.primalRowSolution();
     double * rowPi1 = model.dualRowSolution();
     double * rowPi2 = small.dualRowSolution();
     for (iRow=0;iRow<smallNumberRows;iRow++) {
       int jRow = whichRows[iRow];
       model.setRowStatus(jRow,small.getRowStatus(iRow));
-      rowSol1[jRow] = rowSol2[iRow];
+      //rowSol1[jRow] = rowSol2[iRow];
       rowPi1[jRow] = rowPi2[iRow];
     }
     if ((small.objectiveValue()>lastObjective-1.0e-7&&iPass>5)||
@@ -406,7 +382,6 @@ static void sprint(ClpSimplex & model,
   delete [] negCounts;
   delete [] negSum;
   delete [] weight;
-  delete [] sort;
   delete [] whichRows;
   printf("Sprint took %g seconds\n",CoinCpuTime()-time1);
 }
@@ -506,7 +481,32 @@ int main (int argc, const char *argv[])
   } else {
     // Get initial list in some magical way
     // Add in your own coding here
-    abort();
+    int iColumn;
+    const double * columnLower = model.columnLower();
+    const double * columnUpper = model.columnUpper();
+    double * fullSolution = model.primalColumnSolution();
+    CoinPackedMatrix * matrix = model.matrix();
+    const int * columnStart = matrix->getVectorStarts();
+    int numberColumns = model.numberColumns();
+    for (iColumn=numberRows;iColumn<numberColumns;iColumn++) {
+      if(model.getColumnStatus(iColumn)==ClpSimplex::basic||
+	 columnStart[iColumn+1]==columnStart[iColumn]+1) {
+	sort[numberSort++]=iColumn;
+      } else if (fullSolution[iColumn]>columnLower[iColumn]+1.0e-7&&
+		 fullSolution[iColumn]<columnUpper[iColumn]-1.0e-7) {
+	sort[numberSort++]=iColumn;
+      }
+      if (fullSolution[iColumn]>columnLower[iColumn]-1.0e-7&&
+	  fullSolution[iColumn]<columnUpper[iColumn]+1.0e-7) {
+      } else {
+	printf("bad %d %g %g %g\n",iColumn,columnLower[iColumn],
+	       fullSolution[iColumn],columnUpper[iColumn]);
+      }
+      if (fullSolution[iColumn]<columnLower[iColumn])
+	fullSolution[iColumn]=columnLower[iColumn];
+      if (fullSolution[iColumn]>columnUpper[iColumn])
+	fullSolution[iColumn]=columnUpper[iColumn];
+    }
   }
   // gub stuff
   {
@@ -571,11 +571,15 @@ int main (int argc, const char *argv[])
     }
     nOrd=numberColumns-startSet[numberGub];
     printf("%d ordinary columns, %d gub sets\n",nOrd,numberGub);
+    if (nOrd>numberRows) {
+      printf("This algorithm only designed for problems with few ordinary columns\n");
+      exit(77);
+    }
     assert (numberGub<numberRows); // otherwise array bad
     char * rowType = new char[numberRows];
     memset(rowType,0,numberRows);
     sprint( model, setToRow, whichGub,
-	    whichColumn,  startSet, rowType, numberGub,3);
+	    whichColumn,  startSet, rowType, numberGub,3,sort,numberSort);
     delete [] setToRow;
     delete [] whichGub;
     delete [] whichColumn;
