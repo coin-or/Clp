@@ -4,6 +4,7 @@ Clp/clp_addlibs.txt.in -text
 Clp/configure -text
 Clp/configure.ac -text
 Clp/examples/Makefile.in -text
+Clp/examples/sprintGub.cpp -text
 Clp/inc/config_clp.h.in -text
 /LICENSE -text
 /README -text
