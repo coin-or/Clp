@@ -120,7 +120,8 @@ Idiot::crash(int numberPass, CoinMessageHandler * handler,const CoinMessages *me
     }
   }
   sum /= (double) (nnzero+1);
-  maxIts_=2;
+  if (maxIts_==5)
+    maxIts_=2;
   if (numberPass<=0)
     // Cast to double to avoid VACPP complaining
     majorIterations_=(int)(2+log10((double)(numberColumns+1)));
@@ -129,15 +130,17 @@ Idiot::crash(int numberPass, CoinMessageHandler * handler,const CoinMessages *me
   // If mu not changed then compute
   if (mu_==1e-4)
     mu_= CoinMax(1.0e-3,sum*1.0e-5);
-  if (!lightWeight_) {
-    maxIts2_=105;
-  } else if (lightWeight_==1) {
-    mu_ *= 1000.0;
-    maxIts2_=23;
-  } else if (lightWeight_==2) {
-    maxIts2_=11;
-  } else {
-    maxIts2_=23;
+  if (maxIts2_==100) {
+    if (!lightWeight_) {
+      maxIts2_=105;
+    } else if (lightWeight_==1) {
+      mu_ *= 1000.0;
+      maxIts2_=23;
+    } else if (lightWeight_==2) {
+      maxIts2_=11;
+    } else {
+      maxIts2_=23;
+    }
   }
   //printf("setting mu to %g and doing %d passes\n",mu_,majorIterations_);
   solve2(handler,messages);

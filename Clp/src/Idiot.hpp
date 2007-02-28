@@ -135,6 +135,11 @@ public:
   { return maxIts2_;};
   inline void setMinorIterations(int value)
   { maxIts2_ = value;};
+  // minor iterations for first time
+  inline int getMinorIterations0() const
+  { return maxIts_;};
+  inline void setMinorIterations0(int value)
+  { maxIts_ = value;};
   /** Reduce weight after this many major iterations.  It may
       get reduced before this but this is a maximum.
       Default 3.  3-10 plausible. */
