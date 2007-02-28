@@ -701,7 +701,7 @@ ClpNetworkMatrix::getVectorStarts() const
     starts_ = new CoinBigIndex [numberColumns_+1];
     int i;
     for (i=0;i<numberColumns_+1;i++) {
-      starts_[i]=i;
+      starts_[i]=2*i;
     }
   }
   return starts_;
