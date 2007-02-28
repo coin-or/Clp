@@ -566,10 +566,10 @@ ClpNetworkMatrix::fillBasis(ClpSimplex * model,
       int iRowM = indices_[j];
       int iRowP = indices_[j+1];
       indexRowU[numberElements]=iRowM;
-      rowCount[iRowM++];
+      rowCount[iRowM]++;
       elementU[numberElements]=-1.0;
       indexRowU[numberElements+1]=iRowP;
-      rowCount[iRowP++];
+      rowCount[iRowP]++;
       elementU[numberElements+1]=1.0;
       numberElements+=2;
       start[i+1]=numberElements;
@@ -583,12 +583,12 @@ ClpNetworkMatrix::fillBasis(ClpSimplex * model,
       int iRowP = indices_[j+1];
       if (iRowM>=0) {
 	indexRowU[numberElements]=iRowM;
-	rowCount[iRowM++];
+	rowCount[iRowM]++;
 	elementU[numberElements++]=-1.0;
       }
       if (iRowP>=0) {
 	indexRowU[numberElements]=iRowP;
-	rowCount[iRowP++];
+	rowCount[iRowP]++;
 	elementU[numberElements++]=1.0;
       }
       start[i+1]=numberElements;
