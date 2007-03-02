@@ -6413,11 +6413,11 @@ ClpSimplex::crash(double gap,int pivot)
 		      else if (djValue>dualTolerance) 
 			thisWay = -1;
 		      else
-			{ thisWay =0; abort();}
+			{ thisWay =0;}
 		      break;
 		    case atUpperBound:
 		      if (djValue>dualTolerance) 
-			{ thisWay =-1; abort();}
+			{ thisWay =-1;}
 		      else if (djValue<-dualTolerance) 
 			thisWay = -3;
 		      else
@@ -6425,7 +6425,7 @@ ClpSimplex::crash(double gap,int pivot)
 		      break;
 		    case atLowerBound:
 		      if (djValue<-dualTolerance) 
-			{ thisWay =1; abort();}
+			{ thisWay =1; }
 		      else if (djValue>dualTolerance) 
 			thisWay = 3;
 		      else
