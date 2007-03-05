@@ -1057,6 +1057,7 @@ Idiot::crossOver(int mode)
 	delete [] rhs;
       }
       saveModel = model_;
+      pinfo.setPresolveActions(pinfo.presolveActions()|16384);
       model_ = pinfo.presolvedModel(*model_,1.0e-8,false,5);
     }
     if (model_) {

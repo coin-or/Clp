@@ -481,6 +481,8 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
       //paction_ = dupcol_action::presolve(prob, paction_);
     }
 
+    if ((presolveActions_&16384)!=0)
+      prob->setPresolveOptions(prob->presolveOptions()|16384);
     // Check number rows dropped
     int lastDropped=0;
     prob->pass_=0;
