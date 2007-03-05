@@ -146,7 +146,7 @@ Idiot::crash(int numberPass, CoinMessageHandler * handler,const CoinMessages *me
   solve2(handler,messages);
 #ifndef OSI_IDIOT
   double averageInfeas = model_->sumPrimalInfeasibilities()/((double) model_->numberRows());
-  if (averageInfeas<0.01&&(strategy_&512)!=0) 
+  if ((averageInfeas<0.01&&(strategy_&512)!=0)||(strategy_&8192)!=0) 
     crossOver(16+1); 
   else
     crossOver(3);
@@ -841,11 +841,22 @@ Idiot::crossOver(int mode)
   if ((mode&16)!=0&&addAll<3) presolve=1;
   double * saveUpper = NULL;
   double * saveLower = NULL;
+  double * saveRowUpper = NULL;
+  double * saveRowLower = NULL;
+  bool allowInfeasible = (strategy_&8192)!=0;
   if (addAll<3) {
     saveUpper = new double [ncols];
     saveLower = new double [ncols];
     memcpy(saveUpper,upper,ncols*sizeof(double));
     memcpy(saveLower,lower,ncols*sizeof(double));
+    if (allowInfeasible) {
+      saveRowUpper = new double [nrows];
+      saveRowLower = new double [nrows];
+      memcpy(saveRowUpper,rowupper,nrows*sizeof(double));
+      memcpy(saveRowLower,rowlower,nrows*sizeof(double));
+      double averageInfeas = model_->sumPrimalInfeasibilities()/((double) model_->numberRows());
+      fixTolerance = CoinMax(fixTolerance,1.0e-5*averageInfeas);
+    }
   }
   if (slackStart>=0) {
     slackEnd=slackStart+nrows;
@@ -1024,6 +1035,27 @@ Idiot::crossOver(int mode)
   if (addAll<3) {
     ClpPresolve pinfo;
     if (presolve) {
+      if (allowInfeasible) {
+	// fix up so will be feasible
+	double * rhs = new double[nrows];
+	memset(rhs,0,nrows*sizeof(double));
+	model_->clpMatrix()->times(1.0,colsol,rhs);
+	double * rowupper = model_->rowUpper();
+	double * rowlower= model_->rowLower();
+	double sum = 0.0;
+	for (i=0;i<nrows;i++) {
+	  if (rhs[i]>rowupper[i]) {
+	    sum += rhs[i]-rowupper[i];
+	    rowupper[i]=rhs[i];
+	  }
+	  if (rhs[i]<rowlower[i]) {
+	    sum += rowlower[i]-rhs[i];
+	    rowlower[i]=rhs[i];
+	  }
+	}
+	printf("sum of infeasibilities %g\n",sum);
+	delete [] rhs;
+      }
       saveModel = model_;
       model_ = pinfo.presolvedModel(*model_,1.0e-8,false,5);
     }
@@ -1051,6 +1083,14 @@ Idiot::crossOver(int mode)
       model_ = saveModel;
       saveModel=NULL;
     }
+    if (allowInfeasible) {
+      memcpy(model_->rowUpper(),saveRowUpper,nrows*sizeof(double));
+      memcpy(model_->rowLower(),saveRowLower,nrows*sizeof(double));
+      delete [] saveRowUpper;
+      delete [] saveRowLower;
+      saveRowUpper = NULL;
+      saveRowLower = NULL;
+    }
     if (addAll<2) {
       n=0;
       if (!addAll ) {
@@ -1073,6 +1113,10 @@ Idiot::crossOver(int mode)
 	    lower[i]=saveLower[i];
 	  }
 	}
+	delete [] saveUpper;
+	delete [] saveLower;
+	saveUpper=NULL;
+	saveLower=NULL;
       }
       printf("Time so far %g, %d now added from previous iterations\n",
 	     CoinCpuTime()-startTime,n);
@@ -1109,6 +1153,10 @@ Idiot::crossOver(int mode)
 	    lower[i]=saveLower[i];
 	  }
 	}
+	delete [] saveUpper;
+	delete [] saveLower;
+	saveUpper=NULL;
+	saveLower=NULL;
 	printf("Time so far %g, %d now added from previous iterations\n",
 	       CoinCpuTime()-startTime,n);
       }
@@ -1176,6 +1224,7 @@ Idiot::Idiot()
   baseIts =baseIts/10;
   baseIts *= 10;
   maxIts2_ =200+baseIts+5;
+  maxIts2_=100;
   reasonableInfeas_ =((double) nrows)*0.05;
   lightWeight_=0;
 }
@@ -1215,6 +1264,7 @@ Idiot::Idiot(OsiSolverInterface &model)
   baseIts =baseIts/10;
   baseIts *= 10;
   maxIts2_ =200+baseIts+5;
+  maxIts2_=100;
   reasonableInfeas_ =((double) nrows)*0.05;
   lightWeight_=0;
 }

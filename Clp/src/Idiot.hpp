@@ -239,7 +239,8 @@ private:
                     32 - Scale
 		   512 - crossover 
                   2048 - keep lambda across mu change
-		  4096 - return best solution (not last found) */
+		  4096 - return best solution (not last found)
+		  8192 - always do a presolve in crossover */
   int lightWeight_; // 0 - normal, 1 lightweight
 };
 #endif
