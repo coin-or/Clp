@@ -24,6 +24,8 @@ ClpCholeskyUfl::ClpCholeskyUfl (int denseThreshold)
 #ifdef CLP_USE_CHOLMOD
   L_= NULL;
   cholmod_start (&c_) ;
+  // Can't use supernodal as may not be positive definite
+  c_.supernodal=0;  
 #endif
 }
 
