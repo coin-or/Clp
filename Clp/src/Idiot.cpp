@@ -632,10 +632,10 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
       }
     }
     if (iteration>=majorIterations_) {
-      // If small and not feasible and crash then dive dive dive
-      if (0&&result.infeas>1.0&&majorIterations_<30&&(maxIts2_==11||maxIts2_==23)) {
-	maxIts=7;
-	majorIterations_=100;
+      // If not feasible and crash then dive dive dive
+      if (mu_>1.0e-12&&result.infeas>1.0&&majorIterations_40) {
+	mu_=1.0e-30;
+	majorIterations_=iteration+1;
       } else {
 	if (logLevel>2) 
 	  printf("Exiting due to number of major iterations\n");
