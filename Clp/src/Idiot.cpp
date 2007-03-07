@@ -633,7 +633,7 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
     }
     if (iteration>=majorIterations_) {
       // If not feasible and crash then dive dive dive
-      if (mu_>1.0e-12&&result.infeas>1.0&&majorIterations_40) {
+      if (mu_>1.0e-12&&result.infeas>1.0&&majorIterations_<40) {
 	mu_=1.0e-30;
 	majorIterations_=iteration+1;
       } else {
