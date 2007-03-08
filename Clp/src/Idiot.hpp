@@ -204,7 +204,12 @@ IdiotResult objval(int nrows, int ncols, double * rowsol , double * colsol,
 		   const int * length, int extraBlock, int * rowExtra,
 		   double * solExtra, double * elemExtra, double * upperExtra,
 		   double * costExtra,double weight);
-
+  // Deals with whenUsed and slacks
+  int cleanIteration(int iteration, int ordinaryStart, int ordinaryEnd,
+		     double * colsol, const double * lower, const double * upper,
+		     const double * rowLower, const double * rowUpper,
+		     const double * cost, const double * element, double fixTolerance,double & objChange,
+		     double & infChange);
 private:
   /// Underlying model
   OsiSolverInterface * model_;
@@ -240,7 +245,8 @@ private:
 		   512 - crossover 
                   2048 - keep lambda across mu change
 		  4096 - return best solution (not last found)
-		  8192 - always do a presolve in crossover */
+		  8192 - always do a presolve in crossover
+		 16384 - costed slacks found - so whenUsed_ longer */
   int lightWeight_; // 0 - normal, 1 lightweight
 };
 #endif
