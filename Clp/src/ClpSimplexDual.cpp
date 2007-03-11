@@ -483,6 +483,8 @@ ClpSimplexDual::dual(int ifValuesPass,int startFinishOptions)
     saveDuals = new double [numberRows_+numberColumns_];
     CoinMemcpyN(dual_,numberRows_,saveDuals);
   }
+  if (alphaAccuracy_!=-1.0)
+    alphaAccuracy_ = 1.0;
   int returnCode = startupSolve(ifValuesPass,saveDuals,startFinishOptions);
   // Save so can see if doing after primal
   int initialStatus=problemStatus_;
@@ -3299,6 +3301,7 @@ ClpSimplexDual::checkUnbounded(CoinIndexedVector * ray,
   ray->clear();
   return status;
 }
+//static int count_alpha=0;
 /* Checks if finished.  Updates status */
 void 
 ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
@@ -3322,6 +3325,8 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
   int numberPivots = factorization_->pivots();
   double realDualInfeasibilities=0.0;
   if (type==2) {
+    if (alphaAccuracy_!=-1.0)
+      alphaAccuracy_=-2.0;
     // trouble - restore solution
     CoinMemcpyN(saveStatus_,numberColumns_+numberRows_,status_);
     CoinMemcpyN(savedSolution_+numberColumns_ ,
@@ -3339,78 +3344,87 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
   int tentativeStatus = problemStatus_;
   double changeCost;
   bool unflagVariables = true;
-  if (problemStatus_>-3||factorization_->pivots()) {
-    // factorize
-    // later on we will need to recover from singularities
-    // also we could skip if first time
-    // save dual weights
-    dualRowPivot_->saveWeights(this,1);
-    if (type) {
-      // is factorization okay?
-      if (internalFactorize(1)) {
-	// no - restore previous basis
-	unflagVariables = false;
-	assert (type==1);
-	changeMade_++; // say something changed
-	// Keep any flagged variables
-	int i;
-	for (i=0;i<numberRows_+numberColumns_;i++) {
-	  if (flagged(i))
-	    saveStatus_[i] |= 64; //say flagged
-	}
-	CoinMemcpyN(saveStatus_,numberColumns_+numberRows_,status_);
-	CoinMemcpyN(savedSolution_+numberColumns_ ,
-	       numberRows_,rowActivityWork_);
-	CoinMemcpyN(savedSolution_ ,
-	       numberColumns_,columnActivityWork_);
-	// restore extra stuff
-	int dummy;
-	matrix_->generalExpanded(this,6,dummy);
-	// get correct bounds on all variables
-	resetFakeBounds();
-	// need to reject something
-	char x = isColumn(sequenceOut_) ? 'C' :'R';
-	handler_->message(CLP_SIMPLEX_FLAG,messages_)
-	  <<x<<sequenceWithin(sequenceOut_)
-	  <<CoinMessageEol;
-	setFlagged(sequenceOut_);
-	progress_->clearBadTimes();
-        
-	// Go to safe 
-	factorization_->pivotTolerance(0.99);
-	forceFactorization_=1; // a bit drastic but ..
-	type = 2;
-	//assert (internalFactorize(1)==0);
+  bool weightsSaved=false;
+  if (alphaAccuracy_<0.0||!numberPivots||alphaAccuracy_>1.0e4||factorization_->pivots()>20) {
+    if (problemStatus_>-3||numberPivots) {
+      // factorize
+      // later on we will need to recover from singularities
+      // also we could skip if first time
+      // save dual weights
+      dualRowPivot_->saveWeights(this,1);
+      weightsSaved=true;
+      if (type) {
+	// is factorization okay?
 	if (internalFactorize(1)) {
+	  // no - restore previous basis
+	  unflagVariables = false;
+	  assert (type==1);
+	  changeMade_++; // say something changed
+	  // Keep any flagged variables
+	  int i;
+	  for (i=0;i<numberRows_+numberColumns_;i++) {
+	    if (flagged(i))
+	      saveStatus_[i] |= 64; //say flagged
+	  }
 	  CoinMemcpyN(saveStatus_,numberColumns_+numberRows_,status_);
 	  CoinMemcpyN(savedSolution_+numberColumns_ ,
-		 numberRows_,rowActivityWork_);
+		      numberRows_,rowActivityWork_);
 	  CoinMemcpyN(savedSolution_ ,
-		 numberColumns_,columnActivityWork_);
+		      numberColumns_,columnActivityWork_);
 	  // restore extra stuff
 	  int dummy;
 	  matrix_->generalExpanded(this,6,dummy);
-	  // debug
-	  int returnCode = internalFactorize(1);
-	  while (returnCode) {
-	    // ouch 
-	    // switch off dense
-	    int saveDense = factorization_->denseThreshold();
-	    factorization_->setDenseThreshold(0);
-	    // Go to safe
-	    factorization_->pivotTolerance(0.99);
-	    // make sure will do safe factorization
-	    pivotVariable_[0]=-1;
-	    returnCode=internalFactorize(2);
-	    factorization_->setDenseThreshold(saveDense);
-	  }
 	  // get correct bounds on all variables
 	  resetFakeBounds();
+	  // need to reject something
+	  char x = isColumn(sequenceOut_) ? 'C' :'R';
+	  handler_->message(CLP_SIMPLEX_FLAG,messages_)
+	    <<x<<sequenceWithin(sequenceOut_)
+	    <<CoinMessageEol;
+	  setFlagged(sequenceOut_);
+	  progress_->clearBadTimes();
+	  
+	  // Go to safe 
+	  factorization_->pivotTolerance(0.99);
+	  forceFactorization_=1; // a bit drastic but ..
+	  type = 2;
+	  //assert (internalFactorize(1)==0);
+	  if (internalFactorize(1)) {
+	    CoinMemcpyN(saveStatus_,numberColumns_+numberRows_,status_);
+	    CoinMemcpyN(savedSolution_+numberColumns_ ,
+			numberRows_,rowActivityWork_);
+	    CoinMemcpyN(savedSolution_ ,
+			numberColumns_,columnActivityWork_);
+	    // restore extra stuff
+	    int dummy;
+	    matrix_->generalExpanded(this,6,dummy);
+	    // debug
+	    int returnCode = internalFactorize(1);
+	    while (returnCode) {
+	      // ouch 
+	      // switch off dense
+	      int saveDense = factorization_->denseThreshold();
+	      factorization_->setDenseThreshold(0);
+	      // Go to safe
+	      factorization_->pivotTolerance(0.99);
+	      // make sure will do safe factorization
+	      pivotVariable_[0]=-1;
+	      returnCode=internalFactorize(2);
+	      factorization_->setDenseThreshold(saveDense);
+	    }
+	    // get correct bounds on all variables
+	    resetFakeBounds();
+	  }
 	}
       }
+      if (problemStatus_!=-4||numberPivots>10)
+	problemStatus_=-3;
     }
-    if (problemStatus_!=-4||factorization_->pivots()>10)
-      problemStatus_=-3;
+  } else {
+    //printf("testing with accuracy of %g and status of %d\n",alphaAccuracy_,problemStatus_);
+    //count_alpha++;
+    //if ((count_alpha%5000)==0)
+    //printf("count alpha %d\n",count_alpha);
   }
   // at this stage status is -3 or -4 if looks infeasible
   // get primal and dual solutions
@@ -3448,6 +3462,8 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
     double newTolerance = CoinMin(1.1*factorization_->pivotTolerance(),0.99);
     factorization_->pivotTolerance(newTolerance);
     forceFactorization_=1; // a bit drastic but ..
+    if (alphaAccuracy_!=-1.0)
+      alphaAccuracy_=-2.0;
     type = 2;
     //assert (internalFactorize(1)==0);
     if (internalFactorize(1)) {
@@ -3517,6 +3533,8 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	resetFakeBounds();
 	if(factorization_->pivotTolerance()<0.2)
 	  factorization_->pivotTolerance(0.2);
+	if (alphaAccuracy_!=-1.0)
+	  alphaAccuracy_=-2.0;
 	if (internalFactorize(1)) {
           CoinMemcpyN(saveStatus_,numberColumns_+numberRows_,status_);
           CoinMemcpyN(savedSolution_+numberColumns_ ,
@@ -3993,12 +4011,13 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
     int dummy;
     matrix_->generalExpanded(this,5,dummy);
   }
-
-  // restore weights (if saved) - also recompute infeasibility list
-  if (tentativeStatus>-3) 
-    dualRowPivot_->saveWeights(this,(type <2) ? 2 : 4);
-  else
-    dualRowPivot_->saveWeights(this,3);
+  if (weightsSaved) {
+    // restore weights (if saved) - also recompute infeasibility list
+    if (tentativeStatus>-3) 
+      dualRowPivot_->saveWeights(this,(type <2) ? 2 : 4);
+    else
+      dualRowPivot_->saveWeights(this,3);
+  }
   // unflag all variables (we may want to wait a bit?)
   if ((tentativeStatus!=-2&&tentativeStatus!=-1)&&unflagVariables) {
     int iRow;
@@ -4141,6 +4160,8 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
   // Allow matrices to be sorted etc
   int fake=-999; // signal sort
   matrix_->correctSequence(this,fake,fake);
+  if (alphaAccuracy_>0.0)
+      alphaAccuracy_=1.0;
 }
 /* While updateDualsInDual sees what effect is of flip
    this does actual flipping.
@@ -4907,6 +4928,8 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
   // save dual bound
   double saveDualBound = dualBound_;
 
+  if (alphaAccuracy_!=-1.0)
+    alphaAccuracy_ = 1.0;
   double objectiveChange;
   // for dual we will change bounds using dualBound_
   // for this we need clean basis so it is after factorize

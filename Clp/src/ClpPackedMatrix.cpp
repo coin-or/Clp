@@ -2104,8 +2104,9 @@ ClpPackedMatrix::scale(ClpModel * model) const
   const int * column = rowCopy->getIndices();
   const CoinBigIndex * rowStart = rowCopy->getVectorStarts();
   const double * element = rowCopy->getElements();
-  double * rowScale = new double [numberRows];
-  double * columnScale = new double [numberColumns];
+  int scaleLength = ((model->specialOptions()&131072)==0) ? 1 : 2;
+  double * rowScale = new double [numberRows*scaleLength];
+  double * columnScale = new double [numberColumns*scaleLength];
   // we are going to mark bits we are interested in
   char * usefulRow = new char [numberRows];
   char * usefulColumn = new char [numberColumns];
@@ -2489,6 +2490,15 @@ ClpPackedMatrix::scale(ClpModel * model) const
       }
     }
 #endif
+    if (scaleLength>1) {
+      // make copy
+      double * inverseScale = rowScale + numberRows;
+      for (iRow=0;iRow<numberRows;iRow++) 
+	inverseScale[iRow] = 1.0/rowScale[iRow] ;
+      inverseScale = columnScale + numberColumns;
+      for (iColumn=0;iColumn<numberColumns;iColumn++) 
+	inverseScale[iColumn] = 1.0/columnScale[iColumn] ;
+    }
     model->setRowScale(rowScale);
     model->setColumnScale(columnScale);
     if (model->rowCopy()) {

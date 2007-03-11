@@ -887,6 +887,8 @@ ClpSimplexOther::dualOfModel() const
   }
   if (numberExtraRows) {
     CoinPackedMatrix newCopy;
+    newCopy.setExtraGap(0.0);
+    newCopy.setExtraMajor(0.0);
     newCopy.submatrixOfWithDuplicates(rowCopy,kRow,which);
     rowCopy=newCopy;
   }
@@ -1225,6 +1227,7 @@ ClpSimplexOther::crunch(double * rhs, int * whichRow, int * whichColumn,
     small->setSpecialOptions(specialOptions_);
     small->setPerturbation(perturbation_);
     small->defaultFactorizationFrequency();
+    small->setAlphaAccuracy(alphaAccuracy_);
     // If no rows left then no tightening!
     if (!numberRows2||!numberColumns2) 
       tightenBounds=false;

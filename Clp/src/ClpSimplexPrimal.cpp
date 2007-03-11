@@ -190,6 +190,36 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
   int initialIterations = numberIterations_;
   int initialNegDjs=-1;
   // initialize - maybe values pass and algorithm_ is +1
+#if 0
+  // if so - put in any superbasic costed slacks
+  if (ifValuesPass&&specialOptions_<0x01000000) {
+    // Get column copy
+    const CoinPackedMatrix * columnCopy = matrix();
+    const int * row = columnCopy->getIndices();
+    const CoinBigIndex * columnStart = columnCopy->getVectorStarts();
+    const int * columnLength = columnCopy->getVectorLengths(); 
+    //const double * element = columnCopy->getElements();
+    int n=0;
+    for (int iColumn = 0;iColumn<numberColumns_;iColumn++) {
+      if (columnLength[iColumn]==1) {
+	Status status = getColumnStatus(iColumn);
+	if (status!=basic&&status!=isFree) {
+	  double value = columnActivity_[iColumn];
+	  if (fabs(value-columnLower_[iColumn])>primalTolerance_&&
+	      fabs(value-columnUpper_[iColumn])>primalTolerance_) {
+	    int iRow = row[columnStart[iColumn]];
+	    if (getRowStatus(iRow)==basic) {
+	      setRowStatus(iRow,superBasic);
+	      setColumnStatus(iColumn,basic);
+	      n++;
+	    }
+	  }
+	}   
+      }
+    }
+    printf("%d costed slacks put in basis\n",n);
+  }
+#endif
   if (!startup(ifValuesPass,startFinishOptions)) {
     
     // Set average theta
@@ -434,7 +464,7 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
   // if infeasible get real values
   //printf("XXXXY final cost %g\n",infeasibilityCost_);
   progress_->initialWeight_=0.0;
-  if (problemStatus_==1) {
+  if (problemStatus_==1&&secondaryStatus_!=6) {
     infeasibilityCost_=0.0;
     createRim(1+4);
     nonLinearCost_->checkInfeasibilities(0.0);

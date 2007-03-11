@@ -949,6 +949,13 @@ int main (int argc, const char *argv[])
 		// If presolve on then save presolved
 		bool deleteModel2=false;
 		ClpSimplex * model2 = models+iModel;
+		if (dualize) {
+		  model2 = ((ClpSimplexOther *) model2)->dualOfModel();
+		  printf("Dual of model has %d rows and %d columns\n",
+			 model2->numberRows(),model2->numberColumns());
+		  model2->setOptimizationDirection(1.0);
+		  preSolve=0; // as picks up from model
+		}
 		if (preSolve) {
 		  ClpPresolve pinfo;
 		  int presolveOptions2 = presolveOptions&~0x40000000;

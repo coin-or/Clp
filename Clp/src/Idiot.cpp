@@ -460,17 +460,18 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
   pi= new double[nrows];
   dj=new double[ncols];
   delete [] whenUsed_;
+  bool oddSlacks=false;
   // See if any costed slacks
   int numberSlacks=0;
   for (i=0;i<ncols;i++) {
     if (columnLength[i]==1)
       numberSlacks++;
   }
-  if (!numberSlacks||true) {
+  if (!numberSlacks) {
     whenUsed_=new int[ncols];
   } else {
     printf("%d slacks\n",numberSlacks);
-    strategy_ |= 16384;
+    oddSlacks=true;
     int extra = (int) (nrows*sizeof(double)/sizeof(int));
     whenUsed_=new int[2*ncols+2*nrows+extra];
     int * posSlack = whenUsed_+ncols;
@@ -1043,20 +1044,15 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
     }
   }
   muAtExit_=mu;
+  // For last iteration make as feasible as possible
+  if (oddSlacks);
+    strategy_ |= 16384;
   // not scaled
   n = cleanIteration(iteration, ordStart,ordEnd,
 		     colsol,  lower,  upper,
 		     model_->rowLower(), model_->rowUpper(),
 		     cost, element, fixTolerance,lastResult.objval,lastResult.infeas);
-  if ((strategy_&16384)!=0) {
-    int * posSlack = whenUsed_+ncols;
-    int * negSlack = posSlack+nrows;
-    int * nextSlack = negSlack + nrows;
-    double * rowsol2 = (double *) (nextSlack+ncols);
-    for (i=0;i<nrows;i++)
-      rowsol[i] += rowsol2[i];
-  }
-  if ((logLevel&1)==0) {
+  if ((logLevel&1)==0||(strategy_&16384)!=0) {
     printf(
 	    "%d - mu %g, infeasibility %g, objective %g, %d interior\n",
 	    iteration,mu,lastResult.infeas,lastResult.objval,n);
@@ -1283,6 +1279,56 @@ Idiot::crossOver(int mode)
       }
     }
     model_->setColumnStatus(i,ClpSimplex::superBasic);
+  }
+  if ((strategy_&16384)!=0) {
+    // put in basis
+    int * posSlack = whenUsed_+ncols;
+    int * negSlack = posSlack+nrows;
+    int * nextSlack = negSlack + nrows;
+    for (i=0;i<nrows;i++) {
+      int n=0;
+      int iCol;
+      iCol =posSlack[i];
+      if (iCol>=0) {
+	if (colsol[iCol]>lower[iCol]+1.0e-8&&
+	    colsol[iCol]<upper[iCol]+1.0e-8) {
+	  model_->setColumnStatus(iCol,ClpSimplex::basic);
+	  n++;
+	}
+	while (nextSlack[iCol]>=0) {
+	  iCol = nextSlack[iCol];
+	  if (colsol[iCol]>lower[iCol]+1.0e-8&&
+	      colsol[iCol]<upper[iCol]+1.0e-8) {
+	    model_->setColumnStatus(iCol,ClpSimplex::basic);
+	    n++;
+	  }
+	}
+      }
+      iCol =negSlack[i];
+      if (iCol>=0) {
+	if (colsol[iCol]>lower[iCol]+1.0e-8&&
+	    colsol[iCol]<upper[iCol]+1.0e-8) {
+	  model_->setColumnStatus(iCol,ClpSimplex::basic);
+	  n++;
+	}
+	while (nextSlack[iCol]>=0) {
+	  iCol = nextSlack[iCol];
+	  if (colsol[iCol]>lower[iCol]+1.0e-8&&
+	      colsol[iCol]<upper[iCol]+1.0e-8) {
+	    model_->setColumnStatus(iCol,ClpSimplex::basic);
+	    n++;
+	  }
+	}
+      }
+      if (n) {
+	if (fabs(rowsol[i]-rowlower[i])<fabs(rowsol[i]-rowupper[i]))
+	  model_->setRowStatus(i,ClpSimplex::atLowerBound);
+	else
+	  model_->setRowStatus(i,ClpSimplex::atUpperBound);
+	if (n>1)
+	  printf("%d basic on row %d!\n",n,i);
+      }
+    }
   }
   double maxmin;
   if (model_->getObjSense()==-1.0) {

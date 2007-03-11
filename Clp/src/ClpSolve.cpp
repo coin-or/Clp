@@ -1598,6 +1598,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
       // Solve 
       if (interrupt)
 	currentModel = &small;
+      small.defaultFactorizationFrequency();
       if (dynamic_cast< ClpPackedMatrix*>(matrix_)) {
 	// See if original wanted vector
 	ClpPackedMatrix * clpMatrixO = dynamic_cast< ClpPackedMatrix*>(matrix_);
@@ -2190,7 +2191,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
       delete [] saveUpper;
       saveLower=NULL;
       saveUpper=NULL;
-      model2->primal(1);
+      if (method!=ClpSolve::useBarrierNoCross) 
+	model2->primal(1);
     }
     model2->setPerturbation(savePerturbation);
     time2 = CoinCpuTime();

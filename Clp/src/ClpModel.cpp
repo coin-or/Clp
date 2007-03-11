@@ -75,6 +75,7 @@ ClpModel::ClpModel (bool emptyMessages) :
   secondaryStatus_(0),
   lengthNames_(0),
   numberThreads_(0),
+  specialOptions_(0),
 #ifndef CLP_NO_STD
   defaultHandler_(true),
   rowNames_(),
@@ -156,6 +157,7 @@ void ClpModel::gutsOfDelete()
   delete eventHandler_;
   eventHandler_=NULL;
   whatsChanged_=0;
+  specialOptions_ = 0;
 }
 //#############################################################################
 void ClpModel::setPrimalTolerance( double value) 
@@ -673,6 +675,7 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
   numberColumns_ = rhs.numberColumns_;
   userPointer_ = rhs.userPointer_;
   scalingFlag_ = rhs.scalingFlag_;
+  specialOptions_ = rhs.specialOptions_;
   if (trueCopy) {
 #ifndef CLP_NO_STD
     lengthNames_ = rhs.lengthNames_;
@@ -705,9 +708,10 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
     rowLower_ = ClpCopyOfArray ( rhs.rowLower_, numberRows_ );
     rowUpper_ = ClpCopyOfArray ( rhs.rowUpper_, numberRows_ );
     columnLower_ = ClpCopyOfArray ( rhs.columnLower_, numberColumns_ );
+    int scaleLength = ((specialOptions_&131072)==0) ? 1 : 2;
     columnUpper_ = ClpCopyOfArray ( rhs.columnUpper_, numberColumns_ );
-    rowScale_ = ClpCopyOfArray(rhs.rowScale_,numberRows_);
-    columnScale_ = ClpCopyOfArray(rhs.columnScale_,numberColumns_);
+    rowScale_ = ClpCopyOfArray(rhs.rowScale_,numberRows_*scaleLength);
+    columnScale_ = ClpCopyOfArray(rhs.columnScale_,numberColumns_*scaleLength);
     if (rhs.objective_)
       objective_  = rhs.objective_->clone();
     else
@@ -2770,7 +2774,7 @@ ClpModel::ClpModel ( const ClpModel * rhs,
 #ifndef CLP_NO_STD
   strParam_[ClpProbName] = rhs->strParam_[ClpProbName];
 #endif
-
+  specialOptions_ = rhs->specialOptions_;
   optimizationDirection_ = rhs->optimizationDirection_;
   objectiveValue_=rhs->objectiveValue_;
   smallElement_ = rhs->smallElement_;
@@ -3434,6 +3438,108 @@ ClpModel::unscale()
   rowScale_ = NULL;
   delete [] columnScale_;
   columnScale_ = NULL;
+}
+void 
+ClpModel::setSpecialOptions(unsigned int value)
+{ 
+  specialOptions_=value;
+}
+/* This creates a coinModel object
+ */
+CoinModel * 
+ClpModel::createCoinModel() const
+{
+  CoinModel * coinModel = new CoinModel();
+  CoinPackedMatrix matrixByRow;
+  matrixByRow.reverseOrderedCopyOf(*matrix());
+  coinModel->setObjectiveOffset(objectiveOffset());
+  coinModel->setProblemName(problemName().c_str());
+
+  // Build by row from scratch
+  const double * element = matrixByRow.getElements();
+  const int * column = matrixByRow.getIndices();
+  const CoinBigIndex * rowStart = matrixByRow.getVectorStarts();
+  const int * rowLength = matrixByRow.getVectorLengths();
+  int i;
+  for (i=0;i<numberRows_;i++) {
+    coinModel->addRow(rowLength[i],column+rowStart[i],
+		      element+rowStart[i],rowLower_[i],rowUpper_[i]);
+  }
+  // Now do column part
+  const double * objective = this->objective();
+  for (i=0;i<numberColumns_;i++) {
+    coinModel->setColumnBounds(i,columnLower_[i],columnUpper_[i]);
+    coinModel->setColumnObjective(i,objective[i]);
+  }
+  for ( i=0;i<numberColumns_;i++) {
+    if (isInteger(i))
+      coinModel->setColumnIsInteger(i,true);
+  }
+  // do names
+  for (i=0;i<numberRows_;i++) {
+    char temp[30];
+    strcpy(temp,rowName(i).c_str());
+    int length = strlen(temp);
+    for (int j=0;j<length;j++) {
+      if (temp[j]=='-')
+	temp[j]='_';
+    }
+    coinModel->setRowName(i,temp);
+  }
+  for (i=0;i<numberColumns_;i++) {
+    char temp[30];
+    strcpy(temp,columnName(i).c_str());
+    int length = strlen(temp);
+    for (int j=0;j<length;j++) {
+      if (temp[j]=='-')
+	temp[j]='_';
+    }
+    coinModel->setColumnName(i,temp);
+  }
+  ClpQuadraticObjective * obj = (dynamic_cast< ClpQuadraticObjective*>(objective_));
+  if (obj) {
+    const CoinPackedMatrix * quadObj = obj->quadraticObjective();
+    // add in quadratic
+    const double * element = quadObj->getElements();
+    const int * row = quadObj->getIndices();
+    const CoinBigIndex * columnStart = quadObj->getVectorStarts();
+    const int * columnLength = quadObj->getVectorLengths();
+    for (i=0;i<numberColumns_;i++) {
+      int nels = columnLength[i];
+      if (nels) {
+	CoinBigIndex start = columnStart[i];
+	double constant = coinModel->getColumnObjective(i);
+	char temp[100000];
+	char temp2[30];
+	sprintf(temp,"%g",constant);
+	for (CoinBigIndex k=start;k<start+nels;k++) {
+	  int kColumn = row[k];
+	  double value = element[k];
+#if 1
+	  // ampl gives twice with assumed 0.5
+	  if (kColumn<i)
+	    continue;
+	  else if (kColumn==i)
+	    value *= 0.5;
+#endif
+	  if (value==1.0) 
+	    sprintf(temp2,"+%s",coinModel->getColumnName(kColumn));
+	  else if (value==-1.0)
+	    sprintf(temp2,"-%s",coinModel->getColumnName(kColumn));
+	  else if (value>0.0)
+	    sprintf(temp2,"+%g*%s",value,coinModel->getColumnName(kColumn));
+	  else 
+	    sprintf(temp2,"%g*%s",value,coinModel->getColumnName(kColumn));
+	  strcat(temp,temp2);
+	  assert (strlen(temp)<100000);
+	}
+	coinModel->setObjective(i,temp);
+	if (logLevel()>2)
+	  printf("el for objective column %s is %s\n",coinModel->getColumnName(i),temp);
+      }
+    }
+  }
+  return coinModel;
 }
 //#############################################################################
 // Constructors / Destructor / Assignment

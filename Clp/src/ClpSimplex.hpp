@@ -639,43 +639,13 @@ public:
 			   float allowedInfeasibility);
   //@}
   /**@name most useful gets and sets */
-  //@{ 
-  // On reflection I doubt whether anyone uses so test
-private:
-  /// Worst column primal infeasibility
-  inline double columnPrimalInfeasibility() const 
-          { return columnPrimalInfeasibility_;} ;
-  /// Sequence of worst (-1 if feasible)
-  inline int columnPrimalSequence() const 
-          { return columnPrimalSequence_;} ;
-  /// Worst row primal infeasibility
-  inline double rowPrimalInfeasibility() const 
-          { return rowPrimalInfeasibility_;} ;
-  /// Sequence of worst (-1 if feasible)
-  inline int rowPrimalSequence() const 
-          { return rowPrimalSequence_;} ;
-  /** Worst column dual infeasibility (note - these may not be as meaningful
-      if the problem is primal infeasible */
-  inline double columnDualInfeasibility() const 
-          { return columnDualInfeasibility_;} ;
-  /// Sequence of worst (-1 if feasible)
-  inline int columnDualSequence() const 
-          { return columnDualSequence_;} ;
-  /// Worst row dual infeasibility
-  inline double rowDualInfeasibility() const 
-          { return rowDualInfeasibility_;} ;
-  /// Sequence of worst (-1 if feasible)
-  inline int rowDualSequence() const 
-          { return rowDualSequence_;} ;
-  /// Primal tolerance needed to make dual feasible (<largeTolerance)
-  inline double primalToleranceToGetOptimal() const 
-          { return primalToleranceToGetOptimal_;} ;
-  /// Remaining largest dual infeasibility
-  inline double remainingDualInfeasibility() const 
-          { return remainingDualInfeasibility_;} ;
-  /// Largest difference between input primal solution and computed
-  inline double largestSolutionError() const
-          { return largestSolutionError_;} ;
+  //@{
+public: 
+  /// Initial value for alpha accuracy calculation (-1.0 off)
+  inline double alphaAccuracy() const
+          { return alphaAccuracy_;} ;
+  inline void setAlphaAccuracy(double value)
+          { alphaAccuracy_ = value;} ;
 public:
   /// Disaster handler
   inline void setDisasterHandler(ClpDisasterHandler * handler)
@@ -957,38 +927,6 @@ public:
   { return maximumBasic_;};
   /// Create C++ lines to get to current state
   void generateCpp( FILE * fp,bool defaultFactor=false);
-  /** For advanced options
-      1 - Don't keep changing infeasibility weight
-      2 - Keep nonLinearCost round solves
-      4 - Force outgoing variables to exact bound (primal)
-      8 - Safe to use dense initial factorization
-      16 -Just use basic variables for operation if column generation
-      32 -Clean up with primal before strong branching
-      64 -Treat problem as feasible until last minute (i.e. minimize infeasibilities)
-      128 - Switch off all matrix sanity checks
-      256 - No row copy
-      512 - If not in values pass, solution guaranteed, skip as much as possible
-      1024 - In branch and bound
-      2048 - Don't bother to re-factorize if < 20 iterations
-      4096 - Skip some optimality checks
-      8192 - Do Primal when cleaning up primal
-      16384 - In fast dual (so we can switch off things)
-      32678 - called from Osi
-      65356 - keep arrays around as much as possible
-      NOTE - many applications can call Clp but there may be some short cuts
-             which are taken which are not guaranteed safe from all applications.
-             Vetted applications will have a bit set and the code may test this
-             At present I expect a few such applications - if too many I will
-             have to re-think.  It is up to application owner to change the code
-             if she/he needs these short cuts.  I will not debug unless in Coin
-             repository.  See COIN_CLP_VETTED comments.
-      0x01000000 is Cbc (and in branch and bound)
-      0x02000000 is in a different branch and bound
-  */
-#define COIN_CBC_USING_CLP 0x01000000
-  inline unsigned int specialOptions() const
-  { return specialOptions_;};
-  void setSpecialOptions(unsigned int value);
   /// Gets clean and emptyish factorization
   ClpFactorization * getEmptyFactorization();
   /// May delete or may make clean and emptyish factorization
@@ -1135,8 +1073,8 @@ protected:
   double largestPrimalError_;
   /// Largest error on basic duals
   double largestDualError_;
-  /// Largest difference between input primal solution and computed
-  double largestSolutionError_;
+  /// For computing whether to re-factorize
+  double alphaAccuracy_;
   /// Dual bound
   double dualBound_;
   /// Alpha (pivot element)
@@ -1267,10 +1205,6 @@ protected:
       analysis.  If it doesn't work it can easily be replaced.
   */
   ClpNonLinearCost * nonLinearCost_;
-  /** For advanced options
-      See get and set for meaning
-  */
-  unsigned int specialOptions_;
   /// So we know when to be cautious
   int lastBadIteration_;
   /// So we know when to open up again
