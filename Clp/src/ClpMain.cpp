@@ -793,6 +793,13 @@ int main (int argc, const char *argv[])
 		canOpen=true;
 		fileName = "-";
 	      } else {
+		// See if .lp
+		{
+		  const char * c_name = field.c_str();
+		  int length = strlen(c_name);
+		  if (length>3&&!strncmp(c_name+length-3,".lp",3))
+		    gmpl=-1; // .lp
+		}
                 bool absolutePath;
                 if (dirsep=='/') {
                   // non Windows (or cygwin)
@@ -817,7 +824,7 @@ int main (int argc, const char *argv[])
 		  }
 		} else {
 		  fileName = directory+field;
-                  // See if gmpl (model & data)
+                  // See if gmpl (model & data) - or even lp file
                   int length = field.size();
                   int percent = field.find('%');
                   if (percent<length&&percent>0) {
@@ -828,7 +835,7 @@ int main (int argc, const char *argv[])
                       gmpl=2; // two files
                     printf("GMPL model file %s and data file %s\n",
                            fileName.c_str(),gmplData.c_str());
-                  }
+		  }
 		}
                 std::string name=fileName;
                 if (fileCoinReadable(name)) {
@@ -854,10 +861,12 @@ int main (int argc, const char *argv[])
                   status =models[iModel].readMps(fileName.c_str(),
                                                  keepImportNames!=0,
                                                  allowImportErrors!=0);
-                else
+                else if (gmpl>0)
                   status= models[iModel].readGMPL(fileName.c_str(),
                                                   (gmpl==2) ? gmplData.c_str() : NULL,
                                                   keepImportNames!=0);
+		else
+                  status= models[iModel].readLp(fileName.c_str(),1.0e-12);
 		if (!status||(status>0&&allowImportErrors)) {
 		  goodModels[iModel]=true;
 		  // sets to all slack (not necessary?)

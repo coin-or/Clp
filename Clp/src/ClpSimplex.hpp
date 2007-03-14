@@ -187,6 +187,9 @@ public:
   /// Read GMPL files from the given filenames
   int readGMPL(const char *filename,const char * dataName,
                bool keepNames=false);
+  /// Read file in LP format from file with name filename. 
+  /// See class CoinLpIO for description of this format.
+  int readLp(const char *filename, const double epsilon = 1e-5);
   /** Borrow model.  This is so we dont have to copy large amounts
       of data around.  It assumes a derived class wants to overwrite
       an empty model with a real one - while it does an algorithm.

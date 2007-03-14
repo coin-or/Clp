@@ -27,6 +27,7 @@
 #include "ClpLinearObjective.hpp"
 #include "ClpHelperFunctions.hpp"
 #include "CoinModel.hpp"
+#include "CoinLpIO.hpp"
 #include <cfloat>
 
 #include <string>
@@ -4227,13 +4228,16 @@ ClpSimplex::tightenPrimalBounds(double factor,int doTight)
 		}
 		if (newBound > nowLower + 1.0e-12&&newBound>-large) {
 		  // Tighten the lower bound 
-		  columnLower_[iColumn] = newBound;
 		  numberChanged++;
 		  // check infeasible (relaxed)
-		  if (nowUpper - newBound < 
-		      -100.0*tolerance) {
-		    numberInfeasible++;
+		  if (nowUpper < newBound) { 
+		    if (nowUpper - newBound < 
+			-100.0*tolerance) 
+		      numberInfeasible++;
+		    else 
+		      newBound=nowUpper;
 		  }
+		  columnLower_[iColumn] = newBound;
 		  // adjust
 		  double now;
 		  if (nowLower<-large) {
@@ -4274,13 +4278,16 @@ ClpSimplex::tightenPrimalBounds(double factor,int doTight)
 		}
 		if (newBound < nowUpper - 1.0e-12&&newBound<large) {
 		  // Tighten the upper bound 
-		  columnUpper_[iColumn] = newBound;
 		  numberChanged++;
 		  // check infeasible (relaxed)
-		  if (newBound - nowLower < 
-		      -100.0*tolerance) {
-		    numberInfeasible++;
+		  if (nowLower > newBound) { 
+		    if (newBound - nowLower < 
+			-100.0*tolerance) 
+		      numberInfeasible++;
+		    else 
+		      newBound=nowLower;
 		  }
+		  columnUpper_[iColumn] = newBound;
 		  // adjust 
 		  double now;
 		  if (nowUpper>large) {
@@ -4323,13 +4330,16 @@ ClpSimplex::tightenPrimalBounds(double factor,int doTight)
 		}
 		if (newBound < nowUpper - 1.0e-12&&newBound<large) {
 		  // Tighten the upper bound 
-		  columnUpper_[iColumn] = newBound;
 		  numberChanged++;
 		  // check infeasible (relaxed)
-		  if (newBound - nowLower < 
-		      -100.0*tolerance) {
-		    numberInfeasible++;
+		  if (nowLower > newBound) { 
+		    if (newBound - nowLower < 
+			-100.0*tolerance) 
+		      numberInfeasible++;
+		    else 
+		      newBound=nowLower;
 		  }
+		  columnUpper_[iColumn] = newBound;
 		  // adjust
 		  double now;
 		  if (nowUpper>large) {
@@ -4370,13 +4380,16 @@ ClpSimplex::tightenPrimalBounds(double factor,int doTight)
 		}
 		if (newBound > nowLower + 1.0e-12&&newBound>-large) {
 		  // Tighten the lower bound 
-		  columnLower_[iColumn] = newBound;
 		  numberChanged++;
 		  // check infeasible (relaxed)
-		  if (nowUpper - newBound < 
-		      -100.0*tolerance) {
-		    numberInfeasible++;
+		  if (nowUpper < newBound) { 
+		    if (nowUpper - newBound < 
+			-100.0*tolerance) 
+		      numberInfeasible++;
+		    else 
+		      newBound=nowUpper;
 		  }
+		  columnLower_[iColumn] = newBound;
 		  // adjust
 		  double now;
 		  if (nowLower<-large) {
@@ -6024,6 +6037,37 @@ ClpSimplex::readGMPL(const char *filename,const char * dataName,
   int status = ClpModel::readGMPL(filename,dataName,keepNames);
   createStatus();
   return status;
+}
+// Read file in LP format from file with name filename. 
+int 
+ClpSimplex::readLp(const char *filename, const double epsilon )
+{
+  FILE *fp = fopen(filename, "r");
+
+  if(!fp) {
+    printf("### ERROR: ClpSimplex::readLp():  Unable to open file %s for reading\n",
+	   filename);
+    return(1);
+  }
+  CoinLpIO m;
+  m.readLp(fp, epsilon);
+  fclose(fp);
+  
+  // set problem name
+  setStrParam(ClpProbName, m.getProblemName());
+  
+  // no errors
+  loadProblem(*m.getMatrixByRow(), m.getColLower(), m.getColUpper(),
+	      m.getObjCoefficients(), m.getRowLower(), m.getRowUpper());
+  
+  if (m.integerColumns()) {
+    integerType_ = new char[numberColumns_];
+    CoinMemcpyN(m.integerColumns(),numberColumns_,integerType_);
+  } else {
+    integerType_ = NULL;
+  }
+  createStatus();
+  return 0;
 }
 #endif
 // Just check solution (for external use)
