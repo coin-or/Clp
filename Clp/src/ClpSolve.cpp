@@ -2107,7 +2107,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
       delete [] saveUpper;
       saveLower=NULL;
       saveUpper=NULL;
-      model2->primal(1);
+      if (method!=ClpSolve::useBarrierNoCross) 
+	model2->primal(1);
     }
     model2->setPerturbation(savePerturbation);
     time2 = CoinCpuTime();
