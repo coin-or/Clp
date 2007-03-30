@@ -1200,7 +1200,7 @@ and trustPseudoCosts parameters."
   parameters[numberParameters-1].append("Uni!versityOfFlorida");
 #define REAL_BARRIER
 #else
-  parameters[numberParameters-1].append("Uni!versityOfFlorida_dummy");
+  parameters[numberParameters-1].append("Uni!versityOfFlorida_dummy");    
 #endif
 #ifdef TAUCS_BARRIER
   parameters[numberParameters-1].append("Taucs");
@@ -2478,11 +2478,16 @@ trust the pseudo costs and do not do any more strong branching."
 #ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("tune!PreProcess","Dubious tuning parameters",
-		  0,1000000,PROCESSTUNE,false);
+		  0,20000000,PROCESSTUNE,false);
   parameters[numberParameters-1].setLonghelp
     (
      "For making equality cliques this is minimumsize.  Also for adding \
-integer slacks.  May be used for more later"
+integer slacks.  May be used for more later \
+If <1000 that is what it does.  If <1000000 - numberPasses is (value/1000)-1 and tune is tune %1000. \
+If >= 1000000! - numberPasses is (value/1000000)-1 and tune is tune %1000000.  In this case if tune is now still >=10000 \
+numberPassesPerInnerLoop is changed from 10 to (tune-10000)-1 and tune becomes tune % 10000!!!!! - happy? - \
+so to keep normal limit on cliques of 5, do 3 major passes (include presolves) but only doing one tightening pass per major pass - \
+you would use 3010005 (I think)"
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("two!MirCuts","Whether to use Two phase Mixed Integer Rounding cuts",
