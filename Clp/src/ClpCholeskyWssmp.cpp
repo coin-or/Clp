@@ -1,4 +1,3 @@
-#ifdef WSSMP_BARRIER
 // Copyright (C) 2003, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
@@ -13,6 +12,7 @@
 #include "ClpCholeskyDense.hpp"
 #include "ClpMessage.hpp"
 
+#ifdef WSSMP_BARRIER
 //#############################################################################
 // Constructors / Destructor / Assignment
 //#############################################################################

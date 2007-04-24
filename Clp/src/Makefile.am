@@ -22,6 +22,8 @@ libClp_la_SOURCES = \
 	ClpCholeskyBase.cpp ClpCholeskyBase.hpp \
 	ClpCholeskyDense.cpp ClpCholeskyDense.hpp \
 	ClpCholeskyUfl.cpp ClpCholeskyUfl.hpp \
+	ClpCholeskyWssmp.cpp ClpCholeskyWssmp.hpp \
+	ClpCholeskyWssmpKKT.cpp ClpCholeskyWssmpKKT.hpp \
 	Clp_C_Interface.cpp Clp_C_Interface.h \
 	ClpDualRowDantzig.cpp ClpDualRowDantzig.hpp \
 	ClpDualRowPivot.cpp ClpDualRowPivot.hpp \

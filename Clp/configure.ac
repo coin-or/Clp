@@ -60,6 +60,41 @@ AC_COIN_HAS_PROJECT(CoinUtils)
 AC_COIN_HAS_PROJECT(Clp)
 
 #############################################################################
+#                        Third party linear solvers                         #
+#############################################################################
+
+# WSMP
+AC_ARG_WITH([wsmp],
+            AC_HELP_STRING([--with-wsmp],
+                           [specify WSMP library]),
+            [use_wsmp=$withval], [use_wsmp=no])
+
+if test "$use_wsmp" != "no"; then
+  LIBS="$use_wsmp $LIBS"
+  ADDLIBS="$use_wsmp $ADDLIBS"
+
+  defval=
+  AC_MSG_CHECKING([whether user-supplied WSMP library \"$use_wsmp\" works (symbol wssmp_)])
+  AC_TRY_LINK([],[wssmp_()],
+              [AC_MSG_RESULT(yes)
+               defval=2],
+              [AC_MSG_RESULT(no)])
+  if test "$defval" = ""; then
+    AC_MSG_CHECKING([whether user-supplied WSMP library \"$use_wsmp\" works (symbol wssmp)])
+    AC_TRY_LINK([],[wssmp()],
+                [AC_MSG_RESULT(yes)
+                 defval=3],
+                [AC_MSG_RESULT(no)])
+  fi
+  if test "$defval" = ""; then
+    AC_MSG_ERROR([WSMP library $use_wsmp does not seem to work])
+  fi
+
+  AC_DEFINE_UNQUOTED([WSSMP_BARRIER], [$defval],
+                     [Define to 2 if wssmp_ is available, and to 3 if wssmp is available])
+fi
+
+#############################################################################
 #                             Other dependencies                            #
 #############################################################################
 

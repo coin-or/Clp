@@ -71,3 +71,6 @@
 
 /* Version number of package */
 #undef VERSION
+
+/* Define to 2 if wssmp_ is available, and to 3 if wssmp is available */
+#undef WSSMP_BARRIER
