@@ -6615,7 +6615,7 @@ int ClpSimplex::pivot()
       }
       rowArray_[0]->setNumElements(0);
       // check incoming
-      assert (fabs(dj_[sequenceIn_])<1.0e-6);
+      assert (fabs(dj_[sequenceIn_])<1.0e-6||CoinAbs(solveType_)==2);
     }
     
     // if stable replace in basis
