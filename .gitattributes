@@ -12,6 +12,10 @@ Clp/examples/sprintEasy2.cpp -text
 Clp/examples/sprintGub.cpp -text
 Clp/examples/testSmall.cpp -text
 Clp/inc/config_clp.h.in -text
+Clp/src/ClpConstraint.cpp -text
+Clp/src/ClpConstraint.hpp -text
+Clp/src/ClpConstraintLinear.cpp -text
+Clp/src/ClpConstraintLinear.hpp -text
 /LICENSE -text
 /README -text
 /config.guess -text
