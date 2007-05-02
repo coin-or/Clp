@@ -723,6 +723,19 @@ ClpCholeskyDense::recTri(longDouble * aUnder, int nTri, int nDo,
          aTri+number_entries(i),diagonal,work,numberBlocks);
   }
 }
+#ifdef CHOL_USING_BLAS
+// using simple blas interface
+extern "C" 
+{
+  /** BLAS Fortran subroutine DGEMM. */
+  void F77_FUNC(dgemm,DGEMM)(char* transa, char* transb,
+                             ipfint *m, ipfint *n, ipfint *k,
+                             const double *alpha, const double *a, ipfint *lda,
+                             const double *b, ipfint *ldb, const double *beta,
+                             double *c, ipfint *ldc,
+                             int transa_len, int transb_len);
+}
+#endif
 /* Non leaf recursive rectangle rectangle update,
    nUnder is number of rows in iBlock,
    nUnderK is number of rows in kBlock
@@ -733,7 +746,27 @@ ClpCholeskyDense::recRec(longDouble * above, int nUnder, int nUnderK,
 	    int kBlock,int iBlock, int jBlock,
 	    int numberBlocks)
 {
+#ifdef CHOL_USING_BLAS
+    recRecLeaf(above , aUnder ,  aOther, diagonal,work, nUnderK);
+void 
+ClpCholeskyDense::recRecLeaf(longDouble * above, 
+			     longDouble * aUnder, longDouble *aOther, longDouble * diagonal, longDouble * work,
+			     int nUnder)
+  aa = aOther-BLOCK;
+  for (j = 0; j < BLOCK; j ++) {
+    aa+=BLOCK;
+    for (i=0;i< nUnderK;i++) {
+      longDouble t00=aa[i+0*BLOCK];
+      for (k=0;k<BLOCK;k++) {
+	longDouble a00=aUnder[i+k*BLOCK]*work[k];
+	t00 -= a00 * above[j + k * BLOCK];
+      }
+      aa[i]=t00;
+    }
+  return;
+#endif
   if (nDo<=BLOCK&&nUnder<=BLOCK&&nUnderK<=BLOCK) {
+    assert (nDo==BLOCK&&nUnder==BLOCK);
     recRecLeaf(above , aUnder ,  aOther, diagonal,work, nUnderK);
   } else if (nDo<=nUnderK&&nUnder<=nUnderK) {
     int nb=number_blocks((nUnderK+1)>>1);

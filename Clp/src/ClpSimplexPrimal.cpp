@@ -1322,6 +1322,15 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	   numberRows_,savedSolution_+numberColumns_);
     CoinMemcpyN(columnActivityWork_,numberColumns_,savedSolution_);
   }
+  // see if in Cbc etc
+  bool inCbcOrOther = (specialOptions_&0x03000000)!=0;
+  bool disaster=false;
+  if (disasterArea_&&inCbcOrOther&&disasterArea_->check()) {
+    disasterArea_->saveInfo();
+    disaster=true;
+  }
+  if (disaster)
+    problemStatus_=3;
   if (doFactorization) {
     // restore weights (if saved) - also recompute infeasibility list
     if (tentativeStatus>-3) 

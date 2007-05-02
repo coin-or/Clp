@@ -86,6 +86,7 @@ ClpModel::ClpModel (bool emptyMessages) :
 {
   intParam_[ClpMaxNumIteration] = 2147483647;
   intParam_[ClpMaxNumIterationHotStart] = 9999999;
+  intParam_[ClpNameDiscipline] = 0;
 
   dblParam_[ClpDualObjectiveLimit] = COIN_DBL_MAX;
   dblParam_[ClpPrimalObjectiveLimit] = COIN_DBL_MAX;
@@ -648,6 +649,7 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
   intParam_[ClpMaxNumIteration] = rhs.intParam_[ClpMaxNumIteration];
   intParam_[ClpMaxNumIterationHotStart] = 
     rhs.intParam_[ClpMaxNumIterationHotStart];
+  intParam_[ClpNameDiscipline] = rhs.intParam_[ClpNameDiscipline] ;
 
   dblParam_[ClpDualObjectiveLimit] = rhs.dblParam_[ClpDualObjectiveLimit];
   dblParam_[ClpPrimalObjectiveLimit] = rhs.dblParam_[ClpPrimalObjectiveLimit];
@@ -825,6 +827,10 @@ ClpModel::setIntParam(ClpIntParam key, int value)
       return false;
     break;
   case ClpMaxNumIterationHotStart:
+    if (value < 0)
+      return false;
+    break;
+  case ClpNameDiscipline:
     if (value < 0)
       return false;
     break;
@@ -2763,6 +2769,7 @@ ClpModel::ClpModel ( const ClpModel * rhs,
   intParam_[ClpMaxNumIteration] = rhs->intParam_[ClpMaxNumIteration];
   intParam_[ClpMaxNumIterationHotStart] = 
     rhs->intParam_[ClpMaxNumIterationHotStart];
+  intParam_[ClpNameDiscipline] = rhs->intParam_[ClpNameDiscipline] ;
 
   dblParam_[ClpDualObjectiveLimit] = rhs->dblParam_[ClpDualObjectiveLimit];
   dblParam_[ClpPrimalObjectiveLimit] = rhs->dblParam_[ClpPrimalObjectiveLimit];
