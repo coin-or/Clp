@@ -27,12 +27,13 @@ ClpConstraintLinear::ClpConstraintLinear ()
 //-------------------------------------------------------------------
 // Useful Constructor 
 //-------------------------------------------------------------------
-ClpConstraintLinear::ClpConstraintLinear (int numberCoefficents , 
+ClpConstraintLinear::ClpConstraintLinear (int row, int numberCoefficents , 
 					  int numberColumns,
 					  const int * column, const double * coefficient)
   : ClpConstraint()
 {
   type_=0;
+  rowNumber_=row;
   numberColumns_ = numberColumns;
   numberCoefficients_=numberCoefficents;
   column_ = CoinCopyOfArray(column,numberCoefficients_);
@@ -91,7 +92,9 @@ int
 ClpConstraintLinear::gradient(const ClpSimplex * model,
 			      const double * solution, 
 			      double * gradient,
-			      double & functionValue, bool refresh) const
+			      double & functionValue, 
+			      double & offset,
+			      bool refresh) const
 {
   if (refresh||!lastGradient_) {
     functionValue_=0.0;
@@ -120,6 +123,7 @@ ClpConstraintLinear::gradient(const ClpSimplex * model,
     }
   }
   functionValue = functionValue_;
+  offset=0.0;
   memcpy(gradient,lastGradient_,numberColumns_*sizeof(double));
   return 0;
 }
@@ -176,4 +180,16 @@ int
 ClpConstraintLinear::markNonlinear(char * which) const
 {
   return 0;
+}
+/* Given a zeroed array sets possible nonzero coefficients to 1.
+   Returns number of nonzeros
+*/
+int 
+ClpConstraintLinear::markNonzero(char * which) const
+{
+  for (int i=0;i<numberCoefficients_;i++) {
+    int iColumn = column_[i];
+    which[iColumn]=1;
+  }
+  return numberCoefficients_;
 }

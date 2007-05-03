@@ -12,6 +12,7 @@
 
 class ClpNonlinearInfo;
 class ClpQuadraticObjective;
+class ClpConstraint;
 
 #include "ClpSimplexPrimal.hpp"
 
@@ -41,6 +42,13 @@ public:
 
   */
   int primalSLP(int numberPasses, double deltaTolerance);
+  /** Primal algorithm for nonlinear constraints
+      Using a semi-trust region approach as for pooling problem
+      This is in because I have it lying around
+
+  */
+  int primalSLP(int numberConstraints, ClpConstraint ** constraints,
+		int numberPasses, double deltaTolerance);
 
   /** Creates direction vector.  note longArray is long enough
       for rows and columns.  If numberNonBasic 0 then is updated

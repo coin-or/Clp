@@ -4836,6 +4836,17 @@ ClpSimplex::nonlinearSLP(int numberPasses, double deltaTolerance)
 {
   return ((ClpSimplexNonlinear *) this)->primalSLP(numberPasses,deltaTolerance);
 }
+/* Solves problem with nonlinear constraints using SLP - may be used as crash
+   for other algorithms when number of iterations small.
+   Also exits if all problematical variables are changing
+   less than deltaTolerance
+*/
+int 
+ClpSimplex::nonlinearSLP(int numberConstraints, ClpConstraint ** constraints,
+		   int numberPasses,double deltaTolerance)
+{
+  return ((ClpSimplexNonlinear *) this)->primalSLP(numberConstraints,constraints,numberPasses,deltaTolerance);
+}
 // Solves non-linear using reduced gradient
 int ClpSimplex::reducedGradient(int phase)
 {

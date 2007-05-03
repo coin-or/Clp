@@ -68,22 +68,21 @@ libLTLIBRARIES_INSTALL = $(INSTALL)
 LTLIBRARIES = $(lib_LTLIBRARIES)
 libClp_la_LIBADD =
 am_libClp_la_OBJECTS = ClpCholeskyBase.lo ClpCholeskyDense.lo \
-	ClpCholeskyUfl.lo ClpCholeskyWssmp.lo ClpCholeskyWssmpKKT.lo \
-	ClpConstraint.lo ClpConstraintLinear.lo Clp_C_Interface.lo \
-	ClpDualRowDantzig.lo ClpDualRowPivot.lo ClpDualRowSteepest.lo \
-	ClpDummyMatrix.lo ClpDynamicExampleMatrix.lo \
-	ClpDynamicMatrix.lo ClpEventHandler.lo ClpFactorization.lo \
-	ClpGubDynamicMatrix.lo ClpGubMatrix.lo ClpHelperFunctions.lo \
-	ClpInterior.lo ClpLinearObjective.lo ClpMatrixBase.lo \
-	ClpMessage.lo ClpModel.lo ClpNetworkBasis.lo \
-	ClpNetworkMatrix.lo ClpNonLinearCost.lo ClpObjective.lo \
-	ClpPackedMatrix.lo ClpPlusMinusOneMatrix.lo \
-	ClpPredictorCorrector.lo ClpPresolve.lo \
-	ClpPrimalColumnDantzig.lo ClpPrimalColumnPivot.lo \
-	ClpPrimalColumnSteepest.lo ClpQuadraticObjective.lo \
-	ClpSimplex.lo ClpSimplexDual.lo ClpSimplexNonlinear.lo \
-	ClpSimplexOther.lo ClpSimplexPrimal.lo ClpSolve.lo Idiot.lo \
-	IdiSolve.lo
+	ClpCholeskyUfl.lo ClpConstraint.lo ClpConstraintLinear.lo \
+	Clp_C_Interface.lo ClpDualRowDantzig.lo ClpDualRowPivot.lo \
+	ClpDualRowSteepest.lo ClpDummyMatrix.lo \
+	ClpDynamicExampleMatrix.lo ClpDynamicMatrix.lo \
+	ClpEventHandler.lo ClpFactorization.lo ClpGubDynamicMatrix.lo \
+	ClpGubMatrix.lo ClpHelperFunctions.lo ClpInterior.lo \
+	ClpLinearObjective.lo ClpMatrixBase.lo ClpMessage.lo \
+	ClpModel.lo ClpNetworkBasis.lo ClpNetworkMatrix.lo \
+	ClpNonLinearCost.lo ClpObjective.lo ClpPackedMatrix.lo \
+	ClpPlusMinusOneMatrix.lo ClpPredictorCorrector.lo \
+	ClpPresolve.lo ClpPrimalColumnDantzig.lo \
+	ClpPrimalColumnPivot.lo ClpPrimalColumnSteepest.lo \
+	ClpQuadraticObjective.lo ClpSimplex.lo ClpSimplexDual.lo \
+	ClpSimplexNonlinear.lo ClpSimplexOther.lo ClpSimplexPrimal.lo \
+	ClpSolve.lo Idiot.lo IdiSolve.lo
 libClp_la_OBJECTS = $(am_libClp_la_OBJECTS)
 binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(bin_PROGRAMS)
@@ -275,8 +274,6 @@ libClp_la_SOURCES = \
 	ClpCholeskyBase.cpp ClpCholeskyBase.hpp \
 	ClpCholeskyDense.cpp ClpCholeskyDense.hpp \
 	ClpCholeskyUfl.cpp ClpCholeskyUfl.hpp \
-	ClpCholeskyWssmp.cpp ClpCholeskyWssmp.hpp \
-	ClpCholeskyWssmpKKT.cpp ClpCholeskyWssmpKKT.hpp \
 	ClpConstraint.cpp ClpConstraint.hpp \
 	ClpConstraintLinear.cpp ClpConstraintLinear.hpp \
 	Clp_C_Interface.cpp Clp_C_Interface.h \
@@ -513,8 +510,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpCholeskyBase.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpCholeskyDense.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpCholeskyUfl.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpCholeskyWssmp.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpCholeskyWssmpKKT.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpConstraint.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpConstraintLinear.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpDualRowDantzig.Plo@am__quote@

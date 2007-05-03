@@ -20,7 +20,7 @@ public:
   
   
   /** Fills gradient.  If Linear then solution may be NULL,
-      also returns value of function
+      also returns true value of function and offset so we can use x not deltaX in constraint
       If refresh is false then uses last solution
       Uses model for scaling
       Returns non-zero if gradient udefined at current solution
@@ -29,6 +29,7 @@ public:
 		       const double * solution,
 		       double * gradient,
 		       double & functionValue ,
+		       double & offset,
 		       bool refresh=true) const ;
   /// Resize constraint
   virtual void resize(int newNumberColumns) ; 
@@ -40,6 +41,10 @@ public:
       Returns number of nonlinear columns
    */
   virtual int markNonlinear(char * which) const ;
+  /** Given a zeroed array sets possible nonzero coefficients to 1.
+      Returns number of nonzeros
+   */
+  virtual int markNonzero(char * which) const;
   //@}
   
   
@@ -49,7 +54,7 @@ public:
   ClpConstraintLinear(); 
   
   /// Constructor from constraint
-  ClpConstraintLinear(int numberCoefficients, int numberColumns,
+  ClpConstraintLinear(int row, int numberCoefficients, int numberColumns,
 		      const int * column, const double * element);
   
   /** Copy constructor .

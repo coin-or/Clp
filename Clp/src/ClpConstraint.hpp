@@ -21,7 +21,7 @@ public:
   //@{
   
   /** Fills gradient.  If Linear then solution may be NULL,
-      also returns value of function
+      also returns true value of function and offset so we can use x not deltaX in constraint
       If refresh is false then uses last solution
       Uses model for scaling
       Returns non-zero if gradient udefined at current solution
@@ -30,6 +30,7 @@ public:
 		       const double * solution,
 		       double * gradient,
 		       double & functionValue ,
+		       double & offset,
 		       bool refresh=true) const =0;
   /// Resize constraint
   virtual void resize(int newNumberColumns) = 0; 
@@ -41,6 +42,10 @@ public:
       Returns number of nonlinear columns
    */
   virtual int markNonlinear(char * which) const = 0;
+  /** Given a zeroed array sets possible nonzero coefficients to 1.
+      Returns number of nonzeros
+   */
+  virtual int markNonzero(char * which) const = 0;
   //@}
   
   

@@ -25,6 +25,7 @@ class CoinModel;
 class OsiClpSolverInterface;
 class CoinWarmStartBasis;
 class ClpDisasterHandler;
+class ClpConstraint;
 
 /** This solves LPs using the simplex method
 
@@ -248,6 +249,13 @@ public:
       less than deltaTolerance
   */
   int nonlinearSLP(int numberPasses,double deltaTolerance);
+  /** Solves problem with nonlinear constraints using SLP - may be used as crash
+      for other algorithms when number of iterations small.
+      Also exits if all problematical variables are changing
+      less than deltaTolerance
+  */
+  int nonlinearSLP(int numberConstraints, ClpConstraint ** constraints,
+		   int numberPasses,double deltaTolerance);
   /** Solves using barrier (assumes you have good cholesky factor code).
       Does crossover to simplex if asked*/
   int barrier(bool crossover=true);
