@@ -2863,6 +2863,7 @@ ClpPackedMatrix::appendMatrix(int number, int type,
       matrix_->setDimensions(numberOther,-1);
     numberErrors=matrix_->appendCols(number,starts,index,element,numberOther);
   }
+  numberActiveColumns_ = matrix_->getNumCols();
   return numberErrors;
 }
 void
