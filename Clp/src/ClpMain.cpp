@@ -675,7 +675,7 @@ int main (int argc, const char *argv[])
               if (dualize) {
                 int returnCode=((ClpSimplexOther *) models+iModel)->restoreFromDual(model2);
                 delete model2;
-		if (returnCode)
+		if (returnCode&&dualize!=2)
 		  models[iModel].primal(1);
               }
               if (status>=0)
