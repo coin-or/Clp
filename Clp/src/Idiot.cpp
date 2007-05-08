@@ -774,6 +774,7 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
       drop=drop_*weighted;
       djTol=0.01*djExit;
     }
+    memcpy(saveSol,colsol,ncols*sizeof(double));
     result=IdiSolve(nrows,ncols,rowsol ,colsol,pi,dj,
 		     cost,rowlower,rowupper,
 		     lower,upper,elemXX,row,columnStart,columnLength,lambda,
@@ -836,26 +837,12 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
           lightWeight_=2;
           break;
         }
-	memcpy(colsol,saveSol,ncols*sizeof(double));
       } else {
-        // Save best solution
-        memcpy(saveSol,colsol,ncols*sizeof(double));
 	maxIts=maxIts2;
 	checkIteration=0;
 	if ((strategy_&1024)!=0) mu *= 1.0e-1;
       }
     } else {
-      bool save=false;
-      if (result.infeas<=smallInfeas) {
-	if (result.objval<bestFeasible) 
-	  save=true;
-      } else if (result.infeas+mu*result.objval<bestWeighted) {
-	save=true;
-      }
-      if (save) {
-	// Save best solution
-	memcpy(saveSol,colsol,ncols*sizeof(double));
-      }
     }
     bestInfeas=CoinMin(bestInfeas,result.infeas);
     if (iteration) {
@@ -984,8 +971,6 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
     }
   }
   majorIterations_ = saveMajorIterations;
-  // put back best solution
-  memcpy(colsol,saveSol,ncols*sizeof(double));
 #ifndef OSI_IDIOT
   if (scaled) {
     // Scale solution and free arrays
@@ -994,6 +979,7 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
     int icol,irow;
     for (icol=0;icol<ncols;icol++) {
       colsol[icol] *= columnScale[icol];
+      saveSol[icol] *= columnScale[icol];
       dj[icol] /= columnScale[icol];
     }
     for (irow=0;irow<nrows;irow++) {
@@ -1060,13 +1046,20 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
 #ifndef OSI_IDIOT
   model_->setSumPrimalInfeasibilities(lastResult.infeas);
 #endif
-  {
+  // Put back more feasible solution
+  double saveInfeas[]={0.0,0.0};
+  for (int iSol=0;iSol<3;iSol++) {
+    const double * solution = iSol ? colsol : saveSol;
+    if (iSol==2&&saveInfeas[0]<saveInfeas[1]) {
+      // put back best solution
+      memcpy(colsol,saveSol,ncols*sizeof(double));
+    }
     double large=0.0;
     int i;
     memset(rowsol,0,nrows*sizeof(double));
     for (i=0;i<ncols;i++) {
       CoinBigIndex j;
-      double value=colsol[i];
+      double value=solution[i];
       for (j=columnStart[i];j<columnStart[i]+columnLength[i];j++) {
 	int irow=row[j];
 	rowsol[irow] += element[j]*value;
@@ -1083,6 +1076,8 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
 	  large=diff;
       } 
     }
+    if (iSol<2)
+      saveInfeas[iSol]=large;
     if (logLevel>2)
       printf("largest infeasibility is %g\n",large);
   }

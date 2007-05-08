@@ -886,7 +886,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
     }
 #ifndef COIN_HAS_VOL
     // switch off idiot and volume for now 
-    doIdiot=0;
+    doIdiot=0; 
 #endif
     // pick up number passes
     int nPasses=0;
@@ -1193,6 +1193,13 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	if (nPasses>70) {
 	  info.setStartingWeight(1.0e3);
 	  info.setReduceIterations(6);
+	  if (nPasses>=5000) {
+	    int k= nPasses&100;
+	    nPasses /= 100;
+	    info.setReduceIterations(3);
+	    if (k)
+	      info.setStartingWeight(1.0e2);
+	  }
 	  // also be more lenient on infeasibilities
 	  info.setDropEnoughFeasibility(0.5*info.getDropEnoughFeasibility());
 	  info.setDropEnoughWeighted(-2.0);
