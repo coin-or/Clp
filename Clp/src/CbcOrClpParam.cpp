@@ -1383,7 +1383,7 @@ gap between bounds exceeds this value",
      );
   parameters[numberParameters++]=
     CbcOrClpParam("dualize","Solves dual reformulation",
-		  0,1,DUALIZE,false);
+		  0,2,DUALIZE,false);
   parameters[numberParameters-1].setLonghelp
     (
      "Don't even think about it."
