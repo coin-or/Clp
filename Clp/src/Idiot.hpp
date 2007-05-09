@@ -179,7 +179,10 @@ public:
 private:
 
   /// Does actual work
+  // allow public!
+public:
   void solve2(CoinMessageHandler * handler,const CoinMessages *messages);
+private:
 IdiotResult IdiSolve(
 		     int nrows, int ncols, double * rowsol , double * colsol,
 		     double * pi, double * djs, const double * origcost , 

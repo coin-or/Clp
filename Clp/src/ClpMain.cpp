@@ -1059,15 +1059,7 @@ int main (int argc, const char *argv[])
 		  delete [] columnNames;
 		}
 #else
-                if (dualize) {
-                  ClpSimplex * model3 = ((ClpSimplexOther *) model2)->dualOfModel();
-                  printf("Dual of model has %d rows and %d columns\n",
-                         model3->numberRows(),model3->numberColumns());
-                  model3->writeMps(fileName.c_str(),(outputFormat-1)/2,1+((outputFormat-1)&1));
-                  delete model3;
-                } else {
-                  model2->writeMps(fileName.c_str(),(outputFormat-1)/2,1+((outputFormat-1)&1));
-                }
+		model2->writeMps(fileName.c_str(),(outputFormat-1)/2,1+((outputFormat-1)&1));
 #endif
 		if (deleteModel2)
 		  delete model2;

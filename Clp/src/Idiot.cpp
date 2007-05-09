@@ -837,6 +837,7 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
           lightWeight_=2;
           break;
         }
+	memcpy(colsol,saveSol,ncols*sizeof(double));
       } else {
 	maxIts=maxIts2;
 	checkIteration=0;
