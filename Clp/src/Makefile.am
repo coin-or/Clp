@@ -24,6 +24,7 @@ libClp_la_SOURCES = \
 	ClpCholeskyUfl.cpp ClpCholeskyUfl.hpp \
 	ClpConstraint.cpp ClpConstraint.hpp \
 	ClpConstraintLinear.cpp ClpConstraintLinear.hpp \
+	ClpConstraintQuadratic.cpp ClpConstraintQuadratic.hpp \
 	Clp_C_Interface.cpp Clp_C_Interface.h \
 	ClpDualRowDantzig.cpp ClpDualRowDantzig.hpp \
 	ClpDualRowPivot.cpp ClpDualRowPivot.hpp \
@@ -122,6 +123,7 @@ include_HEADERS = \
 	ClpCholeskyWssmp.hpp \
 	ClpConstraint.hpp \
 	ClpConstraintLinear.hpp \
+	ClpConstraintQuadratic.hpp \
 	ClpDualRowDantzig.hpp \
 	ClpDualRowPivot.hpp \
 	ClpDualRowSteepest.hpp \

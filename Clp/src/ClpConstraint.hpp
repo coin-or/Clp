@@ -31,6 +31,7 @@ public:
 		       double * gradient,
 		       double & functionValue ,
 		       double & offset,
+		       bool useScaling=false,
 		       bool refresh=true) const =0;
   /// Resize constraint
   virtual void resize(int newNumberColumns) = 0; 
@@ -77,9 +78,16 @@ public:
   inline int rowNumber() const
   {return rowNumber_;};
   
+  /// Number of possible coefficients in gradient
+  virtual int numberCoefficients() const = 0;
+  
   /// Constraint function value
   inline double functionValue () const
   { return functionValue_;};
+
+  /// Constraint offset
+  inline double offset () const
+  { return offset_;};
   //@}
 
   //---------------------------------------------------------------------------
@@ -91,6 +99,8 @@ protected:
   mutable double * lastGradient_;
   /// Value of non-linear part of constraint
   mutable double functionValue_;
+  /// Value of offset for constraint
+  mutable double offset_;
   /// Type of constraint - linear is 1
   int type_;
   /// Row number (-1 is objective)

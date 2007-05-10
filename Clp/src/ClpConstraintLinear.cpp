@@ -94,6 +94,7 @@ ClpConstraintLinear::gradient(const ClpSimplex * model,
 			      double * gradient,
 			      double & functionValue, 
 			      double & offset,
+			      bool useScaling,
 			      bool refresh) const
 {
   if (refresh||!lastGradient_) {
@@ -101,7 +102,7 @@ ClpConstraintLinear::gradient(const ClpSimplex * model,
     if (!lastGradient_)
       lastGradient_ = new double[numberColumns_];
     CoinZeroN(lastGradient_,numberColumns_);
-    bool scaling=(model&&model->rowScale());
+    bool scaling=(model&&model->rowScale()&&useScaling);
     if (!scaling) {
       for (int i=0;i<numberCoefficients_;i++) {
 	int iColumn = column_[i];
@@ -191,5 +192,11 @@ ClpConstraintLinear::markNonzero(char * which) const
     int iColumn = column_[i];
     which[iColumn]=1;
   }
+  return numberCoefficients_;
+}
+// Number of coefficients
+int 
+ClpConstraintLinear::numberCoefficients() const
+{
   return numberCoefficients_;
 }

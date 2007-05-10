@@ -15,6 +15,7 @@
 ClpConstraint::ClpConstraint () :
   lastGradient_(NULL),
   functionValue_(0.0),
+  offset_(0.0),
   type_(-1),
   rowNumber_(-1)
 {
@@ -27,6 +28,7 @@ ClpConstraint::ClpConstraint () :
 ClpConstraint::ClpConstraint (const ClpConstraint & source) :
   lastGradient_(NULL),
   functionValue_(source.functionValue_),
+  offset_(source.offset_),
   type_(source.type_),
   rowNumber_(source.rowNumber_)
 {  
@@ -50,6 +52,7 @@ ClpConstraint::operator=(const ClpConstraint& rhs)
 {
   if (this != &rhs) {
     functionValue_ = rhs.functionValue_;
+    offset_ = rhs.offset_;
     type_ = rhs.type_;
     rowNumber_= rhs.rowNumber_;
     delete [] lastGradient_;

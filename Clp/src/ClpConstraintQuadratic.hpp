@@ -1,17 +1,17 @@
 // Copyright (C) 2007, International Business Machines
 // Corporation and others.  All Rights Reserved.
-#ifndef ClpConstraintLinear_H
-#define ClpConstraintLinear_H
+#ifndef ClpConstraintQuadratic_H
+#define ClpConstraintQuadratic_H
 
 #include "ClpConstraint.hpp"
 
 //#############################################################################
 
-/** Linear Constraint Class
+/** Quadratic Constraint Class
 
 */
 
-class ClpConstraintLinear : public ClpConstraint {
+class ClpConstraintQuadratic : public ClpConstraint {
   
 public:
   
@@ -19,7 +19,7 @@ public:
   //@{
   
   
-  /** Fills gradient.  If Linear then solution may be NULL,
+  /** Fills gradient.  If Quadratic then solution may be NULL,
       also returns true value of function and offset so we can use x not deltaX in constraint
       If refresh is false then uses last solution
       Uses model for scaling
@@ -38,8 +38,8 @@ public:
   virtual void deleteSome(int numberToDelete, const int * which) ; 
   /// Scale constraint 
   virtual void reallyScale(const double * columnScale) ;
-  /** Given a zeroed array sets nonlinear columns to 1.
-      Returns number of nonlinear columns
+  /** Given a zeroed array sets nonquadratic columns to 1.
+      Returns number of nonquadratic columns
    */
   virtual int markNonlinear(char * which) const ;
   /** Given a zeroed array sets possible nonzero coefficients to 1.
@@ -52,21 +52,22 @@ public:
   ///@name Constructors and destructors
   //@{
   /// Default Constructor
-  ClpConstraintLinear(); 
+  ClpConstraintQuadratic(); 
   
-  /// Constructor from constraint
-  ClpConstraintLinear(int row, int numberCoefficients, int numberColumns,
-		      const int * column, const double * element);
+  /// Constructor from quadratic
+  ClpConstraintQuadratic(int row, int numberQuadraticColumns, int numberColumns,
+			 const CoinBigIndex * start,
+			 const int * column, const double * element);
   
   /** Copy constructor .
   */
-  ClpConstraintLinear(const ClpConstraintLinear & rhs);
+  ClpConstraintQuadratic(const ClpConstraintQuadratic & rhs);
 
   /// Assignment operator 
-  ClpConstraintLinear & operator=(const ClpConstraintLinear& rhs);
+  ClpConstraintQuadratic & operator=(const ClpConstraintQuadratic& rhs);
   
   /// Destructor 
-  virtual ~ClpConstraintLinear ();
+  virtual ~ClpConstraintQuadratic ();
 
   /// Clone
   virtual ClpConstraint * clone() const;
@@ -75,9 +76,12 @@ public:
   //@{
   /// Number of coefficients
   virtual int numberCoefficients() const;
-  /// Number of columns in linear constraint
+  /// Number of columns in constraint
   inline int numberColumns() const
   {return numberColumns_;};
+  /// Column starts
+  inline CoinBigIndex * start() const
+  { return start_;}
   /// Columns
   inline const int * column() const
   { return column_;};
@@ -90,14 +94,18 @@ public:
   
 private:
   ///@name Private member data 
-  /// Column
+  /// Column starts
+  CoinBigIndex * start_;
+  /// Column (if -1 then linear coefficient)
   int * column_;
   /// Coefficients
   double * coefficient_;
   /// Useful to have number of columns about
   int numberColumns_;
-  /// Number of coefficients
+  /// Number of coefficients in gradient
   int numberCoefficients_;
+  /// Number of quadratic columns
+  int numberQuadraticColumns_;
   //@}
 };
 

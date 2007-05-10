@@ -3418,7 +3418,7 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
   }
   // build row copy of matrix with space for nonzeros
   // Get column copy
-  columnCopy = matrix();
+  columnCopy = newModel.matrix();
   copy.reverseOrderedCopyOf(*columnCopy);
   // get matrix data pointers
   const int * column = copy.getIndices();
@@ -3465,6 +3465,12 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
 	  newElement[numberExtra++] = 1.0;
 	}
       }
+      // copy artificials
+      for (CoinBigIndex j=rowStart[iRow];j<rowStart[iRow]+rowLength[iRow];
+	   j++) {
+	newColumn[numberExtra]=column[j];
+	newElement[numberExtra++] = elementByRow[j];
+      }
     }
     newStarts[iRow+1]=numberExtra;
   }
@@ -3509,7 +3515,6 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
   double * saveSolution = new double [numberColumns2+numberRows];
   char * saveStatus = new char [numberColumns2+numberRows];
   double targetDrop=1.0e31;
-  //double objectiveOffset2 = objectiveOffset;
   // 1 bound up, 2 up, -1 bound down, -2 down, 0 no change
   for (iPass=0;iPass<3;iPass++) {
     last[iPass]=new int[numberNonLinearColumns];
@@ -3521,6 +3526,7 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
   double * gradient = new double [numberColumns_];
 #define SMALL_FIX 0.0
   for (iPass=0;iPass<numberPasses;iPass++) {
+    objectiveOffset2 = objectiveOffset;
     for (jNon=0;jNon<numberNonLinearColumns;jNon++) {
       iColumn=listNonLinearColumn[jNon];
       if (solution[iColumn]<trueLower[jNon])
@@ -3548,7 +3554,7 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
 	  printf("fixing %d\n",iColumn);
 	}
       } else {
-#if 1
+#if 0
 	// fix nonlinear variables
 	columnLower[iColumn]=solution[iColumn];
 	columnUpper[iColumn]=solution[iColumn];
@@ -3571,11 +3577,11 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
       assert (!numberErrors);
       if (iRow>=0) {
 	if (numberRows<50)
-	  printf("For row %d current value is %g (activity %g) , dual is %g\n",iRow,offset,
+	  printf("For row %d current value is %g (activity %g) , dual is %g\n",iRow,functionValue,
 		 newModel.primalRowSolution()[iRow],
 		 newModel.dualRowSolution()[iRow]);
-	for (CoinBigIndex j=rowStart[iRow];j<rowStart[iRow]+rowLength[iRow];
-	     j++) {
+	int numberCoefficients = constraint->numberCoefficients();
+	for (CoinBigIndex j=rowStart[iRow];j<rowStart[iRow]+numberCoefficients;j++) {
 	  int iColumn = column[j];
 	  changeableElement[j] = gradient[iColumn];
 	  gradient[iColumn]=0.0;
@@ -3660,8 +3666,9 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
     }
     if (objectiveOffset2)
       printf("offset2 %g\n",objectiveOffset2);
-    objValue = objValue + infValue -objectiveOffset2;
+    objValue -= objectiveOffset2;
     printf("True objective %g\n",objValue);
+    objValue += infValue;
     if (iPass) {
       double drop = lastObjective-objValue;
       std::cout<<"True drop was "<<drop<<std::endl;
@@ -3852,16 +3859,13 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
 		      NULL,NULL);
     writer.writeMps("xx.mps");
 #endif
-    if (iPass<3) {
-      newModel.primal(1);
-      abort();
-    } else {
-      abort();
-    }
+    // solve
+    newModel.primal(1);
     if (newModel.status()==1) { 
       // Infeasible!
       newModel.allSlackBasis();
       newModel.primal();
+      newModel.writeMps("infeas.mps");
       assert(!newModel.status());
     }
     double sumInfeas=0.0;
@@ -3874,7 +3878,6 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
     }
     printf("%d infeasibilities - summing to %g\n",
 	   numberInfeas,sumInfeas);
-    //model.writeMps("xx");
   }
   delete [] saveSolution;
   delete [] saveStatus;
@@ -3905,18 +3908,6 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
       rowActivity[iRow]+= difference;
     }
   }
-  delete [] saveSolution;
-  delete [] saveStatus;
-  for (iPass=0;iPass<3;iPass++) 
-    delete [] last[iPass];
-  for (jNon=0;jNon<numberNonLinearColumns;jNon++) {
-    iColumn=listNonLinearColumn[jNon];
-    columnLower[iColumn]=trueLower[jNon];
-    columnUpper[iColumn]=trueUpper[jNon];
-  }
-  delete [] trust;
-  delete [] trueUpper;
-  delete [] trueLower;
   delete [] listNonLinearColumn;
   delete [] gradient;
   printf("solution still in newModel - do objective etc!\n");
@@ -3928,6 +3919,5 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
   // should do status region
   CoinZeroN(rowActivity_,numberRows_);
   matrix_->times(1.0,columnActivity_,rowActivity_);
-  abort();
   return 0;
 }
