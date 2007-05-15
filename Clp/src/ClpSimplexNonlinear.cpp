@@ -3577,9 +3577,9 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
       assert (!numberErrors);
       if (iRow>=0) {
 	if (numberRows<50)
-	  printf("For row %d current value is %g (activity %g) , dual is %g\n",iRow,functionValue,
+	  printf("For row %d current value is %g (activity %g) , dual is %g - offset %g\n",iRow,functionValue,
 		 newModel.primalRowSolution()[iRow],
-		 newModel.dualRowSolution()[iRow]);
+		 newModel.dualRowSolution()[iRow],offset);
 	int numberCoefficients = constraint->numberCoefficients();
 	for (CoinBigIndex j=rowStart[iRow];j<rowStart[iRow]+numberCoefficients;j++) {
 	  int iColumn = column[j];

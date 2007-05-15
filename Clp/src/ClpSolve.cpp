@@ -1541,7 +1541,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
     for (iColumn=0;iColumn<originalNumberColumns;iColumn++) {
       if (model2->getColumnStatus(iColumn)!=basic) {
         if (columnSolution[iColumn]>columnLower[iColumn]&&
-            columnSolution[iColumn]<columnUpper[iColumn])
+            columnSolution[iColumn]<columnUpper[iColumn]&&
+	    columnSolution[iColumn])
           sort[numberSort++]=iColumn;
       }
     }

@@ -4336,7 +4336,7 @@ ClpSimplexDual::perturb()
   largestPositive = CoinMax(fabs(largestNegative),largestPositive);
   double elementRatio = largestPositive/smallestPositive;
   int numberNonZero=0;
-  if (!numberIterations_&&perturbation_==50) {
+  if (!numberIterations_&&perturbation_>=50) {
     // See if we need to perturb
     double * sort = new double[numberColumns_];
     // Use objective BEFORE scaling

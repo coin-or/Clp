@@ -146,13 +146,13 @@ ClpConstraintQuadratic::gradient(const ClpSimplex * model,
 	    double valueJ = solution[jColumn];
 	    double elementValue = coefficient_[j];
 	    if (iColumn!=jColumn) {
-	      offset_ += valueI*valueJ*elementValue;
+	      offset_ -= valueI*valueJ*elementValue;
 	      double gradientI = valueJ*elementValue;
 	      double gradientJ = valueI*elementValue;
 	      lastGradient_[iColumn] += gradientI;
 	      lastGradient_[jColumn] += gradientJ;
 	    } else {
-	      offset_ += 0.5*valueI*valueI*elementValue;
+	      offset_ -= 0.5*valueI*valueI*elementValue;
 	      double gradientI = valueI*elementValue;
 	      lastGradient_[iColumn] += gradientI;
 	    }

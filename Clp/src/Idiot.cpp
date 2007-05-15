@@ -806,8 +806,10 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
       }
 #endif
     }
-    if (iteration>50&&n==numberAway&&result.infeas<1.0e-4)
+    if (iteration>50&&n==numberAway&&result.infeas<1.0e-4) {
+      printf("infeas small %g\n",result.infeas);
       break; // not much happening
+    }
     if (lightWeight_==1&&iteration>10&&result.infeas>1.0&&maxIts!=7) {
       if (lastInfeas!=bestInfeas&&CoinMin(result.infeas,lastInfeas)>0.95*bestInfeas)
 	majorIterations_ = CoinMin(majorIterations_,iteration); // not getting feasible
@@ -820,7 +822,7 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
     if (iteration==1) {
       if ((strategy_&1024)!=0&&mu<1.0e-10) 
 	result.infeas=firstInfeas*0.8;
-      if (majorIterations_>=50)
+      if (majorIterations_>=50||dropEnoughFeasibility_<=0.0)
         result.infeas *= 0.8;
       if (result.infeas>firstInfeas*0.9
 	  &&result.infeas>reasonableInfeas) {
