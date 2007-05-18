@@ -123,7 +123,7 @@ public:
   inline void setDoSingletonColumn(bool doSingleton)
   { if (doSingleton) presolveActions_  &= ~512; else presolveActions_ |= 512;};
   /// Set whole group
-  inline bool presolveActions() const
+  inline int presolveActions() const
   { return presolveActions_&0xffff;};
   inline void setPresolveActions(int action)
   { presolveActions_  = (presolveActions_&0xffff0000)|(action&0xffff);};
