@@ -6066,7 +6066,6 @@ ClpSimplex::readLp(const char *filename, const double epsilon )
   
   // set problem name
   setStrParam(ClpProbName, m.getProblemName());
-  
   // no errors
   loadProblem(*m.getMatrixByRow(), m.getColLower(), m.getColUpper(),
 	      m.getObjCoefficients(), m.getRowLower(), m.getRowUpper());
@@ -6078,6 +6077,34 @@ ClpSimplex::readLp(const char *filename, const double epsilon )
     integerType_ = NULL;
   }
   createStatus();
+  unsigned int maxLength=0;
+  int iRow;
+  rowNames_ = std::vector<std::string> ();
+  columnNames_ = std::vector<std::string> ();
+  rowNames_.reserve(numberRows_);
+  for (iRow=0;iRow<numberRows_;iRow++) {
+    const char * name = m.rowName(iRow);
+    if (name) {
+      maxLength = CoinMax(maxLength,(unsigned int) strlen(name));
+      rowNames_.push_back(name);
+    } else {
+      rowNames_.push_back("");
+    }
+  }
+  
+  int iColumn;
+  columnNames_.reserve(numberColumns_);
+  for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+    const char * name = m.columnName(iColumn);
+    if (name) {
+      maxLength = CoinMax(maxLength,(unsigned int) strlen(name));
+      columnNames_.push_back(name);
+    } else {
+      columnNames_.push_back("");
+    }
+  }
+  lengthNames_=(int) maxLength;
+  
   return 0;
 }
 #endif
