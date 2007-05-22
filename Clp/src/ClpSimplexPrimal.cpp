@@ -3012,7 +3012,7 @@ ClpSimplexPrimal::nextSuperBasic(int superBasicType,CoinIndexedVector * columnAr
       finished=true;
       if (firstFree_==numberRows_+numberColumns_)
 	firstFree_=-1;
-      if (returnValue>=0&&getStatus(returnValue)!=superBasic)
+      if (returnValue>=0&&getStatus(returnValue)!=superBasic&&getStatus(returnValue)!=isFree)
 	finished=false; // somehow picked up odd one
     }
     return returnValue;

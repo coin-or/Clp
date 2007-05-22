@@ -3727,25 +3727,27 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	    // find a variable with bad dj
 	    int iSequence;
 	    int iChosen=-1;
-	    double largest = 100.0*primalTolerance_;
-	    for (iSequence=0;iSequence<numberRows_+numberColumns_;
-		 iSequence++) {
-	      double djValue = dj_[iSequence];
-	      double originalLo = originalLower(iSequence);
-	      double originalUp = originalUpper(iSequence);
-	      if (fabs(djValue)>fabs(largest)) {
-		if (getStatus(iSequence)!=basic) {
-		  if (djValue>0&&originalLo<-1.0e20) {
-		    if (djValue>fabs(largest)) {
-		      largest=djValue;
-		      iChosen=iSequence;
-		    }
-		  } else if (djValue<0&&originalUp>1.0e20) {
-		    if (-djValue>fabs(largest)) {
-		      largest=djValue;
-		      iChosen=iSequence;
-		    }
-		  } 
+	    if (!inCbc) {
+	      double largest = 100.0*primalTolerance_;
+	      for (iSequence=0;iSequence<numberRows_+numberColumns_;
+		   iSequence++) {
+		double djValue = dj_[iSequence];
+		double originalLo = originalLower(iSequence);
+		double originalUp = originalUpper(iSequence);
+		if (fabs(djValue)>fabs(largest)) {
+		  if (getStatus(iSequence)!=basic) {
+		    if (djValue>0&&originalLo<-1.0e20) {
+		      if (djValue>fabs(largest)) {
+			largest=djValue;
+			iChosen=iSequence;
+		      }
+		    } else if (djValue<0&&originalUp>1.0e20) {
+		      if (-djValue>fabs(largest)) {
+			largest=djValue;
+			iChosen=iSequence;
+		      }
+		    } 
+		  }
 		}
 	      }
 	    }

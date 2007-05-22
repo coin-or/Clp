@@ -2454,7 +2454,7 @@ see number before trust."
   parameters[numberParameters++]=
     CbcOrClpParam("tighten!Factor","Tighten bounds using this times largest \
 activity at continuous solution",
-		  1.0,1.0e20,TIGHTENFACTOR,false);
+		  1.0e-3,1.0e20,TIGHTENFACTOR,false);
   parameters[numberParameters-1].setLonghelp
     (
      "This sleazy trick can help on some problems."

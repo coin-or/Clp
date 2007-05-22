@@ -129,6 +129,7 @@ Idiot::cleanIteration(int iteration, int ordinaryStart, int ordinaryEnd,
 	}
       }
     }
+    // temp fix for infinite lbs - just limit to -1000
     for (i=0;i<nrows;i++) {
       double rowSave=rowsol[i];
       int iCol;
@@ -137,13 +138,15 @@ Idiot::cleanIteration(int iteration, int ordinaryStart, int ordinaryEnd,
 	// slide all slack down
 	double rowValue=rowsol[i];
 	CoinBigIndex j=columnStart[iCol];
-	rowSave += (colsol[iCol]-lower[iCol])*element[j];
-	colsol[iCol]=lower[iCol];
+	double lowerValue = CoinMax(CoinMin(colsol[iCol],0.0)-1000.0,lower[iCol]);
+	rowSave += (colsol[iCol]-lowerValue)*element[j];
+	colsol[iCol]=lowerValue;
 	while (nextSlack[iCol]>=0) {
 	  iCol = nextSlack[iCol];
+	  double lowerValue = CoinMax(CoinMin(colsol[iCol],0.0)-1000.0,lower[iCol]);
 	  j=columnStart[iCol];
-	  rowSave += (colsol[iCol]-lower[iCol])*element[j];
-	  colsol[iCol]=lower[iCol];
+	  rowSave += (colsol[iCol]-lowerValue)*element[j];
+	  colsol[iCol]=lowerValue;
 	}
 	iCol =posSlack[i];
 	while (rowValue<rowLower[i]&&iCol>=0) {
@@ -151,7 +154,7 @@ Idiot::cleanIteration(int iteration, int ordinaryStart, int ordinaryEnd,
 	  double distance = rowLower[i]-rowValue;
 	  double value = element[columnStart[iCol]];
 	  double thisCost = cost[iCol];
-	  if (distance<=value*(upper[iCol]-lower[iCol])) {
+	  if (distance<=value*(upper[iCol]-colsol[iCol])) {
 	    // can get there
 	    double movement = distance/value;
 	    objValue += movement*thisCost;
@@ -159,7 +162,7 @@ Idiot::cleanIteration(int iteration, int ordinaryStart, int ordinaryEnd,
 	    colsol[iCol] += movement;
 	  } else {
 	    // can't get there
-	    double movement = upper[iCol]-lower[iCol];
+	    double movement = upper[iCol]-colsol[iCol];
 	    objValue += movement*thisCost;
 	    rowValue += movement*value;
 	    colsol[iCol] = upper[iCol];
@@ -204,6 +207,7 @@ Idiot::cleanIteration(int iteration, int ordinaryStart, int ordinaryEnd,
 	CoinBigIndex j=columnStart[iCol];
 	rowSave += (colsol[iCol]-lower[iCol])*element[j];
 	colsol[iCol]=lower[iCol];
+	assert (lower[iCol]>-1.0e20);
 	while (nextSlack[iCol]>=0) {
 	  iCol = nextSlack[iCol];
 	  j=columnStart[iCol];
