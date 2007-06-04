@@ -358,10 +358,10 @@ ClpSimplexOther::primalRanging(int numberCheck,const int * which,
     case isFree:
     case superBasic:
       // Easy
-      valueIncrease=CoinMax(0.0,upper_[iSequence]-solution_[iSequence]);
-      valueDecrease=CoinMax(0.0,solution_[iSequence]-lower_[iSequence]);
-      sequenceIncrease=iSequence;
+      valueDecrease=CoinMax(0.0,upper_[iSequence]-solution_[iSequence]);
+      valueIncrease=CoinMax(0.0,solution_[iSequence]-lower_[iSequence]);
       sequenceDecrease=iSequence;
+      sequenceIncrease=iSequence;
       break;
     case isFixed:
     case atUpperBound:
