@@ -1045,11 +1045,13 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
 		     colsol,  lower,  upper,
 		     model_->rowLower(), model_->rowUpper(),
 		     cost, element, fixTolerance,lastResult.objval,lastResult.infeas);
+#if 0
   if ((logLevel&1)==0||(strategy_&16384)!=0) {
     printf(
 	    "%d - mu %g, infeasibility %g, objective %g, %d interior\n",
 	    iteration,mu,lastResult.infeas,lastResult.objval,n);
   }
+#endif
 #ifndef OSI_IDIOT
   model_->setSumPrimalInfeasibilities(lastResult.infeas);
 #endif
