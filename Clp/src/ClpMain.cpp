@@ -10,7 +10,7 @@
 #include <string>
 #include <iostream>
 
-
+#include "CoinError.hpp"
 #include "CoinPragma.hpp"
 #include "CoinHelperFunctions.hpp"
 #include "CoinSort.hpp"
