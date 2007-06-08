@@ -29,6 +29,7 @@ class ClpSimplexProgress;
 class CoinModel;
 class OsiClpSolverInterface;
 class CoinWarmStartBasis;
+class ClpDisasterHandler;
 
 /** This solves LPs using the simplex method
 
@@ -488,6 +489,9 @@ public:
           { return numberDualInfeasibilities_;} ;
   inline void setNumberDualInfeasibilities(int value)
           { numberDualInfeasibilities_=value;} ;
+  /// Number of dual infeasibilities (without free)
+  inline int numberDualInfeasibilitiesWithoutFree() const 
+          { return numberDualInfeasibilitiesWithoutFree_;} ;
   /// Sum of primal infeasibilities
   inline double sumPrimalInfeasibilities() const 
           { return sumPrimalInfeasibilities_;} ;
