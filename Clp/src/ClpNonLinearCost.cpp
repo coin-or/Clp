@@ -608,7 +608,7 @@ ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
             //cost_[iRange] = cost_[iRange+1]-infeasibilityCost;
             // possibly below
             lowerValue = lower_[iRange+1];
-            if (value<lowerValue-primalTolerance) {
+            if (value-lowerValue<-primalTolerance) {
               value = lowerValue-value;
 #ifndef NDEBUG
               if(value>1.0e15)
@@ -625,7 +625,7 @@ ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
             //cost_[iRange] = cost_[iRange-1]+infeasibilityCost;
             // possibly above
             upperValue = lower_[iRange];
-            if (value>upperValue+primalTolerance) {
+            if (value-upperValue>primalTolerance) {
               value = value-upperValue;
 #ifndef NDEBUG
               if(value>1.0e15)
@@ -804,8 +804,8 @@ ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
         
       case ClpSimplex::basic:
       case ClpSimplex::superBasic:
-        if (value<upperValue+primalTolerance) {
-          if (value>lowerValue-primalTolerance) {
+        if (value-upperValue<=primalTolerance) {
+          if (value-lowerValue>=-primalTolerance) {
             // feasible
             //newWhere=CLP_FEASIBLE;
           } else {
@@ -1264,8 +1264,8 @@ ClpNonLinearCost::checkInfeasibilities(int numberInArray, const int * index)
       }
       // get correct place
       int newWhere=CLP_FEASIBLE;
-      if (value<upperValue+primalTolerance) {
-        if (value>lowerValue-primalTolerance) {
+      if (value-upperValue<=primalTolerance) {
+        if (value-lowerValue>=-primalTolerance) {
           // feasible
           //newWhere=CLP_FEASIBLE;
         } else {
@@ -1377,8 +1377,8 @@ ClpNonLinearCost::checkChanged(int numberInArray, CoinIndexedVector * update)
       }
       // get correct place
       int newWhere=CLP_FEASIBLE;
-      if (value<upperValue+primalTolerance) {
-        if (value>lowerValue-primalTolerance) {
+      if (value-upperValue<=primalTolerance) {
+        if (value-lowerValue>=-primalTolerance) {
           // feasible
           //newWhere=CLP_FEASIBLE;
         } else {
@@ -1520,8 +1520,8 @@ ClpNonLinearCost::setOne(int iSequence, double value)
     }
     // get correct place
     int newWhere=CLP_FEASIBLE;
-    if (value<upperValue+primalTolerance) {
-      if (value>lowerValue-primalTolerance) {
+    if (value-upperValue<=primalTolerance) {
+      if (value-lowerValue>=-primalTolerance) {
         // feasible
         //newWhere=CLP_FEASIBLE;
       } else {
@@ -1599,8 +1599,8 @@ ClpNonLinearCost::setOne(int sequence, double solutionValue, double lowerValue, 
     lower_[start+2]=upperValue;
     cost_[start+2] = costValue+infeasibilityCost;
     double primalTolerance = model_->currentPrimalTolerance();
-    if (solutionValue>=lowerValue-primalTolerance) {
-      if (solutionValue<=upperValue+primalTolerance) {
+    if (solutionValue-lowerValue>=-primalTolerance) {
+      if (solutionValue-upperValue<=primalTolerance) {
         iRange=start+1;
       } else {
         iRange=start+2;
@@ -1733,8 +1733,8 @@ ClpNonLinearCost::setOneOutgoing(int iSequence, double & value)
     if (lowerValue==upperValue)
       value=lowerValue;
     int newWhere=CLP_FEASIBLE;
-    if (value<upperValue+primalTolerance) {
-      if (value>lowerValue-primalTolerance) {
+    if (value-upperValue<=primalTolerance) {
+      if (value-lowerValue>=-primalTolerance) {
         // feasible
         //newWhere=CLP_FEASIBLE;
       } else {
