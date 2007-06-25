@@ -3187,6 +3187,17 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
     // modify cost to hit zero exactly
     // so (dualIn_+modification)==theta_*alpha_
     double modification = theta_*alpha_-dualIn_;
+    // But should not move objectivetoo much ??
+#define DONT_MOVE_OBJECTIVE
+#ifdef DONT_MOVE_OBJECTIVE
+    double moveObjective = fabs(modification*solution_[sequenceIn_]);
+    double smallMove = CoinMax(fabs(objectiveValue_),1.0e-3);
+    if (moveObjective>smallMove) {
+      printf("would move objective by %g - original mod %g sol value %g\n",moveObjective,
+	     modification,solution_[sequenceIn_]);
+      modification *= smallMove/moveObjective;
+    }
+#endif
     if ((specialOptions_&(2048+4096))!=0) {
       if ((specialOptions_&16384)!=0) {
         // in fast dual

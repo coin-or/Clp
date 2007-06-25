@@ -188,7 +188,9 @@ ClpConstraintQuadratic::resize(int newNumberColumns)
 {
   if (numberColumns_!=newNumberColumns) {
     abort();
+#ifndef NDEBUG
     int lastColumn = column_[numberCoefficients_-1];
+#endif
     assert (newNumberColumns>lastColumn);
     delete [] lastGradient_;
     lastGradient_ = NULL;

@@ -60,4 +60,19 @@ ClpConstraint::operator=(const ClpConstraint& rhs)
   }
   return *this;
 }
+// Constraint function value
+double 
+ClpConstraint::functionValue (const ClpSimplex * model,
+			      const double * solution,
+			      bool useScaling,
+			      bool refresh) const 
+{
+  double offset;
+  double value;
+  int n = model->numberColumns();
+  double * grad = new double [n];
+  gradient(model,solution,grad,value,offset,useScaling,refresh);
+  delete [] grad;
+  return value;
+}
 

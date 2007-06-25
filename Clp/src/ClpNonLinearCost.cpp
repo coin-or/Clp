@@ -78,6 +78,18 @@ ClpNonLinearCost::ClpNonLinearCost ( ClpSimplex * model,int method)
   changeCost_=0.0;
   feasibleCost_=0.0;
   infeasibilityWeight_ = -1.0;
+  double * cost = model_->costRegion();
+  // check if all 0
+  int iSequence;
+  bool allZero=true;
+  for (iSequence=0;iSequence<numberTotal1;iSequence++) {
+    if (cost[iSequence]) {
+      allZero=false;
+      break;
+    }
+  }
+  if (allZero)
+    model_->setInfeasibilityCost(1.0);
   double infeasibilityCost = model_->infeasibilityCost();
   sumInfeasibilities_=0.0;
   averageTheta_=0.0;
@@ -93,10 +105,8 @@ ClpNonLinearCost::ClpNonLinearCost ( ClpSimplex * model,int method)
   cost_= NULL;
   infeasible_=NULL;
 
-  int iSequence;
   double * upper = model_->upperRegion();
   double * lower = model_->lowerRegion();
-  double * cost = model_->costRegion();
 
   // See how we are storing things
   bool always4 = (model_->clpMatrix()->
@@ -609,7 +619,7 @@ ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
             // possibly below
             lowerValue = lower_[iRange+1];
             if (value-lowerValue<-primalTolerance) {
-              value = lowerValue-value;
+              value = lowerValue-value-primalTolerance;
 #ifndef NDEBUG
               if(value>1.0e15)
                 printf("nonlincostb %d %g %g %g\n",
@@ -626,7 +636,7 @@ ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
             // possibly above
             upperValue = lower_[iRange];
             if (value-upperValue>primalTolerance) {
-              value = value-upperValue;
+              value = value-upperValue-primalTolerance;
 #ifndef NDEBUG
               if(value>1.0e15)
                 printf("nonlincostu %d %g %g %g\n",
@@ -811,7 +821,7 @@ ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
           } else {
             // below
             newWhere=CLP_BELOW_LOWER;
-            double infeasibility = lowerValue-value;
+            double infeasibility = lowerValue-value-primalTolerance;
             sumInfeasibilities_ += infeasibility;
             largestInfeasibility_ = CoinMax(largestInfeasibility_,infeasibility);
             costValue = trueCost - infeasibilityCost;
@@ -821,7 +831,7 @@ ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
         } else {
           // above
           newWhere = CLP_ABOVE_UPPER;
-          double infeasibility = value-upperValue;
+          double infeasibility = value-upperValue-primalTolerance;
           sumInfeasibilities_ += infeasibility;
           largestInfeasibility_ = CoinMax(largestInfeasibility_,infeasibility);
           costValue = trueCost + infeasibilityCost;

@@ -47,6 +47,8 @@ public:
 			    double & currentObj,
 			    double & predictedObj,
 			    double & thetaObj)=0;
+  /// Return objective value (without any ClpModel offset) (model may be NULL)
+  virtual double objectiveValue(const ClpSimplex * model, const double * solution) const = 0;
   /// Resize objective
   virtual void resize(int newNumberColumns) = 0; 
   /// Delete columns in  objective
@@ -57,6 +59,8 @@ public:
       Returns number of nonlinear columns
    */
   virtual int markNonlinear(char * which);
+  /// Say we have new primal solution - so may need to recompute
+  virtual void newXValues() {};
   //@}
   
   

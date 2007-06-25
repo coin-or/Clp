@@ -24,7 +24,7 @@ public:
       also returns true value of function and offset so we can use x not deltaX in constraint
       If refresh is false then uses last solution
       Uses model for scaling
-      Returns non-zero if gradient udefined at current solution
+      Returns non-zero if gradient undefined at current solution
   */
   virtual int gradient(const ClpSimplex * model,
 		       const double * solution,
@@ -33,6 +33,11 @@ public:
 		       double & offset,
 		       bool useScaling=false,
 		       bool refresh=true) const =0;
+  /// Constraint function value
+  virtual double functionValue (const ClpSimplex * model,
+			const double * solution,
+			bool useScaling=false,
+			bool refresh=true) const ;
   /// Resize constraint
   virtual void resize(int newNumberColumns) = 0; 
   /// Delete columns in  constraint
@@ -81,13 +86,15 @@ public:
   /// Number of possible coefficients in gradient
   virtual int numberCoefficients() const = 0;
   
-  /// Constraint function value
+  /// Stored constraint function value
   inline double functionValue () const
   { return functionValue_;};
 
   /// Constraint offset
   inline double offset () const
   { return offset_;};
+  /// Say we have new primal solution - so may need to recompute
+  virtual void newXValues() {};
   //@}
 
   //---------------------------------------------------------------------------

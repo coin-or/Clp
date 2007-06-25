@@ -545,9 +545,11 @@ CbcOrClpParam::setIntParameter (ClpSimplex * model,int value)
       break;
     case SPECIALOPTIONS:
       model->setSpecialOptions(value);
+#ifdef COIN_HAS_CBC
     case THREADS:
       model->setNumberThreads(value);
       break;
+#endif
     default:
       break;
     }
@@ -577,8 +579,10 @@ CbcOrClpParam::intParameter (ClpSimplex * model) const
   case SPECIALOPTIONS:
     value=model->specialOptions();
     break;
+#ifndef COIN_HAS_CBC
   case THREADS:
     value = model->numberThreads();
+#endif
   default:
     value=intValue_;
     break;
@@ -783,6 +787,20 @@ CbcOrClpParam::setIntParameter (CbcModel &model,int value)
       oldValue=model.sizeMiniTree();
       model.setSizeMiniTree(value);
       break;
+    case CUTPASSINTREE:
+      oldValue=model.getMaximumCutPasses();
+      model.setMaximumCutPasses(value);
+      break;
+    case CUTPASS:
+      oldValue=model.getMaximumCutPassesAtRoot();
+      model.setMaximumCutPassesAtRoot(value);
+      break;
+#ifdef COIN_HAS_CBC
+    case THREADS:
+      oldValue=model.getNumberThreads();
+      model.setNumberThreads(value);
+      break;
+#endif
     default:
       break;
     }
@@ -821,6 +839,16 @@ CbcOrClpParam::intParameter (CbcModel &model) const
   case NUMBERMINI:
     value=model.sizeMiniTree();
     break;
+  case CUTPASSINTREE:
+    value=model.getMaximumCutPasses();
+    break;
+  case CUTPASS:
+    value=model.getMaximumCutPassesAtRoot();
+    break;
+#ifdef COIN_HAS_CBC
+  case THREADS:
+    value = model.getNumberThreads();
+#endif
   default:
     value=intValue_;
     break;
@@ -1950,7 +1978,18 @@ stop if drop small if less than 5000 columns, 20 otherwise"
      "Normally Presolve does 5 passes but you may want to do less to make it\
  more lightweight or do more if improvements are still being made.  As Presolve will return\
  if nothing is being taken out, you should not normally need to use this fine tuning."
+     );
+#endif 
+#ifdef COIN_HAS_CBC
+  parameters[numberParameters++]=
+    CbcOrClpParam("passT!reeCuts","Number of cut passes in tree",
+		  -999999,999999,CUTPASSINTREE);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "The default is one pass"
      ); 
+#endif 
+#ifdef COIN_HAS_CLP
   parameters[numberParameters++]=
     CbcOrClpParam("pertV!alue","Method of perturbation",
 		  -5000,102,PERTVALUE,false);
@@ -2208,6 +2247,18 @@ way of using absolute value rather than fraction."
      "This switches on reduce and split  cuts (either at root or in entire tree) \
 See branchAndCut for information on options."
      ); 
+  parameters[numberParameters++]=
+    CbcOrClpParam("residual!CapacityCuts","Whether to use Residual Capacity cuts",
+		  "off",RESIDCUTS);
+  parameters[numberParameters-1].append("on");
+  parameters[numberParameters-1].append("root");
+  parameters[numberParameters-1].append("ifmove");
+  parameters[numberParameters-1].append("forceOn");
+  parameters[numberParameters-1].setLonghelp
+    (
+     "Residual capacity cuts. \
+See branchAndCut for information on options."
+     ); 
 #endif
 #ifdef COIN_HAS_CLP
   parameters[numberParameters++]=
@@ -2445,10 +2496,16 @@ see number before trust."
     CbcOrClpParam("testO!si","Test OsiObject stuff",
 		  -1,INT_MAX,TESTOSI,false);
 #endif
-#ifdef COIN_HAS_CLP
+#ifdef CBC_THREAD
   parameters[numberParameters++]=
     CbcOrClpParam("thread!s","Number of threads to try and use",
-		  -2,64,THREADS,false);
+		  -100,10000,THREADS,false);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "To use multiple threads, set threads to number wanted.  It may be better \
+to use one or two more than number of cpus available.  If 100+n then n threads and \
+threads used in sub-trees, if 200+n use threads for root cuts, 300+n - both."
+     ); 
 #endif
 #ifdef COIN_HAS_CBC
   parameters[numberParameters++]=

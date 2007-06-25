@@ -99,6 +99,7 @@ static Clp_message clp_us_english[]=
   {CLP_COMPLICATED_MODEL,3004,1,"Can not use addRows or addColumns on CoinModel as mixed, %d rows, %d columns"},
   {CLP_BAD_STRING_VALUES,3005,1,"%d string elements had no values associated with them"},
   {CLP_CRUNCH_STATS,61,2,"Crunch %d (%d) rows, %d (%d) columns and %d (%d) elements"},
+  {CLP_GENERAL,1000,1,"%s"},
   {CLP_DUMMY_END,999999,0,""}
 };
 static Clp_message uk_english[]=

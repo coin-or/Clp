@@ -1014,19 +1014,52 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
     // relax if default
     infeasibilityCost_ = CoinMin(CoinMax(100.0*sumDualInfeasibilities_,1.0e8),1.00000001e10);
     // reset looping criterion
-    *progress = ClpSimplexProgress();
+    progress->reset();
     trueInfeasibility = 1.123456e10;
   }
   if (trueInfeasibility>1.0) {
     // If infeasibility going up may change weights
     double testValue = trueInfeasibility-1.0e-4*(10.0+trueInfeasibility);
-    double lastInf = progress->lastInfeasibility();
-    if(lastInf<testValue||trueInfeasibility==1.123456e10) {
+    double lastInf = progress->lastInfeasibility(1);
+    double lastInf3 = progress->lastInfeasibility(3);
+    double thisObj = progress->lastObjective(0);
+    double thisInf = progress->lastInfeasibility(0);
+    thisObj += infeasibilityCost_*thisInf;
+    double lastObj = progress->lastObjective(1);
+    lastObj += infeasibilityCost_*lastInf;
+    double lastObj3 = progress->lastObjective(3);
+    lastObj3 += infeasibilityCost_*lastInf3;
+    if (lastObj<thisObj-1.0e-5*CoinMax(fabs(thisObj),fabs(lastObj))-1.0e-7
+	&&firstFree_<0) {
+      if (handler_->logLevel()==63)
+	printf("lastobj %g this %g force %d ",lastObj,thisObj,forceFactorization_);
+      int maxFactor = factorization_->maximumPivots();
+      if (maxFactor>10) {
+	if (forceFactorization_<0)
+	  forceFactorization_= maxFactor;
+	forceFactorization_ = CoinMax(1,(forceFactorization_>>2));
+	if (handler_->logLevel()==63)
+	  printf("Reducing factorization frequency to %d\n",forceFactorization_);
+      }
+    } else if (lastObj3<thisObj-1.0e-5*CoinMax(fabs(thisObj),fabs(lastObj3))-1.0e-7
+	&&firstFree_<0) {
+      if (handler_->logLevel()==63)
+	printf("lastobj3 %g this3 %g `force %d ",lastObj3,thisObj,forceFactorization_);
+      int maxFactor = factorization_->maximumPivots();
+      if (maxFactor>10) {
+	if (forceFactorization_<0)
+	  forceFactorization_= maxFactor;
+	forceFactorization_ = CoinMax(1,(forceFactorization_*2)/3);
+	if (handler_->logLevel()==63)
+	printf("Reducing factorization frequency to %d\n",forceFactorization_);
+      }
+    } else if(lastInf<testValue||trueInfeasibility==1.123456e10) {
       if (infeasibilityCost_<1.0e14) {
 	infeasibilityCost_ *= 1.5;
         // reset looping criterion
-        *progress = ClpSimplexProgress();
-	//printf("increasing weight to %g\n",infeasibilityCost_);
+	progress->reset();
+	if (handler_->logLevel()==63)
+	  printf("increasing weight to %g\n",infeasibilityCost_);
 	gutsOfSolution(NULL,NULL,ifValuesPass!=0);
       }
     }
@@ -1066,7 +1099,10 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	sumOfRelaxedPrimalInfeasibilities_ = sum;
 	numberPrimalInfeasibilities_ = ninfeas;
 	sumPrimalInfeasibilities_ = sum;
-	bool unflagged = unflag();
+#ifdef COIN_DEVELOP
+	bool unflagged = 
+#endif
+        unflag();
 #ifdef COIN_DEVELOP
 	if (unflagged&&handler_->logLevel()>0)
 	  printf(" - but flagged variables\n");
@@ -1142,7 +1178,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	if (infeasibilityCost_<1.0e20) {
 	  infeasibilityCost_ *= 5.0;
           // reset looping criterion
-          *progress = ClpSimplexProgress();
+	  progress->reset();
 	  changeMade_++; // say change made
 	  handler_->message(CLP_PRIMAL_WEIGHT,messages_)
 	    <<infeasibilityCost_
@@ -1256,14 +1292,14 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	  // back off weight
 	  infeasibilityCost_ = 1.0e13;
           // reset looping criterion
-          *progress = ClpSimplexProgress();
+	  progress->reset();
 	  unPerturb(); // stop any further perturbation
 	}
 	//we need infeasiblity cost changed
 	if (infeasibilityCost_<1.0e20) {
 	  infeasibilityCost_ *= 5.0;
           // reset looping criterion
-          *progress = ClpSimplexProgress();
+	  progress->reset();
 	  changeMade_++; // say change made
 	  handler_->message(CLP_PRIMAL_WEIGHT,messages_)
 	    <<infeasibilityCost_
@@ -1354,20 +1390,6 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
     firstFree_=saveFirstFree;
     nextSuperBasic(1,NULL);
   }
-#if 0
-  double thisObj = progress->lastObjective(0);
-  double lastObj = progress->lastObjective(1);
-  if (lastObj<thisObj-1.0e-7*CoinMax(fabs(thisObj),fabs(lastObj))-1.0e-8
-      &&firstFree_<0) {
-    int maxFactor = factorization_->maximumPivots();
-    if (maxFactor>10) {
-      if (forceFactorization_<0)
-	forceFactorization_= maxFactor;
-      forceFactorization_ = CoinMax(1,(forceFactorization_>>1));
-      printf("Reducing factorization frequency\n");
-    } 
-  }
-#endif
   // Allow matrices to be sorted etc
   int fake=-999; // signal sort
   matrix_->correctSequence(this,fake,fake);

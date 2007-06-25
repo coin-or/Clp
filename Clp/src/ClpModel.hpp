@@ -248,6 +248,14 @@ public:
 
   /// Create empty ClpPackedMatrix
   void createEmptyMatrix();
+  /** Really clean up matrix (if ClpPackedMatrix).
+      a) eliminate all duplicate AND small elements in matrix 
+      b) remove all gaps and set extraGap_ and extraMajor_ to 0.0
+      c) reallocate arrays and make max lengths equal to lengths
+      d) orders elements
+      returns number of elements eliminated or -1 if not ClpPackedMatrix
+  */
+  int cleanMatrix(double threshold=1.0e-20);
 #ifndef CLP_NO_STD
   /// Drops names - makes lengthnames 0 and names empty
   void dropNames();

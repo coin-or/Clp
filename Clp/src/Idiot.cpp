@@ -518,7 +518,9 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
       iCol = posSlack[i];
       if (iCol>=0) {
 	CoinBigIndex j=columnStart[iCol];
+#ifndef NDEBUG
 	int iRow = row[j];
+#endif
 	assert (element[j]>0.0);
 	assert (iRow==i);
 	dj[0]= cost[iCol]/element[j];
@@ -527,7 +529,9 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
 	while (nextSlack[iCol]>=0) {
 	  iCol = nextSlack[iCol];
 	  CoinBigIndex j=columnStart[iCol];
+#ifndef NDEBUG
 	  int iRow = row[j];
+#endif
 	  assert (element[j]>0.0);
 	  assert (iRow==i);
 	  dj[n]= cost[iCol]/element[j];
@@ -550,7 +554,9 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
       iCol = negSlack[i];
       if (iCol>=0) {
 	CoinBigIndex j=columnStart[iCol];
+#ifndef NDEBUG
 	int iRow = row[j];
+#endif
 	assert (element[j]<0.0);
 	assert (iRow==i);
 	dj[0]= -cost[iCol]/element[j];
@@ -559,7 +565,9 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
 	while (nextSlack[iCol]>=0) {
 	  iCol = nextSlack[iCol];
 	  CoinBigIndex j=columnStart[iCol];
+#ifndef NDEBUG
 	  int iRow = row[j];
+#endif
 	  assert (element[j]<0.0);
 	  assert (iRow==i);
 	  dj[n]= -cost[iCol]/element[j];
@@ -868,12 +876,13 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
 	    nTry+1==maxBigIts||
 	    (result.infeas>lastResult.infeas*0.9
 	     &&result.weighted>lastResult.weighted
-	     -dropEnoughWeighted_*fabs(lastResult.weighted))) {
+	     -dropEnoughWeighted_*CoinMax(fabs(lastResult.weighted),fabs(result.weighted)))) {
 	  mu*=changeMu;
           if ((saveStrategy&32)!=0&&result.infeas<reasonableInfeas&&0) {
 	    reasonableInfeas=CoinMax(smallInfeas,reasonableInfeas*sqrt(changeMu));
 	    printf("reasonable infeas now %g\n",reasonableInfeas);
 	  }
+	  result.weighted=1.0e60;
 	  nTry=0;
 	  bestFeasible=1.0e31;
 	  bestWeighted=1.0e60;

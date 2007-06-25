@@ -290,7 +290,8 @@ ClpModel::loadProblem (
 {
   gutsOfLoadModel(numrows, numcols,
 		  collb, colub, obj, rowlb, rowub, rowObjective);
-  CoinPackedMatrix matrix(true,numrows,numcols,start[numcols],
+  int numberElements = start ? start[numcols] : 0;
+  CoinPackedMatrix matrix(true,numrows,numrows ? numcols : 0,numberElements,
 			      value,index,start,NULL);
   matrix_ = new ClpPackedMatrix(matrix);
   matrix_->setDimensions(numberRows_,numberColumns_);
@@ -321,7 +322,7 @@ ClpModel::loadProblem (
 int 
 ClpModel::loadProblem (  CoinModel & modelObject,bool tryPlusMinusOne)
 {
-  if (modelObject.numberElements()==0)
+  if (modelObject.numberColumns()==0&&modelObject.numberRows()==0)
     return 0;
   int numberErrors = 0;
   // Set arrays for normal use
@@ -990,6 +991,23 @@ ClpModel::createEmptyMatrix()
   whatsChanged_ = 0;
   CoinPackedMatrix matrix2;
   matrix_=new ClpPackedMatrix(matrix2);
+}
+/* Really clean up matrix.
+   a) eliminate all duplicate AND small elements in matrix 
+   b) remove all gaps and set extraGap_ and extraMajor_ to 0.0
+   c) reallocate arrays and make max lengths equal to lengths
+   d) orders elements
+   returns number of elements eliminated or -1 if not ClpMatrix
+*/
+int 
+ClpModel::cleanMatrix(double threshold)
+{
+  ClpPackedMatrix * matrix = (dynamic_cast< ClpPackedMatrix*>(matrix_));
+  if (matrix) {
+    return matrix->getPackedMatrix()->cleanMatrix(threshold);
+  } else {
+    return -1;
+  }
 }
 // Resizes 
 void 

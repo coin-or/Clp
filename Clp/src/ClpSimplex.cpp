@@ -3525,7 +3525,8 @@ ClpSimplex::deleteRim(int getRidOfFactorizationData)
   int numberColumns=numberColumns_;
   if (!numberRows||!numberColumns) {
     numberRows=0;
-    numberColumns=0;
+    if (objective_->type()<2)
+      numberColumns=0;
   }
   if (!auxiliaryModel_) {
     int i;
@@ -7484,38 +7485,8 @@ ClpSimplexProgress::ClpSimplexProgress(const ClpSimplexProgress &rhs)
 ClpSimplexProgress::ClpSimplexProgress(ClpSimplex * model) 
 {
   model_ = model;
-  int i;
-  for (i=0;i<CLP_PROGRESS;i++) {
-    if (model_->algorithm()>=0)
-      objective_[i] = COIN_DBL_MAX;
-    else
-      objective_[i] = -COIN_DBL_MAX;
-    infeasibility_[i] = -1.0; // set to an impossible value
-    realInfeasibility_[i] = COIN_DBL_MAX;
-    numberInfeasibilities_[i]=-1; 
-    iterationNumber_[i]=-1;
-  }
-#ifdef CLP_PROGRESS_WEIGHT
-  for (i=0;i<CLP_PROGRESS_WEIGHT;i++) {
-    objectiveWeight_[i] = COIN_DBL_MAX;
-    infeasibilityWeight_[i] = -1.0; // set to an impossible value
-    realInfeasibilityWeight_[i] = COIN_DBL_MAX;
-    numberInfeasibilitiesWeight_[i]=-1; 
-    iterationNumberWeight_[i]=-1;
-  }
-  drop_ =0.0;
-  best_ =0.0;
-#endif
+  reset();
   initialWeight_=0.0;
-  for (i=0;i<CLP_CYCLE;i++) {
-    //obj_[i]=COIN_DBL_MAX;
-    in_[i]=-1;
-    out_[i]=-1;
-    way_[i]=0;
-  }
-  numberTimes_ = 0;
-  numberBadTimes_ = 0;
-  oddState_=0;
 }
 // Assignment operator. This copies the data
 ClpSimplexProgress & 
@@ -7715,6 +7686,42 @@ ClpSimplexProgress::looping()
     }
   }
   return -1;
+}
+// Resets as much as possible
+void 
+ClpSimplexProgress::reset()
+{
+  int i;
+  for (i=0;i<CLP_PROGRESS;i++) {
+    if (model_->algorithm()>=0)
+      objective_[i] = COIN_DBL_MAX;
+    else
+      objective_[i] = -COIN_DBL_MAX;
+    infeasibility_[i] = -1.0; // set to an impossible value
+    realInfeasibility_[i] = COIN_DBL_MAX;
+    numberInfeasibilities_[i]=-1; 
+    iterationNumber_[i]=-1;
+  }
+#ifdef CLP_PROGRESS_WEIGHT
+  for (i=0;i<CLP_PROGRESS_WEIGHT;i++) {
+    objectiveWeight_[i] = COIN_DBL_MAX;
+    infeasibilityWeight_[i] = -1.0; // set to an impossible value
+    realInfeasibilityWeight_[i] = COIN_DBL_MAX;
+    numberInfeasibilitiesWeight_[i]=-1; 
+    iterationNumberWeight_[i]=-1;
+  }
+  drop_ =0.0;
+  best_ =0.0;
+#endif
+  for (i=0;i<CLP_CYCLE;i++) {
+    //obj_[i]=COIN_DBL_MAX;
+    in_[i]=-1;
+    out_[i]=-1;
+    way_[i]=0;
+  }
+  numberTimes_ = 0;
+  numberBadTimes_ = 0;
+  oddState_=0;
 }
 // Returns previous objective (if -1) - current if (0)
 double 

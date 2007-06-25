@@ -44,6 +44,8 @@ public:
 			    double & currentObj,
 			    double & predictedObj,
 			    double & thetaObj);
+  /// Return objective value (without any ClpModel offset) (model may be NULL)
+  virtual double objectiveValue(const ClpSimplex * model, const double * solution) const ;
   /// Resize objective
   virtual void resize(int newNumberColumns) ; 
   /// Delete columns in  objective
