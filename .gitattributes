@@ -5,6 +5,12 @@ Clp/configure -text
 Clp/configure.ac -text
 Clp/examples/Makefile.in -text
 Clp/inc/config_clp.h.in -text
+Clp/src/ClpConstraint.cpp -text
+Clp/src/ClpConstraint.hpp -text
+Clp/src/ClpConstraintLinear.cpp -text
+Clp/src/ClpConstraintLinear.hpp -text
+Clp/src/ClpConstraintQuadratic.cpp -text
+Clp/src/ClpConstraintQuadratic.hpp -text
 /LICENSE -text
 /README -text
 /config.guess -text
