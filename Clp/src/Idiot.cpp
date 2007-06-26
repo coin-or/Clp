@@ -9,6 +9,7 @@
 #include "ClpPresolve.hpp"
 #include "Idiot.hpp"
 #include "CoinTime.hpp"
+#include "CoinSort.hpp"
 #include "CoinMessageHandler.hpp"
 #include "CoinHelperFunctions.hpp"
 // Redefine stuff for Clp
@@ -59,8 +60,222 @@ Idiot::dropping(IdiotResult result,
     return 1;
   }
 }
+// Deals with whenUsed and slacks
+int 
+Idiot::cleanIteration(int iteration, int ordinaryStart, int ordinaryEnd,
+		      double * colsol, const double * lower, const double * upper,
+		      const double * rowLower, const double * rowUpper,
+		      const double * cost, const double * element, double fixTolerance,
+		      double & objValue, double & infValue)
+{
+  int n=0;
+  if ((strategy_&16384)==0) {
+    for (int i=ordinaryStart;i<ordinaryEnd;i++) {
+      if (colsol[i]>lower[i]+fixTolerance) {
+	if (colsol[i]<upper[i]-fixTolerance) {
+	  n++;
+	} else {
+	  colsol[i]=upper[i];
+	}
+	whenUsed_[i]=iteration;
+      } else {
+	colsol[i]=lower[i];
+      }
+    }
+    return n;
+  } else {
+    printf("entering inf %g, obj %g\n",infValue,objValue);
+    int nrows=model_->getNumRows();
+    int ncols=model_->getNumCols();
+    int * posSlack = whenUsed_+ncols;
+    int * negSlack = posSlack+nrows;
+    int * nextSlack = negSlack + nrows;
+    double * rowsol = (double *) (nextSlack+ncols);
+    memset(rowsol,0,nrows*sizeof(double));
+#ifdef OSI_IDIOT
+    const CoinPackedMatrix * matrix = model_->getMatrixByCol();
+#else
+    ClpMatrixBase * matrix = model_->clpMatrix();
+#endif
+    const int * row = matrix->getIndices();
+    const CoinBigIndex * columnStart = matrix->getVectorStarts();
+    const int * columnLength = matrix->getVectorLengths(); 
+    //const double * element = matrix->getElements();
+    int i;
+    objValue=0.0;
+    infValue=0.0;
+    for ( i=0;i<ncols;i++) {
+      if (nextSlack[i]==-1) {
+	// not a slack
+	if (colsol[i]>lower[i]+fixTolerance) {
+	  if (colsol[i]<upper[i]-fixTolerance) {
+	    n++;
+	    whenUsed_[i]=iteration;
+	  } else {
+	    colsol[i]=upper[i];
+	  }
+	  whenUsed_[i]=iteration;
+	} else {
+	  colsol[i]=lower[i];
+	}
+	double value = colsol[i];
+	if (value) {
+	  objValue += cost[i]*value;
+	  CoinBigIndex j;
+	  for (j=columnStart[i];j<columnStart[i]+columnLength[i];j++) {
+	    int iRow = row[j];
+	    rowsol[iRow] += value*element[j];
+	  }
+	}
+      }
+    }
+    // temp fix for infinite lbs - just limit to -1000
+    for (i=0;i<nrows;i++) {
+      double rowSave=rowsol[i];
+      int iCol;
+      iCol =posSlack[i];
+      if (iCol>=0) {
+	// slide all slack down
+	double rowValue=rowsol[i];
+	CoinBigIndex j=columnStart[iCol];
+	double lowerValue = CoinMax(CoinMin(colsol[iCol],0.0)-1000.0,lower[iCol]);
+	rowSave += (colsol[iCol]-lowerValue)*element[j];
+	colsol[iCol]=lowerValue;
+	while (nextSlack[iCol]>=0) {
+	  iCol = nextSlack[iCol];
+	  double lowerValue = CoinMax(CoinMin(colsol[iCol],0.0)-1000.0,lower[iCol]);
+	  j=columnStart[iCol];
+	  rowSave += (colsol[iCol]-lowerValue)*element[j];
+	  colsol[iCol]=lowerValue;
+	}
+	iCol =posSlack[i];
+	while (rowValue<rowLower[i]&&iCol>=0) {
+	  // want to increase
+	  double distance = rowLower[i]-rowValue;
+	  double value = element[columnStart[iCol]];
+	  double thisCost = cost[iCol];
+	  if (distance<=value*(upper[iCol]-colsol[iCol])) {
+	    // can get there
+	    double movement = distance/value;
+	    objValue += movement*thisCost;
+	    rowValue = rowLower[i];
+	    colsol[iCol] += movement;
+	  } else {
+	    // can't get there
+	    double movement = upper[iCol]-colsol[iCol];
+	    objValue += movement*thisCost;
+	    rowValue += movement*value;
+	    colsol[iCol] = upper[iCol];
+	    iCol = nextSlack[iCol];
+	  }
+	}
+	if (iCol>=0) {
+	  // may want to carry on - because of cost?
+	  while (cost[iCol]<0&&rowValue<rowUpper[i]) {
+	    // want to increase
+	    double distance = rowUpper[i]-rowValue;
+	    double value = element[columnStart[iCol]];
+	    double thisCost = cost[iCol];
+	    if (distance<=value*(upper[iCol]-colsol[iCol])) {
+	      // can get there
+	      double movement = distance/value;
+	      objValue += movement*thisCost;
+	      rowValue = rowUpper[i];
+	      colsol[iCol] += movement;
+	      iCol=-1;
+	    } else {
+	      // can't get there
+	      double movement = upper[iCol]-colsol[iCol];
+	      objValue += movement*thisCost;
+	      rowValue += movement*value;
+	      colsol[iCol] = upper[iCol];
+	      iCol = nextSlack[iCol];
+	    }
+	  }
+	  if (iCol>=0&&colsol[iCol]>lower[iCol]+fixTolerance&&
+	      colsol[iCol]<upper[iCol]-fixTolerance) {
+	    whenUsed_[i]=iteration;
+	    n++;
+	  }
+	}
+	rowsol[i]=rowValue;
+      }
+      iCol =negSlack[i];
+      if (iCol>=0) {
+	// slide all slack down
+	double rowValue=rowsol[i];
+	CoinBigIndex j=columnStart[iCol];
+	rowSave += (colsol[iCol]-lower[iCol])*element[j];
+	colsol[iCol]=lower[iCol];
+	assert (lower[iCol]>-1.0e20);
+	while (nextSlack[iCol]>=0) {
+	  iCol = nextSlack[iCol];
+	  j=columnStart[iCol];
+	  rowSave += (colsol[iCol]-lower[iCol])*element[j];
+	  colsol[iCol]=lower[iCol];
+	}
+	iCol =negSlack[i];
+	while (rowValue>rowUpper[i]&&iCol>=0) {
+	  // want to increase
+	  double distance = -(rowUpper[i]-rowValue);
+	  double value = -element[columnStart[iCol]];
+	  double thisCost = cost[iCol];
+	  if (distance<=value*(upper[iCol]-lower[iCol])) {
+	    // can get there
+	    double movement = distance/value;
+	    objValue += movement*thisCost;
+	    rowValue = rowUpper[i];
+	    colsol[iCol] += movement;
+	  } else {
+	    // can't get there
+	    double movement = upper[iCol]-lower[iCol];
+	    objValue += movement*thisCost;
+	    rowValue -= movement*value;
+	    colsol[iCol] = upper[iCol];
+	    iCol = nextSlack[iCol];
+	  }
+	}
+	if (iCol>=0) {
+	  // may want to carry on - because of cost?
+	  while (cost[iCol]<0&&rowValue>rowLower[i]) {
+	    // want to increase
+	    double distance = -(rowLower[i]-rowValue);
+	    double value = -element[columnStart[iCol]];
+	    double thisCost = cost[iCol];
+	    if (distance<=value*(upper[iCol]-colsol[iCol])) {
+	      // can get there
+	      double movement = distance/value;
+	      objValue += movement*thisCost;
+	      rowValue = rowLower[i];
+	      colsol[iCol] += movement;
+	      iCol=-1;
+	    } else {
+	      // can't get there
+	      double movement = upper[iCol]-colsol[iCol];
+	      objValue += movement*thisCost;
+	      rowValue -= movement*value;
+	      colsol[iCol] = upper[iCol];
+	      iCol = nextSlack[iCol];
+	    }
+	  }
+	  if (iCol>=0&&colsol[iCol]>lower[iCol]+fixTolerance&&
+	      colsol[iCol]<upper[iCol]-fixTolerance) {
+	    whenUsed_[i]=iteration;
+	    n++;
+	  }
+	}
+	rowsol[i]=rowValue;
+      }
+      infValue += CoinMax(CoinMax(0.0,rowLower[i]-rowsol[i]),rowsol[i]-rowUpper[i]);
+      // just change
+      rowsol[i] -= rowSave;
+    }
+    return n;
+  }
+}
 
-/* returns -1 or start of costed slacks */
+/* returns -1 if none or start of costed slacks or -2 if
+   there are costed slacks but it is messy */
  static int countCostedSlacks(OsiSolverInterface * model)
 {
 #ifdef OSI_IDIOT
@@ -120,7 +335,8 @@ Idiot::crash(int numberPass, CoinMessageHandler * handler,const CoinMessages *me
     }
   }
   sum /= (double) (nnzero+1);
-  maxIts_=2;
+  if (maxIts_==5)
+    maxIts_=2;
   if (numberPass<=0)
     // Cast to double to avoid VACPP complaining
     majorIterations_=(int)(2+log10((double)(numberColumns+1)));
@@ -129,21 +345,23 @@ Idiot::crash(int numberPass, CoinMessageHandler * handler,const CoinMessages *me
   // If mu not changed then compute
   if (mu_==1e-4)
     mu_= CoinMax(1.0e-3,sum*1.0e-5);
-  if (!lightWeight_) {
-    maxIts2_=105;
-  } else if (lightWeight_==1) {
-    mu_ *= 1000.0;
-    maxIts2_=23;
-  } else if (lightWeight_==2) {
-    maxIts2_=11;
-  } else {
-    maxIts2_=23;
+  if (maxIts2_==100) {
+    if (!lightWeight_) {
+      maxIts2_=105;
+    } else if (lightWeight_==1) {
+      mu_ *= 1000.0;
+      maxIts2_=23;
+    } else if (lightWeight_==2) {
+      maxIts2_=11;
+    } else {
+      maxIts2_=23;
+    }
   }
   //printf("setting mu to %g and doing %d passes\n",mu_,majorIterations_);
   solve2(handler,messages);
 #ifndef OSI_IDIOT
   double averageInfeas = model_->sumPrimalInfeasibilities()/((double) model_->numberRows());
-  if (averageInfeas<0.01&&(strategy_&512)!=0) 
+  if ((averageInfeas<0.01&&(strategy_&512)!=0)||(strategy_&8192)!=0) 
     crossOver(16+1); 
   else
     crossOver(3);
@@ -246,7 +464,132 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
   pi= new double[nrows];
   dj=new double[ncols];
   delete [] whenUsed_;
-  whenUsed=whenUsed_=new int[ncols];
+  bool oddSlacks=false;
+  // See if any costed slacks
+  int numberSlacks=0;
+  for (i=0;i<ncols;i++) {
+    if (columnLength[i]==1)
+      numberSlacks++;
+  }
+  if (!numberSlacks) {
+    whenUsed_=new int[ncols];
+  } else {
+    printf("%d slacks\n",numberSlacks);
+    oddSlacks=true;
+    int extra = (int) (nrows*sizeof(double)/sizeof(int));
+    whenUsed_=new int[2*ncols+2*nrows+extra];
+    int * posSlack = whenUsed_+ncols;
+    int * negSlack = posSlack+nrows;
+    int * nextSlack = negSlack + nrows;
+    for (i=0;i<nrows;i++) {
+      posSlack[i]=-1;
+      negSlack[i]=-1;
+    }
+    for (i=0;i<ncols;i++) 
+      nextSlack[i]=-1;
+    for (i=0;i<ncols;i++) {
+      if (columnLength[i]==1) {
+	CoinBigIndex j=columnStart[i];
+	int iRow = row[j];
+	if (element[j]>0.0) {
+	  if (posSlack[iRow]==-1) {
+	    posSlack[iRow]=i;
+	  } else {
+	    int iCol = posSlack[iRow];
+	    while (nextSlack[iCol]>=0)
+	      iCol = nextSlack[iCol];
+	    nextSlack[iCol]=i;
+	  }
+	} else {
+	  if (negSlack[iRow]==-1) {
+	    negSlack[iRow]=i;
+	  } else {
+	    int iCol = negSlack[iRow];
+	    while (nextSlack[iCol]>=0)
+	      iCol = nextSlack[iCol];
+	    nextSlack[iCol]=i;
+	  }
+	}
+      }
+    }
+    // now sort
+    for (i=0;i<nrows;i++) {
+      int iCol;
+      iCol = posSlack[i];
+      if (iCol>=0) {
+	CoinBigIndex j=columnStart[iCol];
+#ifndef NDEBUG
+	int iRow = row[j];
+#endif
+	assert (element[j]>0.0);
+	assert (iRow==i);
+	dj[0]= cost[iCol]/element[j];
+	whenUsed_[0]=iCol;
+	int n=1;
+	while (nextSlack[iCol]>=0) {
+	  iCol = nextSlack[iCol];
+	  CoinBigIndex j=columnStart[iCol];
+#ifndef NDEBUG
+	  int iRow = row[j];
+#endif
+	  assert (element[j]>0.0);
+	  assert (iRow==i);
+	  dj[n]= cost[iCol]/element[j];
+	  whenUsed_[n++]=iCol;
+	}
+	for (j=0;j<n;j++) {
+	  int jCol = whenUsed_[j];
+	  nextSlack[jCol]=-2;
+	}
+	CoinSort_2(dj,dj+n,whenUsed_);
+	// put back
+	iCol = whenUsed_[0];
+	posSlack[i]=iCol;
+	for (j=1;j<n;j++) {
+	  int jCol = whenUsed_[j];
+	  nextSlack[iCol]=jCol;
+	  iCol=jCol;
+	}
+      }
+      iCol = negSlack[i];
+      if (iCol>=0) {
+	CoinBigIndex j=columnStart[iCol];
+#ifndef NDEBUG
+	int iRow = row[j];
+#endif
+	assert (element[j]<0.0);
+	assert (iRow==i);
+	dj[0]= -cost[iCol]/element[j];
+	whenUsed_[0]=iCol;
+	int n=1;
+	while (nextSlack[iCol]>=0) {
+	  iCol = nextSlack[iCol];
+	  CoinBigIndex j=columnStart[iCol];
+#ifndef NDEBUG
+	  int iRow = row[j];
+#endif
+	  assert (element[j]<0.0);
+	  assert (iRow==i);
+	  dj[n]= -cost[iCol]/element[j];
+	  whenUsed_[n++]=iCol;
+	}
+	for (j=0;j<n;j++) {
+	  int jCol = whenUsed_[j];
+	  nextSlack[jCol]=-2;
+	}
+	CoinSort_2(dj,dj+n,whenUsed_);
+	// put back
+	iCol = whenUsed_[0];
+	negSlack[i]=iCol;
+	for (j=1;j<n;j++) {
+	  int jCol = whenUsed_[j];
+	  nextSlack[iCol]=jCol;
+	  iCol=jCol;
+	}
+      }
+    }
+  }
+  whenUsed=whenUsed_;
   if (model_->getObjSense()==-1.0) {
     maxmin=-1.0;
   } else {
@@ -384,18 +727,18 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
 		       lower,upper,elemXX,row,columnStart,columnLength,lambda,
 		       0,mu,drop,
 		       maxmin,offset,strategy,djTol,djExit,djFlag);
-  n=0;
-  for (i=ordStart;i<ordEnd;i++) {
-    if (colsol[i]>lower[i]+fixTolerance) {
-      if (colsol[i]<upper[i]-fixTolerance) {
-	n++;
-      } else {
-	colsol[i]=upper[i];
-      }
-      whenUsed[i]=iteration;
-    } else {
-      colsol[i]=lower[i];
-    }
+  // update whenUsed_
+  n = cleanIteration(iteration, ordStart,ordEnd,
+		     colsol,  lower,  upper,
+		     rowlower, rowupper,
+		     cost, elemXX, fixTolerance,lastResult.objval,lastResult.infeas);
+  if ((strategy_&16384)!=0) {
+    int * posSlack = whenUsed_+ncols;
+    int * negSlack = posSlack+nrows;
+    int * nextSlack = negSlack + nrows;
+    double * rowsol2 = (double *) (nextSlack+ncols);
+    for (i=0;i<nrows;i++)
+      rowsol[i] += rowsol2[i];
   }
   if ((logLevel_&1)!=0) {
 #ifndef OSI_IDIOT
@@ -431,6 +774,9 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
     if (lastResult.infeas<=smallInfeas&&lastResult.objval<bestFeasible) {
       bestFeasible=lastResult.objval;
     }
+    if (lastResult.infeas+mu*lastResult.objval<bestWeighted) {
+      bestWeighted=lastResult.objval+mu*lastResult.objval;
+    }
     if ((saveStrategy&4096)) strategy |=256;
     if ((saveStrategy&4)!=0&&iteration>2) {
       /* go to relative tolerances */
@@ -440,23 +786,23 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
       drop=drop_*weighted;
       djTol=0.01*djExit;
     }
+    memcpy(saveSol,colsol,ncols*sizeof(double));
     result=IdiSolve(nrows,ncols,rowsol ,colsol,pi,dj,
 		     cost,rowlower,rowupper,
 		     lower,upper,elemXX,row,columnStart,columnLength,lambda,
 		     maxIts,mu,drop,
 		     maxmin,offset,strategy,djTol,djExit,djFlag);
-    n=0;
-    for (i=ordStart;i<ordEnd;i++) {
-      if (colsol[i]>lower[i]+fixTolerance) {
-	if (colsol[i]<upper[i]-fixTolerance) {
-	  n++;
-	} else {
-	  colsol[i]=upper[i];
-	}
-	whenUsed[i]=iteration;
-      } else {
-	colsol[i]=lower[i];
-      }
+    n = cleanIteration(iteration, ordStart,ordEnd,
+		       colsol,  lower,  upper,
+		       rowlower, rowupper,
+		       cost, elemXX, fixTolerance,result.objval,result.infeas);
+    if ((strategy_&16384)!=0) {
+      int * posSlack = whenUsed_+ncols;
+      int * negSlack = posSlack+nrows;
+      int * nextSlack = negSlack + nrows;
+      double * rowsol2 = (double *) (nextSlack+ncols);
+      for (i=0;i<nrows;i++)
+	rowsol[i] += rowsol2[i];
     }
     if ((logLevel_&1)!=0) {
 #ifndef OSI_IDIOT
@@ -472,8 +818,10 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
       }
 #endif
     }
-    if (iteration>50&&n==numberAway&&result.infeas<1.0e-4)
+    if (iteration>50&&n==numberAway&&result.infeas<1.0e-4) {
+      printf("infeas small %g\n",result.infeas);
       break; // not much happening
+    }
     if (lightWeight_==1&&iteration>10&&result.infeas>1.0&&maxIts!=7) {
       if (lastInfeas!=bestInfeas&&CoinMin(result.infeas,lastInfeas)>0.95*bestInfeas)
 	majorIterations_ = CoinMin(majorIterations_,iteration); // not getting feasible
@@ -486,7 +834,7 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
     if (iteration==1) {
       if ((strategy_&1024)!=0&&mu<1.0e-10) 
 	result.infeas=firstInfeas*0.8;
-      if (majorIterations_>=50)
+      if (majorIterations_>=50||dropEnoughFeasibility_<=0.0)
         result.infeas *= 0.8;
       if (result.infeas>firstInfeas*0.9
 	  &&result.infeas>reasonableInfeas) {
@@ -505,15 +853,11 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
         }
 	memcpy(colsol,saveSol,ncols*sizeof(double));
       } else {
-        // Save best solution
-        memcpy(saveSol,colsol,ncols*sizeof(double));
 	maxIts=maxIts2;
 	checkIteration=0;
 	if ((strategy_&1024)!=0) mu *= 1.0e-1;
       }
-    } else if (result.infeas<bestInfeas) {
-      // Save best solution
-      memcpy(saveSol,colsol,ncols*sizeof(double));
+    } else {
     }
     bestInfeas=CoinMin(bestInfeas,result.infeas);
     if (iteration) {
@@ -532,12 +876,13 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
 	    nTry+1==maxBigIts||
 	    (result.infeas>lastResult.infeas*0.9
 	     &&result.weighted>lastResult.weighted
-	     -dropEnoughWeighted_*fabs(lastResult.weighted))) {
+	     -dropEnoughWeighted_*CoinMax(fabs(lastResult.weighted),fabs(result.weighted)))) {
 	  mu*=changeMu;
           if ((saveStrategy&32)!=0&&result.infeas<reasonableInfeas&&0) {
 	    reasonableInfeas=CoinMax(smallInfeas,reasonableInfeas*sqrt(changeMu));
 	    printf("reasonable infeas now %g\n",reasonableInfeas);
 	  }
+	  result.weighted=1.0e60;
 	  nTry=0;
 	  bestFeasible=1.0e31;
 	  bestWeighted=1.0e60;
@@ -629,10 +974,11 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
       }
     }
     if (iteration>=majorIterations_) {
-      // If small and not feasible and crash then dive dive dive
-      if (0&&result.infeas>1.0&&majorIterations_<30&&(maxIts2_==11||maxIts2_==23)) {
-	maxIts=7;
-	majorIterations_=100;
+      // If not feasible and crash then dive dive dive
+      if (mu>1.0e-12&&result.infeas>1.0&&majorIterations_<40) {
+	mu=1.0e-30;
+	majorIterations_=iteration+1;
+	stopMu=0.0;
       } else {
 	if (logLevel>2) 
 	  printf("Exiting due to number of major iterations\n");
@@ -641,8 +987,6 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
     }
   }
   majorIterations_ = saveMajorIterations;
-  // put back best solution
-  memcpy(colsol,saveSol,ncols*sizeof(double));
 #ifndef OSI_IDIOT
   if (scaled) {
     // Scale solution and free arrays
@@ -651,6 +995,7 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
     int icol,irow;
     for (icol=0;icol<ncols;icol++) {
       colsol[icol] *= columnScale[icol];
+      saveSol[icol] *= columnScale[icol];
       dj[icol] /= columnScale[icol];
     }
     for (irow=0;irow<nrows;irow++) {
@@ -701,17 +1046,16 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
     }
   }
   muAtExit_=mu;
-  n=0;
-  for (i=ordStart;i<ordEnd;i++) {
-    if (colsol[i]>lower[i]+fixTolerance) {
-      n++;
-      whenUsed[i]=iteration;
-    } else {
-      colsol[i]=lower[i];
-    }
-  }
+  // For last iteration make as feasible as possible
+  if (oddSlacks)
+    strategy_ |= 16384;
+  // not scaled
+  n = cleanIteration(iteration, ordStart,ordEnd,
+		     colsol,  lower,  upper,
+		     model_->rowLower(), model_->rowUpper(),
+		     cost, element, fixTolerance,lastResult.objval,lastResult.infeas);
 #if 0
-  if ((logLevel&1)==0) {
+  if ((logLevel&1)==0||(strategy_&16384)!=0) {
     printf(
 	    "%d - mu %g, infeasibility %g, objective %g, %d interior\n",
 	    iteration,mu,lastResult.infeas,lastResult.objval,n);
@@ -720,13 +1064,20 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
 #ifndef OSI_IDIOT
   model_->setSumPrimalInfeasibilities(lastResult.infeas);
 #endif
-  {
+  // Put back more feasible solution
+  double saveInfeas[]={0.0,0.0};
+  for (int iSol=0;iSol<3;iSol++) {
+    const double * solution = iSol ? colsol : saveSol;
+    if (iSol==2&&saveInfeas[0]<saveInfeas[1]) {
+      // put back best solution
+      memcpy(colsol,saveSol,ncols*sizeof(double));
+    }
     double large=0.0;
     int i;
     memset(rowsol,0,nrows*sizeof(double));
     for (i=0;i<ncols;i++) {
       CoinBigIndex j;
-      double value=colsol[i];
+      double value=solution[i];
       for (j=columnStart[i];j<columnStart[i]+columnLength[i];j++) {
 	int irow=row[j];
 	rowsol[irow] += element[j]*value;
@@ -743,6 +1094,8 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
 	  large=diff;
       } 
     }
+    if (iSol<2)
+      saveInfeas[iSol]=large;
     if (logLevel>2)
       printf("largest infeasibility is %g\n",large);
   }
@@ -840,11 +1193,22 @@ Idiot::crossOver(int mode)
   if ((mode&16)!=0&&addAll<3) presolve=1;
   double * saveUpper = NULL;
   double * saveLower = NULL;
+  double * saveRowUpper = NULL;
+  double * saveRowLower = NULL;
+  bool allowInfeasible = (strategy_&8192)!=0;
   if (addAll<3) {
     saveUpper = new double [ncols];
     saveLower = new double [ncols];
     memcpy(saveUpper,upper,ncols*sizeof(double));
     memcpy(saveLower,lower,ncols*sizeof(double));
+    if (allowInfeasible) {
+      saveRowUpper = new double [nrows];
+      saveRowLower = new double [nrows];
+      memcpy(saveRowUpper,rowupper,nrows*sizeof(double));
+      memcpy(saveRowLower,rowlower,nrows*sizeof(double));
+      double averageInfeas = model_->sumPrimalInfeasibilities()/((double) model_->numberRows());
+      fixTolerance = CoinMax(fixTolerance,1.0e-5*averageInfeas);
+    }
   }
   if (slackStart>=0) {
     slackEnd=slackStart+nrows;
@@ -928,6 +1292,56 @@ Idiot::crossOver(int mode)
       }
     }
     model_->setColumnStatus(i,ClpSimplex::superBasic);
+  }
+  if ((strategy_&16384)!=0) {
+    // put in basis
+    int * posSlack = whenUsed_+ncols;
+    int * negSlack = posSlack+nrows;
+    int * nextSlack = negSlack + nrows;
+    for (i=0;i<nrows;i++) {
+      int n=0;
+      int iCol;
+      iCol =posSlack[i];
+      if (iCol>=0) {
+	if (colsol[iCol]>lower[iCol]+1.0e-8&&
+	    colsol[iCol]<upper[iCol]+1.0e-8) {
+	  model_->setColumnStatus(iCol,ClpSimplex::basic);
+	  n++;
+	}
+	while (nextSlack[iCol]>=0) {
+	  iCol = nextSlack[iCol];
+	  if (colsol[iCol]>lower[iCol]+1.0e-8&&
+	      colsol[iCol]<upper[iCol]+1.0e-8) {
+	    model_->setColumnStatus(iCol,ClpSimplex::basic);
+	    n++;
+	  }
+	}
+      }
+      iCol =negSlack[i];
+      if (iCol>=0) {
+	if (colsol[iCol]>lower[iCol]+1.0e-8&&
+	    colsol[iCol]<upper[iCol]+1.0e-8) {
+	  model_->setColumnStatus(iCol,ClpSimplex::basic);
+	  n++;
+	}
+	while (nextSlack[iCol]>=0) {
+	  iCol = nextSlack[iCol];
+	  if (colsol[iCol]>lower[iCol]+1.0e-8&&
+	      colsol[iCol]<upper[iCol]+1.0e-8) {
+	    model_->setColumnStatus(iCol,ClpSimplex::basic);
+	    n++;
+	  }
+	}
+      }
+      if (n) {
+	if (fabs(rowsol[i]-rowlower[i])<fabs(rowsol[i]-rowupper[i]))
+	  model_->setRowStatus(i,ClpSimplex::atLowerBound);
+	else
+	  model_->setRowStatus(i,ClpSimplex::atUpperBound);
+	if (n>1)
+	  printf("%d basic on row %d!\n",n,i);
+      }
+    }
   }
   double maxmin;
   if (model_->getObjSense()==-1.0) {
@@ -1014,14 +1428,51 @@ Idiot::crossOver(int mode)
     }
     /*printf("%d in basis\n",ninbas);*/
   }
+  bool wantVector=false;
+  if (dynamic_cast< ClpPackedMatrix*>(model_->clpMatrix())) {
+    // See if original wanted vector
+    ClpPackedMatrix * clpMatrixO = dynamic_cast< ClpPackedMatrix*>(model_->clpMatrix());
+    wantVector = clpMatrixO->wantsSpecialColumnCopy();
+  }
   if (addAll<3) {
     ClpPresolve pinfo;
     if (presolve) {
+      if (allowInfeasible) {
+	// fix up so will be feasible
+	double * rhs = new double[nrows];
+	memset(rhs,0,nrows*sizeof(double));
+	model_->clpMatrix()->times(1.0,colsol,rhs);
+	double * rowupper = model_->rowUpper();
+	double * rowlower= model_->rowLower();
+	double sum = 0.0;
+	for (i=0;i<nrows;i++) {
+	  if (rhs[i]>rowupper[i]) {
+	    sum += rhs[i]-rowupper[i];
+	    rowupper[i]=rhs[i];
+	  }
+	  if (rhs[i]<rowlower[i]) {
+	    sum += rowlower[i]-rhs[i];
+	    rowlower[i]=rhs[i];
+	  }
+	}
+	printf("sum of infeasibilities %g\n",sum);
+	delete [] rhs;
+      }
       saveModel = model_;
+      pinfo.setPresolveActions(pinfo.presolveActions()|16384);
       model_ = pinfo.presolvedModel(*model_,1.0e-8,false,5);
     }
     if (model_) {
-      model_->primal(1);
+      if (!wantVector) {
+	model_->primal(1);
+      } else {
+	ClpMatrixBase * matrix = model_->clpMatrix();
+	ClpPackedMatrix * clpMatrix = dynamic_cast< ClpPackedMatrix*>(matrix);
+	assert (clpMatrix);
+	clpMatrix->makeSpecialColumnCopy();
+	model_->primal(1);
+	clpMatrix->releaseSpecialColumnCopy();
+      }
       if (presolve) {
 	pinfo.postsolve(true);
 	delete model_;
@@ -1034,6 +1485,14 @@ Idiot::crossOver(int mode)
       presolve=0;
       model_ = saveModel;
       saveModel=NULL;
+    }
+    if (allowInfeasible) {
+      memcpy(model_->rowUpper(),saveRowUpper,nrows*sizeof(double));
+      memcpy(model_->rowLower(),saveRowLower,nrows*sizeof(double));
+      delete [] saveRowUpper;
+      delete [] saveRowLower;
+      saveRowUpper = NULL;
+      saveRowLower = NULL;
     }
     if (addAll<2) {
       n=0;
@@ -1057,6 +1516,10 @@ Idiot::crossOver(int mode)
 	    lower[i]=saveLower[i];
 	  }
 	}
+	delete [] saveUpper;
+	delete [] saveLower;
+	saveUpper=NULL;
+	saveLower=NULL;
       }
       printf("Time so far %g, %d now added from previous iterations\n",
 	     CoinCpuTime()-startTime,n);
@@ -1068,7 +1531,16 @@ Idiot::crossOver(int mode)
       } else {
 	presolve=0;
       }
-      model_->primal(1);
+      if (!wantVector) {
+	model_->primal(1);
+      } else {
+	ClpMatrixBase * matrix = model_->clpMatrix();
+	ClpPackedMatrix * clpMatrix = dynamic_cast< ClpPackedMatrix*>(matrix);
+	assert (clpMatrix);
+	clpMatrix->makeSpecialColumnCopy();
+	model_->primal(1);
+	clpMatrix->releaseSpecialColumnCopy();
+      }
       if (presolve) {
 	pinfo.postsolve(true);
 	delete model_;
@@ -1084,6 +1556,10 @@ Idiot::crossOver(int mode)
 	    lower[i]=saveLower[i];
 	  }
 	}
+	delete [] saveUpper;
+	delete [] saveLower;
+	saveUpper=NULL;
+	saveLower=NULL;
 	printf("Time so far %g, %d now added from previous iterations\n",
 	       CoinCpuTime()-startTime,n);
       }
@@ -1093,7 +1569,16 @@ Idiot::crossOver(int mode)
       } else {
 	presolve=0;
       }
-      model_->primal(1);
+      if (!wantVector) {
+	model_->primal(1);
+      } else {
+	ClpMatrixBase * matrix = model_->clpMatrix();
+	ClpPackedMatrix * clpMatrix = dynamic_cast< ClpPackedMatrix*>(matrix);
+	assert (clpMatrix);
+	clpMatrix->makeSpecialColumnCopy();
+	model_->primal(1);
+	clpMatrix->releaseSpecialColumnCopy();
+      }
       if (presolve) {
 	pinfo.postsolve(true);
 	delete model_;
@@ -1142,6 +1627,7 @@ Idiot::Idiot()
   baseIts =baseIts/10;
   baseIts *= 10;
   maxIts2_ =200+baseIts+5;
+  maxIts2_=100;
   reasonableInfeas_ =((double) nrows)*0.05;
   lightWeight_=0;
 }
@@ -1181,6 +1667,7 @@ Idiot::Idiot(OsiSolverInterface &model)
   baseIts =baseIts/10;
   baseIts *= 10;
   maxIts2_ =200+baseIts+5;
+  maxIts2_=100;
   reasonableInfeas_ =((double) nrows)*0.05;
   lightWeight_=0;
 }

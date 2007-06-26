@@ -226,6 +226,7 @@ public:
       mode=11  - make sure set is clean (used when a variable rejected - but not flagged)
       mode=12  - after factorize but before permute stuff
       mode=13  - at end of simplex to delete stuff
+
   */
   virtual int generalExpanded(ClpSimplex * model,int mode,int & number);
   /** 
@@ -241,8 +242,8 @@ public:
   virtual int checkFeasible(ClpSimplex * model,double & sum) const ;
   /// Returns reduced cost of a variable
   double reducedCost(ClpSimplex * model,int sequence) const;
-  /// Correct sequence in and out to give true value
-  virtual void correctSequence(int & sequenceIn, int & sequenceOut) const;
+  /// Correct sequence in and out to give true value (if both -1 maybe do whole matrix)
+  virtual void correctSequence(const ClpSimplex * model,int & sequenceIn, int & sequenceOut) ;
   //@}
   
   //---------------------------------------------------------------------------

@@ -10,6 +10,7 @@
 #include "ClpFactorization.hpp"
 #include "ClpNonLinearCost.hpp"
 #include "ClpLinearObjective.hpp"
+#include "ClpConstraint.hpp"
 #include "ClpQuadraticObjective.hpp"
 #include "CoinPackedMatrix.hpp"
 #include "CoinIndexedVector.hpp"
@@ -588,6 +589,9 @@ ClpSimplexNonlinear::statusOfProblemInPrimal(int & lastCleaned, int type,
   lastGoodIteration_ = numberIterations_;
   //if (goToDual) 
   //problemStatus_=10; // try dual
+  // Allow matrices to be sorted etc
+  int fake=-999; // signal sort
+  matrix_->correctSequence(this,fake,fake);
 }
 /*
   Reasons to come out:
@@ -2709,10 +2713,14 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
   double * changeRegion = new double [numberColumns];
   double offset=0.0;
   double objValue=0.0;
+  int exitPass = 2*numberPasses+10;
   for (iPass=0;iPass<numberPasses;iPass++) {
+    exitPass--;
     // redo objective
     offset=0.0;
     objValue=-objectiveOffset;
+    // make sure x updated
+    trueObjective->newXValues();
     double theta=-1.0;
     double maxTheta=COIN_DBL_MAX;
     //maxTheta=1.0;
@@ -2795,7 +2803,7 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
     double maxTheta2 = 2.0; // to work out a b c
     double theta2 = trueObjective->stepLength(this,saveSolution,changeRegion,maxTheta2,
 					     objValue,predictedObj,thetaObj);
-    
+    int lastMoveStatus = goodMove;
     if (goodMove>=0) {
       theta = CoinMin(theta2,maxTheta);
 #ifdef CLP_DEBUG
@@ -2818,6 +2826,7 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
 	// Do local minimization
 #define LOCAL
 #ifdef LOCAL
+	bool absolutelyOptimal=false;
 	int saveScaling = scalingFlag();
 	scaling(0);
 	int savePerturbation=perturbation_;
@@ -2883,8 +2892,10 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
 	    int numberNonBasic=0;
 	    directionVector(longArray,spare,rowArray,0,
 			    normFlagged,normUnflagged,numberNonBasic);
-	    if (normFlagged+normUnflagged<1.0e-8)
+	    if (normFlagged+normUnflagged<1.0e-8) {
+	      absolutelyOptimal=true;
 	      break;  //looks optimal
+	    }
 	    double djNorm=0.0;
 	    int iIndex;
 	    for (iIndex=0;iIndex<numberNonBasic;iIndex++) {
@@ -2897,6 +2908,7 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
 	    //int number=longArray->getNumElements();
 	    if (!numberNonBasic) {
 	      // looks optimal
+	      absolutelyOptimal=true;
 	      break;
 	    }
 	    int bestSequence=-1;
@@ -3004,7 +3016,7 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
 	// redo rowActivity
 	memset(rowActivity_,0,numberRows_*sizeof(double));
 	times(1.0,solution,rowActivity_);
-	if (theta>0.99999&&theta2<1.9) {
+	if (theta>0.99999&&theta2<1.9&&!absolutelyOptimal) {
 	  // If big changes then tighten
 	  /*  thetaObj is objvalue + a*2*2 +b*2
 	      predictedObj is objvalue + a*theta2*theta2 +b*theta2
@@ -3023,9 +3035,11 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
     }
     memcpy(objective,trueObjective->gradient(this,solution,offset,true,2),
 	   numberColumns*sizeof(double));
+    //printf("offset comp %g orig %g\n",offset,objectiveOffset);
     // could do faster
     trueObjective->stepLength(this,solution,changeRegion,0.0,
 					     objValue,predictedObj,thetaObj);
+    printf("offset comp %g orig %g - obj from stepLength %g\n",offset,objectiveOffset,objValue);
     setDblParam(ClpObjOffset,objectiveOffset+offset);
     int * temp=last[2];
     last[2]=last[1];
@@ -3051,7 +3065,7 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
     // goodMove +1 yes, 0 no, -1 last was bad - just halve gaps, -2 do nothing
     double maxDelta=0.0;
     if (goodMove>=0) {
-      if (objValue<=lastObjective+1.0e-15*fabs(lastObjective)) 
+      if (objValue-lastObjective<=1.0e-15*fabs(lastObjective)) 
 	goodMove=1;
       else
 	goodMove=0;
@@ -3094,6 +3108,8 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
       for (jNon=0;jNon<numberNonLinearColumns;jNon++) 
 	trust[jNon] *=0.0001;
     }
+    if(lastMoveStatus==-1&&goodMove==-1)
+      goodMove=1; // to force solve
     if (goodMove>0) {
       double drop = lastObjective-objValue;
       handler_->message(CLP_SLP_ITER,messages_)
@@ -3166,7 +3182,7 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
       }
     }
 #endif
-    if (goodMove) {
+    if (goodMove>0) {
       memcpy(saveSolution,solution,numberColumns*sizeof(double));
       memcpy(saveRowSolution,rowActivity_,numberRows*sizeof(double));
       memcpy(savePi,this->dualRowSolution(),numberRows*sizeof(double));
@@ -3256,6 +3272,7 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
       memcpy(this->dualRowSolution(),savePi,numberRows*sizeof(double));
       memcpy(status_,saveStatus,numberRows+numberColumns);
       iPass--;
+      assert (exitPass>0);
       goodMove=-1;
     }
   }
@@ -3304,5 +3321,626 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
   delete [] changeRegion;
   // temp
   //setLogLevel(63);
+  return 0;
+}
+/* Primal algorithm for nonlinear constraints
+   Using a semi-trust region approach as for pooling problem
+   This is in because I have it lying around
+   
+*/
+int 
+ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constraints,
+			       int numberPasses, double deltaTolerance)
+{
+  if (!numberConstraints) {
+    // no nonlinear constraints - may be nonlinear objective
+    return primalSLP(numberPasses,deltaTolerance);
+  }
+  // check all matrix for odd rows is empty
+  int iConstraint;
+  int numberBad=0;
+  CoinPackedMatrix * columnCopy = matrix();
+  // Get a row copy in standard format
+  CoinPackedMatrix copy;
+  copy.reverseOrderedCopyOf(*columnCopy);
+  // get matrix data pointers
+  //const int * column = copy.getIndices();
+  //const CoinBigIndex * rowStart = copy.getVectorStarts();
+  const int * rowLength = copy.getVectorLengths(); 
+  //const double * elementByRow = copy.getElements();
+  int numberArtificials=0;
+  // see how many extra we need
+  CoinBigIndex numberExtra=0;
+  for (iConstraint=0;iConstraint<numberConstraints;iConstraint++) {
+    ClpConstraint * constraint = constraints[iConstraint];
+    int iRow = constraint->rowNumber();
+    assert (iRow>=0);
+    int n = constraint->numberCoefficients() -rowLength[iRow];
+    numberExtra += n;
+    if (iRow>=numberRows_)
+      numberBad++;
+    else if (rowLength[iRow]&&n)
+      numberBad++;
+    if (rowLower_[iRow]>-1.0e20)
+      numberArtificials++;
+    if (rowUpper_[iRow]<1.0e20)
+      numberArtificials++;
+  }
+  if (numberBad)
+    return numberBad;
+  ClpObjective * trueObjective = NULL;
+  if (objective_->type()>=2) {
+    // Replace objective
+    trueObjective = objective_;
+    objective_=new ClpLinearObjective(NULL,numberColumns_);
+  }
+  ClpSimplex newModel(*this);
+  // we can put back true objective
+  if (trueObjective) {
+    // Replace objective
+    delete objective_;
+    objective_=trueObjective;
+  }
+  int numberColumns2 = numberColumns_;
+  double penalty=1.0e9;
+  if (numberArtificials) {
+    numberColumns2 += numberArtificials;
+    int * addStarts = new int [numberArtificials+1];
+    int * addRow = new int[numberArtificials];
+    double * addElement = new double[numberArtificials];
+    addStarts[0]=0;
+    double * addCost = new double [numberArtificials];
+    numberArtificials=0;
+    for (iConstraint=0;iConstraint<numberConstraints;iConstraint++) {
+      ClpConstraint * constraint = constraints[iConstraint];
+      int iRow = constraint->rowNumber();
+      if (rowLower_[iRow]>-1.0e20) {
+	addRow[numberArtificials]=iRow;
+	addElement[numberArtificials]=1.0;
+	addCost[numberArtificials]=penalty;
+	numberArtificials++;
+	addStarts[numberArtificials]=numberArtificials;
+      }
+      if (rowUpper_[iRow]<1.0e20) {
+	addRow[numberArtificials]=iRow;
+	addElement[numberArtificials]=-1.0;
+	addCost[numberArtificials]=penalty;
+	numberArtificials++;
+	addStarts[numberArtificials]=numberArtificials;
+      }
+    }
+    newModel.addColumns(numberArtificials,NULL,NULL,addCost,
+		       addStarts,addRow,addElement);
+    delete [] addStarts;
+    delete [] addRow;
+    delete [] addElement;
+    delete [] addCost;
+  }
+  // find nonlinear columns
+  int * listNonLinearColumn = new int [numberColumns_];
+  char * mark = new char[numberColumns_];
+  memset(mark,0,numberColumns_);
+  for (iConstraint=0;iConstraint<numberConstraints;iConstraint++) {
+    ClpConstraint * constraint = constraints[iConstraint];
+    constraint->markNonlinear(mark);
+  }
+  if (trueObjective)
+    trueObjective->markNonlinear(mark);
+  int iColumn;
+  int numberNonLinearColumns=0;
+  for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+    if (mark[iColumn])
+      listNonLinearColumn[numberNonLinearColumns++]=iColumn;
+  }
+  // build row copy of matrix with space for nonzeros
+  // Get column copy
+  columnCopy = newModel.matrix();
+  copy.reverseOrderedCopyOf(*columnCopy);
+  // get matrix data pointers
+  const int * column = copy.getIndices();
+  const CoinBigIndex * rowStart = copy.getVectorStarts();
+  rowLength = copy.getVectorLengths(); 
+  const double * elementByRow = copy.getElements();
+  numberExtra +=copy.getNumElements();
+  CoinBigIndex * newStarts = new CoinBigIndex [numberRows_+1];
+  int * newColumn = new int[numberExtra];
+  double * newElement = new double[numberExtra];
+  newStarts[0]=0;
+  int * backRow = new int [numberRows_];
+  int iRow;
+  for (iRow=0;iRow<numberRows_;iRow++) 
+    backRow[iRow]=-1;
+  for (iConstraint=0;iConstraint<numberConstraints;iConstraint++) {
+    ClpConstraint * constraint = constraints[iConstraint];
+    iRow = constraint->rowNumber();
+    backRow[iRow]=iConstraint;
+  }
+  numberExtra=0;
+  for (iRow=0;iRow<numberRows_;iRow++) {
+    if (backRow[iRow]<0) {
+      // copy normal 
+      for (CoinBigIndex j=rowStart[iRow];j<rowStart[iRow]+rowLength[iRow];
+	   j++) {
+	newColumn[numberExtra]=column[j];
+	newElement[numberExtra++] = elementByRow[j];
+      }
+    } else {
+      ClpConstraint * constraint = constraints[backRow[iRow]];
+      assert(iRow == constraint->rowNumber());
+      int numberArtificials=0;
+      if (rowLower_[iRow]>-1.0e20)
+	numberArtificials++;
+      if (rowUpper_[iRow]<1.0e20)
+	numberArtificials++;
+      if (numberArtificials==rowLength[iRow]) {
+	// all possible
+	memset(mark,0,numberColumns_);
+	constraint->markNonzero(mark);
+	for (int k=0;k<numberColumns_;k++) {
+	  if (mark[k]) {
+	    newColumn[numberExtra]=k;
+	    newElement[numberExtra++] = 1.0;
+	  }
+	}
+	// copy artificials
+	for (CoinBigIndex j=rowStart[iRow];j<rowStart[iRow]+rowLength[iRow];
+	     j++) {
+	  newColumn[numberExtra]=column[j];
+	  newElement[numberExtra++] = elementByRow[j];
+	}
+      } else {
+	// there already
+	// copy
+	for (CoinBigIndex j=rowStart[iRow];j<rowStart[iRow]+rowLength[iRow];
+	     j++) {
+	  newColumn[numberExtra]=column[j];
+	  assert (elementByRow[j]);
+	  newElement[numberExtra++] = elementByRow[j];
+	}
+      }
+    }
+    newStarts[iRow+1]=numberExtra;
+  }
+  delete [] backRow;
+  CoinPackedMatrix saveMatrix(false,numberColumns2,numberRows_,
+			      numberExtra,newElement,newColumn,newStarts,NULL,0.0,0.0);
+  delete [] newStarts;
+  delete [] newColumn;
+  delete [] newElement;
+  delete [] mark;
+  // get feasible
+  newModel.primal(1);
+  // still infeasible
+  if (newModel.numberPrimalInfeasibilities()) {
+    delete [] listNonLinearColumn;
+    return 0;
+  }
+  int numberRows = newModel.numberRows();
+  double * columnLower = newModel.columnLower();
+  double * columnUpper = newModel.columnUpper();
+  double * objective = newModel.objective();
+  double * rowLower = newModel.rowLower();
+  double * rowUpper = newModel.rowUpper(); 
+  double * solution = newModel.primalColumnSolution();
+  int jNon;
+  int * last[3];
+  
+  double * trust = new double[numberNonLinearColumns];
+  double * trueLower = new double[numberNonLinearColumns];
+  double * trueUpper = new double[numberNonLinearColumns];
+  double objectiveOffset;
+  double objectiveOffset2;
+  getDblParam(ClpObjOffset,objectiveOffset);
+  for (jNon=0;jNon<numberNonLinearColumns;jNon++) {
+    iColumn=listNonLinearColumn[jNon];
+    double upper = columnUpper[iColumn];
+    double lower = columnLower[iColumn];
+    if (solution[iColumn]<trueLower[jNon])
+      solution[iColumn]=trueLower[jNon];
+    else if (solution[iColumn]>trueUpper[jNon])
+      solution[iColumn]=trueUpper[jNon];
+#if 0
+    double large = CoinMax(1000.0,10.0*fabs(solution[iColumn]));
+    if (upper>1.0e10)
+      upper = solution[iColumn]+large;
+    if (lower<-1.0e10)
+      lower = solution[iColumn]-large;
+#else
+    upper = solution[iColumn]+0.5;
+    lower = solution[iColumn]-0.5;
+#endif
+    //columnUpper[iColumn]=upper;
+    trust[jNon]=0.05*(1.0+upper-lower);
+    trueLower[jNon]=columnLower[iColumn];
+    //trueUpper[jNon]=upper;
+    trueUpper[jNon]=columnUpper[iColumn];
+  }
+  bool tryFix=false;
+  int iPass;
+  double lastObjective=1.0e31;
+  double * saveSolution = new double [numberColumns2+numberRows];
+  char * saveStatus = new char [numberColumns2+numberRows];
+  double targetDrop=1.0e31;
+  // 1 bound up, 2 up, -1 bound down, -2 down, 0 no change
+  for (iPass=0;iPass<3;iPass++) {
+    last[iPass]=new int[numberNonLinearColumns];
+    for (jNon=0;jNon<numberNonLinearColumns;jNon++) 
+      last[iPass][jNon]=0;
+  }
+  int numberZeroPasses=0;
+  bool zeroTargetDrop=false;
+  double * gradient = new double [numberColumns_];
+#define SMALL_FIX 0.0
+  for (iPass=0;iPass<numberPasses;iPass++) {
+    objectiveOffset2 = objectiveOffset;
+    for (jNon=0;jNon<numberNonLinearColumns;jNon++) {
+      iColumn=listNonLinearColumn[jNon];
+      if (solution[iColumn]<trueLower[jNon])
+	solution[iColumn]=trueLower[jNon];
+      else if (solution[iColumn]>trueUpper[jNon])
+	solution[iColumn]=trueUpper[jNon];
+      columnLower[iColumn]=CoinMax(solution[iColumn]
+				   -trust[jNon],
+				   trueLower[jNon]);
+      if (!trueLower[jNon]&&columnLower[iColumn]<SMALL_FIX)
+	columnLower[iColumn]=SMALL_FIX;
+      columnUpper[iColumn]=CoinMin(solution[iColumn]
+				   +trust[jNon],
+				   trueUpper[jNon]);
+      if (!trueLower[jNon]) 
+	columnUpper[iColumn] = CoinMax(columnUpper[iColumn],
+				       columnLower[iColumn]+SMALL_FIX);
+      if (!trueLower[jNon]&&tryFix&&
+	  columnLower[iColumn]==SMALL_FIX&&
+	  columnUpper[iColumn]<3.0*SMALL_FIX) {
+	columnLower[iColumn]=0.0;
+	solution[iColumn]=0.0;
+	columnUpper[iColumn]=0.0;
+	printf("fixing %d\n",iColumn);
+      }
+    }
+    // redo matrix
+    double offset;
+    CoinPackedMatrix newMatrix(saveMatrix);
+    // get matrix data pointers
+    column = newMatrix.getIndices();
+    rowStart = newMatrix.getVectorStarts();
+    rowLength = newMatrix.getVectorLengths(); 
+    // make sure x updated
+    if (numberConstraints)
+      constraints[0]->newXValues();
+    else
+      trueObjective->newXValues();
+    double * changeableElement = newMatrix.getMutableElements();
+    if (trueObjective) {
+      memcpy(objective,trueObjective->gradient(this,solution,offset,true,2),
+	     numberColumns_*sizeof(double));
+    } else {
+      memcpy(objective,objective_->gradient(this,solution,offset,true,2),
+	     numberColumns_*sizeof(double));
+    }
+    for (iConstraint=0;iConstraint<numberConstraints;iConstraint++) {
+      ClpConstraint * constraint = constraints[iConstraint];
+      int iRow = constraint->rowNumber();
+      double functionValue;
+#ifndef NDEBUG
+      int numberErrors = 
+#endif
+      constraint->gradient(&newModel,solution,gradient,functionValue,offset);
+      assert (!numberErrors);
+      double dualValue = newModel.dualRowSolution()[iRow];
+      int numberCoefficients = constraint->numberCoefficients();
+      for (CoinBigIndex j=rowStart[iRow];j<rowStart[iRow]+numberCoefficients;j++) {
+	int iColumn = column[j];
+	changeableElement[j] = gradient[iColumn];
+	//objective[iColumn] -= dualValue*gradient[iColumn];
+	gradient[iColumn]=0.0;
+      }
+      for (int k=0;k<numberColumns_;k++)
+	assert (!gradient[k]);
+      if (rowLower_[iRow]>-1.0e20)
+	rowLower[iRow] = rowLower_[iRow] - offset;
+      if (rowUpper_[iRow]<1.0e20)
+	rowUpper[iRow] = rowUpper_[iRow] - offset;
+    }
+    // Replace matrix
+    // Get a column copy in standard format
+    CoinPackedMatrix * columnCopy = new CoinPackedMatrix();;
+    columnCopy->reverseOrderedCopyOf(newMatrix);
+    newModel.replaceMatrix(columnCopy,true);
+    // solve
+    newModel.primal(1);
+    if (newModel.status()==1) { 
+      // Infeasible!
+      newModel.allSlackBasis();
+      newModel.primal();
+      newModel.writeMps("infeas.mps");
+      assert(!newModel.status());
+    }
+    double sumInfeas=0.0;
+    int numberInfeas=0;
+    for (iColumn=numberColumns_;iColumn<numberColumns2;iColumn++) {
+      if (solution[iColumn]>1.0e-8) {
+	numberInfeas++;
+	sumInfeas += solution[iColumn];
+      }
+    }
+    printf("%d artificial infeasibilities - summing to %g\n",
+	   numberInfeas,sumInfeas);
+    double infValue=0.0;
+    double objValue=0.0;
+    // make sure x updated
+    if (numberConstraints)
+      constraints[0]->newXValues();
+    else
+      trueObjective->newXValues();
+    if (trueObjective) {
+      objValue=trueObjective->objectiveValue(this,solution);
+      printf("objective offset %g\n",offset);
+      objectiveOffset2 =objectiveOffset+offset; // ? sign
+      newModel.setObjectiveOffset(objectiveOffset2);
+    } else {
+      objValue=objective_->objectiveValue(this,solution);
+    }
+    for (iConstraint=0;iConstraint<numberConstraints;iConstraint++) {
+      ClpConstraint * constraint = constraints[iConstraint];
+      int iRow = constraint->rowNumber();
+      double functionValue=constraint->functionValue(this,solution);
+      double dualValue = newModel.dualRowSolution()[iRow];
+      if (numberConstraints<50)
+	printf("For row %d current value is %g (activity %g) , dual is %g - offset %g\n",iRow,functionValue,
+	       newModel.primalRowSolution()[iRow],
+	       dualValue,offset);
+      if (functionValue<rowLower_[iRow]-1.0e-5) {
+	double under = rowLower_[iRow]-functionValue;
+	infValue += under;
+      } else if (functionValue>rowUpper_[iRow]+1.0e-5) {
+	double over = functionValue-rowUpper_[iRow];
+	infValue += over;
+      }
+    }
+    if (infValue)
+      printf("Sum infeasibilities %g ",infValue);
+    if (infValue<0.1)
+      infValue=0.0;
+    infValue *= penalty;
+    if (infValue)
+      printf("Infeasible obj %g ",infValue);
+    if (objectiveOffset2)
+      printf("offset2 %g\n",objectiveOffset2);
+    objValue -= objectiveOffset2;
+    printf("True objective %g\n",objValue);
+    objValue += infValue;
+    if (iPass) {
+      double drop = lastObjective-objValue;
+      std::cout<<"True drop was "<<drop<<std::endl;
+      if (drop<-0.05*fabs(objValue)-1.0e-4) {
+	// pretty bad - go back and halve
+	memcpy(solution,saveSolution,numberColumns2*sizeof(double));
+	memcpy(newModel.primalRowSolution(),saveSolution+numberColumns2,
+	       numberRows*sizeof(double));
+	memcpy(newModel.statusArray(),saveStatus,
+	       numberColumns2+numberRows);
+	for (jNon=0;jNon<numberNonLinearColumns;jNon++) 
+	  if (trust[jNon]>0.1)
+	    trust[jNon] *= 0.5;
+	  else
+	    trust[jNon] *= 0.9;
+	
+	printf("** Halving trust\n");
+	objValue=lastObjective;
+	continue;
+      } else if ((iPass%25)==-1) {
+	for (jNon=0;jNon<numberNonLinearColumns;jNon++) 
+	  trust[jNon] *= 2.0;
+	printf("** Doubling trust\n");
+      }
+      int * temp=last[2];
+      last[2]=last[1];
+      last[1]=last[0];
+      last[0]=temp;
+      for (jNon=0;jNon<numberNonLinearColumns;jNon++) {
+	iColumn=listNonLinearColumn[jNon];
+	double change = solution[iColumn]-saveSolution[iColumn];
+	if (change<-1.0e-5) {
+	  if (fabs(change+trust[jNon])<1.0e-5) 
+	    temp[jNon]=-1;
+	  else
+	    temp[jNon]=-2;
+	} else if(change>1.0e-5) {
+	  if (fabs(change-trust[jNon])<1.0e-5) 
+	    temp[jNon]=1;
+	  else
+	    temp[jNon]=2;
+	} else {
+	  temp[jNon]=0;
+	}
+      } 
+      double maxDelta=0.0;
+      double smallestTrust=1.0e31;
+      double smallestNonLinearGap=1.0e31;
+      double smallestGap=1.0e31;
+      bool increasing=false;
+      for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+	double gap = columnUpper[iColumn]-columnLower[iColumn];
+	assert (gap>=0.0);
+	if (gap)
+	  smallestGap = CoinMin(smallestGap,gap);
+      }
+      for (jNon=0;jNon<numberNonLinearColumns;jNon++) {
+	iColumn=listNonLinearColumn[jNon];
+	double gap = columnUpper[iColumn]-columnLower[iColumn];
+	assert (gap>=0.0);
+	if (gap) {
+	  smallestNonLinearGap = CoinMin(smallestNonLinearGap,gap);
+	  if (gap<1.0e-7&&iPass==1) {
+	    printf("Small gap %d %d %g %g %g\n",
+		   jNon,iColumn,columnLower[iColumn],columnUpper[iColumn],
+		   gap);
+	    //trueUpper[jNon]=trueLower[jNon];
+	    //columnUpper[iColumn]=columnLower[iColumn];
+	  }
+	}
+	maxDelta = CoinMax(maxDelta,
+		       fabs(solution[iColumn]-saveSolution[iColumn]));
+	if (last[0][jNon]*last[1][jNon]<0) {
+	  // halve
+	  if (trust[jNon]>1.0)
+	    trust[jNon] *= 0.5;
+	  else
+	    trust[jNon] *= 0.7;
+	} else {
+	  // ? only increase if +=1 ?
+	  if (last[0][jNon]==last[1][jNon]&&
+	      last[0][jNon]==last[2][jNon]&&
+	      last[0][jNon]) {
+	    trust[jNon] *= 1.8; 
+	    increasing=true;
+	  }
+	}
+	smallestTrust = CoinMin(smallestTrust,trust[jNon]);
+      }
+      std::cout<<"largest delta is "<<maxDelta
+	       <<", smallest trust is "<<smallestTrust
+	       <<", smallest gap is "<<smallestGap
+	       <<", smallest nonlinear gap is "<<smallestNonLinearGap
+	       <<std::endl;
+      if (maxDelta<deltaTolerance&&!increasing&&iPass>100) {
+	numberZeroPasses++;
+	if (numberZeroPasses==3) {
+	  if (tryFix) {
+	    std::cout<<"Exiting"<<std::endl;
+	    break;
+	  } else {
+	    tryFix=true;
+	    for (jNon=0;jNon<numberNonLinearColumns;jNon++) 
+	      trust[jNon] = CoinMax(trust[jNon],1.0e-1);
+	    numberZeroPasses=0;
+	  }
+	}
+      } else {
+	numberZeroPasses=0;
+      }
+    }
+    memcpy(saveSolution,solution,numberColumns2*sizeof(double));
+    memcpy(saveSolution+numberColumns2,newModel.primalRowSolution(),
+	   numberRows*sizeof(double));
+    memcpy(saveStatus,newModel.statusArray(),
+	   numberColumns2+numberRows);
+    
+    targetDrop=0.0;
+    if (iPass) {
+      // get reduced costs
+      const double * pi = newModel.dualRowSolution();
+      newModel.matrix()->transposeTimes(pi,
+					newModel.dualColumnSolution());
+      double * r = newModel.dualColumnSolution();
+      for (iColumn=0;iColumn<numberColumns_;iColumn++) 
+	r[iColumn] = objective[iColumn]-r[iColumn];
+      for (jNon=0;jNon<numberNonLinearColumns;jNon++) {
+	iColumn=listNonLinearColumn[jNon];
+	double dj = r[iColumn];
+	if (dj<-1.0e-6) {
+	  double drop = -dj*(columnUpper[iColumn]-solution[iColumn]);
+	  //double upper = CoinMin(trueUpper[jNon],solution[iColumn]+0.1);
+	  //double drop2 = -dj*(upper-solution[iColumn]);
+#if 0
+	  if (drop>1.0e8||drop2>100.0*drop||(drop>1.0e-2&&iPass>100))
+	    printf("Big drop %d %g %g %g %g T %g\n",
+		   iColumn,columnLower[iColumn],solution[iColumn],
+		   columnUpper[iColumn],dj,trueUpper[jNon]);
+#endif
+	  targetDrop += drop;
+	  if (dj<-1.0e-1&&trust[jNon]<1.0e-3
+	      &&trueUpper[jNon]-solution[iColumn]>1.0e-2) {
+	    trust[jNon] *= 1.5;
+	    //printf("Increasing trust on %d to %g\n",
+	    //     iColumn,trust[jNon]);
+	  }
+	} else if (dj>1.0e-6) {
+	  double drop = -dj*(columnLower[iColumn]-solution[iColumn]);
+	  //double lower = CoinMax(trueLower[jNon],solution[iColumn]-0.1);
+	  //double drop2 = -dj*(lower-solution[iColumn]);
+#if 0
+	  if (drop>1.0e8||drop2>100.0*drop||(drop>1.0e-2))
+	    printf("Big drop %d %g %g %g %g T %g\n",
+		   iColumn,columnLower[iColumn],solution[iColumn],
+		   columnUpper[iColumn],dj,trueLower[jNon]);
+#endif
+	  targetDrop += drop;
+	  if (dj>1.0e-1&&trust[jNon]<1.0e-3
+	      &&solution[iColumn]-trueLower[jNon]>1.0e-2) {
+	    trust[jNon] *= 1.5;
+	    printf("Increasing trust on %d to %g\n",
+		   iColumn,trust[jNon]);
+	  }
+	}
+      }
+    }
+    std::cout<<"Pass - "<<iPass
+	     <<", target drop is "<<targetDrop
+	     <<std::endl;
+    if (iPass>1&&targetDrop<1.0e-5&&zeroTargetDrop)
+      break;
+    if (iPass>1&&targetDrop<1.0e-5)
+      zeroTargetDrop = true;
+    else
+      zeroTargetDrop = false;
+    //if (iPass==5)
+    //newModel.setLogLevel(63);
+    lastObjective = objValue;
+    // take out when ClpPackedMatrix changed
+    //newModel.scaling(false);
+#if 0
+    CoinMpsIO writer;
+    writer.setMpsData(*newModel.matrix(), COIN_DBL_MAX,
+		      newModel.getColLower(), newModel.getColUpper(),
+		      newModel.getObjCoefficients(),
+		      (const char*) 0 /*integrality*/,
+		      newModel.getRowLower(), newModel.getRowUpper(),
+		      NULL,NULL);
+    writer.writeMps("xx.mps");
+#endif
+  }
+  delete [] saveSolution;
+  delete [] saveStatus;
+  for (iPass=0;iPass<3;iPass++) 
+    delete [] last[iPass];
+  for (jNon=0;jNon<numberNonLinearColumns;jNon++) {
+    iColumn=listNonLinearColumn[jNon];
+    columnLower[iColumn]=trueLower[jNon];
+    columnUpper[iColumn]=trueUpper[jNon];
+  }
+  delete [] trust;
+  delete [] trueUpper;
+  delete [] trueLower;
+  // Simplest way to get true row activity ?
+  double * rowActivity = newModel.primalRowSolution();
+  for (iRow=0;iRow<numberRows;iRow++) {
+    double difference;
+    if (fabs(rowLower_[iRow])<fabs(rowUpper_[iRow]))
+      difference = rowLower_[iRow]-rowLower[iRow];
+    else
+      difference = rowUpper_[iRow]-rowUpper[iRow];
+    rowLower[iRow]=rowLower_[iRow];
+    rowUpper[iRow]=rowUpper_[iRow];
+    if (difference) {
+      if (numberRows<50)
+	printf("For row %d activity changes from %g to %g\n",
+	       iRow,rowActivity[iRow],rowActivity[iRow]+difference);
+      rowActivity[iRow]+= difference;
+    }
+  }
+  delete [] listNonLinearColumn;
+  delete [] gradient;
+  printf("solution still in newModel - do objective etc!\n");
+  objectiveValue_=newModel.objectiveValue();
+  numberIterations_ =newModel.numberIterations();
+  problemStatus_ =newModel.problemStatus();
+  secondaryStatus_ =newModel.secondaryStatus();
+  memcpy(columnActivity_,newModel.primalColumnSolution(),numberColumns_*sizeof(double));
+  // should do status region
+  CoinZeroN(rowActivity_,numberRows_);
+  matrix_->times(1.0,columnActivity_,rowActivity_);
   return 0;
 }

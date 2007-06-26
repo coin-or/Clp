@@ -190,6 +190,36 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
   int initialIterations = numberIterations_;
   int initialNegDjs=-1;
   // initialize - maybe values pass and algorithm_ is +1
+#if 0
+  // if so - put in any superbasic costed slacks
+  if (ifValuesPass&&specialOptions_<0x01000000) {
+    // Get column copy
+    const CoinPackedMatrix * columnCopy = matrix();
+    const int * row = columnCopy->getIndices();
+    const CoinBigIndex * columnStart = columnCopy->getVectorStarts();
+    const int * columnLength = columnCopy->getVectorLengths(); 
+    //const double * element = columnCopy->getElements();
+    int n=0;
+    for (int iColumn = 0;iColumn<numberColumns_;iColumn++) {
+      if (columnLength[iColumn]==1) {
+	Status status = getColumnStatus(iColumn);
+	if (status!=basic&&status!=isFree) {
+	  double value = columnActivity_[iColumn];
+	  if (fabs(value-columnLower_[iColumn])>primalTolerance_&&
+	      fabs(value-columnUpper_[iColumn])>primalTolerance_) {
+	    int iRow = row[columnStart[iColumn]];
+	    if (getRowStatus(iRow)==basic) {
+	      setRowStatus(iRow,superBasic);
+	      setColumnStatus(iColumn,basic);
+	      n++;
+	    }
+	  }
+	}   
+      }
+    }
+    printf("%d costed slacks put in basis\n",n);
+  }
+#endif
   if (!startup(ifValuesPass,startFinishOptions)) {
     
     // Set average theta
@@ -432,7 +462,9 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
     }
   }
   // if infeasible get real values
-  if (problemStatus_==1) {
+  //printf("XXXXY final cost %g\n",infeasibilityCost_);
+  progress_->initialWeight_=0.0;
+  if (problemStatus_==1&&secondaryStatus_!=6) {
     infeasibilityCost_=0.0;
     createRim(1+4);
     nonLinearCost_->checkInfeasibilities(0.0);
@@ -877,24 +909,157 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
     gutsOfSolution(NULL,NULL,ifValuesPass!=0);
     nonLinearCost_->checkInfeasibilities(primalTolerance_);
   }
+  if (nonLinearCost_->numberInfeasibilities()>0&&!progress->initialWeight_&&!ifValuesPass&&infeasibilityCost_==1.0e10) {
+    // first time infeasible - start up weight computation
+    double * oldDj = dj_;
+    double * oldCost = cost_;
+    int numberRows2 = numberRows_+numberExtraRows_;
+    int numberTotal = numberRows2+numberColumns_;
+    dj_ = new double[numberTotal];
+    cost_ = new double[numberTotal];
+    reducedCostWork_ = dj_;
+    rowReducedCost_ = dj_+numberColumns_;
+    objectiveWork_ = cost_;
+    rowObjectiveWork_ = cost_+numberColumns_;
+    double direction = optimizationDirection_*objectiveScale_;
+    const double * obj = objective();
+    memset(rowObjectiveWork_,0,numberRows_*sizeof(double));
+    int iSequence;
+    if (columnScale_)
+      for (iSequence=0;iSequence<numberColumns_;iSequence++) 
+	cost_[iSequence] = obj[iSequence]*direction*columnScale_[iSequence];
+    else
+      for (iSequence=0;iSequence<numberColumns_;iSequence++) 
+	cost_[iSequence] = obj[iSequence]*direction;
+    computeDuals(NULL);
+    int numberSame=0;
+    int numberDifferent=0;
+    int numberZero=0;
+    int numberFreeSame=0;
+    int numberFreeDifferent=0;
+    int numberFreeZero=0;
+    int n=0;
+    for (iSequence=0;iSequence<numberTotal;iSequence++) {
+      if (getStatus(iSequence) != basic&&!flagged(iSequence)) {
+	// not basic
+	double distanceUp = upper_[iSequence]-solution_[iSequence];
+	double distanceDown = solution_[iSequence]-lower_[iSequence];
+	double feasibleDj = dj_[iSequence];
+	double infeasibleDj = oldDj[iSequence]-feasibleDj;
+	double value = feasibleDj*infeasibleDj;
+	if (distanceUp>primalTolerance_) {
+	  // Check if "free"
+	  if (distanceDown>primalTolerance_) {
+	    // free
+	    if (value>dualTolerance_) {
+	      numberFreeSame++;
+	    } else if(value<-dualTolerance_) {
+	      numberFreeDifferent++;
+	      dj_[n++] = feasibleDj/infeasibleDj;
+	    } else {
+	      numberFreeZero++;
+	    }
+	  } else {
+	    // should not be negative
+	    if (value>dualTolerance_) {
+	      numberSame++;
+	    } else if(value<-dualTolerance_) {
+	      numberDifferent++;
+	      dj_[n++] = feasibleDj/infeasibleDj;
+	    } else {
+	      numberZero++;
+	    }
+	  }
+	} else if (distanceDown>primalTolerance_) {
+	  // should not be positive
+	  if (value>dualTolerance_) {
+	      numberSame++;
+	    } else if(value<-dualTolerance_) {
+	      numberDifferent++;
+	      dj_[n++] = feasibleDj/infeasibleDj;
+	    } else {
+	      numberZero++;
+	    }
+	}
+      }
+      progress->initialWeight_=-1.0;
+    }
+    //printf("XXXX %d same, %d different, %d zero, -- free %d %d %d\n",
+    //   numberSame,numberDifferent,numberZero,
+    //   numberFreeSame,numberFreeDifferent,numberFreeZero);
+    // we want most to be same
+    if (n) {
+      double most = 0.95;
+      std::sort(dj_,dj_+n);
+      int which = (int) ((1.0-most)*((double) n));
+      double take = -dj_[which]*infeasibilityCost_;
+      //printf("XXXXZ inf cost %g take %g (range %g %g)\n",infeasibilityCost_,take,-dj_[0]*infeasibilityCost_,-dj_[n-1]*infeasibilityCost_);
+      take = -dj_[0]*infeasibilityCost_;
+      infeasibilityCost_ = CoinMin(CoinMax(1000.0*take,1.0e8),1.0000001e10);;
+      //printf("XXXX increasing weight to %g\n",infeasibilityCost_);
+    }
+    delete [] dj_;
+    delete [] cost_;
+    dj_= oldDj;
+    cost_ = oldCost;
+    reducedCostWork_ = dj_;
+    rowReducedCost_ = dj_+numberColumns_;
+    objectiveWork_ = cost_;
+    rowObjectiveWork_ = cost_+numberColumns_;
+    if (n)
+      gutsOfSolution(NULL,NULL,ifValuesPass!=0);
+  }
   double trueInfeasibility =nonLinearCost_->sumInfeasibilities();
-  if (!nonLinearCost_->numberInfeasibilities()&&infeasibilityCost_==1.0e10&&!ifValuesPass) {
+  if (!nonLinearCost_->numberInfeasibilities()&&infeasibilityCost_==1.0e10&&!ifValuesPass&&true) {
     // relax if default
-    infeasibilityCost_ = CoinMin(CoinMax(100.0*sumDualInfeasibilities_,1.0e4),1.0e7);
+    infeasibilityCost_ = CoinMin(CoinMax(100.0*sumDualInfeasibilities_,1.0e8),1.00000001e10);
     // reset looping criterion
-    *progress = ClpSimplexProgress();
+    progress->reset();
     trueInfeasibility = 1.123456e10;
   }
   if (trueInfeasibility>1.0) {
     // If infeasibility going up may change weights
     double testValue = trueInfeasibility-1.0e-4*(10.0+trueInfeasibility);
-    double lastInf = progress->lastInfeasibility();
-    if(lastInf<testValue||trueInfeasibility==1.123456e10) {
+    double lastInf = progress->lastInfeasibility(1);
+    double lastInf3 = progress->lastInfeasibility(3);
+    double thisObj = progress->lastObjective(0);
+    double thisInf = progress->lastInfeasibility(0);
+    thisObj += infeasibilityCost_*thisInf;
+    double lastObj = progress->lastObjective(1);
+    lastObj += infeasibilityCost_*lastInf;
+    double lastObj3 = progress->lastObjective(3);
+    lastObj3 += infeasibilityCost_*lastInf3;
+    if (lastObj<thisObj-1.0e-5*CoinMax(fabs(thisObj),fabs(lastObj))-1.0e-7
+	&&firstFree_<0) {
+      if (handler_->logLevel()==63)
+	printf("lastobj %g this %g force %d ",lastObj,thisObj,forceFactorization_);
+      int maxFactor = factorization_->maximumPivots();
+      if (maxFactor>10) {
+	if (forceFactorization_<0)
+	  forceFactorization_= maxFactor;
+	forceFactorization_ = CoinMax(1,(forceFactorization_>>2));
+	if (handler_->logLevel()==63)
+	  printf("Reducing factorization frequency to %d\n",forceFactorization_);
+      }
+    } else if (lastObj3<thisObj-1.0e-5*CoinMax(fabs(thisObj),fabs(lastObj3))-1.0e-7
+	&&firstFree_<0) {
+      if (handler_->logLevel()==63)
+	printf("lastobj3 %g this3 %g `force %d ",lastObj3,thisObj,forceFactorization_);
+      int maxFactor = factorization_->maximumPivots();
+      if (maxFactor>10) {
+	if (forceFactorization_<0)
+	  forceFactorization_= maxFactor;
+	forceFactorization_ = CoinMax(1,(forceFactorization_*2)/3);
+	if (handler_->logLevel()==63)
+	printf("Reducing factorization frequency to %d\n",forceFactorization_);
+      }
+    } else if(lastInf<testValue||trueInfeasibility==1.123456e10) {
       if (infeasibilityCost_<1.0e14) {
 	infeasibilityCost_ *= 1.5;
         // reset looping criterion
-        *progress = ClpSimplexProgress();
-	//printf("increasing weight to %g\n",infeasibilityCost_);
+	progress->reset();
+	if (handler_->logLevel()==63)
+	  printf("increasing weight to %g\n",infeasibilityCost_);
 	gutsOfSolution(NULL,NULL,ifValuesPass!=0);
       }
     }
@@ -926,13 +1091,22 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
       double sum = nonLinearCost_->sumInfeasibilities();
       double average = sum/ ((double) ninfeas);
 #ifdef COIN_DEVELOP
-      printf("nonLinearCost says infeasible %d summing to %g\n",
-	     ninfeas,sum);
+      if (handler_->logLevel()>0)
+	printf("nonLinearCost says infeasible %d summing to %g\n",
+	       ninfeas,sum);
 #endif
       if (average>relaxedToleranceP) {
 	sumOfRelaxedPrimalInfeasibilities_ = sum;
 	numberPrimalInfeasibilities_ = ninfeas;
 	sumPrimalInfeasibilities_ = sum;
+#ifdef COIN_DEVELOP
+	bool unflagged = 
+#endif
+        unflag();
+#ifdef COIN_DEVELOP
+	if (unflagged&&handler_->logLevel()>0)
+	  printf(" - but flagged variables\n");
+#endif
       }
     }
   } 
@@ -1004,7 +1178,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	if (infeasibilityCost_<1.0e20) {
 	  infeasibilityCost_ *= 5.0;
           // reset looping criterion
-          *progress = ClpSimplexProgress();
+	  progress->reset();
 	  changeMade_++; // say change made
 	  handler_->message(CLP_PRIMAL_WEIGHT,messages_)
 	    <<infeasibilityCost_
@@ -1118,14 +1292,14 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	  // back off weight
 	  infeasibilityCost_ = 1.0e13;
           // reset looping criterion
-          *progress = ClpSimplexProgress();
+	  progress->reset();
 	  unPerturb(); // stop any further perturbation
 	}
 	//we need infeasiblity cost changed
 	if (infeasibilityCost_<1.0e20) {
 	  infeasibilityCost_ *= 5.0;
           // reset looping criterion
-          *progress = ClpSimplexProgress();
+	  progress->reset();
 	  changeMade_++; // say change made
 	  handler_->message(CLP_PRIMAL_WEIGHT,messages_)
 	    <<infeasibilityCost_
@@ -1184,6 +1358,15 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	   numberRows_,savedSolution_+numberColumns_);
     CoinMemcpyN(columnActivityWork_,numberColumns_,savedSolution_);
   }
+  // see if in Cbc etc
+  bool inCbcOrOther = (specialOptions_&0x03000000)!=0;
+  bool disaster=false;
+  if (disasterArea_&&inCbcOrOther&&disasterArea_->check()) {
+    disasterArea_->saveInfo();
+    disaster=true;
+  }
+  if (disaster)
+    problemStatus_=3;
   if (doFactorization) {
     // restore weights (if saved) - also recompute infeasibility list
     if (tentativeStatus>-3) 
@@ -1207,20 +1390,9 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
     firstFree_=saveFirstFree;
     nextSuperBasic(1,NULL);
   }
-#if 0
-  double thisObj = progress->lastObjective(0);
-  double lastObj = progress->lastObjective(1);
-  if (lastObj<thisObj-1.0e-7*CoinMax(fabs(thisObj),fabs(lastObj))-1.0e-8
-      &&firstFree_<0) {
-    int maxFactor = factorization_->maximumPivots();
-    if (maxFactor>10) {
-      if (forceFactorization_<0)
-	forceFactorization_= maxFactor;
-      forceFactorization_ = CoinMax(1,(forceFactorization_>>1));
-      printf("Reducing factorization frequency\n");
-    } 
-  }
-#endif
+  // Allow matrices to be sorted etc
+  int fake=-999; // signal sort
+  matrix_->correctSequence(this,fake,fake);
 }
 /* 
    Row array has pivot column
@@ -2862,7 +3034,7 @@ ClpSimplexPrimal::nextSuperBasic(int superBasicType,CoinIndexedVector * columnAr
       finished=true;
       if (firstFree_==numberRows_+numberColumns_)
 	firstFree_=-1;
-      if (returnValue>=0&&getStatus(returnValue)!=superBasic)
+      if (returnValue>=0&&getStatus(returnValue)!=superBasic&&getStatus(returnValue)!=isFree)
 	finished=false; // somehow picked up odd one
     }
     return returnValue;

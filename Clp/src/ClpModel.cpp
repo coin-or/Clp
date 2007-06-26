@@ -40,8 +40,7 @@
 #endif
 
 //#############################################################################
-
-ClpModel::ClpModel () :
+ClpModel::ClpModel (bool emptyMessages) :
 
   optimizationDirection_(1),
   objectiveValue_(0.0),
@@ -76,6 +75,7 @@ ClpModel::ClpModel () :
   secondaryStatus_(0),
   lengthNames_(0),
   numberThreads_(0),
+  specialOptions_(0),
 #ifndef CLP_NO_STD
   defaultHandler_(true),
   rowNames_(),
@@ -102,8 +102,10 @@ ClpModel::ClpModel () :
   handler_ = new CoinMessageHandler();
   handler_->setLogLevel(1);
   eventHandler_ = new ClpEventHandler();
-  messages_ = ClpMessage();
-  coinMessages_ = CoinMessage();
+  if (!emptyMessages) {
+    messages_ = ClpMessage();
+    coinMessages_ = CoinMessage();
+  }
   CoinSeedRandom(1234567);
 }
 
@@ -156,6 +158,7 @@ void ClpModel::gutsOfDelete()
   delete eventHandler_;
   eventHandler_=NULL;
   whatsChanged_=0;
+  specialOptions_ = 0;
 }
 //#############################################################################
 void ClpModel::setPrimalTolerance( double value) 
@@ -287,7 +290,8 @@ ClpModel::loadProblem (
 {
   gutsOfLoadModel(numrows, numcols,
 		  collb, colub, obj, rowlb, rowub, rowObjective);
-  CoinPackedMatrix matrix(true,numrows,numcols,start[numcols],
+  int numberElements = start ? start[numcols] : 0;
+  CoinPackedMatrix matrix(true,numrows,numrows ? numcols : 0,numberElements,
 			      value,index,start,NULL);
   matrix_ = new ClpPackedMatrix(matrix);
   matrix_->setDimensions(numberRows_,numberColumns_);
@@ -318,7 +322,7 @@ ClpModel::loadProblem (
 int 
 ClpModel::loadProblem (  CoinModel & modelObject,bool tryPlusMinusOne)
 {
-  if (modelObject.numberElements()==0)
+  if (modelObject.numberColumns()==0&&modelObject.numberRows()==0)
     return 0;
   int numberErrors = 0;
   // Set arrays for normal use
@@ -674,6 +678,7 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
   numberColumns_ = rhs.numberColumns_;
   userPointer_ = rhs.userPointer_;
   scalingFlag_ = rhs.scalingFlag_;
+  specialOptions_ = rhs.specialOptions_;
   if (trueCopy) {
 #ifndef CLP_NO_STD
     lengthNames_ = rhs.lengthNames_;
@@ -706,9 +711,10 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
     rowLower_ = ClpCopyOfArray ( rhs.rowLower_, numberRows_ );
     rowUpper_ = ClpCopyOfArray ( rhs.rowUpper_, numberRows_ );
     columnLower_ = ClpCopyOfArray ( rhs.columnLower_, numberColumns_ );
+    int scaleLength = ((specialOptions_&131072)==0) ? 1 : 2;
     columnUpper_ = ClpCopyOfArray ( rhs.columnUpper_, numberColumns_ );
-    rowScale_ = ClpCopyOfArray(rhs.rowScale_,numberRows_);
-    columnScale_ = ClpCopyOfArray(rhs.columnScale_,numberColumns_);
+    rowScale_ = ClpCopyOfArray(rhs.rowScale_,numberRows_*scaleLength);
+    columnScale_ = ClpCopyOfArray(rhs.columnScale_,numberColumns_*scaleLength);
     if (rhs.objective_)
       objective_  = rhs.objective_->clone();
     else
@@ -829,7 +835,7 @@ ClpModel::setIntParam(ClpIntParam key, int value)
     if (value < 0)
       return false;
     break;
-  case ClpLastIntParam:
+  default:
     return false;
   }
   intParam_[key] = value;
@@ -874,7 +880,7 @@ ClpModel::setDblParam(ClpDblParam key, double value)
       return false;
     break;
     
-  case ClpLastDblParam:
+  default:
     return false;
   }
   dblParam_[key] = value;
@@ -892,7 +898,7 @@ ClpModel::setStrParam(ClpStrParam key, const std::string & value)
   case ClpProbName:
     break;
 
-  case ClpLastStrParam:
+  default:
     return false;
   }
   strParam_[key] = value;
@@ -985,6 +991,23 @@ ClpModel::createEmptyMatrix()
   whatsChanged_ = 0;
   CoinPackedMatrix matrix2;
   matrix_=new ClpPackedMatrix(matrix2);
+}
+/* Really clean up matrix.
+   a) eliminate all duplicate AND small elements in matrix 
+   b) remove all gaps and set extraGap_ and extraMajor_ to 0.0
+   c) reallocate arrays and make max lengths equal to lengths
+   d) orders elements
+   returns number of elements eliminated or -1 if not ClpMatrix
+*/
+int 
+ClpModel::cleanMatrix(double threshold)
+{
+  ClpPackedMatrix * matrix = (dynamic_cast< ClpPackedMatrix*>(matrix_));
+  if (matrix) {
+    return matrix->getPackedMatrix()->cleanMatrix(threshold);
+  } else {
+    return -1;
+  }
 }
 // Resizes 
 void 
@@ -1304,8 +1327,8 @@ ClpModel::addRows(int number, const double * rowLower,
       rowNames_.resize(numberRows_);
     }
 #endif
-    if (elements)
-      matrix_->appendMatrix(number,0,rowStarts,columns,elements);
+    //if (elements)
+    matrix_->appendMatrix(number,0,rowStarts,columns,elements);
   }
 }
 // Add rows
@@ -1785,8 +1808,8 @@ ClpModel::addColumns(int number, const double * columnLower,
       columnNames_.resize(numberColumns_);
     }
 #endif
-    if (elements)
-      matrix_->appendMatrix(number,1,columnStarts,rows,elements);
+    //if (elements)
+    matrix_->appendMatrix(number,1,columnStarts,rows,elements);
   }
 }
 // Add columns
@@ -2257,8 +2280,20 @@ double *
 ClpModel::infeasibilityRay() const
 {
   double * array = NULL;
-  if (problemStatus_==1&&!secondaryStatus_) 
+  if (problemStatus_==1&&!secondaryStatus_) {
     array = ClpCopyOfArray(ray_,numberRows_);
+#if 0
+    // clean up
+    double largest=1.0e-30;
+    double smallest=COIN_DBL_MAX;
+    int i;
+    for (i=0;i<numberRows_;i++) {
+      double value = fabs(array[i]);
+      smallest = CoinMin(smallest,value);
+      largest = CoinMax(largest,value);
+    }
+#endif
+  }
   return array;
 }
 double * 
@@ -2361,7 +2396,7 @@ ClpModel::readMps(const char *fileName,
     status=-1;
   }
   m.messageHandler()->setPrefix(savePrefix);
-  if (!status||ignoreErrors) {
+  if (!status||(ignoreErrors&&(status>0&&status<100000))) {
     loadProblem(*m.getMatrixByCol(),
 		m.getColLower(),m.getColUpper(),
 		m.getObjCoefficients(),
@@ -2764,7 +2799,7 @@ ClpModel::ClpModel ( const ClpModel * rhs,
 #ifndef CLP_NO_STD
   strParam_[ClpProbName] = rhs->strParam_[ClpProbName];
 #endif
-
+  specialOptions_ = rhs->specialOptions_;
   optimizationDirection_ = rhs->optimizationDirection_;
   objectiveValue_=rhs->objectiveValue_;
   smallElement_ = rhs->smallElement_;
@@ -3007,8 +3042,15 @@ ClpModel::copyRowNames(const char * const * rowNames, int first, int last)
     rowNames_.resize(numberRows_);
   int iRow;
   for (iRow=first; iRow<last;iRow++) {
-    rowNames_[iRow]= rowNames[iRow-first];
-    maxLength = CoinMax(maxLength,(unsigned int) strlen(rowNames[iRow-first]));
+    if (rowNames[iRow-first]&&strlen(rowNames[iRow-first])) {
+      rowNames_[iRow]= rowNames[iRow-first];
+      maxLength = CoinMax(maxLength,(unsigned int) strlen(rowNames[iRow-first]));
+    } else {
+      maxLength = CoinMax(maxLength,(unsigned int) 8);
+      char name[9];
+      sprintf(name,"R%7.7d",iRow);
+      rowNames_[iRow]=name;
+    }
   }
   // May be too big - but we would have to check both rows and columns to be exact
   lengthNames_=(int) maxLength;
@@ -3023,8 +3065,15 @@ ClpModel::copyColumnNames(const char * const * columnNames, int first, int last)
     columnNames_.resize(numberColumns_);
   int iColumn;
   for (iColumn=first; iColumn<last;iColumn++) {
-    columnNames_[iColumn]= columnNames[iColumn-first];
-    maxLength = CoinMax(maxLength,(unsigned int) strlen(columnNames[iColumn-first]));
+    if (columnNames[iColumn-first]&&strlen(columnNames[iColumn-first])) {
+      columnNames_[iColumn]= columnNames[iColumn-first];
+      maxLength = CoinMax(maxLength,(unsigned int) strlen(columnNames[iColumn-first]));
+    } else {
+      maxLength = CoinMax(maxLength,(unsigned int) 8);
+      char name[9];
+      sprintf(name,"C%7.7d",iColumn);
+      columnNames_[iColumn]=name;
+    }
   }
   // May be too big - but we would have to check both rows and columns to be exact
   lengthNames_=(int) maxLength;
@@ -3414,6 +3463,108 @@ ClpModel::unscale()
   rowScale_ = NULL;
   delete [] columnScale_;
   columnScale_ = NULL;
+}
+void 
+ClpModel::setSpecialOptions(unsigned int value)
+{ 
+  specialOptions_=value;
+}
+/* This creates a coinModel object
+ */
+CoinModel * 
+ClpModel::createCoinModel() const
+{
+  CoinModel * coinModel = new CoinModel();
+  CoinPackedMatrix matrixByRow;
+  matrixByRow.reverseOrderedCopyOf(*matrix());
+  coinModel->setObjectiveOffset(objectiveOffset());
+  coinModel->setProblemName(problemName().c_str());
+
+  // Build by row from scratch
+  const double * element = matrixByRow.getElements();
+  const int * column = matrixByRow.getIndices();
+  const CoinBigIndex * rowStart = matrixByRow.getVectorStarts();
+  const int * rowLength = matrixByRow.getVectorLengths();
+  int i;
+  for (i=0;i<numberRows_;i++) {
+    coinModel->addRow(rowLength[i],column+rowStart[i],
+		      element+rowStart[i],rowLower_[i],rowUpper_[i]);
+  }
+  // Now do column part
+  const double * objective = this->objective();
+  for (i=0;i<numberColumns_;i++) {
+    coinModel->setColumnBounds(i,columnLower_[i],columnUpper_[i]);
+    coinModel->setColumnObjective(i,objective[i]);
+  }
+  for ( i=0;i<numberColumns_;i++) {
+    if (isInteger(i))
+      coinModel->setColumnIsInteger(i,true);
+  }
+  // do names
+  for (i=0;i<numberRows_;i++) {
+    char temp[30];
+    strcpy(temp,rowName(i).c_str());
+    int length = strlen(temp);
+    for (int j=0;j<length;j++) {
+      if (temp[j]=='-')
+	temp[j]='_';
+    }
+    coinModel->setRowName(i,temp);
+  }
+  for (i=0;i<numberColumns_;i++) {
+    char temp[30];
+    strcpy(temp,columnName(i).c_str());
+    int length = strlen(temp);
+    for (int j=0;j<length;j++) {
+      if (temp[j]=='-')
+	temp[j]='_';
+    }
+    coinModel->setColumnName(i,temp);
+  }
+  ClpQuadraticObjective * obj = (dynamic_cast< ClpQuadraticObjective*>(objective_));
+  if (obj) {
+    const CoinPackedMatrix * quadObj = obj->quadraticObjective();
+    // add in quadratic
+    const double * element = quadObj->getElements();
+    const int * row = quadObj->getIndices();
+    const CoinBigIndex * columnStart = quadObj->getVectorStarts();
+    const int * columnLength = quadObj->getVectorLengths();
+    for (i=0;i<numberColumns_;i++) {
+      int nels = columnLength[i];
+      if (nels) {
+	CoinBigIndex start = columnStart[i];
+	double constant = coinModel->getColumnObjective(i);
+	char temp[100000];
+	char temp2[30];
+	sprintf(temp,"%g",constant);
+	for (CoinBigIndex k=start;k<start+nels;k++) {
+	  int kColumn = row[k];
+	  double value = element[k];
+#if 1
+	  // ampl gives twice with assumed 0.5
+	  if (kColumn<i)
+	    continue;
+	  else if (kColumn==i)
+	    value *= 0.5;
+#endif
+	  if (value==1.0) 
+	    sprintf(temp2,"+%s",coinModel->getColumnName(kColumn));
+	  else if (value==-1.0)
+	    sprintf(temp2,"-%s",coinModel->getColumnName(kColumn));
+	  else if (value>0.0)
+	    sprintf(temp2,"+%g*%s",value,coinModel->getColumnName(kColumn));
+	  else 
+	    sprintf(temp2,"%g*%s",value,coinModel->getColumnName(kColumn));
+	  strcat(temp,temp2);
+	  assert (strlen(temp)<100000);
+	}
+	coinModel->setObjective(i,temp);
+	if (logLevel()>2)
+	  printf("el for objective column %s is %s\n",coinModel->getColumnName(i),temp);
+      }
+    }
+  }
+  return coinModel;
 }
 //#############################################################################
 // Constructors / Destructor / Assignment

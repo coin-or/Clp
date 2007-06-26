@@ -135,6 +135,11 @@ public:
   { return maxIts2_;};
   inline void setMinorIterations(int value)
   { maxIts2_ = value;};
+  // minor iterations for first time
+  inline int getMinorIterations0() const
+  { return maxIts_;};
+  inline void setMinorIterations0(int value)
+  { maxIts_ = value;};
   /** Reduce weight after this many major iterations.  It may
       get reduced before this but this is a maximum.
       Default 3.  3-10 plausible. */
@@ -174,7 +179,10 @@ public:
 private:
 
   /// Does actual work
+  // allow public!
+public:
   void solve2(CoinMessageHandler * handler,const CoinMessages *messages);
+private:
 IdiotResult IdiSolve(
 		     int nrows, int ncols, double * rowsol , double * colsol,
 		     double * pi, double * djs, const double * origcost , 
@@ -199,7 +207,12 @@ IdiotResult objval(int nrows, int ncols, double * rowsol , double * colsol,
 		   const int * length, int extraBlock, int * rowExtra,
 		   double * solExtra, double * elemExtra, double * upperExtra,
 		   double * costExtra,double weight);
-
+  // Deals with whenUsed and slacks
+  int cleanIteration(int iteration, int ordinaryStart, int ordinaryEnd,
+		     double * colsol, const double * lower, const double * upper,
+		     const double * rowLower, const double * rowUpper,
+		     const double * cost, const double * element, double fixTolerance,double & objChange,
+		     double & infChange);
 private:
   /// Underlying model
   OsiSolverInterface * model_;
@@ -234,7 +247,9 @@ private:
                     32 - Scale
 		   512 - crossover 
                   2048 - keep lambda across mu change
-		  4096 - return best solution (not last found) */
+		  4096 - return best solution (not last found)
+		  8192 - always do a presolve in crossover
+		 16384 - costed slacks found - so whenUsed_ longer */
   int lightWeight_; // 0 - normal, 1 lightweight
 };
 #endif

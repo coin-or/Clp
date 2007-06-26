@@ -85,4 +85,61 @@ protected:
   ClpSimplex * model_;
   //@}
 };
+/** Base class for Clp disaster handling
+    
+This is here to allow for disaster handling.  By disaster I mean that Clp
+would otherwise give up
+
+*/
+
+class ClpDisasterHandler  {
+  
+public:
+  /**@name Virtual methods that the derived classe should provide.
+  */
+  //@{
+  /// Into simplex
+  virtual void intoSimplex()=0;
+  /// Checks if disaster
+  virtual bool check() const = 0;
+  /// saves information for next attempt
+  virtual void saveInfo() =0;
+  //@}
+  
+  
+  /**@name Constructors, destructor */
+
+  //@{
+  /** Default constructor. */
+  ClpDisasterHandler(ClpSimplex * model = NULL);
+  /** Destructor */
+  virtual ~ClpDisasterHandler();
+  // Copy
+  ClpDisasterHandler(const ClpDisasterHandler&);
+  // Assignment
+  ClpDisasterHandler& operator=(const ClpDisasterHandler&);
+  /// Clone
+  virtual ClpDisasterHandler * clone() const =0;
+
+  //@}
+  
+  /**@name Sets/gets */
+
+  //@{
+  /** set model. */
+  void setSimplex(ClpSimplex * model);
+  /// Get model
+  inline ClpSimplex * simplex() const
+  { return model_;};
+  //@}
+  
+  
+protected:
+  /**@name Data members
+     The data members are protected to allow access for derived classes. */
+  //@{
+  /// Pointer to simplex
+  ClpSimplex * model_;
+  //@}
+};
 #endif

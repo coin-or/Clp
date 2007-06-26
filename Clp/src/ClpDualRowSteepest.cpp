@@ -363,7 +363,13 @@ ClpDualRowSteepest::updateWeights(CoinIndexedVector * input,
   }
 #endif
   assert (input->packedMode());
-  assert (updatedColumn->packedMode());
+  if (!updatedColumn->packedMode()) {
+    // I think this means empty
+#ifdef COIN_DEVELOP
+    printf("updatedColumn not packed mode ClpDualRowSteepest::updateWeights\n");
+#endif
+    return 0.0;
+  }
   double alpha=0.0;
   if (!model_->factorization()->networkBasis()) {
     // clear other region

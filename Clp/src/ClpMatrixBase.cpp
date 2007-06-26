@@ -547,7 +547,7 @@ ClpMatrixBase::subsetTimes2(const ClpSimplex * model,
 }
 // Correct sequence in and out to give true value
 void 
-ClpMatrixBase::correctSequence(int & sequenceIn, int & sequenceOut) const
+ClpMatrixBase::correctSequence(const ClpSimplex * model,int & sequenceIn, int & sequenceOut) 
 {
 }
 // Really scale matrix

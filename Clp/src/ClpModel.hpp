@@ -45,7 +45,7 @@ public:
    */
   //@{
     /// Default constructor
-    ClpModel (  );
+    ClpModel (bool emptyMessages=false  );
 
   /** Copy constructor. May scale depending on mode
       -1 leave mode as is 
@@ -248,6 +248,14 @@ public:
 
   /// Create empty ClpPackedMatrix
   void createEmptyMatrix();
+  /** Really clean up matrix (if ClpPackedMatrix).
+      a) eliminate all duplicate AND small elements in matrix 
+      b) remove all gaps and set extraGap_ and extraMajor_ to 0.0
+      c) reallocate arrays and make max lengths equal to lengths
+      d) orders elements
+      returns number of elements eliminated or -1 if not ClpPackedMatrix
+  */
+  int cleanMatrix(double threshold=1.0e-20);
 #ifndef CLP_NO_STD
   /// Drops names - makes lengthnames 0 and names empty
   void dropNames();
@@ -267,6 +275,9 @@ public:
   /// Set name of col
   void setColumnName(int colIndex, std::string & name) ;
 #endif
+  /** This creates a coinModel object
+  */
+  CoinModel * createCoinModel() const;
 
     /** Write the problem in MPS format to the specified file.
 
@@ -360,8 +371,9 @@ public:
        3 - scaled problem optimal - unscaled problem has dual infeasibilities
        4 - scaled problem optimal - unscaled problem has primal and dual infeasibilities
        5 - giving up in primal with flagged variables
-       6 - failed due to empty problem check
+       6 - failed due to empty problem check 
        7 - postSolve says not optimal
+       8 - failed due to bad element check 
        100 up - translation of enum from ClpEventHandler
    */
    inline int secondaryStatus() const            { return secondaryStatus_; }
@@ -744,7 +756,7 @@ public:
 #endif
     // Get an integer parameter
     inline bool getIntParam(ClpIntParam key, int& value) const {
-      if (key!=ClpLastIntParam) {
+      if (key<ClpLastIntParam) {
 	value = intParam_[key];
 	return true;
       } else {
@@ -753,7 +765,7 @@ public:
     }
     // Get an double parameter
     inline bool getDblParam(ClpDblParam key, double& value) const {
-      if (key!=ClpLastDblParam) {
+      if (key<ClpLastDblParam) {
 	value = dblParam_[key];
 	return true;
       } else {
@@ -763,7 +775,7 @@ public:
 #ifndef CLP_NO_STD
     // Get a string parameter
     inline bool getStrParam(ClpStrParam key, std::string& value) const {
-      if (key!=ClpLastStrParam) {
+      if (key<ClpLastStrParam) {
 	value = strParam_[key];
 	return true;
       } else {
@@ -773,6 +785,39 @@ public:
 #endif
     /// Create C++ lines to get to current state
     void generateCpp( FILE * fp);
+  /** For advanced options
+      1 - Don't keep changing infeasibility weight
+      2 - Keep nonLinearCost round solves
+      4 - Force outgoing variables to exact bound (primal)
+      8 - Safe to use dense initial factorization
+      16 -Just use basic variables for operation if column generation
+      32 -Clean up with primal before strong branching
+      64 -Treat problem as feasible until last minute (i.e. minimize infeasibilities)
+      128 - Switch off all matrix sanity checks
+      256 - No row copy
+      512 - If not in values pass, solution guaranteed, skip as much as possible
+      1024 - In branch and bound
+      2048 - Don't bother to re-factorize if < 20 iterations
+      4096 - Skip some optimality checks
+      8192 - Do Primal when cleaning up primal
+      16384 - In fast dual (so we can switch off things)
+      32678 - called from Osi
+      65356 - keep arrays around as much as possible
+      131072 - scale factor arrays have inverse values at end
+      NOTE - many applications can call Clp but there may be some short cuts
+             which are taken which are not guaranteed safe from all applications.
+             Vetted applications will have a bit set and the code may test this
+             At present I expect a few such applications - if too many I will
+             have to re-think.  It is up to application owner to change the code
+             if she/he needs these short cuts.  I will not debug unless in Coin
+             repository.  See COIN_CLP_VETTED comments.
+      0x01000000 is Cbc (and in branch and bound)
+      0x02000000 is in a different branch and bound
+  */
+#define COIN_CBC_USING_CLP 0x01000000
+  inline unsigned int specialOptions() const
+  { return specialOptions_;};
+  void setSpecialOptions(unsigned int value);
   //@}
 
   /**@name private or protected methods */
@@ -901,6 +946,10 @@ protected:
   int lengthNames_;
   /// Number of threads (not very operational)
   int numberThreads_;
+  /** For advanced options
+      See get and set for meaning
+  */
+  unsigned int specialOptions_;
   /// Message handler
   CoinMessageHandler * handler_;
   /// Flag to say if default handler (so delete)

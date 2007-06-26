@@ -3,7 +3,6 @@
 #ifndef ClpPackedMatrix_H
 #define ClpPackedMatrix_H
 
-
 #include "CoinPragma.hpp"
 
 #include "ClpMatrixBase.hpp"
@@ -15,6 +14,7 @@
     For details see CoinPackedMatrix */
 
 class ClpPackedMatrix2;
+class ClpPackedMatrix3;
 class ClpPackedMatrix : public ClpMatrixBase {
   
 public:
@@ -259,6 +259,17 @@ public:
   */
   inline void setMatrixNull()
   { matrix_=NULL;};
+  /// Say we want special column copy
+  inline void makeSpecialColumnCopy()
+  { flags_ |= 8;};
+  /// Say we don't want special column copy
+  void releaseSpecialColumnCopy();
+  /// Are there zeros?
+  inline bool zeros() const
+  { return ((flags_&1)!=0);};
+  /// Do we want special column copy
+  inline bool wantsSpecialColumnCopy() const
+  { return ((flags_&8)!=0);};
    //@}
 
 
@@ -298,10 +309,32 @@ public:
 		    int numberColumns, const int * whichColumns) const ;
   /// make special row copy
   void specialRowCopy(ClpSimplex * model,const ClpMatrixBase * rowCopy); 
+  /// make special column copy
+  void specialColumnCopy(ClpSimplex * model); 
+  /// Correct sequence in and out to give true value
+  virtual void correctSequence(const ClpSimplex * model,int & sequenceIn, int & sequenceOut) ;
    //@}
+private:
+  /// Meat of transposeTimes by column when not scaled
+  void gutsOfTransposeTimesUnscaled(const double * pi,CoinIndexedVector * output, const double tolerance) const;
+  /// Meat of transposeTimes by column when scaled
+  void gutsOfTransposeTimesScaled(const double * pi,const double * columnScale, CoinIndexedVector * output, const double tolerance) const;
+  /// Meat of transposeTimes by row n > 2 if packed
+  void gutsOfTransposeTimesByRowGE3(const CoinIndexedVector * piVector, CoinIndexedVector * output,
+				   CoinIndexedVector * spareVector, const double tolerance, const double scalar) const;
+  /// Meat of transposeTimes by row n == 2 if packed
+  void gutsOfTransposeTimesByRowEQ2(const CoinIndexedVector * piVector, CoinIndexedVector * output,
+				   CoinIndexedVector * spareVector, const double tolerance, const double scalar) const;
+  /// Meat of transposeTimes by row n == 1 if packed
+  void gutsOfTransposeTimesByRowEQ1(const CoinIndexedVector * piVector, CoinIndexedVector * output,
+				   const double tolerance, const double scalar) const;
+  /// Gets rid of special copies
+  void clearCopies();
    
     
 protected:
+  /// Check validity
+  void checkFlags() const;
    /**@name Data members
       The data members are protected to allow access for derived classes. */
    //@{
@@ -309,12 +342,17 @@ protected:
   CoinPackedMatrix * matrix_;
   /// number of active columns (normally same as number of columns)
   int numberActiveColumns_;
-  /// Zero element flag - set true if any zero elements
-  bool zeroElements_;
-  /// Gaps flag - set true if column start and length don't say contiguous
-  bool hasGaps_;
+  /** Flags -
+      1 - has zero elements
+      2 - has gaps
+      4 - has special row copy
+      8 - has special column copy
+  */
+  int flags_;
   /// Special row copy
   ClpPackedMatrix2 * rowCopy_;
+  /// Special column copy
+  ClpPackedMatrix3 * columnCopy_;
    //@}
 };
 #ifdef THREAD
@@ -401,6 +439,81 @@ protected:
   pthread_t * threadId_;
   dualColumn0Struct * info_;
 #endif
+   //@}
+};
+typedef struct {
+  CoinBigIndex startElements_; // point to data
+  int startIndices_; // point to column_
+  int numberInBlock_; 
+  int numberPrice_; // at beginning
+  int numberElements_; // number elements per column
+} blockStruct;
+class ClpPackedMatrix3 {
+  
+public:
+  /**@name Useful methods */
+  //@{
+    /** Return <code>x * -1 * A in <code>z</code>. 
+	Note - x packed and z will be packed mode
+	Squashes small elements and knows about ClpSimplex */
+  void transposeTimes(const ClpSimplex * model,
+                      const double * pi,
+                      CoinIndexedVector * output) const;
+  /// Updates two arrays for steepest 
+  void transposeTimes2(const ClpSimplex * model,
+		       const double * pi, CoinIndexedVector * dj1,
+		       const double * piWeight,
+		       double referenceIn, double devex,
+		       // Array for exact devex to say what is in reference framework
+		       unsigned int * reference,
+		       double * weights, double scaleFactor);
+  //@}
+
+
+  /**@name Constructors, destructor */
+   //@{
+   /** Default constructor. */
+   ClpPackedMatrix3();
+   /** Constructor from copy. */
+   ClpPackedMatrix3(ClpSimplex * model,const CoinPackedMatrix * columnCopy);
+   /** Destructor */
+   virtual ~ClpPackedMatrix3();
+   //@}
+
+   /**@name Copy method */
+   //@{
+   /** The copy constructor. */
+   ClpPackedMatrix3(const ClpPackedMatrix3&);
+   ClpPackedMatrix3& operator=(const ClpPackedMatrix3&);
+   //@}
+   /**@name Sort methods */
+   //@{
+   /** Sort blocks */
+  void sortBlocks(const ClpSimplex * model);
+  /// Swap one variable
+  void swapOne(const ClpSimplex * model,const ClpPackedMatrix * matrix,
+		int iColumn);
+   //@}
+   
+    
+protected:
+   /**@name Data members
+      The data members are protected to allow access for derived classes. */
+   //@{
+  /// Number of blocks
+  int numberBlocks_;
+  /// Number of columns
+  int numberColumns_;
+  /// Column indices and reverse lookup (within block)
+  int * column_;
+  /// Starts for odd/long vectors
+  CoinBigIndex * start_;
+  /// Rows
+  int * row_;
+  /// Elements
+  double * element_;
+  /// Blocks (ordinary start at 0 and go to first block)
+  blockStruct * block_;
    //@}
 };
 

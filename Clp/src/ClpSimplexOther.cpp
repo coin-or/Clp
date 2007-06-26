@@ -358,10 +358,10 @@ ClpSimplexOther::primalRanging(int numberCheck,const int * which,
     case isFree:
     case superBasic:
       // Easy
-      valueIncrease=CoinMax(0.0,upper_[iSequence]-solution_[iSequence]);
-      valueDecrease=CoinMax(0.0,solution_[iSequence]-lower_[iSequence]);
-      sequenceIncrease=iSequence;
+      valueDecrease=CoinMax(0.0,upper_[iSequence]-solution_[iSequence]);
+      valueIncrease=CoinMax(0.0,solution_[iSequence]-lower_[iSequence]);
       sequenceDecrease=iSequence;
+      sequenceIncrease=iSequence;
       break;
     case isFixed:
     case atUpperBound:
@@ -887,6 +887,8 @@ ClpSimplexOther::dualOfModel() const
   }
   if (numberExtraRows) {
     CoinPackedMatrix newCopy;
+    newCopy.setExtraGap(0.0);
+    newCopy.setExtraMajor(0.0);
     newCopy.submatrixOfWithDuplicates(rowCopy,kRow,which);
     rowCopy=newCopy;
   }
@@ -908,7 +910,7 @@ ClpSimplexOther::dualOfModel() const
   return modelDual;
 }
 // Restores solution from dualized problem
-void
+int
 ClpSimplexOther::restoreFromDual(const ClpSimplex * dualProblem)
 {
   int returnCode=0;;
@@ -1115,7 +1117,8 @@ ClpSimplexOther::restoreFromDual(const ClpSimplex * dualProblem)
   memset(rowActivity_,0,numberRows_*sizeof(double));
   matrix_->times(-1.0,columnActivity_,rowActivity_);
   checkSolutionInternal();
-  //return returnCode;
+  return 1; //temp
+  return returnCode;
 }
 /* Does very cursory presolve.
    rhs is numberRows, whichRows is 3*numberRows and whichColumns is 2*numberColumns
@@ -1224,6 +1227,7 @@ ClpSimplexOther::crunch(double * rhs, int * whichRow, int * whichColumn,
     small->setSpecialOptions(specialOptions_);
     small->setPerturbation(perturbation_);
     small->defaultFactorizationFrequency();
+    small->setAlphaAccuracy(alphaAccuracy_);
     // If no rows left then no tightening!
     if (!numberRows2||!numberColumns2) 
       tightenBounds=false;
@@ -1623,7 +1627,7 @@ ClpSimplexOther::tightenIntegerBounds(double * rhsSpace)
   int numberTightened=0;
   if (!feasible) {
     return -1;
-  } else {
+  } else if (integerType_) {
     // and tighten
     for (int iColumn=0;iColumn<numberColumns_;iColumn++) {
       if (integerType_[iColumn]) {
@@ -2154,7 +2158,7 @@ ClpSimplexOther::statusOfProblemInParametrics(int type, ClpDataSave & saveData)
   }
   // Allow matrices to be sorted etc
   int fake=-999; // signal sort
-  matrix_->correctSequence(fake,fake);
+  matrix_->correctSequence(this,fake,fake);
 }
 /* This has the flow between re-factorizations
    Reasons to come out:

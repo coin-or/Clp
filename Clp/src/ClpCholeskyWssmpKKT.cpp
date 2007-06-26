@@ -1,3 +1,4 @@
+#ifdef WSSMP_BARRIER
 // Copyright (C) 2004, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
@@ -12,7 +13,6 @@
 #include "ClpQuadraticObjective.hpp"
 #include "ClpMessage.hpp"
 
-#ifdef WSSMP_BARRIER
 //#############################################################################
 // Constructors / Destructor / Assignment
 //#############################################################################

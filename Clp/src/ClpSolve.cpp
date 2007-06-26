@@ -3,7 +3,6 @@
 
 // This file has higher level solve functions
 
-
 #include "ClpConfig.h"
 #include "CoinPragma.hpp"
 
@@ -14,6 +13,7 @@
 #include "CoinSort.hpp"
 #include "ClpFactorization.hpp"
 #include "ClpSimplex.hpp"
+#include "ClpSimplexOther.hpp"
 #ifndef SLIM_CLP
 #include "ClpQuadraticObjective.hpp"
 #include "ClpInterior.hpp"
@@ -44,8 +44,10 @@
 #include "ClpCholeskyTaucs.hpp"
 #define FAST_BARRIER
 #endif
+#ifdef COIN_DEVELOP
 #ifndef FAST_BARRIER
 static int numberBarrier=0;
+#endif
 #endif
 #ifdef COIN_HAS_VOL
 #include "VolVolume.hpp"
@@ -652,12 +654,12 @@ ClpSimplex::initialSolve(ClpSolve & options)
   int numberColumns = model2->numberColumns();
   int numberRows = model2->numberRows();
   // If not all slack basis - switch off all except sprint
-  int number=0;
+  int numberRowsBasic=0;
   int iRow;
   for (iRow=0;iRow<numberRows;iRow++)
     if (model2->getRowStatus(iRow)==basic)
-      number++;
-  if (number<numberRows) {
+      numberRowsBasic++;
+  if (numberRowsBasic<numberRows) {
     doIdiot=0;
     doCrash=0;
     //doSprint=0;
@@ -884,7 +886,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
     }
 #ifndef COIN_HAS_VOL
     // switch off idiot and volume for now 
-    doIdiot=0;
+    doIdiot=0; 
 #endif
     // pick up number passes
     int nPasses=0;
@@ -975,8 +977,24 @@ ClpSimplex::initialSolve(ClpSolve & options)
       int saveOptions = model2->specialOptions();
       if (model2->numberRows()>100)
 	model2->setSpecialOptions(saveOptions|64); // go as far as possible
-      model2->dual(0);
-      model2->setSpecialOptions(saveOptions);
+      //int numberRows = model2->numberRows();
+      //int numberColumns = model2->numberColumns();
+      if (dynamic_cast< ClpPackedMatrix*>(matrix_)) {
+	// See if original wanted vector
+	ClpPackedMatrix * clpMatrixO = dynamic_cast< ClpPackedMatrix*>(matrix_);
+	ClpMatrixBase * matrix = model2->clpMatrix();
+	if (dynamic_cast< ClpPackedMatrix*>(matrix)&&clpMatrixO->wantsSpecialColumnCopy()) {
+	  ClpPackedMatrix * clpMatrix = dynamic_cast< ClpPackedMatrix*>(matrix);
+	  clpMatrix->makeSpecialColumnCopy();
+	  //model2->setSpecialOptions(model2->specialOptions()|256); // to say no row copy for comparisons
+	  model2->dual(0);
+	  clpMatrix->releaseSpecialColumnCopy();
+	} else {
+	  model2->dual(0);
+	}
+      } else {
+	model2->dual(0);
+      }
     } else if (!numberNotE&&0) {
       // E so we can do in another way
       double * pi = model2->dualRowSolution();
@@ -1175,6 +1193,13 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	if (nPasses>70) {
 	  info.setStartingWeight(1.0e3);
 	  info.setReduceIterations(6);
+	  if (nPasses>=5000) {
+	    int k= nPasses&100;
+	    nPasses /= 100;
+	    info.setReduceIterations(3);
+	    if (k)
+	      info.setStartingWeight(1.0e2);
+	  }
 	  // also be more lenient on infeasibilities
 	  info.setDropEnoughFeasibility(0.5*info.getDropEnoughFeasibility());
 	  info.setDropEnoughWeighted(-2.0);
@@ -1188,8 +1213,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	  info.setLightweight(nPasses%10); // special testing
 #ifdef COIN_DEVELOP
           printf("warning - odd lightweight %d\n",nPasses%10);
-#endif
 	  //info.setReduceIterations(6);
+#endif
 	}
       }
       if (nPasses) {
@@ -1261,7 +1286,22 @@ ClpSimplex::initialSolve(ClpSolve & options)
       model2->nonlinearSLP(doSlp,1.0e-5);
     }
 #endif
-    model2->primal(primalStartup);
+    if (dynamic_cast< ClpPackedMatrix*>(matrix_)) {
+      // See if original wanted vector
+      ClpPackedMatrix * clpMatrixO = dynamic_cast< ClpPackedMatrix*>(matrix_);
+      ClpMatrixBase * matrix = model2->clpMatrix();
+      if (dynamic_cast< ClpPackedMatrix*>(matrix)&&clpMatrixO->wantsSpecialColumnCopy()) {
+	ClpPackedMatrix * clpMatrix = dynamic_cast< ClpPackedMatrix*>(matrix);
+	clpMatrix->makeSpecialColumnCopy();
+	//model2->setSpecialOptions(model2->specialOptions()|256); // to say no row copy for comparisons
+	model2->primal(primalStartup);
+	clpMatrix->releaseSpecialColumnCopy();
+      } else {
+	model2->primal(primalStartup);
+      }
+    } else {
+      model2->primal(primalStartup);
+    }
     time2 = CoinCpuTime();
     timeCore = time2-timeX;
     handler_->message(CLP_INTERVAL_TIMING,messages_)
@@ -1311,6 +1351,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
     const int * row = model2->matrix()->getIndices();
     const CoinBigIndex * columnStart = model2->matrix()->getVectorStarts();
     const int * columnLength = model2->matrix()->getVectorLengths();
+    //bool allSlack = (numberRowsBasic==numberRows);
     for (iColumn=0;iColumn<originalNumberColumns;iColumn++) {
       if (!columnSolution[iColumn]||fabs(columnSolution[iColumn])>1.0e20) {
         double value =0.0;
@@ -1338,7 +1379,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
     // now see what that does to row solution
     double * rowSolution = model2->primalRowSolution();
     CoinZeroN (rowSolution,numberRows);
-    model2->times(1.0,columnSolution,rowSolution);
+    model2->clpMatrix()->times(1.0,columnSolution,rowSolution);
     // See if we can adjust using costed slacks
     double penalty=CoinMin(infeasibilityCost_,1.0e10)*optimizationDirection_;
     const double * lower = model2->rowLower();
@@ -1403,6 +1444,10 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	addStarts[numberArtificials]=numberArtificials;
       }
     }
+    if (numberArtificials) {
+      // need copy so as not to disturb original
+      model2 = new ClpSimplex(*model2);
+    }
     model2->addColumns(numberArtificials,NULL,NULL,addCost,
 		       addStarts,addRow,addElement);
     delete [] addStarts;
@@ -1461,16 +1506,17 @@ ClpSimplex::initialSolve(ClpSolve & options)
     if (doSprint>0)
       maxSprintPass=options.getExtraInfo(1);
     // but if big use to get ratio
-    int ratio=3;
+    double ratio=3;
     if (maxSprintPass>1000) {
-      ratio = CoinMax(maxSprintPass/1000,2);
+      ratio = ((double) maxSprintPass)*0.0001;
+      ratio = CoinMax(ratio,1.1);
       maxSprintPass= maxSprintPass %1000;
 #ifdef COIN_DEVELOP
-      printf("%d passes wanted with ratio of %d\n",maxSprintPass,ratio);
+      printf("%d passes wanted with ratio of %g\n",maxSprintPass,ratio);
 #endif
     }
     // Just take this number of columns in small problem
-    int smallNumberColumns = CoinMin(ratio*numberRows,numberColumns);
+    int smallNumberColumns = (int) CoinMin(ratio*numberRows,(double) numberColumns);
     smallNumberColumns = CoinMax(smallNumberColumns,3000);
     smallNumberColumns = CoinMin(smallNumberColumns,numberColumns);
     //int smallNumberColumns = CoinMin(12*numberRows/10,numberColumns);
@@ -1495,7 +1541,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
     for (iColumn=0;iColumn<originalNumberColumns;iColumn++) {
       if (model2->getColumnStatus(iColumn)!=basic) {
         if (columnSolution[iColumn]>columnLower[iColumn]&&
-            columnSolution[iColumn]<columnUpper[iColumn])
+            columnSolution[iColumn]<columnUpper[iColumn]&&
+	    columnSolution[iColumn])
           sort[numberSort++]=iColumn;
       }
     }
@@ -1544,7 +1591,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
       for (iColumn=0;iColumn<numberColumns;iColumn++) 
 	offset += fullSolution[iColumn]*objective[iColumn];
       small.setDblParam(ClpObjOffset,originalOffset-offset);
-      model2->times(1.0,fullSolution,sumFixed);
+      model2->clpMatrix()->times(1.0,fullSolution,sumFixed);
       
       double * lower = small.rowLower();
       double * upper = small.rowUpper();
@@ -1559,7 +1606,50 @@ ClpSimplex::initialSolve(ClpSolve & options)
       // Solve 
       if (interrupt)
 	currentModel = &small;
-      small.primal(1);
+      small.defaultFactorizationFrequency();
+      if (dynamic_cast< ClpPackedMatrix*>(matrix_)) {
+	// See if original wanted vector
+	ClpPackedMatrix * clpMatrixO = dynamic_cast< ClpPackedMatrix*>(matrix_);
+	ClpMatrixBase * matrix = small.clpMatrix();
+	if (dynamic_cast< ClpPackedMatrix*>(matrix)&&clpMatrixO->wantsSpecialColumnCopy()) {
+	  ClpPackedMatrix * clpMatrix = dynamic_cast< ClpPackedMatrix*>(matrix);
+	  clpMatrix->makeSpecialColumnCopy();
+	  small.primal(1);
+	  clpMatrix->releaseSpecialColumnCopy();
+	} else {
+#if 1
+	  small.primal(1);
+#else
+	  int numberColumns = small.numberColumns();
+	  int numberRows = small.numberRows();
+	  // Use dual region
+	  double * rhs = small.dualRowSolution();
+	  int * whichRow = new int[3*numberRows];
+	  int * whichColumn = new int[2*numberColumns];
+	  int nBound;
+	  ClpSimplex * small2 = ((ClpSimplexOther *) (&small))->crunch(rhs,whichRow,whichColumn,
+									nBound,false,false);
+	  if (small2) {
+	    small2->primal(1);
+	    if (small2->problemStatus()==0) {
+	      small.setProblemStatus(0);
+	      ((ClpSimplexOther *) (&small))->afterCrunch(*small2,whichRow,whichColumn,nBound);
+	    } else {
+	      small2->primal(1);
+	      if (small2->problemStatus())
+		small.primal(1);
+	    }
+	    delete small2;
+	  } else {
+	    small.primal(1);
+	  }
+	  delete [] whichRow;
+	  delete [] whichColumn;
+#endif
+	}
+      } else {
+	small.primal(1);
+      }
       totalIterations += small.numberIterations();
       // move solution back
       const double * solution = small.primalColumnSolution();
@@ -1575,7 +1665,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
       // get reduced cost for large problem
       double * djs = model2->dualColumnSolution();
       CoinMemcpyN(model2->objective(),numberColumns,djs);
-      model2->transposeTimes(-1.0,small.dualRowSolution(),djs);
+      model2->clpMatrix()->transposeTimes(-1.0,small.dualRowSolution(),djs);
       int numberNegative=0;
       double sumNegative = 0.0;
       // now massage weight so all basic in plus good djs
@@ -1659,7 +1749,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
       delete [] saveLower;
       delete [] saveUpper;
     }
-    model2->primal(0);
+    model2->primal(1);
     model2->setPerturbation(savePerturbation);
     time2 = CoinCpuTime();
     timeCore = time2-timeX;
@@ -1704,11 +1794,13 @@ ClpSimplex::initialSolve(ClpSolve & options)
       barrierOptions &= ~8;
       scale=true;
     }
+#ifdef COIN_DEVELOP
 #ifndef FAST_BARRIER
     if (!numberBarrier)
       std::cout<<"Warning - the default ordering is just on row counts! "
 	       <<"The factorization is being improved"<<std::endl;
     numberBarrier++;
+#endif
 #endif
     // If quadratic force KKT
     if (quadraticObj) {
@@ -2124,7 +2216,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
     assert (method!=ClpSolve::automatic); // later
     time2=0.0;
   }
-  if (saveMatrix) {
+  if (saveMatrix&&model2==this) {
     // delete and replace
     delete model2->clpMatrix();
     model2->replaceMatrix(saveMatrix);
@@ -2163,7 +2255,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
       }
       primal(1);
       setPerturbation(savePerturbation);
-      numberIterations += this->numberIterations();
+      numberIterations += numberIterations_;
+      numberIterations_ = numberIterations;
       finalStatus=status();
       time2 = CoinCpuTime();
       handler_->message(CLP_INTERVAL_TIMING,messages_)
@@ -2171,6 +2264,23 @@ ClpSimplex::initialSolve(ClpSolve & options)
       <<CoinMessageEol;
       timeX=time2;
     }
+  } else if (model2!=this) {
+    // not presolved - but different model used (sprint probably)
+    CoinMemcpyN(model2->primalRowSolution(),
+		numberRows_,this->primalRowSolution());
+    CoinMemcpyN(model2->dualRowSolution(),
+		numberRows_,this->dualRowSolution());
+    CoinMemcpyN(model2->primalColumnSolution(),
+		numberColumns_,this->primalColumnSolution());
+    CoinMemcpyN(model2->dualColumnSolution(),
+		numberColumns_,this->dualColumnSolution());
+    CoinMemcpyN(model2->statusArray(),
+		numberColumns_+numberRows_,this->statusArray());
+    objectiveValue_=model2->objectiveValue_;
+    numberIterations_ =model2->numberIterations_;
+    problemStatus_ =model2->problemStatus_;
+    secondaryStatus_ =model2->secondaryStatus_;
+    delete model2;
   }
   setMaximumIterations(saveMaxIterations);
   std::string statusMessage[]={"Unknown","Optimal","PrimalInfeasible","DualInfeasible","Stopped",
@@ -2240,7 +2350,6 @@ ClpSimplex::initialBarrierSolve()
   return initialSolve(options);
 }
 
-
 // Default constructor
 ClpSolve::ClpSolve (  )
 {
@@ -2248,12 +2357,13 @@ ClpSolve::ClpSolve (  )
   presolveType_=presolveOn;
   numberPasses_=5;
   int i;
-  for (i=0;i<6;i++)
+  for (i=0;i<7;i++)
     options_[i]=0;
-  for (i=0;i<6;i++)
+  // say no +-1 matrix
+  options_[3]=1;
+  for (i=0;i<7;i++)
     extraInfo_[i]=-1;
-  for (i=0;i<2;i++)
-    independentOptions_[i]=0;
+  independentOptions_[0]=0;
   // But switch off slacks
   independentOptions_[1]=512;
   // Substitute up to 3
@@ -2271,8 +2381,10 @@ ClpSolve::ClpSolve ( SolveType method, PresolveType presolveType,
   int i;
   for (i=0;i<6;i++)
     options_[i]=options[i];
+  options_[6]=0;
   for (i=0;i<6;i++)
     extraInfo_[i]=extraInfo[i];
+  extraInfo_[6]=0;
   for (i=0;i<3;i++)
     independentOptions_[i]=independentOptions[i];
 }
@@ -2284,9 +2396,9 @@ ClpSolve::ClpSolve(const ClpSolve & rhs)
   presolveType_=rhs.presolveType_;
   numberPasses_=rhs.numberPasses_;
   int i;
-  for ( i=0;i<6;i++)
+  for ( i=0;i<7;i++)
     options_[i]=rhs.options_[i];
-  for ( i=0;i<6;i++)
+  for ( i=0;i<7;i++)
     extraInfo_[i]=rhs.extraInfo_[i];
   for (i=0;i<3;i++)
     independentOptions_[i]=rhs.independentOptions_[i];
@@ -2300,9 +2412,9 @@ ClpSolve::operator=(const ClpSolve & rhs)
     presolveType_=rhs.presolveType_;
     numberPasses_=rhs.numberPasses_;
     int i;
-    for (i=0;i<6;i++)
+    for (i=0;i<7;i++)
       options_[i]=rhs.options_[i];
-    for (i=0;i<6;i++)
+    for (i=0;i<7;i++)
       extraInfo_[i]=rhs.extraInfo_[i];
     for (i=0;i<3;i++)
       independentOptions_[i]=rhs.independentOptions_[i];

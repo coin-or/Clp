@@ -152,7 +152,7 @@ public:
   */
   virtual int synchronize(ClpSimplex * model,int mode);
   /// Correct sequence in and out to give true value
-  virtual void correctSequence(int & sequenceIn, int & sequenceOut) const;
+  virtual void correctSequence(const ClpSimplex * model,int & sequenceIn, int & sequenceOut) ;
   //@}
 
 

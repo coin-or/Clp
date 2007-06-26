@@ -200,7 +200,7 @@ public:
                   const CoinIndexedVector * columnArray,
                   CoinIndexedVector * spareArray,
                   double acceptablePivot,
-                  double & upperReturn, double &bestReturn, double & badFree);
+                  double & upperReturn, double &bestReturn,double & badFree);
   /** 
       Row array has row part of pivot row
       Column array has column part.
@@ -292,6 +292,7 @@ public:
   void gutsOfDual(int ifValuesPass,double * & saveDuals,int initialStatus,
                   ClpDataSave & saveData);
   //int dual2(int ifValuesPass,int startFinishOptions=0);
+  void resetFakeBounds();
   
   //@}
 };

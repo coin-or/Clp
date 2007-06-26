@@ -59,7 +59,7 @@ static bool maskMatches(const int * starts, char ** masks,
 #endif
 
 int mainTest (int argc, const char *argv[],int algorithm,
-	      ClpSimplex empty, bool doPresolve,int switchOff);
+	      ClpSimplex empty, bool doPresolve,int switchOff,bool doVector);
 static void statistics(ClpSimplex * originalModel, ClpSimplex * model);
 static void generateCode(const char * fileName,int type);
 // Returns next valid field
@@ -85,6 +85,7 @@ int main (int argc, const char *argv[])
     int printMode=0;
     int presolveOptions=0;
     int doCrash=0;
+    int doVector=0;
     int doSprint=-1;
     // set reasonable defaults
     int preSolve=5;
@@ -474,6 +475,9 @@ int main (int argc, const char *argv[])
 	    case CRASH:
 	      doCrash=action;
 	      break;
+	    case VECTOR:
+	      doVector=action;
+	      break;
 	    case MESSAGES:
 	      models[iModel].messageHandler()->setPrefix(action!=0);
 	      break;
@@ -589,6 +593,13 @@ int main (int argc, const char *argv[])
 		presolveOptions |= 0x40000000;
 	      solveOptions.setSpecialOption(4,presolveOptions);
 	      solveOptions.setSpecialOption(5,printOptions&1);
+	      if (doVector) {
+		ClpMatrixBase * matrix = models[iModel].clpMatrix();
+		if (dynamic_cast< ClpPackedMatrix*>(matrix)) {
+		  ClpPackedMatrix * clpMatrix = dynamic_cast< ClpPackedMatrix*>(matrix);
+		  clpMatrix->makeSpecialColumnCopy();
+		}
+	      }
 	      if (method==ClpSolve::useDual) {
 		// dual
 		if (doCrash)
@@ -662,8 +673,10 @@ int main (int argc, const char *argv[])
                 status=-1;
               }
               if (dualize) {
-                ((ClpSimplexOther *) models+iModel)->restoreFromDual(model2);
+                int returnCode=((ClpSimplexOther *) models+iModel)->restoreFromDual(model2);
                 delete model2;
+		if (returnCode&&dualize!=2)
+		  models[iModel].primal(1);
               }
               if (status>=0)
                 basisHasValues=1;
@@ -780,6 +793,13 @@ int main (int argc, const char *argv[])
 		canOpen=true;
 		fileName = "-";
 	      } else {
+		// See if .lp
+		{
+		  const char * c_name = field.c_str();
+		  int length = strlen(c_name);
+		  if (length>3&&!strncmp(c_name+length-3,".lp",3))
+		    gmpl=-1; // .lp
+		}
                 bool absolutePath;
                 if (dirsep=='/') {
                   // non Windows (or cygwin)
@@ -804,7 +824,7 @@ int main (int argc, const char *argv[])
 		  }
 		} else {
 		  fileName = directory+field;
-                  // See if gmpl (model & data)
+                  // See if gmpl (model & data) - or even lp file
                   int length = field.size();
                   int percent = field.find('%');
                   if (percent<length&&percent>0) {
@@ -815,7 +835,7 @@ int main (int argc, const char *argv[])
                       gmpl=2; // two files
                     printf("GMPL model file %s and data file %s\n",
                            fileName.c_str(),gmplData.c_str());
-                  }
+		  }
 		}
                 std::string name=fileName;
                 if (fileCoinReadable(name)) {
@@ -841,10 +861,12 @@ int main (int argc, const char *argv[])
                   status =models[iModel].readMps(fileName.c_str(),
                                                  keepImportNames!=0,
                                                  allowImportErrors!=0);
-                else
+                else if (gmpl>0)
                   status= models[iModel].readGMPL(fileName.c_str(),
                                                   (gmpl==2) ? gmplData.c_str() : NULL,
                                                   keepImportNames!=0);
+		else
+                  status= models[iModel].readLp(fileName.c_str(),1.0e-12);
 		if (!status||(status>0&&allowImportErrors)) {
 		  goodModels[iModel]=true;
 		  // sets to all slack (not necessary?)
@@ -936,6 +958,13 @@ int main (int argc, const char *argv[])
 		// If presolve on then save presolved
 		bool deleteModel2=false;
 		ClpSimplex * model2 = models+iModel;
+		if (dualize) {
+		  model2 = ((ClpSimplexOther *) model2)->dualOfModel();
+		  printf("Dual of model has %d rows and %d columns\n",
+			 model2->numberRows(),model2->numberColumns());
+		  model2->setOptimizationDirection(1.0);
+		  preSolve=0; // as picks up from model
+		}
 		if (preSolve) {
 		  ClpPresolve pinfo;
 		  int presolveOptions2 = presolveOptions&~0x40000000;
@@ -1030,15 +1059,7 @@ int main (int argc, const char *argv[])
 		  delete [] columnNames;
 		}
 #else
-                if (dualize) {
-                  ClpSimplex * model3 = ((ClpSimplexOther *) model2)->dualOfModel();
-                  printf("Dual of model has %d rows and %d columns\n",
-                         model3->numberRows(),model3->numberColumns());
-                  model3->writeMps(fileName.c_str(),(outputFormat-1)/2,1+((outputFormat-1)&1));
-                  delete model3;
-                } else {
-                  model2->writeMps(fileName.c_str(),(outputFormat-1)/2,1+((outputFormat-1)&1));
-                }
+		model2->writeMps(fileName.c_str(),(outputFormat-1)/2,1+((outputFormat-1)&1));
 #endif
 		if (deleteModel2)
 		  delete model2;
@@ -1378,7 +1399,7 @@ int main (int argc, const char *argv[])
               int specialOptions = models[iModel].specialOptions();
               models[iModel].setSpecialOptions(0);
 	      mainTest(nFields,fields,algorithm,models[iModel],
-		       (preSolve!=0),specialOptions);
+		       (preSolve!=0),specialOptions,doVector!=0);
 	    }
 	    break;
 	  case UNITTEST:
@@ -1397,7 +1418,7 @@ int main (int argc, const char *argv[])
               int algorithm=-1;
               if (models[iModel].numberRows())
                 algorithm=7;
-	      mainTest(nFields,fields,algorithm,models[iModel],(preSolve!=0),specialOptions);
+	      mainTest(nFields,fields,algorithm,models[iModel],(preSolve!=0),specialOptions,doVector!=0);
 	    }
 	    break;
 	  case FAKEBOUND:

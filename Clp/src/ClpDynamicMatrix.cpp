@@ -229,7 +229,7 @@ ClpDynamicMatrix::ClpDynamicMatrix(ClpSimplex * model, int numberSets,
   numberElements_ = (int) guess;
   numberElements_ = CoinMin(numberElements_,numberElements)+originalMatrix->getNumElements();
   matrix_ = originalMatrix;
-  zeroElements_ = false;
+  flags_ &= ~1;
   // resize model (matrix stays same)
   int newRowSize = numberRows+CoinMin(numberSets_,CoinMax(frequency,numberRows))+1;
   model->resize(newRowSize,numberNeeded);

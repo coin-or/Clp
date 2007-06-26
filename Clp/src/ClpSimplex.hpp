@@ -10,11 +10,6 @@
 #ifndef ClpSimplex_H
 #define ClpSimplex_H
 
-#if defined(_MSC_VER)
-// Turn off compiler warning about long names
-#  pragma warning(disable:4786)
-#endif
-
 #include <iostream>
 #include <cfloat>
 #include "ClpModel.hpp"
@@ -30,6 +25,7 @@ class CoinModel;
 class OsiClpSolverInterface;
 class CoinWarmStartBasis;
 class ClpDisasterHandler;
+class ClpConstraint;
 
 /** This solves LPs using the simplex method
 
@@ -80,7 +76,7 @@ public:
   /**@name Constructors and destructor and copy */
   //@{
   /// Default constructor
-    ClpSimplex (  );
+    ClpSimplex (bool emptyMessages = false  );
 
   /** Copy constructor. May scale depending on mode
       -1 leave mode as is 
@@ -111,6 +107,12 @@ public:
   /** This copies back stuff from miniModel and then deletes miniModel.
       Only to be used with mini constructor */
   void originalModel(ClpSimplex * miniModel);
+  /** Array persistence flag
+      If 0 then as now (delete/new)
+      1 then only do arrays if bigger needed
+      2 as 1 but give a bit extra if bigger needed
+  */
+  void setPersistenceFlag(int value);
   /**
      If you are re-using the same matrix again and again then the setup time
      to do scaling may be significant.  Also you may not want to initialize all values
@@ -186,6 +188,9 @@ public:
   /// Read GMPL files from the given filenames
   int readGMPL(const char *filename,const char * dataName,
                bool keepNames=false);
+  /// Read file in LP format from file with name filename. 
+  /// See class CoinLpIO for description of this format.
+  int readLp(const char *filename, const double epsilon = 1e-5);
   /** Borrow model.  This is so we dont have to copy large amounts
       of data around.  It assumes a derived class wants to overwrite
       an empty model with a real one - while it does an algorithm.
@@ -196,6 +201,16 @@ public:
    void passInEventHandler(const ClpEventHandler * eventHandler);
   /// Puts solution back into small model
   void getbackSolution(const ClpSimplex & smallModel,const int * whichRow, const int * whichColumn);
+  /** Load nonlinear part of problem from AMPL info
+      Returns 0 if linear
+      1 if quadratic objective
+      2 if quadratic constraints
+      3 if nonlinear objective
+      4 if nonlinear constraints
+      -1 on failure
+  */
+  int loadNonLinear(void * info, int & numberConstraints, 
+		    ClpConstraint ** & constraints);
   //@}
 
   /**@name Functions most useful to user */
@@ -214,7 +229,6 @@ public:
   int initialBarrierSolve();
   /// Barrier initial solve, not to be followed by crossover
   int initialBarrierNoCrossSolve();
-
   /** Dual algorithm - see ClpSimplexDual.hpp for method.
       ifValuesPass==2 just does values pass and then stops.
 
@@ -245,6 +259,13 @@ public:
       less than deltaTolerance
   */
   int nonlinearSLP(int numberPasses,double deltaTolerance);
+  /** Solves problem with nonlinear constraints using SLP - may be used as crash
+      for other algorithms when number of iterations small.
+      Also exits if all problematical variables are changing
+      less than deltaTolerance
+  */
+  int nonlinearSLP(int numberConstraints, ClpConstraint ** constraints,
+		   int numberPasses,double deltaTolerance);
   /** Solves using barrier (assumes you have good cholesky factor code).
       Does crossover to simplex if asked*/
   int barrier(bool crossover=true);
@@ -290,7 +311,6 @@ public:
 		  double * costIncrease, int * sequenceIncrease,
 		  double * costDecrease, int * sequenceDecrease,
 		  double * valueIncrease=NULL, double * valueDecrease=NULL);
-
   /** Primal ranging.
       This computes increase/decrease in value for each given variable and corresponding
       sequence numbers which would change basis.  Sequence numbers are 0..numberColumns 
@@ -640,44 +660,17 @@ public:
 			   float allowedInfeasibility);
   //@}
   /**@name most useful gets and sets */
-  //@{ 
-  // On reflection I doubt whether anyone uses so test
-private:
-  /// Worst column primal infeasibility
-  inline double columnPrimalInfeasibility() const 
-          { return columnPrimalInfeasibility_;} ;
-  /// Sequence of worst (-1 if feasible)
-  inline int columnPrimalSequence() const 
-          { return columnPrimalSequence_;} ;
-  /// Worst row primal infeasibility
-  inline double rowPrimalInfeasibility() const 
-          { return rowPrimalInfeasibility_;} ;
-  /// Sequence of worst (-1 if feasible)
-  inline int rowPrimalSequence() const 
-          { return rowPrimalSequence_;} ;
-  /** Worst column dual infeasibility (note - these may not be as meaningful
-      if the problem is primal infeasible */
-  inline double columnDualInfeasibility() const 
-          { return columnDualInfeasibility_;} ;
-  /// Sequence of worst (-1 if feasible)
-  inline int columnDualSequence() const 
-          { return columnDualSequence_;} ;
-  /// Worst row dual infeasibility
-  inline double rowDualInfeasibility() const 
-          { return rowDualInfeasibility_;} ;
-  /// Sequence of worst (-1 if feasible)
-  inline int rowDualSequence() const 
-          { return rowDualSequence_;} ;
-  /// Primal tolerance needed to make dual feasible (<largeTolerance)
-  inline double primalToleranceToGetOptimal() const 
-          { return primalToleranceToGetOptimal_;} ;
-  /// Remaining largest dual infeasibility
-  inline double remainingDualInfeasibility() const 
-          { return remainingDualInfeasibility_;} ;
-  /// Largest difference between input primal solution and computed
-  inline double largestSolutionError() const
-          { return largestSolutionError_;} ;
+  //@{
+public: 
+  /// Initial value for alpha accuracy calculation (-1.0 off)
+  inline double alphaAccuracy() const
+          { return alphaAccuracy_;} ;
+  inline void setAlphaAccuracy(double value)
+          { alphaAccuracy_ = value;} ;
 public:
+  /// Disaster handler
+  inline void setDisasterHandler(ClpDisasterHandler * handler)
+  { disasterArea_= handler;};
   /// Large bound value (for complementarity etc)
   inline double largeValue() const 
           { return largeValue_;} ;
@@ -942,6 +935,8 @@ public:
   { return objectiveValue_;};
    /// Compute objective value from solution and put in objectiveValue_
   void computeObjectiveValue(bool useWorkingSolution=false);
+  /// Compute minimization objective value from internal solution without perturbation
+  double computeInternalObjectiveValue();
   /** Number of extra rows.  These are ones which will be dynamically created
       each iteration.  This is for GUB but may have other uses.
   */
@@ -953,37 +948,10 @@ public:
   { return maximumBasic_;};
   /// Create C++ lines to get to current state
   void generateCpp( FILE * fp,bool defaultFactor=false);
-  /** For advanced options
-      1 - Don't keep changing infeasibility weight
-      2 - Keep nonLinearCost round solves
-      4 - Force outgoing variables to exact bound (primal)
-      8 - Safe to use dense initial factorization
-      16 -Just use basic variables for operation if column generation
-      32 -Clean up with primal before strong branching
-      64 -Treat problem as feasible until last minute (i.e. minimize infeasibilities)
-      128 - Switch off all matrix sanity checks
-      256 - No row copy
-      512 - If not in values pass, solution guaranteed, skip as much as possible
-      1024 - In branch and bound
-      2048 - Don't bother to re-factorize if < 20 iterations
-      4096 - Skip some optimality checks
-      8192 - Do Primal when cleaning up primal
-      16384 - In fast dual (so we can switch off things)
-      32678 - called from Osi
-      NOTE - many applications can call Clp but there may be some short cuts
-             which are taken which are not guaranteed safe from all applications.
-             Vetted applications will have a bit set and the code may test this
-             At present I expect a few such applications - if too many I will
-             have to re-think.  It is up to application owner to change the code
-             if she/he needs these short cuts.  I will not debug unless in Coin
-             repository.  See COIN_CLP_VETTED comments.
-      0x01000000 is Cbc (and in branch and bound)
-  */
-#define COIN_CBC_USING_CLP 0x01000000
-  inline unsigned int specialOptions() const
-  { return specialOptions_;};
-  inline void setSpecialOptions(unsigned int value)
-  { specialOptions_=value;};
+  /// Gets clean and emptyish factorization
+  ClpFactorization * getEmptyFactorization();
+  /// May delete or may make clean and emptyish factorization
+  void setEmptyFactorization();
   //@}
 
   ///@name Basis handling 
@@ -1126,8 +1094,8 @@ protected:
   double largestPrimalError_;
   /// Largest error on basic duals
   double largestDualError_;
-  /// Largest difference between input primal solution and computed
-  double largestSolutionError_;
+  /// For computing whether to re-factorize
+  double alphaAccuracy_;
   /// Dual bound
   double dualBound_;
   /// Alpha (pivot element)
@@ -1234,6 +1202,8 @@ protected:
   double * savedSolution_;
   /// Number of times code has tentatively thought optimal
   int numberTimesOptimal_;
+  /// Disaster handler
+  ClpDisasterHandler * disasterArea_;
   /// If change has been made (first attempt at stopping looping)
   int changeMade_;
   /// Algorithm >0 == Primal, <0 == Dual
@@ -1256,10 +1226,6 @@ protected:
       analysis.  If it doesn't work it can easily be replaced.
   */
   ClpNonLinearCost * nonLinearCost_;
-  /** For advanced options
-      See get and set for meaning
-  */
-  unsigned int specialOptions_;
   /// So we know when to be cautious
   int lastBadIteration_;
   /// So we know when to open up again
@@ -1339,6 +1305,8 @@ public:
     ClpSimplexProgress & operator=(const ClpSimplexProgress & rhs);
   /// Destructor
    ~ClpSimplexProgress (  );
+  /// Resets as much as possible
+   void reset();
   //@}
 
   /**@name Check progress */
@@ -1382,6 +1350,7 @@ public:
   //@}
   /**@name Data  */
 #define CLP_PROGRESS 5
+  //#define CLP_PROGRESS_WEIGHT 10
   //@{
   /// Objective values
   double objective_[CLP_PROGRESS];
@@ -1389,6 +1358,20 @@ public:
   double infeasibility_[CLP_PROGRESS];
   /// Sum of real primal infeasibilities for primal
   double realInfeasibility_[CLP_PROGRESS];
+#ifdef CLP_PROGRESS_WEIGHT
+  /// Objective values for weights
+  double objectiveWeight_[CLP_PROGRESS_WEIGHT];
+  /// Sum of infeasibilities for algorithm for weights
+  double infeasibilityWeight_[CLP_PROGRESS_WEIGHT];
+  /// Sum of real primal infeasibilities for primal for weights
+  double realInfeasibilityWeight_[CLP_PROGRESS_WEIGHT];
+  /// Drop  for weights
+  double drop_;
+  /// Best? for weights
+  double best_;
+#endif
+  /// Initial weight for weights
+  double initialWeight_;
 #define CLP_CYCLE 12
   /// For cycle checking
   //double obj_[CLP_CYCLE];
@@ -1401,6 +1384,12 @@ public:
   int numberInfeasibilities_[CLP_PROGRESS];
   /// Iteration number at which occurred
   int iterationNumber_[CLP_PROGRESS];
+#ifdef CLP_PROGRESS_WEIGHT
+  /// Number of infeasibilities for weights
+  int numberInfeasibilitiesWeight_[CLP_PROGRESS_WEIGHT];
+  /// Iteration number at which occurred for weights
+  int iterationNumberWeight_[CLP_PROGRESS_WEIGHT];
+#endif
   /// Number of times checked (so won't stop too early)
   int numberTimes_;
   /// Number of times it looked like loop

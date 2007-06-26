@@ -12,6 +12,7 @@
 #include "CoinHelperFunctions.hpp"
 
 #include "CoinPackedMatrix.hpp"
+#include "ClpPackedMatrix.hpp"
 #include "ClpSimplex.hpp"
 #ifndef SLIM_CLP
 #include "ClpQuadraticObjective.hpp"
@@ -480,6 +481,8 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
       //paction_ = dupcol_action::presolve(prob, paction_);
     }
 
+    if ((presolveActions_&16384)!=0)
+      prob->setPresolveOptions(prob->presolveOptions()|16384);
     // Check number rows dropped
     int lastDropped=0;
     prob->pass_=0;
@@ -1431,6 +1434,8 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
   presolvedModel_=NULL;
   // Messages
   CoinMessages messages = originalModel->coinMessages();
+  // Only go round 100 times even if integer preprocessing
+  int totalPasses=100;
   while (result==-1) {
 
 #ifndef CLP_NO_STD
@@ -1455,6 +1460,7 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
     // drop integer information if wanted
     if (!keepIntegers)
       presolvedModel_->deleteIntegerInformation();
+    totalPasses--;
 
     double ratio=2.0;
     if (substitution_>3)
@@ -1632,6 +1638,8 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
 	  columnNames.push_back(originalModel->columnName(kColumn));
 	}
 	presolvedModel_->copyNames(rowNames,columnNames);
+      } else {
+	presolvedModel_->setLengthNames(0);
       }
 #endif
       if (rowObjective_) {
@@ -1695,7 +1703,7 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
 						     messages)
 						       <<numberChanges
 						       <<CoinMessageEol;
-	  if (!result) {
+	  if (!result&&totalPasses>0) {
 	    result = -1; // round again
 	  }
 	}
