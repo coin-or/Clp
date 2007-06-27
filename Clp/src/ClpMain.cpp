@@ -15,7 +15,7 @@
 #include "CoinHelperFunctions.hpp"
 #include "CoinSort.hpp"
 // History since 1.0 at end
-#define CLPVERSION "1.03.03"
+#define CLPVERSION "1.05.00"
 
 #include "CoinMpsIO.hpp"
 #include "CoinFileIO.hpp"
@@ -2213,4 +2213,6 @@ static void generateCode(const char * fileName,int type)
   1.02.02 May 19 2005.  Stuff for strong branching and some improvements to simplex
   1.03.01 May 24 2006.  Lots done but I can't remember what!
   1.03.03 June 13 2006.  For clean up after dual perturbation
+  1.04.01 June 26 2007.  Lots of changes but I got lazy
+  1.05.00 June 27 2007.  This is trunk so when gets to stable will be 1.5
  */
