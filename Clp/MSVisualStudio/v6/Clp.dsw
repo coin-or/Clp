@@ -1,0 +1,128 @@
+Microsoft Developer Studio Workspace File, Format Version 6.00
+# WARNING: DO NOT EDIT OR DELETE THIS WORKSPACE FILE!
+
+###############################################################################
+
+Project: "ClpExamplesMinimum"=".\ClpExamplesMinimum\ClpExamplesMinimum.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name libClp
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libCoinUtils
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "ClpExamplesTestBarrier"=".\ClpExamplesTestBarrier\ClpExamplesTestBarrier.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name libClp
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libCoinUtils
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "ClpExamplesTestQP"=".\ClpExamplesTestQP\ClpExamplesTestQP.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name libClp
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libCoinUtils
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "clp"=".\clp\clp.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name libClp
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libCoinUtils
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "libClp"=".\libClp\libClp.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "libCoinUtils"="..\CoinUtils\libCoinUtils\libCoinUtils.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "unitTestCoinUtils"="..\CoinUtils\unitTestCoinUtils\unitTestCoinUtils.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name libCoinUtils
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Global:
+
+Package=<5>
+{{{
+}}}
+
+Package=<3>
+{{{
+}}}
+
+###############################################################################
+
