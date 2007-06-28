@@ -1,3 +1,4 @@
+MSVisualStudio   https://projects.coin-or.org/svn/MSVisualStudio/trunk/ExternalsDirs/Clp
 BuildTools    https://projects.coin-or.org/svn/BuildTools/trunk
 ThirdParty/Blas https://projects.coin-or.org/svn/BuildTools/ThirdParty/Blas/stable/1.0
 ThirdParty/Lapack https://projects.coin-or.org/svn/BuildTools/ThirdParty/Lapack/stable/1.0
