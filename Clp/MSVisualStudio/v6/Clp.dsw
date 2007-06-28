@@ -87,7 +87,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "libCoinUtils"="..\CoinUtils\libCoinUtils\libCoinUtils.dsp" - Package Owner=<4>
+Project: "libCoinUtils"="..\..\..\CoinUtils\MSVisualStudio\v6\libCoinUtils\libCoinUtils.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -99,7 +99,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "unitTestCoinUtils"="..\CoinUtils\unitTestCoinUtils\unitTestCoinUtils.dsp" - Package Owner=<4>
+Project: "unitTestCoinUtils"="..\..\..\CoinUtils\MSVisualStudio\v6\unitTestCoinUtils\unitTestCoinUtils.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{

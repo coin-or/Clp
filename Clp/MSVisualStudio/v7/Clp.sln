@@ -27,11 +27,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libClp", "libClp\libClp.vcp
 	ProjectSection(ProjectDependencies) = postProject
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libCoinUtils", "..\CoinUtils\libCoinUtils\libCoinUtils.vcproj", "{EFC5E42E-0FEF-49F6-824F-D7201E9FED6E}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libCoinUtils", "..\..\..\CoinUtils\MSVisualStudio\v7\libCoinUtils\libCoinUtils.vcproj", "{EFC5E42E-0FEF-49F6-824F-D7201E9FED6E}"
 	ProjectSection(ProjectDependencies) = postProject
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "unitTestCoinUtils", "..\CoinUtils\unitTestCoinUtils\unitTestCoinUtils.vcproj", "{FDE1A08C-578B-4DFF-A145-84ACEC8EA2A6}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "unitTestCoinUtils", "..\..\..\CoinUtils\MSVisualStudio\v7\unitTestCoinUtils\unitTestCoinUtils.vcproj", "{FDE1A08C-578B-4DFF-A145-84ACEC8EA2A6}"
 	ProjectSection(ProjectDependencies) = postProject
 		{EFC5E42E-0FEF-49F6-824F-D7201E9FED6E} = {EFC5E42E-0FEF-49F6-824F-D7201E9FED6E}
 	EndProjectSection
