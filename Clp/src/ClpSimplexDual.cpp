@@ -1198,6 +1198,9 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
 	      handler_->message(CLP_SIMPLEX_FLAG,messages_)
 		<<x<<sequenceWithin(sequenceOut_)
 		<<CoinMessageEol;
+#ifdef COIN_DEVELOP
+	      printf("flag a %g %g\n",btranAlpha,alpha_);
+#endif
 	      setFlagged(sequenceOut_);
 	      progress_->clearBadTimes();
 	      lastBadIteration_ = numberIterations_; // say be more cautious
@@ -1320,6 +1323,9 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
 	    handler_->message(CLP_SIMPLEX_FLAG,messages_)
 	      <<x<<sequenceWithin(sequenceOut_)
 	      <<CoinMessageEol;
+#ifdef COIN_DEVELOP
+	    printf("flag b %g\n",alpha_);
+#endif
 	    setFlagged(sequenceOut_);
 	    progress_->clearBadTimes();
 	    lastBadIteration_ = numberIterations_; // say be more cautious
@@ -1534,6 +1540,9 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
 	    handler_->message(CLP_SIMPLEX_FLAG,messages_)
 	      <<x<<sequenceWithin(sequenceOut_)
 	      <<CoinMessageEol;
+#ifdef COIN_DEVELOP
+	    printf("flag c\n");
+#endif
 	    setFlagged(sequenceOut_);
 	    if (!factorization_->pivots()) {
 	      rowArray_[0]->clear();
@@ -1614,9 +1623,9 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
 	  problemStatus_=-5;
 	} else {
 	  if (iRow<numberRows_) {
-#ifdef CLP_DEBUG
-	    std::cerr<<"Flagged variables at end - infeasible?"<<std::endl;
-	    //printf("Probably infeasible - pivot was %g\n",alpha_);
+#ifdef COIN_DEVELOP
+	    std::cout<<"Flagged variables at end - infeasible?"<<std::endl;
+	    printf("Probably infeasible - pivot was %g\n",alpha_);
 #endif
 	    //if (fabs(alpha_)<1.0e-4) {
 	    //problemStatus_=1;
@@ -3392,6 +3401,9 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	  handler_->message(CLP_SIMPLEX_FLAG,messages_)
 	    <<x<<sequenceWithin(sequenceOut_)
 	    <<CoinMessageEol;
+#ifdef COIN_DEVELOP
+	  printf("flag d\n");
+#endif
 	  setFlagged(sequenceOut_);
 	  progress_->clearBadTimes();
 	  
@@ -3466,6 +3478,9 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
     handler_->message(CLP_SIMPLEX_FLAG,messages_)
       <<x<<sequenceWithin(sequenceOut_)
       <<CoinMessageEol;
+#ifdef COIN_DEVELOP
+    printf("flag e\n");
+#endif
     setFlagged(sequenceOut_);
     progress_->clearBadTimes();
     
@@ -3520,61 +3535,64 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
   } else {
     double thisObj = objectiveValue_;
     double lastObj = progress_->lastObjective(0);
-    if (lastObj>thisObj+1.0e-3*CoinMax(fabs(thisObj),fabs(lastObj))+1.0
-	&&!ifValuesPass&&firstFree_<0) {
-      int maxFactor = factorization_->maximumPivots();
-      if (maxFactor>10&&numberPivots>1) {
-        //printf("lastobj %g thisobj %g\n",lastObj,thisObj);
-	//if (forceFactorization_<0)
-	//forceFactorization_= maxFactor;
-	//forceFactorization_ = CoinMax(1,(forceFactorization_>>1));
-	forceFactorization_=1;
-	//printf("Reducing factorization frequency - bad backwards\n");
-	unflagVariables = false;
-	changeMade_++; // say something changed
-        CoinMemcpyN(saveStatus_,numberColumns_+numberRows_,status_);
-        CoinMemcpyN(savedSolution_+numberColumns_ ,
-                numberRows_,rowActivityWork_);
-        CoinMemcpyN(savedSolution_ ,
-                numberColumns_,columnActivityWork_);
-	// restore extra stuff
-	int dummy;
-	matrix_->generalExpanded(this,6,dummy);
-	// get correct bounds on all variables
-	resetFakeBounds();
-	if(factorization_->pivotTolerance()<0.2)
-	  factorization_->pivotTolerance(0.2);
-	if (alphaAccuracy_!=-1.0)
-	  alphaAccuracy_=-2.0;
-	if (internalFactorize(1)) {
-          CoinMemcpyN(saveStatus_,numberColumns_+numberRows_,status_);
-          CoinMemcpyN(savedSolution_+numberColumns_ ,
-                  numberRows_,rowActivityWork_);
-          CoinMemcpyN(savedSolution_ ,
-                  numberColumns_,columnActivityWork_);
+    if(!ifValuesPass&&firstFree_<0) {
+      if (lastObj>thisObj+1.0e-3*CoinMax(fabs(thisObj),fabs(lastObj))+1.0) {
+	int maxFactor = factorization_->maximumPivots();
+	if (maxFactor>10&&numberPivots>1) {
+	  //printf("lastobj %g thisobj %g\n",lastObj,thisObj);
+	  //if (forceFactorization_<0)
+	  //forceFactorization_= maxFactor;
+	  //forceFactorization_ = CoinMax(1,(forceFactorization_>>1));
+	  forceFactorization_=1;
+	  //printf("Reducing factorization frequency - bad backwards\n");
+	  unflagVariables = false;
+	  changeMade_++; // say something changed
+	  CoinMemcpyN(saveStatus_,numberColumns_+numberRows_,status_);
+	  CoinMemcpyN(savedSolution_+numberColumns_ ,
+		      numberRows_,rowActivityWork_);
+	  CoinMemcpyN(savedSolution_ ,
+		      numberColumns_,columnActivityWork_);
 	  // restore extra stuff
 	  int dummy;
 	  matrix_->generalExpanded(this,6,dummy);
-	  // debug
-	  int returnCode = internalFactorize(1);
-	  while (returnCode) {
-	    // ouch 
-	    // switch off dense
-	    int saveDense = factorization_->denseThreshold();
-	    factorization_->setDenseThreshold(0);
-	    // Go to safe
-	    factorization_->pivotTolerance(0.99);
-	    // make sure will do safe factorization
-	    pivotVariable_[0]=-1;
-	    returnCode=internalFactorize(2);
-	    factorization_->setDenseThreshold(saveDense);
-	  }
+	  // get correct bounds on all variables
 	  resetFakeBounds();
+	  if(factorization_->pivotTolerance()<0.2)
+	    factorization_->pivotTolerance(0.2);
+	  if (alphaAccuracy_!=-1.0)
+	    alphaAccuracy_=-2.0;
+	  if (internalFactorize(1)) {
+	    CoinMemcpyN(saveStatus_,numberColumns_+numberRows_,status_);
+	    CoinMemcpyN(savedSolution_+numberColumns_ ,
+			numberRows_,rowActivityWork_);
+	    CoinMemcpyN(savedSolution_ ,
+			numberColumns_,columnActivityWork_);
+	    // restore extra stuff
+	    int dummy;
+	    matrix_->generalExpanded(this,6,dummy);
+	    // debug
+	    int returnCode = internalFactorize(1);
+	    while (returnCode) {
+	      // ouch 
+	      // switch off dense
+	      int saveDense = factorization_->denseThreshold();
+	      factorization_->setDenseThreshold(0);
+	      // Go to safe
+	      factorization_->pivotTolerance(0.99);
+	      // make sure will do safe factorization
+	      pivotVariable_[0]=-1;
+	      returnCode=internalFactorize(2);
+	      factorization_->setDenseThreshold(saveDense);
+	    }
+	    resetFakeBounds();
+	  }
+	  type = 2; // so will restore weights
+	  // get primal and dual solutions
+	  gutsOfSolution(givenDuals,NULL);
 	}
-	type = 2; // so will restore weights
-	// get primal and dual solutions
-	gutsOfSolution(givenDuals,NULL);
-      } 
+      } else if (lastObj<thisObj-1.0e-5*CoinMax(fabs(thisObj),fabs(lastObj))-1.0e-3) {
+	numberTimesOptimal_=0;
+      }
     }
 #endif
   }
@@ -4042,10 +4060,10 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	clearFlagged(iPivot);
       }
     }
-#if 0
+#ifdef COIN_DEVELOP
     if (numberFlagged) {
-      printf("unflagging %d variables - status %d ninf %d nopt %d\n",numberFlagged,tentativeStatus,
-	     numberPrimalInfeasibilities_,
+      printf("unflagging %d variables - tentativeStatus %d probStat %d ninf %d nopt %d\n",numberFlagged,tentativeStatus,
+	     problemStatus_,numberPrimalInfeasibilities_,
 	     numberTimesOptimal_);
     }
 #endif
@@ -4055,12 +4073,15 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	 Try changing pivot tolerance then give it a few goes and give up */
       if (factorization_->pivotTolerance()<0.9) {
 	factorization_->pivotTolerance(0.99);
-      } else if (numberTimesOptimal_<10) {
+	problemStatus_=-1;
+      } else if (numberTimesOptimal_<3) {
 	numberTimesOptimal_++;
+	problemStatus_=-1;
       } else {
 	unflagVariables=false;
-	changeMade_=false;
-	secondaryStatus_ = 1; // and say probably infeasible
+	//secondaryStatus_ = 1; // and say probably infeasible
+	// try primal
+	problemStatus_=10;
       }
     }
   }
