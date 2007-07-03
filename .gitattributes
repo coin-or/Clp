@@ -1,5 +1,26 @@
 * text=auto !eol
 Clp/LICENSE -text
+Clp/MSVisualStudio/v6/Clp.dsw -text
+Clp/MSVisualStudio/v6/Clp.opt -text
+Clp/MSVisualStudio/v6/ClpExamplesMinimum/ClpExamplesMinimum.dsp -text
+Clp/MSVisualStudio/v6/ClpExamplesTestBarrier/ClpExamplesTestBarrier.dsp -text
+Clp/MSVisualStudio/v6/ClpExamplesTestQP/ClpExamplesTestQP.dsp -text
+Clp/MSVisualStudio/v6/clp/clp.dsp -text
+Clp/MSVisualStudio/v6/libClp/libClp.dsp -text
+Clp/MSVisualStudio/v7/Clp.sln -text
+Clp/MSVisualStudio/v7/Clp.suo -text
+Clp/MSVisualStudio/v7/ClpExamplesMinimum/ClpExamplesMinimum.vcproj -text
+Clp/MSVisualStudio/v7/ClpExamplesTestBarrier/ClpExamplesTestBarrier.vcproj -text
+Clp/MSVisualStudio/v7/ClpExamplesTestQP/ClpExamplesTestQP.vcproj -text
+Clp/MSVisualStudio/v7/clp/clp.vcproj -text
+Clp/MSVisualStudio/v7/libClp/libClp.vcproj -text
+Clp/MSVisualStudio/v8/Clp.sln -text
+Clp/MSVisualStudio/v8/Clp.suo -text
+Clp/MSVisualStudio/v8/ClpExamplesMinimum/ClpExamplesMinimum.vcproj -text
+Clp/MSVisualStudio/v8/ClpExamplesTestBarrier/ClpExamplesTestBarrier.vcproj -text
+Clp/MSVisualStudio/v8/ClpExamplesTestQP/ClpExamplesTestQP.vcproj -text
+Clp/MSVisualStudio/v8/clp/clp.vcproj -text
+Clp/MSVisualStudio/v8/libClp/libClp.vcproj -text
 Clp/clp_addlibs.txt.in -text
 Clp/configure -text
 Clp/configure.ac -text
