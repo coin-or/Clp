@@ -3202,8 +3202,9 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
     double moveObjective = fabs(modification*solution_[sequenceIn_]);
     double smallMove = CoinMax(fabs(objectiveValue_),1.0e-3);
     if (moveObjective>smallMove) {
-      printf("would move objective by %g - original mod %g sol value %g\n",moveObjective,
-	     modification,solution_[sequenceIn_]);
+      if (handler_->logLevel()>1)
+	printf("would move objective by %g - original mod %g sol value %g\n",moveObjective,
+	       modification,solution_[sequenceIn_]);
       modification *= smallMove/moveObjective;
     }
 #endif
