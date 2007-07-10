@@ -4604,7 +4604,8 @@ ClpPackedMatrix3::swapOne(const ClpSimplex * model,const ClpPackedMatrix * matri
   int * rowA = row + kB*nel;
   double * elementB = element + kA*nel;
   int * rowB = row + kA*nel;
-  for (int i=0;i<nel;i++) {
+  int i;
+  for (i=0;i<nel;i++) {
     int temp = rowA[i];
     double tempE = elementA[i];
     rowA[i]=rowB[i];
@@ -4615,7 +4616,6 @@ ClpPackedMatrix3::swapOne(const ClpSimplex * model,const ClpPackedMatrix * matri
 #if 1
 #ifndef NDEBUG
   // check
-  int i;
   for (i=0;i<block->numberPrice_;i++) {
     int iColumn = column[i];
     if (iColumn!=model->sequenceIn()&&iColumn!=model->sequenceOut())
