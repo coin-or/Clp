@@ -47,7 +47,7 @@ ClpPresolve::ClpPresolve() :
   originalColumn_(NULL),
   originalRow_(NULL),
   rowObjective_(NULL),
-  paction_(0),
+  paction_(0),   
   ncols_(0),
   nrows_(0),
   nelems_(0),
@@ -68,7 +68,7 @@ ClpPresolve::~ClpPresolve()
 void 
 ClpPresolve::destroyPresolve()
 {
- const CoinPresolveAction *paction = paction_;
+  const CoinPresolveAction *paction = paction_;
   while (paction) {
     const CoinPresolveAction *next = paction->next;
     delete paction;
@@ -1705,6 +1705,13 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
 						       <<CoinMessageEol;
 	  if (!result&&totalPasses>0) {
 	    result = -1; // round again
+	    const CoinPresolveAction *paction = paction_;
+	    while (paction) {
+	      const CoinPresolveAction *next = paction->next;
+	      delete paction;
+	      paction = next;
+	    }
+	    paction_=NULL;
 	  }
 	}
       }
