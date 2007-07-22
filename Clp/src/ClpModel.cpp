@@ -184,7 +184,10 @@ ClpModel::gutsOfLoadModel (int numberRows, int numberColumns,
 {
   // save event handler in case already set
   ClpEventHandler * handler = eventHandler_->clone();
+  // Save specialOptions
+  int saveOptions = specialOptions_;
   gutsOfDelete();
+  specialOptions_ = saveOptions;
   eventHandler_ = handler;
   numberRows_=numberRows;
   numberColumns_=numberColumns;
