@@ -3367,11 +3367,11 @@ ClpGubMatrix::useEffectiveRhs(ClpSimplex * model, bool cheapest)
   char * mark = new char[numberColumns];
   memset(mark,0,numberColumns);
   for (int iColumn=0;iColumn<numberColumns;iColumn++) 
-    next_[iColumn]=INT_MAX;
+    next_[iColumn]=COIN_INT_MAX;
   int i;
   int * keys = new int[numberSets_];
   for (i=0;i<numberSets_;i++) 
-    keys[i]=INT_MAX;
+    keys[i]=COIN_INT_MAX;
   // set up chains
   for (i=0;i<numberColumns;i++){
     if (model->getStatus(i)==ClpSimplex::basic) 
@@ -3393,13 +3393,13 @@ ClpGubMatrix::useEffectiveRhs(ClpSimplex * model, bool cheapest)
       int smallest=numberRows+1;
       int key=-1;
       j = keys[i];
-      if (j!=INT_MAX) {
+      if (j!=COIN_INT_MAX) {
 	while (1) {
 	  if (mark[j]&&columnLength[j]<smallest&&!gotBasis) {
 	    key=j;
 	    smallest=columnLength[j];
 	  }
-	  if (next_[j]!=INT_MAX) {
+	  if (next_[j]!=COIN_INT_MAX) {
 	    j = next_[j];
 	  } else {
 	    // correct end
@@ -3426,10 +3426,10 @@ ClpGubMatrix::useEffectiveRhs(ClpSimplex * model, bool cheapest)
       int j;
       double sol=0.0;
       j = keys[i];
-      if (j!=INT_MAX) {
+      if (j!=COIN_INT_MAX) {
 	while (1) {
 	  sol += columnSolution[j];
-	  if (next_[j]!=INT_MAX) {
+	  if (next_[j]!=COIN_INT_MAX) {
 	    j = next_[j];
 	  } else {
 	    // correct end

@@ -1051,13 +1051,13 @@ ClpGubDynamicMatrix::useEffectiveRhs(ClpSimplex * model, bool cheapest)
   char * mark = new char[numberColumns];
   memset(mark,0,numberColumns);
   for (int iColumn=0;iColumn<numberColumns;iColumn++) 
-    next_[iColumn]=INT_MAX;
+    next_[iColumn]=COIN_INT_MAX;
   int i;
   int * keys = new int[numberSets_];
   int * back = new int[numberGubColumns_];
   CoinFillN(back,numberGubColumns_,-1);
   for (i=0;i<numberSets_;i++) 
-    keys[i]=INT_MAX;
+    keys[i]=COIN_INT_MAX;
   delete [] dynamicStatus_;
   dynamicStatus_ = new unsigned char [numberGubColumns_];
   memset(dynamicStatus_,0,numberGubColumns_); // for clarity
@@ -1101,7 +1101,7 @@ ClpGubDynamicMatrix::useEffectiveRhs(ClpSimplex * model, bool cheapest)
     int smallest=numberRows+1;
     double value=0.0;
     j=keys[iSet];
-    while (j!=INT_MAX) {
+    while (j!=COIN_INT_MAX) {
       if (model->getStatus(j)== ClpSimplex::basic) {
 	if (length[j]<smallest) {
 	  smallest=length[j];
@@ -1436,9 +1436,9 @@ ClpGubDynamicMatrix::useEffectiveRhs(ClpSimplex * model, bool cheapest)
   // and redo chains
   memset(mark,0,numberColumns);
   for (int iColumnX=0;iColumnX<firstAvailable_;iColumnX++) 
-    next_[iColumnX]=INT_MAX;
+    next_[iColumnX]=COIN_INT_MAX;
   for (i=0;i<numberSets_;i++) {
-    keys[i]=INT_MAX;
+    keys[i]=COIN_INT_MAX;
     int iKey = keyVariable_[i];
     if (iKey<numberColumns)
       model->setStatus(iKey,ClpSimplex::basic);
@@ -1455,7 +1455,7 @@ ClpGubDynamicMatrix::useEffectiveRhs(ClpSimplex * model, bool cheapest)
     }
   }
   for (i=0;i<numberSets_;i++) {
-    if (keys[i]!=INT_MAX) {
+    if (keys[i]!=COIN_INT_MAX) {
       // something in set
       int j;
       if (getStatus(i)!=ClpSimplex::basic) {
@@ -1471,7 +1471,7 @@ ClpGubDynamicMatrix::useEffectiveRhs(ClpSimplex * model, bool cheapest)
 	    key=j;
 	    smallest=length[j];
 	  }
-	  if (next_[j]!=INT_MAX) {
+	  if (next_[j]!=COIN_INT_MAX) {
 	    j = next_[j];
 	  } else {
 	    // correct end
@@ -1495,7 +1495,7 @@ ClpGubDynamicMatrix::useEffectiveRhs(ClpSimplex * model, bool cheapest)
 	j = keys[i];
 	while (1) {
 	  sol += columnSolution[j];
-	  if (next_[j]!=INT_MAX) {
+	  if (next_[j]!=COIN_INT_MAX) {
 	    j = next_[j];
 	  } else {
 	    // correct end

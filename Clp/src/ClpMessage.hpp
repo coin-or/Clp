@@ -5,6 +5,7 @@
 
 
 #include "CoinPragma.hpp"
+#include <cstring>
 
 // This deals with Clp messages (as against Osi messages etc)
 

@@ -908,7 +908,7 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
          if ((saveStrategy&4)==0) drop = drop_/50.0;
          if (lambdaIteration>4 && 
             (((lambdaIteration%10)==0 && smallInfeas<keepinfeas) ||
-             (lambdaIteration%5)==0 && 1.5*smallInfeas<keepinfeas)) {
+             ((lambdaIteration%5)==0 && 1.5*smallInfeas<keepinfeas))) {
            //printf(" Increasing smallInfeas from %f to %f\n",smallInfeas,1.5*smallInfeas);
            smallInfeas *= 1.5;
          }

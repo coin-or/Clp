@@ -3349,6 +3349,8 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
   const int * rowLength = copy.getVectorLengths(); 
   //const double * elementByRow = copy.getElements();
   int numberArtificials=0;
+  // We could use nonlinearcost to do segments - maybe later
+#define SEGMENTS 3  
   // see how many extra we need
   CoinBigIndex numberExtra=0;
   for (iConstraint=0;iConstraint<numberConstraints;iConstraint++) {
@@ -3382,12 +3384,17 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
     objective_=trueObjective;
   }
   int numberColumns2 = numberColumns_;
-  double penalty=1.0e9;
+  // Penalties may be adjusted by duals
+  // Both these should be modified depending on problem
+  double penalties[]={1.0e-2,1.0,1.0e9};
+  double bounds[] = {1.0e-2,1.0,COIN_DBL_MAX};
   if (numberArtificials) {
+    numberArtificials *= SEGMENTS;
     numberColumns2 += numberArtificials;
     int * addStarts = new int [numberArtificials+1];
     int * addRow = new int[numberArtificials];
     double * addElement = new double[numberArtificials];
+    double * addUpper = new double[numberArtificials];
     addStarts[0]=0;
     double * addCost = new double [numberArtificials];
     numberArtificials=0;
@@ -3395,25 +3402,32 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
       ClpConstraint * constraint = constraints[iConstraint];
       int iRow = constraint->rowNumber();
       if (rowLower_[iRow]>-1.0e20) {
-	addRow[numberArtificials]=iRow;
-	addElement[numberArtificials]=1.0;
-	addCost[numberArtificials]=penalty;
-	numberArtificials++;
-	addStarts[numberArtificials]=numberArtificials;
+	for (int k=0;k<SEGMENTS;k++) {
+	  addRow[numberArtificials]=iRow;
+	  addElement[numberArtificials]=1.0;
+	  addCost[numberArtificials]=penalties[k];
+	  addUpper[numberArtificials]=bounds[k];
+	  numberArtificials++;
+	  addStarts[numberArtificials]=numberArtificials;
+	}
       }
       if (rowUpper_[iRow]<1.0e20) {
-	addRow[numberArtificials]=iRow;
-	addElement[numberArtificials]=-1.0;
-	addCost[numberArtificials]=penalty;
-	numberArtificials++;
-	addStarts[numberArtificials]=numberArtificials;
+	for (int k=0;k<SEGMENTS;k++) {
+	  addRow[numberArtificials]=iRow;
+	  addElement[numberArtificials]=-1.0;
+	  addCost[numberArtificials]=penalties[k];
+	  addUpper[numberArtificials]=bounds[k];
+	  numberArtificials++;
+	  addStarts[numberArtificials]=numberArtificials;
+	}
       }
     }
-    newModel.addColumns(numberArtificials,NULL,NULL,addCost,
+    newModel.addColumns(numberArtificials,NULL,addUpper,addCost,
 		       addStarts,addRow,addElement);
     delete [] addStarts;
     delete [] addRow;
     delete [] addElement;
+    delete [] addUpper;
     delete [] addCost;
   }
   // find nonlinear columns
@@ -3469,9 +3483,9 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
       assert(iRow == constraint->rowNumber());
       int numberArtificials=0;
       if (rowLower_[iRow]>-1.0e20)
-	numberArtificials++;
+	numberArtificials += SEGMENTS;
       if (rowUpper_[iRow]<1.0e20)
-	numberArtificials++;
+	numberArtificials += SEGMENTS;
       if (numberArtificials==rowLength[iRow]) {
 	// all possible
 	memset(mark,0,numberColumns_);
@@ -3682,6 +3696,7 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
     } else {
       objValue=objective_->objectiveValue(this,solution);
     }
+    double infPenalty=0.0;
     for (iConstraint=0;iConstraint<numberConstraints;iConstraint++) {
       ClpConstraint * constraint = constraints[iConstraint];
       int iRow = constraint->rowNumber();
@@ -3691,26 +3706,28 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
 	printf("For row %d current value is %g (activity %g) , dual is %g - offset %g\n",iRow,functionValue,
 	       newModel.primalRowSolution()[iRow],
 	       dualValue,offset);
+      double infeasibility=0.0;
       if (functionValue<rowLower_[iRow]-1.0e-5) {
-	double under = rowLower_[iRow]-functionValue;
-	infValue += under;
+	infeasibility = rowLower_[iRow]-functionValue;
       } else if (functionValue>rowUpper_[iRow]+1.0e-5) {
-	double over = functionValue-rowUpper_[iRow];
-	infValue += over;
+	infeasibility = functionValue-rowUpper_[iRow];
+      }
+      infValue += infeasibility;
+      for (int k=0;k<SEGMENTS;k++) {
+	if (infeasibility<=0)
+	  break;
+	double thisPart = CoinMin(infeasibility,bounds[k]);
+	infPenalty += thisPart*penalties[k];
+	infeasibility -= thisPart;
       }
     }
     if (infValue)
-      printf("Sum infeasibilities %g ",infValue);
-    if (infValue<0.1)
-      infValue=0.0;
-    infValue *= penalty;
-    if (infValue)
-      printf("Infeasible obj %g ",infValue);
+      printf("Sum infeasibilities %g - penalty %g",infValue,infPenalty);
     if (objectiveOffset2)
       printf("offset2 %g\n",objectiveOffset2);
     objValue -= objectiveOffset2;
     printf("True objective %g\n",objValue);
-    objValue += infValue;
+    objValue += infPenalty;
     if (iPass) {
       double drop = lastObjective-objValue;
       std::cout<<"True drop was "<<drop<<std::endl;

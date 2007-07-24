@@ -1503,19 +1503,19 @@ e.g. no ENDATA.  This has to be set before import i.e. -errorsAllowed on -import
 #ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("extra1","Extra integer parameter 1",
-		  -1,INT_MAX,EXTRA1,false);
+		  -1,COIN_INT_MAX,EXTRA1,false);
   parameters[numberParameters-1].setIntValue(-1);
   parameters[numberParameters++]=
     CbcOrClpParam("extra2","Extra integer parameter 2",
-		  -1,INT_MAX,EXTRA2,false);
+		  -1,COIN_INT_MAX,EXTRA2,false);
   parameters[numberParameters-1].setIntValue(-1);
   parameters[numberParameters++]=
     CbcOrClpParam("extra3","Extra integer parameter 3",
-		  -1,INT_MAX,EXTRA3,false);
+		  -1,COIN_INT_MAX,EXTRA3,false);
   parameters[numberParameters-1].setIntValue(-1);
   parameters[numberParameters++]=
     CbcOrClpParam("extra4","Extra integer parameter 4",
-		  -1,INT_MAX,EXTRA4,false);
+		  -1,COIN_INT_MAX,EXTRA4,false);
   parameters[numberParameters-1].setIntValue(-1);
 #endif
 #ifdef COIN_HAS_CLP
@@ -1621,7 +1621,7 @@ you should be past that stage:-)"
 #ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("hot!StartMaxIts","Maximum iterations on hot start",
-		  0,INT_MAX,MAXHOTITS,false);
+		  0,COIN_INT_MAX,MAXHOTITS,false);
 #endif
 #ifdef COIN_HAS_CLP
   parameters[numberParameters++]=
@@ -1808,10 +1808,10 @@ You can also use the parameters 'direction minimize'."
 #ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("mipO!ptions","Dubious options for mip",
-		  0,INT_MAX,MIPOPTIONS,false);
+		  0,COIN_INT_MAX,MIPOPTIONS,false);
   parameters[numberParameters++]=
     CbcOrClpParam("more!MipOptions","More dubious options for mip",
-		  -1,INT_MAX,MOREMIPOPTIONS,false);
+		  -1,COIN_INT_MAX,MOREMIPOPTIONS,false);
   parameters[numberParameters++]=
     CbcOrClpParam("mixed!IntegerRoundingCuts","Whether to use Mixed Integer Rounding cuts",
 		  "off",MIXEDCUTS);
@@ -1839,7 +1839,7 @@ but this program turns this off to make it look more friendly.  It can be useful
 #ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("miniT!ree","Size of fast mini tree",
-		  0,INT_MAX,NUMBERMINI,false);
+		  0,COIN_INT_MAX,NUMBERMINI,false);
   parameters[numberParameters-1].setLonghelp
     (
      "The idea is that I can do a small tree fast. \
@@ -1921,7 +1921,7 @@ be done first (the up down choice will carry on after solution)."
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("numberA!nalyze","Number of analysis iterations",
-		  -INT_MAX,INT_MAX,NUMBERANALYZE,false);
+		  -COIN_INT_MAX,COIN_INT_MAX,NUMBERANALYZE,false);
   parameters[numberParameters-1].setLonghelp
     (
      "This says how many iterations to spend at root node analyzing problem. \
@@ -2027,7 +2027,7 @@ stop if drop small if less than 5000 columns, 20 otherwise"
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("pO!ptions","Dubious print options",
-		  0,INT_MAX,PRINTOPTIONS,false);
+		  0,COIN_INT_MAX,PRINTOPTIONS,false);
   parameters[numberParameters-1].setIntValue(0);
   parameters[numberParameters-1].setLonghelp
     (
@@ -2035,7 +2035,7 @@ stop if drop small if less than 5000 columns, 20 otherwise"
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("preO!pt","Presolve options",
-		  0,INT_MAX,PRESOLVEOPTIONS,false);
+		  0,COIN_INT_MAX,PRESOLVEOPTIONS,false);
 #endif
   parameters[numberParameters++]=
     CbcOrClpParam("presolve","Whether to presolve problem",
@@ -2436,7 +2436,7 @@ this does branch and cut."
   parameters[numberParameters-1].append("off");
   parameters[numberParameters++]=
     CbcOrClpParam("special!Options","Dubious options for Simplex - see ClpSimplex.hpp",
-		  0,INT_MAX,SPECIALOPTIONS,false);
+		  0,COIN_INT_MAX,SPECIALOPTIONS,false);
   parameters[numberParameters++]=
     CbcOrClpParam("sprint!Crash","Whether to try sprint crash",
 		  -1,5000000,SPRINT);
@@ -2498,7 +2498,7 @@ see number before trust."
 #ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("testO!si","Test OsiObject stuff",
-		  -1,INT_MAX,TESTOSI,false);
+		  -1,COIN_INT_MAX,TESTOSI,false);
 #endif
 #ifdef CBC_THREAD
   parameters[numberParameters++]=
