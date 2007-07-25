@@ -95,49 +95,49 @@ public:
   //@{
   /// Starts of each column
   inline CoinBigIndex * startColumnGen() const
-  { return startColumnGen_;};
+  { return startColumnGen_;}
   /// rows
   inline int * rowGen() const
-  { return rowGen_;};
+  { return rowGen_;}
   /// elements
   inline float * elementGen() const
-  { return elementGen_;};
+  { return elementGen_;}
   /// costs
   inline float * costGen() const
-  { return costGen_;};
+  { return costGen_;}
   /// full starts
   inline int * fullStartGen() const
-  { return fullStartGen_;};
+  { return fullStartGen_;}
   /// ids in next level matrix
   inline int * idGen() const
-  { return idGen_;};
+  { return idGen_;}
   /// Optional lower bounds on columns
   inline float * columnLowerGen() const
-  { return columnLowerGen_;};
+  { return columnLowerGen_;}
   /// Optional upper bounds on columns
   inline float * columnUpperGen() const
-  { return columnUpperGen_;};
+  { return columnUpperGen_;}
   /// size
   inline int numberColumns() const
-  { return numberColumns_;};
+  { return numberColumns_;}
   inline void setDynamicStatusGen(int sequence, DynamicStatus status)
   {
     unsigned char & st_byte = dynamicStatusGen_[sequence];
     st_byte &= ~7;
     st_byte |= status;
-  };
+  }
   inline DynamicStatus getDynamicStatusGen(int sequence) const
-  {return static_cast<DynamicStatus> (dynamicStatusGen_[sequence]&7);};
+  {return static_cast<DynamicStatus> (dynamicStatusGen_[sequence]&7);}
   /// Whether flagged
   inline bool flaggedGen(int i) const {
     return (dynamicStatusGen_[i]&8)!=0;
-  };
+  }
   inline void setFlaggedGen(int i) {
     dynamicStatusGen_[i] |= 8;
-  };
+  }
   inline void unsetFlagged(int i) {
     dynamicStatusGen_[i]  &= ~8;;
-  };
+  }
    //@}
    
     

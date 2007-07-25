@@ -329,18 +329,18 @@ public:
   inline double objectiveOffset() const { return dblParam_[ClpObjOffset];}
   void setObjectiveOffset(double value);
 #ifndef CLP_NO_STD
-  inline std::string problemName() const { return strParam_[ClpProbName]; };
+  inline std::string problemName() const { return strParam_[ClpProbName]; }
 #endif
    /// Number of iterations
    inline int numberIterations() const  { return numberIterations_; }
    inline int getIterationCount() const { return numberIterations_; }
   inline void setNumberIterations(int numberIterations)
-  { numberIterations_ = numberIterations;};
+  { numberIterations_ = numberIterations;}
   /** Solve type - 1 simplex, 2 simplex interface, 3 Interior.*/
   inline int solveType() const
-  { return solveType_;};
+  { return solveType_;}
   inline void setSolveType(int type)
-  { solveType_=type;};
+  { solveType_=type;}
    /// Maximum number of iterations
    inline int maximumIterations() const { return intParam_[ClpMaxNumIteration]; }
    void setMaximumIterations(int value);
@@ -362,7 +362,7 @@ public:
    inline int problemStatus() const            { return problemStatus_; }
   /// Set problem status
   inline void setProblemStatus(int problemStatus)
-  { problemStatus_ = problemStatus;};
+  { problemStatus_ = problemStatus;}
    /** Secondary status of problem - may get extended
        0 - none
        1 - primal infeasible because dual limit reached OR probably primal
@@ -378,7 +378,7 @@ public:
    */
    inline int secondaryStatus() const            { return secondaryStatus_; }
   inline void setSecondaryStatus(int status)
-  { secondaryStatus_ = status;};
+  { secondaryStatus_ = status;}
    /// Are there a numerical difficulties?
    inline bool isAbandoned() const             { return problemStatus_==4; }
    /// Is optimality proven?
@@ -406,7 +406,7 @@ public:
    inline double * primalColumnSolution() const { return columnActivity_; }
    inline const double * getColSolution() const { return columnActivity_; }
    inline void setColSolution(const double * input)
-   { memcpy(columnActivity_,input,numberColumns_*sizeof(double));};
+   { memcpy(columnActivity_,input,numberColumns_*sizeof(double));}
    /// Dual row solution
    inline double * dualRowSolution() const      { return dual_; }
    inline const double * getRowPrice() const    { return dual_; }
@@ -426,7 +426,7 @@ public:
        void setObjectiveCoefficient( int elementIndex, double elementValue );
        /** Set an objective function coefficient */
        inline void setObjCoeff( int elementIndex, double elementValue )
-       { setObjectiveCoefficient( elementIndex, elementValue);};
+       { setObjectiveCoefficient( elementIndex, elementValue);}
 
       /** Set a single column lower bound<br>
     	  Use -DBL_MAX for -infinity. */
@@ -455,16 +455,16 @@ public:
       /** Set a single column lower bound<br>
     	  Use -DBL_MAX for -infinity. */
        inline void setColLower( int elementIndex, double elementValue )
-       { setColumnLower(elementIndex, elementValue);};
+       { setColumnLower(elementIndex, elementValue);}
       /** Set a single column upper bound<br>
     	  Use DBL_MAX for infinity. */
        inline void setColUpper( int elementIndex, double elementValue )
-       { setColumnUpper(elementIndex, elementValue);};
+       { setColumnUpper(elementIndex, elementValue);}
 
       /** Set a single column lower and upper bound */
       inline void setColBounds( int elementIndex,
 	double lower, double upper )
-       { setColumnBounds(elementIndex, lower, upper);};
+       { setColumnBounds(elementIndex, lower, upper);}
 
       /** Set the bounds on a number of columns simultaneously<br>
     	  @param indexFirst,indexLast pointers to the beginning and after the
@@ -475,7 +475,7 @@ public:
       inline void setColSetBounds(const int* indexFirst,
 				   const int* indexLast,
 				   const double* boundList)
-      { setColumnSetBounds(indexFirst, indexLast, boundList);};
+      { setColumnSetBounds(indexFirst, indexLast, boundList);}
       
       /** Set a single row lower bound<br>
     	  Use -DBL_MAX for -infinity. */
@@ -501,27 +501,27 @@ public:
     
     //@}
    /// Scaling
-   inline const double * rowScale() const {return rowScale_;};
-   inline const double * columnScale() const {return columnScale_;};
-   inline void setRowScale(double * scale) { delete [] (double *) rowScale_; rowScale_ = scale;};
-   inline void setColumnScale(double * scale) { delete [] (double *) columnScale_; columnScale_ = scale;};
+   inline const double * rowScale() const {return rowScale_;}
+   inline const double * columnScale() const {return columnScale_;}
+   inline void setRowScale(double * scale) { delete [] (double *) rowScale_; rowScale_ = scale;}
+   inline void setColumnScale(double * scale) { delete [] (double *) columnScale_; columnScale_ = scale;}
   /// Scaling of objective 
   inline double objectiveScale() const 
-          { return objectiveScale_;} ;
+          { return objectiveScale_;} 
   inline void setObjectiveScale(double value)
-          { objectiveScale_ = value;} ;
+          { objectiveScale_ = value;} 
   /// Scaling of rhs and bounds
   inline double rhsScale() const 
-          { return rhsScale_;} ;
+          { return rhsScale_;} 
   inline void setRhsScale(double value)
-          { rhsScale_ = value;} ;
+          { rhsScale_ = value;} 
    /// Sets or unsets scaling, 0 -off, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic(later)
    void scaling(int mode=1);
   /** If we constructed a "really" scaled model then this reverses the operation.
       Quantities may not be exactly as they were before due to rounding errors */
   void unscale();
    /// Gets scalingFlag
-   inline int scalingFlag() const {return scalingFlag_;};
+   inline int scalingFlag() const {return scalingFlag_;}
    /// Objective
    inline double * objective() const            
   {
@@ -568,13 +568,13 @@ public:
    }
    /// Number of elements in matrix
    inline int getNumElements() const 
-     { return matrix_->getNumElements();};
+     { return matrix_->getNumElements();}
    /** Small element value - elements less than this set to zero,
       default is 1.0e-20 */
    inline double getSmallElementValue() const
-  { return smallElement_;}; 
+  { return smallElement_;}
   inline void setSmallElementValue(double value)
-  { smallElement_=value;}; 
+  { smallElement_=value;} 
    /// Row Matrix 
    inline ClpMatrixBase * rowCopy() const       { return rowCopy_; }
    /// Clp Matrix 
@@ -592,7 +592,7 @@ public:
   */
    inline void replaceMatrix(CoinPackedMatrix * matrix,
 			     bool deleteCurrent=false)
-  { replaceMatrix(new ClpPackedMatrix(matrix),deleteCurrent);};
+  { replaceMatrix(new ClpPackedMatrix(matrix),deleteCurrent);}
    /// Objective value
    inline double objectiveValue() const {
       return objectiveValue_*optimizationDirection_ - dblParam_[ClpObjOffset];
@@ -611,10 +611,10 @@ public:
    double * unboundedRay() const;
   /// See if status (i.e. basis) array exists (partly for OsiClp)
   inline bool statusExists() const
-  { return (status_!=NULL);};
+  { return (status_!=NULL);}
   /// Return address of status (i.e. basis) array (char[numberRows+numberColumns])
   inline unsigned char *  statusArray() const
-  { return status_;};
+  { return status_;}
   /** Return copy of status (i.e. basis) array (char[numberRows+numberColumns]),
       use delete [] */
   unsigned char *  statusCopy() const;
@@ -623,19 +623,19 @@ public:
 
   /// User pointer for whatever reason
   inline void setUserPointer (void * pointer)
-  { userPointer_=pointer;};
+  { userPointer_=pointer;}
   inline void * getUserPointer () const
-  { return userPointer_;};
+  { return userPointer_;}
   /// What has changed in model (only for masochistic users)
   inline int whatsChanged() const 
-          { return whatsChanged_;} ;
+          { return whatsChanged_;} 
   inline void setWhatsChanged(int value)
-          { whatsChanged_ = value;} ;
+          { whatsChanged_ = value;} 
   /// Number of threads (not really being used)
   inline int numberThreads() const 
-          { return numberThreads_;} ;
+          { return numberThreads_;} 
   inline void setNumberThreads(int value)
-          { numberThreads_ = value;} ;
+          { numberThreads_ = value;} 
   //@}
   /**@name Message handling */
   //@{
@@ -673,7 +673,7 @@ public:
    void passInEventHandler(const ClpEventHandler * eventHandler);
    /// Event handler
    inline ClpEventHandler * eventHandler() const
-  { return eventHandler_;};
+  { return eventHandler_;}
    /// length of names (0 means no names0
    inline int lengthNames() const { return lengthNames_; }
 #ifndef CLP_NO_STD
@@ -700,10 +700,10 @@ public:
 #endif
   /// Objective methods
   inline ClpObjective * objectiveAsObject() const
-  { return objective_;};
+  { return objective_;}
   void setObjective(ClpObjective * objective);
   inline void setObjectivePointer(ClpObjective * objective)
-  { objective_ = objective;};
+  { objective_ = objective;}
   /** Solve a problem with no elements - return status and
       dual and primal infeasibilites */
   int emptyProblem(int * infeasNumber=NULL, double * infeasSum=NULL,bool printMessage=true);
@@ -816,7 +816,7 @@ public:
   */
 #define COIN_CBC_USING_CLP 0x01000000
   inline unsigned int specialOptions() const
-  { return specialOptions_;};
+  { return specialOptions_;}
   void setSpecialOptions(unsigned int value);
   //@}
 

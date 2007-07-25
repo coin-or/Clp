@@ -34,7 +34,7 @@ public:
 
   /// Just sets model
   virtual void saveWeights(ClpSimplex * model,int mode)
-  {model_=model;};
+  {model_=model;}
   //@}
   
   

@@ -21,7 +21,7 @@ public:
   /**@name Useful methods */
    //@{
    /// Return a complete CoinPackedMatrix
-  virtual CoinPackedMatrix * getPackedMatrix() const { return matrix_;};
+  virtual CoinPackedMatrix * getPackedMatrix() const { return matrix_;}
     /** Whether the packed matrix is column major ordered or not. */
     virtual bool isColOrdered() const { return matrix_->isColOrdered(); }
    /** Number of entries in the packed matrix. */
@@ -30,30 +30,30 @@ public:
    /** Number of columns. */
    virtual int getNumCols() const { return matrix_->getNumCols(); }
    /** Number of rows. */
-  virtual int getNumRows() const { return matrix_->getNumRows(); };
+  virtual int getNumRows() const { return matrix_->getNumRows(); }
 
    /** A vector containing the elements in the packed matrix. Note that there
 	might be gaps in this list, entries that do not belong to any
 	major-dimension vector. To get the actual elements one should look at
 	this vector together with vectorStarts and vectorLengths. */
    virtual const double * getElements() const 
-  { return matrix_->getElements();};
+  { return matrix_->getElements();}
    /** A vector containing the minor indices of the elements in the packed
         matrix. Note that there might be gaps in this list, entries that do not
         belong to any major-dimension vector. To get the actual elements one
         should look at this vector together with vectorStarts and
         vectorLengths. */
    virtual const int * getIndices() const 
-  { return matrix_->getIndices();};
+  { return matrix_->getIndices();}
 
    virtual const CoinBigIndex * getVectorStarts() const 
-  { return matrix_->getVectorStarts();};
+  { return matrix_->getVectorStarts();}
    /** The lengths of the major-dimension vectors. */
    virtual const int * getVectorLengths() const 
-  { return matrix_->getVectorLengths();} ;
+  { return matrix_->getVectorLengths();} 
   /** The length of a single major-dimension vector. */
   virtual int getVectorLength(int index) const 
-  { return matrix_->getVectorSize(index);};
+  { return matrix_->getVectorSize(index);}
 
     /** Delete the columns whose indices are listed in <code>indDel</code>. */
   virtual void deleteCols(const int numDel, const int * indDel);
@@ -78,7 +78,7 @@ public:
       The index is between 0 and major dimension of matrix */
   virtual void replaceVector(const int index,
 		       const int numReplace, const double * newElements)
-      {matrix_->replaceVector(index,numReplace,newElements);};
+      {matrix_->replaceVector(index,numReplace,newElements);}
   /** Modify one element of packed matrix.  An element may be added.
       This works for either ordering If the new element is zero it will be 
       deleted unless keepZero true */
@@ -147,7 +147,7 @@ public:
   virtual void add(const ClpSimplex * model,double * array,
 		   int column, double multiplier) const;
    /// Allow any parts of a created CoinPackedMatrix to be deleted
-   virtual void releasePackedMatrix() const { };
+   virtual void releasePackedMatrix() const { }
   /** Given positive integer weights for each row fills in sum of weights
       for each column (and slack).
       Returns weights vector
@@ -253,23 +253,23 @@ public:
   /**@name Other */
    //@{
   /// Returns CoinPackedMatrix (non const)
-  inline CoinPackedMatrix * matrix() const { return matrix_;};
+  inline CoinPackedMatrix * matrix() const { return matrix_;}
   /** Just sets matrix_ to NULL so it can be used elsewhere.
       used in GUB
   */
   inline void setMatrixNull()
-  { matrix_=NULL;};
+  { matrix_=NULL;}
   /// Say we want special column copy
   inline void makeSpecialColumnCopy()
-  { flags_ |= 8;};
+  { flags_ |= 8;}
   /// Say we don't want special column copy
   void releaseSpecialColumnCopy();
   /// Are there zeros?
   inline bool zeros() const
-  { return ((flags_&1)!=0);};
+  { return ((flags_&1)!=0);}
   /// Do we want special column copy
   inline bool wantsSpecialColumnCopy() const
-  { return ((flags_&8)!=0);};
+  { return ((flags_&8)!=0);}
    //@}
 
 
@@ -395,7 +395,7 @@ public:
                       CoinIndexedVector * z) const;
   /// Returns true if copy has useful information
   inline bool usefulInfo() const
-  { return rowStart_!=NULL;};
+  { return rowStart_!=NULL;}
   //@}
 
 

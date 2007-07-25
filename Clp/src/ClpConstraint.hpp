@@ -78,23 +78,23 @@ public:
   //@{
   /// Returns type, 0 linear, 1 nonlinear
   inline int type()
-  { return type_;};
+  { return type_;}
   /// Row number (-1 is objective)
   inline int rowNumber() const
-  {return rowNumber_;};
+  {return rowNumber_;}
   
   /// Number of possible coefficients in gradient
   virtual int numberCoefficients() const = 0;
   
   /// Stored constraint function value
   inline double functionValue () const
-  { return functionValue_;};
+  { return functionValue_;}
 
   /// Constraint offset
   inline double offset () const
-  { return offset_;};
+  { return offset_;}
   /// Say we have new primal solution - so may need to recompute
-  virtual void newXValues() {};
+  virtual void newXValues() {}
   //@}
 
   //---------------------------------------------------------------------------

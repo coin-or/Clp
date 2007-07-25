@@ -121,7 +121,7 @@ public:
   //@{ 
   /// Mode
   inline int mode() const
-    { return mode_;};
+    { return mode_;}
   /** Returns number of extra columns for sprint algorithm - 0 means off.
       Also number of iterations before recompute
   */
@@ -181,9 +181,9 @@ public:
   }
   /// Set/ get persistence
   inline void setPersistence(Persistence life)
-  { persistence_ = life;};
+  { persistence_ = life;}
   inline Persistence persistence() const
-  { return persistence_ ;};
+  { return persistence_ ;}
  
   //@}
   //---------------------------------------------------------------------------

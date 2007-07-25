@@ -100,78 +100,78 @@ public:
   /// Whether flagged
   inline bool flagged(int i) const {
     return (dynamicStatus_[i]&8)!=0;
-  };
+  }
   inline void setFlagged(int i) {
     dynamicStatus_[i] |= 8;
-  };
+  }
   inline void unsetFlagged(int i) {
     dynamicStatus_[i]  &= ~8;;
-  };
+  }
   inline void setDynamicStatus(int sequence, DynamicStatus status)
   {
     unsigned char & st_byte = dynamicStatus_[sequence];
     st_byte &= ~7;
     st_byte |= status;
-  };
+  }
   inline DynamicStatus getDynamicStatus(int sequence) const
-  {return static_cast<DynamicStatus> (dynamicStatus_[sequence]&7);};
+  {return static_cast<DynamicStatus> (dynamicStatus_[sequence]&7);}
   /// Saved value of objective offset
   inline double objectiveOffset() const
-  { return objectiveOffset_;};
+  { return objectiveOffset_;}
   /// Starts of each column
   inline CoinBigIndex * startColumn() const
-  { return startColumn_;};
+  { return startColumn_;}
   /// rows
   inline int * row() const
-  { return row_;};
+  { return row_;}
   /// elements
   inline float * element() const
-  { return element_;};
+  { return element_;}
   /// costs
   inline float * cost() const
-  { return cost_;};
+  { return cost_;}
   /// full starts
   inline int * fullStart() const
-  { return fullStart_;};
+  { return fullStart_;}
   /// ids of active columns (just index here)
   inline int * id() const
-  { return id_;};
+  { return id_;}
   /// Optional lower bounds on columns
   inline float * lowerColumn() const
-  { return lowerColumn_;};
+  { return lowerColumn_;}
   /// Optional upper bounds on columns
   inline float * upperColumn() const
-  { return upperColumn_;};
+  { return upperColumn_;}
   /// Optional true lower bounds on sets
   inline float * lowerSet() const
-  { return lowerSet_;};
+  { return lowerSet_;}
   /// Optional true upper bounds on sets
   inline float * upperSet() const
-  { return upperSet_;};
+  { return upperSet_;}
   /// size
   inline int numberGubColumns() const
-  { return numberGubColumns_;};
+  { return numberGubColumns_;}
   /// first free
   inline int firstAvailable() const
-  { return firstAvailable_;};
+  { return firstAvailable_;}
   /// set first free
   inline void setFirstAvailable(int value)
-  { firstAvailable_ = value;};
+  { firstAvailable_ = value;}
   /// first dynamic
   inline int firstDynamic() const
-  { return firstDynamic_;};
+  { return firstDynamic_;}
   /// number of columns in dynamic model
   inline int lastDynamic() const
-  { return lastDynamic_;};
+  { return lastDynamic_;}
   /// size of working matrix (max)
   inline int numberElements() const
-  { return numberElements_;};
+  { return numberElements_;}
   /// Status region for gub slacks
   inline unsigned char * gubRowStatus() const
-  { return status_;};
+  { return status_;}
   /// Status region for gub variables
   inline unsigned char * dynamicStatus() const
-  { return dynamicStatus_;};
+  { return dynamicStatus_;}
   /// Returns which set a variable is in
   int whichSet (int sequence) const;
   //@}

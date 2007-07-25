@@ -90,41 +90,41 @@ public:
   /** Starting weight - small emphasizes feasibility,
       default 1.0e-4 */
   inline double getStartingWeight() const
-  { return mu_;};
+  { return mu_;}
   inline void setStartingWeight(double value)
-  { mu_ = value;};
+  { mu_ = value;}
   /** Weight factor - weight multiplied by this when changes,
       default 0.333 */
   inline double getWeightFactor() const
-  { return muFactor_;};
+  { return muFactor_;}
   inline void setWeightFactor(double value)
-  { muFactor_ = value;};
+  { muFactor_ = value;}
   /** Feasibility tolerance - problem essentially feasible if
       individual infeasibilities less than this.
       default 0.1 */
   inline double getFeasibilityTolerance() const
-  { return smallInfeas_;};
+  { return smallInfeas_;}
   inline void setFeasibilityTolerance(double value)
-  { smallInfeas_ = value;};
+  { smallInfeas_ = value;}
   /** Reasonably feasible.  Dubious method concentrates more on
       objective when sum of infeasibilities less than this.
       Very dubious default value of (Number of rows)/20 */
   inline double getReasonablyFeasible() const
-  { return reasonableInfeas_;};
+  { return reasonableInfeas_;}
   inline void setReasonablyFeasible(double value)
-  { reasonableInfeas_ = value;};
+  { reasonableInfeas_ = value;}
   /** Exit infeasibility - exit if sum of infeasibilities less than this.
       Default -1.0 (i.e. switched off) */
   inline double getExitInfeasibility() const
-  { return exitFeasibility_;};
+  { return exitFeasibility_;}
   inline void setExitInfeasibility(double value)
-  { exitFeasibility_ = value;};
+  { exitFeasibility_ = value;}
   /** Major iterations.  stop after this number.
       Default 30.  Use 2-5 for "crash" 50-100 for serious crunching */
   inline int getMajorIterations() const
-  { return majorIterations_;};
+  { return majorIterations_;}
   inline void setMajorIterations(int value)
-  { majorIterations_ = value;};
+  { majorIterations_ = value;}
   /** Minor iterations.  Do this number of tiny steps before
       deciding whether to change weights etc.
       Default - dubious sqrt(Number of Rows).
@@ -132,46 +132,46 @@ public:
       idiot is not trying to be clever which it may do every 10 minor
       iterations) */
   inline int getMinorIterations() const
-  { return maxIts2_;};
+  { return maxIts2_;}
   inline void setMinorIterations(int value)
-  { maxIts2_ = value;};
+  { maxIts2_ = value;}
   // minor iterations for first time
   inline int getMinorIterations0() const
-  { return maxIts_;};
+  { return maxIts_;}
   inline void setMinorIterations0(int value)
-  { maxIts_ = value;};
+  { maxIts_ = value;}
   /** Reduce weight after this many major iterations.  It may
       get reduced before this but this is a maximum.
       Default 3.  3-10 plausible. */
   inline int getReduceIterations() const
-  { return maxBigIts_;};
+  { return maxBigIts_;}
   inline void setReduceIterations(int value)
-  { maxBigIts_ = value;};
+  { maxBigIts_ = value;}
   /// Amount of information - default of 1 should be okay 
   inline int getLogLevel() const
-  { return logLevel_;};
+  { return logLevel_;}
   inline void setLogLevel(int value)
-  { logLevel_ = value;};
+  { logLevel_ = value;}
   /// How lightweight - 0 not, 1 yes, 2 very lightweight
   inline int getLightweight() const
-  { return lightWeight_;};
+  { return lightWeight_;}
   inline void setLightweight(int value)
-  { lightWeight_ = value;};
+  { lightWeight_ = value;}
   /// strategy
   inline int getStrategy() const
-  { return strategy_;};
+  { return strategy_;}
   inline void setStrategy(int value)
-  { strategy_ = value;};
+  { strategy_ = value;}
   /// Fine tuning - okay if feasibility drop this factor 
   inline double getDropEnoughFeasibility() const
-  { return dropEnoughFeasibility_;};
+  { return dropEnoughFeasibility_;}
   inline void setDropEnoughFeasibility(double value)
-  { dropEnoughFeasibility_=value;};
+  { dropEnoughFeasibility_=value;}
   /// Fine tuning - okay if weighted obj drop this factor 
   inline double getDropEnoughWeighted() const
-  { return dropEnoughWeighted_;};
+  { return dropEnoughWeighted_;}
   inline void setDropEnoughWeighted(double value)
-  { dropEnoughWeighted_=value;};
+  { dropEnoughWeighted_=value;}
   //@}
 
 

@@ -29,7 +29,7 @@ public:
    /** Number of columns. */
    virtual int getNumCols() const { return numberColumns_; }
    /** Number of rows. */
-  virtual int getNumRows() const { return numberRows_; };
+  virtual int getNumRows() const { return numberRows_; }
 
    /** A vector containing the elements in the packed matrix. Note that there
 	might be gaps in this list, entries that do not belong to any
@@ -85,7 +85,7 @@ public:
 		   int column, double multiplier) const;
    /// Allow any parts of a created CoinMatrix to be deleted
   /// Allow any parts of a created CoinPackedMatrix to be deleted
-   virtual void releasePackedMatrix() const {};
+   virtual void releasePackedMatrix() const {}
    //@}
 
   /**@name Matrix times vector methods */

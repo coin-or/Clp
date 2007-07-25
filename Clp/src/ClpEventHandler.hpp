@@ -73,7 +73,7 @@ public:
   void setSimplex(ClpSimplex * model);
   /// Get model
   inline ClpSimplex * simplex() const
-  { return model_;};
+  { return model_;}
   //@}
   
   
@@ -130,7 +130,7 @@ public:
   void setSimplex(ClpSimplex * model);
   /// Get model
   inline ClpSimplex * simplex() const
-  { return model_;};
+  { return model_;}
   //@}
   
   

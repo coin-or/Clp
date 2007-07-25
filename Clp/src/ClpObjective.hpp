@@ -60,7 +60,7 @@ public:
    */
   virtual int markNonlinear(char * which);
   /// Say we have new primal solution - so may need to recompute
-  virtual void newXValues() {};
+  virtual void newXValues() {}
   //@}
   
   
@@ -93,17 +93,17 @@ public:
   //@{
   /// Returns type (above 63 is extra information)
   inline int type()
-  { return type_;};
+  { return type_;}
   /// Whether activated
   inline int activated() const
-  {return activated_;};
+  {return activated_;}
   /// Set whether activated
   inline void setActivated(int value)
-  {activated_=value;};
+  {activated_=value;}
   
   /// Objective offset
   inline double nonlinearOffset () const
-  { return offset_;};
+  { return offset_;}
   //@}
 
   //---------------------------------------------------------------------------

@@ -94,12 +94,12 @@ public:
   //@{ 
   /// Mode
   inline int mode() const
-    { return mode_;};
+    { return mode_;}
   /// Set/ get persistence
   inline void setPersistence(Persistence life)
-  { persistence_ = life;};
+  { persistence_ = life;}
   inline Persistence persistence() const
-  { return persistence_ ;};
+  { return persistence_ ;}
  //@}
 
   //---------------------------------------------------------------------------

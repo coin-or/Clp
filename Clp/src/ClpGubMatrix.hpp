@@ -205,72 +205,72 @@ public:
   //@{
   /// Status
   inline ClpSimplex::Status getStatus(int sequence) const
-  {return static_cast<ClpSimplex::Status> (status_[sequence]&7);};
+  {return static_cast<ClpSimplex::Status> (status_[sequence]&7);}
   inline void setStatus(int sequence, ClpSimplex::Status status)
   {
     unsigned char & st_byte = status_[sequence];
     st_byte &= ~7;
     st_byte |= status;
-  };
+  }
   /// To flag a variable
   inline void setFlagged( int sequence)
   {
     status_[sequence] |= 64;
-  };
+  }
   inline void clearFlagged( int sequence)
   {
     status_[sequence] &= ~64;
-  };
+  }
   inline bool flagged(int sequence) const
-  {return ((status_[sequence]&64)!=0);};
+  {return ((status_[sequence]&64)!=0);}
   /// To say key is above ub
   inline void setAbove( int sequence)
   {
     unsigned char iStat = status_[sequence];
     iStat &= ~24;
     status_[sequence] = iStat|16;
-  };
+  }
   /// To say key is feasible
   inline void setFeasible( int sequence)
   {
     unsigned char iStat = status_[sequence];
     iStat &= ~24;
     status_[sequence] = iStat|8;
-  };
+  }
   /// To say key is below lb
   inline void setBelow( int sequence)
   {
     unsigned char iStat = status_[sequence];
     iStat &= ~24;
     status_[sequence] = iStat;
-  };
+  }
   inline double weight( int sequence) const
   {
     int iStat = status_[sequence]&31;
     iStat = iStat>>3;
     return (double) (iStat-1);
-  };
+  }
   /// Starts
   inline int * start() const
-  { return start_;};
+  { return start_;}
   /// End
   inline int * end() const
-  { return end_;};
+  { return end_;}
   /// Lower bounds on sets
   inline double * lower() const
-  { return lower_;};
+  { return lower_;}
   /// Upper bounds on sets
   inline double * upper() const
-  { return upper_;};
+  { return upper_;}
   /// Key variable of set
   inline int * keyVariable() const
-  { return keyVariable_;};
+  { return keyVariable_;}
   /// Backward pointer to set number
   inline int * backward() const
-  { return backward_;};
+  { return backward_;}
   /// Number of sets (gub rows)
   inline int numberSets() const
-  { return numberSets_;};
+  { return numberSets_;}
   /// Switches off dj checking each factorization (for BIG models)
   void switchOffCheck();
    //@}

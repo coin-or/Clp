@@ -60,9 +60,9 @@ public:
   virtual void clearArrays();
   /// Returns true if would not find any row
   virtual bool looksOptimal() const
-  { return false;};
+  { return false;}
   /// Called when maximum pivots changes
-  virtual void maximumPivotsChanged() {};
+  virtual void maximumPivotsChanged() {}
   //@}
   
   
@@ -89,11 +89,11 @@ public:
   //@{
   /// Returns model
   inline ClpSimplex * model()
-  { return model_;};
+  { return model_;}
   
   /// Returns type (above 63 is extra information)
   inline int type()
-  { return type_;};
+  { return type_;}
   
   //@}
 

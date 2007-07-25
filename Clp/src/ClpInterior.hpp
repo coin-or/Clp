@@ -161,69 +161,69 @@ public:
   //@{ 
   /// If problem is primal feasible
   inline bool primalFeasible() const
-         { return (sumPrimalInfeasibilities_<=1.0e-5);};
+         { return (sumPrimalInfeasibilities_<=1.0e-5);}
   /// If problem is dual feasible
   inline bool dualFeasible() const
-         { return (sumDualInfeasibilities_<=1.0e-5);};
+         { return (sumDualInfeasibilities_<=1.0e-5);}
   /// Current (or last) algorithm
   inline int algorithm() const 
-  {return algorithm_; } ;
+  {return algorithm_; } 
   /// Set algorithm
   inline void setAlgorithm(int value)
-  {algorithm_=value; } ;
+  {algorithm_=value; } 
   /// Sum of dual infeasibilities
   inline double sumDualInfeasibilities() const 
-          { return sumDualInfeasibilities_;} ;
+          { return sumDualInfeasibilities_;} 
   /// Sum of primal infeasibilities
   inline double sumPrimalInfeasibilities() const 
-          { return sumPrimalInfeasibilities_;} ;
+          { return sumPrimalInfeasibilities_;} 
   /// dualObjective.
   inline double dualObjective() const
-  { return dualObjective_;};
+  { return dualObjective_;}
   /// primalObjective.
   inline double primalObjective() const
-  { return primalObjective_;};
+  { return primalObjective_;}
   /// diagonalNorm
   inline double diagonalNorm() const
-  { return diagonalNorm_;};
+  { return diagonalNorm_;}
   /// linearPerturbation
   inline double linearPerturbation() const
-  { return linearPerturbation_;};
+  { return linearPerturbation_;}
   inline void setLinearPerturbation(double value)
-  { linearPerturbation_=value;};
+  { linearPerturbation_=value;}
   /// diagonalPerturbation
   inline double diagonalPerturbation() const
-  { return diagonalPerturbation_;};
+  { return diagonalPerturbation_;}
   inline void setDiagonalPerturbation(double value)
-  { diagonalPerturbation_=value;};
+  { diagonalPerturbation_=value;}
   /// gamma
   inline double gamma() const
-  { return gamma_;};
+  { return gamma_;}
   inline void setGamma(double value)
-  { gamma_=value;};
+  { gamma_=value;}
   /// delta
   inline double delta() const
-  { return delta_;};
+  { return delta_;}
   inline void setDelta(double value)
-  { delta_=value;};
+  { delta_=value;}
   /// ComplementarityGap
   inline double complementarityGap() const 
-          { return complementarityGap_;} ;
+          { return complementarityGap_;} 
   //@}
 
   /**@name most useful gets and sets */
   //@{ 
   /// Largest error on Ax-b
   inline double largestPrimalError() const
-          { return largestPrimalError_;} ;
+          { return largestPrimalError_;} 
   /// Largest error on basic duals
   inline double largestDualError() const
-          { return largestDualError_;} ;
+          { return largestDualError_;} 
   /// Maximum iterations
   inline int maximumBarrierIterations() const
-  { return maximumBarrierIterations_;};
+  { return maximumBarrierIterations_;}
   inline void setMaximumBarrierIterations(int value)
-  { maximumBarrierIterations_=value;};
+  { maximumBarrierIterations_=value;}
   /// Set cholesky (and delete present one)
   void setCholesky(ClpCholeskyBase * cholesky);
   /// Return number fixed to see if worth presolving
@@ -233,10 +233,10 @@ public:
   void fixFixed(bool reallyFix=true);
   /// Primal erturbation vector
   inline double * primalR() const
-  { return primalR_;};
+  { return primalR_;}
   /// Dual erturbation vector
   inline double * dualR() const
-  { return dualR_;};
+  { return dualR_;}
   //@}
 
   protected:
@@ -259,13 +259,13 @@ public:
   //@{
   /// Raw objective value (so always minimize)
   inline double rawObjectiveValue() const
-  { return objectiveValue_;};
+  { return objectiveValue_;}
   /// Returns 1 if sequence indicates column
   inline int isColumn(int sequence) const
-  { return sequence<numberColumns_ ? 1 : 0;};
+  { return sequence<numberColumns_ ? 1 : 0;}
   /// Returns sequence number within section
   inline int sequenceWithin(int sequence) const
-  { return sequence<numberColumns_ ? sequence : sequence-numberColumns_;};
+  { return sequence<numberColumns_ ? sequence : sequence-numberColumns_;}
   /// Checks solution
   void checkSolution();
   /** Modifies djs to allow for quadratic.
@@ -277,85 +277,85 @@ public:
   inline void setFixed( int sequence)
   {
     status_[sequence] |= 1;
-  };
+  }
   inline void clearFixed( int sequence)
   {
     status_[sequence] &= ~1;
-  };
+  }
   inline bool fixed(int sequence) const
-  {return ((status_[sequence]&1)!=0);};
+  {return ((status_[sequence]&1)!=0);}
 
   /// To flag a variable
   inline void setFlagged( int sequence)
   {
     status_[sequence] |= 2;
-  };
+  }
   inline void clearFlagged( int sequence)
   {
     status_[sequence] &= ~2;
-  };
+  }
   inline bool flagged(int sequence) const
-  {return ((status_[sequence]&2)!=0);};
+  {return ((status_[sequence]&2)!=0);}
 
   /// To say a variable is fixed OR free
   inline void setFixedOrFree( int sequence)
   {
     status_[sequence] |= 4;
-  };
+  }
   inline void clearFixedOrFree( int sequence)
   {
     status_[sequence] &= ~4;
-  };
+  }
   inline bool fixedOrFree(int sequence) const
-  {return ((status_[sequence]&4)!=0);};
+  {return ((status_[sequence]&4)!=0);}
 
   /// To say a variable has lower bound
   inline void setLowerBound( int sequence)
   {
     status_[sequence] |= 8;
-  };
+  }
   inline void clearLowerBound( int sequence)
   {
     status_[sequence] &= ~8;
-  };
+  }
   inline bool lowerBound(int sequence) const
-  {return ((status_[sequence]&8)!=0);};
+  {return ((status_[sequence]&8)!=0);}
 
   /// To say a variable has upper bound
   inline void setUpperBound( int sequence)
   {
     status_[sequence] |= 16;
-  };
+  }
   inline void clearUpperBound( int sequence)
   {
     status_[sequence] &= ~16;
-  };
+  }
   inline bool upperBound(int sequence) const
-  {return ((status_[sequence]&16)!=0);};
+  {return ((status_[sequence]&16)!=0);}
 
   /// To say a variable has fake lower bound
   inline void setFakeLower( int sequence)
   {
     status_[sequence] |= 32;
-  };
+  }
   inline void clearFakeLower( int sequence)
   {
     status_[sequence] &= ~32;
-  };
+  }
   inline bool fakeLower(int sequence) const
-  {return ((status_[sequence]&32)!=0);};
+  {return ((status_[sequence]&32)!=0);}
 
   /// To say a variable has fake upper bound
   inline void setFakeUpper( int sequence)
   {
     status_[sequence] |= 64;
-  };
+  }
   inline void clearFakeUpper( int sequence)
   {
     status_[sequence] &= ~64;
-  };
+  }
   inline bool fakeUpper(int sequence) const
-  {return ((status_[sequence]&64)!=0);};
+  {return ((status_[sequence]&64)!=0);}
   //@}
 
 ////////////////// data //////////////////

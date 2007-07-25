@@ -114,13 +114,13 @@ public:
    inline double * linearObjective() const     { return objective_; }
   /// Length of linear objective which could be bigger
   inline int numberExtendedColumns() const
-  {return numberExtendedColumns_;};
+  {return numberExtendedColumns_;}
   /// Number of columns in quadratic objective
   inline int numberColumns() const
-  {return numberColumns_;};
+  {return numberColumns_;}
   /// If a full or half matrix
   inline bool fullMatrix() const
-  { return fullMatrix_;};
+  { return fullMatrix_;}
   //@}
 
   //---------------------------------------------------------------------------

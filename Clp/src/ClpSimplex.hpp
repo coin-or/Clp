@@ -131,7 +131,7 @@ public:
   void deleteAuxiliaryModel();
   /// See if we have auxiliary model
   inline bool usingAuxiliaryModel() const
-  { return auxiliaryModel_!=NULL;};
+  { return auxiliaryModel_!=NULL;}
   /// Assignment operator. This copies the data
     ClpSimplex & operator=(const ClpSimplex & rhs);
   /// Destructor
@@ -448,13 +448,13 @@ public:
   //@{ 
   /// If problem is primal feasible
   inline bool primalFeasible() const
-         { return (numberPrimalInfeasibilities_==0);};
+         { return (numberPrimalInfeasibilities_==0);}
   /// If problem is dual feasible
   inline bool dualFeasible() const
-         { return (numberDualInfeasibilities_==0);};
+         { return (numberDualInfeasibilities_==0);}
   /// factorization 
   inline ClpFactorization * factorization() const 
-          { return factorization_;};
+          { return factorization_;}
   /// Sparsity on or off
   bool sparseFactorization() const;
   void setSparseFactorization(bool value);
@@ -463,11 +463,11 @@ public:
   void setFactorizationFrequency(int value);
   /// Dual bound
   inline double dualBound() const
-          { return dualBound_;};
+          { return dualBound_;}
   void setDualBound(double value);
   /// Infeasibility cost
   inline double infeasibilityCost() const
-          { return infeasibilityCost_;};
+          { return infeasibilityCost_;}
   void setInfeasibilityCost(double value);
   /** Amount of print out:
       0 - none
@@ -486,47 +486,47 @@ public:
       others are for playing
   */
   inline int perturbation() const
-    { return perturbation_;};
+    { return perturbation_;}
   void setPerturbation(int value);
   /// Current (or last) algorithm
   inline int algorithm() const 
-  {return algorithm_; } ;
+  {return algorithm_; } 
   /// Set algorithm
   inline void setAlgorithm(int value)
-  {algorithm_=value; } ;
+  {algorithm_=value; } 
   /// Sum of dual infeasibilities
   inline double sumDualInfeasibilities() const 
-          { return sumDualInfeasibilities_;} ;
+          { return sumDualInfeasibilities_;} 
   inline void setSumDualInfeasibilities(double value)
-          { sumDualInfeasibilities_=value;} ;
+          { sumDualInfeasibilities_=value;} 
   /// Sum of relaxed dual infeasibilities
   inline double sumOfRelaxedDualInfeasibilities() const 
-          { return sumOfRelaxedDualInfeasibilities_;} ;
+          { return sumOfRelaxedDualInfeasibilities_;} 
   inline void setSumOfRelaxedDualInfeasibilities(double value)
-          { sumOfRelaxedDualInfeasibilities_=value;} ;
+          { sumOfRelaxedDualInfeasibilities_=value;} 
   /// Number of dual infeasibilities
   inline int numberDualInfeasibilities() const 
-          { return numberDualInfeasibilities_;} ;
+          { return numberDualInfeasibilities_;} 
   inline void setNumberDualInfeasibilities(int value)
-          { numberDualInfeasibilities_=value;} ;
+          { numberDualInfeasibilities_=value;} 
   /// Number of dual infeasibilities (without free)
   inline int numberDualInfeasibilitiesWithoutFree() const 
-          { return numberDualInfeasibilitiesWithoutFree_;} ;
+          { return numberDualInfeasibilitiesWithoutFree_;} 
   /// Sum of primal infeasibilities
   inline double sumPrimalInfeasibilities() const 
-          { return sumPrimalInfeasibilities_;} ;
+          { return sumPrimalInfeasibilities_;} 
   inline void setSumPrimalInfeasibilities(double value)
-          { sumPrimalInfeasibilities_=value;} ;
+          { sumPrimalInfeasibilities_=value;} 
   /// Sum of relaxed primal infeasibilities
   inline double sumOfRelaxedPrimalInfeasibilities() const 
-          { return sumOfRelaxedPrimalInfeasibilities_;} ;
+          { return sumOfRelaxedPrimalInfeasibilities_;} 
   inline void setSumOfRelaxedPrimalInfeasibilities(double value)
-          { sumOfRelaxedPrimalInfeasibilities_=value;} ;
+          { sumOfRelaxedPrimalInfeasibilities_=value;} 
   /// Number of primal infeasibilities
   inline int numberPrimalInfeasibilities() const 
-          { return numberPrimalInfeasibilities_;} ;
+          { return numberPrimalInfeasibilities_;} 
   inline void setNumberPrimalInfeasibilities(int value)
-          { numberPrimalInfeasibilities_=value;} ;
+          { numberPrimalInfeasibilities_=value;} 
   /** Save model to file, returns 0 if success.  This is designed for
       use outside algorithms so does not save iterating arrays etc.
   It does not save any messaging information. 
@@ -551,10 +551,10 @@ public:
   void checkSolutionInternal();
   /// Useful row length arrays (0,1,2,3,4,5)
   inline CoinIndexedVector * rowArray(int index) const
-  { return rowArray_[index];};
+  { return rowArray_[index];}
   /// Useful column length arrays (0,1,2,3,4,5)
   inline CoinIndexedVector * columnArray(int index) const
-  { return columnArray_[index];};
+  { return columnArray_[index];}
   //@}
 
   /******************** End of most useful part **************/
@@ -664,59 +664,59 @@ public:
 public: 
   /// Initial value for alpha accuracy calculation (-1.0 off)
   inline double alphaAccuracy() const
-          { return alphaAccuracy_;} ;
+          { return alphaAccuracy_;} 
   inline void setAlphaAccuracy(double value)
-          { alphaAccuracy_ = value;} ;
+          { alphaAccuracy_ = value;} 
 public:
   /// Disaster handler
   inline void setDisasterHandler(ClpDisasterHandler * handler)
-  { disasterArea_= handler;};
+  { disasterArea_= handler;}
   /// Large bound value (for complementarity etc)
   inline double largeValue() const 
-          { return largeValue_;} ;
+          { return largeValue_;} 
   void setLargeValue( double value) ;
   /// Largest error on Ax-b
   inline double largestPrimalError() const
-          { return largestPrimalError_;} ;
+          { return largestPrimalError_;} 
   /// Largest error on basic duals
   inline double largestDualError() const
-          { return largestDualError_;} ;
+          { return largestDualError_;} 
   /// Largest error on Ax-b
   inline void setLargestPrimalError(double value)
-          { largestPrimalError_=value;} ;
+          { largestPrimalError_=value;} 
   /// Largest error on basic duals
   inline void setLargestDualError(double value)
-          { largestDualError_=value;} ;
+          { largestDualError_=value;} 
   /// Basic variables pivoting on which rows
   inline int * pivotVariable() const
-          { return pivotVariable_;};
+          { return pivotVariable_;}
   /// If automatic scaling on
   inline bool automaticScaling() const
-  { return automaticScale_!=0;};
+  { return automaticScale_!=0;}
   inline void setAutomaticScaling(bool onOff)
-  { automaticScale_ = onOff ? 1: 0;}; 
+  { automaticScale_ = onOff ? 1: 0;} 
   /// Current dual tolerance
   inline double currentDualTolerance() const 
-          { return dualTolerance_;} ;
+          { return dualTolerance_;} 
   inline void setCurrentDualTolerance(double value)
-          { dualTolerance_ = value;} ;
+          { dualTolerance_ = value;} 
   /// Current primal tolerance
   inline double currentPrimalTolerance() const 
-          { return primalTolerance_;} ;
+          { return primalTolerance_;} 
   inline void setCurrentPrimalTolerance(double value)
-          { primalTolerance_ = value;} ;
+          { primalTolerance_ = value;} 
   /// How many iterative refinements to do
   inline int numberRefinements() const 
-          { return numberRefinements_;} ;
+          { return numberRefinements_;} 
   void setNumberRefinements( int value) ;
   /// Alpha (pivot element) for use by classes e.g. steepestedge
-  inline double alpha() const { return alpha_;};
-  inline void setAlpha(double value) { alpha_ = value;};
+  inline double alpha() const { return alpha_;}
+  inline void setAlpha(double value) { alpha_ = value;}
   /// Reduced cost of last incoming for use by classes e.g. steepestedge
-  inline double dualIn() const { return dualIn_;};
+  inline double dualIn() const { return dualIn_;}
   /// Pivot Row for use by classes e.g. steepestedge
-  inline int pivotRow() const{ return pivotRow_;};
-  inline void setPivotRow(int value) { pivotRow_=value;};
+  inline int pivotRow() const{ return pivotRow_;}
+  inline void setPivotRow(int value) { pivotRow_=value;}
   /// value of incoming variable (in Dual)
   double valueIncomingDual() const;
   //@}
@@ -760,34 +760,34 @@ public:
   /** Return row or column sections - not as much needed as it 
       once was.  These just map into single arrays */
   inline double * solutionRegion(int section) const
-  { if (!section) return rowActivityWork_; else return columnActivityWork_;};
+  { if (!section) return rowActivityWork_; else return columnActivityWork_;}
   inline double * djRegion(int section) const
-  { if (!section) return rowReducedCost_; else return reducedCostWork_;};
+  { if (!section) return rowReducedCost_; else return reducedCostWork_;}
   inline double * lowerRegion(int section) const
-  { if (!section) return rowLowerWork_; else return columnLowerWork_;};
+  { if (!section) return rowLowerWork_; else return columnLowerWork_;}
   inline double * upperRegion(int section) const
-  { if (!section) return rowUpperWork_; else return columnUpperWork_;};
+  { if (!section) return rowUpperWork_; else return columnUpperWork_;}
   inline double * costRegion(int section) const
-  { if (!section) return rowObjectiveWork_; else return objectiveWork_;};
+  { if (!section) return rowObjectiveWork_; else return objectiveWork_;}
   /// Return region as single array
   inline double * solutionRegion() const
-  { return solution_;};
+  { return solution_;}
   inline double * djRegion() const
-  { return dj_;};
+  { return dj_;}
   inline double * lowerRegion() const
-  { return lower_;};
+  { return lower_;}
   inline double * upperRegion() const
-  { return upper_;};
+  { return upper_;}
   inline double * costRegion() const
-  { return cost_;};
+  { return cost_;}
   inline Status getStatus(int sequence) const
-  {return static_cast<Status> (status_[sequence]&7);};
+  {return static_cast<Status> (status_[sequence]&7);}
   inline void setStatus(int sequence, Status status)
   {
     unsigned char & st_byte = status_[sequence];
     st_byte &= ~7;
     st_byte |= status;
-  };
+  }
   /** Normally the first factorization does sparse coding because
       the factorization could be singular.  This allows initial dense 
       factorization when it is known to be safe
@@ -796,72 +796,72 @@ public:
   bool  initialDenseFactorization() const;
   /** Return sequence In or Out */
   inline int sequenceIn() const
-  {return sequenceIn_;};
+  {return sequenceIn_;}
   inline int sequenceOut() const
-  {return sequenceOut_;};
+  {return sequenceOut_;}
   /** Set sequenceIn or Out */
   inline void  setSequenceIn(int sequence)
-  { sequenceIn_=sequence;};
+  { sequenceIn_=sequence;}
   inline void  setSequenceOut(int sequence)
-  { sequenceOut_=sequence;};
+  { sequenceOut_=sequence;}
   /** Return direction In or Out */
   inline int directionIn() const
-  {return directionIn_;};
+  {return directionIn_;}
   inline int directionOut() const
-  {return directionOut_;};
+  {return directionOut_;}
   /** Set directionIn or Out */
   inline void  setDirectionIn(int direction)
-  { directionIn_=direction;};
+  { directionIn_=direction;}
   inline void  setDirectionOut(int direction)
-  { directionOut_=direction;};
+  { directionOut_=direction;}
   /// Value of Out variable
   inline double valueOut() const
-  { return valueOut_;};
+  { return valueOut_;}
   /// Returns 1 if sequence indicates column
   inline int isColumn(int sequence) const
-  { return sequence<numberColumns_ ? 1 : 0;};
+  { return sequence<numberColumns_ ? 1 : 0;}
   /// Returns sequence number within section
   inline int sequenceWithin(int sequence) const
-  { return sequence<numberColumns_ ? sequence : sequence-numberColumns_;};
+  { return sequence<numberColumns_ ? sequence : sequence-numberColumns_;}
   /// Return row or column values
   inline double solution(int sequence)
-  { return solution_[sequence];};
+  { return solution_[sequence];}
   /// Return address of row or column values
   inline double & solutionAddress(int sequence)
-  { return solution_[sequence];};
+  { return solution_[sequence];}
   inline double reducedCost(int sequence)
-   { return dj_[sequence];};
+   { return dj_[sequence];}
   inline double & reducedCostAddress(int sequence)
-   { return dj_[sequence];};
+   { return dj_[sequence];}
   inline double lower(int sequence)
-  { return lower_[sequence];};
+  { return lower_[sequence];}
   /// Return address of row or column lower bound
   inline double & lowerAddress(int sequence)
-  { return lower_[sequence];};
+  { return lower_[sequence];}
   inline double upper(int sequence)
-  { return upper_[sequence];};
+  { return upper_[sequence];}
   /// Return address of row or column upper bound
   inline double & upperAddress(int sequence)
-  { return upper_[sequence];};
+  { return upper_[sequence];}
   inline double cost(int sequence)
-  { return cost_[sequence];};
+  { return cost_[sequence];}
   /// Return address of row or column cost
   inline double & costAddress(int sequence)
-  { return cost_[sequence];};
+  { return cost_[sequence];}
   /// Return original lower bound
   inline double originalLower(int iSequence) const
   { if (iSequence<numberColumns_) return columnLower_[iSequence]; else
-    return rowLower_[iSequence-numberColumns_];};
+    return rowLower_[iSequence-numberColumns_];}
   /// Return original lower bound
   inline double originalUpper(int iSequence) const
   { if (iSequence<numberColumns_) return columnUpper_[iSequence]; else
-    return rowUpper_[iSequence-numberColumns_];};
+    return rowUpper_[iSequence-numberColumns_];}
   /// Theta (pivot change)
   inline double theta() const
-  { return theta_;};
+  { return theta_;}
   /// Return pointer to details of costs
   inline ClpNonLinearCost * nonLinearCost() const
-  { return nonLinearCost_;};
+  { return nonLinearCost_;}
   //@}
   /**@name status methods */
   //@{
@@ -870,50 +870,50 @@ public:
     unsigned char & st_byte = status_[sequence];
     st_byte &= ~24;
     st_byte |= fakeBound<<3;
-  };
+  }
   inline FakeBound getFakeBound(int sequence) const
-  {return static_cast<FakeBound> ((status_[sequence]>>3)&3);};
+  {return static_cast<FakeBound> ((status_[sequence]>>3)&3);}
   inline void setRowStatus(int sequence, Status status)
   {
     unsigned char & st_byte = status_[sequence+numberColumns_];
     st_byte &= ~7;
     st_byte |= status;
-  };
+  }
   inline Status getRowStatus(int sequence) const
-  {return static_cast<Status> (status_[sequence+numberColumns_]&7);};
+  {return static_cast<Status> (status_[sequence+numberColumns_]&7);}
   inline void setColumnStatus(int sequence, Status status)
   {
     unsigned char & st_byte = status_[sequence];
     st_byte &= ~7;
     st_byte |= status;
-  };
+  }
   inline Status getColumnStatus(int sequence) const
-  {return static_cast<Status> (status_[sequence]&7);};
+  {return static_cast<Status> (status_[sequence]&7);}
   inline void setPivoted( int sequence)
-  { status_[sequence] |= 32;};
+  { status_[sequence] |= 32;}
   inline void clearPivoted( int sequence)
-  { status_[sequence] &= ~32; };
+  { status_[sequence] &= ~32; }
   inline bool pivoted(int sequence) const
-  {return (((status_[sequence]>>5)&1)!=0);};
+  {return (((status_[sequence]>>5)&1)!=0);}
   /// To flag a variable (not inline to allow for column generation)
   void setFlagged( int sequence);
   inline void clearFlagged( int sequence)
   {
     status_[sequence] &= ~64;
-  };
+  }
   inline bool flagged(int sequence) const
-  {return ((status_[sequence]&64)!=0);};
+  {return ((status_[sequence]&64)!=0);}
   /// To say row active in primal pivot row choice
   inline void setActive( int iRow)
   {
     status_[iRow] |= 128;
-  };
+  }
   inline void clearActive( int iRow)
   {
     status_[iRow] &= ~128;
-  };
+  }
   inline bool active(int iRow) const
-  {return ((status_[iRow]&128)!=0);};
+  {return ((status_[iRow]&128)!=0);}
   /** Set up status array (can be used by OsiClp).
       Also can be used to set up all slack basis */
   void createStatus() ;
@@ -923,16 +923,16 @@ public:
     
   /// So we know when to be cautious
   inline int lastBadIteration() const
-  {return lastBadIteration_;};
+  {return lastBadIteration_;}
   /// Progress flag - at present 0 bit says artificials out
   inline int progressFlag() const
-  {return progressFlag_;};
+  {return progressFlag_;}
   /// Force re-factorization early 
   inline void forceFactorization(int value)
-  { forceFactorization_ = value;};
+  { forceFactorization_ = value;}
   /// Raw objective value (so always minimize in primal)
   inline double rawObjectiveValue() const
-  { return objectiveValue_;};
+  { return objectiveValue_;}
    /// Compute objective value from solution and put in objectiveValue_
   void computeObjectiveValue(bool useWorkingSolution=false);
   /// Compute minimization objective value from internal solution without perturbation
@@ -941,11 +941,11 @@ public:
       each iteration.  This is for GUB but may have other uses.
   */
   inline int numberExtraRows() const
-  { return numberExtraRows_;};
+  { return numberExtraRows_;}
   /** Maximum number of basic variables - can be more than number of rows if GUB
   */
   inline int maximumBasic() const
-  { return maximumBasic_;};
+  { return maximumBasic_;}
   /// Create C++ lines to get to current state
   void generateCpp( FILE * fp,bool defaultFactor=false);
   /// Gets clean and emptyish factorization
@@ -984,7 +984,7 @@ public:
        void setObjectiveCoefficient( int elementIndex, double elementValue );
        /** Set an objective function coefficient */
        inline void setObjCoeff( int elementIndex, double elementValue )
-       { setObjectiveCoefficient( elementIndex, elementValue);};
+       { setObjectiveCoefficient( elementIndex, elementValue);}
 
       /** Set a single column lower bound<br>
     	  Use -DBL_MAX for -infinity. */
@@ -1013,16 +1013,16 @@ public:
       /** Set a single column lower bound<br>
     	  Use -DBL_MAX for -infinity. */
        inline void setColLower( int elementIndex, double elementValue )
-       { setColumnLower(elementIndex, elementValue);};
+       { setColumnLower(elementIndex, elementValue);}
       /** Set a single column upper bound<br>
     	  Use DBL_MAX for infinity. */
        inline void setColUpper( int elementIndex, double elementValue )
-       { setColumnUpper(elementIndex, elementValue);};
+       { setColumnUpper(elementIndex, elementValue);}
 
       /** Set a single column lower and upper bound */
       inline void setColBounds( int elementIndex,
 	double lower, double upper )
-       { setColumnBounds(elementIndex, lower, upper);};
+       { setColumnBounds(elementIndex, lower, upper);}
 
       /** Set the bounds on a number of columns simultaneously<br>
     	  @param indexFirst,indexLast pointers to the beginning and after the
@@ -1033,7 +1033,7 @@ public:
       inline void setColSetBounds(const int* indexFirst,
 				   const int* indexLast,
 				   const double* boundList)
-      { setColumnSetBounds(indexFirst, indexLast, boundList);};
+      { setColumnSetBounds(indexFirst, indexLast, boundList);}
       
       /** Set a single row lower bound<br>
     	  Use -DBL_MAX for -infinity. */
@@ -1334,18 +1334,18 @@ public:
   void clearIterationNumbers();
   /// Odd state
   inline void newOddState()
-  { oddState_= - oddState_-1;};
+  { oddState_= - oddState_-1;}
   inline void endOddState()
-  { oddState_=abs(oddState_);};
+  { oddState_=abs(oddState_);}
   inline void clearOddState() 
-  { oddState_=0;};
+  { oddState_=0;}
   inline int oddState() const
-  { return oddState_;};
+  { return oddState_;}
   /// number of bad times
   inline int badTimes() const
-  { return numberBadTimes_;};
+  { return numberBadTimes_;}
   inline void clearBadTimes()
-  { numberBadTimes_=0;};
+  { numberBadTimes_=0;}
 
   //@}
   /**@name Data  */

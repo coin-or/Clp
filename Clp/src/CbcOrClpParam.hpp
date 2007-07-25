@@ -129,11 +129,11 @@ public:
   /// Returns name
   inline std::string  name(  ) const {
     return name_;
-  };
+  }
   /// Returns short help
   inline std::string  shortHelp(  ) const {
     return shortHelp_;
-  };
+  }
   /// Sets a double parameter (nonzero code if error)
   int setDoubleParameter(CbcModel & model, double value) ;
   /// Gets a double parameter
@@ -168,7 +168,7 @@ public:
   void printOptions (  ) const;
   /// Returns current parameter option
   inline std::string currentOption (  ) const
-  { return definedKeyWords_[currentKeyWord_]; };
+  { return definedKeyWords_[currentKeyWord_]; }
   /// Sets current parameter option
   void setCurrentOption ( int value , bool printIt=false);
   /// Sets current parameter option using string
@@ -176,26 +176,26 @@ public:
   /// Sets int value
   void setIntValue ( int value );
     inline int intValue () const
-  { return intValue_; };
+  { return intValue_; }
   /// Sets double value
   void setDoubleValue ( double value );
   inline double doubleValue () const
-  { return doubleValue_; };
+  { return doubleValue_; }
   /// Sets string value
   void setStringValue ( std::string value );
   inline std::string stringValue () const
-  { return stringValue_; };
+  { return stringValue_; }
   /// Returns 1 if matches minimum, 2 if matches less, 0 if not matched
   int matches (std::string input) const;
   /// type
   inline CbcOrClpParameterType type() const
-  { return type_;};
+  { return type_;}
   /// whether to display
   inline bool displayThis() const
-  { return display_;};
+  { return display_;}
   /// Set Long help
   inline void setLonghelp(const std::string help) 
-  {longHelp_=help;};
+  {longHelp_=help;}
   /// Print Long help
   void printLongHelp() const;
   /// Print action and string
@@ -206,7 +206,7 @@ public:
       4 - used by ampl
   */
   inline int whereUsed() const
-  { return whereUsed_;};
+  { return whereUsed_;}
   
 private:
   /// gutsOfConstructor

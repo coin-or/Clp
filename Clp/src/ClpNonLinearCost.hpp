@@ -255,13 +255,13 @@ public:
   }
   /// Returns current lower bound
   inline double lower(int sequence) const
-  { return lower_[whichRange_[sequence]+offset_[sequence]];};
+  { return lower_[whichRange_[sequence]+offset_[sequence]];}
   /// Returns current upper bound
   inline double upper(int sequence) const
-  { return lower_[whichRange_[sequence]+offset_[sequence]+1];};
+  { return lower_[whichRange_[sequence]+offset_[sequence]+1];}
   /// Returns current cost
   inline double cost(int sequence) const
-  { return cost_[whichRange_[sequence]+offset_[sequence]];};
+  { return cost_[whichRange_[sequence]+offset_[sequence]];}
   //@}
 
 
@@ -269,33 +269,33 @@ public:
   //@{
   /// Number of infeasibilities
   inline int numberInfeasibilities() const
-  {return numberInfeasibilities_;};
+  {return numberInfeasibilities_;}
   /// Change in cost
   inline double changeInCost() const
-  {return changeCost_;};
+  {return changeCost_;}
   /// Feasible cost
   inline double feasibleCost() const
-  {return feasibleCost_;};
+  {return feasibleCost_;}
   /// Feasible cost with offset and direction (i.e. for reporting)
   double feasibleReportCost() const;
   /// Sum of infeasibilities
   inline double sumInfeasibilities() const
-  {return sumInfeasibilities_;};
+  {return sumInfeasibilities_;}
   /// Largest infeasibility
   inline double largestInfeasibility() const
-  {return largestInfeasibility_;};
+  {return largestInfeasibility_;}
   /// Average theta
   inline double averageTheta() const
-  {return averageTheta_;};
+  {return averageTheta_;}
   inline void setAverageTheta(double value)
-  {averageTheta_=value;};
+  {averageTheta_=value;}
   inline void setChangeInCost(double value) 
-  {changeCost_ = value;};
+  {changeCost_ = value;}
   inline void setMethod(int value) 
-  {method_ = value;};
+  {method_ = value;}
   /// See if may want to look both ways
   inline bool lookBothWays() const
-  { return bothWays_;};
+  { return bothWays_;}
   //@}
   ///@name Private functions to deal with infeasible regions 
   inline bool infeasible(int i) const {
@@ -310,7 +310,7 @@ public:
       value &= ~(1<<bit);
   }
   inline unsigned char * statusArray() const
-  { return status_;};
+  { return status_;}
   /// For debug
   void validate();
   //@}

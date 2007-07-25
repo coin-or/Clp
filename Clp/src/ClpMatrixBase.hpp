@@ -81,7 +81,7 @@ public:
   
   /** Returns a new matrix in reverse order without gaps
       Is allowed to return NULL if doesn't want to have row copy */
-  virtual ClpMatrixBase * reverseOrderedCopy() const {return NULL;};
+  virtual ClpMatrixBase * reverseOrderedCopy() const {return NULL;}
   
   /// Returns number of elements in column part of basis 
   virtual CoinBigIndex countBasis(ClpSimplex * model,
@@ -99,19 +99,19 @@ public:
       default does not allow scaling
       returns non-zero if no scaling done */
   virtual int scale(ClpModel * model) const 
-  { return 1;};
+  { return 1;}
   /** Scales rowCopy if column copy scaled
       Only called if scales already exist */
   virtual void scaleRowCopy(ClpModel * model) const 
-  { };
+  { }
   /// Returns true if can create row copy
   virtual bool canGetRowCopy() const
-  { return true;};
+  { return true;}
   /** Realy really scales column copy 
       Only called if scales already exist.
       Up to user to delete */
   inline virtual ClpMatrixBase * scaledColumnCopy(ClpModel * model) const 
-  { return this->clone();};
+  { return this->clone();}
   
   /** Checks if all elements are in valid range.  Can just
       return true if you are not paranoid.  For Clp I will
@@ -126,7 +126,7 @@ public:
   virtual bool allElementsInRange(ClpModel * model,
 				  double smallest, double largest,
 				  int check=15)
-  { return true;};
+  { return true;}
   /** Set the dimensions of the matrix. In effect, append new empty
       columns/rows to the matrix. A negative number for either dimension
       means that that dimension doesn't change. Otherwise the new dimensions
@@ -155,7 +155,7 @@ public:
       Returns non-zero if any changes.
   */
   virtual int refresh(ClpSimplex * model)
-  { return 0;};
+  { return 0;}
   
   // Really scale matrix
   virtual void reallyScale(const double * rowScale, const double * columnScale);
@@ -295,7 +295,7 @@ public:
   /** Returns true if can combine transposeTimes and subsetTransposeTimes
       and if it would be faster */
   virtual bool canCombine(const ClpSimplex * model,
-                          const CoinIndexedVector * pi) const {return false;};
+                          const CoinIndexedVector * pi) const {return false;}
   /// Updates two arrays for steepest and does devex weights (need not be coded)
   virtual void transposeTimes2(const ClpSimplex * model,
                                const CoinIndexedVector * pi1, CoinIndexedVector * dj1,
@@ -342,9 +342,9 @@ public:
       12 - ClpPlusMinusOneMatrix
   */
   inline int type() const
-  { return type_;};
+  { return type_;}
   /// Sets type
-  void setType(int type) {type_=type;};
+  void setType(int type) {type_=type;}
   /// Sets up an effective RHS
   void useEffectiveRhs(ClpSimplex * model);
   /** Returns effective RHS offset if it is being used.  This is used for long problems
@@ -354,58 +354,58 @@ public:
 				bool check=false);
   /// If rhsOffset used this is iteration last refreshed
   inline int lastRefresh() const
-  { return lastRefresh_;};
+  { return lastRefresh_;}
   /// If rhsOffset used this is refresh frequency (0==off)
   inline int refreshFrequency() const
-  { return refreshFrequency_;};
+  { return refreshFrequency_;}
   inline void setRefreshFrequency(int value)
-  { refreshFrequency_=value;};
+  { refreshFrequency_=value;}
   /// whether to skip dual checks most of time
   inline bool skipDualCheck() const
-  { return skipDualCheck_;};
+  { return skipDualCheck_;}
   inline void setSkipDualCheck(bool yes)
-  { skipDualCheck_=yes;};
+  { skipDualCheck_=yes;}
   /** Partial pricing tuning parameter - minimum number of "objects" to scan.
       e.g. number of Gub sets but could be number of variables */
   inline int minimumObjectsScan() const
-  { return minimumObjectsScan_;};
+  { return minimumObjectsScan_;}
   inline void setMinimumObjectsScan(int value)
-  { minimumObjectsScan_=value;};
+  { minimumObjectsScan_=value;}
   /// Partial pricing tuning parameter - minimum number of negative reduced costs to get
   inline int minimumGoodReducedCosts() const
-  { return minimumGoodReducedCosts_;};
+  { return minimumGoodReducedCosts_;}
   inline void setMinimumGoodReducedCosts(int value)
-  { minimumGoodReducedCosts_=value;};
+  { minimumGoodReducedCosts_=value;}
   /// Current start of search space in matrix (as fraction)
   inline double startFraction() const
-  { return startFraction_;};
+  { return startFraction_;}
   inline void setStartFraction(double value) 
-  { startFraction_ = value;};
+  { startFraction_ = value;}
   /// Current end of search space in matrix (as fraction)
   inline double endFraction() const
-  { return endFraction_;};
+  { return endFraction_;}
   inline void setEndFraction(double value) 
-  { endFraction_ = value;};
+  { endFraction_ = value;}
   /// Current best reduced cost
   inline double savedBestDj() const
-  { return savedBestDj_;};
+  { return savedBestDj_;}
   inline void setSavedBestDj(double value) 
-  { savedBestDj_ = value;};
+  { savedBestDj_ = value;}
   /// Initial number of negative reduced costs wanted
   inline int originalWanted() const
-  { return originalWanted_;};
+  { return originalWanted_;}
   inline void setOriginalWanted(int value) 
-  { originalWanted_ = value;};
+  { originalWanted_ = value;}
   /// Current number of negative reduced costs which we still need
   inline int currentWanted() const
-  { return currentWanted_;};
+  { return currentWanted_;}
   inline void setCurrentWanted(int value) 
-  { currentWanted_ = value;};
+  { currentWanted_ = value;}
   /// Current best sequence
   inline int savedBestSequence() const
-  { return savedBestSequence_;};
+  { return savedBestSequence_;}
   inline void setSavedBestSequence(int value) 
-  { savedBestSequence_ = value;};
+  { savedBestSequence_ = value;}
   //@}
   
   

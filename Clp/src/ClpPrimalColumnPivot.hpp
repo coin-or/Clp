@@ -71,15 +71,15 @@ public:
       way should be -1 to go to lower bound, +1 to upper bound
   */
   virtual int pivotRow(double & way)
-  {way=0;return -2;};
+  {way=0;return -2;}
   /// Gets rid of all arrays (may be empty)
   virtual void clearArrays();
   /// Returns true if would not find any column
   virtual bool looksOptimal() const
-  { return looksOptimal_;};
+  { return looksOptimal_;}
   /// Sets optimality flag (for advanced use)
   virtual void setLooksOptimal(bool flag)
-  { looksOptimal_ = flag;};
+  { looksOptimal_ = flag;}
   //@}
   
   
@@ -106,11 +106,11 @@ public:
   //@{
   /// Returns model
   inline ClpSimplex * model()
-  { return model_;};
+  { return model_;}
   
   /// Returns type (above 63 is extra information)
   inline int type()
-  { return type_;};
+  { return type_;}
 
   /** Returns number of extra columns for sprint algorithm - 0 means off.
       Also number of iterations before recompute
@@ -119,7 +119,7 @@ public:
   /// Switch off sprint idea
   virtual void switchOffSprint();
   /// Called when maximum pivots changes
-  virtual void maximumPivotsChanged() {};
+  virtual void maximumPivotsChanged() {}
   
   //@}
 

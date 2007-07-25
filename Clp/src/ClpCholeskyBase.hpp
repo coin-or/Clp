@@ -58,60 +58,60 @@ public:
   //@{
   /// status.  Returns status
   inline int status() const 
-  {return status_;};
+  {return status_;}
   /// numberRowsDropped.  Number of rows gone
   inline int numberRowsDropped() const 
-  {return numberRowsDropped_;};
+  {return numberRowsDropped_;}
   /// reset numberRowsDropped and rowsDropped.
   void resetRowsDropped();
   /// rowsDropped - which rows are gone
   inline char * rowsDropped() const 
-  {return rowsDropped_;};
+  {return rowsDropped_;}
   /// choleskyCondition.
   inline double choleskyCondition() const 
-  {return choleskyCondition_;};
+  {return choleskyCondition_;}
   /// goDense i.e. use dense factoriaztion if > this (default 0.7).
   inline double goDense() const 
-  {return goDense_;};
+  {return goDense_;}
   /// goDense i.e. use dense factoriaztion if > this (default 0.7).
   inline void setGoDense(double value)
-  {goDense_=value;};
+  {goDense_=value;}
   /// rank.  Returns rank
   inline int rank() const 
-  {return numberRows_-numberRowsDropped_;};
+  {return numberRows_-numberRowsDropped_;}
   /// Return number of rows
   inline int numberRows() const 
-  {return numberRows_;};
+  {return numberRows_;}
   /// Return size
   inline CoinBigIndex size() const
-  { return sizeFactor_;};
+  { return sizeFactor_;}
   /// Return sparseFactor
   inline longDouble * sparseFactor() const
-  { return sparseFactor_;};
+  { return sparseFactor_;}
   /// Return diagonal
   inline longDouble * diagonal() const
-  { return diagonal_;};
+  { return diagonal_;}
   /// Return workDouble
   inline longDouble * workDouble() const
-  { return workDouble_;};
+  { return workDouble_;}
   /// If KKT on
   inline bool kkt() const
-  { return doKKT_;};
+  { return doKKT_;}
   /// Set KKT
   inline void setKKT(bool yesNo)
-  { doKKT_ = yesNo;};
+  { doKKT_ = yesNo;}
   /// Set integer parameter
   inline void setIntegerParameter(int i,int value)
-  { integerParameters_[i]=value;};
+  { integerParameters_[i]=value;}
   /// get integer parameter
   inline int getIntegerParameter(int i)
-  { return integerParameters_[i];};
+  { return integerParameters_[i];}
   /// Set double parameter
   inline void setDoubleParameter(int i,double value)
-  { doubleParameters_[i]=value;};
+  { doubleParameters_[i]=value;}
   /// get double parameter
   inline double getDoubleParameter(int i)
-  { return doubleParameters_[i];};
+  { return doubleParameters_[i];}
    //@}
   
   
@@ -137,10 +137,10 @@ public:
  
   /// Returns type
   inline int type() const
-  { if (doKKT_) return 100; else return type_;};
+  { if (doKKT_) return 100; else return type_;}
 protected:
   /// Sets type
-  void setType(int type) {type_=type;};
+  void setType(int type) {type_=type;}
    //@}
    
   /**@name Symbolic, factor and solve */

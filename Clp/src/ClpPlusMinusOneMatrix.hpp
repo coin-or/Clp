@@ -26,7 +26,7 @@ public:
    /** Number of columns. */
    virtual int getNumCols() const { return numberColumns_; }
    /** Number of rows. */
-  virtual int getNumRows() const { return numberRows_; };
+  virtual int getNumRows() const { return numberRows_; }
 
    /** A vector containing the elements in the packed matrix. Note that there
 	might be gaps in this list, entries that do not belong to any
@@ -39,10 +39,10 @@ public:
         should look at this vector together with vectorStarts and
         vectorLengths. */
   virtual const int * getIndices() const
-  { return indices_;};
+  { return indices_;}
   // and for advanced use
   int * getMutableIndices() const
-  { return indices_;};
+  { return indices_;}
 
   virtual const CoinBigIndex * getVectorStarts() const;
    /** The lengths of the major-dimension vectors. */
@@ -192,10 +192,10 @@ public:
    //@{
   /// Return starts of +1s
   inline CoinBigIndex * startPositive() const
-  { return startPositive_;};
+  { return startPositive_;}
   /// Return starts of -1s
   inline CoinBigIndex * startNegative() const
-  { return startNegative_;};
+  { return startNegative_;}
    //@}
 
 

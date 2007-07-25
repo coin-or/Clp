@@ -99,13 +99,13 @@ public:
       If >=0 then entry stayed in, if -1 then entry went out to lower bound.of zero.
       Entries at upper bound (really nonzero) never go out (at present).
   */
-  virtual void packDown(const int * in, int numberToPack) {};
+  virtual void packDown(const int * in, int numberToPack) {}
   /// Gets lower bound (to simplify coding)
   inline double columnLower(int sequence) const
-  { if (columnLower_) return columnLower_[sequence]; else return 0.0;};
+  { if (columnLower_) return columnLower_[sequence]; else return 0.0;}
   /// Gets upper bound (to simplify coding)
   inline double columnUpper(int sequence) const
-  { if (columnUpper_) return columnUpper_[sequence]; else return COIN_DBL_MAX;};
+  { if (columnUpper_) return columnUpper_[sequence]; else return COIN_DBL_MAX;}
 
   //@}
 
@@ -149,92 +149,92 @@ public:
   //@{
   /// Status of row slacks
   inline ClpSimplex::Status getStatus(int sequence) const
-  {return static_cast<ClpSimplex::Status> (status_[sequence]&7);};
+  {return static_cast<ClpSimplex::Status> (status_[sequence]&7);}
   inline void setStatus(int sequence, ClpSimplex::Status status)
   {
     unsigned char & st_byte = status_[sequence];
     st_byte &= ~7;
     st_byte |= status;
-  };
+  }
   /// Number of sets (dynamic rows)
   inline int numberSets() const
-  { return numberSets_;};
+  { return numberSets_;}
   /// Whether flagged
   inline bool flagged(int i) const {
     return (dynamicStatus_[i]&8)!=0;
-  };
+  }
   inline void setFlagged(int i) {
     dynamicStatus_[i] |= 8;
-  };
+  }
   inline void unsetFlagged(int i) {
     dynamicStatus_[i]  &= ~8;;
-  };
+  }
   inline void setDynamicStatus(int sequence, DynamicStatus status)
   {
     unsigned char & st_byte = dynamicStatus_[sequence];
     st_byte &= ~7;
     st_byte |= status;
-  };
+  }
   inline DynamicStatus getDynamicStatus(int sequence) const
-  {return static_cast<DynamicStatus> (dynamicStatus_[sequence]&7);};
+  {return static_cast<DynamicStatus> (dynamicStatus_[sequence]&7);}
   /// Saved value of objective offset
   inline double objectiveOffset() const
-  { return objectiveOffset_;};
+  { return objectiveOffset_;}
   /// Starts of each column
   inline CoinBigIndex * startColumn() const
-  { return startColumn_;};
+  { return startColumn_;}
   /// rows
   inline int * row() const
-  { return row_;};
+  { return row_;}
   /// elements
   inline float * element() const
-  { return element_;};
+  { return element_;}
   /// costs
   inline float * cost() const
-  { return cost_;};
+  { return cost_;}
   /// ids of active columns (just index here)
   inline int * id() const
-  { return id_;};
+  { return id_;}
   /// Optional lower bounds on columns
   inline float * columnLower() const
-  { return columnLower_;};
+  { return columnLower_;}
   /// Optional upper bounds on columns
   inline float * columnUpper() const
-  { return columnUpper_;};
+  { return columnUpper_;}
   /// Lower bounds on sets
   inline float * lowerSet() const
-  { return lowerSet_;};
+  { return lowerSet_;}
   /// Upper bounds on sets
   inline float * upperSet() const
-  { return upperSet_;};
+  { return upperSet_;}
   /// size
   inline int numberGubColumns() const
-  { return numberGubColumns_;};
+  { return numberGubColumns_;}
   /// first free
   inline int firstAvailable() const
-  { return firstAvailable_;};
+  { return firstAvailable_;}
   /// first dynamic
   inline int firstDynamic() const
-  { return firstDynamic_;};
+  { return firstDynamic_;}
   /// number of columns in dynamic model
   inline int lastDynamic() const
-  { return lastDynamic_;};
+  { return lastDynamic_;}
   /// number of rows in original model
   inline int numberStaticRows() const
-  { return numberStaticRows_;};
+  { return numberStaticRows_;}
   /// size of working matrix (max)
   inline int numberElements() const
-  { return numberElements_;};
+  { return numberElements_;}
   inline int * keyVariable() const
-  { return keyVariable_;};
+  { return keyVariable_;}
   /// Switches off dj checking each factorization (for BIG models)
   void switchOffCheck();
   /// Status region for gub slacks
   inline unsigned char * gubRowStatus() const
-  { return status_;};
+  { return status_;}
   /// Status region for gub variables
   inline unsigned char * dynamicStatus() const
-  { return dynamicStatus_;};
+  { return dynamicStatus_;}
   /// Returns which set a variable is in
   int whichSet (int sequence) const;
    //@}
