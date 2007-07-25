@@ -3642,7 +3642,7 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
 #endif
       constraint->gradient(&newModel,solution,gradient,functionValue,offset);
       assert (!numberErrors);
-      double dualValue = newModel.dualRowSolution()[iRow];
+      // double dualValue = newModel.dualRowSolution()[iRow];
       int numberCoefficients = constraint->numberCoefficients();
       for (CoinBigIndex j=rowStart[iRow];j<rowStart[iRow]+numberCoefficients;j++) {
 	int iColumn = column[j];

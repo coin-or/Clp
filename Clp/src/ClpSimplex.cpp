@@ -399,8 +399,8 @@ ClpSimplex::gutsOfSolution ( double * givenDuals,
                               1.0e5/maximumAbsElement(solution_,numberRows_+numberColumns_));  
     if ((oldValue<incomingInfeasibility_||badInfeasibility>
          (CoinMax(10.0*allowedInfeasibility_,100.0*oldValue)))
-	&&badInfeasibility>CoinMax(incomingInfeasibility_,allowedInfeasibility_)||
-	useError>1.0e-3) {
+	&&(badInfeasibility>CoinMax(incomingInfeasibility_,allowedInfeasibility_)||
+	   useError>1.0e-3)) {
       //printf("Original largest infeas %g, now %g, primalError %g\n",
       //     oldValue,nonLinearCost_->largestInfeasibility(),
       //     largestPrimalError_);
@@ -3849,7 +3849,7 @@ ClpSimplex::deleteRim(int getRidOfFactorizationData)
     ClpMatrixBase * temp = matrix_;
     matrix_=auxiliaryModel_->matrix_;
     auxiliaryModel_->matrix_=temp;
-    assert ((auxiliaryModel_->specialOptions_&16+32)==16+32);
+    assert ((auxiliaryModel_->specialOptions_&(16+32))==16+32);
     if (problemStatus_!=1&&problemStatus_!=10) {
       int i;
       if (auxiliaryModel_->rowScale_) {
@@ -5312,15 +5312,16 @@ ClpSimplex::saveModel(const char * fileName)
     if (outDoubleArray(columnUpper_,numberColumns_,fp))
 	return 1;
     if (ray_) {
-      if (problemStatus_==1)
+      if (problemStatus_==1) {
 	if (outDoubleArray(ray_,numberRows_,fp))
 	  return 1;
-      else if (problemStatus_==2)
+      } else if (problemStatus_==2) {
 	if (outDoubleArray(ray_,numberColumns_,fp))
 	  return 1;
-      else
+      } else {
 	if (outDoubleArray(NULL,0,fp))
 	  return 1;
+      }
     } else {
       if (outDoubleArray(NULL,0,fp))
 	return 1;
@@ -9053,7 +9054,7 @@ ClpSimplex::cleanup(int cleanupScaling)
     int check = cleanupScaling%10;
     bool primal = (secondaryStatus_==2||secondaryStatus_==4);
     bool dual = (secondaryStatus_==3||secondaryStatus_==4);
-    if (((check&1)!=0&&primal)||((check&2)!=0)&&dual) {
+    if (((check&1)!=0&&primal)||(((check&2)!=0)&&dual)) {
       // need cleanup
       int saveScalingFlag = scalingFlag_;
       // say matrix changed

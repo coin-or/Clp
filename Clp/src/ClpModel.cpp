@@ -3285,7 +3285,7 @@ ClpModel::writeMps(const char *filename,
 }
 #ifndef CLP_NO_STD
 // Create row names as char **
-const char * const * const
+const char * const * 
 ClpModel::rowNamesAsChar() const
 {
   char ** rowNames = NULL;
@@ -3319,7 +3319,7 @@ ClpModel::rowNamesAsChar() const
   return reinterpret_cast<const char * const *>(rowNames);
 }
 // Create column names as char **
-const char * const * const
+const char * const * 
 ClpModel::columnNamesAsChar() const
 {
   char ** columnNames = NULL;
@@ -3353,7 +3353,7 @@ ClpModel::columnNamesAsChar() const
 }
 // Delete char * version of names
 void 
-ClpModel::deleteNamesAsChar(const char * const * const names,int number) const
+ClpModel::deleteNamesAsChar(const char * const * names,int number) const
 {
   for (int i=0;i<number;i++) {
     free(const_cast<char *>(names[i]));

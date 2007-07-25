@@ -843,11 +843,11 @@ protected:
       return objectiveValue_;
    }
   /// Create row names as char **
-  const char * const * const rowNamesAsChar() const;
+  const char * const * rowNamesAsChar() const;
   /// Create column names as char **
-  const char * const * const columnNamesAsChar() const;
+  const char * const * columnNamesAsChar() const;
   /// Delete char * version of names
-  void deleteNamesAsChar(const char * const * const names,int number) const;
+  void deleteNamesAsChar(const char * const * names,int number) const;
   //@}
 
 
