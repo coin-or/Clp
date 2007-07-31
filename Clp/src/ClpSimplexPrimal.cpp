@@ -2216,48 +2216,51 @@ ClpSimplexPrimal::perturb(int type)
   // For now just no more than 0.1
   // printf("Pert type %d perturbation %g, maxF %g\n",type,perturbation,maximumFraction);
   if (type==1) {
+    double tolerance = 100.0*primalTolerance_;
     //double multiplier = perturbation*maximumFraction;
     for (iSequence=0;iSequence<numberRows_+numberColumns_;iSequence++) {
       if (getStatus(iSequence)==basic) {
-	double solutionValue = solution_[iSequence];
 	double lowerValue = lower_[iSequence];
 	double upperValue = upper_[iSequence];
-	double difference = upperValue-lowerValue;
-	difference = CoinMin(difference,perturbation);
-	difference = CoinMin(difference,fabs(solutionValue)+1.0);
-	double value = maximumFraction*(difference+1.0);
-	value = CoinMin(value,0.1);
-	value *= CoinDrand48();
-	if (solutionValue-lowerValue<=primalTolerance_) {
-	  lower_[iSequence] -= value;
-	} else if (upperValue-solutionValue<=primalTolerance_) {
-	  upper_[iSequence] += value;
-	} else {
+	if (upperValue>lowerValue+tolerance) {
+	  double solutionValue = solution_[iSequence];
+	  double difference = upperValue-lowerValue;
+	  difference = CoinMin(difference,perturbation);
+	  difference = CoinMin(difference,fabs(solutionValue)+1.0);
+	  double value = maximumFraction*(difference+1.0);
+	  value = CoinMin(value,0.1);
+	  value *= CoinDrand48();
+	  if (solutionValue-lowerValue<=primalTolerance_) {
+	    lower_[iSequence] -= value;
+	  } else if (upperValue-solutionValue<=primalTolerance_) {
+	    upper_[iSequence] += value;
+	  } else {
 #if 0
-	  if (iSequence>=numberColumns_) {
-	    // may not be at bound - but still perturb (unless free)
-	    if (upperValue>1.0e30&&lowerValue<-1.0e30)
-	      value=0.0;
-	    else
-	      value = - value; // as -1.0 in matrix
-	  } else {
-	    value = 0.0;
-	  }
+	    if (iSequence>=numberColumns_) {
+	      // may not be at bound - but still perturb (unless free)
+	      if (upperValue>1.0e30&&lowerValue<-1.0e30)
+		value=0.0;
+	      else
+		value = - value; // as -1.0 in matrix
+	    } else {
+	      value = 0.0;
+	    }
 #else
-	  value=0.0;
+	    value=0.0;
 #endif
-	}
-	if (value) {
-	  if (printOut)
-	    printf("col %d lower from %g to %g, upper from %g to %g\n",
-		   iSequence,lower_[iSequence],lowerValue,upper_[iSequence],upperValue);
-	  if (solutionValue) {
-	    largest = CoinMax(largest,value);
-	    if (value>(fabs(solutionValue)+1.0)*largestPerCent)
-	      largestPerCent=value/(fabs(solutionValue)+1.0);
-	  } else {
-	    largestZero = CoinMax(largestZero,value);
-	  } 
+	  }
+	  if (value) {
+	    if (printOut)
+	      printf("col %d lower from %g to %g, upper from %g to %g\n",
+		     iSequence,lower_[iSequence],lowerValue,upper_[iSequence],upperValue);
+	    if (solutionValue) {
+	      largest = CoinMax(largest,value);
+	      if (value>(fabs(solutionValue)+1.0)*largestPerCent)
+		largestPerCent=value/(fabs(solutionValue)+1.0);
+	    } else {
+	      largestZero = CoinMax(largestZero,value);
+	    } 
+	  }
 	}
       }
     }

@@ -1581,18 +1581,28 @@ ClpSimplex::housekeeping(double objectiveChange)
              lengthR*3>(lengthL+lengthU)*2+1000&&!numberDense) {
     //printf("ret after %d pivots\n",factorization_->pivots());
     return 1;
-  } else {
-    if (forceFactorization_>0&&
-	factorization_->pivots()==forceFactorization_) {
-      // relax
-      forceFactorization_ = (3+5*forceFactorization_)/4;
-      if (forceFactorization_>factorization_->maximumPivots())
-	forceFactorization_ = -1; //off
+  } else if (forceFactorization_>0&&
+	     factorization_->pivots()==forceFactorization_) {
+    // relax
+    forceFactorization_ = (3+5*forceFactorization_)/4;
+    if (forceFactorization_>factorization_->maximumPivots())
+      forceFactorization_ = -1; //off
+    return 1;
+  } else if (numberIterations_>1000+10*(numberRows_+(numberColumns_>>2))) {
+    double random = CoinDrand48();
+    int maxNumber = (forceFactorization_<0) ? maximumPivots : CoinMin(forceFactorization_,maximumPivots);
+    if (factorization_->pivots()>=random*maxNumber) {
+      return 1;
+    } else if (numberIterations_>1000000+10*(numberRows_+(numberColumns_>>2))&&
+	       numberIterations_<1001000+10*(numberRows_+(numberColumns_>>2))) {
       return 1;
     } else {
       // carry on iterating
       return 0;
     }
+  } else {
+    // carry on iterating
+    return 0;
   }
 }
 // Copy constructor. 

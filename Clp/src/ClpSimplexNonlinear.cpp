@@ -3350,7 +3350,13 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
   //const double * elementByRow = copy.getElements();
   int numberArtificials=0;
   // We could use nonlinearcost to do segments - maybe later
-#define SEGMENTS 3  
+#define SEGMENTS 3 
+  // Penalties may be adjusted by duals
+  // Both these should be modified depending on problem
+  // Possibly start with big bounds
+  double penalties[]={1.0e-2,1.0,1.0e9};
+  //double bounds[] = {1.0e-2,1.0,COIN_DBL_MAX};
+  double bounds[] = {1.0e-1,1.0e2,COIN_DBL_MAX};
   // see how many extra we need
   CoinBigIndex numberExtra=0;
   for (iConstraint=0;iConstraint<numberConstraints;iConstraint++) {
@@ -3384,10 +3390,6 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
     objective_=trueObjective;
   }
   int numberColumns2 = numberColumns_;
-  // Penalties may be adjusted by duals
-  // Both these should be modified depending on problem
-  double penalties[]={1.0e-2,1.0,1.0e9};
-  double bounds[] = {1.0e-2,1.0,COIN_DBL_MAX};
   if (numberArtificials) {
     numberArtificials *= SEGMENTS;
     numberColumns2 += numberArtificials;
@@ -3429,6 +3431,7 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
     delete [] addElement;
     delete [] addUpper;
     delete [] addCost;
+    //    newModel.primal(1);
   }
   // find nonlinear columns
   int * listNonLinearColumn = new int [numberColumns_];
@@ -3525,9 +3528,18 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
   // get feasible
   newModel.primal(1);
   // still infeasible
-  if (newModel.numberPrimalInfeasibilities()) {
+  if (newModel.problemStatus()==1) {
     delete [] listNonLinearColumn;
     return 0;
+  } else if (newModel.problemStatus()==2) {
+    // unbounded - add bounds
+    double * columnLower = newModel.columnLower();
+    double * columnUpper = newModel.columnUpper();
+    for (int i=0;i<numberColumns_;i++) {
+      columnLower[i]= CoinMax(-1.0e8,columnLower[i]);
+      columnUpper[i]= CoinMin(1.0e8,columnUpper[i]);
+    }
+    newModel.primal(1);
   }
   int numberRows = newModel.numberRows();
   double * columnLower = newModel.columnLower();
@@ -3549,10 +3561,10 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
     iColumn=listNonLinearColumn[jNon];
     double upper = columnUpper[iColumn];
     double lower = columnLower[iColumn];
-    if (solution[iColumn]<trueLower[jNon])
-      solution[iColumn]=trueLower[jNon];
-    else if (solution[iColumn]>trueUpper[jNon])
-      solution[iColumn]=trueUpper[jNon];
+    if (solution[iColumn]<lower)
+      solution[iColumn]=lower;
+    else if (solution[iColumn]>upper)
+      solution[iColumn]=upper;
 #if 0
     double large = CoinMax(1000.0,10.0*fabs(solution[iColumn]));
     if (upper>1.0e10)
@@ -3697,6 +3709,8 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
       objValue=objective_->objectiveValue(this,solution);
     }
     double infPenalty=0.0;
+    // This penalty is for target drop
+    double infPenalty2=0.0;
     for (iConstraint=0;iConstraint<numberConstraints;iConstraint++) {
       ClpConstraint * constraint = constraints[iConstraint];
       int iRow = constraint->rowNumber();
@@ -3706,6 +3720,9 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
 	printf("For row %d current value is %g (activity %g) , dual is %g - offset %g\n",iRow,functionValue,
 	       newModel.primalRowSolution()[iRow],
 	       dualValue,offset);
+      double movement = newModel.primalRowSolution()[iRow];
+      movement = fabs((movement-functionValue)*dualValue);
+      infPenalty2 += movement;
       double infeasibility=0.0;
       if (functionValue<rowLower_[iRow]-1.0e-5) {
 	infeasibility = rowLower_[iRow]-functionValue;
@@ -3845,7 +3862,7 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
     memcpy(saveStatus,newModel.statusArray(),
 	   numberColumns2+numberRows);
     
-    targetDrop=0.0;
+    targetDrop=infPenalty+infPenalty2;
     if (iPass) {
       // get reduced costs
       const double * pi = newModel.dualRowSolution();
