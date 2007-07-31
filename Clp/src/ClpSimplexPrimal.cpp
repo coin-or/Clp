@@ -2051,6 +2051,8 @@ ClpSimplexPrimal::perturb(int type)
 	double lowerValue = lower_[iSequence];
 	double upperValue = upper_[iSequence];
 	double difference = upperValue-lowerValue;
+	if (difference<primalTolerance_)
+	  continue;
 	difference = CoinMin(difference,perturbation);
 	difference = CoinMin(difference,fabs(solutionValue)+1.0);
 	double value = maximumFraction*(difference+1.0);
