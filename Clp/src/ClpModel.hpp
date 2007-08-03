@@ -669,6 +669,9 @@ public:
   */
    inline void setLogLevel(int value)    { handler_->setLogLevel(value); }
    inline int logLevel() const           { return handler_->logLevel(); }
+   /// Return true if default handler
+   inline bool defaultHandler() const
+   { return defaultHandler_;}
    /// Pass in Event handler (cloned and deleted at end)
    void passInEventHandler(const ClpEventHandler * eventHandler);
    /// Event handler

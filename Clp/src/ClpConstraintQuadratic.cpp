@@ -163,7 +163,7 @@ ClpConstraintQuadratic::gradient(const ClpSimplex * model,
 	  }
 	}
       }
-      functionValue_ += offset_;
+      functionValue_ -= offset_;
     } else {
       abort();
       // do scaling

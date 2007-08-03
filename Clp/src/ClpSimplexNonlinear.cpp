@@ -3711,33 +3711,93 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
     double infPenalty=0.0;
     // This penalty is for target drop
     double infPenalty2=0.0;
+    //const int * row = columnCopy->getIndices();
+    //const CoinBigIndex * columnStart = columnCopy->getVectorStarts();
+    //const int * columnLength = columnCopy->getVectorLengths(); 
+    //const double * element = columnCopy->getElements();
+    double * cost = newModel.objective();
+    column = newMatrix.getIndices();
+    rowStart = newMatrix.getVectorStarts();
+    rowLength = newMatrix.getVectorLengths(); 
+    elementByRow = newMatrix.getElements();
+    int jColumn = numberColumns_;
+    double objectiveAdjustment=0.0;
     for (iConstraint=0;iConstraint<numberConstraints;iConstraint++) {
       ClpConstraint * constraint = constraints[iConstraint];
       int iRow = constraint->rowNumber();
       double functionValue=constraint->functionValue(this,solution);
       double dualValue = newModel.dualRowSolution()[iRow];
       if (numberConstraints<50)
-	printf("For row %d current value is %g (activity %g) , dual is %g - offset %g\n",iRow,functionValue,
+	printf("For row %d current value is %g (row activity %g) , dual is %g\n",iRow,functionValue,
 	       newModel.primalRowSolution()[iRow],
-	       dualValue,offset);
+	       dualValue);
       double movement = newModel.primalRowSolution()[iRow];
       movement = fabs((movement-functionValue)*dualValue);
       infPenalty2 += movement;
-      double infeasibility=0.0;
-      if (functionValue<rowLower_[iRow]-1.0e-5) {
-	infeasibility = rowLower_[iRow]-functionValue;
-      } else if (functionValue>rowUpper_[iRow]+1.0e-5) {
-	infeasibility = functionValue-rowUpper_[iRow];
+      double sumOfActivities=0.0;
+      for (CoinBigIndex j=rowStart[iRow];j<rowStart[iRow]+rowLength[iRow];j++) {
+	int iColumn = column[j];
+	sumOfActivities += fabs(solution[iColumn]*elementByRow[j]); 
       }
-      infValue += infeasibility;
-      for (int k=0;k<SEGMENTS;k++) {
-	if (infeasibility<=0)
-	  break;
-	double thisPart = CoinMin(infeasibility,bounds[k]);
-	infPenalty += thisPart*penalties[k];
-	infeasibility -= thisPart;
+      if (rowLower_[iRow]>-1.0e20) {
+	if (functionValue<rowLower_[iRow]-1.0e-5) {
+	  double infeasibility = rowLower_[iRow]-functionValue;
+	  double thisPenalty=0.0;
+	  infValue += infeasibility;
+	  double boundMultiplier = 1.0;
+	  if (sumOfActivities<0.001)
+	    boundMultiplier = 0.1;
+	  else if (sumOfActivities>100.0)
+	    boundMultiplier=10.0;
+	  int k;
+	  for ( k=0;k<SEGMENTS;k++) {
+	    if (infeasibility<=0)
+	      break;
+	    double thisPart = CoinMin(infeasibility,bounds[k]);
+	    thisPenalty += thisPart*cost[jColumn+k];
+	    infeasibility -= thisPart;
+	  }
+	  infPenalty += thisPenalty;
+	}
+	jColumn += SEGMENTS;
+      }
+      if (rowUpper_[iRow]<1.0e20) {
+	if (functionValue>rowUpper_[iRow]+1.0e-5) {
+	  double infeasibility = functionValue-rowUpper_[iRow];
+	  double thisPenalty=0.0;
+	  infValue += infeasibility;
+	  double boundMultiplier = 1.0;
+	  if (sumOfActivities<0.001)
+	    boundMultiplier = 0.1;
+	  else if (sumOfActivities>100.0)
+	    boundMultiplier=10.0;
+	  int k;
+	  dualValue = -dualValue;
+	  assert (dualValue>=-1.0e-5);
+	  dualValue = CoinMax(dualValue,0.0);
+	  for ( k=0;k<SEGMENTS;k++) {
+	    if (infeasibility<=0)
+	      break;
+	    double thisPart = CoinMin(infeasibility,bounds[k]);
+	    thisPenalty += thisPart*cost[jColumn+k];
+	    infeasibility -= thisPart;
+	  }
+	  infeasibility = functionValue-rowUpper_[iRow];
+	  double newPenalty=0.0;
+	  for ( k=0;k<SEGMENTS;k++) {
+	    double thisPart = CoinMin(infeasibility,bounds[k]);
+	    cost[jColumn+k] = CoinMax(penalties[k],dualValue+1.0e-3);
+	    newPenalty += thisPart*cost[jColumn+k];
+	    infeasibility -= thisPart;
+	  }
+	  infPenalty += thisPenalty;
+	  objectiveAdjustment += CoinMax(0.0,newPenalty-thisPenalty);
+	}
+	jColumn += SEGMENTS;
       }
     }
+    // adjust last objective value
+    lastObjective += objectiveAdjustment;
     if (infValue)
       printf("Sum infeasibilities %g - penalty %g",infValue,infPenalty);
     if (objectiveOffset2)
