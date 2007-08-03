@@ -2223,6 +2223,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
   }
   numberIterations = model2->numberIterations();
   finalStatus=model2->status();
+  int finalSecondaryStatus = model2->secondaryStatus();
   if (presolve==ClpSolve::presolveOn) {
     int saveLevel = logLevel();
     if ((specialOptions_&1024)==0)
@@ -2263,6 +2264,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
       <<"Cleanup"<<time2-timeX<<time2-time1
       <<CoinMessageEol;
       timeX=time2;
+    } else {
+      secondaryStatus_=finalSecondaryStatus;
     }
   } else if (model2!=this) {
     // not presolved - but different model used (sprint probably)

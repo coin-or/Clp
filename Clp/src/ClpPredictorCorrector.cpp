@@ -378,6 +378,7 @@ int ClpPredictorCorrector::solve ( )
       handler_->message(CLP_BARRIER_STOPPING,messages_)
 	<<CoinMessageEol;
       problemStatus_=3;
+      onStopped(); // set secondary status
       break;
     } 
     if (gapO<targetGap_) {

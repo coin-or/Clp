@@ -4551,6 +4551,7 @@ int ClpSimplex::dual (int ifValuesPass , int startFinishOptions)
     setSumPrimalInfeasibilities(temp.sumPrimalInfeasibilities());
     setNumberPrimalInfeasibilities(temp.numberPrimalInfeasibilities());
     setNumberIterations(temp.numberIterations());
+    onStopped(); // set secondary status if stopped
     return returnCode;
   } else {
     // empty
@@ -4658,6 +4659,7 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
   }
   objective_->setActivated(saveQuadraticActivated);
   //factorization_->pivotTolerance(savedPivotTolerance);
+  onStopped(); // set secondary status if stopped
   return returnCode;
 }
 // primal 
@@ -4705,6 +4707,7 @@ int ClpSimplex::primal (int ifValuesPass , int startFinishOptions)
       problemStatus_=0;
   }
   //factorization_->pivotTolerance(savedPivotTolerance);
+  onStopped(); // set secondary status if stopped
   return returnCode;
 }
 #ifndef SLIM_CLP

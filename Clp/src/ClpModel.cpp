@@ -2327,9 +2327,20 @@ ClpModel::hitMaximumIterations() const
 {
   // replaced - compiler error? bool hitMax= (numberIterations_>=maximumIterations());
   bool hitMax = (numberIterations_ >= intParam_[ClpMaxNumIteration]);
-  if (dblParam_[ClpMaxSeconds]>=0.0&&!hitMax)
+  if (dblParam_[ClpMaxSeconds]>=0.0&&!hitMax) {
     hitMax = (CoinCpuTime()>=dblParam_[ClpMaxSeconds]);
+  }
   return hitMax;
+}
+// On stopped - sets secondary status
+void 
+ClpModel::onStopped()
+{
+  if (problemStatus_==3) {
+    secondaryStatus_=0;
+    if (CoinCpuTime()>=dblParam_[ClpMaxSeconds])
+      secondaryStatus_=9;
+  }
 }
 // Pass in Message handler (not deleted at end)
 void 

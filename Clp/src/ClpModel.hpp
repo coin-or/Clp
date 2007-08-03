@@ -373,7 +373,8 @@ public:
        5 - giving up in primal with flagged variables
        6 - failed due to empty problem check 
        7 - postSolve says not optimal
-       8 - failed due to bad element check 
+       8 - failed due to bad element check
+       9 - status was 3 and stopped on time
        100 up - translation of enum from ClpEventHandler
    */
    inline int secondaryStatus() const            { return secondaryStatus_; }
@@ -851,6 +852,8 @@ protected:
   const char * const * columnNamesAsChar() const;
   /// Delete char * version of names
   void deleteNamesAsChar(const char * const * names,int number) const;
+  /// On stopped - sets secondary status
+  void onStopped();
   //@}
 
 
