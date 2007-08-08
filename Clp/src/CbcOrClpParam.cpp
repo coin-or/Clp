@@ -1378,6 +1378,24 @@ re-run with debug set to 'debug.file'  Similarly if you do use preprocessing but
 createAfterPre.  The create case has same effect as saveSolution."
      ); 
 #endif 
+#ifdef COIN_HAS_CBC
+  parameters[numberParameters++]=
+    CbcOrClpParam("dextra1","Extra double parameter 1",
+		  -COIN_DBL_MAX,COIN_DBL_MAX,DEXTRA1,false);
+  parameters[numberParameters-1].setDoubleValue(0.0);
+  parameters[numberParameters++]=
+    CbcOrClpParam("dextra2","Extra double parameter 2",
+		  -COIN_DBL_MAX,COIN_DBL_MAX,DEXTRA2,false);
+  parameters[numberParameters-1].setDoubleValue(0.0);
+  parameters[numberParameters++]=
+    CbcOrClpParam("dextra3","Extra double parameter 3",
+		  -COIN_DBL_MAX,COIN_DBL_MAX,DEXTRA3,false);
+  parameters[numberParameters-1].setDoubleValue(0.0);
+  parameters[numberParameters++]=
+    CbcOrClpParam("dextra4","Extra double parameter 4",
+		  -COIN_DBL_MAX,COIN_DBL_MAX,DEXTRA4,false);
+  parameters[numberParameters-1].setDoubleValue(0.0);
+#endif
   parameters[numberParameters++]=
     CbcOrClpParam("direction","Minimize or Maximize",
 		  "min!imize",DIRECTION);
@@ -1907,7 +1925,8 @@ specialized network code."
 #ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("node!Strategy","What strategy to use to select nodes",
-                  "fewest",NODESTRATEGY);
+                  "hybrid",NODESTRATEGY);
+  parameters[numberParameters-1].append("fewest");
   parameters[numberParameters-1].append("depth");
   parameters[numberParameters-1].append("upfewest");
   parameters[numberParameters-1].append("downfewest");
@@ -1917,7 +1936,8 @@ specialized network code."
     (
      "Normally before a solution the code will choose node with fewest infeasibilities. \
 You can choose depth as the criterion.  You can also say if up or down branch must \
-be done first (the up down choice will carry on after solution)."
+be done first (the up down choice will carry on after solution). \
+Default has now been changed to hybrid which is breadth first on small depth nodes then fewest."
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("numberA!nalyze","Number of analysis iterations",

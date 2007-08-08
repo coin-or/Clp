@@ -3731,7 +3731,7 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
 	printf("For row %d current value is %g (row activity %g) , dual is %g\n",iRow,functionValue,
 	       newModel.primalRowSolution()[iRow],
 	       dualValue);
-      double movement = newModel.primalRowSolution()[iRow];
+      double movement = newModel.primalRowSolution()[iRow]+constraint->offset();
       movement = fabs((movement-functionValue)*dualValue);
       infPenalty2 += movement;
       double sumOfActivities=0.0;
@@ -3750,6 +3750,8 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
 	  else if (sumOfActivities>100.0)
 	    boundMultiplier=10.0;
 	  int k;
+	  assert (dualValue>=-1.0e-5);
+	  dualValue = CoinMax(dualValue,0.0);
 	  for ( k=0;k<SEGMENTS;k++) {
 	    if (infeasibility<=0)
 	      break;
@@ -3757,7 +3759,16 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
 	    thisPenalty += thisPart*cost[jColumn+k];
 	    infeasibility -= thisPart;
 	  }
+	  infeasibility = functionValue-rowUpper_[iRow];
+	  double newPenalty=0.0;
+	  for ( k=0;k<SEGMENTS;k++) {
+	    double thisPart = CoinMin(infeasibility,bounds[k]);
+	    cost[jColumn+k] = CoinMax(penalties[k],dualValue+1.0e-3);
+	    newPenalty += thisPart*cost[jColumn+k];
+	    infeasibility -= thisPart;
+	  }
 	  infPenalty += thisPenalty;
+	  objectiveAdjustment += CoinMax(0.0,newPenalty-thisPenalty);
 	}
 	jColumn += SEGMENTS;
       }
@@ -3804,7 +3815,7 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
       printf("offset2 %g\n",objectiveOffset2);
     objValue -= objectiveOffset2;
     printf("True objective %g\n",objValue);
-    objValue += infPenalty;
+    objValue += infPenalty+infPenalty2;
     if (iPass) {
       double drop = lastObjective-objValue;
       std::cout<<"True drop was "<<drop<<std::endl;
