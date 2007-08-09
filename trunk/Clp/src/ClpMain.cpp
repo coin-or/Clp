@@ -96,7 +96,7 @@ int main (int argc, const char *argv[])
     models->setPerturbation(50);
     models->messageHandler()->setPrefix(false);
     const char dirsep =  CoinFindDirSeparator();
-    std::string directory = (dirsep == '/' ? "./" : ".\\");
+    std::string directory = ".";
     std::string defaultDirectory = directory;
     std::string importFile ="";
     std::string exportFile ="default.mps";
@@ -1372,14 +1372,11 @@ int main (int argc, const char *argv[])
 	    {
 	      // create fields for unitTest
 	      const char * fields[4];
-	      int nFields=2;
 	      fields[0]="fake main from unitTest";
 	      fields[1]="-netlib";
-	      if (directory!=defaultDirectory) {
-		fields[2]="-netlibDir";
-		fields[3]=directory.c_str();
-		nFields=4;
-	      }
+	      fields[2]="-directory";
+	      fields[3]=directory.c_str();
+	      int nFields=4;
 	      int algorithm;
 	      if (type==NETLIB_DUAL) {
 		std::cerr<<"Doing netlib with dual algorithm"<<std::endl;
@@ -1408,14 +1405,12 @@ int main (int argc, const char *argv[])
 	  case UNITTEST:
 	    {
 	      // create fields for unitTest
-	      const char * fields[3];
-	      int nFields=1;
+	      const char * fields[4];
 	      fields[0]="fake main from unitTest";
-	      if (directory!=defaultDirectory) {
-		fields[1]="-mpsDir";
-		fields[2]=directory.c_str();
-		nFields=3;
-	      }
+	      fields[1]="-unitTest";
+	      fields[2]="-directory";
+	      fields[3]=directory.c_str();
+	      int nFields=4;
               int specialOptions = models[iModel].specialOptions();
               models[iModel].setSpecialOptions(0);
               int algorithm=-1;

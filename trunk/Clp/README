@@ -4,9 +4,16 @@ To build Clp see INSTALL file
 
 To use Clp you need the Clp and Coin libraries
 
-To make the unitTest and standalone executable do
+To make standalone executable do 'make Clp' in the Clp directory.
+This creates an executable clp in Clp/src. 
 
-make unitTest in the Clp directory (or make in Clp/test).  This creates an executable clp.in Clp
+To run unitTest do 'make unitTest' in the Clp directory. This will
+do some minimal testing.
+
+To run clp on all netlib problems do 'make unitTest NETLIBDIR=<dirname>'
+dirname should be the path to the directory containing all the
+netlib files. If you have compiled Clp without zlib support then the
+files must be uncompressed.
 
 Running clp gives you some hints.  It can do a unit test (clp -unitTest) and solve netlib 
 problems (-netlib or -netlibp using primal).  It can also solve problems and set tolerances etc.  Just do 

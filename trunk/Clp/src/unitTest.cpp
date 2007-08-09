@@ -226,24 +226,23 @@ static void printSol(ClpSimplex & model)
   }
   printf("Computed objective %g\n",objValue);
 }
-//----------------------------------------------------------------
-// unitTest [-mpsDir=V1] [-netlibDir=V2] [-test]
-// 
-// where:
-//   -mpsDir: directory containing mps test files
-//       Default value V1="../../Data/Sample"    
-//   -netlibDir: directory containing netlib files
-//       Default value V2="../../Data/Netlib"
-//   -test
-//       If specified, then netlib test set run
-//
-// All parameters are optional.
+
+static void usage()
+{
+  std::cerr <<"Correct usage for running clp in testing mode: \n"
+	    <<"  clp -directory DIR  <-unitTest|-netlib> "
+	    <<"    where:\n"
+	    <<"      -directory: directory containing mps test files\n"
+	    <<"                  Must be specified.\n"
+	    <<"      -unitTest or -netlib specifies whether a small sample should be run\n"
+	    <<"          or the full set pf netlib problems.\n"
+	    <<"          One of them must be specified.\n";
+}
+
 //----------------------------------------------------------------
 int mainTest (int argc, const char *argv[],int algorithm,
 	      ClpSimplex empty, bool doPresolve, int switchOffValue,bool doVector)
 {
-  int i;
-
   if (switchOffValue>0) {
     // switch off some
     int iTest;
@@ -255,69 +254,36 @@ int mainTest (int argc, const char *argv[],int algorithm,
     }
   }
 
-  // define valid parameter keywords
-  std::set<std::string> definedKeyWords;
-  definedKeyWords.insert("-mpsDir");
-  definedKeyWords.insert("-netlibDir");
-  definedKeyWords.insert("-netlib");
+  bool netlib = false;
+  bool singleprob = empty.numberRows() > 0;
 
-  // Create a map of parameter keys and associated data
-  std::map<std::string,std::string> parms;
-  for ( i=1; i<argc; i++ ) {
-    std::string parm(argv[i]);
-    std::string key,value;
-    std::string::size_type  eqPos = parm.find('=');
-
-    // Does parm contain and '='
-    if ( eqPos==std::string::npos ) {
-      //Parm does not contain '='
-      key = parm;
-    }
-    else {
-      key=parm.substr(0,eqPos);
-      value=parm.substr(eqPos+1);
-    }
-
-    // Is specifed key valid?
-    if ( definedKeyWords.find(key) == definedKeyWords.end() ) {
-      // invalid key word.
-      // Write help text
-      std::cerr <<"Undefined parameter \"" <<key <<"\".\n";
-      std::cerr <<"Correct usage: \n";
-      std::cerr <<"  unitTest [-mpsDir=V1] [-netlibDir=V2] [-test[=V3]]\n";
-      std::cerr <<"  where:\n";
-      std::cerr <<"    -mpsDir: directory containing mps test files\n";
-      std::cerr <<"        Default value V1=\"../../Data/Sample\"\n";
-      std::cerr <<"    -netlibDir: directory containing netlib files\n";
-      std::cerr <<"        Default value V2=\"../../Data/Netlib\"\n";
-      std::cerr <<"    -test\n";
-      std::cerr <<"        If specified, then netlib testset run.\n";
-      std::cerr <<"        If V3 then taken as single file\n";
-      return 1;
-    }
-    parms[key]=value;
+  if (argc != 4) {
+    usage();
+    return 1;
   }
   
-  const char dirsep =  CoinFindDirSeparator();
-  // Set directory containing mps data files.
-  std::string mpsDir;
-  if (parms.find("-mpsDir") != parms.end())
-    mpsDir=parms["-mpsDir"] + dirsep;
-  else 
-    mpsDir = dirsep == '/' ? "../../Data/Sample/" : "..\\..\\Data\\Sample\\";
- 
-  // Set directory containing netlib data files.
-  std::string netlibDir;
-  if (parms.find("-netlibDir") != parms.end())
-    netlibDir=parms["-netlibDir"] + dirsep;
-  else 
-    netlibDir = dirsep == '/' ? "../../Data/Netlib/" : "..\\..\\Data\\Netlib\\";
-  if (!empty.numberRows()) {
-    testingMessage( "Testing ClpSimplex\n" );
-    ClpSimplexUnitTest(mpsDir,netlibDir);
+  if (strncmp(argv[1], "-unitTest", 9) == 0) {
+    netlib = false;
+  } else if (strncmp(argv[1], "-netlib", 7) == 0) {
+    netlib = true;
+  } else {
+    usage();
+    return 1;
   }
-  if (parms.find("-netlib") != parms.end()||empty.numberRows())
-  {
+  
+  if (strncmp(argv[2], "-directory", 9) != 0) {
+    usage();
+    return 1;
+  }
+  // Set directory containing mps data files.
+  std::string directory(argv[3]);
+
+  if (!netlib) {
+    testingMessage( "Testing clp -unitTest\n" );
+    ClpSimplexUnitTest(directory);
+  }
+
+  if (netlib) {
     unsigned int m;
     
     // Define test problems: 
@@ -333,9 +299,16 @@ int mainTest (int argc, const char *argv[],int algorithm,
     std::vector<double> objValueTol;
     // 100 added means no presolve
     std::vector<int> bestStrategy;
-    if(empty.numberRows()) {
+
+    if (singleprob) {
+      testingMessage( "Testing clp on a single netlib problemx\n" );
+      // Just testing one
+      mpsName.push_back(empty.problemName());min.push_back(true);nRows.push_back(-1);
+      nCols.push_back(-1);objValueTol.push_back(1.e-10);
+      objValue.push_back(0.0);bestStrategy.push_back(0);
+      int iTest;
       std::string alg;
-      for (int iTest=0;iTest<NUMBER_ALGORITHMS;iTest++) {
+      for (iTest=0;iTest<NUMBER_ALGORITHMS;iTest++) {
         ClpSolve solveOptions=setupForSolve(iTest,alg,0);
         printf("%d %s ",iTest,alg.c_str());
         if (switchOff[iTest]) 
@@ -345,8 +318,8 @@ int mainTest (int argc, const char *argv[],int algorithm,
         else
           printf("will be tested\n");
       }
-    }
-    if (!empty.numberRows()) {
+    } else {
+      testingMessage( "Testing clp -netlib\n" );
       mpsName.push_back("25fv47");
       min.push_back(true);
       nRows.push_back(822);
@@ -448,23 +421,6 @@ int mainTest (int argc, const char *argv[],int algorithm,
       mpsName.push_back("vtpbase");min.push_back(true);nRows.push_back(199);nCols.push_back(203);objValueTol.push_back(1.e-10);objValue.push_back(1.2983146246e+05);bestStrategy.push_back(3);
       mpsName.push_back("wood1p");min.push_back(true);nRows.push_back(245);nCols.push_back(2594);objValueTol.push_back(5.e-5);objValue.push_back(1.4429024116e+00);bestStrategy.push_back(3);
       mpsName.push_back("woodw");min.push_back(true);nRows.push_back(1099);nCols.push_back(8405);objValueTol.push_back(1.e-10);objValue.push_back(1.3044763331E+00);bestStrategy.push_back(3);
-    } else {
-      // Just testing one
-      mpsName.push_back(empty.problemName());min.push_back(true);nRows.push_back(-1);
-      nCols.push_back(-1);objValueTol.push_back(1.e-10);
-      objValue.push_back(0.0);bestStrategy.push_back(0);
-      int iTest;
-      std::string alg;
-      for (iTest=0;iTest<NUMBER_ALGORITHMS;iTest++) {
-        ClpSolve solveOptions=setupForSolve(iTest,alg,0);
-        printf("%d %s ",iTest,alg.c_str());
-        if (switchOff[iTest]) 
-          printf("skipped by user\n");
-        else if(solveOptions.getSolveType()==ClpSolve::notImplemented)
-          printf("skipped as not available\n");
-        else
-          printf("will be tested\n");
-      }
     }
 
     double timeTaken =0.0;
@@ -476,7 +432,7 @@ int mainTest (int argc, const char *argv[],int algorithm,
 		<<" (" <<m+1 <<" out of " <<mpsName.size() <<")" <<std::endl;
 
       ClpSimplex solutionBase=empty;
-      std::string fn = netlibDir+mpsName[m];
+      std::string fn = directory+mpsName[m];
       if (!empty.numberRows()||algorithm<6) {
         // Read data mps file,
         CoinMpsIO mps;
@@ -621,10 +577,6 @@ int mainTest (int argc, const char *argv[],int algorithm,
     }
     printf("Total time %g seconds\n",timeTaken);
   }
-  else {
-    testingMessage( "***Skipped Testing on netlib    ***\n" );
-    testingMessage( "***use -netlib to test class***\n" );
-  }
   
   testingMessage( "All tests completed successfully\n" );
   return 0;
@@ -642,8 +594,7 @@ void testingMessage( const char * const msg )
 //--------------------------------------------------------------------------
 // test factorization methods and simplex method and simple barrier
 void
-ClpSimplexUnitTest(const std::string & mpsDir,
-		   const std::string & netlibDir)
+ClpSimplexUnitTest(const std::string & directory)
 {
   
   CoinRelFltEq eq(0.000001);
@@ -764,7 +715,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
 #ifndef COIN_NO_CLP_MESSAGE
   {    
     CoinMpsIO m;
-    std::string fn = mpsDir+"exmip1";
+    std::string fn = directory+"exmip1";
     m.readMps(fn.c_str(),"mps");
     ClpSimplex solution;
     solution.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
@@ -784,7 +735,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
   // Test Message handler
   {    
     CoinMpsIO m;
-    std::string fn = mpsDir+"exmip1";
+    std::string fn = directory+"exmip1";
     //fn = "Test/subGams4";
     m.readMps(fn.c_str(),"mps");
     ClpSimplex model;
@@ -835,7 +786,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
   // Test dual ranging
   {    
     CoinMpsIO m;
-    std::string fn = mpsDir+"exmip1";
+    std::string fn = directory+"exmip1";
     m.readMps(fn.c_str(),"mps");
     ClpSimplex model;
     model.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
@@ -894,7 +845,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
   // Test primal ranging
   {    
     CoinMpsIO m;
-    std::string fn = mpsDir+"exmip1";
+    std::string fn = directory+"exmip1";
     m.readMps(fn.c_str(),"mps");
     ClpSimplex model;
     model.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
@@ -997,11 +948,11 @@ ClpSimplexUnitTest(const std::string & mpsDir,
   // test steepest edge
   {    
     CoinMpsIO m;
-    std::string fn = netlibDir+"finnis";
+    std::string fn = directory+"finnis";
     int returnCode = m.readMps(fn.c_str(),"mps");
     if (returnCode) {
       // probable cause is that gz not there
-      fprintf(stderr,"Unable to open finnis.mps in COIN/Mps/Netlib!\n");
+      fprintf(stderr,"Unable to open finnis.mps in %s!\n", directory.c_str());
       fprintf(stderr,"Most probable cause is finnis.mps is gzipped i.e. finnis.mps.gz and libz has not been activated\n");
       fprintf(stderr,"Either gunzip files or edit Makefiles/Makefile.location to get libz\n");
       exit(999);
@@ -1027,7 +978,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
   // test normal solution
   {    
     CoinMpsIO m;
-    std::string fn = netlibDir+"afiro";
+    std::string fn = directory+"afiro";
     m.readMps(fn.c_str(),"mps");
     ClpSimplex solution;
     ClpModel model;
@@ -1114,7 +1065,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
   // test unbounded
   {    
     CoinMpsIO m;
-    std::string fn = netlibDir+"brandy";
+    std::string fn = directory+"brandy";
     m.readMps(fn.c_str(),"mps");
     ClpSimplex solution;
     // do twice - without and with scaling
@@ -1186,7 +1137,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
   // test infeasible
   {    
     CoinMpsIO m;
-    std::string fn = netlibDir+"brandy";
+    std::string fn = directory+"brandy";
     m.readMps(fn.c_str(),"mps");
     ClpSimplex solution;
     // do twice - without and with scaling
@@ -1275,7 +1226,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
   // test delete and add
   {    
     CoinMpsIO m;
-    std::string fn = netlibDir+"brandy";
+    std::string fn = directory+"brandy";
     m.readMps(fn.c_str(),"mps");
     ClpSimplex solution;
     solution.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
@@ -1454,7 +1405,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
   // Test barrier
   {
     CoinMpsIO m;
-    std::string fn = mpsDir+"exmip1";
+    std::string fn = directory+"exmip1";
     m.readMps(fn.c_str(),"mps");
     ClpInterior solution;
     solution.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
@@ -1466,18 +1417,14 @@ ClpSimplexUnitTest(const std::string & mpsDir,
   // test network 
 #define QUADRATIC
   if (1) {    
-    std::string fn = mpsDir+"input.130";
+    std::string fn = directory+"input.130";
     int numberColumns;
     int numberRows;
     
     FILE * fp = fopen(fn.c_str(),"r");
     if (!fp) {
-      // Try in Data/Sample
-      fn = "Data/Sample/input.130";
-      fp = fopen(fn.c_str(),"r");
-    }
-    if (!fp) {
-      fprintf(stderr,"Unable to open file input.130 in mpsDir or Data/Sample directory\n");
+      fprintf(stderr,"Unable to open file input.130 in directory %s\n",
+	      directory.c_str());
     } else {
       int problem;
       char temp[100];
@@ -1643,7 +1590,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
   // Test quadratic to solve linear
   if (1) {    
     CoinMpsIO m;
-    std::string fn = mpsDir+"exmip1";
+    std::string fn = directory+"exmip1";
     m.readMps(fn.c_str(),"mps");
     ClpSimplex solution;
     solution.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
@@ -1688,7 +1635,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
   // Test quadratic
   if (1) {    
     CoinMpsIO m;
-    std::string fn = mpsDir+"share2qp";
+    std::string fn = directory+"share2qp";
     //fn = "share2qpb";
     m.readMps(fn.c_str(),"mps");
     ClpSimplex model;

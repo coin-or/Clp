@@ -1412,6 +1412,8 @@ You can also use the parameters 'maximize' or 'minimize'."
   parameters[numberParameters-1].setLonghelp
     (
      "This sets the directory which import, export, saveModel, restoreModel etc will use.\
+  This is also the directory where the netlib problems are read from when unitTest\
+  is invoked with -netlib or -netlibp.\
   It is initialized to './'"
      ); 
 #ifdef COIN_HAS_CLP

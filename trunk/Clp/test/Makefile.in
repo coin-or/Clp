@@ -370,8 +370,10 @@ uninstall-am: uninstall-info-am
 
 # We are using the CLP solver executable to do the unit test
 test: ../src/clp$(EXEEXT)
-	cd ../../Data/Netlib; $(MAKE) uncompress
-	../src/clp$(EXEEXT) -unitTest -netlib -netlibp
+	../src/clp$(EXEEXT) -directory ../../Data/Sample -unitTest
+	if test x"$(NETLIBDIR)" != x; then \
+		../src/clp$(EXEEXT) -directory $(NETLIBDIR) -netlib -netlibp ; \
+	fi
 
 .PHONY: test
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
