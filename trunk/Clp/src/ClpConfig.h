@@ -41,6 +41,7 @@
 /*             HERE DEFINE THE CONFIGURATION SPECIFIC MACROS               */
 /***************************************************************************/
 
+/* This needs to be updated "by hand"!!!! */
 #define CLPVERSION "1.4trunk"
 
 /* Define to the debug sanity check level (0 is no test) */
