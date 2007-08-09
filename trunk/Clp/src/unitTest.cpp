@@ -436,7 +436,12 @@ int mainTest (int argc, const char *argv[],int algorithm,
       if (!empty.numberRows()||algorithm<6) {
         // Read data mps file,
         CoinMpsIO mps;
-        mps.readMps(fn.c_str(),"mps");
+        int nerrors=mps.readMps(fn.c_str(),"mps");
+        if (nerrors) {
+        	std::cerr << "Error " << nerrors << " when reading model from " << fn.c_str() << "! "
+        	<< "I'll continue with the next model." << std::endl;
+        	continue;
+        }
         solutionBase.loadProblem(*mps.getMatrixByCol(),mps.getColLower(),
                                  mps.getColUpper(),
                                  mps.getObjCoefficients(),
