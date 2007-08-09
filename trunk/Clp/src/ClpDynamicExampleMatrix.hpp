@@ -73,8 +73,8 @@ public:
 			  int numberColumns, int * starts,
 			  const double * lower, const double * upper,
 			  int * startColumn, int * row,
-			  float * element, float * cost,
-			  float * columnLower=NULL, float * columnUpper=NULL,
+			  double * element, double * cost,
+			  double * columnLower=NULL, double * columnUpper=NULL,
 			  const unsigned char * status=NULL,
 			  const unsigned char * dynamicStatus=NULL,
 			  int numberIds=0,const int *ids=NULL);
@@ -100,10 +100,10 @@ public:
   inline int * rowGen() const
   { return rowGen_;}
   /// elements
-  inline float * elementGen() const
+  inline double * elementGen() const
   { return elementGen_;}
   /// costs
-  inline float * costGen() const
+  inline double * costGen() const
   { return costGen_;}
   /// full starts
   inline int * fullStartGen() const
@@ -112,10 +112,10 @@ public:
   inline int * idGen() const
   { return idGen_;}
   /// Optional lower bounds on columns
-  inline float * columnLowerGen() const
+  inline double * columnLowerGen() const
   { return columnLowerGen_;}
   /// Optional upper bounds on columns
-  inline float * columnUpperGen() const
+  inline double * columnUpperGen() const
   { return columnUpperGen_;}
   /// size
   inline int numberColumns() const
@@ -152,9 +152,9 @@ protected:
   /// rows
   int * rowGen_;
   /// elements
-  float * elementGen_;
+  double * elementGen_;
   /// costs
-  float * costGen_;
+  double * costGen_;
   /// start of each set
   int * fullStartGen_;
   /// for status and which bound
@@ -164,9 +164,9 @@ protected:
       at this level */
   int * idGen_;
   /// Optional lower bounds on columns
-  float * columnLowerGen_;
+  double * columnLowerGen_;
   /// Optional upper bounds on columns
-  float * columnUpperGen_;
+  double * columnUpperGen_;
    //@}
 };
 

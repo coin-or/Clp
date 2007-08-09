@@ -93,21 +93,21 @@ ClpDynamicExampleMatrix::ClpDynamicExampleMatrix(ClpSimplex * model, int numberS
   delete [] id_;
   // and size correctly
   row_ = new int [maximumElements_];
-  element_ = new float [maximumElements_];
+  element_ = new double [maximumElements_];
   startColumn_ = new CoinBigIndex [maximumGubColumns_+1];
   // say no columns yet
   numberGubColumns_=0;
   startColumn_[0]=0;
-  cost_ = new float[maximumGubColumns_];
+  cost_ = new double[maximumGubColumns_];
   dynamicStatus_ = new unsigned char [maximumGubColumns_];
   memset(dynamicStatus_,0,maximumGubColumns_);
   id_ = new int[maximumGubColumns_];
   if (columnLower) 
-    columnLower_ = new float[maximumGubColumns_];
+    columnLower_ = new double[maximumGubColumns_];
   else
     columnLower_ = NULL;
   if (columnUpper) 
-    columnUpper_ = new float[maximumGubColumns_];
+    columnUpper_ = new double[maximumGubColumns_];
   else
     columnUpper_=NULL;
   // space for ids
@@ -121,17 +121,17 @@ ClpDynamicExampleMatrix::ClpDynamicExampleMatrix(ClpSimplex * model, int numberS
   startColumnGen_ = ClpCopyOfArray(startColumn,numberColumns_+1);
   CoinBigIndex numberElements = startColumnGen_[numberColumns_];
   rowGen_ = ClpCopyOfArray(row,numberElements);
-  elementGen_ = new float[numberElements];
+  elementGen_ = new double[numberElements];
   for (i=0;i<numberElements;i++)
     elementGen_[i]=element[i];
-  costGen_ = new float[numberColumns_];
+  costGen_ = new double[numberColumns_];
   for (i=0;i<numberColumns_;i++) {
     costGen_[i]=cost[i];
     // I don't think I need sorted but ...
     CoinSort_2(rowGen_+startColumnGen_[i],rowGen_+startColumnGen_[i+1],elementGen_+startColumnGen_[i]);
   }
   if (columnLower) {
-    columnLowerGen_ = new float[numberColumns_];
+    columnLowerGen_ = new double[numberColumns_];
     for (i=0;i<numberColumns_;i++) {
       columnLowerGen_[i]=columnLower[i];
       if (columnLowerGen_[i]) {
@@ -143,7 +143,7 @@ ClpDynamicExampleMatrix::ClpDynamicExampleMatrix(ClpSimplex * model, int numberS
     columnLowerGen_=NULL;
   }
   if (columnUpper) {
-    columnUpperGen_ = new float[numberColumns_];
+    columnUpperGen_ = new double[numberColumns_];
     for (i=0;i<numberColumns_;i++) 
       columnUpperGen_[i]=columnUpper[i];
   } else {
@@ -223,8 +223,8 @@ ClpDynamicExampleMatrix::ClpDynamicExampleMatrix(ClpSimplex * model, int numberS
 			  int numberGubColumns, int * starts,
 			  const double * lower, const double * upper,
 			  int * startColumn, int * row,
-			  float * element, float * cost,
-			  float * columnLower, float * columnUpper,
+			  double * element, double * cost,
+			  double * columnLower, double * columnUpper,
 			  const unsigned char * status,
 			  const unsigned char * dynamicStatus,
 			  int numberIds,const int *ids)
@@ -252,21 +252,21 @@ ClpDynamicExampleMatrix::ClpDynamicExampleMatrix(ClpSimplex * model, int numberS
   delete [] id_;
   // and size correctly
   row_ = new int [maximumElements_];
-  element_ = new float [maximumElements_];
+  element_ = new double [maximumElements_];
   startColumn_ = new CoinBigIndex [maximumGubColumns_+1];
   // say no columns yet
   numberGubColumns_=0;
   startColumn_[0]=0;
-  cost_ = new float[maximumGubColumns_];
+  cost_ = new double[maximumGubColumns_];
   dynamicStatus_ = new unsigned char [maximumGubColumns_];
   memset(dynamicStatus_,0,maximumGubColumns_);
   id_ = new int[maximumGubColumns_];
   if (columnLower) 
-    columnLower_ = new float[maximumGubColumns_];
+    columnLower_ = new double[maximumGubColumns_];
   else
     columnLower_ = NULL;
   if (columnUpper) 
-    columnUpper_ = new float[maximumGubColumns_];
+    columnUpper_ = new double[maximumGubColumns_];
   else
     columnUpper_=NULL;
   // space for ids

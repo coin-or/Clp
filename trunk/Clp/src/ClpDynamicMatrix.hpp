@@ -92,8 +92,8 @@ public:
   /// Populates initial matrix from dynamic status
   void initialProblem();
   /** Adds in a column to gub structure (called from descendant) and returns sequence */
-  int addColumn(int numberEntries,const int * row, const float * element,
-		 float cost, float lower, float upper, int iSet,
+  int addColumn(int numberEntries,const int * row, const double * element,
+		 double cost, double lower, double upper, int iSet,
 		 DynamicStatus status);
   /** If addColumn forces compression then this allows descendant to know what to do.
       If >=0 then entry stayed in, if -1 then entry went out to lower bound.of zero.
@@ -187,25 +187,25 @@ public:
   inline int * row() const
   { return row_;}
   /// elements
-  inline float * element() const
+  inline double * element() const
   { return element_;}
   /// costs
-  inline float * cost() const
+  inline double * cost() const
   { return cost_;}
   /// ids of active columns (just index here)
   inline int * id() const
   { return id_;}
   /// Optional lower bounds on columns
-  inline float * columnLower() const
+  inline double * columnLower() const
   { return columnLower_;}
   /// Optional upper bounds on columns
-  inline float * columnUpper() const
+  inline double * columnUpper() const
   { return columnUpper_;}
   /// Lower bounds on sets
-  inline float * lowerSet() const
+  inline double * lowerSet() const
   { return lowerSet_;}
   /// Upper bounds on sets
-  inline float * upperSet() const
+  inline double * upperSet() const
   { return upperSet_;}
   /// size
   inline int numberGubColumns() const
@@ -271,9 +271,9 @@ protected:
   /// Saved value of objective offset
   double objectiveOffset_;
   /// Lower bounds on sets
-  float * lowerSet_;
+  double * lowerSet_;
   /// Upper bounds on sets
-  float * upperSet_;
+  double * upperSet_;
   /// Status of slack on set
   unsigned char * status_;
   /// Pointer back to model
@@ -317,17 +317,17 @@ protected:
   /// rows
   int * row_;
   /// elements
-  float * element_;
+  double * element_;
   /// costs
-  float * cost_;
+  double * cost_;
   /// ids of active columns (just index here)
   int * id_;
   /// for status and which bound
   unsigned char * dynamicStatus_;
   /// Optional lower bounds on columns
-  float * columnLower_;
+  double * columnLower_;
   /// Optional upper bounds on columns
-  float * columnUpper_;
+  double * columnUpper_;
    //@}
 };
 
