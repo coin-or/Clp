@@ -2293,7 +2293,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
     <<statusMessage[finalStatus+1]<<objectiveValue()<<numberIterations<<time2-time1;
   handler_->printing(presolve==ClpSolve::presolveOn)
     <<timePresolve;
-  handler_->printing(timeIdiot)
+  handler_->printing(timeIdiot!=0.0)
     <<timeIdiot;
   handler_->message()<<CoinMessageEol;
   if (interrupt) 
