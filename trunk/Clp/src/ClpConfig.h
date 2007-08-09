@@ -41,6 +41,8 @@
 /*             HERE DEFINE THE CONFIGURATION SPECIFIC MACROS               */
 /***************************************************************************/
 
+#define CLPVERSION "1.4trunk"
+
 /* Define to the debug sanity check level (0 is no test) */
 #define COIN_CLP_CHECKLEVEL 0
 

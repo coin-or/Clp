@@ -10,12 +10,9 @@
 #include <string>
 #include <iostream>
 
-
 #include "CoinPragma.hpp"
 #include "CoinHelperFunctions.hpp"
 #include "CoinSort.hpp"
-// History since 1.0 at end
-#define CLPVERSION "1.05.00"
 
 #include "CoinMpsIO.hpp"
 #include "CoinFileIO.hpp"
@@ -46,6 +43,12 @@
 #endif
 #ifdef TAUCS_BARRIER
 #define FOREIGN_BARRIER
+#endif
+
+// If HAVE_CONFIG_H is not defined, CLPVERSION is defined in ClpConfig.h
+#ifdef HAVE_CONFIG_H
+# include "config_clp.h"
+# define CLPVERSION PACKAGE_VERSION
 #endif
 
 static double totalTime=0.0;
