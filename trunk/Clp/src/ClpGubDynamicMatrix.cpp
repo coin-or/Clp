@@ -106,39 +106,39 @@ ClpGubDynamicMatrix::ClpGubDynamicMatrix(ClpSimplex * model, int numberSets,
   startColumn_ = ClpCopyOfArray(startColumn,numberGubColumns_+1);
   CoinBigIndex numberElements = startColumn_[numberGubColumns_];
   row_ = ClpCopyOfArray(row,numberElements);
-  element_ = new float[numberElements];
+  element_ = new double[numberElements];
   CoinBigIndex i;
   for (i=0;i<numberElements;i++)
     element_[i]=element[i];
-  cost_ = new float[numberGubColumns_];
+  cost_ = new double[numberGubColumns_];
   for (i=0;i<numberGubColumns_;i++) {
     cost_[i]=cost[i];
     // need sorted
     CoinSort_2(row_+startColumn_[i],row_+startColumn_[i+1],element_+startColumn_[i]);
   }
   if (lowerColumn) {
-    lowerColumn_ = new float[numberGubColumns_];
+    lowerColumn_ = new double[numberGubColumns_];
     for (i=0;i<numberGubColumns_;i++) 
       lowerColumn_[i]=lowerColumn[i];
   } else {
     lowerColumn_=NULL;
   }
   if (upperColumn) {
-    upperColumn_ = new float[numberGubColumns_];
+    upperColumn_ = new double[numberGubColumns_];
     for (i=0;i<numberGubColumns_;i++) 
       upperColumn_[i]=upperColumn[i];
   } else {
     upperColumn_=NULL;
   }
   if (upperColumn||lowerColumn) {
-    lowerSet_ = new float[numberSets_];
+    lowerSet_ = new double[numberSets_];
     for (i=0;i<numberSets_;i++) {
       if (lower[i]>-1.0e20)
 	lowerSet_[i]=lower[i];
       else
 	lowerSet_[i] = -1.0e30;
     }
-    upperSet_ = new float[numberSets_];
+    upperSet_ = new double[numberSets_];
     for (i=0;i<numberSets_;i++) {
       if (upper[i]<1.0e20)
 	upperSet_[i]=upper[i];
