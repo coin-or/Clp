@@ -1329,7 +1329,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
     int numberRows = model2->numberRows();
     
     // We will need arrays to choose variables.  These are too big but ..
-    float * weight = new float [numberRows+originalNumberColumns];
+    double * weight = new double [numberRows+originalNumberColumns];
     int * sort = new int [numberRows+originalNumberColumns];
     int numberSort=0;
     // We are going to add slacks to get feasible.
