@@ -1412,9 +1412,41 @@ You can also use the parameters 'maximize' or 'minimize'."
   parameters[numberParameters-1].setLonghelp
     (
      "This sets the directory which import, export, saveModel, restoreModel etc will use.\
-  This is also the directory where the netlib problems are read from when unitTest\
-  is invoked with -netlib or -netlibp.\
   It is initialized to './'"
+     ); 
+  parameters[numberParameters++]=
+    CbcOrClpParam("dirSample","Set directory where the COIN-OR sample problems are.",
+		  DIRSAMPLE);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "This sets the directory where the COIN-OR sample problems reside. It is\
+ used only when -unitTest is passed to clp. clp will pick up the test problems\
+ from this directory.\
+ It is initialized to '../../Data/Sample'"
+     ); 
+  parameters[numberParameters++]=
+    CbcOrClpParam("dirNetlib","Set directory where the netlib problems are.",
+		  DIRNETLIB);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "This sets the directory where the netlib problems reside. One can get\
+ the netlib problems from COIN-OR or from the main netlib site. This\
+ parameter is used only when -netlib is passed to clp. clp will pick up the\
+ netlib problems from this directory. If clp is built without zlib support\
+ then the problems must be uncompressed.\
+ It is initialized to '../../Data/Netlib'"
+     ); 
+  parameters[numberParameters++]=
+    CbcOrClpParam("dirMiplib","Set directory where the miplib 2003 problems are.",
+		  DIRMIPLIB);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "This sets the directory where the miplib 2003 problems reside. One can\
+ get the miplib problems from COIN-OR or from the main miplib site. This\
+ parameter is used only when -miplib is passed to cbc. cbc will pick up the\
+ miplib problems from this directory. If cbc is built without zlib support\
+ then the problems must be uncompressed.\
+ It is initialized to '../../Data/miplib3'"
      ); 
 #ifdef COIN_HAS_CLP
   parameters[numberParameters++]=
