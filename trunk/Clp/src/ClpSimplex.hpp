@@ -49,7 +49,8 @@ class ClpConstraint;
 */
 
 class ClpSimplex : public ClpModel {
-  friend void ClpSimplexUnitTest(const std::string & directory);
+   friend void ClpSimplexUnitTest(const std::string & mpsDir,
+				  const std::string & netlibDir);
 
 public:
   /** enums for status of various sorts.
@@ -1279,7 +1280,8 @@ protected:
     It also does some testing of ClpFactorization class
  */
 void
-ClpSimplexUnitTest(const std::string & directory);
+ClpSimplexUnitTest(const std::string & mpsDir,
+		   const std::string & netlibDir);
 
 
 /// For saving extra information to see if looping.
