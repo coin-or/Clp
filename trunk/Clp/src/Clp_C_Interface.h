@@ -204,9 +204,9 @@ Clp_loadQuadraticObjective(Clp_Simplex * model,
   /* status values are as in ClpSimplex.hpp i.e. 0 - free, 1 basic, 2 at upper,
      3 at lower, 4 superbasic, (5 fixed) */
   /* Get variable basis info */
-  COINLIBAPI const int COINLINKAGE Clp_getColumnStatus(Clp_Simplex * model,int sequence);
+  COINLIBAPI int COINLINKAGE Clp_getColumnStatus(Clp_Simplex * model,int sequence);
   /* Get row basis info */
-  COINLIBAPI const int COINLINKAGE Clp_getRowStatus(Clp_Simplex * model,int sequence);
+  COINLIBAPI int COINLINKAGE Clp_getRowStatus(Clp_Simplex * model,int sequence);
   /* Set variable basis info (and value if at bound) */
   COINLIBAPI void COINLINKAGE Clp_setColumnStatus(Clp_Simplex * model,
 						  int sequence, int value);
