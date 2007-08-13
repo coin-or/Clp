@@ -86,7 +86,7 @@ enum CbcOrClpParameterType
     REALLY_SCALE,BASISIN,BASISOUT,SOLVECONTINUOUS,CLEARCUTS,VERSION,STATISTICS,DEBUG,DUMMY,PRINTMASK,
     OUTDUPROWS,USERCLP,MODELIN,
 
-    BAB=351,MIPLIB,STRENGTHEN,PRIORITYIN,USERCBC,
+    BAB=351,MIPLIB,STRENGTHEN,PRIORITYIN,USERCBC,DOHEURISTIC,
 
     OSLSTUFF = 401,CBCSTUFF,
 
@@ -174,6 +174,9 @@ public:
   void setCurrentOption ( int value , bool printIt=false);
   /// Sets current parameter option using string
   void setCurrentOption (const std::string value );
+  /// Returns current parameter option position
+  inline int currentOptionAsInteger (  ) const
+  { return currentKeyWord_; }
   /// Sets int value
   void setIntValue ( int value );
     inline int intValue () const

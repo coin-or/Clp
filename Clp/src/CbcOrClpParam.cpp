@@ -1264,11 +1264,13 @@ See branchAndCut for information on options."
     CbcOrClpParam("combine!Solutions","Whether to use combine solution heuristic",
 		  "off",COMBINE);
   parameters[numberParameters-1].append("on");
+  parameters[numberParameters-1].append("do");
   parameters[numberParameters-1].setLonghelp
     (
      "This switches on a heuristic which does branch and cut on the problem given by just \
 using variables which have appeared in one or more solutions. \
-It obviously only tries after two or more solutions."
+It obviously only tries after two or more solutions. \
+The Do option switches on before preprocessing."
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("cost!Strategy","How to use costs as priorities",
@@ -1414,6 +1416,16 @@ You can also use the parameters 'maximize' or 'minimize'."
      "This sets the directory which import, export, saveModel, restoreModel etc will use.\
   It is initialized to './'"
      ); 
+#ifdef COIN_HAS_CBC
+  parameters[numberParameters++]=
+    CbcOrClpParam("doH!euristic","Do heuristics before any preprocessing",
+		  DOHEURISTIC,3);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "Normally heuristics are done in branch and bound.  It may be useful to do them outside. \
+Doing this may also set cutoff."
+     ); 
+#endif
 #ifdef COIN_HAS_CLP
   parameters[numberParameters++]=
     CbcOrClpParam("dualB!ound","Initially algorithm acts as if no \
@@ -1545,11 +1557,12 @@ e.g. no ENDATA.  This has to be set before import i.e. -errorsAllowed on -import
       CbcOrClpParam("feas!ibilityPump","Whether to try Feasibility Pump",
 		    "off",FPUMP);
     parameters[numberParameters-1].append("on");
+    parameters[numberParameters-1].append("do");
   parameters[numberParameters-1].setLonghelp
     (
      "This switches on feasibility pump heuristic at root. This is due to Fischetti and Lodi \
 and uses a sequence of Lps to try and get an integer feasible solution. \
-Some fine tuning is available by passFeasibilityPump."
+Some fine tuning is available by passFeasibilityPump. Do options does heuristic before preprocessing"
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("fix!OnDj","Try heuristic based on fixing variables with \
@@ -1611,11 +1624,13 @@ See branchAndCut for information on options."
     CbcOrClpParam("greedy!Heuristic","Whether to use a greedy heuristic",
 		  "off",GREEDY);
   parameters[numberParameters-1].append("on");
-  parameters[numberParameters-1].append("root");
+  parameters[numberParameters-1].append("do");
+  //parameters[numberParameters-1].append("root");
   parameters[numberParameters-1].setLonghelp
     (
      "Switches on a greedy heuristic which will try and obtain a solution.  It may just fix a \
-percentage of variables and then try a small branch and cut run."
+percentage of variables and then try a small branch and cut run. \
+The Do option switches on before preprocessing."
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("heur!isticsOnOff","Switches most heuristics on or off",
@@ -2324,9 +2339,11 @@ See branchAndCut for information on options."
     CbcOrClpParam("round!ingHeuristic","Whether to use Rounding heuristic",
 		  "off",ROUNDING);
   parameters[numberParameters-1].append("on");
+  parameters[numberParameters-1].append("do");
   parameters[numberParameters-1].setLonghelp
     (
-     "This switches on a simple (but effective) rounding heuristic at each node of tree."
+     "This switches on a simple (but effective) rounding heuristic at each node of tree.  \
+The Do option switches on before preprocessing."
      ); 
 #endif
   parameters[numberParameters++]=
