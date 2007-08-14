@@ -62,6 +62,8 @@ public:
 
   /**@name Matrix times vector methods */
   //@{
+
+  using ClpPackedMatrix::transposeTimes ;
     /** Return <code>x * scalar * A + y</code> in <code>z</code>. 
 	Can use y as temporary array (will be empty at end)
 	Note - If x packed mode - then z packed mode

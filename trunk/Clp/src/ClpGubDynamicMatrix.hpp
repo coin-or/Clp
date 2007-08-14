@@ -46,6 +46,8 @@ public:
       expensive.  This may re-compute */
   virtual double * rhsOffset(ClpSimplex * model,bool forceRefresh=false,
 				bool check=false);
+
+  using ClpPackedMatrix::times ;
     /** Return <code>y + A * scalar *x</code> in <code>y</code>.
         @pre <code>x</code> must be of size <code>numColumns()</code>
         @pre <code>y</code> must be of size <code>numRows()</code> */
