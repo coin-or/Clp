@@ -4084,7 +4084,7 @@ void checkCorrect(ClpSimplex * model,int iRow,
    in branch and bound on infeasible branches (0.0 is off)
 */
 int 
-ClpSimplex::tightenPrimalBounds(double factor,int doTight)
+ClpSimplex::tightenPrimalBounds(double factor,int doTight,bool tightIntegers)
 {
   
   // Get a row copy in standard format
@@ -4496,6 +4496,31 @@ ClpSimplex::tightenPrimalBounds(double factor,int doTight)
 					saveLower[iColumn]);
 	  }
 	}
+      }
+    }
+    if (tightIntegers&&integerType_) {
+      for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+	if (integerType_[iColumn]) {
+	  double value;
+	  value = floor(columnLower_[iColumn]+0.5);
+	  if (fabs(value-columnLower_[iColumn])>primalTolerance_)
+	    value = ceil(columnLower_[iColumn]);
+	  columnLower_[iColumn]=value;
+	  value = floor(columnUpper_[iColumn]+0.5);
+	  if (fabs(value-columnUpper_[iColumn])>primalTolerance_)
+	    value = floor(columnUpper_[iColumn]);
+	  columnUpper_[iColumn]=value;
+	  if (columnLower_[iColumn]>columnUpper_[iColumn])
+	    numberInfeasible++;
+	}
+      }
+      if (numberInfeasible) {
+	handler_->message(CLP_SIMPLEX_INFEASIBILITIES,messages_)
+	  <<numberInfeasible
+	  <<CoinMessageEol;
+	// restore column bounds
+	memcpy(columnLower_,saveLower,numberColumns_*sizeof(double));
+	memcpy(columnUpper_,saveUpper,numberColumns_*sizeof(double));
       }
     }
   } else {

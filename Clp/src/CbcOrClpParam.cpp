@@ -1069,9 +1069,16 @@ CoinReadGetIntField(int argc, const char *argv[],int * valid)
   int value=0;
   //std::cout<<field<<std::endl;
   if (field!="EOL") {
-    // how do I check valid
-    value =  atoi(field.c_str());
-    *valid=0;
+    const char * start = field.c_str();
+    char * endPointer = NULL;
+    // check valid
+    value =  strtol(start,&endPointer,10);
+    if (*endPointer=='\0') {
+      *valid = 0;
+    } else {
+      *valid = 1;
+      std::cout<<"String of "<<field;
+    }
   } else {
     *valid=2;
   }
@@ -1097,9 +1104,16 @@ CoinReadGetDoubleField(int argc, const char *argv[],int * valid)
   double value=0.0;
   //std::cout<<field<<std::endl;
   if (field!="EOL") {
-    // how do I check valid
-    value = atof(field.c_str());
-    *valid=0;
+    const char * start = field.c_str();
+    char * endPointer = NULL;
+    // check valid
+    value =  strtod(start,&endPointer);
+    if (*endPointer=='\0') {
+      *valid = 0;
+    } else {
+      *valid = 1;
+      std::cout<<"String of "<<field;
+    }
   } else {
     *valid=2;
   }
@@ -2641,6 +2655,16 @@ Look for USERCBC in main driver and modify sample code."
      "Set to 1 to get short help with ? list, 2 to get long help, 3 for both.  (add 4 to just get ampl ones)."
      ); 
   parameters[numberParameters-1].setIntValue(0);
+#ifdef COIN_HAS_CBC
+  parameters[numberParameters++]=
+    CbcOrClpParam("vub!heuristic","Type of vub heuristic",
+		  -2,10,VUBTRY,false);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "If set will try and fix some integer variables"
+     ); 
+  parameters[numberParameters-1].setIntValue(-1);
+#endif 
   assert(numberParameters<CBCMAXPARAMETERS);
 }
 // Given a parameter type - returns its number in list

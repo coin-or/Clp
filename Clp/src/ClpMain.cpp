@@ -328,7 +328,8 @@ int main (int argc, const char *argv[])
 	  if (!valid) {
 	    parameters[iParam].setDoubleParameter(models+iModel,value);
 	  } else if (valid==1) {
-	    abort();
+	    std::cout<<" is illegal for double parameter "<<parameters[iParam].name()<<" value remains "<<
+	      parameters[iParam].doubleValue()<<std::endl;
 	  } else {
 	    std::cout<<parameters[iParam].name()<<" has value "<<
 	      parameters[iParam].doubleValue()<<std::endl;
@@ -361,7 +362,8 @@ int main (int argc, const char *argv[])
               verbose = value;
             parameters[iParam].setIntParameter(models+iModel,value);
 	  } else if (valid==1) {
-	    abort();
+	    std::cout<<" is illegal for integer parameter "<<parameters[iParam].name()<<" value remains "<<
+	      parameters[iParam].intValue()<<std::endl;
 	  } else {
 	    std::cout<<parameters[iParam].name()<<" has value "<<
 	      parameters[iParam].intValue()<<std::endl;

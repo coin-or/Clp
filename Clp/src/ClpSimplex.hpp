@@ -361,7 +361,7 @@ public:
       largest value (at continuous) - should improve stability
       in branch and bound on infeasible branches (0.0 is off)
   */
-  int tightenPrimalBounds(double factor=0.0,int doTight=0);
+  int tightenPrimalBounds(double factor=0.0,int doTight=0,bool tightIntegers=false);
   /** Crash - at present just aimed at dual, returns
       -2 if dual preferred and crash basis created
       -1 if dual preferred and all slack basis preferred
