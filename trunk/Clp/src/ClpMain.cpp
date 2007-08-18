@@ -2,6 +2,7 @@
 // Corporation and others.  All Rights Reserved.
    
 #include "CoinPragma.hpp"
+#include "CoinRead.hpp"
 
 #include <cassert>
 #include <cstdio>
@@ -66,8 +67,8 @@ int mainTest (int argc, const char *argv[],int algorithm,
 static void statistics(ClpSimplex * originalModel, ClpSimplex * model);
 static void generateCode(const char * fileName,int type);
 // Returns next valid field
-int CbcOrClpRead_mode=1;
-FILE * CbcOrClpReadCommand=stdin;
+int ReadMode=1;
+FILE * ReadCommand=stdin;
 int main (int argc, const char *argv[])
 {
   // next {} is just to make sure all memory should be freed - for debug
@@ -192,7 +193,7 @@ int main (int argc, const char *argv[])
     
     while (1) {
       // next command
-      field=CoinReadGetCommand(argc,argv);
+      field=CoinReadGetCommand(argc,argv,ReadCommand,ReadMode);
       
       // exit if null or similar
       if (!field.length()) {
@@ -344,7 +345,8 @@ int main (int argc, const char *argv[])
 	  }
 	} else if (type<101) {
 	  // get next field as double
-	  double value = CoinReadGetDoubleField(argc,argv,&valid);
+	  double value = CoinReadGetDoubleField(argc,argv,&valid,ReadCommand, 
+						ReadMode);
 	  if (!valid) {
 	    parameters[iParam].setDoubleParameter(models+iModel,value);
 	  } else if (valid==1) {
@@ -355,7 +357,8 @@ int main (int argc, const char *argv[])
 	  }
 	} else if (type<201) {
 	  // get next field as int
-	  int value = CoinReadGetIntField(argc,argv,&valid);
+	  int value = CoinReadGetIntField(argc,argv,&valid,ReadCommand,
+					  ReadMode);
 	  if (!valid) {
 	    if (parameters[iParam].type()==PRESOLVEPASS)
 	      preSolve = value;
@@ -388,7 +391,8 @@ int main (int argc, const char *argv[])
 	  }
 	} else if (type<301) {
 	  // one of several strings
-	  std::string value = CoinReadGetString(argc,argv);
+	  std::string value = CoinReadGetString(argc,argv,ReadCommand, 
+						ReadMode);
 	  int action = parameters[iParam].parameterOption(value);
 	  if (action<0) {
 	    if (value!="EOL") {
@@ -794,7 +798,8 @@ int main (int argc, const char *argv[])
 	  case IMPORT:
 	    {
 	      // get next field
-	      field = CoinReadGetString(argc,argv);
+	      field = CoinReadGetString(argc,argv,ReadCommand, 
+					ReadMode);
 	      if (field=="$") {
 		field = parameters[iParam].stringValue();
 	      } else if (field=="EOL") {
@@ -895,15 +900,15 @@ int main (int argc, const char *argv[])
 		  totalTime += time2-time1;
 		  time1=time2;
 		  // Go to canned file if just input file
-		  if (CbcOrClpRead_mode==2&&argc==2) {
+		  if (ReadMode==2&&argc==2) {
 		    // only if ends .mps
 		    char * find = (char *)strstr(fileName.c_str(),".mps");
 		    if (find&&find[4]=='\0') {
 		      find[1]='p'; find[2]='a';find[3]='r';
 		      FILE *fp=fopen(fileName.c_str(),"r");
 		      if (fp) {
-			CbcOrClpReadCommand=fp; // Read from that file
-			CbcOrClpRead_mode=-1;
+			ReadCommand=fp; // Read from that file
+			ReadMode=-1;
 		      }
 		    }
 		  }
@@ -941,7 +946,7 @@ int main (int argc, const char *argv[])
                 models[iModel].setObjectiveOffset(objScale*models[iModel].objectiveOffset());
               }
 	      // get next field
-	      field = CoinReadGetString(argc,argv);
+	      field = CoinReadGetString(argc,argv,ReadCommand,ReadMode);
 	      if (field=="$") {
 		field = parameters[iParam].stringValue();
 	      } else if (field=="EOL") {
@@ -1094,7 +1099,7 @@ int main (int argc, const char *argv[])
 	  case BASISIN:
 	    if (goodModels[iModel]) {
 	      // get next field
-	      field = CoinReadGetString(argc,argv);
+	      field = CoinReadGetString(argc,argv,ReadCommand,ReadMode);
 	      if (field=="$") {
 		field = parameters[iParam].stringValue();
 	      } else if (field=="EOL") {
@@ -1147,7 +1152,8 @@ int main (int argc, const char *argv[])
 	  case PRINTMASK:
             // get next field
 	    {
-	      std::string name = CoinReadGetString(argc,argv);
+	      std::string name = CoinReadGetString(argc,argv,ReadCommand, 
+						   ReadMode);
 	      if (name!="EOL") {
 		parameters[iParam].setStringValue(name);
                 printMask = name;
@@ -1159,7 +1165,7 @@ int main (int argc, const char *argv[])
 	  case BASISOUT:
 	    if (goodModels[iModel]) {
 	      // get next field
-	      field = CoinReadGetString(argc,argv);
+	      field = CoinReadGetString(argc,argv,ReadCommand,ReadMode);
 	      if (field=="$") {
 		field = parameters[iParam].stringValue();
 	      } else if (field=="EOL") {
@@ -1206,7 +1212,7 @@ int main (int argc, const char *argv[])
 	  case SAVE:
 	    {
 	      // get next field
-	      field = CoinReadGetString(argc,argv);
+	      field = CoinReadGetString(argc, argv, ReadCommand, ReadMode);
 	      if (field=="$") {
 		field = parameters[iParam].stringValue();
 	      } else if (field=="EOL") {
@@ -1284,7 +1290,7 @@ int main (int argc, const char *argv[])
 	  case RESTORE:
 	    {
 	      // get next field
-	      field = CoinReadGetString(argc,argv);
+	      field = CoinReadGetString(argc,argv,ReadCommand,ReadMode);
 	      if (field=="$") {
 		field = parameters[iParam].stringValue();
 	      } else if (field=="EOL") {
@@ -1365,7 +1371,8 @@ int main (int argc, const char *argv[])
 	    break;
 	  case DIRECTORY:
 	    {
-	      std::string name = CoinReadGetString(argc,argv);
+	      std::string name = CoinReadGetString(argc,argv,ReadCommand, 
+						   ReadMode);
 	      if (name!="EOL") {
 		int length=name.length();
 		if (name[length-1]=='/'||name[length-1]=='\\')
@@ -1380,7 +1387,8 @@ int main (int argc, const char *argv[])
 	    break;
 	  case DIRSAMPLE:
 	    {
-	      std::string name = CoinReadGetString(argc,argv);
+	      std::string name = CoinReadGetString(argc,argv,ReadCommand, 
+						   ReadMode);
 	      if (name!="EOL") {
 		int length=name.length();
 		if (name[length-1]=='/'||name[length-1]=='\\')
@@ -1395,7 +1403,8 @@ int main (int argc, const char *argv[])
 	    break;
 	  case DIRNETLIB:
 	    {
-	      std::string name = CoinReadGetString(argc,argv);
+	      std::string name = CoinReadGetString(argc,argv,ReadCommand, 
+						   ReadMode);
 	      if (name!="EOL") {
 		int length=name.length();
 		if (name[length-1]=='/'||name[length-1]=='\\')
@@ -1410,7 +1419,8 @@ int main (int argc, const char *argv[])
 	    break;
 	  case DIRMIPLIB:
 	    {
-	      std::string name = CoinReadGetString(argc,argv);
+	       std::string name = CoinReadGetString(argc,argv,ReadCommand, 
+						   ReadMode);
 	      if (name!="EOL") {
 		int length=name.length();
 		if (name[length-1]=='/'||name[length-1]=='\\')
@@ -1424,7 +1434,7 @@ int main (int argc, const char *argv[])
 	    }
 	    break;
 	  case STDIN:
-	    CbcOrClpRead_mode=-1;
+	    ReadMode=-1;
 	    break;
 	  case NETLIB_DUAL:
 	  case NETLIB_EITHER:
@@ -1488,7 +1498,8 @@ int main (int argc, const char *argv[])
 	  case FAKEBOUND:
 	    if (goodModels[iModel]) {
 	      // get bound
-	      double value = CoinReadGetDoubleField(argc,argv,&valid);
+	      double value = CoinReadGetDoubleField(argc,argv,&valid,
+						    ReadCommand,ReadMode);
 	      if (!valid) {
 		std::cout<<"Setting "<<parameters[iParam].name()<<
 		  " to DEBUG "<<value<<std::endl;
@@ -1559,7 +1570,7 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 	  case SOLUTION:
 	    if (goodModels[iModel]) {
 	      // get next field
-	      field = CoinReadGetString(argc,argv);
+	      field = CoinReadGetString(argc,argv,ReadCommand,ReadMode);
 	      if (field=="$") {
 		field = parameters[iParam].stringValue();
 	      } else if (field=="EOL") {
@@ -1789,7 +1800,7 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 	  case SAVESOL:
 	    if (goodModels[iModel]) {
 	      // get next field
-	      field = CoinReadGetString(argc,argv);
+	      field = CoinReadGetString(argc,argv,ReadCommand,ReadMode);
 	      if (field=="$") {
 		field = parameters[iParam].stringValue();
 	      } else if (field=="EOL") {
