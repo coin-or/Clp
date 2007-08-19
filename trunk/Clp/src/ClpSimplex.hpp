@@ -361,7 +361,7 @@ public:
       largest value (at continuous) - should improve stability
       in branch and bound on infeasible branches (0.0 is off)
   */
-  int tightenPrimalBounds(double factor=0.0,int doTight=0);
+  int tightenPrimalBounds(double factor=0.0,int doTight=0,bool tightIntegers=false);
   /** Crash - at present just aimed at dual, returns
       -2 if dual preferred and crash basis created
       -1 if dual preferred and all slack basis preferred
@@ -862,6 +862,18 @@ public:
   /// Return pointer to details of costs
   inline ClpNonLinearCost * nonLinearCost() const
   { return nonLinearCost_;}
+  /** Return more special options
+      1 bit - if presolve says infeasible in ClpSolve return
+      2 bit - if presolved problem infeasible return
+  */
+  inline int moreSpecialOptions() const
+  { return moreSpecialOptions_;}
+  /** Set more special options
+      1 bit - if presolve says infeasible in ClpSolve return
+      2 bit - if presolved problem infeasible return
+  */
+  inline void setMoreSpecialOptions(int value)
+  { moreSpecialOptions_ = value;}
   //@}
   /**@name status methods */
   //@{
@@ -1080,8 +1092,8 @@ protected:
   double columnDualInfeasibility_;
   /// Worst row dual infeasibility
   double rowDualInfeasibility_;
-  /// Sequence of worst (-1 if feasible)
-  int columnDualSequence_;
+  /// More special options - see set for details
+  int moreSpecialOptions_;
   /// Sequence of worst (-1 if feasible)
   int rowDualSequence_;
   /// Primal tolerance needed to make dual feasible (<largeTolerance)

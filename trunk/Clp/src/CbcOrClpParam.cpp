@@ -1069,9 +1069,16 @@ CoinReadGetIntField(int argc, const char *argv[],int * valid)
   int value=0;
   //std::cout<<field<<std::endl;
   if (field!="EOL") {
-    // how do I check valid
-    value =  atoi(field.c_str());
-    *valid=0;
+    const char * start = field.c_str();
+    char * endPointer = NULL;
+    // check valid
+    value =  strtol(start,&endPointer,10);
+    if (*endPointer=='\0') {
+      *valid = 0;
+    } else {
+      *valid = 1;
+      std::cout<<"String of "<<field;
+    }
   } else {
     *valid=2;
   }
@@ -1097,9 +1104,16 @@ CoinReadGetDoubleField(int argc, const char *argv[],int * valid)
   double value=0.0;
   //std::cout<<field<<std::endl;
   if (field!="EOL") {
-    // how do I check valid
-    value = atof(field.c_str());
-    *valid=0;
+    const char * start = field.c_str();
+    char * endPointer = NULL;
+    // check valid
+    value =  strtod(start,&endPointer);
+    if (*endPointer=='\0') {
+      *valid = 0;
+    } else {
+      *valid = 1;
+      std::cout<<"String of "<<field;
+    }
   } else {
     *valid=2;
   }
@@ -1264,11 +1278,13 @@ See branchAndCut for information on options."
     CbcOrClpParam("combine!Solutions","Whether to use combine solution heuristic",
 		  "off",COMBINE);
   parameters[numberParameters-1].append("on");
+  parameters[numberParameters-1].append("do");
   parameters[numberParameters-1].setLonghelp
     (
      "This switches on a heuristic which does branch and cut on the problem given by just \
 using variables which have appeared in one or more solutions. \
-It obviously only tries after two or more solutions."
+It obviously only tries after two or more solutions. \
+The Do option switches on before preprocessing."
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("cost!Strategy","How to use costs as priorities",
@@ -1448,6 +1464,16 @@ You can also use the parameters 'maximize' or 'minimize'."
  then the problems must be uncompressed.\
  It is initialized to '../../Data/miplib3'"
      ); 
+#ifdef COIN_HAS_CBC
+  parameters[numberParameters++]=
+    CbcOrClpParam("doH!euristic","Do heuristics before any preprocessing",
+		  DOHEURISTIC,3);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "Normally heuristics are done in branch and bound.  It may be useful to do them outside. \
+Doing this may also set cutoff."
+     ); 
+#endif
 #ifdef COIN_HAS_CLP
   parameters[numberParameters++]=
     CbcOrClpParam("dualB!ound","Initially algorithm acts as if no \
@@ -1579,11 +1605,12 @@ e.g. no ENDATA.  This has to be set before import i.e. -errorsAllowed on -import
       CbcOrClpParam("feas!ibilityPump","Whether to try Feasibility Pump",
 		    "off",FPUMP);
     parameters[numberParameters-1].append("on");
+    parameters[numberParameters-1].append("do");
   parameters[numberParameters-1].setLonghelp
     (
      "This switches on feasibility pump heuristic at root. This is due to Fischetti and Lodi \
 and uses a sequence of Lps to try and get an integer feasible solution. \
-Some fine tuning is available by passFeasibilityPump."
+Some fine tuning is available by passFeasibilityPump. Do options does heuristic before preprocessing"
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("fix!OnDj","Try heuristic based on fixing variables with \
@@ -1645,11 +1672,13 @@ See branchAndCut for information on options."
     CbcOrClpParam("greedy!Heuristic","Whether to use a greedy heuristic",
 		  "off",GREEDY);
   parameters[numberParameters-1].append("on");
-  parameters[numberParameters-1].append("root");
+  parameters[numberParameters-1].append("do");
+  //parameters[numberParameters-1].append("root");
   parameters[numberParameters-1].setLonghelp
     (
      "Switches on a greedy heuristic which will try and obtain a solution.  It may just fix a \
-percentage of variables and then try a small branch and cut run."
+percentage of variables and then try a small branch and cut run. \
+The Do option switches on before preprocessing."
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("heur!isticsOnOff","Switches most heuristics on or off",
@@ -2358,9 +2387,11 @@ See branchAndCut for information on options."
     CbcOrClpParam("round!ingHeuristic","Whether to use Rounding heuristic",
 		  "off",ROUNDING);
   parameters[numberParameters-1].append("on");
+  parameters[numberParameters-1].append("do");
   parameters[numberParameters-1].setLonghelp
     (
-     "This switches on a simple (but effective) rounding heuristic at each node of tree."
+     "This switches on a simple (but effective) rounding heuristic at each node of tree.  \
+The Do option switches on before preprocessing."
      ); 
 #endif
   parameters[numberParameters++]=
@@ -2658,6 +2689,16 @@ Look for USERCBC in main driver and modify sample code."
      "Set to 1 to get short help with ? list, 2 to get long help, 3 for both.  (add 4 to just get ampl ones)."
      ); 
   parameters[numberParameters-1].setIntValue(0);
+#ifdef COIN_HAS_CBC
+  parameters[numberParameters++]=
+    CbcOrClpParam("vub!heuristic","Type of vub heuristic",
+		  -2,10,VUBTRY,false);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "If set will try and fix some integer variables"
+     ); 
+  parameters[numberParameters-1].setIntValue(-1);
+#endif 
   assert(numberParameters<CBCMAXPARAMETERS);
 }
 // Given a parameter type - returns its number in list

@@ -614,7 +614,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
       handler_->message(CLP_INFEASIBLE,messages_)
 	<<CoinMessageEol;
       model2 = this;
-      if (options.infeasibleReturn()) {
+      problemStatus_=1; // may be unbounded but who cares
+      if (options.infeasibleReturn()||(moreSpecialOptions_&1)!=0) {
         return -1;
       }
       presolve=ClpSolve::presolveOff;
@@ -2246,15 +2247,24 @@ ClpSimplex::initialSolve(ClpSolve & options)
     setLogLevel(saveLevel);
     if (finalStatus!=3&&(finalStatus||status()==-1)) {
       int savePerturbation = perturbation();
-      setPerturbation(100);
-      if (finalStatus==2) {
-        // unbounded - get feasible first
-        double save = optimizationDirection_;
-        optimizationDirection_=0.0;
-        primal(1);
-        optimizationDirection_=save;
+      if (!finalStatus||(moreSpecialOptions_&2)==0) {
+	if (finalStatus==2) {
+	  // unbounded - get feasible first
+	  double save = optimizationDirection_;
+	  optimizationDirection_=0.0;
+	  primal(1);
+	  optimizationDirection_=save;
+	  primal(1);
+	} else if (finalStatus==1) {
+	  dual();
+	} else {
+	  setPerturbation(100);
+	  primal(1);
+	}
+      } else {
+	// just set status
+	problemStatus_=finalStatus;
       }
-      primal(1);
       setPerturbation(savePerturbation);
       numberIterations += numberIterations_;
       numberIterations_ = numberIterations;

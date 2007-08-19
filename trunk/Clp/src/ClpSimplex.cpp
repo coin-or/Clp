@@ -44,7 +44,7 @@ ClpSimplex::ClpSimplex (bool emptyMessages) :
   rowPrimalSequence_(-2), 
   columnDualInfeasibility_(0.0),
   rowDualInfeasibility_(0.0),
-  columnDualSequence_(-2),
+  moreSpecialOptions_(0),
   rowDualSequence_(-2),
   primalToleranceToGetOptimal_(-1.0),
   remainingDualInfeasibility_(0.0),
@@ -155,7 +155,7 @@ ClpSimplex::ClpSimplex ( const ClpModel * rhs,
   rowPrimalSequence_(-2), 
   columnDualInfeasibility_(0.0),
   rowDualInfeasibility_(0.0),
-  columnDualSequence_(-2),
+  moreSpecialOptions_(0),
   rowDualSequence_(-2),
   primalToleranceToGetOptimal_(-1.0),
   remainingDualInfeasibility_(0.0),
@@ -1614,7 +1614,7 @@ ClpSimplex::ClpSimplex(const ClpSimplex &rhs,int scalingMode) :
   rowPrimalSequence_(-2), 
   columnDualInfeasibility_(0.0),
   rowDualInfeasibility_(0.0),
-  columnDualSequence_(-2),
+  moreSpecialOptions_(0),
   rowDualSequence_(-2),
   primalToleranceToGetOptimal_(-1.0),
   remainingDualInfeasibility_(0.0),
@@ -1718,7 +1718,7 @@ ClpSimplex::ClpSimplex(const ClpModel &rhs, int scalingMode) :
   rowPrimalSequence_(-2), 
   columnDualInfeasibility_(0.0),
   rowDualInfeasibility_(0.0),
-  columnDualSequence_(-2),
+  moreSpecialOptions_(0),
   rowDualSequence_(-2),
   primalToleranceToGetOptimal_(-1.0),
   remainingDualInfeasibility_(0.0),
@@ -1911,7 +1911,7 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
   rowPrimalInfeasibility_ = rhs.rowPrimalInfeasibility_;
   rowPrimalSequence_ = rhs.rowPrimalSequence_;
   columnDualInfeasibility_ = rhs.columnDualInfeasibility_;
-  columnDualSequence_ = rhs.columnDualSequence_;
+  moreSpecialOptions_ = rhs.moreSpecialOptions_;
   rowDualInfeasibility_ = rhs.rowDualInfeasibility_;
   rowDualSequence_ = rhs.rowDualSequence_;
   primalToleranceToGetOptimal_ = rhs.primalToleranceToGetOptimal_;
@@ -4084,7 +4084,7 @@ void checkCorrect(ClpSimplex * model,int iRow,
    in branch and bound on infeasible branches (0.0 is off)
 */
 int 
-ClpSimplex::tightenPrimalBounds(double factor,int doTight)
+ClpSimplex::tightenPrimalBounds(double factor,int doTight,bool tightIntegers)
 {
   
   // Get a row copy in standard format
@@ -4496,6 +4496,31 @@ ClpSimplex::tightenPrimalBounds(double factor,int doTight)
 					saveLower[iColumn]);
 	  }
 	}
+      }
+    }
+    if (tightIntegers&&integerType_) {
+      for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+	if (integerType_[iColumn]) {
+	  double value;
+	  value = floor(columnLower_[iColumn]+0.5);
+	  if (fabs(value-columnLower_[iColumn])>primalTolerance_)
+	    value = ceil(columnLower_[iColumn]);
+	  columnLower_[iColumn]=value;
+	  value = floor(columnUpper_[iColumn]+0.5);
+	  if (fabs(value-columnUpper_[iColumn])>primalTolerance_)
+	    value = floor(columnUpper_[iColumn]);
+	  columnUpper_[iColumn]=value;
+	  if (columnLower_[iColumn]>columnUpper_[iColumn])
+	    numberInfeasible++;
+	}
+      }
+      if (numberInfeasible) {
+	handler_->message(CLP_SIMPLEX_INFEASIBILITIES,messages_)
+	  <<numberInfeasible
+	  <<CoinMessageEol;
+	// restore column bounds
+	memcpy(columnLower_,saveLower,numberColumns_*sizeof(double));
+	memcpy(columnUpper_,saveUpper,numberColumns_*sizeof(double));
       }
     }
   } else {
@@ -5196,6 +5221,7 @@ ClpSimplex::borrowModel(ClpSimplex & otherModel)
   primalColumnPivot_ = otherModel.primalColumnPivot_->clone(true);
   perturbation_ = otherModel.perturbation_;
   specialOptions_ = otherModel.specialOptions_;
+  moreSpecialOptions_ = otherModel.moreSpecialOptions_;
   automaticScale_ = otherModel.automaticScale_;
 }
 /// Saves scalars for ClpSimplex
@@ -7334,7 +7360,7 @@ ClpSimplex::returnModel(ClpSimplex & otherModel)
   otherModel.rowPrimalInfeasibility_ = rowPrimalInfeasibility_;
   otherModel.rowPrimalSequence_ = rowPrimalSequence_;
   otherModel.columnDualInfeasibility_ = columnDualInfeasibility_;
-  otherModel.columnDualSequence_ = columnDualSequence_;
+  otherModel.moreSpecialOptions_ = moreSpecialOptions_;
   otherModel.rowDualInfeasibility_ = rowDualInfeasibility_;
   otherModel.rowDualSequence_ = rowDualSequence_;
   otherModel.primalToleranceToGetOptimal_ = primalToleranceToGetOptimal_;
