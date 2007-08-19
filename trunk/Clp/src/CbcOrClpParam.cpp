@@ -5,12 +5,6 @@
 #  pragma warning(disable:4786)
 #endif
 
-#ifdef USE_CBCCONFIG
-# include "CbcConfig.h"
-#else
-# include "ClpConfig.h"
-#endif
-
 #include "CbcOrClpParam.hpp"
 
 #include <string>
@@ -32,7 +26,14 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #endif
+#ifdef COIN_HAS_CBC
+// from CoinSolve
+static char coin_prompt[]="Coin:";
+#else
+static char coin_prompt[]="Clp:";
+#endif
 static bool doPrinting=true;
+std::string afterEquals="";
 void setCbcOrClpPrinting(bool yesNo)
 {
   doPrinting=yesNo;
@@ -904,6 +905,205 @@ void
 CbcOrClpParam::setStringValue ( std::string value )
 { 
   stringValue_=value;
+}
+static char line[1000];
+static char * where=NULL;
+extern int CbcOrClpRead_mode;
+extern FILE * CbcOrClpReadCommand;
+// Simple read stuff
+std::string
+CoinReadNextField()
+{
+  std::string field;
+  if (!where) {
+    // need new line
+#ifdef COIN_HAS_READLINE     
+    if (CbcOrClpReadCommand==stdin) {
+      // Get a line from the user. 
+      where = readline (coin_prompt);
+      
+      // If the line has any text in it, save it on the history.
+      if (where) {
+	if ( *where)
+	  add_history (where);
+	strcpy(line,where);
+	free(where);
+      }
+    } else {
+      where = fgets(line,1000,CbcOrClpReadCommand);
+    }
+#else
+    if (CbcOrClpReadCommand==stdin) {
+      fprintf(stdout,coin_prompt);
+      fflush(stdout);
+    }
+    where = fgets(line,1000,CbcOrClpReadCommand);
+#endif
+    if (!where)
+      return field; // EOF
+    where = line;
+    // clean image
+    char * lastNonBlank = line-1;
+    while ( *where != '\0' ) {
+      if ( *where != '\t' && *where < ' ' ) {
+	break;
+      } else if ( *where != '\t' && *where != ' ') {
+	lastNonBlank = where;
+      }
+      where++;
+    }
+    where=line;
+    *(lastNonBlank+1)='\0';
+  }
+  // munch white space
+  while(*where==' '||*where=='\t')
+    where++;
+  char * saveWhere = where;
+  while (*where!=' '&&*where!='\t'&&*where!='\0')
+    where++;
+  if (where!=saveWhere) {
+    char save = *where;
+    *where='\0';
+    //convert to string
+    field=saveWhere;
+    *where=save;
+  } else {
+    where=NULL;
+    field="EOL";
+  }
+  return field;
+}
+
+std::string
+CoinReadGetCommand(int argc, const char *argv[])
+{
+  std::string field="EOL";
+  // say no =
+  afterEquals="";
+  while (field=="EOL") {
+    if (CbcOrClpRead_mode>0) {
+      if (CbcOrClpRead_mode<argc) {
+	field = argv[CbcOrClpRead_mode++];
+	if (field=="-") {
+	  std::cout<<"Switching to line mode"<<std::endl;
+	  CbcOrClpRead_mode=-1;
+	  field=CoinReadNextField();
+	} else if (field[0]!='-') {
+	  if (CbcOrClpRead_mode!=2) {
+	    // now allow std::cout<<"skipping non-command "<<field<<std::endl;
+	    // field="EOL"; // skip
+	  } else {
+	    // special dispensation - taken as -import name
+	    CbcOrClpRead_mode--;
+	    field="import";
+	  }
+	} else {
+	  if (field!="--") {
+	    // take off -
+	    field = field.substr(1);
+	  } else {
+	    // special dispensation - taken as -import --
+	    CbcOrClpRead_mode--;
+	    field="import";
+	  }
+	}
+      } else {
+	field="";
+      }
+    } else {
+      field=CoinReadNextField();
+    }
+  }
+  // if = then modify and save
+  std::string::size_type found = field.find('=');
+  if (found!=std::string::npos) {
+    afterEquals = field.substr(found+1);
+    field = field.substr(0,found);
+  }
+  //std::cout<<field<<std::endl;
+  return field;
+}
+std::string
+CoinReadGetString(int argc, const char *argv[])
+{
+  std::string field="EOL";
+  if (afterEquals=="") {
+    if (CbcOrClpRead_mode>0) {
+      if (CbcOrClpRead_mode<argc) {
+        if (argv[CbcOrClpRead_mode][0]!='-') { 
+          field = argv[CbcOrClpRead_mode++];
+        } else if (!strcmp(argv[CbcOrClpRead_mode],"--")) {
+          field = argv[CbcOrClpRead_mode++];
+          // -- means import from stdin
+          field = "-";
+        }
+      }
+    } else {
+      field=CoinReadNextField();
+    }
+  } else {
+    field=afterEquals;
+    afterEquals = "";
+  }
+  //std::cout<<field<<std::endl;
+  return field;
+}
+// valid 0 - okay, 1 bad, 2 not there
+int
+CoinReadGetIntField(int argc, const char *argv[],int * valid)
+{
+  std::string field="EOL";
+  if (afterEquals=="") {
+    if (CbcOrClpRead_mode>0) {
+      if (CbcOrClpRead_mode<argc) {
+        // may be negative value so do not check for -
+        field = argv[CbcOrClpRead_mode++];
+      }
+    } else {
+      field=CoinReadNextField();
+    }
+  } else {
+    field=afterEquals;
+    afterEquals = "";
+  }
+  int value=0;
+  //std::cout<<field<<std::endl;
+  if (field!="EOL") {
+    // how do I check valid
+    value =  atoi(field.c_str());
+    *valid=0;
+  } else {
+    *valid=2;
+  }
+  return value;
+}
+double
+CoinReadGetDoubleField(int argc, const char *argv[],int * valid)
+{
+  std::string field="EOL";
+  if (afterEquals=="") {
+    if (CbcOrClpRead_mode>0) {
+      if (CbcOrClpRead_mode<argc) {
+        // may be negative value so do not check for -
+        field = argv[CbcOrClpRead_mode++];
+      }
+    } else {
+      field=CoinReadNextField();
+    }
+  } else {
+    field=afterEquals;
+    afterEquals = "";
+  }
+  double value=0.0;
+  //std::cout<<field<<std::endl;
+  if (field!="EOL") {
+    // how do I check valid
+    value = atof(field.c_str());
+    *valid=0;
+  } else {
+    *valid=2;
+  }
+  return value;
 }
 /*
   Subroutine to establish the cbc parameter array. See the description of

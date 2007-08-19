@@ -260,6 +260,15 @@ private:
   int whereUsed_;
   //@}
 };
+/// Simple read stuff
+std::string CoinReadNextField();
+
+std::string CoinReadGetCommand(int argc, const char *argv[]);
+std::string CoinReadGetString(int argc, const char *argv[]);
+// valid 0 - okay, 1 bad, 2 not there
+int CoinReadGetIntField(int argc, const char *argv[],int * valid);
+double CoinReadGetDoubleField(int argc, const char *argv[],int * valid);
+void CoinReadPrintit(const char * input);
 void setCbcOrClpPrinting(bool yesNo);
 #define CBCMAXPARAMETERS 200
 /*
