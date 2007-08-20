@@ -226,18 +226,22 @@ static void printSol(ClpSimplex & model)
   }
   printf("Computed objective %g\n",objValue);
 }
-//----------------------------------------------------------------
-// unitTest [-mpsDir=V1] [-netlibDir=V2] [-test]
-// 
-// where:
-//   -mpsDir: directory containing mps test files
-//       Default value V1="../../Data/Sample"    
-//   -netlibDir: directory containing netlib files
-//       Default value V2="../../Data/Netlib"
-//   -test
-//       If specified, then netlib test set run
-//
-// All parameters are optional.
+
+void usage(const std::string& key)
+{
+  std::cerr
+    <<"Undefined parameter \"" <<key <<"\".\n"
+    <<"Correct usage: \n"
+    <<"  clp [-dirSample=V1] [-dirNetlib=V2] [-netlib]\n"
+    <<"  where:\n"
+    <<"    -dirSample: directory containing mps test files\n"
+    <<"        Default value V1=\"../../Data/Sample\"\n"
+    <<"    -dirNetlib: directory containing netlib files\"\n"
+    <<"        Default value V2=\"../../Data/Netlib\"\n"
+    <<"    -netlib\n"
+    <<"        If specified, then netlib testset run as well as the nitTest.\n";
+}
+
 //----------------------------------------------------------------
 int mainTest (int argc, const char *argv[],int algorithm,
 	      ClpSimplex empty, bool doPresolve, int switchOffValue,bool doVector)
@@ -257,8 +261,8 @@ int mainTest (int argc, const char *argv[],int algorithm,
 
   // define valid parameter keywords
   std::set<std::string> definedKeyWords;
-  definedKeyWords.insert("-mpsDir");
-  definedKeyWords.insert("-netlibDir");
+  definedKeyWords.insert("-dirSample");
+  definedKeyWords.insert("-dirNetlib");
   definedKeyWords.insert("-netlib");
 
   // Create a map of parameter keys and associated data
@@ -282,17 +286,7 @@ int mainTest (int argc, const char *argv[],int algorithm,
     if ( definedKeyWords.find(key) == definedKeyWords.end() ) {
       // invalid key word.
       // Write help text
-      std::cerr <<"Undefined parameter \"" <<key <<"\".\n";
-      std::cerr <<"Correct usage: \n";
-      std::cerr <<"  unitTest [-mpsDir=V1] [-netlibDir=V2] [-test[=V3]]\n";
-      std::cerr <<"  where:\n";
-      std::cerr <<"    -mpsDir: directory containing mps test files\n";
-      std::cerr <<"        Default value V1=\"../../Data/Sample\"\n";
-      std::cerr <<"    -netlibDir: directory containing netlib files\n";
-      std::cerr <<"        Default value V2=\"../../Data/Netlib\"\n";
-      std::cerr <<"    -test\n";
-      std::cerr <<"        If specified, then netlib testset run.\n";
-      std::cerr <<"        If V3 then taken as single file\n";
+      usage(key);
       return 1;
     }
     parms[key]=value;
@@ -300,21 +294,21 @@ int mainTest (int argc, const char *argv[],int algorithm,
   
   const char dirsep =  CoinFindDirSeparator();
   // Set directory containing mps data files.
-  std::string mpsDir;
-  if (parms.find("-mpsDir") != parms.end())
-    mpsDir=parms["-mpsDir"] + dirsep;
+  std::string dirSample;
+  if (parms.find("-dirSample") != parms.end())
+    dirSample=parms["-dirSample"];
   else 
-    mpsDir = dirsep == '/' ? "../../Data/Sample/" : "..\\..\\Data\\Sample\\";
+    dirSample = dirsep == '/' ? "../../Data/Sample/" : "..\\..\\Data\\Sample\\";
  
   // Set directory containing netlib data files.
-  std::string netlibDir;
-  if (parms.find("-netlibDir") != parms.end())
-    netlibDir=parms["-netlibDir"] + dirsep;
+  std::string dirNetlib;
+  if (parms.find("-dirNetlib") != parms.end())
+    dirNetlib=parms["-dirNetlib"];
   else 
-    netlibDir = dirsep == '/' ? "../../Data/Netlib/" : "..\\..\\Data\\Netlib\\";
+    dirNetlib = dirsep == '/' ? "../../Data/Netlib/" : "..\\..\\Data\\Netlib\\";
   if (!empty.numberRows()) {
     testingMessage( "Testing ClpSimplex\n" );
-    ClpSimplexUnitTest(mpsDir,netlibDir);
+    ClpSimplexUnitTest(dirSample);
   }
   if (parms.find("-netlib") != parms.end()||empty.numberRows())
   {
@@ -476,7 +470,7 @@ int mainTest (int argc, const char *argv[],int algorithm,
 		<<" (" <<m+1 <<" out of " <<mpsName.size() <<")" <<std::endl;
 
       ClpSimplex solutionBase=empty;
-      std::string fn = netlibDir+mpsName[m];
+      std::string fn = dirNetlib+mpsName[m];
       if (!empty.numberRows()||algorithm<6) {
         // Read data mps file,
         CoinMpsIO mps;
@@ -647,8 +641,7 @@ void testingMessage( const char * const msg )
 //--------------------------------------------------------------------------
 // test factorization methods and simplex method and simple barrier
 void
-ClpSimplexUnitTest(const std::string & mpsDir,
-		   const std::string & netlibDir)
+ClpSimplexUnitTest(const std::string & dirSample)
 {
   
   CoinRelFltEq eq(0.000001);
@@ -769,7 +762,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
 #ifndef COIN_NO_CLP_MESSAGE
   {    
     CoinMpsIO m;
-    std::string fn = mpsDir+"exmip1";
+    std::string fn = dirSample+"exmip1";
     m.readMps(fn.c_str(),"mps");
     ClpSimplex solution;
     solution.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
@@ -789,7 +782,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
   // Test Message handler
   {    
     CoinMpsIO m;
-    std::string fn = mpsDir+"exmip1";
+    std::string fn = dirSample+"exmip1";
     //fn = "Test/subGams4";
     m.readMps(fn.c_str(),"mps");
     ClpSimplex model;
@@ -840,7 +833,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
   // Test dual ranging
   {    
     CoinMpsIO m;
-    std::string fn = mpsDir+"exmip1";
+    std::string fn = dirSample+"exmip1";
     m.readMps(fn.c_str(),"mps");
     ClpSimplex model;
     model.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
@@ -899,7 +892,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
   // Test primal ranging
   {    
     CoinMpsIO m;
-    std::string fn = mpsDir+"exmip1";
+    std::string fn = dirSample+"exmip1";
     m.readMps(fn.c_str(),"mps");
     ClpSimplex model;
     model.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
@@ -1002,11 +995,11 @@ ClpSimplexUnitTest(const std::string & mpsDir,
   // test steepest edge
   {    
     CoinMpsIO m;
-    std::string fn = mpsDir+"finnis";
+    std::string fn = dirSample+"finnis";
     int returnCode = m.readMps(fn.c_str(),"mps");
     if (returnCode) {
       // probable cause is that gz not there
-      fprintf(stderr,"Unable to open finnis.mps in %s\n", mpsDir.c_str());
+      fprintf(stderr,"Unable to open finnis.mps in %s\n", dirSample.c_str());
       fprintf(stderr,"Most probable cause is finnis.mps is gzipped i.e. finnis.mps.gz and libz has not been activated\n");
       fprintf(stderr,"Either gunzip files or edit Makefiles/Makefile.location to get libz\n");
       exit(999);
@@ -1032,7 +1025,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
   // test normal solution
   {    
     CoinMpsIO m;
-    std::string fn = mpsDir+"afiro";
+    std::string fn = dirSample+"afiro";
     m.readMps(fn.c_str(),"mps");
     ClpSimplex solution;
     ClpModel model;
@@ -1119,7 +1112,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
   // test unbounded
   {    
     CoinMpsIO m;
-    std::string fn = mpsDir+"brandy";
+    std::string fn = dirSample+"brandy";
     m.readMps(fn.c_str(),"mps");
     ClpSimplex solution;
     // do twice - without and with scaling
@@ -1191,7 +1184,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
   // test infeasible
   {    
     CoinMpsIO m;
-    std::string fn = mpsDir+"brandy";
+    std::string fn = dirSample+"brandy";
     m.readMps(fn.c_str(),"mps");
     ClpSimplex solution;
     // do twice - without and with scaling
@@ -1280,7 +1273,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
   // test delete and add
   {    
     CoinMpsIO m;
-    std::string fn = mpsDir+"brandy";
+    std::string fn = dirSample+"brandy";
     m.readMps(fn.c_str(),"mps");
     ClpSimplex solution;
     solution.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
@@ -1459,7 +1452,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
   // Test barrier
   {
     CoinMpsIO m;
-    std::string fn = mpsDir+"exmip1";
+    std::string fn = dirSample+"exmip1";
     m.readMps(fn.c_str(),"mps");
     ClpInterior solution;
     solution.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
@@ -1471,7 +1464,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
   // test network 
 #define QUADRATIC
   if (1) {    
-    std::string fn = mpsDir+"input.130";
+    std::string fn = dirSample+"input.130";
     int numberColumns;
     int numberRows;
     
@@ -1482,7 +1475,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
       fp = fopen(fn.c_str(),"r");
     }
     if (!fp) {
-      fprintf(stderr,"Unable to open file input.130 in mpsDir or Data/Sample directory\n");
+      fprintf(stderr,"Unable to open file input.130 in dirSample or Data/Sample directory\n");
     } else {
       int problem;
       char temp[100];
@@ -1648,7 +1641,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
   // Test quadratic to solve linear
   if (1) {    
     CoinMpsIO m;
-    std::string fn = mpsDir+"exmip1";
+    std::string fn = dirSample+"exmip1";
     m.readMps(fn.c_str(),"mps");
     ClpSimplex solution;
     solution.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
@@ -1693,7 +1686,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
   // Test quadratic
   if (1) {    
     CoinMpsIO m;
-    std::string fn = mpsDir+"share2qp";
+    std::string fn = dirSample+"share2qp";
     //fn = "share2qpb";
     m.readMps(fn.c_str(),"mps");
     ClpSimplex model;

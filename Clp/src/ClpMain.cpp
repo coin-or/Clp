@@ -1367,10 +1367,10 @@ int main (int argc, const char *argv[])
 	      std::string name = CoinReadGetString(argc,argv);
 	      if (name!="EOL") {
 		int length=name.length();
-		if (name[length-1]=='/'||name[length-1]=='\\')
-		  directory=name;
+		if (name[length-1]==dirsep)
+		  directory = name;
 		else
-		  directory = name+"/";
+		  directory = name+dirsep;
 		parameters[iParam].setStringValue(directory);
 	      } else {
 		parameters[iParam].printString();
@@ -1382,10 +1382,10 @@ int main (int argc, const char *argv[])
 	      std::string name = CoinReadGetString(argc,argv);
 	      if (name!="EOL") {
 		int length=name.length();
-		if (name[length-1]=='/'||name[length-1]=='\\')
-		  dirSample=name;
+		if (name[length-1]==dirsep)
+		  dirSample = name;
 		else
-		  dirSample = name+"/";
+		  dirSample = name+dirsep;
 		parameters[iParam].setStringValue(dirSample);
 	      } else {
 		parameters[iParam].printString();
@@ -1397,10 +1397,10 @@ int main (int argc, const char *argv[])
 	      std::string name = CoinReadGetString(argc,argv);
 	      if (name!="EOL") {
 		int length=name.length();
-		if (name[length-1]=='/'||name[length-1]=='\\')
-		  dirNetlib=name;
+		if (name[length-1]==dirsep)
+		  dirNetlib = name;
 		else
-		  dirNetlib = name+"/";
+		  dirNetlib = name+dirsep;
 		parameters[iParam].setStringValue(dirNetlib);
 	      } else {
 		parameters[iParam].printString();
@@ -1412,10 +1412,10 @@ int main (int argc, const char *argv[])
 	      std::string name = CoinReadGetString(argc,argv);
 	      if (name!="EOL") {
 		int length=name.length();
-		if (name[length-1]=='/'||name[length-1]=='\\')
-		  dirMiplib=name;
+		if (name[length-1]==dirsep)
+		  dirMiplib = name;
 		else
-		  dirMiplib = name+"/";
+		  dirMiplib = name+dirsep;
 		parameters[iParam].setStringValue(dirMiplib);
 	      } else {
 		parameters[iParam].printString();
@@ -1435,10 +1435,10 @@ int main (int argc, const char *argv[])
 	      const char * fields[4];
 	      int nFields=4;
 	      fields[0]="fake main from unitTest";
-	      std::string mpsfield = "-mpsDir=";
+	      std::string mpsfield = "-dirSample=";
 	      mpsfield += dirSample.c_str();
 	      fields[1]=mpsfield.c_str();
-	      std::string netfield = "-netlibDir=";
+	      std::string netfield = "-dirNetlib=";
 	      netfield += dirNetlib.c_str();
 	      fields[2]=netfield.c_str();
 	      fields[3]="-netlib";
@@ -1473,7 +1473,7 @@ int main (int argc, const char *argv[])
 	      const char * fields[2];
 	      int nFields=2;
 	      fields[0]="fake main from unitTest";
-	      std::string dirfield = "-mpsDir=";
+	      std::string dirfield = "-dirSample=";
 	      dirfield += dirSample.c_str();
 	      fields[1]=dirfield.c_str();
               int specialOptions = models[iModel].specialOptions();
