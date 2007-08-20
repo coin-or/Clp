@@ -176,38 +176,38 @@ ClpDynamicMatrix::ClpDynamicMatrix(ClpSimplex * model, int numberSets,
   }
   CoinBigIndex numberElements = startColumn_[numberGubColumns_];
   row_ = ClpCopyOfArray(row,numberElements);
-  element_ = new float[numberElements];
+  element_ = new double[numberElements];
   CoinBigIndex i;
   for (i=0;i<numberElements;i++)
     element_[i]=element[i];
-  cost_ = new float[numberGubColumns_];
+  cost_ = new double[numberGubColumns_];
   for (i=0;i<numberGubColumns_;i++) {
     cost_[i]=cost[i];
     // I don't think I need sorted but ...
     CoinSort_2(row_+startColumn_[i],row_+startColumn_[i+1],element_+startColumn_[i]);
   }
   if (columnLower) {
-    columnLower_ = new float[numberGubColumns_];
+    columnLower_ = new double[numberGubColumns_];
     for (i=0;i<numberGubColumns_;i++) 
       columnLower_[i]=columnLower[i];
   } else {
     columnLower_=NULL;
   }
   if (columnUpper) {
-    columnUpper_ = new float[numberGubColumns_];
+    columnUpper_ = new double[numberGubColumns_];
     for (i=0;i<numberGubColumns_;i++) 
       columnUpper_[i]=columnUpper[i];
   } else {
     columnUpper_=NULL;
   }
-  lowerSet_ = new float[numberSets_];
+  lowerSet_ = new double[numberSets_];
   for (i=0;i<numberSets_;i++) {
     if (lower[i]>-1.0e20)
       lowerSet_[i]=lower[i];
     else
       lowerSet_[i] = -1.0e30;
   }
-  upperSet_ = new float[numberSets_];
+  upperSet_ = new double[numberSets_];
   for (i=0;i<numberSets_;i++) {
     if (upper[i]<1.0e20)
       upperSet_[i]=upper[i];
@@ -2217,8 +2217,8 @@ ClpDynamicMatrix::initialProblem()
 }
 // Adds in a column to gub structure (called from descendant)
 int 
-ClpDynamicMatrix::addColumn(int numberEntries,const int * row, const float * element,
-			    float cost, float lower, float upper,int iSet,
+ClpDynamicMatrix::addColumn(int numberEntries,const int * row, const double * element,
+			    double cost, double lower, double upper,int iSet,
 			    DynamicStatus status)
 {
   // check if already in
@@ -2226,7 +2226,7 @@ ClpDynamicMatrix::addColumn(int numberEntries,const int * row, const float * ele
   while (j>=0) {
     if (startColumn_[j+1]-startColumn_[j]==numberEntries) {
       const int * row2 = row_+startColumn_[j];
-      const float * element2 = element_ + startColumn_[j];
+      const double * element2 = element_ + startColumn_[j];
       bool same=true;
       for (int k=0;k<numberEntries;k++) {
 	if (row[k]!=row2[k]||element[k]!=element2[k]) {

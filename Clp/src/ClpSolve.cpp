@@ -1330,7 +1330,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
     int numberRows = model2->numberRows();
     
     // We will need arrays to choose variables.  These are too big but ..
-    float * weight = new float [numberRows+originalNumberColumns];
+    double * weight = new double [numberRows+originalNumberColumns];
     int * sort = new int [numberRows+originalNumberColumns];
     int numberSort=0;
     // We are going to add slacks to get feasible.
@@ -2303,7 +2303,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
     <<statusMessage[finalStatus+1]<<objectiveValue()<<numberIterations<<time2-time1;
   handler_->printing(presolve==ClpSolve::presolveOn)
     <<timePresolve;
-  handler_->printing(timeIdiot)
+  handler_->printing(timeIdiot!=0.0)
     <<timeIdiot;
   handler_->message()<<CoinMessageEol;
   if (interrupt) 

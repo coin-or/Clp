@@ -110,6 +110,8 @@ public:
 				const double * x, double * y,
 				const double * rowScale, 
 				const double * columnScale) const;
+
+  using ClpMatrixBase::transposeTimes ;
     /** Return <code>x * scalar * A + y</code> in <code>z</code>. 
 	Can use y as temporary array (will be empty at end)
 	Note - If x packed mode - then z packed mode */

@@ -93,7 +93,21 @@ int main (int argc, const char *argv[])
     models->setPerturbation(50);
     models->messageHandler()->setPrefix(false);
     const char dirsep =  CoinFindDirSeparator();
-    std::string directory = (dirsep == '/' ? "./" : ".\\");
+    std::string directory;
+    std::string dirSample;
+    std::string dirNetlib;
+    std::string dirMiplib;
+    if (dirsep == '/') {
+      directory = "./";
+      dirSample = "../../Data/Sample/";
+      dirNetlib = "../../Data/Netlib/";
+      dirMiplib = "../../Data/miplib3/";
+    } else {
+      directory = ".\\";
+      dirSample = "..\\..\\Data\\Sample\\";
+      dirNetlib = "..\\..\\Data\\Netlib\\";
+      dirMiplib = "..\\..\\Data\\miplib3\\";
+    }
     std::string defaultDirectory = directory;
     std::string importFile ="";
     std::string exportFile ="default.mps";
@@ -114,6 +128,9 @@ int main (int argc, const char *argv[])
     parameters[whichParam(BASISOUT,numberParameters,parameters)].setStringValue(exportBasisFile);
     parameters[whichParam(PRINTMASK,numberParameters,parameters)].setStringValue(printMask);
     parameters[whichParam(DIRECTORY,numberParameters,parameters)].setStringValue(directory);
+    parameters[whichParam(DIRSAMPLE,numberParameters,parameters)].setStringValue(dirSample);
+    parameters[whichParam(DIRNETLIB,numberParameters,parameters)].setStringValue(dirNetlib);
+    parameters[whichParam(DIRMIPLIB,numberParameters,parameters)].setStringValue(dirMiplib);
     parameters[whichParam(DUALBOUND,numberParameters,parameters)].setDoubleValue(models->dualBound());
     parameters[whichParam(DUALTOLERANCE,numberParameters,parameters)].setDoubleValue(models->dualTolerance());
     parameters[whichParam(EXPORT,numberParameters,parameters)].setStringValue(exportFile);
@@ -1360,6 +1377,51 @@ int main (int argc, const char *argv[])
 	      }
 	    }
 	    break;
+	  case DIRSAMPLE:
+	    {
+	      std::string name = CoinReadGetString(argc,argv);
+	      if (name!="EOL") {
+		int length=name.length();
+		if (name[length-1]=='/'||name[length-1]=='\\')
+		  dirSample=name;
+		else
+		  dirSample = name+"/";
+		parameters[iParam].setStringValue(dirSample);
+	      } else {
+		parameters[iParam].printString();
+	      }
+	    }
+	    break;
+	  case DIRNETLIB:
+	    {
+	      std::string name = CoinReadGetString(argc,argv);
+	      if (name!="EOL") {
+		int length=name.length();
+		if (name[length-1]=='/'||name[length-1]=='\\')
+		  dirNetlib=name;
+		else
+		  dirNetlib = name+"/";
+		parameters[iParam].setStringValue(dirNetlib);
+	      } else {
+		parameters[iParam].printString();
+	      }
+	    }
+	    break;
+	  case DIRMIPLIB:
+	    {
+	      std::string name = CoinReadGetString(argc,argv);
+	      if (name!="EOL") {
+		int length=name.length();
+		if (name[length-1]=='/'||name[length-1]=='\\')
+		  dirMiplib=name;
+		else
+		  dirMiplib = name+"/";
+		parameters[iParam].setStringValue(dirMiplib);
+	      } else {
+		parameters[iParam].printString();
+	      }
+	    }
+	    break;
 	  case STDIN:
 	    CbcOrClpRead_mode=-1;
 	    break;
@@ -1371,14 +1433,15 @@ int main (int argc, const char *argv[])
 	    {
 	      // create fields for unitTest
 	      const char * fields[4];
-	      int nFields=2;
+	      int nFields=4;
 	      fields[0]="fake main from unitTest";
-	      fields[1]="-netlib";
-	      if (directory!=defaultDirectory) {
-		fields[2]="-netlibDir";
-		fields[3]=directory.c_str();
-		nFields=4;
-	      }
+	      std::string mpsfield = "-mpsDir=";
+	      mpsfield += dirSample.c_str();
+	      fields[1]=mpsfield.c_str();
+	      std::string netfield = "-netlibDir=";
+	      netfield += dirNetlib.c_str();
+	      fields[2]=netfield.c_str();
+	      fields[3]="-netlib";
 	      int algorithm;
 	      if (type==NETLIB_DUAL) {
 		std::cerr<<"Doing netlib with dual algorithm"<<std::endl;
@@ -1407,14 +1470,12 @@ int main (int argc, const char *argv[])
 	  case UNITTEST:
 	    {
 	      // create fields for unitTest
-	      const char * fields[3];
-	      int nFields=1;
+	      const char * fields[2];
+	      int nFields=2;
 	      fields[0]="fake main from unitTest";
-	      if (directory!=defaultDirectory) {
-		fields[1]="-mpsDir";
-		fields[2]=directory.c_str();
-		nFields=3;
-	      }
+	      std::string dirfield = "-mpsDir=";
+	      dirfield += dirSample.c_str();
+	      fields[1]=dirfield.c_str();
               int specialOptions = models[iModel].specialOptions();
               models[iModel].setSpecialOptions(0);
               int algorithm=-1;

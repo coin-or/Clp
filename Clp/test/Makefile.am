@@ -14,8 +14,13 @@ AUTOMAKE_OPTIONS = foreign
 
 # We are using the CLP solver executable to do the unit test
 test: ../src/clp$(EXEEXT)
-	cd ../../Data/Netlib; $(MAKE) uncompress
-	../src/clp$(EXEEXT) -unitTest -netlib -netlibp
+	if test x"$(DIRNETLIB)" != x; then \
+		NETLIBARG="-dirNetlib $(DIRNETLIB) -netlib"; \
+	fi; \
+	if test x"$(DIRSAMPLE)" != x; then \
+		SAMPLEARG="-dirSample $(DIRSAMPLE)"; \
+	fi; \
+	../src/clp$(EXEEXT) $$SAMPLEARG -unitTest $$NETLIBARG
 
 .PHONY: test
 

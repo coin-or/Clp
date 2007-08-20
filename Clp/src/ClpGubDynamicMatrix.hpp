@@ -46,6 +46,8 @@ public:
       expensive.  This may re-compute */
   virtual double * rhsOffset(ClpSimplex * model,bool forceRefresh=false,
 				bool check=false);
+
+  using ClpPackedMatrix::times ;
     /** Return <code>y + A * scalar *x</code> in <code>y</code>.
         @pre <code>x</code> must be of size <code>numColumns()</code>
         @pre <code>y</code> must be of size <code>numRows()</code> */
@@ -125,10 +127,10 @@ public:
   inline int * row() const
   { return row_;}
   /// elements
-  inline float * element() const
+  inline double * element() const
   { return element_;}
   /// costs
-  inline float * cost() const
+  inline double * cost() const
   { return cost_;}
   /// full starts
   inline int * fullStart() const
@@ -137,16 +139,16 @@ public:
   inline int * id() const
   { return id_;}
   /// Optional lower bounds on columns
-  inline float * lowerColumn() const
+  inline double * lowerColumn() const
   { return lowerColumn_;}
   /// Optional upper bounds on columns
-  inline float * upperColumn() const
+  inline double * upperColumn() const
   { return upperColumn_;}
   /// Optional true lower bounds on sets
-  inline float * lowerSet() const
+  inline double * lowerSet() const
   { return lowerSet_;}
   /// Optional true upper bounds on sets
-  inline float * upperSet() const
+  inline double * upperSet() const
   { return upperSet_;}
   /// size
   inline int numberGubColumns() const
@@ -188,9 +190,9 @@ protected:
   /// rows
   int * row_;
   /// elements
-  float * element_;
+  double * element_;
   /// costs
-  float * cost_;
+  double * cost_;
   /// full starts
   int * fullStart_;
   /// ids of active columns (just index here)
@@ -198,13 +200,13 @@ protected:
   /// for status and which bound
   unsigned char * dynamicStatus_;
   /// Optional lower bounds on columns
-  float * lowerColumn_;
+  double * lowerColumn_;
   /// Optional upper bounds on columns
-  float * upperColumn_;
+  double * upperColumn_;
   /// Optional true lower bounds on sets
-  float * lowerSet_;
+  double * lowerSet_;
   /// Optional true upper bounds on sets
-  float * upperSet_;
+  double * upperSet_;
   /// size
   int numberGubColumns_;
   /// first free

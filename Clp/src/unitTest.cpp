@@ -480,8 +480,13 @@ int mainTest (int argc, const char *argv[],int algorithm,
       if (!empty.numberRows()||algorithm<6) {
         // Read data mps file,
         CoinMpsIO mps;
-        mps.readMps(fn.c_str(),"mps");
-        solutionBase.loadProblem(*mps.getMatrixByCol(),mps.getColLower(),
+	int nerrors=mps.readMps(fn.c_str(),"mps");
+	if (nerrors) {
+	  std::cerr << "Error " << nerrors << " when reading model from "
+		    << fn.c_str() << "! Aborting tests.\n";
+	  return 1;
+	}
+	solutionBase.loadProblem(*mps.getMatrixByCol(),mps.getColLower(),
                                  mps.getColUpper(),
                                  mps.getObjCoefficients(),
                                  mps.getRowLower(),mps.getRowUpper());
@@ -997,11 +1002,11 @@ ClpSimplexUnitTest(const std::string & mpsDir,
   // test steepest edge
   {    
     CoinMpsIO m;
-    std::string fn = netlibDir+"finnis";
+    std::string fn = mpsDir+"finnis";
     int returnCode = m.readMps(fn.c_str(),"mps");
     if (returnCode) {
       // probable cause is that gz not there
-      fprintf(stderr,"Unable to open finnis.mps in COIN/Mps/Netlib!\n");
+      fprintf(stderr,"Unable to open finnis.mps in %s\n", mpsDir.c_str());
       fprintf(stderr,"Most probable cause is finnis.mps is gzipped i.e. finnis.mps.gz and libz has not been activated\n");
       fprintf(stderr,"Either gunzip files or edit Makefiles/Makefile.location to get libz\n");
       exit(999);
@@ -1027,7 +1032,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
   // test normal solution
   {    
     CoinMpsIO m;
-    std::string fn = netlibDir+"afiro";
+    std::string fn = mpsDir+"afiro";
     m.readMps(fn.c_str(),"mps");
     ClpSimplex solution;
     ClpModel model;
@@ -1114,7 +1119,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
   // test unbounded
   {    
     CoinMpsIO m;
-    std::string fn = netlibDir+"brandy";
+    std::string fn = mpsDir+"brandy";
     m.readMps(fn.c_str(),"mps");
     ClpSimplex solution;
     // do twice - without and with scaling
@@ -1186,7 +1191,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
   // test infeasible
   {    
     CoinMpsIO m;
-    std::string fn = netlibDir+"brandy";
+    std::string fn = mpsDir+"brandy";
     m.readMps(fn.c_str(),"mps");
     ClpSimplex solution;
     // do twice - without and with scaling
@@ -1275,7 +1280,7 @@ ClpSimplexUnitTest(const std::string & mpsDir,
   // test delete and add
   {    
     CoinMpsIO m;
-    std::string fn = netlibDir+"brandy";
+    std::string fn = mpsDir+"brandy";
     m.readMps(fn.c_str(),"mps");
     ClpSimplex solution;
     solution.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),

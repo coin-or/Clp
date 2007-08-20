@@ -1064,13 +1064,13 @@ Clp_getObjValue(Clp_Simplex * model)
   return model->model_->getObjValue();
 }
 /* Get variable basis info */
-COINLIBAPI const int COINLINKAGE
+COINLIBAPI int COINLINKAGE
 Clp_getColumnStatus(Clp_Simplex * model,int sequence)
 {
   return (int) model->model_->getColumnStatus(sequence);
 }
 /* Get row basis info */
-COINLIBAPI const int COINLINKAGE
+COINLIBAPI int COINLINKAGE
 Clp_getRowStatus(Clp_Simplex * model,int sequence)
 {
   return (int) model->model_->getRowStatus(sequence);
