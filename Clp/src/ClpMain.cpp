@@ -1357,8 +1357,9 @@ int main (int argc, const char *argv[])
 	      int numberRows=models[iModel].numberRows();
 	      double * dualRowSolution = 
 		models[iModel].dualRowSolution();
-	      for (iRow=0;iRow<numberRows;iRow++) 
+	      for (iRow=0;iRow<numberRows;iRow++) {
 		dualRowSolution[iRow] = -dualRowSolution[iRow];
+	      }
               models[iModel].setObjectiveOffset(-models[iModel].objectiveOffset());
 	    }
 	    break;
@@ -1367,10 +1368,11 @@ int main (int argc, const char *argv[])
 	      std::string name = CoinReadGetString(argc,argv);
 	      if (name!="EOL") {
 		int length=name.length();
-		if (name[length-1]==dirsep)
+		if (name[length-1]==dirsep) {
 		  directory = name;
-		else
+		} else {
 		  directory = name+dirsep;
+		}
 		parameters[iParam].setStringValue(directory);
 	      } else {
 		parameters[iParam].printString();
@@ -1382,10 +1384,11 @@ int main (int argc, const char *argv[])
 	      std::string name = CoinReadGetString(argc,argv);
 	      if (name!="EOL") {
 		int length=name.length();
-		if (name[length-1]==dirsep)
+		if (name[length-1]==dirsep) {
 		  dirSample = name;
-		else
+		} else {
 		  dirSample = name+dirsep;
+		}
 		parameters[iParam].setStringValue(dirSample);
 	      } else {
 		parameters[iParam].printString();
@@ -1397,10 +1400,11 @@ int main (int argc, const char *argv[])
 	      std::string name = CoinReadGetString(argc,argv);
 	      if (name!="EOL") {
 		int length=name.length();
-		if (name[length-1]==dirsep)
+		if (name[length-1]==dirsep) {
 		  dirNetlib = name;
-		else
+		} else {
 		  dirNetlib = name+dirsep;
+		}
 		parameters[iParam].setStringValue(dirNetlib);
 	      } else {
 		parameters[iParam].printString();
@@ -1412,10 +1416,11 @@ int main (int argc, const char *argv[])
 	      std::string name = CoinReadGetString(argc,argv);
 	      if (name!="EOL") {
 		int length=name.length();
-		if (name[length-1]==dirsep)
+		if (name[length-1]==dirsep) {
 		  dirMiplib = name;
-		else
+		} else {
 		  dirMiplib = name+dirsep;
+		}
 		parameters[iParam].setStringValue(dirMiplib);
 	      } else {
 		parameters[iParam].printString();
