@@ -6053,6 +6053,7 @@ ClpSimplex::loadProblem (  CoinModel & modelObject, bool keepSolution)
     delete [] psol;
     delete [] dsol;
   }
+  optimizationDirection_ = modelObject.optimizationDirection();  
   return returnCode;
 }
 #endif

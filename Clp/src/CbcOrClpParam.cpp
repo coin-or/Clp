@@ -1863,7 +1863,7 @@ stopping",
 #ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("maxN!odes","Maximum number of nodes to do",
-		  0,2147483647,MAXNODES);
+		  -1,2147483647,MAXNODES);
   parameters[numberParameters-1].setLonghelp
     (
      "This is a repeatable way to limit search.  Normally using time is easier \
@@ -2692,7 +2692,7 @@ Look for USERCBC in main driver and modify sample code."
 #ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("vub!heuristic","Type of vub heuristic",
-		  -2,10,VUBTRY,false);
+		  -2,20,VUBTRY,false);
   parameters[numberParameters-1].setLonghelp
     (
      "If set will try and fix some integer variables"

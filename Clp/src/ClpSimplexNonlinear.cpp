@@ -1298,7 +1298,7 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
       // get direction vector in longArray
       longArray->clear();
       // take out comment to try slightly different idea
-      if (nPasses+nTotalPasses>3000)
+      if (nPasses+nTotalPasses>3000||nBigPasses>200)
 	break;
       if (!nPasses) {
 	numberNonBasic=0;
@@ -3336,6 +3336,12 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
     // no nonlinear constraints - may be nonlinear objective
     return primalSLP(numberPasses,deltaTolerance);
   }
+  // Are we minimizing or maximizing
+  double whichWay=optimizationDirection();
+  if (whichWay<0.0)
+    whichWay=-1.0;
+  else if (whichWay>0.0)
+    whichWay=1.0;
   // check all matrix for odd rows is empty
   int iConstraint;
   int numberBad=0;
@@ -3354,7 +3360,7 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
   // Penalties may be adjusted by duals
   // Both these should be modified depending on problem
   // Possibly start with big bounds
-  double penalties[]={1.0e-2,1.0,1.0e9};
+  double penalties[]={1.0e-2,1.0e3,1.0e9};
   //double bounds[] = {1.0e-2,1.0,COIN_DBL_MAX};
   double bounds[] = {1.0e-1,1.0e2,COIN_DBL_MAX};
   // see how many extra we need
@@ -3526,6 +3532,12 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
   delete [] newElement;
   delete [] mark;
   // get feasible
+  if (whichWay<0.0) {
+    newModel.setOptimizationDirection(1.0);
+    double * objective = newModel.objective();
+    for (int iColumn=0;iColumn<numberColumns_;iColumn++) 
+      objective[iColumn] = - objective[iColumn];
+  }
   newModel.primal(1);
   // still infeasible
   if (newModel.problemStatus()==1) {
@@ -3557,6 +3569,7 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
   double objectiveOffset;
   double objectiveOffset2;
   getDblParam(ClpObjOffset,objectiveOffset);
+  objectiveOffset *= whichWay;
   for (jNon=0;jNon<numberNonLinearColumns;jNon++) {
     iColumn=listNonLinearColumn[jNon];
     double upper = columnUpper[iColumn];
@@ -3596,6 +3609,11 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
   int numberZeroPasses=0;
   bool zeroTargetDrop=false;
   double * gradient = new double [numberColumns_];
+  // keep sum of artificials
+#define KEEP_SUM 5
+  double sumArt[KEEP_SUM];
+  for (jNon=0;jNon<KEEP_SUM;jNon++)
+    sumArt[jNon]=COIN_DBL_MAX;
 #define SMALL_FIX 0.0
   for (iPass=0;iPass<numberPasses;iPass++) {
     objectiveOffset2 = objectiveOffset;
@@ -3645,6 +3663,10 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
       memcpy(objective,objective_->gradient(this,solution,offset,true,2),
 	     numberColumns_*sizeof(double));
     }
+    if (whichWay<0.0) {
+      for (int iColumn=0;iColumn<numberColumns_;iColumn++) 
+	objective[iColumn] = - objective[iColumn];
+    }
     for (iConstraint=0;iConstraint<numberConstraints;iConstraint++) {
       ClpConstraint * constraint = constraints[iConstraint];
       int iRow = constraint->rowNumber();
@@ -3693,6 +3715,23 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
     }
     printf("%d artificial infeasibilities - summing to %g\n",
 	   numberInfeas,sumInfeas);
+    for (jNon=0;jNon<KEEP_SUM-1;jNon++)
+      sumArt[jNon]=sumArt[jNon+1];
+    sumArt[KEEP_SUM-1]=sumInfeas;
+    if (sumInfeas>0.01&&sumInfeas*1.1>sumArt[0]&&objective[numberColumns_+1]<1.0e5) {
+      // not doing very well - increase - be more sophisticated later
+      lastObjective=COIN_DBL_MAX;
+      for (jNon=0;jNon<KEEP_SUM;jNon++)
+	sumArt[jNon]=COIN_DBL_MAX;
+      for (iColumn=numberColumns_;iColumn<numberColumns2;iColumn+=SEGMENTS) {
+	objective[iColumn+1] *= 1.5;
+      }
+      for (jNon=0;jNon<numberNonLinearColumns;jNon++) 
+	if (trust[jNon]>0.1)
+	  trust[jNon] *= 2.0;
+	else
+	  trust[jNon] = 0.1;
+    }
     double infValue=0.0;
     double objValue=0.0;
     // make sure x updated
@@ -3708,6 +3747,7 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
     } else {
       objValue=objective_->objectiveValue(this,solution);
     }
+    objValue *= whichWay;
     double infPenalty=0.0;
     // This penalty is for target drop
     double infPenalty2=0.0;
@@ -3810,11 +3850,11 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
     // adjust last objective value
     lastObjective += objectiveAdjustment;
     if (infValue)
-      printf("Sum infeasibilities %g - penalty %g",infValue,infPenalty);
+      printf("Sum infeasibilities %g - penalty %g ",infValue,infPenalty);
     if (objectiveOffset2)
-      printf("offset2 %g\n",objectiveOffset2);
+      printf("offset2 %g ",objectiveOffset2);
     objValue -= objectiveOffset2;
-    printf("True objective %g\n",objValue);
+    printf("True objective %g or maybe %g\n",objValue,objValue+objectiveOffset2);
     objValue += infPenalty+infPenalty2;
     if (iPass) {
       double drop = lastObjective-objValue;
