@@ -1298,8 +1298,11 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
       // get direction vector in longArray
       longArray->clear();
       // take out comment to try slightly different idea
-      if (nPasses+nTotalPasses>3000||nBigPasses>200)
+      if (nPasses+nTotalPasses>3000||nBigPasses>100) {
+	if (factorization_->pivots())
+	  returnCode=3;
 	break;
+      }
       if (!nPasses) {
 	numberNonBasic=0;
 	nBigPasses++;
