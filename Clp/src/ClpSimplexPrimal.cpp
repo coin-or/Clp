@@ -661,7 +661,8 @@ ClpSimplexPrimal::whileIterating(int valuesOption)
 	problemStatus_=-2; // looks unbounded but has iterated
       } else if (returnCode!=-1) {
 	assert(returnCode==3);
-	problemStatus_=3;
+	if (problemStatus_!=5)
+	  problemStatus_=3;
       }
     } else {
       // no pivot column
@@ -2887,7 +2888,7 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
       if (status>=0) {
 	problemStatus_=5;
 	secondaryStatus_=ClpEventHandler::endOfIteration;
-	returnCode=4;
+	returnCode=3;
       }
     }
   }

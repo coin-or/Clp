@@ -3363,9 +3363,9 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
   // Penalties may be adjusted by duals
   // Both these should be modified depending on problem
   // Possibly start with big bounds
-  double penalties[]={1.0e-2,1.0e3,1.0e9};
+  double penalties[]={1.0e-3,1.0e7,1.0e9};
   //double bounds[] = {1.0e-2,1.0,COIN_DBL_MAX};
-  double bounds[] = {1.0e-1,1.0e2,COIN_DBL_MAX};
+  double bounds[] = {1.0e-2,1.0e2,COIN_DBL_MAX};
   // see how many extra we need
   CoinBigIndex numberExtra=0;
   for (iConstraint=0;iConstraint<numberConstraints;iConstraint++) {
@@ -3399,6 +3399,7 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
     objective_=trueObjective;
   }
   int numberColumns2 = numberColumns_;
+  int numberSmallGap = numberArtificials;
   if (numberArtificials) {
     numberArtificials *= SEGMENTS;
     numberColumns2 += numberArtificials;
@@ -3443,7 +3444,7 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
     //    newModel.primal(1);
   }
   // find nonlinear columns
-  int * listNonLinearColumn = new int [numberColumns_];
+  int * listNonLinearColumn = new int [numberColumns_+numberSmallGap];
   char * mark = new char[numberColumns_];
   memset(mark,0,numberColumns_);
   for (iConstraint=0;iConstraint<numberConstraints;iConstraint++) {
@@ -3457,6 +3458,10 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
   for (iColumn=0;iColumn<numberColumns_;iColumn++) {
     if (mark[iColumn])
       listNonLinearColumn[numberNonLinearColumns++]=iColumn;
+  }
+  // and small gap artificials
+  for (iColumn=numberColumns_;iColumn<numberColumns2;iColumn+=SEGMENTS) {
+    listNonLinearColumn[numberNonLinearColumns++]=iColumn;
   }
   // build row copy of matrix with space for nonzeros
   // Get column copy
@@ -3600,6 +3605,8 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
   bool tryFix=false;
   int iPass;
   double lastObjective=1.0e31;
+  double lastGoodObjective=1.0e31;
+  double * bestSolution = NULL;
   double * saveSolution = new double [numberColumns2+numberRows];
   char * saveStatus = new char [numberColumns2+numberRows];
   double targetDrop=1.0e31;
@@ -3721,14 +3728,15 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
     for (jNon=0;jNon<KEEP_SUM-1;jNon++)
       sumArt[jNon]=sumArt[jNon+1];
     sumArt[KEEP_SUM-1]=sumInfeas;
-    if (sumInfeas>0.01&&sumInfeas*1.1>sumArt[0]&&objective[numberColumns_+1]<1.0e5) {
+    if (sumInfeas>0.01&&sumInfeas*1.1>sumArt[0]&&penalties[1]<1.0e7) {
       // not doing very well - increase - be more sophisticated later
       lastObjective=COIN_DBL_MAX;
       for (jNon=0;jNon<KEEP_SUM;jNon++)
 	sumArt[jNon]=COIN_DBL_MAX;
-      for (iColumn=numberColumns_;iColumn<numberColumns2;iColumn+=SEGMENTS) {
-	objective[iColumn+1] *= 1.5;
-      }
+      //for (iColumn=numberColumns_;iColumn<numberColumns2;iColumn+=SEGMENTS) {
+      //objective[iColumn+1] *= 1.5;
+      //}
+      penalties[1] *= 1.5;
       for (jNon=0;jNon<numberNonLinearColumns;jNon++) 
 	if (trust[jNon]>0.1)
 	  trust[jNon] *= 2.0;
@@ -3857,8 +3865,11 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
     if (objectiveOffset2)
       printf("offset2 %g ",objectiveOffset2);
     objValue -= objectiveOffset2;
-    printf("True objective %g or maybe %g\n",objValue,objValue+objectiveOffset2);
+    printf("True objective %g or maybe %g (with penalty %g) -pen2 %g %g\n",objValue,
+	   objValue+objectiveOffset2,objValue+objectiveOffset2+infPenalty,infPenalty2,penalties[1]);
+    double useObjValue = objValue+objectiveOffset2+infPenalty;
     objValue += infPenalty+infPenalty2;
+    objValue = useObjValue;
     if (iPass) {
       double drop = lastObjective-objValue;
       std::cout<<"True drop was "<<drop<<std::endl;
@@ -3953,6 +3964,18 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
 	       <<", smallest gap is "<<smallestGap
 	       <<", smallest nonlinear gap is "<<smallestNonLinearGap
 	       <<std::endl;
+      if (iPass>200) {
+	//double useObjValue = objValue+objectiveOffset2+infPenalty;
+	if (useObjValue+1.0e-4>	lastGoodObjective&&iPass>250) {
+	  std::cout<<"Exiting as objective not changing much"<<std::endl;
+	  break;
+	} else if (useObjValue<lastGoodObjective) {
+	  lastGoodObjective = useObjValue;
+	  if (!bestSolution)
+	    bestSolution = new double [numberColumns2];
+	  memcpy(bestSolution,solution,numberColumns2*sizeof(double));
+	}
+      }
       if (maxDelta<deltaTolerance&&!increasing&&iPass>100) {
 	numberZeroPasses++;
 	if (numberZeroPasses==3) {
@@ -4062,6 +4085,13 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
   delete [] trust;
   delete [] trueUpper;
   delete [] trueLower;
+  objectiveValue_=newModel.objectiveValue();
+  if (bestSolution) {
+    memcpy(solution,bestSolution,numberColumns2*sizeof(double));
+    delete [] bestSolution;
+    printf("restoring objective of %g\n",lastGoodObjective);
+    objectiveValue_=lastGoodObjective;
+  }
   // Simplest way to get true row activity ?
   double * rowActivity = newModel.primalRowSolution();
   for (iRow=0;iRow<numberRows;iRow++) {
@@ -4082,7 +4112,6 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
   delete [] listNonLinearColumn;
   delete [] gradient;
   printf("solution still in newModel - do objective etc!\n");
-  objectiveValue_=newModel.objectiveValue();
   numberIterations_ =newModel.numberIterations();
   problemStatus_ =newModel.problemStatus();
   secondaryStatus_ =newModel.secondaryStatus();
