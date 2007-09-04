@@ -1086,7 +1086,7 @@ ClpSimplexNonlinear::directionVector (CoinIndexedVector * vectorArray,
 	  
       case basic:
       case ClpSimplex::isFixed:
-	abort();
+	continue; //abort();
 	break;
       case atUpperBound:
 	if (dj_[iSequence]>dualTolerance_) {
