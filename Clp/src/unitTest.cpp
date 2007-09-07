@@ -983,6 +983,96 @@ ClpSimplexUnitTest(const std::string & dirSample)
       }
       printf("\n");
     }
+    /* Do twice -
+       without and with scaling
+    */
+    // set scaling off
+    model.scaling(0);
+    for (int iPass=0;iPass<2;iPass++) {
+      model.primal(0,3+4); // keep factorization
+      const double * rowScale = model.rowScale();
+      const double * columnScale = model.columnScale();
+      if (!iPass)
+        assert (!rowScale);
+      else
+        assert (rowScale); // only true for this example
+      /* has to be exactly correct as in OsiClpsolverInterface.cpp
+         (also redo each pass as may change
+      */
+      printf("B-1 A");
+      for( i = 0; i < n_rows; i++){
+        model.getBInvARow(i, binvA,binvA+n_cols);
+        printf("\nrow: %d -> ",i);
+        int j;
+        // First columns
+        for(j=0; j < n_cols; j++){
+	  if (binvA[j]) {
+	    printf("(%d %g), ", j, binvA[j]);
+	  }
+        }
+        // now rows
+        for(j=0; j < n_rows; j++){
+	  if (binvA[j+n_cols]) {
+	    printf("(%d %g), ", j+n_cols, binvA[j+n_cols]);
+	  }
+        }
+      }
+      printf("\n");
+      printf("And by column (trickier)");
+      const int * pivotVariable = model.pivotVariable();
+      for( i = 0; i < n_cols+n_rows; i++){
+        model.getBInvACol(i, binvA);
+        printf("\ncolumn: %d -> ",i);
+        for(int j=0; j < n_rows; j++){
+	  if (binvA[j]) {
+	    // need to know pivot variable for +1/-1 (slack) and row/column scaling
+	    int pivot = pivotVariable[j];
+	    if (pivot<n_cols) {
+	      // scaled coding is in just in case 
+	      if (!columnScale) {
+		printf("(%d %g), ", j, binvA[j]);
+	      } else {
+		printf("(%d %g), ", j, binvA[j]*columnScale[pivot]);
+	      }
+	    } else {
+	      if (!rowScale) {
+		printf("(%d %g), ", j, binvA[j]);
+	      } else {
+		printf("(%d %g), ", j, binvA[j]/rowScale[pivot-n_cols]);
+	      }
+	    }
+	  }
+        }
+      }
+      printf("\n");
+      printf("binvrow");
+      for( i = 0; i < n_rows; i++){
+	model.getBInvRow(i, binvA);
+	printf("\nrow: %d -> ",i);
+	int j;
+	for (j=0;j<n_rows;j++) {
+	  if (binvA[j])
+	    printf("(%d %g), ", j, binvA[j]);
+	}
+      }
+      printf("\n");
+      printf("And by column ");
+      for( i = 0; i < n_rows; i++){
+	model.getBInvCol(i, binvA);
+	printf("\ncol: %d -> ",i);
+	int j;
+	for (j=0;j<n_rows;j++) {
+	  if (binvA[j])
+	    printf("(%d %g), ", j, binvA[j]);
+	}
+      }
+      printf("\n");
+      // now deal with next pass
+      if (!iPass) {
+	// get scaling for testing
+	model.scaling(1);
+      }
+    }
     free(binvA);
     model.setColUpper(1,2.0);
     model.dual(0,2+4); // use factorization and arrays

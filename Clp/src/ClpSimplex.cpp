@@ -8397,10 +8397,24 @@ ClpSimplex::getBInvRow(int row, double* z)
   // put +1 in row
   // But swap if pivot variable was slack as clp stores slack as -1.0
   double value = (pivotVariable_[row]<numberColumns_) ? 1.0 : -1.0;
-  // What about scaling ?
+  // but scale
+  if (rowScale_) {
+    int pivot = pivotVariable_[row];
+    if (pivot<numberColumns_) 
+      value *= columnScale_[pivot];
+    else
+      value /= rowScale_[pivot-numberColumns_];
+  }
   rowArray1->insert(row,value);
   factorization->updateColumnTranspose(rowArray0,rowArray1);
-  memcpy(z,rowArray1->denseVector(),numberRows()*sizeof(double));
+  if (!rowScale_) {
+    memcpy(z,rowArray1->denseVector(),numberRows_*sizeof(double));
+  } else {
+    double * array = rowArray1->denseVector();
+    for (int i=0;i<numberRows_;i++) {
+      z[i] = array[i] * rowScale_[i];
+    }
+  }
   rowArray1->clear();
 }
 
@@ -8474,7 +8488,6 @@ ClpSimplex::getBInvCol(int col, double* vec)
     printf("ClpSimplexPrimal or ClpSimplexDual must have been called with correct startFinishOption\n");
     abort();
   }
-  ClpFactorization * factorization = factorization_;
   CoinIndexedVector * rowArray0 = rowArray(0);
   CoinIndexedVector * rowArray1 = rowArray(1);
   rowArray0->clear();
@@ -8486,12 +8499,32 @@ ClpSimplex::getBInvCol(int col, double* vec)
   }
 #endif
   // put +1 in row
-  // But swap if pivot variable was slack as clp stores slack as -1.0
-  double value = (pivotVariable_[col]<numberColumns_) ? 1.0 : -1.0;
-  // What about scaling ?
+  // but scale
+  double value;
+  if (!rowScale_) {
+    value=1.0;
+  } else {
+    value = rowScale_[col];
+  }
   rowArray1->insert(col,value);
-  factorization->updateColumn(rowArray0,rowArray1,false);
-  memcpy(vec,rowArray1->denseVector(),numberRows()*sizeof(double));
+  factorization_->updateColumn(rowArray0,rowArray1,false);
+  // But swap if pivot variable was slack as clp stores slack as -1.0
+  double * array = rowArray1->denseVector();
+  if (!rowScale_) {
+    for (int i=0;i<numberRows_;i++) {
+      double multiplier = (pivotVariable_[i]<numberColumns_) ? 1.0 : -1.0;
+      vec[i] = multiplier * array[i];
+    }
+  } else {
+    for (int i=0;i<numberRows_;i++) {
+      int pivot = pivotVariable_[i];
+      double value = array[i];
+      if (pivot<numberColumns_) 
+	vec[i] = value * columnScale_[pivot];
+      else
+	vec[i] = - value / rowScale_[pivot-numberColumns_];
+    }
+  }
   rowArray1->clear();
 }
 
@@ -9283,6 +9316,29 @@ ClpSimplex::setPersistenceFlag(int value)
   }
   if (factorization_)
     factorization_->setPersistenceFlag(value);
+}
+// Move status and solution across
+void 
+ClpSimplex::moveInfo(const ClpSimplex & rhs, bool justStatus)
+{
+  objectiveValue_ = rhs.objectiveValue_;
+  numberIterations_ = rhs. numberIterations_;
+  problemStatus_ = rhs. problemStatus_;
+  secondaryStatus_ = rhs. secondaryStatus_;
+  assert (numberRows_ == rhs.numberRows_);
+  assert (numberColumns_ == rhs.numberColumns_);
+  if (!justStatus) {
+    delete [] status_;
+    if (rhs.status_) {
+      status_ = CoinCopyOfArray(rhs.status_,numberRows_+numberColumns_);
+    } else {
+      status_ = NULL;
+    }
+    memcpy(columnActivity_,rhs.columnActivity_,numberColumns_*sizeof(double));
+    memcpy(reducedCost_,rhs.reducedCost_,numberColumns_*sizeof(double));
+    memcpy(rowActivity_,rhs.rowActivity_,numberRows_*sizeof(double));
+    memcpy(dual_,rhs.dual_,numberRows_*sizeof(double));
+  }
 }
 // Create C++ lines to get to current state
 void 
