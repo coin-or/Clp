@@ -8815,6 +8815,56 @@ ClpSimplex::defaultFactorizationFrequency()
     setFactorizationFrequency(CoinMin(maximum,frequency));
   }
 }
+// Gets clean and emptyish factorization
+ClpFactorization * 
+ClpSimplex::getEmptyFactorization()
+{
+  if ((specialOptions_&65536)==0) {
+    assert (!factorization_);
+    factorization_=new ClpFactorization();
+  } else if (!factorization_) {
+    factorization_=new ClpFactorization();
+    factorization_->setPersistenceFlag(1);
+  } 
+  return factorization_;
+}
+// May delete or may make clean and emptyish factorization
+void 
+ClpSimplex::setEmptyFactorization()
+{
+  if (factorization_) {
+    factorization_->cleanUp();
+    if ((specialOptions_&65536)==0) {
+      delete factorization_;
+      factorization_=NULL;
+    } else if (factorization_) {
+      factorization_->almostDestructor();
+    }
+  }
+}
+// Move status and solution across
+void 
+ClpSimplex::moveInfo(const ClpSimplex & rhs, bool justStatus)
+{
+  objectiveValue_ = rhs.objectiveValue_;
+  numberIterations_ = rhs. numberIterations_;
+  problemStatus_ = rhs. problemStatus_;
+  secondaryStatus_ = rhs. secondaryStatus_;
+  assert (numberRows_ == rhs.numberRows_);
+  assert (numberColumns_ == rhs.numberColumns_);
+  if (!justStatus) {
+    delete [] status_;
+    if (rhs.status_) {
+      status_ = CoinCopyOfArray(rhs.status_,numberRows_+numberColumns_);
+    } else {
+      status_ = NULL;
+    }
+    memcpy(columnActivity_,rhs.columnActivity_,numberColumns_*sizeof(double));
+    memcpy(reducedCost_,rhs.reducedCost_,numberColumns_*sizeof(double));
+    memcpy(rowActivity_,rhs.rowActivity_,numberRows_*sizeof(double));
+    memcpy(dual_,rhs.dual_,numberRows_*sizeof(double));
+  }
+}
 // Create C++ lines to get to current state
 void 
 ClpSimplex::generateCpp( FILE * fp, bool defaultFactor)

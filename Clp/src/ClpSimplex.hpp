@@ -953,6 +953,12 @@ public:
   { return maximumBasic_;};
   /// Create C++ lines to get to current state
   void generateCpp( FILE * fp,bool defaultFactor=false);
+  /// Gets clean and emptyish factorization
+  ClpFactorization * getEmptyFactorization();
+  /// May delete or may make clean and emptyish factorization
+  void setEmptyFactorization();
+  /// Move status and solution across
+  void moveInfo(const ClpSimplex & rhs, bool justStatus=false);
   /** For advanced options
       1 - Don't keep changing infeasibility weight
       2 - Keep nonLinearCost round solves
