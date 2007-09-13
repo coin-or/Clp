@@ -154,6 +154,7 @@ include_HEADERS = \
 	ClpSimplexOther.hpp \
 	ClpSimplexPrimal.hpp \
 	ClpSolve.hpp \
+	CbcOrClpParam.hpp \
 	Idiot.hpp
 
 #############################################################################
