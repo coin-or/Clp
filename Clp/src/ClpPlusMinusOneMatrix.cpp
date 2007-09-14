@@ -26,7 +26,7 @@ ClpPlusMinusOneMatrix::ClpPlusMinusOneMatrix ()
   : ClpMatrixBase()
 {
   setType(12);
-  elements_ = NULL;
+  matrix_ = NULL;
   startPositive_ = NULL;
   startNegative_ = NULL;
   lengths_=NULL;
@@ -42,7 +42,7 @@ ClpPlusMinusOneMatrix::ClpPlusMinusOneMatrix ()
 ClpPlusMinusOneMatrix::ClpPlusMinusOneMatrix (const ClpPlusMinusOneMatrix & rhs) 
 : ClpMatrixBase(rhs)
 {  
-  elements_ = NULL;
+  matrix_ = NULL;
   startPositive_ = NULL;
   startNegative_ = NULL;
   lengths_=NULL;
@@ -74,7 +74,7 @@ ClpPlusMinusOneMatrix::ClpPlusMinusOneMatrix(int numberRows, int numberColumns,
   : ClpMatrixBase()
 {
   setType(12);
-  elements_ = NULL;
+  matrix_ = NULL;
   lengths_=NULL;
   numberRows_=numberRows;
   numberColumns_=numberColumns;
@@ -92,7 +92,7 @@ ClpPlusMinusOneMatrix::ClpPlusMinusOneMatrix (const CoinPackedMatrix & rhs)
   : ClpMatrixBase()
 {  
   setType(12);
-  elements_ = NULL;
+  matrix_ = NULL;
   startPositive_ = NULL;
   startNegative_ = NULL;
   lengths_=NULL;
@@ -173,7 +173,7 @@ ClpPlusMinusOneMatrix::ClpPlusMinusOneMatrix (const CoinPackedMatrix & rhs)
 //-------------------------------------------------------------------
 ClpPlusMinusOneMatrix::~ClpPlusMinusOneMatrix ()
 {
-  delete [] elements_;
+  delete matrix_;
   delete [] startPositive_;
   delete [] startNegative_;
   delete [] lengths_;
@@ -188,12 +188,12 @@ ClpPlusMinusOneMatrix::operator=(const ClpPlusMinusOneMatrix& rhs)
 {
   if (this != &rhs) {
     ClpMatrixBase::operator=(rhs);
-    delete [] elements_;
+    delete matrix_;
     delete [] startPositive_;
     delete [] startNegative_;
     delete [] lengths_;
     delete [] indices_;
-    elements_ = NULL;
+    matrix_ = NULL;
     startPositive_ = NULL;
     lengths_=NULL;
     indices_=NULL;
@@ -237,7 +237,7 @@ ClpPlusMinusOneMatrix::ClpPlusMinusOneMatrix (
 		       int numberColumns, const int * whichColumn)
 : ClpMatrixBase(rhs)
 {  
-  elements_ = NULL;
+  matrix_ = NULL;
   startPositive_ = NULL;
   startNegative_ = NULL;
   lengths_=NULL;
@@ -1041,13 +1041,28 @@ ClpPlusMinusOneMatrix::add(const ClpSimplex * model,double * array,
 CoinPackedMatrix * 
 ClpPlusMinusOneMatrix::getPackedMatrix() const 
 {
-  int numberMinor = (!columnOrdered_) ? numberColumns_ : numberRows_;
-  int numberMajor = (columnOrdered_) ? numberColumns_ : numberRows_;
-  return new CoinPackedMatrix(columnOrdered_,numberMinor,numberMajor,
+  if (!matrix_) {
+    int numberMinor = (!columnOrdered_) ? numberColumns_ : numberRows_;
+    int numberMajor = (columnOrdered_) ? numberColumns_ : numberRows_;
+    int numberElements = startPositive_[numberMajor];
+    double * elements = new double [numberElements];
+    CoinBigIndex j=0;
+    int i;
+    for (i=0;i<numberMajor;i++) {
+      for (;j<startNegative_[i];j++) {
+	elements[j]=1.0;
+      }
+      for (;j<startPositive_[i+1];j++) {
+	elements[j]=-1.0;
+      }
+    }
+    matrix_ =  new CoinPackedMatrix(columnOrdered_,numberMinor,numberMajor,
 			      getNumElements(),
-			      getElements(),indices_,
+			      elements,indices_,
 			      startPositive_,getVectorLengths());
-
+    delete [] elements;
+  }
+  return matrix_;
 }
 /* A vector containing the elements in the packed matrix. Note that there
    might be gaps in this list, entries that do not belong to any
@@ -1056,22 +1071,9 @@ ClpPlusMinusOneMatrix::getPackedMatrix() const
 const double * 
 ClpPlusMinusOneMatrix::getElements() const 
 {
-  if (!elements_) {
-    int numberMajor = (columnOrdered_) ? numberColumns_ : numberRows_;
-    int numberElements = startPositive_[numberMajor];
-    elements_ = new double [numberElements];
-    CoinBigIndex j=0;
-    int i;
-    for (i=0;i<numberMajor;i++) {
-      for (;j<startNegative_[i];j++) {
-	elements_[j]=1.0;
-      }
-      for (;j<startPositive_[i+1];j++) {
-	elements_[j]=-1.0;
-      }
-    }
-  }
-  return elements_;
+  if (!matrix_) 
+    getPackedMatrix();
+  return matrix_->getElements();
 }
 
 const CoinBigIndex * 
@@ -1122,8 +1124,8 @@ ClpPlusMinusOneMatrix::deleteCols(const int numDel, const int * indDel)
   // Get rid of temporary arrays
   delete [] lengths_;
   lengths_=NULL;
-  delete [] elements_;
-  elements_= NULL;
+  delete matrix_;
+  matrix_= NULL;
   CoinBigIndex * newPositive = new CoinBigIndex [newNumber+1];
   CoinBigIndex * newNegative = new CoinBigIndex [newNumber];
   int * newIndices = new int [newSize];
@@ -1190,8 +1192,8 @@ ClpPlusMinusOneMatrix::deleteRows(const int numDel, const int * indDel)
   // Get rid of temporary arrays
   delete [] lengths_;
   lengths_=NULL;
-  delete [] elements_;
-  elements_= NULL;
+  delete matrix_;
+  matrix_= NULL;
   int * newIndices = new int [newSize];
   newSize=0;
   int iColumn;
@@ -1333,8 +1335,8 @@ ClpPlusMinusOneMatrix::appendCols(int number, const CoinPackedVectorBase * const
   // Get rid of temporary arrays
   delete [] lengths_;
   lengths_=NULL;
-  delete [] elements_;
-  elements_= NULL;
+  delete matrix_;
+  matrix_= NULL;
   int numberNow = startPositive_[numberColumns_];
   CoinBigIndex * temp;
   temp = new CoinBigIndex [numberColumns_+1+number];
@@ -1403,8 +1405,8 @@ ClpPlusMinusOneMatrix::appendRows(int number, const CoinPackedVectorBase * const
   // Get rid of temporary arrays
   delete [] lengths_;
   lengths_=NULL;
-  delete [] elements_;
-  elements_= NULL;
+  delete matrix_;
+  matrix_= NULL;
   int numberNow = startPositive_[numberColumns_];
   int * newIndices = new int [numberNow+size];
   // Update starts and turn counts into positions
@@ -1631,9 +1633,9 @@ ClpPlusMinusOneMatrix::partialPricing(ClpSimplex * model, double startFraction, 
 void 
 ClpPlusMinusOneMatrix::releasePackedMatrix() const 
 {
-  delete [] elements_;
+  delete matrix_;
   delete [] lengths_;
-  elements_=NULL;
+  matrix_=NULL;
   lengths_=NULL;
 }
 /* Returns true if can combine transposeTimes and subsetTransposeTimes

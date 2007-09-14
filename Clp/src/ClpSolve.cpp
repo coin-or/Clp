@@ -671,6 +671,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
     if(numberElements>10000&&(doIdiot||doSprint)) 
       plusMinus=true;
   }
+  //plusMinus=true;
 #ifndef SLIM_CLP
   // Statistics (+1,-1, other) - used to decide on strategy if not +-1
   CoinBigIndex statistics[3]={-1,0,0};
@@ -2217,10 +2218,14 @@ ClpSimplex::initialSolve(ClpSolve & options)
     assert (method!=ClpSolve::automatic); // later
     time2=0.0;
   }
-  if (saveMatrix&&model2==this) {
-    // delete and replace
-    delete model2->clpMatrix();
-    model2->replaceMatrix(saveMatrix);
+  if (saveMatrix) {
+    if (model2==this) {
+      // delete and replace
+      delete model2->clpMatrix();
+      model2->replaceMatrix(saveMatrix);
+    } else {
+      delete saveMatrix;
+    }
   }
   numberIterations = model2->numberIterations();
   finalStatus=model2->status();
