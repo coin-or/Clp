@@ -963,6 +963,8 @@ public:
   ClpFactorization * getEmptyFactorization();
   /// May delete or may make clean and emptyish factorization
   void setEmptyFactorization();
+  /// Move status and solution across
+  void moveInfo(const ClpSimplex & rhs, bool justStatus=false);
   //@}
 
   ///@name Basis handling 

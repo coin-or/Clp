@@ -253,7 +253,7 @@ protected:
       The data members are protected to allow access for derived classes. */
    //@{
   /// For fake CoinPackedMatrix
-  mutable double * elements_;
+  mutable CoinPackedMatrix * matrix_;
   mutable int * lengths_;
   /// Start of +1's for each
   CoinBigIndex * startPositive_;
