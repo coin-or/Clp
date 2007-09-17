@@ -982,7 +982,7 @@ CoinReadGetCommand(int argc, const char *argv[])
   afterEquals="";
   while (field=="EOL") {
     if (CbcOrClpRead_mode>0) {
-      if (CbcOrClpRead_mode<argc) {
+      if (CbcOrClpRead_mode<argc&&argv[CbcOrClpRead_mode]) {
 	field = argv[CbcOrClpRead_mode++];
 	if (field=="-") {
 	  std::cout<<"Switching to line mode"<<std::endl;
