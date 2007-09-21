@@ -733,20 +733,40 @@ ClpSimplexOther::readBasis(const char *fileName)
   }
   return status;
 }
-// Creates dual of a problem
+/* Creates dual of a problem if looks plausible
+   (defaults will always create model)
+   fractionRowRanges is fraction of rows allowed to have ranges 
+   fractionColumnRanges is fraction of columns allowed to have ranges 
+*/
 ClpSimplex * 
-ClpSimplexOther::dualOfModel() const
+ClpSimplexOther::dualOfModel(double fractionRowRanges,double fractionColumnRanges) const
 {
   const ClpSimplex * model2 = (const ClpSimplex *) this;
   bool changed=false;
+  int numberChanged=0;
   int iColumn;
   // check if we need to change bounds to rows
   for (iColumn=0;iColumn<numberColumns_;iColumn++) {
     if (columnUpper_[iColumn]<1.0e20&&
         columnLower_[iColumn]>-1.0e20) {
       changed=true;
-      break;
+      numberChanged++;
     }
+  }
+  int iRow;
+  int numberExtraRows=0;
+  if (numberChanged<=fractionColumnRanges*numberColumns_) {
+    for (iRow=0;iRow<numberRows_;iRow++) {
+      if (rowLower_[iRow]>-1.0e20&&
+	  rowUpper_[iRow]<1.0e20) {
+	if (rowUpper_[iRow]!=rowLower_[iRow])
+	  numberExtraRows++;
+      }
+    }
+    if (numberExtraRows>fractionRowRanges*numberRows_)
+      return NULL;
+  } else {
+    return NULL;
   }
   if (changed) {
     ClpSimplex * model3 = new ClpSimplex(*model2);
@@ -783,15 +803,6 @@ ClpSimplexOther::dualOfModel() const
   CoinPackedMatrix * matrix = model2->matrix();
   // get transpose
   CoinPackedMatrix rowCopy = *matrix;
-  int iRow;
-  int numberExtraRows=0;
-  for (iRow=0;iRow<numberRows;iRow++) {
-    if (rowLower[iRow]>-1.0e20&&
-        rowUpper[iRow]<1.0e20) {
-      if (rowUpper[iRow]!=rowLower[iRow])
-         numberExtraRows++;
-    }
-  }
   const int * row = matrix->getIndices();
   const int * columnLength = matrix->getVectorLengths();
   const CoinBigIndex * columnStart = matrix->getVectorStarts();
@@ -896,6 +907,13 @@ ClpSimplexOther::dualOfModel() const
   modelDual->loadProblem(rowCopy,fromRowsLower,fromRowsUpper,newObjective,
                         fromColumnsLower,fromColumnsUpper);
   modelDual->setObjectiveOffset(objOffset);
+  modelDual->setDualBound(model2->dualBound());
+  modelDual->setInfeasibilityCost(model2->infeasibilityCost());
+  modelDual->setDualTolerance(model2->dualTolerance());
+  modelDual->setPrimalTolerance(model2->primalTolerance());
+  modelDual->setPerturbation(model2->perturbation());
+  modelDual->setSpecialOptions(model2->specialOptions());
+  modelDual->setMoreSpecialOptions(model2->moreSpecialOptions());
   delete [] fromRowsLower;
   delete [] fromRowsUpper;
   delete [] fromColumnsLower;

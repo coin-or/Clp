@@ -277,7 +277,7 @@ ClpFactorization::factorize ( ClpSimplex * model,
       // If network - still allow ordinary factorization first time for laziness
       if (networkMatrix)
 	biasLU_=0; // All to U if network
-      int saveMaximumPivots = maximumPivots();
+      //int saveMaximumPivots = maximumPivots();
       delete networkBasis_;
       networkBasis_ = NULL;
       if (networkMatrix&&!doCheck)
@@ -413,7 +413,14 @@ ClpFactorization::factorize ( ClpSimplex * model,
 	ClpDisjointCopyN ( permuteBack_.array(), useNumberRows , pivotColumnBack_.array()  );
 #ifndef SLIM_CLP
 	if (networkMatrix) {
-	  maximumPivots(saveMaximumPivots);
+	  maximumPivots(CoinMax(2000,maximumPivots()));
+	  // redo arrays
+	  for (int iRow=0;iRow<4;iRow++) {
+	    int length =model->numberRows()+maximumPivots();
+	    if (iRow==3||model->objectiveAsObject()->type()>1)
+	      length += model->numberColumns();
+	    model->rowArray(iRow)->reserve(length);
+	  }
 	  // create network factorization
 	  if (doCheck)
 	    delete networkBasis_; // temp
@@ -613,6 +620,7 @@ ClpFactorization::factorize ( ClpSimplex * model,
   } else {
     // network - fake factorization - do nothing
     status_=0;
+    numberPivots_ = 0;
   }
 #endif
 #ifndef SLIM_CLP

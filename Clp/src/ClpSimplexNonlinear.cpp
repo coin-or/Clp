@@ -3363,8 +3363,8 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
   // Penalties may be adjusted by duals
   // Both these should be modified depending on problem
   // Possibly start with big bounds
-  double penalties[]={1.0e-3,1.0e7,1.0e9};
-  //double bounds[] = {1.0e-2,1.0,COIN_DBL_MAX};
+  //double penalties[]={1.0e-3,1.0e7,1.0e9};
+  double penalties[]={1.0e7,1.0e8,1.0e9};
   double bounds[] = {1.0e-2,1.0e2,COIN_DBL_MAX};
   // see how many extra we need
   CoinBigIndex numberExtra=0;
@@ -3619,6 +3619,7 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
   int numberZeroPasses=0;
   bool zeroTargetDrop=false;
   double * gradient = new double [numberColumns_];
+  bool goneFeasible=false;
   // keep sum of artificials
 #define KEEP_SUM 5
   double sumArt[KEEP_SUM];
@@ -3743,6 +3744,12 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
 	else
 	  trust[jNon] = 0.1;
     }
+    if (sumInfeas<0.001&&!goneFeasible) {
+      goneFeasible=true;
+      penalties[0]=1.0e-3;
+      penalties[1]=1.0e6;
+      printf("Got feasible\n");
+    }
     double infValue=0.0;
     double objValue=0.0;
     // make sure x updated
@@ -3778,7 +3785,7 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
       int iRow = constraint->rowNumber();
       double functionValue=constraint->functionValue(this,solution);
       double dualValue = newModel.dualRowSolution()[iRow];
-      if (numberConstraints<50)
+      if (numberConstraints<-50)
 	printf("For row %d current value is %g (row activity %g) , dual is %g\n",iRow,functionValue,
 	       newModel.primalRowSolution()[iRow],
 	       dualValue);

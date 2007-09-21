@@ -44,7 +44,7 @@ ClpSimplex::ClpSimplex (bool emptyMessages) :
   rowPrimalSequence_(-2), 
   columnDualInfeasibility_(0.0),
   rowDualInfeasibility_(0.0),
-  moreSpecialOptions_(0),
+  moreSpecialOptions_(2),
   rowDualSequence_(-2),
   primalToleranceToGetOptimal_(-1.0),
   remainingDualInfeasibility_(0.0),
@@ -155,7 +155,7 @@ ClpSimplex::ClpSimplex ( const ClpModel * rhs,
   rowPrimalSequence_(-2), 
   columnDualInfeasibility_(0.0),
   rowDualInfeasibility_(0.0),
-  moreSpecialOptions_(0),
+  moreSpecialOptions_(2),
   rowDualSequence_(-2),
   primalToleranceToGetOptimal_(-1.0),
   remainingDualInfeasibility_(0.0),
@@ -1614,7 +1614,7 @@ ClpSimplex::ClpSimplex(const ClpSimplex &rhs,int scalingMode) :
   rowPrimalSequence_(-2), 
   columnDualInfeasibility_(0.0),
   rowDualInfeasibility_(0.0),
-  moreSpecialOptions_(0),
+  moreSpecialOptions_(2),
   rowDualSequence_(-2),
   primalToleranceToGetOptimal_(-1.0),
   remainingDualInfeasibility_(0.0),
@@ -1718,7 +1718,7 @@ ClpSimplex::ClpSimplex(const ClpModel &rhs, int scalingMode) :
   rowPrimalSequence_(-2), 
   columnDualInfeasibility_(0.0),
   rowDualInfeasibility_(0.0),
-  moreSpecialOptions_(0),
+  moreSpecialOptions_(2),
   rowDualSequence_(-2),
   primalToleranceToGetOptimal_(-1.0),
   remainingDualInfeasibility_(0.0),
@@ -4090,6 +4090,8 @@ ClpSimplex::tightenPrimalBounds(double factor,int doTight,bool tightIntegers)
   // Get a row copy in standard format
   CoinPackedMatrix copy;
   copy.reverseOrderedCopyOf(*matrix());
+  // Matrix may have been created so get rid of it
+  matrix_->releasePackedMatrix();
   // get matrix data pointers
   const int * column = copy.getIndices();
   const CoinBigIndex * rowStart = copy.getVectorStarts();
@@ -4589,6 +4591,7 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
   //double savedPivotTolerance = factorization_->pivotTolerance();
   int saveQuadraticActivated = objective_->activated();
   objective_->setActivated(0);
+  ClpObjective * saveObjective = objective_;
   CoinAssert (ifValuesPass>=0&&ifValuesPass<3);
   /*  Note use of "down casting".  The only class the user sees is ClpSimplex.
       Classes ClpSimplexDual, ClpSimplexPrimal, (ClpSimplexNonlinear) 
@@ -4601,11 +4604,13 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
       As far as I can see this is perfectly safe.
   */
   int returnCode = ((ClpSimplexDual *) this)->dual(ifValuesPass, startFinishOptions);
+  //int lastAlgorithm = -1;
   if ((specialOptions_&2048)!=0&&problemStatus_==10&&!numberPrimalInfeasibilities_
       &&sumDualInfeasibilities_<1000.0*dualTolerance_&&perturbation_>=100)
     problemStatus_=0; // ignore
   if (problemStatus_==10) {
     //printf("Cleaning up with primal\n");
+    //lastAlgorithm=1;
     int savePerturbation = perturbation_;
     int saveLog = handler_->logLevel();
     //handler_->setLogLevel(63);
@@ -4619,12 +4624,21 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
       intParam_[ClpMaxNumIteration] = numberIterations_ + 1000 + 2*numberRows_+numberColumns_;
     // check which algorithms allowed
     int dummy;
-    if (problemStatus_==10)
+    if (problemStatus_==10&&saveObjective==objective_)
       startFinishOptions |= 2;
     if ((matrix_->generalExpanded(this,4,dummy)&1)!=0)
       returnCode = ((ClpSimplexPrimal *) this)->primal(1,startFinishOptions);
     else
       returnCode = ((ClpSimplexDual *) this)->dual(0,startFinishOptions);
+    if (saveObjective != objective_) {
+      // We changed objective to see if infeasible
+      delete objective_;
+      objective_=saveObjective;
+      if (!problemStatus_) {
+	// carry on
+	returnCode = ((ClpSimplexPrimal *) this)->primal(1,startFinishOptions);
+      }
+    }
     if (problemStatus_==3&&numberIterations_<saveMax) {
       if (handler_->logLevel()==63)
 	printf("looks like trouble - too many iterations in clean up - trying again\n");
@@ -4685,6 +4699,8 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
   objective_->setActivated(saveQuadraticActivated);
   //factorization_->pivotTolerance(savedPivotTolerance);
   onStopped(); // set secondary status if stopped
+  //if (problemStatus_==1&&lastAlgorithm==1)
+  //returnCode=10; // so will do primal after postsolve
   return returnCode;
 }
 // primal 
@@ -4708,7 +4724,9 @@ int ClpSimplex::primal (int ifValuesPass , int startFinishOptions)
       As far as I can see this is perfectly safe.
   */
   int returnCode = ((ClpSimplexPrimal *) this)->primal(ifValuesPass,startFinishOptions);
+  //int lastAlgorithm=1;
   if (problemStatus_==10) {
+    //lastAlgorithm=-1;
     //printf("Cleaning up with dual\n");
     int savePerturbation = perturbation_;
     perturbation_=100;
@@ -4733,6 +4751,8 @@ int ClpSimplex::primal (int ifValuesPass , int startFinishOptions)
   }
   //factorization_->pivotTolerance(savedPivotTolerance);
   onStopped(); // set secondary status if stopped
+  //if (problemStatus_==1&&lastAlgorithm==1)
+  //returnCode=10; // so will do primal after postsolve
   return returnCode;
 }
 #ifndef SLIM_CLP

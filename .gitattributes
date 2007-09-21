@@ -25,6 +25,7 @@ Clp/clp_addlibs.txt.in -text
 Clp/configure -text
 Clp/configure.ac -text
 Clp/examples/Makefile.in -text
+Clp/examples/modify.cpp -text
 Clp/inc/config_clp.h.in -text
 Clp/src/ClpConstraint.cpp -text
 Clp/src/ClpConstraint.hpp -text

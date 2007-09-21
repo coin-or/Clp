@@ -162,8 +162,12 @@ public:
 		 int formatType=0) const;
     /// Read a basis from the given filename
     int readBasis(const char *filename);
-  /// Creates dual of a problem
-  ClpSimplex * dualOfModel() const;
+  /** Creates dual of a problem if looks plausible
+      (defaults will always create model)
+      fractionRowRanges is fraction of rows allowed to have ranges 
+      fractionColumnRanges is fraction of columns allowed to have ranges 
+  */
+  ClpSimplex * dualOfModel(double fractionRowRanges=1.0,double fractionColumnRanges=1.0) const;
   /** Restores solution from dualized problem
       non-zero return code indicates minor problems
   */

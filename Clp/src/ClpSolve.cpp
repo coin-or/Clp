@@ -642,13 +642,14 @@ ClpSimplex::initialSolve(ClpSolve & options)
   if (dynamic_cast< ClpNetworkMatrix*>(matrix_)) {
     // network - switch off stuff
     doIdiot=0;
-    doSprint=0;
+    if (doSprint<0)
+      doSprint=0;
   }
 #else
   if (matrix_->type()==11) {
     // network - switch off stuff
     doIdiot=0;
-    doSprint=0;
+    //doSprint=0;
   }
 #endif
 #endif
@@ -847,7 +848,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	// but make lightweight
 	if(numberRows*10>numberColumns||numberColumns<6000
 	   ||(numberRows*20>numberColumns&&!plusMinus))
-	  maxSprintPass=5;
+	  maxSprintPass=10;
       }
     } else if (doSprint==0) {
       method=ClpSolve::usePrimal; // switch off sprint
@@ -1329,6 +1330,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
     
     int originalNumberColumns = model2->numberColumns();
     int numberRows = model2->numberRows();
+    ClpSimplex * originalModel2 = model2;
     
     // We will need arrays to choose variables.  These are too big but ..
     double * weight = new double [numberRows+originalNumberColumns];
@@ -1383,7 +1385,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
     CoinZeroN (rowSolution,numberRows);
     model2->clpMatrix()->times(1.0,columnSolution,rowSolution);
     // See if we can adjust using costed slacks
-    double penalty=CoinMin(infeasibilityCost_,1.0e10)*optimizationDirection_;
+    double penalty=CoinMax(1.0e5,CoinMin(infeasibilityCost_*0.01,1.0e10))*optimizationDirection_;
     const double * lower = model2->rowLower();
     const double * upper = model2->rowUpper();
     for (iRow=0;iRow<numberRows;iRow++) {
@@ -1425,33 +1427,53 @@ ClpSimplex::initialSolve(ClpSolve & options)
     }
     delete [] negSlack;
     delete [] posSlack;
-    int * addStarts = new int [numberRows+1];
-    int * addRow = new int[numberRows];
-    double * addElement = new double[numberRows];
+    int nRow=numberRows;
+    bool network=false;
+    if (dynamic_cast< ClpNetworkMatrix*>(matrix_)) {
+      network=true;
+      nRow *= 2;
+    }
+    int * addStarts = new int [nRow+1];
+    int * addRow = new int[nRow];
+    double * addElement = new double[nRow];
     addStarts[0]=0;
     int numberArtificials=0;
+    int numberAdd=0;
     double * addCost = new double [numberRows];
     for (iRow=0;iRow<numberRows;iRow++) {
       if (lower[iRow]>rowSolution[iRow]+1.0e-8) {
-	addRow[numberArtificials]=iRow;
-	addElement[numberArtificials]=1.0;
+	addRow[numberAdd]=iRow;
+	addElement[numberAdd++]=1.0;
+	if (network) {
+	  addRow[numberAdd]=numberRows;
+	  addElement[numberAdd++]=-1.0;
+	}
 	addCost[numberArtificials]=penalty;
 	numberArtificials++;
-	addStarts[numberArtificials]=numberArtificials;
+	addStarts[numberArtificials]=numberAdd;
       } else if (upper[iRow]<rowSolution[iRow]-1.0e-8) {
-	addRow[numberArtificials]=iRow;
-	addElement[numberArtificials]=-1.0;
+	addRow[numberAdd]=iRow;
+	addElement[numberAdd++]=-1.0;
+	if (network) {
+	  addRow[numberAdd]=numberRows;
+	  addElement[numberAdd++]=1.0;
+	}
 	addCost[numberArtificials]=penalty;
 	numberArtificials++;
-	addStarts[numberArtificials]=numberArtificials;
+	addStarts[numberArtificials]=numberAdd;
       }
     }
     if (numberArtificials) {
       // need copy so as not to disturb original
       model2 = new ClpSimplex(*model2);
+      if (network) {
+	// network - add a null row
+	model2->addRow(0,NULL,NULL,-COIN_DBL_MAX,COIN_DBL_MAX);
+	numberRows++;
+      }
+      model2->addColumns(numberArtificials,NULL,NULL,addCost,
+			 addStarts,addRow,addElement);
     }
-    model2->addColumns(numberArtificials,NULL,NULL,addCost,
-		       addStarts,addRow,addElement);
     delete [] addStarts;
     delete [] addRow;
     delete [] addElement;
@@ -1566,6 +1588,9 @@ ClpSimplex::initialSolve(ClpSolve & options)
     double originalOffset;
     model2->getDblParam(ClpObjOffset,originalOffset);
     int totalIterations=0;
+    double lastSumArtificials=COIN_DBL_MAX;
+    int originalMaxSprintPass=maxSprintPass;
+    maxSprintPass=20; // so we do that many if infeasible
     for (iPass=0;iPass<maxSprintPass;iPass++) {
       //printf("Bug until submodel new version\n");
       //CoinSort_2(sort,sort+numberSort,weight);
@@ -1664,6 +1689,17 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	model2->setRowStatus(iRow,small.getRowStatus(iRow));
       CoinMemcpyN(small.primalRowSolution(),
 	     numberRows,model2->primalRowSolution());
+      double sumArtificials = 0.0;
+      for (i=0;i<numberArtificials;i++)
+	sumArtificials += fullSolution[i + originalNumberColumns];
+      if (sumArtificials&&iPass>5&&sumArtificials>=lastSumArtificials) {
+	// increase costs
+	double * cost = model2->objective()+originalNumberColumns;
+	double newCost = CoinMin(1.0e10,cost[0]*1.5);
+	for (i=0;i<numberArtificials;i++)
+	  cost[i]=newCost;
+      }
+      lastSumArtificials = sumArtificials;
       // get reduced cost for large problem
       double * djs = model2->dualColumnSolution();
       CoinMemcpyN(model2->objective(),numberColumns,djs);
@@ -1690,7 +1726,13 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	<<iPass+1<<small.numberIterations()<<small.objectiveValue()<<sumNegative
 	<<numberNegative
 	<<CoinMessageEol;
-      if ((small.objectiveValue()*optimizationDirection_>lastObjective-1.0e-7&&iPass>5)||
+      if (sumArtificials<1.0e-8&&originalMaxSprintPass>=0) {
+	maxSprintPass = iPass+originalMaxSprintPass;
+	originalMaxSprintPass=-1;
+      }
+      if (iPass>20)
+	sumArtificials=0.0;
+      if ((small.objectiveValue()*optimizationDirection_>lastObjective-1.0e-7&&iPass>5&&sumArtificials<1.0e-8)||
 	  (!small.numberIterations()&&iPass)||
 	  iPass==maxSprintPass-1||small.status()==3) {
 	
@@ -1732,6 +1774,10 @@ ClpSimplex::initialSolve(ClpSolve & options)
     for (i=0;i<numberArtificials;i++)
       sort[i] = i + originalNumberColumns;
     model2->deleteColumns(numberArtificials,sort);
+    if (network) {
+      int iRow=numberRows-1;
+      model2->deleteRows(1,&iRow);
+    }
     delete [] weight;
     delete [] sort;
     delete [] whichRows;
@@ -1752,6 +1798,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
       delete [] saveUpper;
     }
     model2->primal(1);
+    if (model2!=originalModel2)
+      originalModel2->moveInfo(*model2);
     model2->setPerturbation(savePerturbation);
     time2 = CoinCpuTime();
     timeCore = time2-timeX;

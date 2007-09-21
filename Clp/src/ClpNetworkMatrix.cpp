@@ -7,6 +7,7 @@
 #include "CoinPragma.hpp"
 #include "CoinIndexedVector.hpp"
 #include "CoinHelperFunctions.hpp"
+#include "CoinPackedVector.hpp"
 
 #include "ClpSimplex.hpp"
 #include "ClpFactorization.hpp"
@@ -15,6 +16,7 @@
 #include "ClpPlusMinusOneMatrix.hpp"
 #include "ClpMessage.hpp"
 #include <iostream>
+#include <cassert>
 
 //#############################################################################
 // Constructors / Destructor / Assignment
@@ -27,8 +29,7 @@ ClpNetworkMatrix::ClpNetworkMatrix ()
   : ClpMatrixBase()
 {
   setType(11);
-  elements_ = NULL;
-  starts_ = NULL;
+  matrix_ = NULL;
   lengths_=NULL;
   indices_=NULL;
   numberRows_=0;
@@ -42,8 +43,7 @@ ClpNetworkMatrix::ClpNetworkMatrix(int numberColumns, const int * head,
   : ClpMatrixBase()
 {
   setType(11);
-  elements_ = NULL;
-  starts_ = NULL;
+  matrix_ = NULL;
   lengths_=NULL;
   indices_=new int[2*numberColumns];;
   numberRows_=-1;
@@ -67,8 +67,7 @@ ClpNetworkMatrix::ClpNetworkMatrix(int numberColumns, const int * head,
 ClpNetworkMatrix::ClpNetworkMatrix (const ClpNetworkMatrix & rhs) 
 : ClpMatrixBase(rhs)
 {  
-  elements_ = NULL;
-  starts_ = NULL;
+  matrix_ = NULL;
   lengths_=NULL;
   indices_=NULL;
   numberRows_=rhs.numberRows_;
@@ -90,8 +89,7 @@ ClpNetworkMatrix::ClpNetworkMatrix (const CoinPackedMatrix & rhs)
   : ClpMatrixBase()
 {  
   setType(11);
-  elements_ = NULL;
-  starts_ = NULL;
+  matrix_ = NULL;
   lengths_=NULL;
   indices_=NULL;
   int iColumn;
@@ -186,8 +184,7 @@ ClpNetworkMatrix::ClpNetworkMatrix (const CoinPackedMatrix & rhs)
 //-------------------------------------------------------------------
 ClpNetworkMatrix::~ClpNetworkMatrix ()
 {
-  delete [] elements_;
-  delete [] starts_;
+  delete matrix_;
   delete [] lengths_;
   delete [] indices_;
 }
@@ -200,12 +197,10 @@ ClpNetworkMatrix::operator=(const ClpNetworkMatrix& rhs)
 {
   if (this != &rhs) {
     ClpMatrixBase::operator=(rhs);
-    delete [] elements_;
-    delete [] starts_;
+    delete matrix_;
     delete [] lengths_;
     delete [] indices_;
-    elements_ = NULL;
-    starts_ = NULL;
+    matrix_ = NULL;
     lengths_=NULL;
     indices_=NULL;
     numberRows_=rhs.numberRows_;
@@ -668,11 +663,34 @@ ClpNetworkMatrix::add(const ClpSimplex * model,double * array,
 CoinPackedMatrix * 
 ClpNetworkMatrix::getPackedMatrix() const 
 {
-  return new CoinPackedMatrix(true,numberRows_,numberColumns_,
-			      2*numberColumns_,
-			      getElements(),indices_,
-			      getVectorStarts(),getVectorLengths());
-
+  if (!matrix_) {
+    assert (trueNetwork_); // fix later
+    int numberElements = 2*numberColumns_;
+    double * elements = new double [numberElements];
+    CoinBigIndex i;
+    for (i=0;i<2*numberColumns_;i+=2) {
+      elements[i]=-1.0;
+      elements[i+1]=1.0;
+    }
+    CoinBigIndex * starts = new CoinBigIndex [numberColumns_+1];
+    for (i=0;i<numberColumns_+1;i++) {
+      starts[i]=2*i;
+    }
+    // use assignMatrix to save space
+    delete [] lengths_;
+    lengths_ = NULL;
+    matrix_ = new CoinPackedMatrix();
+    int * indices = CoinCopyOfArray(indices_,2*numberColumns_);
+    matrix_->assignMatrix(true,numberRows_,numberColumns_,
+			  getNumElements(),
+			  elements,indices,
+			  starts,lengths_);
+    assert(!elements);
+    assert(!starts);
+    assert (!indices);
+    assert (!lengths_);
+  }
+  return matrix_;
 }
 /* A vector containing the elements in the packed matrix. Note that there
    might be gaps in this list, entries that do not belong to any
@@ -681,30 +699,17 @@ ClpNetworkMatrix::getPackedMatrix() const
 const double * 
 ClpNetworkMatrix::getElements() const 
 {
-  assert (trueNetwork_); // fix later
-  if (!elements_) {
-    elements_ = new double [2*numberColumns_];
-    int i;
-    for (i=0;i<2*numberColumns_;i+=2) {
-      elements_[i]=-1.0;
-      elements_[i+1]=1.0;
-    }
-  }
-  return elements_;
+  if (!matrix_) 
+    getPackedMatrix();
+  return matrix_->getElements();
 }
 
 const CoinBigIndex * 
 ClpNetworkMatrix::getVectorStarts() const 
 {
-  assert (trueNetwork_); // fix later
-  if (!starts_) {
-    starts_ = new CoinBigIndex [numberColumns_+1];
-    int i;
-    for (i=0;i<numberColumns_+1;i++) {
-      starts_[i]=2*i;
-    }
-  }
-  return starts_;
+  if (!matrix_) 
+    getPackedMatrix();
+  return matrix_->getVectorStarts();
 }
 /* The lengths of the major-dimension vectors. */
 const int * 
@@ -723,14 +728,99 @@ ClpNetworkMatrix::getVectorLengths() const
 /* Delete the columns whose indices are listed in <code>indDel</code>. */
 void ClpNetworkMatrix::deleteCols(const int numDel, const int * indDel) 
 {
-  std::cerr<<"deleteCols not implemented in ClpNetworkMatrix"<<std::endl;
-  abort();
+  assert (trueNetwork_);
+  int iColumn;
+  int numberBad=0;
+  // Use array to make sure we can have duplicates
+  char * which = new char[numberColumns_];
+  memset(which,0,numberColumns_);
+  int nDuplicate=0;
+  for (iColumn=0;iColumn<numDel;iColumn++) {
+    int jColumn = indDel[iColumn];
+    if (jColumn<0||jColumn>=numberColumns_) {
+      numberBad++;
+    } else {
+      if (which[jColumn])
+	nDuplicate++;
+      else
+	which[jColumn]=1;
+    }
+  }
+  if (numberBad)
+    throw CoinError("Indices out of range", "deleteCols", "ClpNetworkMatrix");
+  int newNumber = numberColumns_-numDel+nDuplicate;
+  // Get rid of temporary arrays
+  delete [] lengths_;
+  lengths_=NULL;
+  delete matrix_;
+  matrix_= NULL;
+  int newSize=2*newNumber;
+  int * newIndices = new int [newSize];
+  newSize=0;
+  for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+    if (!which[iColumn]) {
+      CoinBigIndex start;
+      CoinBigIndex i;
+      start = 2*iColumn;
+      for (i=start;i<start+2;i++) 
+	newIndices[newSize++]=indices_[i];
+    }
+  }
+  delete [] which;
+  delete [] indices_;
+  indices_= newIndices;
+  numberColumns_ = newNumber;
 }
 /* Delete the rows whose indices are listed in <code>indDel</code>. */
 void ClpNetworkMatrix::deleteRows(const int numDel, const int * indDel) 
 {
-  std::cerr<<"deleteRows not implemented in ClpNetworkMatrix"<<std::endl;
-  abort();
+  int iRow;
+  int numberBad=0;
+  // Use array to make sure we can have duplicates
+  int * which = new int [numberRows_];
+  memset(which,0,numberRows_*sizeof(int));
+  for (iRow=0;iRow<numDel;iRow++) {
+    int jRow = indDel[iRow];
+    if (jRow<0||jRow>=numberRows_) {
+      numberBad++;
+    } else {
+      which[jRow]=1;
+    }
+  }
+  if (numberBad)
+    throw CoinError("Indices out of range", "deleteRows", "ClpNetworkMatrix");
+  // Only valid of all columns have 0 entries
+  int iColumn;
+  for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+    CoinBigIndex start;
+    CoinBigIndex i;
+    start = 2*iColumn;
+    for (i=start;i<start+2;i++) {
+      int iRow = indices_[i];
+      if (which[iRow])
+	numberBad++;
+    }
+  }
+  if (numberBad)
+    throw CoinError("Row has entries", "deleteRows", "ClpNetworkMatrix");
+  int newNumber=0;
+  for (iRow=0;iRow<numberRows_;iRow++) {
+    if (!which[iRow])
+      which[iRow]=newNumber++;
+    else
+      which[iRow]=-1;
+  }
+  for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+    CoinBigIndex start;
+    CoinBigIndex i;
+    start = 2*iColumn;
+    for (i=start;i<start+2;i++) {
+      int iRow = indices_[i];
+      indices_[i]=which[iRow];
+    }
+  }
+  delete [] which;
+  numberRows_ = newNumber;
 }
 /* Given positive integer weights for each row fills in sum of weights
    for each column (and slack).
@@ -1017,8 +1107,154 @@ ClpNetworkMatrix::partialPricing(ClpSimplex * model, double startFraction, doubl
 void 
 ClpNetworkMatrix::releasePackedMatrix() const 
 {
-  delete [] elements_;
+  delete matrix_;
   delete [] lengths_;
-  elements_=NULL;
+  matrix_=NULL;
   lengths_=NULL;
+}
+// Append Columns
+void 
+ClpNetworkMatrix::appendCols(int number, const CoinPackedVectorBase * const * columns)
+{
+  int iColumn;
+  int numberBad=0;
+  for (iColumn=0;iColumn<number;iColumn++) {
+    int n=columns[iColumn]->getNumElements();
+    const double * element = columns[iColumn]->getElements();
+    if (n!=2)
+      numberBad++;
+    if (fabs(element[0])!=1.0||fabs(element[1])!=1.0)
+	numberBad++;
+    else if (element[0]*element[1]!=-1.0)
+	numberBad++;
+  }
+  if (numberBad)
+    throw CoinError("Not network", "appendCols", "ClpNetworkMatrix");
+  // Get rid of temporary arrays
+  delete [] lengths_;
+  lengths_=NULL;
+  delete matrix_;
+  matrix_= NULL;
+  CoinBigIndex size = 2*number;
+  int * temp2 = new int [numberColumns_*2+size];
+  memcpy(temp2,indices_,numberColumns_*2*sizeof(int));
+  delete [] indices_;
+  indices_= temp2;
+  // now add
+  size=2*numberColumns_;
+  for (iColumn=0;iColumn<number;iColumn++) {
+    const int * row = columns[iColumn]->getIndices();
+    const double * element = columns[iColumn]->getElements();
+    if (element[0]==-1.0) {
+      indices_[size++]=row[0];
+      indices_[size++]=row[1];
+    } else {
+      indices_[size++]=row[1];
+      indices_[size++]=row[0];
+    }
+  }
+  
+  numberColumns_ += number;
+}
+// Append Rows
+void 
+ClpNetworkMatrix::appendRows(int number, const CoinPackedVectorBase * const * rows)
+{
+  // must be zero arrays
+  int numberBad=0;
+  int iRow;
+  for (iRow=0;iRow<number;iRow++) {
+    numberBad += rows[iRow]->getNumElements();
+  }
+  if (numberBad)
+    throw CoinError("Not NULL rows", "appendRows", "ClpNetworkMatrix");
+  numberRows_ += number;
+}
+#ifndef SLIM_CLP
+/* Append a set of rows/columns to the end of the matrix. Returns number of errors
+   i.e. if any of the new rows/columns contain an index that's larger than the
+   number of columns-1/rows-1 (if numberOther>0) or duplicates
+   If 0 then rows, 1 if columns */
+int 
+ClpNetworkMatrix::appendMatrix(int number, int type,
+                                    const CoinBigIndex * starts, const int * index,
+                                    const double * element, int numberOther)
+{
+  int numberErrors=0;
+  // make into CoinPackedVector
+  CoinPackedVectorBase ** vectors=
+    new CoinPackedVectorBase * [number];
+  int iVector;
+  for (iVector=0;iVector<number;iVector++) {
+    int iStart = starts[iVector];
+    vectors[iVector] = 
+      new CoinPackedVector(starts[iVector+1]-iStart,
+                           index+iStart,element+iStart);
+  }
+  if (type==0) {
+    // rows
+    appendRows(number,vectors);
+  } else {
+    // columns
+    appendCols(number,vectors);
+  }
+  for (iVector=0;iVector<number;iVector++) 
+    delete vectors[iVector];
+  delete [] vectors;
+  return numberErrors;
+}
+#endif
+/* Subset clone (without gaps).  Duplicates are allowed
+   and order is as given */
+ClpMatrixBase * 
+ClpNetworkMatrix::subsetClone (int numberRows, const int * whichRows,
+			      int numberColumns, 
+			      const int * whichColumns) const 
+{
+  return new ClpNetworkMatrix(*this, numberRows, whichRows,
+				   numberColumns, whichColumns);
+}
+/* Subset constructor (without gaps).  Duplicates are allowed
+   and order is as given */
+ClpNetworkMatrix::ClpNetworkMatrix (
+		       const ClpNetworkMatrix & rhs,
+		       int numberRows, const int * whichRow,
+		       int numberColumns, const int * whichColumn)
+: ClpMatrixBase(rhs)
+{  
+  setType(11);
+  matrix_ = NULL;
+  lengths_=NULL;
+  indices_=new int[2*numberColumns];;
+  numberRows_=numberRows;
+  numberColumns_=numberColumns;
+  trueNetwork_=true;
+  int iColumn;
+  int numberBad=0;
+  int * which = new int [rhs.numberRows_];
+  int iRow;
+  for (iRow=0;iRow<rhs.numberRows_;iRow++) 
+    which[iRow]=-1;
+  int n=0;
+  for (iRow=0;iRow<numberRows;iRow++) {
+    int jRow=whichRow[iRow];
+    assert (jRow>=0&&jRow<rhs.numberRows_);
+    which[jRow]=n++;
+  }
+  for (iColumn=0;iColumn<numberColumns;iColumn++) {
+    CoinBigIndex start;
+    CoinBigIndex i;
+    start = 2*iColumn;
+    CoinBigIndex offset = 2*whichColumn[iColumn]-start;
+    for (i=start;i<start+2;i++) {
+      int iRow = rhs.indices_[i+offset];
+      iRow = which[iRow];
+      if (iRow<0)
+	numberBad++;
+      else
+	indices_[i]=iRow;
+    }
+  }
+  if (numberBad)
+    throw CoinError("Invalid rows", "subsetConstructor", "ClpNetworkMatrix");
 }

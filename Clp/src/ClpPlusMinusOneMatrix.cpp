@@ -1061,6 +1061,8 @@ ClpPlusMinusOneMatrix::getPackedMatrix() const
 			      elements,indices_,
 			      startPositive_,getVectorLengths());
     delete [] elements;
+    delete [] lengths_;
+    lengths_ = NULL;
   }
   return matrix_;
 }
@@ -1179,7 +1181,7 @@ ClpPlusMinusOneMatrix::deleteRows(const int numDel, const int * indDel)
     }
   }
   if (numberBad)
-    throw CoinError("Indices out of range", "deleteCols", "ClpPlusMinusOneMatrix");
+    throw CoinError("Indices out of range", "deleteRows", "ClpPlusMinusOneMatrix");
   CoinBigIndex iElement;
   CoinBigIndex numberElements=startPositive_[numberColumns_];
   CoinBigIndex newSize=0;

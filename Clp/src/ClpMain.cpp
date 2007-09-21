@@ -15,7 +15,7 @@
 #include "CoinHelperFunctions.hpp"
 #include "CoinSort.hpp"
 // History since 1.0 at end
-#define CLPVERSION "1.05.00"
+#define CLPVERSION "1.06.00"
 
 #include "CoinMpsIO.hpp"
 #include "CoinFileIO.hpp"
@@ -35,6 +35,7 @@
 #include "ClpPrimalColumnDantzig.hpp"
 #include "ClpPresolve.hpp"
 #include "CbcOrClpParam.hpp"
+#include "CoinSignal.hpp"
 #ifdef DMALLOC
 #include "dmalloc.h"
 #endif
@@ -51,6 +52,16 @@
 static double totalTime=0.0;
 static bool maskMatches(const int * starts, char ** masks,
 			std::string & check);
+static ClpSimplex * currentModel = NULL;
+
+extern "C" {
+   static void signal_handler(int whichSignal)
+   {
+      if (currentModel!=NULL) 
+	 currentModel->setMaximumIterations(0); // stop at next iterations
+      return;
+   }
+}
 
 //#############################################################################
 
@@ -114,7 +125,7 @@ int main (int argc, const char *argv[])
     std::string importBasisFile ="";
     int basisHasValues=0;
     int substitution=3;
-    int dualize=0;
+    int dualize=3;  // dualize if looks promising
     std::string exportBasisFile ="default.bas";
     std::string saveFile ="default.prob";
     std::string restoreFile ="default.prob";
@@ -438,13 +449,13 @@ int main (int argc, const char *argv[])
 		ClpPrimalColumnDantzig dantzig;
 		models[iModel].setPrimalColumnPivotAlgorithm(dantzig);
 	      } else if (action==3) {
-		ClpPrimalColumnSteepest steep(2);
+		ClpPrimalColumnSteepest steep(4);
 		models[iModel].setPrimalColumnPivotAlgorithm(steep);
 	      } else if (action==4) {
 		ClpPrimalColumnSteepest steep(1);
 		models[iModel].setPrimalColumnPivotAlgorithm(steep);
 	      } else if (action==5) {
-		ClpPrimalColumnSteepest steep(4);
+		ClpPrimalColumnSteepest steep(2);
 		models[iModel].setPrimalColumnPivotAlgorithm(steep);
 	      } else if (action==6) {
 		ClpPrimalColumnSteepest steep(10);
@@ -558,10 +569,33 @@ int main (int argc, const char *argv[])
 	      ClpSolve::PresolveType presolveType;
 	      ClpSimplex * model2 = models+iModel;
               if (dualize) {
-                model2 = ((ClpSimplexOther *) model2)->dualOfModel();
-                printf("Dual of model has %d rows and %d columns\n",
-                       model2->numberRows(),model2->numberColumns());
-                model2->setOptimizationDirection(1.0);
+		bool tryIt=true;
+		double fractionColumn=1.0;
+		double fractionRow=1.0;
+		if (dualize==3) {
+		  dualize=1;
+		  int numberColumns=model2->numberColumns();
+		  int numberRows=model2->numberRows();
+		  if (numberRows<50000||5*numberColumns>numberRows) {
+		    tryIt=false;
+		  } else {
+		    fractionColumn=0.1;
+		    fractionRow=0.1;
+		  }
+		}
+		if (tryIt) {
+		  model2 = ((ClpSimplexOther *) model2)->dualOfModel(fractionRow,fractionColumn);
+		  if (model2) {
+		    printf("Dual of model has %d rows and %d columns\n",
+			   model2->numberRows(),model2->numberColumns());
+		    model2->setOptimizationDirection(1.0);
+		  } else {
+		    model2 = models+iModel;
+		    dualize=0;
+		  }
+		} else {
+		  dualize=0;
+		}
               }
 	      ClpSolve solveOptions;
               solveOptions.setPresolveActions(presolveOptions);
@@ -693,9 +727,17 @@ int main (int argc, const char *argv[])
               }
               if (dualize) {
                 int returnCode=((ClpSimplexOther *) models+iModel)->restoreFromDual(model2);
+		if (model2->status()==3)
+		  returnCode=0;
                 delete model2;
-		if (returnCode&&dualize!=2)
+		if (returnCode&&dualize!=2) {
+		  CoinSighandler_t saveSignal=SIG_DFL;
+		  currentModel = models+iModel;
+		  // register signal handler
+		  saveSignal = signal(SIGINT,signal_handler);
 		  models[iModel].primal(1);
+		  currentModel=NULL;
+		}
               }
               if (status>=0)
                 basisHasValues=1;
@@ -977,7 +1019,7 @@ int main (int argc, const char *argv[])
 		// If presolve on then save presolved
 		bool deleteModel2=false;
 		ClpSimplex * model2 = models+iModel;
-		if (dualize) {
+		if (dualize&&dualize<3) {
 		  model2 = ((ClpSimplexOther *) model2)->dualOfModel();
 		  printf("Dual of model has %d rows and %d columns\n",
 			 model2->numberRows(),model2->numberColumns());

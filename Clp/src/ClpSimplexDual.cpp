@@ -100,6 +100,7 @@
 #include "CoinIndexedVector.hpp"
 #include "ClpDualRowDantzig.hpp"
 #include "ClpMessage.hpp"
+#include "ClpLinearObjective.hpp"
 #include <cfloat>
 #include <cassert>
 #include <string>
@@ -1521,9 +1522,12 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
 	      problemStatus_=1;
               // unless primal feasible!!!!
               //printf("%d %g %d %g\n",numberPrimalInfeasibilities_,sumPrimalInfeasibilities_,
-              //     numberDualInfeasibilities_,sumDualInfeasibilities_);
-              if (numberDualInfeasibilities_)
+	      //   numberDualInfeasibilities_,sumDualInfeasibilities_);
+              if (sumPrimalInfeasibilities_<1.0e-3||sumDualInfeasibilities_>1.0e-6||(specialOptions_&1024)!=0) {
                 problemStatus_=10;
+		// Get rid of objective
+		objective_ = new ClpLinearObjective(NULL,numberColumns_);
+	      }
 	      rowArray_[0]->clear();
 	      columnArray_[0]->clear();
 	      returnCode=1;

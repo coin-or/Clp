@@ -1343,6 +1343,18 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
       }
     }
   }
+  if (problemStatus_==0) {
+    double objVal = nonLinearCost_->feasibleCost();
+    double tol = 1.0e-10*CoinMax(fabs(objVal),fabs(objectiveValue_))+1.0e-8;
+    if (fabs(objVal-objectiveValue_)>tol) {
+#ifdef COIN_DEVELOP
+      if (handler_->logLevel()>0)
+	printf("nonLinearCost has feasible obj of %g, objectiveValue_ is %g\n",
+	       objVal,objectiveValue_);
+#endif
+      objectiveValue_ = objVal;
+    }
+  }
   // save extra stuff
   matrix_->generalExpanded(this,5,dummy);
   if (type==0||type==1) {

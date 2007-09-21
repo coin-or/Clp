@@ -334,7 +334,8 @@ public:
   virtual ClpMatrixBase * subsetClone (
 				       int numberRows, const int * whichRows,
 				       int numberColumns, const int * whichColumns) const;
-  
+  /// Gets rid of any mutable by products
+  virtual void backToBasics() {}
   /** Returns type.
       The types which code may need to know about are:
       1  - ClpPackedMatrix
