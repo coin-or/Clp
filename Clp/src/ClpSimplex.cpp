@@ -9327,7 +9327,7 @@ ClpSimplex::moveInfo(const ClpSimplex & rhs, bool justStatus)
   secondaryStatus_ = rhs. secondaryStatus_;
   assert (numberRows_ == rhs.numberRows_);
   assert (numberColumns_ == rhs.numberColumns_);
-  if (!justStatus) {
+  if (numberRows_ == rhs.numberRows_ && numberColumns_ == rhs.numberColumns_&& !justStatus) {
     delete [] status_;
     if (rhs.status_) {
       status_ = CoinCopyOfArray(rhs.status_,numberRows_+numberColumns_);
