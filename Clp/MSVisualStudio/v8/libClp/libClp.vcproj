@@ -4,6 +4,7 @@
 	Version="8.00"
 	Name="libClp"
 	ProjectGUID="{4F8F7D1C-3A9E-444D-8EE9-77F33FA05994}"
+	RootNamespace="libClp"
 	>
 	<Platforms>
 		<Platform
@@ -346,6 +347,18 @@
 						PreprocessorDefinitions=""
 					/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\..\src\ClpConstraint.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\src\ClpConstraintLinear.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\src\ClpConstraintQuadratic.cpp"
+				>
 			</File>
 			<File
 				RelativePath="..\..\..\..\Clp\src\ClpDualRowDantzig.cpp"
@@ -1295,6 +1308,18 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\Clp\src\ClpConfig.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\src\ClpConstraint.hpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\src\ClpConstraintLinear.hpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\src\ClpConstraintQuadratic.hpp"
 				>
 			</File>
 			<File
