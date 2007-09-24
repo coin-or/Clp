@@ -3440,6 +3440,15 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
                 setStatus(i,isFree);
               }
             }
+	  } else if (status==isFixed&&upper_[i]>lower_[i]) {
+	    // was fixed - not now
+	    if (solution_[i]<=lower_[i]) {
+	      setStatus(i,atLowerBound);
+	    } else if (solution_[i]>=upper_[i]) {
+	      setStatus(i,atUpperBound);
+	    } else {
+	      setStatus(i,superBasic);
+	    }
 	  }
 	}
       }
