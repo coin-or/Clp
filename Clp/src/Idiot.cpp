@@ -474,7 +474,9 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
   if (!numberSlacks) {
     whenUsed_=new int[ncols];
   } else {
+#ifdef COIN_DEVELOP
     printf("%d slacks\n",numberSlacks);
+#endif
     oddSlacks=true;
     int extra = (int) (nrows*sizeof(double)/sizeof(int));
     whenUsed_=new int[2*ncols+2*nrows+extra];

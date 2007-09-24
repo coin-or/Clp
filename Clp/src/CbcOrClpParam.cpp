@@ -2146,6 +2146,7 @@ to write the original to file using 'file'."
   parameters[numberParameters-1].append("trysos");
   parameters[numberParameters-1].append("equalall");
   parameters[numberParameters-1].append("strategy");
+  parameters[numberParameters-1].append("aggregate");
   parameters[numberParameters-1].setLonghelp
     (
      "This tries to reduce size of model in a similar way to presolve and \
