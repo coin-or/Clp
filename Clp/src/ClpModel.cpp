@@ -3580,6 +3580,238 @@ ClpModel::createCoinModel() const
   }
   return coinModel;
 }
+/* Find a network subset.
+   rotate array should be numberRows.  On output
+   -1 not in network
+   0 in network as is
+   1 in network with signs swapped
+  Returns number of network rows (positive if exact network, negative if needs extra row)
+  From Gulpinar, Gutin, Maros and Mitra
+*/
+int 
+ClpModel::findNetwork(char * rotate,double fractionNeeded)
+{
+  int * mapping = new int [numberRows_];
+  // Get column copy
+  CoinPackedMatrix * columnCopy = matrix();
+  // Get a row copy in standard format
+  CoinPackedMatrix * copy = new CoinPackedMatrix();
+  copy->reverseOrderedCopyOf(*columnCopy);
+  // make sure ordered and no gaps
+  copy->cleanMatrix();
+  // get matrix data pointers
+  const int * columnIn = copy->getIndices();
+  const CoinBigIndex * rowStartIn = copy->getVectorStarts();
+  const int * rowLength = copy->getVectorLengths(); 
+  const double * elementByRowIn = copy->getElements();
+  int iRow,iColumn;
+  int numberEligible=0;
+  int numberIn=0;
+  int numberElements=0;
+  for (iRow=0;iRow<numberRows_;iRow++) {
+    bool possible=true;
+    mapping[iRow]=-1;
+    rotate[iRow]=-1;
+    for (CoinBigIndex j=rowStartIn[iRow];j<rowStartIn[iRow]+rowLength[iRow];j++) {
+      //int iColumn = column[j];
+      double value = elementByRowIn[j];
+      if (fabs(value)!=1.0) {
+	possible=false;
+	break;
+      }
+    }
+    if (rowLength[iRow]&&possible) {
+      mapping[iRow]=numberEligible;
+      numberEligible++;
+      numberElements+=rowLength[iRow];
+    }
+  }
+  if (numberEligible<fractionNeeded*numberRows_) {
+    delete [] mapping;
+    return 0;
+  }
+  // create arrays
+  int * eligible = new int [numberRows_];
+  int * column = new int [numberElements];
+  CoinBigIndex * rowStart = new CoinBigIndex [numberEligible+1];
+  char * elementByRow = new char [numberElements];
+  numberEligible=0;
+  numberElements=0;
+  rowStart[0]=0;
+  for (iRow=0;iRow<numberRows_;iRow++) {
+    if (mapping[iRow]<0)
+      continue;
+    assert (numberEligible==mapping[iRow]);
+    rotate[numberEligible]=0;
+    for (CoinBigIndex j=rowStartIn[iRow];j<rowStartIn[iRow]+rowLength[iRow];j++) {
+      column[numberElements] = columnIn[j];
+      double value = elementByRowIn[j];
+      if (value==1.0) 
+	elementByRow[numberElements++]=1;
+      else
+	elementByRow[numberElements++]=-1;
+    }
+    numberEligible++;
+    rowStart[numberEligible]=numberElements;
+  }
+  // get rid of copy to save space
+  delete copy;
+  const int * rowIn = columnCopy->getIndices();
+  const CoinBigIndex * columnStartIn = columnCopy->getVectorStarts();
+  const int * columnLengthIn = columnCopy->getVectorLengths(); 
+  const double * elementByColumnIn = columnCopy->getElements();
+  int * columnLength = new int [numberColumns_];
+  // May just be that is a network - worth checking
+  bool isNetworkAlready=true;
+  bool trueNetwork=true;
+  for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+    double product =1.0;
+    int n=0;
+    for (CoinBigIndex j=columnStartIn[iColumn];j<columnStartIn[iColumn]+columnLengthIn[iColumn];j++) {
+      iRow = mapping[rowIn[j]];
+      if (iRow>=0) {
+	n++;
+	product *= elementByColumnIn[j];
+      }
+    }
+    if (n>=2) {
+      if (product!=-1.0||n>2) 
+	isNetworkAlready=false;
+    } else if (n==1) {
+      trueNetwork=false;
+    }
+    columnLength[iColumn]=n;
+  }
+  if (!isNetworkAlready) {
+    // For sorting
+    double * count = new double [numberRows_];
+    int * which = new int [numberRows_];
+    int numberLast=-1;
+      // Count for columns
+    char * columnCount = new char[numberColumns_];
+    memset(columnCount,0,numberColumns_);
+    char * currentColumnCount = new char[numberColumns_];
+    // Now do main loop
+    while (numberIn>numberLast) {
+      numberLast=numberIn;
+      int numberLeft = 0;
+      for (iRow=0;iRow<numberEligible;iRow++) {
+	if (rotate[iRow]==0) {
+	  which[numberLeft]=iRow;
+	  int merit=0;
+	  bool OK=true;
+	  bool reflectionOK=true;
+	  for (CoinBigIndex j=rowStart[iRow];j<rowStart[iRow+1];j++) {
+	    iColumn = column[j];
+	    int iCount=columnCount[iColumn];
+	    int absCount=CoinAbs(iCount);
+	    if (absCount<2) {
+	      merit = CoinMax(columnLength[iColumn]-absCount-1,merit);
+	      if (elementByRow[j]==iCount)
+		OK=false;
+	      else if (elementByRow[j]==-iCount)
+		reflectionOK=false;
+	    } else {
+	      merit =-2;
+	      break;
+	    }
+	  }
+	  if (merit>-2&&(OK||reflectionOK)) {
+	    assert (!OK||!reflectionOK||!numberIn);
+	    //if (!numberLast) merit=1;
+	    count[numberLeft++]=(rowStart[iRow+1]-rowStart[iRow]-1)*((double)merit);
+	    if (OK)
+	      rotate[iRow]=0;
+	    else
+	      rotate[iRow]=1;
+	  } else {
+	    // no good
+	    rotate[iRow]=-1;
+	  }
+	}
+      }
+      CoinSort_2(count,count+numberLeft,which);
+      // Get G
+      memset(currentColumnCount,0,numberColumns_);
+      for (iRow=0;iRow<numberLeft;iRow++) {
+	int jRow = which[iRow];
+	bool possible=true;
+	for (int i=0;i<numberIn;i++) {
+	  for (CoinBigIndex j=rowStart[jRow];j<rowStart[jRow+1];j++) {
+	    if (currentColumnCount[column[j]]) {
+	      possible=false;
+	      break;
+	    }
+	  }
+	}
+	if (possible) {
+	  rotate[jRow]+=2;
+	  eligible[numberIn++]=jRow;
+	  char multiplier = (rotate[jRow]==2) ? 1 : -1;
+	  for (CoinBigIndex j=rowStart[jRow];j<rowStart[jRow+1];j++) {
+	    iColumn = column[j];
+	    currentColumnCount[iColumn]++;
+	    int iCount=columnCount[iColumn];
+	    int absCount=CoinAbs(iCount);
+	    if (!absCount) {
+	      columnCount[iColumn]=elementByRow[j]*multiplier;
+	    } else {
+	      columnCount[iColumn]=2;
+	    }
+	  }
+	}
+      }
+    }
+    for (iRow=0;iRow<numberIn;iRow++) {
+      int kRow = eligible[iRow];
+      assert (rotate[kRow]>=2);
+    }
+    trueNetwork=true;
+    for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+      if (CoinAbs(columnCount[iColumn])==1) {
+	trueNetwork=false;
+	break;
+      }
+    }
+    delete [] currentColumnCount;
+    delete [] columnCount;
+    delete [] which;
+    delete [] count;
+  } else {
+    numberIn=numberEligible;
+    for (iRow=0;iRow<numberRows_;iRow++) {
+      int kRow = mapping[iRow];
+      if (kRow>=0) {
+	rotate[kRow]=2;
+      }
+    }
+  }
+  if (!trueNetwork)
+    numberIn= - numberIn;
+  delete [] column;
+  delete [] rowStart;
+  delete [] elementByRow;
+  delete [] columnLength;
+  // redo rotate
+  char * rotate2 = CoinCopyOfArray(rotate,numberEligible);
+  for (iRow=0;iRow<numberRows_;iRow++) {
+    int kRow = mapping[iRow];
+    if (kRow>=0) {
+      int iState=rotate2[kRow];
+      if (iState>1)
+	iState -=2;
+      else
+	iState = -1;
+      rotate[iRow]=iState;
+    } else {
+      rotate[iRow]=-1;
+    }
+  }
+  delete [] rotate2;
+  delete [] eligible;
+  delete [] mapping;
+  return numberIn;
+}
 //#############################################################################
 // Constructors / Destructor / Assignment
 //#############################################################################

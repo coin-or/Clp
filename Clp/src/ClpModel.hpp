@@ -275,6 +275,14 @@ public:
   /// Set name of col
   void setColumnName(int colIndex, std::string & name) ;
 #endif
+  /** Find a network subset.
+      rotate array should be numberRows.  On output
+      -1 not in network
+       0 in network as is
+       1 in network with signs swapped
+      Returns number of network rows
+  */
+  int findNetwork(char * rotate, double fractionNeeded=0.75);
   /** This creates a coinModel object
   */
   CoinModel * createCoinModel() const;
