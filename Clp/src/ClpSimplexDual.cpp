@@ -1526,7 +1526,8 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
               if (sumPrimalInfeasibilities_<1.0e-3||sumDualInfeasibilities_>1.0e-6||(specialOptions_&1024)!=0) {
                 problemStatus_=10;
 		// Get rid of objective
-		objective_ = new ClpLinearObjective(NULL,numberColumns_);
+		if ((specialOptions_&16384)==0)
+		  objective_ = new ClpLinearObjective(NULL,numberColumns_);
 	      }
 	      rowArray_[0]->clear();
 	      columnArray_[0]->clear();

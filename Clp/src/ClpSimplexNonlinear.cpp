@@ -359,7 +359,8 @@ ClpSimplexNonlinear::statusOfProblemInPrimal(int & lastCleaned, int type,
     if(progress->lastInfeasibility()<testValue) {
       if (infeasibilityCost_<1.0e14) {
 	infeasibilityCost_ *= 1.5;
-	printf("increasing weight to %g\n",infeasibilityCost_);
+	if (handler_->logLevel()==63)
+	  printf("increasing weight to %g\n",infeasibilityCost_);
 	gutsOfSolution(NULL,NULL,true);
       }
     }
