@@ -7599,12 +7599,14 @@ ClpSimplexProgress::operator=(const ClpSimplexProgress & rhs)
 // Seems to be something odd about exact comparison of doubles on linux
 static bool equalDouble(double value1, double value2)
 {
-  unsigned int *i1 = (unsigned int *) &value1;
-  unsigned int *i2 = (unsigned int *) &value2;
-  if (sizeof(unsigned int)*2==sizeof(double)) 
-    return (i1[0]==i2[0]&&i1[1]==i2[1]);
+
+  union { double d; int i[2]; } v1,v2;
+  v1.d = value1;
+  v2.d = value2;
+  if (sizeof(int)*2==sizeof(double)) 
+    return (v1.i[0]==v2.i[0]&&v1.i[1]==v2.i[1]);
   else
-    return (i1[0]==i2[0]);
+    return (v1.i[0]==v2.i[0]);
 }
 int
 ClpSimplexProgress::looping()
