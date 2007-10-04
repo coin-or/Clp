@@ -263,6 +263,15 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\..\..\src\ClpConstraint.cpp">
+			</File>
+			<File
+				RelativePath="..\..\..\src\ClpConstraintLinear.cpp">
+			</File>
+			<File
+				RelativePath="..\..\..\src\ClpConstraintQuadratic.cpp">
+			</File>
+			<File
 				RelativePath="..\..\..\..\Clp\src\ClpDualRowDantzig.cpp">
 				<FileConfiguration
 					Name="Debug|Win32">
@@ -1020,6 +1029,15 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\Clp\src\ClpConfig.h">
+			</File>
+			<File
+				RelativePath="..\..\..\src\ClpConstraint.hpp">
+			</File>
+			<File
+				RelativePath="..\..\..\src\ClpConstraintLinear.hpp">
+			</File>
+			<File
+				RelativePath="..\..\..\src\ClpConstraintQuadratic.hpp">
 			</File>
 			<File
 				RelativePath="..\..\..\..\Clp\src\ClpDualRowDantzig.hpp">
