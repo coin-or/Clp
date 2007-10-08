@@ -49,7 +49,7 @@ public:
 
   /** Copy constructor. May scale depending on mode
       -1 leave mode as is 
-      0 -off, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic(later)
+      0 -off, 1 equilibrium, 2 geometric, 3, auto, 4 auto-but-as-initialSolve-in-bab
   */
     ClpModel(const ClpModel & rhs, int scalingMode=-1);
     /// Assignment operator. This copies the data
@@ -524,7 +524,7 @@ public:
           { return rhsScale_;} 
   inline void setRhsScale(double value)
           { rhsScale_ = value;} 
-   /// Sets or unsets scaling, 0 -off, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic(later)
+   /// Sets or unsets scaling, 0 -off, 1 equilibrium, 2 geometric, 3 auto, 4 auto-but-as-initialSolve-in-bab
    void scaling(int mode=1);
   /** If we constructed a "really" scaled model then this reverses the operation.
       Quantities may not be exactly as they were before due to rounding errors */

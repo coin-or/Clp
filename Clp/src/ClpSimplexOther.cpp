@@ -2784,3 +2784,399 @@ ClpSimplexOther::nextTheta(int type, double maxTheta, double * primalChange, dou
     return -1;
   }
 }
+/* Expands out all possible combinations for a knapsack
+   If buildObj NULL then just computes space needed - returns number elements
+   On entry numberOutput is maximum allowed, on exit it is number needed or
+   -1 (as will be number elements) if maximum exceeded.  numberOutput will have at
+   least space to return values which reconstruct input.
+   Rows returned will be original rows but no entries will be returned for
+   any rows all of whose entries are in knapsack.  So up to user to allow for this.
+   If reConstruct >=0 then returns number of entrie which make up item "reConstruct"
+   in expanded knapsack.  Values in buildRow and buildElement;
+*/
+int 
+ClpSimplexOther::expandKnapsack(int knapsackRow, int & numberOutput,
+				double * buildObj, CoinBigIndex * buildStart,
+				int * buildRow, double * buildElement,int reConstruct) const
+{
+  int iRow;
+  int iColumn;
+  // Get column copy
+  CoinPackedMatrix * columnCopy = matrix();
+  // Get a row copy in standard format
+  CoinPackedMatrix matrixByRow;
+  matrixByRow.reverseOrderedCopyOf(*columnCopy);
+  const double * elementByRow = matrixByRow.getElements();
+  const int * column = matrixByRow.getIndices();
+  const CoinBigIndex * rowStart = matrixByRow.getVectorStarts();
+  const int * rowLength = matrixByRow.getVectorLengths();
+  CoinBigIndex j;
+  int * whichColumn = new int [numberColumns_];
+  int * whichRow = new int [numberRows_];
+  int numJ=0;
+  // Get what other columns can compensate for
+  double * lo = new double [numberRows_];
+  double * high = new double [numberRows_];
+  {
+    // Use to get tight column bounds
+    ClpSimplex tempModel(*this);
+    tempModel.tightenPrimalBounds(0.0,0,true);
+    // Now another model without knapsacks
+    int nCol=0;
+    for (iRow=0;iRow<numberRows_;iRow++) {
+      whichRow[iRow]=iRow;
+    }
+    for (iColumn=0;iColumn<numberColumns_;iColumn++)
+      whichColumn[iColumn]=-1;
+    for (j=rowStart[knapsackRow];j<rowStart[knapsackRow]+rowLength[knapsackRow];j++) {
+      int iColumn = column[j];
+      if (columnUpper_[iColumn]>columnLower_[iColumn]) {
+	whichColumn[iColumn]=0;
+      } else {
+	assert (!columnLower_[iColumn]); // fix later
+      }
+    }
+    for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+      if (whichColumn[iColumn]<0)
+	whichColumn[nCol++]=iColumn;
+    }
+    ClpSimplex tempModel2(&tempModel,numberRows_,whichRow,nCol,whichColumn,false,false,false);
+    // Row copy
+    CoinPackedMatrix matrixByRow;
+    matrixByRow.reverseOrderedCopyOf(*tempModel2.matrix());
+    const double * elementByRow = matrixByRow.getElements();
+    const int * column = matrixByRow.getIndices();
+    const CoinBigIndex * rowStart = matrixByRow.getVectorStarts();
+    const int * rowLength = matrixByRow.getVectorLengths();
+    const double * columnLower = tempModel2.getColLower();
+    const double * columnUpper = tempModel2.getColUpper();
+    for (iRow = 0; iRow < numberRows_; iRow++) {
+      lo[iRow]=-COIN_DBL_MAX;
+      high[iRow]=COIN_DBL_MAX;
+      if (rowLower_[iRow]>-1.0e20||rowUpper_[iRow]<1.0e20) {
+	
+	// possible row
+	int infiniteUpper = 0;
+	int infiniteLower = 0;
+	double maximumUp = 0.0;
+	double maximumDown = 0.0;
+	CoinBigIndex rStart = rowStart[iRow];
+	CoinBigIndex rEnd = rowStart[iRow]+rowLength[iRow];
+	CoinBigIndex j;
+	// Compute possible lower and upper ranges
+	
+	for (j = rStart; j < rEnd; ++j) {
+	  double value=elementByRow[j];
+	  iColumn = column[j];
+	  if (value > 0.0) {
+	    if (columnUpper[iColumn] >= 1.0e20) {
+	      ++infiniteUpper;
+	    } else {
+	      maximumUp += columnUpper[iColumn] * value;
+	    }
+	    if (columnLower[iColumn] <= -1.0e20) {
+	      ++infiniteLower;
+	    } else {
+	      maximumDown += columnLower[iColumn] * value;
+	    }
+	  } else if (value<0.0) {
+	    if (columnUpper[iColumn] >= 1.0e20) {
+	      ++infiniteLower;
+	    } else {
+	      maximumDown += columnUpper[iColumn] * value;
+	    }
+	    if (columnLower[iColumn] <= -1.0e20) {
+	      ++infiniteUpper;
+	    } else {
+	      maximumUp += columnLower[iColumn] * value;
+	    }
+	  }
+	}
+	// Build in a margin of error
+	maximumUp += 1.0e-8*fabs(maximumUp)+1.0e-7;
+	maximumDown -= 1.0e-8*fabs(maximumDown)+1.0e-7;
+	// we want to save effective rhs
+	double up = (infiniteUpper) ? COIN_DBL_MAX : maximumUp;
+	double down = (infiniteLower) ? -COIN_DBL_MAX : maximumDown;
+	if (up==COIN_DBL_MAX||rowLower_[iRow]==-COIN_DBL_MAX) {
+	  // However low we go it doesn't matter
+	  lo[iRow]=-COIN_DBL_MAX;
+	} else {
+	  // If we go below this then can not be feasible
+	  lo[iRow]=rowLower_[iRow]-up;
+	}
+	if (down==-COIN_DBL_MAX||rowUpper_[iRow]==COIN_DBL_MAX) {
+	  // However high we go it doesn't matter
+	  high[iRow]=COIN_DBL_MAX;
+	} else {
+	  // If we go above this then can not be feasible
+	  high[iRow]=rowUpper_[iRow]-down;
+	}
+      }
+    }
+  }
+  numJ =0;
+  for (iColumn=0;iColumn<numberColumns_;iColumn++)
+    whichColumn[iColumn]=-1;
+  int * markRow = new int [numberRows_];
+  for (iRow=0;iRow<numberRows_;iRow++) 
+    markRow[iRow]=1;
+  for (j=rowStart[knapsackRow];j<rowStart[knapsackRow]+rowLength[knapsackRow];j++) {
+    int iColumn = column[j];
+    if (columnUpper_[iColumn]>columnLower_[iColumn]) {
+      whichColumn[iColumn]=numJ;
+      numJ++;
+    }
+  }
+  /* mark rows
+     -n in knapsack and n other variables
+     1 no entries
+     n+1000 not involved in knapsack but n entries
+     0 only in knapsack 
+  */
+  for (iRow=0;iRow<numberRows_;iRow++) {
+    int type=1;
+    for (j=rowStart[iRow];j<rowStart[iRow]+rowLength[iRow];j++) {
+      int iColumn = column[j];
+      if (whichColumn[iColumn]>=0) {
+	if (type==1) {
+	  type=0;
+	} else if (type>0) {
+	  assert (type>1000); 
+	  type = -(type-1000);
+	}
+      } else if (type==1) {
+	type = 1001;
+      } else if (type<0) {
+	type --;
+      } else if (type==0) {
+	type = -1;
+      } else {
+	assert (type>1000);
+	type++;
+      }
+    }
+    markRow[iRow]=type;
+    if (type<0&&type>-30&&false)
+      printf("markrow on row %d is %d\n",iRow,markRow[iRow]);
+  }
+  int * bound = new int [numberColumns_+1];
+  int * stack = new int [numberColumns_+1];
+  int * flip = new int [numberColumns_+1];
+  double * offset = new double[numberColumns_+1];
+  double * size = new double [numberColumns_+1];
+  double * rhsOffset = new double[numberRows_];
+  int * build = new int[numberColumns_];
+  int maxNumber=numberOutput;
+  numJ=0;
+  double minSize = rowLower_[knapsackRow];
+  double maxSize = rowUpper_[knapsackRow];
+  double knapsackOffset=0.0;
+  for (j=rowStart[knapsackRow];j<rowStart[knapsackRow]+rowLength[knapsackRow];j++) {
+    int iColumn = column[j];
+    double lowerColumn=columnLower_[iColumn];
+    double upperColumn=columnUpper_[iColumn];
+    if (lowerColumn==upperColumn)
+      continue;
+    double gap = upperColumn-lowerColumn;
+    if (gap>1.0e8)
+      gap=1.0e8;
+    assert (fabs(floor(gap+0.5)-gap)<1.0e-5);
+    whichColumn[numJ]=iColumn;
+    bound[numJ]=(int) gap;
+    if (elementByRow[j]>0.0) {
+      flip[numJ]=1;
+      offset[numJ]=lowerColumn;
+      size[numJ++]=elementByRow[j];
+    } else {
+      flip[numJ]=-1;
+      offset[numJ]=upperColumn;
+      size[numJ++]=-elementByRow[j];
+      lowerColumn = upperColumn;
+    }
+    knapsackOffset += elementByRow[j]*lowerColumn;
+  }  
+  int jRow;
+  for (iRow=0;iRow<numberRows_;iRow++)
+    whichRow[iRow]=iRow;
+  ClpSimplex smallModel(this,numberRows_,whichRow,numJ,whichColumn,true,true,true);
+  // modify rhs to allow for nonzero lower bounds
+  //double * rowLower = smallModel.rowLower();
+  //double * rowUpper = smallModel.rowUpper();
+  const double * columnLower = smallModel.columnLower();
+  //const double * columnUpper = smallModel.columnUpper();
+  const CoinPackedMatrix * matrix = smallModel.matrix();
+  const double * element = matrix->getElements();
+  const int * row = matrix->getIndices();
+  const CoinBigIndex * columnStart = matrix->getVectorStarts();
+  const int * columnLength = matrix->getVectorLengths();
+  const double * objective = smallModel.objective();
+  double objectiveOffset=0.0;
+  // would use for fixed?
+  CoinZeroN(rhsOffset,numberRows_);
+  double * rowActivity = smallModel.primalRowSolution();
+  CoinZeroN(rowActivity,numberRows_);
+  maxSize -= knapsackOffset;
+  minSize -= knapsackOffset;
+  // now generate
+  int i;
+  int iStack=numJ;
+  for (i=0;i<numJ;i++) {
+    stack[i]=0;
+  }
+  double tooMuch = 10.0*maxSize+10000;
+  stack[numJ]=1;
+  size[numJ]=tooMuch;
+  bound[numJ]=0;
+  double sum=tooMuch;
+  // allow for all zero being OK
+  stack[numJ-1]=-1;
+  sum -= size[numJ-1];
+  numberOutput=0;
+  int nelCreate=0;
+  /* typeRun is - 0 for initial sizes
+                  1 for build
+		  2 for reconstruct
+  */
+  int typeRun = buildObj ? 1 : 0;
+  if (reConstruct>=0) {
+    assert (buildRow&&buildElement);
+    typeRun=2;
+  }
+  if (typeRun==1)
+    buildStart[0]=0;
+  while (iStack>=0) {
+    if (sum>=minSize&&sum<=maxSize) {
+      double checkSize =0.0;
+      bool good=true;
+      int nRow=0;
+      double obj=0.0;
+      CoinZeroN(rowActivity,nRow);
+      for (iColumn=0;iColumn<numJ;iColumn++) {
+	int iValue = stack[iColumn];
+	if (iValue>bound[iColumn]) {
+	  good=false;
+	  break;
+	} else {
+	  double realValue = offset[iColumn] + flip[iColumn]*iValue;
+	  if (realValue) {
+	    obj += objective[iColumn]*realValue;
+	    for (CoinBigIndex j=columnStart[iColumn];
+		 j<columnStart[iColumn]+columnLength[iColumn];j++) {
+	      double value = element[j]*realValue;
+	      int kRow = row[j];
+	      if (rowActivity[kRow]) {
+		rowActivity[kRow] += value;
+		if (!rowActivity[kRow])
+		  rowActivity[kRow]=1.0e-100;
+	      } else {
+		build[nRow++]=kRow;
+		rowActivity[kRow]=value;
+	      }
+	    }
+	  }
+	}
+      }
+      if (good) {
+	for (jRow=0;jRow<nRow;jRow++) {
+	  int kRow=build[jRow];
+	  double value = rowActivity[kRow];
+	  if (value>high[kRow]||value<lo[kRow]) {
+	    good=false;
+	    break;
+	  }
+	}
+      }
+      if (good) {
+	if (typeRun==1) {
+	  buildObj[numberOutput]=obj;
+	  for (jRow=0;jRow<nRow;jRow++) {
+	    int kRow=build[jRow];
+	    double value = rowActivity[kRow];
+	    if (markRow[kRow]<0&&fabs(value)>1.0e-13) {
+	      buildElement[nelCreate]=value;
+	      buildRow[nelCreate++]=kRow;
+	    }
+	  }
+	  buildStart[numberOutput+1]=nelCreate;
+	} else if (!typeRun) {
+	  for (jRow=0;jRow<nRow;jRow++) {
+	    int kRow=build[jRow];
+	    double value = rowActivity[kRow];
+	    if (markRow[kRow]<0&&fabs(value)>1.0e-13) {
+	      nelCreate++;
+	    }
+	  }
+	}
+	if (typeRun==2&&reConstruct==numberOutput) {
+	  // build and exit
+	  nelCreate=0;
+	  for (iColumn=0;iColumn<numJ;iColumn++) {
+	    int iValue = stack[iColumn];
+	    double realValue = offset[iColumn] + flip[iColumn]*iValue;
+	    if (realValue) {
+	      buildRow[nelCreate]=whichColumn[iColumn];
+	      buildElement[nelCreate++]=realValue;
+	    }
+	  }
+	  numberOutput=1;
+	  for (i=0;i<numJ;i++) {
+	    bound[i]=0;
+	  }
+	  break;
+	}
+	numberOutput++;
+	if (numberOutput>maxNumber) {
+	  nelCreate=-numberOutput;
+	  numberOutput=-1;
+	  for (i=0;i<numJ;i++) {
+	    bound[i]=0;
+	  }
+	  break;
+	} else if (typeRun==1&&numberOutput==maxNumber) {
+	  // On second run 
+	  for (i=0;i<numJ;i++) {
+	    bound[i]=0;
+	  }
+	  break;
+	} 
+	for (int j=0;j<numJ;j++) {
+	  checkSize += stack[j]*size[j];
+	}
+	assert (fabs(sum-checkSize)<1.0e-3);
+      }
+      for (jRow=0;jRow<nRow;jRow++) {
+	int kRow=build[jRow];
+	rowActivity[kRow]=0.0;
+      }
+    }
+    if (sum>maxSize||stack[iStack]>bound[iStack]) {
+      sum -= size[iStack]*stack[iStack]; 
+      stack[iStack--]=0;
+      if (iStack>=0) {
+	stack[iStack] ++;
+	sum += size[iStack];
+      }
+    } else {
+      // must be less
+      // add to last possible
+      iStack = numJ-1;
+      sum += size[iStack];
+      stack[iStack]++;
+    }
+  }
+  //printf("%d will be created\n",numberOutput);
+  delete [] whichColumn;
+  delete [] whichRow;
+  delete [] bound;
+  delete [] stack;
+  delete [] flip;
+  delete [] size;
+  delete [] offset;
+  delete [] rhsOffset;
+  delete [] build;
+  delete [] markRow;
+  delete [] lo;
+  delete [] high;
+  return nelCreate;
+}

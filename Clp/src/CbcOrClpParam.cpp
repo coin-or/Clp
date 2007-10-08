@@ -2042,7 +2042,7 @@ values, 2 saves values, 3 with greater accuracy and 4 in IEEE."
 #ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("passC!uts","Number of cut passes at root node",
-		  -999999,999999,CUTPASS);
+		  -9999999,9999999,CUTPASS);
   parameters[numberParameters-1].setLonghelp
     (
      "The default is 100 passes if less than 500 columns, 100 passes (but \

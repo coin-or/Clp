@@ -186,6 +186,19 @@ public:
   /** Tightens integer bounds - returns number tightened or -1 if infeasible
   */
   int tightenIntegerBounds(double * rhsSpace); 
+  /** Expands out all possible combinations for a knapsack
+      If buildObj NULL then just computes space needed - returns number elements
+      On entry numberOutput is maximum allowed, on exit it is number needed or
+      -1 (as will be number elements) if maximum exceeded.  numberOutput will have at
+      least space to return values which reconstruct input.
+      Rows returned will be original rows but no entries will be returned for
+      any rows all of whose entries are in knapsack.  So up to user to allow for this.
+      If reConstruct >=0 then returns number of entrie which make up item "reConstruct"
+      in expanded knapsack.  Values in buildRow and buildElement;
+  */
+  int expandKnapsack(int knapsackRow, int & numberOutput,
+		     double * buildObj, CoinBigIndex * buildStart,
+		     int * buildRow, double * buildElement,int reConstruct=-1) const;
   //@}
 };
 #endif

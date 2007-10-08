@@ -7332,7 +7332,11 @@ ClpSimplex::setFlagged( int sequence)
 bool
 ClpSimplex::statusOfProblem(bool initial)
 {
-  createRim(7+8+16+32);
+  bool goodMatrix=createRim(7+8+16+32);
+  if (!goodMatrix) {
+    problemStatus_=4;
+    return false;
+  }
   // is factorization okay?
   if (initial) {
     // First time - allow singularities

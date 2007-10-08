@@ -2127,7 +2127,7 @@ ClpPackedMatrix::scale(ClpModel * model) const
   }
   // mark empty and fixed columns
   // also see if worth scaling
-  assert (model->scalingFlag()<4); // dynamic not implemented
+  assert (model->scalingFlag()<=4); 
   double largest=0.0;
   double smallest=1.0e50;
   // get matrix data pointers
@@ -2173,6 +2173,10 @@ ClpPackedMatrix::scale(ClpModel * model) const
   } else {
       // need to scale 
     int scalingMethod = model->scalingFlag();
+    if (scalingMethod==4) {
+      // Aas auto
+      scalingMethod=3;
+    }
     // and see if there any empty rows
     for (iRow=0;iRow<numberRows;iRow++) {
       if (usefulRow[iRow]) {
@@ -2353,10 +2357,23 @@ ClpPackedMatrix::scale(ClpModel * model) const
         scalingMethod=4;
       } else {
         assert (scalingMethod==4);
-        if (overallSmallest>2.0*savedOverallRatio)
+        if (overallSmallest>2.0*savedOverallRatio) {
           finished=true; // geometric was better
-        else
+	  if (model->scalingFlag()==4) {
+	    // If in Branch and bound change
+	    if ((model->specialOptions()&1024)!=0) {
+	      model->scaling(2);
+	    }
+	  }
+        } else {
           scalingMethod=1; // redo equilibrium
+	  if (model->scalingFlag()==4) {
+	    // If in Branch and bound change
+	    if ((model->specialOptions()&1024)!=0) {
+	      model->scaling(1);
+	    }
+	  }
+	}
 #if 0
         if (model->logLevel()>2) {
           if (finished)
