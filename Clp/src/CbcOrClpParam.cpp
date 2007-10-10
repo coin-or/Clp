@@ -1661,12 +1661,13 @@ See branchAndCut for information on options."
   parameters[numberParameters-1].append("root");
   parameters[numberParameters-1].append("ifmove");
   parameters[numberParameters-1].append("forceOn");
+  parameters[numberParameters-1].append("forceLongOn");
   parameters[numberParameters-1].setLonghelp
     (
      "The original cuts - beware of imitations!  Having gone out of favor, they are now more \
 fashionable as LP solvers are more robust and they interact well with other cuts.  They will almost always \
 give cuts (although in this executable they are limited as to number of variables in cut).  \
-However the cuts may be dense so it is worth experimenting. \
+However the cuts may be dense so it is worth experimenting (Long allows any length). \
 See branchAndCut for information on options."
      ); 
   parameters[numberParameters++]=
