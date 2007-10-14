@@ -655,8 +655,8 @@ public:
 
       Defaults are 1.0,10.0
   */
-  void setValuesPassAction(float incomingInfeasibility,
-			   float allowedInfeasibility);
+  void setValuesPassAction(double incomingInfeasibility,
+			   double allowedInfeasibility);
   //@}
   /**@name most useful gets and sets */
   //@{
@@ -1267,8 +1267,8 @@ protected:
 
       Defaults are 1.0,10.0
   */
-  float incomingInfeasibility_;
-  float allowedInfeasibility_;
+  double incomingInfeasibility_;
+  double allowedInfeasibility_;
   /// Automatic scaling of objective and rhs and bounds
   int automaticScale_;
   /// For dealing with all issues of cycling etc

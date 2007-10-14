@@ -7471,8 +7471,8 @@ ClpSimplex::createPiecewiseLinearCosts(const int * starts,
    Defaults are 1.0,10.0
 */
 void 
-ClpSimplex::setValuesPassAction(float incomingInfeasibility,
-				float allowedInfeasibility)
+ClpSimplex::setValuesPassAction(double incomingInfeasibility,
+				double allowedInfeasibility)
 {
   incomingInfeasibility_=incomingInfeasibility;
   allowedInfeasibility_=allowedInfeasibility;
