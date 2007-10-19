@@ -786,8 +786,9 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	    matrix_->generalExpanded(this,5,dummy);
 	    forceFactorization_=1; // a bit drastic but ..
 	    type = 2;
-	    if (internalFactorize(1)!=0)
-	       largestPrimalError_=1.0e4; // force other type
+	    if (internalFactorize(2)!=0) {
+	      largestPrimalError_=1.0e4; // force other type
+	    }
 	  }
 	  changeMade_++; // say change made
 	}
