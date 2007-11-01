@@ -45,7 +45,7 @@ ClpSimplex::ClpSimplex (bool emptyMessages) :
   columnDualInfeasibility_(0.0),
   rowDualInfeasibility_(0.0),
   moreSpecialOptions_(2),
-  rowDualSequence_(-2),
+  baseIteration_(0),
   primalToleranceToGetOptimal_(-1.0),
   remainingDualInfeasibility_(0.0),
   largeValue_(1.0e15),
@@ -156,7 +156,7 @@ ClpSimplex::ClpSimplex ( const ClpModel * rhs,
   columnDualInfeasibility_(0.0),
   rowDualInfeasibility_(0.0),
   moreSpecialOptions_(2),
-  rowDualSequence_(-2),
+  baseIteration_(0),
   primalToleranceToGetOptimal_(-1.0),
   remainingDualInfeasibility_(0.0),
   largeValue_(1.0e15),
@@ -1615,7 +1615,7 @@ ClpSimplex::ClpSimplex(const ClpSimplex &rhs,int scalingMode) :
   columnDualInfeasibility_(0.0),
   rowDualInfeasibility_(0.0),
   moreSpecialOptions_(2),
-  rowDualSequence_(-2),
+  baseIteration_(0),
   primalToleranceToGetOptimal_(-1.0),
   remainingDualInfeasibility_(0.0),
   largeValue_(1.0e15),
@@ -1719,7 +1719,7 @@ ClpSimplex::ClpSimplex(const ClpModel &rhs, int scalingMode) :
   columnDualInfeasibility_(0.0),
   rowDualInfeasibility_(0.0),
   moreSpecialOptions_(2),
-  rowDualSequence_(-2),
+  baseIteration_(0),
   primalToleranceToGetOptimal_(-1.0),
   remainingDualInfeasibility_(0.0),
   largeValue_(1.0e15),
@@ -1913,7 +1913,7 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
   columnDualInfeasibility_ = rhs.columnDualInfeasibility_;
   moreSpecialOptions_ = rhs.moreSpecialOptions_;
   rowDualInfeasibility_ = rhs.rowDualInfeasibility_;
-  rowDualSequence_ = rhs.rowDualSequence_;
+  baseIteration_ = rhs.baseIteration_;
   primalToleranceToGetOptimal_ = rhs.primalToleranceToGetOptimal_;
   remainingDualInfeasibility_ = rhs.remainingDualInfeasibility_;
   largeValue_ = rhs.largeValue_;
@@ -4635,10 +4635,12 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
     int dummy;
     if (problemStatus_==10&&saveObjective==objective_)
       startFinishOptions |= 2;
+    baseIteration_=numberIterations_;
     if ((matrix_->generalExpanded(this,4,dummy)&1)!=0)
       returnCode = ((ClpSimplexPrimal *) this)->primal(1,startFinishOptions);
     else
       returnCode = ((ClpSimplexDual *) this)->dual(0,startFinishOptions);
+    baseIteration_=0;
     if (saveObjective != objective_) {
       // We changed objective to see if infeasible
       delete objective_;
@@ -4688,7 +4690,12 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
       intParam_[ClpMaxNumIteration] = CoinMin(numberIterations_ + 1000 + 
 					  2*numberRows_+numberColumns_,saveMax);
       perturbation_=savePerturbation;
+      baseIteration_=numberIterations_;
       returnCode = ((ClpSimplexPrimal *) this)->primal(0);
+      baseIteration_=0;
+      computeObjectiveValue();
+      // can't rely on djs either
+      memset(reducedCost_,0,numberColumns_*sizeof(double));
       if (problemStatus_==3&&numberIterations_<saveMax&& 
 	  handler_->logLevel()>0)
 	printf("looks like real trouble - too many iterations in second clean up - giving up\n");
@@ -4744,6 +4751,7 @@ int ClpSimplex::primal (int ifValuesPass , int startFinishOptions)
     setInitialDenseFactorization(true);
     // check which algorithms allowed
     int dummy;
+    baseIteration_=numberIterations_;
     if ((matrix_->generalExpanded(this,4,dummy)&2)!=0&&(specialOptions_&8192)==0) {
       double saveBound = dualBound_;
       // upperOut_ has largest away from bound
@@ -4753,6 +4761,7 @@ int ClpSimplex::primal (int ifValuesPass , int startFinishOptions)
     } else {
       returnCode = ((ClpSimplexPrimal *) this)->primal(0,startFinishOptions);
     }
+    baseIteration_=0;
     setInitialDenseFactorization(denseFactorization);
     perturbation_=savePerturbation;
     if (problemStatus_==10) 
@@ -7396,7 +7405,7 @@ ClpSimplex::returnModel(ClpSimplex & otherModel)
   otherModel.columnDualInfeasibility_ = columnDualInfeasibility_;
   otherModel.moreSpecialOptions_ = moreSpecialOptions_;
   otherModel.rowDualInfeasibility_ = rowDualInfeasibility_;
-  otherModel.rowDualSequence_ = rowDualSequence_;
+  otherModel.baseIteration_ = baseIteration_;
   otherModel.primalToleranceToGetOptimal_ = primalToleranceToGetOptimal_;
   otherModel.remainingDualInfeasibility_ = remainingDualInfeasibility_;
   otherModel.largestPrimalError_ = largestPrimalError_;

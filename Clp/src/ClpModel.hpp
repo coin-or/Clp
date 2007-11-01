@@ -336,6 +336,9 @@ public:
   /// Objective offset
   inline double objectiveOffset() const { return dblParam_[ClpObjOffset];}
   void setObjectiveOffset(double value);
+  /// Presolve tolerance to use
+  inline double presolveTolerance() const
+  { return dblParam_[ClpPresolveTolerance];}
 #ifndef CLP_NO_STD
   inline std::string problemName() const { return strParam_[ClpProbName]; }
 #endif

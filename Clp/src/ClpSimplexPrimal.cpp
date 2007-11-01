@@ -256,6 +256,8 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
     int lastSprintIteration=0;
     double lastObjectiveValue=COIN_DBL_MAX;
     // Start check for cycles
+    if (!progress_)
+      progress_ = new ClpSimplexProgress(this);
     progress_->startCheck();
     /*
       Status of problem:

@@ -2271,6 +2271,7 @@ File is in csv format with allowed headings - name, number, priority, direction,
   parameters[numberParameters-1].append("forceOnBut");
   parameters[numberParameters-1].append("forceOnStrong");
   parameters[numberParameters-1].append("forceOnButStrong");
+  parameters[numberParameters-1].append("strongRoot");
   parameters[numberParameters-1].setLonghelp
     (
      "This switches on probing cuts (either at root or in entire tree) \
@@ -2378,6 +2379,18 @@ See branchAndCut for information on options."
   parameters[numberParameters-1].setDoubleValue(1.0);
 #endif
 #ifdef COIN_HAS_CBC
+  parameters[numberParameters++]=
+      CbcOrClpParam("Rens","Whether to try Relaxation Enforced Neighborhood Search",
+		    "off",RENS);
+    parameters[numberParameters-1].append("on");
+    parameters[numberParameters-1].append("200");
+    parameters[numberParameters-1].append("1000");
+  parameters[numberParameters-1].setLonghelp
+    (
+     "This switches on Relaxation enforced neighborhood Search. \
+on just does feasibility pump \
+200 or 1000 does that many nodes."
+     ); 
   parameters[numberParameters++]=
       CbcOrClpParam("Rins","Whether to try Relaxed Induced Neighborhood Search",
 		    "off",RINS);

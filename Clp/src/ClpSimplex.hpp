@@ -957,6 +957,9 @@ public:
   */
   inline int maximumBasic() const
   { return maximumBasic_;}
+  /// Iteration when we entered dual or primal
+  inline int baseIteration() const
+  { return baseIteration_;}
   /// Create C++ lines to get to current state
   void generateCpp( FILE * fp,bool defaultFactor=false);
   /// Gets clean and emptyish factorization
@@ -1095,8 +1098,8 @@ protected:
   double rowDualInfeasibility_;
   /// More special options - see set for details
   int moreSpecialOptions_;
-  /// Sequence of worst (-1 if feasible)
-  int rowDualSequence_;
+  /// Iteration when we entered dual or primal
+  int baseIteration_;
   /// Primal tolerance needed to make dual feasible (<largeTolerance)
   double primalToleranceToGetOptimal_;
   /// Remaining largest dual infeasibility
