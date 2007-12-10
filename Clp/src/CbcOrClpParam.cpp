@@ -2395,6 +2395,7 @@ on just does feasibility pump \
       CbcOrClpParam("Rins","Whether to try Relaxed Induced Neighborhood Search",
 		    "off",RINS);
     parameters[numberParameters-1].append("on");
+    parameters[numberParameters-1].append("often");
   parameters[numberParameters-1].setLonghelp
     (
      "This switches on Relaxed induced neighborhood Search."
@@ -2631,7 +2632,7 @@ activity at continuous solution",
 #ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("trust!PseudoCosts","Number of branches before we trust pseudocosts",
-		  -1,2000000,NUMBERBEFORE);
+		  -3,2000000,NUMBERBEFORE);
   parameters[numberParameters-1].setLonghelp
     (
      "Using strong branching computes pseudo-costs.  After this many times for a variable we just \
