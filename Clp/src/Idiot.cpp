@@ -454,6 +454,7 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
   memcpy(rowupper,model_->getRowUpper(),nrows*sizeof(double));
   double * rowlower= new double[nrows]; // not const as modified
   memcpy(rowlower,model_->getRowLower(),nrows*sizeof(double));
+  CoinThreadRandom * randomNumberGenerator=model_->randomNumberGenerator();
   int * whenUsed;
   double * lambda;
   saveSol=new double[ncols];
@@ -728,7 +729,7 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
 		       dj,cost,rowlower,rowupper,
 		       lower,upper,elemXX,row,columnStart,columnLength,lambda,
 		       0,mu,drop,
-		       maxmin,offset,strategy,djTol,djExit,djFlag);
+		      maxmin,offset,strategy,djTol,djExit,djFlag,randomNumberGenerator);
   // update whenUsed_
   n = cleanIteration(iteration, ordStart,ordEnd,
 		     colsol,  lower,  upper,
@@ -793,7 +794,7 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
 		     cost,rowlower,rowupper,
 		     lower,upper,elemXX,row,columnStart,columnLength,lambda,
 		     maxIts,mu,drop,
-		     maxmin,offset,strategy,djTol,djExit,djFlag);
+		     maxmin,offset,strategy,djTol,djExit,djFlag,randomNumberGenerator);
     n = cleanIteration(iteration, ordStart,ordEnd,
 		       colsol,  lower,  upper,
 		       rowlower, rowupper,

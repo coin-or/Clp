@@ -516,7 +516,7 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
   int start[4];
   start[1]=number;
   start[2]=0;
-  double dstart = ((double) number) * CoinDrand48();
+  double dstart = ((double) number) * model_->randomNumberGenerator()->randomDouble();
   start[0]=(int) dstart;
   start[3]=start[0];
   //double largestWeight=0.0;
@@ -2681,7 +2681,7 @@ ClpPrimalColumnSteepest::pivotColumnOldMethod(CoinIndexedVector * updates,
   int start[4];
   start[1]=number;
   start[2]=0;
-  double dstart = ((double) number) * CoinDrand48();
+  double dstart = ((double) number) * model_->randomNumberGenerator()->randomDouble();
   start[0]=(int) dstart;
   start[3]=start[0];
   //double largestWeight=0.0;
@@ -3600,14 +3600,14 @@ ClpPrimalColumnSteepest::partialPricing(CoinIndexedVector * updates,
   int nSlacks = infeasible_->getNumElements();
   startR[1]=nSlacks;
   startR[2]=0;
-  double randomR = CoinDrand48();
+  double randomR = model_->randomNumberGenerator()->randomDouble();
   double dstart = ((double) nSlacks) * randomR;
   startR[0]=(int) dstart;
   startR[3]=startR[0];
   double startC[4];
   startC[1]=1.0;
   startC[2]=0;
-  double randomC = CoinDrand48();
+  double randomC = model_->randomNumberGenerator()->randomDouble();
   startC[0]=randomC;
   startC[3]=randomC;
   reducedCost = model_->djRegion(1);

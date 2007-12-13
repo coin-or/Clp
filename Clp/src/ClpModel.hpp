@@ -15,6 +15,7 @@
 //#endif
 #include "ClpPackedMatrix.hpp"
 #include "CoinMessageHandler.hpp"
+#include "CoinHelperFunctions.hpp"
 #include "ClpParameters.hpp"
 #include "ClpObjective.hpp"
 class ClpEventHandler;
@@ -689,6 +690,15 @@ public:
    /// Event handler
    inline ClpEventHandler * eventHandler() const
   { return eventHandler_;}
+  /// Thread specific random number generator
+  inline CoinThreadRandom * randomNumberGenerator() 
+  { return &randomNumberGenerator_;}
+  /// Thread specific random number generator
+  inline CoinThreadRandom & mutableRandomNumberGenerator()
+  { return randomNumberGenerator_;}
+  /// Set seed for thread specific random number generator
+  inline void setRandomSeed(int value)
+  { randomNumberGenerator_.setSeed(value);}
    /// length of names (0 means no names0
    inline int lengthNames() const { return lengthNames_; }
 #ifndef CLP_NO_STD
@@ -971,6 +981,8 @@ protected:
   CoinMessageHandler * handler_;
   /// Flag to say if default handler (so delete)
   bool defaultHandler_;
+  /// Thread specific random number generator
+  CoinThreadRandom randomNumberGenerator_;
   /// Event handler
   ClpEventHandler * eventHandler_;
 #ifndef CLP_NO_STD

@@ -193,7 +193,8 @@ IdiotResult IdiSolve(
 		     const int * length, double * lambda,
 		     int maxIts,double mu,double drop,
 		     double maxmin, double offset,
-		     int strategy,double djTol,double djExit,double djFlag);
+		     int strategy,double djTol,double djExit,double djFlag,
+		     CoinThreadRandom * randomNumberGenerator);
 int dropping(IdiotResult result,
 	     double tolerance,
 	     double small,

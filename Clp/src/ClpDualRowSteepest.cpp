@@ -246,7 +246,7 @@ k
   int start[4];
   start[1]=number;
   start[2]=0;
-  double dstart = ((double) number) * CoinDrand48();
+  double dstart = ((double) number) * model_->randomNumberGenerator()->randomDouble();
   start[0]=(int) dstart;
   start[3]=start[0];
   //double largestWeight=0.0;

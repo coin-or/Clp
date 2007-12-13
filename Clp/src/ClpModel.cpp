@@ -106,7 +106,7 @@ ClpModel::ClpModel (bool emptyMessages) :
     messages_ = ClpMessage();
     coinMessages_ = CoinMessage();
   }
-  CoinSeedRandom(1234567);
+  randomNumberGenerator_.setSeed(1234567);
 }
 
 //-----------------------------------------------------------------------------
@@ -619,7 +619,7 @@ ClpModel::ClpModel(const ClpModel &rhs, int scalingMode) :
       scalingFlag_=0;
     }
   }
-  CoinSeedRandom(1234567);
+  randomNumberGenerator_.setSeed(1234567);
 }
 // Assignment operator. This copies the data
 ClpModel & 
@@ -648,6 +648,7 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
    else 
     handler_ = rhs.handler_;
   eventHandler_ = rhs.eventHandler_->clone();
+  randomNumberGenerator_ = rhs.randomNumberGenerator_;
   messages_ = rhs.messages_;
   coinMessages_ = rhs.coinMessages_;
   intParam_[ClpMaxNumIteration] = rhs.intParam_[ClpMaxNumIteration];
@@ -2796,6 +2797,7 @@ ClpModel::ClpModel ( const ClpModel * rhs,
    else 
     handler_ = rhs->handler_;
   eventHandler_ = rhs->eventHandler_->clone();
+  randomNumberGenerator_ = rhs->randomNumberGenerator_;
   messages_ = rhs->messages_;
   coinMessages_ = rhs->coinMessages_;
   intParam_[ClpMaxNumIteration] = rhs->intParam_[ClpMaxNumIteration];
@@ -2915,7 +2917,7 @@ ClpModel::ClpModel ( const ClpModel * rhs,
     matrix_ = rhs->matrix_->subsetClone(numberRows,whichRow,
 					numberColumns,whichColumn);
   }
-  CoinSeedRandom(1234567);
+  randomNumberGenerator_.setSeed(1234567);
 }
 #ifndef CLP_NO_STD
 // Copies in names

@@ -2915,7 +2915,7 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 		weight=dubiousWeights[iSequence];
 	      else
 		weight=1.0;
-	      weight += CoinDrand48()*1.0e-2;
+	      weight += randomNumberGenerator_.randomDouble()*1.0e-2;
 	      if (absAlpha>2.0*bestPivot) {
 		take=true;
 	      } else if (absAlpha>largestPivot) {
@@ -4558,11 +4558,11 @@ ClpSimplexDual::perturb()
 	value = CoinMin(value,maximumFraction*(fabs(currentValue)+1.0e-1*perturbation+1.0e-3));
 	if (rowLowerWork_[iRow]>-largeValue_) {
 	  if (fabs(rowLowerWork_[iRow])<fabs(rowUpperWork_[iRow])) 
-	    value *= CoinDrand48();
+	    value *= randomNumberGenerator_.randomDouble();
 	  else
-	    value *= -CoinDrand48();
+	    value *= -randomNumberGenerator_.randomDouble();
 	} else if (rowUpperWork_[iRow]<largeValue_) {
-	  value *= -CoinDrand48();
+	  value *= -randomNumberGenerator_.randomDouble();
 	} else {
 	  value=0.0;
 	}
@@ -4615,15 +4615,15 @@ ClpSimplexDual::perturb()
       if (columnLowerWork_[iColumn]>-largeValue_) {
 	if (fabs(columnLowerWork_[iColumn])<
 	    fabs(columnUpperWork_[iColumn])) {
-	  value *= (1.0-m1 +m1*CoinDrand48());
-	  value2 *= (1.0-m1 +m1*CoinDrand48());
+	  value *= (1.0-m1 +m1*randomNumberGenerator_.randomDouble());
+	  value2 *= (1.0-m1 +m1*randomNumberGenerator_.randomDouble());
 	} else {
-	  value *= -(1.0-m1+m1*CoinDrand48());
-	  value2 *= -(1.0-m1+m1*CoinDrand48());
+	  value *= -(1.0-m1+m1*randomNumberGenerator_.randomDouble());
+	  value2 *= -(1.0-m1+m1*randomNumberGenerator_.randomDouble());
 	}
       } else if (columnUpperWork_[iColumn]<largeValue_) {
-	value *= -(1.0-m1+m1*CoinDrand48());
-	value2 *= -(1.0-m1+m1*CoinDrand48());
+	value *= -(1.0-m1+m1*randomNumberGenerator_.randomDouble());
+	value2 *= -(1.0-m1+m1*randomNumberGenerator_.randomDouble());
       } else {
 	value=0.0;
       }

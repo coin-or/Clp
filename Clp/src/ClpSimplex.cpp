@@ -1532,7 +1532,7 @@ ClpSimplex::housekeeping(double objectiveChange)
       printf("Cycle of %d\n",cycle);
     // reset
     progress_->startCheck();
-    double random = CoinDrand48();
+    double random = randomNumberGenerator_.randomDouble();
     int extra = (int) (9.999*random);
     int off[]={1,1,1,1,2,2,2,3,3,4};
     if (factorization_->pivots()>cycle) {
@@ -1589,7 +1589,7 @@ ClpSimplex::housekeeping(double objectiveChange)
       forceFactorization_ = -1; //off
     return 1;
   } else if (numberIterations_>1000+10*(numberRows_+(numberColumns_>>2))) {
-    double random = CoinDrand48();
+    double random = randomNumberGenerator_.randomDouble();
     int maxNumber = (forceFactorization_<0) ? maximumPivots : CoinMin(forceFactorization_,maximumPivots);
     if (factorization_->pivots()>=random*maxNumber) {
       return 1;

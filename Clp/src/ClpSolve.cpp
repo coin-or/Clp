@@ -399,9 +399,9 @@ ClpSimplex::initialSolve(ClpSolve & options)
       obj[i]=0.0;
       if (CoinMin(l,u)<1.0e20) {
         if (l<u) 
-          obj[i]=1.0+CoinDrand48()*1.0e-2;
+          obj[i]=1.0+randomNumberGenerator_.randomDouble()*1.0e-2;
         else
-          obj[i]=-1.0-CoinDrand48()*1.0e-2;
+          obj[i]=-1.0-randomNumberGenerator_.randomDouble()*1.0e-2;
       }
     }
     objective_= new ClpLinearObjective(obj,numberColumns_);
@@ -1507,7 +1507,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
       double * upper = model2->rowUpper();
       for (iRow=0;iRow<numberRows;iRow++) {
 	double lowerValue=lower[iRow], upperValue=upper[iRow];
-	double value = CoinDrand48();
+	double value = randomNumberGenerator_.randomDouble();
 	if (upperValue>lowerValue+primalTolerance_) {
 	  if (lowerValue>-1.0e20&&lowerValue)
 	    lowerValue -= value * 1.0e-4*fabs(lowerValue); 

@@ -126,15 +126,16 @@ Idiot::objval(int nrows, int ncols, double * rowsol , double * colsol,
 }
 IdiotResult 
 Idiot::IdiSolve(
-		    int nrows, int ncols, double * rowsol , double * colsol,
-	      double * pi, double * djs, const double * origcost , double * rowlower,
-	      double * rowupper, const double * lower,
-	      const double * upper, const double * elemnt, 
-		    const int * row, const CoinBigIndex * columnStart,
-		    const int * length, double * lambda,
-		    int maxIts,double mu,double drop,
-		    double maxmin, double offset,
-		    int strategy,double djTol,double djExit,double djFlag)
+		int nrows, int ncols, double * rowsol , double * colsol,
+		double * pi, double * djs, const double * origcost , double * rowlower,
+		double * rowupper, const double * lower,
+		const double * upper, const double * elemnt, 
+		const int * row, const CoinBigIndex * columnStart,
+		const int * length, double * lambda,
+		int maxIts,double mu,double drop,
+		double maxmin, double offset,
+		int strategy,double djTol,double djExit,double djFlag,
+		CoinThreadRandom * randomNumberGenerator)
 {
   IdiotResult result;
   int  i,j,k,iter;
@@ -360,7 +361,7 @@ Idiot::IdiSolve(
       direction = - direction;
       // randomize. 
       // The cast is to avoid gcc compiler warning
-      int kcol = (int)(ncols*CoinDrand48());
+      int kcol = (int)(ncols*randomNumberGenerator->randomDouble());
       if (kcol==ncols)
 	kcol=ncols-1;
       if (direction>0) {

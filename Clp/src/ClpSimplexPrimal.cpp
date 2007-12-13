@@ -773,7 +773,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
               } else if (sequenceOut_>=0&&getStatus(sequenceOut_)!=basic) {
                 setFlagged(sequenceOut_);
               }
-              double newTolerance = CoinMax(0.5 + 0.499*CoinDrand48(),factorization_->pivotTolerance());
+              double newTolerance = CoinMax(0.5 + 0.499*randomNumberGenerator_.randomDouble(),factorization_->pivotTolerance());
               factorization_->pivotTolerance(newTolerance);
             } else {
               // Go to safe 
@@ -2245,7 +2245,7 @@ ClpSimplexPrimal::perturb(int type)
 	  difference = CoinMin(difference,fabs(solutionValue)+1.0);
 	  double value = maximumFraction*(difference+1.0);
 	  value = CoinMin(value,0.1);
-	  value *= CoinDrand48();
+	  value *= randomNumberGenerator_.randomDouble();
 	  if (solutionValue-lowerValue<=primalTolerance_) {
 	    lower_[iSequence] -= value;
 	  } else if (upperValue-solutionValue<=primalTolerance_) {
@@ -2287,7 +2287,7 @@ ClpSimplexPrimal::perturb(int type)
       if (upperValue>lowerValue+primalTolerance_) {
 	double value = perturbation*maximumFraction;
 	value = CoinMin(value,0.1);
-	value *= CoinDrand48();
+	value *= randomNumberGenerator_.randomDouble();
 	if (savePerturbation!=50) {
 	  if (fabs(value)<=primalTolerance_)
 	    value=0.0;
@@ -2346,7 +2346,7 @@ ClpSimplexPrimal::perturb(int type)
       double lowerValue=lower_[i], upperValue=upper_[i];
       double value = perturbation*maximumFraction;
       value = CoinMin(value,0.1);
-      value *= CoinDrand48();
+      value *= randomNumberGenerator_.randomDouble();
       if (upperValue>lowerValue+tolerance) {
 	if (savePerturbation!=50) {
 	  if (fabs(value)<=primalTolerance_)

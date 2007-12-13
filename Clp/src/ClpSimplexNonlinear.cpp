@@ -2441,7 +2441,7 @@ ClpSimplexNonlinear::pivotNonlinearResult()
 	int iRow = which[iIndex];
 	double alpha = work[iIndex];
 	if (fabs(alpha)>1.0e-6) {
-	  double distance = CoinDrand48();
+	  double distance = randomNumberGenerator_.randomDouble();
 	  if (distance<smallest) {
 	    pivotRow_=iRow;
 	    alpha_=alpha;

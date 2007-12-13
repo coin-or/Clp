@@ -2390,7 +2390,7 @@ ClpPackedMatrix::scale(ClpModel * model) const
 #ifdef RANDOMIZE
     // randomize by up to 10%
     for (iRow=0;iRow<numberRows;iRow++) {
-      double value = 0.5-CoinDrand48();//between -0.5 to + 0.5
+      double value = 0.5-randomNumberGenerator_.randomDouble();//between -0.5 to + 0.5
       rowScale[iRow] *= (1.0+0.1*value);
     }
 #endif
@@ -2419,7 +2419,7 @@ ClpPackedMatrix::scale(ClpModel * model) const
 	columnScale[iColumn]=overallLargest/largest;
         columnScale[iColumn]=CoinMax(1.0e-10,CoinMin(1.0e10,columnScale[iColumn]));
 #ifdef RANDOMIZE
-	double value = 0.5-CoinDrand48();//between -0.5 to + 0.5
+	double value = 0.5-randomNumberGenerator_.randomDouble();//between -0.5 to + 0.5
 	columnScale[iColumn] *= (1.0+0.1*value);
 #endif
 	double difference = columnUpper[iColumn]-columnLower[iColumn];
