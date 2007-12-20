@@ -1636,11 +1636,12 @@ See branchAndCut for information on options."
      ); 
     parameters[numberParameters++]=
       CbcOrClpParam("force!Solution","Whether to use given solution as crash for BAB",
-		    "off",USESOLUTION);
-    parameters[numberParameters-1].append("on");
-  parameters[numberParameters-1].setLonghelp
+		    -1,20000000,USESOLUTION);
+    parameters[numberParameters-1].setIntValue(-1);
+    parameters[numberParameters-1].setLonghelp
     (
-     "If on then tries to branch to solution given by AMPL or priorities file."
+     "-1 off.  If 0 then tries to branch to solution given by AMPL or priorities file. \
+If >0 then also does that many nodes on fixed problem."
      ); 
 #endif
   parameters[numberParameters++]=
@@ -1661,12 +1662,13 @@ See branchAndCut for information on options."
   parameters[numberParameters-1].append("root");
   parameters[numberParameters-1].append("ifmove");
   parameters[numberParameters-1].append("forceOn");
+  parameters[numberParameters-1].append("forceLongOn");
   parameters[numberParameters-1].setLonghelp
     (
      "The original cuts - beware of imitations!  Having gone out of favor, they are now more \
 fashionable as LP solvers are more robust and they interact well with other cuts.  They will almost always \
 give cuts (although in this executable they are limited as to number of variables in cut).  \
-However the cuts may be dense so it is worth experimenting. \
+However the cuts may be dense so it is worth experimenting (Long allows any length). \
 See branchAndCut for information on options."
      ); 
   parameters[numberParameters++]=
@@ -2042,7 +2044,7 @@ values, 2 saves values, 3 with greater accuracy and 4 in IEEE."
 #ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("passC!uts","Number of cut passes at root node",
-		  -999999,999999,CUTPASS);
+		  -9999999,9999999,CUTPASS);
   parameters[numberParameters-1].setLonghelp
     (
      "The default is 100 passes if less than 500 columns, 100 passes (but \
@@ -2270,6 +2272,7 @@ File is in csv format with allowed headings - name, number, priority, direction,
   parameters[numberParameters-1].append("forceOnBut");
   parameters[numberParameters-1].append("forceOnStrong");
   parameters[numberParameters-1].append("forceOnButStrong");
+  parameters[numberParameters-1].append("strongRoot");
   parameters[numberParameters-1].setLonghelp
     (
      "This switches on probing cuts (either at root or in entire tree) \
@@ -2378,9 +2381,22 @@ See branchAndCut for information on options."
 #endif
 #ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
+      CbcOrClpParam("Rens","Whether to try Relaxation Enforced Neighborhood Search",
+		    "off",RENS);
+    parameters[numberParameters-1].append("on");
+    parameters[numberParameters-1].append("200");
+    parameters[numberParameters-1].append("1000");
+  parameters[numberParameters-1].setLonghelp
+    (
+     "This switches on Relaxation enforced neighborhood Search. \
+on just does feasibility pump \
+200 or 1000 does that many nodes."
+     ); 
+  parameters[numberParameters++]=
       CbcOrClpParam("Rins","Whether to try Relaxed Induced Neighborhood Search",
 		    "off",RINS);
     parameters[numberParameters-1].append("on");
+    parameters[numberParameters-1].append("often");
   parameters[numberParameters-1].setLonghelp
     (
      "This switches on Relaxed induced neighborhood Search."
@@ -2617,7 +2633,7 @@ activity at continuous solution",
 #ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("trust!PseudoCosts","Number of branches before we trust pseudocosts",
-		  -1,2000000,NUMBERBEFORE);
+		  -3,2000000,NUMBERBEFORE);
   parameters[numberParameters-1].setLonghelp
     (
      "Using strong branching computes pseudo-costs.  After this many times for a variable we just \
