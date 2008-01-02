@@ -1636,11 +1636,12 @@ See branchAndCut for information on options."
      ); 
     parameters[numberParameters++]=
       CbcOrClpParam("force!Solution","Whether to use given solution as crash for BAB",
-		    "off",USESOLUTION);
-    parameters[numberParameters-1].append("on");
-  parameters[numberParameters-1].setLonghelp
+		    -1,20000000,USESOLUTION);
+    parameters[numberParameters-1].setIntValue(-1);
+    parameters[numberParameters-1].setLonghelp
     (
-     "If on then tries to branch to solution given by AMPL or priorities file."
+     "-1 off.  If 0 then tries to branch to solution given by AMPL or priorities file. \
+If >0 then also does that many nodes on fixed problem."
      ); 
 #endif
   parameters[numberParameters++]=

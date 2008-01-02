@@ -1990,7 +1990,7 @@ ClpSimplexOther::parametricsLoop(double startingTheta, double & endingTheta,doub
   // startup will have factorized so can skip
   int factorType=0;
   // Start check for cycles
-  progress_->startCheck();
+  progress_.startCheck();
   // Say change made on first iteration
   changeMade_=1;
   /*
@@ -2106,7 +2106,7 @@ ClpSimplexOther::statusOfProblemInParametrics(int type, ClpDataSave & saveData)
   // Check if looping
   int loop;
   if (type!=2) 
-    loop = progress_->looping();
+    loop = progress_.looping();
   else
     loop=-1;
   if (loop>=0) {
@@ -2155,7 +2155,7 @@ ClpSimplexOther::statusOfProblemInParametrics(int type, ClpDataSave & saveData)
     sumPrimalInfeasibilities_ = 0.0;
   }
   if (dualFeasible()||problemStatus_==-4) {
-    progress_->modifyObjective(objectiveValue_
+    progress_.modifyObjective(objectiveValue_
 			       -sumDualInfeasibilities_*dualBound_);
   }
   if (numberPrimalInfeasibilities_) {
@@ -2326,7 +2326,7 @@ ClpSimplexOther::whileIterating(double startingTheta, double & endingTheta,doubl
 		<<x<<sequenceWithin(sequenceOut_)
 		<<CoinMessageEol;
 	      setFlagged(sequenceOut_);
-	      progress_->clearBadTimes();
+	      progress_.clearBadTimes();
 	      lastBadIteration_ = numberIterations_; // say be more cautious
 	      rowArray_[0]->clear();
 	      rowArray_[1]->clear();
@@ -2417,7 +2417,7 @@ ClpSimplexOther::whileIterating(double startingTheta, double & endingTheta,doubl
 	      <<x<<sequenceWithin(sequenceOut_)
 	      <<CoinMessageEol;
 	    setFlagged(sequenceOut_);
-	    progress_->clearBadTimes();
+	    progress_.clearBadTimes();
 	    lastBadIteration_ = numberIterations_; // say be more cautious
 	    rowArray_[0]->clear();
 	    rowArray_[1]->clear();
@@ -3003,7 +3003,7 @@ ClpSimplexOther::expandKnapsack(int knapsackRow, int & numberOutput,
   // modify rhs to allow for nonzero lower bounds
   //double * rowLower = smallModel.rowLower();
   //double * rowUpper = smallModel.rowUpper();
-  const double * columnLower = smallModel.columnLower();
+  //const double * columnLower = smallModel.columnLower();
   //const double * columnUpper = smallModel.columnUpper();
   const CoinPackedMatrix * matrix = smallModel.matrix();
   const double * element = matrix->getElements();
@@ -3011,7 +3011,7 @@ ClpSimplexOther::expandKnapsack(int knapsackRow, int & numberOutput,
   const CoinBigIndex * columnStart = matrix->getVectorStarts();
   const int * columnLength = matrix->getVectorLengths();
   const double * objective = smallModel.objective();
-  double objectiveOffset=0.0;
+  //double objectiveOffset=0.0;
   // would use for fixed?
   CoinZeroN(rhsOffset,numberRows_);
   double * rowActivity = smallModel.primalRowSolution();

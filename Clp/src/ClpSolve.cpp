@@ -2583,3 +2583,487 @@ ClpSolve::generateCpp(FILE * fp)
   fprintf(fp,"3  ClpSolve clpSolve(method,presolveType,numberPasses,\n");
   fprintf(fp,"3                    options,extraInfo,independentOptions);\n");
 }
+//#############################################################################
+#include "ClpNonLinearCost.hpp"
+
+ClpSimplexProgress::ClpSimplexProgress () 
+{
+  int i;
+  for (i=0;i<CLP_PROGRESS;i++) {
+    objective_[i] = COIN_DBL_MAX;
+    infeasibility_[i] = -1.0; // set to an impossible value
+    realInfeasibility_[i] = COIN_DBL_MAX;
+    numberInfeasibilities_[i]=-1; 
+    iterationNumber_[i]=-1;
+  }
+#ifdef CLP_PROGRESS_WEIGHT
+  for (i=0;i<CLP_PROGRESS_WEIGHT;i++) {
+    objectiveWeight_[i] = COIN_DBL_MAX;
+    infeasibilityWeight_[i] = -1.0; // set to an impossible value
+    realInfeasibilityWeight_[i] = COIN_DBL_MAX;
+    numberInfeasibilitiesWeight_[i]=-1; 
+    iterationNumberWeight_[i]=-1;
+  }
+  drop_ =0.0;
+  best_ =0.0;
+#endif
+  initialWeight_=0.0;
+  for (i=0;i<CLP_CYCLE;i++) {
+    //obj_[i]=COIN_DBL_MAX;
+    in_[i]=-1;
+    out_[i]=-1;
+    way_[i]=0;
+  }
+  numberTimes_ = 0;
+  numberBadTimes_ = 0;
+  model_ = NULL;
+  oddState_=0;
+}
+
+
+//-----------------------------------------------------------------------------
+
+ClpSimplexProgress::~ClpSimplexProgress ()
+{
+}
+// Copy constructor. 
+ClpSimplexProgress::ClpSimplexProgress(const ClpSimplexProgress &rhs) 
+{
+  int i;
+  for (i=0;i<CLP_PROGRESS;i++) {
+    objective_[i] = rhs.objective_[i];
+    infeasibility_[i] = rhs.infeasibility_[i];
+    realInfeasibility_[i] = rhs.realInfeasibility_[i];
+    numberInfeasibilities_[i]=rhs.numberInfeasibilities_[i]; 
+    iterationNumber_[i]=rhs.iterationNumber_[i];
+  }
+#ifdef CLP_PROGRESS_WEIGHT
+  for (i=0;i<CLP_PROGRESS_WEIGHT;i++) {
+    objectiveWeight_[i] = rhs.objectiveWeight_[i];
+    infeasibilityWeight_[i] = rhs.infeasibilityWeight_[i];
+    realInfeasibilityWeight_[i] = rhs.realInfeasibilityWeight_[i];
+    numberInfeasibilitiesWeight_[i]=rhs.numberInfeasibilitiesWeight_[i]; 
+    iterationNumberWeight_[i]=rhs.iterationNumberWeight_[i];
+  }
+  drop_ = rhs.drop_;
+  best_ = rhs.best_;
+#endif
+  initialWeight_ = rhs.initialWeight_;
+  for (i=0;i<CLP_CYCLE;i++) {
+    //obj_[i]=rhs.obj_[i];
+    in_[i]=rhs.in_[i];
+    out_[i]=rhs.out_[i];
+    way_[i]=rhs.way_[i];
+  }
+  numberTimes_ = rhs.numberTimes_;
+  numberBadTimes_ = rhs.numberBadTimes_;
+  model_ = rhs.model_;
+  oddState_=rhs.oddState_;
+}
+// Copy constructor.from model
+ClpSimplexProgress::ClpSimplexProgress(ClpSimplex * model) 
+{
+  model_ = model;
+  reset();
+  initialWeight_=0.0;
+}
+// Fill from model
+void 
+ClpSimplexProgress::fillFromModel ( ClpSimplex * model )
+{
+  model_ = model;
+  reset();
+  initialWeight_=0.0;
+}
+// Assignment operator. This copies the data
+ClpSimplexProgress & 
+ClpSimplexProgress::operator=(const ClpSimplexProgress & rhs)
+{
+  if (this != &rhs) {
+    int i;
+    for (i=0;i<CLP_PROGRESS;i++) {
+      objective_[i] = rhs.objective_[i];
+      infeasibility_[i] = rhs.infeasibility_[i];
+      realInfeasibility_[i] = rhs.realInfeasibility_[i];
+      numberInfeasibilities_[i]=rhs.numberInfeasibilities_[i]; 
+      iterationNumber_[i]=rhs.iterationNumber_[i];
+    }
+#ifdef CLP_PROGRESS_WEIGHT
+    for (i=0;i<CLP_PROGRESS_WEIGHT;i++) {
+      objectiveWeight_[i] = rhs.objectiveWeight_[i];
+      infeasibilityWeight_[i] = rhs.infeasibilityWeight_[i];
+      realInfeasibilityWeight_[i] = rhs.realInfeasibilityWeight_[i];
+      numberInfeasibilitiesWeight_[i]=rhs.numberInfeasibilitiesWeight_[i]; 
+      iterationNumberWeight_[i]=rhs.iterationNumberWeight_[i];
+    }
+    drop_ = rhs.drop_;
+    best_ = rhs.best_;
+#endif
+    initialWeight_ = rhs.initialWeight_;
+    for (i=0;i<CLP_CYCLE;i++) {
+      //obj_[i]=rhs.obj_[i];
+      in_[i]=rhs.in_[i];
+      out_[i]=rhs.out_[i];
+      way_[i]=rhs.way_[i];
+    }
+    numberTimes_ = rhs.numberTimes_;
+    numberBadTimes_ = rhs.numberBadTimes_;
+    model_ = rhs.model_;
+    oddState_=rhs.oddState_;
+  }
+  return *this;
+}
+// Seems to be something odd about exact comparison of doubles on linux
+static bool equalDouble(double value1, double value2)
+{
+
+  union { double d; int i[2]; } v1,v2;
+  v1.d = value1;
+  v2.d = value2;
+  if (sizeof(int)*2==sizeof(double)) 
+    return (v1.i[0]==v2.i[0]&&v1.i[1]==v2.i[1]);
+  else
+    return (v1.i[0]==v2.i[0]);
+}
+int
+ClpSimplexProgress::looping()
+{
+  if (!model_)
+    return -1;
+  double objective = model_->rawObjectiveValue();
+  double infeasibility;
+  double realInfeasibility=0.0;
+  int numberInfeasibilities;
+  int iterationNumber = model_->numberIterations();
+  if (model_->algorithm()<0) {
+    // dual
+    infeasibility = model_->sumPrimalInfeasibilities();
+    numberInfeasibilities = model_->numberPrimalInfeasibilities();
+  } else {
+    //primal
+    infeasibility = model_->sumDualInfeasibilities();
+    realInfeasibility = model_->nonLinearCost()->sumInfeasibilities();
+    numberInfeasibilities = model_->numberDualInfeasibilities();
+  }
+  int i;
+  int numberMatched=0;
+  int matched=0;
+  int nsame=0;
+  for (i=0;i<CLP_PROGRESS;i++) {
+    bool matchedOnObjective = equalDouble(objective,objective_[i]);
+    bool matchedOnInfeasibility = equalDouble(infeasibility,infeasibility_[i]);
+    bool matchedOnInfeasibilities = 
+      (numberInfeasibilities==numberInfeasibilities_[i]);
+    
+    if (matchedOnObjective&&matchedOnInfeasibility&&matchedOnInfeasibilities) {
+      matched |= (1<<i);
+      // Check not same iteration
+      if (iterationNumber!=iterationNumber_[i]) {
+	numberMatched++;
+	// here mainly to get over compiler bug?
+	if (model_->messageHandler()->logLevel()>10)
+	  printf("%d %d %d %d %d loop check\n",i,numberMatched,
+		 matchedOnObjective, matchedOnInfeasibility, 
+		 matchedOnInfeasibilities);
+      } else {
+	// stuck but code should notice
+	nsame++;
+      }
+    }
+    if (i) {
+      objective_[i-1] = objective_[i];
+      infeasibility_[i-1] = infeasibility_[i];
+      realInfeasibility_[i-1] = realInfeasibility_[i];
+      numberInfeasibilities_[i-1]=numberInfeasibilities_[i]; 
+      iterationNumber_[i-1]=iterationNumber_[i];
+    }
+  }
+  objective_[CLP_PROGRESS-1] = objective;
+  infeasibility_[CLP_PROGRESS-1] = infeasibility;
+  realInfeasibility_[CLP_PROGRESS-1] = realInfeasibility;
+  numberInfeasibilities_[CLP_PROGRESS-1]=numberInfeasibilities;
+  iterationNumber_[CLP_PROGRESS-1]=iterationNumber;
+  if (nsame==CLP_PROGRESS)
+    numberMatched=CLP_PROGRESS; // really stuck
+  if (model_->progressFlag())
+    numberMatched=0;
+  numberTimes_++;
+  if (numberTimes_<10)
+    numberMatched=0;
+  // skip if just last time as may be checking something
+  if (matched==(1<<(CLP_PROGRESS-1)))
+    numberMatched=0;
+  if (numberMatched) {
+    model_->messageHandler()->message(CLP_POSSIBLELOOP,model_->messages())
+      <<numberMatched
+      <<matched
+      <<numberTimes_
+      <<CoinMessageEol;
+    numberBadTimes_++;
+    if (numberBadTimes_<10) {
+      // make factorize every iteration
+      model_->forceFactorization(1);
+      if (numberBadTimes_<2) {
+	startCheck(); // clear other loop check
+	if (model_->algorithm()<0) {
+	  // dual - change tolerance
+	  model_->setCurrentDualTolerance(model_->currentDualTolerance()*1.05);
+	  // if infeasible increase dual bound
+	  if (model_->dualBound()<1.0e17) {
+	    model_->setDualBound(model_->dualBound()*1.1);
+	  }
+	} else {
+	  // primal - change tolerance	
+	  if (numberBadTimes_>3)
+	    model_->setCurrentPrimalTolerance(model_->currentPrimalTolerance()*1.05);
+	  // if infeasible increase infeasibility cost
+	  if (model_->nonLinearCost()->numberInfeasibilities()&&
+	      model_->infeasibilityCost()<1.0e17) {
+	    model_->setInfeasibilityCost(model_->infeasibilityCost()*1.1);
+	  }
+	}
+      } else {
+	// flag
+	int iSequence;
+	if (model_->algorithm()<0) {
+	  // dual
+	  if (model_->dualBound()>1.0e14) 
+	    model_->setDualBound(1.0e14);
+	  iSequence=in_[CLP_CYCLE-1];
+	} else {
+	  // primal 
+	  if (model_->infeasibilityCost()>1.0e14) 
+	    model_->setInfeasibilityCost(1.0e14);
+	  iSequence=out_[CLP_CYCLE-1];
+	}
+	if (iSequence>=0) {
+	  char x = model_->isColumn(iSequence) ? 'C' :'R';
+	  if (model_->messageHandler()->logLevel()>=63)
+	    model_->messageHandler()->message(CLP_SIMPLEX_FLAG,model_->messages())
+	      <<x<<model_->sequenceWithin(iSequence)
+	      <<CoinMessageEol;
+          // if Gub then needs to be sequenceIn_
+          int save=model_->sequenceIn();
+          model_->setSequenceIn(iSequence);
+	  model_->setFlagged(iSequence);
+          model_->setSequenceIn(save);
+	  //printf("flagging %d from loop\n",iSequence);
+	  startCheck();
+	} else {
+	  // Give up
+	  if (model_->messageHandler()->logLevel()>=63)
+	    printf("***** All flagged?\n");
+	  return 4;
+	}
+	// reset
+	numberBadTimes_=2;
+      }
+      return -2;
+    } else {
+      // look at solution and maybe declare victory
+      if (infeasibility<1.0e-4) {
+	return 0;
+      } else {
+	model_->messageHandler()->message(CLP_LOOP,model_->messages())
+	  <<CoinMessageEol;
+#ifndef NDEBUG
+        printf("debug loop ClpSimplex A\n");
+	abort();
+#endif
+	return 3;
+      }
+    }
+  }
+  return -1;
+}
+// Resets as much as possible
+void 
+ClpSimplexProgress::reset()
+{
+  int i;
+  for (i=0;i<CLP_PROGRESS;i++) {
+    if (model_->algorithm()>=0)
+      objective_[i] = COIN_DBL_MAX;
+    else
+      objective_[i] = -COIN_DBL_MAX;
+    infeasibility_[i] = -1.0; // set to an impossible value
+    realInfeasibility_[i] = COIN_DBL_MAX;
+    numberInfeasibilities_[i]=-1; 
+    iterationNumber_[i]=-1;
+  }
+#ifdef CLP_PROGRESS_WEIGHT
+  for (i=0;i<CLP_PROGRESS_WEIGHT;i++) {
+    objectiveWeight_[i] = COIN_DBL_MAX;
+    infeasibilityWeight_[i] = -1.0; // set to an impossible value
+    realInfeasibilityWeight_[i] = COIN_DBL_MAX;
+    numberInfeasibilitiesWeight_[i]=-1; 
+    iterationNumberWeight_[i]=-1;
+  }
+  drop_ =0.0;
+  best_ =0.0;
+#endif
+  for (i=0;i<CLP_CYCLE;i++) {
+    //obj_[i]=COIN_DBL_MAX;
+    in_[i]=-1;
+    out_[i]=-1;
+    way_[i]=0;
+  }
+  numberTimes_ = 0;
+  numberBadTimes_ = 0;
+  oddState_=0;
+}
+// Returns previous objective (if -1) - current if (0)
+double 
+ClpSimplexProgress::lastObjective(int back) const
+{
+  return objective_[CLP_PROGRESS-1-back];
+}
+// Returns previous infeasibility (if -1) - current if (0)
+double 
+ClpSimplexProgress::lastInfeasibility(int back) const
+{
+  return realInfeasibility_[CLP_PROGRESS-1-back];
+}
+// Sets real primal infeasibility
+void
+ClpSimplexProgress::setInfeasibility(double value)
+{
+  for (int i=1;i<CLP_PROGRESS;i++) 
+    realInfeasibility_[i-1] = realInfeasibility_[i];
+  realInfeasibility_[CLP_PROGRESS-1]=value;
+}
+// Modify objective e.g. if dual infeasible in dual
+void 
+ClpSimplexProgress::modifyObjective(double value)
+{
+  objective_[CLP_PROGRESS-1]=value;
+}
+// Returns previous iteration number (if -1) - current if (0)
+int 
+ClpSimplexProgress::lastIterationNumber(int back) const
+{
+  return iterationNumber_[CLP_PROGRESS-1-back];
+}
+// clears iteration numbers (to switch off panic)
+void 
+ClpSimplexProgress::clearIterationNumbers()
+{
+  for (int i=0;i<CLP_PROGRESS;i++) 
+    iterationNumber_[i]=-1;
+}
+// Start check at beginning of whileIterating
+void 
+ClpSimplexProgress::startCheck()
+{
+  int i;
+  for (i=0;i<CLP_CYCLE;i++) {
+    //obj_[i]=COIN_DBL_MAX;
+    in_[i]=-1;
+    out_[i]=-1;
+    way_[i]=0;
+  }
+}
+// Returns cycle length in whileIterating
+int 
+ClpSimplexProgress::cycle(int in, int out,int wayIn,int wayOut)
+{
+  int i;
+#if 0
+  if (model_->numberIterations()>206571) {
+    printf("in %d out %d\n",in,out);
+    for (i=0;i<CLP_CYCLE;i++) 
+      printf("cy %d in %d out %d\n",i,in_[i],out_[i]);
+  }
+#endif
+  int matched=0;
+  // first see if in matches any out
+  for (i=1;i<CLP_CYCLE;i++) {
+    if (in==out_[i]) {
+      // even if flip then suspicious
+      matched=-1;
+      break;
+    }
+  }
+#if 0
+  if (!matched||in_[0]<0) {
+    // can't be cycle
+    for (i=0;i<CLP_CYCLE-1;i++) {
+      //obj_[i]=obj_[i+1];
+      in_[i]=in_[i+1];
+      out_[i]=out_[i+1];
+      way_[i]=way_[i+1];
+    }
+  } else {
+    // possible cycle
+    matched=0;
+    for (i=0;i<CLP_CYCLE-1;i++) {
+      int k;
+      char wayThis = way_[i];
+      int inThis = in_[i];
+      int outThis = out_[i];
+      //double objThis = obj_[i];
+      for(k=i+1;k<CLP_CYCLE;k++) {
+	if (inThis==in_[k]&&outThis==out_[k]&&wayThis==way_[k]) {
+	  int distance = k-i;
+	  if (k+distance<CLP_CYCLE) {
+	    // See if repeats
+	    int j=k+distance;
+	    if (inThis==in_[j]&&outThis==out_[j]&&wayThis==way_[j]) {
+	      matched=distance;
+	      break;
+	    }
+	  } else {
+	    matched=distance;
+	    break;
+	  }
+	}
+      }
+      //obj_[i]=obj_[i+1];
+      in_[i]=in_[i+1];
+      out_[i]=out_[i+1];
+      way_[i]=way_[i+1];
+    }
+  }
+#else
+  if (matched&&in_[0]>=0) {
+    // possible cycle - only check [0] against all
+    matched=0;
+    int nMatched=0;
+    char way0 = way_[0];
+    int in0 = in_[0];
+    int out0 = out_[0];
+    //double obj0 = obj_[i];
+    for(int k=1;k<CLP_CYCLE-4;k++) {
+      if (in0==in_[k]&&out0==out_[k]&&way0==way_[k]) {
+	nMatched++;
+	// See if repeats
+	int end = CLP_CYCLE-k;
+	int j;
+	for ( j=1;j<end;j++) {
+	  if (in_[j+k]!=in_[j]||out_[j+k]!=out_[j]||way_[j+k]!=way_[j]) 
+	    break;
+	}
+	if (j==end) {
+	  matched=k;
+	  break;
+	}
+      }
+    }
+    // If three times then that is too much even if not regular
+    if (matched<=0&&nMatched>1)
+      matched=100;
+  }
+  for (i=0;i<CLP_CYCLE-1;i++) {
+    //obj_[i]=obj_[i+1];
+    in_[i]=in_[i+1];
+    out_[i]=out_[i+1];
+    way_[i]=way_[i+1];
+  }
+#endif
+  char way = 1-wayIn+4*(1-wayOut);
+  //obj_[i]=model_->objectiveValue();
+  in_[CLP_CYCLE-1]=in;
+  out_[CLP_CYCLE-1]=out;
+  way_[CLP_CYCLE-1]=way;
+  return matched;
+}

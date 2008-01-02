@@ -387,13 +387,24 @@ ClpDualRowSteepest::updateWeights(CoinIndexedVector * input,
     //int *regionIndex = alternateWeights_->getIndices (  );
     const int *permute = model_->factorization()->permute();
     //double * region = alternateWeights_->denseVector();
-    for ( i = 0; i < numberNonZero; i ++ ) {
-      int iRow = which[i];
-      double value = work[i];
-      norm += value*value;
-      iRow = permute[iRow];
-      work2[iRow] = value;
-      which2[i] = iRow;
+    if (permute) {
+      for ( i = 0; i < numberNonZero; i ++ ) {
+	int iRow = which[i];
+	double value = work[i];
+	norm += value*value;
+	iRow = permute[iRow];
+	work2[iRow] = value;
+	which2[i] = iRow;
+      }
+    } else {
+      for ( i = 0; i < numberNonZero; i ++ ) {
+	int iRow = which[i];
+	double value = work[i];
+	norm += value*value;
+	//iRow = permute[iRow];
+	work2[iRow] = value;
+	which2[i] = iRow;
+      }
     }
     spare->setNumElements ( numberNonZero );
     // Only one array active as already permuted

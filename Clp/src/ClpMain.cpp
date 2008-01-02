@@ -10,6 +10,9 @@
 #include <string>
 #include <iostream>
 
+int boundary_sort=1000;
+int boundary_sort2=1000;
+int boundary_sort3=10000;
 
 #include "CoinPragma.hpp"
 #include "CoinHelperFunctions.hpp"

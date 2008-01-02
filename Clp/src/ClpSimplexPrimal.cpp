@@ -256,9 +256,8 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
     int lastSprintIteration=0;
     double lastObjectiveValue=COIN_DBL_MAX;
     // Start check for cycles
-    if (!progress_)
-      progress_ = new ClpSimplexProgress(this);
-    progress_->startCheck();
+    progress_.fillFromModel(this);
+    progress_.startCheck();
     /*
       Status of problem:
       0 - optimal
@@ -310,7 +309,7 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
       }
 	  
       // may factorize, checks if problem finished
-      statusOfProblemInPrimal(lastCleaned,factorType,progress_,true,ifValuesPass,saveModel);
+      statusOfProblemInPrimal(lastCleaned,factorType,&progress_,true,ifValuesPass,saveModel);
       if (initialStatus==10) {
         // cleanup phase
         if(initialIterations != numberIterations_) {
@@ -319,7 +318,7 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
             if (perturbation_<101&&(specialOptions_&4)==0) {
               perturb(1);
               matrix_->rhsOffset(this,true,false);
-              statusOfProblemInPrimal(lastCleaned,factorType,progress_,true,ifValuesPass,saveModel);
+              statusOfProblemInPrimal(lastCleaned,factorType,&progress_,true,ifValuesPass,saveModel);
             }
           }
         } else {
@@ -339,7 +338,7 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
 	saveModel=NULL;
 	//lastSprintIteration=numberIterations_;
 	printf("End small model after\n");
-	statusOfProblemInPrimal(lastCleaned,factorType,progress_,true,ifValuesPass,saveModel);
+	statusOfProblemInPrimal(lastCleaned,factorType,&progress_,true,ifValuesPass,saveModel);
       } 
       int numberSprintIterations=0;
       int numberSprintColumns = primalColumnPivot_->numberSprintColumns(numberSprintIterations);
@@ -349,8 +348,8 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
 	originalModel(saveModel);
 	saveModel=NULL;
 	// Skip factorization
-	//statusOfProblemInPrimal(lastCleaned,factorType,progress_,false,saveModel);
-	statusOfProblemInPrimal(lastCleaned,factorType,progress_,true,ifValuesPass,saveModel);
+	//statusOfProblemInPrimal(lastCleaned,factorType,&progress_,false,saveModel);
+	statusOfProblemInPrimal(lastCleaned,factorType,&progress_,true,ifValuesPass,saveModel);
       } else if (problemStatus_<0&&!saveModel&&numberSprintColumns&&firstFree_<0) {
 	int numberSort=0;
 	int numberFixed=0;
@@ -414,8 +413,8 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
 	  delete [] whichColumns;
 	  delete [] weight;
 	  // Skip factorization
-	  //statusOfProblemInPrimal(lastCleaned,factorType,progress_,false,saveModel);
-	  //statusOfProblemInPrimal(lastCleaned,factorType,progress_,true,saveModel);
+	  //statusOfProblemInPrimal(lastCleaned,factorType,&progress_,false,saveModel);
+	  //statusOfProblemInPrimal(lastCleaned,factorType,&progress_,true,saveModel);
 	  stopSprint = numberIterations_+numberSprintIterations;
 	  printf("Sprint with %d columns for %d iterations\n",
 		 numberSprintColumns,numberSprintIterations);
@@ -465,7 +464,7 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
   }
   // if infeasible get real values
   //printf("XXXXY final cost %g\n",infeasibilityCost_);
-  progress_->initialWeight_=0.0;
+  progress_.initialWeight_=0.0;
   if (problemStatus_==1&&secondaryStatus_!=6) {
     infeasibilityCost_=0.0;
     createRim(1+4);
@@ -2604,7 +2603,7 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	      <<x<<sequenceWithin(sequenceIn_)
 	      <<CoinMessageEol;
 	    setFlagged(sequenceIn_);
-	    progress_->clearBadTimes();
+	    progress_.clearBadTimes();
 	    lastBadIteration_ = numberIterations_; // say be more cautious
 	    clearAll();
 	    pivotRow_=-1;
@@ -2651,7 +2650,7 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	    <<x<<sequenceWithin(sequenceIn_)
 	    <<CoinMessageEol;
 	  setFlagged(sequenceIn_);
-	  progress_->clearBadTimes();
+	  progress_.clearBadTimes();
 	  lastBadIteration_ = numberIterations_; // say be more cautious
 	  clearAll();
 	  pivotRow_=-1;
@@ -2761,7 +2760,7 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	      <<x<<sequenceWithin(sequenceIn_)
 	      <<CoinMessageEol;
 	    setFlagged(sequenceIn_);
-	    progress_->clearBadTimes();
+	    progress_.clearBadTimes();
 	  }
 	  lastBadIteration_ = numberIterations_; // say be more cautious
 	  clearAll();

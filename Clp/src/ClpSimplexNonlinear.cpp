@@ -72,7 +72,7 @@ int ClpSimplexNonlinear::primal ()
     // This says whether to restore things etc
     int factorType=0;
     // Start check for cycles
-    progress_->startCheck();
+    progress_.startCheck();
     /*
       Status of problem:
       0 - optimal
@@ -118,7 +118,7 @@ int ClpSimplexNonlinear::primal ()
 	    pivotMode=0;	// switch off fast attempt
 	}
       }
-      statusOfProblemInPrimal(lastCleaned,factorType,progress_,true,
+      statusOfProblemInPrimal(lastCleaned,factorType,&progress_,true,
 			      bestObjectiveWhenFlagged);
       
       // Say good factorization
@@ -2514,7 +2514,7 @@ ClpSimplexNonlinear::pivotNonlinearResult()
 	<<x<<sequenceWithin(sequenceIn_)
 	<<CoinMessageEol;
       setFlagged(sequenceIn_);
-      progress_->clearBadTimes();
+      progress_.clearBadTimes();
       lastBadIteration_ = numberIterations_; // say be more cautious
       clearAll();
       pivotRow_=-1;

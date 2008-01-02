@@ -350,7 +350,7 @@ ClpSimplexDual::gutsOfDual(int ifValuesPass,double * & saveDuals,int initialStat
   // startup will have factorized so can skip
   int factorType=0;
   // Start check for cycles
-  progress_->startCheck();
+  progress_.startCheck();
   // Say change made on first iteration
   changeMade_=1;
   /*
@@ -428,7 +428,7 @@ ClpSimplexDual::gutsOfDual(int ifValuesPass,double * & saveDuals,int initialStat
       problemStatus_=3;
     // If values pass then do easy ones on first time
     if (ifValuesPass&&
-        progress_->lastIterationNumber(0)<0&&saveDuals) {
+        progress_.lastIterationNumber(0)<0&&saveDuals) {
       doEasyOnesInValuesPass(saveDuals);
     }
     
@@ -624,7 +624,7 @@ int ClpSimplexDual::dual (int ifValuesPass , int startFinishOptions)
     // startup will have factorized so can skip
     int factorType=0;
     // Start check for cycles
-    progress_->startCheck();
+    progress_.startCheck();
     // Say change made on first iteration
     changeMade_=1;
     /*
@@ -676,7 +676,7 @@ int ClpSimplexDual::dual (int ifValuesPass , int startFinishOptions)
                             ifValuesPass);
       // If values pass then do easy ones on first time
       if (ifValuesPass&&
-	  progress_->lastIterationNumber(0)<0&&saveDuals) {
+	  progress_.lastIterationNumber(0)<0&&saveDuals) {
 	doEasyOnesInValuesPass(saveDuals);
       }
       
@@ -1203,7 +1203,7 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
 	      printf("flag a %g %g\n",btranAlpha,alpha_);
 #endif
 	      setFlagged(sequenceOut_);
-	      progress_->clearBadTimes();
+	      progress_.clearBadTimes();
 	      lastBadIteration_ = numberIterations_; // say be more cautious
 	      rowArray_[0]->clear();
 	      rowArray_[1]->clear();
@@ -1328,7 +1328,7 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
 	    printf("flag b %g\n",alpha_);
 #endif
 	    setFlagged(sequenceOut_);
-	    progress_->clearBadTimes();
+	    progress_.clearBadTimes();
 	    lastBadIteration_ = numberIterations_; // say be more cautious
 	    rowArray_[0]->clear();
 	    rowArray_[1]->clear();
@@ -2325,7 +2325,7 @@ ClpSimplexDual::changeBounds(bool initialize,
     numberInfeasibilities=0;
     changeCost=0.0;
     // put back original bounds and then check
-    createRim(1);
+    createRim1(false);
     int iSequence;
     // bounds will get bigger - just look at ones at bounds
     for (iSequence=0;iSequence<numberRows_+numberColumns_;iSequence++) {
@@ -3411,7 +3411,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	  printf("flag d\n");
 #endif
 	  setFlagged(sequenceOut_);
-	  progress_->clearBadTimes();
+	  progress_.clearBadTimes();
 	  
 	  // Go to safe 
 	  factorization_->pivotTolerance(0.99);
@@ -3488,7 +3488,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
     printf("flag e\n");
 #endif
     setFlagged(sequenceOut_);
-    progress_->clearBadTimes();
+    progress_.clearBadTimes();
     
     // Go to safer 
     double newTolerance = CoinMin(1.1*factorization_->pivotTolerance(),0.99);
@@ -3532,7 +3532,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
     factorization_->pivotTolerance(newTolerance);
   } 
   // Double check infeasibility if no action
-  if (progress_->lastIterationNumber(0)==numberIterations_) {
+  if (progress_.lastIterationNumber(0)==numberIterations_) {
     if (dualRowPivot_->looksOptimal()) {
       numberPrimalInfeasibilities_ = 0;
       sumPrimalInfeasibilities_ = 0.0;
@@ -3540,7 +3540,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 #if 1
   } else {
     double thisObj = objectiveValue_;
-    double lastObj = progress_->lastObjective(0);
+    double lastObj = progress_.lastObjective(0);
     if(!ifValuesPass&&firstFree_<0) {
       if (lastObj>thisObj+1.0e-3*CoinMax(fabs(thisObj),fabs(lastObj))+1.0) {
 	int maxFactor = factorization_->maximumPivots();
@@ -3605,13 +3605,13 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
   // Up tolerance if looks a bit odd
   if (numberIterations_>CoinMax(1000,numberRows_>>4)&&(specialOptions_&64)!=0) {
     if (sumPrimalInfeasibilities_&&sumPrimalInfeasibilities_<1.0e5) {
-      int backIteration = progress_->lastIterationNumber(CLP_PROGRESS-1);
+      int backIteration = progress_.lastIterationNumber(CLP_PROGRESS-1);
       if (backIteration>0&&numberIterations_-backIteration<9*CLP_PROGRESS) {
 	if (factorization_->pivotTolerance()<0.9) {
 	  // up tolerance
 	  factorization_->pivotTolerance(CoinMin(factorization_->pivotTolerance()*1.05+0.02,0.91));
 	  //printf("tol now %g\n",factorization_->pivotTolerance());
-	  progress_->clearIterationNumbers();
+	  progress_.clearIterationNumbers();
 	}
       }
     }
@@ -3619,7 +3619,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
   // Check if looping
   int loop;
   if (!givenDuals&&type!=2) 
-    loop = progress_->looping();
+    loop = progress_.looping();
   else
     loop=-1;
   int situationChanged=0;
@@ -3697,7 +3697,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
     }
     //if (dualFeasible()||problemStatus_==-4||(primalFeasible()&&!numberDualInfeasibilitiesWithoutFree_)) {
     if (dualFeasible()||problemStatus_==-4) {
-      progress_->modifyObjective(objectiveValue_
+      progress_.modifyObjective(objectiveValue_
 			       -sumDualInfeasibilities_*dualBound_);
       if (primalFeasible()&&!givenDuals) {
 	normalType=false;
@@ -3723,7 +3723,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
             //computeObjectiveValue();
 	    changeBounds(true,NULL,changeCost);
             //computeObjectiveValue();
-	    createRim(4);
+	    createRim4(false);
             // make sure duals are current
             computeDuals(givenDuals);
             checkDualSolution();
@@ -3806,7 +3806,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	    if (problemStatus_==2&&perturbation_==101) {
 	      perturbation_=102; // stop any perturbations
 	      cleanDuals=1;
-	      createRim(4);
+	      createRim4(false);
 	      problemStatus_=-1;
 	    }
 	    if (problemStatus_==2) {
@@ -3842,7 +3842,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	  numberChangedBounds=1;
 	  // make sure fake bounds are back
 	  changeBounds(true,NULL,changeCost);
-	  createRim(4);
+	  createRim4(false);
 	}
 	if (numberChangedBounds<=0||dualBound_>1.0e20||
 	    (largestPrimalError_>1.0&&dualBound_>1.0e17)) {
@@ -3851,7 +3851,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	    perturbation_=102; // stop any perturbations
 	    //cleanDuals=1;
 	    //numberChangedBounds=1;
-	    //createRim(4);
+	    //createRim4(false);
 	  }
 	} else {
 	  normalType=false;
@@ -3888,7 +3888,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	memcpy(xdj,dj_,(numberRows_+numberColumns_)*sizeof(double));
 	memcpy(xsolution,solution_,(numberRows_+numberColumns_)*sizeof(double));
 #endif
-	createRim(4);
+	createRim4(false);
 	// make sure duals are current
 	computeDuals(givenDuals);
 	checkDualSolution();
@@ -4184,8 +4184,8 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
       numberDualInfeasibilities_=1;
   }
 #if 1
-  double thisObj = progress_->lastObjective(0);
-  double lastObj = progress_->lastObjective(1);
+  double thisObj = progress_.lastObjective(0);
+  double lastObj = progress_.lastObjective(1);
   if (lastObj>thisObj+1.0e-4*CoinMax(fabs(thisObj),fabs(lastObj))+1.0e-4
       &&givenDuals==NULL&&firstFree_<0) {
     int maxFactor = factorization_->maximumPivots();
@@ -4730,10 +4730,7 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
     useFactorization=false;
   if (!useFactorization||factorization_->numberRows()!=numberRows_) {
     useFactorization = false;
-    factorization_->increasingRows(2);
-    // row activities have negative sign
-    factorization_->slackValue(-1.0);
-    factorization_->zeroTolerance(1.0e-13);
+    factorization_->setDefaultValues();
 
     int factorizationStatus = internalFactorize(0);
     if (factorizationStatus<0) {
@@ -5102,10 +5099,7 @@ ClpSimplexDual::setupForStrongBranching(char * arrays, int numberRows, int numbe
       useFactorization=false;
   }
   if (!useFactorization) {
-    factorization_->increasingRows(2);
-    // row activities have negative sign
-    factorization_->slackValue(-1.0);
-    factorization_->zeroTolerance(1.0e-13);
+    factorization_->setDefaultValues();
 
     int factorizationStatus = internalFactorize(0);
     if (factorizationStatus<0) {
@@ -5796,6 +5790,8 @@ ClpSimplexDual::nextSuperBasic()
 void 
 ClpSimplexDual::resetFakeBounds()
 {
+  // put back original bounds and then check
+  createRim1(false);
   double dummyChangeCost=0.0;
   changeBounds(true,rowArray_[2],dummyChangeCost);
   // throw away change

@@ -20,7 +20,6 @@ class ClpPrimalColumnPivot;
 class ClpFactorization;
 class CoinIndexedVector;
 class ClpNonLinearCost;
-class ClpSimplexProgress;
 class CoinModel;
 class OsiClpSolverInterface;
 class CoinWarmStartBasis;
@@ -42,9 +41,6 @@ class ClpConstraint;
 
     There is an algorithm data member.  + for primal variations
     and - for dual variations
-
-    This file also includes (at end) a very simple class ClpSimplexProgress
-    which is where anti-looping stuff should migrate to
 
 */
 
@@ -131,6 +127,17 @@ public:
   /// See if we have auxiliary model
   inline bool usingAuxiliaryModel() const
   { return auxiliaryModel_!=NULL;}
+  /// Save a copy of model with certain state - normally without cuts
+  void makeBaseModel();
+  /// Switch off base model
+  void deleteBaseModel();
+  /// See if we have base model
+  inline ClpSimplex *  baseModel() const
+  { return baseModel_;}
+  /** Reset to base model (just size and arrays needed)
+      If model NULL use internal copy
+  */
+  void setToBaseModel(ClpSimplex * model=NULL);
   /// Assignment operator. This copies the data
     ClpSimplex & operator=(const ClpSimplex & rhs);
   /// Destructor
@@ -734,7 +741,7 @@ public:
   /// Does most of copying
   void gutsOfCopy(const ClpSimplex & rhs);
   /** puts in format I like (rowLower,rowUpper) also see StandardMatrix 
-      1 bit does rows, 2 bit does column bounds, 4 bit does objective(s).
+      1 bit does rows (now and columns), (2 bit does column bounds), 4 bit does objective(s).
       8 bit does solution scaling in
       16 bit does rowArray and columnArray indexed vectors
       and makes row copy if wanted, also sets columnStart_ etc
@@ -745,6 +752,12 @@ public:
       so do arrays but keep pivotVariable_
   */
   bool createRim(int what,bool makeRowCopy=false,int startFinishOptions=0);
+  /// Does rows and columns
+  void createRim1(bool initial);
+  /// Does objective
+  void createRim4(bool initial);
+  /// Does rows and columns and objective
+  void createRim5(bool initial);
   /** releases above arrays and does solution scaling out.  May also 
       get rid of factorization data -
       0 get rid of nothing, 1 get rid of arrays, 2 also factorization
@@ -787,6 +800,8 @@ public:
     st_byte &= ~7;
     st_byte |= status;
   }
+  /// Start or reset using maximumRows_ and Columns_ - true if change
+  bool startPermanentArrays();
   /** Normally the first factorization does sparse coding because
       the factorization could be singular.  This allows initial dense 
       factorization when it is known to be safe
@@ -864,12 +879,14 @@ public:
   /** Return more special options
       1 bit - if presolve says infeasible in ClpSolve return
       2 bit - if presolved problem infeasible return
+      4 bit - keep arrays like upper_ around
   */
   inline int moreSpecialOptions() const
   { return moreSpecialOptions_;}
   /** Set more special options
       1 bit - if presolve says infeasible in ClpSolve return
       2 bit - if presolved problem infeasible return
+      4 bit - keep arrays like upper_ around
   */
   inline void setMoreSpecialOptions(int value)
   { moreSpecialOptions_ = value;}
@@ -1274,8 +1291,10 @@ protected:
   double allowedInfeasibility_;
   /// Automatic scaling of objective and rhs and bounds
   int automaticScale_;
+  /// A copy of model with certain state - normally without cuts
+  ClpSimplex * baseModel_;
   /// For dealing with all issues of cycling etc
-  ClpSimplexProgress * progress_;
+  ClpSimplexProgress progress_;
 public:
   /// Spare int array for passing information [0]!=0 switches on
   mutable int spareIntArray_[4];
@@ -1298,121 +1317,6 @@ protected:
 void
 ClpSimplexUnitTest(const std::string & mpsDir);
 
-
-/// For saving extra information to see if looping.
-class ClpSimplexProgress {
-
-public:
-
-
-  /**@name Constructors and destructor and copy */
-  //@{
-  /// Default constructor
-    ClpSimplexProgress (  );
-
-  /// Constructor from model
-    ClpSimplexProgress ( ClpSimplex * model );
-
-  /// Copy constructor. 
-  ClpSimplexProgress(const ClpSimplexProgress &);
-
-  /// Assignment operator. This copies the data
-    ClpSimplexProgress & operator=(const ClpSimplexProgress & rhs);
-  /// Destructor
-   ~ClpSimplexProgress (  );
-  /// Resets as much as possible
-   void reset();
-  //@}
-
-  /**@name Check progress */
-  //@{
-  /** Returns -1 if okay, -n+1 (n number of times bad) if bad but action taken,
-      >=0 if give up and use as problem status
-  */
-    int looping (  );
-  /// Start check at beginning of whileIterating
-  void startCheck();
-  /// Returns cycle length in whileIterating
-  int cycle(int in, int out,int wayIn,int wayOut); 
-
-  /// Returns previous objective (if -1) - current if (0)
-  double lastObjective(int back=1) const;
-  /// Set real primal infeasibility and move back
-  void setInfeasibility(double value);
-  /// Returns real primal infeasibility (if -1) - current if (0)
-  double lastInfeasibility(int back=1) const;
-  /// Modify objective e.g. if dual infeasible in dual
-  void modifyObjective(double value);
-  /// Returns previous iteration number (if -1) - current if (0)
-  int lastIterationNumber(int back=1) const;
-  /// clears all iteration numbers (to switch off panic)
-  void clearIterationNumbers();
-  /// Odd state
-  inline void newOddState()
-  { oddState_= - oddState_-1;}
-  inline void endOddState()
-  { oddState_=abs(oddState_);}
-  inline void clearOddState() 
-  { oddState_=0;}
-  inline int oddState() const
-  { return oddState_;}
-  /// number of bad times
-  inline int badTimes() const
-  { return numberBadTimes_;}
-  inline void clearBadTimes()
-  { numberBadTimes_=0;}
-
-  //@}
-  /**@name Data  */
-#define CLP_PROGRESS 5
-  //#define CLP_PROGRESS_WEIGHT 10
-  //@{
-  /// Objective values
-  double objective_[CLP_PROGRESS];
-  /// Sum of infeasibilities for algorithm
-  double infeasibility_[CLP_PROGRESS];
-  /// Sum of real primal infeasibilities for primal
-  double realInfeasibility_[CLP_PROGRESS];
-#ifdef CLP_PROGRESS_WEIGHT
-  /// Objective values for weights
-  double objectiveWeight_[CLP_PROGRESS_WEIGHT];
-  /// Sum of infeasibilities for algorithm for weights
-  double infeasibilityWeight_[CLP_PROGRESS_WEIGHT];
-  /// Sum of real primal infeasibilities for primal for weights
-  double realInfeasibilityWeight_[CLP_PROGRESS_WEIGHT];
-  /// Drop  for weights
-  double drop_;
-  /// Best? for weights
-  double best_;
-#endif
-  /// Initial weight for weights
-  double initialWeight_;
-#define CLP_CYCLE 12
-  /// For cycle checking
-  //double obj_[CLP_CYCLE];
-  int in_[CLP_CYCLE];
-  int out_[CLP_CYCLE];
-  char way_[CLP_CYCLE];
-  /// Pointer back to model so we can get information
-  ClpSimplex * model_;
-  /// Number of infeasibilities
-  int numberInfeasibilities_[CLP_PROGRESS];
-  /// Iteration number at which occurred
-  int iterationNumber_[CLP_PROGRESS];
-#ifdef CLP_PROGRESS_WEIGHT
-  /// Number of infeasibilities for weights
-  int numberInfeasibilitiesWeight_[CLP_PROGRESS_WEIGHT];
-  /// Iteration number at which occurred for weights
-  int iterationNumberWeight_[CLP_PROGRESS_WEIGHT];
-#endif
-  /// Number of times checked (so won't stop too early)
-  int numberTimes_;
-  /// Number of times it looked like loop
-  int numberBadTimes_;
-  /// If things are in an odd state
-  int oddState_;
-  //@}
-};
 // For Devex stuff
 #define DEVEX_TRY_NORM 1.0e-4
 #define DEVEX_ADD_ONE 1.0

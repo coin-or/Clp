@@ -118,7 +118,7 @@ ClpSimplex::ClpSimplex (bool emptyMessages) :
   incomingInfeasibility_(1.0),
   allowedInfeasibility_(10.0),
   automaticScale_(0),
-  progress_(NULL)
+  baseModel_(NULL)
 {
   int i;
   for (i=0;i<6;i++) {
@@ -144,28 +144,28 @@ ClpSimplex::ClpSimplex (bool emptyMessages) :
 
 // Subproblem constructor
 ClpSimplex::ClpSimplex ( const ClpModel * rhs,
-		     int numberRows, const int * whichRow,
-		     int numberColumns, const int * whichColumn,
-		     bool dropNames, bool dropIntegers,bool fixOthers)
+			 int numberRows, const int * whichRow,
+			 int numberColumns, const int * whichColumn,
+			 bool dropNames, bool dropIntegers,bool fixOthers)
   : ClpModel(rhs, numberRows, whichRow,
 	     numberColumns,whichColumn,dropNames,dropIntegers),
-  columnPrimalInfeasibility_(0.0),
-  rowPrimalInfeasibility_(0.0),
-  columnPrimalSequence_(-2),
-  rowPrimalSequence_(-2), 
-  columnDualInfeasibility_(0.0),
-  rowDualInfeasibility_(0.0),
-  moreSpecialOptions_(2),
-  baseIteration_(0),
-  primalToleranceToGetOptimal_(-1.0),
-  remainingDualInfeasibility_(0.0),
-  largeValue_(1.0e15),
-  largestPrimalError_(0.0),
-  largestDualError_(0.0),
-  alphaAccuracy_(-1.0),
-  dualBound_(1.0e10),
-  alpha_(0.0),
-  theta_(0.0),
+    columnPrimalInfeasibility_(0.0),
+    rowPrimalInfeasibility_(0.0),
+    columnPrimalSequence_(-2),
+    rowPrimalSequence_(-2), 
+    columnDualInfeasibility_(0.0),
+    rowDualInfeasibility_(0.0),
+    moreSpecialOptions_(2),
+    baseIteration_(0),
+    primalToleranceToGetOptimal_(-1.0),
+    remainingDualInfeasibility_(0.0),
+    largeValue_(1.0e15),
+    largestPrimalError_(0.0),
+    largestDualError_(0.0),
+    alphaAccuracy_(-1.0),
+    dualBound_(1.0e10),
+    alpha_(0.0),
+    theta_(0.0),
   lowerIn_(0.0),
   valueIn_(0.0),
   upperIn_(-COIN_DBL_MAX),
@@ -210,7 +210,7 @@ ClpSimplex::ClpSimplex ( const ClpModel * rhs,
   numberRefinements_(0),
   pivotVariable_(NULL),
   factorization_(NULL),
-  savedSolution_(NULL),
+    savedSolution_(NULL),
   numberTimesOptimal_(0),
   disasterArea_(NULL),
   changeMade_(1),
@@ -228,8 +228,8 @@ ClpSimplex::ClpSimplex ( const ClpModel * rhs,
   maximumBasic_(0),
   incomingInfeasibility_(1.0),
   allowedInfeasibility_(10.0),
-  automaticScale_(0),
-  progress_(NULL)
+    automaticScale_(0),
+  baseModel_(NULL)
 {
   int i;
   for (i=0;i<6;i++) {
@@ -1524,14 +1524,14 @@ ClpSimplex::housekeeping(double objectiveChange)
   int in = sequenceIn_;
   int out = sequenceOut_;
   matrix_->correctSequence(this,in,out);
-  int cycle=progress_->cycle(in,out,
+  int cycle=progress_.cycle(in,out,
 			    directionIn_,directionOut_);
   if (cycle>0&&objective_->type()<2) {
     //if (cycle>0) {
     if (handler_->logLevel()>=63)
       printf("Cycle of %d\n",cycle);
     // reset
-    progress_->startCheck();
+    progress_.startCheck();
     double random = randomNumberGenerator_.randomDouble();
     int extra = (int) (9.999*random);
     int off[]={1,1,1,1,2,2,2,3,3,4};
@@ -1557,9 +1557,6 @@ ClpSimplex::housekeeping(double objectiveChange)
 #endif
   // only time to re-factorize if one before real time
   // this is so user won't be surprised that maximumPivots has exact meaning
-  CoinBigIndex lengthL = factorization_->numberElementsL();
-  CoinBigIndex lengthU = factorization_->numberElementsU();
-  CoinBigIndex lengthR = factorization_->numberElementsR();
   int numberPivots=factorization_->pivots();
   int maximumPivots = factorization_->maximumPivots();
   int numberDense = factorization_->numberDense();
@@ -1577,8 +1574,7 @@ ClpSimplex::housekeeping(double objectiveChange)
       }
     }
     return 1;
-  } else if (numberPivots*3>maximumPivots*2&&
-             lengthR*3>(lengthL+lengthU)*2+1000&&!numberDense) {
+  } else if (factorization_->timeToRefactorize()) {
     //printf("ret after %d pivots\n",factorization_->pivots());
     return 1;
   } else if (forceFactorization_>0&&
@@ -1688,7 +1684,7 @@ ClpSimplex::ClpSimplex(const ClpSimplex &rhs,int scalingMode) :
   incomingInfeasibility_(1.0),
   allowedInfeasibility_(10.0),
   automaticScale_(0),
-  progress_(NULL)
+  baseModel_(NULL)
 {
   int i;
   for (i=0;i<6;i++) {
@@ -1792,7 +1788,7 @@ ClpSimplex::ClpSimplex(const ClpModel &rhs, int scalingMode) :
   incomingInfeasibility_(1.0),
   allowedInfeasibility_(10.0),
   automaticScale_(0),
-  progress_(NULL)
+  baseModel_(NULL)
 {
   int i;
   for (i=0;i<6;i++) {
@@ -1835,23 +1831,29 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
   maximumBasic_ = rhs.maximumBasic_;
   int numberRows2 = numberRows_+numberExtraRows_;
   auxiliaryModel_ = NULL;
+  moreSpecialOptions_ = rhs.moreSpecialOptions_;
   if ((whatsChanged_&1)!=0) {
-    lower_ = ClpCopyOfArray(rhs.lower_,numberColumns_+numberRows2);
+    int numberTotal = numberColumns_+numberRows2;
+    if ((specialOptions_&65536)!=0&&maximumRows_>=0) {
+      assert (maximumRows_>=numberRows2);
+      assert (maximumColumns_>=numberColumns_);
+      numberTotal = 2*(maximumColumns_+ maximumRows_);
+    }
+    lower_ = ClpCopyOfArray(rhs.lower_,numberTotal);
     rowLowerWork_ = lower_+numberColumns_;
     columnLowerWork_ = lower_;
-    upper_ = ClpCopyOfArray(rhs.upper_,numberColumns_+numberRows2);
+    upper_ = ClpCopyOfArray(rhs.upper_,numberTotal);
     rowUpperWork_ = upper_+numberColumns_;
     columnUpperWork_ = upper_;
-    //cost_ = ClpCopyOfArray(rhs.cost_,2*(numberColumns_+numberRows_));
-    cost_ = ClpCopyOfArray(rhs.cost_,(numberColumns_+numberRows2));
+    cost_ = ClpCopyOfArray(rhs.cost_,numberTotal);
     objectiveWork_ = cost_;
     rowObjectiveWork_ = cost_+numberColumns_;
-    dj_ = ClpCopyOfArray(rhs.dj_,numberRows2+numberColumns_);
+    dj_ = ClpCopyOfArray(rhs.dj_,numberTotal);
     if (dj_) {
       reducedCostWork_ = dj_;
       rowReducedCost_ = dj_+numberColumns_;
     }
-    solution_ = ClpCopyOfArray(rhs.solution_,numberRows2+numberColumns_);
+    solution_ = ClpCopyOfArray(rhs.solution_,numberTotal);
     if (solution_) {
       columnActivityWork_ = solution_;
       rowActivityWork_ = solution_+numberColumns_;
@@ -1911,7 +1913,6 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
   rowPrimalInfeasibility_ = rhs.rowPrimalInfeasibility_;
   rowPrimalSequence_ = rhs.rowPrimalSequence_;
   columnDualInfeasibility_ = rhs.columnDualInfeasibility_;
-  moreSpecialOptions_ = rhs.moreSpecialOptions_;
   rowDualInfeasibility_ = rhs.rowDualInfeasibility_;
   baseIteration_ = rhs.baseIteration_;
   primalToleranceToGetOptimal_ = rhs.primalToleranceToGetOptimal_;
@@ -1964,10 +1965,12 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
   incomingInfeasibility_ = rhs.incomingInfeasibility_;
   allowedInfeasibility_ = rhs.allowedInfeasibility_;
   automaticScale_ = rhs.automaticScale_;
-  if (rhs.progress_)
-    progress_ = new ClpSimplexProgress(*rhs.progress_);
-  else
-    progress_=NULL;
+  if (rhs.baseModel_) {
+    baseModel_ = new ClpSimplex(*rhs.baseModel_);
+  } else {
+    baseModel_ = NULL;
+  }
+  progress_=rhs.progress_;
   for (int i=0;i<4;i++) {
     spareIntArray_[i]=rhs.spareIntArray_[i];
     spareDoubleArray_[i]=rhs.spareDoubleArray_[i];
@@ -1985,28 +1988,30 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
 void 
 ClpSimplex::gutsOfDelete(int type)
 {
-  delete [] lower_;
-  lower_=NULL;
-  rowLowerWork_=NULL;
-  columnLowerWork_=NULL;
-  delete [] upper_;
-  upper_=NULL;
-  rowUpperWork_=NULL;
-  columnUpperWork_=NULL;
-  delete [] cost_;
-  cost_=NULL;
-  objectiveWork_=NULL;
-  rowObjectiveWork_=NULL;
-  delete [] dj_;
-  dj_=NULL;
-  reducedCostWork_=NULL;
-  rowReducedCost_=NULL;
-  delete [] solution_;
-  solution_=NULL;
-  rowActivityWork_=NULL;
-  columnActivityWork_=NULL;
-  delete [] savedSolution_;
-  savedSolution_ = NULL;
+  if (!type||(specialOptions_&65536)==0) {
+    delete [] lower_;
+    lower_=NULL;
+    rowLowerWork_=NULL;
+    columnLowerWork_=NULL;
+    delete [] upper_;
+    upper_=NULL;
+    rowUpperWork_=NULL;
+    columnUpperWork_=NULL;
+    delete [] cost_;
+    cost_=NULL;
+    objectiveWork_=NULL;
+    rowObjectiveWork_=NULL;
+    delete [] dj_;
+    dj_=NULL;
+    reducedCostWork_=NULL;
+    rowReducedCost_=NULL;
+    delete [] solution_;
+    solution_=NULL;
+    rowActivityWork_=NULL;
+    columnActivityWork_=NULL;
+    delete [] savedSolution_;
+    savedSolution_ = NULL;
+  }
   if ((specialOptions_&2)==0) {
     delete nonLinearCost_;
     nonLinearCost_ = NULL;
@@ -2035,8 +2040,8 @@ ClpSimplex::gutsOfDelete(int type)
     dualRowPivot_ = NULL;
     delete primalColumnPivot_;
     primalColumnPivot_ = NULL;
-    delete progress_;
-    progress_=NULL;
+    delete baseModel_;
+    baseModel_=NULL;
   } else {
     // delete any size information in methods
     if (type>1) {
@@ -2269,7 +2274,7 @@ ClpSimplex::checkDualSolution()
     // dual
     firstFree_ = firstFreeDual;
   } else if (numberSuperBasicWithDj||
-	     (progress_&&progress_->lastIterationNumber(0)<=0)) {
+	     (progress_.lastIterationNumber(0)<=0)) {
     firstFree_=firstFreePrimal;
   }
 }
@@ -2386,7 +2391,7 @@ ClpSimplex::checkBothSolutions()
     // dual
     firstFree_ = firstFreeDual;
   } else if (numberSuperBasicWithDj||
-	     (progress_&&progress_->lastIterationNumber(0)<=0)) {
+	     (progress_.lastIterationNumber(0)<=0)) {
     firstFree_=firstFreePrimal;
   }
 }
@@ -2496,6 +2501,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
     }
   }
   if (what==63) {
+    pivotRow_=-1; 
     if (!status_)
       createStatus();
     if (oldMatrix)
@@ -2541,6 +2547,41 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
   }
   int numberRows2 = numberRows_+numberExtraRows_;
   int numberTotal = numberRows2+numberColumns_;
+  if ((specialOptions_&65536)!=0&&!auxiliaryModel_) {
+    assert (!numberExtraRows_);
+    if (!cost_||numberRows2>maximumRows_||numberColumns_>maximumColumns_) {
+      newArrays=true;
+      keepPivots=false;
+      if (cost_) {
+	if (numberRows2>maximumRows_) 
+	  maximumRows_ = numberRows2+10+numberRows2/100;
+	if (numberColumns_>maximumColumns_) 
+	  maximumColumns_ = numberColumns_+10+numberColumns_/100;
+      } else {
+	maximumRows_ = numberRows2;
+	maximumColumns_ = numberColumns_;
+      }
+      int numberTotal2 = (maximumRows_+maximumColumns_)*2;
+      delete [] cost_;
+      cost_ = new double[numberTotal2];
+      delete [] lower_;
+      delete [] upper_;
+      lower_ = new double[numberTotal2];
+      upper_ = new double[numberTotal2];
+      delete [] dj_;
+      dj_ = new double[numberTotal2];
+      delete [] solution_;
+      solution_ = new double[numberTotal2];
+      // ***** should be non NULL but seems to be too much
+      //printf("resize %d savedRowScale %x\n",maximumRows_,savedRowScale_);
+      if (savedRowScale_) {
+	delete [] savedRowScale_;
+	savedRowScale_ = new double [2*maximumRows_];
+	delete [] savedColumnScale_;
+	savedColumnScale_ = new double [2*maximumColumns_];
+      }
+    }
+  }
   int i;
   bool doSanityCheck=true;
   if (what==63&&!auxiliaryModel_) {
@@ -2593,6 +2634,11 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
       columnScale_=NULL;
     }
     if (scalingFlag_>0&&!rowScale_) {
+      if ((specialOptions_&65536)!=0&&!auxiliaryModel_) {
+	assert (!rowScale_);
+	rowScale_ = savedRowScale_;
+	columnScale_ = savedColumnScale_;
+      }
       if (matrix_->scale(this))
 	scalingFlag_=-scalingFlag_; // not scaled after all
       if (rowScale_&&automaticScale_) {
@@ -2723,19 +2769,17 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
     }
   }
   if (what==63) {
-    if (newArrays) {
+    if (newArrays&&(specialOptions_&65536)==0) {
       delete [] cost_;
-      // extra copy with original costs
-      //cost_ = new double[2*numberTotal];
       cost_ = new double[numberTotal];
       delete [] lower_;
       delete [] upper_;
-      lower_ = new double[numberColumns_+numberRows2];
-      upper_ = new double[numberColumns_+numberRows2];
+      lower_ = new double[numberTotal];
+      upper_ = new double[numberTotal];
       delete [] dj_;
-      dj_ = new double[numberRows2+numberColumns_];
+      dj_ = new double[numberTotal];
       delete [] solution_;
-      solution_ = new double[numberRows2+numberColumns_];
+      solution_ = new double[numberTotal];
     } else if (auxiliaryModel_) {
       assert (!cost_);
       cost_=auxiliaryModel_->cost_;
@@ -3534,7 +3578,444 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
   }
   if ((what&5)!=0) 
     matrix_->generalExpanded(this,9,what); // update costs and bounds if necessary
+  if (goodMatrix&&(specialOptions_&65536)!=0&&!auxiliaryModel_) {
+    int save = maximumColumns_+maximumRows_;
+    memcpy(cost_+save,cost_,numberTotal*sizeof(double));
+    memcpy(lower_+save,lower_,numberTotal*sizeof(double));
+    memcpy(upper_+save,upper_,numberTotal*sizeof(double));
+    memcpy(dj_+save,dj_,numberTotal*sizeof(double));
+    memcpy(solution_+save,solution_,numberTotal*sizeof(double));
+    if (rowScale_&&false) {
+      memcpy(savedRowScale_+maximumRows_,rowScale_,numberRows2*sizeof(double));
+      memcpy(savedColumnScale_+maximumColumns_,columnScale_,numberColumns_*sizeof(double));
+    }
+  }
   return goodMatrix;
+}
+// Does rows and columns
+void
+ClpSimplex::createRim1(bool initial)
+{
+  int i;
+  int numberRows2 = numberRows_+numberExtraRows_;
+  int numberTotal = numberRows2+numberColumns_;
+  //assert (!auxiliaryModel_);
+  if (!auxiliaryModel_) {
+    if ((specialOptions_&65536)!=0&&true) {
+      assert (!initial);
+      int save = maximumColumns_+maximumRows_;
+      memcpy(lower_,lower_+save,numberTotal*sizeof(double));
+      memcpy(upper_,upper_+save,numberTotal*sizeof(double));
+      return;
+    }
+    const double * rowScale = rowScale_;
+    const double * columnScale = columnScale_;
+    // clean up any mismatches on infinity
+    // and fix any variables with tiny gaps
+    double primalTolerance=dblParam_[ClpPrimalTolerance];
+    if(rowScale) {
+      // If scaled then do all columns later in one loop 
+      if (!initial) {
+	if ((specialOptions_&131072)==0) {
+	  for (i=0;i<numberColumns_;i++) {
+	    double multiplier = rhsScale_/columnScale[i];
+	    double lowerValue = columnLower_[i];
+	    double upperValue = columnUpper_[i];
+	    if (lowerValue>-1.0e20) {
+	      columnLowerWork_[i]=lowerValue*multiplier;
+	      if (upperValue>=1.0e20) {
+		columnUpperWork_[i]=COIN_DBL_MAX;
+	      } else {
+		columnUpperWork_[i]=upperValue*multiplier;
+		if (fabs(columnUpperWork_[i]-columnLowerWork_[i])<=primalTolerance) {
+		  if (columnLowerWork_[i]>=0.0) {
+		    columnUpperWork_[i] = columnLowerWork_[i];
+		  } else if (columnUpperWork_[i]<=0.0) {
+		    columnLowerWork_[i] = columnUpperWork_[i];
+		  } else {
+		    columnUpperWork_[i] = 0.0;
+		    columnLowerWork_[i] = 0.0;
+		  }
+		}
+	      }
+	    } else if (upperValue<1.0e20) {
+	      columnLowerWork_[i]=-COIN_DBL_MAX;
+	      columnUpperWork_[i]=upperValue*multiplier;
+	    } else {
+	      // free
+	      columnLowerWork_[i]=-COIN_DBL_MAX;
+	      columnUpperWork_[i]=COIN_DBL_MAX;
+	    }
+	  }
+	} else {
+	  const double * inverseScale = columnScale_+numberColumns_;
+	  for (i=0;i<numberColumns_;i++) {
+	    double multiplier = rhsScale_*inverseScale[i];
+	    double lowerValue = columnLower_[i];
+	    double upperValue = columnUpper_[i];
+	    if (lowerValue>-1.0e20) {
+	      columnLowerWork_[i]=lowerValue*multiplier;
+	      if (upperValue>=1.0e20) {
+		columnUpperWork_[i]=COIN_DBL_MAX;
+	      } else {
+		columnUpperWork_[i]=upperValue*multiplier;
+		if (fabs(columnUpperWork_[i]-columnLowerWork_[i])<=primalTolerance) {
+		  if (columnLowerWork_[i]>=0.0) {
+		    columnUpperWork_[i] = columnLowerWork_[i];
+		  } else if (columnUpperWork_[i]<=0.0) {
+		    columnLowerWork_[i] = columnUpperWork_[i];
+		  } else {
+		    columnUpperWork_[i] = 0.0;
+		    columnLowerWork_[i] = 0.0;
+		  }
+		}
+	      }
+	    } else if (upperValue<1.0e20) {
+	      columnLowerWork_[i]=-COIN_DBL_MAX;
+	      columnUpperWork_[i]=upperValue*multiplier;
+	    } else {
+	      // free
+	      columnLowerWork_[i]=-COIN_DBL_MAX;
+	      columnUpperWork_[i]=COIN_DBL_MAX;
+	    }
+	  }
+	}
+      }
+      for (i=0;i<numberRows_;i++) {
+	double multiplier = rhsScale_*rowScale[i];
+	double lowerValue = rowLower_[i];
+	double upperValue = rowUpper_[i];
+	if (lowerValue>-1.0e20) {
+	  rowLowerWork_[i]=lowerValue*multiplier;
+	  if (upperValue>=1.0e20) {
+	    rowUpperWork_[i]=COIN_DBL_MAX;
+	  } else {
+	    rowUpperWork_[i]=upperValue*multiplier;
+	    if (fabs(rowUpperWork_[i]-rowLowerWork_[i])<=primalTolerance) {
+	      if (rowLowerWork_[i]>=0.0) {
+		rowUpperWork_[i] = rowLowerWork_[i];
+	      } else if (rowUpperWork_[i]<=0.0) {
+		rowLowerWork_[i] = rowUpperWork_[i];
+	      } else {
+		rowUpperWork_[i] = 0.0;
+		rowLowerWork_[i] = 0.0;
+	      }
+	    }
+	  }
+	} else if (upperValue<1.0e20) {
+	  rowLowerWork_[i]=-COIN_DBL_MAX;
+	  rowUpperWork_[i]=upperValue*multiplier;
+	} else {
+	  // free
+	  rowLowerWork_[i]=-COIN_DBL_MAX;
+	  rowUpperWork_[i]=COIN_DBL_MAX;
+	}
+      }
+    } else if (rhsScale_!=1.0) {
+      for (i=0;i<numberColumns_;i++) {
+	double lowerValue = columnLower_[i];
+	double upperValue = columnUpper_[i];
+	if (lowerValue>-1.0e20) {
+	  columnLowerWork_[i]=lowerValue*rhsScale_;
+	  if (upperValue>=1.0e20) {
+	    columnUpperWork_[i]=COIN_DBL_MAX;
+	  } else {
+	    columnUpperWork_[i]=upperValue*rhsScale_;
+	    if (fabs(columnUpperWork_[i]-columnLowerWork_[i])<=primalTolerance) {
+	      if (columnLowerWork_[i]>=0.0) {
+		columnUpperWork_[i] = columnLowerWork_[i];
+	      } else if (columnUpperWork_[i]<=0.0) {
+		columnLowerWork_[i] = columnUpperWork_[i];
+	      } else {
+		columnUpperWork_[i] = 0.0;
+		columnLowerWork_[i] = 0.0;
+	      }
+	    }
+	  }
+	} else if (upperValue<1.0e20) {
+	  columnLowerWork_[i]=-COIN_DBL_MAX;
+	  columnUpperWork_[i]=upperValue*rhsScale_;
+	} else {
+	  // free
+	  columnLowerWork_[i]=-COIN_DBL_MAX;
+	  columnUpperWork_[i]=COIN_DBL_MAX;
+	}
+      }
+      for (i=0;i<numberRows_;i++) {
+	double lowerValue = rowLower_[i];
+	double upperValue = rowUpper_[i];
+	if (lowerValue>-1.0e20) {
+	  rowLowerWork_[i]=lowerValue*rhsScale_;
+	  if (upperValue>=1.0e20) {
+	    rowUpperWork_[i]=COIN_DBL_MAX;
+	  } else {
+	    rowUpperWork_[i]=upperValue*rhsScale_;
+	    if (fabs(rowUpperWork_[i]-rowLowerWork_[i])<=primalTolerance) {
+	      if (rowLowerWork_[i]>=0.0) {
+		rowUpperWork_[i] = rowLowerWork_[i];
+	      } else if (rowUpperWork_[i]<=0.0) {
+		rowLowerWork_[i] = rowUpperWork_[i];
+	      } else {
+		rowUpperWork_[i] = 0.0;
+		rowLowerWork_[i] = 0.0;
+	      }
+	    }
+	  }
+	} else if (upperValue<1.0e20) {
+	  rowLowerWork_[i]=-COIN_DBL_MAX;
+	  rowUpperWork_[i]=upperValue*rhsScale_;
+	} else {
+	  // free
+	  rowLowerWork_[i]=-COIN_DBL_MAX;
+	  rowUpperWork_[i]=COIN_DBL_MAX;
+	}
+      }
+    } else {
+      for (i=0;i<numberColumns_;i++) {
+	double lowerValue = columnLower_[i];
+	double upperValue = columnUpper_[i];
+	if (lowerValue>-1.0e20) {
+	  columnLowerWork_[i]=lowerValue;
+	  if (upperValue>=1.0e20) {
+	    columnUpperWork_[i]=COIN_DBL_MAX;
+	  } else {
+	    columnUpperWork_[i]=upperValue;
+	    if (fabs(columnUpperWork_[i]-columnLowerWork_[i])<=primalTolerance) {
+	      if (columnLowerWork_[i]>=0.0) {
+		columnUpperWork_[i] = columnLowerWork_[i];
+	      } else if (columnUpperWork_[i]<=0.0) {
+		columnLowerWork_[i] = columnUpperWork_[i];
+	      } else {
+		columnUpperWork_[i] = 0.0;
+		columnLowerWork_[i] = 0.0;
+	      }
+	    }
+	  }
+	} else if (upperValue<1.0e20) {
+	  columnLowerWork_[i]=-COIN_DBL_MAX;
+	  columnUpperWork_[i]=upperValue;
+	} else {
+	  // free
+	  columnLowerWork_[i]=-COIN_DBL_MAX;
+	  columnUpperWork_[i]=COIN_DBL_MAX;
+	}
+      }
+      for (i=0;i<numberRows_;i++) {
+	double lowerValue = rowLower_[i];
+	double upperValue = rowUpper_[i];
+	if (lowerValue>-1.0e20) {
+	  rowLowerWork_[i]=lowerValue;
+	  if (upperValue>=1.0e20) {
+	    rowUpperWork_[i]=COIN_DBL_MAX;
+	  } else {
+	    rowUpperWork_[i]=upperValue;
+	    if (fabs(rowUpperWork_[i]-rowLowerWork_[i])<=primalTolerance) {
+	      if (rowLowerWork_[i]>=0.0) {
+		rowUpperWork_[i] = rowLowerWork_[i];
+	      } else if (rowUpperWork_[i]<=0.0) {
+		rowLowerWork_[i] = rowUpperWork_[i];
+	      } else {
+		rowUpperWork_[i] = 0.0;
+		rowLowerWork_[i] = 0.0;
+	      }
+	    }
+	  }
+	} else if (upperValue<1.0e20) {
+	  rowLowerWork_[i]=-COIN_DBL_MAX;
+	  rowUpperWork_[i]=upperValue;
+	} else {
+	  // free
+	  rowLowerWork_[i]=-COIN_DBL_MAX;
+	  rowUpperWork_[i]=COIN_DBL_MAX;
+	}
+      }
+    }
+  } else {
+    // auxiliary model
+    if (!initial) {
+      // just copy
+      memcpy(lower_,auxiliaryModel_->lower_+numberTotal,numberTotal*sizeof(double));
+      memcpy(upper_,auxiliaryModel_->upper_+numberTotal,numberTotal*sizeof(double));
+    } else {
+      // clean up any mismatches on infinity
+      // and fix any variables with tiny gaps
+      const double * rowScale = auxiliaryModel_->rowScale_ ;
+      const double * columnScale = auxiliaryModel_->columnScale_ ;
+      assert (rhsScale_==1.0);
+      assert (objectiveScale_==1.0);
+      if ((auxiliaryModel_->specialOptions_&2)==0) {
+	// need to do column bounds
+	if (columnScale) {
+	  const double * inverseScale = columnScale+numberColumns_;
+	  // scaled
+	  for (i=0;i<numberColumns_;i++) {
+	    double value;
+	    value = columnLower_[i];
+	    if (value>-1.0e20) 
+	      value *= inverseScale[i];
+	    lower_[i] = value;
+	    value = columnUpper_[i];
+	    if (value<1.0e20) 
+	      value *= inverseScale[i];
+	    upper_[i] = value;
+	  }
+	} else {
+	  for (i=0;i<numberColumns_;i++) {
+	    lower_[i] = columnLower_[i];
+	    upper_[i] = columnUpper_[i];
+	  }
+	}
+	// save
+	memcpy(auxiliaryModel_->lower_+numberTotal,lower_,numberColumns_*sizeof(double));
+	memcpy(auxiliaryModel_->upper_+numberTotal,upper_,numberColumns_*sizeof(double));
+      } else {
+	// just copy
+	memcpy(lower_,auxiliaryModel_->lower_+numberTotal,numberColumns_*sizeof(double));
+	memcpy(upper_,auxiliaryModel_->upper_+numberTotal,numberColumns_*sizeof(double));
+      }
+      if ((auxiliaryModel_->specialOptions_&1)==0) {
+	// need to do row bounds
+	if (rowScale) {
+	  // scaled
+	  for (i=0;i<numberRows_;i++) {
+	    double value;
+	    value = rowLower_[i];
+	    if (value>-1.0e20) 
+	      value *= rowScale[i];
+	    lower_[i+numberColumns_] = value;
+	    value = rowUpper_[i];
+	    if (value<1.0e20) 
+	      value *= rowScale[i];
+	    upper_[i+numberColumns_] = value;
+	  }
+	} else {
+	  for (i=0;i<numberRows_;i++) {
+	    lower_[i+numberColumns_] = rowLower_[i];
+	    upper_[i+numberColumns_] = rowUpper_[i];
+	  }
+	}
+	// save
+	memcpy(auxiliaryModel_->lower_+numberTotal+numberColumns_,
+	       lower_+numberColumns_,numberRows_*sizeof(double));
+	memcpy(auxiliaryModel_->upper_+numberTotal+numberColumns_,
+	       upper_+numberColumns_,numberRows_*sizeof(double));
+      } else {
+	// just copy
+	memcpy(lower_+numberColumns_,
+	       auxiliaryModel_->lower_+numberTotal+numberColumns_,numberRows_*sizeof(double));
+	memcpy(upper_+numberColumns_,
+	       auxiliaryModel_->upper_+numberTotal+numberColumns_,numberRows_*sizeof(double));
+      }
+    }
+    if (initial) {
+      // do basis
+      assert ((auxiliaryModel_->specialOptions_&8)!=0);
+      // clean solution trusting basis
+      for ( i=0;i<numberTotal;i++) {
+	Status status =getStatus(i);
+	double value=solution_[i]; // may as well leave if basic (values pass)
+	if (status!=basic) {
+	  if (upper_[i]==lower_[i]) {
+	    setStatus(i,isFixed);
+	    value=lower_[i];
+	  } else if (status==atLowerBound) {
+	    if (lower_[i]>-1.0e20) {
+	      value=lower_[i];
+	    } else {
+	      if (upper_[i]<1.0e20) {
+		value=upper_[i];
+		setStatus(i,atUpperBound);
+	      } else {
+		setStatus(i,isFree);
+	      }
+	    }
+	  } else if (status==atUpperBound) {
+	    if (upper_[i]<1.0e20) {
+              value=upper_[i];
+	    } else {
+	      if (lower_[i]>-1.0e20) {
+		value=lower_[i];
+		setStatus(i,atLowerBound);
+	      } else {
+		setStatus(i,isFree);
+	      }
+	    }
+	  }
+	}
+	solution_[i]=value;
+      }
+    }
+  }
+  if ((specialOptions_&65536)!=0&&false) {
+    assert (!initial);
+    int save = maximumColumns_+maximumRows_;
+    for (int i=0;i<numberTotal;i++) {
+      assert (fabs(lower_[i]-lower_[i+save])<1.0e-5);
+      assert (fabs(upper_[i]-upper_[i+save])<1.0e-5);
+    }
+  }
+}
+// Does objective
+void
+ClpSimplex::createRim4(bool initial)
+{
+  int i;
+  int numberRows2 = numberRows_+numberExtraRows_;
+  int numberTotal = numberRows2+numberColumns_;
+  //assert (!auxiliaryModel_);
+  if (!auxiliaryModel_||(initial&&(auxiliaryModel_->specialOptions_&4)==0)) {
+    if ((specialOptions_&65536)!=0&&true) {
+      assert (!initial);
+      int save = maximumColumns_+maximumRows_;
+      memcpy(cost_,cost_+save,numberTotal*sizeof(double));
+      return;
+    }
+    double direction = optimizationDirection_*objectiveScale_;
+    const double * obj = objective();
+    const double * rowScale = auxiliaryModel_ ? auxiliaryModel_->rowScale_ : rowScale_;
+    const double * columnScale = auxiliaryModel_ ? auxiliaryModel_->columnScale_ : columnScale_;
+    // and also scale by scale factors
+    if (rowScale) {
+      if (rowObjective_) {
+	for (i=0;i<numberRows_;i++)
+	  rowObjectiveWork_[i] = rowObjective_[i]*direction/rowScale[i];
+      } else {
+	memset(rowObjectiveWork_,0,numberRows_*sizeof(double));
+      }
+      // If scaled then do all columns later in one loop 
+      if (!initial||auxiliaryModel_) {
+	for (i=0;i<numberColumns_;i++) {
+	  CoinAssert(fabs(obj[i])<1.0e25);
+	  objectiveWork_[i] = obj[i]*direction*columnScale[i];
+	}
+      }
+    } else {
+      if (rowObjective_) {
+	for (i=0;i<numberRows_;i++)
+	  rowObjectiveWork_[i] = rowObjective_[i]*direction;
+      } else {
+	memset(rowObjectiveWork_,0,numberRows_*sizeof(double));
+      }
+      for (i=0;i<numberColumns_;i++) {
+	CoinAssert(fabs(obj[i])<1.0e25);
+	objectiveWork_[i] = obj[i]*direction;
+      }
+    }
+    if (auxiliaryModel_) {
+      // save costs
+      memcpy(auxiliaryModel_->cost_+numberTotal,cost_,numberTotal*sizeof(double));
+    }
+  } else {
+    // just copy
+    memcpy(cost_,auxiliaryModel_->cost_+numberTotal,numberTotal*sizeof(double));
+  }
+}
+// Does rows and columns and objective
+void
+ClpSimplex::createRim5(bool initial)
+{
+  createRim4(initial);
+  createRim1(initial);
 }
 void
 ClpSimplex::deleteRim(int getRidOfFactorizationData)
@@ -5258,7 +5739,6 @@ ClpSimplex::borrowModel(ClpSimplex & otherModel)
   delete primalColumnPivot_;
   primalColumnPivot_ = otherModel.primalColumnPivot_->clone(true);
   perturbation_ = otherModel.perturbation_;
-  specialOptions_ = otherModel.specialOptions_;
   moreSpecialOptions_ = otherModel.moreSpecialOptions_;
   automaticScale_ = otherModel.automaticScale_;
 }
@@ -5517,7 +5997,7 @@ ClpSimplex::restoreModel(const char * fileName)
     // Get rid of current model
     // save event handler in case already set
     ClpEventHandler * handler = eventHandler_->clone();
-    ClpModel::gutsOfDelete();
+    ClpModel::gutsOfDelete(0);
     eventHandler_ = handler;
     gutsOfDelete(0);
     int i;
@@ -7183,10 +7663,7 @@ ClpSimplex::startup(int ifValuesPass, int startFinishOptions)
     int saveThreshold = factorization_->denseThreshold();
     if (!useFactorization||factorization_->numberRows()!=numberRows_) {
       useFactorization = false;
-      factorization_->increasingRows(2);
-      // row activities have negative sign
-      factorization_->slackValue(-1.0);
-      factorization_->zeroTolerance(1.0e-13);
+      factorization_->setDefaultValues();
       // Switch off dense (unless special option set)
       if ((specialOptions_&8)==0)
         factorization_->setDenseThreshold(0);
@@ -7310,8 +7787,7 @@ ClpSimplex::saveData()
   saved.acceptablePivot_ = acceptablePivot_;
   saved.objectiveScale_ = objectiveScale_;
   // Progress indicator
-  delete progress_;
-  progress_ = new ClpSimplexProgress (this);
+  progress_.fillFromModel (this);
   return saved;
 }
 // Restore data
@@ -7326,8 +7802,6 @@ ClpSimplex::restoreData(ClpDataSave saved)
   forceFactorization_=saved.forceFactorization_;
   objectiveScale_ = saved.objectiveScale_;
   acceptablePivot_ = saved.acceptablePivot_;
-  delete progress_;
-  progress_=NULL;
 }
 // To flag a variable (not inline to allow for column generation)
 void 
@@ -7487,481 +7961,6 @@ ClpSimplex::setValuesPassAction(double incomingInfeasibility,
   allowedInfeasibility_=allowedInfeasibility;
   CoinAssert(incomingInfeasibility_>=0.0);
   CoinAssert(allowedInfeasibility_>=incomingInfeasibility_);
-}
-//#############################################################################
-
-ClpSimplexProgress::ClpSimplexProgress () 
-{
-  int i;
-  for (i=0;i<CLP_PROGRESS;i++) {
-    objective_[i] = COIN_DBL_MAX;
-    infeasibility_[i] = -1.0; // set to an impossible value
-    realInfeasibility_[i] = COIN_DBL_MAX;
-    numberInfeasibilities_[i]=-1; 
-    iterationNumber_[i]=-1;
-  }
-#ifdef CLP_PROGRESS_WEIGHT
-  for (i=0;i<CLP_PROGRESS_WEIGHT;i++) {
-    objectiveWeight_[i] = COIN_DBL_MAX;
-    infeasibilityWeight_[i] = -1.0; // set to an impossible value
-    realInfeasibilityWeight_[i] = COIN_DBL_MAX;
-    numberInfeasibilitiesWeight_[i]=-1; 
-    iterationNumberWeight_[i]=-1;
-  }
-  drop_ =0.0;
-  best_ =0.0;
-#endif
-  initialWeight_=0.0;
-  for (i=0;i<CLP_CYCLE;i++) {
-    //obj_[i]=COIN_DBL_MAX;
-    in_[i]=-1;
-    out_[i]=-1;
-    way_[i]=0;
-  }
-  numberTimes_ = 0;
-  numberBadTimes_ = 0;
-  model_ = NULL;
-  oddState_=0;
-}
-
-
-//-----------------------------------------------------------------------------
-
-ClpSimplexProgress::~ClpSimplexProgress ()
-{
-}
-// Copy constructor. 
-ClpSimplexProgress::ClpSimplexProgress(const ClpSimplexProgress &rhs) 
-{
-  int i;
-  for (i=0;i<CLP_PROGRESS;i++) {
-    objective_[i] = rhs.objective_[i];
-    infeasibility_[i] = rhs.infeasibility_[i];
-    realInfeasibility_[i] = rhs.realInfeasibility_[i];
-    numberInfeasibilities_[i]=rhs.numberInfeasibilities_[i]; 
-    iterationNumber_[i]=rhs.iterationNumber_[i];
-  }
-#ifdef CLP_PROGRESS_WEIGHT
-  for (i=0;i<CLP_PROGRESS_WEIGHT;i++) {
-    objectiveWeight_[i] = rhs.objectiveWeight_[i];
-    infeasibilityWeight_[i] = rhs.infeasibilityWeight_[i];
-    realInfeasibilityWeight_[i] = rhs.realInfeasibilityWeight_[i];
-    numberInfeasibilitiesWeight_[i]=rhs.numberInfeasibilitiesWeight_[i]; 
-    iterationNumberWeight_[i]=rhs.iterationNumberWeight_[i];
-  }
-  drop_ = rhs.drop_;
-  best_ = rhs.best_;
-#endif
-  initialWeight_ = rhs.initialWeight_;
-  for (i=0;i<CLP_CYCLE;i++) {
-    //obj_[i]=rhs.obj_[i];
-    in_[i]=rhs.in_[i];
-    out_[i]=rhs.out_[i];
-    way_[i]=rhs.way_[i];
-  }
-  numberTimes_ = rhs.numberTimes_;
-  numberBadTimes_ = rhs.numberBadTimes_;
-  model_ = rhs.model_;
-  oddState_=rhs.oddState_;
-}
-// Copy constructor.from model
-ClpSimplexProgress::ClpSimplexProgress(ClpSimplex * model) 
-{
-  model_ = model;
-  reset();
-  initialWeight_=0.0;
-}
-// Assignment operator. This copies the data
-ClpSimplexProgress & 
-ClpSimplexProgress::operator=(const ClpSimplexProgress & rhs)
-{
-  if (this != &rhs) {
-    int i;
-    for (i=0;i<CLP_PROGRESS;i++) {
-      objective_[i] = rhs.objective_[i];
-      infeasibility_[i] = rhs.infeasibility_[i];
-      realInfeasibility_[i] = rhs.realInfeasibility_[i];
-      numberInfeasibilities_[i]=rhs.numberInfeasibilities_[i]; 
-      iterationNumber_[i]=rhs.iterationNumber_[i];
-    }
-#ifdef CLP_PROGRESS_WEIGHT
-    for (i=0;i<CLP_PROGRESS_WEIGHT;i++) {
-      objectiveWeight_[i] = rhs.objectiveWeight_[i];
-      infeasibilityWeight_[i] = rhs.infeasibilityWeight_[i];
-      realInfeasibilityWeight_[i] = rhs.realInfeasibilityWeight_[i];
-      numberInfeasibilitiesWeight_[i]=rhs.numberInfeasibilitiesWeight_[i]; 
-      iterationNumberWeight_[i]=rhs.iterationNumberWeight_[i];
-    }
-    drop_ = rhs.drop_;
-    best_ = rhs.best_;
-#endif
-    initialWeight_ = rhs.initialWeight_;
-    for (i=0;i<CLP_CYCLE;i++) {
-      //obj_[i]=rhs.obj_[i];
-      in_[i]=rhs.in_[i];
-      out_[i]=rhs.out_[i];
-      way_[i]=rhs.way_[i];
-    }
-    numberTimes_ = rhs.numberTimes_;
-    numberBadTimes_ = rhs.numberBadTimes_;
-    model_ = rhs.model_;
-    oddState_=rhs.oddState_;
-  }
-  return *this;
-}
-// Seems to be something odd about exact comparison of doubles on linux
-static bool equalDouble(double value1, double value2)
-{
-
-  union { double d; int i[2]; } v1,v2;
-  v1.d = value1;
-  v2.d = value2;
-  if (sizeof(int)*2==sizeof(double)) 
-    return (v1.i[0]==v2.i[0]&&v1.i[1]==v2.i[1]);
-  else
-    return (v1.i[0]==v2.i[0]);
-}
-int
-ClpSimplexProgress::looping()
-{
-  if (!model_)
-    return -1;
-  double objective = model_->rawObjectiveValue();
-  double infeasibility;
-  double realInfeasibility=0.0;
-  int numberInfeasibilities;
-  int iterationNumber = model_->numberIterations();
-  if (model_->algorithm()<0) {
-    // dual
-    infeasibility = model_->sumPrimalInfeasibilities();
-    numberInfeasibilities = model_->numberPrimalInfeasibilities();
-  } else {
-    //primal
-    infeasibility = model_->sumDualInfeasibilities();
-    realInfeasibility = model_->nonLinearCost()->sumInfeasibilities();
-    numberInfeasibilities = model_->numberDualInfeasibilities();
-  }
-  int i;
-  int numberMatched=0;
-  int matched=0;
-  int nsame=0;
-  for (i=0;i<CLP_PROGRESS;i++) {
-    bool matchedOnObjective = equalDouble(objective,objective_[i]);
-    bool matchedOnInfeasibility = equalDouble(infeasibility,infeasibility_[i]);
-    bool matchedOnInfeasibilities = 
-      (numberInfeasibilities==numberInfeasibilities_[i]);
-    
-    if (matchedOnObjective&&matchedOnInfeasibility&&matchedOnInfeasibilities) {
-      matched |= (1<<i);
-      // Check not same iteration
-      if (iterationNumber!=iterationNumber_[i]) {
-	numberMatched++;
-	// here mainly to get over compiler bug?
-	if (model_->messageHandler()->logLevel()>10)
-	  printf("%d %d %d %d %d loop check\n",i,numberMatched,
-		 matchedOnObjective, matchedOnInfeasibility, 
-		 matchedOnInfeasibilities);
-      } else {
-	// stuck but code should notice
-	nsame++;
-      }
-    }
-    if (i) {
-      objective_[i-1] = objective_[i];
-      infeasibility_[i-1] = infeasibility_[i];
-      realInfeasibility_[i-1] = realInfeasibility_[i];
-      numberInfeasibilities_[i-1]=numberInfeasibilities_[i]; 
-      iterationNumber_[i-1]=iterationNumber_[i];
-    }
-  }
-  objective_[CLP_PROGRESS-1] = objective;
-  infeasibility_[CLP_PROGRESS-1] = infeasibility;
-  realInfeasibility_[CLP_PROGRESS-1] = realInfeasibility;
-  numberInfeasibilities_[CLP_PROGRESS-1]=numberInfeasibilities;
-  iterationNumber_[CLP_PROGRESS-1]=iterationNumber;
-  if (nsame==CLP_PROGRESS)
-    numberMatched=CLP_PROGRESS; // really stuck
-  if (model_->progressFlag())
-    numberMatched=0;
-  numberTimes_++;
-  if (numberTimes_<10)
-    numberMatched=0;
-  // skip if just last time as may be checking something
-  if (matched==(1<<(CLP_PROGRESS-1)))
-    numberMatched=0;
-  if (numberMatched) {
-    model_->messageHandler()->message(CLP_POSSIBLELOOP,model_->messages())
-      <<numberMatched
-      <<matched
-      <<numberTimes_
-      <<CoinMessageEol;
-    numberBadTimes_++;
-    if (numberBadTimes_<10) {
-      // make factorize every iteration
-      model_->forceFactorization(1);
-      if (numberBadTimes_<2) {
-	startCheck(); // clear other loop check
-	if (model_->algorithm()<0) {
-	  // dual - change tolerance
-	  model_->setCurrentDualTolerance(model_->currentDualTolerance()*1.05);
-	  // if infeasible increase dual bound
-	  if (model_->dualBound()<1.0e17) {
-	    model_->setDualBound(model_->dualBound()*1.1);
-	  }
-	} else {
-	  // primal - change tolerance	
-	  if (numberBadTimes_>3)
-	    model_->setCurrentPrimalTolerance(model_->currentPrimalTolerance()*1.05);
-	  // if infeasible increase infeasibility cost
-	  if (model_->nonLinearCost()->numberInfeasibilities()&&
-	      model_->infeasibilityCost()<1.0e17) {
-	    model_->setInfeasibilityCost(model_->infeasibilityCost()*1.1);
-	  }
-	}
-      } else {
-	// flag
-	int iSequence;
-	if (model_->algorithm()<0) {
-	  // dual
-	  if (model_->dualBound()>1.0e14) 
-	    model_->setDualBound(1.0e14);
-	  iSequence=in_[CLP_CYCLE-1];
-	} else {
-	  // primal 
-	  if (model_->infeasibilityCost()>1.0e14) 
-	    model_->setInfeasibilityCost(1.0e14);
-	  iSequence=out_[CLP_CYCLE-1];
-	}
-	if (iSequence>=0) {
-	  char x = model_->isColumn(iSequence) ? 'C' :'R';
-	  if (model_->messageHandler()->logLevel()>=63)
-	    model_->messageHandler()->message(CLP_SIMPLEX_FLAG,model_->messages())
-	      <<x<<model_->sequenceWithin(iSequence)
-	      <<CoinMessageEol;
-          // if Gub then needs to be sequenceIn_
-          int save=model_->sequenceIn();
-          model_->setSequenceIn(iSequence);
-	  model_->setFlagged(iSequence);
-          model_->setSequenceIn(save);
-	  //printf("flagging %d from loop\n",iSequence);
-	  startCheck();
-	} else {
-	  // Give up
-	  if (model_->messageHandler()->logLevel()>=63)
-	    printf("***** All flagged?\n");
-	  return 4;
-	}
-	// reset
-	numberBadTimes_=2;
-      }
-      return -2;
-    } else {
-      // look at solution and maybe declare victory
-      if (infeasibility<1.0e-4) {
-	return 0;
-      } else {
-	model_->messageHandler()->message(CLP_LOOP,model_->messages())
-	  <<CoinMessageEol;
-#ifndef NDEBUG
-        printf("debug loop ClpSimplex A\n");
-	abort();
-#endif
-	return 3;
-      }
-    }
-  }
-  return -1;
-}
-// Resets as much as possible
-void 
-ClpSimplexProgress::reset()
-{
-  int i;
-  for (i=0;i<CLP_PROGRESS;i++) {
-    if (model_->algorithm()>=0)
-      objective_[i] = COIN_DBL_MAX;
-    else
-      objective_[i] = -COIN_DBL_MAX;
-    infeasibility_[i] = -1.0; // set to an impossible value
-    realInfeasibility_[i] = COIN_DBL_MAX;
-    numberInfeasibilities_[i]=-1; 
-    iterationNumber_[i]=-1;
-  }
-#ifdef CLP_PROGRESS_WEIGHT
-  for (i=0;i<CLP_PROGRESS_WEIGHT;i++) {
-    objectiveWeight_[i] = COIN_DBL_MAX;
-    infeasibilityWeight_[i] = -1.0; // set to an impossible value
-    realInfeasibilityWeight_[i] = COIN_DBL_MAX;
-    numberInfeasibilitiesWeight_[i]=-1; 
-    iterationNumberWeight_[i]=-1;
-  }
-  drop_ =0.0;
-  best_ =0.0;
-#endif
-  for (i=0;i<CLP_CYCLE;i++) {
-    //obj_[i]=COIN_DBL_MAX;
-    in_[i]=-1;
-    out_[i]=-1;
-    way_[i]=0;
-  }
-  numberTimes_ = 0;
-  numberBadTimes_ = 0;
-  oddState_=0;
-}
-// Returns previous objective (if -1) - current if (0)
-double 
-ClpSimplexProgress::lastObjective(int back) const
-{
-  return objective_[CLP_PROGRESS-1-back];
-}
-// Returns previous infeasibility (if -1) - current if (0)
-double 
-ClpSimplexProgress::lastInfeasibility(int back) const
-{
-  return realInfeasibility_[CLP_PROGRESS-1-back];
-}
-// Sets real primal infeasibility
-void
-ClpSimplexProgress::setInfeasibility(double value)
-{
-  for (int i=1;i<CLP_PROGRESS;i++) 
-    realInfeasibility_[i-1] = realInfeasibility_[i];
-  realInfeasibility_[CLP_PROGRESS-1]=value;
-}
-// Modify objective e.g. if dual infeasible in dual
-void 
-ClpSimplexProgress::modifyObjective(double value)
-{
-  objective_[CLP_PROGRESS-1]=value;
-}
-// Returns previous iteration number (if -1) - current if (0)
-int 
-ClpSimplexProgress::lastIterationNumber(int back) const
-{
-  return iterationNumber_[CLP_PROGRESS-1-back];
-}
-// clears iteration numbers (to switch off panic)
-void 
-ClpSimplexProgress::clearIterationNumbers()
-{
-  for (int i=0;i<CLP_PROGRESS;i++) 
-    iterationNumber_[i]=-1;
-}
-// Start check at beginning of whileIterating
-void 
-ClpSimplexProgress::startCheck()
-{
-  int i;
-  for (i=0;i<CLP_CYCLE;i++) {
-    //obj_[i]=COIN_DBL_MAX;
-    in_[i]=-1;
-    out_[i]=-1;
-    way_[i]=0;
-  }
-}
-// Returns cycle length in whileIterating
-int 
-ClpSimplexProgress::cycle(int in, int out,int wayIn,int wayOut)
-{
-  int i;
-#if 0
-  if (model_->numberIterations()>206571) {
-    printf("in %d out %d\n",in,out);
-    for (i=0;i<CLP_CYCLE;i++) 
-      printf("cy %d in %d out %d\n",i,in_[i],out_[i]);
-  }
-#endif
-  int matched=0;
-  // first see if in matches any out
-  for (i=1;i<CLP_CYCLE;i++) {
-    if (in==out_[i]) {
-      // even if flip then suspicious
-      matched=-1;
-      break;
-    }
-  }
-#if 0
-  if (!matched||in_[0]<0) {
-    // can't be cycle
-    for (i=0;i<CLP_CYCLE-1;i++) {
-      //obj_[i]=obj_[i+1];
-      in_[i]=in_[i+1];
-      out_[i]=out_[i+1];
-      way_[i]=way_[i+1];
-    }
-  } else {
-    // possible cycle
-    matched=0;
-    for (i=0;i<CLP_CYCLE-1;i++) {
-      int k;
-      char wayThis = way_[i];
-      int inThis = in_[i];
-      int outThis = out_[i];
-      //double objThis = obj_[i];
-      for(k=i+1;k<CLP_CYCLE;k++) {
-	if (inThis==in_[k]&&outThis==out_[k]&&wayThis==way_[k]) {
-	  int distance = k-i;
-	  if (k+distance<CLP_CYCLE) {
-	    // See if repeats
-	    int j=k+distance;
-	    if (inThis==in_[j]&&outThis==out_[j]&&wayThis==way_[j]) {
-	      matched=distance;
-	      break;
-	    }
-	  } else {
-	    matched=distance;
-	    break;
-	  }
-	}
-      }
-      //obj_[i]=obj_[i+1];
-      in_[i]=in_[i+1];
-      out_[i]=out_[i+1];
-      way_[i]=way_[i+1];
-    }
-  }
-#else
-  if (matched&&in_[0]>=0) {
-    // possible cycle - only check [0] against all
-    matched=0;
-    int nMatched=0;
-    char way0 = way_[0];
-    int in0 = in_[0];
-    int out0 = out_[0];
-    //double obj0 = obj_[i];
-    for(int k=1;k<CLP_CYCLE-4;k++) {
-      if (in0==in_[k]&&out0==out_[k]&&way0==way_[k]) {
-	nMatched++;
-	// See if repeats
-	int end = CLP_CYCLE-k;
-	int j;
-	for ( j=1;j<end;j++) {
-	  if (in_[j+k]!=in_[j]||out_[j+k]!=out_[j]||way_[j+k]!=way_[j]) 
-	    break;
-	}
-	if (j==end) {
-	  matched=k;
-	  break;
-	}
-      }
-    }
-    // If three times then that is too much even if not regular
-    if (matched<=0&&nMatched>1)
-      matched=100;
-  }
-  for (i=0;i<CLP_CYCLE-1;i++) {
-    //obj_[i]=obj_[i+1];
-    in_[i]=in_[i+1];
-    out_[i]=out_[i+1];
-    way_[i]=way_[i+1];
-  }
-#endif
-  char way = 1-wayIn+4*(1-wayOut);
-  //obj_[i]=model_->objectiveValue();
-  in_[CLP_CYCLE-1]=in;
-  out_[CLP_CYCLE-1]=out;
-  way_[CLP_CYCLE-1]=way;
-  return matched;
 }
 // Allow initial dense factorization
 void 
@@ -8798,15 +8797,19 @@ ClpSimplex::setColumnLower( int elementIndex, double elementValue )
     if ((whatsChanged_&1)!=0) {
       // work arrays exist - update as well
       whatsChanged_ &= ~128;
+      double value;
       if (columnLower_[elementIndex]==-COIN_DBL_MAX) {
-	columnLowerWork_[elementIndex] = -COIN_DBL_MAX;
+	value = -COIN_DBL_MAX;
       } else if (!columnScale_) {
-	columnLowerWork_[elementIndex] = elementValue * rhsScale_;
+	value = elementValue * rhsScale_;
       } else {
         assert (!auxiliaryModel_);
-	columnLowerWork_[elementIndex] = elementValue * rhsScale_ 
+	value = elementValue * rhsScale_ 
 	  / columnScale_[elementIndex];
       }
+      columnLowerWork_[elementIndex] = value;
+      if (maximumRows_>=0)
+	columnLowerWork_[elementIndex+maximumRows_+maximumColumns_] = value;
     }
   }
 }
@@ -8829,15 +8832,19 @@ ClpSimplex::setColumnUpper( int elementIndex, double elementValue )
     if ((whatsChanged_&1)!=0) {
       // work arrays exist - update as well
       whatsChanged_ &= ~256;
+      double value;
       if (columnUpper_[elementIndex]==COIN_DBL_MAX) {
-	columnUpperWork_[elementIndex] = COIN_DBL_MAX;
+	value = COIN_DBL_MAX;
       } else if (!columnScale_) {
-	columnUpperWork_[elementIndex] = elementValue * rhsScale_;
+	value = elementValue * rhsScale_;
       } else {
         assert (!auxiliaryModel_);
-	columnUpperWork_[elementIndex] = elementValue * rhsScale_ 
+	value = elementValue * rhsScale_ 
 	  / columnScale_[elementIndex];
       }
+      columnUpperWork_[elementIndex] = value;
+      if (maximumRows_>=0)
+	columnUpperWork_[elementIndex+maximumRows_+maximumColumns_] = value;
     }
   }
 }
@@ -9354,7 +9361,8 @@ void
 ClpSimplex::setPersistenceFlag(int value)
 {
   if (value) {
-    specialOptions_|=65536;
+    //specialOptions_|=65536;
+    startPermanentArrays();
   } else {
     specialOptions_&=~65536;
   }
@@ -9380,6 +9388,70 @@ ClpSimplex::moveInfo(const ClpSimplex & rhs, bool justStatus)
     memcpy(reducedCost_,rhs.reducedCost_,numberColumns_*sizeof(double));
     memcpy(rowActivity_,rhs.rowActivity_,numberRows_*sizeof(double));
     memcpy(dual_,rhs.dual_,numberRows_*sizeof(double));
+  }
+}
+// Save a copy of model with certain state - normally without cuts
+void 
+ClpSimplex::makeBaseModel()
+{
+  delete baseModel_;
+  baseModel_ = new ClpSimplex(*this);
+}
+// Switch off base model
+void 
+ClpSimplex::deleteBaseModel()
+{
+  delete baseModel_;
+  baseModel_=NULL;
+}
+// Reset to base model
+void 
+ClpSimplex::setToBaseModel(ClpSimplex * model)
+{
+  if (!model)
+    model=baseModel_;
+  assert (model);
+  int multiplier = ((model->specialOptions_&65536)!=0) ? 2 : 1;
+  assert (multiplier==2);
+  if (multiplier==2) {
+    assert (model->maximumRows_>=0);
+    if (maximumRows_<0) {
+      specialOptions_ |= 65536;
+      maximumRows_ = model->maximumRows_;
+      maximumColumns_ = model->maximumColumns_;
+    }
+  }
+  // temporary - later use maximumRows_ for rowUpper_ etc
+  assert (numberRows_>=model->numberRows_);
+  abort();
+}
+// Start or reset using maximumRows_ and Columns_
+bool
+ClpSimplex::startPermanentArrays()
+{
+  int maximumRows = maximumRows_;
+  int maximumColumns = maximumColumns_;
+  ClpModel::startPermanentArrays();
+  if (maximumRows!=maximumRows_||
+      maximumColumns!=maximumColumns_) {
+    int numberTotal2 = (maximumRows_+maximumColumns_)*2;
+    delete [] cost_;
+    cost_ = new double[numberTotal2];
+    delete [] lower_;
+    delete [] upper_;
+    lower_ = new double[numberTotal2];
+    upper_ = new double[numberTotal2];
+    delete [] dj_;
+    dj_ = new double[numberTotal2];
+    delete [] solution_;
+    solution_ = new double[numberTotal2];
+    //delete [] savedRowScale_;
+    //savedRowScale_ = new double [2*maximumRows_];
+    //delete [] savedColumnScale_;
+    //savedColumnScale_ = new double [2*maximumColumns_];
+    return true;
+  } else {
+    return false;
   }
 }
 // Create C++ lines to get to current state

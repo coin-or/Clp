@@ -302,6 +302,8 @@ public:
    ClpPackedMatrix& operator=(const ClpPackedMatrix&);
   /// Clone
   virtual ClpMatrixBase * clone() const ;
+  /// Copy contents - resizing if necessary - otherwise re-use memory
+  virtual void copy(const ClpPackedMatrix * from);
   /** Subset clone (without gaps).  Duplicates are allowed
       and order is as given */
   virtual ClpMatrixBase * subsetClone (

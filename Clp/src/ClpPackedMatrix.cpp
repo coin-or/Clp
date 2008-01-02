@@ -152,6 +152,15 @@ ClpMatrixBase * ClpPackedMatrix::clone() const
 {
   return new ClpPackedMatrix(*this);
 }
+// Copy contents - resizing if necessary - otherwise re-use memory
+void
+ClpPackedMatrix::copy(const ClpPackedMatrix * rhs)
+{
+  //*this = *rhs;
+  assert(numberActiveColumns_ == rhs->numberActiveColumns_);
+  assert (matrix_->isColOrdered()==rhs->matrix_->isColOrdered());
+  matrix_->copyReuseArrays(*rhs->matrix_);
+}
 /* Subset clone (without gaps).  Duplicates are allowed
    and order is as given */
 ClpMatrixBase * 
@@ -2084,8 +2093,11 @@ ClpPackedMatrix::scale(ClpModel * model) const
   int numberRows = model->numberRows(); 
   int numberColumns = matrix_->getNumCols();
   // If empty - return as sanityCheck will trap
-  if (!numberRows||!numberColumns)
+  if (!numberRows||!numberColumns) {
+    model->setRowScale(NULL);
+    model->setColumnScale(NULL);
     return 1;
+  }
   ClpMatrixBase * rowCopyBase=model->rowCopy();
   if (!rowCopyBase) {
     // temporary copy
@@ -2105,8 +2117,19 @@ ClpPackedMatrix::scale(ClpModel * model) const
   const CoinBigIndex * rowStart = rowCopy->getVectorStarts();
   const double * element = rowCopy->getElements();
   int scaleLength = ((model->specialOptions()&131072)==0) ? 1 : 2;
-  double * rowScale = new double [numberRows*scaleLength];
-  double * columnScale = new double [numberColumns*scaleLength];
+  double * rowScale;
+  double * columnScale;
+  //assert (!model->rowScale());
+  bool arraysExist;
+  if (!model->rowScale()) {
+    rowScale = new double [numberRows*scaleLength];
+    columnScale = new double [numberColumns*scaleLength];
+    arraysExist=false;
+  } else {
+    rowScale=model->mutableRowScale();
+    columnScale=model->mutableColumnScale();
+    arraysExist=true;
+  }
   // we are going to mark bits we are interested in
   char * usefulRow = new char [numberRows];
   char * usefulColumn = new char [numberColumns];
@@ -2163,9 +2186,14 @@ ClpPackedMatrix::scale(ClpModel * model) const
     // don't bother scaling
     model->messageHandler()->message(CLP_PACKEDSCALE_FORGET,*model->messagesPointer())
       <<CoinMessageEol;
-    delete [] rowScale;
+    if (!arraysExist) {
+      delete [] rowScale;
+      delete [] columnScale;
+    } else {
+      model->setRowScale(NULL);
+      model->setColumnScale(NULL);
+    }
     delete [] usefulRow;
-    delete [] columnScale;
     delete [] usefulColumn;
     if (!model->rowCopy()) 
       delete rowCopyBase; // get rid of temporary row copy
@@ -2516,8 +2544,10 @@ ClpPackedMatrix::scale(ClpModel * model) const
       for (iColumn=0;iColumn<numberColumns;iColumn++) 
 	inverseScale[iColumn] = 1.0/columnScale[iColumn] ;
     }
-    model->setRowScale(rowScale);
-    model->setColumnScale(columnScale);
+    if (!arraysExist) {
+      model->setRowScale(rowScale);
+      model->setColumnScale(columnScale);
+    }
     if (model->rowCopy()) {
       // need to replace row by row
       double * newElement = new double[numberColumns];

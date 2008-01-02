@@ -79,10 +79,14 @@ ClpModel::ClpModel (bool emptyMessages) :
 #ifndef CLP_NO_STD
   defaultHandler_(true),
   rowNames_(),
-  columnNames_()
+  columnNames_(),
 #else
-  defaultHandler_(true)
+  defaultHandler_(true),
 #endif
+  maximumColumns_(-1),
+  maximumRows_(-1),
+  savedRowScale_(NULL),
+  savedColumnScale_(NULL)
 {
   intParam_[ClpMaxNumIteration] = 2147483647;
   intParam_[ClpMaxNumIterationHotStart] = 9999999;
@@ -117,48 +121,84 @@ ClpModel::~ClpModel ()
     delete handler_;
     handler_ = NULL;
   }
-  gutsOfDelete();
+  gutsOfDelete(0);
 }
-void ClpModel::gutsOfDelete()
+// Does most of deletion (0 = all, 1 = most)
+void 
+ClpModel::gutsOfDelete(int type)
 {
-  delete [] rowActivity_;
-  rowActivity_=NULL;
-  delete [] columnActivity_;
-  columnActivity_=NULL;
-  delete [] dual_;
-  dual_=NULL;
-  delete [] reducedCost_;
-  reducedCost_=NULL;
-  delete [] rowLower_;
-  delete [] rowUpper_;
-  delete [] rowObjective_;
-  rowLower_=NULL;
-  rowUpper_=NULL;
-  rowObjective_=NULL;
-  delete [] columnLower_;
-  delete [] columnUpper_;
-  delete objective_;
-  columnLower_=NULL;
-  columnUpper_=NULL;
-  objective_=NULL;
+  if (!type||!permanentArrays()) {
+    maximumRows_=-1;
+    maximumColumns_ = -1;
+    delete [] rowActivity_;
+    rowActivity_=NULL;
+    delete [] columnActivity_;
+    columnActivity_=NULL;
+    delete [] dual_;
+    dual_=NULL;
+    delete [] reducedCost_;
+    reducedCost_=NULL;
+    delete [] rowLower_;
+    delete [] rowUpper_;
+    delete [] rowObjective_;
+    rowLower_=NULL;
+    rowUpper_=NULL;
+    rowObjective_=NULL;
+    delete [] columnLower_;
+    delete [] columnUpper_;
+    delete objective_;
+    columnLower_=NULL;
+    columnUpper_=NULL;
+    objective_=NULL;
+    delete [] savedRowScale_;
+    if (rowScale_==savedRowScale_)
+      rowScale_=NULL;
+    savedRowScale_ = NULL;
+    delete [] savedColumnScale_;
+    if (columnScale_==savedColumnScale_)
+      columnScale_=NULL;
+    savedColumnScale_ = NULL;
+    delete [] rowScale_;
+    rowScale_ = NULL;
+    delete [] columnScale_;
+    columnScale_ = NULL;
+    delete [] integerType_;
+    integerType_ = NULL;
+    delete [] status_;
+    status_=NULL;
+    delete eventHandler_;
+    eventHandler_=NULL;
+  }
+  whatsChanged_=0;
   delete matrix_;
   matrix_=NULL;
   delete rowCopy_;
   rowCopy_=NULL;
   delete [] ray_;
   ray_ = NULL;
-  delete [] rowScale_;
-  rowScale_ = NULL;
-  delete [] columnScale_;
-  columnScale_ = NULL;
-  delete [] integerType_;
-  integerType_ = NULL;
-  delete [] status_;
-  status_=NULL;
-  delete eventHandler_;
-  eventHandler_=NULL;
-  whatsChanged_=0;
   specialOptions_ = 0;
+}
+void 
+ClpModel::setRowScale(double * scale) 
+{
+  if (!savedRowScale_) {
+    delete [] (double *) rowScale_; 
+    rowScale_ = scale;
+  } else {
+    assert (!scale);
+    rowScale_ = NULL;
+  }
+}
+void 
+ClpModel::setColumnScale(double * scale) 
+{
+  if (!savedColumnScale_) {
+    delete [] (double *) columnScale_; 
+    columnScale_ = scale;
+  } else {
+    assert (!scale);
+    columnScale_ = NULL;
+  }
 }
 //#############################################################################
 void ClpModel::setPrimalTolerance( double value) 
@@ -186,7 +226,7 @@ ClpModel::gutsOfLoadModel (int numberRows, int numberColumns,
   ClpEventHandler * handler = eventHandler_->clone();
   // Save specialOptions
   int saveOptions = specialOptions_;
-  gutsOfDelete();
+  gutsOfDelete(0);
   specialOptions_ = saveOptions;
   eventHandler_ = handler;
   numberRows_=numberRows;
@@ -596,17 +636,20 @@ void ClpModel::setColumnSetBounds(const int* indexFirst,
 ClpModel::ClpModel(const ClpModel &rhs, int scalingMode) :
   optimizationDirection_(rhs.optimizationDirection_),
   numberRows_(rhs.numberRows_),
-  numberColumns_(rhs.numberColumns_)
+  numberColumns_(rhs.numberColumns_),
+  specialOptions_(rhs.specialOptions_),
+  maximumColumns_(-1),
+  maximumRows_(-1),
+  savedRowScale_(NULL),
+  savedColumnScale_(NULL)
 {
   gutsOfCopy(rhs);
   if (scalingMode>=0&&matrix_&&
       matrix_->allElementsInRange(this,smallElement_,1.0e20)) {
     // really do scaling
     scalingFlag_=scalingMode;
-    delete [] rowScale_;
-    rowScale_ = NULL;
-    delete [] columnScale_;
-    columnScale_ = NULL;
+    setRowScale(NULL);
+    setColumnScale(NULL);
     delete rowCopy_; // in case odd
     rowCopy_=NULL;
     if (scalingMode&&!matrix_->scale(this)) {
@@ -627,30 +670,37 @@ ClpModel::operator=(const ClpModel & rhs)
 {
   if (this != &rhs) {
     if (defaultHandler_) {
-      delete handler_;
-      handler_ = NULL;
+      //delete handler_;
+      //handler_ = NULL;
     }
-    gutsOfDelete();
+    gutsOfDelete(1);
     optimizationDirection_ = rhs.optimizationDirection_;
     numberRows_ = rhs.numberRows_;
     numberColumns_ = rhs.numberColumns_;
-    gutsOfCopy(rhs);
+    gutsOfCopy(rhs,-1);
   }
   return *this;
 }
-// Does most of copying
+/* Does most of copying
+   If trueCopy 0 then just points to arrays 
+   If -1 leaves as much as possible */
 void 
-ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
+ClpModel::gutsOfCopy(const ClpModel & rhs, int trueCopy)
 {
   defaultHandler_ = rhs.defaultHandler_;
-  if (defaultHandler_) 
-    handler_ = new CoinMessageHandler(*rhs.handler_);
-   else 
-    handler_ = rhs.handler_;
-  eventHandler_ = rhs.eventHandler_->clone();
-  randomNumberGenerator_ = rhs.randomNumberGenerator_;
-  messages_ = rhs.messages_;
-  coinMessages_ = rhs.coinMessages_;
+  if (trueCopy>=0) {
+    if (defaultHandler_) 
+      handler_ = new CoinMessageHandler(*rhs.handler_);
+    else 
+      handler_ = rhs.handler_;
+    eventHandler_ = rhs.eventHandler_->clone();
+    randomNumberGenerator_ = rhs.randomNumberGenerator_;
+    messages_ = rhs.messages_;
+    coinMessages_ = rhs.coinMessages_;
+  } else {
+    if (!eventHandler_&&rhs.eventHandler_)
+      eventHandler_ = rhs.eventHandler_->clone();
+  }
   intParam_[ClpMaxNumIteration] = rhs.intParam_[ClpMaxNumIteration];
   intParam_[ClpMaxNumIterationHotStart] = 
     rhs.intParam_[ClpMaxNumIterationHotStart];
@@ -692,54 +742,131 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
     }
 #endif
     numberThreads_ = rhs.numberThreads_;
-    integerType_ = CoinCopyOfArray(rhs.integerType_,numberColumns_);
-    if (rhs.rowActivity_) {
-      rowActivity_=new double[numberRows_];
-      columnActivity_=new double[numberColumns_];
-      dual_=new double[numberRows_];
-      reducedCost_=new double[numberColumns_];
-      ClpDisjointCopyN ( rhs.rowActivity_, numberRows_ ,
-			  rowActivity_);
-      ClpDisjointCopyN ( rhs.columnActivity_, numberColumns_ ,
-			  columnActivity_);
-      ClpDisjointCopyN ( rhs.dual_, numberRows_ , 
-			  dual_);
-      ClpDisjointCopyN ( rhs.reducedCost_, numberColumns_ ,
-			  reducedCost_);
+    if (maximumRows_<0) {
+      specialOptions_ &= ~65536;
+      savedRowScale_ = NULL;
+      savedColumnScale_ = NULL;
+      integerType_ = CoinCopyOfArray(rhs.integerType_,numberColumns_);
+      if (rhs.rowActivity_) {
+	rowActivity_=new double[numberRows_];
+	columnActivity_=new double[numberColumns_];
+	dual_=new double[numberRows_];
+	reducedCost_=new double[numberColumns_];
+	ClpDisjointCopyN ( rhs.rowActivity_, numberRows_ ,
+			   rowActivity_);
+	ClpDisjointCopyN ( rhs.columnActivity_, numberColumns_ ,
+			   columnActivity_);
+	ClpDisjointCopyN ( rhs.dual_, numberRows_ , 
+			   dual_);
+	ClpDisjointCopyN ( rhs.reducedCost_, numberColumns_ ,
+			   reducedCost_);
+      } else {
+	rowActivity_=NULL;
+	columnActivity_=NULL;
+	dual_=NULL;
+	reducedCost_=NULL;
+      }
+      rowLower_ = ClpCopyOfArray ( rhs.rowLower_, numberRows_ );
+      rowUpper_ = ClpCopyOfArray ( rhs.rowUpper_, numberRows_ );
+      columnLower_ = ClpCopyOfArray ( rhs.columnLower_, numberColumns_ );
+      int scaleLength = ((specialOptions_&131072)==0) ? 1 : 2;
+      columnUpper_ = ClpCopyOfArray ( rhs.columnUpper_, numberColumns_ );
+      rowScale_ = ClpCopyOfArray(rhs.rowScale_,numberRows_*scaleLength);
+      columnScale_ = ClpCopyOfArray(rhs.columnScale_,numberColumns_*scaleLength);
+      if (rhs.objective_)
+	objective_  = rhs.objective_->clone();
+      else
+	objective_ = NULL;
+      rowObjective_ = ClpCopyOfArray ( rhs.rowObjective_, numberRows_ );
+      status_ = ClpCopyOfArray( rhs.status_,numberColumns_+numberRows_);
+      ray_ = NULL;
+      if (problemStatus_==1&&!secondaryStatus_)
+	ray_ = ClpCopyOfArray (rhs.ray_,numberRows_);
+      else if (problemStatus_==2)
+	ray_ = ClpCopyOfArray (rhs.ray_,numberColumns_);
+      if (rhs.rowCopy_) {
+	rowCopy_ = rhs.rowCopy_->clone();
+      } else {
+	rowCopy_=NULL;
+      }
+      matrix_=NULL;
+      if (rhs.matrix_) {
+	matrix_ = rhs.matrix_->clone();
+      }
     } else {
-      rowActivity_=NULL;
-      columnActivity_=NULL;
-      dual_=NULL;
-      reducedCost_=NULL;
-    }
-    rowLower_ = ClpCopyOfArray ( rhs.rowLower_, numberRows_ );
-    rowUpper_ = ClpCopyOfArray ( rhs.rowUpper_, numberRows_ );
-    columnLower_ = ClpCopyOfArray ( rhs.columnLower_, numberColumns_ );
-    int scaleLength = ((specialOptions_&131072)==0) ? 1 : 2;
-    columnUpper_ = ClpCopyOfArray ( rhs.columnUpper_, numberColumns_ );
-    rowScale_ = ClpCopyOfArray(rhs.rowScale_,numberRows_*scaleLength);
-    columnScale_ = ClpCopyOfArray(rhs.columnScale_,numberColumns_*scaleLength);
-    if (rhs.objective_)
-      objective_  = rhs.objective_->clone();
-    else
-      objective_ = NULL;
-    rowObjective_ = ClpCopyOfArray ( rhs.rowObjective_, numberRows_ );
-    status_ = ClpCopyOfArray( rhs.status_,numberColumns_+numberRows_);
-    ray_ = NULL;
-    if (problemStatus_==1&&!secondaryStatus_)
-      ray_ = ClpCopyOfArray (rhs.ray_,numberRows_);
-    else if (problemStatus_==2)
-      ray_ = ClpCopyOfArray (rhs.ray_,numberColumns_);
-    if (rhs.rowCopy_) {
-      rowCopy_ = rhs.rowCopy_->clone();
-    } else {
-      rowCopy_=NULL;
-    }
-    matrix_=NULL;
-    if (rhs.matrix_) {
-      matrix_ = rhs.matrix_->clone();
+      // This already has arrays - just copy
+      startPermanentArrays();
+      if (rhs.integerType_) {
+	assert (integerType_);
+	ClpDisjointCopyN(rhs.integerType_,numberColumns_,integerType_);
+      } else {
+	integerType_ = NULL;
+      }
+      if (rhs.rowActivity_) {
+	ClpDisjointCopyN ( rhs.rowActivity_, numberRows_ ,
+			   rowActivity_);
+	ClpDisjointCopyN ( rhs.columnActivity_, numberColumns_ ,
+			   columnActivity_);
+	ClpDisjointCopyN ( rhs.dual_, numberRows_ , 
+			   dual_);
+	ClpDisjointCopyN ( rhs.reducedCost_, numberColumns_ ,
+			   reducedCost_);
+      } else {
+	rowActivity_=NULL;
+	columnActivity_=NULL;
+	dual_=NULL;
+	reducedCost_=NULL;
+      }
+      ClpDisjointCopyN ( rhs.rowLower_, numberRows_,rowLower_ );
+      ClpDisjointCopyN ( rhs.rowUpper_, numberRows_,rowUpper_ );
+      ClpDisjointCopyN ( rhs.columnLower_, numberColumns_,columnLower_ );
+      assert ((specialOptions_&131072)==0);
+      ClpDisjointCopyN ( rhs.columnUpper_, numberColumns_,columnUpper_ );
+      if (rhs.objective_) {
+	abort(); //check if same
+	objective_  = rhs.objective_->clone();
+      } else {
+	objective_ = NULL;
+      }
+      assert (!rhs.rowObjective_);
+      ClpDisjointCopyN( rhs.status_,numberColumns_+numberRows_,status_);
+      ray_ = NULL;
+      if (problemStatus_==1&&!secondaryStatus_)
+	ray_ = ClpCopyOfArray (rhs.ray_,numberRows_);
+      else if (problemStatus_==2)
+	ray_ = ClpCopyOfArray (rhs.ray_,numberColumns_);
+      assert (!ray_);
+      delete rowCopy_;
+      if (rhs.rowCopy_) {
+	rowCopy_ = rhs.rowCopy_->clone();
+      } else {
+	rowCopy_=NULL;
+      }
+      delete matrix_;
+      matrix_=NULL;
+      if (rhs.matrix_) {
+	matrix_ = rhs.matrix_->clone();
+      }
+      if (rhs.savedRowScale_) {
+	assert (savedRowScale_);
+	assert (!rowScale_);
+	ClpDisjointCopyN(rhs.savedRowScale_,2*maximumRows_,savedRowScale_);
+	ClpDisjointCopyN(rhs.savedColumnScale_,2*maximumColumns_,savedColumnScale_);
+      } else {
+	assert (!savedRowScale_);
+	if (rowScale_) {
+	  ClpDisjointCopyN(rhs.rowScale_,numberRows_,rowScale_);
+	  ClpDisjointCopyN(rhs.columnScale_,numberColumns_,columnScale_);
+	} else {
+	  rowScale_ =NULL;
+	  columnScale_=NULL;
+	}
+      }
+      abort(); // look at resizeDouble and resize
     }
   } else {
+    savedRowScale_ = rhs.savedRowScale_;
+    savedColumnScale_ = rhs.savedColumnScale_;
     rowActivity_ = rhs.rowActivity_;
     columnActivity_ = rhs.columnActivity_;
     dual_ = rhs.dual_;
@@ -765,6 +892,29 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, bool trueCopy)
     status_ = rhs.status_;
   }
 }
+// Copy contents - resizing if necessary - otherwise re-use memory
+void 
+ClpModel::copy(const ClpMatrixBase * from, ClpMatrixBase * & to)
+{
+  assert (from);
+  assert (to);
+  const ClpPackedMatrix * matrixFrom = (dynamic_cast<const ClpPackedMatrix*>(from));
+  ClpPackedMatrix * matrixTo = (dynamic_cast< ClpPackedMatrix*>(to));
+  if (matrixFrom&&matrixTo) {
+    matrixTo->copy(matrixFrom);
+  } else {
+    delete to;
+    to =  from->clone();
+  }
+#if 0
+    delete modelPtr_->matrix_;
+    if (continuousModel_->matrix_) {
+      modelPtr_->matrix_ = continuousModel_->matrix_->clone();
+    } else {
+      modelPtr_->matrix_=NULL;
+    }
+#endif
+}
 /* Borrow model.  This is so we dont have to copy large amounts
    of data around.  It assumes a derived class wants to overwrite
    an empty model with a real one - while it does an algorithm */
@@ -775,13 +925,16 @@ ClpModel::borrowModel(ClpModel & rhs)
     delete handler_;
     handler_ = NULL;
   }
-  gutsOfDelete();
+  gutsOfDelete(1);
   optimizationDirection_ = rhs.optimizationDirection_;
   numberRows_ = rhs.numberRows_;
   numberColumns_ = rhs.numberColumns_;
   delete [] rhs.ray_;
   rhs.ray_=NULL;
-  gutsOfCopy(rhs,false);
+  gutsOfCopy(rhs,0);
+  specialOptions_ = rhs.specialOptions_ & ~65536;
+  savedRowScale_=NULL;
+  savedColumnScale_=NULL;
 }
 // Return model - nulls all arrays so can be deleted safely
 void 
@@ -806,6 +959,8 @@ ClpModel::returnModel(ClpModel & otherModel)
   delete [] otherModel.ray_;
   otherModel.ray_ = ray_;
   ray_ = NULL;
+  rowScale_ = NULL;
+  columnScale_ = NULL;
   //rowScale_=NULL;
   //columnScale_=NULL;
   // do status
@@ -914,7 +1069,7 @@ ClpModel::setStrParam(ClpStrParam key, const std::string & value)
 double * resizeDouble(double * array , int size, int newSize, double fill,
 		      bool createArray)
 {
-  if ((array||createArray)&&size!=newSize) {
+  if ((array||createArray)&&size<newSize) {
     int i;
     double * newArray = new double[newSize];
     if (array)
@@ -1035,6 +1190,10 @@ ClpModel::resize (int newNumberRows, int newNumberColumns)
 				 newNumberColumns,0.0,true);
   reducedCost_ = resizeDouble(reducedCost_,numberColumns_,
 			      newNumberColumns,0.0,true);
+  savedRowScale_ = resizeDouble(savedRowScale_,2*numberRows_,
+			   2*newNumberRows,-COIN_DBL_MAX,false);
+  savedColumnScale_ = resizeDouble(savedColumnScale_,2*numberColumns_,
+			   2*newNumberColumns,-COIN_DBL_MAX,false);
   if (objective_)
     objective_->resize(newNumberColumns);
   else 
@@ -1058,10 +1217,8 @@ ClpModel::resize (int newNumberRows, int newNumberColumns)
     delete [] ray_;
     ray_ = NULL;
   }
-  delete [] rowScale_;
-  rowScale_ = NULL;
-  delete [] columnScale_;
-  columnScale_ = NULL;
+  setRowScale(NULL);
+  setColumnScale(NULL);
   if (status_) {
     if (newNumberColumns+newNumberRows) {
       unsigned char * tempC = new unsigned char [newNumberColumns+newNumberRows];
@@ -1182,9 +1339,11 @@ ClpModel::deleteRows(int number, const int * which)
   secondaryStatus_ = 0;
   delete [] ray_;
   ray_ = NULL;
-  delete [] rowScale_;
+  if (savedRowScale_!=rowScale_) {
+    delete [] rowScale_;
+    delete [] columnScale_;
+  }
   rowScale_ = NULL;
-  delete [] columnScale_;
   columnScale_ = NULL;
 }
 // Deletes columns
@@ -1263,10 +1422,8 @@ ClpModel::deleteColumns(int number, const int * which)
   secondaryStatus_ = 0;
   delete [] ray_;
   ray_ = NULL;
-  delete [] rowScale_;
-  rowScale_ = NULL;
-  delete [] columnScale_;
-  columnScale_ = NULL;
+  setRowScale(NULL);
+  setColumnScale(NULL);
 }
 // Add one row
 void 
@@ -1322,10 +1479,8 @@ ClpModel::addRows(int number, const double * rowLower,
     rowCopy_=NULL;
     if (!matrix_)
       createEmptyMatrix();
-    delete [] rowScale_;
-    rowScale_ = NULL;
-    delete [] columnScale_;
-    columnScale_ = NULL;
+    setRowScale(NULL);
+    setColumnScale(NULL);
 #ifndef CLP_NO_STD
     if (lengthNames_) {
       rowNames_.resize(numberRows_);
@@ -1414,10 +1569,8 @@ ClpModel::addRows(int number, const double * rowLower,
     createEmptyMatrix();
   if (rows)
     matrix_->appendRows(number,rows);
-  delete [] rowScale_;
-  rowScale_ = NULL;
-  delete [] columnScale_;
-  columnScale_ = NULL;
+  setRowScale(NULL);
+  setColumnScale(NULL);
   if (lengthNames_) {
     rowNames_.resize(numberRows_);
   }
@@ -1803,10 +1956,8 @@ ClpModel::addColumns(int number, const double * columnLower,
     rowCopy_=NULL;
     if (!matrix_)
       createEmptyMatrix();
-    delete [] rowScale_;
-    rowScale_ = NULL;
-    delete [] columnScale_;
-    columnScale_ = NULL;
+    setRowScale(NULL);
+    setColumnScale(NULL);
 #ifndef CLP_NO_STD
     if (lengthNames_) {
       columnNames_.resize(numberColumns_);
@@ -1907,10 +2058,8 @@ ClpModel::addColumns(int number, const double * columnLower,
     createEmptyMatrix();
   if (columns)
     matrix_->appendCols(number,columns);
-  delete [] rowScale_;
-  rowScale_ = NULL;
-  delete [] columnScale_;
-  columnScale_ = NULL;
+  setRowScale(NULL);
+  setColumnScale(NULL);
   if (lengthNames_) {
     columnNames_.resize(numberColumns_);
   }
@@ -2790,6 +2939,11 @@ ClpModel::ClpModel ( const ClpModel * rhs,
 		     int numberRows, const int * whichRow,
 		     int numberColumns, const int * whichColumn,
 		     bool dropNames, bool dropIntegers)
+  :  specialOptions_(rhs->specialOptions_),
+  maximumColumns_(-1),
+  maximumRows_(-1),
+  savedRowScale_(NULL),
+  savedColumnScale_(NULL)
 {
   defaultHandler_ = rhs->defaultHandler_;
   if (defaultHandler_) 
@@ -2800,6 +2954,10 @@ ClpModel::ClpModel ( const ClpModel * rhs,
   randomNumberGenerator_ = rhs->randomNumberGenerator_;
   messages_ = rhs->messages_;
   coinMessages_ = rhs->coinMessages_;
+  maximumColumns_ = -1;
+  maximumRows_ = -1;
+  savedRowScale_ = NULL;
+  savedColumnScale_ = NULL;
   intParam_[ClpMaxNumIteration] = rhs->intParam_[ClpMaxNumIteration];
   intParam_[ClpMaxNumIterationHotStart] = 
     rhs->intParam_[ClpMaxNumIterationHotStart];
@@ -3393,10 +3551,8 @@ ClpModel::scaling(int mode)
     scalingFlag_=mode;
   } else if (!mode) {
     scalingFlag_=0;
-    delete [] rowScale_;
-    rowScale_ = NULL;
-    delete [] columnScale_;
-    columnScale_ = NULL;
+    setRowScale(NULL);
+    setColumnScale(NULL);
   }
 }
 void 
@@ -3475,10 +3631,8 @@ ClpModel::unscale()
   }
   
   scalingFlag_=0;
-  delete [] rowScale_;
-  rowScale_ = NULL;
-  delete [] columnScale_;
-  columnScale_ = NULL;
+  setRowScale(NULL);
+  setColumnScale(NULL);
 }
 void 
 ClpModel::setSpecialOptions(unsigned int value)
@@ -3581,6 +3735,41 @@ ClpModel::createCoinModel() const
     }
   }
   return coinModel;
+}
+// Start or reset using maximumRows_ and Columns_
+void 
+ClpModel::startPermanentArrays()
+{
+  if ((specialOptions_&65536)!=0) {
+    if (numberRows_>maximumRows_||numberColumns_>maximumColumns_) {
+      if (numberRows_>maximumRows_)
+	maximumRows_ = numberRows_+10+numberRows_/100;
+      if (numberColumns_>maximumColumns_) 
+	maximumColumns_ = numberColumns_+10+numberColumns_/100;
+      // need to make sure numberRows_ OK and size of matrices
+      resize(maximumRows_,maximumColumns_);
+    } else {
+      return;
+    }
+  } else {
+    specialOptions_ |= 65536;
+    maximumRows_ = numberRows_;
+    maximumColumns_ = numberColumns_;
+  }
+}
+// Stop using maximumRows_ and Columns_
+void 
+ClpModel::stopPermanentArrays()
+{
+  specialOptions_ &= ~65536;
+  maximumRows_=-1;
+  maximumColumns_=-1;
+  if (rowScale_!=savedRowScale_) {
+    delete [] savedRowScale_;
+    delete [] savedColumnScale_;
+  }
+  savedRowScale_ = NULL;
+  savedColumnScale_ = NULL;
 }
 /* Find a network subset.
    rotate array should be numberRows.  On output

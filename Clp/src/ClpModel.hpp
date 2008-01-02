@@ -257,6 +257,8 @@ public:
       returns number of elements eliminated or -1 if not ClpPackedMatrix
   */
   int cleanMatrix(double threshold=1.0e-20);
+  /// Copy contents - resizing if necessary - otherwise re-use memory
+  void copy(const ClpMatrixBase * from, ClpMatrixBase * & to);
 #ifndef CLP_NO_STD
   /// Drops names - makes lengthnames 0 and names empty
   void dropNames();
@@ -516,8 +518,10 @@ public:
    /// Scaling
    inline const double * rowScale() const {return rowScale_;}
    inline const double * columnScale() const {return columnScale_;}
-   inline void setRowScale(double * scale) { delete [] (double *) rowScale_; rowScale_ = scale;}
-   inline void setColumnScale(double * scale) { delete [] (double *) columnScale_; columnScale_ = scale;}
+   inline double * mutableRowScale() const {return rowScale_;}
+   inline double * mutableColumnScale() const {return columnScale_;}
+   void setRowScale(double * scale) ;
+   void setColumnScale(double * scale);
   /// Scaling of objective 
   inline double objectiveScale() const 
           { return objectiveScale_;} 
@@ -826,8 +830,8 @@ public:
       4096 - Skip some optimality checks
       8192 - Do Primal when cleaning up primal
       16384 - In fast dual (so we can switch off things)
-      32678 - called from Osi
-      65356 - keep arrays around as much as possible
+      32768 - called from Osi
+      65536 - keep arrays around as much as possible (also use maximumR/C)
       131072 - scale factor arrays have inverse values at end
       NOTE - many applications can call Clp but there may be some short cuts
              which are taken which are not guaranteed safe from all applications.
@@ -848,11 +852,12 @@ public:
   /**@name private or protected methods */
   //@{
 protected:
-  /// Does most of deletion
-  void gutsOfDelete();
+  /// Does most of deletion (0 = all, 1 = most)
+  void gutsOfDelete(int type);
   /** Does most of copying
-      If trueCopy false then just points to arrays */
-  void gutsOfCopy(const ClpModel & rhs, bool trueCopy=true);
+      If trueCopy 0 then just points to arrays 
+      If -1 leaves as much as possible */
+  void gutsOfCopy(const ClpModel & rhs, int trueCopy=1);
   /// gets lower and upper bounds on rows
   void getRowBound(int iRow, double& lower, double& upper) const;
   /// puts in format I like - 4 array matrix - may make row copy 
@@ -863,10 +868,17 @@ protected:
 		      const double * rowObjective=NULL);
   /// Does much of scaling
   void gutsOfScaling();
-   /// Objective value - always minimize
-   inline double rawObjectiveValue() const {
-      return objectiveValue_;
-   }
+  /// Objective value - always minimize
+  inline double rawObjectiveValue() const {
+    return objectiveValue_;
+  }
+  /// If we are using maximumRows_ and Columns_
+  inline bool permanentArrays() const
+  { return (specialOptions_&65536)!=0;}
+  /// Start using maximumRows_ and Columns_
+  void startPermanentArrays();
+  /// Stop using maximumRows_ and Columns_
+  void stopPermanentArrays();
   /// Create row names as char **
   const char * const * rowNamesAsChar() const;
   /// Create column names as char **
@@ -995,6 +1007,18 @@ protected:
   CoinMessages messages_;
   /// Coin messages
   CoinMessages coinMessages_;
+  /// Maximum number of columns in model
+  int maximumColumns_;
+  /// Maximum number of rows in model
+  int maximumRows_;
+  /// Base packed matrix
+  CoinPackedMatrix baseMatrix_;
+  /// Base row copy
+  CoinPackedMatrix baseRowCopy_;
+  /// Saved row scale factors for matrix
+  double * savedRowScale_;
+  /// Saved column scale factors 
+  double * savedColumnScale_;
 #ifndef CLP_NO_STD
   /// Array of string parameters
   std::string strParam_[ClpLastStrParam];

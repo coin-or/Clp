@@ -203,4 +203,122 @@ private:
   int independentOptions_[3];
   //@}
 };
+
+/// For saving extra information to see if looping.
+class ClpSimplexProgress {
+
+public:
+
+
+  /**@name Constructors and destructor and copy */
+  //@{
+  /// Default constructor
+    ClpSimplexProgress (  );
+
+  /// Constructor from model
+    ClpSimplexProgress ( ClpSimplex * model );
+
+  /// Copy constructor. 
+  ClpSimplexProgress(const ClpSimplexProgress &);
+
+  /// Assignment operator. This copies the data
+    ClpSimplexProgress & operator=(const ClpSimplexProgress & rhs);
+  /// Destructor
+   ~ClpSimplexProgress (  );
+  /// Resets as much as possible
+   void reset();
+  /// Fill from model
+    void fillFromModel ( ClpSimplex * model );
+
+  //@}
+
+  /**@name Check progress */
+  //@{
+  /** Returns -1 if okay, -n+1 (n number of times bad) if bad but action taken,
+      >=0 if give up and use as problem status
+  */
+    int looping (  );
+  /// Start check at beginning of whileIterating
+  void startCheck();
+  /// Returns cycle length in whileIterating
+  int cycle(int in, int out,int wayIn,int wayOut); 
+
+  /// Returns previous objective (if -1) - current if (0)
+  double lastObjective(int back=1) const;
+  /// Set real primal infeasibility and move back
+  void setInfeasibility(double value);
+  /// Returns real primal infeasibility (if -1) - current if (0)
+  double lastInfeasibility(int back=1) const;
+  /// Modify objective e.g. if dual infeasible in dual
+  void modifyObjective(double value);
+  /// Returns previous iteration number (if -1) - current if (0)
+  int lastIterationNumber(int back=1) const;
+  /// clears all iteration numbers (to switch off panic)
+  void clearIterationNumbers();
+  /// Odd state
+  inline void newOddState()
+  { oddState_= - oddState_-1;}
+  inline void endOddState()
+  { oddState_=abs(oddState_);}
+  inline void clearOddState() 
+  { oddState_=0;}
+  inline int oddState() const
+  { return oddState_;}
+  /// number of bad times
+  inline int badTimes() const
+  { return numberBadTimes_;}
+  inline void clearBadTimes()
+  { numberBadTimes_=0;}
+
+  //@}
+  /**@name Data  */
+#define CLP_PROGRESS 5
+  //#define CLP_PROGRESS_WEIGHT 10
+  //@{
+  /// Objective values
+  double objective_[CLP_PROGRESS];
+  /// Sum of infeasibilities for algorithm
+  double infeasibility_[CLP_PROGRESS];
+  /// Sum of real primal infeasibilities for primal
+  double realInfeasibility_[CLP_PROGRESS];
+#ifdef CLP_PROGRESS_WEIGHT
+  /// Objective values for weights
+  double objectiveWeight_[CLP_PROGRESS_WEIGHT];
+  /// Sum of infeasibilities for algorithm for weights
+  double infeasibilityWeight_[CLP_PROGRESS_WEIGHT];
+  /// Sum of real primal infeasibilities for primal for weights
+  double realInfeasibilityWeight_[CLP_PROGRESS_WEIGHT];
+  /// Drop  for weights
+  double drop_;
+  /// Best? for weights
+  double best_;
+#endif
+  /// Initial weight for weights
+  double initialWeight_;
+#define CLP_CYCLE 12
+  /// For cycle checking
+  //double obj_[CLP_CYCLE];
+  int in_[CLP_CYCLE];
+  int out_[CLP_CYCLE];
+  char way_[CLP_CYCLE];
+  /// Pointer back to model so we can get information
+  ClpSimplex * model_;
+  /// Number of infeasibilities
+  int numberInfeasibilities_[CLP_PROGRESS];
+  /// Iteration number at which occurred
+  int iterationNumber_[CLP_PROGRESS];
+#ifdef CLP_PROGRESS_WEIGHT
+  /// Number of infeasibilities for weights
+  int numberInfeasibilitiesWeight_[CLP_PROGRESS_WEIGHT];
+  /// Iteration number at which occurred for weights
+  int iterationNumberWeight_[CLP_PROGRESS_WEIGHT];
+#endif
+  /// Number of times checked (so won't stop too early)
+  int numberTimes_;
+  /// Number of times it looked like loop
+  int numberBadTimes_;
+  /// If things are in an odd state
+  int oddState_;
+  //@}
+};
 #endif
