@@ -338,11 +338,11 @@ ClpFactorization::factorize ( ClpSimplex * model,
 	matrix->fillBasis(model, 
 			  pivotTemp+numberRowBasic, 
 			  numberColumnBasic,
-			  indexRowU_.array(), 
+			  indexRowU, 
 			  startColumnU+numberRowBasic,
 			  numberInRow,
 			  numberInColumn+numberRowBasic,
-			  elementU_.array());
+			  elementU);
 #if 0
 	{
 	  printf("%d row basic, %d column basic\n",numberRowBasic,numberColumnBasic);

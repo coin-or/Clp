@@ -596,6 +596,11 @@ public:
    inline ClpMatrixBase * rowCopy() const       { return rowCopy_; }
    /// Clp Matrix 
    inline ClpMatrixBase * clpMatrix() const     { return matrix_; }
+   /// Scaled ClpPackedMatrix 
+   inline ClpPackedMatrix * clpScaledMatrix() const     { return scaledMatrix_; }
+   /// Sets pointer to scaled ClpPackedMatrix 
+   inline void setClpScaledMatrix(ClpPackedMatrix * scaledMatrix)
+  { delete scaledMatrix_; scaledMatrix_=scaledMatrix; }
   /** Replace Clp Matrix (current is not deleted unless told to
       and new is used)
       So up to user to delete current.  This was used where
@@ -833,6 +838,7 @@ public:
       32768 - called from Osi
       65536 - keep arrays around as much as possible (also use maximumR/C)
       131072 - scale factor arrays have inverse values at end
+      262144 - extra copy of scaled matrix
       NOTE - many applications can call Clp but there may be some short cuts
              which are taken which are not guaranteed safe from all applications.
              Vetted applications will have a bit set and the code may test this
@@ -847,6 +853,8 @@ public:
   inline unsigned int specialOptions() const
   { return specialOptions_;}
   void setSpecialOptions(unsigned int value);
+  inline bool inCbcBranchAndBound() const
+  { return (specialOptions_&COIN_CBC_USING_CLP)!=0;}
   //@}
 
   /**@name private or protected methods */
@@ -935,6 +943,8 @@ protected:
   ClpMatrixBase * matrix_;
   /// Row copy if wanted
   ClpMatrixBase * rowCopy_;
+  /// Scaled packed matrix
+  ClpPackedMatrix * scaledMatrix_;
   /// Infeasible/unbounded ray
   double * ray_;
   /// Row scale factors for matrix

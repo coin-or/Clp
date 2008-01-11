@@ -4434,6 +4434,18 @@ ClpSimplex::deleteRim(int getRidOfFactorizationData)
     delete nonLinearCost_;
     nonLinearCost_=NULL;
   }
+  if (!rowObjective_) {
+  // Redo objective value
+    double objectiveValue =0.0;
+    const double * cost = objective();
+    for (int i=0;i<numberColumns;i++) {
+      double value = columnActivity_[i];
+      objectiveValue += value*cost[i];
+    }
+    //if (fabs(objectiveValue_ -objectiveValue*optimizationDirection())>1.0e-5)
+    //printf("old obj %g new %g\n",objectiveValue_, objectiveValue*optimizationDirection());
+    objectiveValue_ = objectiveValue*optimizationDirection();
+  }
   // get rid of data
   matrix_->generalExpanded(this,13,scalingFlag_);
 }

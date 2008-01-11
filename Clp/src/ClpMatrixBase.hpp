@@ -98,7 +98,7 @@ public:
   /** Creates scales for column copy (rowCopy in model may be modified)
       default does not allow scaling
       returns non-zero if no scaling done */
-  virtual int scale(ClpModel * model) const 
+  virtual int scale(ClpModel * model, const ClpSimplex * baseModel=NULL) const 
   { return 1;}
   /** Scales rowCopy if column copy scaled
       Only called if scales already exist */

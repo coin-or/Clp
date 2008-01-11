@@ -2005,6 +2005,14 @@ ClpPackedMatrix::fillBasis(ClpSimplex * model,
   const double * rowScale = model->rowScale();
   const int * row = matrix_->getIndices();
   const double * elementByColumn = matrix_->getElements();
+  ClpPackedMatrix * scaledMatrix = model->clpScaledMatrix();
+  if (scaledMatrix&&true) {
+    columnLength = scaledMatrix->getVectorLengths(); 
+    columnStart = scaledMatrix->getVectorStarts();
+    rowScale = NULL;
+    row = scaledMatrix->getIndices();
+    elementByColumn = scaledMatrix->getElements();
+  }  
   if ((flags_&1)==0) {
     if (!rowScale) {
       // no scaling
@@ -2085,13 +2093,14 @@ ClpPackedMatrix::fillBasis(ClpSimplex * model,
 }
 // Creates scales for column copy (rowCopy in model may be modified)
 int 
-ClpPackedMatrix::scale(ClpModel * model) const 
+ClpPackedMatrix::scale(ClpModel * model, const ClpSimplex * baseModel) const 
 {
 #ifndef NDEBUG
   //checkFlags();
 #endif
   int numberRows = model->numberRows(); 
   int numberColumns = matrix_->getNumCols();
+  model->setClpScaledMatrix(NULL); // get rid of any scaled matrix
   // If empty - return as sanityCheck will trap
   if (!numberRows||!numberColumns) {
     model->setRowScale(NULL);
@@ -2227,11 +2236,79 @@ ClpPackedMatrix::scale(ClpModel * model) const
     bool finished=false;
     // if scalingMethod 3 then may change
     while (!finished) {
-      ClpFillN ( rowScale, numberRows,1.0);
-      ClpFillN ( columnScale, numberColumns,1.0);
+      int numberPass=3;
       overallLargest=-1.0e-20;
       overallSmallest=1.0e20;
-      if (scalingMethod==1||scalingMethod==3) {
+      if (!baseModel) {
+	ClpFillN ( rowScale, numberRows,1.0);
+	ClpFillN ( columnScale, numberColumns,1.0);
+      } else {
+	// Copy scales and do quick scale on extra rows
+	// Then just one? pass
+	assert (numberColumns==baseModel->numberColumns());
+	int numberRows2 = baseModel->numberRows();
+	assert (numberRows>=numberRows2);
+	assert (baseModel->rowScale());
+	memcpy(rowScale,baseModel->rowScale(),numberRows2*sizeof(double));
+	memcpy(columnScale,baseModel->columnScale(),numberColumns*sizeof(double));
+	if (numberRows>numberRows2) {
+	  numberPass=1;
+	  // do some scaling
+	  if (scalingMethod==1||scalingMethod==3) {
+	    // Maximum in each row
+	    for (iRow=numberRows2;iRow<numberRows;iRow++) {
+	      if (usefulRow[iRow]) {
+		CoinBigIndex j;
+		largest=1.0e-10;
+		for (j=rowStart[iRow];j<rowStart[iRow+1];j++) {
+		  int iColumn = column[j];
+		  if (usefulColumn[iColumn]) {
+		    double value = fabs(element[j]*columnScale[iColumn]);
+		    largest = CoinMax(largest,value);
+		    assert (largest<1.0e40);
+		  }
+		}
+		rowScale[iRow]=1.0/largest;
+		overallLargest = CoinMax(overallLargest,largest);
+		overallSmallest = CoinMin(overallSmallest,largest);
+	      }
+	    }
+	  } else {
+	    overallLargest=0.0;
+	    overallSmallest=1.0e50;
+	    // Geometric mean on row scales
+	    for (iRow=0;iRow<numberRows;iRow++) {
+	      if (usefulRow[iRow]) {
+		CoinBigIndex j;
+		largest=1.0e-20;
+		smallest=1.0e50;
+		for (j=rowStart[iRow];j<rowStart[iRow+1];j++) {
+		  int iColumn = column[j];
+		  if (usefulColumn[iColumn]) {
+		    double value = fabs(element[j]);
+		    // Don't bother with tiny elements
+		    if (value>1.0e-20) {
+		      value *= columnScale[iColumn];
+		      largest = CoinMax(largest,value);
+		      smallest = CoinMin(smallest,value);
+		    }
+		  }
+		}
+		if (iRow>=numberRows2) {
+		  rowScale[iRow]=1.0/sqrt(smallest*largest);
+		  rowScale[iRow]=CoinMax(1.0e-10,CoinMin(1.0e10,rowScale[iRow]));
+		}
+		overallLargest = CoinMax(largest*rowScale[iRow],overallLargest);
+		overallSmallest = CoinMin(smallest*rowScale[iRow],overallSmallest);
+	      }
+	    }
+	  }
+	} else {
+	  // just use
+	  numberPass=0;
+	}
+      }
+      if (!baseModel&&(scalingMethod==1||scalingMethod==3)) {
         // Maximum in each row
         for (iRow=0;iRow<numberRows;iRow++) {
           if (usefulRow[iRow]) {
@@ -2251,7 +2328,6 @@ ClpPackedMatrix::scale(ClpModel * model) const
           }
         }
       } else {
-        int numberPass=3;
 #ifdef USE_OBJECTIVE
         // This will be used to help get scale factors
         double * objective = new double[numberColumns];
@@ -2550,22 +2626,47 @@ ClpPackedMatrix::scale(ClpModel * model) const
     }
     if (model->rowCopy()) {
       // need to replace row by row
-      double * newElement = new double[numberColumns];
+      double * element = model->rowCopy()->getPackedMatrix()->getMutableElements();
       // scale row copy
       for (iRow=0;iRow<numberRows;iRow++) {
 	CoinBigIndex j;
 	double scale = rowScale[iRow];
-	const double * elementsInThisRow = element + rowStart[iRow];
+	double * elementsInThisRow = element + rowStart[iRow];
 	const int * columnsInThisRow = column + rowStart[iRow];
 	int number = rowStart[iRow+1]-rowStart[iRow];
 	assert (number<=numberColumns);
 	for (j=0;j<number;j++) {
 	  int iColumn = columnsInThisRow[j];
-	  newElement[j] = elementsInThisRow[j]*scale*columnScale[iColumn];
+	  elementsInThisRow[j] *= scale*columnScale[iColumn];
 	}
-	rowCopy->replaceVector(iRow,number,newElement);
       }
-      delete [] newElement;
+      if ((model->specialOptions()&262144)!=0) {
+      //if ((model->specialOptions()&(COIN_CBC_USING_CLP|16384))!=0) {
+      //if (model->inCbcBranchAndBound()&&false) {
+	// copy without gaps
+	CoinPackedMatrix * scaledMatrix = new CoinPackedMatrix(*matrix_,0,0);
+	ClpPackedMatrix * scaled = new ClpPackedMatrix(scaledMatrix);
+	model->setClpScaledMatrix(scaled);
+	// get matrix data pointers
+	const int * row = scaledMatrix->getIndices();
+	const CoinBigIndex * columnStart = scaledMatrix->getVectorStarts();
+#ifndef NDEBUG
+	const int * columnLength = scaledMatrix->getVectorLengths(); 
+#endif
+	double * elementByColumn = scaledMatrix->getMutableElements();
+	for (iColumn=0;iColumn<numberColumns;iColumn++) {
+	  CoinBigIndex j;
+	  double scale = columnScale[iColumn];
+	  assert (columnStart[iColumn+1]==columnStart[iColumn]+columnLength[iColumn]);
+	  for (j=columnStart[iColumn];
+	       j<columnStart[iColumn+1];j++) {
+	    int iRow = row[j];
+	    elementByColumn[j] *= scale*rowScale[iRow];
+	  }
+	}
+      } else {
+	//printf("not in b&b\n");
+      }
     } else {
       // no row copy
       delete rowCopyBase;

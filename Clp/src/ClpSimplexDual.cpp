@@ -1063,8 +1063,19 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
         rowArray_[3]->clear();
         sequenceIn_=-1;
 	// put row of tableau in rowArray[0] and columnArray[0]
-	matrix_->transposeTimes(this,-1.0,
-			      rowArray_[0],rowArray_[3],columnArray_[0]);
+	if (!scaledMatrix_) {
+	  matrix_->transposeTimes(this,-1.0,
+				  rowArray_[0],rowArray_[3],columnArray_[0]);
+	} else {
+	  double * saveR = rowScale_;
+	  double * saveC = columnScale_;
+	  rowScale_=NULL;
+	  columnScale_=NULL;
+	  scaledMatrix_->transposeTimes(this,-1.0,
+				  rowArray_[0],rowArray_[3],columnArray_[0]);
+	  rowScale_=saveR;
+	  columnScale_=saveC;
+	}
 	// do ratio test for normal iteration
 	bestPossiblePivot = dualColumn(rowArray_[0],columnArray_[0],rowArray_[3],
 		 columnArray_[1],acceptablePivot,dubiousWeights);
@@ -1092,8 +1103,19 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
         rowArray_[0]->createPacked(1,&pivotRow_,&direction);
 	factorization_->updateColumnTranspose(rowArray_[1],rowArray_[0]);
 	// put row of tableau in rowArray[0] and columnArray[0]
-	matrix_->transposeTimes(this,-1.0,
-			      rowArray_[0],rowArray_[3],columnArray_[0]);
+	if (!scaledMatrix_) {
+	  matrix_->transposeTimes(this,-1.0,
+				  rowArray_[0],rowArray_[3],columnArray_[0]);
+	} else {
+	  double * saveR = rowScale_;
+	  double * saveC = columnScale_;
+	  rowScale_=NULL;
+	  columnScale_=NULL;
+	  scaledMatrix_->transposeTimes(this,-1.0,
+				  rowArray_[0],rowArray_[3],columnArray_[0]);
+	  rowScale_=saveR;
+	  columnScale_=saveC;
+	}
 	acceptablePivot *= 10.0;
 	// do ratio test
         if (ifValuesPass==1) {
@@ -4365,6 +4387,7 @@ ClpSimplexDual::perturb()
   int maxLength=0;
   int minLength=numberRows_;
   double averageCost = 0.0;
+#if 0
   // look at element range
   double smallestNegative;
   double largestNegative;
@@ -4375,6 +4398,7 @@ ClpSimplexDual::perturb()
   smallestPositive = CoinMin(fabs(smallestNegative),smallestPositive);
   largestPositive = CoinMax(fabs(largestNegative),largestPositive);
   double elementRatio = largestPositive/smallestPositive;
+#endif
   int numberNonZero=0;
   if (!numberIterations_&&perturbation_>=50) {
     // See if we need to perturb
@@ -4413,7 +4437,8 @@ ClpSimplexDual::perturb()
     //printf("ratio number diff costs %g, element ratio %g\n",((double)number)/((double) numberColumns_),
     //								      elementRatio);
     //number=0;
-    if (number*4>numberColumns_||elementRatio>1.0e12) {
+    //if (number*4>numberColumns_||elementRatio>1.0e12) {
+    if (number*4>numberColumns_) {
       perturbation_=100;
       return; // good enough
     }

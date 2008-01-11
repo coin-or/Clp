@@ -61,6 +61,7 @@ ClpModel::ClpModel (bool emptyMessages) :
   columnUpper_(NULL),
   matrix_(NULL),
   rowCopy_(NULL),
+  scaledMatrix_(NULL),
   ray_(NULL),
   rowScale_(NULL),
   columnScale_(NULL),
@@ -174,6 +175,8 @@ ClpModel::gutsOfDelete(int type)
   matrix_=NULL;
   delete rowCopy_;
   rowCopy_=NULL;
+  delete scaledMatrix_;
+  scaledMatrix_=NULL,
   delete [] ray_;
   ray_ = NULL;
   specialOptions_ = 0;
@@ -652,6 +655,8 @@ ClpModel::ClpModel(const ClpModel &rhs, int scalingMode) :
     setColumnScale(NULL);
     delete rowCopy_; // in case odd
     rowCopy_=NULL;
+    delete scaledMatrix_;
+    scaledMatrix_=NULL;
     if (scalingMode&&!matrix_->scale(this)) {
       // scaling worked - now apply
       gutsOfScaling();
@@ -789,6 +794,11 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, int trueCopy)
       } else {
 	rowCopy_=NULL;
       }
+      if (rhs.scaledMatrix_) {
+	scaledMatrix_ = new ClpPackedMatrix(*rhs.scaledMatrix_);
+      } else {
+	scaledMatrix_=NULL;
+      }
       matrix_=NULL;
       if (rhs.matrix_) {
 	matrix_ = rhs.matrix_->clone();
@@ -842,6 +852,12 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, int trueCopy)
       } else {
 	rowCopy_=NULL;
       }
+      delete scaledMatrix_;
+      if (rhs.scaledMatrix_) {
+	scaledMatrix_ = new ClpPackedMatrix(*rhs.scaledMatrix_);
+      } else {
+	scaledMatrix_=NULL;
+      }
       delete matrix_;
       matrix_=NULL;
       if (rhs.matrix_) {
@@ -879,6 +895,7 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, int trueCopy)
     columnUpper_ = rhs.columnUpper_;
     matrix_ = rhs.matrix_;
     rowCopy_ = NULL;
+    scaledMatrix_ = NULL;
     ray_ = rhs.ray_;
     //rowScale_ = rhs.rowScale_;
     //columnScale_ = rhs.columnScale_;
@@ -931,7 +948,13 @@ ClpModel::borrowModel(ClpModel & rhs)
   numberColumns_ = rhs.numberColumns_;
   delete [] rhs.ray_;
   rhs.ray_=NULL;
+  // make sure scaled matrix not copied
+  ClpPackedMatrix * save = rhs.scaledMatrix_;
+  rhs.scaledMatrix_ = NULL;
+  delete scaledMatrix_;
+  scaledMatrix_=NULL;
   gutsOfCopy(rhs,0);
+  rhs.scaledMatrix_ = save;
   specialOptions_ = rhs.specialOptions_ & ~65536;
   savedRowScale_=NULL;
   savedColumnScale_=NULL;
@@ -956,6 +979,8 @@ ClpModel::returnModel(ClpModel & otherModel)
   columnUpper_ = NULL;
   matrix_ = NULL;
   rowCopy_ = NULL;
+  delete scaledMatrix_;
+  scaledMatrix_ = NULL;
   delete [] otherModel.ray_;
   otherModel.ray_ = ray_;
   ray_ = NULL;
@@ -1477,6 +1502,8 @@ ClpModel::addRows(int number, const double * rowLower,
     
     delete rowCopy_;
     rowCopy_=NULL;
+    delete scaledMatrix_;
+    scaledMatrix_=NULL;
     if (!matrix_)
       createEmptyMatrix();
     setRowScale(NULL);
@@ -1565,6 +1592,8 @@ ClpModel::addRows(int number, const double * rowLower,
 
   delete rowCopy_;
   rowCopy_=NULL;
+  delete scaledMatrix_;
+  scaledMatrix_=NULL;
   if (!matrix_)
     createEmptyMatrix();
   if (rows)
@@ -1954,6 +1983,8 @@ ClpModel::addColumns(int number, const double * columnLower,
     
     delete rowCopy_;
     rowCopy_=NULL;
+    delete scaledMatrix_;
+    scaledMatrix_=NULL;
     if (!matrix_)
       createEmptyMatrix();
     setRowScale(NULL);
@@ -2054,6 +2085,8 @@ ClpModel::addColumns(int number, const double * columnLower,
 
   delete rowCopy_;
   rowCopy_=NULL;
+  delete scaledMatrix_;
+  scaledMatrix_=NULL;
   if (!matrix_)
     createEmptyMatrix();
   if (columns)
@@ -3070,6 +3103,7 @@ ClpModel::ClpModel ( const ClpModel * rhs,
   columnScale_ = NULL;
   scalingFlag_ = rhs->scalingFlag_;
   rowCopy_=NULL;
+  scaledMatrix_=NULL;
   matrix_=NULL;
   if (rhs->matrix_) {
     matrix_ = rhs->matrix_->subsetClone(numberRows,whichRow,
@@ -3559,19 +3593,27 @@ void
 ClpModel::times(double scalar,
 		  const double * x, double * y) const
 {
-  if (rowScale_)
-    matrix_->times(scalar,x,y,rowScale_,columnScale_);
-  else
-    matrix_->times(scalar,x,y);
+  if (!scaledMatrix_||!rowScale_) {
+    if (rowScale_)
+      matrix_->times(scalar,x,y,rowScale_,columnScale_);
+    else
+      matrix_->times(scalar,x,y);
+  } else {
+    scaledMatrix_->times(scalar,x,y);
+  }
 }
 void 
 ClpModel::transposeTimes(double scalar,
 			   const double * x, double * y) const 
 {
-  if (rowScale_)
-    matrix_->transposeTimes(scalar,x,y,rowScale_,columnScale_);
-  else
-    matrix_->transposeTimes(scalar,x,y);
+  if (!scaledMatrix_||!rowScale_) {
+    if (rowScale_)
+      matrix_->transposeTimes(scalar,x,y,rowScale_,columnScale_);
+    else
+      matrix_->transposeTimes(scalar,x,y);
+  } else {
+    scaledMatrix_->transposeTimes(scalar,x,y);
+  }
 }
 // Does much of scaling
 void 

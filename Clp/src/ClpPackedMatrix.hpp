@@ -38,6 +38,9 @@ public:
 	this vector together with vectorStarts and vectorLengths. */
    virtual const double * getElements() const 
   { return matrix_->getElements();}
+  /// Mutable elements
+  inline double * getMutableElements() const
+  { return matrix_->getMutableElements();}
    /** A vector containing the minor indices of the elements in the packed
         matrix. Note that there might be gaps in this list, entries that do not
         belong to any major-dimension vector. To get the actual elements one
@@ -101,7 +104,7 @@ public:
 				 double * element);
   /** Creates scales for column copy (rowCopy in model may be modified)
       returns non-zero if no scaling done */
-  virtual int scale(ClpModel * model) const ;
+  virtual int scale(ClpModel * model, const ClpSimplex * baseModel=NULL) const ;
   /** Scales rowCopy if column copy scaled
       Only called if scales already exist */
   virtual void scaleRowCopy(ClpModel * model) const ;
