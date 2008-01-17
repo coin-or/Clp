@@ -8819,9 +8819,9 @@ ClpSimplex::setColumnLower( int elementIndex, double elementValue )
 	value = elementValue * rhsScale_ 
 	  / columnScale_[elementIndex];
       }
-      columnLowerWork_[elementIndex] = value;
+      lower_[elementIndex] = value;
       if (maximumRows_>=0)
-	columnLowerWork_[elementIndex+maximumRows_+maximumColumns_] = value;
+	lower_[elementIndex+maximumRows_+maximumColumns_] = value;
     }
   }
 }
@@ -8854,9 +8854,10 @@ ClpSimplex::setColumnUpper( int elementIndex, double elementValue )
 	value = elementValue * rhsScale_ 
 	  / columnScale_[elementIndex];
       }
-      columnUpperWork_[elementIndex] = value;
+      //assert (columnUpperWork_==upper_);
+      upper_[elementIndex] = value;
       if (maximumRows_>=0)
-	columnUpperWork_[elementIndex+maximumRows_+maximumColumns_] = value;
+	upper_[elementIndex+maximumRows_+maximumColumns_] = value;
     }
   }
 }
@@ -8880,12 +8881,12 @@ ClpSimplex::setColumnBounds( int elementIndex,
       // work arrays exist - update as well
       whatsChanged_ &= ~128;
       if (columnLower_[elementIndex]==-COIN_DBL_MAX) {
-	columnLowerWork_[elementIndex] = -COIN_DBL_MAX;
+	lower_[elementIndex] = -COIN_DBL_MAX;
       } else if (!columnScale_) {
-	columnLowerWork_[elementIndex] = lowerValue * rhsScale_;
+	lower_[elementIndex] = lowerValue * rhsScale_;
       } else {
         assert (!auxiliaryModel_);
-	columnLowerWork_[elementIndex] = lowerValue * rhsScale_ 
+	lower_[elementIndex] = lowerValue * rhsScale_ 
 	  / columnScale_[elementIndex];
       }
     }
@@ -8899,12 +8900,12 @@ ClpSimplex::setColumnBounds( int elementIndex,
       // work arrays exist - update as well
       whatsChanged_ &= ~256;
       if (columnUpper_[elementIndex]==COIN_DBL_MAX) {
-	columnUpperWork_[elementIndex] = COIN_DBL_MAX;
+	upper_[elementIndex] = COIN_DBL_MAX;
       } else if (!columnScale_) {
-	columnUpperWork_[elementIndex] = upperValue * rhsScale_;
+	upper_[elementIndex] = upperValue * rhsScale_;
       } else {
         assert (!auxiliaryModel_);
-	columnUpperWork_[elementIndex] = upperValue * rhsScale_ 
+	upper_[elementIndex] = upperValue * rhsScale_ 
 	  / columnScale_[elementIndex];
       }
     }
@@ -8949,21 +8950,21 @@ void ClpSimplex::setColumnSetBounds(const int* indexFirst,
     while (indexFirst != indexLast) {
       const int iColumn=*indexFirst++;
       if (columnLower_[iColumn]==-COIN_DBL_MAX) {
-	columnLowerWork_[iColumn] = -COIN_DBL_MAX;
+	lower_[iColumn] = -COIN_DBL_MAX;
       } else if (!columnScale_) {
-	columnLowerWork_[iColumn] = columnLower_[iColumn] * rhsScale_;
+	lower_[iColumn] = columnLower_[iColumn] * rhsScale_;
       } else {
         assert (!auxiliaryModel_);
-	columnLowerWork_[iColumn] = columnLower_[iColumn] * rhsScale_ 
+	lower_[iColumn] = columnLower_[iColumn] * rhsScale_ 
 	  / columnScale_[iColumn];
       }
       if (columnUpper_[iColumn]==COIN_DBL_MAX) {
-	columnUpperWork_[iColumn] = COIN_DBL_MAX;
+	upper_[iColumn] = COIN_DBL_MAX;
       } else if (!columnScale_) {
-	columnUpperWork_[iColumn] = columnUpper_[iColumn] * rhsScale_;
+	upper_[iColumn] = columnUpper_[iColumn] * rhsScale_;
       } else {
         assert (!auxiliaryModel_);
-	columnUpperWork_[iColumn] = columnUpper_[iColumn] * rhsScale_ 
+	upper_[iColumn] = columnUpper_[iColumn] * rhsScale_ 
 	  / columnScale_[iColumn];
       }
     }

@@ -11,7 +11,7 @@
 //#############################################################################
 // Constructors / Destructor / Assignment
 //#############################################################################
-
+//#define CLP_DEBUG 4
 //-------------------------------------------------------------------
 // Default Constructor 
 //-------------------------------------------------------------------
@@ -335,6 +335,7 @@ ClpDualRowSteepest::updateWeights(CoinIndexedVector * input,
 		  model_->factorization()->maximumPivots());
     double * array = alternateWeights_->denseVector();
     int * which = alternateWeights_->getIndices();
+    alternateWeights_->clear();
     int i;
     for (i=0;i<numberRows;i++) {
       double value=0.0;
@@ -409,7 +410,6 @@ ClpDualRowSteepest::updateWeights(CoinIndexedVector * input,
     spare->setNumElements ( numberNonZero );
     // Only one array active as already permuted
     model_->factorization()->updateColumn(spare,spare,true);
-    // permute back
     numberNonZero = spare->getNumElements();
     // alternateWeights_ should still be empty
     int pivotRow = model_->pivotRow();
@@ -481,8 +481,14 @@ ClpDualRowSteepest::updateWeights(CoinIndexedVector * input,
     }
     spare->setNumElements(number);
     // ftran
+#ifndef NDEBUG
+    alternateWeights_->checkClear();
+#endif
     model_->factorization()->updateColumn(alternateWeights_,spare);
     // alternateWeights_ should still be empty
+#ifndef NDEBUG
+    alternateWeights_->checkClear();
+#endif
     int pivotRow = model_->pivotRow();
 #ifdef CLP_DEBUG
     if ( model_->logLevel (  ) >4  && 

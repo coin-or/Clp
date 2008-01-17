@@ -984,6 +984,10 @@ ClpModel::returnModel(ClpModel & otherModel)
   delete [] otherModel.ray_;
   otherModel.ray_ = ray_;
   ray_ = NULL;
+  if (rowScale_&&otherModel.rowScale_!=rowScale_) {
+    delete [] rowScale_;
+    delete [] columnScale_;
+  }
   rowScale_ = NULL;
   columnScale_ = NULL;
   //rowScale_=NULL;

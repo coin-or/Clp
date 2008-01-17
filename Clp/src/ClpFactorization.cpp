@@ -861,9 +861,10 @@ ClpFactorization::updateColumnTranspose ( CoinIndexedVector * regionSparse,
   if (!networkBasis_) {
 #endif
     collectStatistics_ = true;
-    return CoinFactorization::updateColumnTranspose(regionSparse,
+    int returnValue = CoinFactorization::updateColumnTranspose(regionSparse,
 						    regionSparse2);
     collectStatistics_ = false;
+    return returnValue;
 #ifndef SLIM_CLP
   } else {
 #ifdef CHECK_NETWORK
@@ -1008,7 +1009,10 @@ ClpFactorization::ClpFactorization ()
 #ifndef SLIM_CLP
   networkBasis_ = NULL;
 #endif
+  //coinFactorizationA_ = NULL;
   coinFactorizationA_ = new CoinFactorization() ;
+  coinFactorizationB_ = NULL;
+  //coinFactorizationB_ = new CoinDenseFactorization();
 }
 
 //-------------------------------------------------------------------
@@ -1026,6 +1030,10 @@ ClpFactorization::ClpFactorization (const ClpFactorization & rhs)
     coinFactorizationA_ = new CoinFactorization(*(rhs.coinFactorizationA_));
   else
     coinFactorizationA_=NULL;
+  if (rhs.coinFactorizationB_)
+    coinFactorizationB_ = new CoinDenseFactorization(*(rhs.coinFactorizationB_));
+  else
+    coinFactorizationB_=NULL;
 }
 
 ClpFactorization::ClpFactorization (const CoinFactorization & rhs) 
@@ -1034,6 +1042,16 @@ ClpFactorization::ClpFactorization (const CoinFactorization & rhs)
   networkBasis_=NULL;
 #endif
   coinFactorizationA_ = new CoinFactorization(rhs);
+  coinFactorizationB_=NULL;
+}
+
+ClpFactorization::ClpFactorization (const CoinDenseFactorization & rhs) 
+{
+#ifndef SLIM_CLP
+  networkBasis_=NULL;
+#endif
+  coinFactorizationA_ = NULL;
+  coinFactorizationB_ = new CoinDenseFactorization(rhs);
 }
 
 //-------------------------------------------------------------------
@@ -1045,6 +1063,7 @@ ClpFactorization::~ClpFactorization ()
   delete networkBasis_;
 #endif
   delete coinFactorizationA_;
+  delete coinFactorizationB_;
 }
 
 //----------------------------------------------------------------
@@ -1066,21 +1085,23 @@ ClpFactorization::operator=(const ClpFactorization& rhs)
       coinFactorizationA_ = new CoinFactorization(*(rhs.coinFactorizationA_));
     else
       coinFactorizationA_=NULL;
+    delete coinFactorizationB_;
+    if (rhs.coinFactorizationB_)
+      coinFactorizationB_ = new CoinDenseFactorization(*(rhs.coinFactorizationB_));
+    else
+      coinFactorizationB_=NULL;
   }
   return *this;
 }
-#if 0
-static unsigned int saveList[10000];
-int numberSave=-1;
-inline bool isDense(int i) {
-  return ((saveList[i>>5]>>(i&31))&1)!=0;
+// Go over to dense code
+void 
+ClpFactorization::goDense() 
+{
+  delete coinFactorizationA_;
+  delete coinFactorizationB_;
+  coinFactorizationA_ = NULL;
+  coinFactorizationB_ = new CoinDenseFactorization();
 }
-inline void setDense(int i) {
-  unsigned int & value = saveList[i>>5];
-  int bit = i&31;
-  value |= (1<<bit);
-}
-#endif
 int 
 ClpFactorization::factorize ( ClpSimplex * model,
 			      int solveType, bool valuesPass)
@@ -1090,6 +1111,261 @@ ClpFactorization::factorize ( ClpSimplex * model,
   int numberColumns = model->numberColumns();
   if (!numberRows)
     return 0;
+  if (coinFactorizationB_) {
+    setStatus(-99);
+    int * pivotVariable = model->pivotVariable();
+    //returns 0 -okay, -1 singular, -2 too many in basis */
+    while (status()<-98) {
+      
+      int i;
+      int numberBasic=0;
+      int numberRowBasic;
+      // Move pivot variables across if they look good
+      int * pivotTemp = model->rowArray(0)->getIndices();
+      assert (!model->rowArray(0)->getNumElements());
+      if (!matrix->rhsOffset(model)) {
+	// Seems to prefer things in order so quickest
+	// way is to go though like this
+	for (i=0;i<numberRows;i++) {
+	  if (model->getRowStatus(i) == ClpSimplex::basic) 
+	    pivotTemp[numberBasic++]=i;
+	}
+	numberRowBasic=numberBasic;
+	/* Put column basic variables into pivotVariable
+	   This is done by ClpMatrixBase to allow override for gub
+	*/
+	matrix->generalExpanded(model,0,numberBasic);
+      } else {
+	// Long matrix - do a different way
+	bool fullSearch=false;
+	for (i=0;i<numberRows;i++) {
+	  int iPivot = pivotVariable[i];
+	  if (iPivot>=numberColumns) {
+	    pivotTemp[numberBasic++]=iPivot-numberColumns;
+	  }
+	}
+	numberRowBasic=numberBasic;
+	for (i=0;i<numberRows;i++) {
+	  int iPivot = pivotVariable[i];
+	  if (iPivot<numberColumns) {
+	    if (iPivot>=0) {
+	      pivotTemp[numberBasic++]=iPivot;
+	    } else {
+	      // not full basis
+	      fullSearch=true;
+	      break;
+	    }
+	  }
+	}
+	if (fullSearch) {
+	  // do slow way
+	  numberBasic=0;
+	  for (i=0;i<numberRows;i++) {
+	    if (model->getRowStatus(i) == ClpSimplex::basic) 
+	      pivotTemp[numberBasic++]=i;
+	  }
+	  numberRowBasic=numberBasic;
+	  /* Put column basic variables into pivotVariable
+	     This is done by ClpMatrixBase to allow override for gub
+	  */
+	  matrix->generalExpanded(model,0,numberBasic);
+	}
+      }
+      if (numberBasic>model->maximumBasic()) {
+        // Take out some
+        numberBasic=numberRowBasic;
+        for (int i=0;i<numberColumns;i++) {
+          if (model->getColumnStatus(i) == ClpSimplex::basic) {
+            if (numberBasic<numberRows)
+              numberBasic++;
+            else
+              model->setColumnStatus(i,ClpSimplex::superBasic);
+          }
+        }
+        numberBasic=numberRowBasic;
+        matrix->generalExpanded(model,0,numberBasic);
+      }
+      CoinBigIndex numberElements=numberRowBasic;
+      
+      // compute how much in basis
+      // can change for gub
+      int numberColumnBasic = numberBasic-numberRowBasic;
+      
+      numberElements +=matrix->countBasis(model,
+					  pivotTemp+numberRowBasic, 
+					  numberRowBasic,
+					  numberColumnBasic);
+      // Not needed for dense
+      numberElements = 3 * numberBasic + 3 * numberElements + 10000;
+      coinFactorizationB_->getAreas ( numberRows,
+				      numberRowBasic+numberColumnBasic, numberElements,
+				      2 * numberElements );
+      // Fill in counts so we can skip part of preProcess
+      // This is NOT needed for dense but would be needed for later versions
+      double * elementU;
+      int * indexRowU;
+      CoinBigIndex * startColumnU;
+      int * numberInRow;
+      int * numberInColumn;
+      double slackValue;
+      elementU = coinFactorizationB_->elements();
+      indexRowU = coinFactorizationB_->indices();
+      startColumnU = coinFactorizationB_->starts();
+      slackValue = coinFactorizationB_->slackValue();
+      // At present we don't need counts
+      numberInRow = coinFactorizationB_->intWorkArea();
+      numberInColumn = numberInRow;
+      CoinZeroN ( numberInRow, numberRows + 1 ); // just for valgrind
+      for (i=0;i<numberRowBasic;i++) {
+	int iRow = pivotTemp[i];
+	// Change pivotTemp to correct sequence
+	pivotTemp[i]=iRow+numberColumns;
+	indexRowU[i]=iRow;
+	startColumnU[i]=i;
+	elementU[i]=slackValue;
+      }
+      startColumnU[numberRowBasic]=numberRowBasic;
+      // can change for gub so redo
+      numberColumnBasic = numberBasic-numberRowBasic;
+      matrix->fillBasis(model, 
+			pivotTemp+numberRowBasic, 
+			numberColumnBasic,
+			indexRowU, 
+			startColumnU+numberRowBasic,
+			numberInRow,
+			numberInColumn+numberRowBasic,
+			elementU);
+      // recompute number basic
+      numberBasic = numberRowBasic+numberColumnBasic;
+      for (i=numberBasic;i<numberRows;i++)
+	pivotTemp[i]=-1; // mark not there
+      if (numberBasic) 
+	numberElements = startColumnU[numberBasic-1]
+	  +numberInColumn[numberBasic-1];
+      else
+	numberElements=0;
+      coinFactorizationB_->preProcess ( );
+      coinFactorizationB_->factor (  );
+      // If we get here status is 0 or -1
+      if (status() == 0&&numberBasic==numberRows) {
+	coinFactorizationB_->postProcess(pivotTemp,pivotVariable);
+      } else {
+	// Change pivotTemp to be correct list
+	coinFactorizationB_->makeNonSingular(pivotTemp,numberColumns);
+	double * columnLower = model->lowerRegion();
+	double * columnUpper = model->upperRegion();
+	double * columnActivity = model->solutionRegion();
+	double * rowLower = model->lowerRegion(0);
+	double * rowUpper = model->upperRegion(0);
+	double * rowActivity = model->solutionRegion(0);
+	//redo basis - first take ALL out
+	int iColumn;
+	double largeValue = model->largeValue();
+	for (iColumn=0;iColumn<numberColumns;iColumn++) {
+	  if (model->getColumnStatus(iColumn)==ClpSimplex::basic) {
+	    // take out
+	    if (!valuesPass) {
+	      double lower=columnLower[iColumn];
+	      double upper=columnUpper[iColumn];
+	      double value=columnActivity[iColumn];
+	      if (lower>-largeValue||upper<largeValue) {
+		if (fabs(value-lower)<fabs(value-upper)) {
+		  model->setColumnStatus(iColumn,ClpSimplex::atLowerBound);
+		  columnActivity[iColumn]=lower;
+		} else {
+		  model->setColumnStatus(iColumn,ClpSimplex::atUpperBound);
+		  columnActivity[iColumn]=upper;
+		}
+	      } else {
+		model->setColumnStatus(iColumn,ClpSimplex::isFree);
+	      }
+	    } else {
+	      model->setColumnStatus(iColumn,ClpSimplex::superBasic);
+	    }
+	  }
+	}
+	int iRow;
+	for (iRow=0;iRow<numberRows;iRow++) {
+	  if (model->getRowStatus(iRow)==ClpSimplex::basic) {
+	    // take out
+	    if (!valuesPass) {
+	      double lower=columnLower[iRow];
+	      double upper=columnUpper[iRow];
+	      double value=columnActivity[iRow];
+	      if (lower>-largeValue||upper<largeValue) {
+		if (fabs(value-lower)<fabs(value-upper)) {
+		  model->setRowStatus(iRow,ClpSimplex::atLowerBound);
+		  columnActivity[iRow]=lower;
+		} else {
+		  model->setRowStatus(iRow,ClpSimplex::atUpperBound);
+		  columnActivity[iRow]=upper;
+		}
+	      } else {
+		model->setRowStatus(iRow,ClpSimplex::isFree);
+	      }
+	    } else {
+	      model->setRowStatus(iRow,ClpSimplex::superBasic);
+	    }
+	  }
+	}
+	for (iRow=0;iRow<numberRows;iRow++) {
+	  int iSequence=pivotTemp[iRow];
+	  assert (iSequence>=0);
+	  // basic
+	  model->setColumnStatus(iSequence,ClpSimplex::basic);
+	}
+	// signal repeat
+	coinFactorizationB_->setStatus(-99);
+	// set fixed if they are
+	for (iRow=0;iRow<numberRows;iRow++) {
+	  if (model->getRowStatus(iRow)!=ClpSimplex::basic ) {
+	    if (rowLower[iRow]==rowUpper[iRow]) {
+	      rowActivity[iRow]=rowLower[iRow];
+	      model->setRowStatus(iRow,ClpSimplex::isFixed);
+	    }
+	  }
+	}
+	for (iColumn=0;iColumn<numberColumns;iColumn++) {
+	  if (model->getColumnStatus(iColumn)!=ClpSimplex::basic ) {
+	    if (columnLower[iColumn]==columnUpper[iColumn]) {
+	      columnActivity[iColumn]=columnLower[iColumn];
+	      model->setColumnStatus(iColumn,ClpSimplex::isFixed);
+	    }
+	  }
+	}
+      } 
+    }
+#ifdef CLP_DEBUG
+    // check basic
+    CoinIndexedVector region1(2*numberRows);
+    CoinIndexedVector region2B(2*numberRows);
+    int iPivot;
+    double * arrayB = region2B.denseVector();
+    int i;
+    for (iPivot=0;iPivot<numberRows;iPivot++) {
+      int iSequence = pivotVariable[iPivot];
+      model->unpack(&region2B,iSequence);
+      coinFactorizationB_->updateColumn(&region1,&region2B);
+      if (fabs(arrayB[iPivot]-1.0)<1.0e-4) {
+	// OK?
+	arrayB[iPivot]=0.0;
+      } else {
+	assert (fabs(arrayB[iPivot])<1.0e-4);
+	for (i=0;i<numberRows;i++) {
+	  if (fabs(arrayB[i]-1.0)<1.0e-4)
+	    break;
+	}
+	assert (i<numberRows);
+	printf("variable on row %d landed up on row %d\n",iPivot,i);
+	arrayB[i]=0.0;
+      }
+      for (i=0;i<numberRows;i++)
+	assert (fabs(arrayB[i])<1.0e-4);
+      region2B.clear();
+    }
+#endif
+    return coinFactorizationB_->status();
+  }
   // If too many compressions increase area
   if (coinFactorizationA_->pivots()>1&&coinFactorizationA_->numberCompressions()*10 > coinFactorizationA_->pivots()+10) {
     coinFactorizationA_->areaFactor( coinFactorizationA_->areaFactor()* 1.1);
@@ -1625,11 +1901,42 @@ ClpFactorization::replaceColumn ( const ClpSimplex * model,
   if (!networkBasis_) {
 #endif
     // see if FT
-    if (coinFactorizationA_->forrestTomlin()) {
-      int returnCode= coinFactorizationA_->replaceColumn(regionSparse,
+    if (!coinFactorizationA_||coinFactorizationA_->forrestTomlin()) {
+      int returnCode;
+      if (coinFactorizationA_) {
+	returnCode = coinFactorizationA_->replaceColumn(regionSparse,
+							pivotRow,
+							pivotCheck,
+							checkBeforeModifying);
+      } else {
+	returnCode= coinFactorizationB_->replaceColumn(tableauColumn,
 					      pivotRow,
 					      pivotCheck,
 					      checkBeforeModifying);
+#ifdef CLP_DEBUG
+	// check basic
+	int numberRows = coinFactorizationB_->numberRows();
+	CoinIndexedVector region1(2*numberRows);
+	CoinIndexedVector region2A(2*numberRows);
+	CoinIndexedVector region2B(2*numberRows);
+	int iPivot;
+	double * arrayB = region2B.denseVector();
+	int * pivotVariable = model->pivotVariable();
+	int i;
+	for (iPivot=0;iPivot<numberRows;iPivot++) {
+	  int iSequence = pivotVariable[iPivot];
+	  if (iPivot==pivotRow)
+	    iSequence = model->sequenceIn();
+	  model->unpack(&region2B,iSequence);
+	  coinFactorizationB_->updateColumn(&region1,&region2B);
+	  assert (fabs(arrayB[iPivot]-1.0)<1.0e-4);
+	  arrayB[iPivot]=0.0;
+	  for (i=0;i<numberRows;i++)
+	    assert (fabs(arrayB[i])<1.0e-4);
+	  region2B.clear();
+	}
+#endif
+      }
       return returnCode;
     } else {
       return coinFactorizationA_->replaceColumnPFI(tableauColumn,
@@ -1640,9 +1947,9 @@ ClpFactorization::replaceColumn ( const ClpSimplex * model,
   } else {
     if (doCheck) {
       int returnCode = coinFactorizationA_->replaceColumn(regionSparse,
-							pivotRow,
-							pivotCheck,
-							checkBeforeModifying);
+      						pivotRow,
+      						pivotCheck,
+      						checkBeforeModifying);
       networkBasis_->replaceColumn(regionSparse,
 				   pivotRow);
       return returnCode;
@@ -1666,16 +1973,22 @@ ClpFactorization::updateColumnFT ( CoinIndexedVector * regionSparse,
 #ifdef CLP_DEBUG
   regionSparse->checkClear();
 #endif
-  if (!coinFactorizationA_->numberRows())
-    return 0;
+  if (!numberRows())
+      return 0;
 #ifndef SLIM_CLP
   if (!networkBasis_) {
 #endif
-    coinFactorizationA_->setCollectStatistics(true);
-    int returnValue= coinFactorizationA_->updateColumnFT(regionSparse,
-						       regionSparse2);
-    coinFactorizationA_->setCollectStatistics(false);
-    return returnValue;
+    if (coinFactorizationA_) {
+      coinFactorizationA_->setCollectStatistics(true);
+      int returnValue= coinFactorizationA_->updateColumnFT(regionSparse,
+							   regionSparse2);
+      coinFactorizationA_->setCollectStatistics(false);
+      return returnValue;
+    } else {
+      int returnValue= coinFactorizationB_->updateColumn(regionSparse,
+							 regionSparse2);
+      return returnValue;
+    }
 #ifndef SLIM_CLP
   } else {
 #ifdef CHECK_NETWORK
@@ -1731,17 +2044,24 @@ ClpFactorization::updateColumn ( CoinIndexedVector * regionSparse,
   if (!noPermute)
     regionSparse->checkClear();
 #endif
-  if (!coinFactorizationA_->numberRows())
+  if (!numberRows())
     return 0;
 #ifndef SLIM_CLP
   if (!networkBasis_) {
 #endif
-    coinFactorizationA_->setCollectStatistics(true);
-    int returnValue= coinFactorizationA_->updateColumn(regionSparse,
-						     regionSparse2,
-						     noPermute);
-    coinFactorizationA_->setCollectStatistics(false);
-    return returnValue;
+    if (coinFactorizationA_) {
+      coinFactorizationA_->setCollectStatistics(true);
+      int returnValue= coinFactorizationA_->updateColumn(regionSparse,
+							 regionSparse2,
+							 noPermute);
+      coinFactorizationA_->setCollectStatistics(false);
+      return returnValue;
+    } else {
+      int returnValue= coinFactorizationB_->updateColumn(regionSparse,
+							 regionSparse2,
+							 noPermute);
+      return returnValue;
+    }
 #ifndef SLIM_CLP
   } else {
 #ifdef CHECK_NETWORK
@@ -1810,15 +2130,22 @@ int
 ClpFactorization::updateColumnTranspose ( CoinIndexedVector * regionSparse,
     			  CoinIndexedVector * regionSparse2) const
 {
-  if (!coinFactorizationA_->numberRows())
+  if (!numberRows())
     return 0;
 #ifndef SLIM_CLP
   if (!networkBasis_) {
 #endif
-    coinFactorizationA_->setCollectStatistics(true);
-    return coinFactorizationA_->updateColumnTranspose(regionSparse,
+    if (coinFactorizationA_) {
+      coinFactorizationA_->setCollectStatistics(true);
+      int returnValue =  coinFactorizationA_->updateColumnTranspose(regionSparse,
 						    regionSparse2);
-    coinFactorizationA_->setCollectStatistics(false);
+      coinFactorizationA_->setCollectStatistics(false);
+      return returnValue;
+    } else {
+      int returnValue= coinFactorizationB_->updateColumnTranspose(regionSparse,
+							 regionSparse2);
+      return returnValue;
+    }
 #ifndef SLIM_CLP
   } else {
 #ifdef CHECK_NETWORK
@@ -1868,6 +2195,7 @@ ClpFactorization::goSparse()
 #ifndef SLIM_CLP
   if (!networkBasis_) 
 #endif
+    if (coinFactorizationA_)
     coinFactorizationA_->goSparse();
 }
 // Cleans up i.e. gets rid of network basis 
@@ -1878,6 +2206,7 @@ ClpFactorization::cleanUp()
   delete networkBasis_;
   networkBasis_=NULL;
 #endif
+  if (coinFactorizationA_)
   coinFactorizationA_->resetStatistics();
 }
 /// Says whether to redo pivot order

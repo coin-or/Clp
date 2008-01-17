@@ -10,6 +10,10 @@
 class ClpMatrixBase;
 class ClpSimplex;
 class ClpNetworkBasis;
+//#define CLP_MULTIPLE_FACTORIZATIONS    
+#ifdef CLP_MULTIPLE_FACTORIZATIONS    
+#include "CoinDenseFactorization.hpp"
+#endif
 
 /** This just implements CoinFactorization when an ClpMatrixBase object
     is passed.  If a network then has a dummy CoinFactorization and
@@ -53,7 +57,10 @@ public:
    ClpFactorization(const ClpFactorization&);
    /** The copy constructor from an CoinFactorization. */
    ClpFactorization(const CoinFactorization&);
-
+#ifdef CLP_MULTIPLE_FACTORIZATIONS    
+   /** The copy constructor from an CoinDenseFactorization. */
+   ClpFactorization(const CoinDenseFactorization&);
+#endif
    ClpFactorization& operator=(const ClpFactorization&);
    //@}
    
@@ -102,27 +109,27 @@ public:
   //@{ 
   /// Total number of elements in factorization
   inline int numberElements (  ) const {
-    if (coinFactorizationA_) return coinFactorizationA_->numberElements(); else return 0 ;
+    if (coinFactorizationA_) return coinFactorizationA_->numberElements(); else return coinFactorizationB_->numberElements() ;
   }
   /// Returns address of permute region
   inline int *permute (  ) const {
-    if (coinFactorizationA_) return coinFactorizationA_->permute(); else return NULL ;
+    if (coinFactorizationA_) return coinFactorizationA_->permute(); else return coinFactorizationB_->permute() ;
   }
   /// Returns address of pivotColumn region (also used for permuting)
   inline int *pivotColumn (  ) const {
-    if (coinFactorizationA_) return coinFactorizationA_->pivotColumn(); else return NULL ;
+    if (coinFactorizationA_) return coinFactorizationA_->pivotColumn(); else return coinFactorizationB_->permute() ;
   }
   /// Maximum number of pivots between factorizations
   inline int maximumPivots (  ) const {
-    if (coinFactorizationA_) return coinFactorizationA_->maximumPivots();  else return 0 ;
+    if (coinFactorizationA_) return coinFactorizationA_->maximumPivots();  else return coinFactorizationB_->maximumPivots() ;
   }
   /// Set maximum number of pivots between factorizations
   inline void maximumPivots (  int value) {
-    if (coinFactorizationA_) coinFactorizationA_->maximumPivots(value); 
+    if (coinFactorizationA_) coinFactorizationA_->maximumPivots(value); else coinFactorizationB_->maximumPivots(value);
   }
   /// Returns number of pivots since factorization
   inline int pivots (  ) const {
-    if (coinFactorizationA_) return coinFactorizationA_->pivots(); else return 0 ;
+    if (coinFactorizationA_) return coinFactorizationA_->pivots(); else return coinFactorizationB_->pivots() ;
   }
   /// Whether larger areas needed
   inline double areaFactor (  ) const {
@@ -134,11 +141,11 @@ public:
   }
   /// Zero tolerance
   inline double zeroTolerance (  ) const {
-    if (coinFactorizationA_) return coinFactorizationA_->zeroTolerance();  else return 1.0e-13 ;
+    if (coinFactorizationA_) return coinFactorizationA_->zeroTolerance();  else return coinFactorizationB_->zeroTolerance() ;
   }
   /// Set zero tolerance
   inline void zeroTolerance (  double value) {
-    if (coinFactorizationA_) coinFactorizationA_->zeroTolerance(value);
+    if (coinFactorizationA_) coinFactorizationA_->zeroTolerance(value); else coinFactorizationB_->zeroTolerance(value);
   }
   /**  get sparse threshold */
   inline int sparseThreshold ( ) const
@@ -148,7 +155,11 @@ public:
   { if (coinFactorizationA_) coinFactorizationA_->sparseThreshold(value); }
   /// Returns status
   inline int status (  ) const {
-    if (coinFactorizationA_) return coinFactorizationA_->status(); else return 0 ;
+    if (coinFactorizationA_) return coinFactorizationA_->status(); else return coinFactorizationB_->status() ;
+  }
+  /// Sets status
+  inline void setStatus (  int value) {
+    if (coinFactorizationA_) coinFactorizationA_->setStatus(value); else coinFactorizationB_->setStatus(value) ;
   }
   /// Returns number of dense rows
   inline int numberDense() const
@@ -175,7 +186,7 @@ public:
 							coinFactorizationA_->numberElementsU())*2+1000&&
 	      !coinFactorizationA_->numberDense());
     } else {
-      return false;
+      return coinFactorizationB_->pivots()>coinFactorizationB_->numberRows()/2.45+20;
     }
   }
   /// Level of detail of messages
@@ -191,7 +202,7 @@ public:
   { if (coinFactorizationA_) coinFactorizationA_->clearArrays();}
   /// Number of Rows after factorization
   inline int numberRows (  ) const {
-    if (coinFactorizationA_) return coinFactorizationA_->numberRows(); else return 0 ;
+    if (coinFactorizationA_) return coinFactorizationA_->numberRows(); else return coinFactorizationB_->numberRows() ;
   }
   /// Gets dense threshold
   inline int denseThreshold() const 
@@ -239,6 +250,8 @@ public:
       coinFactorizationA_->zeroTolerance(1.0e-13);
     }
   }
+  /// Go over to dense code
+  void goDense() ;
 #else
   inline bool timeToRefactorize() const
   {
@@ -253,6 +266,8 @@ public:
     slackValue(-1.0);
     zeroTolerance(1.0e-13);
   }
+  /// Go over to dense code
+  inline void goDense() {}
 #endif
   //@}
     
@@ -289,6 +304,8 @@ private:
 #ifdef CLP_MULTIPLE_FACTORIZATIONS    
   /// Pointer to CoinFactorization 
   CoinFactorization * coinFactorizationA_;
+  /// Pointer to CoinDenseFactorization 
+  CoinDenseFactorization * coinFactorizationB_;
 #endif
   //@}
 };

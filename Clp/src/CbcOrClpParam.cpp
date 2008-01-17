@@ -1345,6 +1345,15 @@ presolve as well) - the option maybe does this."
 #endif
 #ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
+    CbcOrClpParam("csv!Statistics","Create one line of statistics",
+		  CSVSTATISTICS,2,false);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "This appends statistics to given file name.  It will use the default\
+ directory given by 'directory'.  A name of '$' will use the previous value for the name.  This\
+ is initialized to '', i.e. it must be set.  Adds header if file empty or does not exist."
+     ); 
+  parameters[numberParameters++]=
     CbcOrClpParam("cutD!epth","Depth in tree at which to do cuts",
 		  -1,999999,CUTDEPTH);
   parameters[numberParameters-1].setLonghelp
@@ -1396,6 +1405,14 @@ createAfterPre.  The create case has same effect as saveSolution."
      ); 
 #endif 
 #ifdef COIN_HAS_CBC
+  parameters[numberParameters++]=
+    CbcOrClpParam("dense!Threshold","Whether to use dense factorization",
+		  -1,200,DENSE,false);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "If processed problem <= this use dense factorization (for testing)"
+     ); 
+  parameters[numberParameters-1].setIntValue(-1);
   parameters[numberParameters++]=
     CbcOrClpParam("dextra1","Extra double parameter 1",
 		  -COIN_DBL_MAX,COIN_DBL_MAX,DEXTRA1,false);
