@@ -142,6 +142,68 @@ int main (int argc, const char *argv[])
     model.addRows(modelObject);
     printf("Time for 10000 addRow using CoinModel is %g\n",CoinCpuTime()-time1);
     model.dual();
+    model.writeMps("b.mps");
+    // Method using least memory - but most complicated
+    time1 = CoinCpuTime();
+    // Assumes we know exact size of model and matrix
+    // Empty model
+    ClpSimplex  model2;
+    {
+      // Create space for 3 columns and 10000 rows
+      int numberRows=10000;
+      int numberColumns=3;
+      // This is fully dense - but would not normally be so
+      int numberElements = numberRows*numberColumns;
+      // Arrays will be set to default values
+      model2.resize(numberRows,numberColumns);
+      double * elements = new double [numberElements];
+      CoinBigIndex * starts = new CoinBigIndex [numberColumns+1];
+      int * rows = new int [numberElements];;
+      int * lengths = new int[numberColumns];
+      // Now fill in - totally unsafe but ....
+      // no need as defaults to 0.0 double * columnLower = model2.columnLower();
+      double * columnUpper = model2.columnUpper();
+      double * objective = model2.objective();
+      double * rowLower = model2.rowLower();
+      double * rowUpper = model2.rowUpper();
+      // Columns - objective was packed
+      for (k=0;k<2;k++) {
+	int iColumn = objIndex[k];
+	objective[iColumn]=objValue[k];
+      }
+      for (k=0;k<numberColumns;k++)
+	columnUpper[k]=upper[k];
+      // Rows
+      for (k=0;k<numberRows;k++) {
+	rowLower[k]=1.0;
+	rowUpper[k]=1.0;
+      }
+      // Now elements
+      double row2Value[]={1.0,-5.0,1.0};
+      CoinBigIndex put=0;
+      for (k=0;k<numberColumns;k++) {
+	starts[k]=put;
+	lengths[k]=numberRows;
+	double value=row2Value[k];
+	for (int i=0;i<numberRows;i++) {
+	  rows[put]=i;
+	  elements[put]=value;
+	  put++;
+	}
+      }
+      starts[numberColumns]=put;
+      // assign to matrix
+      CoinPackedMatrix * matrix = new CoinPackedMatrix(true,0.0,0.0);
+      matrix->assignMatrix(true,numberRows,numberColumns,numberElements,
+			   elements,rows,starts,lengths);
+      ClpPackedMatrix * clpMatrix = new ClpPackedMatrix(matrix);
+      model2.replaceMatrix(clpMatrix,true);
+      printf("Time for 10000 addRow using hand written code is %g\n",CoinCpuTime()-time1);
+      // If matrix is really big could switch off creation of row copy
+      // model2.setSpecialOptions(256);
+    }
+    model2.dual();
+    model2.writeMps("a.mps");
     // Print column solution
     int numberColumns = model.numberColumns();
     
