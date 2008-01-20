@@ -94,6 +94,17 @@ public:
 	      int numberColumns, const int * whichColumns,
 	      bool dropNames=true, bool dropIntegers=true,
               bool fixOthers=false);
+  /** Subproblem constructor.  A subset of whole model is created from the 
+      row and column lists given.  The new order is given by list order and
+      duplicates are allowed.  Name and integer information can be dropped
+      Can optionally modify rhs to take into account variables NOT in list
+      in this case duplicates are not allowed (also see getbackSolution)
+  */
+  ClpSimplex (const ClpSimplex * wholeModel,
+	      int numberRows, const int * whichRows,
+	      int numberColumns, const int * whichColumns,
+	      bool dropNames=true, bool dropIntegers=true,
+              bool fixOthers=false);
   /** This constructor modifies original ClpSimplex and stores
       original stuff in created ClpSimplex.  It is only to be used in
       conjunction with originalModel */

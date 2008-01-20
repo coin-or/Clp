@@ -2674,6 +2674,45 @@ ClpPackedMatrix::scale(ClpModel * model, const ClpSimplex * baseModel) const
     return 0;
   }
 }
+// Creates scaled column copy if scales exist
+void 
+ClpPackedMatrix::createScaledMatrix(ClpSimplex * model) const
+{
+  int numberRows = model->numberRows(); 
+  int numberColumns = matrix_->getNumCols();
+  model->setClpScaledMatrix(NULL); // get rid of any scaled matrix
+  // If empty - return as sanityCheck will trap
+  if (!numberRows||!numberColumns) {
+    model->setRowScale(NULL);
+    model->setColumnScale(NULL);
+    return ;
+  }
+  if (!model->rowScale()) 
+    return;
+  double * rowScale=model->mutableRowScale();
+  double * columnScale=model->mutableColumnScale();
+  // copy without gaps
+  CoinPackedMatrix * scaledMatrix = new CoinPackedMatrix(*matrix_,0,0);
+  ClpPackedMatrix * scaled = new ClpPackedMatrix(scaledMatrix);
+  model->setClpScaledMatrix(scaled);
+  // get matrix data pointers
+  const int * row = scaledMatrix->getIndices();
+  const CoinBigIndex * columnStart = scaledMatrix->getVectorStarts();
+#ifndef NDEBUG
+  const int * columnLength = scaledMatrix->getVectorLengths(); 
+#endif
+  double * elementByColumn = scaledMatrix->getMutableElements();
+  for (int iColumn=0;iColumn<numberColumns;iColumn++) {
+    CoinBigIndex j;
+    double scale = columnScale[iColumn];
+    assert (columnStart[iColumn+1]==columnStart[iColumn]+columnLength[iColumn]);
+    for (j=columnStart[iColumn];
+	 j<columnStart[iColumn+1];j++) {
+      int iRow = row[j];
+      elementByColumn[j] *= scale*rowScale[iRow];
+    }
+  }
+}
 /* Unpacks a column into an CoinIndexedvector
  */
 void 

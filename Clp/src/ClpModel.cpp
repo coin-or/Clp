@@ -914,7 +914,6 @@ void
 ClpModel::copy(const ClpMatrixBase * from, ClpMatrixBase * & to)
 {
   assert (from);
-  assert (to);
   const ClpPackedMatrix * matrixFrom = (dynamic_cast<const ClpPackedMatrix*>(from));
   ClpPackedMatrix * matrixTo = (dynamic_cast< ClpPackedMatrix*>(to));
   if (matrixFrom&&matrixTo) {

@@ -108,6 +108,8 @@ public:
   /** Scales rowCopy if column copy scaled
       Only called if scales already exist */
   virtual void scaleRowCopy(ClpModel * model) const ;
+  /// Creates scaled column copy if scales exist
+  void createScaledMatrix(ClpSimplex * model) const;
   /** Realy really scales column copy 
       Only called if scales already exist.
       Up to user ro delete */

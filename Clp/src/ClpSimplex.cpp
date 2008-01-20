@@ -290,6 +290,153 @@ ClpSimplex::ClpSimplex ( const ClpModel * rhs,
     delete [] solution;
   }  
 }
+// Subproblem constructor
+ClpSimplex::ClpSimplex ( const ClpSimplex * rhs,
+			 int numberRows, const int * whichRow,
+			 int numberColumns, const int * whichColumn,
+			 bool dropNames, bool dropIntegers,bool fixOthers)
+  : ClpModel(rhs, numberRows, whichRow,
+	     numberColumns,whichColumn,dropNames,dropIntegers),
+    columnPrimalInfeasibility_(0.0),
+    rowPrimalInfeasibility_(0.0),
+    columnPrimalSequence_(-2),
+    rowPrimalSequence_(-2), 
+    columnDualInfeasibility_(0.0),
+    rowDualInfeasibility_(0.0),
+    moreSpecialOptions_(2),
+    baseIteration_(0),
+    primalToleranceToGetOptimal_(-1.0),
+    remainingDualInfeasibility_(0.0),
+    largeValue_(1.0e15),
+    largestPrimalError_(0.0),
+    largestDualError_(0.0),
+    alphaAccuracy_(-1.0),
+    dualBound_(1.0e10),
+    alpha_(0.0),
+    theta_(0.0),
+  lowerIn_(0.0),
+  valueIn_(0.0),
+  upperIn_(-COIN_DBL_MAX),
+  dualIn_(0.0),
+  lowerOut_(-1),
+  valueOut_(-1),
+  upperOut_(-1),
+  dualOut_(-1),
+  dualTolerance_(0.0),
+  primalTolerance_(0.0),
+  sumDualInfeasibilities_(0.0),
+  sumPrimalInfeasibilities_(0.0),
+  infeasibilityCost_(1.0e10),
+  sumOfRelaxedDualInfeasibilities_(0.0),
+  sumOfRelaxedPrimalInfeasibilities_(0.0),
+  acceptablePivot_(1.0e-8),
+  lower_(NULL),
+  rowLowerWork_(NULL),
+  columnLowerWork_(NULL),
+  upper_(NULL),
+  rowUpperWork_(NULL),
+  columnUpperWork_(NULL),
+  cost_(NULL),
+  rowObjectiveWork_(NULL),
+  objectiveWork_(NULL),
+  sequenceIn_(-1),
+  directionIn_(-1),
+  sequenceOut_(-1),
+  directionOut_(-1),
+  pivotRow_(-1),
+  lastGoodIteration_(-100),
+  dj_(NULL),
+  rowReducedCost_(NULL),
+  reducedCostWork_(NULL),
+  solution_(NULL),
+  rowActivityWork_(NULL),
+  columnActivityWork_(NULL),
+  auxiliaryModel_(NULL),
+  numberDualInfeasibilities_(0),
+  numberDualInfeasibilitiesWithoutFree_(0),
+  numberPrimalInfeasibilities_(100),
+  numberRefinements_(0),
+  pivotVariable_(NULL),
+  factorization_(NULL),
+    savedSolution_(NULL),
+  numberTimesOptimal_(0),
+  disasterArea_(NULL),
+  changeMade_(1),
+  algorithm_(0),
+  forceFactorization_(-1),
+  perturbation_(100),
+  nonLinearCost_(NULL),
+  lastBadIteration_(-999999),
+  lastFlaggedIteration_(-999999),
+  numberFake_(0),
+  numberChanged_(0),
+  progressFlag_(0),
+  firstFree_(-1),
+  numberExtraRows_(0),
+  maximumBasic_(0),
+  incomingInfeasibility_(1.0),
+  allowedInfeasibility_(10.0),
+    automaticScale_(0),
+  baseModel_(NULL)
+{
+  int i;
+  for (i=0;i<6;i++) {
+    rowArray_[i]=NULL;
+    columnArray_[i]=NULL;
+  }
+  for (i=0;i<4;i++) {
+    spareIntArray_[i]=0;
+    spareDoubleArray_[i]=0.0;
+  }
+  saveStatus_=NULL;
+  factorization_ = new ClpFactorization(*rhs->factorization_);
+  // say Steepest pricing
+  dualRowPivot_ = new ClpDualRowSteepest();
+  // say Steepest pricing
+  primalColumnPivot_ = new ClpPrimalColumnSteepest();
+  solveType_=1; // say simplex based life form
+  if (fixOthers) {
+    int numberOtherColumns=rhs->numberColumns();
+    int numberOtherRows=rhs->numberRows();
+    double * solution = new double [numberOtherColumns];
+    CoinZeroN(solution,numberOtherColumns);
+    int i;
+    for (i=0;i<numberColumns;i++) {
+      int iColumn = whichColumn[i];
+      if (solution[iColumn])
+        fixOthers=false; // duplicates
+      solution[iColumn]=1.0;
+    }
+    if (fixOthers) {
+      const double * otherSolution = rhs->primalColumnSolution();
+      const double * objective = rhs->objective();
+      double offset=0.0;
+      for (i=0;i<numberOtherColumns;i++) {
+        if (solution[i]) {
+          solution[i]=0.0; // in
+        } else {
+          solution[i] = otherSolution[i];
+          offset += objective[i]*otherSolution[i];
+        }
+      }
+      double * rhsModification = new double [numberOtherRows];
+      CoinZeroN(rhsModification,numberOtherRows);
+      rhs->matrix()->times(solution,rhsModification) ;
+      for ( i=0;i<numberRows;i++) {
+        int iRow = whichRow[i];
+        if (rowLower_[i]>-1.0e20)
+          rowLower_[i] -= rhsModification[iRow];
+        if (rowUpper_[i]<1.0e20)
+          rowUpper_[i] -= rhsModification[iRow];
+      }
+      delete [] rhsModification;
+      setObjectiveOffset(rhs->objectiveOffset()-offset);
+      // And set objective value to match
+      setObjectiveValue(rhs->objectiveValue());
+    }
+    delete [] solution;
+  }  
+}
 // Puts solution back small model
 void 
 ClpSimplex::getbackSolution(const ClpSimplex & smallModel,const int * whichRow, const int * whichColumn)
