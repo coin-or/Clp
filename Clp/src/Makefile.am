@@ -88,7 +88,7 @@ clp_LDADD = libClp.la \
 	$(COINUTILSOBJDIR)/src/libCoinUtils.la
 
 # Here we add additional libraries
-LIBS += $(ADDLIBS) `cat $(COINUTILSDOCDIR)/coinutils_addlibs.txt`
+LIBS += $(ADDLIBS) `cat $(COINUTILSOBJDIR)/coinutils_addlibs.txt`
 
 # Finally, the -rpath flag is used by libtool to make sure that the shared
 # library is found (in the lib install directory) when we are using dynamic

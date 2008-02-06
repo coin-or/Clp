@@ -180,7 +180,7 @@ LIBOBJS = @LIBOBJS@
 
 # Here we add additional libraries
 LIBS = @LIBS@ $(ADDLIBS) `cat \
-	$(COINUTILSDOCDIR)/coinutils_addlibs.txt`
+	$(COINUTILSOBJDIR)/coinutils_addlibs.txt`
 LIBTOOL = @LIBTOOL@
 LIBTOOLM4 = @LIBTOOLM4@
 LN_S = @LN_S@
