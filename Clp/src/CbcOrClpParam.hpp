@@ -172,6 +172,8 @@ public:
   { return definedKeyWords_[currentKeyWord_]; }
   /// Sets current parameter option
   void setCurrentOption ( int value , bool printIt=false);
+  /// Sets current parameter option and returns printable string
+  const char * setCurrentOptionWithMessage ( int value );
   /// Sets current parameter option using string
   void setCurrentOption (const std::string value );
   /// Returns current parameter option position

@@ -35,6 +35,7 @@ static char coin_prompt[]="Clp:";
 #endif
 static bool doPrinting=true;
 std::string afterEquals="";
+static char printArray[200];
 void setCbcOrClpPrinting(bool yesNo)
 {
   doPrinting=yesNo;
@@ -879,6 +880,21 @@ CbcOrClpParam::setCurrentOption ( int value , bool printIt)
              <<definedKeyWords_[value]<<std::endl;
 
     currentKeyWord_=value;
+}
+// Sets current parameter option and returns printable string
+const char * 
+CbcOrClpParam::setCurrentOptionWithMessage ( int value )
+{
+  if (value!=currentKeyWord_) {
+    sprintf(printArray,"Option for %s changed from %s to %s",
+	    name_.c_str(),definedKeyWords_[currentKeyWord_].c_str(),
+	    definedKeyWords_[value].c_str());
+
+    currentKeyWord_=value;
+  } else {
+    printArray[0]='\0';
+  }
+  return printArray;
 }
 void 
 CbcOrClpParam::setIntValue ( int value )
