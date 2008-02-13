@@ -78,7 +78,7 @@ enum CbcOrClpParameterType
     GOMORYCUTS,PROBINGCUTS,KNAPSACKCUTS,REDSPLITCUTS,
     ROUNDING,SOLVER,CLIQUECUTS,COSTSTRATEGY,FLOWCUTS,MIXEDCUTS,
     TWOMIRCUTS,PREPROCESS,FPUMP,GREEDY,COMBINE,LOCALTREE,SOS,
-    LANDPCUTS,RINS,RESIDCUTS,RENS,
+    LANDPCUTS,RINS,RESIDCUTS,RENS,DIVING,
     
     DIRECTORY=301,DIRSAMPLE,DIRNETLIB,DIRMIPLIB,IMPORT,EXPORT,RESTORE,SAVE,DUALSIMPLEX,PRIMALSIMPLEX,EITHERSIMPLEX,
     MAXIMIZE,MINIMIZE,EXIT,STDIN,UNITTEST,NETLIB_EITHER,NETLIB_DUAL,NETLIB_PRIMAL,SOLUTION,SAVESOL,
@@ -172,6 +172,8 @@ public:
   { return definedKeyWords_[currentKeyWord_]; }
   /// Sets current parameter option
   void setCurrentOption ( int value , bool printIt=false);
+  /// Sets current parameter option and returns printable string
+  const char * setCurrentOptionWithMessage ( int value );
   /// Sets current parameter option using string
   void setCurrentOption (const std::string value );
   /// Returns current parameter option position

@@ -35,6 +35,7 @@ static char coin_prompt[]="Clp:";
 #endif
 static bool doPrinting=true;
 std::string afterEquals="";
+static char printArray[200];
 void setCbcOrClpPrinting(bool yesNo)
 {
   doPrinting=yesNo;
@@ -880,6 +881,21 @@ CbcOrClpParam::setCurrentOption ( int value , bool printIt)
 
     currentKeyWord_=value;
 }
+// Sets current parameter option and returns printable string
+const char * 
+CbcOrClpParam::setCurrentOptionWithMessage ( int value )
+{
+  if (value!=currentKeyWord_) {
+    sprintf(printArray,"Option for %s changed from %s to %s",
+	    name_.c_str(),definedKeyWords_[currentKeyWord_].c_str(),
+	    definedKeyWords_[value].c_str());
+
+    currentKeyWord_=value;
+  } else {
+    printArray[0]='\0';
+  }
+  return printArray;
+}
 void 
 CbcOrClpParam::setIntValue ( int value )
 { 
@@ -1483,6 +1499,29 @@ You can also use the parameters 'maximize' or 'minimize'."
  It is initialized to '../../Data/miplib3'"
      ); 
 #ifdef COIN_HAS_CBC
+  parameters[numberParameters++]=
+      CbcOrClpParam("Diving","Whether to try Diving heuristics",
+		    "off",DIVING);
+  parameters[numberParameters-1].append("V");
+  parameters[numberParameters-1].append("G");
+  parameters[numberParameters-1].append("GV");
+  parameters[numberParameters-1].append("F");
+  parameters[numberParameters-1].append("FV");
+  parameters[numberParameters-1].append("FG");
+  parameters[numberParameters-1].append("FGV");
+  parameters[numberParameters-1].append("C");
+  parameters[numberParameters-1].append("CV");
+  parameters[numberParameters-1].append("CG");
+  parameters[numberParameters-1].append("CGV");
+  parameters[numberParameters-1].append("CF");
+  parameters[numberParameters-1].append("CFV");
+  parameters[numberParameters-1].append("CFG");
+  parameters[numberParameters-1].append("on");
+  parameters[numberParameters-1].setLonghelp
+    (
+     "This switches on various diving heuristics. \
+C - Coefficient, F - Fractional, G - Guided, V - VectorLength."
+     ); 
   parameters[numberParameters++]=
     CbcOrClpParam("doH!euristic","Do heuristics before any preprocessing",
 		  DOHEURISTIC,3);
