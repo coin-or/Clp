@@ -137,26 +137,38 @@ public:
   }
   /// Sets a double parameter (nonzero code if error)
   int setDoubleParameter(CbcModel & model, double value) ;
+  /// Sets double parameter and returns printable string and error code
+  const char * setDoubleParameterWithMessage ( CbcModel & model, double  value ,int & returnCode);
   /// Gets a double parameter
   double doubleParameter(CbcModel & model) const;
   /// Sets a int parameter (nonzero code if error)
   int setIntParameter(CbcModel & model, int value) ;
+  /// Sets int parameter and returns printable string and error code
+  const char * setIntParameterWithMessage ( CbcModel & model, int value ,int & returnCode);
   /// Gets a int parameter
   int intParameter(CbcModel & model) const;
   /// Sets a double parameter (nonzero code if error)
   int setDoubleParameter(ClpSimplex * model, double value) ;
   /// Gets a double parameter
   double doubleParameter(ClpSimplex * model) const;
+  /// Sets double parameter and returns printable string and error code
+  const char * setDoubleParameterWithMessage ( ClpSimplex * model, double  value ,int & returnCode);
   /// Sets a int parameter (nonzero code if error)
   int setIntParameter(ClpSimplex * model, int value) ;
+  /// Sets int parameter and returns printable string and error code
+  const char * setIntParameterWithMessage ( ClpSimplex * model, int  value ,int & returnCode);
   /// Gets a int parameter
   int intParameter(ClpSimplex * model) const;
   /// Sets a double parameter (nonzero code if error)
   int setDoubleParameter(OsiSolverInterface * model, double value) ;
+  /// Sets double parameter and returns printable string and error code
+  const char * setDoubleParameterWithMessage ( OsiSolverInterface * model, double  value ,int & returnCode);
   /// Gets a double parameter
   double doubleParameter(OsiSolverInterface * model) const;
   /// Sets a int parameter (nonzero code if error)
   int setIntParameter(OsiSolverInterface * model, int value) ;
+  /// Sets int parameter and returns printable string and error code
+  const char * setIntParameterWithMessage ( OsiSolverInterface * model, int  value ,int & returnCode);
   /// Gets a int parameter
   int intParameter(OsiSolverInterface * model) const;
   /// Checks a double parameter (nonzero code if error)
