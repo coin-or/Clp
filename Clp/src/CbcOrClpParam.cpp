@@ -401,11 +401,23 @@ CbcOrClpParam::printLongHelp() const
 int
 CbcOrClpParam::setDoubleParameter (OsiSolverInterface * model,double value) 
 {
+  int returnCode;
+  setDoubleParameterWithMessage(model,value,returnCode);
+  if (doPrinting&&strlen(printArray))
+    std::cout<<printArray<<std::endl;
+  return returnCode;
+}
+// Sets double parameter and returns printable string and error code
+const char * 
+CbcOrClpParam::setDoubleParameterWithMessage ( OsiSolverInterface * model, double  value ,int & returnCode)
+{
   if (value<lowerDoubleValue_||value>upperDoubleValue_) {
+    sprintf(printArray,"%g was provided for %s - valid range is %g to %g",
+	    value,name_.c_str(),lowerDoubleValue_,upperDoubleValue_);
     std::cout<<value<<" was provided for "<<name_<<
       " - valid range is "<<lowerDoubleValue_<<" to "<<
       upperDoubleValue_<<std::endl;
-    return 1;
+    returnCode = 1;
   } else {
     double oldValue=doubleValue_;
     doubleValue_=value;
@@ -421,27 +433,36 @@ CbcOrClpParam::setDoubleParameter (OsiSolverInterface * model,double value)
     default:
       break;
     }
-    if (doPrinting)
-      std::cout<<name_<<" was changed from "<<oldValue<<" to "
-               <<value<<std::endl;
-    return 0;
+    sprintf(printArray,"%s was changed from %g to %g",
+	    name_.c_str(),oldValue,value);
+    returnCode = 0;
   }
+  return printArray;
 }
 #endif
 #ifdef COIN_HAS_CLP
 int
 CbcOrClpParam::setDoubleParameter (ClpSimplex * model,double value) 
 {
+  int returnCode;
+  setDoubleParameterWithMessage(model,value,returnCode);
+  if (doPrinting&&strlen(printArray))
+    std::cout<<printArray<<std::endl;
+  return returnCode;
+}
+// Sets int parameter and returns printable string and error code
+const char * 
+CbcOrClpParam::setDoubleParameterWithMessage ( ClpSimplex * model, double value ,int & returnCode)
+{
   double oldValue = doubleValue_;
   if (value<lowerDoubleValue_||value>upperDoubleValue_) {
-    std::cout<<value<<" was provided for "<<name_<<
-      " - valid range is "<<lowerDoubleValue_<<" to "<<
-      upperDoubleValue_<<std::endl;
-    return 1;
+    sprintf(printArray,"%g was provided for %s - valid range is %g to %g",
+	    value,name_.c_str(),lowerDoubleValue_,upperDoubleValue_);
+    returnCode = 1;
   } else {
-    if (doPrinting)
-      std::cout<<name_<<" was changed from "<<oldValue<<" to "
-               <<value<<std::endl;
+    sprintf(printArray,"%s was changed from %g to %g",
+	    name_.c_str(),oldValue,value);
+    returnCode = 0;
     doubleValue_=value;
     switch(type_) {
 #ifndef COIN_HAS_CBC
@@ -475,8 +496,8 @@ CbcOrClpParam::setDoubleParameter (ClpSimplex * model,double value)
     default:
       break;
     }
-    return 0;
   }
+  return printArray;
 }
 double 
 CbcOrClpParam::doubleParameter (ClpSimplex * model) const
@@ -517,17 +538,26 @@ CbcOrClpParam::doubleParameter (ClpSimplex * model) const
 int 
 CbcOrClpParam::setIntParameter (ClpSimplex * model,int value) 
 {
+  int returnCode;
+  setIntParameterWithMessage(model,value,returnCode);
+  if (doPrinting&&strlen(printArray))
+    std::cout<<printArray<<std::endl;
+  return returnCode;
+}
+// Sets int parameter and returns printable string and error code
+const char * 
+CbcOrClpParam::setIntParameterWithMessage ( ClpSimplex * model, int value ,int & returnCode)
+{
   int oldValue = intValue_;
   if (value<lowerIntValue_||value>upperIntValue_) {
-    std::cout<<value<<" was provided for "<<name_<<
-      " - valid range is "<<lowerIntValue_<<" to "<<
-      upperIntValue_<<std::endl;
-    return 1;
+    sprintf(printArray,"%d was provided for %s - valid range is %d to %d",
+	    value,name_.c_str(),lowerIntValue_,upperIntValue_);
+    returnCode = 1;
   } else {
     intValue_=value;
-    if (doPrinting)
-      std::cout<<name_<<" was changed from "<<oldValue<<" to "
-               <<value<<std::endl;
+    sprintf(printArray,"%s was changed from %d to %d",
+	    name_.c_str(),oldValue,value);
+    returnCode = 0;
     switch(type_) {
     case SOLVERLOGLEVEL:
       model->setLogLevel(value);
@@ -555,8 +585,8 @@ CbcOrClpParam::setIntParameter (ClpSimplex * model,int value)
     default:
       break;
     }
-    return 0;
   }
+  return printArray;
 }
 int 
 CbcOrClpParam::intParameter (ClpSimplex * model) const
@@ -625,11 +655,20 @@ CbcOrClpParam::doubleParameter (OsiSolverInterface * model) const
 int 
 CbcOrClpParam::setIntParameter (OsiSolverInterface * model,int value) 
 {
+  int returnCode;
+  setIntParameterWithMessage(model,value,returnCode);
+  if (doPrinting&&strlen(printArray))
+    std::cout<<printArray<<std::endl;
+  return returnCode;
+}
+// Sets int parameter and returns printable string and error code
+const char * 
+CbcOrClpParam::setIntParameterWithMessage ( OsiSolverInterface * model, int  value ,int & returnCode)
+{
   if (value<lowerIntValue_||value>upperIntValue_) {
-    std::cout<<value<<" was provided for "<<name_<<
-      " - valid range is "<<lowerIntValue_<<" to "<<
-      upperIntValue_<<std::endl;
-    return 1;
+    sprintf(printArray,"%d was provided for %s - valid range is %d to %d",
+	    value,name_.c_str(),lowerIntValue_,upperIntValue_);
+    returnCode = 1;
   } else {
     int oldValue=intValue_;
     intValue_=oldValue;
@@ -640,11 +679,11 @@ CbcOrClpParam::setIntParameter (OsiSolverInterface * model,int value)
     default:
       break;
     }
-    if (doPrinting)
-      std::cout<<name_<<" was changed from "<<oldValue<<" to "
-               <<value<<std::endl;
-    return 0;
+    sprintf(printArray,"%s was changed from %d to %d",
+	    name_.c_str(),oldValue,value);
+    returnCode = 0;
   }
+  return printArray;
 }
 int 
 CbcOrClpParam::intParameter (OsiSolverInterface * model) const
@@ -663,11 +702,20 @@ CbcOrClpParam::intParameter (OsiSolverInterface * model) const
 int
 CbcOrClpParam::setDoubleParameter (CbcModel &model,double value) 
 {
+  int returnCode;
+  setDoubleParameterWithMessage(model,value,returnCode);
+  if (doPrinting&&strlen(printArray))
+    std::cout<<printArray<<std::endl;
+  return returnCode;
+}
+// Sets double parameter and returns printable string and error code
+const char * 
+CbcOrClpParam::setDoubleParameterWithMessage ( CbcModel & model, double  value ,int & returnCode)
+{
   if (value<lowerDoubleValue_||value>upperDoubleValue_) {
-    std::cout<<value<<" was provided for "<<name_<<
-      " - valid range is "<<lowerDoubleValue_<<" to "<<
-      upperDoubleValue_<<std::endl;
-    return 1;
+    sprintf(printArray,"%g was provided for %s - valid range is %g to %g",
+	    value,name_.c_str(),lowerDoubleValue_,upperDoubleValue_);
+    returnCode = 1;
   } else {
     double oldValue=doubleValue_;
     doubleValue_ = value;
@@ -707,11 +755,11 @@ CbcOrClpParam::setDoubleParameter (CbcModel &model,double value)
     default:
       break;
     }
-    if (doPrinting)
-      std::cout<<name_<<" was changed from "<<oldValue<<" to "
-               <<value<<std::endl;
-    return 0;
+    sprintf(printArray,"%s was changed from %g to %g",
+	    name_.c_str(),oldValue,value);
+    returnCode = 0;
   }
+  return printArray;
 }
 double 
 CbcOrClpParam::doubleParameter (CbcModel &model) const
@@ -748,11 +796,20 @@ CbcOrClpParam::doubleParameter (CbcModel &model) const
 int 
 CbcOrClpParam::setIntParameter (CbcModel &model,int value) 
 {
+  int returnCode;
+  setIntParameterWithMessage(model,value,returnCode);
+  if (doPrinting&&strlen(printArray))
+    std::cout<<printArray<<std::endl;
+  return returnCode;
+}
+// Sets int parameter and returns printable string and error code
+const char * 
+CbcOrClpParam::setIntParameterWithMessage ( CbcModel & model, int value ,int & returnCode)
+{
   if (value<lowerIntValue_||value>upperIntValue_) {
-    std::cout<<value<<" was provided for "<<name_<<
-      " - valid range is "<<lowerIntValue_<<" to "<<
-      upperIntValue_<<std::endl;
-    return 1;
+    sprintf(printArray,"%d was provided for %s - valid range is %d to %d",
+	    value,name_.c_str(),lowerIntValue_,upperIntValue_);
+    returnCode = 1;
   } else {
     int oldValue=intValue_;
     intValue_ = value;
@@ -802,17 +859,17 @@ CbcOrClpParam::setIntParameter (CbcModel &model,int value)
     case THREADS:
       oldValue=model.getNumberThreads();
       model.setNumberThreads(value);
-      break;
+      break; 
 #endif
 #endif
     default:
       break;
     }
-    if (doPrinting)
-      std::cout<<name_<<" was changed from "<<oldValue<<" to "
-               <<value<<std::endl;
-    return 0;
+    sprintf(printArray,"%s was changed from %d to %d",
+	    name_.c_str(),oldValue,value);
+    returnCode = 0;
   }
+  return printArray;
 }
 int 
 CbcOrClpParam::intParameter (CbcModel &model) const
