@@ -76,8 +76,8 @@ am_libClp_la_OBJECTS = ClpCholeskyBase.lo ClpCholeskyDense.lo \
 	ClpGubDynamicMatrix.lo ClpGubMatrix.lo ClpHelperFunctions.lo \
 	ClpInterior.lo ClpLinearObjective.lo ClpMatrixBase.lo \
 	ClpMessage.lo ClpModel.lo ClpNetworkBasis.lo \
-	ClpNetworkMatrix.lo ClpNonLinearCost.lo ClpObjective.lo \
-	ClpPackedMatrix.lo ClpPlusMinusOneMatrix.lo \
+	ClpNetworkMatrix.lo ClpNonLinearCost.lo ClpNode.lo \
+	ClpObjective.lo ClpPackedMatrix.lo ClpPlusMinusOneMatrix.lo \
 	ClpPredictorCorrector.lo ClpPresolve.lo \
 	ClpPrimalColumnDantzig.lo ClpPrimalColumnPivot.lo \
 	ClpPrimalColumnSteepest.lo ClpQuadraticObjective.lo \
@@ -301,6 +301,7 @@ libClp_la_SOURCES = \
 	ClpNetworkBasis.cpp ClpNetworkBasis.hpp \
 	ClpNetworkMatrix.cpp ClpNetworkMatrix.hpp \
 	ClpNonLinearCost.cpp ClpNonLinearCost.hpp \
+	ClpNode.cpp ClpNode.hpp \
 	ClpObjective.cpp ClpObjective.hpp \
 	ClpPackedMatrix.cpp ClpPackedMatrix.hpp \
 	ClpParameters.hpp \
@@ -540,6 +541,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpModel.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpNetworkBasis.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpNetworkMatrix.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpNode.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpNonLinearCost.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpObjective.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpPackedMatrix.Plo@am__quote@

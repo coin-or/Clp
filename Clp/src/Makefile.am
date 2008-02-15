@@ -45,6 +45,7 @@ libClp_la_SOURCES = \
 	ClpNetworkBasis.cpp ClpNetworkBasis.hpp \
 	ClpNetworkMatrix.cpp ClpNetworkMatrix.hpp \
 	ClpNonLinearCost.cpp ClpNonLinearCost.hpp \
+	ClpNode.cpp ClpNode.hpp \
 	ClpObjective.cpp ClpObjective.hpp \
 	ClpPackedMatrix.cpp ClpPackedMatrix.hpp \
 	ClpParameters.hpp \
