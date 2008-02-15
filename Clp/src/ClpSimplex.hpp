@@ -594,6 +594,9 @@ public:
   */
   int createPiecewiseLinearCosts(const int * starts,
 		   const double * lower, const double * gradient);
+  /// dual row pivot choice
+  ClpDualRowPivot * dualRowPivot() const
+  { return dualRowPivot_;}
   /** Return model - updates any scalars */
   void returnModel(ClpSimplex & otherModel);
   /** Factorizes using current basis.  
