@@ -2796,12 +2796,14 @@ ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model,int mode)
 	alternateWeights_->capacity()==numberRows+
 	  model_->factorization()->maximumPivots()) {
 	alternateWeights_->clear();
-	if (pivotSequence_>=0) {
+	if (pivotSequence_>=0&&pivotSequence_<numberRows) {
 	  // save pivot order
 	  CoinMemcpyN(pivotVariable,
 		 numberRows,alternateWeights_->getIndices());
 	  // change from pivot row number to sequence number
 	  pivotSequence_=pivotVariable[pivotSequence_];
+	} else {
+	  pivotSequence_ = -1;
 	}
 	state_=1;
       } else {
