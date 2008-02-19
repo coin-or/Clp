@@ -2139,8 +2139,8 @@ ClpSimplexPrimal::perturb(int type)
     // See if we need to perturb
     double * sort = new double[numberRows_];
     for (i=0;i<numberRows_;i++) {
-      double lo = fabs(lower_[i]);
-      double up = fabs(upper_[i]);
+      double lo = fabs(rowLower_[i]);
+      double up = fabs(rowUpper_[i]);
       double value=0.0;
       if (lo&&lo<1.0e20) {
 	if (up&&up<1.0e20)
@@ -2164,7 +2164,7 @@ ClpSimplexPrimal::perturb(int type)
     delete [] sort;
     //printf("ratio number diff rhs %g, element ratio %g\n",((double)number)/((double) numberRows_),
     //								      elementRatio);
-    if (number*4>numberRows_||elementRatio>1.0e12) {
+    if (number*3>numberRows_||elementRatio>1.0e12) {
       perturbation_=100;
       return; // good enough
     }
