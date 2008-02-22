@@ -60,7 +60,7 @@ COINLIBDIR = @abs_lib_dir@
 
 # Libraries necessary to link with Clp
 LIBS = -L$(COINLIBDIR) -lClp -lCoinUtils \
-	@ADDLIBS@ `cat $(COINLIBDIR)/coinutils_addlibs.txt`
+	@ADDLIBS@ `cat @COINUTILSDOCDIR@/coinutils_addlibs.txt`
 
 # Necessary Include dirs (we use the CYGPATH_W variables to allow
 # compilation with Windows compilers)
