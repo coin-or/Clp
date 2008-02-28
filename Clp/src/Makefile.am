@@ -142,6 +142,7 @@ includecoin_HEADERS = \
 	ClpModel.hpp \
 	ClpNetworkMatrix.hpp \
 	ClpNonLinearCost.hpp \
+	ClpNode.hpp \
 	ClpObjective.hpp \
 	ClpPackedMatrix.hpp \
 	ClpPlusMinusOneMatrix.hpp \
