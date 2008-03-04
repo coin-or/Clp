@@ -25,7 +25,12 @@ Clp/clp_addlibs.txt.in -text
 Clp/configure -text
 Clp/configure.ac -text
 Clp/examples/Makefile.in -text
+Clp/examples/g.tiny -text
+Clp/examples/gparm.tiny -text
 Clp/examples/modify.cpp -text
+Clp/examples/myPdco.cpp -text
+Clp/examples/myPdco.hpp -text
+Clp/examples/pdco.cpp -text
 Clp/inc/config_clp.h.in -text
 Clp/src/ClpConstraint.cpp -text
 Clp/src/ClpConstraint.hpp -text
@@ -33,8 +38,14 @@ Clp/src/ClpConstraintLinear.cpp -text
 Clp/src/ClpConstraintLinear.hpp -text
 Clp/src/ClpConstraintQuadratic.cpp -text
 Clp/src/ClpConstraintQuadratic.hpp -text
+Clp/src/ClpLsqr.cpp -text
+Clp/src/ClpLsqr.hpp -text
 Clp/src/ClpNode.cpp -text
 Clp/src/ClpNode.hpp -text
+Clp/src/ClpPdco.cpp -text
+Clp/src/ClpPdco.hpp -text
+Clp/src/ClpPdcoBase.cpp -text
+Clp/src/ClpPdcoBase.hpp -text
 /LICENSE -text
 /README -text
 /config.guess -text

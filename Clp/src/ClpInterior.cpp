@@ -11,7 +11,7 @@
 #include "CoinHelperFunctions.hpp"
 #include "ClpInterior.hpp"
 #include "ClpMatrixBase.hpp"
-#ifdef PDCO
+#ifdef COIN_DO_PDCO
 #include "ClpLsqr.hpp"
 #include "ClpPdcoBase.hpp"
 #endif
@@ -380,7 +380,7 @@ ClpInterior::gutsOfCopy(const ClpInterior & rhs)
    x_ = ClpCopyOfArray(rhs.x_,numberColumns_);
    y_ = ClpCopyOfArray(rhs.y_,numberRows_);
   dj_ = ClpCopyOfArray(rhs.dj_,numberColumns_+numberRows_);
-#ifdef PDCO
+#ifdef COIN_DO_PDCO
   lsqrObject_= new ClpLsqr(*rhs.lsqrObject_);
   pdcoStuff_ = rhs.pdcoStuff_->clone();
 #endif
@@ -471,7 +471,7 @@ ClpInterior::gutsOfDelete()
   y_ = NULL;
   delete [] dj_;
   dj_ = NULL;
-#ifdef PDCO
+#ifdef COIN_DO_PDCO
   delete lsqrObject_;
   lsqrObject_ = NULL;
   //delete pdcoStuff_;
@@ -965,7 +965,7 @@ ClpInterior::readMps(const char *filename,
   int status = ClpModel::readMps(filename,keepNames,ignoreErrors);
   return status;
 }
-#ifdef PDCO
+#ifdef COIN_DO_PDCO
 #include "ClpPdco.hpp"
 /* Pdco algorithm - see ClpPdco.hpp for method */
 int 

@@ -78,12 +78,12 @@ am_libClp_la_OBJECTS = ClpCholeskyBase.lo ClpCholeskyDense.lo \
 	ClpMessage.lo ClpModel.lo ClpNetworkBasis.lo \
 	ClpNetworkMatrix.lo ClpNonLinearCost.lo ClpNode.lo \
 	ClpObjective.lo ClpPackedMatrix.lo ClpPlusMinusOneMatrix.lo \
-	ClpPredictorCorrector.lo ClpPresolve.lo \
-	ClpPrimalColumnDantzig.lo ClpPrimalColumnPivot.lo \
-	ClpPrimalColumnSteepest.lo ClpQuadraticObjective.lo \
-	ClpSimplex.lo ClpSimplexDual.lo ClpSimplexNonlinear.lo \
-	ClpSimplexOther.lo ClpSimplexPrimal.lo ClpSolve.lo Idiot.lo \
-	IdiSolve.lo
+	ClpPredictorCorrector.lo ClpPdco.lo ClpPdcoBase.lo ClpLsqr.lo \
+	ClpPresolve.lo ClpPrimalColumnDantzig.lo \
+	ClpPrimalColumnPivot.lo ClpPrimalColumnSteepest.lo \
+	ClpQuadraticObjective.lo ClpSimplex.lo ClpSimplexDual.lo \
+	ClpSimplexNonlinear.lo ClpSimplexOther.lo ClpSimplexPrimal.lo \
+	ClpSolve.lo Idiot.lo IdiSolve.lo
 libClp_la_OBJECTS = $(am_libClp_la_OBJECTS)
 binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(bin_PROGRAMS)
@@ -307,6 +307,9 @@ libClp_la_SOURCES = \
 	ClpParameters.hpp \
 	ClpPlusMinusOneMatrix.cpp ClpPlusMinusOneMatrix.hpp \
 	ClpPredictorCorrector.cpp ClpPredictorCorrector.hpp \
+	ClpPdco.cpp ClpPdco.hpp \
+	ClpPdcoBase.cpp ClpPdcoBase.hpp \
+	ClpLsqr.cpp ClpLsqr.hpp \
 	ClpPresolve.cpp ClpPresolve.hpp \
 	ClpPrimalColumnDantzig.cpp ClpPrimalColumnDantzig.hpp \
 	ClpPrimalColumnPivot.cpp ClpPrimalColumnPivot.hpp \
@@ -378,6 +381,7 @@ includecoin_HEADERS = \
 	ClpDualRowDantzig.hpp \
 	ClpDualRowPivot.hpp \
 	ClpDualRowSteepest.hpp \
+	ClpDummyMatrix.hpp \
 	ClpDynamicExampleMatrix.hpp \
 	ClpDynamicMatrix.hpp \
 	ClpEventHandler.hpp \
@@ -394,6 +398,7 @@ includecoin_HEADERS = \
 	ClpNode.hpp \
 	ClpObjective.hpp \
 	ClpPackedMatrix.hpp \
+	ClpPdcoBase.hpp \
 	ClpPlusMinusOneMatrix.hpp \
 	ClpParameters.hpp \
 	ClpPresolve.hpp \
@@ -536,6 +541,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpHelperFunctions.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpInterior.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpLinearObjective.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpLsqr.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpMain.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpMatrixBase.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpMessage.Plo@am__quote@
@@ -546,6 +552,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpNonLinearCost.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpObjective.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpPackedMatrix.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpPdco.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpPdcoBase.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpPlusMinusOneMatrix.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpPredictorCorrector.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpPresolve.Plo@am__quote@

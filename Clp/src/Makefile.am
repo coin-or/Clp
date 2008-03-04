@@ -51,6 +51,9 @@ libClp_la_SOURCES = \
 	ClpParameters.hpp \
 	ClpPlusMinusOneMatrix.cpp ClpPlusMinusOneMatrix.hpp \
 	ClpPredictorCorrector.cpp ClpPredictorCorrector.hpp \
+	ClpPdco.cpp ClpPdco.hpp \
+	ClpPdcoBase.cpp ClpPdcoBase.hpp \
+	ClpLsqr.cpp ClpLsqr.hpp \
 	ClpPresolve.cpp ClpPresolve.hpp \
 	ClpPrimalColumnDantzig.cpp ClpPrimalColumnDantzig.hpp \
 	ClpPrimalColumnPivot.cpp ClpPrimalColumnPivot.hpp \
@@ -129,6 +132,7 @@ includecoin_HEADERS = \
 	ClpDualRowDantzig.hpp \
 	ClpDualRowPivot.hpp \
 	ClpDualRowSteepest.hpp \
+	ClpDummyMatrix.hpp \
 	ClpDynamicExampleMatrix.hpp \
 	ClpDynamicMatrix.hpp \
 	ClpEventHandler.hpp \
@@ -145,6 +149,7 @@ includecoin_HEADERS = \
 	ClpNode.hpp \
 	ClpObjective.hpp \
 	ClpPackedMatrix.hpp \
+	ClpPdcoBase.hpp \
 	ClpPlusMinusOneMatrix.hpp \
 	ClpParameters.hpp \
 	ClpPresolve.hpp \

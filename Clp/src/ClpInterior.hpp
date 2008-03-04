@@ -19,6 +19,7 @@
 #include "ClpModel.hpp"
 #include "ClpMatrixBase.hpp"
 #include "ClpSolve.hpp"
+#include "CoinDenseVector.hpp"
 class ClpLsqr;
 class ClpPdcoBase;
 /// ******** DATA to be moved into protected section of ClpInterior
