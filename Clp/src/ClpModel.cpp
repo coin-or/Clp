@@ -3312,6 +3312,8 @@ ClpModel::setObjectiveOffset(double value)
 int ClpModel::emptyProblem(int * infeasNumber, double * infeasSum,bool printMessage)
 {
   secondaryStatus_=6; // so user can see something odd
+  // May be in middle of expecting bounds to stay same etc - negate expectations
+  whatsChanged_=0;
   if (printMessage)
     handler_->message(CLP_EMPTY_PROBLEM,messages_)
       <<numberRows_
