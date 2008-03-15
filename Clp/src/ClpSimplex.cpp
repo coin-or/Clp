@@ -7909,7 +7909,7 @@ ClpSimplex::finish(int startFinishOptions)
 {
   // Get rid of some arrays and empty factorization
   int getRidOfData=1;
-  if ((startFinishOptions&1)!=0||problemStatus_==10) {
+  if (upper_&&((startFinishOptions&1)!=0||problemStatus_==10)) {
     getRidOfData=0; // Keep stuff
     // mark all as current
     whatsChanged_ = 0xffff;
