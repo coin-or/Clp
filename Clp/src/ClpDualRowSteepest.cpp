@@ -176,6 +176,10 @@ ClpDualRowSteepest::pivotRow()
   //#define COLUMN_BIAS 4.0
   //#define FIXED_BIAS 10.0
   if (lastPivotRow>=0) {
+#if defined (__MINGW32__) || defined(__CYGWIN32__)
+    if (model_->numberIterations()<0)
+      printf("aab_p it %d\n",model_->numberIterations());
+#endif
 #ifdef COLUMN_BIAS 
     int numberColumns = model_->numberColumns();
 #endif
@@ -215,6 +219,10 @@ k
     }
     number = infeasible_->getNumElements();
   }
+#if defined(__MINGW32__) || defined(__CYGWIN32__)
+  if (model_->numberIterations()<0)
+    printf("aac_p it %d\n",model_->numberIterations());
+#endif
   if(model_->numberIterations()<model_->lastBadIteration()+200) {
     // we can't really trust infeasibilities if there is dual error
     if (model_->largestDualError()>model_->largestPrimalError())
