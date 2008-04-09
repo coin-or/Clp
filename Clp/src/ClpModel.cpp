@@ -1,6 +1,7 @@
 // copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
+#include <cstdlib>
 #include <cmath>
 #include <cassert>
 #include <cfloat>

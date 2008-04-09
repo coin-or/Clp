@@ -9,6 +9,7 @@
 
 */
 #include <cfloat>
+#include <cstdlib>
 #include <cmath>
 #include "CoinHelperFunctions.hpp"
 #include "CoinFinite.hpp"

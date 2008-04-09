@@ -5,6 +5,7 @@
 #include "CoinPragma.hpp"
 #include <cassert>
 #include <cstdio>
+#include <cstdlib>
 #include <cmath>
 #include <cfloat>
 #include <string>
