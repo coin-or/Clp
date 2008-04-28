@@ -25,9 +25,11 @@ public:
   /// Returns pivot row, -1 if none
   virtual int pivotRow();
   
-  /// Updates weights and returns pivot alpha
+  /** Updates weights and returns pivot alpha.
+      Also does FT update */
   virtual double updateWeights(CoinIndexedVector * input,
 			     CoinIndexedVector * spare,
+			     CoinIndexedVector * spare2,
 			     CoinIndexedVector * updatedColumn);
   
   /** Updates primal solution (and maybe list of candidates)
@@ -82,6 +84,9 @@ public:
   
   /// Assignment operator 
   ClpDualRowSteepest & operator=(const ClpDualRowSteepest& rhs);
+  
+  /// Fill most values
+  void fill(const ClpDualRowSteepest& rhs);
   
   /// Destructor 
   virtual ~ClpDualRowSteepest ();

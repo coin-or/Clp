@@ -496,7 +496,7 @@ ClpPdco::pdco( ClpPdcoBase * stuff, Options &options, Info &info, Outfo &outfo)
 
   // Initialize other things.
 
-  bool  precon   = true;  	
+  bool  precon   = true;  
   double PDitns    = 0;
   bool converged = false;
   double atol      = atol1;
@@ -601,7 +601,7 @@ ClpPdco::pdco( ClpPdcoBase * stuff, Options &options, Info &info, Outfo &outfo)
 	for (int k=0; k<m; k++)
 	  rhs[n+k] = r1_elts[k]*(1.0/d2);
 	double damp    = 0;
-	
+
 	if (precon){    // Construct diagonal preconditioner for LSQR
 	  matPrecon(d2, Pr, D);
 	}  
@@ -609,15 +609,15 @@ ClpPdco::pdco( ClpPdcoBase * stuff, Options &options, Info &info, Outfo &outfo)
 	rw(7)        = precon;
         info.atolmin = atolmin;
         info.r3norm  = fmerit;  // Must be the 2-norm here.
-	
+
         [ dy, istop, itncg, outfo ] = ...
             pdxxxlsqr( nb,m,"pdxxxlsqrmat",Aname,rw,rhs,damp, ...
                        atol,btol,conlim,itnlim,show,info );
-	
+
 
 	thisLsqr.input->rhs_vec = &rhs;
 	thisLsqr.input->sol_vec = &dy;
-	thisLsqr.input->rel_mat_err = atol;	
+	thisLsqr.input->rel_mat_err = atol;
 	thisLsqr.do_lsqr(this);
 	*/
 	//  New version of lsqr

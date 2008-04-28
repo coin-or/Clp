@@ -689,7 +689,7 @@ ClpDynamicMatrix::rhsOffset(ClpSimplex * model,bool forceRefresh,
 	if (fabs(rhs[iRow]-rhsOffset_[iRow])>1.0e-3)
 	  printf("** bad effective %d - true %g old %g\n",iRow,rhs[iRow],rhsOffset_[iRow]);
       }
-      memcpy(saveE,rhs,numberRows*sizeof(double));
+      CoinMemcpyN(rhs,numberRows,saveE);
       delete [] rhs;
     }
 #endif
@@ -1214,7 +1214,7 @@ ClpDynamicMatrix::generalExpanded(ClpSimplex * model,int mode,int &number)
 	model->setStatus(firstAvailable_,ClpSimplex::atLowerBound);
 	columnLower[firstAvailable_]=0.0;
 	columnUpper[firstAvailable_]=COIN_DBL_MAX;
-	
+
 	// not really in small problem
 	int iBig=id_[sequenceIn-firstDynamic_];
 	if (model->getStatus(sequenceIn)==ClpSimplex::atLowerBound) {
@@ -2253,7 +2253,7 @@ ClpDynamicMatrix::addColumn(int numberEntries,const int * row, const double * el
     }
     j = next_[j];
   }
-	
+
   if (numberGubColumns_==maximumGubColumns_||
       startColumn_[numberGubColumns_]+numberEntries>maximumElements_) {
     CoinBigIndex j;
@@ -2314,8 +2314,8 @@ ClpDynamicMatrix::addColumn(int numberEntries,const int * row, const double * el
     abort();
   }
   CoinBigIndex start = startColumn_[numberGubColumns_];
-  memcpy(row_+start,row,numberEntries*sizeof(int));
-  memcpy(element_+start,element,numberEntries*sizeof(float));
+  CoinMemcpyN(row,numberEntries,row_+start);
+  CoinMemcpyN(element,numberEntries,element_+start);
   startColumn_[numberGubColumns_+1]=start+numberEntries;
   cost_[numberGubColumns_]=cost;
   if (columnLower_) 

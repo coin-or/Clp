@@ -75,7 +75,7 @@ ClpNetworkMatrix::ClpNetworkMatrix (const ClpNetworkMatrix & rhs)
   trueNetwork_=rhs.trueNetwork_;
   if (numberColumns_) {
     indices_ = new int [ 2*numberColumns_];
-    memcpy(indices_,rhs.indices_,2*numberColumns_*sizeof(int));
+    CoinMemcpyN(rhs.indices_,2*numberColumns_,indices_);
   }
   int numberRows = getNumRows();
   if (rhs.rhsOffset_&&numberRows) {
@@ -208,7 +208,7 @@ ClpNetworkMatrix::operator=(const ClpNetworkMatrix& rhs)
     trueNetwork_=rhs.trueNetwork_;
     if (numberColumns_) {
       indices_ = new int [ 2*numberColumns_];
-      memcpy(indices_,rhs.indices_,2*numberColumns_*sizeof(int));
+      CoinMemcpyN(rhs.indices_,2*numberColumns_,indices_);
     }
   }
   return *this;
@@ -898,7 +898,7 @@ ClpNetworkMatrix::partialPricing(ClpSimplex * model, double startFraction, doubl
 	double value;
 	int iRowM,iRowP;
 	ClpSimplex::Status status = model->getStatus(iSequence);
-	
+
 	switch(status) {
 	  
 	case ClpSimplex::basic:
@@ -1009,7 +1009,7 @@ ClpNetworkMatrix::partialPricing(ClpSimplex * model, double startFraction, doubl
 	double value;
 	int iRowM,iRowP;
 	ClpSimplex::Status status = model->getStatus(iSequence);
-	
+
 	switch(status) {
 	  
 	case ClpSimplex::basic:
@@ -1137,7 +1137,7 @@ ClpNetworkMatrix::appendCols(int number, const CoinPackedVectorBase * const * co
   matrix_= NULL;
   CoinBigIndex size = 2*number;
   int * temp2 = new int [numberColumns_*2+size];
-  memcpy(temp2,indices_,numberColumns_*2*sizeof(int));
+  CoinMemcpyN(indices_,numberColumns_*2,temp2);
   delete [] indices_;
   indices_= temp2;
   // now add

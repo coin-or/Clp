@@ -583,8 +583,9 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
   if (bestSequence>=0) {
     if (model_->getStatus(bestSequence)==ClpSimplex::atLowerBound)
       assert(model_->reducedCost(bestSequence)<0.0);
-    if (model_->getStatus(bestSequence)==ClpSimplex::atUpperBound)
+    if (model_->getStatus(bestSequence)==ClpSimplex::atUpperBound) {
       assert(model_->reducedCost(bestSequence)>0.0);
+    }
   }
 #endif
   return bestSequence;
@@ -643,7 +644,7 @@ ClpPrimalColumnSteepest::justDjs(CoinIndexedVector * updates,
       ClpSimplex::Status status = model_->getStatus(iSequence+addSequence);
       
       switch(status) {
-	
+
       case ClpSimplex::basic:
 	infeasible_->zero(iSequence+addSequence);
       case ClpSimplex::isFixed:
@@ -1259,7 +1260,7 @@ ClpPrimalColumnSteepest::djsAndDevex2(CoinIndexedVector * updates,
       ClpSimplex::Status status = model_->getStatus(iSequence+addSequence);
       
       switch(status) {
-	
+
       case ClpSimplex::basic:
 	infeasible_->zero(iSequence+addSequence);
       case ClpSimplex::isFixed:
@@ -1451,7 +1452,7 @@ ClpPrimalColumnSteepest::djsAndSteepest2(CoinIndexedVector * updates,
       ClpSimplex::Status status = model_->getStatus(iSequence+addSequence);
       
       switch(status) {
-	
+
       case ClpSimplex::basic:
 	infeasible_->zero(iSequence+addSequence);
       case ClpSimplex::isFixed:
@@ -1557,7 +1558,7 @@ ClpPrimalColumnSteepest::djsAndSteepest2(CoinIndexedVector * updates,
 	double pivot = - updateBy[j];
 	double modification = other[iSequence];
 	double pivotSquared = pivot * pivot;
-	
+
 	thisWeight += pivotSquared * devex_ + pivot * modification;
 	if (thisWeight<TRY_NORM) {
 	  if (mode_==1) {
@@ -2536,7 +2537,7 @@ ClpPrimalColumnSteepest::pivotColumnOldMethod(CoinIndexedVector * updates,
 	updateBy[iSequence]=0.0;
 	double modification = other[iSequence];
 	double pivotSquared = pivot * pivot;
-	
+
 	thisWeight += pivotSquared * devex_ + pivot * modification;
 	if (thisWeight<TRY_NORM) {
 	  if (switchType==1) {
@@ -2591,7 +2592,7 @@ ClpPrimalColumnSteepest::pivotColumnOldMethod(CoinIndexedVector * updates,
 	double modification = updateBy2[j];
 	updateBy2[j]=0.0;
 	double pivotSquared = pivot * pivot;
-	
+
 	thisWeight += pivotSquared * devex_ + pivot * modification;
 	if (thisWeight<TRY_NORM) {
 	  if (switchType==1) {

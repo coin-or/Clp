@@ -44,11 +44,11 @@ ClpCholeskyTaucs::ClpCholeskyTaucs (const ClpCholeskyTaucs & rhs)
   sizeFactorT_=rhs.sizeFactorT_;
   if (matrix_) {
     choleskyStartT_ = (int *) malloc((numberRows_+1)*sizeof(int));
-    memcpy(choleskyStartT_,rhs.choleskyStartT_,(numberRows_+1)*sizeof(int));
+    CoinMemcpyN(rhs.choleskyStartT_,(numberRows_+1),choleskyStartT_);
     choleskyRowT_ = (int *) malloc(sizeFactorT_*sizeof(int));
-    memcpy(choleskyRowT_,rhs.choleskyRowT_,sizeFactorT_*sizeof(int));
+    CoinMemcpyN(rhs.choleskyRowT_,sizeFactorT_,choleskyRowT_);
     sparseFactorT_ = (double *) malloc(sizeFactorT_*sizeof(double));
-    memcpy(sparseFactorT_,rhs.sparseFactorT_,sizeFactorT_*sizeof(double));
+    CoinMemcpyN(rhs.sparseFactorT_,sizeFactorT_,sparseFactorT_);
     matrix_->colptr = choleskyStartT_;
     matrix_->rowind = choleskyRowT_;
     matrix_->values.d = sparseFactorT_;
@@ -89,11 +89,11 @@ ClpCholeskyTaucs::operator=(const ClpCholeskyTaucs& rhs)
     matrix_ = rhs.matrix_;
     if (matrix_) {
       choleskyStartT_ = (int *) malloc((numberRows_+1)*sizeof(int));
-      memcpy(choleskyStartT_,rhs.choleskyStartT_,(numberRows_+1)*sizeof(int));
+      CoinMemcpyN(rhs.choleskyStartT_,(numberRows_+1),choleskyStartT_);
       choleskyRowT_ = (int *) malloc(sizeFactorT_*sizeof(int));
-      memcpy(choleskyRowT_,rhs.choleskyRowT_,sizeFactorT_*sizeof(int));
+      CoinMemcpyN(rhs.choleskyRowT_,sizeFactorT_,choleskyRowT_);
       sparseFactorT_ = (double *) malloc(sizeFactorT_*sizeof(double));
-      memcpy(sparseFactorT_,rhs.sparseFactorT_,sizeFactorT_*sizeof(double));
+      CoinMemcpyN(rhs.sparseFactorT_,sizeFactorT_,sparseFactorT_);
       matrix_->colptr = choleskyStartT_;
       matrix_->rowind = choleskyRowT_;
       matrix_->values.d = sparseFactorT_;
@@ -219,9 +219,9 @@ ClpCholeskyTaucs::order(ClpInterior * model)
     taucs_ccs_order(matrix_,&perm,&invp,(const char *) "genmmd");
   else
     taucs_ccs_order(matrix_,&perm,&invp,(const char *) "identity");
-  memcpy(permuteInverse_,perm,numberRows_*sizeof(int));
+  CoinMemcpyN(perm,numberRows_,permuteInverse_);
   free(perm);
-  memcpy(permute_,invp,numberRows_*sizeof(int));
+  CoinMemcpyN(invp,numberRows_,permute_);
   free(invp);
   // need to permute
   taucs_ccs_matrix * permuted = taucs_ccs_permute_symmetrically(matrix_,permuteInverse_,permute_);

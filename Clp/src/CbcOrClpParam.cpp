@@ -1557,6 +1557,14 @@ You can also use the parameters 'maximize' or 'minimize'."
      ); 
 #ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
+    CbcOrClpParam("diveO!pt","Diving options",
+		  -1,200,DIVEOPT,false);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "If >2 && <7 then modify diving options"
+     ); 
+  parameters[numberParameters-1].setIntValue(-1);
+  parameters[numberParameters++]=
       CbcOrClpParam("Diving","Whether to try Diving heuristics",
 		    "off",DIVING);
   parameters[numberParameters-1].append("V");
@@ -1683,6 +1691,16 @@ e.g. no ENDATA.  This has to be set before import i.e. -errorsAllowed on -import
     (
      "This stops the execution of Clp, end, exit, quit and stop are synonyms"
      ); 
+#ifdef COIN_HAS_CBC
+  parameters[numberParameters++]=
+    CbcOrClpParam("exp!eriment","Whether to use testing features",
+		  -1,200,EXPERIMENT,false);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "If >0 then use some dubious scheme (for testing)"
+     ); 
+  parameters[numberParameters-1].setIntValue(-1);
+#endif
   parameters[numberParameters++]=
     CbcOrClpParam("export","Export model as mps file",
 		  EXPORT);
@@ -1707,7 +1725,7 @@ e.g. no ENDATA.  This has to be set before import i.e. -errorsAllowed on -import
   parameters[numberParameters-1].setIntValue(-1);
   parameters[numberParameters++]=
     CbcOrClpParam("extra4","Extra integer parameter 4",
-		  -1,COIN_INT_MAX,EXTRA4,false);
+		  -COIN_INT_MAX,COIN_INT_MAX,EXTRA4,false);
   parameters[numberParameters-1].setIntValue(-1);
 #endif
 #ifdef COIN_HAS_CLP
@@ -2262,6 +2280,7 @@ to write the original to file using 'file'."
   parameters[numberParameters-1].append("equalall");
   parameters[numberParameters-1].append("strategy");
   parameters[numberParameters-1].append("aggregate");
+  parameters[numberParameters-1].append("forcesos");
   parameters[numberParameters-1].setLonghelp
     (
      "This tries to reduce size of model in a similar way to presolve and \
@@ -2892,13 +2911,13 @@ void restoreSolution(ClpSimplex * lpSolver,std::string fileName,int mode)
 	std::cout<<"Mismatch on rows and/or columns - truncating"<<std::endl;
 	double * temp = new double [CoinMax(numberRowsFile,numberColumnsFile)];
 	fread(temp,sizeof(double),numberRowsFile,fp);
-	memcpy(primalRowSolution,temp,numberRows*sizeof(double));
+ CoinMemcpyN(temp,numberRows,primalRowSolution);
 	fread(temp,sizeof(double),numberRowsFile,fp);
-	memcpy(dualRowSolution,temp,numberRows*sizeof(double));
+ CoinMemcpyN(temp,numberRows,dualRowSolution);
 	fread(temp,sizeof(double),numberColumnsFile,fp);
-	memcpy(primalColumnSolution,temp,numberColumns*sizeof(double));
+ CoinMemcpyN(temp,numberColumns,primalColumnSolution);
 	fread(temp,sizeof(double),numberColumnsFile,fp);
-	memcpy(dualColumnSolution,temp,numberColumns*sizeof(double));
+ CoinMemcpyN(temp,numberColumns,dualColumnSolution);
 	delete [] temp;
       }
       if (mode==3) {

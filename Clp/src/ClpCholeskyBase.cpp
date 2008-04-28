@@ -90,8 +90,8 @@ ClpCholeskyBase::ClpCholeskyBase (const ClpCholeskyBase & rhs) :
   link_ = ClpCopyOfArray(rhs.link_,numberRows_);
   workInteger_ = ClpCopyOfArray(rhs.workInteger_,numberRows_);
   clique_ = ClpCopyOfArray(rhs.clique_,numberRows_);
-  memcpy(integerParameters_,rhs.integerParameters_,64*sizeof(int));
-  memcpy(doubleParameters_,rhs.doubleParameters_,64*sizeof(double));
+  CoinMemcpyN(rhs.integerParameters_,64,integerParameters_);
+  CoinMemcpyN(rhs.doubleParameters_,64,doubleParameters_);
   rowCopy_ = rhs.rowCopy_->clone();
   whichDense_ = NULL;
   denseColumn_=NULL;
@@ -792,7 +792,7 @@ ClpCholeskyBase::symbolic()
       else
 	used[np++]=originalRow;
     }
-    memcpy(permute_+nn,used,np*sizeof(int));
+    CoinMemcpyN(used,np,permute_+nn);
     for (iRow=0;iRow<numberRows_;iRow++) 
       permuteInverse_[permute_[iRow]]=iRow;
   }
@@ -1213,7 +1213,7 @@ ClpCholeskyBase::symbolic()
 	noMemory=true;
       } 
       if (!noMemory)  {
-	memcpy(indices,choleskyRow_,sizeIndex_*sizeof(int));
+ CoinMemcpyN(choleskyRow_,sizeIndex_,indices);
 	delete [] choleskyRow_;
 	choleskyRow_=indices;
       }

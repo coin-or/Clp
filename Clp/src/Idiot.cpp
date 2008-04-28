@@ -84,7 +84,9 @@ Idiot::cleanIteration(int iteration, int ordinaryStart, int ordinaryEnd,
     }
     return n;
   } else {
+#ifdef COIN_DEVELOP
     printf("entering inf %g, obj %g\n",infValue,objValue);
+#endif
     int nrows=model_->getNumRows();
     int ncols=model_->getNumCols();
     int * posSlack = whenUsed_+ncols;
@@ -444,16 +446,16 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
   double * upper = model_->columnUpper();
 #else
   double * cost = new double [ncols];
-  memcpy( cost, model_->getObjCoefficients(), ncols*sizeof(double));
+  CoinMemcpyN( model_->getObjCoefficients(),ncols, cost);
   const double * lower = model_->getColLower();
   const double * upper = model_->getColUpper();
 #endif
   const double *elemXX;
   double * saveSol;
   double * rowupper= new double[nrows]; // not const as modified
-  memcpy(rowupper,model_->getRowUpper(),nrows*sizeof(double));
+  CoinMemcpyN(model_->getRowUpper(),nrows,rowupper);
   double * rowlower= new double[nrows]; // not const as modified
-  memcpy(rowlower,model_->getRowLower(),nrows*sizeof(double));
+  CoinMemcpyN(model_->getRowLower(),nrows,rowlower);
   CoinThreadRandom * randomNumberGenerator=model_->randomNumberGenerator();
   int * whenUsed;
   double * lambda;
@@ -461,7 +463,7 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
   lambda=new double [nrows];
   rowsol= new double[nrows];
   colsol= new double [ncols];
-  memcpy(colsol,model_->getColSolution(),ncols*sizeof(double));
+  CoinMemcpyN(model_->getColSolution(),ncols,colsol);
   pi= new double[nrows];
   dj=new double[ncols];
   delete [] whenUsed_;
@@ -655,9 +657,9 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
       lower = new double[ncols];
       upper = new double[ncols];
       cost = new double[ncols];
-      memcpy(lower,oldLower,ncols*sizeof(double));
-      memcpy(upper,oldUpper,ncols*sizeof(double));
-      memcpy(cost,oldCost,ncols*sizeof(double));
+      CoinMemcpyN(oldLower,ncols,lower);
+      CoinMemcpyN(oldUpper,ncols,upper);
+      CoinMemcpyN(oldCost,ncols,cost);
       int icol,irow;
       for (icol=0;icol<ncols;icol++) {
 	double multiplier = 1.0/columnScale[icol];
@@ -668,7 +670,7 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
 	colsol[icol] *= multiplier;
 	cost[icol] *= columnScale[icol];
       }
-      memcpy(rowlower,model_->rowLower(),nrows*sizeof(double));
+      CoinMemcpyN(model_->rowLower(),nrows,rowlower);
       for (irow=0;irow<nrows;irow++) {
 	double multiplier = rowScale[irow];
 	if (rowlower[irow]>-1.0e50)
@@ -723,7 +725,7 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
   memset(whenUsed,0,ncols*sizeof(int));
   strategy=strategies[strategy];
   if ((saveStrategy&8)!=0) strategy |= 64; /* don't allow large theta */
-  memcpy(saveSol,colsol,ncols*sizeof(double));
+  CoinMemcpyN(colsol,ncols,saveSol);
   
   lastResult=IdiSolve(nrows,ncols,rowsol ,colsol,pi,
 		       dj,cost,rowlower,rowupper,
@@ -789,7 +791,7 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
       drop=drop_*weighted;
       djTol=0.01*djExit;
     }
-    memcpy(saveSol,colsol,ncols*sizeof(double));
+    CoinMemcpyN(colsol,ncols,saveSol);
     result=IdiSolve(nrows,ncols,rowsol ,colsol,pi,dj,
 		     cost,rowlower,rowupper,
 		     lower,upper,elemXX,row,columnStart,columnLength,lambda,
@@ -854,7 +856,7 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
           lightWeight_=2;
           break;
         }
-	memcpy(colsol,saveSol,ncols*sizeof(double));
+ CoinMemcpyN(saveSol,ncols,colsol);
       } else {
 	maxIts=maxIts2;
 	checkIteration=0;
@@ -1073,7 +1075,7 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
     const double * solution = iSol ? colsol : saveSol;
     if (iSol==2&&saveInfeas[0]<saveInfeas[1]) {
       // put back best solution
-      memcpy(colsol,saveSol,ncols*sizeof(double));
+      CoinMemcpyN(saveSol,ncols,colsol);
     }
     double large=0.0;
     int i;
@@ -1130,10 +1132,10 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
   // save solution 
   // duals not much use - but save anyway
 #ifndef OSI_IDIOT
-  memcpy(model_->primalRowSolution(),rowsol,nrows*sizeof(double));
-  memcpy(model_->primalColumnSolution(),colsol,ncols*sizeof(double));
-  memcpy(model_->dualRowSolution(),pi,nrows*sizeof(double));
-  memcpy(model_->dualColumnSolution(),dj,ncols*sizeof(double));
+  CoinMemcpyN(rowsol,nrows,model_->primalRowSolution());
+  CoinMemcpyN(colsol,ncols,model_->primalColumnSolution());
+  CoinMemcpyN(pi,nrows,model_->dualRowSolution());
+  CoinMemcpyN(dj,ncols,model_->dualColumnSolution());
 #else
   model_->setColSolution(colsol);
   model_->setRowPrice(pi);
@@ -1202,13 +1204,13 @@ Idiot::crossOver(int mode)
   if (addAll<3) {
     saveUpper = new double [ncols];
     saveLower = new double [ncols];
-    memcpy(saveUpper,upper,ncols*sizeof(double));
-    memcpy(saveLower,lower,ncols*sizeof(double));
+    CoinMemcpyN(upper,ncols,saveUpper);
+    CoinMemcpyN(lower,ncols,saveLower);
     if (allowInfeasible) {
       saveRowUpper = new double [nrows];
       saveRowLower = new double [nrows];
-      memcpy(saveRowUpper,rowupper,nrows*sizeof(double));
-      memcpy(saveRowLower,rowlower,nrows*sizeof(double));
+      CoinMemcpyN(rowupper,nrows,saveRowUpper);
+      CoinMemcpyN(rowlower,nrows,saveRowLower);
       double averageInfeas = model_->sumPrimalInfeasibilities()/((double) model_->numberRows());
       fixTolerance = CoinMax(fixTolerance,1.0e-5*averageInfeas);
     }
@@ -1490,8 +1492,8 @@ Idiot::crossOver(int mode)
       saveModel=NULL;
     }
     if (allowInfeasible) {
-      memcpy(model_->rowUpper(),saveRowUpper,nrows*sizeof(double));
-      memcpy(model_->rowLower(),saveRowLower,nrows*sizeof(double));
+      CoinMemcpyN(saveRowUpper,nrows,model_->rowUpper());
+      CoinMemcpyN(saveRowLower,nrows,model_->rowLower());
       delete [] saveRowUpper;
       delete [] saveRowLower;
       saveRowUpper = NULL;
@@ -1681,7 +1683,7 @@ Idiot::Idiot(const Idiot &rhs)
   if (model_&&rhs.whenUsed_) {
     int numberColumns = model_->getNumCols();
     whenUsed_ = new int [numberColumns];
-    memcpy(whenUsed_,rhs.whenUsed_,numberColumns*sizeof(int));
+    CoinMemcpyN(rhs.whenUsed_,numberColumns,whenUsed_);
   } else {
     whenUsed_=NULL;
   }
@@ -1718,7 +1720,7 @@ Idiot::operator=(const Idiot & rhs)
     if (model_&&rhs.whenUsed_) {
       int numberColumns = model_->getNumCols();
       whenUsed_ = new int [numberColumns];
-      memcpy(whenUsed_,rhs.whenUsed_,numberColumns*sizeof(int));
+      CoinMemcpyN(rhs.whenUsed_,numberColumns,whenUsed_);
     } else {
       whenUsed_=NULL;
     }

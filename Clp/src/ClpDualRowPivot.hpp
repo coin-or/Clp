@@ -26,9 +26,11 @@ public:
   /// Returns pivot row, -1 if none
   virtual int pivotRow() = 0;
   
-  /// Updates weights and returns pivot alpha
+  /** Updates weights and returns pivot alpha.
+      Also does FT update */
   virtual double updateWeights(CoinIndexedVector * input,
 			     CoinIndexedVector * spare,
+			     CoinIndexedVector * spare2,
 			     CoinIndexedVector * updatedColumn) = 0;
   
   /** Updates primal solution (and maybe list of candidates)

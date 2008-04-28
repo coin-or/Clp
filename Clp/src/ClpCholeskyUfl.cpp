@@ -46,7 +46,7 @@ ClpCholeskyUfl::~ClpCholeskyUfl ()
 {
 #ifdef CLP_USE_CHOLMOD
   cholmod_free_factor (&L_, &c_) ;
-  cholmod_finish (&c_) ;		
+  cholmod_finish (&c_) ;
 #endif
 }
 

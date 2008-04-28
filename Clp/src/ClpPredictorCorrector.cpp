@@ -516,7 +516,7 @@ int ClpPredictorCorrector::solve ( )
       double sigma = pow(affmu/papermu,3);
       printf("mu %g, papermu %g, affmu %g, sigma %g sigmamu %g\n",
 	     mu_,papermu,affmu,sigma,sigma*papermu);
-#endif	
+#endif
       //printf("paper mu %g\n",(nextGap*nextGap*nextGap)/(complementarityGap_*complementarityGap_*
       //					    (double) numberComplementarityPairs_));
     } else {
@@ -588,12 +588,12 @@ int ClpPredictorCorrector::solve ( )
     if ((modeSwitch&2)!=0)
       goodMove=false;
     if (goodMove&&doCorrector) {
-      memcpy(saveX,deltaX_,numberTotal*sizeof(double));
-      memcpy(saveY,deltaY_,numberRows_*sizeof(double));
-      memcpy(saveZ,deltaZ_,numberTotal*sizeof(double));
-      memcpy(saveW,deltaW_,numberTotal*sizeof(double));
-      memcpy(saveSL,deltaSL_,numberTotal*sizeof(double));
-      memcpy(saveSU,deltaSU_,numberTotal*sizeof(double));
+      CoinMemcpyN(deltaX_,numberTotal,saveX);
+      CoinMemcpyN(deltaY_,numberRows_,saveY);
+      CoinMemcpyN(deltaZ_,numberTotal,saveZ);
+      CoinMemcpyN(deltaW_,numberTotal,saveW);
+      CoinMemcpyN(deltaSL_,numberTotal,saveSL);
+      CoinMemcpyN(deltaSU_,numberTotal,saveSU);
 #ifdef HALVE
       double savePrimalStep = actualPrimalStep_;
       double saveDualStep = actualDualStep_;
@@ -658,12 +658,12 @@ int ClpPredictorCorrector::solve ( )
 	  deltaSL_[i] = lambda*deltaSL_[i]+(1.0-lambda)*saveSL[i];
 	  deltaSU_[i] = lambda*deltaSU_[i]+(1.0-lambda)*saveSU[i];
 	}
-	//memcpy(deltaX_,saveX,numberTotal*sizeof(double));
-	//memcpy(deltaY_,saveY,numberRows_*sizeof(double));
-	//memcpy(deltaZ_,saveZ,numberTotal*sizeof(double));
-	//memcpy(deltaW_,saveW,numberTotal*sizeof(double));
-	//memcpy(deltaSL_,saveSL,numberTotal*sizeof(double));
-	//memcpy(deltaSU_,saveSU,numberTotal*sizeof(double));
+   CoinMemcpyN(saveX,numberTotal,deltaX_);
+   CoinMemcpyN(saveY,numberRows_,deltaY_);
+   CoinMemcpyN(saveZ,numberTotal,deltaZ_);
+   CoinMemcpyN(saveW,numberTotal,deltaW_);
+   CoinMemcpyN(saveSL,numberTotal,deltaSL_);
+   CoinMemcpyN(saveSU,numberTotal,deltaSU_);
 	findStepLength(1);
 	nextGap = complementarityGap(nextNumber,nextNumberItems,1);
 	goodMove=checkGoodMove(true,bestNextGap,allowIncreasingGap);
@@ -757,10 +757,10 @@ int ClpPredictorCorrector::solve ( )
     while (goodMove&&numberTries<5) {
       goodMove=false;
       numberTries++;
-      memcpy(saveX,deltaX_,numberTotal*sizeof(double));
-      memcpy(saveY,deltaY_,numberRows_*sizeof(double));
-      memcpy(saveZ,deltaZ_,numberTotal*sizeof(double));
-      memcpy(saveW,deltaW_,numberTotal*sizeof(double));
+      CoinMemcpyN(deltaX_,numberTotal,saveX);
+      CoinMemcpyN(deltaY_,numberRows_,saveY);
+      CoinMemcpyN(deltaZ_,numberTotal,saveZ);
+      CoinMemcpyN(deltaW_,numberTotal,saveW);
       double savePrimalStep = actualPrimalStep_;
       double saveDualStep = actualDualStep_;
       double saveMu = mu_;
@@ -790,10 +790,10 @@ int ClpPredictorCorrector::solve ( )
 	mu_=saveMu;
 	actualPrimalStep_ = savePrimalStep;
 	actualDualStep_ = saveDualStep;
-	memcpy(deltaX_,saveX,numberTotal*sizeof(double));
-	memcpy(deltaY_,saveY,numberRows_*sizeof(double));
-	memcpy(deltaZ_,saveZ,numberTotal*sizeof(double));
-	memcpy(deltaW_,saveW,numberTotal*sizeof(double));
+ CoinMemcpyN(saveX,numberTotal,deltaX_);
+ CoinMemcpyN(saveY,numberRows_,deltaY_);
+ CoinMemcpyN(saveZ,numberTotal,deltaZ_);
+ CoinMemcpyN(saveW,numberTotal,deltaW_);
       } else {
 #ifdef SOME_DEBUG
 	printf("PPphase 3 gap %.18g, steps %.18g %.18g, 2 gap %.18g, steps %.18g %.18g\n",xGap,

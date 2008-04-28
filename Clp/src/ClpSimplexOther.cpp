@@ -453,7 +453,7 @@ ClpSimplexOther::primalRanging1(int whichIn, int whichOther)
       double way = wayIn;
       double theta = 1.0e30;
       for (int iIndex=0;iIndex<number;iIndex++) {
-	
+
 	int iRow = which[iIndex];
 	double alpha = work[iIndex]*way;
 	int iPivot=pivotVariable_[iRow];
@@ -1936,9 +1936,9 @@ ClpSimplexOther::parametrics(double startingTheta, double & endingTheta,double r
         } else {
           // and move stuff back
           int numberTotal = numberRows_+numberColumns_;
-          memcpy(status_,copyModel.statusArray(),numberTotal);
-          memcpy(columnActivity_,copyModel.primalColumnSolution(),numberColumns_*sizeof(double));
-          memcpy(rowActivity_,copyModel.primalRowSolution(),numberRows_*sizeof(double));
+          CoinMemcpyN(copyModel.statusArray(),numberTotal,status_);
+          CoinMemcpyN(copyModel.primalColumnSolution(),numberColumns_,columnActivity_);
+          CoinMemcpyN(copyModel.primalRowSolution(),numberRows_,rowActivity_);
           cleanedUp=0;
         }
       }
@@ -2282,10 +2282,11 @@ ClpSimplexOther::whileIterating(double startingTheta, double & endingTheta,doubl
 	// update the incoming column
 	double btranAlpha = -alpha_*directionOut_; // for check
 	unpackPacked(rowArray_[1]);
-	factorization_->updateColumnFT(rowArray_[2],rowArray_[1]);
+	// moved into updateWeights factorization_->updateColumnFT(rowArray_[2],rowArray_[1]);
 	// and update dual weights (can do in parallel - with extra array)
 	alpha_ = dualRowPivot_->updateWeights(rowArray_[0],
 					      rowArray_[2],
+					      rowArray_[3],
 					      rowArray_[1]);
 	// see if update stable
 #ifdef CLP_DEBUG
@@ -2854,7 +2855,7 @@ ClpSimplexOther::expandKnapsack(int knapsackRow, int & numberOutput,
       lo[iRow]=-COIN_DBL_MAX;
       high[iRow]=COIN_DBL_MAX;
       if (rowLower_[iRow]>-1.0e20||rowUpper_[iRow]<1.0e20) {
-	
+
 	// possible row
 	int infiniteUpper = 0;
 	int infiniteLower = 0;
@@ -2864,7 +2865,7 @@ ClpSimplexOther::expandKnapsack(int knapsackRow, int & numberOutput,
 	CoinBigIndex rEnd = rowStart[iRow]+rowLength[iRow];
 	CoinBigIndex j;
 	// Compute possible lower and upper ranges
-	
+
 	for (j = rStart; j < rEnd; ++j) {
 	  double value=elementByRow[j];
 	  iColumn = column[j];

@@ -205,11 +205,9 @@ ClpSimplexNonlinear::statusOfProblemInPrimal(int & lastCleaned, int type,
   int dummy; // for use in generalExpanded
   if (type==2) {
     // trouble - restore solution
-    memcpy(status_ ,saveStatus_,(numberColumns_+numberRows_)*sizeof(char));
-    memcpy(rowActivityWork_,savedSolution_+numberColumns_ ,
-	   numberRows_*sizeof(double));
-    memcpy(columnActivityWork_,savedSolution_ ,
-	   numberColumns_*sizeof(double));
+    CoinMemcpyN(saveStatus_,(numberColumns_+numberRows_),status_ );
+    CoinMemcpyN(savedSolution_+numberColumns_ ,	numberRows_,rowActivityWork_);
+    CoinMemcpyN(savedSolution_ ,	numberColumns_,columnActivityWork_);
     // restore extra stuff
     matrix_->generalExpanded(this,6,dummy);
     forceFactorization_=1; // a bit drastic but ..
@@ -249,11 +247,9 @@ ClpSimplexNonlinear::statusOfProblemInPrimal(int & lastCleaned, int type,
 	    matrix_->generalExpanded(this,6,dummy);
 	  } else {
 	    // no - restore previous basis
-	    memcpy(status_ ,saveStatus_,(numberColumns_+numberRows_)*sizeof(char));
-	    memcpy(rowActivityWork_,savedSolution_+numberColumns_ ,
-		   numberRows_*sizeof(double));
-	    memcpy(columnActivityWork_,savedSolution_ ,
-		   numberColumns_*sizeof(double));
+     CoinMemcpyN(saveStatus_,(numberColumns_+numberRows_),status_ );
+     CoinMemcpyN(savedSolution_+numberColumns_ ,		numberRows_,rowActivityWork_);
+     CoinMemcpyN(savedSolution_ ,		numberColumns_,columnActivityWork_);
 	    // restore extra stuff
 	    matrix_->generalExpanded(this,6,dummy);
 	    matrix_->generalExpanded(this,5,dummy);
@@ -428,7 +424,7 @@ ClpSimplexNonlinear::statusOfProblemInPrimal(int & lastCleaned, int type,
 	  // we are infeasible - use as ray
 	  delete [] ray_;
 	  ray_ = new double [numberRows_];
-	  memcpy(ray_,dual_,numberRows_*sizeof(double));
+   CoinMemcpyN(dual_,numberRows_,ray_);
 	  // and get feasible duals
 	  infeasibilityCost_=0.0;
 	  createRim(4);
@@ -567,10 +563,9 @@ ClpSimplexNonlinear::statusOfProblemInPrimal(int & lastCleaned, int type,
       savedSolution_ = new double [numberRows_+numberColumns_];
     }
     // save arrays
-    memcpy(saveStatus_,status_,(numberColumns_+numberRows_)*sizeof(char));
-    memcpy(savedSolution_+numberColumns_ ,rowActivityWork_,
-	   numberRows_*sizeof(double));
-    memcpy(savedSolution_ ,columnActivityWork_,numberColumns_*sizeof(double));
+    CoinMemcpyN(status_,(numberColumns_+numberRows_),saveStatus_);
+    CoinMemcpyN(rowActivityWork_,	numberRows_,savedSolution_+numberColumns_ );
+    CoinMemcpyN(columnActivityWork_,numberColumns_,savedSolution_ );
   }
   if (doFactorization) {
     // restore weights (if saved) - also recompute infeasibility list
@@ -1393,8 +1388,8 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
 	}
 #endif
 	djNorm0 = CoinMax(djNorm, 1.0e-20);
-	memcpy(dArray,work,numberTotal*sizeof(double));
-	memcpy(dArray2,work,numberTotal*sizeof(double));
+ CoinMemcpyN(work,numberTotal,dArray);
+ CoinMemcpyN(work,numberTotal,dArray2);
 	if (sequenceIn_>=0&&numberNonBasic==1) {
 	  // see if simple move
 	  double objTheta2 =objective_->stepLength(this,solution_,work,1.0e30,
@@ -1561,7 +1556,7 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
 	    }
 	  } else {
 	  }
-	  memcpy(zzz,zz,number2*number2*sizeof(double));
+   CoinMemcpyN(zz,number2*number2,zzz);
 	  double ww[100];
 	  // get sk -Hkyk
 	  for (iVariable=0;iVariable<number2;iVariable++) {
@@ -1700,8 +1695,8 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
 	    }
 	  }
 #endif
-	  memcpy(saveY,saveY2,numberNonBasic*sizeof(double));
-	  memcpy(saveS,saveS2,numberNonBasic*sizeof(double));
+   CoinMemcpyN(saveY2,numberNonBasic,saveY);
+   CoinMemcpyN(saveS2,numberNonBasic,saveS);
 	}
 #endif
       }
@@ -1804,7 +1799,7 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
 	  printf("%d super, %d normal, %d flagged\n",
 		 nSuper,nNormal,nFlagged);
 #endif
-	
+
 	int nFlagged2=1;
 	if (lastSequenceIn<0&&!nNormal&&!nSuper) {
 	  nFlagged2=unflag();
@@ -1999,7 +1994,7 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
       // Update solution
       for (iSequence=0;iSequence<numberTotal;iSequence++) {
 	//for (iIndex=0;iIndex<number;iIndex++) {
-	
+
 	//int iSequence = which[iIndex];
 	double alpha = dArray[iSequence];
 	if (alpha) {
@@ -2107,10 +2102,10 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
 				rowArray,spare,columnArray);
 	// choose one futhest away from bound which has reasonable pivot
 	// If increasing we want negative alpha
-	
+
 	double * work2;
 	int iSection;
-	
+
 	sequenceIn_=-1;
 	double bestValue=-1.0;
 	double bestDirection=0.0;
@@ -2153,7 +2148,7 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
 	      Status thisStatus = getStatus(iSequence);
 	      double direction=0;;
 	      switch(thisStatus) {
-		
+
 	      case basic:
 	      case ClpSimplex::isFixed:
 		break;
@@ -2227,9 +2222,9 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
 	    printf("no easy pivot - norm %g mode %d\n",djNorm,localPivotMode);
 	    if (rowArray->getNumElements()+columnArray->getNumElements()<12) {
 	      for (iSection=0;iSection<2;iSection++) {
-		
+
 		int addSequence;
-		
+
 		if (!iSection) {
 		  work2 = rowArray->denseVector();
 		  number = rowArray->getNumElements();
@@ -2342,7 +2337,7 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
     double dualTolerance3 = CoinMin(1.0e-2,1.0e3*dualTolerance_);
     for (int iSequence=0;iSequence<numberColumns_+numberRows_;iSequence++) {
       switch(getStatus(iSequence)) {
-	
+
       case basic:
       case ClpSimplex::isFixed:
 	break;
@@ -2699,7 +2694,7 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
   double * saveSolutionM[MULTIPLE};
   for (jNon=0;jNon<MULTIPLE;jNon++) {
     saveSolutionM[jNon]=new double[numberColumns];
-    memcpy(saveSolutionM,solution,numberColumns*sizeof(double));
+    CoinMemcpyN(solution,numberColumns,saveSolutionM);
   }
 #endif
   double targetDrop=1.0e31;
@@ -2800,7 +2795,7 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
 	changeRegion[iColumn]=0.0;
 	saveSolution[iColumn]=solution[iColumn];
       }
-      memcpy(saveRowSolution,rowActivity_,numberRows*sizeof(double));
+      CoinMemcpyN(rowActivity_,numberRows,saveRowSolution);
     }
     // get current value anyway
     double predictedObj,thetaObj;
@@ -2824,8 +2819,8 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
 	memset(rowActivity_,0,numberRows_*sizeof(double));
 	times(1.0,solution,rowActivity_);
 	if (lambda>0.999) {
-	  memcpy(this->dualRowSolution(),savePi,numberRows*sizeof(double));
-	  memcpy(status_,saveStatus,numberRows+numberColumns);
+   CoinMemcpyN(savePi,numberRows,this->dualRowSolution());
+   CoinMemcpyN(saveStatus,numberRows+numberColumns,status_);
 	}
 	// Do local minimization
 #define LOCAL
@@ -3037,8 +3032,8 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
 	}
       }
     }
-    memcpy(objective,trueObjective->gradient(this,solution,offset,true,2),
-	   numberColumns*sizeof(double));
+    CoinMemcpyN(trueObjective->gradient(this,solution,offset,true,2),	numberColumns,
+                 objective);
     //printf("offset comp %g orig %g\n",offset,objectiveOffset);
     // could do faster
     trueObjective->stepLength(this,solution,changeRegion,0.0,
@@ -3187,17 +3182,17 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
     }
 #endif
     if (goodMove>0) {
-      memcpy(saveSolution,solution,numberColumns*sizeof(double));
-      memcpy(saveRowSolution,rowActivity_,numberRows*sizeof(double));
-      memcpy(savePi,this->dualRowSolution(),numberRows*sizeof(double));
-      memcpy(saveStatus,status_,numberRows+numberColumns);
+      CoinMemcpyN(solution,numberColumns,saveSolution);
+      CoinMemcpyN(rowActivity_,numberRows,saveRowSolution);
+      CoinMemcpyN(this->dualRowSolution(),numberRows,savePi);
+      CoinMemcpyN(status_,numberRows+numberColumns,saveStatus);
 #if MULTIPLE>2
       double * tempSol=saveSolutionM[0];
       for (jNon=0;jNon<MULTIPLE-1;jNon++) {
 	saveSolutionM[jNon]=saveSolutionM[jNon+1];
       }
       saveSolutionM[MULTIPLE-1]=tempSol;
-      memcpy(tempSol,solution,numberColumns*sizeof(double));
+      CoinMemcpyN(solution,numberColumns,tempSol);
       
 #endif
       
@@ -3241,13 +3236,13 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
       if (this->status()==1) {
 	// not feasible ! - backtrack and exit
 	// use safe solution
-	memcpy(solution,safeSolution,numberColumns*sizeof(double));
-	memcpy(saveSolution,solution,numberColumns*sizeof(double));
+ CoinMemcpyN(safeSolution,numberColumns,solution);
+ CoinMemcpyN(solution,numberColumns,saveSolution);
 	memset(rowActivity_,0,numberRows_*sizeof(double));
 	times(1.0,solution,rowActivity_);
-	memcpy(saveRowSolution,rowActivity_,numberRows*sizeof(double));
-	memcpy(this->dualRowSolution(),savePi,numberRows*sizeof(double));
-	memcpy(status_,saveStatus,numberRows+numberColumns);
+ CoinMemcpyN(rowActivity_,numberRows,saveRowSolution);
+ CoinMemcpyN(savePi,numberRows,this->dualRowSolution());
+ CoinMemcpyN(saveStatus,numberRows+numberColumns,status_);
 	for (jNon=0;jNon<numberNonLinearColumns;jNon++) {
 	  iColumn=listNonLinearColumn[jNon];
 	  columnLower[iColumn]=CoinMax(solution[iColumn]
@@ -3260,7 +3255,7 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
 	break;
       } else {
 	// save in case problems
-	memcpy(safeSolution,solution,numberColumns*sizeof(double));
+ CoinMemcpyN(solution,numberColumns,safeSolution);
       }
       if (problemStatus_==3)
 	break; // probably user interrupt
@@ -3271,10 +3266,10 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
       if (handler_->logLevel()&32) 
 	printf("Backtracking\n");
 #endif
-      memcpy(solution,saveSolution,numberColumns*sizeof(double));
-      memcpy(rowActivity_,saveRowSolution,numberRows*sizeof(double));
-      memcpy(this->dualRowSolution(),savePi,numberRows*sizeof(double));
-      memcpy(status_,saveStatus,numberRows+numberColumns);
+      CoinMemcpyN(saveSolution,numberColumns,solution);
+      CoinMemcpyN(saveRowSolution,numberRows,rowActivity_);
+      CoinMemcpyN(savePi,numberRows,this->dualRowSolution());
+      CoinMemcpyN(saveStatus,numberRows+numberColumns,status_);
       iPass--;
       assert (exitPass>0);
       goodMove=-1;
@@ -3286,8 +3281,8 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
   }
 #endif
   // restore solution
-  memcpy(solution,saveSolution,numberColumns*sizeof(double));
-  memcpy(rowActivity_,saveRowSolution,numberRows*sizeof(double));
+  CoinMemcpyN(saveSolution,numberColumns,solution);
+  CoinMemcpyN(saveRowSolution,numberRows,rowActivity_);
   for (jNon=0;jNon<numberNonLinearColumns;jNon++) {
     iColumn=listNonLinearColumn[jNon];
     columnLower[iColumn]=CoinMax(solution[iColumn],
@@ -3300,8 +3295,8 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
   delete [] savePi;
   delete [] saveStatus;
   // redo objective
-  memcpy(objective,trueObjective->gradient(this,solution,offset,true,2),
-	 numberColumns*sizeof(double));
+  CoinMemcpyN(trueObjective->gradient(this,solution,offset,true,2),	numberColumns,
+               objective);
   ClpSimplex::primal(1);
   delete objective_;
   objective_=trueObjective;
@@ -3669,11 +3664,11 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
       trueObjective->newXValues();
     double * changeableElement = newMatrix.getMutableElements();
     if (trueObjective) {
-      memcpy(objective,trueObjective->gradient(this,solution,offset,true,2),
-	     numberColumns_*sizeof(double));
+      CoinMemcpyN(trueObjective->gradient(this,solution,offset,true,2),	numberColumns_,
+                   objective);
     } else {
-      memcpy(objective,objective_->gradient(this,solution,offset,true,2),
-	     numberColumns_*sizeof(double));
+      CoinMemcpyN(objective_->gradient(this,solution,offset,true,2),	numberColumns_,
+                   objective);
     }
     if (whichWay<0.0) {
       for (int iColumn=0;iColumn<numberColumns_;iColumn++) 
@@ -3883,17 +3878,17 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
       std::cout<<"True drop was "<<drop<<std::endl;
       if (drop<-0.05*fabs(objValue)-1.0e-4) {
 	// pretty bad - go back and halve
-	memcpy(solution,saveSolution,numberColumns2*sizeof(double));
-	memcpy(newModel.primalRowSolution(),saveSolution+numberColumns2,
-	       numberRows*sizeof(double));
-	memcpy(newModel.statusArray(),saveStatus,
-	       numberColumns2+numberRows);
+	CoinMemcpyN(saveSolution,numberColumns2,solution);
+	CoinMemcpyN(saveSolution+numberColumns2,
+		    numberRows,newModel.primalRowSolution());
+	CoinMemcpyN((unsigned char *) saveStatus,
+		    numberColumns2+numberRows,newModel.statusArray());
 	for (jNon=0;jNon<numberNonLinearColumns;jNon++) 
 	  if (trust[jNon]>0.1)
 	    trust[jNon] *= 0.5;
 	  else
 	    trust[jNon] *= 0.9;
-	
+
 	printf("** Halving trust\n");
 	objValue=lastObjective;
 	continue;
@@ -3981,7 +3976,7 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
 	  lastGoodObjective = useObjValue;
 	  if (!bestSolution)
 	    bestSolution = new double [numberColumns2];
-	  memcpy(bestSolution,solution,numberColumns2*sizeof(double));
+   CoinMemcpyN(solution,numberColumns2,bestSolution);
 	}
       }
       if (maxDelta<deltaTolerance&&!increasing&&iPass>100) {
@@ -4001,11 +3996,11 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
 	numberZeroPasses=0;
       }
     }
-    memcpy(saveSolution,solution,numberColumns2*sizeof(double));
-    memcpy(saveSolution+numberColumns2,newModel.primalRowSolution(),
-	   numberRows*sizeof(double));
-    memcpy(saveStatus,newModel.statusArray(),
-	   numberColumns2+numberRows);
+    CoinMemcpyN(solution,numberColumns2,saveSolution);
+    CoinMemcpyN(newModel.primalRowSolution(),
+		numberRows,saveSolution+numberColumns2);
+    CoinMemcpyN(newModel.statusArray(),
+		numberColumns2+numberRows,(unsigned char *) saveStatus);
     
     targetDrop=infPenalty+infPenalty2;
     if (iPass) {
@@ -4095,7 +4090,7 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
   delete [] trueLower;
   objectiveValue_=newModel.objectiveValue();
   if (bestSolution) {
-    memcpy(solution,bestSolution,numberColumns2*sizeof(double));
+    CoinMemcpyN(bestSolution,numberColumns2,solution);
     delete [] bestSolution;
     printf("restoring objective of %g\n",lastGoodObjective);
     objectiveValue_=lastGoodObjective;
@@ -4123,7 +4118,7 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
   numberIterations_ =newModel.numberIterations();
   problemStatus_ =newModel.problemStatus();
   secondaryStatus_ =newModel.secondaryStatus();
-  memcpy(columnActivity_,newModel.primalColumnSolution(),numberColumns_*sizeof(double));
+  CoinMemcpyN(newModel.primalColumnSolution(),numberColumns_,columnActivity_);
   // should do status region
   CoinZeroN(rowActivity_,numberRows_);
   matrix_->times(1.0,columnActivity_,rowActivity_);

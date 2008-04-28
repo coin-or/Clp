@@ -448,6 +448,63 @@ ClpSimplex::initialSolve(ClpSolve & options)
   }
 #endif
 #endif
+  if (presolve!=ClpSolve::presolveOff) {
+    bool costedSlacks=false;
+    int numberPasses=5;
+    if (presolve==ClpSolve::presolveNumber) {
+      numberPasses=options.getPresolvePasses();
+      presolve = ClpSolve::presolveOn;
+    } else if (presolve==ClpSolve::presolveNumberCost) {
+      numberPasses=options.getPresolvePasses();
+      presolve = ClpSolve::presolveOn;
+      costedSlacks=true;
+      // switch on singletons to slacks
+      pinfo.setDoSingletonColumn(true);
+    }
+#ifndef CLP_NO_STD
+    if (presolveToFile) {
+      // PreSolve to file - not fully tested
+      printf("Presolving to file - presolve.save\n");
+      pinfo.presolvedModelToFile(*this,"presolve.save",dblParam_[ClpPresolveTolerance],
+			   false,numberPasses);
+      model2=this;
+    } else {
+#endif
+      model2 = pinfo.presolvedModel(*this,dblParam_[ClpPresolveTolerance],
+				    false,numberPasses,true,costedSlacks);
+#ifndef CLP_NO_STD
+    }
+#endif
+    time2 = CoinCpuTime();
+    timePresolve = time2-timeX;
+    handler_->message(CLP_INTERVAL_TIMING,messages_)
+      <<"Presolve"<<timePresolve<<time2-time1
+      <<CoinMessageEol;
+    timeX=time2;
+    if (!model2) {
+      handler_->message(CLP_INFEASIBLE,messages_)
+	<<CoinMessageEol;
+      model2 = this;
+      problemStatus_=1; // may be unbounded but who cares
+      if (options.infeasibleReturn()||(moreSpecialOptions_&1)!=0) {
+        return -1;
+      }
+      presolve=ClpSolve::presolveOff;
+    }
+    // We may be better off using original (but if dual leave because of bounds)
+    if (presolve!=ClpSolve::presolveOff&&
+	numberRows_<1.01*model2->numberRows_&&numberColumns_<1.01*model2->numberColumns_
+	&&model2!=this) {
+      if(method!=ClpSolve::useDual||
+	 (numberRows_==model2->numberRows_&&numberColumns_==model2->numberColumns_)) {
+	delete model2;
+	model2 = this;
+	presolve=ClpSolve::presolveOff;
+      }
+    }
+  }
+  if (interrupt)
+    currentModel = model2;
   // For below >0 overrides
   // 0 means no, -1 means maybe
   int doIdiot=0;
@@ -455,6 +512,23 @@ ClpSimplex::initialSolve(ClpSolve & options)
   int doSprint=0;
   int doSlp=0;
   int primalStartup=1;
+  // switch to primal from automatic if just one cost entry
+  if (method==ClpSolve::automatic&&model2->numberColumns()>5000&&
+      (specialOptions_&1024)!=0) {
+    int numberColumns = model2->numberColumns();
+    const double * obj = model2->objective();
+    int nNon=0;
+    for (int i=0;i<numberColumns;i++) {
+      if (obj[i])
+	nNon++;
+    }
+    if (nNon==1) {
+#ifdef COIN_DEVELOP
+      printf("Forcing primal\n");
+#endif
+      method=ClpSolve::usePrimal;
+    }
+  }
   if (method!=ClpSolve::useDual&&method!=ClpSolve::useBarrier
       &&method!=ClpSolve::useBarrierNoCross) {
     switch (options.getSpecialOption(1)) {
@@ -577,63 +651,6 @@ ClpSimplex::initialSolve(ClpSolve & options)
 #endif
   // Just do this number of passes in Sprint
   int maxSprintPass=100;
-  bool costedSlacks=false;
-  if (presolve!=ClpSolve::presolveOff) {
-    int numberPasses=5;
-    if (presolve==ClpSolve::presolveNumber) {
-      numberPasses=options.getPresolvePasses();
-      presolve = ClpSolve::presolveOn;
-    } else if (presolve==ClpSolve::presolveNumberCost) {
-      numberPasses=options.getPresolvePasses();
-      presolve = ClpSolve::presolveOn;
-      costedSlacks=true;
-      // switch on singletons to slacks
-      pinfo.setDoSingletonColumn(true);
-    }
-#ifndef CLP_NO_STD
-    if (presolveToFile) {
-      // PreSolve to file - not fully tested
-      printf("Presolving to file - presolve.save\n");
-      pinfo.presolvedModelToFile(*this,"presolve.save",dblParam_[ClpPresolveTolerance],
-			   false,numberPasses);
-      model2=this;
-    } else {
-#endif
-      model2 = pinfo.presolvedModel(*this,dblParam_[ClpPresolveTolerance],
-				    false,numberPasses,true,costedSlacks);
-#ifndef CLP_NO_STD
-    }
-#endif
-    time2 = CoinCpuTime();
-    timePresolve = time2-timeX;
-    handler_->message(CLP_INTERVAL_TIMING,messages_)
-      <<"Presolve"<<timePresolve<<time2-time1
-      <<CoinMessageEol;
-    timeX=time2;
-    if (!model2) {
-      handler_->message(CLP_INFEASIBLE,messages_)
-	<<CoinMessageEol;
-      model2 = this;
-      problemStatus_=1; // may be unbounded but who cares
-      if (options.infeasibleReturn()||(moreSpecialOptions_&1)!=0) {
-        return -1;
-      }
-      presolve=ClpSolve::presolveOff;
-    }
-    // We may be better off using original (but if dual leave because of bounds)
-    if (presolve!=ClpSolve::presolveOff&&
-	numberRows_<1.01*model2->numberRows_&&numberColumns_<1.01*model2->numberColumns_
-	&&model2!=this) {
-      if(method!=ClpSolve::useDual||
-	 (numberRows_==model2->numberRows_&&numberColumns_==model2->numberColumns_)) {
-	delete model2;
-	model2 = this;
-	presolve=ClpSolve::presolveOff;
-      }
-    }
-  }
-  if (interrupt)
-    currentModel = model2;
   // See if worth trying +- one matrix
   bool plusMinus=false;
   int numberElements=model2->getNumElements();
@@ -671,8 +688,9 @@ ClpSimplex::initialSolve(ClpSolve & options)
       plusMinus=true;
     if(numberElements>10000&&(doIdiot||doSprint)) 
       plusMinus=true;
+  } else if ((specialOptions_&1024)!=0) {
+    plusMinus=true;
   }
-  //plusMinus=true;
 #ifndef SLIM_CLP
   // Statistics (+1,-1, other) - used to decide on strategy if not +-1
   CoinBigIndex statistics[3]={-1,0,0};
@@ -690,7 +708,13 @@ ClpSimplex::initialSolve(ClpSolve & options)
     if (clpMatrix) {
       ClpPlusMinusOneMatrix * newMatrix = new ClpPlusMinusOneMatrix(*(clpMatrix->matrix()));
       if (newMatrix->getIndices()) {
-	model2->replaceMatrix(newMatrix);
+	if ((specialOptions_&1024)==0) {
+	  model2->replaceMatrix(newMatrix);
+	} else {
+	  // in integer - just use for sprint/idiot
+	  saveMatrix=NULL;
+	  delete newMatrix;
+	}
       } else {
 	handler_->message(CLP_MATRIX_CHANGE,messages_)
 	  <<"+- 1"
@@ -713,6 +737,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
     // make sure model2 has correct value
     model2->setFactorizationFrequency(this->factorizationFrequency());
   }
+  bool tryItSave = false;
   if (method==ClpSolve::automatic) {
     if (doSprint==0&&doIdiot==0) {
       // off
@@ -780,7 +805,9 @@ ClpSimplex::initialSolve(ClpSolve & options)
               largestGap = value2-value1;
           }
         }
-        bool tryIt= numberRows>200&&numberColumns>2000&&numberColumns>2*numberRows;
+        bool tryIt= numberRows>200&&numberColumns>2000&&
+	  (numberColumns>2*numberRows||(method==ClpSolve::automatic&&(specialOptions_&1024)!=0));
+	tryItSave = tryIt;
         if (numberRows<1000&&numberColumns<3000)
           tryIt=false;
         if (notInteger)
@@ -1095,12 +1122,14 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	}
       }
       bool increaseSprint=plusMinus;
+      if ((specialOptions_&1024)!=0)
+	increaseSprint=false;
       if (!plusMinus) {
         // If 90% +- 1 then go for sprint
         if (statistics[0]>=0&&10*statistics[2]<statistics[0]+statistics[1])
           increaseSprint=true;
       }
-      bool tryIt= numberRows>200&&numberColumns>2000&&numberColumns>2*numberRows;
+      bool tryIt= tryItSave;
       if (numberRows<1000&&numberColumns<3000)
         tryIt=false;
       if (tryIt) {
@@ -1148,7 +1177,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	    //info.setFeasibilityTolerance(1.0e-7);
 	  }
 	  // If few passes - don't bother
-	  if (nPasses<=5)
+	  if (nPasses<=5&&!plusMinus)
 	    nPasses=0;
 	} else {
 	  if (doIdiot<0)
@@ -1185,7 +1214,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	  } else if (nPasses==5&&ratio>5.0) {
 	    nPasses = (int) (((double) nPasses)*(ratio/5.0)); // increase if lots of elements per column
           }
-	  if (nPasses<=5)
+	  if (nPasses<=5&&!plusMinus)
 	    nPasses=0;
 	  //info.setStartingWeight(1.0e-1);
 	}
@@ -1735,7 +1764,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
       if ((small.objectiveValue()*optimizationDirection_>lastObjective-1.0e-7&&iPass>5&&sumArtificials<1.0e-8)||
 	  (!small.numberIterations()&&iPass)||
 	  iPass==maxSprintPass-1||small.status()==3) {
-	
+
 	break; // finished
       } else {
 	lastObjective = small.objectiveValue()*optimizationDirection_;
@@ -2813,7 +2842,7 @@ ClpSimplexProgress::looping()
 	    model_->setDualBound(model_->dualBound()*1.1);
 	  }
 	} else {
-	  // primal - change tolerance	
+	  // primal - change tolerance
 	  if (numberBadTimes_>3)
 	    model_->setCurrentPrimalTolerance(model_->currentPrimalTolerance()*1.05);
 	  // if infeasible increase infeasibility cost

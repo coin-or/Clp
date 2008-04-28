@@ -275,6 +275,9 @@ public:
   /// Do we want special column copy
   inline bool wantsSpecialColumnCopy() const
   { return ((flags_&8)!=0);}
+  /// Flags
+  inline int flags() const
+  { return flags_;}
    //@}
 
 
@@ -323,12 +326,23 @@ public:
    //@}
 private:
   /// Meat of transposeTimes by column when not scaled
-  void gutsOfTransposeTimesUnscaled(const double * pi,CoinIndexedVector * output, const double tolerance) const;
+  int gutsOfTransposeTimesUnscaled(const double * COIN_RESTRICT pi,
+				    int * COIN_RESTRICT index, 
+				    double * COIN_RESTRICT array,
+				    const double tolerance) const;
   /// Meat of transposeTimes by column when scaled
-  void gutsOfTransposeTimesScaled(const double * pi,const double * columnScale, CoinIndexedVector * output, const double tolerance) const;
-  /// Meat of transposeTimes by row n > 2 if packed
-  void gutsOfTransposeTimesByRowGE3(const CoinIndexedVector * piVector, CoinIndexedVector * output,
-				   CoinIndexedVector * spareVector, const double tolerance, const double scalar) const;
+  int gutsOfTransposeTimesScaled(const double * COIN_RESTRICT pi,
+				 const double * COIN_RESTRICT columnScale,
+				 int * COIN_RESTRICT index, 
+				 double * COIN_RESTRICT array,
+				 const double tolerance) const;
+  /// Meat of transposeTimes by row n > 2 if packed - returns number nonzero
+  int gutsOfTransposeTimesByRowGE3(const CoinIndexedVector * COIN_RESTRICT piVector, 
+				   int * COIN_RESTRICT index, 
+				   double * COIN_RESTRICT output,
+				   int * COIN_RESTRICT lookup,
+				   const double tolerance, 
+				   const double scalar) const;
   /// Meat of transposeTimes by row n == 2 if packed
   void gutsOfTransposeTimesByRowEQ2(const CoinIndexedVector * piVector, CoinIndexedVector * output,
 				   CoinIndexedVector * spareVector, const double tolerance, const double scalar) const;
@@ -341,7 +355,7 @@ private:
     
 protected:
   /// Check validity
-  void checkFlags() const;
+  void checkFlags(int type) const;
    /**@name Data members
       The data members are protected to allow access for derived classes. */
    //@{

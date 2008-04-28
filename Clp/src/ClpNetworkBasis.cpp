@@ -18,7 +18,9 @@
 //-------------------------------------------------------------------
 ClpNetworkBasis::ClpNetworkBasis () 
 {
+#ifndef COIN_FAST_CODE
   slackValue_=-1.0;
+#endif
   numberRows_=0;
   numberColumns_=0;
   parent_ = NULL;
@@ -43,7 +45,9 @@ ClpNetworkBasis::ClpNetworkBasis(const ClpSimplex * model,
 				 const int * numberInColumn,
 				 const int * indexRow, const double * element)
 {
+#ifndef COIN_FAST_CODE
   slackValue_=-1.0;
+#endif
   numberRows_=numberRows;
   numberColumns_=numberRows;
   parent_ = new int [ numberRows_+1];
@@ -135,78 +139,80 @@ ClpNetworkBasis::ClpNetworkBasis(const ClpSimplex * model,
 //-------------------------------------------------------------------
 ClpNetworkBasis::ClpNetworkBasis (const ClpNetworkBasis & rhs) 
 {
+#ifndef COIN_FAST_CODE
   slackValue_=rhs.slackValue_;
+#endif
   numberRows_=rhs.numberRows_;
   numberColumns_=rhs.numberColumns_;
   if (rhs.parent_) {
     parent_ = new int [numberRows_+1];
-    memcpy(parent_,rhs.parent_,(numberRows_+1)*sizeof(int));
+    CoinMemcpyN(rhs.parent_,(numberRows_+1),parent_);
   } else {
     parent_ = NULL;
   }
   if (rhs.descendant_) {
     descendant_ = new int [numberRows_+1];
-    memcpy(descendant_,rhs.descendant_,(numberRows_+1)*sizeof(int));
+    CoinMemcpyN(rhs.descendant_,(numberRows_+1),descendant_);
   } else {
     descendant_ = NULL;
   }
   if (rhs.pivot_) {
     pivot_ = new int [numberRows_+1];
-    memcpy(pivot_,rhs.pivot_,(numberRows_+1)*sizeof(int));
+    CoinMemcpyN(rhs.pivot_,(numberRows_+1),pivot_);
   } else {
     pivot_ = NULL;
   }
   if (rhs.rightSibling_) {
     rightSibling_ = new int [numberRows_+1];
-    memcpy(rightSibling_,rhs.rightSibling_,(numberRows_+1)*sizeof(int));
+    CoinMemcpyN(rhs.rightSibling_,(numberRows_+1),rightSibling_);
   } else {
     rightSibling_ = NULL;
   }
   if (rhs.leftSibling_) {
     leftSibling_ = new int [numberRows_+1];
-    memcpy(leftSibling_,rhs.leftSibling_,(numberRows_+1)*sizeof(int));
+    CoinMemcpyN(rhs.leftSibling_,(numberRows_+1),leftSibling_);
   } else {
     leftSibling_ = NULL;
   }
   if (rhs.sign_) {
     sign_ = new double [numberRows_+1];
-    memcpy(sign_,rhs.sign_,(numberRows_+1)*sizeof(double));
+    CoinMemcpyN(rhs.sign_,(numberRows_+1),sign_);
   } else {
     sign_ = NULL;
   }
   if (rhs.stack_) {
     stack_ = new int [numberRows_+1];
-    memcpy(stack_,rhs.stack_,(numberRows_+1)*sizeof(int));
+    CoinMemcpyN(rhs.stack_,(numberRows_+1),stack_);
   } else {
     stack_ = NULL;
   }
   if (rhs.permute_) {
     permute_ = new int [numberRows_+1];
-    memcpy(permute_,rhs.permute_,(numberRows_+1)*sizeof(int));
+    CoinMemcpyN(rhs.permute_,(numberRows_+1),permute_);
   } else {
     permute_ = NULL;
   }
   if (rhs.permuteBack_) {
     permuteBack_ = new int [numberRows_+1];
-    memcpy(permuteBack_,rhs.permuteBack_,(numberRows_+1)*sizeof(int));
+    CoinMemcpyN(rhs.permuteBack_,(numberRows_+1),permuteBack_);
   } else {
     permuteBack_ = NULL;
   }
   if (rhs.stack2_) {
     stack2_ = new int [numberRows_+1];
-    memcpy(stack2_,rhs.stack2_,(numberRows_+1)*sizeof(int));
+    CoinMemcpyN(rhs.stack2_,(numberRows_+1),stack2_);
   } else {
     stack2_ = NULL;
   }
   if (rhs.depth_) {
     depth_ = new int [numberRows_+1];
-    memcpy(depth_,rhs.depth_,(numberRows_+1)*sizeof(int));
+    CoinMemcpyN(rhs.depth_,(numberRows_+1),depth_);
   } else {
     depth_ = NULL;
   }
   if (rhs.mark_) {
     mark_ = new char [numberRows_+1];
-    memcpy(mark_,rhs.mark_,(numberRows_+1)*sizeof(char));
+    CoinMemcpyN(rhs.mark_,(numberRows_+1),mark_);
   } else {
     mark_ = NULL;
   }
@@ -251,78 +257,80 @@ ClpNetworkBasis::operator=(const ClpNetworkBasis& rhs)
     delete [] stack2_;
     delete [] depth_;
     delete [] mark_;
+#ifndef COIN_FAST_CODE
     slackValue_=rhs.slackValue_;
+#endif
     numberRows_=rhs.numberRows_;
     numberColumns_=rhs.numberColumns_;
     if (rhs.parent_) {
       parent_ = new int [numberRows_+1];
-      memcpy(parent_,rhs.parent_,(numberRows_+1)*sizeof(int));
+      CoinMemcpyN(rhs.parent_,(numberRows_+1),parent_);
     } else {
       parent_ = NULL;
     }
     if (rhs.descendant_) {
       descendant_ = new int [numberRows_+1];
-      memcpy(descendant_,rhs.descendant_,(numberRows_+1)*sizeof(int));
+      CoinMemcpyN(rhs.descendant_,(numberRows_+1),descendant_);
     } else {
       descendant_ = NULL;
     }
     if (rhs.pivot_) {
       pivot_ = new int [numberRows_+1];
-      memcpy(pivot_,rhs.pivot_,(numberRows_+1)*sizeof(int));
+      CoinMemcpyN(rhs.pivot_,(numberRows_+1),pivot_);
     } else {
       pivot_ = NULL;
     }
     if (rhs.rightSibling_) {
       rightSibling_ = new int [numberRows_+1];
-      memcpy(rightSibling_,rhs.rightSibling_,(numberRows_+1)*sizeof(int));
+      CoinMemcpyN(rhs.rightSibling_,(numberRows_+1),rightSibling_);
     } else {
       rightSibling_ = NULL;
     }
     if (rhs.leftSibling_) {
       leftSibling_ = new int [numberRows_+1];
-      memcpy(leftSibling_,rhs.leftSibling_,(numberRows_+1)*sizeof(int));
+      CoinMemcpyN(rhs.leftSibling_,(numberRows_+1),leftSibling_);
     } else {
       leftSibling_ = NULL;
     }
     if (rhs.sign_) {
       sign_ = new double [numberRows_+1];
-      memcpy(sign_,rhs.sign_,(numberRows_+1)*sizeof(double));
+      CoinMemcpyN(rhs.sign_,(numberRows_+1),sign_);
     } else {
       sign_ = NULL;
     }
     if (rhs.stack_) {
       stack_ = new int [numberRows_+1];
-      memcpy(stack_,rhs.stack_,(numberRows_+1)*sizeof(int));
+      CoinMemcpyN(rhs.stack_,(numberRows_+1),stack_);
     } else {
       stack_ = NULL;
     }
     if (rhs.permute_) {
       permute_ = new int [numberRows_+1];
-      memcpy(permute_,rhs.permute_,(numberRows_+1)*sizeof(int));
+      CoinMemcpyN(rhs.permute_,(numberRows_+1),permute_);
     } else {
       permute_ = NULL;
     }
     if (rhs.permuteBack_) {
       permuteBack_ = new int [numberRows_+1];
-      memcpy(permuteBack_,rhs.permuteBack_,(numberRows_+1)*sizeof(int));
+      CoinMemcpyN(rhs.permuteBack_,(numberRows_+1),permuteBack_);
     } else {
       permuteBack_ = NULL;
     }
     if (rhs.stack2_) {
       stack2_ = new int [numberRows_+1];
-      memcpy(stack2_,rhs.stack2_,(numberRows_+1)*sizeof(int));
+      CoinMemcpyN(rhs.stack2_,(numberRows_+1),stack2_);
     } else {
       stack2_ = NULL;
     }
     if (rhs.depth_) {
       depth_ = new int [numberRows_+1];
-      memcpy(depth_,rhs.depth_,(numberRows_+1)*sizeof(int));
+      CoinMemcpyN(rhs.depth_,(numberRows_+1),depth_);
     } else {
       depth_ = NULL;
     }
     if (rhs.mark_) {
       mark_ = new char [numberRows_+1];
-      memcpy(mark_,rhs.mark_,(numberRows_+1)*sizeof(char));
+      CoinMemcpyN(rhs.mark_,(numberRows_+1),mark_);
     } else {
       mark_ = NULL;
     }
@@ -928,7 +936,7 @@ ClpNetworkBasis::updateColumnTranspose (  CoinIndexedVector * regionSparse,
   int *regionIndex = regionSparse->getIndices (  );
   int i;
   int numberNonZero=0;
-  memcpy(region,region2,numberRows_*sizeof(double));
+  CoinMemcpyN(region2,numberRows_,region);
   for (i=0;i<numberRows_;i++) {
     double value = region[i];
     if (value) {

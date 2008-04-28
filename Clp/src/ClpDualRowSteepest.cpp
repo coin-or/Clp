@@ -146,6 +146,65 @@ ClpDualRowSteepest::operator=(const ClpDualRowSteepest& rhs)
   }
   return *this;
 }
+// Fill most values
+void 
+ClpDualRowSteepest::fill(const ClpDualRowSteepest& rhs)
+{
+  state_=rhs.state_;
+  mode_ = rhs.mode_;
+  persistence_ = rhs.persistence_;
+  assert (model_->numberRows()==rhs.model_->numberRows());
+  model_ = rhs.model_;
+  assert(model_);
+  int number = model_->numberRows();
+  if (rhs.savedWeights_) 
+    number = CoinMin(number,rhs.savedWeights_->capacity());
+  if (rhs.infeasible_!=NULL) {
+    if (!infeasible_)
+      infeasible_= new CoinIndexedVector(rhs.infeasible_);
+    else
+      *infeasible_ = *rhs.infeasible_;
+  } else {
+    delete infeasible_;
+    infeasible_=NULL;
+  }
+  if (rhs.weights_!=NULL) {
+    if (!weights_)
+      weights_= new double[number];
+    ClpDisjointCopyN(rhs.weights_,number,weights_);
+  } else {
+    delete [] weights_;
+    weights_=NULL;
+  }
+  if (rhs.alternateWeights_!=NULL) {
+    if (!alternateWeights_)
+      alternateWeights_= new CoinIndexedVector(rhs.alternateWeights_);
+    else
+      *alternateWeights_ = *rhs.alternateWeights_;
+  } else {
+    delete alternateWeights_;
+    alternateWeights_=NULL;
+  }
+  if (rhs.savedWeights_!=NULL) {
+    if (!savedWeights_)
+      savedWeights_= new CoinIndexedVector(rhs.savedWeights_);
+    else
+      *savedWeights_ = *rhs.savedWeights_;
+  } else {
+    delete savedWeights_;
+    savedWeights_=NULL;
+  }
+  if (rhs.dubiousWeights_) {
+    assert(model_);
+    int number = model_->numberRows();
+    if (!dubiousWeights_)
+      dubiousWeights_= new int[number];
+    ClpDisjointCopyN(rhs.dubiousWeights_,number,dubiousWeights_);
+  } else {
+    delete [] dubiousWeights_;
+    dubiousWeights_=NULL;
+  }
+}
 // Returns pivot row, -1 if none
 int 
 ClpDualRowSteepest::pivotRow()
@@ -159,6 +218,7 @@ ClpDualRowSteepest::pivotRow()
   const int * pivotVariable =model_->pivotVariable();
   int chosenRow=-1;
   int lastPivotRow = model_->pivotRow();
+  assert (lastPivotRow<model_->numberRows());
   double tolerance=model_->currentPrimalTolerance();
   // we can't really trust infeasibilities if there is primal error
   // this coding has to mimic coding in checkPrimalSolution
@@ -175,7 +235,11 @@ ClpDualRowSteepest::pivotRow()
   // do last pivot row one here
   //#define COLUMN_BIAS 4.0
   //#define FIXED_BIAS 10.0
-  if (lastPivotRow>=0) {
+  if (lastPivotRow>=0&&lastPivotRow<model_->numberRows()) {
+#if defined (__MINGW32__) || defined(__CYGWIN32__)
+    if (model_->numberIterations()<0)
+      printf("aab_p it %d\n",model_->numberIterations());
+#endif
 #if defined (__MINGW32__) || defined(__CYGWIN32__)
     if (model_->numberIterations()<0)
       printf("aab_p it %d\n",model_->numberIterations());
@@ -328,12 +392,22 @@ k
   }
   return chosenRow;
 }
-// Updates weights and returns pivot alpha
+#if 0
+static double ft_count=0.0;
+static double up_count=0.0;
+static double ft_count_in=0.0;
+static double up_count_in=0.0;
+static int xx_count=0;
+#endif
+/* Updates weights and returns pivot alpha.
+   Also does FT update */
 double
 ClpDualRowSteepest::updateWeights(CoinIndexedVector * input,
 				  CoinIndexedVector * spare,
+				  CoinIndexedVector * spare2,
 				  CoinIndexedVector * updatedColumn)
 {
+  //#define CLP_DEBUG 3
 #if CLP_DEBUG>2
   // Very expensive debug
   {
@@ -416,8 +490,36 @@ ClpDualRowSteepest::updateWeights(CoinIndexedVector * input,
       }
     }
     spare->setNumElements ( numberNonZero );
-    // Only one array active as already permuted
-    model_->factorization()->updateColumn(spare,spare,true);
+    // Do FT update
+#if 0
+    ft_count_in+= updatedColumn->getNumElements();
+    up_count_in+= spare->getNumElements();
+#endif
+    if (permute) {
+#if CLP_DEBUG>2
+      printf("REGION before %d els\n",spare->getNumElements());
+      spare->print();
+#endif
+      model_->factorization()->updateTwoColumnsFT(spare2,updatedColumn,
+						  spare,true);
+#if CLP_DEBUG>2
+      printf("REGION after %d els\n",spare->getNumElements());
+      spare->print();
+#endif
+   } else {
+      // Leave as old way
+      model_->factorization()->updateColumnFT(spare2,updatedColumn);
+      model_->factorization()->updateColumn(spare2,spare,false);
+    }
+#undef CLP_DEBUG
+#if 0
+    ft_count+= updatedColumn->getNumElements();
+    up_count+= spare->getNumElements();
+    xx_count++;
+    if ((xx_count%1000)==0)
+      printf("zz %d ft %g up %g (in %g %g)\n",xx_count,ft_count,up_count,
+	     ft_count_in,up_count_in);
+#endif
     numberNonZero = spare->getNumElements();
     // alternateWeights_ should still be empty
     int pivotRow = model_->pivotRow();
@@ -452,7 +554,7 @@ ClpDualRowSteepest::updateWeights(CoinIndexedVector * input,
       work3[nSave]=devex; // save old
       which3[nSave++]=iRow;
       // transform to match spare
-      int jRow = pivotColumn[iRow];
+      int jRow = permute ? pivotColumn[iRow] : iRow;
       double value = work2[jRow];
       devex +=  theta * (theta*norm+value * multiplier);
       if (devex < DEVEX_TRY_NORM) 
@@ -471,6 +573,8 @@ ClpDualRowSteepest::updateWeights(CoinIndexedVector * input,
     spare->checkClear();
 #endif
   } else {
+    // Do FT update
+    model_->factorization()->updateColumnFT(spare,updatedColumn);
     // clear other region
     alternateWeights_->clear();
     double norm = 0.0;
@@ -802,10 +906,8 @@ ClpDualRowSteepest::saveWeights(ClpSimplex * model,int mode)
 	back[i]=-1;
       if (mode!=4) {
 	// save
-	memcpy(savedWeights_->getIndices(),which,
-	       numberRows*sizeof(int));
-	memcpy(savedWeights_->denseVector(),weights_,
-	       numberRows*sizeof(double));
+ CoinMemcpyN(which,	numberRows,savedWeights_->getIndices());
+ CoinMemcpyN(weights_,	numberRows,savedWeights_->denseVector());
       } else {
 	// restore
 	//memcpy(which,savedWeights_->getIndices(),

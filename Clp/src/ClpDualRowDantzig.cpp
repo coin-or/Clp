@@ -4,6 +4,7 @@
 #include "CoinPragma.hpp"
 #include "ClpSimplex.hpp"
 #include "ClpDualRowDantzig.hpp"
+#include "ClpFactorization.hpp"
 #include "CoinIndexedVector.hpp"
 #include "CoinHelperFunctions.hpp"
 
@@ -76,12 +77,15 @@ ClpDualRowDantzig::pivotRow()
   }
   return chosenRow;
 }
-// Returns pivot alpha
+// FT update and returns pivot alpha
 double
 ClpDualRowDantzig::updateWeights(CoinIndexedVector * input,
 				  CoinIndexedVector * spare,
+				 CoinIndexedVector * spare2,
 				  CoinIndexedVector * updatedColumn)
 {
+  // Do FT update
+  model_->factorization()->updateColumnFT(spare,updatedColumn);
   // pivot element
   double alpha=0.0;
   // look at updated column

@@ -537,10 +537,8 @@ ClpInterior::createWorkingData()
   int nTotal = numberRows_+numberColumns_;
   delete [] solution_;
   solution_ = new double[nTotal];
-  memcpy(solution_,columnActivity_,
-	 numberColumns_*sizeof(double));
-  memcpy(solution_+numberColumns_,rowActivity_,
-	 numberRows_*sizeof(double));
+  CoinMemcpyN(columnActivity_,	numberColumns_,solution_);
+  CoinMemcpyN(rowActivity_,	numberRows_,solution_+numberColumns_);
   delete [] cost_;
   cost_ = new double[nTotal];
   int i;
@@ -565,10 +563,10 @@ ClpInterior::createWorkingData()
   columnLowerWork_ = lower_;
   rowUpperWork_ = upper_+numberColumns_;
   columnUpperWork_ = upper_;
-  memcpy(rowLowerWork_,rowLower_,numberRows_*sizeof(double));
-  memcpy(rowUpperWork_,rowUpper_,numberRows_*sizeof(double));
-  memcpy(columnLowerWork_,columnLower_,numberColumns_*sizeof(double));
-  memcpy(columnUpperWork_,columnUpper_,numberColumns_*sizeof(double));
+  CoinMemcpyN(rowLower_,numberRows_,rowLowerWork_);
+  CoinMemcpyN(rowUpper_,numberRows_,rowUpperWork_);
+  CoinMemcpyN(columnLower_,numberColumns_,columnLowerWork_);
+  CoinMemcpyN(columnUpper_,numberColumns_,columnUpperWork_);
   // clean up any mismatches on infinity
   for (i=0;i<numberColumns_;i++) {
     if (columnLowerWork_[i]<-1.0e30)

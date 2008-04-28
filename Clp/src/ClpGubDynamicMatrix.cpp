@@ -362,7 +362,7 @@ ClpGubDynamicMatrix::partialPricing(ClpSimplex * model, double startFraction, do
 	// get dj without 
 	assert (model->getStatus(iBasic)==ClpSimplex::basic);
 	djMod=0.0;
-	
+
 	for (j=startColumn[iBasic];
 	     j<startColumn[iBasic]+length[iBasic];j++) {
 	  int jRow=row[j];
@@ -706,7 +706,7 @@ ClpGubDynamicMatrix::synchronize(ClpSimplex * model,int mode)
 	}
       }
       // move to next_
-      memcpy(next_+firstDynamic_,temp+firstDynamic_,(firstAvailable_-firstDynamic_)*sizeof(int));
+      CoinMemcpyN(temp+firstDynamic_,(firstAvailable_-firstDynamic_),next_+firstDynamic_);
       // if odd iterations may be one out so adjust currentNumber
       currentNumber=CoinMin(currentNumber+1,lastDynamic_);
       // zero solution
@@ -1677,7 +1677,7 @@ ClpGubDynamicMatrix::rhsOffset(ClpSimplex * model,bool forceRefresh,
 	if (fabs(rhs[iRow]-rhsOffset_[iRow])>1.0e-3)
 	  printf("** bad effective %d - true %g old %g\n",iRow,rhs[iRow],rhsOffset_[iRow]);
       }
-      memcpy(saveE,rhs,numberRows*sizeof(double));
+      CoinMemcpyN(rhs,numberRows,saveE);
       delete [] rhs;
     }
 #endif

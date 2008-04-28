@@ -191,8 +191,8 @@ ClpPresolve::postsolve(bool updateStatus)
       }
       rowstat = status + ncols0;
       colstat = status;
-      memcpy(colstat, presolvedModel_->statusArray(), ncols);
-      memcpy(rowstat, presolvedModel_->statusArray()+ncols, nrows);
+      CoinMemcpyN( presolvedModel_->statusArray(), ncols,colstat);
+      CoinMemcpyN( presolvedModel_->statusArray()+ncols, nrows,rowstat);
     }
 #ifndef CLP_NO_STD
   } else {
@@ -205,8 +205,8 @@ ClpPresolve::postsolve(bool updateStatus)
       unsigned char *status = new unsigned char [nrows0+ncols0];
       rowstat = status + ncols0;
       colstat = status;
-      memcpy(colstat, presolvedModel_->statusArray(), ncols);
-      memcpy(rowstat, presolvedModel_->statusArray()+ncols, nrows);
+      CoinMemcpyN( presolvedModel_->statusArray(), ncols,colstat);
+      CoinMemcpyN( presolvedModel_->statusArray()+ncols, nrows,rowstat);
     }
   }
 #endif
@@ -234,12 +234,12 @@ ClpPresolve::postsolve(bool updateStatus)
     assert (originalModel_==presolvedModel_);
     originalModel_->restoreModel(saveFile_.c_str());
     remove(saveFile_.c_str());
-    memcpy(originalModel_->primalRowSolution(),acts,nrows0*sizeof(double));
+    CoinMemcpyN(acts,nrows0,originalModel_->primalRowSolution());
     // delete [] acts;
-    memcpy(originalModel_->primalColumnSolution(),sol,ncols0*sizeof(double));
+    CoinMemcpyN(sol,ncols0,originalModel_->primalColumnSolution());
     // delete [] sol;
     if (updateStatus) {
-      memcpy(originalModel_->statusArray(),colstat,nrows0+ncols0);
+      CoinMemcpyN(colstat,nrows0+ncols0,originalModel_->statusArray());
       // delete [] colstat;
     }
   } else {
@@ -251,8 +251,7 @@ ClpPresolve::postsolve(bool updateStatus)
   }
 #endif
   // put back duals
-  memcpy(originalModel_->dualRowSolution(),prob.rowduals_,
-	 nrows_*sizeof(double));
+  CoinMemcpyN(prob.rowduals_,	nrows_,originalModel_->dualRowSolution());
   double maxmin = originalModel_->getObjSense();
   if (maxmin<0.0) {
     // swap signs
@@ -263,10 +262,9 @@ ClpPresolve::postsolve(bool updateStatus)
   }
   // Now check solution
   double offset;
-  memcpy(originalModel_->dualColumnSolution(),
-	 originalModel_->objectiveAsObject()->gradient(originalModel_,
-						       originalModel_->primalColumnSolution(),
-						       offset,true),ncols_*sizeof(double));
+  CoinMemcpyN(originalModel_->objectiveAsObject()->gradient(originalModel_,
+							    originalModel_->primalColumnSolution(),offset,true),
+	      ncols_,originalModel_->dualColumnSolution());
   originalModel_->transposeTimes(-1.0,
 				 originalModel_->dualRowSolution(),
 				 originalModel_->dualColumnSolution());
@@ -438,7 +436,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
 
   if (!prob->status_) {
     bool slackSingleton = doSingletonColumn();
-    slackSingleton = false;
+    slackSingleton = true;
     const bool slackd = doSingleton();
     const bool doubleton = doDoubleton();
     const bool tripleton = doTripleton();
@@ -688,7 +686,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
 	for (i=0;i<nrows_;i++) 
 	  if (!hinrow[i])
 	    numberDropped++;
-	
+
 	prob->messageHandler()->message(COIN_PRESOLVE_PASS,
 					messages)
 					  <<numberDropped<<iLoop+1
@@ -1121,7 +1119,7 @@ CoinPresolveMatrix::CoinPresolveMatrix(int ncols0_in,
 
   delete mRow;
   if (si->integerInformation()) {
-    memcpy(integerType_,si->integerInformation(),ncols_*sizeof(char));
+    CoinMemcpyN((unsigned char *) si->integerInformation(),ncols_,integerType_);
   } else {
     ClpFillN<unsigned char>(integerType_, ncols_, (unsigned char) 0);
   }
@@ -1175,14 +1173,13 @@ CoinPresolveMatrix::CoinPresolveMatrix(int ncols0_in,
   if (doStatus) {
     // allow for status and solution
     sol_ = new double[ncols_];
-    memcpy(sol_,si->primalColumnSolution(),ncols_*sizeof(double));;
+    CoinMemcpyN(si->primalColumnSolution(),ncols_,sol_);;
     acts_ = new double [nrows_];
-    memcpy(acts_,si->primalRowSolution(),nrows_*sizeof(double));
+    CoinMemcpyN(si->primalRowSolution(),nrows_,acts_);
     if (!si->statusArray())
       si->createStatus();
     colstat_ = new unsigned char [nrows_+ncols_];
-    memcpy(colstat_,si->statusArray(),
-	   (nrows_+ncols_)*sizeof(unsigned char));
+    CoinMemcpyN(si->statusArray(),	(nrows_+ncols_),colstat_);
     rowstat_ = colstat_+ncols_;
   }
 
@@ -1550,14 +1547,10 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
     
       prob.update_model(presolvedModel_, nrows_, ncols_, nelems_);
       // copy status and solution
-      memcpy(presolvedModel_->primalColumnSolution(),
-	     prob.sol_,prob.ncols_*sizeof(double));
-      memcpy(presolvedModel_->primalRowSolution(),
-	     prob.acts_,prob.nrows_*sizeof(double));
-      memcpy(presolvedModel_->statusArray(),
-	     prob.colstat_,prob.ncols_*sizeof(unsigned char));
-      memcpy(presolvedModel_->statusArray()+prob.ncols_,
-	     prob.rowstat_,prob.nrows_*sizeof(unsigned char));
+      CoinMemcpyN(	     prob.sol_,prob.ncols_,presolvedModel_->primalColumnSolution());
+      CoinMemcpyN(	     prob.acts_,prob.nrows_,presolvedModel_->primalRowSolution());
+      CoinMemcpyN(	     prob.colstat_,prob.ncols_,presolvedModel_->statusArray());
+      CoinMemcpyN(	     prob.rowstat_,prob.nrows_,presolvedModel_->statusArray()+prob.ncols_);
       delete [] prob.sol_;
       delete [] prob.acts_;
       delete [] prob.colstat_;
@@ -1566,7 +1559,7 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
       prob.colstat_=NULL;
       
       int ncolsNow = presolvedModel_->getNumCols();
-      memcpy(originalColumn_,prob.originalColumn_,ncolsNow*sizeof(int));
+      CoinMemcpyN(prob.originalColumn_,ncolsNow,originalColumn_);
 #ifndef SLIM_CLP
 #ifndef NO_RTTI
       ClpQuadraticObjective * quadraticObj = (dynamic_cast< ClpQuadraticObjective*>(originalModel->objectiveAsObject()));
@@ -1590,7 +1583,7 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
 								   originalColumn_);
 	// and modify linear and check
 	double * linear = newObj->linearObjective();
-	memcpy(linear,presolvedModel_->objective(),ncolsNow*sizeof(double));
+ CoinMemcpyN(presolvedModel_->objective(),ncolsNow,linear);
 	int iColumn;
 	for ( iColumn=0;iColumn<numberColumns;iColumn++) {
 	  if (columnQuadraticLength[iColumn])
@@ -1616,7 +1609,7 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
       delete [] prob.originalColumn_;
       prob.originalColumn_=NULL;
       int nrowsNow = presolvedModel_->getNumRows();
-      memcpy(originalRow_,prob.originalRow_,nrowsNow*sizeof(int));
+      CoinMemcpyN(prob.originalRow_,nrowsNow,originalRow_);
       delete [] prob.originalRow_;
       prob.originalRow_=NULL;
 #ifndef CLP_NO_STD

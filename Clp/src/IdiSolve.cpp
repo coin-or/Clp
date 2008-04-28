@@ -294,7 +294,7 @@ Idiot::IdiSolve(
   if ((strategy&256)!=0) {
     /* save best solution */
     saveSol=new double[ncols];
-    memcpy(saveSol,colsol,ncols*sizeof(double));
+    CoinMemcpyN(colsol,ncols,saveSol);
     if (extraBlock) {
       useCostExtra=new double[extraBlock];
       memset(useCostExtra,0,extraBlock*sizeof(double));
@@ -340,8 +340,8 @@ Idiot::IdiSolve(
 	  history[i]=history[i-1];
 	}
 	history[0]=x;
-	memcpy(history[0],colsol,ncols*sizeof(double));
-        memcpy(history[0]+ncols,solExtra,extraBlock*sizeof(double));
+ CoinMemcpyN(colsol,ncols,history[0]);
+        CoinMemcpyN(solExtra,extraBlock,history[0]+ncols);
       }
     }
     if ((iter % SAVEHISTORY)==0||doFull) {
@@ -351,8 +351,8 @@ Idiot::IdiSolve(
 	  history[i]=history[i-1];
 	}
 	history[0]=x;
-	memcpy(history[0],colsol,ncols*sizeof(double));
-        memcpy(history[0]+ncols,solExtra,extraBlock*sizeof(double));
+ CoinMemcpyN(colsol,ncols,history[0]);
+        CoinMemcpyN(solExtra,extraBlock,history[0]+ncols);
       }
     }
     /* start full try */
@@ -378,8 +378,8 @@ Idiot::IdiSolve(
 	  history[i]=history[i-1];
 	}
 	history[0]=x;
-	memcpy(history[0],colsol,ncols*sizeof(double));
-        memcpy(history[0]+ncols,solExtra,extraBlock*sizeof(double));
+ CoinMemcpyN(colsol,ncols,history[0]);
+        CoinMemcpyN(solExtra,extraBlock,history[0]+ncols);
 	}*/
       while (!good) {
 	itry++;
@@ -404,8 +404,8 @@ Idiot::IdiSolve(
 #ifdef FIT
 	    int ntot=0,nsign=0,ngood=0,mgood[4]={0,0,0,0};
 	    double diff1,diff2,val0,val1,val2,newValue;
-	    memcpy(history[HISTORY-1],colsol,ncols*sizeof(double));
-	    memcpy(history[HISTORY-1]+ncols,solExtra,extraBlock*sizeof(double));
+     CoinMemcpyN(colsol,ncols,history[HISTORY-1]);
+     CoinMemcpyN(solExtra,extraBlock,history[HISTORY-1]+ncols);
 #endif
 	    dj[0]=0.0;
 	    for (i=1;i<nsolve;i++) {
@@ -760,7 +760,7 @@ Idiot::IdiSolve(
 	    printf("%d %g better than %g\n",iter,
 		   result.weighted*maxmin-useOffset,bestSol*maxmin-useOffset);
 	    bestSol=result.weighted;
-	    memcpy(saveSol,colsol,ncols*sizeof(double));
+     CoinMemcpyN(colsol,ncols,saveSol);
 	  }
 	}
 #ifdef FITz
@@ -784,9 +784,9 @@ Idiot::IdiSolve(
 	    weightedObj=ww;
 	    objvalue=oo;
 	    sum1=ss;
-	    memcpy(rowsol,row2,nrows*sizeof(double));
-	    memcpy(pi,pi2,nrows*sizeof(double));
-	    memcpy(colsol,sol2,ncols*sizeof(double));
+     CoinMemcpyN(row2,nrows,rowsol);
+     CoinMemcpyN(pi2,nrows,pi);
+     CoinMemcpyN(sol2,ncols,colsol);
 	    result= objval(nrows,ncols,rowsol,colsol,pi,djs,cost,
 			    rowlower,rowupper,lower,upper,
 			    elemnt,row,columnStart,extraBlock,rowExtra,
@@ -817,14 +817,14 @@ Idiot::IdiSolve(
 	    if ((logLevel_&16)!=0) {
 	      printf("Weighted objective from %g to %g ?\n",lastObj,weightedObj);
 	    }
-	      memcpy(colsol,history[0],ncols*sizeof(double));
-	      memcpy(solExtra,history[0]+ncols,extraBlock*sizeof(double));
+       CoinMemcpyN(history[0],ncols,colsol);
+       CoinMemcpyN(history[0]+ncols,extraBlock,solExtra);
 	      good=1;
 	    }
 	  } else if ((strategy&3)==2) {
 	    if (weightedObj>lastObj+0.1*maxDj) {
-	      memcpy(colsol,history[0],ncols*sizeof(double));
-	      memcpy(solExtra,history[0]+ncols,extraBlock*sizeof(double));
+       CoinMemcpyN(history[0],ncols,colsol);
+       CoinMemcpyN(history[0]+ncols,extraBlock,solExtra);
 	      doScale++;
 	      good=0;
 	    }
@@ -863,7 +863,7 @@ Idiot::IdiSolve(
 	       piSum*maxmin-useOffset,maxDj);
 	}
       }
-      memcpy(statusWork,statusSave,ncols*sizeof(char));
+      CoinMemcpyN(statusSave,ncols,statusWork);
       nflagged=0;
     }
     nChange=0;
@@ -1068,7 +1068,7 @@ Idiot::IdiSolve(
   if (saveSol) {
     if (result.weighted<bestSol) {
       bestSol=result.weighted;
-      memcpy(saveSol,colsol,ncols*sizeof(double));
+      CoinMemcpyN(colsol,ncols,saveSol);
     } else {
       printf("restoring previous - now %g best %g\n",
 	     result.weighted*maxmin-useOffset,bestSol*maxmin-useOffset);
@@ -1078,7 +1078,7 @@ Idiot::IdiSolve(
     if (extraBlock) {
       delete [] useCostExtra;
     }
-    memcpy(colsol,saveSol,ncols*sizeof(double));
+    CoinMemcpyN(saveSol,ncols,colsol);
     delete [] saveSol;
   }
   for (i=0;i<nsolve;i++) {

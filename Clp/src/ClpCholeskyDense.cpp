@@ -423,8 +423,8 @@ ClpCholeskyDense::factorizePart3( int * rowsDropped)
   diagonal_ = sparseFactor_ + 40000;
   sparseFactor_=diagonal_ + numberRows_;
   //memcpy(sparseFactor_,xx,sizeFactor_*sizeof(double));
-  memcpy(sparseFactor_,xx,40000*sizeof(double));
-  memcpy(diagonal_,yy,numberRows_*sizeof(double));
+  CoinMemcpyN(xx,40000,sparseFactor_);
+  CoinMemcpyN(yy,numberRows_,diagonal_);
   int numberDropped=0;
   double largest=0.0;
   double smallest=COIN_DBL_MAX;

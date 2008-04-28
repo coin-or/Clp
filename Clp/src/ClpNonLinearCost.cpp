@@ -230,7 +230,7 @@ ClpNonLinearCost::refreshCosts(const double * columnCosts)
   // zero row costs
   memset(cost+numberColumns_,0,numberRows_*sizeof(double));
   // copy column costs
-  memcpy(cost,columnCosts,numberColumns_*sizeof(double));
+  CoinMemcpyN(columnCosts,numberColumns_,cost);
   if ((method_&1)!=0) {
     for (int iSequence=0;iSequence<numberRows_+numberColumns_;iSequence++) {
       int start = start_[iSequence];
@@ -426,19 +426,18 @@ ClpNonLinearCost::ClpNonLinearCost (const ClpNonLinearCost & rhs) :
     convex_ = rhs.convex_;
     if (CLP_METHOD1) {
       start_ = new int [numberTotal+1];
-      memcpy(start_,rhs.start_,(numberTotal+1)*sizeof(int));
+      CoinMemcpyN(rhs.start_,(numberTotal+1),start_);
       whichRange_ = new int [numberTotal];
-      memcpy(whichRange_,rhs.whichRange_,numberTotal*sizeof(int));
+      CoinMemcpyN(rhs.whichRange_,numberTotal,whichRange_);
       offset_ = new int [numberTotal];
-      memcpy(offset_,rhs.offset_,numberTotal*sizeof(int));
+      CoinMemcpyN(rhs.offset_,numberTotal,offset_);
       int numberEntries = start_[numberTotal];
       lower_ = new double [numberEntries];
-      memcpy(lower_,rhs.lower_,numberEntries*sizeof(double));
+      CoinMemcpyN(rhs.lower_,numberEntries,lower_);
       cost_ = new double [numberEntries];
-      memcpy(cost_,rhs.cost_,numberEntries*sizeof(double));
+      CoinMemcpyN(rhs.cost_,numberEntries,cost_);
       infeasible_ = new unsigned int[(numberEntries+31)>>5];
-      memcpy(infeasible_,rhs.infeasible_,
-             ((numberEntries+31)>>5)*sizeof(unsigned int));
+      CoinMemcpyN(rhs.infeasible_,((numberEntries+31)>>5),infeasible_);
     }
     if (CLP_METHOD2) {
       bound_ = CoinCopyOfArray(rhs.bound_,numberTotal);
@@ -495,19 +494,18 @@ ClpNonLinearCost::operator=(const ClpNonLinearCost& rhs)
       int numberTotal = numberRows_+numberColumns_;
       if (CLP_METHOD1) {
         start_ = new int [numberTotal+1];
-        memcpy(start_,rhs.start_,(numberTotal+1)*sizeof(int));
+        CoinMemcpyN(rhs.start_,(numberTotal+1),start_);
         whichRange_ = new int [numberTotal];
-        memcpy(whichRange_,rhs.whichRange_,numberTotal*sizeof(int));
+        CoinMemcpyN(rhs.whichRange_,numberTotal,whichRange_);
         offset_ = new int [numberTotal];
-        memcpy(offset_,rhs.offset_,numberTotal*sizeof(int));
+        CoinMemcpyN(rhs.offset_,numberTotal,offset_);
         int numberEntries = start_[numberTotal];
         lower_ = new double [numberEntries];
-        memcpy(lower_,rhs.lower_,numberEntries*sizeof(double));
+        CoinMemcpyN(rhs.lower_,numberEntries,lower_);
         cost_ = new double [numberEntries];
-        memcpy(cost_,rhs.cost_,numberEntries*sizeof(double));
+        CoinMemcpyN(rhs.cost_,numberEntries,cost_);
         infeasible_ = new unsigned int[(numberEntries+31)>>5];
-        memcpy(infeasible_,rhs.infeasible_,
-               ((numberEntries+31)>>5)*sizeof(unsigned int));
+        CoinMemcpyN(rhs.infeasible_,((numberEntries+31)>>5),infeasible_);
       }
       if (CLP_METHOD2) {
         bound_ = CoinCopyOfArray(rhs.bound_,numberTotal);

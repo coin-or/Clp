@@ -235,6 +235,9 @@ public:
   /// Clears all bits and clears rowArray[1] etc
   void clearAll();
   
+  /// Sort of lexicographic resolve
+  int lexSolve();
+  
   //@}
 };
 #endif

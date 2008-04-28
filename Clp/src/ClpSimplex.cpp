@@ -115,6 +115,7 @@ ClpSimplex::ClpSimplex (bool emptyMessages) :
   firstFree_(-1),
   numberExtraRows_(0),
   maximumBasic_(0),
+  dontFactorizePivots_(0),
   incomingInfeasibility_(1.0),
   allowedInfeasibility_(10.0),
   automaticScale_(0),
@@ -226,6 +227,7 @@ ClpSimplex::ClpSimplex ( const ClpModel * rhs,
   firstFree_(-1),
   numberExtraRows_(0),
   maximumBasic_(0),
+  dontFactorizePivots_(0),
   incomingInfeasibility_(1.0),
   allowedInfeasibility_(10.0),
     automaticScale_(0),
@@ -374,6 +376,7 @@ ClpSimplex::ClpSimplex ( const ClpSimplex * rhs,
   firstFree_(-1),
   numberExtraRows_(0),
   maximumBasic_(0),
+  dontFactorizePivots_(0),
   incomingInfeasibility_(1.0),
   allowedInfeasibility_(10.0),
     automaticScale_(0),
@@ -390,8 +393,17 @@ ClpSimplex::ClpSimplex ( const ClpSimplex * rhs,
   }
   saveStatus_=NULL;
   factorization_ = new ClpFactorization(*rhs->factorization_);
+#ifdef CLP_MULTIPLE_FACTORIZATIONS    
+  if (numberRows_<=factorization_->goDenseThreshold()) //&&!factorization_->isDense())
+    factorization_->goDense();
+#endif
+  ClpDualRowDantzig * pivot =
+    dynamic_cast< ClpDualRowDantzig*>(rhs->dualRowPivot_);
   // say Steepest pricing
-  dualRowPivot_ = new ClpDualRowSteepest();
+  if (!pivot)
+    dualRowPivot_ = new ClpDualRowSteepest();
+  else
+    dualRowPivot_ = new ClpDualRowDantzig();
   // say Steepest pricing
   primalColumnPivot_ = new ClpPrimalColumnSteepest();
   solveType_=1; // say simplex based life form
@@ -512,7 +524,7 @@ ClpSimplex::gutsOfSolution ( double * givenDuals,
   computePrimals(rowActivityWork_, columnActivityWork_);
   // If necessary - override results
   if (givenPrimals) {
-    memcpy(columnActivityWork_,givenPrimals,numberColumns_*sizeof(double));
+    CoinMemcpyN(givenPrimals,numberColumns_,columnActivityWork_);
     memset(rowActivityWork_,0,numberRows_*sizeof(double));
     times(-1.0,columnActivityWork_,rowActivityWork_);
   }
@@ -1062,7 +1074,7 @@ ClpSimplex::computeDuals(double * givenDjs)
     // If necessary - override results
     if (givenDjs) {
       // restore accurate duals
-      memcpy(givenDjs,dj_,(numberRows_+numberColumns_)*sizeof(double));
+      CoinMemcpyN(dj_,(numberRows_+numberColumns_),givenDjs);
     }
     arrayVector->clear();
     previousVector->clear();
@@ -1071,7 +1083,7 @@ ClpSimplex::computeDuals(double * givenDjs)
     // Nonlinear
     objective_->reducedGradient(this,dj_,false);
     // get dual_ by moving from reduced costs for slacks
-    memcpy(dual_,dj_+numberColumns_,numberRows_*sizeof(double));
+    CoinMemcpyN(dj_+numberColumns_,numberRows_,dual_);
   }
 #endif
 }
@@ -1828,6 +1840,7 @@ ClpSimplex::ClpSimplex(const ClpSimplex &rhs,int scalingMode) :
   firstFree_(-1),
   numberExtraRows_(0),
   maximumBasic_(0),
+  dontFactorizePivots_(0),
   incomingInfeasibility_(1.0),
   allowedInfeasibility_(10.0),
   automaticScale_(0),
@@ -1932,6 +1945,7 @@ ClpSimplex::ClpSimplex(const ClpModel &rhs, int scalingMode) :
   firstFree_(-1),
   numberExtraRows_(0),
   maximumBasic_(0),
+  dontFactorizePivots_(0),
   incomingInfeasibility_(1.0),
   allowedInfeasibility_(10.0),
   automaticScale_(0),
@@ -1976,15 +1990,16 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
   assert (numberColumns_==rhs.numberColumns_);
   numberExtraRows_ = rhs.numberExtraRows_;
   maximumBasic_ = rhs.maximumBasic_;
+  dontFactorizePivots_ = rhs.dontFactorizePivots_;
   int numberRows2 = numberRows_+numberExtraRows_;
   auxiliaryModel_ = NULL;
   moreSpecialOptions_ = rhs.moreSpecialOptions_;
   if ((whatsChanged_&1)!=0) {
     int numberTotal = numberColumns_+numberRows2;
     if ((specialOptions_&65536)!=0&&maximumRows_>=0) {
-      assert (maximumRows_>=numberRows2);
-      assert (maximumColumns_>=numberColumns_);
-      numberTotal = 2*(maximumColumns_+ maximumRows_);
+      assert (maximumInternalRows_>=numberRows2);
+      assert (maximumInternalColumns_>=numberColumns_);
+      numberTotal = 2*(maximumInternalColumns_+ maximumInternalRows_);
     }
     lower_ = ClpCopyOfArray(rhs.lower_,numberTotal);
     rowLowerWork_ = lower_+numberColumns_;
@@ -2011,7 +2026,7 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
     } else {
       pivotVariable_=NULL;
     }
-    savedSolution_ = ClpCopyOfArray(rhs.savedSolution_,numberColumns_+numberRows_);
+    savedSolution_ = ClpCopyOfArray(rhs.savedSolution_,numberTotal);
     int i;
     for (i=0;i<6;i++) {
       rowArray_[i]=NULL;
@@ -2022,7 +2037,7 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
         columnArray_[i] = new CoinIndexedVector(*rhs.columnArray_[i]);
     }
     if (rhs.saveStatus_) {
-      saveStatus_ = ClpCopyOfArray( rhs.saveStatus_,numberColumns_+numberRows_);
+      saveStatus_ = ClpCopyOfArray( rhs.saveStatus_,numberTotal);
     }
   } else {
     lower_ = NULL;
@@ -2136,6 +2151,8 @@ void
 ClpSimplex::gutsOfDelete(int type)
 {
   if (!type||(specialOptions_&65536)==0) {
+    maximumInternalColumns_ = -1;
+    maximumInternalRows_ = -1;
     delete [] lower_;
     lower_=NULL;
     rowLowerWork_=NULL;
@@ -2311,7 +2328,9 @@ ClpSimplex::checkDualSolution()
   // Check any djs from dynamic rows
   matrix_->dualExpanded(this,NULL,NULL,3);
   numberDualInfeasibilitiesWithoutFree_= numberDualInfeasibilities_;
+  objectiveValue_ = 0.0;
   for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+    objectiveValue_ += objectiveWork_[iColumn]*columnActivityWork_[iColumn];
     if (getColumnStatus(iColumn) != basic&&!flagged(iColumn)) {
       // not basic
       double distanceUp = columnUpperWork_[iColumn]-
@@ -2371,6 +2390,7 @@ ClpSimplex::checkDualSolution()
     }
   }
   for (iRow=0;iRow<numberRows_;iRow++) {
+    objectiveValue_ += rowActivityWork_[iRow]*rowObjectiveWork_[iRow];
     if (getRowStatus(iRow) != basic&&!flagged(iRow+numberColumns_)) {
       // not basic
       double distanceUp = rowUpperWork_[iRow]-rowActivityWork_[iRow];
@@ -2424,6 +2444,8 @@ ClpSimplex::checkDualSolution()
 	     (progress_.lastIterationNumber(0)<=0)) {
     firstFree_=firstFreePrimal;
   }
+  objectiveValue_ += objective_->nonlinearOffset();
+  objectiveValue_ /= (objectiveScale_*rhsScale_);
 }
 /* This sets sum and number of infeasibilities (Dual and Primal) */
 void 
@@ -2687,7 +2709,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
       int numberNew = numberRows_+numberColumns_+numberExtraRows_;
       unsigned char * newStatus = new unsigned char [numberNew];
       memset(newStatus+numberOld,0,numberExtraRows_);
-      memcpy(newStatus,status_,numberOld);
+      CoinMemcpyN(status_,numberOld,newStatus);
       delete [] status_;
       status_=newStatus;
     }
@@ -2696,19 +2718,28 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
   int numberTotal = numberRows2+numberColumns_;
   if ((specialOptions_&65536)!=0&&!auxiliaryModel_) {
     assert (!numberExtraRows_);
-    if (!cost_||numberRows2>maximumRows_||numberColumns_>maximumColumns_) {
+    if (!cost_||numberRows2>maximumInternalRows_||
+	numberColumns_>maximumInternalColumns_) {
       newArrays=true;
       keepPivots=false;
+      printf("createrim a %d rows, %d maximum rows %d maxinternal\n",
+	     numberRows_,maximumRows_,maximumInternalRows_);
+      int oldMaximumRows=maximumInternalRows_;
+      int oldMaximumColumns=maximumInternalColumns_;
       if (cost_) {
-	if (numberRows2>maximumRows_) 
-	  maximumRows_ = numberRows2+10+numberRows2/100;
-	if (numberColumns_>maximumColumns_) 
-	  maximumColumns_ = numberColumns_+10+numberColumns_/100;
+	if (numberRows2>maximumInternalRows_) 
+	  maximumInternalRows_ = numberRows2;
+	if (numberColumns_>maximumInternalColumns_) 
+	  maximumInternalColumns_ = numberColumns_;
       } else {
-	maximumRows_ = numberRows2;
-	maximumColumns_ = numberColumns_;
+	maximumInternalRows_ = numberRows2;
+	maximumInternalColumns_ = numberColumns_;
       }
-      int numberTotal2 = (maximumRows_+maximumColumns_)*2;
+      assert(maximumInternalRows_ == maximumRows_);
+      assert(maximumInternalColumns_ == maximumColumns_);
+      printf("createrim b %d rows, %d maximum rows, %d maxinternal\n",
+	     numberRows_,maximumRows_,maximumInternalRows_);
+      int numberTotal2 = (maximumInternalRows_+maximumInternalColumns_)*2;
       delete [] cost_;
       cost_ = new double[numberTotal2];
       delete [] lower_;
@@ -2722,10 +2753,24 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
       // ***** should be non NULL but seems to be too much
       //printf("resize %d savedRowScale %x\n",maximumRows_,savedRowScale_);
       if (savedRowScale_) {
+	assert (oldMaximumRows>0);
+	double * temp;
+	temp = new double [4*maximumRows_];
+	CoinFillN(temp,4*maximumRows_,1.0);
+	CoinMemcpyN(savedRowScale_,numberRows_,temp);
+	CoinMemcpyN(savedRowScale_+oldMaximumRows,numberRows_,temp+maximumRows_);
+	CoinMemcpyN(savedRowScale_+2*oldMaximumRows,numberRows_,temp+2*maximumRows_);
+	CoinMemcpyN(savedRowScale_+3*oldMaximumRows,numberRows_,temp+3*maximumRows_);
 	delete [] savedRowScale_;
-	savedRowScale_ = new double [2*maximumRows_];
+	savedRowScale_ = temp;
+	temp = new double [4*maximumColumns_];
+	CoinFillN(temp,4*maximumColumns_,1.0);
+	CoinMemcpyN(savedColumnScale_,numberColumns_,temp);
+	CoinMemcpyN(savedColumnScale_+oldMaximumColumns,numberColumns_,temp+maximumColumns_);
+	CoinMemcpyN(savedColumnScale_+2*oldMaximumColumns,numberColumns_,temp+2*maximumColumns_);
+	CoinMemcpyN(savedColumnScale_+3*oldMaximumColumns,numberColumns_,temp+3*maximumColumns_);
 	delete [] savedColumnScale_;
-	savedColumnScale_ = new double [2*maximumColumns_];
+	savedColumnScale_ = temp;
       }
     }
   }
@@ -2743,7 +2788,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
     int checkType=(doSanityCheck) ? 15 : 14;
     if (oldMatrix)
       checkType = 14;
-    if ((specialOptions_&0x1000000)!=0)
+    if ((specialOptions_&COIN_CBC_USING_CLP)!=0)
       checkType -= 4; // don't check for duplicates
     if (!matrix_->allElementsInRange(this,smallElement_,1.0e20,checkType)) {
       problemStatus_=4;
@@ -2780,14 +2825,37 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
       rowScale_=NULL;
       columnScale_=NULL;
     }
+    inverseRowScale_ = NULL;
+    inverseColumnScale_ = NULL;
     if (scalingFlag_>0&&!rowScale_) {
+      if ((specialOptions_&131072)!=0) {
+	inverseRowScale_ = rowScale_+numberRows2;
+	inverseColumnScale_ = columnScale_+numberColumns_;
+      }
       if ((specialOptions_&65536)!=0&&!auxiliaryModel_) {
 	assert (!rowScale_);
 	rowScale_ = savedRowScale_;
 	columnScale_ = savedColumnScale_;
+	// put back original
+	if (savedRowScale_) {
+	  inverseRowScale_ = savedRowScale_+maximumInternalRows_;
+	  inverseColumnScale_ = savedColumnScale_+maximumInternalColumns_;
+	  CoinMemcpyN(savedRowScale_+2*maximumInternalRows_,
+		      numberRows2,savedRowScale_);
+	  CoinMemcpyN(savedRowScale_+3*maximumInternalRows_,
+		      numberRows2,inverseRowScale_);
+	  CoinMemcpyN(savedColumnScale_+2*maximumColumns_,
+		      numberColumns_,savedColumnScale_);
+	  CoinMemcpyN(savedColumnScale_+3*maximumColumns_,
+		      numberColumns_,inverseColumnScale_);
+	}
       }
       if (matrix_->scale(this))
 	scalingFlag_=-scalingFlag_; // not scaled after all
+      if ((specialOptions_&131072)!=0&&rowScale_&&!savedRowScale_) {
+	inverseRowScale_ = rowScale_+numberRows2;
+	inverseColumnScale_ = columnScale_+numberColumns_;
+      }
       if (rowScale_&&automaticScale_) {
 	// try automatic scaling
 	double smallestObj=1.0e100;
@@ -2987,11 +3055,11 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
       }
       if (auxiliaryModel_) {
         // save costs
-        memcpy(auxiliaryModel_->cost_+numberTotal,cost_,numberTotal*sizeof(double));
+        CoinMemcpyN(cost_,numberTotal,auxiliaryModel_->cost_+numberTotal);
       }
     } else {
       // just copy
-      memcpy(cost_,auxiliaryModel_->cost_+numberTotal,numberTotal*sizeof(double));
+      CoinMemcpyN(auxiliaryModel_->cost_+numberTotal,numberTotal,cost_);
     }
   }
   if ((what&1)!=0) {
@@ -3004,7 +3072,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
       if(rowScale) {
         // If scaled then do all columns later in one loop 
         if (what!=63) {
-	  if ((specialOptions_&131072)==0) {
+	  if (!inverseColumnScale_) {
 	    for (i=0;i<numberColumns_;i++) {
 	      double multiplier = rhsScale_/columnScale[i];
 	      double lowerValue = columnLower_[i];
@@ -3036,7 +3104,8 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
 	      }
 	    }
 	  } else {
-	    const double * inverseScale = columnScale_+numberColumns_;
+	    assert (inverseColumnScale_);
+	    const double * inverseScale = inverseColumnScale_;
 	    for (i=0;i<numberColumns_;i++) {
 	      double multiplier = rhsScale_*inverseScale[i];
 	      double lowerValue = columnLower_[i];
@@ -3222,8 +3291,8 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
       // auxiliary model
       if (what!=63) {
         // just copy
-        memcpy(lower_,auxiliaryModel_->lower_+numberTotal,numberTotal*sizeof(double));
-        memcpy(upper_,auxiliaryModel_->upper_+numberTotal,numberTotal*sizeof(double));
+        CoinMemcpyN(auxiliaryModel_->lower_+numberTotal,numberTotal,lower_);
+        CoinMemcpyN(auxiliaryModel_->upper_+numberTotal,numberTotal,upper_);
       } else {
         assert (rhsScale_==1.0);
         assert (objectiveScale_==1.0);
@@ -3250,12 +3319,12 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
             }
           }
           // save
-          memcpy(auxiliaryModel_->lower_+numberTotal,lower_,numberColumns_*sizeof(double));
-          memcpy(auxiliaryModel_->upper_+numberTotal,upper_,numberColumns_*sizeof(double));
+          CoinMemcpyN(lower_,numberColumns_,auxiliaryModel_->lower_+numberTotal);
+          CoinMemcpyN(upper_,numberColumns_,auxiliaryModel_->upper_+numberTotal);
         } else {
           // just copy
-          memcpy(lower_,auxiliaryModel_->lower_+numberTotal,numberColumns_*sizeof(double));
-          memcpy(upper_,auxiliaryModel_->upper_+numberTotal,numberColumns_*sizeof(double));
+          CoinMemcpyN(auxiliaryModel_->lower_+numberTotal,numberColumns_,lower_);
+          CoinMemcpyN(auxiliaryModel_->upper_+numberTotal,numberColumns_,upper_);
         }
         if ((auxiliaryModel_->specialOptions_&1)==0) {
           // need to do row bounds
@@ -3279,16 +3348,14 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
             }
           }
           // save
-          memcpy(auxiliaryModel_->lower_+numberTotal+numberColumns_,
-                 lower_+numberColumns_,numberRows_*sizeof(double));
-          memcpy(auxiliaryModel_->upper_+numberTotal+numberColumns_,
-                 upper_+numberColumns_,numberRows_*sizeof(double));
+          CoinMemcpyN(                 lower_+numberColumns_,numberRows_,auxiliaryModel_->lower_+numberTotal+numberColumns_);
+          CoinMemcpyN(                 upper_+numberColumns_,numberRows_,auxiliaryModel_->upper_+numberTotal+numberColumns_);
         } else {
           // just copy
-          memcpy(lower_+numberColumns_,
-                 auxiliaryModel_->lower_+numberTotal+numberColumns_,numberRows_*sizeof(double));
-          memcpy(upper_+numberColumns_,
-                 auxiliaryModel_->upper_+numberTotal+numberColumns_,numberRows_*sizeof(double));
+          CoinMemcpyN(                 auxiliaryModel_->lower_+numberTotal+numberColumns_,
+                       numberRows_,lower_+numberColumns_);
+          CoinMemcpyN(                 auxiliaryModel_->upper_+numberTotal+numberColumns_,
+                       numberRows_,upper_+numberColumns_);
         }
       }
       if (what==63) {
@@ -3355,7 +3422,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
         // and fix any variables with tiny gaps
         double primalTolerance=dblParam_[ClpPrimalTolerance];
         // on entry
-	if ((specialOptions_&131072)==0) {
+	if (!inverseColumnScale_) {
 	  for (i=0;i<numberColumns_;i++) {
 	    CoinAssert(fabs(obj[i])<1.0e25);
 	    double scaleFactor = columnScale_[i];
@@ -3424,7 +3491,8 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
 	    rowActivityWork_[i] = value;
 	  }
 	} else {
-	  const double * inverseScale = columnScale_+numberColumns_;
+	  assert (inverseColumnScale_);
+	  const double * inverseScale = inverseColumnScale_;
 	  for (i=0;i<numberColumns_;i++) {
 	    CoinAssert(fabs(obj[i])<1.0e25);
 	    double scaleFactor = columnScale_[i];
@@ -3473,7 +3541,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
 	    }
 	    columnActivityWork_[i] = value;
 	  }
-	  inverseScale = rowScale_+numberRows_;
+	  inverseScale = inverseRowScale_;
 	  for (i=0;i<numberRows_;i++) {
 	    dual_[i] *= inverseScale[i];
 	    dual_[i] *= objectiveScale_;
@@ -3727,14 +3795,33 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
     matrix_->generalExpanded(this,9,what); // update costs and bounds if necessary
   if (goodMatrix&&(specialOptions_&65536)!=0&&!auxiliaryModel_) {
     int save = maximumColumns_+maximumRows_;
-    memcpy(cost_+save,cost_,numberTotal*sizeof(double));
-    memcpy(lower_+save,lower_,numberTotal*sizeof(double));
-    memcpy(upper_+save,upper_,numberTotal*sizeof(double));
-    memcpy(dj_+save,dj_,numberTotal*sizeof(double));
-    memcpy(solution_+save,solution_,numberTotal*sizeof(double));
-    if (rowScale_&&false) {
-      memcpy(savedRowScale_+maximumRows_,rowScale_,numberRows2*sizeof(double));
-      memcpy(savedColumnScale_+maximumColumns_,columnScale_,numberColumns_*sizeof(double));
+    CoinMemcpyN(cost_,numberTotal,cost_+save);
+    CoinMemcpyN(lower_,numberTotal,lower_+save);
+    CoinMemcpyN(upper_,numberTotal,upper_+save);
+    CoinMemcpyN(dj_,numberTotal,dj_+save);
+    CoinMemcpyN(solution_,numberTotal,solution_+save);
+    if (rowScale_&&!savedRowScale_) {
+      double * temp;
+      temp = new double [4*maximumRows_];
+      CoinFillN(temp,4*maximumRows_,1.0);
+      CoinMemcpyN(rowScale_,numberRows2,temp);
+      CoinMemcpyN(rowScale_+numberRows2,numberRows2,temp+maximumRows_);
+      CoinMemcpyN(rowScale_,numberRows2,temp+2*maximumRows_);
+      CoinMemcpyN(rowScale_+numberRows2,numberRows2,temp+3*maximumRows_);
+      delete [] rowScale_;
+      savedRowScale_ = temp;
+      rowScale_ = savedRowScale_;
+      inverseRowScale_ = savedRowScale_+maximumInternalRows_;
+      temp = new double [4*maximumColumns_];
+      CoinFillN(temp,4*maximumColumns_,1.0);
+      CoinMemcpyN(columnScale_,numberColumns_,temp);
+      CoinMemcpyN(columnScale_+numberColumns_,numberColumns_,temp+maximumColumns_);
+      CoinMemcpyN(columnScale_,numberColumns_,temp+2*maximumColumns_);
+      CoinMemcpyN(columnScale_+numberColumns_,numberColumns_,temp+3*maximumColumns_);
+      delete [] columnScale_;
+      savedColumnScale_ = temp;
+      columnScale_ = savedColumnScale_;
+      inverseColumnScale_ = savedColumnScale_+maximumInternalColumns_;
     }
   }
   return goodMatrix;
@@ -3751,8 +3838,8 @@ ClpSimplex::createRim1(bool initial)
     if ((specialOptions_&65536)!=0&&true) {
       assert (!initial);
       int save = maximumColumns_+maximumRows_;
-      memcpy(lower_,lower_+save,numberTotal*sizeof(double));
-      memcpy(upper_,upper_+save,numberTotal*sizeof(double));
+      CoinMemcpyN(lower_+save,numberTotal,lower_);
+      CoinMemcpyN(upper_+save,numberTotal,upper_);
       return;
     }
     const double * rowScale = rowScale_;
@@ -3763,7 +3850,7 @@ ClpSimplex::createRim1(bool initial)
     if(rowScale) {
       // If scaled then do all columns later in one loop 
       if (!initial) {
-	if ((specialOptions_&131072)==0) {
+	if (!inverseColumnScale_) {
 	  for (i=0;i<numberColumns_;i++) {
 	    double multiplier = rhsScale_/columnScale[i];
 	    double lowerValue = columnLower_[i];
@@ -3795,7 +3882,8 @@ ClpSimplex::createRim1(bool initial)
 	    }
 	  }
 	} else {
-	  const double * inverseScale = columnScale_+numberColumns_;
+	  assert (inverseColumnScale_);
+	  const double * inverseScale = inverseColumnScale_;
 	  for (i=0;i<numberColumns_;i++) {
 	    double multiplier = rhsScale_*inverseScale[i];
 	    double lowerValue = columnLower_[i];
@@ -3981,8 +4069,8 @@ ClpSimplex::createRim1(bool initial)
     // auxiliary model
     if (!initial) {
       // just copy
-      memcpy(lower_,auxiliaryModel_->lower_+numberTotal,numberTotal*sizeof(double));
-      memcpy(upper_,auxiliaryModel_->upper_+numberTotal,numberTotal*sizeof(double));
+      CoinMemcpyN(auxiliaryModel_->lower_+numberTotal,numberTotal,lower_);
+      CoinMemcpyN(auxiliaryModel_->upper_+numberTotal,numberTotal,upper_);
     } else {
       // clean up any mismatches on infinity
       // and fix any variables with tiny gaps
@@ -4013,12 +4101,12 @@ ClpSimplex::createRim1(bool initial)
 	  }
 	}
 	// save
-	memcpy(auxiliaryModel_->lower_+numberTotal,lower_,numberColumns_*sizeof(double));
-	memcpy(auxiliaryModel_->upper_+numberTotal,upper_,numberColumns_*sizeof(double));
+ CoinMemcpyN(lower_,numberColumns_,auxiliaryModel_->lower_+numberTotal);
+ CoinMemcpyN(upper_,numberColumns_,auxiliaryModel_->upper_+numberTotal);
       } else {
 	// just copy
-	memcpy(lower_,auxiliaryModel_->lower_+numberTotal,numberColumns_*sizeof(double));
-	memcpy(upper_,auxiliaryModel_->upper_+numberTotal,numberColumns_*sizeof(double));
+ CoinMemcpyN(auxiliaryModel_->lower_+numberTotal,numberColumns_,lower_);
+ CoinMemcpyN(auxiliaryModel_->upper_+numberTotal,numberColumns_,upper_);
       }
       if ((auxiliaryModel_->specialOptions_&1)==0) {
 	// need to do row bounds
@@ -4042,16 +4130,14 @@ ClpSimplex::createRim1(bool initial)
 	  }
 	}
 	// save
-	memcpy(auxiliaryModel_->lower_+numberTotal+numberColumns_,
-	       lower_+numberColumns_,numberRows_*sizeof(double));
-	memcpy(auxiliaryModel_->upper_+numberTotal+numberColumns_,
-	       upper_+numberColumns_,numberRows_*sizeof(double));
+ CoinMemcpyN(	       lower_+numberColumns_,numberRows_,auxiliaryModel_->lower_+numberTotal+numberColumns_);
+ CoinMemcpyN(	       upper_+numberColumns_,numberRows_,auxiliaryModel_->upper_+numberTotal+numberColumns_);
       } else {
 	// just copy
-	memcpy(lower_+numberColumns_,
-	       auxiliaryModel_->lower_+numberTotal+numberColumns_,numberRows_*sizeof(double));
-	memcpy(upper_+numberColumns_,
-	       auxiliaryModel_->upper_+numberTotal+numberColumns_,numberRows_*sizeof(double));
+ CoinMemcpyN(	       auxiliaryModel_->lower_+numberTotal+numberColumns_,numberRows_,
+              lower_+numberColumns_);
+ CoinMemcpyN(	       auxiliaryModel_->upper_+numberTotal+numberColumns_,numberRows_,
+              upper_+numberColumns_);
       }
     }
     if (initial) {
@@ -4093,6 +4179,7 @@ ClpSimplex::createRim1(bool initial)
       }
     }
   }
+#ifndef NDEBUG
   if ((specialOptions_&65536)!=0&&false) {
     assert (!initial);
     int save = maximumColumns_+maximumRows_;
@@ -4101,6 +4188,7 @@ ClpSimplex::createRim1(bool initial)
       assert (fabs(upper_[i]-upper_[i+save])<1.0e-5);
     }
   }
+#endif
 }
 // Does objective
 void
@@ -4114,7 +4202,7 @@ ClpSimplex::createRim4(bool initial)
     if ((specialOptions_&65536)!=0&&true) {
       assert (!initial);
       int save = maximumColumns_+maximumRows_;
-      memcpy(cost_,cost_+save,numberTotal*sizeof(double));
+      CoinMemcpyN(cost_+save,numberTotal,cost_);
       return;
     }
     double direction = optimizationDirection_*objectiveScale_;
@@ -4150,11 +4238,11 @@ ClpSimplex::createRim4(bool initial)
     }
     if (auxiliaryModel_) {
       // save costs
-      memcpy(auxiliaryModel_->cost_+numberTotal,cost_,numberTotal*sizeof(double));
+      CoinMemcpyN(cost_,numberTotal,auxiliaryModel_->cost_+numberTotal);
     }
   } else {
     // just copy
-    memcpy(cost_,auxiliaryModel_->cost_+numberTotal,numberTotal*sizeof(double));
+    CoinMemcpyN(auxiliaryModel_->cost_+numberTotal,numberTotal,cost_);
   }
 }
 // Does rows and columns and objective
@@ -4203,7 +4291,7 @@ ClpSimplex::deleteRim(int getRidOfFactorizationData)
       int numberDualUnscaled=0;
       double scaleC = 1.0/objectiveScale_;
       double scaleR = 1.0/rhsScale_;
-      if ((specialOptions_&131072)==0) {
+      if (!inverseColumnScale_) {
 	for (i=0;i<numberColumns;i++) {
 	  double scaleFactor = columnScale_[i];
 	  double valueScaled = columnActivityWork_[i];
@@ -4267,7 +4355,8 @@ ClpSimplex::deleteRim(int getRidOfFactorizationData)
 	    numberDualUnscaled++;
 	}
       } else {
-	const double * inverseScale = columnScale_+numberColumns;
+	assert (inverseColumnScale_);
+	const double * inverseScale = inverseColumnScale_;
 	for (i=0;i<numberColumns;i++) {
 	  double scaleFactor = columnScale_[i];
 	  double valueScaled = columnActivityWork_[i];
@@ -4298,7 +4387,7 @@ ClpSimplex::deleteRim(int getRidOfFactorizationData)
 	  if (value<columnUpper_[i]-primalTolerance_&&valueDual<-dualTolerance_)
 	    numberDualUnscaled++;
 	}
-	inverseScale = rowScale_+numberRows;
+	inverseScale = inverseRowScale_;
 	for (i=0;i<numberRows;i++) {
 	  double scaleFactor = rowScale_[i];
 	  double valueScaled = rowActivityWork_[i];
@@ -4481,14 +4570,14 @@ ClpSimplex::deleteRim(int getRidOfFactorizationData)
     for (iRow=0;iRow<4;iRow++) {
       if (rowArray_[iRow]) {
         rowArray_[iRow]->clear();
-        rowArray_[iRow]->checkClear();
+        //rowArray_[iRow]->checkClear();
       }
       rowArray_[iRow]=NULL;
     }
     for (iColumn=0;iColumn<2;iColumn++) {
       if (columnArray_[iColumn]) {
         columnArray_[iColumn]->clear();
-        columnArray_[iColumn]->checkClear();
+        //columnArray_[iColumn]->checkClear();
       }
       columnArray_[iColumn]=NULL;
     }
@@ -4634,6 +4723,12 @@ ClpSimplex::setFactorization( ClpFactorization & factorization)
   delete factorization_;
   factorization_= new ClpFactorization(factorization);
 }
+// Copies in factorization to existing one
+void 
+ClpSimplex::copyFactorization( ClpFactorization & factorization)
+{
+  *factorization_= factorization;
+}
 /* Perturbation:
    -50 to +50 - perturb by this power of ten (-6 sounds good)
    100 - auto perturb if takes too long (1.0e-6 largest nonzero)
@@ -4759,9 +4854,9 @@ ClpSimplex::tightenPrimalBounds(double factor,int doTight,bool tightIntegers)
 
   // Save column bounds
   double * saveLower = new double [numberColumns_];
-  memcpy(saveLower,columnLower_,numberColumns_*sizeof(double));
+  CoinMemcpyN(columnLower_,numberColumns_,saveLower);
   double * saveUpper = new double [numberColumns_];
-  memcpy(saveUpper,columnUpper_,numberColumns_*sizeof(double));
+  CoinMemcpyN(columnUpper_,numberColumns_,saveUpper);
 
   int iRow, iColumn;
 
@@ -5170,8 +5265,8 @@ ClpSimplex::tightenPrimalBounds(double factor,int doTight,bool tightIntegers)
 	  <<numberInfeasible
 	  <<CoinMessageEol;
 	// restore column bounds
-	memcpy(columnLower_,saveLower,numberColumns_*sizeof(double));
-	memcpy(columnUpper_,saveUpper,numberColumns_*sizeof(double));
+ CoinMemcpyN(saveLower,numberColumns_,columnLower_);
+ CoinMemcpyN(saveUpper,numberColumns_,columnUpper_);
       }
     }
   } else {
@@ -5179,8 +5274,8 @@ ClpSimplex::tightenPrimalBounds(double factor,int doTight,bool tightIntegers)
       <<numberInfeasible
       <<CoinMessageEol;
     // restore column bounds
-    memcpy(columnLower_,saveLower,numberColumns_*sizeof(double));
-    memcpy(columnUpper_,saveUpper,numberColumns_*sizeof(double));
+    CoinMemcpyN(saveLower,numberColumns_,columnLower_);
+    CoinMemcpyN(saveUpper,numberColumns_,columnUpper_);
   }
   delete [] saveLower;
   delete [] saveUpper;
@@ -5215,11 +5310,11 @@ int ClpSimplex::dual (int ifValuesPass , int startFinishOptions)
     returnCode=temp.dualDebug(ifValuesPass,startFinishOptions);
     // Move status and solution back
     int numberTotal = numberRows_+numberColumns_;
-    memcpy(status_,temp.statusArray(),numberTotal);
-    memcpy(columnActivity_,temp.primalColumnSolution(),numberColumns_*sizeof(double));
-    memcpy(rowActivity_,temp.primalRowSolution(),numberRows_*sizeof(double));
-    memcpy(reducedCost_,temp.dualColumnSolution(),numberColumns_*sizeof(double));
-    memcpy(dual_,temp.dualRowSolution(),numberRows_*sizeof(double));
+    CoinMemcpyN(temp.statusArray(),numberTotal,status_);
+    CoinMemcpyN(temp.primalColumnSolution(),numberColumns_,columnActivity_);
+    CoinMemcpyN(temp.primalRowSolution(),numberRows_,rowActivity_);
+    CoinMemcpyN(temp.dualColumnSolution(),numberColumns_,reducedCost_);
+    CoinMemcpyN(temp.dualRowSolution(),numberRows_,dual_);
     problemStatus_ = temp.problemStatus_;
     setObjectiveValue(temp.objectiveValue());
     setSumDualInfeasibilities(temp.sumDualInfeasibilities());
@@ -5259,6 +5354,9 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
     problemStatus_=0; // ignore
   if (problemStatus_==10) {
     //printf("Cleaning up with primal\n");
+#ifdef COIN_DEVELOP
+    int saveNumberIterations=numberIterations_;
+#endif
     //lastAlgorithm=1;
     int savePerturbation = perturbation_;
     int saveLog = handler_->logLevel();
@@ -5291,7 +5389,9 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
       }
     }
     if (problemStatus_==3&&numberIterations_<saveMax) {
+#ifndef COIN_DEVELOP
       if (handler_->logLevel()==63)
+#endif
 	printf("looks like trouble - too many iterations in clean up - trying again\n");
       // flatten solution and try again
       int iRow,iColumn;
@@ -5337,7 +5437,11 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
       // can't rely on djs either
       memset(reducedCost_,0,numberColumns_*sizeof(double));
       if (problemStatus_==3&&numberIterations_<saveMax&& 
+#ifndef COIN_DEVELOP
 	  handler_->logLevel()>0)
+#else
+	  handler_->logLevel()>0-2)
+#endif
 	printf("looks like real trouble - too many iterations in second clean up - giving up\n");
     }
     intParam_[ClpMaxNumIteration] = saveMax;
@@ -5351,6 +5455,11 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
         problemStatus_=4;
     }
     handler_->setLogLevel(saveLog);
+#ifdef COIN_DEVELOP
+    if (numberIterations_>200)
+      printf("after primal status %d - %d iterations (save %d)\n",
+	     problemStatus_,numberIterations_,saveNumberIterations);
+#endif
   }
   objective_->setActivated(saveQuadraticActivated);
   //factorization_->pivotTolerance(savedPivotTolerance);
@@ -5672,10 +5781,10 @@ ClpSimplex::barrier(bool crossover)
     int numberTotal = numberRows+numberColumns;
     saveLower = new double [numberTotal];
     saveUpper = new double [numberTotal];
-    memcpy(saveLower,barrier.columnLower(),numberColumns*sizeof(double));
-    memcpy(saveLower+numberColumns,barrier.rowLower(),numberRows*sizeof(double));
-    memcpy(saveUpper,barrier.columnUpper(),numberColumns*sizeof(double));
-    memcpy(saveUpper+numberColumns,barrier.rowUpper(),numberRows*sizeof(double));
+    CoinMemcpyN(barrier.columnLower(),numberColumns,saveLower);
+    CoinMemcpyN(barrier.rowLower(),numberRows,saveLower+numberColumns);
+    CoinMemcpyN(barrier.columnUpper(),numberColumns,saveUpper);
+    CoinMemcpyN(barrier.rowUpper(),numberRows,saveUpper+numberColumns);
     barrier.fixFixed();
     saveModel2=model2;
   }
@@ -5764,13 +5873,13 @@ ClpSimplex::barrier(bool crossover)
 	double * dj = model2->dualColumnSolution();
 	double * cost = model2->objective();
 	double * saveCost = new double[numberColumns];
-	memcpy(saveCost,cost,numberColumns*sizeof(double));
+ CoinMemcpyN(cost,numberColumns,saveCost);
 	double * saveLower = new double[numberColumns];
 	double * lower = model2->columnLower();
-	memcpy(saveLower,lower,numberColumns*sizeof(double));
+ CoinMemcpyN(lower,numberColumns,saveLower);
 	double * saveUpper = new double[numberColumns];
 	double * upper = model2->columnUpper();
-	memcpy(saveUpper,upper,numberColumns*sizeof(double));
+ CoinMemcpyN(upper,numberColumns,saveUpper);
 	int i;
 	double tolerance = 10.0*dualTolerance_;
 	for ( i=0;i<numberColumns;i++) {
@@ -5804,11 +5913,11 @@ ClpSimplex::barrier(bool crossover)
 	//model2->setLogLevel(63);
 	//model2->setFactorizationFrequency(1);
 	model2->dual(2);
-	memcpy(cost,saveCost,numberColumns*sizeof(double));
+ CoinMemcpyN(saveCost,numberColumns,cost);
 	delete [] saveCost;
-	memcpy(lower,saveLower,numberColumns*sizeof(double));
+ CoinMemcpyN(saveLower,numberColumns,lower);
 	delete [] saveLower;
-	memcpy(upper,saveUpper,numberColumns*sizeof(double));
+ CoinMemcpyN(saveUpper,numberColumns,upper);
 	delete [] saveUpper;
       }
       // and finish
@@ -5840,11 +5949,11 @@ ClpSimplex::barrier(bool crossover)
     model2=saveModel2;
     int numberRows = model2->numberRows();
     int numberColumns = model2->numberColumns();
-    memcpy(model2->columnLower(),saveLower,numberColumns*sizeof(double));
-    memcpy(model2->rowLower(),saveLower+numberColumns,numberRows*sizeof(double));
+    CoinMemcpyN(saveLower,numberColumns,model2->columnLower());
+    CoinMemcpyN(saveLower+numberColumns,numberRows,model2->rowLower());
     delete [] saveLower;
-    memcpy(model2->columnUpper(),saveUpper,numberColumns*sizeof(double));
-    memcpy(model2->rowUpper(),saveUpper+numberColumns,numberRows*sizeof(double));
+    CoinMemcpyN(saveUpper,numberColumns,model2->columnUpper());
+    CoinMemcpyN(saveUpper+numberColumns,numberRows,model2->rowUpper());
     delete [] saveUpper;
     model2->primal(1);
   }
@@ -5959,7 +6068,7 @@ ClpSimplex::saveModel(const char * fileName)
     CoinBigIndex numberWritten;
     // Fill in scalars
     scalars.optimizationDirection = optimizationDirection_;
-    memcpy(scalars.dblParam, dblParam_,ClpLastDblParam * sizeof(double));
+    CoinMemcpyN( dblParam_,ClpLastDblParam,scalars.dblParam);
     scalars.objectiveValue = objectiveValue_;
     scalars.dualBound = dualBound_;
     scalars.dualTolerance = dualTolerance_;
@@ -5969,7 +6078,7 @@ ClpSimplex::saveModel(const char * fileName)
     scalars.infeasibilityCost = infeasibilityCost_;
     scalars.numberRows = numberRows_;
     scalars.numberColumns = numberColumns_;
-    memcpy(scalars.intParam, intParam_,ClpLastIntParam * sizeof(double));
+    CoinMemcpyN( intParam_,ClpLastIntParam,scalars.intParam);
     scalars.numberIterations = numberIterations_;
     scalars.problemStatus = problemStatus_;
     scalars.maximumIterations = maximumIterations();
@@ -6177,7 +6286,7 @@ ClpSimplex::restoreModel(const char * fileName)
       return 1;
     // Fill in scalars
     optimizationDirection_ = scalars.optimizationDirection;
-    memcpy(dblParam_, scalars.dblParam, ClpLastDblParam * sizeof(double));
+    CoinMemcpyN( scalars.dblParam,ClpLastDblParam,dblParam_);
     objectiveValue_ = scalars.objectiveValue;
     dualBound_ = scalars.dualBound;
     dualTolerance_ = scalars.dualTolerance;
@@ -6187,7 +6296,7 @@ ClpSimplex::restoreModel(const char * fileName)
     infeasibilityCost_ = scalars.infeasibilityCost;
     numberRows_ = scalars.numberRows;
     numberColumns_ = scalars.numberColumns;
-    memcpy(intParam_, scalars.intParam,ClpLastIntParam * sizeof(double));
+    CoinMemcpyN( scalars.intParam,ClpLastIntParam,intParam_);
     numberIterations_ = scalars.numberIterations;
     problemStatus_ = scalars.problemStatus;
     setMaximumIterations(scalars.maximumIterations);
@@ -6702,13 +6811,13 @@ ClpSimplex::loadProblem (  CoinModel & modelObject, bool keepSolution)
   if (status_&&numberRows_&&numberRows_==modelObject.numberRows()&&
       numberColumns_==modelObject.numberColumns()) {
     status = new unsigned char [numberRows_+numberColumns_];
-    memcpy(status,status_,numberRows_+numberColumns_);
+    CoinMemcpyN(status_,numberRows_+numberColumns_,status);
     psol = new double [numberRows_+numberColumns_];
-    memcpy(psol,columnActivity_,numberColumns_*sizeof(double));
-    memcpy(psol+numberColumns_,rowActivity_,numberRows_*sizeof(double));
+    CoinMemcpyN(columnActivity_,numberColumns_,psol);
+    CoinMemcpyN(rowActivity_,numberRows_,psol+numberColumns_);
     dsol = new double [numberRows_+numberColumns_];
-    memcpy(dsol,reducedCost_,numberColumns_*sizeof(double));
-    memcpy(dsol+numberColumns_,dual_,numberRows_*sizeof(double));
+    CoinMemcpyN(reducedCost_,numberColumns_,dsol);
+    CoinMemcpyN(dual_,numberRows_,dsol+numberColumns_);
   }
   int returnCode = ClpModel::loadProblem(modelObject);
   const int * integerType = modelObject.integerTypeArray();
@@ -6721,11 +6830,11 @@ ClpSimplex::loadProblem (  CoinModel & modelObject, bool keepSolution)
   createStatus();
   if (status) {
     // copy back
-    memcpy(status_,status,numberRows_+numberColumns_);
-    memcpy(columnActivity_,psol,numberColumns_*sizeof(double));
-    memcpy(rowActivity_,psol+numberColumns_,numberRows_*sizeof(double));
-    memcpy(reducedCost_,dsol,numberColumns_*sizeof(double));
-    memcpy(dual_,dsol+numberColumns_,numberRows_*sizeof(double));
+    CoinMemcpyN(status,numberRows_+numberColumns_,status_);
+    CoinMemcpyN(psol,numberColumns_,columnActivity_);
+    CoinMemcpyN(psol+numberColumns_,numberRows_,rowActivity_);
+    CoinMemcpyN(dsol,numberColumns_,reducedCost_);
+    CoinMemcpyN(dsol+numberColumns_,numberRows_,dual_);
     delete [] status;
     delete [] psol;
     delete [] dsol;
@@ -7856,13 +7965,56 @@ ClpSimplex::startup(int ifValuesPass, int startFinishOptions)
 	  return 1; // some error
 	else
 	  numberThrownOut = status;
-	
+
 	// for this we need clean basis so it is after factorize
 	if (!numberThrownOut||numberThrownOut==numberRows_+1) {
 	  // solution will be done again - skip if absolutely sure
 	  if ((specialOptions_&512)==0||numberThrownOut==numberRows_+1) {
 	    numberThrownOut = gutsOfSolution(  NULL,NULL,
 					       ifValuesPass!=0);
+	    if (largestPrimalError_>10.0&&!ifValuesPass&&!numberThrownOut) {
+	      // throw out up to 1000 structurals
+	      int iRow;
+	      int * sort = new int[numberRows_];
+	      double * array = rowArray_[0]->denseVector();
+	      memset(array,0,numberRows_*sizeof(double));
+	      times(-1.0,columnActivityWork_,array);
+	      int numberBasic=0;
+	      for (iRow=0;iRow<numberRows_;iRow++) {
+		int iPivot=pivotVariable_[iRow];
+		if (iPivot<numberColumns_) {
+		  // column
+		  double difference = fabs(array[iRow]+rowActivityWork_[iRow]);
+		  if (difference>1.0e-4) {
+		    sort[numberThrownOut]=iPivot;
+		    array[numberThrownOut++]=difference;
+		    if (getStatus(iPivot)==basic)
+		      numberBasic++;
+		  }
+		}
+	      }
+	      if (!numberBasic) {
+		allSlackBasis(true);
+	      } else {
+		CoinSort_2(array, array + numberThrownOut, sort);
+		numberThrownOut = CoinMin(1000,numberThrownOut);
+		for (iRow=0;iRow<numberThrownOut;iRow++) {
+		  int iColumn=sort[iRow];
+		  setColumnStatus(iColumn,superBasic);
+		  if (fabs(solution_[iColumn])>1.0e10) {
+		    if (upper_[iColumn]<0.0) {
+		      solution_[iColumn]=upper_[iColumn];
+		    } else if (lower_[iColumn]>0.0) {
+		      solution_[iColumn]=lower_[iColumn];
+		    } else {
+		      solution_[iColumn]=0.0;
+		    }
+		  }
+		}
+	      }
+	      CoinZeroN(array,numberRows_);
+	      delete [] sort;
+	    }
 	  } else {
 	    // make sure not optimal at once
 	    numberPrimalInfeasibilities_=1;
@@ -7872,13 +8024,15 @@ ClpSimplex::startup(int ifValuesPass, int startFinishOptions)
 	  matrix_->rhsOffset(this,true); // redo rhs offset
 	}
 	totalNumberThrownOut+= numberThrownOut;
-	
+
       }
     } else {
       // using previous factorization - we assume fine
-      // but we need to say not optimal
-      numberPrimalInfeasibilities_=1;
-      numberDualInfeasibilities_=1;
+      if ((moreSpecialOptions_&8)==0) {
+	// but we need to say not optimal
+	numberPrimalInfeasibilities_=1;
+	numberDualInfeasibilities_=1;
+      }
       matrix_->rhsOffset(this,true); // redo rhs offset
     }
     if (totalNumberThrownOut)
@@ -8017,12 +8171,12 @@ ClpSimplex::statusOfProblem(bool initial)
     internalFactorize(1);
 #endif
   }
-  //memcpy(rowActivityWork_,rowActivity_,numberRows_*sizeof(double));
-  //memcpy(columnActivityWork_,columnActivity_,numberColumns_*sizeof(double));
+    CoinMemcpyN(rowActivity_,numberRows_,rowActivityWork_);
+    CoinMemcpyN(columnActivity_,numberColumns_,columnActivityWork_);
   gutsOfSolution(NULL,NULL);
-  //memcpy(rowActivity_,rowActivityWork_,numberRows_*sizeof(double));
-  //memcpy(columnActivity_,columnActivityWork_,numberColumns_*sizeof(double));
-  //memcpy(reducedCost_,dj_,numberColumns_*sizeof(double));
+    CoinMemcpyN(rowActivityWork_,numberRows_,rowActivity_);
+    CoinMemcpyN(columnActivityWork_,numberColumns_,columnActivity_);
+    CoinMemcpyN(dj_,numberColumns_,reducedCost_);
   deleteRim(-1);
   return (primalFeasible()&&dualFeasible());
 }
@@ -8183,7 +8337,7 @@ ClpSimplex::ClpSimplex (ClpSimplex * wholeModel,
   wholeModel->createRim(1+4,false);
   lower_ = wholeModel->lower_;
   wholeModel->lower_ = new double [numberTotal];
-  memcpy(wholeModel->lower_+numberColumns,lower_+numberColumns_,numberRows_*sizeof(double));
+  CoinMemcpyN(lower_+numberColumns_,numberRows_,wholeModel->lower_+numberColumns);
   for (iColumn=0;iColumn<numberColumns;iColumn++) {
     int jColumn = whichColumns[iColumn];
     wholeModel->lower_[iColumn]=lower_[jColumn];
@@ -8552,8 +8706,7 @@ ClpSimplex::getBInvARow(int row, double* z, double * slack)
   clpMatrix()->transposeTimes(this,1.0,
 			    rowArray1,columnArray1,columnArray0);
   if (!rowScale_) {
-    memcpy(z,columnArray0->denseVector(),
-	   numberColumns_*sizeof(double));
+    CoinMemcpyN(columnArray0->denseVector(),	numberColumns_,z);
   } else {
     double * array = columnArray0->denseVector();
     for (int i=0;i<numberColumns_;i++)
@@ -8561,8 +8714,7 @@ ClpSimplex::getBInvARow(int row, double* z, double * slack)
   }
   if (slack) {
     if (!rowScale_) {
-      memcpy(slack,rowArray1->denseVector(),
-	     numberRows_*sizeof(double));
+      CoinMemcpyN(rowArray1->denseVector(),	numberRows_,slack);
     } else {
       double * array = rowArray1->denseVector();
       for (int i=0;i<numberRows_;i++)
@@ -8610,7 +8762,7 @@ ClpSimplex::getBInvRow(int row, double* z)
   rowArray1->insert(row,value);
   factorization->updateColumnTranspose(rowArray0,rowArray1);
   if (!rowScale_) {
-    memcpy(z,rowArray1->denseVector(),numberRows_*sizeof(double));
+    CoinMemcpyN(rowArray1->denseVector(),numberRows_,z);
   } else {
     double * array = rowArray1->denseVector();
     for (int i=0;i<numberRows_;i++) {
@@ -8742,8 +8894,7 @@ ClpSimplex::getBasics(int* index)
     abort();
   }
   CoinAssert (index);
-  memcpy(index,pivotVariable(),
-	 numberRows()*sizeof(int));
+  CoinMemcpyN(pivotVariable(),	numberRows(),index);
 }
 /* Set an objective function coefficient */
 void 
@@ -9249,14 +9400,14 @@ ClpSimplex::auxiliaryModel(int options)
     }
     // copy anyway
     auxiliaryModel_->lower_ = new double [2*numberTotal];
-    memcpy(auxiliaryModel_->lower_,lower_,numberTotal*sizeof(double));
-    memcpy(auxiliaryModel_->lower_+numberTotal,lower_,numberTotal*sizeof(double));
+    CoinMemcpyN(lower_,numberTotal,auxiliaryModel_->lower_);
+    CoinMemcpyN(lower_,numberTotal,auxiliaryModel_->lower_+numberTotal);
     auxiliaryModel_->upper_ = new double [2*numberTotal];
-    memcpy(auxiliaryModel_->upper_,upper_,numberTotal*sizeof(double));
-    memcpy(auxiliaryModel_->upper_+numberTotal,upper_,numberTotal*sizeof(double));
+    CoinMemcpyN(upper_,numberTotal,auxiliaryModel_->upper_);
+    CoinMemcpyN(upper_,numberTotal,auxiliaryModel_->upper_+numberTotal);
     auxiliaryModel_->cost_ = new double [2*numberTotal];
-    memcpy(auxiliaryModel_->cost_,cost_,numberTotal*sizeof(double));
-    memcpy(auxiliaryModel_->cost_+numberTotal,cost_,numberTotal*sizeof(double));
+    CoinMemcpyN(cost_,numberTotal,auxiliaryModel_->cost_);
+    CoinMemcpyN(cost_,numberTotal,auxiliaryModel_->cost_+numberTotal);
     auxiliaryModel_->dj_ = new double [2*numberTotal];
     memset(auxiliaryModel_->dj_,0,2*numberTotal*sizeof(double));
     auxiliaryModel_->solution_ = new double [2*numberTotal];
@@ -9544,10 +9695,10 @@ ClpSimplex::moveInfo(const ClpSimplex & rhs, bool justStatus)
     } else {
       status_ = NULL;
     }
-    memcpy(columnActivity_,rhs.columnActivity_,numberColumns_*sizeof(double));
-    memcpy(reducedCost_,rhs.reducedCost_,numberColumns_*sizeof(double));
-    memcpy(rowActivity_,rhs.rowActivity_,numberRows_*sizeof(double));
-    memcpy(dual_,rhs.dual_,numberRows_*sizeof(double));
+    CoinMemcpyN(rhs.columnActivity_,numberColumns_,columnActivity_);
+    CoinMemcpyN(rhs.reducedCost_,numberColumns_,reducedCost_);
+    CoinMemcpyN(rhs.rowActivity_,numberRows_,rowActivity_);
+    CoinMemcpyN(rhs.dual_,numberRows_,dual_);
   }
 }
 // Save a copy of model with certain state - normally without cuts
@@ -9581,6 +9732,8 @@ ClpSimplex::setToBaseModel(ClpSimplex * model)
       maximumColumns_ = model->maximumColumns_;
     }
   }
+  printf("resetbase a %d rows, %d maximum rows\n",
+	     numberRows_,maximumRows_);
   // temporary - later use maximumRows_ for rowUpper_ etc
   assert (numberRows_>=model->numberRows_);
   abort();
@@ -9594,6 +9747,9 @@ ClpSimplex::startPermanentArrays()
   ClpModel::startPermanentArrays();
   if (maximumRows!=maximumRows_||
       maximumColumns!=maximumColumns_) {
+#if 0
+    maximumInternalRows_ = maximumRows_;
+    maximumInternalColumns_ = maximumColumns_;
     int numberTotal2 = (maximumRows_+maximumColumns_)*2;
     delete [] cost_;
     cost_ = new double[numberTotal2];
@@ -9605,14 +9761,1422 @@ ClpSimplex::startPermanentArrays()
     dj_ = new double[numberTotal2];
     delete [] solution_;
     solution_ = new double[numberTotal2];
-    //delete [] savedRowScale_;
-    //savedRowScale_ = new double [2*maximumRows_];
-    //delete [] savedColumnScale_;
-    //savedColumnScale_ = new double [2*maximumColumns_];
+    assert (scalingFlag_>0);
+    if (rowScale_&&rowScale_!=savedRowScale_)
+      delete [] rowScale_;
+    rowScale_=NULL;
+    // Do initial scaling
+    delete [] savedRowScale_;
+    savedRowScale_ = new double [4*maximumRows_];
+    delete [] savedColumnScale_;
+    savedColumnScale_ = new double [4*maximumColumns_];
+    if (scalingFlag_>0) {
+      rowScale_ = savedRowScale_;
+      columnScale_ = savedColumnScale_;
+      if (matrix_->scale(this)) {
+	scalingFlag_=-scalingFlag_; // not scaled after all
+	assert (!rowScale_);
+      }
+      int numberRows2 = numberRows_+numberExtraRows_;
+      if (rowScale_) {
+	CoinMemcpyN(rowScale_,2*numberRows2,savedRowScale_+2*maximumRows_);
+	CoinMemcpyN(columnScale_,2*numberColumns_,savedColumnScale_+2*maximumColumns_);
+      } else {
+	abort();
+	CoinFillN(savedRowScale_+2*maximumRows_,2*numberRows2,1.0);
+	CoinFillN(savedColumnScale_+2*maximumColumns_,2*numberColumns_,1.0);
+      }
+    }
+#else
+    createRim(63);
+#endif
     return true;
   } else {
     return false;
   }
+}
+#include "ClpNode.hpp"
+// Fathom - 1 if solution
+int 
+ClpSimplex::fathom(void * stuff)
+{
+  assert (stuff);
+  ClpNodeStuff * info = (ClpNodeStuff *) stuff;
+  info->nNodes_=0;
+  // say can declare optimal
+  moreSpecialOptions_ |= 8;
+  int saveMaxIterations = maximumIterations();
+  setMaximumIterations(100+5*(numberRows_+numberColumns_));
+  if (info->presolveType_) {
+    // crunch down
+    bool feasible=true;
+    // Use dual region
+    double * rhs = dual_;
+    int * whichRow = new int[3*numberRows_];
+    int * whichColumn = new int[2*numberColumns_];
+    int nBound;
+    bool tightenBounds = ((specialOptions_&64)==0) ? false : true; 
+    ClpSimplex * small = 
+      ((ClpSimplexOther *) this)->crunch(rhs,whichRow,whichColumn,
+					 nBound,false,tightenBounds);
+    if (small) {
+      //double limit = 0.0;
+      //getDblParam(ClpDualObjectiveLimit, limit);
+      //printf("objlimit a %g",limit);
+      //small->getDblParam(ClpDualObjectiveLimit, limit);
+      //printf(" %g\n",limit);
+      // pack down pseudocosts
+      if (info->upPseudo_) {
+	const char * integerType2 = small->integerInformation();
+	int n=small->numberColumns();
+	int k=0;
+	int jColumn=0;
+	int j=0;
+	for (int i=0;i<n;i++) {
+	  if (integerType2[i]) {
+	    int iColumn = whichColumn[i];
+	    // find
+	    while (jColumn!=iColumn) {
+	      if (integerType_[jColumn])
+		j++;
+	      jColumn++;
+	    }
+	    info->upPseudo_[k]=info->upPseudo_[j];
+	    info->numberUp_[k]=info->numberUp_[j];
+	    info->downPseudo_[k]=info->downPseudo_[j];
+	    info->numberDown_[k]=info->numberDown_[j];
+	    assert (info->upPseudo_[k]>1.0e-40&&info->upPseudo_[k]<1.0e40);
+	    assert (info->downPseudo_[k]>1.0e-40&&info->downPseudo_[k]<1.0e40);
+	    k++;
+	  }
+	}
+      }
+#if 0
+      small->dual();
+      if (small->problemStatus()==0) {
+	//problemStatus_ = 0;
+      } else if (small->problemStatus()!=3) {
+	feasible=false;
+      } else {
+	if (small->problemStatus_==3) {
+	  // may be problems
+	  printf("need coding from OsiClp for crunch\n");
+	  abort();
+	}
+      }
+#endif
+    } else {
+      feasible=false;
+    }
+    int returnCode=0;
+    if (feasible) {
+      info->presolveType_=0;
+      // save and move pseudo costs
+      returnCode= small->fathom(stuff);
+      // restore pseudocosts
+      if (info->upPseudo_) {
+	int n=small->numberColumns();
+	int * back = new int [numberColumns_];
+	int numberIntegers=0;
+	for (int i=0;i<numberColumns_;i++) {
+	  if (integerType_[i]) { 
+	    back[i]=-10-numberIntegers;
+	    numberIntegers++;
+	  } else {
+	    back[i]=-1;
+	  }
+	}
+	const char * integerType2 = small->integerInformation();
+	int numberIntegers2=0;
+	for (int i=0;i<n;i++) {
+	  int iColumn = whichColumn[i];
+	  if (integerType2[i]) {
+	    int iBack = -back[iColumn];
+	    assert (iBack>=10);
+	    iBack -= 10;
+	    back[iColumn]=iBack;
+	    numberIntegers2++;
+	  }
+	}
+	int k=numberIntegers2;
+	for (int i=numberColumns_-1;i>=0;i--) {
+	  int iBack = back[i];
+	  if (iBack<=-10) {
+	    // fixed integer
+	    numberIntegers--;
+	    info->numberUp_[numberIntegers]=-1; // say not updated
+	  } else if (iBack>=0) {
+	    // not fixed integer
+	    numberIntegers--;
+	    k--;
+	    assert (info->upPseudo_[k]>1.0e-40&&info->upPseudo_[k]<1.0e40);
+	    assert (info->downPseudo_[k]>1.0e-40&&info->downPseudo_[k]<1.0e40);
+	    info->upPseudo_[numberIntegers]=info->upPseudo_[k];
+	    info->numberUp_[numberIntegers]=info->numberUp_[k];
+	    info->downPseudo_[numberIntegers]=info->downPseudo_[k];
+	    info->numberDown_[numberIntegers]=info->numberDown_[k];
+	  }
+	}
+	delete [] back;
+      }
+      if (returnCode) {
+	//check this does everything
+	((ClpSimplexOther *) this)->afterCrunch(*small,
+						whichRow,whichColumn,nBound);
+	for (int i=0;i<numberColumns_;i++) {
+	  if (integerType_[i]) { 
+	    double value = columnActivity_[i];
+	    double value2 = floor(value+0.5);
+	    assert (fabs(value-value2)<1.0e-4);
+	    columnActivity_[i]=value2;
+	    columnLower_[i]=value2;
+	    columnUpper_[i]=value2;
+	  }
+	}
+	//setLogLevel(63);
+	//double objectiveValue=doubleCheck();
+	//printf("Solution of %g\n",objectiveValue);
+      }
+      delete small;
+    }
+    delete [] whichRow;
+    delete [] whichColumn;
+    setMaximumIterations(saveMaxIterations);
+    return returnCode;
+  }
+  int returnCode = startFastDual2(info);
+  if (returnCode) {
+    stopFastDual2(info);
+    setMaximumIterations(saveMaxIterations);
+    return returnCode;
+  }
+  gutsOfSolution ( NULL,NULL);
+  int status=fastDual2(info);
+#if 0
+  {
+    int iPivot;
+    double * array = rowArray_[3]->denseVector();
+    int i;
+    for (iPivot=0;iPivot<numberRows_;iPivot++) {
+      int iSequence = pivotVariable_[iPivot];
+      unpack(rowArray_[3],iSequence);
+      factorization_->updateColumn(rowArray_[2],rowArray_[3]);
+      assert (fabs(array[iPivot]-1.0)<1.0e-4);
+      array[iPivot]=0.0;
+      for (i=0;i<numberRows_;i++)
+	assert (fabs(array[i])<1.0e-4);
+      rowArray_[3]->clear();
+    }
+  }
+#endif
+  CoinAssert (problemStatus_||objectiveValue_<1.0e50);
+  if (status&&problemStatus_!=3) {
+    // not finished - might be optimal
+    checkPrimalSolution(rowActivityWork_,columnActivityWork_);
+    double limit = 0.0;
+    getDblParam(ClpDualObjectiveLimit, limit);
+    //printf("objlimit b %g\n",limit);
+    if (!numberPrimalInfeasibilities_&&objectiveValue()*optimizationDirection_<limit) { 
+      problemStatus_=0;
+    } 
+    status=problemStatus_;
+  }
+  if (problemStatus_!=0&&problemStatus_!=1) {
+#ifdef COIN_DEVELOP
+    printf("bad status %d on initial fast dual %d its\n",problemStatus_,
+	   numberIterations_);
+#endif
+    info->nNodes_=-1;
+    setMaximumIterations(saveMaxIterations);
+    return 0;
+  }
+  int numberNodes=1;
+  int numberIterations=numberIterations_;
+#ifdef COIN_DEVELOP
+  int printFrequency=1000;
+#endif
+  if (problemStatus_==1) {
+    //printf("fathom infeasible on initial\n");
+    stopFastDual2(info);
+    info->numberNodesExplored_ = 1;
+    info->numberIterations_ = numberIterations;
+    setMaximumIterations(saveMaxIterations);
+    return 0;
+  } else if (problemStatus_!=0) {
+    stopFastDual2(info);
+    info->numberNodesExplored_ = 1;
+    info->numberIterations_ = numberIterations;
+    setMaximumIterations(saveMaxIterations);
+    // say bad
+    info->nNodes_=-1;
+    return 0;
+  }
+  if (!columnScale_) {
+    CoinMemcpyN(solution_,numberColumns_,columnActivity_);
+  } else {
+    assert(columnActivity_);
+    assert(columnScale_);
+    assert(solution_);
+    int j;
+    for (j=0;j<numberColumns_;j++) 
+      columnActivity_[j] = solution_[j]*columnScale_[j];
+  }
+  double increment=info->integerIncrement_;
+  int maxDepthSize=10;
+  int maxDepth=0;
+  int depth=0;
+  ClpNode ** nodes = new ClpNode * [maxDepthSize];
+  int numberTotal = numberRows_+numberColumns_;
+  double * saveLower = CoinCopyOfArray(columnLower_,numberColumns_);
+  double * saveUpper = CoinCopyOfArray(columnUpper_,numberColumns_);
+  double * saveLowerInternal = CoinCopyOfArray(lower_,numberTotal);
+  double * saveUpperInternal = CoinCopyOfArray(upper_,numberTotal);
+  double * bestLower = NULL;
+  double * bestUpper = NULL;
+  int * back = new int [numberColumns_];
+  int numberIntegers=0;
+  double sumChanges=1.0e-5;
+  int numberChanges=1;
+  for (int i=0;i<numberColumns_;i++) {
+    if (integerType_[i])
+      back[i]=numberIntegers++;
+    else
+      back[i]=-1;
+  }
+  unsigned char * bestStatus = NULL;
+  double bestObjective;
+  getDblParam(ClpDualObjectiveLimit, bestObjective);
+  double saveBestObjective = bestObjective;
+  bool backtrack=false;
+  bool printing = handler_->logLevel()>0;
+  double optVal[133];
+  {
+    memset(optVal,0,sizeof(optVal));
+    int intIndicesV[]={61,62,65,66,67,68,69,70};
+    double intSolnV[] = {4.,21.,4.,4.,6.,1.,25.,8.};
+    int vecLen = sizeof(intIndicesV)/sizeof(int);
+    for (int i=0;i<vecLen;i++) {
+      optVal[intIndicesV[i]]=intSolnV[i];
+    }
+  }
+  while (depth>=0) {
+    // If backtrack get to correct depth
+    if (backtrack) {
+      depth--;
+      while (depth>=0) {
+	if (!nodes[depth]->fathomed()) {
+	  nodes[depth]->changeState();
+	  break;
+	}
+	//if (printing)
+	//printf("deleting node at depth %d\n",depth);
+	//delete nodes[depth];
+	//nodes[depth]=NULL;
+	depth--;
+      }
+      if (depth<0)
+	break;
+      // apply
+      // First if backtracking we need to restore factorization, bounds and weights
+      CoinMemcpyN(saveLowerInternal,numberTotal,lower_);
+      CoinMemcpyN(saveUpperInternal,numberTotal,upper_);
+      CoinMemcpyN(saveLower,numberColumns_,columnLower_);
+      CoinMemcpyN(saveUpper,numberColumns_,columnUpper_);
+      for (int i=0;i<depth;i++) {
+	nodes[i]->applyNode(this,0);
+      }
+      nodes[depth]->applyNode(this,1);
+      int iColumn = nodes[depth]->sequence();
+      if (printing)
+	printf("after backtracking - applying node at depth %d - variable %d (%g,%g)\n",
+	       depth,iColumn,
+	       columnLower_[iColumn],columnUpper_[iColumn]);
+      depth++;
+    } else {
+      // just bounds
+      if (depth>0) {
+	nodes[depth-1]->applyNode(this,0);
+	int iColumn = nodes[depth-1]->sequence();
+	if (printing)
+	  printf("No backtracking - applying node at depth-m %d - variable %d (%g,%g)\n",
+		 depth-1,iColumn,
+		 columnLower_[iColumn],columnUpper_[iColumn]);
+      }
+    }
+    bool onOptimal=true;
+    if (numberColumns_==133) {
+      const char * integerType = integerInformation();
+      for (int i=0;i<133;i++) {
+	if (integerType[i]) {
+	  if (columnLower_[i]>optVal[i]||columnUpper_[i]<optVal[i]) {
+	    onOptimal=false;
+	    break;
+	  }
+	}
+      }
+      if (onOptimal)
+	printf("On optimal path\n");
+    }
+    // solve
+#if 0
+    {
+      int iPivot;
+      double * array = rowArray_[3]->denseVector();
+      int i;
+      for (iPivot=0;iPivot<numberRows_;iPivot++) {
+	int iSequence = pivotVariable_[iPivot];
+	unpack(rowArray_[3],iSequence);
+	factorization_->updateColumn(rowArray_[2],rowArray_[3]);
+	assert (fabs(array[iPivot]-1.0)<1.0e-4);
+	array[iPivot]=0.0;
+	for (i=0;i<numberRows_;i++)
+	  assert (fabs(array[i])<1.0e-4);
+	rowArray_[3]->clear();
+      }
+    }
+#endif
+    fastDual2(info);
+#if 0
+    {
+      int iPivot;
+      double * array = rowArray_[3]->denseVector();
+      int i;
+      for (iPivot=0;iPivot<numberRows_;iPivot++) {
+	int iSequence = pivotVariable_[iPivot];
+	unpack(rowArray_[3],iSequence);
+	factorization_->updateColumn(rowArray_[2],rowArray_[3]);
+	assert (fabs(array[iPivot]-1.0)<1.0e-4);
+	array[iPivot]=0.0;
+	for (i=0;i<numberRows_;i++)
+	  assert (fabs(array[i])<1.0e-4);
+	rowArray_[3]->clear();
+      }
+    }
+#endif
+    // give up if odd
+    if (problemStatus_>1) {
+      info->nNodes_ =-1;
+#ifdef COIN_DEVELOP
+      printf("OUCH giving up on loop! %d %d %d %d\n",
+	     numberNodes,numberIterations,problemStatus_,numberIterations_);
+      printf("xx %d\n",numberIterations*(numberRows_+numberColumns_));
+      //abort();
+#endif
+      break;
+    }
+    numberNodes++;
+    numberIterations += numberIterations_;
+    if ((numberNodes%1000)==0) {
+#ifdef COIN_DEVELOP
+      if ((numberNodes%printFrequency)==0) {
+	printf("After %d nodes (%d iterations) - best solution %g - current depth %d\n",
+	       numberNodes,numberIterations,bestObjective,depth);
+	printFrequency *= 2;
+      }
+#endif
+      if (numberIterations*(numberRows_+numberColumns_)>5.0e8) {
+	// give up
+	info->nNodes_ =-1;
+#ifdef COIN_DEVELOP
+	printf("OUCH giving up on nodes %d %d\n",numberNodes,numberIterations);
+	printf("xx %d\n",numberIterations*(numberRows_+numberColumns_));
+	//abort();
+#endif
+	break;
+      }
+    }
+    if (problemStatus_==1||
+	(problemStatus_==0&&objectiveValue()*optimizationDirection_>bestObjective)) {
+      backtrack=true;
+      if (printing)
+	printf("infeasible at depth %d\n",depth);
+      if (depth>0) {
+	int way=nodes[depth-1]->way();
+	int sequence = nodes[depth-1]->sequence();
+#ifndef NDEBUG
+	double branchingValue = nodes[depth-1]->branchingValue();
+	if (way>0)
+	  assert (columnLower_[sequence]==ceil(branchingValue));
+	else
+	  assert (columnUpper_[sequence]==floor(branchingValue));
+#endif
+	sequence = back[sequence];
+	double change = bestObjective-nodes[depth-1]->objectiveValue();
+	if (change>1.0e10)
+	  change= 10.0*sumChanges/(1.0+numberChanges);
+	info->update(way,sequence,change,false);
+      }
+    } else if (problemStatus_!=0) {
+      abort();
+    } else {
+      // Create node
+      ClpNode * node;
+      computeDuals(NULL);
+      if (depth>0) {
+	int way=nodes[depth-1]->way();
+	int sequence = nodes[depth-1]->sequence();
+#ifndef NDEBUG
+	double branchingValue = nodes[depth-1]->branchingValue();
+	if (way>0)
+	  assert (columnLower_[sequence]==ceil(branchingValue));
+	else
+	  assert (columnUpper_[sequence]==floor(branchingValue));
+#endif
+	sequence = back[sequence];
+	info->update(way,sequence,
+		     objectiveValue()-nodes[depth-1]->objectiveValue(),
+		     true);
+	numberChanges++;
+	sumChanges += objectiveValue()-nodes[depth-1]->objectiveValue();
+      }
+      if (depth<maxDepth) {
+	node = nodes[depth];
+	node->gutsOfConstructor(this,info,1,depth);
+      } else {
+	node = new ClpNode(this,info,depth);
+	if (depth==maxDepthSize) {
+	  maxDepthSize = 2*maxDepthSize+10;
+	  ClpNode ** temp = new ClpNode * [maxDepthSize];
+	  for (int i=0;i<depth;i++) 
+	    temp[i]=nodes[i];
+	  delete [] nodes;
+	  nodes = temp;
+	}
+	nodes[maxDepth++]=node;
+      }
+
+    if (numberColumns_==133&&onOptimal) {
+      const char * integerType = integerInformation();
+      for (int i=0;i<133;i++) {
+	if (integerType[i]) {
+	  if (columnLower_[i]>optVal[i]||columnUpper_[i]<optVal[i]) {
+	    onOptimal=false;
+	    printf("bad %d %g %g %g\n",i,columnLower_[i],optVal[i],
+		   columnUpper_[i]);
+	  }
+	}
+      }
+      assert (onOptimal);
+    }
+
+      if (node->sequence()<0) {
+	// solution
+	double objectiveValue=doubleCheck();
+#ifdef COIN_DEVELOP
+	printf("Solution of %g after %d nodes at depth %d\n",
+	       objectiveValue,numberNodes,depth);
+#endif
+	if (objectiveValue<bestObjective) {
+	  ClpNode node2(this,info,depth);
+	  assert (node2.sequence()<0);
+	  // later then lower_ not columnLower_ (and total?)
+	  delete [] bestLower;
+	  bestLower = CoinCopyOfArray(columnLower_,numberColumns_);
+	  delete [] bestUpper;
+	  bestUpper = CoinCopyOfArray(columnUpper_,numberColumns_);
+	  delete [] bestStatus;
+	  bestStatus = CoinCopyOfArray(status_,numberTotal);
+	  bestObjective = objectiveValue-increment;
+	  setDblParam(ClpDualObjectiveLimit,bestObjective*optimizationDirection_);
+	} else {
+	  printf("why bad solution feasible\n");
+	}
+	//delete node;
+	backtrack=true;
+      } else {
+	if (printing)
+	  printf("depth %d variable %d\n",depth,node->sequence());
+	depth++;
+	backtrack=false;
+	//nodes[depth++] = new ClpNode (this,info);
+      }
+    }
+  }
+  if (!info->nNodes_)
+    assert (depth==-1);
+  for (int i=0;i<maxDepth;i++)
+    delete nodes[i];
+  delete [] nodes;
+  delete [] back;
+  stopFastDual2(info);
+  //printf("fathom finished after %d nodes\n",numberNodes);
+  if (bestStatus) {
+    CoinMemcpyN(bestLower,numberColumns_,columnLower_);
+    CoinMemcpyN(bestUpper,numberColumns_,columnUpper_);
+    CoinMemcpyN(bestStatus,numberTotal,status_);
+    delete [] bestLower;
+    delete [] bestUpper;
+    delete [] bestStatus;
+    setDblParam(ClpDualObjectiveLimit, saveBestObjective);
+    dual();
+    info->numberNodesExplored_ = numberNodes;
+    info->numberIterations_ = numberIterations;
+    returnCode = 1;
+  } else {
+    info->numberNodesExplored_ = numberNodes;
+    info->numberIterations_ = numberIterations;
+    returnCode = 0;
+  }
+  if (info->nNodes_<0) {
+    if (lower_) {
+      CoinMemcpyN(saveLowerInternal,numberTotal,lower_);
+      CoinMemcpyN(saveUpperInternal,numberTotal,upper_);
+    }
+    CoinMemcpyN(saveLower,numberColumns_,columnLower_);
+    CoinMemcpyN(saveUpper,numberColumns_,columnUpper_);
+  }
+  delete [] saveLower;
+  delete [] saveUpper;
+  delete [] saveLowerInternal;
+  delete [] saveUpperInternal;
+  setMaximumIterations(saveMaxIterations);
+  return returnCode;
+}
+//#define CHECK_PATH
+#ifdef CHECK_PATH
+const double * debuggerSolution_Z=NULL;
+int numberColumns_Z=-1;
+int gotGoodNode_Z=-1;
+#endif
+/* Do up to N deep - returns 
+   -1 - no solution nNodes_ valid nodes
+   >= if solution and that node gives solution
+   ClpNode array is 2**N long.  Values for N and 
+   array are in stuff (nNodes_ also in stuff) */
+int 
+ClpSimplex::fathomMany(void * stuff)
+{
+  assert (stuff);
+  ClpNodeStuff * info = (ClpNodeStuff *) stuff;
+  int nNodes = (1<<info->nDepth_)+1+info->nDepth_;
+  int goodNodes=0;
+  info->nNodes_=0;
+  ClpNode ** nodeInfo = info->nodeInfo_;
+  assert (nodeInfo);
+  // say can declare optimal
+  moreSpecialOptions_ |= 8;
+  double limit = 0.0;
+  getDblParam(ClpDualObjectiveLimit, limit);
+  for (int j=0;j<nNodes;j++) {
+    if (nodeInfo[j]) {
+      nodeInfo[j]->setObjectiveValue(limit);
+      if (info->large_)
+	nodeInfo[j]->cleanUpForCrunch();
+    }
+  }
+#ifdef CHECK_PATH
+  // Note - if code working can get assert on startOptimal==2 (if finds)
+  int startOptimal=0;
+  if (numberColumns_==numberColumns_Z) {
+    assert (debuggerSolution_Z);
+    startOptimal=1;
+    for (int i=0;i<numberColumns_;i++) {
+      if (columnUpper_[i]<debuggerSolution_Z[i]||columnLower_[i]>debuggerSolution_Z[i]) {
+	startOptimal=0;
+	break;
+      }
+    }
+    if (startOptimal) {
+      printf("starting on optimal\n");
+    }
+  } else if (info->large_&&info->large_->numberColumns_==numberColumns_Z) {
+    assert (debuggerSolution_Z);
+    startOptimal=1;
+    for (int i=0;i<info->large_->numberColumns_;i++) {
+      if (info->large_->columnUpper_[i]<debuggerSolution_Z[i]||info->large_->columnLower_[i]>debuggerSolution_Z[i]) {
+	startOptimal=0;
+	break;
+      }
+    }
+    if (startOptimal) {
+      printf("starting on optimal (presolved) %d\n",numberColumns_);
+    }
+  }
+#endif
+  int whichSolution=-1;
+  if (info->presolveType_) {
+    // crunch down
+    bool feasible=true;
+    // Use dual region
+    double * rhs = dual_;
+    int * whichRow = new int[3*numberRows_];
+    int * whichColumn = new int[2*numberColumns_];
+    int nBound;
+    bool tightenBounds = ((specialOptions_&64)==0) ? false : true; 
+    ClpSimplex * small = 
+      ((ClpSimplexOther *) this)->crunch(rhs,whichRow,whichColumn,
+					 nBound,false,tightenBounds);
+    if (small) {
+      info->large_=this;
+      info->whichRow_ = whichRow;
+      info->whichColumn_ = whichColumn;
+      info->nBound_ = nBound;
+      //double limit = 0.0;
+      //getDblParam(ClpDualObjectiveLimit, limit);
+      //printf("objlimit a %g",limit);
+      //small->getDblParam(ClpDualObjectiveLimit, limit);
+      //printf(" %g\n",limit);
+      // pack down pseudocosts
+      if (info->upPseudo_) {
+	const char * integerType2 = small->integerInformation();
+	int n=small->numberColumns();
+	int k=0;
+	int jColumn=0;
+	int j=0;
+	for (int i=0;i<n;i++) {
+	  if (integerType2[i]) {
+	    int iColumn = whichColumn[i];
+	    // find
+	    while (jColumn!=iColumn) {
+	      if (integerType_[jColumn])
+		j++;
+	      jColumn++;
+	    }
+	    info->upPseudo_[k]=info->upPseudo_[j];
+	    info->numberUp_[k]=info->numberUp_[j];
+	    info->downPseudo_[k]=info->downPseudo_[j];
+	    info->numberDown_[k]=info->numberDown_[j];
+	    assert (info->upPseudo_[k]>1.0e-40&&info->upPseudo_[k]<1.0e40);
+	    assert (info->downPseudo_[k]>1.0e-40&&info->downPseudo_[k]<1.0e40);
+	    k++;
+	  }
+	}
+      }
+    } else {
+      feasible=false;
+    }
+    if (feasible) {
+      info->presolveType_=0;
+      // save and move pseudo costs
+      whichSolution = small->fathomMany(stuff);
+      // restore pseudocosts
+      if (info->upPseudo_) {
+	int n=small->numberColumns();
+	int * back = new int [numberColumns_];
+	int numberIntegers=0;
+	for (int i=0;i<numberColumns_;i++) {
+	  if (integerType_[i]) { 
+	    back[i]=-10-numberIntegers;
+	    numberIntegers++;
+	  } else {
+	    back[i]=-1;
+	  }
+	}
+	const char * integerType2 = small->integerInformation();
+	int numberIntegers2=0;
+	for (int i=0;i<n;i++) {
+	  int iColumn = whichColumn[i];
+	  if (integerType2[i]) {
+	    int iBack = -back[iColumn];
+	    assert (iBack>=10);
+	    iBack -= 10;
+	    back[iColumn]=iBack;
+	    numberIntegers2++;
+	  }
+	}
+	int k=numberIntegers2;
+	for (int i=numberColumns_-1;i>=0;i--) {
+	  int iBack = back[i];
+	  if (iBack<=-10) {
+	    // fixed integer
+	    numberIntegers--;
+	    info->numberUp_[numberIntegers]=-1; // say not updated
+	  } else if (iBack>=0) {
+	    // not fixed integer
+	    numberIntegers--;
+	    k--;
+	    assert (info->upPseudo_[k]>1.0e-40&&info->upPseudo_[k]<1.0e40);
+	    assert (info->downPseudo_[k]>1.0e-40&&info->downPseudo_[k]<1.0e40);
+	    info->upPseudo_[numberIntegers]=info->upPseudo_[k];
+	    info->numberUp_[numberIntegers]=info->numberUp_[k];
+	    info->downPseudo_[numberIntegers]=info->downPseudo_[k];
+	    info->numberDown_[numberIntegers]=info->numberDown_[k];
+	  }
+	}
+	delete [] back;
+      }
+      delete small;
+    }
+    info->large_=NULL;
+    info->whichRow_ = NULL;
+    info->whichColumn_ = NULL;
+    delete [] whichRow;
+    delete [] whichColumn;
+    return whichSolution;
+  }
+  {
+    int nBasic=0;
+    int i;
+    for (i=0;i<numberRows_+numberColumns_;i++) {
+      if (getColumnStatus(i)==basic)
+	nBasic++;
+    }
+    assert (nBasic==numberRows_);
+  }
+  int returnCode = startFastDual2(info);
+  if (returnCode) {
+    stopFastDual2(info);
+    abort();
+    return -1;
+  }
+  gutsOfSolution ( NULL,NULL);
+  int status=fastDual2(info);
+  CoinAssert (problemStatus_||objectiveValue_<1.0e50);
+  if (status&&problemStatus_!=3) {
+    // not finished - might be optimal
+    checkPrimalSolution(rowActivityWork_,columnActivityWork_);
+    double limit = 0.0;
+    getDblParam(ClpDualObjectiveLimit, limit);
+    //printf("objlimit b %g\n",limit);
+    if (!numberPrimalInfeasibilities_&&objectiveValue()*optimizationDirection_<limit) { 
+      problemStatus_=0;
+    } 
+    status=problemStatus_;
+  }
+  assert (problemStatus_==0||problemStatus_==1);//((ClpSimplexDual *) this)->dual(0,0);
+  if (problemStatus_==10) {
+    printf("Cleaning up with primal - need coding without createRim!\n");
+    abort();
+  }
+  int numberNodes=0;
+  int numberIterations=numberIterations_;
+  if (problemStatus_==1) {
+    //printf("fathom infeasible on initial\n");
+    stopFastDual2(info);
+    info->nNodes_ = 0;
+    info->numberNodesExplored_ = 0;
+    info->numberIterations_ = numberIterations;
+    return -1;
+  } else if (problemStatus_!=0) {
+    abort();
+  }
+  if (!columnScale_) {
+    CoinMemcpyN(solution_,numberColumns_,columnActivity_);
+  } else {
+    assert(columnActivity_);
+    assert(columnScale_);
+    assert(solution_);
+    int j;
+    for (j=0;j<numberColumns_;j++) 
+      columnActivity_[j] = solution_[j]*columnScale_[j];
+  }
+  double increment=info->integerIncrement_;
+  int depth=0;
+  int numberTotal = numberRows_+numberColumns_;
+  double * saveLower = CoinCopyOfArray(columnLower_,numberColumns_);
+  double * saveUpper = CoinCopyOfArray(columnUpper_,numberColumns_);
+  double * saveLowerInternal = CoinCopyOfArray(lower_,numberTotal);
+  double * saveUpperInternal = CoinCopyOfArray(upper_,numberTotal);
+  //double * bestLower = NULL;
+  //double * bestUpper = NULL;
+  int * back = new int [numberColumns_];
+  int numberIntegers=0;
+  double sumChanges=1.0e-5;
+  int numberChanges=1;
+  for (int i=0;i<numberColumns_;i++) {
+    if (integerType_[i])
+      back[i]=numberIntegers++;
+    else
+      back[i]=-1;
+  }
+  //unsigned char * bestStatus = NULL;
+  double bestObjective;
+  getDblParam(ClpDualObjectiveLimit, bestObjective);
+  double saveBestObjective = bestObjective;
+  bool backtrack=false;
+  bool printing = handler_->logLevel()>0;
+#ifdef CHECK_PATH
+  if (startOptimal)
+    printing=true;
+#endif
+  /* Use nodeInfo for storage
+     depth 0 will be nNodes-1, 1 nNodes-2 etc */
+  int useDepth=nNodes-1;
+  bool lastFeasible=true;
+  while (depth>=0) {
+    // If backtrack get to correct depth
+    if (backtrack) {
+      depth--;
+      useDepth++;
+      while (depth>=0) {
+	if (!nodeInfo[useDepth]->fathomed()) {
+	  nodeInfo[useDepth]->changeState();
+	  break;
+	}
+	//if (printing)
+	//printf("deleting node at depth %d\n",depth);
+	//delete nodes[useDepth];
+	//nodes[useDepth]=NULL;
+	depth--;
+	useDepth++;
+      }
+      if (depth<0)
+	break;
+      // apply
+      // First if backtracking we need to restore factorization, bounds and weights
+      CoinMemcpyN(saveLowerInternal,numberTotal,lower_);
+      CoinMemcpyN(saveUpperInternal,numberTotal,upper_);
+      CoinMemcpyN(saveLower,numberColumns_,columnLower_);
+      CoinMemcpyN(saveUpper,numberColumns_,columnUpper_);
+      for (int i=0;i<depth;i++) {
+	nodeInfo[nNodes-1-i]->applyNode(this,0);
+      }
+      nodeInfo[useDepth]->applyNode(this,1);
+      int iColumn = nodeInfo[useDepth]->sequence();
+	if (printing)
+	  printf("after backtracking - applying node at depth %d - variable %d (%g,%g)\n",
+		 depth,iColumn,
+		 columnLower_[iColumn],columnUpper_[iColumn]);
+      depth++;
+      useDepth--;
+    } else {
+      // just bounds
+      if (depth>0) {
+	nodeInfo[useDepth+1]->applyNode(this,0);
+	int iColumn = nodeInfo[useDepth+1]->sequence();
+	if (printing)
+	  printf("No backtracking - applying node at depth-m %d - variable %d (%g,%g)\n",
+		 depth-1,iColumn,
+		 columnLower_[iColumn],columnUpper_[iColumn]);
+      }
+    }
+    // solve
+    fastDual2(info);
+    numberNodes++;
+    numberIterations += numberIterations_;
+    if ((numberNodes%1000)==0)
+      printf("After %d nodes (%d iterations) - best solution %g - current depth %d\n",
+	     numberNodes,numberIterations,bestObjective,depth);
+    if (problemStatus_==1||
+	(problemStatus_==0&&objectiveValue()*optimizationDirection_>bestObjective)) {
+      backtrack=true;
+      lastFeasible=false;
+      if (printing)
+	printf("infeasible at depth %d\n",depth);
+#ifdef CHECK_PATH
+      if (startOptimal&&numberColumns_==numberColumns_Z) {
+	bool onOptimal=true;
+	for (int i=0;i<numberColumns_;i++) {
+	  if (columnUpper_[i]<debuggerSolution_Z[i]||columnLower_[i]>debuggerSolution_Z[i]) {
+	    onOptimal=false;
+	    break;
+	  }
+	}
+	if (onOptimal) {
+	  printf("INF on optimal fathom at depth %d\n",depth);
+	  abort();
+	}
+      } else if (info->large_&&startOptimal&&info->large_->numberColumns_==numberColumns_Z) {
+	bool onOptimal=true;
+	for (int i=0;i<info->large_->numberColumns_;i++) {
+	  if (info->large_->columnUpper_[i]<debuggerSolution_Z[i]||info->large_->columnLower_[i]>debuggerSolution_Z[i]) {
+	    onOptimal=false;
+	    break;
+	  }
+	}
+	if (onOptimal) {
+	  printf("INF on optimal (pre) fathom at depth %d\n",depth);
+	  abort();
+	}
+      }
+#endif
+      if (depth>0||true) {
+	int way=nodeInfo[useDepth+1]->way();
+	int sequence = nodeInfo[useDepth+1]->sequence();
+#ifndef NDEBUG
+	double branchingValue = nodeInfo[useDepth+1]->branchingValue();
+	if (way>0)
+	  assert (columnLower_[sequence]==ceil(branchingValue));
+	else
+	  assert (columnUpper_[sequence]==floor(branchingValue));
+#endif
+	sequence = back[sequence];
+	double change = bestObjective-nodeInfo[useDepth+1]->objectiveValue();
+	if (change>1.0e10)
+	  change= 10.0*sumChanges/(1.0+numberChanges);
+	info->update(way,sequence,change,false);
+      }
+    } else if (problemStatus_!=0) {
+      abort();
+    } else {
+      // Create node
+      ClpNode * node;
+      computeDuals(NULL);
+      if (depth>0) {
+	int way=nodeInfo[useDepth+1]->way();
+	int sequence = nodeInfo[useDepth+1]->sequence();
+#ifndef NDEBUG
+	double branchingValue = nodeInfo[useDepth+1]->branchingValue();
+	if (way>0)
+	  assert (columnLower_[sequence]==ceil(branchingValue));
+	else
+	  assert (columnUpper_[sequence]==floor(branchingValue));
+#endif
+	sequence = back[sequence];
+	info->update(way,sequence,
+		     objectiveValue()-nodeInfo[useDepth+1]->objectiveValue(),
+		     true);
+	numberChanges++;
+	sumChanges += objectiveValue()-nodeInfo[useDepth+1]->objectiveValue();
+      }
+#ifdef CHECK_PATH
+      if (startOptimal&&numberColumns_==numberColumns_Z) {
+	bool onOptimal=true;
+	for (int i=0;i<numberColumns_;i++) {
+	  if (columnUpper_[i]<debuggerSolution_Z[i]||columnLower_[i]>debuggerSolution_Z[i]) {
+	    onOptimal=false;
+	    break;
+	  }
+	}
+	if (onOptimal) {
+	  if (depth>=info->nDepth_) {
+	    printf("on optimal fathom at full depth %d %d %g\n",
+		   depth,goodNodes,objectiveValue());
+	    gotGoodNode_Z=goodNodes;
+	    startOptimal=2;
+	  } else {
+	    printf("on optimal fathom at depth %d\n",depth);
+	  }
+	}
+      } else if (info->large_&&startOptimal&&info->large_->numberColumns_==numberColumns_Z) {
+	bool onOptimal=true;
+	// Fix bounds in large
+	for (int i=0;i<numberColumns_;i++) {
+	  if (integerType_[i]) {
+	    int iColumn = info->whichColumn_[i];
+	    info->large_->columnUpper_[iColumn] = columnUpper_[i];
+	    info->large_->columnLower_[iColumn] = columnLower_[i];
+	    printf("%d dj %g dual %g scale %g\n",
+		   iColumn,dj_[i],reducedCost_[i],columnScale_[i]);
+		   
+	  }
+	}
+	for (int i=0;i<info->large_->numberColumns_;i++) {
+	  if (info->large_->columnUpper_[i]<debuggerSolution_Z[i]||info->large_->columnLower_[i]>debuggerSolution_Z[i]) {
+	    onOptimal=false;
+	    break;
+	  }
+	}
+	if (onOptimal) {
+	  if (depth>=info->nDepth_) {
+	    printf("on (pre) tentative optimal fathom at full depth %d %d %g\n",
+		   depth,goodNodes,objectiveValue());
+	    for (int i=0;i<info->large_->numberColumns_;i++) 
+	      printf("fathomA %d %g %g\n",i,info->large_->columnLower_[i],
+		     info->large_->columnUpper_[i]);
+	  } else {
+	    printf("on (pre) optimal fathom at depth %d\n",depth);
+	  }
+	}
+      }
+#endif
+      if (depth<info->nDepth_) {
+	node = nodeInfo[useDepth];
+	if (node) {
+	  node->gutsOfConstructor(this,info,1,depth);
+	} else {
+	  node = new ClpNode(this,info,depth);
+	  nodeInfo[useDepth]=node;
+	}
+      } else {
+	// save
+	node = nodeInfo[goodNodes];
+	if (!node) {
+	  node = new ClpNode(this,info,depth);
+	  nodeInfo[goodNodes]=node;
+	}
+	if (!node->oddArraysExist())
+	  node->createArrays(this);
+	node->gutsOfConstructor(this,info,2,depth);
+      }
+      if (node->sequence()<0) {
+	// solution
+	lastFeasible=false;
+	double objectiveValue=doubleCheck();
+	printf("Solution of %g after %d nodes at depth %d\n",
+	       objectiveValue,numberNodes,depth);
+	if (objectiveValue<bestObjective&&!problemStatus_) {
+	  // make sure node exists
+	  node = nodeInfo[goodNodes];
+	  if (!node) {
+	    node = new ClpNode(this,info,depth);
+	    nodeInfo[goodNodes]=node;
+	  }
+	  if (info->large_) {
+	    //check this does everything
+	    // Fix bounds in large
+	    for (int i=0;i<numberColumns_;i++) {
+	      if (integerType_[i]) {
+		int iColumn = info->whichColumn_[i];
+		info->large_->columnUpper_[iColumn] = columnUpper_[i];
+		info->large_->columnLower_[iColumn] = columnLower_[i];
+	      }
+	    }
+	    ((ClpSimplexOther *) info->large_)->afterCrunch(*this,
+		       info->whichRow_,info->whichColumn_,info->nBound_);
+	    // do as for large
+	    if (!node->oddArraysExist())
+	      node->createArrays(info->large_);
+	    node->gutsOfConstructor(info->large_,info,2,depth);
+	  } else {
+	    if (!node->oddArraysExist())
+	      node->createArrays(this);
+	    node->gutsOfConstructor(this,info,2,depth);
+	  }
+	  whichSolution=goodNodes;
+	  goodNodes++;
+	  assert (node->sequence()<0);
+	  bestObjective = objectiveValue-increment;
+	  setDblParam(ClpDualObjectiveLimit,bestObjective*optimizationDirection_);
+	} else {
+	  printf("why bad solution feasible\n");
+	}
+	backtrack=true;
+      } else {
+	lastFeasible=true;
+	if (printing)
+	  printf("depth %d variable %d\n",depth,node->sequence());
+	if (depth==info->nDepth_) {
+	  if (info->large_) {
+	    //check this does everything
+	    // Fix bounds in large
+	    for (int i=0;i<numberColumns_;i++) {
+	      if (integerType_[i]) {
+		int iColumn = info->whichColumn_[i];
+		info->large_->columnUpper_[iColumn] = columnUpper_[i];
+		info->large_->columnLower_[iColumn] = columnLower_[i];
+	      }
+	    }
+#ifdef CHECK_PATH
+	    if (startOptimal)
+	      for (int i=0;i<info->large_->numberColumns_;i++) 
+		printf("fathomB %d %g %g %g\n",i,info->large_->columnLower_[i],
+		       info->large_->columnUpper_[i],
+		       node->dualSolution()[i]);
+#endif
+	    ((ClpSimplexOther *) info->large_)->afterCrunch(*this,
+		       info->whichRow_,info->whichColumn_,info->nBound_);
+#ifdef CHECK_PATH
+	    if (startOptimal) {
+	      bool onOptimal=true;
+	      for (int i=0;i<info->large_->numberColumns_;i++) 
+		printf("fathomC %d %g %g\n",i,info->large_->columnLower_[i],
+		       info->large_->columnUpper_[i]);
+	      for (int i=0;i<info->large_->numberColumns_;i++) {
+		if (info->large_->columnUpper_[i]<debuggerSolution_Z[i]||info->large_->columnLower_[i]>debuggerSolution_Z[i]) {
+		  onOptimal=false;
+		  break;
+		}
+	      }
+	      if (onOptimal) {
+		printf("on (pre) optimal fathom at full depth %d %d %g\n",
+		       depth,goodNodes,info->large_->objectiveValue());
+		startOptimal=2;
+		gotGoodNode_Z=goodNodes;
+		for (int i=0;i<info->large_->numberColumns_;i++) 
+		  printf("fathom %d %g %g\n",i,info->large_->columnLower_[i],
+			 info->large_->columnUpper_[i]);
+	      }
+	    }
+#endif
+	    // do as for large
+	    node->gutsOfConstructor(info->large_,info,2,depth);
+	  }
+	  goodNodes++;
+	  backtrack=true;
+	} else {
+	  depth++;
+	  useDepth--;
+	  backtrack=false;
+	}
+      }
+    }
+  }
+#ifdef CHECK_PATH
+  if (startOptimal) {
+    assert(startOptimal==2);
+    printf("got fathomed optimal at end %d\n",startOptimal);
+    if (startOptimal!=2)
+      abort();
+  }
+#endif
+  assert (depth==-1);
+  delete [] saveLower;
+  delete [] saveUpper;
+  delete [] saveLowerInternal;
+  delete [] saveUpperInternal;
+  delete [] back;
+  //printf("fathom finished after %d nodes\n",numberNodes);
+  if (whichSolution>=0) {
+    setDblParam(ClpDualObjectiveLimit, saveBestObjective);
+  }
+  stopFastDual2(info);
+  info->nNodes_ = goodNodes;
+  info->numberNodesExplored_ = numberNodes;
+  info->numberIterations_ = numberIterations;
+  return whichSolution;
+}
+// Double checks OK
+double 
+ClpSimplex::doubleCheck()
+{
+#if 0
+  double * solution = CoinCopyOfArray(solution_,numberColumns_+numberRows_);
+  gutsOfSolution ( NULL,NULL);
+  for (int i=0;i<numberColumns_;i++) {
+    if (fabs(solution[i]-solution_[i])>1.0e-7)
+      printf("bada %d bad %g good %g\n",
+	     i,solution[i],solution_[i]);
+  }
+  //abort();
+#endif
+  dual(0,7);
+#if 0
+  for (int i=0;i<numberColumns_;i++) {
+    if (fabs(solution[i]-solution_[i])>1.0e-7)
+      printf("badb %d bad %g good %g\n",
+	     i,solution[i],solution_[i]);
+  }
+  dual(0,1);
+  for (int i=0;i<numberColumns_;i++) {
+    if (fabs(solution[i]-solution_[i])>1.0e-7)
+      printf("badc %d bad %g good %g\n",
+	     i,solution[i],solution_[i]);
+  }
+  delete [] solution;
+#endif
+  return objectiveValue()*optimizationDirection_;
+}
+// Start Fast dual
+int 
+ClpSimplex::startFastDual2(ClpNodeStuff * info)
+{
+  info->saveOptions_ = specialOptions_;
+  assert ((info->solverOptions_&65536)==0);
+  info->solverOptions_ |= 65536;
+  if ((specialOptions_&65536)==0)
+    factorization_->setPersistenceFlag(2);
+  //assert (!lower_);
+  // create modifiable copies of model rim and do optional scaling
+  createRim(7+8+16+32,true,0);
+#ifndef NDEBUG
+  ClpPackedMatrix* clpMatrix =
+    dynamic_cast< ClpPackedMatrix*>(matrix_);
+  assert (clpMatrix&&(clpMatrix->flags()&1)==0);
+#endif
+  if (!inverseColumnScale_&&columnScale_) {
+    if ((info->solverOptions_&1)!=0) {
+      double * temp = new double [2*numberColumns_];
+      for (int i=0;i<numberColumns_;i++) {
+	double value = columnScale_[i];
+	temp[i]=value;
+	temp[i+numberColumns_]=1.0/value;
+      }
+      delete [] columnScale_;
+      columnScale_ = temp;
+    }
+    if ((info->solverOptions_&4)!=0) {
+      double * temp = new double [2*numberRows_];
+      for (int i=0;i<numberRows_;i++) {
+	double value = rowScale_[i];
+	temp[i]=value;
+	temp[i+numberRows_]=1.0/value;
+      }
+      delete [] rowScale_;
+      rowScale_ = temp;
+    }
+  }
+  // mark all as current
+  whatsChanged_ = 0xffff;
+
+  // change newLower and newUpper if scaled
+
+  // Do initial factorization
+  // and set certain stuff
+  // We can either set increasing rows so ...IsBasic gives pivot row
+  // or we can just increment iBasic one by one
+  // for now let ...iBasic give pivot row
+  int factorizationStatus = internalFactorize(0);
+  if (factorizationStatus<0) {
+    // some error
+    // we should either debug or ignore 
+#ifndef NDEBUG
+    printf("***** ClpDual strong branching factorization error - debug\n");
+#endif
+    abort();
+    return -2;
+  } else if (factorizationStatus&&factorizationStatus<=numberRows_) {
+    handler_->message(CLP_SINGULARITIES,messages_)
+      <<factorizationStatus
+      <<CoinMessageEol;
+    abort();
+    return -3;
+  }
+  // Start of fast iterations
+  factorization_->sparseThreshold(0);
+  factorization_->goSparse();
+  assert (!info->saveCosts_);
+  int numberTotal = numberRows_+numberColumns_;
+  info->saveCosts_ = CoinCopyOfArray(cost_,numberTotal);
+  return 0;
+}
+// Like Fast dual
+int 
+ClpSimplex::fastDual2(ClpNodeStuff * info)
+{
+  assert ((info->solverOptions_&65536)!=0);
+  int numberTotal = numberRows_+numberColumns_;
+  assert (info->saveCosts_);
+  CoinMemcpyN(info->saveCosts_,numberTotal,cost_);
+  numberPrimalInfeasibilities_=1;
+  sumPrimalInfeasibilities_=0.5;
+  sumOfRelaxedDualInfeasibilities_ = 0.0;
+  sumOfRelaxedPrimalInfeasibilities_ = 0.5;
+  checkDualSolution();
+  //if (xxxxxx)
+  //checkPrimalSolution(rowActivityWork_,columnActivityWork_);
+  specialOptions_ |= 524288; // say use solution
+  ClpObjective * saveObjective = objective_;
+  int status = ((ClpSimplexDual *) this)->fastDual(true);
+  specialOptions_ &= ~524288; // say dont use solution
+  CoinAssert (problemStatus_||objectiveValue_<1.0e50);
+  if (status&&problemStatus_!=3) {
+    // not finished - might be optimal
+    checkPrimalSolution(rowActivityWork_,columnActivityWork_);
+    double limit = 0.0;
+    getDblParam(ClpDualObjectiveLimit, limit);
+    if (!numberPrimalInfeasibilities_&&objectiveValue()*optimizationDirection_<limit) { 
+      problemStatus_=0;
+    }
+  }
+  if (problemStatus_==10) {
+    //printf("Cleaning up with primal\n");
+    //lastAlgorithm=1;
+    int savePerturbation = perturbation_;
+    int saveLog = handler_->logLevel();
+    //handler_->setLogLevel(63);
+    perturbation_=100;
+    bool denseFactorization = initialDenseFactorization();
+    // It will be safe to allow dense
+    setInitialDenseFactorization(true);
+    // Allow for catastrophe
+    int saveMax = intParam_[ClpMaxNumIteration];
+    if (intParam_[ClpMaxNumIteration]>100000+numberIterations_)
+      intParam_[ClpMaxNumIteration] = numberIterations_ + 1000 + 2*numberRows_+numberColumns_;
+    // check which algorithms allowed
+    baseIteration_=numberIterations_;
+    status = ((ClpSimplexPrimal *) this)->primal(1,7);
+    baseIteration_=0;
+    if (saveObjective != objective_) {
+      // We changed objective to see if infeasible
+      delete objective_;
+      objective_=saveObjective;
+      if (!problemStatus_) {
+	// carry on
+	status = ((ClpSimplexPrimal *) this)->primal(1,7);
+      }
+    }
+    if (problemStatus_==3&&numberIterations_<saveMax) {
+      if (handler_->logLevel()==63)
+	printf("looks like trouble - too many iterations in clean up - trying again\n");
+      // flatten solution and try again
+      int iColumn;
+      for (iColumn=0;iColumn<numberTotal;iColumn++) {
+	if (getStatus(iColumn)!=basic) {
+	  setStatus(iColumn,superBasic);
+	  // but put to bound if close
+	  if (fabs(solution_[iColumn]-lower_[iColumn])
+	      <=primalTolerance_) {
+	    solution_[iColumn]=lower_[iColumn];
+	    setStatus(iColumn,atLowerBound);
+	  } else if (fabs(solution_[iColumn]
+			  -upper_[iColumn])
+		     <=primalTolerance_) {
+	    solution_[iColumn]=upper_[iColumn];
+	    setStatus(iColumn,atUpperBound);
+	  }
+	}
+      }
+      problemStatus_=-1;
+      intParam_[ClpMaxNumIteration] = CoinMin(numberIterations_ + 1000 + 
+					      2*numberRows_+numberColumns_,saveMax);
+      perturbation_=savePerturbation;
+      baseIteration_=numberIterations_;
+      status = ((ClpSimplexPrimal *) this)->primal(0);
+      baseIteration_=0;
+      computeObjectiveValue();
+      // can't rely on djs either
+      memset(reducedCost_,0,numberColumns_*sizeof(double));
+      if (problemStatus_==3&&numberIterations_<saveMax&& 
+	  handler_->logLevel()>0)
+	printf("looks like real trouble - too many iterations in second clean up - giving up\n");
+    }
+    intParam_[ClpMaxNumIteration] = saveMax;
+    
+    setInitialDenseFactorization(denseFactorization);
+    perturbation_=savePerturbation;
+    if (problemStatus_==10) { 
+      if (!numberPrimalInfeasibilities_)
+	problemStatus_=0;
+      else
+	problemStatus_=4;
+    }
+    handler_->setLogLevel(saveLog);
+  }
+  status=problemStatus_;
+  if (!problemStatus_) {
+    int j;
+    // Move solution to external array
+    if (!columnScale_) {
+      CoinMemcpyN(solution_,numberColumns_,columnActivity_);
+    } else {
+      for (j=0;j<numberColumns_;j++) 
+	columnActivity_[j] = solution_[j]*columnScale_[j];
+    }
+    if ((info->solverOptions_&1)!=0) {
+      // reduced costs
+      if (!columnScale_) {
+	CoinMemcpyN(reducedCost_,numberColumns_,dj_);
+      } else {
+	for (j=0;j<numberColumns_;j++) 
+	  reducedCost_[j] = dj_[j]*columnScale_[j+numberColumns_];
+      }
+    }
+    if ((info->solverOptions_&2)!=0) {
+      // dual
+      if (!rowScale_) {
+	CoinMemcpyN(dual_,numberRows_,dj_+numberColumns_);
+      } else {
+	for (j=0;j<numberRows_;j++) 
+	  dual_[j] = dj_[j+numberColumns_]*rowScale_[j];
+      }
+    }
+    if ((info->solverOptions_&4)!=0) {
+      // row activity
+      if (!rowScale_) {
+	CoinMemcpyN(rowActivity_,numberRows_,solution_+numberColumns_);
+      } else {
+	for (j=0;j<numberRows_;j++) 
+	  rowActivity_[j] = solution_[j+numberColumns_]*rowScale_[j+numberRows_];
+      }
+    }
+  }
+  return status;
+}
+// Stop Fast dual
+void 
+ClpSimplex::stopFastDual2(ClpNodeStuff * info)
+{
+  delete [] info->saveCosts_;
+  info->saveCosts_=NULL;
+  specialOptions_=info->saveOptions_;
+  // try just factorization
+  if ((specialOptions_&65536)==0)
+    factorization_->setPersistenceFlag(0);
+  deleteRim(1);
+  whatsChanged_=0;
+  assert ((info->solverOptions_&65536)!=0);
+  info->solverOptions_ &= ~65536;
 }
 // Create C++ lines to get to current state
 void 

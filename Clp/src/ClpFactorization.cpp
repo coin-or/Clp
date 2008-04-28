@@ -20,6 +20,43 @@ const static bool doCheck=true;
 const static bool doCheck=false;
 #endif
 #endif
+//#define CLP_FACTORIZATION_INSTRUMENT
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+#include "CoinTime.hpp"
+double factorization_instrument(int type)
+{
+  static int times[10]={0,0,0,0,0,0,0,0,0,0};
+  static double startTime=0.0;
+  static double totalTimes [10]={0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
+  if (type<0) {
+    assert (!startTime);
+    startTime=CoinCpuTime();
+    return 0.0;
+  } else if (type>0) {
+    times[type]++;
+    double difference = CoinCpuTime()-startTime;
+    totalTimes[type] += difference;
+    startTime=0.0;
+    return difference;
+  } else {
+    // report
+    const char * types[10]=
+      {"","fac=rhs_etc","factorize","replace","update_FT",
+       "update","update_transpose","gosparse","getWeights!","update2_FT"};
+    double total=0.0;
+    for (int i=1;i<10;i++) {
+      if (times[i]) {
+	printf("%s was called %d times taking %g seconds\n",
+	       types[i],times[i],totalTimes[i]);
+	total += totalTimes[i];
+	times[i]=0;
+	totalTimes[i]=0.0;
+      }
+    }
+    return total;
+  }
+}
+#endif
 //#############################################################################
 // Constructors / Destructor / Assignment
 //#############################################################################
@@ -74,6 +111,9 @@ ClpFactorization::~ClpFactorization ()
 ClpFactorization &
 ClpFactorization::operator=(const ClpFactorization& rhs)
 {
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+  factorization_instrument(-1);
+#endif
   if (this != &rhs) {
     CoinFactorization::operator=(rhs);
 #ifndef SLIM_CLP
@@ -84,6 +124,9 @@ ClpFactorization::operator=(const ClpFactorization& rhs)
       networkBasis_=NULL;
 #endif
   }
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+  factorization_instrument(1);
+#endif
   return *this;
 }
 #if 0
@@ -102,6 +145,9 @@ int
 ClpFactorization::factorize ( ClpSimplex * model,
 			      int solveType, bool valuesPass)
 {
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+  factorization_instrument(-1);
+#endif
   ClpMatrixBase * matrix = model->clpMatrix(); 
   int numberRows = model->numberRows();
   int numberColumns = model->numberColumns();
@@ -304,7 +350,7 @@ ClpFactorization::factorize ( ClpSimplex * model,
 	// and recompute as network side say different
 	if (model->numberIterations())
 	  numberRowBasic = numberBasic - numberColumnBasic;
-	numberElements = 3 * numberBasic + 3 * numberElements + 10000;
+	numberElements = 3 * numberBasic + 3 * numberElements + 20000;
 #if 0
 	// If iteration not zero then may be compressed
 	getAreas ( !model->numberIterations() ? numberRows : numberBasic, 
@@ -651,6 +697,9 @@ ClpFactorization::factorize ( ClpSimplex * model,
     }
   }
 #endif
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+  factorization_instrument(2);
+#endif
   return status_;
 }
 /* Replaces one Column to basis,
@@ -668,39 +717,45 @@ ClpFactorization::replaceColumn ( const ClpSimplex * model,
 				  double pivotCheck ,
 				  bool checkBeforeModifying)
 {
+  int returnCode;
 #ifndef SLIM_CLP
   if (!networkBasis_) {
 #endif
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+    factorization_instrument(-1);
+#endif
     // see if FT
     if (doForrestTomlin_) {
-      int returnCode= CoinFactorization::replaceColumn(regionSparse,
+      returnCode= CoinFactorization::replaceColumn(regionSparse,
 					      pivotRow,
 					      pivotCheck,
 					      checkBeforeModifying);
-      return returnCode;
     } else {
-      return CoinFactorization::replaceColumnPFI(tableauColumn,
+      returnCode= CoinFactorization::replaceColumnPFI(tableauColumn,
 					      pivotRow,pivotCheck); // Note array
     }
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+    factorization_instrument(3);
+#endif
 
 #ifndef SLIM_CLP
   } else {
     if (doCheck) {
-      int returnCode = CoinFactorization::replaceColumn(regionSparse,
+      returnCode = CoinFactorization::replaceColumn(regionSparse,
 							pivotRow,
 							pivotCheck,
 							checkBeforeModifying);
       networkBasis_->replaceColumn(regionSparse,
 				   pivotRow);
-      return returnCode;
     } else {
       // increase number of pivots
       numberPivots_++;
-      return networkBasis_->replaceColumn(regionSparse,
+      returnCode = networkBasis_->replaceColumn(regionSparse,
 				   pivotRow);
     }
   }
 #endif
+  return returnCode;
 }
 
 /* Updates one column (FTRAN) from region2
@@ -718,11 +773,17 @@ ClpFactorization::updateColumnFT ( CoinIndexedVector * regionSparse,
 #ifndef SLIM_CLP
   if (!networkBasis_) {
 #endif
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+    factorization_instrument(-1);
+#endif
     collectStatistics_ = true;
-    int returnValue= CoinFactorization::updateColumnFT(regionSparse,
+    int returnCode= CoinFactorization::updateColumnFT(regionSparse,
 						       regionSparse2);
     collectStatistics_ = false;
-    return returnValue;
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+    factorization_instrument(4);
+#endif
+    return returnCode;
 #ifndef SLIM_CLP
   } else {
 #ifdef CHECK_NETWORK
@@ -782,12 +843,18 @@ ClpFactorization::updateColumn ( CoinIndexedVector * regionSparse,
 #ifndef SLIM_CLP
   if (!networkBasis_) {
 #endif
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+    factorization_instrument(-1);
+#endif
     collectStatistics_ = true;
-    int returnValue= CoinFactorization::updateColumn(regionSparse,
+    int returnCode= CoinFactorization::updateColumn(regionSparse,
 						     regionSparse2,
 						     noPermute);
     collectStatistics_ = false;
-    return returnValue;
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+    factorization_instrument(5);
+#endif
+    return returnCode;
 #ifndef SLIM_CLP
   } else {
 #ifdef CHECK_NETWORK
@@ -832,6 +899,21 @@ ClpFactorization::updateColumn ( CoinIndexedVector * regionSparse,
 #endif
 }
 /* Updates one column (FTRAN) from region2
+   Tries to do FT update
+   number returned is negative if no room.
+   Also updates region3
+   region1 starts as zero and is zero at end */
+int 
+ClpFactorization::updateTwoColumnsFT ( CoinIndexedVector * regionSparse1,
+				       CoinIndexedVector * regionSparse2,
+				       CoinIndexedVector * regionSparse3,
+				       bool noPermuteRegion3) 
+{
+  int returnCode=updateColumnFT(regionSparse1,regionSparse2);
+  updateColumn(regionSparse1,regionSparse3,noPermuteRegion3);
+  return returnCode;
+}
+/* Updates one column (FTRAN) from region2
    number returned is negative if no room
    region1 starts as zero and is zero at end */
 int 
@@ -844,10 +926,10 @@ ClpFactorization::updateColumnForDebug ( CoinIndexedVector * regionSparse,
   if (!numberRows_)
     return 0;
   collectStatistics_ = false;
-  int returnValue= CoinFactorization::updateColumn(regionSparse,
+  int returnCode= CoinFactorization::updateColumn(regionSparse,
                                                    regionSparse2,
                                                    noPermute);
-  return returnValue;
+  return returnCode;
 }
 /* Updates one column (BTRAN) from region2
    region1 starts as zero and is zero at end */
@@ -860,11 +942,17 @@ ClpFactorization::updateColumnTranspose ( CoinIndexedVector * regionSparse,
 #ifndef SLIM_CLP
   if (!networkBasis_) {
 #endif
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+    factorization_instrument(-1);
+#endif
     collectStatistics_ = true;
-    int returnValue = CoinFactorization::updateColumnTranspose(regionSparse,
+    int returnCode = CoinFactorization::updateColumnTranspose(regionSparse,
 						    regionSparse2);
     collectStatistics_ = false;
-    return returnValue;
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+    factorization_instrument(6);
+#endif
+    return returnCode;
 #ifndef SLIM_CLP
   } else {
 #ifdef CHECK_NETWORK
@@ -910,10 +998,16 @@ ClpFactorization::updateColumnTranspose ( CoinIndexedVector * regionSparse,
 void 
 ClpFactorization::goSparse()
 {
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+  factorization_instrument(-1);
+#endif
 #ifndef SLIM_CLP
   if (!networkBasis_) 
 #endif
     CoinFactorization::goSparse();
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+  factorization_instrument(7);
+#endif
 }
 // Cleans up i.e. gets rid of network basis 
 void 
@@ -945,6 +1039,9 @@ ClpFactorization::needToReorder() const
 void
 ClpFactorization::getWeights(int * weights) const
 {
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+  factorization_instrument(-1);
+#endif
 #ifndef SLIM_CLP
   if (networkBasis_) {
     // Network - just unit
@@ -997,6 +1094,9 @@ ClpFactorization::getWeights(int * weights) const
       weights[iPermute]=number;
     }
   }
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+  factorization_instrument(8);
+#endif
 }
 #else
 // This one allows multiple factorizations
@@ -1013,6 +1113,7 @@ ClpFactorization::ClpFactorization ()
   coinFactorizationA_ = new CoinFactorization() ;
   coinFactorizationB_ = NULL;
   //coinFactorizationB_ = new CoinDenseFactorization();
+  goDenseThreshold_ = -1;
 }
 
 //-------------------------------------------------------------------
@@ -1020,6 +1121,9 @@ ClpFactorization::ClpFactorization ()
 //-------------------------------------------------------------------
 ClpFactorization::ClpFactorization (const ClpFactorization & rhs) 
 {
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+  factorization_instrument(-1);
+#endif
 #ifndef SLIM_CLP
   if (rhs.networkBasis_)
     networkBasis_ = new ClpNetworkBasis(*(rhs.networkBasis_));
@@ -1034,24 +1138,42 @@ ClpFactorization::ClpFactorization (const ClpFactorization & rhs)
     coinFactorizationB_ = new CoinDenseFactorization(*(rhs.coinFactorizationB_));
   else
     coinFactorizationB_=NULL;
+  goDenseThreshold_ = rhs.goDenseThreshold_;
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+  factorization_instrument(1);
+#endif
 }
 
 ClpFactorization::ClpFactorization (const CoinFactorization & rhs) 
 {
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+  factorization_instrument(-1);
+#endif
 #ifndef SLIM_CLP
   networkBasis_=NULL;
 #endif
   coinFactorizationA_ = new CoinFactorization(rhs);
   coinFactorizationB_=NULL;
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+  factorization_instrument(1);
+  goDenseThreshold_ = -1;
+#endif
 }
 
 ClpFactorization::ClpFactorization (const CoinDenseFactorization & rhs) 
 {
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+  factorization_instrument(-1);
+#endif
 #ifndef SLIM_CLP
   networkBasis_=NULL;
 #endif
   coinFactorizationA_ = NULL;
   coinFactorizationB_ = new CoinDenseFactorization(rhs);
+  goDenseThreshold_ = -1;
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+  factorization_instrument(1);
+#endif
 }
 
 //-------------------------------------------------------------------
@@ -1072,6 +1194,9 @@ ClpFactorization::~ClpFactorization ()
 ClpFactorization &
 ClpFactorization::operator=(const ClpFactorization& rhs)
 {
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+  factorization_instrument(-1);
+#endif
   if (this != &rhs) {
 #ifndef SLIM_CLP
     delete networkBasis_;
@@ -1091,6 +1216,9 @@ ClpFactorization::operator=(const ClpFactorization& rhs)
     else
       coinFactorizationB_=NULL;
   }
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+  factorization_instrument(1);
+#endif
   return *this;
 }
 // Go over to dense code
@@ -1101,6 +1229,7 @@ ClpFactorization::goDense()
   delete coinFactorizationB_;
   coinFactorizationA_ = NULL;
   coinFactorizationB_ = new CoinDenseFactorization();
+  //printf("going dense\n");
 }
 int 
 ClpFactorization::factorize ( ClpSimplex * model,
@@ -1111,6 +1240,9 @@ ClpFactorization::factorize ( ClpSimplex * model,
   int numberColumns = model->numberColumns();
   if (!numberRows)
     return 0;
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+  factorization_instrument(-1);
+#endif
   if (coinFactorizationB_) {
     setStatus(-99);
     int * pivotVariable = model->pivotVariable();
@@ -1196,7 +1328,7 @@ ClpFactorization::factorize ( ClpSimplex * model,
 					  numberRowBasic,
 					  numberColumnBasic);
       // Not needed for dense
-      numberElements = 3 * numberBasic + 3 * numberElements + 10000;
+      numberElements = 3 * numberBasic + 3 * numberElements + 20000;
       coinFactorizationB_->getAreas ( numberRows,
 				      numberRowBasic+numberColumnBasic, numberElements,
 				      2 * numberElements );
@@ -1207,11 +1339,15 @@ ClpFactorization::factorize ( ClpSimplex * model,
       CoinBigIndex * startColumnU;
       int * numberInRow;
       int * numberInColumn;
-      double slackValue;
       elementU = coinFactorizationB_->elements();
       indexRowU = coinFactorizationB_->indices();
       startColumnU = coinFactorizationB_->starts();
+#ifndef COIN_FAST_CODE
+      double slackValue;
       slackValue = coinFactorizationB_->slackValue();
+#else
+#define slackValue -1.0
+#endif
       // At present we don't need counts
       numberInRow = coinFactorizationB_->intWorkArea();
       numberInColumn = numberInRow;
@@ -1363,6 +1499,9 @@ ClpFactorization::factorize ( ClpSimplex * model,
 	assert (fabs(arrayB[i])<1.0e-4);
       region2B.clear();
     }
+#endif
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+    factorization_instrument(2);
 #endif
     return coinFactorizationB_->status();
   }
@@ -1563,7 +1702,7 @@ ClpFactorization::factorize ( ClpSimplex * model,
 	// and recompute as network side say different
 	if (model->numberIterations())
 	  numberRowBasic = numberBasic - numberColumnBasic;
-	numberElements = 3 * numberBasic + 3 * numberElements + 10000;
+	numberElements = 3 * numberBasic + 3 * numberElements + 20000;
 	coinFactorizationA_->getAreas ( numberRows,
 		   numberRowBasic+numberColumnBasic, numberElements,
 		   2 * numberElements );
@@ -1576,7 +1715,9 @@ ClpFactorization::factorize ( ClpSimplex * model,
 	double * elementU = coinFactorizationA_->elementU();
 	int * indexRowU = coinFactorizationA_->indexRowU();
 	CoinBigIndex * startColumnU = coinFactorizationA_->startColumnU();
+#ifndef COIN_FAST_CODE
 	double slackValue = coinFactorizationA_->slackValue();
+#endif
 	for (i=0;i<numberRowBasic;i++) {
 	  int iRow = pivotTemp[i];
 	  indexRowU[i]=iRow;
@@ -1880,6 +2021,9 @@ ClpFactorization::factorize ( ClpSimplex * model,
     }
   }
 #endif
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+  factorization_instrument(2);
+#endif
   return coinFactorizationA_->status();
 }
 /* Replaces one Column to basis,
@@ -1900,9 +2044,12 @@ ClpFactorization::replaceColumn ( const ClpSimplex * model,
 #ifndef SLIM_CLP
   if (!networkBasis_) {
 #endif
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+    factorization_instrument(-1);
+#endif
+    int returnCode;
     // see if FT
     if (!coinFactorizationA_||coinFactorizationA_->forrestTomlin()) {
-      int returnCode;
       if (coinFactorizationA_) {
 	returnCode = coinFactorizationA_->replaceColumn(regionSparse,
 							pivotRow,
@@ -1937,11 +2084,14 @@ ClpFactorization::replaceColumn ( const ClpSimplex * model,
 	}
 #endif
       }
-      return returnCode;
     } else {
-      return coinFactorizationA_->replaceColumnPFI(tableauColumn,
+      returnCode = coinFactorizationA_->replaceColumnPFI(tableauColumn,
 					      pivotRow,pivotCheck); // Note array
     }
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+      factorization_instrument(3);
+#endif
+      return returnCode;
 
 #ifndef SLIM_CLP
   } else {
@@ -1978,17 +2128,23 @@ ClpFactorization::updateColumnFT ( CoinIndexedVector * regionSparse,
 #ifndef SLIM_CLP
   if (!networkBasis_) {
 #endif
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+    factorization_instrument(-1);
+#endif
+    int returnCode;
     if (coinFactorizationA_) {
       coinFactorizationA_->setCollectStatistics(true);
-      int returnValue= coinFactorizationA_->updateColumnFT(regionSparse,
+      returnCode= coinFactorizationA_->updateColumnFT(regionSparse,
 							   regionSparse2);
       coinFactorizationA_->setCollectStatistics(false);
-      return returnValue;
     } else {
-      int returnValue= coinFactorizationB_->updateColumn(regionSparse,
+      returnCode= coinFactorizationB_->updateColumn(regionSparse,
 							 regionSparse2);
-      return returnValue;
     }
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+    factorization_instrument(4);
+#endif
+    return returnCode;
 #ifndef SLIM_CLP
   } else {
 #ifdef CHECK_NETWORK
@@ -2049,19 +2205,25 @@ ClpFactorization::updateColumn ( CoinIndexedVector * regionSparse,
 #ifndef SLIM_CLP
   if (!networkBasis_) {
 #endif
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+    factorization_instrument(-1);
+#endif
+    int returnCode;
     if (coinFactorizationA_) {
       coinFactorizationA_->setCollectStatistics(true);
-      int returnValue= coinFactorizationA_->updateColumn(regionSparse,
+      returnCode= coinFactorizationA_->updateColumn(regionSparse,
 							 regionSparse2,
 							 noPermute);
       coinFactorizationA_->setCollectStatistics(false);
-      return returnValue;
     } else {
-      int returnValue= coinFactorizationB_->updateColumn(regionSparse,
+      returnCode= coinFactorizationB_->updateColumn(regionSparse,
 							 regionSparse2,
 							 noPermute);
-      return returnValue;
     }
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+    factorization_instrument(5);
+#endif
+    return returnCode;
 #ifndef SLIM_CLP
   } else {
 #ifdef CHECK_NETWORK
@@ -2107,6 +2269,65 @@ ClpFactorization::updateColumn ( CoinIndexedVector * regionSparse,
 #endif
 }
 /* Updates one column (FTRAN) from region2
+   Tries to do FT update
+   number returned is negative if no room.
+   Also updates region3
+   region1 starts as zero and is zero at end */
+int 
+ClpFactorization::updateTwoColumnsFT ( CoinIndexedVector * regionSparse1,
+				       CoinIndexedVector * regionSparse2,
+				       CoinIndexedVector * regionSparse3,
+				       bool noPermuteRegion3)
+{
+#ifdef CLP_DEBUG
+  regionSparse1->checkClear();
+#endif
+  if (!numberRows())
+    return 0;
+  int returnCode=0;
+#ifndef SLIM_CLP
+  if (!networkBasis_) {
+#endif
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+    factorization_instrument(-1);
+#endif
+    if (coinFactorizationA_) {
+      coinFactorizationA_->setCollectStatistics(true);
+      if (coinFactorizationA_->spaceForForrestTomlin()) {
+	assert (regionSparse2->packedMode());
+	assert (!regionSparse3->packedMode());
+	returnCode= coinFactorizationA_->updateTwoColumnsFT(regionSparse1,
+							    regionSparse2,
+							    regionSparse3,
+							    noPermuteRegion3);
+      } else {
+	returnCode= coinFactorizationA_->updateColumnFT(regionSparse1,
+							regionSparse2);
+	coinFactorizationA_->updateColumn(regionSparse1,
+					  regionSparse3,
+					  noPermuteRegion3);
+      }
+      coinFactorizationA_->setCollectStatistics(false);
+    } else {
+      returnCode= coinFactorizationB_->updateColumn(regionSparse1,
+						     regionSparse2);
+      coinFactorizationB_->updateColumn(regionSparse1,
+					regionSparse3,
+					noPermuteRegion3);
+    }
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+    factorization_instrument(9);
+#endif
+    return returnCode;
+#ifndef SLIM_CLP
+  } else {
+    returnCode=updateColumnFT(regionSparse1,regionSparse2);
+    updateColumn(regionSparse1,regionSparse3,noPermuteRegion3);
+  }
+#endif
+  return returnCode;
+}
+/* Updates one column (FTRAN) from region2
    number returned is negative if no room
    region1 starts as zero and is zero at end */
 int 
@@ -2119,10 +2340,10 @@ ClpFactorization::updateColumnForDebug ( CoinIndexedVector * regionSparse,
   if (!coinFactorizationA_->numberRows())
     return 0;
   coinFactorizationA_->setCollectStatistics(false);
-  int returnValue= coinFactorizationA_->updateColumn(regionSparse,
+  int returnCode= coinFactorizationA_->updateColumn(regionSparse,
                                                    regionSparse2,
                                                    noPermute);
-  return returnValue;
+  return returnCode;
 }
 /* Updates one column (BTRAN) from region2
    region1 starts as zero and is zero at end */
@@ -2135,17 +2356,23 @@ ClpFactorization::updateColumnTranspose ( CoinIndexedVector * regionSparse,
 #ifndef SLIM_CLP
   if (!networkBasis_) {
 #endif
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+    factorization_instrument(-1);
+#endif
+    int returnCode;
     if (coinFactorizationA_) {
       coinFactorizationA_->setCollectStatistics(true);
-      int returnValue =  coinFactorizationA_->updateColumnTranspose(regionSparse,
+      returnCode =  coinFactorizationA_->updateColumnTranspose(regionSparse,
 						    regionSparse2);
       coinFactorizationA_->setCollectStatistics(false);
-      return returnValue;
     } else {
-      int returnValue= coinFactorizationB_->updateColumnTranspose(regionSparse,
+      returnCode= coinFactorizationB_->updateColumnTranspose(regionSparse,
 							 regionSparse2);
-      return returnValue;
     }
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+    factorization_instrument(6);
+#endif
+    return returnCode;
 #ifndef SLIM_CLP
   } else {
 #ifdef CHECK_NETWORK
@@ -2193,10 +2420,18 @@ void
 ClpFactorization::goSparse()
 {
 #ifndef SLIM_CLP
-  if (!networkBasis_) 
+  if (!networkBasis_) {
 #endif
-    if (coinFactorizationA_)
-    coinFactorizationA_->goSparse();
+    if (coinFactorizationA_) {
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+      factorization_instrument(-1);
+#endif
+      coinFactorizationA_->goSparse();
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+      factorization_instrument(7);
+#endif
+    }
+  }
 }
 // Cleans up i.e. gets rid of network basis 
 void 
@@ -2229,6 +2464,9 @@ ClpFactorization::needToReorder() const
 void
 ClpFactorization::getWeights(int * weights) const
 {
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+  factorization_instrument(-1);
+#endif
 #ifndef SLIM_CLP
   if (networkBasis_) {
     // Network - just unit
@@ -2285,5 +2523,8 @@ ClpFactorization::getWeights(int * weights) const
       weights[iPermute]=number;
     }
   }
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+  factorization_instrument(8);
+#endif
 }
 #endif

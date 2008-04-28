@@ -99,10 +99,10 @@ MyMessageHandler::print()
         // Column solution
         int numberColumns = model_->numberColumns();
         const double * solution = model_->solutionRegion(1);
-	
+
         // Create vector to contain solution
         StdVectorDouble feasibleExtremePoint;
-	
+
         const double *objective = model_->objective();
         double objectiveValue = 0;
         
@@ -123,7 +123,7 @@ MyMessageHandler::print()
         std::cout << "Objective "<< objectiveValue << std::endl;
         // Save solution
         feasibleExtremePoints_.push_front(feasibleExtremePoint);
-	
+
         // Want maximum of 10 solutions, so if more then 10 get rid of oldest
         int numExtremePointsSaved = feasibleExtremePoints_.size();
         if ( numExtremePointsSaved>=10 ) {

@@ -20,6 +20,7 @@ class ClpPrimalColumnPivot;
 class ClpFactorization;
 class CoinIndexedVector;
 class ClpNonLinearCost;
+class ClpNodeStuff;
 class CoinModel;
 class OsiClpSolverInterface;
 class CoinWarmStartBasis;
@@ -369,6 +370,8 @@ public:
   CoinWarmStartBasis * getBasis() const;
   /// Passes in factorization
   void setFactorization( ClpFactorization & factorization);
+  /// Copies in factorization to existing one
+  void copyFactorization( ClpFactorization & factorization);
   /** Tightens primal bounds to make dual faster.  Unless
       fixed or doTight>10, bounds are slightly looser than they could be.
       This is to make dual go faster and is probably not needed
@@ -415,6 +418,22 @@ public:
 		      bool stopOnFirstInfeasible=true,
 		      bool alwaysFinish=false,
 		      int startFinishOptions=0);
+  /// Fathom - 1 if solution
+  int fathom(void * stuff);
+  /** Do up to N deep - returns 
+      -1 - no solution nNodes_ valid nodes
+      >= if solution and that node gives solution
+      ClpNode array is 2**N long.  Values for N and 
+      array are in stuff (nNodes_ also in stuff) */
+  int fathomMany(void * stuff);
+  /// Double checks OK
+  double doubleCheck();
+  /// Starts Fast dual2
+  int startFastDual2(ClpNodeStuff * stuff);
+  /// Like Fast dual
+  int fastDual2(ClpNodeStuff * stuff);
+  /// Stops Fast dual2
+  void stopFastDual2(ClpNodeStuff * stuff);
   //@}
 
   /**@name Needed for functionality of OsiSimplexInterface */
@@ -597,6 +616,9 @@ public:
   /// dual row pivot choice
   ClpDualRowPivot * dualRowPivot() const
   { return dualRowPivot_;}
+  /// Returns true if model looks OK
+  inline bool goodAccuracy() const
+  { return (largestPrimalError_<1.0e-7&&largestDualError_<1.0e-7);}
   /** Return model - updates any scalars */
   void returnModel(ClpSimplex & otherModel);
   /** Factorizes using current basis.  
@@ -894,6 +916,7 @@ public:
       1 bit - if presolve says infeasible in ClpSolve return
       2 bit - if presolved problem infeasible return
       4 bit - keep arrays like upper_ around
+      8 bit - if factorization kept can still declare optimal at once
   */
   inline int moreSpecialOptions() const
   { return moreSpecialOptions_;}
@@ -1292,6 +1315,8 @@ protected:
   /** Maximum number of basic variables - can be more than number of rows if GUB
   */
   int maximumBasic_;
+  /// If may skip final factorize then allow up to this pivots (default 20)
+  int dontFactorizePivots_;
   /** For advanced use.  When doing iterative solves things can get
       nasty so on values pass if incoming solution has largest
       infeasibility < incomingInfeasibility throw out variables

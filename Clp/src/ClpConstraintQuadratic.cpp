@@ -179,7 +179,7 @@ ClpConstraintQuadratic::gradient(const ClpSimplex * model,
   }
   functionValue = functionValue_;
   offset = offset_;
-  memcpy(gradient,lastGradient_,numberColumns_*sizeof(double));
+  CoinMemcpyN(lastGradient_,numberColumns_,gradient);
   return 0;
 }
 // Resize constraint

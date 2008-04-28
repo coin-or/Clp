@@ -159,7 +159,7 @@ ClpDynamicExampleMatrix::ClpDynamicExampleMatrix(ClpSimplex * model, int numberS
   if (status) {
     status_ = ClpCopyOfArray(status,numberSets_);
     assert (dynamicStatus);
-    memcpy(dynamicStatus_,dynamicStatus,numberIds);
+    CoinMemcpyN(dynamicStatus,numberIds,dynamicStatus_);
     assert (numberIds);
   } else {
     assert (!numberIds);
@@ -311,7 +311,7 @@ ClpDynamicExampleMatrix::ClpDynamicExampleMatrix(ClpSimplex * model, int numberS
   if (status) {
     status_ = ClpCopyOfArray(status,numberSets_);
     assert (dynamicStatus);
-    memcpy(dynamicStatus_,dynamicStatus,numberIds);
+    CoinMemcpyN(dynamicStatus,numberIds,dynamicStatus_);
     assert (numberIds);
   } else {
     assert (!numberIds);

@@ -53,11 +53,11 @@ ClpPlusMinusOneMatrix::ClpPlusMinusOneMatrix (const ClpPlusMinusOneMatrix & rhs)
   if (numberColumns_) {
     CoinBigIndex numberElements = rhs.startPositive_[numberColumns_];
     indices_ = new int [ numberElements];
-    memcpy(indices_,rhs.indices_,numberElements*sizeof(int));
+    CoinMemcpyN(rhs.indices_,numberElements,indices_);
     startPositive_ = new CoinBigIndex [ numberColumns_+1];
-    memcpy(startPositive_,rhs.startPositive_,(numberColumns_+1)*sizeof(CoinBigIndex));
+    CoinMemcpyN(rhs.startPositive_,(numberColumns_+1),startPositive_);
     startNegative_ = new CoinBigIndex [ numberColumns_];
-    memcpy(startNegative_,rhs.startNegative_,numberColumns_*sizeof(CoinBigIndex));
+    CoinMemcpyN(rhs.startNegative_,numberColumns_,startNegative_);
   }
   int numberRows = getNumRows();
   if (rhs.rhsOffset_&&numberRows) {
@@ -203,11 +203,11 @@ ClpPlusMinusOneMatrix::operator=(const ClpPlusMinusOneMatrix& rhs)
     if (numberColumns_) {
       CoinBigIndex numberElements = rhs.startPositive_[numberColumns_];
       indices_ = new int [ numberElements];
-      memcpy(indices_,rhs.indices_,numberElements*sizeof(int));
+      CoinMemcpyN(rhs.indices_,numberElements,indices_);
       startPositive_ = new CoinBigIndex [ numberColumns_+1];
-      memcpy(startPositive_,rhs.startPositive_,(numberColumns_+1)*sizeof(CoinBigIndex));
+      CoinMemcpyN(rhs.startPositive_,(numberColumns_+1),startPositive_);
       startNegative_ = new CoinBigIndex [ numberColumns_];
-      memcpy(startNegative_,rhs.startNegative_,numberColumns_*sizeof(CoinBigIndex));
+      CoinMemcpyN(rhs.startNegative_,numberColumns_,startNegative_);
     }
   }
   return *this;
@@ -1342,15 +1342,15 @@ ClpPlusMinusOneMatrix::appendCols(int number, const CoinPackedVectorBase * const
   int numberNow = startPositive_[numberColumns_];
   CoinBigIndex * temp;
   temp = new CoinBigIndex [numberColumns_+1+number];
-  memcpy(temp,startPositive_,(numberColumns_+1)*sizeof(CoinBigIndex ));
+  CoinMemcpyN(startPositive_,(numberColumns_+1),temp);
   delete [] startPositive_;
   startPositive_= temp;
   temp = new CoinBigIndex [numberColumns_+number];
-  memcpy(temp,startNegative_,numberColumns_*sizeof(CoinBigIndex ));
+  CoinMemcpyN(startNegative_,numberColumns_,temp);
   delete [] startNegative_;
   startNegative_= temp;
   int * temp2 = new int [numberNow+size];
-  memcpy(temp2,indices_,numberNow*sizeof(int));
+  CoinMemcpyN(indices_,numberNow,temp2);
   delete [] indices_;
   indices_= temp2;
   // now add
@@ -1422,14 +1422,14 @@ ClpPlusMinusOneMatrix::appendRows(int number, const CoinPackedVectorBase * const
     move = startNegative_[iColumn]-now;
     n = countPositive[iColumn];
     startPositive_[iColumn] += numberAdded;
-    memcpy(indices_+now,newIndices+startPositive_[iColumn],move*sizeof(int));
+    CoinMemcpyN(newIndices+startPositive_[iColumn],move,indices_+now);
     countPositive[iColumn]= startNegative_[iColumn]+numberAdded;
     numberAdded += n;
     now = startNegative_[iColumn];
     move = startPositive_[iColumn+1]-now;
     n = countNegative[iColumn];
     startNegative_[iColumn] += numberAdded;
-    memcpy(indices_+now,newIndices+startNegative_[iColumn],move*sizeof(int));
+    CoinMemcpyN(newIndices+startNegative_[iColumn],move,indices_+now);
     countNegative[iColumn]= startPositive_[iColumn+1]+numberAdded;
     numberAdded += n;
   }
@@ -1524,7 +1524,7 @@ ClpPlusMinusOneMatrix::partialPricing(ClpSimplex * model, double startFraction, 
       ClpSimplex::Status status = model->getStatus(iSequence);
       
       switch(status) {
-	
+
       case ClpSimplex::basic:
       case ClpSimplex::isFixed:
 	break;
@@ -1907,13 +1907,13 @@ ClpPlusMinusOneMatrix::setDimensions(int newnumrows, int newnumcols)
     int i;
     CoinBigIndex end = startPositive_[length];
     temp = new CoinBigIndex [number+1];
-    memcpy(temp,startPositive_,(length+1)*sizeof(CoinBigIndex));
+    CoinMemcpyN(startPositive_,(length+1),temp);
     delete [] startPositive_;
     for (i=length+1;i<number+1;i++)
       temp[i]= end;
     startPositive_=temp;
     temp = new CoinBigIndex [number];
-    memcpy(temp,startNegative_,length*sizeof(CoinBigIndex));
+    CoinMemcpyN(startNegative_,length,temp);
     delete [] startNegative_;
     for (i=length;i<number;i++)
       temp[i]= end;

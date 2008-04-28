@@ -85,7 +85,10 @@
      is fairly easy.
 
  */
-
+#ifdef COIN_DEVELOP
+#undef COIN_DEVELOP
+#define COIN_DEVELOP 2
+#endif
 
 #include "CoinPragma.hpp"
 
@@ -323,9 +326,15 @@ ClpSimplexDual::startupSolve(int ifValuesPass,double * saveDuals,int startFinish
 	  //gutsOfSolution(NULL,NULL);
 	} else if (numberDualInfeasibilities_) {
 	  problemStatus_=10;
+#if COIN_DEVELOP>2
+	 
+	  printf("returning at %d\n",__LINE__);
+#endif
 	  return 1; // to primal
 	}
       }
+    } else if (!ifValuesPass) {
+      gutsOfSolution(NULL,NULL);
     }
     return 0;
   } else {
@@ -468,8 +477,10 @@ ClpSimplexDual::gutsOfDual(int ifValuesPass,double * & saveDuals,int initialStat
         break;
       }
     }
-      // Do iterations
-    whileIterating(saveDuals,ifValuesPass);
+    // Do iterations
+    int returnCode=whileIterating(saveDuals,ifValuesPass);
+    if (returnCode==-2)
+      factorType=3;
   }
 }
 int 
@@ -480,6 +491,11 @@ ClpSimplexDual::dual(int ifValuesPass,int startFinishOptions)
   // save data
   ClpDataSave data = saveData();
   double * saveDuals = NULL;
+  int saveDont = dontFactorizePivots_;
+  if ((specialOptions_&2048)==0)
+    dontFactorizePivots_=0;
+  else if(!dontFactorizePivots_)
+    dontFactorizePivots_ = 20;
   if (ifValuesPass) {
     saveDuals = new double [numberRows_+numberColumns_];
     CoinMemcpyN(dual_,numberRows_,saveDuals);
@@ -499,6 +515,7 @@ ClpSimplexDual::dual(int ifValuesPass,int startFinishOptions)
   
   // Restore any saved stuff
   restoreData(data);
+  dontFactorizePivots_ = saveDont;
   return problemStatus_;
 }
 // old way
@@ -619,7 +636,7 @@ int ClpSimplexDual::dual (int ifValuesPass , int startFinishOptions)
 	handler_->message()<<CoinMessageEol;
       }
     }
-	
+
     // This says whether to restore things etc
     // startup will have factorized so can skip
     int factorType=0;
@@ -946,22 +963,22 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
       double saveValue = objectiveValue_;
       double * saveRow1 = new double[numberRows_];
       double * saveRow2 = new double[numberRows_];
-      memcpy(saveRow1,rowReducedCost_,numberRows_*sizeof(double));
-      memcpy(saveRow2,rowActivityWork_,numberRows_*sizeof(double));
+      CoinMemcpyN(rowReducedCost_,numberRows_,saveRow1);
+      CoinMemcpyN(rowActivityWork_,numberRows_,saveRow2);
       double * saveColumn1 = new double[numberColumns_];
       double * saveColumn2 = new double[numberColumns_];
-      memcpy(saveColumn1,reducedCostWork_,numberColumns_*sizeof(double));
-      memcpy(saveColumn2,columnActivityWork_,numberColumns_*sizeof(double));
+      CoinMemcpyN(reducedCostWork_,numberColumns_,saveColumn1);
+      CoinMemcpyN(columnActivityWork_,numberColumns_,saveColumn2);
       gutsOfSolution(NULL,NULL);
       printf("xxx %d old obj %g, recomputed %g, sum dual inf %g\n",
 	     numberIterations_,
 	     saveValue,objectiveValue_,sumDualInfeasibilities_);
       if (saveValue>objectiveValue_+1.0e-2)
 	printf("**bad**\n");
-      memcpy(rowReducedCost_,saveRow1,numberRows_*sizeof(double));
-      memcpy(rowActivityWork_,saveRow2,numberRows_*sizeof(double));
-      memcpy(reducedCostWork_,saveColumn1,numberColumns_*sizeof(double));
-      memcpy(columnActivityWork_,saveColumn2,numberColumns_*sizeof(double));
+      CoinMemcpyN(saveRow1,numberRows_,rowReducedCost_);
+      CoinMemcpyN(saveRow2,numberRows_,rowActivityWork_);
+      CoinMemcpyN(saveColumn1,numberColumns_,reducedCostWork_);
+      CoinMemcpyN(saveColumn2,numberColumns_,columnActivityWork_);
       delete [] saveRow1;
       delete [] saveRow2;
       delete [] saveColumn1;
@@ -1178,10 +1195,11 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
 	// update the incoming column
 	double btranAlpha = -alpha_*directionOut_; // for check
 	unpackPacked(rowArray_[1]);
-	factorization_->updateColumnFT(rowArray_[2],rowArray_[1]);
+	// moved into updateWeights - factorization_->updateColumnFT(rowArray_[2],rowArray_[1]);
 	// and update dual weights (can do in parallel - with extra array)
 	alpha_ = dualRowPivot_->updateWeights(rowArray_[0],
 					      rowArray_[2],
+					      rowArray_[3],
 					      rowArray_[1]);
 	// see if update stable
 #ifdef CLP_DEBUG
@@ -1473,7 +1491,7 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
         }
 #ifdef CHECK_ACCURACY
         if (whatNext) {
-          memcpy(zzzzzz,solution_,(numberRows_+numberColumns_)*sizeof(double));
+          CoinMemcpyN(solution_,(numberRows_+numberColumns_),zzzzzz);
         }
 #endif
 	//if (numberIterations_==1890)
@@ -1527,7 +1545,8 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
 	if (handler_->logLevel()&32)
 	  printf("** no column pivot\n");
 #endif
-	if (factorization_->pivots()<5&&acceptablePivot_<=1.0e-8) {
+	if (factorization_->pivots()<=CoinMax(dontFactorizePivots_,5)&&acceptablePivot_<=1.0e-8) {
+	  //&&goodAccuracy()) {
           // If not in branch and bound etc save ray
           if ((specialOptions_&(1024|4096))==0) {
 	    // create ray anyway
@@ -1545,12 +1564,60 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
               // unless primal feasible!!!!
               //printf("%d %g %d %g\n",numberPrimalInfeasibilities_,sumPrimalInfeasibilities_,
 	      //   numberDualInfeasibilities_,sumDualInfeasibilities_);
-              if (sumPrimalInfeasibilities_<1.0e-3||sumDualInfeasibilities_>1.0e-6||(specialOptions_&1024)!=0) {
-                problemStatus_=10;
-		// Get rid of objective
-		if ((specialOptions_&16384)==0)
-		  objective_ = new ClpLinearObjective(NULL,numberColumns_);
+	      //#define TEST_CLP_NODE
+#ifndef TEST_CLP_NODE
+	      // Should be correct - but ...
+	      int numberFake = numberAtFakeBound();
+	      double sumPrimal =  (!numberFake) ? 2.0e5 : sumPrimalInfeasibilities_;
+              if (sumPrimalInfeasibilities_<1.0e-3||sumDualInfeasibilities_>1.0e-5||
+		  (sumPrimal<1.0e5&&(specialOptions_&1024)!=0&&factorization_->pivots())) {
+		if (sumPrimal>50.0&&factorization_->pivots()>2) {
+		  problemStatus_=-4;
+#ifdef COIN_DEVELOP
+		  printf("status to -4 at %d - primalinf %g pivots %d\n",
+			 __LINE__,sumPrimalInfeasibilities_,
+			 factorization_->pivots());
+#endif
+		} else {
+		  problemStatus_=10;
+#if COIN_DEVELOP>1
+		  printf("returning at %d - primal %d %g - dual %d %g fake %d weight %g - pivs %d - options (1024-16384) %d %d %d %d %d\n",
+			 __LINE__,numberPrimalInfeasibilities_,
+			 sumPrimalInfeasibilities_,
+			 numberDualInfeasibilities_,sumDualInfeasibilities_,
+			 numberFake_,dualBound_,factorization_->pivots(),
+			 (specialOptions_&1024)!=0 ? 1 : 0,
+			 (specialOptions_&2048)!=0 ? 1 : 0,
+			 (specialOptions_&4096)!=0 ? 1 : 0,
+			 (specialOptions_&8192)!=0 ? 1 : 0,
+			 (specialOptions_&16384)!=0 ? 1 : 0
+			 );
+#endif
+		  // Get rid of objective
+		  if ((specialOptions_&16384)==0)
+		    objective_ = new ClpLinearObjective(NULL,numberColumns_);
+		}
 	      }
+#else
+              if (sumPrimalInfeasibilities_<1.0e-3||sumDualInfeasibilities_>1.0e-6) {
+#ifdef COIN_DEVELOP
+		printf("at %d - primal %d %g - dual %d %g fake %d weight %g - pivs %d\n",
+		       __LINE__,numberPrimalInfeasibilities_,
+		       sumPrimalInfeasibilities_,
+		       numberDualInfeasibilities_,sumDualInfeasibilities_,
+		       numberFake_,dualBound_,factorization_->pivots());
+#endif
+		if ((specialOptions_&1024)!=0&&factorization_->pivots()) {
+		  problemStatus_=10;
+#if COIN_DEVELOP>1
+		  printf("returning at %d\n",__LINE__);
+#endif
+		  // Get rid of objective
+		  if ((specialOptions_&16384)==0)
+		    objective_ = new ClpLinearObjective(NULL,numberColumns_);
+		}
+	      }
+#endif
 	      rowArray_[0]->clear();
 	      columnArray_[0]->clear();
 	      returnCode=1;
@@ -1621,8 +1688,8 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
       bool specialCase;
       int useNumberFake;
       returnCode=0;
-      if (numberPivots<20&&
-	  (specialOptions_&2048)!=0&&!numberChanged_&&perturbation_>=100
+      if (numberPivots<=CoinMax(dontFactorizePivots_,20)&&
+	  (specialOptions_&2048)!=0&&!numberChanged_
 	  &&dualBound_>1.0e8) {
 	specialCase=true;
 	// as dual bound high - should be okay
@@ -1647,7 +1714,8 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
         
 	if (useNumberFake||numberDualInfeasibilities_) {
 	  // may be dual infeasible
-	  problemStatus_=-5;
+	  if ((specialOptions_&1024)==0)
+	    problemStatus_=-5;
 	} else {
 	  if (iRow<numberRows_) {
 #ifdef COIN_DEVELOP
@@ -3369,7 +3437,6 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
         cost_[i] *= objectiveScale_;
     }
   }
-  bool normalType=true;
   int numberPivots = factorization_->pivots();
   double realDualInfeasibilities=0.0;
   if (type==2) {
@@ -3393,8 +3460,13 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
   double changeCost;
   bool unflagVariables = true;
   bool weightsSaved=false;
-  if (alphaAccuracy_<0.0||!numberPivots||alphaAccuracy_>1.0e4||factorization_->pivots()>20) {
-    if (problemStatus_>-3||numberPivots) {
+  int dontFactorizePivots = dontFactorizePivots_;
+  if (type==3) {
+    type=1;
+    dontFactorizePivots=1;
+  }
+  if (alphaAccuracy_<0.0||!numberPivots||alphaAccuracy_>1.0e4||numberPivots>20) {
+    if (problemStatus_>-3||numberPivots>dontFactorizePivots) {
       // factorize
       // later on we will need to recover from singularities
       // also we could skip if first time
@@ -3479,7 +3551,70 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
   }
   // at this stage status is -3 or -4 if looks infeasible
   // get primal and dual solutions
-  gutsOfSolution(givenDuals,NULL);
+#if 0
+  {
+    int numberTotal = numberRows_+numberColumns_;
+    double * saveSol = CoinCopyOfArray(solution_,numberTotal);
+    double * saveDj = CoinCopyOfArray(dj_,numberTotal);
+    double tolerance = type ? 1.0e-4 : 1.0e-8;
+    // always if values pass
+    double saveObj=objectiveValue_;
+    double sumPrimal = sumPrimalInfeasibilities_;
+    int numberPrimal = numberPrimalInfeasibilities_;
+    double sumDual = sumDualInfeasibilities_;
+    int numberDual = numberDualInfeasibilities_;
+    gutsOfSolution(givenDuals,NULL);
+    int j;
+    double largestPrimal = tolerance;
+    int iPrimal=-1;
+    for (j=0;j<numberTotal;j++) {
+      double difference = solution_[j]-saveSol[j];
+      if (fabs(difference)>largestPrimal) {
+	iPrimal=j;
+	largestPrimal=fabs(difference);
+      }
+    }
+    double largestDual = tolerance;
+    int iDual=-1;
+    for (j=0;j<numberTotal;j++) {
+      double difference = dj_[j]-saveDj[j];
+      if (fabs(difference)>largestDual&&upper_[j]>lower_[j]) {
+	iDual=j;
+	largestDual=fabs(difference);
+      }
+    }
+    if (!type) {
+      if (fabs(saveObj-objectiveValue_)>1.0e-5||
+	  numberPrimal!=numberPrimalInfeasibilities_||numberPrimal!=1||
+	  fabs(sumPrimal-sumPrimalInfeasibilities_)>1.0e-5||iPrimal>=0||
+	  numberDual!=numberDualInfeasibilities_||numberDual!=0||
+	  fabs(sumDual-sumDualInfeasibilities_)>1.0e-5||iDual>=0)
+	printf("type %d its %d pivots %d primal n(%d,%d) s(%g,%g) diff(%g,%d) dual n(%d,%d) s(%g,%g) diff(%g,%d) obj(%g,%g)\n",
+	       type,numberIterations_,numberPivots,
+	       numberPrimal,numberPrimalInfeasibilities_,sumPrimal,sumPrimalInfeasibilities_,
+	       largestPrimal,iPrimal,
+	       numberDual,numberDualInfeasibilities_,sumDual,sumDualInfeasibilities_,
+	       largestDual,iDual,
+	       saveObj,objectiveValue_);
+    } else {
+      if (fabs(saveObj-objectiveValue_)>1.0e-5||
+	  numberPrimalInfeasibilities_||iPrimal>=0||
+	  numberDualInfeasibilities_||iDual>=0)
+	printf("type %d its %d pivots %d primal n(%d,%d) s(%g,%g) diff(%g,%d) dual n(%d,%d) s(%g,%g) diff(%g,%d) obj(%g,%g)\n",
+	       type,numberIterations_,numberPivots,
+	       numberPrimal,numberPrimalInfeasibilities_,sumPrimal,sumPrimalInfeasibilities_,
+	       largestPrimal,iPrimal,
+	       numberDual,numberDualInfeasibilities_,sumDual,sumDualInfeasibilities_,
+	       largestDual,iDual,
+	       saveObj,objectiveValue_);
+    }
+    delete [] saveSol;
+    delete [] saveDj;
+  }
+#else
+  if (type||ifValuesPass)
+    gutsOfSolution(givenDuals,NULL);
+#endif
   // If bad accuracy treat as singular
   if ((largestPrimalError_>1.0e15||largestDualError_>1.0e15)&&numberIterations_) {
     // restore previous basis
@@ -3548,7 +3683,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
     }
     // get primal and dual solutions
     gutsOfSolution(givenDuals,NULL);
-  } else if (largestPrimalError_<1.0e-7&&largestDualError_<1.0e-7) {
+  } else if (goodAccuracy()) {
     // Can reduce tolerance
     double newTolerance = CoinMax(0.99*factorization_->pivotTolerance(),saveData.pivotTolerance_);
     factorization_->pivotTolerance(newTolerance);
@@ -3653,6 +3788,9 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
       sumPrimalInfeasibilities_ = 0.0;
     } else {
       problemStatus_ = 10; // instead - try other algorithm
+#if COIN_DEVELOP>2
+      printf("returning at %d\n",__LINE__);
+#endif
     }
     return;
   } else if (loop<-1) {
@@ -3722,7 +3860,6 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
       progress_.modifyObjective(objectiveValue_
 			       -sumDualInfeasibilities_*dualBound_);
       if (primalFeasible()&&!givenDuals) {
-	normalType=false;
 	// may be optimal - or may be bounds are wrong
 	handler_->message(CLP_DUAL_BOUNDS,messages_)
 	  <<dualBound_
@@ -3876,7 +4013,6 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	    //createRim4(false);
 	  }
 	} else {
-	  normalType=false;
 	  problemStatus_=-1; //iterate
 	  cleanDuals=1;
 	  if (numberChangedBounds<=0)
@@ -3904,11 +4040,11 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	double * xupper = new double[numberRows_+numberColumns_];
 	double * xdj = new double[numberRows_+numberColumns_];
 	double * xsolution = new double[numberRows_+numberColumns_];
-	memcpy(xcost,cost_,(numberRows_+numberColumns_)*sizeof(double));
-	memcpy(xlower,lower_,(numberRows_+numberColumns_)*sizeof(double));
-	memcpy(xupper,upper_,(numberRows_+numberColumns_)*sizeof(double));
-	memcpy(xdj,dj_,(numberRows_+numberColumns_)*sizeof(double));
-	memcpy(xsolution,solution_,(numberRows_+numberColumns_)*sizeof(double));
+ CoinMemcpyN(cost_,(numberRows_+numberColumns_),xcost);
+ CoinMemcpyN(lower_,(numberRows_+numberColumns_),xlower);
+ CoinMemcpyN(upper_,(numberRows_+numberColumns_),xupper);
+ CoinMemcpyN(dj_,(numberRows_+numberColumns_),xdj);
+ CoinMemcpyN(solution_,(numberRows_+numberColumns_),xsolution);
 #endif
 	createRim4(false);
 	// make sure duals are current
@@ -3991,11 +4127,11 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	double * xupper = new double[numberRows_+numberColumns_];
 	double * xdj = new double[numberRows_+numberColumns_];
 	double * xsolution = new double[numberRows_+numberColumns_];
-	memcpy(xcost,cost_,(numberRows_+numberColumns_)*sizeof(double));
-	memcpy(xlower,lower_,(numberRows_+numberColumns_)*sizeof(double));
-	memcpy(xupper,upper_,(numberRows_+numberColumns_)*sizeof(double));
-	memcpy(xdj,dj_,(numberRows_+numberColumns_)*sizeof(double));
-	memcpy(xsolution,solution_,(numberRows_+numberColumns_)*sizeof(double));
+ CoinMemcpyN(cost_,(numberRows_+numberColumns_),xcost);
+ CoinMemcpyN(lower_,(numberRows_+numberColumns_),xlower);
+ CoinMemcpyN(upper_,(numberRows_+numberColumns_),xupper);
+ CoinMemcpyN(dj_,(numberRows_+numberColumns_),xdj);
+ CoinMemcpyN(solution_,(numberRows_+numberColumns_),xsolution);
 #endif
 	if (givenDuals)
 	  dualTolerance_=1.0e50;
@@ -4036,20 +4172,28 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	dualTolerance_=saveTolerance;
 	//assert(numberDualInfeasibilitiesWithoutFree_==0);
 	if (numberDualInfeasibilities_) {
-	  if (numberPrimalInfeasibilities_||numberPivots)
+	  if (numberPrimalInfeasibilities_||numberPivots) {
 	    problemStatus_=-1; // carry on as normal
-	  else
+	  } else {
 	    problemStatus_=10; // try primal
+#if COIN_DEVELOP>1
+	    printf("returning at %d\n",__LINE__);
+#endif
+	  }
 	} else if (situationChanged==2) {
 	  problemStatus_=-1; // carry on as normal
 	}
 	situationChanged=0;
       } else {
 	// iterate
-	if (cleanDuals!=2) 
+	if (cleanDuals!=2) {
 	  problemStatus_=-1;
-        else 
+        } else {
 	  problemStatus_ = 10; // try primal
+#if COIN_DEVELOP>2
+	  printf("returning at %d\n",__LINE__);
+#endif
+	}
       }
     }
   }
@@ -4110,6 +4254,9 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	//secondaryStatus_ = 1; // and say probably infeasible
 	// try primal
 	problemStatus_=10;
+#if COIN_DEVELOP>1
+	printf("returning at %d\n",__LINE__);
+#endif
       }
     }
   }
@@ -4131,13 +4278,11 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
       looksInfeasible=true;
     if (looksInfeasible) {
       // Even if not perturbed internal costs may have changed
-      if (true||perturbation_==101) {
-	// be careful
-	if (numberIterations_) {
-	  if(computeInternalObjectiveValue()>limit) {
-	    problemStatus_=1;
-	    secondaryStatus_ = 1; // and say was on cutoff
-	  }
+      // be careful
+      if (numberIterations_) {
+	if(computeInternalObjectiveValue()>limit) {
+	  problemStatus_=1;
+	  secondaryStatus_ = 1; // and say was on cutoff
 	}
       } else {
 	problemStatus_=1;
@@ -4189,7 +4334,9 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 		     numberIterations_,iBigB,bigB,iBigN,bigN);
 	  }
 	}
+#if COIN_DEVELOP!=2
 	if (handler_->logLevel()>2)
+#endif
 	  printf("bad dual - going to primal %d %g\n",looksBad,largestPrimalError_);
         allSlackBasis(true);
         problemStatus_=10;
@@ -4643,8 +4790,9 @@ ClpSimplexDual::perturb()
 	  value *= (1.0-m1 +m1*randomNumberGenerator_.randomDouble());
 	  value2 *= (1.0-m1 +m1*randomNumberGenerator_.randomDouble());
 	} else {
-	  value *= -(1.0-m1+m1*randomNumberGenerator_.randomDouble());
-	  value2 *= -(1.0-m1+m1*randomNumberGenerator_.randomDouble());
+	  //value *= -(1.0-m1+m1*randomNumberGenerator_.randomDouble());
+	  //value2 *= -(1.0-m1+m1*randomNumberGenerator_.randomDouble());
+	  value=0.0;
 	}
       } else if (columnUpperWork_[iColumn]<largeValue_) {
 	value *= -(1.0-m1+m1*randomNumberGenerator_.randomDouble());
@@ -4981,6 +5129,11 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
   secondaryStatus_=0;
   // Say in fast dual
   specialOptions_ |= 16384;
+  int saveDont = dontFactorizePivots_;
+  if ((specialOptions_&2048)==0)
+    dontFactorizePivots_=0;
+  else if(!dontFactorizePivots_)
+    dontFactorizePivots_ = 20;
   //handler_->setLogLevel(63);
   // save data
   ClpDataSave data = saveData();
@@ -4995,15 +5148,61 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
   double objectiveChange;
   // for dual we will change bounds using dualBound_
   // for this we need clean basis so it is after factorize
-  gutsOfSolution(NULL,NULL);
+#if 0
+  {
+    int numberTotal = numberRows_+numberColumns_;
+    double * saveSol = CoinCopyOfArray(solution_,numberTotal);
+    double * saveDj = CoinCopyOfArray(dj_,numberTotal);
+    double tolerance = 1.0e-8;
+    gutsOfSolution(NULL,NULL);
+    int j;
+    double largestPrimal = tolerance;
+    int iPrimal=-1;
+    for (j=0;j<numberTotal;j++) {
+      double difference = solution_[j]-saveSol[j];
+      if (fabs(difference)>largestPrimal) {
+	iPrimal=j;
+	largestPrimal=fabs(difference);
+      }
+    }
+    double largestDual = tolerance;
+    int iDual=-1;
+    for (j=0;j<numberTotal;j++) {
+      double difference = dj_[j]-saveDj[j];
+      if (fabs(difference)>largestDual&&upper_[j]>lower_[j]) {
+	iDual=j;
+	largestDual=fabs(difference);
+      }
+    }
+    if (iPrimal>=0||iDual>=0) 
+	printf("pivots %d primal diff(%g,%d) dual diff(%g,%d)\n",
+	       factorization_->pivots(),
+	       largestPrimal,iPrimal,
+	       largestDual,iDual);
+    delete [] saveSol;
+    delete [] saveDj;
+  }
+#else
+  if ((specialOptions_&524288)==0)
+    gutsOfSolution(NULL,NULL);
+#endif
+#if 0
+  if (numberPrimalInfeasibilities_!=1||
+      numberDualInfeasibilities_)
+    printf("dual %g (%d) primal %g (%d)\n",
+	   sumDualInfeasibilities_,numberDualInfeasibilities_,
+	   sumPrimalInfeasibilities_,numberPrimalInfeasibilities_);
+#endif
   numberFake_ =0; // Number of variables at fake bounds
   numberChanged_ =0; // Number of variables with changed costs
   changeBounds(true,NULL,objectiveChange);
 
   problemStatus_ = -1;
   numberIterations_=0;
-  factorization_->sparseThreshold(0);
-  factorization_->goSparse();
+  if ((specialOptions_&524288)==0) {
+    factorization_->sparseThreshold(0);
+    factorization_->goSparse();
+  }
 
   int lastCleaned=0; // last time objective or bounds cleaned up
 
@@ -5049,6 +5248,26 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
     // give matrix (and model costs and bounds a chance to be
     // refreshed (normally null)
     matrix_->refresh(this);
+    // If getting nowhere - why not give it a kick
+    // does not seem to work too well - do some more work
+    if ((specialOptions_&524288)!=0&&
+	perturbation_<101&&numberIterations_>2*(numberRows_+numberColumns_)) {
+      perturb();
+      // Can't get here if values pass
+      gutsOfSolution(NULL,NULL);
+      if (handler_->logLevel()>2) {
+        handler_->message(CLP_SIMPLEX_STATUS,messages_)
+          <<numberIterations_<<objectiveValue();
+        handler_->printing(sumPrimalInfeasibilities_>0.0)
+          <<sumPrimalInfeasibilities_<<numberPrimalInfeasibilities_;
+        handler_->printing(sumDualInfeasibilities_>0.0)
+          <<sumDualInfeasibilities_<<numberDualInfeasibilities_;
+        handler_->printing(numberDualInfeasibilitiesWithoutFree_
+                           <numberDualInfeasibilities_)
+                             <<numberDualInfeasibilitiesWithoutFree_;
+        handler_->message()<<CoinMessageEol;
+      }
+    }
     // may factorize, checks if problem finished
     // should be able to speed this up on first time
     statusOfProblemInDual(lastCleaned,factorType,NULL,data,0);
@@ -5072,6 +5291,8 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
 #endif
 	break;
       }
+      if (returnCode==-2)
+	factorType=3;
       returnCode=0;
     }
   }
@@ -5090,6 +5311,7 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
          ||returnCode||problemStatus_); // all bounds should be okay
   // Restore any saved stuff
   restoreData(data);
+  dontFactorizePivots_ = saveDont;
   dualBound_ = saveDualBound;
   return returnCode;
 }

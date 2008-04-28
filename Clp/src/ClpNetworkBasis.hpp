@@ -103,8 +103,10 @@ private:
   void print();
   /**@name data */
   //@{
+#ifndef COIN_FAST_CODE
   /// Whether slack value is  +1 or -1
   double slackValue_;
+#endif
   /// Number of Rows in factorization
   int numberRows_;
   /// Number of Columns in factorization

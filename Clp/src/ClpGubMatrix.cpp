@@ -841,7 +841,7 @@ ClpGubMatrix::subsetTransposeTimes(const ClpSimplex * model,
 	  if (iBasic==iColumn) {
 	    toIndex_[iSet]=jColumn;
 	    fromIndex_[numberTouched++]=iSet;
-	  }	
+	  }
 	}
       }
     }
@@ -866,7 +866,7 @@ ClpGubMatrix::subsetTransposeTimes(const ClpSimplex * model,
 	  if (iBasic==iColumn) {
 	    toIndex_[iSet]=jColumn;
 	    fromIndex_[numberTouched++]=iSet;
-	  }	
+	  }
 	}
       }
     }
@@ -1601,7 +1601,7 @@ ClpGubMatrix::partialPricing(ClpSimplex * model, double startFraction, double en
 		// get dj without 
 		assert (model->getStatus(iBasic)==ClpSimplex::basic);
 		djMod=0.0;
-		
+
 		for (j=startColumn[iBasic];
 		     j<startColumn[iBasic]+length[iBasic];j++) {
 		  int jRow=row[j];
@@ -2684,7 +2684,7 @@ ClpGubMatrix::generalExpanded(ClpSimplex * model,int mode,int &number)
       if (pivotRow>=numberRows) {
 	int iExtra = pivotRow-numberRows;
 	//const int * length = matrix_->getVectorLengths();
-	
+
 	assert (sequenceOut>=numberRows+numberColumns||
 		sequenceOut==keyVariable_[iSetOut]);
 	int incomingColumn = sequenceIn; // to be used in updates
@@ -2937,15 +2937,15 @@ ClpGubMatrix::generalExpanded(ClpSimplex * model,int mode,int &number)
   case 5:
     {
       synchronize(model,0);
-      memcpy(saveStatus_,status_,numberSets_);
-      memcpy(savedKeyVariable_,keyVariable_,numberSets_*sizeof(int));
+      CoinMemcpyN(status_,numberSets_,saveStatus_);
+      CoinMemcpyN(keyVariable_,numberSets_,savedKeyVariable_);
     }
     break;
     // restore status
   case 6:
     {
-      memcpy(status_,saveStatus_,numberSets_);
-      memcpy(keyVariable_,savedKeyVariable_,numberSets_*sizeof(int));
+      CoinMemcpyN(saveStatus_,numberSets_,status_);
+      CoinMemcpyN(savedKeyVariable_,numberSets_,keyVariable_);
       // restore firstAvailable_
       synchronize(model,7);
       // redo next_

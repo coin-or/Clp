@@ -10,7 +10,7 @@
 class ClpMatrixBase;
 class ClpSimplex;
 class ClpNetworkBasis;
-//#define CLP_MULTIPLE_FACTORIZATIONS    
+#define CLP_MULTIPLE_FACTORIZATIONS    
 #ifdef CLP_MULTIPLE_FACTORIZATIONS    
 #include "CoinDenseFactorization.hpp"
 #endif
@@ -92,9 +92,20 @@ public:
       region1 starts as zero and is zero at end */
   int updateColumnFT ( CoinIndexedVector * regionSparse,
 		       CoinIndexedVector * regionSparse2);
+  /** Updates one column (FTRAN) from region2
+      region1 starts as zero and is zero at end */
   int updateColumn ( CoinIndexedVector * regionSparse,
 		     CoinIndexedVector * regionSparse2,
 		     bool noPermute=false) const;
+  /** Updates one column (FTRAN) from region2
+      Tries to do FT update
+      number returned is negative if no room.
+      Also updates region3
+      region1 starts as zero and is zero at end */
+  int updateTwoColumnsFT ( CoinIndexedVector * regionSparse1,
+			   CoinIndexedVector * regionSparse2,
+			   CoinIndexedVector * regionSparse3,
+			   bool noPermuteRegion3=false) ;
   /// For debug (no statistics update)
   int updateColumnForDebug ( CoinIndexedVector * regionSparse,
 		     CoinIndexedVector * regionSparse2,
@@ -244,14 +255,24 @@ public:
   /// Sets default values
   inline void setDefaultValues() {
     if (coinFactorizationA_) {
-      coinFactorizationA_->increasingRows(2);
       // row activities have negative sign
+#ifndef COIN_FAST_CODE
       coinFactorizationA_->slackValue(-1.0);
+#endif
       coinFactorizationA_->zeroTolerance(1.0e-13);
     }
   }
+  /// Get switch to dense if number rows <= this
+  inline int goDenseThreshold() const
+  { return goDenseThreshold_;}
+  /// Set switch to dense if number rows <= this
+  inline void setGoDenseThreshold(int value)
+  { goDenseThreshold_ = value;}
   /// Go over to dense code
   void goDense() ;
+  /// Return 1 if dense code
+  inline int isDense() const
+  { return coinFactorizationB_ ? 1 : 0;}
 #else
   inline bool timeToRefactorize() const
   {
@@ -261,9 +282,10 @@ public:
   }
   /// Sets default values
   inline void setDefaultValues() {
-    increasingRows(2);
     // row activities have negative sign
+#ifndef COIN_FAST_CODE
     slackValue(-1.0);
+#endif
     zeroTolerance(1.0e-13);
   }
   /// Go over to dense code
@@ -306,6 +328,8 @@ private:
   CoinFactorization * coinFactorizationA_;
   /// Pointer to CoinDenseFactorization 
   CoinDenseFactorization * coinFactorizationB_;
+  /// Switch to dense if number rows <= this
+  int goDenseThreshold_;
 #endif
   //@}
 };
