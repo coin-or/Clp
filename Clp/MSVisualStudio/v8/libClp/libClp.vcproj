@@ -836,6 +836,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\..\..\src\ClpNode.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\Clp\src\ClpNonLinearCost.cpp"
 				>
 				<FileConfiguration
@@ -1392,6 +1396,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\Clp\src\ClpNetworkMatrix.hpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\src\ClpNode.hpp"
 				>
 			</File>
 			<File
