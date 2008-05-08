@@ -1477,7 +1477,7 @@ re-run with debug set to 'debug.file'  Similarly if you do use preprocessing but
 createAfterPre.  The create case has same effect as saveSolution."
      ); 
 #endif 
-#ifdef COIN_HAS_CBC
+#ifdef COIN_HAS_CLP
   parameters[numberParameters++]=
     CbcOrClpParam("dense!Threshold","Whether to use dense factorization",
 		  -1,200,DENSE,false);
@@ -1486,6 +1486,8 @@ createAfterPre.  The create case has same effect as saveSolution."
      "If processed problem <= this use dense factorization (for testing)"
      ); 
   parameters[numberParameters-1].setIntValue(-1);
+#endif 
+#ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("dextra1","Extra double parameter 1",
 		  -COIN_DBL_MAX,COIN_DBL_MAX,DEXTRA1,false);
@@ -2793,6 +2795,7 @@ you would use 3010005 (I think)"
   parameters[numberParameters-1].append("root");
   parameters[numberParameters-1].append("ifmove");
   parameters[numberParameters-1].append("forceOn");
+  parameters[numberParameters-1].append("forceLongOn");
   parameters[numberParameters-1].setLonghelp
     (
      "This switches on two phase mixed integer rounding  cuts (either at root or in entire tree) \
