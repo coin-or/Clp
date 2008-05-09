@@ -341,6 +341,7 @@ private:
 				   int * COIN_RESTRICT index, 
 				   double * COIN_RESTRICT output,
 				   int * COIN_RESTRICT lookup,
+				   char * COIN_RESTRICT marked,
 				   const double tolerance, 
 				   const double scalar) const;
   /// Meat of transposeTimes by row n == 2 if packed

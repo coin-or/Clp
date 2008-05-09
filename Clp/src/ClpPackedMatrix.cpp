@@ -890,14 +890,16 @@ ClpPackedMatrix::transposeTimesByRow(const ClpSimplex * model, double scalar,
       int * index = columnArray->getIndices();
       double * array = columnArray->denseVector();
       assert (!y->getNumElements());
-      int * lookup = (int *) y->denseVector();
+      // and set up mark as char array
+      char * marked = (char *) (index+columnArray->capacity());
+      int * lookup = y->getIndices();
 #ifndef NDEBUG
       int numberColumns = matrix_->getNumCols();
       for (int i=0;i<numberColumns;i++)
-	assert(!lookup[i]);
+	assert(!marked[i]);
 #endif
       numberNonZero=gutsOfTransposeTimesByRowGE3(rowArray,index,array,
-						 lookup,zeroTolerance,scalar);
+						 lookup,marked,zeroTolerance,scalar);
       columnArray->setNumElements(numberNonZero);
     } else {
       double * markVector = y->denseVector();
@@ -1091,6 +1093,7 @@ ClpPackedMatrix::gutsOfTransposeTimesByRowGE3(const CoinIndexedVector * COIN_RES
 					      int * COIN_RESTRICT index, 
 					      double * COIN_RESTRICT output,
 					      int * COIN_RESTRICT lookup,
+					      char * COIN_RESTRICT marked,
 					      const double tolerance, 
 					      const double scalar) const
 {
@@ -1101,6 +1104,9 @@ ClpPackedMatrix::gutsOfTransposeTimesByRowGE3(const CoinIndexedVector * COIN_RES
   const CoinBigIndex * rowStart = getVectorStarts();
   const double * element = getElements();
   const int * whichRow = piVector->getIndices();
+#ifndef NDEBUG
+  int maxColumn=0;
+#endif
   // ** Row copy is already scaled
   int iRow;
   int i;
@@ -1110,15 +1116,19 @@ ClpPackedMatrix::gutsOfTransposeTimesByRowGE3(const CoinIndexedVector * COIN_RES
     CoinBigIndex j;
     for (j=rowStart[iRow];j<rowStart[iRow+1];j++) {
       int iColumn = column[j];
+#ifndef NDEBUG
+      maxColumn=CoinMax(maxColumn,iColumn);
+#endif
       double elValue = element[j];
-      int k = lookup[iColumn];
       elValue *= value;
-      if (k) {
-	output[k-1] += elValue;
+      if (marked[iColumn]) {
+	int k = lookup[iColumn];
+	output[k] += elValue;
       } else {
 	output[numberNonZero] = elValue;
-	index[numberNonZero++]=iColumn;
+	marked[iColumn]=1;
 	lookup[iColumn]=numberNonZero;
+	index[numberNonZero++]=iColumn;
       }
     }
   }
@@ -1128,14 +1138,14 @@ ClpPackedMatrix::gutsOfTransposeTimesByRowGE3(const CoinIndexedVector * COIN_RES
   // get rid of tiny values and zero out lookup
   for (i=0;i<numberNonZero;i++) {
     int iColumn = index[i];
-    lookup[iColumn]=0;
+    marked[iColumn]=0;
     double value = output[i];
     if (fabs(value)<=tolerance) {
       while (fabs(value)<=tolerance) {
 	numberNonZero--;
 	value = output[numberNonZero];
 	iColumn = index[numberNonZero];
-	lookup[iColumn]=0;
+	marked[iColumn]=0;
 	if (i<numberNonZero) {
 	  output[numberNonZero]=0.0;
 	  output[i] = value;
@@ -1150,6 +1160,8 @@ ClpPackedMatrix::gutsOfTransposeTimesByRowGE3(const CoinIndexedVector * COIN_RES
 #ifndef NDEBUG
   for (i=numberNonZero;i<saveN;i++)
     assert(!output[i]);
+  for (i=0;i<=maxColumn;i++)
+    assert (!marked[i]);
 #endif
   return numberNonZero;
 }
