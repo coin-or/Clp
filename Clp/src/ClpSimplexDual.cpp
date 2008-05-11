@@ -5235,6 +5235,7 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
   int returnCode = 0;
 
   int iRow,iColumn;
+  int maxPass = maximumIterations();
   while (problemStatus_<0) {
     // clear
     for (iRow=0;iRow<4;iRow++) {
@@ -5274,6 +5275,18 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
 
     // Say good factorization
     factorType=1;
+    maxPass--;
+    if (maxPass<-10) {
+      // odd
+      returnCode=1;
+      problemStatus_ = 3; 
+      // can't say anything interesting - might as well return
+#ifdef CLP_DEBUG
+      printf("returning from fastDual after %d iterations with code %d because of loop\n",
+	     numberIterations_,returnCode);
+#endif
+      break;
+    }
 
     // Do iterations
     if (problemStatus_<0) {
