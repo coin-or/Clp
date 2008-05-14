@@ -434,6 +434,13 @@ public:
   int fastDual2(ClpNodeStuff * stuff);
   /// Stops Fast dual2
   void stopFastDual2(ClpNodeStuff * stuff);
+  /** Deals with crunch aspects
+      mode 0 - in
+           1 - out with solution
+	   2 - out without solution
+      returns small model or NULL
+  */
+  ClpSimplex * fastCrunch(ClpNodeStuff * stuff, int mode);
   //@}
 
   /**@name Needed for functionality of OsiSimplexInterface */

@@ -11026,6 +11026,18 @@ ClpSimplex::fastDual2(ClpNodeStuff * info)
 {
   assert ((info->solverOptions_&65536)!=0);
   int numberTotal = numberRows_+numberColumns_;
+#ifndef NDEBUG
+  if (columnScale_&&optimizationDirection_==1.0) {
+    //const double * obj = objective();
+    for (int i=0;i<numberColumns_;i++) {
+      //assert (fabs(cost_[i]-obj[i]*columnScale_[i])<1.0e-8);
+      if (lower_[i]>-1.0e30)
+	assert (fabs(lower_[i]-columnLower_[i]/columnScale_[i])<1.0e-8);
+      if (upper_[i]<1.0e30)
+	assert (fabs(upper_[i]-columnUpper_[i]/columnScale_[i])<1.0e-8);
+    }
+  }
+#endif
   assert (info->saveCosts_);
   CoinMemcpyN(info->saveCosts_,numberTotal,cost_);
   numberPrimalInfeasibilities_=1;
@@ -11177,6 +11189,82 @@ ClpSimplex::stopFastDual2(ClpNodeStuff * info)
   whatsChanged_=0;
   assert ((info->solverOptions_&65536)!=0);
   info->solverOptions_ &= ~65536;
+}
+// Deals with crunch aspects
+ClpSimplex *
+ClpSimplex::fastCrunch(ClpNodeStuff * info, int mode)
+{
+  ClpSimplex * small=NULL;
+  if (mode==0) {
+    // before crunch
+    // crunch down
+    // Use dual region
+    double * rhs = dual_;
+    int * whichRow = new int[3*numberRows_];
+    int * whichColumn = new int[2*numberColumns_];
+    int nBound;
+    bool tightenBounds = ((specialOptions_&64)==0) ? false : true; 
+    small = 
+      ((ClpSimplexOther *) this)->crunch(rhs,whichRow,whichColumn,
+					 nBound,false,tightenBounds);
+    if (small) {
+      info->large_=this;
+      info->whichRow_ = whichRow;
+      info->whichColumn_ = whichColumn;
+      info->nBound_ = nBound;
+      if (info->upPseudo_) {
+	const char * integerType2 = small->integerInformation();
+	int n=small->numberColumns();
+	int k=0;
+	int jColumn=0;
+	int j=0;
+	for (int i=0;i<n;i++) {
+	  if (integerType2[i]) {
+	    int iColumn = whichColumn[i];
+	    // find
+	    while (jColumn!=iColumn) {
+	      if (integerType_[jColumn])
+		j++;
+	      jColumn++;
+	    }
+	    info->upPseudo_[k]=info->upPseudo_[j];
+	    info->numberUp_[k]=info->numberUp_[j];
+	    info->downPseudo_[k]=info->downPseudo_[j];
+	    info->numberDown_[k]=info->numberDown_[j];
+	    assert (info->upPseudo_[k]>1.0e-40&&info->upPseudo_[k]<1.0e40);
+	    assert (info->downPseudo_[k]>1.0e-40&&info->downPseudo_[k]<1.0e40);
+	    k++;
+	  }
+	}
+      }
+    } else {
+      delete [] whichRow;
+      delete [] whichColumn;
+    }
+  } else {
+    // after crunch
+    if (mode==1) {
+      // has solution
+      ClpSimplex * other = info->large_;
+      assert (other!=this);
+      ((ClpSimplexOther *) other)->afterCrunch(*this,
+					       info->whichRow_,
+					       info->whichColumn_,info->nBound_);
+      for (int i=0;i<other->numberColumns_;i++) {
+	if (other->integerType_[i]) { 
+	  double value = other->columnActivity_[i];
+	  double value2 = floor(value+0.5);
+	  assert (fabs(value-value2)<1.0e-4);
+	  other->columnActivity_[i]=value2;
+	  other->columnLower_[i]=value2;
+	  other->columnUpper_[i]=value2;
+	}
+      }
+    }
+    delete [] info->whichRow_;
+    delete [] info->whichColumn_;
+  }
+  return small;
 }
 // Create C++ lines to get to current state
 void 

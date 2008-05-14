@@ -246,6 +246,9 @@ public:
   int index(double value) const;
   /// Add value to list and return index
   int addValue(double value) ;
+  /// Number of different entries
+  inline int numberEntries() const
+  { return numberHash_;}
   //@}
 
   /**@name Constructors, destructor */

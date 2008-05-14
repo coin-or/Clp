@@ -759,11 +759,14 @@ ClpHashValue::ClpHashValue (ClpSimplex * model) :
   hash_ = new CoinHashLink[maxHash_];
   
   for ( i = 0; i < maxHash_; i++ ) {
-    hash_[i].value = 0.0;
+    hash_[i].value = -1.0e-100;
     hash_[i].index = -1;
     hash_[i].next = -1;
   }
-
+  // Put in +0
+  hash_[0].value=0.0;
+  hash_[0].index=0;
+  numberHash_=1;
   /*
    * Initialize the hash table.  Only the index of the first value that
    * hashes to a value is entered in the table; subsequent values that
@@ -773,7 +776,8 @@ ClpHashValue::ClpHashValue (ClpSimplex * model) :
     int length=columnLength[i];
     CoinBigIndex start = columnStart[i];
     for (CoinBigIndex i=start;i<start+length;i++) {
-      ipos = hash ( elementByColumn[i]);
+      double value = elementByColumn[i];
+      ipos = hash ( value);
       if ( hash_[ipos].index == -1 ) {
 	hash_[ipos].index = numberHash_;
 	numberHash_++;
@@ -886,6 +890,8 @@ ClpHashValue::operator=(const ClpHashValue& rhs)
 int 
 ClpHashValue::index(double value) const
 {
+  if (!value)
+    return 0;
   int ipos = hash ( value);
   int returnCode=-1;
   while ( hash_[ipos].index>=0 ) {
@@ -910,6 +916,13 @@ ClpHashValue::addValue(double value)
   int ipos = hash ( value);
   
   assert (value!=hash_[ipos].value);
+  if (hash_[ipos].index==-1) {
+    // can put in here
+    hash_[ipos].index = numberHash_;
+    numberHash_++;
+    hash_[ipos].value = value;
+    return numberHash_-1;
+  }
   int k = hash_[ipos].next;
   while (k!=-1) {
     ipos = k;
@@ -963,7 +976,7 @@ ClpHashValue::resize(bool increaseMax)
   CoinHashLink * newHash = new CoinHashLink[newSize];
   int i;
   for ( i = 0; i < newSize; i++ ) {
-    newHash[i].value = 0.0;
+    newHash[i].value = -1.0e-100;
     newHash[i].index = -1;
     newHash[i].next = -1;
   }
@@ -985,7 +998,9 @@ ClpHashValue::resize(bool increaseMax)
       if ( hash_[ipos].index == -1 ) {
 	hash_[ipos].index = n;
 	n++;
-	hash_[ipos].value = hash_[i].value;
+	hash_[ipos].value = oldHash[i].value;
+	// unmark
+	oldHash[i].index=-1;
       }
     }
   }
@@ -1002,11 +1017,8 @@ ClpHashValue::resize(bool increaseMax)
       ipos = hash ( value);
       int k;
       while ( true ) {
-	if (value==hash_[ipos].value)
-	  break;
-	else 
-	  k = hash_[ipos].next;
-	
+	assert (value!=hash_[ipos].value);
+	k = hash_[ipos].next;
 	if ( k == -1 ) {
 	  while ( true ) {
 	    ++lastUsed_;
@@ -1027,4 +1039,5 @@ ClpHashValue::resize(bool increaseMax)
     }
   }
   assert (n==numberHash_);
+  delete [] oldHash;
 }
