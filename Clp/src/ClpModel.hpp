@@ -1082,6 +1082,7 @@ public:
   int perturbation_;
   int forceFactorization_;
   int scalingFlag_;
+  unsigned int specialOptions_;
   //@}
 };
 

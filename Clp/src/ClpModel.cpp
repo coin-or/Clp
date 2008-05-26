@@ -4186,6 +4186,7 @@ ClpDataSave::ClpDataSave ()
   perturbation_ = 0;
   forceFactorization_=-1;
   scalingFlag_=0;
+  specialOptions_=0;
 }
 
 //-------------------------------------------------------------------
@@ -4202,6 +4203,7 @@ ClpDataSave::ClpDataSave (const ClpDataSave & rhs)
   perturbation_ = rhs.perturbation_;
   forceFactorization_=rhs.forceFactorization_;
   scalingFlag_=rhs.scalingFlag_;
+  specialOptions_=rhs.specialOptions_;
 }
 
 //-------------------------------------------------------------------
@@ -4227,6 +4229,7 @@ ClpDataSave::operator=(const ClpDataSave& rhs)
     perturbation_ = rhs.perturbation_;
     forceFactorization_=rhs.forceFactorization_;
     scalingFlag_=rhs.scalingFlag_;
+    specialOptions_=rhs.specialOptions_;
   }
   return *this;
 }
