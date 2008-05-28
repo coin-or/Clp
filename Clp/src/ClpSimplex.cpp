@@ -9538,10 +9538,13 @@ ClpSimplex::moveInfo(const ClpSimplex & rhs, bool justStatus)
   problemStatus_ = rhs. problemStatus_;
   secondaryStatus_ = rhs. secondaryStatus_;
   if (numberRows_ == rhs.numberRows_ && numberColumns_ == rhs.numberColumns_&& !justStatus) {
-    delete [] status_;
     if (rhs.status_) {
-      status_ = CoinCopyOfArray(rhs.status_,numberRows_+numberColumns_);
+      if (status_)
+	CoinMemcpyN(rhs.status_,numberRows_+numberColumns_,status_);
+      else
+	status_ = CoinCopyOfArray(rhs.status_,numberRows_+numberColumns_);
     } else {
+      delete [] status_;
       status_ = NULL;
     }
     memcpy(columnActivity_,rhs.columnActivity_,numberColumns_*sizeof(double));
