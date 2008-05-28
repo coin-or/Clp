@@ -9690,10 +9690,13 @@ ClpSimplex::moveInfo(const ClpSimplex & rhs, bool justStatus)
   problemStatus_ = rhs. problemStatus_;
   secondaryStatus_ = rhs. secondaryStatus_;
   if (numberRows_ == rhs.numberRows_ && numberColumns_ == rhs.numberColumns_&& !justStatus) {
-    delete [] status_;
     if (rhs.status_) {
-      status_ = CoinCopyOfArray(rhs.status_,numberRows_+numberColumns_);
+      if (status_)
+	CoinMemcpyN(rhs.status_,numberRows_+numberColumns_,status_);
+      else
+	status_ = CoinCopyOfArray(rhs.status_,numberRows_+numberColumns_);
     } else {
+      delete [] status_;
       status_ = NULL;
     }
     CoinMemcpyN(rhs.columnActivity_,numberColumns_,columnActivity_);
@@ -9808,6 +9811,40 @@ ClpSimplex::fathom(void * stuff)
   moreSpecialOptions_ |= 8;
   int saveMaxIterations = maximumIterations();
   setMaximumIterations(100+5*(numberRows_+numberColumns_));
+#if 0
+  bool onOptimal=true;
+  double optVal[133];
+  {
+    memset(optVal,0,sizeof(optVal));
+#if 0
+    int intIndicesV[]={61,62,65,66,67,68,69,70};
+    double intSolnV[] = {4.,21.,4.,4.,6.,1.,25.,8.};
+    int vecLen = sizeof(intIndicesV)/sizeof(int);
+    for (int i=0;i<vecLen;i++) {
+      optVal[intIndicesV[i]]=intSolnV[i];
+    }
+#else
+    int intIndicesAt1[]={ 0,18,25,36,44,59,61,77,82,93 };
+    int vecLen = sizeof(intIndicesAt1)/sizeof(int);
+    for (int i=0;i<vecLen;i++) {
+      optVal[intIndicesAt1[i]]=1;
+    }
+#endif
+  }
+  if (numberColumns_==100) {
+    const char * integerType = integerInformation();
+    for (int i=0;i<100;i++) {
+      if (integerType[i]) {
+	if (columnLower_[i]>optVal[i]||columnUpper_[i]<optVal[i]) {
+	  onOptimal=false;
+	  break;
+	}
+      }
+    }
+    if (onOptimal)
+      printf("On optimal path fathom\n");
+  }
+#endif
   if (info->presolveType_) {
     // crunch down
     bool feasible=true;
@@ -10050,16 +10087,6 @@ ClpSimplex::fathom(void * stuff)
   double saveBestObjective = bestObjective;
   bool backtrack=false;
   bool printing = handler_->logLevel()>0;
-  double optVal[133];
-  {
-    memset(optVal,0,sizeof(optVal));
-    int intIndicesV[]={61,62,65,66,67,68,69,70};
-    double intSolnV[] = {4.,21.,4.,4.,6.,1.,25.,8.};
-    int vecLen = sizeof(intIndicesV)/sizeof(int);
-    for (int i=0;i<vecLen;i++) {
-      optVal[intIndicesV[i]]=intSolnV[i];
-    }
-  }
   while (depth>=0) {
     // If backtrack get to correct depth
     if (backtrack) {
@@ -10103,20 +10130,6 @@ ClpSimplex::fathom(void * stuff)
 		 depth-1,iColumn,
 		 columnLower_[iColumn],columnUpper_[iColumn]);
       }
-    }
-    bool onOptimal=true;
-    if (numberColumns_==133) {
-      const char * integerType = integerInformation();
-      for (int i=0;i<133;i++) {
-	if (integerType[i]) {
-	  if (columnLower_[i]>optVal[i]||columnUpper_[i]<optVal[i]) {
-	    onOptimal=false;
-	    break;
-	  }
-	}
-      }
-      if (onOptimal)
-	printf("On optimal path\n");
     }
     // solve
 #if 0
@@ -10245,7 +10258,7 @@ ClpSimplex::fathom(void * stuff)
 	}
 	nodes[maxDepth++]=node;
       }
-
+#if 0
     if (numberColumns_==133&&onOptimal) {
       const char * integerType = integerInformation();
       for (int i=0;i<133;i++) {
@@ -10259,7 +10272,7 @@ ClpSimplex::fathom(void * stuff)
       }
       assert (onOptimal);
     }
-
+#endif
       if (node->sequence()<0) {
 	// solution
 	double objectiveValue=doubleCheck();

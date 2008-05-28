@@ -1567,8 +1567,8 @@ You can also use the parameters 'maximize' or 'minimize'."
      ); 
   parameters[numberParameters-1].setIntValue(-1);
   parameters[numberParameters++]=
-      CbcOrClpParam("Diving","Whether to try Diving heuristics",
-		    "off",DIVING);
+      CbcOrClpParam("DivingS!ome","Whether to try Diving heuristics",
+		    "off",DIVINGA);
   parameters[numberParameters-1].append("V");
   parameters[numberParameters-1].append("G");
   parameters[numberParameters-1].append("GV");
@@ -1587,8 +1587,34 @@ You can also use the parameters 'maximize' or 'minimize'."
   parameters[numberParameters-1].setLonghelp
     (
      "This switches on various diving heuristics. \
-C - Coefficient, F - Fractional, G - Guided, V - VectorLength."
+C - Coefficient, F - Fractional, G - Guided, V - VectorLength. \
+You may prefer to use individual on/off which has divingC,F,G and V \
+and also divingL and P"
      ); 
+  parameters[numberParameters++]=
+      CbcOrClpParam("DivingC!oefficient","Whether to try DiveCoefficient",
+		    "off",DIVINGC);
+  parameters[numberParameters-1].append("on");
+  parameters[numberParameters++]=
+      CbcOrClpParam("DivingF!ractional","Whether to try DiveFractional",
+		    "off",DIVINGF);
+  parameters[numberParameters-1].append("on");
+  parameters[numberParameters++]=
+      CbcOrClpParam("DivingG!uided","Whether to try DiveGuided",
+		    "off",DIVINGG);
+  parameters[numberParameters-1].append("on");
+  parameters[numberParameters++]=
+      CbcOrClpParam("DivingL!ineSearch","Whether to try DiveLineSearch",
+		    "off",DIVINGL);
+  parameters[numberParameters-1].append("on");
+  parameters[numberParameters++]=
+      CbcOrClpParam("DivingP!seudoCost","Whether to try DivePseudoCost",
+		    "off",DIVINGP);
+  parameters[numberParameters-1].append("on");
+  parameters[numberParameters++]=
+      CbcOrClpParam("DivingV!ectorLength","Whether to try DiveVectorLength",
+		    "off",DIVINGV);
+  parameters[numberParameters-1].append("on");
   parameters[numberParameters++]=
     CbcOrClpParam("doH!euristic","Do heuristics before any preprocessing",
 		  DOHEURISTIC,3);
