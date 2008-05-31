@@ -2566,6 +2566,12 @@ ClpModel::infeasibilityRay() const
   double * array = NULL;
   if (problemStatus_==1&&!secondaryStatus_) {
     array = ClpCopyOfArray(ray_,numberRows_);
+    //#define SWAP_SIGN
+#ifdef SWAP_SIGN
+    // swap signs to be consistent with norm
+    for (int i=0;i<numberRows_;i++)
+      ray_[i] = -ray_[i];
+#endif
 #if 0
     // clean up
     double largest=1.0e-30;
