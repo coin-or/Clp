@@ -1568,28 +1568,13 @@ You can also use the parameters 'maximize' or 'minimize'."
   parameters[numberParameters-1].setIntValue(-1);
   parameters[numberParameters++]=
       CbcOrClpParam("DivingS!ome","Whether to try Diving heuristics",
-		    "off",DIVINGA);
-  parameters[numberParameters-1].append("V");
-  parameters[numberParameters-1].append("G");
-  parameters[numberParameters-1].append("GV");
-  parameters[numberParameters-1].append("F");
-  parameters[numberParameters-1].append("FV");
-  parameters[numberParameters-1].append("FG");
-  parameters[numberParameters-1].append("FGV");
-  parameters[numberParameters-1].append("C");
-  parameters[numberParameters-1].append("CV");
-  parameters[numberParameters-1].append("CG");
-  parameters[numberParameters-1].append("CGV");
-  parameters[numberParameters-1].append("CF");
-  parameters[numberParameters-1].append("CFV");
-  parameters[numberParameters-1].append("CFG");
+		    "off",DIVINGS);
   parameters[numberParameters-1].append("on");
   parameters[numberParameters-1].setLonghelp
     (
-     "This switches on various diving heuristics. \
-C - Coefficient, F - Fractional, G - Guided, V - VectorLength. \
-You may prefer to use individual on/off which has divingC,F,G and V \
-and also divingL and P"
+     "This switches on a random diving heuristic at various times. \
+C - Coefficient, F - Fractional, G - Guided, L - LineSearch, P - PseudoCost, V - VectorLength. \
+You may prefer to use individual on/off"
      ); 
   parameters[numberParameters++]=
       CbcOrClpParam("DivingC!oefficient","Whether to try DiveCoefficient",
@@ -2546,6 +2531,7 @@ See branchAndCut for information on options."
     parameters[numberParameters-1].append("on");
     parameters[numberParameters-1].append("200");
     parameters[numberParameters-1].append("1000");
+    parameters[numberParameters-1].append("10000");
   parameters[numberParameters-1].setLonghelp
     (
      "This switches on Relaxation enforced neighborhood Search. \
