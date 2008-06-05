@@ -2893,6 +2893,8 @@ bool ClpPredictorCorrector::checkGoodMove2(double move,
       if (!flagged(iColumn)) {
 	nextSolution[iColumn]=solution_[iColumn]+
 	  actualPrimalStep_*deltaX_[iColumn];
+      } else {
+	nextSolution[iColumn]=solution_[iColumn];
       }
     }
     // do reduced costs
