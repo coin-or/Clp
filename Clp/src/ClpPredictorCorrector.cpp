@@ -2873,8 +2873,8 @@ bool ClpPredictorCorrector::checkGoodMove2(double move,
       } 
     } 
   } 
-   double * nextDj=NULL;
-   double maximumDualError = maximumDualError_;
+  double * nextDj=NULL;
+  double maximumDualError = maximumDualError_;
 #ifndef NO_RTTI
   ClpQuadraticObjective * quadraticObj = (dynamic_cast< ClpQuadraticObjective*>(objective_));
 #else
@@ -2893,6 +2893,8 @@ bool ClpPredictorCorrector::checkGoodMove2(double move,
       if (!flagged(iColumn)) {
 	nextSolution[iColumn]=solution_[iColumn]+
 	  actualPrimalStep_*deltaX_[iColumn];
+      } else {
+	nextSolution[iColumn]=solution_[iColumn];
       }
     }
     // do reduced costs

@@ -91,6 +91,10 @@ public:
   inline ClpSimplex * model()
   { return model_;}
   
+  /// Sets model (normally to NULL)
+  inline void setModel(ClpSimplex * model)
+  { model_=model;}
+  
   /// Returns type (above 63 is extra information)
   inline int type()
   { return type_;}
