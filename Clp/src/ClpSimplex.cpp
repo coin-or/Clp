@@ -6341,7 +6341,7 @@ ClpSimplex::restoreModel(const char * fileName)
 	return 1;
     if (inDoubleArray(rowUpper_,numberRows_,fp))
 	return 1;
-    double * objective;
+    double * objective=NULL;
     if (inDoubleArray(objective,numberColumns_,fp))
 	return 1;
     delete objective_;
@@ -9302,21 +9302,43 @@ ClpSimplex::checkSolutionInternal()
     } else if (primalValue<lower-primalTolerance) {
       sumPrimalInfeasibilities_ += lower-primalValue-primalTolerance;
       numberPrimalInfeasibilities_ ++;
-    } else if (getRowStatus(iRow) != basic) {
-      // not basic
-      if (primalValue<upper-primalTolerance) {
-	// dual should not be negative
-	if (dualValue<-dualTolerance) {
-          sumDualInfeasibilities_ -= dualValue+dualTolerance_;
-          numberDualInfeasibilities_ ++;
-        }
-      }
-      if (primalValue>lower+primalTolerance) {
+    } else {
+      switch(getRowStatus(iRow)) {
+	
+      case basic:
+      case ClpSimplex::isFixed:
+	break;
+      case atUpperBound:
 	// dual should not be positive
 	if (dualValue>dualTolerance) {
-          sumDualInfeasibilities_ += dualValue-dualTolerance_;
-          numberDualInfeasibilities_ ++;
-        }
+	  sumDualInfeasibilities_ += dualValue-dualTolerance_;
+	  numberDualInfeasibilities_ ++;
+	}
+	break;
+      case atLowerBound:
+	// dual should not be negative
+	if (dualValue<-dualTolerance) {
+	  sumDualInfeasibilities_ -= dualValue+dualTolerance_;
+	  numberDualInfeasibilities_ ++;
+	}
+	break;
+      case superBasic:
+      case isFree:
+	if (primalValue<upper-primalTolerance) {
+	  // dual should not be negative
+	  if (dualValue<-dualTolerance) {
+	    sumDualInfeasibilities_ -= dualValue+dualTolerance_;
+	    numberDualInfeasibilities_ ++;
+	  }
+	}
+	if (primalValue>lower+primalTolerance) {
+	  // dual should not be positive
+	  if (dualValue>dualTolerance) {
+	    sumDualInfeasibilities_ += dualValue-dualTolerance_;
+	    numberDualInfeasibilities_ ++;
+	  }
+	}
+	break;
       }
     }
   }
@@ -9332,21 +9354,43 @@ ClpSimplex::checkSolutionInternal()
     } else if (primalValue<lower-primalTolerance) {
       sumPrimalInfeasibilities_ += lower-primalValue-primalTolerance;
       numberPrimalInfeasibilities_ ++;
-    } else if (getColumnStatus(iColumn) != basic) {
-      // not basic
-      if (primalValue<upper-primalTolerance) {
-	// dual should not be negative
-	if (dualValue<-dualTolerance) {
-          sumDualInfeasibilities_ -= dualValue+dualTolerance_;
-          numberDualInfeasibilities_ ++;
-        }
-      }
-      if (primalValue>lower+primalTolerance) {
+    } else {
+      switch(getColumnStatus(iRow)) {
+	
+      case basic:
+      case ClpSimplex::isFixed:
+	break;
+      case atUpperBound:
 	// dual should not be positive
 	if (dualValue>dualTolerance) {
-          sumDualInfeasibilities_ += dualValue-dualTolerance_;
-          numberDualInfeasibilities_ ++;
-        }
+	  sumDualInfeasibilities_ += dualValue-dualTolerance_;
+	  numberDualInfeasibilities_ ++;
+	}
+	break;
+      case atLowerBound:
+	// dual should not be negative
+	if (dualValue<-dualTolerance) {
+	  sumDualInfeasibilities_ -= dualValue+dualTolerance_;
+	  numberDualInfeasibilities_ ++;
+	}
+	break;
+      case superBasic:
+      case isFree:
+	if (primalValue<upper-primalTolerance) {
+	  // dual should not be negative
+	  if (dualValue<-dualTolerance) {
+	    sumDualInfeasibilities_ -= dualValue+dualTolerance_;
+	    numberDualInfeasibilities_ ++;
+	  }
+	}
+	if (primalValue>lower+primalTolerance) {
+	  // dual should not be positive
+	  if (dualValue>dualTolerance) {
+	    sumDualInfeasibilities_ += dualValue-dualTolerance_;
+	    numberDualInfeasibilities_ ++;
+	  }
+	}
+	break;
       }
     }
   }

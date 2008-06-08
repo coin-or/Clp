@@ -1726,7 +1726,7 @@ e.g. no ENDATA.  This has to be set before import i.e. -errorsAllowed on -import
 #ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("extra1","Extra integer parameter 1",
-		  -1,COIN_INT_MAX,EXTRA1,false);
+		  -100,COIN_INT_MAX,EXTRA1,false);
   parameters[numberParameters-1].setIntValue(-1);
   parameters[numberParameters++]=
     CbcOrClpParam("extra2","Extra integer parameter 2",

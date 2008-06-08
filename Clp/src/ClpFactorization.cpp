@@ -2138,7 +2138,7 @@ ClpFactorization::updateColumnFT ( CoinIndexedVector * regionSparse,
 							   regionSparse2);
       coinFactorizationA_->setCollectStatistics(false);
     } else {
-      returnCode= coinFactorizationB_->updateColumn(regionSparse,
+      returnCode= coinFactorizationB_->updateColumnFT(regionSparse,
 							 regionSparse2);
     }
 #ifdef CLP_FACTORIZATION_INSTRUMENT
@@ -2309,7 +2309,7 @@ ClpFactorization::updateTwoColumnsFT ( CoinIndexedVector * regionSparse1,
       }
       coinFactorizationA_->setCollectStatistics(false);
     } else {
-      returnCode= coinFactorizationB_->updateColumn(regionSparse1,
+      returnCode= coinFactorizationB_->updateColumnFT(regionSparse1,
 						     regionSparse2);
       coinFactorizationB_->updateColumn(regionSparse1,
 					regionSparse3,
