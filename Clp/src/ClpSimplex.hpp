@@ -25,6 +25,7 @@ class OsiClpSolverInterface;
 class CoinWarmStartBasis;
 class ClpDisasterHandler;
 class ClpConstraint;
+class ClpNodeStuff;
 
 /** This solves LPs using the simplex method
 
@@ -415,6 +416,12 @@ public:
 		      bool stopOnFirstInfeasible=true,
 		      bool alwaysFinish=false,
 		      int startFinishOptions=0);
+  /// Starts Fast dual2
+  int startFastDual2(ClpNodeStuff * stuff);
+  /// Like Fast dual
+  int fastDual2(ClpNodeStuff * stuff);
+  /// Stops Fast dual2
+  void stopFastDual2(ClpNodeStuff * stuff);
   //@}
 
   /**@name Needed for functionality of OsiSimplexInterface */

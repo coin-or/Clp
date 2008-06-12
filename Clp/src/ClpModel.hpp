@@ -297,7 +297,7 @@ public:
 	<ul>
 	  <li> 0 - normal
 	  <li> 1 - extra accuracy 
-	  <li> 2 - IEEE hex (later)
+	  <li> 2 - IEEE hex 
 	</ul>
 
 	Returns non-zero on I/O error
@@ -518,8 +518,12 @@ public:
    /// Scaling
    inline const double * rowScale() const {return rowScale_;}
    inline const double * columnScale() const {return columnScale_;}
+   inline const double * inverseRowScale() const {return inverseRowScale_;}
+   inline const double * inverseColumnScale() const {return inverseColumnScale_;}
    inline double * mutableRowScale() const {return rowScale_;}
    inline double * mutableColumnScale() const {return columnScale_;}
+   inline double * mutableInverseRowScale() const {return inverseRowScale_;}
+   inline double * mutableInverseColumnScale() const {return inverseColumnScale_;}
    void setRowScale(double * scale) ;
    void setColumnScale(double * scale);
   /// Scaling of objective 
@@ -839,6 +843,7 @@ public:
       65536 - keep arrays around as much as possible (also use maximumR/C)
       131072 - scale factor arrays have inverse values at end
       262144 - extra copy of scaled matrix
+      524288 - Clp fast dual
       NOTE - many applications can call Clp but there may be some short cuts
              which are taken which are not guaranteed safe from all applications.
              Vetted applications will have a bit set and the code may test this
@@ -951,6 +956,10 @@ protected:
   double * rowScale_;
   /// Column scale factors 
   double * columnScale_;
+  /// Inverse row scale factors for matrix (end of rowScale_)
+  double * inverseRowScale_;
+  /// Inverse column scale factors for matrix (end of columnScale_)
+  double * inverseColumnScale_;
   /// Scale flag, 0 none, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic
   int scalingFlag_;
   /** Status (i.e. basis) Region.  I know that not all algorithms need a status
@@ -1021,6 +1030,10 @@ protected:
   int maximumColumns_;
   /// Maximum number of rows in model
   int maximumRows_;
+  /// Maximum number of columns (internal arrays) in model
+  int maximumInternalColumns_;
+  /// Maximum number of rows (internal arrays) in model
+  int maximumInternalRows_;
   /// Base packed matrix
   CoinPackedMatrix baseMatrix_;
   /// Base row copy
@@ -1069,6 +1082,7 @@ public:
   int perturbation_;
   int forceFactorization_;
   int scalingFlag_;
+  unsigned int specialOptions_;
   //@}
 };
 

@@ -9617,6 +9617,26 @@ ClpSimplex::startPermanentArrays()
     return false;
   }
 }
+// Start Fast dual
+int 
+ClpSimplex::startFastDual2(ClpNodeStuff * info)
+{
+  abort();
+  return 0;
+}
+// Like Fast dual
+int 
+ClpSimplex::fastDual2(ClpNodeStuff * info)
+{
+  abort();
+  return 0;
+}
+// Stop Fast dual
+void 
+ClpSimplex::stopFastDual2(ClpNodeStuff * info)
+{
+  abort();
+}
 // Create C++ lines to get to current state
 void 
 ClpSimplex::generateCpp( FILE * fp, bool defaultFactor)

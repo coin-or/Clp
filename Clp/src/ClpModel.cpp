@@ -66,6 +66,8 @@ ClpModel::ClpModel (bool emptyMessages) :
   ray_(NULL),
   rowScale_(NULL),
   columnScale_(NULL),
+  inverseRowScale_(NULL),
+  inverseColumnScale_(NULL),
   scalingFlag_(3),
   status_(NULL),
   integerType_(NULL),
@@ -87,6 +89,8 @@ ClpModel::ClpModel (bool emptyMessages) :
 #endif
   maximumColumns_(-1),
   maximumRows_(-1),
+  maximumInternalColumns_(-1),
+  maximumInternalRows_(-1),
   savedRowScale_(NULL),
   savedColumnScale_(NULL)
 {
@@ -644,6 +648,8 @@ ClpModel::ClpModel(const ClpModel &rhs, int scalingMode) :
   specialOptions_(rhs.specialOptions_),
   maximumColumns_(-1),
   maximumRows_(-1),
+  maximumInternalColumns_(-1),
+  maximumInternalRows_(-1),
   savedRowScale_(NULL),
   savedColumnScale_(NULL)
 {
@@ -806,6 +812,8 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, int trueCopy)
       }
     } else {
       // This already has arrays - just copy
+      savedRowScale_ = NULL;
+      savedColumnScale_ = NULL;
       startPermanentArrays();
       if (rhs.integerType_) {
 	assert (integerType_);
@@ -867,8 +875,8 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, int trueCopy)
       if (rhs.savedRowScale_) {
 	assert (savedRowScale_);
 	assert (!rowScale_);
-	ClpDisjointCopyN(rhs.savedRowScale_,2*maximumRows_,savedRowScale_);
-	ClpDisjointCopyN(rhs.savedColumnScale_,2*maximumColumns_,savedColumnScale_);
+	ClpDisjointCopyN(rhs.savedRowScale_,4*maximumInternalRows_,savedRowScale_);
+	ClpDisjointCopyN(rhs.savedColumnScale_,4*maximumInternalColumns_,savedColumnScale_);
       } else {
 	assert (!savedRowScale_);
 	if (rowScale_) {
@@ -883,6 +891,7 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, int trueCopy)
     }
   } else {
     savedRowScale_ = rhs.savedRowScale_;
+    assert (!savedRowScale_);
     savedColumnScale_ = rhs.savedColumnScale_;
     rowActivity_ = rhs.rowActivity_;
     columnActivity_ = rhs.columnActivity_;
@@ -909,6 +918,8 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, int trueCopy)
     integerType_ = NULL;
     status_ = rhs.status_;
   }
+  inverseRowScale_ = NULL;
+  inverseColumnScale_ = NULL;
 }
 // Copy contents - resizing if necessary - otherwise re-use memory
 void 
@@ -924,12 +935,12 @@ ClpModel::copy(const ClpMatrixBase * from, ClpMatrixBase * & to)
     to =  from->clone();
   }
 #if 0
-    delete modelPtr_->matrix_;
-    if (continuousModel_->matrix_) {
-      modelPtr_->matrix_ = continuousModel_->matrix_->clone();
-    } else {
-      modelPtr_->matrix_=NULL;
-    }
+  delete modelPtr_->matrix_;
+  if (continuousModel_->matrix_) {
+    modelPtr_->matrix_ = continuousModel_->matrix_->clone();
+  } else {
+    modelPtr_->matrix_=NULL;
+  }
 #endif
 }
 /* Borrow model.  This is so we dont have to copy large amounts
@@ -958,6 +969,8 @@ ClpModel::borrowModel(ClpModel & rhs)
   specialOptions_ = rhs.specialOptions_ & ~65536;
   savedRowScale_=NULL;
   savedColumnScale_=NULL;
+  inverseRowScale_ = NULL;
+  inverseColumnScale_ = NULL;
 }
 // Return model - nulls all arrays so can be deleted safely
 void 
@@ -1002,6 +1015,8 @@ ClpModel::returnModel(ClpModel & otherModel)
     delete handler_;
     handler_ = NULL;
   }
+  inverseRowScale_ = NULL;
+  inverseColumnScale_ = NULL;
 }
 //#############################################################################
 // Parameter related methods
@@ -1205,32 +1220,62 @@ ClpModel::resize (int newNumberRows, int newNumberColumns)
       newNumberColumns==numberColumns_)
     return; // nothing to do
   whatsChanged_ = 0;
-  rowActivity_ = resizeDouble(rowActivity_,numberRows_,
-			      newNumberRows,0.0,true);
-  dual_ = resizeDouble(dual_,numberRows_,
-		       newNumberRows,0.0,true);
-  rowObjective_ = resizeDouble(rowObjective_,numberRows_,
-			       newNumberRows,0.0,false);
-  rowLower_ = resizeDouble(rowLower_,numberRows_,
-			   newNumberRows,-COIN_DBL_MAX,true);
-  rowUpper_ = resizeDouble(rowUpper_,numberRows_,
-			   newNumberRows,COIN_DBL_MAX,true);
-  columnActivity_ = resizeDouble(columnActivity_,numberColumns_,
-				 newNumberColumns,0.0,true);
-  reducedCost_ = resizeDouble(reducedCost_,numberColumns_,
-			      newNumberColumns,0.0,true);
-  savedRowScale_ = resizeDouble(savedRowScale_,2*numberRows_,
-			   2*newNumberRows,-COIN_DBL_MAX,false);
-  savedColumnScale_ = resizeDouble(savedColumnScale_,2*numberColumns_,
-			   2*newNumberColumns,-COIN_DBL_MAX,false);
-  if (objective_)
+  int numberRows2=newNumberRows;
+  int numberColumns2=newNumberColumns;
+  if (numberRows2<maximumRows_)
+    numberRows2=maximumRows_;
+  if (numberColumns2<maximumColumns_)
+    numberColumns2=maximumColumns_;
+  if (numberRows2>maximumRows_) {
+    rowActivity_ = resizeDouble(rowActivity_,numberRows_,
+				newNumberRows,0.0,true);
+    dual_ = resizeDouble(dual_,numberRows_,
+			 newNumberRows,0.0,true);
+    rowObjective_ = resizeDouble(rowObjective_,numberRows_,
+				 newNumberRows,0.0,false);
+    rowLower_ = resizeDouble(rowLower_,numberRows_,
+			     newNumberRows,-COIN_DBL_MAX,true);
+    rowUpper_ = resizeDouble(rowUpper_,numberRows_,
+			     newNumberRows,COIN_DBL_MAX,true);
+  }
+  if (numberColumns2>maximumColumns_) {
+    columnActivity_ = resizeDouble(columnActivity_,numberColumns_,
+				   newNumberColumns,0.0,true);
+    reducedCost_ = resizeDouble(reducedCost_,numberColumns_,
+				newNumberColumns,0.0,true);
+  }
+  if (savedRowScale_&&numberRows2>maximumInternalRows_) {
+    double * temp;
+    temp = new double [4*newNumberRows];
+    CoinFillN(temp,4*newNumberRows,1.0);
+    CoinMemcpyN(savedRowScale_,numberRows_,temp);
+    CoinMemcpyN(savedRowScale_+maximumInternalRows_,numberRows_,temp+newNumberRows);
+    CoinMemcpyN(savedRowScale_+2*maximumInternalRows_,numberRows_,temp+2*newNumberRows);
+    CoinMemcpyN(savedRowScale_+3*maximumInternalRows_,numberRows_,temp+3*newNumberRows);
+    delete [] savedRowScale_;
+    savedRowScale_ = temp;
+  }
+  if (savedColumnScale_&&numberColumns2>maximumInternalColumns_) {
+    double * temp;
+    temp = new double [4*newNumberColumns];
+    CoinFillN(temp,4*newNumberColumns,1.0);
+    CoinMemcpyN(savedColumnScale_,numberColumns_,temp);
+    CoinMemcpyN(savedColumnScale_+maximumInternalColumns_,numberColumns_,temp+newNumberColumns);
+    CoinMemcpyN(savedColumnScale_+2*maximumInternalColumns_,numberColumns_,temp+2*newNumberColumns);
+    CoinMemcpyN(savedColumnScale_+3*maximumInternalColumns_,numberColumns_,temp+3*newNumberColumns);
+    delete [] savedColumnScale_;
+    savedColumnScale_ = temp;
+  }
+  if (objective_&&numberColumns2>maximumColumns_)
     objective_->resize(newNumberColumns);
-  else 
+  else if (!objective_)
     objective_ = new ClpLinearObjective(NULL,newNumberColumns);
-  columnLower_ = resizeDouble(columnLower_,numberColumns_,
-			      newNumberColumns,0.0,true);
-  columnUpper_ = resizeDouble(columnUpper_,numberColumns_,
-			      newNumberColumns,COIN_DBL_MAX,true);
+  if (numberColumns2>maximumColumns_) {
+    columnLower_ = resizeDouble(columnLower_,numberColumns_,
+				newNumberColumns,0.0,true);
+    columnUpper_ = resizeDouble(columnUpper_,numberColumns_,
+				newNumberColumns,COIN_DBL_MAX,true);
+  }
   if (newNumberRows<numberRows_) {
     int * which = new int[numberRows_-newNumberRows];
     int i;
@@ -1250,14 +1295,23 @@ ClpModel::resize (int newNumberRows, int newNumberColumns)
   setColumnScale(NULL);
   if (status_) {
     if (newNumberColumns+newNumberRows) {
-      unsigned char * tempC = new unsigned char [newNumberColumns+newNumberRows];
-      unsigned char * tempR = tempC + newNumberColumns;
-      memset(tempC,3,newNumberColumns*sizeof(unsigned char));
-      memset(tempR,1,newNumberRows*sizeof(unsigned char));
-      memcpy(tempC,status_,CoinMin(newNumberColumns,numberColumns_)*sizeof(unsigned char));
-      memcpy(tempR,status_+numberColumns_,CoinMin(newNumberRows,numberRows_)*sizeof(unsigned char));
-      delete [] status_;
-      status_ = tempC;
+      if (newNumberColumns+newNumberRows>maximumRows_+maximumColumns_) {
+	unsigned char * tempC = new unsigned char [newNumberColumns+newNumberRows];
+	unsigned char * tempR = tempC + newNumberColumns;
+	memset(tempC,3,newNumberColumns*sizeof(unsigned char));
+	memset(tempR,1,newNumberRows*sizeof(unsigned char));
+	CoinMemcpyN(status_,CoinMin(newNumberColumns,numberColumns_),tempC);
+	CoinMemcpyN(status_+numberColumns_,CoinMin(newNumberRows,numberRows_),tempR);
+	delete [] status_;
+	status_ = tempC;
+      } else if (newNumberColumns<numberColumns_) {
+	memmove(status_+newNumberColumns,status_+numberColumns_,
+		newNumberRows);
+      } else if (newNumberColumns>numberColumns_) {
+	memset(status_+numberColumns_,3,newNumberColumns-numberColumns_);
+	memmove(status_+newNumberColumns,status_+numberColumns_,
+		newNumberRows);
+      }
     } else {
       // empty model - some systems don't like new [0]
       delete [] status_;
@@ -1296,7 +1350,7 @@ ClpModel::resize (int newNumberRows, int newNumberColumns)
     matrix_->deleteCols(numberColumns_-newNumberColumns,which);
     delete [] which;
   }
-  if (integerType_) {
+  if (integerType_&&numberColumns2>maximumColumns_) {
     char * temp = new char [newNumberColumns];
     CoinZeroN(temp,newNumberColumns);
     CoinMemcpyN(integerType_,
@@ -1305,6 +1359,16 @@ ClpModel::resize (int newNumberRows, int newNumberColumns)
     integerType_ = temp;
   }
   numberColumns_ = newNumberColumns;
+  if ((specialOptions_&65536)!=0) {
+    // leave until next create rim to up numbers
+  }
+  if (maximumRows_>=0) {
+    if (numberRows_>maximumRows_)
+      printf("resize %d rows, %d old maximum rows\n",
+	     numberRows_,maximumRows_);
+    maximumRows_ = CoinMax(maximumRows_,numberRows_);
+    maximumColumns_ = CoinMax(maximumColumns_,numberColumns_);
+  }
 }
 // Deletes rows
 void 
@@ -1314,36 +1378,66 @@ ClpModel::deleteRows(int number, const int * which)
     return; // nothing to do
   whatsChanged_ &= ~(1+2+4+8+16+32); // all except columns changed
   int newSize=0;
-  rowActivity_ = deleteDouble(rowActivity_,numberRows_,
-			      number, which, newSize);
-  dual_ = deleteDouble(dual_,numberRows_,
-			      number, which, newSize);
-  rowObjective_ = deleteDouble(rowObjective_,numberRows_,
-			      number, which, newSize);
-  rowLower_ = deleteDouble(rowLower_,numberRows_,
-			      number, which, newSize);
-  rowUpper_ = deleteDouble(rowUpper_,numberRows_,
-			      number, which, newSize);
-  if (matrix_->getNumRows())
-    matrix_->deleteRows(number,which);
-  //matrix_->removeGaps();
-  // status
-  if (status_) {
-    if (numberColumns_+newSize) {
-      unsigned char * tempR  = (unsigned char *) deleteChar((char *)status_+numberColumns_,
-							    numberRows_,
-							    number, which, newSize,false);
-      unsigned char * tempC = new unsigned char [numberColumns_+newSize];
-      memcpy(tempC,status_,numberColumns_*sizeof(unsigned char));
-      memcpy(tempC+numberColumns_,tempR,newSize*sizeof(unsigned char));
-      delete [] tempR;
-      delete [] status_;
-      status_ = tempC;
-    } else {
-      // empty model - some systems don't like new [0]
-      delete [] status_;
-      status_ = NULL;
+  if (maximumRows_<0) {
+    rowActivity_ = deleteDouble(rowActivity_,numberRows_,
+				number, which, newSize);
+    dual_ = deleteDouble(dual_,numberRows_,
+			 number, which, newSize);
+    rowObjective_ = deleteDouble(rowObjective_,numberRows_,
+				 number, which, newSize);
+    rowLower_ = deleteDouble(rowLower_,numberRows_,
+			     number, which, newSize);
+    rowUpper_ = deleteDouble(rowUpper_,numberRows_,
+			     number, which, newSize);
+    if (matrix_->getNumRows())
+      matrix_->deleteRows(number,which);
+    //matrix_->removeGaps();
+    // status
+    if (status_) {
+      if (numberColumns_+newSize) {
+	unsigned char * tempR  = (unsigned char *) deleteChar((char *)status_+numberColumns_,
+							      numberRows_,
+							      number, which, newSize,false);
+	unsigned char * tempC = new unsigned char [numberColumns_+newSize];
+	CoinMemcpyN(status_,numberColumns_,tempC);
+	CoinMemcpyN(tempR,newSize,tempC+numberColumns_);
+	delete [] tempR;
+	delete [] status_;
+	status_ = tempC;
+      } else {
+	// empty model - some systems don't like new [0]
+	delete [] status_;
+	status_ = NULL;
+      }
     }
+  } else {
+    char * deleted = new char [numberRows_];
+    int i;
+    int numberDeleted=0;
+    CoinZeroN(deleted,numberRows_);
+    for (i=0;i<number;i++) {
+      int j = which[i];
+      if (j>=0&&j<numberRows_&&!deleted[j]) {
+	numberDeleted++;
+	deleted[j]=1;
+      }
+    }
+    assert (!rowObjective_);
+    unsigned char * status2 = status_+numberColumns_;
+    for (i=0;i<numberRows_;i++) {
+      if (!deleted[i]) {
+	rowActivity_[newSize]=rowActivity_[i]; 
+	dual_[newSize] = dual_[i]; 
+	rowLower_[newSize] = rowLower_[i]; 
+	rowUpper_[newSize] = rowUpper_[i]; 
+	status2[newSize] = status2[i];
+	newSize++;
+      }
+    }
+    if (matrix_->getNumRows())
+      matrix_->deleteRows(number,which);
+    //matrix_->removeGaps();
+    delete [] deleted;
   }
 #ifndef CLP_NO_STD
   // Now works if which out of order
@@ -1381,6 +1475,7 @@ ClpModel::deleteColumns(int number, const int * which)
 {
   if (!number)
     return; // nothing to do
+  assert (maximumColumns_<0);
   whatsChanged_ &= ~(1+2+4+8+64+128+256); // all except rows changed
   int newSize=0;
   columnActivity_ = deleteDouble(columnActivity_,numberColumns_,
@@ -1414,9 +1509,8 @@ ClpModel::deleteColumns(int number, const int * which)
 							    numberColumns_,
 							    number, which, newSize,false);
       unsigned char * temp = new unsigned char [numberRows_+newSize];
-      memcpy(temp,tempC,newSize*sizeof(unsigned char));
-      memcpy(temp+newSize,status_+numberColumns_,
-	     numberRows_*sizeof(unsigned char));
+      CoinMemcpyN(tempC,newSize,temp);
+      CoinMemcpyN(status_+numberColumns_,	numberRows_,temp+newSize);
       delete [] tempC;
       delete [] status_;
       status_ = temp;
@@ -2472,6 +2566,12 @@ ClpModel::infeasibilityRay() const
   double * array = NULL;
   if (problemStatus_==1&&!secondaryStatus_) {
     array = ClpCopyOfArray(ray_,numberRows_);
+    //#define SWAP_SIGN
+#ifdef SWAP_SIGN
+    // swap signs to be consistent with norm
+    for (int i=0;i<numberRows_;i++)
+      ray_[i] = -ray_[i];
+#endif
 #if 0
     // clean up
     double largest=1.0e-30;
@@ -2525,7 +2625,7 @@ ClpModel::onStopped()
 {
   if (problemStatus_==3) {
     secondaryStatus_=0;
-    if (CoinCpuTime()>=dblParam_[ClpMaxSeconds])
+    if (CoinCpuTime()>=dblParam_[ClpMaxSeconds]&&dblParam_[ClpMaxSeconds]>=0.0)
       secondaryStatus_=9;
   }
 }
@@ -2873,7 +2973,7 @@ ClpModel::copyinStatus(const unsigned char * statusArray)
   delete [] status_;
   if (statusArray) {
     status_ = new unsigned char [numberRows_+numberColumns_];
-    memcpy(status_,statusArray,(numberRows_+numberColumns_)*sizeof(unsigned char));
+    CoinMemcpyN(statusArray,(numberRows_+numberColumns_),status_);
   } else {
     status_=NULL;
   }
@@ -2979,6 +3079,8 @@ ClpModel::ClpModel ( const ClpModel * rhs,
   :  specialOptions_(rhs->specialOptions_),
   maximumColumns_(-1),
   maximumRows_(-1),
+  maximumInternalColumns_(-1),
+  maximumInternalRows_(-1),
   savedRowScale_(NULL),
   savedColumnScale_(NULL)
 {
@@ -2993,6 +3095,8 @@ ClpModel::ClpModel ( const ClpModel * rhs,
   coinMessages_ = rhs->coinMessages_;
   maximumColumns_ = -1;
   maximumRows_ = -1;
+  maximumInternalColumns_ = -1;
+  maximumInternalRows_ = -1;
   savedRowScale_ = NULL;
   savedColumnScale_ = NULL;
   intParam_[ClpMaxNumIteration] = rhs->intParam_[ClpMaxNumIteration];
@@ -3105,6 +3209,8 @@ ClpModel::ClpModel ( const ClpModel * rhs,
     ray_ = whichDouble (rhs->ray_,numberColumns,whichColumn);
   rowScale_ = NULL;
   columnScale_ = NULL;
+  inverseRowScale_ = NULL;
+  inverseColumnScale_ = NULL;
   scalingFlag_ = rhs->scalingFlag_;
   rowCopy_=NULL;
   scaledMatrix_=NULL;
@@ -3313,8 +3419,6 @@ ClpModel::setObjectiveOffset(double value)
 int ClpModel::emptyProblem(int * infeasNumber, double * infeasSum,bool printMessage)
 {
   secondaryStatus_=6; // so user can see something odd
-  // May be in middle of expecting bounds to stay same etc - negate expectations
-  whatsChanged_=0;
   if (printMessage)
     handler_->message(CLP_EMPTY_PROBLEM,messages_)
       <<numberRows_
@@ -3788,14 +3892,24 @@ ClpModel::createCoinModel() const
 void 
 ClpModel::startPermanentArrays()
 {
+  printf("startperm a %d rows, %d maximum rows\n",
+	 numberRows_,maximumRows_);
   if ((specialOptions_&65536)!=0) {
     if (numberRows_>maximumRows_||numberColumns_>maximumColumns_) {
       if (numberRows_>maximumRows_)
-	maximumRows_ = numberRows_+10+numberRows_/100;
+	if (maximumRows_>0)
+	  maximumRows_ = numberRows_+10+numberRows_/100;
+	else
+	  maximumRows_ = numberRows_;
       if (numberColumns_>maximumColumns_) 
-	maximumColumns_ = numberColumns_+10+numberColumns_/100;
+	if (maximumColumns_>0)
+	  maximumColumns_ = numberColumns_+10+numberColumns_/100;
+	else
+	  maximumColumns_ = numberColumns_;
       // need to make sure numberRows_ OK and size of matrices
       resize(maximumRows_,maximumColumns_);
+      printf("startperm b %d rows, %d maximum rows\n",
+	     numberRows_,maximumRows_);
     } else {
       return;
     }
@@ -3803,6 +3917,13 @@ ClpModel::startPermanentArrays()
     specialOptions_ |= 65536;
     maximumRows_ = numberRows_;
     maximumColumns_ = numberColumns_;
+    baseMatrix_ = *matrix();
+    baseMatrix_.cleanMatrix();
+    baseRowCopy_.setExtraGap(0.0);
+    baseRowCopy_.setExtraMajor(0.0);
+    baseRowCopy_.reverseOrderedCopyOf(baseMatrix_);
+    printf("startperm c %d rows, %d maximum rows\n",
+	     numberRows_,maximumRows_);
   }
 }
 // Stop using maximumRows_ and Columns_
@@ -4001,10 +4122,12 @@ ClpModel::findNetwork(char * rotate,double fractionNeeded)
 	}
       }
     }
+#ifndef NDEBUG
     for (iRow=0;iRow<numberIn;iRow++) {
       int kRow = eligible[iRow];
       assert (rotate[kRow]>=2);
     }
+#endif
     trueNetwork=true;
     for (iColumn=0;iColumn<numberColumns_;iColumn++) {
       if (CoinAbs(columnCount[iColumn])==1) {
@@ -4069,6 +4192,7 @@ ClpDataSave::ClpDataSave ()
   perturbation_ = 0;
   forceFactorization_=-1;
   scalingFlag_=0;
+  specialOptions_=0;
 }
 
 //-------------------------------------------------------------------
@@ -4085,6 +4209,7 @@ ClpDataSave::ClpDataSave (const ClpDataSave & rhs)
   perturbation_ = rhs.perturbation_;
   forceFactorization_=rhs.forceFactorization_;
   scalingFlag_=rhs.scalingFlag_;
+  specialOptions_=rhs.specialOptions_;
 }
 
 //-------------------------------------------------------------------
@@ -4110,6 +4235,7 @@ ClpDataSave::operator=(const ClpDataSave& rhs)
     perturbation_ = rhs.perturbation_;
     forceFactorization_=rhs.forceFactorization_;
     scalingFlag_=rhs.scalingFlag_;
+    specialOptions_=rhs.specialOptions_;
   }
   return *this;
 }
