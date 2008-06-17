@@ -465,14 +465,12 @@ CbcOrClpParam::setDoubleParameterWithMessage ( ClpSimplex * model, double value 
     returnCode = 0;
     doubleValue_=value;
     switch(type_) {
-#ifndef COIN_HAS_CBC
     case DUALTOLERANCE:
       model->setDualTolerance(value);
       break;
     case PRIMALTOLERANCE:
       model->setPrimalTolerance(value);
       break;
-#endif
     case DUALBOUND:
       model->setDualBound(value);
       break;
@@ -1480,7 +1478,7 @@ createAfterPre.  The create case has same effect as saveSolution."
 #ifdef COIN_HAS_CLP
   parameters[numberParameters++]=
     CbcOrClpParam("dense!Threshold","Whether to use dense factorization",
-		  -1,200,DENSE,false);
+		  -1,10000,DENSE,false);
   parameters[numberParameters-1].setLonghelp
     (
      "If processed problem <= this use dense factorization (for testing)"
