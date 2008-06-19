@@ -1519,8 +1519,10 @@ ClpFactorization::factorize ( ClpSimplex * model,
 #endif
     coinFactorizationA_->setStatus(-99);
     int * pivotVariable = model->pivotVariable();
+    int nTimesRound=0;
     //returns 0 -okay, -1 singular, -2 too many in basis, -99 memory */
     while (coinFactorizationA_->status()<-98) {
+      nTimesRound++;
       
       int i;
       int numberBasic=0;
@@ -1762,7 +1764,8 @@ ClpFactorization::factorize ( ClpSimplex * model,
 	if (coinFactorizationA_->status()==-99) {
 	  // get more memory
 	  coinFactorizationA_->areaFactor(2.0*coinFactorizationA_->areaFactor());
-	} else if (coinFactorizationA_->status()==-1&&model->numberIterations()==0&&
+	} else if (coinFactorizationA_->status()==-1&&
+		   (model->numberIterations()==0||nTimesRound>2)&&
                    coinFactorizationA_->denseThreshold()) {
           // Round again without dense
           coinFactorizationA_->setDenseThreshold(0);
