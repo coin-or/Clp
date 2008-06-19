@@ -3443,10 +3443,17 @@ int ClpModel::emptyProblem(int * infeasNumber, double * infeasSum,bool printMess
       dual_[i]=0.0;
       if (rowLower_[i]<=rowUpper_[i]) {
 	if (rowLower_[i]>-1.0e30||rowUpper_[i]<1.0e30) {
-	  if (fabs(rowLower_[i])<fabs(rowUpper_[i]))
-	    rowActivity_[i]=rowLower_[i];
-	  else
-	    rowActivity_[i]=rowUpper_[i];
+	  if (rowLower_[i]<=0.0&&rowUpper_[i]>=0.0) {
+	    if (fabs(rowLower_[i])<fabs(rowUpper_[i]))
+	      rowActivity_[i]=rowLower_[i];
+	    else
+	      rowActivity_[i]=rowUpper_[i];
+	  } else {
+	    rowActivity_[i]=0.0;
+	    numberPrimalInfeasibilities++;
+	    sumPrimalInfeasibilities += CoinMin(rowLower_[i],-rowUpper_[i]);
+	    returnCode=1;
+	  }
 	} else {
 	  rowActivity_[i]=0.0;
 	}
