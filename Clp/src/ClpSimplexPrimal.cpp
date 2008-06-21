@@ -2747,7 +2747,7 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	    break;
 	  } else {
 	    // user in charge - re-factorize
-	    int lastCleaned;
+	    int lastCleaned=0;
 	    ClpSimplexProgress dummyProgress;
 	    if (saveStatus_)
 	      statusOfProblemInPrimal(lastCleaned,1,&dummyProgress,true,ifValuesPass);
@@ -2805,7 +2805,7 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	  primalRay(rowArray_[1]);
 	} else if (solveType_==2) {
 	  // refactorize
-	  int lastCleaned;
+	  int lastCleaned=0;
 	  ClpSimplexProgress dummyProgress;
 	  if (saveStatus_)
 	    statusOfProblemInPrimal(lastCleaned,1,&dummyProgress,true,ifValuesPass);
@@ -2912,7 +2912,7 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
   }
   if (solveType_==2&&(returnCode == -2||returnCode==-3)) {
     // refactorize here
-    int lastCleaned;
+    int lastCleaned=0;
     ClpSimplexProgress dummyProgress;
     if (saveStatus_)
       statusOfProblemInPrimal(lastCleaned,1,&dummyProgress,true,ifValuesPass);
