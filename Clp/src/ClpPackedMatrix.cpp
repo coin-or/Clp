@@ -2215,12 +2215,10 @@ ClpPackedMatrix::scale(ClpModel * model, const ClpSimplex * baseModel) const
 	      
               rowScale[iRow]=1.0/sqrt(smallest*largest);
               //rowScale[iRow]=CoinMax(1.0e-10,CoinMin(1.0e10,rowScale[iRow]));
-#ifdef COIN_DEVELOP
 	      if (model->logLevel()>2) {
 		overallLargest = CoinMax(largest*rowScale[iRow],overallLargest);
 		overallSmallest = CoinMin(smallest*rowScale[iRow],overallSmallest);
 	      }
-#endif
             }
           }
 #ifdef USE_OBJECTIVE
