@@ -1591,6 +1591,34 @@ int ClpSimplex::internalFactorize ( int solveType)
 int 
 ClpSimplex::housekeeping(double objectiveChange)
 {
+  //#define COMPUTE_INT_INFEAS
+#ifdef COMPUTE_INT_INFEAS
+  if (algorithm_>0&&integerType_) {
+    if (fabs(theta_)>1.0e-6||!numberIterations_) {
+      int numberFixed=0;
+      int numberUnsat=0;
+      int numberSat=0;
+      double sumUnsat=0.0;
+      for (int i=0;i<numberColumns_;i++) {
+	if (upper_[i]>lower_[i]) {
+	  double value = columnScale_ ? solution_[i]*columnScale_[i] : solution_[i];
+	  double closest = floor(value+0.5);
+	  // problem may be perturbed so relax test
+	  if (fabs(value-closest)>1.0e-4) {
+	    numberUnsat++;
+	    sumUnsat += fabs(value-closest);
+	  } else {
+	    numberSat++;
+	  }
+	} else {
+	  numberFixed++;
+	}
+      }
+      printf("iteration %d, %d unsatisfied (%g), %d fixed, %d satisfied\n",
+	     numberIterations_,numberUnsat,sumUnsat,numberFixed,numberSat);
+    }
+  }
+#endif
   // save value of incoming and outgoing
   double oldIn = solution_[sequenceIn_];
   double oldOut = solution_[sequenceOut_];
