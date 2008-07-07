@@ -1593,7 +1593,7 @@ ClpSimplex::housekeeping(double objectiveChange)
 {
   //#define COMPUTE_INT_INFEAS
 #ifdef COMPUTE_INT_INFEAS
-  if (algorithm_>0&&integerType_) {
+  if (algorithm_>0&&integerType_&&!sumPrimalInfeasibilities_) {
     if (fabs(theta_)>1.0e-6||!numberIterations_) {
       int numberFixed=0;
       int numberUnsat=0;
