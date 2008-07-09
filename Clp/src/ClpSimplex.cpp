@@ -1593,20 +1593,34 @@ ClpSimplex::housekeeping(double objectiveChange)
 {
   //#define COMPUTE_INT_INFEAS
 #ifdef COMPUTE_INT_INFEAS
-  if (algorithm_>0&&integerType_&&!sumPrimalInfeasibilities_) {
+  if (algorithm_>0&&integerType_&&!nonLinearCost_->numberInfeasibilities()) {
     if (fabs(theta_)>1.0e-6||!numberIterations_) {
       int numberFixed=0;
       int numberUnsat=0;
       int numberSat=0;
       double sumUnsat=0.0;
+      double tolerance = 10.0*primalTolerance_;
+      double mostAway=0.0;
+      int iAway=-1;
       for (int i=0;i<numberColumns_;i++) {
 	if (upper_[i]>lower_[i]) {
-	  double value = columnScale_ ? solution_[i]*columnScale_[i] : solution_[i];
-	  double closest = floor(value+0.5);
-	  // problem may be perturbed so relax test
-	  if (fabs(value-closest)>1.0e-4) {
-	    numberUnsat++;
-	    sumUnsat += fabs(value-closest);
+	  double value = solution_[i];
+	  if (value>lower_[i]+tolerance&&
+	      value<upper_[i]-tolerance) {
+	    if (columnScale_)
+	      value *= columnScale_[i];
+	    double closest = floor(value+0.5);
+	    // problem may be perturbed so relax test
+	    if (fabs(value-closest)>1.0e-4) {
+	      numberUnsat++;
+	      sumUnsat += fabs(value-closest);
+	      if (mostAway<fabs(value-closest)) {
+		mostAway=fabs(value-closest);
+		iAway=i;
+	      }
+	    } else {
+	      numberSat++;
+	    }
 	  } else {
 	    numberSat++;
 	  }
@@ -1614,8 +1628,8 @@ ClpSimplex::housekeeping(double objectiveChange)
 	  numberFixed++;
 	}
       }
-      printf("iteration %d, %d unsatisfied (%g), %d fixed, %d satisfied\n",
-	     numberIterations_,numberUnsat,sumUnsat,numberFixed,numberSat);
+      printf("iteration %d, %d unsatisfied (%g,%g), %d fixed, %d satisfied\n",
+	     numberIterations_,numberUnsat,sumUnsat,mostAway,numberFixed,numberSat);
     }
   }
 #endif
