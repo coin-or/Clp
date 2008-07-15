@@ -1782,7 +1782,8 @@ See branchAndCut for information on options."
     parameters[numberParameters-1].setIntValue(-1);
     parameters[numberParameters-1].setLonghelp
     (
-     "-1 off.  If 0 then tries to branch to solution given by AMPL or priorities file. \
+     "-1 off.  If 1 then tries to branch to solution given by AMPL or priorities file. \
+If 0 then just tries to set as best solution \
 If >0 then also does that many nodes on fixed problem."
      ); 
 #endif
@@ -2373,6 +2374,7 @@ costs this much to be infeasible",
   parameters[numberParameters-1].append("special");
   parameters[numberParameters-1].append("rows");
   parameters[numberParameters-1].append("all");
+  parameters[numberParameters-1].append("csv");
   parameters[numberParameters-1].setLonghelp
     (
      "This changes the amount and format of printing a solution:\nnormal - nonzero column variables \n\
