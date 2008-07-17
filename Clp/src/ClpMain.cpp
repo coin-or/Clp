@@ -59,7 +59,11 @@ static bool maskMatches(const int * starts, char ** masks,
 static ClpSimplex * currentModel = NULL;
 
 extern "C" {
-   static void signal_handler(int whichSignal)
+   static void 
+#if defined(_MSC_VER)
+   __cdecl
+#endif // _MSC_VER
+   signal_handler(int whichSignal)
    {
       if (currentModel!=NULL) 
 	 currentModel->setMaximumIterations(0); // stop at next iterations
@@ -80,7 +84,12 @@ static void generateCode(const char * fileName,int type);
 // Returns next valid field
 int CbcOrClpRead_mode=1;
 FILE * CbcOrClpReadCommand=stdin;
-int main (int argc, const char *argv[])
+
+int
+#if defined(_MSC_VER)
+__cdecl
+#endif // _MSC_VER
+main (int argc, const char *argv[])
 {
   // next {} is just to make sure all memory should be freed - for debug
   {
