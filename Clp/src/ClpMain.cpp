@@ -1077,7 +1077,7 @@ int main (int argc, const char *argv[])
 		  rowNames = new char * [numberRows];
 		  for (iRow=0;iRow<numberRows;iRow++) {
 		    rowNames[iRow] = 
-		      strdup(model2->rowName(iRow).c_str());
+		      CoinStrdup(model2->rowName(iRow).c_str());
 #ifdef STRIPBLANKS
 		    char * xx = rowNames[iRow];
 		    int i;
@@ -1094,7 +1094,7 @@ int main (int argc, const char *argv[])
 		  columnNames = new char * [numberColumns];
 		  for (iColumn=0;iColumn<numberColumns;iColumn++) {
 		    columnNames[iColumn] = 
-		      strdup(model2->columnName(iColumn).c_str());
+		      CoinStrdup(model2->columnName(iColumn).c_str());
 #ifdef STRIPBLANKS
 		    char * xx = columnNames[iColumn];
 		    int i;
