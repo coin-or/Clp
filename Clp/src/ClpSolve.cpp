@@ -341,7 +341,11 @@ static ClpInterior * currentModel2 = NULL;
 static ClpSimplex * currentModel = NULL;
 
 extern "C" {
-   static void signal_handler(int whichSignal)
+   static void 
+#if defined(_MSC_VER)
+   __cdecl
+#endif // _MSC_VER
+   signal_handler(int whichSignal)
    {
       if (currentModel!=NULL) 
 	 currentModel->setMaximumIterations(0); // stop at next iterations
