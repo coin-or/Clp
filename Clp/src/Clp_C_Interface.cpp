@@ -6,13 +6,8 @@
 
 #include "CoinPragma.hpp"
 
-#include <math.h>
-#include <string.h>
-
-/* 04-07-08 bobe including extras.h to get strdup() */
-#if defined(__MWERKS__) 
-#include <extras.h>
-#endif
+#include <cmath>
+#include <cstring>
 
 #include "CoinHelperFunctions.hpp"
 #include "ClpSimplex.hpp"
@@ -162,7 +157,7 @@ CMessageHandler::print()
     char * vString[10];
     for (i=0;i<nString;i++) {
       std::string value = stringValue(i);
-      vString[i]=strdup(value.c_str());
+      vString[i]=CoinStrdup(value.c_str());
     }
     callback_(model_,messageNumber,
 	      nDouble,vDouble,
