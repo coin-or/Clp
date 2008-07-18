@@ -265,8 +265,9 @@ public:
   void statusOfProblemInDual(int & lastCleaned, int type,
 			     double * givenDjs, ClpDataSave & saveData,
                              int ifValuesPass);
-  /// Perturbs problem (method depends on perturbation())
-  void perturb();
+  /** Perturbs problem (method depends on perturbation())
+      returns nonzero if should go to dual */
+  int perturb();
   /** Fast iterations.  Misses out a lot of initialization.
       Normally stops on maximum iterations, first re-factorization
       or tentative optimum.  If looks interesting then continues as

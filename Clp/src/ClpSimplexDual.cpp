@@ -226,12 +226,13 @@ ClpSimplexDual::startupSolve(int ifValuesPass,double * saveDuals,int startFinish
   // Do initial factorization
   // If user asked for perturbation - do it
   if (!startup(0,startFinishOptions)) {
+    int usePrimal=0;
     // looks okay
     // Superbasic variables not allowed
     // If values pass then scale pi 
     if (ifValuesPass) {
       if (problemStatus_&&perturbation_<100) 
-	perturb();
+	usePrimal=perturb();
       int i;
       if (scalingFlag_>0) {
 	for (i=0;i<numberRows_;i++) {
@@ -303,7 +304,7 @@ ClpSimplexDual::startupSolve(int ifValuesPass,double * saveDuals,int startFinish
     if (problemStatus_<0&&perturbation_<100) {
       bool inCbcOrOther = (specialOptions_&0x03000000)!=0;
       if (!inCbcOrOther)
-	perturb();
+	usePrimal=perturb();
       // Can't get here if values pass
       gutsOfSolution(NULL,NULL);
       if (handler_->logLevel()>2) {
@@ -320,7 +321,7 @@ ClpSimplexDual::startupSolve(int ifValuesPass,double * saveDuals,int startFinish
       }
       if (inCbcOrOther) {
 	if (numberPrimalInfeasibilities_) {
-	  perturb();
+	  usePrimal=perturb();
 	  if (perturbation_>=101)
 	    computeDuals(NULL);
 	  //gutsOfSolution(NULL,NULL);
@@ -336,7 +337,13 @@ ClpSimplexDual::startupSolve(int ifValuesPass,double * saveDuals,int startFinish
     } else if (!ifValuesPass) {
       gutsOfSolution(NULL,NULL);
     }
-    return 0;
+    if (usePrimal) {
+      problemStatus_=10;
+#if COIN_DEVELOP>1
+      printf("returning to use primal (no obj) at %d\n",__LINE__);
+#endif
+    }
+    return usePrimal;
   } else {
     return 1;
   }
@@ -4517,11 +4524,11 @@ ClpSimplexDual::changeBound( int iSequence)
   return modified;
 }
 // Perturbs problem
-void 
+int 
 ClpSimplexDual::perturb()
 {
   if (perturbation_>100)
-    return; //perturbed already
+    return 0; //perturbed already
   if (perturbation_==100)
     perturbation_=50; // treat as normal
   int savePerturbation = perturbation_;
@@ -4573,6 +4580,8 @@ ClpSimplexDual::perturb()
       last=sort[i];
     }
     delete [] sort;
+    if (!numberNonZero)
+      return 1; // safer to use primal
 #if 0
     printf("nnz %d percent %d",number,(number*100)/numberColumns_);
     if (number*4>numberColumns_)
@@ -4587,7 +4596,7 @@ ClpSimplexDual::perturb()
     //if (number*4>numberColumns_||elementRatio>1.0e12) {
     if (number*4>numberColumns_) {
       perturbation_=100;
-      return; // good enough
+      return 0; // good enough
     }
   }
   int iColumn;
@@ -4860,7 +4869,7 @@ ClpSimplexDual::perturb()
   //CoinZeroN(cost_+nTotal,nTotal);
   // say perturbed
   perturbation_=101;
-
+  return 0;
 }
 /* For strong branching.  On input lower and upper are new bounds
    while on output they are change in objective function values 

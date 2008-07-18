@@ -5437,7 +5437,7 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
     setInitialDenseFactorization(true);
     // Allow for catastrophe
     int saveMax = intParam_[ClpMaxNumIteration];
-    if (intParam_[ClpMaxNumIteration]>100000+numberIterations_)
+    if (intParam_[ClpMaxNumIteration]>100000+numberIterations_&&numberIterations_)
       intParam_[ClpMaxNumIteration] = numberIterations_ + 1000 + 2*numberRows_+numberColumns_;
     // check which algorithms allowed
     int dummy;
