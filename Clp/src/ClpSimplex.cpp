@@ -1683,6 +1683,7 @@ ClpSimplex::housekeeping(double objectiveChange)
 	  int maximumSolutions;
 	  int numberColumns;
 	  double ** solution;
+	  int * numberUnsatisfied;
 	} clpSolution;
 	clpSolution * solution = (clpSolution *) userPointer_; 
 	if (solution->numberSolutions==solution->maximumSolutions) {
@@ -1694,10 +1695,15 @@ ClpSimplex::housekeeping(double objectiveChange)
 	    temp[i]=solution->solution[i];
 	  delete [] solution->solution;
 	  solution->solution=temp;
+	  int * tempN = new int [n2];
+	  for (int i=0;i<n;i++)
+	    tempN[i] = solution->numberUnsatisfied[i];
+	  delete [] solution->numberUnsatisfied;
+	  solution->numberUnsatisfied = tempN;
 	}
 	assert (numberColumns_==solution->numberColumns);
 	double * sol = new double [numberColumns_];
-	solution->solution[solution->numberSolutions++]=sol;
+	solution->solution[solution->numberSolutions]=sol;
 	int numberFixed=0;
 	int numberUnsat=0;
 	int numberSat=0;
@@ -1735,6 +1741,7 @@ ClpSimplex::housekeeping(double objectiveChange)
 	    numberFixed++;
 	  }
 	}
+	solution->numberUnsatisfied[solution->numberSolutions++]=numberUnsat;
 	printf("iteration %d, %d unsatisfied (%g,%g), %d fixed, %d satisfied\n",
 	       numberIterations_,numberUnsat,sumUnsat,mostAway,numberFixed,numberSat);
       }
