@@ -1661,6 +1661,27 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 		fp=fopen(fileName.c_str(),"w");
 	      }
 	      if (fp) {
+		// Write solution header (suggested by Luigi Poderico)
+		double objValue = models[iModel].getObjValue()*models[iModel].getObjSense();
+		int iStat = models[iModel].status();
+		if (iStat==0) {
+		  fprintf(fp, "optimal\n" );
+		} else if (iStat==1) {
+		  // infeasible
+		  fprintf(fp, "infeasible\n" );
+		} else if (iStat==2) {
+		  // unbounded
+		  fprintf(fp, "unbounded\n" );
+		} else if (iStat==3) {
+		  fprintf(fp, "stopped on iterations or time\n" );
+		} else if (iStat==4) {
+		  fprintf(fp, "stopped on difficulties\n" );
+		} else if (iStat==5) {
+		  fprintf(fp, "stopped on ctrl-c\n" );
+		} else {
+		  fprintf(fp, "status unknown\n" );
+		}
+		fprintf(fp, "Objective value %15.8g\n", objValue);
 		// make fancy later on
 		int iRow;
 		int numberRows=models[iModel].numberRows();
