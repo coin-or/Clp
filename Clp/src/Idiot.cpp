@@ -1526,8 +1526,10 @@ Idiot::crossOver(int mode)
 	saveUpper=NULL;
 	saveLower=NULL;
       }
+#ifdef COIN_DEVELOP
       printf("Time so far %g, %d now added from previous iterations\n",
 	     CoinCpuTime()-startTime,n);
+#endif
       if (addAll)
 	presolve=0;
       if (presolve) {
@@ -1565,8 +1567,10 @@ Idiot::crossOver(int mode)
 	delete [] saveLower;
 	saveUpper=NULL;
 	saveLower=NULL;
+#ifdef COIN_DEVELOP
 	printf("Time so far %g, %d now added from previous iterations\n",
 	       CoinCpuTime()-startTime,n);
+#endif
       }
       if (presolve) {
 	saveModel = model_;
@@ -1591,7 +1595,9 @@ Idiot::crossOver(int mode)
 	saveModel=NULL;
       }
     }
+#ifdef COIN_DEVELOP
     printf("Total time in crossover %g\n", CoinCpuTime()-startTime);
+#endif
     delete [] saveUpper;
     delete [] saveLower;
   }
