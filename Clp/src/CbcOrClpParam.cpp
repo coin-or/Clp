@@ -1502,6 +1502,15 @@ createAfterPre.  The create case has same effect as saveSolution."
     CbcOrClpParam("dextra4","Extra double parameter 4",
 		  -COIN_DBL_MAX,COIN_DBL_MAX,DEXTRA4,false);
   parameters[numberParameters-1].setDoubleValue(0.0);
+  parameters[numberParameters++]=
+      CbcOrClpParam("Dins","Whether to try Distance Induced Neighborhood Search",
+		    "off",DINS);
+    parameters[numberParameters-1].append("on");
+    parameters[numberParameters-1].append("often");
+  parameters[numberParameters-1].setLonghelp
+    (
+     "This switches on Distance induced neighborhood Search."
+     ); 
 #endif
   parameters[numberParameters++]=
     CbcOrClpParam("direction","Minimize or Maximize",
@@ -1708,9 +1717,10 @@ e.g. no ENDATA.  This has to be set before import i.e. -errorsAllowed on -import
 		  -1,200,EXPERIMENT,false);
   parameters[numberParameters-1].setLonghelp
     (
-     "If >0 then use some dubious scheme (for testing)"
+     "Defines how adventurous you want to be in using new ideas. \
+0 then no new ideas, 1 fairly sensible, 2 a bit dubious, 3 you are on your own!"
      ); 
-  parameters[numberParameters-1].setIntValue(-1);
+  parameters[numberParameters-1].setIntValue(0);
 #endif
   parameters[numberParameters++]=
     CbcOrClpParam("export","Export model as mps file",
@@ -1724,11 +1734,11 @@ e.g. no ENDATA.  This has to be set before import i.e. -errorsAllowed on -import
 #ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("extra1","Extra integer parameter 1",
-		  -100,COIN_INT_MAX,EXTRA1,false);
+		  -COIN_INT_MAX,COIN_INT_MAX,EXTRA1,false);
   parameters[numberParameters-1].setIntValue(-1);
   parameters[numberParameters++]=
     CbcOrClpParam("extra2","Extra integer parameter 2",
-		  -1,COIN_INT_MAX,EXTRA2,false);
+		  -100,COIN_INT_MAX,EXTRA2,false);
   parameters[numberParameters-1].setIntValue(-1);
   parameters[numberParameters++]=
     CbcOrClpParam("extra3","Extra integer parameter 3",
@@ -1782,8 +1792,9 @@ See branchAndCut for information on options."
     parameters[numberParameters-1].setIntValue(-1);
     parameters[numberParameters-1].setLonghelp
     (
-     "-1 off.  If 0 then tries to branch to solution given by AMPL or priorities file. \
-If >0 then also does that many nodes on fixed problem."
+     "-1 off.  If 1 then tries to branch to solution given by AMPL or priorities file. \
+If 0 then just tries to set as best solution \
+If 1 then also does that many nodes on fixed problem."
      ); 
 #endif
   parameters[numberParameters++]=
@@ -2373,6 +2384,7 @@ costs this much to be infeasible",
   parameters[numberParameters-1].append("special");
   parameters[numberParameters-1].append("rows");
   parameters[numberParameters-1].append("all");
+  parameters[numberParameters-1].append("csv");
   parameters[numberParameters-1].setLonghelp
     (
      "This changes the amount and format of printing a solution:\nnormal - nonzero column variables \n\

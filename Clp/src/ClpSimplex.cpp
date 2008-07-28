@@ -1672,6 +1672,82 @@ ClpSimplex::housekeeping(double objectiveChange)
     handler_->printing(algorithm_>0)<<dualIn_<<theta_;
     handler_->message()<<CoinMessageEol;
   }
+  //#define COMPUTE_INT_INFEAS
+#ifdef COMPUTE_INT_INFEAS
+  if (userPointer_) {
+    if (algorithm_>0&&integerType_&&!nonLinearCost_->numberInfeasibilities()) {
+      if (fabs(theta_)>1.0e-6||!numberIterations_) {
+	// For saving solutions
+	typedef struct {
+	  int numberSolutions;
+	  int maximumSolutions;
+	  int numberColumns;
+	  double ** solution;
+	  int * numberUnsatisfied;
+	} clpSolution;
+	clpSolution * solution = (clpSolution *) userPointer_; 
+	if (solution->numberSolutions==solution->maximumSolutions) {
+	  int n =  solution->maximumSolutions;
+	  int n2 = (n*3)/2+10;
+	  solution->maximumSolutions=n2;
+	  double ** temp = new double * [n2];
+	  for (int i=0;i<n;i++)
+	    temp[i]=solution->solution[i];
+	  delete [] solution->solution;
+	  solution->solution=temp;
+	  int * tempN = new int [n2];
+	  for (int i=0;i<n;i++)
+	    tempN[i] = solution->numberUnsatisfied[i];
+	  delete [] solution->numberUnsatisfied;
+	  solution->numberUnsatisfied = tempN;
+	}
+	assert (numberColumns_==solution->numberColumns);
+	double * sol = new double [numberColumns_];
+	solution->solution[solution->numberSolutions]=sol;
+	int numberFixed=0;
+	int numberUnsat=0;
+	int numberSat=0;
+	double sumUnsat=0.0;
+	double tolerance = 10.0*primalTolerance_;
+	double mostAway=0.0;
+	int iAway=-1;
+	for (int i=0;i<numberColumns_;i++) {
+	  // Save anyway
+	  sol[i] = columnScale_ ? solution_[i]*columnScale_[i] : solution_[i];
+	  // rest is optional
+	  if (upper_[i]>lower_[i]) {
+	    double value = solution_[i];
+	    if (value>lower_[i]+tolerance&&
+		value<upper_[i]-tolerance&&integerType_[i]) {
+	      // may have to modify value if scaled
+	      if (columnScale_)
+		value *= columnScale_[i];
+	      double closest = floor(value+0.5);
+	      // problem may be perturbed so relax test
+	      if (fabs(value-closest)>1.0e-4) {
+		numberUnsat++;
+		sumUnsat += fabs(value-closest);
+		if (mostAway<fabs(value-closest)) {
+		  mostAway=fabs(value-closest);
+		  iAway=i;
+		}
+	      } else {
+		numberSat++;
+	      }
+	    } else {
+	      numberSat++;
+	    }
+	  } else {
+	    numberFixed++;
+	  }
+	}
+	solution->numberUnsatisfied[solution->numberSolutions++]=numberUnsat;
+	printf("iteration %d, %d unsatisfied (%g,%g), %d fixed, %d satisfied\n",
+	       numberIterations_,numberUnsat,sumUnsat,mostAway,numberFixed,numberSat);
+      }
+    }
+  }
+#endif
   if (hitMaximumIterations())
     return 2;
 #if 1
@@ -5368,8 +5444,15 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
     setInitialDenseFactorization(true);
     // Allow for catastrophe
     int saveMax = intParam_[ClpMaxNumIteration];
-    if (intParam_[ClpMaxNumIteration]>100000+numberIterations_)
-      intParam_[ClpMaxNumIteration] = numberIterations_ + 1000 + 2*numberRows_+numberColumns_;
+    if (numberIterations_) {
+      // normal
+      if (intParam_[ClpMaxNumIteration]>100000+numberIterations_)
+	intParam_[ClpMaxNumIteration] 
+	  = numberIterations_ + 1000 + 2*numberRows_+numberColumns_;
+    } else {
+      // Not normal allow more
+      baseIteration_ += 2*(numberRows_+numberColumns_);
+    }
     // check which algorithms allowed
     int dummy;
     if (problemStatus_==10&&saveObjective==objective_)
