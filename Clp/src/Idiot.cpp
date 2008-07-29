@@ -1159,7 +1159,7 @@ Idiot::crossOver(int mode)
     return;
   }
   double fixTolerance=IDIOT_FIX_TOLERANCE;
-  double startTime = CoinCpuTime();
+  // double startTime = CoinCpuTime();		unused?
   ClpSimplex * saveModel=NULL;
   ClpMatrixBase * matrix = model_->clpMatrix();
   const int * row = matrix->getIndices();

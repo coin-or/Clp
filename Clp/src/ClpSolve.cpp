@@ -3093,10 +3093,10 @@ ClpSimplexProgress::cycle(int in, int out,int wayIn,int wayOut)
     way_[i]=way_[i+1];
   }
 #endif
-  char way = 1-wayIn+4*(1-wayOut);
+  int way = 1-wayIn+4*(1-wayOut);
   //obj_[i]=model_->objectiveValue();
   in_[CLP_CYCLE-1]=in;
   out_[CLP_CYCLE-1]=out;
-  way_[CLP_CYCLE-1]=way;
+  way_[CLP_CYCLE-1]=static_cast<char>(way);
   return matched;
 }

@@ -1717,7 +1717,7 @@ ClpCholeskyBase::factorize(const double * diagonal, int * rowsDropped)
       if (newDropped||numberRowsDropped_) {
 	newDropped=0;
 	for (int i=0;i<numberRows_;i++) {
-	  char dropped = rowsDropped[i];
+	  char dropped = static_cast<char>(rowsDropped[i]);
 	  rowsDropped_[i]=dropped;
 	  rowsDropped_[i]=0;
 	  if (dropped==2) {
@@ -1733,7 +1733,7 @@ ClpCholeskyBase::factorize(const double * diagonal, int * rowsDropped)
       if (newDropped) {
 	newDropped=0;
 	for (int i=0;i<numberRows_;i++) {
-	  char dropped = rowsDropped[i];
+	  char dropped = static_cast<char>(rowsDropped[i]);
 	  rowsDropped_[i]=dropped;
 	  if (dropped==2) {
 	    //dropped this time

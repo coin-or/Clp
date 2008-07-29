@@ -3903,16 +3903,18 @@ ClpModel::startPermanentArrays()
 	 numberRows_,maximumRows_);
   if ((specialOptions_&65536)!=0) {
     if (numberRows_>maximumRows_||numberColumns_>maximumColumns_) {
-      if (numberRows_>maximumRows_)
-	if (maximumRows_>0)
+      if (numberRows_>maximumRows_) {
+        if (maximumRows_>0)
 	  maximumRows_ = numberRows_+10+numberRows_/100;
 	else
 	  maximumRows_ = numberRows_;
-      if (numberColumns_>maximumColumns_) 
+      }
+      if (numberColumns_>maximumColumns_) {
 	if (maximumColumns_>0)
 	  maximumColumns_ = numberColumns_+10+numberColumns_/100;
 	else
 	  maximumColumns_ = numberColumns_;
+      }
       // need to make sure numberRows_ OK and size of matrices
       resize(maximumRows_,maximumColumns_);
       printf("startperm b %d rows, %d maximum rows\n",
@@ -4112,16 +4114,16 @@ ClpModel::findNetwork(char * rotate,double fractionNeeded)
 	  }
 	}
 	if (possible) {
-	  rotate[jRow]+=2;
+	  rotate[jRow] = static_cast<char>(rotate[jRow]+2);
 	  eligible[numberIn++]=jRow;
-	  char multiplier = (rotate[jRow]==2) ? 1 : -1;
+	  char multiplier = static_cast<char>((rotate[jRow]==2) ? 1 : -1);
 	  for (CoinBigIndex j=rowStart[jRow];j<rowStart[jRow+1];j++) {
 	    iColumn = column[j];
 	    currentColumnCount[iColumn]++;
 	    int iCount=columnCount[iColumn];
 	    int absCount=CoinAbs(iCount);
 	    if (!absCount) {
-	      columnCount[iColumn]=elementByRow[j]*multiplier;
+	      columnCount[iColumn]=static_cast<char>(elementByRow[j]*multiplier);
 	    } else {
 	      columnCount[iColumn]=2;
 	    }
@@ -4137,7 +4139,7 @@ ClpModel::findNetwork(char * rotate,double fractionNeeded)
 #endif
     trueNetwork=true;
     for (iColumn=0;iColumn<numberColumns_;iColumn++) {
-      if (CoinAbs(columnCount[iColumn])==1) {
+      if (CoinAbs(static_cast<int>(columnCount[iColumn]))==1) {
 	trueNetwork=false;
 	break;
       }
@@ -4171,7 +4173,7 @@ ClpModel::findNetwork(char * rotate,double fractionNeeded)
 	iState -=2;
       else
 	iState = -1;
-      rotate[iRow]=iState;
+      rotate[iRow]=static_cast<char>(iState);
     } else {
       rotate[iRow]=-1;
     }

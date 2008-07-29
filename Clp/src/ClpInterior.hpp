@@ -277,11 +277,11 @@ public:
   /// To say a variable is fixed
   inline void setFixed( int sequence)
   {
-    status_[sequence] |= 1;
+    status_[sequence] = static_cast<unsigned char>(status_[sequence] | 1) ;
   }
   inline void clearFixed( int sequence)
   {
-    status_[sequence] &= ~1;
+    status_[sequence] = static_cast<unsigned char>(status_[sequence] & ~1) ;
   }
   inline bool fixed(int sequence) const
   {return ((status_[sequence]&1)!=0);}
@@ -289,11 +289,11 @@ public:
   /// To flag a variable
   inline void setFlagged( int sequence)
   {
-    status_[sequence] |= 2;
+    status_[sequence] = static_cast<unsigned char>(status_[sequence] | 2) ;
   }
   inline void clearFlagged( int sequence)
   {
-    status_[sequence] &= ~2;
+    status_[sequence] = static_cast<unsigned char>(status_[sequence] & ~2) ;
   }
   inline bool flagged(int sequence) const
   {return ((status_[sequence]&2)!=0);}
@@ -301,11 +301,11 @@ public:
   /// To say a variable is fixed OR free
   inline void setFixedOrFree( int sequence)
   {
-    status_[sequence] |= 4;
+    status_[sequence] = static_cast<unsigned char>(status_[sequence] | 4) ;
   }
   inline void clearFixedOrFree( int sequence)
   {
-    status_[sequence] &= ~4;
+    status_[sequence] = static_cast<unsigned char>(status_[sequence] & ~4) ;
   }
   inline bool fixedOrFree(int sequence) const
   {return ((status_[sequence]&4)!=0);}
@@ -313,11 +313,11 @@ public:
   /// To say a variable has lower bound
   inline void setLowerBound( int sequence)
   {
-    status_[sequence] |= 8;
+    status_[sequence] = static_cast<unsigned char>(status_[sequence] | 8) ;
   }
   inline void clearLowerBound( int sequence)
   {
-    status_[sequence] &= ~8;
+    status_[sequence] = static_cast<unsigned char>(status_[sequence] & ~8) ;
   }
   inline bool lowerBound(int sequence) const
   {return ((status_[sequence]&8)!=0);}
@@ -325,11 +325,11 @@ public:
   /// To say a variable has upper bound
   inline void setUpperBound( int sequence)
   {
-    status_[sequence] |= 16;
+    status_[sequence] = static_cast<unsigned char>(status_[sequence] | 16) ;
   }
   inline void clearUpperBound( int sequence)
   {
-    status_[sequence] &= ~16;
+    status_[sequence] = static_cast<unsigned char>(status_[sequence] & ~16) ;
   }
   inline bool upperBound(int sequence) const
   {return ((status_[sequence]&16)!=0);}
@@ -337,11 +337,11 @@ public:
   /// To say a variable has fake lower bound
   inline void setFakeLower( int sequence)
   {
-    status_[sequence] |= 32;
+    status_[sequence] = static_cast<unsigned char>(status_[sequence] | 32) ;
   }
   inline void clearFakeLower( int sequence)
   {
-    status_[sequence] &= ~32;
+    status_[sequence] = static_cast<unsigned char>(status_[sequence] & ~32) ;
   }
   inline bool fakeLower(int sequence) const
   {return ((status_[sequence]&32)!=0);}
@@ -349,11 +349,11 @@ public:
   /// To say a variable has fake upper bound
   inline void setFakeUpper( int sequence)
   {
-    status_[sequence] |= 64;
+    status_[sequence] = static_cast<unsigned char>(status_[sequence] | 64) ;
   }
   inline void clearFakeUpper( int sequence)
   {
-    status_[sequence] &= ~64;
+    status_[sequence] = static_cast<unsigned char>(status_[sequence] & ~64) ;
   }
   inline bool fakeUpper(int sequence) const
   {return ((status_[sequence]&64)!=0);}
