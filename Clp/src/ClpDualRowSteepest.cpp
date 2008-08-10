@@ -228,6 +228,7 @@ ClpDualRowSteepest::pivotRow()
   // But cap
   tolerance = CoinMin(1000.0,tolerance);
   tolerance *= tolerance; // as we are using squares
+  double saveTolerance = tolerance;
   double * solution = model_->solutionRegion();
   double * lower = model_->lowerRegion();
   double * upper = model_->upperRegion();
@@ -384,7 +385,7 @@ k
       break;
   }
   //printf("smallest %g largest %g\n",smallestWeight,largestWeight);
-  if (chosenRow<0&& bToleranceIncreased) {
+  if (chosenRow<0&& tolerance>saveTolerance && bToleranceIncreased) {
     // won't line up with checkPrimalSolution - do again
     double saveError = model_->largestDualError();
     model_->setLargestDualError(0.0);
