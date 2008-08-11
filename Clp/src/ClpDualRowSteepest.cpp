@@ -228,7 +228,7 @@ ClpDualRowSteepest::pivotRow()
   // But cap
   tolerance = CoinMin(1000.0,tolerance);
   tolerance *= tolerance; // as we are using squares
-  double saveTolerance = tolerance;
+  bool toleranceChanged = false;
   double * solution = model_->solutionRegion();
   double * lower = model_->lowerRegion();
   double * upper = model_->upperRegion();
@@ -236,14 +236,6 @@ ClpDualRowSteepest::pivotRow()
   //#define COLUMN_BIAS 4.0
   //#define FIXED_BIAS 10.0
   if (lastPivotRow>=0&&lastPivotRow<model_->numberRows()) {
-#if defined (__MINGW32__) || defined(__CYGWIN32__)
-    if (model_->numberIterations()<0)
-      printf("aab_p it %d\n",model_->numberIterations());
-#endif
-#if defined (__MINGW32__) || defined(__CYGWIN32__)
-    if (model_->numberIterations()<0)
-      printf("aab_p it %d\n",model_->numberIterations());
-#endif
 #ifdef COLUMN_BIAS 
     int numberColumns = model_->numberColumns();
 #endif
@@ -283,14 +275,12 @@ k
     }
     number = infeasible_->getNumElements();
   }
-#if defined(__MINGW32__) || defined(__CYGWIN32__)
-  if (model_->numberIterations()<0)
-    printf("aac_p it %d\n",model_->numberIterations());
-#endif
   if(model_->numberIterations()<model_->lastBadIteration()+200) {
     // we can't really trust infeasibilities if there is dual error
-    if (model_->largestDualError()>model_->largestPrimalError())
+    if (model_->largestDualError()>model_->largestPrimalError()) {
       tolerance *= CoinMin(model_->largestDualError()/model_->largestPrimalError(),1000.0);
+      toleranceChanged=true;
+    }
   }
   int numberWanted;
   if (mode_<2 ) {
@@ -382,7 +372,7 @@ k
       break;
   }
   //printf("smallest %g largest %g\n",smallestWeight,largestWeight);
-  if (chosenRow<0&& tolerance>saveTolerance) {
+  if (chosenRow<0 && toleranceChanged) {
     // won't line up with checkPrimalSolution - do again
     double saveError = model_->largestDualError();
     model_->setLargestDualError(0.0);
