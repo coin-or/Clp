@@ -211,17 +211,17 @@ public:
   inline void setStatus(int sequence, ClpSimplex::Status status)
   {
     unsigned char & st_byte = status_[sequence];
-    st_byte &= ~7;
-    st_byte |= status;
+    st_byte = static_cast<unsigned char>(st_byte & ~7);
+    st_byte = static_cast<unsigned char>(st_byte | status);
   }
   /// To flag a variable
   inline void setFlagged( int sequence)
   {
-    status_[sequence] |= 64;
+    status_[sequence] = static_cast<unsigned char>(status_[sequence] | 64);
   }
   inline void clearFlagged( int sequence)
   {
-    status_[sequence] &= ~64;
+    status_[sequence] = static_cast<unsigned char>(status_[sequence] & ~64);
   }
   inline bool flagged(int sequence) const
   {return ((status_[sequence]&64)!=0);}
@@ -229,21 +229,21 @@ public:
   inline void setAbove( int sequence)
   {
     unsigned char iStat = status_[sequence];
-    iStat &= ~24;
-    status_[sequence] = iStat|16;
+    iStat = static_cast<unsigned char>(iStat & ~24);
+    status_[sequence] = static_cast<unsigned char>(iStat|16);
   }
   /// To say key is feasible
   inline void setFeasible( int sequence)
   {
     unsigned char iStat = status_[sequence];
-    iStat &= ~24;
-    status_[sequence] = iStat|8;
+    iStat = static_cast<unsigned char>(iStat & ~24);
+    status_[sequence] = static_cast<unsigned char>(iStat|8);
   }
   /// To say key is below lb
   inline void setBelow( int sequence)
   {
     unsigned char iStat = status_[sequence];
-    iStat &= ~24;
+    iStat = static_cast<unsigned char>(iStat & ~24);
     status_[sequence] = iStat;
   }
   inline double weight( int sequence) const

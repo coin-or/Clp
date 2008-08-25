@@ -41,13 +41,22 @@ inline int originalStatus(unsigned char status)
 inline int currentStatus(unsigned char status) 
 { return (status>>4);}
 inline void setOriginalStatus(unsigned char & status,int value) 
-{ status &= ~15;status |= value;}
+{ 
+  status = static_cast<unsigned char>(status & ~15);
+  status = static_cast<unsigned char>(status | value);
+}
 inline void setCurrentStatus(unsigned char &status,int value) 
-{ status &= ~(15<<4);status |= (value<<4);}
+{ 
+  status = static_cast<unsigned char>(status & ~(15<<4));
+  status = static_cast<unsigned char>(status | (value<<4));
+}
 inline void setInitialStatus(unsigned char &status)
-{ status = CLP_FEASIBLE | (CLP_SAME<<4);}
+{ status = static_cast<unsigned char>(CLP_FEASIBLE | (CLP_SAME<<4)); }
 inline void setSameStatus(unsigned char &status)
-{ status &= ~(15<<4);status |= (CLP_SAME<<4);}
+{ 
+  status = static_cast<unsigned char>(status & ~(15<<4));
+  status = static_cast<unsigned char>(status | (CLP_SAME<<4));
+}
 // Use second version to get more speed
 //#define FAST_CLPNON
 #ifndef FAST_CLPNON
@@ -219,7 +228,7 @@ public:
       double saveRhs1=rhs;
       rhs = saveRhs;
 #endif
-      int iStatus = status_[sequence];
+      unsigned char iStatus = status_[sequence];
       int iWhere = currentStatus(iStatus);
       if (iWhere==CLP_SAME)
         iWhere = originalStatus(iStatus);

@@ -123,8 +123,8 @@ public:
   inline void setDynamicStatusGen(int sequence, DynamicStatus status)
   {
     unsigned char & st_byte = dynamicStatusGen_[sequence];
-    st_byte &= ~7;
-    st_byte |= status;
+    st_byte = static_cast<unsigned char>(st_byte & ~7);
+    st_byte = static_cast<unsigned char>(st_byte | status);
   }
   inline DynamicStatus getDynamicStatusGen(int sequence) const
   {return static_cast<DynamicStatus> (dynamicStatusGen_[sequence]&7);}
@@ -133,10 +133,10 @@ public:
     return (dynamicStatusGen_[i]&8)!=0;
   }
   inline void setFlaggedGen(int i) {
-    dynamicStatusGen_[i] |= 8;
+    dynamicStatusGen_[i] = static_cast<unsigned char>(dynamicStatusGen_[i] | 8);
   }
   inline void unsetFlagged(int i) {
-    dynamicStatusGen_[i]  &= ~8;;
+    dynamicStatusGen_[i] = static_cast<unsigned char>(dynamicStatusGen_[i] & ~8);
   }
    //@}
    

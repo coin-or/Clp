@@ -840,8 +840,8 @@ public:
   inline void setStatus(int sequence, Status status)
   {
     unsigned char & st_byte = status_[sequence];
-    st_byte &= ~7;
-    st_byte |= status;
+    st_byte = static_cast<unsigned char>(st_byte & ~7);
+    st_byte = static_cast<unsigned char>(st_byte | status);
   }
   /// Start or reset using maximumRows_ and Columns_ - true if change
   bool startPermanentArrays();
@@ -940,49 +940,49 @@ public:
   inline void setFakeBound(int sequence, FakeBound fakeBound)
   {
     unsigned char & st_byte = status_[sequence];
-    st_byte &= ~24;
-    st_byte |= fakeBound<<3;
+    st_byte = static_cast<unsigned char>(st_byte & ~24);
+    st_byte = static_cast<unsigned char>(st_byte | (fakeBound<<3));
   }
   inline FakeBound getFakeBound(int sequence) const
   {return static_cast<FakeBound> ((status_[sequence]>>3)&3);}
   inline void setRowStatus(int sequence, Status status)
   {
     unsigned char & st_byte = status_[sequence+numberColumns_];
-    st_byte &= ~7;
-    st_byte |= status;
+    st_byte = static_cast<unsigned char>(st_byte & ~7);
+    st_byte = static_cast<unsigned char>(st_byte | status);
   }
   inline Status getRowStatus(int sequence) const
   {return static_cast<Status> (status_[sequence+numberColumns_]&7);}
   inline void setColumnStatus(int sequence, Status status)
   {
     unsigned char & st_byte = status_[sequence];
-    st_byte &= ~7;
-    st_byte |= status;
+    st_byte = static_cast<unsigned char>(st_byte & ~7);
+    st_byte = static_cast<unsigned char>(st_byte | status);
   }
   inline Status getColumnStatus(int sequence) const
   {return static_cast<Status> (status_[sequence]&7);}
   inline void setPivoted( int sequence)
-  { status_[sequence] |= 32;}
+  { status_[sequence] = static_cast<unsigned char>(status_[sequence] | 32);}
   inline void clearPivoted( int sequence)
-  { status_[sequence] &= ~32; }
+  { status_[sequence] = static_cast<unsigned char>(status_[sequence] & ~32);}
   inline bool pivoted(int sequence) const
   {return (((status_[sequence]>>5)&1)!=0);}
   /// To flag a variable (not inline to allow for column generation)
   void setFlagged( int sequence);
   inline void clearFlagged( int sequence)
   {
-    status_[sequence] &= ~64;
+    status_[sequence] = static_cast<unsigned char>(status_[sequence] & ~64);
   }
   inline bool flagged(int sequence) const
   {return ((status_[sequence]&64)!=0);}
   /// To say row active in primal pivot row choice
   inline void setActive( int iRow)
   {
-    status_[iRow] |= 128;
+    status_[iRow] = static_cast<unsigned char>(status_[iRow] | 128);
   }
   inline void clearActive( int iRow)
   {
-    status_[iRow] &= ~128;
+    status_[iRow] = static_cast<unsigned char>(status_[iRow] & ~128);
   }
   inline bool active(int iRow) const
   {return ((status_[iRow]&128)!=0);}

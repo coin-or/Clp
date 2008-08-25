@@ -2070,7 +2070,7 @@ ClpPackedMatrix::scale(ClpModel * model, const ClpSimplex * baseModel) const
 	    break;
 	  }
 	}
-	usefulRow[iRow]=useful;
+	usefulRow[iRow]=static_cast<char>(useful);
       }
     }
     double savedOverallRatio=0.0;
@@ -3621,7 +3621,7 @@ ClpPackedMatrix2::ClpPackedMatrix2 (ClpSimplex * model,const CoinPackedMatrix * 
               printf("not packed correctly - zero element\n");
               abort();
             }
-            column_[j]=iColumn-start;
+            column_[j]=static_cast<unsigned short>(iColumn-start);
             nFound++;
             if (lastFound) {
               printf("not packed correctly - out of order\n");
@@ -3633,7 +3633,7 @@ ClpPackedMatrix2::ClpPackedMatrix2 (ClpSimplex * model,const CoinPackedMatrix * 
           }
         } 
       }
-      count_[iRow*numberBlocks_+iBlock]=nFound;
+      count_[iRow*numberBlocks_+iBlock]=static_cast<unsigned short>(nFound);
       if (!nFound)
         nZero++;
     }
