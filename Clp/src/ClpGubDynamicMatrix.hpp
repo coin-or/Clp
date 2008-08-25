@@ -104,16 +104,16 @@ public:
     return (dynamicStatus_[i]&8)!=0;
   }
   inline void setFlagged(int i) {
-    dynamicStatus_[i] |= 8;
+    dynamicStatus_[i] = static_cast<unsigned char>(dynamicStatus_[i] | 8);
   }
   inline void unsetFlagged(int i) {
-    dynamicStatus_[i]  &= ~8;;
+    dynamicStatus_[i] = static_cast<unsigned char>(dynamicStatus_[i] & ~8);
   }
   inline void setDynamicStatus(int sequence, DynamicStatus status)
   {
     unsigned char & st_byte = dynamicStatus_[sequence];
-    st_byte &= ~7;
-    st_byte |= status;
+    st_byte = static_cast<unsigned char>(st_byte & ~7);
+    st_byte = static_cast<unsigned char>(st_byte | status);
   }
   inline DynamicStatus getDynamicStatus(int sequence) const
   {return static_cast<DynamicStatus> (dynamicStatus_[sequence]&7);}

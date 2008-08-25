@@ -783,7 +783,7 @@ ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
     // nonbasic should be at a valid bound
     for (iSequence=0;iSequence<numberTotal;iSequence++) {
       double value=solution[iSequence];
-      int iStatus = status_[iSequence];
+      unsigned char iStatus = status_[iSequence];
       assert (currentStatus(iStatus)==CLP_SAME);
       double lowerValue=lower[iSequence];
       double upperValue=upper[iSequence];
@@ -988,7 +988,7 @@ ClpNonLinearCost::feasibleBounds()
     double * cost = model_->costRegion();
     int numberTotal = numberColumns_+numberRows_;
     for (iSequence=0;iSequence<numberTotal;iSequence++) {
-      int iStatus = status_[iSequence];
+      unsigned char iStatus = status_[iSequence];
       assert (currentStatus(iStatus)==CLP_SAME);
       double lowerValue=lower[iSequence];
       double upperValue=upper[iSequence];
@@ -1059,7 +1059,7 @@ ClpNonLinearCost::goThru(int numberInArray, double multiplier,
       int iSequence = pivotVariable[iRow];
       double alpha = multiplier*array[iRow];
       double value = solution[iSequence];
-      int iStatus = status_[iSequence];
+      unsigned char iStatus = status_[iSequence];
       int iWhere = currentStatus(iStatus);
       if (iWhere==CLP_SAME)
         iWhere = originalStatus(iStatus);
@@ -1145,7 +1145,7 @@ ClpNonLinearCost::goBack(int numberInArray, const int * index,
       int iRow = index[i];
       int iSequence = pivotVariable[iRow];
       double value = solution[iSequence];
-      int iStatus = status_[iSequence];
+      unsigned char iStatus = status_[iSequence];
       int iWhere = currentStatus(iStatus);
       int original = originalStatus(iStatus);
       assert (iWhere!=CLP_SAME);
@@ -1255,7 +1255,7 @@ ClpNonLinearCost::checkInfeasibilities(int numberInArray, const int * index)
       int iRow = index[i];
       int iSequence = pivotVariable[iRow];
       double value=solution[iSequence];
-      int iStatus = status_[iSequence];
+      unsigned char iStatus = status_[iSequence];
       assert (currentStatus(iStatus)==CLP_SAME);
       double lowerValue=lower[iSequence];
       double upperValue=upper[iSequence];
@@ -1368,7 +1368,7 @@ ClpNonLinearCost::checkChanged(int numberInArray, CoinIndexedVector * update)
       int iRow = index[i];
       int iSequence = pivotVariable[iRow];
       double value=solution[iSequence];
-      int iStatus = status_[iSequence];
+      unsigned char iStatus = status_[iSequence];
       assert (currentStatus(iStatus)==CLP_SAME);
       double lowerValue=lower[iSequence];
       double upperValue=upper[iSequence];
@@ -1511,7 +1511,7 @@ ClpNonLinearCost::setOne(int iSequence, double value)
     double * upper = model_->upperRegion();
     double * lower = model_->lowerRegion();
     double * cost = model_->costRegion();
-    int iStatus = status_[iSequence];
+    unsigned char iStatus = status_[iSequence];
     assert (currentStatus(iStatus)==CLP_SAME);
     double lowerValue=lower[iSequence];
     double upperValue=upper[iSequence];
@@ -1712,7 +1712,7 @@ ClpNonLinearCost::setOneOutgoing(int iSequence, double & value)
     double * upper = model_->upperRegion();
     double * lower = model_->lowerRegion();
     double * cost = model_->costRegion();
-    int iStatus = status_[iSequence];
+    unsigned char iStatus = status_[iSequence];
     assert (currentStatus(iStatus)==CLP_SAME);
     double lowerValue=lower[iSequence];
     double upperValue=upper[iSequence];
