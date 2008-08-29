@@ -148,6 +148,7 @@ int main (int argc, const char *argv[])
       //solveOptions.setSpecialOption(1,2,200); // idiot
       small.initialSolve(solveOptions);
     }
+    bool dualInfeasible = (small.status()==2);
     // move solution back
     double * solution = model2->primalColumnSolution();
     const double * smallSolution = small.primalColumnSolution();
@@ -179,7 +180,7 @@ int main (int argc, const char *argv[])
 	//printf("%d %g %g\n",iRow,fullSolution[iRow],small.primalRowSolution()[iSort]);
 	if (model2->getRowStatus(iRow)==ClpSimplex::basic) {
 	  // Basic - we can get rid of if early on
-	  if (iPass<takeOutPass) {
+	  if (iPass<takeOutPass&&!dualInfeasible) {
 	    // may have hit max iterations so check
 	    double infeasibility = max(fullSolution[iRow]-rowUpper[iRow],
 				       rowLower[iRow]-fullSolution[iRow]);
