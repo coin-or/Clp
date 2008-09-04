@@ -305,6 +305,8 @@ ClpModel::loadProblem (  const ClpMatrixBase& matrix,
   } else {
     // later may want to keep as unknown class
     CoinPackedMatrix matrix2;
+    matrix2.setExtraGap(0.0);
+    matrix2.setExtraMajor(0.0);
     matrix2.reverseOrderedCopyOf(*matrix.getPackedMatrix());
     matrix.releasePackedMatrix();
     matrix_=new ClpPackedMatrix(matrix2);
@@ -318,12 +320,21 @@ ClpModel::loadProblem (  const CoinPackedMatrix& matrix,
 		     const double* rowlb, const double* rowub,
 				const double * rowObjective)
 {
+  ClpPackedMatrix* clpMatrix =
+    dynamic_cast< ClpPackedMatrix*>(matrix_);
+  bool special = (clpMatrix) ? clpMatrix->wantsSpecialColumnCopy() : false;
   gutsOfLoadModel(matrix.getNumRows(),matrix.getNumCols(),
 		  collb, colub, obj, rowlb, rowub, rowObjective);
   if (matrix.isColOrdered()) {
     matrix_=new ClpPackedMatrix(matrix);
+    if (special) {
+      clpMatrix = dynamic_cast< ClpPackedMatrix*>(matrix_);
+      clpMatrix->makeSpecialColumnCopy();
+    }
   } else {
     CoinPackedMatrix matrix2;
+    matrix2.setExtraGap(0.0);
+    matrix2.setExtraMajor(0.0);
     matrix2.reverseOrderedCopyOf(matrix);
     matrix_=new ClpPackedMatrix(matrix2);
   }    
@@ -3725,7 +3736,7 @@ ClpModel::transposeTimes(double scalar,
 {
   if (!scaledMatrix_||!rowScale_) {
     if (rowScale_)
-      matrix_->transposeTimes(scalar,x,y,rowScale_,columnScale_);
+      matrix_->transposeTimes(scalar,x,y,rowScale_,columnScale_,NULL);
     else
       matrix_->transposeTimes(scalar,x,y);
   } else {
@@ -3805,6 +3816,8 @@ ClpModel::createCoinModel() const
 {
   CoinModel * coinModel = new CoinModel();
   CoinPackedMatrix matrixByRow;
+  matrixByRow.setExtraGap(0.0);
+  matrixByRow.setExtraMajor(0.0);
   matrixByRow.reverseOrderedCopyOf(*matrix());
   coinModel->setObjectiveOffset(objectiveOffset());
   coinModel->setProblemName(problemName().c_str());
@@ -3965,6 +3978,8 @@ ClpModel::findNetwork(char * rotate,double fractionNeeded)
   CoinPackedMatrix * columnCopy = matrix();
   // Get a row copy in standard format
   CoinPackedMatrix * copy = new CoinPackedMatrix();
+  copy->setExtraGap(0.0);
+  copy->setExtraMajor(0.0);
   copy->reverseOrderedCopyOf(*columnCopy);
   // make sure ordered and no gaps
   copy->cleanMatrix();

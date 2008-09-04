@@ -440,7 +440,10 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
     const bool slackd = doSingleton();
     const bool doubleton = doDoubleton();
     const bool tripleton = doTripleton();
+#define NO_FORCING
+#ifndef NO_FORCING
     const bool forcing = doForcing();
+#endif
     const bool ifree = doImpliedFree();
     const bool zerocost = doTighten();
     const bool dupcol = doDupcol();
@@ -476,7 +479,16 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
     check_sol(prob,1.0e0);
 #endif
     if (dupcol) {
-      //paction_ = dupcol_action::presolve(prob, paction_);
+      // maybe allow integer columns to be checked
+      if ((presolveActions_&512)!=0)
+	prob->setPresolveOptions(prob->presolveOptions()|1);
+      paction_ = dupcol_action::presolve(prob, paction_);
+    }
+    if (duprow) {
+      paction_ = duprow_action::presolve(prob, paction_);
+    }
+    if (doGubrow()) {
+      paction_ = gubrow_action::presolve(prob, paction_);
     }
 
     if ((presolveActions_&16384)!=0)
@@ -493,9 +505,19 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
 #endif
       const CoinPresolveAction * const paction0 = paction_;
       // look for substitutions with no fill
-      int fill_level=2;
-      //fill_level=10;
-      //printf("** fill_level == 10 !\n");
+      int fill_level=3;
+#define IMPLIED 3
+#define IMPLIED2 99
+#if IMPLIED!=3
+#if IMPLIED>2&&IMPLIED<11
+      fill_level=IMPLIED;
+      printf("** fill_level == %d !\n",fill_level);
+#endif
+#if IMPLIED>11&&IMPLIED<21
+      fill_level=-(IMPLIED-10);
+      printf("** fill_level == %d !\n",fill_level);
+#endif
+#endif
       int whichPass=0;
       while (1) {
 	whichPass++;
@@ -533,15 +555,16 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
 	  if (prob->status_)
 	    break;
 	}
-
+#ifndef NO_FORCING
 	if (forcing) {
 	  paction_ = forcing_constraint_action::presolve(prob, paction_);
 	  if (prob->status_)
 	    break;
 	}
+#endif
 
 	if (ifree&&(whichPass%5)==1) {
-	paction_ = implied_free_action::presolve(prob, paction_,fill_level);
+	  paction_ = implied_free_action::presolve(prob, paction_,fill_level);
 	if (prob->status_)
 	  break;
 	}
@@ -641,8 +664,13 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
 	    break;
 	  const CoinPresolveAction * const paction2 = paction_;
 	  if (ifree) {
-	    //int fill_level=0; // switches off substitution
-	    paction_ = implied_free_action::presolve(prob, paction_,fill_level);
+#if IMPLIED2 ==0
+	    int fill_level=0; // switches off substitution
+#elif IMPLIED2!=99
+	    int fill_level=IMPLIED2;
+#endif
+	    if ((itry&1)==0)
+	      paction_ = implied_free_action::presolve(prob, paction_,fill_level);
 	    if (prob->status_)
 	      break;
 	  }
@@ -651,7 +679,11 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
 	}
       } else if (ifree) {
 	// just free
+#if IMPLIED2 ==0
 	int fill_level=0; // switches off substitution
+#elif IMPLIED2!=99
+	int fill_level=IMPLIED2;
+#endif
 	paction_ = implied_free_action::presolve(prob, paction_,fill_level);
 	if (prob->status_)
 	  break;
@@ -1054,7 +1086,6 @@ CoinPresolveMatrix::CoinPresolveMatrix(int ncols0_in,
   nextRowsToDo_(new int[nrows_in]),
   numberNextRowsToDo_(0),
   presolveOptions_(0)
-
 {
   const int bufsize = bulk0_;
 
@@ -1089,9 +1120,11 @@ CoinPresolveMatrix::CoinPresolveMatrix(int ncols0_in,
 
   // same thing for row rep
   CoinPackedMatrix * mRow = new CoinPackedMatrix();
-  mRow->reverseOrderedCopyOf(*m);
-  mRow->removeGaps();
   mRow->setExtraGap(0.0);
+  mRow->setExtraMajor(0.0);
+  mRow->reverseOrderedCopyOf(*m);
+  //mRow->removeGaps();
+  //mRow->setExtraGap(0.0);
 
   // Now get rid of matrix
   si->createEmptyMatrix();
@@ -1206,6 +1239,8 @@ CoinPresolveMatrix::CoinPresolveMatrix(int ncols0_in,
   // this must come after the calls to presolve_prefix
   mcstrt_[ncols_] = bufsize-1;
   mrstrt_[nrows_] = bufsize-1;
+  // Allocate useful arrays
+  initializeStuff();
 
 #if	PRESOLVE_CONSISTENCY
 //consistent(false);
@@ -1506,6 +1541,8 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
 
     // Do presolve
     paction_ = presolve(&prob);
+    // Get rid of useful arrays
+    prob.deleteStuff();
 
     result =0; 
 

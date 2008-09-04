@@ -122,6 +122,11 @@ public:
   { return (presolveActions_&512)==0;}
   inline void setDoSingletonColumn(bool doSingleton)
   { if (doSingleton) presolveActions_  &= ~512; else presolveActions_ |= 512;}
+  /// Whether we want to do gubrow part of presolve
+  inline bool doGubrow() const
+  { return (presolveActions_&1024)==0;}
+  inline void setDoGubrow(bool doGubrow)
+  { if (doGubrow) presolveActions_  &= ~1024; else presolveActions_ |= 1024;}
   /// Set whole group
   inline int presolveActions() const
   { return presolveActions_&0xffff;}

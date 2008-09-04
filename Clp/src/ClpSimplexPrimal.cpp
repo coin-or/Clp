@@ -179,7 +179,7 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
   */
 
   algorithm_ = +1;
-  //specialOptions_ |= 4;
+  moreSpecialOptions_ &= ~16; // clear check replaceColumn accuracy
 
   // save data
   ClpDataSave data = saveData();
@@ -655,7 +655,11 @@ ClpSimplexPrimal::whileIterating(int valuesOption)
       if (returnCode<-1&&returnCode>-5) {
 	problemStatus_=-2; // 
       } else if (returnCode==-5) {
-	// something flagged - continue;
+	if ((moreSpecialOptions_&16)==0&&factorization_->pivots()) {
+	  moreSpecialOptions_ |= 16;
+	  problemStatus_=-2;
+	}
+	// otherwise something flagged - continue;
       } else if (returnCode==2) {
 	problemStatus_=-5; // looks unbounded
       } else if (returnCode==4) {
@@ -1386,6 +1390,8 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
     problemStatus_=4; // unknown
   }
   lastGoodIteration_ = numberIterations_;
+  if (numberIterations_>lastBadIteration_+100)
+    moreSpecialOptions_ &= ~16; // clear check accuracy flag
   if (goToDual) 
     problemStatus_=10; // try dual
   // make sure first free monotonic
@@ -2717,7 +2723,8 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 						     rowArray_[2],
 						     rowArray_[1],
 						     pivotRow_,
-						     alpha_);
+						     alpha_,
+						     (moreSpecialOptions_&16)!=0);
 
       // if no pivots, bad update but reasonable alpha - take and invert
       if (updateStatus==2&&

@@ -1059,14 +1059,37 @@ ClpSimplex::computeDuals(double * givenDjs)
       value += rowObjectiveWork_[iRow];
       rowReducedCost_[iRow]=value;
     }
-    ClpDisjointCopyN(objectiveWork_,numberColumns_,reducedCostWork_);
     // can use work if problem scaled (for better cache)
-    if (numberRows_>10000)
-      matrix_->transposeTimes(-1.0,dual_,reducedCostWork_,
-			      rowScale_,columnScale_,work);
-    else
-      matrix_->transposeTimes(-1.0,dual_,reducedCostWork_,
-			      rowScale_,columnScale_,NULL);
+    ClpPackedMatrix* clpMatrix =
+      dynamic_cast< ClpPackedMatrix*>(matrix_);
+    if (clpMatrix&&rowScale_&&(clpMatrix->flags()&2)==0) { 
+      CoinIndexedVector * cVector = columnArray_[0];
+      int * whichColumn = cVector->getIndices();
+      assert (!cVector->getNumElements());
+      int n=0;
+      for (int i=0;i<numberColumns_;i++) {
+	if (getColumnStatus(i)!=basic) {
+	  whichColumn[n++]=i;
+	  reducedCostWork_[i]=objectiveWork_[i];
+	} else {
+	  reducedCostWork_[i]=0.0;
+	}
+      }
+      if (numberRows_>4000)
+	clpMatrix->transposeTimesSubset(n,whichColumn,dual_,reducedCostWork_,
+				rowScale_,columnScale_,work);
+      else
+	clpMatrix->transposeTimesSubset(n,whichColumn,dual_,reducedCostWork_,
+				rowScale_,columnScale_,NULL);
+    } else {
+      ClpDisjointCopyN(objectiveWork_,numberColumns_,reducedCostWork_);
+      if (numberRows_>4000)
+	matrix_->transposeTimes(-1.0,dual_,reducedCostWork_,
+				rowScale_,columnScale_,work);
+      else
+	matrix_->transposeTimes(-1.0,dual_,reducedCostWork_,
+				rowScale_,columnScale_,NULL);
+    }
     ClpFillN(work,numberRows_,0.0);
     // Extended duals and check dual infeasibility
     if (!matrix_->skipDualCheck()||algorithm_<0||problemStatus_!=-2) 
@@ -1672,7 +1695,9 @@ ClpSimplex::housekeeping(double objectiveChange)
     handler_->printing(algorithm_>0)<<dualIn_<<theta_;
     handler_->message()<<CoinMessageEol;
   }
-  //#define COMPUTE_INT_INFEAS
+#ifdef COIN_FACTORIZATION_INFO
+#define COMPUTE_INT_INFEAS
+#endif
 #ifdef COMPUTE_INT_INFEAS
   if (userPointer_) {
     if (algorithm_>0&&integerType_&&!nonLinearCost_->numberInfeasibilities()) {
@@ -2717,6 +2742,7 @@ ClpSimplex::unpackPacked(CoinIndexedVector * rowArray,int sequence)
     matrix_->unpackPacked(this,rowArray,sequence);
   }
 }
+//static int x_gaps[4]={0,0,0,0};
 //static int scale_times[]={0,0,0,0};
 bool
 ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
@@ -2864,7 +2890,8 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
     int checkType=(doSanityCheck) ? 15 : 14;
     if (oldMatrix)
       checkType = 14;
-    if ((specialOptions_&COIN_CBC_USING_CLP)!=0)
+    bool inCbcOrOther = (specialOptions_&0x03000000)!=0;
+    if (inCbcOrOther)
       checkType -= 4; // don't check for duplicates
     if (!matrix_->allElementsInRange(this,smallElement_,1.0e20,checkType)) {
       problemStatus_=4;
@@ -3060,6 +3087,24 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
     }
   }
   if (what==63) {
+#if 0
+    {
+      x_gaps[0]++;
+      ClpPackedMatrix* clpMatrix =
+	dynamic_cast< ClpPackedMatrix*>(matrix_);
+      if (clpMatrix) {
+	if (!clpMatrix->getPackedMatrix()->hasGaps())
+	  x_gaps[1]++;
+	if ((clpMatrix->flags()&2)==0)
+	  x_gaps[3]++;
+      } else {
+	x_gaps[2]++;
+      }
+      if ((x_gaps[0]%1000)==0)
+	printf("create %d times, no gaps %d times - not clp %d times - flagged %d\n",
+	       x_gaps[0],x_gaps[1],x_gaps[2],x_gaps[3]);
+    }
+#endif
     if (newArrays&&(specialOptions_&65536)==0) {
       delete [] cost_;
       cost_ = new double[numberTotal];
@@ -4910,6 +4955,8 @@ ClpSimplex::tightenPrimalBounds(double factor,int doTight,bool tightIntegers)
   
   // Get a row copy in standard format
   CoinPackedMatrix copy;
+  copy.setExtraGap(0.0);
+  copy.setExtraMajor(0.0);
   copy.reverseOrderedCopyOf(*matrix());
   // Matrix may have been created so get rid of it
   matrix_->releasePackedMatrix();
@@ -7333,6 +7380,8 @@ ClpSimplex::crash(double gap,int pivot)
 	CoinPackedMatrix * columnCopy = matrix();
 	// Get a row copy in standard format
 	CoinPackedMatrix copy;
+	copy.setExtraGap(0.0);
+	copy.setExtraMajor(0.0);
 	copy.reverseOrderedCopyOf(*columnCopy);
 	// get matrix data pointers
 	const int * column = copy.getIndices();
@@ -8191,7 +8240,7 @@ ClpSimplex::saveData()
 void 
 ClpSimplex::restoreData(ClpDataSave saved)
 {
-  factorization_->sparseThreshold(saved.sparseThreshold_);
+  //factorization_->sparseThreshold(saved.sparseThreshold_);
   factorization_->pivotTolerance(saved.pivotTolerance_);
   perturbation_ = saved.perturbation_;
   infeasibilityCost_ = saved.infeasibilityCost_;

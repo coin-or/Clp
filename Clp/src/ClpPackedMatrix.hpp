@@ -22,21 +22,21 @@ public:
    //@{
    /// Return a complete CoinPackedMatrix
   virtual CoinPackedMatrix * getPackedMatrix() const { return matrix_;}
-    /** Whether the packed matrix is column major ordered or not. */
-    virtual bool isColOrdered() const { return matrix_->isColOrdered(); }
+  /** Whether the packed matrix is column major ordered or not. */
+  virtual bool isColOrdered() const { return matrix_->isColOrdered(); }
    /** Number of entries in the packed matrix. */
   virtual  CoinBigIndex getNumElements() const 
   { return matrix_->getNumElements(); }
-   /** Number of columns. */
-   virtual int getNumCols() const { return matrix_->getNumCols(); }
-   /** Number of rows. */
+  /** Number of columns. */
+  virtual int getNumCols() const { return matrix_->getNumCols(); }
+  /** Number of rows. */
   virtual int getNumRows() const { return matrix_->getNumRows(); }
-
-   /** A vector containing the elements in the packed matrix. Note that there
-	might be gaps in this list, entries that do not belong to any
-	major-dimension vector. To get the actual elements one should look at
-	this vector together with vectorStarts and vectorLengths. */
-   virtual const double * getElements() const 
+  
+  /** A vector containing the elements in the packed matrix. Note that there
+      might be gaps in this list, entries that do not belong to any
+      major-dimension vector. To get the actual elements one should look at
+      this vector together with vectorStarts and vectorLengths. */
+  virtual const double * getElements() const 
   { return matrix_->getElements();}
   /// Mutable elements
   inline double * getMutableElements() const
@@ -198,6 +198,16 @@ public:
 				const double * rowScale, 
 				const double * columnScale,
 				double * spare=NULL) const;
+    /** Return <code>y - pi * A</code> in <code>y</code>.
+        @pre <code>pi</code> must be of size <code>numRows()</code>
+        @pre <code>y</code> must be of size <code>numColumns()</code> 
+	This just does subset (but puts in correct place in y) */
+  void transposeTimesSubset( int number,
+			     const int * which,
+			     const double * pi, double * y,
+			     const double * rowScale, 
+			     const double * columnScale,
+			     double * spare=NULL) const;
     /** Return <code>x * scalar * A + y</code> in <code>z</code>. 
 	Can use y as temporary array (will be empty at end)
 	Note - If x packed mode - then z packed mode
@@ -266,7 +276,7 @@ public:
   { matrix_=NULL;}
   /// Say we want special column copy
   inline void makeSpecialColumnCopy()
-  { flags_ |= 8;}
+  { flags_ |= 16;}
   /// Say we don't want special column copy
   void releaseSpecialColumnCopy();
   /// Are there zeros?
@@ -274,7 +284,7 @@ public:
   { return ((flags_&1)!=0);}
   /// Do we want special column copy
   inline bool wantsSpecialColumnCopy() const
-  { return ((flags_&8)!=0);}
+  { return ((flags_&16)!=0);}
   /// Flags
   inline int flags() const
   { return flags_;}
@@ -336,6 +346,13 @@ private:
 				 int * COIN_RESTRICT index, 
 				 double * COIN_RESTRICT array,
 				 const double tolerance) const;
+  /// Meat of transposeTimes by row n > K if packed - returns number nonzero
+  int gutsOfTransposeTimesByRowGEK(const CoinIndexedVector * COIN_RESTRICT piVector, 
+				   int * COIN_RESTRICT index, 
+				   double * COIN_RESTRICT output,
+				   int numberColumns,
+				   const double tolerance, 
+				   const double scalar) const;
   /// Meat of transposeTimes by row n > 2 if packed - returns number nonzero
   int gutsOfTransposeTimesByRowGE3(const CoinIndexedVector * COIN_RESTRICT piVector, 
 				   int * COIN_RESTRICT index, 
@@ -369,6 +386,7 @@ protected:
       2 - has gaps
       4 - has special row copy
       8 - has special column copy
+      16 - wants special column copy
   */
   int flags_;
   /// Special row copy

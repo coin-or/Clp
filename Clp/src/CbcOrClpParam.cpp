@@ -1503,6 +1503,10 @@ createAfterPre.  The create case has same effect as saveSolution."
 		  -COIN_DBL_MAX,COIN_DBL_MAX,DEXTRA4,false);
   parameters[numberParameters-1].setDoubleValue(0.0);
   parameters[numberParameters++]=
+    CbcOrClpParam("dextra5","Extra double parameter 5",
+		  -COIN_DBL_MAX,COIN_DBL_MAX,DEXTRA5,false);
+  parameters[numberParameters-1].setDoubleValue(0.0);
+  parameters[numberParameters++]=
       CbcOrClpParam("Dins","Whether to try Distance Induced Neighborhood Search",
 		    "off",DINS);
     parameters[numberParameters-1].append("on");
@@ -1577,6 +1581,7 @@ You can also use the parameters 'maximize' or 'minimize'."
       CbcOrClpParam("DivingS!ome","Whether to try Diving heuristics",
 		    "off",DIVINGS);
   parameters[numberParameters-1].append("on");
+  parameters[numberParameters-1].append("do");
   parameters[numberParameters-1].setLonghelp
     (
      "This switches on a random diving heuristic at various times. \
@@ -1587,26 +1592,32 @@ You may prefer to use individual on/off"
       CbcOrClpParam("DivingC!oefficient","Whether to try DiveCoefficient",
 		    "off",DIVINGC);
   parameters[numberParameters-1].append("on");
+  parameters[numberParameters-1].append("do");
   parameters[numberParameters++]=
       CbcOrClpParam("DivingF!ractional","Whether to try DiveFractional",
 		    "off",DIVINGF);
   parameters[numberParameters-1].append("on");
+  parameters[numberParameters-1].append("do");
   parameters[numberParameters++]=
       CbcOrClpParam("DivingG!uided","Whether to try DiveGuided",
 		    "off",DIVINGG);
   parameters[numberParameters-1].append("on");
+  parameters[numberParameters-1].append("do");
   parameters[numberParameters++]=
       CbcOrClpParam("DivingL!ineSearch","Whether to try DiveLineSearch",
 		    "off",DIVINGL);
   parameters[numberParameters-1].append("on");
+  parameters[numberParameters-1].append("do");
   parameters[numberParameters++]=
       CbcOrClpParam("DivingP!seudoCost","Whether to try DivePseudoCost",
 		    "off",DIVINGP);
   parameters[numberParameters-1].append("on");
+  parameters[numberParameters-1].append("do");
   parameters[numberParameters++]=
       CbcOrClpParam("DivingV!ectorLength","Whether to try DiveVectorLength",
 		    "off",DIVINGV);
   parameters[numberParameters-1].append("on");
+  parameters[numberParameters-1].append("do");
   parameters[numberParameters++]=
     CbcOrClpParam("doH!euristic","Do heuristics before any preprocessing",
 		  DOHEURISTIC,3);
@@ -1754,11 +1765,11 @@ e.g. no ENDATA.  This has to be set before import i.e. -errorsAllowed on -import
     CbcOrClpParam("fakeB!ound","All bounds <= this value - DEBUG",
 		  1.0,1.0e15,FAKEBOUND,false);
 #ifdef COIN_HAS_CBC
-    parameters[numberParameters++]=
-      CbcOrClpParam("feas!ibilityPump","Whether to try Feasibility Pump",
-		    "off",FPUMP);
-    parameters[numberParameters-1].append("on");
-    parameters[numberParameters-1].append("do");
+  parameters[numberParameters++]=
+    CbcOrClpParam("feas!ibilityPump","Whether to try Feasibility Pump",
+		  "off",FPUMP);
+  parameters[numberParameters-1].append("on");
+  parameters[numberParameters-1].append("do");
   parameters[numberParameters-1].setLonghelp
     (
      "This switches on feasibility pump heuristic at root. This is due to Fischetti and Lodi \
@@ -2226,7 +2237,7 @@ stop if drop small if less than 5000 columns, 20 otherwise"
 #ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("passT!reeCuts","Number of cut passes in tree",
-		  -999999,999999,CUTPASSINTREE);
+		  -9999999,9999999,CUTPASSINTREE);
   parameters[numberParameters-1].setLonghelp
     (
      "The default is one pass"
@@ -2443,7 +2454,7 @@ but strong options do more probing"
 \t>=1000000 use as accumulate switch\n\
 \t>=1000 use index+1 as number of large loops\n\
 \t>=100 use 0.05 objvalue as increment\n\
-\t>=10 use +0.1 objvalue for cutoff (add)\n\
+\t%100 == 10,20 etc for experimentation\n\
 \t1 == fix ints at bounds, 2 fix all integral ints, 3 and continuous at bounds"
      ); 
   parameters[numberParameters-1].setIntValue(0);
@@ -2725,6 +2736,20 @@ this does branch and cut."
      "This stops the execution of Clp, end, exit, quit and stop are synonyms"
      ); 
 #ifdef COIN_HAS_CBC
+  parameters[numberParameters++]=
+    CbcOrClpParam("strat!egy","Switches on groups of features",
+		  0,2,STRATEGY);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "This turns on newer features. \
+Use 0 for easy problems, 1 is default, 2 is aggressive. \
+1 uses Gomory cuts using tolerance of 0.01 at root, \
+does a possible restart after 100 nodes if can fix many \
+and activates a diving and RINS heuristic and makes feasibility pump \
+more aggressive. \
+This does not apply to unit tests (where 'experiment' may have similar effects)."
+     ); 
+  parameters[numberParameters-1].setIntValue(1);
   parameters[numberParameters++]=
     CbcOrClpParam("strengthen","Create strengthened problem",
 		  STRENGTHEN,3);

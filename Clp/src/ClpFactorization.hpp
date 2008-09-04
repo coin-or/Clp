@@ -175,14 +175,14 @@ public:
   /// Returns number of dense rows
   inline int numberDense() const
   { if (coinFactorizationA_) return coinFactorizationA_->numberDense(); else return 0 ;}
-#if 0
+#if 1
   /// Returns number in U area
   inline CoinBigIndex numberElementsU (  ) const {
-    if (coinFactorizationA_) return coinFactorizationA_->numberElementsU(); else return 0 ;
+    if (coinFactorizationA_) return coinFactorizationA_->numberElementsU(); else return -1 ;
   }
   /// Returns number in L area
   inline CoinBigIndex numberElementsL (  ) const {
-    if (coinFactorizationA_) return coinFactorizationA_->numberElementsL(); else return 0 ;
+    if (coinFactorizationA_) return coinFactorizationA_->numberElementsL(); else return -1 ;
   }
   /// Returns number in R area
   inline CoinBigIndex numberElementsR (  ) const {

@@ -464,6 +464,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
       costedSlacks=true;
       // switch on singletons to slacks
       pinfo.setDoSingletonColumn(true);
+      // gub stuff for testing
+      pinfo.setDoGubrow(true);
     }
 #ifndef CLP_NO_STD
     if (presolveToFile) {
@@ -516,10 +518,12 @@ ClpSimplex::initialSolve(ClpSolve & options)
   int doSprint=0;
   int doSlp=0;
   int primalStartup=1;
+  bool tryItSave = false;
   // switch to primal from automatic if just one cost entry
   if (method==ClpSolve::automatic&&model2->numberColumns()>5000&&
       (specialOptions_&1024)!=0) {
     int numberColumns = model2->numberColumns();
+    int numberRows = model2->numberRows();
     const double * obj = model2->objective();
     int nNon=0;
     for (int i=0;i<numberColumns;i++) {
@@ -531,6 +535,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
       printf("Forcing primal\n");
 #endif
       method=ClpSolve::usePrimal;
+      tryItSave= numberRows>200&&numberColumns>2000&&
+	(numberColumns>2*numberRows||(specialOptions_&1024)!=0);
     }
   }
   if (method!=ClpSolve::useDual&&method!=ClpSolve::useBarrier
@@ -741,7 +747,6 @@ ClpSimplex::initialSolve(ClpSolve & options)
     // make sure model2 has correct value
     model2->setFactorizationFrequency(this->factorizationFrequency());
   }
-  bool tryItSave = false;
   if (method==ClpSolve::automatic) {
     if (doSprint==0&&doIdiot==0) {
       // off
@@ -810,7 +815,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
           }
         }
         bool tryIt= numberRows>200&&numberColumns>2000&&
-	  (numberColumns>2*numberRows||(method==ClpSolve::automatic&&(specialOptions_&1024)!=0));
+	  (numberColumns>2*numberRows||(method!=ClpSolve::useDual&&(specialOptions_&1024)!=0));
 	tryItSave = tryIt;
         if (numberRows<1000&&numberColumns<3000)
           tryIt=false;
