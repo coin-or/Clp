@@ -1695,11 +1695,7 @@ ClpSimplex::housekeeping(double objectiveChange)
     handler_->printing(algorithm_>0)<<dualIn_<<theta_;
     handler_->message()<<CoinMessageEol;
   }
-#ifdef COIN_FACTORIZATION_INFO
-#define COMPUTE_INT_INFEAS
-#endif
-#ifdef COMPUTE_INT_INFEAS
-  if (userPointer_) {
+  if (trustedUserPointer_&&trustedUserPointer_->typeStruct==1) {
     if (algorithm_>0&&integerType_&&!nonLinearCost_->numberInfeasibilities()) {
       if (fabs(theta_)>1.0e-6||!numberIterations_) {
 	// For saving solutions
@@ -1710,7 +1706,7 @@ ClpSimplex::housekeeping(double objectiveChange)
 	  double ** solution;
 	  int * numberUnsatisfied;
 	} clpSolution;
-	clpSolution * solution = (clpSolution *) userPointer_; 
+	clpSolution * solution = (clpSolution *) trustedUserPointer_->data; 
 	if (solution->numberSolutions==solution->maximumSolutions) {
 	  int n =  solution->maximumSolutions;
 	  int n2 = (n*3)/2+10;
@@ -1772,7 +1768,6 @@ ClpSimplex::housekeeping(double objectiveChange)
       }
     }
   }
-#endif
   if (hitMaximumIterations())
     return 2;
 #if 1

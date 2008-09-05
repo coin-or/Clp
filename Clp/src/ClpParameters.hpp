@@ -113,4 +113,10 @@ ClpCopyOfArray( const T * array, const int size)
     return NULL;
   }
 }
+/// For a structure to be used by trusted code
+typedef struct {
+  int typeStruct; // allocated as 1,2 etc
+  int typeCall;
+  void * data;
+} ClpTrustedData;
 #endif

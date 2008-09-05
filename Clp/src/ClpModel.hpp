@@ -652,6 +652,11 @@ public:
   { userPointer_=pointer;}
   inline void * getUserPointer () const
   { return userPointer_;}
+  /// Trusted user pointer
+  inline void setTrustedUserPointer (ClpTrustedData * pointer)
+  { trustedUserPointer_=pointer;}
+  inline ClpTrustedData * getTrustedUserPointer () const
+  { return trustedUserPointer_;}
   /// What has changed in model (only for masochistic users)
   inline int whatsChanged() const 
           { return whatsChanged_;} 
@@ -974,6 +979,8 @@ protected:
   char * integerType_;
   /// User pointer for whatever reason
   void * userPointer_;
+  /// Trusted user pointer e.g. for heuristics
+  ClpTrustedData * trustedUserPointer_;
   /// Array of integer parameters
   int intParam_[ClpLastIntParam];
   /// Number of iterations

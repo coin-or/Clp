@@ -2266,6 +2266,19 @@ stop if drop small if less than 5000 columns, 20 otherwise"
     (
      "By default clp uses Forrest-Tomlin L-U update.  If you are masochistic you can switch it off."
      ); 
+#endif 
+#ifdef COIN_HAS_CBC
+  parameters[numberParameters++]=
+      CbcOrClpParam("pivot!AndFix","Whether to try Pivot and Fix heuristic",
+		    "off",PIVOTANDFIX);
+  parameters[numberParameters-1].append("on");
+  parameters[numberParameters-1].append("do");
+  parameters[numberParameters-1].setLonghelp
+    (
+     "stuff needed."
+     ); 
+#endif 
+#ifdef COIN_HAS_CLP
   parameters[numberParameters++]=
     CbcOrClpParam("plus!Minus","Tries to make +- 1 matrix",
 		  PLUSMINUS,7,false);
@@ -2467,6 +2480,15 @@ but strong options do more probing"
      "This stops the execution of Clp, end, exit, quit and stop are synonyms"
      ); 
 #ifdef COIN_HAS_CBC
+  parameters[numberParameters++]=
+      CbcOrClpParam("rand!omizedRounding","Whether to try randomized rounding heuristic",
+		    "off",RANDROUND);
+  parameters[numberParameters-1].append("on");
+  parameters[numberParameters-1].append("do");
+  parameters[numberParameters-1].setLonghelp
+    (
+     "stuff needed."
+     ); 
   parameters[numberParameters++]=
     CbcOrClpParam("ratio!Gap","Stop when gap between best possible and \
 best less than this fraction of larger of two",

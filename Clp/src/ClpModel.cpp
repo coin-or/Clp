@@ -72,6 +72,7 @@ ClpModel::ClpModel (bool emptyMessages) :
   status_(NULL),
   integerType_(NULL),
   userPointer_(NULL),
+  trustedUserPointer_(NULL),
   numberIterations_(0),
   solveType_(0),
   whatsChanged_(0),
@@ -754,6 +755,7 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, int trueCopy)
   numberRows_ = rhs.numberRows_;
   numberColumns_ = rhs.numberColumns_;
   userPointer_ = rhs.userPointer_;
+  trustedUserPointer_ = rhs.trustedUserPointer_;
   scalingFlag_ = rhs.scalingFlag_;
   specialOptions_ = rhs.specialOptions_;
   if (trueCopy) {
@@ -3151,6 +3153,7 @@ ClpModel::ClpModel ( const ClpModel * rhs,
   numberRows_ = numberRows;
   numberColumns_ = numberColumns;
   userPointer_ = rhs->userPointer_;
+  trustedUserPointer_ = rhs->trustedUserPointer_;
   numberThreads_=0;
 #ifndef CLP_NO_STD
   if (!dropNames) {
