@@ -4581,7 +4581,8 @@ ClpSimplex::deleteRim(int getRidOfFactorizationData)
     delete nonLinearCost_;
     nonLinearCost_=NULL;
   }
-  if (!rowObjective_&&problemStatus_==0&&objective_->type()==1) {
+  if (!rowObjective_&&problemStatus_==0&&objective_->type()==1&&
+      numberRows&&numberColumns) {
   // Redo objective value
     double objectiveValue =0.0;
     const double * cost = objective();
