@@ -3038,7 +3038,9 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
     // could do faster
     trueObjective->stepLength(this,solution,changeRegion,0.0,
 					     objValue,predictedObj,thetaObj);
+#ifdef CLP_INVESTIGATE
     printf("offset comp %g orig %g - obj from stepLength %g\n",offset,objectiveOffset,objValue);
+#endif
     setDblParam(ClpObjOffset,objectiveOffset+offset);
     int * temp=last[2];
     last[2]=last[1];
