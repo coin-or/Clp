@@ -116,8 +116,8 @@ int main (int argc, const char *argv[])
   double lastObjective=1.0e31;
 
   // Just take this number of columns in small problem
-  int smallNumberColumns = min(3*numberRows,numberColumns);
-  smallNumberColumns = max(smallNumberColumns,3000);
+  int smallNumberColumns = CoinMin(3*numberRows,numberColumns);
+  smallNumberColumns = CoinMax(smallNumberColumns,3000);
   // We will be using all rows
   int * whichRows = new int [numberRows];
   for (int iRow=0;iRow<numberRows;iRow++)

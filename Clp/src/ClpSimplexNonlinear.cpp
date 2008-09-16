@@ -1345,7 +1345,7 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
 #endif
 	if (solutionError<0.0) {
 	  solutionError=largest;
-	} else if (largest>max(1.0e-8,1.0e2*solutionError)&&
+	} else if (largest>CoinMax(1.0e-8,1.0e2*solutionError)&&
 		   factorization_->pivots()) {
 	  longArray->clear();
 	  pivotRow_ = -1;

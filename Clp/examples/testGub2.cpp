@@ -107,8 +107,8 @@ int main (int argc, const char *argv[])
 	  gubRow=false;
 	  break;
 	} else {
-	  last=max(last,iColumn);
-	  first = min(first,iColumn);
+	  last=CoinMax(last,iColumn);
+	  first = CoinMin(first,iColumn);
 	}
       }
     }

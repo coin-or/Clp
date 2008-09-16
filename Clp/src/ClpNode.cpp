@@ -207,8 +207,8 @@ ClpNode::gutsOfConstructor (ClpSimplex * model, const ClpNodeStuff * stuff,
   for (iColumn=0;iColumn<numberColumns;iColumn++) {
     if (integerType[iColumn]) {
       double value = solution[iColumn];
-      value = max(value,(double) lower[iColumn]);
-      value = min(value,(double) upper[iColumn]);
+      value = CoinMax(value,(double) lower[iColumn]);
+      value = CoinMin(value,(double) upper[iColumn]);
       double nearest = floor(value+0.5);
       if (fabs(value-nearest)>integerTolerance) {
 	numberInfeasibilities_++;

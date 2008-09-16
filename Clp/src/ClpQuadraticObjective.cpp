@@ -39,7 +39,7 @@ ClpQuadraticObjective::ClpQuadraticObjective (const double * objective ,
   type_=2;
   numberColumns_ = numberColumns;
   if (numberExtendedColumns>=0)
-    numberExtendedColumns_= max(numberColumns_,numberExtendedColumns);
+    numberExtendedColumns_= CoinMax(numberColumns_,numberExtendedColumns);
   else
     numberExtendedColumns_= numberColumns_;
   if (objective) {

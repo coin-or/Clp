@@ -55,7 +55,7 @@ int main (int argc, const char *argv[])
   info.LSdamp = 0.0;
   // These are already set?
   model.xsize_ = 50.0/(model.numberColumns());
-  model.xsize_ = min( 1.0, model.xsize_);
+  model.xsize_ = CoinMin( 1.0, model.xsize_);
 
   /*
    *     Solve the test problem
