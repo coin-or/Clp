@@ -1787,7 +1787,7 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
 	      computeDuals(givenDuals);
 	      checkDualSolution();
 	      if (numberDualInfeasibilities_) {
-		problemStatus_=-3;
+		problemStatus_=10; // was -3;
 	      } else {
 		computeObjectiveValue(true);
 	      }
@@ -4498,11 +4498,13 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	      }
 	    }
 	  }
+#ifdef CLP_INVESTIGATE
 	  if (bigB>1.0e8||bigN>1.0e8) {
 	    if (handler_->logLevel()>0)
 	      printf("it %d - basic %d %g, nonbasic %d %g\n",
 		     numberIterations_,iBigB,bigB,iBigN,bigN);
 	  }
+#endif
 	}
 #if COIN_DEVELOP!=2
 	if (handler_->logLevel()>2)

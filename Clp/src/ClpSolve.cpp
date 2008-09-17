@@ -465,7 +465,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
       // switch on singletons to slacks
       pinfo.setDoSingletonColumn(true);
       // gub stuff for testing
-      pinfo.setDoGubrow(true);
+      //pinfo.setDoGubrow(true);
     }
 #ifndef CLP_NO_STD
     if (presolveToFile) {
