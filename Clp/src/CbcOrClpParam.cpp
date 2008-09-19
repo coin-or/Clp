@@ -733,6 +733,10 @@ CbcOrClpParam::setDoubleParameterWithMessage ( CbcModel & model, double  value ,
       oldValue=model.getDblParam(CbcModel::CbcAllowableGap);
       model.setDblParam(CbcModel::CbcAllowableGap,value);
       break;
+    case GAPRATIO:
+      oldValue=model.getDblParam(CbcModel::CbcAllowableFractionGap);
+      model.setDblParam(CbcModel::CbcAllowableFractionGap,value);
+      break;
     case CUTOFF:
       oldValue=model.getCutoff();
       model.setCutoff(value);
@@ -772,8 +776,12 @@ CbcOrClpParam::doubleParameter (CbcModel &model) const
     break;
   case INCREMENT:
     value=model.getDblParam(CbcModel::CbcCutoffIncrement);
+    break;
   case ALLOWABLEGAP:
     value=model.getDblParam(CbcModel::CbcAllowableGap);
+    break;
+  case GAPRATIO:
+    value=model.getDblParam(CbcModel::CbcAllowableFractionGap);
     break;
   case CUTOFF:
     value=model.getCutoff();
@@ -1827,6 +1835,7 @@ If 1 then also does that many nodes on fixed problem."
   parameters[numberParameters-1].append("ifmove");
   parameters[numberParameters-1].append("forceOn");
   parameters[numberParameters-1].append("forceLongOn");
+  parameters[numberParameters-1].append("long");
   parameters[numberParameters-1].setLonghelp
     (
      "The original cuts - beware of imitations!  Having gone out of favor, they are now more \

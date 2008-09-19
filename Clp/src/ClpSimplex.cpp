@@ -7757,6 +7757,8 @@ int ClpSimplex::pivot()
     int * index = rowArray_[1]->getIndices();
     int number = rowArray_[1]->getNumElements();
     double * element = rowArray_[1]->denseVector();
+    assert ( !rowArray_[3]->getNumElements());
+    double * saveSolution = rowArray_[3]->denseVector();
     for (i=0;i<number;i++) {
       int ii = index[i];
       if ( pivotVariable_[ii]==sequenceOut_) {
@@ -7788,7 +7790,7 @@ int ClpSimplex::pivot()
       // get column
       int ij = pivotVariable_[ii];
       double value=element[ii];
-      element[ii]= solution_[ij];
+      saveSolution[ii]= solution_[ij];
       solution_[ij] -= movement*value;
     }
     //rowArray_[1]->setNumElements(0);
@@ -7877,12 +7879,11 @@ int ClpSimplex::pivot()
       solution_[sequenceIn_]=valueIn_;
       int * index = rowArray_[1]->getIndices();
       int number = rowArray_[1]->getNumElements();
-      double * element = rowArray_[1]->denseVector();
       for (i=0;i<number;i++) {
         int ii = index[i];
         // get column
         int ij = pivotVariable_[ii];
-        solution_[ij] = element[ii];
+        solution_[ij] = saveSolution[ii];
       }
       if (sequenceOut_>=0)
         valueOut_=solution_[sequenceOut_];
@@ -7895,6 +7896,9 @@ int ClpSimplex::pivot()
           abort();
         }
         gutsOfSolution(NULL,NULL);
+	valueIn_=solution_[sequenceIn_];
+	if (sequenceOut_>=0)
+	  valueOut_=solution_[sequenceOut_];
 	roundAgain=true;
       } else {
 	returnCode=-1;
@@ -7908,6 +7912,15 @@ int ClpSimplex::pivot()
 	factorization_->areaFactor(
 				   factorization_->areaFactor() * 1.1);
       returnCode =1; // factorize now
+    }
+    {
+      // clear saveSolution
+      int * index = rowArray_[1]->getIndices();
+      int number = rowArray_[1]->getNumElements();
+      for (i=0;i<number;i++) {
+	int ii = index[i];
+	saveSolution[ii]=0.0;
+      }
     }
     rowArray_[1]->clear();
     if (takePivot) {
@@ -10865,7 +10878,7 @@ ClpSimplex::fathomMany(void * stuff)
 	}
       }
 #endif
-      if (depth>0||true) {
+      if (depth>0) {
 	int way=nodeInfo[useDepth+1]->way();
 	int sequence = nodeInfo[useDepth+1]->sequence();
 #ifndef NDEBUG
@@ -11262,7 +11275,14 @@ ClpSimplex::fastDual2(ClpNodeStuff * info)
       intParam_[ClpMaxNumIteration] = numberIterations_ + 1000 + 2*numberRows_+numberColumns_;
     // check which algorithms allowed
     baseIteration_=numberIterations_;
+    // save upper and lower around primal
+    double * saveLower2 = CoinCopyOfArray(lower_,numberColumns_+numberRows_);
+    double * saveUpper2 = CoinCopyOfArray(upper_,numberColumns_+numberRows_);
     status = ((ClpSimplexPrimal *) this)->primal(1,7);
+    CoinMemcpyN(saveLower2,numberColumns_+numberRows_,lower_);
+    delete [] saveLower2;
+    CoinMemcpyN(saveUpper2,numberColumns_+numberRows_,upper_);
+    delete [] saveUpper2;
     baseIteration_=0;
     if (saveObjective != objective_) {
       // We changed objective to see if infeasible
@@ -11270,7 +11290,14 @@ ClpSimplex::fastDual2(ClpNodeStuff * info)
       objective_=saveObjective;
       if (!problemStatus_) {
 	// carry on
+	// save upper and lower around primal
+	double * saveLower2 = CoinCopyOfArray(lower_,numberColumns_+numberRows_);
+	double * saveUpper2 = CoinCopyOfArray(upper_,numberColumns_+numberRows_);
 	status = ((ClpSimplexPrimal *) this)->primal(1,7);
+	CoinMemcpyN(saveLower2,numberColumns_+numberRows_,lower_);
+	delete [] saveLower2;
+	CoinMemcpyN(saveUpper2,numberColumns_+numberRows_,upper_);
+	delete [] saveUpper2;
       }
     }
     if (problemStatus_==3&&numberIterations_<saveMax) {
