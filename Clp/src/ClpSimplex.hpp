@@ -717,9 +717,12 @@ public:
   inline void setAlphaAccuracy(double value)
           { alphaAccuracy_ = value;} 
 public:
-  /// Disaster handler
+  /// Set disaster handler
   inline void setDisasterHandler(ClpDisasterHandler * handler)
   { disasterArea_= handler;}
+  /// Get disaster handler
+  inline ClpDisasterHandler * disasterHandler() const
+  { return disasterArea_;}
   /// Large bound value (for complementarity etc)
   inline double largeValue() const 
           { return largeValue_;} 

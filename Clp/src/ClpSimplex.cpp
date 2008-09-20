@@ -11346,6 +11346,32 @@ ClpSimplex::fastDual2(ClpNodeStuff * info)
 	problemStatus_=4;
     }
     handler_->setLogLevel(saveLog);
+  } else if (problemStatus_==1) {
+    // bounds may be bad
+    int numberTotal = numberRows_+numberColumns_;
+    if (columnScale_) {
+      for (int i=0;i<numberTotal;i++) {
+	if (lower_[i]>-1.0e30) {
+	  if (fabs(lower_[i]*columnScale_[i]-columnLower_[i])>1.0e-8)
+	    lower_[i]=columnLower_[i]/columnScale_[i];
+	}
+	if (upper_[i]<1.0e30) {
+	  if (fabs(upper_[i]*columnScale_[i]-columnUpper_[i])>1.0e-8)
+	    upper_[i]=columnUpper_[i]/columnScale_[i];
+	}
+      }
+    } else {
+      for (int i=0;i<numberTotal;i++) {
+	if (lower_[i]>-1.0e30) {
+	  if (lower_[i]!=columnLower_[i])
+	    lower_[i]=columnLower_[i];
+	}
+	if (upper_[i]<1.0e30) {
+	  if (upper_[i]!=columnUpper_[i])
+	    upper_[i]=columnUpper_[i];
+	}
+      }
+    }
   }
   status=problemStatus_;
   if (!problemStatus_) {
@@ -11385,6 +11411,23 @@ ClpSimplex::fastDual2(ClpNodeStuff * info)
       }
     }
   }
+#ifndef NDEBUG
+  if (columnScale_) {
+    for (int i=0;i<numberColumns_;i++) {
+      if (lower_[i]>-1.0e30)
+	assert (fabs(lower_[i]-columnLower_[i]/columnScale_[i])<1.0e-8);
+      if (upper_[i]<1.0e30)
+	assert (fabs(upper_[i]-columnUpper_[i]/columnScale_[i])<1.0e-8);
+    }
+  } else {
+    for (int i=0;i<numberColumns_;i++) {
+      if (lower_[i]>-1.0e30)
+	assert (fabs(lower_[i]-columnLower_[i])<1.0e-8);
+      if (upper_[i]<1.0e30)
+	assert (fabs(upper_[i]-columnUpper_[i])<1.0e-8);
+    }
+  }
+#endif
   return status;
 }
 // Stop Fast dual
