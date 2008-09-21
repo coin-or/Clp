@@ -11215,7 +11215,9 @@ ClpSimplex::startFastDual2(ClpNodeStuff * info)
   factorization_->goSparse();
   assert (!info->saveCosts_);
   int numberTotal = numberRows_+numberColumns_;
-  info->saveCosts_ = CoinCopyOfArray(cost_,numberTotal);
+  double * save = new double [3*numberTotal];
+  info->saveCosts_ = save;
+  CoinMemcpyN(cost_,numberTotal,save);
   return 0;
 }
 // Like Fast dual
@@ -11224,20 +11226,13 @@ ClpSimplex::fastDual2(ClpNodeStuff * info)
 {
   assert ((info->solverOptions_&65536)!=0);
   int numberTotal = numberRows_+numberColumns_;
-#ifndef NDEBUG
-  if (columnScale_&&optimizationDirection_==1.0) {
-    //const double * obj = objective();
-    for (int i=0;i<numberColumns_;i++) {
-      //assert (fabs(cost_[i]-obj[i]*columnScale_[i])<1.0e-8);
-      if (lower_[i]>-1.0e30)
-	assert (fabs(lower_[i]-columnLower_[i]/columnScale_[i])<1.0e-8);
-      if (upper_[i]<1.0e30)
-	assert (fabs(upper_[i]-columnUpper_[i]/columnScale_[i])<1.0e-8);
-    }
-  }
-#endif
   assert (info->saveCosts_);
-  CoinMemcpyN(info->saveCosts_,numberTotal,cost_);
+  double * save = info->saveCosts_;
+  CoinMemcpyN(save,numberTotal,cost_);
+  save += numberTotal;
+  CoinMemcpyN(lower_,numberTotal,save);
+  save += numberTotal;
+  CoinMemcpyN(upper_,numberTotal,save);
   numberPrimalInfeasibilities_=1;
   sumPrimalInfeasibilities_=0.5;
   sumOfRelaxedDualInfeasibilities_ = 0.0;
@@ -11275,14 +11270,7 @@ ClpSimplex::fastDual2(ClpNodeStuff * info)
       intParam_[ClpMaxNumIteration] = numberIterations_ + 1000 + 2*numberRows_+numberColumns_;
     // check which algorithms allowed
     baseIteration_=numberIterations_;
-    // save upper and lower around primal
-    double * saveLower2 = CoinCopyOfArray(lower_,numberColumns_+numberRows_);
-    double * saveUpper2 = CoinCopyOfArray(upper_,numberColumns_+numberRows_);
     status = ((ClpSimplexPrimal *) this)->primal(1,7);
-    CoinMemcpyN(saveLower2,numberColumns_+numberRows_,lower_);
-    delete [] saveLower2;
-    CoinMemcpyN(saveUpper2,numberColumns_+numberRows_,upper_);
-    delete [] saveUpper2;
     baseIteration_=0;
     if (saveObjective != objective_) {
       // We changed objective to see if infeasible
@@ -11290,14 +11278,7 @@ ClpSimplex::fastDual2(ClpNodeStuff * info)
       objective_=saveObjective;
       if (!problemStatus_) {
 	// carry on
-	// save upper and lower around primal
-	double * saveLower2 = CoinCopyOfArray(lower_,numberColumns_+numberRows_);
-	double * saveUpper2 = CoinCopyOfArray(upper_,numberColumns_+numberRows_);
 	status = ((ClpSimplexPrimal *) this)->primal(1,7);
-	CoinMemcpyN(saveLower2,numberColumns_+numberRows_,lower_);
-	delete [] saveLower2;
-	CoinMemcpyN(saveUpper2,numberColumns_+numberRows_,upper_);
-	delete [] saveUpper2;
       }
     }
     if (problemStatus_==3&&numberIterations_<saveMax) {
@@ -11346,32 +11327,6 @@ ClpSimplex::fastDual2(ClpNodeStuff * info)
 	problemStatus_=4;
     }
     handler_->setLogLevel(saveLog);
-  } else if (problemStatus_==1) {
-    // bounds may be bad
-    int numberTotal = numberRows_+numberColumns_;
-    if (columnScale_) {
-      for (int i=0;i<numberTotal;i++) {
-	if (lower_[i]>-1.0e30) {
-	  if (fabs(lower_[i]*columnScale_[i]-columnLower_[i])>1.0e-8)
-	    lower_[i]=columnLower_[i]/columnScale_[i];
-	}
-	if (upper_[i]<1.0e30) {
-	  if (fabs(upper_[i]*columnScale_[i]-columnUpper_[i])>1.0e-8)
-	    upper_[i]=columnUpper_[i]/columnScale_[i];
-	}
-      }
-    } else {
-      for (int i=0;i<numberTotal;i++) {
-	if (lower_[i]>-1.0e30) {
-	  if (lower_[i]!=columnLower_[i])
-	    lower_[i]=columnLower_[i];
-	}
-	if (upper_[i]<1.0e30) {
-	  if (upper_[i]!=columnUpper_[i])
-	    upper_[i]=columnUpper_[i];
-	}
-      }
-    }
   }
   status=problemStatus_;
   if (!problemStatus_) {
@@ -11411,23 +11366,12 @@ ClpSimplex::fastDual2(ClpNodeStuff * info)
       }
     }
   }
-#ifndef NDEBUG
-  if (columnScale_) {
-    for (int i=0;i<numberColumns_;i++) {
-      if (lower_[i]>-1.0e30)
-	assert (fabs(lower_[i]-columnLower_[i]/columnScale_[i])<1.0e-8);
-      if (upper_[i]<1.0e30)
-	assert (fabs(upper_[i]-columnUpper_[i]/columnScale_[i])<1.0e-8);
-    }
-  } else {
-    for (int i=0;i<numberColumns_;i++) {
-      if (lower_[i]>-1.0e30)
-	assert (fabs(lower_[i]-columnLower_[i])<1.0e-8);
-      if (upper_[i]<1.0e30)
-	assert (fabs(upper_[i]-columnUpper_[i])<1.0e-8);
-    }
-  }
-#endif
+  save = info->saveCosts_;
+  CoinMemcpyN(save,numberTotal,cost_);
+  save += numberTotal;
+  CoinMemcpyN(save,numberTotal,lower_);
+  save += numberTotal;
+  CoinMemcpyN(save,numberTotal,upper_);
   return status;
 }
 // Stop Fast dual
