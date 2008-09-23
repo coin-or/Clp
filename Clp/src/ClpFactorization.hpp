@@ -10,9 +10,15 @@
 class ClpMatrixBase;
 class ClpSimplex;
 class ClpNetworkBasis;
-#define CLP_MULTIPLE_FACTORIZATIONS    
-#ifdef CLP_MULTIPLE_FACTORIZATIONS    
+#ifndef CLP_MULTIPLE_FACTORIZATIONS 
+#define CLP_MULTIPLE_FACTORIZATIONS 1
+#endif    
+#if CLP_MULTIPLE_FACTORIZATIONS == 1
 #include "CoinDenseFactorization.hpp"
+typedef CoinDenseFactorization CoinOtherFactorization;
+#elif CLP_MULTIPLE_FACTORIZATIONS == 2
+#include "CoinSimpFactorization.hpp"
+typedef CoinSimpFactorization CoinOtherFactorization;
 #endif
 
 /** This just implements CoinFactorization when an ClpMatrixBase object
@@ -58,8 +64,8 @@ public:
    /** The copy constructor from an CoinFactorization. */
    ClpFactorization(const CoinFactorization&);
 #ifdef CLP_MULTIPLE_FACTORIZATIONS    
-   /** The copy constructor from an CoinDenseFactorization. */
-   ClpFactorization(const CoinDenseFactorization&);
+   /** The copy constructor from an CoinOtherFactorization. */
+   ClpFactorization(const CoinOtherFactorization&);
 #endif
    ClpFactorization& operator=(const ClpFactorization&);
    //@}
@@ -326,8 +332,8 @@ private:
 #ifdef CLP_MULTIPLE_FACTORIZATIONS    
   /// Pointer to CoinFactorization 
   CoinFactorization * coinFactorizationA_;
-  /// Pointer to CoinDenseFactorization 
-  CoinDenseFactorization * coinFactorizationB_;
+  /// Pointer to CoinOtherFactorization 
+  CoinOtherFactorization * coinFactorizationB_;
   /// Switch to dense if number rows <= this
   int goDenseThreshold_;
 #endif

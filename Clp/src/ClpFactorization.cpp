@@ -1112,7 +1112,7 @@ ClpFactorization::ClpFactorization ()
   //coinFactorizationA_ = NULL;
   coinFactorizationA_ = new CoinFactorization() ;
   coinFactorizationB_ = NULL;
-  //coinFactorizationB_ = new CoinDenseFactorization();
+  //coinFactorizationB_ = new CoinOtherFactorization();
   goDenseThreshold_ = -1;
 }
 
@@ -1135,7 +1135,7 @@ ClpFactorization::ClpFactorization (const ClpFactorization & rhs)
   else
     coinFactorizationA_=NULL;
   if (rhs.coinFactorizationB_)
-    coinFactorizationB_ = new CoinDenseFactorization(*(rhs.coinFactorizationB_));
+    coinFactorizationB_ = new CoinOtherFactorization(*(rhs.coinFactorizationB_));
   else
     coinFactorizationB_=NULL;
   goDenseThreshold_ = rhs.goDenseThreshold_;
@@ -1160,7 +1160,7 @@ ClpFactorization::ClpFactorization (const CoinFactorization & rhs)
 #endif
 }
 
-ClpFactorization::ClpFactorization (const CoinDenseFactorization & rhs) 
+ClpFactorization::ClpFactorization (const CoinOtherFactorization & rhs) 
 {
 #ifdef CLP_FACTORIZATION_INSTRUMENT
   factorization_instrument(-1);
@@ -1169,7 +1169,7 @@ ClpFactorization::ClpFactorization (const CoinDenseFactorization & rhs)
   networkBasis_=NULL;
 #endif
   coinFactorizationA_ = NULL;
-  coinFactorizationB_ = new CoinDenseFactorization(rhs);
+  coinFactorizationB_ = new CoinOtherFactorization(rhs);
   goDenseThreshold_ = -1;
 #ifdef CLP_FACTORIZATION_INSTRUMENT
   factorization_instrument(1);
@@ -1212,7 +1212,7 @@ ClpFactorization::operator=(const ClpFactorization& rhs)
       coinFactorizationA_=NULL;
     delete coinFactorizationB_;
     if (rhs.coinFactorizationB_)
-      coinFactorizationB_ = new CoinDenseFactorization(*(rhs.coinFactorizationB_));
+      coinFactorizationB_ = new CoinOtherFactorization(*(rhs.coinFactorizationB_));
     else
       coinFactorizationB_=NULL;
   }
@@ -1228,8 +1228,8 @@ ClpFactorization::goDense()
   delete coinFactorizationA_;
   delete coinFactorizationB_;
   coinFactorizationA_ = NULL;
-  coinFactorizationB_ = new CoinDenseFactorization();
-  //printf("going dense\n");
+  coinFactorizationB_ = new CoinOtherFactorization();
+  printf("going dense\n");
 }
 int 
 ClpFactorization::factorize ( ClpSimplex * model,

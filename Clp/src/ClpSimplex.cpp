@@ -7795,20 +7795,23 @@ int ClpSimplex::pivot()
     }
     //rowArray_[1]->setNumElements(0);
     // see where something went to
+#ifndef NDEBUG
+    CoinRelFltEq eq(1.0e-9);
+#endif
     if (sequenceOut_<0) {
       if (directionIn_<0) {
-	assert (fabs(solution_[sequenceIn_]-upperIn_)<5.0e-7);
+	assert (eq(solution_[sequenceIn_],upperIn_));
 	solution_[sequenceIn_]=upperIn_;
       } else {
-	assert (fabs(solution_[sequenceIn_]-lowerIn_)<5.0e-7);
+	assert (eq(solution_[sequenceIn_],lowerIn_));
 	solution_[sequenceIn_]=lowerIn_;
       }
     } else {
       if (directionOut_<0) {
-	assert (fabs(solution_[sequenceOut_]-upperOut_)<5.0e-7);
+	assert (eq(solution_[sequenceOut_],upperOut_));
 	solution_[sequenceOut_]=upperOut_;
       } else {
-	assert (fabs(solution_[sequenceOut_]-lowerOut_)<5.0e-7);
+	assert (eq(solution_[sequenceOut_],lowerOut_));
 	solution_[sequenceOut_]=lowerOut_;
       }
       valueOut_=solution_[sequenceOut_];
