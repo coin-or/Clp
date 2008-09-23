@@ -1229,7 +1229,7 @@ ClpFactorization::goDense()
   delete coinFactorizationB_;
   coinFactorizationA_ = NULL;
   coinFactorizationB_ = new CoinOtherFactorization();
-  printf("going dense\n");
+  //printf("going dense\n");
 }
 int 
 ClpFactorization::factorize ( ClpSimplex * model,
