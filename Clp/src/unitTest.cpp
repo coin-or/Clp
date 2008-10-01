@@ -1146,6 +1146,7 @@ ClpSimplexUnitTest(const std::string & dirSample)
       double objValue = colsol.dotProduct(objective);
       CoinRelFltEq eq(1.0e-8);
       assert(eq(objValue,-4.6475314286e+02));
+#ifdef CLP_AUXILIARY_MODEL
       // Test auxiliary model
       //solution.scaling(0);
       solution.auxiliaryModel(63-2); // bounds may change
@@ -1155,6 +1156,7 @@ ClpSimplexUnitTest(const std::string & dirSample)
       solution.dual();
       assert(eq(solution.objectiveValue(),-4.6475314286e+02));
       solution.auxiliaryModel(-1);
+#endif
       solution.dual();
       assert(eq(solution.objectiveValue(),-4.6475314286e+02));
       double * lower = solution.columnLower();

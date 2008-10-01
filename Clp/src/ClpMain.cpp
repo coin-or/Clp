@@ -733,9 +733,8 @@ main (int argc, const char *argv[])
               }
 #ifdef CLP_MULTIPLE_FACTORIZATIONS   
 	      int denseCode = parameters[whichParam(DENSE,numberParameters,parameters)].intValue();
-	      if (denseCode>=model2->numberRows()) {
-		model2->factorization()->goDense();
-	      }
+	      model2->factorization()->setGoDenseThreshold(denseCode);
+	      model2->factorization()->goDenseOrSmall(model2->numberRows());
 #endif
               try {
                 status=model2->initialSolve(solveOptions);

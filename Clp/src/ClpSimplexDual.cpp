@@ -125,6 +125,9 @@ extern int * vub;
 extern int * toVub;
 extern int * nextDescendent;
 #endif
+#ifndef CLP_AUXILIARY_MODEL
+#define auxiliaryModel_ false
+#endif
 // dual 
 
   /* *** Method
@@ -498,10 +501,13 @@ ClpSimplexDual::gutsOfDual(int ifValuesPass,double * & saveDuals,int initialStat
 #ifdef CLP_INVESTIGATE
     nPivots=factorization_->pivots();
 #endif
+    if (!problemStatus_&&factorization_->pivots())
+      computeDuals(NULL); // need to compute duals
     if (returnCode==-2)
       factorType=3;
   }
 #ifdef CLP_INVESTIGATE
+  // NOTE - can fail if parallel
   if (z_thinks!=-1) {
     assert (z_thinks<4);
     if ((!factorization_->pivots()&&nPivots<20)&&z_thinks>=0&&z_thinks<2)
@@ -3945,6 +3951,10 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
     situationChanged=2;
   }
   progressFlag_ = 0; //reset progress flag
+  /*if (!numberIterations_&&sumDualInfeasibilities_)
+    printf("OBJ %g sumPinf %g sumDinf %g\n",
+	   objectiveValue(),sumPrimalInfeasibilities_,
+	   sumDualInfeasibilities_);*/
   if (handler_->detail(CLP_SIMPLEX_STATUS,messages_)<100) {
     handler_->message(CLP_SIMPLEX_STATUS,messages_)
       <<numberIterations_<<objectiveValue();
@@ -4157,7 +4167,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	}
 	delete [] saveColumnSolution;
 	delete [] saveRowSolution;
-      } 
+      }
       if (problemStatus_==-4||problemStatus_==-5) {
 	// may be infeasible - or may be bounds are wrong
 	numberChangedBounds=changeBounds(0,NULL,changeCost);
@@ -4171,8 +4181,9 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	  changeBounds(1,NULL,changeCost);
 	  createRim4(false);
 	}
-	if (numberChangedBounds<=0||dualBound_>1.0e20||
-	    (largestPrimalError_>1.0&&dualBound_>1.0e17)) {
+	if ((numberChangedBounds<=0||dualBound_>1.0e20||
+	    (largestPrimalError_>1.0&&dualBound_>1.0e17))&&
+	    (numberPivots<4||sumPrimalInfeasibilities_>1.0e-6)) {
 	  problemStatus_=1; // infeasible
 	  if (perturbation_==101) {
 	    perturbation_=102; // stop any perturbations
@@ -4610,12 +4621,14 @@ ClpSimplexDual::originalBound( int iSequence)
   if (getFakeBound(iSequence)!=noFake) {
     numberFake_--;;
     setFakeBound(iSequence,noFake);
+#ifdef CLP_AUXILIARY_MODEL
     if (auxiliaryModel_) {
       // just copy back
       lower_[iSequence]=auxiliaryModel_->lowerRegion()[iSequence+numberRows_+numberColumns_];
       upper_[iSequence]=auxiliaryModel_->upperRegion()[iSequence+numberRows_+numberColumns_];
       return;
     }
+#endif
     if (iSequence>=numberColumns_) {
       // rows
       int iRow = iSequence-numberColumns_;

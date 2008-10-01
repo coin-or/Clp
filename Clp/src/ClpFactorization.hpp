@@ -11,14 +11,17 @@ class ClpMatrixBase;
 class ClpSimplex;
 class ClpNetworkBasis;
 #ifndef CLP_MULTIPLE_FACTORIZATIONS 
-#define CLP_MULTIPLE_FACTORIZATIONS 1
+#define CLP_MULTIPLE_FACTORIZATIONS 3
 #endif    
 #if CLP_MULTIPLE_FACTORIZATIONS == 1
 #include "CoinDenseFactorization.hpp"
-typedef CoinDenseFactorization CoinOtherFactorization;
+typedef CoinDenseFactorization CoinSmallFactorization;
 #elif CLP_MULTIPLE_FACTORIZATIONS == 2
 #include "CoinSimpFactorization.hpp"
-typedef CoinSimpFactorization CoinOtherFactorization;
+typedef CoinSimpFactorization CoinSmallFactorization;
+#elif CLP_MULTIPLE_FACTORIZATIONS == 3
+#include "CoinDenseFactorization.hpp"
+#include "CoinSimpFactorization.hpp"
 #endif
 
 /** This just implements CoinFactorization when an ClpMatrixBase object
@@ -59,13 +62,16 @@ public:
 
    /**@name Copy method */
    //@{
-   /** The copy constructor. */
-   ClpFactorization(const ClpFactorization&);
    /** The copy constructor from an CoinFactorization. */
    ClpFactorization(const CoinFactorization&);
 #ifdef CLP_MULTIPLE_FACTORIZATIONS    
-   /** The copy constructor from an CoinOtherFactorization. */
-   ClpFactorization(const CoinOtherFactorization&);
+   /** The copy constructor. */
+  ClpFactorization(const ClpFactorization&,int denseIfSmaller=-1);
+   /** The copy constructor from an CoinSmallFactorization. */
+   ClpFactorization(const CoinSmallFactorization&);
+#else
+   /** The copy constructor. */
+   ClpFactorization(const ClpFactorization&);
 #endif
    ClpFactorization& operator=(const ClpFactorization&);
    //@}
@@ -274,10 +280,16 @@ public:
   /// Set switch to dense if number rows <= this
   inline void setGoDenseThreshold(int value)
   { goDenseThreshold_ = value;}
-  /// Go over to dense code
-  void goDense() ;
+  /// Get switch to small if number rows <= this
+  inline int goSmallThreshold() const
+  { return goSmallThreshold_;}
+  /// Set switch to small if number rows <= this
+  inline void setGoSmallThreshold(int value)
+  { goSmallThreshold_ = value;}
+  /// Go over to dense or small code if small enough
+  void goDenseOrSmall(int numberRows) ;
   /// Return 1 if dense code
-  inline int isDense() const
+  inline int isDenseOrSmall() const
   { return coinFactorizationB_ ? 1 : 0;}
 #else
   inline bool timeToRefactorize() const
@@ -332,8 +344,10 @@ private:
 #ifdef CLP_MULTIPLE_FACTORIZATIONS    
   /// Pointer to CoinFactorization 
   CoinFactorization * coinFactorizationA_;
-  /// Pointer to CoinOtherFactorization 
-  CoinOtherFactorization * coinFactorizationB_;
+  /// Pointer to CoinSmallFactorization 
+  CoinSmallFactorization * coinFactorizationB_;
+  /// Switch to small if number rows <= this
+  int goSmallThreshold_;
   /// Switch to dense if number rows <= this
   int goDenseThreshold_;
 #endif

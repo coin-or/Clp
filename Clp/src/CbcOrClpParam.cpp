@@ -1484,7 +1484,7 @@ createAfterPre.  The create case has same effect as saveSolution."
      ); 
 #endif 
 #ifdef COIN_HAS_CLP
-#if CLP_MULTIPLE_FACTORIZATIONS == 1
+#if CLP_MULTIPLE_FACTORIZATIONS >0
   parameters[numberParameters++]=
     CbcOrClpParam("dense!Threshold","Whether to use dense factorization",
 		  -1,10000,DENSE,false);
@@ -2684,10 +2684,10 @@ In this program it is really only useful for testing but the library function\n\
      "If you are solving a quadratic problem using primal then it may be helpful to do some \
 sequential Lps to get a good approximate solution."
      ); 
-#if CLP_MULTIPLE_FACTORIZATIONS == 2
+#if CLP_MULTIPLE_FACTORIZATIONS > 0
   parameters[numberParameters++]=
     CbcOrClpParam("small!Factorization","Whether to use small factorization",
-		  -1,10000,DENSE,false);
+		  -1,10000,SMALLFACT,false);
   parameters[numberParameters-1].setLonghelp
     (
      "If processed problem <= this use small factorization"

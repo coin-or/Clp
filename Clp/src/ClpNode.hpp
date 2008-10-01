@@ -24,6 +24,8 @@ public:
       2 - saved bounds and basis etc
   */
   void applyNode(ClpSimplex * model, int doBoundsEtc );
+  /// Choose a new variable
+  void chooseVariable(ClpSimplex * model, ClpNodeStuff * info);
   /// Fix on reduced costs
   int fixOnReducedCosts(ClpSimplex * model);
   /// Create odd arrays
@@ -55,6 +57,9 @@ public:
   /// Number infeasibilities
   inline int numberInfeasibilities() const
   { return numberInfeasibilities_;}
+  /// Relative depth
+  inline int depth() const
+  { return depth_;}
   /// Estimated solution value
   inline double estimatedSolution() const
   { return estimatedSolution_;}
@@ -137,6 +142,8 @@ typedef struct {
   int sequence_;
   /// Number of infeasibilities
   int numberInfeasibilities_;
+  /// Relative depth
+  int depth_;
   /// Number fixed by reduced cost
   int numberFixed_;
   /// Flags - 1 duals scaled
@@ -182,6 +189,8 @@ public:
 		       int number);
   /// Update pseudo costs
   void update(int way,int sequence,double change,bool feasible);
+  /// Return maximum number of nodes
+  int maximumNodes() const;
   //@}
   
 public:
@@ -222,6 +231,7 @@ public:
       2 - create external reduced costs for rows
       4 - create external row activity (columns always done)
       Above only done if feasible
+      32 - just create up to nDepth_+1 nodes
       65536 - set if activated
   */
   int solverOptions_;

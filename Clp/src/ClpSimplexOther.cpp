@@ -158,7 +158,9 @@ void ClpSimplexOther::dualRanging(int numberCheck,const int * which,
       break;
     }
     double scaleFactor;
+#ifdef CLP_AUXILIARY_MODEL
     if (!auxiliaryModel_) {
+#endif
       if (rowScale_) {
         if (iSequence<numberColumns_) 
           scaleFactor = 1.0/(objectiveScale_*columnScale_[iSequence]);
@@ -167,6 +169,7 @@ void ClpSimplexOther::dualRanging(int numberCheck,const int * which,
       } else {
         scaleFactor = 1.0/objectiveScale_;
       }
+#ifdef CLP_AUXILIARY_MODEL
     } else {
       if (auxiliaryModel_->rowScale()) {
         if (iSequence<numberColumns_) 
@@ -177,6 +180,7 @@ void ClpSimplexOther::dualRanging(int numberCheck,const int * which,
         scaleFactor = 1.0/objectiveScale_;
       }
     }
+#endif
     if (costIncrease<1.0e30)
       costIncrease *= scaleFactor;
     if (costDecrease<1.0e30)

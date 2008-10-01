@@ -120,6 +120,7 @@ public:
       2 as 1 but give a bit extra if bigger needed
   */
   void setPersistenceFlag(int value);
+#ifdef CLP_AUXILIARY_MODEL
   /**
      If you are re-using the same matrix again and again then the setup time
      to do scaling may be significant.  Also you may not want to initialize all values
@@ -139,6 +140,7 @@ public:
   /// See if we have auxiliary model
   inline bool usingAuxiliaryModel() const
   { return auxiliaryModel_!=NULL;}
+#endif
   /// Save a copy of model with certain state - normally without cuts
   void makeBaseModel();
   /// Switch off base model
@@ -1261,8 +1263,10 @@ protected:
   double * rowActivityWork_;
   /// Column activities - working copy
   double * columnActivityWork_;
+#ifdef CLP_AUXILIARY_MODEL
   /// Auxiliary model
   ClpSimplex * auxiliaryModel_;
+#endif
   /// Number of dual infeasibilities
   int numberDualInfeasibilities_;
   /// Number of dual infeasibilities (without free)
