@@ -310,6 +310,10 @@ ClpSimplexDual::startupSolve(int ifValuesPass,double * saveDuals,int startFinish
 	usePrimal=perturb();
       // Can't get here if values pass
       gutsOfSolution(NULL,NULL);
+      //if (numberDualInfeasibilities_)
+      //printf("ZZZ %d primal %d dual - cost %g\n",
+      //       numberPrimalInfeasibilities_,
+      //       numberDualInfeasibilities_,cost_[0]);
       if (handler_->logLevel()>2) {
 	handler_->message(CLP_SIMPLEX_STATUS,messages_)
 	  <<numberIterations_<<objectiveValue();
@@ -330,6 +334,8 @@ ClpSimplexDual::startupSolve(int ifValuesPass,double * saveDuals,int startFinish
 	  //gutsOfSolution(NULL,NULL);
 	} else if (numberDualInfeasibilities_) {
 	  problemStatus_=10;
+	  if ((moreSpecialOptions_&32)!=0&&false)
+	    problemStatus_ = 0; // say optimal!!
 #if COIN_DEVELOP>2
 	 
 	  printf("returning at %d\n",__LINE__);
@@ -5201,7 +5207,7 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
     columnUpper_[iColumn] = saveBound;
     CoinMemcpyN(savePivot, numberRows_,pivotVariable_);
     delete factorization_;
-    factorization_ = new ClpFactorization(saveFactorization);
+    factorization_ = new ClpFactorization(saveFactorization,numberRows_);
 
     newUpper[i]=objectiveChange;
 #ifdef CLP_DEBUG
@@ -5264,7 +5270,7 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
     columnLower_[iColumn] = saveBound;
     CoinMemcpyN(savePivot, numberRows_,pivotVariable_);
     delete factorization_;
-    factorization_ = new ClpFactorization(saveFactorization);
+    factorization_ = new ClpFactorization(saveFactorization,numberRows_);
 
     newLower[i]=objectiveChange;
 #ifdef CLP_DEBUG
@@ -5601,7 +5607,7 @@ ClpSimplexDual::setupForStrongBranching(char * arrays, int numberRows, int numbe
   CoinMemcpyN(cost_,
           numberRows_+numberColumns_,saveObjective);
   CoinMemcpyN(pivotVariable_, numberRows_,savePivot);
-  return new ClpFactorization(*factorization_);
+  return new ClpFactorization(*factorization_,numberRows_);
 }
 // This cleans up after strong branching
 void 

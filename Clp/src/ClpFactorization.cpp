@@ -76,7 +76,8 @@ ClpFactorization::ClpFactorization () :
 //-------------------------------------------------------------------
 // Copy constructor 
 //-------------------------------------------------------------------
-ClpFactorization::ClpFactorization (const ClpFactorization & rhs) :
+ClpFactorization::ClpFactorization (const ClpFactorization & rhs,
+				    int dummyDenseIfSmaller) :
    CoinFactorization(rhs) 
 {
 #ifndef SLIM_CLP
@@ -1140,14 +1141,18 @@ ClpFactorization::ClpFactorization (const ClpFactorization & rhs,
       goDense=1;
     else if (denseIfSmaller<=goSmallThreshold_) 
       goDense=2;
+  } else if (denseIfSmaller<0) {
+    if (-denseIfSmaller<=goDenseThreshold_) 
+      goDense=1;
+    else if (-denseIfSmaller<=goSmallThreshold_) 
+      goDense=2;
   }
   if (rhs.coinFactorizationA_&&!goDense)
     coinFactorizationA_ = new CoinFactorization(*(rhs.coinFactorizationA_));
   else
     coinFactorizationA_=NULL;
-  if (rhs.coinFactorizationB_)
+  if (rhs.coinFactorizationB_&&(denseIfSmaller>=0||!goDense))
     coinFactorizationB_ = rhs.coinFactorizationB_->clone();
-  //coinFactorizationB_ = new CoinSmallFactorization(*(rhs.coinFactorizationB_));
   else
     coinFactorizationB_=NULL;
   if (goDense) {
@@ -1156,10 +1161,16 @@ ClpFactorization::ClpFactorization (const ClpFactorization & rhs,
       coinFactorizationB_ = new CoinDenseFactorization();
     else
       coinFactorizationB_ = new CoinSimpFactorization();
-    assert(rhs.coinFactorizationA_);
-    coinFactorizationB_->maximumPivots(rhs.coinFactorizationA_->maximumPivots());
-    coinFactorizationB_->pivotTolerance(rhs.coinFactorizationA_->pivotTolerance());
-    coinFactorizationB_->zeroTolerance(rhs.coinFactorizationA_->zeroTolerance());
+    if (rhs.coinFactorizationA_) {
+      coinFactorizationB_->maximumPivots(rhs.coinFactorizationA_->maximumPivots());
+      coinFactorizationB_->pivotTolerance(rhs.coinFactorizationA_->pivotTolerance());
+      coinFactorizationB_->zeroTolerance(rhs.coinFactorizationA_->zeroTolerance());
+    } else {
+      assert (coinFactorizationB_);
+      coinFactorizationB_->maximumPivots(rhs.coinFactorizationB_->maximumPivots());
+      coinFactorizationB_->pivotTolerance(rhs.coinFactorizationB_->pivotTolerance());
+      coinFactorizationB_->zeroTolerance(rhs.coinFactorizationB_->zeroTolerance());
+    }
   }
   assert (!coinFactorizationA_||!coinFactorizationB_);
 #ifdef CLP_FACTORIZATION_INSTRUMENT
@@ -2362,11 +2373,27 @@ ClpFactorization::updateTwoColumnsFT ( CoinIndexedVector * regionSparse1,
       }
       coinFactorizationA_->setCollectStatistics(false);
     } else {
-      returnCode= coinFactorizationB_->updateColumnFT(regionSparse1,
-						     regionSparse2);
-      coinFactorizationB_->updateColumn(regionSparse1,
-					regionSparse3,
-					noPermuteRegion3);
+#if 0
+      CoinSimpFactorization * fact =
+	dynamic_cast< CoinSimpFactorization*>(coinFactorizationB_);
+      if (!fact) {
+	returnCode= coinFactorizationB_->updateColumnFT(regionSparse1,
+							regionSparse2);
+	coinFactorizationB_->updateColumn(regionSparse1,
+					  regionSparse3,
+					  noPermuteRegion3);
+      } else {
+	returnCode= fact->updateTwoColumnsFT(regionSparse1,
+					     regionSparse2,
+					     regionSparse3,
+					     noPermuteRegion3);
+      }
+#else
+      returnCode= coinFactorizationB_->updateTwoColumnsFT(regionSparse1,
+							  regionSparse2,
+							  regionSparse3,
+							  noPermuteRegion3);
+#endif
     }
 #ifdef CLP_FACTORIZATION_INSTRUMENT
     factorization_instrument(9);

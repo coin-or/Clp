@@ -485,13 +485,13 @@ ClpDualRowSteepest::updateWeights(CoinIndexedVector * input,
     ft_count_in+= updatedColumn->getNumElements();
     up_count_in+= spare->getNumElements();
 #endif
-    if (permute) {
+    if (permute||true) {
 #if CLP_DEBUG>2
       printf("REGION before %d els\n",spare->getNumElements());
       spare->print();
 #endif
       model_->factorization()->updateTwoColumnsFT(spare2,updatedColumn,
-						  spare,true);
+						  spare,permute!=NULL);
 #if CLP_DEBUG>2
       printf("REGION after %d els\n",spare->getNumElements());
       spare->print();

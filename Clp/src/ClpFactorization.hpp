@@ -64,14 +64,11 @@ public:
    //@{
    /** The copy constructor from an CoinFactorization. */
    ClpFactorization(const CoinFactorization&);
-#ifdef CLP_MULTIPLE_FACTORIZATIONS    
    /** The copy constructor. */
-  ClpFactorization(const ClpFactorization&,int denseIfSmaller=-1);
+  ClpFactorization(const ClpFactorization&,int denseIfSmaller=0);
+#ifdef CLP_MULTIPLE_FACTORIZATIONS    
    /** The copy constructor from an CoinSmallFactorization. */
    ClpFactorization(const CoinSmallFactorization&);
-#else
-   /** The copy constructor. */
-   ClpFactorization(const ClpFactorization&);
 #endif
    ClpFactorization& operator=(const ClpFactorization&);
    //@}

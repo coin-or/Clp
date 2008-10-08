@@ -400,11 +400,7 @@ ClpSimplex::ClpSimplex ( const ClpSimplex * rhs,
     spareDoubleArray_[i]=0.0;
   }
   saveStatus_=NULL;
-#ifdef CLP_MULTIPLE_FACTORIZATIONS    
-  factorization_ = new ClpFactorization(*rhs->factorization_,numberRows_);
-#else
-  factorization_ = new ClpFactorization(*rhs->factorization_);
-#endif
+  factorization_ = new ClpFactorization(*rhs->factorization_,-numberRows_);
   ClpDualRowDantzig * pivot =
     dynamic_cast< ClpDualRowDantzig*>(rhs->dualRowPivot_);
   // say Steepest pricing
@@ -2192,7 +2188,7 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
   }
   if (rhs.factorization_) {
     delete factorization_;
-    factorization_ = new ClpFactorization(*rhs.factorization_);
+    factorization_ = new ClpFactorization(*rhs.factorization_,numberRows_);
   } else {
     factorization_=NULL;
   }
@@ -4921,7 +4917,7 @@ void
 ClpSimplex::setFactorization( ClpFactorization & factorization)
 {
   delete factorization_;
-  factorization_= new ClpFactorization(factorization);
+  factorization_= new ClpFactorization(factorization,numberRows_);
 }
 // Copies in factorization to existing one
 void 

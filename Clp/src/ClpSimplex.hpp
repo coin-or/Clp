@@ -930,6 +930,7 @@ public:
       4 bit - keep arrays like upper_ around
       8 bit - if factorization kept can still declare optimal at once
       16 bit - if checking replaceColumn accuracy before updating
+      32 bit - say optimal if primal feasible!
   */
   inline int moreSpecialOptions() const
   { return moreSpecialOptions_;}

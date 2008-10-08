@@ -734,6 +734,8 @@ main (int argc, const char *argv[])
 #ifdef CLP_MULTIPLE_FACTORIZATIONS   
 	      int denseCode = parameters[whichParam(DENSE,numberParameters,parameters)].intValue();
 	      model2->factorization()->setGoDenseThreshold(denseCode);
+	      int smallCode = parameters[whichParam(SMALLFACT,numberParameters,parameters)].intValue();
+	      model2->factorization()->setGoSmallThreshold(smallCode);
 	      model2->factorization()->goDenseOrSmall(model2->numberRows());
 #endif
               try {

@@ -111,5 +111,11 @@ ClpDisasterHandler::setSimplex(ClpSimplex * model)
 {
   model_= model;
 }
+// Type of disaster 0 can fix, 1 abort
+int 
+ClpDisasterHandler::typeOfDisaster()
+{
+  return 0;
+}
 
 

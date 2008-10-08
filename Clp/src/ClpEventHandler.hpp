@@ -104,6 +104,8 @@ public:
   virtual bool check() const = 0;
   /// saves information for next attempt
   virtual void saveInfo() =0;
+  /// Type of disaster 0 can fix, 1 abort
+  virtual int typeOfDisaster();
   //@}
   
   
