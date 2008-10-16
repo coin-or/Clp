@@ -11559,6 +11559,22 @@ ClpSimplex::fastCrunch(ClpNodeStuff * info, int mode)
   }
   return small;
 }
+// Return true if the objective limit test can be relied upon
+bool 
+ClpSimplex::isObjectiveLimitTestValid() const 
+{
+  if (problemStatus_ == 0) {
+    return true;
+  } else if (problemStatus_ == 1) {
+    // ok if dual
+    return (algorithm_<0); 
+  } else if (problemStatus_==2) {
+    // ok if primal
+    return (algorithm_>0); 
+  } else {
+    return false;
+  }
+}
 // Create C++ lines to get to current state
 void 
 ClpSimplex::generateCpp( FILE * fp, bool defaultFactor)

@@ -539,6 +539,8 @@ public:
   /// Set algorithm
   inline void setAlgorithm(int value)
   {algorithm_=value; } 
+  /// Return true if the objective limit test can be relied upon
+  bool isObjectiveLimitTestValid() const ;
   /// Sum of dual infeasibilities
   inline double sumDualInfeasibilities() const 
           { return sumDualInfeasibilities_;} 
