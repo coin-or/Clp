@@ -5524,7 +5524,7 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
 #ifndef COIN_DEVELOP
 	  handler_->logLevel()==63)
 #else
-	  handler_->logLevel()>0-2)
+	  true)
 #endif
 	printf("looks like real trouble - too many iterations in second clean up - giving up\n");
     }
@@ -11230,7 +11230,9 @@ ClpSimplex::fastDual2(ClpNodeStuff * info)
       }
     }
     if (problemStatus_==3&&numberIterations_<saveMax) {
+#ifndef COIN_DEVELOP
       if (handler_->logLevel()==63)
+#endif
 	printf("looks like trouble - too many iterations in clean up - trying again\n");
       // flatten solution and try again
       int iColumn;
@@ -11261,7 +11263,11 @@ ClpSimplex::fastDual2(ClpNodeStuff * info)
       // can't rely on djs either
       memset(reducedCost_,0,numberColumns_*sizeof(double));
       if (problemStatus_==3&&numberIterations_<saveMax&& 
-	  handler_->logLevel()>0)
+#ifndef COIN_DEVELOP
+	  handler_->logLevel()==63)
+#else
+	  true)
+#endif
 	printf("looks like real trouble - too many iterations in second clean up - giving up\n");
     }
     intParam_[ClpMaxNumIteration] = saveMax;
