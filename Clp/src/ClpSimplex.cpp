@@ -5522,7 +5522,7 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
       memset(reducedCost_,0,numberColumns_*sizeof(double));
       if (problemStatus_==3&&numberIterations_<saveMax&& 
 #ifndef COIN_DEVELOP
-	  handler_->logLevel()>0)
+	  handler_->logLevel()==63)
 #else
 	  handler_->logLevel()>0-2)
 #endif
