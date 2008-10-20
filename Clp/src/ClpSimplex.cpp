@@ -8121,6 +8121,14 @@ ClpSimplex::startup(int ifValuesPass, int startFinishOptions)
     double infeasSum[2];
     bool printIt = (specialOptions_&32768)==0 ? true : false; // no message if from Osi
     problemStatus_=emptyProblem(infeasNumber,infeasSum,printIt);
+    if ((startFinishOptions&1)!=0) {
+      // User may expect user data - fill in as required
+      if (numberRows_) {
+	if (!pivotVariable_) 
+	  pivotVariable_ = new int [numberRows_];
+	CoinIotaN(pivotVariable_,numberRows_,numberColumns_);
+      }
+    }
     numberDualInfeasibilities_=infeasNumber[0];
     sumDualInfeasibilities_=infeasSum[0];
     numberPrimalInfeasibilities_=infeasNumber[1];
