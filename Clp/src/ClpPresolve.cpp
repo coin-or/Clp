@@ -1071,21 +1071,21 @@ CoinPresolveMatrix::CoinPresolveMatrix(int ncols0_in,
   // Do the copy here to try to avoid running out of memory.
 
   const CoinBigIndex * start = m->getVectorStarts();
-  const int * length = m->getVectorLengths();
   const int * row = m->getIndices();
   const double * element = m->getElements();
   int icol,nel=0;
   mcstrt_[0]=0;
+  ClpDisjointCopyN(m->getVectorLengths(),ncols_,  hincol_);
   for (icol=0;icol<ncols_;icol++) {
-    int j;
-    for (j=start[icol];j<start[icol]+length[icol];j++) {
+    CoinBigIndex j;
+    for (j=start[icol];j<start[icol]+hincol_[icol];j++) {
       hrow_[nel]=row[j];
-      colels_[nel++]=element[j];
+      if (fabs(element[j])>ZTOLDP)
+	colels_[nel++]=element[j];
     }
     mcstrt_[icol+1]=nel;
+    hincol_[icol]=nel-mcstrt_[icol];
   }
-  assert(mcstrt_[ncols_] == nelems_);
-  ClpDisjointCopyN(m->getVectorLengths(),ncols_,  hincol_);
 
   // same thing for row rep
   CoinPackedMatrix * mRow = new CoinPackedMatrix();
@@ -1116,6 +1116,24 @@ CoinPresolveMatrix::CoinPresolveMatrix(int ncols0_in,
   delete [] strt;
   hinrow_ = new int[nrows_in+1];
   ClpDisjointCopyN(len, nrows_,  hinrow_);
+  if (nelems_>nel) {
+    nelems_ = nel;
+    // Clean any small elements
+    int irow;
+    nel=0;
+    CoinBigIndex start=0;
+    for (irow=0;irow<nrows_;irow++) {
+      CoinBigIndex j;
+      for (j=start;j<start+hinrow_[irow];j++) {
+	hcol_[nel]=hcol_[j];
+	if (fabs(rowels_[j])>ZTOLDP)
+	  rowels_[nel++]=rowels_[j];
+      }
+      start=mrstrt_[irow+1];
+      mrstrt_[irow+1]=nel;
+      hinrow_[irow]=nel-mrstrt_[irow];
+    }
+  }
 
   delete mRow;
   if (si->integerInformation()) {
