@@ -1789,6 +1789,11 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
 	    problemStatus_=-5;
 	  } else {
 	    problemStatus_=0;
+	    // make it look OK
+	    numberPrimalInfeasibilities_=0;
+	    sumPrimalInfeasibilities_=0.0;
+	    numberDualInfeasibilities_=0;
+	    sumDualInfeasibilities_=0.0;
 	    // May be perturbed
 	    if (perturbation_==101||numberChanged_) {
 	      perturbation_=102; // stop any perturbations
