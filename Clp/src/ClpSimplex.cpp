@@ -5672,8 +5672,8 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
   //if (problemStatus_==1&&lastAlgorithm==1)
   //returnCode=10; // so will do primal after postsolve
   if (!problemStatus_) {
-    assert (!numberPrimalInfeasibilities_);
-    assert (!numberDualInfeasibilities_);
+    //assert (!numberPrimalInfeasibilities_);
+    //assert (!numberDualInfeasibilities_);
   }
   return returnCode;
 }
