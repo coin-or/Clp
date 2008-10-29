@@ -4335,11 +4335,13 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	      }
 	    }
 	  }
+#ifdef CLP_INVESTIGATE
 	  if (bigB>1.0e8||bigN>1.0e8) {
 	    if (handler_->logLevel()>0)
 	      printf("it %d - basic %d %g, nonbasic %d %g\n",
 		     numberIterations_,iBigB,bigB,iBigN,bigN);
 	  }
+#endif
 	}
 #if COIN_DEVELOP!=2
 	if (handler_->logLevel()>2)
