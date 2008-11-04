@@ -45,6 +45,7 @@
 				Optimization="0"
 				AdditionalIncludeDirectories="..\..\..\..\CoinUtils\src,..\..\..\..\BuildTools\headers"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
+				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
 				RuntimeTypeInfo="true"
