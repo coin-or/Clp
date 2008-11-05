@@ -164,7 +164,7 @@ ClpDummyMatrix::fillBasis(ClpSimplex * model,
 			 int & numberColumnBasic,
 			 int * row, int * start,
 			 int * rowCount, int * columnCount,
-			 double * element)
+			 CoinFactorizationDouble * element)
 {
   std::cerr<<"fillBasis not supported - ClpDummyMatrix"<<std::endl;
   abort();

@@ -39,11 +39,11 @@ ClpNetworkBasis::ClpNetworkBasis ()
 }
 // Constructor from CoinFactorization
 ClpNetworkBasis::ClpNetworkBasis(const ClpSimplex * model,
-				 int numberRows, const double * pivotRegion,
+				 int numberRows, const CoinFactorizationDouble * pivotRegion,
 				 const int * permuteBack,
 				 const CoinBigIndex * startColumn, 
 				 const int * numberInColumn,
-				 const int * indexRow, const double * element)
+				 const int * indexRow, const CoinFactorizationDouble * element)
 {
 #ifndef COIN_FAST_CODE
   slackValue_=-1.0;

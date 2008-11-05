@@ -101,7 +101,7 @@ public:
 				 int & numberColumnBasic,
 				 int * row, int * start,
 				 int * rowCount, int * columnCount,
-				 double * element);
+				 CoinFactorizationDouble * element);
   /** Creates scales for column copy (rowCopy in model may be modified)
       returns non-zero if no scaling done */
   virtual int scale(ClpModel * model, const ClpSimplex * baseModel=NULL) const ;

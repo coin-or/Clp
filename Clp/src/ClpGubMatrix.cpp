@@ -973,7 +973,7 @@ ClpGubMatrix::fillBasis(ClpSimplex * model,
 			 int & numberColumnBasic,
 			 int * indexRowU, int * start,
 			 int * rowCount, int * columnCount,
-			 double * elementU)
+			 CoinFactorizationDouble * elementU)
 {
   int i;
   int numberColumns = getNumCols();

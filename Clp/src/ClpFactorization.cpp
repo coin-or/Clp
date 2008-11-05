@@ -1389,7 +1389,7 @@ ClpFactorization::factorize ( ClpSimplex * model,
 				      2 * numberElements );
       // Fill in counts so we can skip part of preProcess
       // This is NOT needed for dense but would be needed for later versions
-      double * elementU;
+      CoinFactorizationDouble * elementU;
       int * indexRowU;
       CoinBigIndex * startColumnU;
       int * numberInRow;
@@ -1775,7 +1775,7 @@ ClpFactorization::factorize ( ClpSimplex * model,
 	int * numberInColumn = coinFactorizationA_->numberInColumn();
 	CoinZeroN ( numberInRow, coinFactorizationA_->numberRows() + 1 );
 	CoinZeroN ( numberInColumn, coinFactorizationA_->maximumColumnsExtra() + 1 );
-	double * elementU = coinFactorizationA_->elementU();
+	CoinFactorizationDouble * elementU = coinFactorizationA_->elementU();
 	int * indexRowU = coinFactorizationA_->indexRowU();
 	CoinBigIndex * startColumnU = coinFactorizationA_->startColumnU();
 #ifndef COIN_FAST_CODE

@@ -78,7 +78,7 @@ public:
 				 int & numberColumnBasic,
 				 int * row, int * start,
 				 int * rowCount, int * columnCount,
-				 double * element);
+				 CoinFactorizationDouble * element);
   /** Given positive integer weights for each row fills in sum of weights
       for each column (and slack).
       Returns weights vector

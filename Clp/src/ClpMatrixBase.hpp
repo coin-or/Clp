@@ -94,7 +94,7 @@ public:
 				 int & numberColumnBasic,
 				 int * row, int * start,
 				 int * rowCount, int * columnCount,
-				 double * element)=0;
+				 CoinFactorizationDouble * element)=0;
   /** Creates scales for column copy (rowCopy in model may be modified)
       default does not allow scaling
       returns non-zero if no scaling done */

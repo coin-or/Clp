@@ -1915,7 +1915,7 @@ ClpPackedMatrix::fillBasis(ClpSimplex * model,
 			   int * COIN_RESTRICT start,
 			   int * COIN_RESTRICT rowCount, 
 			   int * COIN_RESTRICT columnCount,
-			   double * COIN_RESTRICT elementU)
+			   CoinFactorizationDouble * COIN_RESTRICT elementU)
 {
   const int * COIN_RESTRICT columnLength = matrix_->getVectorLengths(); 
   int i;
