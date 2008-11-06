@@ -2107,6 +2107,15 @@ This is a first try and will hopefully become more sophisticated."
   parameters[numberParameters++]=
     CbcOrClpParam("miplib","Do some of miplib test set",
 		  MIPLIB,3);
+  parameters[numberParameters++]=
+      CbcOrClpParam("naive!Heuristics","Whether to try some stupid heuristic",
+		    "off",NAIVE);
+  parameters[numberParameters-1].append("on");
+  parameters[numberParameters-1].append("do");
+  parameters[numberParameters-1].setLonghelp
+    (
+     "Really silly stuff e.g. fix all integers with costs to zero!."
+     ); 
 #endif 
 #ifdef COIN_HAS_CLP
   parameters[numberParameters++]=
