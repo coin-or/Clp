@@ -1288,7 +1288,10 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	  }
 	}
       } else {
-	problemStatus_=0; // optimal
+	if (!alwaysOptimal||!sumOfRelaxedPrimalInfeasibilities_)
+	  problemStatus_=0; // optimal
+	else
+	  problemStatus_=1; // infeasible
       }
     }
   } else {
