@@ -307,6 +307,12 @@ ClpSimplexDual::startupSolve(int ifValuesPass,double * saveDuals,int startFinish
 	usePrimal=perturb();
       // Can't get here if values pass
       gutsOfSolution(NULL,NULL);
+#ifdef COIN_DEVELOP
+      if (numberDualInfeasibilities_)
+	printf("ZZZ %d primal %d dual - cost %g\n",
+	       numberPrimalInfeasibilities_,
+	       numberDualInfeasibilities_,cost_[0]);
+#endif
       if (handler_->logLevel()>2) {
 	handler_->message(CLP_SIMPLEX_STATUS,messages_)
 	  <<numberIterations_<<objectiveValue();
@@ -1564,7 +1570,10 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
           }
 	  // If we have just factorized and infeasibility reasonable say infeas
 	  if (((specialOptions_&4096)!=0||bestPossiblePivot<1.0e-11)&&dualBound_>1.0e8) {
-	    if (valueOut_>upperOut_+1.0e-3||valueOut_<lowerOut_-1.0e-3
+	    double testValue=1.0e-4;
+	    if (!factorization_->pivots()&&numberPrimalInfeasibilities_==1)
+	      testValue=1.0e-6;
+	    if (valueOut_>upperOut_+testValue||valueOut_<lowerOut_-testValue
 		|| (specialOptions_&64)==0) {
 	      // say infeasible
 	      problemStatus_=1;
@@ -1738,44 +1747,107 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
 	    //}
 	    problemStatus_=-5;
 	  } else {
-            if (numberPivots) {
-              // objective may be wrong
-              objectiveValue_ = innerProduct(cost_,numberColumns_+numberRows_,solution_);
-              objectiveValue_ += objective_->nonlinearOffset();
-              objectiveValue_ /= (objectiveScale_*rhsScale_);
-              if ((specialOptions_&16384)==0) {
-                // and dual_ may be wrong (i.e. for fixed or basic)
-                CoinIndexedVector * arrayVector = rowArray_[1];
-                arrayVector->clear();
-                int iRow;
-                double * array = arrayVector->denseVector();
-                /* Use dual_ instead of array
-                   Even though dual_ is only numberRows_ long this is
-                   okay as gets permuted to longer rowArray_[2]
-                */
-                arrayVector->setDenseVector(dual_);
-                int * index = arrayVector->getIndices();
-                int number=0;
-                for (iRow=0;iRow<numberRows_;iRow++) {
-                  int iPivot=pivotVariable_[iRow];
-                  double value = cost_[iPivot];
-                  dual_[iRow]=value;
-                  if (value) {
-                    index[number++]=iRow;
-                  }
-                }
-                arrayVector->setNumElements(number);
-                // Extended duals before "updateTranspose"
-                matrix_->dualExpanded(this,arrayVector,NULL,0);
-                // Btran basic costs
-                rowArray_[2]->clear();
-                factorization_->updateColumnTranspose(rowArray_[2],arrayVector);
-                // and return vector
-                arrayVector->setDenseVector(array);
-              }
-            }
 	    problemStatus_=0;
-	    sumPrimalInfeasibilities_=0.0;
+#ifndef CLP_CHECK_NUMBER_PIVOTS
+#define CLP_CHECK_NUMBER_PIVOTS 10
+#endif
+#if CLP_CHECK_NUMBER_PIVOTS < 20
+	    if (numberPivots>CLP_CHECK_NUMBER_PIVOTS) {
+#ifndef NDEBUG
+	      int nTotal = numberRows_+numberColumns_;
+	      double * comp = CoinCopyOfArray(solution_,nTotal);
+#endif
+	      computePrimals(rowActivityWork_,columnActivityWork_);
+#ifndef NDEBUG
+	      double largest=1.0e-5;
+	      int bad=-1;
+	      for (int i=0;i<nTotal;i++) {
+		double value = solution_[i];
+		double larger = CoinMax(fabs(value),fabs(comp[i]));
+		double tol = 1.0e-5+1.0e-5*larger;
+		double diff = fabs(value-comp[i]);
+		if (diff-tol>largest) {
+		  bad=i;
+		  largest = diff-tol;
+		}
+	      }
+	      if (bad>=0)
+		printf("bad %d old %g new %g\n",bad,comp[bad],solution_[bad]);
+#endif
+	      checkPrimalSolution(rowActivityWork_,columnActivityWork_);
+	      if (numberPrimalInfeasibilities_) {
+		printf("XXX Infeas ? %d inf summing to %g\n",numberPrimalInfeasibilities_,
+		       sumPrimalInfeasibilities_);
+		problemStatus_=-1;
+		returnCode=-2;
+	      }
+#ifndef NDEBUG
+	      memcpy(solution_,comp,nTotal*sizeof(double));
+	      delete [] comp;
+#endif
+	    }
+#endif
+	    if (!problemStatus_) {
+	      // make it look OK
+	      numberPrimalInfeasibilities_=0;
+	      sumPrimalInfeasibilities_=0.0;
+	      numberDualInfeasibilities_=0;
+	      sumDualInfeasibilities_=0.0;
+	      // May be perturbed
+	      if (perturbation_==101||numberChanged_) {
+		perturbation_=102; // stop any perturbations
+		//double changeCost;
+		//changeBounds(1,NULL,changeCost);
+		createRim4(false);
+		// make sure duals are current
+		computeDuals(givenDuals);
+		checkDualSolution();
+		if (numberDualInfeasibilities_) {
+		  problemStatus_=10; // was -3;
+		} else {
+		  computeObjectiveValue(true);
+		}
+	      } else if (numberPivots) {
+		computeObjectiveValue(true);
+	      } 
+	      if (numberPivots<-1000) {
+		// objective may be wrong
+		objectiveValue_ = innerProduct(cost_,numberColumns_+numberRows_,solution_);
+		objectiveValue_ += objective_->nonlinearOffset();
+		objectiveValue_ /= (objectiveScale_*rhsScale_);
+		if ((specialOptions_&16384)==0) {
+		  // and dual_ may be wrong (i.e. for fixed or basic)
+		  CoinIndexedVector * arrayVector = rowArray_[1];
+		  arrayVector->clear();
+		  int iRow;
+		  double * array = arrayVector->denseVector();
+		  /* Use dual_ instead of array
+		     Even though dual_ is only numberRows_ long this is
+		     okay as gets permuted to longer rowArray_[2]
+		  */
+		  arrayVector->setDenseVector(dual_);
+		  int * index = arrayVector->getIndices();
+		  int number=0;
+		  for (iRow=0;iRow<numberRows_;iRow++) {
+		    int iPivot=pivotVariable_[iRow];
+		    double value = cost_[iPivot];
+		    dual_[iRow]=value;
+		    if (value) {
+		      index[number++]=iRow;
+		    }
+		  }
+		  arrayVector->setNumElements(number);
+		  // Extended duals before "updateTranspose"
+		  matrix_->dualExpanded(this,arrayVector,NULL,0);
+		  // Btran basic costs
+		  rowArray_[2]->clear();
+		  factorization_->updateColumnTranspose(rowArray_[2],arrayVector);
+		  // and return vector
+		  arrayVector->setDenseVector(array);
+		}
+	      }
+	      sumPrimalInfeasibilities_=0.0;
+	    }
             if ((specialOptions_&(1024+16384))!=0) {
               CoinIndexedVector * arrayVector = rowArray_[1];
               arrayVector->clear();
@@ -2766,6 +2838,7 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
   upperTheta = 1.0e31;
   double bestPossible=0.0;
   double badFree=0.0;
+  alpha_=0.0;
   if (spareIntArray_[0]!=-1) {
     numberRemaining = dualColumn0(rowArray,columnArray,spareArray,
                                   acceptablePivot,upperTheta,bestPossible,badFree);
@@ -3895,8 +3968,15 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
             checkDualSolution();
             //if (numberDualInfeasibilities_)
               numberChanged_=1; // force something to happen
-            //else
-            //computeObjectiveValue();
+	      lastCleaned=numberIterations_-1;
+#ifdef DUAL_TRY_FASTER
+            } else {
+	      //double value = objectiveValue_;
+	      computeObjectiveValue(true);
+	      //printf("old %g new %g\n",value,objectiveValue_);
+	      //numberChanged_=1;
+	    }
+#endif
 	  }
 	  if (lastCleaned<numberIterations_&&numberTimesOptimal_<4&&
 	      (numberChanged_||(specialOptions_&4096)==0)) {
