@@ -1836,9 +1836,12 @@ ClpSimplex::initialSolve(ClpSolve & options)
       delete [] saveUpper;
     }
     model2->primal(1);
-    if (model2!=originalModel2)
-      originalModel2->moveInfo(*model2);
     model2->setPerturbation(savePerturbation);
+    if (model2!=originalModel2) {
+      originalModel2->moveInfo(*model2);
+      delete model2;
+      model2 = originalModel2;
+    }
     time2 = CoinCpuTime();
     timeCore = time2-timeX;
     handler_->message(CLP_INTERVAL_TIMING,messages_)
