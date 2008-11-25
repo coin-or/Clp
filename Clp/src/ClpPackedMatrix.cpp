@@ -2857,8 +2857,9 @@ ClpPackedMatrix::allElementsInRange(ClpModel * model,
     matrix_->eliminateDuplicates(smallest);
   else if (numberSmall) 
     matrix_->compress(smallest);
-  // If smallest >0.0 then there can't be zero elements
-  if (smallest>0.0)
+  // Can there be zero elements?
+  flags_ |= 1;;
+  if (!numberSmall&&!numberDuplicate)
     flags_ &= ~1;;
   return true;
 }
