@@ -2857,10 +2857,11 @@ ClpPackedMatrix::allElementsInRange(ClpModel * model,
     matrix_->eliminateDuplicates(smallest);
   else if (numberSmall) 
     matrix_->compress(smallest);
-  // Can there be zero elements?
-  flags_ |= 1;;
-  if (!numberSmall&&!numberDuplicate)
+  // If smallest >0.0 then there can't be zero elements
+  if (smallest>0.0)
     flags_ &= ~1;;
+  if (numberSmall||numberDuplicate)
+    flags_ |= 2; // will have gaps
   return true;
 }
 /* Given positive integer weights for each row fills in sum of weights
