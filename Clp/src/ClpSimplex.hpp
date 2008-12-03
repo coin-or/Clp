@@ -21,7 +21,7 @@ class ClpFactorization;
 class CoinIndexedVector;
 class ClpNonLinearCost;
 class ClpNodeStuff;
-class CoinModel;
+class CoinStructuredModel;
 class OsiClpSolverInterface;
 class CoinWarmStartBasis;
 class ClpDisasterHandler;
@@ -292,6 +292,16 @@ public:
   /** Solves non-linear using reduced gradient.  Phase = 0 get feasible,
       =1 use solution */
   int reducedGradient(int phase=0);
+  /// Solve using structure of model and maybe in parallel
+  int solve(CoinStructuredModel * model);
+  /** This loads a model from a CoinStructuredModel object - returns number of errors.
+      If originalOrder then keep to order stored in blocks,
+      otherwise first column/rows correspond to first block - etc.
+      If keepSolution true and size is same as current then
+      keeps current status and solution
+  */
+  int loadProblem (  CoinStructuredModel & modelObject,
+		     bool originalOrder=true,bool keepSolution=false);
   /**
      When scaling is on it is possible that the scaled problem
      is feasible but the unscaled is not.  Clp returns a secondary

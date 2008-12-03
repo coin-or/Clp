@@ -25,6 +25,7 @@ Clp/clp_addlibs.txt.in -text
 Clp/configure -text
 Clp/configure.ac -text
 Clp/examples/Makefile.in -text
+Clp/examples/decomp2.cpp -text
 Clp/examples/g.tiny -text
 Clp/examples/gparm.tiny -text
 Clp/examples/modify.cpp -text
