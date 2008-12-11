@@ -1575,7 +1575,7 @@ ClpModel::addRow(int numberInRow, const int * columns,
 void 
 ClpModel::addRows(int number, const double * rowLower, 
 		  const double * rowUpper,
-		  const int * rowStarts, const int * columns,
+		  const CoinBigIndex * rowStarts, const int * columns,
 		  const double * elements)
 {
   if (number) {
@@ -1632,7 +1632,7 @@ ClpModel::addRows(int number, const double * rowLower,
 void 
 ClpModel::addRows(int number, const double * rowLower, 
 		  const double * rowUpper,
-		  const int * rowStarts, 
+		  const CoinBigIndex * rowStarts, 
 		  const int * rowLengths, const int * columns,
 		  const double * elements)
 {
