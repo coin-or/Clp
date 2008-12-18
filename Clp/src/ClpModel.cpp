@@ -1624,8 +1624,11 @@ ClpModel::addRows(int number, const double * rowLower,
       rowNames_.resize(numberRows_);
     }
 #endif
-    if (rowStarts) 
+    if (rowStarts) {
+      // Make sure matrix has correct number of columns
+      matrix_->getPackedMatrix()->reserve(numberColumns_,0,true);
       matrix_->appendMatrix(number,0,rowStarts,columns,elements);
+    }
   }
 }
 // Add rows
