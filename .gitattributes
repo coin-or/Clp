@@ -21,6 +21,12 @@ Clp/MSVisualStudio/v8/ClpExamplesTestBarrier/ClpExamplesTestBarrier.vcproj -text
 Clp/MSVisualStudio/v8/ClpExamplesTestQP/ClpExamplesTestQP.vcproj -text
 Clp/MSVisualStudio/v8/clp/clp.vcproj -text
 Clp/MSVisualStudio/v8/libClp/libClp.vcproj -text
+Clp/MSVisualStudio/v9/Clp.sln -text
+Clp/MSVisualStudio/v9/ClpExamplesMinimum/ClpExamplesMinimum.vcproj -text
+Clp/MSVisualStudio/v9/ClpExamplesTestBarrier/ClpExamplesTestBarrier.vcproj -text
+Clp/MSVisualStudio/v9/ClpExamplesTestQP/ClpExamplesTestQP.vcproj -text
+Clp/MSVisualStudio/v9/clp/clp.vcproj -text
+Clp/MSVisualStudio/v9/libClp/libClp.vcproj -text
 Clp/clp_addlibs.txt.in -text
 Clp/configure -text
 Clp/configure.ac -text
