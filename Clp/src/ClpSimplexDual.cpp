@@ -1822,8 +1822,10 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
 #endif
 	      checkPrimalSolution(rowActivityWork_,columnActivityWork_);
 	      if (numberPrimalInfeasibilities_) {
+#ifdef COIN_DEVELOP
 		printf("XXX Infeas ? %d inf summing to %g\n",numberPrimalInfeasibilities_,
 		       sumPrimalInfeasibilities_);
+#endif
 		problemStatus_=-1;
 		returnCode=-2;
 	      }
