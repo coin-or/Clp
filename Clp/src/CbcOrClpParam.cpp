@@ -1784,7 +1784,8 @@ e.g. no ENDATA.  This has to be set before import i.e. -errorsAllowed on -import
     (
      "This switches on feasibility pump heuristic at root. This is due to Fischetti and Lodi \
 and uses a sequence of Lps to try and get an integer feasible solution. \
-Some fine tuning is available by passFeasibilityPump. Do options does heuristic before preprocessing"
+Some fine tuning is available by passFeasibilityPump and also pumpTune. \
+Do option does heuristic before preprocessing"
      ); 
   parameters[numberParameters++]=
     CbcOrClpParam("fix!OnDj","Try heuristic based on fixing variables with \
@@ -2486,7 +2487,7 @@ but strong options do more probing"
      "This fine tunes Feasibility Pump \n\
 \t>=1000000 use as accumulate switch\n\
 \t>=1000 use index+1 as number of large loops\n\
-\t>=100 use 0.05 objvalue as increment\n\
+\t==100 use objvalue +0.05*fabs(objvalue) as cutoff OR dextra1 if set\n\
 \t%100 == 10,20 etc for experimentation\n\
 \t1 == fix ints at bounds, 2 fix all integral ints, 3 and continuous at bounds"
      ); 
