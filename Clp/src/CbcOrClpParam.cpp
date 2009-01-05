@@ -1782,7 +1782,7 @@ e.g. no ENDATA.  This has to be set before import i.e. -errorsAllowed on -import
   parameters[numberParameters-1].append("do");
   parameters[numberParameters-1].setLonghelp
     (
-     "This switches on feasibility pump heuristic at root. This is due to Fischetti and Lodi \
+     "This switches on feasibility pump heuristic at root. This is due to Fischetti and Lodi and Glover \
 and uses a sequence of Lps to try and get an integer feasible solution. \
 Some fine tuning is available by passFeasibilityPump and also pumpTune. \
 Do option does heuristic before preprocessing"
