@@ -191,7 +191,7 @@ void
 ClpModel::setRowScale(double * scale) 
 {
   if (!savedRowScale_) {
-    delete [] (double *) rowScale_; 
+    delete [] reinterpret_cast<double *> (rowScale_); 
     rowScale_ = scale;
   } else {
     assert (!scale);
@@ -202,7 +202,7 @@ void
 ClpModel::setColumnScale(double * scale) 
 {
   if (!savedColumnScale_) {
-    delete [] (double *) columnScale_; 
+    delete [] reinterpret_cast<double *> (columnScale_); 
     columnScale_ = scale;
   } else {
     assert (!scale);
@@ -329,7 +329,7 @@ ClpModel::loadProblem (  const CoinPackedMatrix& matrix,
   if (matrix.isColOrdered()) {
     matrix_=new ClpPackedMatrix(matrix);
     if (special) {
-      clpMatrix = dynamic_cast< ClpPackedMatrix*>(matrix_);
+      clpMatrix = static_cast< ClpPackedMatrix*>(matrix_);
       clpMatrix->makeSpecialColumnCopy();
     }
   } else {
@@ -405,6 +405,7 @@ ClpModel::loadProblem (  CoinModel & modelObject,bool tryPlusMinusOne)
   int numberColumns = modelObject.numberColumns();
   gutsOfLoadModel(numberRows, numberColumns,
 		  columnLower, columnUpper, objective, rowLower, rowUpper, NULL);
+  setObjectiveOffset(modelObject.objectiveOffset());
   CoinBigIndex * startPositive = NULL;
   CoinBigIndex * startNegative = NULL;
   delete matrix_;
@@ -1408,9 +1409,10 @@ ClpModel::deleteRows(int number, const int * which)
     // status
     if (status_) {
       if (numberColumns_+newSize) {
-	unsigned char * tempR  = (unsigned char *) deleteChar((char *)status_+numberColumns_,
-							      numberRows_,
-							      number, which, newSize,false);
+	unsigned char * tempR  = reinterpret_cast<unsigned char *> 
+	  (deleteChar(reinterpret_cast<char *>(status_)+numberColumns_,
+		      numberRows_,
+		      number, which, newSize,false));
 	unsigned char * tempC = new unsigned char [numberColumns_+newSize];
 	CoinMemcpyN(status_,numberColumns_,tempC);
 	CoinMemcpyN(tempR,newSize,tempC+numberColumns_);
@@ -1518,9 +1520,10 @@ ClpModel::deleteColumns(int number, const int * which)
   // status
   if (status_) {
     if (numberRows_+newSize) {
-      unsigned char * tempC  = (unsigned char *) deleteChar((char *)status_,
-							    numberColumns_,
-							    number, which, newSize,false);
+      unsigned char * tempC  = reinterpret_cast<unsigned char *> 
+	(deleteChar(reinterpret_cast<char *>(status_),
+		    numberColumns_,
+		    number, which, newSize,false));
       unsigned char * temp = new unsigned char [numberRows_+newSize];
       CoinMemcpyN(tempC,newSize,temp);
       CoinMemcpyN(status_+numberColumns_,	numberRows_,temp+newSize);
@@ -2750,7 +2753,7 @@ ClpModel::readMps(const char *fileName,
       rowNames_.reserve(numberRows_);
       for (iRow=0;iRow<numberRows_;iRow++) {
 	const char * name = m.rowName(iRow);
-	maxLength = CoinMax(maxLength,(unsigned int) strlen(name));
+	maxLength = CoinMax(maxLength,static_cast<unsigned int> (strlen(name)));
 	  rowNames_.push_back(name);
       }
       
@@ -2758,10 +2761,10 @@ ClpModel::readMps(const char *fileName,
       columnNames_.reserve(numberColumns_);
       for (iColumn=0;iColumn<numberColumns_;iColumn++) {
 	const char * name = m.columnName(iColumn);
-	maxLength = CoinMax(maxLength,(unsigned int) strlen(name));
+	maxLength = CoinMax(maxLength,static_cast<unsigned int> (strlen(name)));
 	columnNames_.push_back(name);
       }
-      lengthNames_=(int) maxLength;
+      lengthNames_=static_cast<int> (maxLength);
     } else {
       lengthNames_=0;
     }
@@ -2834,7 +2837,7 @@ ClpModel::readGMPL(const char *fileName,const char * dataName,
       rowNames_.reserve(numberRows_);
       for (iRow=0;iRow<numberRows_;iRow++) {
 	const char * name = m.rowName(iRow);
-	maxLength = CoinMax(maxLength,(unsigned int) strlen(name));
+	maxLength = CoinMax(maxLength,static_cast<unsigned int> (strlen(name)));
 	  rowNames_.push_back(name);
       }
       
@@ -2842,10 +2845,10 @@ ClpModel::readGMPL(const char *fileName,const char * dataName,
       columnNames_.reserve(numberColumns_);
       for (iColumn=0;iColumn<numberColumns_;iColumn++) {
 	const char * name = m.columnName(iColumn);
-	maxLength = CoinMax(maxLength,(unsigned int) strlen(name));
+	maxLength = CoinMax(maxLength,static_cast<unsigned int> (strlen(name)));
 	columnNames_.push_back(name);
       }
-      lengthNames_=(int) maxLength;
+      lengthNames_=static_cast<int> (maxLength);
     } else {
       lengthNames_=0;
     }
@@ -3167,15 +3170,15 @@ ClpModel::ClpModel ( const ClpModel * rhs,
     rowNames_.reserve(numberRows_);
     for (iRow=0;iRow<numberRows_;iRow++) {
       rowNames_.push_back(rhs->rowNames_[whichRow[iRow]]);
-      maxLength = CoinMax(maxLength,(unsigned int) strlen(rowNames_[iRow].c_str()));
+      maxLength = CoinMax(maxLength,static_cast<unsigned int> (strlen(rowNames_[iRow].c_str())));
     }
     int iColumn;
     columnNames_.reserve(numberColumns_);
     for (iColumn=0;iColumn<numberColumns_;iColumn++) {
       columnNames_.push_back(rhs->columnNames_[whichColumn[iColumn]]);
-      maxLength = CoinMax(maxLength,(unsigned int) strlen(columnNames_[iColumn].c_str()));
+      maxLength = CoinMax(maxLength,static_cast<unsigned int> (strlen(columnNames_[iColumn].c_str())));
     }
-    lengthNames_=(int) maxLength;
+    lengthNames_=static_cast<int> (maxLength);
   } else {
     lengthNames_ = 0;
     rowNames_ = std::vector<std::string> ();
@@ -3251,15 +3254,15 @@ ClpModel::copyNames(std::vector<std::string> & rowNames,
   rowNames_.reserve(numberRows_);
   for (iRow=0;iRow<numberRows_;iRow++) {
     rowNames_.push_back(rowNames[iRow]);
-    maxLength = CoinMax(maxLength,(unsigned int) strlen(rowNames_[iRow].c_str()));
+    maxLength = CoinMax(maxLength,static_cast<unsigned int> (strlen(rowNames_[iRow].c_str())));
   }
   int iColumn;
   columnNames_.reserve(numberColumns_);
   for (iColumn=0;iColumn<numberColumns_;iColumn++) {
     columnNames_.push_back(columnNames[iColumn]);
-    maxLength = CoinMax(maxLength,(unsigned int) strlen(columnNames_[iColumn].c_str()));
+    maxLength = CoinMax(maxLength,static_cast<unsigned int> (strlen(columnNames_[iColumn].c_str())));
   }
-  lengthNames_=(int) maxLength;
+  lengthNames_=static_cast<int> (maxLength);
 }
 // Return name or Rnnnnnnn
 std::string 
@@ -3294,9 +3297,9 @@ ClpModel::setRowName(int iRow, std::string &name)
   if (size<=iRow)
     rowNames_.resize(iRow+1);
   rowNames_[iRow]= name;
-  maxLength = CoinMax(maxLength,(unsigned int) strlen(name.c_str()));
+  maxLength = CoinMax(maxLength,static_cast<unsigned int> (strlen(name.c_str())));
   // May be too big - but we would have to check both rows and columns to be exact
-  lengthNames_=(int) maxLength;
+  lengthNames_=static_cast<int> (maxLength);
 }
 // Return name or Cnnnnnnn
 std::string 
@@ -3331,9 +3334,9 @@ ClpModel::setColumnName(int iColumn, std::string &name)
   if (size<=iColumn)
     columnNames_.resize(iColumn+1);
   columnNames_[iColumn]= name;
-  maxLength = CoinMax(maxLength,(unsigned int) strlen(name.c_str()));
+  maxLength = CoinMax(maxLength,static_cast<unsigned int> (strlen(name.c_str())));
   // May be too big - but we would have to check both columns and columns to be exact
-  lengthNames_=(int) maxLength;
+  lengthNames_=static_cast<int> (maxLength);
 }
 // Copies in Row names - modifies names first .. last-1
 void 
@@ -3346,10 +3349,10 @@ ClpModel::copyRowNames(const std::vector<std::string> & rowNames, int first, int
   int iRow;
   for (iRow=first; iRow<last;iRow++) {
     rowNames_[iRow]= rowNames[iRow-first];
-    maxLength = CoinMax(maxLength,(unsigned int) strlen(rowNames_[iRow-first].c_str()));
+    maxLength = CoinMax(maxLength,static_cast<unsigned int> (strlen(rowNames_[iRow-first].c_str())));
   }
   // May be too big - but we would have to check both rows and columns to be exact
-  lengthNames_=(int) maxLength;
+  lengthNames_=static_cast<int> (maxLength);
 }
 // Copies in Column names - modifies names first .. last-1
 void 
@@ -3362,10 +3365,10 @@ ClpModel::copyColumnNames(const std::vector<std::string> & columnNames, int firs
   int iColumn;
   for (iColumn=first; iColumn<last;iColumn++) {
     columnNames_[iColumn]= columnNames[iColumn-first];
-    maxLength = CoinMax(maxLength,(unsigned int) strlen(columnNames_[iColumn-first].c_str()));
+    maxLength = CoinMax(maxLength,static_cast<unsigned int> (strlen(columnNames_[iColumn-first].c_str())));
   }
   // May be too big - but we would have to check both rows and columns to be exact
-  lengthNames_=(int) maxLength;
+  lengthNames_=static_cast<int> (maxLength);
 }
 // Copies in Row names - modifies names first .. last-1
 void 
@@ -3379,16 +3382,16 @@ ClpModel::copyRowNames(const char * const * rowNames, int first, int last)
   for (iRow=first; iRow<last;iRow++) {
     if (rowNames[iRow-first]&&strlen(rowNames[iRow-first])) {
       rowNames_[iRow]= rowNames[iRow-first];
-      maxLength = CoinMax(maxLength,(unsigned int) strlen(rowNames[iRow-first]));
+      maxLength = CoinMax(maxLength,static_cast<unsigned int> (strlen(rowNames[iRow-first])));
     } else {
-      maxLength = CoinMax(maxLength,(unsigned int) 8);
+      maxLength = CoinMax(maxLength,static_cast<unsigned int> (8));
       char name[9];
       sprintf(name,"R%7.7d",iRow);
       rowNames_[iRow]=name;
     }
   }
   // May be too big - but we would have to check both rows and columns to be exact
-  lengthNames_=(int) maxLength;
+  lengthNames_=static_cast<int> (maxLength);
 }
 // Copies in Column names - modifies names first .. last-1
 void 
@@ -3402,16 +3405,16 @@ ClpModel::copyColumnNames(const char * const * columnNames, int first, int last)
   for (iColumn=first; iColumn<last;iColumn++) {
     if (columnNames[iColumn-first]&&strlen(columnNames[iColumn-first])) {
       columnNames_[iColumn]= columnNames[iColumn-first];
-      maxLength = CoinMax(maxLength,(unsigned int) strlen(columnNames[iColumn-first]));
+      maxLength = CoinMax(maxLength,static_cast<unsigned int> (strlen(columnNames[iColumn-first])));
     } else {
-      maxLength = CoinMax(maxLength,(unsigned int) 8);
+      maxLength = CoinMax(maxLength,static_cast<unsigned int> (8));
       char name[9];
       sprintf(name,"C%7.7d",iColumn);
       columnNames_[iColumn]=name;
     }
   }
   // May be too big - but we would have to check both rows and columns to be exact
-  lengthNames_=(int) maxLength;
+  lengthNames_=static_cast<int> (maxLength);
 }
 #endif
 // Primal objective limit
@@ -3594,7 +3597,7 @@ ClpModel::writeMps(const char *filename,
   writer.setMpsData(*(matrix_->getPackedMatrix()), COIN_DBL_MAX,
 		    getColLower(), getColUpper(),
 		    objective,
-		    (const char*) 0 /*integrality*/,
+		    reinterpret_cast<const char*> (NULL) /*integrality*/,
 		    getRowLower(), getRowUpper(),
 		    columnNames, rowNames);
   // Pass in array saying if each variable integer
@@ -4109,7 +4112,8 @@ ClpModel::findNetwork(char * rotate,double fractionNeeded)
 	  if (merit>-2&&(OK||reflectionOK)) {
 	    assert (!OK||!reflectionOK||!numberIn);
 	    //if (!numberLast) merit=1;
-	    count[numberLeft++]=(rowStart[iRow+1]-rowStart[iRow]-1)*((double)merit);
+	    count[numberLeft++]=(rowStart[iRow+1]-rowStart[iRow]-1)*
+	      (static_cast<double>(merit));
 	    if (OK)
 	      rotate[iRow]=0;
 	    else
@@ -4217,6 +4221,8 @@ ClpDataSave::ClpDataSave ()
   infeasibilityCost_ = 0.0;
   sparseThreshold_ = 0;
   pivotTolerance_=0.0;
+  zeroFactorizationTolerance_=1.0e13;
+  zeroSimplexTolerance_=1.0e-13;
   acceptablePivot_ = 0.0;
   objectiveScale_ = 1.0;
   perturbation_ = 0;
@@ -4233,6 +4239,8 @@ ClpDataSave::ClpDataSave (const ClpDataSave & rhs)
   dualBound_ = rhs.dualBound_;
   infeasibilityCost_ = rhs.infeasibilityCost_;
   pivotTolerance_ = rhs.pivotTolerance_;
+  zeroFactorizationTolerance_= rhs.zeroFactorizationTolerance_;
+  zeroSimplexTolerance_= rhs.zeroSimplexTolerance_;
   acceptablePivot_ = rhs.acceptablePivot_;
   objectiveScale_ = rhs.objectiveScale_;
   sparseThreshold_ = rhs.sparseThreshold_;
@@ -4259,6 +4267,8 @@ ClpDataSave::operator=(const ClpDataSave& rhs)
     dualBound_ = rhs.dualBound_;
     infeasibilityCost_ = rhs.infeasibilityCost_;
     pivotTolerance_ = rhs.pivotTolerance_;
+    zeroFactorizationTolerance_=zeroFactorizationTolerance_;
+    zeroSimplexTolerance_=zeroSimplexTolerance_;
     acceptablePivot_ = rhs.acceptablePivot_;
     objectiveScale_ = rhs.objectiveScale_;
     sparseThreshold_ = rhs.sparseThreshold_;

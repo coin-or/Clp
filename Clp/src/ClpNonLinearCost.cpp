@@ -819,6 +819,7 @@ ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
           } else {
             // below
             newWhere=CLP_BELOW_LOWER;
+	    assert (fabs(lowerValue)<1.0e100);
             double infeasibility = lowerValue-value-primalTolerance;
             sumInfeasibilities_ += infeasibility;
             largestInfeasibility_ = CoinMax(largestInfeasibility_,infeasibility);
@@ -997,6 +998,7 @@ ClpNonLinearCost::feasibleBounds()
       if (iWhere==CLP_BELOW_LOWER) {
         lowerValue=upperValue;
         upperValue=bound_[iSequence];
+	assert (fabs(lowerValue)<1.0e100);
       } else if (iWhere==CLP_ABOVE_UPPER) {
         upperValue=lowerValue;
         lowerValue=bound_[iSequence];
@@ -1265,6 +1267,7 @@ ClpNonLinearCost::checkInfeasibilities(int numberInArray, const int * index)
         lowerValue=upperValue;
         upperValue=bound_[iSequence];
         numberInfeasibilities_--;
+	assert (fabs(lowerValue)<1.0e100);
       } else if (iWhere==CLP_ABOVE_UPPER) {
         upperValue=lowerValue;
         lowerValue=bound_[iSequence];
@@ -1279,6 +1282,7 @@ ClpNonLinearCost::checkInfeasibilities(int numberInArray, const int * index)
         } else {
           // below
           newWhere=CLP_BELOW_LOWER;
+	  assert (fabs(lowerValue)<1.0e100);
           costValue -= infeasibilityWeight_;
           numberInfeasibilities_++;
         }
@@ -1378,6 +1382,7 @@ ClpNonLinearCost::checkChanged(int numberInArray, CoinIndexedVector * update)
         lowerValue=upperValue;
         upperValue=bound_[iSequence];
         numberInfeasibilities_--;
+	assert (fabs(lowerValue)<1.0e100);
       } else if (iWhere==CLP_ABOVE_UPPER) {
         upperValue=lowerValue;
         lowerValue=bound_[iSequence];
@@ -1394,6 +1399,7 @@ ClpNonLinearCost::checkChanged(int numberInArray, CoinIndexedVector * update)
           newWhere=CLP_BELOW_LOWER;
           costValue -= infeasibilityWeight_;
           numberInfeasibilities_++;
+	  assert (fabs(lowerValue)<1.0e100);
         }
       } else {
         // above
@@ -1521,6 +1527,7 @@ ClpNonLinearCost::setOne(int iSequence, double value)
       lowerValue=upperValue;
       upperValue=bound_[iSequence];
       numberInfeasibilities_--;
+      assert (fabs(lowerValue)<1.0e100);
     } else if (iWhere==CLP_ABOVE_UPPER) {
       upperValue=lowerValue;
       lowerValue=bound_[iSequence];
@@ -1537,6 +1544,7 @@ ClpNonLinearCost::setOne(int iSequence, double value)
         newWhere=CLP_BELOW_LOWER;
         costValue -= infeasibilityWeight_;
         numberInfeasibilities_++;
+	assert (fabs(lowerValue)<1.0e100);
       }
     } else {
       // above
@@ -1731,6 +1739,7 @@ ClpNonLinearCost::setOneOutgoing(int iSequence, double & value)
       lowerValue=upperValue;
       upperValue=bound_[iSequence];
       numberInfeasibilities_--;
+      assert (fabs(lowerValue)<1.0e100);
     } else if (iWhere==CLP_ABOVE_UPPER) {
       upperValue=lowerValue;
       lowerValue=bound_[iSequence];
@@ -1750,6 +1759,7 @@ ClpNonLinearCost::setOneOutgoing(int iSequence, double & value)
         newWhere=CLP_BELOW_LOWER;
         costValue -= infeasibilityWeight_;
         numberInfeasibilities_++;
+	assert (fabs(lowerValue)<1.0e100);
       }
     } else {
       // above
@@ -1822,6 +1832,7 @@ ClpNonLinearCost::nearest(int iSequence, double solutionValue)
     if (iWhere==CLP_BELOW_LOWER) {
       lowerValue=upperValue;
       upperValue=bound_[iSequence];
+      assert (fabs(lowerValue)<1.0e100);
     } else if (iWhere==CLP_ABOVE_UPPER) {
       upperValue=lowerValue;
       lowerValue=bound_[iSequence];
@@ -1895,6 +1906,7 @@ ClpNonLinearCost::validate()
     if (iWhere==CLP_BELOW_LOWER) {
       lowerValue=upperValue;
       upperValue=bound_[iSequence];
+      assert (fabs(lowerValue)<1.0e100);
       costValue -= infeasibilityCost;
       assert (value<=lowerValue-primalTolerance);
       numberInfeasibilities++;

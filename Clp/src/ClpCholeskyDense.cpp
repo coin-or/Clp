@@ -72,6 +72,8 @@ ClpCholeskyBase * ClpCholeskyDense::clone() const
 // If not power of 2 then need to redo a bit
 #define BLOCK 16
 #define BLOCKSHIFT 4
+// Block unroll if power of 2 and at least 8
+#define BLOCKUNROLL
 
 #define BLOCKSQ ( BLOCK*BLOCK )
 #define BLOCKSQSHIFT ( BLOCKSHIFT+BLOCKSHIFT )
@@ -681,7 +683,7 @@ ClpCholeskyDense::triRec(longDouble * aTri, int nThis, longDouble * aUnder,
       (numberBlocks-jBlock-nb)*(numberBlocks-jBlock-nb-1))>>1;
     aother=aUnder+number_entries(i);
     recRec(aTri+number_entries(nb),nThis-nThis2,nLeft,nThis2,aUnder,aother,
-          diagonal,work,iBlock,kBlock,jBlock,numberBlocks);
+          work,kBlock,jBlock,numberBlocks);
     triRec(aTri+number_entries(nintri+nbelow),nThis-nThis2,aother,diagonal+nThis2,
 	   work+nThis2,nLeft,
       iBlock-nb,kBlock-nb,numberBlocks-nb);
@@ -718,85 +720,54 @@ ClpCholeskyDense::recTri(longDouble * aUnder, int nTri, int nDo,
       (numberBlocks-iBlock-nb)*(numberBlocks-iBlock-nb+1))>>1;
     aother=aTri+number_entries(nb);
     recRec(aUnder,nTri2,nTri-nTri2,nDo,aUnder+number_entries(nb),aother,
-	   diagonal,work,iBlock+nb,iBlock,jBlock,numberBlocks);
+	   work,iBlock,jBlock,numberBlocks);
     recTri(aUnder+number_entries(nb),nTri-nTri2,nDo,iBlock+nb,jBlock,
          aTri+number_entries(i),diagonal,work,numberBlocks);
   }
 }
-#ifdef CHOL_USING_BLAS
-// using simple blas interface
-extern "C" 
-{
-  /** BLAS Fortran subroutine DGEMM. */
-  void F77_FUNC(dgemm,DGEMM)(char* transa, char* transb,
-                             ipfint *m, ipfint *n, ipfint *k,
-                             const double *alpha, const double *a, ipfint *lda,
-                             const double *b, ipfint *ldb, const double *beta,
-                             double *c, ipfint *ldc,
-                             int transa_len, int transb_len);
-}
-#endif
 /* Non leaf recursive rectangle rectangle update,
    nUnder is number of rows in iBlock,
    nUnderK is number of rows in kBlock
 */
 void 
 ClpCholeskyDense::recRec(longDouble * above, int nUnder, int nUnderK,
-			 int nDo, longDouble * aUnder, longDouble *aOther, longDouble * diagonal, longDouble * work,
-	    int kBlock,int iBlock, int jBlock,
-	    int numberBlocks)
+			 int nDo, longDouble * aUnder, longDouble *aOther,
+			 longDouble * work,
+			 int iBlock, int jBlock,
+			 int numberBlocks)
 {
-#ifdef CHOL_USING_BLAS
-    recRecLeaf(above , aUnder ,  aOther, diagonal,work, nUnderK);
-void 
-ClpCholeskyDense::recRecLeaf(longDouble * above, 
-			     longDouble * aUnder, longDouble *aOther, longDouble * diagonal, longDouble * work,
-			     int nUnder)
-  aa = aOther-BLOCK;
-  for (j = 0; j < BLOCK; j ++) {
-    aa+=BLOCK;
-    for (i=0;i< nUnderK;i++) {
-      longDouble t00=aa[i+0*BLOCK];
-      for (k=0;k<BLOCK;k++) {
-	longDouble a00=aUnder[i+k*BLOCK]*work[k];
-	t00 -= a00 * above[j + k * BLOCK];
-      }
-      aa[i]=t00;
-    }
-  return;
-#endif
   if (nDo<=BLOCK&&nUnder<=BLOCK&&nUnderK<=BLOCK) {
     assert (nDo==BLOCK&&nUnder==BLOCK);
-    recRecLeaf(above , aUnder ,  aOther, diagonal,work, nUnderK);
+    recRecLeaf(above , aUnder ,  aOther, work, nUnderK);
   } else if (nDo<=nUnderK&&nUnder<=nUnderK) {
     int nb=number_blocks((nUnderK+1)>>1);
     int nUnder2=number_rows(nb);
-    recRec(above,nUnder,nUnder2,nDo,aUnder,aOther,diagonal,work,
-               kBlock,iBlock,jBlock,numberBlocks);
+    recRec(above,nUnder,nUnder2,nDo,aUnder,aOther,work,
+               iBlock,jBlock,numberBlocks);
     recRec(above,nUnder,nUnderK-nUnder2,nDo,aUnder+number_entries(nb),
-        aOther+number_entries(nb),diagonal,work,kBlock+nb,iBlock,jBlock,numberBlocks);
+        aOther+number_entries(nb),work,iBlock,jBlock,numberBlocks);
   } else if (nUnderK<=nDo&&nUnder<=nDo) {
     int nb=number_blocks((nDo+1)>>1);
     int nDo2=number_rows(nb);
     int i;
-    recRec(above,nUnder,nUnderK,nDo2,aUnder,aOther,diagonal,work,
-         kBlock,iBlock,jBlock,numberBlocks);
+    recRec(above,nUnder,nUnderK,nDo2,aUnder,aOther,work,
+         iBlock,jBlock,numberBlocks);
     i=((numberBlocks-jBlock)*(numberBlocks-jBlock-1)-
       (numberBlocks-jBlock-nb)*(numberBlocks-jBlock-nb-1))>>1;
     recRec(above+number_entries(i),nUnder,nUnderK,nDo-nDo2,
 	   aUnder+number_entries(i),
-	   aOther,diagonal+nDo2,work+nDo2,
-	   kBlock-nb,iBlock-nb,jBlock,numberBlocks-nb);
+	   aOther,work+nDo2,
+	   iBlock-nb,jBlock,numberBlocks-nb);
   } else {
     int nb=number_blocks((nUnder+1)>>1);
     int nUnder2=number_rows(nb);
     int i;
-    recRec(above,nUnder2,nUnderK,nDo,aUnder,aOther,diagonal,work,
-               kBlock,iBlock,jBlock,numberBlocks);
+    recRec(above,nUnder2,nUnderK,nDo,aUnder,aOther,work,
+               iBlock,jBlock,numberBlocks);
     i=((numberBlocks-iBlock)*(numberBlocks-iBlock-1)-
       (numberBlocks-iBlock-nb)*(numberBlocks-iBlock-nb-1))>>1;
     recRec(above+number_entries(nb),nUnder-nUnder2,nUnderK,nDo,aUnder,
-        aOther+number_entries(i),diagonal,work,kBlock,iBlock+nb,jBlock,numberBlocks);
+        aOther+number_entries(i),work,iBlock+nb,jBlock,numberBlocks);
   }
 }
 // Leaf recursive factor
@@ -897,7 +868,7 @@ ClpCholeskyDense::triRecLeaf(longDouble * aTri, longDouble * aUnder, longDouble 
 #endif
   int j;
   longDouble * aa;
-#if BLOCK==16
+#ifdef BLOCKUNROLL
   if (nUnder==BLOCK) {
     aa = aTri-2*BLOCK;
     for (j = 0; j < BLOCK; j +=2) {
@@ -946,7 +917,7 @@ ClpCholeskyDense::triRecLeaf(longDouble * aTri, longDouble * aUnder, longDouble 
         aUnder[i+j*BLOCK]=t00*temp1;
       }
     }
-#if BLOCK==16
+#ifdef BLOCKUNROLL
   }
 #endif
 }
@@ -967,7 +938,7 @@ void ClpCholeskyDense::recTriLeaf(longDouble * aUnder, longDouble * aTri,
   int i, j, k;
   longDouble t00;
   longDouble * aa;
-#if BLOCK==16
+#ifdef BLOCKUNROLL
   if (nUnder==BLOCK) {
     longDouble * aUnder2 = aUnder-2;
     aa = aTri-2*BLOCK;
@@ -1025,7 +996,7 @@ void ClpCholeskyDense::recTriLeaf(longDouble * aUnder, longDouble * aTri,
         aa[i]=t00;
       }
     }
-#if BLOCK==16
+#ifdef BLOCKUNROLL
   }
 #endif
 }
@@ -1034,8 +1005,10 @@ void ClpCholeskyDense::recTriLeaf(longDouble * aUnder, longDouble * aTri,
    nUnderK is number of rows in kBlock
 */
 void 
-ClpCholeskyDense::recRecLeaf(longDouble * above, 
-			     longDouble * aUnder, longDouble *aOther, longDouble * diagonal, longDouble * work,
+ClpCholeskyDense::recRecLeaf(const longDouble * COIN_RESTRICT above, 
+			     const longDouble * COIN_RESTRICT aUnder, 
+			     longDouble * COIN_RESTRICT aOther, 
+			     const longDouble * COIN_RESTRICT work,
 			     int nUnder)
 {
 #ifdef POS_DEBUG
@@ -1048,11 +1021,10 @@ ClpCholeskyDense::recRecLeaf(longDouble * above,
   //printf("%d %d %d\n",ia,iu,io);
   printf("recrecleaf above (%d,%d), under (%d,%d), other (%d,%d)\n",
 	 ira,ica,iru,icu,iro,ico);
-  assert (diagonal==diagonal_+ica*BLOCK);
 #endif
   int i, j, k;
   longDouble * aa;
-#if BLOCK==16
+#ifdef BLOCKUNROLL
   aa = aOther-4*BLOCK;
   if (nUnder==BLOCK) {
     //#define INTEL
@@ -1100,28 +1072,32 @@ ClpCholeskyDense::recRecLeaf(longDouble * above,
 	longDouble t13=aa[i+3+1*BLOCK];
 	longDouble t23=aa[i+3+2*BLOCK];
 	longDouble t33=aa[i+3+3*BLOCK];
+	const longDouble * COIN_RESTRICT aUnderNow = aUnder+i;
+	const longDouble * COIN_RESTRICT aboveNow = above+j;
 	for (k=0;k<BLOCK;k++) {
 	  longDouble multiplier = work[k];
-          longDouble a00=aUnder[i+0+k*BLOCK]*multiplier;
-          longDouble a01=aUnder[i+1+k*BLOCK]*multiplier;
-          longDouble a02=aUnder[i+2+k*BLOCK]*multiplier;
-          longDouble a03=aUnder[i+3+k*BLOCK]*multiplier;
-          t00 -= a00 * above[j + 0 + k * BLOCK];
-          t10 -= a00 * above[j + 1 + k * BLOCK];
-          t20 -= a00 * above[j + 2 + k * BLOCK];
-          t30 -= a00 * above[j + 3 + k * BLOCK];
-          t01 -= a01 * above[j + 0 + k * BLOCK];
-          t11 -= a01 * above[j + 1 + k * BLOCK];
-          t21 -= a01 * above[j + 2 + k * BLOCK];
-          t31 -= a01 * above[j + 3 + k * BLOCK];
-          t02 -= a02 * above[j + 0 + k * BLOCK];
-          t12 -= a02 * above[j + 1 + k * BLOCK];
-          t22 -= a02 * above[j + 2 + k * BLOCK];
-          t32 -= a02 * above[j + 3 + k * BLOCK];
-          t03 -= a03 * above[j + 0 + k * BLOCK];
-          t13 -= a03 * above[j + 1 + k * BLOCK];
-          t23 -= a03 * above[j + 2 + k * BLOCK];
-          t33 -= a03 * above[j + 3 + k * BLOCK];
+          longDouble a00=aUnderNow[0]*multiplier;
+          longDouble a01=aUnderNow[1]*multiplier;
+          longDouble a02=aUnderNow[2]*multiplier;
+          longDouble a03=aUnderNow[3]*multiplier;
+          t00 -= a00 * aboveNow[0];
+          t10 -= a00 * aboveNow[1];
+          t20 -= a00 * aboveNow[2];
+          t30 -= a00 * aboveNow[3];
+          t01 -= a01 * aboveNow[0];
+          t11 -= a01 * aboveNow[1];
+          t21 -= a01 * aboveNow[2];
+          t31 -= a01 * aboveNow[3];
+          t02 -= a02 * aboveNow[0];
+          t12 -= a02 * aboveNow[1];
+          t22 -= a02 * aboveNow[2];
+          t32 -= a02 * aboveNow[3];
+          t03 -= a03 * aboveNow[0];
+          t13 -= a03 * aboveNow[1];
+          t23 -= a03 * aboveNow[2];
+          t33 -= a03 * aboveNow[3];
+	  aUnderNow += BLOCK;
+	  aboveNow += BLOCK;
 	}
 	aa[i+0+0*BLOCK]=t00;
 	aa[i+0+1*BLOCK]=t10;
@@ -1156,18 +1132,22 @@ ClpCholeskyDense::recRecLeaf(longDouble * above,
 	longDouble t11=aa[i+1+1*BLOCK];
 	longDouble t21=aa[i+1+2*BLOCK];
 	longDouble t31=aa[i+1+3*BLOCK];
+	const longDouble * COIN_RESTRICT aUnderNow = aUnder+i;
+	const longDouble * COIN_RESTRICT aboveNow = above+j;
 	for (k=0;k<BLOCK;k++) {
 	  longDouble multiplier = work[k];
-          longDouble a00=aUnder[i+k*BLOCK]*multiplier;
-          longDouble a01=aUnder[i+1+k*BLOCK]*multiplier;
-          t00 -= a00 * above[j + 0 + k * BLOCK];
-          t10 -= a00 * above[j + 1 + k * BLOCK];
-          t20 -= a00 * above[j + 2 + k * BLOCK];
-          t30 -= a00 * above[j + 3 + k * BLOCK];
-          t01 -= a01 * above[j + 0 + k * BLOCK];
-          t11 -= a01 * above[j + 1 + k * BLOCK];
-          t21 -= a01 * above[j + 2 + k * BLOCK];
-          t31 -= a01 * above[j + 3 + k * BLOCK];
+          longDouble a00=aUnderNow[0]*multiplier;
+          longDouble a01=aUnderNow[1]*multiplier;
+          t00 -= a00 * aboveNow[0];
+          t10 -= a00 * aboveNow[1];
+          t20 -= a00 * aboveNow[2];
+          t30 -= a00 * aboveNow[3];
+          t01 -= a01 * aboveNow[0];
+          t11 -= a01 * aboveNow[1];
+          t21 -= a01 * aboveNow[2];
+          t31 -= a01 * aboveNow[3];
+	  aUnderNow += BLOCK;
+	  aboveNow += BLOCK;
 	}
 	aa[i+0*BLOCK]=t00;
 	aa[i+1*BLOCK]=t10;
@@ -1338,7 +1318,7 @@ void
 ClpCholeskyDense::solveF2(longDouble * a,int n,double * region, double * region2)
 {
   int j, k;
-#if BLOCK==16
+#ifdef BLOCKUNROLL
   if (n==BLOCK) {
     for (k = 0; k < BLOCK; k+=4) {
       longDouble t0 = region2[0];
@@ -1441,7 +1421,7 @@ ClpCholeskyDense::solveF2(longDouble * a,int n,double * region, double * region2
       }
       region2[k] = t00;
     }
-#if BLOCK==16
+#ifdef BLOCKUNROLL
   }
 #endif
 }
@@ -1465,7 +1445,7 @@ void
 ClpCholeskyDense::solveB2(longDouble * a,int n,double * region, double * region2)
 {
   int j, k;
-#if BLOCK==16
+#ifdef BLOCKUNROLL
   if (n==BLOCK) {
     for (j = 0; j < BLOCK; j +=4) {
       longDouble t0 = region[0];
@@ -1569,7 +1549,7 @@ ClpCholeskyDense::solveB2(longDouble * a,int n,double * region, double * region2
       }
       region[j] = t00;
     }
-#if BLOCK==16
+#ifdef BLOCKUNROLL
   }
 #endif
 }
@@ -1656,7 +1636,7 @@ void
 ClpCholeskyDense::solveF2Long(longDouble * a,int n,longDouble * region, longDouble * region2)
 {
   int j, k;
-#if BLOCK==16
+#ifdef BLOCKUNROLL
   if (n==BLOCK) {
     for (k = 0; k < BLOCK; k+=4) {
       longDouble t0 = region2[0];
@@ -1759,7 +1739,7 @@ ClpCholeskyDense::solveF2Long(longDouble * a,int n,longDouble * region, longDoub
       }
       region2[k] = t00;
     }
-#if BLOCK==16
+#ifdef BLOCKUNROLL
   }
 #endif
 }
@@ -1783,7 +1763,7 @@ void
 ClpCholeskyDense::solveB2Long(longDouble * a,int n,longDouble * region, longDouble * region2)
 {
   int j, k;
-#if BLOCK==16
+#ifdef BLOCKUNROLL
   if (n==BLOCK) {
     for (j = 0; j < BLOCK; j +=4) {
       longDouble t0 = region[0];
@@ -1887,7 +1867,7 @@ ClpCholeskyDense::solveB2Long(longDouble * a,int n,longDouble * region, longDoub
       }
       region[j] = t00;
     }
-#if BLOCK==16
+#ifdef BLOCKUNROLL
   }
 #endif
 }
@@ -1974,7 +1954,7 @@ void
 ClpCholeskyDense::solveF2LongWork(longDouble * a,int n,longWork * region, longWork * region2)
 {
   int j, k;
-#if BLOCK==16
+#ifdef BLOCKUNROLL
   if (n==BLOCK) {
     for (k = 0; k < BLOCK; k+=4) {
       longWork t0 = region2[0];
@@ -2077,7 +2057,7 @@ ClpCholeskyDense::solveF2LongWork(longDouble * a,int n,longWork * region, longWo
       }
       region2[k] = t00;
     }
-#if BLOCK==16
+#ifdef BLOCKUNROLL
   }
 #endif
 }
@@ -2101,7 +2081,7 @@ void
 ClpCholeskyDense::solveB2LongWork(longDouble * a,int n,longWork * region, longWork * region2)
 {
   int j, k;
-#if BLOCK==16
+#ifdef BLOCKUNROLL
   if (n==BLOCK) {
     for (j = 0; j < BLOCK; j +=4) {
       longWork t0 = region[0];
@@ -2205,7 +2185,7 @@ ClpCholeskyDense::solveB2LongWork(longDouble * a,int n,longWork * region, longWo
       }
       region[j] = t00;
     }
-#if BLOCK==16
+#ifdef BLOCKUNROLL
   }
 #endif
 }

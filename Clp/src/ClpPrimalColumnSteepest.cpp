@@ -241,8 +241,8 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
       int numberWanted=10;
       int numberColumns = model_->numberColumns();
       int numberHiddenRows = model_->clpMatrix()->hiddenRows();
-      double ratio = (double) (sizeFactorization_+numberHiddenRows)/
-	(double) (numberRows + 2*numberHiddenRows);
+      double ratio = static_cast<double> (sizeFactorization_+numberHiddenRows)/
+	static_cast<double> (numberRows + 2*numberHiddenRows);
       // Number of dual infeasibilities at last invert
       int numberDual = model_->numberDualInfeasibilities();
       int numberLook = CoinMin(numberDual,numberColumns/10);
@@ -380,9 +380,9 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
     // See if to switch
     int numberRows = model_->numberRows();
     // ratio is done on number of columns here
-    //double ratio = (double) sizeFactorization_/(double) numberColumns;
-    double ratio = (double) sizeFactorization_/(double) numberRows;
-    //double ratio = (double) sizeFactorization_/(double) model_->clpMatrix()->getNumElements();
+    //double ratio = static_cast<double> sizeFactorization_/static_cast<double> numberColumns;
+    double ratio = static_cast<double> (sizeFactorization_)/static_cast<double> (numberRows);
+    //double ratio = static_cast<double> sizeFactorization_/static_cast<double> model_->clpMatrix()->getNumElements();
     if (ratio<1.0) {
       numberWanted = CoinMax(100,number/200);
     } else if (ratio<2.0-1.0) {
@@ -405,7 +405,7 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
   }
   int numberRows = model_->numberRows();
   // ratio is done on number of rows here
-  double ratio = (double) sizeFactorization_/(double) numberRows;
+  double ratio = static_cast<double> (sizeFactorization_)/static_cast<double> (numberRows);
   if(switchType==4) {
     // Still in devex mode
     // Go to steepest if lot of iterations?
@@ -453,7 +453,7 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
 	if (ratio>number) {
 	  numberWanted=number+1;
 	} else {
-	  numberWanted = CoinMax(2000,(int) ratio);
+	  numberWanted = CoinMax(2000,static_cast<int> (ratio));
 	  numberWanted = CoinMax(numberWanted,numberColumns/10);
 	}
       }
@@ -516,8 +516,8 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
   int start[4];
   start[1]=number;
   start[2]=0;
-  double dstart = ((double) number) * model_->randomNumberGenerator()->randomDouble();
-  start[0]=(int) dstart;
+  double dstart = static_cast<double> (number) * model_->randomNumberGenerator()->randomDouble();
+  start[0]=static_cast<int> (dstart);
   start[3]=start[0];
   //double largestWeight=0.0;
   //double smallestWeight=1.0e100;
@@ -2405,9 +2405,9 @@ ClpPrimalColumnSteepest::pivotColumnOldMethod(CoinIndexedVector * updates,
     // See if to switch
     int numberRows = model_->numberRows();
     // ratio is done on number of columns here
-    //double ratio = (double) sizeFactorization_/(double) numberColumns;
-    double ratio = (double) sizeFactorization_/(double) numberRows;
-    //double ratio = (double) sizeFactorization_/(double) model_->clpMatrix()->getNumElements();
+    //double ratio = static_cast<double> sizeFactorization_/static_cast<double> numberColumns;
+    double ratio = static_cast<double> (sizeFactorization_)/static_cast<double> (numberRows);
+    //double ratio = static_cast<double> sizeFactorization_/static_cast<double> model_->clpMatrix()->getNumElements();
     if (ratio<0.1) {
       numberWanted = CoinMax(100,number/200);
     } else if (ratio<0.3) {
@@ -2433,7 +2433,7 @@ ClpPrimalColumnSteepest::pivotColumnOldMethod(CoinIndexedVector * updates,
     // Still in devex mode
     int numberRows = model_->numberRows();
     // ratio is done on number of rows here
-    double ratio = (double) sizeFactorization_/(double) numberRows;
+    double ratio = static_cast<double> (sizeFactorization_)/static_cast<double> (numberRows);
     // Go to steepest if lot of iterations?
     if (ratio<1.0) {
       numberWanted = CoinMax(2000,number/20);
@@ -2465,7 +2465,7 @@ ClpPrimalColumnSteepest::pivotColumnOldMethod(CoinIndexedVector * updates,
     } else if (switchType==2) {
       numberWanted = CoinMax(2000,number/8);
     } else {
-      double ratio = (double) sizeFactorization_/(double) model_->numberRows();
+      double ratio = static_cast<double> (sizeFactorization_)/static_cast<double> (model_->numberRows());
       if (ratio<1.0) {
 	numberWanted = CoinMax(2000,number/20);
       } else if (ratio<5.0) {
@@ -2479,7 +2479,7 @@ ClpPrimalColumnSteepest::pivotColumnOldMethod(CoinIndexedVector * updates,
 	if (ratio>number) {
 	  numberWanted=number+1;
 	} else {
-	  numberWanted = CoinMax(2000,(int) ratio);
+	  numberWanted = CoinMax(2000,static_cast<int> (ratio));
 	  numberWanted = CoinMax(numberWanted,numberColumns/10);
 	}
       }
@@ -2682,8 +2682,8 @@ ClpPrimalColumnSteepest::pivotColumnOldMethod(CoinIndexedVector * updates,
   int start[4];
   start[1]=number;
   start[2]=0;
-  double dstart = ((double) number) * model_->randomNumberGenerator()->randomDouble();
-  start[0]=(int) dstart;
+  double dstart = static_cast<double> (number) * model_->randomNumberGenerator()->randomDouble();
+  start[0]=static_cast<int> (dstart);
   start[3]=start[0];
   //double largestWeight=0.0;
   //double smallestWeight=1.0e100;
@@ -3604,8 +3604,8 @@ ClpPrimalColumnSteepest::partialPricing(CoinIndexedVector * updates,
   startR[1]=nSlacks;
   startR[2]=0;
   double randomR = model_->randomNumberGenerator()->randomDouble();
-  double dstart = ((double) nSlacks) * randomR;
-  startR[0]=(int) dstart;
+  double dstart = static_cast<double> (nSlacks) * randomR;
+  startR[0]=static_cast<int> (dstart);
   startR[3]=startR[0];
   double startC[4];
   startC[1]=1.0;
@@ -3735,14 +3735,14 @@ ClpPrimalColumnSteepest::partialPricing(CoinIndexedVector * updates,
       double start = startC[iPassC];
       // If we put this idea back then each function needs to update endFraction **
 #if 0
-      double dchunk = ((double) chunk)/((double) numberColumns);
+      double dchunk = (static_cast<double> chunk)/(static_cast<double> numberColumns);
       double end = CoinMin(startC[iPassC+1],start+dchunk);;
 #else
       double end=startC[iPassC+1]; // force end
 #endif
       model_->clpMatrix()->partialPricing(model_,start,end,bestSequence,numberWanted);
       numberWanted=model_->clpMatrix()->currentWanted();
-      numberLook -= (int) ((end-start)*numberColumns);
+      numberLook -= static_cast<int> ((end-start)*numberColumns);
       if (numberLook<0&&(10*(saveNumberWanted-numberWanted)>saveNumberWanted))
 	numberWanted=0; // give up
       if (saveSequence!=bestSequence) {

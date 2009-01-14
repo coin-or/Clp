@@ -526,7 +526,7 @@ ClpGubMatrix::transposeTimes(const ClpSimplex * model, double scalar,
   double * array = columnArray->denseVector();
   int numberInRowArray = rowArray->getNumElements();
   // maybe I need one in OsiSimplex
-  double zeroTolerance = model->factorization()->zeroTolerance();
+  double zeroTolerance = model->zeroTolerance();
   int numberRows = model->numberRows();
   ClpPackedMatrix* rowCopy =
     dynamic_cast< ClpPackedMatrix*>(model->rowCopy());
@@ -1347,7 +1347,8 @@ ClpGubMatrix::partialPricing(ClpSimplex * model, double startFraction, double en
   if (numberSets_) {
     // Do packed part before gub
     int numberColumns = matrix_->getNumCols();
-    double ratio = ((double) firstGub_)/((double) numberColumns);
+    double ratio = static_cast<double> (firstGub_)/
+      static_cast<double> (numberColumns);
     ClpPackedMatrix::partialPricing(model,startFraction*ratio,
 				    endFraction*ratio,bestSequence,numberWanted);
     if (numberWanted||minimumGoodReducedCosts_<-1) {
@@ -1373,8 +1374,8 @@ ClpGubMatrix::partialPricing(ClpSimplex * model, double startFraction, double en
 	bestDj=tolerance;
       int sequenceOut = model->sequenceOut();
       int saveSequence = bestSequence;
-      int startG = firstGub_+ (int) (startFraction* (lastGub_-firstGub_));
-      int endG = firstGub_+ (int) (endFraction* (lastGub_-firstGub_));
+      int startG = firstGub_+ static_cast<int> (startFraction* (lastGub_-firstGub_));
+      int endG = firstGub_+ static_cast<int> (endFraction* (lastGub_-firstGub_));
       endG = CoinMin(lastGub_,endG+1);
       // If nothing found yet can go all the way to end
       int endAll = endG;
@@ -1772,8 +1773,10 @@ ClpGubMatrix::partialPricing(ClpSimplex * model, double startFraction, double en
     }
     if (numberWanted) {
       // Do packed part after gub
-      double offset = ((double) lastGub_)/((double) numberColumns); 
-      double ratio = ((double) numberColumns)/((double) numberColumns)-offset;
+      double offset = static_cast<double> (lastGub_)/
+	static_cast<double> (numberColumns); 
+      double ratio = static_cast<double> (numberColumns)/
+	static_cast<double> (numberColumns)-offset;
       double start2 = offset + ratio*startFraction;
       double end2 = CoinMin(1.0,offset + ratio*endFraction+1.0e-6);
       ClpPackedMatrix::partialPricing(model,start2,end2,bestSequence,numberWanted);

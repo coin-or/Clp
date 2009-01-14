@@ -468,6 +468,8 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
   if (problemStatus_==1&&secondaryStatus_!=6) {
     infeasibilityCost_=0.0;
     createRim(1+4);
+    delete nonLinearCost_;
+    nonLinearCost_ = new ClpNonLinearCost(this);
     nonLinearCost_->checkInfeasibilities(0.0);
     sumPrimalInfeasibilities_=nonLinearCost_->sumInfeasibilities();
     numberPrimalInfeasibilities_= nonLinearCost_->numberInfeasibilities();
@@ -852,7 +854,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
   }
   // If in primal and small dj give up
   if ((specialOptions_&1024)!=0&&!numberPrimalInfeasibilities_&&numberDualInfeasibilities_) {
-    double average = sumDualInfeasibilities_/((double) numberDualInfeasibilities_);
+    double average = sumDualInfeasibilities_/(static_cast<double> (numberDualInfeasibilities_));
     if (numberIterations_>300&&average<1.0e-4) {
       numberDualInfeasibilities_ = 0;
       sumDualInfeasibilities_ = 0.0;
@@ -998,7 +1000,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
     if (n) {
       double most = 0.95;
       std::sort(dj_,dj_+n);
-      int which = (int) ((1.0-most)*((double) n));
+      int which = static_cast<int> ((1.0-most)*static_cast<double> (n));
       double take = -dj_[which]*infeasibilityCost_;
       //printf("XXXXZ inf cost %g take %g (range %g %g)\n",infeasibilityCost_,take,-dj_[0]*infeasibilityCost_,-dj_[n-1]*infeasibilityCost_);
       take = -dj_[0]*infeasibilityCost_;
@@ -1096,7 +1098,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
       relaxedToleranceP = relaxedToleranceP +  error;
       int ninfeas = nonLinearCost_->numberInfeasibilities();
       double sum = nonLinearCost_->sumInfeasibilities();
-      double average = sum/ ((double) ninfeas);
+      double average = sum/ static_cast<double> (ninfeas);
 #ifdef COIN_DEVELOP
       if (handler_->logLevel()>0)
 	printf("nonLinearCost says infeasible %d summing to %g\n",
@@ -1163,42 +1165,47 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	  nonLinearCost_->checkInfeasibilities(primalTolerance_);
 	  numberDualInfeasibilities_=1; // carry on
 	  problemStatus_=-1;
+	} else if (numberDualInfeasibilities_==0&&largestDualError_>1.0e-2) {
+	  goToDual=true;
+	  factorization_->pivotTolerance(CoinMax(0.9,factorization_->pivotTolerance()));
 	}
-	if (infeasibilityCost_>=1.0e20||
-	    numberDualInfeasibilities_==0) {
-	  // we are infeasible - use as ray
-	  delete [] ray_;
-	  ray_ = new double [numberRows_];
-	  CoinMemcpyN(dual_,numberRows_,ray_);
-	  // and get feasible duals
-	  infeasibilityCost_=0.0;
-	  createRim(4);
-	  nonLinearCost_->checkInfeasibilities(primalTolerance_);
-	  gutsOfSolution(NULL,NULL,ifValuesPass!=0);
-	  // so will exit
-	  infeasibilityCost_=1.0e30;
-	  // reset infeasibilities
-	  sumPrimalInfeasibilities_=nonLinearCost_->sumInfeasibilities();;
-	  numberPrimalInfeasibilities_=
-	    nonLinearCost_->numberInfeasibilities();
-	}
-	if (infeasibilityCost_<1.0e20) {
-	  infeasibilityCost_ *= 5.0;
-          // reset looping criterion
-	  progress->reset();
-	  changeMade_++; // say change made
-	  handler_->message(CLP_PRIMAL_WEIGHT,messages_)
-	    <<infeasibilityCost_
-	    <<CoinMessageEol;
-	  // put back original costs and then check
-	  createRim(4);
-	  nonLinearCost_->checkInfeasibilities(0.0);
-	  gutsOfSolution(NULL,NULL,ifValuesPass!=0);
-	  problemStatus_=-1; //continue
-	  goToDual=false;
-	} else {
-	  // say infeasible
-	  problemStatus_ = 1;
+	if (!goToDual) {
+	  if (infeasibilityCost_>=1.0e20||
+	      numberDualInfeasibilities_==0) {
+	    // we are infeasible - use as ray
+	    delete [] ray_;
+	    ray_ = new double [numberRows_];
+	    CoinMemcpyN(dual_,numberRows_,ray_);
+	    // and get feasible duals
+	    infeasibilityCost_=0.0;
+	    createRim(4);
+	    nonLinearCost_->checkInfeasibilities(primalTolerance_);
+	    gutsOfSolution(NULL,NULL,ifValuesPass!=0);
+	    // so will exit
+	    infeasibilityCost_=1.0e30;
+	    // reset infeasibilities
+	    sumPrimalInfeasibilities_=nonLinearCost_->sumInfeasibilities();;
+	    numberPrimalInfeasibilities_=
+	      nonLinearCost_->numberInfeasibilities();
+	  }
+	  if (infeasibilityCost_<1.0e20) {
+	    infeasibilityCost_ *= 5.0;
+	    // reset looping criterion
+	    progress->reset();
+	    changeMade_++; // say change made
+	    handler_->message(CLP_PRIMAL_WEIGHT,messages_)
+	      <<infeasibilityCost_
+	      <<CoinMessageEol;
+	    // put back original costs and then check
+	    createRim(4);
+	    nonLinearCost_->checkInfeasibilities(0.0);
+	    gutsOfSolution(NULL,NULL,ifValuesPass!=0);
+	    problemStatus_=-1; //continue
+	    goToDual=false;
+	  } else {
+	    // say infeasible
+	    problemStatus_ = 1;
+	  }
 	}
       }
     } else {
@@ -1219,7 +1226,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	  changeMade_++; // say change made
 	  if (numberTimesOptimal_==1) {
 	    // better to have small tolerance even if slower
-	    factorization_->zeroTolerance(1.0e-15);
+	    factorization_->zeroTolerance(CoinMin(factorization_->zeroTolerance(),1.0e-15));
 	  }
 	  lastCleaned=numberIterations_;
 	  if (primalTolerance_!=dblParam_[ClpPrimalTolerance])
@@ -1337,7 +1344,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	//bool unflagged = 
 	unflag();
 	if (sumDualInfeasibilities_<1.0e-3||
-            (sumDualInfeasibilities_/(double) numberDualInfeasibilities_)<1.0e-5||
+            (sumDualInfeasibilities_/static_cast<double> (numberDualInfeasibilities_))<1.0e-5||
             progress->lastIterationNumber(0)==numberIterations_) {
           if (!numberPrimalInfeasibilities_) {
             if (numberTimesOptimal_<4) {
@@ -1871,7 +1878,7 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
   double theta1 = CoinMax(theta_,1.0e-12);
   double theta2 = numberIterations_*nonLinearCost_->averageTheta();
   // Set average theta
-  nonLinearCost_->setAverageTheta((theta1+theta2)/((double) (numberIterations_+1)));
+  nonLinearCost_->setAverageTheta((theta1+theta2)/(static_cast<double> (numberIterations_+1)));
   //if (numberIterations_%1000==0)
   //printf("average theta is %g\n",nonLinearCost_->averageTheta());
 
@@ -2213,7 +2220,7 @@ ClpSimplexPrimal::perturb(int type)
       }
     }
     if (numberNonZero) 
-      perturbation /= (double) numberNonZero;
+      perturbation /= static_cast<double> (numberNonZero);
     else
       perturbation = 1.0e-1;
   } else if (perturbation_<100) {
@@ -2243,6 +2250,17 @@ ClpSimplexPrimal::perturb(int type)
   // Change so at least 1.0e-5 and no more than 0.1
   // For now just no more than 0.1
   // printf("Pert type %d perturbation %g, maxF %g\n",type,perturbation,maximumFraction);
+  // seems much slower???#define SAVE_PERT
+#ifdef SAVE_PERT
+  if (2*numberColumns_>maximumPerturbationSize_) {
+    delete [] perturbationArray_;
+    maximumPerturbationSize_ = 2* numberColumns_;
+    perturbationArray_ = new double [maximumPerturbationSize_];
+    for (int iColumn=0;iColumn<maximumPerturbationSize_;iColumn++) {
+      perturbationArray_[iColumn] = randomNumberGenerator_.randomDouble();
+    }
+  }
+#endif 
   if (type==1) {
     double tolerance = 100.0*primalTolerance_;
     //double multiplier = perturbation*maximumFraction;
@@ -2257,7 +2275,11 @@ ClpSimplexPrimal::perturb(int type)
 	  difference = CoinMin(difference,fabs(solutionValue)+1.0);
 	  double value = maximumFraction*(difference+1.0);
 	  value = CoinMin(value,0.1);
+#ifndef SAVE_PERT
 	  value *= randomNumberGenerator_.randomDouble();
+#else
+	  value *= perturbationArray_[2*iSequence];
+#endif
 	  if (solutionValue-lowerValue<=primalTolerance_) {
 	    lower_[iSequence] -= value;
 	  } else if (upperValue-solutionValue<=primalTolerance_) {
@@ -2299,6 +2321,11 @@ ClpSimplexPrimal::perturb(int type)
       if (upperValue>lowerValue+primalTolerance_) {
 	double value = perturbation*maximumFraction;
 	value = CoinMin(value,0.1);
+#ifndef SAVE_PERT
+	value *= randomNumberGenerator_.randomDouble();
+#else
+	value *= perturbationArray_[2*i+1];
+#endif
 	value *= randomNumberGenerator_.randomDouble();
 	if (savePerturbation!=50) {
 	  if (fabs(value)<=primalTolerance_)
@@ -2741,7 +2768,7 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
       } else if (updateStatus==2) {
 	// major error
 	// better to have small tolerance even if slower
-	factorization_->zeroTolerance(1.0e-15);
+	factorization_->zeroTolerance(CoinMin(factorization_->zeroTolerance(),1.0e-15));
 	int maxFactor = factorization_->maximumPivots();
 	if (maxFactor>10) {
 	  if (forceFactorization_<0)

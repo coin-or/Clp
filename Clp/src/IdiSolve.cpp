@@ -361,7 +361,7 @@ Idiot::IdiSolve(
       direction = - direction;
       // randomize. 
       // The cast is to avoid gcc compiler warning
-      int kcol = (int)(ncols*randomNumberGenerator->randomDouble());
+      int kcol = static_cast<int>(ncols*randomNumberGenerator->randomDouble());
       if (kcol==ncols)
 	kcol=ncols-1;
       if (direction>0) {
@@ -428,9 +428,7 @@ Idiot::IdiSolve(
 		  if (diff1*diff2>=0.0) {
 		    nsign++;
 		    if (fabs(diff1)<fabs(diff2)) {
-          // cast is to avoid gcc compiler
-          // warning: initialization to 'int' from 'double'
-		      int ii=(int)fabs(4.0*diff1/diff2);
+		      int ii=static_cast<int>(fabs(4.0*diff1/diff2));
 		      if (ii==4) ii=3;
 		      mgood[ii]++;
 		      ngood++;
@@ -1043,7 +1041,7 @@ Idiot::IdiSolve(
       for (i=DJTEST-1;i>0;i--) {
 	maxDj+=djSave[i];
       }
-      maxDj = maxDj/(double) DJTEST;
+      maxDj = maxDj/static_cast<double> (DJTEST);
       if (maxDj<djExit&&iter>50) {
 	//printf("Exiting on low dj %g after %d iterations\n",maxDj,iter);
 	break;

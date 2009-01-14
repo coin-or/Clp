@@ -366,7 +366,7 @@ ClpNetworkMatrix::transposeTimes(const ClpSimplex * model, double scalar,
   double * array = columnArray->denseVector();
   int numberInRowArray = rowArray->getNumElements();
   // maybe I need one in OsiSimplex
-  double zeroTolerance = model->factorization()->zeroTolerance();
+  double zeroTolerance = model->zeroTolerance();
   int numberRows = model->numberRows();
 #ifndef NO_RTTI
   ClpPlusMinusOneMatrix* rowCopy =
@@ -877,8 +877,8 @@ ClpNetworkMatrix::partialPricing(ClpSimplex * model, double startFraction, doubl
 {
   numberWanted=currentWanted_;
   int j;
-  int start = (int) (startFraction*numberColumns_);
-  int end = CoinMin((int) (endFraction*numberColumns_+1),numberColumns_);
+  int start = static_cast<int> (startFraction*numberColumns_);
+  int end = CoinMin(static_cast<int> (endFraction*numberColumns_+1),numberColumns_);
   double tolerance=model->currentDualTolerance();
   double * reducedCost = model->djRegion();
   const double * duals = model->dualRowSolution();

@@ -58,8 +58,9 @@ public:
       nUnderK is number of rows in kBlock
   */
   void recRec(longDouble * above, int nUnder, int nUnderK,
-	      int nDo, longDouble * aUnder, longDouble *aOther,longDouble * diagonal, longDouble * work,
-	      int kBlock,int iBlock, int jBlock,
+	      int nDo, longDouble * aUnder, longDouble *aOther,
+	      longDouble * work,
+	      int iBlock, int jBlock,
 	      int numberBlocks);
   /// Leaf recursive factor
   void factorLeaf(longDouble * a, int n, 
@@ -75,8 +76,10 @@ public:
       nUnder is number of rows in iBlock,
       nUnderK is number of rows in kBlock
   */
-  void recRecLeaf(longDouble * above, 
-		  longDouble * aUnder, longDouble *aOther, longDouble * diagonal, longDouble * work,
+  void recRecLeaf(const longDouble * COIN_RESTRICT above, 
+		  const longDouble * COIN_RESTRICT aUnder, 
+		  longDouble * COIN_RESTRICT aOther, 
+		  const longDouble * COIN_RESTRICT work,
 		  int nUnder);
   /// Forward part of solve
   void solveF1(longDouble * a,int n,double * region);

@@ -92,7 +92,7 @@ Idiot::cleanIteration(int iteration, int ordinaryStart, int ordinaryEnd,
     int * posSlack = whenUsed_+ncols;
     int * negSlack = posSlack+nrows;
     int * nextSlack = negSlack + nrows;
-    double * rowsol = (double *) (nextSlack+ncols);
+    double * rowsol = reinterpret_cast<double *> (nextSlack+ncols);
     memset(rowsol,0,nrows*sizeof(double));
 #ifdef OSI_IDIOT
     const CoinPackedMatrix * matrix = model_->getMatrixByCol();
@@ -336,12 +336,12 @@ Idiot::crash(int numberPass, CoinMessageHandler * handler,const CoinMessages *me
       nnzero++;
     }
   }
-  sum /= (double) (nnzero+1);
+  sum /= static_cast<double> (nnzero+1);
   if (maxIts_==5)
     maxIts_=2;
   if (numberPass<=0)
     // Cast to double to avoid VACPP complaining
-    majorIterations_=(int)(2+log10((double)(numberColumns+1)));
+    majorIterations_=static_cast<int>(2+log10(static_cast<double>(numberColumns+1)));
   else
     majorIterations_=numberPass;
   // If mu not changed then compute
@@ -362,7 +362,7 @@ Idiot::crash(int numberPass, CoinMessageHandler * handler,const CoinMessages *me
   //printf("setting mu to %g and doing %d passes\n",mu_,majorIterations_);
   solve2(handler,messages);
 #ifndef OSI_IDIOT
-  double averageInfeas = model_->sumPrimalInfeasibilities()/((double) model_->numberRows());
+  double averageInfeas = model_->sumPrimalInfeasibilities()/static_cast<double> (model_->numberRows());
   if ((averageInfeas<0.01&&(strategy_&512)!=0)||(strategy_&8192)!=0) 
     crossOver(16+1); 
   else
@@ -481,7 +481,7 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
     printf("%d slacks\n",numberSlacks);
 #endif
     oddSlacks=true;
-    int extra = (int) (nrows*sizeof(double)/sizeof(int));
+    int extra = static_cast<int> (nrows*sizeof(double)/sizeof(int));
     whenUsed_=new int[2*ncols+2*nrows+extra];
     int * posSlack = whenUsed_+ncols;
     int * negSlack = posSlack+nrows;
@@ -710,7 +710,7 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
   }
   d2*=2.0; /* for luck */
   
-  d2=d2/((double) (4*nrows+8000));
+  d2=d2/static_cast<double> (4*nrows+8000);
   d2*=0.5; /* halve with more flexible method */
   if (d2<5.0) d2=5.0;
   if (djExit==0.0) {
@@ -741,7 +741,7 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
     int * posSlack = whenUsed_+ncols;
     int * negSlack = posSlack+nrows;
     int * nextSlack = negSlack + nrows;
-    double * rowsol2 = (double *) (nextSlack+ncols);
+    double * rowsol2 = reinterpret_cast<double *> (nextSlack+ncols);
     for (i=0;i<nrows;i++)
       rowsol[i] += rowsol2[i];
   }
@@ -805,7 +805,7 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
       int * posSlack = whenUsed_+ncols;
       int * negSlack = posSlack+nrows;
       int * nextSlack = negSlack + nrows;
-      double * rowsol2 = (double *) (nextSlack+ncols);
+      double * rowsol2 = reinterpret_cast<double *> (nextSlack+ncols);
       for (i=0;i<nrows;i++)
 	rowsol[i] += rowsol2[i];
     }
@@ -1118,7 +1118,7 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
     dj[i]=djval;
   }
   if ((strategy_&1024)!=0) {
-    double ratio = ((double) ncols)/((double) nrows);
+    double ratio = static_cast<double> (ncols)/static_cast<double> (nrows);
     printf("col/row ratio %g infeas ratio %g\n",ratio,lastResult.infeas/firstInfeas);
     if (lastResult.infeas>0.01*firstInfeas*ratio) {
       strategy_ &= (~1024);
@@ -1213,7 +1213,7 @@ Idiot::crossOver(int mode)
       saveRowLower = new double [nrows];
       CoinMemcpyN(rowupper,nrows,saveRowUpper);
       CoinMemcpyN(rowlower,nrows,saveRowLower);
-      double averageInfeas = model_->sumPrimalInfeasibilities()/((double) model_->numberRows());
+      double averageInfeas = model_->sumPrimalInfeasibilities()/static_cast<double> (model_->numberRows());
       fixTolerance = CoinMax(fixTolerance,1.0e-5*averageInfeas);
     }
   }
@@ -1636,12 +1636,12 @@ Idiot::Idiot()
   dropEnoughWeighted_ =0.01;
   // adjust
   double nrows=10000.0;
-  int baseIts =(int) sqrt((double)nrows);
+  int baseIts =static_cast<int> (sqrt(static_cast<double>(nrows)));
   baseIts =baseIts/10;
   baseIts *= 10;
   maxIts2_ =200+baseIts+5;
   maxIts2_=100;
-  reasonableInfeas_ =((double) nrows)*0.05;
+  reasonableInfeas_ =static_cast<double> (nrows)*0.05;
   lightWeight_=0;
 }
 // Constructor from model
@@ -1676,12 +1676,12 @@ Idiot::Idiot(OsiSolverInterface &model)
     nrows=model_->getNumRows();
   else
     nrows=10000.0;
-  int baseIts =(int) sqrt((double)nrows);
+  int baseIts =static_cast<int> (sqrt(static_cast<double>(nrows)));
   baseIts =baseIts/10;
   baseIts *= 10;
   maxIts2_ =200+baseIts+5;
   maxIts2_=100;
-  reasonableInfeas_ =((double) nrows)*0.05;
+  reasonableInfeas_ =static_cast<double> (nrows)*0.05;
   lightWeight_=0;
 }
 // Copy constructor. 

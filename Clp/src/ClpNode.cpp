@@ -182,7 +182,7 @@ ClpNode::gutsOfConstructor (ClpSimplex * model, const ClpNodeStuff * stuff,
   int iColumn;
   sequence_=-1;
   double integerTolerance = stuff->integerTolerance_;
-  double mostAway=integerTolerance;
+  double mostAway=0.0;
   sumInfeasibilities_ = 0.0;
   numberInfeasibilities_ = 0;
   int nFix=0;
@@ -250,8 +250,8 @@ ClpNode::gutsOfConstructor (ClpSimplex * model, const ClpNodeStuff * stuff,
   for (iColumn=0;iColumn<numberColumns;iColumn++) {
     if (integerType[iColumn]) {
       double value = solution[iColumn];
-      value = CoinMax(value,(double) lower[iColumn]);
-      value = CoinMin(value,(double) upper[iColumn]);
+      value = CoinMax(value,static_cast<double> (lower[iColumn]));
+      value = CoinMin(value,static_cast<double> (upper[iColumn]));
       double nearest = floor(value+0.5);
       if (fabs(value-nearest)>integerTolerance) {
 	numberInfeasibilities_++;
@@ -294,8 +294,21 @@ ClpNode::gutsOfConstructor (ClpSimplex * model, const ClpNodeStuff * stuff,
 	  infeasibility = 0.1*CoinMax(upValue,downValue)+
 	    0.9*CoinMin(upValue,downValue) + integerTolerance;
 #elif PSEUDO==3
-	double upValue = (ceil(value)-value)*(upPseudo[iInteger]/(1.0+numberUp[iInteger]+numberUpInfeasible[iInteger]));
-	double downValue = (value-floor(value))*(downPseudo[iInteger]/(1.0+numberDown[iInteger]+numberDownInfeasible[iInteger]));
+	// Extra 100% for infeasible branches
+	double upValue = (ceil(value)-value)*(upPseudo[iInteger]/
+					      (1.0+numberUp[iInteger]));
+	if (numberUp[iInteger]) {
+	  double ratio = 1.0+static_cast<double>(numberUpInfeasible[iInteger])/
+	    static_cast<double>(numberUp[iInteger]);
+	  upValue *= ratio;
+	}
+	double downValue = (value-floor(value))*(downPseudo[iInteger]/
+						 (1.0+numberDown[iInteger]));
+	if (numberDown[iInteger]) {
+	  double ratio = 1.0+static_cast<double>(numberDownInfeasible[iInteger])/
+	    static_cast<double>(numberDown[iInteger]);
+	  downValue *= ratio;
+	}
 	double infeasibility;
 	if (depth>1000)
 	  infeasibility = CoinMax(upValue,downValue)+integerTolerance;
@@ -306,6 +319,7 @@ ClpNode::gutsOfConstructor (ClpSimplex * model, const ClpNodeStuff * stuff,
 #else
 	double infeasibility = fabs(value-nearest);
 #endif
+	assert (infeasibility>0.0);
 	if (infeasibility>mostAway) {
 	  mostAway=infeasibility;
 	  sequence_=iColumn;
@@ -372,8 +386,8 @@ ClpNode::gutsOfConstructor (ClpSimplex * model, const ClpNodeStuff * stuff,
     iInteger=0;
     for (iColumn=0;iColumn<numberColumns;iColumn++) {
       if (integerType[iColumn]) {
-	lower_[iInteger]=(int) lower[iColumn];
-	upper_[iInteger]=(int) upper[iColumn];
+	lower_[iInteger]=static_cast<int> (lower[iColumn]);
+	upper_[iInteger]=static_cast<int> (upper[iColumn]);
 	iInteger++;
       }
     }
@@ -508,9 +522,9 @@ ClpNode::applyNode(ClpSimplex * model, int doBoundsEtc )
     for (int iColumn=0;iColumn<numberColumns;iColumn++) {
       if (integerType[iColumn]) {
 	iInteger++;
-	if (lower_[iInteger]!=(int) lower[iColumn])
+	if (lower_[iInteger]!=static_cast<int> (lower[iColumn]))
 	  model->setColumnLower(iColumn,lower_[iInteger]);
-	if (upper_[iInteger]!=(int) upper[iColumn])
+	if (upper_[iInteger]!=static_cast<int> (upper[iColumn]))
 	  model->setColumnUpper(iColumn,upper_[iInteger]);
       }
     }
@@ -771,10 +785,10 @@ ClpNodeStuff::fillPseudoCosts(const double * down, const double * up,
   // scale
   for (int i=0;i<number;i++) {
     int n;
-    n = numberDown_[i]+numberDownInfeasible_[i];
+    n = numberDown_[i];
     if (n)
       downPseudo_[i] *= n;
-    n = numberUp_[i]+numberUpInfeasible_[i];
+    n = numberUp_[i];
     if (n)
       upPseudo_[i] *= n;
   }
@@ -783,16 +797,16 @@ ClpNodeStuff::fillPseudoCosts(const double * down, const double * up,
 void 
 ClpNodeStuff::update(int way,int sequence,double change,bool feasible)
 {
+  assert (numberDown_[sequence]>=numberDownInfeasible_[sequence]);
+  assert (numberUp_[sequence]>=numberUpInfeasible_[sequence]);
   if (way<0) {
-    if (feasible)
-      numberDown_[sequence]++;
-    else
+    numberDown_[sequence]++;
+    if (!feasible)
       numberDownInfeasible_[sequence]++;
     downPseudo_[sequence] += CoinMax(change,1.0e-12);
   } else {
-    if (feasible)
-      numberUp_[sequence]++;
-    else
+    numberUp_[sequence]++;
+    if (!feasible)
       numberUpInfeasible_[sequence]++;
     upPseudo_[sequence] += CoinMax(change,1.0e-12);
   }

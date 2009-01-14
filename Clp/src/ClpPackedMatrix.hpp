@@ -288,6 +288,9 @@ public:
   /// Flags
   inline int flags() const
   { return flags_;}
+  /// Sets flags_ correctly
+  inline void checkGaps()
+  { flags_ = (matrix_->hasGaps()) ? (flags_|2) : (flags_&(~2));} 
    //@}
 
 

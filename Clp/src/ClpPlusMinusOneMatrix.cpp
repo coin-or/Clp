@@ -502,7 +502,7 @@ ClpPlusMinusOneMatrix::transposeTimes(const ClpSimplex * model, double scalar,
   double * array = columnArray->denseVector();
   int numberInRowArray = rowArray->getNumElements();
   // maybe I need one in OsiSimplex
-  double zeroTolerance = model->factorization()->zeroTolerance();
+  double zeroTolerance = model->zeroTolerance();
   int numberRows = model->numberRows();
   bool packed = rowArray->packedMode();
 #ifndef NO_RTTI
@@ -602,7 +602,7 @@ ClpPlusMinusOneMatrix::transposeTimesByRow(const ClpSimplex * model, double scal
   double * array = columnArray->denseVector();
   int numberInRowArray = rowArray->getNumElements();
   // maybe I need one in OsiSimplex
-  double zeroTolerance = model->factorization()->zeroTolerance();
+  double zeroTolerance = model->zeroTolerance();
   const int * column = indices_;
   const CoinBigIndex * startPositive = startPositive_;
   const CoinBigIndex * startNegative = startNegative_;
@@ -617,7 +617,7 @@ ClpPlusMinusOneMatrix::transposeTimesByRow(const ClpSimplex * model, double scal
     if (packed) {
       numberNonZero=0;
       // and set up mark as char array
-      char * marked = (char *) (index+columnArray->capacity());
+      char * marked = reinterpret_cast<char *> (index+columnArray->capacity());
       double * array2 = y->denseVector();
 #ifdef CLP_DEBUG
       int numberColumns = model->numberColumns();
@@ -665,7 +665,7 @@ ClpPlusMinusOneMatrix::transposeTimesByRow(const ClpSimplex * model, double scal
     } else {      
       numberNonZero=0;
       // and set up mark as char array
-      char * marked = (char *) markVector;
+      char * marked = reinterpret_cast<char *> (markVector);
       for (i=0;i<numberOriginal;i++) {
 	int iColumn = index[i];
 	marked[iColumn]=0;
@@ -722,7 +722,7 @@ ClpPlusMinusOneMatrix::transposeTimesByRow(const ClpSimplex * model, double scal
 	pi1=pi[0];
       }
       // and set up mark as char array
-      char * marked = (char *) (index+columnArray->capacity());
+      char * marked = reinterpret_cast<char *> (index+columnArray->capacity());
       int * lookup = y->getIndices();
       double value = pi0*scalar;
       for (j=startPositive[iRow0];j<startNegative[iRow0];j++) {
@@ -1503,8 +1503,8 @@ ClpPlusMinusOneMatrix::partialPricing(ClpSimplex * model, double startFraction, 
 			      int & bestSequence, int & numberWanted)
 {
   numberWanted=currentWanted_;
-  int start = (int) (startFraction*numberColumns_);
-  int end = CoinMin((int) (endFraction*numberColumns_+1),numberColumns_);
+  int start = static_cast<int> (startFraction*numberColumns_);
+  int end = CoinMin(static_cast<int> (endFraction*numberColumns_+1),numberColumns_);
   CoinBigIndex j;
   double tolerance=model->currentDualTolerance();
   double * reducedCost = model->djRegion();
@@ -1688,7 +1688,7 @@ ClpPlusMinusOneMatrix::transposeTimes2(const ClpSimplex * model,
   int * index = dj1->getIndices();
   double * array = dj1->denseVector();
   int numberInRowArray = pi1->getNumElements();
-  double zeroTolerance = model->factorization()->zeroTolerance();
+  double zeroTolerance = model->zeroTolerance();
   bool packed = pi1->packedMode();
   // do by column
   int iColumn;

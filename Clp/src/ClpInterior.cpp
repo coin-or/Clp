@@ -983,7 +983,7 @@ ClpInterior::pdco( ClpPdcoBase * stuff, Options &options, Info &info, Outfo &out
 int 
 ClpInterior::primalDual()
 { 
-  return ((ClpPredictorCorrector *) this)->solve();
+  return (static_cast<ClpPredictorCorrector *> (this))->solve();
 }
 
 void 

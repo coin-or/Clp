@@ -1226,7 +1226,7 @@ ClpCholeskyBase::symbolic()
   double flops=0.0;
   for (iRow=0;iRow<numberRows_;iRow++) {
     int length = choleskyStart_[iRow+1]-choleskyStart_[iRow];
-    flops += ((double) length) * (length + 2.0);
+    flops += static_cast<double> (length) * (length + 2.0);
   }
   if (model_->messageHandler()->logLevel()>0) 
     std::cout<<sizeFactor<<" elements in sparse Cholesky, flop count "<<flops<<std::endl;
@@ -1276,7 +1276,7 @@ ClpCholeskyBase::symbolic()
 int
 ClpCholeskyBase::symbolic1(const CoinBigIndex * Astart, const int * Arow)
 {
-  int * marked = (int *) workInteger_;
+  int * marked = reinterpret_cast<int *> (workInteger_);
   int iRow;
   // may not need to do this here but makes debugging easier
   for (iRow=0;iRow<numberRows_;iRow++) {
@@ -1310,7 +1310,7 @@ void
 ClpCholeskyBase::symbolic2(const CoinBigIndex * Astart, const int * Arow)
 {
   int * mergeLink = clique_;
-  int * marker = (int *) workInteger_;
+  int * marker = reinterpret_cast<int *> (workInteger_);
   int iRow;
   for (iRow=0;iRow<numberRows_;iRow++) {
     marker[iRow]=-1;
@@ -1428,7 +1428,7 @@ ClpCholeskyBase::symbolic2(const CoinBigIndex * Astart, const int * Arow)
     CoinBigIndex left=sizeFactor_-choleskyStart_[iRow];
     double n=numberleft;
     double threshold = n*(n-1.0)*0.5*goDense_;
-    if ((double) left >= threshold) 
+    if ( left >= threshold) 
       break;
     numberleft--;
   }
@@ -2552,7 +2552,7 @@ ClpCholeskyBase::solve(double * region, int type)
     regionX=ClpCopyOfArray(region,numberRows_);
   }
 #endif
-  longWork * work = (longWork *) workDouble_;
+  longWork * work = reinterpret_cast<longWork *> (workDouble_);
   int i;
   CoinBigIndex j;
   for (i=0;i<numberRows_;i++) {

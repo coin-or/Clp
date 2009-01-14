@@ -676,8 +676,12 @@ ClpFactorization::factorize ( ClpSimplex * model,
     // take out part if quadratic
     if (model->algorithm()==2) {
       ClpObjective * obj = model->objectiveAsObject();
+#ifndef NDEBUG
       ClpQuadraticObjective * quadraticObj = (dynamic_cast< ClpQuadraticObjective*>(obj));
       assert (quadraticObj);
+#else
+      ClpQuadraticObjective * quadraticObj = (static_cast< ClpQuadraticObjective*>(obj));
+#endif
       CoinPackedMatrix * quadratic = quadraticObj->quadraticObjective();
       int numberXColumns = quadratic->getNumCols();
       assert (numberXColumns<numberColumns);
@@ -2063,8 +2067,12 @@ ClpFactorization::factorize ( ClpSimplex * model,
     // take out part if quadratic
     if (model->algorithm()==2) {
       ClpObjective * obj = model->objectiveAsObject();
+#ifndef NDEBUG
       ClpQuadraticObjective * quadraticObj = (dynamic_cast< ClpQuadraticObjective*>(obj));
       assert (quadraticObj);
+#else
+      ClpQuadraticObjective * quadraticObj = (static_cast< ClpQuadraticObjective*>(obj));
+#endif
       CoinPackedMatrix * quadratic = quadraticObj->quadraticObjective();
       int numberXColumns = quadratic->getNumCols();
       assert (numberXColumns<numberColumns);

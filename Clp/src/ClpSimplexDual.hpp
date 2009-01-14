@@ -294,7 +294,7 @@ public:
   void gutsOfDual(int ifValuesPass,double * & saveDuals,int initialStatus,
                   ClpDataSave & saveData);
   //int dual2(int ifValuesPass,int startFinishOptions=0);
-  void resetFakeBounds();
+  void resetFakeBounds(int type);
   
   //@}
 };

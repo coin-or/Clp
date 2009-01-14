@@ -1083,6 +1083,8 @@ public:
   double dualBound_;
   double infeasibilityCost_;
   double pivotTolerance_;
+  double zeroFactorizationTolerance_;
+  double zeroSimplexTolerance_;
   double acceptablePivot_;
   double objectiveScale_;
   int sparseThreshold_;

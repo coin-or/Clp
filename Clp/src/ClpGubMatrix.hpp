@@ -250,7 +250,7 @@ public:
   {
     int iStat = status_[sequence]&31;
     iStat = iStat>>3;
-    return (double) (iStat-1);
+    return static_cast<double> (iStat-1);
   }
   /// Starts
   inline int * start() const

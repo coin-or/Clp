@@ -269,6 +269,18 @@ public:
   { return numberBadTimes_;}
   inline void clearBadTimes()
   { numberBadTimes_=0;}
+  /// number of really bad times
+  inline int reallyBadTimes() const
+  { return numberReallyBadTimes_;}
+  inline void incrementReallyBadTimes()
+  { numberReallyBadTimes_++;}
+  /// number of times flagged
+  inline int timesFlagged() const
+  { return numberTimesFlagged_;}
+  inline void clearTimesFlagged()
+  { numberTimesFlagged_=0;}
+  inline void incrementTimesFlagged()
+  { numberTimesFlagged_++;}
 
   //@}
   /**@name Data  */
@@ -317,6 +329,10 @@ public:
   int numberTimes_;
   /// Number of times it looked like loop
   int numberBadTimes_;
+  /// Number really bad times
+  int numberReallyBadTimes_;
+  /// Number of times no iterations as flagged
+  int numberTimesFlagged_;
   /// If things are in an odd state
   int oddState_;
   //@}

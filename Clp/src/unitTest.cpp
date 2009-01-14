@@ -1,6 +1,10 @@
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
+
 #include "ClpConfig.h"
 #include "CoinPragma.hpp"
 #include <cassert>
@@ -14,6 +18,7 @@
 #include "CoinMpsIO.hpp"
 #include "CoinPackedMatrix.hpp"
 #include "CoinPackedVector.hpp"
+#include "CoinStructuredModel.hpp"
 #include "CoinHelperFunctions.hpp"
 #include "CoinTime.hpp"
 
@@ -39,9 +44,6 @@
 
 //#############################################################################
 
-#ifdef NDEBUG
-#undef NDEBUG
-#endif
 
 // Function Prototypes. Function definitions is in this file.
 void testingMessage( const char * const msg );
@@ -253,8 +255,10 @@ int mainTest (int argc, const char *argv[],int algorithm,
     // switch off some
     int iTest;
     for (iTest=0;iTest<NUMBER_ALGORITHMS;iTest++) {
+#ifndef NDEBUG
       int bottom = switchOffValue%10;
       assert (bottom==0||bottom==1);
+#endif
       switchOffValue/= 10;
       switchOff[iTest]=0;
     }
@@ -704,16 +708,22 @@ ClpSimplexUnitTest(const std::string & dirSample)
     }
     // intricate stuff does not work with scaling
     solution.scaling(0);
+#ifndef NDEBUG
     int returnCode = solution.factorize ( );
     assert(!returnCode);
+#else
+    solution.factorize ( );
+#endif
     const double * colsol = solution.primalColumnSolution();
     const double * rowsol = solution.primalRowSolution();
     solution.getSolution(rowsol,colsol);
+#ifndef NDEBUG
     double colsol1[5]={20.0/7.0,3.0,0.0,0.0,23.0/7.0};
     for (i=0;i<5;i++) {
       assert(eq(colsol[i],colsol1[i]));
     }
     // now feed in again without actually doing factorization
+#endif
     ClpFactorization factorization2 = *solution.factorization();
     ClpSimplex solution2 = solution;
     solution2.setFactorization(factorization2);
@@ -960,7 +970,7 @@ ClpSimplexUnitTest(const std::string & dirSample)
     
     //check that the tableau matches wolsey (B-1 A)
     // slacks in second part of binvA
-    double * binvA = (double*) malloc((n_cols+n_rows) * sizeof(double));
+    double * binvA = reinterpret_cast<double*> (malloc((n_cols+n_rows) * sizeof(double)));
     
     printf("B-1 A by row\n");
     int i;
@@ -1143,7 +1153,9 @@ ClpSimplexUnitTest(const std::string & dirSample)
       int numberRows = solution.numberRows();
       CoinPackedVector colsol(numberColumns,solution.primalColumnSolution());
       double * objective = solution.objective();
+#ifndef NDEBUG
       double objValue = colsol.dotProduct(objective);
+#endif
       CoinRelFltEq eq(1.0e-8);
       assert(eq(objValue,-4.6475314286e+02));
 #ifdef CLP_AUXILIARY_MODEL
@@ -1183,12 +1195,14 @@ ClpSimplexUnitTest(const std::string & dirSample)
       lower = solution.rowLower();
       upper = solution.rowUpper();
       sol = solution.primalRowSolution();
+#ifndef NDEBUG
       for (iRow=0;iRow<numberRows;iRow++) {
 	double value = result[iRow];
 	assert(eq(value,sol[iRow]));
 	assert(value<upper[iRow]+1.0e-8);
 	assert(value>lower[iRow]-1.0e-8);
       }
+#endif
       delete [] result;
       // test row objective
       double * rowObjective = solution.rowObjective();
@@ -1254,12 +1268,14 @@ ClpSimplexUnitTest(const std::string & dirSample)
       lower = solution.rowLower();
       upper = solution.rowUpper();
       sol = solution.primalRowSolution();
+#ifndef NDEBUG
       for (iRow=0;iRow<numberRows;iRow++) {
 	double value = result[iRow];
 	assert(eq(value,sol[iRow]));
 	assert(value<upper[iRow]+2.0e-8);
 	assert(value>lower[iRow]-2.0e-8);
       }
+#endif
       CoinFillN ( result, numberRows,0.0);
       solution.matrix()->times(ray, result);
       // there may be small differences (especially if scaled)
@@ -1839,7 +1855,9 @@ ClpSimplexUnitTest(const std::string & dirSample)
     model.setFactorizationFrequency(10);
     model.primal();
     printSol(model);
+#ifndef NDEBUG
     double objValue = model.getObjValue();
+#endif
     CoinRelFltEq eq(1.0e-4);
     assert(eq(objValue,-400.92));
     // and again for barrier
@@ -1879,5 +1897,115 @@ ClpSimplexUnitTest(const std::string & dirSample)
     objValue = solution.getObjValue();
     assert(eq(objValue,0.5));
   }
-#endif  
+#endif
+  // Test CoinStructuredModel
+  {
+
+    // Sub block
+    CoinModel sub;
+    {
+      // matrix data
+      //deliberate hiccup of 2 between 0 and 1
+      CoinBigIndex start[5]={0,4,7,8,9};
+      int length[5]={2,3,1,1,1};
+      int rows[11]={0,2,-1,-1,0,1,2,0,1,2};
+      double elements[11]={7.0,2.0,1.0e10,1.0e10,-2.0,1.0,-2.0,1,1,1};
+      CoinPackedMatrix matrix(true,3,5,8,elements,rows,start,length);
+      // by row
+      matrix.reverseOrdering();
+      const double * element = matrix.getElements();
+      const int * column = matrix.getIndices();
+      const CoinBigIndex * rowStart = matrix.getVectorStarts();
+      const int * rowLength = matrix.getVectorLengths();
+      
+      // rim data
+      //double objective[5]={-4.0,1.0,0.0,0.0,0.0};
+      double rowLower[3]={14.0,3.0,3.0};
+      double rowUpper[3]={14.0,3.0,3.0};
+      //double columnLower[5]={0.0,0.0,0.0,0.0,0.0};
+      //double columnUpper[5]={100.0,100.0,100.0,100.0,100.0};
+      
+      for (int i=0;i<3;i++) {
+	sub.addRow(rowLength[i],column+rowStart[i],
+		   element+rowStart[i],rowLower[i],rowUpper[i]);
+      }
+      //for (int i=0;i<5;i++) {
+      //sub.setColumnBounds(i,columnLower[i],columnUpper[i]);
+      //sub.setColumnObjective(i,objective[i]);
+      //}
+      sub.convertMatrix();
+    }
+    // Top
+    CoinModel top;
+    {
+      // matrix data
+      CoinBigIndex start[5]={0,2,4,6,8};
+      int length[5]={2,2,2,2,2};
+      int rows[10]={0,1,0,1,0,1,0,1,0,1};
+      double elements[10]={1,1,1,1,1,1,1,1,1,1};
+      CoinPackedMatrix matrix(true,2,5,8,elements,rows,start,length);
+      // by row
+      matrix.reverseOrdering();
+      const double * element = matrix.getElements();
+      const int * column = matrix.getIndices();
+      const CoinBigIndex * rowStart = matrix.getVectorStarts();
+      const int * rowLength = matrix.getVectorLengths();
+      
+      // rim data
+      double objective[5]={-4.0,1.0,0.0,0.0,0.0};
+      //double rowLower[3]={14.0,3.0,3.0};
+      //double rowUpper[3]={14.0,3.0,3.0};
+      double columnLower[5]={0.0,0.0,0.0,0.0,0.0};
+      double columnUpper[5]={100.0,100.0,100.0,100.0,100.0};
+      
+      for (int i=0;i<2;i++) {
+	top.addRow(rowLength[i],column+rowStart[i],
+		   element+rowStart[i],
+		   -COIN_DBL_MAX,COIN_DBL_MAX);
+      }
+      for (int i=0;i<5;i++) {
+	top.setColumnBounds(i,columnLower[i],columnUpper[i]);
+	top.setColumnObjective(i,objective[i]);
+      }
+      top.convertMatrix();
+    }
+    // Create a structured model
+    CoinStructuredModel structured;
+    int numberBlocks=5;
+    for (int i=0;i<numberBlocks;i++) {
+      std::string topName="row_master";
+      std::string blockName="block_";
+      blockName.append(1,'a'+i);
+      structured.addBlock(topName,blockName,top);
+      structured.addBlock(blockName,blockName,sub);
+    }
+    // Set rhs on first block
+    CoinModel * first = structured.coinBlock(0);
+    for (int i=0;i<2;i++) {
+      first->setRowLower(i,0.0);
+      first->setRowUpper(i,100.0);
+    }
+    // Refresh whats set
+    structured.refresh(0);
+    // Could perturb stuff, but for first go don't bother
+    ClpSimplex fullModel;
+    // There is no original stuff set - think
+    fullModel.loadProblem(structured,false);
+    fullModel.dual();
+    fullModel.dropNames();
+    fullModel.writeMps("test.mps");
+    // Make up very simple nested model - not realistic
+    // Create a structured model
+    CoinStructuredModel structured2;
+    numberBlocks=3;
+    for (int i=0;i<numberBlocks;i++) {
+      std::string blockName="block_";
+      blockName.append(1,'a'+i);
+      structured2.addBlock(blockName,blockName,structured);
+    }
+    fullModel.loadProblem(structured2,false);
+    fullModel.dual();
+    fullModel.dropNames();
+    fullModel.writeMps("test2.mps");
+  }
 }

@@ -162,9 +162,9 @@ ClpGubDynamicMatrix::ClpGubDynamicMatrix(ClpSimplex * model, int numberSets,
   originalMatrixA->setMatrixNull(); // so can be deleted safely
   // guess how much space needed
   double guess = originalMatrix->getNumElements()+10;
-  guess /= (double) numberColumns;
+  guess /= static_cast<double> (numberColumns);
   guess *= 2*numberGubColumns_;
-  numberElements_ = (int) CoinMin(guess,10000000.0);
+  numberElements_ = static_cast<int> (CoinMin(guess,10000000.0));
   numberElements_ = CoinMin(numberElements_,numberElements)+originalMatrix->getNumElements();
   matrix_ = originalMatrix;
   flags_ &= ~1;
@@ -294,8 +294,8 @@ ClpGubDynamicMatrix::partialPricing(ClpSimplex * model, double startFraction, do
     return;
   } else {
     // and do some proportion of full set
-    int startG2 = (int) (startFraction*numberSets_);
-    int endG2 = (int) (endFraction*numberSets_+0.1);
+    int startG2 = static_cast<int> (startFraction*numberSets_);
+    int endG2 = static_cast<int> (endFraction*numberSets_+0.1);
     endG2 = CoinMin(endG2,numberSets_);
     //printf("gub price - set start %d end %d\n",
     //   startG2,endG2);

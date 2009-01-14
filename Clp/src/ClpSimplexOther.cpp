@@ -745,7 +745,7 @@ ClpSimplexOther::readBasis(const char *fileName)
 ClpSimplex * 
 ClpSimplexOther::dualOfModel(double fractionRowRanges,double fractionColumnRanges) const
 {
-  const ClpSimplex * model2 = (const ClpSimplex *) this;
+  const ClpSimplex * model2 = static_cast<const ClpSimplex *> (this);
   bool changed=false;
   int numberChanged=0;
   int iColumn;
@@ -1762,7 +1762,7 @@ ClpSimplexOther::parametrics(double startingTheta, double & endingTheta,double r
     
     // save data
     ClpDataSave data = saveData();
-    int returnCode = ((ClpSimplexDual *) this)->startupSolve(0,NULL,0);
+    int returnCode = reinterpret_cast<ClpSimplexDual *> (this)->startupSolve(0,NULL,0);
     int iRow,iColumn;
     double * chgUpper=NULL;
     double * chgLower=NULL;
@@ -1856,7 +1856,7 @@ ClpSimplexOther::parametrics(double startingTheta, double & endingTheta,double r
         }
       }
       double * saveDuals=NULL;
-      ((ClpSimplexDual *) this)->gutsOfDual(0,saveDuals,-1,data);
+      reinterpret_cast<ClpSimplexDual *> (this)->gutsOfDual(0,saveDuals,-1,data);
       assert (!problemStatus_);
       // Now do parametrics
       printf("at starting theta of %g objective value is %g\n",startingTheta,
@@ -1887,7 +1887,7 @@ ClpSimplexOther::parametrics(double startingTheta, double & endingTheta,double r
         }
       }
     }
-    ((ClpSimplexDual *) this)->finishSolve(0);
+    reinterpret_cast<ClpSimplexDual *> (this)->finishSolve(0);
     
     delete dualRowPivot_;
     dualRowPivot_ = savePivot;
@@ -2052,7 +2052,7 @@ ClpSimplexOther::parametricsLoop(double startingTheta, double & endingTheta,doub
     // Do iterations
     if (canTryQuick) {
       double * saveDuals=NULL;
-      ((ClpSimplexDual *)this)->whileIterating(saveDuals,0);
+      reinterpret_cast<ClpSimplexDual *> (this)->whileIterating(saveDuals,0);
     } else {
       whileIterating(startingTheta,  endingTheta, reportIncrement,
                      changeLower, changeUpper,
@@ -2245,7 +2245,7 @@ ClpSimplexOther::whileIterating(double startingTheta, double & endingTheta,doubl
       abort();
     // choose row to go out
     // dualRow will go to virtual row pivot choice algorithm
-    ((ClpSimplexDual *) this)->dualRow(-1);
+    reinterpret_cast<ClpSimplexDual *> ( this)->dualRow(-1);
     if (pivotRow_>=0) {
       // we found a pivot row
       if (handler_->detail(CLP_SIMPLEX_PIVOTROW,messages_)<100) {
@@ -2278,7 +2278,7 @@ ClpSimplexOther::whileIterating(double startingTheta, double & endingTheta,doubl
       matrix_->transposeTimes(this,-1.0,
 			      rowArray_[0],rowArray_[3],columnArray_[0]);
       // do ratio test for normal iteration
-      bestPossiblePivot = ((ClpSimplexDual *) this)->dualColumn(rowArray_[0],
+      bestPossiblePivot = reinterpret_cast<ClpSimplexDual *> ( this)->dualColumn(rowArray_[0],
                                                                 columnArray_[0],columnArray_[1],
                                                                 rowArray_[3],acceptablePivot,NULL);
       if (sequenceIn_>=0) {
@@ -2354,7 +2354,7 @@ ClpSimplexOther::whileIterating(double startingTheta, double & endingTheta,doubl
 	int nswapped = 0;
 	//rowArray_[0]->cleanAndPackSafe(1.0e-60);
 	//columnArray_[0]->cleanAndPackSafe(1.0e-60);
-        nswapped = ((ClpSimplexDual *) this)->updateDualsInDual(rowArray_[0],columnArray_[0],
+        nswapped = reinterpret_cast<ClpSimplexDual *> ( this)->updateDualsInDual(rowArray_[0],columnArray_[0],
                                      rowArray_[2],theta_,
                                      objectiveChange,false);
 
@@ -2430,7 +2430,7 @@ ClpSimplexOther::whileIterating(double startingTheta, double & endingTheta,doubl
 	    // make sure dual feasible
 	    // look at all rows and columns
 	    double objectiveChange=0.0;
-	    ((ClpSimplexDual *) this)->updateDualsInDual(rowArray_[0],columnArray_[0],rowArray_[1],
+	    reinterpret_cast<ClpSimplexDual *> ( this)->updateDualsInDual(rowArray_[0],columnArray_[0],rowArray_[1],
 			      0.0,objectiveChange,true);
 	    continue;
 	  }
@@ -2455,7 +2455,7 @@ ClpSimplexOther::whileIterating(double startingTheta, double & endingTheta,doubl
 	  theta_=0.0;
 	}
 	// do actual flips
-	((ClpSimplexDual *) this)->flipBounds(rowArray_[0],columnArray_[0],theta_);
+	reinterpret_cast<ClpSimplexDual *> ( this)->flipBounds(rowArray_[0],columnArray_[0],theta_);
 	//rowArray_[1]->expand();
 	dualRowPivot_->updatePrimalSolution(rowArray_[1],
 					    movement,
@@ -2486,8 +2486,8 @@ ClpSimplexOther::whileIterating(double startingTheta, double & endingTheta,doubl
 	solution_[sequenceOut_]=valueOut_;
 	int whatNext=housekeeping(objectiveChange);
 	// and set bounds correctly
-	((ClpSimplexDual *) this)->originalBound(sequenceIn_); 
-	((ClpSimplexDual *) this)->changeBound(sequenceOut_);
+	reinterpret_cast<ClpSimplexDual *> ( this)->originalBound(sequenceIn_); 
+	reinterpret_cast<ClpSimplexDual *> ( this)->changeBound(sequenceOut_);
 	if (whatNext==1) {
 	  problemStatus_ =-2; // refactorize
 	} else if (whatNext==2) {
@@ -2988,7 +2988,7 @@ ClpSimplexOther::expandKnapsack(int knapsackRow, int & numberOutput,
       gap=1.0e8;
     assert (fabs(floor(gap+0.5)-gap)<1.0e-5);
     whichColumn[numJ]=iColumn;
-    bound[numJ]=(int) gap;
+    bound[numJ]=static_cast<int> (gap);
     if (elementByRow[j]>0.0) {
       flip[numJ]=1;
       offset[numJ]=lowerColumn;

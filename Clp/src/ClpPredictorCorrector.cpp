@@ -458,8 +458,10 @@ int ClpPredictorCorrector::solve ( )
 	}
 	return -1;
       } else {
+#ifndef NDEBUG
 	//int newDropped2=cholesky_->factorize(diagonal_,rowsDroppedThisTime);
 	//assert(!newDropped2);
+#endif
 	if (newDropped<0&&0) {
 	  //replace dropped
 	  newDropped=-newDropped;
@@ -522,9 +524,9 @@ int ClpPredictorCorrector::solve ( )
     } else {
       double phi;
       if (numberComplementarityPairs_<=5000) {
-	phi=pow((double) numberComplementarityPairs_,2.0);
+	phi=pow(static_cast<double> (numberComplementarityPairs_),2.0);
       } else {
-	phi=pow((double) numberComplementarityPairs_,1.5);
+	phi=pow(static_cast<double> (numberComplementarityPairs_),1.5);
 	if (phi<500.0*500.0) {
 	  phi=500.0*500.0;
 	} 
@@ -689,9 +691,9 @@ int ClpPredictorCorrector::solve ( )
       double mu1=mu_;
       double phi;
       if (numberComplementarityPairs_<=500) {
-	phi=pow((double) numberComplementarityPairs_,2.0);
+	phi=pow(static_cast<double> (numberComplementarityPairs_),2.0);
       } else {
-	phi=pow((double) numberComplementarityPairs_,1.5);
+	phi=pow(static_cast<double> (numberComplementarityPairs_),1.5);
 	if (phi<500.0*500.0) {
 	  phi=500.0*500.0;
 	} 
@@ -740,7 +742,7 @@ int ClpPredictorCorrector::solve ( )
     if (numberIterations_==0)
       smallestPrimalDualMu=mu_;
     if (!goodMove)
-      mu_=nextGap / ((double) 1.1*nextNumber);
+      mu_=nextGap / (static_cast<double> (nextNumber)*1.1);
     //if (quadraticObj)
     //goodMove=true; 
     //goodMove=false; //TEMP
@@ -1315,7 +1317,7 @@ double ClpPredictorCorrector::findStepLength( int phase)
 	} 
       } 
     }
-    double mu = (sumL+sumU)/((double) (nL+nU));
+    double mu = (sumL+sumU)/(static_cast<double> (nL+nU));
 
     double minBeta = 0.1*mu;
     double maxBeta = 10.0*mu;
@@ -1771,7 +1773,7 @@ int ClpPredictorCorrector::createSolution()
   if (!maximumObjective) {
     maximumObjective=1.0; // objective all zero
   } 
-  objectiveNorm2=sqrt(objectiveNorm2)/(double) numberTotal;
+  objectiveNorm2=sqrt(objectiveNorm2)/static_cast<double> (numberTotal);
   objectiveNorm_=maximumObjective;
   scaleFactor_=1.0;
   if (maximumObjective>0.0) {
@@ -3017,7 +3019,7 @@ int ClpPredictorCorrector::updateSolution(double nextGap)
   } else {
     qDiagonal=1.0e-8*mu_;
   } 
-  //double nextMu = nextGap/((double)(2*numberComplementarityPairs_));
+  //double nextMu = nextGap/(static_cast<double>(2*numberComplementarityPairs_));
   //printf("using gap of %g\n",nextMu);
   //qDiagonal *= 1.0e2;
   //largest allowable ratio of lowerSlack/zVec (etc)

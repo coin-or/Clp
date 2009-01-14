@@ -328,6 +328,11 @@ ClpCholeskyWssmp::order(ClpInterior * model)
     std::cout<<"wssmp returning error code of "<<integerParameters_[63]<<std::endl;
     return 1;
   }
+  // Modify gamma and delta if 0.0
+  if (!model->gamma()&&!model->delta()) {
+    model->setGamma(5.0e-5);
+    model->setDelta(5.0e-5);
+  }
   std::cout<<integerParameters_[23]<<" elements in sparse Cholesky"<<std::endl;
   if (!integerParameters_[23]) {
     for (int iRow=0;iRow<numberRows_;iRow++) {
@@ -560,8 +565,9 @@ ClpCholeskyWssmp::factorize(const double * diagonal, int * rowsDropped)
       //std::cout<<std::endl;
       newDropped=0;
       for (int i=0;i<numberRows_;i++) {
-	char dropped = rowsDropped[i];
+	char dropped = static_cast<char>(rowsDropped[i]);
 	rowsDropped_[i]=dropped;
+	rowsDropped_[i]=0;
         if (dropped==2) {
           //dropped this time
           rowsDropped[newDropped++]=i;
@@ -575,7 +581,7 @@ ClpCholeskyWssmp::factorize(const double * diagonal, int * rowsDropped)
     if (newDropped) {
       newDropped=0;
       for (int i=0;i<numberRows_;i++) {
-	char dropped = rowsDropped[i];
+	char dropped = static_cast<char>(rowsDropped[i]);
 	rowsDropped_[i]=dropped;
         if (dropped==2) {
           //dropped this time
@@ -605,7 +611,7 @@ ClpCholeskyWssmp::solve (double * region)
   int i0=0;
   integerParameters_[1]=4;
   integerParameters_[2]=4;
-#if 0
+#if 1
   integerParameters_[5]=3;
   doubleParameters_[5]=1.0e-10;
   integerParameters_[6]=6;

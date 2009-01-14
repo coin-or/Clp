@@ -40,8 +40,8 @@
 ClpSimplex::ClpSimplex (bool emptyMessages) :
 
   ClpModel(emptyMessages),
-  columnPrimalInfeasibility_(0.0),
-  rowPrimalInfeasibility_(0.0),
+  bestPossibleImprovement_(0.0),
+  zeroTolerance_(1.0e-13),
   columnPrimalSequence_(-2),
   rowPrimalSequence_(-2), 
   columnDualInfeasibility_(0.0),
@@ -123,6 +123,8 @@ ClpSimplex::ClpSimplex (bool emptyMessages) :
   incomingInfeasibility_(1.0),
   allowedInfeasibility_(10.0),
   automaticScale_(0),
+  maximumPerturbationSize_(0),
+  perturbationArray_(NULL),
   baseModel_(NULL)
 {
   int i;
@@ -154,8 +156,8 @@ ClpSimplex::ClpSimplex ( const ClpModel * rhs,
 			 bool dropNames, bool dropIntegers,bool fixOthers)
   : ClpModel(rhs, numberRows, whichRow,
 	     numberColumns,whichColumn,dropNames,dropIntegers),
-    columnPrimalInfeasibility_(0.0),
-    rowPrimalInfeasibility_(0.0),
+    bestPossibleImprovement_(0.0),
+    zeroTolerance_(1.0e-13),
     columnPrimalSequence_(-2),
     rowPrimalSequence_(-2), 
     columnDualInfeasibility_(0.0),
@@ -237,6 +239,8 @@ ClpSimplex::ClpSimplex ( const ClpModel * rhs,
   incomingInfeasibility_(1.0),
   allowedInfeasibility_(10.0),
     automaticScale_(0),
+  maximumPerturbationSize_(0),
+  perturbationArray_(NULL),
   baseModel_(NULL)
 {
   int i;
@@ -305,8 +309,8 @@ ClpSimplex::ClpSimplex ( const ClpSimplex * rhs,
 			 bool dropNames, bool dropIntegers,bool fixOthers)
   : ClpModel(rhs, numberRows, whichRow,
 	     numberColumns,whichColumn,dropNames,dropIntegers),
-    columnPrimalInfeasibility_(0.0),
-    rowPrimalInfeasibility_(0.0),
+    bestPossibleImprovement_(0.0),
+    zeroTolerance_(1.0e-13),
     columnPrimalSequence_(-2),
     rowPrimalSequence_(-2), 
     columnDualInfeasibility_(0.0),
@@ -388,6 +392,8 @@ ClpSimplex::ClpSimplex ( const ClpSimplex * rhs,
   incomingInfeasibility_(1.0),
   allowedInfeasibility_(10.0),
     automaticScale_(0),
+  maximumPerturbationSize_(0),
+  perturbationArray_(NULL),
   baseModel_(NULL)
 {
   int i;
@@ -451,7 +457,16 @@ ClpSimplex::ClpSimplex ( const ClpSimplex * rhs,
       setObjectiveValue(rhs->objectiveValue());
     }
     delete [] solution;
-  }  
+  }
+  if (rhs->maximumPerturbationSize_) {
+    maximumPerturbationSize_ = 2*numberColumns;
+    perturbationArray_ = new double [maximumPerturbationSize_];
+    for (i=0;i<numberColumns;i++) {
+      int iColumn = whichColumn[i];
+      perturbationArray_[2*i]=rhs->perturbationArray_[2*iColumn];
+      perturbationArray_[2*i+1]=rhs->perturbationArray_[2*iColumn+1];
+    }
+  }
 }
 // Puts solution back small model
 void 
@@ -648,6 +663,11 @@ ClpSimplex::gutsOfSolution ( double * givenDuals,
       <<largestPrimalError_
       <<largestDualError_
       <<CoinMessageEol;
+  if (largestPrimalError_>1.0e-1&&numberRows_>100&&numberIterations_) {
+      // Change factorization tolerance
+    if (factorization_->zeroTolerance()>1.0e-18)
+      factorization_->zeroTolerance(1.0e-18);
+  }
   // Switch off false values pass indicator
   if (!valuesPass&&algorithm_>0)
     firstFree_ = -1;
@@ -1530,10 +1550,12 @@ int ClpSimplex::internalFactorize ( int solveType)
 	    numberBasic++;
 	}
 	totalSlacks=numberBasic;
+#if 0
 	for (iColumn=0;iColumn<numberColumns_;iColumn++) {
 	  if (getColumnStatus(iColumn)==basic) 
 	    numberBasic++;
 	}
+#endif
       } else {
 	// all slack basis
 	int numberBasic=0;
@@ -1726,7 +1748,7 @@ ClpSimplex::housekeeping(double objectiveChange)
 	  double ** solution;
 	  int * numberUnsatisfied;
 	} clpSolution;
-	clpSolution * solution = (clpSolution *) trustedUserPointer_->data; 
+	clpSolution * solution = reinterpret_cast<clpSolution *> (trustedUserPointer_->data); 
 	if (solution->numberSolutions==solution->maximumSolutions) {
 	  int n =  solution->maximumSolutions;
 	  int n2 = (n*3)/2+10;
@@ -1808,7 +1830,7 @@ ClpSimplex::housekeeping(double objectiveChange)
     // reset
     progress_.startCheck();
     double random = randomNumberGenerator_.randomDouble();
-    int extra = (int) (9.999*random);
+    int extra = static_cast<int> (9.999*random);
     int off[]={1,1,1,1,2,2,2,3,3,4};
     if (factorization_->pivots()>cycle) {
       forceFactorization_=CoinMax(1,cycle-off[extra]);
@@ -1879,8 +1901,8 @@ ClpSimplex::housekeeping(double objectiveChange)
 // Copy constructor. 
 ClpSimplex::ClpSimplex(const ClpSimplex &rhs,int scalingMode) :
   ClpModel(rhs,scalingMode),
-  columnPrimalInfeasibility_(0.0),
-  rowPrimalInfeasibility_(0.0),
+  bestPossibleImprovement_(0.0),
+  zeroTolerance_(1.0e-13),
   columnPrimalSequence_(-2),
   rowPrimalSequence_(-2), 
   columnDualInfeasibility_(0.0),
@@ -1962,6 +1984,8 @@ ClpSimplex::ClpSimplex(const ClpSimplex &rhs,int scalingMode) :
   incomingInfeasibility_(1.0),
   allowedInfeasibility_(10.0),
   automaticScale_(0),
+  maximumPerturbationSize_(0),
+  perturbationArray_(NULL),
   baseModel_(NULL)
 {
   int i;
@@ -1986,8 +2010,8 @@ ClpSimplex::ClpSimplex(const ClpSimplex &rhs,int scalingMode) :
 // Copy constructor from model
 ClpSimplex::ClpSimplex(const ClpModel &rhs, int scalingMode) :
   ClpModel(rhs,scalingMode),
-  columnPrimalInfeasibility_(0.0),
-  rowPrimalInfeasibility_(0.0),
+  bestPossibleImprovement_(0.0),
+  zeroTolerance_(1.0e-13),
   columnPrimalSequence_(-2),
   rowPrimalSequence_(-2), 
   columnDualInfeasibility_(0.0),
@@ -2069,6 +2093,8 @@ ClpSimplex::ClpSimplex(const ClpModel &rhs, int scalingMode) :
   incomingInfeasibility_(1.0),
   allowedInfeasibility_(10.0),
   automaticScale_(0),
+  maximumPerturbationSize_(0),
+  perturbationArray_(NULL),
   baseModel_(NULL)
 {
   int i;
@@ -2192,9 +2218,9 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
   } else {
     factorization_=NULL;
   }
-  columnPrimalInfeasibility_ = rhs.columnPrimalInfeasibility_;
+  bestPossibleImprovement_ = rhs.bestPossibleImprovement_;
   columnPrimalSequence_ = rhs.columnPrimalSequence_;
-  rowPrimalInfeasibility_ = rhs.rowPrimalInfeasibility_;
+  zeroTolerance_ = rhs.zeroTolerance_;
   rowPrimalSequence_ = rhs.rowPrimalSequence_;
   columnDualInfeasibility_ = rhs.columnDualInfeasibility_;
   rowDualInfeasibility_ = rhs.rowDualInfeasibility_;
@@ -2249,6 +2275,14 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
   incomingInfeasibility_ = rhs.incomingInfeasibility_;
   allowedInfeasibility_ = rhs.allowedInfeasibility_;
   automaticScale_ = rhs.automaticScale_;
+  maximumPerturbationSize_ = rhs.maximumPerturbationSize_;
+  if (maximumPerturbationSize_&&maximumPerturbationSize_>=2*numberColumns_) {
+    perturbationArray_ = CoinCopyOfArray(rhs.perturbationArray_,
+					 maximumPerturbationSize_);
+  } else {
+    maximumPerturbationSize_ = 0;
+    perturbationArray_ = NULL;
+  }
   if (rhs.baseModel_) {
     baseModel_ = new ClpSimplex(*rhs.baseModel_);
   } else {
@@ -2330,6 +2364,9 @@ ClpSimplex::gutsOfDelete(int type)
     primalColumnPivot_ = NULL;
     delete baseModel_;
     baseModel_=NULL;
+    delete [] perturbationArray_;
+    perturbationArray_ = NULL;
+    maximumPerturbationSize_ = 0;
   } else {
     // delete any size information in methods
     if (type>1) {
@@ -2442,11 +2479,13 @@ ClpSimplex::checkDualSolution()
   int firstFreePrimal = -1;
   int firstFreeDual = -1;
   int numberSuperBasicWithDj=0;
-  double relaxedTolerance=dualTolerance_;
+  bestPossibleImprovement_=0.0;
   // we can't really trust infeasibilities if there is dual error
   double error = CoinMin(1.0e-2,largestDualError_);
   // allow tolerance at least slightly bigger than standard
-  relaxedTolerance = relaxedTolerance +  error;
+  double relaxedTolerance = dualTolerance_ +  error;
+  // allow bigger tolerance for possible improvement
+  double possTolerance = 5.0*relaxedTolerance;
   sumOfRelaxedDualInfeasibilities_ = 0.0;
 
   // Check any djs from dynamic rows
@@ -2480,6 +2519,8 @@ ClpSimplex::checkDualSolution()
 	    if (getColumnStatus(iColumn) != isFree) {
 	      numberDualInfeasibilitiesWithoutFree_ ++;
 	      sumDualInfeasibilities_ += value-dualTolerance_;
+	      if (value>possTolerance)
+		bestPossibleImprovement_ += distanceUp*value;
 	      if (value>relaxedTolerance) 
 		sumOfRelaxedDualInfeasibilities_ += value-relaxedTolerance;
 	      numberDualInfeasibilities_ ++;
@@ -2488,6 +2529,8 @@ ClpSimplex::checkDualSolution()
 	      value *= 0.01;
 	      if (value>dualTolerance_) {
 		sumDualInfeasibilities_ += value-dualTolerance_;
+		if (value>possTolerance)
+		  bestPossibleImprovement_=1.0e100;
 		if (value>relaxedTolerance) 
 		  sumOfRelaxedDualInfeasibilities_ += value-relaxedTolerance;
 		numberDualInfeasibilities_ ++;
@@ -2502,6 +2545,8 @@ ClpSimplex::checkDualSolution()
 	if (value>0.0) {
 	  if (value>dualTolerance_) {
 	    sumDualInfeasibilities_ += value-dualTolerance_;
+	    if (value>possTolerance)
+	      bestPossibleImprovement_+= value*distanceDown;
 	    if (value>relaxedTolerance) 
 	      sumOfRelaxedDualInfeasibilities_ += value-relaxedTolerance;
 	    numberDualInfeasibilities_ ++;
@@ -2536,6 +2581,8 @@ ClpSimplex::checkDualSolution()
 	  value = - value;
 	  if (value>dualTolerance_) {
 	    sumDualInfeasibilities_ += value-dualTolerance_;
+	    if (value>possTolerance)
+	      bestPossibleImprovement_+= value*distanceUp;
 	    if (value>relaxedTolerance) 
 	      sumOfRelaxedDualInfeasibilities_ += value-relaxedTolerance;
 	    numberDualInfeasibilities_ ++;
@@ -2550,6 +2597,8 @@ ClpSimplex::checkDualSolution()
 	if (value>0.0) {
 	  if (value>dualTolerance_) {
 	    sumDualInfeasibilities_ += value-dualTolerance_;
+	    if (value>possTolerance)
+	      bestPossibleImprovement_+= value*distanceDown;
 	    if (value>relaxedTolerance) 
 	      sumOfRelaxedDualInfeasibilities_ += value-relaxedTolerance;
 	    numberDualInfeasibilities_ ++;
@@ -2602,7 +2651,10 @@ ClpSimplex::checkBothSolutions()
   error = CoinMin(1.0e-2,largestDualError_);
   // allow tolerance at least slightly bigger than standard
   relaxedToleranceD = relaxedToleranceD +  error;
+  // allow bigger tolerance for possible improvement
+  double possTolerance = 5.0*relaxedToleranceD;
   sumOfRelaxedDualInfeasibilities_ = 0.0;
+  bestPossibleImprovement_=0.0;
 
   // Check any infeasibilities from dynamic rows
   matrix_->primalExpanded(this,2);
@@ -2644,6 +2696,8 @@ ClpSimplex::checkBothSolutions()
         if (distanceDown<primalTolerance) {
           if (distanceUp>primalTolerance&&djValue<-dualTolerance) {
 	    sumDualInfeasibilities_ -= djValue+dualTolerance;
+	    if (djValue<-possTolerance)
+	      bestPossibleImprovement_ -= distanceUp*djValue;
 	    if (djValue<-relaxedToleranceD) 
 	      sumOfRelaxedDualInfeasibilities_ -= djValue+relaxedToleranceD;
 	    numberDualInfeasibilities_ ++;
@@ -2651,6 +2705,8 @@ ClpSimplex::checkBothSolutions()
         } else if (distanceUp<primalTolerance) {
           if (djValue>dualTolerance) {
 	    sumDualInfeasibilities_ += djValue-dualTolerance;
+	    if (djValue>possTolerance)
+	      bestPossibleImprovement_ += distanceDown*djValue;
 	    if (djValue>relaxedToleranceD) 
 	      sumOfRelaxedDualInfeasibilities_ += djValue-relaxedToleranceD;
 	    numberDualInfeasibilities_ ++;
@@ -2662,6 +2718,7 @@ ClpSimplex::checkBothSolutions()
 	    if (getStatus(iSequence) == isFree) 
               numberDualInfeasibilitiesFree++;
             sumDualInfeasibilities_ += fabs(djValue)-dualTolerance;
+	    bestPossibleImprovement_=1.0e100;
             numberDualInfeasibilities_ ++;
             if (fabs(djValue)>relaxedToleranceD) {
               sumOfRelaxedDualInfeasibilities_ += value-relaxedToleranceD;
@@ -5545,7 +5602,75 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
 
       As far as I can see this is perfectly safe.
   */
-  int returnCode = ((ClpSimplexDual *) this)->dual(ifValuesPass, startFinishOptions);
+#ifdef COIN_DEVELOP
+#define EXPENSIVE
+#endif
+#ifdef EXPENSIVE
+  static int dualCount=0;
+  static int dualCheckCount=-1;
+  dualCount++;
+  if (dualCount==dualCheckCount) {
+    printf("Bad dual coming up\n");
+  }
+  ClpSimplex saveModel=*this;
+#endif
+  int returnCode = static_cast<ClpSimplexDual *> (this)->dual(ifValuesPass, startFinishOptions);
+#ifdef EXPENSIVE
+  if (problemStatus_==1) {
+    saveModel.allSlackBasis(true);
+    static_cast<ClpSimplexDual *> (&saveModel)->dual(0,0);
+    if (saveModel.problemStatus_==0) {
+      if (saveModel.objectiveValue()<dblParam_[0]-1.0e-8*(1.0+fabs(dblParam_[0]))) {
+	if (objectiveValue()<dblParam_[0]-1.0e-6*(1.0+fabs(dblParam_[0]))) {
+	  printf("BAD dual - objs %g ,savemodel %g cutoff %g at count %d\n",
+		 objectiveValue(),saveModel.objectiveValue(),dblParam_[0],dualCount);
+	  saveModel=*this;
+	  saveModel.setLogLevel(63);
+	  static_cast<ClpSimplexDual *> (&saveModel)->dual(0,0);
+	  // flatten solution and try again
+	  int iRow,iColumn;
+	  for (iRow=0;iRow<numberRows_;iRow++) {
+	    if (getRowStatus(iRow)!=basic) {
+	      setRowStatus(iRow,superBasic);
+	      // but put to bound if close
+	      if (fabs(rowActivity_[iRow]-rowLower_[iRow])
+		  <=primalTolerance_) {
+		rowActivity_[iRow]=rowLower_[iRow];
+		setRowStatus(iRow,atLowerBound);
+	      } else if (fabs(rowActivity_[iRow]-rowUpper_[iRow])
+			 <=primalTolerance_) {
+		rowActivity_[iRow]=rowUpper_[iRow];
+		setRowStatus(iRow,atUpperBound);
+	      }
+	    }
+	  }
+	  for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+	    if (getColumnStatus(iColumn)!=basic) {
+	      setColumnStatus(iColumn,superBasic);
+	      // but put to bound if close
+	      if (fabs(columnActivity_[iColumn]-columnLower_[iColumn])
+		  <=primalTolerance_) {
+		columnActivity_[iColumn]=columnLower_[iColumn];
+		setColumnStatus(iColumn,atLowerBound);
+	      } else if (fabs(columnActivity_[iColumn]
+			      -columnUpper_[iColumn])
+			 <=primalTolerance_) {
+		columnActivity_[iColumn]=columnUpper_[iColumn];
+		setColumnStatus(iColumn,atUpperBound);
+	      }
+	    }
+	  }
+	  static_cast<ClpSimplexPrimal *> (&saveModel)->primal(0,0);
+	} else {
+	  printf("bad? dual - objs %g ,savemodel %g cutoff %g at count %d\n",
+		 objectiveValue(),saveModel.objectiveValue(),dblParam_[0],dualCount);
+	}
+	if (dualCount>dualCheckCount&&dualCheckCount>=0)
+	  abort();
+      }
+    }
+  }
+#endif
   //int lastAlgorithm = -1;
   if ((specialOptions_&2048)!=0&&problemStatus_==10&&!numberPrimalInfeasibilities_
       &&sumDualInfeasibilities_<1000.0*dualTolerance_&&perturbation_>=100)
@@ -5580,9 +5705,9 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
       startFinishOptions |= 2;
     baseIteration_=numberIterations_;
     if ((matrix_->generalExpanded(this,4,dummy)&1)!=0)
-      returnCode = ((ClpSimplexPrimal *) this)->primal(1,startFinishOptions);
+      returnCode = static_cast<ClpSimplexPrimal *> (this)->primal(1,startFinishOptions);
     else
-      returnCode = ((ClpSimplexDual *) this)->dual(0,startFinishOptions);
+      returnCode = static_cast<ClpSimplexDual *> (this)->dual(0,startFinishOptions);
     baseIteration_=0;
     if (saveObjective != objective_) {
       // We changed objective to see if infeasible
@@ -5590,7 +5715,7 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
       objective_=saveObjective;
       if (!problemStatus_) {
 	// carry on
-	returnCode = ((ClpSimplexPrimal *) this)->primal(1,startFinishOptions);
+	returnCode = static_cast<ClpSimplexPrimal *> (this)->primal(1,startFinishOptions);
       }
     }
     if (problemStatus_==3&&numberIterations_<saveMax) {
@@ -5636,7 +5761,7 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
 					  2*numberRows_+numberColumns_,saveMax);
       perturbation_=savePerturbation;
       baseIteration_=numberIterations_;
-      returnCode = ((ClpSimplexPrimal *) this)->primal(0);
+      returnCode = static_cast<ClpSimplexPrimal *> (this)->primal(0);
       baseIteration_=0;
       computeObjectiveValue();
       // can't rely on djs either
@@ -5696,7 +5821,7 @@ int ClpSimplex::primal (int ifValuesPass , int startFinishOptions)
 
       As far as I can see this is perfectly safe.
   */
-  int returnCode = ((ClpSimplexPrimal *) this)->primal(ifValuesPass,startFinishOptions);
+  int returnCode = static_cast<ClpSimplexPrimal *> (this)->primal(ifValuesPass,startFinishOptions);
   //int lastAlgorithm=1;
   if (problemStatus_==10) {
     //lastAlgorithm=-1;
@@ -5713,10 +5838,10 @@ int ClpSimplex::primal (int ifValuesPass , int startFinishOptions)
       double saveBound = dualBound_;
       // upperOut_ has largest away from bound
       dualBound_=CoinMin(CoinMax(2.0*upperOut_,1.0e8),dualBound_);
-      returnCode = ((ClpSimplexDual *) this)->dual(0,startFinishOptions);
+      returnCode = static_cast<ClpSimplexDual *> (this)->dual(0,startFinishOptions);
       dualBound_=saveBound;
     } else {
-      returnCode = ((ClpSimplexPrimal *) this)->primal(0,startFinishOptions);
+      returnCode = static_cast<ClpSimplexPrimal *> (this)->primal(0,startFinishOptions);
     }
     baseIteration_=0;
     setInitialDenseFactorization(denseFactorization);
@@ -5750,7 +5875,7 @@ int ClpSimplex::dualRanging(int numberCheck,const int * which,
 {
   int savePerturbation = perturbation_;
   perturbation_=100;
-  int returnCode = ((ClpSimplexPrimal *) this)->primal(0,1);
+  int returnCode = static_cast<ClpSimplexPrimal *> (this)->primal(0,1);
   if (problemStatus_==10) {
     //printf("Cleaning up with dual\n");
     bool denseFactorization = initialDenseFactorization();
@@ -5763,10 +5888,10 @@ int ClpSimplex::dualRanging(int numberCheck,const int * which,
       double saveBound=dualBound_;
       if (upperOut_>0.0)
 	dualBound_=2.0*upperOut_;
-      returnCode = ((ClpSimplexDual *) this)->dual(0,1);
+      returnCode = static_cast<ClpSimplexDual *> (this)->dual(0,1);
       dualBound_=saveBound;
     } else {
-      returnCode = ((ClpSimplexPrimal *) this)->primal(0,1);
+      returnCode = static_cast<ClpSimplexPrimal *> (this)->primal(0,1);
     }
     setInitialDenseFactorization(denseFactorization);
     if (problemStatus_==10) 
@@ -5777,7 +5902,7 @@ int ClpSimplex::dualRanging(int numberCheck,const int * which,
     finish(); // get rid of arrays
     return 1; // odd status
   }
-  ((ClpSimplexOther *) this)->dualRanging(numberCheck,which,
+  static_cast<ClpSimplexOther *> (this)->dualRanging(numberCheck,which,
 					  costIncrease,sequenceIncrease,
 					  costDecrease,sequenceDecrease,
 					  valueIncrease, valueDecrease);
@@ -5800,7 +5925,7 @@ int ClpSimplex::primalRanging(int numberCheck,const int * which,
 {
   int savePerturbation = perturbation_;
   perturbation_=100;
-  int returnCode = ((ClpSimplexPrimal *) this)->primal(0,1);
+  int returnCode = static_cast<ClpSimplexPrimal *> (this)->primal(0,1);
   if (problemStatus_==10) {
     //printf("Cleaning up with dual\n");
     bool denseFactorization = initialDenseFactorization();
@@ -5813,10 +5938,10 @@ int ClpSimplex::primalRanging(int numberCheck,const int * which,
       double saveBound=dualBound_;
       if (upperOut_>0.0)
 	dualBound_=2.0*upperOut_;
-      returnCode = ((ClpSimplexDual *) this)->dual(0,1);
+      returnCode = static_cast<ClpSimplexDual *> (this)->dual(0,1);
       dualBound_=saveBound;
     } else {
-      returnCode = ((ClpSimplexPrimal *) this)->primal(0,1);
+      returnCode = static_cast<ClpSimplexPrimal *> (this)->primal(0,1);
     }
     setInitialDenseFactorization(denseFactorization);
     if (problemStatus_==10) 
@@ -5827,7 +5952,7 @@ int ClpSimplex::primalRanging(int numberCheck,const int * which,
     finish(); // get rid of arrays
     return 1; // odd status
   }
-  ((ClpSimplexOther *) this)->primalRanging(numberCheck,which,
+  static_cast<ClpSimplexOther *> (this)->primalRanging(numberCheck,which,
 					  valueIncrease,sequenceIncrease,
 					  valueDecrease,sequenceDecrease);
   finish(); // get rid of arrays
@@ -5852,14 +5977,14 @@ ClpSimplex::writeBasis(const char *filename,
 			    bool writeValues,
 			    int formatType) const
 {
-  return ((const ClpSimplexOther *) this)->writeBasis(filename,writeValues,
+  return static_cast<const ClpSimplexOther *> (this)->writeBasis(filename,writeValues,
 					 formatType);
 }
 // Read a basis from the given filename
 int 
 ClpSimplex::readBasis(const char *filename)
 {
-  return ((ClpSimplexOther *) this)->readBasis(filename);
+  return static_cast<ClpSimplexOther *> (this)->readBasis(filename);
 }
 #include "ClpSimplexNonlinear.hpp"
 /* Solves nonlinear problem using SLP - may be used as crash
@@ -5868,7 +5993,7 @@ ClpSimplex::readBasis(const char *filename)
 int 
 ClpSimplex::nonlinearSLP(int numberPasses, double deltaTolerance)
 {
-  return ((ClpSimplexNonlinear *) this)->primalSLP(numberPasses,deltaTolerance);
+  return static_cast<ClpSimplexNonlinear *> (this)->primalSLP(numberPasses,deltaTolerance);
 }
 /* Solves problem with nonlinear constraints using SLP - may be used as crash
    for other algorithms when number of iterations small.
@@ -5879,7 +6004,7 @@ int
 ClpSimplex::nonlinearSLP(int numberConstraints, ClpConstraint ** constraints,
 		   int numberPasses,double deltaTolerance)
 {
-  return ((ClpSimplexNonlinear *) this)->primalSLP(numberConstraints,constraints,numberPasses,deltaTolerance);
+  return static_cast<ClpSimplexNonlinear *> (this)->primalSLP(numberConstraints,constraints,numberPasses,deltaTolerance);
 }
 // Solves non-linear using reduced gradient
 int ClpSimplex::reducedGradient(int phase)
@@ -5901,7 +6026,7 @@ int ClpSimplex::reducedGradient(int phase)
       return 0;
   }
   // Now enter method
-  int returnCode = ((ClpSimplexNonlinear *) this)->primal();
+  int returnCode = static_cast<ClpSimplexNonlinear *> (this)->primal();
   return returnCode;
 }
 #include "ClpPredictorCorrector.hpp"
@@ -6058,7 +6183,7 @@ ClpSimplex::barrier(bool crossover)
       delete [] sort;
       delete [] dsort;
     }
-    if (gap<1.0e-3*((double) (numberRows+numberColumns))) {
+    if (gap<1.0e-3*(static_cast<double> (numberRows+numberColumns))) {
       int numberRows = model2->numberRows();
       int numberColumns = model2->numberColumns();
       // just primal values pass
@@ -6181,7 +6306,7 @@ int ClpSimplex::strongBranching(int numberVariables,const int * variables,
 				bool alwaysFinish,
 				int startFinishOptions)
 {
-  return ((ClpSimplexDual *) this)->strongBranching(numberVariables,variables,
+  return static_cast<ClpSimplexDual *> (this)->strongBranching(numberVariables,variables,
 						    newLower,  newUpper,outputSolution,
 						    outputStatus, outputIterations,
 						    stopOnFirstInfeasible,
@@ -6217,6 +6342,8 @@ ClpSimplex::borrowModel(ClpSimplex & otherModel)
   perturbation_ = otherModel.perturbation_;
   moreSpecialOptions_ = otherModel.moreSpecialOptions_;
   automaticScale_ = otherModel.automaticScale_;
+  maximumPerturbationSize_ = otherModel.maximumPerturbationSize_;
+  perturbationArray_ = otherModel.perturbationArray_;
 }
 /// Saves scalars for ClpSimplex
 typedef struct {
@@ -6378,9 +6505,9 @@ ClpSimplex::saveModel(const char * fileName)
       char * array = 
 	new char[CoinMax(numberRows_,numberColumns_)*(lengthNames_+1)];
       char * put = array;
-      CoinAssert (numberRows_ == (int) rowNames_.size());
+      CoinAssert (numberRows_ == static_cast<int> (rowNames_.size()));
       for (i=0;i<numberRows_;i++) {
-	assert((int)rowNames_[i].size()<=lengthNames_);
+	assert(static_cast<int>(rowNames_[i].size())<=lengthNames_);
 	strcpy(put,rowNames_[i].c_str());
 	put += lengthNames_+1;
       }
@@ -6388,9 +6515,9 @@ ClpSimplex::saveModel(const char * fileName)
       if (numberWritten!=numberRows_)
 	return 1;
       put=array;
-      CoinAssert (numberColumns_ == (int) columnNames_.size());
+      CoinAssert (numberColumns_ == static_cast<int> (columnNames_.size()));
       for (i=0;i<numberColumns_;i++) {
-	assert((int) columnNames_[i].size()<=lengthNames_);
+	assert(static_cast<int> (columnNames_[i].size())<=lengthNames_);
 	strcpy(put,columnNames_[i].c_str());
 	put += lengthNames_+1;
       }
@@ -7121,7 +7248,7 @@ ClpSimplex::readLp(const char *filename, const double epsilon )
   for (iRow=0;iRow<numberRows_;iRow++) {
     const char * name = m.rowName(iRow);
     if (name) {
-      maxLength = CoinMax(maxLength,(unsigned int) strlen(name));
+      maxLength = CoinMax(maxLength,static_cast<unsigned int> (strlen(name)));
       rowNames_.push_back(name);
     } else {
       rowNames_.push_back("");
@@ -7133,13 +7260,13 @@ ClpSimplex::readLp(const char *filename, const double epsilon )
   for (iColumn=0;iColumn<numberColumns_;iColumn++) {
     const char * name = m.columnName(iColumn);
     if (name) {
-      maxLength = CoinMax(maxLength,(unsigned int) strlen(name));
+      maxLength = CoinMax(maxLength,static_cast<unsigned int> (strlen(name)));
       columnNames_.push_back(name);
     } else {
       columnNames_.push_back("");
     }
   }
-  lengthNames_=(int) maxLength;
+  lengthNames_=static_cast<int> (maxLength);
   
   return 0;
 }
@@ -8045,7 +8172,7 @@ int ClpSimplex::primalPivotResult()
   upperIn_=upper_[sequenceIn_];
   dualIn_=dj_[sequenceIn_];
 
-  int returnCode = ((ClpSimplexPrimal *) this)->pivotResult();
+  int returnCode = static_cast<ClpSimplexPrimal *> (this)->pivotResult();
   if (returnCode<0&&returnCode>-4) {
     return 0;
   } else {
@@ -8064,7 +8191,7 @@ int ClpSimplex::primalPivotResult()
 int 
 ClpSimplex::dualPivotResult()
 {
-  return ((ClpSimplexDual *) this)->pivotResult();
+  return static_cast<ClpSimplexDual *> (this)->pivotResult();
 }
 // Factorization frequency
 int 
@@ -8176,9 +8303,9 @@ ClpSimplex::startup(int ifValuesPass, int startFinishOptions)
       
       if (perturbation_<100) {
 	if (algorithm_>0&&(objective_->type()<2||!objective_->activated())) {
-	  ((ClpSimplexPrimal *) this)->perturb(0);
+	  static_cast<ClpSimplexPrimal *> (this)->perturb(0);
 	} else if (algorithm_<0) {
-	((ClpSimplexDual *) this)->perturb();
+	  static_cast<ClpSimplexDual *> (this)->perturb();
 	}
       }
     }
@@ -8329,6 +8456,8 @@ ClpSimplex::saveData()
   saved.infeasibilityCost_ = infeasibilityCost_;
   saved.sparseThreshold_ = factorization_->sparseThreshold();
   saved.pivotTolerance_ = factorization_->pivotTolerance();
+  saved.zeroFactorizationTolerance_ = factorization_->zeroTolerance();
+  saved.zeroSimplexTolerance_=zeroTolerance_;
   saved.perturbation_ = perturbation_;
   saved.forceFactorization_=forceFactorization_;
   saved.acceptablePivot_ = acceptablePivot_;
@@ -8343,6 +8472,8 @@ ClpSimplex::restoreData(ClpDataSave saved)
 {
   //factorization_->sparseThreshold(saved.sparseThreshold_);
   factorization_->pivotTolerance(saved.pivotTolerance_);
+  factorization_->zeroTolerance(saved.zeroFactorizationTolerance_); 
+  zeroTolerance_ = saved.zeroSimplexTolerance_;
   perturbation_ = saved.perturbation_;
   infeasibilityCost_ = saved.infeasibilityCost_;
   dualBound_ = saved.dualBound_;
@@ -8419,9 +8550,9 @@ void
 ClpSimplex::returnModel(ClpSimplex & otherModel)
 {
   ClpModel::returnModel(otherModel);
-  otherModel.columnPrimalInfeasibility_ = columnPrimalInfeasibility_;
+  otherModel.bestPossibleImprovement_ = bestPossibleImprovement_;
   otherModel.columnPrimalSequence_ = columnPrimalSequence_;
-  otherModel.rowPrimalInfeasibility_ = rowPrimalInfeasibility_;
+  otherModel.zeroTolerance_ = zeroTolerance_;
   otherModel.rowPrimalSequence_ = rowPrimalSequence_;
   otherModel.columnDualInfeasibility_ = columnDualInfeasibility_;
   otherModel.moreSpecialOptions_ = moreSpecialOptions_;
@@ -8457,6 +8588,10 @@ ClpSimplex::returnModel(ClpSimplex & otherModel)
   otherModel.disasterArea_ = NULL;
   otherModel.sumOfRelaxedDualInfeasibilities_ = sumOfRelaxedDualInfeasibilities_;
   otherModel.sumOfRelaxedPrimalInfeasibilities_ = sumOfRelaxedPrimalInfeasibilities_;
+  if (perturbationArray_ != otherModel.perturbationArray_) 
+    delete [] perturbationArray_;
+  perturbationArray_ = NULL;
+  
 }
 /* Constructs a non linear cost from list of non-linearities (columns only)
    First lower of each column is taken as real lower
@@ -8601,7 +8736,7 @@ ClpSimplex::ClpSimplex (ClpSimplex * wholeModel,
     printf("map %d %d\n",iColumn,mapping[iColumn]);
 #endif
   // Save mapping somewhere - doesn't matter
-  rowUpper_ = (double *) mapping;
+  rowUpper_ = reinterpret_cast<double *> (mapping);
   upper_ = wholeModel->upper_;
   wholeModel->upper_ = new double [numberTotal];
   for (iColumn=0;iColumn<numberTotal;iColumn++) {
@@ -8734,7 +8869,7 @@ ClpSimplex::originalModel(ClpSimplex * miniModel)
   int numberTotal = numberSmall+numberRows_;
   // copy back
   int iColumn;
-  int * mapping = (int *) miniModel->rowUpper_;
+  int * mapping = reinterpret_cast<int *> (miniModel->rowUpper_);
 #ifdef CLP_DEBUG
   for (iColumn=0;iColumn<numberRows_+numberColumns_;iColumn++) 
     printf("mapb %d %d\n",iColumn,mapping[iColumn]);
@@ -9816,13 +9951,13 @@ ClpSimplex::getBasis() const
     for (iRow=0;iRow<numberRows_;iRow++) {
       int iStatus = getRowStatus(iRow);
       iStatus = lookupA[iStatus];
-      basis->setArtifStatus(iRow,(CoinWarmStartBasis::Status) iStatus);
+      basis->setArtifStatus(iRow,static_cast<CoinWarmStartBasis::Status> (iStatus));
     }
     int lookupS[]={0,1,2,3,0,3};
     for (iColumn=0;iColumn<numberColumns_;iColumn++) {
       int iStatus = getColumnStatus(iColumn);
       iStatus = lookupS[iStatus];
-      basis->setStructStatus(iColumn,(CoinWarmStartBasis::Status) iStatus);
+      basis->setStructStatus(iColumn,static_cast<CoinWarmStartBasis::Status> (iStatus));
     }
   }
   return basis;
@@ -10086,7 +10221,7 @@ int
 ClpSimplex::fathom(void * stuff)
 {
   assert (stuff);
-  ClpNodeStuff * info = (ClpNodeStuff *) stuff;
+  ClpNodeStuff * info = reinterpret_cast<ClpNodeStuff *> (stuff);
   info->nNodes_=0;
   // say can declare optimal
   moreSpecialOptions_ |= 8;
@@ -10136,7 +10271,7 @@ ClpSimplex::fathom(void * stuff)
     int nBound;
     bool tightenBounds = ((specialOptions_&64)==0) ? false : true; 
     ClpSimplex * small = 
-      ((ClpSimplexOther *) this)->crunch(rhs,whichRow,whichColumn,
+      static_cast<ClpSimplexOther *> (this)->crunch(rhs,whichRow,whichColumn,
 					 nBound,false,tightenBounds);
     if (small) {
       //double limit = 0.0;
@@ -10162,8 +10297,10 @@ ClpSimplex::fathom(void * stuff)
 	    }
 	    info->upPseudo_[k]=info->upPseudo_[j];
 	    info->numberUp_[k]=info->numberUp_[j];
+	    info->numberUpInfeasible_[k]=info->numberUpInfeasible_[j];
 	    info->downPseudo_[k]=info->downPseudo_[j];
 	    info->numberDown_[k]=info->numberDown_[j];
+	    info->numberDownInfeasible_[k]=info->numberDownInfeasible_[j];
 	    assert (info->upPseudo_[k]>1.0e-40&&info->upPseudo_[k]<1.0e40);
 	    assert (info->downPseudo_[k]>1.0e-40&&info->downPseudo_[k]<1.0e40);
 	    k++;
@@ -10232,15 +10369,17 @@ ClpSimplex::fathom(void * stuff)
 	    assert (info->downPseudo_[k]>1.0e-40&&info->downPseudo_[k]<1.0e40);
 	    info->upPseudo_[numberIntegers]=info->upPseudo_[k];
 	    info->numberUp_[numberIntegers]=info->numberUp_[k];
+	    info->numberUpInfeasible_[numberIntegers]=info->numberUpInfeasible_[k];
 	    info->downPseudo_[numberIntegers]=info->downPseudo_[k];
 	    info->numberDown_[numberIntegers]=info->numberDown_[k];
+	    info->numberDownInfeasible_[numberIntegers]=info->numberDownInfeasible_[k];
 	  }
 	}
 	delete [] back;
       }
       if (returnCode) {
 	//check this does everything
-	((ClpSimplexOther *) this)->afterCrunch(*small,
+	static_cast<ClpSimplexOther *> (this)->afterCrunch(*small,
 						whichRow,whichColumn,nBound);
 	for (int i=0;i<numberColumns_;i++) {
 	  if (integerType_[i]) { 
@@ -10269,7 +10408,12 @@ ClpSimplex::fathom(void * stuff)
     setMaximumIterations(saveMaxIterations);
     return returnCode;
   }
+  // Get fake bounds correctly
+  //(static_cast<ClpSimplexDual *>(this))->resetFakeBounds(1);
   gutsOfSolution ( NULL,NULL);
+  double dummyChange;
+  (static_cast<ClpSimplexDual *>(this))->changeBounds(3,NULL,dummyChange);
+  int saveNumberFake = numberFake_;
   int status=fastDual2(info);
 #if 0
   {
@@ -10344,6 +10488,9 @@ ClpSimplex::fathom(void * stuff)
   int maxDepthSize=10;
   int maxDepth=0;
   int depth=0;
+  // Get fake bounds correctly
+  (static_cast<ClpSimplexDual *>(this))->changeBounds(3,NULL,dummyChange);
+  saveNumberFake = numberFake_;
   ClpNode ** nodes = new ClpNode * [maxDepthSize];
   int numberTotal = numberRows_+numberColumns_;
   double * saveLower = CoinCopyOfArray(columnLower_,numberColumns_);
@@ -10430,6 +10577,8 @@ ClpSimplex::fathom(void * stuff)
       }
     }
 #endif
+    // Get fake bounds correctly
+    (static_cast<ClpSimplexDual *>(this))->changeBounds(3,NULL,dummyChange);
     fastDual2(info);
 #if 0
     {
@@ -10616,6 +10765,7 @@ ClpSimplex::fathom(void * stuff)
     if (lower_) {
       CoinMemcpyN(saveLowerInternal,numberTotal,lower_);
       CoinMemcpyN(saveUpperInternal,numberTotal,upper_);
+      numberFake_ = saveNumberFake;
     }
     CoinMemcpyN(saveLower,numberColumns_,columnLower_);
     CoinMemcpyN(saveUpper,numberColumns_,columnUpper_);
@@ -10642,7 +10792,7 @@ int
 ClpSimplex::fathomMany(void * stuff)
 {
   assert (stuff);
-  ClpNodeStuff * info = (ClpNodeStuff *) stuff;
+  ClpNodeStuff * info = reinterpret_cast<ClpNodeStuff *> (stuff);
   int nNodes = info->maximumNodes();
   int goodNodes=0;
   info->nNodes_=0;
@@ -10699,7 +10849,7 @@ ClpSimplex::fathomMany(void * stuff)
     int nBound;
     bool tightenBounds = ((specialOptions_&64)==0) ? false : true; 
     ClpSimplex * small = 
-      ((ClpSimplexOther *) this)->crunch(rhs,whichRow,whichColumn,
+      static_cast<ClpSimplexOther *> (this)->crunch(rhs,whichRow,whichColumn,
 					 nBound,false,tightenBounds);
     if (small) {
       info->large_=this;
@@ -10729,8 +10879,10 @@ ClpSimplex::fathomMany(void * stuff)
 	    }
 	    info->upPseudo_[k]=info->upPseudo_[j];
 	    info->numberUp_[k]=info->numberUp_[j];
+	    info->numberUpInfeasible_[k]=info->numberUpInfeasible_[j];
 	    info->downPseudo_[k]=info->downPseudo_[j];
 	    info->numberDown_[k]=info->numberDown_[j];
+	    info->numberDownInfeasible_[k]=info->numberDownInfeasible_[j];
 	    assert (info->upPseudo_[k]>1.0e-40&&info->upPseudo_[k]<1.0e40);
 	    assert (info->downPseudo_[k]>1.0e-40&&info->downPseudo_[k]<1.0e40);
 	    k++;
@@ -10784,8 +10936,10 @@ ClpSimplex::fathomMany(void * stuff)
 	    assert (info->downPseudo_[k]>1.0e-40&&info->downPseudo_[k]<1.0e40);
 	    info->upPseudo_[numberIntegers]=info->upPseudo_[k];
 	    info->numberUp_[numberIntegers]=info->numberUp_[k];
+	    info->numberUpInfeasible_[numberIntegers]=info->numberUpInfeasible_[k];
 	    info->downPseudo_[numberIntegers]=info->downPseudo_[k];
 	    info->numberDown_[numberIntegers]=info->numberDown_[k];
+	    info->numberDownInfeasible_[numberIntegers]=info->numberDownInfeasible_[k];
 	  }
 	}
 	delete [] back;
@@ -10828,7 +10982,7 @@ ClpSimplex::fathomMany(void * stuff)
     } 
     status=problemStatus_;
   }
-  assert (problemStatus_==0||problemStatus_==1);//((ClpSimplexDual *) this)->dual(0,0);
+  assert (problemStatus_==0||problemStatus_==1);//(static_cast<ClpSimplexDual *> this)->dual(0,0);
   if (problemStatus_==10) {
     printf("Cleaning up with primal - need coding without createRim!\n");
     abort();
@@ -11115,7 +11269,7 @@ ClpSimplex::fathomMany(void * stuff)
 		info->large_->columnLower_[iColumn] = columnLower_[i];
 	      }
 	    }
-	    ((ClpSimplexOther *) info->large_)->afterCrunch(*this,
+	    static_cast<ClpSimplexOther *> (info->large_)->afterCrunch(*this,
 		       info->whichRow_,info->whichColumn_,info->nBound_);
 	    // do as for large
 	    if (!node->oddArraysExist())
@@ -11157,7 +11311,7 @@ ClpSimplex::fathomMany(void * stuff)
 		       info->large_->columnUpper_[i],
 		       node->dualSolution()[i]);
 #endif
-	    ((ClpSimplexOther *) info->large_)->afterCrunch(*this,
+	    static_cast<ClpSimplexOther *> (info->large_)->afterCrunch(*this,
 		       info->whichRow_,info->whichColumn_,info->nBound_);
 #ifdef CHECK_PATH
 	    if (startOptimal) {
@@ -11347,7 +11501,12 @@ ClpSimplex::fastDual2(ClpNodeStuff * info)
   //checkPrimalSolution(rowActivityWork_,columnActivityWork_);
   specialOptions_ |= 524288; // say use solution
   ClpObjective * saveObjective = objective_;
-  int status = ((ClpSimplexDual *) this)->fastDual(true);
+#ifndef NDEBUG
+  (static_cast<ClpSimplexDual *>(this))->resetFakeBounds(-1);
+#endif
+  //int saveNumberFake = numberFake_;
+  int status = static_cast<ClpSimplexDual *> (this)->fastDual(true);
+  //numberFake_ = saveNumberFake;
   specialOptions_ &= ~524288; // say dont use solution
   CoinAssert (problemStatus_||objectiveValue_<1.0e50);
   if (status&&problemStatus_!=3) {
@@ -11375,7 +11534,7 @@ ClpSimplex::fastDual2(ClpNodeStuff * info)
       intParam_[ClpMaxNumIteration] = numberIterations_ + 1000 + 2*numberRows_+numberColumns_;
     // check which algorithms allowed
     baseIteration_=numberIterations_;
-    status = ((ClpSimplexPrimal *) this)->primal(1,7);
+    status = static_cast<ClpSimplexPrimal *> (this)->primal(1,7);
     baseIteration_=0;
     if (saveObjective != objective_) {
       // We changed objective to see if infeasible
@@ -11383,7 +11542,7 @@ ClpSimplex::fastDual2(ClpNodeStuff * info)
       objective_=saveObjective;
       if (!problemStatus_) {
 	// carry on
-	status = ((ClpSimplexPrimal *) this)->primal(1,7);
+	status = static_cast<ClpSimplexPrimal *> (this)->primal(1,7);
       }
     }
     if (problemStatus_==3&&numberIterations_<saveMax) {
@@ -11414,7 +11573,7 @@ ClpSimplex::fastDual2(ClpNodeStuff * info)
 					      2*numberRows_+numberColumns_,saveMax);
       perturbation_=savePerturbation;
       baseIteration_=numberIterations_;
-      status = ((ClpSimplexPrimal *) this)->primal(0);
+      status = static_cast<ClpSimplexPrimal *> (this)->primal(0);
       baseIteration_=0;
       computeObjectiveValue();
       // can't rely on djs either
@@ -11476,10 +11635,12 @@ ClpSimplex::fastDual2(ClpNodeStuff * info)
   }
   save = info->saveCosts_;
   CoinMemcpyN(save,numberTotal,cost_);
+#if 0
   save += numberTotal;
   CoinMemcpyN(save,numberTotal,lower_);
   save += numberTotal;
   CoinMemcpyN(save,numberTotal,upper_);
+#endif
   return status;
 }
 // Stop Fast dual
@@ -11512,7 +11673,7 @@ ClpSimplex::fastCrunch(ClpNodeStuff * info, int mode)
     int nBound;
     bool tightenBounds = ((specialOptions_&64)==0) ? false : true; 
     small = 
-      ((ClpSimplexOther *) this)->crunch(rhs,whichRow,whichColumn,
+      static_cast<ClpSimplexOther *> (this)->crunch(rhs,whichRow,whichColumn,
 					 nBound,false,tightenBounds);
     if (small) {
       info->large_=this;
@@ -11536,8 +11697,10 @@ ClpSimplex::fastCrunch(ClpNodeStuff * info, int mode)
 	    }
 	    info->upPseudo_[k]=info->upPseudo_[j];
 	    info->numberUp_[k]=info->numberUp_[j];
+	    info->numberUpInfeasible_[k]=info->numberUpInfeasible_[j];
 	    info->downPseudo_[k]=info->downPseudo_[j];
 	    info->numberDown_[k]=info->numberDown_[j];
+	    info->numberDownInfeasible_[k]=info->numberDownInfeasible_[j];
 	    assert (info->upPseudo_[k]>1.0e-40&&info->upPseudo_[k]<1.0e40);
 	    assert (info->downPseudo_[k]>1.0e-40&&info->downPseudo_[k]<1.0e40);
 	    k++;
@@ -11554,7 +11717,7 @@ ClpSimplex::fastCrunch(ClpNodeStuff * info, int mode)
       // has solution
       ClpSimplex * other = info->large_;
       assert (other!=this);
-      ((ClpSimplexOther *) other)->afterCrunch(*this,
+      static_cast<ClpSimplexOther *> (other)->afterCrunch(*this,
 					       info->whichRow_,
 					       info->whichColumn_,info->nBound_);
       for (int i=0;i<other->numberColumns_;i++) {

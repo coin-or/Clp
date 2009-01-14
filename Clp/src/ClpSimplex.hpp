@@ -18,6 +18,7 @@
 class ClpDualRowPivot;
 class ClpPrimalColumnPivot;
 class ClpFactorization;
+#include "ClpFactorization.hpp"
 class CoinIndexedVector;
 class ClpNonLinearCost;
 class ClpNodeStuff;
@@ -64,9 +65,9 @@ public:
   // For Dual
   enum FakeBound {
     noFake = 0x00,
-    bothFake = 0x01,
+    lowerFake = 0x01,
     upperFake = 0x02,
-    lowerFake = 0x03
+    bothFake = 0x03
   };
 
   /**@name Constructors and destructor and copy */
@@ -708,6 +709,11 @@ protected:
   void checkDualSolution();
   /** This sets sum and number of infeasibilities (Dual and Primal) */
   void checkBothSolutions();
+  /**  If input negative scales objective so maximum <= -value
+       and returns scale factor used.  If positive unscales and also
+       redoes dual stuff
+  */
+  double scaleObjective(double value);
 public:
   /** For advanced use.  When doing iterative solves things can get
       nasty so on values pass if incoming solution has largest
@@ -753,6 +759,12 @@ public:
   /// Largest error on basic duals
   inline void setLargestDualError(double value)
           { largestDualError_=value;} 
+  /// Get zero tolerance
+  inline double zeroTolerance() const 
+  { return zeroTolerance_;/*factorization_->zeroTolerance();*/} 
+  /// Set zero tolerance
+  inline void setZeroTolerance( double value)
+  { zeroTolerance_ = value;}
   /// Basic variables pivoting on which rows
   inline int * pivotVariable() const
           { return pivotVariable_;}
@@ -1017,7 +1029,7 @@ public:
   {return lastBadIteration_;}
   /// Progress flag - at present 0 bit says artificials out
   inline int progressFlag() const
-  {return progressFlag_;}
+  {return (progressFlag_&3);}
   /// Force re-factorization early 
   inline void forceFactorization(int value)
   { forceFactorization_ = value;}
@@ -1164,10 +1176,11 @@ protected:
    single array is the owner of memory 
   */
   //@{
-  /// Worst column primal infeasibility
-  double columnPrimalInfeasibility_;
-  /// Worst row primal infeasibility
-  double rowPrimalInfeasibility_;
+  /** Best possible improvement using djs (primal) or 
+      obj change by flipping bounds to make dual feasible (dual) */
+  double bestPossibleImprovement_;
+  /// Zero tolerance
+  double zeroTolerance_;
   /// Sequence of worst (-1 if feasible)
   int columnPrimalSequence_;
   /// Sequence of worst (-1 if feasible)
@@ -1358,6 +1371,10 @@ protected:
   double allowedInfeasibility_;
   /// Automatic scaling of objective and rhs and bounds
   int automaticScale_;
+  /// Maximum perturbation array size (take out when code rewritten)
+  int maximumPerturbationSize_;
+  /// Perturbation array (maximumPerturbationSize_)
+  double * perturbationArray_;
   /// A copy of model with certain state - normally without cuts
   ClpSimplex * baseModel_;
   /// For dealing with all issues of cycling etc

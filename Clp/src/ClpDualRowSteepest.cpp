@@ -289,7 +289,8 @@ k
     numberWanted = CoinMax(2000,number/8);
   } else {
     int numberElements = model_->factorization()->numberElements();
-    double ratio = (double) numberElements/(double) model_->numberRows();
+    double ratio = static_cast<double> (numberElements)/
+      static_cast<double> (model_->numberRows());
     numberWanted = CoinMax(2000,number/8);
     if (ratio<1.0) {
       numberWanted = CoinMax(2000,number/20);
@@ -298,7 +299,7 @@ k
       if (ratio>number)
 	numberWanted=number+1;
       else
-	numberWanted = CoinMax(2000,(int) ratio);
+	numberWanted = CoinMax(2000,static_cast<int> (ratio));
     }
   }
   if (model_->largestPrimalError()>1.0e-3)
@@ -308,8 +309,8 @@ k
   int start[4];
   start[1]=number;
   start[2]=0;
-  double dstart = ((double) number) * model_->randomNumberGenerator()->randomDouble();
-  start[0]=(int) dstart;
+  double dstart = static_cast<double> (number) * model_->randomNumberGenerator()->randomDouble();
+  start[0]=static_cast<int> (dstart);
   start[3]=start[0];
   //double largestWeight=0.0;
   //double smallestWeight=1.0e100;
@@ -835,7 +836,7 @@ ClpDualRowSteepest::saveWeights(ClpSimplex * model,int mode)
 	state_=-1;
       }
     }
-  } else if (mode==2||mode==4||mode==5) {
+  } else if (mode==2||mode==4||mode>=5) {
     // restore
     if (!weights_||state_==-1||mode==5) {
       // initialize weights
@@ -886,7 +887,7 @@ ClpDualRowSteepest::saveWeights(ClpSimplex * model,int mode)
 	array[i]=weights_[i];
 	which[i]=pivotVariable[i];
       }
-    } else {
+    } else if (mode!=6) {
       int * which = alternateWeights_->getIndices();
       CoinIndexedVector * rowArray3 = model_->rowArray(3);
       rowArray3->clear();
@@ -896,8 +897,8 @@ ClpDualRowSteepest::saveWeights(ClpSimplex * model,int mode)
 	back[i]=-1;
       if (mode!=4) {
 	// save
- CoinMemcpyN(which,	numberRows,savedWeights_->getIndices());
- CoinMemcpyN(weights_,	numberRows,savedWeights_->denseVector());
+	CoinMemcpyN(which,	numberRows,savedWeights_->getIndices());
+	CoinMemcpyN(weights_,	numberRows,savedWeights_->denseVector());
       } else {
 	// restore
 	//memcpy(which,savedWeights_->getIndices(),
@@ -923,6 +924,27 @@ ClpDualRowSteepest::saveWeights(ClpSimplex * model,int mode)
 	  // odd
 	  weights_[i]=1.0;
 	}
+      }
+    } else {
+      // mode 6 - scale back weights as primal errors
+      double primalError = model_->largestPrimalError();
+      double allowed ;
+      if (primalError>1.0e3)
+	allowed=10.0;
+      else if (primalError>1.0e2)
+	allowed=50.0;
+      else if (primalError>1.0e1)
+	allowed=100.0;
+      else
+	allowed=1000.0;
+      double allowedInv =1.0/allowed;
+      for (i=0;i<numberRows;i++) {
+	double value = weights_[i];
+	if (value<allowedInv)
+	  value = allowedInv;
+	else if (value>allowed)
+	  value=allowed;
+	weights_[i]=allowed;
       }
     }
     state_=0;

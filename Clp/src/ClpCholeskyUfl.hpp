@@ -10,7 +10,7 @@ extern "C"{
 #include "amd.h"
 #else
 #include "cholmod.h"
-#endif
+#endif  
 #ifdef __cplusplus
           }
 #endif

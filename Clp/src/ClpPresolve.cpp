@@ -838,7 +838,7 @@ void ClpPresolve::postsolve(CoinPostsolveMatrix &prob)
 #endif
   
   while (paction) {
-#if	PRESOLVE_DEBUG
+#if PRESOLVE_DEBUG
     printf("POSTSOLVING %s\n", paction->name());
 #endif
 
@@ -998,7 +998,7 @@ CoinPrePostsolveMatrix::CoinPrePostsolveMatrix(const ClpSimplex * si,
     messages_()
 
 {
-  bulk0_ = (CoinBigIndex) (bulkRatio_*nelems_in);
+  bulk0_ = static_cast<CoinBigIndex> (bulkRatio_*nelems_in);
   hrow_  = new int   [bulk0_];
   colels_ = new double[bulk0_];
   si->getDblParam(ClpObjOffset,originalOffset_);
@@ -1178,9 +1178,9 @@ CoinPresolveMatrix::CoinPresolveMatrix(int ncols0_in,
 
   delete mRow;
   if (si->integerInformation()) {
-    CoinMemcpyN((unsigned char *) si->integerInformation(),ncols_,integerType_);
+    CoinMemcpyN(reinterpret_cast<unsigned char *> (si->integerInformation()),ncols_,integerType_);
   } else {
-    ClpFillN<unsigned char>(integerType_, ncols_, (unsigned char) 0);
+    ClpFillN<unsigned char>(integerType_, ncols_, static_cast<unsigned char> (0));
   }
 
 #ifndef SLIM_CLP
@@ -1288,7 +1288,7 @@ void CoinPresolveMatrix::update_model(ClpSimplex * si,
       numberIntegers++;
   }
   if (numberIntegers) 
-    si->copyInIntegerInformation((const char *) integerType_);
+    si->copyInIntegerInformation(reinterpret_cast<const char *> (integerType_));
   else
     si->copyInIntegerInformation(NULL);
 

@@ -597,7 +597,7 @@ main (int argc, const char *argv[])
 		  }
 		}
 		if (tryIt) {
-		  model2 = ((ClpSimplexOther *) model2)->dualOfModel(fractionRow,fractionColumn);
+		  model2 = static_cast<ClpSimplexOther *> (model2)->dualOfModel(fractionRow,fractionColumn);
 		  if (model2) {
 		    printf("Dual of model has %d rows and %d columns\n",
 			   model2->numberRows(),model2->numberColumns());
@@ -746,15 +746,14 @@ main (int argc, const char *argv[])
                 status=-1;
               }
               if (dualize) {
-                int returnCode=((ClpSimplexOther *) models+iModel)->restoreFromDual(model2);
+                int returnCode=static_cast<ClpSimplexOther *> (models+iModel)->restoreFromDual(model2);
 		if (model2->status()==3)
 		  returnCode=0;
                 delete model2;
 		if (returnCode&&dualize!=2) {
-		  CoinSighandler_t saveSignal=SIG_DFL;
 		  currentModel = models+iModel;
 		  // register signal handler
-		  saveSignal = signal(SIGINT,signal_handler);
+		  signal(SIGINT,signal_handler);
 		  models[iModel].primal(1);
 		  currentModel=NULL;
 		}
@@ -958,7 +957,7 @@ main (int argc, const char *argv[])
 		  // Go to canned file if just input file
 		  if (CbcOrClpRead_mode==2&&argc==2) {
 		    // only if ends .mps
-		    char * find = (char *)strstr(fileName.c_str(),".mps");
+		    char * find = reinterpret_cast<char *>(strstr(fileName.c_str(),".mps"));
 		    if (find&&find[4]=='\0') {
 		      find[1]='p'; find[2]='a';find[3]='r';
 		      FILE *fp=fopen(fileName.c_str(),"r");
@@ -1040,7 +1039,7 @@ main (int argc, const char *argv[])
 		bool deleteModel2=false;
 		ClpSimplex * model2 = models+iModel;
 		if (dualize&&dualize<3) {
-		  model2 = ((ClpSimplexOther *) model2)->dualOfModel();
+		  model2 = static_cast<ClpSimplexOther *> (model2)->dualOfModel();
 		  printf("Dual of model has %d rows and %d columns\n",
 			 model2->numberRows(),model2->numberColumns());
 		  model2->setOptimizationDirection(1.0);
@@ -1962,7 +1961,7 @@ static void breakdown(const char * name, int numberLook, const double * region)
     1.0,
     1.0e1,1.0e2,1.0e3,1.0e4,1.0e5,1.0e8,1.0e11,1.0e15,
     COIN_DBL_MAX};
-  int nRanges = (int) (sizeof(range)/sizeof(double));
+  int nRanges = static_cast<int> (sizeof(range)/sizeof(double));
   int * number = new int[nRanges];
   memset(number,0,nRanges*sizeof(int));
   int * numberExact = new int[nRanges];
@@ -2182,7 +2181,7 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
   }
   printf("Column breakdown:\n");
   int k;
-  for (k=0;k<(int) (sizeof(cType)/sizeof(int));k++) {
+  for (k=0;k<static_cast<int> (sizeof(cType)/sizeof(int));k++) {
     printf("%d of type %s ",cType[k],cName[k].c_str());
     if (((k+1)%3)==0)
       printf("\n");
@@ -2190,7 +2189,7 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
   if ((k%3)!=0)
     printf("\n");
   printf("Row breakdown:\n");
-  for (k=0;k<(int) (sizeof(rType)/sizeof(int));k++) {
+  for (k=0;k<static_cast<int> (sizeof(rType)/sizeof(int));k++) {
     printf("%d of type %s ",rType[k],rName[k].c_str());
     if (((k+1)%3)==0)
       printf("\n");

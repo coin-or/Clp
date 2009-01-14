@@ -129,7 +129,7 @@ MyMessageHandler::print()
         if ( numExtremePointsSaved>=10 ) {
           feasibleExtremePoints_.pop_back();
           assert( feasibleExtremePoints_.size() == 
-		  (unsigned int) numExtremePointsSaved-1 );
+		  static_cast<unsigned int> (numExtremePointsSaved)-1 );
         };
 
       }

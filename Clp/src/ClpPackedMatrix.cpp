@@ -526,15 +526,15 @@ ClpPackedMatrix::transposeTimes(const ClpSimplex * model, double scalar,
   double * array = columnArray->denseVector();
   int numberInRowArray = rowArray->getNumElements();
   // maybe I need one in OsiSimplex
-  double zeroTolerance = model->factorization()->zeroTolerance();
+  double zeroTolerance = model->zeroTolerance();
+#if 0 //def COIN_DEVELOP
+  if (zeroTolerance!=1.0e-13) {
+    printf("small element in matrix - zero tolerance %g\n",zeroTolerance);
+  }
+#endif
   int numberRows = model->numberRows();
-#ifndef NO_RTTI
-  ClpPackedMatrix* rowCopy =
-    dynamic_cast< ClpPackedMatrix*>(model->rowCopy());
-#else
   ClpPackedMatrix* rowCopy =
     static_cast< ClpPackedMatrix*>(model->rowCopy());
-#endif 
   bool packed = rowArray->packedMode();
   double factor = (numberRows<100) ? 0.25 : 0.35;
   factor=0.5;
@@ -761,7 +761,7 @@ ClpPackedMatrix::transposeTimesByColumn(const ClpSimplex * model, double scalar,
   double * COIN_RESTRICT array = columnArray->denseVector();
   int numberInRowArray = rowArray->getNumElements();
   // maybe I need one in OsiSimplex
-  double zeroTolerance = model->factorization()->zeroTolerance();
+  double zeroTolerance = model->zeroTolerance();
   bool packed = rowArray->packedMode();
   // do by column
   int iColumn;
@@ -988,7 +988,7 @@ ClpPackedMatrix::transposeTimesByRow(const ClpSimplex * model, double scalar,
   double * array = columnArray->denseVector();
   int numberInRowArray = rowArray->getNumElements();
   // maybe I need one in OsiSimplex
-  double zeroTolerance = model->factorization()->zeroTolerance();
+  double zeroTolerance = model->zeroTolerance();
   const int * column = matrix_->getIndices();
   const CoinBigIndex * rowStart = getVectorStarts();
   const double * element = getElements();
@@ -1024,7 +1024,7 @@ ClpPackedMatrix::transposeTimesByRow(const ClpSimplex * model, double scalar,
       double * markVector = y->denseVector();
       numberNonZero=0;
       // and set up mark as char array
-      char * marked = (char *) markVector;
+      char * marked = reinterpret_cast<char *> (markVector);
       for (i=0;i<numberOriginal;i++) {
 	int iColumn = index[i];
 	marked[iColumn]=0;
@@ -1278,7 +1278,7 @@ ClpPackedMatrix::gutsOfTransposeTimesByRowEQ2(const CoinIndexedVector * piVector
     pi1=pi[0];
   }
   // and set up mark as char array
-  char * marked = (char *) (index+output->capacity());
+  char * marked = reinterpret_cast<char *> (index+output->capacity());
   int * lookup = spareVector->getIndices();
   double value = pi0*scalar;
   CoinBigIndex j;
@@ -1533,7 +1533,7 @@ ClpPackedMatrix::transposeTimes2(const ClpSimplex * model,
   int * index = dj1->getIndices();
   double * array = dj1->denseVector();
   int numberInRowArray = pi1->getNumElements();
-  double zeroTolerance = model->factorization()->zeroTolerance();
+  double zeroTolerance = model->zeroTolerance();
   bool packed = pi1->packedMode();
   // do by column
   int iColumn;
@@ -2035,7 +2035,7 @@ ClpPackedMatrix::scale(ClpModel * model, const ClpSimplex * baseModel) const
     // temporary copy
     rowCopyBase = reverseOrderedCopy();
   }
-#ifndef NO_RTTI
+#ifndef NDEBUG
   ClpPackedMatrix* rowCopy =
     dynamic_cast< ClpPackedMatrix*>(rowCopyBase);
   // Make sure it is really a ClpPackedMatrix
@@ -2143,7 +2143,15 @@ ClpPackedMatrix::scale(ClpModel * model, const ClpSimplex * baseModel) const
       delete rowCopyBase; // get rid of temporary row copy
     return 1;
   } else {
-      // need to scale 
+      // need to scale
+    if (largest>1.0e13*smallest) {
+      // safer to have smaller zero tolerance
+      double ratio = smallest/largest;
+      ClpSimplex * simplex = static_cast<ClpSimplex *> (model);
+      double newTolerance = CoinMax(ratio*0.5,1.0e-18);
+      if (simplex->zeroTolerance()>newTolerance)
+	simplex->setZeroTolerance(newTolerance);
+    }
     int scalingMethod = model->scalingFlag();
     if (scalingMethod==4) {
       // As auto
@@ -2490,6 +2498,16 @@ ClpPackedMatrix::scale(ClpModel * model, const ClpSimplex * baseModel) const
       <<overallSmallest
       <<overallLargest
       <<CoinMessageEol;
+    if (overallSmallest<1.0e-13) {
+      // Change factorization zero tolerance
+      double newTolerance = CoinMax(1.0e-15*(overallSmallest/1.0e-13),
+					     1.0e-18);
+      ClpSimplex * simplex = static_cast<ClpSimplex *> (model);
+      if (simplex->factorization()->zeroTolerance()>newTolerance)
+	simplex->factorization()->zeroTolerance(newTolerance);
+      newTolerance = CoinMax(overallSmallest*0.5,1.0e-18);
+      simplex->setZeroTolerance(newTolerance);
+    }
     delete [] usefulRow;
     delete [] usefulColumn;
 #ifndef SLIM_CLP
@@ -2829,7 +2847,7 @@ ClpPackedMatrix::allElementsInRange(ClpModel * model,
 #if 0
       matrix_->removeGaps();
 #else
-      flags_ |= 2;
+      checkGaps();
 #endif
 #ifdef COIN_DEVELOP
       //printf("flags set to 2\n");
@@ -3105,8 +3123,8 @@ ClpPackedMatrix::partialPricing(ClpSimplex * model, double startFraction, double
 			      int & bestSequence, int & numberWanted)
 {
   numberWanted=currentWanted_;
-  int start = (int) (startFraction*numberActiveColumns_);
-  int end = CoinMin((int) (endFraction*numberActiveColumns_+1),numberActiveColumns_);
+  int start = static_cast<int> (startFraction*numberActiveColumns_);
+  int end = CoinMin(static_cast<int> (endFraction*numberActiveColumns_+1),numberActiveColumns_);
   const double * element =matrix_->getElements();
   const int * row = matrix_->getIndices();
   const CoinBigIndex * startColumn = matrix_->getVectorStarts();
@@ -3357,6 +3375,7 @@ ClpPackedMatrix::clearCopies()
   rowCopy_=NULL;
   columnCopy_=NULL;
   flags_ &= ~(4+8);
+  checkGaps();
  }
 // makes sure active columns correct
 int 
@@ -3396,7 +3415,7 @@ ClpPackedMatrix::scaleRowCopy(ClpModel * model) const
     int numberColumns = matrix_->getNumCols();
 #endif
     ClpMatrixBase * rowCopyBase=model->rowCopy();
-#ifndef NO_RTTI
+#ifndef NDEBUG
     ClpPackedMatrix* rowCopy =
       dynamic_cast< ClpPackedMatrix*>(rowCopyBase);
     // Make sure it is really a ClpPackedMatrix
@@ -3488,7 +3507,7 @@ ClpPackedMatrix::deleteCols(const int numDel, const int * indDel)
   clearCopies();
   numberActiveColumns_ = matrix_->getNumCols();
   // may now have gaps
-  flags_ |= 2;
+  checkGaps();
   matrix_->setExtraGap(0.0);
 }
 /* Delete the rows whose indices are listed in <code>indDel</code>. */
@@ -3500,7 +3519,7 @@ ClpPackedMatrix::deleteRows(const int numDel, const int * indDel)
   clearCopies();
   numberActiveColumns_ = matrix_->getNumCols();
   // may now have gaps
-  flags_ |= 2;
+  checkGaps();
   matrix_->setExtraGap(0.0);
 }
 #ifndef CLP_NO_VECTOR
@@ -3519,7 +3538,7 @@ ClpPackedMatrix::appendRows(int number, const CoinPackedVectorBase * const * row
   matrix_->appendRows(number,rows);
   numberActiveColumns_ = matrix_->getNumCols();
   // may now have gaps
-  flags_ |= 2;
+  checkGaps();
   clearCopies();
 }
 #endif
@@ -4320,7 +4339,7 @@ ClpPackedMatrix2::transposeTimes(const ClpSimplex * model,
   int iBlock;
   for (iBlock=0;iBlock<numberBlocks_;iBlock++) {
     double * dwork = work_+6*iBlock;
-    int * iwork = (int *) (dwork+3);
+    int * iwork = reinterpret_cast<int *> (dwork+3);
     if (!dualColumn) {
 #ifndef THREAD
       int offset = offset_[iBlock];
@@ -4579,7 +4598,7 @@ ClpPackedMatrix3::ClpPackedMatrix3(ClpSimplex * model,const CoinPackedMatrix * c
   start_ = new CoinBigIndex [nOdd+1];
   // even if no blocks do a dummy one
   numberBlocks_ = CoinMax(numberBlocks_,1);
-  block_ = (blockStruct *) new char [numberBlocks_*sizeof(blockStruct)];
+  block_ = new blockStruct [numberBlocks_];
   memset(block_,0,numberBlocks_*sizeof(blockStruct));
   // Fill in what we can
   int nTotal=nOdd;
@@ -4900,7 +4919,7 @@ ClpPackedMatrix3::transposeTimes(const ClpSimplex * model,
   int numberNonZero=0;
   int * index = output->getIndices();
   double * array = output->denseVector();
-  double zeroTolerance = model->factorization()->zeroTolerance();
+  double zeroTolerance = model->zeroTolerance();
   double value = 0.0;
   CoinBigIndex j;
   int numberOdd = block_->startIndices_;
@@ -5067,7 +5086,7 @@ ClpPackedMatrix3::transposeTimes2(const ClpSimplex * model,
   int numberNonZero=0;
   int * index = output->getIndices();
   double * array = output->denseVector();
-  double zeroTolerance = model->factorization()->zeroTolerance();
+  double zeroTolerance = model->zeroTolerance();
   double value = 0.0;
   bool killDjs = (scaleFactor==0.0);
   if (!scaleFactor)
