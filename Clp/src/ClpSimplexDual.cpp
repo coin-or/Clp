@@ -2814,6 +2814,52 @@ ClpSimplexDual::changeBounds(int initialize,
 	  setStatus(iSequence,atUpperBound);
 	  solution_[iSequence]=0.5*dualBound_;
 	}
+      } else if (status==basic) {
+	// make sure not at fake bound and bounds correct
+	setFakeBound(iSequence,ClpSimplexDual::noFake);
+	double gap = upper_[iSequence]-lower_[iSequence];
+	if (gap>0.5*dualBound_&&gap<2.0*dualBound_) {
+	  if (iSequence<numberColumns_) {
+	    if (columnScale_) {
+	      double multiplier = rhsScale_/columnScale_[iSequence];
+	      // lower
+	      double value = columnLower_[iSequence];
+	      if (value>-1.0e30) {
+		value *= multiplier;
+	      }
+	      lower_[iSequence]=value;
+	      // upper
+	      value = columnUpper_[iSequence];
+	      if (value<1.0e30) {
+		value *= multiplier;
+	      }
+	      upper_[iSequence]=value;
+	    } else {
+	      lower_[iSequence]=columnLower_[iSequence];;
+	      upper_[iSequence]=columnUpper_[iSequence];;
+	    }
+	  } else {
+	    int iRow = iSequence-numberColumns_;
+	    if (rowScale_) {
+	      // lower
+	      double multiplier = rhsScale_*rowScale_[iRow];
+	      double value = rowLower_[iRow];
+	      if (value>-1.0e30) {
+		value *= multiplier;
+	      }
+	      lower_[iSequence]=value;
+	      // upper
+	      value = rowUpper_[iRow];
+	      if (value<1.0e30) {
+		value *= multiplier;
+	      }
+	      upper_[iSequence]=value;
+	    } else {
+	      lower_[iSequence]=rowLower_[iRow];;
+	      upper_[iSequence]=rowUpper_[iRow];;
+	    }
+	  }
+	}
       }
     }
 
