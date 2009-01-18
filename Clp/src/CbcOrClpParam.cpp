@@ -1913,8 +1913,11 @@ you should be past that stage:-)"
 		  -9999999,9999999,HOPTIONS);
   parameters[numberParameters-1].setLonghelp
     (
-     "0 doh 1 nodes -1 2 doh+hot 3 nodes-1+hot 4 ord heur+hot. \
-More usefully 100 says stop heuristic immediately allowable gap reached."
+     "1 says stop heuristic immediately allowable gap reached. \
+Others are for feasibility pump - \
+2 says do exact number of passes given, \
+4 only applies if initial cutoff given and says relax after 50 passes, \
+while 8 will adapt cutoff rhs after first solution if it looks as if code is stalling."
      ); 
   parameters[numberParameters-1].setIntValue(0);
   parameters[numberParameters++]=
