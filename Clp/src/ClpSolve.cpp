@@ -3146,6 +3146,21 @@ ClpSimplex::solve(CoinStructuredModel * model)
     } else {
       thisBlock = dynamic_cast<CoinModel *>(model->block(i));
       assert (thisBlock);
+      // just fill in info
+      CoinModelBlockInfo info = CoinModelBlockInfo();
+      int whatsSet = thisBlock->whatIsSet();
+      info.matrix = ((whatsSet&1)!=0) ? 1 : 0;
+      info.rhs = ((whatsSet&2)!=0) ? 1 : 0;
+      info.rowName = ((whatsSet&4)!=0) ? 1 : 0;
+      info.integer = ((whatsSet&32)!=0) ? 1 : 0;
+      info.bounds = ((whatsSet&8)!=0) ? 1 : 0;
+      info.columnName = ((whatsSet&16)!=0) ? 1 : 0;
+      // Which block
+      int iRowBlock=model->rowBlock(thisBlock->getRowBlock());
+      info.rowBlock=iRowBlock;
+      int iColumnBlock=model->columnBlock(thisBlock->getColumnBlock());
+      info.columnBlock=iColumnBlock;
+      blockInfo[i] = info;
     }
   }
   if (numberRowBlocks==numberColumnBlocks||numberRowBlocks==numberColumnBlocks+1) {
