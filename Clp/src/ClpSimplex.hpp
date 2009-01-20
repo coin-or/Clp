@@ -714,6 +714,10 @@ protected:
        redoes dual stuff
   */
   double scaleObjective(double value);
+  /// Solve using Dantzig-Wolfe decomposition and maybe in parallel
+  int solveDW(CoinStructuredModel * model);
+  /// Solve using Benders decomposition and maybe in parallel
+  int solveBenders(CoinStructuredModel * model);
 public:
   /** For advanced use.  When doing iterative solves things can get
       nasty so on values pass if incoming solution has largest
