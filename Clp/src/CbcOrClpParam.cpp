@@ -1487,12 +1487,10 @@ See branchAndCut for information on options."
      "This will read a solution file from the given file name.  It will use the default\
  directory given by 'directory'.  A name of '$' will use the previous value for the name.  This\
  is initialized to '', i.e. it must be set.\n\n\
-If set to create it will create a file called debug.file  after search; if set \
-to createAfterPre it will create one suitable for use after preprocessing.\n\n\
-The idea is that if you suspect a bad cut generator and you did not use preprocessing \
+If set to create it will create a file called debug.file  after search.\n\n\
+The idea is that if you suspect a bad cut generator \
 you can do a good run with debug set to 'create' and then switch on the cuts you suspect and \
-re-run with debug set to 'debug.file'  Similarly if you do use preprocessing but use \
-createAfterPre.  The create case has same effect as saveSolution."
+re-run with debug set to 'debug.file'  The create case has same effect as saveSolution."
      ); 
 #endif 
 #ifdef COIN_HAS_CLP
