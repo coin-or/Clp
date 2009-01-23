@@ -2200,9 +2200,9 @@ ClpModel::addColumns(int number, const double * columnLower,
   }
   // Deal with matrix
 
-  delete rowCopy_;
+  delete rowCopy_; 
   rowCopy_=NULL;
-  delete scaledMatrix_;
+  delete scaledMatrix_;  
   scaledMatrix_=NULL;
   if (!matrix_)
     createEmptyMatrix();

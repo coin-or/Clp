@@ -4098,6 +4098,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
   } else {
     double thisObj = objectiveValue_-bestPossibleImprovement_;
 #ifdef CLP_INVESTIGATE
+    assert (bestPossibleImprovement_>-1000.0&&objectiveValue_>-1.0e100);
     if (bestPossibleImprovement_)
       printf("obj %g add in %g -> %g\n",objectiveValue_,bestPossibleImprovement_,
 	     thisObj);

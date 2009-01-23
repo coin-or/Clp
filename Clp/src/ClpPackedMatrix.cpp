@@ -1946,6 +1946,7 @@ ClpPackedMatrix::fillBasis(ClpSimplex * model,
 	  int iRow=row[j];
 	  indexRowU[numberElements]=iRow;
 	  rowCount[iRow]++;
+	  assert (elementByColumn[j]);
 	  elementU[numberElements++]=elementByColumn[j];
 	}
 	start[i+1]=numberElements;
@@ -1964,6 +1965,7 @@ ClpPackedMatrix::fillBasis(ClpSimplex * model,
 	  int iRow = row[j];
 	  indexRowU[numberElements]=iRow;
 	  rowCount[iRow]++;
+	  assert (elementByColumn[j]);
 	  elementU[numberElements++]=
 	    elementByColumn[j]*scale*rowScale[iRow];
 	}

@@ -1662,7 +1662,8 @@ ClpSimplex::housekeeping(double objectiveChange)
   numberIterations_++;
   changeMade_++; // something has happened
   // incoming variable
-  if (handler_->detail(CLP_SIMPLEX_HOUSE1,messages_)<100) {
+  if (handler_->logLevel()>7) {
+    //if (handler_->detail(CLP_SIMPLEX_HOUSE1,messages_)<100) {
     handler_->message(CLP_SIMPLEX_HOUSE1,messages_)
       <<directionOut_
       <<directionIn_<<theta_
@@ -1728,7 +1729,8 @@ ClpSimplex::housekeeping(double objectiveChange)
   // Update hidden stuff e.g. effective RHS and gub
   matrix_->updatePivot(this,oldIn,oldOut);
   objectiveValue_ += objectiveChange/(objectiveScale_*rhsScale_);
-  if (handler_->detail(CLP_SIMPLEX_HOUSE2,messages_)<100) {
+  if (handler_->logLevel()>7) {
+    //if (handler_->detail(CLP_SIMPLEX_HOUSE2,messages_)<100) {
     handler_->message(CLP_SIMPLEX_HOUSE2,messages_)
       <<numberIterations_<<objectiveValue()
       <<rowcol[isColumn(sequenceIn_)]<<sequenceWithin(sequenceIn_)
@@ -1987,7 +1989,7 @@ ClpSimplex::ClpSimplex(const ClpSimplex &rhs,int scalingMode) :
   maximumPerturbationSize_(0),
   perturbationArray_(NULL),
   baseModel_(NULL)
-{
+{ 
   int i;
   for (i=0;i<6;i++) {
     rowArray_[i]=NULL;
@@ -10752,7 +10754,10 @@ ClpSimplex::fathom(void * stuff)
     delete [] bestUpper;
     delete [] bestStatus;
     setDblParam(ClpDualObjectiveLimit, saveBestObjective);
+    int saveOptions=specialOptions_;
+    specialOptions_&=~65536;
     dual();
+    specialOptions_=saveOptions;
     info->numberNodesExplored_ = numberNodes;
     info->numberIterations_ = numberIterations;
     returnCode = 1;
@@ -11096,6 +11101,9 @@ ClpSimplex::fathomMany(void * stuff)
       }
     }
     // solve
+    double dummyChange;
+    (static_cast<ClpSimplexDual *>(this))->changeBounds(3,NULL,dummyChange);
+    //int saveNumberFake = numberFake_;
     fastDual2(info);
     numberNodes++;
     numberIterations += numberIterations_;
@@ -11411,8 +11419,12 @@ ClpSimplex::startFastDual2(ClpNodeStuff * info)
   info->saveOptions_ = specialOptions_;
   assert ((info->solverOptions_&65536)==0);
   info->solverOptions_ |= 65536;
-  if ((specialOptions_&65536)==0)
+  if ((specialOptions_&65536)==0) {
     factorization_->setPersistenceFlag(2);
+  } else {
+    factorization_->setPersistenceFlag(2);
+    startPermanentArrays();
+  }
   //assert (!lower_);
   // create modifiable copies of model rim and do optional scaling
   createRim(7+8+16+32,true,0);
@@ -11430,6 +11442,10 @@ ClpSimplex::startFastDual2(ClpNodeStuff * info)
 	temp[i+numberColumns_]=1.0/value;
       }
       delete [] columnScale_;
+      if (savedColumnScale_&&savedColumnScale_==columnScale_) 
+	savedColumnScale_=NULL;
+      if (savedRowScale_&&savedRowScale_==rowScale_) 
+	savedRowScale_=NULL;
       columnScale_ = temp;
     }
     if ((info->solverOptions_&4)!=0) {
@@ -11439,6 +11455,10 @@ ClpSimplex::startFastDual2(ClpNodeStuff * info)
 	temp[i]=value;
 	temp[i+numberRows_]=1.0/value;
       }
+      if (savedColumnScale_&&savedColumnScale_==columnScale_) 
+	savedColumnScale_=NULL;
+      if (savedRowScale_&&savedRowScale_==rowScale_) 
+	savedRowScale_=NULL;
       delete [] rowScale_;
       rowScale_ = temp;
     }
