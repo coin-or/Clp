@@ -4133,7 +4133,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
       if (lastObj>thisObj+
 	  testTol*(fabs(thisObj)+fabs(lastObj))+testTol) {
 	int maxFactor = factorization_->maximumPivots();
-	if ((specialOptions_&16384)==0) {
+	if ((specialOptions_&1048576)==0) {
 	  if (progress_.timesFlagged()>10) 
 	    progress_.incrementReallyBadTimes();
 	  if (maxFactor>10-9) {
@@ -5805,6 +5805,8 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
   algorithm_ = -1;
   secondaryStatus_=0;
   // Say in fast dual
+  if (!alwaysFinish)
+    specialOptions_ |= 1048576;
   specialOptions_ |= 16384;
   int saveDont = dontFactorizePivots_;
   if ((specialOptions_&2048)==0)
@@ -6000,7 +6002,7 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
     columnArray_[iColumn]->clear();
   }    
   // Say not in fast dual
-  specialOptions_ &= ~16384;
+  specialOptions_ &= ~(16384|1048576);
   assert(!numberFake_||((specialOptions_&(2048|4096))!=0&&dualBound_>=1.0e8)
          ||returnCode||problemStatus_); // all bounds should be okay
   if (numberFake_>0&&false) {

@@ -849,6 +849,7 @@ public:
       131072 - scale factor arrays have inverse values at end
       262144 - extra copy of scaled matrix
       524288 - Clp fast dual
+      1048576 - don't need to finish dual (can return 3)
       NOTE - many applications can call Clp but there may be some short cuts
              which are taken which are not guaranteed safe from all applications.
              Vetted applications will have a bit set and the code may test this

@@ -11512,6 +11512,8 @@ ClpSimplex::fastDual2(ClpNodeStuff * info)
   CoinMemcpyN(lower_,numberTotal,save);
   save += numberTotal;
   CoinMemcpyN(upper_,numberTotal,save);
+  double dummyChange;
+  (static_cast<ClpSimplexDual *>(this))->changeBounds(3,NULL,dummyChange);
   numberPrimalInfeasibilities_=1;
   sumPrimalInfeasibilities_=0.5;
   sumOfRelaxedDualInfeasibilities_ = 0.0;
@@ -11519,10 +11521,11 @@ ClpSimplex::fastDual2(ClpNodeStuff * info)
   checkDualSolution();
   //if (xxxxxx)
   //checkPrimalSolution(rowActivityWork_,columnActivityWork_);
+  assert((specialOptions_&16384)==0);
   specialOptions_ |= 524288; // say use solution
   ClpObjective * saveObjective = objective_;
 #ifndef NDEBUG
-  (static_cast<ClpSimplexDual *>(this))->resetFakeBounds(-1);
+  //(static_cast<ClpSimplexDual *>(this))->resetFakeBounds(-1);
 #endif
   //int saveNumberFake = numberFake_;
   int status = static_cast<ClpSimplexDual *> (this)->fastDual(true);
