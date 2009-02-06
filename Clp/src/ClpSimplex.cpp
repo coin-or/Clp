@@ -9728,6 +9728,12 @@ ClpSimplex::checkSolutionInternal()
       switch(getColumnStatus(iColumn)) {
 	
       case basic:
+	// dual should be zero
+	if (fabs(dualValue)>10.0*dualTolerance) {
+	  sumDualInfeasibilities_ -= dualValue+dualTolerance_;
+	  numberDualInfeasibilities_ ++;
+	}
+	break;
       case ClpSimplex::isFixed:
 	break;
       case atUpperBound:
