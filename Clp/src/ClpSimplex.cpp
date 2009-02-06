@@ -9725,7 +9725,7 @@ ClpSimplex::checkSolutionInternal()
       sumPrimalInfeasibilities_ += lower-primalValue-primalTolerance;
       numberPrimalInfeasibilities_ ++;
     } else {
-      switch(getColumnStatus(iRow)) {
+      switch(getColumnStatus(iColumn)) {
 	
       case basic:
       case ClpSimplex::isFixed:

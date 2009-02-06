@@ -1007,8 +1007,17 @@ ClpSimplexOther::restoreFromDual(const ClpSimplex * dualProblem)
       if (otherValue==COIN_DBL_MAX) {
         reducedCost_[iColumn]=objValue-dualActs[iColumn];
         if (columnUpper_[iColumn]>1.0e20) {
-          setColumnStatus(iColumn,atLowerBound);
-          columnActivity_[iColumn]=columnLower_[iColumn];
+	  if (columnLower_[iColumn]>-1.0e20) {
+	    if (columnUpper_[iColumn]>columnLower_[iColumn])
+	      setColumnStatus(iColumn,atLowerBound);
+	    else
+	      setColumnStatus(iColumn,isFixed);
+	    columnActivity_[iColumn]=columnLower_[iColumn];
+	  } else {
+	    // free
+	    setColumnStatus(iColumn,isFree);
+	    columnActivity_[iColumn]=0.0;
+	  }
         } else {
           setColumnStatus(iColumn,atUpperBound);
           columnActivity_[iColumn]=columnUpper_[iColumn];
@@ -1017,10 +1026,16 @@ ClpSimplexOther::restoreFromDual(const ClpSimplex * dualProblem)
         reducedCost_[iColumn]=objValue-dualActs[iColumn];
         //printf("other dual sol %g\n",otherValue);
         if (fabs(otherValue-columnLower_[iColumn])<1.0e-5) {
-          setColumnStatus(iColumn,atLowerBound);
+	  if (columnUpper_[iColumn]>columnLower_[iColumn])
+	    setColumnStatus(iColumn,atLowerBound);
+	  else
+	    setColumnStatus(iColumn,isFixed);
           columnActivity_[iColumn]=columnLower_[iColumn];
         } else if (fabs(otherValue-columnUpper_[iColumn])<1.0e-5) {
-          setColumnStatus(iColumn,atUpperBound);
+	  if (columnUpper_[iColumn]>columnLower_[iColumn])
+	    setColumnStatus(iColumn,atUpperBound);
+	  else
+	    setColumnStatus(iColumn,isFixed);
           columnActivity_[iColumn]=columnUpper_[iColumn];
         } else {
           abort();
@@ -1054,10 +1069,16 @@ ClpSimplexOther::restoreFromDual(const ClpSimplex * dualProblem)
         } else {
           reducedCost_[iColumn]=objValue-dualActs[iColumn];
           if (fabs(otherValue-columnLower_[iColumn])<1.0e-5) {
-            setColumnStatus(iColumn,atLowerBound);
+	    if (columnUpper_[iColumn]>columnLower_[iColumn])
+	      setColumnStatus(iColumn,atLowerBound);
+	    else
+	      setColumnStatus(iColumn,isFixed);
             columnActivity_[iColumn]=columnLower_[iColumn];
           } else if (fabs(otherValue-columnUpper_[iColumn])<1.0e-5) {
-            setColumnStatus(iColumn,atUpperBound);
+	    if (columnUpper_[iColumn]>columnLower_[iColumn])
+	      setColumnStatus(iColumn,atUpperBound);
+	    else
+	      setColumnStatus(iColumn,isFixed);
             columnActivity_[iColumn]=columnUpper_[iColumn];
           } else {
             abort();
@@ -1067,14 +1088,13 @@ ClpSimplexOther::restoreFromDual(const ClpSimplex * dualProblem)
     }
   }
   // now rows
-  int kRow=0;
   int kExtraRow=jColumn;
   int numberRanges=0;
   for (iRow=0;iRow<numberRows_;iRow++) {
-    Status status = dualProblem->getColumnStatus(kRow);
+    Status status = dualProblem->getColumnStatus(iRow);
     if (status==basic) {
       // row is at bound
-      dual_[iRow]=dualSol[kRow];;
+      dual_[iRow]=dualSol[iRow];;
     } else {
       // row basic
       setRowStatus(iRow,basic);
@@ -1086,51 +1106,55 @@ ClpSimplexOther::restoreFromDual(const ClpSimplex * dualProblem)
         rowActivity_[iRow]=rowUpper_[iRow];
         setRowStatus(iRow,atUpperBound);
       } else {
-        rowActivity_[iRow]=rowUpper_[iRow]+dualSol[kRow];
+	assert (dualDj[iRow]<1.0e-5);
+        rowActivity_[iRow]=rowUpper_[iRow]+dualDj[iRow];
       }        
-      kRow++;
     } else if (rowUpper_[iRow]>1.0e20) {
       if (status==basic) {
         rowActivity_[iRow]=rowLower_[iRow];
         setRowStatus(iRow,atLowerBound);
       } else {
-        rowActivity_[iRow]=rowLower_[iRow]+dualSol[kRow];
+        rowActivity_[iRow]=rowLower_[iRow]+dualDj[iRow];
+	assert (dualDj[iRow]>-1.0e-5);
       }        
-      kRow++;
     } else {
       if (rowUpper_[iRow]==rowLower_[iRow]) {
         rowActivity_[iRow]=rowLower_[iRow];
         if (status==basic) {
-          setRowStatus(iRow,atLowerBound);
+          setRowStatus(iRow,isFixed);
         }        
-        kRow++;
       } else {
         // range
         numberRanges++;
 	Status statusL = dualProblem->getColumnStatus(kExtraRow);
-	kExtraRow++;
+	//printf("range row %d (%d), extra %d (%d) - dualSol %g,%g dualDj %g,%g\n",
+	//     iRow,status,kExtraRow,statusL, dualSol[iRow],
+	//     dualSol[kExtraRow],dualDj[iRow],dualDj[kExtraRow]);
 	if (status==basic) {
 	  assert (statusL!=basic);
 	  rowActivity_[iRow]=rowUpper_[iRow];
 	  setRowStatus(iRow,atUpperBound);
 	} else if (statusL==basic) {
+	  numberBasic--; // already counted
 	  rowActivity_[iRow]=rowLower_[iRow];
 	  setRowStatus(iRow,atLowerBound);
+	  dual_[iRow]=dualSol[kExtraRow];;
 	} else {
-	  rowActivity_[iRow]=rowLower_[iRow]+dualSol[kRow];
+	  rowActivity_[iRow]=rowLower_[iRow]-dualDj[iRow];
+	  assert (dualDj[iRow]<1.0e-5);
 	  // row basic
-	  setRowStatus(iRow,basic);
-	  numberBasic++;
+	  //setRowStatus(iRow,basic);
+	  //numberBasic++;
 	  dual_[iRow]=0.0;
 	}
-        kRow++;
+	kExtraRow++;
       }
     }
   }
   if (numberBasic!=numberRows_) {
     printf("Bad basis - ranges - coding needed\n");
     assert (numberRanges);
-    returnCode=1;
+    abort();
   }
   if (optimizationDirection_<0.0) {
     for (iRow=0;iRow<numberRows_;iRow++) {
@@ -1145,21 +1169,19 @@ ClpSimplexOther::restoreFromDual(const ClpSimplex * dualProblem)
   matrix_->transposeTimes(-1.0,dual_,reducedCost_);
   checkSolutionInternal();
   // Below will go to ..DEBUG later
-  if (returnCode) 
-    return 1; // Skip checks as will fail at present
-#ifndef NDEBUG
+#if 0 //ndef NDEBUG
   // Check if correct
   double * columnActivity = CoinCopyOfArray(columnActivity_,numberColumns_);
   double * rowActivity = CoinCopyOfArray(rowActivity_,numberRows_);
   double * reducedCost = CoinCopyOfArray(reducedCost_,numberColumns_);
   double * dual = CoinCopyOfArray(dual_,numberRows_);
-  this->dual();
+  this->primal();
   CoinRelFltEq eq(1.0e-5);
-  for (iColumn=0;iColumn<numberColumns_;iColumn++) {
-    assert(eq(columnActivity[iColumn],columnActivity_[iColumn]));
-  }
   for (iRow=0;iRow<numberRows_;iRow++) {
     assert(eq(dual[iRow],dual_[iRow]));
+  }
+  for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+    assert(eq(columnActivity[iColumn],columnActivity_[iColumn]));
   }
   for (iRow=0;iRow<numberRows_;iRow++) {
     assert(eq(rowActivity[iRow],rowActivity_[iRow]));
