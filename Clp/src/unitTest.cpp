@@ -2001,7 +2001,8 @@ ClpSimplexUnitTest(const std::string & dirSample)
     numberBlocks=3;
     for (int i=0;i<numberBlocks;i++) {
       std::string blockName="block_";
-      blockName.append(1,'a'+i);
+      char bName = 'a'+i;
+      blockName.append(1,bName);
       structured2.addBlock(blockName,blockName,structured);
     }
     fullModel.loadProblem(structured2,false);
