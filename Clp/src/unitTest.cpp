@@ -1975,7 +1975,8 @@ ClpSimplexUnitTest(const std::string & dirSample)
     for (int i=0;i<numberBlocks;i++) {
       std::string topName="row_master";
       std::string blockName="block_";
-      blockName.append(1,'a'+i);
+      char bName = 'a'+i;
+      blockName.append(1,bName);
       structured.addBlock(topName,blockName,top);
       structured.addBlock(blockName,blockName,sub);
     }
