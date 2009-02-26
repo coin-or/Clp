@@ -7978,8 +7978,12 @@ int ClpSimplex::pivot()
 	break;
       }
     }
-    if (fabs(alpha_)<1.0e-8)
+    if (fabs(alpha_)<1.0e-8) {
+      // be on safe side and clear arrays
+      rowArray_[0]->clear();
+      rowArray_[1]->clear();
       return -1; // will be singular
+    }
     // we are going to subtract movement from current basic
     double movement;
     // see where incoming will go to
@@ -8033,8 +8037,12 @@ int ClpSimplex::pivot()
     double objectiveChange = dualIn_*movement;
     // update duals
     if (pivotRow_>=0) {
-      if (fabs(alpha_)<1.0e-8)
+      if (fabs(alpha_)<1.0e-8) {
+	// be on safe side and clear arrays
+	rowArray_[0]->clear();
+	rowArray_[1]->clear();
 	return -1; // will be singular
+      }
       double multiplier = dualIn_/alpha_;
       rowArray_[0]->insert(pivotRow_,multiplier);
       factorization_->updateColumnTranspose(rowArray_[2],rowArray_[0]);
