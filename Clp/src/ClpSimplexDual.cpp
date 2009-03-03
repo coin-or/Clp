@@ -3859,6 +3859,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
   double changeCost;
   bool unflagVariables = true;
   bool weightsSaved=false;
+  bool weightsSaved2=numberIterations_&&!numberPrimalInfeasibilities_;
   int dontFactorizePivots = dontFactorizePivots_;
   if (type==3) {
     type=1;
@@ -4866,6 +4867,8 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	// reset weights or scale back
 	dualRowPivot_->saveWeights(this,6);
       }
+    } else if (weightsSaved2&&numberPrimalInfeasibilities_) {
+      dualRowPivot_->saveWeights(this,3);
     }
   }
   // see if cutoff reached

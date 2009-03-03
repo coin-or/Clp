@@ -381,6 +381,19 @@ k
     chosenRow=pivotRow();
     model_->setLargestDualError(saveError);
   }
+  if (chosenRow<0&&lastPivotRow<0){
+    int nLeft=0;
+    for (int i=0;i<number;i++) {
+      int iRow = index[i];
+      if (fabs(infeas[iRow])>1.0e-50) {
+	index[nLeft++]=iRow;
+      } else {
+	infeas[iRow]=0.0;
+      }
+    }
+    infeasible_->setNumElements(nLeft);
+    model_->setNumberPrimalInfeasibilities(nLeft);
+  }
   return chosenRow;
 }
 #if 0

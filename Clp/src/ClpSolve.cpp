@@ -2779,6 +2779,8 @@ ClpSimplexProgress::looping()
   if (!model_)
     return -1;
   double objective = model_->rawObjectiveValue();
+  if (model_->algorithm()<0)
+    objective -= model_->bestPossibleImprovement();
   double infeasibility;
   double realInfeasibility=0.0;
   int numberInfeasibilities;

@@ -949,6 +949,10 @@ public:
   /// Theta (pivot change)
   inline double theta() const
   { return theta_;}
+  /** Best possible improvement using djs (primal) or 
+      obj change by flipping bounds to make dual feasible (dual) */
+  inline double bestPossibleImprovement() const
+  { return bestPossibleImprovement_;}
   /// Return pointer to details of costs
   inline ClpNonLinearCost * nonLinearCost() const
   { return nonLinearCost_;}
