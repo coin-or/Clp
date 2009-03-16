@@ -187,7 +187,7 @@ ClpNode::gutsOfConstructor (ClpSimplex * model, const ClpNodeStuff * stuff,
   numberInfeasibilities_ = 0;
   int nFix=0;
   double gap = CoinMax(model->dualObjectiveLimit()-objectiveValue_,1.0e-4);
-#define PSEUDO 1
+#define PSEUDO 3
 #if PSEUDO==1||PSEUDO==2
   // Column copy of matrix
   ClpPackedMatrix * matrix = model->clpScaledMatrix();
