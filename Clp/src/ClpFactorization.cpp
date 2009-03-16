@@ -9,6 +9,7 @@
 #include "CoinHelperFunctions.hpp"
 #include "CoinIndexedVector.hpp"
 #include "ClpSimplex.hpp"
+#include "ClpSimplexDual.hpp"
 #include "ClpMatrixBase.hpp"
 #ifndef SLIM_CLP
 #include "ClpNetworkBasis.hpp"
@@ -1292,6 +1293,8 @@ int
 ClpFactorization::factorize ( ClpSimplex * model,
 			      int solveType, bool valuesPass)
 {
+  //if ((model->specialOptions()&16384))
+  //printf("factor at %d iterations\n",model->numberIterations());
   ClpMatrixBase * matrix = model->clpMatrix(); 
   int numberRows = model->numberRows();
   int numberColumns = model->numberColumns();
@@ -1300,6 +1303,7 @@ ClpFactorization::factorize ( ClpSimplex * model,
 #ifdef CLP_FACTORIZATION_INSTRUMENT
   factorization_instrument(-1);
 #endif
+  bool anyChanged=false;
   if (coinFactorizationB_) {
     coinFactorizationB_->setStatus(-99);
     int * pivotVariable = model->pivotVariable();
@@ -1452,6 +1456,7 @@ ClpFactorization::factorize ( ClpSimplex * model,
 	coinFactorizationB_->postProcess(pivotTemp,pivotVariable);
       } else {
 	// Change pivotTemp to be correct list
+	anyChanged=true;
 	coinFactorizationB_->makeNonSingular(pivotTemp,numberColumns);
 	double * columnLower = model->lowerRegion();
 	double * columnUpper = model->upperRegion();
@@ -1568,6 +1573,11 @@ ClpFactorization::factorize ( ClpSimplex * model,
 #ifdef CLP_FACTORIZATION_INSTRUMENT
     factorization_instrument(2);
 #endif
+    if ( anyChanged&&model->algorithm()<0&&solveType>0) {
+      double dummyCost;
+      static_cast<ClpSimplexDual *> (model)->changeBounds(3,
+							  NULL,dummyCost);
+    }
     return coinFactorizationB_->status();
   }
   // If too many compressions increase area
@@ -2614,5 +2624,20 @@ ClpFactorization::getWeights(int * weights) const
 #ifdef CLP_FACTORIZATION_INSTRUMENT
   factorization_instrument(8);
 #endif
+}
+// Set tolerances to safer of existing and given
+void 
+ClpFactorization::saferTolerances (  double zeroValue, 
+				    double pivotValue)
+{
+  // better to have small tolerance even if slower
+  zeroTolerance(CoinMin(zeroTolerance(),zeroValue));
+  // better to have large tolerance even if slower
+  double newValue;
+  if (pivotValue>0.0)
+    newValue = pivotValue;
+  else 
+    newValue = -pivotTolerance()*pivotValue;
+  pivotTolerance(CoinMin(CoinMax(pivotTolerance(),newValue),0.999));
 }
 #endif

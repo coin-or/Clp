@@ -167,6 +167,8 @@ public:
   inline void zeroTolerance (  double value) {
     if (coinFactorizationA_) coinFactorizationA_->zeroTolerance(value); else coinFactorizationB_->zeroTolerance(value);
   }
+  /// Set tolerances to safer of existing and given
+  void saferTolerances (  double zeroTolerance, double pivotTolerance);
   /**  get sparse threshold */
   inline int sparseThreshold ( ) const
   { if (coinFactorizationA_) return coinFactorizationA_->sparseThreshold(); else return 0 ;}

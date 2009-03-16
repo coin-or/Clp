@@ -183,6 +183,8 @@ public:
   void afterCrunch(const ClpSimplex & small,
                    const int * whichRows, const int * whichColumns,
                    int nBound);
+  /// Quick try at cleaning up duals if postsolve gets wrong
+  void cleanupAfterPostsolve();
   /** Tightens integer bounds - returns number tightened or -1 if infeasible
   */
   int tightenIntegerBounds(double * rhsSpace); 

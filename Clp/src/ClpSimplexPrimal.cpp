@@ -231,7 +231,7 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
     
     // This says whether to restore things etc
     int factorType=0;
-    if (problemStatus_<0&&perturbation_<100) {
+    if (problemStatus_<0&&perturbation_<100&&!ifValuesPass) {
       perturb(0);
       // Can't get here if values pass
       assert (!ifValuesPass);
@@ -447,6 +447,11 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
 	    secondaryStatus_=ClpEventHandler::endOfValuesPass;
 	    break;
 	  }
+	  //#define FEB_TRY
+#ifdef FEB_TRY
+	  if (perturbation_<100) 
+	    perturb(0);
+#endif
 	}
       }
       // Check event
@@ -1908,9 +1913,20 @@ ClpSimplexPrimal::primalColumn(CoinIndexedVector * updates,
 			       CoinIndexedVector * spareColumn1,
 			       CoinIndexedVector * spareColumn2)
 {
+  
+  ClpMatrixBase * saveMatrix = matrix_;
+  double * saveRowScale = rowScale_;
+  if (scaledMatrix_) {
+    rowScale_=NULL;
+    matrix_ = scaledMatrix_;
+  }
   sequenceIn_ = primalColumnPivot_->pivotColumn(updates,spareRow1,
 					       spareRow2,spareColumn1,
 					       spareColumn2);
+  if (scaledMatrix_) {
+    matrix_ = saveMatrix;
+    rowScale_ = saveRowScale;
+  }
   if (sequenceIn_>=0) {
     valueIn_=solution_[sequenceIn_];
     dualIn_=dj_[sequenceIn_];
@@ -2223,6 +2239,13 @@ ClpSimplexPrimal::perturb(int type)
       perturbation /= static_cast<double> (numberNonZero);
     else
       perturbation = 1.0e-1;
+    if (perturbation_>50&&perturbation_<60) {
+      // reduce
+      while (perturbation_>50) {
+	perturbation_--;
+	perturbation *= 0.25;
+      }
+    }
   } else if (perturbation_<100) {
     perturbation = pow(10.0,perturbation_);
     // user is in charge
@@ -2660,9 +2683,19 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
     double checkValue=1.0e-2;
     if (largestDualError_>1.0e-5)
       checkValue=1.0e-1;
-    if (!ifValuesPass&&solveType_==1&&(saveDj*dualIn_<1.0e-20||
+    double test2 = dualTolerance_;
+    double test1 = 1.0e-20;
+#if 0 //def FEB_TRY
+    if (factorization_->pivots()<1) {
+      test1 = -1.0e-4;
+      if ((saveDj<0.0&&dualIn_<-1.0e-5*dualTolerance_)||
+	  (saveDj>0.0&&dualIn_>1.0e-5*dualTolerance_))
+	test2=0.0; // allow through
+    }
+#endif
+    if (!ifValuesPass&&solveType_==1&&(saveDj*dualIn_<test1||
 	fabs(saveDj-dualIn_)>checkValue*(1.0+fabs(saveDj))||
-			fabs(dualIn_)<dualTolerance_)) {
+			fabs(dualIn_)<test2)) {
       char x = isColumn(sequenceIn_) ? 'C' :'R';
       handler_->message(CLP_PRIMAL_DJ,messages_)
         <<x<<sequenceWithin(sequenceIn_)
@@ -2681,15 +2714,19 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	break;
       } else {
 	// take on more relaxed criterion
-	if (saveDj*dualIn_<1.0e-20||
+	if (saveDj*dualIn_<test1||
 	    fabs(saveDj-dualIn_)>2.0e-1*(1.0+fabs(dualIn_))||
-	    fabs(dualIn_)<dualTolerance_) {
+	    fabs(dualIn_)<test2) {
 	  // need to reject something
 	  char x = isColumn(sequenceIn_) ? 'C' :'R';
 	  handler_->message(CLP_SIMPLEX_FLAG,messages_)
 	    <<x<<sequenceWithin(sequenceIn_)
 	    <<CoinMessageEol;
 	  setFlagged(sequenceIn_);
+#ifdef FEB_TRY
+	  // Make safer?
+	  factorization_->saferTolerances (1.0e-15,-1.03);
+#endif
 	  progress_.clearBadTimes();
 	  lastBadIteration_ = numberIterations_; // say be more cautious
 	  clearAll();

@@ -176,7 +176,7 @@ ClpModel::gutsOfDelete(int type)
     delete eventHandler_;
     eventHandler_=NULL;
   }
-  whatsChanged_=0;
+  whatsChanged_ = 0;
   delete matrix_;
   matrix_=NULL;
   delete rowCopy_;
@@ -290,7 +290,7 @@ void ClpModel::setRowObjective(const double * rowObjective)
 {
   delete [] rowObjective_;
   rowObjective_=ClpCopyOfArray(rowObjective,numberRows_);
-  whatsChanged_=0;
+  whatsChanged_ = 0;
 }
 void
 ClpModel::loadProblem (  const ClpMatrixBase& matrix,
@@ -795,10 +795,9 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, int trueCopy)
       rowLower_ = ClpCopyOfArray ( rhs.rowLower_, numberRows_ );
       rowUpper_ = ClpCopyOfArray ( rhs.rowUpper_, numberRows_ );
       columnLower_ = ClpCopyOfArray ( rhs.columnLower_, numberColumns_ );
-      int scaleLength = ((specialOptions_&131072)==0) ? 1 : 2;
       columnUpper_ = ClpCopyOfArray ( rhs.columnUpper_, numberColumns_ );
-      rowScale_ = ClpCopyOfArray(rhs.rowScale_,numberRows_*scaleLength);
-      columnScale_ = ClpCopyOfArray(rhs.columnScale_,numberColumns_*scaleLength);
+      rowScale_ = ClpCopyOfArray(rhs.rowScale_,numberRows_*2);
+      columnScale_ = ClpCopyOfArray(rhs.columnScale_,numberColumns_*2);
       if (rhs.objective_)
 	objective_  = rhs.objective_->clone();
       else
@@ -854,6 +853,7 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, int trueCopy)
       ClpDisjointCopyN ( rhs.rowUpper_, numberRows_,rowUpper_ );
       ClpDisjointCopyN ( rhs.columnLower_, numberColumns_,columnLower_ );
       assert ((specialOptions_&131072)==0);
+      abort();
       ClpDisjointCopyN ( rhs.columnUpper_, numberColumns_,columnUpper_ );
       if (rhs.objective_) {
 	abort(); //check if same
@@ -2706,6 +2706,7 @@ ClpModel::readMps(const char *fileName,
   *m.messagesPointer()=coinMessages();
   bool savePrefix =m.messageHandler()->prefix();
   m.messageHandler()->setPrefix(handler_->prefix());
+  m.setSmallElementValue(CoinMax(smallElement_,m.getSmallElementValue()));
   double time1 = CoinCpuTime(),time2;
   int status=0;
   try {
@@ -3776,7 +3777,7 @@ ClpModel::gutsOfScaling()
       rowUpper_[i] = COIN_DBL_MAX;
   }
   for (i=0;i<numberColumns_;i++) {
-    double multiplier = 1.0/columnScale_[i];
+    double multiplier = 1.0*inverseColumnScale_[i];
     columnActivity_[i] *= multiplier;
     reducedCost_[i] *= columnScale_[i];
     if (columnLower_[i]>-1.0e30)
@@ -3803,9 +3804,9 @@ ClpModel::unscale()
     int i;
     // reverse scaling
     for (i=0;i<numberRows_;i++) 
-      rowScale_[i] = 1.0/rowScale_[i];
+      rowScale_[i] = 1.0*inverseRowScale_[i];
     for (i=0;i<numberColumns_;i++) 
-      columnScale_[i] = 1.0/columnScale_[i];
+      columnScale_[i] = 1.0*inverseColumnScale_[i];
     gutsOfScaling();
   }
   
@@ -3970,6 +3971,13 @@ ClpModel::stopPermanentArrays()
   }
   savedRowScale_ = NULL;
   savedColumnScale_ = NULL;
+}
+// Set new row matrix
+void 
+ClpModel::setNewRowCopy(ClpMatrixBase * newCopy)
+{
+  delete rowCopy_;
+  rowCopy_ = newCopy;
 }
 /* Find a network subset.
    rotate array should be numberRows.  On output

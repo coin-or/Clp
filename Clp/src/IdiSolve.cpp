@@ -69,13 +69,13 @@ static void solveSmall(int nsolve,double **aIn,double **a, double * b) {
 IdiotResult 
 Idiot::objval(int nrows, int ncols, double * rowsol , double * colsol,
 	      double * pi, double * djs, const double * cost , 
-			const double * rowlower,
+	      const double * rowlower,
 	      const double * rowupper, const double * lower,
 	      const double * upper, const double * elemnt, 
 	      const int * row, const CoinBigIndex * columnStart,
-			  const int * length, int extraBlock, int * rowExtra,
-		 double * solExtra, double * elemExtra, double * upperExtra,
-		 double * costExtra,double weight)
+	      const int * length, int extraBlock, int * rowExtra,
+	      double * solExtra, double * elemExtra, double * upperExtra,
+	      double * costExtra,double weight)
 {
   IdiotResult result;
   double objvalue=0.0;
@@ -193,6 +193,11 @@ Idiot::IdiSolve(
   for (i=0;i<DROP;i++) {
     obj[i]=1.0e70;
   }
+  //#define TWO_GOES
+#ifdef TWO_GOES
+  double * pi2 = new double [nrows];
+  double * rowsol2 = new double [nrows];
+#endif
   allsum=new double * [nsolve];
   aX=new double * [nsolve];
   aworkX=new double * [nsolve];
@@ -340,7 +345,7 @@ Idiot::IdiSolve(
 	  history[i]=history[i-1];
 	}
 	history[0]=x;
- CoinMemcpyN(colsol,ncols,history[0]);
+	CoinMemcpyN(colsol,ncols,history[0]);
         CoinMemcpyN(solExtra,extraBlock,history[0]+ncols);
       }
     }
@@ -351,7 +356,7 @@ Idiot::IdiSolve(
 	  history[i]=history[i-1];
 	}
 	history[0]=x;
- CoinMemcpyN(colsol,ncols,history[0]);
+	CoinMemcpyN(colsol,ncols,history[0]);
         CoinMemcpyN(solExtra,extraBlock,history[0]+ncols);
       }
     }
@@ -375,10 +380,10 @@ Idiot::IdiSolve(
       /*if ((strategy&16)==0) {
 	double * x=history[HISTORY-1];
 	for (i=HISTORY-1;i>0;i--) {
-	  history[i]=history[i-1];
+	history[i]=history[i-1];
 	}
 	history[0]=x;
- CoinMemcpyN(colsol,ncols,history[0]);
+	CoinMemcpyN(colsol,ncols,history[0]);
         CoinMemcpyN(solExtra,extraBlock,history[0]+ncols);
 	}*/
       while (!good) {
@@ -404,8 +409,8 @@ Idiot::IdiSolve(
 #ifdef FIT
 	    int ntot=0,nsign=0,ngood=0,mgood[4]={0,0,0,0};
 	    double diff1,diff2,val0,val1,val2,newValue;
-     CoinMemcpyN(colsol,ncols,history[HISTORY-1]);
-     CoinMemcpyN(solExtra,extraBlock,history[HISTORY-1]+ncols);
+	    CoinMemcpyN(colsol,ncols,history[HISTORY-1]);
+	    CoinMemcpyN(solExtra,extraBlock,history[HISTORY-1]+ncols);
 #endif
 	    dj[0]=0.0;
 	    for (i=1;i<nsolve;i++) {
@@ -745,10 +750,10 @@ Idiot::IdiSolve(
 	}
 	good=1;
 	result = objval(nrows,ncols,rowsol,colsol,pi,djs,useCost,
-			    rowlower,rowupper,lower,upper,
-			    elemnt,row,columnStart,length,extraBlock,rowExtra,
-			    solExtra,elemExtra,upperExtra,useCostExtra,
-			    weight);
+			rowlower,rowupper,lower,upper,
+			elemnt,row,columnStart,length,extraBlock,rowExtra,
+			solExtra,elemExtra,upperExtra,useCostExtra,
+			weight);
 	weightedObj=result.weighted;
         if (!iter) saveValue=weightedObj;
 	objvalue=result.objval;
@@ -758,7 +763,7 @@ Idiot::IdiSolve(
 	    printf("%d %g better than %g\n",iter,
 		   result.weighted*maxmin-useOffset,bestSol*maxmin-useOffset);
 	    bestSol=result.weighted;
-     CoinMemcpyN(colsol,ncols,saveSol);
+	    CoinMemcpyN(colsol,ncols,saveSol);
 	  }
 	}
 #ifdef FITz
@@ -767,10 +772,10 @@ Idiot::IdiSolve(
 	  double ww,oo,ss;
 	  if (extraBlock) abort();
 	  result2= objval(nrows,ncols,row2,sol2,pi2,djs,cost,
-		     rowlower,rowupper,lower,upper,
-		     elemnt,row,columnStart,extraBlock,rowExtra,
-		     solExtra,elemExtra,upperExtra,costExtra,
-		     weight);
+			  rowlower,rowupper,lower,upper,
+			  elemnt,row,columnStart,extraBlock,rowExtra,
+			  solExtra,elemExtra,upperExtra,costExtra,
+			  weight);
 	  ww=result2.weighted;
 	  oo=result2.objval;
 	  ss=result2.infeas;
@@ -782,14 +787,14 @@ Idiot::IdiSolve(
 	    weightedObj=ww;
 	    objvalue=oo;
 	    sum1=ss;
-     CoinMemcpyN(row2,nrows,rowsol);
-     CoinMemcpyN(pi2,nrows,pi);
-     CoinMemcpyN(sol2,ncols,colsol);
+	    CoinMemcpyN(row2,nrows,rowsol);
+	    CoinMemcpyN(pi2,nrows,pi);
+	    CoinMemcpyN(sol2,ncols,colsol);
 	    result= objval(nrows,ncols,rowsol,colsol,pi,djs,cost,
-			    rowlower,rowupper,lower,upper,
-			    elemnt,row,columnStart,extraBlock,rowExtra,
-			    solExtra,elemExtra,upperExtra,costExtra,
-			    weight);
+			   rowlower,rowupper,lower,upper,
+			   elemnt,row,columnStart,extraBlock,rowExtra,
+			   solExtra,elemExtra,upperExtra,costExtra,
+			   weight);
 	    weightedObj=result.weighted;
 	    objvalue=result.objval;
 	    sum1=result.infeas;
@@ -812,17 +817,17 @@ Idiot::IdiSolve(
 	  if ((strategy&3)==1) {
 	    good=0;
 	    if (weightedObj>lastObj+djExit) {
-	    if ((logLevel_&16)!=0) {
-	      printf("Weighted objective from %g to %g ?\n",lastObj,weightedObj);
-	    }
-       CoinMemcpyN(history[0],ncols,colsol);
-       CoinMemcpyN(history[0]+ncols,extraBlock,solExtra);
+	      if ((logLevel_&16)!=0) {
+		printf("Weighted objective from %g to %g ?\n",lastObj,weightedObj);
+	      }
+	      CoinMemcpyN(history[0],ncols,colsol);
+	      CoinMemcpyN(history[0]+ncols,extraBlock,solExtra);
 	      good=1;
 	    }
 	  } else if ((strategy&3)==2) {
 	    if (weightedObj>lastObj+0.1*maxDj) {
-       CoinMemcpyN(history[0],ncols,colsol);
-       CoinMemcpyN(history[0]+ncols,extraBlock,solExtra);
+	      CoinMemcpyN(history[0],ncols,colsol);
+	      CoinMemcpyN(history[0]+ncols,extraBlock,solExtra);
 	      doScale++;
 	      good=0;
 	    }
@@ -844,8 +849,8 @@ Idiot::IdiSolve(
 	obj[DROP-1]=best;
 	if (test-best<drop&&(strategy&8)==0) {
 	  if ((logLevel_&8)!=0) {
-	  printf("Exiting as drop in %d its is %g after %d iterations\n",
-		 DROP*checkFrequency_,test-best,iter);
+	    printf("Exiting as drop in %d its is %g after %d iterations\n",
+		   DROP*checkFrequency_,test-best,iter);
 	  }
 	  goto RETURN;
 	}
@@ -856,9 +861,9 @@ Idiot::IdiSolve(
 	  piSum+=(rowsol[i]+rowupper[i])*pi[i];
 	}
 	if ((logLevel_&2)!=0) {
-	printf("%d Infeas %g, obj %g - wtObj %g dual %g maxDj %g\n",
-	       iter,sum1,objvalue*maxmin-useOffset,weightedObj-useOffset,
-	       piSum*maxmin-useOffset,maxDj);
+	  printf("%d Infeas %g, obj %g - wtObj %g dual %g maxDj %g\n",
+		 iter,sum1,objvalue*maxmin-useOffset,weightedObj-useOffset,
+		 piSum*maxmin-useOffset,maxDj);
 	}
       }
       CoinMemcpyN(statusSave,ncols,statusWork);
@@ -869,9 +874,28 @@ Idiot::IdiSolve(
     maxDj=0.0;
     // go through forwards or backwards and starting at odd places
     int itry;
+#ifdef TWO_GOES
+    memcpy(pi2,pi,nrows*sizeof(double));
+    memcpy(rowsol2,rowsol,nrows*sizeof(double));
+#endif
     for (itry=0;itry<2;itry++) {
       int icol=start[itry];
       int istop= stop[itry];
+#ifdef TWO_GOES
+      for (int iPar=0;iPar<2;iPar++) {
+	double * temp = pi;
+	pi=pi2;
+	pi2=temp;
+	temp = rowsol;
+	rowsol=rowsol2;
+	rowsol2=temp;
+	if (iPar==0) {
+	  istop = (icol+istop)>>1;
+	} else {
+	  icol=istop;
+	  istop=stop[itry];
+	}
+#endif
       for (;icol!=istop;icol += direction) {
 	if (!statusWork[icol]) {
 	  CoinBigIndex j;
@@ -986,7 +1010,16 @@ Idiot::IdiSolve(
 	  }
 	}
       }
+#ifdef TWO_GOES
+      }
+#endif
     }
+#ifdef TWO_GOES
+    for (i=0;i<nrows;i++) {
+      rowsol[i] = 0.5*(rowsol[i]+rowsol2[i]);
+      pi[i] = 0.5*(pi[i]+pi2[i]);
+    }
+#endif
     if (extraBlock) {
       for (i=0;i<extraBlock;i++) {
 	double value=solExtra[i];
@@ -1056,10 +1089,10 @@ Idiot::IdiSolve(
     printf("%g good %g bad\n",kgood,kbad);
   }
   result = objval(nrows,ncols,rowsol,colsol,pi,djs,useCost,
-			    rowlower,rowupper,lower,upper,
-			    elemnt,row,columnStart,length,extraBlock,rowExtra,
-			    solExtra,elemExtra,upperExtra,useCostExtra,
-			    weight);
+		  rowlower,rowupper,lower,upper,
+		  elemnt,row,columnStart,length,extraBlock,rowExtra,
+		  solExtra,elemExtra,upperExtra,useCostExtra,
+		  weight);
   result.djAtBeginning=largestDj;
   result.djAtEnd=smallestDj;
   result.dropThis=saveValue-result.weighted;
@@ -1092,6 +1125,10 @@ Idiot::IdiSolve(
   delete [] aworkX;
   delete [] allsum;
   delete [] cost;
+#ifdef TWO_GOES
+  delete [] pi2 ;
+  delete [] rowsol2 ;
+#endif
   for (i=0;i<HISTORY+1;i++) {
     delete [] history[i];
   }

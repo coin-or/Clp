@@ -14,6 +14,7 @@
 #include "CoinPackedMatrix.hpp"
 #include "ClpPackedMatrix.hpp"
 #include "ClpSimplex.hpp"
+#include "ClpSimplexOther.hpp"
 #ifndef SLIM_CLP
 #include "ClpQuadraticObjective.hpp"
 #endif
@@ -271,7 +272,11 @@ ClpPresolve::postsolve(bool updateStatus)
   memset(originalModel_->primalRowSolution(),0,nrows_*sizeof(double));
   originalModel_->times(1.0,originalModel_->primalColumnSolution(),
 			originalModel_->primalRowSolution());
-  originalModel_->checkSolutionInternal();
+  originalModel_->checkSolutionInternal();  
+  if (originalModel_->sumDualInfeasibilities()>1.0e-1) {
+    // See if we can fix easily
+    static_cast<ClpSimplexOther *> (originalModel_)->cleanupAfterPostsolve();
+  }
   // Messages
   presolvedModel_->messageHandler()->message(COIN_PRESOLVE_POSTSOLVE,
 					    messages)
@@ -849,8 +854,15 @@ void ClpPresolve::postsolve(CoinPostsolveMatrix &prob)
     int nr=0;
     int i;
     for (i=0;i<prob.nrows_;i++) {
-      if ((prob.rowstat_[i]&7)==1)
+      if ((prob.rowstat_[i]&7)==1) {
         nr++;
+      } else if ((prob.rowstat_[i]&7)==2) {
+	// at ub
+	assert (prob.acts_[i]>prob.rup_[i]-1.0e-6);
+      } else if ((prob.rowstat_[i]&7)==3) {
+	// at lb
+	assert (prob.acts_[i]<prob.rlo_[i]+1.0e-6);
+      }
     }
     int nc=0;
     for (i=0;i<prob.ncols_;i++) {

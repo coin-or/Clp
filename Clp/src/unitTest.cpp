@@ -53,6 +53,9 @@ static std::string nameBarrier="barrier-UFL";
 #elif WSSMP_BARRIER
 static int barrierAvailable=2;
 static std::string nameBarrier="barrier-WSSMP";
+#elif MUMPS_BARRIER
+static int barrierAvailable=3;
+static std::string nameBarrier="barrier-MUMPS";
 #else
 static int barrierAvailable=0;
 static std::string nameBarrier="barrier-slow";
@@ -584,6 +587,10 @@ int mainTest (int argc, const char *argv[],int algorithm,
 #ifdef WSSMP_BARRIER
           solveOptions.setSpecialOption(4,2);
           nameAlgorithm="barrier-WSSMP";
+#endif
+#ifdef MUMPS_BARRIER
+          solveOptions.setSpecialOption(4,6);
+          nameAlgorithm="barrier-MUMPS";
 #endif
           method = ClpSolve::useBarrier;
         }
@@ -1158,17 +1165,6 @@ ClpSimplexUnitTest(const std::string & dirSample)
 #endif
       CoinRelFltEq eq(1.0e-8);
       assert(eq(objValue,-4.6475314286e+02));
-#ifdef CLP_AUXILIARY_MODEL
-      // Test auxiliary model
-      //solution.scaling(0);
-      solution.auxiliaryModel(63-2); // bounds may change
-      solution.dual();
-      solution.primal();
-      solution.allSlackBasis();
-      solution.dual();
-      assert(eq(solution.objectiveValue(),-4.6475314286e+02));
-      solution.auxiliaryModel(-1);
-#endif
       solution.dual();
       assert(eq(solution.objectiveValue(),-4.6475314286e+02));
       double * lower = solution.columnLower();

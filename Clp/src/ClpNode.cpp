@@ -187,17 +187,22 @@ ClpNode::gutsOfConstructor (ClpSimplex * model, const ClpNodeStuff * stuff,
   numberInfeasibilities_ = 0;
   int nFix=0;
   double gap = CoinMax(model->dualObjectiveLimit()-objectiveValue_,1.0e-4);
-#define PSEUDO 3
+#define PSEUDO 1
 #if PSEUDO==1||PSEUDO==2
   // Column copy of matrix
   ClpPackedMatrix * matrix = model->clpScaledMatrix();
-  if (!matrix)
+  const double *objective = model->costRegion() ;
+  if (!objective) {
+    objective=model->objective();
+    //if (!matrix)
     matrix = dynamic_cast< ClpPackedMatrix*>(model->clpMatrix());
+  } else if (!matrix) {
+    matrix = dynamic_cast< ClpPackedMatrix*>(model->clpMatrix());
+  }
   const double * element = matrix->getElements();
   const int * row = matrix->getIndices();
   const CoinBigIndex * columnStart = matrix->getVectorStarts();
   const int * columnLength = matrix->getVectorLengths();
-  const double *objective = model->costRegion() ;
   double direction = model->optimizationDirection();
   const double * dual = dualSolution_+numberColumns;
 #if PSEUDO==2
@@ -238,14 +243,13 @@ ClpNode::gutsOfConstructor (ClpSimplex * model, const ClpNodeStuff * stuff,
     }
   }
 #endif
-#elif PSEUDO==3
+#endif
   const double * downPseudo = stuff->downPseudo_;
   const int * numberDown = stuff->numberDown_;
   const int * numberDownInfeasible = stuff->numberDownInfeasible_;
   const double * upPseudo = stuff->upPseudo_;
   const int * numberUp = stuff->numberUp_;
   const int * numberUpInfeasible = stuff->numberUpInfeasible_;
-#endif
   int iInteger=0;
   for (iColumn=0;iColumn<numberColumns;iColumn++) {
     if (integerType[iColumn]) {
@@ -259,7 +263,8 @@ ClpNode::gutsOfConstructor (ClpSimplex * model, const ClpNodeStuff * stuff,
 #if PSEUDO==1 || PSEUDO ==2
 	double upValue = 0.0;
 	double downValue = 0.0;
-	double value2 = objective ? direction*objective[iColumn] : 0.0;
+	double value2 = direction*objective[iColumn];
+	//double dj2=value2;
 	if (value2) {
 	  if (value2>0.0)
 	    upValue += 1.5*value2;
@@ -273,6 +278,7 @@ ClpNode::gutsOfConstructor (ClpSimplex * model, const ClpNodeStuff * stuff,
 	  value2 = -dual[iRow];
 	  if (value2) {
 	    value2 *= element[j];
+	    //dj2 += value2;
 #if PSEUDO==2
 	    assert (activeWeight[iRow]>0.0||fabs(dual[iRow])<1.0e-6);
 	    value2 *= activeWeight[iRow];
@@ -283,8 +289,26 @@ ClpNode::gutsOfConstructor (ClpSimplex * model, const ClpNodeStuff * stuff,
 	      downValue -= value2;
 	  }
 	}
-	upValue = CoinMax(upValue,1.0e-8);
-	downValue = CoinMax(downValue,1.0e-8);
+	//assert (fabs(dj2)<1.0e-4);
+	double upValue2 = (upPseudo[iInteger]/(1.0+numberUp[iInteger]));
+	// Extra for infeasible branches
+	if (numberUp[iInteger]) {
+	  double ratio = 1.0+static_cast<double>(numberUpInfeasible[iInteger])/
+	    static_cast<double>(numberUp[iInteger]);
+	  upValue2 *= ratio;
+	}
+	double downValue2 = (downPseudo[iInteger]/(1.0+numberDown[iInteger]));
+	if (numberDown[iInteger]) {
+	  double ratio = 1.0+static_cast<double>(numberDownInfeasible[iInteger])/
+	    static_cast<double>(numberDown[iInteger]);
+	  downValue2 *= ratio;
+	}
+	//printf("col %d - downPi %g up %g, downPs %g up %g\n",
+	//     iColumn,upValue,downValue,upValue2,downValue2);
+	upValue = CoinMax(0.1*upValue,upValue2);
+	downValue = CoinMax(0.1*downValue,downValue2);
+	//upValue = CoinMax(upValue,1.0e-8);
+	//downValue = CoinMax(downValue,1.0e-8);
 	upValue *= ceil(value)-value;
 	downValue *= value-floor(value);
 	double infeasibility;
@@ -293,6 +317,7 @@ ClpNode::gutsOfConstructor (ClpSimplex * model, const ClpNodeStuff * stuff,
 	else
 	  infeasibility = 0.1*CoinMax(upValue,downValue)+
 	    0.9*CoinMin(upValue,downValue) + integerTolerance;
+	estimatedSolution_ += CoinMin(upValue2,downValue2);
 #elif PSEUDO==3
 	// Extra 100% for infeasible branches
 	double upValue = (ceil(value)-value)*(upPseudo[iInteger]/
@@ -629,6 +654,7 @@ ClpNodeStuff::ClpNodeStuff () :
   nBound_(0),
   saveOptions_(0),
   solverOptions_(0),
+  maximumNodes_(0),
   nDepth_(-1),
   nNodes_(0),
   numberNodesExplored_(0),
@@ -658,6 +684,7 @@ ClpNodeStuff::ClpNodeStuff (const ClpNodeStuff & rhs)
     nBound_(0),
     saveOptions_(rhs.saveOptions_),
     solverOptions_(rhs.solverOptions_),
+    maximumNodes_(rhs.maximumNodes_),
     nDepth_(rhs.nDepth_),
     nNodes_(rhs.nNodes_),
     numberNodesExplored_(rhs.numberNodesExplored_),
@@ -688,12 +715,14 @@ ClpNodeStuff::operator=(const ClpNodeStuff& rhs)
     nBound_ = 0;
     saveOptions_ = rhs.saveOptions_;
     solverOptions_ = rhs.solverOptions_;
+    maximumNodes_ = rhs.maximumNodes_;
     int n = maximumNodes();
     if (n) {
       for (int i=0;i<n;i++) 
 	delete nodeInfo_[i];
-      delete [] nodeInfo_;
     }
+    delete [] nodeInfo_;
+    nodeInfo_=NULL;
     nDepth_ = rhs.nDepth_;
     nNodes_ = rhs.nNodes_;
     numberNodesExplored_ = rhs.numberNodesExplored_;
@@ -723,6 +752,7 @@ ClpNodeStuff::zap(int type)
     nBound_ = 0;
     saveOptions_ = 0;
     solverOptions_ = 0;
+    maximumNodes_ = 0;
     nDepth_ = -1;
     nNodes_ = 0;
     presolveType_ = 0;
@@ -746,21 +776,35 @@ ClpNodeStuff::~ClpNodeStuff ()
   if (n) {
     for (int i=0;i<n;i++) 
       delete nodeInfo_[i];
-    delete [] nodeInfo_;
   }
+  delete [] nodeInfo_;
 }
 // Return maximum number of nodes
 int 
 ClpNodeStuff::maximumNodes() const
 {
-  int n;
-  if ((solverOptions_&32)==0) 
-    n = (1<<nDepth_)+1+nDepth_;
-  else if (nDepth_) 
-    n = 1+1+nDepth_;
-  else
-    n = 0;
+  int n=0;
+#if 0
+  if (nDepth_!=-1) {
+    if ((solverOptions_&32)==0) 
+      n = (1<<nDepth_);
+    else if (nDepth_) 
+      n = 1;
+  }
+  assert (n==maximumNodes_-(1+nDepth_)||n==0);
+#else
+  if (nDepth_!=-1) {
+    n = maximumNodes_-(1+nDepth_);
+    assert (n>0);
+  }
+#endif
   return n;
+}
+// Return maximum space for nodes
+int 
+ClpNodeStuff::maximumSpace() const
+{
+  return maximumNodes_;
 }
 /* Fill with pseudocosts */
 void 

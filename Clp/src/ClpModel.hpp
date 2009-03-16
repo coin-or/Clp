@@ -598,6 +598,8 @@ public:
   { smallElement_=value;} 
    /// Row Matrix 
    inline ClpMatrixBase * rowCopy() const       { return rowCopy_; }
+   /// Set new row matrix
+   void setNewRowCopy(ClpMatrixBase * newCopy);
    /// Clp Matrix 
    inline ClpMatrixBase * clpMatrix() const     { return matrix_; }
    /// Scaled ClpPackedMatrix 
@@ -846,7 +848,7 @@ public:
       16384 - In fast dual (so we can switch off things)
       32768 - called from Osi
       65536 - keep arrays around as much as possible (also use maximumR/C)
-      131072 - scale factor arrays have inverse values at end
+      131072 - unused
       262144 - extra copy of scaled matrix
       524288 - Clp fast dual
       1048576 - don't need to finish dual (can return 3)
@@ -1002,6 +1004,7 @@ protected:
         256 - column ubs not changed
 	512 - basis not changed (up to user to set this to 0)
 	      top bits may be used internally
+	shift by 65336 is 3 all same, 1 all except col bounds      
   */
   unsigned int whatsChanged_;
   /// Status of problem

@@ -191,6 +191,8 @@ public:
   void update(int way,int sequence,double change,bool feasible);
   /// Return maximum number of nodes
   int maximumNodes() const;
+  /// Return maximum space for nodes
+  int maximumSpace() const;
   //@}
   
 public:
@@ -235,6 +237,8 @@ public:
       65536 - set if activated
   */
   int solverOptions_;
+  /// Maximum number of nodes to do
+  int maximumNodes_;
   /// Number deep
   int nDepth_;
   /// Number nodes returned (-1 if fathom aborted)

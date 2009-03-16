@@ -104,7 +104,7 @@ public:
 				 CoinFactorizationDouble * element);
   /** Creates scales for column copy (rowCopy in model may be modified)
       returns non-zero if no scaling done */
-  virtual int scale(ClpModel * model, const ClpSimplex * baseModel=NULL) const ;
+  virtual int scale(ClpModel * model,const ClpSimplex * baseModel=NULL) const ;
   /** Scales rowCopy if column copy scaled
       Only called if scales already exist */
   virtual void scaleRowCopy(ClpModel * model) const ;

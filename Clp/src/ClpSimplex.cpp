@@ -28,9 +28,6 @@
 #include "CoinModel.hpp"
 #include "CoinLpIO.hpp"
 #include <cfloat>
-#ifndef CLP_AUXILIARY_MODEL
-#define auxiliaryModel_ false
-#endif
 
 #include <string>
 #include <stdio.h>
@@ -94,9 +91,6 @@ ClpSimplex::ClpSimplex (bool emptyMessages) :
   solution_(NULL),
   rowActivityWork_(NULL),
   columnActivityWork_(NULL),
-#ifdef CLP_AUXILIARY_MODEL
-  auxiliaryModel_(NULL),
-#endif
   numberDualInfeasibilities_(0),
   numberDualInfeasibilitiesWithoutFree_(0),
   numberPrimalInfeasibilities_(100),
@@ -210,9 +204,6 @@ ClpSimplex::ClpSimplex ( const ClpModel * rhs,
   solution_(NULL),
   rowActivityWork_(NULL),
   columnActivityWork_(NULL),
-#ifdef CLP_AUXILIARY_MODEL
-  auxiliaryModel_(NULL),
-#endif
   numberDualInfeasibilities_(0),
   numberDualInfeasibilitiesWithoutFree_(0),
   numberPrimalInfeasibilities_(100),
@@ -363,9 +354,6 @@ ClpSimplex::ClpSimplex ( const ClpSimplex * rhs,
   solution_(NULL),
   rowActivityWork_(NULL),
   columnActivityWork_(NULL),
-#ifdef CLP_AUXILIARY_MODEL
-  auxiliaryModel_(NULL),
-#endif
   numberDualInfeasibilities_(0),
   numberDualInfeasibilitiesWithoutFree_(0),
   numberPrimalInfeasibilities_(100),
@@ -407,6 +395,8 @@ ClpSimplex::ClpSimplex ( const ClpSimplex * rhs,
   }
   saveStatus_=NULL;
   factorization_ = new ClpFactorization(*rhs->factorization_,-numberRows_);
+  //factorization_ = new ClpFactorization(*rhs->factorization_,
+  //				rhs->factorization_->goDenseThreshold());
   ClpDualRowDantzig * pivot =
     dynamic_cast< ClpDualRowDantzig*>(rhs->dualRowPivot_);
   // say Steepest pricing
@@ -1102,7 +1092,13 @@ ClpSimplex::computeDuals(double * givenDjs)
     // can use work if problem scaled (for better cache)
     ClpPackedMatrix* clpMatrix =
       dynamic_cast< ClpPackedMatrix*>(matrix_);
-    if (clpMatrix&&rowScale_&&(clpMatrix->flags()&2)==0) { 
+    double * saveRowScale = rowScale_;
+    //double * saveColumnScale = columnScale_;
+    if (scaledMatrix_) {
+      rowScale_=NULL;
+      clpMatrix = scaledMatrix_;
+    }
+    if (clpMatrix&&(clpMatrix->flags()&2)==0) { 
       CoinIndexedVector * cVector = columnArray_[0];
       int * whichColumn = cVector->getIndices();
       assert (!cVector->getNumElements());
@@ -1130,6 +1126,8 @@ ClpSimplex::computeDuals(double * givenDjs)
 	matrix_->transposeTimes(-1.0,dual_,reducedCostWork_,
 				rowScale_,columnScale_,NULL);
     }
+    rowScale_ = saveRowScale;
+    //columnScale_ = saveColumnScale;
     ClpFillN(work,numberRows_,0.0);
     // Extended duals and check dual infeasibility
     if (!matrix_->skipDualCheck()||algorithm_<0||problemStatus_!=-2) 
@@ -1859,6 +1857,8 @@ ClpSimplex::housekeeping(double objectiveChange)
   int numberPivots=factorization_->pivots();
   int maximumPivots = factorization_->maximumPivots();
   int numberDense = factorization_->numberDense();
+  bool dontInvert = ((specialOptions_&16384)!=0&&numberIterations_*3>
+		     2*maximumIterations());
   if (numberPivots==maximumPivots||
       maximumPivots<2) {
     // If dense then increase
@@ -1873,7 +1873,7 @@ ClpSimplex::housekeeping(double objectiveChange)
       }
     }
     return 1;
-  } else if (factorization_->timeToRefactorize()) {
+  } else if (factorization_->timeToRefactorize()&&!dontInvert) {
     //printf("ret after %d pivots\n",factorization_->pivots());
     return 1;
   } else if (forceFactorization_>0&&
@@ -1957,9 +1957,6 @@ ClpSimplex::ClpSimplex(const ClpSimplex &rhs,int scalingMode) :
   solution_(NULL),
   rowActivityWork_(NULL),
   columnActivityWork_(NULL),
-#ifdef CLP_AUXILIARY_MODEL
-  auxiliaryModel_(NULL),
-#endif
   numberDualInfeasibilities_(0),
   numberDualInfeasibilitiesWithoutFree_(0),
   numberPrimalInfeasibilities_(100),
@@ -2066,9 +2063,6 @@ ClpSimplex::ClpSimplex(const ClpModel &rhs, int scalingMode) :
   solution_(NULL),
   rowActivityWork_(NULL),
   columnActivityWork_(NULL),
-#ifdef CLP_AUXILIARY_MODEL
-  auxiliaryModel_(NULL),
-#endif
   numberDualInfeasibilities_(0),
   numberDualInfeasibilitiesWithoutFree_(0),
   numberPrimalInfeasibilities_(100),
@@ -2140,9 +2134,6 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
   maximumBasic_ = rhs.maximumBasic_;
   dontFactorizePivots_ = rhs.dontFactorizePivots_;
   int numberRows2 = numberRows_+numberExtraRows_;
-#ifdef CLP_AUXILIARY_MODEL
-  auxiliaryModel_ = NULL;
-#endif
   moreSpecialOptions_ = rhs.moreSpecialOptions_;
   if ((whatsChanged_&1)!=0) {
     int numberTotal = numberColumns_+numberRows2;
@@ -2214,8 +2205,8 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
     }
     saveStatus_ = NULL;
   }
+  delete factorization_;
   if (rhs.factorization_) {
-    delete factorization_;
     factorization_ = new ClpFactorization(*rhs.factorization_,numberRows_);
   } else {
     factorization_=NULL;
@@ -2353,10 +2344,6 @@ ClpSimplex::gutsOfDelete(int type)
   saveStatus_=NULL;
   if (!type) {
     // delete everything
-#ifdef CLP_AUXILIARY_MODEL
-    delete auxiliaryModel_;
-    auxiliaryModel_ = NULL;
-#endif
     setEmptyFactorization();
     delete [] pivotVariable_;
     pivotVariable_=NULL;
@@ -2372,7 +2359,9 @@ ClpSimplex::gutsOfDelete(int type)
   } else {
     // delete any size information in methods
     if (type>1) {
-      factorization_->clearArrays();
+      //assert (factorization_);
+      if (factorization_)
+	factorization_->clearArrays();
       delete [] pivotVariable_;
       pivotVariable_=NULL;
     }
@@ -2843,18 +2832,6 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
     keepPivots=true;
   }
   bool oldMatrix = ((startFinishOptions&4)!=0&&(whatsChanged_&1)!=0);
-#ifdef CLP_AUXILIARY_MODEL
-  if (auxiliaryModel_) {
-    if (auxiliaryModel_->numberRows_==numberRows_&&
-        auxiliaryModel_->numberColumns_==numberColumns_&&
-	(whatsChanged_&511)==511) {
-      oldMatrix=true; 
-    } else {
-      deleteAuxiliaryModel();
-      oldMatrix=false;
-    }
-  }
-#endif
   if (what==63) {
     pivotRow_=-1; 
     if (!status_)
@@ -2902,7 +2879,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
   }
   int numberRows2 = numberRows_+numberExtraRows_;
   int numberTotal = numberRows2+numberColumns_;
-  if ((specialOptions_&65536)!=0&&!auxiliaryModel_) {
+  if ((specialOptions_&65536)!=0) {
     assert (!numberExtraRows_);
     if (!cost_||numberRows2>maximumInternalRows_||
 	numberColumns_>maximumInternalColumns_) {
@@ -2962,7 +2939,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
   }
   int i;
   bool doSanityCheck=true;
-  if (what==63&&!auxiliaryModel_) {
+  if (what==63) {
     // We may want to switch stuff off for speed
     if ((specialOptions_&256)!=0)
       makeRowCopy=false; // no row copy
@@ -2989,7 +2966,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
       rowCopy_ = matrix_->reverseOrderedCopy();
     }
 #if 0
-    if (what==63&&(specialOptions_&131072)!=0) {
+    if (what==63) {
       int k=rowScale_ ? 1 : 0;
       if (oldMatrix)
 	k+=2;
@@ -3015,11 +2992,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
     inverseRowScale_ = NULL;
     inverseColumnScale_ = NULL;
     if (scalingFlag_>0&&!rowScale_) {
-      if ((specialOptions_&131072)!=0) {
-	inverseRowScale_ = rowScale_+numberRows2;
-	inverseColumnScale_ = columnScale_+numberColumns_;
-      }
-      if ((specialOptions_&65536)!=0&&!auxiliaryModel_) {
+      if ((specialOptions_&65536)!=0) {
 	assert (!rowScale_);
 	rowScale_ = savedRowScale_;
 	columnScale_ = savedColumnScale_;
@@ -3039,10 +3012,6 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
       }
       if (matrix_->scale(this))
 	scalingFlag_=-scalingFlag_; // not scaled after all
-      if ((specialOptions_&131072)!=0&&rowScale_&&!savedRowScale_) {
-	inverseRowScale_ = rowScale_+numberRows2;
-	inverseColumnScale_ = columnScale_+numberColumns_;
-      }
       if (rowScale_&&automaticScale_) {
 	// try automatic scaling
 	double smallestObj=1.0e100;
@@ -3057,7 +3026,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
 	    largestObj = CoinMax(largestObj,value);
 	  }
 	  if (columnLower_[i]>0.0||columnUpper_[i]<0.0) {
-	    double scale = 1.0/columnScale_[i];
+	    double scale = 1.0*inverseColumnScale_[i];
 	    //printf("%d %g %g %g %g\n",i,scale,lower_[i],upper_[i],largestRhs);
 	    if (columnLower_[i]>0)
 	      largestRhs=CoinMax(largestRhs,columnLower_[i]*scale);
@@ -3160,6 +3129,10 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
     } else if (makeRowCopy&&scalingFlag_>0&&!oldMatrix) {
       matrix_->scaleRowCopy(this);
     }
+    if (rowScale_&&!savedRowScale_) {
+      inverseRowScale_ = rowScale_+numberRows2;
+      inverseColumnScale_ = columnScale_+numberColumns_;
+    }
     // See if we can try for faster row copy
     if (makeRowCopy&&!oldMatrix) {
       ClpPackedMatrix* clpMatrix =
@@ -3200,21 +3173,6 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
       dj_ = new double[numberTotal];
       delete [] solution_;
       solution_ = new double[numberTotal];
-#ifdef CLP_AUXILIARY_MODEL
-    } else if (auxiliaryModel_) {
-      assert (!cost_);
-      cost_=auxiliaryModel_->cost_;
-      assert (!lower_);
-      lower_=auxiliaryModel_->lower_;
-      assert (!upper_);
-      upper_=auxiliaryModel_->upper_;
-      assert (!dj_);
-      dj_=auxiliaryModel_->dj_;
-      assert (!solution_);
-      solution_=auxiliaryModel_->solution_;
-      assert (!rowScale_);
-      assert (!columnScale_);
-#endif
     }
     reducedCostWork_ = dj_;
     rowReducedCost_ = dj_+numberColumns_;
@@ -3228,930 +3186,75 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
     columnUpperWork_ = upper_;
   }
   if ((what&4)!=0) {
-#ifdef CLP_AUXILIARY_MODEL
-    if (!auxiliaryModel_||(what==63&&(auxiliaryModel_->specialOptions_&4)==0))
-#endif
-      {
-      double direction = optimizationDirection_*objectiveScale_;
-      const double * obj = objective();
-#ifdef CLP_AUXILIARY_MODEL
-      const double * rowScale = auxiliaryModel_ ? auxiliaryModel_->rowScale_ : rowScale_;
-      const double * columnScale = auxiliaryModel_ ? auxiliaryModel_->columnScale_ : columnScale_;
-#else
-      const double * rowScale = rowScale_;
-      const double * columnScale = columnScale_;
-#endif
-      // and also scale by scale factors
-      if (rowScale) {
-        if (rowObjective_) {
-          for (i=0;i<numberRows_;i++)
-            rowObjectiveWork_[i] = rowObjective_[i]*direction/rowScale[i];
-        } else {
-          memset(rowObjectiveWork_,0,numberRows_*sizeof(double));
-        }
-        // If scaled then do all columns later in one loop 
-        if (what!=63||auxiliaryModel_) {
-          for (i=0;i<numberColumns_;i++) {
-            CoinAssert(fabs(obj[i])<1.0e25);
-            objectiveWork_[i] = obj[i]*direction*columnScale[i];
-          }
-        }
+    double direction = optimizationDirection_*objectiveScale_;
+    const double * obj = objective();
+    const double * rowScale = rowScale_;
+    const double * columnScale = columnScale_;
+    // and also scale by scale factors
+    if (rowScale) {
+      if (rowObjective_) {
+	for (i=0;i<numberRows_;i++)
+	  rowObjectiveWork_[i] = rowObjective_[i]*direction/rowScale[i];
       } else {
-        if (rowObjective_) {
-          for (i=0;i<numberRows_;i++)
-            rowObjectiveWork_[i] = rowObjective_[i]*direction;
-        } else {
-          memset(rowObjectiveWork_,0,numberRows_*sizeof(double));
-        }
-        for (i=0;i<numberColumns_;i++) {
-          CoinAssert(fabs(obj[i])<1.0e25);
-          objectiveWork_[i] = obj[i]*direction;
-        }
+	memset(rowObjectiveWork_,0,numberRows_*sizeof(double));
       }
-#ifdef CLP_AUXILIARY_MODEL
-      if (auxiliaryModel_) {
-        // save costs
-        CoinMemcpyN(cost_,numberTotal,auxiliaryModel_->cost_+numberTotal);
+      // If scaled then do all columns later in one loop 
+      if (what!=63) {
+	for (i=0;i<numberColumns_;i++) {
+	  CoinAssert(fabs(obj[i])<1.0e25);
+	  objectiveWork_[i] = obj[i]*direction*columnScale[i];
+	}
       }
     } else {
-      // just copy
-      CoinMemcpyN(auxiliaryModel_->cost_+numberTotal,numberTotal,cost_);
-#endif
+      if (rowObjective_) {
+	for (i=0;i<numberRows_;i++)
+	  rowObjectiveWork_[i] = rowObjective_[i]*direction;
+      } else {
+	memset(rowObjectiveWork_,0,numberRows_*sizeof(double));
+      }
+      for (i=0;i<numberColumns_;i++) {
+	CoinAssert(fabs(obj[i])<1.0e25);
+	objectiveWork_[i] = obj[i]*direction;
+      }
     }
   }
   if ((what&1)!=0) {
-#ifdef CLP_AUXILIARY_MODEL
-    const double * rowScale = auxiliaryModel_ ? auxiliaryModel_->rowScale_ : rowScale_;
-    const double * columnScale = auxiliaryModel_ ? auxiliaryModel_->columnScale_ : columnScale_;
-#else
     const double * rowScale = rowScale_;
-    const double * columnScale = columnScale_;
-#endif
-    // clean up any mismatches on infinity
-    // and fix any variables with tiny gaps
-    double primalTolerance=dblParam_[ClpPrimalTolerance];
-#ifdef CLP_AUXILIARY_MODEL
-    if (!auxiliaryModel_) {
-#endif
-      if(rowScale) {
-        // If scaled then do all columns later in one loop 
-        if (what!=63) {
-	  if (!inverseColumnScale_) {
-	    for (i=0;i<numberColumns_;i++) {
-	      double multiplier = rhsScale_/columnScale[i];
-	      double lowerValue = columnLower_[i];
-	      double upperValue = columnUpper_[i];
-	      if (lowerValue>-1.0e20) {
-		columnLowerWork_[i]=lowerValue*multiplier;
-		if (upperValue>=1.0e20) {
-		  columnUpperWork_[i]=COIN_DBL_MAX;
-		} else {
-		  columnUpperWork_[i]=upperValue*multiplier;
-		  if (fabs(columnUpperWork_[i]-columnLowerWork_[i])<=primalTolerance) {
-		    if (columnLowerWork_[i]>=0.0) {
-		      columnUpperWork_[i] = columnLowerWork_[i];
-		    } else if (columnUpperWork_[i]<=0.0) {
-		      columnLowerWork_[i] = columnUpperWork_[i];
-		    } else {
-		      columnUpperWork_[i] = 0.0;
-		      columnLowerWork_[i] = 0.0;
-		    }
-		  }
-		}
-	      } else if (upperValue<1.0e20) {
-		columnLowerWork_[i]=-COIN_DBL_MAX;
-		columnUpperWork_[i]=upperValue*multiplier;
-	      } else {
-		// free
-		columnLowerWork_[i]=-COIN_DBL_MAX;
-		columnUpperWork_[i]=COIN_DBL_MAX;
-	      }
-	    }
-	  } else {
-	    assert (inverseColumnScale_);
-	    const double * inverseScale = inverseColumnScale_;
-	    for (i=0;i<numberColumns_;i++) {
-	      double multiplier = rhsScale_*inverseScale[i];
-	      double lowerValue = columnLower_[i];
-	      double upperValue = columnUpper_[i];
-	      if (lowerValue>-1.0e20) {
-		columnLowerWork_[i]=lowerValue*multiplier;
-		if (upperValue>=1.0e20) {
-		  columnUpperWork_[i]=COIN_DBL_MAX;
-		} else {
-		  columnUpperWork_[i]=upperValue*multiplier;
-		  if (fabs(columnUpperWork_[i]-columnLowerWork_[i])<=primalTolerance) {
-		    if (columnLowerWork_[i]>=0.0) {
-		      columnUpperWork_[i] = columnLowerWork_[i];
-		    } else if (columnUpperWork_[i]<=0.0) {
-		      columnLowerWork_[i] = columnUpperWork_[i];
-		    } else {
-		      columnUpperWork_[i] = 0.0;
-		      columnLowerWork_[i] = 0.0;
-		    }
-		  }
-		}
-	      } else if (upperValue<1.0e20) {
-		columnLowerWork_[i]=-COIN_DBL_MAX;
-		columnUpperWork_[i]=upperValue*multiplier;
-	      } else {
-		// free
-		columnLowerWork_[i]=-COIN_DBL_MAX;
-		columnUpperWork_[i]=COIN_DBL_MAX;
-	      }
-	    }
-	  }
-	}
-        for (i=0;i<numberRows_;i++) {
-          double multiplier = rhsScale_*rowScale[i];
-          double lowerValue = rowLower_[i];
-          double upperValue = rowUpper_[i];
-          if (lowerValue>-1.0e20) {
-            rowLowerWork_[i]=lowerValue*multiplier;
-            if (upperValue>=1.0e20) {
-              rowUpperWork_[i]=COIN_DBL_MAX;
-            } else {
-              rowUpperWork_[i]=upperValue*multiplier;
-              if (fabs(rowUpperWork_[i]-rowLowerWork_[i])<=primalTolerance) {
-                if (rowLowerWork_[i]>=0.0) {
-                  rowUpperWork_[i] = rowLowerWork_[i];
-                } else if (rowUpperWork_[i]<=0.0) {
-                  rowLowerWork_[i] = rowUpperWork_[i];
-                } else {
-                  rowUpperWork_[i] = 0.0;
-                  rowLowerWork_[i] = 0.0;
-                }
-              }
-            }
-          } else if (upperValue<1.0e20) {
-            rowLowerWork_[i]=-COIN_DBL_MAX;
-            rowUpperWork_[i]=upperValue*multiplier;
-          } else {
-            // free
-            rowLowerWork_[i]=-COIN_DBL_MAX;
-            rowUpperWork_[i]=COIN_DBL_MAX;
-          }
-        }
-      } else if (rhsScale_!=1.0) {
-        for (i=0;i<numberColumns_;i++) {
-          double lowerValue = columnLower_[i];
-          double upperValue = columnUpper_[i];
-          if (lowerValue>-1.0e20) {
-            columnLowerWork_[i]=lowerValue*rhsScale_;
-            if (upperValue>=1.0e20) {
-              columnUpperWork_[i]=COIN_DBL_MAX;
-            } else {
-              columnUpperWork_[i]=upperValue*rhsScale_;
-              if (fabs(columnUpperWork_[i]-columnLowerWork_[i])<=primalTolerance) {
-                if (columnLowerWork_[i]>=0.0) {
-                  columnUpperWork_[i] = columnLowerWork_[i];
-                } else if (columnUpperWork_[i]<=0.0) {
-                  columnLowerWork_[i] = columnUpperWork_[i];
-                } else {
-                  columnUpperWork_[i] = 0.0;
-                  columnLowerWork_[i] = 0.0;
-                }
-              }
-            }
-          } else if (upperValue<1.0e20) {
-            columnLowerWork_[i]=-COIN_DBL_MAX;
-            columnUpperWork_[i]=upperValue*rhsScale_;
-          } else {
-            // free
-            columnLowerWork_[i]=-COIN_DBL_MAX;
-            columnUpperWork_[i]=COIN_DBL_MAX;
-          }
-        }
-        for (i=0;i<numberRows_;i++) {
-          double lowerValue = rowLower_[i];
-          double upperValue = rowUpper_[i];
-          if (lowerValue>-1.0e20) {
-            rowLowerWork_[i]=lowerValue*rhsScale_;
-            if (upperValue>=1.0e20) {
-              rowUpperWork_[i]=COIN_DBL_MAX;
-            } else {
-              rowUpperWork_[i]=upperValue*rhsScale_;
-              if (fabs(rowUpperWork_[i]-rowLowerWork_[i])<=primalTolerance) {
-                if (rowLowerWork_[i]>=0.0) {
-                  rowUpperWork_[i] = rowLowerWork_[i];
-                } else if (rowUpperWork_[i]<=0.0) {
-                  rowLowerWork_[i] = rowUpperWork_[i];
-                } else {
-                  rowUpperWork_[i] = 0.0;
-                  rowLowerWork_[i] = 0.0;
-                }
-              }
-            }
-          } else if (upperValue<1.0e20) {
-            rowLowerWork_[i]=-COIN_DBL_MAX;
-            rowUpperWork_[i]=upperValue*rhsScale_;
-          } else {
-            // free
-            rowLowerWork_[i]=-COIN_DBL_MAX;
-            rowUpperWork_[i]=COIN_DBL_MAX;
-          }
-        }
-      } else {
-        for (i=0;i<numberColumns_;i++) {
-          double lowerValue = columnLower_[i];
-          double upperValue = columnUpper_[i];
-          if (lowerValue>-1.0e20) {
-            columnLowerWork_[i]=lowerValue;
-            if (upperValue>=1.0e20) {
-              columnUpperWork_[i]=COIN_DBL_MAX;
-            } else {
-              columnUpperWork_[i]=upperValue;
-              if (fabs(columnUpperWork_[i]-columnLowerWork_[i])<=primalTolerance) {
-                if (columnLowerWork_[i]>=0.0) {
-                  columnUpperWork_[i] = columnLowerWork_[i];
-                } else if (columnUpperWork_[i]<=0.0) {
-                  columnLowerWork_[i] = columnUpperWork_[i];
-                } else {
-                  columnUpperWork_[i] = 0.0;
-                  columnLowerWork_[i] = 0.0;
-                }
-              }
-            }
-          } else if (upperValue<1.0e20) {
-            columnLowerWork_[i]=-COIN_DBL_MAX;
-            columnUpperWork_[i]=upperValue;
-          } else {
-            // free
-            columnLowerWork_[i]=-COIN_DBL_MAX;
-            columnUpperWork_[i]=COIN_DBL_MAX;
-          }
-        }
-        for (i=0;i<numberRows_;i++) {
-          double lowerValue = rowLower_[i];
-          double upperValue = rowUpper_[i];
-          if (lowerValue>-1.0e20) {
-            rowLowerWork_[i]=lowerValue;
-            if (upperValue>=1.0e20) {
-              rowUpperWork_[i]=COIN_DBL_MAX;
-            } else {
-              rowUpperWork_[i]=upperValue;
-              if (fabs(rowUpperWork_[i]-rowLowerWork_[i])<=primalTolerance) {
-                if (rowLowerWork_[i]>=0.0) {
-                  rowUpperWork_[i] = rowLowerWork_[i];
-                } else if (rowUpperWork_[i]<=0.0) {
-                  rowLowerWork_[i] = rowUpperWork_[i];
-                } else {
-                  rowUpperWork_[i] = 0.0;
-                  rowLowerWork_[i] = 0.0;
-                }
-              }
-            }
-          } else if (upperValue<1.0e20) {
-            rowLowerWork_[i]=-COIN_DBL_MAX;
-            rowUpperWork_[i]=upperValue;
-          } else {
-            // free
-            rowLowerWork_[i]=-COIN_DBL_MAX;
-            rowUpperWork_[i]=COIN_DBL_MAX;
-          }
-        }
-      }
-#ifdef CLP_AUXILIARY_MODEL
-    } else {
-      // auxiliary model
-      if (what!=63) {
-        // just copy
-        CoinMemcpyN(auxiliaryModel_->lower_+numberTotal,numberTotal,lower_);
-        CoinMemcpyN(auxiliaryModel_->upper_+numberTotal,numberTotal,upper_);
-      } else {
-        assert (rhsScale_==1.0);
-        assert (objectiveScale_==1.0);
-        if ((auxiliaryModel_->specialOptions_&2)==0) {
-          // need to do column bounds
-          if (columnScale) {
-            const double * inverseScale = columnScale+numberColumns_;
-            // scaled
-            for (i=0;i<numberColumns_;i++) {
-              double value;
-              value = columnLower_[i];
-              if (value>-1.0e20) 
-                value *= inverseScale[i];
-              lower_[i] = value;
-              value = columnUpper_[i];
-              if (value<1.0e20) 
-                value *= inverseScale[i];
-              upper_[i] = value;
-            }
-          } else {
-            for (i=0;i<numberColumns_;i++) {
-              lower_[i] = columnLower_[i];
-              upper_[i] = columnUpper_[i];
-            }
-          }
-          // save
-          CoinMemcpyN(lower_,numberColumns_,auxiliaryModel_->lower_+numberTotal);
-          CoinMemcpyN(upper_,numberColumns_,auxiliaryModel_->upper_+numberTotal);
-        } else {
-          // just copy
-          CoinMemcpyN(auxiliaryModel_->lower_+numberTotal,numberColumns_,lower_);
-          CoinMemcpyN(auxiliaryModel_->upper_+numberTotal,numberColumns_,upper_);
-        }
-        if ((auxiliaryModel_->specialOptions_&1)==0) {
-          // need to do row bounds
-          if (rowScale) {
-            // scaled
-            for (i=0;i<numberRows_;i++) {
-              double value;
-              value = rowLower_[i];
-              if (value>-1.0e20) 
-                value *= rowScale[i];
-              lower_[i+numberColumns_] = value;
-              value = rowUpper_[i];
-              if (value<1.0e20) 
-                value *= rowScale[i];
-              upper_[i+numberColumns_] = value;
-            }
-          } else {
-            for (i=0;i<numberRows_;i++) {
-              lower_[i+numberColumns_] = rowLower_[i];
-              upper_[i+numberColumns_] = rowUpper_[i];
-            }
-          }
-          // save
-          CoinMemcpyN(                 lower_+numberColumns_,numberRows_,auxiliaryModel_->lower_+numberTotal+numberColumns_);
-          CoinMemcpyN(                 upper_+numberColumns_,numberRows_,auxiliaryModel_->upper_+numberTotal+numberColumns_);
-        } else {
-          // just copy
-          CoinMemcpyN(                 auxiliaryModel_->lower_+numberTotal+numberColumns_,
-                       numberRows_,lower_+numberColumns_);
-          CoinMemcpyN(                 auxiliaryModel_->upper_+numberTotal+numberColumns_,
-                       numberRows_,upper_+numberColumns_);
-        }
-      }
-      if (what==63) {
-        // do basis
-        assert ((auxiliaryModel_->specialOptions_&8)!=0);
-        // clean solution trusting basis
-        for ( i=0;i<numberTotal;i++) {
-          Status status =getStatus(i);
-          double value=solution_[i]; // may as well leave if basic (values pass)
-          if (status!=basic) {
-            if (upper_[i]==lower_[i]) {
-              setStatus(i,isFixed);
-              value=lower_[i];
-            } else if (status==atLowerBound) {
-              if (lower_[i]>-1.0e20) {
-                value=lower_[i];
-              } else {
-                if (upper_[i]<1.0e20) {
-                  value=upper_[i];
-                  setStatus(i,atUpperBound);
-                } else {
-                  setStatus(i,isFree);
-                }
-              }
-            } else if (status==atUpperBound) {
-              if (upper_[i]<1.0e20) {
-              value=upper_[i];
-              } else {
-                if (lower_[i]>-1.0e20) {
-                  value=lower_[i];
-                  setStatus(i,atLowerBound);
-                } else {
-                  setStatus(i,isFree);
-                }
-              }
-            }
-          }
-          solution_[i]=value;
-        }
-      }
-    }
-#endif
-  }
-  if (what==63) {
-    // move information to work arrays
-    double direction = optimizationDirection_;
-    // direction is actually scale out not scale in
-    if (direction)
-      direction = 1.0/direction;
-#ifdef CLP_AUXILIARY_MODEL
-    if (direction!=1.0&&(!auxiliaryModel_||(auxiliaryModel_->specialOptions_&8)==0))
-#else
-    if (direction!=1.0)
-#endif
- {
-      // reverse all dual signs
-      for (i=0;i<numberColumns_;i++) 
-        reducedCost_[i] *= direction;
-      for (i=0;i<numberRows_;i++) 
-        dual_[i] *= direction;
-    }
-    for (i=0;i<numberRows_+numberColumns_;i++) {
-      setFakeBound(i,noFake);
-    }
-#ifdef CLP_AUXILIARY_MODEL
-    if (!auxiliaryModel_) {
-#endif
-      if (rowScale_) {
-        const double * obj = objective();
-        double direction = optimizationDirection_*objectiveScale_;
-        // clean up any mismatches on infinity
-        // and fix any variables with tiny gaps
-        double primalTolerance=dblParam_[ClpPrimalTolerance];
-        // on entry
-	if (!inverseColumnScale_) {
-	  for (i=0;i<numberColumns_;i++) {
-	    CoinAssert(fabs(obj[i])<1.0e25);
-	    double scaleFactor = columnScale_[i];
-	    double multiplier = rhsScale_/scaleFactor;
-	    scaleFactor *= direction;
-	    objectiveWork_[i] = obj[i]*scaleFactor;
-	    reducedCostWork_[i] = reducedCost_[i]*scaleFactor;
-	    double lowerValue = columnLower_[i];
-	    double upperValue = columnUpper_[i];
-	    if (lowerValue>-1.0e20) {
-	      columnLowerWork_[i]=lowerValue*multiplier;
-	      if (upperValue>=1.0e20) {
-		columnUpperWork_[i]=COIN_DBL_MAX;
-	      } else {
-		columnUpperWork_[i]=upperValue*multiplier;
-		if (fabs(columnUpperWork_[i]-columnLowerWork_[i])<=primalTolerance) {
-		  if (columnLowerWork_[i]>=0.0) {
-		    columnUpperWork_[i] = columnLowerWork_[i];
-		  } else if (columnUpperWork_[i]<=0.0) {
-		    columnLowerWork_[i] = columnUpperWork_[i];
-		  } else {
-		    columnUpperWork_[i] = 0.0;
-		    columnLowerWork_[i] = 0.0;
-		  }
-		}
-	      }
-	    } else if (upperValue<1.0e20) {
-	      columnLowerWork_[i]=-COIN_DBL_MAX;
-	      columnUpperWork_[i]=upperValue*multiplier;
-	    } else {
-	      // free
-	      columnLowerWork_[i]=-COIN_DBL_MAX;
-	      columnUpperWork_[i]=COIN_DBL_MAX;
-	    }
-	    double value = columnActivity_[i] * multiplier;
-	    if (fabs(value)>1.0e20) {
-	      //printf("bad value of %g for column %d\n",value,i);
-	      setColumnStatus(i,superBasic);
-	      if (columnUpperWork_[i]<0.0) {
-		value=columnUpperWork_[i];
-	      } else if (columnLowerWork_[i]>0.0) {
-		value=columnLowerWork_[i];
-	      } else {
-		value=0.0;
-	      }
-	    }
-	    columnActivityWork_[i] = value;
-	  }
-	  for (i=0;i<numberRows_;i++) {
-	    dual_[i] /= rowScale_[i];
-	    dual_[i] *= objectiveScale_;
-	    rowReducedCost_[i] = dual_[i];
-	    double multiplier = rhsScale_*rowScale_[i];
-	    double value = rowActivity_[i] * multiplier;
-	    if (fabs(value)>1.0e20) {
-	      //printf("bad value of %g for row %d\n",value,i);
-	      setRowStatus(i,superBasic);
-	      if (rowUpperWork_[i]<0.0) {
-		value=rowUpperWork_[i];
-	      } else if (rowLowerWork_[i]>0.0) {
-		value=rowLowerWork_[i];
-	      } else {
-		value=0.0;
-	      }
-	    }
-	    rowActivityWork_[i] = value;
-	  }
-	} else {
-	  assert (inverseColumnScale_);
-	  const double * inverseScale = inverseColumnScale_;
-	  for (i=0;i<numberColumns_;i++) {
-	    CoinAssert(fabs(obj[i])<1.0e25);
-	    double scaleFactor = columnScale_[i];
-	    double multiplier = rhsScale_*inverseScale[i];
-	    scaleFactor *= direction;
-	    objectiveWork_[i] = obj[i]*scaleFactor;
-	    reducedCostWork_[i] = reducedCost_[i]*scaleFactor;
-	    double lowerValue = columnLower_[i];
-	    double upperValue = columnUpper_[i];
-	    if (lowerValue>-1.0e20) {
-	      columnLowerWork_[i]=lowerValue*multiplier;
-	      if (upperValue>=1.0e20) {
-		columnUpperWork_[i]=COIN_DBL_MAX;
-	      } else {
-		columnUpperWork_[i]=upperValue*multiplier;
-		if (fabs(columnUpperWork_[i]-columnLowerWork_[i])<=primalTolerance) {
-		  if (columnLowerWork_[i]>=0.0) {
-		    columnUpperWork_[i] = columnLowerWork_[i];
-		  } else if (columnUpperWork_[i]<=0.0) {
-		    columnLowerWork_[i] = columnUpperWork_[i];
-		  } else {
-		    columnUpperWork_[i] = 0.0;
-		    columnLowerWork_[i] = 0.0;
-		  }
-		}
-	      }
-	    } else if (upperValue<1.0e20) {
-	      columnLowerWork_[i]=-COIN_DBL_MAX;
-	      columnUpperWork_[i]=upperValue*multiplier;
-	    } else {
-	      // free
-	      columnLowerWork_[i]=-COIN_DBL_MAX;
-	      columnUpperWork_[i]=COIN_DBL_MAX;
-	    }
-	    double value = columnActivity_[i] * multiplier;
-	    if (fabs(value)>1.0e20) {
-	      //printf("bad value of %g for column %d\n",value,i);
-	      setColumnStatus(i,superBasic);
-	      if (columnUpperWork_[i]<0.0) {
-		value=columnUpperWork_[i];
-	      } else if (columnLowerWork_[i]>0.0) {
-		value=columnLowerWork_[i];
-	      } else {
-		value=0.0;
-	      }
-	    }
-	    columnActivityWork_[i] = value;
-	  }
-	  inverseScale = inverseRowScale_;
-	  for (i=0;i<numberRows_;i++) {
-	    dual_[i] *= inverseScale[i];
-	    dual_[i] *= objectiveScale_;
-	    rowReducedCost_[i] = dual_[i];
-	    double multiplier = rhsScale_*rowScale_[i];
-	    double value = rowActivity_[i] * multiplier;
-	    if (fabs(value)>1.0e20) {
-	      //printf("bad value of %g for row %d\n",value,i);
-	      setRowStatus(i,superBasic);
-	      if (rowUpperWork_[i]<0.0) {
-		value=rowUpperWork_[i];
-	      } else if (rowLowerWork_[i]>0.0) {
-		value=rowLowerWork_[i];
-	      } else {
-		value=0.0;
-	      }
-	    }
-	    rowActivityWork_[i] = value;
-	  }
-	}
-      } else if (objectiveScale_!=1.0||rhsScale_!=1.0) {
-        // on entry
-        for (i=0;i<numberColumns_;i++) {
-          double value = columnActivity_[i];
-          value *= rhsScale_;
-          if (fabs(value)>1.0e20) {
-            //printf("bad value of %g for column %d\n",value,i);
-            setColumnStatus(i,superBasic);
-            if (columnUpperWork_[i]<0.0) {
-              value=columnUpperWork_[i];
-            } else if (columnLowerWork_[i]>0.0) {
-              value=columnLowerWork_[i];
-            } else {
-              value=0.0;
-            }
-          }
-          columnActivityWork_[i] = value;
-          reducedCostWork_[i] = reducedCost_[i]*objectiveScale_;
-        }
-        for (i=0;i<numberRows_;i++) {
-          double value = rowActivity_[i];
-          value *= rhsScale_;
-          if (fabs(value)>1.0e20) {
-            //printf("bad value of %g for row %d\n",value,i);
-            setRowStatus(i,superBasic);
-            if (rowUpperWork_[i]<0.0) {
-              value=rowUpperWork_[i];
-            } else if (rowLowerWork_[i]>0.0) {
-              value=rowLowerWork_[i];
-            } else {
-              value=0.0;
-            }
-          }
-          rowActivityWork_[i] = value;
-          dual_[i] *= objectiveScale_;
-          rowReducedCost_[i] = dual_[i];
-        }
-      } else {
-        // on entry
-        for (i=0;i<numberColumns_;i++) {
-          double value = columnActivity_[i];
-          if (fabs(value)>1.0e20) {
-            //printf("bad value of %g for column %d\n",value,i);
-            setColumnStatus(i,superBasic);
-            if (columnUpperWork_[i]<0.0) {
-              value=columnUpperWork_[i];
-            } else if (columnLowerWork_[i]>0.0) {
-              value=columnLowerWork_[i];
-            } else {
-              value=0.0;
-            }
-          }
-          columnActivityWork_[i] = value;
-          reducedCostWork_[i] = reducedCost_[i];
-        }
-        for (i=0;i<numberRows_;i++) {
-          double value = rowActivity_[i];
-          if (fabs(value)>1.0e20) {
-            //printf("bad value of %g for row %d\n",value,i);
-            setRowStatus(i,superBasic);
-            if (rowUpperWork_[i]<0.0) {
-              value=rowUpperWork_[i];
-            } else if (rowLowerWork_[i]>0.0) {
-              value=rowLowerWork_[i];
-            } else {
-              value=0.0;
-            }
-          }
-          rowActivityWork_[i] = value;
-          rowReducedCost_[i] = dual_[i];
-        }
-      }
-#ifdef CLP_AUXILIARY_MODEL
-    }
-#endif
-  }
-  
-  if (what==63&&doSanityCheck&&!auxiliaryModel_) {
-    // check rim of problem okay
-    if (!sanityCheck())
-      goodMatrix=false;
-  } 
-  // we need to treat matrix as if each element by rowScaleIn and columnScaleout??
-  // maybe we need to move scales to SimplexModel for factorization?
-  if ((what==63&&!pivotVariable_)||(newArrays&&!keepPivots)) {
-    delete [] pivotVariable_;
-    pivotVariable_=new int[numberRows2];
-    for (int i=0;i<numberRows2;i++)
-      pivotVariable_[i]=-1;
-  } else if (what==63&&!keepPivots) {
-    // just reset
-    for (int i=0;i<numberRows2;i++)
-      pivotVariable_[i]=-1;
-  } else if (what==63) {
-    // check pivots
-    for (int i=0;i<numberRows2;i++) {
-      int iSequence = pivotVariable_[i];
-      if (iSequence<numberRows_+numberColumns_&&
-          getStatus(iSequence)!=basic) {
-	keepPivots =false;
-	break;
-      }
-    }
-    if (!keepPivots) {
-      // reset
-      for (int i=0;i<numberRows2;i++)
-	pivotVariable_[i]=-1;
-    } else {
-      // clean
-      for (int i=0;i<numberColumns_+numberRows_;i++) {
-	Status status =getStatus(i);
-	if (status!=basic) {
-	  if (upper_[i]==lower_[i]) {
-	    setStatus(i,isFixed);
-	    solution_[i]=lower_[i];
-	  } else if (status==atLowerBound) {
-	    if (lower_[i]>-1.0e20) {
-              solution_[i]=lower_[i];
-            } else {
-              //printf("seq %d at lower of %g\n",i,lower_[i]);
-              if (upper_[i]<1.0e20) {
-                solution_[i]=upper_[i];
-                setStatus(i,atUpperBound);
-              } else {
-                setStatus(i,isFree);
-              }
-            }
-	  } else if (status==atUpperBound) {
-	    if (upper_[i]<1.0e20) {
-              solution_[i]=upper_[i];
-            } else {
-              //printf("seq %d at upper of %g\n",i,upper_[i]);
-              if (lower_[i]>-1.0e20) {
-                solution_[i]=lower_[i];
-                setStatus(i,atLowerBound);
-              } else {
-                setStatus(i,isFree);
-              }
-            }
-	  } else if (status==isFixed&&upper_[i]>lower_[i]) {
-	    // was fixed - not now
-	    if (solution_[i]<=lower_[i]) {
-	      setStatus(i,atLowerBound);
-	    } else if (solution_[i]>=upper_[i]) {
-	      setStatus(i,atUpperBound);
-	    } else {
-	      setStatus(i,superBasic);
-	    }
-	  }
-	}
-      }
-    }
-  }
-  
-  if (what==63) {
-    if (newArrays) {
-      // get some arrays
-      int iRow,iColumn;
-      // these are "indexed" arrays so we always know where nonzeros are
-      /**********************************************************
-      rowArray_[3] is long enough for rows+columns
-      *********************************************************/
-      for (iRow=0;iRow<4;iRow++) {
-	int length =numberRows2+factorization_->maximumPivots();
-	if (iRow==3||objective_->type()>1)
-	  length += numberColumns_;
-	if ((specialOptions_&65536)==0||!rowArray_[iRow]) {
-	  delete rowArray_[iRow];
-	  rowArray_[iRow]=new CoinIndexedVector();
-	}
-	rowArray_[iRow]->reserve(length);
-      }
-      
-      for (iColumn=0;iColumn<2;iColumn++) {
-	if ((specialOptions_&65536)==0||!columnArray_[iColumn]) {
-	  delete columnArray_[iColumn];
-	  columnArray_[iColumn]=new CoinIndexedVector();
-	}
-	if (!iColumn)
-	  columnArray_[iColumn]->reserve(numberColumns_);
-	else
-	  columnArray_[iColumn]->reserve(CoinMax(numberRows2,numberColumns_));
-      }
-    } else {
-      int iRow,iColumn;
-#ifdef CLP_AUXILIARY_MODEL
-      if (auxiliaryModel_) {
-        for (iRow=0;iRow<4;iRow++) {
-          assert (!rowArray_[iRow]);
-          rowArray_[iRow]=auxiliaryModel_->rowArray_[iRow];
-          // For safety
-          memset(rowArray_[iRow]->denseVector(),0,rowArray_[iRow]->capacity()*sizeof(double));
-        }
-        for (iColumn=0;iColumn<2;iColumn++) {
-          assert (!columnArray_[iColumn]);
-          columnArray_[iColumn]=auxiliaryModel_->columnArray_[iColumn];
-          // For safety
-          memset(columnArray_[iColumn]->denseVector(),0,columnArray_[iColumn]->capacity()*sizeof(double));
-        }
-        // do matrices
-        rowCopy_=auxiliaryModel_->rowCopy_;
-        ClpMatrixBase * temp = matrix_;
-        matrix_=auxiliaryModel_->matrix_;
-        auxiliaryModel_->matrix_=temp;
-      }
-#endif
-      for (iRow=0;iRow<4;iRow++) {
-        rowArray_[iRow]->clear();
-#ifndef NDEBUG
-	int length =numberRows2+factorization_->maximumPivots();
-	if (iRow==3||objective_->type()>1)
-	  length += numberColumns_;
-	assert(rowArray_[iRow]->capacity()>=length);
-        rowArray_[iRow]->checkClear();
-#endif
-      }
-      
-      for (iColumn=0;iColumn<2;iColumn++) {
-        columnArray_[iColumn]->clear();
-#ifndef NDEBUG
-	int length =numberColumns_;
-	if (iColumn)
-	  length=CoinMax(numberRows2,numberColumns_);
-	assert(columnArray_[iColumn]->capacity()>=length);
-        columnArray_[iColumn]->checkClear();
-#endif
-      }
-    }    
-  }
-  if (problemStatus_==10) {
-    problemStatus_=-1;
-    handler_->setLogLevel(saveLevel); // switch back messages
-  }
-  if ((what&5)!=0) 
-    matrix_->generalExpanded(this,9,what); // update costs and bounds if necessary
-  if (goodMatrix&&(specialOptions_&65536)!=0&&!auxiliaryModel_) {
-    int save = maximumColumns_+maximumRows_;
-    CoinMemcpyN(cost_,numberTotal,cost_+save);
-    CoinMemcpyN(lower_,numberTotal,lower_+save);
-    CoinMemcpyN(upper_,numberTotal,upper_+save);
-    CoinMemcpyN(dj_,numberTotal,dj_+save);
-    CoinMemcpyN(solution_,numberTotal,solution_+save);
-    if (rowScale_&&!savedRowScale_) {
-      double * temp;
-      temp = new double [4*maximumRows_];
-      CoinFillN(temp,4*maximumRows_,1.0);
-      CoinMemcpyN(rowScale_,numberRows2,temp);
-      CoinMemcpyN(rowScale_+numberRows2,numberRows2,temp+maximumRows_);
-      CoinMemcpyN(rowScale_,numberRows2,temp+2*maximumRows_);
-      CoinMemcpyN(rowScale_+numberRows2,numberRows2,temp+3*maximumRows_);
-      delete [] rowScale_;
-      savedRowScale_ = temp;
-      rowScale_ = savedRowScale_;
-      inverseRowScale_ = savedRowScale_+maximumInternalRows_;
-      temp = new double [4*maximumColumns_];
-      CoinFillN(temp,4*maximumColumns_,1.0);
-      CoinMemcpyN(columnScale_,numberColumns_,temp);
-      CoinMemcpyN(columnScale_+numberColumns_,numberColumns_,temp+maximumColumns_);
-      CoinMemcpyN(columnScale_,numberColumns_,temp+2*maximumColumns_);
-      CoinMemcpyN(columnScale_+numberColumns_,numberColumns_,temp+3*maximumColumns_);
-      delete [] columnScale_;
-      savedColumnScale_ = temp;
-      columnScale_ = savedColumnScale_;
-      inverseColumnScale_ = savedColumnScale_+maximumInternalColumns_;
-    }
-  }
-  return goodMatrix;
-}
-// Does rows and columns
-void
-ClpSimplex::createRim1(bool initial)
-{
-  int i;
-  int numberRows2 = numberRows_+numberExtraRows_;
-  int numberTotal = numberRows2+numberColumns_;
-  //assert (!auxiliaryModel_);
-#ifdef CLP_AUXILIARY_MODEL
-  if (!auxiliaryModel_) {
-#endif
-    if ((specialOptions_&65536)!=0&&true) {
-      assert (!initial);
-      int save = maximumColumns_+maximumRows_;
-      CoinMemcpyN(lower_+save,numberTotal,lower_);
-      CoinMemcpyN(upper_+save,numberTotal,upper_);
-      return;
-    }
-    const double * rowScale = rowScale_;
-    const double * columnScale = columnScale_;
     // clean up any mismatches on infinity
     // and fix any variables with tiny gaps
     double primalTolerance=dblParam_[ClpPrimalTolerance];
     if(rowScale) {
       // If scaled then do all columns later in one loop 
-      if (!initial) {
-	if (!inverseColumnScale_) {
-	  for (i=0;i<numberColumns_;i++) {
-	    double multiplier = rhsScale_/columnScale[i];
-	    double lowerValue = columnLower_[i];
-	    double upperValue = columnUpper_[i];
-	    if (lowerValue>-1.0e20) {
-	      columnLowerWork_[i]=lowerValue*multiplier;
-	      if (upperValue>=1.0e20) {
-		columnUpperWork_[i]=COIN_DBL_MAX;
-	      } else {
-		columnUpperWork_[i]=upperValue*multiplier;
-		if (fabs(columnUpperWork_[i]-columnLowerWork_[i])<=primalTolerance) {
-		  if (columnLowerWork_[i]>=0.0) {
-		    columnUpperWork_[i] = columnLowerWork_[i];
-		  } else if (columnUpperWork_[i]<=0.0) {
-		    columnLowerWork_[i] = columnUpperWork_[i];
-		  } else {
-		    columnUpperWork_[i] = 0.0;
-		    columnLowerWork_[i] = 0.0;
-		  }
+      if (what!=63) {
+	const double * inverseScale = inverseColumnScale_;
+	for (i=0;i<numberColumns_;i++) {
+	  double multiplier = rhsScale_*inverseScale[i];
+	  double lowerValue = columnLower_[i];
+	  double upperValue = columnUpper_[i];
+	  if (lowerValue>-1.0e20) {
+	    columnLowerWork_[i]=lowerValue*multiplier;
+	    if (upperValue>=1.0e20) {
+	      columnUpperWork_[i]=COIN_DBL_MAX;
+	    } else {
+	      columnUpperWork_[i]=upperValue*multiplier;
+	      if (fabs(columnUpperWork_[i]-columnLowerWork_[i])<=primalTolerance) {
+		if (columnLowerWork_[i]>=0.0) {
+		  columnUpperWork_[i] = columnLowerWork_[i];
+		} else if (columnUpperWork_[i]<=0.0) {
+		  columnLowerWork_[i] = columnUpperWork_[i];
+		} else {
+		  columnUpperWork_[i] = 0.0;
+		  columnLowerWork_[i] = 0.0;
 		}
 	      }
-	    } else if (upperValue<1.0e20) {
-	      columnLowerWork_[i]=-COIN_DBL_MAX;
-	      columnUpperWork_[i]=upperValue*multiplier;
-	    } else {
-	      // free
-	      columnLowerWork_[i]=-COIN_DBL_MAX;
-	      columnUpperWork_[i]=COIN_DBL_MAX;
 	    }
-	  }
-	} else {
-	  assert (inverseColumnScale_);
-	  const double * inverseScale = inverseColumnScale_;
-	  for (i=0;i<numberColumns_;i++) {
-	    double multiplier = rhsScale_*inverseScale[i];
-	    double lowerValue = columnLower_[i];
-	    double upperValue = columnUpper_[i];
-	    if (lowerValue>-1.0e20) {
-	      columnLowerWork_[i]=lowerValue*multiplier;
-	      if (upperValue>=1.0e20) {
-		columnUpperWork_[i]=COIN_DBL_MAX;
-	      } else {
-		columnUpperWork_[i]=upperValue*multiplier;
-		if (fabs(columnUpperWork_[i]-columnLowerWork_[i])<=primalTolerance) {
-		  if (columnLowerWork_[i]>=0.0) {
-		    columnUpperWork_[i] = columnLowerWork_[i];
-		  } else if (columnUpperWork_[i]<=0.0) {
-		    columnLowerWork_[i] = columnUpperWork_[i];
-		  } else {
-		    columnUpperWork_[i] = 0.0;
-		    columnLowerWork_[i] = 0.0;
-		  }
-		}
-	      }
-	    } else if (upperValue<1.0e20) {
-	      columnLowerWork_[i]=-COIN_DBL_MAX;
-	      columnUpperWork_[i]=upperValue*multiplier;
-	    } else {
-	      // free
-	      columnLowerWork_[i]=-COIN_DBL_MAX;
-	      columnUpperWork_[i]=COIN_DBL_MAX;
-	    }
+	  } else if (upperValue<1.0e20) {
+	    columnLowerWork_[i]=-COIN_DBL_MAX;
+	    columnUpperWork_[i]=upperValue*multiplier;
+	  } else {
+	    // free
+	    columnLowerWork_[i]=-COIN_DBL_MAX;
+	    columnUpperWork_[i]=COIN_DBL_MAX;
 	  }
 	}
       }
@@ -4304,122 +3407,545 @@ ClpSimplex::createRim1(bool initial)
 	}
       }
     }
-#ifdef CLP_AUXILIARY_MODEL
-  } else {
-    // auxiliary model
-    if (!initial) {
-      // just copy
-      CoinMemcpyN(auxiliaryModel_->lower_+numberTotal,numberTotal,lower_);
-      CoinMemcpyN(auxiliaryModel_->upper_+numberTotal,numberTotal,upper_);
-    } else {
+  }
+  if (what==63) {
+    // move information to work arrays
+    double direction = optimizationDirection_;
+    // direction is actually scale out not scale in
+    if (direction)
+      direction = 1.0/direction;
+    if (direction!=1.0) {
+      // reverse all dual signs
+      for (i=0;i<numberColumns_;i++) 
+        reducedCost_[i] *= direction;
+      for (i=0;i<numberRows_;i++) 
+        dual_[i] *= direction;
+    }
+    for (i=0;i<numberRows_+numberColumns_;i++) {
+      setFakeBound(i,noFake);
+    }
+    if (rowScale_) {
+      const double * obj = objective();
+      double direction = optimizationDirection_*objectiveScale_;
       // clean up any mismatches on infinity
       // and fix any variables with tiny gaps
-      const double * rowScale = auxiliaryModel_->rowScale_ ;
-      const double * columnScale = auxiliaryModel_->columnScale_ ;
-      assert (rhsScale_==1.0);
-      assert (objectiveScale_==1.0);
-      if ((auxiliaryModel_->specialOptions_&2)==0) {
-	// need to do column bounds
-	if (columnScale) {
-	  const double * inverseScale = columnScale+numberColumns_;
-	  // scaled
-	  for (i=0;i<numberColumns_;i++) {
-	    double value;
-	    value = columnLower_[i];
-	    if (value>-1.0e20) 
-	      value *= inverseScale[i];
-	    lower_[i] = value;
-	    value = columnUpper_[i];
-	    if (value<1.0e20) 
-	      value *= inverseScale[i];
-	    upper_[i] = value;
-	  }
-	} else {
-	  for (i=0;i<numberColumns_;i++) {
-	    lower_[i] = columnLower_[i];
-	    upper_[i] = columnUpper_[i];
-	  }
-	}
-	// save
- CoinMemcpyN(lower_,numberColumns_,auxiliaryModel_->lower_+numberTotal);
- CoinMemcpyN(upper_,numberColumns_,auxiliaryModel_->upper_+numberTotal);
-      } else {
-	// just copy
- CoinMemcpyN(auxiliaryModel_->lower_+numberTotal,numberColumns_,lower_);
- CoinMemcpyN(auxiliaryModel_->upper_+numberTotal,numberColumns_,upper_);
-      }
-      if ((auxiliaryModel_->specialOptions_&1)==0) {
-	// need to do row bounds
-	if (rowScale) {
-	  // scaled
-	  for (i=0;i<numberRows_;i++) {
-	    double value;
-	    value = rowLower_[i];
-	    if (value>-1.0e20) 
-	      value *= rowScale[i];
-	    lower_[i+numberColumns_] = value;
-	    value = rowUpper_[i];
-	    if (value<1.0e20) 
-	      value *= rowScale[i];
-	    upper_[i+numberColumns_] = value;
-	  }
-	} else {
-	  for (i=0;i<numberRows_;i++) {
-	    lower_[i+numberColumns_] = rowLower_[i];
-	    upper_[i+numberColumns_] = rowUpper_[i];
-	  }
-	}
-	// save
- CoinMemcpyN(	       lower_+numberColumns_,numberRows_,auxiliaryModel_->lower_+numberTotal+numberColumns_);
- CoinMemcpyN(	       upper_+numberColumns_,numberRows_,auxiliaryModel_->upper_+numberTotal+numberColumns_);
-      } else {
-	// just copy
- CoinMemcpyN(	       auxiliaryModel_->lower_+numberTotal+numberColumns_,numberRows_,
-              lower_+numberColumns_);
- CoinMemcpyN(	       auxiliaryModel_->upper_+numberTotal+numberColumns_,numberRows_,
-              upper_+numberColumns_);
-      }
-    }
-    if (initial) {
-      // do basis
-      assert ((auxiliaryModel_->specialOptions_&8)!=0);
-      // clean solution trusting basis
-      for ( i=0;i<numberTotal;i++) {
-	Status status =getStatus(i);
-	double value=solution_[i]; // may as well leave if basic (values pass)
-	if (status!=basic) {
-	  if (upper_[i]==lower_[i]) {
-	    setStatus(i,isFixed);
-	    value=lower_[i];
-	  } else if (status==atLowerBound) {
-	    if (lower_[i]>-1.0e20) {
-	      value=lower_[i];
-	    } else {
-	      if (upper_[i]<1.0e20) {
-		value=upper_[i];
-		setStatus(i,atUpperBound);
+      double primalTolerance=dblParam_[ClpPrimalTolerance];
+      // on entry
+      const double * inverseScale = inverseColumnScale_;
+      for (i=0;i<numberColumns_;i++) {
+	CoinAssert(fabs(obj[i])<1.0e25);
+	double scaleFactor = columnScale_[i];
+	double multiplier = rhsScale_*inverseScale[i];
+	scaleFactor *= direction;
+	objectiveWork_[i] = obj[i]*scaleFactor;
+	reducedCostWork_[i] = reducedCost_[i]*scaleFactor;
+	double lowerValue = columnLower_[i];
+	double upperValue = columnUpper_[i];
+	if (lowerValue>-1.0e20) {
+	  columnLowerWork_[i]=lowerValue*multiplier;
+	  if (upperValue>=1.0e20) {
+	    columnUpperWork_[i]=COIN_DBL_MAX;
+	  } else {
+	    columnUpperWork_[i]=upperValue*multiplier;
+	    if (fabs(columnUpperWork_[i]-columnLowerWork_[i])<=primalTolerance) {
+	      if (columnLowerWork_[i]>=0.0) {
+		columnUpperWork_[i] = columnLowerWork_[i];
+	      } else if (columnUpperWork_[i]<=0.0) {
+		columnLowerWork_[i] = columnUpperWork_[i];
 	      } else {
-		setStatus(i,isFree);
-	      }
-	    }
-	  } else if (status==atUpperBound) {
-	    if (upper_[i]<1.0e20) {
-              value=upper_[i];
-	    } else {
-	      if (lower_[i]>-1.0e20) {
-		value=lower_[i];
-		setStatus(i,atLowerBound);
-	      } else {
-		setStatus(i,isFree);
+		columnUpperWork_[i] = 0.0;
+		columnLowerWork_[i] = 0.0;
 	      }
 	    }
 	  }
+	} else if (upperValue<1.0e20) {
+	  columnLowerWork_[i]=-COIN_DBL_MAX;
+	  columnUpperWork_[i]=upperValue*multiplier;
+	} else {
+	  // free
+	  columnLowerWork_[i]=-COIN_DBL_MAX;
+	  columnUpperWork_[i]=COIN_DBL_MAX;
 	}
-	solution_[i]=value;
+	double value = columnActivity_[i] * multiplier;
+	if (fabs(value)>1.0e20) {
+	  //printf("bad value of %g for column %d\n",value,i);
+	  setColumnStatus(i,superBasic);
+	  if (columnUpperWork_[i]<0.0) {
+	    value=columnUpperWork_[i];
+	  } else if (columnLowerWork_[i]>0.0) {
+	    value=columnLowerWork_[i];
+	  } else {
+	    value=0.0;
+	  }
+	}
+	columnActivityWork_[i] = value;
+      }
+      inverseScale = inverseRowScale_;
+      for (i=0;i<numberRows_;i++) {
+	dual_[i] *= inverseScale[i];
+	dual_[i] *= objectiveScale_;
+	rowReducedCost_[i] = dual_[i];
+	double multiplier = rhsScale_*rowScale_[i];
+	double value = rowActivity_[i] * multiplier;
+	if (fabs(value)>1.0e20) {
+	  //printf("bad value of %g for row %d\n",value,i);
+	  setRowStatus(i,superBasic);
+	  if (rowUpperWork_[i]<0.0) {
+	    value=rowUpperWork_[i];
+	  } else if (rowLowerWork_[i]>0.0) {
+	    value=rowLowerWork_[i];
+	  } else {
+	    value=0.0;
+	  }
+	}
+	rowActivityWork_[i] = value;
+      }
+    } else if (objectiveScale_!=1.0||rhsScale_!=1.0) {
+      // on entry
+      for (i=0;i<numberColumns_;i++) {
+	double value = columnActivity_[i];
+	value *= rhsScale_;
+	if (fabs(value)>1.0e20) {
+	  //printf("bad value of %g for column %d\n",value,i);
+	  setColumnStatus(i,superBasic);
+	  if (columnUpperWork_[i]<0.0) {
+	    value=columnUpperWork_[i];
+	  } else if (columnLowerWork_[i]>0.0) {
+	    value=columnLowerWork_[i];
+	  } else {
+	    value=0.0;
+	  }
+	}
+	columnActivityWork_[i] = value;
+	reducedCostWork_[i] = reducedCost_[i]*objectiveScale_;
+      }
+      for (i=0;i<numberRows_;i++) {
+	double value = rowActivity_[i];
+	value *= rhsScale_;
+	if (fabs(value)>1.0e20) {
+	  //printf("bad value of %g for row %d\n",value,i);
+	  setRowStatus(i,superBasic);
+	  if (rowUpperWork_[i]<0.0) {
+	    value=rowUpperWork_[i];
+	  } else if (rowLowerWork_[i]>0.0) {
+	    value=rowLowerWork_[i];
+	  } else {
+	    value=0.0;
+	  }
+	}
+	rowActivityWork_[i] = value;
+	dual_[i] *= objectiveScale_;
+	rowReducedCost_[i] = dual_[i];
+      }
+    } else {
+      // on entry
+      for (i=0;i<numberColumns_;i++) {
+	double value = columnActivity_[i];
+	if (fabs(value)>1.0e20) {
+	  //printf("bad value of %g for column %d\n",value,i);
+	  setColumnStatus(i,superBasic);
+	  if (columnUpperWork_[i]<0.0) {
+	    value=columnUpperWork_[i];
+	  } else if (columnLowerWork_[i]>0.0) {
+	    value=columnLowerWork_[i];
+	  } else {
+	    value=0.0;
+	  }
+	}
+	columnActivityWork_[i] = value;
+	reducedCostWork_[i] = reducedCost_[i];
+      }
+      for (i=0;i<numberRows_;i++) {
+	double value = rowActivity_[i];
+	if (fabs(value)>1.0e20) {
+	  //printf("bad value of %g for row %d\n",value,i);
+	  setRowStatus(i,superBasic);
+	  if (rowUpperWork_[i]<0.0) {
+	    value=rowUpperWork_[i];
+	  } else if (rowLowerWork_[i]>0.0) {
+	    value=rowLowerWork_[i];
+	  } else {
+	    value=0.0;
+	  }
+	}
+	rowActivityWork_[i] = value;
+	rowReducedCost_[i] = dual_[i];
       }
     }
   }
+  
+  if (what==63&&doSanityCheck) {
+    // check rim of problem okay
+    if (!sanityCheck())
+      goodMatrix=false;
+  } 
+  // we need to treat matrix as if each element by rowScaleIn and columnScaleout??
+  // maybe we need to move scales to SimplexModel for factorization?
+  if ((what==63&&!pivotVariable_)||(newArrays&&!keepPivots)) {
+    delete [] pivotVariable_;
+    pivotVariable_=new int[numberRows2];
+    for (int i=0;i<numberRows2;i++)
+      pivotVariable_[i]=-1;
+  } else if (what==63&&!keepPivots) {
+    // just reset
+    for (int i=0;i<numberRows2;i++)
+      pivotVariable_[i]=-1;
+  } else if (what==63) {
+    // check pivots
+    for (int i=0;i<numberRows2;i++) {
+      int iSequence = pivotVariable_[i];
+      if (iSequence<numberRows_+numberColumns_&&
+          getStatus(iSequence)!=basic) {
+	keepPivots =false;
+	break;
+      }
+    }
+    if (!keepPivots) {
+      // reset
+      for (int i=0;i<numberRows2;i++)
+	pivotVariable_[i]=-1;
+    } else {
+      // clean
+      for (int i=0;i<numberColumns_+numberRows_;i++) {
+	Status status =getStatus(i);
+	if (status!=basic) {
+	  if (upper_[i]==lower_[i]) {
+	    setStatus(i,isFixed);
+	    solution_[i]=lower_[i];
+	  } else if (status==atLowerBound) {
+	    if (lower_[i]>-1.0e20) {
+              solution_[i]=lower_[i];
+            } else {
+              //printf("seq %d at lower of %g\n",i,lower_[i]);
+              if (upper_[i]<1.0e20) {
+                solution_[i]=upper_[i];
+                setStatus(i,atUpperBound);
+              } else {
+                setStatus(i,isFree);
+              }
+            }
+	  } else if (status==atUpperBound) {
+	    if (upper_[i]<1.0e20) {
+              solution_[i]=upper_[i];
+            } else {
+              //printf("seq %d at upper of %g\n",i,upper_[i]);
+              if (lower_[i]>-1.0e20) {
+                solution_[i]=lower_[i];
+                setStatus(i,atLowerBound);
+              } else {
+                setStatus(i,isFree);
+              }
+            }
+	  } else if (status==isFixed&&upper_[i]>lower_[i]) {
+	    // was fixed - not now
+	    if (solution_[i]<=lower_[i]) {
+	      setStatus(i,atLowerBound);
+	    } else if (solution_[i]>=upper_[i]) {
+	      setStatus(i,atUpperBound);
+	    } else {
+	      setStatus(i,superBasic);
+	    }
+	  }
+	}
+      }
+    }
+  }
+  
+  if (what==63) {
+    if (newArrays) {
+      // get some arrays
+      int iRow,iColumn;
+      // these are "indexed" arrays so we always know where nonzeros are
+      /**********************************************************
+      rowArray_[3] is long enough for rows+columns
+      *********************************************************/
+      for (iRow=0;iRow<4;iRow++) {
+	int length =numberRows2+factorization_->maximumPivots();
+	if (iRow==3||objective_->type()>1)
+	  length += numberColumns_;
+	if ((specialOptions_&65536)==0||!rowArray_[iRow]) {
+	  delete rowArray_[iRow];
+	  rowArray_[iRow]=new CoinIndexedVector();
+	}
+	rowArray_[iRow]->reserve(length);
+      }
+      
+      for (iColumn=0;iColumn<2;iColumn++) {
+	if ((specialOptions_&65536)==0||!columnArray_[iColumn]) {
+	  delete columnArray_[iColumn];
+	  columnArray_[iColumn]=new CoinIndexedVector();
+	}
+	if (!iColumn)
+	  columnArray_[iColumn]->reserve(numberColumns_);
+	else
+	  columnArray_[iColumn]->reserve(CoinMax(numberRows2,numberColumns_));
+      }
+    } else {
+      int iRow,iColumn;
+      for (iRow=0;iRow<4;iRow++) {
+        rowArray_[iRow]->clear();
+#ifndef NDEBUG
+	int length =numberRows2+factorization_->maximumPivots();
+	if (iRow==3||objective_->type()>1)
+	  length += numberColumns_;
+	assert(rowArray_[iRow]->capacity()>=length);
+        rowArray_[iRow]->checkClear();
 #endif
+      }
+      
+      for (iColumn=0;iColumn<2;iColumn++) {
+        columnArray_[iColumn]->clear();
+#ifndef NDEBUG
+	int length =numberColumns_;
+	if (iColumn)
+	  length=CoinMax(numberRows2,numberColumns_);
+	assert(columnArray_[iColumn]->capacity()>=length);
+        columnArray_[iColumn]->checkClear();
+#endif
+      }
+    }    
+  }
+  if (problemStatus_==10) {
+    problemStatus_=-1;
+    handler_->setLogLevel(saveLevel); // switch back messages
+  }
+  if ((what&5)!=0) 
+    matrix_->generalExpanded(this,9,what); // update costs and bounds if necessary
+  if (goodMatrix&&(specialOptions_&65536)!=0) {
+    int save = maximumColumns_+maximumRows_;
+    CoinMemcpyN(cost_,numberTotal,cost_+save);
+    CoinMemcpyN(lower_,numberTotal,lower_+save);
+    CoinMemcpyN(upper_,numberTotal,upper_+save);
+    CoinMemcpyN(dj_,numberTotal,dj_+save);
+    CoinMemcpyN(solution_,numberTotal,solution_+save);
+    if (rowScale_&&!savedRowScale_) {
+      double * temp;
+      temp = new double [4*maximumRows_];
+      CoinFillN(temp,4*maximumRows_,1.0);
+      CoinMemcpyN(rowScale_,numberRows2,temp);
+      CoinMemcpyN(rowScale_+numberRows2,numberRows2,temp+maximumRows_);
+      CoinMemcpyN(rowScale_,numberRows2,temp+2*maximumRows_);
+      CoinMemcpyN(rowScale_+numberRows2,numberRows2,temp+3*maximumRows_);
+      delete [] rowScale_;
+      savedRowScale_ = temp;
+      rowScale_ = savedRowScale_;
+      inverseRowScale_ = savedRowScale_+maximumInternalRows_;
+      temp = new double [4*maximumColumns_];
+      CoinFillN(temp,4*maximumColumns_,1.0);
+      CoinMemcpyN(columnScale_,numberColumns_,temp);
+      CoinMemcpyN(columnScale_+numberColumns_,numberColumns_,temp+maximumColumns_);
+      CoinMemcpyN(columnScale_,numberColumns_,temp+2*maximumColumns_);
+      CoinMemcpyN(columnScale_+numberColumns_,numberColumns_,temp+3*maximumColumns_);
+      delete [] columnScale_;
+      savedColumnScale_ = temp;
+      columnScale_ = savedColumnScale_;
+      inverseColumnScale_ = savedColumnScale_+maximumInternalColumns_;
+    }
+  }
+  return goodMatrix;
+}
+// Does rows and columns
+void
+ClpSimplex::createRim1(bool initial)
+{
+  int i;
+  int numberRows2 = numberRows_+numberExtraRows_;
+  int numberTotal = numberRows2+numberColumns_;
+  if ((specialOptions_&65536)!=0&&true) {
+    assert (!initial);
+    int save = maximumColumns_+maximumRows_;
+    CoinMemcpyN(lower_+save,numberTotal,lower_);
+    CoinMemcpyN(upper_+save,numberTotal,upper_);
+    return;
+  }
+  const double * rowScale = rowScale_;
+  // clean up any mismatches on infinity
+  // and fix any variables with tiny gaps
+  double primalTolerance=dblParam_[ClpPrimalTolerance];
+  if(rowScale) {
+    // If scaled then do all columns later in one loop 
+    if (!initial) {
+      const double * inverseScale = inverseColumnScale_;
+      for (i=0;i<numberColumns_;i++) {
+	double multiplier = rhsScale_*inverseScale[i];
+	double lowerValue = columnLower_[i];
+	double upperValue = columnUpper_[i];
+	if (lowerValue>-1.0e20) {
+	  columnLowerWork_[i]=lowerValue*multiplier;
+	  if (upperValue>=1.0e20) {
+	    columnUpperWork_[i]=COIN_DBL_MAX;
+	  } else {
+	    columnUpperWork_[i]=upperValue*multiplier;
+	    if (fabs(columnUpperWork_[i]-columnLowerWork_[i])<=primalTolerance) {
+	      if (columnLowerWork_[i]>=0.0) {
+		columnUpperWork_[i] = columnLowerWork_[i];
+	      } else if (columnUpperWork_[i]<=0.0) {
+		columnLowerWork_[i] = columnUpperWork_[i];
+	      } else {
+		columnUpperWork_[i] = 0.0;
+		columnLowerWork_[i] = 0.0;
+	      }
+	    }
+	  }
+	} else if (upperValue<1.0e20) {
+	  columnLowerWork_[i]=-COIN_DBL_MAX;
+	  columnUpperWork_[i]=upperValue*multiplier;
+	} else {
+	  // free
+	  columnLowerWork_[i]=-COIN_DBL_MAX;
+	  columnUpperWork_[i]=COIN_DBL_MAX;
+	}
+      }
+    }
+    for (i=0;i<numberRows_;i++) {
+      double multiplier = rhsScale_*rowScale[i];
+      double lowerValue = rowLower_[i];
+      double upperValue = rowUpper_[i];
+      if (lowerValue>-1.0e20) {
+	rowLowerWork_[i]=lowerValue*multiplier;
+	if (upperValue>=1.0e20) {
+	  rowUpperWork_[i]=COIN_DBL_MAX;
+	} else {
+	  rowUpperWork_[i]=upperValue*multiplier;
+	  if (fabs(rowUpperWork_[i]-rowLowerWork_[i])<=primalTolerance) {
+	    if (rowLowerWork_[i]>=0.0) {
+	      rowUpperWork_[i] = rowLowerWork_[i];
+	    } else if (rowUpperWork_[i]<=0.0) {
+	      rowLowerWork_[i] = rowUpperWork_[i];
+	    } else {
+	      rowUpperWork_[i] = 0.0;
+	      rowLowerWork_[i] = 0.0;
+	    }
+	  }
+	}
+      } else if (upperValue<1.0e20) {
+	rowLowerWork_[i]=-COIN_DBL_MAX;
+	rowUpperWork_[i]=upperValue*multiplier;
+      } else {
+	// free
+	rowLowerWork_[i]=-COIN_DBL_MAX;
+	rowUpperWork_[i]=COIN_DBL_MAX;
+      }
+    }
+  } else if (rhsScale_!=1.0) {
+    for (i=0;i<numberColumns_;i++) {
+      double lowerValue = columnLower_[i];
+      double upperValue = columnUpper_[i];
+      if (lowerValue>-1.0e20) {
+	columnLowerWork_[i]=lowerValue*rhsScale_;
+	if (upperValue>=1.0e20) {
+	  columnUpperWork_[i]=COIN_DBL_MAX;
+	} else {
+	  columnUpperWork_[i]=upperValue*rhsScale_;
+	  if (fabs(columnUpperWork_[i]-columnLowerWork_[i])<=primalTolerance) {
+	    if (columnLowerWork_[i]>=0.0) {
+	      columnUpperWork_[i] = columnLowerWork_[i];
+	    } else if (columnUpperWork_[i]<=0.0) {
+	      columnLowerWork_[i] = columnUpperWork_[i];
+	    } else {
+	      columnUpperWork_[i] = 0.0;
+	      columnLowerWork_[i] = 0.0;
+	    }
+	  }
+	}
+      } else if (upperValue<1.0e20) {
+	columnLowerWork_[i]=-COIN_DBL_MAX;
+	columnUpperWork_[i]=upperValue*rhsScale_;
+      } else {
+	// free
+	columnLowerWork_[i]=-COIN_DBL_MAX;
+	columnUpperWork_[i]=COIN_DBL_MAX;
+      }
+    }
+    for (i=0;i<numberRows_;i++) {
+      double lowerValue = rowLower_[i];
+      double upperValue = rowUpper_[i];
+      if (lowerValue>-1.0e20) {
+	rowLowerWork_[i]=lowerValue*rhsScale_;
+	if (upperValue>=1.0e20) {
+	  rowUpperWork_[i]=COIN_DBL_MAX;
+	} else {
+	  rowUpperWork_[i]=upperValue*rhsScale_;
+	  if (fabs(rowUpperWork_[i]-rowLowerWork_[i])<=primalTolerance) {
+	    if (rowLowerWork_[i]>=0.0) {
+	      rowUpperWork_[i] = rowLowerWork_[i];
+	    } else if (rowUpperWork_[i]<=0.0) {
+	      rowLowerWork_[i] = rowUpperWork_[i];
+	    } else {
+	      rowUpperWork_[i] = 0.0;
+	      rowLowerWork_[i] = 0.0;
+	    }
+	  }
+	}
+      } else if (upperValue<1.0e20) {
+	rowLowerWork_[i]=-COIN_DBL_MAX;
+	rowUpperWork_[i]=upperValue*rhsScale_;
+      } else {
+	// free
+	rowLowerWork_[i]=-COIN_DBL_MAX;
+	rowUpperWork_[i]=COIN_DBL_MAX;
+      }
+    }
+  } else {
+    for (i=0;i<numberColumns_;i++) {
+      double lowerValue = columnLower_[i];
+      double upperValue = columnUpper_[i];
+      if (lowerValue>-1.0e20) {
+	columnLowerWork_[i]=lowerValue;
+	if (upperValue>=1.0e20) {
+	  columnUpperWork_[i]=COIN_DBL_MAX;
+	} else {
+	  columnUpperWork_[i]=upperValue;
+	  if (fabs(columnUpperWork_[i]-columnLowerWork_[i])<=primalTolerance) {
+	    if (columnLowerWork_[i]>=0.0) {
+	      columnUpperWork_[i] = columnLowerWork_[i];
+	    } else if (columnUpperWork_[i]<=0.0) {
+	      columnLowerWork_[i] = columnUpperWork_[i];
+	    } else {
+	      columnUpperWork_[i] = 0.0;
+	      columnLowerWork_[i] = 0.0;
+	    }
+	  }
+	}
+      } else if (upperValue<1.0e20) {
+	columnLowerWork_[i]=-COIN_DBL_MAX;
+	columnUpperWork_[i]=upperValue;
+      } else {
+	// free
+	columnLowerWork_[i]=-COIN_DBL_MAX;
+	columnUpperWork_[i]=COIN_DBL_MAX;
+      }
+    }
+    for (i=0;i<numberRows_;i++) {
+      double lowerValue = rowLower_[i];
+      double upperValue = rowUpper_[i];
+      if (lowerValue>-1.0e20) {
+	rowLowerWork_[i]=lowerValue;
+	if (upperValue>=1.0e20) {
+	  rowUpperWork_[i]=COIN_DBL_MAX;
+	} else {
+	  rowUpperWork_[i]=upperValue;
+	  if (fabs(rowUpperWork_[i]-rowLowerWork_[i])<=primalTolerance) {
+	    if (rowLowerWork_[i]>=0.0) {
+	      rowUpperWork_[i] = rowLowerWork_[i];
+	    } else if (rowUpperWork_[i]<=0.0) {
+	      rowLowerWork_[i] = rowUpperWork_[i];
+	    } else {
+	      rowUpperWork_[i] = 0.0;
+	      rowLowerWork_[i] = 0.0;
+	    }
+	  }
+	}
+      } else if (upperValue<1.0e20) {
+	rowLowerWork_[i]=-COIN_DBL_MAX;
+	rowUpperWork_[i]=upperValue;
+      } else {
+	// free
+	rowLowerWork_[i]=-COIN_DBL_MAX;
+	rowUpperWork_[i]=COIN_DBL_MAX;
+      }
+    }
+  }
 #ifndef NDEBUG
   if ((specialOptions_&65536)!=0&&false) {
     assert (!initial);
@@ -4438,62 +3964,43 @@ ClpSimplex::createRim4(bool initial)
   int i;
   int numberRows2 = numberRows_+numberExtraRows_;
   int numberTotal = numberRows2+numberColumns_;
-  //assert (!auxiliaryModel_);
-#ifdef CLP_AUXILIARY_MODEL
-  if (!auxiliaryModel_||(initial&&(auxiliaryModel_->specialOptions_&4)==0)) {
-#endif
-    if ((specialOptions_&65536)!=0&&true) {
-      assert (!initial);
-      int save = maximumColumns_+maximumRows_;
-      CoinMemcpyN(cost_+save,numberTotal,cost_);
-      return;
-    }
-    double direction = optimizationDirection_*objectiveScale_;
-    const double * obj = objective();
-#ifdef CLP_AUXILIARY_MODEL
-    const double * rowScale = auxiliaryModel_ ? auxiliaryModel_->rowScale_ : rowScale_;
-    const double * columnScale = auxiliaryModel_ ? auxiliaryModel_->columnScale_ : columnScale_;
-#else
-    const double * rowScale = rowScale_;
-    const double * columnScale = columnScale_;
-#endif
-    // and also scale by scale factors
-    if (rowScale) {
-      if (rowObjective_) {
-	for (i=0;i<numberRows_;i++)
-	  rowObjectiveWork_[i] = rowObjective_[i]*direction/rowScale[i];
-      } else {
-	memset(rowObjectiveWork_,0,numberRows_*sizeof(double));
-      }
-      // If scaled then do all columns later in one loop 
-      if (!initial||auxiliaryModel_) {
-	for (i=0;i<numberColumns_;i++) {
-	  CoinAssert(fabs(obj[i])<1.0e25);
-	  objectiveWork_[i] = obj[i]*direction*columnScale[i];
-	}
-      }
+  if ((specialOptions_&65536)!=0&&true) {
+    assert (!initial);
+    int save = maximumColumns_+maximumRows_;
+    CoinMemcpyN(cost_+save,numberTotal,cost_);
+    return;
+  }
+  double direction = optimizationDirection_*objectiveScale_;
+  const double * obj = objective();
+  const double * rowScale = rowScale_;
+  const double * columnScale = columnScale_;
+  // and also scale by scale factors
+  if (rowScale) {
+    if (rowObjective_) {
+      for (i=0;i<numberRows_;i++)
+	rowObjectiveWork_[i] = rowObjective_[i]*direction/rowScale[i];
     } else {
-      if (rowObjective_) {
-	for (i=0;i<numberRows_;i++)
-	  rowObjectiveWork_[i] = rowObjective_[i]*direction;
-      } else {
-	memset(rowObjectiveWork_,0,numberRows_*sizeof(double));
-      }
+      memset(rowObjectiveWork_,0,numberRows_*sizeof(double));
+    }
+    // If scaled then do all columns later in one loop 
+    if (!initial) {
       for (i=0;i<numberColumns_;i++) {
 	CoinAssert(fabs(obj[i])<1.0e25);
-	objectiveWork_[i] = obj[i]*direction;
+	objectiveWork_[i] = obj[i]*direction*columnScale[i];
       }
     }
-#ifdef CLP_AUXILIARY_MODEL
-    if (auxiliaryModel_) {
-      // save costs
-      CoinMemcpyN(cost_,numberTotal,auxiliaryModel_->cost_+numberTotal);
-    }
   } else {
-    // just copy
-    CoinMemcpyN(auxiliaryModel_->cost_+numberTotal,numberTotal,cost_);
+    if (rowObjective_) {
+      for (i=0;i<numberRows_;i++)
+	rowObjectiveWork_[i] = rowObjective_[i]*direction;
+    } else {
+      memset(rowObjectiveWork_,0,numberRows_*sizeof(double));
+    }
+    for (i=0;i<numberColumns_;i++) {
+      CoinAssert(fabs(obj[i])<1.0e25);
+      objectiveWork_[i] = obj[i]*direction;
+    }
   }
-#endif
 }
 // Does rows and columns and objective
 void
@@ -4513,408 +4020,235 @@ ClpSimplex::deleteRim(int getRidOfFactorizationData)
     if (objective_->type()<2)
       numberColumns=0;
   }
-#ifdef CLP_AUXILIARY_MODEL
-  if (!auxiliaryModel_) {
-#endif
-    int i;
-    if (problemStatus_!=1&&problemStatus_!=2) {
-      delete [] ray_;
-      ray_=NULL;
-    }
-    // set upperOut_ to furthest away from bound so can use in dual for dualBound_
-    upperOut_=1.0;
+  int i;
+  if (problemStatus_!=1&&problemStatus_!=2) {
+    delete [] ray_;
+    ray_=NULL;
+  }
+  // set upperOut_ to furthest away from bound so can use in dual for dualBound_
+  upperOut_=1.0;
 #if 0
-    {
-      int nBad=0;
-      for (i=0;i<numberColumns;i++) {
-        if (lower_[i]==upper_[i]&&getColumnStatus(i)==basic)
-          nBad++;
-      }
-      if (nBad)
-        printf("yy %d basic fixed\n",nBad);
+  {
+    int nBad=0;
+    for (i=0;i<numberColumns;i++) {
+      if (lower_[i]==upper_[i]&&getColumnStatus(i)==basic)
+	nBad++;
     }
+    if (nBad)
+      printf("yy %d basic fixed\n",nBad);
+  }
 #endif
-    // ray may be null if in branch and bound
-    if (rowScale_) {
-      // Collect infeasibilities
-      int numberPrimalScaled=0;
-      int numberPrimalUnscaled=0;
-      int numberDualScaled=0;
-      int numberDualUnscaled=0;
-      double scaleC = 1.0/objectiveScale_;
-      double scaleR = 1.0/rhsScale_;
-      if (!inverseColumnScale_) {
-	for (i=0;i<numberColumns;i++) {
-	  double scaleFactor = columnScale_[i];
-	  double valueScaled = columnActivityWork_[i];
-	  double lowerScaled = columnLowerWork_[i];
-	  double upperScaled = columnUpperWork_[i];
-	  if (lowerScaled>-1.0e20||upperScaled<1.0e20) {
-	    if (valueScaled<lowerScaled-primalTolerance_||
-		valueScaled>upperScaled+primalTolerance_)
-	      numberPrimalScaled++;
-	    else
-	      upperOut_ = CoinMax(upperOut_,CoinMin(valueScaled-lowerScaled,upperScaled-valueScaled));
-	  }
-	  columnActivity_[i] = valueScaled*scaleFactor*scaleR;
-	  double value = columnActivity_[i];
-	  if (value<columnLower_[i]-primalTolerance_)
-	    numberPrimalUnscaled++;
-	  else if (value>columnUpper_[i]+primalTolerance_)
-	    numberPrimalUnscaled++;
-	  double valueScaledDual = reducedCostWork_[i];
-	  if (valueScaled>columnLowerWork_[i]+primalTolerance_&&valueScaledDual>dualTolerance_)
-	    numberDualScaled++;
-	  if (valueScaled<columnUpperWork_[i]-primalTolerance_&&valueScaledDual<-dualTolerance_)
-	    numberDualScaled++;
-	  reducedCost_[i] = (valueScaledDual*scaleC)/scaleFactor;
-	  double valueDual = reducedCost_[i];
-	  if (value>columnLower_[i]+primalTolerance_&&valueDual>dualTolerance_)
-	    numberDualUnscaled++;
-	  if (value<columnUpper_[i]-primalTolerance_&&valueDual<-dualTolerance_)
-	    numberDualUnscaled++;
-	}
-	for (i=0;i<numberRows;i++) {
-	  double scaleFactor = rowScale_[i];
-	  double valueScaled = rowActivityWork_[i];
-	  double lowerScaled = rowLowerWork_[i];
-	  double upperScaled = rowUpperWork_[i];
-	  if (lowerScaled>-1.0e20||upperScaled<1.0e20) {
-	    if (valueScaled<lowerScaled-primalTolerance_||
-		valueScaled>upperScaled+primalTolerance_)
-	      numberPrimalScaled++;
-	    else
-	      upperOut_ = CoinMax(upperOut_,CoinMin(valueScaled-lowerScaled,upperScaled-valueScaled));
-	  }
-	  rowActivity_[i] = (valueScaled*scaleR)/scaleFactor;
-	  double value = rowActivity_[i];
-	  if (value<rowLower_[i]-primalTolerance_)
-	    numberPrimalUnscaled++;
-	  else if (value>rowUpper_[i]+primalTolerance_)
-	    numberPrimalUnscaled++;
-	  double valueScaledDual = dual_[i]+rowObjectiveWork_[i];;
-	  if (valueScaled>rowLowerWork_[i]+primalTolerance_&&valueScaledDual>dualTolerance_)
-	    numberDualScaled++;
-	  if (valueScaled<rowUpperWork_[i]-primalTolerance_&&valueScaledDual<-dualTolerance_)
-	    numberDualScaled++;
-	  dual_[i] *= scaleFactor*scaleC;
-	  double valueDual = dual_[i]; 
-	  if (rowObjective_)
-	    valueDual += rowObjective_[i];
-	  if (value>rowLower_[i]+primalTolerance_&&valueDual>dualTolerance_)
-	    numberDualUnscaled++;
-	  if (value<rowUpper_[i]-primalTolerance_&&valueDual<-dualTolerance_)
-	    numberDualUnscaled++;
-	}
+  // ray may be null if in branch and bound
+  if (rowScale_) {
+    // Collect infeasibilities
+    int numberPrimalScaled=0;
+    int numberPrimalUnscaled=0;
+    int numberDualScaled=0;
+    int numberDualUnscaled=0;
+    double scaleC = 1.0/objectiveScale_;
+    double scaleR = 1.0/rhsScale_;
+    const double * inverseScale = inverseColumnScale_;
+    for (i=0;i<numberColumns;i++) {
+      double scaleFactor = columnScale_[i];
+      double valueScaled = columnActivityWork_[i];
+      double lowerScaled = columnLowerWork_[i];
+      double upperScaled = columnUpperWork_[i];
+      if (lowerScaled>-1.0e20||upperScaled<1.0e20) {
+	if (valueScaled<lowerScaled-primalTolerance_||
+	    valueScaled>upperScaled+primalTolerance_)
+	  numberPrimalScaled++;
+	else
+	  upperOut_ = CoinMax(upperOut_,CoinMin(valueScaled-lowerScaled,upperScaled-valueScaled));
+      }
+      columnActivity_[i] = valueScaled*scaleFactor*scaleR;
+      double value = columnActivity_[i];
+      if (value<columnLower_[i]-primalTolerance_)
+	numberPrimalUnscaled++;
+      else if (value>columnUpper_[i]+primalTolerance_)
+	numberPrimalUnscaled++;
+      double valueScaledDual = reducedCostWork_[i];
+      if (valueScaled>columnLowerWork_[i]+primalTolerance_&&valueScaledDual>dualTolerance_)
+	numberDualScaled++;
+      if (valueScaled<columnUpperWork_[i]-primalTolerance_&&valueScaledDual<-dualTolerance_)
+	numberDualScaled++;
+      reducedCost_[i] = (valueScaledDual*scaleC)*inverseScale[i];
+      double valueDual = reducedCost_[i];
+      if (value>columnLower_[i]+primalTolerance_&&valueDual>dualTolerance_)
+	numberDualUnscaled++;
+      if (value<columnUpper_[i]-primalTolerance_&&valueDual<-dualTolerance_)
+	numberDualUnscaled++;
+    }
+    inverseScale = inverseRowScale_;
+    for (i=0;i<numberRows;i++) {
+      double scaleFactor = rowScale_[i];
+      double valueScaled = rowActivityWork_[i];
+      double lowerScaled = rowLowerWork_[i];
+      double upperScaled = rowUpperWork_[i];
+      if (lowerScaled>-1.0e20||upperScaled<1.0e20) {
+	if (valueScaled<lowerScaled-primalTolerance_||
+	    valueScaled>upperScaled+primalTolerance_)
+	  numberPrimalScaled++;
+	else
+	  upperOut_ = CoinMax(upperOut_,CoinMin(valueScaled-lowerScaled,upperScaled-valueScaled));
+      }
+      rowActivity_[i] = (valueScaled*scaleR)*inverseScale[i];
+      double value = rowActivity_[i];
+      if (value<rowLower_[i]-primalTolerance_)
+	numberPrimalUnscaled++;
+      else if (value>rowUpper_[i]+primalTolerance_)
+	numberPrimalUnscaled++;
+      double valueScaledDual = dual_[i]+rowObjectiveWork_[i];;
+      if (valueScaled>rowLowerWork_[i]+primalTolerance_&&valueScaledDual>dualTolerance_)
+	numberDualScaled++;
+      if (valueScaled<rowUpperWork_[i]-primalTolerance_&&valueScaledDual<-dualTolerance_)
+	numberDualScaled++;
+      dual_[i] *= scaleFactor*scaleC;
+      double valueDual = dual_[i]; 
+      if (rowObjective_)
+	valueDual += rowObjective_[i];
+      if (value>rowLower_[i]+primalTolerance_&&valueDual>dualTolerance_)
+	numberDualUnscaled++;
+      if (value<rowUpper_[i]-primalTolerance_&&valueDual<-dualTolerance_)
+	numberDualUnscaled++;
+    }
+    if (!problemStatus_&&!secondaryStatus_) {
+      // See if we need to set secondary status
+      if (numberPrimalUnscaled) {
+	if (numberDualUnscaled) 
+	  secondaryStatus_=4;
+	else
+	  secondaryStatus_=2;
       } else {
-	assert (inverseColumnScale_);
-	const double * inverseScale = inverseColumnScale_;
-	for (i=0;i<numberColumns;i++) {
-	  double scaleFactor = columnScale_[i];
-	  double valueScaled = columnActivityWork_[i];
-	  double lowerScaled = columnLowerWork_[i];
-	  double upperScaled = columnUpperWork_[i];
-	  if (lowerScaled>-1.0e20||upperScaled<1.0e20) {
-	    if (valueScaled<lowerScaled-primalTolerance_||
-		valueScaled>upperScaled+primalTolerance_)
-	      numberPrimalScaled++;
-	    else
-	      upperOut_ = CoinMax(upperOut_,CoinMin(valueScaled-lowerScaled,upperScaled-valueScaled));
-	  }
-	  columnActivity_[i] = valueScaled*scaleFactor*scaleR;
-	  double value = columnActivity_[i];
-	  if (value<columnLower_[i]-primalTolerance_)
-	    numberPrimalUnscaled++;
-	  else if (value>columnUpper_[i]+primalTolerance_)
-	    numberPrimalUnscaled++;
-	  double valueScaledDual = reducedCostWork_[i];
-	  if (valueScaled>columnLowerWork_[i]+primalTolerance_&&valueScaledDual>dualTolerance_)
-	    numberDualScaled++;
-	  if (valueScaled<columnUpperWork_[i]-primalTolerance_&&valueScaledDual<-dualTolerance_)
-	    numberDualScaled++;
-	  reducedCost_[i] = (valueScaledDual*scaleC)*inverseScale[i];
-	  double valueDual = reducedCost_[i];
-	  if (value>columnLower_[i]+primalTolerance_&&valueDual>dualTolerance_)
-	    numberDualUnscaled++;
-	  if (value<columnUpper_[i]-primalTolerance_&&valueDual<-dualTolerance_)
-	    numberDualUnscaled++;
-	}
-	inverseScale = inverseRowScale_;
-	for (i=0;i<numberRows;i++) {
-	  double scaleFactor = rowScale_[i];
-	  double valueScaled = rowActivityWork_[i];
-	  double lowerScaled = rowLowerWork_[i];
-	  double upperScaled = rowUpperWork_[i];
-	  if (lowerScaled>-1.0e20||upperScaled<1.0e20) {
-	    if (valueScaled<lowerScaled-primalTolerance_||
-		valueScaled>upperScaled+primalTolerance_)
-	      numberPrimalScaled++;
-	    else
-	      upperOut_ = CoinMax(upperOut_,CoinMin(valueScaled-lowerScaled,upperScaled-valueScaled));
-	  }
-	  rowActivity_[i] = (valueScaled*scaleR)*inverseScale[i];
-	  double value = rowActivity_[i];
-	  if (value<rowLower_[i]-primalTolerance_)
-	    numberPrimalUnscaled++;
-	  else if (value>rowUpper_[i]+primalTolerance_)
-	    numberPrimalUnscaled++;
-	  double valueScaledDual = dual_[i]+rowObjectiveWork_[i];;
-	  if (valueScaled>rowLowerWork_[i]+primalTolerance_&&valueScaledDual>dualTolerance_)
-	    numberDualScaled++;
-	  if (valueScaled<rowUpperWork_[i]-primalTolerance_&&valueScaledDual<-dualTolerance_)
-	    numberDualScaled++;
-	  dual_[i] *= scaleFactor*scaleC;
-	  double valueDual = dual_[i]; 
-	  if (rowObjective_)
-	    valueDual += rowObjective_[i];
-	  if (value>rowLower_[i]+primalTolerance_&&valueDual>dualTolerance_)
-	    numberDualUnscaled++;
-	  if (value<rowUpper_[i]-primalTolerance_&&valueDual<-dualTolerance_)
-	    numberDualUnscaled++;
-	}
+	if (numberDualUnscaled) 
+	  secondaryStatus_=3;
       }
-      if (!problemStatus_&&!secondaryStatus_) {
-        // See if we need to set secondary status
-        if (numberPrimalUnscaled) {
-          if (numberDualUnscaled) 
-            secondaryStatus_=4;
-          else
-            secondaryStatus_=2;
-        } else {
-          if (numberDualUnscaled) 
-            secondaryStatus_=3;
-        }
-      }
-      if (problemStatus_==2) {
-        for (i=0;i<numberColumns;i++) {
-          ray_[i] *= columnScale_[i];
-        }
-      } else if (problemStatus_==1&&ray_) {
-        for (i=0;i<numberRows;i++) {
-          ray_[i] *= rowScale_[i];
-        }
-      }
-    } else if (rhsScale_!=1.0||objectiveScale_!=1.0) {
-      // Collect infeasibilities
-      int numberPrimalScaled=0;
-      int numberPrimalUnscaled=0;
-      int numberDualScaled=0;
-      int numberDualUnscaled=0;
-      double scaleC = 1.0/objectiveScale_;
-      double scaleR = 1.0/rhsScale_;
+    }
+    if (problemStatus_==2) {
       for (i=0;i<numberColumns;i++) {
-        double valueScaled = columnActivityWork_[i];
-        double lowerScaled = columnLowerWork_[i];
-        double upperScaled = columnUpperWork_[i];
-        if (lowerScaled>-1.0e20||upperScaled<1.0e20) {
-          if (valueScaled<lowerScaled-primalTolerance_||
-              valueScaled>upperScaled+primalTolerance_)
-            numberPrimalScaled++;
-          else
-            upperOut_ = CoinMax(upperOut_,CoinMin(valueScaled-lowerScaled,upperScaled-valueScaled));
-        }
-        columnActivity_[i] = valueScaled*scaleR;
-        double value = columnActivity_[i];
-        if (value<columnLower_[i]-primalTolerance_)
-          numberPrimalUnscaled++;
-        else if (value>columnUpper_[i]+primalTolerance_)
-          numberPrimalUnscaled++;
-        double valueScaledDual = reducedCostWork_[i];
-        if (valueScaled>columnLowerWork_[i]+primalTolerance_&&valueScaledDual>dualTolerance_)
-          numberDualScaled++;
-        if (valueScaled<columnUpperWork_[i]-primalTolerance_&&valueScaledDual<-dualTolerance_)
-          numberDualScaled++;
-        reducedCost_[i] = valueScaledDual*scaleC;
-        double valueDual = reducedCost_[i];
-        if (value>columnLower_[i]+primalTolerance_&&valueDual>dualTolerance_)
-          numberDualUnscaled++;
-        if (value<columnUpper_[i]-primalTolerance_&&valueDual<-dualTolerance_)
-          numberDualUnscaled++;
+	ray_[i] *= columnScale_[i];
+      }
+    } else if (problemStatus_==1&&ray_) {
+      for (i=0;i<numberRows;i++) {
+	ray_[i] *= rowScale_[i];
+      }
+    }
+  } else if (rhsScale_!=1.0||objectiveScale_!=1.0) {
+    // Collect infeasibilities
+    int numberPrimalScaled=0;
+    int numberPrimalUnscaled=0;
+    int numberDualScaled=0;
+    int numberDualUnscaled=0;
+    double scaleC = 1.0/objectiveScale_;
+    double scaleR = 1.0/rhsScale_;
+    for (i=0;i<numberColumns;i++) {
+      double valueScaled = columnActivityWork_[i];
+      double lowerScaled = columnLowerWork_[i];
+      double upperScaled = columnUpperWork_[i];
+      if (lowerScaled>-1.0e20||upperScaled<1.0e20) {
+	if (valueScaled<lowerScaled-primalTolerance_||
+	    valueScaled>upperScaled+primalTolerance_)
+	  numberPrimalScaled++;
+	else
+	  upperOut_ = CoinMax(upperOut_,CoinMin(valueScaled-lowerScaled,upperScaled-valueScaled));
+      }
+      columnActivity_[i] = valueScaled*scaleR;
+      double value = columnActivity_[i];
+      if (value<columnLower_[i]-primalTolerance_)
+	numberPrimalUnscaled++;
+      else if (value>columnUpper_[i]+primalTolerance_)
+	numberPrimalUnscaled++;
+      double valueScaledDual = reducedCostWork_[i];
+      if (valueScaled>columnLowerWork_[i]+primalTolerance_&&valueScaledDual>dualTolerance_)
+	numberDualScaled++;
+      if (valueScaled<columnUpperWork_[i]-primalTolerance_&&valueScaledDual<-dualTolerance_)
+	numberDualScaled++;
+      reducedCost_[i] = valueScaledDual*scaleC;
+      double valueDual = reducedCost_[i];
+      if (value>columnLower_[i]+primalTolerance_&&valueDual>dualTolerance_)
+	numberDualUnscaled++;
+      if (value<columnUpper_[i]-primalTolerance_&&valueDual<-dualTolerance_)
+	numberDualUnscaled++;
+    }
+    for (i=0;i<numberRows;i++) {
+      double valueScaled = rowActivityWork_[i];
+      double lowerScaled = rowLowerWork_[i];
+      double upperScaled = rowUpperWork_[i];
+      if (lowerScaled>-1.0e20||upperScaled<1.0e20) {
+	if (valueScaled<lowerScaled-primalTolerance_||
+	    valueScaled>upperScaled+primalTolerance_)
+	  numberPrimalScaled++;
+	else
+	  upperOut_ = CoinMax(upperOut_,CoinMin(valueScaled-lowerScaled,upperScaled-valueScaled));
+      }
+      rowActivity_[i] = valueScaled*scaleR;
+      double value = rowActivity_[i];
+      if (value<rowLower_[i]-primalTolerance_)
+	numberPrimalUnscaled++;
+      else if (value>rowUpper_[i]+primalTolerance_)
+	numberPrimalUnscaled++;
+      double valueScaledDual = dual_[i]+rowObjectiveWork_[i];;
+      if (valueScaled>rowLowerWork_[i]+primalTolerance_&&valueScaledDual>dualTolerance_)
+	numberDualScaled++;
+      if (valueScaled<rowUpperWork_[i]-primalTolerance_&&valueScaledDual<-dualTolerance_)
+	numberDualScaled++;
+      dual_[i] *= scaleC;
+      double valueDual = dual_[i]; 
+      if (rowObjective_)
+	valueDual += rowObjective_[i];
+      if (value>rowLower_[i]+primalTolerance_&&valueDual>dualTolerance_)
+	numberDualUnscaled++;
+      if (value<rowUpper_[i]-primalTolerance_&&valueDual<-dualTolerance_)
+	numberDualUnscaled++;
+    }
+    if (!problemStatus_&&!secondaryStatus_) {
+      // See if we need to set secondary status
+      if (numberPrimalUnscaled) {
+	if (numberDualUnscaled) 
+	  secondaryStatus_=4;
+	else
+	  secondaryStatus_=2;
+      } else {
+	if (numberDualUnscaled) 
+	  secondaryStatus_=3;
+      }
+    }
+  } else {
+    if (columnActivityWork_) {
+      for (i=0;i<numberColumns;i++) {
+	double value = columnActivityWork_[i];
+	double lower = columnLowerWork_[i];
+	double upper = columnUpperWork_[i];
+	if (lower>-1.0e20||upper<1.0e20) {
+	  if (value>lower&&value<upper)
+	    upperOut_ = CoinMax(upperOut_,CoinMin(value-lower,upper-value));
+	}
+	columnActivity_[i] = columnActivityWork_[i];
+	reducedCost_[i] = reducedCostWork_[i];
       }
       for (i=0;i<numberRows;i++) {
-        double valueScaled = rowActivityWork_[i];
-        double lowerScaled = rowLowerWork_[i];
-        double upperScaled = rowUpperWork_[i];
-        if (lowerScaled>-1.0e20||upperScaled<1.0e20) {
-          if (valueScaled<lowerScaled-primalTolerance_||
-              valueScaled>upperScaled+primalTolerance_)
-            numberPrimalScaled++;
-          else
-            upperOut_ = CoinMax(upperOut_,CoinMin(valueScaled-lowerScaled,upperScaled-valueScaled));
-        }
-        rowActivity_[i] = valueScaled*scaleR;
-        double value = rowActivity_[i];
-        if (value<rowLower_[i]-primalTolerance_)
-          numberPrimalUnscaled++;
-        else if (value>rowUpper_[i]+primalTolerance_)
-          numberPrimalUnscaled++;
-        double valueScaledDual = dual_[i]+rowObjectiveWork_[i];;
-        if (valueScaled>rowLowerWork_[i]+primalTolerance_&&valueScaledDual>dualTolerance_)
-          numberDualScaled++;
-        if (valueScaled<rowUpperWork_[i]-primalTolerance_&&valueScaledDual<-dualTolerance_)
-          numberDualScaled++;
-        dual_[i] *= scaleC;
-        double valueDual = dual_[i]; 
-        if (rowObjective_)
-          valueDual += rowObjective_[i];
-        if (value>rowLower_[i]+primalTolerance_&&valueDual>dualTolerance_)
-          numberDualUnscaled++;
-        if (value<rowUpper_[i]-primalTolerance_&&valueDual<-dualTolerance_)
-          numberDualUnscaled++;
-      }
-      if (!problemStatus_&&!secondaryStatus_) {
-        // See if we need to set secondary status
-        if (numberPrimalUnscaled) {
-          if (numberDualUnscaled) 
-            secondaryStatus_=4;
-          else
-            secondaryStatus_=2;
-        } else {
-          if (numberDualUnscaled) 
-            secondaryStatus_=3;
-        }
-      }
-    } else {
-      if (columnActivityWork_) {
-        for (i=0;i<numberColumns;i++) {
-          double value = columnActivityWork_[i];
-          double lower = columnLowerWork_[i];
-          double upper = columnUpperWork_[i];
-          if (lower>-1.0e20||upper<1.0e20) {
-            if (value>lower&&value<upper)
-              upperOut_ = CoinMax(upperOut_,CoinMin(value-lower,upper-value));
-          }
-          columnActivity_[i] = columnActivityWork_[i];
-          reducedCost_[i] = reducedCostWork_[i];
-        }
-        for (i=0;i<numberRows;i++) {
-          double value = rowActivityWork_[i];
-          double lower = rowLowerWork_[i];
-          double upper = rowUpperWork_[i];
-          if (lower>-1.0e20||upper<1.0e20) {
-            if (value>lower&&value<upper)
-              upperOut_ = CoinMax(upperOut_,CoinMin(value-lower,upper-value));
-          }
-          rowActivity_[i] = rowActivityWork_[i];
-        }
-      }
-    }
-    // switch off scalefactor if auto
-    if (automaticScale_) {
-      rhsScale_=1.0;
-      objectiveScale_=1.0;
-    }
-    if (optimizationDirection_!=1.0) {
-      // and modify all dual signs
-      for (i=0;i<numberColumns;i++) 
-        reducedCost_[i] *= optimizationDirection_;
-      for (i=0;i<numberRows;i++) 
-        dual_[i] *= optimizationDirection_;
-    }
-#ifdef CLP_AUXILIARY_MODEL
-  } else {
-    // auxiliary model
-    cost_=NULL;
-    lower_=NULL;
-    upper_=NULL;
-    dj_=NULL;
-    solution_=NULL;
-    int iRow,iColumn;
-    for (iRow=0;iRow<4;iRow++) {
-      if (rowArray_[iRow]) {
-        rowArray_[iRow]->clear();
-        //rowArray_[iRow]->checkClear();
-      }
-      rowArray_[iRow]=NULL;
-    }
-    for (iColumn=0;iColumn<2;iColumn++) {
-      if (columnArray_[iColumn]) {
-        columnArray_[iColumn]->clear();
-        //columnArray_[iColumn]->checkClear();
-      }
-      columnArray_[iColumn]=NULL;
-    }
-    rowCopy_=NULL;
-    ClpMatrixBase * temp = matrix_;
-    matrix_=auxiliaryModel_->matrix_;
-    auxiliaryModel_->matrix_=temp;
-    assert ((auxiliaryModel_->specialOptions_&(16+32))==16+32);
-    if (problemStatus_!=1&&problemStatus_!=10) {
-      int i;
-      if (auxiliaryModel_->rowScale_) {
-        const double * scale = auxiliaryModel_->columnScale_;
-        const double * inverseScale = scale + numberColumns;
-        for (i=0;i<numberColumns;i++) {
-          columnActivity_[i] = auxiliaryModel_->columnActivityWork_[i]*scale[i];
-          reducedCost_[i] = auxiliaryModel_->reducedCostWork_[i]*inverseScale[i];
-        }
-        scale = auxiliaryModel_->rowScale_;
-        inverseScale = scale + numberRows;
-        for (i=0;i<numberRows;i++) {
-          rowActivity_[i] = auxiliaryModel_->rowActivityWork_[i]*inverseScale[i];
-        }
-      } else {
-        for (i=0;i<numberColumns;i++) {
-          columnActivity_[i] = auxiliaryModel_->columnActivityWork_[i];
-          reducedCost_[i] = auxiliaryModel_->reducedCostWork_[i];
-        }
-        for (i=0;i<numberRows;i++) {
-          rowActivity_[i] = auxiliaryModel_->rowActivityWork_[i];
-        }
-      }
-      if (optimizationDirection_!=1.0) {
-        // and modify reduced costs
-        for (i=0;i<numberColumns;i++) 
-          reducedCost_[i] *= optimizationDirection_;
-      }
-    } else if (problemStatus_==10) {
-      int i;
-      if (auxiliaryModel_->rowScale_) {
-        const double * scale = auxiliaryModel_->columnScale_;
-        const double * inverseScale = scale + numberColumns;
-        for (i=0;i<numberColumns;i++) {
-          double lower = auxiliaryModel_->columnLowerWork_[i];
-          double upper = auxiliaryModel_->columnUpperWork_[i];
-          double value = auxiliaryModel_->columnActivityWork_[i];
-          if (value>lower&&value<upper) {
-            upperOut_ = CoinMax(upperOut_,CoinMin(value-lower,upper-value));
-          }
-          columnActivity_[i] = value*scale[i];
-        }
-        scale = auxiliaryModel_->rowScale_;
-        inverseScale = scale + numberRows;
-        for (i=0;i<numberRows;i++) {
-          double lower = auxiliaryModel_->rowLowerWork_[i];
-          double upper = auxiliaryModel_->rowUpperWork_[i];
-          double value = auxiliaryModel_->rowActivityWork_[i];
-          if (value>lower&&value<upper) {
-            upperOut_ = CoinMax(upperOut_,CoinMin(value-lower,upper-value));
-          }
-          rowActivity_[i] = auxiliaryModel_->rowActivityWork_[i]*inverseScale[i];
-        }
-      } else {
-        for (i=0;i<numberColumns;i++) {
-          double lower = auxiliaryModel_->columnLowerWork_[i];
-          double upper = auxiliaryModel_->columnUpperWork_[i];
-          double value = auxiliaryModel_->columnActivityWork_[i];
-          if (value>lower&&value<upper) {
-            upperOut_ = CoinMax(upperOut_,CoinMin(value-lower,upper-value));
-          }
-          columnActivity_[i] = value;
-        }
-        for (i=0;i<numberRows;i++) {
-          double lower = auxiliaryModel_->rowLowerWork_[i];
-          double upper = auxiliaryModel_->rowUpperWork_[i];
-          double value = auxiliaryModel_->rowActivityWork_[i];
-          if (value>lower&&value<upper) {
-            upperOut_ = CoinMax(upperOut_,CoinMin(value-lower,upper-value));
-          }
-          rowActivity_[i] = value;
-        }
+	double value = rowActivityWork_[i];
+	double lower = rowLowerWork_[i];
+	double upper = rowUpperWork_[i];
+	if (lower>-1.0e20||upper<1.0e20) {
+	  if (value>lower&&value<upper)
+	    upperOut_ = CoinMax(upperOut_,CoinMin(value-lower,upper-value));
+	}
+	rowActivity_[i] = rowActivityWork_[i];
       }
     }
   }
-#endif
+  // switch off scalefactor if auto
+  if (automaticScale_) {
+    rhsScale_=1.0;
+    objectiveScale_=1.0;
+  }
+  if (optimizationDirection_!=1.0) {
+    // and modify all dual signs
+    for (i=0;i<numberColumns;i++) 
+      reducedCost_[i] *= optimizationDirection_;
+      for (i=0;i<numberRows;i++) 
+        dual_[i] *= optimizationDirection_;
+  }
   // scaling may have been turned off
   scalingFlag_ = abs(scalingFlag_);
   if(getRidOfFactorizationData>0) {
@@ -5605,7 +4939,7 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
       As far as I can see this is perfectly safe.
   */
 #ifdef COIN_DEVELOP
-#define EXPENSIVE
+  //#define EXPENSIVE
 #endif
 #ifdef EXPENSIVE
   static int dualCount=0;
@@ -5812,7 +5146,199 @@ int ClpSimplex::primal (int ifValuesPass , int startFinishOptions)
   if (objective_->type()>1&&objective_->activated()) 
     return reducedGradient();
 #endif  
-  CoinAssert (ifValuesPass>=0&&ifValuesPass<3);
+  CoinAssert ((ifValuesPass>=0&&ifValuesPass<3)||
+	      (ifValuesPass>=12&&ifValuesPass<100)||
+	      (ifValuesPass>=112&&ifValuesPass<200));
+  if (ifValuesPass>=12) {
+    int numberProblems = (ifValuesPass-10)%100;
+    ifValuesPass = (ifValuesPass<100) ? 1 : 2;
+    // Go parallel to do solve
+    // Only if all slack basis
+    int i;
+    for ( i=0;i<numberColumns_;i++) {
+      if (getColumnStatus(i)==basic)
+	break;
+    }
+    if (i==numberColumns_) {
+      // try if vaguely feasible
+      CoinZeroN(rowActivity_,numberRows_);
+      const int * row = matrix_->getIndices();
+      const CoinBigIndex * columnStart = matrix_->getVectorStarts();
+      const int * columnLength = matrix_->getVectorLengths(); 
+      const double * element = matrix_->getElements();
+      for (int iColumn=0;iColumn<numberColumns_;iColumn++) {
+	CoinBigIndex j;
+	double value = columnActivity_[iColumn];
+	if (value) {
+	  CoinBigIndex start = columnStart[iColumn];
+	  CoinBigIndex end = start + columnLength[iColumn];
+	  for (j=start; j<end; j++) {
+	    int iRow=row[j];
+	    rowActivity_[iRow] += value*element[j];
+	  }
+	}
+      }
+      checkSolutionInternal();
+      if (sumPrimalInfeasibilities_*sqrt(numberRows_)<1.0) {
+	// Could do better if can decompose
+	// correction to get feasible
+	double scaleFactor = 1.0/numberProblems;
+	double * correction = new double [numberRows_];
+	for (int iRow=0;iRow<numberRows_;iRow++) {
+	  double value=rowActivity_[iRow];
+	  if (value>rowUpper_[iRow])
+	    value = rowUpper_[iRow]-value;
+	  else if (value<rowLower_[iRow])
+	    value = rowLower_[iRow]-value;
+	  else
+	    value=0.0;
+	  correction[iRow]=value*scaleFactor;
+	}
+	int numberColumns = (numberColumns_+numberProblems-1)/numberProblems;
+	int * whichRows = new int [numberRows_];
+	for (int i=0;i<numberRows_;i++)
+	  whichRows[i]=i;
+	int * whichColumns = new int [numberColumns_];
+	ClpSimplex ** model = new ClpSimplex * [numberProblems];
+	int startColumn=0;
+	double * saveLower = CoinCopyOfArray(rowLower_,numberRows_);
+	double * saveUpper = CoinCopyOfArray(rowUpper_,numberRows_);
+	for (int i=0;i<numberProblems;i++) {
+	  int endColumn = CoinMin(startColumn+numberColumns,numberColumns_);
+	  CoinZeroN(rowActivity_,numberRows_);
+	  for (int iColumn=startColumn;iColumn<endColumn;iColumn++) {
+	    whichColumns[iColumn-startColumn]=iColumn;
+	    CoinBigIndex j;
+	    double value = columnActivity_[iColumn];
+	    if (value) {
+	      CoinBigIndex start = columnStart[iColumn];
+	      CoinBigIndex end = start + columnLength[iColumn];
+	      for (j=start; j<end; j++) {
+		int iRow=row[j];
+		rowActivity_[iRow] += value*element[j];
+	      }
+	    }
+	  }
+	  // adjust rhs
+	  for (int iRow=0;iRow<numberRows_;iRow++) {
+	    double value=rowActivity_[iRow]+correction[iRow];
+	    if (saveUpper[iRow]<1.0e30)
+	      rowUpper_[iRow]=value;
+	    if (saveLower[iRow]>-1.0e30)
+	      rowLower_[iRow]=value;
+	  }
+	  model[i] = new ClpSimplex(this,numberRows_,whichRows,
+				    endColumn-startColumn,whichColumns);
+	  //#define FEB_TRY
+#ifdef FEB_TRY
+	  model[i]->setPerturbation(perturbation_);
+#endif
+	  startColumn=endColumn;
+	}
+	memcpy(rowLower_,saveLower,numberRows_*sizeof(double));
+	memcpy(rowUpper_,saveUpper,numberRows_*sizeof(double));
+	delete [] saveLower;
+	delete [] saveUpper;
+	delete [] correction;
+	// solve (in parallel)
+	for (int i=0;i<numberProblems;i++) {
+	  model[i]->primal(1/*ifValuesPass*/);
+	}
+	startColumn=0;
+	int numberBasic=0;
+	// use whichRows as counter
+	for (int iRow=0;iRow<numberRows_;iRow++) {
+	  int startValue=0;
+	  if (rowUpper_[iRow]>rowLower_[iRow])
+	    startValue++;
+	  if (rowUpper_[iRow]>1.0e30)
+	    startValue++;
+	  if (rowLower_[iRow]<-1.0e30)
+	    startValue++;
+	  whichRows[iRow]=1000*startValue;
+	}
+	for (int i=0;i<numberProblems;i++) {
+	  int endColumn = CoinMin(startColumn+numberColumns,numberColumns_);
+	  ClpSimplex * simplex = model[i];
+	  const double * solution = simplex->columnActivity_;
+	  for (int iColumn=startColumn;iColumn<endColumn;iColumn++) {
+	    columnActivity_[iColumn] = solution[iColumn-startColumn];
+	    Status status = simplex->getColumnStatus(iColumn-startColumn);
+	    setColumnStatus(iColumn,status);
+	    if (status==basic)
+	      numberBasic++;
+	  }
+	  for (int iRow=0;iRow<numberRows_;iRow++) {
+	    if (simplex->getRowStatus(iRow)==basic)
+	      whichRows[iRow]++;
+	  }
+	  delete model[i];
+	  startColumn=endColumn;
+	}
+	delete [] model;
+	for (int iRow=0;iRow<numberRows_;iRow++) 
+	  setRowStatus(iRow,superBasic);
+	CoinZeroN(rowActivity_,numberRows_);
+	for (int iColumn=0;iColumn<numberColumns_;iColumn++) {
+	  CoinBigIndex j;
+	  double value = columnActivity_[iColumn];
+	  if (value) {
+	    CoinBigIndex start = columnStart[iColumn];
+	    CoinBigIndex end = start + columnLength[iColumn];
+	    for (j=start; j<end; j++) {
+	      int iRow=row[j];
+	      rowActivity_[iRow] += value*element[j];
+	    }
+	  }
+	}
+	checkSolutionInternal();
+	if (numberBasic<numberRows_) {
+	  int * order = new int [numberRows_];
+	  for (int iRow=0;iRow<numberRows_;iRow++) {
+	    setRowStatus(iRow,superBasic);
+	    int nTimes = whichRows[iRow]%1000;
+	    if (nTimes)
+	      nTimes += whichRows[iRow]/500;
+	    whichRows[iRow]=-nTimes;
+	    order[iRow]=iRow;
+	  }
+	  CoinSort_2(whichRows,whichRows+numberRows_,order);
+	  int nPut = numberRows_-numberBasic;
+	  for (int i=0;i<nPut;i++) {
+	    int iRow = order[i];
+	    setRowStatus(iRow,basic);
+	  }
+	  delete [] order;
+	} else if (numberBasic>numberRows_) {
+	  double * away = new double [numberBasic];
+	  numberBasic=0;
+	  for (int iColumn=0;iColumn<numberColumns_;iColumn++) {
+	    if (getColumnStatus(iColumn)==basic) {
+	      double value = columnActivity_[iColumn];
+	      value = CoinMin(value-columnLower_[iColumn],
+			      columnUpper_[iColumn]-value);
+	      away[numberBasic]=value;
+	      whichColumns[numberBasic++]=iColumn;
+	    }
+	  }
+	  CoinSort_2(away,away+numberBasic,whichColumns);
+	  int nPut = numberBasic-numberRows_;
+	  for (int i=0;i<nPut;i++) {
+	    int iColumn = whichColumns[i];
+	    double value = columnActivity_[iColumn];
+	    if (value-columnLower_[iColumn]<
+		columnUpper_[iColumn]-value)
+	      setColumnStatus(iColumn,atLowerBound);
+	    else
+	      setColumnStatus(iColumn,atUpperBound);
+	  }
+	  delete [] away;
+	}
+	delete [] whichColumns;
+	delete [] whichRows;
+      }
+    }
+  }
   /*  Note use of "down casting".  The only class the user sees is ClpSimplex.
       Classes ClpSimplexDual, ClpSimplexPrimal, (ClpSimplexNonlinear) 
       and ClpSimplexOther all exist and inherit from ClpSimplex but have no
@@ -6033,12 +5559,14 @@ int ClpSimplex::reducedGradient(int phase)
 }
 #include "ClpPredictorCorrector.hpp"
 #include "ClpCholeskyBase.hpp"
-// Preference is WSSMP, TAUCS, UFL (just ordering) then base
+// Preference is WSSMP, UFL (just ordering), MUMPS, TAUCS then base
 #if WSSMP_BARRIER
 #include "ClpCholeskyWssmp.hpp"
 #include "ClpCholeskyWssmpKKT.hpp"
 #elif UFL_BARRIER
 #include "ClpCholeskyUfl.hpp"
+#elif MUMPS_BARRIER
+#include "ClpCholeskyMumps.hpp"
 #elif TAUCS_BARRIER
 #include "ClpCholeskyTaucs.hpp"
 #endif
@@ -6058,7 +5586,7 @@ ClpSimplex::barrier(bool crossover)
     quadraticObj = (static_cast< ClpQuadraticObjective*>(objective_));
   // If Quadratic we need KKT
   bool doKKT = (quadraticObj!=NULL);
-  // Preference is WSSMP, UFL, TAUCS then base
+  // Preference is WSSMP, UFL, MUMPS, TAUCS then base
 #ifdef WSSMP_BARRIER
  if (!doKKT) {
    ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp(CoinMax(100,model2->numberRows()/10));
@@ -6082,6 +5610,16 @@ ClpSimplex::barrier(bool crossover)
  assert (!doKKT);
  ClpCholeskyTaucs * cholesky = new ClpCholeskyTaucs();
  barrier.setCholesky(cholesky);
+#elif MUMPS_BARRIER
+ if (!doKKT) {
+   ClpCholeskyMumps * cholesky = new ClpCholeskyMumps();
+   barrier.setCholesky(cholesky);
+ } else {
+   printf("***** Unable to do Mumps with KKT\n");
+   ClpCholeskyBase * cholesky = new ClpCholeskyBase();
+   cholesky->setKKT(true);
+   barrier.setCholesky(cholesky);
+ }
 #else
  if (!doKKT) {
   ClpCholeskyBase * cholesky = new ClpCholeskyBase();
@@ -7080,8 +6618,9 @@ void ClpSimplex::allSlackBasis(bool resetSolution)
 	  solution_[i] = columnActivity_[i];
 	}
       } else {
+	double * inverseColumnScale=columnScale_+numberColumns_;
 	for (i=0;i<numberColumns_;i++) {
-	  solution_[i] = columnActivity_[i]*(rhsScale_/columnScale_[i]);
+	  solution_[i] = columnActivity_[i]*(rhsScale_*inverseColumnScale[i]);
 	}
       }
     }
@@ -8228,6 +7767,16 @@ ClpSimplex::startup(int ifValuesPass, int startFinishOptions)
   int useFactorization=false;
   if ((startFinishOptions&2)!=0&&(whatsChanged_&(2+512))==2+512)
     useFactorization=true; // Keep factorization if possible
+#if 0
+  // seems to be needed if rows deleted later in CbcModel!
+  if (!solution_&&scaledMatrix_) {
+    // get rid of scaled matrix
+    if (scaledMatrix_->getNumRows()!=numberRows_) {
+      delete scaledMatrix_;
+      scaledMatrix_=NULL;
+    }
+  }
+#endif
   // sanity check
   // bad if empty (trap here to avoid using bad matrix_)
 #if 0
@@ -8315,7 +7864,9 @@ ClpSimplex::startup(int ifValuesPass, int startFinishOptions)
       
       if (perturbation_<100) {
 	if (algorithm_>0&&(objective_->type()<2||!objective_->activated())) {
+#ifndef FEB_TRY
 	  static_cast<ClpSimplexPrimal *> (this)->perturb(0);
+#endif
 	} else if (algorithm_<0) {
 	  static_cast<ClpSimplexDual *> (this)->perturb();
 	}
@@ -8330,6 +7881,7 @@ ClpSimplex::startup(int ifValuesPass, int startFinishOptions)
     // loop round to clean up solution if values pass
     int numberThrownOut = -1;
     int totalNumberThrownOut=0;
+    problemStatus_=-1;
     // see if we are re-using factorization
     if (!useFactorization) {
       while(numberThrownOut) {
@@ -8415,7 +7967,11 @@ ClpSimplex::startup(int ifValuesPass, int startFinishOptions)
     // Switch back dense
     factorization_->setDenseThreshold(saveThreshold);
     
-    problemStatus_ = -1;
+    if (!numberPrimalInfeasibilities_&&!numberDualInfeasibilities_
+	&&!ifValuesPass)
+      problemStatus_=0;
+    else
+      assert(problemStatus_ == -1);
     
     // number of times we have declared optimality
     numberTimesOptimal_=0;
@@ -8439,9 +7995,9 @@ ClpSimplex::finish(int startFinishOptions)
   if (upper_&&((startFinishOptions&1)!=0||problemStatus_==10)) {
     getRidOfData=0; // Keep stuff
     // mark all as current
-    whatsChanged_ = 0xffff;
+    whatsChanged_ = 0x3ffffff;
   } else {
-    whatsChanged_=0;
+    whatsChanged_ &= ~0xffff;
   }
   deleteRim(getRidOfData);
   // Skip message if changing algorithms
@@ -8693,7 +8249,7 @@ ClpSimplex::ClpSimplex (ClpSimplex * wholeModel,
   } else {
     wholeModel->rowCopy_=NULL;
   }
-  whatsChanged_=0;
+  whatsChanged_ &= ~0xffff;
   CoinAssert (wholeModel->matrix_);
   wholeModel->matrix_ = wholeModel->matrix_->subsetClone(numberRows_,whichRow,
 					numberColumns,whichColumns);
@@ -9079,7 +8635,7 @@ ClpSimplex::getBInvARow(int row, double* z, double * slack)
     if (pivot<numberColumns_)
       value = columnScale_[pivot];
     else
-      value = -1.0/rowScale_[pivot-numberColumns_];
+      value = -1.0*inverseRowScale_[pivot-numberColumns_];
   }
   rowArray1->insert(row,value);
   factorization_->updateColumnTranspose(rowArray0,rowArray1);
@@ -9091,7 +8647,7 @@ ClpSimplex::getBInvARow(int row, double* z, double * slack)
   } else {
     double * array = columnArray0->denseVector();
     for (int i=0;i<numberColumns_;i++)
-      z[i] = array[i]/columnScale_[i];
+      z[i] = array[i]*inverseColumnScale_[i];
   }
   if (slack) {
     if (!rowScale_) {
@@ -9181,7 +8737,7 @@ ClpSimplex::getBInvACol(int col, double* vec)
   } else {
     if (col<numberColumns_) {
       unpack(rowArray1,col);
-      double multiplier = 1.0/columnScale_[col];
+      double multiplier = 1.0*inverseColumnScale_[col];
       int number = rowArray1->getNumElements();
       int * index = rowArray1->getIndices();
       double * array = rowArray1->denseVector();
@@ -9295,7 +8851,6 @@ ClpSimplex::setObjectiveCoefficient( int elementIndex, double elementValue )
       if (!rowScale_) {
 	objectiveWork_[elementIndex] = direction*elementValue;
       } else {
-        assert (!auxiliaryModel_);
 	objectiveWork_[elementIndex] = direction*elementValue
 	  *columnScale_[elementIndex];
       }
@@ -9324,7 +8879,6 @@ ClpSimplex::setRowLower( int elementIndex, double elementValue ) {
       } else if (!rowScale_) {
 	rowLowerWork_[elementIndex] = elementValue * rhsScale_;
       } else {
-        assert (!auxiliaryModel_);
 	rowLowerWork_[elementIndex] = elementValue * rhsScale_ 
 	  * rowScale_[elementIndex];
       }
@@ -9354,7 +8908,6 @@ ClpSimplex::setRowUpper( int elementIndex, double elementValue ) {
       } else if (!rowScale_) {
 	rowUpperWork_[elementIndex] = elementValue * rhsScale_;
       } else {
-        assert (!auxiliaryModel_);
 	rowUpperWork_[elementIndex] = elementValue * rhsScale_ 
 	  * rowScale_[elementIndex];
       }
@@ -9387,7 +8940,6 @@ ClpSimplex::setRowBounds( int elementIndex,
       } else if (!rowScale_) {
 	rowLowerWork_[elementIndex] = lowerValue * rhsScale_;
       } else {
-        assert (!auxiliaryModel_);
 	rowLowerWork_[elementIndex] = lowerValue * rhsScale_ 
 	  * rowScale_[elementIndex];
       }
@@ -9403,7 +8955,6 @@ ClpSimplex::setRowBounds( int elementIndex,
       } else if (!rowScale_) {
 	rowUpperWork_[elementIndex] = upperValue * rhsScale_;
       } else {
-        assert (!auxiliaryModel_);
 	rowUpperWork_[elementIndex] = upperValue * rhsScale_ 
 	  * rowScale_[elementIndex];
       }
@@ -9453,7 +9004,6 @@ void ClpSimplex::setRowSetBounds(const int* indexFirst,
       } else if (!rowScale_) {
 	rowLowerWork_[iRow] = rowLower_[iRow] * rhsScale_;
       } else {
-        assert (!auxiliaryModel_);
 	rowLowerWork_[iRow] = rowLower_[iRow] * rhsScale_ 
 	  * rowScale_[iRow];
       }
@@ -9462,7 +9012,6 @@ void ClpSimplex::setRowSetBounds(const int* indexFirst,
       } else if (!rowScale_) {
 	rowUpperWork_[iRow] = rowUpper_[iRow] * rhsScale_;
       } else {
-        assert (!auxiliaryModel_);
 	rowUpperWork_[iRow] = rowUpper_[iRow] * rhsScale_ 
 	  * rowScale_[iRow];
       }
@@ -9494,7 +9043,6 @@ ClpSimplex::setColumnLower( int elementIndex, double elementValue )
       } else if (!columnScale_) {
 	value = elementValue * rhsScale_;
       } else {
-        assert (!auxiliaryModel_);
 	value = elementValue * rhsScale_ 
 	  / columnScale_[elementIndex];
       }
@@ -9529,7 +9077,6 @@ ClpSimplex::setColumnUpper( int elementIndex, double elementValue )
       } else if (!columnScale_) {
 	value = elementValue * rhsScale_;
       } else {
-        assert (!auxiliaryModel_);
 	value = elementValue * rhsScale_ 
 	  / columnScale_[elementIndex];
       }
@@ -9564,7 +9111,6 @@ ClpSimplex::setColumnBounds( int elementIndex,
       } else if (!columnScale_) {
 	lower_[elementIndex] = lowerValue * rhsScale_;
       } else {
-        assert (!auxiliaryModel_);
 	lower_[elementIndex] = lowerValue * rhsScale_ 
 	  / columnScale_[elementIndex];
       }
@@ -9583,7 +9129,6 @@ ClpSimplex::setColumnBounds( int elementIndex,
       } else if (!columnScale_) {
 	upper_[elementIndex] = upperValue * rhsScale_;
       } else {
-        assert (!auxiliaryModel_);
 	upper_[elementIndex] = upperValue * rhsScale_ 
 	  / columnScale_[elementIndex];
       }
@@ -9633,7 +9178,6 @@ void ClpSimplex::setColumnSetBounds(const int* indexFirst,
       } else if (!columnScale_) {
 	lower_[iColumn] = columnLower_[iColumn] * rhsScale_;
       } else {
-        assert (!auxiliaryModel_);
 	lower_[iColumn] = columnLower_[iColumn] * rhsScale_ 
 	  / columnScale_[iColumn];
       }
@@ -9642,7 +9186,6 @@ void ClpSimplex::setColumnSetBounds(const int* indexFirst,
       } else if (!columnScale_) {
 	upper_[iColumn] = columnUpper_[iColumn] * rhsScale_;
       } else {
-        assert (!auxiliaryModel_);
 	upper_[iColumn] = columnUpper_[iColumn] * rhsScale_ 
 	  / columnScale_[iColumn];
       }
@@ -9676,6 +9219,17 @@ ClpSimplex::checkSolutionInternal()
     double primalValue = rowActivity_[iRow];
     double lower = rowLower_[iRow];
     double upper = rowUpper_[iRow];
+    ClpSimplex::Status status = getRowStatus(iRow);
+    if (status!=basic) {
+      if (lower==upper) {
+	status = ClpSimplex::isFixed;
+      } else if (primalValue>upper-primalTolerance) {
+	status = ClpSimplex::atUpperBound;
+      } else if (primalValue<lower+primalTolerance) {
+	status = ClpSimplex::atLowerBound;
+      }
+      setRowStatus(iRow,status);
+    }
     if (primalValue>upper+primalTolerance) {
       sumPrimalInfeasibilities_ += primalValue-upper-primalTolerance;
       numberPrimalInfeasibilities_ ++;
@@ -9683,7 +9237,7 @@ ClpSimplex::checkSolutionInternal()
       sumPrimalInfeasibilities_ += lower-primalValue-primalTolerance;
       numberPrimalInfeasibilities_ ++;
     } else {
-      switch(getRowStatus(iRow)) {
+      switch(status) {
 	
       case basic:
       case ClpSimplex::isFixed:
@@ -9728,6 +9282,11 @@ ClpSimplex::checkSolutionInternal()
     objectiveValue_ += objective[iColumn]*primalValue;
     double lower = columnLower_[iColumn];
     double upper = columnUpper_[iColumn];
+    ClpSimplex::Status status = getColumnStatus(iColumn);
+    if (status!=basic&&lower==upper) {
+      status = ClpSimplex::isFixed;
+      setColumnStatus(iColumn,ClpSimplex::isFixed);
+    }
     if (primalValue>upper+primalTolerance) {
       sumPrimalInfeasibilities_ += primalValue-upper-primalTolerance;
       numberPrimalInfeasibilities_ ++;
@@ -9735,7 +9294,7 @@ ClpSimplex::checkSolutionInternal()
       sumPrimalInfeasibilities_ += lower-primalValue-primalTolerance;
       numberPrimalInfeasibilities_ ++;
     } else {
-      switch(getColumnStatus(iColumn)) {
+      switch(status) {
 	
       case basic:
 	// dual should be zero
@@ -9790,110 +9349,6 @@ ClpSimplex::checkSolutionInternal()
   else
     problemStatus_=-1;
 }
-#ifdef CLP_AUXILIARY_MODEL
-/*
-  If you are re-using the same matrix again and again then the setup time
-  to do scaling may be significant.  Also you may not want to initialize all values
-  or return all values (especially if infeasible).  While an auxiliary model exists
-  it will be faster.  If options -1 then model is switched off.  Otherwise switched on
-  with following options.
-  1 - rhs is constant
-  2 - bounds are constant
-  4 - objective is constant
-  8 - solution in by basis and no djs etc in
-  16 - no duals out (but reduced costs)
-  32 - no output if infeasible
-*/
-void 
-ClpSimplex::auxiliaryModel(int options)
-{
-  delete auxiliaryModel_;
-  auxiliaryModel_=NULL;
-  if (options>=0) {
-    createRim(63,true,0);
-    auxiliaryModel_ = new ClpSimplex(true);
-    auxiliaryModel_->specialOptions_=options;
-    int i;
-    int numberRows2 = numberRows_+numberExtraRows_;
-    int numberTotal = numberRows2+numberColumns_;
-    auxiliaryModel_->numberRows_=numberRows_;
-    auxiliaryModel_->numberColumns_=numberColumns_;
-    if (rowScale_) {
-      auxiliaryModel_->rowScale_= new double [2*numberRows_];
-      for (i=0;i<numberRows_;i++) {
-        auxiliaryModel_->rowScale_[i]=rowScale_[i];
-        auxiliaryModel_->rowScale_[numberRows_+i]=1.0/rowScale_[i];
-      }
-      auxiliaryModel_->columnScale_= new double [2*numberColumns_];
-      for (i=0;i<numberColumns_;i++) {
-        auxiliaryModel_->columnScale_[i]=columnScale_[i];
-        auxiliaryModel_->columnScale_[numberColumns_+i]=1.0/columnScale_[i];
-      }
-    }
-    // copy anyway
-    auxiliaryModel_->lower_ = new double [2*numberTotal];
-    CoinMemcpyN(lower_,numberTotal,auxiliaryModel_->lower_);
-    CoinMemcpyN(lower_,numberTotal,auxiliaryModel_->lower_+numberTotal);
-    auxiliaryModel_->upper_ = new double [2*numberTotal];
-    CoinMemcpyN(upper_,numberTotal,auxiliaryModel_->upper_);
-    CoinMemcpyN(upper_,numberTotal,auxiliaryModel_->upper_+numberTotal);
-    auxiliaryModel_->cost_ = new double [2*numberTotal];
-    CoinMemcpyN(cost_,numberTotal,auxiliaryModel_->cost_);
-    CoinMemcpyN(cost_,numberTotal,auxiliaryModel_->cost_+numberTotal);
-    auxiliaryModel_->dj_ = new double [2*numberTotal];
-    memset(auxiliaryModel_->dj_,0,2*numberTotal*sizeof(double));
-    auxiliaryModel_->solution_ = new double [2*numberTotal];
-    memset(auxiliaryModel_->solution_,0,2*numberTotal*sizeof(double));
-    auxiliaryModel_->reducedCostWork_ = auxiliaryModel_->dj_;
-    auxiliaryModel_->rowReducedCost_ = auxiliaryModel_->dj_+numberColumns_;
-    auxiliaryModel_->columnActivityWork_ = auxiliaryModel_->solution_;
-    auxiliaryModel_->rowActivityWork_ = auxiliaryModel_->solution_+numberColumns_;
-    auxiliaryModel_->objectiveWork_ = auxiliaryModel_->cost_;
-    auxiliaryModel_->rowObjectiveWork_ = auxiliaryModel_->cost_+numberColumns_;
-    auxiliaryModel_->rowLowerWork_ = auxiliaryModel_->lower_+numberColumns_;
-    auxiliaryModel_->columnLowerWork_ = auxiliaryModel_->lower_;
-    auxiliaryModel_->rowUpperWork_ = auxiliaryModel_->upper_+numberColumns_;
-    auxiliaryModel_->columnUpperWork_ = auxiliaryModel_->upper_;
-    // delete in model
-    delete [] lower_;
-    lower_=NULL;
-    delete [] upper_;
-    upper_=NULL;
-    delete [] cost_;
-    cost_=NULL;
-    delete [] dj_;
-    dj_=NULL;
-    delete [] solution_;
-    solution_=NULL;
-    auxiliaryModel_->rowCopy_=rowCopy_;
-    ClpMatrixBase * columnCopy = rowCopy_->reverseOrderedCopy();
-    rowCopy_=NULL;
-    // Point to correct as will be restored
-    auxiliaryModel_->matrix_ = matrix_;
-    int iRow,iColumn;
-    for (iRow=0;iRow<4;iRow++) {
-      auxiliaryModel_->rowArray_[iRow]=rowArray_[iRow];
-      rowArray_[iRow]=NULL;
-    }
-    for (iColumn=0;iColumn<2;iColumn++) {
-      auxiliaryModel_->columnArray_[iColumn]=columnArray_[iColumn];
-      columnArray_[iColumn]=NULL;
-    }
-    // Set status so won't overwrite solution
-    int saveStat=problemStatus_;
-    problemStatus_=1;
-    deleteRim(1);
-    problemStatus_=saveStat;
-    auxiliaryModel_->matrix_ = columnCopy;
-    // Get rid of scaling
-    delete [] rowScale_;
-    delete [] columnScale_;
-    rowScale_=NULL;
-    columnScale_=NULL;
-    whatsChanged_ &= ~1;
-  }
-}
-#endif
 /*
   When scaling is on it is possible that the scaled problem
   is feasible but the unscaled is not.  Clp returns a secondary
@@ -9979,15 +9434,6 @@ ClpSimplex::getBasis() const
     }
   }
   return basis;
-}
-#endif
-#ifdef CLP_AUXILIARY_MODEL
-// Switch off e.g. if people using presolve
-void 
-ClpSimplex::deleteAuxiliaryModel()
-{
-  delete auxiliaryModel_;
-  auxiliaryModel_=NULL;
 }
 #endif
 // Compute objective value from solution
@@ -10396,6 +9842,7 @@ ClpSimplex::fathom(void * stuff)
 	delete [] back;
       }
       if (returnCode) {
+	bool fixBounds = (info->nNodes_>=0) ? true : false;
 	//check this does everything
 	static_cast<ClpSimplexOther *> (this)->afterCrunch(*small,
 						whichRow,whichColumn,nBound);
@@ -10405,8 +9852,10 @@ ClpSimplex::fathom(void * stuff)
 	    double value2 = floor(value+0.5);
 	    assert (fabs(value-value2)<1.0e-4);
 	    columnActivity_[i]=value2;
-	    columnLower_[i]=value2;
-	    columnUpper_[i]=value2;
+	    if (fixBounds) {
+	      columnLower_[i]=value2;
+	      columnUpper_[i]=value2;
+	    }
 	  }
 	}
 	//setLogLevel(63);
@@ -10815,6 +10264,7 @@ ClpSimplex::fathomMany(void * stuff)
   assert (stuff);
   ClpNodeStuff * info = reinterpret_cast<ClpNodeStuff *> (stuff);
   int nNodes = info->maximumNodes();
+  int putNode = info->maximumSpace();
   int goodNodes=0;
   info->nNodes_=0;
   ClpNode ** nodeInfo = info->nodeInfo_;
@@ -10823,7 +10273,7 @@ ClpSimplex::fathomMany(void * stuff)
   moreSpecialOptions_ |= 8;
   double limit = 0.0;
   getDblParam(ClpDualObjectiveLimit, limit);
-  for (int j=0;j<nNodes;j++) {
+  for (int j=0;j<putNode;j++) {
     if (nodeInfo[j]) {
       nodeInfo[j]->setObjectiveValue(limit);
       if (info->large_)
@@ -10974,6 +10424,7 @@ ClpSimplex::fathomMany(void * stuff)
     delete [] whichColumn;
     return whichSolution;
   }
+#ifndef DEBUG
   {
     int nBasic=0;
     int i;
@@ -10983,6 +10434,7 @@ ClpSimplex::fathomMany(void * stuff)
     }
     assert (nBasic==numberRows_);
   }
+#endif
   int returnCode = startFastDual2(info);
   if (returnCode) {
     stopFastDual2(info);
@@ -11060,10 +10512,11 @@ ClpSimplex::fathomMany(void * stuff)
     printing=true;
 #endif
   /* Use nodeInfo for storage
-     depth 0 will be nNodes-1, 1 nNodes-2 etc */
-  int useDepth=nNodes-1;
+     depth 0 will be putNode-1, 1 putNode-2 etc */
+  int useDepth=putNode-1;
   bool lastFeasible=true;
   bool justDive = (info->solverOptions_&32)!=0;
+  //printf("putNode %d nDepth %d\n");
   while (depth>=0) {
     bool stopAtOnce=false;
     // If backtrack get to correct depth
@@ -11091,7 +10544,7 @@ ClpSimplex::fathomMany(void * stuff)
       CoinMemcpyN(saveLower,numberColumns_,columnLower_);
       CoinMemcpyN(saveUpper,numberColumns_,columnUpper_);
       for (int i=0;i<depth;i++) {
-	nodeInfo[nNodes-1-i]->applyNode(this,0);
+	nodeInfo[putNode-1-i]->applyNode(this,0);
       }
       nodeInfo[useDepth]->applyNode(this,1);
       if (justDive)
@@ -11306,6 +10759,8 @@ ClpSimplex::fathomMany(void * stuff)
 	  }
 	  whichSolution=goodNodes;
 	  goodNodes++;
+	  if (goodNodes>=nNodes)
+	    justDive=true; // clean up phase
 	  assert (node->sequence()<0);
 	  bestObjective = objectiveValue-increment;
 	  setDblParam(ClpDualObjectiveLimit,bestObjective*optimizationDirection_);
@@ -11364,6 +10819,8 @@ ClpSimplex::fathomMany(void * stuff)
 	    node->gutsOfConstructor(info->large_,info,2,depth);
 	  }
 	  goodNodes++;
+	  if (goodNodes>=nNodes)
+	    justDive=true; // clean up phase
 	  backtrack=true;
 	} else {
 	  depth++;
@@ -11373,6 +10830,8 @@ ClpSimplex::fathomMany(void * stuff)
       }
     }
   }
+  //printf("nNodes %d nDepth %d, useDepth %d goodNodes %d\n",
+  // nNodes,info->nDepth_,useDepth,goodNodes);
 #ifdef CHECK_PATH
   if (startOptimal) {
     assert(startOptimal==2);
@@ -11449,38 +10908,8 @@ ClpSimplex::startFastDual2(ClpNodeStuff * info)
     dynamic_cast< ClpPackedMatrix*>(matrix_);
   assert (clpMatrix&&(clpMatrix->flags()&1)==0);
 #endif
-  if (!inverseColumnScale_&&columnScale_) {
-    if ((info->solverOptions_&1)!=0) {
-      double * temp = new double [2*numberColumns_];
-      for (int i=0;i<numberColumns_;i++) {
-	double value = columnScale_[i];
-	temp[i]=value;
-	temp[i+numberColumns_]=1.0/value;
-      }
-      delete [] columnScale_;
-      if (savedColumnScale_&&savedColumnScale_==columnScale_) 
-	savedColumnScale_=NULL;
-      if (savedRowScale_&&savedRowScale_==rowScale_) 
-	savedRowScale_=NULL;
-      columnScale_ = temp;
-    }
-    if ((info->solverOptions_&4)!=0) {
-      double * temp = new double [2*numberRows_];
-      for (int i=0;i<numberRows_;i++) {
-	double value = rowScale_[i];
-	temp[i]=value;
-	temp[i+numberRows_]=1.0/value;
-      }
-      if (savedColumnScale_&&savedColumnScale_==columnScale_) 
-	savedColumnScale_=NULL;
-      if (savedRowScale_&&savedRowScale_==rowScale_) 
-	savedRowScale_=NULL;
-      delete [] rowScale_;
-      rowScale_ = temp;
-    }
-  }
   // mark all as current
-  whatsChanged_ = 0xffff;
+  whatsChanged_ = 0x3ffffff;
 
   // change newLower and newUpper if scaled
 
@@ -11693,7 +11122,7 @@ ClpSimplex::stopFastDual2(ClpNodeStuff * info)
   if ((specialOptions_&65536)==0)
     factorization_->setPersistenceFlag(0);
   deleteRim(1);
-  whatsChanged_=0;
+  whatsChanged_ &= ~0xffff;
   assert ((info->solverOptions_&65536)!=0);
   info->solverOptions_ &= ~65536;
 }

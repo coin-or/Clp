@@ -52,6 +52,9 @@ int boundary_sort3=10000;
 #ifdef TAUCS_BARRIER
 #define FOREIGN_BARRIER
 #endif
+#ifdef MUMPS_BARRIER
+#define FOREIGN_BARRIER
+#endif
 
 static double totalTime=0.0;
 static bool maskMatches(const int * starts, char ** masks,

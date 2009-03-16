@@ -68,8 +68,8 @@ libLTLIBRARIES_INSTALL = $(INSTALL)
 LTLIBRARIES = $(lib_LTLIBRARIES)
 libClp_la_LIBADD =
 am_libClp_la_OBJECTS = ClpCholeskyBase.lo ClpCholeskyDense.lo \
-	ClpCholeskyUfl.lo ClpCholeskyWssmp.lo ClpCholeskyWssmpKKT.lo \
-	ClpConstraint.lo ClpConstraintLinear.lo \
+	ClpCholeskyUfl.lo ClpCholeskyMumps.lo ClpCholeskyWssmp.lo \
+	ClpCholeskyWssmpKKT.lo ClpConstraint.lo ClpConstraintLinear.lo \
 	ClpConstraintQuadratic.lo Clp_C_Interface.lo \
 	ClpDualRowDantzig.lo ClpDualRowPivot.lo ClpDualRowSteepest.lo \
 	ClpDummyMatrix.lo ClpDynamicExampleMatrix.lo \
@@ -279,6 +279,7 @@ libClp_la_SOURCES = \
 	ClpCholeskyBase.cpp ClpCholeskyBase.hpp \
 	ClpCholeskyDense.cpp ClpCholeskyDense.hpp \
 	ClpCholeskyUfl.cpp ClpCholeskyUfl.hpp \
+	ClpCholeskyMumps.cpp ClpCholeskyMumps.hpp \
 	ClpCholeskyWssmp.cpp ClpCholeskyWssmp.hpp \
 	ClpCholeskyWssmpKKT.cpp ClpCholeskyWssmpKKT.hpp \
 	ClpConstraint.cpp ClpConstraint.hpp \
@@ -527,6 +528,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CbcOrClpParam.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpCholeskyBase.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpCholeskyDense.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpCholeskyMumps.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpCholeskyUfl.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpCholeskyWssmp.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpCholeskyWssmpKKT.Plo@am__quote@

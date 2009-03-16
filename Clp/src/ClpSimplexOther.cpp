@@ -110,7 +110,7 @@ void ClpSimplexOther::dualRanging(int numberCheck,const int * which,
               if(false&&sequenceIncrease<numberColumns_&&integerType_[sequenceIncrease]) {
                 // can improve
                 double movement = (columnScale_==NULL) ? 1.0 : 
-                  rhsScale_/columnScale_[sequenceIncrease];
+                  rhsScale_*inverseColumnScale_[sequenceIncrease];
                 costIncrease = CoinMax(fabs(djValue*movement),costIncrease);
               }
             } else {
@@ -125,7 +125,7 @@ void ClpSimplexOther::dualRanging(int numberCheck,const int * which,
               if(sequenceDecrease<numberColumns_&&integerType_[sequenceDecrease]) {
                 // can improve
                 double movement = (columnScale_==NULL) ? 1.0 : 
-                  rhsScale_/columnScale_[sequenceDecrease];
+                  rhsScale_*inverseColumnScale_[sequenceDecrease];
                 costDecrease = CoinMax(fabs(djValue*movement),costDecrease);
               }
             } else {
@@ -158,29 +158,14 @@ void ClpSimplexOther::dualRanging(int numberCheck,const int * which,
       break;
     }
     double scaleFactor;
-#ifdef CLP_AUXILIARY_MODEL
-    if (!auxiliaryModel_) {
-#endif
-      if (rowScale_) {
-        if (iSequence<numberColumns_) 
-          scaleFactor = 1.0/(objectiveScale_*columnScale_[iSequence]);
-        else
-          scaleFactor = rowScale_[iSequence-numberColumns_]/objectiveScale_;
-      } else {
-        scaleFactor = 1.0/objectiveScale_;
-      }
-#ifdef CLP_AUXILIARY_MODEL
+    if (rowScale_) {
+      if (iSequence<numberColumns_) 
+	scaleFactor = 1.0/(objectiveScale_*columnScale_[iSequence]);
+      else
+	scaleFactor = rowScale_[iSequence-numberColumns_]/objectiveScale_;
     } else {
-      if (auxiliaryModel_->rowScale()) {
-        if (iSequence<numberColumns_) 
-          scaleFactor = 1.0/(objectiveScale_*auxiliaryModel_->columnScale()[iSequence]);
-        else
-          scaleFactor = auxiliaryModel_->rowScale()[iSequence-numberColumns_]/objectiveScale_;
-      } else {
-        scaleFactor = 1.0/objectiveScale_;
-      }
+      scaleFactor = 1.0/objectiveScale_;
     }
-#endif
     if (costIncrease<1.0e30)
       costIncrease *= scaleFactor;
     if (costDecrease<1.0e30)
@@ -1168,14 +1153,23 @@ ClpSimplexOther::restoreFromDual(const ClpSimplex * dualProblem)
   memcpy(reducedCost_,this->objective(),numberColumns_*sizeof(double));
   matrix_->transposeTimes(-1.0,dual_,reducedCost_);
   checkSolutionInternal();
+  if (sumDualInfeasibilities_>1.0e-5||sumPrimalInfeasibilities_>1.0e-5) {
+    returnCode=1;
+#ifdef CLP_INVESTIGATE
+    printf("There are %d dual infeasibilities summing to %g ",
+	   numberDualInfeasibilities_,sumDualInfeasibilities_);
+    printf("and %d primal infeasibilities summing to %g\n",
+	   numberPrimalInfeasibilities_,sumPrimalInfeasibilities_);
+#endif
+  }
   // Below will go to ..DEBUG later
-#if 0 //ndef NDEBUG
+#if 1 //ndef NDEBUG
   // Check if correct
   double * columnActivity = CoinCopyOfArray(columnActivity_,numberColumns_);
   double * rowActivity = CoinCopyOfArray(rowActivity_,numberRows_);
   double * reducedCost = CoinCopyOfArray(reducedCost_,numberColumns_);
   double * dual = CoinCopyOfArray(dual_,numberRows_);
-  this->primal();
+  this->dual(); //primal();
   CoinRelFltEq eq(1.0e-5);
   for (iRow=0;iRow<numberRows_;iRow++) {
     assert(eq(dual[iRow],dual_[iRow]));
@@ -1556,6 +1550,25 @@ ClpSimplexOther::crunch(double * rhs, int * whichRow, int * whichColumn,
       }
     }
   }
+#if 0
+  if (small) {
+    static int which=0;
+    which++;
+    char xxxx[20];
+    sprintf(xxxx,"bad%d.mps",which);
+    small->writeMps(xxxx,0,1);
+    sprintf(xxxx,"largebad%d.mps",which);
+    writeMps(xxxx,0,1);
+    printf("bad%d %x old size %d %d new %d %d\n",which,small,
+	   numberRows_,numberColumns_,small->numberRows(),small->numberColumns());
+#if 0
+    for (int i=0;i<numberColumns_;i++) 
+      printf("Bound %d %g %g\n",i,columnLower_[i],columnUpper_[i]);
+    for (int i=0;i<numberRows_;i++) 
+      printf("Row bound %d %g %g\n",i,rowLower_[i],rowUpper_[i]);
+#endif
+  }
+#endif
   return small;
 }
 /* After very cursory presolve.
@@ -1566,6 +1579,12 @@ ClpSimplexOther::afterCrunch(const ClpSimplex & small,
                              const int * whichRow, 
                              const int * whichColumn, int nBound)
 {
+#ifndef NDEBUG
+  for (int i=0;i<small.numberRows();i++)
+    assert (whichRow[i]>=0&&whichRow[i]<numberRows_);
+  for (int i=0;i<small.numberColumns();i++)
+    assert (whichColumn[i]>=0&&whichColumn[i]<numberColumns_);
+#endif
   getbackSolution(small,whichRow,whichColumn);
   // and deal with status for bounds
   const double * element = matrix_->getElements();
@@ -3238,4 +3257,106 @@ ClpSimplexOther::expandKnapsack(int knapsackRow, int & numberOutput,
   delete [] lo;
   delete [] high;
   return nelCreate;
+}
+// Quick try at cleaning up duals if postsolve gets wrong
+void 
+ClpSimplexOther::cleanupAfterPostsolve()
+{
+  // First mark singleton equality rows
+  char * mark = new char [ numberRows_];
+  memset(mark,0,numberRows_);
+  const int * row = matrix_->getIndices();
+  const CoinBigIndex * columnStart = matrix_->getVectorStarts();
+  const int * columnLength = matrix_->getVectorLengths(); 
+  const double * element = matrix_->getElements();
+  for (int iColumn=0;iColumn<numberColumns_;iColumn++) {
+    for (CoinBigIndex j =columnStart[iColumn];
+	 j<columnStart[iColumn]+columnLength[iColumn];j++) {
+      int iRow = row[j];
+      if (mark[iRow])
+	mark[iRow]=2;
+      else
+	mark[iRow]=1;
+    }
+  }
+  // for now just == rows
+  for (int iRow=0;iRow<numberRows_;iRow++) {
+    if (rowUpper_[iRow]>rowLower_[iRow])
+      mark[iRow]=3;
+  }
+  double dualTolerance=dblParam_[ClpDualTolerance];
+  double primalTolerance=dblParam_[ClpPrimalTolerance];
+  int numberCleaned=0;
+  double maxmin = optimizationDirection_;
+  for (int iColumn=0;iColumn<numberColumns_;iColumn++) {
+    double dualValue = reducedCost_[iColumn]*maxmin;
+    double primalValue = columnActivity_[iColumn];
+    double lower = columnLower_[iColumn];
+    double upper = columnUpper_[iColumn];
+    int way=0;
+    switch(getColumnStatus(iColumn)) {
+	
+    case basic:
+      // dual should be zero
+      if (dualValue>dualTolerance) {
+	way=-1;
+      } else if (dualValue<-dualTolerance) {
+	way=1;
+      }
+      break;
+    case ClpSimplex::isFixed:
+      break;
+    case atUpperBound:
+      // dual should not be positive
+      if (dualValue>dualTolerance) {
+	way=-1;
+      }
+      break;
+    case atLowerBound:
+      // dual should not be negative
+      if (dualValue<-dualTolerance) {
+	way=1;
+      }
+      break;
+    case superBasic:
+    case isFree:
+      if (primalValue<upper-primalTolerance) {
+	// dual should not be negative
+	if (dualValue<-dualTolerance) {
+	  way=1;
+	}
+      }
+      if (primalValue>lower+primalTolerance) {
+	// dual should not be positive
+	if (dualValue>dualTolerance) {
+	  way=-1;
+	}
+      }
+      break;
+    }
+    if (way) {
+      // see if can find singleton row
+      for (CoinBigIndex j =columnStart[iColumn];
+	   j<columnStart[iColumn]+columnLength[iColumn];j++) {
+	int iRow = row[j];
+	if (mark[iRow]==1) {
+	  double value=element[j];
+	  // dj - addDual*value == 0.0
+	  double addDual = dualValue/value;
+	  dual_[iRow] += addDual;
+	  reducedCost_[iColumn]=0.0;
+	  numberCleaned++;
+	  break;
+	}
+      }
+    }
+  }
+  delete [] mark;
+#ifdef CLP_INVESTIGATE
+  printf("cleanupAfterPostsolve cleaned up %d columns\n",numberCleaned);
+#endif
+  // Redo
+  memcpy(reducedCost_,this->objective(),numberColumns_*sizeof(double));
+  matrix_->transposeTimes(-1.0,dual_,reducedCost_);
+  checkSolutionInternal();
 }

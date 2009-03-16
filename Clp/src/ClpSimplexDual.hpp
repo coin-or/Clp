@@ -131,9 +131,10 @@ public:
 		      bool alwaysFinish=false,
 		      int startFinishOptions=0);
   /// This does first part of StrongBranching
-  ClpFactorization * setupForStrongBranching(char * arrays, int numberRows, int numberColumns);
+  ClpFactorization * setupForStrongBranching(char * arrays, int numberRows, 
+					     int numberColumns,bool solveLp=false);
   /// This cleans up after strong branching
-  void cleanupAfterStrongBranching();
+  void cleanupAfterStrongBranching(ClpFactorization * factorization);
   //@}
 
   /**@name Functions used in dual */

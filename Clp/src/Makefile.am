@@ -22,6 +22,7 @@ libClp_la_SOURCES = \
 	ClpCholeskyBase.cpp ClpCholeskyBase.hpp \
 	ClpCholeskyDense.cpp ClpCholeskyDense.hpp \
 	ClpCholeskyUfl.cpp ClpCholeskyUfl.hpp \
+	ClpCholeskyMumps.cpp ClpCholeskyMumps.hpp \
 	ClpCholeskyWssmp.cpp ClpCholeskyWssmp.hpp \
 	ClpCholeskyWssmpKKT.cpp ClpCholeskyWssmpKKT.hpp \
 	ClpConstraint.cpp ClpConstraint.hpp \

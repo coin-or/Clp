@@ -40,6 +40,8 @@ Clp/examples/myPdco.cpp -text
 Clp/examples/myPdco.hpp -text
 Clp/examples/pdco.cpp -text
 Clp/inc/config_clp.h.in -text
+Clp/src/ClpCholeskyMumps.cpp -text
+Clp/src/ClpCholeskyMumps.hpp -text
 Clp/src/ClpConstraint.cpp -text
 Clp/src/ClpConstraint.hpp -text
 Clp/src/ClpConstraintLinear.cpp -text

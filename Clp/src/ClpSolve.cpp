@@ -45,6 +45,10 @@
 #include "ClpCholeskyTaucs.hpp"
 #define FAST_BARRIER
 #endif
+#ifdef MUMPS_BARRIER
+#include "ClpCholeskyMumps.hpp"
+#define FAST_BARRIER
+#endif
 #ifdef COIN_DEVELOP
 #ifndef FAST_BARRIER
 static int numberBarrier=0;
@@ -1954,6 +1958,15 @@ ClpSimplex::initialSolve(ClpSolve & options)
     case 5:
       {
 	ClpCholeskyTaucs * cholesky = new ClpCholeskyTaucs();
+	barrier.setCholesky(cholesky);
+	assert (!doKKT);
+      }
+      break;
+#endif
+#ifdef MUMPS_BARRIER
+    case 6:
+      {
+	ClpCholeskyMumps * cholesky = new ClpCholeskyMumps();
 	barrier.setCholesky(cholesky);
 	assert (!doKKT);
       }

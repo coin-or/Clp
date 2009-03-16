@@ -1343,6 +1343,12 @@ and trustPseudoCosts parameters."
 #else
   parameters[numberParameters-1].append("Taucs_dummy");
 #endif
+#ifdef MUMPS_BARRIER
+  parameters[numberParameters-1].append("Mumps");
+#define REAL_BARRIER
+#else
+  parameters[numberParameters-1].append("Mumps_dummy");    
+#endif
   parameters[numberParameters-1].setLonghelp
     (
      "For a barrier code to be effective it needs a good Cholesky ordering and factorization.  \
@@ -1391,6 +1397,20 @@ See Rounding for meaning of on,both,before"
      "This orders the variables in order of their absolute costs - with largest cost ones being branched on \
 first.  This primitive strategy can be surprsingly effective.  The column order\
  option is obviously not on costs but easy to code here."
+     ); 
+  parameters[numberParameters++]=
+    CbcOrClpParam("cplex!Use","Whether to use Cplex!",
+		  "off",CPX);
+  parameters[numberParameters-1].append("on");
+  parameters[numberParameters-1].setLonghelp
+    (
+     " If the user has Cplex, but wants to use some of Cbc'sheuristics \
+then you can!  If this is on, then Cbc will get to the root node and then \
+hand over to Cplex.  If heuristics find a solution this can be significantly \
+quicker.  You will probably want to switch off Cbc's cuts as Cplex thinks \
+they are genuine constraints.  It is also probable that you want to switch \
+off preprocessing, although for difficult problems it is worth trying \
+both."
      ); 
 #endif
   parameters[numberParameters++]=
