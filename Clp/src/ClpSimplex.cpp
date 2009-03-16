@@ -5179,7 +5179,7 @@ int ClpSimplex::primal (int ifValuesPass , int startFinishOptions)
 	}
       }
       checkSolutionInternal();
-      if (sumPrimalInfeasibilities_*sqrt(numberRows_)<1.0) {
+      if (sumPrimalInfeasibilities_*sqrt(static_cast<double>(numberRows_))<1.0) {
 	// Could do better if can decompose
 	// correction to get feasible
 	double scaleFactor = 1.0/numberProblems;
@@ -5563,11 +5563,14 @@ int ClpSimplex::reducedGradient(int phase)
 #if WSSMP_BARRIER
 #include "ClpCholeskyWssmp.hpp"
 #include "ClpCholeskyWssmpKKT.hpp"
-#elif UFL_BARRIER
+#endif
+#if UFL_BARRIER
 #include "ClpCholeskyUfl.hpp"
-#elif MUMPS_BARRIER
+#endif
+#if MUMPS_BARRIER
 #include "ClpCholeskyMumps.hpp"
-#elif TAUCS_BARRIER
+#endif
+#if TAUCS_BARRIER
 #include "ClpCholeskyTaucs.hpp"
 #endif
 #include "ClpPresolve.hpp"
