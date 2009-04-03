@@ -2718,7 +2718,9 @@ ClpSimplexDual::changeBounds(int initialize,
 	  if (newLowerValue > lowerValue) {
 	    if (newUpperValue < upperValue) {
 	      setFakeBound(iSequence,ClpSimplexDual::bothFake);
-	      abort();
+#ifdef CLP_INVESTIGATE
+	      abort(); // No idea what should happen here - I have never got here
+#endif
 	      numberFake_++;
 	    } else {
 	      setFakeBound(iSequence,ClpSimplexDual::lowerFake);
