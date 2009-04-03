@@ -1404,7 +1404,7 @@ first.  This primitive strategy can be surprsingly effective.  The column order\
   parameters[numberParameters-1].append("on");
   parameters[numberParameters-1].setLonghelp
     (
-     " If the user has Cplex, but wants to use some of Cbc'sheuristics \
+     " If the user has Cplex, but wants to use some of Cbc's heuristics \
 then you can!  If this is on, then Cbc will get to the root node and then \
 hand over to Cplex.  If heuristics find a solution this can be significantly \
 quicker.  You will probably want to switch off Cbc's cuts as Cplex thinks \
