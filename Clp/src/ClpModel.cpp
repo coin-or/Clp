@@ -3638,8 +3638,14 @@ ClpModel::rowNamesAsChar() const
     numberNames = CoinMin(numberRows_,numberNames);
     int iRow;
     for (iRow=0;iRow<numberNames;iRow++) {
-      rowNames[iRow] = 
-	CoinStrdup(rowName(iRow).c_str());
+      if (rowName(iRow)!="") {
+	rowNames[iRow] = 
+	  CoinStrdup(rowName(iRow).c_str());
+      } else {
+	char name[9];
+	sprintf(name,"R%7.7d",iRow);
+	rowNames[iRow]=CoinStrdup(name);
+      }
 #ifdef STRIPBLANKS
       char * xx = rowNames[iRow];
       int i;
@@ -3672,8 +3678,14 @@ ClpModel::columnNamesAsChar() const
     numberNames = CoinMin(numberColumns_,numberNames);
     int iColumn;
     for (iColumn=0;iColumn<numberNames;iColumn++) {
-      columnNames[iColumn] = 
-	CoinStrdup(columnName(iColumn).c_str());
+      if (columnName(iColumn)!="") {
+	columnNames[iColumn] = 
+	  CoinStrdup(columnName(iColumn).c_str());
+      } else {
+	char name[9];
+	sprintf(name,"C%7.7d",iColumn);
+	columnNames[iColumn]=CoinStrdup(name);
+      }
 #ifdef STRIPBLANKS
       char * xx = columnNames[iColumn];
       int i;
