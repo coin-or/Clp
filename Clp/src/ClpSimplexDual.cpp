@@ -5616,7 +5616,7 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
     saveBound = columnUpper_[iColumn];
     // external view - in case really getting optimal 
     columnUpper_[iColumn] = newUpper[i];
-    assert (inverseColumnScale_);
+    assert (inverseColumnScale_||scalingFlag_<=0);
     if (scalingFlag_<=0) 
       upper_[iColumn] = newUpper[i]*rhsScale_;
     else 
@@ -5684,7 +5684,7 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
     saveBound = columnLower_[iColumn];
     // external view - in case really getting optimal 
     columnLower_[iColumn] = newLower[i];
-    assert (inverseColumnScale_);
+    assert (inverseColumnScale_||scalingFlag_<=0);
     if (scalingFlag_<=0) 
       lower_[iColumn] = newLower[i]*rhsScale_;
     else 
