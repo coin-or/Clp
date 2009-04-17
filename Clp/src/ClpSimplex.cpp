@@ -694,6 +694,7 @@ ClpSimplex::computePrimals ( const double * rowActivities,
       int iPivot=pivotVariable_[iRow];
       assert (iPivot>=0);
       solution_[iPivot] = 0.0;
+      assert (getStatus(iPivot)==basic);
     }
     // Extended solution before "update"
     matrix_->primalExpanded(this,0);
@@ -7367,7 +7368,7 @@ ClpSimplex::crash(double gap,int pivot)
 		    change=-minimumDown;
 		  setRowStatus(iRow,atLowerBound);
 		}
-		assert (fabs(change)<1.0e20);
+		assert (fabs(change)<1.0e200);
 		setColumnStatus(kColumn,basic);
 		numberIn++;
 		pi[iRow]=change;
@@ -7923,6 +7924,7 @@ ClpSimplex::startup(int ifValuesPass, int startFinishOptions)
 	      }
 	      if (!numberBasic) {
 		allSlackBasis(true);
+		numberThrownOut=1; // force another go
 	      } else {
 		CoinSort_2(array, array + numberThrownOut, sort);
 		numberThrownOut = CoinMin(1000,numberThrownOut);

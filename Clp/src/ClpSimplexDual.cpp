@@ -2805,7 +2805,6 @@ ClpSimplexDual::changeBounds(int initialize,
 	  lower_[iSequence]=-0.5*dualBound_;
 	  upper_[iSequence]= 0.5*dualBound_;
 	  setFakeBound(iSequence,ClpSimplexDual::bothFake);
-	  abort();
 	  numberFake_++;
 	  setStatus(iSequence,atUpperBound);
 	  solution_[iSequence]=0.5*dualBound_;
@@ -6933,7 +6932,9 @@ ClpSimplexDual::resetFakeBounds(int type)
 	      lower_[iSequence] = upperValue-dualBound_;
 	      setFakeBound(iSequence,ClpSimplexDual::lowerFake);
 	    } else {
+#ifdef CLP_INVESTIGATE
 	      printf("bad1\n");
+#endif
 	    }
 	  }
 	  assert(fabs(upper_[iSequence]-value)<1.0e-5||
@@ -6949,7 +6950,9 @@ ClpSimplexDual::resetFakeBounds(int type)
 	      upper_[iSequence] = lowerValue+dualBound_;
 	      setFakeBound(iSequence,ClpSimplexDual::upperFake);
 	    } else {
+#ifdef CLP_INVESTIGATE
 	      printf("bad1\n");
+#endif
 	    }
 	  }
 	  assert(fabs(upper_[iSequence]-value)<1.0e-5||
