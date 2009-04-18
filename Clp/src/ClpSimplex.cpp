@@ -694,7 +694,9 @@ ClpSimplex::computePrimals ( const double * rowActivities,
       int iPivot=pivotVariable_[iRow];
       assert (iPivot>=0);
       solution_[iPivot] = 0.0;
+#ifdef CLP_INVESTIGATE
       assert (getStatus(iPivot)==basic);
+#endif
     }
     // Extended solution before "update"
     matrix_->primalExpanded(this,0);
