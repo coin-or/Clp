@@ -694,7 +694,9 @@ ClpSimplex::computePrimals ( const double * rowActivities,
       int iPivot=pivotVariable_[iRow];
       assert (iPivot>=0);
       solution_[iPivot] = 0.0;
+#ifdef CLP_INVESTIGATE
       assert (getStatus(iPivot)==basic);
+#endif
     }
     // Extended solution before "update"
     matrix_->primalExpanded(this,0);
@@ -6074,13 +6076,13 @@ ClpSimplex::saveModel(const char * fileName)
     // integers
     if (integerType_) {
       int marker=1;
-      fwrite(&marker,sizeof(int),1,fp);
+      numberWritten=fwrite(&marker,sizeof(int),1,fp);
       numberWritten = fwrite(integerType_,1,numberColumns_,fp);
       if (numberWritten!=numberColumns_)
 	return 1;
     } else {
       int marker=0;
-      fwrite(&marker,sizeof(int),1,fp);
+      numberWritten=fwrite(&marker,sizeof(int),1,fp);
     }
     // just standard type at present
     assert (matrix_->type()==1);
@@ -7973,7 +7975,8 @@ ClpSimplex::startup(int ifValuesPass, int startFinishOptions)
     factorization_->setDenseThreshold(saveThreshold);
     
     if (!numberPrimalInfeasibilities_&&!numberDualInfeasibilities_
-	&&!ifValuesPass)
+	&&!ifValuesPass&&
+	(!nonLinearCost_||!nonLinearCost_->numberInfeasibilities()))
       problemStatus_=0;
     else
       assert(problemStatus_ == -1);
