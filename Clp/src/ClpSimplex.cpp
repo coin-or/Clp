@@ -7975,7 +7975,8 @@ ClpSimplex::startup(int ifValuesPass, int startFinishOptions)
     factorization_->setDenseThreshold(saveThreshold);
     
     if (!numberPrimalInfeasibilities_&&!numberDualInfeasibilities_
-	&&!ifValuesPass)
+	&&!ifValuesPass&&
+	(!nonLinearCost_||!nonLinearCost_->numberInfeasibilities()))
       problemStatus_=0;
     else
       assert(problemStatus_ == -1);
