@@ -6076,13 +6076,13 @@ ClpSimplex::saveModel(const char * fileName)
     // integers
     if (integerType_) {
       int marker=1;
-      fwrite(&marker,sizeof(int),1,fp);
+      numberWritten=fwrite(&marker,sizeof(int),1,fp);
       numberWritten = fwrite(integerType_,1,numberColumns_,fp);
       if (numberWritten!=numberColumns_)
 	return 1;
     } else {
       int marker=0;
-      fwrite(&marker,sizeof(int),1,fp);
+      numberWritten=fwrite(&marker,sizeof(int),1,fp);
     }
     // just standard type at present
     assert (matrix_->type()==1);
