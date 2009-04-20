@@ -824,7 +824,7 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
 #endif
     }
     if (iteration>50&&n==numberAway&&result.infeas<1.0e-4) {
-      printf("infeas small %g\n",result.infeas);
+      //printf("infeas small %g\n",result.infeas);
       break; // not much happening
     }
     if (lightWeight_==1&&iteration>10&&result.infeas>1.0&&maxIts!=7) {
