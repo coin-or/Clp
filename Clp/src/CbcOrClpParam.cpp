@@ -857,10 +857,6 @@ CbcOrClpParam::setIntParameterWithMessage ( CbcModel & model, int value ,int & r
       oldValue=model.numberAnalyzeIterations();
       model.setNumberAnalyzeIterations(value);
       break;
-    case NUMBERMINI:
-      oldValue=model.sizeMiniTree();
-      model.setSizeMiniTree(value);
-      break;
     case CUTPASSINTREE:
       oldValue=model.getMaximumCutPasses();
       model.setMaximumCutPasses(value);
@@ -911,9 +907,6 @@ CbcOrClpParam::intParameter (CbcModel &model) const
     break;
   case NUMBERANALYZE:
     value=model.numberAnalyzeIterations();
-    break;
-  case NUMBERMINI:
-    value=model.sizeMiniTree();
     break;
   case CUTPASSINTREE:
     value=model.getMaximumCutPasses();
@@ -2160,14 +2153,6 @@ but this program turns this off to make it look more friendly.  It can be useful
  you intend to override the behavior of a particular message."
      );
 #ifdef COIN_HAS_CBC
-  parameters[numberParameters++]=
-    CbcOrClpParam("miniT!ree","Size of fast mini tree",
-		  0,COIN_INT_MAX,NUMBERMINI,false);
-  parameters[numberParameters-1].setLonghelp
-    (
-     "The idea is that I can do a small tree fast. \
-This is a first try and will hopefully become more sophisticated."
-     ); 
   parameters[numberParameters++]=
     CbcOrClpParam("miplib","Do some of miplib test set",
 		  MIPLIB,3);
