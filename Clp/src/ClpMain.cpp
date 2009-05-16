@@ -19,7 +19,7 @@ int boundary_sort3=10000;
 #include "CoinHelperFunctions.hpp"
 #include "CoinSort.hpp"
 // History since 1.0 at end
-#define CLPVERSION "1.09.00"
+#define CLPVERSION "1.10.00"
 
 #include "CoinMpsIO.hpp"
 #include "CoinFileIO.hpp"
@@ -2604,7 +2604,7 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
 	if (numberPossible>1&&!numberIntegers) {
 	  //printf("possible %d - but no integers\n",numberPossible);
 	}
-	if (numberPossible>1&&(numberIntegers||true)) {
+	if (numberPossible>1&&(numberIntegers||false)) {
 	  // 
 	  printf("possible %d - %d integers\n",numberPossible,numberIntegers);
 	  int lastLook=iLook;

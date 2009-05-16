@@ -64,6 +64,13 @@ void ClpSimplexOther::dualRanging(int numberCheck,const int * which,
     columnArray_[0]->clear();
     //columnArray_[0]->checkClear();
     int iSequence = which[i];
+    if (iSequence<0) {
+      costIncreased[i] = 0.0;
+      sequenceIncreased[i] = -1;
+      costDecreased[i] = 0.0;
+      sequenceDecreased[i] = -1;
+      continue;
+    }
     double costIncrease=COIN_DBL_MAX;
     double costDecrease=COIN_DBL_MAX;
     int sequenceIncrease=-1;
@@ -195,10 +202,10 @@ void ClpSimplexOther::dualRanging(int numberCheck,const int * which,
       abort();
     }
   }
-  //rowArray_[0]->clear();
+  rowArray_[0]->clear();
   //rowArray_[1]->clear();
   //columnArray_[1]->clear();
-  //columnArray_[0]->clear();
+  columnArray_[0]->clear();
   //rowArray_[3]->clear();
   if (!optimizationDirection_)
     printf("*** ????? Ranging with zero optimization costs\n");
@@ -3129,7 +3136,7 @@ ClpSimplexOther::expandKnapsack(int knapsackRow, int & numberOutput,
       bool good=true;
       int nRow=0;
       double obj=0.0;
-      CoinZeroN(rowActivity,nRow);
+      CoinZeroN(rowActivity,numberRows_);
       for (iColumn=0;iColumn<numJ;iColumn++) {
 	int iValue = stack[iColumn];
 	if (iValue>bound[iColumn]) {

@@ -194,6 +194,7 @@ int ClpPredictorCorrector::solve ( )
   double checkGap = COIN_DBL_MAX;
   int lastGoodIteration=0;
   double bestObjectiveGap=COIN_DBL_MAX;
+  double bestObjective=COIN_DBL_MAX;
   int saveIteration=-1;
   bool sloppyOptimal=false;
   double * savePi=NULL;
@@ -247,15 +248,21 @@ int ClpPredictorCorrector::solve ( )
       historyInfeasibility_[i-1]=historyInfeasibility_[i];
     historyInfeasibility_[LENGTH_HISTORY-1]=complementarityGap_;
     // switch off saved if changes
-    if (saveIteration+10<numberIterations_&&
-	complementarityGap_*2.0<historyInfeasibility_[0])
-      saveIteration=-1;
+    //if (saveIteration+10<numberIterations_&&
+    //complementarityGap_*2.0<historyInfeasibility_[0])
+    //saveIteration=-1;
     lastStep = CoinMin(actualPrimalStep_,actualDualStep_);
     double goodGapChange;
+    //#define KEEP_GOING_IF_FIXED 0
+#ifndef KEEP_GOING_IF_FIXED 
+#define KEEP_GOING_IF_FIXED 10000
+#endif
     if (!sloppyOptimal) {
       goodGapChange=0.93;
     } else {
       goodGapChange=0.7;
+      if (numberFixed>KEEP_GOING_IF_FIXED)
+	goodGapChange=0.99; // make more likely to carry on
     } 
     double gapO;
     double lastGood=bestObjectiveGap;
@@ -274,9 +281,11 @@ int ClpPredictorCorrector::solve ( )
 	<<gapO
 	<<CoinMessageEol;
       //start saving best
-      if (gapO<bestObjectiveGap) {
-        saveIteration=numberIterations_;
+      if (gapO<bestObjectiveGap) 
         bestObjectiveGap=gapO;
+      if (primalObjective_<bestObjective) {
+        saveIteration=numberIterations_;
+        bestObjective=primalObjective_;
         if (!savePi) {
           savePi=new double[numberRows_];
           savePrimal = new double [numberTotal];
@@ -332,6 +341,14 @@ int ClpPredictorCorrector::solve ( )
 	  }
 	}
       } 
+      if (complementarityGap_>0.5*checkGap&&primalObjective_>
+	  bestObjective+1.0e-9&&
+	  (numberIterations_>saveIteration+5||numberIterations_>100)) {
+	handler_->message(CLP_BARRIER_EXIT2,messages_)
+	  <<saveIteration
+	  <<CoinMessageEol;
+	break;
+      }
     } 
     if ((gapO<1.0e-6||(gapO<1.0e-4&&complementarityGap_<0.1))&&!sloppyOptimal) {
       sloppyOptimal=true;
@@ -364,7 +381,7 @@ int ClpPredictorCorrector::solve ( )
       handler_->message(CLP_BARRIER_COMPLEMENTARITY,messages_)
 	<<complementarityGap_<<"not decreasing"
 	<<CoinMessageEol;
-      if (gapO>0.75*lastGood) {
+      if (gapO>0.75*lastGood&&numberFixed<KEEP_GOING_IF_FIXED) {
         break;
       } 
     } else if (numberIterations_-lastGoodIteration>=2&&
@@ -830,7 +847,7 @@ int ClpPredictorCorrector::solve ( )
   delete [] saveSL;
   delete [] saveSU;
   if (savePi) {
-    //std::cout<<"Restoring from iteration "<<saveIteration<<std::endl;
+    std::cout<<"Restoring from iteration "<<saveIteration<<std::endl;
     CoinMemcpyN(savePi,numberRows_,dual_);
     CoinMemcpyN(savePrimal,numberTotal,solution_);
     delete [] savePi;
@@ -3431,6 +3448,11 @@ int ClpPredictorCorrector::updateSolution(double nextGap)
         deltaX_[iColumn]=0.0;
       } else {
         numberKilled++;
+	if (solution_[iColumn]!=lower_[iColumn]&&
+	    solution_[iColumn]!=upper_[iColumn]) {
+	  printf("%d %g %g %g\n",iColumn,lower_[iColumn],
+		 solution_[iColumn],upper_[iColumn]);
+	}
         diagonal_[iColumn]=0.0;
         zVec_[iColumn]=0.0;
         wVec_[iColumn]=0.0;
@@ -3564,11 +3586,18 @@ int ClpPredictorCorrector::updateSolution(double nextGap)
   if (rhsNorm_>solutionNorm_) {
     solutionNorm_=rhsNorm_;
   } 
-  double scaledRHSError=maximumRHSError_/solutionNorm_;
+  double scaledRHSError=maximumRHSError_/(solutionNorm_+10.0);
   bool dualFeasible=true;
+#if KEEP_GOING_IF_FIXED > 5 
   if (maximumBoundInfeasibility_>primalTolerance()||
       scaledRHSError>primalTolerance())
     primalFeasible=false;
+#else
+  if (maximumBoundInfeasibility_>primalTolerance()||
+      scaledRHSError>CoinMax(CoinMin(100.0*primalTolerance(),1.0e-5),
+			     primalTolerance())
+    primalFeasible=false;
+#endif
   // relax dual test if obj big and gap smallish
   double gap=fabs(primalObjective_-dualObjective_);
   double sizeObj = CoinMin(fabs(primalObjective_),fabs(dualObjective_))+1.0e-50;

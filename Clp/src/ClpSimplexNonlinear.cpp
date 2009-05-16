@@ -654,6 +654,23 @@ ClpSimplexNonlinear::whileIterating(int & pivotMode)
 			 columnArray_[0],rowArray_[1],pivotMode,solutionError,
 			 array1);
     if (result) {
+      if (result==2) {
+	// does not look good
+	double currentObj;
+	double thetaObj;
+	double predictedObj;
+	objective_->stepLength(this,solution_,solution_,0.0,
+			       currentObj,thetaObj,predictedObj);
+	if (currentObj==predictedObj) {
+#ifdef CLP_INVESTIGATE
+	printf("looks bad - no change in obj %g\n",currentObj);
+#endif
+	  if (factorization_->pivots())
+	    result=3;
+	  else
+	    problemStatus_=0;
+	}
+      }
       if (result==3) 
 	break; // null vector not accurate
 #ifdef CLP_DEBUG
@@ -662,7 +679,7 @@ ClpSimplexNonlinear::whileIterating(int & pivotMode)
 	double thetaObj;
 	double predictedObj;
 	objective_->stepLength(this,solution_,solution_,0.0,
-			       currentObj,predictedObj,thetaObj);
+			       currentObj,thetaObj,predictedObj);
 	printf("obj %g after interior move\n",currentObj);
       }
 #endif
@@ -2061,6 +2078,8 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
     if (handler_->logLevel()&32) 
       printf("out of loop after %d passes\n",nPasses);
 #endif
+    if (nPasses>=1000)
+      returnCode=2;
     bool ordinaryDj=false;
     //if(sequenceIn_>=0&&numberNonBasic==1&&theta_<1.0e-7&&theta_==basicTheta) 
     //printf("could try ordinary iteration %g\n",theta_);
@@ -2270,7 +2289,7 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
 	    returnCode=1;
 	  } else {
 	    returnCode=2; // do single incoming
-	    //returnCode=1;
+	    returnCode=1;
 	  }
 	}
       }
