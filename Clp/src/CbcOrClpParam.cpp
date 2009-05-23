@@ -2867,6 +2867,7 @@ more aggressive. \
 This does not apply to unit tests (where 'experiment' may have similar effects)."
      ); 
   parameters[numberParameters-1].setIntValue(1);
+#ifdef CBC_KEEP_DEPRECATED
   parameters[numberParameters++]=
     CbcOrClpParam("strengthen","Create strengthened problem",
 		  STRENGTHEN,3);
@@ -2874,7 +2875,8 @@ This does not apply to unit tests (where 'experiment' may have similar effects).
     (
      "This creates a new problem by applying the root node cuts.  All tight constraints \
 will be in resulting problem"
-     ); 
+     );
+#endif 
   parameters[numberParameters++]=
     CbcOrClpParam("strong!Branching","Number of variables to look at in strong branching",
 		  0,999999,STRONGBRANCHING);

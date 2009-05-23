@@ -815,16 +815,32 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
     // May need to do more if column generation
     dummy=4;
     matrix_->generalExpanded(this,9,dummy);
+#ifdef KEEP_GOING_IF_FIXED
+    double lastAverageInfeasibility=sumDualInfeasibilities_/
+      static_cast<double>(numberDualInfeasibilities_+10);
+#endif
     numberThrownOut=gutsOfSolution(NULL,NULL,(firstFree_>=0));
     double sumInfeasibility =  nonLinearCost_->sumInfeasibilities();
-    if (numberThrownOut||
-	(sumInfeasibility>1.0e7&&sumInfeasibility>100.0*lastSumInfeasibility
-	 &&factorization_->pivotTolerance()<0.11)||(largestPrimalError_>1.0e10&&largestDualError_>1.0e10)) {
+    int reason2=0;
+#ifdef KEEP_GOING_IF_FIXED
+    if (!lastSumInfeasibility&&sumInfeasibility&&
+	 lastAverageInfeasibility<1.0e-1&&numberPivots>10)
+      reason2=3;
+    if (lastSumInfeasibility<1.0e-6&&sumInfeasibility>1.0e-3&&
+	 numberPivots>10)
+      reason2=4;
+#endif
+    if (numberThrownOut)
+      reason2=1;
+    if ((sumInfeasibility>1.0e7&&sumInfeasibility>100.0*lastSumInfeasibility
+	&&factorization_->pivotTolerance()<0.11)||
+	(largestPrimalError_>1.0e10&&largestDualError_>1.0e10))
+      reason2=2;
+    if (reason2) {
       problemStatus_=tentativeStatus;
       doFactorization=true;
       if (numberPivots) {
         // go back
-        numberThrownOut=-1;
         // trouble - restore solution
         CoinMemcpyN(saveStatus_,numberColumns_+numberRows_,status_);
         CoinMemcpyN(savedSolution_+numberColumns_ ,
@@ -833,9 +849,16 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	   numberColumns_,columnActivityWork_);
         // restore extra stuff
         matrix_->generalExpanded(this,6,dummy);
-        forceFactorization_=1; // a bit drastic but ..
-        // Go to safe 
-        factorization_->pivotTolerance(0.99);
+	if (reason2<3) {
+	  // Go to safe 
+	  factorization_->pivotTolerance(CoinMin(0.99,1.01*factorization_->pivotTolerance()));
+	  forceFactorization_=1; // a bit drastic but ..
+	} else if (forceFactorization_<0) {
+	  forceFactorization_=CoinMin(numberPivots/2,100);
+	} else {
+	  forceFactorization_=CoinMin(forceFactorization_,
+				      CoinMax(3,numberPivots/2));
+	}
         pivotRow_=-1; // say no weights update
         changeMade_++; // say change made
         if (numberPivots==1) {
@@ -846,7 +869,14 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
             setFlagged(sequenceOut_);
           }
         }
+	type=2; // so will restore weights
+	if (internalFactorize(2)!=0) {
+	  largestPrimalError_=1.0e4; // force other type
+	}
         numberPivots=0;
+	numberThrownOut=gutsOfSolution(NULL,NULL,(firstFree_>=0));
+	assert (!numberThrownOut);
+	sumInfeasibility =  nonLinearCost_->sumInfeasibilities();
       }
     }
   }
@@ -2173,16 +2203,21 @@ ClpSimplexPrimal::perturb(int type)
   double elementRatio = largestPositive/smallestPositive;
   if (!numberIterations_&&perturbation_==50) {
     // See if we need to perturb
-    double * sort = new double[numberRows_];
+    int numberTotal=CoinMax(numberRows_,numberColumns_);
+    double * sort = new double[numberTotal];
+    int nFixed=0;
     for (i=0;i<numberRows_;i++) {
       double lo = fabs(rowLower_[i]);
       double up = fabs(rowUpper_[i]);
       double value=0.0;
       if (lo&&lo<1.0e20) {
-	if (up&&up<1.0e20)
+	if (up&&up<1.0e20) {
 	  value = 0.5*(lo+up);
-	else
+	  if (lo==up)
+	    nFixed++;
+	} else {
 	  value=lo;
+	}
       } else {
 	if (up&&up<1.0e20)
 	  value = up;
@@ -2197,16 +2232,58 @@ ClpSimplexPrimal::perturb(int type)
 	number++;
       last=sort[i];
     }
+#ifdef KEEP_GOING_IF_FIXED 
+    printf("ratio number diff rhs %g (%d %d fixed), element ratio %g\n",((double)number)/((double) numberRows_),
+	   numberRows_,nFixed,elementRatio);
+#endif
+    if (number*4>numberRows_||elementRatio>1.0e12) {
+      perturbation_=100;
+      return; // good enough
+    }
+    number=0;
+#ifdef KEEP_GOING_IF_FIXED 
+    if (!integerType_) {
+      // look at columns
+      nFixed=0;
+      for (i=0;i<numberColumns_;i++) {
+	double lo = fabs(columnLower_[i]);
+	double up = fabs(columnUpper_[i]);
+	double value=0.0;
+	if (lo&&lo<1.0e20) {
+	  if (up&&up<1.0e20) {
+	    value = 0.5*(lo+up);
+	    if (lo==up)
+	      nFixed++;
+	  } else {
+	    value=lo;
+	  }
+	} else {
+	  if (up&&up<1.0e20)
+	    value = up;
+	}
+	sort[i]=value;
+      }
+      std::sort(sort,sort+numberColumns_);
+      number=1;
+      last = sort[0];
+      for (i=1;i<numberColumns_;i++) {
+	if (last!=sort[i])
+	  number++;
+	last=sort[i];
+      }
+      printf("cratio number diff bounds %g (%d %d fixed)\n",((double)number)/((double) numberColumns_),
+	     numberColumns_,nFixed);
+    }
+#endif
     delete [] sort;
-    //printf("ratio number diff rhs %g, element ratio %g\n",((double)number)/((double) numberRows_),
-    //								      elementRatio);
-    if (number*3>numberRows_||elementRatio>1.0e12) {
+    if (number*4>numberColumns_) {
       perturbation_=100;
       return; // good enough
     }
   }
   // primal perturbation
   double perturbation=1.0e-20;
+  double bias=1.0;
   int numberNonZero=0;
   // maximum fraction of rhs/bounds to perturb
   double maximumFraction = 1.0e-5;
@@ -2239,12 +2316,20 @@ ClpSimplexPrimal::perturb(int type)
       perturbation /= static_cast<double> (numberNonZero);
     else
       perturbation = 1.0e-1;
-    if (perturbation_>50&&perturbation_<60) {
+    if (perturbation_>50&&perturbation_<55) {
       // reduce
       while (perturbation_>50) {
 	perturbation_--;
 	perturbation *= 0.25;
+	bias *= 0.25;
       }
+    } else if (perturbation_>=55&&perturbation_<60) {
+      // increase
+      while (perturbation_>55) {
+	perturbation_--;
+	perturbation *= 4.0;
+      }
+      perturbation_=50;
     }
   } else if (perturbation_<100) {
     perturbation = pow(10.0,perturbation_);
@@ -2283,7 +2368,7 @@ ClpSimplexPrimal::perturb(int type)
       perturbationArray_[iColumn] = randomNumberGenerator_.randomDouble();
     }
   }
-#endif 
+#endif
   if (type==1) {
     double tolerance = 100.0*primalTolerance_;
     //double multiplier = perturbation*maximumFraction;
@@ -2296,7 +2381,7 @@ ClpSimplexPrimal::perturb(int type)
 	  double difference = upperValue-lowerValue;
 	  difference = CoinMin(difference,perturbation);
 	  difference = CoinMin(difference,fabs(solutionValue)+1.0);
-	  double value = maximumFraction*(difference+1.0);
+	  double value = maximumFraction*(difference+bias);
 	  value = CoinMin(value,0.1);
 #ifndef SAVE_PERT
 	  value *= randomNumberGenerator_.randomDouble();

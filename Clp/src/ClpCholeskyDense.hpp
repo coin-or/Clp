@@ -88,21 +88,21 @@ public:
   void solveB1(longDouble * a,int n,double * region);
   void solveB2(longDouble * a,int n,double * region,double * region2);
   /** Uses factorization to solve. */
-  void solveLong (longDouble * region) ;
+  void solveLong (CoinWorkDouble * region) ;
   /// Forward part of solve
-  void solveF1Long(longDouble * a,int n,longDouble * region);
-  void solveF2Long(longDouble * a,int n,longDouble * region,longDouble * region2);
+  void solveF1Long(longDouble * a,int n,CoinWorkDouble * region);
+  void solveF2Long(longDouble * a,int n,CoinWorkDouble * region,CoinWorkDouble * region2);
   /// Backward part of solve
-  void solveB1Long(longDouble * a,int n,longDouble * region);
-  void solveB2Long(longDouble * a,int n,longDouble * region,longDouble * region2);
+  void solveB1Long(longDouble * a,int n,CoinWorkDouble * region);
+  void solveB2Long(longDouble * a,int n,CoinWorkDouble * region,CoinWorkDouble * region2);
   /** Uses factorization to solve. */
-  void solveLongWork (longWork * region) ;
+  void solveLongWork (CoinWorkDouble * region) ;
   /// Forward part of solve
-  void solveF1LongWork(longDouble * a,int n,longWork * region);
-  void solveF2LongWork(longDouble * a,int n,longWork * region,longWork * region2);
+  void solveF1LongWork(longDouble * a,int n,CoinWorkDouble * region);
+  void solveF2LongWork(longDouble * a,int n,CoinWorkDouble * region,CoinWorkDouble * region2);
   /// Backward part of solve
-  void solveB1LongWork(longDouble * a,int n,longWork * region);
-  void solveB2LongWork(longDouble * a,int n,longWork * region,longWork * region2);
+  void solveB1LongWork(longDouble * a,int n,CoinWorkDouble * region);
+  void solveB2LongWork(longDouble * a,int n,CoinWorkDouble * region,CoinWorkDouble * region2);
   int bNumber(const longDouble * array,int &, int&);
   /// A
   inline longDouble * aMatrix() const

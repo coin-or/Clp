@@ -604,3 +604,20 @@ ClpMatrixBase::modifyCoefficient(int row, int column, double newElement,
   std::cerr<<"modifyCoefficient not supported - ClpMatrixBase"<<std::endl;
   abort();
 }
+#if COIN_LONG_WORK 
+// For long double versions (aborts if not supported)
+void 
+ClpMatrixBase::times(CoinWorkDouble scalar,
+      const CoinWorkDouble * x, CoinWorkDouble * y) const 
+{ 
+  std::cerr<<"long times not supported - ClpMatrixBase"<<std::endl;
+  abort();
+}
+void 
+ClpMatrixBase::transposeTimes(CoinWorkDouble scalar,
+			      const CoinWorkDouble * x, CoinWorkDouble * y) const 
+{ 
+  std::cerr<<"long transposeTimes not supported - ClpMatrixBase"<<std::endl;
+  abort();
+}
+#endif

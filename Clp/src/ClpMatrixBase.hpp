@@ -4,6 +4,7 @@
 #define ClpMatrixBase_H
 
 #include "CoinPragma.hpp"
+#include "CoinFinite.hpp"
 
 #include "CoinPackedMatrix.hpp"
 class CoinIndexedVector;
@@ -276,6 +277,13 @@ public:
 			      const double * rowScale, 
 			      const double * columnScale,
 			      double * spare=NULL) const;
+#if COIN_LONG_WORK 
+  // For long double versions (aborts if not supported)
+  virtual void times(CoinWorkDouble scalar,
+		     const CoinWorkDouble * x, CoinWorkDouble * y) const ;
+  virtual void transposeTimes(CoinWorkDouble scalar,
+			      const CoinWorkDouble * x, CoinWorkDouble * y) const ;
+#endif
   /** Return <code>x * scalar *A + y</code> in <code>z</code>. 
       Can use y as temporary array (will be empty at end)
       Note - If x packed mode - then z packed mode

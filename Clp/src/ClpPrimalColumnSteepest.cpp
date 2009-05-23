@@ -2775,6 +2775,7 @@ ClpPrimalColumnSteepest::maximumPivotsChanged()
    2) after factorization
    3) just redo infeasibilities
    4) restore weights
+   5) at end of values pass (so need initialization)
 */
 void 
 ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model,int mode)

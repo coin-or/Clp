@@ -263,6 +263,13 @@ public:
                                double * weights, double scaleFactor);
   /// Sets up an effective RHS
   void useEffectiveRhs(ClpSimplex * model);
+#if COIN_LONG_WORK 
+  // For long double versions 
+  virtual void times(CoinWorkDouble scalar,
+		     const CoinWorkDouble * x, CoinWorkDouble * y) const ;
+  virtual void transposeTimes(CoinWorkDouble scalar,
+			      const CoinWorkDouble * x, CoinWorkDouble * y) const ;
+#endif
 //@}
 
   /**@name Other */

@@ -105,7 +105,14 @@ public:
   /// Initialize weights
   void initializeWeights();
 
-  /// Save weights
+  /** Save weights - this may initialize weights as well
+      mode is -
+      1) before factorization
+      2) after factorization
+      3) just redo infeasibilities
+      4) restore weights
+      5) at end of values pass (so need initialization)
+  */
   virtual void saveWeights(ClpSimplex * model,int mode);
   /// Gets rid of last update
   virtual void unrollWeights();

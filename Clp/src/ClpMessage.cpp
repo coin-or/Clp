@@ -81,7 +81,7 @@ static Clp_message clp_us_english[]=
   {CLP_BARRIER_MU,44,3,"Changing mu from %g to %g"}, 
   {CLP_BARRIER_INFO,45,3,"Detail - %s"}, 
   {CLP_BARRIER_END,46,1,"At end primal/dual infeasibilities %g/%g, complementarity gap %g, objective %g"}, 
-  {CLP_BARRIER_ACCURACY,47,2,"Relative error in phase %d, refinement %d is %g"}, 
+  {CLP_BARRIER_ACCURACY,47,2,"Relative error in phase %d, %d refinements reduced from %g to %g"}, 
   {CLP_BARRIER_SAFE,48,2,"Initial safe primal value %g, objective norm %g"}, 
   {CLP_BARRIER_NEGATIVE_GAPS,49,3,"%d negative gaps summing to %g"}, 
   {CLP_BARRIER_REDUCING,50,2,"Reducing %s step from %g to %g"}, 

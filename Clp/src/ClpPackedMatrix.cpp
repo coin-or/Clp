@@ -5960,6 +5960,103 @@ ClpPackedMatrix3::transposeTimes2(const ClpSimplex * model,
   output->setNumElements(numberNonZero);
   output->setPackedMode(true);
 }
+#if COIN_LONG_WORK 
+// For long double versions
+void 
+ClpPackedMatrix::times(CoinWorkDouble scalar,
+		   const CoinWorkDouble * x, CoinWorkDouble * y) const
+{
+  int iRow,iColumn;
+  // get matrix data pointers
+  const int * row = matrix_->getIndices();
+  const CoinBigIndex * columnStart = matrix_->getVectorStarts();
+  const double * elementByColumn = matrix_->getElements();
+  //memset(y,0,matrix_->getNumRows()*sizeof(double));
+  assert (((flags_&2)!=0)==matrix_->hasGaps());
+  if (!(flags_&2)) {
+    for (iColumn=0;iColumn<numberActiveColumns_;iColumn++) {
+      CoinBigIndex j;
+      CoinWorkDouble value = x[iColumn];
+      if (value) {
+	CoinBigIndex start = columnStart[iColumn];
+	CoinBigIndex end = columnStart[iColumn+1];
+	value *= scalar;
+	for (j=start; j<end; j++) {
+	  iRow=row[j];
+	  y[iRow] += value*elementByColumn[j];
+	}
+      }
+    }
+  } else {
+    const int * columnLength = matrix_->getVectorLengths(); 
+    for (iColumn=0;iColumn<numberActiveColumns_;iColumn++) {
+      CoinBigIndex j;
+      CoinWorkDouble value = x[iColumn];
+      if (value) {
+	CoinBigIndex start = columnStart[iColumn];
+	CoinBigIndex end = start + columnLength[iColumn];
+	value *= scalar;
+	for (j=start; j<end; j++) {
+	  iRow=row[j];
+	  y[iRow] += value*elementByColumn[j];
+	}
+      }
+    }
+  }
+}
+void 
+ClpPackedMatrix::transposeTimes(CoinWorkDouble scalar,
+				const CoinWorkDouble * x, CoinWorkDouble * y) const
+{
+  int iColumn;
+  // get matrix data pointers
+  const int * row = matrix_->getIndices();
+  const CoinBigIndex * columnStart = matrix_->getVectorStarts();
+  const double * elementByColumn = matrix_->getElements();
+  if (!(flags_&2)) {
+    if (scalar==-1.0) {
+      CoinBigIndex start=columnStart[0];
+      for (iColumn=0;iColumn<numberActiveColumns_;iColumn++) {
+	CoinBigIndex j;
+	CoinBigIndex next=columnStart[iColumn+1];
+	CoinWorkDouble value=y[iColumn];
+	for (j=start;j<next;j++) {
+	  int jRow=row[j];
+	  value -= x[jRow]*elementByColumn[j];
+	}
+	start=next;
+	y[iColumn] = value;
+      }
+    } else {
+      CoinBigIndex start=columnStart[0];
+      for (iColumn=0;iColumn<numberActiveColumns_;iColumn++) {
+	CoinBigIndex j;
+	CoinBigIndex next=columnStart[iColumn+1];
+	CoinWorkDouble value=0.0;
+	for (j=start;j<next;j++) {
+	  int jRow=row[j];
+	  value += x[jRow]*elementByColumn[j];
+	}
+	start=next;
+	y[iColumn] += value*scalar;
+      }
+    }
+  } else {
+    const int * columnLength = matrix_->getVectorLengths(); 
+    for (iColumn=0;iColumn<numberActiveColumns_;iColumn++) {
+      CoinBigIndex j;
+      CoinWorkDouble value=0.0;
+      CoinBigIndex start = columnStart[iColumn];
+      CoinBigIndex end = start + columnLength[iColumn];
+      for (j=start; j<end; j++) {
+	int jRow=row[j];
+	value += x[jRow]*elementByColumn[j];
+      }
+      y[iColumn] += value*scalar;
+    }
+  }
+}
+#endif
 #ifdef CLP_ALL_ONE_FILE
 #undef reference
 #endif

@@ -1891,6 +1891,10 @@ ClpSimplex::initialSolve(ClpSolve & options)
       barrierOptions &= ~512;
       forceFixing=true;
     }
+    if (barrierOptions&1024) {
+      barrierOptions &= ~1024;
+      barrier.setProjectionTolerance(1.0e-9);
+    }
     if (barrierOptions&8) {
       barrierOptions &= ~8;
       scale=true;
@@ -1994,7 +1998,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
         barrier.setDelta(1.0e-5);
         break;
       case 2:
-        barrier.setGamma(1.0e-5);
+        barrier.setGamma(1.0e-7);
         break;
       case 3:
         barrier.setDelta(1.0e-5);
@@ -2083,8 +2087,10 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	    }
 	  }
 	}
+#ifdef CLP_INVESTIGATE
 	printf("%d columns fixed\n",nFix);
-	int nr=barrier.numberRows();
+#endif
+  	int nr=barrier.numberRows();
 	lower = barrier.rowLower();
 	upper = barrier.rowUpper();
 	solution = barrier.primalRowSolution();
@@ -2103,7 +2109,9 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	    }
 	  }
 	}
+#ifdef CLP_INVESTIGATE
 	printf("%d row slacks fixed\n",nFix);
+#endif
       }
       saveModel2=model2;
       extraPresolve=true;
@@ -2135,7 +2143,9 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	    }
 	  }
 	}
+#ifdef CLP_INVESTIGATE
 	printf("%d columns fixed\n",nFix);
+#endif
 	int nr=barrier.numberRows();
 	lower = barrier.rowLower();
 	upper = barrier.rowUpper();
@@ -2153,12 +2163,14 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	      lower[i]=upper[i];
 	      nFix++;
 	    } else {
-	      printf("fixrow %d %g <= %g <= %g\n",
-		     i,lower[i],solution[i],upper[i]);
+	      //printf("fixrow %d %g <= %g <= %g\n",
+	      //     i,lower[i],solution[i],upper[i]);
 	    }
 	  }
 	}
+#ifdef CLP_INVESTIGATE
 	printf("%d row slacks fixed\n",nFix);
+#endif
       }
     }
 #ifdef BORROW    

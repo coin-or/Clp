@@ -4798,41 +4798,47 @@ ClpSimplex::tightenPrimalBounds(double factor,int doTight,bool tightIntegers)
         if (saveLower[iColumn]<-1.0e30&&columnLower_[iColumn]<-1.0e10) {
           columnLower_[iColumn]=-COIN_DBL_MAX;
         }
+#ifdef KEEP_GOING_IF_FIXED 
+	double multiplier = 5.0e-3*floor(100.0*randomNumberGenerator_.randomDouble())+1.0;
+	multiplier *= 100.0;
+#else
+	double multiplier = 100.0;
+#endif
 	if (columnUpper_[iColumn]-columnLower_[iColumn]<useTolerance+1.0e-8) {
 	  // relax enough so will have correct dj
 #if 1
 	  columnLower_[iColumn]=CoinMax(saveLower[iColumn],
-				    columnLower_[iColumn]-100.0*useTolerance);
+				    columnLower_[iColumn]-multiplier*useTolerance);
 	  columnUpper_[iColumn]=CoinMin(saveUpper[iColumn],
-				    columnUpper_[iColumn]+100.0*useTolerance);
+				    columnUpper_[iColumn]+multiplier*useTolerance);
 #else
 	  if (fabs(columnUpper_[iColumn])<fabs(columnLower_[iColumn])) {
-	    if (columnUpper_[iColumn]- 100.0*useTolerance>saveLower[iColumn]) {
-	      columnLower_[iColumn]=columnUpper_[iColumn]-100.0*useTolerance;
+	    if (columnUpper_[iColumn]- multiplier*useTolerance>saveLower[iColumn]) {
+	      columnLower_[iColumn]=columnUpper_[iColumn]-multiplier*useTolerance;
 	    } else {
 	      columnLower_[iColumn]=saveLower[iColumn];
 	      columnUpper_[iColumn]=CoinMin(saveUpper[iColumn],
-					saveLower[iColumn]+100.0*useTolerance);
+					saveLower[iColumn]+multiplier*useTolerance);
 	    }
 	  } else {
-	    if (columnLower_[iColumn]+100.0*useTolerance<saveUpper[iColumn]) {
-	      columnUpper_[iColumn]=columnLower_[iColumn]+100.0*useTolerance;
+	    if (columnLower_[iColumn]+multiplier*useTolerance<saveUpper[iColumn]) {
+	      columnUpper_[iColumn]=columnLower_[iColumn]+multiplier*useTolerance;
 	    } else {
 	      columnUpper_[iColumn]=saveUpper[iColumn];
 	      columnLower_[iColumn]=CoinMax(saveLower[iColumn],
-					saveUpper[iColumn]-100.0*useTolerance);
+					saveUpper[iColumn]-multiplier*useTolerance);
 	    }
 	  }
 #endif
 	} else {
 	  if (columnUpper_[iColumn]<saveUpper[iColumn]) {
 	    // relax a bit
-	    columnUpper_[iColumn] = CoinMin(columnUpper_[iColumn]+100.0*useTolerance,
+	    columnUpper_[iColumn] = CoinMin(columnUpper_[iColumn]+multiplier*useTolerance,
 					saveUpper[iColumn]);
 	  }
 	  if (columnLower_[iColumn]>saveLower[iColumn]) {
 	    // relax a bit
-	    columnLower_[iColumn] = CoinMax(columnLower_[iColumn]-100.0*useTolerance,
+	    columnLower_[iColumn] = CoinMax(columnLower_[iColumn]-multiplier*useTolerance,
 					saveLower[iColumn]);
 	  }
 	}

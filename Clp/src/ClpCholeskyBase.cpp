@@ -85,7 +85,7 @@ ClpCholeskyBase::ClpCholeskyBase (const ClpCholeskyBase & rhs) :
   workDouble_ = ClpCopyOfArray(rhs.workDouble_,numberRows_);
 #else
   // actually long double
-  workDouble_ = (double *) ClpCopyOfArray((longWork *) rhs.workDouble_,numberRows_);
+  workDouble_ = reinterpret_cast<double *> (ClpCopyOfArray(reinterpret_cast<CoinWorkDouble *> (rhs.workDouble_),numberRows_));
 #endif
   link_ = ClpCopyOfArray(rhs.link_,numberRows_);
   workInteger_ = ClpCopyOfArray(rhs.workInteger_,numberRows_);
@@ -170,7 +170,7 @@ ClpCholeskyBase::operator=(const ClpCholeskyBase& rhs)
     workDouble_ = ClpCopyOfArray(rhs.workDouble_,numberRows_);
 #else
     // actually long double
-    workDouble_ = (double *) ClpCopyOfArray((longWork *) rhs.workDouble_,numberRows_);
+    workDouble_ = reinterpret_cast<double *> (ClpCopyOfArray(reinterpret_cast<CoinWorkDouble *> (rhs.workDouble_),numberRows_));
 #endif
     link_ = ClpCopyOfArray(rhs.link_,numberRows_);
     workInteger_ = ClpCopyOfArray(rhs.workInteger_,numberRows_);
@@ -194,32 +194,32 @@ ClpCholeskyBase::resetRowsDropped()
 /* Uses factorization to solve. - given as if KKT.
    region1 is rows+columns, region2 is rows */
 void 
-ClpCholeskyBase::solveKKT (double * region1, double * region2, const double * diagonal,
-			   double diagonalScaleFactor)
+ClpCholeskyBase::solveKKT (CoinWorkDouble * region1, CoinWorkDouble * region2, const CoinWorkDouble * diagonal,
+			   CoinWorkDouble diagonalScaleFactor)
 {
   if (!doKKT_) {
     int iColumn;
     int numberColumns = model_->numberColumns();
     int numberTotal = numberRows_+numberColumns;
-    double * region1Save = new double[numberTotal];
+    CoinWorkDouble * region1Save = new CoinWorkDouble[numberTotal];
     for (iColumn=0;iColumn<numberTotal;iColumn++) {
       region1[iColumn] *= diagonal[iColumn];
       region1Save[iColumn]=region1[iColumn];
     }
     multiplyAdd(region1+numberColumns,numberRows_,-1.0,region2,1.0);
     model_->clpMatrix()->times(1.0,region1,region2);
-    double maximumRHS = maximumAbsElement(region2,numberRows_);
-    double scale=1.0;
-    double unscale=1.0;
+    CoinWorkDouble maximumRHS = maximumAbsElement(region2,numberRows_);
+    CoinWorkDouble scale=1.0;
+    CoinWorkDouble unscale=1.0;
     if (maximumRHS>1.0e-30) {
       if (maximumRHS<=0.5) {
-	double factor=2.0;
+	CoinWorkDouble factor=2.0;
 	while (maximumRHS<=0.5) {
 	  maximumRHS*=factor;
 	  scale*=factor;
 	} /* endwhile */
       } else if (maximumRHS>=2.0&&maximumRHS<=COIN_DBL_MAX) {
-	double factor=0.5;
+	CoinWorkDouble factor=0.5;
 	while (maximumRHS>=2.0) {
 	  maximumRHS*=factor;
 	  scale*=factor;
@@ -245,19 +245,19 @@ ClpCholeskyBase::solveKKT (double * region1, double * region2, const double * di
     int numberRowsModel = model_->numberRows();
     int numberColumns = model_->numberColumns();
     int numberTotal = numberColumns + numberRowsModel;
-    double * array = new double [numberRows_];
+    CoinWorkDouble * array = new CoinWorkDouble [numberRows_];
     CoinMemcpyN(region1,numberTotal,array);
     CoinMemcpyN(region2,numberRowsModel,array+numberTotal);
     assert (numberRows_>=numberRowsModel+numberTotal);
     solve(array);
     int iRow;
     for (iRow=0;iRow<numberTotal;iRow++) { 
-      if (rowsDropped_[iRow]&&fabs(array[iRow])>1.0e-8) {
+      if (rowsDropped_[iRow]&&CoinAbs(array[iRow])>1.0e-8) {
 	printf("row region1 %d dropped %g\n",iRow,array[iRow]);
       }
     }
     for (;iRow<numberRows_;iRow++) {
-      if (rowsDropped_[iRow]&&fabs(array[iRow])>1.0e-8) {
+      if (rowsDropped_[iRow]&&CoinAbs(array[iRow])>1.0e-8) {
 	printf("row region2 %d dropped %g\n",iRow,array[iRow]);
       }
     }
@@ -1236,7 +1236,7 @@ ClpCholeskyBase::symbolic()
     workDouble_ = new longDouble[numberRows_];
 #else
     // actually long double
-    workDouble_ = (double *) (new longWork[numberRows_]);
+    workDouble_ = reinterpret_cast<double *> (new CoinWorkDouble[numberRows_]);
 #endif
     diagonal_ = new longDouble[numberRows_];
   }
@@ -1520,7 +1520,7 @@ ClpCholeskyBase::symbolic2(const CoinBigIndex * Astart, const int * Arow)
 }
 /* Factorize - filling in rowsDropped and returning number dropped */
 int 
-ClpCholeskyBase::factorize(const double * diagonal, int * rowsDropped) 
+ClpCholeskyBase::factorize(const CoinWorkDouble * diagonal, int * rowsDropped) 
 {
   const CoinBigIndex * columnStart = model_->clpMatrix()->getVectorStarts();
   const int * columnLength = model_->clpMatrix()->getVectorLengths();
@@ -1532,14 +1532,14 @@ ClpCholeskyBase::factorize(const double * diagonal, int * rowsDropped)
   const double * elementByRow = rowCopy_->getElements();
   int numberColumns=model_->clpMatrix()->getNumCols();
   //perturbation
-  longDouble perturbation=model_->diagonalPerturbation()*model_->diagonalNorm();
+  CoinWorkDouble perturbation=model_->diagonalPerturbation()*model_->diagonalNorm();
   //perturbation=perturbation*perturbation*100000000.0;
   if (perturbation>1.0) {
 #ifdef COIN_DEVELOP
     //if (model_->model()->logLevel()&4) 
       std::cout <<"large perturbation "<<perturbation<<std::endl;
 #endif
-    perturbation=sqrt(perturbation);;
+    perturbation=CoinSqrt(perturbation);
     perturbation=1.0;
   }
   int iRow;
@@ -1547,11 +1547,11 @@ ClpCholeskyBase::factorize(const double * diagonal, int * rowsDropped)
   longDouble * work = workDouble_;
   CoinZeroN(work,numberRows_);
   int newDropped=0;
-  double largest=1.0;
-  double smallest=COIN_DBL_MAX;
+  CoinWorkDouble largest=1.0;
+  CoinWorkDouble smallest=COIN_DBL_MAX;
   int numberDense=0;
   if (!doKKT_) {
-    const double * diagonalSlack = diagonal + numberColumns;
+    const CoinWorkDouble * diagonalSlack = diagonal + numberColumns;
     if (dense_)
       numberDense=dense_->numberRows();
     if (whichDense_) {
@@ -1576,10 +1576,10 @@ ClpCholeskyBase::factorize(const double * diagonal, int * rowsDropped)
 	}
       }
     }
-    longDouble delta2 = model_->delta(); // add delta*delta to diagonal
+    CoinWorkDouble delta2 = model_->delta(); // add delta*delta to diagonal
     delta2 *= delta2;
     // largest in initial matrix
-    double largest2=1.0e-20;
+    CoinWorkDouble largest2=1.0e-20;
     for (iRow=0;iRow<numberRows_;iRow++) {
       longDouble * put = sparseFactor_+choleskyStart_[iRow];
       int * which = choleskyRow_+indexStart_[iRow];
@@ -1596,25 +1596,25 @@ ClpCholeskyBase::factorize(const double * diagonal, int * rowsDropped)
 	  if (!whichDense_||!whichDense_[iColumn]) {
 	    CoinBigIndex start=columnStart[iColumn];
 	    CoinBigIndex end=columnStart[iColumn]+columnLength[iColumn];
-	    longDouble multiplier = diagonal[iColumn]*elementByRow[k];
+	    CoinWorkDouble multiplier = diagonal[iColumn]*elementByRow[k];
 	    for (CoinBigIndex j=start;j<end;j++) {
 	      int jRow=row[j];
 	      int jNewRow = permuteInverse_[jRow];
 	      if (jNewRow>=iRow&&!rowsDropped_[jRow]) {
-		longDouble value=element[j]*multiplier;
+		CoinWorkDouble value=element[j]*multiplier;
 		work[jNewRow] += value;
 	      }
 	    }
 	  }
 	}
 	diagonal_[iRow]=work[iRow];
-	largest2 = CoinMax(largest2,fabs(work[iRow]));
+	largest2 = CoinMax(largest2,CoinAbs(work[iRow]));
 	work[iRow]=0.0;
 	int j;
 	for (j=0;j<number;j++) {
 	  int jRow = which[j];
 	  put[j]=work[jRow];
-	  largest2 = CoinMax(largest2,fabs(work[jRow]));
+	  largest2 = CoinMax(largest2,CoinAbs(work[jRow]));
 	  work[jRow]=0.0;
 	}
       } else {
@@ -1628,14 +1628,14 @@ ClpCholeskyBase::factorize(const double * diagonal, int * rowsDropped)
     }
     //check sizes
     largest2*=1.0e-20;
-    largest = CoinMin(largest2,1.0e-11);
+    largest = CoinMin(largest2,CHOL_SMALL_VALUE);
     int numberDroppedBefore=0;
     for (iRow=0;iRow<numberRows_;iRow++) {
       int dropped=rowsDropped_[iRow];
       // Move to int array
       rowsDropped[iRow]=dropped;
       if (!dropped) {
-	longDouble diagonal = diagonal_[iRow];
+	CoinWorkDouble diagonal = diagonal_[iRow];
 	if (diagonal>largest2) {
 	  diagonal_[iRow]=diagonal+perturbation;
 	} else {
@@ -1662,7 +1662,7 @@ ClpCholeskyBase::factorize(const double * diagonal, int * rowsDropped)
       int i;
       for ( i=0;i<numberRows_;i++) {
 	assert (diagonal_[i]>=0.0);
-	diagonal_[i]=sqrt(diagonal_[i]);
+	diagonal_[i]=CoinSqrt(diagonal_[i]);
       }
       // Update dense columns (just L)
       // Zero out dropped rows
@@ -1672,7 +1672,23 @@ ClpCholeskyBase::factorize(const double * diagonal, int * rowsDropped)
 	  if (rowsDropped[j])
 	    a[j]=0.0;
 	}
-	solveLong(a,1);
+	for (i=0;i<numberRows_;i++) {
+	  int iRow = permute_[i];
+	  workDouble_[i] = a[iRow];
+	}
+	for (i=0;i<numberRows_;i++) {
+	  CoinWorkDouble value=workDouble_[i];
+	  CoinBigIndex offset = indexStart_[i]-choleskyStart_[i];
+	  CoinBigIndex j;
+	  for (j=choleskyStart_[i];j<choleskyStart_[i+1];j++) {
+	    int iRow = choleskyRow_[j+offset];
+	    workDouble_[iRow] -= sparseFactor_[j]*value;
+	  }
+	}
+	for (i=0;i<numberRows_;i++) {
+	  int iRow = permute_[i];
+	  a[iRow]=workDouble_[i]*diagonal_[i];
+	}
       }
       dense_->resetRowsDropped();
       longDouble * denseBlob = dense_->aMatrix();
@@ -1681,13 +1697,13 @@ ClpCholeskyBase::factorize(const double * diagonal, int * rowsDropped)
       for (i=0;i<numberDense;i++) {
 	const longDouble * a = denseColumn_+i*numberRows_;
 	// do diagonal
-	longDouble value = denseDiagonal[i];
+	CoinWorkDouble value = denseDiagonal[i];
 	const longDouble * b = denseColumn_+i*numberRows_;
 	for (int k=0;k<numberRows_;k++) 
 	  value += a[k]*b[k];
 	denseDiagonal[i]=value;
 	for (int j=i+1;j<numberDense;j++) {
-	  longDouble value = 0.0;
+	  CoinWorkDouble value = 0.0;
 	  const longDouble * b = denseColumn_+j*numberRows_;
 	  for (int k=0;k<numberRows_;k++) 
 	    value += a[k]*b[k];
@@ -1777,7 +1793,7 @@ ClpCholeskyBase::factorize(const double * diagonal, int * rowsDropped)
       //permuteInverse_[permute_[iRow]]=iRow;
     }
     if (permuted) {
-      longDouble delta2 = model_->delta(); // add delta*delta to bottom
+      CoinWorkDouble delta2 = model_->delta(); // add delta*delta to bottom
       delta2 *= delta2;
       // Need to permute - ugly
       if (!quadratic) {
@@ -1787,10 +1803,10 @@ ClpCholeskyBase::factorize(const double * diagonal, int * rowsDropped)
 	  int iOriginalRow = permute_[iRow];
 	  if (iOriginalRow<numberColumns) {
 	    iColumn=iOriginalRow;
-	    longDouble value = diagonal[iColumn];
-	    if (fabs(value)>1.0e-100) {
+	    CoinWorkDouble value = diagonal[iColumn];
+	    if (CoinAbs(value)>1.0e-100) {
 	      value = 1.0/value;
-	      largest = CoinMax(largest,fabs(value));
+	      largest = CoinMax(largest,CoinAbs(value));
 	      diagonal_[iRow] = -value;
 	      CoinBigIndex start=columnStart[iColumn];
 	      CoinBigIndex end=columnStart[iColumn]+columnLength[iColumn];
@@ -1799,17 +1815,17 @@ ClpCholeskyBase::factorize(const double * diagonal, int * rowsDropped)
 		kRow=permuteInverse_[kRow];
 		if (kRow>iRow) {
 		  work[kRow]=element[j];
-		  largest = CoinMax(largest,fabs(element[j]));
+		  largest = CoinMax(largest,CoinAbs(element[j]));
 		}
 	      }
 	    } else {
 	      diagonal_[iRow] = -value;
 	    }
 	  } else if (iOriginalRow<numberTotal) {
-	    longDouble value = diagonal[iOriginalRow];
-	    if (fabs(value)>1.0e-100) {
+	    CoinWorkDouble value = diagonal[iOriginalRow];
+	    if (CoinAbs(value)>1.0e-100) {
 	      value = 1.0/value;
-	      largest = CoinMax(largest,fabs(value));
+	      largest = CoinMax(largest,CoinAbs(value));
 	    } else {
 	      value = 1.0e100;
 	    }
@@ -1827,7 +1843,7 @@ ClpCholeskyBase::factorize(const double * diagonal, int * rowsDropped)
 	      int jNewRow = permuteInverse_[jRow];
 	      if (jNewRow>iRow) {
 		work[jNewRow]=elementByRow[j];
-		largest = CoinMax(largest,fabs(elementByRow[j]));
+		largest = CoinMax(largest,CoinAbs(elementByRow[j]));
 	      }
 	    }
 	    // slack - should it be permute
@@ -1856,8 +1872,8 @@ ClpCholeskyBase::factorize(const double * diagonal, int * rowsDropped)
 	  if (iOriginalRow<numberColumns) {
 	    CoinBigIndex j;
 	    iColumn=iOriginalRow;
-	    longDouble value = diagonal[iColumn];
-	    if (fabs(value)>1.0e-100) {
+	    CoinWorkDouble value = diagonal[iColumn];
+	    if (CoinAbs(value)>1.0e-100) {
 	      value = 1.0/value;
 	      for (j=columnQuadraticStart[iColumn];
 		   j<columnQuadraticStart[iColumn]+columnQuadraticLength[iColumn];j++) {
@@ -1869,7 +1885,7 @@ ClpCholeskyBase::factorize(const double * diagonal, int * rowsDropped)
 		  value += quadraticElement[j];
 		}
 	      }
-	      largest = CoinMax(largest,fabs(value));
+	      largest = CoinMax(largest,CoinAbs(value));
 	      diagonal_[iRow] = -value;
 	      CoinBigIndex start=columnStart[iColumn];
 	      CoinBigIndex end=columnStart[iColumn]+columnLength[iColumn];
@@ -1878,17 +1894,17 @@ ClpCholeskyBase::factorize(const double * diagonal, int * rowsDropped)
 		kRow=permuteInverse_[kRow];
 		if (kRow>iRow) {
 		  work[kRow]=element[j];
-		  largest = CoinMax(largest,fabs(element[j]));
+		  largest = CoinMax(largest,CoinAbs(element[j]));
 		}
 	      }
 	    } else {
 	      diagonal_[iRow] = -value;
 	    }
 	  } else if (iOriginalRow<numberTotal) {
-	    longDouble value = diagonal[iOriginalRow];
-	    if (fabs(value)>1.0e-100) {
+	    CoinWorkDouble value = diagonal[iOriginalRow];
+	    if (CoinAbs(value)>1.0e-100) {
 	      value = 1.0/value;
-	      largest = CoinMax(largest,fabs(value));
+	      largest = CoinMax(largest,CoinAbs(value));
 	    } else {
 	      value = 1.0e100;
 	    }
@@ -1906,7 +1922,7 @@ ClpCholeskyBase::factorize(const double * diagonal, int * rowsDropped)
 	      int jNewRow = permuteInverse_[jRow];
 	      if (jNewRow>iRow) {
 		work[jNewRow]=elementByRow[j];
-		largest = CoinMax(largest,fabs(elementByRow[j]));
+		largest = CoinMax(largest,CoinAbs(elementByRow[j]));
 	      }
 	    }
 	    // slack - should it be permute
@@ -1930,10 +1946,10 @@ ClpCholeskyBase::factorize(const double * diagonal, int * rowsDropped)
 	for (iColumn=0;iColumn<numberColumns;iColumn++) {
 	  longDouble * put = sparseFactor_+choleskyStart_[iColumn];
 	  int * which = choleskyRow_+indexStart_[iColumn];
-	  longDouble value = diagonal[iColumn];
-	  if (fabs(value)>1.0e-100) {
+	  CoinWorkDouble value = diagonal[iColumn];
+	  if (CoinAbs(value)>1.0e-100) {
 	    value = 1.0/value;
-	    largest = CoinMax(largest,fabs(value));
+	    largest = CoinMax(largest,CoinAbs(value));
 	    diagonal_[iColumn] = -value;
 	    CoinBigIndex start=columnStart[iColumn];
 	    CoinBigIndex end=columnStart[iColumn]+columnLength[iColumn];
@@ -1941,7 +1957,7 @@ ClpCholeskyBase::factorize(const double * diagonal, int * rowsDropped)
 	      //choleskyRow_[numberElements]=row[j]+numberTotal;
 	      //sparseFactor_[numberElements++]=element[j];
 	      work[row[j]+numberTotal]=element[j];
-	      largest = CoinMax(largest,fabs(element[j]));
+	      largest = CoinMax(largest,CoinAbs(element[j]));
 	    }
 	  } else {
 	    diagonal_[iColumn] = -value;
@@ -1964,9 +1980,9 @@ ClpCholeskyBase::factorize(const double * diagonal, int * rowsDropped)
 	  longDouble * put = sparseFactor_+choleskyStart_[iColumn];
 	  int * which = choleskyRow_+indexStart_[iColumn];
 	  int number = choleskyStart_[iColumn+1]-choleskyStart_[iColumn];
-	  longDouble value = diagonal[iColumn];
+	  CoinWorkDouble value = diagonal[iColumn];
 	  CoinBigIndex j;
-	  if (fabs(value)>1.0e-100) {
+	  if (CoinAbs(value)>1.0e-100) {
 	    value = 1.0/value;
 	    for (j=columnQuadraticStart[iColumn];
 		 j<columnQuadraticStart[iColumn]+columnQuadraticLength[iColumn];j++) {
@@ -1977,13 +1993,13 @@ ClpCholeskyBase::factorize(const double * diagonal, int * rowsDropped)
 		value += quadraticElement[j];
 	      }
 	    }
-	    largest = CoinMax(largest,fabs(value));
+	    largest = CoinMax(largest,CoinAbs(value));
 	    diagonal_[iColumn] = -value;
 	    CoinBigIndex start=columnStart[iColumn];
 	    CoinBigIndex end=columnStart[iColumn]+columnLength[iColumn];
 	    for (j=start;j<end;j++) {
 	      work[row[j]+numberTotal]=element[j];
-	      largest = CoinMax(largest,fabs(element[j]));
+	      largest = CoinMax(largest,CoinAbs(element[j]));
 	    }
 	    for (j=0;j<number;j++) {
 	      int jRow = which[j];
@@ -2004,10 +2020,10 @@ ClpCholeskyBase::factorize(const double * diagonal, int * rowsDropped)
       for (iColumn=numberColumns;iColumn<numberTotal;iColumn++) {
 	longDouble * put = sparseFactor_+choleskyStart_[iColumn];
 	int * which = choleskyRow_+indexStart_[iColumn];
-	longDouble value = diagonal[iColumn];
-	if (fabs(value)>1.0e-100) {
+	CoinWorkDouble value = diagonal[iColumn];
+	if (CoinAbs(value)>1.0e-100) {
 	  value = 1.0/value;
-	  largest = CoinMax(largest,fabs(value));
+	  largest = CoinMax(largest,CoinAbs(value));
 	} else {
 	  value = 1.0e100;
 	}
@@ -2022,7 +2038,7 @@ ClpCholeskyBase::factorize(const double * diagonal, int * rowsDropped)
 	}
       }
       // Finish diagonal
-      longDouble delta2 = model_->delta(); // add delta*delta to bottom
+      CoinWorkDouble delta2 = model_->delta(); // add delta*delta to bottom
       delta2 *= delta2;
       for (iRow=0;iRow<numberRowsModel;iRow++) {
 	longDouble * put = sparseFactor_+choleskyStart_[iRow+numberTotal];
@@ -2036,7 +2052,7 @@ ClpCholeskyBase::factorize(const double * diagonal, int * rowsDropped)
     }
     //check sizes
     largest*=1.0e-20;
-    largest = CoinMin(largest,1.0e-11);
+    largest = CoinMin(largest,CHOL_SMALL_VALUE);
     doubleParameters_[10]=CoinMax(1.0e-20,largest);
     integerParameters_[20]=0;
     doubleParameters_[3]=0.0;
@@ -2055,8 +2071,8 @@ ClpCholeskyBase::factorize(const double * diagonal, int * rowsDropped)
     choleskyCondition_=largest/smallest;
     // Should save adjustments in ..R_
     int n1=0,n2=0;
-    double * primalR = model_->primalR();
-    double * dualR = model_->dualR();
+    CoinWorkDouble * primalR = model_->primalR();
+    CoinWorkDouble * dualR = model_->dualR();
     for (iRow=0;iRow<numberTotal;iRow++) { 
       if (rowsDropped2[iRow]) {
 	n1++;
@@ -2092,8 +2108,8 @@ ClpCholeskyBase::factorize(const double * diagonal, int * rowsDropped)
 void 
 ClpCholeskyBase::factorizePart2(int * rowsDropped) 
 {
-  longDouble largest=doubleParameters_[3];
-  longDouble smallest=doubleParameters_[4];
+  CoinWorkDouble largest=doubleParameters_[3];
+  CoinWorkDouble smallest=doubleParameters_[4];
   int numberDropped=integerParameters_[20];
   // probably done before
   largest=0.0;
@@ -2158,14 +2174,14 @@ ClpCholeskyBase::factorizePart2(int * rowsDropped)
       int jRow;
       for ( jRow=lastRow;jRow<iRow;jRow++) {
 	int jCount = jRow-lastRow;
-	longDouble diagonalValue = diagonal_[jRow];
+	CoinWorkDouble diagonalValue = diagonal_[jRow];
 	CoinBigIndex start=choleskyStart_[jRow];
 	CoinBigIndex end=choleskyStart_[jRow+1];
 	for (int kRow=lastRow;kRow<jRow;kRow++) {
 	  jCount--;
 	  CoinBigIndex get = choleskyStart_[kRow]+jCount;
-	  longDouble a_jk = sparseFactor_[get];
-	  longDouble value1 = d[kRow]*a_jk;
+	  CoinWorkDouble a_jk = sparseFactor_[get];
+	  CoinWorkDouble value1 = d[kRow]*a_jk;
 	  diagonalValue -= a_jk*value1;
 	  for (CoinBigIndex j=start;j<end;j++)
 	    sparseFactor_[j] -= value1*sparseFactor_[++get];
@@ -2221,7 +2237,7 @@ ClpCholeskyBase::factorizePart2(int * rowsDropped)
       cliqueSize=choleskyStart_[iRow+1]-cliquePointer+1;
     }
     // for each column L[*,kRow] that affects L[*,iRow] 
-    longDouble diagonalValue=diagonal_[iRow];
+    CoinWorkDouble diagonalValue=diagonal_[iRow];
     int nextRow = link_[iRow];
     int kRow=0;
     while (1) {
@@ -2233,8 +2249,8 @@ ClpCholeskyBase::factorizePart2(int * rowsDropped)
       CoinBigIndex k=first[kRow];
       CoinBigIndex end=choleskyStart_[kRow+1];
       assert(k<end);
-      longDouble a_ik=sparseFactor_[k++];
-      longDouble value1=d[kRow]*a_ik;
+      CoinWorkDouble a_ik=sparseFactor_[k++];
+      CoinWorkDouble value1=d[kRow]*a_ik;
       // update first
       first[kRow]=k;
       diagonalValue -= value1*a_ik;
@@ -2258,8 +2274,8 @@ ClpCholeskyBase::factorizePart2(int * rowsDropped)
 	  for (int kkRow=kRow+1;kkRow<last;kkRow++) {
 	    CoinBigIndex j=first[kkRow];
 	    //int iiRow = choleskyRow_[j+indexStart_[kkRow]-choleskyStart_[kkRow]];
-	    longDouble a = sparseFactor_[j];
-	    longDouble dValue = d[kkRow]*a;
+	    CoinWorkDouble a = sparseFactor_[j];
+	    CoinWorkDouble dValue = d[kkRow]*a;
 	    diagonalValue -= a*dValue;
 	    work[kkRow]=dValue;
 	    first[kkRow]++;
@@ -2270,7 +2286,7 @@ ClpCholeskyBase::factorizePart2(int * rowsDropped)
 	  int length = end-k;
 	  for (int i=0;i<length;i++) {
 	    int lRow = choleskyRow_[currentIndex++];
-	    longDouble t0 = work[lRow];
+	    CoinWorkDouble t0 = work[lRow];
 	    for (int kkRow=kRow;kkRow<last;kkRow++) {
 	      CoinBigIndex j = first[kkRow]+i;
 	      t0 += work[kkRow]*sparseFactor_[j];
@@ -2339,7 +2355,7 @@ ClpCholeskyBase::factorizePart2(int * rowsDropped)
 	link_[nextRow]=iRow;
 	for (CoinBigIndex j=start;j<end;j++) {
 	  int jRow = choleskyRow_[j+offset];
-	  longDouble value = sparseFactor_[j]-work[jRow];
+	  CoinWorkDouble value = sparseFactor_[j]-work[jRow];
 	  work[jRow]=0.0;
 	  sparseFactor_[j]= diagonalValue*value;
 	}
@@ -2394,40 +2410,40 @@ void ClpCholeskyBase::updateDense(longDouble * d, longDouble * work, int * first
     if (start<end) {
       CoinBigIndex offset = indexStart_[iRow]-choleskyStart_[iRow];
       if (clique_[iRow]<2) {
-	longDouble dValue=d[iRow];
+	CoinWorkDouble dValue=d[iRow];
 	for (CoinBigIndex k=start;k<end;k++) {
 	  int kRow = choleskyRow_[k+offset]; 
 	  assert(kRow>=firstDense_);
-	  longDouble a_ik=sparseFactor_[k];
-	  longDouble value1=dValue*a_ik;
+	  CoinWorkDouble a_ik=sparseFactor_[k];
+	  CoinWorkDouble value1=dValue*a_ik;
 	  diagonal_[kRow] -= value1*a_ik;
 	  CoinBigIndex base = choleskyStart_[kRow]-kRow-1;
 	  for (CoinBigIndex j=k+1;j<end;j++) {
 	    int jRow=choleskyRow_[j+offset];
-	    longDouble a_jk = sparseFactor_[j];
+	    CoinWorkDouble a_jk = sparseFactor_[j];
 	    sparseFactor_[base+jRow] -= a_jk*value1;
 	  }
 	}
       } else if (clique_[iRow]<3) {
 	// do as pair
-	longDouble dValue0=d[iRow];
-	longDouble dValue1=d[iRow+1];
+	CoinWorkDouble dValue0=d[iRow];
+	CoinWorkDouble dValue1=d[iRow+1];
 	int offset1 = first[iRow+1]-start;
 	// skip row
 	iRow++;
 	for (CoinBigIndex k=start;k<end;k++) {
 	  int kRow = choleskyRow_[k+offset]; 
 	  assert(kRow>=firstDense_);
-	  longDouble a_ik0=sparseFactor_[k];
-	  longDouble value0=dValue0*a_ik0;
-	  longDouble a_ik1=sparseFactor_[k+offset1];
-	  longDouble value1=dValue1*a_ik1;
+	  CoinWorkDouble a_ik0=sparseFactor_[k];
+	  CoinWorkDouble value0=dValue0*a_ik0;
+	  CoinWorkDouble a_ik1=sparseFactor_[k+offset1];
+	  CoinWorkDouble value1=dValue1*a_ik1;
 	  diagonal_[kRow] -= value0*a_ik0 + value1*a_ik1;
 	  CoinBigIndex base = choleskyStart_[kRow]-kRow-1;
 	  for (CoinBigIndex j=k+1;j<end;j++) {
 	    int jRow=choleskyRow_[j+offset];
-	    longDouble a_jk0 = sparseFactor_[j];
-	    longDouble a_jk1 = sparseFactor_[j+offset1];
+	    CoinWorkDouble a_jk0 = sparseFactor_[j];
+	    CoinWorkDouble a_jk1 = sparseFactor_[j+offset1];
 	    sparseFactor_[base+jRow] -= a_jk0*value0+a_jk1*value1;
 	  }
 	}
@@ -2440,29 +2456,29 @@ void ClpCholeskyBase::updateDense(longDouble * d, longDouble * work, int * first
 	// do as clique
 	// maybe later get fancy on big cliques and do transpose copy
 	// seems only worth going to 3 on Intel
-	longDouble dValue0=d[iRow];
-	longDouble dValue1=d[iRow+1];
-	longDouble dValue2=d[iRow+2];
+	CoinWorkDouble dValue0=d[iRow];
+	CoinWorkDouble dValue1=d[iRow+1];
+	CoinWorkDouble dValue2=d[iRow+2];
 	// get offsets and skip rows
 	int offset1 = first[++iRow]-start;
 	int offset2 = first[++iRow]-start;
 	for (CoinBigIndex k=start;k<end;k++) {
 	  int kRow = choleskyRow_[k+offset]; 
 	  assert(kRow>=firstDense_);
-	  double diagonalValue=diagonal_[kRow];
-	  longDouble a_ik0=sparseFactor_[k];
-	  longDouble value0=dValue0*a_ik0;
-	  longDouble a_ik1=sparseFactor_[k+offset1];
-	  longDouble value1=dValue1*a_ik1;
-	  longDouble a_ik2=sparseFactor_[k+offset2];
-	  longDouble value2=dValue2*a_ik2;
+	  CoinWorkDouble diagonalValue=diagonal_[kRow];
+	  CoinWorkDouble a_ik0=sparseFactor_[k];
+	  CoinWorkDouble value0=dValue0*a_ik0;
+	  CoinWorkDouble a_ik1=sparseFactor_[k+offset1];
+	  CoinWorkDouble value1=dValue1*a_ik1;
+	  CoinWorkDouble a_ik2=sparseFactor_[k+offset2];
+	  CoinWorkDouble value2=dValue2*a_ik2;
 	  CoinBigIndex base = choleskyStart_[kRow]-kRow-1;
 	  diagonal_[kRow] = diagonalValue - value0*a_ik0 - value1*a_ik1 - value2*a_ik2;
 	  for (CoinBigIndex j=k+1;j<end;j++) {
 	    int jRow=choleskyRow_[j+offset];
-	    longDouble a_jk0 = sparseFactor_[j];
-	    longDouble a_jk1 = sparseFactor_[j+offset1];
-	    longDouble a_jk2 = sparseFactor_[j+offset2];
+	    CoinWorkDouble a_jk0 = sparseFactor_[j];
+	    CoinWorkDouble a_jk1 = sparseFactor_[j+offset1];
+	    CoinWorkDouble a_jk2 = sparseFactor_[j+offset2];
 	    sparseFactor_[base+jRow] -= a_jk0*value0+a_jk1*value1+a_jk2*value2;
 	  }
 	}
@@ -2471,10 +2487,10 @@ void ClpCholeskyBase::updateDense(longDouble * d, longDouble * work, int * first
 	// do as clique
 	// maybe later get fancy on big cliques and do transpose copy
 	// maybe only worth going to 3 on Intel (but may have hidden registers)
-	longDouble dValue0=d[iRow];
-	longDouble dValue1=d[iRow+1];
-	longDouble dValue2=d[iRow+2];
-	longDouble dValue3=d[iRow+3];
+	CoinWorkDouble dValue0=d[iRow];
+	CoinWorkDouble dValue1=d[iRow+1];
+	CoinWorkDouble dValue2=d[iRow+2];
+	CoinWorkDouble dValue3=d[iRow+3];
 	// get offsets and skip rows
 	int offset1 = first[++iRow]-start;
 	int offset2 = first[++iRow]-start;
@@ -2482,23 +2498,23 @@ void ClpCholeskyBase::updateDense(longDouble * d, longDouble * work, int * first
 	for (CoinBigIndex k=start;k<end;k++) {
 	  int kRow = choleskyRow_[k+offset]; 
 	  assert(kRow>=firstDense_);
-	  double diagonalValue=diagonal_[kRow];
-	  longDouble a_ik0=sparseFactor_[k];
-	  longDouble value0=dValue0*a_ik0;
-	  longDouble a_ik1=sparseFactor_[k+offset1];
-	  longDouble value1=dValue1*a_ik1;
-	  longDouble a_ik2=sparseFactor_[k+offset2];
-	  longDouble value2=dValue2*a_ik2;
-	  longDouble a_ik3=sparseFactor_[k+offset3];
-	  longDouble value3=dValue3*a_ik3;
+	  CoinWorkDouble diagonalValue=diagonal_[kRow];
+	  CoinWorkDouble a_ik0=sparseFactor_[k];
+	  CoinWorkDouble value0=dValue0*a_ik0;
+	  CoinWorkDouble a_ik1=sparseFactor_[k+offset1];
+	  CoinWorkDouble value1=dValue1*a_ik1;
+	  CoinWorkDouble a_ik2=sparseFactor_[k+offset2];
+	  CoinWorkDouble value2=dValue2*a_ik2;
+	  CoinWorkDouble a_ik3=sparseFactor_[k+offset3];
+	  CoinWorkDouble value3=dValue3*a_ik3;
 	  CoinBigIndex base = choleskyStart_[kRow]-kRow-1;
 	  diagonal_[kRow] = diagonalValue - (value0*a_ik0 + value1*a_ik1 + value2*a_ik2+value3*a_ik3);
 	  for (CoinBigIndex j=k+1;j<end;j++) {
 	    int jRow=choleskyRow_[j+offset];
-	    longDouble a_jk0 = sparseFactor_[j];
-	    longDouble a_jk1 = sparseFactor_[j+offset1];
-	    longDouble a_jk2 = sparseFactor_[j+offset2];
-	    longDouble a_jk3 = sparseFactor_[j+offset3];
+	    CoinWorkDouble a_jk0 = sparseFactor_[j];
+	    CoinWorkDouble a_jk1 = sparseFactor_[j+offset1];
+	    CoinWorkDouble a_jk2 = sparseFactor_[j+offset2];
+	    CoinWorkDouble a_jk3 = sparseFactor_[j+offset3];
 	    sparseFactor_[base+jRow] -= a_jk0*value0+a_jk1*value1+a_jk2*value2+a_jk3*value3;
 	  }
 	}
@@ -2519,19 +2535,23 @@ ClpCholeskyBase::solve (double * region)
     solve(region,1);
     // do change;
     int numberDense = dense_->numberRows();
-    double * change = new double[numberDense];
+    CoinWorkDouble * change = new CoinWorkDouble[numberDense];
     for (i=0;i<numberDense;i++) {
       const longDouble * a = denseColumn_+i*numberRows_;
-      longDouble value =0.0;
+      CoinWorkDouble value =0.0;
       for (int iRow=0;iRow<numberRows_;iRow++) 
 	value += a[iRow]*region[iRow];
       change[i]=value;
     }
     // solve
+#if CLP_LONG_CHOLESKY>0
+    dense_->solveLong(change);
+#else
     dense_->solve(change);
+#endif
     for (i=0;i<numberDense;i++) {
       const longDouble * a = denseColumn_+i*numberRows_;
-      longDouble value = change[i];
+      CoinWorkDouble value = change[i];
       for (int iRow=0;iRow<numberRows_;iRow++) 
 	region[iRow] -= value*a[iRow];
     }
@@ -2548,11 +2568,11 @@ ClpCholeskyBase::solve(double * region, int type)
 {
 #ifdef CLP_DEBUG
   double * regionX=NULL;
-  if (sizeof(longWork)!=sizeof(double)&&type==3) {
+  if (sizeof(CoinWorkDouble)!=sizeof(double)&&type==3) {
     regionX=ClpCopyOfArray(region,numberRows_);
   }
 #endif
-  longWork * work = reinterpret_cast<longWork *> (workDouble_);
+  CoinWorkDouble * work = reinterpret_cast<CoinWorkDouble *> (workDouble_);
   int i;
   CoinBigIndex j;
   for (i=0;i<numberRows_;i++) {
@@ -2562,7 +2582,7 @@ ClpCholeskyBase::solve(double * region, int type)
   switch (type) {
   case 1:
     for (i=0;i<numberRows_;i++) {
-      longDouble value=work[i];
+      CoinWorkDouble value=work[i];
       CoinBigIndex offset = indexStart_[i]-choleskyStart_[i];
       for (j=choleskyStart_[i];j<choleskyStart_[i+1];j++) {
 	int iRow = choleskyRow_[j+offset];
@@ -2577,7 +2597,7 @@ ClpCholeskyBase::solve(double * region, int type)
   case 2:
     for (i=numberRows_-1;i>=0;i--) {
       CoinBigIndex offset = indexStart_[i]-choleskyStart_[i];
-      longDouble value=work[i]*diagonal_[i];
+      CoinWorkDouble value=work[i]*diagonal_[i];
       for (j=choleskyStart_[i];j<choleskyStart_[i+1];j++) {
 	int iRow = choleskyRow_[j+offset];
 	value -= sparseFactor_[j]*work[iRow];
@@ -2590,7 +2610,7 @@ ClpCholeskyBase::solve(double * region, int type)
   case 3:
     for (i=0;i<firstDense_;i++) {
       CoinBigIndex offset = indexStart_[i]-choleskyStart_[i];
-      longDouble value=work[i];
+      CoinWorkDouble value=work[i];
       for (j=choleskyStart_[i];j<choleskyStart_[i+1];j++) {
 	int iRow = choleskyRow_[j+offset];
 	work[iRow] -= sparseFactor_[j]*value;
@@ -2608,14 +2628,14 @@ ClpCholeskyBase::solve(double * region, int type)
       dense.solveLongWork(work+firstDense_);
 #endif
       for (i=numberRows_-1;i>=firstDense_;i--) {
-	longDouble value=work[i];
+	CoinWorkDouble value=work[i];
 	int iRow = permute_[i];
 	region[iRow]=value;
       }
     }
     for (i=firstDense_-1;i>=0;i--) {
       CoinBigIndex offset = indexStart_[i]-choleskyStart_[i];
-      longDouble value=work[i]*diagonal_[i];
+      CoinWorkDouble value=work[i]*diagonal_[i];
       for (j=choleskyStart_[i];j<choleskyStart_[i+1];j++) {
 	int iRow = choleskyRow_[j+offset];
 	value -= sparseFactor_[j]*work[iRow];
@@ -2633,7 +2653,7 @@ ClpCholeskyBase::solve(double * region, int type)
     CoinBigIndex j;
     double largestO=0.0;
     for (i=0;i<numberRows_;i++) {
-      largestO = CoinMax(largestO,fabs(regionX[i]));
+      largestO = CoinMax(largestO,CoinAbs(regionX[i]));
     }
     for (i=0;i<numberRows_;i++) {
       int iRow = permute_[i];
@@ -2641,7 +2661,7 @@ ClpCholeskyBase::solve(double * region, int type)
     }
     for (i=0;i<firstDense_;i++) {
       CoinBigIndex offset = indexStart_[i]-choleskyStart_[i];
-      longDouble value=work[i];
+      CoinWorkDouble value=work[i];
       for (j=choleskyStart_[i];j<choleskyStart_[i+1];j++) {
 	int iRow = choleskyRow_[j+offset];
 	work[iRow] -= sparseFactor_[j]*value;
@@ -2655,14 +2675,14 @@ ClpCholeskyBase::solve(double * region, int type)
       dense.reserveSpace(this,nDense);
       dense.solveLong(work+firstDense_);
       for (i=numberRows_-1;i>=firstDense_;i--) {
-	longDouble value=work[i];
+	CoinWorkDouble value=work[i];
 	int iRow = permute_[i];
 	regionX[iRow]=value;
       }
     }
     for (i=firstDense_-1;i>=0;i--) {
       CoinBigIndex offset = indexStart_[i]-choleskyStart_[i];
-      longDouble value=work[i]*diagonal_[i];
+      CoinWorkDouble value=work[i]*diagonal_[i];
       for (j=choleskyStart_[i];j<choleskyStart_[i+1];j++) {
 	int iRow = choleskyRow_[j+offset];
 	value -= sparseFactor_[j]*work[iRow];
@@ -2674,8 +2694,8 @@ ClpCholeskyBase::solve(double * region, int type)
     double largest=0.0;
     double largestV=0.0;
     for (i=0;i<numberRows_;i++) {
-      largest = CoinMax(largest,fabs(region[i]-regionX[i]));
-      largestV = CoinMax(largestV,fabs(region[i]));
+      largest = CoinMax(largest,CoinAbs(region[i]-regionX[i]));
+      largestV = CoinMax(largestV,CoinAbs(region[i]));
     }
     printf("largest difference %g, largest %g, largest original %g\n",
 	   largest,largestV,largestO);
@@ -2683,80 +2703,54 @@ ClpCholeskyBase::solve(double * region, int type)
   }
 #endif
 }
-/* solve - 1 just first half, 2 just second half - 3 both.
-   If 1 and 2 then diagonal has sqrt of inverse otherwise inverse
-*/
+#if CLP_LONG_CHOLESKY
+/* Uses factorization to solve. */
 void 
-ClpCholeskyBase::solveLong(longDouble * region, int type)
+ClpCholeskyBase::solve (CoinWorkDouble * region) 
 {
+  assert (!whichDense_) ;
+  CoinWorkDouble * work = reinterpret_cast<CoinWorkDouble *> (workDouble_);
   int i;
   CoinBigIndex j;
   for (i=0;i<numberRows_;i++) {
     int iRow = permute_[i];
-    workDouble_[i] = region[iRow];
+    work[i] = region[iRow];
   }
-  switch (type) {
-  case 1:
-    for (i=0;i<numberRows_;i++) {
-      longDouble value=workDouble_[i];
-      CoinBigIndex offset = indexStart_[i]-choleskyStart_[i];
-      for (j=choleskyStart_[i];j<choleskyStart_[i+1];j++) {
-	int iRow = choleskyRow_[j+offset];
-	workDouble_[iRow] -= sparseFactor_[j]*value;
-      }
+  for (i=0;i<firstDense_;i++) {
+    CoinBigIndex offset = indexStart_[i]-choleskyStart_[i];
+    CoinWorkDouble value=work[i];
+    for (j=choleskyStart_[i];j<choleskyStart_[i+1];j++) {
+      int iRow = choleskyRow_[j+offset];
+      work[iRow] -= sparseFactor_[j]*value;
     }
-    for (i=0;i<numberRows_;i++) {
-      int iRow = permute_[i];
-      region[iRow]=workDouble_[i]*diagonal_[i];
-    }
-    break;
-  case 2:
-    for (i=numberRows_-1;i>=0;i--) {
-      CoinBigIndex offset = indexStart_[i]-choleskyStart_[i];
-      longDouble value=workDouble_[i]*diagonal_[i];
-      for (j=choleskyStart_[i];j<choleskyStart_[i+1];j++) {
-	int iRow = choleskyRow_[j+offset];
-	value -= sparseFactor_[j]*workDouble_[iRow];
-      }
-      workDouble_[i]=value;
+  }
+  if (firstDense_<numberRows_) {
+    // do dense
+    ClpCholeskyDense dense;
+    // just borrow space
+    int nDense = numberRows_-firstDense_;
+    dense.reserveSpace(this,nDense);
+#if CLP_LONG_CHOLESKY!=1
+    dense.solveLong(work+firstDense_);
+#else
+    dense.solveLongWork(work+firstDense_);
+#endif
+    for (i=numberRows_-1;i>=firstDense_;i--) {
+      CoinWorkDouble value=work[i];
       int iRow = permute_[i];
       region[iRow]=value;
     }
-    break;
-  case 3:
-    for (i=0;i<firstDense_;i++) {
-      CoinBigIndex offset = indexStart_[i]-choleskyStart_[i];
-      longDouble value=workDouble_[i];
-      for (j=choleskyStart_[i];j<choleskyStart_[i+1];j++) {
-	int iRow = choleskyRow_[j+offset];
-	workDouble_[iRow] -= sparseFactor_[j]*value;
-      }
+  }
+  for (i=firstDense_-1;i>=0;i--) {
+    CoinBigIndex offset = indexStart_[i]-choleskyStart_[i];
+    CoinWorkDouble value=work[i]*diagonal_[i];
+    for (j=choleskyStart_[i];j<choleskyStart_[i+1];j++) {
+      int iRow = choleskyRow_[j+offset];
+      value -= sparseFactor_[j]*work[iRow];
     }
-    if (firstDense_<numberRows_) {
-      // do dense
-      ClpCholeskyDense dense;
-      // just borrow space
-      int nDense = numberRows_-firstDense_;
-      dense.reserveSpace(this,nDense);
-      dense.solveLong(workDouble_+firstDense_);
-      for (i=numberRows_-1;i>=firstDense_;i--) {
-	longDouble value=workDouble_[i];
-	int iRow = permute_[i];
-	region[iRow]=value;
-      }
-    }
-    for (i=firstDense_-1;i>=0;i--) {
-      CoinBigIndex offset = indexStart_[i]-choleskyStart_[i];
-      longDouble value=workDouble_[i]*diagonal_[i];
-      for (j=choleskyStart_[i];j<choleskyStart_[i+1];j++) {
-	int iRow = choleskyRow_[j+offset];
-	value -= sparseFactor_[j]*workDouble_[iRow];
-      }
-      workDouble_[i]=value;
-      int iRow = permute_[i];
-      region[iRow]=value;
-    }
-    break;
+    work[i]=value;
+    int iRow = permute_[i];
+    region[iRow]=value;
   }
 }
-
+#endif
