@@ -1,9 +1,26 @@
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
+/*----------------------------------------------------------------------------*/
+/*      Ordering code - courtesy of Anshul Gupta                              */
+/*	(C) Copyright IBM Corporation 1997, 2009.  All Rights Reserved.       */
+/*----------------------------------------------------------------------------*/
+
+/*  A compact no-frills Approximate Minimum Local Fill ordering code.
+
+    References:
+
+[1] Ordering Sparse Matrices Using Approximate Minimum Local Fill.
+    Edward Rothberg, SGI Manuscript, April 1996.
+[2] An Approximate Minimum Degree Ordering Algorithm.
+    T. Davis, P. Amestoy, and I. Duff, TR-94-039, CIS Department,
+    University of Florida, December 1994. 
+*/
+/*----------------------------------------------------------------------------*/
+
 
 #include "CoinPragma.hpp"
 
-#include <iostream>
+#include <iostream> 
 
 #include "ClpCholeskyBase.hpp"
 #include "ClpInterior.hpp"
@@ -620,6 +637,19 @@ int
 ClpCholeskyBase::order(ClpInterior * model) 
 {
   model_=model;
+#define BASE_ORDER 2
+#if BASE_ORDER>0
+  if (!doKKT_&&model_->numberRows()>6) {
+    if (preOrder(false,true,false))
+      return -1;
+    //rowsDropped_ = new char [numberRows_];
+    numberRowsDropped_=0;
+    memset(rowsDropped_,0,numberRows_);
+    //rowCopy_ = model->clpMatrix()->reverseOrderedCopy();
+    // approximate minimum degree
+    return orderAMD();
+  }
+#endif
   int numberRowsModel = model_->numberRows();
   int numberColumns = model_->numberColumns();
   int numberTotal = numberColumns + numberRowsModel;
@@ -635,6 +665,7 @@ ClpCholeskyBase::order(ClpInterior * model)
   }
   rowsDropped_ = new char [numberRows_];
   numberRowsDropped_=0;
+  memset(rowsDropped_,0,numberRows_);
   rowCopy_ = model->clpMatrix()->reverseOrderedCopy();
   const CoinBigIndex * columnStart = model_->clpMatrix()->getVectorStarts();
   const int * columnLength = model_->clpMatrix()->getVectorLengths();
@@ -748,7 +779,6 @@ ClpCholeskyBase::order(ClpInterior * model)
   delete [] used;
   delete [] count;
   permuteInverse_ = new int [numberRows_];
-  memset(rowsDropped_,0,numberRows_);
   for (iRow=0;iRow<numberRows_;iRow++) {
     //permute_[iRow]=iRow; // force no permute
     //permute_[iRow]=numberRows_-1-iRow; // force odd permute
@@ -756,6 +786,1134 @@ ClpCholeskyBase::order(ClpInterior * model)
     permuteInverse_[permute_[iRow]]=iRow;
   }
   return 0;
+}
+#if BASE_ORDER==1
+/* Orders rows and saves pointer to matrix.and model */
+int 
+ClpCholeskyBase::orderAMD()
+{
+  permuteInverse_ = new int [numberRows_];
+  permute_ = new int[numberRows_];
+  // Do ordering
+  int returnCode=0;
+  // get more space and full matrix
+  int space = 6*sizeFactor_+100000;
+  int * temp = new int [space];
+  int * which = new int[2*numberRows_];
+  CoinBigIndex * tempStart = new CoinBigIndex [numberRows_+1];
+  memset(which,0,numberRows_*sizeof(int));
+  for (int iRow=0;iRow<numberRows_;iRow++) {
+    which[iRow]+= choleskyStart_[iRow+1]-choleskyStart_[iRow]-1;
+    for (CoinBigIndex j=choleskyStart_[iRow]+1;j<choleskyStart_[iRow+1];j++) {
+      int jRow=choleskyRow_[j];
+      which[jRow]++;
+    }
+  }
+  CoinBigIndex sizeFactor =0;
+  for (int iRow=0;iRow<numberRows_;iRow++) {
+    int length = which[iRow];
+    permute_[iRow]=length;
+    tempStart[iRow]=sizeFactor;
+    which[iRow]=sizeFactor;
+    sizeFactor += length;
+  }
+  for (int iRow=0;iRow<numberRows_;iRow++) {
+    assert (choleskyRow_[choleskyStart_[iRow]]==iRow);
+    for (CoinBigIndex j=choleskyStart_[iRow]+1;j<choleskyStart_[iRow+1];j++) {
+      int jRow=choleskyRow_[j];
+      int put = which[iRow];
+      temp[put]=jRow;
+      which[iRow]++;
+      put = which[jRow];
+      temp[put]=iRow;
+      which[jRow]++;
+    }
+  }
+  for (int iRow=1;iRow<numberRows_;iRow++) 
+    assert (which[iRow-1]==tempStart[iRow]);
+  CoinBigIndex lastSpace=sizeFactor;
+  delete [] choleskyRow_;
+  choleskyRow_=temp;
+  delete [] choleskyStart_;
+  choleskyStart_=tempStart;
+  // linked lists of sizes and lengths
+  int * first = new int [numberRows_];
+  int * next = new int [numberRows_];
+  int * previous = new int [numberRows_];
+  char * mark = new char[numberRows_];
+  memset(mark,0,numberRows_);
+  CoinBigIndex * sort = new CoinBigIndex [numberRows_];
+  int * order = new int [numberRows_];
+  for (int iRow=0;iRow<numberRows_;iRow++) {
+    first[iRow]=-1;
+    next[iRow]=-1;
+    previous[iRow]=-1;
+    permuteInverse_[iRow]=-1;
+  }
+  int large = 1000+2*numberRows_;
+  for (int iRow=0;iRow<numberRows_;iRow++) {
+    int n = permute_[iRow];
+    if (first[n]<0) {
+      first[n]=iRow;
+      previous[iRow]=n+large;
+      next[iRow]=n+2*large;
+    } else {
+      int k=first[n];
+      assert (k<numberRows_);
+      first[n]=iRow;
+      previous[iRow]=n+large;
+      assert (previous[k]==n+large);
+      next[iRow]=k;
+      previous[k]=iRow;
+    }
+  }
+  int smallest=0;
+  int done=0;
+  int numberCompressions=0;
+  int numberExpansions=0;
+  while (smallest<numberRows_) {
+    if (first[smallest]<0||first[smallest]>numberRows_) {
+      smallest++;
+      continue;
+    }
+    int iRow=first[smallest];
+    if (false) {
+      int kRow=-1;
+      int ss=999999;
+      for (int jRow=numberRows_-1;jRow>=0;jRow--) {
+	if (permuteInverse_[jRow]<0) {
+	  int length = permute_[jRow];
+	  assert (length>0);
+	  for (CoinBigIndex j=choleskyStart_[jRow];
+	       j<choleskyStart_[jRow]+length;j++) {
+	    int jjRow=choleskyRow_[j];
+	    assert (permuteInverse_[jjRow]<0);
+	  }
+	  if (length<ss) {
+	    ss=length;
+	    kRow=jRow;
+	  }
+	}
+      }
+      assert (smallest==ss);
+      printf("list chose %d - full chose %d - length %d\n",
+	     iRow,kRow,ss);
+    }
+    int kNext = next[iRow];
+    first[smallest]=kNext;
+    if (kNext<numberRows_)
+      previous[kNext]=previous[iRow];
+    previous[iRow]=-1;
+    next[iRow]=-1;
+    permuteInverse_[iRow]=done;
+    done++;
+    // Now add edges
+    CoinBigIndex start=choleskyStart_[iRow];
+    CoinBigIndex end=choleskyStart_[iRow]+permute_[iRow];
+    int nSave=0;
+    for (CoinBigIndex k=start;k<end;k++) {
+      int kRow=choleskyRow_[k];
+      assert (permuteInverse_[kRow]<0);
+      //if (permuteInverse_[kRow]<0) 
+      which[nSave++]=kRow;
+    }
+    for (int i=0;i<nSave;i++) {
+      int kRow = which[i];
+      int length = permute_[kRow];
+      CoinBigIndex start=choleskyStart_[kRow];
+      CoinBigIndex end=choleskyStart_[kRow]+length;
+      for (CoinBigIndex j=start;j<end;j++) {
+	int jRow=choleskyRow_[j];
+	mark[jRow]=1;
+      }
+      mark[kRow]=1;
+      int n=nSave;
+      for (int j=0;j<nSave;j++) {
+	int jRow=which[j];
+	if (!mark[jRow]) {
+	  which[n++]=jRow;
+	}
+      }
+      for (CoinBigIndex j=start;j<end;j++) {
+	int jRow=choleskyRow_[j];
+	mark[jRow]=0;
+      }
+      mark[kRow]=0;
+      if (n>nSave) {
+	bool inPlace = (n-nSave==1);
+	if (!inPlace) {
+	  // extend
+	  int length = n-nSave+end-start;
+	  if (length+lastSpace>space) {
+	    // need to compress
+	    numberCompressions++;
+	    int newN=0;
+	    for (int iRow=0;iRow<numberRows_;iRow++) {
+	      CoinBigIndex start=choleskyStart_[iRow];
+	      if (permuteInverse_[iRow]<0) {
+		sort[newN]=start;
+		order[newN++]=iRow;
+	      } else {
+		choleskyStart_[iRow]=-1;
+		permute_[iRow]=0;
+	      }
+	    }
+	    CoinSort_2(sort,sort+newN,order);
+	    sizeFactor=0;
+	    for (int k=0;k<newN;k++) {
+	      int iRow=order[k];
+	      int length = permute_[iRow];
+	      CoinBigIndex start=choleskyStart_[iRow];
+	      choleskyStart_[iRow]=sizeFactor;
+	      for (int j=0;j<length;j++) 
+		choleskyRow_[sizeFactor+j]=choleskyRow_[start+j];
+	      sizeFactor += length;
+	    }
+	    lastSpace=sizeFactor;
+	    if ((sizeFactor+numberRows_+1000)*4>3*space) {
+	      // need to expand
+	      numberExpansions++;
+	      space = (3*space)/2;
+	      int * temp = new int [space];
+	      memcpy(temp,choleskyRow_,sizeFactor*sizeof(int));
+	      delete [] choleskyRow_;
+	      choleskyRow_=temp;
+	    }
+	  }
+	}
+	// Now add
+	start=choleskyStart_[kRow];
+	end=choleskyStart_[kRow]+permute_[kRow];
+	if (!inPlace)
+	  choleskyStart_[kRow]=lastSpace;
+	CoinBigIndex put = choleskyStart_[kRow];
+	for (CoinBigIndex j=start;j<end;j++) {
+	  int jRow=choleskyRow_[j];
+	  if (permuteInverse_[jRow]<0) 
+	    choleskyRow_[put++]=jRow;
+	}
+	for (int j=nSave;j<n;j++) {
+	  int jRow=which[j];
+	  choleskyRow_[put++]=jRow;
+	}
+	if (!inPlace) {
+	  permute_[kRow]=put-lastSpace;
+	  lastSpace=put;
+	} else {
+	  permute_[kRow]=put-choleskyStart_[kRow];
+	}
+      } else {
+	// pack down for new counts
+	CoinBigIndex put=start;
+	for (CoinBigIndex j=start;j<end;j++) {
+	  int jRow=choleskyRow_[j];
+	  if (permuteInverse_[jRow]<0) 
+	    choleskyRow_[put++]=jRow;
+	}
+	permute_[kRow]=put-start;
+      } 
+      // take out
+      int iNext = next[kRow];
+      int iPrevious = previous[kRow];
+      if (iPrevious<numberRows_) {
+	next[iPrevious]=iNext;
+      } else {
+	assert (iPrevious==length+large);
+	first[length]=iNext;
+      }
+      if (iNext<numberRows_) {
+	previous[iNext]=iPrevious;
+      } else {
+	assert (iNext==length+2*large);
+      }
+      // put in
+      length=permute_[kRow];
+      smallest = CoinMin(smallest,length);
+      if (first[length]<0||first[length]>numberRows_) {
+	first[length]=kRow;
+	previous[kRow]=length+large;
+	next[kRow]=length+2*large;
+      } else {
+	int k=first[length];
+	assert (k<numberRows_);
+	first[length]=kRow;
+	previous[kRow]=length+large;
+	assert (previous[k]==length+large);
+	next[kRow]=k;
+	previous[k]=kRow;
+      }
+    }
+  }
+  // do rest
+  for (int iRow=0;iRow<numberRows_;iRow++) {
+    if (permuteInverse_[iRow]<0) 
+      permuteInverse_[iRow]=done++;
+  }
+  printf("%d compressions, %d expansions\n",
+	 numberCompressions,numberExpansions);
+  assert (done==numberRows_);
+  delete [] sort;
+  delete [] order;
+  delete [] which;
+  delete [] mark;
+  delete [] first;
+  delete [] next;
+  delete [] previous;
+  delete [] choleskyRow_;
+  choleskyRow_=NULL;
+  delete [] choleskyStart_;
+  choleskyStart_=NULL;
+#ifndef NDEBUG
+  for (int iRow=0;iRow<numberRows_;iRow++) {
+    permute_[iRow]=-1;
+  }
+#endif
+  for (int iRow=0;iRow<numberRows_;iRow++) {
+    permute_[permuteInverse_[iRow]]=iRow;
+  }
+#ifndef NDEBUG
+  for (int iRow=0;iRow<numberRows_;iRow++) {
+    assert(permute_[iRow]>=0&&permute_[iRow]<numberRows_);
+  }
+#endif
+  return returnCode;
+} 
+#elif BASE_ORDER==2
+/*----------------------------------------------------------------------------*/
+/*	(C) Copyright IBM Corporation 1997, 2009.  All Rights Reserved.       */
+/*----------------------------------------------------------------------------*/
+
+/*  A compact no-frills Approximate Minimum Local Fill ordering code.
+
+    References:
+
+[1] Ordering Sparse Matrices Using Approximate Minimum Local Fill.
+    Edward Rothberg, SGI Manuscript, April 1996.
+[2] An Approximate Minimum Degree Ordering Algorithm.
+    T. Davis, P. Amestoy, and I. Duff, TR-94-039, CIS Department,
+    University of Florida, December 1994. 
+*/
+
+#include <math.h>
+#include <stdlib.h>
+
+typedef int             WSI;
+
+#define NORDTHRESH	7
+#define MAXIW		2147000000
+
+//#define WSSMP_DBG
+#ifdef WSSMP_DBG
+static void chk (WSI ind, WSI i, WSI lim) {
+
+  if (i <= 0 || i > lim) {
+    printf("%d: chk: myamlf: WAR**: i, lim = %d, %d\n",ind,i,lim);
+  }
+}
+#endif
+
+static void 
+myamlf(WSI n, WSI xadj[], WSI adjncy[], WSI dgree[], WSI varbl[], 
+       WSI snxt[], WSI perm[], WSI invp[], WSI head[], WSI lsize[], 
+       WSI flag[], WSI erscore[], WSI locaux, WSI adjln, WSI speed)
+{
+WSI l, i, j, k;
+double x, y;
+WSI maxmum, fltag, nodeg, scln, nm1, deg, tn,
+    locatns, ipp, jpp, nnode, numpiv, node, 
+    nodeln, currloc, counter, numii, mindeg,
+    i0, i1, i2, i4, i5, i6, i7, i9,
+    j0, j1, j2, j3, j4, j5, j6, j7, j8, j9;
+/*                                             n cannot be less than NORDTHRESH
+ if (n < 3) {
+    if (n > 0) perm[0] = invp[0] = 1;
+    if (n > 1) perm[1] = invp[1] = 2; 
+    return;
+ }
+*/
+#ifdef WSSMP_DBG
+ printf("Myamlf: n, locaux, adjln, speed = %d,%d,%d,%d\n",n,locaux,adjln,speed);
+ for (i = 0; i < n; i++) flag[i] = 0;
+ k = xadj[0];
+ for (i = 1; i <= n; i++) {
+   j = k + dgree[i-1];
+   if (j < k || k < 1) printf("ERR**: myamlf: i, j, k = %d,%d,%d\n",i,j,k);
+   for (l = k; l < j; l++) {
+      if (adjncy[l - 1] < 1 || adjncy[l - 1] > n || adjncy[l - 1] == i)
+        printf("ERR**: myamlf: i, l, adjj[l] = %d,%d,%d\n",i,l,adjncy[l - 1]);
+      if (flag[adjncy[l - 1] - 1] == i)
+        printf("ERR**: myamlf: duplicate entry: %d - %d\n",i,adjncy[l - 1]);
+      flag[adjncy[l - 1] - 1] = i;
+      nm1 = adjncy[l - 1] - 1;
+      for (fltag = xadj[nm1]; fltag < xadj[nm1] + dgree[nm1]; fltag++) {
+        if (adjncy[fltag - 1] == i) goto L100;
+      }
+      printf("ERR**: Unsymmetric %d %d\n",i,fltag);
+L100:;
+   }
+   k = j;
+   if (k > locaux) printf("ERR**: i, j, k, locaux = %d, %d, %d, %d\n",
+                                  i, j, k, locaux);
+ }
+ if (n*(n-1) < locaux-1) printf("ERR**: myamlf: too many nnz, n, ne = %d, %d\n",
+                                n,adjln);
+ for (i = 0; i < n; i++) flag[i] = 1;
+ if (n > 10000) printf ("Finished error checking in AMF\n");
+ for (i = locaux; i <= adjln; i++) adjncy[i - 1] = -22;
+#endif
+
+ maxmum = 0;
+ mindeg = 1;
+ fltag = 2;
+ locatns = locaux - 1;
+ nm1 = n - 1;
+ counter = 1;
+ for (l = 0; l < n; l++) {
+     j = erscore[l];
+#ifdef WSSMP_DBG
+chk(1,j,n);
+#endif
+     if (j > 0) {
+         nnode = head[j - 1];
+         if (nnode) perm[nnode - 1] = l + 1;
+         snxt[l] = nnode;
+         head[j - 1] = l + 1;
+     } else {
+         invp[l] = -(counter++);
+         flag[l] = xadj[l] = 0;
+     }
+ }
+ while (counter <= n) {
+     for (deg = mindeg; head[deg - 1] < 1; deg++);
+     nodeg = 0;
+#ifdef WSSMP_DBG
+chk(2,deg,n-1);
+#endif
+     node = head[deg - 1];
+#ifdef WSSMP_DBG
+chk(3,node,n);
+#endif
+     mindeg = deg;
+     nnode = snxt[node - 1];
+     if (nnode) perm[nnode - 1] = 0;
+     head[deg - 1] = nnode;
+     nodeln = invp[node - 1];
+     numpiv = varbl[node - 1];
+     invp[node - 1] = -counter;
+     counter += numpiv;
+     varbl[node - 1] = -numpiv;
+     if (nodeln) {
+         j4 = locaux;
+         i5 = lsize[node - 1] - nodeln;
+	 i2 = nodeln + 1;
+         l = xadj[node - 1];
+         for (i6 = 1; i6 <= i2; ++i6) {
+             if (i6 == i2) {
+                 tn = node, i0 = l, scln = i5;
+             } else {
+#ifdef WSSMP_DBG
+chk(4,l,adjln);
+#endif
+                 tn = adjncy[l-1];
+		 l++;
+#ifdef WSSMP_DBG
+chk(5,tn,n);
+#endif
+                 i0 = xadj[tn - 1];
+                 scln = lsize[tn - 1];
+             }
+             for (i7 = 1; i7 <= scln; ++i7) {
+#ifdef WSSMP_DBG
+chk(6,i0,adjln);
+#endif
+               i = adjncy[i0 - 1];
+	       i0++;
+#ifdef WSSMP_DBG
+chk(7,i,n);
+#endif
+               numii = varbl[i - 1];
+               if (numii > 0) {
+                 if (locaux > adjln) {
+                   lsize[node - 1] -= i6;
+                   xadj[node - 1] = l;
+                   if (!lsize[node - 1]) xadj[node - 1] = 0;
+                   xadj[tn - 1] = i0;
+                   lsize[tn - 1] = scln - i7;
+                   if (!lsize[tn - 1]) xadj[tn - 1] = 0;
+                   for (j = 1; j <= n; j++) {
+                     i4 = xadj[j - 1];
+                     if (i4 > 0) {
+                       xadj[j - 1] = adjncy[i4 - 1];
+#ifdef WSSMP_DBG
+chk(8,i4,adjln);
+#endif
+                       adjncy[i4 - 1] = -j;
+                     }
+                   }
+                   i9 = j4 - 1;
+                   j6 = j7 = 1;
+                   while (j6 <= i9) {
+#ifdef WSSMP_DBG
+chk(9,j6,adjln);
+#endif
+                     j = -adjncy[j6 - 1];
+		     j6++;
+                     if (j > 0) {
+#ifdef WSSMP_DBG
+chk(10,j7,adjln);
+chk(11,j,n);
+#endif
+                       adjncy[j7 - 1] = xadj[j - 1];
+                       xadj[j - 1] = j7++;
+                       j8 = lsize[j - 1] - 1 + j7;
+                       for (; j7 < j8; j7++,j6++) adjncy[j7-1] = adjncy[j6-1];
+                     }
+                   }
+                   for (j0=j7; j4 < locaux; j4++,j7++) {
+#ifdef WSSMP_DBG
+chk(12,j4,adjln);
+#endif
+		     adjncy[j7 - 1] = adjncy[j4 - 1];
+		   }
+                   j4 = j0;
+                   locaux = j7;
+                   i0 = xadj[tn - 1];
+                   l = xadj[node - 1];
+                 }
+                 adjncy[locaux-1] = i;
+		 locaux++;
+                 varbl[i - 1] = -numii;
+                 nodeg += numii;
+                 ipp = perm[i - 1];
+                 nnode = snxt[i - 1];
+#ifdef WSSMP_DBG
+if (ipp) chk(13,ipp,n);
+if (nnode) chk(14,nnode,n);
+#endif
+                 if (ipp) snxt[ipp - 1] = nnode; 
+		 else head[erscore[i - 1] - 1] = nnode;
+                 if (nnode) perm[nnode - 1] = ipp;
+               }
+             }
+             if (tn != node) {
+                 flag[tn - 1] = 0, xadj[tn - 1] = -node;
+             }
+         }
+         currloc = (j5 = locaux) - j4;
+         locatns += currloc;
+     } else {
+         i1 = (j4 = xadj[node - 1]) + lsize[node - 1];
+         for (j = j5 = j4; j < i1; j++) {
+#ifdef WSSMP_DBG
+chk(15,j,adjln);
+#endif
+             i = adjncy[j - 1];
+#ifdef WSSMP_DBG
+chk(16,i,n);
+#endif
+             numii = varbl[i - 1];
+             if (numii > 0) {
+                 nodeg += numii;
+                 varbl[i - 1] = -numii;
+#ifdef WSSMP_DBG
+chk(17,j5,adjln);
+#endif
+                 adjncy[j5-1] = i;
+                 ipp = perm[i - 1];
+                 nnode = snxt[i - 1];
+	 	 j5++;
+#ifdef WSSMP_DBG
+if (ipp) chk(18,ipp,n);
+if (nnode) chk(19,nnode,n);
+#endif
+                 if (ipp) snxt[ipp - 1] = nnode; 
+		 else head[erscore[i - 1] - 1] = nnode;
+                 if (nnode) perm[nnode - 1] = ipp;
+             }
+         }
+         currloc = 0;
+     }
+#ifdef WSSMP_DBG
+chk(20,node,n);
+#endif
+     lsize[node - 1] = j5 - (xadj[node - 1] = j4);
+     dgree[node - 1] = nodeg;
+     if (fltag+n < 0 || fltag+n > MAXIW) {
+       for (i = 1; i <= n; i++) if (flag[i - 1]) flag[i - 1] = 1;
+       fltag = 2;
+     }
+     for (j3 = j4; j3 < j5; j3++) {
+#ifdef WSSMP_DBG
+chk(21,j3,adjln);
+#endif
+       i = adjncy[j3 - 1];
+#ifdef WSSMP_DBG
+chk(22,i,n);
+#endif
+       j = invp[i - 1];
+       if (j > 0) {
+         i4 = fltag - (numii = -varbl[i - 1]);
+         i2 = xadj[i - 1] + j;
+         for (l = xadj[i - 1]; l < i2; l++) {
+#ifdef WSSMP_DBG
+chk(23,l,adjln);
+#endif
+           tn = adjncy[l - 1];
+#ifdef WSSMP_DBG
+chk(24,tn,n);
+#endif
+           j9 = flag[tn - 1];
+           if (j9 >= fltag) j9 -= numii; else if (j9) j9 = dgree[tn - 1] + i4;
+           flag[tn - 1] = j9;
+         }
+       }
+     }
+     for (j3 = j4; j3 < j5; j3++) {
+#ifdef WSSMP_DBG
+chk(25,j3,adjln);
+#endif
+         i = adjncy[j3 - 1];
+         i5 = deg = 0;
+#ifdef WSSMP_DBG
+chk(26,i,n);
+#endif
+         j1 = (i4 = xadj[i - 1]) + invp[i - 1];
+         for (l = j0 = i4; l < j1; l++) {
+#ifdef WSSMP_DBG
+chk(27,l,adjln);
+#endif
+             tn = adjncy[l - 1];
+#ifdef WSSMP_DBG
+chk(70,tn,n);
+#endif
+             j8 = flag[tn - 1];
+             if (j8) {
+                 deg += (j8 - fltag);
+#ifdef WSSMP_DBG
+chk(28,i4,adjln);
+#endif
+                 adjncy[i4-1] = tn;
+                 i5 += tn;
+		 i4++;
+		 while (i5 >= nm1) i5 -= nm1;
+             }
+         }
+         invp[i - 1] = (j2 = i4) - j0 + 1;
+         i2 = j0 + lsize[i - 1];
+         for (l = j1; l < i2; l++) {
+#ifdef WSSMP_DBG
+chk(29,l,adjln);
+#endif
+             j = adjncy[l - 1];
+#ifdef WSSMP_DBG
+chk(30,j,n);
+#endif
+             numii = varbl[j - 1];
+             if (numii > 0) {
+                 deg += numii;
+#ifdef WSSMP_DBG
+chk(31,i4,adjln);
+#endif
+                 adjncy[i4-1] = j;
+                 i5 += j;
+		 i4++;
+		 while (i5 >= nm1) i5 -= nm1;
+             }
+         }
+         if (invp[i - 1] == 1 && j2 == i4) {
+             numii = -varbl[i - 1];
+             xadj[i - 1] = -node;
+             nodeg -= numii;
+             counter += numii;
+             numpiv += numii;
+             invp[i - 1] = varbl[i - 1] = 0;
+         } else {
+	     if (dgree[i - 1] > deg) dgree[i - 1] = deg;
+#ifdef WSSMP_DBG
+chk(32,j2,adjln);
+chk(33,j0,adjln);
+#endif
+             adjncy[i4 - 1] = adjncy[j2 - 1];
+             adjncy[j2 - 1] = adjncy[j0 - 1];
+             adjncy[j0 - 1] = node;
+             lsize[i - 1] = i4 - j0 + 1;
+             i5++;
+#ifdef WSSMP_DBG
+chk(35,i5,n);
+#endif
+             j = head[i5 - 1];
+             if (j > 0) {
+                 snxt[i - 1] = perm[j - 1];
+                 perm[j - 1] = i;
+             } else {
+                 snxt[i - 1] = -j;
+                 head[i5 - 1] = -i;
+             }
+             perm[i - 1] = i5;
+         }
+     }
+#ifdef WSSMP_DBG
+chk(36,node,n);
+#endif
+     dgree[node - 1] = nodeg;
+     if (maxmum < nodeg) maxmum = nodeg;
+     fltag += maxmum;
+#ifdef WSSMP_DBG
+     if (fltag+n+1 < 0) printf("ERR**: fltag = %d (A)\n",fltag);
+#endif
+     for (j3 = j4; j3 < j5; ++j3) {
+#ifdef WSSMP_DBG
+chk(37,j3,adjln);
+#endif
+       i = adjncy[j3 - 1];
+#ifdef WSSMP_DBG
+chk(38,i,n);
+#endif
+       if (varbl[i - 1] < 0) {
+         i5 = perm[i - 1];
+#ifdef WSSMP_DBG
+chk(39,i5,n);
+#endif
+         j = head[i5 - 1];
+         if (j) {
+           if (j < 0) {
+                head[i5 - 1] = 0, i = -j;
+           } else {
+#ifdef WSSMP_DBG
+chk(40,j,n);
+#endif
+                i = perm[j - 1];
+                perm[j - 1] = 0;
+           }
+           while (i) {
+#ifdef WSSMP_DBG
+chk(41,i,n);
+#endif
+             if (!snxt[i - 1]) {
+                 i = 0;
+             } else {
+               k = invp[i - 1];
+               i2 = xadj[i - 1] + (scln = lsize[i - 1]);
+               for (l = xadj[i - 1] + 1; l < i2; l++) {
+#ifdef WSSMP_DBG
+chk(42,l,adjln);
+chk(43,adjncy[l - 1],n);
+#endif
+		 flag[adjncy[l - 1] - 1] = fltag;
+	       }
+               jpp = i;
+               j = snxt[i - 1];
+               while (j) {
+#ifdef WSSMP_DBG
+chk(44,j,n);
+#endif
+                 if (lsize[j - 1] == scln && invp[j - 1] == k) {
+                   i2 = xadj[j - 1] + scln;
+                   j8 = 1;
+                   for (l = xadj[j - 1] + 1; l < i2; l++) {
+#ifdef WSSMP_DBG
+chk(45,l,adjln);
+chk(46,adjncy[l - 1],n);
+#endif
+                       if (flag[adjncy[l - 1] - 1] != fltag) {
+			 j8 = 0;
+			 break;
+		       }
+		   }
+                   if (j8) {
+                     xadj[j - 1] = -i;
+                     varbl[i - 1] += varbl[j - 1];
+                     varbl[j - 1] = invp[j - 1] = 0;
+#ifdef WSSMP_DBG
+chk(47,j,n);
+chk(48,jpp,n);
+#endif
+                     j = snxt[j - 1];
+                     snxt[jpp - 1] = j;
+                   } else {
+                     jpp = j;
+#ifdef WSSMP_DBG
+chk(49,j,n);
+#endif
+                     j = snxt[j - 1];
+                   }
+                 } else {
+                   jpp = j;
+#ifdef WSSMP_DBG
+chk(50,j,n);
+#endif
+                   j = snxt[j - 1];
+                 }
+               }
+               fltag++;
+#ifdef WSSMP_DBG
+               if (fltag+n+1 < 0) printf("ERR**: fltag = %d (B)\n",fltag);
+#endif
+#ifdef WSSMP_DBG
+chk(51,i,n);
+#endif
+               i = snxt[i - 1];
+             }
+           }
+         }
+       }
+     }
+     j8 = nm1 - counter;
+     switch (speed) {
+case 1:
+       for (j = j3 = j4; j3 < j5; j3++) {
+#ifdef WSSMP_DBG
+chk(52,j3,adjln);
+#endif
+         i = adjncy[j3 - 1];
+#ifdef WSSMP_DBG
+chk(53,i,n);
+#endif
+         numii = varbl[i - 1];
+         if (numii < 0) {
+           k = 0;
+           i4 = (l = xadj[i - 1]) + invp[i - 1];
+           for (; l < i4; l++) {
+#ifdef WSSMP_DBG
+chk(54,l,adjln);
+chk(55,adjncy[l - 1],n);
+#endif
+              i5 = dgree[adjncy[l - 1] - 1];
+              if (k < i5) k = i5;
+           }
+           x = static_cast<double> (k - 1);
+           varbl[i - 1] = abs(numii);
+           j9 = dgree[i - 1] + nodeg;
+           deg = (j8 > j9 ? j9 : j8) + numii;
+           if (deg < 1) deg = 1;
+           y = static_cast<double> (deg);
+           dgree[i - 1] = deg;
+/*
+           printf("%i %f should >= %i %f\n",deg,y,k-1,x);
+           if (y < x) printf("** \n"); else printf("\n");
+*/
+	   y = y*y - y;
+           x = y - (x*x - x);
+	   if (x < 1.1) x = 1.1;
+           deg = static_cast<WSI>(sqrt(x));
+/*         if (deg < 1) deg = 1; */
+           erscore[i - 1] = deg;
+#ifdef WSSMP_DBG
+chk(56,deg,n-1);
+#endif
+           nnode = head[deg - 1];
+           if (nnode) perm[nnode - 1] = i;
+           snxt[i - 1] = nnode;
+           perm[i - 1] = 0;
+#ifdef WSSMP_DBG
+chk(57,j,adjln);
+#endif
+           head[deg - 1] = adjncy[j-1] = i;
+	   j++;
+           if (deg < mindeg) mindeg = deg;
+         }
+       }
+       break;
+case 2:
+       for (j = j3 = j4; j3 < j5; j3++) {
+#ifdef WSSMP_DBG
+chk(58,j3,adjln);
+#endif
+         i = adjncy[j3 - 1];
+#ifdef WSSMP_DBG
+chk(59,i,n);
+#endif
+         numii = varbl[i - 1];
+         if (numii < 0) {
+           x = static_cast<double> (dgree[adjncy[xadj[i - 1] - 1] - 1] - 1);
+           varbl[i - 1] = abs(numii);
+           j9 = dgree[i - 1] + nodeg;
+           deg = (j8 > j9 ? j9 : j8) + numii;
+           if (deg < 1) deg = 1;
+           y = static_cast<double> (deg);
+           dgree[i - 1] = deg;
+/*
+           printf("%i %f should >= %i %f",deg,y,dgree[adjncy[xadj[i - 1] - 1] - 1]-1,x);
+           if (y < x) printf("** \n"); else printf("\n");
+*/
+	   y = y*y - y;
+           x = y - (x*x - x);
+	   if (x < 1.1) x = 1.1;
+           deg = static_cast<WSI>(sqrt(x));
+/*         if (deg < 1) deg = 1; */
+           erscore[i - 1] = deg;
+#ifdef WSSMP_DBG
+chk(60,deg,n-1);
+#endif
+           nnode = head[deg - 1];
+           if (nnode) perm[nnode - 1] = i;
+           snxt[i - 1] = nnode;
+           perm[i - 1] = 0;
+#ifdef WSSMP_DBG
+chk(61,j,adjln);
+#endif
+           head[deg - 1] = adjncy[j-1] = i;
+	   j++;
+           if (deg < mindeg) mindeg = deg;
+         }
+       }
+       break;
+default:
+       for (j = j3 = j4; j3 < j5; j3++) {
+#ifdef WSSMP_DBG
+chk(62,j3,adjln);
+#endif
+         i = adjncy[j3 - 1];
+#ifdef WSSMP_DBG
+chk(63,i,n);
+#endif
+         numii = varbl[i - 1];
+         if (numii < 0) {
+           varbl[i - 1] = abs(numii);
+           j9 = dgree[i - 1] + nodeg;
+           deg = (j8 > j9 ? j9 : j8) + numii;
+           if (deg < 1) deg = 1;
+           dgree[i - 1] = deg;
+#ifdef WSSMP_DBG
+chk(64,deg,n-1);
+#endif
+           nnode = head[deg - 1];
+           if (nnode) perm[nnode - 1] = i;
+           snxt[i - 1] = nnode;
+           perm[i - 1] = 0;
+#ifdef WSSMP_DBG
+chk(65,j,adjln);
+#endif
+           head[deg - 1] = adjncy[j-1] = i;
+	   j++;
+           if (deg < mindeg) mindeg = deg;
+         }
+       }
+       break;
+     }
+     if (currloc) {
+#ifdef WSSMP_DBG
+chk(66,node,n);
+#endif
+       locatns += (lsize[node - 1] - currloc), locaux = j;
+     }
+     varbl[node - 1] = numpiv + nodeg;
+     lsize[node - 1] = j - j4;
+     if (!lsize[node - 1]) flag[node - 1] = xadj[node - 1] = 0;
+ }
+ for (l = 1; l <= n; l++) {
+   if (!invp[l - 1]) {
+     for (i = -xadj[l - 1]; invp[i - 1] >= 0; i = -xadj[i - 1]);
+       tn = i;
+#ifdef WSSMP_DBG
+chk(67,tn,n);
+#endif
+       k = -invp[tn - 1];
+       i = l;
+#ifdef WSSMP_DBG
+chk(68,i,n);
+#endif
+       while (invp[i - 1] >= 0) {
+         nnode = -xadj[i - 1];
+         xadj[i - 1] = -tn;
+         if (!invp[i - 1]) invp[i - 1] = k++;
+         i = nnode;
+       }
+       invp[tn - 1] = -k;
+   }
+ }
+ for (l = 0; l < n; l++) {
+   i = abs(invp[l]);
+#ifdef WSSMP_DBG
+chk(69,i,n);
+#endif
+   invp[l] = i;
+   perm[i - 1] = l + 1;
+ }
+ return;
+}
+// This code is not needed, but left in in case needed sometime
+#if 0
+/*C--------------------------------------------------------------------------*/
+void amlfdr(WSI *n, WSI xadj[], WSI adjncy[], WSI dgree[], WSI *adjln,
+            WSI *locaux, WSI varbl[], WSI snxt[], WSI perm[],
+            WSI head[], WSI invp[], WSI lsize[], WSI flag[], WSI *ispeed)
+{
+WSI nn,nlocaux,nadjln,speed,i,j,mx,mxj,*erscore;
+
+#ifdef WSSMP_DBG
+  printf("Calling amlfdr for n, speed = %d, %d\n",*n,*ispeed);
+#endif
+
+  if ((nn = *n) == 0) return;
+
+#ifdef WSSMP_DBG
+  if (nn == 31) {
+    printf("n = %d; adjln = %d; locaux = %d; ispeed = %d\n",
+            *n,*adjln,*locaux,*ispeed);
+  }
+#endif
+
+  if (nn < NORDTHRESH) {
+    for (i = 0; i < nn; i++) lsize[i] = i;
+    for (i = nn; i > 0; i--) {
+      mx = dgree[0];
+      mxj = 0;
+      for (j = 1; j < i; j++)
+        if (dgree[j] > mx) {
+          mx = dgree[j];
+          mxj = j;
+        }
+      invp[lsize[mxj]] = i;
+      dgree[mxj] = dgree[i-1];
+      lsize[mxj] = lsize[i-1];
+    }
+    return;
+  }
+  speed = *ispeed;
+  if (speed < 3) {
+/*  
+    erscore = (WSI *)malloc(nn * sizeof(WSI)); 
+    if (erscore == NULL) speed = 3;
+*/
+    wscmal (&nn, &i, &erscore);
+    if (i != 0) speed = 3;
+  }
+  if (speed > 2) erscore = dgree;
+  if (speed < 3) {
+    for (i = 0; i < nn; i++) {
+      perm[i] = 0;
+      invp[i] = 0;
+      head[i] = 0;
+      flag[i] = 1;
+      varbl[i] = 1;
+      lsize[i] = dgree[i];
+      erscore[i] = dgree[i];
+    }
+  } else {
+    for (i = 0; i < nn; i++) {
+      perm[i] = 0;
+      invp[i] = 0;
+      head[i] = 0;
+      flag[i] = 1;
+      varbl[i] = 1;
+      lsize[i] = dgree[i];
+    }
+  }
+  nlocaux = *locaux;
+  nadjln = *adjln;
+
+  myamlf(nn, xadj, adjncy, dgree, varbl, snxt, perm, invp,
+         head, lsize, flag, erscore, nlocaux, nadjln, speed);
+/*
+  if (speed < 3) free(erscore);
+*/
+  if (speed < 3) wscfr(&erscore);
+  return;
+}
+#endif // end of taking out amlfdr
+/*C--------------------------------------------------------------------------*/
+#endif
+// Orders rows
+int 
+ClpCholeskyBase::orderAMD()
+{
+  permuteInverse_ = new int [numberRows_];
+  permute_ = new int[numberRows_];
+  // Do ordering
+  int returnCode=0;
+  // get full matrix
+  int space = 2*sizeFactor_+10000+4*numberRows_;
+  int * temp = new int [space];
+  CoinBigIndex * count = new CoinBigIndex [numberRows_];
+  CoinBigIndex * tempStart = new CoinBigIndex [numberRows_+1];
+  memset(count,0,numberRows_*sizeof(int));
+  for (int iRow=0;iRow<numberRows_;iRow++) {
+    count[iRow]+= choleskyStart_[iRow+1]-choleskyStart_[iRow]-1;
+    for (CoinBigIndex j=choleskyStart_[iRow]+1;j<choleskyStart_[iRow+1];j++) {
+      int jRow=choleskyRow_[j];
+      count[jRow]++;
+    }
+  }
+#define OFFSET 1
+  CoinBigIndex sizeFactor =0;
+  for (int iRow=0;iRow<numberRows_;iRow++) {
+    int length = count[iRow];
+    permute_[iRow]=length;
+    // add 1 to starts
+    tempStart[iRow]=sizeFactor+OFFSET;
+    count[iRow]=sizeFactor;
+    sizeFactor += length;
+  }
+  tempStart[numberRows_]=sizeFactor+OFFSET;
+  // add 1 to rows 
+  for (int iRow=0;iRow<numberRows_;iRow++) {
+    assert (choleskyRow_[choleskyStart_[iRow]]==iRow);
+    for (CoinBigIndex j=choleskyStart_[iRow]+1;j<choleskyStart_[iRow+1];j++) {
+      int jRow=choleskyRow_[j];
+      int put = count[iRow];
+      temp[put]=jRow+OFFSET;
+      count[iRow]++;
+      put = count[jRow];
+      temp[put]=iRow+OFFSET;
+      count[jRow]++;
+    }
+  }
+  for (int iRow=1;iRow<numberRows_;iRow++) 
+    assert (count[iRow-1]==tempStart[iRow]-OFFSET);
+  delete [] choleskyRow_;
+  choleskyRow_=temp;
+  delete [] choleskyStart_;
+  choleskyStart_=tempStart;
+  int locaux=sizeFactor+OFFSET;
+  delete [] count;
+  int speed=integerParameters_[0];
+  if (speed<1||speed>2)
+    speed=3;
+  int * use = new int [((speed<3) ? 7 : 6)*numberRows_];
+  int * dgree = use;
+  int * varbl = dgree+numberRows_;
+  int * snxt = varbl+numberRows_;
+  int * head = snxt+numberRows_;
+  int * lsize = head+numberRows_;
+  int * flag = lsize+numberRows_;
+  int * erscore;
+  for (int i=0;i<numberRows_;i++) {
+    dgree[i]=choleskyStart_[i+1]-choleskyStart_[i];
+    head[i]=dgree[i];
+    snxt[i]=0;
+    permute_[i]=0;
+    permuteInverse_[i]=0;
+    head[i]=0;
+    flag[i]=1;
+    varbl[i]=1;
+    lsize[i]=dgree[i];
+  }
+  if (speed<3) {
+    erscore = flag+numberRows_;
+    for (int i=0;i<numberRows_;i++) 
+      erscore[i]=dgree[i];
+  } else {
+    erscore = dgree;
+  }
+  myamlf(numberRows_, choleskyStart_, choleskyRow_, 
+	 dgree, varbl, snxt, permute_, permuteInverse_,
+         head, lsize, flag, erscore, locaux, space, speed);
+  for (int iRow=0;iRow<numberRows_;iRow++) {
+    permute_[iRow]--;
+  }
+  for (int iRow=0;iRow<numberRows_;iRow++) {
+    permuteInverse_[permute_[iRow]]=iRow;
+  }
+  for (int iRow=0;iRow<numberRows_;iRow++) {
+    assert (permuteInverse_[iRow]>=0&&permuteInverse_[iRow]<numberRows_);
+  }
+  delete [] use;
+  delete [] choleskyRow_;
+  choleskyRow_=NULL;
+  delete [] choleskyStart_;
+  choleskyStart_=NULL;
+  return returnCode;
 }
 /* Does Symbolic factorization given permutation.
    This is called immediately after order.  If user provides this then
@@ -1337,9 +2495,16 @@ ClpCholeskyBase::symbolic2(const CoinBigIndex * Astart, const int * Arow)
       int kRow=Arow[j];
       int k=iRow;
       int linked = link_[iRow];
+#ifndef NDEBUG
+      int count=0;
+#endif
       while (linked<=kRow) {
 	k=linked;
 	linked = link_[k];
+#ifndef NDEBUG
+	count++;
+	assert (count<numberRows_);
+#endif
       }
       nz++;
       link_[k]=kRow;
@@ -2386,6 +3551,7 @@ ClpCholeskyBase::factorizePart2(int * rowsDropped)
     dense.setDoubleParameter(10,dropValue);
     dense.setIntegerParameter(20,0);
     dense.setIntegerParameter(34,firstPositive);
+    dense.setModel(model_);
     dense.factorizePart2(dropped);
     largest=dense.getDoubleParameter(3);
     smallest=dense.getDoubleParameter(4);

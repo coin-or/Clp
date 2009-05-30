@@ -35,24 +35,15 @@
 #ifdef WSSMP_BARRIER
 #include "ClpCholeskyWssmp.hpp"
 #include "ClpCholeskyWssmpKKT.hpp"
-#define FAST_BARRIER
 #endif
 #ifdef UFL_BARRIER
 #include "ClpCholeskyUfl.hpp"
-#define FAST_BARRIER
 #endif
 #ifdef TAUCS_BARRIER
 #include "ClpCholeskyTaucs.hpp"
-#define FAST_BARRIER
 #endif
 #ifdef MUMPS_BARRIER
 #include "ClpCholeskyMumps.hpp"
-#define FAST_BARRIER
-#endif
-#ifdef COIN_DEVELOP
-#ifndef FAST_BARRIER
-static int numberBarrier=0;
-#endif
 #endif
 #ifdef COIN_HAS_VOL
 #include "VolVolume.hpp"
@@ -1875,6 +1866,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
     bool scale=false;
     bool doKKT=false;
     bool forceFixing=false;
+    int speed=0;
     if (barrierOptions&16) {
       barrierOptions &= ~16;
       doKKT=true;
@@ -1895,18 +1887,14 @@ ClpSimplex::initialSolve(ClpSolve & options)
       barrierOptions &= ~1024;
       barrier.setProjectionTolerance(1.0e-9);
     }
+    if (barrierOptions&(2048|4096)) {
+      speed = (barrierOptions&(2048|4096))>>11;
+      barrierOptions &= ~(2048|4096);
+    }
     if (barrierOptions&8) {
       barrierOptions &= ~8;
       scale=true;
     }
-#ifdef COIN_DEVELOP
-#ifndef FAST_BARRIER
-    if (!numberBarrier)
-      std::cout<<"Warning - the default ordering is just on row counts! "
-	       <<"The factorization is being improved"<<std::endl;
-    numberBarrier++;
-#endif
-#endif
     // If quadratic force KKT
     if (quadraticObj) {
       doKKT=true;
@@ -1916,6 +1904,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
     default:
       if (!doKKT) {
 	ClpCholeskyBase * cholesky = new ClpCholeskyBase();
+	cholesky->setIntegerParameter(0,speed);
 	barrier.setCholesky(cholesky);
       } else {
 	ClpCholeskyBase * cholesky = new ClpCholeskyBase();
@@ -1987,7 +1976,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
     int saveMaxIts = model2->maximumIterations();
     if (saveMaxIts<1000) {
       barrier.setMaximumBarrierIterations(saveMaxIts);
-      model2->setMaximumIterations(1000000);
+      model2->setMaximumIterations(10000000);
     }
 #ifndef SAVEIT
     //barrier.setDiagonalPerturbation(1.0e-25);
@@ -2393,7 +2382,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	model2->reducedGradient(1);
       }
     }
-    model2->setMaximumIterations(saveMaxIts);
+    
+    //model2->setMaximumIterations(saveMaxIts);
 #ifdef BORROW
     delete [] rowPrimal;
     delete [] columnPrimal;
@@ -2517,7 +2507,9 @@ ClpSimplex::initialSolve(ClpSolve & options)
     secondaryStatus_ =model2->secondaryStatus_;
     delete model2;
   }
-  setMaximumIterations(saveMaxIterations);
+  if (method!=ClpSolve::useBarrierNoCross&&
+      method!=ClpSolve::useBarrier)
+    setMaximumIterations(saveMaxIterations);
   std::string statusMessage[]={"Unknown","Optimal","PrimalInfeasible","DualInfeasible","Stopped",
 			       "Errors","User stopped"};
   assert (finalStatus>=-1&&finalStatus<=5);

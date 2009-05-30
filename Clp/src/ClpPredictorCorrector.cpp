@@ -880,8 +880,10 @@ int ClpPredictorCorrector::solve ( )
     }
     if (numberGoodTries&&handler_->logLevel()>1) {
       printf("%d centering steps moved from (gap %.18g, dual %.18g, primal %.18g) to (gap %.18g, dual %.18g, primal %.18g)\n",
-	     numberGoodTries,nextGap,originalDualStep,originalPrimalStep,
-	     nextCenterGap, actualDualStep_,actualPrimalStep_);
+	     numberGoodTries,static_cast<double>(nextGap),static_cast<double>(originalDualStep),
+	     static_cast<double>(originalPrimalStep),
+	     static_cast<double>(nextCenterGap), static_cast<double>(actualDualStep_),
+	     static_cast<double>(actualPrimalStep_));
     }
     // save last gap
     checkGap = complementarityGap_;
@@ -990,11 +992,7 @@ CoinWorkDouble ClpPredictorCorrector::findStepLength( int phase)
   CoinWorkDouble maximumPrimalStep=COIN_DBL_MAX;
   CoinWorkDouble maximumDualStep=COIN_DBL_MAX;
   int numberTotal = numberRows_+numberColumns_;
-#if CLP_LONG_CHOLESKY<2
   CoinWorkDouble tolerance = 1.0e-12;
-#else
-  CoinWorkDouble tolerance = 1.0e-14;
-#endif
   int chosenPrimalSequence=-1;
   int chosenDualSequence=-1;
   bool lowPrimal=false;
@@ -1580,7 +1578,7 @@ CoinWorkDouble ClpPredictorCorrector::findDirectionVector(const int phase)
   CoinWorkDouble tryError=1.0e31;
   CoinWorkDouble saveMaximum=0.0;
   double firstError=0.0;
-  double lastError=0.0;
+  double lastError2=0.0;
   while (!goodSolve&&numberTries<30) {
     CoinWorkDouble lastError=relativeError;
     goodSolve=true;
@@ -1689,7 +1687,7 @@ CoinWorkDouble ClpPredictorCorrector::findDirectionVector(const int phase)
     if (numberTries==1)
       firstError=relativeError;
     if (relativeError<lastError) {
-      lastError=relativeError;
+      lastError2=relativeError;
       maximumRHSChange_= maximumRHSChange;
       if (relativeError>projectionTolerance&&numberTries<=3) {
         //try and refine
@@ -1740,10 +1738,10 @@ CoinWorkDouble ClpPredictorCorrector::findDirectionVector(const int phase)
       }
     }
   } /* endwhile */
-  if (firstError>1.0e-9||numberTries>1) {
+  if (firstError>1.0e-8||numberTries>1) {
     handler_->message(CLP_BARRIER_ACCURACY,messages_)
       <<phase<<numberTries<<static_cast<double>(firstError)
-      <<static_cast<double>(lastError)
+      <<static_cast<double>(lastError2)
       <<CoinMessageEol;
   } 
   delete [] regionSave;
@@ -2506,16 +2504,6 @@ void ClpPredictorCorrector::setupForSolve(const int phase)
 	}
       }
     } 
-    if (0) {
-      int i=1324;
-      printf("%d %.18g %.18g %.18g %.18g %.18g %.18g %.18g\n",i,solution_[i],
-	     diagonal_[i],dj_[i],
-	     lowerSlack_[i],zVec_[i],
-	     upperSlack_[i],wVec_[i]);
-      printf("%d %.18g %.18g %.18g %.18g %.18g\n",i,rhsC_[i],
-	     rhsZ_[i],rhsL_[i],
-	     rhsW_[i],rhsU_[i]);
-    }
 #if 0
     for (int i=0;i<3;i++) {
       if (!CoinAbs(rhsZ_[i]))
@@ -2935,15 +2923,9 @@ bool ClpPredictorCorrector::checkGoodMove2(CoinWorkDouble move,
 					   bool allowIncreasingGap)
 {
   CoinWorkDouble complementarityMultiplier =1.0/numberComplementarityPairs_;
-#if CLP_LONG_CHOLESKY<2
   const CoinWorkDouble gamma = 1.0e-8;
   const CoinWorkDouble gammap = 1.0e-8;
   CoinWorkDouble gammad = 1.0e-8;
-#else
-  const CoinWorkDouble gamma = 1.0e-8;
-  const CoinWorkDouble gammap = 1.0e-8;
-  CoinWorkDouble gammad = 1.0e-8;
-#endif
   int nextNumber;
   int nextNumberItems;
   CoinWorkDouble nextGap=complementarityGap(nextNumber,nextNumberItems,2);
@@ -3111,21 +3093,13 @@ int ClpPredictorCorrector::updateSolution(CoinWorkDouble nextGap)
     dualTolerance=1.0e-12;
   } 
   CoinWorkDouble offsetObjective=0.0;
-  const CoinWorkDouble killTolerance=primalTolerance();
+  CoinWorkDouble killTolerance=primalTolerance();
   CoinWorkDouble qDiagonal;
-#if CLP_LONG_CHOLESKY<2
   if (mu_<1.0) {
     qDiagonal=1.0e-8;
   } else {
     qDiagonal=1.0e-8*mu_;
   }
-#else 
-  if (mu_<1.0) {
-    qDiagonal=1.0e-8;
-  } else {
-    qDiagonal=1.0e-8*mu_;
-  } 
-#endif
   //CoinWorkDouble nextMu = nextGap/(static_cast<CoinWorkDouble>(2*numberComplementarityPairs_));
   //printf("using gap of %g\n",nextMu);
   //qDiagonal *= 1.0e2;
@@ -3159,17 +3133,22 @@ int ClpPredictorCorrector::updateSolution(CoinWorkDouble nextGap)
   if (objective_->type()==2)
     quadraticObj = (static_cast< ClpQuadraticObjective*>(objective_));
 #endif
+#ifndef CLP_CAUTION
+#define KILL_ITERATION 50
+#else
+#define KILL_ITERATION 100
+#endif
   if (!quadraticObj||1) {
-    if (numberIterations_<50) {
+    if (numberIterations_<KILL_ITERATION) {
       killFactor = 1.0;
-    } else if (numberIterations_<100) {
-      killFactor = 10.0;
+    } else if (numberIterations_<2*KILL_ITERATION) {
+      killFactor = 5.0;
       stepLength_=CoinMax(stepLength_,0.9995);
-    } else if (numberIterations_<200) {
-      killFactor = 100.0;
+    } else if (numberIterations_<4*KILL_ITERATION) {
+      killFactor = 20.0;
       stepLength_=CoinMax(stepLength_,0.99995);
     } else {
-      killFactor = 1.0e5;
+      killFactor = 1.0e2;
       stepLength_=CoinMax(stepLength_,0.999995);
     }
   } else {
@@ -3220,10 +3199,12 @@ int ClpPredictorCorrector::updateSolution(CoinWorkDouble nextGap)
   matrix_->transposeTimes(-1.0,dualArray,dj_);
   CoinWorkDouble gamma2 = gamma_*gamma_; // gamma*gamma will be added to diagonal
   CoinWorkDouble gammaOffset=0.0;
+#if 0
   const CoinBigIndex * columnStart = matrix_->getVectorStarts();
   const int * columnLength = matrix_->getVectorLengths();
   const int * row = matrix_->getIndices();
   const double * element = matrix_->getElements();
+#endif
   for (iColumn=0;iColumn<numberTotal;iColumn++) {
     if (!flagged(iColumn)) {
       CoinWorkDouble reducedCost=dj_[iColumn];
@@ -3239,9 +3220,6 @@ int ClpPredictorCorrector::updateSolution(CoinWorkDouble nextGap)
       CoinWorkDouble sUpper=extra;
       CoinWorkDouble sLower=extra;
       CoinWorkDouble kill;
-#if CLP_LONG_CHOLESKY>1
-      killTolerance *= 1.0e-1;
-#endif
       if (CoinAbs(newPrimal)>1.0e4) {
         kill=killTolerance*1.0e-4*newPrimal;
       } else {
@@ -3286,11 +3264,11 @@ int ClpPredictorCorrector::updateSolution(CoinWorkDouble nextGap)
 	upper_[iColumn]=newPrimal+largeGap2;
 	upperSlack_[iColumn] = largeGap2;
 	// so we can just have one test
-	fakeOldBounds=true;
+	fakeOldBounds=true; 
       }
       CoinWorkDouble lowerBoundInfeasibility=0.0;
       CoinWorkDouble upperBoundInfeasibility=0.0;
-      double saveNewPrimal = newPrimal;
+      //double saveNewPrimal = newPrimal;
       if (lowerBound(iColumn)) {
         CoinWorkDouble oldSlack = lowerSlack_[iColumn];
         CoinWorkDouble newSlack;
@@ -3300,14 +3278,7 @@ int ClpPredictorCorrector::updateSolution(CoinWorkDouble nextGap)
 	if (fakeOldBounds)
 	  newSlack = lowerSlack_[iColumn];
         CoinWorkDouble epsilon = CoinAbs(newSlack)*epsilonBase;
-#if CLP_LONG_CHOLESKY<2
-        if (epsilon>1.0e-5) {
-          //cout<<"bad"<<endl;
-          epsilon=1.0e-5;
-        }
-#else
         epsilon=CoinMin(epsilon,1.0e-5);
-#endif 
 	//epsilon=1.0e-14;
         //make sure reasonable
         if (zValue<epsilon) {
@@ -3325,15 +3296,9 @@ int ClpPredictorCorrector::updateSolution(CoinWorkDouble nextGap)
 	  } else {
 	    larger=feasibleSlack;
 	  } 
-#if CLP_LONG_CHOLESKY<2
 	  if (CoinAbs(feasibleSlack-newSlack)<1.0e-6*larger) {
 	    newSlack=feasibleSlack;
 	  }
-#else 
-	  if (CoinAbs(feasibleSlack-newSlack)<1.0e-6*larger) {
-	    newSlack=feasibleSlack;
-	  }
-#endif 
         } 
         if (zVec_[iColumn]>dualTolerance) {
           dualObjectiveThis+=lower_[iColumn]*zVec_[iColumn];
@@ -3371,14 +3336,7 @@ int ClpPredictorCorrector::updateSolution(CoinWorkDouble nextGap)
 	if (fakeOldBounds)
 	  newSlack = upperSlack_[iColumn];
         CoinWorkDouble epsilon = CoinAbs(newSlack)*epsilonBase;
-#if CLP_LONG_CHOLESKY<2
-        if (epsilon>1.0e-5) {
-          //cout<<"bad"<<endl;
-          epsilon=1.0e-5;
-        }
-#else
         epsilon=CoinMin(epsilon,1.0e-5);
-#endif 
         //make sure reasonable
 	//epsilon=1.0e-14;
         if (wValue<epsilon) {
@@ -3396,15 +3354,9 @@ int ClpPredictorCorrector::updateSolution(CoinWorkDouble nextGap)
 	  } else {
 	    larger=feasibleSlack;
 	  } 
-#if CLP_LONG_CHOLESKY<2
 	  if (CoinAbs(feasibleSlack-newSlack)<1.0e-6*larger) {
 	    newSlack=feasibleSlack;
 	  }
-#else 
-	  if (CoinAbs(feasibleSlack-newSlack)<1.0e-6*larger) {
-	    newSlack=feasibleSlack;
-	  }
-#endif 
         } 
         if (wVec_[iColumn]>dualTolerance) {
           dualObjectiveThis-=upper_[iColumn]*wVec_[iColumn];
@@ -3432,7 +3384,8 @@ int ClpPredictorCorrector::updateSolution(CoinWorkDouble nextGap)
           sUpper+=upperSlack_[iColumn];
         } 
       } 
-      if (false&&newPrimal!=saveNewPrimal&&iColumn<numberColumns_) {
+#if 0
+      if (newPrimal!=saveNewPrimal&&iColumn<numberColumns_) {
 	// adjust slacks
 	double movement = newPrimal-saveNewPrimal;
 	for (CoinBigIndex j=columnStart[iColumn];
@@ -3442,6 +3395,7 @@ int ClpPredictorCorrector::updateSolution(CoinWorkDouble nextGap)
 	  solution_[iRow+numberColumns_] += slackMovement; // sign?
 	}
       }
+#endif
       solution_[iColumn]=newPrimal;
       if (CoinAbs(newPrimal)>solutionNorm) {
         solutionNorm=CoinAbs(newPrimal);
@@ -3580,8 +3534,8 @@ int ClpPredictorCorrector::updateSolution(CoinWorkDouble nextGap)
         numberKilled++;
 	if (solution_[iColumn]!=lower_[iColumn]&&
 	    solution_[iColumn]!=upper_[iColumn]) {
-	  printf("%d %g %g %g\n",iColumn,lower_[iColumn],
-		 solution_[iColumn],upper_[iColumn]);
+	  printf("%d %g %g %g\n",iColumn,static_cast<double>(lower_[iColumn]),
+		 static_cast<double>(solution_[iColumn]),static_cast<double>(upper_[iColumn]));
 	}
         diagonal_[iColumn]=0.0;
         zVec_[iColumn]=0.0;

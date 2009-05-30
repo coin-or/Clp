@@ -29,7 +29,7 @@
 #endif
 #if CLP_LONG_CHOLESKY>1
 typedef long double longDouble;
-#define CHOL_SMALL_VALUE 1.0e-15
+#define CHOL_SMALL_VALUE 1.0e-15 
 #elif CLP_LONG_CHOLESKY==1
 typedef double longDouble;
 #define CHOL_SMALL_VALUE 1.0e-11
@@ -77,6 +77,10 @@ public:
   /** Uses factorization to solve. */
   virtual void solve (CoinWorkDouble * region) ;
 #endif
+private:
+  /// AMD ordering
+  int orderAMD();
+public:
   //@}
 
   /**@name Gets */
@@ -165,7 +169,10 @@ public:
   { if (doKKT_) return 100; else return type_;}
 protected:
   /// Sets type
-  void setType(int type) {type_=type;}
+  inline void setType(int type) {type_=type;}
+  /// model.
+  inline void setModel(ClpInterior * model)
+  { model_=model;}
    //@}
    
   /**@name Symbolic, factor and solve */

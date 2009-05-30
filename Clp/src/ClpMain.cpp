@@ -189,7 +189,8 @@ main (int argc, const char *argv[])
     // Hidden stuff for barrier
     int choleskyType = 0;
     int gamma=0;
-    int scaleBarrier=0;
+    parameters[whichParam(BARRIERSCALE,numberParameters,parameters)].setCurrentOption(2);
+    int scaleBarrier=2;
     int doKKT=0;
     int crossover=2; // do crossover unless quadratic
     
@@ -709,8 +710,11 @@ main (int argc, const char *argv[])
 		  solveOptions.setSpecialOption(1,11); // switch off values
 	      } else if (method==ClpSolve::useBarrier||method==ClpSolve::useBarrierNoCross) {
 		int barrierOptions = choleskyType;
-		if (scaleBarrier)
-		  barrierOptions |= 8;
+		if (scaleBarrier) {
+		  if ((scaleBarrier&1)!=0) 
+		    barrierOptions |= 8;
+		  barrierOptions |= 2048*(scaleBarrier>>1);
+		}
 		if (doKKT)
 		  barrierOptions |= 16;
 		if (gamma)
