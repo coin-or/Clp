@@ -33,6 +33,11 @@ static char coin_prompt[]="Coin:";
 #else
 static char coin_prompt[]="Clp:";
 #endif
+#ifdef CLP_CILK
+#ifndef CBC_THREAD
+#define CBC_THREAD
+#endif
+#endif
 #if WSSMP_BARRIER>=2
 #ifndef CBC_THREAD
 #define CBC_THREAD
@@ -1308,9 +1313,13 @@ and trustPseudoCosts parameters."
      ); 
 #endif
   parameters[numberParameters++]=
-    CbcOrClpParam("bscale","Whether to scale in barrier",
+    CbcOrClpParam("bscale","Whether to scale in barrier (and ordering speed)",
 		  "off",BARRIERSCALE,7,false);
   parameters[numberParameters-1].append("on");
+  parameters[numberParameters-1].append("off1");
+  parameters[numberParameters-1].append("on1");
+  parameters[numberParameters-1].append("off2");
+  parameters[numberParameters-1].append("on2");
   parameters[numberParameters++]=
     CbcOrClpParam("chol!esky","Which cholesky algorithm",
 		  "native",CHOLESKY,7);
