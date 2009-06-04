@@ -1,3 +1,4 @@
+/* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
@@ -2243,6 +2244,7 @@ ClpSimplexPrimal::perturb(int type)
 #endif
     if (number*4>numberRows_||elementRatio>1.0e12) {
       perturbation_=100;
+      delete [] sort;
       return; // good enough
     }
     number=0;

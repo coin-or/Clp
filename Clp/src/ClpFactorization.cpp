@@ -1,3 +1,4 @@
+/* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
@@ -1309,6 +1310,11 @@ ClpFactorization::factorize ( ClpSimplex * model,
     int * pivotVariable = model->pivotVariable();
     //returns 0 -okay, -1 singular, -2 too many in basis */
     // allow dense
+    int solveMode=2;
+    if (model->numberIterations())
+      solveMode+=100;
+    if (valuesPass)
+      solveMode+= 10;
     coinFactorizationB_->setSolveMode(-1);
     while (status()<-98) {
       
@@ -1411,10 +1417,10 @@ ClpFactorization::factorize ( ClpSimplex * model,
 #else
 #define slackValue -1.0
 #endif
-      // At present we don't need counts
-      numberInRow = coinFactorizationB_->intWorkArea();
-      numberInColumn = numberInRow;
-      CoinZeroN ( numberInRow, numberRows + 1 ); // just for valgrind
+      numberInRow = coinFactorizationB_->numberInRow();
+      numberInColumn = coinFactorizationB_->numberInColumn();
+      CoinZeroN ( numberInRow, numberRows  );
+      CoinZeroN ( numberInColumn, numberRows );
       for (i=0;i<numberRowBasic;i++) {
 	int iRow = pivotTemp[i];
 	// Change pivotTemp to correct sequence
@@ -1422,6 +1428,8 @@ ClpFactorization::factorize ( ClpSimplex * model,
 	indexRowU[i]=iRow;
 	startColumnU[i]=i;
 	elementU[i]=slackValue;
+	numberInRow[iRow]=1;
+	numberInColumn[i]=1;
       }
       startColumnU[numberRowBasic]=numberRowBasic;
       // can change for gub so redo
@@ -1446,8 +1454,10 @@ ClpFactorization::factorize ( ClpSimplex * model,
       coinFactorizationB_->preProcess ( );
       coinFactorizationB_->factor (  );
       if (coinFactorizationB_->status() == -1 &&
-	  coinFactorizationB_->solveMode()!=0) {
-	coinFactorizationB_->setSolveMode(0);
+	  (coinFactorizationB_->solveMode()%10)!=0) {
+	int solveMode=coinFactorizationB_->solveMode();
+	solveMode -= solveMode%10; // so bottom will be 0
+	coinFactorizationB_->setSolveMode(solveMode);
 	coinFactorizationB_->setStatus(-99);
 	continue;
       }
