@@ -1554,6 +1554,7 @@ ClpPrimalColumnSteepest::djsAndSteepest2(CoinIndexedVector * updates,
       // do alternateWeights_ here so can scale
       for (j=0;j<number;j++) {
 	int iSequence = index[j];
+	assert (iSequence>=0&&iSequence<model_->numberRows());
 	double thisWeight = weight[iSequence];
 	// row has -1 
 	double pivot = - updateBy[j];

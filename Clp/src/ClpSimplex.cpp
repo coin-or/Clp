@@ -2209,10 +2209,10 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
     }
     saveStatus_ = NULL;
   }
-  delete factorization_;
   if (rhs.factorization_) {
-    factorization_ = new ClpFactorization(*rhs.factorization_,numberRows_);
+    setFactorization(*rhs.factorization_);
   } else {
+    delete factorization_;
     factorization_=NULL;
   }
   bestPossibleImprovement_ = rhs.bestPossibleImprovement_;
@@ -2342,10 +2342,12 @@ ClpSimplex::gutsOfDelete(int type)
       columnArray_[i]=NULL;
     }
   }
-  delete rowCopy_;
-  rowCopy_=NULL;
   delete [] saveStatus_;
   saveStatus_=NULL;
+  if (type!=1) {
+    delete rowCopy_;
+    rowCopy_=NULL;
+  }
   if (!type) {
     // delete everything
     setEmptyFactorization();
@@ -2964,10 +2966,16 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
       //goodMatrix= false;
       return false;
     }
-    if (makeRowCopy&&!oldMatrix) {
-      delete rowCopy_;
-      // may return NULL if can't give row copy
-      rowCopy_ = matrix_->reverseOrderedCopy();
+    bool rowCopyIsScaled;
+    if (makeRowCopy) {
+      if(!oldMatrix||!rowCopy_) {
+	delete rowCopy_;
+	// may return NULL if can't give row copy
+	rowCopy_ = matrix_->reverseOrderedCopy();
+	rowCopyIsScaled=false;
+      } else {
+	rowCopyIsScaled=true;
+      }
     }
 #if 0
     if (what==63) {
@@ -3130,7 +3138,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
 	    <<CoinMessageEol;
 	}
       }
-    } else if (makeRowCopy&&scalingFlag_>0&&!oldMatrix) {
+    } else if (makeRowCopy&&scalingFlag_>0&&!rowCopyIsScaled) {
       matrix_->scaleRowCopy(this);
     }
     if (rowScale_&&!savedRowScale_) {
@@ -3687,23 +3695,31 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
     } else {
       int iRow,iColumn;
       for (iRow=0;iRow<4;iRow++) {
-        rowArray_[iRow]->clear();
-#ifndef NDEBUG
 	int length =numberRows2+factorization_->maximumPivots();
 	if (iRow==3||objective_->type()>1)
 	  length += numberColumns_;
-	assert(rowArray_[iRow]->capacity()>=length);
+	if(rowArray_[iRow]->capacity()>=length) {
+	  rowArray_[iRow]->clear();
+	} else {
+	  // model size or maxinv changed
+	  rowArray_[iRow]->reserve(length);
+	}
+#ifndef NDEBUG
         rowArray_[iRow]->checkClear();
 #endif
       }
       
       for (iColumn=0;iColumn<2;iColumn++) {
-        columnArray_[iColumn]->clear();
-#ifndef NDEBUG
 	int length =numberColumns_;
 	if (iColumn)
 	  length=CoinMax(numberRows2,numberColumns_);
-	assert(columnArray_[iColumn]->capacity()>=length);
+	if(columnArray_[iColumn]->capacity()>=length) {
+	  columnArray_[iColumn]->clear();
+	} else {
+	  // model size or maxinv changed
+	  columnArray_[iColumn]->reserve(length);
+	}
+#ifndef NDEBUG
         columnArray_[iColumn]->checkClear();
 #endif
       }
@@ -4309,12 +4325,23 @@ ClpSimplex::setPrimalColumnPivotAlgorithm(ClpPrimalColumnPivot & choice)
   delete primalColumnPivot_;
   primalColumnPivot_ = choice.clone(true);
 }
-// Passes in factorization
 void 
 ClpSimplex::setFactorization( ClpFactorization & factorization)
 {
-  delete factorization_;
-  factorization_= new ClpFactorization(factorization,numberRows_);
+  if (factorization_) 
+    factorization_->setFactorization(factorization);
+  else
+    factorization_ = new ClpFactorization(factorization,
+					  numberRows_);
+}
+
+// Swaps factorization
+ClpFactorization * 
+ClpSimplex::swapFactorization( ClpFactorization * factorization)
+{
+  ClpFactorization * swap =factorization_;
+  factorization_= factorization;
+  return swap;
 }
 // Copies in factorization to existing one
 void 

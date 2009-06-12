@@ -357,6 +357,9 @@ ClpSimplexDual::startupSolve(int ifValuesPass,double * saveDuals,int startFinish
       }
     } else if (!ifValuesPass) {
       gutsOfSolution(NULL,NULL);
+      // double check
+      if (numberDualInfeasibilities_||numberPrimalInfeasibilities_)
+	problemStatus_=-1;
     }
     if (usePrimal) {
       problemStatus_=10;
@@ -1099,6 +1102,13 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
     }
     if(numberIterations_==debugIteration) {
       printf("dodgy iteration coming up\n");
+    }
+#endif
+#if 0
+    printf("checking nz\n");
+    for (int i=0;i<3;i++) {
+      if (!rowArray_[i]->getNumElements())
+	rowArray_[i]->checkClear();
     }
 #endif
     // choose row to go out
@@ -5671,9 +5681,9 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
             numberRows_+numberColumns_,cost_);
     columnUpper_[iColumn] = saveBound;
     CoinMemcpyN(savePivot, numberRows_,pivotVariable_);
-    delete factorization_;
-    factorization_ = new ClpFactorization(saveFactorization,numberRows_);
-
+    //delete factorization_;
+    //factorization_ = new ClpFactorization(saveFactorization,numberRows_);
+    setFactorization(saveFactorization);
     newUpper[i]=objectiveChange;
 #ifdef CLP_DEBUG
     printf("down on %d costs %g\n",iColumn,objectiveChange);
@@ -5737,8 +5747,9 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
             numberRows_+numberColumns_,cost_);
     columnLower_[iColumn] = saveBound;
     CoinMemcpyN(savePivot, numberRows_,pivotVariable_);
-    delete factorization_;
-    factorization_ = new ClpFactorization(saveFactorization,numberRows_);
+    //delete factorization_;
+    //factorization_ = new ClpFactorization(saveFactorization,numberRows_);
+    setFactorization(saveFactorization);
 
     newLower[i]=objectiveChange;
 #ifdef CLP_DEBUG

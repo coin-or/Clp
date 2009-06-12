@@ -69,15 +69,11 @@ public:
       If return code negative then out of memory */
   virtual int factorize(const CoinWorkDouble * diagonal, int * rowsDropped) ;
   /** Uses factorization to solve. */
-  virtual void solve (double * region) ;
+  virtual void solve (CoinWorkDouble * region) ;
   /** Uses factorization to solve. - given as if KKT.
    region1 is rows+columns, region2 is rows */
   virtual void solveKKT (CoinWorkDouble * region1, CoinWorkDouble * region2, const CoinWorkDouble * diagonal,
 			 CoinWorkDouble diagonalScaleFactor);
-#if CLP_LONG_CHOLESKY
-  /** Uses factorization to solve. */
-  virtual void solve (CoinWorkDouble * region) ;
-#endif
 private:
   /// AMD ordering
   int orderAMD();
@@ -194,7 +190,7 @@ protected:
   /** solve - 1 just first half, 2 just second half - 3 both.
   If 1 and 2 then diagonal has sqrt of inverse otherwise inverse
   */
-  void solve(double * region, int type);
+  void solve(CoinWorkDouble * region, int type);
   /// Forms ADAT - returns nonzero if not enough memory
   int preOrder(bool lowerTriangular, bool includeDiagonal, bool doKKT);
   /// Updates dense part (broken out for profiling)

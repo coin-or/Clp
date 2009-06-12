@@ -94,6 +94,7 @@ ClpNode::gutsOfConstructor (ClpSimplex * model, const ClpNodeStuff * stuff,
     maximumRows_=CoinMax(maximumRows_,numberRows);
     maximumColumns_=CoinMax(maximumColumns_,numberColumns);
     maximumTotal = maximumRows_+maximumColumns_;
+    assert (!factorization_);
     factorization_ = new ClpFactorization(*model->factorization(),numberRows);
     status_ = CoinCopyOfArrayPartial(model->statusArray(),maximumTotal,numberTotal);
     primalSolution_ = CoinCopyOfArrayPartial(model->solutionRegion(),maximumTotal,numberTotal);

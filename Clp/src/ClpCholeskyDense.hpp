@@ -22,9 +22,9 @@ public:
   virtual int symbolic();
   /** Factorize - filling in rowsDropped and returning number dropped.
       If return code negative then out of memory */
-  virtual int factorize(const double * diagonal, int * rowsDropped) ;
+  virtual int factorize(const CoinWorkDouble * diagonal, int * rowsDropped) ;
   /** Uses factorization to solve. */
-  virtual void solve (double * region) ;
+  virtual void solve (CoinWorkDouble * region) ;
   /**@}*/
 
   /**@name Non virtual methods for ClpCholeskyDense  */
@@ -40,27 +40,11 @@ public:
   /** part 2 of Factorize - filling in rowsDropped - blocked */
   void factorizePart3(int * rowsDropped) ;
   /** Forward part of solve */
-  void solveF1(longDouble * a,int n,double * region);
-  void solveF2(longDouble * a,int n,double * region,double * region2);
+  void solveF1(longDouble * a,int n,CoinWorkDouble * region);
+  void solveF2(longDouble * a,int n,CoinWorkDouble * region,CoinWorkDouble * region2);
   /** Backward part of solve */
-  void solveB1(longDouble * a,int n,double * region);
-  void solveB2(longDouble * a,int n,double * region,double * region2);
-  /** Uses factorization to solve. */
-  void solveLong (CoinWorkDouble * region) ;
-  /** Forward part of solve */
-  void solveF1Long(longDouble * a,int n,CoinWorkDouble * region);
-  void solveF2Long(longDouble * a,int n,CoinWorkDouble * region,CoinWorkDouble * region2);
-  /** Backward part of solve */
-  void solveB1Long(longDouble * a,int n,CoinWorkDouble * region);
-  void solveB2Long(longDouble * a,int n,CoinWorkDouble * region,CoinWorkDouble * region2);
-  /** Uses factorization to solve. */
-  void solveLongWork (CoinWorkDouble * region) ;
-  /** Forward part of solve */
-  void solveF1LongWork(longDouble * a,int n,CoinWorkDouble * region);
-  void solveF2LongWork(longDouble * a,int n,CoinWorkDouble * region,CoinWorkDouble * region2);
-  /** Backward part of solve */
-  void solveB1LongWork(longDouble * a,int n,CoinWorkDouble * region);
-  void solveB2LongWork(longDouble * a,int n,CoinWorkDouble * region,CoinWorkDouble * region2);
+  void solveB1(longDouble * a,int n,CoinWorkDouble * region);
+  void solveB2(longDouble * a,int n,CoinWorkDouble * region,CoinWorkDouble * region2);
   int bNumber(const longDouble * array,int &, int&);
   /** A */
   inline longDouble * aMatrix() const

@@ -363,6 +363,8 @@ public:
   CoinWarmStartBasis * getBasis() const;
   /// Passes in factorization
   void setFactorization( ClpFactorization & factorization);
+  // Swaps factorization
+  ClpFactorization * swapFactorization( ClpFactorization * factorization);
   /// Copies in factorization to existing one
   void copyFactorization( ClpFactorization & factorization);
   /** Tightens primal bounds to make dual faster.  Unless

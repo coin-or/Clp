@@ -520,6 +520,9 @@ main (int argc, const char *argv[])
 	    case PFI:
 	      models[iModel].factorization()->setForrestTomlin(action==0);
 	      break;
+	    case FACTORIZATION:
+	      models[iModel].factorization()->forceOtherFactorization(action);
+	      break;
 	    case CRASH:
 	      doCrash=action;
 	      break;

@@ -12,17 +12,28 @@ class ClpMatrixBase;
 class ClpSimplex;
 class ClpNetworkBasis;
 #ifndef CLP_MULTIPLE_FACTORIZATIONS 
+#ifdef CLP_OSL 
+#define CLP_MULTIPLE_FACTORIZATIONS 4
+#else
 #define CLP_MULTIPLE_FACTORIZATIONS 3
+#endif
 #endif    
 #if CLP_MULTIPLE_FACTORIZATIONS == 1
 #include "CoinDenseFactorization.hpp"
 typedef CoinDenseFactorization CoinSmallFactorization;
+typedef CoinOslFactorization CoinSmallFactorization;
 #elif CLP_MULTIPLE_FACTORIZATIONS == 2
 #include "CoinSimpFactorization.hpp"
 typedef CoinSimpFactorization CoinSmallFactorization;
+typedef CoinOslFactorization CoinSmallFactorization;
 #elif CLP_MULTIPLE_FACTORIZATIONS == 3
 #include "CoinDenseFactorization.hpp"
 #include "CoinSimpFactorization.hpp"
+#define CoinOslFactorization CoinDenseFactorization
+#elif CLP_MULTIPLE_FACTORIZATIONS == 4
+#include "CoinDenseFactorization.hpp"
+#include "CoinSimpFactorization.hpp"
+#include "CoinOslFactorization.hpp"
 #endif
 
 /** This just implements CoinFactorization when an ClpMatrixBase object
@@ -274,6 +285,14 @@ public:
       coinFactorizationA_->zeroTolerance(1.0e-13);
     }
   }
+  /// If nonzero force use of 1,dense 2,small 3,osl 
+  void forceOtherFactorization(int which);
+  /// Get switch to osl if number rows <= this
+  inline int goOslThreshold() const
+  { return goOslThreshold_;}
+  /// Set switch to osl if number rows <= this
+  inline void setGoOslThreshold(int value)
+  { goOslThreshold_ = value;}
   /// Get switch to dense if number rows <= this
   inline int goDenseThreshold() const
   { return goDenseThreshold_;}
@@ -288,6 +307,8 @@ public:
   { goSmallThreshold_ = value;}
   /// Go over to dense or small code if small enough
   void goDenseOrSmall(int numberRows) ;
+  /// Sets factorization
+  void setFactorization(ClpFactorization & factorization);
   /// Return 1 if dense code
   inline int isDenseOrSmall() const
   { return coinFactorizationB_ ? 1 : 0;}
@@ -346,6 +367,10 @@ private:
   CoinFactorization * coinFactorizationA_;
   /// Pointer to CoinSmallFactorization 
   CoinSmallFactorization * coinFactorizationB_;
+  /// If nonzero force use of 1,dense 2,small 3,osl 
+  int forceB_;
+  /// Switch to osl if number rows <= this
+  int goOslThreshold_;
   /// Switch to small if number rows <= this
   int goSmallThreshold_;
   /// Switch to dense if number rows <= this

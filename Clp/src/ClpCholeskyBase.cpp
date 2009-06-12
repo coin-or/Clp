@@ -3692,7 +3692,7 @@ void ClpCholeskyBase::updateDense(longDouble * d, longDouble * work, int * first
 }
 /* Uses factorization to solve. */
 void 
-ClpCholeskyBase::solve (double * region) 
+ClpCholeskyBase::solve (CoinWorkDouble * region) 
 {
   if (!whichDense_) {
     solve(region,3);
@@ -3711,11 +3711,7 @@ ClpCholeskyBase::solve (double * region)
       change[i]=value;
     }
     // solve
-#if CLP_LONG_CHOLESKY>0
-    dense_->solveLong(change);
-#else
     dense_->solve(change);
-#endif
     for (i=0;i<numberDense;i++) {
       const longDouble * a = denseColumn_+i*numberRows_;
       CoinWorkDouble value = change[i];
@@ -3731,7 +3727,7 @@ ClpCholeskyBase::solve (double * region)
    If 1 and 2 then diagonal has sqrt of inverse otherwise inverse
 */
 void 
-ClpCholeskyBase::solve(double * region, int type)
+ClpCholeskyBase::solve(CoinWorkDouble * region, int type)
 {
 #ifdef CLP_DEBUG
   double * regionX=NULL;
@@ -3789,11 +3785,7 @@ ClpCholeskyBase::solve(double * region, int type)
       // just borrow space
       int nDense = numberRows_-firstDense_;
       dense.reserveSpace(this,nDense);
-#if CLP_LONG_CHOLESKY!=1
-      dense.solveLong(work+firstDense_);
-#else
-      dense.solveLongWork(work+firstDense_);
-#endif
+      dense.solve(work+firstDense_);
       for (i=numberRows_-1;i>=firstDense_;i--) {
 	CoinWorkDouble value=work[i];
 	int iRow = permute_[i];
@@ -3840,7 +3832,7 @@ ClpCholeskyBase::solve(double * region, int type)
       // just borrow space
       int nDense = numberRows_-firstDense_;
       dense.reserveSpace(this,nDense);
-      dense.solveLong(work+firstDense_);
+      dense.solve(work+firstDense_);
       for (i=numberRows_-1;i>=firstDense_;i--) {
 	CoinWorkDouble value=work[i];
 	int iRow = permute_[i];
@@ -3870,7 +3862,7 @@ ClpCholeskyBase::solve(double * region, int type)
   }
 #endif
 }
-#if CLP_LONG_CHOLESKY
+#if 0 //CLP_LONG_CHOLESKY
 /* Uses factorization to solve. */
 void 
 ClpCholeskyBase::solve (CoinWorkDouble * region) 
@@ -3897,11 +3889,7 @@ ClpCholeskyBase::solve (CoinWorkDouble * region)
     // just borrow space
     int nDense = numberRows_-firstDense_;
     dense.reserveSpace(this,nDense);
-#if CLP_LONG_CHOLESKY!=1
-    dense.solveLong(work+firstDense_);
-#else
-    dense.solveLongWork(work+firstDense_);
-#endif
+    dense.solve(work+firstDense_);
     for (i=numberRows_-1;i>=firstDense_;i--) {
       CoinWorkDouble value=work[i];
       int iRow = permute_[i];

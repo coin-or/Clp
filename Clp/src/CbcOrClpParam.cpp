@@ -1816,6 +1816,17 @@ e.g. no ENDATA.  This has to be set before import i.e. -errorsAllowed on -import
 #endif
 #ifdef COIN_HAS_CLP
   parameters[numberParameters++]=
+    CbcOrClpParam("fact!orization","Which factorization to use",
+		  "normal",FACTORIZATION);
+  parameters[numberParameters-1].append("dense");
+  parameters[numberParameters-1].append("simple");
+  parameters[numberParameters-1].append("osl");
+  parameters[numberParameters-1].setLonghelp
+    (
+     "The default is to use the normal CoinFactorization, but \
+other choices are a dense one, osl's or one designed for small problems."
+     ); 
+  parameters[numberParameters++]=
     CbcOrClpParam("fakeB!ound","All bounds <= this value - DEBUG",
 		  1.0,1.0e15,FAKEBOUND,false);
 #ifdef COIN_HAS_CBC
