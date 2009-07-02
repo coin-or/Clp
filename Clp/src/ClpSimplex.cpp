@@ -42,12 +42,10 @@ ClpSimplex::ClpSimplex (bool emptyMessages) :
   zeroTolerance_(1.0e-13),
   columnPrimalSequence_(-2),
   rowPrimalSequence_(-2), 
-  columnDualInfeasibility_(0.0),
-  rowDualInfeasibility_(0.0),
+  bestObjectiveValue_(-COIN_DBL_MAX),
   moreSpecialOptions_(2),
   baseIteration_(0),
   primalToleranceToGetOptimal_(-1.0),
-  remainingDualInfeasibility_(0.0),
   largeValue_(1.0e15),
   largestPrimalError_(0.0),
   largestDualError_(0.0),
@@ -155,12 +153,10 @@ ClpSimplex::ClpSimplex ( const ClpModel * rhs,
     zeroTolerance_(1.0e-13),
     columnPrimalSequence_(-2),
     rowPrimalSequence_(-2), 
-    columnDualInfeasibility_(0.0),
-    rowDualInfeasibility_(0.0),
+    bestObjectiveValue_(-COIN_DBL_MAX),
     moreSpecialOptions_(2),
     baseIteration_(0),
     primalToleranceToGetOptimal_(-1.0),
-    remainingDualInfeasibility_(0.0),
     largeValue_(1.0e15),
     largestPrimalError_(0.0),
     largestDualError_(0.0),
@@ -305,12 +301,10 @@ ClpSimplex::ClpSimplex ( const ClpSimplex * rhs,
     zeroTolerance_(1.0e-13),
     columnPrimalSequence_(-2),
     rowPrimalSequence_(-2), 
-    columnDualInfeasibility_(0.0),
-    rowDualInfeasibility_(0.0),
+    bestObjectiveValue_(-COIN_DBL_MAX),
     moreSpecialOptions_(2),
     baseIteration_(0),
     primalToleranceToGetOptimal_(-1.0),
-    remainingDualInfeasibility_(0.0),
     largeValue_(1.0e15),
     largestPrimalError_(0.0),
     largestDualError_(0.0),
@@ -326,8 +320,8 @@ ClpSimplex::ClpSimplex ( const ClpSimplex * rhs,
   valueOut_(-1),
   upperOut_(-1),
   dualOut_(-1),
-  dualTolerance_(0.0),
-  primalTolerance_(0.0),
+  dualTolerance_(rhs->dualTolerance_),
+  primalTolerance_(rhs->primalTolerance_),
   sumDualInfeasibilities_(0.0),
   sumPrimalInfeasibilities_(0.0),
   infeasibilityCost_(1.0e10),
@@ -607,8 +601,8 @@ ClpSimplex::gutsOfSolution ( double * givenDuals,
 	  // column
 	  double difference= save[iRow];
 	  if (difference>1.0e-4) {
-	    sort[numberOut]=iPivot;
-	    save[numberOut++]=difference;
+	    sort[numberOut]=iRow;
+	    save[numberOut++]=-difference;
             if (getStatus(iPivot)==basic)
               numberBasic++;
 	  }
@@ -617,13 +611,16 @@ ClpSimplex::gutsOfSolution ( double * givenDuals,
       if (!numberBasic) {
         //printf("no errors on basic - going to all slack - numberOut %d\n",numberOut);
         allSlackBasis(true);
-      }
-      CoinSort_2(save, save + numberOut, sort,
-		 CoinFirstGreater_2<double, int>());
+	CoinIotaN(pivotVariable_,numberRows_,numberColumns_);
+      } 
+      CoinSort_2(save, save + numberOut, sort);
       numberOut = CoinMin(1000,numberOut);
       for (iRow=0;iRow<numberOut;iRow++) {
-	int iColumn=sort[iRow];
+	int jRow=sort[iRow];
+	int iColumn=pivotVariable_[jRow];
 	setColumnStatus(iColumn,superBasic);
+	setRowStatus(jRow,basic);
+	pivotVariable_[jRow]=jRow+numberColumns_;
 	if (fabs(solution_[iColumn])>1.0e10) {
 	  if (upper_[iColumn]<0.0) {
 	    solution_[iColumn]=upper_[iColumn];
@@ -1677,6 +1674,12 @@ ClpSimplex::housekeeping(double objectiveChange)
         <<CoinMessageEol;
     }
   }
+#if 0
+  printf("h1 %d %d %g %g %g %g",
+      directionOut_
+      ,directionIn_,theta_
+	 ,dualOut_,dualIn_,alpha_);
+#endif
   // change of incoming
   char rowcol[]={'R','C'};
   if (pivotRow_>=0)
@@ -1741,6 +1744,13 @@ ClpSimplex::housekeeping(double objectiveChange)
     handler_->printing(algorithm_>0)<<dualIn_<<theta_;
     handler_->message()<<CoinMessageEol;
   }
+#if 0
+  if (numberIterations_>10000)
+  printf(" it %d %g %c%d %c%d\n"
+      ,numberIterations_,objectiveValue()
+      ,rowcol[isColumn(sequenceIn_)],sequenceWithin(sequenceIn_)
+	 ,rowcol[isColumn(sequenceOut_)],sequenceWithin(sequenceOut_));
+#endif
   if (trustedUserPointer_&&trustedUserPointer_->typeStruct==1) {
     if (algorithm_>0&&integerType_&&!nonLinearCost_->numberInfeasibilities()) {
       if (fabs(theta_)>1.0e-6||!numberIterations_) {
@@ -1911,12 +1921,10 @@ ClpSimplex::ClpSimplex(const ClpSimplex &rhs,int scalingMode) :
   zeroTolerance_(1.0e-13),
   columnPrimalSequence_(-2),
   rowPrimalSequence_(-2), 
-  columnDualInfeasibility_(0.0),
-  rowDualInfeasibility_(0.0),
+  bestObjectiveValue_(rhs.bestObjectiveValue_),
   moreSpecialOptions_(2),
   baseIteration_(0),
   primalToleranceToGetOptimal_(-1.0),
-  remainingDualInfeasibility_(0.0),
   largeValue_(1.0e15),
   largestPrimalError_(0.0),
   largestDualError_(0.0),
@@ -2017,12 +2025,10 @@ ClpSimplex::ClpSimplex(const ClpModel &rhs, int scalingMode) :
   zeroTolerance_(1.0e-13),
   columnPrimalSequence_(-2),
   rowPrimalSequence_(-2), 
-  columnDualInfeasibility_(0.0),
-  rowDualInfeasibility_(0.0),
+  bestObjectiveValue_(-COIN_DBL_MAX),
   moreSpecialOptions_(2),
   baseIteration_(0),
   primalToleranceToGetOptimal_(-1.0),
-  remainingDualInfeasibility_(0.0),
   largeValue_(1.0e15),
   largestPrimalError_(0.0),
   largestDualError_(0.0),
@@ -2219,11 +2225,9 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
   columnPrimalSequence_ = rhs.columnPrimalSequence_;
   zeroTolerance_ = rhs.zeroTolerance_;
   rowPrimalSequence_ = rhs.rowPrimalSequence_;
-  columnDualInfeasibility_ = rhs.columnDualInfeasibility_;
-  rowDualInfeasibility_ = rhs.rowDualInfeasibility_;
+  bestObjectiveValue_ = rhs.bestObjectiveValue_;
   baseIteration_ = rhs.baseIteration_;
   primalToleranceToGetOptimal_ = rhs.primalToleranceToGetOptimal_;
-  remainingDualInfeasibility_ = rhs.remainingDualInfeasibility_;
   largeValue_ = rhs.largeValue_;
   largestPrimalError_ = rhs.largestPrimalError_;
   largestDualError_ = rhs.largestDualError_;
@@ -2517,7 +2521,7 @@ ClpSimplex::checkDualSolution()
 	      numberDualInfeasibilitiesWithoutFree_ ++;
 	      sumDualInfeasibilities_ += value-dualTolerance_;
 	      if (value>possTolerance)
-		bestPossibleImprovement_ += distanceUp*value;
+		bestPossibleImprovement_ += CoinMin(distanceUp,1.0e10)*value;
 	      if (value>relaxedTolerance) 
 		sumOfRelaxedDualInfeasibilities_ += value-relaxedTolerance;
 	      numberDualInfeasibilities_ ++;
@@ -2543,7 +2547,7 @@ ClpSimplex::checkDualSolution()
 	  if (value>dualTolerance_) {
 	    sumDualInfeasibilities_ += value-dualTolerance_;
 	    if (value>possTolerance)
-	      bestPossibleImprovement_+= value*distanceDown;
+	      bestPossibleImprovement_+= value*CoinMin(distanceDown,1.0e10);
 	    if (value>relaxedTolerance) 
 	      sumOfRelaxedDualInfeasibilities_ += value-relaxedTolerance;
 	    numberDualInfeasibilities_ ++;
@@ -2579,7 +2583,7 @@ ClpSimplex::checkDualSolution()
 	  if (value>dualTolerance_) {
 	    sumDualInfeasibilities_ += value-dualTolerance_;
 	    if (value>possTolerance)
-	      bestPossibleImprovement_+= value*distanceUp;
+	      bestPossibleImprovement_+= value*CoinMin(distanceUp,1.0e10);
 	    if (value>relaxedTolerance) 
 	      sumOfRelaxedDualInfeasibilities_ += value-relaxedTolerance;
 	    numberDualInfeasibilities_ ++;
@@ -2595,7 +2599,7 @@ ClpSimplex::checkDualSolution()
 	  if (value>dualTolerance_) {
 	    sumDualInfeasibilities_ += value-dualTolerance_;
 	    if (value>possTolerance)
-	      bestPossibleImprovement_+= value*distanceDown;
+	      bestPossibleImprovement_+= value*CoinMin(distanceDown,1.0e10);
 	    if (value>relaxedTolerance) 
 	      sumOfRelaxedDualInfeasibilities_ += value-relaxedTolerance;
 	    numberDualInfeasibilities_ ++;
@@ -2623,13 +2627,16 @@ ClpSimplex::checkBothSolutions()
 {
   if ((matrix_->skipDualCheck()&&algorithm_>0&&problemStatus_==-2)||
       matrix_->rhsOffset(this)) {
+    // Say may be free or superbasic
+    moreSpecialOptions_ &= ~8;
     // old way
     checkPrimalSolution(rowActivityWork_,columnActivityWork_);
     checkDualSolution();
     return;
   }
   int iSequence;
-
+  assert (dualTolerance_>0.0&&dualTolerance_<1.0e10);
+  assert (primalTolerance_>0.0&&primalTolerance_<1.0e10);
   objectiveValue_ = 0.0;
   sumPrimalInfeasibilities_=0.0;
   numberPrimalInfeasibilities_=0;
@@ -2663,6 +2670,8 @@ ClpSimplex::checkBothSolutions()
   int numberSuperBasicWithDj=0;
 
   int numberTotal = numberRows_ + numberColumns_;
+  // Say no free or superbasic
+  moreSpecialOptions_ |= 8;
   for (iSequence=0;iSequence<numberTotal;iSequence++) {
     double value = solution_[iSequence];
 #ifdef COIN_DEBUG
@@ -2710,6 +2719,8 @@ ClpSimplex::checkBothSolutions()
           }
         } else {
           // may be free
+	  // Say free or superbasic
+	  moreSpecialOptions_ &= ~8;
           djValue *= 0.01;
 	  if (fabs(djValue)>dualTolerance) {
 	    if (getStatus(iSequence) == isFree) 
@@ -3670,11 +3681,14 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
       // these are "indexed" arrays so we always know where nonzeros are
       /**********************************************************
       rowArray_[3] is long enough for rows+columns
+      rowArray_[1] is long enough for max(rows,columns)
       *********************************************************/
       for (iRow=0;iRow<4;iRow++) {
 	int length =numberRows2+factorization_->maximumPivots();
 	if (iRow==3||objective_->type()>1)
 	  length += numberColumns_;
+	else if (iRow==1)
+	  length = CoinMax(length,numberColumns_);
 	if ((specialOptions_&65536)==0||!rowArray_[iRow]) {
 	  delete rowArray_[iRow];
 	  rowArray_[iRow]=new CoinIndexedVector();
@@ -5680,7 +5694,7 @@ ClpSimplex::barrier(bool crossover)
   }
   barrier.primalDual();
   int barrierStatus=barrier.status();
-  double gap = barrier.complementarityGap();
+  double gap = static_cast<double>(barrier.complementarityGap());
   // get which variables are fixed
   double * saveLower=NULL;
   double * saveUpper=NULL;
@@ -8164,12 +8178,10 @@ ClpSimplex::returnModel(ClpSimplex & otherModel)
   otherModel.columnPrimalSequence_ = columnPrimalSequence_;
   otherModel.zeroTolerance_ = zeroTolerance_;
   otherModel.rowPrimalSequence_ = rowPrimalSequence_;
-  otherModel.columnDualInfeasibility_ = columnDualInfeasibility_;
+  otherModel.bestObjectiveValue_ = bestObjectiveValue_;
   otherModel.moreSpecialOptions_ = moreSpecialOptions_;
-  otherModel.rowDualInfeasibility_ = rowDualInfeasibility_;
   otherModel.baseIteration_ = baseIteration_;
   otherModel.primalToleranceToGetOptimal_ = primalToleranceToGetOptimal_;
-  otherModel.remainingDualInfeasibility_ = remainingDualInfeasibility_;
   otherModel.largestPrimalError_ = largestPrimalError_;
   otherModel.largestDualError_ = largestDualError_;
   otherModel.alphaAccuracy_ = alphaAccuracy_;

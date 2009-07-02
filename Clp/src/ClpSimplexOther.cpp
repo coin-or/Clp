@@ -1299,6 +1299,14 @@ ClpSimplexOther::crunch(double * rhs, int * whichRow, int * whichColumn,
   if (!returnCode) {
     small = new ClpSimplex(this,numberRows2,whichRow,
                      numberColumns2,whichColumn,true,false);
+#if 0
+    ClpPackedMatrix * rowCopy = dynamic_cast<ClpPackedMatrix *>(rowCopy_);
+    if (rowCopy) {
+      assert(!small->rowCopy());
+      small->setNewRowCopy(new ClpPackedMatrix(*rowCopy,numberRows2,whichRow,
+					      numberColumns2,whichColumn));
+    }
+#endif
     // Set some stuff
     small->setDualBound(dualBound_);
     small->setInfeasibilityCost(infeasibilityCost_);

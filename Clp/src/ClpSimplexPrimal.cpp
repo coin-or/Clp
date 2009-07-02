@@ -221,6 +221,8 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
     printf("%d costed slacks put in basis\n",n);
   }
 #endif
+  // Start can skip some things in transposeTimes
+  specialOptions_ |= 131072;
   if (!startup(ifValuesPass,startFinishOptions)) {
     
     // Set average theta
@@ -482,6 +484,8 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
     // and get good feasible duals
     computeDuals(NULL);
   }
+  // Stop can skip some things in transposeTimes
+  specialOptions_ &= ~131072;
   // clean up
   unflag();
   finish(startFinishOptions);
@@ -2239,8 +2243,8 @@ ClpSimplexPrimal::perturb(int type)
       last=sort[i];
     }
 #ifdef KEEP_GOING_IF_FIXED 
-    printf("ratio number diff rhs %g (%d %d fixed), element ratio %g\n",((double)number)/((double) numberRows_),
-	   numberRows_,nFixed,elementRatio);
+    //printf("ratio number diff rhs %g (%d %d fixed), element ratio %g\n",((double)number)/((double) numberRows_),
+    //   numberRows_,nFixed,elementRatio);
 #endif
     if (number*4>numberRows_||elementRatio>1.0e12) {
       perturbation_=100;
@@ -2278,8 +2282,8 @@ ClpSimplexPrimal::perturb(int type)
 	  number++;
 	last=sort[i];
       }
-      printf("cratio number diff bounds %g (%d %d fixed)\n",((double)number)/((double) numberColumns_),
-	     numberColumns_,nFixed);
+      //printf("cratio number diff bounds %g (%d %d fixed)\n",((double)number)/((double) numberColumns_),
+      //     numberColumns_,nFixed);
     }
 #endif
     delete [] sort;
@@ -3268,6 +3272,8 @@ ClpSimplexPrimal::lexSolve()
   int ifValuesPass=0;
 #if 0
   // if so - put in any superbasic costed slacks
+  // Start can skip some things in transposeTimes
+  specialOptions_ |= 131072;
   if (ifValuesPass&&specialOptions_<0x01000000) {
     // Get column copy
     const CoinPackedMatrix * columnCopy = matrix();
@@ -3607,6 +3613,8 @@ ClpSimplexPrimal::lexSolve()
     // and get good feasible duals
     computeDuals(NULL);
   }
+  // Stop can skip some things in transposeTimes
+  specialOptions_ &= ~131072;
   // clean up
   unflag();
   finish(0);

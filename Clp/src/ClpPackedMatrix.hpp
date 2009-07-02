@@ -357,10 +357,38 @@ private:
 				 int * COIN_RESTRICT index, 
 				 double * COIN_RESTRICT array,
 				 const double tolerance) const;
+  /// Meat of transposeTimes by column when not scaled and skipping
+  int gutsOfTransposeTimesUnscaled(const double * COIN_RESTRICT pi,
+				    int * COIN_RESTRICT index, 
+				    double * COIN_RESTRICT array,
+				   const unsigned char * status,
+				    const double tolerance) const;
+  /** Meat of transposeTimes by column when not scaled and skipping
+      and doing part of dualColumn */
+  int gutsOfTransposeTimesUnscaled(const double * COIN_RESTRICT pi,
+				    int * COIN_RESTRICT index, 
+				    double * COIN_RESTRICT array,
+				   const unsigned char * status,
+				    int * COIN_RESTRICT spareIndex, 
+				    double * COIN_RESTRICT spareArray,
+				    const double * COIN_RESTRICT reducedCost,
+				   double & upperTheta,
+				   double & bestPossible,
+				   double acceptablePivot,
+				   double dualTolerance,
+				   int & numberRemaining,
+				    const double zeroTolerance) const;
+  /// Meat of transposeTimes by column when scaled and skipping
+  int gutsOfTransposeTimesScaled(const double * COIN_RESTRICT pi,
+				 const double * COIN_RESTRICT columnScale,
+				 int * COIN_RESTRICT index, 
+				 double * COIN_RESTRICT array,
+				   const unsigned char * status,
+				 const double tolerance) const;
   /// Meat of transposeTimes by row n > K if packed - returns number nonzero
   int gutsOfTransposeTimesByRowGEK(const CoinIndexedVector * COIN_RESTRICT piVector, 
 				   int * COIN_RESTRICT index, 
-				   double * COIN_RESTRICT output,
+ 				   double * COIN_RESTRICT output,
 				   int numberColumns,
 				   const double tolerance, 
 				   const double scalar) const;

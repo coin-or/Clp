@@ -722,7 +722,8 @@ ClpFactorization::replaceColumn ( const ClpSimplex * model,
 				  CoinIndexedVector * tableauColumn,
 				  int pivotRow,
 				  double pivotCheck ,
-				  bool checkBeforeModifying)
+				  bool checkBeforeModifying,
+				  double acceptablePivot)
 {
   int returnCode;
 #ifndef SLIM_CLP
@@ -736,7 +737,8 @@ ClpFactorization::replaceColumn ( const ClpSimplex * model,
       returnCode= CoinFactorization::replaceColumn(regionSparse,
 					      pivotRow,
 					      pivotCheck,
-					      checkBeforeModifying);
+						   checkBeforeModifying,
+						   acceptablePivot);
     } else {
       returnCode= CoinFactorization::replaceColumnPFI(tableauColumn,
 					      pivotRow,pivotCheck); // Note array
@@ -751,7 +753,8 @@ ClpFactorization::replaceColumn ( const ClpSimplex * model,
       returnCode = CoinFactorization::replaceColumn(regionSparse,
 							pivotRow,
 							pivotCheck,
-							checkBeforeModifying);
+						    checkBeforeModifying,
+						    acceptablePivot);
       networkBasis_->replaceColumn(regionSparse,
 				   pivotRow);
     } else {
@@ -1107,6 +1110,21 @@ ClpFactorization::getWeights(int * weights) const
 }
 #else
 // This one allows multiple factorizations
+#if CLP_MULTIPLE_FACTORIZATIONS == 1
+typedef CoinDenseFactorization CoinOtherFactorization;
+typedef CoinOslFactorization CoinOtherFactorization;
+#elif CLP_MULTIPLE_FACTORIZATIONS == 2
+#include "CoinSimpFactorization.hpp"
+typedef CoinSimpFactorization CoinOtherFactorization;
+typedef CoinOslFactorization CoinOtherFactorization;
+#elif CLP_MULTIPLE_FACTORIZATIONS == 3
+#include "CoinSimpFactorization.hpp"
+#define CoinOslFactorization CoinDenseFactorization
+#elif CLP_MULTIPLE_FACTORIZATIONS == 4
+#include "CoinDenseFactorization.hpp"
+#include "CoinSimpFactorization.hpp"
+#include "CoinOslFactorization.hpp"
+#endif
 
 //-------------------------------------------------------------------
 // Default Constructor 
@@ -1119,7 +1137,7 @@ ClpFactorization::ClpFactorization ()
   //coinFactorizationA_ = NULL;
   coinFactorizationA_ = new CoinFactorization() ;
   coinFactorizationB_ = NULL;
-  //coinFactorizationB_ = new CoinSmallFactorization();
+  //coinFactorizationB_ = new CoinOtherFactorization();
   forceB_=0;
   goOslThreshold_ = -1;
   goDenseThreshold_ = -1;
@@ -1146,7 +1164,13 @@ ClpFactorization::ClpFactorization (const ClpFactorization & rhs,
   goDenseThreshold_ = rhs.goDenseThreshold_;
   goSmallThreshold_ = rhs.goSmallThreshold_;
   int goDense = 0;
-  if (denseIfSmaller>0&&!rhs.coinFactorizationB_) {
+  if (denseIfSmaller>0&&denseIfSmaller<=goDenseThreshold_) {
+    CoinDenseFactorization * denseR = 
+      dynamic_cast<CoinDenseFactorization *>(rhs.coinFactorizationB_);
+    if (!denseR)
+      goDense=1;
+  }
+  if (denseIfSmaller>0&&!rhs.coinFactorizationB_) { 
     if (denseIfSmaller<=goDenseThreshold_) 
       goDense=1;
     else if (denseIfSmaller<=goSmallThreshold_) 
@@ -1214,7 +1238,7 @@ ClpFactorization::ClpFactorization (const CoinFactorization & rhs)
   assert (!coinFactorizationA_||!coinFactorizationB_);
 }
 
-ClpFactorization::ClpFactorization (const CoinSmallFactorization & rhs) 
+ClpFactorization::ClpFactorization (const CoinOtherFactorization & rhs) 
 {
 #ifdef CLP_FACTORIZATION_INSTRUMENT
   factorization_instrument(-1);
@@ -1224,7 +1248,7 @@ ClpFactorization::ClpFactorization (const CoinSmallFactorization & rhs)
 #endif
   coinFactorizationA_ = NULL;
   coinFactorizationB_ = rhs.clone();
-  //coinFactorizationB_ = new CoinSmallFactorization(rhs);
+  //coinFactorizationB_ = new CoinOtherFactorization(rhs);
   forceB_=0;
   goOslThreshold_ = -1;
   goDenseThreshold_ = -1;
@@ -1964,16 +1988,23 @@ ClpFactorization::factorize ( ClpSimplex * model,
 	const int * back = coinFactorizationA_->pivotColumnBack();
 	//int * pivotTemp = pivotColumn_.array();
 	//ClpDisjointCopyN ( pivotVariable, numberRows , pivotTemp  );
+#ifndef NDEBUG
+	CoinFillN(pivotVariable,numberRows,-1);
+#endif
 	// Redo pivot order
 	for (i=0;i<numberRowBasic;i++) {
 	  int k = pivotTemp[i];
 	  // so rowIsBasic[k] would be permuteBack[back[i]]
-	  pivotVariable[permuteBack[back[i]]]=k+numberColumns;
+	  int j=permuteBack[back[i]];
+	  assert (pivotVariable[j]==-1);
+	  pivotVariable[j]=k+numberColumns;
 	}
 	for (;i<useNumberRows;i++) {
 	  int k = pivotTemp[i];
 	  // so rowIsBasic[k] would be permuteBack[back[i]]
-	  pivotVariable[permuteBack[back[i]]]=k;
+	  int j=permuteBack[back[i]];
+	  assert (pivotVariable[j]==-1);
+	  pivotVariable[j]=k;
 	}
 #if 0
         if (numberSave>=0) {
@@ -2227,7 +2258,8 @@ ClpFactorization::replaceColumn ( const ClpSimplex * model,
 				  CoinIndexedVector * tableauColumn,
 				  int pivotRow,
 				  double pivotCheck ,
-				  bool checkBeforeModifying)
+				  bool checkBeforeModifying,
+				       double acceptablePivot)
 {
 #ifndef SLIM_CLP
   if (!networkBasis_) {
@@ -2242,7 +2274,8 @@ ClpFactorization::replaceColumn ( const ClpSimplex * model,
 	returnCode = coinFactorizationA_->replaceColumn(regionSparse,
 							pivotRow,
 							pivotCheck,
-							checkBeforeModifying);
+							checkBeforeModifying,
+							acceptablePivot);
       } else {
 	bool tab = coinFactorizationB_->wantsTableauColumn();
 	int numberIterations=model->numberIterations();
@@ -2251,7 +2284,8 @@ ClpFactorization::replaceColumn ( const ClpSimplex * model,
 	  coinFactorizationB_->replaceColumn(tab?tableauColumn:regionSparse,
 					     pivotRow,
 					     pivotCheck,
-					     checkBeforeModifying);
+					     checkBeforeModifying,
+					     acceptablePivot);
 #ifdef CLP_DEBUG
 	// check basic
 	int numberRows = coinFactorizationB_->numberRows();
@@ -2291,7 +2325,8 @@ ClpFactorization::replaceColumn ( const ClpSimplex * model,
       int returnCode = coinFactorizationA_->replaceColumn(regionSparse,
       						pivotRow,
       						pivotCheck,
-      						checkBeforeModifying);
+							  checkBeforeModifying,
+							  acceptablePivot);
       networkBasis_->replaceColumn(regionSparse,
 				   pivotRow);
       return returnCode;

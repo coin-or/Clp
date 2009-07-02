@@ -849,7 +849,7 @@ public:
       16384 - In fast dual (so we can switch off things)
       32768 - called from Osi
       65536 - keep arrays around as much as possible (also use maximumR/C)
-      131072 - unused
+      131072 - transposeTimes is -1.0 and can skip basic and fixed
       262144 - extra copy of scaled matrix
       524288 - Clp fast dual
       1048576 - don't need to finish dual (can return 3)

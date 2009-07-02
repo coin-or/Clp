@@ -11,6 +11,7 @@
 class ClpMatrixBase;
 class ClpSimplex;
 class ClpNetworkBasis;
+class CoinOtherFactorization;
 #ifndef CLP_MULTIPLE_FACTORIZATIONS 
 #ifdef CLP_OSL 
 #define CLP_MULTIPLE_FACTORIZATIONS 4
@@ -18,22 +19,8 @@ class ClpNetworkBasis;
 #define CLP_MULTIPLE_FACTORIZATIONS 3
 #endif
 #endif    
-#if CLP_MULTIPLE_FACTORIZATIONS == 1
+#ifdef CLP_MULTIPLE_FACTORIZATIONS 
 #include "CoinDenseFactorization.hpp"
-typedef CoinDenseFactorization CoinSmallFactorization;
-typedef CoinOslFactorization CoinSmallFactorization;
-#elif CLP_MULTIPLE_FACTORIZATIONS == 2
-#include "CoinSimpFactorization.hpp"
-typedef CoinSimpFactorization CoinSmallFactorization;
-typedef CoinOslFactorization CoinSmallFactorization;
-#elif CLP_MULTIPLE_FACTORIZATIONS == 3
-#include "CoinDenseFactorization.hpp"
-#include "CoinSimpFactorization.hpp"
-#define CoinOslFactorization CoinDenseFactorization
-#elif CLP_MULTIPLE_FACTORIZATIONS == 4
-#include "CoinDenseFactorization.hpp"
-#include "CoinSimpFactorization.hpp"
-#include "CoinOslFactorization.hpp"
 #endif
 
 /** This just implements CoinFactorization when an ClpMatrixBase object
@@ -79,8 +66,8 @@ public:
    /** The copy constructor. */
   ClpFactorization(const ClpFactorization&,int denseIfSmaller=0);
 #ifdef CLP_MULTIPLE_FACTORIZATIONS    
-   /** The copy constructor from an CoinSmallFactorization. */
-   ClpFactorization(const CoinSmallFactorization&);
+   /** The copy constructor from an CoinOtherFactorization. */
+   ClpFactorization(const CoinOtherFactorization&);
 #endif
    ClpFactorization& operator=(const ClpFactorization&);
    //@}
@@ -101,7 +88,8 @@ public:
 		      CoinIndexedVector * tableauColumn,
 		      int pivotRow,
 		      double pivotCheck ,
-		      bool checkBeforeModifying=false);
+		      bool checkBeforeModifying=false,
+		      double acceptablePivot=1.0e-8);
   //@}
 
   /**@name various uses of factorization (return code number elements) 
@@ -225,7 +213,7 @@ public:
   }
   /// Level of detail of messages
   inline int messageLevel (  ) const {
-    if (coinFactorizationA_) return coinFactorizationA_->messageLevel();  else return 0 ;
+    if (coinFactorizationA_) return coinFactorizationA_->messageLevel();  else return 1 ;
   }
   /// Set level of detail of messages
   inline void messageLevel (  int value) {
@@ -233,7 +221,11 @@ public:
   }
   /// Get rid of all memory
   inline void clearArrays()
-  { if (coinFactorizationA_) coinFactorizationA_->clearArrays();}
+  { if (coinFactorizationA_) 
+      coinFactorizationA_->clearArrays();
+    else if (coinFactorizationB_) 
+      coinFactorizationB_->clearArrays();
+  }
   /// Number of Rows after factorization
   inline int numberRows (  ) const {
     if (coinFactorizationA_) return coinFactorizationA_->numberRows(); else return coinFactorizationB_->numberRows() ;
@@ -246,11 +238,12 @@ public:
   { if (coinFactorizationA_) coinFactorizationA_->setDenseThreshold(value);}
   /// Pivot tolerance
   inline double pivotTolerance (  ) const {
-    if (coinFactorizationA_) return coinFactorizationA_->pivotTolerance();  else return 1.0e-8 ;
+    if (coinFactorizationA_) return coinFactorizationA_->pivotTolerance();  else if (coinFactorizationB_) return coinFactorizationB_->pivotTolerance();return 1.0e-8 ;
   }
   /// Set pivot tolerance
   inline void pivotTolerance (  double value) {
     if (coinFactorizationA_) coinFactorizationA_->pivotTolerance(value);
+    else if (coinFactorizationB_) coinFactorizationB_->pivotTolerance(value);
   }
   /// Allows change of pivot accuracy check 1.0 == none >1.0 relaxed
   inline void relaxAccuracyCheck(double value)
@@ -266,7 +259,11 @@ public:
   { if (coinFactorizationA_) coinFactorizationA_->setPersistenceFlag(value);}
   /// Delete all stuff (leaves as after CoinFactorization())
   inline void almostDestructor()
-  { if (coinFactorizationA_) coinFactorizationA_->almostDestructor(); }
+  { if (coinFactorizationA_) 
+      coinFactorizationA_->almostDestructor();
+    else if (coinFactorizationB_) 
+      coinFactorizationB_->clearArrays();
+  }
   /// Returns areaFactor but adjusted for dense
   inline double adjustedAreaFactor() const
   { if (coinFactorizationA_) return coinFactorizationA_->adjustedAreaFactor(); else return 0.0 ; }
@@ -365,8 +362,8 @@ private:
 #ifdef CLP_MULTIPLE_FACTORIZATIONS    
   /// Pointer to CoinFactorization 
   CoinFactorization * coinFactorizationA_;
-  /// Pointer to CoinSmallFactorization 
-  CoinSmallFactorization * coinFactorizationB_;
+  /// Pointer to CoinOtherFactorization 
+  CoinOtherFactorization * coinFactorizationB_;
   /// If nonzero force use of 1,dense 2,small 3,osl 
   int forceB_;
   /// Switch to osl if number rows <= this

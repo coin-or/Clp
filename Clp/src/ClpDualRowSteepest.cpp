@@ -671,16 +671,18 @@ ClpDualRowSteepest::updatePrimalSolution(
 					double primalRatio,
 					double & objectiveChange)
 {
-  double * work = primalUpdate->denseVector();
+  double * COIN_RESTRICT work = primalUpdate->denseVector();
   int number = primalUpdate->getNumElements();
-  int * which = primalUpdate->getIndices();
+  int * COIN_RESTRICT which = primalUpdate->getIndices();
   int i;
   double changeObj=0.0;
   double tolerance=model_->currentPrimalTolerance();
-  const int * pivotVariable = model_->pivotVariable();
-  double * infeas = infeasible_->denseVector();
-  int pivotRow = model_->pivotRow();
-  double * solution = model_->solutionRegion();
+  const int * COIN_RESTRICT pivotVariable = model_->pivotVariable();
+  double * COIN_RESTRICT infeas = infeasible_->denseVector();
+  double * COIN_RESTRICT solution = model_->solutionRegion();
+  const double * COIN_RESTRICT costModel = model_->costRegion();
+  const double * COIN_RESTRICT lowerModel = model_->lowerRegion();
+  const double * COIN_RESTRICT upperModel = model_->upperRegion();
 #ifdef COLUMN_BIAS 
   int numberColumns = model_->numberColumns();
 #endif
@@ -689,23 +691,14 @@ ClpDualRowSteepest::updatePrimalSolution(
       int iRow=which[i];
       int iPivot=pivotVariable[iRow];
       double value = solution[iPivot];
-      double cost = model_->cost(iPivot);
+      double cost = costModel[iPivot];
       double change = primalRatio*work[i];
       work[i]=0.0;
       value -= change;
       changeObj -= change*cost;
+      double lower = lowerModel[iPivot];
+      double upper = upperModel[iPivot];
       solution[iPivot] = value;
-      double lower = model_->lower(iPivot);
-      double upper = model_->upper(iPivot);
-      // But if pivot row then use value of incoming
-      // Although it is safer to recompute before next selection
-      // in case something odd happens
-      if (iRow==pivotRow) {
-	iPivot = model_->sequenceIn();
-	lower = model_->lower(iPivot);
-	upper = model_->upper(iPivot);
-	value = model_->valueIncomingDual();
-      }
       if (value<lower-tolerance) {
 	value -= lower;
 	value *= value;
@@ -749,22 +742,13 @@ ClpDualRowSteepest::updatePrimalSolution(
       int iRow=which[i];
       int iPivot=pivotVariable[iRow];
       double value = solution[iPivot];
-      double cost = model_->cost(iPivot);
+      double cost = costModel[iPivot];
       double change = primalRatio*work[iRow];
       value -= change;
       changeObj -= change*cost;
+      double lower = lowerModel[iPivot];
+      double upper = upperModel[iPivot];
       solution[iPivot] = value;
-      double lower = model_->lower(iPivot);
-      double upper = model_->upper(iPivot);
-      // But if pivot row then use value of incoming
-      // Although it is safer to recompute before next selection
-      // in case something odd happens
-      if (iRow==pivotRow) {
-	iPivot = model_->sequenceIn();
-	lower = model_->lower(iPivot);
-	upper = model_->upper(iPivot);
-	value = model_->valueIncomingDual();
-      }
       if (value<lower-tolerance) {
 	value -= lower;
 	value *= value;
@@ -804,6 +788,14 @@ ClpDualRowSteepest::updatePrimalSolution(
       }
       work[iRow]=0.0;
     }
+  }
+  // Do pivot row
+  {
+    int iRow = model_->pivotRow();
+    // feasible - was it infeasible - if so set tiny
+    assert (infeas[iRow]);
+    //if (infeas[iRow])
+    infeas[iRow] = COIN_INDEXED_REALLY_TINY_ELEMENT;
   }
   primalUpdate->setNumElements(0);
   objectiveChange += changeObj;

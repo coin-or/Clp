@@ -36,7 +36,7 @@ inline void
 CoinMemcpyN(const CoinWorkDouble * from, const int size, double * to)
 {
   for (int i=0;i<size;i++)
-    to[i]=from[i];
+    to[i]=static_cast<double>(from[i]);
 }
 inline CoinWorkDouble
 CoinMax(const CoinWorkDouble x1, const double x2)

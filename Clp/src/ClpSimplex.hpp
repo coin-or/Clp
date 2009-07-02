@@ -723,6 +723,10 @@ public:
   inline void setAlphaAccuracy(double value)
           { alphaAccuracy_ = value;} 
 public:
+   /// Objective value
+   //inline double objectiveValue() const {
+  //return (objectiveValue_-bestPossibleImprovement_)*optimizationDirection_ - dblParam_[ClpObjOffset];
+  //}
   /// Set disaster handler
   inline void setDisasterHandler(ClpDisasterHandler * handler)
   { disasterArea_= handler;}
@@ -952,6 +956,7 @@ public:
       1 bit - if presolve says infeasible in ClpSolve return
       2 bit - if presolved problem infeasible return
       4 bit - keep arrays like upper_ around
+      8 bit - no free or superBasic variables
   */
   inline void setMoreSpecialOptions(int value)
   { moreSpecialOptions_ = value;}
@@ -1175,18 +1180,14 @@ protected:
   int columnPrimalSequence_;
   /// Sequence of worst (-1 if feasible)
   int rowPrimalSequence_;
-  /// Worst column dual infeasibility
-  double columnDualInfeasibility_;
-  /// Worst row dual infeasibility
-  double rowDualInfeasibility_;
+  /// "Best" objective value
+  double bestObjectiveValue_;
   /// More special options - see set for details
   int moreSpecialOptions_;
   /// Iteration when we entered dual or primal
   int baseIteration_;
   /// Primal tolerance needed to make dual feasible (<largeTolerance)
   double primalToleranceToGetOptimal_;
-  /// Remaining largest dual infeasibility
-  double remainingDualInfeasibility_;
   /// Large bound value (for complementarity etc)
   double largeValue_;
   /// Largest error on Ax-b
