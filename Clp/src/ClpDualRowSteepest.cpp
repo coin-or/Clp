@@ -793,9 +793,9 @@ ClpDualRowSteepest::updatePrimalSolution(
   {
     int iRow = model_->pivotRow();
     // feasible - was it infeasible - if so set tiny
-    assert (infeas[iRow]);
-    //if (infeas[iRow])
-    infeas[iRow] = COIN_INDEXED_REALLY_TINY_ELEMENT;
+    //assert (infeas[iRow]);
+    if (infeas[iRow])
+      infeas[iRow] = COIN_INDEXED_REALLY_TINY_ELEMENT;
   }
   primalUpdate->setNumElements(0);
   objectiveChange += changeObj;

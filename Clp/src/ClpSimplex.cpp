@@ -61,8 +61,8 @@ ClpSimplex::ClpSimplex (bool emptyMessages) :
   valueOut_(-1),
   upperOut_(-1),
   dualOut_(-1),
-  dualTolerance_(0.0),
-  primalTolerance_(0.0),
+  dualTolerance_(1.0e-7),
+  primalTolerance_(1.0e-7),
   sumDualInfeasibilities_(0.0),
   sumPrimalInfeasibilities_(0.0),
   infeasibilityCost_(1.0e10),
@@ -172,8 +172,8 @@ ClpSimplex::ClpSimplex ( const ClpModel * rhs,
   valueOut_(-1),
   upperOut_(-1),
   dualOut_(-1),
-  dualTolerance_(0.0),
-  primalTolerance_(0.0),
+  dualTolerance_(1.0e-7),
+  primalTolerance_(1.0e-7),
   sumDualInfeasibilities_(0.0),
   sumPrimalInfeasibilities_(0.0),
   infeasibilityCost_(1.0e10),
@@ -1940,8 +1940,8 @@ ClpSimplex::ClpSimplex(const ClpSimplex &rhs,int scalingMode) :
   valueOut_(-1),
   upperOut_(-1),
   dualOut_(-1),
-  dualTolerance_(0.0),
-  primalTolerance_(0.0),
+  dualTolerance_(1.0e-7),
+  primalTolerance_(1.0e-7),
   sumDualInfeasibilities_(0.0),
   sumPrimalInfeasibilities_(0.0),
   infeasibilityCost_(1.0e10),
@@ -2044,8 +2044,8 @@ ClpSimplex::ClpSimplex(const ClpModel &rhs, int scalingMode) :
   valueOut_(-1),
   upperOut_(-1),
   dualOut_(-1),
-  dualTolerance_(0.0),
-  primalTolerance_(0.0),
+  dualTolerance_(1.0e-7),
+  primalTolerance_(1.0e-7),
   sumDualInfeasibilities_(0.0),
   sumPrimalInfeasibilities_(0.0),
   infeasibilityCost_(1.0e10),
@@ -8160,12 +8160,12 @@ ClpSimplex::statusOfProblem(bool initial)
     internalFactorize(1);
 #endif
   }
-    CoinMemcpyN(rowActivity_,numberRows_,rowActivityWork_);
-    CoinMemcpyN(columnActivity_,numberColumns_,columnActivityWork_);
+  CoinMemcpyN(rowActivity_,numberRows_,rowActivityWork_);
+  CoinMemcpyN(columnActivity_,numberColumns_,columnActivityWork_);
   gutsOfSolution(NULL,NULL);
-    CoinMemcpyN(rowActivityWork_,numberRows_,rowActivity_);
-    CoinMemcpyN(columnActivityWork_,numberColumns_,columnActivity_);
-    CoinMemcpyN(dj_,numberColumns_,reducedCost_);
+  CoinMemcpyN(rowActivityWork_,numberRows_,rowActivity_);
+  CoinMemcpyN(columnActivityWork_,numberColumns_,columnActivity_);
+  CoinMemcpyN(dj_,numberColumns_,reducedCost_);
   deleteRim(-1);
   return (primalFeasible()&&dualFeasible());
 }
