@@ -91,11 +91,20 @@ clp_SOURCES = \
 	unitTest.cpp
 
 # List all additionally required COIN libraries
-clp_LDADD = libClp.la \
-	$(COINUTILSOBJDIR)/src/libCoinUtils.la
+clp_LDADD = libClp.la
+if COIN_HAS_COINUTILS_INSTALLED
+  clp_LDADD += -L$(COINUTILSINSTDIR)/lib -lCoinUtils
+else
+  clp_LDADD += $(COINUTILSOBJDIR)/src/libCoinUtils.la
+endif
 
 # Here we add additional libraries
-LIBS += $(ADDLIBS) `cat $(COINUTILSOBJDIR)/coinutils_addlibs.txt`
+LIBS += $(ADDLIBS)
+if COIN_HAS_COINUTILS_INSTALLED
+  LIBS += `cat $(COINUTILSDOCDIR)/coinutils_addlibs.txt`
+else
+  LIBS += `cat $(COINUTILSOBJDIR)/coinutils_addlibs.txt`
+endif
 
 # Finally, the -rpath flag is used by libtool to make sure that the shared
 # library is found (in the lib install directory) when we are using dynamic
@@ -108,9 +117,13 @@ clp_LDFLAGS = -rpath $(libdir)
 
 # Here list all include flags, relative to this "srcdir" directory.  This
 # "cygpath" stuff is necessary to compile with native compilers on Windows.
-AM_CPPFLAGS = \
+if COIN_HAS_COINUTILS_INSTALLED
+  AM_CPPFLAGS = -I`$(CYGPATH_W) $(COINUTILSINSTDIR)/include/coin`
+else
+  AM_CPPFLAGS = \
 	-I`$(CYGPATH_W) $(COINUTILSSRCDIR)/src` \
 	-I`$(CYGPATH_W) $(COINUTILSOBJDIR)/inc`
+endif
 
 # This line is necessary to allow VPATH compilation with MS compilers
 # on Cygwin

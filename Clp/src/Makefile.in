@@ -45,6 +45,10 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 bin_PROGRAMS = clp$(EXEEXT)
+@COIN_HAS_COINUTILS_INSTALLED_TRUE@am__append_1 = -L$(COINUTILSINSTDIR)/lib -lCoinUtils
+@COIN_HAS_COINUTILS_INSTALLED_FALSE@am__append_2 = $(COINUTILSOBJDIR)/src/libCoinUtils.la
+@COIN_HAS_COINUTILS_INSTALLED_TRUE@am__append_3 = `cat $(COINUTILSDOCDIR)/coinutils_addlibs.txt`
+@COIN_HAS_COINUTILS_INSTALLED_FALSE@am__append_4 = `cat $(COINUTILSOBJDIR)/coinutils_addlibs.txt`
 subdir = src
 DIST_COMMON = $(includecoin_HEADERS) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in
@@ -92,7 +96,10 @@ am_clp_OBJECTS = ClpMain.$(OBJEXT) CbcOrClpParam.$(OBJEXT) \
 	MyEventHandler.$(OBJEXT) MyMessageHandler.$(OBJEXT) \
 	unitTest.$(OBJEXT)
 clp_OBJECTS = $(am_clp_OBJECTS)
-clp_DEPENDENCIES = libClp.la $(COINUTILSOBJDIR)/src/libCoinUtils.la
+am__DEPENDENCIES_1 =
+@COIN_HAS_COINUTILS_INSTALLED_FALSE@am__DEPENDENCIES_2 = $(COINUTILSOBJDIR)/src/libCoinUtils.la
+clp_DEPENDENCIES = libClp.la $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_2)
 depcomp = $(SHELL) $(top_srcdir)/../depcomp
 am__depfiles_maybe = depfiles
 CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
@@ -139,14 +146,20 @@ CCDEPMODE = @CCDEPMODE@
 CDEFS = @CDEFS@
 CFLAGS = @CFLAGS@
 CLPDOCDIR = @CLPDOCDIR@
+CLPINSTDIR = @CLPINSTDIR@
 CLPOBJDIR = @CLPOBJDIR@
 CLPSRCDIR = @CLPSRCDIR@
 COINUTILSDOCDIR = @COINUTILSDOCDIR@
+COINUTILSINSTDIR = @COINUTILSINSTDIR@
 COINUTILSOBJDIR = @COINUTILSOBJDIR@
 COINUTILSSRCDIR = @COINUTILSSRCDIR@
 COIN_HAS_CLP_FALSE = @COIN_HAS_CLP_FALSE@
+COIN_HAS_CLP_INSTALLED_FALSE = @COIN_HAS_CLP_INSTALLED_FALSE@
+COIN_HAS_CLP_INSTALLED_TRUE = @COIN_HAS_CLP_INSTALLED_TRUE@
 COIN_HAS_CLP_TRUE = @COIN_HAS_CLP_TRUE@
 COIN_HAS_COINUTILS_FALSE = @COIN_HAS_COINUTILS_FALSE@
+COIN_HAS_COINUTILS_INSTALLED_FALSE = @COIN_HAS_COINUTILS_INSTALLED_FALSE@
+COIN_HAS_COINUTILS_INSTALLED_TRUE = @COIN_HAS_COINUTILS_INSTALLED_TRUE@
 COIN_HAS_COINUTILS_TRUE = @COIN_HAS_COINUTILS_TRUE@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
@@ -180,8 +193,7 @@ LIBEXT = @LIBEXT@
 LIBOBJS = @LIBOBJS@
 
 # Here we add additional libraries
-LIBS = @LIBS@ $(ADDLIBS) `cat \
-	$(COINUTILSOBJDIR)/coinutils_addlibs.txt`
+LIBS = @LIBS@ $(ADDLIBS) $(am__append_3) $(am__append_4)
 LIBTOOL = @LIBTOOL@
 LIBTOOLM4 = @LIBTOOLM4@
 LN_S = @LN_S@
@@ -342,14 +354,16 @@ clp_SOURCES = \
 
 
 # List all additionally required COIN libraries
-clp_LDADD = libClp.la \
-	$(COINUTILSOBJDIR)/src/libCoinUtils.la
-
+clp_LDADD = libClp.la $(am__append_1) $(am__append_2)
 
 # Finally, the -rpath flag is used by libtool to make sure that the shared
 # library is found (in the lib install directory) when we are using dynamic
 # libraries.
 clp_LDFLAGS = -rpath $(libdir)
+@COIN_HAS_COINUTILS_INSTALLED_FALSE@AM_CPPFLAGS = \
+@COIN_HAS_COINUTILS_INSTALLED_FALSE@	-I`$(CYGPATH_W) $(COINUTILSSRCDIR)/src` \
+@COIN_HAS_COINUTILS_INSTALLED_FALSE@	-I`$(CYGPATH_W) $(COINUTILSOBJDIR)/inc`
+
 
 ########################################################################
 #                            Additional flags                          #
@@ -357,10 +371,7 @@ clp_LDFLAGS = -rpath $(libdir)
 
 # Here list all include flags, relative to this "srcdir" directory.  This
 # "cygpath" stuff is necessary to compile with native compilers on Windows.
-AM_CPPFLAGS = \
-	-I`$(CYGPATH_W) $(COINUTILSSRCDIR)/src` \
-	-I`$(CYGPATH_W) $(COINUTILSOBJDIR)/inc`
-
+@COIN_HAS_COINUTILS_INSTALLED_TRUE@AM_CPPFLAGS = -I`$(CYGPATH_W) $(COINUTILSINSTDIR)/include/coin`
 
 # This line is necessary to allow VPATH compilation with MS compilers
 # on Cygwin
