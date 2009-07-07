@@ -1830,7 +1830,7 @@ clp watson.mps -\nscaling off\nprimalsimplex"
                       fprintf(fp,"%7d ",iRow);
                       if (lengthName)
                         fprintf(fp,format,rowNames[iRow].c_str());
-                      fprintf(fp,"%15.8g        %15.8g\n",primalRowSolution[iRow],
+                      fprintf(fp," %15.8g        %15.8g\n",primalRowSolution[iRow],
                               dualRowSolution[iRow]);
                     }
                   }
@@ -1861,7 +1861,7 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 		    fprintf(fp,"%7d ",iColumn);
 		    if (lengthName)
 		      fprintf(fp,format,columnNames[iColumn].c_str());
-		    fprintf(fp,"%15.8g        %15.8g\n",
+		    fprintf(fp," %15.8g        %15.8g\n",
 			    primalColumnSolution[iColumn],
 			    dualColumnSolution[iColumn]);
 		  }
