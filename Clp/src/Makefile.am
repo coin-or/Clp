@@ -1,4 +1,4 @@
-# Copyright (C) 2006 International Business Machines and others.
+# Copyright (C) 2006, 2009 International Business Machines and others.
 # All Rights Reserved.
 # This file is distributed under the Common Public License.
 
@@ -92,15 +92,15 @@ clp_SOURCES = \
 
 # List all additionally required COIN libraries
 clp_LDADD = libClp.la
-if COIN_HAS_COINUTILS_INSTALLED
-  clp_LDADD += -L$(COINUTILSINSTDIR)/lib -lCoinUtils
+if COIN_HAS_COINUTILS_PREINSTALLED
+  LIBS += -L`$(CYGPATH_W) $(COINUTILSINSTDIR)/lib` -lCoinUtils
 else
   clp_LDADD += $(COINUTILSOBJDIR)/src/libCoinUtils.la
 endif
 
 # Here we add additional libraries
 LIBS += $(ADDLIBS)
-if COIN_HAS_COINUTILS_INSTALLED
+if COIN_HAS_COINUTILS_PREINSTALLED
   LIBS += `cat $(COINUTILSDOCDIR)/coinutils_addlibs.txt`
 else
   LIBS += `cat $(COINUTILSOBJDIR)/coinutils_addlibs.txt`
@@ -117,7 +117,7 @@ clp_LDFLAGS = -rpath $(libdir)
 
 # Here list all include flags, relative to this "srcdir" directory.  This
 # "cygpath" stuff is necessary to compile with native compilers on Windows.
-if COIN_HAS_COINUTILS_INSTALLED
+if COIN_HAS_COINUTILS_PREINSTALLED
   AM_CPPFLAGS = -I`$(CYGPATH_W) $(COINUTILSINSTDIR)/include/coin`
 else
   AM_CPPFLAGS = \
@@ -174,6 +174,7 @@ includecoin_HEADERS = \
 	ClpPrimalColumnSteepest.hpp \
 	ClpQuadraticObjective.hpp \
 	ClpSimplex.hpp \
+	ClpSimplexDual.hpp \
 	ClpSimplexNonlinear.hpp \
 	ClpSimplexOther.hpp \
 	ClpSimplexPrimal.hpp \
