@@ -98,7 +98,7 @@ public:
   /** Creates scales for column copy (rowCopy in model may be modified)
       default does not allow scaling
       returns non-zero if no scaling done */
-  virtual int scale(ClpModel * , const ClpSimplex * baseModel=NULL) const 
+  virtual int scale(ClpModel * , const ClpSimplex * =NULL) const 
   { return 1;}
   /** Scales rowCopy if column copy scaled
       Only called if scales already exist */
@@ -124,8 +124,8 @@ public:
       8 - report on large and small
   */
   virtual bool allElementsInRange(ClpModel * ,
-				  double smallest, double largest,
-				  int check=15)
+				  double, double,
+				  int =15)
   { return true;}
   /** Set the dimensions of the matrix. In effect, append new empty
       columns/rows to the matrix. A negative number for either dimension
@@ -294,8 +294,8 @@ public:
 				    CoinIndexedVector * z) const = 0;
   /** Returns true if can combine transposeTimes and subsetTransposeTimes
       and if it would be faster */
-  virtual bool canCombine(const ClpSimplex * model,
-                          const CoinIndexedVector * pi) const {return false;}
+  virtual bool canCombine(const ClpSimplex * ,
+                          const CoinIndexedVector * ) const {return false;}
   /// Updates two arrays for steepest and does devex weights (need not be coded)
   virtual void transposeTimes2(const ClpSimplex * model,
                                const CoinIndexedVector * pi1, CoinIndexedVector * dj1,
