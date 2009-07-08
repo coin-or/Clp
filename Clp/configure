@@ -20491,13 +20491,16 @@ fi;
 # Check whether --with-coin-instdir or --without-coin-instdir was given.
 if test "${with_coin_instdir+set}" = set; then
   withval="$with_coin_instdir"
-  coin_has_coinutils=installed
-		   if test -d "$withval"; then : ; else
+  if test -d "$withval"; then : ; else
 		     { { echo "$as_me:$LINENO: error: argument for --with-coin-instdir not a directory" >&5
 echo "$as_me: error: argument for --with-coin-instdir not a directory" >&2;}
    { (exit 1); exit 1; }; }
 		   fi
-                   COINUTILSINSTDIR=`cd $withval; pwd`
+		   if test -r $withval/include/coin/CoinTime.hpp; then
+                        coin_has_coinutils=installed
+			COINUTILSINSTDIR=`cd $withval; pwd`
+                      fi
+
 fi;
     fi
 
@@ -20683,13 +20686,14 @@ fi;
 # Check whether --with-coin-instdir or --without-coin-instdir was given.
 if test "${with_coin_instdir+set}" = set; then
   withval="$with_coin_instdir"
-  coin_has_clp=installed
-		   if test -d "$withval"; then : ; else
+  if test -d "$withval"; then : ; else
 		     { { echo "$as_me:$LINENO: error: argument for --with-coin-instdir not a directory" >&5
 echo "$as_me: error: argument for --with-coin-instdir not a directory" >&2;}
    { (exit 1); exit 1; }; }
 		   fi
-                   CLPINSTDIR=`cd $withval; pwd`
+		   { echo "$as_me:$LINENO: WARNING: Cannot verify availability of Clp with --with-coin-instdir flag.  Project manager needs to provide name of header to look for" >&5
+echo "$as_me: WARNING: Cannot verify availability of Clp with --with-coin-instdir flag.  Project manager needs to provide name of header to look for" >&2;}
+
 fi;
     fi
 
