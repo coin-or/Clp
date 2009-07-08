@@ -4324,6 +4324,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
                          <<numberDualInfeasibilitiesWithoutFree_;
     handler_->message()<<CoinMessageEol;
   }
+  double approximateObjective=objectiveValue_;
 #ifdef CLP_REPORT_PROGRESS
     if (ixxxxxx>=ixxyyyy-4&&ixxxxxx<=ixxyyyy) {
       char temp[20];
@@ -5004,6 +5005,10 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
   matrix_->correctSequence(this,fake,fake);
   if (alphaAccuracy_>0.0)
       alphaAccuracy_=1.0;
+  // If we are stopping - use plausible objective
+  // Maybe only in fast dual
+  if (problemStatus_>2)
+    objectiveValue_ = approximateObjective;
 }
 /* While updateDualsInDual sees what effect is of flip
    this does actual flipping.
