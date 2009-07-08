@@ -161,6 +161,7 @@ includecoin_HEADERS = \
 	ClpPrimalColumnSteepest.hpp \
 	ClpQuadraticObjective.hpp \
 	ClpSimplex.hpp \
+	ClpSimplexDual.hpp \
 	ClpSimplexNonlinear.hpp \
 	ClpSimplexOther.hpp \
 	ClpSimplexPrimal.hpp \
