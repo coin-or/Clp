@@ -1,4 +1,3 @@
-/* $Id$ */
 // Copyright (C) 2003, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
@@ -240,9 +239,9 @@ Clp_loadProblem (Clp_Simplex * model,  const int numcols, const int numrows,
     printf("%s numcols = %i, numrows = %i\n", 
       prefix, numcols, numrows);
     printf("%s model = %p, start = %p, index = %p, value = %p\n",
-      prefix, (void*)model, (void*)start, (void*)index, (void*)value);
+	   prefix, reinterpret_cast<const void *>(model), reinterpret_cast<const void *>(start), reinterpret_cast<const void *>(index), reinterpret_cast<const void *>(value));
     printf("%s collb = %p, colub = %p, obj = %p, rowlb = %p, rowub = %p\n",
-      prefix, (void*)collb, (void*)colub, (void*)obj, (void*)rowlb, (void*)rowub);
+	   prefix, reinterpret_cast<const void *>(collb), reinterpret_cast<const void *>(colub), reinterpret_cast<const void *>(obj), reinterpret_cast<const void *>(rowlb), reinterpret_cast<const void *>(rowub));
   }
   model->model_->loadProblem(numcols,numrows,start,index,value,
 			     collb,colub,obj,rowlb,rowub);
@@ -1130,7 +1129,7 @@ Clp_printModel(Clp_Simplex * model, const char * prefix)
   printf("%s numcols = %i, numrows = %i, numelem = %i\n", 
     prefix, numcols, numrows, numelem);
   printf("%s model = %p, start = %p, index = %p, value = %p\n",
-    prefix, (void*)model, (void*)start, (void*)index, (void*)value);
+	 prefix, reinterpret_cast<const void *>(model), reinterpret_cast<const void *>(start), reinterpret_cast<const void *>(index), reinterpret_cast<const void *>(value));
   clp_simplex->matrix()->dumpMatrix(NULL);
   {
     int i;
@@ -1142,7 +1141,7 @@ Clp_printModel(Clp_Simplex * model, const char * prefix)
   }
   
   printf("%s collb = %p, colub = %p, obj = %p, rowlb = %p, rowub = %p\n",
-    prefix, (void*)collb, (void*)colub, (void*)obj, (void*)rowlb, (void*)rowub);
+	 prefix, reinterpret_cast<const void *>(collb), reinterpret_cast<const void *>(colub), reinterpret_cast<const void *>(obj), reinterpret_cast<const void *>(rowlb), reinterpret_cast<const void *>(rowub));
   printf("%s optimization direction = %g\n",prefix, Clp_optimizationDirection(model));
   printf("  (1 - minimize, -1 - maximize, 0 - ignore)\n");
   {

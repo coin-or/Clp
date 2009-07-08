@@ -100,11 +100,11 @@ public:
   /** Creates scales for column copy (rowCopy in model may be modified)
       default does not allow scaling
       returns non-zero if no scaling done */
-  virtual int scale(ClpModel * model, const ClpSimplex * baseModel=NULL) const 
+  virtual int scale(ClpModel * , const ClpSimplex * =NULL) const 
   { return 1;}
   /** Scales rowCopy if column copy scaled
       Only called if scales already exist */
-  virtual void scaleRowCopy(ClpModel * model) const 
+  virtual void scaleRowCopy(ClpModel * ) const 
   { }
   /// Returns true if can create row copy
   virtual bool canGetRowCopy() const
@@ -112,7 +112,7 @@ public:
   /** Realy really scales column copy 
       Only called if scales already exist.
       Up to user to delete */
-  inline virtual ClpMatrixBase * scaledColumnCopy(ClpModel * model) const 
+  inline virtual ClpMatrixBase * scaledColumnCopy(ClpModel * ) const 
   { return this->clone();}
   
   /** Checks if all elements are in valid range.  Can just
@@ -125,9 +125,9 @@ public:
       4 - check and compress duplicates
       8 - report on large and small
   */
-  virtual bool allElementsInRange(ClpModel * model,
-				  double smallest, double largest,
-				  int check=15)
+  virtual bool allElementsInRange(ClpModel * ,
+				  double , double ,
+				  int =15)
   { return true;}
   /** Set the dimensions of the matrix. In effect, append new empty
       columns/rows to the matrix. A negative number for either dimension
@@ -156,7 +156,7 @@ public:
       matrix and any bounds or costs to be updated (sensibly).
       Returns non-zero if any changes.
   */
-  virtual int refresh(ClpSimplex * model)
+  virtual int refresh(ClpSimplex * )
   { return 0;}
   
   // Really scale matrix
@@ -303,8 +303,8 @@ public:
 				    CoinIndexedVector * z) const = 0;
   /** Returns true if can combine transposeTimes and subsetTransposeTimes
       and if it would be faster */
-  virtual bool canCombine(const ClpSimplex * model,
-                          const CoinIndexedVector * pi) const {return false;}
+  virtual bool canCombine(const ClpSimplex * ,
+                          const CoinIndexedVector * ) const {return false;}
   /// Updates two arrays for steepest and does devex weights (need not be coded)
   virtual void transposeTimes2(const ClpSimplex * model,
                                const CoinIndexedVector * pi1, CoinIndexedVector * dj1,
