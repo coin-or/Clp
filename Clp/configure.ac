@@ -56,7 +56,7 @@ AC_COIN_INIT_AUTO_TOOLS
 #                              COIN components                              #
 #############################################################################
 
-AC_COIN_HAS_PROJECT(CoinUtils, CoinTime.hpp, libCoinUtils)
+AC_COIN_HAS_PROJECT(CoinUtils)
 AC_COIN_HAS_PROJECT(Clp)
 
 #############################################################################

@@ -20496,11 +20496,10 @@ if test "${with_coin_instdir+set}" = set; then
 echo "$as_me: error: argument for --with-coin-instdir not a directory" >&2;}
    { (exit 1); exit 1; }; }
 		   fi
-		   if test -r $withval/include/coin/CoinTime.hpp; then
-                        coin_has_coinutils=installed
-			COINUTILSINSTDIR=`cd $withval; pwd`
-                      fi
-
+		   if test -r $withval/share/doc/coin/CoinUtils/README; then
+		     coin_has_coinutils=installed
+		     COINUTILSINSTDIR=`cd $withval; pwd`
+		   fi
 fi;
     fi
 
@@ -20562,40 +20561,30 @@ fi
 if test $coin_has_coinutils = installed; then
   echo "$as_me:$LINENO: result: installed in $COINUTILSINSTDIR" >&5
 echo "${ECHO_T}installed in $COINUTILSINSTDIR" >&6
-  # Check for header
-  tmp=$COINUTILSINSTDIR/include/coin
-                  echo "$as_me:$LINENO: checking whether header CoinTime.hpp is available in $tmp" >&5
-echo $ECHO_N "checking whether header CoinTime.hpp is available in $tmp... $ECHO_C" >&6
-                  if test -r $tmp/CoinTime.hpp; then
-		    echo "$as_me:$LINENO: result: yes" >&5
-echo "${ECHO_T}yes" >&6
-		  else
-		    echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6
-		    { { echo "$as_me:$LINENO: error: Header CoinTime.hpp not available in CoinUtils installation directory" >&5
-echo "$as_me: error: Header CoinTime.hpp not available in CoinUtils installation directory" >&2;}
-   { (exit 1); exit 1; }; }
-		  fi
+  if test -r $COINUTILSINSTDIR/share/doc/coin/CoinUtils/README; then
 
-  # Check for library (this is not qo reliable)
-  tmp=$COINUTILSINSTDIR/lib
-                  echo "$as_me:$LINENO: checking whether library libCoinUtils.* is available in $tmp" >&5
-echo $ECHO_N "checking whether library libCoinUtils.* is available in $tmp... $ECHO_C" >&6
-		  bla=`ls $tmp/libCoinUtils.* 2>/dev/null | head -n 1`
-		  if test x"$bla" = x; then
-		    echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6
-		    { { echo "$as_me:$LINENO: error: Library libCoinUtils.* not available in CoinUtils installation directory" >&5
-echo "$as_me: error: Library libCoinUtils.* not available in CoinUtils installation directory" >&2;}
+  :
+else
+  { { echo "$as_me:$LINENO: error: $COINUTILSINSTDIR/share/doc/coin/CoinUtils/README should be available if CoinUtils is installed" >&5
+echo "$as_me: error: $COINUTILSINSTDIR/share/doc/coin/CoinUtils/README should be available if CoinUtils is installed" >&2;}
    { (exit 1); exit 1; }; }
-		  else
-		    echo "$as_me:$LINENO: result: found $bla" >&5
-echo "${ECHO_T}found $bla" >&6
-		  fi
+  :
+fi
 
 else
   echo "$as_me:$LINENO: result: $coin_has_coinutils" >&5
 echo "${ECHO_T}$coin_has_coinutils" >&6
+  if test $coin_has_coinutils != notGiven &&
+     test $coin_has_coinutils != skipping; then
+    echo "$as_me:$LINENO: checking for source code location of CoinUtils" >&5
+echo $ECHO_N "checking for source code location of CoinUtils... $ECHO_C" >&6
+    echo "$as_me:$LINENO: result: $COINUTILSSRCDIR" >&5
+echo "${ECHO_T}$COINUTILSSRCDIR" >&6
+    echo "$as_me:$LINENO: checking for object code location of CoinUtils" >&5
+echo $ECHO_N "checking for object code location of CoinUtils... $ECHO_C" >&6
+    echo "$as_me:$LINENO: result: $COINUTILSOBJDIR" >&5
+echo "${ECHO_T}$COINUTILSOBJDIR" >&6
+  fi
 fi
 
 echo "$as_me:$LINENO: checking for COIN project Clp" >&5
@@ -20691,9 +20680,10 @@ if test "${with_coin_instdir+set}" = set; then
 echo "$as_me: error: argument for --with-coin-instdir not a directory" >&2;}
    { (exit 1); exit 1; }; }
 		   fi
-		   { echo "$as_me:$LINENO: WARNING: Cannot verify availability of Clp with --with-coin-instdir flag.  Project manager needs to provide name of header to look for" >&5
-echo "$as_me: WARNING: Cannot verify availability of Clp with --with-coin-instdir flag.  Project manager needs to provide name of header to look for" >&2;}
-
+		   if test -r $withval/share/doc/coin/Clp/README; then
+		     coin_has_clp=installed
+		     CLPINSTDIR=`cd $withval; pwd`
+		   fi
 fi;
     fi
 
@@ -20755,13 +20745,30 @@ fi
 if test $coin_has_clp = installed; then
   echo "$as_me:$LINENO: result: installed in $CLPINSTDIR" >&5
 echo "${ECHO_T}installed in $CLPINSTDIR" >&6
-  # Check for header
+  if test -r $CLPINSTDIR/share/doc/coin/Clp/README; then
 
-  # Check for library (this is not qo reliable)
+  :
+else
+  { { echo "$as_me:$LINENO: error: $CLPINSTDIR/share/doc/coin/Clp/README should be available if Clp is installed" >&5
+echo "$as_me: error: $CLPINSTDIR/share/doc/coin/Clp/README should be available if Clp is installed" >&2;}
+   { (exit 1); exit 1; }; }
+  :
+fi
 
 else
   echo "$as_me:$LINENO: result: $coin_has_clp" >&5
 echo "${ECHO_T}$coin_has_clp" >&6
+  if test $coin_has_clp != notGiven &&
+     test $coin_has_clp != skipping; then
+    echo "$as_me:$LINENO: checking for source code location of Clp" >&5
+echo $ECHO_N "checking for source code location of Clp... $ECHO_C" >&6
+    echo "$as_me:$LINENO: result: $CLPSRCDIR" >&5
+echo "${ECHO_T}$CLPSRCDIR" >&6
+    echo "$as_me:$LINENO: checking for object code location of Clp" >&5
+echo $ECHO_N "checking for object code location of Clp... $ECHO_C" >&6
+    echo "$as_me:$LINENO: result: $CLPOBJDIR" >&5
+echo "${ECHO_T}$CLPOBJDIR" >&6
+  fi
 fi
 
 
