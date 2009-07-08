@@ -167,6 +167,7 @@ includecoin_HEADERS = \
 	ClpSimplexPrimal.hpp \
 	ClpSolve.hpp \
 	CbcOrClpParam.hpp \
+	CbcOrClpParam.cpp \
 	Idiot.hpp
 
 #############################################################################
