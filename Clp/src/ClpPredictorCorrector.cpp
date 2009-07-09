@@ -3137,7 +3137,11 @@ int ClpPredictorCorrector::updateSolution(CoinWorkDouble nextGap)
 #ifndef CLP_CAUTION
 #define KILL_ITERATION 50
 #else
+#if CLP_CAUTION < 1
+#define KILL_ITERATION 50
+#else
 #define KILL_ITERATION 100
+#endif
 #endif
   if (!quadraticObj||1) {
     if (numberIterations_<KILL_ITERATION) {

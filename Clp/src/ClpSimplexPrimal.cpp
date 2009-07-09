@@ -820,14 +820,17 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
     // May need to do more if column generation
     dummy=4;
     matrix_->generalExpanded(this,9,dummy);
-#ifdef CLP_CAUTION
+#ifndef CLP_CAUTION
+#define CLP_CAUTION 1
+#endif
+#if CLP_CAUTION
     double lastAverageInfeasibility=sumDualInfeasibilities_/
       static_cast<double>(numberDualInfeasibilities_+10);
 #endif
     numberThrownOut=gutsOfSolution(NULL,NULL,(firstFree_>=0));
     double sumInfeasibility =  nonLinearCost_->sumInfeasibilities();
     int reason2=0;
-#ifdef CLP_CAUTION
+#if CLP_CAUTION
 #if CLP_CAUTION==2
     double test2=1.0e5;
 #else

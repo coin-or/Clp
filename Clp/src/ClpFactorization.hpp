@@ -13,11 +13,7 @@ class ClpSimplex;
 class ClpNetworkBasis;
 class CoinOtherFactorization;
 #ifndef CLP_MULTIPLE_FACTORIZATIONS 
-#ifdef CLP_OSL 
 #define CLP_MULTIPLE_FACTORIZATIONS 4
-#else
-#define CLP_MULTIPLE_FACTORIZATIONS 3
-#endif
 #endif    
 #ifdef CLP_MULTIPLE_FACTORIZATIONS 
 #include "CoinDenseFactorization.hpp"
