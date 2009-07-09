@@ -2589,7 +2589,7 @@ ClpModel::infeasibilityRay() const
 #ifndef CLP_NO_SWAP_SIGN
     // swap signs to be consistent with norm
     for (int i=0;i<numberRows_;i++)
-      ray_[i] = -ray_[i];
+      array[i] = -array[i];
 #endif
 #if 0
     // clean up
