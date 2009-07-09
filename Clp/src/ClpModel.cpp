@@ -806,7 +806,7 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, int trueCopy)
       rowObjective_ = ClpCopyOfArray ( rhs.rowObjective_, numberRows_ );
       status_ = ClpCopyOfArray( rhs.status_,numberColumns_+numberRows_);
       ray_ = NULL;
-      if (problemStatus_==1&&!secondaryStatus_)
+      if (problemStatus_==1)
 	ray_ = ClpCopyOfArray (rhs.ray_,numberRows_);
       else if (problemStatus_==2)
 	ray_ = ClpCopyOfArray (rhs.ray_,numberColumns_);
@@ -865,7 +865,7 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, int trueCopy)
       assert (!rhs.rowObjective_);
       ClpDisjointCopyN( rhs.status_,numberColumns_+numberRows_,status_);
       ray_ = NULL;
-      if (problemStatus_==1&&!secondaryStatus_)
+      if (problemStatus_==1)
 	ray_ = ClpCopyOfArray (rhs.ray_,numberRows_);
       else if (problemStatus_==2)
 	ray_ = ClpCopyOfArray (rhs.ray_,numberColumns_);
@@ -3224,7 +3224,7 @@ ClpModel::ClpModel ( const ClpModel * rhs,
   CoinMemcpyN(columnStatus,numberColumns_,status_);
   delete [] columnStatus;
   ray_ = NULL;
-  if (problemStatus_==1&&!secondaryStatus_)
+  if (problemStatus_==1)
     ray_ = whichDouble (rhs->ray_,numberRows,whichRow);
   else if (problemStatus_==2)
     ray_ = whichDouble (rhs->ray_,numberColumns,whichColumn);
