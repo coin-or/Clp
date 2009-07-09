@@ -1121,9 +1121,9 @@ typedef CoinOslFactorization CoinOtherFactorization;
 #include "CoinSimpFactorization.hpp"
 #define CoinOslFactorization CoinDenseFactorization
 #elif CLP_MULTIPLE_FACTORIZATIONS == 4
-#include "CoinDenseFactorization.hpp"
 #include "CoinSimpFactorization.hpp"
-#include "CoinOslFactorization.hpp"
+#define CoinOslFactorization CoinDenseFactorization
+//#include "CoinOslFactorization.hpp"
 #endif
 
 //-------------------------------------------------------------------
