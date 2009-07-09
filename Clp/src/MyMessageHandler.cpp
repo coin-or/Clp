@@ -125,11 +125,10 @@ MyMessageHandler::print()
         feasibleExtremePoints_.push_front(feasibleExtremePoint);
 
         // Want maximum of 10 solutions, so if more then 10 get rid of oldest
-        int numExtremePointsSaved = feasibleExtremePoints_.size();
+        size_t numExtremePointsSaved = feasibleExtremePoints_.size();
         if ( numExtremePointsSaved>=10 ) {
           feasibleExtremePoints_.pop_back();
-          assert( feasibleExtremePoints_.size() == 
-		  static_cast<unsigned int> (numExtremePointsSaved)-1 );
+          assert( feasibleExtremePoints_.size() + 1 == numExtremePointsSaved );
         };
 
       }

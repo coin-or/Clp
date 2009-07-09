@@ -231,12 +231,12 @@ void
 CbcOrClpParam::gutsOfConstructor()
 {
   std::string::size_type  shriekPos = name_.find('!');
-  lengthName_ = name_.length();
+  lengthName_ = (unsigned int)name_.length();
   if ( shriekPos==std::string::npos ) {
     //does not contain '!'
     lengthMatch_= lengthName_;
   } else {
-    lengthMatch_=shriekPos;
+    lengthMatch_=(unsigned int)shriekPos;
     name_ = name_.substr(0,shriekPos)+name_.substr(shriekPos+1);
     lengthName_--;
   }
@@ -284,17 +284,17 @@ CbcOrClpParam::matchName (  ) const
 int 
 CbcOrClpParam::parameterOption ( std::string check ) const
 {
-  int numberItems = definedKeyWords_.size();
+  size_t numberItems = definedKeyWords_.size();
   if (!numberItems) {
     return -1;
   } else {
-    int whichItem=0;
+    size_t whichItem=0;
     unsigned int it;
     for (it=0;it<definedKeyWords_.size();it++) {
       std::string thisOne = definedKeyWords_[it];
-      std::string::size_type  shriekPos = thisOne.find('!');
-      unsigned int length1 = thisOne.length();
-      unsigned int length2 = length1;
+      std::string::size_type shriekPos = thisOne.find('!');
+      std::string::size_type length1 = thisOne.length();
+      std::string::size_type length2 = length1;
       if ( shriekPos!=std::string::npos ) {
 	//contains '!'
 	length2 = shriekPos;
@@ -303,7 +303,7 @@ CbcOrClpParam::parameterOption ( std::string check ) const
 	length1 = thisOne.length();
       }
       if (check.length()<=length1&&length2<=check.length()) {
-	unsigned int i;
+	std::string::size_type i;
 	for (i=0;i<check.length();i++) {
 	  if (tolower(thisOne[i])!=tolower(check[i])) 
 	    break;
@@ -318,7 +318,7 @@ CbcOrClpParam::parameterOption ( std::string check ) const
       }
     }
     if (whichItem<numberItems)
-      return whichItem;
+      return (int)whichItem;
     else
       return -1;
   }
@@ -363,9 +363,9 @@ CbcOrClpParam::printString() const
 }
 void CoinReadPrintit(const char * input)
 {
-  int length =strlen(input);
+  size_t length =strlen(input);
   char temp[101];
-  int i;
+  size_t i;
   int n=0;
   for (i=0;i<length;i++) {
     if (input[i]=='\n') {
@@ -1155,7 +1155,7 @@ CoinReadGetIntField(int argc, const char *argv[],int * valid)
     field=afterEquals;
     afterEquals = "";
   }
-  int value=0;
+  size_t value=0;
   //std::cout<<field<<std::endl;
   if (field!="EOL") {
     const char * start = field.c_str();
@@ -1171,7 +1171,7 @@ CoinReadGetIntField(int argc, const char *argv[],int * valid)
   } else {
     *valid=2;
   }
-  return value;
+  return (int)value;
 }
 double
 CoinReadGetDoubleField(int argc, const char *argv[],int * valid)

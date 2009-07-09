@@ -5923,13 +5923,13 @@ typedef struct {
 #ifndef SLIM_NOIO
 int outDoubleArray(double * array, int length, FILE * fp)
 {
-  int numberWritten;
+  size_t numberWritten;
   if (array&&length) {
     numberWritten = fwrite(&length,sizeof(int),1,fp);
     if (numberWritten!=1)
       return 1;
     numberWritten = fwrite(array,sizeof(double),length,fp);
-    if (numberWritten!=length)
+    if (numberWritten!=(size_t)length)
       return 1;
   } else {
     length = 0;
@@ -5946,7 +5946,7 @@ ClpSimplex::saveModel(const char * fileName)
   FILE * fp = fopen(fileName,"wb");
   if (fp) {
     Clp_scalars scalars;
-    CoinBigIndex numberWritten;
+    size_t numberWritten;
     // Fill in scalars
     scalars.optimizationDirection = optimizationDirection_;
     CoinMemcpyN( dblParam_,ClpLastDblParam,scalars.dblParam);
@@ -5980,7 +5980,7 @@ ClpSimplex::saveModel(const char * fileName)
     numberWritten = fwrite(&scalars,sizeof(Clp_scalars),1,fp);
     if (numberWritten!=1)
       return 1;
-    CoinBigIndex length;
+    size_t length;
 #ifndef CLP_NO_STD
     int i;
     // strings
@@ -6058,7 +6058,7 @@ ClpSimplex::saveModel(const char * fileName)
 	put += lengthNames_+1;
       }
       numberWritten = fwrite(array,lengthNames_+1,numberRows_,fp);
-      if (numberWritten!=numberRows_)
+      if (numberWritten!=(size_t)numberRows_)
 	return 1;
       put=array;
       CoinAssert (numberColumns_ == static_cast<int> (columnNames_.size()));
@@ -6068,7 +6068,7 @@ ClpSimplex::saveModel(const char * fileName)
 	put += lengthNames_+1;
       }
       numberWritten = fwrite(array,lengthNames_+1,numberColumns_,fp);
-      if (numberWritten!=numberColumns_)
+      if (numberWritten!=(size_t)numberColumns_)
 	return 1;
       delete [] array;
     }
@@ -6078,7 +6078,7 @@ ClpSimplex::saveModel(const char * fileName)
       int marker=1;
       numberWritten=fwrite(&marker,sizeof(int),1,fp);
       numberWritten = fwrite(integerType_,1,numberColumns_,fp);
-      if (numberWritten!=numberColumns_)
+      if (numberWritten!=(size_t)numberColumns_)
 	return 1;
     } else {
       int marker=0;
@@ -6104,11 +6104,11 @@ ClpSimplex::saveModel(const char * fileName)
       return 1;
     numberWritten = fwrite(matrix_->getVectorStarts(),
 			   sizeof(int),numberColumns_+1,fp);
-    if (numberWritten!=numberColumns_+1)
+    if (numberWritten!=(size_t)numberColumns_+1)
       return 1;
     numberWritten = fwrite(matrix_->getVectorLengths(),
 			   sizeof(int),numberColumns_,fp);
-    if (numberWritten!=numberColumns_)
+    if (numberWritten!=(size_t)numberColumns_)
       return 1;
     // finished
     fclose(fp);
@@ -6120,7 +6120,7 @@ ClpSimplex::saveModel(const char * fileName)
 
 int inDoubleArray(double * &array, int length, FILE * fp)
 {
-  int numberRead;
+  size_t numberRead;
   int length2;
   numberRead = fread(&length2,sizeof(int),1,fp);
   if (numberRead!=1)
@@ -6131,7 +6131,7 @@ int inDoubleArray(double * &array, int length, FILE * fp)
       return 2;
     array = new double[length];
     numberRead = fread(array,sizeof(double),length,fp);
-    if (numberRead!=length)
+    if (numberRead!=(size_t)length)
       return 1;
   } 
   return 0;
@@ -6159,7 +6159,7 @@ ClpSimplex::restoreModel(const char * fileName)
     // Say sparse
     factorization_->sparseThreshold(1);
     Clp_scalars scalars;
-    CoinBigIndex numberRead;
+    size_t numberRead;
 
     // get scalars
     numberRead = fread(&scalars,sizeof(Clp_scalars),1,fp);
@@ -6191,7 +6191,7 @@ ClpSimplex::restoreModel(const char * fileName)
     algorithm_ = scalars.algorithm;
     specialOptions_ = scalars.specialOptions;
     // strings
-    CoinBigIndex length;
+    size_t length;
 #ifndef CLP_NO_STD
     for (i=0;i<ClpLastStrParam;i++) {
       numberRead = fread(&length,sizeof(int),1,fp);
@@ -6254,7 +6254,7 @@ ClpSimplex::restoreModel(const char * fileName)
     if (numberRead!=1)
 	return 1;
     if (length) {
-      if (length!=numberRows_+numberColumns_)
+      if (length!=(size_t)(numberRows_+numberColumns_))
 	return 1;
       status_ = new char unsigned[length];
       numberRead = fread(status_,sizeof(char),length, fp);
@@ -6267,7 +6267,7 @@ ClpSimplex::restoreModel(const char * fileName)
 	new char[CoinMax(numberRows_,numberColumns_)*(lengthNames_+1)];
       char * get = array;
       numberRead = fread(array,lengthNames_+1,numberRows_,fp);
-      if (numberRead!=numberRows_)
+      if (numberRead!=(size_t)numberRows_)
 	return 1;
       rowNames_ = std::vector<std::string> ();
       rowNames_.resize(numberRows_);
@@ -6277,7 +6277,7 @@ ClpSimplex::restoreModel(const char * fileName)
       }
       get = array;
       numberRead = fread(array,lengthNames_+1,numberColumns_,fp);
-      if (numberRead!=numberColumns_)
+      if (numberRead!=(size_t)numberColumns_)
 	return 1;
       columnNames_ = std::vector<std::string> ();
       columnNames_.resize(numberColumns_);
@@ -6299,7 +6299,7 @@ ClpSimplex::restoreModel(const char * fileName)
     if (ifInteger==1) {
       integerType_ = new char [numberColumns_];
       numberRead = fread(integerType_,1,numberColumns_,fp);
-      if (numberRead!=numberColumns_)
+      if (numberRead!=(size_t)numberColumns_)
 	return 1;
     } else {
       integerType_=NULL;
@@ -6359,10 +6359,10 @@ ClpSimplex::restoreModel(const char * fileName)
     if (numberRead!=length)
       return 1;
     numberRead = fread(starts, sizeof(int),numberColumns_+1,fp);
-    if (numberRead!=numberColumns_+1)
+    if (numberRead!=(size_t)numberColumns_+1)
       return 1;
     numberRead = fread(lengths, sizeof(int),numberColumns_,fp);
-    if (numberRead!=numberColumns_)
+    if (numberRead!=(size_t)numberColumns_)
       return 1;
     // assign matrix
     CoinPackedMatrix * matrix = new CoinPackedMatrix();
@@ -6372,16 +6372,16 @@ ClpSimplex::restoreModel(const char * fileName)
     length=0;
     for (i=0;i<numberColumns_;i++) {
       int start = starts[i];
-      starts[i]=length;
+      starts[i]=(int)length;
       for (CoinBigIndex j=start;j<start+lengths[i];j++) {
         elements[length]=elements[j];
         indices[length++]=indices[j];
       }
-      lengths[i]=length-starts[i];
+      lengths[i]=(int)length-starts[i];
     }
-    starts[numberColumns_]=length;
+    starts[numberColumns_]=(int)length;
     matrix->assignMatrix(true, numberRows_, numberColumns_,
-			 length, elements, indices, starts, lengths);
+			 (CoinBigIndex)length, elements, indices, starts, lengths);
     // and transfer to Clp
     matrix_ = new ClpPackedMatrix(matrix);
     // finished
