@@ -8069,9 +8069,14 @@ ClpSimplex::setFlagged( int sequence)
 bool
 ClpSimplex::statusOfProblem(bool initial)
 {
+  // We don't want scaling
+  int saveFlag = scalingFlag_;
+  if (!rowScale_)
+    scalingFlag_=0;
   bool goodMatrix=createRim(7+8+16+32);
   if (!goodMatrix) {
     problemStatus_=4;
+    scalingFlag_ = saveFlag;
     return false;
   }
   // is factorization okay?
@@ -8085,6 +8090,7 @@ ClpSimplex::statusOfProblem(bool initial)
 	status=0; // all slack
       if (status<0) {
         deleteRim(-1);
+	scalingFlag_ = saveFlag;
 	return false; // some error
       } else {
 	numberThrownOut = status;
@@ -8112,13 +8118,14 @@ ClpSimplex::statusOfProblem(bool initial)
     internalFactorize(1);
 #endif
   }
-    CoinMemcpyN(rowActivity_,numberRows_,rowActivityWork_);
-    CoinMemcpyN(columnActivity_,numberColumns_,columnActivityWork_);
+  CoinMemcpyN(rowActivity_,numberRows_,rowActivityWork_);
+  CoinMemcpyN(columnActivity_,numberColumns_,columnActivityWork_);
   gutsOfSolution(NULL,NULL);
-    CoinMemcpyN(rowActivityWork_,numberRows_,rowActivity_);
-    CoinMemcpyN(columnActivityWork_,numberColumns_,columnActivity_);
-    CoinMemcpyN(dj_,numberColumns_,reducedCost_);
+  CoinMemcpyN(rowActivityWork_,numberRows_,rowActivity_);
+  CoinMemcpyN(columnActivityWork_,numberColumns_,columnActivity_);
+  CoinMemcpyN(dj_,numberColumns_,reducedCost_);
   deleteRim(-1);
+  scalingFlag_ = saveFlag;
   return (primalFeasible()&&dualFeasible());
 }
 /* Return model - updates any scalars */
