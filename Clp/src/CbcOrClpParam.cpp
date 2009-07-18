@@ -2820,12 +2820,12 @@ this does branch and cut."
  be turned off - this does so."
      ); 
   parameters[numberParameters++]=
-    CbcOrClpParam("slog!Level","Level of detail in Solver output",
+    CbcOrClpParam("slog!Level","Level of detail in (LP) Solver output",
 		  -1,63,SOLVERLOGLEVEL);
   parameters[numberParameters-1].setLonghelp
     (
      "If 0 then there should be no output in normal circumstances.  1 is probably the best\
- value for most uses, while 2 and 3 give more information."
+ value for most uses, while 2 and 3 give more information.  This parameter is only used inside MIP - for Clp use 'log'"
      );
 #else
   // allow solve as synonym for dual 
