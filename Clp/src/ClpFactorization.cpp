@@ -1,7 +1,6 @@
 /* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
-
 #include "CoinPragma.hpp"
 #include "ClpFactorization.hpp"
 #ifndef SLIM_CLP
@@ -1122,8 +1121,8 @@ typedef CoinOslFactorization CoinOtherFactorization;
 #define CoinOslFactorization CoinDenseFactorization
 #elif CLP_MULTIPLE_FACTORIZATIONS == 4
 #include "CoinSimpFactorization.hpp"
-#define CoinOslFactorization CoinDenseFactorization
-//#include "CoinOslFactorization.hpp"
+//#define CoinOslFactorization CoinDenseFactorization
+#include "CoinOslFactorization.hpp"
 #endif
 
 //-------------------------------------------------------------------

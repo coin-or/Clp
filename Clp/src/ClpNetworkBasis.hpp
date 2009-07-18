@@ -15,6 +15,9 @@ class ClpMatrixBase;
 class CoinIndexedVector;
 class ClpSimplex;
 #include "CoinFinite.hpp"
+#ifndef COIN_FAST_CODE
+#define COIN_FAST_CODE
+#endif
 
 /** This deals with Factorization and Updates for network structures
  */

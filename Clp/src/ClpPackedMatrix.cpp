@@ -3873,6 +3873,10 @@ ClpPackedMatrix::allElementsInRange(ClpModel * model,
 {
   int iColumn;
   // make sure matrix correct size
+  assert (matrix_->getNumRows()<=model->numberRows());
+  if (model->clpScaledMatrix())
+    assert (model->clpScaledMatrix()->getNumElements()==matrix_->getNumElements());
+  assert (matrix_->getNumRows()<=model->numberRows());
   matrix_->setDimensions(model->numberRows(),model->numberColumns());
   CoinBigIndex numberLarge=0;;
   CoinBigIndex numberSmall=0;;
@@ -3885,7 +3889,7 @@ ClpPackedMatrix::allElementsInRange(ClpModel * model,
   const CoinBigIndex * columnStart = matrix_->getVectorStarts();
   const int * columnLength = matrix_->getVectorLengths(); 
   const double * elementByColumn = matrix_->getElements();
-  int numberRows = matrix_->getNumRows();
+  int numberRows = model->numberRows();
   int numberColumns = matrix_->getNumCols();
   // Say no gaps
   flags_ &= ~2;

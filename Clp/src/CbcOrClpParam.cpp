@@ -1243,6 +1243,18 @@ then the search will be terminated.  Also see ratioGap."
      "Mainly useful for tuning purposes.  Normally the first dual or primal will be using an all slack \
 basis anyway."
      ); 
+#endif
+#ifdef COIN_HAS_CBC
+  parameters[numberParameters++]=
+    CbcOrClpParam("artif!icialCost","Costs >= this treated as artificials in feasibility pump",
+		  0.0,COIN_DBL_MAX,ARTIFICIALCOST,false);
+  parameters[numberParameters-1].setDoubleValue(0.0);
+    parameters[numberParameters-1].setLonghelp
+    (
+     "0.0 off - otherwise variables with costs >= this are treated as artificials and fixed to lower bound in feasibility pump"
+     ); 
+#endif
+#ifdef COIN_HAS_CLP
   parameters[numberParameters++]=
     CbcOrClpParam("auto!Scale","Whether to scale objective, rhs and bounds of problem if they look odd",
 		  "off",AUTOSCALE,7,false);
@@ -1530,13 +1542,14 @@ re-run with debug set to 'debug.file'  The create case has same effect as saveSo
 #endif 
 #ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
-    CbcOrClpParam("dextra1","Extra double parameter 1",
-		  -COIN_DBL_MAX,COIN_DBL_MAX,DEXTRA1,false);
-  parameters[numberParameters-1].setDoubleValue(0.0);
-  parameters[numberParameters++]=
-    CbcOrClpParam("dextra2","Extra double parameter 2",
-		  -COIN_DBL_MAX,COIN_DBL_MAX,DEXTRA2,false);
-  parameters[numberParameters-1].setDoubleValue(0.0);
+    CbcOrClpParam("depth!MiniBab","Depth at which to try mini BAB",
+		  -COIN_INT_MAX,COIN_INT_MAX,DEPTHMINIBAB);
+  parameters[numberParameters-1].setIntValue(-1);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "Rather a complicated parameter but can be useful. -1 means off for large problems but on as if -12 for problems where rows+columns<500, -2 \
+means use Cplex if it is linked in.  Otherwise if negative then go into depth first complete search fast branch and bound when depth>= -value-2 (so -3 will use this at depth>=1).  This mode is only switched on after 500 nodes.  If you really want to switch it off for small problems then set this to -999.  If >=0 the value doesn't matter very much.  The code will do approximately 100 nodes of fast branch and bound every now and then at depth>=5.  The actual logic is too twisted to describe here."
+     ); 
   parameters[numberParameters++]=
     CbcOrClpParam("dextra3","Extra double parameter 3",
 		  -COIN_DBL_MAX,COIN_DBL_MAX,DEXTRA3,false);
@@ -1810,8 +1823,8 @@ e.g. no ENDATA.  This has to be set before import i.e. -errorsAllowed on -import
 		  -1,COIN_INT_MAX,EXTRA3,false);
   parameters[numberParameters-1].setIntValue(-1);
   parameters[numberParameters++]=
-    CbcOrClpParam("extra4","Extra integer parameter 4",
-		  -COIN_INT_MAX,COIN_INT_MAX,EXTRA4,false);
+    CbcOrClpParam("depthminibab","Extra integer parameter 4",
+		  -COIN_INT_MAX,COIN_INT_MAX,DEPTHMINIBAB,false);
   parameters[numberParameters-1].setIntValue(-1);
 #endif
 #ifdef COIN_HAS_CLP
@@ -1830,6 +1843,24 @@ other choices are a dense one, osl's or one designed for small problems."
     CbcOrClpParam("fakeB!ound","All bounds <= this value - DEBUG",
 		  1.0,1.0e15,FAKEBOUND,false);
 #ifdef COIN_HAS_CBC
+  parameters[numberParameters++]=
+    CbcOrClpParam("fakeC!utoff","Fake cutoff for use in feasibility pump",
+		  -COIN_DBL_MAX,COIN_DBL_MAX,FAKECUTOFF);
+  parameters[numberParameters-1].setDoubleValue(0.0);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "0.0 off - otherwise add a constraint forcing objective below this value\
+ in feasibility pump"
+     ); 
+  parameters[numberParameters++]=
+    CbcOrClpParam("fakeI!ncrement","Fake increment for use in feasibility pump",
+		  -COIN_DBL_MAX,COIN_DBL_MAX,FAKEINCREMENT,false);
+  parameters[numberParameters-1].setDoubleValue(0.0);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "0.0 off - otherwise use as absolute increment to cutoff \
+when solution found in feasibility pump"
+     ); 
   parameters[numberParameters++]=
     CbcOrClpParam("feas!ibilityPump","Whether to try Feasibility Pump",
 		  "off",FPUMP);
@@ -1875,6 +1906,16 @@ See branchAndCut for information on options."
      "-1 off.  If 1 then tries to branch to solution given by AMPL or priorities file. \
 If 0 then just tries to set as best solution \
 If 1 then also does that many nodes on fixed problem."
+     ); 
+  parameters[numberParameters++]=
+    CbcOrClpParam("fraction!forBAB","Fraction in feasibility pump",
+		  1.0e-5,1.1,SMALLBAB,false);
+  parameters[numberParameters-1].setDoubleValue(0.5);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "After a pass in feasibility pump, variables which have not moved \
+about are fixed and if the preprocessed model is small enough a few nodes \
+of branch and bound are done on reduced problem.  Small problem has to be less than this fraction of original."
      ); 
 #endif
   parameters[numberParameters++]=

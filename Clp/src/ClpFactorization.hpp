@@ -18,6 +18,9 @@ class CoinOtherFactorization;
 #ifdef CLP_MULTIPLE_FACTORIZATIONS 
 #include "CoinDenseFactorization.hpp"
 #endif
+#ifndef COIN_FAST_CODE
+#define COIN_FAST_CODE
+#endif
 
 /** This just implements CoinFactorization when an ClpMatrixBase object
     is passed.  If a network then has a dummy CoinFactorization and
