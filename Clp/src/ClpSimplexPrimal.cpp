@@ -1484,7 +1484,6 @@ void
 ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
 			    CoinIndexedVector * rhsArray,
 			    CoinIndexedVector * spareArray,
-			    CoinIndexedVector * spareArray2,
 			    int valuesPass)
 {
   double saveDj = dualIn_;
@@ -2745,7 +2744,7 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
     // Get extra rows
     matrix_->extendUpdated(this,rowArray_[1],0);
     // do ratio test and re-compute dj
-    primalRow(rowArray_[1],rowArray_[3],rowArray_[2],rowArray_[0],
+    primalRow(rowArray_[1],rowArray_[3],rowArray_[2],
 	      ifValuesPass);
     if (ifValuesPass) {
       saveDj=dualIn_;
@@ -2754,7 +2753,7 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	if(fabs(dualIn_)<1.0e2*dualTolerance_&&objective_->type()<2) {
 	  // try other way
 	  directionIn_=-directionIn_;
-	  primalRow(rowArray_[1],rowArray_[3],rowArray_[2],rowArray_[0],
+	  primalRow(rowArray_[1],rowArray_[3],rowArray_[2],
 		    0);
 	}
 	if (pivotRow_==-1||(pivotRow_>=0&&fabs(alpha_)<1.0e-5)) {

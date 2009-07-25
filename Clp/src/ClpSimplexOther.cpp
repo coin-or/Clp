@@ -2281,7 +2281,7 @@ ClpSimplexOther::statusOfProblemInParametrics(int type, ClpDataSave & saveData)
    +3 max iterations 
 */
 int 
-ClpSimplexOther::whileIterating(double startingTheta, double & endingTheta,double reportIncrement,
+ClpSimplexOther::whileIterating(double startingTheta, double & endingTheta,double /*reportIncrement*/,
                                 const double * changeLower, const double * changeUpper,
                                 const double * changeObjective)
 {
@@ -2544,7 +2544,7 @@ ClpSimplexOther::whileIterating(double startingTheta, double & endingTheta,doubl
 	  theta_=0.0;
 	}
 	// do actual flips
-	reinterpret_cast<ClpSimplexDual *> ( this)->flipBounds(rowArray_[0],columnArray_[0],theta_);
+	reinterpret_cast<ClpSimplexDual *> ( this)->flipBounds(rowArray_[0],columnArray_[0]);
 	//rowArray_[1]->expand();
 	dualRowPivot_->updatePrimalSolution(rowArray_[1],
 					    movement,
@@ -2778,9 +2778,9 @@ ClpSimplexOther::whileIterating(double startingTheta, double & endingTheta,doubl
 }
 // Computes next theta and says if objective or bounds (0= bounds, 1 objective, -1 none)
 int 
-ClpSimplexOther::nextTheta(int type, double maxTheta, double * primalChange, double * dualChange,
+ClpSimplexOther::nextTheta(int type, double maxTheta, double * primalChange, double * /*dualChange*/,
                            const double * changeLower, const double * changeUpper,
-                           const double * changeObjective)
+                           const double * /*changeObjective*/)
 {
   int numberTotal = numberColumns_+numberRows_;
   int iSequence;

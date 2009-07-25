@@ -1508,9 +1508,7 @@ ClpFactorization::factorize ( ClpSimplex * model,
       // can change for gub
       int numberColumnBasic = numberBasic-numberRowBasic;
       
-      numberElements +=matrix->countBasis(model,
-					  pivotTemp+numberRowBasic, 
-					  numberRowBasic,
+      numberElements +=matrix->countBasis(pivotTemp+numberRowBasic, 
 					  numberColumnBasic);
       // Not needed for dense
       numberElements = 3 * numberBasic + 3 * numberElements + 20000;
@@ -1901,9 +1899,7 @@ ClpFactorization::factorize ( ClpSimplex * model,
 	// can change for gub
 	int numberColumnBasic = numberBasic-numberRowBasic;
 
-	numberElements +=matrix->countBasis(model,
-					   pivotTemp+numberRowBasic, 
-					   numberRowBasic,
+	numberElements +=matrix->countBasis( pivotTemp+numberRowBasic, 
 					    numberColumnBasic);
 	// and recompute as network side say different
 	if (model->numberIterations())

@@ -67,7 +67,7 @@ extern "C" {
 #if defined(_MSC_VER)
    __cdecl
 #endif // _MSC_VER
-   signal_handler(int whichSignal)
+   signal_handler(int /*whichSignal*/)
    {
       if (currentModel!=NULL) 
 	 currentModel->setMaximumIterations(0); // stop at next iterations
@@ -281,8 +281,13 @@ main (int argc, const char *argv[])
 	  std::cout<<"abcd without value (where expected) gives current value"<<std::endl;
 	  std::cout<<"abcd value sets value"<<std::endl;
 	  std::cout<<"Commands are:"<<std::endl;
-	  int maxAcross=5;
+	  int maxAcross=10;
 	  bool evenHidden=false;
+	  int printLevel = 
+	    parameters[whichParam(ALLCOMMANDS,
+				   numberParameters,parameters)].currentOptionAsInteger();
+	  int convertP[]={2,1,0};
+	  printLevel=convertP[printLevel];
 	  if ((verbose&8)!=0) {
 	    // even hidden
 	    evenHidden = true;
@@ -299,6 +304,7 @@ main (int argc, const char *argv[])
 	  int iType;
 	  for (iType=0;iType<4;iType++) {
 	    int across=0;
+	    int lengthLine=0;
             if ((verbose%4)!=0)
               std::cout<<std::endl;
 	    std::cout<<types[iType]<<std::endl;
@@ -306,16 +312,23 @@ main (int argc, const char *argv[])
               std::cout<<std::endl;
 	    for ( iParam=0; iParam<numberParameters; iParam++ ) {
 	      int type = parameters[iParam].type();
-	      if ((parameters[iParam].displayThis()||evenHidden)&&
+	      //printf("%d type %d limits %d %d display %d\n",iParam,
+	      //   type,limits[iType],limits[iType+1],parameters[iParam].displayThis());
+	      if ((parameters[iParam].displayThis()>=printLevel||evenHidden)&&
 		  type>=limits[iType]
 		  &&type<limits[iType+1]) {
 		if (!across) {
-                  if ((verbose&2)==0) 
-                    std::cout<<"  ";
-                  else
+                  if ((verbose&2)!=0) 
                     std::cout<<"Command ";
                 }
-                std::cout<<parameters[iParam].matchName()<<"  ";
+		int length = parameters[iParam].lengthMatchName()+1;
+		if (lengthLine+length>80) {
+		  std::cout<<std::endl;
+		  across=0;
+		  lengthLine=0;
+		}
+                std::cout<<" "<<parameters[iParam].matchName();
+		lengthLine += length ;
 		across++;
 		if (across==maxAcross) {
 		  across=0;
@@ -548,7 +561,8 @@ main (int argc, const char *argv[])
 	      crossover=action;
 	      break;
 	    default:
-	      abort();
+	      //abort();
+	      break;
 	    }
 	  }
 	} else {

@@ -447,7 +447,7 @@ ClpNode::gutsOfConstructor (ClpSimplex * model, const ClpNodeStuff * stuff,
 //-------------------------------------------------------------------
 // Copy constructor 
 //-------------------------------------------------------------------
-ClpNode::ClpNode (const ClpNode & source) 
+ClpNode::ClpNode (const ClpNode & ) 
 {  
   printf("ClpNode copy not implemented\n");
   abort();
@@ -591,7 +591,7 @@ ClpNode::applyNode(ClpSimplex * model, int doBoundsEtc )
 }
 // Choose a new variable
 void 
-ClpNode::chooseVariable(ClpSimplex * model, ClpNodeStuff * info)
+ClpNode::chooseVariable(ClpSimplex * , ClpNodeStuff * /*info*/)
 {
 #if 0
   int way=branchState_.firstBranch;
@@ -604,7 +604,7 @@ ClpNode::chooseVariable(ClpSimplex * model, ClpNodeStuff * info)
 }
 // Fix on reduced costs
 int 
-ClpNode::fixOnReducedCosts(ClpSimplex * model)
+ClpNode::fixOnReducedCosts(ClpSimplex * )
 {
   
   return 0;

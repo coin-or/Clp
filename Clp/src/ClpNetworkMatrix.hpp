@@ -68,9 +68,8 @@ public:
   /** Returns a new matrix in reverse order without gaps */
   virtual ClpMatrixBase * reverseOrderedCopy() const;
   /// Returns number of elements in column part of basis 
-  virtual CoinBigIndex countBasis(ClpSimplex * model,
+  virtual CoinBigIndex countBasis(
 				 const int * whichColumn, 
-				 int numberRowBasic,
 				  int & numberColumnBasic);
   /// Fills in column part of basis
   virtual void fillBasis(ClpSimplex * model,

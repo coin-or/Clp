@@ -91,7 +91,7 @@ CMessageHandler::CMessageHandler (const CMessageHandler & rhs)
 }
 
 CMessageHandler::CMessageHandler (const CoinMessageHandler & rhs) 
-  : CoinMessageHandler(),
+  : CoinMessageHandler(rhs),
     model_(NULL),
     callback_(NULL)
 {  
@@ -99,7 +99,7 @@ CMessageHandler::CMessageHandler (const CoinMessageHandler & rhs)
 
 // Constructor with pointer to model
 CMessageHandler::CMessageHandler(Clp_Simplex * model,
-               FILE * userPointer)
+               FILE * )
   : CoinMessageHandler(),
     model_(model),
     callback_(NULL)
@@ -444,7 +444,7 @@ Clp_problemName(Clp_Simplex * model, int maxNumberCharacters, char * array)
 }
 /* Sets problem name.  Must have \0 at end.  */
 COINLIBAPI int COINLINKAGE 
-Clp_setProblemName(Clp_Simplex * model, int maxNumberCharacters, char * array)
+Clp_setProblemName(Clp_Simplex * model, int /*maxNumberCharacters*/, char * array)
 {
   return model->model_->setStrParam(ClpProbName, array);
 }

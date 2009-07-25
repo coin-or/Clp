@@ -57,8 +57,8 @@ ClpObjective::operator=(const ClpObjective& rhs)
    and order is as given.
 */
 ClpObjective * 
-ClpObjective::subsetClone (int numberColumns, 
-			   const int * whichColumns) const
+ClpObjective::subsetClone (int, 
+			   const int * ) const
 {
   std::cerr<<"subsetClone not supported - ClpObjective"<<std::endl;
   abort();
@@ -68,7 +68,7 @@ ClpObjective::subsetClone (int numberColumns,
    Returns number of nonlinear columns
 */
 int 
-ClpObjective::markNonlinear(char * which)
+ClpObjective::markNonlinear(char *)
 {
   return 0;
 }

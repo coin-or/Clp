@@ -342,7 +342,7 @@ extern "C" {
 #if defined(_MSC_VER)
    __cdecl
 #endif // _MSC_VER
-   signal_handler(int whichSignal)
+   signal_handler(int /*whichSignal*/)
    {
       if (currentModel!=NULL) 
 	 currentModel->setMaximumIterations(0); // stop at next iterations
@@ -2669,7 +2669,7 @@ ClpSolve::getSpecialOption(int which) const
 
 // Solve types
 void 
-ClpSolve::setSolveType(SolveType method, int extraInfo)
+ClpSolve::setSolveType(SolveType method, int /*extraInfo*/)
 {
   method_=method;
 }
@@ -3269,12 +3269,12 @@ ClpSimplex::solve(CoinStructuredModel * model)
       // just fill in info
       CoinModelBlockInfo info = CoinModelBlockInfo();
       int whatsSet = thisBlock->whatIsSet();
-      info.matrix = ((whatsSet&1)!=0) ? 1 : 0;
-      info.rhs = ((whatsSet&2)!=0) ? 1 : 0;
-      info.rowName = ((whatsSet&4)!=0) ? 1 : 0;
-      info.integer = ((whatsSet&32)!=0) ? 1 : 0;
-      info.bounds = ((whatsSet&8)!=0) ? 1 : 0;
-      info.columnName = ((whatsSet&16)!=0) ? 1 : 0;
+      info.matrix = static_cast<char>(((whatsSet&1)!=0) ? 1 : 0);
+      info.rhs = static_cast<char>(((whatsSet&2)!=0) ? 1 : 0);
+      info.rowName = static_cast<char>(((whatsSet&4)!=0) ? 1 : 0);
+      info.integer = static_cast<char>(((whatsSet&32)!=0) ? 1 : 0);
+      info.bounds = static_cast<char>(((whatsSet&8)!=0) ? 1 : 0);
+      info.columnName = static_cast<char>(((whatsSet&16)!=0) ? 1 : 0);
       // Which block
       int iRowBlock=model->rowBlock(thisBlock->getRowBlock());
       info.rowBlock=iRowBlock;
@@ -3661,12 +3661,12 @@ ClpSimplex::solveDW(CoinStructuredModel * model)
     // just fill in info
     CoinModelBlockInfo info = CoinModelBlockInfo();
     int whatsSet = thisBlock->whatIsSet();
-    info.matrix = ((whatsSet&1)!=0) ? 1 : 0;
-    info.rhs = ((whatsSet&2)!=0) ? 1 : 0;
-    info.rowName = ((whatsSet&4)!=0) ? 1 : 0;
-    info.integer = ((whatsSet&32)!=0) ? 1 : 0;
-    info.bounds = ((whatsSet&8)!=0) ? 1 : 0;
-    info.columnName = ((whatsSet&16)!=0) ? 1 : 0;
+    info.matrix = static_cast<char>(((whatsSet&1)!=0) ? 1 : 0);
+    info.rhs = static_cast<char>(((whatsSet&2)!=0) ? 1 : 0);
+    info.rowName = static_cast<char>(((whatsSet&4)!=0) ? 1 : 0);
+    info.integer = static_cast<char>(((whatsSet&32)!=0) ? 1 : 0);
+    info.bounds = static_cast<char>(((whatsSet&8)!=0) ? 1 : 0);
+    info.columnName = static_cast<char>(((whatsSet&16)!=0) ? 1 : 0);
     // Which block
     int iRowBlock=model->rowBlock(thisBlock->getRowBlock());
     info.rowBlock=iRowBlock;
@@ -4312,12 +4312,12 @@ ClpSimplex::solveBenders(CoinStructuredModel * model)
     // just fill in info
     CoinModelBlockInfo info = CoinModelBlockInfo();
     int whatsSet = thisBlock->whatIsSet();
-    info.matrix = ((whatsSet&1)!=0) ? 1 : 0;
-    info.rhs = ((whatsSet&2)!=0) ? 1 : 0;
-    info.rowName = ((whatsSet&4)!=0) ? 1 : 0;
-    info.integer = ((whatsSet&32)!=0) ? 1 : 0;
-    info.bounds = ((whatsSet&8)!=0) ? 1 : 0;
-    info.columnName = ((whatsSet&16)!=0) ? 1 : 0;
+    info.matrix = static_cast<char>(((whatsSet&1)!=0) ? 1 : 0);
+    info.rhs = static_cast<char>(((whatsSet&2)!=0) ? 1 : 0);
+    info.rowName = static_cast<char>(((whatsSet&4)!=0) ? 1 : 0);
+    info.integer = static_cast<char>(((whatsSet&32)!=0) ? 1 : 0);
+    info.bounds = static_cast<char>(((whatsSet&8)!=0) ? 1 : 0);
+    info.columnName = static_cast<char>(((whatsSet&16)!=0) ? 1 : 0);
     // Which block
     int iRowBlock=model->rowBlock(thisBlock->getRowBlock());
     info.rowBlock=iRowBlock;

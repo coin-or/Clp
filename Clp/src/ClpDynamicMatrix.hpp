@@ -102,7 +102,7 @@ public:
       If >=0 then entry stayed in, if -1 then entry went out to lower bound.of zero.
       Entries at upper bound (really nonzero) never go out (at present).
   */
-  virtual void packDown(const int * in, int numberToPack) {}
+  virtual void packDown(const int * , int ) {}
   /// Gets lower bound (to simplify coding)
   inline double columnLower(int sequence) const
   { if (columnLower_) return columnLower_[sequence]; else return 0.0;}

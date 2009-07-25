@@ -336,8 +336,8 @@ ClpNetworkMatrix::transposeTimes(double scalar,
 void 
 ClpNetworkMatrix::times(double scalar,
 		       const double * x, double * y,
-		       const double * rowScale, 
-		       const double * columnScale) const
+			const double * /*rowScale*/, 
+			const double * /*columnScale*/) const
 {
   // we know it is not scaled 
   times(scalar, x, y);
@@ -345,8 +345,9 @@ ClpNetworkMatrix::times(double scalar,
 void 
 ClpNetworkMatrix::transposeTimes( double scalar,
 				 const double * x, double * y,
-				 const double * rowScale, 
-				 const double * columnScale, double * spare) const
+				  const double * /*rowScale*/, 
+				  const double * /*columnScale*/, 
+				  double * /*spare*/) const
 {
   // we know it is not scaled 
   transposeTimes(scalar, x, y);
@@ -480,7 +481,7 @@ ClpNetworkMatrix::transposeTimes(const ClpSimplex * model, double scalar,
 /* Return <code>x *A in <code>z</code> but
    just for indices in y. */
 void 
-ClpNetworkMatrix::subsetTransposeTimes(const ClpSimplex * model,
+ClpNetworkMatrix::subsetTransposeTimes(const ClpSimplex * /*model*/,
 			      const CoinIndexedVector * rowArray,
 			      const CoinIndexedVector * y,
 			      CoinIndexedVector * columnArray) const
@@ -522,9 +523,7 @@ ClpNetworkMatrix::subsetTransposeTimes(const ClpSimplex * model,
 }
 /// returns number of elements in column part of basis,
 CoinBigIndex 
-ClpNetworkMatrix::countBasis(ClpSimplex * model,
-				 const int * whichColumn, 
-				 int numberBasic,
+ClpNetworkMatrix::countBasis( const int * whichColumn, 
 			     int & numberColumnBasic)
 {
   int i;
@@ -546,7 +545,7 @@ ClpNetworkMatrix::countBasis(ClpSimplex * model,
   return numberElements;
 }
 void
-ClpNetworkMatrix::fillBasis(ClpSimplex * model,
+ClpNetworkMatrix::fillBasis(ClpSimplex * /*model*/,
 			 const int * whichColumn, 
 			 int & numberColumnBasic,
 			 int * indexRowU, int * start,
@@ -595,7 +594,7 @@ ClpNetworkMatrix::fillBasis(ClpSimplex * model,
 /* Unpacks a column into an CoinIndexedvector
  */
 void 
-ClpNetworkMatrix::unpack(const ClpSimplex * model,CoinIndexedVector * rowArray,
+ClpNetworkMatrix::unpack(const ClpSimplex * /*model*/,CoinIndexedVector * rowArray,
 		   int iColumn) const 
 {
   CoinBigIndex j=iColumn<<1;
@@ -611,7 +610,7 @@ ClpNetworkMatrix::unpack(const ClpSimplex * model,CoinIndexedVector * rowArray,
 Note that model is NOT const.  Bounds and objective could
 be modified if doing column generation (just for this variable) */
 void 
-ClpNetworkMatrix::unpackPacked(ClpSimplex * model,
+ClpNetworkMatrix::unpackPacked(ClpSimplex * /*model*/,
 			    CoinIndexedVector * rowArray,
 			    int iColumn) const
 {
@@ -635,7 +634,7 @@ ClpNetworkMatrix::unpackPacked(ClpSimplex * model,
 /* Adds multiple of a column into an CoinIndexedvector
       You can use quickAdd to add to vector */
 void 
-ClpNetworkMatrix::add(const ClpSimplex * model,CoinIndexedVector * rowArray,
+ClpNetworkMatrix::add(const ClpSimplex * /*model*/,CoinIndexedVector * rowArray,
 		   int iColumn, double multiplier) const 
 {
   CoinBigIndex j=iColumn<<1;
@@ -648,7 +647,7 @@ ClpNetworkMatrix::add(const ClpSimplex * model,CoinIndexedVector * rowArray,
 }
 /* Adds multiple of a column into an array */
 void 
-ClpNetworkMatrix::add(const ClpSimplex * model,double * array,
+ClpNetworkMatrix::add(const ClpSimplex * /*model*/,double * array,
 		    int iColumn, double multiplier) const
 {
   CoinBigIndex j=iColumn<<1;
@@ -1179,7 +1178,7 @@ ClpNetworkMatrix::appendRows(int number, const CoinPackedVectorBase * const * ro
 int 
 ClpNetworkMatrix::appendMatrix(int number, int type,
                                     const CoinBigIndex * starts, const int * index,
-                                    const double * element, int numberOther)
+			       const double * element, int /*numberOther*/)
 {
   int numberErrors=0;
   // make into CoinPackedVector

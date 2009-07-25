@@ -226,7 +226,7 @@ ClpConstraintQuadratic::deleteSome(int numberToDelete, const int * which)
 }
 // Scale constraint 
 void 
-ClpConstraintQuadratic::reallyScale(const double * columnScale) 
+ClpConstraintQuadratic::reallyScale(const double * ) 
 {
   abort();
 }

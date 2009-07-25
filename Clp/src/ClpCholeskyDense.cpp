@@ -686,7 +686,7 @@ ClpCholeskyCtriRec(ClpCholeskyDenseC * thisStruct, longDouble * aTri, int nThis,
 			 int numberBlocks)
 {
   if (nThis<=BLOCK&&nLeft<=BLOCK) {
-    ClpCholeskyCtriRecLeaf(thisStruct, aTri,aUnder,diagonal,work,nLeft);
+    ClpCholeskyCtriRecLeaf(/*thisStruct,*/ aTri,aUnder,diagonal,work,nLeft);
   } else if (nThis<nLeft) {
     int nb=number_blocks((nLeft+1)>>1);
     int nLeft2=number_rows(nb);
@@ -721,7 +721,7 @@ ClpCholeskyCrecTri(ClpCholeskyDenseC * thisStruct, longDouble * aUnder, int nTri
 			 int numberBlocks)
 {
   if (nTri<=BLOCK&&nDo<=BLOCK) {
-    ClpCholeskyCrecTriLeaf(thisStruct, aUnder,aTri,diagonal,work,nTri);
+    ClpCholeskyCrecTriLeaf(/*thisStruct,*/ aUnder,aTri,/*diagonal,*/work,nTri);
   } else if (nTri<nDo) {
     int nb=number_blocks((nDo+1)>>1);
     int nDo2=number_rows(nb);
@@ -762,7 +762,7 @@ ClpCholeskyCrecRec(ClpCholeskyDenseC * thisStruct, longDouble * above, int nUnde
 {
   if (nDo<=BLOCK&&nUnder<=BLOCK&&nUnderK<=BLOCK) {
     assert (nDo==BLOCK&&nUnder==BLOCK);
-    ClpCholeskyCrecRecLeaf(thisStruct, above , aUnder ,  aOther, work, nUnderK);
+    ClpCholeskyCrecRecLeaf(/*thisStruct,*/ above , aUnder ,  aOther, work, nUnderK);
   } else if (nDo<=nUnderK&&nUnder<=nUnderK) {
     int nb=number_blocks((nUnderK+1)>>1);
     int nUnder2=number_rows(nb);
@@ -866,7 +866,7 @@ ClpCholeskyCfactorLeaf(ClpCholeskyDenseC * thisStruct, longDouble * a, int n,
 }
   /* Leaf recursive triangle rectangle update*/
 void 
-ClpCholeskyCtriRecLeaf(ClpCholeskyDenseC * thisStruct, longDouble * aTri, longDouble * aUnder, longDouble * diagonal, longDouble * work,
+ClpCholeskyCtriRecLeaf(/*ClpCholeskyDenseC * thisStruct,*/ longDouble * aTri, longDouble * aUnder, longDouble * diagonal, longDouble * work,
 		int nUnder)
 {
 #ifdef POS_DEBUG
@@ -940,8 +940,8 @@ ClpCholeskyCtriRecLeaf(ClpCholeskyDenseC * thisStruct, longDouble * aTri, longDo
 #endif
 }
   /* Leaf recursive rectangle triangle update*/
-void ClpCholeskyCrecTriLeaf(ClpCholeskyDenseC * thisStruct, longDouble * aUnder, longDouble * aTri, 
-				  longDouble * diagonal, longDouble * work, int nUnder)
+void ClpCholeskyCrecTriLeaf(/*ClpCholeskyDenseC * thisStruct,*/ longDouble * aUnder, longDouble * aTri, 
+			    /*longDouble * diagonal,*/ longDouble * work, int nUnder)
 {
 #ifdef POS_DEBUG
   int iru,icu;
@@ -1023,7 +1023,7 @@ void ClpCholeskyCrecTriLeaf(ClpCholeskyDenseC * thisStruct, longDouble * aUnder,
    nUnderK is number of rows in kBlock
 */
 void 
-ClpCholeskyCrecRecLeaf(ClpCholeskyDenseC * thisStruct,
+ClpCholeskyCrecRecLeaf(/*ClpCholeskyDenseC * thisStruct,*/
 					 const longDouble * COIN_RESTRICT above, 
 			     const longDouble * COIN_RESTRICT aUnder, 
 			     longDouble * COIN_RESTRICT aOther, 

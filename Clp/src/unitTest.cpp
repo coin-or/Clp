@@ -1586,10 +1586,14 @@ ClpSimplexUnitTest(const std::string & dirSample)
       int problem;
       char temp[100];
       // read and skip 
-      fscanf(fp,"%s",temp);
+      int x=fscanf(fp,"%s",temp);
+      if (x<0)
+	throw("bad fscanf");
       assert (!strcmp(temp,"BEGIN"));
-      fscanf(fp,"%*s %*s %d %d %*s %*s %d %*s",&problem, &numberRows, 
+      x=fscanf(fp,"%*s %*s %d %d %*s %*s %d %*s",&problem, &numberRows, 
 	     &numberColumns);
+      if (x<0)
+	throw("bad fscanf");
       // scan down to SUPPLY
       while (fgets(temp,100,fp)) {
 	if (!strncmp(temp,"SUPPLY",6))
@@ -1972,7 +1976,7 @@ ClpSimplexUnitTest(const std::string & dirSample)
     for (int i=0;i<numberBlocks;i++) {
       std::string topName="row_master";
       std::string blockName="block_";
-      char bName = 'a'+static_cast<char>(i);
+      char bName = static_cast<char>('a'+static_cast<char>(i));
       blockName.append(1,bName);
       structured.addBlock(topName,blockName,top);
       structured.addBlock(blockName,blockName,sub);
@@ -1998,7 +2002,7 @@ ClpSimplexUnitTest(const std::string & dirSample)
     numberBlocks=3;
     for (int i=0;i<numberBlocks;i++) {
       std::string blockName="block_";
-      char bName = 'a'+static_cast<char>(i);
+      char bName = static_cast<char>('a'+static_cast<char>(i));
       blockName.append(1,bName);
       structured2.addBlock(blockName,blockName,structured);
     }

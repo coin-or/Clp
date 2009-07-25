@@ -75,7 +75,7 @@ enum CbcOrClpParameterType
     DIRECTION=201,DUALPIVOT,SCALING,ERRORSALLOWED,KEEPNAMES,SPARSEFACTOR,
     PRIMALPIVOT,PRESOLVE,CRASH,BIASLU,PERTURBATION,MESSAGES,AUTOSCALE,
     CHOLESKY,KKT,BARRIERSCALE,GAMMA,CROSSOVER,PFI,INTPRINT,VECTOR,
-    FACTORIZATION,
+    FACTORIZATION,ALLCOMMANDS,
     
     NODESTRATEGY = 251,BRANCHSTRATEGY,CUTSSTRATEGY,HEURISTICSTRATEGY,
     GOMORYCUTS,PROBINGCUTS,KNAPSACKCUTS,REDSPLITCUTS,
@@ -108,15 +108,15 @@ public:
   /// Constructors
   CbcOrClpParam (  );
   CbcOrClpParam (std::string name, std::string help,
-	   double lower, double upper, CbcOrClpParameterType type,bool display=true);
+	   double lower, double upper, CbcOrClpParameterType type,int display=2);
   CbcOrClpParam (std::string name, std::string help,
-	   int lower, int upper, CbcOrClpParameterType type,bool display=true);
+	   int lower, int upper, CbcOrClpParameterType type,int display=2);
   // Other strings will be added by insert
   CbcOrClpParam (std::string name, std::string help, std::string firstValue,
-	   CbcOrClpParameterType type,int whereUsed=7,bool display=true);
+	   CbcOrClpParameterType type,int whereUsed=7,int display=2);
   // Action
   CbcOrClpParam (std::string name, std::string help,
-	   CbcOrClpParameterType type,int whereUsed=7,bool display=true);
+	   CbcOrClpParameterType type,int whereUsed=7,int display=2);
   /// Copy constructor. 
   CbcOrClpParam(const CbcOrClpParam &);
   /// Assignment operator. This copies the data
@@ -179,6 +179,8 @@ public:
   int checkDoubleParameter(double value) const;
   /// Returns name which could match
   std::string matchName (  ) const;
+  /// Returns length of name for ptinting
+  int lengthMatchName (  ) const;
   /// Returns parameter option which matches (-1 if none)
   int parameterOption ( std::string check ) const;
   /// Prints parameter options
@@ -213,7 +215,7 @@ public:
   inline CbcOrClpParameterType type() const
   { return type_;}
   /// whether to display
-  inline bool displayThis() const
+  inline int displayThis() const
   { return display_;}
   /// Set Long help
   inline void setLonghelp(const std::string help) 
@@ -266,7 +268,7 @@ private:
   /// Current keyWord (if a keyword parameter)
   int currentKeyWord_;
   /// Display on ?
-  bool display_;
+  int display_;
   /// Integer parameter - current value
   int intValue_;
   /// Double parameter - current value

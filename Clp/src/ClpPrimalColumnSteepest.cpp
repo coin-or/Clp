@@ -286,37 +286,37 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
   }
   if (switchType==5) {
     if (anyUpdates>0) {
-      justDjs(updates,spareRow1,spareRow2,
+      justDjs(updates,spareRow2,
 	spareColumn1,spareColumn2);
     }
   } else if (anyUpdates==1) {
     if (switchType<4) {
       // exact etc when can use dj 
-      djsAndSteepest(updates,spareRow1,spareRow2,
+      djsAndSteepest(updates,spareRow2,
 	spareColumn1,spareColumn2);
     } else {
       // devex etc when can use dj 
-      djsAndDevex(updates,spareRow1,spareRow2,
+      djsAndDevex(updates,spareRow2,
 	spareColumn1,spareColumn2);
     }
   } else if (anyUpdates==-1) {
     if (switchType<4) {
       // exact etc when djs okay 
-      justSteepest(updates,spareRow1,spareRow2,
+      justSteepest(updates,spareRow2,
 	spareColumn1,spareColumn2);
     } else {
       // devex etc when djs okay 
-      justDevex(updates,spareRow1,spareRow2,
+      justDevex(updates,spareRow2,
 	spareColumn1,spareColumn2);
     }
   } else if (anyUpdates==2) {
     if (switchType<4) {
       // exact etc when have to use pivot
-      djsAndSteepest2(updates,spareRow1,spareRow2,
+      djsAndSteepest2(updates,spareRow2,
 	spareColumn1,spareColumn2);
     } else {
       // devex etc when have to use pivot
-      djsAndDevex2(updates,spareRow1,spareRow2,
+      djsAndDevex2(updates,spareRow2,
 	spareColumn1,spareColumn2);
     }
   } 
@@ -594,7 +594,6 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
 // Just update djs
 void 
 ClpPrimalColumnSteepest::justDjs(CoinIndexedVector * updates,
-	       CoinIndexedVector * spareRow1,
 	       CoinIndexedVector * spareRow2,
 	       CoinIndexedVector * spareColumn1,
 	       CoinIndexedVector * spareColumn2)
@@ -699,7 +698,6 @@ ClpPrimalColumnSteepest::justDjs(CoinIndexedVector * updates,
 // Update djs, weights for Devex
 void 
 ClpPrimalColumnSteepest::djsAndDevex(CoinIndexedVector * updates,
-	       CoinIndexedVector * spareRow1,
 	       CoinIndexedVector * spareRow2,
 	       CoinIndexedVector * spareColumn1,
 	       CoinIndexedVector * spareColumn2)
@@ -939,7 +937,6 @@ ClpPrimalColumnSteepest::djsAndDevex(CoinIndexedVector * updates,
 // Update djs, weights for Steepest
 void 
 ClpPrimalColumnSteepest::djsAndSteepest(CoinIndexedVector * updates,
-	       CoinIndexedVector * spareRow1,
 	       CoinIndexedVector * spareRow2,
 	       CoinIndexedVector * spareColumn1,
 	       CoinIndexedVector * spareColumn2)
@@ -1208,7 +1205,6 @@ ClpPrimalColumnSteepest::djsAndSteepest(CoinIndexedVector * updates,
 // Update djs, weights for Devex
 void 
 ClpPrimalColumnSteepest::djsAndDevex2(CoinIndexedVector * updates,
-	       CoinIndexedVector * spareRow1,
 	       CoinIndexedVector * spareRow2,
 	       CoinIndexedVector * spareColumn1,
 	       CoinIndexedVector * spareColumn2)
@@ -1400,7 +1396,6 @@ ClpPrimalColumnSteepest::djsAndDevex2(CoinIndexedVector * updates,
 // Update djs, weights for Steepest
 void 
 ClpPrimalColumnSteepest::djsAndSteepest2(CoinIndexedVector * updates,
-	       CoinIndexedVector * spareRow1,
 	       CoinIndexedVector * spareRow2,
 	       CoinIndexedVector * spareColumn1,
 	       CoinIndexedVector * spareColumn2)
@@ -1665,7 +1660,7 @@ ClpPrimalColumnSteepest::transposeTimes2(const CoinIndexedVector * pi1, CoinInde
   }
   if (model_->clpMatrix()->canCombine(model_,pi1)) {
     // put row of tableau in rowArray and columnArray
-    model_->clpMatrix()->transposeTimes2(model_,pi1,dj1,pi2,dj2,spare,referenceIn, devex_,
+    model_->clpMatrix()->transposeTimes2(model_,pi1,dj1,pi2,spare,referenceIn, devex_,
                                          reference_,
                                          weights_,scaleFactor);
   } else {
@@ -1724,7 +1719,6 @@ ClpPrimalColumnSteepest::transposeTimes2(const CoinIndexedVector * pi1, CoinInde
 // Update weights for Devex
 void 
 ClpPrimalColumnSteepest::justDevex(CoinIndexedVector * updates,
-	       CoinIndexedVector * spareRow1,
 	       CoinIndexedVector * spareRow2,
 	       CoinIndexedVector * spareColumn1,
 	       CoinIndexedVector * spareColumn2)
@@ -1832,7 +1826,6 @@ ClpPrimalColumnSteepest::justDevex(CoinIndexedVector * updates,
 // Update weights for Steepest
 void 
 ClpPrimalColumnSteepest::justSteepest(CoinIndexedVector * updates,
-	       CoinIndexedVector * spareRow1,
 	       CoinIndexedVector * spareRow2,
 	       CoinIndexedVector * spareColumn1,
 	       CoinIndexedVector * spareColumn2)
@@ -1979,7 +1972,7 @@ ClpPrimalColumnSteepest::justSteepest(CoinIndexedVector * updates,
 // Returns pivot column, -1 if none
 int 
 ClpPrimalColumnSteepest::pivotColumnOldMethod(CoinIndexedVector * updates,
-				    CoinIndexedVector * spareRow1,
+				    CoinIndexedVector * ,
 				    CoinIndexedVector * spareRow2,
 				    CoinIndexedVector * spareColumn1,
 				    CoinIndexedVector * spareColumn2)
@@ -2799,7 +2792,7 @@ ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model,int mode)
       if (infeasible_->capacity()==numberRows+numberColumns&&
 	alternateWeights_->capacity()==numberRows+
 	  model_->factorization()->maximumPivots()) {
-	alternateWeights_->clear();
+	//alternateWeights_->clear();
 	if (pivotSequence_>=0&&pivotSequence_<numberRows) {
 	  // save pivot order
 	  CoinMemcpyN(pivotVariable,

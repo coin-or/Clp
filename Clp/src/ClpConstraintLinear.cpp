@@ -181,7 +181,7 @@ ClpConstraintLinear::reallyScale(const double * columnScale)
    Returns number of nonlinear columns
 */
 int 
-ClpConstraintLinear::markNonlinear(char * which) const
+ClpConstraintLinear::markNonlinear(char *) const
 {
   return 0;
 }

@@ -45,7 +45,6 @@ public:
 			  CoinIndexedVector * spareColumn2);
   /// Just update djs
   void justDjs(CoinIndexedVector * updates,
-	       CoinIndexedVector * spareRow1,
 	       CoinIndexedVector * spareRow2,
 	       CoinIndexedVector * spareColumn1,
 	       CoinIndexedVector * spareColumn2);
@@ -56,37 +55,31 @@ public:
 		     int numberLook);
   /// Update djs, weights for Devex using djs
   void djsAndDevex(CoinIndexedVector * updates,
-	       CoinIndexedVector * spareRow1,
 	       CoinIndexedVector * spareRow2,
 	       CoinIndexedVector * spareColumn1,
 	       CoinIndexedVector * spareColumn2);
   /// Update djs, weights for Steepest using djs
   void djsAndSteepest(CoinIndexedVector * updates,
-	       CoinIndexedVector * spareRow1,
 	       CoinIndexedVector * spareRow2,
 	       CoinIndexedVector * spareColumn1,
 	       CoinIndexedVector * spareColumn2);
   /// Update djs, weights for Devex using pivot row
   void djsAndDevex2(CoinIndexedVector * updates,
-	       CoinIndexedVector * spareRow1,
 	       CoinIndexedVector * spareRow2,
 	       CoinIndexedVector * spareColumn1,
 	       CoinIndexedVector * spareColumn2);
   /// Update djs, weights for Steepest using pivot row
   void djsAndSteepest2(CoinIndexedVector * updates,
-	       CoinIndexedVector * spareRow1,
 	       CoinIndexedVector * spareRow2,
 	       CoinIndexedVector * spareColumn1,
 	       CoinIndexedVector * spareColumn2);
   /// Update weights for Devex
   void justDevex(CoinIndexedVector * updates,
-	       CoinIndexedVector * spareRow1,
 	       CoinIndexedVector * spareRow2,
 	       CoinIndexedVector * spareColumn1,
 	       CoinIndexedVector * spareColumn2);
   /// Update weights for Steepest
   void justSteepest(CoinIndexedVector * updates,
-	       CoinIndexedVector * spareRow1,
 	       CoinIndexedVector * spareRow2,
 	       CoinIndexedVector * spareColumn1,
 	       CoinIndexedVector * spareColumn2);

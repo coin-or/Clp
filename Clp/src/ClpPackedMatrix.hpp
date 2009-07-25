@@ -92,9 +92,7 @@ public:
   /** Returns a new matrix in reverse order without gaps */
   virtual ClpMatrixBase * reverseOrderedCopy() const;
   /// Returns number of elements in column part of basis 
-  virtual CoinBigIndex countBasis(ClpSimplex * model,
-				 const int * whichColumn, 
-				 int numberRowBasic,
+  virtual CoinBigIndex countBasis(const int * whichColumn, 
 				  int & numberColumnBasic);
   /// Fills in column part of basis
   virtual void fillBasis(ClpSimplex * model,
@@ -248,7 +246,7 @@ public:
   /// Updates two arrays for steepest 
   virtual void transposeTimes2(const ClpSimplex * model,
                                const CoinIndexedVector * pi1, CoinIndexedVector * dj1,
-                               const CoinIndexedVector * pi2, CoinIndexedVector * dj2,
+                               const CoinIndexedVector * pi2, 
                                CoinIndexedVector * spare,
                                double referenceIn, double devex,
                                // Array for exact devex to say what is in reference framework
@@ -257,7 +255,7 @@ public:
   /// Updates second array for steepest and does devex weights 
   virtual void subsetTimes2(const ClpSimplex * model,
                                 CoinIndexedVector * dj1,
-                               const CoinIndexedVector * pi2, CoinIndexedVector * dj2,
+                               const CoinIndexedVector * pi2, CoinIndexedVector * dj2, 
                                double referenceIn, double devex,
                                // Array for exact devex to say what is in reference framework
                                unsigned int * reference,

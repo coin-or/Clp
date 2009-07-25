@@ -3050,7 +3050,7 @@ bool ClpPredictorCorrector::checkGoodMove2(CoinWorkDouble move,
 }
 // updateSolution.  Updates solution at end of iteration
 //returns number fixed
-int ClpPredictorCorrector::updateSolution(CoinWorkDouble nextGap)
+int ClpPredictorCorrector::updateSolution(CoinWorkDouble /*nextGap*/)
 {
   CoinWorkDouble * dualArray = reinterpret_cast<CoinWorkDouble *>(dual_);
   int numberTotal = numberRows_+numberColumns_;
@@ -3756,7 +3756,8 @@ ClpPredictorCorrector::affineProduct()
 }
 //See exactly what would happen given current deltas
 void 
-ClpPredictorCorrector::debugMove(int phase,CoinWorkDouble primalStep, CoinWorkDouble dualStep)
+ClpPredictorCorrector::debugMove(int /*phase*/,
+				 CoinWorkDouble primalStep, CoinWorkDouble dualStep)
 {
 #ifndef SOME_DEBUG
   return;

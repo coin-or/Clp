@@ -194,7 +194,7 @@ protected:
   /// Forms ADAT - returns nonzero if not enough memory
   int preOrder(bool lowerTriangular, bool includeDiagonal, bool doKKT);
   /// Updates dense part (broken out for profiling)
-  void updateDense(longDouble * d, longDouble * work, int * first);
+  void updateDense(longDouble * d, /*longDouble * work,*/ int * first);
   //@}
     
 protected:

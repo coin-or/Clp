@@ -1072,7 +1072,7 @@ static void matrix_bounds_ok(const double *lo, const double *up, int n)
 }
 #endif
 CoinPresolveMatrix::CoinPresolveMatrix(int ncols0_in,
-				     double maxmin,
+				       double /*maxmin*/,
 				     // end prepost members
 
 				     ClpSimplex * si,
@@ -1271,8 +1271,8 @@ CoinPresolveMatrix::CoinPresolveMatrix(int ncols0_in,
     printf("NC: %6d\n", hincol[i]);
 #endif
 
-  presolve_make_memlists(mcstrt_, hincol_, clink_, ncols_);
-  presolve_make_memlists(mrstrt_, hinrow_, rlink_, nrows_);
+  presolve_make_memlists(/*mcstrt_,*/ hincol_, clink_, ncols_);
+  presolve_make_memlists(/*mrstrt_,*/ hinrow_, rlink_, nrows_);
 
   // this allows last col/row to expand up to bufsize-1 (22);
   // this must come after the calls to presolve_prefix
@@ -1288,9 +1288,9 @@ CoinPresolveMatrix::CoinPresolveMatrix(int ncols0_in,
 }
 
 void CoinPresolveMatrix::update_model(ClpSimplex * si,
-				     int nrows0,
-				     int ncols0,
-				     CoinBigIndex nelems0)
+				      int /*nrows0*/,
+				      int /*ncols0*/,
+				      CoinBigIndex /*nelems0*/)
 {
   si->loadProblem(ncols_, nrows_, mcstrt_, hrow_, colels_, hincol_,
 		 clo_, cup_, cost_, rlo_, rup_);

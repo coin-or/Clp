@@ -55,14 +55,14 @@ ClpPrimalColumnPivot::operator=(const ClpPrimalColumnPivot& rhs)
   return *this;
 }
 void 
-ClpPrimalColumnPivot::saveWeights(ClpSimplex * model,int mode)
+ClpPrimalColumnPivot::saveWeights(ClpSimplex * model,int )
 {
   model_=model;
 }
 // checks accuracy and may re-initialize (may be empty)
 
 void 
-ClpPrimalColumnPivot::updateWeights(CoinIndexedVector * input)
+ClpPrimalColumnPivot::updateWeights(CoinIndexedVector *)
 {
 }
 
@@ -75,7 +75,7 @@ ClpPrimalColumnPivot::clearArrays()
    Also number of iterations before recompute
 */
 int 
-ClpPrimalColumnPivot::numberSprintColumns(int & numberIterations) const
+ClpPrimalColumnPivot::numberSprintColumns(int & ) const
 {
   return 0;
 }

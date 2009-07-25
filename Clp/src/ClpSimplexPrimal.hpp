@@ -184,7 +184,6 @@ public:
   void primalRow(CoinIndexedVector * rowArray,
 		 CoinIndexedVector * rhsArray,
 		 CoinIndexedVector * spareArray,
-		 CoinIndexedVector * spareArray2,
 		 int valuesPass);
   /** 
       Chooses primal pivot column

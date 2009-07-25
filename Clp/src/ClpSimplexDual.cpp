@@ -398,6 +398,8 @@ ClpSimplexDual::gutsOfDual(int ifValuesPass,double * & saveDuals,int initialStat
   z_thinks=-1;
   int nPivots=9999;
 #endif
+  double largestPrimalError=0.0;
+  double largestDualError=0.0;
   // Start can skip some things in transposeTimes
   specialOptions_ |= 131072;
   int lastCleaned=0; // last time objective or bounds cleaned up
@@ -483,6 +485,8 @@ ClpSimplexDual::gutsOfDual(int ifValuesPass,double * & saveDuals,int initialStat
     // may factorize, checks if problem finished
     statusOfProblemInDual(lastCleaned,factorType,saveDuals,data,
                           ifValuesPass);
+    largestPrimalError=CoinMax(largestPrimalError,largestPrimalError_);
+    largestDualError=CoinMax(largestDualError,largestDualError_);
     if (disaster)
       problemStatus_=3;
     // If values pass then do easy ones on first time
@@ -554,6 +558,8 @@ ClpSimplexDual::gutsOfDual(int ifValuesPass,double * & saveDuals,int initialStat
 #endif
   // Stop can skip some things in transposeTimes
   specialOptions_ &= ~131072;
+  largestPrimalError_=largestPrimalError;
+  largestDualError_=largestDualError;
 }
 int 
 ClpSimplexDual::dual(int ifValuesPass,int startFinishOptions)
@@ -1507,7 +1513,7 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
 	  theta_=0.0;
 	}
 	// do actual flips
-	flipBounds(rowArray_[0],columnArray_[0],theta_);
+	flipBounds(rowArray_[0],columnArray_[0]);
 	//rowArray_[1]->expand();
 	dualRowPivot_->updatePrimalSolution(rowArray_[1],
 					    movement,
@@ -2412,7 +2418,7 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
   numberInfeasibilities += numberRowInfeasibilities;
   if (fullRecompute) {
     // do actual flips
-    flipBounds(rowArray,columnArray,0.0);
+    flipBounds(rowArray,columnArray);
   }
   objectiveChange += changeObj;
   return numberInfeasibilities;
@@ -3162,7 +3168,7 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 			   CoinIndexedVector * spareArray,
 			   CoinIndexedVector * spareArray2,
 			   double acceptablePivot,
-			   CoinBigIndex * dubiousWeights)
+			   CoinBigIndex * /*dubiousWeights*/)
 {
   int numberPossiblySwapped=0;
   int numberRemaining=0;
@@ -5131,8 +5137,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 */
 void 
 ClpSimplexDual::flipBounds(CoinIndexedVector * rowArray,
-		  CoinIndexedVector * columnArray,
-		  double change)
+		  CoinIndexedVector * columnArray)
 {
   int number;
   int * which;

@@ -1882,7 +1882,7 @@ ClpPackedMatrix::canCombine(const ClpSimplex * model,
 void 
 ClpPackedMatrix::transposeTimes2(const ClpSimplex * model,
                                  const CoinIndexedVector * pi1, CoinIndexedVector * dj1,
-                                 const CoinIndexedVector * pi2, CoinIndexedVector * dj2,
+                                 const CoinIndexedVector * pi2,
                                  CoinIndexedVector * spare,
                                  double referenceIn, double devex,
                                  // Array for exact devex to say what is in reference framework
@@ -2177,7 +2177,7 @@ ClpPackedMatrix::transposeTimes2(const ClpSimplex * model,
 void 
 ClpPackedMatrix::subsetTimes2(const ClpSimplex * model,
                               CoinIndexedVector * dj1,
-                            const CoinIndexedVector * pi2, CoinIndexedVector * dj2,
+                            const CoinIndexedVector * pi2, CoinIndexedVector *,
                             double referenceIn, double devex,
                             // Array for exact devex to say what is in reference framework
                             unsigned int * reference,
@@ -2270,9 +2270,7 @@ ClpPackedMatrix::subsetTimes2(const ClpSimplex * model,
 }
 /// returns number of elements in column part of basis,
 CoinBigIndex 
-ClpPackedMatrix::countBasis(ClpSimplex * model,
-			   const int * whichColumn, 
-			   int numberBasic,
+ClpPackedMatrix::countBasis( const int * whichColumn, 
 			    int & numberColumnBasic)
 {
   const int * columnLength = matrix_->getVectorLengths(); 
@@ -3078,7 +3076,7 @@ static void doSqrts(double * array,int n)
 //static int scale_stats[5]={0,0,0,0,0};
 // Creates scales for column copy (rowCopy in model may be modified)
 int 
-ClpPackedMatrix::scale(ClpModel * model,const ClpSimplex * baseModel) const 
+ClpPackedMatrix::scale(ClpModel * model,const ClpSimplex * /*baseModel*/) const 
 {
   //const ClpSimplex * baseModel=NULL;
   //return scale2(model);
@@ -4431,7 +4429,7 @@ ClpPackedMatrix::clearCopies()
  }
 // makes sure active columns correct
 int 
-ClpPackedMatrix::refresh(ClpSimplex * model)
+ClpPackedMatrix::refresh(ClpSimplex * )
 {
   numberActiveColumns_ = matrix_->getNumCols();
 #if 0
@@ -4755,7 +4753,7 @@ ClpPackedMatrix2::ClpPackedMatrix2 ()
 //-------------------------------------------------------------------
 // Useful Constructor 
 //-------------------------------------------------------------------
-ClpPackedMatrix2::ClpPackedMatrix2 (ClpSimplex * model,const CoinPackedMatrix * rowCopy) 
+ClpPackedMatrix2::ClpPackedMatrix2 (ClpSimplex * ,const CoinPackedMatrix * rowCopy) 
   : numberBlocks_(0),
     numberRows_(0),
     offset_(NULL),

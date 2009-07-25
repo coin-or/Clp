@@ -1152,8 +1152,8 @@ ClpSimplex::computeDuals(double * givenDjs)
 /* Given an existing factorization computes and checks 
    primal and dual solutions.  Uses input arrays for variables at
    bounds.  Returns feasibility states */
-int ClpSimplex::getSolution ( const double * rowActivities,
-			       const double * columnActivities)
+int ClpSimplex::getSolution ( const double * /*rowActivities*/,
+			      const double * /*columnActivities*/)
 {
   if (!factorization_->status()) {
     // put in standard form
@@ -4393,12 +4393,12 @@ ClpSimplex::setSparseFactorization(bool value)
     factorization_->sparseThreshold(0);
   }
 }
-void checkCorrect(ClpSimplex * model,int iRow,
+void checkCorrect(ClpSimplex * /*model*/,int iRow,
 		  const double * element,const int * rowStart,const int * rowLength,
 		  const int * column,
 		  const double * columnLower_, const double * columnUpper_,
-		  int infiniteUpperC,
-		  int infiniteLowerC,
+		  int /*infiniteUpperC*/,
+		  int /*infiniteLowerC*/,
 		  double &maximumUpC,
 		  double &maximumDownC)
 {
@@ -4440,8 +4440,8 @@ void checkCorrect(ClpSimplex * model,int iRow,
       }
     }
   }
-  assert (infiniteLowerC==infiniteLower);
-  assert (infiniteUpperC==infiniteUpper);
+  //assert (infiniteLowerC==infiniteLower);
+  //assert (infiniteUpperC==infiniteUpper);
   if (fabs(maximumUp-maximumUpC)>1.0e-12*CoinMax(fabs(maximumUp),fabs(maximumUpC)))
     printf("row %d comp up %g, true up %g\n",iRow,
 	   maximumUpC,maximumUp);
@@ -6733,7 +6733,7 @@ ClpSimplex::loadProblem (  const int numcols, const int numrows,
 #ifndef SLIM_NOIO
 // This loads a model from a coinModel object - returns number of errors
 int 
-ClpSimplex::loadProblem (  CoinModel & modelObject, bool keepSolution)
+ClpSimplex::loadProblem (  CoinModel & modelObject, bool /*keepSolution*/)
 {
   unsigned char * status = NULL;
   double * psol = NULL;

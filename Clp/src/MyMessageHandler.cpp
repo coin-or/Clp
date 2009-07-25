@@ -42,7 +42,7 @@ MyMessageHandler::MyMessageHandler (const MyMessageHandler & rhs)
 }
 
 MyMessageHandler::MyMessageHandler (const CoinMessageHandler & rhs) 
-  : CoinMessageHandler(),
+  : CoinMessageHandler(rhs),
     model_(NULL),
     feasibleExtremePoints_(),
     iterationNumber_(-1)
@@ -51,7 +51,7 @@ MyMessageHandler::MyMessageHandler (const CoinMessageHandler & rhs)
 
 // Constructor with pointer to model
 MyMessageHandler::MyMessageHandler(ClpSimplex * model,
-               FILE * userPointer)
+				   FILE * /*userPointer*/)
   : CoinMessageHandler(),
     model_(model),
     feasibleExtremePoints_(),

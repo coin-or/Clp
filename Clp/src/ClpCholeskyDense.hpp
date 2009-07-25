@@ -133,21 +133,21 @@ extern "C" {
 			 int * rowsDropped);
   /**Leaf recursive triangle rectangle update */
   void 
-  ClpCholeskyCtriRecLeaf(ClpCholeskyDenseC * thisStruct, 
+  ClpCholeskyCtriRecLeaf(/*ClpCholeskyDenseC * thisStruct,*/ 
 			 longDouble * aTri, longDouble * aUnder,
 			 longDouble * diagonal, longDouble * work,
 			 int nUnder);
   /**Leaf recursive rectangle triangle update */
   void 
-  ClpCholeskyCrecTriLeaf(ClpCholeskyDenseC * thisStruct, 
+  ClpCholeskyCrecTriLeaf(/*ClpCholeskyDenseC * thisStruct, */
 			 longDouble * aUnder, longDouble * aTri, 
-			 longDouble * diagonal, longDouble * work, int nUnder);
+			 /*longDouble * diagonal,*/ longDouble * work, int nUnder);
   /** Leaf recursive rectangle rectangle update,
       nUnder is number of rows in iBlock,
       nUnderK is number of rows in kBlock
   */
   void 
-  ClpCholeskyCrecRecLeaf(ClpCholeskyDenseC * thisStruct, 
+  ClpCholeskyCrecRecLeaf(/*ClpCholeskyDenseC * thisStruct, */
 			 const longDouble * COIN_RESTRICT above, 
 			 const longDouble * COIN_RESTRICT aUnder, 
 			 longDouble * COIN_RESTRICT aOther, 

@@ -1185,7 +1185,7 @@ chk(1,j,n);
      }
  }
  while (counter <= n) {
-     for (deg = mindeg; head[deg - 1] < 1; deg++);
+   for (deg = mindeg; head[deg - 1] < 1; deg++) {};
      nodeg = 0;
 #ifdef WSSMP_DBG
 chk(2,deg,n-1);
@@ -1704,7 +1704,7 @@ chk(66,node,n);
  }
  for (l = 1; l <= n; l++) {
    if (!invp[l - 1]) {
-     for (i = -xadj[l - 1]; invp[i - 1] >= 0; i = -xadj[i - 1]);
+     for (i = -xadj[l - 1]; invp[i - 1] >= 0; i = -xadj[i - 1]){};
        tn = i;
 #ifdef WSSMP_DBG
 chk(67,tn,n);
@@ -3531,7 +3531,7 @@ ClpCholeskyBase::factorizePart2(int * rowsDropped)
   if (firstDense_<numberRows_) {
     // do dense
     // update dense part
-    updateDense(d,work,first);
+    updateDense(d,/*work,*/first);
     ClpCholeskyDense dense;
     // just borrow space
     int nDense = numberRows_-firstDense_;
@@ -3569,7 +3569,7 @@ ClpCholeskyBase::factorizePart2(int * rowsDropped)
   return;
 }
 // Updates dense part (broken out for profiling)
-void ClpCholeskyBase::updateDense(longDouble * d, longDouble * work, int * first)
+void ClpCholeskyBase::updateDense(longDouble * d, /*longDouble * work,*/ int * first)
 {
   for (int iRow=0;iRow<firstDense_;iRow++) {
     CoinBigIndex start=first[iRow];

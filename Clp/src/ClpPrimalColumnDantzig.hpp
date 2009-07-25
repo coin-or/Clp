@@ -35,7 +35,7 @@ public:
 			  CoinIndexedVector * spareColumn2);
 
   /// Just sets model
-  virtual void saveWeights(ClpSimplex * model,int mode)
+  virtual void saveWeights(ClpSimplex * model,int)
   {model_=model;}
   //@}
   

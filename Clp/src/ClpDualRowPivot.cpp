@@ -51,7 +51,7 @@ ClpDualRowPivot::operator=(const ClpDualRowPivot& rhs)
   return *this;
 }
 void 
-ClpDualRowPivot::saveWeights(ClpSimplex * model,int mode)
+ClpDualRowPivot::saveWeights(ClpSimplex * model,int /*mode*/)
 {
   model_=model;
 }
