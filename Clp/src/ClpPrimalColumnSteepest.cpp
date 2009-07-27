@@ -2875,8 +2875,12 @@ ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model,int mode)
 	//pivotSequence_= savedPivotSequence_;
 	//model_->setSequenceOut(savedSequenceOut_); 
 	pivotSequence_= -1;
-	model_->setSequenceOut(-1); 
-	alternateWeights_->clear();
+	model_->setSequenceOut(-1);
+	// indices are wrong so clear by hand
+	//alternateWeights_->clear();
+	CoinZeroN(alternateWeights_->denseVector(),
+		  alternateWeights_->capacity());
+	alternateWeights_->setNumElements(0);
       }
     }
     state_=0;
