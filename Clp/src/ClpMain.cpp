@@ -238,8 +238,8 @@ main (int argc, const char *argv[])
       // see if ? at end
       int numberQuery=0;
       if (field!="?"&&field!="???") {
-	int length = field.length();
-	int i;
+	size_t length = field.length();
+	long i;
 	for (i=length-1;i>0;i--) {
 	  if (field[i]=='?') 
 	    numberQuery++;
@@ -879,7 +879,7 @@ main (int argc, const char *argv[])
 		// See if .lp
 		{
 		  const char * c_name = field.c_str();
-		  int length = strlen(c_name);
+		  size_t length = strlen(c_name);
 		  if (length>3&&!strncmp(c_name+length-3,".lp",3))
 		    gmpl=-1; // .lp
 		}
@@ -908,13 +908,13 @@ main (int argc, const char *argv[])
 		} else {
 		  fileName = directory+field;
                   // See if gmpl (model & data) - or even lp file
-                  int length = field.size();
-                  int percent = field.find('%');
+                  size_t length = field.size();
+                  size_t percent = field.find('%');
                   if (percent<length&&percent>0) {
                     gmpl=1;
                     fileName = directory+field.substr(0,percent);
                     gmplData = directory+field.substr(percent+1);
-                    if (percent<length-1)
+                    if (percent+1<length)
                       gmpl=2; // two files
                     printf("GMPL model file %s and data file %s\n",
                            fileName.c_str(),gmplData.c_str());
@@ -1431,7 +1431,7 @@ main (int argc, const char *argv[])
 	    {
 	      std::string name = CoinReadGetString(argc,argv);
 	      if (name!="EOL") {
-		int length=name.length();
+		size_t length=name.length();
 		if (name[length-1]==dirsep) {
 		  directory = name;
 		} else {
@@ -1447,7 +1447,7 @@ main (int argc, const char *argv[])
 	    {
 	      std::string name = CoinReadGetString(argc,argv);
 	      if (name!="EOL") {
-		int length=name.length();
+		size_t length=name.length();
 		if (name[length-1]==dirsep) {
 		  dirSample = name;
 		} else {
@@ -1463,7 +1463,7 @@ main (int argc, const char *argv[])
 	    {
 	      std::string name = CoinReadGetString(argc,argv);
 	      if (name!="EOL") {
-		int length=name.length();
+		size_t length=name.length();
 		if (name[length-1]==dirsep) {
 		  dirNetlib = name;
 		} else {
@@ -1479,7 +1479,7 @@ main (int argc, const char *argv[])
 	    {
 	      std::string name = CoinReadGetString(argc,argv);
 	      if (name!="EOL") {
-		int length=name.length();
+		size_t length=name.length();
 		if (name[length-1]==dirsep) {
 		  dirMiplib = name;
 		} else {
@@ -1688,7 +1688,7 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 		// make fancy later on
 		int iRow;
 		int numberRows=models[iModel].numberRows();
-		int lengthName = models[iModel].lengthNames(); // 0 if no names
+		size_t lengthName = models[iModel].lengthNames(); // 0 if no names
 		// in general I don't want to pass around massive
 		// amounts of data but seems simpler here
 		std::vector<std::string> rowNames =
@@ -1703,17 +1703,17 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 		double * rowUpper = models[iModel].rowUpper();
 		double primalTolerance = models[iModel].primalTolerance();
 		char format[6];
-		sprintf(format,"%%-%ds",CoinMax(lengthName,8));
+		sprintf(format,"%%-%ds",(int)CoinMax(lengthName,(size_t)8));
                 bool doMask = (printMask!=""&&lengthName);
 		int * maskStarts=NULL;
-		int maxMasks=0;
+		size_t maxMasks=0;
 		char ** masks =NULL;
 		if (doMask) {
 		  int nAst =0;
 		  const char * pMask2 = printMask.c_str();
 		  char pMask[100];
-		  int iChar;
-		  int lengthMask = strlen(pMask2);
+		  size_t iChar;
+		  size_t lengthMask = strlen(pMask2);
 		  assert (lengthMask<100);
 		  if (*pMask2=='"') {
 		    if (pMask2[lengthMask-1]!='"') {
@@ -1745,32 +1745,32 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 		      maxMasks *= (lengthName+1);
 		    }
 		  }
-		  int nEntries = 1;
+		  size_t nEntries = 1;
 		  maskStarts = new int[lengthName+2];
 		  masks = new char * [maxMasks];
 		  char ** newMasks = new char * [maxMasks];
-		  int i;
+		  size_t i;
 		  for (i=0;i<maxMasks;i++) {
 		    masks[i] = new char[lengthName+1];
 		    newMasks[i] = new char[lengthName+1];
 		  }
 		  strcpy(masks[0],pMask);
 		  for (int iAst=0;iAst<nAst;iAst++) {
-		    int nOldEntries = nEntries;
+		    size_t nOldEntries = nEntries;
 		    nEntries=0;
-		    for (int iEntry = 0;iEntry<nOldEntries;iEntry++) {
+		    for (size_t iEntry = 0;iEntry<nOldEntries;iEntry++) {
 		      char * oldMask = masks[iEntry];
 		      char * ast = strchr(oldMask,'*');
 		      assert (ast);
-		      int length = strlen(oldMask)-1;
-		      int nBefore = ast-oldMask;
-		      int nAfter = length-nBefore;
+		      size_t length = strlen(oldMask)-1;
+		      size_t nBefore = ast-oldMask;
+		      size_t nAfter = length-nBefore;
 		      // and add null
 		      nAfter++;
-		      for (int i=0;i<=lengthName-length;i++) {
+		      for (size_t i=0;i<=lengthName-length;i++) {
 			char * maskOut = newMasks[nEntries];
    CoinMemcpyN(oldMask,nBefore,maskOut);
-			for (int k=0;k<i;k++) 
+			for (size_t k=0;k<i;k++) 
 			  maskOut[k+nBefore]='?';
    CoinMemcpyN(ast+1,nAfter,maskOut+nBefore+i);
 			nEntries++;
@@ -1782,23 +1782,23 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 		    newMasks = temp;
 		  }
 		  // Now extend and sort
-		  int * sort = new int[nEntries];
+		  size_t* sort = new size_t[nEntries];
 		  for (i=0;i<nEntries;i++) {
 		    char * maskThis = masks[i];
-		    int length = strlen(maskThis);
+		    size_t length = strlen(maskThis);
 		    while (maskThis[length-1]==' ')
 		      length--;
 		    maskThis[length]='\0';
 		    sort[i]=length;
 		  }
 		  CoinSort_2(sort,sort+nEntries,masks);
-		  int lastLength=-1;
+		  long lastLength=-1;
 		  for (i=0;i<nEntries;i++) {
-		    int length = sort[i];
-		    while (length>lastLength) 
-		      maskStarts[++lastLength] = i;
+		    size_t length = sort[i];
+		    while ((long)length>lastLength) 
+		      maskStarts[++lastLength] = (int)i;
 		  }
-		  maskStarts[++lastLength]=nEntries;
+		  maskStarts[++lastLength]=(int)nEntries;
 		  delete [] sort;
 		  for (i=0;i<maxMasks;i++)
 		    delete [] newMasks[i];
@@ -1862,7 +1862,7 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 		  fclose(fp);
 		if (masks) {
 		  delete [] maskStarts;
-		  for (int i=0;i<maxMasks;i++)
+		  for (size_t i=0;i<maxMasks;i++)
 		    delete [] masks[i];
 		  delete [] masks;
 		}
@@ -2888,12 +2888,12 @@ static bool maskMatches(const int * starts, char ** masks,
 {
   // back to char as I am old fashioned
   const char * checkC = check.c_str();
-  int length = strlen(checkC);
+  size_t length = strlen(checkC);
   while (checkC[length-1]==' ')
     length--;
   for (int i=starts[length];i<starts[length+1];i++) {
     char * thisMask = masks[i];
-    int k;
+    size_t k;
     for ( k=0;k<length;k++) {
       if (thisMask[k]!='?'&&thisMask[k]!=checkC[k]) 
 	break;

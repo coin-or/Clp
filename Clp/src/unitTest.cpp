@@ -819,9 +819,9 @@ ClpSimplexUnitTest(const std::string & dirSample)
     model.primal(0,3);
     // Write saved solutions
     int nc = model.getNumCols();
-    int s; 
+    size_t s; 
     std::deque<StdVectorDouble> fep = messageHandler.getFeasibleExtremePoints();
-    int numSavedSolutions = fep.size();
+    size_t numSavedSolutions = fep.size();
     for ( s=0; s<numSavedSolutions; ++s ) {
       const StdVectorDouble & solnVec = fep[s];
       for ( int c=0; c<nc; ++c ) {
@@ -1967,11 +1967,11 @@ ClpSimplexUnitTest(const std::string & dirSample)
     }
     // Create a structured model
     CoinStructuredModel structured;
-    int numberBlocks=5;
-    for (int i=0;i<numberBlocks;i++) {
+    char numberBlocks=5;
+    for (char i=0;i<numberBlocks;i++) {
       std::string topName="row_master";
       std::string blockName="block_";
-      char bName = 'a'+i;
+      char bName = (char)('a'+i);
       blockName.append(1,bName);
       structured.addBlock(topName,blockName,top);
       structured.addBlock(blockName,blockName,sub);
@@ -1995,9 +1995,9 @@ ClpSimplexUnitTest(const std::string & dirSample)
     // Create a structured model
     CoinStructuredModel structured2;
     numberBlocks=3;
-    for (int i=0;i<numberBlocks;i++) {
+    for (char i=0;i<numberBlocks;i++) {
       std::string blockName="block_";
-      char bName = 'a'+i;
+      char bName = (char)('a'+i);
       blockName.append(1,bName);
       structured2.addBlock(blockName,blockName,structured);
     }

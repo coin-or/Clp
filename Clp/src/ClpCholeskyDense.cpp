@@ -779,7 +779,7 @@ ClpCholeskyDense::factorLeaf(longDouble * a, int n,
   longDouble smallest=doubleParameters_[4];
   double dropValue = doubleParameters_[10];
   int firstPositive=integerParameters_[34];
-  int rowOffset=diagonal-diagonal_;
+  size_t rowOffset=diagonal-diagonal_;
   int numberDropped=0;
   int i, j, k;
   longDouble t00,temp1;
@@ -794,7 +794,7 @@ ClpCholeskyDense::factorLeaf(longDouble * a, int n,
     }
     bool dropColumn=false;
     longDouble useT00=t00;
-    if (j+rowOffset<firstPositive) {
+    if ((int)(j+rowOffset)<firstPositive) {
       // must be negative
       if (t00<=-dropValue) {
 	smallest = CoinMin(smallest,-t00);
