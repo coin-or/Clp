@@ -837,7 +837,7 @@ public:
       4 - Force outgoing variables to exact bound (primal)
       8 - Safe to use dense initial factorization
       16 -Just use basic variables for operation if column generation
-      32 -Clean up with primal before strong branching
+      32 -Create ray even in BAB
       64 -Treat problem as feasible until last minute (i.e. minimize infeasibilities)
       128 - Switch off all matrix sanity checks
       256 - No row copy

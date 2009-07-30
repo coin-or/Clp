@@ -1711,6 +1711,7 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 		int iRow;
 		int numberRows=models[iModel].numberRows();
 		int lengthName = models[iModel].lengthNames(); // 0 if no names
+		int lengthPrint = CoinMax(lengthName,8);
 		// in general I don't want to pass around massive
 		// amounts of data but seems simpler here
 		std::vector<std::string> rowNames =
@@ -1724,8 +1725,6 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 		double * rowLower = models[iModel].rowLower();
 		double * rowUpper = models[iModel].rowUpper();
 		double primalTolerance = models[iModel].primalTolerance();
-		char format[6];
-		sprintf(format,"%%-%ds",CoinMax(lengthName,8));
                 bool doMask = (printMask!=""&&lengthName);
 		int * maskStarts=NULL;
 		int maxMasks=0;
@@ -1842,8 +1841,15 @@ clp watson.mps -\nscaling off\nprimalsimplex"
                       type=0;
                     if (type) {
                       fprintf(fp,"%7d ",iRow);
-                      if (lengthName)
-                        fprintf(fp,format,rowNames[iRow].c_str());
+                      if (lengthName) {
+			const char * name = rowNames[iRow].c_str();
+			int n=strlen(name);
+			int i;
+			for (i=0;i<n;i++)
+			  fprintf(fp,"%c",name[i]);
+			for (;i<lengthPrint;i++)
+			  fprintf(fp," ");
+		      }
                       fprintf(fp," %15.8g        %15.8g\n",primalRowSolution[iRow],
                               dualRowSolution[iRow]);
                     }
@@ -1873,8 +1879,15 @@ clp watson.mps -\nscaling off\nprimalsimplex"
                     type =0;
 		  if (type) {
 		    fprintf(fp,"%7d ",iColumn);
-		    if (lengthName)
-		      fprintf(fp,format,columnNames[iColumn].c_str());
+		    if (lengthName) {
+		      const char * name = columnNames[iColumn].c_str();
+		      int n=strlen(name);
+		      int i;
+		      for (i=0;i<n;i++)
+			fprintf(fp,"%c",name[i]);
+		      for (;i<lengthPrint;i++)
+			fprintf(fp," ");
+		    }
 		    fprintf(fp," %15.8g        %15.8g\n",
 			    primalColumnSolution[iColumn],
 			    dualColumnSolution[iColumn]);

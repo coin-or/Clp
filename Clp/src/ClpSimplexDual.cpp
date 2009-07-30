@@ -1704,12 +1704,14 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
 	if (factorization_->pivots()<2&&acceptablePivot_<=1.0e-8) {
 	  //&&goodAccuracy()) {
           // If not in branch and bound etc save ray
-          if ((specialOptions_&(1024|4096))==0) {
+	  delete [] ray_;
+          if ((specialOptions_&(1024|4096))==0||(specialOptions_&32)!=0) {
 	    // create ray anyway
-	    delete [] ray_;
 	    ray_ = new double [ numberRows_];
 	    rowArray_[0]->expand(); // in case packed
 	    CoinMemcpyN(rowArray_[0]->denseVector(),numberRows_,ray_);
+          } else {
+	    ray_ = NULL;
           }
 	  // If we have just factorized and infeasibility reasonable say infeas
 	  if (((specialOptions_&4096)!=0||bestPossiblePivot<1.0e-11)&&dualBound_>1.0e8) {

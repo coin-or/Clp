@@ -1675,7 +1675,7 @@ ClpPlusMinusOneMatrix::canCombine(const ClpSimplex * model,
 void 
 ClpPlusMinusOneMatrix::transposeTimes2(const ClpSimplex * model,
                                  const CoinIndexedVector * pi1, CoinIndexedVector * dj1,
-                                 const CoinIndexedVector * pi2, CoinIndexedVector * ,
+                                 const CoinIndexedVector * pi2,
                                  CoinIndexedVector * spare,
                                  double referenceIn, double devex,
                                  // Array for exact devex to say what is in reference framework

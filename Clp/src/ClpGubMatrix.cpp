@@ -892,16 +892,14 @@ ClpGubMatrix::subsetTransposeTimes(const ClpSimplex * model,
 }
 /// returns number of elements in column part of basis,
 CoinBigIndex 
-ClpGubMatrix::countBasis(ClpSimplex * /*model*/,
-			   const int * whichColumn, 
-			   int numberBasic,
+ClpGubMatrix::countBasis(const int * whichColumn, 
 			 int & numberColumnBasic)
 {
   int i;
   int numberColumns = getNumCols();
   const int * columnLength = matrix_->getVectorLengths(); 
   int numberRows = getNumRows();
-  int saveNumberBasic=numberBasic;
+  int numberBasic=0;
   CoinBigIndex numberElements=0;
   int lastSet=-1;
   int key=-1;
@@ -965,7 +963,7 @@ ClpGubMatrix::countBasis(ClpSimplex * /*model*/,
   delete [] work;
   delete [] mark;
   // update number of column basic
-  numberColumnBasic = numberBasic-saveNumberBasic;
+  numberColumnBasic = numberBasic;
   return numberElements;
 }
 void

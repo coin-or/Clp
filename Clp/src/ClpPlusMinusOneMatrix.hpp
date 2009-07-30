@@ -172,7 +172,7 @@ public:
   /// Updates two arrays for steepest 
   virtual void transposeTimes2(const ClpSimplex * model,
                                const CoinIndexedVector * pi1, CoinIndexedVector * dj1,
-                               const CoinIndexedVector * pi2, CoinIndexedVector * dj2,
+                               const CoinIndexedVector * pi2,
                                CoinIndexedVector * spare,
                                double referenceIn, double devex,
                                // Array for exact devex to say what is in reference framework
