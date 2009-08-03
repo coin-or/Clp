@@ -1714,7 +1714,8 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
 	    ray_ = NULL;
           }
 	  // If we have just factorized and infeasibility reasonable say infeas
-	  if (((specialOptions_&4096)!=0||bestPossiblePivot<1.0e-11)&&dualBound_>1.0e8) {
+	  double dualTest = ((specialOptions_&4096)!=0) ? 1.0e8 : 1.0e13;
+	  if (((specialOptions_&4096)!=0||bestPossiblePivot<1.0e-11)&&dualBound_>dualTest) {
 	    double testValue=1.0e-4;
 	    if (!factorization_->pivots()&&numberPrimalInfeasibilities_==1)
 	      testValue=1.0e-6;
