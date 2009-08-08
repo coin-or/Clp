@@ -949,6 +949,7 @@ public:
       8 bit - if factorization kept can still declare optimal at once
       16 bit - if checking replaceColumn accuracy before updating
       32 bit - say optimal if primal feasible!
+      64 bit - give up easily in dual (and say infeasible)
   */
   inline int moreSpecialOptions() const
   { return moreSpecialOptions_;}
@@ -957,6 +958,9 @@ public:
       2 bit - if presolved problem infeasible return
       4 bit - keep arrays like upper_ around
       8 bit - no free or superBasic variables
+      16 bit - if checking replaceColumn accuracy before updating
+      32 bit - say optimal if primal feasible!
+      64 bit - give up easily in dual (and say infeasible)
   */
   inline void setMoreSpecialOptions(int value)
   { moreSpecialOptions_ = value;}

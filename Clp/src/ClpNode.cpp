@@ -185,6 +185,7 @@ ClpNode::gutsOfConstructor (ClpSimplex * model, const ClpNodeStuff * stuff,
   sequence_=-1;
   double integerTolerance = stuff->integerTolerance_;
   double mostAway=0.0;
+  int bestPriority=COIN_INT_MAX;
   sumInfeasibilities_ = 0.0;
   numberInfeasibilities_ = 0;
   int nFix=0;
@@ -250,6 +251,7 @@ ClpNode::gutsOfConstructor (ClpSimplex * model, const ClpNodeStuff * stuff,
   const int * numberDown = stuff->numberDown_;
   const int * numberDownInfeasible = stuff->numberDownInfeasible_;
   const double * upPseudo = stuff->upPseudo_;
+  const int * priority = stuff->priority_;
   const int * numberUp = stuff->numberUp_;
   const int * numberUpInfeasible = stuff->numberUpInfeasible_;
   int iInteger=0;
@@ -347,6 +349,12 @@ ClpNode::gutsOfConstructor (ClpSimplex * model, const ClpNodeStuff * stuff,
 	double infeasibility = fabs(value-nearest);
 #endif
 	assert (infeasibility>0.0);
+	if (priority[iInteger]<bestPriority) {
+	  mostAway=0.0;
+	  bestPriority=priority[iInteger];
+	} else if (priority[iInteger]>bestPriority) {
+	  infeasibility=0.0;
+	}
 	if (infeasibility>mostAway) {
 	  mostAway=infeasibility;
 	  sequence_=iColumn;
@@ -398,6 +406,8 @@ ClpNode::gutsOfConstructor (ClpSimplex * model, const ClpNodeStuff * stuff,
       iInteger++;
     }
   }
+  //printf("Choosing %d inf %g pri %d\n",
+  // sequence_,mostAway,bestPriority);
 #if PSEUDO == 2
   delete [] activeWeight;
 #endif
@@ -644,6 +654,7 @@ ClpNodeStuff::ClpNodeStuff () :
   integerIncrement_(1.0e-8),
   downPseudo_(NULL),
   upPseudo_(NULL),
+  priority_(NULL),
   numberDown_(NULL),
   numberUp_(NULL),
   numberDownInfeasible_(NULL),
@@ -674,6 +685,7 @@ ClpNodeStuff::ClpNodeStuff (const ClpNodeStuff & rhs)
     integerIncrement_(rhs.integerIncrement_),
     downPseudo_(NULL),
     upPseudo_(NULL),
+    priority_(NULL),
     numberDown_(NULL),
     numberUp_(NULL),
     numberDownInfeasible_(NULL),
@@ -705,6 +717,7 @@ ClpNodeStuff::operator=(const ClpNodeStuff& rhs)
     integerIncrement_ = rhs.integerIncrement_;
     downPseudo_ = NULL;
     upPseudo_ = NULL;
+    priority_ = NULL;
     numberDown_ = NULL;
     numberUp_ = NULL;
     numberDownInfeasible_ = NULL;
@@ -740,6 +753,7 @@ ClpNodeStuff::zap(int type)
   if ((type&1)!=0) {
     downPseudo_ = NULL;
     upPseudo_ = NULL;
+    priority_ = NULL;
     numberDown_ = NULL;
     numberUp_ = NULL;
     numberDownInfeasible_ = NULL;
@@ -770,6 +784,7 @@ ClpNodeStuff::~ClpNodeStuff ()
 {
   delete [] downPseudo_;
   delete [] upPseudo_;
+  delete [] priority_;
   delete [] numberDown_;
   delete [] numberUp_;
   delete [] numberDownInfeasible_;
@@ -811,6 +826,7 @@ ClpNodeStuff::maximumSpace() const
 /* Fill with pseudocosts */
 void 
 ClpNodeStuff::fillPseudoCosts(const double * down, const double * up, 
+			      const int * priority,
 			      const int * numberDown, const int * numberUp,
 			      const int * numberDownInfeasible, 
 			      const int * numberUpInfeasible,
@@ -818,12 +834,14 @@ ClpNodeStuff::fillPseudoCosts(const double * down, const double * up,
 {
   delete [] downPseudo_;
   delete [] upPseudo_;
+  delete [] priority_;
   delete [] numberDown_;
   delete [] numberUp_;
   delete [] numberDownInfeasible_;
   delete [] numberUpInfeasible_;
   downPseudo_ = CoinCopyOfArray(down,number);
   upPseudo_ = CoinCopyOfArray(up,number);
+  priority_ = CoinCopyOfArray(priority,number);
   numberDown_ = CoinCopyOfArray(numberDown,number);
   numberUp_ = CoinCopyOfArray(numberUp,number);
   numberDownInfeasible_ = CoinCopyOfArray(numberDownInfeasible,number);

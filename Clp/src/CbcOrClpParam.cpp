@@ -1515,6 +1515,18 @@ to -1 (off -> code decides)."
      );
   parameters[numberParameters-1].setIntValue(-1);
   parameters[numberParameters++]=
+    CbcOrClpParam("cutL!ength","Length of a cut",
+		  -1,COIN_INT_MAX,CUTLENGTH);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "At present this only applies to Gomory cuts. -1 (default) leaves as is. \
+Any value >0 says that all cuts <= this length can be generated both at \
+root node and in tree. 0 says to use some dynamic lengths.  If value >=10,000,000 \
+then the length in tree is value%10000000 - so 10000100 means unlimited length \
+at root and 100 in tree."
+     );
+  parameters[numberParameters-1].setIntValue(-1);
+  parameters[numberParameters++]=
     CbcOrClpParam("cuto!ff","All solutions must be better than this",
 		  -1.0e60,1.0e60,CUTOFF);
   parameters[numberParameters-1].setDoubleValue(1.0e50);
@@ -2226,6 +2238,17 @@ but this program turns this off to make it look more friendly.  It can be useful
      );
 #ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
+    CbcOrClpParam("moreT!une","Yet more dubious ideas for feasibility pump",
+		  0,100000000,FPUMPTUNE2,0);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "Yet more ideas for Feasibility Pump \n\
+\t/100 == 1,3.. exact 1.0 for objective values\n\
+\t/100 == 2,3.. allow more iterations per pass\n\
+\t n fix if value of variable same for last n iterations."
+     ); 
+  parameters[numberParameters-1].setIntValue(0);
+  parameters[numberParameters++]=
     CbcOrClpParam("miplib","Do some of miplib test set",
 		  MIPLIB,3,1);
   parameters[numberParameters++]=
@@ -2625,11 +2648,14 @@ when solution found in feasibility pump"
   parameters[numberParameters-1].setLonghelp
     (
      "This fine tunes Feasibility Pump \n\
+\t>=10000000 use as objective weight switch\n\
 \t>=1000000 use as accumulate switch\n\
 \t>=1000 use index+1 as number of large loops\n\
 \t==100 use objvalue +0.05*fabs(objvalue) as cutoff OR fakeCutoff if set\n\
-\t%100 == 10,20 etc for experimentation\n\
-\t1 == fix ints at bounds, 2 fix all integral ints, 3 and continuous at bounds"
+\t%100 == 10,20 affects how each solve is done\n\
+\t1 == fix ints at bounds, 2 fix all integral ints, 3 and continuous at bounds. \
+If accumulate is on then after a major pass, variables which have not moved \
+are fixed and a small branch and bound is tried."
      ); 
   parameters[numberParameters-1].setIntValue(0);
 #endif

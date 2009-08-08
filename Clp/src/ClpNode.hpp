@@ -185,6 +185,7 @@ public:
   //@{
   /** Fill with pseudocosts */
   void fillPseudoCosts(const double * down, const double * up, 
+		       const int * priority,
 		       const int * numberDown, const int * numberUp,
 		       const int * numberDownInfeasible, const int * numberUpInfeasible,
 		       int number);
@@ -207,6 +208,8 @@ public:
   double * downPseudo_;
   /// Up pseudo costs
   double * upPseudo_;
+  /// Priority
+  int * priority_;
   /// Number of times down
   int * numberDown_;
   /// Number of times up

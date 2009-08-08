@@ -1787,7 +1787,7 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
 	    }
 	  }
 	  // If special option set - put off as long as possible
-	  if ((specialOptions_&64)==0) {
+	  if ((specialOptions_&64)==0||(moreSpecialOptions_&64)!=0) {
             if (factorization_->pivots()==0)
               problemStatus_=-4; //say looks infeasible
 	  } else {

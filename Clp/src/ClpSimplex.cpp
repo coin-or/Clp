@@ -9820,6 +9820,7 @@ ClpSimplex::fathom(void * stuff)
 		j++;
 	      jColumn++;
 	    }
+	    info->priority_[k]=info->priority_[j];
 	    info->upPseudo_[k]=info->upPseudo_[j];
 	    info->numberUp_[k]=info->numberUp_[j];
 	    info->numberUpInfeasible_[k]=info->numberUpInfeasible_[j];
