@@ -39,6 +39,13 @@ AC_PREFIX_DEFAULT([`pwd`])
 AC_COIN_CREATE_LIBTOOL
 
 #############################################################################
+#             Check which ThirdParty sources are available                  #
+#############################################################################
+
+AC_COIN_THIRDPARTY_SUBDIRS([Blas],[ThirdParty/Blas],[daxpy.f])
+AC_COIN_THIRDPARTY_SUBDIRS([Lapack],[ThirdParty/Lapack],[LAPACK/SRC/dlarf.f])
+
+#############################################################################
 #                  Check which subprojects are there                        #
 #############################################################################
 
