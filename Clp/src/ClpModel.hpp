@@ -379,8 +379,8 @@ public:
   { problemStatus_ = problemStatus;}
    /** Secondary status of problem - may get extended
        0 - none
-       1 - primal infeasible because dual limit reached OR probably primal
-       infeasible but can't prove it (main status 4)
+       1 - primal infeasible because dual limit reached OR (probably primal
+       infeasible but can't prove it  - main status was 4)
        2 - scaled problem optimal - unscaled problem has primal infeasibilities
        3 - scaled problem optimal - unscaled problem has dual infeasibilities
        4 - scaled problem optimal - unscaled problem has primal and dual infeasibilities
