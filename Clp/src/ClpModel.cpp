@@ -4041,6 +4041,7 @@ ClpModel::findNetwork(char * rotate,double fractionNeeded)
   }
   if (numberEligible<fractionNeeded*numberRows_) {
     delete [] mapping;
+    delete copy;
     return 0;
   }
   // create arrays
@@ -4109,7 +4110,7 @@ ClpModel::findNetwork(char * rotate,double fractionNeeded)
       numberLast=numberIn;
       int numberLeft = 0;
       for (iRow=0;iRow<numberEligible;iRow++) {
-	if (rotate[iRow]==0) {
+	if (rotate[iRow]==0&&rowStart[iRow+1]>rowStart[iRow]) {
 	  which[numberLeft]=iRow;
 	  int merit=0;
 	  bool OK=true;
