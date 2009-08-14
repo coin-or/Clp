@@ -4130,8 +4130,8 @@ ClpModel::findNetwork(char * rotate,double fractionNeeded)
 	      break;
 	    }
 	  }
-	  if (merit>-2&&(OK||reflectionOK)) {
-	    assert (!OK||!reflectionOK||!numberIn);
+	  if (merit>-2&&(OK||reflectionOK)&&
+	      (!OK||!reflectionOK||!numberIn)) {
 	    //if (!numberLast) merit=1;
 	    count[numberLeft++]=(rowStart[iRow+1]-rowStart[iRow]-1)*
 	      (static_cast<double>(merit));
