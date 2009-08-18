@@ -2173,7 +2173,10 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
 	  // flipping bounds
 	  double movement = mult*(lower[iSequence] - upper[iSequence]);
 	  which[numberInfeasibilities++]=iSequence;
-	  assert (fabs(movement)<1.0e30);
+#ifndef NDEBUG
+	  if (fabs(movement)>=1.0e30)
+	    resetFakeBounds(-1000-iSequence);
+#endif
 #ifdef CLP_DEBUG
 	  if ((handler_->logLevel()&32))
 	    printf("%d %d, new dj %g, alpha %g, movement %g\n",
@@ -2213,7 +2216,10 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
 	    // flipping bounds
 	    double movement = mult*(upper[iSequence] - lower[iSequence]);
 	    which[numberInfeasibilities++]=iSequence;
-	    assert (fabs(movement)<1.0e30);
+#ifndef NDEBUG
+	    if (fabs(movement)>=1.0e30)
+	      resetFakeBounds(-1000-iSequence);
+#endif
 #ifdef CLP_DEBUG
 	    if ((handler_->logLevel()&32))
 	      printf("%d %d, new dj %g, alpha %g, movement %g\n",
@@ -2240,7 +2246,10 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
 	    // to upper bound 
 	    which[numberInfeasibilities++]=iSequence;
 	    movement = upper[iSequence] - lower[iSequence];
-	    assert (fabs(movement)<1.0e30);
+#ifndef NDEBUG
+	    if (fabs(movement)>=1.0e30)
+	      resetFakeBounds(-1000-iSequence);
+#endif
 #ifdef CLP_DEBUG
 	    if ((handler_->logLevel()&32))
 	      printf("%d %d, new dj %g, alpha %g, movement %g\n",
@@ -2258,7 +2267,10 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
 	    // to lower bound (if swap)
 	    which[numberInfeasibilities++]=iSequence;
 	    movement = lower[iSequence]-upper[iSequence];
-	    assert (fabs(movement)<1.0e30);
+#ifndef NDEBUG
+	    if (fabs(movement)>=1.0e30)
+	      resetFakeBounds(-1000-iSequence);
+#endif
 #ifdef CLP_DEBUG
 	    if ((handler_->logLevel()&32))
 	      printf("%d %d, new dj %g, alpha %g, movement %g\n",
@@ -2297,14 +2309,20 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
 	  movement = lower[iSequence]-upper[iSequence];
 	  changeObj += movement*cost[iSequence];
 	  outputArray->quickAdd(iSequence,-movement);
-	  assert (fabs(movement)<1.0e30);
+#ifndef NDEBUG
+	  if (fabs(movement)>=1.0e30)
+	    resetFakeBounds(-1000-iSequence);
+#endif
 #ifndef NO_SWAP7
 	} else if (value>-tolerance) {
 	  // at correct bound but may swap
 	  FakeBound bound = getFakeBound(iSequence+numberColumns_);
 	  if (bound==ClpSimplexDual::upperFake) {
 	    movement = lower[iSequence]-upper[iSequence];
-	    assert (fabs(movement)<1.0e30);
+#ifndef NDEBUG
+	    if (fabs(movement)>=1.0e30)
+	      resetFakeBounds(-1000-iSequence);
+#endif
 	    setStatus(iSequence+numberColumns_,atLowerBound);
 	    solution[iSequence] = lower[iSequence];
 	    changeObj += movement*cost[iSequence];
@@ -2321,7 +2339,10 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
 	  // put back alpha
 	  which[numberInfeasibilities++]=iSequence;
 	  movement = upper[iSequence] - lower[iSequence];
-	  assert (fabs(movement)<1.0e30);
+#ifndef NDEBUG
+	  if (fabs(movement)>=1.0e30)
+	    resetFakeBounds(-1000-iSequence);
+#endif
 	  changeObj += movement*cost[iSequence];
 	  outputArray->quickAdd(iSequence,-movement);
 #ifndef NO_SWAP7
@@ -2330,7 +2351,10 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
 	  FakeBound bound = getFakeBound(iSequence+numberColumns_);
 	  if (bound==ClpSimplexDual::lowerFake) {
 	    movement = upper[iSequence]-lower[iSequence];
-	    assert (fabs(movement)<1.0e30);
+#ifndef NDEBUG
+	    if (fabs(movement)>=1.0e30)
+	      resetFakeBounds(-1000-iSequence);
+#endif
 	    setStatus(iSequence+numberColumns_,atUpperBound);
 	    solution[iSequence] = upper[iSequence];
 	    changeObj += movement*cost[iSequence];
@@ -2364,7 +2388,10 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
 	  // put back alpha
 	  which[numberInfeasibilities++]=iSequence;
 	  movement = upper[iSequence] - lower[iSequence];
-	  assert (fabs(movement)<1.0e30);
+#ifndef NDEBUG
+	  if (fabs(movement)>=1.0e30)
+	    resetFakeBounds(-1000-iSequence);
+#endif
 	  changeObj += movement*cost[iSequence];
 	  matrix_->add(this,outputArray,iSequence,movement);
 #ifndef NO_SWAP7
@@ -2373,7 +2400,10 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
 	  FakeBound bound = getFakeBound(iSequence);
 	  if (bound==ClpSimplexDual::lowerFake) {
 	    movement = upper[iSequence]-lower[iSequence];
-	    assert (fabs(movement)<1.0e30);
+#ifndef NDEBUG
+	  if (fabs(movement)>=1.0e30)
+	    resetFakeBounds(-1000-iSequence);
+#endif
 	    setStatus(iSequence,atUpperBound);
 	    solution[iSequence] = upper[iSequence];
 	    changeObj += movement*cost[iSequence];
@@ -2390,7 +2420,10 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
 	  // put back alpha
 	  which[numberInfeasibilities++]=iSequence;
 	  movement = lower[iSequence]-upper[iSequence];
-	  assert (fabs(movement)<1.0e30);
+#ifndef NDEBUG
+	  if (fabs(movement)>=1.0e30)
+	    resetFakeBounds(-1000-iSequence);
+#endif
 	  changeObj += movement*cost[iSequence];
 	  matrix_->add(this,outputArray,iSequence,movement);
 #ifndef NO_SWAP7
@@ -2399,7 +2432,10 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
 	  FakeBound bound = getFakeBound(iSequence);
 	  if (bound==ClpSimplexDual::upperFake) {
 	    movement = lower[iSequence]-upper[iSequence];
-	    assert (fabs(movement)<1.0e30);
+#ifndef NDEBUG
+	    if (fabs(movement)>=1.0e30)
+	      resetFakeBounds(-1000-iSequence);
+#endif
 	    setStatus(iSequence,atLowerBound);
 	    solution[iSequence] = lower[iSequence];
 	    changeObj += movement*cost[iSequence];
@@ -6898,108 +6934,165 @@ ClpSimplexDual::resetFakeBounds(int type)
     double * tempLower = CoinCopyOfArray(lower_,nTotal);
     double * tempUpper = CoinCopyOfArray(upper_,nTotal);
     int iSequence;
+    // Get scaled true bounds
     if (columnScale_) {
       for (iSequence=0;iSequence<numberColumns_;iSequence++) {
-	FakeBound fakeStatus = getFakeBound(iSequence);
-	if (fakeStatus!=noFake) {
-	  if ((static_cast<int> (fakeStatus)&1)!=0) {
-	    // lower
-	    double value = columnLower_[iSequence];
-	    if (value>-1.0e30) {
-	      double multiplier = rhsScale_*inverseColumnScale_[iSequence];
-	      value *= multiplier;
-	    }
-	    tempLower[iSequence]=value;
-	  }
-	  if ((static_cast<int> (fakeStatus)&2)!=0) {
-	    // upper
-	    double value = columnUpper_[iSequence];
-	    if (value<1.0e30) {
-	      double multiplier = rhsScale_*inverseColumnScale_[iSequence];
-	      value *= multiplier;
-	    }
-	    tempUpper[iSequence]=value;
-	  }
+	// lower
+	double value = columnLower_[iSequence];
+	if (value>-1.0e30) {
+	  double multiplier = rhsScale_*inverseColumnScale_[iSequence];
+	  value *= multiplier;
 	}
+	tempLower[iSequence]=value;
+	// upper
+	value = columnUpper_[iSequence];
+	if (value<1.0e30) {
+	  double multiplier = rhsScale_*inverseColumnScale_[iSequence];
+	  value *= multiplier;
+	}
+	tempUpper[iSequence]=value;
       }
       for (iSequence=0;iSequence<numberRows_;iSequence++) {
-	FakeBound fakeStatus = getFakeBound(iSequence+numberColumns_);
-	if (fakeStatus!=noFake) {
-	  if ((static_cast<int> (fakeStatus)&1)!=0) {
-	    // lower
-	    double value = rowLower_[iSequence];
-	    if (value>-1.0e30) {
-	      double multiplier = rhsScale_*rowScale_[iSequence];
-	      value *= multiplier;
-	    }
-	    tempLower[iSequence+numberColumns_]=value;
-	  }
-	  if ((static_cast<int> (fakeStatus)&2)!=0) {
-	    // upper
-	    double value = rowUpper_[iSequence];
-	    if (value<1.0e30) {
-	      double multiplier = rhsScale_*rowScale_[iSequence];
-	      value *= multiplier;
-	    }
-	    tempUpper[iSequence+numberColumns_]=value;
-	  }
+	// lower
+	double value = rowLower_[iSequence];
+	if (value>-1.0e30) {
+	  double multiplier = rhsScale_*rowScale_[iSequence];
+	  value *= multiplier;
 	}
+	tempLower[iSequence+numberColumns_]=value;
+	// upper
+	value = rowUpper_[iSequence];
+	if (value<1.0e30) {
+	  double multiplier = rhsScale_*rowScale_[iSequence];
+	  value *= multiplier;
+	}
+	tempUpper[iSequence+numberColumns_]=value;
       }
     } else {
       for (iSequence=0;iSequence<numberColumns_;iSequence++) {
-	FakeBound fakeStatus = getFakeBound(iSequence);
-	if ((static_cast<int> (fakeStatus)&1)!=0) {
-	  // lower
-	  tempLower[iSequence]=columnLower_[iSequence];
-	}
-	if ((static_cast<int> (fakeStatus)&2)!=0) {
-	  // upper
-	  tempUpper[iSequence]=columnUpper_[iSequence];
-	}
+	// lower
+	tempLower[iSequence]=columnLower_[iSequence];
+	// upper
+	tempUpper[iSequence]=columnUpper_[iSequence];
       }
       for (iSequence=0;iSequence<numberRows_;iSequence++) {
-	FakeBound fakeStatus = getFakeBound(iSequence+numberColumns_);
-	if ((static_cast<int> (fakeStatus)&1)!=0) {
-	  // lower
-	  tempLower[iSequence+numberColumns_]=rowLower_[iSequence];
-	}
-	if ((static_cast<int> (fakeStatus)&2)!=0) {
-	  // upper
-	  tempUpper[iSequence+numberColumns_]=rowUpper_[iSequence];
-	}
+	// lower
+	tempLower[iSequence+numberColumns_]=rowLower_[iSequence];
+	// upper
+	tempUpper[iSequence+numberColumns_]=rowUpper_[iSequence];
       }
     }
     int nFake=0;
+    int nErrors=0;
+    int nSuperBasic=0;
+    int nWarnings=0;
     for (iSequence=0;iSequence<nTotal;iSequence++) {
       FakeBound fakeStatus = getFakeBound(iSequence);
       Status status = getStatus(iSequence);
       bool isFake=false;
+      char RC = 'C';
+      int jSequence=iSequence;
+      if (jSequence>=numberColumns_) {
+	RC='R';
+	jSequence-=numberColumns_;
+      }
+      double lowerValue=tempLower[iSequence];
+      double upperValue=tempUpper[iSequence];
+      double value = solution_[iSequence];
+      CoinRelFltEq equal;
       if (status==atUpperBound||
 	  status==atLowerBound) {
-	double lowerValue=tempLower[iSequence];
-	double upperValue=tempUpper[iSequence];
-	double value = solution_[iSequence];
-	CoinRelFltEq equal;
 	if (fakeStatus==ClpSimplexDual::upperFake) {
-	  assert(equal(upper_[iSequence],(lowerValue+dualBound_)));
-	  assert(equal(upper_[iSequence],value)||
-		 equal(lower_[iSequence],value));
+	  if(!equal(upper_[iSequence],(lowerValue+dualBound_))||
+	  !(equal(upper_[iSequence],value)||
+	    equal(lower_[iSequence],value))) {
+	    nErrors++;
+	    printf("** upperFake %c%d %g <= %g <= %g true %g, %g\n",
+		   RC,jSequence,lower_[iSequence],solution_[iSequence],
+		   upper_[iSequence],lowerValue,upperValue);
+	  }
 	  isFake=true;;
 	} else if (fakeStatus==ClpSimplexDual::lowerFake) {
-	  assert(equal(lower_[iSequence],(upperValue-dualBound_)));
-	  assert(equal(upper_[iSequence],value)||
-		 equal(lower_[iSequence],value));
+	  if(!equal(lower_[iSequence],(upperValue-dualBound_))||
+	     !(equal(upper_[iSequence],value)||
+	       equal(lower_[iSequence],value))) {
+	    nErrors++;
+	    printf("** lowerFake %c%d %g <= %g <= %g true %g, %g\n",
+		   RC,jSequence,lower_[iSequence],solution_[iSequence],
+		   upper_[iSequence],lowerValue,upperValue);
+	  }
 	  isFake=true;;
+	} else if (fakeStatus==ClpSimplexDual::bothFake) {
+	  nWarnings++;
+	  printf("** %d at bothFake?\n",iSequence);
+	} else if (upper_[iSequence]-lower_[iSequence]>2.0*dualBound_) {
+	  nErrors++;
+	  printf("** noFake! %c%d %g <= %g <= %g true %g, %g\n",
+		 RC,jSequence,lower_[iSequence],solution_[iSequence],
+		 upper_[iSequence],lowerValue,upperValue);
+	}
+      } else if (status==superBasic||status==isFree) {
+	nSuperBasic++;
+	printf("** free or superbasic %c%d %g <= %g <= %g true %g, %g - status %d\n",
+	       RC,jSequence,lower_[iSequence],solution_[iSequence],
+	       upper_[iSequence],lowerValue,upperValue,status);
+      } else if (status==basic) {
+	bool odd=false;
+	if (!equal(lower_[iSequence],lowerValue))
+	  odd=true;
+	if (!equal(upper_[iSequence],upperValue))
+	  odd=true;
+	if (odd) {
+	  printf("** basic %c%d %g <= %g <= %g true %g, %g\n",
+	       RC,jSequence,lower_[iSequence],solution_[iSequence],
+	       upper_[iSequence],lowerValue,upperValue);
+	  nWarnings++;
+	}
+      } else if (status==isFixed) {
+	if (!equal(upper_[iSequence],lower_[iSequence])) {
+	  nErrors++;
+	  printf("** fixed! %c%d %g <= %g <= %g true %g, %g\n",
+		 RC,jSequence,lower_[iSequence],solution_[iSequence],
+		 upper_[iSequence],lowerValue,upperValue);
 	}
       }
       if (isFake) {
 	nFake++;
       } else {
-	assert (fakeStatus==ClpSimplexDual::noFake);
+	if (fakeStatus!=ClpSimplexDual::noFake) {
+	  nErrors++;
+	  printf("** bad fake status %c%d %d\n",
+		 RC,jSequence,fakeStatus);
+	}
       }
     }
-    //printf("nfake %d numberFake %d\n",nFake,numberFake_);
-    assert (nFake==numberFake_);
+    if (nFake!=numberFake_) {
+      printf("nfake %d numberFake %d\n",nFake,numberFake_);
+      nErrors++;
+    }
+    if (nErrors||type<=-1000) {
+      printf("%d errors, %d warnings, %d free/superbasic, %d fake\n",
+	     nErrors,nWarnings,nSuperBasic,numberFake_);
+      printf("dualBound %g\n",
+	     dualBound_);
+      if (type<=-1000) {
+	iSequence = -type;
+	iSequence -= 1000;
+	char RC = 'C';
+	int jSequence=iSequence;
+	if (jSequence>=numberColumns_) {
+	  RC='R';
+	  jSequence-=numberColumns_;
+	}
+	double lowerValue=tempLower[iSequence];
+	double upperValue=tempUpper[iSequence];
+	printf("*** movement>1.0e30 for  %c%d %g <= %g <= %g true %g, %g - status %d\n",
+		 RC,jSequence,lower_[iSequence],solution_[iSequence],
+	       upper_[iSequence],lowerValue,upperValue,status_[iSequence]);
+	assert (nErrors); // should have been picked up
+      }
+      assert (!nErrors);
+    }
     delete [] tempLower;
     delete [] tempUpper;
 #endif
