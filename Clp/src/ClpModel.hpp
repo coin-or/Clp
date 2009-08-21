@@ -969,7 +969,8 @@ protected:
   double * inverseRowScale_;
   /// Inverse column scale factors for matrix (end of columnScale_)
   double * inverseColumnScale_;
-  /// Scale flag, 0 none, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic
+  /** Scale flag, 0 none, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic,
+      5 geometric on rows */
   int scalingFlag_;
   /** Status (i.e. basis) Region.  I know that not all algorithms need a status
       array, but it made sense for things like crossover and put

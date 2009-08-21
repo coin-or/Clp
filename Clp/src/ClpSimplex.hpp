@@ -1163,6 +1163,8 @@ public:
       void setRowSetBounds(const int* indexFirst,
     				   const int* indexLast,
     				   const double* boundList);
+  /// Resizes rim part of model 
+  void resize (int newNumberRows, int newNumberColumns);
     
     //@}
 

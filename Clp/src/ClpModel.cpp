@@ -680,6 +680,8 @@ ClpModel::ClpModel(const ClpModel &rhs, int scalingMode) :
     scaledMatrix_=NULL;
     if (scalingMode&&!matrix_->scale(this)) {
       // scaling worked - now apply
+      inverseRowScale_ = rowScale_+numberRows_;
+      inverseColumnScale_ = columnScale_+numberColumns_;
       gutsOfScaling();
       // pretend not scaled
       scalingFlag_ = -scalingFlag_;
@@ -3731,7 +3733,7 @@ ClpModel::scaling(int mode)
   // If mode changes then we treat as new matrix (need new row copy)
   if (mode!=scalingFlag_)
     whatsChanged_ &= ~(2+4+8);
-  if (mode>0&&mode<5) {
+  if (mode>0&&mode<6) {
     scalingFlag_=mode;
   } else if (!mode) {
     scalingFlag_=0;

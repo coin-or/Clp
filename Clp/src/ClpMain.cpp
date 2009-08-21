@@ -86,6 +86,7 @@ static void generateCode(const char * fileName,int type);
 // Returns next valid field
 int CbcOrClpRead_mode=1;
 FILE * CbcOrClpReadCommand=stdin;
+extern int CbcOrClpEnvironmentIndex;
 
 int
 #if defined(_MSC_VER)
@@ -1940,6 +1941,9 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 	      std::cout<<"** Current model not valid"<<std::endl;
 	      
 	    }
+	    break;
+	  case ENVIRONMENT:
+	    CbcOrClpEnvironmentIndex=0;
 	    break;
 	  default:
 	    abort();

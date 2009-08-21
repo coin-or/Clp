@@ -1010,6 +1010,41 @@ CbcOrClpParam::setStringValue ( std::string value )
 static char line[1000];
 static char * where=NULL;
 extern int CbcOrClpRead_mode;
+int CbcOrClpEnvironmentIndex=-1;
+static int fillEnv()
+{
+  char * environ = getenv("CBC_CLP_ENVIRONMENT");
+  int length=0;
+  if (environ) {
+    length = strlen(environ);
+    if (CbcOrClpEnvironmentIndex<length) {
+      // find next non blank
+      char * whereEnv = environ+ CbcOrClpEnvironmentIndex;
+      // munch white space
+      while(*whereEnv==' '||*whereEnv=='\t'||*whereEnv<' ')
+	whereEnv++;
+      // copy
+      char * put = line;
+      while ( *whereEnv != '\0' ) {
+	if ( *whereEnv == ' '||*whereEnv == '\t' || *whereEnv < ' ' ) {
+	  break;
+	}
+	*put=*whereEnv;
+	put++;
+	assert (put-line<1000);
+	whereEnv++;
+      }
+      CbcOrClpEnvironmentIndex=whereEnv-environ;
+      *put='\0';
+      length=strlen(line);
+    } else {
+      length=0;
+    }
+  }
+  if (!length)
+    CbcOrClpEnvironmentIndex=-1;
+  return length;
+}
 extern FILE * CbcOrClpReadCommand;
 // Simple read stuff
 std::string
@@ -1083,8 +1118,18 @@ CoinReadGetCommand(int argc, const char *argv[])
   afterEquals="";
   while (field=="EOL") {
     if (CbcOrClpRead_mode>0) {
-      if (CbcOrClpRead_mode<argc&&argv[CbcOrClpRead_mode]) {
-	field = argv[CbcOrClpRead_mode++];
+      if ((CbcOrClpRead_mode<argc&&argv[CbcOrClpRead_mode])||
+	  CbcOrClpEnvironmentIndex>=0) {
+	if(CbcOrClpEnvironmentIndex<0) {
+	  field = argv[CbcOrClpRead_mode++];
+	} else {
+	  if (fillEnv()) {
+	    field=line;
+	  } else {
+	    // not there
+	    continue;
+	  }
+	}
 	if (field=="-") {
 	  std::cout<<"Switching to line mode"<<std::endl;
 	  CbcOrClpRead_mode=-1;
@@ -1093,7 +1138,7 @@ CoinReadGetCommand(int argc, const char *argv[])
 	  if (CbcOrClpRead_mode!=2) {
 	    // now allow std::cout<<"skipping non-command "<<field<<std::endl;
 	    // field="EOL"; // skip
-	  } else {
+	  } else if (CbcOrClpEnvironmentIndex<0) {
 	    // special dispensation - taken as -import name
 	    CbcOrClpRead_mode--;
 	    field="import";
@@ -1130,14 +1175,19 @@ CoinReadGetString(int argc, const char *argv[])
   std::string field="EOL";
   if (afterEquals=="") {
     if (CbcOrClpRead_mode>0) {
-      if (CbcOrClpRead_mode<argc) {
-        if (argv[CbcOrClpRead_mode][0]!='-') { 
-          field = argv[CbcOrClpRead_mode++];
-        } else if (!strcmp(argv[CbcOrClpRead_mode],"--")) {
-          field = argv[CbcOrClpRead_mode++];
-          // -- means import from stdin
-          field = "-";
-        }
+      if (CbcOrClpRead_mode<argc||CbcOrClpEnvironmentIndex>=0) {
+	if(CbcOrClpEnvironmentIndex<0) {
+	  if (argv[CbcOrClpRead_mode][0]!='-') { 
+	    field = argv[CbcOrClpRead_mode++];
+	  } else if (!strcmp(argv[CbcOrClpRead_mode],"--")) {
+	    field = argv[CbcOrClpRead_mode++];
+	    // -- means import from stdin
+	    field = "-";
+	  }
+	} else {
+	  fillEnv();
+	  field=line;
+	}
       }
     } else {
       field=CoinReadNextField();
@@ -1156,9 +1206,14 @@ CoinReadGetIntField(int argc, const char *argv[],int * valid)
   std::string field="EOL";
   if (afterEquals=="") {
     if (CbcOrClpRead_mode>0) {
-      if (CbcOrClpRead_mode<argc) {
-        // may be negative value so do not check for -
-        field = argv[CbcOrClpRead_mode++];
+      if (CbcOrClpRead_mode<argc||CbcOrClpEnvironmentIndex>=0) {
+	if(CbcOrClpEnvironmentIndex<0) {
+	  // may be negative value so do not check for -
+	  field = argv[CbcOrClpRead_mode++];
+	} else {
+	  fillEnv();
+	  field=line;
+	}
       }
     } else {
       field=CoinReadNextField();
@@ -1191,9 +1246,14 @@ CoinReadGetDoubleField(int argc, const char *argv[],int * valid)
   std::string field="EOL";
   if (afterEquals=="") {
     if (CbcOrClpRead_mode>0) {
-      if (CbcOrClpRead_mode<argc) {
-        // may be negative value so do not check for -
-        field = argv[CbcOrClpRead_mode++];
+      if (CbcOrClpRead_mode<argc||CbcOrClpEnvironmentIndex>=0) {
+	if(CbcOrClpEnvironmentIndex<0) {
+	  // may be negative value so do not check for -
+	  field = argv[CbcOrClpRead_mode++];
+	} else {
+	  fillEnv();
+	  field=line;
+	}
       }
     } else {
       field=CoinReadNextField();
@@ -1417,6 +1477,19 @@ See branchAndCut for information on options."
     (
      "This switches on a heuristic which does branch and cut on the problem given by just \
 using variables which have appeared in one or more solutions. \
+It obviously only tries after two or more solutions. \
+See Rounding for meaning of on,both,before"
+     ); 
+  parameters[numberParameters++]=
+    CbcOrClpParam("combine2!Solutions","Whether to use crossover solution heuristic",
+		  "off",CROSSOVER2);
+  parameters[numberParameters-1].append("on");
+  parameters[numberParameters-1].append("both");
+  parameters[numberParameters-1].append("before");
+  parameters[numberParameters-1].setLonghelp
+    (
+     "This switches on a heuristic which does branch and cut on the problem given by \
+fixing variables which have same value in two or more solutions. \
 It obviously only tries after two or more solutions. \
 See Rounding for meaning of on,both,before"
      ); 
@@ -1812,6 +1885,13 @@ correct tolerance (remembering to switch off presolve for this final short clean
     (
      "This stops execution ; end, exit, quit and stop are synonyms"
      ); 
+  parameters[numberParameters++]=
+    CbcOrClpParam("environ!ment","Read commands from environment",
+		  ENVIRONMENT,7,0);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "This starts reading from environment variable CBC_CLP_ENVIRONMENT."
+     );
   parameters[numberParameters++]=
     CbcOrClpParam("error!sAllowed","Whether to allow import errors",
 		  "off",ERRORSALLOWED,3);
@@ -2828,6 +2908,8 @@ If name contains '_fix_read_' then does not write but reads and will fix all var
   parameters[numberParameters-1].append("equi!librium");
   parameters[numberParameters-1].append("geo!metric");
   parameters[numberParameters-1].append("auto!matic");
+  parameters[numberParameters-1].append("dynamic");
+  parameters[numberParameters-1].append("rows!only");
   parameters[numberParameters-1].setLonghelp
     (
      "Scaling can help in solving problems which might otherwise fail because of lack of\

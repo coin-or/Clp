@@ -10252,7 +10252,10 @@ ClpSimplex::fathom(void * stuff)
 	  bestObjective = objectiveValue-increment;
 	  setDblParam(ClpDualObjectiveLimit,bestObjective*optimizationDirection_);
 	} else {
+	  //#define CLP_INVESTIGATE
+#ifdef CLP_INVESTIGATE
 	  printf("why bad solution feasible\n");
+#endif
 	}
 	//delete node;
 	backtrack=true;
@@ -10827,7 +10830,10 @@ ClpSimplex::fathomMany(void * stuff)
 	  bestObjective = objectiveValue-increment;
 	  setDblParam(ClpDualObjectiveLimit,bestObjective*optimizationDirection_);
 	} else {
+#ifdef CLP_INVESTIGATE
 	  printf("why bad solution feasible\n");
+	  abort();
+#endif
 	}
 	backtrack=true;
       } else {
@@ -11265,6 +11271,19 @@ ClpSimplex::fastCrunch(ClpNodeStuff * info, int mode)
     delete [] info->whichColumn_;
   }
   return small;
+}
+// Resizes rim part of model 
+void 
+ClpSimplex::resize (int newNumberRows, int newNumberColumns)
+{
+  ClpModel::resize(newNumberRows,newNumberColumns);
+  if (saveStatus_) {
+    // delete arrays
+    int saveOptions = specialOptions_;
+    specialOptions_=0;
+    gutsOfDelete(2);
+    specialOptions_=saveOptions;
+  }
 }
 // Return true if the objective limit test can be relied upon
 bool 
