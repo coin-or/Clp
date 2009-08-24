@@ -5747,6 +5747,10 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
   }
   // save stuff
   ClpFactorization saveFactorization(*factorization_);
+  // Get fake bounds correctly
+  double changeCost;
+  changeBounds(3,NULL,changeCost);
+  int saveNumberFake=numberFake_;
   // save basis and solution 
   double * saveSolution = new double[numberRows_+numberColumns_];
   CoinMemcpyN(solution_,
@@ -5784,9 +5788,6 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
       upper_[iColumn] = newUpper[i]*rhsScale_;
     else 
       upper_[iColumn] = (newUpper[i]*inverseColumnScale_[iColumn])*rhsScale_; // scale
-    // Get fake bounds correctly
-    double changeCost;
-    changeBounds(3,NULL,changeCost);
     // Start of fast iterations
     int status = fastDual(alwaysFinish);
     CoinAssert (problemStatus_||objectiveValue_<1.0e50);
@@ -5823,6 +5824,7 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
     outputIterations[iSolution]=numberIterations_;
     iSolution++;
     // restore
+    numberFake_=saveNumberFake;
     CoinMemcpyN(saveSolution,
             numberRows_+numberColumns_,solution_);
     CoinMemcpyN(saveStatus,numberColumns_+numberRows_,status_);
@@ -5852,8 +5854,6 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
       lower_[iColumn] = newLower[i]*rhsScale_;
     else 
       lower_[iColumn] = (newLower[i]*inverseColumnScale_[iColumn])*rhsScale_; // scale
-    // Get fake bounds correctly
-    resetFakeBounds(1);
     // Start of fast iterations
     status = fastDual(alwaysFinish);
     // make sure plausible
@@ -5889,6 +5889,7 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
     iSolution++;
 
     // restore
+    numberFake_=saveNumberFake;
     CoinMemcpyN(saveSolution,
             numberRows_+numberColumns_,solution_);
     CoinMemcpyN(saveStatus,numberColumns_+numberRows_,status_);
@@ -7033,9 +7034,9 @@ ClpSimplexDual::resetFakeBounds(int type)
 	}
       } else if (status==superBasic||status==isFree) {
 	nSuperBasic++;
-	printf("** free or superbasic %c%d %g <= %g <= %g true %g, %g - status %d\n",
-	       RC,jSequence,lower_[iSequence],solution_[iSequence],
-	       upper_[iSequence],lowerValue,upperValue,status);
+	//printf("** free or superbasic %c%d %g <= %g <= %g true %g, %g - status %d\n",
+	//     RC,jSequence,lower_[iSequence],solution_[iSequence],
+	//     upper_[iSequence],lowerValue,upperValue,status);
       } else if (status==basic) {
 	bool odd=false;
 	if (!equal(lower_[iSequence],lowerValue))
