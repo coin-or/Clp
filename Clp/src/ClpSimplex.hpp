@@ -950,6 +950,7 @@ public:
       16 bit - if checking replaceColumn accuracy before updating
       32 bit - say optimal if primal feasible!
       64 bit - give up easily in dual (and say infeasible)
+      128 bit - no objective, 0-1 and in B&B
   */
   inline int moreSpecialOptions() const
   { return moreSpecialOptions_;}
@@ -961,6 +962,7 @@ public:
       16 bit - if checking replaceColumn accuracy before updating
       32 bit - say optimal if primal feasible!
       64 bit - give up easily in dual (and say infeasible)
+      128 bit - no objective, 0-1 and in B&B
   */
   inline void setMoreSpecialOptions(int value)
   { moreSpecialOptions_ = value;}

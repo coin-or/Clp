@@ -637,8 +637,47 @@ ClpSimplex::gutsOfSolution ( double * givenDuals,
     if (numberOut)
       return numberOut;
   }
-
+  if ((moreSpecialOptions_&128)!=0&&!numberIterations_) {
+    //printf("trying feas pump\n");
+    const char * integerType = integerInformation();
+    assert (integerType);
+    assert (perturbationArray_);
+    CoinZeroN(cost_,numberRows_+numberColumns_);
+    for (int i=0;i<numberRows_-numberRows_;i++) {
+      int iSequence = pivotVariable_[i];
+      if (iSequence<numberColumns_&&integerType[iSequence]) {
+	double lower =lower_[iSequence];
+	double upper = upper_[iSequence];
+	double value = solution_[iSequence];
+	if (value>=lower-primalTolerance_&&
+	    value<=upper+primalTolerance_) {
+	  double sign;
+	  if (value-lower<upper-value) 
+	    sign=1.0;
+	  else
+	    sign=-1.0;
+	  cost_[iSequence]=sign*perturbationArray_[iSequence];
+	}
+      }
+    }
+  }
   computeDuals(givenDuals);
+  if ((moreSpecialOptions_&128)!=0&&!numberIterations_) {
+    const char * integerType = integerInformation();
+    // Need to do columns and rows to stay dual feasible
+    for (int iSequence=0;iSequence<numberColumns_;iSequence++) {
+      if (integerType[iSequence]&&getStatus(iSequence)!=basic) {
+	double djValue=dj_[iSequence];
+	double change=0.0;
+	if (getStatus(iSequence)==atLowerBound) 
+	  change = CoinMax(-djValue,10.0*perturbationArray_[iSequence]);
+	else if (getStatus(iSequence)==atUpperBound) 
+	  change = CoinMin(-djValue,-10.0*perturbationArray_[iSequence]);
+	cost_[iSequence]=change;
+	dj_[iSequence]+=change;
+      }
+    }
+  }
 
   // now check solutions
   //checkPrimalSolution( rowActivityWork_, columnActivityWork_);
@@ -9772,7 +9811,7 @@ ClpSimplex::fathom(void * stuff)
     }
 #endif
   }
-  if (numberColumns_==100) {
+  if (numberColumns_==-100) {
     const char * integerType = integerInformation();
     for (int i=0;i<100;i++) {
       if (integerType[i]) {

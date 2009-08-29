@@ -2323,6 +2323,9 @@ but this program turns this off to make it look more friendly.  It can be useful
   parameters[numberParameters-1].setLonghelp
     (
      "Yet more ideas for Feasibility Pump \n\
+\t/1000 == 1 Pump will run twice if no solution found\n\
+\t/1000 == 2 Pump will only run after root cuts if no solution found\n\
+\t/1000 >10 as above but even if solution found\n\
 \t/100 == 1,3.. exact 1.0 for objective values\n\
 \t/100 == 2,3.. allow more iterations per pass\n\
 \t n fix if value of variable same for last n iterations."

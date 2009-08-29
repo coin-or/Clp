@@ -5342,7 +5342,7 @@ ClpSimplexDual::perturb()
     // See if we need to perturb
     double * sort = new double[numberColumns_];
     // Use objective BEFORE scaling
-    const double * obj = objective();
+    const double * obj = ((moreSpecialOptions_&128)==0) ? objective() : cost_;
     int i;
     for (i=0;i<numberColumns_;i++) {
       double value = fabs(obj[i]);
