@@ -1530,6 +1530,24 @@ int ClpSimplex::internalFactorize ( int solveType)
 	    break;
 	  }
 	}
+	if (numberBasic<numberRows_) {
+	  // add some slacks in case odd warmstart
+#ifdef CLP_INVESTIGATE
+	  printf("BAD %d basic, %d rows %d slacks\n",
+		 numberBasic,numberRows_,totalSlacks);
+#endif
+	  int iRow=numberRows_-1;
+	  while (numberBasic<numberRows_) {
+	    if (getRowStatus(iRow)!=basic) {
+	      setRowStatus(iRow,basic);
+	      numberBasic++;
+	      totalSlacks++;
+	      iRow--;
+	    } else {
+	      break;
+	    }
+	  }
+	}
       } else {
 	// all slack basis
 	int numberBasic=0;
@@ -11026,20 +11044,26 @@ ClpSimplex::startFastDual2(ClpNodeStuff * info)
   // or we can just increment iBasic one by one
   // for now let ...iBasic give pivot row
   int factorizationStatus = internalFactorize(0);
-  if (factorizationStatus<0) {
+  if (factorizationStatus<0||
+      (factorizationStatus&&factorizationStatus<=numberRows_)) {
     // some error
+#if 0
     // we should either debug or ignore 
-#ifndef NDEBUG
+#ifdef CLP_INVESTIGATE
+    //#ifndef NDEBUG
     printf("***** ClpDual strong branching factorization error - debug\n");
+    abort();
+    //#endif
 #endif
-    abort();
     return -2;
-  } else if (factorizationStatus&&factorizationStatus<=numberRows_) {
-    handler_->message(CLP_SINGULARITIES,messages_)
-      <<factorizationStatus
-      <<CoinMessageEol;
-    abort();
-    return -3;
+#else
+    dual(0,7);
+    createRim(7+8+16+32,true,0);
+    int factorizationStatus = internalFactorize(0);
+    assert (factorizationStatus==0);
+    if (factorizationStatus)
+      abort();
+#endif
   }
   // Start of fast iterations
   factorization_->sparseThreshold(0);

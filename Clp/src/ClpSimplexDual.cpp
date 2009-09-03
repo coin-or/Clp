@@ -5960,6 +5960,7 @@ int ClpSimplexDual::strongBranching(int numberVariables,const int * variables,
 // treat no pivot as finished (unless interesting)
 int ClpSimplexDual::fastDual(bool alwaysFinish)
 {
+  progressFlag_=0;
   bestObjectiveValue_ = objectiveValue_;
   algorithm_ = -1;
   secondaryStatus_=0;
