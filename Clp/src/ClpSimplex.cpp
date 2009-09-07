@@ -1530,6 +1530,7 @@ int ClpSimplex::internalFactorize ( int solveType)
 	    break;
 	  }
 	}
+#if 0
 	if (numberBasic<numberRows_) {
 	  // add some slacks in case odd warmstart
 #ifdef CLP_INVESTIGATE
@@ -1548,6 +1549,7 @@ int ClpSimplex::internalFactorize ( int solveType)
 	    }
 	  }
 	}
+#endif
       } else {
 	// all slack basis
 	int numberBasic=0;
@@ -5148,10 +5150,14 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
     if (problemStatus_==10&&saveObjective==objective_)
       startFinishOptions |= 2;
     baseIteration_=numberIterations_;
+    // Say second call
+    moreSpecialOptions_ |= 256;
     if ((matrix_->generalExpanded(this,4,dummy)&1)!=0)
       returnCode = static_cast<ClpSimplexPrimal *> (this)->primal(1,startFinishOptions);
     else
       returnCode = static_cast<ClpSimplexDual *> (this)->dual(0,startFinishOptions);
+    // Say not second call
+    moreSpecialOptions_ &= ~256;
     baseIteration_=0;
     if (saveObjective != objective_) {
       // We changed objective to see if infeasible
@@ -5470,6 +5476,8 @@ int ClpSimplex::primal (int ifValuesPass , int startFinishOptions)
     // check which algorithms allowed
     int dummy;
     baseIteration_=numberIterations_;
+    // Say second call
+    moreSpecialOptions_ |= 256;
     if ((matrix_->generalExpanded(this,4,dummy)&2)!=0&&(specialOptions_&8192)==0) {
       double saveBound = dualBound_;
       // upperOut_ has largest away from bound
@@ -5479,6 +5487,8 @@ int ClpSimplex::primal (int ifValuesPass , int startFinishOptions)
     } else {
       returnCode = static_cast<ClpSimplexPrimal *> (this)->primal(0,startFinishOptions);
     }
+    // Say not second call
+    moreSpecialOptions_ &= ~256;
     baseIteration_=0;
     setInitialDenseFactorization(denseFactorization);
     perturbation_=savePerturbation;

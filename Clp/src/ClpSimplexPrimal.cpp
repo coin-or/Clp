@@ -1213,7 +1213,8 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	  nonLinearCost_->checkInfeasibilities(primalTolerance_);
 	  numberDualInfeasibilities_=1; // carry on
 	  problemStatus_=-1;
-	} else if (numberDualInfeasibilities_==0&&largestDualError_>1.0e-2) {
+	} else if (numberDualInfeasibilities_==0&&largestDualError_>1.0e-2&&
+		   (moreSpecialOptions_&256)==0) {
 	  goToDual=true;
 	  factorization_->pivotTolerance(CoinMax(0.9,factorization_->pivotTolerance()));
 	}
@@ -1261,7 +1262,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
       if (perturbation_==101) {
 	goToDual=unPerturb(); // stop any further perturbation
         if (numberRows_>20000&&!numberTimesOptimal_)
-          goToDual=0; // Better to carry on a bit longer
+          goToDual=false; // Better to carry on a bit longer
 	lastCleaned=-1; // carry on
       }
       bool unflagged = (unflag()!=0);
