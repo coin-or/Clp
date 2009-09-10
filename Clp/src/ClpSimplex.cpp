@@ -1378,6 +1378,12 @@ int ClpSimplex::internalFactorize ( int solveType)
 	}
       }
       if (!allSlack) {
+#define CLP_INVESTIGATE2
+#ifdef CLP_INVESTIGATE2
+	int numberTotal=numberRows_+numberColumns_;
+	double * saveSol = valuesPass ? 
+	  CoinCopyOfArray(solution_,numberTotal) : NULL;
+#endif
 	// set values from warm start (if sensible)
 	int numberBasic=0;
 	for (iRow=0;iRow<numberRows_;iRow++) {
@@ -1530,6 +1536,23 @@ int ClpSimplex::internalFactorize ( int solveType)
 	    break;
 	  }
 	}
+#ifdef CLP_INVESTIGATE2
+	if (saveSol) {
+	  int numberChanged=0;
+	  double largestChanged=0.0;
+	  for (int i=0;i<numberTotal;i++) {
+	    double difference = fabs(solution_[i]-saveSol[i]);
+	    if (difference>1.0e-7) {
+	      numberChanged++;
+	      if (difference>largestChanged)
+		largestChanged=difference;
+	    }
+	  }
+	  if (numberChanged)
+	    printf("%d changed, largest %g\n",numberChanged,largestChanged);
+	  delete [] saveSol;
+	}
+#endif
 #if 0
 	if (numberBasic<numberRows_) {
 	  // add some slacks in case odd warmstart

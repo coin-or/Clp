@@ -603,7 +603,7 @@ ClpSimplexOther::writeBasis(const char *filename,
     fprintf(fp, "NAME          %s       ",strParam_[ClpProbName].c_str());
   }
   if (formatType>=2)
-    fprintf(fp,"IEEE");
+    fprintf(fp,"FREEIEEE");
   else if (writeValues)
     fprintf(fp,"VALUES");
   // finish off name 
@@ -1205,8 +1205,8 @@ ClpSimplex *
 ClpSimplexOther::crunch(double * rhs, int * whichRow, int * whichColumn,
                         int & nBound, bool moreBounds, bool tightenBounds)
 {
-#if 0
-  //#ifndef NDEBUG
+  //#define CHECK_STATUS
+#ifdef CHECK_STATUS
   {
     int n=0;
     int i;
@@ -1583,6 +1583,19 @@ ClpSimplexOther::crunch(double * rhs, int * whichRow, int * whichColumn,
     for (int i=0;i<numberRows_;i++) 
       printf("Row bound %d %g %g\n",i,rowLower_[i],rowUpper_[i]);
 #endif
+  }
+#endif
+#ifdef CHECK_STATUS
+  {
+    int n=0;
+    int i;
+    for (i=0;i<small->numberColumns();i++)
+      if (small->getColumnStatus(i)==ClpSimplex::basic)
+        n++;
+    for (i=0;i<small->numberRows();i++)
+      if (small->getRowStatus(i)==ClpSimplex::basic)
+        n++;
+    assert (n==small->numberRows());
   }
 #endif
   return small;

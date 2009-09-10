@@ -592,6 +592,17 @@ ClpSimplexDual::dual(int ifValuesPass,int startFinishOptions)
   
   if (!returnCode)
     gutsOfDual(ifValuesPass,saveDuals,initialStatus,data);
+  if (!problemStatus_) {
+    // see if cutoff reached
+    double limit = 0.0;
+    getDblParam(ClpDualObjectiveLimit, limit);
+    if(fabs(limit)<1.0e30&&objectiveValue()*optimizationDirection_>
+       limit+1.0e-7+1.0e-8*fabs(limit)) {
+      // actually infeasible on objective
+      problemStatus_=1;
+      secondaryStatus_=1;
+    }
+  }
   if (problemStatus_==10)
     startFinishOptions |= 1;
   finishSolve(startFinishOptions);
@@ -6178,6 +6189,17 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
   dualBound_ = saveDualBound;
   // Stop can skip some things in transposeTimes
   specialOptions_ &= ~131072;
+  if (!problemStatus_) {
+    // see if cutoff reached
+    double limit = 0.0;
+    getDblParam(ClpDualObjectiveLimit, limit);
+    if(fabs(limit)<1.0e30&&objectiveValue()*optimizationDirection_>
+       limit+1.0e-7+1.0e-8*fabs(limit)) {
+      // actually infeasible on objective
+      problemStatus_=1;
+      secondaryStatus_=1;
+    }
+  }
   if (problemStatus_==3)
     objectiveValue_ = CoinMax(bestObjectiveValue_,objectiveValue_-bestPossibleImprovement_);
   return returnCode;

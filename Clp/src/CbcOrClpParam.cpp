@@ -1738,7 +1738,7 @@ You can also use the parameters 'maximize' or 'minimize'."
 #ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
     CbcOrClpParam("diveO!pt","Diving options",
-		  -1,200,DIVEOPT,1);
+		  -1,200000,DIVEOPT,1);
   parameters[numberParameters-1].setLonghelp
     (
      "If >2 && <8 then modify diving options - \
@@ -1943,6 +1943,10 @@ It can be useful to get rid of the original names and go over to using Rnnnnnnn 
   parameters[numberParameters++]=
     CbcOrClpParam("extra3","Extra integer parameter 3",
 		  -1,COIN_INT_MAX,EXTRA3,0);
+  parameters[numberParameters-1].setIntValue(-1);
+  parameters[numberParameters++]=
+    CbcOrClpParam("extra4","Extra integer parameter 4",
+		  -1,COIN_INT_MAX,EXTRA4,0);
   parameters[numberParameters-1].setIntValue(-1);
 #endif
 #ifdef COIN_HAS_CLP
