@@ -254,7 +254,17 @@ ClpNode::gutsOfConstructor (ClpSimplex * model, const ClpNodeStuff * stuff,
   const int * priority = stuff->priority_;
   const int * numberUp = stuff->numberUp_;
   const int * numberUpInfeasible = stuff->numberUpInfeasible_;
+  int numberBeforeTrust = stuff->numberBeforeTrust_;
+  int stateOfSearch = stuff->stateOfSearch_;
   int iInteger=0;
+  // weight at 1.0 is max min (CbcBranch was 0.8,0.1) (ClpNode was 0.9,0.9)
+#define WEIGHT_AFTER 0.9
+#define WEIGHT_BEFORE 0.2
+  //Stolen from Constraint Integer Programming book (with epsilon change)
+#define WEIGHT_PRODUCT
+#ifdef WEIGHT_PRODUCT
+  double smallChange = stuff->smallChange_;
+#endif
   for (iColumn=0;iColumn<numberColumns;iColumn++) {
     if (integerType[iColumn]) {
       double value = solution[iColumn];
@@ -294,17 +304,19 @@ ClpNode::gutsOfConstructor (ClpSimplex * model, const ClpNodeStuff * stuff,
 	  }
 	}
 	//assert (fabs(dj2)<1.0e-4);
-	double upValue2 = (upPseudo[iInteger]/(1.0+numberUp[iInteger]));
+	int nUp=numberUp[iInteger];
+	double upValue2 = (upPseudo[iInteger]/(1.0+nUp));
 	// Extra for infeasible branches
-	if (numberUp[iInteger]) {
+	if (nUp) {
 	  double ratio = 1.0+static_cast<double>(numberUpInfeasible[iInteger])/
-	    static_cast<double>(numberUp[iInteger]);
+	    static_cast<double>(nUp);
 	  upValue2 *= ratio;
 	}
-	double downValue2 = (downPseudo[iInteger]/(1.0+numberDown[iInteger]));
-	if (numberDown[iInteger]) {
+	int nDown = numberDown[iInteger];
+	double downValue2 = (downPseudo[iInteger]/(1.0+nDown));
+	if (nDown) {
 	  double ratio = 1.0+static_cast<double>(numberDownInfeasible[iInteger])/
-	    static_cast<double>(numberDown[iInteger]);
+	    static_cast<double>(nDown);
 	  downValue2 *= ratio;
 	}
 	//printf("col %d - downPi %g up %g, downPs %g up %g\n",
@@ -316,34 +328,66 @@ ClpNode::gutsOfConstructor (ClpSimplex * model, const ClpNodeStuff * stuff,
 	upValue *= ceil(value)-value;
 	downValue *= value-floor(value);
 	double infeasibility;
-	if (depth>1000)
-	  infeasibility = CoinMax(upValue,downValue)+integerTolerance;
-	else
-	  infeasibility = 0.1*CoinMax(upValue,downValue)+
-	    0.9*CoinMin(upValue,downValue) + integerTolerance;
+	//if (depth>1000)
+	//infeasibility = CoinMax(upValue,downValue)+integerTolerance;
+	//else
+	if (stateOfSearch<=2) {
+	  // no solution
+	  infeasibility = (1.0-WEIGHT_BEFORE)*CoinMax(upValue,downValue)+
+	    WEIGHT_BEFORE*CoinMin(upValue,downValue) + integerTolerance;
+	} else {
+#ifndef WEIGHT_PRODUCT
+	  infeasibility = (1.0-WEIGHT_AFTER)*CoinMax(upValue,downValue)+
+	    WEIGHT_AFTER*CoinMin(upValue,downValue) + integerTolerance;
+#else
+	  infeasibility = CoinMax(CoinMax(upValue,downValue),smallChange)*
+	    CoinMax(CoinMin(upValue,downValue),smallChange);
+#endif
+	}
 	estimatedSolution_ += CoinMin(upValue2,downValue2);
 #elif PSEUDO==3
+	int nUp=numberUp[iInteger];
+	int nDown = numberDown[iInteger];
 	// Extra 100% for infeasible branches
 	double upValue = (ceil(value)-value)*(upPseudo[iInteger]/
-					      (1.0+numberUp[iInteger]));
-	if (numberUp[iInteger]) {
+					      (1.0+nUp));
+	if (nUp) {
 	  double ratio = 1.0+static_cast<double>(numberUpInfeasible[iInteger])/
-	    static_cast<double>(numberUp[iInteger]);
+	    static_cast<double>(nUp);
 	  upValue *= ratio;
 	}
 	double downValue = (value-floor(value))*(downPseudo[iInteger]/
-						 (1.0+numberDown[iInteger]));
-	if (numberDown[iInteger]) {
+						 (1.0+nDown));
+	if (nDown) {
 	  double ratio = 1.0+static_cast<double>(numberDownInfeasible[iInteger])/
-	    static_cast<double>(numberDown[iInteger]);
+	    static_cast<double>(nDown);
 	  downValue *= ratio;
 	}
+	if (nUp<numberBeforeTrust||nDown<numberBeforeTrust) {
+	  upValue *= 10.0;
+	  downValue *= 10.0;
+	}
+	  
 	double infeasibility;
-	if (depth>1000)
-	  infeasibility = CoinMax(upValue,downValue)+integerTolerance;
-	else
-	  infeasibility = 0.1*CoinMax(upValue,downValue)+
-	    0.9*CoinMin(upValue,downValue) + integerTolerance;
+ 	//if (depth>1000) 
+	//infeasibility = CoinMax(upValue,downValue)+integerTolerance;
+	//else
+	if (stateOfSearch<=2) {
+	  // no solution
+	  infeasibility = (1.0-WEIGHT_BEFORE)*CoinMax(upValue,downValue)+
+	    WEIGHT_BEFORE*CoinMin(upValue,downValue) + integerTolerance;
+	} else {
+#ifndef WEIGHT_PRODUCT
+	  infeasibility = (1.0-WEIGHT_AFTER)*CoinMax(upValue,downValue)+
+	    WEIGHT_AFTER*CoinMin(upValue,downValue) + integerTolerance;
+#else
+	  infeasibility = CoinMax(CoinMax(upValue,downValue),smallChange)*
+	    CoinMax(CoinMin(upValue,downValue),smallChange);
+	  //infeasibility += CoinMin(upValue,downValue)*smallChange;
+#endif
+	}
+	//infeasibility = 0.1*CoinMax(upValue,downValue)+
+	//0.9*CoinMin(upValue,downValue) + integerTolerance;
 	estimatedSolution_ += CoinMin(upValue,downValue);
 #else
 	double infeasibility = fabs(value-nearest);
@@ -652,6 +696,7 @@ ClpNode::changeState()
 ClpNodeStuff::ClpNodeStuff () :
   integerTolerance_(1.0e-7),
   integerIncrement_(1.0e-8),
+  smallChange_(1.0e-8),
   downPseudo_(NULL),
   upPseudo_(NULL),
   priority_(NULL),
@@ -668,6 +713,8 @@ ClpNodeStuff::ClpNodeStuff () :
   saveOptions_(0),
   solverOptions_(0),
   maximumNodes_(0),
+  numberBeforeTrust_(0),
+  stateOfSearch_(0),
   nDepth_(-1),
   nNodes_(0),
   numberNodesExplored_(0),
@@ -683,6 +730,7 @@ ClpNodeStuff::ClpNodeStuff () :
 ClpNodeStuff::ClpNodeStuff (const ClpNodeStuff & rhs) 
   : integerTolerance_(rhs.integerTolerance_),
     integerIncrement_(rhs.integerIncrement_),
+    smallChange_(rhs.smallChange_),
     downPseudo_(NULL),
     upPseudo_(NULL),
     priority_(NULL),
@@ -699,6 +747,8 @@ ClpNodeStuff::ClpNodeStuff (const ClpNodeStuff & rhs)
     saveOptions_(rhs.saveOptions_),
     solverOptions_(rhs.solverOptions_),
     maximumNodes_(rhs.maximumNodes_),
+    numberBeforeTrust_(rhs.numberBeforeTrust_),
+    stateOfSearch_(rhs.stateOfSearch_),
     nDepth_(rhs.nDepth_),
     nNodes_(rhs.nNodes_),
     numberNodesExplored_(rhs.numberNodesExplored_),
@@ -715,6 +765,7 @@ ClpNodeStuff::operator=(const ClpNodeStuff& rhs)
   if (this != &rhs) {
     integerTolerance_ = rhs.integerTolerance_;
     integerIncrement_ = rhs.integerIncrement_;
+    smallChange_ = rhs.smallChange_;
     downPseudo_ = NULL;
     upPseudo_ = NULL;
     priority_ = NULL;
@@ -731,6 +782,8 @@ ClpNodeStuff::operator=(const ClpNodeStuff& rhs)
     saveOptions_ = rhs.saveOptions_;
     solverOptions_ = rhs.solverOptions_;
     maximumNodes_ = rhs.maximumNodes_;
+    numberBeforeTrust_ = rhs.numberBeforeTrust_;
+    stateOfSearch_ = rhs.stateOfSearch_;
     int n = maximumNodes();
     if (n) {
       for (int i=0;i<n;i++) 
@@ -769,6 +822,8 @@ ClpNodeStuff::zap(int type)
     saveOptions_ = 0;
     solverOptions_ = 0;
     maximumNodes_ = 0;
+    numberBeforeTrust_ = 0;
+    stateOfSearch_ = 0;
     nDepth_ = -1;
     nNodes_ = 0;
     presolveType_ = 0;

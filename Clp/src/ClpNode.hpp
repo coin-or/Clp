@@ -204,6 +204,8 @@ public:
   double integerTolerance_;
   /// Integer increment
   double integerIncrement_;
+  /// Small chnage in branch
+  double smallChange_;
   /// Down pseudo costs
   double * downPseudo_;
   /// Up pseudo costs
@@ -243,6 +245,10 @@ public:
   int solverOptions_;
   /// Maximum number of nodes to do
   int maximumNodes_;
+  /// Number before trust from CbcModel
+  int numberBeforeTrust_;
+  /// State of search from CbcModel
+  int stateOfSearch_;
   /// Number deep
   int nDepth_;
   /// Number nodes returned (-1 if fathom aborted)
