@@ -895,6 +895,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
       if (numberInfeasibilities) {
 	handler_->message(CLP_INFEASIBLE,messages_)
 	  <<CoinMessageEol;
+	delete model2;
 	model2 = this;
 	presolve=ClpSolve::presolveOff;
       }
