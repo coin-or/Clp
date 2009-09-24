@@ -188,7 +188,7 @@ int ClpPredictorCorrector::solve ( )
   //constants for infeas interior point
   const double beta2 = 0.99995;
   const double tau   = 0.00002;
-  double lastComplementarityGap=COIN_DBL_MAX;
+  double lastComplementarityGap=COIN_DBL_MAX*1.0e20;
   double lastStep=1.0;
   // use to see if to take affine
   double checkGap = COIN_DBL_MAX;
@@ -884,7 +884,7 @@ int ClpPredictorCorrector::solve ( )
 double ClpPredictorCorrector::findStepLength( int phase)
 {
   double directionNorm=0.0;
-  double maximumPrimalStep=COIN_DBL_MAX;
+  double maximumPrimalStep=COIN_DBL_MAX*1.0e-20;
   double maximumDualStep=COIN_DBL_MAX;
   int numberTotal = numberRows_+numberColumns_;
   double tolerance = 1.0e-12;
