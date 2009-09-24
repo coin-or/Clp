@@ -251,7 +251,8 @@ void usage(const std::string& key)
 
 //----------------------------------------------------------------
 int mainTest (int argc, const char *argv[],int algorithm,
-	      ClpSimplex empty, bool doPresolve, int switchOffValue,bool doVector)
+	      ClpSimplex empty, ClpSolve solveOptionsIn,
+	      int switchOffValue,bool doVector)
 {
   int i;
 
@@ -561,13 +562,7 @@ int mainTest (int argc, const char *argv[],int algorithm,
       }
 #endif
       ClpSolve::SolveType method;
-      ClpSolve::PresolveType presolveType;
-      ClpSolve solveOptions;
-      if (doPresolve)
-        presolveType=ClpSolve::presolveOn;
-      else
-        presolveType=ClpSolve::presolveOff;
-      solveOptions.setPresolveType(presolveType,5);
+      ClpSolve solveOptions=solveOptionsIn;
       std::string nameAlgorithm;
       if (algorithm!=5) {
         if (algorithm==0) {

@@ -786,7 +786,8 @@ ClpSimplex::computePrimals ( const double * rowActivities,
   int iRefine;
   CoinIndexedVector * thisVector = arrayVector;
   CoinIndexedVector * lastVector = previousVector;
-  factorization_->updateColumn(workSpace,thisVector);
+  if (number)
+    factorization_->updateColumn(workSpace,thisVector);
   double * work = workSpace->denseVector();
 #ifdef CLP_DEBUG
   if (numberIterations_==-3840) {

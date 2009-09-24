@@ -80,7 +80,7 @@ extern "C" {
 #endif
 
 int mainTest (int argc, const char *argv[],int algorithm,
-	      ClpSimplex empty, bool doPresolve,int switchOff,bool doVector);
+	      ClpSimplex empty, ClpSolve solveOptions,int switchOff,bool doVector);
 static void statistics(ClpSimplex * originalModel, ClpSimplex * model);
 static void generateCode(const char * fileName,int type);
 // Returns next valid field
@@ -1553,8 +1553,35 @@ main (int argc, const char *argv[])
 	      }
               int specialOptions = models[iModel].specialOptions();
               models[iModel].setSpecialOptions(0);
+	      ClpSolve solveOptions;
+	      ClpSolve::PresolveType presolveType;
+	      if (preSolve)
+		presolveType=ClpSolve::presolveOn;
+	      else
+		presolveType=ClpSolve::presolveOff;
+	      solveOptions.setPresolveType(presolveType,5);
+	      if (doSprint>=0||doIdiot>=0) {
+		if (doSprint>0) {
+		  // sprint overrides idiot
+		  solveOptions.setSpecialOption(1,3,doSprint); // sprint
+		} else if (doIdiot>0) {
+		  solveOptions.setSpecialOption(1,2,doIdiot); // idiot
+		} else {
+		  if (doIdiot==0) {
+		    if (doSprint==0)
+		      solveOptions.setSpecialOption(1,4); // all slack
+		    else
+		      solveOptions.setSpecialOption(1,9); // all slack or sprint
+		  } else {
+		    if (doSprint==0)
+		      solveOptions.setSpecialOption(1,8); // all slack or idiot
+		    else
+		      solveOptions.setSpecialOption(1,7); // initiative
+		  }
+		}
+	      }
 	      mainTest(nFields,fields,algorithm,models[iModel],
-		       (preSolve!=0),specialOptions,doVector!=0);
+		       solveOptions,specialOptions,doVector!=0);
 	    }
 	    break;
 	  case UNITTEST:
@@ -1571,7 +1598,15 @@ main (int argc, const char *argv[])
               int algorithm=-1;
               if (models[iModel].numberRows())
                 algorithm=7;
-	      mainTest(nFields,fields,algorithm,models[iModel],(preSolve!=0),specialOptions,doVector!=0);
+	      ClpSolve solveOptions;
+	      ClpSolve::PresolveType presolveType;
+	      if (preSolve)
+		presolveType=ClpSolve::presolveOn;
+	      else
+		presolveType=ClpSolve::presolveOff;
+	      solveOptions.setPresolveType(presolveType,5);
+	      mainTest(nFields,fields,algorithm,models[iModel],
+		       solveOptions,specialOptions,doVector!=0);
 	    }
 	    break;
 	  case FAKEBOUND:

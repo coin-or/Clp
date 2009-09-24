@@ -1319,14 +1319,14 @@ Idiot::crossOver(int mode)
       iCol =posSlack[i];
       if (iCol>=0) {
 	if (colsol[iCol]>lower[iCol]+1.0e-8&&
-	    colsol[iCol]<upper[iCol]+1.0e-8) {
+	    colsol[iCol]<upper[iCol]-1.0e-8) {
 	  model_->setColumnStatus(iCol,ClpSimplex::basic);
 	  n++;
 	}
 	while (nextSlack[iCol]>=0) {
 	  iCol = nextSlack[iCol];
 	  if (colsol[iCol]>lower[iCol]+1.0e-8&&
-	      colsol[iCol]<upper[iCol]+1.0e-8) {
+	      colsol[iCol]<upper[iCol]-1.0e-8) {
 	    model_->setColumnStatus(iCol,ClpSimplex::basic);
 	    n++;
 	  }
@@ -1335,14 +1335,14 @@ Idiot::crossOver(int mode)
       iCol =negSlack[i];
       if (iCol>=0) {
 	if (colsol[iCol]>lower[iCol]+1.0e-8&&
-	    colsol[iCol]<upper[iCol]+1.0e-8) {
+	    colsol[iCol]<upper[iCol]-1.0e-8) {
 	  model_->setColumnStatus(iCol,ClpSimplex::basic);
 	  n++;
 	}
 	while (nextSlack[iCol]>=0) {
 	  iCol = nextSlack[iCol];
 	  if (colsol[iCol]>lower[iCol]+1.0e-8&&
-	      colsol[iCol]<upper[iCol]+1.0e-8) {
+	      colsol[iCol]<upper[iCol]-1.0e-8) {
 	    model_->setColumnStatus(iCol,ClpSimplex::basic);
 	    n++;
 	  }

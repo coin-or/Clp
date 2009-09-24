@@ -1397,9 +1397,11 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
         double oldDualOut = dualOut_;
 	// which will change basic solution
 	if (nswapped) {
-	  factorization_->updateColumn(rowArray_[3],rowArray_[2]);
-	  dualRowPivot_->updatePrimalSolution(rowArray_[2],
-					      1.0,objectiveChange);
+	  if (rowArray_[2]->getNumElements()) {
+	    factorization_->updateColumn(rowArray_[3],rowArray_[2]);
+	    dualRowPivot_->updatePrimalSolution(rowArray_[2],
+						1.0,objectiveChange);
+	  }
 	  // recompute dualOut_
 	  valueOut_ = solution_[sequenceOut_];
 	  if (directionOut_<0) {
