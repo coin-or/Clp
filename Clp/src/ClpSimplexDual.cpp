@@ -3654,20 +3654,16 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
     }
   }
 
-  if (sequenceIn_>=0) {
 #ifdef MORE_CAREFUL
     // If we have done pivots and things look bad set alpha_ 0.0 to force factorization
-    if (badSumPivots) {
+    if (badSumPivots||
+	fabs(theta_*badFree)>10.0*dualTolerance_&&factorization_->pivots()) {
       if (handler_->logLevel()>1)
         printf("forcing re-factorization\n");
-      alpha_=0.0;
-    }
-    if (fabs(theta_*badFree)>10.0*dualTolerance_&&factorization_->pivots()) {
-      if (handler_->logLevel()>1)
-        printf("forcing re-factorizationon free\n");
-      alpha_=0.0;
+      sequenceIn_=-1;
     }
 #endif
+  if (sequenceIn_>=0) {
     lowerIn_ = lower_[sequenceIn_];
     upperIn_ = upper_[sequenceIn_];
     valueIn_ = solution_[sequenceIn_];
@@ -3732,6 +3728,10 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
       directionIn_=1;
       lowerIn_=valueIn_;
     }
+  } else {
+    // no pivot
+    bestPossible=0.0;
+    alpha_=0.0;
   }
   //if (thisIncrease) 
   //dualTolerance_+= 1.0e-6*dblParam_[ClpDualTolerance];
