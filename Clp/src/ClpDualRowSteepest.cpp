@@ -536,7 +536,7 @@ ClpDualRowSteepest::updateWeights(CoinIndexedVector * input,
 #endif
     // could re-initialize here (could be expensive)
     norm /= model_->alpha() * model_->alpha();
-    
+    assert(model_->alpha());
     assert(norm);
     // pivot element
     alpha=0.0;

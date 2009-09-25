@@ -17,15 +17,10 @@
 #include "ClpPackedMatrix.hpp"
 #include "CoinMessageHandler.hpp"
 #include "CoinHelperFunctions.hpp"
+#include "CoinFinite.hpp"
 #include "ClpParameters.hpp"
 #include "ClpObjective.hpp"
 class ClpEventHandler;
-
-// Plus infinity
-#ifndef COIN_DBL_MAX
-#define COIN_DBL_MAX DBL_MAX
-#endif
-
 /** This is the base class for Linear and quadratic Models
     This knows nothing about the algorithm, but it seems to
     have a reasonable amount of information
