@@ -616,6 +616,7 @@ ClpSimplex::gutsOfSolution ( double * givenDuals,
       if (!numberBasic) {
         //printf("no errors on basic - going to all slack - numberOut %d\n",numberOut);
         allSlackBasis(true);
+	CoinIotaN(pivotVariable_,numberRows_,numberColumns_);
       }
       CoinSort_2(save, save + numberOut, sort,
 		 CoinFirstGreater_2<double, int>());
