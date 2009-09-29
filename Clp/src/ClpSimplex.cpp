@@ -610,8 +610,13 @@ ClpSimplex::gutsOfSolution ( double * givenDuals,
       }
       if (!numberBasic) {
         //printf("no errors on basic - going to all slack - numberOut %d\n",numberOut);
+#if 0
         allSlackBasis(true);
 	CoinIotaN(pivotVariable_,numberRows_,numberColumns_);
+#else
+	// allow
+	numberOut=0;
+#endif
       } 
       CoinSort_2(save, save + numberOut, sort);
       numberOut = CoinMin(1000,numberOut);

@@ -2213,7 +2213,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	saveUpper=NULL;
       }
     }
-    if (method==ClpSolve::useBarrier) {
+    if (method==ClpSolve::useBarrier||barrierStatus<0) {
       if (maxIts&&barrierStatus<4&&!quadraticObj) {
 	//printf("***** crossover - needs more thought on difficult models\n");
 #if SAVEIT==1

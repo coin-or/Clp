@@ -959,7 +959,7 @@ int ClpPredictorCorrector::solve ( )
   //delete all temporary regions
   deleteWorkingData();
 #if KEEP_GOING_IF_FIXED<10
-#ifndef NDEBUG
+#if 0 //ndef NDEBUG
   {
     static int kk=0;
     char name[20];

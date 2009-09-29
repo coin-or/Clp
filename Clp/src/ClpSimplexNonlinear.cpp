@@ -50,7 +50,7 @@ int ClpSimplexNonlinear::primal ()
 #endif
     // for moment only if no scaling
     // May be faster if switched off - but can't see why
-    if (!quadraticObj->fullMatrix()&&!rowScale_&&objectiveScale_==1.0) {
+    if (!quadraticObj->fullMatrix()&&(!rowScale_&&!scalingFlag_)&&objectiveScale_==1.0) {
       saveObjective = objective_;
       objective_=new ClpQuadraticObjective(*quadraticObj,1);
     }
