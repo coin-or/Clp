@@ -2519,7 +2519,17 @@ stop if drop small if less than 5000 columns, 20 otherwise"
 #endif 
 #ifdef COIN_HAS_CBC
   parameters[numberParameters++]=
-      CbcOrClpParam("pivot!AndFix","Whether to try Pivot and Fix heuristic",
+      CbcOrClpParam("pivotAndC!omplement","Whether to try Pivot and Complement heuristic",
+		    "off",PIVOTANDCOMPLEMENT);
+  parameters[numberParameters-1].append("on");
+  parameters[numberParameters-1].append("both");
+  parameters[numberParameters-1].append("before");
+  parameters[numberParameters-1].setLonghelp
+    (
+     "stuff needed. \
+Doh option does heuristic before preprocessing"     ); 
+  parameters[numberParameters++]=
+      CbcOrClpParam("pivotAndF!ix","Whether to try Pivot and Fix heuristic",
 		    "off",PIVOTANDFIX);
   parameters[numberParameters-1].append("on");
   parameters[numberParameters-1].append("both");
