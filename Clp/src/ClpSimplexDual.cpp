@@ -7033,9 +7033,11 @@ ClpSimplexDual::resetFakeBounds(int type)
 	  !(equal(upper_[iSequence],value)||
 	    equal(lower_[iSequence],value))) {
 	    nErrors++;
+#ifdef CLP_INVESTIGATE
 	    printf("** upperFake %c%d %g <= %g <= %g true %g, %g\n",
 		   RC,jSequence,lower_[iSequence],solution_[iSequence],
 		   upper_[iSequence],lowerValue,upperValue);
+#endif
 	  }
 	  isFake=true;;
 	} else if (fakeStatus==ClpSimplexDual::lowerFake) {
@@ -7043,19 +7045,25 @@ ClpSimplexDual::resetFakeBounds(int type)
 	     !(equal(upper_[iSequence],value)||
 	       equal(lower_[iSequence],value))) {
 	    nErrors++;
+#ifdef CLP_INVESTIGATE
 	    printf("** lowerFake %c%d %g <= %g <= %g true %g, %g\n",
 		   RC,jSequence,lower_[iSequence],solution_[iSequence],
 		   upper_[iSequence],lowerValue,upperValue);
+#endif
 	  }
 	  isFake=true;;
 	} else if (fakeStatus==ClpSimplexDual::bothFake) {
 	  nWarnings++;
+#ifdef CLP_INVESTIGATE
 	  printf("** %d at bothFake?\n",iSequence);
+#endif
 	} else if (upper_[iSequence]-lower_[iSequence]>2.0*dualBound_) {
 	  nErrors++;
+#ifdef CLP_INVESTIGATE
 	  printf("** noFake! %c%d %g <= %g <= %g true %g, %g\n",
 		 RC,jSequence,lower_[iSequence],solution_[iSequence],
 		 upper_[iSequence],lowerValue,upperValue);
+#endif
 	}
       } else if (status==superBasic||status==isFree) {
 	nSuperBasic++;
@@ -7069,17 +7077,21 @@ ClpSimplexDual::resetFakeBounds(int type)
 	if (!equal(upper_[iSequence],upperValue))
 	  odd=true;
 	if (odd) {
+#ifdef CLP_INVESTIGATE
 	  printf("** basic %c%d %g <= %g <= %g true %g, %g\n",
 	       RC,jSequence,lower_[iSequence],solution_[iSequence],
 	       upper_[iSequence],lowerValue,upperValue);
+#endif
 	  nWarnings++;
 	}
       } else if (status==isFixed) {
 	if (!equal(upper_[iSequence],lower_[iSequence])) {
 	  nErrors++;
+#ifdef CLP_INVESTIGATE
 	  printf("** fixed! %c%d %g <= %g <= %g true %g, %g\n",
 		 RC,jSequence,lower_[iSequence],solution_[iSequence],
 		 upper_[iSequence],lowerValue,upperValue);
+#endif
 	}
       }
       if (isFake) {
@@ -7087,20 +7099,26 @@ ClpSimplexDual::resetFakeBounds(int type)
       } else {
 	if (fakeStatus!=ClpSimplexDual::noFake) {
 	  nErrors++;
+#ifdef CLP_INVESTIGATE
 	  printf("** bad fake status %c%d %d\n",
 		 RC,jSequence,fakeStatus);
+#endif
 	}
       }
     }
     if (nFake!=numberFake_) {
+#ifdef CLP_INVESTIGATE
       printf("nfake %d numberFake %d\n",nFake,numberFake_);
+#endif
       nErrors++;
     }
     if (nErrors||type<=-1000) {
+#ifdef CLP_INVESTIGATE
       printf("%d errors, %d warnings, %d free/superbasic, %d fake\n",
 	     nErrors,nWarnings,nSuperBasic,numberFake_);
       printf("dualBound %g\n",
 	     dualBound_);
+#endif
       if (type<=-1000) {
 	iSequence = -type;
 	iSequence -= 1000;
@@ -7112,9 +7130,11 @@ ClpSimplexDual::resetFakeBounds(int type)
 	}
 	double lowerValue=tempLower[iSequence];
 	double upperValue=tempUpper[iSequence];
+#ifdef CLP_INVESTIGATE
 	printf("*** movement>1.0e30 for  %c%d %g <= %g <= %g true %g, %g - status %d\n",
 		 RC,jSequence,lower_[iSequence],solution_[iSequence],
 	       upper_[iSequence],lowerValue,upperValue,status_[iSequence]);
+#endif
 	assert (nErrors); // should have been picked up
       }
       assert (!nErrors);
