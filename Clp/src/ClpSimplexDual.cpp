@@ -3819,14 +3819,14 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 
 #ifdef MORE_CAREFUL
     // If we have done pivots and things look bad set alpha_ 0.0 to force factorization
-    if (badSumPivots||
-	fabs(theta_*badFree)>10.0*dualTolerance_&&factorization_->pivots()) {
+  if ((badSumPivots||
+       fabs(theta_*badFree)>10.0*dualTolerance_)&&factorization_->pivots()) {
       if (handler_->logLevel()>1)
         printf("forcing re-factorization\n");
       sequenceIn_=-1;
     }
 #endif
-  if (sequenceIn_>=0) {
+  if (sequenceIn_>=0) { 
     lowerIn_ = lower_[sequenceIn_];
     upperIn_ = upper_[sequenceIn_];
     valueIn_ = solution_[sequenceIn_];
