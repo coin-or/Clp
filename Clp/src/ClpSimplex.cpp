@@ -3168,7 +3168,7 @@ ClpSimplex::createRim(int what,bool makeRowCopy, int startFinishOptions)
 #endif
     if (newArrays&&(specialOptions_&65536)==0) {
       delete [] cost_;
-      cost_ = new double[numberTotal];
+      cost_ = new double[2*numberTotal];
       delete [] lower_;
       delete [] upper_;
       lower_ = new double[numberTotal];
