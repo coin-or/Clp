@@ -19,7 +19,7 @@ int boundary_sort3=10000;
 #include "CoinHelperFunctions.hpp"
 #include "CoinSort.hpp"
 // History since 1.0 at end
-#define CLPVERSION "1.09.00"
+#define CLPVERSION "1.10.00"
 
 #include "CoinMpsIO.hpp"
 #include "CoinFileIO.hpp"
