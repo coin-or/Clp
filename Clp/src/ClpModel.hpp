@@ -858,10 +858,10 @@ public:
       0x01000000 is Cbc (and in branch and bound)
       0x02000000 is in a different branch and bound
   */
-#define COIN_CBC_USING_CLP 0x01000000
   inline unsigned int specialOptions() const
   { return specialOptions_;}
   void setSpecialOptions(unsigned int value);
+#define COIN_CBC_USING_CLP 0x01000000
   inline bool inCbcBranchAndBound() const
   { return (specialOptions_&COIN_CBC_USING_CLP)!=0;}
   //@}
