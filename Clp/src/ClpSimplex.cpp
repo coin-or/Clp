@@ -1384,8 +1384,8 @@ int ClpSimplex::internalFactorize ( int solveType)
 	}
       }
       if (!allSlack) {
-#define CLP_INVESTIGATE2
-#ifdef CLP_INVESTIGATE2
+	//#define CLP_INVESTIGATE2
+#ifdef CLP_INVESTIGATE3
 	int numberTotal=numberRows_+numberColumns_;
 	double * saveSol = valuesPass ? 
 	  CoinCopyOfArray(solution_,numberTotal) : NULL;
@@ -1542,7 +1542,7 @@ int ClpSimplex::internalFactorize ( int solveType)
 	    break;
 	  }
 	}
-#ifdef CLP_INVESTIGATE2
+#ifdef CLP_INVESTIGATE3
 	if (saveSol) {
 	  int numberChanged=0;
 	  double largestChanged=0.0;
