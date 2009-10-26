@@ -777,18 +777,10 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, int trueCopy)
       savedColumnScale_ = NULL;
       integerType_ = CoinCopyOfArray(rhs.integerType_,numberColumns_);
       if (rhs.rowActivity_) {
-	rowActivity_=new double[numberRows_];
-	columnActivity_=new double[numberColumns_];
-	dual_=new double[numberRows_];
-	reducedCost_=new double[numberColumns_];
-	ClpDisjointCopyN ( rhs.rowActivity_, numberRows_ ,
-			   rowActivity_);
-	ClpDisjointCopyN ( rhs.columnActivity_, numberColumns_ ,
-			   columnActivity_);
-	ClpDisjointCopyN ( rhs.dual_, numberRows_ , 
-			   dual_);
-	ClpDisjointCopyN ( rhs.reducedCost_, numberColumns_ ,
-			   reducedCost_);
+	rowActivity_= ClpCopyOfArray(rhs.rowActivity_, numberRows_);
+	columnActivity_= ClpCopyOfArray(rhs.columnActivity_,numberColumns_);
+	dual_= ClpCopyOfArray(rhs.dual_, numberRows_);
+	reducedCost_= ClpCopyOfArray(rhs.reducedCost_, numberColumns_);
       } else {
 	rowActivity_=NULL;
 	columnActivity_=NULL;
