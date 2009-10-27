@@ -4988,8 +4988,13 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
       } else {
 	unflagVariables=false;
 	//secondaryStatus_ = 1; // and say probably infeasible
-	// try primal
-	problemStatus_=10;
+	if ((moreSpecialOptions_&256)==0) {
+	  // try primal
+	  problemStatus_=10;
+	} else {
+	  // almost certainly infeasible
+	  problemStatus_=1;
+	}
 #if COIN_DEVELOP>1
 	printf("returning at %d\n",__LINE__);
 #endif
