@@ -57,6 +57,7 @@ void ClpSimplexOther::dualRanging(int numberCheck,const int * which,
   if (inCBC)
     assert (integerType_);
   dualTolerance_ = dblParam_[ClpDualTolerance];
+  double * arrayX = rowArray_[0]->denseVector();
   for ( i=0;i<numberCheck;i++) {
     rowArray_[0]->clear();
     //rowArray_[0]->checkClear();
@@ -101,13 +102,22 @@ void ClpSimplexOther::dualRanging(int numberCheck,const int * which,
 	// do ratio test up and down
 	checkDualRatios(rowArray_[0],columnArray_[0],costIncrease,sequenceIncrease,alphaIncrease,
 		    costDecrease,sequenceDecrease,alphaDecrease);
-	if (valueIncrease) {
-	  if (sequenceIncrease>=0)
-	    valueIncrease[i] = primalRanging1(sequenceIncrease,iSequence);
-	  if (sequenceDecrease>=0)
-	    valueDecrease[i] = primalRanging1(sequenceDecrease,iSequence);
-	}
-        if (inCBC) { 
+        if (!inCBC) {
+	  if (valueIncrease) {
+	    if (sequenceIncrease>=0)
+	      valueIncrease[i] = primalRanging1(sequenceIncrease,iSequence);
+	    if (sequenceDecrease>=0)
+	      valueDecrease[i] = primalRanging1(sequenceDecrease,iSequence);
+	  }
+	} else { 
+	  int number = rowArray_[0]->getNumElements();
+	  double scale2=0.0;
+	  int j;
+	  for (j=0;j<number;j++) {
+	    scale2+=arrayX[j]*arrayX[j];
+	  }
+	  scale2 = 1.0/sqrt(scale2);
+	  valueIncrease[i]=scale2;
           if (sequenceIncrease>=0) {
             double djValue = dj_[sequenceIncrease];
             if (fabs(djValue)>10.0*dualTolerance_) {
@@ -140,6 +150,8 @@ void ClpSimplexOther::dualRanging(int numberCheck,const int * which,
               costDecrease=0.0;
             }
           }
+	  costIncrease *= scale2;
+	  costDecrease *= scale2;
         }
       }
       break;

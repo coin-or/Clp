@@ -1455,7 +1455,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
     problemStatus_=10; // try dual
   // make sure first free monotonic
   if (firstFree_>=0&&saveFirstFree>=0) {
-    firstFree_=saveFirstFree;
+    firstFree_= (numberIterations_) ? saveFirstFree : -1;
     nextSuperBasic(1,NULL);
   }
   if (doFactorization) {
@@ -3151,61 +3151,22 @@ ClpSimplexPrimal::primalRay(CoinIndexedVector * rowArray)
    if 2 uses list.
 */
 int 
-ClpSimplexPrimal::nextSuperBasic(int superBasicType,CoinIndexedVector * columnArray)
+ClpSimplexPrimal::nextSuperBasic(int superBasicType,
+				 CoinIndexedVector * columnArray)
 {
-  if (firstFree_>=0&&superBasicType) {
-    int returnValue=-1;
-    bool finished=false;
-    while (!finished) {
-      returnValue=firstFree_;
-      int iColumn=firstFree_+1;
-      if (superBasicType>1) {
-	if (superBasicType>2) {
-	  // Initialize list
-	  // Wild guess that lower bound more natural than upper
-	  int number=0;
-	  double * work=columnArray->denseVector();
-	  int * which=columnArray->getIndices();
-	  for (iColumn=0;iColumn<numberRows_+numberColumns_;iColumn++) {
-	    if (!flagged(iColumn)) {
-	      if (getStatus(iColumn)==superBasic) {
-		if (fabs(solution_[iColumn]-lower_[iColumn])<=primalTolerance_) {
-		  solution_[iColumn]=lower_[iColumn];
-		  setStatus(iColumn,atLowerBound);
-		} else if (fabs(solution_[iColumn]-upper_[iColumn])
-			   <=primalTolerance_) {
-		  solution_[iColumn]=upper_[iColumn];
-		  setStatus(iColumn,atUpperBound);
-		} else if (lower_[iColumn]<-1.0e20&&upper_[iColumn]>1.0e20) {
-		  setStatus(iColumn,isFree);
-		  break;
-		} else if (!flagged(iColumn)) {
-		  // put ones near bounds at end after sorting
-		  work[number]= - CoinMin(0.1*(solution_[iColumn]-lower_[iColumn]),
-				      upper_[iColumn]-solution_[iColumn]);
-		  which[number++] = iColumn;
-		}
-	      }
-	    }
-	  }
-	  CoinSort_2(work,work+number,which);
-	  columnArray->setNumElements(number);
-	  CoinZeroN(work,number);
-	}
+  int returnValue=-1;
+  bool finished=false;
+  while (!finished) {
+    returnValue=firstFree_;
+    int iColumn=firstFree_+1;
+    if (superBasicType>1) {
+      if (superBasicType>2) {
+	// Initialize list
+	// Wild guess that lower bound more natural than upper
+	int number=0;
+	double * work=columnArray->denseVector();
 	int * which=columnArray->getIndices();
-	int number = columnArray->getNumElements();
-	if (!number) {
-	  // finished
-	  iColumn = numberRows_+numberColumns_;
-	  returnValue=-1;
-	} else {
-	  number--;
-	  returnValue=which[number];
-	  iColumn=returnValue;
-	  columnArray->setNumElements(number);
-	}      
-      } else {
-	for (;iColumn<numberRows_+numberColumns_;iColumn++) {
+	for (iColumn=0;iColumn<numberRows_+numberColumns_;iColumn++) {
 	  if (!flagged(iColumn)) {
 	    if (getStatus(iColumn)==superBasic) {
 	      if (fabs(solution_[iColumn]-lower_[iColumn])<=primalTolerance_) {
@@ -3218,24 +3179,60 @@ ClpSimplexPrimal::nextSuperBasic(int superBasicType,CoinIndexedVector * columnAr
 	      } else if (lower_[iColumn]<-1.0e20&&upper_[iColumn]>1.0e20) {
 		setStatus(iColumn,isFree);
 		break;
-	      } else {
-		break;
+	      } else if (!flagged(iColumn)) {
+		// put ones near bounds at end after sorting
+		work[number]= - CoinMin(0.1*(solution_[iColumn]-lower_[iColumn]),
+					upper_[iColumn]-solution_[iColumn]);
+		which[number++] = iColumn;
 	      }
 	    }
 	  }
 	}
+	CoinSort_2(work,work+number,which);
+	columnArray->setNumElements(number);
+	CoinZeroN(work,number);
       }
-      firstFree_ = iColumn;
-      finished=true;
-      if (firstFree_==numberRows_+numberColumns_)
-	firstFree_=-1;
-      if (returnValue>=0&&getStatus(returnValue)!=superBasic&&getStatus(returnValue)!=isFree)
-	finished=false; // somehow picked up odd one
+      int * which=columnArray->getIndices();
+      int number = columnArray->getNumElements();
+      if (!number) {
+	// finished
+	iColumn = numberRows_+numberColumns_;
+	returnValue=-1;
+      } else {
+	number--;
+	returnValue=which[number];
+	iColumn=returnValue;
+	columnArray->setNumElements(number);
+      }      
+    } else {
+      for (;iColumn<numberRows_+numberColumns_;iColumn++) {
+	if (!flagged(iColumn)) {
+	  if (getStatus(iColumn)==superBasic) {
+	    if (fabs(solution_[iColumn]-lower_[iColumn])<=primalTolerance_) {
+	      solution_[iColumn]=lower_[iColumn];
+	      setStatus(iColumn,atLowerBound);
+	    } else if (fabs(solution_[iColumn]-upper_[iColumn])
+		       <=primalTolerance_) {
+	      solution_[iColumn]=upper_[iColumn];
+	      setStatus(iColumn,atUpperBound);
+	    } else if (lower_[iColumn]<-1.0e20&&upper_[iColumn]>1.0e20) {
+	      setStatus(iColumn,isFree);
+	      break;
+	    } else {
+	      break;
+	    }
+	  }
+	}
+      }
     }
-    return returnValue;
-  } else {
-    return -1;
+    firstFree_ = iColumn;
+    finished=true;
+    if (firstFree_==numberRows_+numberColumns_)
+      firstFree_=-1;
+    if (returnValue>=0&&getStatus(returnValue)!=superBasic&&getStatus(returnValue)!=isFree)
+      finished=false; // somehow picked up odd one
   }
+  return returnValue;
 }
 void
 ClpSimplexPrimal::clearAll()

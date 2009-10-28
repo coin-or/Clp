@@ -152,7 +152,7 @@ public:
   ClpPrimalColumnSteepest(int mode=3); 
   
   /// Copy constructor 
-  ClpPrimalColumnSteepest(const ClpPrimalColumnSteepest &);
+  ClpPrimalColumnSteepest(const ClpPrimalColumnSteepest & rhs);
   
   /// Assignment operator 
   ClpPrimalColumnSteepest & operator=(const ClpPrimalColumnSteepest& rhs);

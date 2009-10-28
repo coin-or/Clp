@@ -1461,7 +1461,6 @@ possibilities."
   parameters[numberParameters-1].append("ifmove");
   parameters[numberParameters-1].append("forceOn");
   parameters[numberParameters-1].append("onglobal");
-  parameters[numberParameters-1].append("rootglobal");
   parameters[numberParameters-1].setLonghelp
     (
      "This switches on clique cuts (either at root or in entire tree) \
@@ -1948,6 +1947,17 @@ It can be useful to get rid of the original names and go over to using Rnnnnnnn 
     CbcOrClpParam("extra4","Extra integer parameter 4",
 		  -1,COIN_INT_MAX,EXTRA4,0);
   parameters[numberParameters-1].setIntValue(-1);
+  parameters[numberParameters-1].setLonghelp
+    (
+     "This switches on yet more special options!! \
+The bottom digit is a strategy when to used shadow price stuff e.g. 3 \
+means use until a solution is found.  The next two digits say what sort \
+of dual information to use.  After that it goes back to powers of 2 so -\n\
+\t1000 - switches on experimental hotstart\n\
+\t2,4,6000 - switches on experimental methods of stopping cuts\n\
+\t8000 - increase minimum drop gradually\n\
+\t16000 - switches on alternate gomory criterion"
+     ); 
 #endif
 #ifdef COIN_HAS_CLP
   parameters[numberParameters++]=
@@ -1994,8 +2004,7 @@ before branch and bound - use with extreme caution!"
     parameters[numberParameters-1].append("root");
     parameters[numberParameters-1].append("ifmove");
     parameters[numberParameters-1].append("forceOn");
-  parameters[numberParameters-1].append("onglobal");
-  parameters[numberParameters-1].append("rootglobal");
+    parameters[numberParameters-1].append("onglobal");
     parameters[numberParameters-1].setLonghelp
     (
      "This switches on flow cover cuts (either at root or in entire tree) \
@@ -2041,7 +2050,7 @@ of branch and bound are done on reduced problem.  Small problem has to be less t
   parameters[numberParameters-1].append("ifmove");
   parameters[numberParameters-1].append("forceOn");
   parameters[numberParameters-1].append("onglobal");
-  parameters[numberParameters-1].append("rootglobal");
+  parameters[numberParameters-1].append("forceandglobal");
   parameters[numberParameters-1].append("forceLongOn");
   parameters[numberParameters-1].append("long");
   parameters[numberParameters-1].setLonghelp
@@ -2104,7 +2113,7 @@ while 8 will adapt cutoff rhs after first solution if it looks as if code is sta
 #ifdef COIN_HAS_CLP
   parameters[numberParameters++]=
     CbcOrClpParam("idiot!Crash","Whether to try idiot crash",
-		  -1,999999,IDIOT);
+		  -1,99999999,IDIOT);
   parameters[numberParameters-1].setLonghelp
     (
      "This is a type of 'crash' which works well on some homogeneous problems.\
@@ -2185,7 +2194,7 @@ This needs to be set before the import of model - so -keepnames off -import xxxx
   parameters[numberParameters-1].append("ifmove");
   parameters[numberParameters-1].append("forceOn");
   parameters[numberParameters-1].append("onglobal");
-  parameters[numberParameters-1].append("rootglobal");
+  parameters[numberParameters-1].append("forceandglobal");
   parameters[numberParameters-1].setLonghelp
     (
      "This switches on knapsack cuts (either at root or in entire tree) \
@@ -2302,7 +2311,6 @@ You can also use the parameters 'direction minimize'."
   parameters[numberParameters-1].append("ifmove");
   parameters[numberParameters-1].append("forceOn");
   parameters[numberParameters-1].append("onglobal");
-  parameters[numberParameters-1].append("rootglobal");
   parameters[numberParameters-1].setLonghelp
     (
      "This switches on mixed integer rounding cuts (either at root or in entire tree) \
@@ -2327,6 +2335,7 @@ but this program turns this off to make it look more friendly.  It can be useful
   parameters[numberParameters-1].setLonghelp
     (
      "Yet more ideas for Feasibility Pump \n\
+\t/100000 == 1 use box constraints and original obj in cleanup\n\
 \t/1000 == 1 Pump will run twice if no solution found\n\
 \t/1000 == 2 Pump will only run after root cuts if no solution found\n\
 \t/1000 >10 as above but even if solution found\n\
@@ -2710,7 +2719,7 @@ File is in csv format with allowed headings - name, number, priority, direction,
   parameters[numberParameters-1].append("ifmove");
   parameters[numberParameters-1].append("forceOn");
   parameters[numberParameters-1].append("onglobal");
-  parameters[numberParameters-1].append("rootglobal");
+  parameters[numberParameters-1].append("forceonglobal");
   parameters[numberParameters-1].append("forceOnBut");
   parameters[numberParameters-1].append("forceOnStrong");
   parameters[numberParameters-1].append("forceOnButStrong");
@@ -3174,7 +3183,7 @@ you would use 3010005 (I think)"
   parameters[numberParameters-1].append("ifmove");
   parameters[numberParameters-1].append("forceOn");
   parameters[numberParameters-1].append("onglobal");
-  parameters[numberParameters-1].append("rootglobal");
+  parameters[numberParameters-1].append("forceandglobal");
   parameters[numberParameters-1].append("forceLongOn");
   parameters[numberParameters-1].setLonghelp
     (
@@ -3207,6 +3216,17 @@ Look for USERCLP in main driver and modify sample code."
 Look for USERCBC in main driver and modify sample code. \
 It is possible you can get same effect by using example driver4.cpp."
      ); 
+  parameters[numberParameters++]=
+      CbcOrClpParam("Vnd!VariableNeighborhoodSearch","Whether to try Variable Neighborhood Search",
+		    "off",VND);
+    parameters[numberParameters-1].append("on");
+    parameters[numberParameters-1].append("both");
+    parameters[numberParameters-1].append("before");
+    parameters[numberParameters-1].append("intree");
+  parameters[numberParameters-1].setLonghelp
+    (
+     "This switches on variable neighborhood Search. \
+Doh option does heuristic before preprocessing"     ); 
 #endif
   parameters[numberParameters++]=
     CbcOrClpParam("vector","Whether to use vector? Form of matrix in simplex",
@@ -3233,7 +3253,7 @@ It is possible you can get same effect by using example driver4.cpp."
      "If set will try and fix some integer variables"
      ); 
   parameters[numberParameters-1].setIntValue(-1);
-#if 0
+#ifdef ZERO_HALF_CUTS
   parameters[numberParameters++]=
     CbcOrClpParam("zero!HalfCuts","Whether to use zero half cuts",
 		  "off",ZEROHALFCUTS);
@@ -3242,7 +3262,6 @@ It is possible you can get same effect by using example driver4.cpp."
   parameters[numberParameters-1].append("ifmove");
   parameters[numberParameters-1].append("forceOn");
   parameters[numberParameters-1].append("onglobal");
-  parameters[numberParameters-1].append("rootglobal");
   parameters[numberParameters-1].setLonghelp
     (
      "This switches on zero-half cuts (either at root or in entire tree) \

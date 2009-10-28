@@ -341,7 +341,6 @@ Idiot::crash(int numberPass, CoinMessageHandler * handler,const CoinMessages *me
   if (maxIts_==5)
     maxIts_=2;
   if (numberPass<=0)
-    // Cast to double to avoid VACPP complaining
     majorIterations_=static_cast<int>(2+log10(static_cast<double>(numberColumns+1)));
   else
     majorIterations_=numberPass;
@@ -367,7 +366,7 @@ Idiot::crash(int numberPass, CoinMessageHandler * handler,const CoinMessages *me
   if ((averageInfeas<0.01&&(strategy_&512)!=0)||(strategy_&8192)!=0) 
     crossOver(16+1); 
   else
-    crossOver(3);
+    crossOver(majorIterations_<1000000 ? 3 : 2);
 #endif
 }
 void
@@ -391,6 +390,7 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
   int maxIts=maxIts_;
   int logLevel=logLevel_;
   int saveMajorIterations = majorIterations_;
+  majorIterations_ = majorIterations_%1000000;
   if (handler) {
     if (handler->logLevel()>0&&handler->logLevel()<3)
       logLevel=1;
@@ -1203,7 +1203,7 @@ Idiot::crossOver(int mode)
   double * saveLower = NULL;
   double * saveRowUpper = NULL;
   double * saveRowLower = NULL;
-  bool allowInfeasible = (strategy_&8192)!=0;
+  bool allowInfeasible = ((strategy_&8192)!=0)||(majorIterations_>1000000);
   if (addAll<3) {
     saveUpper = new double [ncols];
     saveLower = new double [ncols];
@@ -1573,6 +1573,7 @@ Idiot::crossOver(int mode)
   } else {
     maxmin=1.0;
   }
+  bool justValuesPass=majorIterations_>1000000;
   if (slackStart>=0) {
     for (i=0;i<nrows;i++) {
       model_->setRowStatus(i,ClpSimplex::superBasic);
@@ -1668,6 +1669,8 @@ Idiot::crossOver(int mode)
 	model_->clpMatrix()->times(1.0,colsol,rhs);
 	double * rowupper = model_->rowUpper();
 	double * rowlower= model_->rowLower();
+	saveRowUpper = CoinCopyOfArray(rowupper,nrows);
+	saveRowLower = CoinCopyOfArray(rowlower,nrows);
 	double sum = 0.0;
 	for (i=0;i<nrows;i++) {
 	  if (rhs[i]>rowupper[i]) {
@@ -1690,7 +1693,7 @@ Idiot::crossOver(int mode)
       if (!wantVector) {
 	//#define TWO_GOES
 #ifndef TWO_GOES
-	model_->primal(1);
+	model_->primal(justValuesPass ? 2 : 1);
 #else
 	model_->primal(1+11);
 #endif
@@ -1714,6 +1717,8 @@ Idiot::crossOver(int mode)
       presolve=0;
       model_ = saveModel;
       saveModel=NULL;
+      if (justValuesPass)
+	model_->primal(2);
     }
     if (allowInfeasible) {
       CoinMemcpyN(saveRowUpper,nrows,model_->rowUpper());
@@ -1754,6 +1759,8 @@ Idiot::crossOver(int mode)
       printf("Time so far %g, %d now added from previous iterations\n",
 	     CoinCpuTime()-startTime,n);
 #endif
+      if (justValuesPass)
+	return;
       if (addAll)
 	presolve=0;
       if (presolve) {

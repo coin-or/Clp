@@ -1228,12 +1228,12 @@ ClpSimplex::initialSolve(ClpSolve & options)
       }
       if (doIdiot>0) {
 	// pick up number passes
-	nPasses=options.getExtraInfo(1);
+	nPasses=options.getExtraInfo(1)%1000000;
 	if (nPasses>70) {
 	  info.setStartingWeight(1.0e3);
 	  info.setReduceIterations(6);
 	  if (nPasses>=5000) {
-	    int k= nPasses&100;
+	    int k= nPasses%100;
 	    nPasses /= 100;
 	    info.setReduceIterations(3);
 	    if (k)
@@ -1256,6 +1256,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
 #endif
 	}
       }
+      if (options.getExtraInfo(1)>1000000)
+	nPasses += 1000000;
       if (nPasses) {
 	doCrash=0;
 #if 0
@@ -1325,21 +1327,24 @@ ClpSimplex::initialSolve(ClpSolve & options)
       model2->nonlinearSLP(doSlp,1.0e-5);
     }
 #endif
-    if (dynamic_cast< ClpPackedMatrix*>(matrix_)) {
-      // See if original wanted vector
-      ClpPackedMatrix * clpMatrixO = dynamic_cast< ClpPackedMatrix*>(matrix_);
-      ClpMatrixBase * matrix = model2->clpMatrix();
-      if (dynamic_cast< ClpPackedMatrix*>(matrix)&&clpMatrixO->wantsSpecialColumnCopy()) {
-	ClpPackedMatrix * clpMatrix = dynamic_cast< ClpPackedMatrix*>(matrix);
-	clpMatrix->makeSpecialColumnCopy();
-	//model2->setSpecialOptions(model2->specialOptions()|256); // to say no row copy for comparisons
-	model2->primal(primalStartup);
-	clpMatrix->releaseSpecialColumnCopy();
+    if (options.getSpecialOption(1)!=2||
+	options.getExtraInfo(1)<1000000) {
+      if (dynamic_cast< ClpPackedMatrix*>(matrix_)) {
+	// See if original wanted vector
+	ClpPackedMatrix * clpMatrixO = dynamic_cast< ClpPackedMatrix*>(matrix_);
+	ClpMatrixBase * matrix = model2->clpMatrix();
+	if (dynamic_cast< ClpPackedMatrix*>(matrix)&&clpMatrixO->wantsSpecialColumnCopy()) {
+	  ClpPackedMatrix * clpMatrix = dynamic_cast< ClpPackedMatrix*>(matrix);
+	  clpMatrix->makeSpecialColumnCopy();
+	  //model2->setSpecialOptions(model2->specialOptions()|256); // to say no row copy for comparisons
+	  model2->primal(primalStartup);
+	  clpMatrix->releaseSpecialColumnCopy();
+	} else {
+	  model2->primal(primalStartup);
+	}
       } else {
 	model2->primal(primalStartup);
       }
-    } else {
-      model2->primal(primalStartup);
     }
     time2 = CoinCpuTime();
     timeCore = time2-timeX;
@@ -2530,6 +2535,20 @@ ClpSimplex::initialSolve(ClpSolve & options)
   if (savedObjective) {
     delete objective_;
     objective_=savedObjective;
+  }
+  if (options.getSpecialOption(1)==2&&
+	options.getExtraInfo(1)>1000000) {
+    ClpObjective * savedObjective=objective_;
+    // make up zero objective
+    double * obj = new double[numberColumns_];
+    for (int i=0;i<numberColumns_;i++) 
+      obj[i]=0.0;
+    objective_= new ClpLinearObjective(obj,numberColumns_);
+    delete [] obj;
+    primal(1);
+    delete objective_;
+    objective_=savedObjective;
+    finalStatus=status();
   }
   return finalStatus;
 }

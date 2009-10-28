@@ -585,7 +585,7 @@ public:
       then status used - so all nonbasic variables set to
       indicated bound and if any values changed (or ==2)  basic values re-computed.
   */
-  void checkSolution(int setToBounds=false);
+  void checkSolution(int setToBounds=0);
   /** Just check solution (for internal use) - sets sum of
       infeasibilities etc. */
   void checkSolutionInternal();

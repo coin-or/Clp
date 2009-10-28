@@ -2347,7 +2347,9 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
   sumPrimalInfeasibilities_ = rhs.sumPrimalInfeasibilities_;
   numberPrimalInfeasibilities_ = rhs.numberPrimalInfeasibilities_;
   dualRowPivot_ = rhs.dualRowPivot_->clone(true);
+  dualRowPivot_->setModel(this);
   primalColumnPivot_ = rhs.primalColumnPivot_->clone(true);
+  primalColumnPivot_->setModel(this);
   numberTimesOptimal_ = rhs.numberTimesOptimal_;
   disasterArea_ = NULL;
   changeMade_ = rhs.changeMade_;
@@ -4419,6 +4421,7 @@ ClpSimplex::setDualRowPivotAlgorithm(ClpDualRowPivot & choice)
 {
   delete dualRowPivot_;
   dualRowPivot_ = choice.clone(true);
+  dualRowPivot_->setModel(this);
 }
 // Sets row pivot choice algorithm in dual
 void 
@@ -4426,6 +4429,7 @@ ClpSimplex::setPrimalColumnPivotAlgorithm(ClpPrimalColumnPivot & choice)
 {
   delete primalColumnPivot_;
   primalColumnPivot_ = choice.clone(true);
+  primalColumnPivot_->setModel(this);
 }
 void 
 ClpSimplex::setFactorization( ClpFactorization & factorization)
@@ -4583,6 +4587,65 @@ ClpSimplex::tightenPrimalBounds(double factor,int doTight,bool tightIntegers)
   CoinMemcpyN(columnUpper_,numberColumns_,saveUpper);
 
   int iRow, iColumn;
+  // If wanted compute a reasonable dualBound_
+  if (factor==COIN_DBL_MAX) {
+    factor=0.0;
+    if (dualBound_==1.0e10) {
+      // get largest scaled away from bound
+      double largest=1.0e-12;
+      double largestScaled=1.0e-12;
+      int iRow;
+      for (iRow=0;iRow<numberRows_;iRow++) {
+	double value = rowActivity_[iRow];
+	double above = value-rowLower_[iRow];
+	double below = rowUpper_[iRow]-value;
+	if (above<1.0e12) {
+	  largest = CoinMax(largest,above);
+	}
+	if (below<1.0e12) {
+	  largest = CoinMax(largest,below);
+	}
+	if (rowScale_) {
+	  double multiplier = rowScale_[iRow];
+	  above *= multiplier;
+	  below *= multiplier;
+	}
+	if (above<1.0e12) {
+	  largestScaled = CoinMax(largestScaled,above);
+	}
+	if (below<1.0e12) {
+	  largestScaled = CoinMax(largestScaled,below);
+	}
+      }
+      
+      int iColumn;
+      for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+	double value = columnActivity_[iColumn];
+	double above = value-columnLower_[iColumn];
+	double below = columnUpper_[iColumn]-value;
+	if (above<1.0e12) {
+	  largest = CoinMax(largest,above);
+	}
+	if (below<1.0e12) {
+	  largest = CoinMax(largest,below);
+	}
+	if (columnScale_) {
+	  double multiplier = 1.0/columnScale_[iColumn];
+	  above *= multiplier;
+	  below *= multiplier;
+	}
+	if (above<1.0e12) {
+	  largestScaled = CoinMax(largestScaled,above);
+	}
+	if (below<1.0e12) {
+	  largestScaled = CoinMax(largestScaled,below);
+	}
+      }
+      std::cout<<"Largest (scaled) away from bound "<<largestScaled
+	       <<" unscaled "<<largest<<std::endl;
+      dualBound_=CoinMax(1.0001e7,CoinMin(100.0*largest,1.00001e10));
+    }
+  }
 
   // If wanted - tighten column bounds using solution
   if (factor) {
@@ -5482,6 +5545,7 @@ int ClpSimplex::primal (int ifValuesPass , int startFinishOptions)
       }
     }
   }
+  //firstFree_=-1;
   /*  Note use of "down casting".  The only class the user sees is ClpSimplex.
       Classes ClpSimplexDual, ClpSimplexPrimal, (ClpSimplexNonlinear) 
       and ClpSimplexOther all exist and inherit from ClpSimplex but have no
@@ -6027,8 +6091,10 @@ ClpSimplex::borrowModel(ClpSimplex & otherModel)
   primalTolerance_ = otherModel.primalTolerance_;
   delete dualRowPivot_;
   dualRowPivot_ = otherModel.dualRowPivot_->clone(true);
+  dualRowPivot_->setModel(this);
   delete primalColumnPivot_;
   primalColumnPivot_ = otherModel.primalColumnPivot_->clone(true);
+  primalColumnPivot_->setModel(this);
   perturbation_ = otherModel.perturbation_;
   moreSpecialOptions_ = otherModel.moreSpecialOptions_;
   automaticScale_ = otherModel.automaticScale_;
@@ -8045,8 +8111,10 @@ ClpSimplex::startup(int ifValuesPass, int startFinishOptions)
 	if (!numberThrownOut||numberThrownOut==numberRows_+1) {
 	  // solution will be done again - skip if absolutely sure
 	  if ((specialOptions_&512)==0||numberThrownOut==numberRows_+1) {
+	    //int saveFirstFree=firstFree_;
 	    numberThrownOut = gutsOfSolution(  NULL,NULL,
 					       ifValuesPass!=0);
+	    //firstFree_=saveFirstFree;
 	    if (largestPrimalError_>10.0&&!ifValuesPass&&!numberThrownOut) {
 	      // throw out up to 1000 structurals
 	      int iRow;
