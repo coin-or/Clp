@@ -1,3 +1,4 @@
+/* $Id$ */
 // Copyright (C) 2003, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
@@ -173,52 +174,57 @@ public:
   inline void setAlgorithm(int value)
   {algorithm_=value; } 
   /// Sum of dual infeasibilities
-  inline double sumDualInfeasibilities() const 
+  inline CoinWorkDouble sumDualInfeasibilities() const 
           { return sumDualInfeasibilities_;} 
   /// Sum of primal infeasibilities
-  inline double sumPrimalInfeasibilities() const 
+  inline CoinWorkDouble sumPrimalInfeasibilities() const 
           { return sumPrimalInfeasibilities_;} 
   /// dualObjective.
-  inline double dualObjective() const
+  inline CoinWorkDouble dualObjective() const
   { return dualObjective_;}
   /// primalObjective.
-  inline double primalObjective() const
+  inline CoinWorkDouble primalObjective() const
   { return primalObjective_;}
   /// diagonalNorm
-  inline double diagonalNorm() const
+  inline CoinWorkDouble diagonalNorm() const
   { return diagonalNorm_;}
   /// linearPerturbation
-  inline double linearPerturbation() const
+  inline CoinWorkDouble linearPerturbation() const
   { return linearPerturbation_;}
-  inline void setLinearPerturbation(double value)
+  inline void setLinearPerturbation(CoinWorkDouble value)
   { linearPerturbation_=value;}
+  /// projectionTolerance
+  inline CoinWorkDouble projectionTolerance() const
+  { return projectionTolerance_;}
+  inline void setProjectionTolerance(CoinWorkDouble value)
+  { projectionTolerance_=value;}
   /// diagonalPerturbation
-  inline double diagonalPerturbation() const
+  inline CoinWorkDouble diagonalPerturbation() const
   { return diagonalPerturbation_;}
-  inline void setDiagonalPerturbation(double value)
+  inline void setDiagonalPerturbation(CoinWorkDouble value)
   { diagonalPerturbation_=value;}
   /// gamma
-  inline double gamma() const
+  inline CoinWorkDouble gamma() const
   { return gamma_;}
-  inline void setGamma(double value)
+  inline void setGamma(CoinWorkDouble value)
   { gamma_=value;}
   /// delta
-  inline double delta() const
+  inline CoinWorkDouble delta() const
   { return delta_;}
-  inline void setDelta(double value)
+  inline void setDelta(CoinWorkDouble value)
   { delta_=value;}
   /// ComplementarityGap
-  inline double complementarityGap() const 
+  inline CoinWorkDouble complementarityGap() const 
           { return complementarityGap_;} 
   //@}
 
   /**@name most useful gets and sets */
   //@{ 
   /// Largest error on Ax-b
-  inline double largestPrimalError() const
+  inline CoinWorkDouble largestPrimalError() const
           { return largestPrimalError_;} 
   /// Largest error on basic duals
-  inline double largestDualError() const
+  inline CoinWorkDouble largestDualError() const
           { return largestDualError_;} 
   /// Maximum iterations
   inline int maximumBarrierIterations() const
@@ -233,10 +239,10 @@ public:
       set values to exact bounds */
   void fixFixed(bool reallyFix=true);
   /// Primal erturbation vector
-  inline double * primalR() const
+  inline CoinWorkDouble * primalR() const
   { return primalR_;}
   /// Dual erturbation vector
-  inline double * dualR() const
+  inline CoinWorkDouble * dualR() const
   { return dualR_;}
   //@}
 
@@ -259,7 +265,7 @@ public:
   /**@name public methods */
   //@{
   /// Raw objective value (so always minimize)
-  inline double rawObjectiveValue() const
+  inline CoinWorkDouble rawObjectiveValue() const
   { return objectiveValue_;}
   /// Returns 1 if sequence indicates column
   inline int isColumn(int sequence) const
@@ -271,8 +277,8 @@ public:
   void checkSolution();
   /** Modifies djs to allow for quadratic.
       returns quadratic offset */
-  double quadraticDjs(double * djRegion, const double * solution,
-		      double scaleFactor);
+  CoinWorkDouble quadraticDjs(CoinWorkDouble * djRegion, const CoinWorkDouble * solution,
+		      CoinWorkDouble scaleFactor);
 
   /// To say a variable is fixed
   inline void setFixed( int sequence)
@@ -369,40 +375,40 @@ protected:
   */
   //@{
   /// Largest error on Ax-b
-  double largestPrimalError_;
+  CoinWorkDouble largestPrimalError_;
   /// Largest error on basic duals
-  double largestDualError_;
+  CoinWorkDouble largestDualError_;
   /// Sum of dual infeasibilities
-  double sumDualInfeasibilities_;
+  CoinWorkDouble sumDualInfeasibilities_;
   /// Sum of primal infeasibilities
-  double sumPrimalInfeasibilities_;
+  CoinWorkDouble sumPrimalInfeasibilities_;
   /// Worst complementarity
-  double worstComplementarity_;
+  CoinWorkDouble worstComplementarity_;
   /// 
 public:
-  double xsize_;
-  double zsize_;
+  CoinWorkDouble xsize_;
+  CoinWorkDouble zsize_;
 protected:
   /// Working copy of lower bounds (Owner of arrays below)
-  double * lower_;
+  CoinWorkDouble * lower_;
   /// Row lower bounds - working copy
-  double * rowLowerWork_;
+  CoinWorkDouble * rowLowerWork_;
   /// Column lower bounds - working copy
-  double * columnLowerWork_;
+  CoinWorkDouble * columnLowerWork_;
   /// Working copy of upper bounds (Owner of arrays below)
-  double * upper_;
+  CoinWorkDouble * upper_;
   /// Row upper bounds - working copy
-  double * rowUpperWork_;
+  CoinWorkDouble * rowUpperWork_;
   /// Column upper bounds - working copy
-  double * columnUpperWork_;
+  CoinWorkDouble * columnUpperWork_;
   /// Working copy of objective 
-  double * cost_;
+  CoinWorkDouble * cost_;
 public:
   /// Rhs
-  double * rhs_;
-  double * x_;
-  double * y_;
-  double * dj_;
+  CoinWorkDouble * rhs_;
+  CoinWorkDouble * x_;
+  CoinWorkDouble * y_;
+  CoinWorkDouble * dj_;
 protected:
   /// Pointer to Lsqr object
   ClpLsqr * lsqrObject_;
@@ -410,105 +416,105 @@ protected:
   ClpPdcoBase * pdcoStuff_;
   /// Below here is standard barrier stuff
   /// mu.
-  double mu_;
+  CoinWorkDouble mu_;
   /// objectiveNorm.
-  double objectiveNorm_;
+  CoinWorkDouble objectiveNorm_;
   /// rhsNorm.
-  double rhsNorm_;
+  CoinWorkDouble rhsNorm_;
   /// solutionNorm.
-  double solutionNorm_;
+  CoinWorkDouble solutionNorm_;
   /// dualObjective.
-  double dualObjective_;
+  CoinWorkDouble dualObjective_;
   /// primalObjective.
-  double primalObjective_;
+  CoinWorkDouble primalObjective_;
   /// diagonalNorm.
-  double diagonalNorm_;
+  CoinWorkDouble diagonalNorm_;
   /// stepLength
-  double stepLength_;
+  CoinWorkDouble stepLength_;
   /// linearPerturbation
-  double linearPerturbation_;
+  CoinWorkDouble linearPerturbation_;
   /// diagonalPerturbation
-  double diagonalPerturbation_;
+  CoinWorkDouble diagonalPerturbation_;
   // gamma from Saunders and Tomlin regularized
-  double gamma_;
+  CoinWorkDouble gamma_;
   // delta from Saunders and Tomlin regularized
-  double delta_;
+  CoinWorkDouble delta_;
   /// targetGap
-  double targetGap_;
+  CoinWorkDouble targetGap_;
   /// projectionTolerance
-  double projectionTolerance_;
+  CoinWorkDouble projectionTolerance_;
   /// maximumRHSError.  maximum Ax
-  double maximumRHSError_;
+  CoinWorkDouble maximumRHSError_;
   /// maximumBoundInfeasibility.
-  double maximumBoundInfeasibility_;
+  CoinWorkDouble maximumBoundInfeasibility_;
   /// maximumDualError.
-  double maximumDualError_;
+  CoinWorkDouble maximumDualError_;
   /// diagonalScaleFactor.
-  double diagonalScaleFactor_;
+  CoinWorkDouble diagonalScaleFactor_;
   /// scaleFactor.  For scaling objective
-  double scaleFactor_;
+  CoinWorkDouble scaleFactor_;
   /// actualPrimalStep
-  double actualPrimalStep_;
+  CoinWorkDouble actualPrimalStep_;
   /// actualDualStep
-  double actualDualStep_;
+  CoinWorkDouble actualDualStep_;
   /// smallestInfeasibility
-  double smallestInfeasibility_;
+  CoinWorkDouble smallestInfeasibility_;
   /// historyInfeasibility.
 #define LENGTH_HISTORY 5
-  double historyInfeasibility_[LENGTH_HISTORY];
+  CoinWorkDouble historyInfeasibility_[LENGTH_HISTORY];
   /// complementarityGap.
-  double complementarityGap_;
+  CoinWorkDouble complementarityGap_;
   /// baseObjectiveNorm
-  double baseObjectiveNorm_;
+  CoinWorkDouble baseObjectiveNorm_;
   /// worstDirectionAccuracy
-  double worstDirectionAccuracy_;
+  CoinWorkDouble worstDirectionAccuracy_;
   /// maximumRHSChange
-  double maximumRHSChange_;
+  CoinWorkDouble maximumRHSChange_;
   /// errorRegion. i.e. Ax
-  double * errorRegion_;
+  CoinWorkDouble * errorRegion_;
   /// rhsFixRegion.
-  double * rhsFixRegion_;
+  CoinWorkDouble * rhsFixRegion_;
   /// upperSlack
-  double * upperSlack_;
+  CoinWorkDouble * upperSlack_;
   /// lowerSlack
-  double * lowerSlack_;
+  CoinWorkDouble * lowerSlack_;
   /// diagonal
-  double * diagonal_;
+  CoinWorkDouble * diagonal_;
   /// solution
-  double * solution_;
+  CoinWorkDouble * solution_;
   /// work array
-  double * workArray_;
+  CoinWorkDouble * workArray_;
   /// delta X
-  double * deltaX_;
+  CoinWorkDouble * deltaX_;
   /// delta Y
-  double * deltaY_;
+  CoinWorkDouble * deltaY_;
   /// deltaZ.
-  double * deltaZ_;
+  CoinWorkDouble * deltaZ_;
   /// deltaW.
-  double * deltaW_;
+  CoinWorkDouble * deltaW_;
   /// deltaS.
-  double * deltaSU_;
-  double * deltaSL_;
+  CoinWorkDouble * deltaSU_;
+  CoinWorkDouble * deltaSL_;
   /// Primal regularization array
-  double * primalR_;
+  CoinWorkDouble * primalR_;
   /// Dual regularization array
-  double * dualR_;
+  CoinWorkDouble * dualR_;
   /// rhs B
-  double * rhsB_;
+  CoinWorkDouble * rhsB_;
   /// rhsU.
-  double * rhsU_;
+  CoinWorkDouble * rhsU_;
   /// rhsL.
-  double * rhsL_;
+  CoinWorkDouble * rhsL_;
   /// rhsZ.
-  double * rhsZ_;
+  CoinWorkDouble * rhsZ_;
   /// rhsW.
-  double * rhsW_;
+  CoinWorkDouble * rhsW_;
   /// rhs C
-  double * rhsC_;
+  CoinWorkDouble * rhsC_;
   /// zVec
-  double * zVec_;
+  CoinWorkDouble * zVec_;
   /// wVec
-  double * wVec_;
+  CoinWorkDouble * wVec_;
   /// cholesky.
   ClpCholeskyBase * cholesky_;
   /// numberComplementarityPairs i.e. ones with lower and/or upper bounds (not fixed)

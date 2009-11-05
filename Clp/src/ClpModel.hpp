@@ -1,3 +1,4 @@
+/* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
 #ifndef ClpModel_H
@@ -16,15 +17,10 @@
 #include "ClpPackedMatrix.hpp"
 #include "CoinMessageHandler.hpp"
 #include "CoinHelperFunctions.hpp"
+#include "CoinFinite.hpp"
 #include "ClpParameters.hpp"
 #include "ClpObjective.hpp"
 class ClpEventHandler;
-
-// Plus infinity
-#ifndef COIN_DBL_MAX
-#define COIN_DBL_MAX DBL_MAX
-#endif
-
 /** This is the base class for Linear and quadratic Models
     This knows nothing about the algorithm, but it seems to
     have a reasonable amount of information
@@ -836,7 +832,7 @@ public:
       4 - Force outgoing variables to exact bound (primal)
       8 - Safe to use dense initial factorization
       16 -Just use basic variables for operation if column generation
-      32 -Clean up with primal before strong branching
+      32 -Create ray even in BAB
       64 -Treat problem as feasible until last minute (i.e. minimize infeasibilities)
       128 - Switch off all matrix sanity checks
       256 - No row copy
@@ -848,7 +844,7 @@ public:
       16384 - In fast dual (so we can switch off things)
       32768 - called from Osi
       65536 - keep arrays around as much as possible (also use maximumR/C)
-      131072 - unused
+      131072 - transposeTimes is -1.0 and can skip basic and fixed
       262144 - extra copy of scaled matrix
       524288 - Clp fast dual
       1048576 - don't need to finish dual (can return 3)
@@ -862,10 +858,10 @@ public:
       0x01000000 is Cbc (and in branch and bound)
       0x02000000 is in a different branch and bound
   */
-#define COIN_CBC_USING_CLP 0x01000000
   inline unsigned int specialOptions() const
   { return specialOptions_;}
   void setSpecialOptions(unsigned int value);
+#define COIN_CBC_USING_CLP 0x01000000
   inline bool inCbcBranchAndBound() const
   { return (specialOptions_&COIN_CBC_USING_CLP)!=0;}
   //@}
@@ -968,7 +964,8 @@ protected:
   double * inverseRowScale_;
   /// Inverse column scale factors for matrix (end of columnScale_)
   double * inverseColumnScale_;
-  /// Scale flag, 0 none, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic
+  /** Scale flag, 0 none, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic,
+      5 geometric on rows */
   int scalingFlag_;
   /** Status (i.e. basis) Region.  I know that not all algorithms need a status
       array, but it made sense for things like crossover and put

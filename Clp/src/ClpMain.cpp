@@ -1,3 +1,4 @@
+/* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
    
@@ -19,8 +20,7 @@ int boundary_sort3=10000;
 #include "CoinHelperFunctions.hpp"
 #include "CoinSort.hpp"
 // History since 1.0 at end
-#define CLPVERSION "1.10.00"
-
+#include "ClpConfig.h"
 #include "CoinMpsIO.hpp"
 #include "CoinFileIO.hpp"
 
@@ -66,7 +66,7 @@ extern "C" {
 #if defined(_MSC_VER)
    __cdecl
 #endif // _MSC_VER
-   signal_handler(int whichSignal)
+   signal_handler(int /*whichSignal*/)
    {
       if (currentModel!=NULL) 
 	 currentModel->setMaximumIterations(0); // stop at next iterations
@@ -81,12 +81,13 @@ extern "C" {
 #endif
 
 int mainTest (int argc, const char *argv[],int algorithm,
-	      ClpSimplex empty, bool doPresolve,int switchOff,bool doVector);
+	      ClpSimplex empty, ClpSolve solveOptions,int switchOff,bool doVector);
 static void statistics(ClpSimplex * originalModel, ClpSimplex * model);
 static void generateCode(const char * fileName,int type);
 // Returns next valid field
 int CbcOrClpRead_mode=1;
 FILE * CbcOrClpReadCommand=stdin;
+extern int CbcOrClpEnvironmentIndex;
 
 int
 #if defined(_MSC_VER)
@@ -189,7 +190,8 @@ main (int argc, const char *argv[])
     // Hidden stuff for barrier
     int choleskyType = 0;
     int gamma=0;
-    int scaleBarrier=0;
+    parameters[whichParam(BARRIERSCALE,numberParameters,parameters)].setCurrentOption(2);
+    int scaleBarrier=2;
     int doKKT=0;
     int crossover=2; // do crossover unless quadratic
     
@@ -238,8 +240,8 @@ main (int argc, const char *argv[])
       // see if ? at end
       int numberQuery=0;
       if (field!="?"&&field!="???") {
-	size_t length = field.length();
-	long i;
+	int length = field.length();
+	int i;
 	for (i=length-1;i>0;i--) {
 	  if (field[i]=='?') 
 	    numberQuery++;
@@ -279,8 +281,13 @@ main (int argc, const char *argv[])
 	  std::cout<<"abcd without value (where expected) gives current value"<<std::endl;
 	  std::cout<<"abcd value sets value"<<std::endl;
 	  std::cout<<"Commands are:"<<std::endl;
-	  int maxAcross=5;
+	  int maxAcross=10;
 	  bool evenHidden=false;
+	  int printLevel = 
+	    parameters[whichParam(ALLCOMMANDS,
+				   numberParameters,parameters)].currentOptionAsInteger();
+	  int convertP[]={2,1,0};
+	  printLevel=convertP[printLevel];
 	  if ((verbose&8)!=0) {
 	    // even hidden
 	    evenHidden = true;
@@ -297,6 +304,7 @@ main (int argc, const char *argv[])
 	  int iType;
 	  for (iType=0;iType<4;iType++) {
 	    int across=0;
+	    int lengthLine=0;
             if ((verbose%4)!=0)
               std::cout<<std::endl;
 	    std::cout<<types[iType]<<std::endl;
@@ -304,16 +312,23 @@ main (int argc, const char *argv[])
               std::cout<<std::endl;
 	    for ( iParam=0; iParam<numberParameters; iParam++ ) {
 	      int type = parameters[iParam].type();
-	      if ((parameters[iParam].displayThis()||evenHidden)&&
+	      //printf("%d type %d limits %d %d display %d\n",iParam,
+	      //   type,limits[iType],limits[iType+1],parameters[iParam].displayThis());
+	      if ((parameters[iParam].displayThis()>=printLevel||evenHidden)&&
 		  type>=limits[iType]
 		  &&type<limits[iType+1]) {
 		if (!across) {
-                  if ((verbose&2)==0) 
-                    std::cout<<"  ";
-                  else
+                  if ((verbose&2)!=0) 
                     std::cout<<"Command ";
                 }
-                std::cout<<parameters[iParam].matchName()<<"  ";
+		int length = parameters[iParam].lengthMatchName()+1;
+		if (lengthLine+length>80) {
+		  std::cout<<std::endl;
+		  across=0;
+		  lengthLine=0;
+		}
+                std::cout<<" "<<parameters[iParam].matchName();
+		lengthLine += length ;
 		across++;
 		if (across==maxAcross) {
 		  across=0;
@@ -518,6 +533,9 @@ main (int argc, const char *argv[])
 	    case PFI:
 	      models[iModel].factorization()->setForrestTomlin(action==0);
 	      break;
+	    case FACTORIZATION:
+	      models[iModel].factorization()->forceOtherFactorization(action);
+	      break;
 	    case CRASH:
 	      doCrash=action;
 	      break;
@@ -543,7 +561,8 @@ main (int argc, const char *argv[])
 	      crossover=action;
 	      break;
 	    default:
-	      abort();
+	      //abort();
+	      break;
 	    }
 	  }
 	} else {
@@ -709,8 +728,11 @@ main (int argc, const char *argv[])
 		  solveOptions.setSpecialOption(1,11); // switch off values
 	      } else if (method==ClpSolve::useBarrier||method==ClpSolve::useBarrierNoCross) {
 		int barrierOptions = choleskyType;
-		if (scaleBarrier)
-		  barrierOptions |= 8;
+		if (scaleBarrier) {
+		  if ((scaleBarrier&1)!=0) 
+		    barrierOptions |= 8;
+		  barrierOptions |= 2048*(scaleBarrier>>1);
+		}
 		if (doKKT)
 		  barrierOptions |= 16;
 		if (gamma)
@@ -879,7 +901,7 @@ main (int argc, const char *argv[])
 		// See if .lp
 		{
 		  const char * c_name = field.c_str();
-		  size_t length = strlen(c_name);
+		  int length = strlen(c_name);
 		  if (length>3&&!strncmp(c_name+length-3,".lp",3))
 		    gmpl=-1; // .lp
 		}
@@ -908,13 +930,13 @@ main (int argc, const char *argv[])
 		} else {
 		  fileName = directory+field;
                   // See if gmpl (model & data) - or even lp file
-                  size_t length = field.size();
-                  size_t percent = field.find('%');
+                  int length = field.size();
+                  int percent = field.find('%');
                   if (percent<length&&percent>0) {
                     gmpl=1;
                     fileName = directory+field.substr(0,percent);
                     gmplData = directory+field.substr(percent+1);
-                    if (percent+1<length)
+                    if (percent<length-1)
                       gmpl=2; // two files
                     printf("GMPL model file %s and data file %s\n",
                            fileName.c_str(),gmplData.c_str());
@@ -1431,7 +1453,7 @@ main (int argc, const char *argv[])
 	    {
 	      std::string name = CoinReadGetString(argc,argv);
 	      if (name!="EOL") {
-		size_t length=name.length();
+		int length=name.length();
 		if (name[length-1]==dirsep) {
 		  directory = name;
 		} else {
@@ -1447,7 +1469,7 @@ main (int argc, const char *argv[])
 	    {
 	      std::string name = CoinReadGetString(argc,argv);
 	      if (name!="EOL") {
-		size_t length=name.length();
+		int length=name.length();
 		if (name[length-1]==dirsep) {
 		  dirSample = name;
 		} else {
@@ -1463,7 +1485,7 @@ main (int argc, const char *argv[])
 	    {
 	      std::string name = CoinReadGetString(argc,argv);
 	      if (name!="EOL") {
-		size_t length=name.length();
+		int length=name.length();
 		if (name[length-1]==dirsep) {
 		  dirNetlib = name;
 		} else {
@@ -1479,7 +1501,7 @@ main (int argc, const char *argv[])
 	    {
 	      std::string name = CoinReadGetString(argc,argv);
 	      if (name!="EOL") {
-		size_t length=name.length();
+		int length=name.length();
 		if (name[length-1]==dirsep) {
 		  dirMiplib = name;
 		} else {
@@ -1532,8 +1554,35 @@ main (int argc, const char *argv[])
 	      }
               int specialOptions = models[iModel].specialOptions();
               models[iModel].setSpecialOptions(0);
+	      ClpSolve solveOptions;
+	      ClpSolve::PresolveType presolveType;
+	      if (preSolve)
+		presolveType=ClpSolve::presolveOn;
+	      else
+		presolveType=ClpSolve::presolveOff;
+	      solveOptions.setPresolveType(presolveType,5);
+	      if (doSprint>=0||doIdiot>=0) {
+		if (doSprint>0) {
+		  // sprint overrides idiot
+		  solveOptions.setSpecialOption(1,3,doSprint); // sprint
+		} else if (doIdiot>0) {
+		  solveOptions.setSpecialOption(1,2,doIdiot); // idiot
+		} else {
+		  if (doIdiot==0) {
+		    if (doSprint==0)
+		      solveOptions.setSpecialOption(1,4); // all slack
+		    else
+		      solveOptions.setSpecialOption(1,9); // all slack or sprint
+		  } else {
+		    if (doSprint==0)
+		      solveOptions.setSpecialOption(1,8); // all slack or idiot
+		    else
+		      solveOptions.setSpecialOption(1,7); // initiative
+		  }
+		}
+	      }
 	      mainTest(nFields,fields,algorithm,models[iModel],
-		       (preSolve!=0),specialOptions,doVector!=0);
+		       solveOptions,specialOptions,doVector!=0);
 	    }
 	    break;
 	  case UNITTEST:
@@ -1550,7 +1599,15 @@ main (int argc, const char *argv[])
               int algorithm=-1;
               if (models[iModel].numberRows())
                 algorithm=7;
-	      mainTest(nFields,fields,algorithm,models[iModel],(preSolve!=0),specialOptions,doVector!=0);
+	      ClpSolve solveOptions;
+	      ClpSolve::PresolveType presolveType;
+	      if (preSolve)
+		presolveType=ClpSolve::presolveOn;
+	      else
+		presolveType=ClpSolve::presolveOff;
+	      solveOptions.setPresolveType(presolveType,5);
+	      mainTest(nFields,fields,algorithm,models[iModel],
+		       solveOptions,specialOptions,doVector!=0);
 	    }
 	    break;
 	  case FAKEBOUND:
@@ -1688,7 +1745,8 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 		// make fancy later on
 		int iRow;
 		int numberRows=models[iModel].numberRows();
-		size_t lengthName = models[iModel].lengthNames(); // 0 if no names
+		int lengthName = models[iModel].lengthNames(); // 0 if no names
+		int lengthPrint = CoinMax(lengthName,8);
 		// in general I don't want to pass around massive
 		// amounts of data but seems simpler here
 		std::vector<std::string> rowNames =
@@ -1702,18 +1760,16 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 		double * rowLower = models[iModel].rowLower();
 		double * rowUpper = models[iModel].rowUpper();
 		double primalTolerance = models[iModel].primalTolerance();
-		char format[6];
-		sprintf(format,"%%-%ds",(int)CoinMax(lengthName,(size_t)8));
                 bool doMask = (printMask!=""&&lengthName);
 		int * maskStarts=NULL;
-		size_t maxMasks=0;
+		int maxMasks=0;
 		char ** masks =NULL;
 		if (doMask) {
 		  int nAst =0;
 		  const char * pMask2 = printMask.c_str();
 		  char pMask[100];
-		  size_t iChar;
-		  size_t lengthMask = strlen(pMask2);
+		  int iChar;
+		  int lengthMask = strlen(pMask2);
 		  assert (lengthMask<100);
 		  if (*pMask2=='"') {
 		    if (pMask2[lengthMask-1]!='"') {
@@ -1745,32 +1801,32 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 		      maxMasks *= (lengthName+1);
 		    }
 		  }
-		  size_t nEntries = 1;
+		  int nEntries = 1;
 		  maskStarts = new int[lengthName+2];
 		  masks = new char * [maxMasks];
 		  char ** newMasks = new char * [maxMasks];
-		  size_t i;
+		  int i;
 		  for (i=0;i<maxMasks;i++) {
 		    masks[i] = new char[lengthName+1];
 		    newMasks[i] = new char[lengthName+1];
 		  }
 		  strcpy(masks[0],pMask);
 		  for (int iAst=0;iAst<nAst;iAst++) {
-		    size_t nOldEntries = nEntries;
+		    int nOldEntries = nEntries;
 		    nEntries=0;
-		    for (size_t iEntry = 0;iEntry<nOldEntries;iEntry++) {
+		    for (int iEntry = 0;iEntry<nOldEntries;iEntry++) {
 		      char * oldMask = masks[iEntry];
 		      char * ast = strchr(oldMask,'*');
 		      assert (ast);
-		      size_t length = strlen(oldMask)-1;
-		      size_t nBefore = ast-oldMask;
-		      size_t nAfter = length-nBefore;
+		      int length = strlen(oldMask)-1;
+		      int nBefore = ast-oldMask;
+		      int nAfter = length-nBefore;
 		      // and add null
 		      nAfter++;
-		      for (size_t i=0;i<=lengthName-length;i++) {
+		      for (int i=0;i<=lengthName-length;i++) {
 			char * maskOut = newMasks[nEntries];
    CoinMemcpyN(oldMask,nBefore,maskOut);
-			for (size_t k=0;k<i;k++) 
+			for (int k=0;k<i;k++) 
 			  maskOut[k+nBefore]='?';
    CoinMemcpyN(ast+1,nAfter,maskOut+nBefore+i);
 			nEntries++;
@@ -1782,23 +1838,23 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 		    newMasks = temp;
 		  }
 		  // Now extend and sort
-		  size_t* sort = new size_t[nEntries];
+		  int * sort = new int[nEntries];
 		  for (i=0;i<nEntries;i++) {
 		    char * maskThis = masks[i];
-		    size_t length = strlen(maskThis);
+		    int length = strlen(maskThis);
 		    while (maskThis[length-1]==' ')
 		      length--;
 		    maskThis[length]='\0';
 		    sort[i]=length;
 		  }
 		  CoinSort_2(sort,sort+nEntries,masks);
-		  long lastLength=-1;
+		  int lastLength=-1;
 		  for (i=0;i<nEntries;i++) {
-		    size_t length = sort[i];
-		    while ((long)length>lastLength) 
-		      maskStarts[++lastLength] = (int)i;
+		    int length = sort[i];
+		    while (length>lastLength) 
+		      maskStarts[++lastLength] = i;
 		  }
-		  maskStarts[++lastLength]=(int)nEntries;
+		  maskStarts[++lastLength]=nEntries;
 		  delete [] sort;
 		  for (i=0;i<maxMasks;i++)
 		    delete [] newMasks[i];
@@ -1820,9 +1876,16 @@ clp watson.mps -\nscaling off\nprimalsimplex"
                       type=0;
                     if (type) {
                       fprintf(fp,"%7d ",iRow);
-                      if (lengthName)
-                        fprintf(fp,format,rowNames[iRow].c_str());
-                      fprintf(fp,"%15.8g        %15.8g\n",primalRowSolution[iRow],
+                      if (lengthName) {
+			const char * name = rowNames[iRow].c_str();
+			int n=strlen(name);
+			int i;
+			for (i=0;i<n;i++)
+			  fprintf(fp,"%c",name[i]);
+			for (;i<lengthPrint;i++)
+			  fprintf(fp," ");
+		      }
+                      fprintf(fp," %15.8g        %15.8g\n",primalRowSolution[iRow],
                               dualRowSolution[iRow]);
                     }
                   }
@@ -1851,9 +1914,16 @@ clp watson.mps -\nscaling off\nprimalsimplex"
                     type =0;
 		  if (type) {
 		    fprintf(fp,"%7d ",iColumn);
-		    if (lengthName)
-		      fprintf(fp,format,columnNames[iColumn].c_str());
-		    fprintf(fp,"%15.8g        %15.8g\n",
+		    if (lengthName) {
+		      const char * name = columnNames[iColumn].c_str();
+		      int n=strlen(name);
+		      int i;
+		      for (i=0;i<n;i++)
+			fprintf(fp,"%c",name[i]);
+		      for (;i<lengthPrint;i++)
+			fprintf(fp," ");
+		    }
+		    fprintf(fp," %15.8g        %15.8g\n",
 			    primalColumnSolution[iColumn],
 			    dualColumnSolution[iColumn]);
 		  }
@@ -1862,7 +1932,7 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 		  fclose(fp);
 		if (masks) {
 		  delete [] maskStarts;
-		  for (size_t i=0;i<maxMasks;i++)
+		  for (int i=0;i<maxMasks;i++)
 		    delete [] masks[i];
 		  delete [] masks;
 		}
@@ -1907,6 +1977,9 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 	      std::cout<<"** Current model not valid"<<std::endl;
 	      
 	    }
+	    break;
+	  case ENVIRONMENT:
+	    CbcOrClpEnvironmentIndex=0;
 	    break;
 	  default:
 	    abort();
@@ -2604,7 +2677,7 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
 	if (numberPossible>1&&!numberIntegers) {
 	  //printf("possible %d - but no integers\n",numberPossible);
 	}
-	if (numberPossible>1&&(numberIntegers||true)) {
+	if (numberPossible>1&&(numberIntegers||false)) {
 	  // 
 	  printf("possible %d - %d integers\n",numberPossible,numberIntegers);
 	  int lastLook=iLook;
@@ -2888,12 +2961,12 @@ static bool maskMatches(const int * starts, char ** masks,
 {
   // back to char as I am old fashioned
   const char * checkC = check.c_str();
-  size_t length = strlen(checkC);
+  int length = strlen(checkC);
   while (checkC[length-1]==' ')
     length--;
   for (int i=starts[length];i<starts[length+1];i++) {
     char * thisMask = masks[i];
-    size_t k;
+    int k;
     for ( k=0;k<length;k++) {
       if (thisMask[k]!='?'&&thisMask[k]!=checkC[k]) 
 	break;
@@ -2998,4 +3071,5 @@ static void generateCode(const char * fileName,int type)
   1.03.03 June 13 2006.  For clean up after dual perturbation
   1.04.01 June 26 2007.  Lots of changes but I got lazy
   1.05.00 June 27 2007.  This is trunk so when gets to stable will be 1.5
+  1.11.00 November 5 2009 (Guy Fawkes) - OSL factorization and better ordering
  */

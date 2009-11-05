@@ -1,3 +1,4 @@
+/* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
@@ -50,7 +51,7 @@ ClpDualRowPivot::operator=(const ClpDualRowPivot& rhs)
   return *this;
 }
 void 
-ClpDualRowPivot::saveWeights(ClpSimplex * model,int mode)
+ClpDualRowPivot::saveWeights(ClpSimplex * model,int /*mode*/)
 {
   model_=model;
 }

@@ -1,3 +1,4 @@
+/* $Id: ClpNode.hpp 1430 2009-09-15 15:51:17Z forrest $ */
 // Copyright (C) 2008, International Business Machines
 // Corporation and others.  All Rights Reserved.
 #ifndef ClpNode_H
@@ -184,6 +185,7 @@ public:
   //@{
   /** Fill with pseudocosts */
   void fillPseudoCosts(const double * down, const double * up, 
+		       const int * priority,
 		       const int * numberDown, const int * numberUp,
 		       const int * numberDownInfeasible, const int * numberUpInfeasible,
 		       int number);
@@ -202,10 +204,14 @@ public:
   double integerTolerance_;
   /// Integer increment
   double integerIncrement_;
+  /// Small chnage in branch
+  double smallChange_;
   /// Down pseudo costs
   double * downPseudo_;
   /// Up pseudo costs
   double * upPseudo_;
+  /// Priority
+  int * priority_;
   /// Number of times down
   int * numberDown_;
   /// Number of times up
@@ -239,6 +245,10 @@ public:
   int solverOptions_;
   /// Maximum number of nodes to do
   int maximumNodes_;
+  /// Number before trust from CbcModel
+  int numberBeforeTrust_;
+  /// State of search from CbcModel
+  int stateOfSearch_;
   /// Number deep
   int nDepth_;
   /// Number nodes returned (-1 if fathom aborted)

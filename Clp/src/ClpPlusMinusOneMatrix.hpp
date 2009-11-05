@@ -1,3 +1,4 @@
+/* $Id$ */
 // Copyright (C) 2003, International Business Machines
 // Corporation and others.  All Rights Reserved.
 #ifndef ClpPlusMinusOneMatrix_H
@@ -68,9 +69,8 @@ public:
   /** Returns a new matrix in reverse order without gaps */
   virtual ClpMatrixBase * reverseOrderedCopy() const;
   /// Returns number of elements in column part of basis 
-  virtual CoinBigIndex countBasis(ClpSimplex * model,
+  virtual CoinBigIndex countBasis(
 				 const int * whichColumn, 
-				 int numberRowBasic,
 				  int & numberColumnBasic);
   /// Fills in column part of basis
   virtual void fillBasis(ClpSimplex * model,
@@ -172,7 +172,7 @@ public:
   /// Updates two arrays for steepest 
   virtual void transposeTimes2(const ClpSimplex * model,
                                const CoinIndexedVector * pi1, CoinIndexedVector * dj1,
-                               const CoinIndexedVector * pi2, CoinIndexedVector * dj2,
+                               const CoinIndexedVector * pi2,
                                CoinIndexedVector * spare,
                                double referenceIn, double devex,
                                // Array for exact devex to say what is in reference framework

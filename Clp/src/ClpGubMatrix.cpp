@@ -1,3 +1,4 @@
+/* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
@@ -891,16 +892,14 @@ ClpGubMatrix::subsetTransposeTimes(const ClpSimplex * model,
 }
 /// returns number of elements in column part of basis,
 CoinBigIndex 
-ClpGubMatrix::countBasis(ClpSimplex * model,
-			   const int * whichColumn, 
-			   int numberBasic,
+ClpGubMatrix::countBasis(const int * whichColumn, 
 			 int & numberColumnBasic)
 {
   int i;
   int numberColumns = getNumCols();
   const int * columnLength = matrix_->getVectorLengths(); 
   int numberRows = getNumRows();
-  int saveNumberBasic=numberBasic;
+  int numberBasic=0;
   CoinBigIndex numberElements=0;
   int lastSet=-1;
   int key=-1;
@@ -964,7 +963,7 @@ ClpGubMatrix::countBasis(ClpSimplex * model,
   delete [] work;
   delete [] mark;
   // update number of column basic
-  numberColumnBasic = numberBasic-saveNumberBasic;
+  numberColumnBasic = numberBasic;
   return numberElements;
 }
 void
@@ -2212,7 +2211,7 @@ ClpGubMatrix::primalExpanded(ClpSimplex * model,int mode)
 void 
 ClpGubMatrix::dualExpanded(ClpSimplex * model,
 			    CoinIndexedVector * array,
-			    double * other,int mode)
+			   double * /*other*/,int mode)
 {
   switch (mode) {
     // modify costs before transposeUpdate
@@ -2222,7 +2221,7 @@ ClpGubMatrix::dualExpanded(ClpSimplex * model,
       double * cost = model->costRegion();
       ClpSimplex::Status iStatus;
       // not dual values yet
-      assert (!other);
+      //assert (!other);
       //double * work = array->denseVector();
       double infeasibilityCost = model->infeasibilityCost();
       int * pivotVariable = model->pivotVariable();
@@ -2592,7 +2591,7 @@ ClpGubMatrix::dualExpanded(ClpSimplex * model,
 }
 // This is local to Gub to allow synchronization when status is good
 int 
-ClpGubMatrix::synchronize(ClpSimplex * model, int mode)
+ClpGubMatrix::synchronize(ClpSimplex *, int)
 {
   return 0;
 }
@@ -3510,7 +3509,11 @@ ClpGubMatrix::redoSet(ClpSimplex * model, int newKey, int oldKey, int iSet)
    or big gub or anywhere where going through full columns is
    expensive.  This may re-compute */
 double * 
-ClpGubMatrix::rhsOffset(ClpSimplex * model,bool forceRefresh,bool check)
+ClpGubMatrix::rhsOffset(ClpSimplex * model,bool forceRefresh,bool 
+#ifdef CLP_DEBUG
+check
+#endif
+)
 {
   //forceRefresh=true;
   if (rhsOffset_) {
@@ -3637,7 +3640,7 @@ ClpGubMatrix::rhsOffset(ClpSimplex * model,bool forceRefresh,bool check)
    update information for a pivot (and effective rhs)
 */
 int 
-ClpGubMatrix::updatePivot(ClpSimplex * model,double oldInValue, double oldOutValue)
+ClpGubMatrix::updatePivot(ClpSimplex * model,double oldInValue, double /*oldOutValue*/)
 {
   int sequenceIn = model->sequenceIn();
   int sequenceOut = model->sequenceOut();
@@ -4075,7 +4078,7 @@ ClpGubMatrix::switchOffCheck()
 }
 // Correct sequence in and out to give true value
 void 
-ClpGubMatrix::correctSequence(const ClpSimplex * model,int & sequenceIn, int & sequenceOut)
+ClpGubMatrix::correctSequence(const ClpSimplex * /*model*/,int & sequenceIn, int & sequenceOut)
 {
   if (sequenceIn!=-999) {
     sequenceIn = trueSequenceIn_;

@@ -1,3 +1,4 @@
+/* $Id$ */
 /*
  * Include file for the configuration of Clp.
  *
@@ -56,6 +57,10 @@
 /* Define to 1 if readline is available */
 /* #undef COIN_HAS_READLINE */
 
+
 #endif /* HAVE_CONFIG_H */
 
+#ifndef CLPVERSION 
+#define CLPVERSION "1.11.0"
+#endif
 #endif /*__HAVE_COINUTILS_CONFIG_H__*/

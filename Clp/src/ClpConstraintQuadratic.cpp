@@ -1,3 +1,4 @@
+/* $Id: ClpConstraintQuadratic.cpp 1402 2009-07-25 08:39:55Z forrest $ */
 // Copyright (C) 2007, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
@@ -225,7 +226,7 @@ ClpConstraintQuadratic::deleteSome(int numberToDelete, const int * which)
 }
 // Scale constraint 
 void 
-ClpConstraintQuadratic::reallyScale(const double * columnScale) 
+ClpConstraintQuadratic::reallyScale(const double * ) 
 {
   abort();
 }

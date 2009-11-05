@@ -1,3 +1,4 @@
+/* $Id$ */
 // Copyright (C) 2003, International Business Machines
 // Corporation and others.  All Rights Reserved. 
 
@@ -41,7 +42,7 @@ MyMessageHandler::MyMessageHandler (const MyMessageHandler & rhs)
 }
 
 MyMessageHandler::MyMessageHandler (const CoinMessageHandler & rhs) 
-  : CoinMessageHandler(),
+  : CoinMessageHandler(rhs),
     model_(NULL),
     feasibleExtremePoints_(),
     iterationNumber_(-1)
@@ -50,7 +51,7 @@ MyMessageHandler::MyMessageHandler (const CoinMessageHandler & rhs)
 
 // Constructor with pointer to model
 MyMessageHandler::MyMessageHandler(ClpSimplex * model,
-               FILE * userPointer)
+				   FILE * /*userPointer*/)
   : CoinMessageHandler(),
     model_(model),
     feasibleExtremePoints_(),
@@ -125,10 +126,11 @@ MyMessageHandler::print()
         feasibleExtremePoints_.push_front(feasibleExtremePoint);
 
         // Want maximum of 10 solutions, so if more then 10 get rid of oldest
-        size_t numExtremePointsSaved = feasibleExtremePoints_.size();
+        int numExtremePointsSaved = feasibleExtremePoints_.size();
         if ( numExtremePointsSaved>=10 ) {
           feasibleExtremePoints_.pop_back();
-          assert( feasibleExtremePoints_.size() + 1 == numExtremePointsSaved );
+          assert( feasibleExtremePoints_.size() == 
+		  static_cast<unsigned int> (numExtremePointsSaved)-1 );
         };
 
       }

@@ -1,3 +1,4 @@
+/* $Id$ */
 // Copyright (C) 2004, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
@@ -567,7 +568,11 @@ ClpDynamicMatrix::partialPricing(ClpSimplex * model, double startFraction, doubl
    expensive.  This may re-compute */
 double * 
 ClpDynamicMatrix::rhsOffset(ClpSimplex * model,bool forceRefresh,
-		      bool check)
+		      bool
+#ifdef CLP_DEBUG
+ check
+#endif
+)
 {
   //forceRefresh=true;
   if (!model_->numberIterations())
@@ -890,8 +895,8 @@ ClpDynamicMatrix::updatePivot(ClpSimplex * model,double oldInValue, double oldOu
 */
 void 
 ClpDynamicMatrix::dualExpanded(ClpSimplex * model,
-			    CoinIndexedVector * array,
-			    double * other,int mode)
+			       CoinIndexedVector * /*array*/,
+			       double * /*other*/,int mode)
 {
   switch (mode) {
     // modify costs before transposeUpdate

@@ -1,3 +1,4 @@
+/* $Id$ */
 // Copyright (C) 2003, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
@@ -97,13 +98,14 @@ ClpLinearObjective::operator=(const ClpLinearObjective& rhs)
 
 // Returns gradient
 double *  
-ClpLinearObjective::gradient(const ClpSimplex * model,
-			     const double * solution, double & offset,bool refresh,
-			     int includeLinear)
+ClpLinearObjective::gradient(const ClpSimplex * /*model*/,
+			     const double * /*solution*/, double & offset,
+			     bool /*refresh*/,
+			     int /*includeLinear*/)
 {
   // not sure what to do about scaling
   //assert (!model);
-  assert (includeLinear==2); //otherwise need to return all zeros
+  //assert (includeLinear==2); //otherwise need to return all zeros
   offset=0.0;
   return objective_;
 }
@@ -112,7 +114,7 @@ ClpLinearObjective::gradient(const ClpSimplex * model,
  */
 double 
 ClpLinearObjective::reducedGradient(ClpSimplex * model, double * region,
-				 bool useFeasibleCosts)
+				    bool /*useFeasibleCosts*/)
 {
   int numberRows = model->numberRows();
   //work space
@@ -129,7 +131,7 @@ ClpLinearObjective::reducedGradient(ClpSimplex * model, double * region,
   int * index = arrayVector.getIndices();
   int number=0;
   const double * cost = model->costRegion();
-  assert (!useFeasibleCosts);
+  //assert (!useFeasibleCosts);
   const int * pivotVariable = model->pivotVariable();
   for (iRow=0;iRow<numberRows;iRow++) {
     int iPivot=pivotVariable[iRow];

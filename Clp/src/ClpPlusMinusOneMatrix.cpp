@@ -1,3 +1,4 @@
+/* $Id$ */
 // Copyright (C) 2003, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
@@ -471,8 +472,8 @@ ClpPlusMinusOneMatrix::transposeTimes(double scalar,
 void 
 ClpPlusMinusOneMatrix::times(double scalar,
 		       const double * x, double * y,
-		       const double * rowScale, 
-		       const double * columnScale) const
+			     const double * /*rowScale*/, 
+			     const double * /*columnScale*/) const
 {
   // we know it is not scaled 
   times(scalar, x, y);
@@ -480,8 +481,9 @@ ClpPlusMinusOneMatrix::times(double scalar,
 void 
 ClpPlusMinusOneMatrix::transposeTimes( double scalar,
 				 const double * x, double * y,
-				 const double * rowScale, 
-				 const double * columnScale, double * spare) const
+				       const double * /*rowScale*/, 
+				       const double * /*columnScale*/,
+				       double * /*spare*/) const
 {
   // we know it is not scaled 
   transposeTimes(scalar, x, y);
@@ -889,7 +891,7 @@ ClpPlusMinusOneMatrix::transposeTimesByRow(const ClpSimplex * model, double scal
 /* Return <code>x *A in <code>z</code> but
    just for indices in y. */
 void 
-ClpPlusMinusOneMatrix::subsetTransposeTimes(const ClpSimplex * model,
+ClpPlusMinusOneMatrix::subsetTransposeTimes(const ClpSimplex * ,
 			      const CoinIndexedVector * rowArray,
 			      const CoinIndexedVector * y,
 			      CoinIndexedVector * columnArray) const
@@ -919,9 +921,7 @@ ClpPlusMinusOneMatrix::subsetTransposeTimes(const ClpSimplex * model,
 }
 /// returns number of elements in column part of basis,
 CoinBigIndex 
-ClpPlusMinusOneMatrix::countBasis(ClpSimplex * model,
-				 const int * whichColumn, 
-				 int numberBasic,
+ClpPlusMinusOneMatrix::countBasis(const int * whichColumn, 
 				  int & numberColumnBasic)
 {
   int i;
@@ -933,7 +933,7 @@ ClpPlusMinusOneMatrix::countBasis(ClpSimplex * model,
   return numberElements;
 }
 void
-ClpPlusMinusOneMatrix::fillBasis(ClpSimplex * model,
+ClpPlusMinusOneMatrix::fillBasis(ClpSimplex * ,
 			 const int * whichColumn, 
 			 int & numberColumnBasic,
 			 int * indexRowU, int * start,
@@ -965,7 +965,7 @@ ClpPlusMinusOneMatrix::fillBasis(ClpSimplex * model,
 /* Unpacks a column into an CoinIndexedvector
  */
 void 
-ClpPlusMinusOneMatrix::unpack(const ClpSimplex * model,
+ClpPlusMinusOneMatrix::unpack(const ClpSimplex * ,
 			      CoinIndexedVector * rowArray,
 			      int iColumn) const 
 {
@@ -984,7 +984,7 @@ ClpPlusMinusOneMatrix::unpack(const ClpSimplex * model,
 Note that model is NOT const.  Bounds and objective could
 be modified if doing column generation (just for this variable) */
 void 
-ClpPlusMinusOneMatrix::unpackPacked(ClpSimplex * model,
+ClpPlusMinusOneMatrix::unpackPacked(ClpSimplex * ,
 			    CoinIndexedVector * rowArray,
 			    int iColumn) const
 {
@@ -1008,7 +1008,7 @@ ClpPlusMinusOneMatrix::unpackPacked(ClpSimplex * model,
 /* Adds multiple of a column into an CoinIndexedvector
       You can use quickAdd to add to vector */
 void 
-ClpPlusMinusOneMatrix::add(const ClpSimplex * model,CoinIndexedVector * rowArray,
+ClpPlusMinusOneMatrix::add(const ClpSimplex * ,CoinIndexedVector * rowArray,
 		   int iColumn, double multiplier) const 
 {
   CoinBigIndex j=startPositive_[iColumn];
@@ -1023,7 +1023,7 @@ ClpPlusMinusOneMatrix::add(const ClpSimplex * model,CoinIndexedVector * rowArray
 }
 /* Adds multiple of a column into an array */
 void 
-ClpPlusMinusOneMatrix::add(const ClpSimplex * model,double * array,
+ClpPlusMinusOneMatrix::add(const ClpSimplex * ,double * array,
 		    int iColumn, double multiplier) const
 {
   CoinBigIndex j=startPositive_[iColumn];
@@ -1675,7 +1675,7 @@ ClpPlusMinusOneMatrix::canCombine(const ClpSimplex * model,
 void 
 ClpPlusMinusOneMatrix::transposeTimes2(const ClpSimplex * model,
                                  const CoinIndexedVector * pi1, CoinIndexedVector * dj1,
-                                 const CoinIndexedVector * pi2, CoinIndexedVector * dj2,
+                                 const CoinIndexedVector * pi2,
                                  CoinIndexedVector * spare,
                                  double referenceIn, double devex,
                                  // Array for exact devex to say what is in reference framework
@@ -1819,9 +1819,9 @@ ClpPlusMinusOneMatrix::transposeTimes2(const ClpSimplex * model,
 }
 // Updates second array for steepest and does devex weights
 void 
-ClpPlusMinusOneMatrix::subsetTimes2(const ClpSimplex * model,
+ClpPlusMinusOneMatrix::subsetTimes2(const ClpSimplex * ,
                               CoinIndexedVector * dj1,
-                            const CoinIndexedVector * pi2, CoinIndexedVector * dj2,
+                            const CoinIndexedVector * pi2, CoinIndexedVector *,
                             double referenceIn, double devex,
                             // Array for exact devex to say what is in reference framework
                             unsigned int * reference,
@@ -1928,7 +1928,7 @@ ClpPlusMinusOneMatrix::setDimensions(int newnumrows, int newnumcols)
 int 
 ClpPlusMinusOneMatrix::appendMatrix(int number, int type,
                                     const CoinBigIndex * starts, const int * index,
-                                    const double * element, int numberOther)
+                                    const double * element, int /*numberOther*/)
 {
   int numberErrors=0;
   // make into CoinPackedVector

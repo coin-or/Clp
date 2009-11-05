@@ -1,3 +1,4 @@
+/* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
@@ -68,13 +69,13 @@ static void solveSmall(int nsolve,double **aIn,double **a, double * b) {
 }
 IdiotResult 
 Idiot::objval(int nrows, int ncols, double * rowsol , double * colsol,
-	      double * pi, double * djs, const double * cost , 
-	      const double * rowlower,
-	      const double * rowupper, const double * lower,
-	      const double * upper, const double * elemnt, 
+	      double * pi, double * /*djs*/, const double * cost , 
+	      const double * /*rowlower*/,
+	      const double * rowupper, const double * /*lower*/,
+	      const double * /*upper*/, const double * elemnt, 
 	      const int * row, const CoinBigIndex * columnStart,
 	      const int * length, int extraBlock, int * rowExtra,
-	      double * solExtra, double * elemExtra, double * upperExtra,
+	      double * solExtra, double * elemExtra, double * /*upperExtra*/,
 	      double * costExtra,double weight)
 {
   IdiotResult result;

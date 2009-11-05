@@ -1,3 +1,4 @@
+/* $Id$ */
 // Copyright (C) 2003, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
@@ -43,7 +44,7 @@ ClpNetworkBasis::ClpNetworkBasis(const ClpSimplex * model,
 				 const int * permuteBack,
 				 const CoinBigIndex * startColumn, 
 				 const int * numberInColumn,
-				 const int * indexRow, const CoinFactorizationDouble * element)
+				 const int * indexRow, const CoinFactorizationDouble * /*element*/)
 {
 #ifndef COIN_FAST_CODE
   slackValue_=-1.0;

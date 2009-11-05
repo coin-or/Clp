@@ -1,3 +1,4 @@
+/* $Id$ */
 // Copyright (C) 2004, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
@@ -654,6 +655,23 @@ ClpSimplexNonlinear::whileIterating(int & pivotMode)
 			 columnArray_[0],rowArray_[1],pivotMode,solutionError,
 			 array1);
     if (result) {
+      if (result==2&&sequenceIn_<0) {
+	// does not look good
+	double currentObj;
+	double thetaObj;
+	double predictedObj;
+	objective_->stepLength(this,solution_,solution_,0.0,
+			       currentObj,thetaObj,predictedObj);
+	if (currentObj==predictedObj) {
+#ifdef CLP_INVESTIGATE
+	printf("looks bad - no change in obj %g\n",currentObj);
+#endif
+	  if (factorization_->pivots())
+	    result=3;
+	  else
+	    problemStatus_=0;
+	}
+      }
       if (result==3) 
 	break; // null vector not accurate
 #ifdef CLP_DEBUG
@@ -662,7 +680,7 @@ ClpSimplexNonlinear::whileIterating(int & pivotMode)
 	double thetaObj;
 	double predictedObj;
 	objective_->stepLength(this,solution_,solution_,0.0,
-			       currentObj,predictedObj,thetaObj);
+			       currentObj,thetaObj,predictedObj);
 	printf("obj %g after interior move\n",currentObj);
       }
 #endif
@@ -1948,7 +1966,7 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
 	//}
       }
       // always out if one variable in and zero move
-      if (theta_==basicTheta||(sequenceIn_>=0&&!theta_))
+      if (theta_==basicTheta||(sequenceIn_>=0&&theta_<1.0e-10))
 	finished=true; // come out
 #ifdef CLP_DEBUG
       if (handler_->logLevel()&32) {
@@ -2028,10 +2046,13 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
 	  //finished=true;
 	  //objTheta=0.0;
 	  //theta_=0.0;
+	} else if (sequenceIn_<0&&nTotalPasses>10) {
+	  if (objTheta<1.0e-10) {
+	    finished=true;
+	    //printf("zero move\n");
+	    break;
+	  }
 	}
-	//if (objTheta<1.0e-12) 
-	//finished=true;
-	//printf("zero move\n");
       }
 #ifdef CLP_DEBUG
       if (handler_->logLevel()&32) {
@@ -2059,8 +2080,10 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
     }
 #ifdef CLP_DEBUG
     if (handler_->logLevel()&32) 
-      printf("out of loop after %d passes\n",nPasses);
+      printf("out of loop after %d (%d) passes\n",nPasses,nTotalPasses);
 #endif
+    if (nTotalPasses>=1000||(nTotalPasses>10&&sequenceIn_<0&&theta_<1.0e-10))
+      returnCode=2;
     bool ordinaryDj=false;
     //if(sequenceIn_>=0&&numberNonBasic==1&&theta_<1.0e-7&&theta_==basicTheta) 
     //printf("could try ordinary iteration %g\n",theta_);
@@ -2270,7 +2293,7 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
 	    returnCode=1;
 	  } else {
 	    returnCode=2; // do single incoming
-	    //returnCode=1;
+	    returnCode=1;
 	  }
 	}
       }

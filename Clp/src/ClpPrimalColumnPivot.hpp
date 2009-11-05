@@ -1,3 +1,4 @@
+/* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
 #ifndef ClpPrimalcolumnPivot_H
@@ -99,7 +100,7 @@ public:
 
   /// Clone
   virtual ClpPrimalColumnPivot * clone(bool copyData = true) const = 0;
- 
+
   //@}
 
   ///@name Other
@@ -107,6 +108,9 @@ public:
   /// Returns model
   inline ClpSimplex * model()
   { return model_;}
+  /// Sets model
+  inline void setModel(ClpSimplex * model)
+  { model_=model;}
   
   /// Returns type (above 63 is extra information)
   inline int type()

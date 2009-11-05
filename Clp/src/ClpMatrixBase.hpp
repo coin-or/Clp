@@ -1,9 +1,11 @@
+/* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
 #ifndef ClpMatrixBase_H
 #define ClpMatrixBase_H
 
 #include "CoinPragma.hpp"
+#include "CoinFinite.hpp"
 
 #include "CoinPackedMatrix.hpp"
 class CoinIndexedVector;
@@ -84,9 +86,7 @@ public:
   virtual ClpMatrixBase * reverseOrderedCopy() const {return NULL;}
   
   /// Returns number of elements in column part of basis 
-  virtual CoinBigIndex countBasis(ClpSimplex * model,
-				 const int * whichColumn, 
-				 int numberRowBasic,
+  virtual CoinBigIndex countBasis(const int * whichColumn, 
 				  int & numberColumnBasic)=0;
   /// Fills in column part of basis
   virtual void fillBasis(ClpSimplex * model,
@@ -124,7 +124,7 @@ public:
       8 - report on large and small
   */
   virtual bool allElementsInRange(ClpModel * ,
-				  double, double,
+				  double , double ,
 				  int =15)
   { return true;}
   /** Set the dimensions of the matrix. In effect, append new empty
@@ -276,6 +276,13 @@ public:
 			      const double * rowScale, 
 			      const double * columnScale,
 			      double * spare=NULL) const;
+#if COIN_LONG_WORK 
+  // For long double versions (aborts if not supported)
+  virtual void times(CoinWorkDouble scalar,
+		     const CoinWorkDouble * x, CoinWorkDouble * y) const ;
+  virtual void transposeTimes(CoinWorkDouble scalar,
+			      const CoinWorkDouble * x, CoinWorkDouble * y) const ;
+#endif
   /** Return <code>x * scalar *A + y</code> in <code>z</code>. 
       Can use y as temporary array (will be empty at end)
       Note - If x packed mode - then z packed mode
@@ -299,7 +306,7 @@ public:
   /// Updates two arrays for steepest and does devex weights (need not be coded)
   virtual void transposeTimes2(const ClpSimplex * model,
                                const CoinIndexedVector * pi1, CoinIndexedVector * dj1,
-                               const CoinIndexedVector * pi2, CoinIndexedVector * dj2,
+                               const CoinIndexedVector * pi2, 
                                CoinIndexedVector * spare,
                                double referenceIn, double devex,
                                // Array for exact devex to say what is in reference framework

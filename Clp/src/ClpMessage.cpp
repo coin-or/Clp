@@ -1,3 +1,4 @@
+/* $Id$ */
 // Copyright (C) 2000, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
@@ -52,13 +53,13 @@ static Clp_message clp_us_english[]=
   {CLP_PACKEDSCALE_FORGET,1004,2,"Not bothering to scale as good enough"},
   {CLP_INITIALIZE_STEEP,1005,3,"Initializing steepest edge weights - old %g, new %g"},
   {CLP_UNABLE_OPEN,6001,0,"Unable to open file %s for reading"},
-  {CLP_BAD_BOUNDS,6002,0,"%d bad bound pairs or bad objectives were found - first at %c%d"},
-  {CLP_BAD_MATRIX,6003,0,"Matrix has %d large values, first at column %d, row %d is %g"},
-  {CLP_LOOP,6004,0,"Can't get out of loop - stopping"},
+  {CLP_BAD_BOUNDS,6002,1,"%d bad bound pairs or bad objectives were found - first at %c%d"},
+  {CLP_BAD_MATRIX,6003,1,"Matrix has %d large values, first at column %d, row %d is %g"},
+  {CLP_LOOP,6004,1,"Can't get out of loop - stopping"},
   {CLP_DUPLICATEELEMENTS,26,1,"Matrix will be packed to eliminate %d duplicate elements"},
   {CLP_IMPORT_RESULT,27,1,"Model was imported from %s in %g seconds"},
   {CLP_IMPORT_ERRORS,3001,1," There were %d errors when importing model from %s"},
-  {CLP_EMPTY_PROBLEM,3002,0,"Empty problem - %d rows, %d columns and %d elements"},
+  {CLP_EMPTY_PROBLEM,3002,1,"Empty problem - %d rows, %d columns and %d elements"},
   {CLP_CRASH,28,1,"Crash put %d variables in basis, %d dual infeasibilities"},
   {CLP_END_VALUES_PASS,29,1,"End of values pass after %d iterations"},
   {CLP_QUADRATIC_BOTH,108,32,"%s %d (%g) and %d (%g) both basic"},
@@ -71,7 +72,7 @@ static Clp_message clp_us_english[]=
   {CLP_SPRINT,34,1,"Pass %d took %d iterations, objective %g, dual infeasibilities %g( %d)"},
   {CLP_BARRIER_ITERATION,35,1,"%d Primal %g Dual %g Complementarity %g - %d fixed, rank %d"}, 
   {CLP_BARRIER_OBJECTIVE_GAP,36,3,"Feasible - objective gap %g"}, 
-  {CLP_BARRIER_GONE_INFEASIBLE,37,2,"Gone infeasible"}, 
+  {CLP_BARRIER_GONE_INFEASIBLE,37,2,"Infeasible"}, 
   {CLP_BARRIER_CLOSE_TO_OPTIMAL,38,2,"Close to optimal after %d iterations with complementarity %g"}, 
   {CLP_BARRIER_COMPLEMENTARITY,39,2,"Complementarity %g - %s"}, 
   {CLP_BARRIER_EXIT2,40,1,"Exiting - using solution from iteration %d"}, 
@@ -81,7 +82,7 @@ static Clp_message clp_us_english[]=
   {CLP_BARRIER_MU,44,3,"Changing mu from %g to %g"}, 
   {CLP_BARRIER_INFO,45,3,"Detail - %s"}, 
   {CLP_BARRIER_END,46,1,"At end primal/dual infeasibilities %g/%g, complementarity gap %g, objective %g"}, 
-  {CLP_BARRIER_ACCURACY,47,2,"Relative error in phase %d, refinement %d is %g"}, 
+  {CLP_BARRIER_ACCURACY,47,2,"Relative error in phase %d, %d passes %g => %g"}, 
   {CLP_BARRIER_SAFE,48,2,"Initial safe primal value %g, objective norm %g"}, 
   {CLP_BARRIER_NEGATIVE_GAPS,49,3,"%d negative gaps summing to %g"}, 
   {CLP_BARRIER_REDUCING,50,2,"Reducing %s step from %g to %g"}, 

@@ -1,3 +1,4 @@
+/* $Id$ */
 // Copyright (C) 2003, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
@@ -111,6 +112,107 @@ getNorms(const double * region, int size, double & norm1, double & norm2)
     norm1 = CoinMax(norm1,fabs(region[i]));
   }
 }
+#if COIN_LONG_WORK 
+// For long double versions 
+CoinWorkDouble 
+maximumAbsElement(const CoinWorkDouble * region, int size)
+{
+  int i;
+  CoinWorkDouble maxValue=0.0;
+  for (i=0;i<size;i++) 
+    maxValue = CoinMax(maxValue,CoinAbs(region[i]));
+  return maxValue;
+}
+void 
+setElements(CoinWorkDouble * region, int size, CoinWorkDouble value)
+{
+  int i;
+  for (i=0;i<size;i++) 
+    region[i]=value;
+}
+void 
+multiplyAdd(const CoinWorkDouble * region1, int size, CoinWorkDouble multiplier1,
+		 CoinWorkDouble * region2, CoinWorkDouble multiplier2)
+{
+  int i;
+  if (multiplier1==1.0) {
+    if (multiplier2==1.0) {
+      for (i=0;i<size;i++) 
+	region2[i] = region1[i] + region2[i];
+    } else if (multiplier2==-1.0) {
+      for (i=0;i<size;i++) 
+	region2[i] = region1[i] - region2[i];
+    } else if (multiplier2==0.0) {
+      for (i=0;i<size;i++) 
+	region2[i] = region1[i] ;
+    } else {
+      for (i=0;i<size;i++) 
+	region2[i] = region1[i] + multiplier2*region2[i];
+    }
+  } else if (multiplier1==-1.0) {
+    if (multiplier2==1.0) {
+      for (i=0;i<size;i++) 
+	region2[i] = -region1[i] + region2[i];
+    } else if (multiplier2==-1.0) {
+      for (i=0;i<size;i++) 
+	region2[i] = -region1[i] - region2[i];
+    } else if (multiplier2==0.0) {
+      for (i=0;i<size;i++) 
+	region2[i] = -region1[i] ;
+    } else {
+      for (i=0;i<size;i++) 
+	region2[i] = -region1[i] + multiplier2*region2[i];
+    }
+  } else if (multiplier1==0.0) {
+    if (multiplier2==1.0) {
+      // nothing to do
+    } else if (multiplier2==-1.0) {
+      for (i=0;i<size;i++) 
+	region2[i] =  -region2[i];
+    } else if (multiplier2==0.0) {
+      for (i=0;i<size;i++) 
+	region2[i] =  0.0;
+    } else {
+      for (i=0;i<size;i++) 
+	region2[i] =  multiplier2*region2[i];
+    }
+  } else {
+    if (multiplier2==1.0) {
+      for (i=0;i<size;i++) 
+	region2[i] = multiplier1*region1[i] + region2[i];
+    } else if (multiplier2==-1.0) {
+      for (i=0;i<size;i++) 
+	region2[i] = multiplier1*region1[i] - region2[i];
+    } else if (multiplier2==0.0) {
+      for (i=0;i<size;i++) 
+	region2[i] = multiplier1*region1[i] ;
+    } else {
+      for (i=0;i<size;i++) 
+	region2[i] = multiplier1*region1[i] + multiplier2*region2[i];
+    }
+  }
+}
+CoinWorkDouble 
+innerProduct(const CoinWorkDouble * region1, int size, const CoinWorkDouble * region2)
+{
+  int i;
+  CoinWorkDouble value=0.0;
+  for (i=0;i<size;i++)
+    value += region1[i]*region2[i];
+  return value;
+}
+void 
+getNorms(const CoinWorkDouble * region, int size, CoinWorkDouble & norm1, CoinWorkDouble & norm2)
+{
+  norm1 = 0.0;
+  norm2 = 0.0;
+  int i;
+  for (i=0;i<size;i++) {
+    norm2 += region[i]*region[i];
+    norm1 = CoinMax(norm1,CoinAbs(region[i]));
+  }
+}
+#endif
 #ifdef DEBUG_MEMORY
 #include <malloc.h>
 #include <stdio.h>

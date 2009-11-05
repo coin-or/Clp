@@ -1,3 +1,4 @@
+/* $Id$ */
 // Copyright (C) 2003, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
@@ -55,36 +56,36 @@ public:
   //phase  - 0 predictor
   //         1 corrector
   //         2 primal dual
-  double findStepLength( int phase);
+  CoinWorkDouble findStepLength( int phase);
   /// findDirectionVector.
-  double findDirectionVector(const int phase);
+  CoinWorkDouble findDirectionVector(const int phase);
   /// createSolution.  Creates solution from scratch (- code if no memory)
   int createSolution();
   /// complementarityGap.  Computes gap
   //phase 0=as is , 1 = after predictor , 2 after corrector
-  double complementarityGap(int & numberComplementarityPairs,int & numberComplementarityItems,
+  CoinWorkDouble complementarityGap(int & numberComplementarityPairs,int & numberComplementarityItems,
 			    const int phase);
   /// setupForSolve.
   //phase 0=affine , 1 = corrector , 2 = primal-dual
   void setupForSolve(const int phase);
   /** Does solve. region1 is for deltaX (columns+rows), region2 for deltaPi (rows) */
-  void solveSystem(double * region1, double * region2,
-		   const double * region1In, const double * region2In,
-		   const double * saveRegion1, const double * saveRegion2,
+  void solveSystem(CoinWorkDouble * region1, CoinWorkDouble * region2,
+		   const CoinWorkDouble * region1In, const CoinWorkDouble * region2In,
+		   const CoinWorkDouble * saveRegion1, const CoinWorkDouble * saveRegion2,
 		   bool gentleRefine);
   /// sees if looks plausible change in complementarity
-  bool checkGoodMove(const bool doCorrector,double & bestNextGap,
+  bool checkGoodMove(const bool doCorrector,CoinWorkDouble & bestNextGap,
 		     bool allowIncreasingGap);
   ///:  checks for one step size
-  bool checkGoodMove2(double move,double & bestNextGap,
+  bool checkGoodMove2(CoinWorkDouble move,CoinWorkDouble & bestNextGap,
 		      bool allowIncreasingGap);
   /// updateSolution.  Updates solution at end of iteration
   //returns number fixed
-  int updateSolution(double nextGap);
+  int updateSolution(CoinWorkDouble nextGap);
   ///  Save info on products of affine deltaT*deltaW and deltaS*deltaZ
-  double affineProduct();
+  CoinWorkDouble affineProduct();
   ///See exactly what would happen given current deltas
-  void debugMove(int phase,double primalStep, double dualStep);
+  void debugMove(int phase,CoinWorkDouble primalStep, CoinWorkDouble dualStep);
   //@}
 
 };

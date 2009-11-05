@@ -1,3 +1,4 @@
+/* $Id$ */
 // copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
@@ -679,6 +680,8 @@ ClpModel::ClpModel(const ClpModel &rhs, int scalingMode) :
     scaledMatrix_=NULL;
     if (scalingMode&&!matrix_->scale(this)) {
       // scaling worked - now apply
+      inverseRowScale_ = rowScale_+numberRows_;
+      inverseColumnScale_ = columnScale_+numberColumns_;
       gutsOfScaling();
       // pretend not scaled
       scalingFlag_ = -scalingFlag_;
@@ -774,18 +777,10 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, int trueCopy)
       savedColumnScale_ = NULL;
       integerType_ = CoinCopyOfArray(rhs.integerType_,numberColumns_);
       if (rhs.rowActivity_) {
-	rowActivity_=new double[numberRows_];
-	columnActivity_=new double[numberColumns_];
-	dual_=new double[numberRows_];
-	reducedCost_=new double[numberColumns_];
-	ClpDisjointCopyN ( rhs.rowActivity_, numberRows_ ,
-			   rowActivity_);
-	ClpDisjointCopyN ( rhs.columnActivity_, numberColumns_ ,
-			   columnActivity_);
-	ClpDisjointCopyN ( rhs.dual_, numberRows_ , 
-			   dual_);
-	ClpDisjointCopyN ( rhs.reducedCost_, numberColumns_ ,
-			   reducedCost_);
+	rowActivity_= ClpCopyOfArray(rhs.rowActivity_, numberRows_);
+	columnActivity_= ClpCopyOfArray(rhs.columnActivity_,numberColumns_);
+	dual_= ClpCopyOfArray(rhs.dual_, numberRows_);
+	reducedCost_= ClpCopyOfArray(rhs.reducedCost_, numberColumns_);
       } else {
 	rowActivity_=NULL;
 	columnActivity_=NULL;
@@ -2583,13 +2578,12 @@ double *
 ClpModel::infeasibilityRay() const
 {
   double * array = NULL;
-  if (problemStatus_==1&&!secondaryStatus_) {
+  if (problemStatus_==1) {
     array = ClpCopyOfArray(ray_,numberRows_);
-    //#define SWAP_SIGN
-#ifdef SWAP_SIGN
+#ifndef CLP_NO_SWAP_SIGN
     // swap signs to be consistent with norm
     for (int i=0;i<numberRows_;i++)
-      ray_[i] = -ray_[i];
+      array[i] = -array[i];
 #endif
 #if 0
     // clean up
@@ -3274,8 +3268,8 @@ ClpModel::getRowName(int iRow) const
     indexError(iRow,"getRowName");
   }
 #endif
-  size_t size = rowNames_.size();
-  if (size>(size_t)iRow) {
+  int size = rowNames_.size();
+  if (size>iRow) {
     return rowNames_[iRow];
   } else {
     char name[9];
@@ -3294,8 +3288,8 @@ ClpModel::setRowName(int iRow, std::string &name)
   }
 #endif
   unsigned int maxLength=lengthNames_;
-  size_t size = rowNames_.size();
-  if (size<=(size_t)iRow)
+  int size = rowNames_.size();
+  if (size<=iRow)
     rowNames_.resize(iRow+1);
   rowNames_[iRow]= name;
   maxLength = CoinMax(maxLength,static_cast<unsigned int> (strlen(name.c_str())));
@@ -3311,8 +3305,8 @@ ClpModel::getColumnName(int iColumn) const
     indexError(iColumn,"getColumnName");
   }
 #endif
-  size_t size = columnNames_.size();
-  if (size>(size_t)iColumn) {
+  int size = columnNames_.size();
+  if (size>iColumn) {
     return columnNames_[iColumn];
   } else {
     char name[9];
@@ -3331,8 +3325,8 @@ ClpModel::setColumnName(int iColumn, std::string &name)
   }
 #endif
   unsigned int maxLength=lengthNames_;
-  size_t size = columnNames_.size();
-  if (size<=(size_t)iColumn)
+  int size = columnNames_.size();
+  if (size<=iColumn)
     columnNames_.resize(iColumn+1);
   columnNames_[iColumn]= name;
   maxLength = CoinMax(maxLength,static_cast<unsigned int> (strlen(name.c_str())));
@@ -3344,8 +3338,8 @@ void
 ClpModel::copyRowNames(const std::vector<std::string> & rowNames, int first, int last)
 {
   unsigned int maxLength=lengthNames_;
-  size_t size = rowNames_.size();
-  if (size!=(size_t)numberRows_)
+  int size = rowNames_.size();
+  if (size!=numberRows_)
     rowNames_.resize(numberRows_);
   int iRow;
   for (iRow=first; iRow<last;iRow++) {
@@ -3360,8 +3354,8 @@ void
 ClpModel::copyColumnNames(const std::vector<std::string> & columnNames, int first, int last)
 {
   unsigned int maxLength=lengthNames_;
-  size_t size = columnNames_.size();
-  if (size!=(size_t)numberColumns_)
+  int size = columnNames_.size();
+  if (size!=numberColumns_)
     columnNames_.resize(numberColumns_);
   int iColumn;
   for (iColumn=first; iColumn<last;iColumn++) {
@@ -3376,8 +3370,8 @@ void
 ClpModel::copyRowNames(const char * const * rowNames, int first, int last)
 {
   unsigned int maxLength=lengthNames_;
-  size_t size = rowNames_.size();
-  if (size!=(size_t)numberRows_)
+  int size = rowNames_.size();
+  if (size!=numberRows_)
     rowNames_.resize(numberRows_);
   int iRow;
   for (iRow=first; iRow<last;iRow++) {
@@ -3399,8 +3393,8 @@ void
 ClpModel::copyColumnNames(const char * const * columnNames, int first, int last)
 {
   unsigned int maxLength=lengthNames_;
-  size_t size = columnNames_.size();
-  if (size!=(size_t)numberColumns_)
+  int size = columnNames_.size();
+  if (size!=numberColumns_)
     columnNames_.resize(numberColumns_);
   int iColumn;
   for (iColumn=first; iColumn<last;iColumn++) {
@@ -3634,12 +3628,18 @@ ClpModel::rowNamesAsChar() const
   char ** rowNames = NULL;
   if (lengthNames()) {
     rowNames = new char * [numberRows_+1];
-    size_t numberNames = rowNames_.size();
-    numberNames = CoinMin((size_t)numberRows_,numberNames);
-    size_t iRow;
+    int numberNames = rowNames_.size();
+    numberNames = CoinMin(numberRows_,numberNames);
+    int iRow;
     for (iRow=0;iRow<numberNames;iRow++) {
-      rowNames[iRow] = 
-	CoinStrdup(rowName((int)iRow).c_str());
+      if (rowName(iRow)!="") {
+	rowNames[iRow] = 
+	  CoinStrdup(rowName(iRow).c_str());
+      } else {
+	char name[9];
+	sprintf(name,"R%7.7d",iRow);
+	rowNames[iRow]=CoinStrdup(name);
+      }
 #ifdef STRIPBLANKS
       char * xx = rowNames[iRow];
       int i;
@@ -3653,8 +3653,8 @@ ClpModel::rowNamesAsChar() const
 #endif
     }
     char name[9];
-    for ( ;iRow<(size_t)numberRows_;iRow++) {
-      sprintf(name,"R%7.7d",(int)iRow);
+    for ( ;iRow<numberRows_;iRow++) {
+      sprintf(name,"R%7.7d",iRow);
       rowNames[iRow]=CoinStrdup(name);
     }
     rowNames[numberRows_] = CoinStrdup("OBJROW");
@@ -3668,12 +3668,18 @@ ClpModel::columnNamesAsChar() const
   char ** columnNames = NULL;
   if (lengthNames()) {
     columnNames = new char * [numberColumns_];
-    size_t numberNames = columnNames_.size();
-    numberNames = CoinMin((size_t)numberColumns_,numberNames);
-    size_t iColumn;
+    int numberNames = columnNames_.size();
+    numberNames = CoinMin(numberColumns_,numberNames);
+    int iColumn;
     for (iColumn=0;iColumn<numberNames;iColumn++) {
-      columnNames[iColumn] = 
-	CoinStrdup(columnName((int)iColumn).c_str());
+      if (columnName(iColumn)!="") {
+	columnNames[iColumn] = 
+	  CoinStrdup(columnName(iColumn).c_str());
+      } else {
+	char name[9];
+	sprintf(name,"C%7.7d",iColumn);
+	columnNames[iColumn]=CoinStrdup(name);
+      }
 #ifdef STRIPBLANKS
       char * xx = columnNames[iColumn];
       int i;
@@ -3687,8 +3693,8 @@ ClpModel::columnNamesAsChar() const
 #endif
     }
     char name[9];
-    for ( ;iColumn<(size_t)numberColumns_;iColumn++) {
-      sprintf(name,"C%7.7d",(int)iColumn);
+    for ( ;iColumn<numberColumns_;iColumn++) {
+      sprintf(name,"C%7.7d",iColumn);
       columnNames[iColumn]=CoinStrdup(name);
     }
   }
@@ -3719,7 +3725,7 @@ ClpModel::scaling(int mode)
   // If mode changes then we treat as new matrix (need new row copy)
   if (mode!=scalingFlag_)
     whatsChanged_ &= ~(2+4+8);
-  if (mode>0&&mode<5) {
+  if (mode>0&&mode<6) {
     scalingFlag_=mode;
   } else if (!mode) {
     scalingFlag_=0;
@@ -3856,8 +3862,8 @@ ClpModel::createCoinModel() const
   for (i=0;i<numberRows_;i++) {
     char temp[30];
     strcpy(temp,rowName(i).c_str());
-    size_t length = strlen(temp);
-    for (size_t j=0;j<length;j++) {
+    int length = strlen(temp);
+    for (int j=0;j<length;j++) {
       if (temp[j]=='-')
 	temp[j]='_';
     }
@@ -3866,8 +3872,8 @@ ClpModel::createCoinModel() const
   for (i=0;i<numberColumns_;i++) {
     char temp[30];
     strcpy(temp,columnName(i).c_str());
-    size_t length = strlen(temp);
-    for (size_t j=0;j<length;j++) {
+    int length = strlen(temp);
+    for (int j=0;j<length;j++) {
       if (temp[j]=='-')
 	temp[j]='_';
     }
@@ -4029,6 +4035,7 @@ ClpModel::findNetwork(char * rotate,double fractionNeeded)
   }
   if (numberEligible<fractionNeeded*numberRows_) {
     delete [] mapping;
+    delete copy;
     return 0;
   }
   // create arrays
@@ -4097,7 +4104,7 @@ ClpModel::findNetwork(char * rotate,double fractionNeeded)
       numberLast=numberIn;
       int numberLeft = 0;
       for (iRow=0;iRow<numberEligible;iRow++) {
-	if (rotate[iRow]==0) {
+	if (rotate[iRow]==0&&rowStart[iRow+1]>rowStart[iRow]) {
 	  which[numberLeft]=iRow;
 	  int merit=0;
 	  bool OK=true;
@@ -4117,8 +4124,8 @@ ClpModel::findNetwork(char * rotate,double fractionNeeded)
 	      break;
 	    }
 	  }
-	  if (merit>-2&&(OK||reflectionOK)) {
-	    assert (!OK||!reflectionOK||!numberIn);
+	  if (merit>-2&&(OK||reflectionOK)&&
+	      (!OK||!reflectionOK||!numberIn)) {
 	    //if (!numberLast) merit=1;
 	    count[numberLeft++]=(rowStart[iRow+1]-rowStart[iRow]-1)*
 	      (static_cast<double>(merit));

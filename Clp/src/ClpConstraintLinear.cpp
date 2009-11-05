@@ -1,3 +1,4 @@
+/* $Id: ClpConstraintLinear.cpp 1402 2009-07-25 08:39:55Z forrest $ */
 // Copyright (C) 2007, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
@@ -180,7 +181,7 @@ ClpConstraintLinear::reallyScale(const double * columnScale)
    Returns number of nonlinear columns
 */
 int 
-ClpConstraintLinear::markNonlinear(char * which) const
+ClpConstraintLinear::markNonlinear(char *) const
 {
   return 0;
 }

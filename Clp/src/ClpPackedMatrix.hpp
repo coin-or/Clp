@@ -1,3 +1,4 @@
+/* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
 #ifndef ClpPackedMatrix_H
@@ -91,9 +92,7 @@ public:
   /** Returns a new matrix in reverse order without gaps */
   virtual ClpMatrixBase * reverseOrderedCopy() const;
   /// Returns number of elements in column part of basis 
-  virtual CoinBigIndex countBasis(ClpSimplex * model,
-				 const int * whichColumn, 
-				 int numberRowBasic,
+  virtual CoinBigIndex countBasis(const int * whichColumn, 
 				  int & numberColumnBasic);
   /// Fills in column part of basis
   virtual void fillBasis(ClpSimplex * model,
@@ -247,7 +246,7 @@ public:
   /// Updates two arrays for steepest 
   virtual void transposeTimes2(const ClpSimplex * model,
                                const CoinIndexedVector * pi1, CoinIndexedVector * dj1,
-                               const CoinIndexedVector * pi2, CoinIndexedVector * dj2,
+                               const CoinIndexedVector * pi2, 
                                CoinIndexedVector * spare,
                                double referenceIn, double devex,
                                // Array for exact devex to say what is in reference framework
@@ -256,13 +255,20 @@ public:
   /// Updates second array for steepest and does devex weights 
   virtual void subsetTimes2(const ClpSimplex * model,
                                 CoinIndexedVector * dj1,
-                               const CoinIndexedVector * pi2, CoinIndexedVector * dj2,
+                               const CoinIndexedVector * pi2, CoinIndexedVector * dj2, 
                                double referenceIn, double devex,
                                // Array for exact devex to say what is in reference framework
                                unsigned int * reference,
                                double * weights, double scaleFactor);
   /// Sets up an effective RHS
   void useEffectiveRhs(ClpSimplex * model);
+#if COIN_LONG_WORK 
+  // For long double versions 
+  virtual void times(CoinWorkDouble scalar,
+		     const CoinWorkDouble * x, CoinWorkDouble * y) const ;
+  virtual void transposeTimes(CoinWorkDouble scalar,
+			      const CoinWorkDouble * x, CoinWorkDouble * y) const ;
+#endif
 //@}
 
   /**@name Other */
@@ -349,10 +355,38 @@ private:
 				 int * COIN_RESTRICT index, 
 				 double * COIN_RESTRICT array,
 				 const double tolerance) const;
+  /// Meat of transposeTimes by column when not scaled and skipping
+  int gutsOfTransposeTimesUnscaled(const double * COIN_RESTRICT pi,
+				    int * COIN_RESTRICT index, 
+				    double * COIN_RESTRICT array,
+				   const unsigned char * status,
+				    const double tolerance) const;
+  /** Meat of transposeTimes by column when not scaled and skipping
+      and doing part of dualColumn */
+  int gutsOfTransposeTimesUnscaled(const double * COIN_RESTRICT pi,
+				    int * COIN_RESTRICT index, 
+				    double * COIN_RESTRICT array,
+				   const unsigned char * status,
+				    int * COIN_RESTRICT spareIndex, 
+				    double * COIN_RESTRICT spareArray,
+				    const double * COIN_RESTRICT reducedCost,
+				   double & upperTheta,
+				   double & bestPossible,
+				   double acceptablePivot,
+				   double dualTolerance,
+				   int & numberRemaining,
+				    const double zeroTolerance) const;
+  /// Meat of transposeTimes by column when scaled and skipping
+  int gutsOfTransposeTimesScaled(const double * COIN_RESTRICT pi,
+				 const double * COIN_RESTRICT columnScale,
+				 int * COIN_RESTRICT index, 
+				 double * COIN_RESTRICT array,
+				   const unsigned char * status,
+				 const double tolerance) const;
   /// Meat of transposeTimes by row n > K if packed - returns number nonzero
   int gutsOfTransposeTimesByRowGEK(const CoinIndexedVector * COIN_RESTRICT piVector, 
 				   int * COIN_RESTRICT index, 
-				   double * COIN_RESTRICT output,
+ 				   double * COIN_RESTRICT output,
 				   int numberColumns,
 				   const double tolerance, 
 				   const double scalar) const;

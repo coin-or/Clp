@@ -1,3 +1,4 @@
+/* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
@@ -1538,7 +1539,11 @@ ClpGubDynamicMatrix::useEffectiveRhs(ClpSimplex * model, bool cheapest)
    expensive.  This may re-compute */
 double * 
 ClpGubDynamicMatrix::rhsOffset(ClpSimplex * model,bool forceRefresh,
-		      bool check)
+		      bool 
+#ifdef CLP_DEBUG
+check
+#endif
+)
 {
   //forceRefresh=true;
   //check=false;
@@ -1992,7 +1997,7 @@ ClpGubDynamicMatrix::times(double scalar,
    Returns number and sum of primal infeasibilities.
 */
 int 
-ClpGubDynamicMatrix::checkFeasible(ClpSimplex * model,double & sum) const
+ClpGubDynamicMatrix::checkFeasible(ClpSimplex * /*model*/,double & sum) const
 {
   int numberRows = model_->numberRows();
   double * rhs = new double[numberRows];

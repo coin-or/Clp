@@ -1,3 +1,4 @@
+/* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
@@ -109,7 +110,7 @@ void
 ClpMatrixBase::times(double scalar,
 		     const double * x, double * y,
 		     const double * rowScale, 
-		     const double * columnScale) const
+		     const double * /*columnScale*/) const
 {
   if (rowScale) {
     std::cerr<<"Scaling not supported - ClpMatrixBase"<<std::endl;
@@ -123,8 +124,8 @@ void
 ClpMatrixBase::transposeTimes(double scalar,
 			      const double * x, double * y,
 			      const double * rowScale, 
-			      const double * columnScale,
-			      double * spare) const
+			      const double * /*columnScale*/,
+			      double * /*spare*/) const
 {
   if (rowScale) {
     std::cerr<<"Scaling not supported - ClpMatrixBase"<<std::endl;
@@ -139,8 +140,8 @@ ClpMatrixBase::transposeTimes(double scalar,
    sense */
 ClpMatrixBase * 
 ClpMatrixBase::subsetClone (
-			    int numberRows, const int * whichRows,
-			    int numberColumns, const int * whichColumns) const
+			    int /*numberRows*/, const int * /*whichRows*/,
+			    int /*numberColumns*/, const int * /*whichColumns*/) const
  
 
 {
@@ -154,7 +155,7 @@ ClpMatrixBase::subsetClone (
    Default returns vector of ones
 */
 CoinBigIndex * 
-ClpMatrixBase::dubiousWeights(const ClpSimplex * model,int * inputWeights) const
+ClpMatrixBase::dubiousWeights(const ClpSimplex * model,int * /*inputWeights*/) const
 {
   int number = model->numberRows()+model->numberColumns();
   CoinBigIndex * weights = new CoinBigIndex[number];
@@ -166,14 +167,16 @@ ClpMatrixBase::dubiousWeights(const ClpSimplex * model,int * inputWeights) const
 #ifndef CLP_NO_VECTOR
 // Append Columns
 void 
-ClpMatrixBase::appendCols(int number, const CoinPackedVectorBase * const * columns)
+ClpMatrixBase::appendCols(int /*number*/, 
+			  const CoinPackedVectorBase * const * /*columns*/)
 {
   std::cerr<<"appendCols not supported - ClpMatrixBase"<<std::endl;
   abort();
 }
 // Append Rows
 void 
-ClpMatrixBase::appendRows(int number, const CoinPackedVectorBase * const * rows)
+ClpMatrixBase::appendRows(int /*number*/, 
+			  const CoinPackedVectorBase * const * /*rows*/)
 {
   std::cerr<<"appendRows not supported - ClpMatrixBase"<<std::endl;
   abort();
@@ -233,8 +236,8 @@ ClpMatrixBase::listTransposeTimes(const ClpSimplex * model,
 }
 // Partial pricing 
 void 
-ClpMatrixBase::partialPricing(ClpSimplex * model, double start, double end,
-			      int & bestSequence, int & numberWanted)
+ClpMatrixBase::partialPricing(ClpSimplex * , double , double ,
+			      int & , int & )
 {
   std::cerr<<"partialPricing not supported - ClpMatrixBase"<<std::endl;
   abort();
@@ -246,7 +249,7 @@ ClpMatrixBase::partialPricing(ClpSimplex * model, double start, double end,
    This will normally be a no-op - it is in for GUB!
 */
 int 
-ClpMatrixBase::extendUpdated(ClpSimplex * model,CoinIndexedVector * update,int mode)
+ClpMatrixBase::extendUpdated(ClpSimplex * ,CoinIndexedVector * ,int )
 {
   return 0;
 }
@@ -256,7 +259,7 @@ ClpMatrixBase::extendUpdated(ClpSimplex * model,CoinIndexedVector * update,int m
      Remember to update here when settled down
 */
 void 
-ClpMatrixBase::primalExpanded(ClpSimplex * model,int mode)
+ClpMatrixBase::primalExpanded(ClpSimplex * ,int )
 {
 }
 /*
@@ -265,9 +268,9 @@ ClpMatrixBase::primalExpanded(ClpSimplex * model,int mode)
      Remember to update here when settled down
 */
 void 
-ClpMatrixBase::dualExpanded(ClpSimplex * model,
-			    CoinIndexedVector * array,
-			    double * other,int mode)
+ClpMatrixBase::dualExpanded(ClpSimplex * ,
+			    CoinIndexedVector * ,
+			    double * ,int )
 {
 }
 /*
@@ -315,7 +318,7 @@ ClpMatrixBase::generalExpanded(ClpSimplex * model,int mode, int &number)
 }
 // Sets up an effective RHS
 void 
-ClpMatrixBase::useEffectiveRhs(ClpSimplex * model)
+ClpMatrixBase::useEffectiveRhs(ClpSimplex * )
 {
   std::cerr<<"useEffectiveRhs not supported - ClpMatrixBase"<<std::endl;
   abort();
@@ -324,7 +327,11 @@ ClpMatrixBase::useEffectiveRhs(ClpSimplex * model)
    or big gub or anywhere where going through full columns is
    expensive.  This may re-compute */
 double * 
-ClpMatrixBase::rhsOffset(ClpSimplex * model,bool forceRefresh,bool check)
+ClpMatrixBase::rhsOffset(ClpSimplex * model,bool forceRefresh,bool 
+#ifdef CLP_DEBUG
+check
+#endif
+)
 {
   if (rhsOffset_) {
 #ifdef CLP_DEBUG
@@ -385,7 +392,7 @@ ClpMatrixBase::rhsOffset(ClpSimplex * model,bool forceRefresh,bool check)
    update information for a pivot (and effective rhs)
 */
 int 
-ClpMatrixBase::updatePivot(ClpSimplex * model,double oldInValue, double oldOutValue)
+ClpMatrixBase::updatePivot(ClpSimplex * model,double oldInValue, double )
 {
   if (rhsOffset_) {
     // update effective rhs
@@ -414,7 +421,7 @@ ClpMatrixBase::hiddenRows() const
    May update bestSequence.
 */
 void 
-ClpMatrixBase::createVariable(ClpSimplex * model, int & bestSequence)
+ClpMatrixBase::createVariable(ClpSimplex *, int &)
 {
 }
 // Returns reduced cost of a variable
@@ -547,26 +554,26 @@ ClpMatrixBase::subsetTimes2(const ClpSimplex * model,
 }
 // Correct sequence in and out to give true value
 void 
-ClpMatrixBase::correctSequence(const ClpSimplex * model,int & sequenceIn, int & sequenceOut) 
+ClpMatrixBase::correctSequence(const ClpSimplex * ,int & , int & ) 
 {
 }
 // Really scale matrix
 void 
-ClpMatrixBase::reallyScale(const double * rowScale, const double * columnScale)
+ClpMatrixBase::reallyScale(const double * , const double * )
 {
   std::cerr<<"reallyScale not supported - ClpMatrixBase"<<std::endl;
   abort();
 }
 // Updates two arrays for steepest 
 void 
-ClpMatrixBase::transposeTimes2(const ClpSimplex * model,
-                               const CoinIndexedVector * pi1, CoinIndexedVector * dj1,
-                               const CoinIndexedVector * pi2, CoinIndexedVector * dj2,
-                               CoinIndexedVector * spare,
-                               double referenceIn, double devex,
+ClpMatrixBase::transposeTimes2(const ClpSimplex * ,
+                               const CoinIndexedVector * , CoinIndexedVector *,
+                               const CoinIndexedVector * , 
+                               CoinIndexedVector * ,
+                               double , double ,
                                // Array for exact devex to say what is in reference framework
-                               unsigned int * reference,
-                               double * weights, double scaleFactor)
+                               unsigned int * ,
+                               double * , double )
 {
   std::cerr<<"transposeTimes2 not supported - ClpMatrixBase"<<std::endl;
   abort();
@@ -577,7 +584,7 @@ ClpMatrixBase::transposeTimes2(const ClpSimplex * model,
    MUST be at least as large as the current ones otherwise an exception
    is thrown. */
 void 
-ClpMatrixBase::setDimensions(int numrows, int numcols){
+ClpMatrixBase::setDimensions(int , int ){
   // If odd matrix assume user knows what they are doing
 }
 /* Append a set of rows/columns to the end of the matrix. Returns number of errors
@@ -585,9 +592,9 @@ ClpMatrixBase::setDimensions(int numrows, int numcols){
    number of columns-1/rows-1 (if numberOther>0) or duplicates
    If 0 then rows, 1 if columns */
 int 
-ClpMatrixBase::appendMatrix(int number, int type,
-                            const CoinBigIndex * starts, const int * index,
-                            const double * element, int numberOther)
+ClpMatrixBase::appendMatrix(int , int ,
+                            const CoinBigIndex * , const int * ,
+                            const double * , int )
 {
   std::cerr<<"appendMatrix not supported - ClpMatrixBase"<<std::endl;
   abort();
@@ -598,9 +605,26 @@ ClpMatrixBase::appendMatrix(int number, int type,
    This works for either ordering If the new element is zero it will be 
    deleted unless keepZero true */
 void 
-ClpMatrixBase::modifyCoefficient(int row, int column, double newElement,
-			bool keepZero)
+ClpMatrixBase::modifyCoefficient(int , int , double ,
+			bool )
 { 
   std::cerr<<"modifyCoefficient not supported - ClpMatrixBase"<<std::endl;
   abort();
 }
+#if COIN_LONG_WORK 
+// For long double versions (aborts if not supported)
+void 
+ClpMatrixBase::times(CoinWorkDouble scalar,
+      const CoinWorkDouble * x, CoinWorkDouble * y) const 
+{ 
+  std::cerr<<"long times not supported - ClpMatrixBase"<<std::endl;
+  abort();
+}
+void 
+ClpMatrixBase::transposeTimes(CoinWorkDouble scalar,
+			      const CoinWorkDouble * x, CoinWorkDouble * y) const 
+{ 
+  std::cerr<<"long transposeTimes not supported - ClpMatrixBase"<<std::endl;
+  abort();
+}
+#endif

@@ -1,3 +1,5 @@
+
+/* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
@@ -52,7 +54,7 @@ enum CbcOrClpParameterType
     TIMELIMIT_BAB, GAPRATIO,
     
     DJFIX = 81, TIGHTENFACTOR,PRESOLVETOLERANCE,OBJSCALE2,
-    DEXTRA1, DEXTRA2, DEXTRA3, DEXTRA4, DEXTRA5,
+    FAKEINCREMENT, FAKECUTOFF, ARTIFICIALCOST,DEXTRA3, SMALLBAB, DEXTRA4, DEXTRA5,
 
     SOLVERLOGLEVEL=101,
 #ifndef COIN_HAS_CBC 
@@ -63,10 +65,10 @@ enum CbcOrClpParameterType
     SUBSTITUTION,DUALIZE,VERBOSE,CPP,PROCESSTUNE,USESOLUTION,
 
     STRONGBRANCHING=151,CUTDEPTH, MAXNODES,NUMBERBEFORE,NUMBERANALYZE,
-    NUMBERMINI,MIPOPTIONS,MOREMIPOPTIONS,MAXHOTITS,FPUMPITS,MAXSOLS,
-    FPUMPTUNE,TESTOSI,EXTRA1,EXTRA2,EXTRA3,EXTRA4,CUTPASSINTREE,
+    MIPOPTIONS,MOREMIPOPTIONS,MAXHOTITS,FPUMPITS,MAXSOLS,
+    FPUMPTUNE,TESTOSI,EXTRA1,EXTRA2,EXTRA3,EXTRA4,DEPTHMINIBAB,CUTPASSINTREE,
     THREADS,CUTPASS,VUBTRY,DENSE,EXPERIMENT,DIVEOPT,STRATEGY,SMALLFACT,
-    HOPTIONS,
+    HOPTIONS,CUTLENGTH,FPUMPTUNE2,
 #ifdef COIN_HAS_CBC 
     LOGLEVEL , 
 #endif
@@ -74,6 +76,7 @@ enum CbcOrClpParameterType
     DIRECTION=201,DUALPIVOT,SCALING,ERRORSALLOWED,KEEPNAMES,SPARSEFACTOR,
     PRIMALPIVOT,PRESOLVE,CRASH,BIASLU,PERTURBATION,MESSAGES,AUTOSCALE,
     CHOLESKY,KKT,BARRIERSCALE,GAMMA,CROSSOVER,PFI,INTPRINT,VECTOR,
+    FACTORIZATION,ALLCOMMANDS,
     
     NODESTRATEGY = 251,BRANCHSTRATEGY,CUTSSTRATEGY,HEURISTICSTRATEGY,
     GOMORYCUTS,PROBINGCUTS,KNAPSACKCUTS,REDSPLITCUTS,
@@ -81,12 +84,13 @@ enum CbcOrClpParameterType
     TWOMIRCUTS,PREPROCESS,FPUMP,GREEDY,COMBINE,LOCALTREE,SOS,
     LANDPCUTS,RINS,RESIDCUTS,RENS,DIVINGS,DIVINGC,DIVINGF,DIVINGG,DIVINGL,
     DIVINGP,DIVINGV,DINS,PIVOTANDFIX,RANDROUND,NAIVE,ZEROHALFCUTS,CPX,
+    CROSSOVER2,PIVOTANDCOMPLEMENT,VND,
     
     DIRECTORY=301,DIRSAMPLE,DIRNETLIB,DIRMIPLIB,IMPORT,EXPORT,RESTORE,SAVE,DUALSIMPLEX,PRIMALSIMPLEX,EITHERSIMPLEX,
     MAXIMIZE,MINIMIZE,EXIT,STDIN,UNITTEST,NETLIB_EITHER,NETLIB_DUAL,NETLIB_PRIMAL,SOLUTION,SAVESOL,
     TIGHTEN,FAKEBOUND,HELP,PLUSMINUS,NETWORK,ALLSLACK,REVERSE,BARRIER,NETLIB_BARRIER,NETLIB_TUNE,
     REALLY_SCALE,BASISIN,BASISOUT,SOLVECONTINUOUS,CLEARCUTS,VERSION,STATISTICS,DEBUG,DUMMY,PRINTMASK,
-    OUTDUPROWS,USERCLP,MODELIN,CSVSTATISTICS,STOREDFILE,
+    OUTDUPROWS,USERCLP,MODELIN,CSVSTATISTICS,STOREDFILE,ENVIRONMENT,
 
     BAB=351,MIPLIB,STRENGTHEN,PRIORITYIN,USERCBC,DOHEURISTIC,
 
@@ -106,15 +110,15 @@ public:
   /// Constructors
   CbcOrClpParam (  );
   CbcOrClpParam (std::string name, std::string help,
-	   double lower, double upper, CbcOrClpParameterType type,bool display=true);
+	   double lower, double upper, CbcOrClpParameterType type,int display=2);
   CbcOrClpParam (std::string name, std::string help,
-	   int lower, int upper, CbcOrClpParameterType type,bool display=true);
+	   int lower, int upper, CbcOrClpParameterType type,int display=2);
   // Other strings will be added by insert
   CbcOrClpParam (std::string name, std::string help, std::string firstValue,
-	   CbcOrClpParameterType type,int whereUsed=7,bool display=true);
+	   CbcOrClpParameterType type,int whereUsed=7,int display=2);
   // Action
   CbcOrClpParam (std::string name, std::string help,
-	   CbcOrClpParameterType type,int whereUsed=7,bool display=true);
+	   CbcOrClpParameterType type,int whereUsed=7,int display=2);
   /// Copy constructor. 
   CbcOrClpParam(const CbcOrClpParam &);
   /// Assignment operator. This copies the data
@@ -177,6 +181,8 @@ public:
   int checkDoubleParameter(double value) const;
   /// Returns name which could match
   std::string matchName (  ) const;
+  /// Returns length of name for ptinting
+  int lengthMatchName (  ) const;
   /// Returns parameter option which matches (-1 if none)
   int parameterOption ( std::string check ) const;
   /// Prints parameter options
@@ -211,7 +217,7 @@ public:
   inline CbcOrClpParameterType type() const
   { return type_;}
   /// whether to display
-  inline bool displayThis() const
+  inline int displayThis() const
   { return display_;}
   /// Set Long help
   inline void setLonghelp(const std::string help) 
@@ -264,7 +270,7 @@ private:
   /// Current keyWord (if a keyword parameter)
   int currentKeyWord_;
   /// Display on ?
-  bool display_;
+  int display_;
   /// Integer parameter - current value
   int intValue_;
   /// Double parameter - current value

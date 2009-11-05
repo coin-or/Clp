@@ -1,3 +1,4 @@
+/* $Id$ */
 // Copyright (C) 2004, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
@@ -56,6 +57,7 @@ void ClpSimplexOther::dualRanging(int numberCheck,const int * which,
   if (inCBC)
     assert (integerType_);
   dualTolerance_ = dblParam_[ClpDualTolerance];
+  double * arrayX = rowArray_[0]->denseVector();
   for ( i=0;i<numberCheck;i++) {
     rowArray_[0]->clear();
     //rowArray_[0]->checkClear();
@@ -64,6 +66,13 @@ void ClpSimplexOther::dualRanging(int numberCheck,const int * which,
     columnArray_[0]->clear();
     //columnArray_[0]->checkClear();
     int iSequence = which[i];
+    if (iSequence<0) {
+      costIncreased[i] = 0.0;
+      sequenceIncreased[i] = -1;
+      costDecreased[i] = 0.0;
+      sequenceDecreased[i] = -1;
+      continue;
+    }
     double costIncrease=COIN_DBL_MAX;
     double costDecrease=COIN_DBL_MAX;
     int sequenceIncrease=-1;
@@ -93,13 +102,22 @@ void ClpSimplexOther::dualRanging(int numberCheck,const int * which,
 	// do ratio test up and down
 	checkDualRatios(rowArray_[0],columnArray_[0],costIncrease,sequenceIncrease,alphaIncrease,
 		    costDecrease,sequenceDecrease,alphaDecrease);
-	if (valueIncrease) {
-	  if (sequenceIncrease>=0)
-	    valueIncrease[i] = primalRanging1(sequenceIncrease,iSequence);
-	  if (sequenceDecrease>=0)
-	    valueDecrease[i] = primalRanging1(sequenceDecrease,iSequence);
-	}
-        if (inCBC) { 
+        if (!inCBC) {
+	  if (valueIncrease) {
+	    if (sequenceIncrease>=0)
+	      valueIncrease[i] = primalRanging1(sequenceIncrease,iSequence);
+	    if (sequenceDecrease>=0)
+	      valueDecrease[i] = primalRanging1(sequenceDecrease,iSequence);
+	  }
+	} else { 
+	  int number = rowArray_[0]->getNumElements();
+	  double scale2=0.0;
+	  int j;
+	  for (j=0;j<number;j++) {
+	    scale2+=arrayX[j]*arrayX[j];
+	  }
+	  scale2 = 1.0/sqrt(scale2);
+	  valueIncrease[i]=scale2;
           if (sequenceIncrease>=0) {
             double djValue = dj_[sequenceIncrease];
             if (fabs(djValue)>10.0*dualTolerance_) {
@@ -132,6 +150,8 @@ void ClpSimplexOther::dualRanging(int numberCheck,const int * which,
               costDecrease=0.0;
             }
           }
+	  costIncrease *= scale2;
+	  costDecrease *= scale2;
         }
       }
       break;
@@ -195,10 +215,10 @@ void ClpSimplexOther::dualRanging(int numberCheck,const int * which,
       abort();
     }
   }
-  //rowArray_[0]->clear();
+  rowArray_[0]->clear();
   //rowArray_[1]->clear();
   //columnArray_[1]->clear();
-  //columnArray_[0]->clear();
+  columnArray_[0]->clear();
   //rowArray_[3]->clear();
   if (!optimizationDirection_)
     printf("*** ????? Ranging with zero optimization costs\n");
@@ -595,7 +615,7 @@ ClpSimplexOther::writeBasis(const char *filename,
     fprintf(fp, "NAME          %s       ",strParam_[ClpProbName].c_str());
   }
   if (formatType>=2)
-    fprintf(fp,"IEEE");
+    fprintf(fp,"FREEIEEE");
   else if (writeValues)
     fprintf(fp,"VALUES");
   // finish off name 
@@ -1197,8 +1217,8 @@ ClpSimplex *
 ClpSimplexOther::crunch(double * rhs, int * whichRow, int * whichColumn,
                         int & nBound, bool moreBounds, bool tightenBounds)
 {
-#if 0
-  //#ifndef NDEBUG
+  //#define CHECK_STATUS
+#ifdef CHECK_STATUS
   {
     int n=0;
     int i;
@@ -1291,6 +1311,14 @@ ClpSimplexOther::crunch(double * rhs, int * whichRow, int * whichColumn,
   if (!returnCode) {
     small = new ClpSimplex(this,numberRows2,whichRow,
                      numberColumns2,whichColumn,true,false);
+#if 0
+    ClpPackedMatrix * rowCopy = dynamic_cast<ClpPackedMatrix *>(rowCopy_);
+    if (rowCopy) {
+      assert(!small->rowCopy());
+      small->setNewRowCopy(new ClpPackedMatrix(*rowCopy,numberRows2,whichRow,
+					      numberColumns2,whichColumn));
+    }
+#endif
     // Set some stuff
     small->setDualBound(dualBound_);
     small->setInfeasibilityCost(infeasibilityCost_);
@@ -1567,6 +1595,19 @@ ClpSimplexOther::crunch(double * rhs, int * whichRow, int * whichColumn,
     for (int i=0;i<numberRows_;i++) 
       printf("Row bound %d %g %g\n",i,rowLower_[i],rowUpper_[i]);
 #endif
+  }
+#endif
+#ifdef CHECK_STATUS
+  {
+    int n=0;
+    int i;
+    for (i=0;i<small->numberColumns();i++)
+      if (small->getColumnStatus(i)==ClpSimplex::basic)
+        n++;
+    for (i=0;i<small->numberRows();i++)
+      if (small->getRowStatus(i)==ClpSimplex::basic)
+        n++;
+    assert (n==small->numberRows());
   }
 #endif
   return small;
@@ -2265,7 +2306,7 @@ ClpSimplexOther::statusOfProblemInParametrics(int type, ClpDataSave & saveData)
    +3 max iterations 
 */
 int 
-ClpSimplexOther::whileIterating(double startingTheta, double & endingTheta,double reportIncrement,
+ClpSimplexOther::whileIterating(double startingTheta, double & endingTheta,double /*reportIncrement*/,
                                 const double * changeLower, const double * changeUpper,
                                 const double * changeObjective)
 {
@@ -2528,7 +2569,7 @@ ClpSimplexOther::whileIterating(double startingTheta, double & endingTheta,doubl
 	  theta_=0.0;
 	}
 	// do actual flips
-	reinterpret_cast<ClpSimplexDual *> ( this)->flipBounds(rowArray_[0],columnArray_[0],theta_);
+	reinterpret_cast<ClpSimplexDual *> ( this)->flipBounds(rowArray_[0],columnArray_[0]);
 	//rowArray_[1]->expand();
 	dualRowPivot_->updatePrimalSolution(rowArray_[1],
 					    movement,
@@ -2762,9 +2803,9 @@ ClpSimplexOther::whileIterating(double startingTheta, double & endingTheta,doubl
 }
 // Computes next theta and says if objective or bounds (0= bounds, 1 objective, -1 none)
 int 
-ClpSimplexOther::nextTheta(int type, double maxTheta, double * primalChange, double * dualChange,
+ClpSimplexOther::nextTheta(int type, double maxTheta, double * primalChange, double * /*dualChange*/,
                            const double * changeLower, const double * changeUpper,
-                           const double * changeObjective)
+                           const double * /*changeObjective*/)
 {
   int numberTotal = numberColumns_+numberRows_;
   int iSequence;
@@ -3129,7 +3170,7 @@ ClpSimplexOther::expandKnapsack(int knapsackRow, int & numberOutput,
       bool good=true;
       int nRow=0;
       double obj=0.0;
-      CoinZeroN(rowActivity,nRow);
+      CoinZeroN(rowActivity,numberRows_);
       for (iColumn=0;iColumn<numJ;iColumn++) {
 	int iValue = stack[iColumn];
 	if (iValue>bound[iColumn]) {

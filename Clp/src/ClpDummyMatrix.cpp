@@ -1,3 +1,4 @@
+/* $Id$ */
 // Copyright (C) 2003, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
@@ -48,7 +49,7 @@ ClpDummyMatrix::ClpDummyMatrix (const ClpDummyMatrix & rhs)
   numberElements_=rhs.numberElements_;
 }
 
-ClpDummyMatrix::ClpDummyMatrix (const CoinPackedMatrix & rhs) 
+ClpDummyMatrix::ClpDummyMatrix (const CoinPackedMatrix & ) 
   : ClpMatrixBase()
 {  
   std::cerr<<"Constructor from CoinPackedMatrix nnot supported - ClpDummyMatrix"<<std::endl;
@@ -94,33 +95,33 @@ ClpDummyMatrix::reverseOrderedCopy() const
 }
 //unscaled versions
 void 
-ClpDummyMatrix::times(double scalar,
-		   const double * x, double * y) const
+ClpDummyMatrix::times(double ,
+		   const double * , double * ) const
 {
   std::cerr<<"times not supported - ClpDummyMatrix"<<std::endl;
   abort();
 }
 void 
-ClpDummyMatrix::transposeTimes(double scalar,
-				const double * x, double * y) const
+ClpDummyMatrix::transposeTimes(double ,
+				const double * , double * ) const
 {
   std::cerr<<"transposeTimes not supported - ClpDummyMatrix"<<std::endl;
   abort();
 }
 void 
-ClpDummyMatrix::times(double scalar,
-		       const double * x, double * y,
-		       const double * rowScale, 
-		       const double * columnScale) const
+ClpDummyMatrix::times(double ,
+		       const double * , double * ,
+		       const double * , 
+		       const double * ) const
 {
   std::cerr<<"timesnot supported - ClpDummyMatrix"<<std::endl;
   abort();
 }
 void 
-ClpDummyMatrix::transposeTimes( double scalar,
-				 const double * x, double * y,
-				 const double * rowScale, 
-				 const double * columnScale) const
+ClpDummyMatrix::transposeTimes( double,
+				 const double * , double * ,
+				 const double * , 
+				 const double * ) const
 {
   std::cerr<<"transposeTimesnot supported - ClpDummyMatrix"<<std::endl;
   abort();
@@ -128,10 +129,10 @@ ClpDummyMatrix::transposeTimes( double scalar,
 /* Return <code>x * A + y</code> in <code>z</code>. 
 	Squashes small elements and knows about ClpSimplex */
 void 
-ClpDummyMatrix::transposeTimes(const ClpSimplex * model, double scalar,
-			      const CoinIndexedVector * rowArray,
-			      CoinIndexedVector * y,
-			      CoinIndexedVector * columnArray) const
+ClpDummyMatrix::transposeTimes(const ClpSimplex * , double ,
+			      const CoinIndexedVector * ,
+			      CoinIndexedVector * ,
+			      CoinIndexedVector * ) const
 {
   std::cerr<<"transposeTimes not supported - ClpDummyMatrix"<<std::endl;
   abort();
@@ -139,32 +140,30 @@ ClpDummyMatrix::transposeTimes(const ClpSimplex * model, double scalar,
 /* Return <code>x *A in <code>z</code> but
    just for indices in y */
 void 
-ClpDummyMatrix::subsetTransposeTimes(const ClpSimplex * model,
-			      const CoinIndexedVector * rowArray,
-			      const CoinIndexedVector * y,
-			      CoinIndexedVector * columnArray) const
+ClpDummyMatrix::subsetTransposeTimes(const ClpSimplex * ,
+			      const CoinIndexedVector * ,
+			      const CoinIndexedVector * ,
+			      CoinIndexedVector * ) const
 {
   std::cerr<<"subsetTransposeTimes not supported - ClpDummyMatrix"<<std::endl;
   abort();
 }
 /// returns number of elements in column part of basis,
 CoinBigIndex 
-ClpDummyMatrix::countBasis(ClpSimplex * model,
-				 const int * whichColumn, 
-				 int numberBasic,
-			   int & numberColumnBasic)
+ClpDummyMatrix::countBasis(const int * , 
+			   int & )
 {
   std::cerr<<"countBasis not supported - ClpDummyMatrix"<<std::endl;
   abort();
   return 0;
 }
 void
-ClpDummyMatrix::fillBasis(ClpSimplex * model,
-			 const int * whichColumn, 
-			 int & numberColumnBasic,
-			 int * row, int * start,
-			 int * rowCount, int * columnCount,
-			 CoinFactorizationDouble * element)
+ClpDummyMatrix::fillBasis(ClpSimplex * ,
+			 const int * , 
+			 int & ,
+			 int * , int * ,
+			 int * , int * ,
+			 CoinFactorizationDouble * )
 {
   std::cerr<<"fillBasis not supported - ClpDummyMatrix"<<std::endl;
   abort();
@@ -172,8 +171,8 @@ ClpDummyMatrix::fillBasis(ClpSimplex * model,
 /* Unpacks a column into an CoinIndexedvector
  */
 void 
-ClpDummyMatrix::unpack(const ClpSimplex * model,CoinIndexedVector * rowArray,
-		   int iColumn) const 
+ClpDummyMatrix::unpack(const ClpSimplex * ,CoinIndexedVector * ,
+		   int ) const 
 {
   std::cerr<<"unpack not supported - ClpDummyMatrix"<<std::endl;
   abort();
@@ -183,9 +182,9 @@ ClpDummyMatrix::unpack(const ClpSimplex * model,CoinIndexedVector * rowArray,
 Note that model is NOT const.  Bounds and objective could
 be modified if doing column generation (just for this variable) */
 void 
-ClpDummyMatrix::unpackPacked(ClpSimplex * model,
-			    CoinIndexedVector * rowArray,
-			    int iColumn) const
+ClpDummyMatrix::unpackPacked(ClpSimplex * ,
+			    CoinIndexedVector * ,
+			    int ) const
 {
   std::cerr<<"unpackPacked not supported - ClpDummyMatrix"<<std::endl;
   abort();
@@ -193,16 +192,16 @@ ClpDummyMatrix::unpackPacked(ClpSimplex * model,
 /* Adds multiple of a column into an CoinIndexedvector
       You can use quickAdd to add to vector */
 void 
-ClpDummyMatrix::add(const ClpSimplex * model,CoinIndexedVector * rowArray,
-		   int iColumn, double multiplier) const 
+ClpDummyMatrix::add(const ClpSimplex * ,CoinIndexedVector * ,
+		   int , double ) const 
 {
   std::cerr<<"add not supported - ClpDummyMatrix"<<std::endl;
   abort();
 }
 /* Adds multiple of a column into an array */
 void 
-ClpDummyMatrix::add(const ClpSimplex * model,double * array,
-		    int column, double multiplier) const
+ClpDummyMatrix::add(const ClpSimplex * ,double * ,
+		    int , double ) const
 {
   std::cerr<<"add not supported - ClpDummyMatrix"<<std::endl;
   abort();
@@ -244,13 +243,13 @@ ClpDummyMatrix::getVectorLengths() const
   return NULL;
 }
 /* Delete the columns whose indices are listed in <code>indDel</code>. */
-void ClpDummyMatrix::deleteCols(const int numDel, const int * indDel) 
+void ClpDummyMatrix::deleteCols(const int , const int * ) 
 {
   std::cerr<<"deleteCols not supported - ClpDummyMatrix"<<std::endl;
   abort();
 }
 /* Delete the rows whose indices are listed in <code>indDel</code>. */
-void ClpDummyMatrix::deleteRows(const int numDel, const int * indDel) 
+void ClpDummyMatrix::deleteRows(const int , const int * ) 
 {
   std::cerr<<"deleteRows not supported - ClpDummyMatrix"<<std::endl;
   abort();

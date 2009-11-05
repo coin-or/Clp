@@ -1,3 +1,4 @@
+/* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
@@ -57,7 +58,7 @@ ClpPrimalColumnDantzig::operator=(const ClpPrimalColumnDantzig& rhs)
 // Returns pivot column, -1 if none
 int 
 ClpPrimalColumnDantzig::pivotColumn(CoinIndexedVector * updates,
-				    CoinIndexedVector * spareRow1,
+				    CoinIndexedVector * /*spareRow1*/,
 				    CoinIndexedVector * spareRow2,
 				    CoinIndexedVector * spareColumn1,
 				    CoinIndexedVector * spareColumn2)

@@ -1,3 +1,4 @@
+/* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
@@ -38,7 +39,6 @@ ClpPrimalColumnSteepest::ClpPrimalColumnSteepest (int mode)
 {
   type_=2+64*mode;
 }
-
 //-------------------------------------------------------------------
 // Copy constructor 
 //-------------------------------------------------------------------
@@ -65,10 +65,11 @@ ClpPrimalColumnSteepest::ClpPrimalColumnSteepest (const ClpPrimalColumnSteepest 
     if (rhs.weights_) {
       assert(model_);
       int number = model_->numberRows()+model_->numberColumns();
+      assert (number == rhs.model_->numberRows()+rhs.model_->numberColumns());
       weights_= new double[number];
-      ClpDisjointCopyN(rhs.weights_,number,weights_);
+      CoinMemcpyN(rhs.weights_,number,weights_);
       savedWeights_= new double[number];
-      ClpDisjointCopyN(rhs.savedWeights_,number,savedWeights_);
+      CoinMemcpyN(rhs.savedWeights_,number,savedWeights_);
       if (mode_!=1) {
         reference_ = CoinCopyOfArray(rhs.reference_,(number+31)>>5);
       }
@@ -135,10 +136,11 @@ ClpPrimalColumnSteepest::operator=(const ClpPrimalColumnSteepest& rhs)
     if (rhs.weights_!=NULL) {
       assert(model_);
       int number = model_->numberRows()+model_->numberColumns();
+      assert (number == rhs.model_->numberRows()+rhs.model_->numberColumns());
       weights_= new double[number];
-      ClpDisjointCopyN(rhs.weights_,number,weights_);
+      CoinMemcpyN(rhs.weights_,number,weights_);
       savedWeights_= new double[number];
-      ClpDisjointCopyN(rhs.savedWeights_,number,savedWeights_);
+      CoinMemcpyN(rhs.savedWeights_,number,savedWeights_);
       if (mode_!=1) {
 	reference_ = CoinCopyOfArray(rhs.reference_,(number+31)>>5);
       }
@@ -285,37 +287,37 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
   }
   if (switchType==5) {
     if (anyUpdates>0) {
-      justDjs(updates,spareRow1,spareRow2,
+      justDjs(updates,spareRow2,
 	spareColumn1,spareColumn2);
     }
   } else if (anyUpdates==1) {
     if (switchType<4) {
       // exact etc when can use dj 
-      djsAndSteepest(updates,spareRow1,spareRow2,
+      djsAndSteepest(updates,spareRow2,
 	spareColumn1,spareColumn2);
     } else {
       // devex etc when can use dj 
-      djsAndDevex(updates,spareRow1,spareRow2,
+      djsAndDevex(updates,spareRow2,
 	spareColumn1,spareColumn2);
     }
   } else if (anyUpdates==-1) {
     if (switchType<4) {
       // exact etc when djs okay 
-      justSteepest(updates,spareRow1,spareRow2,
+      justSteepest(updates,spareRow2,
 	spareColumn1,spareColumn2);
     } else {
       // devex etc when djs okay 
-      justDevex(updates,spareRow1,spareRow2,
+      justDevex(updates,spareRow2,
 	spareColumn1,spareColumn2);
     }
   } else if (anyUpdates==2) {
     if (switchType<4) {
       // exact etc when have to use pivot
-      djsAndSteepest2(updates,spareRow1,spareRow2,
+      djsAndSteepest2(updates,spareRow2,
 	spareColumn1,spareColumn2);
     } else {
       // devex etc when have to use pivot
-      djsAndDevex2(updates,spareRow1,spareRow2,
+      djsAndDevex2(updates,spareRow2,
 	spareColumn1,spareColumn2);
     }
   } 
@@ -593,7 +595,6 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
 // Just update djs
 void 
 ClpPrimalColumnSteepest::justDjs(CoinIndexedVector * updates,
-	       CoinIndexedVector * spareRow1,
 	       CoinIndexedVector * spareRow2,
 	       CoinIndexedVector * spareColumn1,
 	       CoinIndexedVector * spareColumn2)
@@ -698,7 +699,6 @@ ClpPrimalColumnSteepest::justDjs(CoinIndexedVector * updates,
 // Update djs, weights for Devex
 void 
 ClpPrimalColumnSteepest::djsAndDevex(CoinIndexedVector * updates,
-	       CoinIndexedVector * spareRow1,
 	       CoinIndexedVector * spareRow2,
 	       CoinIndexedVector * spareColumn1,
 	       CoinIndexedVector * spareColumn2)
@@ -938,7 +938,6 @@ ClpPrimalColumnSteepest::djsAndDevex(CoinIndexedVector * updates,
 // Update djs, weights for Steepest
 void 
 ClpPrimalColumnSteepest::djsAndSteepest(CoinIndexedVector * updates,
-	       CoinIndexedVector * spareRow1,
 	       CoinIndexedVector * spareRow2,
 	       CoinIndexedVector * spareColumn1,
 	       CoinIndexedVector * spareColumn2)
@@ -1207,7 +1206,6 @@ ClpPrimalColumnSteepest::djsAndSteepest(CoinIndexedVector * updates,
 // Update djs, weights for Devex
 void 
 ClpPrimalColumnSteepest::djsAndDevex2(CoinIndexedVector * updates,
-	       CoinIndexedVector * spareRow1,
 	       CoinIndexedVector * spareRow2,
 	       CoinIndexedVector * spareColumn1,
 	       CoinIndexedVector * spareColumn2)
@@ -1399,7 +1397,6 @@ ClpPrimalColumnSteepest::djsAndDevex2(CoinIndexedVector * updates,
 // Update djs, weights for Steepest
 void 
 ClpPrimalColumnSteepest::djsAndSteepest2(CoinIndexedVector * updates,
-	       CoinIndexedVector * spareRow1,
 	       CoinIndexedVector * spareRow2,
 	       CoinIndexedVector * spareColumn1,
 	       CoinIndexedVector * spareColumn2)
@@ -1553,6 +1550,7 @@ ClpPrimalColumnSteepest::djsAndSteepest2(CoinIndexedVector * updates,
       // do alternateWeights_ here so can scale
       for (j=0;j<number;j++) {
 	int iSequence = index[j];
+	assert (iSequence>=0&&iSequence<model_->numberRows());
 	double thisWeight = weight[iSequence];
 	// row has -1 
 	double pivot = - updateBy[j];
@@ -1663,7 +1661,7 @@ ClpPrimalColumnSteepest::transposeTimes2(const CoinIndexedVector * pi1, CoinInde
   }
   if (model_->clpMatrix()->canCombine(model_,pi1)) {
     // put row of tableau in rowArray and columnArray
-    model_->clpMatrix()->transposeTimes2(model_,pi1,dj1,pi2,dj2,spare,referenceIn, devex_,
+    model_->clpMatrix()->transposeTimes2(model_,pi1,dj1,pi2,spare,referenceIn, devex_,
                                          reference_,
                                          weights_,scaleFactor);
   } else {
@@ -1722,7 +1720,6 @@ ClpPrimalColumnSteepest::transposeTimes2(const CoinIndexedVector * pi1, CoinInde
 // Update weights for Devex
 void 
 ClpPrimalColumnSteepest::justDevex(CoinIndexedVector * updates,
-	       CoinIndexedVector * spareRow1,
 	       CoinIndexedVector * spareRow2,
 	       CoinIndexedVector * spareColumn1,
 	       CoinIndexedVector * spareColumn2)
@@ -1830,7 +1827,6 @@ ClpPrimalColumnSteepest::justDevex(CoinIndexedVector * updates,
 // Update weights for Steepest
 void 
 ClpPrimalColumnSteepest::justSteepest(CoinIndexedVector * updates,
-	       CoinIndexedVector * spareRow1,
 	       CoinIndexedVector * spareRow2,
 	       CoinIndexedVector * spareColumn1,
 	       CoinIndexedVector * spareColumn2)
@@ -1977,7 +1973,7 @@ ClpPrimalColumnSteepest::justSteepest(CoinIndexedVector * updates,
 // Returns pivot column, -1 if none
 int 
 ClpPrimalColumnSteepest::pivotColumnOldMethod(CoinIndexedVector * updates,
-				    CoinIndexedVector * spareRow1,
+				    CoinIndexedVector * ,
 				    CoinIndexedVector * spareRow2,
 				    CoinIndexedVector * spareColumn1,
 				    CoinIndexedVector * spareColumn2)
@@ -2775,6 +2771,7 @@ ClpPrimalColumnSteepest::maximumPivotsChanged()
    2) after factorization
    3) just redo infeasibilities
    4) restore weights
+   5) at end of values pass (so need initialization)
 */
 void 
 ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model,int mode)
@@ -2796,7 +2793,7 @@ ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model,int mode)
       if (infeasible_->capacity()==numberRows+numberColumns&&
 	alternateWeights_->capacity()==numberRows+
 	  model_->factorization()->maximumPivots()) {
-	alternateWeights_->clear();
+	//alternateWeights_->clear();
 	if (pivotSequence_>=0&&pivotSequence_<numberRows) {
 	  // save pivot order
 	  CoinMemcpyN(pivotVariable,
@@ -2879,8 +2876,12 @@ ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model,int mode)
 	//pivotSequence_= savedPivotSequence_;
 	//model_->setSequenceOut(savedSequenceOut_); 
 	pivotSequence_= -1;
-	model_->setSequenceOut(-1); 
-	alternateWeights_->clear();
+	model_->setSequenceOut(-1);
+	// indices are wrong so clear by hand
+	//alternateWeights_->clear();
+	CoinZeroN(alternateWeights_->denseVector(),
+		  alternateWeights_->capacity());
+	alternateWeights_->setNumElements(0);
       }
     }
     state_=0;

@@ -1,3 +1,4 @@
+/* $Id$ */
 // Copyright (C) 2003, International Business Machines
 // Corporation and others.  All Rights Reserved.
 #ifndef ClpDummyMatrix_H
@@ -54,9 +55,7 @@ public:
   /** Returns a new matrix in reverse order without gaps */
   virtual ClpMatrixBase * reverseOrderedCopy() const;
   /// Returns number of elements in column part of basis 
-  virtual CoinBigIndex countBasis(ClpSimplex * model,
-				 const int * whichColumn, 
-				 int numberRowBasic,
+  virtual CoinBigIndex countBasis(const int * whichColumn, 
 				  int & numberColumnBasic);
   /// Fills in column part of basis
   virtual void fillBasis(ClpSimplex * model,

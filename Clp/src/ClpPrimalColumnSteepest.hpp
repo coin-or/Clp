@@ -1,3 +1,4 @@
+/* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
 #ifndef ClpPrimalColumnSteepest_H
@@ -44,7 +45,6 @@ public:
 			  CoinIndexedVector * spareColumn2);
   /// Just update djs
   void justDjs(CoinIndexedVector * updates,
-	       CoinIndexedVector * spareRow1,
 	       CoinIndexedVector * spareRow2,
 	       CoinIndexedVector * spareColumn1,
 	       CoinIndexedVector * spareColumn2);
@@ -55,37 +55,31 @@ public:
 		     int numberLook);
   /// Update djs, weights for Devex using djs
   void djsAndDevex(CoinIndexedVector * updates,
-	       CoinIndexedVector * spareRow1,
 	       CoinIndexedVector * spareRow2,
 	       CoinIndexedVector * spareColumn1,
 	       CoinIndexedVector * spareColumn2);
   /// Update djs, weights for Steepest using djs
   void djsAndSteepest(CoinIndexedVector * updates,
-	       CoinIndexedVector * spareRow1,
 	       CoinIndexedVector * spareRow2,
 	       CoinIndexedVector * spareColumn1,
 	       CoinIndexedVector * spareColumn2);
   /// Update djs, weights for Devex using pivot row
   void djsAndDevex2(CoinIndexedVector * updates,
-	       CoinIndexedVector * spareRow1,
 	       CoinIndexedVector * spareRow2,
 	       CoinIndexedVector * spareColumn1,
 	       CoinIndexedVector * spareColumn2);
   /// Update djs, weights for Steepest using pivot row
   void djsAndSteepest2(CoinIndexedVector * updates,
-	       CoinIndexedVector * spareRow1,
 	       CoinIndexedVector * spareRow2,
 	       CoinIndexedVector * spareColumn1,
 	       CoinIndexedVector * spareColumn2);
   /// Update weights for Devex
   void justDevex(CoinIndexedVector * updates,
-	       CoinIndexedVector * spareRow1,
 	       CoinIndexedVector * spareRow2,
 	       CoinIndexedVector * spareColumn1,
 	       CoinIndexedVector * spareColumn2);
   /// Update weights for Steepest
   void justSteepest(CoinIndexedVector * updates,
-	       CoinIndexedVector * spareRow1,
 	       CoinIndexedVector * spareRow2,
 	       CoinIndexedVector * spareColumn1,
 	       CoinIndexedVector * spareColumn2);
@@ -105,7 +99,14 @@ public:
   /// Initialize weights
   void initializeWeights();
 
-  /// Save weights
+  /** Save weights - this may initialize weights as well
+      mode is -
+      1) before factorization
+      2) after factorization
+      3) just redo infeasibilities
+      4) restore weights
+      5) at end of values pass (so need initialization)
+  */
   virtual void saveWeights(ClpSimplex * model,int mode);
   /// Gets rid of last update
   virtual void unrollWeights();
@@ -151,7 +152,7 @@ public:
   ClpPrimalColumnSteepest(int mode=3); 
   
   /// Copy constructor 
-  ClpPrimalColumnSteepest(const ClpPrimalColumnSteepest &);
+  ClpPrimalColumnSteepest(const ClpPrimalColumnSteepest & rhs);
   
   /// Assignment operator 
   ClpPrimalColumnSteepest & operator=(const ClpPrimalColumnSteepest& rhs);

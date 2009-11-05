@@ -1,3 +1,4 @@
+/* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
@@ -173,7 +174,7 @@ Idiot::cleanIteration(int iteration, int ordinaryStart, int ordinaryEnd,
 	}
 	if (iCol>=0) {
 	  // may want to carry on - because of cost?
-	  while (cost[iCol]<0&&rowValue<rowUpper[i]) {
+	  while (iCol>=0&&cost[iCol]<0&&rowValue<rowUpper[i]) {
 	    // want to increase
 	    double distance = rowUpper[i]-rowValue;
 	    double value = element[columnStart[iCol]];
@@ -239,7 +240,7 @@ Idiot::cleanIteration(int iteration, int ordinaryStart, int ordinaryEnd,
 	}
 	if (iCol>=0) {
 	  // may want to carry on - because of cost?
-	  while (cost[iCol]<0&&rowValue>rowLower[i]) {
+	  while (iCol>=0&&cost[iCol]<0&&rowValue>rowLower[i]) {
 	    // want to increase
 	    double distance = -(rowLower[i]-rowValue);
 	    double value = -element[columnStart[iCol]];
@@ -340,7 +341,6 @@ Idiot::crash(int numberPass, CoinMessageHandler * handler,const CoinMessages *me
   if (maxIts_==5)
     maxIts_=2;
   if (numberPass<=0)
-    // Cast to double to avoid VACPP complaining
     majorIterations_=static_cast<int>(2+log10(static_cast<double>(numberColumns+1)));
   else
     majorIterations_=numberPass;
@@ -366,7 +366,7 @@ Idiot::crash(int numberPass, CoinMessageHandler * handler,const CoinMessages *me
   if ((averageInfeas<0.01&&(strategy_&512)!=0)||(strategy_&8192)!=0) 
     crossOver(16+1); 
   else
-    crossOver(3);
+    crossOver(majorIterations_<1000000 ? 3 : 2);
 #endif
 }
 void
@@ -390,6 +390,7 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
   int maxIts=maxIts_;
   int logLevel=logLevel_;
   int saveMajorIterations = majorIterations_;
+  majorIterations_ = majorIterations_%1000000;
   if (handler) {
     if (handler->logLevel()>0&&handler->logLevel()<3)
       logLevel=1;
@@ -824,7 +825,7 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
 #endif
     }
     if (iteration>50&&n==numberAway&&result.infeas<1.0e-4) {
-      //printf("infeas small %g\n",result.infeas);
+      printf("infeas small %g\n",result.infeas);
       break; // not much happening
     }
     if (lightWeight_==1&&iteration>10&&result.infeas>1.0&&maxIts!=7) {
@@ -1202,7 +1203,7 @@ Idiot::crossOver(int mode)
   double * saveLower = NULL;
   double * saveRowUpper = NULL;
   double * saveRowLower = NULL;
-  bool allowInfeasible = (strategy_&8192)!=0;
+  bool allowInfeasible = ((strategy_&8192)!=0)||(majorIterations_>1000000);
   if (addAll<3) {
     saveUpper = new double [ncols];
     saveLower = new double [ncols];
@@ -1312,50 +1313,259 @@ Idiot::crossOver(int mode)
     int * posSlack = whenUsed_+ncols;
     int * negSlack = posSlack+nrows;
     int * nextSlack = negSlack + nrows;
+#if 1
+    // Array for sorting out slack values
+    double * ratio = new double [ncols];
+    int * which = new int [ncols];
+    for (i=0;i<nrows;i++) {
+      if (posSlack[i]>=0||negSlack[i]>=0) {
+	int iCol;
+	int nPlus=0;
+	int nMinus=0;
+	bool possible=true;
+	// Get sum
+	double sum=0.0;
+	iCol =posSlack[i];
+	while (iCol>=0) {
+	  double value = element[columnStart[iCol]];
+	  sum += value*colsol[iCol];
+	  if (lower[iCol]) {
+	    possible=false;
+	    break;
+	  } else {
+	    nPlus++;
+	  }
+	  iCol=nextSlack[iCol];
+	}
+	iCol =negSlack[i];
+	while (iCol>=0) {
+	  double value = -element[columnStart[iCol]];
+	  sum -= value*colsol[iCol];
+	  if (lower[iCol]) {
+	    possible=false;
+	    break;
+	  } else {
+	    nMinus++;
+	  }
+	  iCol=nextSlack[iCol];
+	}
+	//printf("%d plus, %d minus",nPlus,nMinus);
+	//printf("\n");
+	if ((rowsol[i]-rowlower[i]<1.0e-7||
+	     rowupper[i]-rowsol[i]<1.0e-7)&&
+	    nPlus+nMinus<2) 
+	  possible=false;
+	if (possible) {
+	  // Amount contributed by other varaibles
+	  sum = rowsol[i]-sum;
+	  double lo = rowlower[i];
+	  if (lo>-1.0e20)
+	    lo -=sum;
+	  double up = rowupper[i];
+	  if (up<1.0e20)
+	    up -= sum;
+	  //printf("row bounds %g %g\n",lo,up);
+	  if (0) {
+	    double sum=0.0;
+	    double x=0.0;
+	    for (int k=0;k<ncols;k++) {
+	      CoinBigIndex j;
+	      double value=colsol[k];
+	      x+=value*cost[k];
+	      for (j=columnStart[k];j<columnStart[k]+columnLength[k];j++) {
+		int irow=row[j];
+		if (irow==i)
+		  sum += element[j]*value;
+	      }
+	    }
+	    printf("Before sum %g <= %g <= %g cost %.18g\n",
+		   rowlower[i],sum,rowupper[i],x);
+	  }
+	  // set all to zero
+	  iCol =posSlack[i];
+	  while (iCol>=0) {
+	    colsol[iCol]=0.0;
+	    iCol=nextSlack[iCol];
+	  }
+	  iCol =negSlack[i];
+	  while (iCol>=0) {
+	    colsol[iCol]=0.0;
+	    iCol=nextSlack[iCol];
+	  }
+	  {
+	    int iCol;
+	    iCol =posSlack[i];
+	    while (iCol>=0) {
+	      //printf("col %d el %g sol %g bounds %g %g cost %g\n",
+	      //     iCol,element[columnStart[iCol]],
+	      //     colsol[iCol],lower[iCol],upper[iCol],cost[iCol]);
+	      iCol = nextSlack[iCol];
+	    }
+	    iCol =negSlack[i];
+	    while (iCol>=0) {
+	      //printf("col %d el %g sol %g bounds %g %g cost %g\n",
+	      //     iCol,element[columnStart[iCol]],
+	      //     colsol[iCol],lower[iCol],upper[iCol],cost[iCol]);
+	      iCol = nextSlack[iCol];
+	    }
+	  }
+	  //printf("now what?\n");
+	  int n=0;
+	  bool basic=false;
+	  if (lo>0.0) {
+	    // Add in positive
+	    iCol =posSlack[i];
+	    while (iCol>=0) {
+	      double value = element[columnStart[iCol]];
+	      ratio[n]=cost[iCol]/value;
+	      which[n++]=iCol;
+	      iCol=nextSlack[iCol];
+	    }
+	    CoinSort_2(ratio,ratio+n,which);
+	    for (int i=0;i<n;i++) {
+	      iCol=which[i];
+	      double value=element[columnStart[iCol]];
+	      if (lo>=upper[iCol]*value) {
+		value *=upper[iCol];
+		sum+=value;
+		lo-=value;
+		colsol[iCol]=upper[iCol];
+	      } else {
+		value = lo/value;
+		sum += lo;
+		lo=0.0;
+		colsol[iCol]=value;
+		model_->setColumnStatus(iCol,ClpSimplex::basic);
+		basic=true;
+	      }
+	      if (lo<1.0e-7)
+		break;
+	    }
+	  } else if (up<0.0) {
+	    // Use lo so coding is more similar
+	    lo=-up;
+	    // Add in negative
+	    iCol =negSlack[i];
+	    while (iCol>=0) {
+	      double value = -element[columnStart[iCol]];
+	      ratio[n]=cost[iCol]/value;
+	      which[n++]=iCol;
+	      iCol=nextSlack[iCol];
+	    }
+	    CoinSort_2(ratio,ratio+n,which);
+	    for (int i=0;i<n;i++) {
+	      iCol=which[i];
+	      double value=-element[columnStart[iCol]];
+	      if (lo>=upper[iCol]*value) {
+		value *=upper[iCol];
+		sum+=value;
+		lo-=value;
+		colsol[iCol]=upper[iCol];
+	      } else {
+		value = lo/value;
+		sum += lo;
+		lo=0.0;
+		colsol[iCol]=value;
+		model_->setColumnStatus(iCol,ClpSimplex::basic);
+		basic=true;
+	      }
+	      if (lo<1.0e-7)
+		break;
+	    }
+	  }
+	  if (0) {
+	    double sum2=0.0;
+	    double x=0.0;
+	    for (int k=0;k<ncols;k++) {
+	      CoinBigIndex j;
+	      double value=colsol[k];
+	      x+=value*cost[k];
+	      for (j=columnStart[k];j<columnStart[k]+columnLength[k];j++) {
+		int irow=row[j];
+		if (irow==i)
+		  sum2 += element[j]*value;
+	      }
+	    }
+	    printf("after sum %g <= %g <= %g cost %.18g (sum = %g)\n",
+		   rowlower[i],sum2,rowupper[i],x,sum);
+	  }
+	  rowsol[i]=sum;
+	  if (basic) {
+	    if (fabs(rowsol[i]-rowlower[i])<fabs(rowsol[i]-rowupper[i]))
+	      model_->setRowStatus(i,ClpSimplex::atLowerBound);
+	    else
+	      model_->setRowStatus(i,ClpSimplex::atUpperBound);
+	  }
+	} else {
+	  int n=0;
+	  int iCol;
+	  iCol =posSlack[i];
+	  while (iCol>=0) {
+	    if (colsol[iCol]>lower[iCol]+1.0e-8&&
+		colsol[iCol]<upper[iCol]-1.0e-8) {
+	      model_->setColumnStatus(iCol,ClpSimplex::basic);
+	      n++;
+	    }
+	    iCol = nextSlack[iCol];
+	  }
+	  iCol =negSlack[i];
+	  while (iCol>=0) {
+	    if (colsol[iCol]>lower[iCol]+1.0e-8&&
+		colsol[iCol]<upper[iCol]-1.0e-8) {
+	      model_->setColumnStatus(iCol,ClpSimplex::basic);
+	      n++;
+	    }
+	    iCol = nextSlack[iCol];
+	  }
+	  if (n) {
+	    if (fabs(rowsol[i]-rowlower[i])<fabs(rowsol[i]-rowupper[i]))
+	      model_->setRowStatus(i,ClpSimplex::atLowerBound);
+	    else
+	      model_->setRowStatus(i,ClpSimplex::atUpperBound);
+#ifdef CLP_INVESTIGATE
+	    if (n>1)
+	      printf("%d basic on row %d!\n",n,i);
+#endif
+	  }
+	}
+      }
+    }
+    delete [] ratio;
+    delete [] which;
+#else
     for (i=0;i<nrows;i++) {
       int n=0;
       int iCol;
       iCol =posSlack[i];
-      if (iCol>=0) {
+      while (iCol>=0) {
 	if (colsol[iCol]>lower[iCol]+1.0e-8&&
-	    colsol[iCol]<upper[iCol]+1.0e-8) {
+	    colsol[iCol]<upper[iCol]-1.0e-8) {
 	  model_->setColumnStatus(iCol,ClpSimplex::basic);
 	  n++;
 	}
-	while (nextSlack[iCol]>=0) {
-	  iCol = nextSlack[iCol];
-	  if (colsol[iCol]>lower[iCol]+1.0e-8&&
-	      colsol[iCol]<upper[iCol]+1.0e-8) {
-	    model_->setColumnStatus(iCol,ClpSimplex::basic);
-	    n++;
-	  }
-	}
+	iCol = nextSlack[iCol];
       }
       iCol =negSlack[i];
-      if (iCol>=0) {
+      while (iCol>=0) {
 	if (colsol[iCol]>lower[iCol]+1.0e-8&&
-	    colsol[iCol]<upper[iCol]+1.0e-8) {
+	    colsol[iCol]<upper[iCol]-1.0e-8) {
 	  model_->setColumnStatus(iCol,ClpSimplex::basic);
 	  n++;
 	}
-	while (nextSlack[iCol]>=0) {
-	  iCol = nextSlack[iCol];
-	  if (colsol[iCol]>lower[iCol]+1.0e-8&&
-	      colsol[iCol]<upper[iCol]+1.0e-8) {
-	    model_->setColumnStatus(iCol,ClpSimplex::basic);
-	    n++;
-	  }
-	}
+	iCol = nextSlack[iCol];
       }
       if (n) {
 	if (fabs(rowsol[i]-rowlower[i])<fabs(rowsol[i]-rowupper[i]))
 	  model_->setRowStatus(i,ClpSimplex::atLowerBound);
 	else
 	  model_->setRowStatus(i,ClpSimplex::atUpperBound);
+#ifdef CLP_INVESTIGATE
 	if (n>1)
 	  printf("%d basic on row %d!\n",n,i);
+#endif
       }
     }
+#endif
   }
   double maxmin;
   if (model_->getObjSense()==-1.0) {
@@ -1363,6 +1573,7 @@ Idiot::crossOver(int mode)
   } else {
     maxmin=1.0;
   }
+  bool justValuesPass=majorIterations_>1000000;
   if (slackStart>=0) {
     for (i=0;i<nrows;i++) {
       model_->setRowStatus(i,ClpSimplex::superBasic);
@@ -1458,6 +1669,8 @@ Idiot::crossOver(int mode)
 	model_->clpMatrix()->times(1.0,colsol,rhs);
 	double * rowupper = model_->rowUpper();
 	double * rowlower= model_->rowLower();
+	saveRowUpper = CoinCopyOfArray(rowupper,nrows);
+	saveRowLower = CoinCopyOfArray(rowlower,nrows);
 	double sum = 0.0;
 	for (i=0;i<nrows;i++) {
 	  if (rhs[i]>rowupper[i]) {
@@ -1480,7 +1693,7 @@ Idiot::crossOver(int mode)
       if (!wantVector) {
 	//#define TWO_GOES
 #ifndef TWO_GOES
-	model_->primal(1);
+	model_->primal(justValuesPass ? 2 : 1);
 #else
 	model_->primal(1+11);
 #endif
@@ -1504,6 +1717,8 @@ Idiot::crossOver(int mode)
       presolve=0;
       model_ = saveModel;
       saveModel=NULL;
+      if (justValuesPass)
+	model_->primal(2);
     }
     if (allowInfeasible) {
       CoinMemcpyN(saveRowUpper,nrows,model_->rowUpper());
@@ -1544,6 +1759,8 @@ Idiot::crossOver(int mode)
       printf("Time so far %g, %d now added from previous iterations\n",
 	     CoinCpuTime()-startTime,n);
 #endif
+      if (justValuesPass)
+	return;
       if (addAll)
 	presolve=0;
       if (presolve) {

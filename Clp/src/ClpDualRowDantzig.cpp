@@ -1,3 +1,4 @@
+/* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
@@ -79,9 +80,9 @@ ClpDualRowDantzig::pivotRow()
 }
 // FT update and returns pivot alpha
 double
-ClpDualRowDantzig::updateWeights(CoinIndexedVector * input,
+ClpDualRowDantzig::updateWeights(CoinIndexedVector * /*input*/,
 				  CoinIndexedVector * spare,
-				 CoinIndexedVector * spare2,
+				 CoinIndexedVector * /*spare2*/,
 				  CoinIndexedVector * updatedColumn)
 {
   // Do FT update

@@ -1,3 +1,4 @@
+/* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
@@ -173,12 +174,10 @@ public:
 		  CoinIndexedVector * columnArray,
 		  double theta);
   /** While updateDualsInDual sees what effect is of flip
-      this does actuall flipping.
-      If change >0.0 then value in array >0.0 => from lower to upper
+      this does actual flipping.
   */
   void flipBounds(CoinIndexedVector * rowArray,
-		  CoinIndexedVector * columnArray,
-		  double change);
+		  CoinIndexedVector * columnArray);
   /** 
       Row array has row part of pivot row
       Column array has column part.

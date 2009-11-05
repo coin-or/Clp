@@ -1,3 +1,4 @@
+/* $Id$ */
 // Copyright (C) 2003, International Business Machines
 // Corporation and others.  All Rights Reserved.
 #ifndef ClpHelperFunctions_H
@@ -17,6 +18,56 @@ void multiplyAdd(const double * region1, int size, double multiplier1,
 		 double * region2, double multiplier2);
 double innerProduct(const double * region1, int size, const double * region2);
 void getNorms(const double * region, int size, double & norm1, double & norm2);
+#if COIN_LONG_WORK 
+  // For long double versions 
+CoinWorkDouble maximumAbsElement(const CoinWorkDouble * region, int size);
+void setElements(CoinWorkDouble * region, int size, CoinWorkDouble value);
+void multiplyAdd(const CoinWorkDouble * region1, int size, CoinWorkDouble multiplier1,
+		 CoinWorkDouble * region2, CoinWorkDouble multiplier2);
+CoinWorkDouble innerProduct(const CoinWorkDouble * region1, int size, const CoinWorkDouble * region2);
+void getNorms(const CoinWorkDouble * region, int size, CoinWorkDouble & norm1, CoinWorkDouble & norm2);
+inline void
+CoinMemcpyN(const double * from, const int size, CoinWorkDouble * to)
+{
+  for (int i=0;i<size;i++)
+    to[i]=from[i];
+}
+inline void
+CoinMemcpyN(const CoinWorkDouble * from, const int size, double * to)
+{
+  for (int i=0;i<size;i++)
+    to[i]=static_cast<double>(from[i]);
+}
+inline CoinWorkDouble
+CoinMax(const CoinWorkDouble x1, const double x2)
+{
+    return (x1 > x2) ? x1 : x2;
+}
+inline CoinWorkDouble
+CoinMax(double x1, const CoinWorkDouble x2)
+{
+    return (x1 > x2) ? x1 : x2;
+}
+inline CoinWorkDouble
+CoinMin(const CoinWorkDouble x1, const double x2)
+{
+    return (x1 < x2) ? x1 : x2;
+}
+inline CoinWorkDouble
+CoinMin(double x1, const CoinWorkDouble x2)
+{
+    return (x1 < x2) ? x1 : x2;
+}
+inline CoinWorkDouble CoinSqrt(CoinWorkDouble x)
+{
+  return sqrtl(x);
+}
+#else
+inline double CoinSqrt(double x)
+{
+  return sqrt(x);
+}
+#endif
 
 /// Following only included if ClpPdco defined
 #ifdef ClpPdco_H

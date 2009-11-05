@@ -1,3 +1,4 @@
+/* $Id$ */
 // Copyright (C) 2003, International Business Machines
 // Corporation and others.  All Rights Reserved.
 #ifndef ClpCholeskyBase_H
@@ -5,16 +6,37 @@
 
 #include "CoinPragma.hpp"
 #include "CoinFinite.hpp"
+//#define CLP_LONG_CHOLESKY 0
+#ifndef CLP_LONG_CHOLESKY 
 #define CLP_LONG_CHOLESKY 0
+#endif
+/* valid combinations are 
+   CLP_LONG_CHOLESKY 0 and COIN_LONG_WORK 0
+   CLP_LONG_CHOLESKY 1 and COIN_LONG_WORK 1
+   CLP_LONG_CHOLESKY 2 and COIN_LONG_WORK 1
+*/
+#if COIN_LONG_WORK==0
+#if CLP_LONG_CHOLESKY>0
+#define CHOLESKY_BAD_COMBINATION
+#endif
+#else
+#if CLP_LONG_CHOLESKY==0
+#define CHOLESKY_BAD_COMBINATION
+#endif
+#endif
+#ifdef CHOLESKY_BAD_COMBINATION
+#  warning("Bad combination of CLP_LONG_CHOLESKY and COIN_BIG_DOUBLE/COIN_LONG_WORK");
+"Bad combination of CLP_LONG_CHOLESKY and COIN_LONG_WORK"
+#endif
 #if CLP_LONG_CHOLESKY>1
 typedef long double longDouble;
-typedef long double longWork;
+#define CHOL_SMALL_VALUE 1.0e-15 
 #elif CLP_LONG_CHOLESKY==1
 typedef double longDouble;
-typedef long double longWork;
+#define CHOL_SMALL_VALUE 1.0e-11
 #else
 typedef double longDouble;
-typedef double longWork;
+#define CHOL_SMALL_VALUE 1.0e-11
 #endif
 class ClpInterior;
 class ClpCholeskyDense;
@@ -45,13 +67,17 @@ public:
   virtual int symbolic();
   /** Factorize - filling in rowsDropped and returning number dropped.
       If return code negative then out of memory */
-  virtual int factorize(const double * diagonal, int * rowsDropped) ;
+  virtual int factorize(const CoinWorkDouble * diagonal, int * rowsDropped) ;
   /** Uses factorization to solve. */
-  virtual void solve (double * region) ;
+  virtual void solve (CoinWorkDouble * region) ;
   /** Uses factorization to solve. - given as if KKT.
    region1 is rows+columns, region2 is rows */
-  virtual void solveKKT (double * region1, double * region2, const double * diagonal,
-			 double diagonalScaleFactor);
+  virtual void solveKKT (CoinWorkDouble * region1, CoinWorkDouble * region2, const CoinWorkDouble * diagonal,
+			 CoinWorkDouble diagonalScaleFactor);
+private:
+  /// AMD ordering
+  int orderAMD();
+public:
   //@}
 
   /**@name Gets */
@@ -140,7 +166,10 @@ public:
   { if (doKKT_) return 100; else return type_;}
 protected:
   /// Sets type
-  void setType(int type) {type_=type;}
+  inline void setType(int type) {type_=type;}
+  /// model.
+  inline void setModel(ClpInterior * model)
+  { model_=model;}
    //@}
    
   /**@name Symbolic, factor and solve */
@@ -161,12 +190,11 @@ protected:
   /** solve - 1 just first half, 2 just second half - 3 both.
   If 1 and 2 then diagonal has sqrt of inverse otherwise inverse
   */
-  void solve(double * region, int type);
-  void solveLong(longDouble * region, int type);
+  void solve(CoinWorkDouble * region, int type);
   /// Forms ADAT - returns nonzero if not enough memory
   int preOrder(bool lowerTriangular, bool includeDiagonal, bool doKKT);
   /// Updates dense part (broken out for profiling)
-  void updateDense(longDouble * d, longDouble * work, int * first);
+  void updateDense(longDouble * d, /*longDouble * work,*/ int * first);
   //@}
     
 protected:

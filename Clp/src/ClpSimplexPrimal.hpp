@@ -1,3 +1,4 @@
+/* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
@@ -183,7 +184,6 @@ public:
   void primalRow(CoinIndexedVector * rowArray,
 		 CoinIndexedVector * rhsArray,
 		 CoinIndexedVector * spareArray,
-		 CoinIndexedVector * spareArray2,
 		 int valuesPass);
   /** 
       Chooses primal pivot column

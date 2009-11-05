@@ -1,3 +1,4 @@
+/* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
@@ -362,6 +363,8 @@ public:
   CoinWarmStartBasis * getBasis() const;
   /// Passes in factorization
   void setFactorization( ClpFactorization & factorization);
+  // Swaps factorization
+  ClpFactorization * swapFactorization( ClpFactorization * factorization);
   /// Copies in factorization to existing one
   void copyFactorization( ClpFactorization & factorization);
   /** Tightens primal bounds to make dual faster.  Unless
@@ -582,7 +585,7 @@ public:
       then status used - so all nonbasic variables set to
       indicated bound and if any values changed (or ==2)  basic values re-computed.
   */
-  void checkSolution(int setToBounds=false);
+  void checkSolution(int setToBounds=0);
   /** Just check solution (for internal use) - sets sum of
       infeasibilities etc. */
   void checkSolutionInternal();
@@ -720,6 +723,10 @@ public:
   inline void setAlphaAccuracy(double value)
           { alphaAccuracy_ = value;} 
 public:
+   /// Objective value
+   //inline double objectiveValue() const {
+  //return (objectiveValue_-bestPossibleImprovement_)*optimizationDirection_ - dblParam_[ClpObjOffset];
+  //}
   /// Set disaster handler
   inline void setDisasterHandler(ClpDisasterHandler * handler)
   { disasterArea_= handler;}
@@ -942,6 +949,9 @@ public:
       8 bit - if factorization kept can still declare optimal at once
       16 bit - if checking replaceColumn accuracy before updating
       32 bit - say optimal if primal feasible!
+      64 bit - give up easily in dual (and say infeasible)
+      128 bit - no objective, 0-1 and in B&B
+      256 bit - in primal from dual or vice versa
   */
   inline int moreSpecialOptions() const
   { return moreSpecialOptions_;}
@@ -949,6 +959,12 @@ public:
       1 bit - if presolve says infeasible in ClpSolve return
       2 bit - if presolved problem infeasible return
       4 bit - keep arrays like upper_ around
+      8 bit - no free or superBasic variables
+      16 bit - if checking replaceColumn accuracy before updating
+      32 bit - say optimal if primal feasible!
+      64 bit - give up easily in dual (and say infeasible)
+      128 bit - no objective, 0-1 and in B&B
+      256 bit - in primal from dual or vice versa
   */
   inline void setMoreSpecialOptions(int value)
   { moreSpecialOptions_ = value;}
@@ -1151,6 +1167,8 @@ public:
       void setRowSetBounds(const int* indexFirst,
     				   const int* indexLast,
     				   const double* boundList);
+  /// Resizes rim part of model 
+  void resize (int newNumberRows, int newNumberColumns);
     
     //@}
 
@@ -1172,18 +1190,14 @@ protected:
   int columnPrimalSequence_;
   /// Sequence of worst (-1 if feasible)
   int rowPrimalSequence_;
-  /// Worst column dual infeasibility
-  double columnDualInfeasibility_;
-  /// Worst row dual infeasibility
-  double rowDualInfeasibility_;
+  /// "Best" objective value
+  double bestObjectiveValue_;
   /// More special options - see set for details
   int moreSpecialOptions_;
   /// Iteration when we entered dual or primal
   int baseIteration_;
   /// Primal tolerance needed to make dual feasible (<largeTolerance)
   double primalToleranceToGetOptimal_;
-  /// Remaining largest dual infeasibility
-  double remainingDualInfeasibility_;
   /// Large bound value (for complementarity etc)
   double largeValue_;
   /// Largest error on Ax-b

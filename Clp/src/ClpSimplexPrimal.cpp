@@ -1,3 +1,4 @@
+/* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
@@ -220,6 +221,8 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
     printf("%d costed slacks put in basis\n",n);
   }
 #endif
+  // Start can skip some things in transposeTimes
+  specialOptions_ |= 131072;
   if (!startup(ifValuesPass,startFinishOptions)) {
     
     // Set average theta
@@ -481,6 +484,8 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
     // and get good feasible duals
     computeDuals(NULL);
   }
+  // Stop can skip some things in transposeTimes
+  specialOptions_ &= ~131072;
   // clean up
   unflag();
   finish(startFinishOptions);
@@ -815,16 +820,40 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
     // May need to do more if column generation
     dummy=4;
     matrix_->generalExpanded(this,9,dummy);
+#ifndef CLP_CAUTION
+#define CLP_CAUTION 1
+#endif
+#if CLP_CAUTION
+    double lastAverageInfeasibility=sumDualInfeasibilities_/
+      static_cast<double>(numberDualInfeasibilities_+10);
+#endif
     numberThrownOut=gutsOfSolution(NULL,NULL,(firstFree_>=0));
     double sumInfeasibility =  nonLinearCost_->sumInfeasibilities();
-    if (numberThrownOut||
-	(sumInfeasibility>1.0e7&&sumInfeasibility>100.0*lastSumInfeasibility
-	 &&factorization_->pivotTolerance()<0.11)||(largestPrimalError_>1.0e10&&largestDualError_>1.0e10)) {
+    int reason2=0;
+#if CLP_CAUTION
+#if CLP_CAUTION==2
+    double test2=1.0e5;
+#else
+    double test2=1.0e-1;
+#endif
+    if (!lastSumInfeasibility&&sumInfeasibility&&
+	 lastAverageInfeasibility<test2&&numberPivots>10)
+      reason2=3;
+    if (lastSumInfeasibility<1.0e-6&&sumInfeasibility>1.0e-3&&
+	 numberPivots>10)
+      reason2=4;
+#endif
+    if (numberThrownOut)
+      reason2=1;
+    if ((sumInfeasibility>1.0e7&&sumInfeasibility>100.0*lastSumInfeasibility
+	&&factorization_->pivotTolerance()<0.11)||
+	(largestPrimalError_>1.0e10&&largestDualError_>1.0e10))
+      reason2=2;
+    if (reason2) {
       problemStatus_=tentativeStatus;
       doFactorization=true;
       if (numberPivots) {
         // go back
-        numberThrownOut=-1;
         // trouble - restore solution
         CoinMemcpyN(saveStatus_,numberColumns_+numberRows_,status_);
         CoinMemcpyN(savedSolution_+numberColumns_ ,
@@ -833,9 +862,16 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	   numberColumns_,columnActivityWork_);
         // restore extra stuff
         matrix_->generalExpanded(this,6,dummy);
-        forceFactorization_=1; // a bit drastic but ..
-        // Go to safe 
-        factorization_->pivotTolerance(0.99);
+	if (reason2<3) {
+	  // Go to safe 
+	  factorization_->pivotTolerance(CoinMin(0.99,1.01*factorization_->pivotTolerance()));
+	  forceFactorization_=1; // a bit drastic but ..
+	} else if (forceFactorization_<0) {
+	  forceFactorization_=CoinMin(numberPivots/2,100);
+	} else {
+	  forceFactorization_=CoinMin(forceFactorization_,
+				      CoinMax(3,numberPivots/2));
+	}
         pivotRow_=-1; // say no weights update
         changeMade_++; // say change made
         if (numberPivots==1) {
@@ -846,7 +882,14 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
             setFlagged(sequenceOut_);
           }
         }
+	type=2; // so will restore weights
+	if (internalFactorize(2)!=0) {
+	  largestPrimalError_=1.0e4; // force other type
+	}
         numberPivots=0;
+	numberThrownOut=gutsOfSolution(NULL,NULL,(firstFree_>=0));
+	assert (!numberThrownOut);
+	sumInfeasibility =  nonLinearCost_->sumInfeasibilities();
       }
     }
   }
@@ -1170,7 +1213,8 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
 	  nonLinearCost_->checkInfeasibilities(primalTolerance_);
 	  numberDualInfeasibilities_=1; // carry on
 	  problemStatus_=-1;
-	} else if (numberDualInfeasibilities_==0&&largestDualError_>1.0e-2) {
+	} else if (numberDualInfeasibilities_==0&&largestDualError_>1.0e-2&&
+		   (moreSpecialOptions_&256)==0) {
 	  goToDual=true;
 	  factorization_->pivotTolerance(CoinMax(0.9,factorization_->pivotTolerance()));
 	}
@@ -1218,7 +1262,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
       if (perturbation_==101) {
 	goToDual=unPerturb(); // stop any further perturbation
         if (numberRows_>20000&&!numberTimesOptimal_)
-          goToDual=0; // Better to carry on a bit longer
+          goToDual=false; // Better to carry on a bit longer
 	lastCleaned=-1; // carry on
       }
       bool unflagged = (unflag()!=0);
@@ -1411,7 +1455,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
     problemStatus_=10; // try dual
   // make sure first free monotonic
   if (firstFree_>=0&&saveFirstFree>=0) {
-    firstFree_=saveFirstFree;
+    firstFree_= (numberIterations_) ? saveFirstFree : -1;
     nextSuperBasic(1,NULL);
   }
   if (doFactorization) {
@@ -1441,7 +1485,6 @@ void
 ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
 			    CoinIndexedVector * rhsArray,
 			    CoinIndexedVector * spareArray,
-			    CoinIndexedVector * spareArray2,
 			    int valuesPass)
 {
   double saveDj = dualIn_;
@@ -2173,16 +2216,21 @@ ClpSimplexPrimal::perturb(int type)
   double elementRatio = largestPositive/smallestPositive;
   if (!numberIterations_&&perturbation_==50) {
     // See if we need to perturb
-    double * sort = new double[numberRows_];
+    int numberTotal=CoinMax(numberRows_,numberColumns_);
+    double * sort = new double[numberTotal];
+    int nFixed=0;
     for (i=0;i<numberRows_;i++) {
       double lo = fabs(rowLower_[i]);
       double up = fabs(rowUpper_[i]);
       double value=0.0;
       if (lo&&lo<1.0e20) {
-	if (up&&up<1.0e20)
+	if (up&&up<1.0e20) {
 	  value = 0.5*(lo+up);
-	else
+	  if (lo==up)
+	    nFixed++;
+	} else {
 	  value=lo;
+	}
       } else {
 	if (up&&up<1.0e20)
 	  value = up;
@@ -2197,16 +2245,59 @@ ClpSimplexPrimal::perturb(int type)
 	number++;
       last=sort[i];
     }
+#ifdef KEEP_GOING_IF_FIXED 
+    //printf("ratio number diff rhs %g (%d %d fixed), element ratio %g\n",((double)number)/((double) numberRows_),
+    //   numberRows_,nFixed,elementRatio);
+#endif
+    if (number*4>numberRows_||elementRatio>1.0e12) {
+      perturbation_=100;
+      delete [] sort;
+      return; // good enough
+    }
+    number=0;
+#ifdef KEEP_GOING_IF_FIXED 
+    if (!integerType_) {
+      // look at columns
+      nFixed=0;
+      for (i=0;i<numberColumns_;i++) {
+	double lo = fabs(columnLower_[i]);
+	double up = fabs(columnUpper_[i]);
+	double value=0.0;
+	if (lo&&lo<1.0e20) {
+	  if (up&&up<1.0e20) {
+	    value = 0.5*(lo+up);
+	    if (lo==up)
+	      nFixed++;
+	  } else {
+	    value=lo;
+	  }
+	} else {
+	  if (up&&up<1.0e20)
+	    value = up;
+	}
+	sort[i]=value;
+      }
+      std::sort(sort,sort+numberColumns_);
+      number=1;
+      last = sort[0];
+      for (i=1;i<numberColumns_;i++) {
+	if (last!=sort[i])
+	  number++;
+	last=sort[i];
+      }
+      //printf("cratio number diff bounds %g (%d %d fixed)\n",((double)number)/((double) numberColumns_),
+      //     numberColumns_,nFixed);
+    }
+#endif
     delete [] sort;
-    //printf("ratio number diff rhs %g, element ratio %g\n",((double)number)/((double) numberRows_),
-    //								      elementRatio);
-    if (number*3>numberRows_||elementRatio>1.0e12) {
+    if (number*4>numberColumns_) {
       perturbation_=100;
       return; // good enough
     }
   }
   // primal perturbation
   double perturbation=1.0e-20;
+  double bias=1.0;
   int numberNonZero=0;
   // maximum fraction of rhs/bounds to perturb
   double maximumFraction = 1.0e-5;
@@ -2239,12 +2330,20 @@ ClpSimplexPrimal::perturb(int type)
       perturbation /= static_cast<double> (numberNonZero);
     else
       perturbation = 1.0e-1;
-    if (perturbation_>50&&perturbation_<60) {
+    if (perturbation_>50&&perturbation_<55) {
       // reduce
       while (perturbation_>50) {
 	perturbation_--;
 	perturbation *= 0.25;
+	bias *= 0.25;
       }
+    } else if (perturbation_>=55&&perturbation_<60) {
+      // increase
+      while (perturbation_>55) {
+	perturbation_--;
+	perturbation *= 4.0;
+      }
+      perturbation_=50;
     }
   } else if (perturbation_<100) {
     perturbation = pow(10.0,perturbation_);
@@ -2283,7 +2382,7 @@ ClpSimplexPrimal::perturb(int type)
       perturbationArray_[iColumn] = randomNumberGenerator_.randomDouble();
     }
   }
-#endif 
+#endif
   if (type==1) {
     double tolerance = 100.0*primalTolerance_;
     //double multiplier = perturbation*maximumFraction;
@@ -2296,7 +2395,7 @@ ClpSimplexPrimal::perturb(int type)
 	  double difference = upperValue-lowerValue;
 	  difference = CoinMin(difference,perturbation);
 	  difference = CoinMin(difference,fabs(solutionValue)+1.0);
-	  double value = maximumFraction*(difference+1.0);
+	  double value = maximumFraction*(difference+bias);
 	  value = CoinMin(value,0.1);
 #ifndef SAVE_PERT
 	  value *= randomNumberGenerator_.randomDouble();
@@ -2646,7 +2745,7 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
     // Get extra rows
     matrix_->extendUpdated(this,rowArray_[1],0);
     // do ratio test and re-compute dj
-    primalRow(rowArray_[1],rowArray_[3],rowArray_[2],rowArray_[0],
+    primalRow(rowArray_[1],rowArray_[3],rowArray_[2],
 	      ifValuesPass);
     if (ifValuesPass) {
       saveDj=dualIn_;
@@ -2655,7 +2754,7 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	if(fabs(dualIn_)<1.0e2*dualTolerance_&&objective_->type()<2) {
 	  // try other way
 	  directionIn_=-directionIn_;
-	  primalRow(rowArray_[1],rowArray_[3],rowArray_[2],rowArray_[0],
+	  primalRow(rowArray_[1],rowArray_[3],rowArray_[2],
 		    0);
 	}
 	if (pivotRow_==-1||(pivotRow_>=0&&fabs(alpha_)<1.0e-5)) {
@@ -3052,61 +3151,22 @@ ClpSimplexPrimal::primalRay(CoinIndexedVector * rowArray)
    if 2 uses list.
 */
 int 
-ClpSimplexPrimal::nextSuperBasic(int superBasicType,CoinIndexedVector * columnArray)
+ClpSimplexPrimal::nextSuperBasic(int superBasicType,
+				 CoinIndexedVector * columnArray)
 {
-  if (firstFree_>=0&&superBasicType) {
-    int returnValue=-1;
-    bool finished=false;
-    while (!finished) {
-      returnValue=firstFree_;
-      int iColumn=firstFree_+1;
-      if (superBasicType>1) {
-	if (superBasicType>2) {
-	  // Initialize list
-	  // Wild guess that lower bound more natural than upper
-	  int number=0;
-	  double * work=columnArray->denseVector();
-	  int * which=columnArray->getIndices();
-	  for (iColumn=0;iColumn<numberRows_+numberColumns_;iColumn++) {
-	    if (!flagged(iColumn)) {
-	      if (getStatus(iColumn)==superBasic) {
-		if (fabs(solution_[iColumn]-lower_[iColumn])<=primalTolerance_) {
-		  solution_[iColumn]=lower_[iColumn];
-		  setStatus(iColumn,atLowerBound);
-		} else if (fabs(solution_[iColumn]-upper_[iColumn])
-			   <=primalTolerance_) {
-		  solution_[iColumn]=upper_[iColumn];
-		  setStatus(iColumn,atUpperBound);
-		} else if (lower_[iColumn]<-1.0e20&&upper_[iColumn]>1.0e20) {
-		  setStatus(iColumn,isFree);
-		  break;
-		} else if (!flagged(iColumn)) {
-		  // put ones near bounds at end after sorting
-		  work[number]= - CoinMin(0.1*(solution_[iColumn]-lower_[iColumn]),
-				      upper_[iColumn]-solution_[iColumn]);
-		  which[number++] = iColumn;
-		}
-	      }
-	    }
-	  }
-	  CoinSort_2(work,work+number,which);
-	  columnArray->setNumElements(number);
-	  CoinZeroN(work,number);
-	}
+  int returnValue=-1;
+  bool finished=false;
+  while (!finished) {
+    returnValue=firstFree_;
+    int iColumn=firstFree_+1;
+    if (superBasicType>1) {
+      if (superBasicType>2) {
+	// Initialize list
+	// Wild guess that lower bound more natural than upper
+	int number=0;
+	double * work=columnArray->denseVector();
 	int * which=columnArray->getIndices();
-	int number = columnArray->getNumElements();
-	if (!number) {
-	  // finished
-	  iColumn = numberRows_+numberColumns_;
-	  returnValue=-1;
-	} else {
-	  number--;
-	  returnValue=which[number];
-	  iColumn=returnValue;
-	  columnArray->setNumElements(number);
-	}      
-      } else {
-	for (;iColumn<numberRows_+numberColumns_;iColumn++) {
+	for (iColumn=0;iColumn<numberRows_+numberColumns_;iColumn++) {
 	  if (!flagged(iColumn)) {
 	    if (getStatus(iColumn)==superBasic) {
 	      if (fabs(solution_[iColumn]-lower_[iColumn])<=primalTolerance_) {
@@ -3119,24 +3179,60 @@ ClpSimplexPrimal::nextSuperBasic(int superBasicType,CoinIndexedVector * columnAr
 	      } else if (lower_[iColumn]<-1.0e20&&upper_[iColumn]>1.0e20) {
 		setStatus(iColumn,isFree);
 		break;
-	      } else {
-		break;
+	      } else if (!flagged(iColumn)) {
+		// put ones near bounds at end after sorting
+		work[number]= - CoinMin(0.1*(solution_[iColumn]-lower_[iColumn]),
+					upper_[iColumn]-solution_[iColumn]);
+		which[number++] = iColumn;
 	      }
 	    }
 	  }
 	}
+	CoinSort_2(work,work+number,which);
+	columnArray->setNumElements(number);
+	CoinZeroN(work,number);
       }
-      firstFree_ = iColumn;
-      finished=true;
-      if (firstFree_==numberRows_+numberColumns_)
-	firstFree_=-1;
-      if (returnValue>=0&&getStatus(returnValue)!=superBasic&&getStatus(returnValue)!=isFree)
-	finished=false; // somehow picked up odd one
+      int * which=columnArray->getIndices();
+      int number = columnArray->getNumElements();
+      if (!number) {
+	// finished
+	iColumn = numberRows_+numberColumns_;
+	returnValue=-1;
+      } else {
+	number--;
+	returnValue=which[number];
+	iColumn=returnValue;
+	columnArray->setNumElements(number);
+      }      
+    } else {
+      for (;iColumn<numberRows_+numberColumns_;iColumn++) {
+	if (!flagged(iColumn)) {
+	  if (getStatus(iColumn)==superBasic) {
+	    if (fabs(solution_[iColumn]-lower_[iColumn])<=primalTolerance_) {
+	      solution_[iColumn]=lower_[iColumn];
+	      setStatus(iColumn,atLowerBound);
+	    } else if (fabs(solution_[iColumn]-upper_[iColumn])
+		       <=primalTolerance_) {
+	      solution_[iColumn]=upper_[iColumn];
+	      setStatus(iColumn,atUpperBound);
+	    } else if (lower_[iColumn]<-1.0e20&&upper_[iColumn]>1.0e20) {
+	      setStatus(iColumn,isFree);
+	      break;
+	    } else {
+	      break;
+	    }
+	  }
+	}
+      }
     }
-    return returnValue;
-  } else {
-    return -1;
+    firstFree_ = iColumn;
+    finished=true;
+    if (firstFree_==numberRows_+numberColumns_)
+      firstFree_=-1;
+    if (returnValue>=0&&getStatus(returnValue)!=superBasic&&getStatus(returnValue)!=isFree)
+      finished=false; // somehow picked up odd one
   }
+  return returnValue;
 }
 void
 ClpSimplexPrimal::clearAll()
@@ -3176,6 +3272,8 @@ ClpSimplexPrimal::lexSolve()
   int ifValuesPass=0;
 #if 0
   // if so - put in any superbasic costed slacks
+  // Start can skip some things in transposeTimes
+  specialOptions_ |= 131072;
   if (ifValuesPass&&specialOptions_<0x01000000) {
     // Get column copy
     const CoinPackedMatrix * columnCopy = matrix();
@@ -3515,6 +3613,8 @@ ClpSimplexPrimal::lexSolve()
     // and get good feasible duals
     computeDuals(NULL);
   }
+  // Stop can skip some things in transposeTimes
+  specialOptions_ &= ~131072;
   // clean up
   unflag();
   finish(0);

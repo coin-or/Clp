@@ -1,6 +1,6 @@
+/* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
-
 #include "CoinPragma.hpp"
 #include "ClpFactorization.hpp"
 #ifndef SLIM_CLP
@@ -721,7 +721,8 @@ ClpFactorization::replaceColumn ( const ClpSimplex * model,
 				  CoinIndexedVector * tableauColumn,
 				  int pivotRow,
 				  double pivotCheck ,
-				  bool checkBeforeModifying)
+				  bool checkBeforeModifying,
+				  double acceptablePivot)
 {
   int returnCode;
 #ifndef SLIM_CLP
@@ -735,7 +736,8 @@ ClpFactorization::replaceColumn ( const ClpSimplex * model,
       returnCode= CoinFactorization::replaceColumn(regionSparse,
 					      pivotRow,
 					      pivotCheck,
-					      checkBeforeModifying);
+						   checkBeforeModifying,
+						   acceptablePivot);
     } else {
       returnCode= CoinFactorization::replaceColumnPFI(tableauColumn,
 					      pivotRow,pivotCheck); // Note array
@@ -750,7 +752,8 @@ ClpFactorization::replaceColumn ( const ClpSimplex * model,
       returnCode = CoinFactorization::replaceColumn(regionSparse,
 							pivotRow,
 							pivotCheck,
-							checkBeforeModifying);
+						    checkBeforeModifying,
+						    acceptablePivot);
       networkBasis_->replaceColumn(regionSparse,
 				   pivotRow);
     } else {
@@ -1106,6 +1109,21 @@ ClpFactorization::getWeights(int * weights) const
 }
 #else
 // This one allows multiple factorizations
+#if CLP_MULTIPLE_FACTORIZATIONS == 1
+typedef CoinDenseFactorization CoinOtherFactorization;
+typedef CoinOslFactorization CoinOtherFactorization;
+#elif CLP_MULTIPLE_FACTORIZATIONS == 2
+#include "CoinSimpFactorization.hpp"
+typedef CoinSimpFactorization CoinOtherFactorization;
+typedef CoinOslFactorization CoinOtherFactorization;
+#elif CLP_MULTIPLE_FACTORIZATIONS == 3
+#include "CoinSimpFactorization.hpp"
+#define CoinOslFactorization CoinDenseFactorization
+#elif CLP_MULTIPLE_FACTORIZATIONS == 4
+#include "CoinSimpFactorization.hpp"
+//#define CoinOslFactorization CoinDenseFactorization
+#include "CoinOslFactorization.hpp"
+#endif
 
 //-------------------------------------------------------------------
 // Default Constructor 
@@ -1118,7 +1136,9 @@ ClpFactorization::ClpFactorization ()
   //coinFactorizationA_ = NULL;
   coinFactorizationA_ = new CoinFactorization() ;
   coinFactorizationB_ = NULL;
-  //coinFactorizationB_ = new CoinSmallFactorization();
+  //coinFactorizationB_ = new CoinOtherFactorization();
+  forceB_=0;
+  goOslThreshold_ = -1;
   goDenseThreshold_ = -1;
   goSmallThreshold_ = -1;
 }
@@ -1138,19 +1158,31 @@ ClpFactorization::ClpFactorization (const ClpFactorization & rhs,
   else
     networkBasis_=NULL;
 #endif
+  forceB_ = rhs.forceB_;
+  goOslThreshold_ = rhs.goOslThreshold_;
   goDenseThreshold_ = rhs.goDenseThreshold_;
   goSmallThreshold_ = rhs.goSmallThreshold_;
   int goDense = 0;
-  if (denseIfSmaller>0&&!rhs.coinFactorizationB_) {
+  if (denseIfSmaller>0&&denseIfSmaller<=goDenseThreshold_) {
+    CoinDenseFactorization * denseR = 
+      dynamic_cast<CoinDenseFactorization *>(rhs.coinFactorizationB_);
+    if (!denseR)
+      goDense=1;
+  }
+  if (denseIfSmaller>0&&!rhs.coinFactorizationB_) { 
     if (denseIfSmaller<=goDenseThreshold_) 
       goDense=1;
     else if (denseIfSmaller<=goSmallThreshold_) 
       goDense=2;
+    else if (denseIfSmaller<=goOslThreshold_) 
+      goDense=3;
   } else if (denseIfSmaller<0) {
     if (-denseIfSmaller<=goDenseThreshold_) 
       goDense=1;
     else if (-denseIfSmaller<=goSmallThreshold_) 
       goDense=2;
+    else if (-denseIfSmaller<=goOslThreshold_) 
+      goDense=3;
   }
   if (rhs.coinFactorizationA_&&!goDense)
     coinFactorizationA_ = new CoinFactorization(*(rhs.coinFactorizationA_));
@@ -1164,8 +1196,10 @@ ClpFactorization::ClpFactorization (const ClpFactorization & rhs,
     delete coinFactorizationB_;
     if (goDense==1)
       coinFactorizationB_ = new CoinDenseFactorization();
-    else
+    else if (goDense==2)
       coinFactorizationB_ = new CoinSimpFactorization();
+    else
+      coinFactorizationB_ = new CoinOslFactorization();
     if (rhs.coinFactorizationA_) {
       coinFactorizationB_->maximumPivots(rhs.coinFactorizationA_->maximumPivots());
       coinFactorizationB_->pivotTolerance(rhs.coinFactorizationA_->pivotTolerance());
@@ -1196,12 +1230,14 @@ ClpFactorization::ClpFactorization (const CoinFactorization & rhs)
 #ifdef CLP_FACTORIZATION_INSTRUMENT
   factorization_instrument(1);
 #endif
+  forceB_=0;
+  goOslThreshold_ = -1;
   goDenseThreshold_ = -1;
   goSmallThreshold_ = -1;
   assert (!coinFactorizationA_||!coinFactorizationB_);
 }
 
-ClpFactorization::ClpFactorization (const CoinSmallFactorization & rhs) 
+ClpFactorization::ClpFactorization (const CoinOtherFactorization & rhs) 
 {
 #ifdef CLP_FACTORIZATION_INSTRUMENT
   factorization_instrument(-1);
@@ -1211,7 +1247,9 @@ ClpFactorization::ClpFactorization (const CoinSmallFactorization & rhs)
 #endif
   coinFactorizationA_ = NULL;
   coinFactorizationB_ = rhs.clone();
-  //coinFactorizationB_ = new CoinSmallFactorization(rhs);
+  //coinFactorizationB_ = new CoinOtherFactorization(rhs);
+  forceB_=0;
+  goOslThreshold_ = -1;
   goDenseThreshold_ = -1;
   goSmallThreshold_ = -1;
 #ifdef CLP_FACTORIZATION_INSTRUMENT
@@ -1249,18 +1287,43 @@ ClpFactorization::operator=(const ClpFactorization& rhs)
     else
       networkBasis_=NULL;
 #endif
-    delete coinFactorizationA_;
+    forceB_ = rhs.forceB_;
+    goOslThreshold_ = rhs.goOslThreshold_;
     goDenseThreshold_ = rhs.goDenseThreshold_;
     goSmallThreshold_ = rhs.goSmallThreshold_;
-    if (rhs.coinFactorizationA_)
-      coinFactorizationA_ = new CoinFactorization(*(rhs.coinFactorizationA_));
-    else
-      coinFactorizationA_=NULL;
-    delete coinFactorizationB_;
-    if (rhs.coinFactorizationB_) {
-      coinFactorizationB_ = rhs.coinFactorizationB_->clone();
-      //coinFactorizationB_ = new CoinSmallFactorization(*(rhs.coinFactorizationB_));
+    if (rhs.coinFactorizationA_) {
+      if (coinFactorizationA_)
+	*coinFactorizationA_ = *(rhs.coinFactorizationA_);
+      else
+	coinFactorizationA_ = new CoinFactorization(*rhs.coinFactorizationA_);
     } else {
+      delete coinFactorizationA_;
+      coinFactorizationA_=NULL;
+    }
+    
+    if (rhs.coinFactorizationB_) {
+      if (coinFactorizationB_) {
+	CoinDenseFactorization * denseR = dynamic_cast<CoinDenseFactorization *>(rhs.coinFactorizationB_);
+	CoinDenseFactorization * dense = dynamic_cast<CoinDenseFactorization *>(coinFactorizationB_);
+	CoinOslFactorization * oslR = dynamic_cast<CoinOslFactorization *>(rhs.coinFactorizationB_);
+	CoinOslFactorization * osl = dynamic_cast<CoinOslFactorization *>(coinFactorizationB_);
+	CoinSimpFactorization * simpR = dynamic_cast<CoinSimpFactorization *>(rhs.coinFactorizationB_);
+	CoinSimpFactorization * simp = dynamic_cast<CoinSimpFactorization *>(coinFactorizationB_);
+	if (dense&&denseR) {
+	  *dense=*denseR;
+	} else if (osl&&oslR) {
+	  *osl=*oslR;
+	} else if (simp&&simpR) {
+	  *simp=*simpR;
+	} else {
+	  delete coinFactorizationB_;
+	  coinFactorizationB_ = rhs.coinFactorizationB_->clone();
+	}
+      } else {
+	coinFactorizationB_ = rhs.coinFactorizationB_->clone();
+      }
+    } else {
+      delete coinFactorizationB_;
       coinFactorizationB_=NULL;
     }
   }
@@ -1274,20 +1337,57 @@ ClpFactorization::operator=(const ClpFactorization& rhs)
 void 
 ClpFactorization::goDenseOrSmall(int numberRows) 
 {
-  if (numberRows<=goDenseThreshold_) {
-    delete coinFactorizationA_;
-    delete coinFactorizationB_;
-    coinFactorizationA_ = NULL;
-    coinFactorizationB_ = new CoinDenseFactorization();
-    //printf("going dense\n");
-  } else if (numberRows<=goSmallThreshold_) {
-    delete coinFactorizationA_;
-    delete coinFactorizationB_;
-    coinFactorizationA_ = NULL;
-    coinFactorizationB_ = new CoinSimpFactorization();
-    //printf("going small\n");
+  if (!forceB_) {
+    if (numberRows<=goDenseThreshold_) {
+      delete coinFactorizationA_;
+      delete coinFactorizationB_;
+      coinFactorizationA_ = NULL;
+      coinFactorizationB_ = new CoinDenseFactorization();
+      //printf("going dense\n");
+    } else if (numberRows<=goSmallThreshold_) {
+      delete coinFactorizationA_;
+      delete coinFactorizationB_;
+      coinFactorizationA_ = NULL;
+      coinFactorizationB_ = new CoinSimpFactorization();
+      //printf("going small\n");
+    } else if (numberRows<=goOslThreshold_) {
+      delete coinFactorizationA_;
+      delete coinFactorizationB_;
+      coinFactorizationA_ = NULL;
+      coinFactorizationB_ = new CoinOslFactorization();
+      //printf("going small\n");
+    }
   }
   assert (!coinFactorizationA_||!coinFactorizationB_);
+}
+// If nonzero force use of 1,dense 2,small 3,osl 
+void 
+ClpFactorization::forceOtherFactorization(int which)
+{
+  delete coinFactorizationB_;
+  forceB_=0;
+  coinFactorizationB_ = NULL;
+  if (which>0&&which<4) {
+    delete coinFactorizationA_;
+    coinFactorizationA_ = NULL;
+    forceB_=which;
+    switch (which) {
+    case 1:
+      coinFactorizationB_ = new CoinDenseFactorization();
+      goDenseThreshold_=COIN_INT_MAX;
+    break;
+    case 2:
+      coinFactorizationB_ = new CoinSimpFactorization();
+      goSmallThreshold_=COIN_INT_MAX;
+    break;
+    case 3:
+      coinFactorizationB_ = new CoinOslFactorization();
+      goOslThreshold_=COIN_INT_MAX;
+    break;
+    }
+  } else if (!coinFactorizationA_) {
+    coinFactorizationA_ = new CoinFactorization();
+  }
 }
 int 
 ClpFactorization::factorize ( ClpSimplex * model,
@@ -1309,7 +1409,12 @@ ClpFactorization::factorize ( ClpSimplex * model,
     int * pivotVariable = model->pivotVariable();
     //returns 0 -okay, -1 singular, -2 too many in basis */
     // allow dense
-    coinFactorizationB_->setSolveMode(-1);
+    int solveMode=2;
+    if (model->numberIterations())
+      solveMode+=8;
+    if (valuesPass)
+      solveMode+= 4;
+    coinFactorizationB_->setSolveMode(solveMode);
     while (status()<-98) {
       
       int i;
@@ -1379,6 +1484,23 @@ ClpFactorization::factorize ( ClpSimplex * model,
         }
         numberBasic=numberRowBasic;
         matrix->generalExpanded(model,0,numberBasic);
+      } else if (numberBasic<numberRows) {
+	// add in some
+	int needed = numberRows-numberBasic;
+	// move up columns
+	for (i=numberBasic-1;i>=numberRowBasic;i--)
+	  pivotTemp[i+needed]=pivotTemp[i];
+	numberRowBasic=0;
+	numberBasic=numberRows;
+	for (i=0;i<numberRows;i++) {
+	  if (model->getRowStatus(i) == ClpSimplex::basic) {
+	    pivotTemp[numberRowBasic++]=i;
+	  } else if (needed) {
+	    needed--;
+	    model->setRowStatus(i,ClpSimplex::basic);
+	    pivotTemp[numberRowBasic++]=i;
+	  }
+	}
       }
       CoinBigIndex numberElements=numberRowBasic;
       
@@ -1386,12 +1508,12 @@ ClpFactorization::factorize ( ClpSimplex * model,
       // can change for gub
       int numberColumnBasic = numberBasic-numberRowBasic;
       
-      numberElements +=matrix->countBasis(model,
-					  pivotTemp+numberRowBasic, 
-					  numberRowBasic,
+      numberElements +=matrix->countBasis(pivotTemp+numberRowBasic, 
 					  numberColumnBasic);
       // Not needed for dense
       numberElements = 3 * numberBasic + 3 * numberElements + 20000;
+      int numberIterations=model->numberIterations();
+      coinFactorizationB_->setUsefulInformation(&numberIterations,0);
       coinFactorizationB_->getAreas ( numberRows,
 				      numberRowBasic+numberColumnBasic, numberElements,
 				      2 * numberElements );
@@ -1411,10 +1533,10 @@ ClpFactorization::factorize ( ClpSimplex * model,
 #else
 #define slackValue -1.0
 #endif
-      // At present we don't need counts
-      numberInRow = coinFactorizationB_->intWorkArea();
-      numberInColumn = numberInRow;
-      CoinZeroN ( numberInRow, numberRows + 1 ); // just for valgrind
+      numberInRow = coinFactorizationB_->numberInRow();
+      numberInColumn = coinFactorizationB_->numberInColumn();
+      CoinZeroN ( numberInRow, numberRows  );
+      CoinZeroN ( numberInColumn, numberRows );
       for (i=0;i<numberRowBasic;i++) {
 	int iRow = pivotTemp[i];
 	// Change pivotTemp to correct sequence
@@ -1422,6 +1544,8 @@ ClpFactorization::factorize ( ClpSimplex * model,
 	indexRowU[i]=iRow;
 	startColumnU[i]=i;
 	elementU[i]=slackValue;
+	numberInRow[iRow]=1;
+	numberInColumn[i]=1;
       }
       startColumnU[numberRowBasic]=numberRowBasic;
       // can change for gub so redo
@@ -1446,15 +1570,18 @@ ClpFactorization::factorize ( ClpSimplex * model,
       coinFactorizationB_->preProcess ( );
       coinFactorizationB_->factor (  );
       if (coinFactorizationB_->status() == -1 &&
-	  coinFactorizationB_->solveMode()!=0) {
-	coinFactorizationB_->setSolveMode(0);
+	  (coinFactorizationB_->solveMode()%3)!=0) {
+	int solveMode=coinFactorizationB_->solveMode();
+	solveMode -= solveMode%3; // so bottom will be 0
+	coinFactorizationB_->setSolveMode(solveMode);
 	coinFactorizationB_->setStatus(-99);
-	continue;
       }
+      if (coinFactorizationB_->status() == -99)
+	continue;
       // If we get here status is 0 or -1
       if (coinFactorizationB_->status() == 0&&numberBasic==numberRows) {
 	coinFactorizationB_->postProcess(pivotTemp,pivotVariable);
-      } else {
+      } else if (solveType==0||solveType==2/*||solveType==1*/) {
 	// Change pivotTemp to be correct list
 	anyChanged=true;
 	coinFactorizationB_->makeNonSingular(pivotTemp,numberColumns);
@@ -1772,9 +1899,7 @@ ClpFactorization::factorize ( ClpSimplex * model,
 	// can change for gub
 	int numberColumnBasic = numberBasic-numberRowBasic;
 
-	numberElements +=matrix->countBasis(model,
-					   pivotTemp+numberRowBasic, 
-					   numberRowBasic,
+	numberElements +=matrix->countBasis( pivotTemp+numberRowBasic, 
 					    numberColumnBasic);
 	// and recompute as network side say different
 	if (model->numberIterations())
@@ -1858,16 +1983,23 @@ ClpFactorization::factorize ( ClpSimplex * model,
 	const int * back = coinFactorizationA_->pivotColumnBack();
 	//int * pivotTemp = pivotColumn_.array();
 	//ClpDisjointCopyN ( pivotVariable, numberRows , pivotTemp  );
+#ifndef NDEBUG
+	CoinFillN(pivotVariable,numberRows,-1);
+#endif
 	// Redo pivot order
 	for (i=0;i<numberRowBasic;i++) {
 	  int k = pivotTemp[i];
 	  // so rowIsBasic[k] would be permuteBack[back[i]]
-	  pivotVariable[permuteBack[back[i]]]=k+numberColumns;
+	  int j=permuteBack[back[i]];
+	  assert (pivotVariable[j]==-1);
+	  pivotVariable[j]=k+numberColumns;
 	}
 	for (;i<useNumberRows;i++) {
 	  int k = pivotTemp[i];
 	  // so rowIsBasic[k] would be permuteBack[back[i]]
-	  pivotVariable[permuteBack[back[i]]]=k;
+	  int j=permuteBack[back[i]];
+	  assert (pivotVariable[j]==-1);
+	  pivotVariable[j]=k;
 	}
 #if 0
         if (numberSave>=0) {
@@ -2108,7 +2240,7 @@ ClpFactorization::factorize ( ClpSimplex * model,
 #endif
   return coinFactorizationA_->status();
 }
-/* Replaces one Column to basis,
+/* Replaces one Column in basis,
    returns 0=OK, 1=Probably OK, 2=singular, 3=no room
    If checkBeforeModifying is true will do all accuracy checks
    before modifying factorization.  Whether to set this depends on
@@ -2121,7 +2253,8 @@ ClpFactorization::replaceColumn ( const ClpSimplex * model,
 				  CoinIndexedVector * tableauColumn,
 				  int pivotRow,
 				  double pivotCheck ,
-				  bool checkBeforeModifying)
+				  bool checkBeforeModifying,
+				       double acceptablePivot)
 {
 #ifndef SLIM_CLP
   if (!networkBasis_) {
@@ -2136,12 +2269,18 @@ ClpFactorization::replaceColumn ( const ClpSimplex * model,
 	returnCode = coinFactorizationA_->replaceColumn(regionSparse,
 							pivotRow,
 							pivotCheck,
-							checkBeforeModifying);
+							checkBeforeModifying,
+							acceptablePivot);
       } else {
-	returnCode= coinFactorizationB_->replaceColumn(tableauColumn,
-					      pivotRow,
-					      pivotCheck,
-					      checkBeforeModifying);
+	bool tab = coinFactorizationB_->wantsTableauColumn();
+	int numberIterations=model->numberIterations();
+	coinFactorizationB_->setUsefulInformation(&numberIterations,1);
+	returnCode= 
+	  coinFactorizationB_->replaceColumn(tab?tableauColumn:regionSparse,
+					     pivotRow,
+					     pivotCheck,
+					     checkBeforeModifying,
+					     acceptablePivot);
 #ifdef CLP_DEBUG
 	// check basic
 	int numberRows = coinFactorizationB_->numberRows();
@@ -2181,7 +2320,8 @@ ClpFactorization::replaceColumn ( const ClpSimplex * model,
       int returnCode = coinFactorizationA_->replaceColumn(regionSparse,
       						pivotRow,
       						pivotCheck,
-      						checkBeforeModifying);
+							  checkBeforeModifying,
+							  acceptablePivot);
       networkBasis_->replaceColumn(regionSparse,
 				   pivotRow);
       return returnCode;
@@ -2305,6 +2445,11 @@ ClpFactorization::updateColumn ( CoinIndexedVector * regionSparse,
 #ifdef CLP_FACTORIZATION_INSTRUMENT
     factorization_instrument(5);
 #endif
+    //#define PRINT_VECTOR
+#ifdef PRINT_VECTOR
+    printf("Update\n");
+    regionSparse2->print();
+#endif
     return returnCode;
 #ifndef SLIM_CLP
   } else {
@@ -2416,6 +2561,11 @@ ClpFactorization::updateTwoColumnsFT ( CoinIndexedVector * regionSparse1,
 #ifdef CLP_FACTORIZATION_INSTRUMENT
     factorization_instrument(9);
 #endif
+#ifdef PRINT_VECTOR
+    printf("UpdateTwoFT\n");
+    regionSparse2->print();
+    regionSparse3->print();
+#endif
     return returnCode;
 #ifndef SLIM_CLP
   } else {
@@ -2458,6 +2608,7 @@ ClpFactorization::updateColumnTranspose ( CoinIndexedVector * regionSparse,
     factorization_instrument(-1);
 #endif
     int returnCode;
+
     if (coinFactorizationA_) {
       coinFactorizationA_->setCollectStatistics(true);
       returnCode =  coinFactorizationA_->updateColumnTranspose(regionSparse,
@@ -2469,6 +2620,10 @@ ClpFactorization::updateColumnTranspose ( CoinIndexedVector * regionSparse,
     }
 #ifdef CLP_FACTORIZATION_INSTRUMENT
     factorization_instrument(6);
+#endif
+#ifdef PRINT_VECTOR
+    printf("UpdateTranspose\n");
+    regionSparse2->print();
 #endif
     return returnCode;
 #ifndef SLIM_CLP
@@ -2639,5 +2794,11 @@ ClpFactorization::saferTolerances (  double zeroValue,
   else 
     newValue = -pivotTolerance()*pivotValue;
   pivotTolerance(CoinMin(CoinMax(pivotTolerance(),newValue),0.999));
+}
+// Sets factorization
+void 
+ClpFactorization::setFactorization(ClpFactorization & rhs)
+{
+  ClpFactorization::operator=(rhs);
 }
 #endif

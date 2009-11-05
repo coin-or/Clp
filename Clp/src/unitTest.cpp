@@ -1,3 +1,4 @@
+/* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
@@ -250,7 +251,8 @@ void usage(const std::string& key)
 
 //----------------------------------------------------------------
 int mainTest (int argc, const char *argv[],int algorithm,
-	      ClpSimplex empty, bool doPresolve, int switchOffValue,bool doVector)
+	      ClpSimplex empty, ClpSolve solveOptionsIn,
+	      int switchOffValue,bool doVector)
 {
   int i;
 
@@ -560,13 +562,7 @@ int mainTest (int argc, const char *argv[],int algorithm,
       }
 #endif
       ClpSolve::SolveType method;
-      ClpSolve::PresolveType presolveType;
-      ClpSolve solveOptions;
-      if (doPresolve)
-        presolveType=ClpSolve::presolveOn;
-      else
-        presolveType=ClpSolve::presolveOff;
-      solveOptions.setPresolveType(presolveType,5);
+      ClpSolve solveOptions=solveOptionsIn;
       std::string nameAlgorithm;
       if (algorithm!=5) {
         if (algorithm==0) {
@@ -819,9 +815,9 @@ ClpSimplexUnitTest(const std::string & dirSample)
     model.primal(0,3);
     // Write saved solutions
     int nc = model.getNumCols();
-    size_t s; 
+    int s; 
     std::deque<StdVectorDouble> fep = messageHandler.getFeasibleExtremePoints();
-    size_t numSavedSolutions = fep.size();
+    int numSavedSolutions = fep.size();
     for ( s=0; s<numSavedSolutions; ++s ) {
       const StdVectorDouble & solnVec = fep[s];
       for ( int c=0; c<nc; ++c ) {
@@ -1585,10 +1581,14 @@ ClpSimplexUnitTest(const std::string & dirSample)
       int problem;
       char temp[100];
       // read and skip 
-      fscanf(fp,"%s",temp);
+      int x=fscanf(fp,"%s",temp);
+      if (x<0)
+	throw("bad fscanf");
       assert (!strcmp(temp,"BEGIN"));
-      fscanf(fp,"%*s %*s %d %d %*s %*s %d %*s",&problem, &numberRows, 
+      x=fscanf(fp,"%*s %*s %d %d %*s %*s %d %*s",&problem, &numberRows, 
 	     &numberColumns);
+      if (x<0)
+	throw("bad fscanf");
       // scan down to SUPPLY
       while (fgets(temp,100,fp)) {
 	if (!strncmp(temp,"SUPPLY",6))
@@ -1967,11 +1967,11 @@ ClpSimplexUnitTest(const std::string & dirSample)
     }
     // Create a structured model
     CoinStructuredModel structured;
-    char numberBlocks=5;
-    for (char i=0;i<numberBlocks;i++) {
+    int numberBlocks=5;
+    for (int i=0;i<numberBlocks;i++) {
       std::string topName="row_master";
       std::string blockName="block_";
-      char bName = (char)('a'+i);
+      char bName = static_cast<char>('a'+static_cast<char>(i));
       blockName.append(1,bName);
       structured.addBlock(topName,blockName,top);
       structured.addBlock(blockName,blockName,sub);
@@ -1995,9 +1995,9 @@ ClpSimplexUnitTest(const std::string & dirSample)
     // Create a structured model
     CoinStructuredModel structured2;
     numberBlocks=3;
-    for (char i=0;i<numberBlocks;i++) {
+    for (int i=0;i<numberBlocks;i++) {
       std::string blockName="block_";
-      char bName = (char)('a'+i);
+      char bName = static_cast<char>('a'+static_cast<char>(i));
       blockName.append(1,bName);
       structured2.addBlock(blockName,blockName,structured);
     }

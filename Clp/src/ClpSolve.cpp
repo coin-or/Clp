@@ -1,3 +1,4 @@
+/* $Id$ */
 // Copyright (C) 2003, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
@@ -35,24 +36,15 @@
 #ifdef WSSMP_BARRIER
 #include "ClpCholeskyWssmp.hpp"
 #include "ClpCholeskyWssmpKKT.hpp"
-#define FAST_BARRIER
 #endif
 #ifdef UFL_BARRIER
 #include "ClpCholeskyUfl.hpp"
-#define FAST_BARRIER
 #endif
 #ifdef TAUCS_BARRIER
 #include "ClpCholeskyTaucs.hpp"
-#define FAST_BARRIER
 #endif
 #ifdef MUMPS_BARRIER
 #include "ClpCholeskyMumps.hpp"
-#define FAST_BARRIER
-#endif
-#ifdef COIN_DEVELOP
-#ifndef FAST_BARRIER
-static int numberBarrier=0;
-#endif
 #endif
 #ifdef COIN_HAS_VOL
 #include "VolVolume.hpp"
@@ -350,7 +342,7 @@ extern "C" {
 #if defined(_MSC_VER)
    __cdecl
 #endif // _MSC_VER
-   signal_handler(int whichSignal)
+   signal_handler(int /*whichSignal*/)
    {
       if (currentModel!=NULL) 
 	 currentModel->setMaximumIterations(0); // stop at next iterations
@@ -1236,12 +1228,12 @@ ClpSimplex::initialSolve(ClpSolve & options)
       }
       if (doIdiot>0) {
 	// pick up number passes
-	nPasses=options.getExtraInfo(1);
+	nPasses=options.getExtraInfo(1)%1000000;
 	if (nPasses>70) {
 	  info.setStartingWeight(1.0e3);
 	  info.setReduceIterations(6);
 	  if (nPasses>=5000) {
-	    int k= nPasses&100;
+	    int k= nPasses%100;
 	    nPasses /= 100;
 	    info.setReduceIterations(3);
 	    if (k)
@@ -1264,6 +1256,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
 #endif
 	}
       }
+      if (options.getExtraInfo(1)>1000000)
+	nPasses += 1000000;
       if (nPasses) {
 	doCrash=0;
 #if 0
@@ -1333,21 +1327,24 @@ ClpSimplex::initialSolve(ClpSolve & options)
       model2->nonlinearSLP(doSlp,1.0e-5);
     }
 #endif
-    if (dynamic_cast< ClpPackedMatrix*>(matrix_)) {
-      // See if original wanted vector
-      ClpPackedMatrix * clpMatrixO = dynamic_cast< ClpPackedMatrix*>(matrix_);
-      ClpMatrixBase * matrix = model2->clpMatrix();
-      if (dynamic_cast< ClpPackedMatrix*>(matrix)&&clpMatrixO->wantsSpecialColumnCopy()) {
-	ClpPackedMatrix * clpMatrix = dynamic_cast< ClpPackedMatrix*>(matrix);
-	clpMatrix->makeSpecialColumnCopy();
-	//model2->setSpecialOptions(model2->specialOptions()|256); // to say no row copy for comparisons
-	model2->primal(primalStartup);
-	clpMatrix->releaseSpecialColumnCopy();
+    if (options.getSpecialOption(1)!=2||
+	options.getExtraInfo(1)<1000000) {
+      if (dynamic_cast< ClpPackedMatrix*>(matrix_)) {
+	// See if original wanted vector
+	ClpPackedMatrix * clpMatrixO = dynamic_cast< ClpPackedMatrix*>(matrix_);
+	ClpMatrixBase * matrix = model2->clpMatrix();
+	if (dynamic_cast< ClpPackedMatrix*>(matrix)&&clpMatrixO->wantsSpecialColumnCopy()) {
+	  ClpPackedMatrix * clpMatrix = dynamic_cast< ClpPackedMatrix*>(matrix);
+	  clpMatrix->makeSpecialColumnCopy();
+	  //model2->setSpecialOptions(model2->specialOptions()|256); // to say no row copy for comparisons
+	  model2->primal(primalStartup);
+	  clpMatrix->releaseSpecialColumnCopy();
+	} else {
+	  model2->primal(primalStartup);
+	}
       } else {
 	model2->primal(primalStartup);
       }
-    } else {
-      model2->primal(primalStartup);
     }
     time2 = CoinCpuTime();
     timeCore = time2-timeX;
@@ -1875,6 +1872,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
     bool presolveInCrossover=false;
     bool scale=false;
     bool doKKT=false;
+    bool forceFixing=false;
+    int speed=0;
     if (barrierOptions&16) {
       barrierOptions &= ~16;
       doKKT=true;
@@ -1887,18 +1886,22 @@ ClpSimplex::initialSolve(ClpSolve & options)
       barrierOptions &= ~256;
       presolveInCrossover=true;
     }
+    if (barrierOptions&512) {
+      barrierOptions &= ~512;
+      forceFixing=true;
+    }
+    if (barrierOptions&1024) {
+      barrierOptions &= ~1024;
+      barrier.setProjectionTolerance(1.0e-9);
+    }
+    if (barrierOptions&(2048|4096)) {
+      speed = (barrierOptions&(2048|4096))>>11;
+      barrierOptions &= ~(2048|4096);
+    }
     if (barrierOptions&8) {
       barrierOptions &= ~8;
       scale=true;
     }
-#ifdef COIN_DEVELOP
-#ifndef FAST_BARRIER
-    if (!numberBarrier)
-      std::cout<<"Warning - the default ordering is just on row counts! "
-	       <<"The factorization is being improved"<<std::endl;
-    numberBarrier++;
-#endif
-#endif
     // If quadratic force KKT
     if (quadraticObj) {
       doKKT=true;
@@ -1908,6 +1911,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
     default:
       if (!doKKT) {
 	ClpCholeskyBase * cholesky = new ClpCholeskyBase();
+	cholesky->setIntegerParameter(0,speed);
 	barrier.setCholesky(cholesky);
       } else {
 	ClpCholeskyBase * cholesky = new ClpCholeskyBase();
@@ -1979,7 +1983,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
     int saveMaxIts = model2->maximumIterations();
     if (saveMaxIts<1000) {
       barrier.setMaximumBarrierIterations(saveMaxIts);
-      model2->setMaximumIterations(1000000);
+      model2->setMaximumIterations(10000000);
     }
 #ifndef SAVEIT
     //barrier.setDiagonalPerturbation(1.0e-25);
@@ -1990,7 +1994,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
         barrier.setDelta(1.0e-5);
         break;
       case 2:
-        barrier.setGamma(1.0e-5);
+        barrier.setGamma(1.0e-7);
         break;
       case 3:
         barrier.setDelta(1.0e-5);
@@ -2053,15 +2057,117 @@ ClpSimplex::initialSolve(ClpSolve & options)
       CoinMemcpyN(barrier.columnUpper(),numberColumns,saveUpper);
       CoinMemcpyN(barrier.rowUpper(),numberRows,saveUpper+numberColumns);
     }
-    if (numberFixed*20>barrier.numberRows()&&numberFixed>5000&&
+    if (((numberFixed*20>barrier.numberRows()&&numberFixed>5000)||forceFixing)&&
         presolveInCrossover) {
       // may as well do presolve
-      barrier.fixFixed();
+      if (!forceFixing) {
+	barrier.fixFixed();
+      } else {
+	// Fix
+	int n=barrier.numberColumns();
+	double * lower = barrier.columnLower();
+	double * upper = barrier.columnUpper();
+	double * solution = barrier.primalColumnSolution();
+	int nFix=0;
+	for (int i=0;i<n;i++) {
+	  if (barrier.fixedOrFree(i)&&lower[i]<upper[i]) {
+	    double value = solution[i];
+	    if (value<lower[i]+1.0e-6&&value-lower[i]<upper[i]-value) {
+	      solution[i]=lower[i];
+	      upper[i]=lower[i];
+	      nFix++;
+	    } else if (value>upper[i]-1.0e-6&&value-lower[i]>upper[i]-value) {
+	      solution[i]=upper[i];
+	      lower[i]=upper[i];
+	      nFix++;
+	    }
+	  }
+	}
+#ifdef CLP_INVESTIGATE
+	printf("%d columns fixed\n",nFix);
+#endif
+  	int nr=barrier.numberRows();
+	lower = barrier.rowLower();
+	upper = barrier.rowUpper();
+	solution = barrier.primalRowSolution();
+	nFix=0;
+	for (int i=0;i<nr;i++) {
+	  if (barrier.fixedOrFree(i+n)&&lower[i]<upper[i]) {
+	    double value = solution[i];
+	    if (value<lower[i]+1.0e-6&&value-lower[i]<upper[i]-value) {
+	      solution[i]=lower[i];
+	      upper[i]=lower[i];
+	      nFix++;
+	    } else if (value>upper[i]-1.0e-6&&value-lower[i]>upper[i]-value) {
+	      solution[i]=upper[i];
+	      lower[i]=upper[i];
+	      nFix++;
+	    }
+	  }
+	}
+#ifdef CLP_INVESTIGATE
+	printf("%d row slacks fixed\n",nFix);
+#endif
+      }
       saveModel2=model2;
       extraPresolve=true;
     } else if (numberFixed) {
       // Set fixed to bounds (may have restored earlier solution)
-      barrier.fixFixed(false);
+      if (!forceFixing) {
+	barrier.fixFixed(false);
+      } else {
+	// Fix
+	int n=barrier.numberColumns();
+	double * lower = barrier.columnLower();
+	double * upper = barrier.columnUpper();
+	double * solution = barrier.primalColumnSolution();
+	int nFix=0;
+	for (int i=0;i<n;i++) {
+	  if (barrier.fixedOrFree(i)&&lower[i]<upper[i]) {
+	    double value = solution[i];
+	    if (value<lower[i]+1.0e-8&&value-lower[i]<upper[i]-value) {
+	      solution[i]=lower[i];
+	      upper[i]=lower[i];
+	      nFix++;
+	    } else if (value>upper[i]-1.0e-8&&value-lower[i]>upper[i]-value) {
+	      solution[i]=upper[i];
+	      lower[i]=upper[i];
+	      nFix++;
+	    } else {
+	      //printf("fixcol %d %g <= %g <= %g\n",
+	      //     i,lower[i],solution[i],upper[i]);
+	    }
+	  }
+	}
+#ifdef CLP_INVESTIGATE
+	printf("%d columns fixed\n",nFix);
+#endif
+	int nr=barrier.numberRows();
+	lower = barrier.rowLower();
+	upper = barrier.rowUpper();
+	solution = barrier.primalRowSolution();
+	nFix=0;
+	for (int i=0;i<nr;i++) {
+	  if (barrier.fixedOrFree(i+n)&&lower[i]<upper[i]) {
+	    double value = solution[i];
+	    if (value<lower[i]+1.0e-5&&value-lower[i]<upper[i]-value) {
+	      solution[i]=lower[i];
+	      upper[i]=lower[i];
+	      nFix++;
+	    } else if (value>upper[i]-1.0e-5&&value-lower[i]>upper[i]-value) {
+	      solution[i]=upper[i];
+	      lower[i]=upper[i];
+	      nFix++;
+	    } else {
+	      //printf("fixrow %d %g <= %g <= %g\n",
+	      //     i,lower[i],solution[i],upper[i]);
+	    }
+	  }
+	}
+#ifdef CLP_INVESTIGATE
+	printf("%d row slacks fixed\n",nFix);
+#endif
+      }
     }
 #ifdef BORROW    
     barrier.returnModel(*model2);
@@ -2121,14 +2227,15 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	// make sure no status left
 	model2->createStatus();
 	// solve
-	model2->setPerturbation(100);
+	if (!forceFixing)
+	  model2->setPerturbation(100);
         if (model2->factorizationFrequency()==200) {
           // User did not touch preset
           model2->defaultFactorizationFrequency();
         }
 #if 1
 	// throw some into basis 
-	{
+	if(!forceFixing) {
 	  int numberRows = model2->numberRows();
 	  int numberColumns = model2->numberColumns();
 	  double * dsort = new double[numberColumns];
@@ -2169,89 +2276,89 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	  }
 	  delete [] sort;
 	  delete [] dsort;
-	}
-        // model2->allSlackBasis();
-	if (gap<1.0e-3*static_cast<double> (numberRows+numberColumns)) {
-          if (saveUpper) {
-            int numberRows = model2->numberRows();
-            int numberColumns = model2->numberColumns();
-            CoinMemcpyN(saveLower,numberColumns,model2->columnLower());
-            CoinMemcpyN(saveLower+numberColumns,numberRows,model2->rowLower());
-            delete [] saveLower;
-            CoinMemcpyN(saveUpper,numberColumns,model2->columnUpper());
-            CoinMemcpyN(saveUpper+numberColumns,numberRows,model2->rowUpper());
-            delete [] saveUpper;
-            saveLower=NULL;
-            saveUpper=NULL;
-          }
-	  int numberRows = model2->numberRows();
-	  int numberColumns = model2->numberColumns();
-	  // just primal values pass
-	  double saveScale = model2->objectiveScale();
-	  model2->setObjectiveScale(1.0e-3);
-	  model2->primal(2);
-	  model2->setObjectiveScale(saveScale);
-	  // save primal solution and copy back dual
-	  CoinMemcpyN(model2->primalRowSolution(),
-		      numberRows,rowPrimal);
-	  CoinMemcpyN(rowDual,
-		      numberRows,model2->dualRowSolution());
-	  CoinMemcpyN(model2->primalColumnSolution(),
-		      numberColumns,columnPrimal);
-	  CoinMemcpyN(columnDual,
-		      numberColumns,model2->dualColumnSolution());
-	  //model2->primal(1);
-	  // clean up reduced costs and flag variables
-	  {
-	    double * dj = model2->dualColumnSolution();
-	    double * cost = model2->objective();
-	    double * saveCost = new double[numberColumns];
-	    CoinMemcpyN(cost,numberColumns,saveCost);
-	    double * saveLower = new double[numberColumns];
-	    double * lower = model2->columnLower();
-	    CoinMemcpyN(lower,numberColumns,saveLower);
-	    double * saveUpper = new double[numberColumns];
-	    double * upper = model2->columnUpper();
-	    CoinMemcpyN(upper,numberColumns,saveUpper);
-	    int i;
-	    double tolerance = 10.0*dualTolerance_;
-	    for ( i=0;i<numberColumns;i++) {
-	      if (model2->getStatus(i)==basic) {
-		dj[i]=0.0;
-	      } else if (model2->getStatus(i)==atLowerBound) {
-		if (optimizationDirection_*dj[i]<tolerance) {
-		  if (optimizationDirection_*dj[i]<0.0) {
-		    //if (dj[i]<-1.0e-3)
-		    //printf("bad dj at lb %d %g\n",i,dj[i]);
-		    cost[i] -= dj[i];
-		    dj[i]=0.0;
+	  // model2->allSlackBasis();
+	  if (gap<1.0e-3*static_cast<double> (numberRows+numberColumns)) {
+	    if (saveUpper) {
+	      int numberRows = model2->numberRows();
+	      int numberColumns = model2->numberColumns();
+	      CoinMemcpyN(saveLower,numberColumns,model2->columnLower());
+	      CoinMemcpyN(saveLower+numberColumns,numberRows,model2->rowLower());
+	      CoinMemcpyN(saveUpper,numberColumns,model2->columnUpper());
+	      CoinMemcpyN(saveUpper+numberColumns,numberRows,model2->rowUpper());
+	      delete [] saveLower;
+	      delete [] saveUpper;
+	      saveLower=NULL;
+	      saveUpper=NULL;
+	    }
+	    int numberRows = model2->numberRows();
+	    int numberColumns = model2->numberColumns();
+	    // just primal values pass
+	    double saveScale = model2->objectiveScale();
+	    model2->setObjectiveScale(1.0e-3);
+	    model2->primal(2);
+	    model2->setObjectiveScale(saveScale);
+	    // save primal solution and copy back dual
+	    CoinMemcpyN(model2->primalRowSolution(),
+			numberRows,rowPrimal);
+	    CoinMemcpyN(rowDual,
+			numberRows,model2->dualRowSolution());
+	    CoinMemcpyN(model2->primalColumnSolution(),
+			numberColumns,columnPrimal);
+	    CoinMemcpyN(columnDual,
+			numberColumns,model2->dualColumnSolution());
+	    //model2->primal(1);
+	    // clean up reduced costs and flag variables
+	    {
+	      double * dj = model2->dualColumnSolution();
+	      double * cost = model2->objective();
+	      double * saveCost = new double[numberColumns];
+	      CoinMemcpyN(cost,numberColumns,saveCost);
+	      double * saveLower = new double[numberColumns];
+	      double * lower = model2->columnLower();
+	      CoinMemcpyN(lower,numberColumns,saveLower);
+	      double * saveUpper = new double[numberColumns];
+	      double * upper = model2->columnUpper();
+	      CoinMemcpyN(upper,numberColumns,saveUpper);
+	      int i;
+	      double tolerance = 10.0*dualTolerance_;
+	      for ( i=0;i<numberColumns;i++) {
+		if (model2->getStatus(i)==basic) {
+		  dj[i]=0.0;
+		} else if (model2->getStatus(i)==atLowerBound) {
+		  if (optimizationDirection_*dj[i]<tolerance) {
+		    if (optimizationDirection_*dj[i]<0.0) {
+		      //if (dj[i]<-1.0e-3)
+		      //printf("bad dj at lb %d %g\n",i,dj[i]);
+		      cost[i] -= dj[i];
+		      dj[i]=0.0;
+		    }
+		  } else {
+		    upper[i]=lower[i];
 		  }
-		} else {
-		  upper[i]=lower[i];
-		}
-	      } else if (model2->getStatus(i)==atUpperBound) {
-		if (optimizationDirection_*dj[i]>tolerance) {
-		  if (optimizationDirection_*dj[i]>0.0) {
-		    //if (dj[i]>1.0e-3)
-		    //printf("bad dj at ub %d %g\n",i,dj[i]);
-		    cost[i] -= dj[i];
-		    dj[i]=0.0;
+		} else if (model2->getStatus(i)==atUpperBound) {
+		  if (optimizationDirection_*dj[i]>tolerance) {
+		    if (optimizationDirection_*dj[i]>0.0) {
+		      //if (dj[i]>1.0e-3)
+		      //printf("bad dj at ub %d %g\n",i,dj[i]);
+		      cost[i] -= dj[i];
+		      dj[i]=0.0;
+		    }
+		  } else {
+		    lower[i]=upper[i];
 		  }
-		} else {
-		  lower[i]=upper[i];
 		}
 	      }
+	      // just dual values pass
+	      //model2->setLogLevel(63);
+	      //model2->setFactorizationFrequency(1);
+	      model2->dual(2);
+	      CoinMemcpyN(saveCost,numberColumns,cost);
+	      delete [] saveCost;
+	      CoinMemcpyN(saveLower,numberColumns,lower);
+	      delete [] saveLower;
+	      CoinMemcpyN(saveUpper,numberColumns,upper);
+	      delete [] saveUpper;
 	    }
-	    // just dual values pass
-	    //model2->setLogLevel(63);
-	    //model2->setFactorizationFrequency(1);
-	    model2->dual(2);
-	    CoinMemcpyN(saveCost,numberColumns,cost);
-	    delete [] saveCost;
-	    CoinMemcpyN(saveLower,numberColumns,lower);
-	    delete [] saveLower;
-	    CoinMemcpyN(saveUpper,numberColumns,upper);
-	    delete [] saveUpper;
 	  }
 	  // and finish
 	  // move solutions
@@ -2282,7 +2389,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	model2->reducedGradient(1);
       }
     }
-    model2->setMaximumIterations(saveMaxIts);
+    
+    //model2->setMaximumIterations(saveMaxIts);
 #ifdef BORROW
     delete [] rowPrimal;
     delete [] columnPrimal;
@@ -2295,13 +2403,15 @@ ClpSimplex::initialSolve(ClpSolve & options)
       model2=saveModel2;
     }
     if (saveUpper) {
-      int numberRows = model2->numberRows();
-      int numberColumns = model2->numberColumns();
-      CoinMemcpyN(saveLower,numberColumns,model2->columnLower());
-      CoinMemcpyN(saveLower+numberColumns,numberRows,model2->rowLower());
+      if (!forceFixing) {
+	int numberRows = model2->numberRows();
+	int numberColumns = model2->numberColumns();
+	CoinMemcpyN(saveLower,numberColumns,model2->columnLower());
+	CoinMemcpyN(saveLower+numberColumns,numberRows,model2->rowLower());
+	CoinMemcpyN(saveUpper,numberColumns,model2->columnUpper());
+	CoinMemcpyN(saveUpper+numberColumns,numberRows,model2->rowUpper());
+      }
       delete [] saveLower;
-      CoinMemcpyN(saveUpper,numberColumns,model2->columnUpper());
-      CoinMemcpyN(saveUpper+numberColumns,numberRows,model2->rowUpper());
       delete [] saveUpper;
       saveLower=NULL;
       saveUpper=NULL;
@@ -2404,7 +2514,9 @@ ClpSimplex::initialSolve(ClpSolve & options)
     secondaryStatus_ =model2->secondaryStatus_;
     delete model2;
   }
-  setMaximumIterations(saveMaxIterations);
+  if (method!=ClpSolve::useBarrierNoCross&&
+      method!=ClpSolve::useBarrier)
+    setMaximumIterations(saveMaxIterations);
   std::string statusMessage[]={"Unknown","Optimal","PrimalInfeasible","DualInfeasible","Stopped",
 			       "Errors","User stopped"};
   assert (finalStatus>=-1&&finalStatus<=5);
@@ -2423,6 +2535,20 @@ ClpSimplex::initialSolve(ClpSolve & options)
   if (savedObjective) {
     delete objective_;
     objective_=savedObjective;
+  }
+  if (options.getSpecialOption(1)==2&&
+	options.getExtraInfo(1)>1000000) {
+    ClpObjective * savedObjective=objective_;
+    // make up zero objective
+    double * obj = new double[numberColumns_];
+    for (int i=0;i<numberColumns_;i++) 
+      obj[i]=0.0;
+    objective_= new ClpLinearObjective(obj,numberColumns_);
+    delete [] obj;
+    primal(1);
+    delete objective_;
+    objective_=savedObjective;
+    finalStatus=status();
   }
   return finalStatus;
 }
@@ -2563,7 +2689,7 @@ ClpSolve::getSpecialOption(int which) const
 
 // Solve types
 void 
-ClpSolve::setSolveType(SolveType method, int extraInfo)
+ClpSolve::setSolveType(SolveType method, int /*extraInfo*/)
 {
   method_=method;
 }
@@ -3163,12 +3289,12 @@ ClpSimplex::solve(CoinStructuredModel * model)
       // just fill in info
       CoinModelBlockInfo info = CoinModelBlockInfo();
       int whatsSet = thisBlock->whatIsSet();
-      info.matrix = ((whatsSet&1)!=0) ? 1 : 0;
-      info.rhs = ((whatsSet&2)!=0) ? 1 : 0;
-      info.rowName = ((whatsSet&4)!=0) ? 1 : 0;
-      info.integer = ((whatsSet&32)!=0) ? 1 : 0;
-      info.bounds = ((whatsSet&8)!=0) ? 1 : 0;
-      info.columnName = ((whatsSet&16)!=0) ? 1 : 0;
+      info.matrix = static_cast<char>(((whatsSet&1)!=0) ? 1 : 0);
+      info.rhs = static_cast<char>(((whatsSet&2)!=0) ? 1 : 0);
+      info.rowName = static_cast<char>(((whatsSet&4)!=0) ? 1 : 0);
+      info.integer = static_cast<char>(((whatsSet&32)!=0) ? 1 : 0);
+      info.bounds = static_cast<char>(((whatsSet&8)!=0) ? 1 : 0);
+      info.columnName = static_cast<char>(((whatsSet&16)!=0) ? 1 : 0);
       // Which block
       int iRowBlock=model->rowBlock(thisBlock->getRowBlock());
       info.rowBlock=iRowBlock;
@@ -3555,12 +3681,12 @@ ClpSimplex::solveDW(CoinStructuredModel * model)
     // just fill in info
     CoinModelBlockInfo info = CoinModelBlockInfo();
     int whatsSet = thisBlock->whatIsSet();
-    info.matrix = ((whatsSet&1)!=0) ? 1 : 0;
-    info.rhs = ((whatsSet&2)!=0) ? 1 : 0;
-    info.rowName = ((whatsSet&4)!=0) ? 1 : 0;
-    info.integer = ((whatsSet&32)!=0) ? 1 : 0;
-    info.bounds = ((whatsSet&8)!=0) ? 1 : 0;
-    info.columnName = ((whatsSet&16)!=0) ? 1 : 0;
+    info.matrix = static_cast<char>(((whatsSet&1)!=0) ? 1 : 0);
+    info.rhs = static_cast<char>(((whatsSet&2)!=0) ? 1 : 0);
+    info.rowName = static_cast<char>(((whatsSet&4)!=0) ? 1 : 0);
+    info.integer = static_cast<char>(((whatsSet&32)!=0) ? 1 : 0);
+    info.bounds = static_cast<char>(((whatsSet&8)!=0) ? 1 : 0);
+    info.columnName = static_cast<char>(((whatsSet&16)!=0) ? 1 : 0);
     // Which block
     int iRowBlock=model->rowBlock(thisBlock->getRowBlock());
     info.rowBlock=iRowBlock;
@@ -4206,12 +4332,12 @@ ClpSimplex::solveBenders(CoinStructuredModel * model)
     // just fill in info
     CoinModelBlockInfo info = CoinModelBlockInfo();
     int whatsSet = thisBlock->whatIsSet();
-    info.matrix = ((whatsSet&1)!=0) ? 1 : 0;
-    info.rhs = ((whatsSet&2)!=0) ? 1 : 0;
-    info.rowName = ((whatsSet&4)!=0) ? 1 : 0;
-    info.integer = ((whatsSet&32)!=0) ? 1 : 0;
-    info.bounds = ((whatsSet&8)!=0) ? 1 : 0;
-    info.columnName = ((whatsSet&16)!=0) ? 1 : 0;
+    info.matrix = static_cast<char>(((whatsSet&1)!=0) ? 1 : 0);
+    info.rhs = static_cast<char>(((whatsSet&2)!=0) ? 1 : 0);
+    info.rowName = static_cast<char>(((whatsSet&4)!=0) ? 1 : 0);
+    info.integer = static_cast<char>(((whatsSet&32)!=0) ? 1 : 0);
+    info.bounds = static_cast<char>(((whatsSet&8)!=0) ? 1 : 0);
+    info.columnName = static_cast<char>(((whatsSet&16)!=0) ? 1 : 0);
     // Which block
     int iRowBlock=model->rowBlock(thisBlock->getRowBlock());
     info.rowBlock=iRowBlock;
