@@ -647,8 +647,13 @@ Idiot::solve2(CoinMessageHandler * handler,const CoinMessages * messages)
   bool scaled=false;
 #ifndef OSI_IDIOT
   if ((strategy_&32)!=0&&!allOnes) {
-    if (model_->scalingFlag()>0)
+    if (model_->scalingFlag()>0) {
+      // May not be synchronized
+      int flag = model_->scalingFlag();
+      model_->scaling(0);
+      model_->scaling(flag);
       scaled = model_->clpMatrix()->scale(model_)==0;
+    }
     if (scaled) {
       const double * rowScale = model_->rowScale();
       const double * columnScale = model_->columnScale();
