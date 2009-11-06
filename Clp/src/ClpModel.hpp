@@ -344,8 +344,8 @@ public:
    /// Number of iterations
    inline int numberIterations() const  { return numberIterations_; }
    inline int getIterationCount() const { return numberIterations_; }
-  inline void setNumberIterations(int numberIterations)
-  { numberIterations_ = numberIterations;}
+  inline void setNumberIterations(int numberIterationsNew)
+  { numberIterations_ = numberIterationsNew;}
   /** Solve type - 1 simplex, 2 simplex interface, 3 Interior.*/
   inline int solveType() const
   { return solveType_;}
@@ -371,8 +371,8 @@ public:
    inline int status() const            { return problemStatus_; }
    inline int problemStatus() const            { return problemStatus_; }
   /// Set problem status
-  inline void setProblemStatus(int problemStatus)
-  { problemStatus_ = problemStatus;}
+  inline void setProblemStatus(int problemStatusNew)
+  { problemStatus_ = problemStatusNew;}
    /** Secondary status of problem - may get extended
        0 - none
        1 - primal infeasible because dual limit reached OR (probably primal
@@ -388,8 +388,8 @@ public:
        100 up - translation of enum from ClpEventHandler
    */
    inline int secondaryStatus() const            { return secondaryStatus_; }
-  inline void setSecondaryStatus(int status)
-  { secondaryStatus_ = status;}
+  inline void setSecondaryStatus(int newstatus)
+  { secondaryStatus_ = newstatus;}
    /// Are there a numerical difficulties?
    inline bool isAbandoned() const             { return problemStatus_==4; }
    /// Is optimality proven?
@@ -614,9 +614,9 @@ public:
       matrices were being rotated.  This version changes CoinPackedMatrix
       to ClpPackedMatrix.  ClpModel takes ownership.
   */
-   inline void replaceMatrix(CoinPackedMatrix * matrix,
+   inline void replaceMatrix(CoinPackedMatrix * newmatrix,
 			     bool deleteCurrent=false)
-  { replaceMatrix(new ClpPackedMatrix(matrix),deleteCurrent);}
+  { replaceMatrix(new ClpPackedMatrix(newmatrix),deleteCurrent);}
    /// Objective value
    inline double objectiveValue() const {
       return objectiveValue_*optimizationDirection_ - dblParam_[ClpObjOffset];
@@ -743,8 +743,8 @@ public:
   inline ClpObjective * objectiveAsObject() const
   { return objective_;}
   void setObjective(ClpObjective * objective);
-  inline void setObjectivePointer(ClpObjective * objective)
-  { objective_ = objective;}
+  inline void setObjectivePointer(ClpObjective * newobjective)
+  { objective_ = newobjective;}
   /** Solve a problem with no elements - return status and
       dual and primal infeasibilites */
   int emptyProblem(int * infeasNumber=NULL, double * infeasSum=NULL,bool printMessage=true);

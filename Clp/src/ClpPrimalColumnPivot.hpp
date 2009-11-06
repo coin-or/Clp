@@ -109,8 +109,8 @@ public:
   inline ClpSimplex * model()
   { return model_;}
   /// Sets model
-  inline void setModel(ClpSimplex * model)
-  { model_=model;}
+  inline void setModel(ClpSimplex * newmodel)
+  { model_=newmodel;}
   
   /// Returns type (above 63 is extra information)
   inline int type()

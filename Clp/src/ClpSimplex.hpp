@@ -19,7 +19,6 @@
 class ClpDualRowPivot;
 class ClpPrimalColumnPivot;
 class ClpFactorization;
-#include "ClpFactorization.hpp"
 class CoinIndexedVector;
 class ClpNonLinearCost;
 class ClpNodeStuff;
@@ -856,11 +855,11 @@ public:
   { return cost_;}
   inline Status getStatus(int sequence) const
   {return static_cast<Status> (status_[sequence]&7);}
-  inline void setStatus(int sequence, Status status)
+  inline void setStatus(int sequence, Status newstatus)
   {
     unsigned char & st_byte = status_[sequence];
     st_byte = static_cast<unsigned char>(st_byte & ~7);
-    st_byte = static_cast<unsigned char>(st_byte | status);
+    st_byte = static_cast<unsigned char>(st_byte | newstatus);
   }
   /// Start or reset using maximumRows_ and Columns_ - true if change
   bool startPermanentArrays();
@@ -979,19 +978,19 @@ public:
   }
   inline FakeBound getFakeBound(int sequence) const
   {return static_cast<FakeBound> ((status_[sequence]>>3)&3);}
-  inline void setRowStatus(int sequence, Status status)
+  inline void setRowStatus(int sequence, Status newstatus)
   {
     unsigned char & st_byte = status_[sequence+numberColumns_];
     st_byte = static_cast<unsigned char>(st_byte & ~7);
-    st_byte = static_cast<unsigned char>(st_byte | status);
+    st_byte = static_cast<unsigned char>(st_byte | newstatus);
   }
   inline Status getRowStatus(int sequence) const
   {return static_cast<Status> (status_[sequence+numberColumns_]&7);}
-  inline void setColumnStatus(int sequence, Status status)
+  inline void setColumnStatus(int sequence, Status newstatus)
   {
     unsigned char & st_byte = status_[sequence];
     st_byte = static_cast<unsigned char>(st_byte & ~7);
-    st_byte = static_cast<unsigned char>(st_byte | status);
+    st_byte = static_cast<unsigned char>(st_byte | newstatus);
   }
   inline Status getColumnStatus(int sequence) const
   {return static_cast<Status> (status_[sequence]&7);}
@@ -1132,8 +1131,8 @@ public:
 
       /** Set a single column lower and upper bound */
       inline void setColBounds( int elementIndex,
-	double lower, double upper )
-       { setColumnBounds(elementIndex, lower, upper);}
+	double newlower, double newupper )
+       { setColumnBounds(elementIndex, newlower, newupper);}
 
       /** Set the bounds on a number of columns simultaneously<br>
     	  @param indexFirst,indexLast pointers to the beginning and after the

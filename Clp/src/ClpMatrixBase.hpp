@@ -352,7 +352,7 @@ public:
   inline int type() const
   { return type_;}
   /// Sets type
-  void setType(int type) {type_=type;}
+  void setType(int newtype) {type_=newtype;}
   /// Sets up an effective RHS
   void useEffectiveRhs(ClpSimplex * model);
   /** Returns effective RHS offset if it is being used.  This is used for long problems

@@ -121,33 +121,33 @@ public:
   /// Whether we want to do dual part of presolve
   inline bool doDual() const
   { return (independentOptions_[1]&1)==0;}
-  inline void setDoDual(bool doDual)
-  { if (doDual) independentOptions_[1]  &= ~1; else independentOptions_[1] |= 1;}
+  inline void setDoDual(bool doDual_)
+  { if (doDual_) independentOptions_[1]  &= ~1; else independentOptions_[1] |= 1;}
   /// Whether we want to do singleton part of presolve
   inline bool doSingleton() const
   { return (independentOptions_[1]&2)==0;}
-  inline void setDoSingleton(bool doSingleton)
-  { if (doSingleton) independentOptions_[1]  &= ~2; else independentOptions_[1] |= 2;}
+  inline void setDoSingleton(bool doSingleton_)
+  { if (doSingleton_) independentOptions_[1]  &= ~2; else independentOptions_[1] |= 2;}
   /// Whether we want to do doubleton part of presolve
   inline bool doDoubleton() const
   { return (independentOptions_[1]&4)==0;}
-  inline void setDoDoubleton(bool doDoubleton)
-  { if (doDoubleton) independentOptions_[1]  &= ~4; else independentOptions_[1] |= 4;}
+  inline void setDoDoubleton(bool doDoubleton_)
+  { if (doDoubleton_) independentOptions_[1]  &= ~4; else independentOptions_[1] |= 4;}
   /// Whether we want to do tripleton part of presolve
   inline bool doTripleton() const
   { return (independentOptions_[1]&8)==0;}
-  inline void setDoTripleton(bool doTripleton)
-  { if (doTripleton) independentOptions_[1]  &= ~8; else independentOptions_[1] |= 8;}
+  inline void setDoTripleton(bool doTripleton_)
+  { if (doTripleton_) independentOptions_[1]  &= ~8; else independentOptions_[1] |= 8;}
   /// Whether we want to do tighten part of presolve
   inline bool doTighten() const
   { return (independentOptions_[1]&16)==0;}
-  inline void setDoTighten(bool doTighten)
-  { if (doTighten) independentOptions_[1]  &= ~16; else independentOptions_[1] |= 16;}
+  inline void setDoTighten(bool doTighten_)
+  { if (doTighten_) independentOptions_[1]  &= ~16; else independentOptions_[1] |= 16;}
   /// Whether we want to do forcing part of presolve
   inline bool doForcing() const
   { return (independentOptions_[1]&32)==0;}
-  inline void setDoForcing(bool doForcing)
-  { if (doForcing) independentOptions_[1]  &= ~32; else independentOptions_[1] |= 32;}
+  inline void setDoForcing(bool doForcing_)
+  { if (doForcing_) independentOptions_[1]  &= ~32; else independentOptions_[1] |= 32;}
   /// Whether we want to do impliedfree part of presolve
   inline bool doImpliedFree() const
   { return (independentOptions_[1]&64)==0;}
@@ -156,18 +156,18 @@ public:
   /// Whether we want to do dupcol part of presolve
   inline bool doDupcol() const
   { return (independentOptions_[1]&128)==0;}
-  inline void setDoDupcol(bool doDupcol)
-  { if (doDupcol) independentOptions_[1]  &= ~128; else independentOptions_[1] |= 128;}
+  inline void setDoDupcol(bool doDupcol_)
+  { if (doDupcol_) independentOptions_[1]  &= ~128; else independentOptions_[1] |= 128;}
   /// Whether we want to do duprow part of presolve
   inline bool doDuprow() const
   { return (independentOptions_[1]&256)==0;}
-  inline void setDoDuprow(bool doDuprow)
-  { if (doDuprow) independentOptions_[1]  &= ~256; else independentOptions_[1] |= 256;}
+  inline void setDoDuprow(bool doDuprow_)
+  { if (doDuprow_) independentOptions_[1]  &= ~256; else independentOptions_[1] |= 256;}
   /// Whether we want to do singleton column part of presolve
   inline bool doSingletonColumn() const
   { return (independentOptions_[1]&512)==0;}
-  inline void setDoSingletonColumn(bool doSingleton)
-  { if (doSingleton) independentOptions_[1]  &= ~512; else independentOptions_[1] |= 512;}
+  inline void setDoSingletonColumn(bool doSingleton_)
+  { if (doSingleton_) independentOptions_[1]  &= ~512; else independentOptions_[1] |= 512;}
   /// Set whole group
   inline int presolveActions() const
   { return independentOptions_[1]&0xffff;}
