@@ -1013,6 +1013,10 @@ extern int CbcOrClpRead_mode;
 int CbcOrClpEnvironmentIndex=-1;
 static int fillEnv()
 {
+#if defined(_MSC_VER) || defined(__MSVCRT__)
+  return 0;
+#else
+  // Don't think it will work on Windows
   char * environ = getenv("CBC_CLP_ENVIRONMENT");
   int length=0;
   if (environ) {
@@ -1044,6 +1048,7 @@ static int fillEnv()
   if (!length)
     CbcOrClpEnvironmentIndex=-1;
   return length;
+#endif
 }
 extern FILE * CbcOrClpReadCommand;
 // Simple read stuff
