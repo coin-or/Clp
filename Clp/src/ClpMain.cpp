@@ -3070,4 +3070,5 @@ static void generateCode(const char * fileName,int type)
   1.03.03 June 13 2006.  For clean up after dual perturbation
   1.04.01 June 26 2007.  Lots of changes but I got lazy
   1.05.00 June 27 2007.  This is trunk so when gets to stable will be 1.5
+  1.11.00 November 5 2009 (Guy Fawkes) - OSL factorization and better ordering
  */

@@ -1453,6 +1453,10 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
     moreSpecialOptions_ &= ~16; // clear check accuracy flag
   if (goToDual) 
     problemStatus_=10; // try dual
+  // If bad go to dual
+  if (numberIterations_>1000&&largestPrimalError_>1.0e6
+      &&largestDualError_>1.0e6) 
+    problemStatus_=10; // try dual
   // make sure first free monotonic
   if (firstFree_>=0&&saveFirstFree>=0) {
     firstFree_= (numberIterations_) ? saveFirstFree : -1;
@@ -2795,45 +2799,50 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
     if (!ifValuesPass&&solveType_==1&&(saveDj*dualIn_<test1||
 	fabs(saveDj-dualIn_)>checkValue*(1.0+fabs(saveDj))||
 			fabs(dualIn_)<test2)) {
-      char x = isColumn(sequenceIn_) ? 'C' :'R';
-      handler_->message(CLP_PRIMAL_DJ,messages_)
-        <<x<<sequenceWithin(sequenceIn_)
-        <<saveDj<<dualIn_
-	<<CoinMessageEol;
-      if(lastGoodIteration_ != numberIterations_) {
-	clearAll();
-	pivotRow_=-1; // say no weights update
-	returnCode=-4;
-	if(lastGoodIteration_+1 == numberIterations_) {
-	  // not looking wonderful - try cleaning bounds
-	  // put non-basics to bounds in case tolerance moved
-	  nonLinearCost_->checkInfeasibilities(0.0);
-	}
-	sequenceOut_=-1;
-	break;
-      } else {
-	// take on more relaxed criterion
-	if (saveDj*dualIn_<test1||
-	    fabs(saveDj-dualIn_)>2.0e-1*(1.0+fabs(dualIn_))||
-	    fabs(dualIn_)<test2) {
-	  // need to reject something
-	  char x = isColumn(sequenceIn_) ? 'C' :'R';
-	  handler_->message(CLP_SIMPLEX_FLAG,messages_)
-	    <<x<<sequenceWithin(sequenceIn_)
-	    <<CoinMessageEol;
-	  setFlagged(sequenceIn_);
-#ifdef FEB_TRY
-	  // Make safer?
-	  factorization_->saferTolerances (1.0e-15,-1.03);
-#endif
-	  progress_.clearBadTimes();
-	  lastBadIteration_ = numberIterations_; // say be more cautious
+      if (!(saveDj*dualIn_>0.0&&CoinMin(fabs(saveDj),fabs(dualIn_))>
+	    1.0e5)) {
+	char x = isColumn(sequenceIn_) ? 'C' :'R';
+	handler_->message(CLP_PRIMAL_DJ,messages_)
+	  <<x<<sequenceWithin(sequenceIn_)
+	  <<saveDj<<dualIn_
+	  <<CoinMessageEol;
+	if(lastGoodIteration_ != numberIterations_) {
 	  clearAll();
-	  pivotRow_=-1;
-	  returnCode=-5;
+	  pivotRow_=-1; // say no weights update
+	  returnCode=-4;
+	  if(lastGoodIteration_+1 == numberIterations_) {
+	    // not looking wonderful - try cleaning bounds
+	    // put non-basics to bounds in case tolerance moved
+	    nonLinearCost_->checkInfeasibilities(0.0);
+	  }
 	  sequenceOut_=-1;
 	  break;
+	} else {
+	  // take on more relaxed criterion
+	  if (saveDj*dualIn_<test1||
+	      fabs(saveDj-dualIn_)>2.0e-1*(1.0+fabs(dualIn_))||
+	      fabs(dualIn_)<test2) {
+	    // need to reject something
+	    char x = isColumn(sequenceIn_) ? 'C' :'R';
+	    handler_->message(CLP_SIMPLEX_FLAG,messages_)
+	      <<x<<sequenceWithin(sequenceIn_)
+	      <<CoinMessageEol;
+	    setFlagged(sequenceIn_);
+#ifdef FEB_TRY
+	    // Make safer?
+	    factorization_->saferTolerances (1.0e-15,-1.03);
+#endif
+	    progress_.clearBadTimes();
+	    lastBadIteration_ = numberIterations_; // say be more cautious
+	    clearAll();
+	    pivotRow_=-1;
+	    returnCode=-5;
+	    sequenceOut_=-1;
+	    break;
+	  }
 	}
+      } else {
+	//printf("%d %g %g\n",numberIterations_,saveDj,dualIn_);
       }
     }
     if (pivotRow_>=0) {

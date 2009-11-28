@@ -605,37 +605,37 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
 	// set up for next pass
 	// later do faster if many changes i.e. memset and memcpy
 	prob->numberRowsToDo_ = prob->numberNextRowsToDo_;
-	int kcheck;
-	bool found=false;
-	kcheck=-1;
+	//int kcheck;
+	//bool found=false;
+	//kcheck=-1;
 	for (i=0;i<prob->numberNextRowsToDo_;i++) {
 	  int index = prob->nextRowsToDo_[i];
 	  prob->unsetRowChanged(index);
 	  prob->rowsToDo_[i] = index;
-	  if (index==kcheck) {
-	    printf("row %d on list after pass %d\n",kcheck,
-		   whichPass);
-	    found=true;
-	  }
+	  //if (index==kcheck) {
+	  //printf("row %d on list after pass %d\n",kcheck,
+	  //   whichPass);
+	  //found=true;
+	  //}
 	}
-	if (!found&&kcheck>=0)
-	  prob->rowsToDo_[prob->numberRowsToDo_++]=kcheck;
+	//if (!found&&kcheck>=0)
+	//prob->rowsToDo_[prob->numberRowsToDo_++]=kcheck;
 	prob->numberNextRowsToDo_=0;
 	prob->numberColsToDo_ = prob->numberNextColsToDo_;
-	kcheck=-1;
-	found=false;
+	//kcheck=-1;
+	//found=false;
 	for (i=0;i<prob->numberNextColsToDo_;i++) {
 	  int index = prob->nextColsToDo_[i];
 	  prob->unsetColChanged(index);
 	  prob->colsToDo_[i] = index;
-	  if (index==kcheck) {
-	    printf("col %d on list after pass %d\n",kcheck,
-		   whichPass);
-	    found=true;
-	  }
+	  //if (index==kcheck) {
+	  //printf("col %d on list after pass %d\n",kcheck,
+	  //   whichPass);
+	  //found=true;
+	  //}
 	}
-	if (!found&&kcheck>=0)
-	  prob->colsToDo_[prob->numberColsToDo_++]=kcheck;
+	//if (!found&&kcheck>=0)
+	//prob->colsToDo_[prob->numberColsToDo_++]=kcheck;
 	prob->numberNextColsToDo_=0;
 	if (paction_ == paction1&&fill_level>0)
 	  break;
