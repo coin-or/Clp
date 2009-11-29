@@ -6,5 +6,5 @@ Name: CLP
 Description: COIN-OR Linear Programming Solver
 Version: @PACKAGE_VERSION@
 Libs: -L${libdir} -lClp @ADDLIBS@
-Cflags: -I${includedir}
+Cflags: -I${includedir} -I@ABSBUILDDIR@/inc
 Requires: @REQUIREDPACKAGES@
