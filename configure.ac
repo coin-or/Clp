@@ -42,10 +42,12 @@ AC_COIN_CREATE_LIBTOOL
 #                  Check which subprojects are there                        #
 #############################################################################
 
-AC_COIN_MAIN_SUBDIRS(CoinUtils)
-AC_COIN_MAIN_SUBDIRS(Data/Netlib)
-AC_COIN_MAIN_SUBDIRS(Data/Sample)
-AC_COIN_MAIN_SUBDIRS(Clp)
+AC_COIN_MAIN_PACKAGEDIR(Blas,ThirdParty,daxpy.f)
+AC_COIN_MAIN_PACKAGEDIR(Lapack,ThirdParty,[LAPACK/SRC/dlarf.f])
+AC_COIN_MAIN_PACKAGEDIR(Sample,Data)
+AC_COIN_MAIN_PACKAGEDIR(Netlib,Data)
+AC_COIN_MAIN_PACKAGEDIR(CoinUtils)
+AC_COIN_MAIN_PACKAGEDIR(Clp)
 
 ##############################################################################
 #                   Finishing up by writing all the output                   #

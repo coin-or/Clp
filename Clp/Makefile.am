@@ -103,6 +103,9 @@ install-exec-local: install-doc
 uninstall-local: uninstall-doc
 	rm -f $(DESTDIR)$(addlibsdir)/$(addlibsfile)
 
+pkgconfiglibdir = $(prefix)/lib/pkgconfig
+pkgconfiglib_DATA = clp.pc
+
 ########################################################################
 #                         Maintainer Stuff                             #
 ########################################################################

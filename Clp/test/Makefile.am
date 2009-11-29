@@ -12,15 +12,18 @@ AUTOMAKE_OPTIONS = foreign
 #                         unitTest for Clp                             #
 ########################################################################
 
+unittestflags = 
+if COIN_HAS_SAMPLE
+  unittestflags += -dirSample $(SAMPLE_DATA)
+endif
+unittestflags += -unitTest
+if COIN_HAS_NETLIB
+  unittestflags += -dirNetlib $(NETLIB_DATA) -netlib
+endif
+
 # We are using the CLP solver executable to do the unit test
 test: ../src/clp$(EXEEXT)
-	if test x"$(DIRNETLIB)" != x; then \
-		NETLIBARG="-dirNetlib $(DIRNETLIB) -netlib"; \
-	fi; \
-	if test x"$(DIRSAMPLE)" != x; then \
-		SAMPLEARG="-dirSample $(DIRSAMPLE)"; \
-	fi; \
-	../src/clp$(EXEEXT) $$SAMPLEARG -unitTest $$NETLIBARG
+	../src/clp$(EXEEXT) $(unittestflags)
 
 .PHONY: test
 
