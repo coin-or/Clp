@@ -152,35 +152,35 @@ main (int argc, const char *argv[])
     CbcOrClpParam parameters[CBCMAXPARAMETERS];
     int numberParameters ;
     establishParams(numberParameters,parameters) ;
-    parameters[whichParam(BASISIN,numberParameters,parameters)].setStringValue(importBasisFile);
-    parameters[whichParam(BASISOUT,numberParameters,parameters)].setStringValue(exportBasisFile);
-    parameters[whichParam(PRINTMASK,numberParameters,parameters)].setStringValue(printMask);
-    parameters[whichParam(DIRECTORY,numberParameters,parameters)].setStringValue(directory);
-    parameters[whichParam(DIRSAMPLE,numberParameters,parameters)].setStringValue(dirSample);
-    parameters[whichParam(DIRNETLIB,numberParameters,parameters)].setStringValue(dirNetlib);
-    parameters[whichParam(DIRMIPLIB,numberParameters,parameters)].setStringValue(dirMiplib);
-    parameters[whichParam(DUALBOUND,numberParameters,parameters)].setDoubleValue(models->dualBound());
-    parameters[whichParam(DUALTOLERANCE,numberParameters,parameters)].setDoubleValue(models->dualTolerance());
-    parameters[whichParam(EXPORT,numberParameters,parameters)].setStringValue(exportFile);
-    parameters[whichParam(IDIOT,numberParameters,parameters)].setIntValue(doIdiot);
-    parameters[whichParam(IMPORT,numberParameters,parameters)].setStringValue(importFile);
-    parameters[whichParam(SOLVERLOGLEVEL,numberParameters,parameters)].setIntValue(models->logLevel());
-    parameters[whichParam(MAXFACTOR,numberParameters,parameters)].setIntValue(models->factorizationFrequency());
-    parameters[whichParam(MAXITERATION,numberParameters,parameters)].setIntValue(models->maximumIterations());
-    parameters[whichParam(OUTPUTFORMAT,numberParameters,parameters)].setIntValue(outputFormat);
-    parameters[whichParam(PRESOLVEPASS,numberParameters,parameters)].setIntValue(preSolve);
-    parameters[whichParam(PERTVALUE,numberParameters,parameters)].setIntValue(models->perturbation());
-    parameters[whichParam(PRIMALTOLERANCE,numberParameters,parameters)].setDoubleValue(models->primalTolerance());
-    parameters[whichParam(PRIMALWEIGHT,numberParameters,parameters)].setDoubleValue(models->infeasibilityCost());
-    parameters[whichParam(RESTORE,numberParameters,parameters)].setStringValue(restoreFile);
-    parameters[whichParam(SAVE,numberParameters,parameters)].setStringValue(saveFile);
-    parameters[whichParam(TIMELIMIT,numberParameters,parameters)].setDoubleValue(models->maximumSeconds());
-    parameters[whichParam(SOLUTION,numberParameters,parameters)].setStringValue(solutionFile);
-    parameters[whichParam(SAVESOL,numberParameters,parameters)].setStringValue(solutionSaveFile);
-    parameters[whichParam(SPRINT,numberParameters,parameters)].setIntValue(doSprint);
-    parameters[whichParam(SUBSTITUTION,numberParameters,parameters)].setIntValue(substitution);
-    parameters[whichParam(DUALIZE,numberParameters,parameters)].setIntValue(dualize);
-    parameters[whichParam(PRESOLVETOLERANCE,numberParameters,parameters)].setDoubleValue(1.0e-8);
+    parameters[whichParam(CLP_PARAM_ACTION_BASISIN,numberParameters,parameters)].setStringValue(importBasisFile);
+    parameters[whichParam(CLP_PARAM_ACTION_BASISOUT,numberParameters,parameters)].setStringValue(exportBasisFile);
+    parameters[whichParam(CLP_PARAM_ACTION_PRINTMASK,numberParameters,parameters)].setStringValue(printMask);
+    parameters[whichParam(CLP_PARAM_ACTION_DIRECTORY,numberParameters,parameters)].setStringValue(directory);
+    parameters[whichParam(CLP_PARAM_ACTION_DIRSAMPLE,numberParameters,parameters)].setStringValue(dirSample);
+    parameters[whichParam(CLP_PARAM_ACTION_DIRNETLIB,numberParameters,parameters)].setStringValue(dirNetlib);
+    parameters[whichParam(CBC_PARAM_ACTION_DIRMIPLIB,numberParameters,parameters)].setStringValue(dirMiplib);
+    parameters[whichParam(CLP_PARAM_DBL_DUALBOUND,numberParameters,parameters)].setDoubleValue(models->dualBound());
+    parameters[whichParam(CLP_PARAM_DBL_DUALTOLERANCE,numberParameters,parameters)].setDoubleValue(models->dualTolerance());
+    parameters[whichParam(CLP_PARAM_ACTION_EXPORT,numberParameters,parameters)].setStringValue(exportFile);
+    parameters[whichParam(CLP_PARAM_INT_IDIOT,numberParameters,parameters)].setIntValue(doIdiot);
+    parameters[whichParam(CLP_PARAM_ACTION_IMPORT,numberParameters,parameters)].setStringValue(importFile);
+    parameters[whichParam(CLP_PARAM_INT_SOLVERLOGLEVEL,numberParameters,parameters)].setIntValue(models->logLevel());
+    parameters[whichParam(CLP_PARAM_INT_MAXFACTOR,numberParameters,parameters)].setIntValue(models->factorizationFrequency());
+    parameters[whichParam(CLP_PARAM_INT_MAXITERATION,numberParameters,parameters)].setIntValue(models->maximumIterations());
+    parameters[whichParam(CLP_PARAM_INT_OUTPUTFORMAT,numberParameters,parameters)].setIntValue(outputFormat);
+    parameters[whichParam(CLP_PARAM_INT_PRESOLVEPASS,numberParameters,parameters)].setIntValue(preSolve);
+    parameters[whichParam(CLP_PARAM_INT_PERTVALUE,numberParameters,parameters)].setIntValue(models->perturbation());
+    parameters[whichParam(CLP_PARAM_DBL_PRIMALTOLERANCE,numberParameters,parameters)].setDoubleValue(models->primalTolerance());
+    parameters[whichParam(CLP_PARAM_DBL_PRIMALWEIGHT,numberParameters,parameters)].setDoubleValue(models->infeasibilityCost());
+    parameters[whichParam(CLP_PARAM_ACTION_RESTORE,numberParameters,parameters)].setStringValue(restoreFile);
+    parameters[whichParam(CLP_PARAM_ACTION_SAVE,numberParameters,parameters)].setStringValue(saveFile);
+    parameters[whichParam(CLP_PARAM_DBL_TIMELIMIT,numberParameters,parameters)].setDoubleValue(models->maximumSeconds());
+    parameters[whichParam(CLP_PARAM_ACTION_SOLUTION,numberParameters,parameters)].setStringValue(solutionFile);
+    parameters[whichParam(CLP_PARAM_ACTION_SAVESOL,numberParameters,parameters)].setStringValue(solutionSaveFile);
+    parameters[whichParam(CLP_PARAM_INT_SPRINT,numberParameters,parameters)].setIntValue(doSprint);
+    parameters[whichParam(CLP_PARAM_INT_SUBSTITUTION,numberParameters,parameters)].setIntValue(substitution);
+    parameters[whichParam(CLP_PARAM_INT_DUALIZE,numberParameters,parameters)].setIntValue(dualize);
+    parameters[whichParam(CLP_PARAM_DBL_PRESOLVETOLERANCE,numberParameters,parameters)].setDoubleValue(1.0e-8);
     int verbose=0;
     
     // total number of commands read
@@ -190,7 +190,7 @@ main (int argc, const char *argv[])
     // Hidden stuff for barrier
     int choleskyType = 0;
     int gamma=0;
-    parameters[whichParam(BARRIERSCALE,numberParameters,parameters)].setCurrentOption(2);
+    parameters[whichParam(CLP_PARAM_STR_BARRIERSCALE,numberParameters,parameters)].setCurrentOption(2);
     int scaleBarrier=2;
     int doKKT=0;
     int crossover=2; // do crossover unless quadratic
@@ -272,7 +272,7 @@ main (int argc, const char *argv[])
 	CbcOrClpParameterType type = found.type();
 	int valid;
 	numberGoodCommands++;
-	if (type==GENERALQUERY) {
+	if (type==CBC_PARAM_GENERALQUERY) {
 	  std::cout<<"In argument list keywords have leading - "
 	    ", -stdin or just - switches to stdin"<<std::endl;
 	  std::cout<<"One command per line (and no -)"<<std::endl;
@@ -284,7 +284,7 @@ main (int argc, const char *argv[])
 	  int maxAcross=10;
 	  bool evenHidden=false;
 	  int printLevel = 
-	    parameters[whichParam(ALLCOMMANDS,
+	    parameters[whichParam(CLP_PARAM_STR_ALLCOMMANDS,
 				   numberParameters,parameters)].currentOptionAsInteger();
 	  int convertP[]={2,1,0};
 	  printLevel=convertP[printLevel];
@@ -351,7 +351,7 @@ main (int argc, const char *argv[])
 	    if (across)
 	      std::cout<<std::endl;
 	  }
-	} else if (type==FULLGENERALQUERY) {
+	} else if (type==CBC_PARAM_FULLGENERALQUERY) {
 	  std::cout<<"Full list of commands is:"<<std::endl;
 	  int maxAcross=5;
 	  int limits[]={1,101,201,301,401};
@@ -397,27 +397,27 @@ main (int argc, const char *argv[])
 	  // get next field as int
 	  int value = CoinReadGetIntField(argc,argv,&valid);
 	  if (!valid) {
-	    if (parameters[iParam].type()==PRESOLVEPASS)
+	    if (parameters[iParam].type()==CLP_PARAM_INT_PRESOLVEPASS)
 	      preSolve = value;
-	    else if (parameters[iParam].type()==IDIOT)
+	    else if (parameters[iParam].type()==CLP_PARAM_INT_IDIOT)
 	      doIdiot = value;
-	    else if (parameters[iParam].type()==SPRINT)
+	    else if (parameters[iParam].type()==CLP_PARAM_INT_SPRINT)
 	      doSprint = value;
-	    else if (parameters[iParam].type()==OUTPUTFORMAT)
+	    else if (parameters[iParam].type()==CLP_PARAM_INT_OUTPUTFORMAT)
 	      outputFormat = value;
-	    else if (parameters[iParam].type()==SLPVALUE)
+	    else if (parameters[iParam].type()==CLP_PARAM_INT_SLPVALUE)
 	      slpValue = value;
-	    else if (parameters[iParam].type()==CPP)
+	    else if (parameters[iParam].type()==CLP_PARAM_INT_CPP)
 	      cppValue = value;
-	    else if (parameters[iParam].type()==PRESOLVEOPTIONS)
+	    else if (parameters[iParam].type()==CLP_PARAM_INT_PRESOLVEOPTIONS)
 	      presolveOptions = value;
-	    else if (parameters[iParam].type()==PRINTOPTIONS)
+	    else if (parameters[iParam].type()==CLP_PARAM_INT_PRINTOPTIONS)
 	      printOptions = value;
-	    else if (parameters[iParam].type()==SUBSTITUTION)
+	    else if (parameters[iParam].type()==CLP_PARAM_INT_SUBSTITUTION)
 	      substitution = value;
-	    else if (parameters[iParam].type()==DUALIZE)
+	    else if (parameters[iParam].type()==CLP_PARAM_INT_DUALIZE)
 	      dualize = value;
-            else if (parameters[iParam].type()==VERBOSE)
+            else if (parameters[iParam].type()==CLP_PARAM_INT_VERBOSE)
               verbose = value;
             parameters[iParam].setIntParameter(models+iModel,value);
 	  } else if (valid==1) {
@@ -444,7 +444,7 @@ main (int argc, const char *argv[])
 	    parameters[iParam].setCurrentOption(action);
 	    // for now hard wired
 	    switch (type) {
-	    case DIRECTION:
+	    case CLP_PARAM_STR_DIRECTION:
 	      if (action==0)
 		models[iModel].setOptimizationDirection(1);
 	      else if (action==1)
@@ -452,7 +452,7 @@ main (int argc, const char *argv[])
 	      else
 		models[iModel].setOptimizationDirection(0);
 	      break;
-	    case DUALPIVOT:
+	    case CLP_PARAM_STR_DUALPIVOT:
 	      if (action==0) {
 		ClpDualRowSteepest steep(3);
 		models[iModel].setDualRowPivotAlgorithm(steep);
@@ -469,7 +469,7 @@ main (int argc, const char *argv[])
 		models[iModel].setDualRowPivotAlgorithm(steep);
 	      }
 	      break;
-	    case PRIMALPIVOT:
+	    case CLP_PARAM_STR_PRIMALPIVOT:
 	      if (action==0) {
 		ClpPrimalColumnSteepest steep(3);
 		models[iModel].setPrimalColumnPivotAlgorithm(steep);
@@ -493,34 +493,34 @@ main (int argc, const char *argv[])
 		models[iModel].setPrimalColumnPivotAlgorithm(steep);
 	      }
 	      break;
-	    case SCALING:
+	    case CLP_PARAM_STR_SCALING:
 	      models[iModel].scaling(action);
 	      break;
-	    case AUTOSCALE:
+	    case CLP_PARAM_STR_AUTOSCALE:
 	      models[iModel].setAutomaticScaling(action!=0);
 	      break;
-	    case SPARSEFACTOR:
+	    case CLP_PARAM_STR_SPARSEFACTOR:
 	      models[iModel].setSparseFactorization((1-action)!=0);
 	      break;
-	    case BIASLU:
+	    case CLP_PARAM_STR_BIASLU:
 	      models[iModel].factorization()->setBiasLU(action);
 	      break;
-	    case PERTURBATION:
+	    case CLP_PARAM_STR_PERTURBATION:
 	      if (action==0)
 		models[iModel].setPerturbation(50);
 	      else
 		models[iModel].setPerturbation(100);
 	      break;
-	    case ERRORSALLOWED:
+	    case CLP_PARAM_STR_ERRORSALLOWED:
 	      allowImportErrors = action;
 	      break;
-            case INTPRINT:
+            case CLP_PARAM_STR_INTPRINT:
               printMode=action;
               break;
-	    case KEEPNAMES:
+	    case CLP_PARAM_STR_KEEPNAMES:
 	      keepImportNames = 1-action;
 	      break;
-	    case PRESOLVE:
+	    case CLP_PARAM_STR_PRESOLVE:
 	      if (action==0)
 		preSolve = 5;
 	      else if (action==1)
@@ -530,34 +530,34 @@ main (int argc, const char *argv[])
 	      else
 		preSolveFile=true;
 	      break;
-	    case PFI:
+	    case CLP_PARAM_STR_PFI:
 	      models[iModel].factorization()->setForrestTomlin(action==0);
 	      break;
-	    case FACTORIZATION:
+	    case CLP_PARAM_STR_FACTORIZATION:
 	      models[iModel].factorization()->forceOtherFactorization(action);
 	      break;
-	    case CRASH:
+	    case CLP_PARAM_STR_CRASH:
 	      doCrash=action;
 	      break;
-	    case VECTOR:
+	    case CLP_PARAM_STR_VECTOR:
 	      doVector=action;
 	      break;
-	    case MESSAGES:
+	    case CLP_PARAM_STR_MESSAGES:
 	      models[iModel].messageHandler()->setPrefix(action!=0);
 	      break;
-	    case CHOLESKY:
+	    case CLP_PARAM_STR_CHOLESKY:
 	      choleskyType = action;
 	      break;
-	    case GAMMA:
+	    case CLP_PARAM_STR_GAMMA:
 	      gamma=action;
 	      break;
-	    case BARRIERSCALE:
+	    case CLP_PARAM_STR_BARRIERSCALE:
 	      scaleBarrier=action;
 	      break;
-	    case KKT:
+	    case CLP_PARAM_STR_KKT:
 	      doKKT=action;
 	      break;
-	    case CROSSOVER:
+	    case CLP_PARAM_STR_CROSSOVER:
 	      crossover=action;
 	      break;
 	    default:
@@ -567,18 +567,18 @@ main (int argc, const char *argv[])
 	  }
 	} else {
 	  // action
-	  if (type==EXIT)
+	  if (type==CLP_PARAM_ACTION_EXIT)
 	    break; // stop all
 	  switch (type) {
-	  case DUALSIMPLEX:
-	  case PRIMALSIMPLEX:
-	  case EITHERSIMPLEX:
-	  case BARRIER:
+	  case CLP_PARAM_ACTION_DUALSIMPLEX:
+	  case CLP_PARAM_ACTION_PRIMALSIMPLEX:
+	  case CLP_PARAM_ACTION_EITHERSIMPLEX:
+	  case CLP_PARAM_ACTION_BARRIER:
             // synonym for dual
-	  case BAB:
+	  case CBC_PARAM_ACTION_BAB:
 	    if (goodModels[iModel]) {
               double objScale = 
-                parameters[whichParam(OBJSCALE2,numberParameters,parameters)].doubleValue();
+                parameters[whichParam(CLP_PARAM_DBL_OBJSCALE2,numberParameters,parameters)].doubleValue();
               if (objScale!=1.0) {
                 int iColumn;
                 int numberColumns=models[iModel].numberColumns();
@@ -657,11 +657,12 @@ main (int argc, const char *argv[])
 		presolveType=ClpSolve::presolveOff;
               }
 	      solveOptions.setPresolveType(presolveType,preSolve);
-	      if (type==DUALSIMPLEX||type==BAB) {
+	      if (type==CLP_PARAM_ACTION_DUALSIMPLEX ||
+			  type==CBC_PARAM_ACTION_BAB) {
 		method=ClpSolve::useDual;
-	      } else if (type==PRIMALSIMPLEX) {
+	      } else if (type==CLP_PARAM_ACTION_PRIMALSIMPLEX) {
 		method=ClpSolve::usePrimalorSprint;
-	      } else if (type==EITHERSIMPLEX) {
+	      } else if (type==CLP_PARAM_ACTION_EITHERSIMPLEX) {
 		method=ClpSolve::automatic;
 	      } else {
 		method = ClpSolve::useBarrier;
@@ -757,9 +758,9 @@ main (int argc, const char *argv[])
                 }
               }
 #ifdef CLP_MULTIPLE_FACTORIZATIONS   
-	      int denseCode = parameters[whichParam(DENSE,numberParameters,parameters)].intValue();
+	      int denseCode = parameters[whichParam(CBC_PARAM_INT_DENSE,numberParameters,parameters)].intValue();
 	      model2->factorization()->setGoDenseThreshold(denseCode);
-	      int smallCode = parameters[whichParam(SMALLFACT,numberParameters,parameters)].intValue();
+	      int smallCode = parameters[whichParam(CBC_PARAM_INT_SMALLFACT,numberParameters,parameters)].intValue();
 	      model2->factorization()->setGoSmallThreshold(smallCode);
 	      model2->factorization()->goDenseOrSmall(model2->numberRows());
 #endif
@@ -789,7 +790,7 @@ main (int argc, const char *argv[])
 	      std::cout<<"** Current model not valid"<<std::endl;
 	    }
 	    break;
-          case STATISTICS:
+          case CLP_PARAM_ACTION_STATISTICS:
 	    if (goodModels[iModel]) {
               // If presolve on look at presolved
               bool deleteModel2=false;
@@ -803,7 +804,7 @@ main (int argc, const char *argv[])
                 if ((printOptions&1)!=0)
                   pinfo.statistics();
                 double presolveTolerance = 
-                  parameters[whichParam(PRESOLVETOLERANCE,numberParameters,parameters)].doubleValue();
+                  parameters[whichParam(CLP_PARAM_DBL_PRESOLVETOLERANCE,numberParameters,parameters)].doubleValue();
                 model2 = 
                   pinfo.presolvedModel(models[iModel],presolveTolerance,
                                        true,preSolve);
@@ -825,7 +826,7 @@ main (int argc, const char *argv[])
 	      std::cout<<"** Current model not valid"<<std::endl;
 	    }
 	    break;
-	  case TIGHTEN:
+	  case CLP_PARAM_ACTION_TIGHTEN:
 	    if (goodModels[iModel]) {
      	      int numberInfeasibilities = models[iModel].tightenPrimalBounds();
 	      if (numberInfeasibilities)
@@ -834,7 +835,7 @@ main (int argc, const char *argv[])
 	      std::cout<<"** Current model not valid"<<std::endl;
 	    }
 	    break;
-	  case PLUSMINUS:
+	  case CLP_PARAM_ACTION_PLUSMINUS:
 	    if (goodModels[iModel]) {
 	      ClpMatrixBase * saveMatrix = models[iModel].clpMatrix();
 	      ClpPackedMatrix* clpMatrix =
@@ -855,7 +856,7 @@ main (int argc, const char *argv[])
 	      std::cout<<"** Current model not valid"<<std::endl;
 	    }
 	    break;
-	  case NETWORK:
+	  case CLP_PARAM_ACTION_NETWORK:
 	    if (goodModels[iModel]) {
 	      ClpMatrixBase * saveMatrix = models[iModel].clpMatrix();
 	      ClpPackedMatrix* clpMatrix =
@@ -876,7 +877,7 @@ main (int argc, const char *argv[])
 	      std::cout<<"** Current model not valid"<<std::endl;
 	    }
 	    break;
-	  case IMPORT:
+	  case CLP_PARAM_ACTION_IMPORT:
 	    {
 	      // get next field
 	      field = CoinReadGetString(argc,argv);
@@ -1000,10 +1001,10 @@ main (int argc, const char *argv[])
 	      }
 	    }
 	    break;
-	  case EXPORT:
+	  case CLP_PARAM_ACTION_EXPORT:
 	    if (goodModels[iModel]) {
               double objScale = 
-                parameters[whichParam(OBJSCALE2,numberParameters,parameters)].doubleValue();
+                parameters[whichParam(CLP_PARAM_DBL_OBJSCALE2,numberParameters,parameters)].doubleValue();
               if (objScale!=1.0) {
                 int iColumn;
                 int numberColumns=models[iModel].numberColumns();
@@ -1079,7 +1080,7 @@ main (int argc, const char *argv[])
 		  if ((printOptions&1)!=0)
 		    pinfo.statistics();
                   double presolveTolerance = 
-                    parameters[whichParam(PRESOLVETOLERANCE,numberParameters,parameters)].doubleValue();
+                    parameters[whichParam(CLP_PARAM_DBL_PRESOLVETOLERANCE,numberParameters,parameters)].doubleValue();
 		  model2 = 
 		    pinfo.presolvedModel(models[iModel],presolveTolerance,
 					 true,preSolve,false,false);
@@ -1176,7 +1177,7 @@ main (int argc, const char *argv[])
 	      std::cout<<"** Current model not valid"<<std::endl;
 	    }
 	    break;
-	  case BASISIN:
+	  case CLP_PARAM_ACTION_BASISIN:
 	    if (goodModels[iModel]) {
 	      // get next field
 	      field = CoinReadGetString(argc,argv);
@@ -1229,7 +1230,7 @@ main (int argc, const char *argv[])
 	      std::cout<<"** Current model not valid"<<std::endl;
 	    }
 	    break;
-	  case PRINTMASK:
+	  case CLP_PARAM_ACTION_PRINTMASK:
             // get next field
 	    {
 	      std::string name = CoinReadGetString(argc,argv);
@@ -1241,7 +1242,7 @@ main (int argc, const char *argv[])
 	      }
 	    }
 	    break;
-	  case BASISOUT:
+	  case CLP_PARAM_ACTION_BASISOUT:
 	    if (goodModels[iModel]) {
 	      // get next field
 	      field = CoinReadGetString(argc,argv);
@@ -1288,7 +1289,7 @@ main (int argc, const char *argv[])
 	      std::cout<<"** Current model not valid"<<std::endl;
 	    }
 	    break;
-	  case SAVE:
+	  case CLP_PARAM_ACTION_SAVE:
 	    {
 	      // get next field
 	      field = CoinReadGetString(argc,argv);
@@ -1332,7 +1333,7 @@ main (int argc, const char *argv[])
 		if (preSolve) {
 		  ClpPresolve pinfo;
                   double presolveTolerance = 
-                    parameters[whichParam(PRESOLVETOLERANCE,numberParameters,parameters)].doubleValue();
+                    parameters[whichParam(CLP_PARAM_DBL_PRESOLVETOLERANCE,numberParameters,parameters)].doubleValue();
 		  model2 = 
 		    pinfo.presolvedModel(models[iModel],presolveTolerance,
 					 false,preSolve);
@@ -1366,7 +1367,7 @@ main (int argc, const char *argv[])
 	      }
 	    }
 	    break;
-	  case RESTORE:
+	  case CLP_PARAM_ACTION_RESTORE:
 	    {
 	      // get next field
 	      field = CoinReadGetString(argc,argv);
@@ -1416,16 +1417,16 @@ main (int argc, const char *argv[])
 	      }
 	    }
 	    break;
-	  case MAXIMIZE:
+	  case CLP_PARAM_ACTION_MAXIMIZE:
 	    models[iModel].setOptimizationDirection(-1);
 	    break;
-	  case MINIMIZE:
+	  case CLP_PARAM_ACTION_MINIMIZE:
 	    models[iModel].setOptimizationDirection(1);
 	    break;
-	  case ALLSLACK:
+	  case CLP_PARAM_ACTION_ALLSLACK:
 	    models[iModel].allSlackBasis(true);
 	    break;
-	  case REVERSE:
+	  case CLP_PARAM_ACTION_REVERSE:
 	    if (goodModels[iModel]) {
 	      int iColumn;
 	      int numberColumns=models[iModel].numberColumns();
@@ -1449,7 +1450,7 @@ main (int argc, const char *argv[])
               models[iModel].setObjectiveOffset(-models[iModel].objectiveOffset());
 	    }
 	    break;
-	  case DIRECTORY:
+	  case CLP_PARAM_ACTION_DIRECTORY:
 	    {
 	      std::string name = CoinReadGetString(argc,argv);
 	      if (name!="EOL") {
@@ -1465,7 +1466,7 @@ main (int argc, const char *argv[])
 	      }
 	    }
 	    break;
-	  case DIRSAMPLE:
+	  case CLP_PARAM_ACTION_DIRSAMPLE:
 	    {
 	      std::string name = CoinReadGetString(argc,argv);
 	      if (name!="EOL") {
@@ -1481,7 +1482,7 @@ main (int argc, const char *argv[])
 	      }
 	    }
 	    break;
-	  case DIRNETLIB:
+	  case CLP_PARAM_ACTION_DIRNETLIB:
 	    {
 	      std::string name = CoinReadGetString(argc,argv);
 	      if (name!="EOL") {
@@ -1497,7 +1498,7 @@ main (int argc, const char *argv[])
 	      }
 	    }
 	    break;
-	  case DIRMIPLIB:
+	  case CBC_PARAM_ACTION_DIRMIPLIB:
 	    {
 	      std::string name = CoinReadGetString(argc,argv);
 	      if (name!="EOL") {
@@ -1513,14 +1514,14 @@ main (int argc, const char *argv[])
 	      }
 	    }
 	    break;
-	  case STDIN:
+	  case CLP_PARAM_ACTION_STDIN:
 	    CbcOrClpRead_mode=-1;
 	    break;
-	  case NETLIB_DUAL:
-	  case NETLIB_EITHER:
-	  case NETLIB_BARRIER:
-	  case NETLIB_PRIMAL:
-	  case NETLIB_TUNE:
+	  case CLP_PARAM_ACTION_NETLIB_DUAL:
+	  case CLP_PARAM_ACTION_NETLIB_EITHER:
+	  case CLP_PARAM_ACTION_NETLIB_BARRIER:
+	  case CLP_PARAM_ACTION_NETLIB_PRIMAL:
+	  case CLP_PARAM_ACTION_NETLIB_TUNE:
 	    {
 	      // create fields for unitTest
 	      const char * fields[4];
@@ -1534,16 +1535,16 @@ main (int argc, const char *argv[])
 	      fields[2]=netfield.c_str();
 	      fields[3]="-netlib";
 	      int algorithm;
-	      if (type==NETLIB_DUAL) {
+	      if (type==CLP_PARAM_ACTION_NETLIB_DUAL) {
 		std::cerr<<"Doing netlib with dual algorithm"<<std::endl;
 		algorithm =0;
-	      } else if (type==NETLIB_BARRIER) {
+	      } else if (type==CLP_PARAM_ACTION_NETLIB_BARRIER) {
 		std::cerr<<"Doing netlib with barrier algorithm"<<std::endl;
 		algorithm =2;
-	      } else if (type==NETLIB_EITHER) {
+	      } else if (type==CLP_PARAM_ACTION_NETLIB_EITHER) {
 		std::cerr<<"Doing netlib with dual or primal algorithm"<<std::endl;
 		algorithm =3;
-	      } else if (type==NETLIB_TUNE) {
+	      } else if (type==CLP_PARAM_ACTION_NETLIB_TUNE) {
 		std::cerr<<"Doing netlib with best algorithm!"<<std::endl;
 		algorithm =5;
                 // uncomment next to get active tuning
@@ -1585,7 +1586,7 @@ main (int argc, const char *argv[])
 		       solveOptions,specialOptions,doVector!=0);
 	    }
 	    break;
-	  case UNITTEST:
+	  case CLP_PARAM_ACTION_UNITTEST:
 	    {
 	      // create fields for unitTest
 	      const char * fields[2];
@@ -1610,7 +1611,7 @@ main (int argc, const char *argv[])
 		       solveOptions,specialOptions,doVector!=0);
 	    }
 	    break;
-	  case FAKEBOUND:
+	  case CLP_PARAM_ACTION_FAKEBOUND:
 	    if (goodModels[iModel]) {
 	      // get bound
 	      double value = CoinReadGetDoubleField(argc,argv,&valid);
@@ -1648,7 +1649,7 @@ main (int argc, const char *argv[])
 	      }
 	    }
 	    break;
-	  case REALLY_SCALE:
+	  case CLP_PARAM_ACTION_REALLY_SCALE:
 	    if (goodModels[iModel]) {
 	      ClpSimplex newModel(models[iModel],
 				  models[iModel].scalingFlag());
@@ -1656,7 +1657,7 @@ main (int argc, const char *argv[])
 	      models[iModel]=newModel;
 	    }
 	    break;
-	  case USERCLP:
+	  case CLP_PARAM_ACTION_USERCLP:
             // Replace the sample code by whatever you want
 	    if (goodModels[iModel]) {
               ClpSimplex * thisModel = &models[iModel];
@@ -1664,7 +1665,7 @@ main (int argc, const char *argv[])
                      thisModel->numberRows(),thisModel->numberColumns());
 	    }
 	    break;
-	  case HELP:
+	  case CLP_PARAM_ACTION_HELP:
 	    std::cout<<"Coin LP version "<<CLPVERSION
 		     <<", build "<<__DATE__<<std::endl;
 	    std::cout<<"Non default values:-"<<std::endl;
@@ -1681,7 +1682,7 @@ clp watson.mps -scaling off -primalsimplex\nis the same as\n\
 clp watson.mps -\nscaling off\nprimalsimplex"
 		    );
   	    break;
-	  case SOLUTION:
+	  case CLP_PARAM_ACTION_SOLUTION:
 	    if (goodModels[iModel]) {
 	      // get next field
 	      field = CoinReadGetString(argc,argv);
@@ -1945,7 +1946,7 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 	    }
 	  
 	    break;
-	  case SAVESOL:
+	  case CLP_PARAM_ACTION_SAVESOL:
 	    if (goodModels[iModel]) {
 	      // get next field
 	      field = CoinReadGetString(argc,argv);
@@ -1978,7 +1979,7 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 	      
 	    }
 	    break;
-	  case ENVIRONMENT:
+	  case CLP_PARAM_ACTION_ENVIRONMENT:
 	    CbcOrClpEnvironmentIndex=0;
 	    break;
 	  default:
