@@ -1,8 +1,8 @@
 /* $Id$ */
 // Copyright (C) 2004, International Business Machines
-// Corporation and others.  All Rights Reserved. 
+// Corporation and others.  All Rights Reserved.
 
-#if defined(_MSC_VER) 
+#if defined(_MSC_VER)
 #pragma warning(disable:4786)
 #pragma warning(disable:4503)
 #endif
@@ -15,75 +15,75 @@
 //#############################################################################
 
 //-------------------------------------------------------------------
-// Default Constructor 
+// Default Constructor
 //-------------------------------------------------------------------
-MyEventHandler::MyEventHandler () 
-  : ClpEventHandler()
+MyEventHandler::MyEventHandler ()
+        : ClpEventHandler()
 {
 }
 
 //-------------------------------------------------------------------
-// Copy constructor 
+// Copy constructor
 //-------------------------------------------------------------------
-MyEventHandler::MyEventHandler (const MyEventHandler & rhs) 
-: ClpEventHandler(rhs)
-{  
+MyEventHandler::MyEventHandler (const MyEventHandler & rhs)
+        : ClpEventHandler(rhs)
+{
 }
 
 // Constructor with pointer to model
 MyEventHandler::MyEventHandler(ClpSimplex * model)
-  : ClpEventHandler(model)
+        : ClpEventHandler(model)
 {
 }
 
 //-------------------------------------------------------------------
-// Destructor 
+// Destructor
 //-------------------------------------------------------------------
 MyEventHandler::~MyEventHandler ()
 {
 }
 
 //----------------------------------------------------------------
-// Assignment operator 
+// Assignment operator
 //-------------------------------------------------------------------
 MyEventHandler &
-MyEventHandler::operator=(const MyEventHandler& rhs)
+MyEventHandler::operator=(const MyEventHandler & rhs)
 {
-  if (this != &rhs) {
-    ClpEventHandler::operator=(rhs);
-  }
-  return *this;
+    if (this != &rhs) {
+        ClpEventHandler::operator=(rhs);
+    }
+    return *this;
 }
 //-------------------------------------------------------------------
 // Clone
 //-------------------------------------------------------------------
 ClpEventHandler * MyEventHandler::clone() const
 {
-  return new MyEventHandler(*this);
+    return new MyEventHandler(*this);
 }
 
-int 
+int
 MyEventHandler::event(Event whichEvent)
 {
-  if (whichEvent==endOfValuesPass)
-    return 0; // say optimal
-  else
-    return -1; // carry on
+    if (whichEvent == endOfValuesPass)
+        return 0; // say optimal
+    else
+        return -1; // carry on
 
 #if 0
-  // This is how one can get some progress information at the end of each iteration.
-  if (whichEvent==endOfIteration) {
-    int numIter = model_->getIterationCount();
-    double sumDualInfeas = model_->sumDualInfeasibilities();
-    double sumPrimalInfeas = model_->sumPrimalInfeasibilities();
-    double obj = model_->getObjValue();
-  }
+    // This is how one can get some progress information at the end of each iteration.
+    if (whichEvent == endOfIteration) {
+        int numIter = model_->getIterationCount();
+        double sumDualInfeas = model_->sumDualInfeasibilities();
+        double sumPrimalInfeas = model_->sumPrimalInfeasibilities();
+        double obj = model_->getObjValue();
+    }
 
-  // This is how one can tell CLP to stop now.
-  // The value of cancelAsap needs to come from the application using CLP.
-  if ( cancelAsap ) return 5;
-  else return -1;
+    // This is how one can tell CLP to stop now.
+    // The value of cancelAsap needs to come from the application using CLP.
+    if ( cancelAsap ) return 5;
+    else return -1;
 #endif
 
-  
+
 }

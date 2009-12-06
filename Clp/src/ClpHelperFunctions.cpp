@@ -14,203 +14,203 @@
 #include <cmath>
 #include "CoinHelperFunctions.hpp"
 #include "CoinFinite.hpp"
-double 
+double
 maximumAbsElement(const double * region, int size)
 {
-  int i;
-  double maxValue=0.0;
-  for (i=0;i<size;i++) 
-    maxValue = CoinMax(maxValue,fabs(region[i]));
-  return maxValue;
+    int i;
+    double maxValue = 0.0;
+    for (i = 0; i < size; i++)
+        maxValue = CoinMax(maxValue, fabs(region[i]));
+    return maxValue;
 }
-void 
+void
 setElements(double * region, int size, double value)
 {
-  int i;
-  for (i=0;i<size;i++) 
-    region[i]=value;
+    int i;
+    for (i = 0; i < size; i++)
+        region[i] = value;
 }
-void 
+void
 multiplyAdd(const double * region1, int size, double multiplier1,
-		 double * region2, double multiplier2)
+            double * region2, double multiplier2)
 {
-  int i;
-  if (multiplier1==1.0) {
-    if (multiplier2==1.0) {
-      for (i=0;i<size;i++) 
-	region2[i] = region1[i] + region2[i];
-    } else if (multiplier2==-1.0) {
-      for (i=0;i<size;i++) 
-	region2[i] = region1[i] - region2[i];
-    } else if (multiplier2==0.0) {
-      for (i=0;i<size;i++) 
-	region2[i] = region1[i] ;
+    int i;
+    if (multiplier1 == 1.0) {
+        if (multiplier2 == 1.0) {
+            for (i = 0; i < size; i++)
+                region2[i] = region1[i] + region2[i];
+        } else if (multiplier2 == -1.0) {
+            for (i = 0; i < size; i++)
+                region2[i] = region1[i] - region2[i];
+        } else if (multiplier2 == 0.0) {
+            for (i = 0; i < size; i++)
+                region2[i] = region1[i] ;
+        } else {
+            for (i = 0; i < size; i++)
+                region2[i] = region1[i] + multiplier2 * region2[i];
+        }
+    } else if (multiplier1 == -1.0) {
+        if (multiplier2 == 1.0) {
+            for (i = 0; i < size; i++)
+                region2[i] = -region1[i] + region2[i];
+        } else if (multiplier2 == -1.0) {
+            for (i = 0; i < size; i++)
+                region2[i] = -region1[i] - region2[i];
+        } else if (multiplier2 == 0.0) {
+            for (i = 0; i < size; i++)
+                region2[i] = -region1[i] ;
+        } else {
+            for (i = 0; i < size; i++)
+                region2[i] = -region1[i] + multiplier2 * region2[i];
+        }
+    } else if (multiplier1 == 0.0) {
+        if (multiplier2 == 1.0) {
+            // nothing to do
+        } else if (multiplier2 == -1.0) {
+            for (i = 0; i < size; i++)
+                region2[i] =  -region2[i];
+        } else if (multiplier2 == 0.0) {
+            for (i = 0; i < size; i++)
+                region2[i] =  0.0;
+        } else {
+            for (i = 0; i < size; i++)
+                region2[i] =  multiplier2 * region2[i];
+        }
     } else {
-      for (i=0;i<size;i++) 
-	region2[i] = region1[i] + multiplier2*region2[i];
+        if (multiplier2 == 1.0) {
+            for (i = 0; i < size; i++)
+                region2[i] = multiplier1 * region1[i] + region2[i];
+        } else if (multiplier2 == -1.0) {
+            for (i = 0; i < size; i++)
+                region2[i] = multiplier1 * region1[i] - region2[i];
+        } else if (multiplier2 == 0.0) {
+            for (i = 0; i < size; i++)
+                region2[i] = multiplier1 * region1[i] ;
+        } else {
+            for (i = 0; i < size; i++)
+                region2[i] = multiplier1 * region1[i] + multiplier2 * region2[i];
+        }
     }
-  } else if (multiplier1==-1.0) {
-    if (multiplier2==1.0) {
-      for (i=0;i<size;i++) 
-	region2[i] = -region1[i] + region2[i];
-    } else if (multiplier2==-1.0) {
-      for (i=0;i<size;i++) 
-	region2[i] = -region1[i] - region2[i];
-    } else if (multiplier2==0.0) {
-      for (i=0;i<size;i++) 
-	region2[i] = -region1[i] ;
-    } else {
-      for (i=0;i<size;i++) 
-	region2[i] = -region1[i] + multiplier2*region2[i];
-    }
-  } else if (multiplier1==0.0) {
-    if (multiplier2==1.0) {
-      // nothing to do
-    } else if (multiplier2==-1.0) {
-      for (i=0;i<size;i++) 
-	region2[i] =  -region2[i];
-    } else if (multiplier2==0.0) {
-      for (i=0;i<size;i++) 
-	region2[i] =  0.0;
-    } else {
-      for (i=0;i<size;i++) 
-	region2[i] =  multiplier2*region2[i];
-    }
-  } else {
-    if (multiplier2==1.0) {
-      for (i=0;i<size;i++) 
-	region2[i] = multiplier1*region1[i] + region2[i];
-    } else if (multiplier2==-1.0) {
-      for (i=0;i<size;i++) 
-	region2[i] = multiplier1*region1[i] - region2[i];
-    } else if (multiplier2==0.0) {
-      for (i=0;i<size;i++) 
-	region2[i] = multiplier1*region1[i] ;
-    } else {
-      for (i=0;i<size;i++) 
-	region2[i] = multiplier1*region1[i] + multiplier2*region2[i];
-    }
-  }
 }
-double 
+double
 innerProduct(const double * region1, int size, const double * region2)
 {
-  int i;
-  double value=0.0;
-  for (i=0;i<size;i++)
-    value += region1[i]*region2[i];
-  return value;
+    int i;
+    double value = 0.0;
+    for (i = 0; i < size; i++)
+        value += region1[i] * region2[i];
+    return value;
 }
-void 
+void
 getNorms(const double * region, int size, double & norm1, double & norm2)
 {
-  norm1 = 0.0;
-  norm2 = 0.0;
-  int i;
-  for (i=0;i<size;i++) {
-    norm2 += region[i]*region[i];
-    norm1 = CoinMax(norm1,fabs(region[i]));
-  }
+    norm1 = 0.0;
+    norm2 = 0.0;
+    int i;
+    for (i = 0; i < size; i++) {
+        norm2 += region[i] * region[i];
+        norm1 = CoinMax(norm1, fabs(region[i]));
+    }
 }
-#if COIN_LONG_WORK 
-// For long double versions 
-CoinWorkDouble 
+#if COIN_LONG_WORK
+// For long double versions
+CoinWorkDouble
 maximumAbsElement(const CoinWorkDouble * region, int size)
 {
-  int i;
-  CoinWorkDouble maxValue=0.0;
-  for (i=0;i<size;i++) 
-    maxValue = CoinMax(maxValue,CoinAbs(region[i]));
-  return maxValue;
+    int i;
+    CoinWorkDouble maxValue = 0.0;
+    for (i = 0; i < size; i++)
+        maxValue = CoinMax(maxValue, CoinAbs(region[i]));
+    return maxValue;
 }
-void 
+void
 setElements(CoinWorkDouble * region, int size, CoinWorkDouble value)
 {
-  int i;
-  for (i=0;i<size;i++) 
-    region[i]=value;
+    int i;
+    for (i = 0; i < size; i++)
+        region[i] = value;
 }
-void 
+void
 multiplyAdd(const CoinWorkDouble * region1, int size, CoinWorkDouble multiplier1,
-		 CoinWorkDouble * region2, CoinWorkDouble multiplier2)
+            CoinWorkDouble * region2, CoinWorkDouble multiplier2)
 {
-  int i;
-  if (multiplier1==1.0) {
-    if (multiplier2==1.0) {
-      for (i=0;i<size;i++) 
-	region2[i] = region1[i] + region2[i];
-    } else if (multiplier2==-1.0) {
-      for (i=0;i<size;i++) 
-	region2[i] = region1[i] - region2[i];
-    } else if (multiplier2==0.0) {
-      for (i=0;i<size;i++) 
-	region2[i] = region1[i] ;
+    int i;
+    if (multiplier1 == 1.0) {
+        if (multiplier2 == 1.0) {
+            for (i = 0; i < size; i++)
+                region2[i] = region1[i] + region2[i];
+        } else if (multiplier2 == -1.0) {
+            for (i = 0; i < size; i++)
+                region2[i] = region1[i] - region2[i];
+        } else if (multiplier2 == 0.0) {
+            for (i = 0; i < size; i++)
+                region2[i] = region1[i] ;
+        } else {
+            for (i = 0; i < size; i++)
+                region2[i] = region1[i] + multiplier2 * region2[i];
+        }
+    } else if (multiplier1 == -1.0) {
+        if (multiplier2 == 1.0) {
+            for (i = 0; i < size; i++)
+                region2[i] = -region1[i] + region2[i];
+        } else if (multiplier2 == -1.0) {
+            for (i = 0; i < size; i++)
+                region2[i] = -region1[i] - region2[i];
+        } else if (multiplier2 == 0.0) {
+            for (i = 0; i < size; i++)
+                region2[i] = -region1[i] ;
+        } else {
+            for (i = 0; i < size; i++)
+                region2[i] = -region1[i] + multiplier2 * region2[i];
+        }
+    } else if (multiplier1 == 0.0) {
+        if (multiplier2 == 1.0) {
+            // nothing to do
+        } else if (multiplier2 == -1.0) {
+            for (i = 0; i < size; i++)
+                region2[i] =  -region2[i];
+        } else if (multiplier2 == 0.0) {
+            for (i = 0; i < size; i++)
+                region2[i] =  0.0;
+        } else {
+            for (i = 0; i < size; i++)
+                region2[i] =  multiplier2 * region2[i];
+        }
     } else {
-      for (i=0;i<size;i++) 
-	region2[i] = region1[i] + multiplier2*region2[i];
+        if (multiplier2 == 1.0) {
+            for (i = 0; i < size; i++)
+                region2[i] = multiplier1 * region1[i] + region2[i];
+        } else if (multiplier2 == -1.0) {
+            for (i = 0; i < size; i++)
+                region2[i] = multiplier1 * region1[i] - region2[i];
+        } else if (multiplier2 == 0.0) {
+            for (i = 0; i < size; i++)
+                region2[i] = multiplier1 * region1[i] ;
+        } else {
+            for (i = 0; i < size; i++)
+                region2[i] = multiplier1 * region1[i] + multiplier2 * region2[i];
+        }
     }
-  } else if (multiplier1==-1.0) {
-    if (multiplier2==1.0) {
-      for (i=0;i<size;i++) 
-	region2[i] = -region1[i] + region2[i];
-    } else if (multiplier2==-1.0) {
-      for (i=0;i<size;i++) 
-	region2[i] = -region1[i] - region2[i];
-    } else if (multiplier2==0.0) {
-      for (i=0;i<size;i++) 
-	region2[i] = -region1[i] ;
-    } else {
-      for (i=0;i<size;i++) 
-	region2[i] = -region1[i] + multiplier2*region2[i];
-    }
-  } else if (multiplier1==0.0) {
-    if (multiplier2==1.0) {
-      // nothing to do
-    } else if (multiplier2==-1.0) {
-      for (i=0;i<size;i++) 
-	region2[i] =  -region2[i];
-    } else if (multiplier2==0.0) {
-      for (i=0;i<size;i++) 
-	region2[i] =  0.0;
-    } else {
-      for (i=0;i<size;i++) 
-	region2[i] =  multiplier2*region2[i];
-    }
-  } else {
-    if (multiplier2==1.0) {
-      for (i=0;i<size;i++) 
-	region2[i] = multiplier1*region1[i] + region2[i];
-    } else if (multiplier2==-1.0) {
-      for (i=0;i<size;i++) 
-	region2[i] = multiplier1*region1[i] - region2[i];
-    } else if (multiplier2==0.0) {
-      for (i=0;i<size;i++) 
-	region2[i] = multiplier1*region1[i] ;
-    } else {
-      for (i=0;i<size;i++) 
-	region2[i] = multiplier1*region1[i] + multiplier2*region2[i];
-    }
-  }
 }
-CoinWorkDouble 
+CoinWorkDouble
 innerProduct(const CoinWorkDouble * region1, int size, const CoinWorkDouble * region2)
 {
-  int i;
-  CoinWorkDouble value=0.0;
-  for (i=0;i<size;i++)
-    value += region1[i]*region2[i];
-  return value;
+    int i;
+    CoinWorkDouble value = 0.0;
+    for (i = 0; i < size; i++)
+        value += region1[i] * region2[i];
+    return value;
 }
-void 
+void
 getNorms(const CoinWorkDouble * region, int size, CoinWorkDouble & norm1, CoinWorkDouble & norm2)
 {
-  norm1 = 0.0;
-  norm2 = 0.0;
-  int i;
-  for (i=0;i<size;i++) {
-    norm2 += region[i]*region[i];
-    norm1 = CoinMax(norm1,CoinAbs(region[i]));
-  }
+    norm1 = 0.0;
+    norm2 = 0.0;
+    int i;
+    for (i = 0; i < size; i++) {
+        norm2 += region[i] * region[i];
+        norm1 = CoinMax(norm1, CoinAbs(region[i]));
+    }
 }
 #endif
 #ifdef DEBUG_MEMORY
@@ -225,30 +225,29 @@ static NEW_HANDLER new_handler;                        // function to call if `n
 void *
 operator new(size_t size)
 {
-  void * p;
-  for (;;)
-    {
-      p = malloc(size);
-      if      (p)           break;        // success
-      else if (new_handler) new_handler();   // failure - try again (allow user to release some storage first)
-      else                  break;        // failure - no retry
+    void * p;
+    for (;;) {
+        p = malloc(size);
+        if      (p)           break;        // success
+        else if (new_handler) new_handler();   // failure - try again (allow user to release some storage first)
+        else                  break;        // failure - no retry
     }
-  if (size>1000000)
-    printf("Allocating memory of size %d\n",size);
-  return p;
+    if (size > 1000000)
+        printf("Allocating memory of size %d\n", size);
+    return p;
 }
 
 // Deallocate storage.
 void
 operator delete(void *p)
 {
-  free(p);
-  return;
+    free(p);
+    return;
 }
 void
 operator delete [] (void *p)
 {
-  free(p);
-  return;
+    free(p);
+    return;
 }
 #endif

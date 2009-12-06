@@ -60,7 +60,7 @@
 
 #endif /* HAVE_CONFIG_H */
 
-#ifndef CLPVERSION 
+#ifndef CLPVERSION
 #define CLPVERSION "1.11.0"
 #endif
 #endif /*__HAVE_COINUTILS_CONFIG_H__*/
