@@ -11,7 +11,7 @@ class ClpMatrixBase;
 class ClpSimplex;
 class ClpNetworkBasis;
 #ifndef CLP_MULTIPLE_FACTORIZATIONS 
-//#define CLP_MULTIPLE_FACTORIZATIONS 3
+#define CLP_MULTIPLE_FACTORIZATIONS 3
 #endif    
 #if CLP_MULTIPLE_FACTORIZATIONS == 1
 #include "CoinDenseFactorization.hpp"
