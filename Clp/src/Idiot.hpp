@@ -71,7 +71,8 @@ public:
   /// Get an approximate solution with the idiot code
   void solve();
   /// Lightweight "crash"
-  void crash(int numberPass,CoinMessageHandler * handler ,const CoinMessages * messages);
+   void crash(int numberPass, CoinMessageHandler * handler,
+              const CoinMessages * messages, bool doCrossover = true);
   /** Use simplex to get an optimal solution
       mode is how many steps the simplex crossover should take to
       arrive to an extreme point:

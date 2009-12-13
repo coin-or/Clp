@@ -265,6 +265,10 @@ Clp_loadQuadraticObjective(Clp_Simplex * model,
   COINLIBAPI int COINLINKAGE Clp_dual(Clp_Simplex * model, int ifValuesPass);
   /** Primal algorithm - see ClpSimplexPrimal.hpp for method */
   COINLIBAPI int COINLINKAGE Clp_primal(Clp_Simplex * model, int ifValuesPass);
+#ifndef SLIM_CLP
+  /** Solve the problem with the idiot code */
+  COINLIBAPI void COINLINKAGE Clp_idiot(Clp_Simplex * model, int tryhard);
+#endif
   /** Sets or unsets scaling, 0 -off, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic(later) */
   COINLIBAPI void COINLINKAGE Clp_scaling(Clp_Simplex * model, int mode);
   /** Gets scalingFlag */
@@ -362,6 +366,8 @@ Clp_loadQuadraticObjective(Clp_Simplex * model,
   COINLIBAPI int COINLINKAGE Clp_isIterationLimitReached(Clp_Simplex * model);
   /** Direction of optimization (1 - minimize, -1 - maximize, 0 - ignore */
   COINLIBAPI double COINLINKAGE Clp_getObjSense(Clp_Simplex * model);
+  /** Direction of optimization (1 - minimize, -1 - maximize, 0 - ignore */
+  COINLIBAPI void COINLINKAGE Clp_setObjSense(Clp_Simplex * model, double objsen);
   /** Primal row solution */
   COINLIBAPI const double * COINLINKAGE Clp_getRowActivity(Clp_Simplex * model);
   /** Primal column solution */

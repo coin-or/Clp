@@ -323,7 +323,8 @@ Idiot::cleanIteration(int iteration, int ordinaryStart, int ordinaryEnd,
   return slackStart;
 }
 void
-Idiot::crash(int numberPass, CoinMessageHandler * handler,const CoinMessages *messages)
+Idiot::crash(int numberPass, CoinMessageHandler * handler,
+             const CoinMessages *messages, bool doCrossover)
 {
   // lightweight options
   int numberColumns = model_->getNumCols();
@@ -362,13 +363,16 @@ Idiot::crash(int numberPass, CoinMessageHandler * handler,const CoinMessages *me
   //printf("setting mu to %g and doing %d passes\n",mu_,majorIterations_);
   solve2(handler,messages);
 #ifndef OSI_IDIOT
-  double averageInfeas = model_->sumPrimalInfeasibilities()/static_cast<double> (model_->numberRows());
-  if ((averageInfeas<0.01&&(strategy_&512)!=0)||(strategy_&8192)!=0) 
-    crossOver(16+1); 
-  else
-    crossOver(majorIterations_<1000000 ? 3 : 2);
+  if (doCrossover) {
+     double averageInfeas = model_->sumPrimalInfeasibilities()/static_cast<double> (model_->numberRows());
+     if ((averageInfeas<0.01&&(strategy_&512)!=0)||(strategy_&8192)!=0) 
+        crossOver(16+1); 
+     else
+        crossOver(majorIterations_<1000000 ? 3 : 2);
+  }
 #endif
 }
+
 void
 Idiot::solve()
 {

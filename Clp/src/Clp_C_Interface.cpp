@@ -12,6 +12,9 @@
 #include "CoinHelperFunctions.hpp"
 #include "ClpSimplex.hpp"
 #include "ClpInterior.hpp"
+#ifndef SLIM_CLP
+#include "Idiot.hpp"
+#endif
 #include <cfloat>
 // Get C stuff but with extern C
 #define CLP_EXTERN_C
@@ -993,6 +996,12 @@ Clp_getObjSense(Clp_Simplex * model)
 {
   return model->model_->getObjSense();
 }
+/* Direction of optimization (1 - minimize, -1 - maximize, 0 - ignore */
+COINLIBAPI void COINLINKAGE 
+Clp_setObjSense(Clp_Simplex * model, double objsen)
+{
+  model->model_->setOptimizationDirection(objsen);
+}
 /* Primal row solution */
 COINLIBAPI const double * COINLINKAGE 
 Clp_getRowActivity(Clp_Simplex * model)
@@ -1154,6 +1163,32 @@ Clp_printModel(Clp_Simplex * model, const char * prefix)
         prefix, i, rowlb[i], i, rowub[i]);
   }
 }
+
+#ifndef SLIM_CLP
+/** Solve the problem with the idiot code */
+/* tryhard values:
+   tryhard & 7:
+      0: NOT lightweight, 105 iterations within a pass (when mu stays fixed)
+      1: lightweight, but focus more on optimality (mu is high)
+         (23 iters in a pass)
+      2: lightweight, but focus more on feasibility (11 iters in a pass)
+      3: lightweight, but focus more on feasibility (23 iters in a pass, so it
+         goes closer to opt than option 2)
+   tryhard >> 3:
+      number of passes, the larger the number the closer it gets to optimality
+*/
+COINLIBAPI void COINLINKAGE
+Clp_idiot(Clp_Simplex * model, int tryhard)
+{
+   ClpSimplex *clp = model->model_;
+   Idiot info(*clp);
+   int numberpass = tryhard >> 3;
+   int lightweight = tryhard & 7;
+   info.setLightweight(lightweight);
+   info.crash(numberpass, clp->messageHandler(), clp->messagesPointer(), false);
+}
+#endif
+
 #if defined(__MWERKS__) 
 #pragma export off
 #endif
