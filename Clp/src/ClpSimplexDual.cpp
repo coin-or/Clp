@@ -6217,6 +6217,9 @@ ClpSimplexDual::setupForStrongBranching(char * arrays, int numberRows,
                                         int numberColumns, bool solveLp)
 {
     if (solveLp) {
+        // make sure won't create fake objective
+        int saveOptions = specialOptions_;
+        specialOptions_ |= 16384;
         // solve
         dual(0, 7);
         if (problemStatus_ == 10) {
@@ -6227,6 +6230,7 @@ ClpSimplexDual::setupForStrongBranching(char * arrays, int numberRows,
                 //assert (problemStatus_!=10);
             }
         }
+        specialOptions_ = saveOptions;
         if (problemStatus_ == 1)
             return NULL; // say infeasible
         // May be empty
