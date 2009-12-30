@@ -776,17 +776,10 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, int trueCopy)
       savedRowScale_ = NULL;
       savedColumnScale_ = NULL;
       integerType_ = CoinCopyOfArray(rhs.integerType_,numberColumns_);
-      if (rhs.rowActivity_) {
-	rowActivity_= ClpCopyOfArray(rhs.rowActivity_, numberRows_);
-	columnActivity_= ClpCopyOfArray(rhs.columnActivity_,numberColumns_);
-	dual_= ClpCopyOfArray(rhs.dual_, numberRows_);
-	reducedCost_= ClpCopyOfArray(rhs.reducedCost_, numberColumns_);
-      } else {
-	rowActivity_=NULL;
-	columnActivity_=NULL;
-	dual_=NULL;
-	reducedCost_=NULL;
-      }
+      rowActivity_= ClpCopyOfArray(rhs.rowActivity_, numberRows_);
+      columnActivity_= ClpCopyOfArray(rhs.columnActivity_,numberColumns_);
+      dual_= ClpCopyOfArray(rhs.dual_, numberRows_);
+      reducedCost_= ClpCopyOfArray(rhs.reducedCost_, numberColumns_);
       rowLower_ = ClpCopyOfArray ( rhs.rowLower_, numberRows_ );
       rowUpper_ = ClpCopyOfArray ( rhs.rowUpper_, numberRows_ );
       columnLower_ = ClpCopyOfArray ( rhs.columnLower_, numberColumns_ );
