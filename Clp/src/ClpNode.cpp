@@ -850,6 +850,11 @@ ClpNodeStuff::~ClpNodeStuff ()
             delete nodeInfo_[i];
     }
     delete [] nodeInfo_;
+#ifdef CLP_INVESTIGATE
+    // Should be NULL - find out why not?
+    assert (!saveCosts_);
+#endif
+    delete [] saveCosts_;
 }
 // Return maximum number of nodes
 int
