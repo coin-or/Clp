@@ -14,11 +14,11 @@ AUTOMAKE_OPTIONS = foreign
 
 unittestflags = 
 if COIN_HAS_SAMPLE
-  unittestflags += -dirSample $(SAMPLE_DATA)
+  unittestflags += -dirSample `$(CYGPATH_W) $(SAMPLE_DATA)`
 endif
 unittestflags += -unitTest
 if COIN_HAS_NETLIB
-  unittestflags += -dirNetlib $(NETLIB_DATA) -netlib
+  unittestflags += -dirNetlib `$(CYGPATH_W) $(NETLIB_DATA)` -netlib
 endif
 
 # We are using the CLP solver executable to do the unit test

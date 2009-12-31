@@ -20604,7 +20604,7 @@ fi;
 if test "${with_coinutils_incdir+set}" = set; then
   withval="$with_coinutils_incdir"
   coin_has_coinutils=yes
-     COINUTILS_CFLAGS="-I$withval"
+     COINUTILS_CFLAGS="-I`${CYGPATH_W} $withval`"
 fi;
 
 
@@ -20664,7 +20664,15 @@ fi;
 if test -n "$PKG_CONFIG" ; then
   if $PKG_CONFIG --exists "coinutils = 2.5BSPsplit"; then
     COINUTILS_VERSIONS="`$PKG_CONFIG --modversion coinutils = 2.5BSPsplit 2>/dev/null`"
-     COINUTILS_CFLAGS=`$PKG_CONFIG --cflags "coinutils = 2.5BSPsplit" 2>/dev/null`
+     cflags=`$PKG_CONFIG --cflags "coinutils = 2.5BSPsplit" 2>/dev/null`
+    # pkg-config cannot handle spaces, so CYGPATH_W cannot be put into .pc files
+	# thus, we modify the cflags extracted from pkg-config by putting CYGPATH_W behind -I's
+	# but only do this if is not trivial
+    if test "$CYGPATH_W" != "echo" ; then
+      # need to put into brackets since otherwise autoconf replaces the brackets in the sed command
+	  cflags=`echo $cflags | sed -e 's/-I\([^ ]*\)/-I\`${CYGPATH_W} \1\`/g'`
+	fi
+    COINUTILS_CFLAGS="$cflags"
     COINUTILS_LIBS=`$PKG_CONFIG --libs "coinutils = 2.5BSPsplit" 2>/dev/null`
     COINUTILS_DATA=`$PKG_CONFIG --variable=datadir "coinutils = 2.5BSPsplit" 2>/dev/null`
      coin_has_coinutils=yes
@@ -20785,7 +20793,7 @@ fi;
 if test "${with_sample_incdir+set}" = set; then
   withval="$with_sample_incdir"
   coin_has_sample=yes
-     SAMPLE_CFLAGS="-I$withval"
+     SAMPLE_CFLAGS="-I`${CYGPATH_W} $withval`"
 fi;
 
 
@@ -20845,7 +20853,15 @@ fi;
 if test -n "$PKG_CONFIG" ; then
   if $PKG_CONFIG --exists "sample"; then
     SAMPLE_VERSIONS="`$PKG_CONFIG --modversion sample 2>/dev/null`"
-     SAMPLE_CFLAGS=`$PKG_CONFIG --cflags "sample" 2>/dev/null`
+     cflags=`$PKG_CONFIG --cflags "sample" 2>/dev/null`
+    # pkg-config cannot handle spaces, so CYGPATH_W cannot be put into .pc files
+	# thus, we modify the cflags extracted from pkg-config by putting CYGPATH_W behind -I's
+	# but only do this if is not trivial
+    if test "$CYGPATH_W" != "echo" ; then
+      # need to put into brackets since otherwise autoconf replaces the brackets in the sed command
+	  cflags=`echo $cflags | sed -e 's/-I\([^ ]*\)/-I\`${CYGPATH_W} \1\`/g'`
+	fi
+    SAMPLE_CFLAGS="$cflags"
     SAMPLE_LIBS=`$PKG_CONFIG --libs "sample" 2>/dev/null`
     SAMPLE_DATA=`$PKG_CONFIG --variable=datadir "sample" 2>/dev/null`
      coin_has_sample=yes
@@ -20966,7 +20982,7 @@ fi;
 if test "${with_netlib_incdir+set}" = set; then
   withval="$with_netlib_incdir"
   coin_has_netlib=yes
-     NETLIB_CFLAGS="-I$withval"
+     NETLIB_CFLAGS="-I`${CYGPATH_W} $withval`"
 fi;
 
 
@@ -21026,7 +21042,15 @@ fi;
 if test -n "$PKG_CONFIG" ; then
   if $PKG_CONFIG --exists "netlib"; then
     NETLIB_VERSIONS="`$PKG_CONFIG --modversion netlib 2>/dev/null`"
-     NETLIB_CFLAGS=`$PKG_CONFIG --cflags "netlib" 2>/dev/null`
+     cflags=`$PKG_CONFIG --cflags "netlib" 2>/dev/null`
+    # pkg-config cannot handle spaces, so CYGPATH_W cannot be put into .pc files
+	# thus, we modify the cflags extracted from pkg-config by putting CYGPATH_W behind -I's
+	# but only do this if is not trivial
+    if test "$CYGPATH_W" != "echo" ; then
+      # need to put into brackets since otherwise autoconf replaces the brackets in the sed command
+	  cflags=`echo $cflags | sed -e 's/-I\([^ ]*\)/-I\`${CYGPATH_W} \1\`/g'`
+	fi
+    NETLIB_CFLAGS="$cflags"
     NETLIB_LIBS=`$PKG_CONFIG --libs "netlib" 2>/dev/null`
     NETLIB_DATA=`$PKG_CONFIG --variable=datadir "netlib" 2>/dev/null`
      coin_has_netlib=yes
