@@ -65,7 +65,7 @@ AC_COIN_HAS_MODULE(Netlib,     [netlib], [required=0])
 if test "$coin_has_coinutils" != yes ; then
   AC_COIN_HAS_PROJECT(CoinUtils)
   if test $coin_has_coinutils != notGiven && test $coin_has_coinutils != skipping ; then
-    COINUTILS_CFLAGS="-I${COINUTILSSRCDIR}/src -I${COINUTILSOBJDIR}/inc"
+    COINUTILS_CFLAGS="-I`${CYGPATH_W} ${COINUTILSSRCDIR}/src` -I`${CYGPATH_W} ${COINUTILSOBJDIR}/inc`"
     COINUTILS_LIBS="${COINUTILSOBJDIR}/src/libCoinUtils.la `cat ${COINUTILSOBJDIR}/coinutils_addlibs.txt`"
   else
     AC_MSG_ERROR("Required package CoinUtils unavailable.")

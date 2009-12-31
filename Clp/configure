@@ -21319,7 +21319,7 @@ echo "${ECHO_T}$COINUTILSOBJDIR" >&6
 fi
 
   if test $coin_has_coinutils != notGiven && test $coin_has_coinutils != skipping ; then
-    COINUTILS_CFLAGS="-I${COINUTILSSRCDIR}/src -I${COINUTILSOBJDIR}/inc"
+    COINUTILS_CFLAGS="-I`${CYGPATH_W} ${COINUTILSSRCDIR}/src` -I`${CYGPATH_W} ${COINUTILSOBJDIR}/inc`"
     COINUTILS_LIBS="${COINUTILSOBJDIR}/src/libCoinUtils.la `cat ${COINUTILSOBJDIR}/coinutils_addlibs.txt`"
   else
     { { echo "$as_me:$LINENO: error: \"Required package CoinUtils unavailable.\"" >&5

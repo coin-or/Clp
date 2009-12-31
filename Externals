@@ -2,4 +2,4 @@ BuildTools    https://projects.coin-or.org/svn/BuildTools/stable/BSPsplit
 #ThirdParty/Blas https://projects.coin-or.org/svn/BuildTools/ThirdParty/Blas/stable/1.0
 #ThirdParty/Lapack https://projects.coin-or.org/svn/BuildTools/ThirdParty/Lapack/stable/1.0
 #Data/Sample   https://projects.coin-or.org/svn/Data/stable/1.0/Sample
-#CoinUtils     https://projects.coin-or.org/svn/CoinUtils/stable/2.5/CoinUtils
+#CoinUtils     https://projects.coin-or.org/svn/CoinUtils/stable/BSPsplit/CoinUtils
