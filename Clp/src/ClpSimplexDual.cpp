@@ -3393,6 +3393,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
   double changeCost;
   bool unflagVariables = true;
   bool weightsSaved=false;
+  bool weightsSaved2=numberIterations_&&!numberPrimalInfeasibilities_;
   if (alphaAccuracy_<0.0||!numberPivots||alphaAccuracy_>1.0e4||factorization_->pivots()>20) {
     if (problemStatus_>-3||numberPivots) {
       // factorize
@@ -4076,6 +4077,8 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
       dualRowPivot_->saveWeights(this,(type <2) ? 2 : 4);
     else
       dualRowPivot_->saveWeights(this,3);
+  } else if (weightsSaved2&&numberPrimalInfeasibilities_) {
+    dualRowPivot_->saveWeights(this,3);
   }
   // unflag all variables (we may want to wait a bit?)
   if ((tentativeStatus!=-2&&tentativeStatus!=-1)&&unflagVariables) {

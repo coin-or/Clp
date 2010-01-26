@@ -2,6 +2,7 @@
 // Corporation and others.  All Rights Reserved.
 
 #include "CoinPragma.hpp"
+#include <cstdio>
 #include "ClpFactorization.hpp"
 #ifndef SLIM_CLP
 #include "ClpQuadraticObjective.hpp"
