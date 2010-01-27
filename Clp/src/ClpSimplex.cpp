@@ -10072,17 +10072,25 @@ ClpSimplex::fathom(void * stuff)
 	//check this does everything
 	static_cast<ClpSimplexOther *> (this)->afterCrunch(*small,
 						whichRow,whichColumn,nBound);
+	bool badSolution=false;
 	for (int i=0;i<numberColumns_;i++) {
 	  if (integerType_[i]) { 
 	    double value = columnActivity_[i];
 	    double value2 = floor(value+0.5);
-	    assert (fabs(value-value2)<1.0e-4);
+	    if (fabs(value-value2)>=1.0e-4) {
+	      // Very odd - can't use
+	      badSolution=true;
+	    }
 	    columnActivity_[i]=value2;
 	    if (fixBounds) {
 	      columnLower_[i]=value2;
 	      columnUpper_[i]=value2;
 	    }
 	  }
+	}
+	if (badSolution) {
+	  info->nNodes_=-1;
+	  returnCode=0;
 	}
 	//setLogLevel(63);
 	//double objectiveValue=doubleCheck();
