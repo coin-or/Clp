@@ -1452,7 +1452,6 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
 	    break;
 	  }
 	}
-	CoinAssert(fabs(dualOut_)<1.0e50);
 	// if stable replace in basis
 	int updateStatus = factorization_->replaceColumn(this,
 							 rowArray_[2],
@@ -1461,6 +1460,9 @@ ClpSimplexDual::whileIterating(double * & givenDuals,int ifValuesPass)
 							 alpha_,
 							 (moreSpecialOptions_&16)!=0,
 							 acceptablePivot);
+	// If looks like bad pivot - refactorize
+	if (fabs(dualOut_)>1.0e50)
+	  updateStatus=2;
 	// if no pivots, bad update but reasonable alpha - take and invert
 	if (updateStatus==2&&
 		   !factorization_->pivots()&&fabs(alpha_)>1.0e-5)
