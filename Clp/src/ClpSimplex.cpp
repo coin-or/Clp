@@ -5585,8 +5585,12 @@ int ClpSimplex::primal (int ifValuesPass , int startFinishOptions)
     baseIteration_=0;
     setInitialDenseFactorization(denseFactorization);
     perturbation_=savePerturbation;
-    if (problemStatus_==10) 
-      problemStatus_=0;
+    if (problemStatus_==10) {
+      if (!numberPrimalInfeasibilities_)
+        problemStatus_=0;
+      else
+        problemStatus_=4;
+    }
   }
   //factorization_->pivotTolerance(savedPivotTolerance);
   onStopped(); // set secondary status if stopped
