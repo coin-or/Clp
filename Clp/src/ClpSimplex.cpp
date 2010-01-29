@@ -11234,6 +11234,8 @@ ClpSimplex::fastDual2(ClpNodeStuff * info)
     }
   }
   if (problemStatus_==10) {
+    // Say second call
+    moreSpecialOptions_ |= 256;
     //printf("Cleaning up with primal\n");
     //lastAlgorithm=1;
     int savePerturbation = perturbation_;
@@ -11298,6 +11300,8 @@ ClpSimplex::fastDual2(ClpNodeStuff * info)
 	printf("looks like real trouble - too many iterations in second clean up - giving up\n");
 #endif
     }
+    // Say not second call
+    moreSpecialOptions_ &= ~256;
     intParam_[ClpMaxNumIteration] = saveMax;
     
     setInitialDenseFactorization(denseFactorization);

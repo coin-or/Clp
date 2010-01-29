@@ -1451,12 +1451,18 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
   lastGoodIteration_ = numberIterations_;
   if (numberIterations_>lastBadIteration_+100)
     moreSpecialOptions_ &= ~16; // clear check accuracy flag
-  if (goToDual) 
+  if (goToDual||numberIterations_>1000&&largestPrimalError_>1.0e6
+      &&largestDualError_>1.0e6) {
     problemStatus_=10; // try dual
-  // If bad go to dual
-  if (numberIterations_>1000&&largestPrimalError_>1.0e6
-      &&largestDualError_>1.0e6) 
-    problemStatus_=10; // try dual
+    // See if second call
+    if ((moreSpecialOptions_&256)!=0) {
+      numberPrimalInfeasibilities_ = nonLinearCost_->numberInfeasibilities();
+      sumPrimalInfeasibilities_ = nonLinearCost_->sumInfeasibilities();
+      // say infeasible
+      if (numberPrimalInfeasibilities_)
+	problemStatus_=1;
+    }
+  }
   // make sure first free monotonic
   if (firstFree_>=0&&saveFirstFree>=0) {
     firstFree_= (numberIterations_) ? saveFirstFree : -1;
