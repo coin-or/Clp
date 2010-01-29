@@ -1451,8 +1451,8 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
   lastGoodIteration_ = numberIterations_;
   if (numberIterations_>lastBadIteration_+100)
     moreSpecialOptions_ &= ~16; // clear check accuracy flag
-  if (goToDual||numberIterations_>1000&&largestPrimalError_>1.0e6
-      &&largestDualError_>1.0e6) {
+  if (goToDual||(numberIterations_>1000&&largestPrimalError_>1.0e6
+		 &&largestDualError_>1.0e6)) {
     problemStatus_=10; // try dual
     // See if second call
     if ((moreSpecialOptions_&256)!=0) {
