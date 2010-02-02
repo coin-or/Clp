@@ -1317,7 +1317,9 @@ Idiot::crossOver(int mode)
     int * posSlack = whenUsed_+ncols;
     int * negSlack = posSlack+nrows;
     int * nextSlack = negSlack + nrows;
-#if 1
+    /* Laci - try both ways - to see what works -
+       you can change second part as much as you want */
+#ifndef LACI_TRY  // was #if 1
     // Array for sorting out slack values
     double * ratio = new double [ncols];
     int * which = new int [ncols];

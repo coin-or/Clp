@@ -1286,8 +1286,11 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	delete [] saveUpper;
 #else
 	// Allow for crossover
+#define LACI_TRY
+#ifndef LACI_TRY
         //if (doIdiot>0)
           info.setStrategy(512|info.getStrategy());
+#endif
 	// Allow for scaling
 	info.setStrategy(32|info.getStrategy());
 	info.crash(nPasses,model2->messageHandler(),model2->messagesPointer());
@@ -1327,6 +1330,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
       model2->nonlinearSLP(doSlp,1.0e-5);
     }
 #endif
+#ifndef LACI_TRY
     if (options.getSpecialOption(1)!=2||
 	options.getExtraInfo(1)<1000000) {
       if (dynamic_cast< ClpPackedMatrix*>(matrix_)) {
@@ -1346,6 +1350,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	model2->primal(primalStartup);
       }
     }
+#endif
     time2 = CoinCpuTime();
     timeCore = time2-timeX;
     handler_->message(CLP_INTERVAL_TIMING,messages_)
