@@ -4944,6 +4944,8 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned,int type,
 	  }
 	} else if (situationChanged==2) {
 	  problemStatus_=-1; // carry on as normal
+	  // need to reset bounds
+	  changeBounds(3,NULL,changeCost);
 	}
 	situationChanged=0;
       } else {
