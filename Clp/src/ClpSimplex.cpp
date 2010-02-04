@@ -5341,11 +5341,24 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
     //if (returnCode!=10)
     //assert (!numberDualInfeasibilities_);
   }
+  //#define CLP_INVESTIGATE_OBJ
+#ifdef CLP_INVESTIGATE_OBJ
+  if (saveObjective != objective_) {
+    // We changed objective to see if infeasible
+    printf("ZZ DUAL objective_ %x saveObjective %x\n",
+	   objective_,saveObjective);
+    delete objective_;
+    objective_=saveObjective;
+  }
+#endif
   return returnCode;
 }
 // primal 
 int ClpSimplex::primal (int ifValuesPass , int startFinishOptions)
 {
+#ifdef CLP_INVESTIGATE_OBJ
+  ClpObjective * saveObjective = objective_;
+#endif
   //double savedPivotTolerance = factorization_->pivotTolerance();
 #ifndef SLIM_CLP
   // See if nonlinear
@@ -5596,6 +5609,15 @@ int ClpSimplex::primal (int ifValuesPass , int startFinishOptions)
   onStopped(); // set secondary status if stopped
   //if (problemStatus_==1&&lastAlgorithm==1)
   //returnCode=10; // so will do primal after postsolve
+#ifdef CLP_INVESTIGATE_OBJ
+  if (saveObjective != objective_) {
+    // We changed objective to see if infeasible
+    printf("ZZ DUAL objective_ %x saveObjective %x\n",
+	   objective_,saveObjective);
+    delete objective_;
+    objective_=saveObjective;
+  }
+#endif
   return returnCode;
 }
 #ifndef SLIM_CLP
