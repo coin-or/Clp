@@ -1,6 +1,7 @@
 prefix=@prefix@
-libdir=@exec_prefix@/lib
-includedir=${prefix}/include/coin
+exec_prefix=@exec_prefix@
+libdir=@libdir@/coin
+includedir=@includedir@/coin
 
 Name: CLP
 Description: COIN-OR Linear Programming Solver

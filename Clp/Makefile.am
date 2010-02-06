@@ -94,16 +94,10 @@ distclean-local:
 #                  Installation of the addlibs file                    #
 ########################################################################
 
-addlibsfile = clp_addlibs.txt
-addlibsdir = $(prefix)/share/doc/coin/$(PACKAGE_NAME)/
+addlibsdir = $(datadir)/coin/doc/Clp
+addlibs_DATA = clp_addlibs.txt
 
-install-exec-local: install-doc
-	$(install_sh_DATA) $(addlibsfile) $(DESTDIR)$(addlibsdir)/$(addlibsfile)
-
-uninstall-local: uninstall-doc
-	rm -f $(DESTDIR)$(addlibsdir)/$(addlibsfile)
-
-pkgconfiglibdir = $(prefix)/lib/pkgconfig
+pkgconfiglibdir = $(libdir)/pkgconfig
 pkgconfiglib_DATA = clp.pc
 
 ########################################################################

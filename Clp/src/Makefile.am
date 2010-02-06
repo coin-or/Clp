@@ -14,7 +14,8 @@ AUTOMAKE_OPTIONS = foreign
 
 # Name of the library compiled in this directory.  We want it to be installed
 # in the 'lib' directory
-lib_LTLIBRARIES = libClp.la
+coinlibdir = ${libdir}/coin
+coinlib_LTLIBRARIES = libClp.la
 
 # List all source files for this library, including headers
 libClp_la_SOURCES = \
@@ -98,7 +99,7 @@ LIBS += $(COINUTILS_LIBS) $(ADDLIBS)
 # Finally, the -rpath flag is used by libtool to make sure that the shared
 # library is found (in the lib install directory) when we are using dynamic
 # libraries.
-clp_LDFLAGS = -rpath $(libdir)
+clp_LDFLAGS = -rpath $(libdir)/coin
 
 ########################################################################
 #                            Additional flags                          #

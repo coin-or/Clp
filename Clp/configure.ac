@@ -59,8 +59,8 @@ AC_COIN_INIT_AUTO_TOOLS
 #AC_COIN_HAS_MODULE_BLAS
 #AC_COIN_HAS_MODULE_LAPACK
 AC_COIN_HAS_MODULE(CoinUtils,  [coinutils = 2.5BSPsplit])
-AC_COIN_HAS_MODULE(Sample,     [sample], [required=0])
-AC_COIN_HAS_MODULE(Netlib,     [netlib], [required=0])
+AC_COIN_HAS_MODULE(Sample,     [coindatasample], [required=0])
+AC_COIN_HAS_MODULE(Netlib,     [coindatanetlib], [required=0])
 
 if test "$coin_has_coinutils" != yes ; then
   AC_COIN_HAS_PROJECT(CoinUtils)

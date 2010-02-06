@@ -20622,8 +20622,10 @@ if test $coin_has_coinutils = notGiven; then
     coin_save_PKG_CONFIG_PATH="$PKG_CONFIG_PATH"
 
     # let's assume that when installing into $prefix, then the user may have installed some other coin projects there before, so it's worth to have a look into there
-    if test -d "$prefix"; then
-      PKG_CONFIG_PATH="$prefix/lib/pkgconfig:$prefix/lib/ThirdParty/pkgconfig:$prefix/lib/Data/pkgconfig:$PKG_CONFIG_PATH"
+    # best would actually to use ${libdir}, since .pc files get installed into ${libdir}/pkgconfig,
+    # unfortunately, ${libdir} expands to ${exec_prefix}/lib and ${exec_prefix} to ${prefix}...
+    if test -d "${prefix}"; then
+      PKG_CONFIG_PATH="${prefix}/lib/pkgconfig:$PKG_CONFIG_PATH"
     fi
 
 
@@ -20635,7 +20637,7 @@ if test "${with_coin_instdir+set}" = set; then
 echo "$as_me: error: argument for --with-coin-instdir not a directory" >&2;}
    { (exit 1); exit 1; }; }
        fi
-       PKG_CONFIG_PATH="$withval/lib/pkgconfig:$withval/lib/ThirdParty/pkgconfig:$withval/lib/Data/pkgconfig:$PKG_CONFIG_PATH"
+       PKG_CONFIG_PATH="$withval/lib/pkgconfig:$PKG_CONFIG_PATH"
 
 fi;
 
@@ -20811,8 +20813,10 @@ if test $coin_has_sample = notGiven; then
     coin_save_PKG_CONFIG_PATH="$PKG_CONFIG_PATH"
 
     # let's assume that when installing into $prefix, then the user may have installed some other coin projects there before, so it's worth to have a look into there
-    if test -d "$prefix"; then
-      PKG_CONFIG_PATH="$prefix/lib/pkgconfig:$prefix/lib/ThirdParty/pkgconfig:$prefix/lib/Data/pkgconfig:$PKG_CONFIG_PATH"
+    # best would actually to use ${libdir}, since .pc files get installed into ${libdir}/pkgconfig,
+    # unfortunately, ${libdir} expands to ${exec_prefix}/lib and ${exec_prefix} to ${prefix}...
+    if test -d "${prefix}"; then
+      PKG_CONFIG_PATH="${prefix}/lib/pkgconfig:$PKG_CONFIG_PATH"
     fi
 
 
@@ -20824,7 +20828,7 @@ if test "${with_coin_instdir+set}" = set; then
 echo "$as_me: error: argument for --with-coin-instdir not a directory" >&2;}
    { (exit 1); exit 1; }; }
        fi
-       PKG_CONFIG_PATH="$withval/lib/pkgconfig:$withval/lib/ThirdParty/pkgconfig:$withval/lib/Data/pkgconfig:$PKG_CONFIG_PATH"
+       PKG_CONFIG_PATH="$withval/lib/pkgconfig:$PKG_CONFIG_PATH"
 
 fi;
 
@@ -20851,9 +20855,9 @@ fi;
 
 
 if test -n "$PKG_CONFIG" ; then
-  if $PKG_CONFIG --exists "sample"; then
-    SAMPLE_VERSIONS="`$PKG_CONFIG --modversion sample 2>/dev/null`"
-     cflags=`$PKG_CONFIG --cflags "sample" 2>/dev/null`
+  if $PKG_CONFIG --exists "coindatasample"; then
+    SAMPLE_VERSIONS="`$PKG_CONFIG --modversion coindatasample 2>/dev/null`"
+     cflags=`$PKG_CONFIG --cflags "coindatasample" 2>/dev/null`
     # pkg-config cannot handle spaces, so CYGPATH_W cannot be put into .pc files
 	# thus, we modify the cflags extracted from pkg-config by putting CYGPATH_W behind -I's
 	# but only do this if is not trivial
@@ -20862,18 +20866,18 @@ if test -n "$PKG_CONFIG" ; then
 	  cflags=`echo $cflags | sed -e 's/-I\([^ ]*\)/-I\`${CYGPATH_W} \1\`/g'`
 	fi
     SAMPLE_CFLAGS="$cflags"
-    SAMPLE_LIBS=`$PKG_CONFIG --libs "sample" 2>/dev/null`
-    SAMPLE_DATA=`$PKG_CONFIG --variable=datadir "sample" 2>/dev/null`
+    SAMPLE_LIBS=`$PKG_CONFIG --libs "coindatasample" 2>/dev/null`
+    SAMPLE_DATA=`$PKG_CONFIG --variable=datadir "coindatasample" 2>/dev/null`
      coin_has_sample=yes
         echo "$as_me:$LINENO: result: yes: $SAMPLE_VERSIONS" >&5
 echo "${ECHO_T}yes: $SAMPLE_VERSIONS" >&6
         if test $required = 1; then
-          REQUIREDPACKAGES="$REQUIREDPACKAGES sample"
+          REQUIREDPACKAGES="$REQUIREDPACKAGES coindatasample"
 	fi
 
 
   else
-    SAMPLE_PKG_ERRORS=`$PKG_CONFIG $pkg_short_errors --errors-to-stdout --print-errors sample`
+    SAMPLE_PKG_ERRORS=`$PKG_CONFIG $pkg_short_errors --errors-to-stdout --print-errors coindatasample`
       coin_has_sample=notGiven
         echo "$as_me:$LINENO: result: not given: $SAMPLE_PKG_ERRORS" >&5
 echo "${ECHO_T}not given: $SAMPLE_PKG_ERRORS" >&6
@@ -21000,8 +21004,10 @@ if test $coin_has_netlib = notGiven; then
     coin_save_PKG_CONFIG_PATH="$PKG_CONFIG_PATH"
 
     # let's assume that when installing into $prefix, then the user may have installed some other coin projects there before, so it's worth to have a look into there
-    if test -d "$prefix"; then
-      PKG_CONFIG_PATH="$prefix/lib/pkgconfig:$prefix/lib/ThirdParty/pkgconfig:$prefix/lib/Data/pkgconfig:$PKG_CONFIG_PATH"
+    # best would actually to use ${libdir}, since .pc files get installed into ${libdir}/pkgconfig,
+    # unfortunately, ${libdir} expands to ${exec_prefix}/lib and ${exec_prefix} to ${prefix}...
+    if test -d "${prefix}"; then
+      PKG_CONFIG_PATH="${prefix}/lib/pkgconfig:$PKG_CONFIG_PATH"
     fi
 
 
@@ -21013,7 +21019,7 @@ if test "${with_coin_instdir+set}" = set; then
 echo "$as_me: error: argument for --with-coin-instdir not a directory" >&2;}
    { (exit 1); exit 1; }; }
        fi
-       PKG_CONFIG_PATH="$withval/lib/pkgconfig:$withval/lib/ThirdParty/pkgconfig:$withval/lib/Data/pkgconfig:$PKG_CONFIG_PATH"
+       PKG_CONFIG_PATH="$withval/lib/pkgconfig:$PKG_CONFIG_PATH"
 
 fi;
 
@@ -21040,9 +21046,9 @@ fi;
 
 
 if test -n "$PKG_CONFIG" ; then
-  if $PKG_CONFIG --exists "netlib"; then
-    NETLIB_VERSIONS="`$PKG_CONFIG --modversion netlib 2>/dev/null`"
-     cflags=`$PKG_CONFIG --cflags "netlib" 2>/dev/null`
+  if $PKG_CONFIG --exists "coindatanetlib"; then
+    NETLIB_VERSIONS="`$PKG_CONFIG --modversion coindatanetlib 2>/dev/null`"
+     cflags=`$PKG_CONFIG --cflags "coindatanetlib" 2>/dev/null`
     # pkg-config cannot handle spaces, so CYGPATH_W cannot be put into .pc files
 	# thus, we modify the cflags extracted from pkg-config by putting CYGPATH_W behind -I's
 	# but only do this if is not trivial
@@ -21051,18 +21057,18 @@ if test -n "$PKG_CONFIG" ; then
 	  cflags=`echo $cflags | sed -e 's/-I\([^ ]*\)/-I\`${CYGPATH_W} \1\`/g'`
 	fi
     NETLIB_CFLAGS="$cflags"
-    NETLIB_LIBS=`$PKG_CONFIG --libs "netlib" 2>/dev/null`
-    NETLIB_DATA=`$PKG_CONFIG --variable=datadir "netlib" 2>/dev/null`
+    NETLIB_LIBS=`$PKG_CONFIG --libs "coindatanetlib" 2>/dev/null`
+    NETLIB_DATA=`$PKG_CONFIG --variable=datadir "coindatanetlib" 2>/dev/null`
      coin_has_netlib=yes
         echo "$as_me:$LINENO: result: yes: $NETLIB_VERSIONS" >&5
 echo "${ECHO_T}yes: $NETLIB_VERSIONS" >&6
         if test $required = 1; then
-          REQUIREDPACKAGES="$REQUIREDPACKAGES netlib"
+          REQUIREDPACKAGES="$REQUIREDPACKAGES coindatanetlib"
 	fi
 
 
   else
-    NETLIB_PKG_ERRORS=`$PKG_CONFIG $pkg_short_errors --errors-to-stdout --print-errors netlib`
+    NETLIB_PKG_ERRORS=`$PKG_CONFIG $pkg_short_errors --errors-to-stdout --print-errors coindatanetlib`
       coin_has_netlib=notGiven
         echo "$as_me:$LINENO: result: not given: $NETLIB_PKG_ERRORS" >&5
 echo "${ECHO_T}not given: $NETLIB_PKG_ERRORS" >&6
