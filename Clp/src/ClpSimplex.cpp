@@ -5126,8 +5126,17 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
 #endif
 {
   //double savedPivotTolerance = factorization_->pivotTolerance();
-  int saveQuadraticActivated = objective_->activated();
-  objective_->setActivated(0);
+  int saveQuadraticActivated = 0;
+  if (objective_) {
+    saveQuadraticActivated = objective_->activated();
+    objective_->setActivated(0);
+  } else {
+    // create dummy stuff
+    assert (!numberColumns_);
+    if (!numberRows_) 
+      problemStatus_=0; // say optimal
+    return 0;
+  }
   ClpObjective * saveObjective = objective_;
   CoinAssert (ifValuesPass>=0&&ifValuesPass<3);
   /*  Note use of "down casting".  The only class the user sees is ClpSimplex.
