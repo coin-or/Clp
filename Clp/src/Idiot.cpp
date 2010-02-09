@@ -210,12 +210,12 @@ Idiot::cleanIteration(int iteration, int ordinaryStart, int ordinaryEnd,
 	CoinBigIndex j=columnStart[iCol];
 	rowSave += (colsol[iCol]-lower[iCol])*element[j];
 	colsol[iCol]=lower[iCol];
-	assert (lower[iCol]>-1.0e20);
 	while (nextSlack[iCol]>=0) {
 	  iCol = nextSlack[iCol];
+	  double lowerValue = CoinMax(CoinMin(colsol[iCol],0.0)-1000.0,lower[iCol]);
 	  j=columnStart[iCol];
-	  rowSave += (colsol[iCol]-lower[iCol])*element[j];
-	  colsol[iCol]=lower[iCol];
+	  rowSave += (colsol[iCol]-lowerValue)*element[j];
+	  colsol[iCol]=lowerValue;
 	}
 	iCol =negSlack[i];
 	while (rowValue>rowUpper[i]&&iCol>=0) {
@@ -1320,7 +1320,9 @@ Idiot::crossOver(int mode)
     int * posSlack = whenUsed_+ncols;
     int * negSlack = posSlack+nrows;
     int * nextSlack = negSlack + nrows;
-#if 1
+    /* Laci - try both ways - to see what works -
+       you can change second part as much as you want */
+#ifndef LACI_TRY
     // Array for sorting out slack values
     double * ratio = new double [ncols];
     int * which = new int [ncols];
