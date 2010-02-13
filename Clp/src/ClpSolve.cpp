@@ -1286,7 +1286,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	delete [] saveUpper;
 #else
 	// Allow for crossover
-#define LACI_TRY
+	//#define LACI_TRY
 #ifndef LACI_TRY
         //if (doIdiot>0)
           info.setStrategy(512|info.getStrategy());

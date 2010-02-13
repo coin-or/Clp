@@ -1261,7 +1261,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned,int type,
       // may be optimal
       if (perturbation_==101) {
 	goToDual=unPerturb(); // stop any further perturbation
-        if (numberRows_>20000&&!numberTimesOptimal_)
+        if ((numberRows_>20000||numberDualInfeasibilities_)&&!numberTimesOptimal_)
           goToDual=false; // Better to carry on a bit longer
 	lastCleaned=-1; // carry on
       }
