@@ -56,10 +56,10 @@ CFLAGS = @CFLAGS@ -DSAMPLEDIR=\"@SAMPLE_DATA@\"
 COININCDIR = @abs_include_dir@/coin
 
 # Directory with COIN libraries
-COINLIBDIR = @abs_lib_dir@
+COINLIBDIR = @abs_lib_dir@/coin
 
 # Libraries necessary to link with Clp
-LIBS = @COINUTILS_LIBS@ -lClp @ADDLIBS@
+LIBS = @COINUTILS_LIBS@ -L`$(CYGPATH_W) $(COINLIBDIR)` -lClp @ADDLIBS@
 
 # Necessary Include dirs (we use the CYGPATH_W variables to allow
 # compilation with Windows compilers)
