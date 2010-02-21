@@ -41,6 +41,8 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
+@COIN_HAS_SAMPLE_TRUE@am__append_1 = -dirSample `$(CYGPATH_W) $(SAMPLE_DATA)`
+@COIN_HAS_NETLIB_TRUE@am__append_2 = -dirNetlib `$(CYGPATH_W) $(NETLIB_DATA)` -netlib
 subdir = test
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -54,6 +56,7 @@ CONFIG_CLEAN_FILES =
 SOURCES =
 DIST_SOURCES =
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
+ABSBUILDDIR = @ABSBUILDDIR@
 ACLOCAL = @ACLOCAL@
 ADDLIBS = @ADDLIBS@
 ADD_CFLAGS = @ADD_CFLAGS@
@@ -74,16 +77,18 @@ CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CDEFS = @CDEFS@
 CFLAGS = @CFLAGS@
-CLPDOCDIR = @CLPDOCDIR@
-CLPOBJDIR = @CLPOBJDIR@
-CLPSRCDIR = @CLPSRCDIR@
 COINUTILSDOCDIR = @COINUTILSDOCDIR@
 COINUTILSOBJDIR = @COINUTILSOBJDIR@
 COINUTILSSRCDIR = @COINUTILSSRCDIR@
-COIN_HAS_CLP_FALSE = @COIN_HAS_CLP_FALSE@
-COIN_HAS_CLP_TRUE = @COIN_HAS_CLP_TRUE@
+COINUTILS_CFLAGS = @COINUTILS_CFLAGS@
+COINUTILS_DATA = @COINUTILS_DATA@
+COINUTILS_LIBS = @COINUTILS_LIBS@
 COIN_HAS_COINUTILS_FALSE = @COIN_HAS_COINUTILS_FALSE@
 COIN_HAS_COINUTILS_TRUE = @COIN_HAS_COINUTILS_TRUE@
+COIN_HAS_NETLIB_FALSE = @COIN_HAS_NETLIB_FALSE@
+COIN_HAS_NETLIB_TRUE = @COIN_HAS_NETLIB_TRUE@
+COIN_HAS_SAMPLE_FALSE = @COIN_HAS_SAMPLE_FALSE@
+COIN_HAS_SAMPLE_TRUE = @COIN_HAS_SAMPLE_TRUE@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CXX = @CXX@
@@ -126,6 +131,9 @@ MAINTAINER_MODE_TRUE = @MAINTAINER_MODE_TRUE@
 MAKEINFO = @MAKEINFO@
 MPICC = @MPICC@
 MPICXX = @MPICXX@
+NETLIB_CFLAGS = @NETLIB_CFLAGS@
+NETLIB_DATA = @NETLIB_DATA@
+NETLIB_LIBS = @NETLIB_LIBS@
 OBJEXT = @OBJEXT@
 OPT_CFLAGS = @OPT_CFLAGS@
 OPT_CXXFLAGS = @OPT_CXXFLAGS@
@@ -136,8 +144,13 @@ PACKAGE_STRING = @PACKAGE_STRING@
 PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
+PKG_CONFIG = @PKG_CONFIG@
 RANLIB = @RANLIB@
+REQUIREDPACKAGES = @REQUIREDPACKAGES@
 RPATH_FLAGS = @RPATH_FLAGS@
+SAMPLE_CFLAGS = @SAMPLE_CFLAGS@
+SAMPLE_DATA = @SAMPLE_DATA@
+SAMPLE_LIBS = @SAMPLE_LIBS@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
@@ -155,6 +168,7 @@ ac_ct_F77 = @ac_ct_F77@
 ac_ct_RANLIB = @ac_ct_RANLIB@
 ac_ct_STRIP = @ac_ct_STRIP@
 ac_cxx_preproc_warn_flag = @ac_cxx_preproc_warn_flag@
+ac_pt_PKG_CONFIG = @ac_pt_PKG_CONFIG@
 am__fastdepCC_FALSE = @am__fastdepCC_FALSE@
 am__fastdepCC_TRUE = @am__fastdepCC_TRUE@
 am__fastdepCXX_FALSE = @am__fastdepCXX_FALSE@
@@ -197,6 +211,11 @@ sol_cc_compiler = @sol_cc_compiler@
 sysconfdir = @sysconfdir@
 target_alias = @target_alias@
 AUTOMAKE_OPTIONS = foreign
+
+########################################################################
+#                         unitTest for Clp                             #
+########################################################################
+unittestflags = $(am__append_1) -unitTest $(am__append_2)
 
 ########################################################################
 #                          Cleaning stuff                              #
@@ -367,19 +386,9 @@ uninstall-am: uninstall-info-am
 	uninstall-info-am
 
 
-########################################################################
-#                         unitTest for Clp                             #
-########################################################################
-
 # We are using the CLP solver executable to do the unit test
 test: ../src/clp$(EXEEXT)
-	if test x"$(DIRNETLIB)" != x; then \
-		NETLIBARG="-dirNetlib $(DIRNETLIB) -netlib"; \
-	fi; \
-	if test x"$(DIRSAMPLE)" != x; then \
-		SAMPLEARG="-dirSample $(DIRSAMPLE)"; \
-	fi; \
-	../src/clp$(EXEEXT) $$SAMPLEARG -unitTest $$NETLIBARG
+	../src/clp$(EXEEXT) $(unittestflags)
 
 .PHONY: test
 # Tell versions [3.59,3.63) of GNU make to not export all variables.

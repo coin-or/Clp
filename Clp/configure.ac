@@ -56,8 +56,19 @@ AC_COIN_INIT_AUTO_TOOLS
 #                              COIN components                              #
 #############################################################################
 
-AC_COIN_HAS_PROJECT(CoinUtils)
-AC_COIN_HAS_PROJECT(Clp)
+AC_COIN_HAS_MODULE(CoinUtils,  [coinutils = split])
+AC_COIN_HAS_MODULE(Sample,     [coindatasample], [required=0])
+AC_COIN_HAS_MODULE(Netlib,     [coindatanetlib], [required=0])
+
+if test "$coin_has_coinutils" != yes ; then
+  AC_COIN_HAS_PROJECT(CoinUtils)
+  if test $coin_has_coinutils != notGiven && test $coin_has_coinutils != skipping ; then
+    COINUTILS_CFLAGS="-I`${CYGPATH_W} ${COINUTILSSRCDIR}/src` -I`${CYGPATH_W} ${COINUTILSOBJDIR}/inc`"
+    COINUTILS_LIBS="${COINUTILSOBJDIR}/src/libCoinUtils.la `cat ${COINUTILSOBJDIR}/coinutils_addlibs.txt`"
+  else
+    AC_MSG_ERROR("Required package CoinUtils unavailable.")
+  fi
+fi
 
 #############################################################################
 #                        Third party linear solvers                         #
@@ -126,7 +137,9 @@ AC_CONFIG_FILES([Makefile
                  examples/Makefile
                  src/Makefile
                  test/Makefile
-		 clp_addlibs.txt])
+		 clp_addlibs.txt
+		 clp.pc
+		 clp-uninstalled.pc])
 
 # Here put the location and name of the configuration header file
 AC_CONFIG_HEADER([inc/config_clp.h])

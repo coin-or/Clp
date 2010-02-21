@@ -777,70 +777,76 @@ ClpSimplexUnitTest(const std::string & dirSample)
   {    
     CoinMpsIO m;
     std::string fn = dirSample+"exmip1";
-    m.readMps(fn.c_str(),"mps");
-    ClpSimplex solution;
-    solution.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
-			 m.getObjCoefficients(),
-			 m.getRowLower(),m.getRowUpper());
-    solution.dual();
-    // Test event handling
-    MyEventHandler handler;
-    solution.passInEventHandler(&handler);
-    int numberRows=solution.numberRows();
-    // make sure values pass has something to do
-    for (int i=0;i<numberRows;i++)
-      solution.setRowStatus(i,ClpSimplex::basic);
-    solution.primal(1);
-    assert (solution.secondaryStatus()==102); // Came out at end of pass
+    if (m.readMps(fn.c_str(),"mps") == 0) {
+      ClpSimplex solution;
+      solution.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
+			  m.getObjCoefficients(),
+			  m.getRowLower(),m.getRowUpper());
+      solution.dual();
+      // Test event handling
+      MyEventHandler handler;
+      solution.passInEventHandler(&handler);
+      int numberRows=solution.numberRows();
+      // make sure values pass has something to do
+      for (int i=0;i<numberRows;i++)
+	solution.setRowStatus(i,ClpSimplex::basic);
+      solution.primal(1);
+      assert (solution.secondaryStatus()==102); // Came out at end of pass
+    } else {
+      std::cerr << "Error reading exmip1 from sample data. Skipping test." << std::endl;
+    }
   }
   // Test Message handler
   {    
     CoinMpsIO m;
     std::string fn = dirSample+"exmip1";
     //fn = "Test/subGams4";
-    m.readMps(fn.c_str(),"mps");
-    ClpSimplex model;
-    model.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
-			 m.getObjCoefficients(),
-			 m.getRowLower(),m.getRowUpper());
-    // Message handler
-    MyMessageHandler messageHandler(&model);
-    std::cout<<"Testing derived message handler"<<std::endl;
-    model.passInMessageHandler(&messageHandler);
-    model.messagesPointer()->setDetailMessage(1,102);
-    model.setFactorizationFrequency(10);
-    model.primal();
-    model.primal(0,3);
-    model.setObjCoeff(3,-2.9473684210526314);
-    model.primal(0,3);
-    // Write saved solutions
-    int nc = model.getNumCols();
-    int s; 
-    std::deque<StdVectorDouble> fep = messageHandler.getFeasibleExtremePoints();
-    int numSavedSolutions = fep.size();
-    for ( s=0; s<numSavedSolutions; ++s ) {
-      const StdVectorDouble & solnVec = fep[s];
-      for ( int c=0; c<nc; ++c ) {
-        if (fabs(solnVec[c])>1.0e-8)
-          std::cout <<"Saved Solution: " <<s <<" ColNum: " <<c <<" Value: " <<solnVec[c] <<std::endl;
+    if (m.readMps(fn.c_str(),"mps") == 0) {
+      ClpSimplex model;
+      model.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
+			  m.getObjCoefficients(),
+			  m.getRowLower(),m.getRowUpper());
+      // Message handler
+      MyMessageHandler messageHandler(&model);
+      std::cout<<"Testing derived message handler"<<std::endl;
+      model.passInMessageHandler(&messageHandler);
+      model.messagesPointer()->setDetailMessage(1,102);
+      model.setFactorizationFrequency(10);
+      model.primal();
+      model.primal(0,3);
+      model.setObjCoeff(3,-2.9473684210526314);
+      model.primal(0,3);
+      // Write saved solutions
+      int nc = model.getNumCols();
+      int s; 
+      std::deque<StdVectorDouble> fep = messageHandler.getFeasibleExtremePoints();
+      int numSavedSolutions = fep.size();
+      for ( s=0; s<numSavedSolutions; ++s ) {
+	const StdVectorDouble & solnVec = fep[s];
+	for ( int c=0; c<nc; ++c ) {
+	  if (fabs(solnVec[c])>1.0e-8)
+	    std::cout <<"Saved Solution: " <<s <<" ColNum: " <<c <<" Value: " <<solnVec[c] <<std::endl;
+	}
       }
-    }
-    // Solve again without scaling
-    // and maximize then minimize
-    messageHandler.clearFeasibleExtremePoints();
-    model.scaling(0);
-    model.setOptimizationDirection(-1);
-    model.primal();
-    model.setOptimizationDirection(1);
-    model.primal();
-    fep = messageHandler.getFeasibleExtremePoints();
-    numSavedSolutions = fep.size();
-    for ( s=0; s<numSavedSolutions; ++s ) {
-      const StdVectorDouble & solnVec = fep[s];
-      for ( int c=0; c<nc; ++c ) {
-        if (fabs(solnVec[c])>1.0e-8)
-          std::cout <<"Saved Solution: " <<s <<" ColNum: " <<c <<" Value: " <<solnVec[c] <<std::endl;
+      // Solve again without scaling
+      // and maximize then minimize
+      messageHandler.clearFeasibleExtremePoints();
+      model.scaling(0);
+      model.setOptimizationDirection(-1);
+      model.primal();
+      model.setOptimizationDirection(1);
+      model.primal();
+      fep = messageHandler.getFeasibleExtremePoints();
+      numSavedSolutions = fep.size();
+      for ( s=0; s<numSavedSolutions; ++s ) {
+	const StdVectorDouble & solnVec = fep[s];
+	for ( int c=0; c<nc; ++c ) {
+	  if (fabs(solnVec[c])>1.0e-8)
+	    std::cout <<"Saved Solution: " <<s <<" ColNum: " <<c <<" Value: " <<solnVec[c] <<std::endl;
+	}
       }
+    } else {
+      std::cerr << "Error reading exmip1 from sample data. Skipping test." << std::endl;
     }
   }
 #endif
@@ -848,86 +854,92 @@ ClpSimplexUnitTest(const std::string & dirSample)
   {    
     CoinMpsIO m;
     std::string fn = dirSample+"exmip1";
-    m.readMps(fn.c_str(),"mps");
-    ClpSimplex model;
-    model.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
-			 m.getObjCoefficients(),
-			 m.getRowLower(),m.getRowUpper());
-    model.primal();
-    int which[13] = {0,1,2,3,4,5,6,7,8,9,10,11,12};
-    double costIncrease[13];
-    int sequenceIncrease[13];
-    double costDecrease[13];
-    int sequenceDecrease[13];
-    // ranging
-    model.dualRanging(13,which,costIncrease,sequenceIncrease,
-		      costDecrease,sequenceDecrease);
-    int i;
-    for ( i=0;i<13;i++)
-      printf("%d increase %g %d, decrease %g %d\n",
-	     i,costIncrease[i],sequenceIncrease[i],
-	     costDecrease[i],sequenceDecrease[i]);
-    assert (fabs(costDecrease[3])<1.0e-4);
-    assert (fabs(costIncrease[7]-1.0)<1.0e-4);
-    model.setOptimizationDirection(-1);
-    {
-      int j;
-      double * obj = model.objective();
-      int n=model.numberColumns();
-      for (j=0;j<n;j++) 
-	obj[j] *= -1.0;
-    }
-    double costIncrease2[13];
-    int sequenceIncrease2[13];
-    double costDecrease2[13];
-    int sequenceDecrease2[13];
-    // ranging
-    model.dualRanging(13,which,costIncrease2,sequenceIncrease2,
-		      costDecrease2,sequenceDecrease2);
-    for (i=0;i<13;i++) {
-      assert (fabs(costIncrease[i]-costDecrease2[i])<1.0e-6);
-      assert (fabs(costDecrease[i]-costIncrease2[i])<1.0e-6);
-      assert (sequenceIncrease[i]==sequenceDecrease2[i]);
-      assert (sequenceDecrease[i]==sequenceIncrease2[i]);
-    }
-    // Now delete all rows and see what happens
-    model.deleteRows(model.numberRows(),which);
-    model.primal();
-    // ranging
-    if (!model.dualRanging(8,which,costIncrease,sequenceIncrease,
-                           costDecrease,sequenceDecrease)) {
-      for (i=0;i<8;i++) {
-        printf("%d increase %g %d, decrease %g %d\n",
-               i,costIncrease[i],sequenceIncrease[i],
-               costDecrease[i],sequenceDecrease[i]);
+    if (m.readMps(fn.c_str(),"mps") == 0) {
+      ClpSimplex model;
+      model.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
+			  m.getObjCoefficients(),
+			  m.getRowLower(),m.getRowUpper());
+      model.primal();
+      int which[13] = {0,1,2,3,4,5,6,7,8,9,10,11,12};
+      double costIncrease[13];
+      int sequenceIncrease[13];
+      double costDecrease[13];
+      int sequenceDecrease[13];
+      // ranging
+      model.dualRanging(13,which,costIncrease,sequenceIncrease,
+			costDecrease,sequenceDecrease);
+      int i;
+      for ( i=0;i<13;i++)
+	printf("%d increase %g %d, decrease %g %d\n",
+	      i,costIncrease[i],sequenceIncrease[i],
+	      costDecrease[i],sequenceDecrease[i]);
+      assert (fabs(costDecrease[3])<1.0e-4);
+      assert (fabs(costIncrease[7]-1.0)<1.0e-4);
+      model.setOptimizationDirection(-1);
+      {
+	int j;
+	double * obj = model.objective();
+	int n=model.numberColumns();
+	for (j=0;j<n;j++) 
+	  obj[j] *= -1.0;
       }
+      double costIncrease2[13];
+      int sequenceIncrease2[13];
+      double costDecrease2[13];
+      int sequenceDecrease2[13];
+      // ranging
+      model.dualRanging(13,which,costIncrease2,sequenceIncrease2,
+			costDecrease2,sequenceDecrease2);
+      for (i=0;i<13;i++) {
+	assert (fabs(costIncrease[i]-costDecrease2[i])<1.0e-6);
+	assert (fabs(costDecrease[i]-costIncrease2[i])<1.0e-6);
+	assert (sequenceIncrease[i]==sequenceDecrease2[i]);
+	assert (sequenceDecrease[i]==sequenceIncrease2[i]);
+      }
+      // Now delete all rows and see what happens
+      model.deleteRows(model.numberRows(),which);
+      model.primal();
+      // ranging
+      if (!model.dualRanging(8,which,costIncrease,sequenceIncrease,
+			    costDecrease,sequenceDecrease)) {
+	for (i=0;i<8;i++) {
+	  printf("%d increase %g %d, decrease %g %d\n",
+		i,costIncrease[i],sequenceIncrease[i],
+		costDecrease[i],sequenceDecrease[i]);
+	}
+      }
+    } else {
+      std::cerr << "Error reading exmip1 from sample data. Skipping test." << std::endl;
     }
   }
   // Test primal ranging
   {    
     CoinMpsIO m;
     std::string fn = dirSample+"exmip1";
-    m.readMps(fn.c_str(),"mps");
-    ClpSimplex model;
-    model.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
-			 m.getObjCoefficients(),
-			 m.getRowLower(),m.getRowUpper());
-    model.primal();
-    int which[13] = {0,1,2,3,4,5,6,7,8,9,10,11,12};
-    double valueIncrease[13];
-    int sequenceIncrease[13];
-    double valueDecrease[13];
-    int sequenceDecrease[13];
-    // ranging
-    model.primalRanging(13,which,valueIncrease,sequenceIncrease,
-		      valueDecrease,sequenceDecrease);
-    int i;
-    for ( i=0;i<13;i++)
-      printf("%d increase %g %d, decrease %g %d\n",
-	     i,valueIncrease[i],sequenceIncrease[i],
-	     valueDecrease[i],sequenceDecrease[i]);
-    assert (fabs(valueIncrease[3]-0.642857)<1.0e-4);
-    assert (fabs(valueIncrease[8]-2.95113)<1.0e-4);
+    if (m.readMps(fn.c_str(),"mps") == 0) {
+      ClpSimplex model;
+      model.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
+			  m.getObjCoefficients(),
+			  m.getRowLower(),m.getRowUpper());
+      model.primal();
+      int which[13] = {0,1,2,3,4,5,6,7,8,9,10,11,12};
+      double valueIncrease[13];
+      int sequenceIncrease[13];
+      double valueDecrease[13];
+      int sequenceDecrease[13];
+      // ranging
+      model.primalRanging(13,which,valueIncrease,sequenceIncrease,
+			valueDecrease,sequenceDecrease);
+      int i;
+      for ( i=0;i<13;i++)
+	printf("%d increase %g %d, decrease %g %d\n",
+	      i,valueIncrease[i],sequenceIncrease[i],
+	      valueDecrease[i],sequenceDecrease[i]);
+      assert (fabs(valueIncrease[3]-0.642857)<1.0e-4);
+      assert (fabs(valueIncrease[8]-2.95113)<1.0e-4);
+    } else {
+      std::cerr << "Error reading exmip1 from sample data. Skipping test." << std::endl;
+    }
 #if 0
     // out until I find optimization bug
     // Test parametrics
@@ -1104,319 +1116,355 @@ ClpSimplexUnitTest(const std::string & dirSample)
     if (returnCode) {
       // probable cause is that gz not there
       fprintf(stderr,"Unable to open finnis.mps in %s\n", dirSample.c_str());
-      fprintf(stderr,"Most probable cause is finnis.mps is gzipped i.e. finnis.mps.gz and libz has not been activated\n");
+      fprintf(stderr,"Most probable cause is that sample data is not available, or finnis.mps is gzipped i.e. finnis.mps.gz and libz has not been activated\n");
       fprintf(stderr,"Either gunzip files or edit Makefiles/Makefile.location to get libz\n");
-      exit(999);
-    }
-    ClpModel model;
-    model.loadProblem(*m.getMatrixByCol(),m.getColLower(),
-		    m.getColUpper(),
-		    m.getObjCoefficients(),
-		    m.getRowLower(),m.getRowUpper());
-    ClpSimplex solution(model);
+    } else {
+      ClpModel model;
+      model.loadProblem(*m.getMatrixByCol(),m.getColLower(),
+		      m.getColUpper(),
+		      m.getObjCoefficients(),
+		      m.getRowLower(),m.getRowUpper());
+      ClpSimplex solution(model);
 
-    solution.scaling(1); 
-    solution.setDualBound(1.0e8);
-    //solution.factorization()->maximumPivots(1);
-    //solution.setLogLevel(3);
-    solution.setDualTolerance(1.0e-7);
-    // set objective sense,
-    ClpDualRowSteepest steep;
-    solution.setDualRowPivotAlgorithm(steep);
-    solution.setDblParam(ClpObjOffset,m.objectiveOffset());
-    solution.dual();
+      solution.scaling(1); 
+      solution.setDualBound(1.0e8);
+      //solution.factorization()->maximumPivots(1);
+      //solution.setLogLevel(3);
+      solution.setDualTolerance(1.0e-7);
+      // set objective sense,
+      ClpDualRowSteepest steep;
+      solution.setDualRowPivotAlgorithm(steep);
+      solution.setDblParam(ClpObjOffset,m.objectiveOffset());
+      solution.dual();
+    }
   }
   // test normal solution
   {    
     CoinMpsIO m;
     std::string fn = dirSample+"afiro";
-    m.readMps(fn.c_str(),"mps");
-    ClpSimplex solution;
-    ClpModel model;
-    // do twice - without and with scaling
-    int iPass;
-    for (iPass=0;iPass<2;iPass++) {
-      // explicit row objective for testing
-      int nr = m.getNumRows();
-      double * rowObj = new double[nr];
-      CoinFillN(rowObj,nr,0.0);
-      model.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
-		      m.getObjCoefficients(),
-		      m.getRowLower(),m.getRowUpper(),rowObj);
-      delete [] rowObj;
-      solution = ClpSimplex(model);
-      if (iPass) {
-	solution.scaling();
+    if (m.readMps(fn.c_str(),"mps") == 0) {
+      ClpSimplex solution;
+      ClpModel model;
+      // do twice - without and with scaling
+      int iPass;
+      for (iPass=0;iPass<2;iPass++) {
+	// explicit row objective for testing
+	int nr = m.getNumRows();
+	double * rowObj = new double[nr];
+	CoinFillN(rowObj,nr,0.0);
+	model.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
+			m.getObjCoefficients(),
+			m.getRowLower(),m.getRowUpper(),rowObj);
+	delete [] rowObj;
+	solution = ClpSimplex(model);
+	if (iPass) {
+	  solution.scaling();
+	}
+	solution.dual();
+	solution.dual();
+	// test optimal
+	assert (solution.status()==0);
+	int numberColumns = solution.numberColumns();
+	int numberRows = solution.numberRows();
+	CoinPackedVector colsol(numberColumns,solution.primalColumnSolution());
+	double * objective = solution.objective();
+  #ifndef NDEBUG
+	double objValue = colsol.dotProduct(objective);
+  #endif
+	CoinRelFltEq eq(1.0e-8);
+	assert(eq(objValue,-4.6475314286e+02));
+	solution.dual();
+	assert(eq(solution.objectiveValue(),-4.6475314286e+02));
+	double * lower = solution.columnLower();
+	double * upper = solution.columnUpper();
+	double * sol = solution.primalColumnSolution();
+	double * result = new double[numberColumns];
+	CoinFillN ( result, numberColumns,0.0);
+	solution.matrix()->transposeTimes(solution.dualRowSolution(), result);
+	int iRow , iColumn;
+	// see if feasible and dual feasible
+	for (iColumn=0;iColumn<numberColumns;iColumn++) {
+	  double value = sol[iColumn];
+	  assert(value<upper[iColumn]+1.0e-8);
+	  assert(value>lower[iColumn]-1.0e-8);
+	  value = objective[iColumn]-result[iColumn];
+	  assert (value>-1.0e-5);
+	  if (sol[iColumn]>1.0e-5)
+	    assert (value<1.0e-5);
+	}
+	delete [] result;
+	result = new double[numberRows];
+	CoinFillN ( result, numberRows,0.0);
+	solution.matrix()->times(colsol, result);
+	lower = solution.rowLower();
+	upper = solution.rowUpper();
+	sol = solution.primalRowSolution();
+  #ifndef NDEBUG
+	for (iRow=0;iRow<numberRows;iRow++) {
+	  double value = result[iRow];
+	  assert(eq(value,sol[iRow]));
+	  assert(value<upper[iRow]+1.0e-8);
+	  assert(value>lower[iRow]-1.0e-8);
+	}
+  #endif
+	delete [] result;
+	// test row objective
+	double * rowObjective = solution.rowObjective();
+	CoinDisjointCopyN(solution.dualRowSolution(),numberRows,rowObjective);
+	CoinDisjointCopyN(solution.dualColumnSolution(),numberColumns,objective);
+	// this sets up all slack basis
+	solution.createStatus();
+	solution.dual();
+	CoinFillN(rowObjective,numberRows,0.0);
+	CoinDisjointCopyN(m.getObjCoefficients(),numberColumns,objective);
+	solution.dual();
       }
-      solution.dual();
-      solution.dual();
-      // test optimal
-      assert (solution.status()==0);
-      int numberColumns = solution.numberColumns();
-      int numberRows = solution.numberRows();
-      CoinPackedVector colsol(numberColumns,solution.primalColumnSolution());
-      double * objective = solution.objective();
-#ifndef NDEBUG
-      double objValue = colsol.dotProduct(objective);
-#endif
-      CoinRelFltEq eq(1.0e-8);
-      assert(eq(objValue,-4.6475314286e+02));
-      solution.dual();
-      assert(eq(solution.objectiveValue(),-4.6475314286e+02));
-      double * lower = solution.columnLower();
-      double * upper = solution.columnUpper();
-      double * sol = solution.primalColumnSolution();
-      double * result = new double[numberColumns];
-      CoinFillN ( result, numberColumns,0.0);
-      solution.matrix()->transposeTimes(solution.dualRowSolution(), result);
-      int iRow , iColumn;
-      // see if feasible and dual feasible
-      for (iColumn=0;iColumn<numberColumns;iColumn++) {
-	double value = sol[iColumn];
-	assert(value<upper[iColumn]+1.0e-8);
-	assert(value>lower[iColumn]-1.0e-8);
-	value = objective[iColumn]-result[iColumn];
-	assert (value>-1.0e-5);
-	if (sol[iColumn]>1.0e-5)
-	  assert (value<1.0e-5);
-      }
-      delete [] result;
-      result = new double[numberRows];
-      CoinFillN ( result, numberRows,0.0);
-      solution.matrix()->times(colsol, result);
-      lower = solution.rowLower();
-      upper = solution.rowUpper();
-      sol = solution.primalRowSolution();
-#ifndef NDEBUG
-      for (iRow=0;iRow<numberRows;iRow++) {
-	double value = result[iRow];
-	assert(eq(value,sol[iRow]));
-	assert(value<upper[iRow]+1.0e-8);
-	assert(value>lower[iRow]-1.0e-8);
-      }
-#endif
-      delete [] result;
-      // test row objective
-      double * rowObjective = solution.rowObjective();
-      CoinDisjointCopyN(solution.dualRowSolution(),numberRows,rowObjective);
-      CoinDisjointCopyN(solution.dualColumnSolution(),numberColumns,objective);
-      // this sets up all slack basis
-      solution.createStatus();
-      solution.dual();
-      CoinFillN(rowObjective,numberRows,0.0);
-      CoinDisjointCopyN(m.getObjCoefficients(),numberColumns,objective);
-      solution.dual();
+    } else {
+      std::cerr << "Error reading afiro from sample data. Skipping test." << std::endl;
     }
   }
   // test unbounded
   {    
     CoinMpsIO m;
     std::string fn = dirSample+"brandy";
-    m.readMps(fn.c_str(),"mps");
-    ClpSimplex solution;
-    // do twice - without and with scaling
-    int iPass;
-    for (iPass=0;iPass<2;iPass++) {
-      solution.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
-		      m.getObjCoefficients(),
-		      m.getRowLower(),m.getRowUpper());
-      if (iPass)
-	solution.scaling();
-      solution.setOptimizationDirection(-1);
-      // test unbounded and ray
-#ifdef DUAL
-      solution.setDualBound(100.0);
-      solution.dual();
-#else
-      solution.primal();
-#endif
-      assert (solution.status()==2);
-      int numberColumns = solution.numberColumns();
-      int numberRows = solution.numberRows();
-      double * lower = solution.columnLower();
-      double * upper = solution.columnUpper();
-      double * sol = solution.primalColumnSolution();
-      double * ray = solution.unboundedRay();
-      double * objective = solution.objective();
-      double objChange=0.0;
-      int iRow , iColumn;
-      // make sure feasible and columns form ray
-      for (iColumn=0;iColumn<numberColumns;iColumn++) {
-	double value = sol[iColumn];
-	assert(value<upper[iColumn]+1.0e-8);
-	assert(value>lower[iColumn]-1.0e-8);
-	value = ray[iColumn];
-	if (value>0.0)
-	  assert(upper[iColumn]>1.0e30);
-	else if (value<0.0)
-	  assert(lower[iColumn]<-1.0e30);
-	objChange += value*objective[iColumn];
+    if (m.readMps(fn.c_str(),"mps") == 0) {
+      ClpSimplex solution;
+      // do twice - without and with scaling
+      int iPass;
+      for (iPass=0;iPass<2;iPass++) {
+	solution.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
+			m.getObjCoefficients(),
+			m.getRowLower(),m.getRowUpper());
+	if (iPass)
+	  solution.scaling();
+	solution.setOptimizationDirection(-1);
+	// test unbounded and ray
+  #ifdef DUAL
+	solution.setDualBound(100.0);
+	solution.dual();
+  #else
+	solution.primal();
+  #endif
+	assert (solution.status()==2);
+	int numberColumns = solution.numberColumns();
+	int numberRows = solution.numberRows();
+	double * lower = solution.columnLower();
+	double * upper = solution.columnUpper();
+	double * sol = solution.primalColumnSolution();
+	double * ray = solution.unboundedRay();
+	double * objective = solution.objective();
+	double objChange=0.0;
+	int iRow , iColumn;
+	// make sure feasible and columns form ray
+	for (iColumn=0;iColumn<numberColumns;iColumn++) {
+	  double value = sol[iColumn];
+	  assert(value<upper[iColumn]+1.0e-8);
+	  assert(value>lower[iColumn]-1.0e-8);
+	  value = ray[iColumn];
+	  if (value>0.0)
+	    assert(upper[iColumn]>1.0e30);
+	  else if (value<0.0)
+	    assert(lower[iColumn]<-1.0e30);
+	  objChange += value*objective[iColumn];
+	}
+	// make sure increasing objective
+	assert(objChange>0.0);
+	double * result = new double[numberRows];
+	CoinFillN ( result, numberRows,0.0);
+	solution.matrix()->times(sol, result);
+	lower = solution.rowLower();
+	upper = solution.rowUpper();
+	sol = solution.primalRowSolution();
+  #ifndef NDEBUG
+	for (iRow=0;iRow<numberRows;iRow++) {
+	  double value = result[iRow];
+	  assert(eq(value,sol[iRow]));
+	  assert(value<upper[iRow]+2.0e-8);
+	  assert(value>lower[iRow]-2.0e-8);
+	}
+  #endif
+	CoinFillN ( result, numberRows,0.0);
+	solution.matrix()->times(ray, result);
+	// there may be small differences (especially if scaled)
+	for (iRow=0;iRow<numberRows;iRow++) {
+	  double value = result[iRow];
+	  if (value>1.0e-8)
+	    assert(upper[iRow]>1.0e30);
+	  else if (value<-1.0e-8)
+	    assert(lower[iRow]<-1.0e30);
+	}
+	delete [] result;
+	delete [] ray;
       }
-      // make sure increasing objective
-      assert(objChange>0.0);
-      double * result = new double[numberRows];
-      CoinFillN ( result, numberRows,0.0);
-      solution.matrix()->times(sol, result);
-      lower = solution.rowLower();
-      upper = solution.rowUpper();
-      sol = solution.primalRowSolution();
-#ifndef NDEBUG
-      for (iRow=0;iRow<numberRows;iRow++) {
-	double value = result[iRow];
-	assert(eq(value,sol[iRow]));
-	assert(value<upper[iRow]+2.0e-8);
-	assert(value>lower[iRow]-2.0e-8);
-      }
-#endif
-      CoinFillN ( result, numberRows,0.0);
-      solution.matrix()->times(ray, result);
-      // there may be small differences (especially if scaled)
-      for (iRow=0;iRow<numberRows;iRow++) {
-	double value = result[iRow];
-	if (value>1.0e-8)
-	  assert(upper[iRow]>1.0e30);
-	else if (value<-1.0e-8)
-	  assert(lower[iRow]<-1.0e30);
-      }
-      delete [] result;
-      delete [] ray;
+    } else {
+      std::cerr << "Error reading brandy from sample data. Skipping test." << std::endl;
     }
   }
   // test infeasible
   {    
     CoinMpsIO m;
     std::string fn = dirSample+"brandy";
-    m.readMps(fn.c_str(),"mps");
-    ClpSimplex solution;
-    // do twice - without and with scaling
-    int iPass;
-    for (iPass=0;iPass<2;iPass++) {
-      solution.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
-		      m.getObjCoefficients(),
-		      m.getRowLower(),m.getRowUpper());
-      if (iPass)
-	solution.scaling();
-      // test infeasible and ray
-      solution.columnUpper()[0]=0.0;
-#ifdef DUAL
-      solution.setDualBound(100.0);
-      solution.dual();
-#else
-      solution.primal();
-#endif
-      assert (solution.status()==1);
-      int numberColumns = solution.numberColumns();
-      int numberRows = solution.numberRows();
-      double * lower = solution.rowLower();
-      double * upper = solution.rowUpper();
-      double * ray = solution.infeasibilityRay();
-      assert(ray);
-      // construct proof of infeasibility
-      int iRow , iColumn;
-      double lo=0.0,up=0.0;
-      int nl=0,nu=0;
-      for (iRow=0;iRow<numberRows;iRow++) {
-	if (lower[iRow]>-1.0e20) {
-	  lo += ray[iRow]*lower[iRow];
-	} else {
-	  if (ray[iRow]>1.0e-8) 
-	    nl++;
+    if (m.readMps(fn.c_str(),"mps") == 0) {
+      ClpSimplex solution;
+      // do twice - without and with scaling
+      int iPass;
+      for (iPass=0;iPass<2;iPass++) {
+	solution.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
+			m.getObjCoefficients(),
+			m.getRowLower(),m.getRowUpper());
+	if (iPass)
+	  solution.scaling();
+	// test infeasible and ray
+	solution.columnUpper()[0]=0.0;
+  #ifdef DUAL
+	solution.setDualBound(100.0);
+	solution.dual();
+  #else
+	solution.primal();
+  #endif
+	assert (solution.status()==1);
+	int numberColumns = solution.numberColumns();
+	int numberRows = solution.numberRows();
+	double * lower = solution.rowLower();
+	double * upper = solution.rowUpper();
+	double * ray = solution.infeasibilityRay();
+	assert(ray);
+	// construct proof of infeasibility
+	int iRow , iColumn;
+	double lo=0.0,up=0.0;
+	int nl=0,nu=0;
+	for (iRow=0;iRow<numberRows;iRow++) {
+	  if (lower[iRow]>-1.0e20) {
+	    lo += ray[iRow]*lower[iRow];
+	  } else {
+	    if (ray[iRow]>1.0e-8) 
+	      nl++;
+	  }
+	  if (upper[iRow]<1.0e20) {
+	    up += ray[iRow]*upper[iRow];
+	  } else {
+	    if (ray[iRow]>1.0e-8) 
+	      nu++;
+	  }
 	}
-	if (upper[iRow]<1.0e20) {
-	  up += ray[iRow]*upper[iRow];
-	} else {
-	  if (ray[iRow]>1.0e-8) 
-	    nu++;
+	if (nl)
+	  lo=-1.0e100;
+	if (nu)
+	  up=1.0e100;
+	double * result = new double[numberColumns];
+	double lo2=0.0,up2=0.0;
+	CoinFillN ( result, numberColumns,0.0);
+	solution.matrix()->transposeTimes(ray, result);
+	lower = solution.columnLower();
+	upper = solution.columnUpper();
+	nl=nu=0;
+	for (iColumn=0;iColumn<numberColumns;iColumn++) {
+	  if (result[iColumn]>1.0e-8) {
+	    if (lower[iColumn]>-1.0e20)
+	      lo2 += result[iColumn]*lower[iColumn];
+	    else
+	      nl++;
+	    if (upper[iColumn]<1.0e20)
+	      up2 += result[iColumn]*upper[iColumn];
+	    else
+	      nu++;
+	  } else if (result[iColumn]<-1.0e-8) {
+	    if (lower[iColumn]>-1.0e20)
+	      up2 += result[iColumn]*lower[iColumn];
+	    else
+	      nu++;
+	    if (upper[iColumn]<1.0e20)
+	      lo2 += result[iColumn]*upper[iColumn];
+	    else
+	      nl++;
+	  }
 	}
+	if (nl)
+	  lo2=-1.0e100;
+	if (nu)
+	  up2=1.0e100;
+	// make sure inconsistency
+	assert(lo2>up||up2<lo);
+	delete [] result;
+	delete [] ray;
       }
-      if (nl)
-	lo=-1.0e100;
-      if (nu)
-	up=1.0e100;
-      double * result = new double[numberColumns];
-      double lo2=0.0,up2=0.0;
-      CoinFillN ( result, numberColumns,0.0);
-      solution.matrix()->transposeTimes(ray, result);
-      lower = solution.columnLower();
-      upper = solution.columnUpper();
-      nl=nu=0;
-      for (iColumn=0;iColumn<numberColumns;iColumn++) {
-	if (result[iColumn]>1.0e-8) {
-	  if (lower[iColumn]>-1.0e20)
-	    lo2 += result[iColumn]*lower[iColumn];
-	  else
-	    nl++;
-	  if (upper[iColumn]<1.0e20)
-	    up2 += result[iColumn]*upper[iColumn];
-	  else
-	    nu++;
-	} else if (result[iColumn]<-1.0e-8) {
-	  if (lower[iColumn]>-1.0e20)
-	    up2 += result[iColumn]*lower[iColumn];
-	  else
-	    nu++;
-	  if (upper[iColumn]<1.0e20)
-	    lo2 += result[iColumn]*upper[iColumn];
-	  else
-	    nl++;
-	}
-      }
-      if (nl)
-	lo2=-1.0e100;
-      if (nu)
-	up2=1.0e100;
-      // make sure inconsistency
-      assert(lo2>up||up2<lo);
-      delete [] result;
-      delete [] ray;
+    } else {
+      std::cerr << "Error reading brandy from sample data. Skipping test." << std::endl;
     }
   }
   // test delete and add
   {    
     CoinMpsIO m;
     std::string fn = dirSample+"brandy";
-    m.readMps(fn.c_str(),"mps");
-    ClpSimplex solution;
-    solution.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
-			 m.getObjCoefficients(),
-			 m.getRowLower(),m.getRowUpper());
-    solution.dual();
-    CoinRelFltEq eq(1.0e-8);
-    assert(eq(solution.objectiveValue(),1.5185098965e+03));
+    if (m.readMps(fn.c_str(),"mps") == 0) {
+      ClpSimplex solution;
+      solution.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
+			  m.getObjCoefficients(),
+			  m.getRowLower(),m.getRowUpper());
+      solution.dual();
+      CoinRelFltEq eq(1.0e-8);
+      assert(eq(solution.objectiveValue(),1.5185098965e+03));
 
-    int numberColumns = solution.numberColumns();
-    int numberRows = solution.numberRows();
-    double * saveObj = new double [numberColumns];
-    double * saveLower = new double[numberRows+numberColumns];
-    double * saveUpper = new double[numberRows+numberColumns];
-    int * which = new int [numberRows+numberColumns];
+      int numberColumns = solution.numberColumns();
+      int numberRows = solution.numberRows();
+      double * saveObj = new double [numberColumns];
+      double * saveLower = new double[numberRows+numberColumns];
+      double * saveUpper = new double[numberRows+numberColumns];
+      int * which = new int [numberRows+numberColumns];
 
-    int numberElements = m.getMatrixByCol()->getNumElements();
-    int * starts = new int[numberRows+numberColumns];
-    int * index = new int[numberElements];
-    double * element = new double[numberElements];
+      int numberElements = m.getMatrixByCol()->getNumElements();
+      int * starts = new int[numberRows+numberColumns];
+      int * index = new int[numberElements];
+      double * element = new double[numberElements];
 
-    const CoinBigIndex * startM;
-    const int * lengthM;
-    const int * indexM;
-    const double * elementM;
+      const CoinBigIndex * startM;
+      const int * lengthM;
+      const int * indexM;
+      const double * elementM;
 
-    int n,nel;
+      int n,nel;
 
-    // delete non basic columns
-    n=0;
-    nel=0;
-    int iRow , iColumn;
-    const double * lower = m.getColLower();
-    const double * upper = m.getColUpper();
-    const double * objective = m.getObjCoefficients();
-    startM = m.getMatrixByCol()->getVectorStarts();
-    lengthM = m.getMatrixByCol()->getVectorLengths();
-    indexM = m.getMatrixByCol()->getIndices();
-    elementM = m.getMatrixByCol()->getElements();
-    starts[0]=0;
-    for (iColumn=0;iColumn<numberColumns;iColumn++) {
-      if (solution.getColumnStatus(iColumn)!=ClpSimplex::basic) {
+      // delete non basic columns
+      n=0;
+      nel=0;
+      int iRow , iColumn;
+      const double * lower = m.getColLower();
+      const double * upper = m.getColUpper();
+      const double * objective = m.getObjCoefficients();
+      startM = m.getMatrixByCol()->getVectorStarts();
+      lengthM = m.getMatrixByCol()->getVectorLengths();
+      indexM = m.getMatrixByCol()->getIndices();
+      elementM = m.getMatrixByCol()->getElements();
+      starts[0]=0;
+      for (iColumn=0;iColumn<numberColumns;iColumn++) {
+	if (solution.getColumnStatus(iColumn)!=ClpSimplex::basic) {
+	  saveObj[n]=objective[iColumn];
+	  saveLower[n]=lower[iColumn];
+	  saveUpper[n]=upper[iColumn];
+	  int j;
+	  for (j=startM[iColumn];j<startM[iColumn]+lengthM[iColumn];j++) {
+	    index[nel]=indexM[j];
+	    element[nel++]=elementM[j];
+	  }
+	  which[n++]=iColumn;
+	  starts[n]=nel;
+	}
+      }
+      solution.deleteColumns(n,which);
+      solution.dual();
+      // Put back
+      solution.addColumns(n,saveLower,saveUpper,saveObj,
+			  starts,index,element);
+      solution.dual();
+      assert(eq(solution.objectiveValue(),1.5185098965e+03));
+      // Delete all columns and add back
+      n=0;
+      nel=0;
+      starts[0]=0;
+      lower = m.getColLower();
+      upper = m.getColUpper();
+      objective = m.getObjCoefficients();
+      for (iColumn=0;iColumn<numberColumns;iColumn++) {
 	saveObj[n]=objective[iColumn];
 	saveLower[n]=lower[iColumn];
 	saveUpper[n]=upper[iColumn];
@@ -1428,57 +1476,56 @@ ClpSimplexUnitTest(const std::string & dirSample)
 	which[n++]=iColumn;
 	starts[n]=nel;
       }
-    }
-    solution.deleteColumns(n,which);
-    solution.dual();
-    // Put back
-    solution.addColumns(n,saveLower,saveUpper,saveObj,
-			starts,index,element);
-    solution.dual();
-    assert(eq(solution.objectiveValue(),1.5185098965e+03));
-    // Delete all columns and add back
-    n=0;
-    nel=0;
-    starts[0]=0;
-    lower = m.getColLower();
-    upper = m.getColUpper();
-    objective = m.getObjCoefficients();
-    for (iColumn=0;iColumn<numberColumns;iColumn++) {
-      saveObj[n]=objective[iColumn];
-      saveLower[n]=lower[iColumn];
-      saveUpper[n]=upper[iColumn];
-      int j;
-      for (j=startM[iColumn];j<startM[iColumn]+lengthM[iColumn];j++) {
-	index[nel]=indexM[j];
-	element[nel++]=elementM[j];
-      }
-      which[n++]=iColumn;
-      starts[n]=nel;
-    }
-    solution.deleteColumns(n,which);
-    solution.dual();
-    // Put back
-    solution.addColumns(n,saveLower,saveUpper,saveObj,
-			starts,index,element);
-    solution.dual();
-    assert(eq(solution.objectiveValue(),1.5185098965e+03));
+      solution.deleteColumns(n,which);
+      solution.dual();
+      // Put back
+      solution.addColumns(n,saveLower,saveUpper,saveObj,
+			  starts,index,element);
+      solution.dual();
+      assert(eq(solution.objectiveValue(),1.5185098965e+03));
 
-    // reload with original
-    solution.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
-			 m.getObjCoefficients(),
-			 m.getRowLower(),m.getRowUpper());
-    // delete half rows
-    n=0;
-    nel=0;
-    lower = m.getRowLower();
-    upper = m.getRowUpper();
-    startM = m.getMatrixByRow()->getVectorStarts();
-    lengthM = m.getMatrixByRow()->getVectorLengths();
-    indexM = m.getMatrixByRow()->getIndices();
-    elementM = m.getMatrixByRow()->getElements();
-    starts[0]=0;
-    for (iRow=0;iRow<numberRows;iRow++) {
-      if ((iRow&1)==0) {
+      // reload with original
+      solution.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
+			  m.getObjCoefficients(),
+			  m.getRowLower(),m.getRowUpper());
+      // delete half rows
+      n=0;
+      nel=0;
+      lower = m.getRowLower();
+      upper = m.getRowUpper();
+      startM = m.getMatrixByRow()->getVectorStarts();
+      lengthM = m.getMatrixByRow()->getVectorLengths();
+      indexM = m.getMatrixByRow()->getIndices();
+      elementM = m.getMatrixByRow()->getElements();
+      starts[0]=0;
+      for (iRow=0;iRow<numberRows;iRow++) {
+	if ((iRow&1)==0) {
+	  saveLower[n]=lower[iRow];
+	  saveUpper[n]=upper[iRow];
+	  int j;
+	  for (j=startM[iRow];j<startM[iRow]+lengthM[iRow];j++) {
+	    index[nel]=indexM[j];
+	    element[nel++]=elementM[j];
+	  }
+	  which[n++]=iRow;
+	  starts[n]=nel;
+	}
+      }
+      solution.deleteRows(n,which);
+      solution.dual();
+      // Put back
+      solution.addRows(n,saveLower,saveUpper,
+			  starts,index,element);
+      solution.dual();
+      assert(eq(solution.objectiveValue(),1.5185098965e+03));
+      solution.writeMps("yy.mps");
+      // Delete all rows
+      n=0;
+      nel=0;
+      lower = m.getRowLower();
+      upper = m.getRowUpper();
+      starts[0]=0;
+      for (iRow=0;iRow<numberRows;iRow++) {
 	saveLower[n]=lower[iRow];
 	saveUpper[n]=upper[iRow];
 	int j;
@@ -1489,82 +1536,62 @@ ClpSimplexUnitTest(const std::string & dirSample)
 	which[n++]=iRow;
 	starts[n]=nel;
       }
-    }
-    solution.deleteRows(n,which);
-    solution.dual();
-    // Put back
-    solution.addRows(n,saveLower,saveUpper,
-			starts,index,element);
-    solution.dual();
-    assert(eq(solution.objectiveValue(),1.5185098965e+03));
-    solution.writeMps("yy.mps");
-    // Delete all rows
-    n=0;
-    nel=0;
-    lower = m.getRowLower();
-    upper = m.getRowUpper();
-    starts[0]=0;
-    for (iRow=0;iRow<numberRows;iRow++) {
-      saveLower[n]=lower[iRow];
-      saveUpper[n]=upper[iRow];
-      int j;
-      for (j=startM[iRow];j<startM[iRow]+lengthM[iRow];j++) {
-	index[nel]=indexM[j];
-	element[nel++]=elementM[j];
+      solution.deleteRows(n,which);
+      solution.dual();
+      // Put back
+      solution.addRows(n,saveLower,saveUpper,
+			  starts,index,element);
+      solution.dual();
+      solution.writeMps("xx.mps");
+      assert(eq(solution.objectiveValue(),1.5185098965e+03));
+      // Zero out status array to give some interest
+      memset(solution.statusArray()+numberColumns,0,numberRows);
+      solution.primal(1);
+      assert(eq(solution.objectiveValue(),1.5185098965e+03));
+      // Delete all columns and rows
+      n=0;
+      for (iColumn=0;iColumn<numberColumns;iColumn++) {
+	which[n++]=iColumn;
+	starts[n]=nel;
       }
-      which[n++]=iRow;
-      starts[n]=nel;
-    }
-    solution.deleteRows(n,which);
-    solution.dual();
-    // Put back
-    solution.addRows(n,saveLower,saveUpper,
-			starts,index,element);
-    solution.dual();
-    solution.writeMps("xx.mps");
-    assert(eq(solution.objectiveValue(),1.5185098965e+03));
-    // Zero out status array to give some interest
-    memset(solution.statusArray()+numberColumns,0,numberRows);
-    solution.primal(1);
-    assert(eq(solution.objectiveValue(),1.5185098965e+03));
-    // Delete all columns and rows
-    n=0;
-    for (iColumn=0;iColumn<numberColumns;iColumn++) {
-      which[n++]=iColumn;
-      starts[n]=nel;
-    }
-    solution.deleteColumns(n,which);
-    n=0;
-    for (iRow=0;iRow<numberRows;iRow++) {
-      which[n++]=iRow;
-      starts[n]=nel;
-    }
-    solution.deleteRows(n,which);
+      solution.deleteColumns(n,which);
+      n=0;
+      for (iRow=0;iRow<numberRows;iRow++) {
+	which[n++]=iRow;
+	starts[n]=nel;
+      }
+      solution.deleteRows(n,which);
 
-    delete [] saveObj;
-    delete [] saveLower;
-    delete [] saveUpper;
-    delete [] which;
-    delete [] starts;
-    delete [] index;
-    delete [] element;
+      delete [] saveObj;
+      delete [] saveLower;
+      delete [] saveUpper;
+      delete [] which;
+      delete [] starts;
+      delete [] index;
+      delete [] element;
+    } else {
+      std::cerr << "Error reading brandy from sample data. Skipping test." << std::endl;
+    }
   }
 #if 1
   // Test barrier
   {
     CoinMpsIO m;
     std::string fn = dirSample+"exmip1";
-    m.readMps(fn.c_str(),"mps");
-    ClpInterior solution;
-    solution.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
-			 m.getObjCoefficients(),
-			 m.getRowLower(),m.getRowUpper());
-    solution.primalDual();
+    if (m.readMps(fn.c_str(),"mps") == 0) {
+      ClpInterior solution;
+      solution.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
+			  m.getObjCoefficients(),
+			  m.getRowLower(),m.getRowUpper());
+      solution.primalDual();
+    } else {
+      std::cerr << "Error reading exmip1 from sample data. Skipping test." << std::endl;
+    }
   }
 #endif
   // test network 
 #define QUADRATIC
-  if (1) {    
+  if (1) {
     std::string fn = dirSample+"input.130";
     int numberColumns;
     int numberRows;
@@ -1747,151 +1774,160 @@ ClpSimplexUnitTest(const std::string & dirSample)
   if (1) {    
     CoinMpsIO m;
     std::string fn = dirSample+"exmip1";
-    m.readMps(fn.c_str(),"mps");
-    ClpSimplex solution;
-    solution.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
-			 m.getObjCoefficients(),
-			 m.getRowLower(),m.getRowUpper());
-    //solution.dual();
-    // get quadratic part
-    int numberColumns=solution.numberColumns();
-    int * start=new int [numberColumns+1];
-    int * column = new int[numberColumns];
-    double * element = new double[numberColumns];
-    int i;
-    start[0]=0;
-    int n=0;
-    int kk=numberColumns-1;
-    int kk2=numberColumns-1;
-    for (i=0;i<numberColumns;i++) {
-      if (i>=kk) {
-	column[n]=i;
-	if (i>=kk2)
-	  element[n]=1.0e-1;
-	else
-	  element[n]=0.0;
-	n++;
+    if (m.readMps(fn.c_str(),"mps") == 0) {
+      ClpSimplex solution;
+      solution.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
+			  m.getObjCoefficients(),
+			  m.getRowLower(),m.getRowUpper());
+      //solution.dual();
+      // get quadratic part
+      int numberColumns=solution.numberColumns();
+      int * start=new int [numberColumns+1];
+      int * column = new int[numberColumns];
+      double * element = new double[numberColumns];
+      int i;
+      start[0]=0;
+      int n=0;
+      int kk=numberColumns-1;
+      int kk2=numberColumns-1;
+      for (i=0;i<numberColumns;i++) {
+	if (i>=kk) {
+	  column[n]=i;
+	  if (i>=kk2)
+	    element[n]=1.0e-1;
+	  else
+	    element[n]=0.0;
+	  n++;
+	}
+	start[i+1]=n;
       }
-      start[i+1]=n;
+      // Load up objective
+      solution.loadQuadraticObjective(numberColumns,start,column,element);
+      delete [] start;
+      delete [] column;
+      delete [] element;
+      //solution.quadraticSLP(50,1.0e-4);
+      CoinRelFltEq eq(1.0e-4);
+      //assert(eq(objValue,820.0));
+      //solution.setLogLevel(63);
+      solution.primal();
+      printSol(solution);
+      //assert(eq(objValue,3.2368421));
+      //exit(77);
+    } else {
+      std::cerr << "Error reading exmip1 from sample data. Skipping test." << std::endl;
     }
-    // Load up objective
-    solution.loadQuadraticObjective(numberColumns,start,column,element);
-    delete [] start;
-    delete [] column;
-    delete [] element;
-    //solution.quadraticSLP(50,1.0e-4);
-    CoinRelFltEq eq(1.0e-4);
-    //assert(eq(objValue,820.0));
-    //solution.setLogLevel(63);
-    solution.primal();
-    printSol(solution);
-    //assert(eq(objValue,3.2368421));
-    //exit(77);
   }
   // Test quadratic
   if (1) {    
     CoinMpsIO m;
     std::string fn = dirSample+"share2qp";
     //fn = "share2qpb";
-    m.readMps(fn.c_str(),"mps");
-    ClpSimplex model;
-    model.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
-			 m.getObjCoefficients(),
-			 m.getRowLower(),m.getRowUpper());
-    model.dual();
-    // get quadratic part
-    int * start=NULL;
-    int * column = NULL;
-    double * element = NULL;
-    m.readQuadraticMps(NULL,start,column,element,2);
-    int column2[200];
-    double element2[200];
-    int start2[80];
-    int j;
-    start2[0]=0;
-    int nel=0;
-    bool good=false;
-    for (j=0;j<79;j++) {
-      if (start[j]==start[j+1]) {
-	column2[nel]=j;
-	element2[nel]=0.0;
-	nel++;
-      } else {
-	int i;
-	for (i=start[j];i<start[j+1];i++) {
-	  column2[nel]=column[i];
-	  element2[nel++]=element[i];
+    if (m.readMps(fn.c_str(),"mps") == 0) {
+      ClpSimplex model;
+      model.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
+			  m.getObjCoefficients(),
+			  m.getRowLower(),m.getRowUpper());
+      model.dual();
+      // get quadratic part
+      int * start=NULL;
+      int * column = NULL;
+      double * element = NULL;
+      m.readQuadraticMps(NULL,start,column,element,2);
+      int column2[200];
+      double element2[200];
+      int start2[80];
+      int j;
+      start2[0]=0;
+      int nel=0;
+      bool good=false;
+      for (j=0;j<79;j++) {
+	if (start[j]==start[j+1]) {
+	  column2[nel]=j;
+	  element2[nel]=0.0;
+	  nel++;
+	} else {
+	  int i;
+	  for (i=start[j];i<start[j+1];i++) {
+	    column2[nel]=column[i];
+	    element2[nel++]=element[i];
+	  }
 	}
+	start2[j+1]=nel;
       }
-      start2[j+1]=nel;
+      // Load up objective
+      if (good)
+	model.loadQuadraticObjective(model.numberColumns(),start2,column2,element2);
+      else
+	model.loadQuadraticObjective(model.numberColumns(),start,column,element);
+      delete [] start;
+      delete [] column;
+      delete [] element;
+      int numberColumns=model.numberColumns();
+      model.scaling(0);
+  #if 0
+      model.nonlinearSLP(50,1.0e-4);
+  #else
+      // Get feasible
+      ClpObjective * saveObjective = model.objectiveAsObject()->clone();
+      ClpLinearObjective zeroObjective(NULL,numberColumns);
+      model.setObjective(&zeroObjective);
+      model.dual();
+      model.setObjective(saveObjective);
+      delete saveObjective;
+  #endif
+      //model.setLogLevel(63);
+      //exit(77);
+      model.setFactorizationFrequency(10);
+      model.primal();
+      printSol(model);
+  #ifndef NDEBUG
+      double objValue = model.getObjValue();
+  #endif
+      CoinRelFltEq eq(1.0e-4);
+      assert(eq(objValue,-400.92));
+      // and again for barrier
+      model.barrier(false);
+      //printSol(model);
+      model.allSlackBasis();
+      model.primal();
+      //printSol(model);
+    } else {
+      std::cerr << "Error reading share2qp from sample data. Skipping test." << std::endl;
     }
-    // Load up objective
-    if (good)
-      model.loadQuadraticObjective(model.numberColumns(),start2,column2,element2);
-    else
-      model.loadQuadraticObjective(model.numberColumns(),start,column,element);
-    delete [] start;
-    delete [] column;
-    delete [] element;
-    int numberColumns=model.numberColumns();
-    model.scaling(0);
-#if 0
-    model.nonlinearSLP(50,1.0e-4);
-#else
-    // Get feasible
-    ClpObjective * saveObjective = model.objectiveAsObject()->clone();
-    ClpLinearObjective zeroObjective(NULL,numberColumns);
-    model.setObjective(&zeroObjective);
-    model.dual();
-    model.setObjective(saveObjective);
-    delete saveObjective;
-#endif
-    //model.setLogLevel(63);
-    //exit(77);
-    model.setFactorizationFrequency(10);
-    model.primal();
-    printSol(model);
-#ifndef NDEBUG
-    double objValue = model.getObjValue();
-#endif
-    CoinRelFltEq eq(1.0e-4);
-    assert(eq(objValue,-400.92));
-    // and again for barrier
-    model.barrier(false);
-    //printSol(model);
-    model.allSlackBasis();
-    model.primal();
-    //printSol(model);
   }
   if (0) {    
     CoinMpsIO m;
     std::string fn = "./beale";
     //fn = "./jensen";
-    m.readMps(fn.c_str(),"mps");
-    ClpSimplex solution;
-    solution.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
-			 m.getObjCoefficients(),
-			 m.getRowLower(),m.getRowUpper());
-    solution.setDblParam(ClpObjOffset,m.objectiveOffset());
-    solution.dual();
-    // get quadratic part
-    int * start=NULL;
-    int * column = NULL;
-    double * element = NULL;
-    m.readQuadraticMps(NULL,start,column,element,2);
-    // Load up objective
-    solution.loadQuadraticObjective(solution.numberColumns(),start,column,element);
-    delete [] start;
-    delete [] column;
-    delete [] element;
-    solution.primal(1);
-    solution.nonlinearSLP(50,1.0e-4);
-    double objValue = solution.getObjValue();
-    CoinRelFltEq eq(1.0e-4);
-    assert(eq(objValue,0.5));
-    solution.primal();
-    objValue = solution.getObjValue();
-    assert(eq(objValue,0.5));
+    if (m.readMps(fn.c_str(),"mps") == 0) {
+      ClpSimplex solution;
+      solution.loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
+			  m.getObjCoefficients(),
+			  m.getRowLower(),m.getRowUpper());
+      solution.setDblParam(ClpObjOffset,m.objectiveOffset());
+      solution.dual();
+      // get quadratic part
+      int * start=NULL;
+      int * column = NULL;
+      double * element = NULL;
+      m.readQuadraticMps(NULL,start,column,element,2);
+      // Load up objective
+      solution.loadQuadraticObjective(solution.numberColumns(),start,column,element);
+      delete [] start;
+      delete [] column;
+      delete [] element;
+      solution.primal(1);
+      solution.nonlinearSLP(50,1.0e-4);
+      double objValue = solution.getObjValue();
+      CoinRelFltEq eq(1.0e-4);
+      assert(eq(objValue,0.5));
+      solution.primal();
+      objValue = solution.getObjValue();
+      assert(eq(objValue,0.5));
+    } else {
+      std::cerr << "Error reading beale.mps. Skipping test." << std::endl;
+    }
   }
 #endif
   // Test CoinStructuredModel

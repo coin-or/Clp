@@ -4,6 +4,7 @@
 
 /* This example shows the use of the "C" interface */
 
+#include "ClpConfig.h"
 #include "Clp_C_Interface.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -40,9 +41,14 @@ int main (int argc, const char *argv[])
   /* register callback */
   Clp_registerCallBack(model,callBack);
   /* Keep names when reading an mps file */
-  if (argc<2)
-    status=Clp_readMps(model,"../../Data/Sample/p0033.mps",1,0);
-  else
+  if (argc<2) {
+#if defined(COIN_HAS_SAMPLE) && defined(SAMPLEDIR)
+    status=Clp_readMps(model,SAMPLEDIR "/p0033.mps",1,0);
+#else
+    fprintf(stderr,"Do not know where to find sample MPS files.\n");
+    exit(1);
+#endif
+  } else
     status=Clp_readMps(model,argv[1],1,0);
 
   if (status) {

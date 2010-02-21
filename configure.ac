@@ -12,7 +12,7 @@
 
 AC_PREREQ(2.59)
 
-AC_INIT([Clp],[trunk],[coin-clp@lists.coin-or.org])
+AC_INIT([Clp],[split],[coin-clp@lists.coin-or.org])
 
 AC_COPYRIGHT([
 Copyright 2006 International Business Machines and others.
@@ -39,20 +39,15 @@ AC_PREFIX_DEFAULT([`pwd`])
 AC_COIN_CREATE_LIBTOOL
 
 #############################################################################
-#             Check which ThirdParty sources are available                  #
-#############################################################################
-
-AC_COIN_THIRDPARTY_SUBDIRS([Blas],[ThirdParty/Blas],[daxpy.f])
-AC_COIN_THIRDPARTY_SUBDIRS([Lapack],[ThirdParty/Lapack],[LAPACK/SRC/dlarf.f])
-
-#############################################################################
 #                  Check which subprojects are there                        #
 #############################################################################
 
-AC_COIN_MAIN_SUBDIRS(CoinUtils)
-AC_COIN_MAIN_SUBDIRS(Data/Sample)
-AC_COIN_MAIN_SUBDIRS(Data/Netlib)
-AC_COIN_MAIN_SUBDIRS(Clp)
+AC_COIN_MAIN_PACKAGEDIR(Blas,ThirdParty,daxpy.f,coinblas)
+AC_COIN_MAIN_PACKAGEDIR(Lapack,ThirdParty,[LAPACK/SRC/dlarf.f],coinlapack)
+AC_COIN_MAIN_PACKAGEDIR(Sample,Data,,coindatasample)
+AC_COIN_MAIN_PACKAGEDIR(Netlib,Data,,coindatanetlib)
+AC_COIN_MAIN_PACKAGEDIR(CoinUtils)
+AC_COIN_MAIN_PACKAGEDIR(Clp)
 
 ##############################################################################
 #                   Finishing up by writing all the output                   #
