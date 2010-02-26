@@ -73,57 +73,57 @@ This class implements LSQR
  */
 class ClpLsqr {
 private:
-    /**@name Private member data */
-    //@{
-    //@}
+     /**@name Private member data */
+     //@{
+     //@}
 
 public:
-    /**@name Public member data */
-    //@{
-    /// Row dimension of matrix
-    int          nrows_;
-    /// Column dimension of matrix
-    int          ncols_;
-    /// Pointer to Model object for this instance
-    ClpInterior        *model_;
-    /// Diagonal array 1
-    double         *diag1_;
-    /// Constant diagonal 2
-    double         diag2_;
-    //@}
+     /**@name Public member data */
+     //@{
+     /// Row dimension of matrix
+     int          nrows_;
+     /// Column dimension of matrix
+     int          ncols_;
+     /// Pointer to Model object for this instance
+     ClpInterior        *model_;
+     /// Diagonal array 1
+     double         *diag1_;
+     /// Constant diagonal 2
+     double         diag2_;
+     //@}
 
-    /**@name Constructors and destructors */
-    /** Default constructor */
-    ClpLsqr();
+     /**@name Constructors and destructors */
+     /** Default constructor */
+     ClpLsqr();
 
-    /** Constructor for use with Pdco model (note modified for pdco!!!!) */
-    ClpLsqr(ClpInterior *model);
-    /// Copy constructor
-    ClpLsqr(const ClpLsqr &);
-    /// Assignment operator. This copies the data
-    ClpLsqr & operator=(const ClpLsqr & rhs);
-    /** Destructor */
-    ~ClpLsqr();
-    //@}
+     /** Constructor for use with Pdco model (note modified for pdco!!!!) */
+     ClpLsqr(ClpInterior *model);
+     /// Copy constructor
+     ClpLsqr(const ClpLsqr &);
+     /// Assignment operator. This copies the data
+     ClpLsqr & operator=(const ClpLsqr & rhs);
+     /** Destructor */
+     ~ClpLsqr();
+     //@}
 
-    /**@name Methods */
-    //@{
-    /// Set an int parameter
-    bool setParam(char *parmName, int parmValue);
-    /// Call the Lsqr algorithm
-    void do_lsqr( CoinDenseVector<double> &b,
-                  double damp, double atol, double btol, double conlim, int itnlim,
-                  bool show, Info info, CoinDenseVector<double> &x , int *istop,
-                  int *itn, Outfo *outfo, bool precon, CoinDenseVector<double> &Pr );
-    /// Matrix-vector multiply - implemented by user
-    void matVecMult( int, CoinDenseVector<double> *, CoinDenseVector<double> *);
+     /**@name Methods */
+     //@{
+     /// Set an int parameter
+     bool setParam(char *parmName, int parmValue);
+     /// Call the Lsqr algorithm
+     void do_lsqr( CoinDenseVector<double> &b,
+                   double damp, double atol, double btol, double conlim, int itnlim,
+                   bool show, Info info, CoinDenseVector<double> &x , int *istop,
+                   int *itn, Outfo *outfo, bool precon, CoinDenseVector<double> &Pr );
+     /// Matrix-vector multiply - implemented by user
+     void matVecMult( int, CoinDenseVector<double> *, CoinDenseVector<double> *);
 
-    void matVecMult( int, CoinDenseVector<double> &, CoinDenseVector<double> &);
-    /// diag1 - we just borrow as it is part of a CoinDenseVector<double>
-    void borrowDiag1(double * array) {
-        diag1_ = array;
-    };
-    //@}
+     void matVecMult( int, CoinDenseVector<double> &, CoinDenseVector<double> &);
+     /// diag1 - we just borrow as it is part of a CoinDenseVector<double>
+     void borrowDiag1(double * array) {
+          diag1_ = array;
+     };
+     //@}
 };
 #endif
 

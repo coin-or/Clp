@@ -6,40 +6,40 @@
 
 #include "ClpEventHandler.hpp"
 
-/** This is so user can trap events and do useful stuff.  
+/** This is so user can trap events and do useful stuff.
     This is used in Clp/Test/unitTest.cpp
 
-    ClpSimplex model_ is available as well as anything else you care 
+    ClpSimplex model_ is available as well as anything else you care
     to pass in
 */
 
 class MyEventHandler : public ClpEventHandler {
-  
-public:
-  /**@name Overrides */
-  //@{
-  virtual int event(Event whichEvent);
-  //@}
 
-  /**@name Constructors, destructor etc*/
-  //@{
-  /** Default constructor. */
-  MyEventHandler();
-  /// Constructor with pointer to model (redundant as setEventHandler does)
-  MyEventHandler(ClpSimplex * model);
-  /** Destructor */
-  virtual ~MyEventHandler();
-  /** The copy constructor. */
-  MyEventHandler(const MyEventHandler & rhs);
-  /// Assignment
-  MyEventHandler& operator=(const MyEventHandler & rhs);
-  /// Clone
-  virtual ClpEventHandler * clone() const ;
-  //@}
-   
-    
+public:
+     /**@name Overrides */
+     //@{
+     virtual int event(Event whichEvent);
+     //@}
+
+     /**@name Constructors, destructor etc*/
+     //@{
+     /** Default constructor. */
+     MyEventHandler();
+     /// Constructor with pointer to model (redundant as setEventHandler does)
+     MyEventHandler(ClpSimplex * model);
+     /** Destructor */
+     virtual ~MyEventHandler();
+     /** The copy constructor. */
+     MyEventHandler(const MyEventHandler & rhs);
+     /// Assignment
+     MyEventHandler& operator=(const MyEventHandler & rhs);
+     /// Clone
+     virtual ClpEventHandler * clone() const ;
+     //@}
+
+
 protected:
-  // data goes here
+     // data goes here
 };
 
 #endif
