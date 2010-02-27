@@ -12,7 +12,7 @@
 
 AC_PREREQ(2.59)
 
-AC_INIT([Clp],[trunk],[coin-clp@list.coin-or.org])
+AC_INIT([Clp],[trunk],[clp@list.coin-or.org])
 
 AC_COPYRIGHT([
 Copyright 2006 International Business Machines and others.
@@ -22,7 +22,7 @@ under the Common Public License.])
 
 # List one file in the package so that the configure script can test
 # whether the package is actually there
-AC_CONFIG_SRCDIR(src/ClpCholeskyBase.cpp)
+AC_CONFIG_SRCDIR(src/ClpSimplex.cpp)
 
 # Where should everything be installed by default?  Here, we want it
 # to be installed directly in 'bin', 'lib', 'include' subdirectories
@@ -57,9 +57,12 @@ AC_COIN_INIT_AUTO_TOOLS
 #############################################################################
 
 AC_COIN_HAS_MODULE(CoinUtils,  [coinutils = split])
+AC_COIN_HAS_MODULE(Osi,        [osi],            [required=0])
+AC_COIN_HAS_MODULE(OsiTests,   [osi-unittests],  [required=0])
 AC_COIN_HAS_MODULE(Sample,     [coindatasample], [required=0])
 AC_COIN_HAS_MODULE(Netlib,     [coindatanetlib], [required=0])
 
+# fallback if no pkg-config is available
 if test "$coin_has_coinutils" != yes ; then
   AC_COIN_HAS_PROJECT(CoinUtils)
   if test $coin_has_coinutils != notGiven && test $coin_has_coinutils != skipping ; then
@@ -136,10 +139,16 @@ AC_COIN_VPATH_LINK(examples/input.130)
 AC_CONFIG_FILES([Makefile
                  examples/Makefile
                  src/Makefile
+                 src/OsiClp/Makefile
                  test/Makefile
 		 clp_addlibs.txt
 		 clp.pc
 		 clp-uninstalled.pc])
+		 
+if test $coin_has_osi = yes ; then
+  AC_CONFIG_FILES([src/OsiClp/osi-clp.pc
+                   osi-clp-uninstalled.pc:src/OsiClp/osi-clp-uninstalled.pc.in])
+fi
 
 # Here put the location and name of the configuration header file
 AC_CONFIG_HEADER([inc/config_clp.h])

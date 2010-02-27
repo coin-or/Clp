@@ -9,21 +9,48 @@
 AUTOMAKE_OPTIONS = foreign
 
 ########################################################################
+#                         unitTest for OsiClp                          #
+########################################################################
+
+if COIN_HAS_OSITESTS
+
+noinst_PROGRAMS = osiUnitTest
+
+osiUnitTest_SOURCES = osiUnitTest.cpp OsiClpSolverInterfaceTest.cpp
+
+osiUnitTest_LDADD = ../src/libClp.la ../src/OsiClp/libOsiClp.la
+
+LIBS += $(COINUTILS_LIBS) $(OSITESTS_LIBS)
+
+AM_CPPFLAGS = $(COINUTILS_CFLAGS) $(OSITESTS_CFLAGS) \
+	-I`$(CYGPATH_W) $(srcdir)/../src` \
+	-I`$(CYGPATH_W) $(srcdir)/../src/OsiClp`
+
+testdepend =  osiUnitTest$(EXEEXT)
+endif
+
+########################################################################
 #                         unitTest for Clp                             #
 ########################################################################
 
 unittestflags = 
+osiunittestflags =
 if COIN_HAS_SAMPLE
   unittestflags += -dirSample `$(CYGPATH_W) $(SAMPLE_DATA)`
+  osiunittestflags += -mpsDir=`$(CYGPATH_W) $(SAMPLE_DATA)`
 endif
 unittestflags += -unitTest
 if COIN_HAS_NETLIB
   unittestflags += -dirNetlib `$(CYGPATH_W) $(NETLIB_DATA)` -netlib
+  osiunittestflags += -netlibDir=`$(CYGPATH_W) $(NETLIB_DATA)` -testOsiSolverInterface
 endif
 
 # We are using the CLP solver executable to do the unit test
-test: ../src/clp$(EXEEXT)
-	../src/clp$(EXEEXT) $(unittestflags)
+test: ../src/clp$(EXEEXT) $(testdepend)
+	../src/clp$(EXEEXT) $(unittestflags) || exit 1
+	if test -e osiUnitTest$(EXEEXT) ; then \
+	  osiUnitTest$(EXEEXT) $(osiunittestflags) || exit 1 ; \
+	fi
 
 .PHONY: test
 

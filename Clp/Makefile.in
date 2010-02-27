@@ -65,7 +65,8 @@ DIST_COMMON = README $(am__configure_deps) \
 	$(srcdir)/clp-uninstalled.pc.in $(srcdir)/clp.pc.in \
 	$(srcdir)/clp_addlibs.txt.in $(top_srcdir)/configure \
 	$(top_srcdir)/examples/Makefile.in \
-	$(top_srcdir)/inc/config_clp.h.in AUTHORS
+	$(top_srcdir)/inc/config_clp.h.in \
+	$(top_srcdir)/src/OsiClp/osi-clp-uninstalled.pc.in AUTHORS
 @HAVE_EXTERNALS_TRUE@am__append_2 = Externals
 @HAVE_EXTERNALS_TRUE@am__append_3 = .Externals-stamp
 subdir = .
@@ -79,7 +80,7 @@ am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/inc/config_clp.h
 CONFIG_CLEAN_FILES = examples/Makefile clp_addlibs.txt clp.pc \
-	clp-uninstalled.pc
+	clp-uninstalled.pc osi-clp-uninstalled.pc
 SOURCES =
 DIST_SOURCES =
 RECURSIVE_TARGETS = all-recursive check-recursive dvi-recursive \
@@ -144,6 +145,10 @@ COIN_HAS_COINUTILS_FALSE = @COIN_HAS_COINUTILS_FALSE@
 COIN_HAS_COINUTILS_TRUE = @COIN_HAS_COINUTILS_TRUE@
 COIN_HAS_NETLIB_FALSE = @COIN_HAS_NETLIB_FALSE@
 COIN_HAS_NETLIB_TRUE = @COIN_HAS_NETLIB_TRUE@
+COIN_HAS_OSITESTS_FALSE = @COIN_HAS_OSITESTS_FALSE@
+COIN_HAS_OSITESTS_TRUE = @COIN_HAS_OSITESTS_TRUE@
+COIN_HAS_OSI_FALSE = @COIN_HAS_OSI_FALSE@
+COIN_HAS_OSI_TRUE = @COIN_HAS_OSI_TRUE@
 COIN_HAS_SAMPLE_FALSE = @COIN_HAS_SAMPLE_FALSE@
 COIN_HAS_SAMPLE_TRUE = @COIN_HAS_SAMPLE_TRUE@
 CPP = @CPP@
@@ -194,6 +199,12 @@ NETLIB_LIBS = @NETLIB_LIBS@
 OBJEXT = @OBJEXT@
 OPT_CFLAGS = @OPT_CFLAGS@
 OPT_CXXFLAGS = @OPT_CXXFLAGS@
+OSITESTS_CFLAGS = @OSITESTS_CFLAGS@
+OSITESTS_DATA = @OSITESTS_DATA@
+OSITESTS_LIBS = @OSITESTS_LIBS@
+OSI_CFLAGS = @OSI_CFLAGS@
+OSI_DATA = @OSI_DATA@
+OSI_LIBS = @OSI_LIBS@
 PACKAGE = @PACKAGE@
 PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
 PACKAGE_NAME = @PACKAGE_NAME@
@@ -375,6 +386,8 @@ clp.pc: $(top_builddir)/config.status $(srcdir)/clp.pc.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@
 clp-uninstalled.pc: $(top_builddir)/config.status $(srcdir)/clp-uninstalled.pc.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@
+osi-clp-uninstalled.pc: $(top_builddir)/config.status $(top_srcdir)/src/OsiClp/osi-clp-uninstalled.pc.in
+	cd $(top_builddir) && $(SHELL) ./config.status $@
 
 mostlyclean-libtool:
 	-rm -f *.lo
@@ -555,7 +568,7 @@ distclean-tags:
 distdir: $(DISTFILES)
 	$(am__remove_distdir)
 	mkdir $(distdir)
-	$(mkdir_p) $(distdir)/. $(distdir)/.. $(distdir)/../BuildTools $(distdir)/doc $(distdir)/doc/Howto $(distdir)/examples $(distdir)/inc
+	$(mkdir_p) $(distdir)/. $(distdir)/.. $(distdir)/../BuildTools $(distdir)/doc $(distdir)/doc/Howto $(distdir)/examples $(distdir)/inc $(distdir)/src/OsiClp
 	@srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`; \
 	topsrcdirstrip=`echo "$(top_srcdir)" | sed 's|.|.|g'`; \
 	list='$(DISTFILES)'; for file in $$list; do \

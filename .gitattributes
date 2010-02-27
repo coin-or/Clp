@@ -58,6 +58,14 @@ Clp/src/ClpPdco.cpp -text
 Clp/src/ClpPdco.hpp -text
 Clp/src/ClpPdcoBase.cpp -text
 Clp/src/ClpPdcoBase.hpp -text
+Clp/src/OsiClp/Makefile.am -text
+Clp/src/OsiClp/Makefile.in -text
+Clp/src/OsiClp/OsiClpSolverInterface.cpp -text
+Clp/src/OsiClp/OsiClpSolverInterface.hpp -text
+Clp/src/OsiClp/osi-clp-uninstalled.pc.in -text
+Clp/src/OsiClp/osi-clp.pc.in -text
+Clp/test/OsiClpSolverInterfaceTest.cpp -text
+Clp/test/osiUnitTest.cpp -text
 /LICENSE -text
 /README -text
 /config.guess -text
