@@ -4,7 +4,7 @@
 #ifdef COIN_DO_PDCO
 
 /* Pdco algorithm
-   
+
 Method
 
 
@@ -30,14 +30,14 @@ Method
 #include <stdio.h>
 #include <iostream>
 
-int 
+int
 ClpPdco::pdco()
 {
-  printf("Dummy pdco solve\n");
-  return 0;
+     printf("Dummy pdco solve\n");
+     return 0;
 }
 // ** Temporary version
-int  
+int
 ClpPdco::pdco( ClpPdcoBase * stuff, Options &options, Info &info, Outfo &outfo)
 {
 //    D1, D2 are positive-definite diagonal matrices defined from d1, d2.
@@ -176,827 +176,843 @@ ClpPdco::pdco( ClpPdcoBase * stuff, Options &options, Info &info, Outfo &outfo)
 //-----------------------------------------------------------------------
 
 //  global pdDDD1 pdDDD2 pdDDD3
-  double inf = 1.0e30;
-  double eps = 1.0e-15;
-  double atolold, r3ratio, Pinf, Dinf, Cinf, Cinf0;
-  
-  printf("\n   --------------------------------------------------------");
-  printf("\n   pdco.m                            Version of 01 Nov 2002");
-  printf("\n   Primal-dual barrier method to minimize a convex function");
-  printf("\n   subject to linear constraints Ax + r = b,  bl <= x <= bu");
-  printf("\n   --------------------------------------------------------\n");
+     double inf = 1.0e30;
+     double eps = 1.0e-15;
+     double atolold, r3ratio, Pinf, Dinf, Cinf, Cinf0;
 
-  int m = numberRows_;
-  int n = numberColumns_;
-  bool ifexplicit = true;
+     printf("\n   --------------------------------------------------------");
+     printf("\n   pdco.m                            Version of 01 Nov 2002");
+     printf("\n   Primal-dual barrier method to minimize a convex function");
+     printf("\n   subject to linear constraints Ax + r = b,  bl <= x <= bu");
+     printf("\n   --------------------------------------------------------\n");
 
-  CoinDenseVector<double> b(m, rhs_);  
-  CoinDenseVector<double> x(n, x_);
-  CoinDenseVector<double> y(m, y_);
-  CoinDenseVector<double> z(n, dj_);
-  //delete old arrays
-  delete [] rhs_;
-  delete [] x_;
-  delete [] y_;
-  delete [] dj_;
-  rhs_=NULL;
-  x_=NULL;
-  y_=NULL;
-  dj_=NULL;
+     int m = numberRows_;
+     int n = numberColumns_;
+     bool ifexplicit = true;
 
-  // Save stuff so available elsewhere
-  pdcoStuff_ = stuff;
+     CoinDenseVector<double> b(m, rhs_);
+     CoinDenseVector<double> x(n, x_);
+     CoinDenseVector<double> y(m, y_);
+     CoinDenseVector<double> z(n, dj_);
+     //delete old arrays
+     delete [] rhs_;
+     delete [] x_;
+     delete [] y_;
+     delete [] dj_;
+     rhs_ = NULL;
+     x_ = NULL;
+     y_ = NULL;
+     dj_ = NULL;
 
-  double normb  = b.infNorm();
-  double normx0 = x.infNorm();
-  double normy0 = y.infNorm();
-  double normz0 = z.infNorm();
+     // Save stuff so available elsewhere
+     pdcoStuff_ = stuff;
 
-  printf("\nmax |b | = %8g     max |x0| = %8g", normb , normx0);
-  printf(                "      xsize   = %8g", xsize_);
-  printf("\nmax |y0| = %8g     max |z0| = %8g", normy0, normz0);
-  printf(                "      zsize   = %8g", zsize_);
+     double normb  = b.infNorm();
+     double normx0 = x.infNorm();
+     double normy0 = y.infNorm();
+     double normz0 = z.infNorm();
 
-  //---------------------------------------------------------------------
-  // Initialize.
-  //---------------------------------------------------------------------
-  //true   = 1;
-  //false  = 0;
-  //zn     = zeros(n,1);
-  int nb     = n + m;
-  int nkkt   = nb;
-  int CGitns = 0;
-  int inform = 0;
-  //---------------------------------------------------------------------  
-  //  Only allow scalar d1, d2 for now
-  //---------------------------------------------------------------------
-  /*
-  if (d1_->size()==1)
-      d1_->resize(n, d1_->getElements()[0]);  // Allow scalar d1, d2
-  if (d2_->size()==1)
-      d2->resize(m, d2->getElements()[0]);  // to mean dk * unit vector
- */
-  assert (stuff->sizeD1()==1);
-  double d1 = stuff->getD1();
-  double d2 = stuff->getD2();
+     printf("\nmax |b | = %8g     max |x0| = %8g", normb , normx0);
+     printf(                "      xsize   = %8g", xsize_);
+     printf("\nmax |y0| = %8g     max |z0| = %8g", normy0, normz0);
+     printf(                "      zsize   = %8g", zsize_);
 
-  //---------------------------------------------------------------------
-  // Grab input options.
-  //---------------------------------------------------------------------
-  int  maxitn    = options.MaxIter;
-  double featol    = options.FeaTol;
-  double opttol    = options.OptTol;
-  double steptol   = options.StepTol;
-  int  stepSame  = 1;  /* options.StepSame;   // 1 means stepx == stepz */
-  double x0min     = options.x0min;
-  double z0min     = options.z0min;
-  double mu0       = options.mu0;
-  int  LSproblem = options.LSproblem;  // See below
-  int  LSmethod  = options.LSmethod;   // 1=Cholesky    2=QR    3=LSQR
-  int  itnlim    = options.LSQRMaxIter * CoinMin(m,n);
-  double atol1     = options.LSQRatol1;  // Initial  atol
-  double atol2     = options.LSQRatol2;  // Smallest atol,unless atol1 is smaller
-  double conlim    = options.LSQRconlim;
-  int  wait      = options.wait;
+     //---------------------------------------------------------------------
+     // Initialize.
+     //---------------------------------------------------------------------
+     //true   = 1;
+     //false  = 0;
+     //zn     = zeros(n,1);
+     int nb     = n + m;
+     int nkkt   = nb;
+     int CGitns = 0;
+     int inform = 0;
+     //---------------------------------------------------------------------
+     //  Only allow scalar d1, d2 for now
+     //---------------------------------------------------------------------
+     /*
+     if (d1_->size()==1)
+         d1_->resize(n, d1_->getElements()[0]);  // Allow scalar d1, d2
+     if (d2_->size()==1)
+         d2->resize(m, d2->getElements()[0]);  // to mean dk * unit vector
+      */
+     assert (stuff->sizeD1() == 1);
+     double d1 = stuff->getD1();
+     double d2 = stuff->getD2();
 
-  // LSproblem:
-  //  1 = dy          2 = dy shifted, DLS
-  // 11 = s          12 =  s shifted, DLS    (dx = Ds)
-  // 21 = dx
-  // 31 = 3x3 system, symmetrized by Z^{1/2}
-  // 32 = 2x2 system, symmetrized by X^{1/2}
+     //---------------------------------------------------------------------
+     // Grab input options.
+     //---------------------------------------------------------------------
+     int  maxitn    = options.MaxIter;
+     double featol    = options.FeaTol;
+     double opttol    = options.OptTol;
+     double steptol   = options.StepTol;
+     int  stepSame  = 1;  /* options.StepSame;   // 1 means stepx == stepz */
+     double x0min     = options.x0min;
+     double z0min     = options.z0min;
+     double mu0       = options.mu0;
+     int  LSproblem = options.LSproblem;  // See below
+     int  LSmethod  = options.LSmethod;   // 1=Cholesky    2=QR    3=LSQR
+     int  itnlim    = options.LSQRMaxIter * CoinMin(m, n);
+     double atol1     = options.LSQRatol1;  // Initial  atol
+     double atol2     = options.LSQRatol2;  // Smallest atol,unless atol1 is smaller
+     double conlim    = options.LSQRconlim;
+     int  wait      = options.wait;
 
-  //---------------------------------------------------------------------
-  // Set other parameters.
-  //---------------------------------------------------------------------
-  int  kminor    = 0;      // 1 stops after each iteration
-  double eta       = 1e-4;   // Linesearch tolerance for "sufficient descent"
-  double maxf      = 10;     // Linesearch backtrack limit (function evaluations)
-  double maxfail   = 1;      // Linesearch failure limit (consecutive iterations)
-  double bigcenter = 1e+3;   // mu is reduced if center < bigcenter.
+     // LSproblem:
+     //  1 = dy          2 = dy shifted, DLS
+     // 11 = s          12 =  s shifted, DLS    (dx = Ds)
+     // 21 = dx
+     // 31 = 3x3 system, symmetrized by Z^{1/2}
+     // 32 = 2x2 system, symmetrized by X^{1/2}
 
-  // Parameters for LSQR.
-  double atolmin   = eps;    // Smallest atol if linesearch back-tracks
-  double btol      = 0;      // Should be small (zero is ok)
-  double show      = false;  // Controls lsqr iteration log
-  /*
-  double gamma     = d1->infNorm();
-  double delta     = d2->infNorm();
-  */
-  double gamma = d1;
-  double delta = d2;
+     //---------------------------------------------------------------------
+     // Set other parameters.
+     //---------------------------------------------------------------------
+     int  kminor    = 0;      // 1 stops after each iteration
+     double eta       = 1e-4;   // Linesearch tolerance for "sufficient descent"
+     double maxf      = 10;     // Linesearch backtrack limit (function evaluations)
+     double maxfail   = 1;      // Linesearch failure limit (consecutive iterations)
+     double bigcenter = 1e+3;   // mu is reduced if center < bigcenter.
 
-  printf("\n\nx0min    = %8g     featol   = %8.1e", x0min, featol);
-  printf(                  "      d1max   = %8.1e", gamma);
-  printf(  "\nz0min    = %8g     opttol   = %8.1e", z0min, opttol);
-  printf(                  "      d2max   = %8.1e", delta);
-  printf(  "\nmu0      = %8.1e     steptol  = %8g", mu0  , steptol);
-  printf(                  "     bigcenter= %8g"  , bigcenter);
+     // Parameters for LSQR.
+     double atolmin   = eps;    // Smallest atol if linesearch back-tracks
+     double btol      = 0;      // Should be small (zero is ok)
+     double show      = false;  // Controls lsqr iteration log
+     /*
+     double gamma     = d1->infNorm();
+     double delta     = d2->infNorm();
+     */
+     double gamma = d1;
+     double delta = d2;
 
-  printf("\n\nLSQR:");
-  printf("\natol1    = %8.1e     atol2    = %8.1e", atol1 , atol2 );
-  printf(                  "      btol    = %8.1e", btol );
-  printf("\nconlim   = %8.1e     itnlim   = %8d"  , conlim, itnlim);
-  printf(                  "      show    = %8g"  , show );
+     printf("\n\nx0min    = %8g     featol   = %8.1e", x0min, featol);
+     printf(                  "      d1max   = %8.1e", gamma);
+     printf(  "\nz0min    = %8g     opttol   = %8.1e", z0min, opttol);
+     printf(                  "      d2max   = %8.1e", delta);
+     printf(  "\nmu0      = %8.1e     steptol  = %8g", mu0  , steptol);
+     printf(                  "     bigcenter= %8g"  , bigcenter);
+
+     printf("\n\nLSQR:");
+     printf("\natol1    = %8.1e     atol2    = %8.1e", atol1 , atol2 );
+     printf(                  "      btol    = %8.1e", btol );
+     printf("\nconlim   = %8.1e     itnlim   = %8d"  , conlim, itnlim);
+     printf(                  "      show    = %8g"  , show );
 
 // LSmethod  = 3;  ////// Hardwire LSQR
 // LSproblem = 1;  ////// and LS problem defining "dy".
-/*
-  if wait
-    printf("\n\nReview parameters... then type "return"\n")
-    keyboard
-  end
-*/
-  if (eta < 0)
-    printf("\n\nLinesearch disabled by eta < 0");
+     /*
+       if wait
+         printf("\n\nReview parameters... then type "return"\n")
+         keyboard
+       end
+     */
+     if (eta < 0)
+          printf("\n\nLinesearch disabled by eta < 0");
 
-  //---------------------------------------------------------------------
-  // All parameters have now been set.
-  //---------------------------------------------------------------------
-  double time    = CoinCpuTime();
-  bool useChol = (LSmethod == 1);
-  bool useQR   = (LSmethod == 2);
-  bool direct  = (LSmethod <= 2 && ifexplicit);
-  char solver[6];
-  strcpy(solver,"  LSQR");
+     //---------------------------------------------------------------------
+     // All parameters have now been set.
+     //---------------------------------------------------------------------
+     double time    = CoinCpuTime();
+     bool useChol = (LSmethod == 1);
+     bool useQR   = (LSmethod == 2);
+     bool direct  = (LSmethod <= 2 && ifexplicit);
+     char solver[6];
+     strcpy(solver, "  LSQR");
 
 
-  //---------------------------------------------------------------------
-  // Categorize bounds and allow for fixed variables by modifying b.
-  //---------------------------------------------------------------------
+     //---------------------------------------------------------------------
+     // Categorize bounds and allow for fixed variables by modifying b.
+     //---------------------------------------------------------------------
 
-  int nlow, nupp, nfix;
-  int *bptrs[3] = {0};
-  getBoundTypes(&nlow, &nupp, &nfix, bptrs );
-  int *low = bptrs[0];
-  int *upp = bptrs[1];
-  int *fix = bptrs[2];
+     int nlow, nupp, nfix;
+     int *bptrs[3] = {0};
+     getBoundTypes(&nlow, &nupp, &nfix, bptrs );
+     int *low = bptrs[0];
+     int *upp = bptrs[1];
+     int *fix = bptrs[2];
 
-  int nU = n;
-  if (nupp ==0) nU = 1;   //Make dummy vectors if no Upper bounds
+     int nU = n;
+     if (nupp == 0) nU = 1;  //Make dummy vectors if no Upper bounds
 
-  //---------------------------------------------------------------------
-  //  Get pointers to local copy of model bounds
-  //---------------------------------------------------------------------
+     //---------------------------------------------------------------------
+     //  Get pointers to local copy of model bounds
+     //---------------------------------------------------------------------
 
-  CoinDenseVector<double> bl(n, columnLower_);
-  double *bl_elts = bl.getElements();
-  CoinDenseVector<double> bu(nU, columnUpper_);  // this is dummy if no UB
-  double *bu_elts = bu.getElements();
+     CoinDenseVector<double> bl(n, columnLower_);
+     double *bl_elts = bl.getElements();
+     CoinDenseVector<double> bu(nU, columnUpper_);  // this is dummy if no UB
+     double *bu_elts = bu.getElements();
 
-  CoinDenseVector<double> r1(m, 0.0);
-  double *r1_elts = r1.getElements();
-  CoinDenseVector<double> x1(n, 0.0);
-  double *x1_elts = x1.getElements();
+     CoinDenseVector<double> r1(m, 0.0);
+     double *r1_elts = r1.getElements();
+     CoinDenseVector<double> x1(n, 0.0);
+     double *x1_elts = x1.getElements();
 
-  if (nfix > 0){
-    for (int k=0; k<nfix; k++)
-      x1_elts[fix[k]] = bl[fix[k]];
-    matVecMult(1, r1, x1);
-    b = b - r1;
-      // At some stage, might want to look at normfix = norm(r1,inf);
-  }
+     if (nfix > 0) {
+          for (int k = 0; k < nfix; k++)
+               x1_elts[fix[k]] = bl[fix[k]];
+          matVecMult(1, r1, x1);
+          b = b - r1;
+          // At some stage, might want to look at normfix = norm(r1,inf);
+     }
 
-  //---------------------------------------------------------------------
-  // Scale the input data.
-  // The scaled variables are
-  //    xbar     = x/beta,
-  //    ybar     = y/zeta,
-  //    zbar     = z/zeta.
-  // Define
-  //    theta    = beta*zeta;
-  // The scaled function is
-  //    phibar   = ( 1   /theta) fbar(beta*xbar),
-  //    gradient = (beta /theta) grad,
-  //    Hessian  = (beta2/theta) hess.
-  //---------------------------------------------------------------------
-  double beta = xsize_;   if (beta==0) beta = 1;   // beta scales b, x.
-  double zeta = zsize_;   if (zeta==0) zeta = 1;   // zeta scales y, z.
-  double theta  = beta*zeta;                            // theta scales obj.
-  // (theta could be anything, but theta = beta*zeta makes
-  // scaled grad = grad/zeta = 1 approximately if zeta is chosen right.)
+     //---------------------------------------------------------------------
+     // Scale the input data.
+     // The scaled variables are
+     //    xbar     = x/beta,
+     //    ybar     = y/zeta,
+     //    zbar     = z/zeta.
+     // Define
+     //    theta    = beta*zeta;
+     // The scaled function is
+     //    phibar   = ( 1   /theta) fbar(beta*xbar),
+     //    gradient = (beta /theta) grad,
+     //    Hessian  = (beta2/theta) hess.
+     //---------------------------------------------------------------------
+     double beta = xsize_;
+     if (beta == 0) beta = 1; // beta scales b, x.
+     double zeta = zsize_;
+     if (zeta == 0) zeta = 1; // zeta scales y, z.
+     double theta  = beta * zeta;                          // theta scales obj.
+     // (theta could be anything, but theta = beta*zeta makes
+     // scaled grad = grad/zeta = 1 approximately if zeta is chosen right.)
 
-  for (int k=0; k<nlow; k++)
-    bl_elts[low[k]] = bl_elts[low[k]]/beta;
-  for (int k=0; k<nupp; k++)
-    bu_elts[upp[k]] = bu_elts[upp[k]]/beta;
-  d1     = d1 * ( beta/sqrt(theta) );
-  d2     = d2 * ( sqrt(theta)/beta );
+     for (int k = 0; k < nlow; k++)
+          bl_elts[low[k]] = bl_elts[low[k]] / beta;
+     for (int k = 0; k < nupp; k++)
+          bu_elts[upp[k]] = bu_elts[upp[k]] / beta;
+     d1     = d1 * ( beta / sqrt(theta) );
+     d2     = d2 * ( sqrt(theta) / beta );
 
-  double beta2  = beta*beta;
-  b.scale( (1.0/beta) );
-  y.scale( (1.0/zeta) );
-  x.scale( (1.0/beta) ); 
-  z.scale( (1.0/zeta) );
- 
-  //---------------------------------------------------------------------
-  // Initialize vectors that are not fully used if bounds are missing.
-  //---------------------------------------------------------------------
-  CoinDenseVector<double> rL(n, 0.0);
-  CoinDenseVector<double> cL(n, 0.0);
-  CoinDenseVector<double> z1(n, 0.0);
-  CoinDenseVector<double> dx1(n, 0.0);
-  CoinDenseVector<double> dz1(n, 0.0);
-  CoinDenseVector<double> r2(n, 0.0);
+     double beta2  = beta * beta;
+     b.scale( (1.0 / beta) );
+     y.scale( (1.0 / zeta) );
+     x.scale( (1.0 / beta) );
+     z.scale( (1.0 / zeta) );
 
-  // Assign upper bd regions (dummy if no UBs)
+     //---------------------------------------------------------------------
+     // Initialize vectors that are not fully used if bounds are missing.
+     //---------------------------------------------------------------------
+     CoinDenseVector<double> rL(n, 0.0);
+     CoinDenseVector<double> cL(n, 0.0);
+     CoinDenseVector<double> z1(n, 0.0);
+     CoinDenseVector<double> dx1(n, 0.0);
+     CoinDenseVector<double> dz1(n, 0.0);
+     CoinDenseVector<double> r2(n, 0.0);
 
-  CoinDenseVector<double> rU(nU, 0.0);
-  CoinDenseVector<double> cU(nU, 0.0);
-  CoinDenseVector<double> x2(nU, 0.0);
-  CoinDenseVector<double> z2(nU, 0.0);
-  CoinDenseVector<double> dx2(nU, 0.0);    
-  CoinDenseVector<double> dz2(nU, 0.0);
+     // Assign upper bd regions (dummy if no UBs)
 
-  //---------------------------------------------------------------------
-  // Initialize x, y, z, objective, etc.
-  //---------------------------------------------------------------------
-  CoinDenseVector<double> dx(n, 0.0);
-  CoinDenseVector<double> dy(m, 0.0);
-  CoinDenseVector<double> Pr(m);
-  CoinDenseVector<double> D(n);
-  double *D_elts = D.getElements();
-  CoinDenseVector<double> w(n);
-  double *w_elts = w.getElements();
-  CoinDenseVector<double> rhs(m+n);
-    
+     CoinDenseVector<double> rU(nU, 0.0);
+     CoinDenseVector<double> cU(nU, 0.0);
+     CoinDenseVector<double> x2(nU, 0.0);
+     CoinDenseVector<double> z2(nU, 0.0);
+     CoinDenseVector<double> dx2(nU, 0.0);
+     CoinDenseVector<double> dz2(nU, 0.0);
 
-  //---------------------------------------------------------------------
-  // Pull out the element array pointers for efficiency
-  //---------------------------------------------------------------------
-  double *x_elts  = x.getElements();
-  double *x2_elts = x2.getElements();
-  double *z_elts  = z.getElements();
-  double *z1_elts = z1.getElements();
-  double *z2_elts = z2.getElements();
+     //---------------------------------------------------------------------
+     // Initialize x, y, z, objective, etc.
+     //---------------------------------------------------------------------
+     CoinDenseVector<double> dx(n, 0.0);
+     CoinDenseVector<double> dy(m, 0.0);
+     CoinDenseVector<double> Pr(m);
+     CoinDenseVector<double> D(n);
+     double *D_elts = D.getElements();
+     CoinDenseVector<double> w(n);
+     double *w_elts = w.getElements();
+     CoinDenseVector<double> rhs(m + n);
 
-  for (int k=0; k<nlow; k++){
-    x_elts[low[k]]  = CoinMax( x_elts[low[k]], bl[low[k]]);
-    x1_elts[low[k]] = CoinMax( x_elts[low[k]] - bl[low[k]], x0min  );
-    z1_elts[low[k]] = CoinMax( z_elts[low[k]], z0min  );
-  }
-  for (int k=0; k<nupp; k++){
-    x_elts[upp[k]]  = CoinMin( x_elts[upp[k]], bu[upp[k]]);
-    x2_elts[upp[k]] = CoinMax(bu[upp[k]] -  x_elts[upp[k]], x0min  );
-    z2_elts[upp[k]] = CoinMax(-z_elts[upp[k]], z0min  );
-  }
-  //////////////////// Assume hessian is diagonal. //////////////////////
+
+     //---------------------------------------------------------------------
+     // Pull out the element array pointers for efficiency
+     //---------------------------------------------------------------------
+     double *x_elts  = x.getElements();
+     double *x2_elts = x2.getElements();
+     double *z_elts  = z.getElements();
+     double *z1_elts = z1.getElements();
+     double *z2_elts = z2.getElements();
+
+     for (int k = 0; k < nlow; k++) {
+          x_elts[low[k]]  = CoinMax( x_elts[low[k]], bl[low[k]]);
+          x1_elts[low[k]] = CoinMax( x_elts[low[k]] - bl[low[k]], x0min  );
+          z1_elts[low[k]] = CoinMax( z_elts[low[k]], z0min  );
+     }
+     for (int k = 0; k < nupp; k++) {
+          x_elts[upp[k]]  = CoinMin( x_elts[upp[k]], bu[upp[k]]);
+          x2_elts[upp[k]] = CoinMax(bu[upp[k]] -  x_elts[upp[k]], x0min  );
+          z2_elts[upp[k]] = CoinMax(-z_elts[upp[k]], z0min  );
+     }
+     //////////////////// Assume hessian is diagonal. //////////////////////
 
 //  [obj,grad,hess] = feval( Fname, (x*beta) );
-  x.scale(beta);
-  double obj = getObj(x);
-  CoinDenseVector<double> grad(n);
-  getGrad(x, grad);
-  CoinDenseVector<double> H(n);
-  getHessian(x ,H);
-  x.scale((1.0/beta));
-  
-  double * g_elts=grad.getElements();
-  double * H_elts=H.getElements();
+     x.scale(beta);
+     double obj = getObj(x);
+     CoinDenseVector<double> grad(n);
+     getGrad(x, grad);
+     CoinDenseVector<double> H(n);
+     getHessian(x , H);
+     x.scale((1.0 / beta));
 
-  obj /= theta;                       // Scaled obj.
-  grad = grad*(beta/theta) + (d1*d1)*x; // grad includes x regularization.
-  H  = H*(beta2/theta) + (d1*d1)      ;     // H    includes x regularization.
-  
+     double * g_elts = grad.getElements();
+     double * H_elts = H.getElements();
 
-  /*---------------------------------------------------------------------
-  // Compute primal and dual residuals:
-  // r1 =  b - Aprod(x) - d2*d2*y;
-  // r2 =  grad - Atprod(y) + z2 - z1;  
-  //  rL =  bl - x + x1;
-  //  rU =  x + x2 - bu; */
-  //---------------------------------------------------------------------
-  //  [r1,r2,rL,rU,Pinf,Dinf] = ...
-  //      pdxxxresid1( Aname,fix,low,upp, ...
-  //                   b,bl,bu,d1,d2,grad,rL,rU,x,x1,x2,y,z1,z2 );
-  pdxxxresid1( this, nlow, nupp, nfix, low, upp, fix, 
-	       b,bl_elts,bu_elts,d1,d2,grad,rL,rU,x,x1,x2,y,z1,z2,
-	       r1, r2, &Pinf, &Dinf);
-  //---------------------------------------------------------------------
-  // Initialize mu and complementarity residuals:
-  //    cL   = mu*e - X1*z1.
-  //    cU   = mu*e - X2*z2.
-  //
-  // 25 Jan 2001: Now that b and obj are scaled (and hence x,y,z),
-  //              we should be able to use mufirst = mu0 (absolute value).
-  //              0.1 worked poorly on StarTest1 with x0min = z0min = 0.1.
-  // 29 Jan 2001: We might as well use mu0 = x0min * z0min;
-  //              so that most variables are centered after a warm start.
-  // 29 Sep 2002: Use mufirst = mu0*(x0min * z0min),
-  //              regarding mu0 as a scaling of the initial center.
-  //---------------------------------------------------------------------
-  //  double mufirst = mu0*(x0min * z0min);
-  double mufirst = mu0;   // revert to absolute value
-  double mulast  = 0.1 * opttol;
-  mulast  = CoinMin( mulast, mufirst );
-  double mu      = mufirst;
-  double center,  fmerit;
-  pdxxxresid2( mu, nlow, nupp, low,upp, cL, cU, x1, x2,
-			z1, z2, &center, &Cinf, &Cinf0 );
-  fmerit = pdxxxmerit(nlow, nupp, low, upp, r1, r2, rL, rU, cL, cU );
-
-  // Initialize other things.
-
-  bool  precon   = true;  
-  double PDitns    = 0;
-  bool converged = false;
-  double atol      = atol1;
-  atol2     = CoinMax( atol2, atolmin );
-  atolmin   = atol2;
-  //  pdDDD2    = d2;    // Global vector for diagonal matrix D2
-
-  //  Iteration log.
-
-  double stepx   = 0;
-  double stepz   = 0;
-  int nf      = 0;
-  int itncg   = 0;
-  int nfail   = 0;
-
-  printf("\n\nItn   mu   stepx   stepz  Pinf  Dinf");
-  printf("  Cinf   Objective    nf  center");
-  if (direct) {
-    printf("\n");
-  }else{ 
-    printf("  atol   solver   Inexact\n");
-  }
-
-  double regx = (d1*x).twoNorm();
-  double regy = (d2*y).twoNorm();
-  //  regterm = twoNorm(d1.*x)^2  +  norm(d2.*y)^2;
-  double regterm = regx*regx + regy*regy;
-  double objreg  = obj  +  0.5*regterm;
-  double objtrue = objreg * theta;
-
-  printf("\n%3g                     ", PDitns        );
-  printf("%6.1f%6.1f" , log10(Pinf ), log10(Dinf));
-  printf("%6.1f%15.7e", log10(Cinf0), objtrue    );
-  printf("   %8.1f\n"   , center                   );
-  /*
-  if kminor
-    printf("\n\nStart of first minor itn...\n");
-    keyboard
-  end
-  */
-  //---------------------------------------------------------------------
-  // Main loop.
-  //---------------------------------------------------------------------
-  // Lsqr
-  ClpLsqr  thisLsqr(this);
-  //  while (converged) {
-  while(PDitns < maxitn) {
-    PDitns = PDitns + 1;
-
-    // 31 Jan 2001: Set atol according to progress, a la Inexact Newton.
-    // 07 Feb 2001: 0.1 not small enough for Satellite problem.  Try 0.01.
-    // 25 Apr 2001: 0.01 seems wasteful for Star problem.
-    //              Now that starting conditions are better, go back to 0.1.
-
-    double r3norm = CoinMax(Pinf,   CoinMax(Dinf,  Cinf));
-    atol   = CoinMin(atol,  r3norm*0.1);
-    atol   = CoinMax(atol,  atolmin   );
-    info.r3norm = r3norm;
-
-    //-------------------------------------------------------------------
-    //  Define a damped Newton iteration for solving f = 0,
-    //  keeping  x1, x2, z1, z2 > 0.  We eliminate dx1, dx2, dz1, dz2
-    //  to obtain the system
-    //
-    //     [-H2  A"  ] [ dx ] = [ w ],   H2 = H + D1^2 + X1inv Z1 + X2inv Z2,
-    //     [ A   D2^2] [ dy ] = [ r1]    w  = r2 - X1inv(cL + Z1 rL)
-    //                                           + X2inv(cU + Z2 rU),
-    //
-    //  which is equivalent to the least-squares problem
-    //
-    //     min || [ D A"]dy  -  [  D w   ] ||,   D = H2^{-1/2}.         (*)
-    //         || [  D2 ]       [D2inv r1] ||
-    //-------------------------------------------------------------------
-    for (int k=0; k<nlow; k++)
-      H_elts[low[k]]  = H_elts[low[k]] + z1[low[k]]/x1[low[k]];
-    for (int k=0; k<nupp; k++)
-      H[upp[k]]  = H[upp[k]] + z2[upp[k]]/x2[upp[k]];
-    w = r2;
-    for (int k=0; k<nlow; k++)
-      w[low[k]]  = w[low[k]] - (cL[low[k]] + z1[low[k]]*rL[low[k]])/x1[low[k]];
-    for (int k=0; k<nupp; k++)
-      w[upp[k]]  = w[upp[k]] + (cU[upp[k]] + z2[upp[k]]*rU[upp[k]])/x2[upp[k]];
-
-    if (LSproblem == 1){
-      //-----------------------------------------------------------------
-      //  Solve (*) for dy.
-      //-----------------------------------------------------------------
-      H      = 1.0/H;    // H is now Hinv (NOTE!)
-      for (int k=0; k<nfix; k++)  
-	H[fix[k]] = 0;
-      for (int k=0; k<n; k++)
-	D_elts[k]= sqrt(H_elts[k]);
-      thisLsqr.borrowDiag1(D_elts);
-      thisLsqr.diag2_ = d2;
-
-      if (direct){
-	// Omit direct option for now
-      }else {// Iterative solve using LSQR.
-	//rhs     = [ D.*w; r1./d2 ];
-	for (int k=0; k<n; k++)
-	  rhs[k] = D_elts[k]*w_elts[k];
-	for (int k=0; k<m; k++)
-	  rhs[n+k] = r1_elts[k]*(1.0/d2);
-	double damp    = 0;
-
-	if (precon){    // Construct diagonal preconditioner for LSQR
-	  matPrecon(d2, Pr, D);
-	}  
-	    /*
-	rw(7)        = precon;
-        info.atolmin = atolmin;
-        info.r3norm  = fmerit;  // Must be the 2-norm here.
-
-        [ dy, istop, itncg, outfo ] = ...
-            pdxxxlsqr( nb,m,"pdxxxlsqrmat",Aname,rw,rhs,damp, ...
-                       atol,btol,conlim,itnlim,show,info );
+     obj /= theta;                       // Scaled obj.
+     grad = grad * (beta / theta) + (d1 * d1) * x; // grad includes x regularization.
+     H  = H * (beta2 / theta) + (d1 * d1)      ; // H    includes x regularization.
 
 
-	thisLsqr.input->rhs_vec = &rhs;
-	thisLsqr.input->sol_vec = &dy;
-	thisLsqr.input->rel_mat_err = atol;
-	thisLsqr.do_lsqr(this);
-	*/
-	//  New version of lsqr
+     /*---------------------------------------------------------------------
+     // Compute primal and dual residuals:
+     // r1 =  b - Aprod(x) - d2*d2*y;
+     // r2 =  grad - Atprod(y) + z2 - z1;
+     //  rL =  bl - x + x1;
+     //  rU =  x + x2 - bu; */
+     //---------------------------------------------------------------------
+     //  [r1,r2,rL,rU,Pinf,Dinf] = ...
+     //      pdxxxresid1( Aname,fix,low,upp, ...
+     //                   b,bl,bu,d1,d2,grad,rL,rU,x,x1,x2,y,z1,z2 );
+     pdxxxresid1( this, nlow, nupp, nfix, low, upp, fix,
+                  b, bl_elts, bu_elts, d1, d2, grad, rL, rU, x, x1, x2, y, z1, z2,
+                  r1, r2, &Pinf, &Dinf);
+     //---------------------------------------------------------------------
+     // Initialize mu and complementarity residuals:
+     //    cL   = mu*e - X1*z1.
+     //    cU   = mu*e - X2*z2.
+     //
+     // 25 Jan 2001: Now that b and obj are scaled (and hence x,y,z),
+     //              we should be able to use mufirst = mu0 (absolute value).
+     //              0.1 worked poorly on StarTest1 with x0min = z0min = 0.1.
+     // 29 Jan 2001: We might as well use mu0 = x0min * z0min;
+     //              so that most variables are centered after a warm start.
+     // 29 Sep 2002: Use mufirst = mu0*(x0min * z0min),
+     //              regarding mu0 as a scaling of the initial center.
+     //---------------------------------------------------------------------
+     //  double mufirst = mu0*(x0min * z0min);
+     double mufirst = mu0;   // revert to absolute value
+     double mulast  = 0.1 * opttol;
+     mulast  = CoinMin( mulast, mufirst );
+     double mu      = mufirst;
+     double center,  fmerit;
+     pdxxxresid2( mu, nlow, nupp, low, upp, cL, cU, x1, x2,
+                  z1, z2, &center, &Cinf, &Cinf0 );
+     fmerit = pdxxxmerit(nlow, nupp, low, upp, r1, r2, rL, rU, cL, cU );
 
-	int istop, itn;
-	dy.clear();
-	show = false;
-        info.atolmin = atolmin;
-        info.r3norm  = fmerit;  // Must be the 2-norm here.
+     // Initialize other things.
 
-	thisLsqr.do_lsqr( rhs, damp, atol, btol, conlim, itnlim, 
-		      show, info, dy , &istop, &itncg, &outfo, precon, Pr);
-	if (precon)
-		  dy = dy*Pr;
+     bool  precon   = true;
+     double PDitns    = 0;
+     bool converged = false;
+     double atol      = atol1;
+     atol2     = CoinMax( atol2, atolmin );
+     atolmin   = atol2;
+     //  pdDDD2    = d2;    // Global vector for diagonal matrix D2
 
-	if (!precon && itncg>999999)
-	  precon=true;
+     //  Iteration log.
 
-        if (istop == 3  ||  istop == 7 )  // conlim or itnlim
-          printf("\n    LSQR stopped early:  istop = //%d", istop);
-        
+     double stepx   = 0;
+     double stepz   = 0;
+     int nf      = 0;
+     int itncg   = 0;
+     int nfail   = 0;
 
-        atolold   = outfo.atolold;
-        atol      = outfo.atolnew;
-        r3ratio   = outfo.r3ratio;
-      }// LSproblem 1
+     printf("\n\nItn   mu   stepx   stepz  Pinf  Dinf");
+     printf("  Cinf   Objective    nf  center");
+     if (direct) {
+          printf("\n");
+     } else {
+          printf("  atol   solver   Inexact\n");
+     }
 
-      //      grad      = pdxxxmat( Aname,2,m,n,dy );   // grad = A"dy
-      grad.clear();
-      matVecMult(2, grad, dy);
-      for (int k=0; k<nfix; k++)
-	grad[fix[k]] = 0;                            // grad is a work vector
-      dx = H * (grad - w);
-   
-    }else{
-      perror( "This LSproblem not yet implemented\n" );
-    }
-    //-------------------------------------------------------------------
+     double regx = (d1 * x).twoNorm();
+     double regy = (d2 * y).twoNorm();
+     //  regterm = twoNorm(d1.*x)^2  +  norm(d2.*y)^2;
+     double regterm = regx * regx + regy * regy;
+     double objreg  = obj  +  0.5 * regterm;
+     double objtrue = objreg * theta;
 
-    CGitns += itncg;
+     printf("\n%3g                     ", PDitns        );
+     printf("%6.1f%6.1f" , log10(Pinf ), log10(Dinf));
+     printf("%6.1f%15.7e", log10(Cinf0), objtrue    );
+     printf("   %8.1f\n"   , center                   );
+     /*
+     if kminor
+       printf("\n\nStart of first minor itn...\n");
+       keyboard
+     end
+     */
+     //---------------------------------------------------------------------
+     // Main loop.
+     //---------------------------------------------------------------------
+     // Lsqr
+     ClpLsqr  thisLsqr(this);
+     //  while (converged) {
+     while(PDitns < maxitn) {
+          PDitns = PDitns + 1;
 
-    //-------------------------------------------------------------------
-    // dx and dy are now known.  Get dx1, dx2, dz1, dz2.
-    //-------------------------------------------------------------------
-    for (int k=0; k<nlow; k++){    
-      dx1[low[k]] = - rL[low[k]] + dx[low[k]];
-      dz1[low[k]] =  (cL[low[k]] - z1[low[k]]*dx1[low[k]]) / x1[low[k]];
-    }
-    for (int k=0; k<nupp; k++){    
-      dx2[upp[k]] = - rU[upp[k]] - dx[upp[k]];
-      dz2[upp[k]] =  (cU[upp[k]] - z2[upp[k]]*dx2[upp[k]]) / x2[upp[k]];
-    }
-    //-------------------------------------------------------------------
-    // Find the maximum step.
-    //--------------------------------------------------------------------
-    double stepx1 = pdxxxstep(nlow, low, x1, dx1 );
-    double stepx2 = inf;
-    if (nupp > 0)
-      stepx2 = pdxxxstep(nupp, upp, x2, dx2 );
-    double stepz1 = pdxxxstep( z1     , dz1      );
-    double stepz2 = inf;
-    if (nupp > 0)
-      stepz2 = pdxxxstep( z2     , dz2      );
-    double stepx  = CoinMin( stepx1, stepx2 );
-    double stepz  = CoinMin( stepz1, stepz2 );
-    stepx  = CoinMin( steptol*stepx, 1.0 );
-    stepz  = CoinMin( steptol*stepz, 1.0 );
-    if (stepSame){                   // For NLPs, force same step
-      stepx = CoinMin( stepx, stepz );   // (true Newton method)
-      stepz = stepx;
-    }
-   
-    //-------------------------------------------------------------------
-    // Backtracking linesearch.
-    //-------------------------------------------------------------------
-    bool fail     =  true;
-    nf       =  0;
+          // 31 Jan 2001: Set atol according to progress, a la Inexact Newton.
+          // 07 Feb 2001: 0.1 not small enough for Satellite problem.  Try 0.01.
+          // 25 Apr 2001: 0.01 seems wasteful for Star problem.
+          //              Now that starting conditions are better, go back to 0.1.
 
-    while (nf < maxf){
-      nf      = nf + 1;
-      x       = x        +  stepx * dx;
-      y       = y        +  stepz * dy;
-      for (int k=0; k<nlow; k++){    
-	x1[low[k]] = x1[low[k]]  +  stepx * dx1[low[k]];
-	z1[low[k]] = z1[low[k]]  +  stepz * dz1[low[k]];
-      }
-      for (int k=0; k<nupp; k++){    
-	x2[upp[k]] = x2[upp[k]]  +  stepx * dx2[upp[k]];
-	z2[upp[k]] = z2[upp[k]]  +  stepz * dz2[upp[k]];
-      }
-      //      [obj,grad,hess] = feval( Fname, (x*beta) );
-      x.scale(beta);
-      obj = getObj(x);
-      getGrad(x, grad);
-      getHessian(x, H);
-      x.scale((1.0/beta));
-      
-      obj        /= theta;
-      grad       = grad*(beta /theta)  +  d1*d1*x;
-      H          = H*(beta2/theta)  +  d1*d1;
-      
-      //      [r1,r2,rL,rU,Pinf,Dinf] = ...
-      pdxxxresid1( this, nlow, nupp, nfix, low, upp, fix,
-		   b,bl_elts,bu_elts,d1,d2,grad,rL,rU,x,x1,x2,
-		   y,z1,z2, r1, r2, &Pinf, &Dinf );
-      //double center, Cinf, Cinf0;
-      //      [cL,cU,center,Cinf,Cinf0] = ...
-                  pdxxxresid2( mu, nlow, nupp, low,upp,cL,cU,x1,x2,z1,z2,
-			       &center, &Cinf, &Cinf0);
-      double fmeritnew = pdxxxmerit(nlow, nupp, low,upp,r1,r2,rL,rU,cL,cU );
-      double step      = CoinMin( stepx, stepz );
+          double r3norm = CoinMax(Pinf,   CoinMax(Dinf,  Cinf));
+          atol   = CoinMin(atol,  r3norm * 0.1);
+          atol   = CoinMax(atol,  atolmin   );
+          info.r3norm = r3norm;
 
-      if (fmeritnew <= (1 - eta*step)*fmerit){
-         fail = false;
-         break;
-      }
+          //-------------------------------------------------------------------
+          //  Define a damped Newton iteration for solving f = 0,
+          //  keeping  x1, x2, z1, z2 > 0.  We eliminate dx1, dx2, dz1, dz2
+          //  to obtain the system
+          //
+          //     [-H2  A"  ] [ dx ] = [ w ],   H2 = H + D1^2 + X1inv Z1 + X2inv Z2,
+          //     [ A   D2^2] [ dy ] = [ r1]    w  = r2 - X1inv(cL + Z1 rL)
+          //                                           + X2inv(cU + Z2 rU),
+          //
+          //  which is equivalent to the least-squares problem
+          //
+          //     min || [ D A"]dy  -  [  D w   ] ||,   D = H2^{-1/2}.         (*)
+          //         || [  D2 ]       [D2inv r1] ||
+          //-------------------------------------------------------------------
+          for (int k = 0; k < nlow; k++)
+               H_elts[low[k]]  = H_elts[low[k]] + z1[low[k]] / x1[low[k]];
+          for (int k = 0; k < nupp; k++)
+               H[upp[k]]  = H[upp[k]] + z2[upp[k]] / x2[upp[k]];
+          w = r2;
+          for (int k = 0; k < nlow; k++)
+               w[low[k]]  = w[low[k]] - (cL[low[k]] + z1[low[k]] * rL[low[k]]) / x1[low[k]];
+          for (int k = 0; k < nupp; k++)
+               w[upp[k]]  = w[upp[k]] + (cU[upp[k]] + z2[upp[k]] * rU[upp[k]]) / x2[upp[k]];
 
-      // Merit function didn"t decrease.
-      // Restore variables to previous values.
-      // (This introduces a little error, but save lots of space.)
-      
-      x       = x        -  stepx * dx;
-      y       = y        -  stepz * dy;
-      for (int k=0; k<nlow; k++){    
-	x1[low[k]] = x1[low[k]]  -  stepx * dx1[low[k]];
-	z1[low[k]] = z1[low[k]]  -  stepz * dz1[low[k]];
-      }
-      for (int k=0; k<nupp; k++){    
-	x2[upp[k]] = x2[upp[k]]  -  stepx * dx2[upp[k]];
-	z2[upp[k]] = z2[upp[k]]  -  stepz * dz2[upp[k]];
-      }
-      // Back-track.
-      // If it"s the first time,
-      // make stepx and stepz the same.
+          if (LSproblem == 1) {
+               //-----------------------------------------------------------------
+               //  Solve (*) for dy.
+               //-----------------------------------------------------------------
+               H      = 1.0 / H;  // H is now Hinv (NOTE!)
+               for (int k = 0; k < nfix; k++)
+                    H[fix[k]] = 0;
+               for (int k = 0; k < n; k++)
+                    D_elts[k] = sqrt(H_elts[k]);
+               thisLsqr.borrowDiag1(D_elts);
+               thisLsqr.diag2_ = d2;
 
-      if (nf == 1 && stepx != stepz){
-         stepx = step;
-      }else if (nf < maxf){
-         stepx = stepx/2;
-      }
-      stepz = stepx;
-    }
+               if (direct) {
+                    // Omit direct option for now
+               } else {// Iterative solve using LSQR.
+                    //rhs     = [ D.*w; r1./d2 ];
+                    for (int k = 0; k < n; k++)
+                         rhs[k] = D_elts[k] * w_elts[k];
+                    for (int k = 0; k < m; k++)
+                         rhs[n+k] = r1_elts[k] * (1.0 / d2);
+                    double damp    = 0;
 
-    if (fail){
-      printf("\n     Linesearch failed (nf too big)");
-      nfail += 1;
-    }else{
-      nfail = 0;
-    }
+                    if (precon) {   // Construct diagonal preconditioner for LSQR
+                         matPrecon(d2, Pr, D);
+                    }
+                    /*
+                    	rw(7)        = precon;
+                            info.atolmin = atolmin;
+                            info.r3norm  = fmerit;  // Must be the 2-norm here.
 
-    //-------------------------------------------------------------------
-    // Set convergence measures.
-    //--------------------------------------------------------------------
-    regx = (d1*x).twoNorm();
-    regy = (d2*y).twoNorm();
-    regterm = regx*regx + regy*regy;
-    objreg  = obj  +  0.5*regterm;
-    objtrue = objreg * theta;
-
-    bool primalfeas    = Pinf  <=  featol;
-    bool dualfeas      = Dinf  <=  featol;
-    bool complementary = Cinf0 <=  opttol;
-    bool enough        = PDitns>=       4;  // Prevent premature termination.
-    bool converged     = primalfeas  &  dualfeas  &  complementary  &  enough;
-
-    //-------------------------------------------------------------------
-    // Iteration log.
-    //-------------------------------------------------------------------
-    char str1[100],str2[100],str3[100],str4[100],str5[100];
-    sprintf(str1, "\n%3g%5.1f" , PDitns      , log10(mu)   );
-    sprintf(str2, "%8.5f%8.5f" , stepx       , stepz       );
-    if (stepx < 0.0001 || stepz < 0.0001){
-      sprintf(str2, " %6.1e %6.1e" , stepx       , stepz       );
-    }
-
-    sprintf(str3, "%6.1f%6.1f" , log10(Pinf) , log10(Dinf));
-    sprintf(str4, "%6.1f%15.7e", log10(Cinf0), objtrue     );
-    sprintf(str5, "%3d%8.1f"   , nf          , center      );
-    if (center > 99999){
-      sprintf(str5, "%3d%8.1e"   , nf          , center      );
-    }
-    printf("%s%s%s%s%s", str1, str2, str3, str4, str5);
-    if (direct){
-      // relax
-    }else{
-      printf(" %5.1f%7d%7.3f", log10(atolold), itncg, r3ratio);
-    }
-    //-------------------------------------------------------------------
-    // Test for termination.
-    //-------------------------------------------------------------------
-    if (kminor){
-      printf( "\nStart of next minor itn...\n");
-      //      keyboard;
-    }
-
-    if (converged){
-      printf("\n   Converged");
-      break;
-    }else if (PDitns >= maxitn){
-      printf("\n   Too many iterations");
-      inform = 1;
-      break;
-    }else if (nfail  >= maxfail){
-      printf("\n   Too many linesearch failures");
-      inform = 2;
-      break;
-    }else{
-
-      // Reduce mu, and reset certain residuals.
-
-      double stepmu  = CoinMin( stepx , stepz   );
-      stepmu  = CoinMin( stepmu, steptol );
-      double muold   = mu;
-      mu      = mu   -  stepmu * mu;
-      if (center >= bigcenter)
-	mu = muold;  
-
-      // mutrad = mu0*(sum(Xz)/n); // 24 May 1998: Traditional value, but
-      // mu     = CoinMin(mu,mutrad ); // it seemed to decrease mu too much.
-
-      mu      = CoinMax(mu,mulast);  // 13 Jun 1998: No need for smaller mu.
-      //      [cL,cU,center,Cinf,Cinf0] = ...
-      pdxxxresid2( mu, nlow, nupp, low, upp, cL, cU, x1, x2, z1, z2,
-		   &center, &Cinf, &Cinf0 );
-      fmerit = pdxxxmerit( nlow, nupp, low,upp,r1,r2,rL,rU,cL,cU );
-
-      // Reduce atol for LSQR (and SYMMLQ).
-      // NOW DONE AT TOP OF LOOP.
-
-      atolold = atol;
-      // if atol > atol2
-      //   atolfac = (mu/mufirst)^0.25;
-      //   atol    = CoinMax( atol*atolfac, atol2 );
-      // end
-
-      // atol = CoinMin( atol, mu );     // 22 Jan 2001: a la Inexact Newton.
-      // atol = CoinMin( atol, 0.5*mu ); // 30 Jan 2001: A bit tighter
-
-      // If the linesearch took more than one function (nf > 1),
-      // we assume the search direction needed more accuracy
-      // (though this may be true only for LPs).
-      // 12 Jun 1998: Ask for more accuracy if nf > 2.
-      // 24 Nov 2000: Also if the steps are small.
-      // 30 Jan 2001: Small steps might be ok with warm start.
-      // 06 Feb 2001: Not necessarily.  Reinstated tests in next line.
-
-      if (nf > 2  ||  CoinMin( stepx, stepz ) <= 0.01)
-        atol = atolold*0.1;
-    }
-  //---------------------------------------------------------------------
-  // End of main loop.
-  //---------------------------------------------------------------------
-  }
+                            [ dy, istop, itncg, outfo ] = ...
+                       pdxxxlsqr( nb,m,"pdxxxlsqrmat",Aname,rw,rhs,damp, ...
+                                  atol,btol,conlim,itnlim,show,info );
 
 
-  for (int k=0; k<nfix; k++)    
-    x[fix[k]] = bl[fix[k]];
-  z      = z1;
-  if (nupp > 0)
-    z = z - z2;
-  printf("\n\nmax |x| =%10.3f", x.infNorm() );
-  printf("    max |y| =%10.3f", y.infNorm() );
-  printf("    max |z| =%10.3f", z.infNorm() );
-  printf("   scaled");
+                    	thisLsqr.input->rhs_vec = &rhs;
+                    	thisLsqr.input->sol_vec = &dy;
+                    	thisLsqr.input->rel_mat_err = atol;
+                    	thisLsqr.do_lsqr(this);
+                    	*/
+                    //  New version of lsqr
 
-  x.scale(beta);   y.scale(zeta);   z.scale(zeta);   // Unscale x, y, z.
+                    int istop, itn;
+                    dy.clear();
+                    show = false;
+                    info.atolmin = atolmin;
+                    info.r3norm  = fmerit;  // Must be the 2-norm here.
 
-  printf(  "\nmax |x| =%10.3f", x.infNorm() );
-  printf("    max |y| =%10.3f", y.infNorm() );
-  printf("    max |z| =%10.3f", z.infNorm() );
-  printf(" unscaled\n");
+                    thisLsqr.do_lsqr( rhs, damp, atol, btol, conlim, itnlim,
+                                      show, info, dy , &istop, &itncg, &outfo, precon, Pr);
+                    if (precon)
+                         dy = dy * Pr;
 
-  time   = CoinCpuTime() - time;
-  char str1[100],str2[100];
-  sprintf(str1, "\nPDitns  =%10g", PDitns );
-  sprintf(str2, "itns =%10d", CGitns );
-  //  printf( [str1 " " solver str2] );
-  printf("    time    =%10.1f\n", time);
-  /*
-  pdxxxdistrib( abs(x),abs(z) );   // Private function
-  
-  if (wait)
-    keyboard;
-  */
+                    if (!precon && itncg > 999999)
+                         precon = true;
+
+                    if (istop == 3  ||  istop == 7 )  // conlim or itnlim
+                         printf("\n    LSQR stopped early:  istop = //%d", istop);
+
+
+                    atolold   = outfo.atolold;
+                    atol      = outfo.atolnew;
+                    r3ratio   = outfo.r3ratio;
+               }// LSproblem 1
+
+               //      grad      = pdxxxmat( Aname,2,m,n,dy );   // grad = A"dy
+               grad.clear();
+               matVecMult(2, grad, dy);
+               for (int k = 0; k < nfix; k++)
+                    grad[fix[k]] = 0;                            // grad is a work vector
+               dx = H * (grad - w);
+
+          } else {
+               perror( "This LSproblem not yet implemented\n" );
+          }
+          //-------------------------------------------------------------------
+
+          CGitns += itncg;
+
+          //-------------------------------------------------------------------
+          // dx and dy are now known.  Get dx1, dx2, dz1, dz2.
+          //-------------------------------------------------------------------
+          for (int k = 0; k < nlow; k++) {
+               dx1[low[k]] = - rL[low[k]] + dx[low[k]];
+               dz1[low[k]] =  (cL[low[k]] - z1[low[k]] * dx1[low[k]]) / x1[low[k]];
+          }
+          for (int k = 0; k < nupp; k++) {
+               dx2[upp[k]] = - rU[upp[k]] - dx[upp[k]];
+               dz2[upp[k]] =  (cU[upp[k]] - z2[upp[k]] * dx2[upp[k]]) / x2[upp[k]];
+          }
+          //-------------------------------------------------------------------
+          // Find the maximum step.
+          //--------------------------------------------------------------------
+          double stepx1 = pdxxxstep(nlow, low, x1, dx1 );
+          double stepx2 = inf;
+          if (nupp > 0)
+               stepx2 = pdxxxstep(nupp, upp, x2, dx2 );
+          double stepz1 = pdxxxstep( z1     , dz1      );
+          double stepz2 = inf;
+          if (nupp > 0)
+               stepz2 = pdxxxstep( z2     , dz2      );
+          double stepx  = CoinMin( stepx1, stepx2 );
+          double stepz  = CoinMin( stepz1, stepz2 );
+          stepx  = CoinMin( steptol * stepx, 1.0 );
+          stepz  = CoinMin( steptol * stepz, 1.0 );
+          if (stepSame) {                  // For NLPs, force same step
+               stepx = CoinMin( stepx, stepz );   // (true Newton method)
+               stepz = stepx;
+          }
+
+          //-------------------------------------------------------------------
+          // Backtracking linesearch.
+          //-------------------------------------------------------------------
+          bool fail     =  true;
+          nf       =  0;
+
+          while (nf < maxf) {
+               nf      = nf + 1;
+               x       = x        +  stepx * dx;
+               y       = y        +  stepz * dy;
+               for (int k = 0; k < nlow; k++) {
+                    x1[low[k]] = x1[low[k]]  +  stepx * dx1[low[k]];
+                    z1[low[k]] = z1[low[k]]  +  stepz * dz1[low[k]];
+               }
+               for (int k = 0; k < nupp; k++) {
+                    x2[upp[k]] = x2[upp[k]]  +  stepx * dx2[upp[k]];
+                    z2[upp[k]] = z2[upp[k]]  +  stepz * dz2[upp[k]];
+               }
+               //      [obj,grad,hess] = feval( Fname, (x*beta) );
+               x.scale(beta);
+               obj = getObj(x);
+               getGrad(x, grad);
+               getHessian(x, H);
+               x.scale((1.0 / beta));
+
+               obj        /= theta;
+               grad       = grad * (beta / theta)  +  d1 * d1 * x;
+               H          = H * (beta2 / theta)  +  d1 * d1;
+
+               //      [r1,r2,rL,rU,Pinf,Dinf] = ...
+               pdxxxresid1( this, nlow, nupp, nfix, low, upp, fix,
+                            b, bl_elts, bu_elts, d1, d2, grad, rL, rU, x, x1, x2,
+                            y, z1, z2, r1, r2, &Pinf, &Dinf );
+               //double center, Cinf, Cinf0;
+               //      [cL,cU,center,Cinf,Cinf0] = ...
+               pdxxxresid2( mu, nlow, nupp, low, upp, cL, cU, x1, x2, z1, z2,
+                            &center, &Cinf, &Cinf0);
+               double fmeritnew = pdxxxmerit(nlow, nupp, low, upp, r1, r2, rL, rU, cL, cU );
+               double step      = CoinMin( stepx, stepz );
+
+               if (fmeritnew <= (1 - eta * step)*fmerit) {
+                    fail = false;
+                    break;
+               }
+
+               // Merit function didn"t decrease.
+               // Restore variables to previous values.
+               // (This introduces a little error, but save lots of space.)
+
+               x       = x        -  stepx * dx;
+               y       = y        -  stepz * dy;
+               for (int k = 0; k < nlow; k++) {
+                    x1[low[k]] = x1[low[k]]  -  stepx * dx1[low[k]];
+                    z1[low[k]] = z1[low[k]]  -  stepz * dz1[low[k]];
+               }
+               for (int k = 0; k < nupp; k++) {
+                    x2[upp[k]] = x2[upp[k]]  -  stepx * dx2[upp[k]];
+                    z2[upp[k]] = z2[upp[k]]  -  stepz * dz2[upp[k]];
+               }
+               // Back-track.
+               // If it"s the first time,
+               // make stepx and stepz the same.
+
+               if (nf == 1 && stepx != stepz) {
+                    stepx = step;
+               } else if (nf < maxf) {
+                    stepx = stepx / 2;
+               }
+               stepz = stepx;
+          }
+
+          if (fail) {
+               printf("\n     Linesearch failed (nf too big)");
+               nfail += 1;
+          } else {
+               nfail = 0;
+          }
+
+          //-------------------------------------------------------------------
+          // Set convergence measures.
+          //--------------------------------------------------------------------
+          regx = (d1 * x).twoNorm();
+          regy = (d2 * y).twoNorm();
+          regterm = regx * regx + regy * regy;
+          objreg  = obj  +  0.5 * regterm;
+          objtrue = objreg * theta;
+
+          bool primalfeas    = Pinf  <=  featol;
+          bool dualfeas      = Dinf  <=  featol;
+          bool complementary = Cinf0 <=  opttol;
+          bool enough        = PDitns >=       4; // Prevent premature termination.
+          bool converged     = primalfeas  &  dualfeas  &  complementary  &  enough;
+
+          //-------------------------------------------------------------------
+          // Iteration log.
+          //-------------------------------------------------------------------
+          char str1[100], str2[100], str3[100], str4[100], str5[100];
+          sprintf(str1, "\n%3g%5.1f" , PDitns      , log10(mu)   );
+          sprintf(str2, "%8.5f%8.5f" , stepx       , stepz       );
+          if (stepx < 0.0001 || stepz < 0.0001) {
+               sprintf(str2, " %6.1e %6.1e" , stepx       , stepz       );
+          }
+
+          sprintf(str3, "%6.1f%6.1f" , log10(Pinf) , log10(Dinf));
+          sprintf(str4, "%6.1f%15.7e", log10(Cinf0), objtrue     );
+          sprintf(str5, "%3d%8.1f"   , nf          , center      );
+          if (center > 99999) {
+               sprintf(str5, "%3d%8.1e"   , nf          , center      );
+          }
+          printf("%s%s%s%s%s", str1, str2, str3, str4, str5);
+          if (direct) {
+               // relax
+          } else {
+               printf(" %5.1f%7d%7.3f", log10(atolold), itncg, r3ratio);
+          }
+          //-------------------------------------------------------------------
+          // Test for termination.
+          //-------------------------------------------------------------------
+          if (kminor) {
+               printf( "\nStart of next minor itn...\n");
+               //      keyboard;
+          }
+
+          if (converged) {
+               printf("\n   Converged");
+               break;
+          } else if (PDitns >= maxitn) {
+               printf("\n   Too many iterations");
+               inform = 1;
+               break;
+          } else if (nfail  >= maxfail) {
+               printf("\n   Too many linesearch failures");
+               inform = 2;
+               break;
+          } else {
+
+               // Reduce mu, and reset certain residuals.
+
+               double stepmu  = CoinMin( stepx , stepz   );
+               stepmu  = CoinMin( stepmu, steptol );
+               double muold   = mu;
+               mu      = mu   -  stepmu * mu;
+               if (center >= bigcenter)
+                    mu = muold;
+
+               // mutrad = mu0*(sum(Xz)/n); // 24 May 1998: Traditional value, but
+               // mu     = CoinMin(mu,mutrad ); // it seemed to decrease mu too much.
+
+               mu      = CoinMax(mu, mulast); // 13 Jun 1998: No need for smaller mu.
+               //      [cL,cU,center,Cinf,Cinf0] = ...
+               pdxxxresid2( mu, nlow, nupp, low, upp, cL, cU, x1, x2, z1, z2,
+                            &center, &Cinf, &Cinf0 );
+               fmerit = pdxxxmerit( nlow, nupp, low, upp, r1, r2, rL, rU, cL, cU );
+
+               // Reduce atol for LSQR (and SYMMLQ).
+               // NOW DONE AT TOP OF LOOP.
+
+               atolold = atol;
+               // if atol > atol2
+               //   atolfac = (mu/mufirst)^0.25;
+               //   atol    = CoinMax( atol*atolfac, atol2 );
+               // end
+
+               // atol = CoinMin( atol, mu );     // 22 Jan 2001: a la Inexact Newton.
+               // atol = CoinMin( atol, 0.5*mu ); // 30 Jan 2001: A bit tighter
+
+               // If the linesearch took more than one function (nf > 1),
+               // we assume the search direction needed more accuracy
+               // (though this may be true only for LPs).
+               // 12 Jun 1998: Ask for more accuracy if nf > 2.
+               // 24 Nov 2000: Also if the steps are small.
+               // 30 Jan 2001: Small steps might be ok with warm start.
+               // 06 Feb 2001: Not necessarily.  Reinstated tests in next line.
+
+               if (nf > 2  ||  CoinMin( stepx, stepz ) <= 0.01)
+                    atol = atolold * 0.1;
+          }
+          //---------------------------------------------------------------------
+          // End of main loop.
+          //---------------------------------------------------------------------
+     }
+
+
+     for (int k = 0; k < nfix; k++)
+          x[fix[k]] = bl[fix[k]];
+     z      = z1;
+     if (nupp > 0)
+          z = z - z2;
+     printf("\n\nmax |x| =%10.3f", x.infNorm() );
+     printf("    max |y| =%10.3f", y.infNorm() );
+     printf("    max |z| =%10.3f", z.infNorm() );
+     printf("   scaled");
+
+     x.scale(beta);
+     y.scale(zeta);
+     z.scale(zeta);   // Unscale x, y, z.
+
+     printf(  "\nmax |x| =%10.3f", x.infNorm() );
+     printf("    max |y| =%10.3f", y.infNorm() );
+     printf("    max |z| =%10.3f", z.infNorm() );
+     printf(" unscaled\n");
+
+     time   = CoinCpuTime() - time;
+     char str1[100], str2[100];
+     sprintf(str1, "\nPDitns  =%10g", PDitns );
+     sprintf(str2, "itns =%10d", CGitns );
+     //  printf( [str1 " " solver str2] );
+     printf("    time    =%10.1f\n", time);
+     /*
+     pdxxxdistrib( abs(x),abs(z) );   // Private function
+
+     if (wait)
+       keyboard;
+     */
 //-----------------------------------------------------------------------
 // End function pdco.m
 //-----------------------------------------------------------------------
-/*  printf("Solution x values:\n\n");
-  for (int k=0; k<n; k++)
-    printf(" %d   %e\n", k, x[k]);
-*/
+     /*  printf("Solution x values:\n\n");
+       for (int k=0; k<n; k++)
+         printf(" %d   %e\n", k, x[k]);
+     */
 // Print distribution
-  float thresh[9]={ 0.00000001, 0.0000001, 0.000001,0.00001, 0.0001, 0.001, 0.01, 0.1, 1.00001};
-  int counts[9]={0};
-  for (int ij=0; ij<n; ij++){
-    for (int j=0; j<9; j++){
-      if(x[ij] < thresh[j]){
-	counts[j] += 1;
-	break;
-      }
-    }
-  }
-  printf ("Distribution of Solution Values\n");
-  for (int j=8; j>1; j--)
-    printf(" %f  to  %f %d\n",thresh[j-1],thresh[j],counts[j]);
-  printf("   Less than   %f %d\n",thresh[2],counts[0]);
+     float thresh[9] = { 0.00000001, 0.0000001, 0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1, 1.00001};
+     int counts[9] = {0};
+     for (int ij = 0; ij < n; ij++) {
+          for (int j = 0; j < 9; j++) {
+               if(x[ij] < thresh[j]) {
+                    counts[j] += 1;
+                    break;
+               }
+          }
+     }
+     printf ("Distribution of Solution Values\n");
+     for (int j = 8; j > 1; j--)
+          printf(" %f  to  %f %d\n", thresh[j-1], thresh[j], counts[j]);
+     printf("   Less than   %f %d\n", thresh[2], counts[0]);
 
-  return 0;
+     return 0;
 }
 // LSQR
-void 
+void
 ClpPdco::lsqr()
 {
 }
 
-void ClpPdco::matVecMult( int mode, double* x_elts, double* y_elts){
-  pdcoStuff_->matVecMult(this,mode,x_elts,y_elts);
+void ClpPdco::matVecMult( int mode, double* x_elts, double* y_elts)
+{
+     pdcoStuff_->matVecMult(this, mode, x_elts, y_elts);
 }
-void ClpPdco::matVecMult( int mode, CoinDenseVector<double> &x, double *y_elts){
-  double *x_elts = x.getElements();
-  matVecMult( mode, x_elts, y_elts);
-  return;
-}
-
-void ClpPdco::matVecMult( int mode, CoinDenseVector<double> &x, CoinDenseVector<double> &y){
-  double *x_elts = x.getElements();
-  double *y_elts = y.getElements();
-  matVecMult( mode, x_elts, y_elts);
-  return;
+void ClpPdco::matVecMult( int mode, CoinDenseVector<double> &x, double *y_elts)
+{
+     double *x_elts = x.getElements();
+     matVecMult( mode, x_elts, y_elts);
+     return;
 }
 
-void ClpPdco::matVecMult( int mode, CoinDenseVector<double> *x, CoinDenseVector<double> *y){
-  double *x_elts = x->getElements();
-  double *y_elts = y->getElements();
-  matVecMult( mode, x_elts, y_elts);
-  return;
-}
-void ClpPdco::matPrecon(double delta, double* x_elts, double* y_elts){
-  pdcoStuff_->matPrecon(this,delta,x_elts,y_elts);
-}
-void ClpPdco::matPrecon(double delta, CoinDenseVector<double> &x, double *y_elts){
-  double *x_elts = x.getElements();
-  matPrecon(delta, x_elts, y_elts);
-  return;
-}
-    
-void ClpPdco::matPrecon(double delta, CoinDenseVector<double> &x, CoinDenseVector<double> &y){
-  double *x_elts = x.getElements();
-  double *y_elts = y.getElements();
-  matPrecon(delta, x_elts, y_elts);
-  return;
+void ClpPdco::matVecMult( int mode, CoinDenseVector<double> &x, CoinDenseVector<double> &y)
+{
+     double *x_elts = x.getElements();
+     double *y_elts = y.getElements();
+     matVecMult( mode, x_elts, y_elts);
+     return;
 }
 
-void ClpPdco::matPrecon(double delta, CoinDenseVector<double> *x, CoinDenseVector<double> *y){
-  double *x_elts = x->getElements();
-  double *y_elts = y->getElements();
-  matPrecon(delta, x_elts, y_elts);
-  return;
+void ClpPdco::matVecMult( int mode, CoinDenseVector<double> *x, CoinDenseVector<double> *y)
+{
+     double *x_elts = x->getElements();
+     double *y_elts = y->getElements();
+     matVecMult( mode, x_elts, y_elts);
+     return;
 }
-void ClpPdco::getBoundTypes(int *nlow, int *nupp, int *nfix, int **bptrs){
-  *nlow = numberColumns_;
-  *nupp = *nfix = 0;
-  int *low_ = (int *)malloc(numberColumns_*sizeof(int)) ;
-  for (int k=0; k <numberColumns_; k++)
-    low_[k] = k;
-  bptrs[0]= low_;
-  return;
+void ClpPdco::matPrecon(double delta, double* x_elts, double* y_elts)
+{
+     pdcoStuff_->matPrecon(this, delta, x_elts, y_elts);
 }
-
-double ClpPdco::getObj(CoinDenseVector<double> &x){
-  return pdcoStuff_->getObj(this, x);
+void ClpPdco::matPrecon(double delta, CoinDenseVector<double> &x, double *y_elts)
+{
+     double *x_elts = x.getElements();
+     matPrecon(delta, x_elts, y_elts);
+     return;
 }
 
-void ClpPdco::getGrad(CoinDenseVector<double> &x, CoinDenseVector<double> &g){
-  pdcoStuff_->getGrad(this, x,g);
+void ClpPdco::matPrecon(double delta, CoinDenseVector<double> &x, CoinDenseVector<double> &y)
+{
+     double *x_elts = x.getElements();
+     double *y_elts = y.getElements();
+     matPrecon(delta, x_elts, y_elts);
+     return;
 }
 
-void ClpPdco::getHessian(CoinDenseVector<double> &x, CoinDenseVector<double> &H){
-  pdcoStuff_->getHessian(this, x,H);
+void ClpPdco::matPrecon(double delta, CoinDenseVector<double> *x, CoinDenseVector<double> *y)
+{
+     double *x_elts = x->getElements();
+     double *y_elts = y->getElements();
+     matPrecon(delta, x_elts, y_elts);
+     return;
+}
+void ClpPdco::getBoundTypes(int *nlow, int *nupp, int *nfix, int **bptrs)
+{
+     *nlow = numberColumns_;
+     *nupp = *nfix = 0;
+     int *low_ = (int *)malloc(numberColumns_ * sizeof(int)) ;
+     for (int k = 0; k < numberColumns_; k++)
+          low_[k] = k;
+     bptrs[0] = low_;
+     return;
+}
+
+double ClpPdco::getObj(CoinDenseVector<double> &x)
+{
+     return pdcoStuff_->getObj(this, x);
+}
+
+void ClpPdco::getGrad(CoinDenseVector<double> &x, CoinDenseVector<double> &g)
+{
+     pdcoStuff_->getGrad(this, x, g);
+}
+
+void ClpPdco::getHessian(CoinDenseVector<double> &x, CoinDenseVector<double> &H)
+{
+     pdcoStuff_->getHessian(this, x, H);
 }
 #endif

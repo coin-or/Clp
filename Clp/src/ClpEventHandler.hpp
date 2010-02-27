@@ -25,67 +25,67 @@ User can derive and construct from CbcModel  - not pretty
 class ClpEventHandler  {
 
 public:
-    /** enums for what sort of event.
+     /** enums for what sort of event.
 
-        These will also be returned in ClpModel::secondaryStatus() as int
-    */
-    enum Event {
-        endOfIteration = 100, // used to set secondary status
-        endOfFactorization,
-        endOfValuesPass,
-        node, // for Cbc
-        treeStatus, // for Cbc
-        solution, // for Cbc
-        theta // hit in parametrics
-    };
-    /**@name Virtual method that the derived classe should provide.
-     The base class instance does nothing and as event() is only useful method
-     it would not be very useful NOT providing one!
-    */
-    //@{
-    /** This can do whatever it likes.  If return code -1 then carries on
-        if 0 sets ClpModel::status() to 5 (stopped by event) and will return to user.
-        At present if <-1 carries on and if >0 acts as if 0 - this may change
-    */
-    virtual int event(Event whichEvent);
-    //@}
+         These will also be returned in ClpModel::secondaryStatus() as int
+     */
+     enum Event {
+          endOfIteration = 100, // used to set secondary status
+          endOfFactorization,
+          endOfValuesPass,
+          node, // for Cbc
+          treeStatus, // for Cbc
+          solution, // for Cbc
+          theta // hit in parametrics
+     };
+     /**@name Virtual method that the derived classe should provide.
+      The base class instance does nothing and as event() is only useful method
+      it would not be very useful NOT providing one!
+     */
+     //@{
+     /** This can do whatever it likes.  If return code -1 then carries on
+         if 0 sets ClpModel::status() to 5 (stopped by event) and will return to user.
+         At present if <-1 carries on and if >0 acts as if 0 - this may change
+     */
+     virtual int event(Event whichEvent);
+     //@}
 
 
-    /**@name Constructors, destructor */
+     /**@name Constructors, destructor */
 
-    //@{
-    /** Default constructor. */
-    ClpEventHandler(ClpSimplex * model = NULL);
-    /** Destructor */
-    virtual ~ClpEventHandler();
-    // Copy
-    ClpEventHandler(const ClpEventHandler&);
-    // Assignment
-    ClpEventHandler& operator=(const ClpEventHandler&);
-    /// Clone
-    virtual ClpEventHandler * clone() const;
+     //@{
+     /** Default constructor. */
+     ClpEventHandler(ClpSimplex * model = NULL);
+     /** Destructor */
+     virtual ~ClpEventHandler();
+     // Copy
+     ClpEventHandler(const ClpEventHandler&);
+     // Assignment
+     ClpEventHandler& operator=(const ClpEventHandler&);
+     /// Clone
+     virtual ClpEventHandler * clone() const;
 
-    //@}
+     //@}
 
-    /**@name Sets/gets */
+     /**@name Sets/gets */
 
-    //@{
-    /** set model. */
-    void setSimplex(ClpSimplex * model);
-    /// Get model
-    inline ClpSimplex * simplex() const {
-        return model_;
-    }
-    //@}
+     //@{
+     /** set model. */
+     void setSimplex(ClpSimplex * model);
+     /// Get model
+     inline ClpSimplex * simplex() const {
+          return model_;
+     }
+     //@}
 
 
 protected:
-    /**@name Data members
-       The data members are protected to allow access for derived classes. */
-    //@{
-    /// Pointer to simplex
-    ClpSimplex * model_;
-    //@}
+     /**@name Data members
+        The data members are protected to allow access for derived classes. */
+     //@{
+     /// Pointer to simplex
+     ClpSimplex * model_;
+     //@}
 };
 /** Base class for Clp disaster handling
 
@@ -97,54 +97,54 @@ would otherwise give up
 class ClpDisasterHandler  {
 
 public:
-    /**@name Virtual methods that the derived classe should provide.
-    */
-    //@{
-    /// Into simplex
-    virtual void intoSimplex() = 0;
-    /// Checks if disaster
-    virtual bool check() const = 0;
-    /// saves information for next attempt
-    virtual void saveInfo() = 0;
-    /// Type of disaster 0 can fix, 1 abort
-    virtual int typeOfDisaster();
-    //@}
+     /**@name Virtual methods that the derived classe should provide.
+     */
+     //@{
+     /// Into simplex
+     virtual void intoSimplex() = 0;
+     /// Checks if disaster
+     virtual bool check() const = 0;
+     /// saves information for next attempt
+     virtual void saveInfo() = 0;
+     /// Type of disaster 0 can fix, 1 abort
+     virtual int typeOfDisaster();
+     //@}
 
 
-    /**@name Constructors, destructor */
+     /**@name Constructors, destructor */
 
-    //@{
-    /** Default constructor. */
-    ClpDisasterHandler(ClpSimplex * model = NULL);
-    /** Destructor */
-    virtual ~ClpDisasterHandler();
-    // Copy
-    ClpDisasterHandler(const ClpDisasterHandler&);
-    // Assignment
-    ClpDisasterHandler& operator=(const ClpDisasterHandler&);
-    /// Clone
-    virtual ClpDisasterHandler * clone() const = 0;
+     //@{
+     /** Default constructor. */
+     ClpDisasterHandler(ClpSimplex * model = NULL);
+     /** Destructor */
+     virtual ~ClpDisasterHandler();
+     // Copy
+     ClpDisasterHandler(const ClpDisasterHandler&);
+     // Assignment
+     ClpDisasterHandler& operator=(const ClpDisasterHandler&);
+     /// Clone
+     virtual ClpDisasterHandler * clone() const = 0;
 
-    //@}
+     //@}
 
-    /**@name Sets/gets */
+     /**@name Sets/gets */
 
-    //@{
-    /** set model. */
-    void setSimplex(ClpSimplex * model);
-    /// Get model
-    inline ClpSimplex * simplex() const {
-        return model_;
-    }
-    //@}
+     //@{
+     /** set model. */
+     void setSimplex(ClpSimplex * model);
+     /// Get model
+     inline ClpSimplex * simplex() const {
+          return model_;
+     }
+     //@}
 
 
 protected:
-    /**@name Data members
-       The data members are protected to allow access for derived classes. */
-    //@{
-    /// Pointer to simplex
-    ClpSimplex * model_;
-    //@}
+     /**@name Data members
+        The data members are protected to allow access for derived classes. */
+     //@{
+     /// Pointer to simplex
+     ClpSimplex * model_;
+     //@}
 };
 #endif

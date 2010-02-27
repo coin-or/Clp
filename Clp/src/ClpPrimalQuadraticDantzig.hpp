@@ -19,57 +19,57 @@ class ClpPrimalQuadraticDantzig : public ClpPrimalColumnPivot {
 
 public:
 
-    ///@name Algorithmic methods
-    //@{
+     ///@name Algorithmic methods
+     //@{
 
-    /** Returns pivot column, -1 if none.
-        Lumbers over all columns - slow
-        updateArray has cost updates (also use pivotRow_ from last iteration)
-        Can just do full price if you really want to be slow
-    */
-    virtual int pivotColumn(CoinIndexedVector * updates,
-                            CoinIndexedVector * spareRow1,
-                            CoinIndexedVector * spareRow2,
-                            CoinIndexedVector * spareColumn1,
-                            CoinIndexedVector * spareColumn2);
+     /** Returns pivot column, -1 if none.
+         Lumbers over all columns - slow
+         updateArray has cost updates (also use pivotRow_ from last iteration)
+         Can just do full price if you really want to be slow
+     */
+     virtual int pivotColumn(CoinIndexedVector * updates,
+                             CoinIndexedVector * spareRow1,
+                             CoinIndexedVector * spareRow2,
+                             CoinIndexedVector * spareColumn1,
+                             CoinIndexedVector * spareColumn2);
 
-    /// Just sets model
-    virtual void saveWeights(ClpSimplex * model, int mode) {
-        model_ = model;
-    }
-    //@}
+     /// Just sets model
+     virtual void saveWeights(ClpSimplex * model, int mode) {
+          model_ = model;
+     }
+     //@}
 
 
-    ///@name Constructors and destructors
-    //@{
-    /// Default Constructor
-    ClpPrimalQuadraticDantzig();
+     ///@name Constructors and destructors
+     //@{
+     /// Default Constructor
+     ClpPrimalQuadraticDantzig();
 
-    /// Copy constructor
-    ClpPrimalQuadraticDantzig(const ClpPrimalQuadraticDantzig &);
+     /// Copy constructor
+     ClpPrimalQuadraticDantzig(const ClpPrimalQuadraticDantzig &);
 
-    /// Constructor from model
-    ClpPrimalQuadraticDantzig(ClpSimplexPrimalQuadratic * model,
-                              ClpQuadraticInfo * info);
+     /// Constructor from model
+     ClpPrimalQuadraticDantzig(ClpSimplexPrimalQuadratic * model,
+                               ClpQuadraticInfo * info);
 
-    /// Assignment operator
-    ClpPrimalQuadraticDantzig & operator=(const ClpPrimalQuadraticDantzig& rhs);
+     /// Assignment operator
+     ClpPrimalQuadraticDantzig & operator=(const ClpPrimalQuadraticDantzig& rhs);
 
-    /// Destructor
-    virtual ~ClpPrimalQuadraticDantzig ();
+     /// Destructor
+     virtual ~ClpPrimalQuadraticDantzig ();
 
-    /// Clone
-    virtual ClpPrimalColumnPivot * clone(bool copyData = true) const;
+     /// Clone
+     virtual ClpPrimalColumnPivot * clone(bool copyData = true) const;
 
-    //@}
+     //@}
 
-    //---------------------------------------------------------------------------
+     //---------------------------------------------------------------------------
 
 private:
-    ///@name Private member data
-    /// Pointer to info
-    ClpQuadraticInfo * quadraticInfo_;
-    //@}
+     ///@name Private member data
+     /// Pointer to info
+     ClpQuadraticInfo * quadraticInfo_;
+     //@}
 };
 
 #endif

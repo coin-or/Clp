@@ -23,50 +23,50 @@ class ClpPdco : public ClpInterior {
 
 public:
 
-    /**@name Description of algorithm */
-    //@{
-    /** Pdco algorithm
+     /**@name Description of algorithm */
+     //@{
+     /** Pdco algorithm
 
-        Method
+         Method
 
 
-    */
+     */
 
-    int pdco();
-    // ** Temporary version
-    int  pdco( ClpPdcoBase * stuff, Options &options, Info &info, Outfo &outfo);
+     int pdco();
+     // ** Temporary version
+     int  pdco( ClpPdcoBase * stuff, Options &options, Info &info, Outfo &outfo);
 
-    //@}
+     //@}
 
-    /**@name Functions used in pdco */
-    //@{
-    /// LSQR
-    void lsqr();
+     /**@name Functions used in pdco */
+     //@{
+     /// LSQR
+     void lsqr();
 
-    void matVecMult( int, double *, double *);
+     void matVecMult( int, double *, double *);
 
-    void matVecMult( int, CoinDenseVector<double> &, double *);
+     void matVecMult( int, CoinDenseVector<double> &, double *);
 
-    void matVecMult( int, CoinDenseVector<double> &, CoinDenseVector<double> &);
+     void matVecMult( int, CoinDenseVector<double> &, CoinDenseVector<double> &);
 
-    void matVecMult( int, CoinDenseVector<double> *, CoinDenseVector<double> *);
+     void matVecMult( int, CoinDenseVector<double> *, CoinDenseVector<double> *);
 
-    void getBoundTypes( int *, int *, int *, int**);
+     void getBoundTypes( int *, int *, int *, int**);
 
-    void getGrad(CoinDenseVector<double> &x, CoinDenseVector<double> &grad);
+     void getGrad(CoinDenseVector<double> &x, CoinDenseVector<double> &grad);
 
-    void getHessian(CoinDenseVector<double> &x, CoinDenseVector<double> &H);
+     void getHessian(CoinDenseVector<double> &x, CoinDenseVector<double> &H);
 
-    double getObj(CoinDenseVector<double> &x);
+     double getObj(CoinDenseVector<double> &x);
 
-    void matPrecon( double, double *, double *);
+     void matPrecon( double, double *, double *);
 
-    void matPrecon( double, CoinDenseVector<double> &, double *);
+     void matPrecon( double, CoinDenseVector<double> &, double *);
 
-    void matPrecon( double, CoinDenseVector<double> &, CoinDenseVector<double> &);
+     void matPrecon( double, CoinDenseVector<double> &, CoinDenseVector<double> &);
 
-    void matPrecon( double, CoinDenseVector<double> *, CoinDenseVector<double> *);
-    //@}
+     void matPrecon( double, CoinDenseVector<double> *, CoinDenseVector<double> *);
+     //@}
 
 };
 #endif
