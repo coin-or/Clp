@@ -92,7 +92,9 @@ am_clp_OBJECTS = ClpMain.$(OBJEXT) CbcOrClpParam.$(OBJEXT) \
 	MyEventHandler.$(OBJEXT) MyMessageHandler.$(OBJEXT) \
 	unitTest.$(OBJEXT)
 clp_OBJECTS = $(am_clp_OBJECTS)
-clp_DEPENDENCIES = libClp.la
+am__DEPENDENCIES_1 =
+clp_DEPENDENCIES = libClp.la $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 depcomp = $(SHELL) $(top_srcdir)/../depcomp
 am__depfiles_maybe = depfiles
 CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
@@ -192,7 +194,7 @@ INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LDFLAGS = @LDFLAGS@
 LIBEXT = @LIBEXT@
 LIBOBJS = @LIBOBJS@
-LIBS = @LIBS@ $(COINUTILS_LIBS) $(ADDLIBS)
+LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
 LIBTOOLM4 = @LIBTOOLM4@
 LN_S = @LN_S@
@@ -370,7 +372,7 @@ clp_SOURCES = \
 
 
 # List all additionally required COIN libraries
-clp_LDADD = libClp.la
+clp_LDADD = libClp.la $(COINUTILS_LIBS) $(ADDLIBS)
 
 # Finally, the -rpath flag is used by libtool to make sure that the shared
 # library is found (in the lib install directory) when we are using dynamic
