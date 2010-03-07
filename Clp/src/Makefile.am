@@ -166,6 +166,9 @@ includecoin_HEADERS = \
 	CbcOrClpParam.hpp \
 	Idiot.hpp
 
+# needed by Cbc
+includecoin_HEADERS += CbcOrClpParam.cpp
+
 #############################################################################
 # Create the Config.h file that always defines HAVE_CONFIG_H and install it #
 #############################################################################
