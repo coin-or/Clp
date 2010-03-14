@@ -49,7 +49,7 @@ endif
 test: ../src/clp$(EXEEXT) $(testdepend)
 	../src/clp$(EXEEXT) $(unittestflags) || exit 1
 	if test -e osiUnitTest$(EXEEXT) ; then \
-	  osiUnitTest$(EXEEXT) $(osiunittestflags) || exit 1 ; \
+	  ./osiUnitTest$(EXEEXT) $(osiunittestflags) || exit 1 ; \
 	fi
 
 .PHONY: test
