@@ -62,7 +62,7 @@ AC_COIN_HAS_MODULE(OsiTests,   [osi-unittests],  [required=0])
 AC_COIN_HAS_MODULE(Sample,     [coindatasample], [required=0])
 AC_COIN_HAS_MODULE(Netlib,     [coindatanetlib], [required=0])
 
-# fallback if no pkg-config is available
+# fallbacks if no pkg-config is available
 if test "$coin_has_coinutils" != yes ; then
   AC_COIN_HAS_PROJECT(CoinUtils)
   if test $coin_has_coinutils != notGiven && test $coin_has_coinutils != skipping ; then
@@ -70,6 +70,14 @@ if test "$coin_has_coinutils" != yes ; then
     COINUTILS_LIBS="${COINUTILSOBJDIR}/src/libCoinUtils.la `cat ${COINUTILSOBJDIR}/coinutils_addlibs.txt`"
   else
     AC_MSG_ERROR("Required package CoinUtils unavailable.")
+  fi
+fi
+
+if test "$coin_has_osi" != yes ; then
+  AC_COIN_HAS_PROJECT(Osi)
+  if test $coin_has_osi != notGiven && test $coin_has_osi != skipping ; then
+    OSI_CFLAGS="-I`${CYGPATH_W} ${OSISRCDIR}/src` -I`${CYGPATH_W} ${OSIOBJDIR}/inc`"
+    OSI_LIBS="${OSIOBJDIR}/src/libOsi.la `cat ${OSIOBJDIR}/osi_addlibs.txt`"
   fi
 fi
 

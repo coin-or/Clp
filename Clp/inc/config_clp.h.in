@@ -15,7 +15,7 @@
 /* Define to 1 if the Netlib module is available */
 #undef COIN_HAS_NETLIB
 
-/* Define to 1 if the Osi module is available */
+/* Define to 1 if the Osi package is used */
 #undef COIN_HAS_OSI
 
 /* Define to 1 if the OsiTests module is available */
