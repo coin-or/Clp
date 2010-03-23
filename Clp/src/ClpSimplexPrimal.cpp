@@ -2755,8 +2755,21 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
           // Get extra rows
           matrix_->extendUpdated(this, rowArray_[1], 0);
           // do ratio test and re-compute dj
-          primalRow(rowArray_[1], rowArray_[3], rowArray_[2],
+#ifdef CLP_USER_DRIVEN
+          if (solveType_!=2||(moreSpecialOptions_&512)==0) {
+#endif
+              primalRow(rowArray_[1], rowArray_[3], rowArray_[2],
                     ifValuesPass);
+#ifdef CLP_USER_DRIVEN
+          } else {
+              int status = eventHandler_->event(ClpEventHandler::pivotRow);
+              if (status>=0) {
+ 	          problemStatus_=5;
+		  secondaryStatus_=ClpEventHandler::pivotRow;
+		  break;
+	      }
+	  }
+#endif
           if (ifValuesPass) {
                saveDj = dualIn_;
                //assert (fabs(alpha_)>=1.0e-5||(objective_->type()<2||!objective_->activated())||pivotRow_==-2);
@@ -2852,7 +2865,7 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
                }
           }
           if (pivotRow_ >= 0) {
-               if (solveType_ == 2) {
+               if (solveType_==2&&(moreSpecialOptions_&512)==0) {
                     // **** Coding for user interface
                     // do ray
                     primalRay(rowArray_[1]);
@@ -2930,7 +2943,7 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
                     if(lastGoodIteration_ != numberIterations_) {
                          clearAll();
                          pivotRow_ = -1;
-                         if (solveType_ == 1) {
+                         if (solveType_==1||(moreSpecialOptions_&512)!=0) {
                               returnCode = -4;
                               break;
                          } else {
@@ -2991,7 +3004,7 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
                          returnCode = 2; //say looks unbounded
                          // do ray
                          primalRay(rowArray_[1]);
-                    } else if (solveType_ == 2) {
+                    } else if (solveType_==2&&(moreSpecialOptions_&512)==0) {
                          // refactorize
                          int lastCleaned = 0;
                          ClpSimplexProgress dummyProgress;
@@ -3098,7 +3111,8 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
                }
           }
      }
-     if (solveType_ == 2 && (returnCode == -2 || returnCode == -3)) {
+     if ((solveType_==2&&(moreSpecialOptions_&512)==0)&&
+         (returnCode == -2||returnCode==-3)) {
           // refactorize here
           int lastCleaned = 0;
           ClpSimplexProgress dummyProgress;
