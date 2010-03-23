@@ -594,6 +594,9 @@ public:
   /// Useful column length arrays (0,1,2,3,4,5)
   inline CoinIndexedVector * columnArray(int index) const
   { return columnArray_[index];}
+  /// Sets firstFree_
+  inline void setFirstFree(int value)
+  { firstFree_=value;}
   //@}
 
   /******************** End of most useful part **************/
@@ -617,8 +620,11 @@ public:
   int createPiecewiseLinearCosts(const int * starts,
 		   const double * lower, const double * gradient);
   /// dual row pivot choice
-  ClpDualRowPivot * dualRowPivot() const
+  inline ClpDualRowPivot * dualRowPivot() const
   { return dualRowPivot_;}
+  /// primal column pivot choice
+  inline ClpPrimalColumnPivot * primalColumnPivot() const
+  { return primalColumnPivot_;}
   /// Returns true if model looks OK
   inline bool goodAccuracy() const
   { return (largestPrimalError_<1.0e-7&&largestDualError_<1.0e-7);}
@@ -892,6 +898,18 @@ public:
   /// Value of Out variable
   inline double valueOut() const
   { return valueOut_;}
+  /// Set value of out variable
+  inline void setValueOut(double value)
+  { valueOut_=value;}
+  /// Set lower of out variable
+  inline void setLowerOut(double value)
+  { lowerOut_=value;}
+  /// Set upper of out variable
+  inline void setUpperOut(double value)
+  { upperOut_=value;}
+  /// Set theta of out variable
+  inline void setTheta(double value)
+  { theta_=value;}
   /// Returns 1 if sequence indicates column
   inline int isColumn(int sequence) const
   { return sequence<numberColumns_ ? 1 : 0;}
@@ -951,6 +969,7 @@ public:
       64 bit - give up easily in dual (and say infeasible)
       128 bit - no objective, 0-1 and in B&B
       256 bit - in primal from dual or vice versa
+      512 bit - alternative use of solveType_
   */
   inline int moreSpecialOptions() const
   { return moreSpecialOptions_;}
@@ -964,6 +983,7 @@ public:
       64 bit - give up easily in dual (and say infeasible)
       128 bit - no objective, 0-1 and in B&B
       256 bit - in primal from dual or vice versa
+      512 bit - alternative use of solveType_
   */
   inline void setMoreSpecialOptions(int value)
   { moreSpecialOptions_ = value;}

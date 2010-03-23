@@ -36,7 +36,8 @@ public:
     node, // for Cbc
     treeStatus, // for Cbc
     solution, // for Cbc
-    theta // hit in parametrics
+    theta, // hit in parametrics
+    pivotRow // used to choose pivot row
   };
   /**@name Virtual method that the derived classe should provide.
    The base class instance does nothing and as event() is only useful method
