@@ -1728,10 +1728,11 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
           presolvedModel_->setRowObjective(rowObjective_);
         }
       }
-      // now clean up integer variables.  This can modify original
+      /* now clean up integer variables.  This can modify original
+	 Don't do if dupcol added columns together */
       int i;
       const char * information = presolvedModel_->integerInformation();
-      if (information) {
+      if ((prob.presolveOptions_&0x80000000)==0&&information) {
 	int numberChanges=0;
 	double * lower0 = originalModel_->columnLower();
 	double * upper0 = originalModel_->columnUpper();
