@@ -1,6 +1,6 @@
-BuildTools    https://projects.coin-or.org/svn/BuildTools/stable/0.5
-ThirdParty/Blas https://projects.coin-or.org/svn/BuildTools/ThirdParty/Blas/stable/1.0
-ThirdParty/Lapack https://projects.coin-or.org/svn/BuildTools/ThirdParty/Lapack/stable/1.0
-Data/Netlib   https://projects.coin-or.org/svn/Data/stable/1.0/Netlib
-Data/Sample   https://projects.coin-or.org/svn/Data/stable/1.0/Sample
-CoinUtils     https://projects.coin-or.org/svn/CoinUtils/stable/2.6/CoinUtils
+BuildTools  https://projects.coin-or.org/svn/BuildTools/releases/0.5.29
+ThirdParty/Blas  https://projects.coin-or.org/svn/BuildTools/ThirdParty/Blas/releases/1.0.14
+ThirdParty/Lapack  https://projects.coin-or.org/svn/BuildTools/ThirdParty/Lapack/releases/1.0.20
+Data/Netlib  https://projects.coin-or.org/svn/Data/releases/1.0.7/Netlib
+Data/Sample  https://projects.coin-or.org/svn/Data/releases/1.0.7/Sample
+CoinUtils  https://projects.coin-or.org/svn/CoinUtils/releases/2.6.3/CoinUtils
