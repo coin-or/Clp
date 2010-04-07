@@ -488,7 +488,7 @@ clean-libLTLIBRARIES:
 	  rm -f "$${dir}/so_locations"; \
 	done
 libClp.la: $(libClp_la_OBJECTS) $(libClp_la_DEPENDENCIES) 
-	$(CXXLINK) -rpath $(libdir) $(libClp_la_LDFLAGS) $(libClp_la_OBJECTS) $(libClp_la_LIBADD)
+	$(CXXLINK) -rpath $(libdir) $(libClp_la_LDFLAGS) $(libClp_la_OBJECTS) $(libClp_la_LIBADD) $(LIBS)
 install-binPROGRAMS: $(bin_PROGRAMS)
 	@$(NORMAL_INSTALL)
 	test -z "$(bindir)" || $(mkdir_p) "$(DESTDIR)$(bindir)"
