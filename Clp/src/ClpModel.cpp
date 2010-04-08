@@ -2574,7 +2574,7 @@ double *
 ClpModel::infeasibilityRay() const
 {
      double * array = NULL;
-     if (problemStatus_ == 1) {
+     if (problemStatus_ == 1 && ray_) {
           array = ClpCopyOfArray(ray_, numberRows_);
 #ifndef CLP_NO_SWAP_SIGN
           // swap signs to be consistent with norm
