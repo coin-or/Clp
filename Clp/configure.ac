@@ -75,9 +75,7 @@ COINUTILS_LIBS="$COINUTILS_LIBS $BLAS_LIBS $LAPACK_LIBS"
 AC_COIN_HAS_MODULE(Osi,               [osi],                     [required=0])
 AC_COIN_HAS_MODULE_FALLBACK(Osi,      [osi],           [../Osi], [required=0])
 AC_COIN_HAS_MODULE(OsiTests,          [osi-unittests],           [required=0])
-if test $coin_has_ositests != yes ; then
-  AC_COIN_HAS_MODULE_FALLBACK(OsiTests, [osi-unittests], [../Osi], [required=0])
-fi
+AC_COIN_HAS_MODULE_FALLBACK(OsiTests, [osi-unittests], [../Osi], [required=0])
 
 AC_COIN_HAS_MODULE(Sample,          [coindatasample],                   [required=0])
 AC_COIN_HAS_MODULE_FALLBACK(Sample, [coindatasample], [../Data/Sample], [required=0])

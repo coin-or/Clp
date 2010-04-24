@@ -21374,7 +21374,6 @@ fi
 
 
 
-if test $coin_has_ositests != yes ; then
 
 if test x$coin_has_ositests != "xyes" ; then
 echo "$as_me:$LINENO: checking for COIN-OR module OsiTests (fallback)" >&5
@@ -21445,7 +21444,6 @@ echo "$as_me:$LINENO: result: $coin_has_ositests" >&5
 echo "${ECHO_T}$coin_has_ositests" >&6
 fi
 
-fi
 
 
 echo "$as_me:$LINENO: checking for COIN-OR module Sample" >&5
