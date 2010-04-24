@@ -20782,6 +20782,8 @@ if test $coin_has_blas != "skipping" ; then
       else
         BLAS_LIBS="-L`cd ../ThirdParty/Blas; pwd` $projectlibs"
       fi
+    else
+      BLAS_LIBS=`sed -n -e 's/Libs://p' ../ThirdParty/Blas/coinblas-uninstalled.pc`
     fi
     BLAS_DATA=`sed -n -e 's/datadir=//gp' ../ThirdParty/Blas/coinblas-uninstalled.pc`
 
@@ -20836,6 +20838,8 @@ if test $coin_has_lapack != "skipping" ; then
       else
         LAPACK_LIBS="-L`cd ../ThirdParty/Lapack; pwd` $projectlibs"
       fi
+    else
+      LAPACK_LIBS=`sed -n -e 's/Libs://p' ../ThirdParty/Lapack/coinlapack-uninstalled.pc`
     fi
     LAPACK_DATA=`sed -n -e 's/datadir=//gp' ../ThirdParty/Lapack/coinlapack-uninstalled.pc`
 
@@ -20891,6 +20895,8 @@ if test $coin_has_coinutils != "skipping" ; then
       else
         COINUTILS_LIBS="-L`cd ../CoinUtils; pwd` $projectlibs"
       fi
+    else
+      COINUTILS_LIBS=`sed -n -e 's/Libs://p' ../CoinUtils/coinutils-uninstalled.pc`
     fi
     COINUTILS_DATA=`sed -n -e 's/datadir=//gp' ../CoinUtils/coinutils-uninstalled.pc`
 
@@ -21156,6 +21162,8 @@ if test $coin_has_osi != "skipping" ; then
       else
         OSI_LIBS="-L`cd ../Osi; pwd` $projectlibs"
       fi
+    else
+      OSI_LIBS=`sed -n -e 's/Libs://p' ../Osi/osi-uninstalled.pc`
     fi
     OSI_DATA=`sed -n -e 's/datadir=//gp' ../Osi/osi-uninstalled.pc`
 
@@ -21410,6 +21418,8 @@ if test $coin_has_ositests != "skipping" ; then
       else
         OSITESTS_LIBS="-L`cd ../Osi; pwd` $projectlibs"
       fi
+    else
+      OSITESTS_LIBS=`sed -n -e 's/Libs://p' ../Osi/osi-unittests-uninstalled.pc`
     fi
     OSITESTS_DATA=`sed -n -e 's/datadir=//gp' ../Osi/osi-unittests-uninstalled.pc`
 
@@ -21665,6 +21675,8 @@ if test $coin_has_sample != "skipping" ; then
       else
         SAMPLE_LIBS="-L`cd ../Data/Sample; pwd` $projectlibs"
       fi
+    else
+      SAMPLE_LIBS=`sed -n -e 's/Libs://p' ../Data/Sample/coindatasample-uninstalled.pc`
     fi
     SAMPLE_DATA=`sed -n -e 's/datadir=//gp' ../Data/Sample/coindatasample-uninstalled.pc`
 
@@ -21920,6 +21932,8 @@ if test $coin_has_netlib != "skipping" ; then
       else
         NETLIB_LIBS="-L`cd ../Data/Netlib; pwd` $projectlibs"
       fi
+    else
+      NETLIB_LIBS=`sed -n -e 's/Libs://p' ../Data/Netlib/coindatanetlib-uninstalled.pc`
     fi
     NETLIB_DATA=`sed -n -e 's/datadir=//gp' ../Data/Netlib/coindatanetlib-uninstalled.pc`
 
