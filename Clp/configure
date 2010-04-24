@@ -20742,8 +20742,121 @@ fi
 
 
 
+if test $coin_has_coinutils != yes ; then
+  #if we have to use the fallback routines, then obviously it will not find CoinUtils dependencies
+  #thus, we check whether ThirdParty/Blas and ThirdParty/Lapack have been setup and
+  #assume that if present then they are dependencies of CoinUtils
 
-if test $coin_has_coinutils != "yes" ; then
+if test x$coin_has_blas != "xyes" ; then
+echo "$as_me:$LINENO: checking for COIN-OR module Blas (fallback)" >&5
+echo $ECHO_N "checking for COIN-OR module Blas (fallback)... $ECHO_C" >&6
+
+coin_has_blas=notGiven
+
+# check if user wants to skip module in any case
+if test x"$COIN_SKIP_PROJECTS" != x; then
+  for dir in $COIN_SKIP_PROJECTS; do
+    if test $dir = "Blas"; then
+      coin_has_blas=skipping
+    fi
+  done
+fi
+
+BLAS_LIBS=
+BLAS_CFLAGS=
+BLAS_DATA=
+
+
+if test $coin_has_blas != "skipping" ; then
+  # if the project is available and configured, then a project-uninstalled.pc file should have been created
+  if test -r ../ThirdParty/Blas/coinblas-uninstalled.pc ; then
+    # read CFLAGS and LIBS from coinblas-uninstalled.pc file
+    # add CYGPATH_W cludge into include flags
+    # replace -L${libdir} by absolute path to build directory in linker flags
+    # we assume that the build directory is ../ThirdParty/Blas/src if this directory exists, otherwise we assume that it is ../ThirdParty/Blas
+    BLAS_CFLAGS=`sed -n -e 's/Cflags://' -e 's/-I\([^ ]*\)/-I\`${CYGPATH_W} \1\`/gp' ../ThirdParty/Blas/coinblas-uninstalled.pc`
+    projectlibs=`sed -n -e 's/Libs://' -e 's/-L\${libdir}//p' ../ThirdParty/Blas/coinblas-uninstalled.pc`
+    if test "x$projectlibs" != x ; then
+      if test -d ../ThirdParty/Blas/src ; then
+        BLAS_LIBS="-L`cd ../ThirdParty/Blas/src; pwd` $projectlibs"
+      else
+        BLAS_LIBS="-L`cd ../ThirdParty/Blas; pwd` $projectlibs"
+      fi
+    fi
+    BLAS_DATA=`sed -n -e 's/datadir=//gp' ../ThirdParty/Blas/coinblas-uninstalled.pc`
+
+
+
+
+
+    coin_has_blas=yes
+  fi
+fi
+
+#if user did not disable setting of makefile conditional, do it
+
+
+echo "$as_me:$LINENO: result: $coin_has_blas" >&5
+echo "${ECHO_T}$coin_has_blas" >&6
+fi
+
+
+if test x$coin_has_lapack != "xyes" ; then
+echo "$as_me:$LINENO: checking for COIN-OR module Lapack (fallback)" >&5
+echo $ECHO_N "checking for COIN-OR module Lapack (fallback)... $ECHO_C" >&6
+
+coin_has_lapack=notGiven
+
+# check if user wants to skip module in any case
+if test x"$COIN_SKIP_PROJECTS" != x; then
+  for dir in $COIN_SKIP_PROJECTS; do
+    if test $dir = "Lapack"; then
+      coin_has_lapack=skipping
+    fi
+  done
+fi
+
+LAPACK_LIBS=
+LAPACK_CFLAGS=
+LAPACK_DATA=
+
+
+if test $coin_has_lapack != "skipping" ; then
+  # if the project is available and configured, then a project-uninstalled.pc file should have been created
+  if test -r ../ThirdParty/Lapack/coinlapack-uninstalled.pc ; then
+    # read CFLAGS and LIBS from coinlapack-uninstalled.pc file
+    # add CYGPATH_W cludge into include flags
+    # replace -L${libdir} by absolute path to build directory in linker flags
+    # we assume that the build directory is ../ThirdParty/Lapack/src if this directory exists, otherwise we assume that it is ../ThirdParty/Lapack
+    LAPACK_CFLAGS=`sed -n -e 's/Cflags://' -e 's/-I\([^ ]*\)/-I\`${CYGPATH_W} \1\`/gp' ../ThirdParty/Lapack/coinlapack-uninstalled.pc`
+    projectlibs=`sed -n -e 's/Libs://' -e 's/-L\${libdir}//p' ../ThirdParty/Lapack/coinlapack-uninstalled.pc`
+    if test "x$projectlibs" != x ; then
+      if test -d ../ThirdParty/Lapack/src ; then
+        LAPACK_LIBS="-L`cd ../ThirdParty/Lapack/src; pwd` $projectlibs"
+      else
+        LAPACK_LIBS="-L`cd ../ThirdParty/Lapack; pwd` $projectlibs"
+      fi
+    fi
+    LAPACK_DATA=`sed -n -e 's/datadir=//gp' ../ThirdParty/Lapack/coinlapack-uninstalled.pc`
+
+
+
+
+
+    coin_has_lapack=yes
+  fi
+fi
+
+#if user did not disable setting of makefile conditional, do it
+
+
+echo "$as_me:$LINENO: result: $coin_has_lapack" >&5
+echo "${ECHO_T}$coin_has_lapack" >&6
+fi
+
+fi
+
+if test x$coin_has_coinutils != "xyes" ; then
 echo "$as_me:$LINENO: checking for COIN-OR module CoinUtils (fallback)" >&5
 echo $ECHO_N "checking for COIN-OR module CoinUtils (fallback)... $ECHO_C" >&6
 
@@ -20782,8 +20895,8 @@ if test $coin_has_coinutils != "skipping" ; then
     COINUTILS_DATA=`sed -n -e 's/datadir=//gp' ../CoinUtils/coinutils-uninstalled.pc`
 
     ADDLIBS="$ADDLIBS $COINUTILS_LIBS"
+       REQUIREDPACKAGES="$REQUIREDPACKAGES coinutils"
 
-    REQUIREDPACKAGES="$REQUIREDPACKAGES coinutils"
 
 
 cat >>confdefs.h <<\_ACEOF
@@ -20819,6 +20932,9 @@ if test $coin_has_coinutils != yes ; then
 echo "$as_me: error: Required package CoinUtils not available." >&2;}
    { (exit 1); exit 1; }; }
 fi
+#so if we had to do find Blas and Lapack separately, then add their linker flags to the CoinUtils flags
+#actually the libs may already be included in libCoinUtils, but we may still need the fortran library flags
+COINUTILS_LIBS="$COINUTILS_LIBS $BLAS_LIBS $LAPACK_LIBS"
 
 
 echo "$as_me:$LINENO: checking for COIN-OR module Osi" >&5
@@ -21005,7 +21121,7 @@ fi
 
 
 
-if test $coin_has_osi != "yes" ; then
+if test x$coin_has_osi != "xyes" ; then
 echo "$as_me:$LINENO: checking for COIN-OR module Osi (fallback)" >&5
 echo $ECHO_N "checking for COIN-OR module Osi (fallback)... $ECHO_C" >&6
 
@@ -21042,8 +21158,6 @@ if test $coin_has_osi != "skipping" ; then
       fi
     fi
     OSI_DATA=`sed -n -e 's/datadir=//gp' ../Osi/osi-uninstalled.pc`
-
-    ADDLIBS="$ADDLIBS $OSI_LIBS"
 
 
 
@@ -21260,8 +21374,9 @@ fi
 
 
 
+if test $coin_has_ositests != yes ; then
 
-if test $coin_has_ositests != "yes" ; then
+if test x$coin_has_ositests != "xyes" ; then
 echo "$as_me:$LINENO: checking for COIN-OR module OsiTests (fallback)" >&5
 echo $ECHO_N "checking for COIN-OR module OsiTests (fallback)... $ECHO_C" >&6
 
@@ -21299,8 +21414,6 @@ if test $coin_has_ositests != "skipping" ; then
     fi
     OSITESTS_DATA=`sed -n -e 's/datadir=//gp' ../Osi/osi-unittests-uninstalled.pc`
 
-    ADDLIBS="$ADDLIBS $OSITESTS_LIBS"
-
 
 
 
@@ -21332,6 +21445,7 @@ echo "$as_me:$LINENO: result: $coin_has_ositests" >&5
 echo "${ECHO_T}$coin_has_ositests" >&6
 fi
 
+fi
 
 
 echo "$as_me:$LINENO: checking for COIN-OR module Sample" >&5
@@ -21518,7 +21632,7 @@ fi
 
 
 
-if test $coin_has_sample != "yes" ; then
+if test x$coin_has_sample != "xyes" ; then
 echo "$as_me:$LINENO: checking for COIN-OR module Sample (fallback)" >&5
 echo $ECHO_N "checking for COIN-OR module Sample (fallback)... $ECHO_C" >&6
 
@@ -21555,8 +21669,6 @@ if test $coin_has_sample != "skipping" ; then
       fi
     fi
     SAMPLE_DATA=`sed -n -e 's/datadir=//gp' ../Data/Sample/coindatasample-uninstalled.pc`
-
-    ADDLIBS="$ADDLIBS $SAMPLE_LIBS"
 
 
 
@@ -21775,7 +21887,7 @@ fi
 
 
 
-if test $coin_has_netlib != "yes" ; then
+if test x$coin_has_netlib != "xyes" ; then
 echo "$as_me:$LINENO: checking for COIN-OR module Netlib (fallback)" >&5
 echo $ECHO_N "checking for COIN-OR module Netlib (fallback)... $ECHO_C" >&6
 
@@ -21812,8 +21924,6 @@ if test $coin_has_netlib != "skipping" ; then
       fi
     fi
     NETLIB_DATA=`sed -n -e 's/datadir=//gp' ../Data/Netlib/coindatanetlib-uninstalled.pc`
-
-    ADDLIBS="$ADDLIBS $NETLIB_LIBS"
 
 
 
