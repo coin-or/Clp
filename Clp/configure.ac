@@ -53,33 +53,25 @@ AC_COIN_PROG_CXX
 AC_COIN_INIT_AUTO_TOOLS
 
 #############################################################################
-#                              COIN components                              #
+#                              COIN-OR components                           #
 #############################################################################
 
-AC_COIN_HAS_MODULE(CoinUtils,  [coinutils = split])
-AC_COIN_HAS_MODULE(Osi,        [osi],            [required=0])
-AC_COIN_HAS_MODULE(OsiTests,   [osi-unittests],  [required=0])
-AC_COIN_HAS_MODULE(Sample,     [coindatasample], [required=0])
-AC_COIN_HAS_MODULE(Netlib,     [coindatanetlib], [required=0])
-
-# fallbacks if no pkg-config is available
-if test "$coin_has_coinutils" != yes ; then
-  AC_COIN_HAS_PROJECT(CoinUtils)
-  if test $coin_has_coinutils != notGiven && test $coin_has_coinutils != skipping ; then
-    COINUTILS_CFLAGS="-I`${CYGPATH_W} ${COINUTILSSRCDIR}/src` -I`${CYGPATH_W} ${COINUTILSOBJDIR}/inc`"
-    COINUTILS_LIBS="${COINUTILSOBJDIR}/src/libCoinUtils.la `cat ${COINUTILSOBJDIR}/coinutils_addlibs.txt`"
-  else
-    AC_MSG_ERROR("Required package CoinUtils unavailable.")
-  fi
+AC_COIN_HAS_MODULE(CoinUtils,          [coinutils = split])
+AC_COIN_HAS_MODULE_FALLBACK(CoinUtils, [coinutils], [../CoinUtils])
+if test $coin_has_coinutils != yes ; then
+  AC_MSG_ERROR([Required package CoinUtils not available.])
 fi
 
-if test "$coin_has_osi" != yes ; then
-  AC_COIN_HAS_PROJECT(Osi)
-  if test $coin_has_osi != notGiven && test $coin_has_osi != skipping ; then
-    OSI_CFLAGS="-I`${CYGPATH_W} ${OSISRCDIR}/src` -I`${CYGPATH_W} ${OSIOBJDIR}/inc`"
-    OSI_LIBS="${OSIOBJDIR}/src/libOsi.la `cat ${OSIOBJDIR}/osi_addlibs.txt`"
-  fi
-fi
+AC_COIN_HAS_MODULE(Osi,               [osi],                     [required=0])
+AC_COIN_HAS_MODULE_FALLBACK(Osi,      [osi],           [../Osi], [required=0])
+AC_COIN_HAS_MODULE(OsiTests,          [osi-unittests],           [required=0])
+AC_COIN_HAS_MODULE_FALLBACK(OsiTests, [osi-unittests], [../Osi], [required=0])
+
+AC_COIN_HAS_MODULE(Sample,          [coindatasample],                   [required=0])
+AC_COIN_HAS_MODULE_FALLBACK(Sample, [coindatasample], [../Data/Sample], [required=0])
+
+AC_COIN_HAS_MODULE(Netlib,          [coindatanetlib],                   [required=0])
+AC_COIN_HAS_MODULE_FALLBACK(Netlib, [coindatanetlib], [../Data/Netlib], [required=0])
 
 #############################################################################
 #                        Third party linear solvers                         #

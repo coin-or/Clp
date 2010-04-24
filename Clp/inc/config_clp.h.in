@@ -9,13 +9,13 @@
 /* Define to the debug verbosity level (0 is no output) */
 #undef COIN_CLP_VERBOSITY
 
-/* Define to 1 if the CoinUtils package is used */
+/* Define to 1 if the CoinUtils module is available */
 #undef COIN_HAS_COINUTILS
 
 /* Define to 1 if the Netlib module is available */
 #undef COIN_HAS_NETLIB
 
-/* Define to 1 if the Osi package is used */
+/* Define to 1 if the Osi module is available */
 #undef COIN_HAS_OSI
 
 /* Define to 1 if the OsiTests module is available */

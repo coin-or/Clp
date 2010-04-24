@@ -1,10 +1,9 @@
 prefix=@prefix@
 libdir=@ABSBUILDDIR@/src
-includedir=@abs_source_dir@/src
 
 Name: CLP
 Description: COIN-OR Linear Programming Solver
 Version: @PACKAGE_VERSION@
 Libs: -L${libdir} -lClp @ADDLIBS@
-Cflags: -I${includedir} -I@ABSBUILDDIR@/inc
+Cflags: -I@abs_source_dir@/src -I@ABSBUILDDIR@/inc
 Requires: @REQUIREDPACKAGES@
