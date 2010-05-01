@@ -63,8 +63,7 @@ DIST_COMMON = README $(am__configure_deps) \
 	$(srcdir)/../ltmain.sh $(srcdir)/../missing \
 	$(srcdir)/Makefile.am $(srcdir)/Makefile.in \
 	$(srcdir)/clp-uninstalled.pc.in $(srcdir)/clp.pc.in \
-	$(srcdir)/clp_addlibs.txt.in $(top_srcdir)/configure \
-	$(top_srcdir)/examples/Makefile.in \
+	$(top_srcdir)/configure $(top_srcdir)/examples/Makefile.in \
 	$(top_srcdir)/inc/config_clp.h.in \
 	$(top_srcdir)/src/OsiClp/osi-clp-uninstalled.pc.in AUTHORS
 @HAVE_EXTERNALS_TRUE@am__append_2 = Externals
@@ -79,8 +78,8 @@ am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
  configure.lineno configure.status.lineno
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/inc/config_clp.h
-CONFIG_CLEAN_FILES = examples/Makefile clp_addlibs.txt clp.pc \
-	clp-uninstalled.pc osi-clp-uninstalled.pc
+CONFIG_CLEAN_FILES = examples/Makefile clp.pc clp-uninstalled.pc \
+	osi-clp-uninstalled.pc
 SOURCES =
 DIST_SOURCES =
 RECURSIVE_TARGETS = all-recursive check-recursive dvi-recursive \
@@ -146,8 +145,11 @@ COIN_HAS_OSITESTS_FALSE = @COIN_HAS_OSITESTS_FALSE@
 COIN_HAS_OSITESTS_TRUE = @COIN_HAS_OSITESTS_TRUE@
 COIN_HAS_OSI_FALSE = @COIN_HAS_OSI_FALSE@
 COIN_HAS_OSI_TRUE = @COIN_HAS_OSI_TRUE@
+COIN_HAS_PKGCONFIG_FALSE = @COIN_HAS_PKGCONFIG_FALSE@
+COIN_HAS_PKGCONFIG_TRUE = @COIN_HAS_PKGCONFIG_TRUE@
 COIN_HAS_SAMPLE_FALSE = @COIN_HAS_SAMPLE_FALSE@
 COIN_HAS_SAMPLE_TRUE = @COIN_HAS_SAMPLE_TRUE@
+COIN_PKG_CONFIG_PATH = @COIN_PKG_CONFIG_PATH@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CXX = @CXX@
@@ -309,14 +311,15 @@ EXTRA_DIST = doc/authors.xml doc/basicmodelclasses.xml doc/clpexe.xml \
 ########################################################################
 #                  Installation of the addlibs file                    #
 ########################################################################
-addlibsdir = $(datadir)/coin/doc/Clp
-addlibs_DATA = clp_addlibs.txt
+@COIN_HAS_PKGCONFIG_TRUE@addlibsdir = $(datadir)/coin/doc/Clp
+@COIN_HAS_PKGCONFIG_TRUE@addlibs_DATA = clp_addlibs.txt
 pkgconfiglibdir = $(libdir)/pkgconfig
 pkgconfiglib_DATA = clp.pc
 
 ########################################################################
 #                         Maintainer Stuff                             #
 ########################################################################
+CLEANFILES = clp_addlibs.txt
 
 # Files that are generated and should be cleaned with make distclean
 DISTCLEANFILES = $(am__append_3) $(VPATH_DISTCLEANFILES)
@@ -376,8 +379,6 @@ $(top_srcdir)/inc/config_clp.h.in: @MAINTAINER_MODE_TRUE@ $(am__configure_deps)
 distclean-hdr:
 	-rm -f inc/config_clp.h inc/stamp-h1
 examples/Makefile: $(top_builddir)/config.status $(top_srcdir)/examples/Makefile.in
-	cd $(top_builddir) && $(SHELL) ./config.status $@
-clp_addlibs.txt: $(top_builddir)/config.status $(srcdir)/clp_addlibs.txt.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@
 clp.pc: $(top_builddir)/config.status $(srcdir)/clp.pc.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@
@@ -729,6 +730,7 @@ install-strip:
 mostlyclean-generic:
 
 clean-generic:
+	-test -z "$(CLEANFILES)" || rm -f $(CLEANFILES)
 
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
@@ -829,6 +831,9 @@ install-exec-local: install-doc
 uninstall-local: uninstall-doc
 
 .PHONY: test unitTest
+
+@COIN_HAS_PKGCONFIG_TRUE@clp_addlibs.txt : clp.pc
+@COIN_HAS_PKGCONFIG_TRUE@	PKG_CONFIG_PATH=.:@COIN_PKG_CONFIG_PATH@ $(PKG_CONFIG) --libs clp > clp_addlibs.txt
 
 install-doc: $(DocFiles)
 	test -z "$(DocInstallDir)" || $(mkdir_p) "$(DESTDIR)$(DocInstallDir)"

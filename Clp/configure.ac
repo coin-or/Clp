@@ -56,7 +56,7 @@ AC_COIN_INIT_AUTO_TOOLS
 #                              COIN-OR components                           #
 #############################################################################
 
-AC_COIN_HAS_MODULE(CoinUtils,          [coinutils = split])
+AC_COIN_HAS_MODULE(CoinUtils, [coinutils = split])
 if test $coin_has_coinutils != yes ; then
   #if we have to use the fallback routines, then obviously it will not find CoinUtils dependencies
   #thus, we check whether ThirdParty/Blas and ThirdParty/Lapack have been setup and
@@ -72,16 +72,10 @@ fi
 #actually the libs may already be included in libCoinUtils, but we may still need the fortran library flags
 COINUTILS_LIBS="$COINUTILS_LIBS $BLAS_LIBS $LAPACK_LIBS"
 
-AC_COIN_HAS_MODULE(Osi,               [osi],                     [required=0])
-AC_COIN_HAS_MODULE_FALLBACK(Osi,      [osi],           [../Osi], [required=0])
-AC_COIN_HAS_MODULE(OsiTests,          [osi-unittests],           [required=0])
-AC_COIN_HAS_MODULE_FALLBACK(OsiTests, [osi-unittests], [../Osi], [required=0])
-
-AC_COIN_HAS_MODULE(Sample,          [coindatasample],                   [required=0])
-AC_COIN_HAS_MODULE_FALLBACK(Sample, [coindatasample], [../Data/Sample], [required=0])
-
-AC_COIN_HAS_MODULE(Netlib,          [coindatanetlib],                   [required=0])
-AC_COIN_HAS_MODULE_FALLBACK(Netlib, [coindatanetlib], [../Data/Netlib], [required=0])
+AC_COIN_HAS_MODULE(Osi,      [osi],            [required=0], [../Osi])
+AC_COIN_HAS_MODULE(OsiTests, [osi-unittests],  [required=0], [../Osi])
+AC_COIN_HAS_MODULE(Sample,   [coindatasample], [required=0], [../Data/Sample])
+AC_COIN_HAS_MODULE(Netlib,   [coindatanetlib], [required=0], [../Data/Netlib])
 
 #############################################################################
 #                        Third party linear solvers                         #
@@ -151,7 +145,6 @@ AC_CONFIG_FILES([Makefile
                  src/Makefile
                  src/OsiClp/Makefile
                  test/Makefile
-		 clp_addlibs.txt
 		 clp.pc
 		 clp-uninstalled.pc])
 		 
