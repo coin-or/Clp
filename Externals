@@ -1,4 +1,4 @@
-BuildTools    https://projects.coin-or.org/svn/BuildTools/branches/split
+BuildTools    https://projects.coin-or.org/svn/BuildTools/trunk
 #ThirdParty/Blas https://projects.coin-or.org/svn/BuildTools/ThirdParty/Blas/stable/1.0
 #ThirdParty/Lapack https://projects.coin-or.org/svn/BuildTools/ThirdParty/Lapack/stable/1.0
 #Data/Sample   https://projects.coin-or.org/svn/Data/stable/1.0/Sample
