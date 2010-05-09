@@ -56,7 +56,7 @@ AC_COIN_INIT_AUTO_TOOLS
 #                              COIN-OR components                           #
 #############################################################################
 
-AC_COIN_HAS_MODULE(CoinUtils, [coinutils = split])
+AC_COIN_HAS_MODULE(CoinUtils, [coinutils = trunk])
 if test $coin_has_coinutils != yes ; then
   #if we have to use the fallback routines, then obviously it will not find CoinUtils dependencies
   #thus, we check whether ThirdParty/Blas and ThirdParty/Lapack have been setup and
