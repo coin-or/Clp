@@ -977,19 +977,19 @@ public:
      }
      /// Set value of out variable
      inline void setValueOut(double value) {
-          valueOut_=value;
+          valueOut_ = value;
      }
      /// Set lower of out variable
      inline void setLowerOut(double value) {
-          lowerOut_=value;
+          lowerOut_ = value;
      }
      /// Set upper of out variable
      inline void setUpperOut(double value) {
-          upperOut_=value;
+          upperOut_ = value;
      }
      /// Set theta of out variable
      inline void setTheta(double value) {
-          theta_=value;
+          theta_ = value;
      }
      /// Returns 1 if sequence indicates column
      inline int isColumn(int sequence) const {
