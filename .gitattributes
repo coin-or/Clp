@@ -56,6 +56,7 @@ Clp/src/ClpPdco.cpp -text
 Clp/src/ClpPdco.hpp -text
 Clp/src/ClpPdcoBase.cpp -text
 Clp/src/ClpPdcoBase.hpp -text
+/Dependencies -text
 /LICENSE -text
 /README -text
 /config.guess -text
