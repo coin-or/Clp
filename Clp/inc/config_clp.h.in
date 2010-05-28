@@ -1,7 +1,7 @@
 /* inc/config_clp.h.in.  Generated from configure.ac by autoheader.  */
 
 /* "Version of Clp" */
-#undef CLPVERSION
+#undef CLP_VERSION
 
 /* Define to the debug sanity check level (0 is no test) */
 #undef COIN_CLP_CHECKLEVEL

@@ -20669,7 +20669,7 @@ fi
 
 
 cat >>confdefs.h <<_ACEOF
-#define CLPVERSION "$PACKAGE_VERSION"
+#define CLP_VERSION "$PACKAGE_VERSION"
 _ACEOF
 
 

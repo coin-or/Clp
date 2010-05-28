@@ -19,6 +19,7 @@
  */
 
 #ifndef __CLPCONFIG_H__
+#define __CLPCONFIG_H__
 
 #ifdef HAVE_CONFIG_H
 #include "config_clp.h"
@@ -57,8 +58,8 @@
 /* Define to 1 if readline is available */
 /* #undef COIN_HAS_READLINE */
 
-#define CLPVERSION "trunk"
+#define CLP_VERSION "trunk"
 
 #endif /* HAVE_CONFIG_H */
 
-#endif /*__HAVE_COINUTILS_CONFIG_H__*/
+#endif /*__CLPCONFIG_H__ */

@@ -98,7 +98,7 @@ fi
 #                           CLP version number                              #
 #############################################################################
 
-AC_DEFINE_UNQUOTED(CLPVERSION, "$PACKAGE_VERSION", "Version of Clp")
+AC_DEFINE_UNQUOTED(CLP_VERSION, "$PACKAGE_VERSION", "Version of Clp")
 
 #############################################################################
 #                             Other dependencies                            #

@@ -206,7 +206,7 @@ main (int argc, const char *argv[])
           //ClpPrimalColumnSteepest steepP;
           //models[0].setPrimalColumnPivotAlgorithm(steepP);
           std::string field;
-          std::cout << "Coin LP version " << CLPVERSION
+          std::cout << "Coin LP version " << CLP_VERSION
                     << ", build " << __DATE__ << std::endl;
           // Print command line
           if (argc > 1) {
@@ -1658,7 +1658,7 @@ main (int argc, const char *argv[])
                               }
                               break;
                          case CLP_PARAM_ACTION_HELP:
-                              std::cout << "Coin LP version " << CLPVERSION
+                              std::cout << "Coin LP version " << CLP_VERSION
                                         << ", build " << __DATE__ << std::endl;
                               std::cout << "Non default values:-" << std::endl;
                               std::cout << "Perturbation " << models[0].perturbation() << " (default 100)"
