@@ -8,7 +8,7 @@
 #include "ClpCholeskyBase.hpp"
 #include "ClpQuadraticObjective.hpp"
 #include <cassert>
-int main (int argc, const char *argv[])
+int main(int argc, const char *argv[])
 {
      /* Read quadratic model in two stages to test loadQuadraticObjective.
 
@@ -21,7 +21,12 @@ int main (int argc, const char *argv[])
      */
      if (argc < 2) {
           CoinMpsIO  m;
-          int status = m.readMps("../../Data/Sample/share2qp", "mps");
+#if defined(COIN_HAS_SAMPLE) && defined(SAMPLEDIR)
+          int status = m.readMps(SAMPLEDIR "/share2qp", "mps");
+#else
+          fprintf(stderr, "Do not know where to find sample MPS files.\n");
+          exit(1);
+#endif
           if (status) {
                printf("errors on input\n");
                exit(77);
@@ -60,11 +65,11 @@ int main (int argc, const char *argv[])
           int i;
           int numberColumns = model.numberColumns();
           int numberRows = model.numberRows();
-          for ( i = 0; i < numberColumns; i++) {
+          for (i = 0; i < numberColumns; i++) {
                if (fabs(primal[i]) > 1.0e-8)
                     printf("%d primal %g\n", i, primal[i]);
           }
-          for ( i = 0; i < numberRows; i++) {
+          for (i = 0; i < numberRows; i++) {
                if (fabs(dual[i]) > 1.0e-8)
                     printf("%d dual %g\n", i, dual[i]);
           }
@@ -102,7 +107,7 @@ int main (int argc, const char *argv[])
                // Check duals by hand
                const ClpQuadraticObjective * quadraticObj =
                     (dynamic_cast<const ClpQuadraticObjective*>(model.objectiveAsObject()));
-               assert (quadraticObj);
+               assert(quadraticObj);
                CoinPackedMatrix * quad = quadraticObj->quadraticObjective();
                const int * columnQuadratic = quad->getIndices();
                const CoinBigIndex * columnQuadraticStart = quad->getVectorStarts();
@@ -114,7 +119,7 @@ int main (int argc, const char *argv[])
                // move linear objective
                memcpy(gradient, quadraticObj->linearObjective(), numberColumns * sizeof(double));
                int iColumn;
-               for ( iColumn = 0; iColumn < numberColumns; iColumn++) {
+               for (iColumn = 0; iColumn < numberColumns; iColumn++) {
                     double valueI = primal[iColumn];
                     CoinBigIndex j;
                     for (j = columnQuadraticStart[iColumn];
@@ -148,7 +153,7 @@ int main (int argc, const char *argv[])
                const CoinBigIndex * columnStart = matrix->getVectorStarts();
                const int * columnLength = matrix->getVectorLengths();
                const double * element = matrix->getElements();
-               for ( iColumn = 0; iColumn < numberColumns; iColumn++) {
+               for (iColumn = 0; iColumn < numberColumns; iColumn++) {
                     double dj = gradient[iColumn];
                     CoinBigIndex j;
                     for (j = columnStart[iColumn];
@@ -157,9 +162,9 @@ int main (int argc, const char *argv[])
                          dj -= element[j] * dual[jRow];
                     }
                     if (model.getColumnStatus(iColumn) == ClpSimplex::basic) {
-                         assert (fabs(dj) < 1.0e-5);
+                         assert(fabs(dj) < 1.0e-5);
                     } else {
-                         assert (dj > -1.0e-5);
+                         assert(dj > -1.0e-5);
                     }
                }
                delete [] gradient;

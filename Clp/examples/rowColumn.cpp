@@ -14,7 +14,7 @@
 #include <cstdio>
 #include <cassert>
 
-int main (int argc, const char *argv[])
+int main(int argc, const char *argv[])
 {
      ClpSimplex  modelByRow, modelByColumn;
 
@@ -60,7 +60,7 @@ int main (int argc, const char *argv[])
      // Solve
      modelByColumn.dual();
      // check value of objective
-     assert (fabs(modelByColumn.objectiveValue() - 76000.0) < 1.0e-7);
+     assert(fabs(modelByColumn.objectiveValue() - 76000.0) < 1.0e-7);
      // b) As two steps - first creating a CoinPackedMatrix
      // NULL for column lengths indicate they are stored without gaps
      // Look at CoinPackedMatrix.hpp for other ways to create a matrix
@@ -74,10 +74,10 @@ int main (int argc, const char *argv[])
      // Solve
      modelByColumn.dual();
      // check value of objective
-     assert (fabs(modelByColumn.objectiveValue() - 76000.0) < 1.0e-7);
+     assert(fabs(modelByColumn.objectiveValue() - 76000.0) < 1.0e-7);
      // Now do by row
      // The false says row ordered so numberRows and numberColumns swapped - see CoinPackedMatrix.hpp
-     assert(numberElements == rowStart[numberRows]); // check same number of elements in each copy
+     assert(numberElements == rowStart[numberRows]);    // check same number of elements in each copy
      CoinPackedMatrix byRow(false, numberColumns, numberRows, numberElements,
                             elementByRow, column, rowStart, NULL);
      // now load matrix and rim
@@ -87,7 +87,7 @@ int main (int argc, const char *argv[])
      // Solve
      modelByRow.dual();
      // check value of objective
-     assert (fabs(modelByRow.objectiveValue() - 76000.0) < 1.0e-7);
+     assert(fabs(modelByRow.objectiveValue() - 76000.0) < 1.0e-7);
      // write solution
      const double * solution = modelByRow.primalColumnSolution();
      for (int i = 0; i < numberColumns; i++) {

@@ -5,13 +5,18 @@
 #include "ClpSimplex.hpp"
 #include "CoinHelperFunctions.hpp"
 #include "CoinBuild.hpp"
-int main (int argc, const char *argv[])
+int main(int argc, const char *argv[])
 {
      ClpSimplex  model;
      int status;
-     if (argc < 2)
-          status = model.readMps("../../Data/Sample/p0033.mps");
-     else
+     if (argc < 2) {
+#if defined(COIN_HAS_SAMPLE) && defined(SAMPLEDIR)
+          status = model.readMps(SAMPLEDIR "/p0033.mps", true);
+#else
+          fprintf(stderr, "Do not know where to find sample MPS files.\n");
+          exit(1);
+#endif
+     } else
           status = model.readMps(argv[1]);
      if (status) {
           printf("errors on input\n");
@@ -120,7 +125,7 @@ int main (int argc, const char *argv[])
      int kRow = 0;
      for (iRow = 0; iRow < numberRows; iRow++) {
           if (rowLower[iRow] <= -1.0e20) {
-               assert (rowUpper[iRow] < 1.0e20);
+               assert(rowUpper[iRow] < 1.0e20);
                newObjective[kRow] = -rowUpper[iRow];
                fromRowsLower[kRow] = -COIN_DBL_MAX;
                fromRowsUpper[kRow] = 0.0;

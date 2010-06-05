@@ -15,7 +15,7 @@
 #include <assert.h>
 #include <cmath>
 
-int main (int argc, const char *argv[])
+int main(int argc, const char *argv[])
 {
 
      // Get model in some way
@@ -56,12 +56,12 @@ int main (int argc, const char *argv[])
      info.LSdamp = 0.0;
      // These are already set?
      model.xsize_ = 50.0 / (model.numberColumns());
-     model.xsize_ = CoinMin( 1.0, model.xsize_);
+     model.xsize_ = CoinMin(1.0, model.xsize_);
 
      /*
       *     Solve the test problem
       */
-     model.pdco( &stuff, options, info, outfo);
+     model.pdco(&stuff, options, info, outfo);
 
      /*
       *     Examine the results.

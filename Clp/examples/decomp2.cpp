@@ -2,18 +2,27 @@
 // Copyright (C) 2008, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
+#include "ClpConfig.h"
 #include "ClpSimplex.hpp"
 #include "CoinStructuredModel.hpp"
 #include <iomanip>
 
-int main (int argc, const char *argv[])
+int main(int argc, const char *argv[])
 {
      /* Create a structured model by reading mps file and trying
         Dantzig-Wolfe decomposition (that's the 1 parameter)
      */
      // At present D-W rows are hard coded - will move stuff from OSL
-     CoinStructuredModel model((argc < 2) ? "../../Data/Netlib/czprob.mps"
+#if defined(COIN_HAS_NETLIB) && defined(NETLIBDIR)
+     CoinStructuredModel model((argc < 2) ? NETLIBDIR "/czprob.mps"
                                : argv[1], 1);
+#else
+     if (argc<2) {
+          fprintf(stderr, "Do not know where to find netlib MPS files.\n");
+          return 1;
+     }
+     CoinStructuredModel model(argv[1], 1);
+#endif
      if (!model.numberRows())
           exit(10);
      // Get default solver - could change stuff

@@ -41,7 +41,7 @@ VPATH = @srcdir@
 CXX = @CXX@
 
 # C++ Compiler options
-CXXFLAGS = @CXXFLAGS@
+CXXFLAGS = @CXXFLAGS@ -DSAMPLEDIR=\"@SAMPLE_DATA@\" -DNETLIBDIR=\"@NETLIB_DATA@\"
 
 # additional C++ Compiler options for linking
 CXXLINKFLAGS = @RPATH_FLAGS@
@@ -50,21 +50,20 @@ CXXLINKFLAGS = @RPATH_FLAGS@
 CC = @CC@
 
 # C Compiler options
-CFLAGS = @CFLAGS@
+CFLAGS = @CFLAGS@ -DSAMPLEDIR=\"@SAMPLE_DATA@\" -DNETLIBDIR=\"@NETLIB_DATA@\"
 
 # Directory with COIN header files
 COININCDIR = @abs_include_dir@/coin
 
 # Directory with COIN libraries
-COINLIBDIR = @abs_lib_dir@
+COINLIBDIR = @abs_lib_dir@/coin
 
 # Libraries necessary to link with Clp
-LIBS = -L$(COINLIBDIR) -lClp -lCoinUtils \
-	@ADDLIBS@ `cat @COINUTILSDOCDIR@/coinutils_addlibs.txt`
+LIBS = @COINUTILS_LIBS@ -L`$(CYGPATH_W) $(COINLIBDIR)` -lClp @ADDLIBS@
 
 # Necessary Include dirs (we use the CYGPATH_W variables to allow
 # compilation with Windows compilers)
-INCL =  -I`$(CYGPATH_W) $(COININCDIR)` $(ADDINCFLAGS)
+INCL = @COINUTILS_CFLAGS@ -I`$(CYGPATH_W) $(COININCDIR)` $(ADDINCFLAGS)
 
 # The following is necessary under cygwin, if native compilers are used
 CYGPATH_W = @CYGPATH_W@

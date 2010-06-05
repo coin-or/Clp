@@ -12,7 +12,7 @@
 #include <iomanip>
 #include <cassert>
 
-int main (int argc, const char *argv[])
+int main(int argc, const char *argv[])
 {
      {
           // Empty model
@@ -60,7 +60,7 @@ int main (int argc, const char *argv[])
           ClpSimplex modelSave = model;
           double time1 = CoinCpuTime();
           int k;
-          for ( k = 0; k < 10000; k++) {
+          for (k = 0; k < 10000; k++) {
                int column2Index[] = {0, 1};
                double column2Value[] = {1.0, -5.0};
                model.addColumn(2, column2Index, column2Value,
@@ -72,7 +72,7 @@ int main (int argc, const char *argv[])
           // Now use build
           CoinBuild buildObject;
           time1 = CoinCpuTime();
-          for ( k = 0; k < 100000; k++) {
+          for (k = 0; k < 100000; k++) {
                int column2Index[] = {0, 1};
                double column2Value[] = {1.0, -5.0};
                buildObject.addColumn(2, column2Index, column2Value,
@@ -87,7 +87,7 @@ int main (int argc, const char *argv[])
           model.deleteColumns(3, del);
           CoinBuild buildObject2;
           time1 = CoinCpuTime();
-          for ( k = 0; k < 10000; k++) {
+          for (k = 0; k < 10000; k++) {
                int column2Index[] = {0, 1};
                double column2Value[] = {1.0, 1.0, -1.0};
                int bias = k & 1;
@@ -102,7 +102,7 @@ int main (int argc, const char *argv[])
           model.deleteColumns(3, del);
           CoinModel modelObject2;
           time1 = CoinCpuTime();
-          for ( k = 0; k < 10000; k++) {
+          for (k = 0; k < 10000; k++) {
                int column2Index[] = {0, 1};
                double column2Value[] = {1.0, 1.0, -1.0};
                int bias = k & 1;
@@ -117,7 +117,7 @@ int main (int argc, const char *argv[])
           // Now use model
           CoinModel modelObject;
           time1 = CoinCpuTime();
-          for ( k = 0; k < 100000; k++) {
+          for (k = 0; k < 100000; k++) {
                int column2Index[] = {0, 1};
                double column2Value[] = {1.0, -5.0};
                modelObject.addColumn(2, column2Index, column2Value,
@@ -182,9 +182,14 @@ int main (int argc, const char *argv[])
           // Now copy a model
           ClpSimplex  model;
           int status;
-          if (argc < 2)
-               status = model.readMps("../../Data/Sample/p0033.mps");
-          else
+          if (argc < 2) {
+#if defined(COIN_HAS_SAMPLE) && defined(SAMPLEDIR)
+               status = model.readMps(SAMPLEDIR "/p0033.mps", true);
+#else
+               fprintf(stderr, "Do not know where to find sample MPS files.\n");
+               exit(1);
+#endif
+          } else
                status = model.readMps(argv[1]);
           if (status) {
                printf("errors on input\n");
@@ -226,9 +231,14 @@ int main (int argc, const char *argv[])
           // and again
           ClpSimplex  model;
           int status;
-          if (argc < 2)
-               status = model.readMps("../../Data/Sample/p0033.mps");
-          else
+          if (argc < 2) {
+#if defined(COIN_HAS_SAMPLE) && defined(SAMPLEDIR)
+               status = model.readMps(SAMPLEDIR "/p0033.mps", true);
+#else
+               fprintf(stderr, "Do not know where to find sample MPS files.\n");
+               exit(1);
+#endif
+          } else
                status = model.readMps(argv[1]);
           if (status) {
                printf("errors on input\n");

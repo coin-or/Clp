@@ -20,7 +20,7 @@
 //-------------------------------------------------------------------
 // Default Constructor
 //-------------------------------------------------------------------
-myPdco::myPdco ()
+myPdco::myPdco()
      : ClpPdcoBase(),
        rowIndex_(NULL),
        numlinks_(0),
@@ -44,7 +44,7 @@ myPdco::myPdco(double d1, double d2,
 //-------------------------------------------------------------------
 // Copy constructor
 //-------------------------------------------------------------------
-myPdco::myPdco (const myPdco & rhs)
+myPdco::myPdco(const myPdco & rhs)
      : ClpPdcoBase(rhs),
        numlinks_(rhs.numlinks_),
        numnodes_(rhs.numnodes_)
@@ -55,7 +55,7 @@ myPdco::myPdco (const myPdco & rhs)
 //-------------------------------------------------------------------
 // Destructor
 //-------------------------------------------------------------------
-myPdco::~myPdco ()
+myPdco::~myPdco()
 {
      delete [] rowIndex_;
 }
@@ -64,10 +64,10 @@ myPdco::~myPdco ()
 // Assignment operator
 //-------------------------------------------------------------------
 myPdco &
-myPdco::operator=(const myPdco& rhs)
+myPdco::operator= (const myPdco & rhs)
 {
      if (this != &rhs) {
-          ClpPdcoBase::operator=(rhs);
+          ClpPdcoBase::operator= (rhs);
           numlinks_ = rhs.numlinks_;
           numnodes_ = rhs.numnodes_;
           rowIndex_ = ClpCopyOfArray(rhs.rowIndex_, 2 * (numlinks_ + 2 * numnodes_));
@@ -90,10 +90,10 @@ void myPdco::matVecMult(ClpInterior * model,  int mode, double* x_elts, double* 
           for (int k = 0; k < numlinks_; k++) {
                y_sum += y_elts[k];
                int i1 = rowIndex_[2*k];
-               assert (i1 >= 0);
+               assert(i1 >= 0);
                x_elts[i1] += y_elts[k];
                int i2 = rowIndex_[2*k+1];
-               assert (i2 >= 0);
+               assert(i2 >= 0);
                x_elts[i2] -= y_elts[k];
           }
           double y_suma = 0.0;
@@ -215,7 +215,7 @@ myPdco::myPdco(ClpInterior & model, FILE * fpData, FILE * fpParam)
      int *ito = &ipair[1];
      int nonzpt = 0;
      numlinks_ = 0;
-     while(fscanf(fpData, "%d %d", ifrom, ito) && kct++ < maxlinks) {
+     while (fscanf(fpData, "%d %d", ifrom, ito) && kct++ < maxlinks) {
           //  while(fread(ipair, 4,2, fpData) && kct++ < maxlinks){
           if ((*ifrom) < 0) {
                printf("Bad link  %d  %d\n", *ifrom, *ito);
@@ -239,7 +239,7 @@ myPdco::myPdco(ClpInterior & model, FILE * fpData, FILE * fpParam)
      }
      fclose(fpData);
      fclose(fpParam);
-     printf ("imax %d  imin %d\n", imax, imin);
+     printf("imax %d  imin %d\n", imax, imin);
      // Set model size
      numnodes_ = imax + 1;
      nrow = numnodes_ + 3;

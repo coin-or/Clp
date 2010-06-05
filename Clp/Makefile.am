@@ -88,24 +88,32 @@ clean-local:
 distclean-local:
 	if test -r test/Makefile; then cd test; $(MAKE) distclean; fi
 
+install-exec-local: install-doc
+
+uninstall-local: uninstall-doc
+
 .PHONY: test unitTest
 
 ########################################################################
 #                  Installation of the addlibs file                    #
 ########################################################################
 
-addlibsfile = clp_addlibs.txt
-addlibsdir = $(prefix)/share/doc/coin/$(PACKAGE_NAME)/
+if COIN_HAS_PKGCONFIG
+addlibsdir = $(datadir)/coin/doc/Clp
+addlibs_DATA = clp_addlibs.txt
 
-install-exec-local: install-doc
-	$(install_sh_DATA) $(addlibsfile) $(DESTDIR)$(addlibsdir)/$(addlibsfile)
+clp_addlibs.txt : clp.pc
+	PKG_CONFIG_PATH=.:@COIN_PKG_CONFIG_PATH@ $(PKG_CONFIG) --libs clp > clp_addlibs.txt
+endif
 
-uninstall-local: uninstall-doc
-	rm -f $(DESTDIR)$(addlibsdir)/$(addlibsfile)
+pkgconfiglibdir = $(libdir)/pkgconfig
+pkgconfiglib_DATA = clp.pc
 
 ########################################################################
 #                         Maintainer Stuff                             #
 ########################################################################
+
+CLEANFILES = clp_addlibs.txt
 
 # Files that are generated and should be cleaned with make distclean
 DISTCLEANFILES =

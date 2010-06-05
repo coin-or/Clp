@@ -7,7 +7,7 @@
 */
 #include "ClpSimplex.hpp"
 #include "CoinHelperFunctions.hpp"
-int main (int argc, const char *argv[])
+int main(int argc, const char *argv[])
 {
      ClpSimplex  model;
      // model is as exmip1.mps from Data/samples

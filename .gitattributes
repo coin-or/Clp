@@ -27,7 +27,8 @@ Clp/MSVisualStudio/v9/ClpExamplesTestBarrier/ClpExamplesTestBarrier.vcproj -text
 Clp/MSVisualStudio/v9/ClpExamplesTestQP/ClpExamplesTestQP.vcproj -text
 Clp/MSVisualStudio/v9/clp/clp.vcproj -text
 Clp/MSVisualStudio/v9/libClp/libClp.vcproj -text
-Clp/clp_addlibs.txt.in -text
+Clp/clp-uninstalled.pc.in -text
+Clp/clp.pc.in -text
 Clp/configure -text
 Clp/configure.ac -text
 Clp/examples/Makefile.in -text
@@ -56,6 +57,14 @@ Clp/src/ClpPdco.cpp -text
 Clp/src/ClpPdco.hpp -text
 Clp/src/ClpPdcoBase.cpp -text
 Clp/src/ClpPdcoBase.hpp -text
+Clp/src/OsiClp/Makefile.am -text
+Clp/src/OsiClp/Makefile.in -text
+Clp/src/OsiClp/OsiClpSolverInterface.cpp -text
+Clp/src/OsiClp/OsiClpSolverInterface.hpp -text
+Clp/src/OsiClp/osi-clp-uninstalled.pc.in -text
+Clp/src/OsiClp/osi-clp.pc.in -text
+Clp/test/OsiClpSolverInterfaceTest.cpp -text
+Clp/test/osiUnitTest.cpp -text
 /Dependencies -text
 /LICENSE -text
 /README -text

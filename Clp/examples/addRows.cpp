@@ -12,7 +12,7 @@
 #include <iomanip>
 #include <cassert>
 
-int main (int argc, const char *argv[])
+int main(int argc, const char *argv[])
 {
      try {
           // Empty model
@@ -66,7 +66,7 @@ int main (int argc, const char *argv[])
           ClpSimplex modelSave = model;
           double time1 = CoinCpuTime();
           int k;
-          for ( k = 0; k < 10000; k++) {
+          for (k = 0; k < 10000; k++) {
                int row2Index[] = {0, 1, 2};
                double row2Value[] = {1.0, -5.0, 1.0};
                model.addRow(3, row2Index, row2Value,
@@ -78,7 +78,7 @@ int main (int argc, const char *argv[])
           // Now use build
           CoinBuild buildObject;
           time1 = CoinCpuTime();
-          for ( k = 0; k < 10000; k++) {
+          for (k = 0; k < 10000; k++) {
                int row2Index[] = {0, 1, 2};
                double row2Value[] = {1.0, -5.0, 1.0};
                buildObject.addRow(3, row2Index, row2Value,
@@ -93,7 +93,7 @@ int main (int argc, const char *argv[])
           // Now use build +-1
           CoinBuild buildObject2;
           time1 = CoinCpuTime();
-          for ( k = 0; k < 10000; k++) {
+          for (k = 0; k < 10000; k++) {
                int row2Index[] = {0, 1, 2};
                double row2Value[] = {1.0, -1.0, 1.0};
                buildObject2.addRow(3, row2Index, row2Value,
@@ -107,7 +107,7 @@ int main (int argc, const char *argv[])
           // Now use build +-1
           CoinModel modelObject2;
           time1 = CoinCpuTime();
-          for ( k = 0; k < 10000; k++) {
+          for (k = 0; k < 10000; k++) {
                int row2Index[] = {0, 1, 2};
                double row2Value[] = {1.0, -1.0, 1.0};
                modelObject2.addRow(3, row2Index, row2Value,
@@ -120,7 +120,7 @@ int main (int argc, const char *argv[])
           // Now use build +-1
           CoinModel modelObject3;
           time1 = CoinCpuTime();
-          for ( k = 0; k < 10000; k++) {
+          for (k = 0; k < 10000; k++) {
                int row2Index[] = {0, 1, 2};
                double row2Value[] = {1.0, -1.0, 1.0};
                modelObject3.addRow(3, row2Index, row2Value,
@@ -134,7 +134,7 @@ int main (int argc, const char *argv[])
           // Now use model
           CoinModel modelObject;
           time1 = CoinCpuTime();
-          for ( k = 0; k < 10000; k++) {
+          for (k = 0; k < 10000; k++) {
                int row2Index[] = {0, 1, 2};
                double row2Value[] = {1.0, -5.0, 1.0};
                modelObject.addRow(3, row2Index, row2Value,
@@ -265,7 +265,7 @@ int main (int argc, const char *argv[])
           // Now use build +-1
           CoinBuild buildObject3;
           time1 = CoinCpuTime();
-          for ( k = 0; k < 10000; k++) {
+          for (k = 0; k < 10000; k++) {
                int row2Index[] = {0, 1, 2};
                double row2Value[] = {1.0, -1.0, 1.0};
                buildObject3.addRow(3, row2Index, row2Value,

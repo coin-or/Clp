@@ -9,15 +9,20 @@
 #include "CoinHelperFunctions.hpp"
 #include "CoinTime.hpp"
 #include "CoinMpsIO.hpp"
-int main (int argc, const char *argv[])
+int main(int argc, const char *argv[])
 {
      ClpSimplex  model;
      int status;
      int maxIts = 0;
      int maxFactor = 100;
-     if (argc < 2)
-          status = model.readMps("../../Data/Sample/p0033.mps");
-     else
+     if (argc < 2) {
+#if defined(COIN_HAS_SAMPLE) && defined(SAMPLEDIR)
+          status = model.readMps(SAMPLEDIR "/p0033.mps", true);
+#else
+          fprintf(stderr, "Do not know where to find sample MPS files.\n");
+          exit(1);
+#endif
+     } else
           status = model.readMps(argv[1]);
      if (status) {
           printf("errors on input\n");
@@ -258,7 +263,7 @@ int main (int argc, const char *argv[])
           {
                ClpGubDynamicMatrix * gubMatrix =
                     dynamic_cast< ClpGubDynamicMatrix*>(model2.clpMatrix());
-               assert (gubMatrix);
+               assert(gubMatrix);
                const double * solution = model2.primalColumnSolution();
                int numberGubColumns = gubMatrix->numberGubColumns();
                int firstOdd = gubMatrix->firstDynamic();
@@ -270,8 +275,8 @@ int main (int argc, const char *argv[])
                int numberSets = gubMatrix->numberSets();
                const int * id = gubMatrix->id();
                int i;
-               const float * lowerColumn = gubMatrix->lowerColumn();
-               const float * upperColumn = gubMatrix->upperColumn();
+               const double * lowerColumn = gubMatrix->lowerColumn();
+               const double * upperColumn = gubMatrix->upperColumn();
                for (i = 0; i < numberGubColumns; i++) {
                     if (gubMatrix->getDynamicStatus(i) == ClpGubDynamicMatrix::atUpperBound) {
                          gubSolution[i+firstOdd] = upperColumn[i];
@@ -349,7 +354,7 @@ int main (int argc, const char *argv[])
                     else
                          abort();
                }
-               FILE * fp = fopen ("xx.sol", "w");
+               FILE * fp = fopen("xx.sol", "w");
                fwrite(gubSolution, sizeof(double), numberTotalColumns, fp);
                fwrite(status, sizeof(char), numberTotalColumns, fp);
                const double * rowsol = model2.primalRowSolution();
@@ -358,7 +363,7 @@ int main (int argc, const char *argv[])
                memset(rowsol2, 0, originalNumberRows * sizeof(double));
                model.times(1.0, gubSolution, rowsol2);
                for (i = 0; i < numberRows; i++)
-                    assert (fabs(rowsol[i] - rowsol2[i]) < 1.0e-3);
+                    assert(fabs(rowsol[i] - rowsol2[i]) < 1.0e-3);
                //for (;i<originalNumberRows;i++)
                //printf("%d %g\n",i,rowsol2[i]);
                delete [] rowsol2;

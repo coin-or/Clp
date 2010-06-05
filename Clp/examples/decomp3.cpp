@@ -2,13 +2,14 @@
 // Copyright (C) 2008, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
+#include "ClpConfig.h"
 #include "ClpSimplex.hpp"
 #include "ClpPresolve.hpp"
 #include "CoinStructuredModel.hpp"
 #include "CoinTime.hpp"
 #include <iomanip>
 
-int main (int argc, const char *argv[])
+int main(int argc, const char *argv[])
 {
      /* Create a structured model by reading mps file and trying
         Dantzig-Wolfe or Benders decomposition
@@ -30,8 +31,16 @@ int main (int argc, const char *argv[])
      }
      //#define PRESOLVE
 #ifndef PRESOLVE
-     CoinStructuredModel model((argc < 2) ? "../../Data/Netlib/czprob.mps"
+#if defined(COIN_HAS_NETLIB) && defined(NETLIBDIR)
+     CoinStructuredModel model((argc < 2) ? NETLIBDIR "/czprob.mps"
                                : argv[1], decompose, maxBlocks);
+#else
+     if (argc<2) {
+          fprintf(stderr, "Do not know where to find netlib MPS files.\n");
+          return 1;
+     }
+     CoinStructuredModel model(argv[1], 1);
+#endif
      if (!model.numberRows())
           exit(10);
      // Get default solver - could change stuff
@@ -48,8 +57,16 @@ int main (int argc, const char *argv[])
      solver.primal(1);
 #else
      ClpSimplex  model;
-     int status = model.readMps((argc < 2) ? "../../Data/Netlib/czprob.mps"
+#if defined(COIN_HAS_NETLIB) && defined(NETLIBDIR)
+     int status = model.readMps((argc < 2) ? NETLIBDIR "/czprob.mps"
                                 : argv[1]);
+#else
+     if (argc<2) {
+          fprintf(stderr, "Do not know where to find netlib MPS files.\n");
+          return 1;
+     }
+     int status = model.readMps(argv[1]);
+#endif
      if (status) {
           fprintf(stdout, "Bad readMps %s\n", argv[1]);
           exit(1);
@@ -75,7 +92,15 @@ int main (int argc, const char *argv[])
 #endif
      return 0;
      ClpSimplex solver2;
-     solver2.readMps((argc < 2) ? "../../Data/Netlib/czprob.mps" : argv[1]);
+#if defined(COIN_HAS_NETLIB) && defined(NETLIBDIR)
+     solver2.readMps((argc < 2) ? NETLIBDIR "/czprob.mps" : argv[1]);
+#else
+     if (argc<2) {
+          fprintf(stderr, "Do not know where to find netlib MPS files.\n");
+          return 1;
+     }
+     solver2.readMps(argv[1]);
+#endif
      time1 = CoinCpuTime() ;
      solver2.dual();
      std::cout << "second try took " << CoinCpuTime() - time1 << " seconds" << std::endl;

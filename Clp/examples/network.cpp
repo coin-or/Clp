@@ -17,13 +17,13 @@
 #include <assert.h>
 #include <cmath>
 
-int main (int argc, const char *argv[])
+int main(int argc, const char *argv[])
 {
      int numberColumns;
      int numberRows;
 
      FILE * fp;
-     if ( argc > 1 ) {
+     if (argc > 1) {
           fp = fopen(argv[1], "r");
           if (!fp) {
                fprintf(stderr, "Unable to open file %s\n", argv[1]);
@@ -40,7 +40,7 @@ int main (int argc, const char *argv[])
      char temp[100];
      // read and skip
      fscanf(fp, "%s", temp);
-     assert (!strcmp(temp, "BEGIN"));
+     assert(!strcmp(temp, "BEGIN"));
      fscanf(fp, "%*s %*s %d %d %*s %*s %d %*s", &problem, &numberRows,
             &numberColumns);
      // scan down to SUPPLY

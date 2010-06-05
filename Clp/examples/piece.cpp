@@ -10,7 +10,7 @@
 #include "CoinMpsIO.hpp"
 #include <iomanip>
 
-int main (int argc, const char *argv[])
+int main(int argc, const char *argv[])
 {
      int status;
      CoinMpsIO m;
@@ -114,7 +114,7 @@ int main (int argc, const char *argv[])
                double up2 = columnUpper1[iColumn+1];
                double obj2 = objective1[iColumn+1];
                double sol2 = oldSolution[iColumn+1];
-               if(fabs(up1 - lo2) > 1.0e-8) {
+               if (fabs(up1 - lo2) > 1.0e-8) {
                     // try other way
                     double temp;
                     temp = lo1;
@@ -201,7 +201,7 @@ int main (int argc, const char *argv[])
      model.setDblParam(ClpObjOffset, -objectiveOffset);
      // Create nonlinear objective
      int returnCode = model.createPiecewiseLinearCosts(segstart, breakpt, slope);
-     assert (!returnCode);
+     assert(!returnCode);
 
      // delete
      delete [] segstart;

@@ -7,7 +7,7 @@
 #include "CoinSort.hpp"
 #include <iomanip>
 
-int main (int argc, const char *argv[])
+int main(int argc, const char *argv[])
 {
      ClpSimplex  model;
      int status;
@@ -83,7 +83,7 @@ int main (int argc, const char *argv[])
           // adjust smallNumberColumns if necessary
           if (iPass) {
                double ratio = ((double) smallNumberRows) / ((double) model2->numberRows());
-               smallNumberColumns = (int) (smallNumberColumns * ratio);
+               smallNumberColumns = (int)(smallNumberColumns * ratio);
           }
           delete model2;
           /* After this postsolve model should be optimal.

@@ -4,6 +4,7 @@
 
 /* This example shows the use of the "C" interface */
 
+#include "ClpConfig.h"
 #include "Clp_C_Interface.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,13 +19,13 @@ static void callBack(Clp_Simplex * model, int messageNumber,
 {
      if (messageNumber == 1000002) {
           /* Coin0002 */
-          assert (nString == 1 && nInt == 3);
+          assert(nString == 1 && nInt == 3);
           printf("Name of problem is %s\n", vString[0]);
           printf("row %d col %d el %d\n", vInt[0], vInt[1], vInt[2]);
      } else if (messageNumber == 5) {
           /* Clp0005 */
           int i;
-          assert (nInt == 4 && nDouble == 3); /* they may not all print */
+          assert(nInt == 4 && nDouble == 3);    /* they may not all print */
           for (i = 0; i < 3; i++)
                printf("%d %g\n", vInt[i], vDouble[i]);
      }
@@ -32,7 +33,7 @@ static void callBack(Clp_Simplex * model, int messageNumber,
 
 
 
-int main (int argc, const char *argv[])
+int main(int argc, const char *argv[])
 {
      /* Get default model */
      Clp_Simplex  * model = Clp_newModel();
@@ -40,9 +41,14 @@ int main (int argc, const char *argv[])
      /* register callback */
      Clp_registerCallBack(model, callBack);
      /* Keep names when reading an mps file */
-     if (argc < 2)
-          status = Clp_readMps(model, "../../Data/Sample/p0033.mps", 1, 0);
-     else
+     if (argc < 2) {
+#if defined(COIN_HAS_SAMPLE) && defined(SAMPLEDIR)
+          status = Clp_readMps(model, SAMPLEDIR "/p0033.mps", 1, 0);
+#else
+          fprintf(stderr, "Do not know where to find sample MPS files.\n");
+          exit(1);
+#endif
+     } else
           status = Clp_readMps(model, argv[1], 1, 0);
 
      if (status) {

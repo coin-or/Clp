@@ -167,11 +167,11 @@ static int solve(EKKModel * model, int  startup, int algorithm,
      double * rowDual = (double *) ekk_rowduals(model);
      int numberRows = ekk_getInumrows(model);
      int numberColumns = ekk_getInumcols(model);
-     int * rowStatus =  (int *) ekk_rowstat(model);
+     int * rowStatus = (int *) ekk_rowstat(model);
      double * rowSolution = (double *) ekk_rowacts(model);
      int i;
      int * columnStatus = (int *) ekk_colstat(model);
-     double * columnSolution =  (double *) ekk_colsol(model);
+     double * columnSolution = (double *) ekk_colsol(model);
      memcpy(rowSolution, clp->primalRowSolution(), numberRows * sizeof(double));
      memcpy(rowDual, clp->dualRowSolution(), numberRows * sizeof(double));
      for (i = 0; i < numberRows; i++) {
@@ -199,7 +199,7 @@ static int solve(EKKModel * model, int  startup, int algorithm,
      ekk_setRsumpinf(model, clp->sumPrimalInfeasibilities());
      ekk_setRsumdinf(model, clp->sumDualInfeasibilities());
      delete clp;
-     if (compressInfo )
+     if (compressInfo)
           ekk_decompressModel(model, compressInfo);
 
      if (scaled)

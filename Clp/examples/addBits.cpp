@@ -24,6 +24,7 @@
 
   (you can have as many different strings as you want)
 */
+#include "ClpConfig.h"
 #include "ClpSimplex.hpp"
 #include "CoinHelperFunctions.hpp"
 #include "CoinTime.hpp"
@@ -31,12 +32,20 @@
 #include <iomanip>
 #include <cassert>
 
-int main (int argc, const char *argv[])
+int main(int argc, const char *argv[])
 {
      // Empty model
      ClpSimplex  model;
-     std::string mpsFileName = "../../Data/Netlib/25fv47.mps";
+     std::string mpsFileName;
      if (argc >= 2) mpsFileName = argv[1];
+     else {
+#if defined(COIN_HAS_NETLIB) && defined(NETLIBDIR)
+          mpsFileName = NETLIBDIR "/25fv47.mps";
+#else
+          fprintf(stderr, "Do not know where to find netlib MPS files.\n");
+          exit(1);
+#endif
+     }
      int status = model.readMps(mpsFileName.c_str(), true);
 
      if (status) {
@@ -159,14 +168,14 @@ int main (int argc, const char *argv[])
           build.setLogLevel(1);
      int numberErrors = model2.loadProblem(build);
      // should fail as we never set multiplier
-     assert (numberErrors);
+     assert(numberErrors);
      time3 = CoinCpuTime() - time2;
      // subtract out unsuccessful times
      time1 += time3;
      time2 += time3;
      build.associateElement("multiplier", 0.0);
      numberErrors = model2.loadProblem(build);
-     assert (!numberErrors);
+     assert(!numberErrors);
      time3 = CoinCpuTime();
      printf("Time for build using CoinModel is %g (%g for successful loadproblem)\n", time3 - time1,
             time3 - time2);
@@ -175,7 +184,7 @@ int main (int argc, const char *argv[])
      for (double multiplier = 0.0; multiplier < 2.0; multiplier += 0.1) {
           build.associateElement("multiplier", multiplier);
           numberErrors = model2.loadProblem(build, true);
-          assert (!numberErrors);
+          assert(!numberErrors);
           model2.dual();
      }
 

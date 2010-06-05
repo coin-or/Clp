@@ -8,13 +8,18 @@
 
 AUTOMAKE_OPTIONS = foreign
 
+if COIN_HAS_OSI
+  SUBDIRS = OsiClp
+endif
+
 ########################################################################
 #                               libClp                                 #
 ########################################################################
 
 # Name of the library compiled in this directory.  We want it to be installed
 # in the 'lib' directory
-lib_LTLIBRARIES = libClp.la
+coinlibdir = ${libdir}/coin
+coinlib_LTLIBRARIES = libClp.la
 
 # List all source files for this library, including headers
 libClp_la_SOURCES = \
@@ -91,26 +96,19 @@ clp_SOURCES = \
 	unitTest.cpp
 
 # List all additionally required COIN libraries
-clp_LDADD = libClp.la \
-	$(COINUTILSOBJDIR)/src/libCoinUtils.la
-
-# Here we add additional libraries
-LIBS += $(ADDLIBS) `cat $(COINUTILSOBJDIR)/coinutils_addlibs.txt`
+clp_LDADD = libClp.la $(COINUTILS_LIBS) $(ADDLIBS)
 
 # Finally, the -rpath flag is used by libtool to make sure that the shared
 # library is found (in the lib install directory) when we are using dynamic
 # libraries.
-clp_LDFLAGS = -rpath $(libdir)
+clp_LDFLAGS = -rpath $(libdir)/coin
 
 ########################################################################
 #                            Additional flags                          #
 ########################################################################
 
-# Here list all include flags, relative to this "srcdir" directory.  This
-# "cygpath" stuff is necessary to compile with native compilers on Windows.
-AM_CPPFLAGS = \
-	-I`$(CYGPATH_W) $(COINUTILSSRCDIR)/src` \
-	-I`$(CYGPATH_W) $(COINUTILSOBJDIR)/inc`
+# CbcOrClpParam seem to require COIN_HAS_CLP so that it knows that it is build within Clp
+AM_CPPFLAGS = $(COINUTILS_CFLAGS) -DCOIN_HAS_CLP
 
 # This line is necessary to allow VPATH compilation with MS compilers
 # on Cygwin
@@ -167,6 +165,9 @@ includecoin_HEADERS = \
 	ClpSolve.hpp \
 	CbcOrClpParam.hpp \
 	Idiot.hpp
+
+# needed by Cbc
+includecoin_HEADERS += CbcOrClpParam.cpp
 
 #############################################################################
 # Create the Config.h file that always defines HAVE_CONFIG_H and install it #

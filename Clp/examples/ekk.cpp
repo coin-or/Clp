@@ -48,7 +48,7 @@ extern "C" int ekk_preSolveClp(EKKModel * model, bool keepIntegers,
 #include <stdio.h>
 #include <stdarg.h>
 
-int main (int argc, const char *argv[])
+int main(int argc, const char *argv[])
 {
      const char * name;
      // problem is actually scaled for osl, dynamically for clp (slows clp)
@@ -61,14 +61,19 @@ int main (int argc, const char *argv[])
      EKKModel * model;
      EKKContext * context;
 
-     if ( argc > 1 ) {
+     if (argc > 1) {
           name = argv[1];
      } else {
-          name = "../../Data/Sample/p0033.mps";
-     }
+#if defined(COIN_HAS_SAMPLE) && defined(SAMPLEDIR)
+          name = (SAMPLEDIR "/p0033.mps";
+#else
+          fprintf(stderr, "Do not know where to find sample MPS files.\n");
+          exit(1);
+#endif
+             }
 
-     /* initialize OSL environment */
-     context = ekk_initializeContext();
+             /* initialize OSL environment */
+             context = ekk_initializeContext();
      model = ekk_newModel(context, "");
 
      int i;
@@ -142,7 +147,7 @@ int main (int argc, const char *argv[])
                ekk_primalSimplex(model, 3);
           }
           if (useosl == 2)
-               ekk_allSlackBasis(model); // otherwise it would be easy
+               ekk_allSlackBasis(model);    // otherwise it would be easy
      }
      if ((useosl & 2) == 0) {
           // CLP

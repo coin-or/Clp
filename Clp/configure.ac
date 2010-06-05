@@ -12,7 +12,7 @@
 
 AC_PREREQ(2.59)
 
-AC_INIT([Clp],[trunk],[coin-clp@list.coin-or.org])
+AC_INIT([Clp],[trunk],[clp@list.coin-or.org])
 
 AC_COPYRIGHT([
 Copyright 2006 International Business Machines and others.
@@ -22,7 +22,7 @@ under the Common Public License.])
 
 # List one file in the package so that the configure script can test
 # whether the package is actually there
-AC_CONFIG_SRCDIR(src/ClpCholeskyBase.cpp)
+AC_CONFIG_SRCDIR(src/ClpSimplex.cpp)
 
 # Where should everything be installed by default?  Here, we want it
 # to be installed directly in 'bin', 'lib', 'include' subdirectories
@@ -53,11 +53,29 @@ AC_COIN_PROG_CXX
 AC_COIN_INIT_AUTO_TOOLS
 
 #############################################################################
-#                              COIN components                              #
+#                              COIN-OR components                           #
 #############################################################################
 
-AC_COIN_HAS_PROJECT(CoinUtils)
-AC_COIN_HAS_PROJECT(Clp)
+AC_COIN_HAS_MODULE(CoinUtils, [coinutils = trunk])
+if test $coin_has_coinutils != yes ; then
+  #if we have to use the fallback routines, then obviously it will not find CoinUtils dependencies
+  #thus, we check whether ThirdParty/Blas and ThirdParty/Lapack have been setup and
+  #assume that if present then they are dependencies of CoinUtils
+  AC_COIN_HAS_MODULE_FALLBACK(Blas,   [coinblas],   [../ThirdParty/Blas],   [required=0 dodefine=0 doconditional=0])
+  AC_COIN_HAS_MODULE_FALLBACK(Lapack, [coinlapack], [../ThirdParty/Lapack], [required=0 dodefine=0 doconditional=0])
+fi
+AC_COIN_HAS_MODULE_FALLBACK(CoinUtils, [coinutils], [../CoinUtils])
+if test $coin_has_coinutils != yes ; then
+  AC_MSG_ERROR([Required package CoinUtils not available.])
+fi
+#so if we had to do find Blas and Lapack separately, then add their linker flags to the CoinUtils flags
+#actually the libs may already be included in libCoinUtils, but we may still need the fortran library flags
+COINUTILS_LIBS="$COINUTILS_LIBS $BLAS_LIBS $LAPACK_LIBS"
+
+AC_COIN_HAS_MODULE(Osi,      [osi],            [required=0], [../Osi])
+AC_COIN_HAS_MODULE(OsiTests, [osi-unittests],  [required=0], [../Osi])
+AC_COIN_HAS_MODULE(Sample,   [coindatasample], [required=0], [../Data/Sample])
+AC_COIN_HAS_MODULE(Netlib,   [coindatanetlib], [required=0], [../Data/Netlib])
 
 #############################################################################
 #                        Third party linear solvers                         #
@@ -125,8 +143,15 @@ AC_COIN_VPATH_LINK(examples/input.130)
 AC_CONFIG_FILES([Makefile
                  examples/Makefile
                  src/Makefile
+                 src/OsiClp/Makefile
                  test/Makefile
-		 clp_addlibs.txt])
+		 clp.pc
+		 clp-uninstalled.pc])
+		 
+if test $coin_has_osi = yes ; then
+  AC_CONFIG_FILES([src/OsiClp/osi-clp.pc
+                   osi-clp-uninstalled.pc:src/OsiClp/osi-clp-uninstalled.pc.in])
+fi
 
 # Here put the location and name of the configuration header file
 AC_CONFIG_HEADER([inc/config_clp.h])

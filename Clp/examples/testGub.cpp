@@ -2,6 +2,7 @@
 // Copyright (C) 2003, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
+#include "ClpConfig.h"
 #include "ClpSimplex.hpp"
 #include "ClpDynamicExampleMatrix.hpp"
 #include "ClpPrimalColumnSteepest.hpp"
@@ -9,17 +10,22 @@
 #include "CoinHelperFunctions.hpp"
 #include "CoinTime.hpp"
 #include "CoinMpsIO.hpp"
-int main (int argc, const char *argv[])
+int main(int argc, const char *argv[])
 {
      ClpSimplex  model;
      int status;
      int maxFactor = 100;
      if (argc < 2) {
-          status = model.readMps("../../Data/Netlib/czprob.mps");
+#if defined(COIN_HAS_NETLIB) && defined(NETLIBDIR)
+          status = model.readMps(NETLIBDIR "/czprob.mps");
           if (status) {
                printf("Unable to read matrix - trying gzipped version\n");
-               status = model.readMps("../../Data/Netlib/czprob.mps.gz");
+               status = model.readMps(NETLIBDIR "/czprob.mps.gz");
           }
+#else
+          fprintf(stderr, "Do not know where to find sample MPS files.\n");
+          exit(1);
+#endif
      } else {
           status = model.readMps(argv[1]);
      }
@@ -244,7 +250,7 @@ int main (int argc, const char *argv[])
           }
           printf("** While after adding matrix there are %d rows and %d columns\n",
                  model2.numberRows(), model2.numberColumns());
-          model2.setSpecialOptions(4); // exactly to bound
+          model2.setSpecialOptions(4);    // exactly to bound
           // For now scaling off
           model2.scaling(0);
           ClpPrimalColumnSteepest steepest(5);
@@ -260,7 +266,7 @@ int main (int argc, const char *argv[])
           if (argc > 3) {
                ClpDynamicMatrix * oldMatrix =
                     dynamic_cast< ClpDynamicMatrix*>(model2.clpMatrix());
-               assert (oldMatrix);
+               assert(oldMatrix);
                ClpDynamicMatrix * newMatrix = new
                ClpDynamicMatrix(&model3, numberGub,
                                 numberColumns, gubStart,
@@ -271,13 +277,13 @@ int main (int argc, const char *argv[])
                model3.replaceMatrix(newMatrix);
                // and ordinary status (but only NON gub rows)
                memcpy(model3.statusArray(), model2.statusArray(),
-                      (newMatrix->numberStaticRows() + model3.numberColumns())*sizeof(unsigned char));
+                      (newMatrix->numberStaticRows() + model3.numberColumns()) *sizeof(unsigned char));
                newMatrix->switchOffCheck();
                newMatrix->setRefreshFrequency(1000);
           } else {
                ClpDynamicExampleMatrix * oldMatrix =
                     dynamic_cast< ClpDynamicExampleMatrix*>(model2.clpMatrix());
-               assert (oldMatrix);
+               assert(oldMatrix);
                ClpDynamicExampleMatrix * newMatrix = new
                ClpDynamicExampleMatrix(&model3, numberGub,
                                        numberColumns, gubStart,
@@ -289,11 +295,11 @@ int main (int argc, const char *argv[])
                model3.replaceMatrix(newMatrix);
                // and ordinary status (but only NON gub rows)
                memcpy(model3.statusArray(), model2.statusArray(),
-                      (newMatrix->numberStaticRows() + model3.numberColumns())*sizeof(unsigned char));
+                      (newMatrix->numberStaticRows() + model3.numberColumns()) *sizeof(unsigned char));
                newMatrix->switchOffCheck();
                newMatrix->setRefreshFrequency(1000);
           }
-          model3.setSpecialOptions(4); // exactly to bound
+          model3.setSpecialOptions(4);    // exactly to bound
           // For now scaling off
           model3.scaling(0);
           model3.setPrimalColumnPivotAlgorithm(steepest);
@@ -312,7 +318,7 @@ int main (int argc, const char *argv[])
           // and only works at present for ClpDynamicMatrix
           ClpDynamicMatrix * gubMatrix =
                dynamic_cast< ClpDynamicMatrix*>(model2.clpMatrix());
-          assert (gubMatrix);
+          assert(gubMatrix);
           ClpDynamicExampleMatrix * gubMatrix2 =
                dynamic_cast< ClpDynamicExampleMatrix*>(model2.clpMatrix());
           if (!gubMatrix2) {
@@ -329,8 +335,8 @@ int main (int argc, const char *argv[])
                int numberSets = gubMatrix->numberSets();
                const int * id = gubMatrix->id();
                int i;
-               const float * columnLower = gubMatrix->columnLower();
-               const float * columnUpper = gubMatrix->columnUpper();
+               const double * columnLower = gubMatrix->columnLower();
+               const double * columnUpper = gubMatrix->columnUpper();
                for (i = 0; i < numberGubColumns; i++) {
                     if (gubMatrix->getDynamicStatus(i) == ClpDynamicMatrix::atUpperBound) {
                          gubSolution[i+firstOdd] = columnUpper[i];
@@ -408,7 +414,7 @@ int main (int argc, const char *argv[])
                          abort();
                }
                // Coding below may not work if gub rows not at end
-               FILE * fp = fopen ("xx.sol", "w");
+               FILE * fp = fopen("xx.sol", "w");
                fwrite(gubSolution, sizeof(double), numberTotalColumns, fp);
                fwrite(status, sizeof(char), numberTotalColumns, fp);
                const double * rowsol = model2.primalRowSolution();
@@ -416,10 +422,10 @@ int main (int argc, const char *argv[])
                memset(rowsol2, 0, originalNumberRows * sizeof(double));
                model.times(1.0, gubSolution, rowsol2);
                for (i = 0; i < numberStaticRows; i++)
-                    assert (fabs(rowsol[i] - rowsol2[i]) < 1.0e-3);
+                    assert(fabs(rowsol[i] - rowsol2[i]) < 1.0e-3);
                for (; i < originalNumberRows; i++)
-                    assert (rowsol2[i] > lower[i-numberStaticRows] - 1.0e-3 &&
-                            rowsol2[i] < upper[i-numberStaticRows] + 1.0e-3);
+                    assert(rowsol2[i] > lower[i-numberStaticRows] - 1.0e-3 &&
+                           rowsol2[i] < upper[i-numberStaticRows] + 1.0e-3);
                //for (;i<originalNumberRows;i++)
                //printf("%d %g\n",i,rowsol2[i]);
                fwrite(rowsol2, sizeof(double), originalNumberRows, fp);
