@@ -70,7 +70,7 @@ if test $coin_has_coinutils != yes ; then
 fi
 #so if we had to do find Blas and Lapack separately, then add their linker flags to the CoinUtils flags
 #actually the libs may already be included in libCoinUtils, but we may still need the fortran library flags
-COINUTILS_LIBS="$COINUTILS_LIBS $BLAS_LIBS $LAPACK_LIBS"
+COINUTILS_LIBS="$COINUTILS_LIBS $LAPACK_LIBS $BLAS_LIBS"
 
 AC_COIN_HAS_MODULE(Osi,      [osi],            [required=0], [../Osi])
 AC_COIN_HAS_MODULE(OsiTests, [osi-unittests],  [required=0], [../Osi])
