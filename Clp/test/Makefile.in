@@ -68,7 +68,7 @@ osiUnitTest_OBJECTS = $(am_osiUnitTest_OBJECTS)
 @COIN_HAS_OSITESTS_TRUE@osiUnitTest_DEPENDENCIES = ../src/libClp.la \
 @COIN_HAS_OSITESTS_TRUE@	../src/OsiClp/libOsiClp.la
 DEFAULT_INCLUDES = -I. -I$(srcdir) -I$(top_builddir)/inc
-depcomp = $(SHELL) $(top_srcdir)/../depcomp
+depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
 CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 	$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS)

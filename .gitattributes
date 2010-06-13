@@ -29,8 +29,11 @@ Clp/MSVisualStudio/v9/clp/clp.vcproj -text
 Clp/MSVisualStudio/v9/libClp/libClp.vcproj -text
 Clp/clp-uninstalled.pc.in -text
 Clp/clp.pc.in -text
+Clp/config.guess -text
+Clp/config.sub -text
 Clp/configure -text
 Clp/configure.ac -text
+Clp/depcomp -text
 Clp/examples/Makefile.in -text
 Clp/examples/decomp2.cpp -text
 Clp/examples/decomp3.cpp -text
@@ -41,6 +44,9 @@ Clp/examples/myPdco.cpp -text
 Clp/examples/myPdco.hpp -text
 Clp/examples/pdco.cpp -text
 Clp/inc/config_clp.h.in -text
+Clp/install-sh -text
+Clp/ltmain.sh -text
+Clp/missing -text
 Clp/src/ClpCholeskyMumps.cpp -text
 Clp/src/ClpCholeskyMumps.hpp -text
 Clp/src/ClpConstraint.cpp -text

@@ -95,7 +95,7 @@ clp_OBJECTS = $(am_clp_OBJECTS)
 am__DEPENDENCIES_1 =
 clp_DEPENDENCIES = libClp.la $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1)
-depcomp = $(SHELL) $(top_srcdir)/../depcomp
+depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
 CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 	$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS)
