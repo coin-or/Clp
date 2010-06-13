@@ -2,7 +2,6 @@
 // Copyright (C) 2008, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
-#include "ClpConfig.h"
 #include "ClpSimplex.hpp"
 #include "CoinStructuredModel.hpp"
 #include <iomanip>
@@ -13,7 +12,7 @@ int main(int argc, const char *argv[])
         Dantzig-Wolfe decomposition (that's the 1 parameter)
      */
      // At present D-W rows are hard coded - will move stuff from OSL
-#if defined(COIN_HAS_NETLIB) && defined(NETLIBDIR)
+#if defined(NETLIBDIR)
      CoinStructuredModel model((argc < 2) ? NETLIBDIR "/czprob.mps"
                                : argv[1], 1);
 #else

@@ -24,7 +24,6 @@
 
   (you can have as many different strings as you want)
 */
-#include "ClpConfig.h"
 #include "ClpSimplex.hpp"
 #include "CoinHelperFunctions.hpp"
 #include "CoinTime.hpp"
@@ -39,7 +38,7 @@ int main(int argc, const char *argv[])
      std::string mpsFileName;
      if (argc >= 2) mpsFileName = argv[1];
      else {
-#if defined(COIN_HAS_NETLIB) && defined(NETLIBDIR)
+#if defined(NETLIBDIR)
           mpsFileName = NETLIBDIR "/25fv47.mps";
 #else
           fprintf(stderr, "Do not know where to find netlib MPS files.\n");

@@ -2,7 +2,6 @@
 // Copyright (C) 2003, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
-#include "ClpConfig.h"
 #include "ClpSimplex.hpp"
 #include "CoinMpsIO.hpp"
 #include <iomanip>
@@ -13,7 +12,7 @@ int main(int argc, const char *argv[])
      int status;
      // Keep names
      if (argc < 2) {
-#if defined(COIN_HAS_NETLIB) && defined(NETLIBDIR)
+#if defined(NETLIBDIR)
           status = model.readMps(NETLIBDIR "/czprob.mps", true);
 #else
           fprintf(stderr, "Do not know where to find netlib MPS files.\n");

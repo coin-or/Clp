@@ -16,7 +16,7 @@ int main(int argc, const char *argv[])
      int maxIts = 0;
      int maxFactor = 100;
      if (argc < 2) {
-#if defined(COIN_HAS_SAMPLE) && defined(SAMPLEDIR)
+#if defined(SAMPLEDIR)
           status = model.readMps(SAMPLEDIR "/p0033.mps", true);
 #else
           fprintf(stderr, "Do not know where to find sample MPS files.\n");

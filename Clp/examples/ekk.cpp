@@ -64,7 +64,7 @@ int main(int argc, const char *argv[])
      if (argc > 1) {
           name = argv[1];
      } else {
-#if defined(COIN_HAS_SAMPLE) && defined(SAMPLEDIR)
+#if defined(SAMPLEDIR)
           name = (SAMPLEDIR "/p0033.mps";
 #else
           fprintf(stderr, "Do not know where to find sample MPS files.\n");

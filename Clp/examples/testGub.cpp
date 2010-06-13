@@ -2,7 +2,6 @@
 // Copyright (C) 2003, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
-#include "ClpConfig.h"
 #include "ClpSimplex.hpp"
 #include "ClpDynamicExampleMatrix.hpp"
 #include "ClpPrimalColumnSteepest.hpp"
@@ -16,7 +15,7 @@ int main(int argc, const char *argv[])
      int status;
      int maxFactor = 100;
      if (argc < 2) {
-#if defined(COIN_HAS_NETLIB) && defined(NETLIBDIR)
+#if defined(NETLIBDIR)
           status = model.readMps(NETLIBDIR "/czprob.mps");
           if (status) {
                printf("Unable to read matrix - trying gzipped version\n");

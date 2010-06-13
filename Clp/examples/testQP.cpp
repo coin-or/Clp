@@ -21,7 +21,7 @@ int main(int argc, const char *argv[])
      */
      if (argc < 2) {
           CoinMpsIO  m;
-#if defined(COIN_HAS_SAMPLE) && defined(SAMPLEDIR)
+#if defined(SAMPLEDIR)
           int status = m.readMps(SAMPLEDIR "/share2qp", "mps");
 #else
           fprintf(stderr, "Do not know where to find sample MPS files.\n");

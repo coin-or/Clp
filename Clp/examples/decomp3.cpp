@@ -2,7 +2,6 @@
 // Copyright (C) 2008, International Business Machines
 // Corporation and others.  All Rights Reserved.
 
-#include "ClpConfig.h"
 #include "ClpSimplex.hpp"
 #include "ClpPresolve.hpp"
 #include "CoinStructuredModel.hpp"
@@ -31,7 +30,7 @@ int main(int argc, const char *argv[])
      }
      //#define PRESOLVE
 #ifndef PRESOLVE
-#if defined(COIN_HAS_NETLIB) && defined(NETLIBDIR)
+#if defined(NETLIBDIR)
      CoinStructuredModel model((argc < 2) ? NETLIBDIR "/czprob.mps"
                                : argv[1], decompose, maxBlocks);
 #else
@@ -57,7 +56,7 @@ int main(int argc, const char *argv[])
      solver.primal(1);
 #else
      ClpSimplex  model;
-#if defined(COIN_HAS_NETLIB) && defined(NETLIBDIR)
+#if defined(NETLIBDIR)
      int status = model.readMps((argc < 2) ? NETLIBDIR "/czprob.mps"
                                 : argv[1]);
 #else
@@ -92,7 +91,7 @@ int main(int argc, const char *argv[])
 #endif
      return 0;
      ClpSimplex solver2;
-#if defined(COIN_HAS_NETLIB) && defined(NETLIBDIR)
+#if defined(NETLIBDIR)
      solver2.readMps((argc < 2) ? NETLIBDIR "/czprob.mps" : argv[1]);
 #else
      if (argc<2) {
