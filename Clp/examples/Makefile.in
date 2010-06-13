@@ -67,7 +67,7 @@ LIBS = @COINUTILS_LIBS@ -L`$(CYGPATH_W) $(COINLIBDIR)` -lClp @ADDLIBS@
 
 # Necessary Include dirs (we use the CYGPATH_W variables to allow
 # compilation with Windows compilers)
-INCL = @COINUTILS_CFLAGS@ -I`$(CYGPATH_W) $(COININCDIR)` $(ADDINCFLAGS)
+INCL = -I`$(CYGPATH_W) $(COININCDIR)` @COINUTILS_CFLAGS@ $(ADDINCFLAGS)
 
 # The following is necessary under cygwin, if native compilers are used
 CYGPATH_W = @CYGPATH_W@
