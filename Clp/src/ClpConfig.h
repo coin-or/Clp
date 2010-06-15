@@ -58,6 +58,7 @@
 /* Define to 1 if readline is available */
 /* #undef COIN_HAS_READLINE */
 
+/* Clp version */
 #define CLP_VERSION "trunk"
 
 #endif /* HAVE_CONFIG_H */

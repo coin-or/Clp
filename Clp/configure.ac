@@ -41,7 +41,7 @@ AC_CANONICAL_BUILD
 # the source root directory contains definition of where to find those
 # externals.  The following macro ensures that those externals are
 # retrieved by svn if they are not there yet.
-AC_COIN_PROJECTDIR_INIT
+AC_COIN_PROJECTDIR_INIT(Clp)
 
 # Check if user wants to produce debugging code
 AC_COIN_DEBUG_COMPILE(Clp)
@@ -111,12 +111,6 @@ if test "$use_wsmp" != "no"; then
   AC_DEFINE_UNQUOTED([WSSMP_BARRIER], [$defval],
                      [Define to 2 if wssmp_ is available, and to 3 if wssmp is available])
 fi
-
-#############################################################################
-#                           CLP version number                              #
-#############################################################################
-
-AC_DEFINE_UNQUOTED(CLP_VERSION, "$PACKAGE_VERSION", "Version of Clp")
 
 #############################################################################
 #                             Other dependencies                            #
