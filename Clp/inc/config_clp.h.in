@@ -1,6 +1,9 @@
 /* inc/config_clp.h.in.  Generated from configure.ac by autoheader.  */
 
-/* "Version of Clp" */
+/* SVN revision number of project */
+#undef CLP_SVN_REV
+
+/* Version number of project */
 #undef CLP_VERSION
 
 /* Define to the debug sanity check level (0 is no test) */
@@ -86,9 +89,3 @@
 
 /* Define to 2 if wssmp_ is available, and to 3 if wssmp is available */
 #undef WSSMP_BARRIER
-
-/* SVN revision number of project */
-#undef _SVN_REV
-
-/* Version number of project */
-#undef _VERSION
