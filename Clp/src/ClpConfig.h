@@ -59,7 +59,7 @@
 /* #undef COIN_HAS_READLINE */
 
 /* Clp version */
-#define CLP_VERSION "1.12.0"
+#define CLP_VERSION "1.12"
 
 #endif /* HAVE_CONFIG_H */
 
