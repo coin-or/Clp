@@ -43,7 +43,7 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 @COIN_HAS_OSITESTS_TRUE@noinst_PROGRAMS = osiUnitTest$(EXEEXT)
-@COIN_HAS_OSITESTS_TRUE@am__append_1 = $(COINUTILS_LIBS) $(OSITESTS_LIBS)
+@COIN_HAS_OSITESTS_TRUE@am__append_1 = $(COINUTILS_LIBS) $(OSI_LIBS) $(OSITESTS_LIBS)
 @COIN_HAS_SAMPLE_TRUE@am__append_2 = -dirSample `$(CYGPATH_W) $(SAMPLE_DATA)`
 @COIN_HAS_SAMPLE_TRUE@am__append_3 = -mpsDir=`$(CYGPATH_W) $(SAMPLE_DATA)`
 @COIN_HAS_NETLIB_TRUE@am__append_4 = -dirNetlib `$(CYGPATH_W) $(NETLIB_DATA)` -netlib
@@ -253,7 +253,7 @@ target_alias = @target_alias@
 AUTOMAKE_OPTIONS = foreign
 @COIN_HAS_OSITESTS_TRUE@osiUnitTest_SOURCES = osiUnitTest.cpp OsiClpSolverInterfaceTest.cpp
 @COIN_HAS_OSITESTS_TRUE@osiUnitTest_LDADD = ../src/libClp.la ../src/OsiClp/libOsiClp.la
-@COIN_HAS_OSITESTS_TRUE@AM_CPPFLAGS = $(COINUTILS_CFLAGS) $(OSITESTS_CFLAGS) \
+@COIN_HAS_OSITESTS_TRUE@AM_CPPFLAGS = $(COINUTILS_CFLAGS) $(OSI_CFLAGS) $(OSITESTS_CFLAGS) \
 @COIN_HAS_OSITESTS_TRUE@	-I`$(CYGPATH_W) $(srcdir)/../src` \
 @COIN_HAS_OSITESTS_TRUE@	-I`$(CYGPATH_W) $(srcdir)/../src/OsiClp`
 
