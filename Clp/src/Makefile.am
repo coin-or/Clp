@@ -17,7 +17,7 @@ endif
 ########################################################################
 
 # Name of the library compiled in this directory.  We want it to be installed
-# in the 'lib' directory
+# in the 'lib/coin' directory
 coinlibdir = ${libdir}/coin
 coinlib_LTLIBRARIES = libClp.la
 
@@ -119,7 +119,7 @@ DEFAULT_INCLUDES = -I. -I`$(CYGPATH_W) $(srcdir)` -I$(top_builddir)/inc
 ########################################################################
 
 # Here list all the header files that are required by a user of the library,
-# and that therefore should be installed in 'install/coin'
+# and that therefore should be installed in 'include/coin'
 includecoindir = $(includedir)/coin
 includecoin_HEADERS = \
 	../inc/config_clp.h \

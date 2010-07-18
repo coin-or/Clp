@@ -47,6 +47,7 @@ AC_COIN_MAIN_PACKAGEDIR(Lapack,ThirdParty,[LAPACK/SRC/dlarf.f],coinlapack)
 AC_COIN_MAIN_PACKAGEDIR(Sample,Data,,coindatasample)
 AC_COIN_MAIN_PACKAGEDIR(Netlib,Data,,coindatanetlib)
 AC_COIN_MAIN_PACKAGEDIR(CoinUtils)
+AC_COIN_MAIN_PACKAGEDIR(Osi)
 AC_COIN_MAIN_PACKAGEDIR(Clp)
 
 ##############################################################################
