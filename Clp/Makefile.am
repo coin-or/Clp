@@ -95,19 +95,20 @@ uninstall-local: uninstall-doc
 .PHONY: test unitTest
 
 ########################################################################
-#                  Installation of the addlibs file                    #
+#                    Creation of the addlibs file                      #
 ########################################################################
-
-if COIN_HAS_PKGCONFIG
-addlibsdir = $(datadir)/coin/doc/Clp
-addlibs_DATA = clp_addlibs.txt
-
-clp_addlibs.txt : clp.pc
-	PKG_CONFIG_PATH=.:@COIN_PKG_CONFIG_PATH@ $(PKG_CONFIG) --libs clp > clp_addlibs.txt
-endif
 
 pkgconfiglibdir = $(libdir)/pkgconfig
 pkgconfiglib_DATA = clp.pc
+
+if COIN_HAS_PKGCONFIG
+addlibsdir = $(DESTDIR)$(datadir)/coin/doc/Clp
+	
+install-data-hook:
+	@$(mkdir_p) "$(addlibsdir)"
+	PKG_CONFIG_PATH=@COIN_PKG_CONFIG_PATH@ PKG_CONFIG_DISABLE_UNINSTALLED= \
+	$(PKG_CONFIG) --libs clp > $(addlibsdir)/clp_addlibs.txt
+endif
 
 ########################################################################
 #                         Maintainer Stuff                             #
