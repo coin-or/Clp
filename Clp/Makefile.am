@@ -106,7 +106,7 @@ addlibsdir = $(DESTDIR)$(datadir)/coin/doc/Clp
 	
 install-data-hook:
 	@$(mkdir_p) "$(addlibsdir)"
-	PKG_CONFIG_PATH=@COIN_PKG_CONFIG_PATH@ PKG_CONFIG_DISABLE_UNINSTALLED= \
+	PKG_CONFIG_PATH=@COIN_PKG_CONFIG_PATH@ \
 	$(PKG_CONFIG) --libs clp > $(addlibsdir)/clp_addlibs.txt
 endif
 
