@@ -34,6 +34,7 @@ Clp/config.sub -text
 Clp/configure -text
 Clp/configure.ac -text
 Clp/depcomp -text
+Clp/doxydoc/doxygen.conf.in -text
 Clp/examples/Makefile.in -text
 Clp/examples/decomp2.cpp -text
 Clp/examples/decomp3.cpp -text
@@ -79,6 +80,6 @@ Clp/test/osiUnitTest.cpp -text
 /configure -text
 /configure.ac -text
 /depcomp -text
-doxydoc/doxygen.conf -text
+doxydoc/doxygen.conf.in -text
 /install-sh -text
 /missing -text

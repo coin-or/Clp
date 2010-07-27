@@ -113,6 +113,12 @@ AC_COIN_CHECK_GNU_READLINE
 AC_COIN_VPATH_LINK(examples/hello.mps)
 AC_COIN_VPATH_LINK(examples/input.130)
 
+#############################################################################
+#                  Check for doxygen                                        #
+#############################################################################
+
+AC_COIN_DOXYGEN(CoinUtils Osi)
+
 ##############################################################################
 #                   Finishing up by writing all the output                   #
 ##############################################################################
@@ -131,6 +137,8 @@ if test $coin_has_osi = yes ; then
   AC_CONFIG_FILES([src/OsiClp/osi-clp.pc
                    osi-clp-uninstalled.pc:src/OsiClp/osi-clp-uninstalled.pc.in])
 fi
+
+AC_CONFIG_FILES([doxydoc/doxygen.conf])
 
 # Here put the location and name of the configuration header file
 AC_CONFIG_HEADER([inc/config_clp.h])

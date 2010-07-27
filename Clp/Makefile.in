@@ -61,6 +61,7 @@ DIST_COMMON = README $(am__configure_deps) \
 	$(srcdir)/BuildTools/Makemain.inc $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in $(srcdir)/clp-uninstalled.pc.in \
 	$(srcdir)/clp.pc.in $(top_srcdir)/configure \
+	$(top_srcdir)/doxydoc/doxygen.conf.in \
 	$(top_srcdir)/examples/Makefile.in \
 	$(top_srcdir)/inc/config_clp.h.in \
 	$(top_srcdir)/src/OsiClp/osi-clp-uninstalled.pc.in AUTHORS \
@@ -78,7 +79,7 @@ am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/inc/config_clp.h
 CONFIG_CLEAN_FILES = examples/Makefile clp.pc clp-uninstalled.pc \
-	osi-clp-uninstalled.pc
+	osi-clp-uninstalled.pc doxydoc/doxygen.conf
 SOURCES =
 DIST_SOURCES =
 RECURSIVE_TARGETS = all-recursive check-recursive dvi-recursive \
@@ -251,6 +252,12 @@ build_alias = @build_alias@
 build_cpu = @build_cpu@
 build_os = @build_os@
 build_vendor = @build_vendor@
+coin_doxy_excludes = @coin_doxy_excludes@
+coin_doxy_logname = @coin_doxy_logname@
+coin_doxy_tagfiles = @coin_doxy_tagfiles@
+coin_doxy_tagname = @coin_doxy_tagname@
+coin_doxy_usedot = @coin_doxy_usedot@
+coin_have_doxygen = @coin_have_doxygen@
 datadir = @datadir@
 exec_prefix = @exec_prefix@
 have_autoconf = @have_autoconf@
@@ -385,6 +392,8 @@ clp.pc: $(top_builddir)/config.status $(srcdir)/clp.pc.in
 clp-uninstalled.pc: $(top_builddir)/config.status $(srcdir)/clp-uninstalled.pc.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@
 osi-clp-uninstalled.pc: $(top_builddir)/config.status $(top_srcdir)/src/OsiClp/osi-clp-uninstalled.pc.in
+	cd $(top_builddir) && $(SHELL) ./config.status $@
+doxydoc/doxygen.conf: $(top_builddir)/config.status $(top_srcdir)/doxydoc/doxygen.conf.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@
 
 mostlyclean-libtool:
@@ -549,7 +558,7 @@ distclean-tags:
 distdir: $(DISTFILES)
 	$(am__remove_distdir)
 	mkdir $(distdir)
-	$(mkdir_p) $(distdir)/. $(distdir)/BuildTools $(distdir)/doc $(distdir)/doc/Howto $(distdir)/examples $(distdir)/inc $(distdir)/src/OsiClp
+	$(mkdir_p) $(distdir)/. $(distdir)/BuildTools $(distdir)/doc $(distdir)/doc/Howto $(distdir)/doxydoc $(distdir)/examples $(distdir)/inc $(distdir)/src/OsiClp
 	@srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`; \
 	topsrcdirstrip=`echo "$(top_srcdir)" | sed 's|.|.|g'`; \
 	list='$(DISTFILES)'; for file in $$list; do \

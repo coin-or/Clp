@@ -50,6 +50,12 @@ AC_COIN_MAIN_PACKAGEDIR(CoinUtils)
 AC_COIN_MAIN_PACKAGEDIR(Osi)
 AC_COIN_MAIN_PACKAGEDIR(Clp)
 
+#############################################################################
+#                  Check for doxygen                                        #
+#############################################################################
+
+AC_COIN_DOXYGEN(CoinUtils Osi)
+
 ##############################################################################
 #                   Finishing up by writing all the output                   #
 ##############################################################################
@@ -57,6 +63,7 @@ AC_COIN_MAIN_PACKAGEDIR(Clp)
 # Here list all the files that configure should create (except for the
 # configuration header file)
 AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([doxydoc/doxygen.conf])
 
 # Finally, we let configure write all the output...
 AC_COIN_FINALIZE
