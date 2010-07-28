@@ -612,7 +612,7 @@ maintainer-clean-generic:
 	@echo "it deletes files that may require special tools to rebuild."
 clean: clean-recursive
 
-clean-am: clean-generic clean-libtool mostlyclean-am
+clean-am: clean-generic clean-libtool clean-local mostlyclean-am
 
 distclean: distclean-recursive
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
@@ -658,14 +658,14 @@ ps: ps-recursive
 
 ps-am:
 
-uninstall-am: uninstall-info-am
+uninstall-am: uninstall-info-am uninstall-local
 
 uninstall-info: uninstall-info-recursive
 
 .PHONY: $(RECURSIVE_TARGETS) CTAGS GTAGS all all-am am--refresh check \
-	check-am clean clean-generic clean-libtool clean-recursive \
-	ctags ctags-recursive dist dist-all dist-bzip2 dist-gzip \
-	dist-shar dist-tarZ dist-zip distcheck distclean \
+	check-am clean clean-generic clean-libtool clean-local \
+	clean-recursive ctags ctags-recursive dist dist-all dist-bzip2 \
+	dist-gzip dist-shar dist-tarZ dist-zip distcheck distclean \
 	distclean-generic distclean-libtool distclean-recursive \
 	distclean-tags distcleancheck distdir distuninstallcheck dvi \
 	dvi-am html html-am info info-am install install-am \
@@ -675,7 +675,8 @@ uninstall-info: uninstall-info-recursive
 	maintainer-clean maintainer-clean-generic \
 	maintainer-clean-recursive mostlyclean mostlyclean-generic \
 	mostlyclean-libtool mostlyclean-recursive pdf pdf-am ps ps-am \
-	tags tags-recursive uninstall uninstall-am uninstall-info-am
+	tags tags-recursive uninstall uninstall-am uninstall-info-am \
+	uninstall-local
 
 
 ########################################################################
@@ -696,8 +697,38 @@ tests:
 
 unitTests: tests
 
+# Generate doxygen doc'n in subdirectories (except @PACKAGE_NAME@) if a doxydoc
+# directory is present, then do the base, if present.
+
 doxydoc:
-	cd $(srcdir); doxygen doxydoc/doxygen.conf
+	for dir in $(subdirs) ; do \
+	  if test $$dir != @PACKAGE_NAME@ && test -r $$dir/doxydoc ; then \
+	    (cd $$dir ; $(MAKE) doxydoc) \
+	  fi ; \
+	done ; \
+	if test -r doxydoc/doxygen.conf ; then \
+	  doxygen doxydoc/doxygen.conf ; \
+	fi
+
+clean-doxydoc:
+	( cd doxydoc ; rm -rf html *.log *.tag )
+
+# DocInstallDir is defined in Makemain.inc and is specific to the package.
+# For the short term, adopt the notion that we install only the package
+# doxydoc.
+
+install-doxydoc: doxydoc
+	if test -r doxydoc/doxygen.conf ; then \
+	  $(mkdir_p) $(DocInstallDir) ; \
+	  cp -R doxydoc $(DocInstallDir) ; \
+	fi
+
+uninstall-doxydoc:
+	rm -rf $(DocInstallDir)/doxydoc
+
+clean-local: clean-doxydoc
+# install-data-local: install-doxydoc
+uninstall-local: uninstall-doxydoc
 
 .PHONY: test unitTest tests unitTests doxydoc
 
