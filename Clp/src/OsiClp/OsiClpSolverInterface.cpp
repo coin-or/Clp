@@ -2790,8 +2790,13 @@ OsiClpSolverInterface::getMutableMatrixByCol() const
 }
 
 //------------------------------------------------------------------
-std::vector<double*> OsiClpSolverInterface::getDualRays(int /*maxNumRays*/) const
+std::vector<double*> OsiClpSolverInterface::getDualRays(int maxNumRays,
+							bool fullRay) const
 {
+  if (fullRay == true) {
+    throw CoinError("Full dual rays not yet implemented.","getDualRays",
+		    "OsiClpSolverInterface");
+  }
   return std::vector<double*>(1, modelPtr_->infeasibilityRay());
 }
 //------------------------------------------------------------------
