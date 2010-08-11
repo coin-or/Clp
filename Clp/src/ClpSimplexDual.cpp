@@ -5813,6 +5813,11 @@ int ClpSimplexDual::strongBranching(int numberVariables, const int * variables,
           // Start of fast iterations
           int status = fastDual(alwaysFinish);
           CoinAssert (problemStatus_ || objectiveValue_ < 1.0e50);
+#ifdef CLP_DEBUG
+	  printf("first status %d obj %g\n",problemStatus_,objectiveValue_);
+#endif
+	  if(problemStatus_==10) 
+ 	      problemStatus_=3;
           // make sure plausible
           double obj = CoinMax(objectiveValue_, saveObjectiveValue);
           if (status && problemStatus_ != 3) {
@@ -5825,14 +5830,14 @@ int ClpSimplexDual::strongBranching(int numberVariables, const int * variables,
                }
                status = problemStatus_;
           }
+          if (problemStatus_ == 3)
+               status = 2;
           if (status || (problemStatus_ == 0 && !isDualObjectiveLimitReached())) {
                objectiveChange = obj - saveObjectiveValue;
           } else {
                objectiveChange = 1.0e100;
                status = 1;
           }
-          if (problemStatus_ == 3)
-               status = 2;
 
           if (scalingFlag_ <= 0) {
                CoinMemcpyN(solution_, numberColumns_, outputSolution[iSolution]);
@@ -5878,6 +5883,12 @@ int ClpSimplexDual::strongBranching(int numberVariables, const int * variables,
                lower_[iColumn] = (newLower[i] * inverseColumnScale_[iColumn]) * rhsScale_; // scale
           // Start of fast iterations
           status = fastDual(alwaysFinish);
+	  CoinAssert (problemStatus_||objectiveValue_<1.0e50);
+#ifdef CLP_DEBUG
+	  printf("second status %d obj %g\n",problemStatus_,objectiveValue_);
+#endif
+	  if(problemStatus_==10) 
+	      problemStatus_=3;
           // make sure plausible
           obj = CoinMax(objectiveValue_, saveObjectiveValue);
           if (status && problemStatus_ != 3) {
@@ -5890,14 +5901,14 @@ int ClpSimplexDual::strongBranching(int numberVariables, const int * variables,
                }
                status = problemStatus_;
           }
+          if (problemStatus_ == 3)
+               status = 2;
           if (status || (problemStatus_ == 0 && !isDualObjectiveLimitReached())) {
                objectiveChange = obj - saveObjectiveValue;
           } else {
                objectiveChange = 1.0e100;
                status = 1;
           }
-          if (problemStatus_ == 3)
-               status = 2;
           if (scalingFlag_ <= 0) {
                CoinMemcpyN(solution_, numberColumns_, outputSolution[iSolution]);
           } else {
@@ -7141,9 +7152,9 @@ ClpSimplexDual::resetFakeBounds(int type)
                          RC = 'R';
                          jSequence -= numberColumns_;
                     }
+#ifdef CLP_INVESTIGATE
                     double lowerValue = tempLower[iSequence];
                     double upperValue = tempUpper[iSequence];
-#ifdef CLP_INVESTIGATE
                     printf("*** movement>1.0e30 for  %c%d %g <= %g <= %g true %g, %g - status %d\n",
                            RC, jSequence, lower_[iSequence], solution_[iSequence],
                            upper_[iSequence], lowerValue, upperValue, status_[iSequence]);
