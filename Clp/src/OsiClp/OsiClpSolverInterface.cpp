@@ -5658,7 +5658,7 @@ OsiClpSolverInterface::getReducedGradient(
 
 /* Set a new objective and apply the old basis so that the
    reduced costs are properly updated  */
-void OsiClpSolverInterface::setObjectiveAndRefresh(double* c)
+void OsiClpSolverInterface::setObjectiveAndRefresh(const double* c)
 {
   modelPtr_->whatsChanged_ &= (0xffff&~(64));
   assert (modelPtr_->solveType()==2);
