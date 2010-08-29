@@ -181,11 +181,7 @@ public:
   ///Get the reduced gradient for the cost vector c 
   virtual void getReducedGradient(double* columnReducedCosts, 
 				  double * duals,
-				  const double * c);
-  
-  /** Set a new objective and apply the old basis so that the
-      reduced costs are properly updated  */
-  virtual void setObjectiveAndRefresh(const double* c);
+				  const double * c) const ;
   
   ///Get a row of the tableau (slack part in slack if not NULL)
   virtual void getBInvARow(int row, double* z, double * slack=NULL) const;

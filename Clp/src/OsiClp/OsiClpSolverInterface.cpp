@@ -4554,8 +4554,10 @@ OsiClpSolverInterface::getBasisDiff(const unsigned char * statusArray) const
   CoinWarmStartDiff * difference = basis.generateDiff(&basis_);
   return difference;
 }
-/* Read an mps file from the given filename (defaults to Osi reader) - returns
-   number of errors (see OsiMpsReader class) */
+/*
+  Read an mps file from the given filename - returns number of errors
+  (see CoinMpsIO class)
+*/
 int 
 OsiClpSolverInterface::readMps(const char *filename,
 			       const char *extension ) 
@@ -4574,7 +4576,11 @@ OsiClpSolverInterface::readMps(const char *filename,
   setInfo_=NULL;
   numberSOS_=0;
   CoinSet ** sets=NULL;
+  // Temporarily reduce log level to get CoinMpsIO to shut up.
+  int saveLogLevel = modelPtr_->messageHandler()->logLevel() ;
+  modelPtr_->messageHandler()->setLogLevel(0) ;
   int numberErrors = m.readMps(filename,extension,numberSOS_,sets);
+  modelPtr_->messageHandler()->setLogLevel(saveLogLevel) ;
   if (numberSOS_) {
     setInfo_ = new CoinSet[numberSOS_];
     for (int i=0;i<numberSOS_;i++) {
@@ -5639,7 +5645,7 @@ void
 OsiClpSolverInterface::getReducedGradient(
 					  double* columnReducedCosts, 
 					  double * duals,
-					  const double * c)
+					  const double * c) const
 {
   assert (modelPtr_->solveType()==2);
   // could do this faster with coding inside Clp
@@ -5656,8 +5662,14 @@ OsiClpSolverInterface::getReducedGradient(
   CoinMemcpyN(modelPtr_->djRegion(1),	numberColumns,columnReducedCosts);
 }
 
+#if 0
+
+  Deleted from OsiSimplex API 100828. Leave the code here for a bit just in
+  case someone yells.  -- lh, 100828 --
+
 /* Set a new objective and apply the old basis so that the
-   reduced costs are properly updated  */
+   reduced costs are properly updated
+*/
 void OsiClpSolverInterface::setObjectiveAndRefresh(const double* c)
 {
   modelPtr_->whatsChanged_ &= (0xffff&~(64));
@@ -5670,6 +5682,7 @@ void OsiClpSolverInterface::setObjectiveAndRefresh(const double* c)
   CoinMemcpyN(c,numberColumns,modelPtr_->costRegion());
   modelPtr_->computeDuals(NULL);
 }
+#endif
 
 //Get a row of the tableau (slack part in slack if not NULL)
 void 

@@ -1174,8 +1174,19 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
     m.setObjSense(-1.0);
     m.initialSolve();
   }
+# if 0
+/*
+  This section stops working without setObjectiveAndRefresh. Assertion failure
+  down in the guts of clp, likely due to reduced costs not properly updated.
+  Leave the code in for a bit so it's easily recoverable if anyone actually
+  yells about the loss. There was no response to a public announcement
+  of intent to delete, but sometimes it takes a whack on the head to get
+  peoples' attention. At some point, it'd be good to come back through and
+  make this work again. -- lh, 100828 --
+*/
   // Do parametrics on the objective by hand
-  {    
+  {
+    std::cout << " Beginning Osi Simplex mode 2 ... " << std::endl ;
     OsiClpSolverInterface m;
     std::string fn = mpsDir+"p0033";
     m.readMps(fn.c_str(),"mps");
@@ -1206,6 +1217,7 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
     double totalChange=100.0;
     double totalDone=0.0;
     while (true) {
+      std::cout << " Starting iterations ... " << std::endl ;
       // Save current
       // (would be more accurate to start from scratch)
       memcpy(djsNow, m.getReducedCost(),numberColumns*sizeof(double));
@@ -1291,11 +1303,13 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
     delete [] dualsNow;
     delete [] djsNow;
     // exit special mode
+    std::cout << " Finished simplex mode 2 ; checking result." << std::endl ;
     m.disableSimplexInterface();
     simplex->messageHandler()->setLogLevel(4);
     m.resolve();
     assert (!m.getIterationCount());
   }
+# endif
   // Solve an lp when interface is on
   {    
     OsiClpSolverInterface m;
