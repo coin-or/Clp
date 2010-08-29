@@ -10,6 +10,29 @@
 #include <cstdio>
 #include <iostream>
 
+/*
+  CLP_NO_VECTOR
+
+  There's no hint of the motivation for this, so here's a bit of speculation.
+  CLP_NO_VECTOR excises CoinPackedVector from the code. Looking over
+  affected code here, and the much more numerous occurrences of affected
+  code in CoinUtils, it looks to be an efficiency issue.
+
+  One good example is CoinPackedMatrix.isEquivalent. The default version
+  tests equivalence of major dimension vectors by retrieving them as
+  CPVs and invoking CPV.isEquivalent. As pointed out in the documention,
+  CPV.isEquivalent implicitly sorts the nonzeros of each vector (insertion in
+  a map) prior to comparison. As a one-off, this is arguably more efficient
+  than allocating and clearing a full vector, then dropping in the nonzeros,
+  then checking against the second vector (in fact, this is the algorithm
+  for testing a packed vector against a full vector).
+
+  In CPM.isEquivalent, we have a whole sequence of vectors to compare. Better
+  to allocate a full vector sized to match, clear it (one time cost), then
+  edit nonzeros in and out while doing comparisons. The cost of allocating
+  and clearing the full vector is amortised over all columns.
+*/
+
 
 #include "CoinPragma.hpp"
 
