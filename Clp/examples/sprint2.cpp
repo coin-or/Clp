@@ -37,6 +37,7 @@ int main(int argc, const char *argv[])
      memcpy(saveLower, columnLower, numberColumns * sizeof(double));
      double * saveUpper = new double [numberColumns];
      memcpy(saveUpper, columnUpper, numberColumns * sizeof(double));
+     double * solution = model.primalColumnSolution();
      // Fix in some magical way so remaining problem is easy
 #if 0
      // This is from a real-world problem
@@ -48,11 +49,11 @@ int main(int argc, const char *argv[])
           }
      }
 #else
-     double * obj = model->objective();
+     double * obj = model.objective();
      double * saveObj = new double [numberColumns];
      memcpy(saveObj, obj, numberColumns * sizeof(double));
      memset(obj, 0, numberColumns * sizeof(double));
-     model->dual();
+     model.dual();
      memcpy(obj, saveObj, numberColumns * sizeof(double));
      delete [] saveObj;
      for (int iColumn = 0; iColumn < numberColumns; iColumn++) {
@@ -61,7 +62,6 @@ int main(int argc, const char *argv[])
        }
      }
 #endif
-     double * solution = model.primalColumnSolution();
 
      // Just do this number of passes
      int maxPass = 100;
@@ -121,7 +121,7 @@ int main(int argc, const char *argv[])
           } else {
                lastObjective = model.objectiveValue();
                // now massage weight so all basic in plus good djs
-	       const double * djs = model->primalDualSolution();
+	       const double * djs = model.dualColumnSolution();
                for (int iColumn = 0; iColumn < numberColumns; iColumn++) {
                     double dj = djs[iColumn];
                     double value = solution[iColumn];
