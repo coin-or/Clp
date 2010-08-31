@@ -38,6 +38,7 @@ int main(int argc, const char *argv[])
      double * saveUpper = new double [numberColumns];
      memcpy(saveUpper, columnUpper, numberColumns * sizeof(double));
      // Fix in some magical way so remaining problem is easy
+#if 0
      // This is from a real-world problem
      for (int iColumn = 0; iColumn < numberColumns; iColumn++) {
           char firstCharacter = model.columnName(iColumn)[0];
@@ -46,6 +47,20 @@ int main(int argc, const char *argv[])
                columnUpper[iColumn] = columnLower[iColumn];
           }
      }
+#else
+     double * obj = model->objective();
+     double * saveObj = new double [numberColumns];
+     memcpy(saveObj, obj, numberColumns * sizeof(double));
+     memset(obj, 0, numberColumns * sizeof(double));
+     model->dual();
+     memcpy(obj, saveObj, numberColumns * sizeof(double));
+     delete [] saveObj;
+     for (int iColumn = 0; iColumn < numberColumns; iColumn++) {
+         if (solution[iColumn]<columnLower[iColumn]+1.0e-8) {
+	     columnUpper[iColumn] = columnLower[iColumn];
+       }
+     }
+#endif
      double * solution = model.primalColumnSolution();
 
      // Just do this number of passes
@@ -106,8 +121,9 @@ int main(int argc, const char *argv[])
           } else {
                lastObjective = model.objectiveValue();
                // now massage weight so all basic in plus good djs
+	       const double * djs = model->primalDualSolution();
                for (int iColumn = 0; iColumn < numberColumns; iColumn++) {
-                    double dj = weight[iColumn];
+                    double dj = djs[iColumn];
                     double value = solution[iColumn];
                     if (model.getStatus(iColumn) == ClpSimplex::basic)
                          dj = -1.0e50;
