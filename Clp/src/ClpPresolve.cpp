@@ -1585,7 +1585,9 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
 
     result =0; 
 
-    if (prob.status_==0&&paction_) {
+    bool fixInfeasibility = (prob.presolveOptions_&16384)!=0;
+    bool hasSolution = (prob.presolveOptions_&32768)!=0;
+    if (prob.status_ == 0 && paction_ && (!hasSolution || !fixInfeasibility)) {
       // Looks feasible but double check to see if anything slipped through
       int n		= prob.ncols_;
       double * lo = prob.clo_;
@@ -1594,7 +1596,7 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
       
       for (i=0;i<n;i++) {
 	if (up[i]<lo[i]) {
-	  if (up[i]<lo[i]-1.0e-8) {
+	  if (up[i] < lo[i] - feasibilityTolerance && !fixInfeasibility) {
 	    // infeasible
 	    prob.status_=1;
 	  } else {
@@ -1609,7 +1611,7 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
 
       for (i=0;i<n;i++) {
 	if (up[i]<lo[i]) {
-	  if (up[i]<lo[i]-1.0e-8) {
+	  if (up[i] < lo[i] - feasibilityTolerance && !fixInfeasibility) {
 	    // infeasible
 	    prob.status_=1;
 	  } else {
@@ -1627,6 +1629,47 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
       CoinMemcpyN(	     prob.acts_,prob.nrows_,presolvedModel_->primalRowSolution());
       CoinMemcpyN(	     prob.colstat_,prob.ncols_,presolvedModel_->statusArray());
       CoinMemcpyN(	     prob.rowstat_,prob.nrows_,presolvedModel_->statusArray()+prob.ncols_);
+      if (fixInfeasibility && hasSolution) {
+	// Looks feasible but double check to see if anything slipped through
+	int n		= prob.ncols_;
+	double * lo = prob.clo_;
+	double * up = prob.cup_;
+	double * rsol = prob.acts_;
+	//memset(prob.acts_,0,prob.nrows_*sizeof(double));
+	presolvedModel_->matrix()->times(prob.sol_,rsol);
+	int i;
+	
+	for (i = 0; i < n; i++) {
+	  double gap=up[i]-lo[i];
+	  if (rsol[i]<lo[i]-feasibilityTolerance&&fabs(rsol[i]-lo[i])<1.0e-3) {
+	    lo[i]=rsol[i];
+	    if (gap<1.0e5)
+	      up[i]=lo[i]+gap;
+	  } else if (rsol[i]>up[i]+feasibilityTolerance&&fabs(rsol[i]-up[i])<1.0e-3) {
+	    up[i]=rsol[i];
+	    if (gap<1.0e5)
+	      lo[i]=up[i]-gap;
+	  }
+	  if (up[i] < lo[i]) {
+	    up[i] = lo[i];
+	  }
+	}
+      }
+      
+      int n = prob.nrows_;
+      double * lo = prob.rlo_;
+      double * up = prob.rup_;
+      
+      for (i = 0; i < n; i++) {
+	if (up[i] < lo[i]) {
+	  if (up[i] < lo[i] - feasibilityTolerance && !fixInfeasibility) {
+	    // infeasible
+	    prob.status_ = 1;
+	  } else {
+	    up[i] = lo[i];
+	  }
+	}
+      }
       delete [] prob.sol_;
       delete [] prob.acts_;
       delete [] prob.colstat_;
