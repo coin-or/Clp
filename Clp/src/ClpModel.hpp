@@ -749,8 +749,8 @@ public:
          Up to user to use delete [] on these arrays.  */
      double * infeasibilityRay() const;
      double * unboundedRay() const;
-     /// just test if infeasibilityRay exists
-     inline bool infeasibilityRayExists() const {
+     /// just test if infeasibility or unbounded Ray exists
+     inline bool rayExists() const {
          return (ray_!=NULL);
      }
      /// just delete ray if exists
