@@ -19,11 +19,9 @@ public:
      ///@name Stuff
      //@{
 
-     /** Returns gradient.  If Linear then solution may be NULL,
-         also returns an offset (to be added to current one)
-         If refresh is false then uses last solution
-         Uses model for scaling
-         includeLinear 0 - no, 1 as is, 2 as feasible
+     /** Returns objective coefficients.
+       
+       Offset is always set to 0.0. All other parameters unused.
      */
      virtual double * gradient(const ClpSimplex * model,
                                const double * solution, double & offset, bool refresh,

@@ -62,6 +62,7 @@ void OsiClpSolverInterface::initialSolve()
   ClpObjective * savedObjective=NULL;
   double savedDualLimit=modelPtr_->dblParam_[ClpDualObjectiveLimit];
   if (fakeObjective_) {
+    // Clear (no objective, 0-1 and in B&B)
     modelPtr_->setMoreSpecialOptions(modelPtr_->moreSpecialOptions()&(~128));
     // See if all with costs fixed
     int numberColumns = modelPtr_->numberColumns_;
@@ -77,16 +78,19 @@ void OsiClpSolverInterface::initialSolve()
       }
     }
     if (i==numberColumns) {
+      // Check (Clp fast dual)
       if ((specialOptions_&524288)==0) {
 	// Set fake
 	savedObjective=modelPtr_->objective_;
 	modelPtr_->objective_=fakeObjective_;
 	modelPtr_->dblParam_[ClpDualObjectiveLimit]=COIN_DBL_MAX;
       } else {
+	// Set (no objective, 0-1 and in B&B)
 	modelPtr_->setMoreSpecialOptions(modelPtr_->moreSpecialOptions()|128);
       }
     }
   }
+  // Check (in branch and bound)
   if ((specialOptions_&1024)==0) {
     solver = new ClpSimplex(true);
     deleteSolver=true;
@@ -2790,7 +2794,7 @@ OsiClpSolverInterface::getMutableMatrixByCol() const
 }
 
 //------------------------------------------------------------------
-std::vector<double*> OsiClpSolverInterface::getDualRays(int maxNumRays,
+std::vector<double*> OsiClpSolverInterface::getDualRays(int /*maxNumRays*/,
 							bool fullRay) const
 {
   if (fullRay == true) {
@@ -2891,8 +2895,13 @@ OsiClpSolverInterface::setObjective(const double * array)
   // Say can't gurantee optimal basis etc
   lastAlgorithm_=999;
   modelPtr_->whatsChanged_ &= (0xffff&~64);
-  CoinMemcpyN(array,modelPtr_->numberColumns(),
-		    modelPtr_->objective());
+  int n = modelPtr_->numberColumns() ;
+  if (fakeMinInSimplex_) {
+    std::transform(array,array+n,
+  		   modelPtr_->objective(),std::negate<double>()) ;
+  } else {
+    CoinMemcpyN(array,n,modelPtr_->objective());
+  }
 }
 /* Set the lower bounds for all columns
     array [getNumCols()] is an array of values for the objective.
@@ -3696,7 +3705,6 @@ ClpSimplex * OsiClpSolverInterface::getModelPtr() const
 OsiClpSolverInterface::OsiClpSolverInterface ()
 :
 OsiSolverInterface(),
-linearObjective_(NULL),
 rowsense_(NULL),
 rhs_(NULL),
 rowrange_(NULL),
@@ -3715,6 +3723,8 @@ matrixByRow_(NULL),
 matrixByRowAtContinuous_(NULL),  
 integerInformation_(NULL),
 whichRange_(NULL),
+fakeMinInSimplex_(false),
+linearObjective_(NULL),
 cleanupScaling_(0),
 specialOptions_(0x80000000),
 baseModel_(NULL),
@@ -3779,7 +3789,8 @@ notOwned_(false),
 matrixByRow_(NULL),
 matrixByRowAtContinuous_(NULL),  
 integerInformation_(NULL),
-whichRange_(NULL)
+whichRange_(NULL),
+fakeMinInSimplex_(rhs.fakeMinInSimplex_)
 {
   //printf("in copy %x - > %x\n",&rhs,this);
   if ( rhs.modelPtr_  ) 
@@ -3856,6 +3867,7 @@ matrixByRow_(NULL),
 matrixByRowAtContinuous_(NULL),  
 integerInformation_(NULL),
 whichRange_(NULL),
+fakeMinInSimplex_(false),
 cleanupScaling_(0),
 specialOptions_(0x80000000),
 baseModel_(NULL),
@@ -4961,7 +4973,10 @@ OsiClpSolverInterface::getObjValue() const
     // This does not pass unitTest when getObjValue is called before solve.
     //printf("obj a %g %g\n",modelPtr_->objectiveValue(),
     //     OsiSolverInterface::getObjValue());
-    return modelPtr_->objectiveValue();
+    if (fakeMinInSimplex_)
+      return -modelPtr_->objectiveValue() ;
+    else
+      return modelPtr_->objectiveValue();
   } else {
     return OsiSolverInterface::getObjValue();
   }
@@ -4980,7 +4995,8 @@ OsiClpSolverInterface::setObjCoeff( int elementIndex, double elementValue )
     indexError(elementIndex,"setObjCoeff");
   }
 #endif
-  modelPtr_->setObjectiveCoefficient(elementIndex,elementValue);
+  modelPtr_->setObjectiveCoefficient(elementIndex,
+    ((fakeMinInSimplex_)?-elementValue:elementValue));
 }
 
 /* Set a single column lower bound<br>
@@ -5283,10 +5299,37 @@ OsiClpSolverInterface::setRowSetTypes(const int* indexFirst,
     }
   }
 }
-/*Enables normal operation of subsequent functions.
-  This method is supposed to ensure that all typical things (like
-  reduced costs, etc.) are updated when individual pivots are executed
-  and can be queried by other methods 
+
+/*
+  Clp's copy-in/copy-out design paradigm is a challenge for the simplex modes.
+  Normal operation goes like this:
+    * startup() loads clp's work arrays, performing scaling for numerical
+      stability and compensating for max.
+    * clp solves the problem
+    * finish() unloads the work arrays into answer arrays, undoing scaling
+      and max compensation.
+  There are two solutions: undo scaling and max on demand, or make them
+  into noops. The various getBInv* methods undo scaling on demand (but
+  see special option 512) and do not need to worry about max. Other get
+  solution methods are not coded to do this, so the second approach is
+  used. For simplex modes, turn off scaling (necessary for both primal and
+  dual solutions) and temporarily convert max to min (necessary for dual
+  solution). This makes the unscaling in getBInv* superfluous, but don't
+  remove it. Arguably the better solution here would be to go through and
+  add unscaling and max compensation to the get solution methods. Look for
+  fakeMinInSimplex to see the places this propagates to.
+
+  TODO: setRowPrice never has worked properly, and I didn't try to fix it in
+        this go-round.
+
+  As of 100907, change applied to [enable|disable]Factorization (mode 1).
+  Limitation of [enable|disable]SimplexInterface (mode 2) noted in
+  documentation.  -- lh, 100907 --
+*/
+/*
+  Enables normal operation of subsequent functions.  This method is supposed
+  to ensure that all typical things (like reduced costs, etc.) are updated
+  when individual pivots are executed and can be queried by other methods
 */
 void 
 OsiClpSolverInterface::enableSimplexInterface(bool doingPrimal)
@@ -5350,14 +5393,37 @@ OsiClpSolverInterface::disableSimplexInterface()
   basis_ = getBasis(modelPtr_);
   modelPtr_->setSolveType(1);
 }
+
+/*
+  Force scaling off. If the client thinks we're maximising, arrange it so
+  that clp sees minimisation while the client still sees maximisation. In
+  keeping with the spirit of the getBInv methods, special option 512 will
+  leave all work to the client.
+*/
 void 
 OsiClpSolverInterface::enableFactorization() const
 {
-  specialOptions_ &= ~0x80000000;
   saveData_.specialOptions_=specialOptions_;
-  int saveStatus = modelPtr_->problemStatus_;
+  // Try to preserve work regions, reuse factorization
   if ((specialOptions_&(1+8))!=1+8)
     setSpecialOptionsMutable((1+8)|specialOptions_);
+  // Are we allowed to make the output sensible to mere mortals?
+  if ((specialOptions_&512)==0) {
+    // Force scaling to off
+    saveData_.scalingFlag_ = modelPtr_->scalingFlag() ;
+    modelPtr_->scaling(0) ;
+    // Temporarily force to min but keep a copy of original objective.
+    if (getObjSense() < 0.0) {
+      fakeMinInSimplex_ = true ;
+      modelPtr_->setOptimizationDirection(1.0) ;
+      double *c = modelPtr_->objective() ;
+      int n = getNumCols() ;
+      linearObjective_ = new double[n] ;
+      CoinMemcpyN(c,n,linearObjective_) ;
+      std::transform(c,c+n,c,std::negate<double>()) ;
+    }
+  }
+  int saveStatus = modelPtr_->problemStatus_;
 #ifdef NDEBUG
   modelPtr_->startup(0);
 #else
@@ -5367,7 +5433,10 @@ OsiClpSolverInterface::enableFactorization() const
   modelPtr_->problemStatus_=saveStatus;
 }
 
-//Undo whatever setting changes the above method had to make
+/*
+  Undo enableFactorization. Retrieve the special options and scaling and
+  remove the temporary objective used to fake minimisation in clp.
+*/
 void 
 OsiClpSolverInterface::disableFactorization() const
 {
@@ -5377,22 +5446,24 @@ OsiClpSolverInterface::disableFactorization() const
   // message will not appear anyway
   int saveMessageLevel=modelPtr_->messageHandler()->logLevel();
   modelPtr_->messageHandler()->setLogLevel(0);
-  // Should re-do - for moment save arrays 
-  double * sol = CoinCopyOfArray(modelPtr_->columnActivity_,modelPtr_->numberColumns_);
-  double * dj = CoinCopyOfArray(modelPtr_->reducedCost_,modelPtr_->numberColumns_);
-  double * rsol = CoinCopyOfArray(modelPtr_->rowActivity_,modelPtr_->numberRows_);
-  double * dual = CoinCopyOfArray(modelPtr_->dual_,modelPtr_->numberRows_);
   modelPtr_->finish();
-  CoinMemcpyN(sol,modelPtr_->numberColumns_,modelPtr_->columnActivity_);
-  CoinMemcpyN(dj,modelPtr_->numberColumns_,modelPtr_->reducedCost_);
-  CoinMemcpyN(rsol,modelPtr_->numberRows_,modelPtr_->rowActivity_);
-  CoinMemcpyN(dual,modelPtr_->numberRows_,modelPtr_->dual_);
-  delete [] sol;
-  delete [] dj;
-  delete [] rsol;
-  delete [] dual;
   modelPtr_->messageHandler()->setLogLevel(saveMessageLevel);
+  // Client asked for transforms on the way in, so back out.
+  if ((specialOptions_&512)==0) {
+    modelPtr_->scaling(saveData_.scalingFlag_) ;
+    if (fakeMinInSimplex_ == true) {
+      fakeMinInSimplex_ = false ;
+      modelPtr_->setOptimizationDirection(-1.0) ;
+      double *c = modelPtr_->objective() ;
+      int n = getNumCols() ;
+      std::transform(c,c+n,c,std::negate<double>()) ;
+      delete[] linearObjective_ ;
+    }
+  }
 }
+
+
+
 /* The following two methods may be replaced by the
    methods of OsiSolverInterface using OsiWarmStartBasis if:
    1. OsiWarmStartBasis resize operation is implemented
@@ -5640,26 +5711,58 @@ OsiClpSolverInterface::dualPivotResult(int& /*colIn*/, int& /*sign*/,
   return 0;
 }
 
-//Get the reduced gradient for the cost vector c 
+/*
+  This method should not leave a permanent change in the solver. For
+  this reason, save a copy of the cost region and replace it after we've
+  calculated the duals and reduced costs.
+
+  On the good side, if we're maximising, we should negate the objective on
+  the way in and negate the duals on the way out. Since clp won't be doing
+  anything more with c, we can exploit (-1)(-1) = 1 and do nothing.
+*/
 void 
 OsiClpSolverInterface::getReducedGradient(
 					  double* columnReducedCosts, 
 					  double * duals,
 					  const double * c) const
 {
-  assert (modelPtr_->solveType()==2);
+  //assert (modelPtr_->solveType()==2);
   // could do this faster with coding inside Clp
   // save current costs
   int numberColumns = modelPtr_->numberColumns();
   double * save = new double [numberColumns];
-  CoinMemcpyN(modelPtr_->costRegion(),numberColumns,save);
-  CoinMemcpyN(c,numberColumns,modelPtr_->costRegion());
+  double * obj = modelPtr_->costRegion();
+  CoinMemcpyN(obj,numberColumns,save);
+  // Compute new duals and reduced costs.
+  const double * columnScale = modelPtr_->columnScale();
+  if (!columnScale) {
+    CoinMemcpyN(c,numberColumns,obj) ;
+  } else {
+    // need to scale
+    for (int i=0;i<numberColumns;i++)
+      obj[i] = c[i]*columnScale[i];
+  }
   modelPtr_->computeDuals(NULL);
-  CoinMemcpyN(save,numberColumns,modelPtr_->costRegion());
+
+  // Restore previous cost vector
+  CoinMemcpyN(save,numberColumns,obj);
   delete [] save;
+
+  // Transfer results to parameters
   int numberRows = modelPtr_->numberRows();
-  CoinMemcpyN(modelPtr_->dualRowSolution(),numberRows,duals);
-  CoinMemcpyN(modelPtr_->djRegion(1),	numberColumns,columnReducedCosts);
+  const double * dualScaled = modelPtr_->dualRowSolution();
+  const double * djScaled = modelPtr_->djRegion(1);
+  if (!columnScale) {
+      CoinMemcpyN(dualScaled,numberRows,duals) ;
+      CoinMemcpyN(djScaled,numberColumns,columnReducedCosts) ;
+  } else {
+    // need to scale
+    const double * rowScale = modelPtr_->rowScale();
+    for (int i=0;i<numberRows;i++)
+      duals[i] = dualScaled[i]*rowScale[i];
+    for (int i=0;i<numberColumns;i++)
+      columnReducedCosts[i] = djScaled[i]/columnScale[i];
+  }
 }
 
 #if 0
@@ -6152,8 +6255,6 @@ OsiClpSolverInterface::reset()
   lastAlgorithm_=0;
   notOwned_=false;
   modelPtr_ = new ClpSimplex();
-  // This is also deleted by Clp --tkr 7/31/03
-  // delete linearObjective_;
   linearObjective_ = NULL;
   fillParamMaps();
 }

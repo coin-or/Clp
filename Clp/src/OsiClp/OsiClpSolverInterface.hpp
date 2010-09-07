@@ -62,53 +62,36 @@ public:
   void crossover(int options,int basis);
   //@}
   
-  ///@name OsiSimplexInterface methods 
-  //@{
-  
-  /**Enables normal operation of subsequent functions.
-     This method is supposed to ensure that all typical things (like
-     reduced costs, etc.) are updated when individual pivots are executed
-     and can be queried by other methods 
+  /*! @name OsiSimplexInterface methods
+      \brief Methods for the Osi Simplex API.
+
+    The current implementation should work for both minimisation and
+    maximisation in mode 1 (tableau access). In mode 2 (single pivot), only
+    minimisation is supported as of 100907.
   */
-  virtual void enableSimplexInterface(bool doingPrimal);
+  //@{
+  /** \brief Simplex API capability.
   
-  ///Undo whatever setting changes the above method had to make
-  virtual void disableSimplexInterface();
-  /** Returns 1 if can just do getBInv etc
-      2 if has all OsiSimplex methods
-      and 0 if it has none */
+    Returns
+     - 0 if no simplex API
+     - 1 if can just do getBInv etc
+     - 2 if has all OsiSimplex methods
+  */
   virtual int canDoSimplexInterface() const;
-  /** Tells solver that calls to getBInv etc are about to take place.
-      Underlying code may need mutable as this may be called from 
-      CglCut:;generateCuts which is const.  If that is too horrific then
-      each solver e.g. BCP or CBC will have to do something outside
-      main loop.
+
+  /*! \brief Enables simplex mode 1 (tableau access)
+  
+    Tells solver that calls to getBInv etc are about to take place.
+    Underlying code may need mutable as this may be called from 
+    CglCut::generateCuts which is const.  If that is too horrific then
+    each solver e.g. BCP or CBC will have to do something outside
+    main loop.
   */
   virtual void enableFactorization() const;
-  /// and stop
+
+  /*! \brief Undo any setting changes made by #enableFactorization */
   virtual void disableFactorization() const;
   
-  /** Sets up solver for repeated use by Osi interface.
-      The normal usage does things like keeping factorization around so can be used.
-      Will also do things like keep scaling and row copy of matrix if
-      matrix does not change.
-      adventure:
-      0 - safe stuff as above
-      1 - will take more risks - if it does not work then bug which will be fixed
-      2 - don't bother doing most extreme termination checks e.g. don't bother
-      re-factorizing if less than 20 iterations.
-      3 - Actually safer than 1 (mainly just keeps factorization)
-      
-      printOut - -1 always skip round common messages instead of doing some work
-      0 skip if normal defaults
-      1 leaves
-  */
-  void setupForRepeatedUse(int senseOfAdventure=0, int printOut=0);
-  /// Synchronize model (really if no cuts in tree)
-  virtual void synchronizeModel();
-  // Sleazy methods to fool const requirements (no less safe as modelPtr_ mutable)
-  void setSpecialOptionsMutable(unsigned int value) const;
-
   /** Returns true if a basis is available
       AND problem is optimal.  This should be used to see if
       the BInvARow type operations are possible and meaningful. 
@@ -143,40 +126,6 @@ public:
       Returns 0 if OK, 1 if problem is bad e.g. duplicate elements, too large ...
   */
   virtual int setBasisStatus(const int* cstat, const int* rstat);
-  
-  /** Perform a pivot by substituting a colIn for colOut in the basis. 
-      The status of the leaving variable is given in statOut. Where
-      1 is to upper bound, -1 to lower bound
-      Return code is 0 for okay,
-      1 if inaccuracy forced re-factorization (should be okay) and
-      -1 for singular factorization
-  */
-  virtual int pivot(int colIn, int colOut, int outStatus);
-  
-  /** Obtain a result of the primal pivot 
-      Outputs: colOut -- leaving column, outStatus -- its status,
-      t -- step size, and, if dx!=NULL, *dx -- primal ray direction.
-      Inputs: colIn -- entering column, sign -- direction of its change (+/-1).
-      Both for colIn and colOut, artificial variables are index by
-      the negative of the row index minus 1.
-      Return code (for now): 0 -- leaving variable found, 
-      -1 -- everything else?
-      Clearly, more informative set of return values is required 
-      Primal and dual solutions are updated
-  */
-  virtual int primalPivotResult(int colIn, int sign, 
-				int& colOut, int& outStatus, 
-				double& t, CoinPackedVector* dx);
-  
-  /** Obtain a result of the dual pivot (similar to the previous method)
-      Differences: entering variable and a sign of its change are now
-      the outputs, the leaving variable and its statuts -- the inputs
-      If dx!=NULL, then *dx contains dual ray
-      Return code: same
-  */
-  virtual int dualPivotResult(int& colIn, int& sign, 
-			      int colOut, int outStatus, 
-			      double& t, CoinPackedVector* dx);
   
   ///Get the reduced gradient for the cost vector c 
   virtual void getReducedGradient(double* columnReducedCosts, 
@@ -216,6 +165,52 @@ public:
       getBInvCol()).
   */
   virtual void getBasics(int* index) const;
+
+  /*! \brief Enables simplex mode 2 (individual pivot control)
+
+     This method is supposed to ensure that all typical things (like
+     reduced costs, etc.) are updated when individual pivots are executed
+     and can be queried by other methods.
+  */
+  virtual void enableSimplexInterface(bool doingPrimal);
+  
+  /*! \brief Undo setting changes made by #enableSimplexInterface */
+  virtual void disableSimplexInterface();
+
+  /** Perform a pivot by substituting a colIn for colOut in the basis. 
+      The status of the leaving variable is given in statOut. Where
+      1 is to upper bound, -1 to lower bound
+      Return code is 0 for okay,
+      1 if inaccuracy forced re-factorization (should be okay) and
+      -1 for singular factorization
+  */
+  virtual int pivot(int colIn, int colOut, int outStatus);
+  
+  /** Obtain a result of the primal pivot 
+      Outputs: colOut -- leaving column, outStatus -- its status,
+      t -- step size, and, if dx!=NULL, *dx -- primal ray direction.
+      Inputs: colIn -- entering column, sign -- direction of its change (+/-1).
+      Both for colIn and colOut, artificial variables are index by
+      the negative of the row index minus 1.
+      Return code (for now): 0 -- leaving variable found, 
+      -1 -- everything else?
+      Clearly, more informative set of return values is required 
+      Primal and dual solutions are updated
+  */
+  virtual int primalPivotResult(int colIn, int sign, 
+				int& colOut, int& outStatus, 
+				double& t, CoinPackedVector* dx);
+  
+  /** Obtain a result of the dual pivot (similar to the previous method)
+      Differences: entering variable and a sign of its change are now
+      the outputs, the leaving variable and its statuts -- the inputs
+      If dx!=NULL, then *dx contains dual ray
+      Return code: same
+  */
+  virtual int dualPivotResult(int& colIn, int& sign, 
+			      int colOut, int outStatus, 
+			      double& t, CoinPackedVector* dx);
+  
   
   //@}
   //---------------------------------------------------------------------------
@@ -309,7 +304,7 @@ public:
   //@}
   
   //---------------------------------------------------------------------------
-  /**@name Hotstart related methods (primarily used in strong branching). <br>
+  /**@name Hotstart related methods (primarily used in strong branching).
      The user can create a hotstart (a snapshot) of the optimization process
      then reoptimize over and over again always starting from there.<br>
      <strong>NOTE</strong>: between hotstarted optimizations only
@@ -422,11 +417,15 @@ public:
   
   /// Get pointer to array[getNumCols()] of objective function coefficients
   virtual const double * getObjCoefficients() const 
-  { return modelPtr_->objective(); }
+  { if (fakeMinInSimplex_)
+      return linearObjective_ ;
+    else
+      return modelPtr_->objective(); }
   
   /// Get objective function sense (1 for min (default), -1 for max)
   virtual double getObjSense() const 
-  { return modelPtr_->optimizationDirection(); }
+  { return ((fakeMinInSimplex_)?-modelPtr_->optimizationDirection():
+  				 modelPtr_->optimizationDirection()); }
   
   /// Return true if column is continuous
   virtual bool isContinuous(int colNumber) const;
@@ -1076,6 +1075,34 @@ public:
   void setFakeObjective(ClpLinearObjective * fakeObjective);
   /// Set fake objective
   void setFakeObjective(double * fakeObjective);
+  /*! \brief Set up solver for repeated use by Osi interface.
+
+    The normal usage does things like keeping factorization around so can be
+    used.  Will also do things like keep scaling and row copy of matrix if
+    matrix does not change.
+
+    \p senseOfAdventure:
+    - 0 - safe stuff as above
+    - 1 - will take more risks - if it does not work then bug which will be
+          fixed
+    - 2 - don't bother doing most extreme termination checks e.g. don't bother
+	  re-factorizing if less than 20 iterations.
+    - 3 - Actually safer than 1 (mainly just keeps factorization)
+      
+    \p printOut
+    - -1 always skip round common messages instead of doing some work
+    -  0 skip if normal defaults
+    -  1 leaves
+  */
+  void setupForRepeatedUse(int senseOfAdventure=0, int printOut=0);
+  /// Synchronize model (really if no cuts in tree)
+  virtual void synchronizeModel();
+  /*! \brief Set special options in underlying clp solver.
+
+    Safe as const because #modelPtr_ is mutable.
+  */
+  void setSpecialOptionsMutable(unsigned int value) const;
+
   //@}
   
   //---------------------------------------------------------------------------
@@ -1198,15 +1225,14 @@ public:
   { largestAway_ = value;}
   /// Sort of lexicographic resolve
   void lexSolve();
-protected:
   //@}
   
+protected:
   /**@name Protected member data */
   //@{
   /// Clp model represented by this class instance
   mutable ClpSimplex * modelPtr_;
-  /// Linear objective - just points to ClpModel
-  double * linearObjective_;
+  //@}
   /**@name Cached information derived from the OSL model */
   //@{
   /// Pointer to dense vector of row sense indicators
@@ -1253,7 +1279,16 @@ protected:
   /** The original iteration limit before hotstarts started. */
   int itlimOrig_;
   
-  /// Last algorithm used , 1 = primal, 2 = dual
+  /*! \brief Last algorithm used
+  
+    Coded as
+    -    0 invalid
+    -    1 primal
+    -    2 dual
+    - -911 disaster in the algorithm that was attempted
+    -  999 current solution no longer optimal due to change in problem or
+           basis
+  */
   mutable int lastAlgorithm_;
   
   /// To say if destructor should delete underlying model
@@ -1278,6 +1313,16 @@ protected:
   //std::map<OsiDblParam, ClpDblParam> dblParamMap_;
   //std::map<OsiStrParam, ClpStrParam> strParamMap_;
   
+  /*! \brief Faking min to get proper dual solution signs in simplex API */
+  mutable bool fakeMinInSimplex_ ;
+  /*! \brief Linear objective
+  
+    Normally a pointer to the linear coefficient array in the clp objective.
+    An independent copy when #fakeMinInSimplex_ is true, because we need
+    something permanent to point to when #getObjCoefficients is called.
+  */
+  mutable double *linearObjective_;
+
   /// To save data in OsiSimplex stuff
   mutable ClpDataSave saveData_;
   /// Options for initialSolve
@@ -1307,7 +1352,9 @@ protected:
       64 try and tighten bounds in crunch
       128 Model will only change in column bounds
       256 Clean up model before hot start
-      512 Give user direct access to Clp regions in getBInvARow etc
+      512 Give user direct access to Clp regions in getBInvARow etc (i.e.,
+          do not unscale, and do not return result in getBInv parameters;
+	  you have to know where to look for the answer)
       1024 Don't "borrow" model in initialSolve
       2048 Don't crunch
       4096 quick check for optimality
@@ -1420,7 +1467,6 @@ protected:
   int phase_;
   /// Are we in trouble
   bool inTrouble_;
-      
   //@}
 };
 // So unit test can find out if NDEBUG set
