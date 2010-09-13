@@ -56,11 +56,11 @@ AC_COIN_INIT_AUTO_TOOLS
 #                              COIN-OR components                           #
 #############################################################################
 
-AC_COIN_HAS_MODULE(CoinUtils, [coinutils = trunk])
-AC_COIN_HAS_MODULE(Osi,       [osi],            [required=0], [../Osi])
-AC_COIN_HAS_MODULE(OsiTests,  [osi-unittests],  [required=0], [../Osi])
-AC_COIN_HAS_MODULE(Sample,    [coindatasample], [required=0], [../Data/Sample])
-AC_COIN_HAS_MODULE(Netlib,    [coindatanetlib], [required=0], [../Data/Netlib])
+AC_COIN_HAS_PACKAGE(CoinUtils, [coinutils = trunk], [ClpLib])
+AC_COIN_HAS_PACKAGE(Osi,       [osi],               [OsiClpLib])
+AC_COIN_HAS_PACKAGE(OsiTests,  [osi-unittests])
+AC_COIN_HAS_PACKAGE(Sample,    [coindatasample])
+AC_COIN_HAS_PACKAGE(Netlib,    [coindatanetlib])
 
 #############################################################################
 #                        Third party linear solvers                         #
@@ -73,8 +73,8 @@ AC_ARG_WITH([wsmp],
             [use_wsmp=$withval], [use_wsmp=no])
 
 if test "$use_wsmp" != "no"; then
-  LIBS="$use_wsmp $LIBS"
-  ADDLIBS="$use_wsmp $ADDLIBS"
+  CLPLIB_LIBS="$use_wsmp $CLPLIB_LIBS"
+  CLPLIB_PCLIBS="$use_wsmp $CLPLIB_PCLIBS"
 
   defval=
   AC_MSG_CHECKING([whether user-supplied WSMP library \"$use_wsmp\" works (symbol wssmp_)])
@@ -89,7 +89,7 @@ if test "$use_wsmp" != "no"; then
                  defval=3],
                 [AC_MSG_RESULT(no)])
   fi
-  if test "$defval" = ""; then
+  if test "x$defval" = "x"; then
     AC_MSG_ERROR([WSMP library $use_wsmp does not seem to work])
   fi
 
@@ -101,7 +101,7 @@ fi
 #                             Other dependencies                            #
 #############################################################################
 
-AC_COIN_CHECK_GNU_READLINE
+AC_COIN_CHECK_GNU_READLINE(ClpLib)
 
 ##############################################################################
 #                   VPATH links for example input files                      #

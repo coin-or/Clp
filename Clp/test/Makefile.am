@@ -20,7 +20,7 @@ osiUnitTest_SOURCES = osiUnitTest.cpp OsiClpSolverInterfaceTest.cpp
 
 osiUnitTest_LDADD = ../src/libClp.la ../src/OsiClp/libOsiClp.la
 
-LIBS += $(COINUTILS_LIBS) $(OSI_LIBS) $(OSITESTS_LIBS)
+LIBS += $(CLPLIB_LIBS) $(OSICLP_LIBS) $(OSITESTS_LIBS)
 
 AM_CPPFLAGS = $(COINUTILS_CFLAGS) $(OSI_CFLAGS) $(OSITESTS_CFLAGS) \
 	-I`$(CYGPATH_W) $(srcdir)/../src` \

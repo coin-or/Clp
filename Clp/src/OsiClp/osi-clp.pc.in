@@ -6,6 +6,6 @@ includedir=@includedir@/coin
 Name: OsiClp
 Description: COIN-OR Open Solver Interface for CLP
 Version: @PACKAGE_VERSION@
-Libs: -L${libdir} -lOsiClp
+Libs: -L${libdir} -lOsiClp @OSICLPLIB_PCLIBS@
 Cflags: -I${includedir}
-Requires: osi clp
+Requires: clp @OSICLPLIB_PCREQUIRES@

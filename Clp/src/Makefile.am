@@ -96,7 +96,7 @@ clp_SOURCES = \
 	unitTest.cpp
 
 # List all additionally required COIN libraries
-clp_LDADD = libClp.la $(COINUTILS_LIBS) $(ADDLIBS)
+clp_LDADD = libClp.la $(CLPLIB_LIBS)
 
 # Finally, the -rpath flag is used by libtool to make sure that the shared
 # library is found (in the lib install directory) when we are using dynamic
