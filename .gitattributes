@@ -27,6 +27,13 @@ Clp/MSVisualStudio/v9/ClpExamplesTestBarrier/ClpExamplesTestBarrier.vcproj -text
 Clp/MSVisualStudio/v9/ClpExamplesTestQP/ClpExamplesTestQP.vcproj -text
 Clp/MSVisualStudio/v9/clp/clp.vcproj -text
 Clp/MSVisualStudio/v9/libClp/libClp.vcproj -text
+Clp/MSVisualStudio/v9alt/Clp.sln -text
+Clp/MSVisualStudio/v9alt/Clp.vcproj -text
+Clp/MSVisualStudio/v9alt/OsiClpUnitTest.vcproj -text
+Clp/MSVisualStudio/v9alt/clp.vsprops -text
+Clp/MSVisualStudio/v9alt/libClp.vcproj -text
+Clp/MSVisualStudio/v9alt/libOsiClp.vcproj -text
+Clp/MSVisualStudio/v9alt/osiclp.vsprops -text
 Clp/clp-uninstalled.pc.in -text
 Clp/clp.pc.in -text
 Clp/config.guess -text
