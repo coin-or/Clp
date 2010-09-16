@@ -237,12 +237,12 @@ void
 CbcOrClpParam::gutsOfConstructor()
 {
      std::string::size_type  shriekPos = name_.find('!');
-     lengthName_ = name_.length();
+     lengthName_ = static_cast<unsigned int>(name_.length());
      if ( shriekPos == std::string::npos ) {
           //does not contain '!'
           lengthMatch_ = lengthName_;
      } else {
-          lengthMatch_ = shriekPos;
+          lengthMatch_ = static_cast<unsigned int>(shriekPos);
           name_ = name_.substr(0, shriekPos) + name_.substr(shriekPos + 1);
           lengthName_--;
      }
@@ -299,7 +299,7 @@ CbcOrClpParam::matchName (  ) const
 int
 CbcOrClpParam::parameterOption ( std::string check ) const
 {
-     int numberItems = definedKeyWords_.size();
+     int numberItems = static_cast<int>(definedKeyWords_.size());
      if (!numberItems) {
           return -1;
      } else {
@@ -308,8 +308,8 @@ CbcOrClpParam::parameterOption ( std::string check ) const
           for (it = 0; it < definedKeyWords_.size(); it++) {
                std::string thisOne = definedKeyWords_[it];
                std::string::size_type  shriekPos = thisOne.find('!');
-               unsigned int length1 = thisOne.length();
-               unsigned int length2 = length1;
+               size_t length1 = thisOne.length();
+               size_t length2 = length1;
                if ( shriekPos != std::string::npos ) {
                     //contains '!'
                     length2 = shriekPos;
@@ -378,7 +378,7 @@ CbcOrClpParam::printString() const
 }
 void CoinReadPrintit(const char * input)
 {
-     int length = strlen(input);
+     int length = static_cast<int>(strlen(input));
      char temp[101];
      int i;
      int n = 0;
@@ -3304,7 +3304,7 @@ void restoreSolution(ClpSimplex * lpSolver, std::string fileName, int mode)
           int numberRowsFile;
           int numberColumnsFile;
           double objectiveValue;
-          int nRead;
+          size_t nRead;
           nRead = fread(&numberRowsFile, sizeof(int), 1, fp);
           if (nRead != 1)
                throw("Error in fread");
@@ -3368,7 +3368,7 @@ void restoreSolution(ClpSimplex * lpSolver, std::string fileName, int mode)
                          throw("Error in fread");
                     CoinMemcpyN(temp, numberColumns, dualColumnSolution);
                     delete [] temp;
-               }
+			   }
                if (mode == 3) {
                     int i;
                     for (i = 0; i < numberRows; i++) {
@@ -3426,7 +3426,7 @@ void saveSolution(const ClpSimplex * lpSolver, std::string fileName)
           int numberRows = lpSolver->numberRows();
           int numberColumns = lpSolver->numberColumns();
           double objectiveValue = lpSolver->objectiveValue();
-          int nWrite;
+          size_t nWrite;
           nWrite = fwrite(&numberRows, sizeof(int), 1, fp);
           if (nWrite != 1)
                throw("Error in fwrite");
