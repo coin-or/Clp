@@ -2879,6 +2879,8 @@ See branchAndCut for information on options."
      parameters[numberParameters-1].append("200");
      parameters[numberParameters-1].append("1000");
      parameters[numberParameters-1].append("10000");
+     parameters[numberParameters-1].append("dj");
+     parameters[numberParameters-1].append("djbefore");
      parameters[numberParameters-1].setLonghelp
      (
           "This switches on Relaxation enforced neighborhood Search. \

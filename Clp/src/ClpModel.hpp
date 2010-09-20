@@ -749,6 +749,15 @@ public:
          Up to user to use delete [] on these arrays.  */
      double * infeasibilityRay() const;
      double * unboundedRay() const;
+     /// just test if infeasibility or unbounded Ray exists
+     inline bool rayExists() const {
+         return (ray_!=NULL);
+     }
+     /// just delete ray if exists
+     inline void deleteRay() {
+         delete [] ray_;
+         ray_=NULL;
+     }
      /// See if status (i.e. basis) array exists (partly for OsiClp)
      inline bool statusExists() const {
           return (status_ != NULL);

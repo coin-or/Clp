@@ -1455,7 +1455,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                       && largestDualError_ > 1.0e6)) {
           problemStatus_ = 10; // try dual
           // See if second call
-          if ((moreSpecialOptions_ & 256) != 0) {
+          if ((moreSpecialOptions_ & 256) != 0||nonLinearCost_->numberInfeasibilities()>1.0e2) {
                numberPrimalInfeasibilities_ = nonLinearCost_->numberInfeasibilities();
                sumPrimalInfeasibilities_ = nonLinearCost_->sumInfeasibilities();
                // say infeasible
