@@ -37,16 +37,24 @@ public:
           treeStatus, // for Cbc
           solution, // for Cbc
           theta, // hit in parametrics
-          pivotRow // used to choose pivot row
+          pivotRow, // used to choose pivot row
+	  presolveStart, // ClpSolve presolve start
+	  presolveSize, // sees if ClpSolve presolve too big or too small
+	  presolveInfeasible, // ClpSolve presolve infeasible
+	  presolveBeforeSolve, // ClpSolve presolve before solve
+	  presolveAfterFirstSolve, // ClpSolve presolve after solve
+	  presolveAfterSolve, // ClpSolve presolve after solve
+	  presolveEnd // ClpSolve presolve end
      };
-     /**@name Virtual method that the derived classe should provide.
+     /**@name Virtual method that the derived classes should provide.
       The base class instance does nothing and as event() is only useful method
       it would not be very useful NOT providing one!
      */
      //@{
      /** This can do whatever it likes.  If return code -1 then carries on
          if 0 sets ClpModel::status() to 5 (stopped by event) and will return to user.
-         At present if <-1 carries on and if >0 acts as if 0 - this may change
+         At present if <-1 carries on and if >0 acts as if 0 - this may change.
+	 For ClpSolve 2 -> too big return status of -2 and -> too small 3
      */
      virtual int event(Event whichEvent);
      //@}

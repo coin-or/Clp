@@ -24,6 +24,7 @@
 #include "ClpPlusMinusOneMatrix.hpp"
 #include "ClpNetworkMatrix.hpp"
 #endif
+#include "ClpEventHandler.hpp"
 #include "ClpLinearObjective.hpp"
 #include "ClpSolve.hpp"
 #include "ClpPackedMatrix.hpp"
@@ -434,6 +435,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
      double timePresolve = 0.0;
      double timeIdiot = 0.0;
      double timeCore = 0.0;
+     eventHandler()->event(ClpEventHandler::presolveStart);
      int savePerturbation = perturbation_;
      int saveScaling = scalingFlag_;
 #ifndef SLIM_CLP
@@ -488,12 +490,25 @@ ClpSimplex::initialSolve(ClpSolve & options)
                handler_->message(CLP_INFEASIBLE, messages_)
                          << CoinMessageEol;
                model2 = this;
+	       eventHandler()->event(ClpEventHandler::presolveStart);
                problemStatus_ = 1; // may be unbounded but who cares
                if (options.infeasibleReturn() || (moreSpecialOptions_ & 1) != 0) {
                     return -1;
                }
                presolve = ClpSolve::presolveOff;
+	  } else {
+	      model2->eventHandler()->setSimplex(model2);
+	      int rcode=model2->eventHandler()->event(ClpEventHandler::presolveSize);
+	      // see if too big or small
+	      if (rcode==2) {
+		  delete model2;
+		  return -2;
+	      } else if (rcode==3) {
+		  delete model2;
+		  return -3;
+	      }
           }
+	  model2->eventHandler()->setSimplex(model2);
           // We may be better off using original (but if dual leave because of bounds)
           if (presolve != ClpSolve::presolveOff &&
                     numberRows_ < 1.01 * model2->numberRows_ && numberColumns_ < 1.01 * model2->numberColumns_
@@ -515,6 +530,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
      int doSprint = 0;
      int doSlp = 0;
      int primalStartup = 1;
+     model2->eventHandler()->event(ClpEventHandler::presolveBeforeSolve);
      bool tryItSave = false;
      // switch to primal from automatic if just one cost entry
      if (method == ClpSolve::automatic && model2->numberColumns() > 5000 &&
@@ -2466,7 +2482,10 @@ ClpSimplex::initialSolve(ClpSolve & options)
                currentModel = this;
           // checkSolution(); already done by postSolve
           setLogLevel(saveLevel);
-          if (finalStatus != 3 && (finalStatus || status() == -1)) {
+	  setProblemStatus(finalStatus);
+	  setSecondaryStatus(finalSecondaryStatus);
+	  int rcode=eventHandler()->event(ClpEventHandler::presolveAfterFirstSolve);
+          if (finalStatus != 3 && rcode < 0 && (finalStatus || status() == -1)) {
                int savePerturbation = perturbation();
                if (!finalStatus || (moreSpecialOptions_ & 2) == 0) {
                     if (finalStatus == 2) {
@@ -2495,7 +2514,9 @@ ClpSimplex::initialSolve(ClpSolve & options)
                          << "Cleanup" << time2 - timeX << time2 - time1
                          << CoinMessageEol;
                timeX = time2;
-          } else {
+          } else if (rcode >= 0) {
+	      primal(1);
+	  } else {
                secondaryStatus_ = finalSecondaryStatus;
           }
      } else if (model2 != this) {
@@ -2553,6 +2574,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
           objective_ = savedObjective;
           finalStatus = status();
      }
+     eventHandler()->event(ClpEventHandler::presolveEnd);
      return finalStatus;
 }
 // General solve
