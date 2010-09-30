@@ -2482,10 +2482,11 @@ ClpSimplex::initialSolve(ClpSolve & options)
                currentModel = this;
           // checkSolution(); already done by postSolve
           setLogLevel(saveLevel);
+	  int oldStatus=problemStatus_;
 	  setProblemStatus(finalStatus);
 	  setSecondaryStatus(finalSecondaryStatus);
 	  int rcode=eventHandler()->event(ClpEventHandler::presolveAfterFirstSolve);
-          if (finalStatus != 3 && rcode < 0 && (finalStatus || status() == -1)) {
+          if (finalStatus != 3 && rcode < 0 && (finalStatus || oldStatus == -1)) {
                int savePerturbation = perturbation();
                if (!finalStatus || (moreSpecialOptions_ & 2) == 0) {
                     if (finalStatus == 2) {
