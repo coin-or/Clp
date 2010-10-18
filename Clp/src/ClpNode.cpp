@@ -1159,10 +1159,13 @@ ClpHashValue::addValue(double value)
      return numberHash_ - 1;
 }
 
-int
-ClpHashValue::hash ( double value) const
-{
-     static int mmult[] = {
+namespace {
+  /*
+    Originally a local static variable in ClpHashValue::hash.
+	Local static variables are a problem when building DLLs on Windows, but
+	file-local constants seem to be ok.  -- lh, 101016 --
+  */
+  const int mmult_for_hash[] = {
           262139, 259459, 256889, 254291, 251701, 249133, 246709, 244247,
           241667, 239179, 236609, 233983, 231289, 228859, 226357, 223829,
           221281, 218849, 216319, 213721, 211093, 208673, 206263, 203773,
@@ -1174,6 +1177,11 @@ ClpHashValue::hash ( double value) const
           103387, 101021, 98639, 96179, 93911, 91583, 89317, 86939, 84521,
           82183, 79939, 77587, 75307, 72959, 70793, 68447, 66103
      };
+}
+int
+ClpHashValue::hash ( double value) const
+{
+     
      union {
           double d;
           char c[8];
@@ -1185,7 +1193,7 @@ ClpHashValue::hash ( double value) const
 
      for ( j = 0; j < 8; ++j ) {
           int ichar = v1.c[j];
-          n += mmult[j] * ichar;
+          n += mmult_for_hash[j] * ichar;
      }
      return ( abs ( n ) % maxHash_ );	/* integer abs */
 }

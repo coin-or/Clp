@@ -1694,6 +1694,10 @@ int ClpSimplex::internalFactorize ( int solveType)
      //         solution_[iRow],iRow,status_[iRow]);
      //}
      //}
+#    ifndef _MSC_VER
+	 // The local static var k is a problem when trying to build a DLL. Since this is
+	 // just for debugging (likely done on *nix), just hide it from Windows
+	 // -- lh, 101016 --
      if (0)  {
           static int k = 0;
           printf("start basis\n");
@@ -1707,6 +1711,7 @@ int ClpSimplex::internalFactorize ( int solveType)
                exit(0);
           k++;
      }
+#    endif
      int status = factorization_->factorize(this, solveType, valuesPass);
      if (status) {
           handler_->message(CLP_SIMPLEX_BADFACTOR, messages_)
