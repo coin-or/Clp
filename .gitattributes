@@ -31,6 +31,7 @@ Clp/MSVisualStudio/v9alt/Clp.sln -text
 Clp/MSVisualStudio/v9alt/Clp.vcproj -text
 Clp/MSVisualStudio/v9alt/OsiClpUnitTest.vcproj -text
 Clp/MSVisualStudio/v9alt/clp.vsprops -text
+Clp/MSVisualStudio/v9alt/genDefForClp.ps1 -text
 Clp/MSVisualStudio/v9alt/libClp.vcproj -text
 Clp/MSVisualStudio/v9alt/libOsiClp.vcproj -text
 Clp/MSVisualStudio/v9alt/osiclp.vsprops -text
