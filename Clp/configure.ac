@@ -56,11 +56,11 @@ AC_COIN_INIT_AUTO_TOOLS
 #                              COIN-OR components                           #
 #############################################################################
 
-AC_COIN_HAS_PACKAGE(CoinUtils, [coinutils = trunk], [ClpLib])
-AC_COIN_HAS_PACKAGE(Osi,       [osi],               [OsiClpLib])
-AC_COIN_HAS_PACKAGE(OsiTests,  [osi-unittests])
-AC_COIN_HAS_PACKAGE(Sample,    [coindatasample])
-AC_COIN_HAS_PACKAGE(Netlib,    [coindatanetlib])
+AC_COIN_CHECK_PACKAGE(CoinUtils, [coinutils = trunk], [ClpLib])
+AC_COIN_CHECK_PACKAGE(Osi,       [osi],               [OsiClpLib])
+AC_COIN_CHECK_PACKAGE(OsiTests,  [osi-unittests])
+AC_COIN_CHECK_PACKAGE(Sample,    [coindatasample])
+AC_COIN_CHECK_PACKAGE(Netlib,    [coindatanetlib])
 
 #############################################################################
 #                        Third party linear solvers                         #
