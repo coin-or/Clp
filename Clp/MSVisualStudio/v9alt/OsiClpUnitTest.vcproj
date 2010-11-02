@@ -377,8 +377,8 @@
 		</Configuration>
 		<Configuration
 			Name="DebugDLL|x64"
-			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
-			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
+			OutputDirectory="$(CoinBinDir)"
+			IntermediateDirectory="$(ProjectName)\$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="1"
 			InheritedPropertySheets="$(COIN_ROOT)\BuildTools\MSVisualStudio\v9alt\coin.vsprops;.\osiclp.vsprops"
 			CharacterSet="1"

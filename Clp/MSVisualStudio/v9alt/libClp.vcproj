@@ -332,9 +332,9 @@
 		</Configuration>
 		<Configuration
 			Name="DebugDLL|x64"
-			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
-			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
-			ConfigurationType="4"
+			OutputDirectory="$(CoinBinDir)"
+			IntermediateDirectory="$(ProjectName)\$(PlatformName)\$(ConfigurationName)"
+			ConfigurationType="2"
 			InheritedPropertySheets="$(COIN_ROOT)\BuildTools\MSVisualStudio\v9alt\coin.vsprops;$(CoinRoot)\CoinUtils\CoinUtils\MSVisualStudio\v9alt\coinutils.vsprops"
 			CharacterSet="1"
 			ManagedExtensions="1"
@@ -371,13 +371,18 @@
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
+				Description="Generate $(ProjectName).def"
+				CommandLine="powershell -ExecutionPolicy RemoteSigned -File .\genDefForClp.ps1 $(IntDir) Clp"
 			/>
 			<Tool
-				Name="VCLibrarianTool"
-				AdditionalDependencies="$(NOINHERIT)"
+				Name="VCLinkerTool"
+				ModuleDefinitionFile="$(IntDir)\libClp.def"
 			/>
 			<Tool
 				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -389,7 +394,12 @@
 				Name="VCFxCopTool"
 			/>
 			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
 				Name="VCPostBuildEventTool"
+				Description="Copy import lib to $(CoinLibDir)"
+				CommandLine="if not exist $(CoinLibDir) mkdir $(CoinLibDir)&#x0D;&#x0A;move /y $(OutDir)\$(TargetName).lib $(CoinLibDir)"
 			/>
 		</Configuration>
 	</Configurations>
@@ -845,6 +855,14 @@
 			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
 			>
 		</Filter>
+		<File
+			RelativePath=".\clp.vsprops"
+			>
+		</File>
+		<File
+			RelativePath=".\genDefForClp.ps1"
+			>
+		</File>
 	</Files>
 	<Globals>
 	</Globals>
