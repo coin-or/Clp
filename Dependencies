@@ -1,4 +1,7 @@
-BuildTools  https://projects.coin-or.org/svn/BuildTools/stable/0.6/
-Data/Sample  https://projects.coin-or.org/svn/Data/Sample/stable/1.1/
-CoinUtils  https://projects.coin-or.org/svn/CoinUtils/stable/2.7/CoinUtils
-Osi  https://projects.coin-or.org/svn/Osi/stable/0.104/Osi
+BuildTools    https://projects.coin-or.org/svn/BuildTools/trunk
+ThirdParty/Blas https://projects.coin-or.org/svn/BuildTools/ThirdParty/Blas/trunk
+ThirdParty/Lapack https://projects.coin-or.org/svn/BuildTools/ThirdParty/Lapack/trunk
+#Data/Netlib   https://projects.coin-or.org/svn/Data/Netlib/trunk
+Data/Sample   https://projects.coin-or.org/svn/Data/Sample/trunk
+CoinUtils     https://projects.coin-or.org/svn/CoinUtils/trunk/CoinUtils
+Osi     https://projects.coin-or.org/svn/Osi/trunk/Osi
