@@ -21011,6 +21011,11 @@ fi
 
 
 
+if test $coin_has_coinutils != yes ; then
+  { { echo "$as_me:$LINENO: error: Required package CoinUtils not available." >&5
+echo "$as_me: error: Required package CoinUtils not available." >&2;}
+   { (exit 1); exit 1; }; }
+fi
 
 echo "$as_me:$LINENO: checking for COIN-OR package Osi" >&5
 echo $ECHO_N "checking for COIN-OR package Osi... $ECHO_C" >&6
