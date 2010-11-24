@@ -113,6 +113,7 @@ ClpPresolve::presolvedModelToFile(ClpSimplex &si, std::string fileName,
                                   double feasibilityTolerance,
                                   bool keepIntegers,
                                   int numberPasses,
+				  bool dropNames,
                                   bool doRowObjective)
 {
      // Check matrix
@@ -121,7 +122,7 @@ ClpPresolve::presolvedModelToFile(ClpSimplex &si, std::string fileName,
           return 2;
      saveFile_ = fileName;
      si.saveModel(saveFile_.c_str());
-     ClpSimplex * model = gutsOfPresolvedModel(&si, feasibilityTolerance, keepIntegers, numberPasses, true,
+     ClpSimplex * model = gutsOfPresolvedModel(&si, feasibilityTolerance, keepIntegers, numberPasses, dropNames,
                           doRowObjective);
      if (model == &si) {
           return 0;
@@ -304,6 +305,12 @@ ClpPresolve::postsolve(bool updateStatus)
           }
      } else {
           originalModel_->setProblemStatus( presolvedModel_->status());
+	  // but not if close to feasible
+	  if( originalModel_->sumPrimalInfeasibilities()<1.0e-1) {
+               originalModel_->setProblemStatus( -1);
+               // Say not optimal after presolve
+               originalModel_->setSecondaryStatus(7);
+	  }
      }
 #ifndef CLP_NO_STD
      if (saveFile_ != "")
@@ -1522,10 +1529,12 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
                presolvedModel_ = new ClpSimplex(*originalModel);
 #ifndef CLP_NO_STD
                originalModel->setLengthNames(lengthNames);
+	       presolvedModel_->dropNames();
           } else {
                presolvedModel_ = originalModel;
+	       if (dropNames)
+		 presolvedModel_->dropNames();
           }
-          presolvedModel_->dropNames();
 #endif
 
           // drop integer information if wanted

@@ -45,12 +45,13 @@ public:
                                  bool doRowObjective = false);
 #ifndef CLP_NO_STD
      /** This version saves data in a file.  The passed in model
-         is updated to be presolved model.  names are always dropped.
+         is updated to be presolved model.  
          Returns non-zero if infeasible*/
      int presolvedModelToFile(ClpSimplex &si, std::string fileName,
                               double feasibilityTolerance = 0.0,
                               bool keepIntegers = true,
                               int numberPasses = 5,
+			      bool dropNames = false,
                               bool doRowObjective = false);
 #endif
      /** Return pointer to presolved model,
