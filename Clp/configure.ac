@@ -137,7 +137,7 @@ AC_CONFIG_FILES([Makefile
 		 clp-uninstalled.pc])
 		 
 if test $coin_has_osi = yes ; then
-  AC_CONFIG_FILES([src/OsiClp/osi-clp.pc
+  AC_CONFIG_FILES([osi-clp.pc:src/OsiClp/osi-clp.pc.in
                    osi-clp-uninstalled.pc:src/OsiClp/osi-clp-uninstalled.pc.in])
 fi
 

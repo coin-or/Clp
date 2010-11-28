@@ -21,7 +21,6 @@
 # Author:  Andreas Waechter           IBM    2006-04-13
 
 
-
 srcdir = @srcdir@
 top_srcdir = @top_srcdir@
 VPATH = @srcdir@
@@ -46,7 +45,7 @@ build_triplet = @build@
 host_triplet = @host@
 subdir = src/OsiClp
 DIST_COMMON = $(includecoin_HEADERS) $(srcdir)/Makefile.am \
-	$(srcdir)/Makefile.in $(srcdir)/osi-clp.pc.in
+	$(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/acinclude.m4 \
 	$(top_srcdir)/configure.ac
@@ -54,7 +53,7 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/inc/config_clp.h
-CONFIG_CLEAN_FILES = osi-clp.pc
+CONFIG_CLEAN_FILES =
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
 am__vpath_adj = case $$p in \
     $(srcdir)/*) f=`echo "$$p" | sed "s|^$$srcdirstrip/||"`;; \
@@ -62,7 +61,7 @@ am__vpath_adj = case $$p in \
   esac;
 am__strip_dir = `echo $$p | sed -e 's|^.*/||'`;
 am__installdirs = "$(DESTDIR)$(coinlibdir)" \
-	"$(DESTDIR)$(pkgconfiglibdir)" "$(DESTDIR)$(includecoindir)"
+	"$(DESTDIR)$(includecoindir)"
 coinlibLTLIBRARIES_INSTALL = $(INSTALL)
 LTLIBRARIES = $(coinlib_LTLIBRARIES)
 libOsiClp_la_LIBADD =
@@ -88,8 +87,6 @@ LINK = $(LIBTOOL) --tag=CC --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
 SOURCES = $(libOsiClp_la_SOURCES)
 DIST_SOURCES = $(libOsiClp_la_SOURCES)
-pkgconfiglibDATA_INSTALL = $(INSTALL_DATA)
-DATA = $(pkgconfiglib_DATA)
 includecoinHEADERS_INSTALL = $(INSTALL_HEADER)
 HEADERS = $(includecoin_HEADERS)
 ETAGS = etags
@@ -312,8 +309,6 @@ DEFAULT_INCLUDES = -I. -I`$(CYGPATH_W) $(srcdir)` -I$(top_builddir)/inc
 # and that therefore should be installed in 'includedir/coin'
 includecoindir = $(includedir)/coin
 includecoin_HEADERS = OsiClpSolverInterface.hpp
-pkgconfiglibdir = $(libdir)/pkgconfig
-pkgconfiglib_DATA = osi-clp.pc
 all: all-am
 
 .SUFFIXES:
@@ -347,8 +342,6 @@ $(top_srcdir)/configure: @MAINTAINER_MODE_TRUE@ $(am__configure_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(ACLOCAL_M4): @MAINTAINER_MODE_TRUE@ $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
-osi-clp.pc: $(top_builddir)/config.status $(srcdir)/osi-clp.pc.in
-	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 install-coinlibLTLIBRARIES: $(coinlib_LTLIBRARIES)
 	@$(NORMAL_INSTALL)
 	test -z "$(coinlibdir)" || $(mkdir_p) "$(DESTDIR)$(coinlibdir)"
@@ -417,23 +410,6 @@ clean-libtool:
 distclean-libtool:
 	-rm -f libtool
 uninstall-info-am:
-install-pkgconfiglibDATA: $(pkgconfiglib_DATA)
-	@$(NORMAL_INSTALL)
-	test -z "$(pkgconfiglibdir)" || $(mkdir_p) "$(DESTDIR)$(pkgconfiglibdir)"
-	@list='$(pkgconfiglib_DATA)'; for p in $$list; do \
-	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
-	  f=$(am__strip_dir) \
-	  echo " $(pkgconfiglibDATA_INSTALL) '$$d$$p' '$(DESTDIR)$(pkgconfiglibdir)/$$f'"; \
-	  $(pkgconfiglibDATA_INSTALL) "$$d$$p" "$(DESTDIR)$(pkgconfiglibdir)/$$f"; \
-	done
-
-uninstall-pkgconfiglibDATA:
-	@$(NORMAL_UNINSTALL)
-	@list='$(pkgconfiglib_DATA)'; for p in $$list; do \
-	  f=$(am__strip_dir) \
-	  echo " rm -f '$(DESTDIR)$(pkgconfiglibdir)/$$f'"; \
-	  rm -f "$(DESTDIR)$(pkgconfiglibdir)/$$f"; \
-	done
 install-includecoinHEADERS: $(includecoin_HEADERS)
 	@$(NORMAL_INSTALL)
 	test -z "$(includecoindir)" || $(mkdir_p) "$(DESTDIR)$(includecoindir)"
@@ -529,9 +505,9 @@ distdir: $(DISTFILES)
 	done
 check-am: all-am
 check: check-am
-all-am: Makefile $(LTLIBRARIES) $(DATA) $(HEADERS)
+all-am: Makefile $(LTLIBRARIES) $(HEADERS)
 installdirs:
-	for dir in "$(DESTDIR)$(coinlibdir)" "$(DESTDIR)$(pkgconfiglibdir)" "$(DESTDIR)$(includecoindir)"; do \
+	for dir in "$(DESTDIR)$(coinlibdir)" "$(DESTDIR)$(includecoindir)"; do \
 	  test -z "$$dir" || $(mkdir_p) "$$dir"; \
 	done
 install: install-am
@@ -579,8 +555,7 @@ info: info-am
 
 info-am:
 
-install-data-am: install-coinlibLTLIBRARIES install-includecoinHEADERS \
-	install-pkgconfiglibDATA
+install-data-am: install-coinlibLTLIBRARIES install-includecoinHEADERS
 
 install-exec-am:
 
@@ -609,8 +584,7 @@ ps: ps-am
 ps-am:
 
 uninstall-am: uninstall-coinlibLTLIBRARIES \
-	uninstall-includecoinHEADERS uninstall-info-am \
-	uninstall-pkgconfiglibDATA
+	uninstall-includecoinHEADERS uninstall-info-am
 
 .PHONY: CTAGS GTAGS all all-am check check-am clean \
 	clean-coinlibLTLIBRARIES clean-generic clean-libtool ctags \
@@ -619,14 +593,12 @@ uninstall-am: uninstall-coinlibLTLIBRARIES \
 	html-am info info-am install install-am \
 	install-coinlibLTLIBRARIES install-data install-data-am \
 	install-exec install-exec-am install-includecoinHEADERS \
-	install-info install-info-am install-man \
-	install-pkgconfiglibDATA install-strip installcheck \
-	installcheck-am installdirs maintainer-clean \
+	install-info install-info-am install-man install-strip \
+	installcheck installcheck-am installdirs maintainer-clean \
 	maintainer-clean-generic mostlyclean mostlyclean-compile \
 	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
 	tags uninstall uninstall-am uninstall-coinlibLTLIBRARIES \
-	uninstall-includecoinHEADERS uninstall-info-am \
-	uninstall-pkgconfiglibDATA
+	uninstall-includecoinHEADERS uninstall-info-am
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

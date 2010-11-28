@@ -110,6 +110,10 @@ uninstall-local: uninstall-doc
 pkgconfiglibdir = $(libdir)/pkgconfig
 pkgconfiglib_DATA = clp.pc
 
+if COIN_HAS_OSI
+pkgconfiglib_DATA += osi-clp.pc
+endif
+
 if COIN_HAS_PKGCONFIG
 addlibsdir = $(DESTDIR)$(datadir)/coin/doc/Clp
 	

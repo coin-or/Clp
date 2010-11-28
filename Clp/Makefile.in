@@ -57,6 +57,7 @@ host_triplet = @host@
 # specified.  But we need to list it as subdirectory to make sure that it is
 # included in the tarball
 @ALWAYS_FALSE@am__append_1 = test
+@COIN_HAS_OSI_TRUE@am__append_2 = osi-clp.pc
 DIST_COMMON = README $(am__configure_deps) \
 	$(srcdir)/BuildTools/Makemain.inc $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in $(srcdir)/clp-uninstalled.pc.in \
@@ -64,10 +65,11 @@ DIST_COMMON = README $(am__configure_deps) \
 	$(top_srcdir)/doxydoc/doxygen.conf.in \
 	$(top_srcdir)/examples/Makefile.in \
 	$(top_srcdir)/inc/config_clp.h.in \
-	$(top_srcdir)/src/OsiClp/osi-clp-uninstalled.pc.in AUTHORS \
-	config.guess config.sub depcomp install-sh ltmain.sh missing
-@HAVE_EXTERNALS_TRUE@am__append_2 = Externals
-@HAVE_EXTERNALS_TRUE@am__append_3 = .Externals-stamp
+	$(top_srcdir)/src/OsiClp/osi-clp-uninstalled.pc.in \
+	$(top_srcdir)/src/OsiClp/osi-clp.pc.in AUTHORS config.guess \
+	config.sub depcomp install-sh ltmain.sh missing
+@HAVE_EXTERNALS_TRUE@am__append_3 = Externals
+@HAVE_EXTERNALS_TRUE@am__append_4 = .Externals-stamp
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/acinclude.m4 \
@@ -79,7 +81,7 @@ am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/inc/config_clp.h
 CONFIG_CLEAN_FILES = examples/Makefile clp.pc clp-uninstalled.pc \
-	osi-clp-uninstalled.pc doxydoc/doxygen.conf
+	osi-clp.pc osi-clp-uninstalled.pc doxydoc/doxygen.conf
 SOURCES =
 DIST_SOURCES =
 RECURSIVE_TARGETS = all-recursive check-recursive dvi-recursive \
@@ -321,13 +323,13 @@ EXTRA_DIST = doc/authors.xml doc/basicmodelclasses.xml doc/clpexe.xml \
 	examples/sprint.cpp examples/testBarrier.cpp \
 	examples/testBasis.cpp examples/testGub2.cpp \
 	examples/testGub.cpp examples/testQP.cpp \
-	examples/useVolume.cpp $(am__append_2)
+	examples/useVolume.cpp $(am__append_3)
 
 ########################################################################
 #                    Creation of the addlibs file                      #
 ########################################################################
 pkgconfiglibdir = $(libdir)/pkgconfig
-pkgconfiglib_DATA = clp.pc
+pkgconfiglib_DATA = clp.pc $(am__append_2)
 @COIN_HAS_PKGCONFIG_TRUE@addlibsdir = $(DESTDIR)$(datadir)/coin/doc/Clp
 
 ########################################################################
@@ -336,7 +338,7 @@ pkgconfiglib_DATA = clp.pc
 CLEANFILES = 
 
 # Files that are generated and should be cleaned with make distclean
-DISTCLEANFILES = $(am__append_3) $(VPATH_DISTCLEANFILES)
+DISTCLEANFILES = $(am__append_4) $(VPATH_DISTCLEANFILES)
 DocFiles = README AUTHORS LICENSE
 DocInstallDir = $(datadir)/coin/doc/$(PACKAGE_NAME)
 all: all-recursive
@@ -397,6 +399,8 @@ examples/Makefile: $(top_builddir)/config.status $(top_srcdir)/examples/Makefile
 clp.pc: $(top_builddir)/config.status $(srcdir)/clp.pc.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@
 clp-uninstalled.pc: $(top_builddir)/config.status $(srcdir)/clp-uninstalled.pc.in
+	cd $(top_builddir) && $(SHELL) ./config.status $@
+osi-clp.pc: $(top_builddir)/config.status $(top_srcdir)/src/OsiClp/osi-clp.pc.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@
 osi-clp-uninstalled.pc: $(top_builddir)/config.status $(top_srcdir)/src/OsiClp/osi-clp-uninstalled.pc.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@
