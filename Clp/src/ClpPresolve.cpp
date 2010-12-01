@@ -509,6 +509,8 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
           // Check number rows dropped
           int lastDropped = 0;
           prob->pass_ = 0;
+	  if (numberPasses_<=5)
+	      prob->presolveOptions_ |= 0x10000; // say more lightweight
           for (iLoop = 0; iLoop < numberPasses_; iLoop++) {
                // See if we want statistics
                if ((presolveActions_ & 0x80000000) != 0)
@@ -770,6 +772,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
 
           }
      }
+     prob->presolveOptions_ &= ~0x10000;
      if (!prob->status_) {
           paction_ = drop_zero_coefficients(prob, paction_);
 #if	PRESOLVE_DEBUG

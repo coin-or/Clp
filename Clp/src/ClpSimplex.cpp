@@ -5253,7 +5253,10 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
           }
           // check which algorithms allowed
           int dummy;
-          if (problemStatus_ == 10 && saveObjective == objective_)
+	  ClpPackedMatrix * ordinary =
+	    dynamic_cast< ClpPackedMatrix*>(matrix_);
+          if (problemStatus_ == 10 && saveObjective == objective_ &&
+	      ordinary)
                startFinishOptions |= 2;
           baseIteration_ = numberIterations_;
           // Say second call
