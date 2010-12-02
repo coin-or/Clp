@@ -4,6 +4,7 @@
 	Version="9.00"
 	Name="ClpExamplesTestBarrier"
 	ProjectGUID="{F6DD73C8-6714-414E-9A98-D51F6D6AD9B4}"
+	RootNamespace="ClpExamplesTestBarrier"
 	TargetFrameworkVersion="131072"
 	>
 	<Platforms>
@@ -46,9 +47,9 @@
 				Optimization="2"
 				InlineFunctionExpansion="1"
 				AdditionalIncludeDirectories="..\..\..\..\Clp\src,..\..\..\..\CoinUtils\src,..\..\..\..\BuildTools\headers"
-				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;_CRT_SECURE_NO_DEPRECATE"
+				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;_CRT_SECURE_NO_DEPRECATE;SAMPLEDIR=\&quot;..\\..\\..\\..\\Data\\Sample\\\\&quot;"
 				StringPooling="true"
-				RuntimeLibrary="0"
+				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
 				RuntimeTypeInfo="true"
 				UsePrecompiledHeader="0"
@@ -135,9 +136,9 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="..\..\..\..\Clp\src,..\..\..\..\CoinUtils\src,..\..\..\..\BuildTools\headers"
-				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;_CRT_SECURE_NO_DEPRECATE"
+				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;_CRT_SECURE_NO_DEPRECATE;SAMPLEDIR=\&quot;..\\..\\..\\..\\Data\\Sample\\\\&quot;"
 				BasicRuntimeChecks="3"
-				RuntimeLibrary="1"
+				RuntimeLibrary="3"
 				RuntimeTypeInfo="true"
 				UsePrecompiledHeader="0"
 				PrecompiledHeaderFile=".\Debug/ClpExamplesTestBarrier.pch"
@@ -232,90 +233,6 @@
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl"
 			>
-			<File
-				RelativePath="..\..\..\..\Clp\src\ClpCholeskyBase.hpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\Clp\src\ClpCholeskyDense.hpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\Clp\src\ClpCholeskyWssmp.hpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\Clp\src\ClpConfig.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\Clp\src\ClpInterior.hpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\Clp\src\ClpMatrixBase.hpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\Clp\src\ClpModel.hpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\Clp\src\ClpObjective.hpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\Clp\src\ClpParameters.hpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\Clp\src\ClpSimplex.hpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\Clp\src\ClpSolve.hpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\CoinUtils\src\CoinError.hpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\CoinUtils\src\CoinFinite.hpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\CoinUtils\src\CoinFloatEqual.hpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\CoinUtils\src\CoinMessageHandler.hpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\CoinUtils\src\CoinPackedMatrix.hpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\CoinUtils\src\CoinPackedVectorBase.hpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\CoinUtils\src\CoinPragma.hpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\CoinUtils\src\CoinShallowPackedVector.hpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\BuildTools\headers\configall_system.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\BuildTools\headers\configall_system_msc.h"
-				>
-			</File>
 		</Filter>
 	</Files>
 	<Globals>

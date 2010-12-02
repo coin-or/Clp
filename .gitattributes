@@ -25,8 +25,10 @@ Clp/MSVisualStudio/v9/Clp.sln -text
 Clp/MSVisualStudio/v9/ClpExamplesMinimum/ClpExamplesMinimum.vcproj -text
 Clp/MSVisualStudio/v9/ClpExamplesTestBarrier/ClpExamplesTestBarrier.vcproj -text
 Clp/MSVisualStudio/v9/ClpExamplesTestQP/ClpExamplesTestQP.vcproj -text
+Clp/MSVisualStudio/v9/OsiClpUnitTest/OsiClpUnitTest.vcproj -text
 Clp/MSVisualStudio/v9/clp/clp.vcproj -text
 Clp/MSVisualStudio/v9/libClp/libClp.vcproj -text
+Clp/MSVisualStudio/v9/libOsiClp/libOsiClp.vcproj -text
 Clp/MSVisualStudio/v9alt/Clp.sln -text
 Clp/MSVisualStudio/v9alt/Clp.vcproj -text
 Clp/MSVisualStudio/v9alt/OsiClpUnitTest.vcproj -text
