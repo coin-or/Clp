@@ -84,6 +84,11 @@ public:
                      const double * changeLowerBound, const double * changeUpperBound,
                      const double * changeLowerRhs, const double * changeUpperRhs,
                      const double * changeObjective);
+     /** Version of parametrics which reads from file
+	 See CbcClpParam.cpp for details of format
+	 Returns -2 if unable to open file */
+     int parametrics(const char * dataFile);
+
 private:
      /** Parametrics - inner loop
          This first attempt is when reportIncrement non zero and may

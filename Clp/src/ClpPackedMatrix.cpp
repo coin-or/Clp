@@ -1148,22 +1148,23 @@ ClpPackedMatrix::transposeTimesByRow(const ClpSimplex * model, double scalar,
           if (packed) {
                int * index = columnArray->getIndices();
                double * array = columnArray->denseVector();
+#ifdef COIN_SPARSE_MATRIX
                assert (!y->getNumElements());
                // and set up mark as char array
-               //char * marked = (char *) (index+columnArray->capacity());
-               //int * lookup = y->getIndices();
-               int numberColumns = matrix_->getNumCols();
+               char * marked = reinterpret_cast<char *> (index+columnArray->capacity());
+               int * lookup = y->getIndices();
                //int numberRows = matrix_->getNumRows();
 #ifndef NDEBUG
                //for (int i=0;i<numberColumns;i++)
                //assert(!marked[i]);
 #endif
-               //if (numberInRowArray>0)
+               numberNonZero=gutsOfTransposeTimesByRowGE3(rowArray,index,array,
+               				   lookup,marked,zeroTolerance,scalar);
+#else
+               int numberColumns = matrix_->getNumCols();
                numberNonZero = gutsOfTransposeTimesByRowGEK(rowArray, index, array,
                                numberColumns, zeroTolerance, scalar);
-               //else
-               //numberNonZero=gutsOfTransposeTimesByRowGE3(rowArray,index,array,
-               //				   lookup,marked,zeroTolerance,scalar);
+#endif
                columnArray->setNumElements(numberNonZero);
           } else {
                double * markVector = y->denseVector();

@@ -1296,6 +1296,43 @@ main (int argc, const char *argv[])
                                    std::cout << "** Current model not valid" << std::endl;
                               }
                               break;
+                         case CLP_PARAM_ACTION_PARAMETRICS:
+                              if (goodModels[iModel]) {
+                                   // get next field
+                                   field = CoinReadGetString(argc, argv);
+                                   if (field == "$") {
+                                        field = parameters[iParam].stringValue();
+                                   } else if (field == "EOL") {
+                                        parameters[iParam].printString();
+                                        break;
+                                   } else {
+                                        parameters[iParam].setStringValue(field);
+                                   }
+                                   std::string fileName;
+                                   //bool canOpen = false;
+                                   if (field[0] == '/' || field[0] == '\\') {
+                                        fileName = field;
+                                   } else if (field[0] == '~') {
+                                        char * environVar = getenv("HOME");
+                                        if (environVar) {
+                                             std::string home(environVar);
+                                             field = field.erase(0, 1);
+                                             fileName = home + field;
+                                        } else {
+                                             fileName = field;
+                                        }
+                                   } else {
+                                        fileName = directory + field;
+                                   }
+				   ClpSimplex * model2 = models + iModel;
+				   static_cast<ClpSimplexOther *> (model2)->parametrics(fileName.c_str());
+				   time2 = CoinCpuTime();
+				   totalTime += time2 - time1;
+				   time1 = time2;
+                              } else {
+                                   std::cout << "** Current model not valid" << std::endl;
+                              }
+                              break;
                          case CLP_PARAM_ACTION_SAVE: {
                               // get next field
                               field = CoinReadGetString(argc, argv);

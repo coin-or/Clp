@@ -2469,6 +2469,33 @@ This is a first try and will hopefully become more sophisticated."
  gives greater precision, while 5,6 give IEEE values.  When used for exporting a basis 1 does not save \
 values, 2 saves values, 3 with greater accuracy and 4 in IEEE."
      );
+#ifdef COIN_HAS_CLP
+     parameters[numberParameters++] =
+          CbcOrClpParam("para!metrics", "Import data from file and do parametrics",
+                        CLP_PARAM_ACTION_PARAMETRICS, 3);
+     parameters[numberParameters-1].setLonghelp
+     (
+          "This will read a file with parametric data from the given file name \
+and then do parametrics.  It will use the default\
+ directory given by 'directory'.  A name of '$' will use the previous value for the name.  This\
+ is initialized to '', i.e. it must be set.  This can not read from compressed files. \
+File is in modified csv format - a line ROWS will be followed by rows data \
+while a line COLUMNS will be followed by column data.  The last line \
+should be ENDATA. The ROWS line must exist and is in the format \
+ROWS, inital theta, final theta, interval theta, n where n is 0 to get \
+CLPI0062 message at interval or at each change of theta \
+and 1 to get CLPI0063 message at each iteration.  If interval theta is 0.0 \
+or >= final theta then no interval reporting.  n may be missed out when it is \
+taken as 0.  If there is Row data then \
+there is a headings line with allowed headings - name, number, \
+lower(rhs change), upper(rhs change), rhs(change).  Either the lower and upper \
+fields should be given or the rhs field. \
+The optional COLUMNS line is followed by a headings line with allowed \
+headings - name, number, objective(change), lower(change), upper(change). \
+ Exactly one of name and number must be given for either section and \
+missing ones have value 0.0."
+     );
+#endif
 #ifdef COIN_HAS_CBC
      parameters[numberParameters++] =
           CbcOrClpParam("passC!uts", "Number of cut passes at root node",

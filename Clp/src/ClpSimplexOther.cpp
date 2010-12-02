@@ -23,7 +23,7 @@
 #include <cassert>
 #include <string>
 #include <stdio.h>
-#include <iostream>
+#include <iostream> 
 /* Dual ranging.
    This computes increase/decrease in cost for each given variable and corresponding
    sequence numbers which would change basis.  Sequence numbers are 0..numberColumns
@@ -1953,7 +1953,14 @@ ClpSimplexOther::parametrics(double startingTheta, double & endingTheta, double 
                     // bad ranges or initial
                     returnCode = -1;
                }
-               endingTheta = CoinMin(endingTheta, maxTheta);
+	       if (maxTheta < endingTheta) {
+		 char line[100];
+		 sprintf(line,"Crossover considerations reduce ending  theta from %g to %g\n", 
+			 endingTheta,maxTheta);
+		 handler_->message(CLP_GENERAL,messages_)
+		   << line << CoinMessageEol;
+		 endingTheta = maxTheta;
+	       }
                if (endingTheta < startingTheta) {
                     // bad initial
                     returnCode = -2;
@@ -1971,10 +1978,10 @@ ClpSimplexOther::parametrics(double startingTheta, double & endingTheta, double 
                reinterpret_cast<ClpSimplexDual *> (this)->gutsOfDual(0, saveDuals, -1, data);
                assert (!problemStatus_);
                // Now do parametrics
-               printf("at starting theta of %g objective value is %g\n", startingTheta,
-                      objectiveValue());
+	       handler_->message(CLP_PARAMETRICS_STATS, messages_)
+		 << startingTheta << objectiveValue() << CoinMessageEol;
                while (!returnCode) {
-                    assert (reportIncrement);
+		    //assert (reportIncrement);
                     returnCode = parametricsLoop(startingTheta, endingTheta, reportIncrement,
                                                  chgLower, chgUpper, chgObjective, data,
                                                  canTryQuick);
@@ -1987,13 +1994,20 @@ ClpSimplexOther::parametrics(double startingTheta, double & endingTheta, double 
                          //upper_[i] += change*chgUpper[i];
                          //cost_[i] += change*chgObjective[i];
                          //}
-                         printf("at theta of %g objective value is %g\n", startingTheta,
-                                objectiveValue());
+			 handler_->message(CLP_PARAMETRICS_STATS, messages_)
+			   << startingTheta << objectiveValue() << CoinMessageEol;
                          if (startingTheta >= endingTheta)
                               break;
                     } else if (returnCode == -1) {
                          // trouble - do external solve
                          needToDoSomething = true;
+		    } else if (problemStatus_==1) {
+		      // can't move any further
+		      if (!canTryQuick) {
+			handler_->message(CLP_PARAMETRICS_STATS, messages_)
+			  << endingTheta << objectiveValue() << CoinMessageEol;
+			problemStatus_=0;
+		      }
                     } else {
                          abort();
                     }
@@ -2042,7 +2056,10 @@ ClpSimplexOther::parametrics(double startingTheta, double & endingTheta, double 
                     }
                     copyModel.dual();
                     if (copyModel.problemStatus()) {
-                         printf("Can not get to theta of %g\n", startingTheta);
+		      char line[100];
+		      sprintf(line,"Can not get to theta of %g\n", startingTheta);
+		      handler_->message(CLP_GENERAL,messages_)
+			<< line << CoinMessageEol;
                          canTryQuick = false; // do slowly to get exact amount
                          // back to last known good
                          if (cleanedUp == 1)
@@ -2064,7 +2081,569 @@ ClpSimplexOther::parametrics(double startingTheta, double & endingTheta, double 
           delete [] chgObjective;
      }
      perturbation_ = savePerturbation;
+     char line[100];
+     sprintf(line,"Ending theta %g\n", endingTheta);
+     handler_->message(CLP_GENERAL,messages_)
+       << line << CoinMessageEol;
      return problemStatus_;
+}
+/* Version of parametrics which reads from file
+   See CbcClpParam.cpp for details of format
+   Returns -2 if unable to open file */
+int 
+ClpSimplexOther::parametrics(const char * dataFile)
+{
+  int returnCode=-2;
+  FILE *fp = fopen(dataFile, "r");
+  char line[200];
+  if (!fp) {
+    handler_->message(CLP_UNABLE_OPEN, messages_)
+      << dataFile << CoinMessageEol;
+    return -2;
+  }
+
+  if (!fgets(line, 200, fp)) {
+    sprintf(line,"Empty parametrics file %s?",dataFile);
+    handler_->message(CLP_GENERAL,messages_)
+      << line << CoinMessageEol;
+    fclose(fp);
+    return -2;
+  }
+  char * pos = line;
+  char * put = line;
+  while (*pos >= ' ' && *pos != '\n') {
+    if (*pos != ' ' && *pos != '\t') {
+      *put = static_cast<char>(tolower(*pos));
+      put++;
+    }
+    pos++;
+  }
+  *put = '\0';
+  pos = line;
+  double startTheta=0.0;
+  double endTheta=0.0;
+  double intervalTheta=COIN_DBL_MAX;
+  int detail=0;
+  bool good = true;
+  while (good) {
+    good=false;
+    // check ROWS
+    char * comma = strchr(pos, ',');
+    if (!comma)
+      break;
+    *comma = '\0';
+    if (strcmp(pos,"rows"))
+      break;
+    *comma = ',';
+    pos = comma+1;
+    // check lower theta
+    comma = strchr(pos, ',');
+    if (!comma)
+      break;
+    *comma = '\0';
+    startTheta = atof(pos);
+    *comma = ',';
+    pos = comma+1;
+    // check upper theta
+    comma = strchr(pos, ',');
+    good=true;
+    if (comma)
+      *comma = '\0';
+    endTheta = atof(pos);
+    if (comma) {
+      *comma = ',';
+      pos = comma+1;
+      comma = strchr(pos, ',');
+      if (comma)
+	*comma = '\0';
+      intervalTheta = atof(pos);
+      if (comma) {
+	*comma = ',';
+	pos = comma+1;
+	comma = strchr(pos, ',');
+	if (comma)
+	  *comma = '\0';
+	detail = atoi(pos);
+	if (comma) 
+	*comma = ',';
+      }
+    }
+    break;
+  }
+  if (good) {
+    if (startTheta<0.0||
+	startTheta>endTheta||
+	intervalTheta<0.0)
+      good=false;
+    if (detail<0||detail>1)
+      good=false;
+  }
+  if (intervalTheta>=endTheta)
+    intervalTheta=0.0;
+  if (!good) {
+    sprintf(line,"Odd first line %s on file %s?",line,dataFile);
+    handler_->message(CLP_GENERAL,messages_)
+      << line << CoinMessageEol;
+    fclose(fp);
+    return -2;
+  }
+  if (!fgets(line, 200, fp)) {
+    sprintf(line,"Not enough records on parametrics file %s?",dataFile);
+    handler_->message(CLP_GENERAL,messages_)
+      << line << CoinMessageEol;
+    fclose(fp);
+    return -2;
+  }
+  double * lowerRowMove = NULL;
+  double * upperRowMove = NULL;
+  double * lowerColumnMove = NULL;
+  double * upperColumnMove = NULL;
+  double * objectiveMove = NULL;
+  char saveLine[200];
+  saveLine[0]='\0';
+  std::string headingsRow[] = {"name", "number", "lower", "upper", "rhs"};
+  int gotRow[] = { -1, -1, -1, -1, -1};
+  int orderRow[5];
+  assert(sizeof(gotRow) == sizeof(orderRow));
+  int nAcross = 0;
+  pos = line;
+  put = line;
+  while (*pos >= ' ' && *pos != '\n') {
+    if (*pos != ' ' && *pos != '\t') {
+      *put = static_cast<char>(tolower(*pos));
+      put++;
+    }
+    pos++;
+  }
+  *put = '\0';
+  pos = line;
+  int i;
+  good = true;
+  if (strncmp(line,"column",6)) {
+    while (pos) {
+      char * comma = strchr(pos, ',');
+      if (comma)
+	*comma = '\0';
+      for (i = 0; i < static_cast<int> (sizeof(gotRow) / sizeof(int)); i++) {
+	if (headingsRow[i] == pos) {
+	  if (gotRow[i] < 0) {
+	    orderRow[nAcross] = i;
+	    gotRow[i] = nAcross++;
+	  } else {
+	    // duplicate
+	    good = false;
+	  }
+	  break;
+	}
+      }
+      if (i == static_cast<int> (sizeof(gotRow) / sizeof(int)))
+	good = false;
+      if (comma) {
+	*comma = ',';
+	pos = comma + 1;
+      } else {
+	break;
+      }
+    }
+    if (gotRow[0] < 0 && gotRow[1] < 0)
+      good = false;
+    if (gotRow[0] >= 0 && gotRow[1] >= 0)
+      good = false;
+    if (gotRow[0] >= 0 && !lengthNames())
+      good = false;
+    if (gotRow[4]<0) {
+      if (gotRow[2] < 0 && gotRow[3] >= 0)
+	good = false;
+      else if (gotRow[3] < 0 && gotRow[2] >= 0)
+	good = false;
+    } else if (gotRow[2]>=0||gotRow[3]>=0) {
+      good = false;
+    }
+    if (good) {
+      char ** rowNames = new char * [numberRows_];
+      int iRow;
+      for (iRow = 0; iRow < numberRows_; iRow++) {
+	rowNames[iRow] =
+	  CoinStrdup(rowName(iRow).c_str());
+      }
+      lowerRowMove = new double [numberRows_];
+      memset(lowerRowMove,0,numberRows_*sizeof(double));
+      upperRowMove = new double [numberRows_];
+      memset(upperRowMove,0,numberRows_*sizeof(double));
+      int nLine = 0;
+      int nBadLine = 0;
+      int nBadName = 0;
+      bool goodLine=false;
+      while (fgets(line, 200, fp)) {
+	goodLine=true;
+	if (!strncmp(line, "ENDATA", 6)||
+	    !strncmp(line, "COLUMN",6))
+	  break;
+	goodLine=false;
+	nLine++;
+	iRow = -1;
+	double upper = 0.0;
+	double lower = 0.0;
+	char * pos = line;
+	char * put = line;
+	while (*pos >= ' ' && *pos != '\n') {
+	  if (*pos != ' ' && *pos != '\t') {
+	    *put = *pos;
+	    put++;
+	  }
+	  pos++;
+	}
+	*put = '\0';
+	pos = line;
+	for (int i = 0; i < nAcross; i++) {
+	  char * comma = strchr(pos, ',');
+	  if (comma) {
+	    *comma = '\0';
+	  } else if (i < nAcross - 1) {
+	    nBadLine++;
+	    break;
+	  }
+	  switch (orderRow[i]) {
+	    // name
+	  case 0:
+	    // For large problems this could be slow
+	    for (iRow = 0; iRow < numberRows_; iRow++) {
+	      if (!strcmp(rowNames[iRow], pos))
+		break;
+	    }
+	    if (iRow == numberRows_)
+	      iRow = -1;
+	    break;
+	    // number
+	  case 1:
+	    iRow = atoi(pos);
+	    if (iRow < 0 || iRow >= numberRows_)
+	      iRow = -1;
+	    break;
+	    // lower
+	  case 2:
+	    upper = atof(pos);
+	    break;
+	    // upper
+	  case 3:
+	    lower = atof(pos);
+	    break;
+	    // rhs
+	  case 4:
+	    lower = atof(pos);
+	    upper = lower;
+	    break;
+	  }
+	  if (comma) {
+	    *comma = ',';
+	    pos = comma + 1;
+	  }
+	}
+	if (iRow >= 0) {
+	  if (rowLower_[iRow]>-1.0e20)
+	    lowerRowMove[iRow] = lower;
+	  else
+	    lowerRowMove[iRow]=0.0;
+	  if (rowUpper_[iRow]<1.0e20)
+	    upperRowMove[iRow] = upper;
+	  else
+	    upperRowMove[iRow] = lower;
+	} else {
+	  nBadName++;
+	  if(saveLine[0]=='\0')
+	    strcpy(saveLine,line);
+	}
+      }
+      sprintf(line,"%d Row fields and %d records", nAcross, nLine);
+      handler_->message(CLP_GENERAL,messages_)
+	<< line << CoinMessageEol;
+      if (nBadName) {
+	sprintf(line," ** %d records did not match on name/sequence, first bad %s", nBadName,saveLine);
+	handler_->message(CLP_GENERAL,messages_)
+	  << line << CoinMessageEol;
+	returnCode=-1;
+	good=false;
+      }
+      for (iRow = 0; iRow < numberRows_; iRow++) {
+	free(rowNames[iRow]);
+      }
+      delete [] rowNames;
+    } else {
+      sprintf(line,"Duplicate or unknown keyword - or name/number fields wrong");
+      handler_->message(CLP_GENERAL,messages_)
+	<< line << CoinMessageEol;
+      returnCode=-1;
+      good=false;
+    }
+  }
+  if (good&&(!strncmp(line, "COLUMN",6)||!strncmp(line, "column",6))) {
+    if (!fgets(line, 200, fp)) {
+      sprintf(line,"Not enough records on parametrics file %s after COLUMNS?",dataFile);
+      handler_->message(CLP_GENERAL,messages_)
+	<< line << CoinMessageEol;
+      fclose(fp);
+      return -2;
+    }
+    std::string headingsColumn[] = {"name", "number", "lower", "upper", "objective"};
+    saveLine[0]='\0';
+    int gotColumn[] = { -1, -1, -1, -1, -1};
+    int orderColumn[5];
+    assert(sizeof(gotColumn) == sizeof(orderColumn));
+    nAcross = 0;
+    pos = line;
+    put = line;
+    while (*pos >= ' ' && *pos != '\n') {
+      if (*pos != ' ' && *pos != '\t') {
+	*put = static_cast<char>(tolower(*pos));
+	put++;
+      }
+      pos++;
+    }
+    *put = '\0';
+    pos = line;
+    int i;
+    if (strncmp(line,"endata",6)&&good) {
+      while (pos) {
+	char * comma = strchr(pos, ',');
+	if (comma)
+	  *comma = '\0';
+	for (i = 0; i < static_cast<int> (sizeof(gotColumn) / sizeof(int)); i++) {
+	  if (headingsColumn[i] == pos) {
+	    if (gotColumn[i] < 0) {
+	      orderColumn[nAcross] = i;
+	      gotColumn[i] = nAcross++;
+	    } else {
+	      // duplicate
+	      good = false;
+	    }
+	    break;
+	  }
+	}
+	if (i == static_cast<int> (sizeof(gotColumn) / sizeof(int)))
+	  good = false;
+	if (comma) {
+	  *comma = ',';
+	  pos = comma + 1;
+	} else {
+	  break;
+	}
+      }
+      if (gotColumn[0] < 0 && gotColumn[1] < 0)
+	good = false;
+      if (gotColumn[0] >= 0 && gotColumn[1] >= 0)
+	good = false;
+      if (gotColumn[0] >= 0 && !lengthNames())
+	good = false;
+      if (good) {
+	char ** columnNames = new char * [numberColumns_];
+	int iColumn;
+	for (iColumn = 0; iColumn < numberColumns_; iColumn++) {
+	  columnNames[iColumn] =
+	    CoinStrdup(columnName(iColumn).c_str());
+	}
+	lowerColumnMove = reinterpret_cast<double *> (malloc(numberColumns_ * sizeof(double)));
+	memset(lowerColumnMove,0,numberColumns_*sizeof(double));
+	upperColumnMove = reinterpret_cast<double *> (malloc(numberColumns_ * sizeof(double)));
+	memset(upperColumnMove,0,numberColumns_*sizeof(double));
+	objectiveMove = reinterpret_cast<double *> (malloc(numberColumns_ * sizeof(double)));
+	memset(objectiveMove,0,numberColumns_*sizeof(double));
+	int nLine = 0;
+	int nBadLine = 0;
+	int nBadName = 0;
+	bool goodLine=false;
+	while (fgets(line, 200, fp)) {
+	  goodLine=true;
+	  if (!strncmp(line, "ENDATA", 6))
+	    break;
+	  goodLine=false;
+	  nLine++;
+	  iColumn = -1;
+	  double upper = 0.0;
+	  double lower = 0.0;
+	  double obj =0.0;
+	  char * pos = line;
+	  char * put = line;
+	  while (*pos >= ' ' && *pos != '\n') {
+	    if (*pos != ' ' && *pos != '\t') {
+	      *put = *pos;
+	      put++;
+	    }
+	    pos++;
+	  }
+	  *put = '\0';
+	  pos = line;
+	  for (int i = 0; i < nAcross; i++) {
+	    char * comma = strchr(pos, ',');
+	    if (comma) {
+	      *comma = '\0';
+	    } else if (i < nAcross - 1) {
+	      nBadLine++;
+	      break;
+	    }
+	    switch (orderColumn[i]) {
+	      // name
+	    case 0:
+	      // For large problems this could be slow
+	      for (iColumn = 0; iColumn < numberColumns_; iColumn++) {
+		if (!strcmp(columnNames[iColumn], pos))
+		  break;
+	      }
+	      if (iColumn == numberColumns_)
+		iColumn = -1;
+	      break;
+	      // number
+	    case 1:
+	      iColumn = atoi(pos);
+	      if (iColumn < 0 || iColumn >= numberColumns_)
+		iColumn = -1;
+	      break;
+	      // lower
+	    case 2:
+	      upper = atof(pos);
+	      break;
+	      // upper
+	    case 3:
+	      lower = atof(pos);
+	      break;
+	      // objective
+	    case 4:
+	      obj = atof(pos);
+	      upper = lower;
+	      break;
+	    }
+	    if (comma) {
+	      *comma = ',';
+	      pos = comma + 1;
+	    }
+	  }
+	  if (iColumn >= 0) {
+	    if (columnLower_[iColumn]>-1.0e20)
+	      lowerColumnMove[iColumn] = lower;
+	    else
+	      lowerColumnMove[iColumn]=0.0;
+	    if (columnUpper_[iColumn]<1.0e20)
+	      upperColumnMove[iColumn] = upper;
+	    else
+	      upperColumnMove[iColumn] = lower;
+	    objectiveMove[iColumn] = obj;
+	  } else {
+	    nBadName++;
+	    if(saveLine[0]=='\0')
+	      strcpy(saveLine,line);
+	  }
+	}
+	sprintf(line,"%d Column fields and %d records", nAcross, nLine);
+	handler_->message(CLP_GENERAL,messages_)
+	  << line << CoinMessageEol;
+	if (nBadName) {
+	  sprintf(line," ** %d records did not match on name/sequence, first bad %s", nBadName,saveLine);
+	  handler_->message(CLP_GENERAL,messages_)
+	    << line << CoinMessageEol;
+	  returnCode=-1;
+	  good=false;
+	}
+	for (iColumn = 0; iColumn < numberColumns_; iColumn++) {
+	  free(columnNames[iColumn]);
+	}
+	delete [] columnNames;
+      } else {
+	sprintf(line,"Duplicate or unknown keyword - or name/number fields wrong");
+	handler_->message(CLP_GENERAL,messages_)
+	  << line << CoinMessageEol;
+	returnCode=-1;
+	good=false;
+      }
+    }
+  }
+  returnCode=-1;
+  if (good) {
+    // clean arrays
+    if (lowerRowMove) {
+      bool empty=true;
+      for (int i=0;i<numberRows_;i++) {
+	if (lowerRowMove[i]) {
+	  empty=false;
+	break;
+	}
+      }
+      if (empty) {
+	delete [] lowerRowMove;
+	lowerRowMove=NULL;
+      }
+    }
+    if (upperRowMove) {
+      bool empty=true;
+      for (int i=0;i<numberRows_;i++) {
+	if (upperRowMove[i]) {
+	  empty=false;
+	break;
+	}
+      }
+      if (empty) {
+	delete [] upperRowMove;
+	upperRowMove=NULL;
+      }
+    }
+    if (lowerColumnMove) {
+      bool empty=true;
+      for (int i=0;i<numberColumns_;i++) {
+	if (lowerColumnMove[i]) {
+	  empty=false;
+	break;
+	}
+      }
+      if (empty) {
+	delete [] lowerColumnMove;
+	lowerColumnMove=NULL;
+      }
+    }
+    if (upperColumnMove) {
+      bool empty=true;
+      for (int i=0;i<numberColumns_;i++) {
+	if (upperColumnMove[i]) {
+	  empty=false;
+	break;
+	}
+      }
+      if (empty) {
+	delete [] upperColumnMove;
+	upperColumnMove=NULL;
+      }
+    }
+    if (objectiveMove) {
+      bool empty=true;
+      for (int i=0;i<numberColumns_;i++) {
+	if (objectiveMove[i]) {
+	  empty=false;
+	break;
+	}
+      }
+      if (empty) {
+	delete [] objectiveMove;
+	objectiveMove=NULL;
+      }
+    }
+    int saveScaling = scalingFlag_;
+    scalingFlag_ = 0;
+    int saveLogLevel = handler_->logLevel();
+    if (detail>0&&!intervalTheta)
+      handler_->setLogLevel(3);
+    else
+      handler_->setLogLevel(1);
+    returnCode = parametrics(startTheta,endTheta,intervalTheta,
+			     lowerColumnMove,upperColumnMove,
+			     lowerRowMove,upperRowMove,
+			     objectiveMove);
+    scalingFlag_ = saveScaling;
+    handler_->setLogLevel(saveLogLevel);
+  }
+  delete [] lowerRowMove;
+  delete [] upperRowMove;
+  delete [] lowerColumnMove;
+  delete [] upperColumnMove;
+  delete [] objectiveMove;
+  fclose(fp);
+  return returnCode;
 }
 int
 ClpSimplexOther::parametricsLoop(double startingTheta, double & endingTheta, double reportIncrement,
@@ -2144,7 +2723,8 @@ ClpSimplexOther::parametricsLoop(double startingTheta, double & endingTheta, dou
           }
 
           // exit if victory declared
-          if (problemStatus_ >= 0)
+          if (problemStatus_ >= 0 && 
+	      (canTryQuick || startingTheta>=endingTheta-1.0e-7) )
                break;
 
           // test for maximum iterations
@@ -2162,6 +2742,7 @@ ClpSimplexOther::parametricsLoop(double startingTheta, double & endingTheta, dou
                }
           }
           // Do iterations
+	  problemStatus_=-1;
           if (canTryQuick) {
                double * saveDuals = NULL;
                reinterpret_cast<ClpSimplexDual *> (this)->whileIterating(saveDuals, 0);
@@ -2169,6 +2750,7 @@ ClpSimplexOther::parametricsLoop(double startingTheta, double & endingTheta, dou
                whileIterating(startingTheta,  endingTheta, reportIncrement,
                               changeLower, changeUpper,
                               changeObjective);
+	       startingTheta = endingTheta;
           }
      }
      if (!problemStatus_) {
@@ -2302,6 +2884,7 @@ ClpSimplexOther::statusOfProblemInParametrics(int type, ClpDataSave & saveData)
    +0 looks optimal (might be unbounded - but we will investigate)
    +1 looks infeasible
    +3 max iterations
+   +4 accuracy problems
 */
 int
 ClpSimplexOther::whileIterating(double startingTheta, double & endingTheta, double /*reportIncrement*/,
@@ -2326,10 +2909,11 @@ ClpSimplexOther::whileIterating(double startingTheta, double & endingTheta, doub
      // status -3 to go to top without an invert
      int returnCode = -1;
      double saveSumDual = sumDualInfeasibilities_; // so we know to be careful
+     double lastTheta = startingTheta;
      double useTheta = startingTheta;
-     double * primalChange = new double[numberRows_];
-     double * dualChange = new double[numberColumns_];
      int numberTotal = numberColumns_ + numberRows_;
+     double * primalChange = new double[numberTotal];
+     double * dualChange = new double[numberTotal];
      int iSequence;
      // See if bounds
      int type = 0;
@@ -2348,16 +2932,42 @@ ClpSimplexOther::whileIterating(double startingTheta, double & endingTheta, doub
      }
      assert (type);
      while (problemStatus_ == -1) {
-          double increaseTheta = CoinMin(endingTheta - useTheta, 1.0e50);
+          double increaseTheta = CoinMin(endingTheta - lastTheta, 1.0e50);
 
           // Get theta for bounds - we know can't crossover
           int pivotType = nextTheta(type, increaseTheta, primalChange, dualChange,
                                     changeLower, changeUpper, changeObjective);
-          if (pivotType)
-               abort();
+	  useTheta += theta_;
+	  double change = useTheta - lastTheta;
+	  for (int i = 0; i < numberTotal; i++) {
+	    lower_[i] += change * changeLower[i];
+	    upper_[i] += change * changeUpper[i];
+	    switch(getStatus(i)) {
+	      
+	    case basic:
+	    case isFree:
+	    case superBasic:
+	      break;
+	    case isFixed:
+	    case atUpperBound:
+	      solution_[i] = upper_[i];
+	      break;
+	    case atLowerBound:
+	      solution_[i] = lower_[i];
+	      break;
+	    }
+	    cost_[i] += change * changeObjective[i];
+	    assert (solution_[i]>lower_[i]-1.0e-5&&
+		    solution_[i]<upper_[i]+1.0e-5);
+	  }
+	  sequenceIn_=-1;
+          if (pivotType) {
+	      problemStatus_ = -2;
+	      endingTheta = useTheta;
+	      return 4;
+	  }
           // choose row to go out
-          // dualRow will go to virtual row pivot choice algorithm
-          reinterpret_cast<ClpSimplexDual *> ( this)->dualRow(-1);
+          //reinterpret_cast<ClpSimplexDual *> ( this)->dualRow(-1);
           if (pivotRow_ >= 0) {
                // we found a pivot row
                if (handler_->detail(CLP_SIMPLEX_PIVOTROW, messages_) < 100) {
@@ -2577,7 +3187,7 @@ ClpSimplexOther::whileIterating(double startingTheta, double & endingTheta, doub
                     dualOut_ *= -directionOut_;
                     //setStatus(sequenceIn_,basic);
                     dj_[sequenceIn_] = 0.0;
-                    double oldValue = valueIn_;
+                    //double oldValue = valueIn_;
                     if (directionIn_ == -1) {
                          // as if from upper bound
                          valueIn_ = upperIn_ + dualOut_;
@@ -2585,7 +3195,10 @@ ClpSimplexOther::whileIterating(double startingTheta, double & endingTheta, doub
                          // as if from lower bound
                          valueIn_ = lowerIn_ + dualOut_;
                     }
-                    objectiveChange += cost_[sequenceIn_] * (valueIn_ - oldValue);
+		    objectiveChange = 0.0;
+		    for (int i=0;i<numberTotal;i++)
+		      objectiveChange += solution_[i]*cost_[i];
+                    objectiveChange -= objectiveValue_;
                     // outgoing
                     // set dj to zero unless values pass
                     if (directionOut_ > 0) {
@@ -2597,6 +3210,43 @@ ClpSimplexOther::whileIterating(double startingTheta, double & endingTheta, doub
                     }
                     solution_[sequenceOut_] = valueOut_;
                     int whatNext = housekeeping(objectiveChange);
+		    {
+		      char in[200],out[200];
+		      int iSequence=sequenceIn_;
+		      if (iSequence<numberColumns_) {
+			if (lengthNames_) 
+			  strcpy(in,columnNames_[iSequence].c_str());
+			 else 
+			  sprintf(in,"C%7.7d",iSequence);
+		      } else {
+			iSequence -= numberColumns_;
+			if (lengthNames_) 
+			  strcpy(in,rowNames_[iSequence].c_str());
+			 else 
+			  sprintf(in,"R%7.7d",iSequence);
+		      }
+		      iSequence=sequenceOut_;
+		      if (iSequence<numberColumns_) {
+			if (lengthNames_) 
+			  strcpy(out,columnNames_[iSequence].c_str());
+			 else 
+			  sprintf(out,"C%7.7d",iSequence);
+		      } else {
+			iSequence -= numberColumns_;
+			if (lengthNames_) 
+			  strcpy(out,rowNames_[iSequence].c_str());
+			 else 
+			  sprintf(out,"R%7.7d",iSequence);
+		      }
+		      handler_->message(CLP_PARAMETRICS_STATS2, messages_)
+			<< useTheta << objectiveValue() 
+			<< in << out << CoinMessageEol;
+		    }
+		    if (useTheta>lastTheta+1.0e-9) {
+		      handler_->message(CLP_PARAMETRICS_STATS, messages_)
+			<< useTheta << objectiveValue() << CoinMessageEol;
+		      lastTheta = useTheta;
+		    }
                     // and set bounds correctly
                     reinterpret_cast<ClpSimplexDual *> ( this)->originalBound(sequenceIn_);
                     reinterpret_cast<ClpSimplexDual *> ( this)->changeBound(sequenceOut_);
@@ -2797,6 +3447,7 @@ ClpSimplexOther::whileIterating(double startingTheta, double & endingTheta, doub
      }
      delete [] primalChange;
      delete [] dualChange;
+     endingTheta = lastTheta;
      return returnCode;
 }
 // Computes next theta and says if objective or bounds (0= bounds, 1 objective, -1 none)
@@ -2831,23 +3482,25 @@ ClpSimplexOther::nextTheta(int type, double maxTheta, double * primalChange, dou
           }
           // use array
           double * array = rowArray_[1]->denseVector();
+	  // put slacks in
+	  for (int i=0;i<numberRows_;i++)
+	    array[i] = - primalChange[i+numberColumns_];
           times(1.0, primalChange, array);
           int * index = rowArray_[1]->getIndices();
           int number = 0;
+          pivotRow_ = -1;
           for (iRow = 0; iRow < numberRows_; iRow++) {
                double value = array[iRow];
                if (value) {
-                    array[iRow] = value;
                     index[number++] = iRow;
                }
           }
           // ftran it
           rowArray_[1]->setNumElements(number);
           factorization_->updateColumn(rowArray_[0], rowArray_[1]);
-          number = rowArray_[1]->getNumElements();
-          pivotRow_ = -1;
-          for (iRow = 0; iRow < number; iRow++) {
-               int iPivot = index[iRow];
+          //number = rowArray_[1]->getNumElements();
+          for (int iPivot = 0; iPivot < numberRows_; iPivot++) {
+	    //int iPivot = index[iRow];
                iSequence = pivotVariable_[iPivot];
                // solution value will be sol - theta*alpha
                // bounds will be bounds + change *theta
@@ -2860,20 +3513,20 @@ ClpSimplexOther::nextTheta(int type, double maxTheta, double * primalChange, dou
                double thetaCoefficient;
                double hitsLower = COIN_DBL_MAX;
                thetaCoefficient = changeLower[iSequence] + alpha;
-               if (fabs(thetaCoefficient) > 1.0e-8)
-                    hitsLower = (currentSolution - currentLower) / thetaCoefficient;
-               if (hitsLower < 0.0) {
+               if (thetaCoefficient > 1.0e-8)
+		 hitsLower = (currentSolution - currentLower) / thetaCoefficient;
+               //if (hitsLower < 0.0) {
                     // does not hit - but should we check further
-                    hitsLower = COIN_DBL_MAX;
-               }
+	       //   hitsLower = COIN_DBL_MAX;
+               //}
                double hitsUpper = COIN_DBL_MAX;
                thetaCoefficient = changeUpper[iSequence] + alpha;
-               if (fabs(thetaCoefficient) > 1.0e-8)
+               if (thetaCoefficient < -1.0e-8)
                     hitsUpper = (currentSolution - currentUpper) / thetaCoefficient;
-               if (hitsUpper < 0.0) {
+               //if (hitsUpper < 0.0) {
                     // does not hit - but should we check further
-                    hitsUpper = COIN_DBL_MAX;
-               }
+	       //   hitsUpper = COIN_DBL_MAX;
+               //}
                if (CoinMin(hitsLower, hitsUpper) < theta_) {
                     theta_ = CoinMin(hitsLower, hitsUpper);
                     toLower = hitsLower < hitsUpper;
@@ -2884,15 +3537,27 @@ ClpSimplexOther::nextTheta(int type, double maxTheta, double * primalChange, dou
      if ((type & 2) != 0) {
           abort();
      }
+     theta_ = CoinMax(theta_,0.0);
+     // update solution
+     double * array = rowArray_[1]->denseVector();
+     int * index = rowArray_[1]->getIndices();
+     int number = rowArray_[1]->getNumElements();
+     for (int iRow = 0; iRow < number; iRow++) {
+       int iPivot = index[iRow];
+       iSequence = pivotVariable_[iPivot];
+       // solution value will be sol - theta*alpha
+       double alpha = array[iPivot];
+       solution_[iSequence] -= theta_ * alpha;
+     }
      if (pivotRow_ >= 0) {
           sequenceOut_ = pivotVariable_[pivotRow_];
           valueOut_ = solution_[sequenceOut_];
-          lowerOut_ = lower_[sequenceOut_];
-          upperOut_ = upper_[sequenceOut_];
+          lowerOut_ = lower_[sequenceOut_]+theta_*changeLower[sequenceOut_];
+          upperOut_ = upper_[sequenceOut_]+theta_*changeUpper[sequenceOut_];
           if (!toLower) {
                directionOut_ = -1;
                dualOut_ = valueOut_ - upperOut_;
-          } else if (valueOut_ < lowerOut_) {
+          } else {
                directionOut_ = 1;
                dualOut_ = lowerOut_ - valueOut_;
           }

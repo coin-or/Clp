@@ -97,8 +97,9 @@ ClpPresolve::presolvedModel(ClpSimplex & si,
                             bool doRowObjective)
 {
      // Check matrix
+     int checkType = ((si.specialOptions() & 128) != 0) ? 14 : 15;
      if (!si.clpMatrix()->allElementsInRange(&si, si.getSmallElementValue(),
-                                             1.0e20))
+                                             1.0e20,checkType))
           return NULL;
      else
           return gutsOfPresolvedModel(&si, feasibilityTolerance, keepIntegers, numberPasses, dropNames,
