@@ -472,7 +472,7 @@ ac_includes_default="\
 # include <unistd.h>
 #endif"
 
-ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os ADDLIBS PCADDLIBS FADDLIBS ALWAYS_FALSE_TRUE ALWAYS_FALSE_FALSE have_svnversion CLP_SVN_REV COIN_CC_IS_CL_TRUE COIN_CC_IS_CL_FALSE CDEFS ADD_CFLAGS DBG_CFLAGS OPT_CFLAGS sol_cc_compiler CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT MPICC CXXDEFS ADD_CXXFLAGS DBG_CXXFLAGS OPT_CXXFLAGS CXX CXXFLAGS ac_ct_CXX COIN_CXX_IS_CL_TRUE COIN_CXX_IS_CL_FALSE MPICXX EGREP INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA CYGPATH_W PACKAGE VERSION ACLOCAL AUTOCONF AUTOMAKE AUTOHEADER MAKEINFO install_sh STRIP ac_ct_STRIP INSTALL_STRIP_PROGRAM mkdir_p AWK SET_MAKE am__leading_dot AMTAR am__tar am__untar DEPDIR am__include am__quote AMDEP_TRUE AMDEP_FALSE AMDEPBACKSLASH CCDEPMODE am__fastdepCC_TRUE am__fastdepCC_FALSE CXXDEPMODE am__fastdepCXX_TRUE am__fastdepCXX_FALSE MAINTAINER_MODE_TRUE MAINTAINER_MODE_FALSE MAINT LIBTOOLM4 have_autoconf have_automake have_svn BUILDTOOLSDIR AUX_DIR abs_source_dir abs_lib_dir abs_include_dir abs_bin_dir HAVE_EXTERNALS_TRUE HAVE_EXTERNALS_FALSE host host_cpu host_vendor host_os LN_S ECHO AR ac_ct_AR RANLIB ac_ct_RANLIB CPP CXXCPP F77 FFLAGS ac_ct_F77 LIBTOOL ac_c_preproc_warn_flag ac_cxx_preproc_warn_flag RPATH_FLAGS LT_LDFLAGS PKG_CONFIG ac_pt_PKG_CONFIG COIN_HAS_PKGCONFIG_TRUE COIN_HAS_PKGCONFIG_FALSE COIN_PKG_CONFIG_PATH COIN_PKG_CONFIG_PATH_UNINSTALLED COINUTILS_LIBS COINUTILS_CFLAGS COINUTILS_DATA CLPLIB_CFLAGS CLPLIB_LIBS CLPLIB_PCLIBS CLPLIB_PCREQUIRES CLPLIB_CFLAGS_INSTALLED CLPLIB_LIBS_INSTALLED COINUTILS_DATA_INSTALLED COIN_HAS_COINUTILS_TRUE COIN_HAS_COINUTILS_FALSE OSI_LIBS OSI_CFLAGS OSI_DATA OSICLPLIB_CFLAGS OSICLPLIB_LIBS OSICLPLIB_PCLIBS OSICLPLIB_PCREQUIRES OSICLPLIB_CFLAGS_INSTALLED OSICLPLIB_LIBS_INSTALLED OSI_DATA_INSTALLED COIN_HAS_OSI_TRUE COIN_HAS_OSI_FALSE OSITESTS_LIBS OSITESTS_CFLAGS OSITESTS_DATA OSITESTS_DATA_INSTALLED COIN_HAS_OSITESTS_TRUE COIN_HAS_OSITESTS_FALSE SAMPLE_LIBS SAMPLE_CFLAGS SAMPLE_DATA SAMPLE_DATA_INSTALLED COIN_HAS_SAMPLE_TRUE COIN_HAS_SAMPLE_FALSE NETLIB_LIBS NETLIB_CFLAGS NETLIB_DATA NETLIB_DATA_INSTALLED COIN_HAS_NETLIB_TRUE COIN_HAS_NETLIB_FALSE coin_have_doxygen coin_doxy_usedot coin_doxy_tagname coin_doxy_logname coin_doxy_tagfiles coin_doxy_excludes LIBEXT VPATH_DISTCLEANFILES ABSBUILDDIR LIBOBJS LTLIBOBJS'
+ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os ADDLIBS PCADDLIBS FADDLIBS ALWAYS_FALSE_TRUE ALWAYS_FALSE_FALSE have_svnversion CLP_SVN_REV COIN_CC_IS_CL_TRUE COIN_CC_IS_CL_FALSE CDEFS ADD_CFLAGS DBG_CFLAGS OPT_CFLAGS sol_cc_compiler CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT MPICC CXXDEFS ADD_CXXFLAGS DBG_CXXFLAGS OPT_CXXFLAGS CXX CXXFLAGS ac_ct_CXX COIN_CXX_IS_CL_TRUE COIN_CXX_IS_CL_FALSE MPICXX EGREP INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA CYGPATH_W PACKAGE VERSION ACLOCAL AUTOCONF AUTOMAKE AUTOHEADER MAKEINFO install_sh STRIP ac_ct_STRIP INSTALL_STRIP_PROGRAM mkdir_p AWK SET_MAKE am__leading_dot AMTAR am__tar am__untar DEPDIR am__include am__quote AMDEP_TRUE AMDEP_FALSE AMDEPBACKSLASH CCDEPMODE am__fastdepCC_TRUE am__fastdepCC_FALSE CXXDEPMODE am__fastdepCXX_TRUE am__fastdepCXX_FALSE MAINTAINER_MODE_TRUE MAINTAINER_MODE_FALSE MAINT LIBTOOLM4 have_autoconf have_automake have_svn BUILDTOOLSDIR AUX_DIR abs_source_dir abs_lib_dir abs_include_dir abs_bin_dir HAVE_EXTERNALS_TRUE HAVE_EXTERNALS_FALSE host host_cpu host_vendor host_os LN_S ECHO AR ac_ct_AR RANLIB ac_ct_RANLIB CPP CXXCPP F77 FFLAGS ac_ct_F77 LIBTOOL ac_c_preproc_warn_flag ac_cxx_preproc_warn_flag RPATH_FLAGS LT_LDFLAGS PKG_CONFIG ac_pt_PKG_CONFIG COIN_HAS_PKGCONFIG_TRUE COIN_HAS_PKGCONFIG_FALSE COIN_PKG_CONFIG_PATH COIN_PKG_CONFIG_PATH_UNINSTALLED COINUTILS_LIBS COINUTILS_CFLAGS COINUTILS_DATA COINUTILS_DEPENDENCIES COINUTILS_LIBS_INSTALLED COINUTILS_CFLAGS_INSTALLED COINUTILS_DATA_INSTALLED CLPLIB_CFLAGS CLPLIB_LIBS CLPLIB_PCLIBS CLPLIB_PCREQUIRES CLPLIB_DEPENDENCIES CLPLIB_CFLAGS_INSTALLED CLPLIB_LIBS_INSTALLED COIN_HAS_COINUTILS_TRUE COIN_HAS_COINUTILS_FALSE OSI_LIBS OSI_CFLAGS OSI_DATA OSI_DEPENDENCIES OSI_LIBS_INSTALLED OSI_CFLAGS_INSTALLED OSI_DATA_INSTALLED OSICLPLIB_CFLAGS OSICLPLIB_LIBS OSICLPLIB_PCLIBS OSICLPLIB_PCREQUIRES OSICLPLIB_DEPENDENCIES OSICLPLIB_CFLAGS_INSTALLED OSICLPLIB_LIBS_INSTALLED COIN_HAS_OSI_TRUE COIN_HAS_OSI_FALSE OSITESTS_LIBS OSITESTS_CFLAGS OSITESTS_DATA OSITESTS_DEPENDENCIES OSITESTS_LIBS_INSTALLED OSITESTS_CFLAGS_INSTALLED OSITESTS_DATA_INSTALLED COIN_HAS_OSITESTS_TRUE COIN_HAS_OSITESTS_FALSE SAMPLE_LIBS SAMPLE_CFLAGS SAMPLE_DATA SAMPLE_DEPENDENCIES SAMPLE_LIBS_INSTALLED SAMPLE_CFLAGS_INSTALLED SAMPLE_DATA_INSTALLED COIN_HAS_SAMPLE_TRUE COIN_HAS_SAMPLE_FALSE NETLIB_LIBS NETLIB_CFLAGS NETLIB_DATA NETLIB_DEPENDENCIES NETLIB_LIBS_INSTALLED NETLIB_CFLAGS_INSTALLED NETLIB_DATA_INSTALLED COIN_HAS_NETLIB_TRUE COIN_HAS_NETLIB_FALSE coin_have_doxygen coin_doxy_usedot coin_doxy_tagname coin_doxy_logname coin_doxy_tagfiles coin_doxy_excludes LIBEXT VPATH_DISTCLEANFILES ABSBUILDDIR LIBOBJS LTLIBOBJS'
 ac_subst_files=''
 
 # Initialize some variables set by options.
@@ -20757,6 +20757,13 @@ COINUTILS_DATA=
 
 
 
+
+
+
+
+
+
+
 #check if user provided LIBS, CFLAGS, or DATA for module
 if test $coin_has_coinutils != skipping; then
 
@@ -21048,48 +21055,6 @@ _ACEOF
     CLPLIB_LIBS_INSTALLED="$COINUTILS_LIBS_INSTALLED $CLPLIB_LIBS_INSTALLED"
 
 
-
-
-
-  if test 1 = 0 ; then  #change this test to enable a bit of debugging output
-    if test -n "$COINUTILS_CFLAGS" ; then
-      { echo "$as_me:$LINENO: CoinUtils CFLAGS are $COINUTILS_CFLAGS" >&5
-echo "$as_me: CoinUtils CFLAGS are $COINUTILS_CFLAGS" >&6;}
-    fi
-    if test -n "$COINUTILS_LIBS" ; then
-      { echo "$as_me:$LINENO: CoinUtils LIBS   are $COINUTILS_LIBS" >&5
-echo "$as_me: CoinUtils LIBS   are $COINUTILS_LIBS" >&6;}
-    fi
-    if test -n "$COINUTILS_DATA" ; then
-      { echo "$as_me:$LINENO: CoinUtils DATA   is  $COINUTILS_DATA" >&5
-echo "$as_me: CoinUtils DATA   is  $COINUTILS_DATA" >&6;}
-    fi
-    if test -n "$COINUTILS_CFLAGS_INSTALLED" ; then
-      { echo "$as_me:$LINENO: CoinUtils CFLAGS_INSTALLED are $COINUTILS_CFLAGS_INSTALLED" >&5
-echo "$as_me: CoinUtils CFLAGS_INSTALLED are $COINUTILS_CFLAGS_INSTALLED" >&6;}
-    fi
-    if test -n "$COINUTILS_LIBS_INSTALLED" ; then
-      { echo "$as_me:$LINENO: CoinUtils LIBS_INSTALLED   are $COINUTILS_LIBS_INSTALLED" >&5
-echo "$as_me: CoinUtils LIBS_INSTALLED   are $COINUTILS_LIBS_INSTALLED" >&6;}
-    fi
-    if test -n "$COINUTILS_DATA_INSTALLED" ; then
-      { echo "$as_me:$LINENO: CoinUtils DATA_INSTALLED   is  $COINUTILS_DATA_INSTALLED" >&5
-echo "$as_me: CoinUtils DATA_INSTALLED   is  $COINUTILS_DATA_INSTALLED" >&6;}
-    fi
-
-      { echo "$as_me:$LINENO: " >&5
-echo "$as_me: " >&6;}
-      { echo "$as_me:$LINENO: ClpLib CFLAGS are $CLPLIB_CFLAGS" >&5
-echo "$as_me: ClpLib CFLAGS are $CLPLIB_CFLAGS" >&6;}
-      { echo "$as_me:$LINENO: ClpLib LIBS   are $CLPLIB_LIBS" >&5
-echo "$as_me: ClpLib LIBS   are $CLPLIB_LIBS" >&6;}
-      { echo "$as_me:$LINENO: ClpLib CFLAGS_INSTALLED are $CLPLIB_CFLAGS_INSTALLED" >&5
-echo "$as_me: ClpLib CFLAGS_INSTALLED are $CLPLIB_CFLAGS_INSTALLED" >&6;}
-      { echo "$as_me:$LINENO: ClpLib LIBS_INSTALLED   are $CLPLIB_LIBS_INSTALLED" >&5
-echo "$as_me: ClpLib LIBS_INSTALLED   are $CLPLIB_LIBS_INSTALLED" >&6;}
-
-  fi
-
 fi
 
 
@@ -21120,6 +21085,13 @@ cat >>confdefs.h <<\_ACEOF
 _ACEOF
 
 
+  # construct dependencies variables from LIBS variables
+  # we add an extra space in LIBS so we can substitute out everything starting with " -"
+  COINUTILS_DEPENDENCIES=`echo " $COINUTILS_LIBS" | sed -e 's/ -[^ ]*//g'`
+
+    CLPLIB_DEPENDENCIES=`echo " $CLPLIB_LIBS" | sed -e 's/ -[^ ]*//g'`
+
+
   if test 1 = 0 ; then  #change this test to enable a bit of debugging output
     if test -n "$COINUTILS_CFLAGS" ; then
       { echo "$as_me:$LINENO: CoinUtils CFLAGS are $COINUTILS_CFLAGS" >&5
@@ -21128,6 +21100,10 @@ echo "$as_me: CoinUtils CFLAGS are $COINUTILS_CFLAGS" >&6;}
     if test -n "$COINUTILS_LIBS" ; then
       { echo "$as_me:$LINENO: CoinUtils LIBS   are $COINUTILS_LIBS" >&5
 echo "$as_me: CoinUtils LIBS   are $COINUTILS_LIBS" >&6;}
+    fi
+    if test -n "$COINUTILS_DEPENDENCIES" ; then
+      { echo "$as_me:$LINENO: CoinUtils DEPENDENCIES are $COINUTILS_DEPENDENCIES" >&5
+echo "$as_me: CoinUtils DEPENDENCIES are $COINUTILS_DEPENDENCIES" >&6;}
     fi
     if test -n "$COINUTILS_DATA" ; then
       { echo "$as_me:$LINENO: CoinUtils DATA   is  $COINUTILS_DATA" >&5
@@ -21142,6 +21118,8 @@ echo "$as_me: CoinUtils CFLAGS are $COINUTILS_CFLAGS" >&6;}
 echo "$as_me: ClpLib CFLAGS are $CLPLIB_CFLAGS" >&6;}
       { echo "$as_me:$LINENO: ClpLib LIBS   are $CLPLIB_LIBS" >&5
 echo "$as_me: ClpLib LIBS   are $CLPLIB_LIBS" >&6;}
+      { echo "$as_me:$LINENO: ClpLib DEPENDENCIES are $CLPLIB_DEPENDENCIES" >&5
+echo "$as_me: ClpLib DEPENDENCIES are $CLPLIB_DEPENDENCIES" >&6;}
 
   fi
 fi
@@ -21183,6 +21161,13 @@ fi
 OSI_LIBS=
 OSI_CFLAGS=
 OSI_DATA=
+
+
+
+
+
+
+
 
 
 
@@ -21484,48 +21469,6 @@ _ACEOF
     OSICLPLIB_LIBS_INSTALLED="$OSI_LIBS_INSTALLED $OSICLPLIB_LIBS_INSTALLED"
 
 
-
-
-
-  if test 1 = 0 ; then  #change this test to enable a bit of debugging output
-    if test -n "$OSI_CFLAGS" ; then
-      { echo "$as_me:$LINENO: Osi CFLAGS are $OSI_CFLAGS" >&5
-echo "$as_me: Osi CFLAGS are $OSI_CFLAGS" >&6;}
-    fi
-    if test -n "$OSI_LIBS" ; then
-      { echo "$as_me:$LINENO: Osi LIBS   are $OSI_LIBS" >&5
-echo "$as_me: Osi LIBS   are $OSI_LIBS" >&6;}
-    fi
-    if test -n "$OSI_DATA" ; then
-      { echo "$as_me:$LINENO: Osi DATA   is  $OSI_DATA" >&5
-echo "$as_me: Osi DATA   is  $OSI_DATA" >&6;}
-    fi
-    if test -n "$OSI_CFLAGS_INSTALLED" ; then
-      { echo "$as_me:$LINENO: Osi CFLAGS_INSTALLED are $OSI_CFLAGS_INSTALLED" >&5
-echo "$as_me: Osi CFLAGS_INSTALLED are $OSI_CFLAGS_INSTALLED" >&6;}
-    fi
-    if test -n "$OSI_LIBS_INSTALLED" ; then
-      { echo "$as_me:$LINENO: Osi LIBS_INSTALLED   are $OSI_LIBS_INSTALLED" >&5
-echo "$as_me: Osi LIBS_INSTALLED   are $OSI_LIBS_INSTALLED" >&6;}
-    fi
-    if test -n "$OSI_DATA_INSTALLED" ; then
-      { echo "$as_me:$LINENO: Osi DATA_INSTALLED   is  $OSI_DATA_INSTALLED" >&5
-echo "$as_me: Osi DATA_INSTALLED   is  $OSI_DATA_INSTALLED" >&6;}
-    fi
-
-      { echo "$as_me:$LINENO: " >&5
-echo "$as_me: " >&6;}
-      { echo "$as_me:$LINENO: OsiClpLib CFLAGS are $OSICLPLIB_CFLAGS" >&5
-echo "$as_me: OsiClpLib CFLAGS are $OSICLPLIB_CFLAGS" >&6;}
-      { echo "$as_me:$LINENO: OsiClpLib LIBS   are $OSICLPLIB_LIBS" >&5
-echo "$as_me: OsiClpLib LIBS   are $OSICLPLIB_LIBS" >&6;}
-      { echo "$as_me:$LINENO: OsiClpLib CFLAGS_INSTALLED are $OSICLPLIB_CFLAGS_INSTALLED" >&5
-echo "$as_me: OsiClpLib CFLAGS_INSTALLED are $OSICLPLIB_CFLAGS_INSTALLED" >&6;}
-      { echo "$as_me:$LINENO: OsiClpLib LIBS_INSTALLED   are $OSICLPLIB_LIBS_INSTALLED" >&5
-echo "$as_me: OsiClpLib LIBS_INSTALLED   are $OSICLPLIB_LIBS_INSTALLED" >&6;}
-
-  fi
-
 fi
 
 
@@ -21556,6 +21499,13 @@ cat >>confdefs.h <<\_ACEOF
 _ACEOF
 
 
+  # construct dependencies variables from LIBS variables
+  # we add an extra space in LIBS so we can substitute out everything starting with " -"
+  OSI_DEPENDENCIES=`echo " $OSI_LIBS" | sed -e 's/ -[^ ]*//g'`
+
+    OSICLPLIB_DEPENDENCIES=`echo " $OSICLPLIB_LIBS" | sed -e 's/ -[^ ]*//g'`
+
+
   if test 1 = 0 ; then  #change this test to enable a bit of debugging output
     if test -n "$OSI_CFLAGS" ; then
       { echo "$as_me:$LINENO: Osi CFLAGS are $OSI_CFLAGS" >&5
@@ -21564,6 +21514,10 @@ echo "$as_me: Osi CFLAGS are $OSI_CFLAGS" >&6;}
     if test -n "$OSI_LIBS" ; then
       { echo "$as_me:$LINENO: Osi LIBS   are $OSI_LIBS" >&5
 echo "$as_me: Osi LIBS   are $OSI_LIBS" >&6;}
+    fi
+    if test -n "$OSI_DEPENDENCIES" ; then
+      { echo "$as_me:$LINENO: Osi DEPENDENCIES are $OSI_DEPENDENCIES" >&5
+echo "$as_me: Osi DEPENDENCIES are $OSI_DEPENDENCIES" >&6;}
     fi
     if test -n "$OSI_DATA" ; then
       { echo "$as_me:$LINENO: Osi DATA   is  $OSI_DATA" >&5
@@ -21578,6 +21532,8 @@ echo "$as_me: Osi CFLAGS are $OSI_CFLAGS" >&6;}
 echo "$as_me: OsiClpLib CFLAGS are $OSICLPLIB_CFLAGS" >&6;}
       { echo "$as_me:$LINENO: OsiClpLib LIBS   are $OSICLPLIB_LIBS" >&5
 echo "$as_me: OsiClpLib LIBS   are $OSICLPLIB_LIBS" >&6;}
+      { echo "$as_me:$LINENO: OsiClpLib DEPENDENCIES are $OSICLPLIB_DEPENDENCIES" >&5
+echo "$as_me: OsiClpLib DEPENDENCIES are $OSICLPLIB_DEPENDENCIES" >&6;}
 
   fi
 fi
@@ -21614,6 +21570,10 @@ fi
 OSITESTS_LIBS=
 OSITESTS_CFLAGS=
 OSITESTS_DATA=
+
+
+
+
 
 
 
@@ -21896,35 +21856,6 @@ _ACEOF
 
 
 
-
-  if test 1 = 0 ; then  #change this test to enable a bit of debugging output
-    if test -n "$OSITESTS_CFLAGS" ; then
-      { echo "$as_me:$LINENO: OsiTests CFLAGS are $OSITESTS_CFLAGS" >&5
-echo "$as_me: OsiTests CFLAGS are $OSITESTS_CFLAGS" >&6;}
-    fi
-    if test -n "$OSITESTS_LIBS" ; then
-      { echo "$as_me:$LINENO: OsiTests LIBS   are $OSITESTS_LIBS" >&5
-echo "$as_me: OsiTests LIBS   are $OSITESTS_LIBS" >&6;}
-    fi
-    if test -n "$OSITESTS_DATA" ; then
-      { echo "$as_me:$LINENO: OsiTests DATA   is  $OSITESTS_DATA" >&5
-echo "$as_me: OsiTests DATA   is  $OSITESTS_DATA" >&6;}
-    fi
-    if test -n "$OSITESTS_CFLAGS_INSTALLED" ; then
-      { echo "$as_me:$LINENO: OsiTests CFLAGS_INSTALLED are $OSITESTS_CFLAGS_INSTALLED" >&5
-echo "$as_me: OsiTests CFLAGS_INSTALLED are $OSITESTS_CFLAGS_INSTALLED" >&6;}
-    fi
-    if test -n "$OSITESTS_LIBS_INSTALLED" ; then
-      { echo "$as_me:$LINENO: OsiTests LIBS_INSTALLED   are $OSITESTS_LIBS_INSTALLED" >&5
-echo "$as_me: OsiTests LIBS_INSTALLED   are $OSITESTS_LIBS_INSTALLED" >&6;}
-    fi
-    if test -n "$OSITESTS_DATA_INSTALLED" ; then
-      { echo "$as_me:$LINENO: OsiTests DATA_INSTALLED   is  $OSITESTS_DATA_INSTALLED" >&5
-echo "$as_me: OsiTests DATA_INSTALLED   is  $OSITESTS_DATA_INSTALLED" >&6;}
-    fi
-
-  fi
-
 fi
 
 
@@ -21955,6 +21886,11 @@ cat >>confdefs.h <<\_ACEOF
 _ACEOF
 
 
+  # construct dependencies variables from LIBS variables
+  # we add an extra space in LIBS so we can substitute out everything starting with " -"
+  OSITESTS_DEPENDENCIES=`echo " $OSITESTS_LIBS" | sed -e 's/ -[^ ]*//g'`
+
+
   if test 1 = 0 ; then  #change this test to enable a bit of debugging output
     if test -n "$OSITESTS_CFLAGS" ; then
       { echo "$as_me:$LINENO: OsiTests CFLAGS are $OSITESTS_CFLAGS" >&5
@@ -21963,6 +21899,10 @@ echo "$as_me: OsiTests CFLAGS are $OSITESTS_CFLAGS" >&6;}
     if test -n "$OSITESTS_LIBS" ; then
       { echo "$as_me:$LINENO: OsiTests LIBS   are $OSITESTS_LIBS" >&5
 echo "$as_me: OsiTests LIBS   are $OSITESTS_LIBS" >&6;}
+    fi
+    if test -n "$OSITESTS_DEPENDENCIES" ; then
+      { echo "$as_me:$LINENO: OsiTests DEPENDENCIES are $OSITESTS_DEPENDENCIES" >&5
+echo "$as_me: OsiTests DEPENDENCIES are $OSITESTS_DEPENDENCIES" >&6;}
     fi
     if test -n "$OSITESTS_DATA" ; then
       { echo "$as_me:$LINENO: OsiTests DATA   is  $OSITESTS_DATA" >&5
@@ -22008,6 +21948,10 @@ fi
 SAMPLE_LIBS=
 SAMPLE_CFLAGS=
 SAMPLE_DATA=
+
+
+
+
 
 
 
@@ -22290,35 +22234,6 @@ _ACEOF
 
 
 
-
-  if test 1 = 0 ; then  #change this test to enable a bit of debugging output
-    if test -n "$SAMPLE_CFLAGS" ; then
-      { echo "$as_me:$LINENO: Sample CFLAGS are $SAMPLE_CFLAGS" >&5
-echo "$as_me: Sample CFLAGS are $SAMPLE_CFLAGS" >&6;}
-    fi
-    if test -n "$SAMPLE_LIBS" ; then
-      { echo "$as_me:$LINENO: Sample LIBS   are $SAMPLE_LIBS" >&5
-echo "$as_me: Sample LIBS   are $SAMPLE_LIBS" >&6;}
-    fi
-    if test -n "$SAMPLE_DATA" ; then
-      { echo "$as_me:$LINENO: Sample DATA   is  $SAMPLE_DATA" >&5
-echo "$as_me: Sample DATA   is  $SAMPLE_DATA" >&6;}
-    fi
-    if test -n "$SAMPLE_CFLAGS_INSTALLED" ; then
-      { echo "$as_me:$LINENO: Sample CFLAGS_INSTALLED are $SAMPLE_CFLAGS_INSTALLED" >&5
-echo "$as_me: Sample CFLAGS_INSTALLED are $SAMPLE_CFLAGS_INSTALLED" >&6;}
-    fi
-    if test -n "$SAMPLE_LIBS_INSTALLED" ; then
-      { echo "$as_me:$LINENO: Sample LIBS_INSTALLED   are $SAMPLE_LIBS_INSTALLED" >&5
-echo "$as_me: Sample LIBS_INSTALLED   are $SAMPLE_LIBS_INSTALLED" >&6;}
-    fi
-    if test -n "$SAMPLE_DATA_INSTALLED" ; then
-      { echo "$as_me:$LINENO: Sample DATA_INSTALLED   is  $SAMPLE_DATA_INSTALLED" >&5
-echo "$as_me: Sample DATA_INSTALLED   is  $SAMPLE_DATA_INSTALLED" >&6;}
-    fi
-
-  fi
-
 fi
 
 
@@ -22349,6 +22264,11 @@ cat >>confdefs.h <<\_ACEOF
 _ACEOF
 
 
+  # construct dependencies variables from LIBS variables
+  # we add an extra space in LIBS so we can substitute out everything starting with " -"
+  SAMPLE_DEPENDENCIES=`echo " $SAMPLE_LIBS" | sed -e 's/ -[^ ]*//g'`
+
+
   if test 1 = 0 ; then  #change this test to enable a bit of debugging output
     if test -n "$SAMPLE_CFLAGS" ; then
       { echo "$as_me:$LINENO: Sample CFLAGS are $SAMPLE_CFLAGS" >&5
@@ -22357,6 +22277,10 @@ echo "$as_me: Sample CFLAGS are $SAMPLE_CFLAGS" >&6;}
     if test -n "$SAMPLE_LIBS" ; then
       { echo "$as_me:$LINENO: Sample LIBS   are $SAMPLE_LIBS" >&5
 echo "$as_me: Sample LIBS   are $SAMPLE_LIBS" >&6;}
+    fi
+    if test -n "$SAMPLE_DEPENDENCIES" ; then
+      { echo "$as_me:$LINENO: Sample DEPENDENCIES are $SAMPLE_DEPENDENCIES" >&5
+echo "$as_me: Sample DEPENDENCIES are $SAMPLE_DEPENDENCIES" >&6;}
     fi
     if test -n "$SAMPLE_DATA" ; then
       { echo "$as_me:$LINENO: Sample DATA   is  $SAMPLE_DATA" >&5
@@ -22402,6 +22326,10 @@ fi
 NETLIB_LIBS=
 NETLIB_CFLAGS=
 NETLIB_DATA=
+
+
+
+
 
 
 
@@ -22684,35 +22612,6 @@ _ACEOF
 
 
 
-
-  if test 1 = 0 ; then  #change this test to enable a bit of debugging output
-    if test -n "$NETLIB_CFLAGS" ; then
-      { echo "$as_me:$LINENO: Netlib CFLAGS are $NETLIB_CFLAGS" >&5
-echo "$as_me: Netlib CFLAGS are $NETLIB_CFLAGS" >&6;}
-    fi
-    if test -n "$NETLIB_LIBS" ; then
-      { echo "$as_me:$LINENO: Netlib LIBS   are $NETLIB_LIBS" >&5
-echo "$as_me: Netlib LIBS   are $NETLIB_LIBS" >&6;}
-    fi
-    if test -n "$NETLIB_DATA" ; then
-      { echo "$as_me:$LINENO: Netlib DATA   is  $NETLIB_DATA" >&5
-echo "$as_me: Netlib DATA   is  $NETLIB_DATA" >&6;}
-    fi
-    if test -n "$NETLIB_CFLAGS_INSTALLED" ; then
-      { echo "$as_me:$LINENO: Netlib CFLAGS_INSTALLED are $NETLIB_CFLAGS_INSTALLED" >&5
-echo "$as_me: Netlib CFLAGS_INSTALLED are $NETLIB_CFLAGS_INSTALLED" >&6;}
-    fi
-    if test -n "$NETLIB_LIBS_INSTALLED" ; then
-      { echo "$as_me:$LINENO: Netlib LIBS_INSTALLED   are $NETLIB_LIBS_INSTALLED" >&5
-echo "$as_me: Netlib LIBS_INSTALLED   are $NETLIB_LIBS_INSTALLED" >&6;}
-    fi
-    if test -n "$NETLIB_DATA_INSTALLED" ; then
-      { echo "$as_me:$LINENO: Netlib DATA_INSTALLED   is  $NETLIB_DATA_INSTALLED" >&5
-echo "$as_me: Netlib DATA_INSTALLED   is  $NETLIB_DATA_INSTALLED" >&6;}
-    fi
-
-  fi
-
 fi
 
 
@@ -22743,6 +22642,11 @@ cat >>confdefs.h <<\_ACEOF
 _ACEOF
 
 
+  # construct dependencies variables from LIBS variables
+  # we add an extra space in LIBS so we can substitute out everything starting with " -"
+  NETLIB_DEPENDENCIES=`echo " $NETLIB_LIBS" | sed -e 's/ -[^ ]*//g'`
+
+
   if test 1 = 0 ; then  #change this test to enable a bit of debugging output
     if test -n "$NETLIB_CFLAGS" ; then
       { echo "$as_me:$LINENO: Netlib CFLAGS are $NETLIB_CFLAGS" >&5
@@ -22751,6 +22655,10 @@ echo "$as_me: Netlib CFLAGS are $NETLIB_CFLAGS" >&6;}
     if test -n "$NETLIB_LIBS" ; then
       { echo "$as_me:$LINENO: Netlib LIBS   are $NETLIB_LIBS" >&5
 echo "$as_me: Netlib LIBS   are $NETLIB_LIBS" >&6;}
+    fi
+    if test -n "$NETLIB_DEPENDENCIES" ; then
+      { echo "$as_me:$LINENO: Netlib DEPENDENCIES are $NETLIB_DEPENDENCIES" >&5
+echo "$as_me: Netlib DEPENDENCIES are $NETLIB_DEPENDENCIES" >&6;}
     fi
     if test -n "$NETLIB_DATA" ; then
       { echo "$as_me:$LINENO: Netlib DATA   is  $NETLIB_DATA" >&5
@@ -24410,42 +24318,59 @@ s,@COIN_PKG_CONFIG_PATH_UNINSTALLED@,$COIN_PKG_CONFIG_PATH_UNINSTALLED,;t t
 s,@COINUTILS_LIBS@,$COINUTILS_LIBS,;t t
 s,@COINUTILS_CFLAGS@,$COINUTILS_CFLAGS,;t t
 s,@COINUTILS_DATA@,$COINUTILS_DATA,;t t
+s,@COINUTILS_DEPENDENCIES@,$COINUTILS_DEPENDENCIES,;t t
+s,@COINUTILS_LIBS_INSTALLED@,$COINUTILS_LIBS_INSTALLED,;t t
+s,@COINUTILS_CFLAGS_INSTALLED@,$COINUTILS_CFLAGS_INSTALLED,;t t
+s,@COINUTILS_DATA_INSTALLED@,$COINUTILS_DATA_INSTALLED,;t t
 s,@CLPLIB_CFLAGS@,$CLPLIB_CFLAGS,;t t
 s,@CLPLIB_LIBS@,$CLPLIB_LIBS,;t t
 s,@CLPLIB_PCLIBS@,$CLPLIB_PCLIBS,;t t
 s,@CLPLIB_PCREQUIRES@,$CLPLIB_PCREQUIRES,;t t
+s,@CLPLIB_DEPENDENCIES@,$CLPLIB_DEPENDENCIES,;t t
 s,@CLPLIB_CFLAGS_INSTALLED@,$CLPLIB_CFLAGS_INSTALLED,;t t
 s,@CLPLIB_LIBS_INSTALLED@,$CLPLIB_LIBS_INSTALLED,;t t
-s,@COINUTILS_DATA_INSTALLED@,$COINUTILS_DATA_INSTALLED,;t t
 s,@COIN_HAS_COINUTILS_TRUE@,$COIN_HAS_COINUTILS_TRUE,;t t
 s,@COIN_HAS_COINUTILS_FALSE@,$COIN_HAS_COINUTILS_FALSE,;t t
 s,@OSI_LIBS@,$OSI_LIBS,;t t
 s,@OSI_CFLAGS@,$OSI_CFLAGS,;t t
 s,@OSI_DATA@,$OSI_DATA,;t t
+s,@OSI_DEPENDENCIES@,$OSI_DEPENDENCIES,;t t
+s,@OSI_LIBS_INSTALLED@,$OSI_LIBS_INSTALLED,;t t
+s,@OSI_CFLAGS_INSTALLED@,$OSI_CFLAGS_INSTALLED,;t t
+s,@OSI_DATA_INSTALLED@,$OSI_DATA_INSTALLED,;t t
 s,@OSICLPLIB_CFLAGS@,$OSICLPLIB_CFLAGS,;t t
 s,@OSICLPLIB_LIBS@,$OSICLPLIB_LIBS,;t t
 s,@OSICLPLIB_PCLIBS@,$OSICLPLIB_PCLIBS,;t t
 s,@OSICLPLIB_PCREQUIRES@,$OSICLPLIB_PCREQUIRES,;t t
+s,@OSICLPLIB_DEPENDENCIES@,$OSICLPLIB_DEPENDENCIES,;t t
 s,@OSICLPLIB_CFLAGS_INSTALLED@,$OSICLPLIB_CFLAGS_INSTALLED,;t t
 s,@OSICLPLIB_LIBS_INSTALLED@,$OSICLPLIB_LIBS_INSTALLED,;t t
-s,@OSI_DATA_INSTALLED@,$OSI_DATA_INSTALLED,;t t
 s,@COIN_HAS_OSI_TRUE@,$COIN_HAS_OSI_TRUE,;t t
 s,@COIN_HAS_OSI_FALSE@,$COIN_HAS_OSI_FALSE,;t t
 s,@OSITESTS_LIBS@,$OSITESTS_LIBS,;t t
 s,@OSITESTS_CFLAGS@,$OSITESTS_CFLAGS,;t t
 s,@OSITESTS_DATA@,$OSITESTS_DATA,;t t
+s,@OSITESTS_DEPENDENCIES@,$OSITESTS_DEPENDENCIES,;t t
+s,@OSITESTS_LIBS_INSTALLED@,$OSITESTS_LIBS_INSTALLED,;t t
+s,@OSITESTS_CFLAGS_INSTALLED@,$OSITESTS_CFLAGS_INSTALLED,;t t
 s,@OSITESTS_DATA_INSTALLED@,$OSITESTS_DATA_INSTALLED,;t t
 s,@COIN_HAS_OSITESTS_TRUE@,$COIN_HAS_OSITESTS_TRUE,;t t
 s,@COIN_HAS_OSITESTS_FALSE@,$COIN_HAS_OSITESTS_FALSE,;t t
 s,@SAMPLE_LIBS@,$SAMPLE_LIBS,;t t
 s,@SAMPLE_CFLAGS@,$SAMPLE_CFLAGS,;t t
 s,@SAMPLE_DATA@,$SAMPLE_DATA,;t t
+s,@SAMPLE_DEPENDENCIES@,$SAMPLE_DEPENDENCIES,;t t
+s,@SAMPLE_LIBS_INSTALLED@,$SAMPLE_LIBS_INSTALLED,;t t
+s,@SAMPLE_CFLAGS_INSTALLED@,$SAMPLE_CFLAGS_INSTALLED,;t t
 s,@SAMPLE_DATA_INSTALLED@,$SAMPLE_DATA_INSTALLED,;t t
 s,@COIN_HAS_SAMPLE_TRUE@,$COIN_HAS_SAMPLE_TRUE,;t t
 s,@COIN_HAS_SAMPLE_FALSE@,$COIN_HAS_SAMPLE_FALSE,;t t
 s,@NETLIB_LIBS@,$NETLIB_LIBS,;t t
 s,@NETLIB_CFLAGS@,$NETLIB_CFLAGS,;t t
 s,@NETLIB_DATA@,$NETLIB_DATA,;t t
+s,@NETLIB_DEPENDENCIES@,$NETLIB_DEPENDENCIES,;t t
+s,@NETLIB_LIBS_INSTALLED@,$NETLIB_LIBS_INSTALLED,;t t
+s,@NETLIB_CFLAGS_INSTALLED@,$NETLIB_CFLAGS_INSTALLED,;t t
 s,@NETLIB_DATA_INSTALLED@,$NETLIB_DATA_INSTALLED,;t t
 s,@COIN_HAS_NETLIB_TRUE@,$COIN_HAS_NETLIB_TRUE,;t t
 s,@COIN_HAS_NETLIB_FALSE@,$COIN_HAS_NETLIB_FALSE,;t t
