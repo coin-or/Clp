@@ -68,6 +68,7 @@ ifeq ($(COIN_HAS_SAMPLE), TRUE)
   endif
 endif
 
+# Netlib data directory
 ifeq ($(COIN_HAS_NETLIB), TRUE)
   ifeq ($(COIN_HAS_PKGCONFIG), TRUE)
     CXXFLAGS += -DNETLIBDIR=\"`PKG_CONFIG_PATH=@COIN_PKG_CONFIG_PATH@ @PKG_CONFIG@ --variable=datadir coindatanetlib`\"
