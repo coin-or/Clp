@@ -76,7 +76,7 @@ libClp_la_SOURCES = \
 	Idiot.cpp Idiot.hpp \
 	IdiSolve.cpp
 
-# This is for libtool (on Windows)
+# This is for libtool
 libClp_la_LDFLAGS = $(LT_LDFLAGS)
 
 ########################################################################
@@ -95,13 +95,16 @@ clp_SOURCES = \
 	MyMessageHandler.cpp MyMessageHandler.hpp \
 	unitTest.cpp
 
-# List all additionally required COIN libraries
+# List all additionally required libraries
 clp_LDADD = libClp.la $(CLPLIB_LIBS)
+
+# List all dependency libraries (similar to LDADD, but without -l, -L flags)
+clp_DEPENDENCIES = libClp.la $(CLPLIB_DEPENDENCIES)
 
 # Finally, the -rpath flag is used by libtool to make sure that the shared
 # library is found (in the lib install directory) when we are using dynamic
 # libraries.
-clp_LDFLAGS = -rpath $(libdir)/coin
+clp_LDFLAGS = -rpath $(coinlibdir)
 
 ########################################################################
 #                            Additional flags                          #

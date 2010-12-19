@@ -41,6 +41,3 @@ DEFAULT_INCLUDES = -I. -I`$(CYGPATH_W) $(srcdir)` -I$(top_builddir)/inc
 # and that therefore should be installed in 'includedir/coin'
 includecoindir = $(includedir)/coin
 includecoin_HEADERS = OsiClpSolverInterface.hpp
-
-pkgconfiglibdir = $(libdir)/pkgconfig
-pkgconfiglib_DATA = osi-clp.pc

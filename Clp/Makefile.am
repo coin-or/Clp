@@ -110,17 +110,23 @@ uninstall-local: uninstall-doc
 pkgconfiglibdir = $(libdir)/pkgconfig
 pkgconfiglib_DATA = clp.pc
 
-if COIN_HAS_PKGCONFIG
+if COIN_HAS_OSI
+pkgconfiglib_DATA += osi-clp.pc
+endif
+
 addlibsdir = $(DESTDIR)$(datadir)/coin/doc/Clp
 	
 install-data-hook:
 	@$(mkdir_p) "$(addlibsdir)"
+if COIN_HAS_PKGCONFIG
 	PKG_CONFIG_PATH=@COIN_PKG_CONFIG_PATH@ \
 	$(PKG_CONFIG) --libs clp > $(addlibsdir)/clp_addlibs.txt
+else
+	echo -L@abs_lib_dir@ -lClp @CLPLIB_LIBS_INSTALLED@ > $(addlibsdir)/clp_addlibs.txt
+endif
 
 uninstall-hook:
 	rm -f $(addlibsdir)/clp_addlibs.txt
-endif
 
 ########################################################################
 #                         Maintainer Stuff                             #

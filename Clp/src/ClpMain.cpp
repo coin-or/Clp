@@ -132,9 +132,16 @@ main (int argc, const char *argv[])
                dirMiplib = "../../Data/miplib3/";
           } else {
                directory = ".\\";
+#              ifdef COIN_MSVS
+	       // Visual Studio builds are deeper
+               dirSample = "..\\..\\..\\..\\Data\\Sample\\";
+               dirNetlib = "..\\..\\..\\..\\Data\\Netlib\\";
+               dirMiplib = "..\\..\\..\\..\\Data\\miplib3\\";
+#              else
                dirSample = "..\\..\\Data\\Sample\\";
                dirNetlib = "..\\..\\Data\\Netlib\\";
                dirMiplib = "..\\..\\Data\\miplib3\\";
+#              endif
           }
           std::string defaultDirectory = directory;
           std::string importFile = "";

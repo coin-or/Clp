@@ -9,7 +9,11 @@ int main(int argc, const char *argv[])
      int status;
      if (argc < 2) {
 #if defined(SAMPLEDIR)
-          status = model.readMps(SAMPLEDIR "/p0033.mps", true);
+/*
+  SAMPLEDIR should "path/to/Data/Sample/"
+  Include the quotes and final path separator.
+*/
+          status = model.readMps(SAMPLEDIR "p0033.mps", true);
 #else
           fprintf(stderr, "Do not know where to find sample MPS files.\n");
           exit(1);

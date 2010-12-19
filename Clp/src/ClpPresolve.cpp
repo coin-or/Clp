@@ -115,13 +115,14 @@ ClpPresolve::presolvedModelToFile(ClpSimplex &si, std::string fileName,
                                   int numberPasses,
                                   bool doRowObjective)
 {
+  bool dropNames = false;
      // Check matrix
      if (!si.clpMatrix()->allElementsInRange(&si, si.getSmallElementValue(),
                                              1.0e20))
           return 2;
      saveFile_ = fileName;
      si.saveModel(saveFile_.c_str());
-     ClpSimplex * model = gutsOfPresolvedModel(&si, feasibilityTolerance, keepIntegers, numberPasses, true,
+     ClpSimplex * model = gutsOfPresolvedModel(&si, feasibilityTolerance, keepIntegers, numberPasses, dropNames,
                           doRowObjective);
      if (model == &si) {
           return 0;
@@ -304,6 +305,12 @@ ClpPresolve::postsolve(bool updateStatus)
           }
      } else {
           originalModel_->setProblemStatus( presolvedModel_->status());
+	  // but not if close to feasible
+	  if( originalModel_->sumPrimalInfeasibilities()<1.0e-1) {
+               originalModel_->setProblemStatus( -1);
+               // Say not optimal after presolve
+               originalModel_->setSecondaryStatus(7);
+	  }
      }
 #ifndef CLP_NO_STD
      if (saveFile_ != "")
@@ -502,6 +509,8 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
           // Check number rows dropped
           int lastDropped = 0;
           prob->pass_ = 0;
+	  if (numberPasses_<=5)
+	      prob->presolveOptions_ |= 0x10000; // say more lightweight
           for (iLoop = 0; iLoop < numberPasses_; iLoop++) {
                // See if we want statistics
                if ((presolveActions_ & 0x80000000) != 0)
@@ -763,6 +772,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
 
           }
      }
+     prob->presolveOptions_ &= ~0x10000;
      if (!prob->status_) {
           paction_ = drop_zero_coefficients(prob, paction_);
 #if	PRESOLVE_DEBUG
@@ -1522,10 +1532,12 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
                presolvedModel_ = new ClpSimplex(*originalModel);
 #ifndef CLP_NO_STD
                originalModel->setLengthNames(lengthNames);
+	       presolvedModel_->dropNames();
           } else {
                presolvedModel_ = originalModel;
+	       if (dropNames)
+		 presolvedModel_->dropNames();
           }
-          presolvedModel_->dropNames();
 #endif
 
           // drop integer information if wanted
