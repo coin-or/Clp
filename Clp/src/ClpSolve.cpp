@@ -420,18 +420,18 @@ ClpSimplex::initialSolve(ClpSolve & options)
      // If no status array - set up basis
      if (!status_)
           allSlackBasis();
-     ClpPresolve pinfo;
-     pinfo.setSubstitution(options.substitution());
+     ClpPresolve * pinfo = new ClpPresolve();
+     pinfo->setSubstitution(options.substitution());
      int presolveOptions = options.presolveActions();
      bool presolveToFile = (presolveOptions & 0x40000000) != 0;
      presolveOptions &= ~0x40000000;
      if ((presolveOptions & 0xffff) != 0)
-          pinfo.setPresolveActions(presolveOptions);
+          pinfo->setPresolveActions(presolveOptions);
      // switch off singletons to slacks
-     //pinfo.setDoSingletonColumn(false); // done by bits
+     //pinfo->setDoSingletonColumn(false); // done by bits
      int printOptions = options.getSpecialOption(5);
      if ((printOptions & 1) != 0)
-          pinfo.statistics();
+          pinfo->statistics();
      double timePresolve = 0.0;
      double timeIdiot = 0.0;
      double timeCore = 0.0;
@@ -462,20 +462,20 @@ ClpSimplex::initialSolve(ClpSolve & options)
                presolve = ClpSolve::presolveOn;
                costedSlacks = true;
                // switch on singletons to slacks
-               pinfo.setDoSingletonColumn(true);
+               pinfo->setDoSingletonColumn(true);
                // gub stuff for testing
-               //pinfo.setDoGubrow(true);
+               //pinfo->setDoGubrow(true);
           }
 #ifndef CLP_NO_STD
           if (presolveToFile) {
                // PreSolve to file - not fully tested
                printf("Presolving to file - presolve.save\n");
-               pinfo.presolvedModelToFile(*this, "presolve.save", dblParam_[ClpPresolveTolerance],
+               pinfo->presolvedModelToFile(*this, "presolve.save", dblParam_[ClpPresolveTolerance],
                                           false, numberPasses);
                model2 = this;
           } else {
 #endif
-               model2 = pinfo.presolvedModel(*this, dblParam_[ClpPresolveTolerance],
+               model2 = pinfo->presolvedModel(*this, dblParam_[ClpPresolveTolerance],
                                              false, numberPasses, true, costedSlacks);
 #ifndef CLP_NO_STD
           }
@@ -493,6 +493,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	       eventHandler()->event(ClpEventHandler::presolveInfeasible);
                problemStatus_ = 1; // may be unbounded but who cares
                if (options.infeasibleReturn() || (moreSpecialOptions_ & 1) != 0) {
+		 delete pinfo;
                     return -1;
                }
                presolve = ClpSolve::presolveOff;
@@ -502,12 +503,15 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	      // see if too big or small
 	      if (rcode==2) {
 		  delete model2;
+		 delete pinfo;
 		  return -2;
 	      } else if (rcode==3) {
 		  delete model2;
+		 delete pinfo;
 		  return -3;
 	      }
           }
+	  model2->setMoreSpecialOptions(model2->moreSpecialOptions()&(~1024));
 	  model2->eventHandler()->setSimplex(model2);
           // We may be better off using original (but if dual leave because of bounds)
           if (presolve != ClpSolve::presolveOff &&
@@ -2468,7 +2472,9 @@ ClpSimplex::initialSolve(ClpSolve & options)
                setLogLevel(CoinMin(1, saveLevel));
           else
                setLogLevel(CoinMin(0, saveLevel));
-          pinfo.postsolve(true);
+          pinfo->postsolve(true);
+	  delete pinfo;
+	  pinfo = NULL;
           factorization_->areaFactor(model2->factorization()->adjustedAreaFactor());
           time2 = CoinCpuTime();
           timePresolve += time2 - timeX;
@@ -2576,6 +2582,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
           finalStatus = status();
      }
      eventHandler()->event(ClpEventHandler::presolveEnd);
+     delete pinfo;
      return finalStatus;
 }
 // General solve
@@ -2700,7 +2707,7 @@ ClpSolve::operator=(const ClpSolve & rhs)
 ClpSolve::~ClpSolve (  )
 {
 }
-// See header file for deatils
+// See header file for details
 void
 ClpSolve::setSpecialOption(int which, int value, int extraInfo)
 {
