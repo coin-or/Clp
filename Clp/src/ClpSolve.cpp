@@ -735,6 +735,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
           if (clpMatrix) {
                ClpPlusMinusOneMatrix * newMatrix = new ClpPlusMinusOneMatrix(*(clpMatrix->matrix()));
                if (newMatrix->getIndices()) {
+                  // CHECKME This test of specialOptions and the one above
+                  // don't seem compatible.
                     if ((specialOptions_ & 1024) == 0) {
                          model2->replaceMatrix(newMatrix);
                     } else {
@@ -823,6 +825,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
                                    break;
                               }
                          }
+                         // CHECKME This next bit can't be right...
                          if (value2 > value1) {
                               numberNotE++;
                               if (value2 > 1.0e31 || value1 < -1.0e31)
@@ -2602,7 +2605,7 @@ ClpSimplex::initialDualSolve()
      options.setSolveType(ClpSolve::useDual);
      return initialSolve(options);
 }
-// General dual solve
+// General primal solve
 int
 ClpSimplex::initialPrimalSolve()
 {

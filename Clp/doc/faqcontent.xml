@@ -9,7 +9,7 @@
   <para>
   (DN 08/27/04) The <ulink url="http://www.coin-or.org/">COIN-OR</ulink> LP code
   is designed to be a high quality Simplex code provided under the terms of the
-  <ulink url="http://opensource.org/licenses/cpl.php">Common Public License</ulink>.
+  <ulink url="http://www.opensource.org/licenses/eclipse-1.0.php">Eclipse Public License</ulink>.
   CLP is written in C++, and is primarily intended to be used as a callable
   library (though a rudimentary stand-alone executable exists).
   The first release was version .90.  The current release is version 1.00.2.

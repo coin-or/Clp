@@ -1,6 +1,6 @@
 # Copyright (C) 2006 International Business Machines and others.
 # All Rights Reserved.
-# This file is distributed under the Common Public License.
+# This file is distributed under the Eclipse Public License.
 
 ## $Id: Makefile.am 1152 2007-12-28 03:59:07Z andreasw $
 
