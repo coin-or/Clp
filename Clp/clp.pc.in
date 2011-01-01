@@ -5,6 +5,7 @@ includedir=@includedir@/coin
 
 Name: CLP
 Description: COIN-OR Linear Programming Solver
+URL: https://projects.coin-or.org/Clp
 Version: @PACKAGE_VERSION@
 Libs: -L${libdir} -lClp @CLPLIB_PCLIBS@
 Cflags: -I${includedir}
