@@ -13,8 +13,7 @@ AUTOMAKE_OPTIONS = foreign
 ########################################################################
 
 # Name of the library compiled in this directory.
-coinlibdir = ${libdir}/coin
-coinlib_LTLIBRARIES = libOsiClp.la
+lib_LTLIBRARIES = libOsiClp.la
 
 # List all source files for this library, including headers
 libOsiClp_la_SOURCES = OsiClpSolverInterface.cpp OsiClpSolverInterface.hpp

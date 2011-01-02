@@ -17,9 +17,8 @@ endif
 ########################################################################
 
 # Name of the library compiled in this directory.  We want it to be installed
-# in the 'lib/coin' directory
-coinlibdir = ${libdir}/coin
-coinlib_LTLIBRARIES = libClp.la
+# in the 'lib' directory
+lib_LTLIBRARIES = libClp.la
 
 # List all source files for this library, including headers
 libClp_la_SOURCES = \
@@ -104,7 +103,7 @@ clp_DEPENDENCIES = libClp.la $(CLPLIB_DEPENDENCIES)
 # Finally, the -rpath flag is used by libtool to make sure that the shared
 # library is found (in the lib install directory) when we are using dynamic
 # libraries.
-clp_LDFLAGS = -rpath $(coinlibdir)
+clp_LDFLAGS = -rpath $(libdir)
 
 ########################################################################
 #                            Additional flags                          #
