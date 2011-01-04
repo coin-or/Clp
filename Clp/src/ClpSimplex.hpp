@@ -1070,6 +1070,7 @@ public:
          128 bit - no objective, 0-1 and in B&B
          256 bit - in primal from dual or vice versa
          512 bit - alternative use of solveType_
+         1024 bit - don't do row copy of factorization
      */
      inline int moreSpecialOptions() const {
           return moreSpecialOptions_;
@@ -1085,6 +1086,7 @@ public:
          128 bit - no objective, 0-1 and in B&B
          256 bit - in primal from dual or vice versa
          512 bit - alternative use of solveType_
+         1024 bit - don't do row copy of factorization
      */
      inline void setMoreSpecialOptions(int value) {
           moreSpecialOptions_ = value;

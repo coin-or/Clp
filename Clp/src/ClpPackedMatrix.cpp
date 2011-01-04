@@ -19,19 +19,6 @@
 // at end to get min/max!
 #include "ClpPackedMatrix.hpp"
 #include "ClpMessage.hpp"
-//#define COIN_PREFETCH
-#ifdef COIN_PREFETCH
-#if 1
-#define coin_prefetch(mem) \
-         __asm__ __volatile__ ("prefetchnta %0" : : "m" (*((char *)(mem))))
-#else
-#define coin_prefetch(mem) \
-         __asm__ __volatile__ ("prefetch %0" : : "m" (*((char *)(mem))))
-#endif
-#else
-// dummy
-#define coin_prefetch(mem)
-#endif
 #ifdef INTEL_MKL
 #include "mkl_spblas.h"
 #endif
@@ -60,7 +47,11 @@ ClpPackedMatrix::ClpPackedMatrix ()
 ClpPackedMatrix::ClpPackedMatrix (const ClpPackedMatrix & rhs)
      : ClpMatrixBase(rhs)
 {
+#ifndef COIN_SPARSE_MATRIX
      matrix_ = new CoinPackedMatrix(*(rhs.matrix_), -1, -1);
+#else
+     matrix_ = new CoinPackedMatrix(*(rhs.matrix_), -0, -0);
+#endif
      numberActiveColumns_ = rhs.numberActiveColumns_;
      flags_ = rhs.flags_ & (~2);
      int numberRows = matrix_->getNumRows();
@@ -100,7 +91,11 @@ ClpPackedMatrix::ClpPackedMatrix (CoinPackedMatrix * rhs)
 ClpPackedMatrix::ClpPackedMatrix (const CoinPackedMatrix & rhs)
      : ClpMatrixBase()
 {
+#ifndef COIN_SPARSE_MATRIX
      matrix_ = new CoinPackedMatrix(rhs, -1, -1);
+#else
+     matrix_ = new CoinPackedMatrix(rhs, -0, -0);
+#endif
      numberActiveColumns_ = matrix_->getNumCols();
      rowCopy_ = NULL;
      flags_ = 0;
@@ -128,7 +123,11 @@ ClpPackedMatrix::operator=(const ClpPackedMatrix& rhs)
      if (this != &rhs) {
           ClpMatrixBase::operator=(rhs);
           delete matrix_;
+#ifndef COIN_SPARSE_MATRIX
           matrix_ = new CoinPackedMatrix(*(rhs.matrix_));
+#else
+	  matrix_ = new CoinPackedMatrix(*(rhs.matrix_), -0, -0);
+#endif
           numberActiveColumns_ = rhs.numberActiveColumns_;
           flags_ = rhs.flags_;
           delete rowCopy_;
@@ -1148,18 +1147,35 @@ ClpPackedMatrix::transposeTimesByRow(const ClpSimplex * model, double scalar,
           if (packed) {
                int * index = columnArray->getIndices();
                double * array = columnArray->denseVector();
-#ifdef COIN_SPARSE_MATRIX
+#if 0
+	       {
+		 double  * array2 = y->denseVector();
+		 int numberColumns = matrix_->getNumCols();
+		 for (int i=0;i<numberColumns;i++) {
+		   assert(!array[i]);
+		   assert(!array2[i]);
+		 }
+	       }
+#endif
+	       //#define COIN_SPARSE_MATRIX 1
+#if COIN_SPARSE_MATRIX
                assert (!y->getNumElements());
+#if COIN_SPARSE_MATRIX != 2
                // and set up mark as char array
                char * marked = reinterpret_cast<char *> (index+columnArray->capacity());
                int * lookup = y->getIndices();
-               //int numberRows = matrix_->getNumRows();
 #ifndef NDEBUG
+               //int numberColumns = matrix_->getNumCols();
                //for (int i=0;i<numberColumns;i++)
                //assert(!marked[i]);
 #endif
-               numberNonZero=gutsOfTransposeTimesByRowGE3(rowArray,index,array,
+               numberNonZero=gutsOfTransposeTimesByRowGE3a(rowArray,index,array,
                				   lookup,marked,zeroTolerance,scalar);
+#else
+               double  * array2 = y->denseVector();
+               numberNonZero=gutsOfTransposeTimesByRowGE3(rowArray,index,array,
+               				   array2,zeroTolerance,scalar);
+#endif
 #else
                int numberColumns = matrix_->getNumCols();
                numberNonZero = gutsOfTransposeTimesByRowGEK(rowArray, index, array,
@@ -1832,21 +1848,30 @@ ClpPackedMatrix::subsetTransposeTimes(const ClpSimplex * model,
           columnStart = scaledMatrix->getVectorStarts();
           elementByColumn = scaledMatrix->getElements();
      }
-     if (!(flags & 2) && numberToDo) {
+     if (!(flags & 2) && numberToDo>2) {
           // no gaps
           if (!rowScale) {
                int iColumn = which[0];
                double value = 0.0;
                CoinBigIndex j;
+	       int columnNext = which[1];
+               CoinBigIndex startNext=columnStart[columnNext];
+	       coin_prefetch_const(row+startNext); 
+	       coin_prefetch_const(elementByColumn+startNext); 
+               CoinBigIndex endNext=columnStart[columnNext+1];
                for (j = columnStart[iColumn];
                          j < columnStart[iColumn+1]; j++) {
                     int iRow = row[j];
                     value += pi[iRow] * elementByColumn[j];
                }
-               for (jColumn = 0; jColumn < numberToDo - 1; jColumn++) {
-                    int iColumn = which[jColumn+1];
-                    CoinBigIndex start = columnStart[iColumn];
-                    CoinBigIndex end = columnStart[iColumn+1];
+               for (jColumn = 0; jColumn < numberToDo - 2; jColumn++) {
+                    CoinBigIndex start = startNext;
+                    CoinBigIndex end = endNext;
+                    columnNext = which[jColumn+2];
+		    startNext=columnStart[columnNext];
+		    coin_prefetch_const(row+startNext); 
+		    coin_prefetch_const(elementByColumn+startNext); 
+		    endNext=columnStart[columnNext+1];
                     array[jColumn] = value;
                     value = 0.0;
                     for (j = start; j < end; j++) {
@@ -1854,6 +1879,12 @@ ClpPackedMatrix::subsetTransposeTimes(const ClpSimplex * model,
                          value += pi[iRow] * elementByColumn[j];
                     }
                }
+	       array[jColumn++] = value;
+	       value = 0.0;
+	       for (j = startNext; j < endNext; j++) {
+		 int iRow = row[j];
+		 value += pi[iRow] * elementByColumn[j];
+	       }
                array[jColumn] = value;
           } else {
 #ifdef CLP_INVESTIGATE
@@ -4112,7 +4143,7 @@ ClpPackedMatrix::allElementsInRange(ClpModel * model,
      return true;
 }
 int
-ClpPackedMatrix::gutsOfTransposeTimesByRowGE3(const CoinIndexedVector * COIN_RESTRICT piVector,
+ClpPackedMatrix::gutsOfTransposeTimesByRowGE3a(const CoinIndexedVector * COIN_RESTRICT piVector,
           int * COIN_RESTRICT index,
           double * COIN_RESTRICT output,
           int * COIN_RESTRICT lookup,
@@ -4127,17 +4158,26 @@ ClpPackedMatrix::gutsOfTransposeTimesByRowGE3(const CoinIndexedVector * COIN_RES
      const CoinBigIndex * COIN_RESTRICT rowStart = matrix_->getVectorStarts();
      const double * COIN_RESTRICT element = matrix_->getElements();
      const int * COIN_RESTRICT whichRow = piVector->getIndices();
+     int * fakeRow = const_cast<int *> (whichRow);
+     fakeRow[numberInRowArray]=0; // so can touch
 #ifndef NDEBUG
      int maxColumn = 0;
 #endif
      // ** Row copy is already scaled
-     int iRow;
-     int i;
-     for (i = 0; i < numberInRowArray; i++) {
-          iRow = whichRow[i];
+     int nextRow=whichRow[0];
+     CoinBigIndex nextStart = rowStart[nextRow]; 
+     CoinBigIndex nextEnd = rowStart[nextRow+1]; 
+     for (int i = 0; i < numberInRowArray; i++) {
           double value = pi[i] * scalar;
+	  CoinBigIndex start=nextStart;
+	  CoinBigIndex end=nextEnd;
+	  nextRow=whichRow[i+1];
+	  nextStart = rowStart[nextRow]; 
+	  coin_prefetch_const(column + nextStart);
+	  coin_prefetch_const(element + nextStart);
+	  nextEnd = rowStart[nextRow+1]; 
           CoinBigIndex j;
-          for (j = rowStart[iRow]; j < rowStart[iRow+1]; j++) {
+          for (j = start; j < end; j++) {
                int iColumn = column[j];
 #ifndef NDEBUG
                maxColumn = CoinMax(maxColumn, iColumn);
@@ -4159,7 +4199,7 @@ ClpPackedMatrix::gutsOfTransposeTimesByRowGE3(const CoinIndexedVector * COIN_RES
      int saveN = numberNonZero;
 #endif
      // get rid of tiny values and zero out lookup
-     for (i = 0; i < numberNonZero; i++) {
+     for (int i = 0; i < numberNonZero; i++) {
           int iColumn = index[i];
           marked[iColumn] = 0;
           double value = output[i];
@@ -4181,11 +4221,62 @@ ClpPackedMatrix::gutsOfTransposeTimesByRowGE3(const CoinIndexedVector * COIN_RES
           }
      }
 #ifndef NDEBUG
-     for (i = numberNonZero; i < saveN; i++)
+     for (int i = numberNonZero; i < saveN; i++)
           assert(!output[i]);
-     for (i = 0; i <= maxColumn; i++)
+     for (int i = 0; i <= maxColumn; i++)
           assert (!marked[i]);
 #endif
+     return numberNonZero;
+}
+int
+ClpPackedMatrix::gutsOfTransposeTimesByRowGE3(const CoinIndexedVector * COIN_RESTRICT piVector,
+          int * COIN_RESTRICT index,
+          double * COIN_RESTRICT output,
+          double * COIN_RESTRICT array,
+          const double tolerance,
+          const double scalar) const
+{
+     const double * COIN_RESTRICT pi = piVector->denseVector();
+     int numberNonZero = 0;
+     int numberInRowArray = piVector->getNumElements();
+     const int * COIN_RESTRICT column = matrix_->getIndices();
+     const CoinBigIndex * COIN_RESTRICT rowStart = matrix_->getVectorStarts();
+     const double * COIN_RESTRICT element = matrix_->getElements();
+     const int * COIN_RESTRICT whichRow = piVector->getIndices();
+     // ** Row copy is already scaled
+     for (int i = 0; i < numberInRowArray; i++) {
+          int iRow = whichRow[i];
+          double value = pi[i] * scalar;
+          CoinBigIndex j;
+          for (j = rowStart[iRow]; j < rowStart[iRow+1]; j++) {
+               int iColumn = column[j];
+	       double inValue = array[iColumn];
+               double elValue = element[j];
+               elValue *= value;
+	       if (inValue) {
+		 double outValue = inValue + elValue;
+		 if (!outValue)
+		   outValue = COIN_INDEXED_REALLY_TINY_ELEMENT;
+		 array[iColumn] = outValue;
+               } else {
+		 array[iColumn] = elValue;
+		 assert (elValue);
+		 index[numberNonZero++] = iColumn;
+               }
+          }
+     }
+     int saveN = numberNonZero;
+     // get rid of tiny values
+     numberNonZero=0;
+     for (int i = 0; i < saveN; i++) {
+          int iColumn = index[i];
+          double value = array[iColumn];
+	  array[iColumn] =0.0;
+          if (fabs(value) > tolerance) {
+	    output[numberNonZero] = value;
+	    index[numberNonZero++] = iColumn;
+          }
+     }
      return numberNonZero;
 }
 /* Given positive integer weights for each row fills in sum of weights
@@ -5192,21 +5283,21 @@ static int doOneBlock(double * array, int * index,
                nextN = rowStart[numberInRowArray] - nextStart;
                rowStart++;
                if (nextN) {
-                    coin_prefetch(element + nextStart);
+                    coin_prefetch_const(element + nextStart);
                     nextPi = pi[iWhich];
                     break;
                }
           }
           CoinBigIndex end = j + n;
-          //coin_prefetch(element+rowStart_[i+1]);
-          //coin_prefetch(column_+rowStart_[i+1]);
+          //coin_prefetch_const(element+rowStart_[i+1]);
+          //coin_prefetch_const(column_+rowStart_[i+1]);
           if (n < 100) {
                if ((n & 1) != 0) {
                     unsigned int jColumn = column[j];
                     array[jColumn] -= value * element[j];
                     j++;
                }
-               coin_prefetch(column + nextStart);
+               coin_prefetch_const(column + nextStart);
                for (; j < end; j += 2) {
                     unsigned int jColumn0 = column[j];
                     double value0 = value * element[j];
@@ -5245,9 +5336,9 @@ static int doOneBlock(double * array, int * index,
                     array[jColumn3] -= value3;
                     j += 4;
                }
-               //coin_prefetch(column+nextStart);
+               //coin_prefetch_const(column+nextStart);
                for (; j < end; j += 8) {
-                    coin_prefetch(element + j + 16);
+                    coin_prefetch_const(element + j + 16);
                     unsigned int jColumn0 = column[j];
                     double value0 = value * element[j];
                     unsigned int jColumn1 = column[j+1];
@@ -5260,7 +5351,7 @@ static int doOneBlock(double * array, int * index,
                     array[jColumn1] -= value1;
                     array[jColumn2] -= value2;
                     array[jColumn3] -= value3;
-                    coin_prefetch(column + j + 16);
+                    coin_prefetch_const(column + j + 16);
                     jColumn0 = column[j+4];
                     value0 = value * element[j+4];
                     jColumn1 = column[j+5];

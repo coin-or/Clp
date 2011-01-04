@@ -1736,7 +1736,8 @@ int ClpSimplex::internalFactorize ( int solveType)
      //if (factorization_->sparseThreshold()) {
      // get default value
      factorization_->sparseThreshold(0);
-     factorization_->goSparse();
+     if (!(moreSpecialOptions_&1024))
+       factorization_->goSparse();
      //}
 
      return status;

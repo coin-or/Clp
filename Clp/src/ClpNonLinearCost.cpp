@@ -781,8 +781,15 @@ ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
      }
 #endif
      if (CLP_METHOD2) {
+       //#define CLP_NON_JUST_BASIC
+#ifndef CLP_NON_JUST_BASIC
           // nonbasic should be at a valid bound
           for (iSequence = 0; iSequence < numberTotal; iSequence++) {
+#else
+	  const int * pivotVariable = model_->pivotVariable();
+	  for (int i=0;i<numberRows_;i++) {
+	    int iSequence = pivotVariable[i];
+#endif
                double value = solution[iSequence];
                unsigned char iStatus = status_[iSequence];
                assert (currentStatus(iStatus) == CLP_SAME);

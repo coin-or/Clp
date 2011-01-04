@@ -2711,6 +2711,9 @@ costs this much to be infeasible",
      parameters[numberParameters-1].append("rows");
      parameters[numberParameters-1].append("all");
      parameters[numberParameters-1].append("csv");
+     parameters[numberParameters-1].append("bound!ranging");
+     parameters[numberParameters-1].append("rhs!ranging");
+     parameters[numberParameters-1].append("objective!ranging");
      parameters[numberParameters-1].setLonghelp
      (
           "This changes the amount and format of printing a solution:\nnormal - nonzero column variables \n\

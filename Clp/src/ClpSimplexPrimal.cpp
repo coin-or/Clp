@@ -95,6 +95,33 @@
 #include <string>
 #include <stdio.h>
 #include <iostream>
+#ifdef CLP_USER_DRIVEN1
+/* Returns true if variable sequenceOut can leave basis when
+   model->sequenceIn() enters.
+   This function may be entered several times for each sequenceOut.  
+   The first time realAlpha will be positive if going to lower bound
+   and negative if going to upper bound (scaled bounds in lower,upper) - then will be zero.
+   currentValue is distance to bound.
+   currentTheta is current theta.
+   alpha is fabs(pivot element).
+   Variable will change theta if currentValue - currentTheta*alpha < 0.0
+*/
+bool userChoiceValid1(const ClpSimplex * model,
+		      int sequenceOut,
+		      double currentValue,
+		      double currentTheta,
+		      double alpha,
+		      double realAlpha);
+/* This returns true if chosen in/out pair valid.
+   The main thing to check would be variable flipping bounds may be
+   OK.  This would be signaled by reasonable theta_ and valueOut_.
+   If you return false sequenceIn_ will be flagged as ineligible.
+*/
+bool userChoiceValid2(const ClpSimplex * model);
+/* If a good pivot then you may wish to unflag some variables.
+ */
+void userChoiceWasGood(ClpSimplex * model);
+#endif
 // primal
 int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
 {
@@ -1670,6 +1697,12 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
                assert (oldValue >= -tolerance);
                if (possible) {
                     value = oldValue - upperTheta * alpha;
+#ifdef CLP_USER_DRIVEN1
+		    int sequenceOut=pivotVariable_[index[iIndex]];
+		    if(!userChoiceValid1(this,sequenceOut,oldValue,
+					 upperTheta,alpha,work[iIndex]*way))
+		      value =0.0; // say can't use
+#endif
                     if (value < -primalTolerance_ && alpha >= acceptablePivot) {
                          upperTheta = (oldValue + primalTolerance_) / alpha;
                          pivotOne = numberRemaining;
@@ -1734,6 +1767,12 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
                     double oldValue = rhs[iIndex];
                     double value = oldValue - upperTheta * alpha;
 
+#ifdef CLP_USER_DRIVEN1
+		    int sequenceOut=pivotVariable_[index[iIndex]];
+		    if(!userChoiceValid1(this,sequenceOut,oldValue,
+					 upperTheta,alpha, 0.0))
+		      value =0.0; // say can't use
+#endif
                     if (value < -primalTolerance_ && alpha >= acceptablePivot) {
                          upperTheta = (oldValue + primalTolerance_) / alpha;
                          iBest = iIndex; // just in case weird numbers
@@ -1761,7 +1800,12 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
                               bestPivot = alpha;
                               theta_ = oldValue / bestPivot;
                               pivotRow_ = iIndex;
-                         } else if (alpha < acceptablePivot) {
+                         } else if (alpha < acceptablePivot
+#ifdef CLP_USER_DRIVEN1
+		      ||!userChoiceValid1(this,pivotVariable_[index[iIndex]],
+					  oldValue,upperTheta,alpha,0.0)
+#endif
+				    ) {
                               if (value < -primalTolerance_)
                                    sumInfeasibilities += -value - primalTolerance_;
                          }
@@ -2865,6 +2909,10 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
                }
           }
           if (pivotRow_ >= 0) {
+ #ifdef CLP_USER_DRIVEN1
+	       // Got good pivot - may need to unflag stuff
+	       userChoiceWasGood(this);
+ #endif
                if (solveType_ == 2 && (moreSpecialOptions_ & 512) == 0) {
                     // **** Coding for user interface
                     // do ray
@@ -3000,6 +3048,27 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
                          solution_[sequenceIn_] += theta_;
                     }
                     rowArray_[0]->clear();
+ #ifdef CLP_USER_DRIVEN1
+		    /* Note if valueOut_ < COIN_DBL_MAX and
+		       theta_ reasonable then this may be a valid sub flip */
+		    if(!userChoiceValid2(this)) {
+		      if (factorization_->pivots()<5) {
+			// flag variable
+			char x = isColumn(sequenceIn_) ? 'C' : 'R';
+			handler_->message(CLP_SIMPLEX_FLAG, messages_)
+			  << x << sequenceWithin(sequenceIn_)
+			  << CoinMessageEol;
+			setFlagged(sequenceIn_);
+			progress_.clearBadTimes();
+			roundAgain = true;
+			continue;
+		      } else {
+			// try refactorizing first
+			returnCode = 4; //say looks odd but has iterated
+			break;
+		      }
+		    }
+ #endif
                     if (!factorization_->pivots() && acceptablePivot_ <= 1.0e-8) {
                          returnCode = 2; //say looks unbounded
                          // do ray

@@ -611,54 +611,62 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
                     presolve_consistent(prob, true) ;
 #endif
 
-
-                    // set up for next pass
-                    // later do faster if many changes i.e. memset and memcpy
-                    prob->numberRowsToDo_ = prob->numberNextRowsToDo_;
-                    //int kcheck;
-                    //bool found=false;
-                    //kcheck=-1;
-                    for (i = 0; i < prob->numberNextRowsToDo_; i++) {
-                         int index = prob->nextRowsToDo_[i];
-                         prob->unsetRowChanged(index);
-                         prob->rowsToDo_[i] = index;
-                         //if (index==kcheck) {
-                         //printf("row %d on list after pass %d\n",kcheck,
-                         //   whichPass);
-                         //found=true;
-                         //}
-                    }
-                    //if (!found&&kcheck>=0)
-                    //prob->rowsToDo_[prob->numberRowsToDo_++]=kcheck;
-                    prob->numberNextRowsToDo_ = 0;
-                    prob->numberColsToDo_ = prob->numberNextColsToDo_;
-                    //kcheck=-1;
-                    //found=false;
-                    for (i = 0; i < prob->numberNextColsToDo_; i++) {
-                         int index = prob->nextColsToDo_[i];
-                         prob->unsetColChanged(index);
-                         prob->colsToDo_[i] = index;
-                         //if (index==kcheck) {
-                         //printf("col %d on list after pass %d\n",kcheck,
-                         //   whichPass);
-                         //found=true;
-                         //}
-                    }
-                    //if (!found&&kcheck>=0)
-                    //prob->colsToDo_[prob->numberColsToDo_++]=kcheck;
-                    prob->numberNextColsToDo_ = 0;
+		    {
+		      // set up for next pass
+		      // later do faster if many changes i.e. memset and memcpy
+		      const int * count = prob->hinrow_;
+		      const int * nextToDo = prob->nextRowsToDo_;
+		      int * toDo = prob->rowsToDo_;
+		      int nNext = prob->numberNextRowsToDo_;
+		      int n = 0;
+		      for (int i = 0; i < nNext; i++) {
+			int index = nextToDo[i];
+			prob->unsetRowChanged(index);
+			if (count[index]) 
+			  toDo[n++] = index;
+		      }
+		      prob->numberRowsToDo_ = n;
+		      prob->numberNextRowsToDo_ = 0;
+		      count = prob->hincol_;
+		      nextToDo = prob->nextColsToDo_;
+		      toDo = prob->colsToDo_;
+		      nNext = prob->numberNextColsToDo_;
+		      n = 0;
+		      for (int i = 0; i < nNext; i++) {
+			int index = nextToDo[i];
+			prob->unsetColChanged(index);
+			if (count[index]) 
+			  toDo[n++] = index;
+		      }
+		      prob->numberColsToDo_ = n;
+		      prob->numberNextColsToDo_ = 0;
+		    }
                     if (paction_ == paction1 && fill_level > 0)
                          break;
                }
                // say look at all
                int i;
                if (!prob->anyProhibited()) {
-                    for (i = 0; i < nrows_; i++)
-                         prob->rowsToDo_[i] = i;
-                    prob->numberRowsToDo_ = nrows_;
-                    for (i = 0; i < ncols_; i++)
-                         prob->colsToDo_[i] = i;
-                    prob->numberColsToDo_ = ncols_;
+		 const int * count = prob->hinrow_;
+		 int * toDo = prob->rowsToDo_;
+		 int n = 0;
+		 for (int i = 0; i < nrows_; i++) {
+		   prob->unsetRowChanged(i);
+		   if (count[i]) 
+		     toDo[n++] = i;
+		 }
+		 prob->numberRowsToDo_ = n;
+		 prob->numberNextRowsToDo_ = 0;
+		 count = prob->hincol_;
+		 toDo = prob->colsToDo_;
+		 n = 0;
+		 for (int i = 0; i < ncols_; i++) {
+		   prob->unsetColChanged(i);
+		   if (count[i]) 
+		     toDo[n++] = i;
+		 }
+		 prob->numberColsToDo_ = n;
+		 prob->numberNextColsToDo_ = 0;
                } else {
                     // some stuff must be left alone
                     prob->numberRowsToDo_ = 0;

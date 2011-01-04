@@ -88,6 +88,41 @@ static void generateCode(const char * fileName, int type);
 int CbcOrClpRead_mode = 1;
 FILE * CbcOrClpReadCommand = stdin;
 extern int CbcOrClpEnvironmentIndex;
+#ifdef CLP_USER_DRIVEN1
+/* Returns true if variable sequenceOut can leave basis when
+   model->sequenceIn() enters.
+   This function may be entered several times for each sequenceOut.  
+   The first time realAlpha will be positive if going to lower bound
+   and negative if going to upper bound (scaled bounds in lower,upper) - then will be zero.
+   currentValue is distance to bound.
+   currentTheta is current theta.
+   alpha is fabs(pivot element).
+   Variable will change theta if currentValue - currentTheta*alpha < 0.0
+*/
+bool userChoiceValid1(const ClpSimplex * model,
+		      int sequenceOut,
+		      double currentValue,
+		      double currentTheta,
+		      double alpha,
+		      double realAlpha)
+{
+  return true;
+}
+/* This returns true if chosen in/out pair valid.
+   The main thing to check would be variable flipping bounds may be
+   OK.  This would be signaled by reasonable theta_ and valueOut_.
+   If you return false sequenceIn_ will be flagged as ineligible.
+*/
+bool userChoiceValid2(const ClpSimplex * model)
+{
+  return true;
+}
+/* If a good pivot then you may wish to unflag some variables.
+ */
+void userChoiceWasGood(ClpSimplex * model)
+{
+}
+#endif
 
 int
 #if defined(_MSC_VER)
@@ -1722,6 +1757,11 @@ clp watson.mps -\nscaling off\nprimalsimplex"
                               if (goodModels[iModel]) {
                                    // get next field
                                    field = CoinReadGetString(argc, argv);
+				   bool append = false;
+				   if (field == "append$") {
+				     field = "$";
+				     append = true;
+				   }
                                    if (field == "$") {
                                         field = parameters[iParam].stringValue();
                                    } else if (field == "EOL") {
@@ -1755,7 +1795,10 @@ clp watson.mps -\nscaling off\nprimalsimplex"
                                         } else {
                                              fileName = directory + field;
                                         }
-                                        fp = fopen(fileName.c_str(), "w");
+					if (!append)
+					  fp = fopen(fileName.c_str(), "w");
+					else
+					  fp = fopen(fileName.c_str(), "a");
                                    }
                                    if (fp) {
                                         // Write solution header (suggested by Luigi Poderico)
@@ -1897,6 +1940,145 @@ clp watson.mps -\nscaling off\nprimalsimplex"
                                                   delete [] newMasks[i];
                                              delete [] newMasks;
                                         }
+					if (printMode > 5) {
+					  int numberColumns = models[iModel].numberColumns();
+					  // column length unless rhs ranging
+					  int number = numberColumns;
+					  switch (printMode) {
+					    // bound ranging
+					    case 6:
+					      fprintf(fp,"Bound ranging");
+					      break;
+					    // rhs ranging
+					    case 7:
+					      fprintf(fp,"Rhs ranging");
+					      number = numberRows;
+					      break;
+					    // objective ranging
+					    case 8:
+					      fprintf(fp,"Objective ranging");
+					      break;
+					  }
+					  if (lengthName)
+					    fprintf(fp,",name");
+					  fprintf(fp,",increase,variable,decrease,variable\n");
+					  int * which = new int [ number];
+					  if (printMode != 7) {
+					    if (!doMask) {
+					      for (int i = 0; i < number;i ++)
+						which[i]=i;
+					    } else {
+					      int n = 0;
+					      for (int i = 0; i < number;i ++) {
+						if (maskMatches(maskStarts,masks,columnNames[i]))
+						  which[n++]=i;
+					      }
+					      if (n) {
+						number=n;
+					      } else {
+						printf("No names match - doing all\n");
+						for (int i = 0; i < number;i ++)
+						  which[i]=i;
+					      }
+					    }
+					  } else {
+					    if (!doMask) {
+					      for (int i = 0; i < number;i ++)
+						which[i]=i+numberColumns;
+					    } else {
+					      int n = 0;
+					      for (int i = 0; i < number;i ++) {
+						if (maskMatches(maskStarts,masks,rowNames[i]))
+						  which[n++]=i+numberColumns;
+					      }
+					      if (n) {
+						number=n;
+					      } else {
+						printf("No names match - doing all\n");
+						for (int i = 0; i < number;i ++)
+						  which[i]=i+numberColumns;
+					      }
+					    }
+					  }
+					  double * valueIncrease = new double [ number];
+					  int * sequenceIncrease = new int [ number];
+					  double * valueDecrease = new double [ number];
+					  int * sequenceDecrease = new int [ number];
+					  switch (printMode) {
+					    // bound or rhs ranging
+					    case 6:
+					    case 7:
+					      models[iModel].primalRanging(numberRows,
+									   which, valueIncrease, sequenceIncrease,
+									   valueDecrease, sequenceDecrease);
+					      break;
+					    // objective ranging
+					    case 8:
+					      models[iModel].dualRanging(number,
+									   which, valueIncrease, sequenceIncrease,
+									   valueDecrease, sequenceDecrease);
+					      break;
+					  }
+					  for (int i = 0; i < number; i++) {
+					    int iWhich = which[i];
+					    fprintf(fp, "%d,", (iWhich<numberColumns) ? iWhich : iWhich-numberColumns);
+					    if (lengthName) {
+					      const char * name = (printMode==7) ? rowNames[iWhich-numberColumns].c_str() : columnNames[iWhich].c_str();
+					      fprintf(fp,"%s,",name);
+					    }
+					    if (valueIncrease[i]<1.0e30) {
+					      fprintf(fp, "%.10g,", valueIncrease[i]);
+					      int outSequence = sequenceIncrease[i];
+					      if (outSequence<numberColumns) {
+						if (lengthName)
+						  fprintf(fp,"%s,",columnNames[outSequence].c_str());
+						else
+						  fprintf(fp,"C%7.7d,",outSequence);
+					      } else {
+						outSequence -= numberColumns;
+						if (lengthName)
+						  fprintf(fp,"%s,",rowNames[outSequence].c_str());
+						else
+						  fprintf(fp,"R%7.7d,",outSequence);
+					      }
+					    } else {
+					      fprintf(fp,"1.0e100,,");
+					    }
+					    if (valueDecrease[i]<1.0e30) {
+					      fprintf(fp, "%.10g,", valueDecrease[i]);
+					      int outSequence = sequenceDecrease[i];
+					      if (outSequence<numberColumns) {
+						if (lengthName)
+						  fprintf(fp,"%s",columnNames[outSequence].c_str());
+						else
+						  fprintf(fp,"C%7.7d",outSequence);
+					      } else {
+						outSequence -= numberColumns;
+						if (lengthName)
+						  fprintf(fp,"%s",rowNames[outSequence].c_str());
+						else
+						  fprintf(fp,"R%7.7d",outSequence);
+					      }
+					    } else {
+					      fprintf(fp,"1.0e100,");
+					    }
+					    fprintf(fp,"\n");
+					  }
+					  if (fp != stdout)
+					    fclose(fp);
+					  delete [] which;
+					  delete [] valueIncrease;
+					  delete [] sequenceIncrease;
+					  delete [] valueDecrease;
+					  delete [] sequenceDecrease;
+					  if (masks) {
+					    delete [] maskStarts;
+					    for (int i = 0; i < maxMasks; i++)
+					      delete [] masks[i];
+					    delete [] masks;
+					  }
+					  break;
+					}
                                         if (printMode > 2) {
                                              for (iRow = 0; iRow < numberRows; iRow++) {
                                                   int type = printMode - 3;

@@ -419,6 +419,13 @@ private:
      int gutsOfTransposeTimesByRowGE3(const CoinIndexedVector * COIN_RESTRICT piVector,
                                       int * COIN_RESTRICT index,
                                       double * COIN_RESTRICT output,
+                                      double * COIN_RESTRICT array2,
+                                      const double tolerance,
+                                      const double scalar) const;
+     /// Meat of transposeTimes by row n > 2 if packed - returns number nonzero
+     int gutsOfTransposeTimesByRowGE3a(const CoinIndexedVector * COIN_RESTRICT piVector,
+                                      int * COIN_RESTRICT index,
+                                      double * COIN_RESTRICT output,
                                       int * COIN_RESTRICT lookup,
                                       char * COIN_RESTRICT marked,
                                       const double tolerance,

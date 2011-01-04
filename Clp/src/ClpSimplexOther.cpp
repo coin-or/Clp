@@ -1307,6 +1307,8 @@ ClpSimplexOther::crunch(double * rhs, int * whichRow, int * whichColumn,
      }
      ClpSimplex * small = NULL;
      if (!returnCode) {
+       //printf("CRUNCH from (%d,%d) to (%d,%d)\n",
+       //     numberRows_,numberColumns_,numberRows2,numberColumns2);
           small = new ClpSimplex(this, numberRows2, whichRow,
                                  numberColumns2, whichColumn, true, false);
 #if 0
