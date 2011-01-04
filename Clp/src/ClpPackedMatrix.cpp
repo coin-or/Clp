@@ -1856,8 +1856,8 @@ ClpPackedMatrix::subsetTransposeTimes(const ClpSimplex * model,
                CoinBigIndex j;
 	       int columnNext = which[1];
                CoinBigIndex startNext=columnStart[columnNext];
-	       coin_prefetch_const(row+startNext); 
-	       coin_prefetch_const(elementByColumn+startNext); 
+	       //coin_prefetch_const(row+startNext); 
+	       //coin_prefetch_const(elementByColumn+startNext); 
                CoinBigIndex endNext=columnStart[columnNext+1];
                for (j = columnStart[iColumn];
                          j < columnStart[iColumn+1]; j++) {
@@ -1869,8 +1869,8 @@ ClpPackedMatrix::subsetTransposeTimes(const ClpSimplex * model,
                     CoinBigIndex end = endNext;
                     columnNext = which[jColumn+2];
 		    startNext=columnStart[columnNext];
-		    coin_prefetch_const(row+startNext); 
-		    coin_prefetch_const(elementByColumn+startNext); 
+		    //coin_prefetch_const(row+startNext); 
+		    //coin_prefetch_const(elementByColumn+startNext); 
 		    endNext=columnStart[columnNext+1];
                     array[jColumn] = value;
                     value = 0.0;
@@ -4173,8 +4173,8 @@ ClpPackedMatrix::gutsOfTransposeTimesByRowGE3a(const CoinIndexedVector * COIN_RE
 	  CoinBigIndex end=nextEnd;
 	  nextRow=whichRow[i+1];
 	  nextStart = rowStart[nextRow]; 
-	  coin_prefetch_const(column + nextStart);
-	  coin_prefetch_const(element + nextStart);
+	  //coin_prefetch_const(column + nextStart);
+	  //coin_prefetch_const(element + nextStart);
 	  nextEnd = rowStart[nextRow+1]; 
           CoinBigIndex j;
           for (j = start; j < end; j++) {
@@ -5283,7 +5283,7 @@ static int doOneBlock(double * array, int * index,
                nextN = rowStart[numberInRowArray] - nextStart;
                rowStart++;
                if (nextN) {
-                    coin_prefetch_const(element + nextStart);
+                    //coin_prefetch_const(element + nextStart);
                     nextPi = pi[iWhich];
                     break;
                }
@@ -5297,7 +5297,7 @@ static int doOneBlock(double * array, int * index,
                     array[jColumn] -= value * element[j];
                     j++;
                }
-               coin_prefetch_const(column + nextStart);
+               //coin_prefetch_const(column + nextStart);
                for (; j < end; j += 2) {
                     unsigned int jColumn0 = column[j];
                     double value0 = value * element[j];
@@ -5338,7 +5338,7 @@ static int doOneBlock(double * array, int * index,
                }
                //coin_prefetch_const(column+nextStart);
                for (; j < end; j += 8) {
-                    coin_prefetch_const(element + j + 16);
+                    //coin_prefetch_const(element + j + 16);
                     unsigned int jColumn0 = column[j];
                     double value0 = value * element[j];
                     unsigned int jColumn1 = column[j+1];
@@ -5351,7 +5351,7 @@ static int doOneBlock(double * array, int * index,
                     array[jColumn1] -= value1;
                     array[jColumn2] -= value2;
                     array[jColumn3] -= value3;
-                    coin_prefetch_const(column + j + 16);
+                    //coin_prefetch_const(column + j + 16);
                     jColumn0 = column[j+4];
                     value0 = value * element[j+4];
                     jColumn1 = column[j+5];
