@@ -1,6 +1,8 @@
 /* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
+// This code is licensed under the terms of the Eclipse Public License (EPL).
+
 // "Idiot" as the name of this algorithm is copylefted.  If you want to change
 // the name then it should be something equally stupid (but not "Stupid") or
 // even better something witty.

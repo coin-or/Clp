@@ -1,6 +1,10 @@
 /* $Id$ */
-/* Copyright (C) 2003, International Business Machines Corporation
-   and others.  All Rights Reserved. */
+/*
+  Copyright (C) 2003, International Business Machines Corporation
+  and others.  All Rights Reserved.
+
+  This code is licensed under the terms of the Eclipse Public License (EPL).
+*/
 #ifndef ClpCholeskyDense_H
 #define ClpCholeskyDense_H
 

@@ -1,6 +1,8 @@
 /* $Id$ */
 // Copyright (C) 2009, International Business Machines
 // Corporation and others.  All Rights Reserved.
+// This code is licensed under the terms of the Eclipse Public License (EPL).
+
 #ifndef ClpCholeskyMumps_H
 #define ClpCholeskyMumps_H
 #include "ClpCholeskyBase.hpp"

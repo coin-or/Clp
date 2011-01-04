@@ -1,6 +1,8 @@
 /* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
+// This code is licensed under the terms of the Eclipse Public License (EPL).
+
 /*----------------------------------------------------------------------------*/
 /*      Ordering code - courtesy of Anshul Gupta                              */
 /*	(C) Copyright IBM Corporation 1997, 2009.  All Rights Reserved.       */

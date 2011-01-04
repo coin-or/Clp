@@ -1,6 +1,8 @@
 /* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
+// This code is licensed under the terms of the Eclipse Public License (EPL).
+
 #ifndef ClpPrimalQuadraticDantzig_H
 #define ClpPrimalQuadraticDantzig_H
 
