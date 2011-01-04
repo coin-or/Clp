@@ -1,6 +1,7 @@
 /* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
+// This code is licensed under the terms of the Eclipse Public License (EPL).
 
 /*  This can be used to compare OSL and Clp.  The interface functions
     below (in ekk_interface.cpp) were written so that calls to osl

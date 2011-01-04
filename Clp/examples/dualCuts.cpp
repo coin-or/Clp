@@ -1,13 +1,14 @@
 /* $Id$ */
-/* Copyright (C) 2003, International Business Machines Corporation
-   and others.  All Rights Reserved.
+/*
+  Copyright (C) 2003, International Business Machines Corporation and others.
+  All Rights Reserved.
 
-   This sample program is designed to illustrate programming
-   techniques using CoinLP, has not been thoroughly tested
-   and comes without any warranty whatsoever.
+  This sample program is designed to illustrate programming techniques
+  using CoinLP, has not been thoroughly tested and comes without any
+  warranty whatsoever.
 
-   You may copy, modify and distribute this sample program without
-   any restrictions whatsoever and without any payment to anyone.
+  You may copy, modify and distribute this sample program without any
+  restrictions whatsoever and without any payment to anyone.
 */
 
 #include "ClpSimplex.hpp"
