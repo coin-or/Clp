@@ -1699,8 +1699,7 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
                if (possible) {
                     value = oldValue - upperTheta * alpha;
 #ifdef CLP_USER_DRIVEN1
-		    int sequenceOut=pivotVariable_[index[iIndex]];
-		    if(!userChoiceValid1(this,sequenceOut,oldValue,
+		    if(!userChoiceValid1(this,iPivot,oldValue,
 					 upperTheta,alpha,work[iIndex]*way))
 		      value =0.0; // say can't use
 #endif
