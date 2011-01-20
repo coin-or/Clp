@@ -1932,7 +1932,7 @@ ClpSimplex::housekeeping(double objectiveChange)
      matrix_->correctSequence(this, in, out);
      int cycle = progress_.cycle(in, out,
                                  directionIn_, directionOut_);
-     if (cycle > 0 && objective_->type() < 2) {
+     if (cycle > 0 && objective_->type() < 2 && matrix_->type() < 15) {
           //if (cycle>0) {
           if (handler_->logLevel() >= 63)
                printf("Cycle of %d\n", cycle);
@@ -1944,11 +1944,13 @@ ClpSimplex::housekeeping(double objectiveChange)
           if (factorization_->pivots() > cycle) {
                forceFactorization_ = CoinMax(1, cycle - off[extra]);
           } else {
-               // need to reject something
+	    /* need to reject something
+	       should be better if don't reject incoming
+	       as it is in basis */
                int iSequence;
-               if (algorithm_ > 0)
-                    iSequence = sequenceIn_;
-               else
+               //if (algorithm_ > 0)
+	       //   iSequence = sequenceIn_;
+               //else
                     iSequence = sequenceOut_;
                char x = isColumn(iSequence) ? 'C' : 'R';
                if (handler_->logLevel() >= 63)
@@ -1992,7 +1994,7 @@ ClpSimplex::housekeeping(double objectiveChange)
           if (forceFactorization_ > factorization_->maximumPivots())
                forceFactorization_ = -1; //off
           return 1;
-     } else if (numberIterations_ > 1000 + 10 * (numberRows_ + (numberColumns_ >> 2))) {
+     } else if (numberIterations_ > 1000 + 10 * (numberRows_ + (numberColumns_ >> 2)) && matrix_->type()<15) {
           double random = randomNumberGenerator_.randomDouble();
           int maxNumber = (forceFactorization_ < 0) ? maximumPivots : CoinMin(forceFactorization_, maximumPivots);
           if (factorization_->pivots() >= random * maxNumber) {
@@ -8249,7 +8251,10 @@ ClpSimplex::finish(int startFinishOptions)
      } else {
           whatsChanged_ &= ~0xffff;
      }
+     double saveObjValue = objectiveValue_;
      deleteRim(getRidOfData);
+     if (matrix_->type()>=15)
+       objectiveValue_ = saveObjValue;
      // Skip message if changing algorithms
      if (problemStatus_ != 10) {
           if (problemStatus_ == -1)

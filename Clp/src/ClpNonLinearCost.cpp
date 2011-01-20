@@ -607,6 +607,12 @@ ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
                          status = ClpSimplex::isFixed;
                     }
                }
+	       //#define PRINT_DETAIL7 2
+#if PRINT_DETAIL7>1
+	       printf("NL %d sol %g bounds %g %g\n",
+		      iSequence,solution[iSequence],
+		      lowerValue,upperValue);
+#endif
                switch(status) {
 
                case ClpSimplex::basic:
@@ -625,6 +631,11 @@ ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
                                         printf("nonlincostb %d %g %g %g\n",
                                                iSequence, lowerValue, solution[iSequence], lower_[iRange+2]);
 #endif
+#if PRINT_DETAIL7
+				   printf("**NL %d sol %g below %g\n",
+					  iSequence,solution[iSequence],
+					  lowerValue);
+#endif
                                    sumInfeasibilities_ += value;
                                    largestInfeasibility_ = CoinMax(largestInfeasibility_, value);
                                    changeCost_ -= lowerValue *
@@ -641,6 +652,11 @@ ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
                                    if(value > 1.0e15)
                                         printf("nonlincostu %d %g %g %g\n",
                                                iSequence, lower_[iRange-1], solution[iSequence], upperValue);
+#endif
+#if PRINT_DETAIL7
+				   printf("**NL %d sol %g above %g\n",
+					  iSequence,solution[iSequence],
+					  upperValue);
 #endif
                                    sumInfeasibilities_ += value;
                                    largestInfeasibility_ = CoinMax(largestInfeasibility_, value);

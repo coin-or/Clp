@@ -15,6 +15,7 @@
 #include "ClpHelperFunctions.hpp"
 #include "ClpFactorization.hpp"
 #include "ClpDualRowDantzig.hpp"
+#include "ClpDynamicMatrix.hpp"
 #include "CoinPackedMatrix.hpp"
 #include "CoinIndexedVector.hpp"
 #include "CoinBuild.hpp"
@@ -4066,4 +4067,679 @@ ClpSimplexOther::cleanupAfterPostsolve()
      memcpy(reducedCost_, this->objective(), numberColumns_ * sizeof(double));
      matrix_->transposeTimes(-1.0, dual_, reducedCost_);
      checkSolutionInternal();
+}
+// Returns gub version of model or NULL
+ClpSimplex * 
+ClpSimplexOther::gubVersion(int * whichRows, int * whichColumns,
+			    int neededGub,
+			    int factorizationFrequency)
+{
+  // find gub
+  int numberRows = this->numberRows();
+  int numberColumns = this->numberColumns();
+  int iRow, iColumn;
+  int * columnIsGub = new int [numberColumns];
+  const double * columnLower = this->columnLower();
+  const double * columnUpper = this->columnUpper();
+  int numberFixed=0;
+  for (iColumn = 0; iColumn < numberColumns; iColumn++) {
+    if (columnUpper[iColumn] == columnLower[iColumn]) {
+      columnIsGub[iColumn]=-2;
+      numberFixed++;
+    } else if (columnLower[iColumn]>=0) {
+      columnIsGub[iColumn]=-1;
+    } else {
+      columnIsGub[iColumn]=-3;
+    }
+  }
+  CoinPackedMatrix * matrix = this->matrix();
+  // get row copy
+  CoinPackedMatrix rowCopy = *matrix;
+  rowCopy.reverseOrdering();
+  const int * column = rowCopy.getIndices();
+  const int * rowLength = rowCopy.getVectorLengths();
+  const CoinBigIndex * rowStart = rowCopy.getVectorStarts();
+  const double * element = rowCopy.getElements();
+  int numberNonGub = 0;
+  int numberEmpty = numberRows;
+  int * rowIsGub = new int [numberRows];
+  int smallestGubRow=-1;
+  int count=numberColumns+1;
+  double * rowLower = this->rowLower();
+  double * rowUpper = this->rowUpper();
+  // make sure we can get rid of upper bounds
+  double * fixedRow = new double [numberRows];
+  for (iRow = 0 ; iRow < numberRows ; iRow++) {
+    double sumFixed=0.0;
+    for (int j = rowStart[iRow]; j < rowStart[iRow] + rowLength[iRow]; j++) {
+      int iColumn = column[j];
+      double value = columnLower[iColumn];
+      if (value) 
+	sumFixed += element[j] * value;
+    }
+    fixedRow[iRow]=rowUpper[iRow]-sumFixed;
+  }
+  for (iRow = numberRows - 1; iRow >= 0; iRow--) {
+    bool gubRow = true;
+    int numberInRow=0;
+    double sumFixed=0.0;
+    double gap = fixedRow[iRow]-1.0e-12;
+    for (int j = rowStart[iRow]; j < rowStart[iRow] + rowLength[iRow]; j++) {
+      int iColumn = column[j];
+      if (columnIsGub[iColumn]!=-2) {
+	if (element[j] != 1.0||columnIsGub[iColumn]==-3||
+	    columnUpper[iColumn]-columnLower[iColumn]<gap) {
+	  gubRow = false;
+	  break;
+	} else {
+	  numberInRow++;
+	  if (columnIsGub[iColumn] >= 0) {
+	    gubRow = false;
+	    break;
+	  }
+	}
+      } else {
+	sumFixed += columnLower[iColumn]*element[j];
+      }
+    }
+    if (!gubRow) {
+      whichRows[numberNonGub++] = iRow;
+      rowIsGub[iRow] = -1;
+    } else if (numberInRow) {
+      if (numberInRow<count) {
+	count = numberInRow;
+	smallestGubRow=iRow;
+      }
+      for (int j = rowStart[iRow]; j < rowStart[iRow] + rowLength[iRow]; j++) {
+	int iColumn = column[j];
+	if (columnIsGub[iColumn]!=-2) 
+	  columnIsGub[iColumn] = iRow;
+      }
+      rowIsGub[iRow] = 0;
+    } else {
+      // empty row!
+      whichRows[--numberEmpty] = iRow;
+      rowIsGub[iRow] = -2;
+      if (sumFixed>rowUpper[iRow]+1.0e-4||
+	  sumFixed<rowLower[iRow]-1.0e-4) {
+	fprintf(stderr,"******** No infeasible empty rows - please!\n");
+	abort();
+      }
+    }
+  }
+  delete [] fixedRow;
+  char message[100];
+  int numberGub = numberEmpty - numberNonGub;
+  if (numberGub >= neededGub) { 
+    sprintf(message,"%d gub rows", numberGub);
+    handler_->message(CLP_GENERAL, messages_)
+      << message << CoinMessageEol;
+    int numberNormal = 0;
+    for (iColumn = 0; iColumn < numberColumns; iColumn++) {
+      if (columnIsGub[iColumn] < 0  && columnIsGub[iColumn] !=-2) {
+	whichColumns[numberNormal++] = iColumn;
+      }
+    }
+    if (!numberNormal) {
+      sprintf(message,"Putting back one gub row to make non-empty");
+      handler_->message(CLP_GENERAL, messages_)
+	<< message << CoinMessageEol;
+      rowIsGub[smallestGubRow]=-1;
+      whichRows[numberNonGub++] = smallestGubRow;
+      for (int j = rowStart[smallestGubRow]; 
+	   j < rowStart[smallestGubRow] + rowLength[smallestGubRow]; j++) {
+	int iColumn = column[j];
+	if (columnIsGub[iColumn]>=0) {
+	  columnIsGub[iColumn]=-4;
+	  whichColumns[numberNormal++] = iColumn;
+	}
+      }
+    }
+    std::sort(whichRows,whichRows+numberNonGub);
+    std::sort(whichColumns,whichColumns+numberNormal);
+    double * lower = CoinCopyOfArray(this->rowLower(),numberRows);
+    double * upper = CoinCopyOfArray(this->rowUpper(),numberRows);
+    // leave empty rows at end
+    numberEmpty = numberRows-numberEmpty;
+    const int * row = matrix->getIndices();
+    const int * columnLength = matrix->getVectorLengths();
+    const CoinBigIndex * columnStart = matrix->getVectorStarts();
+    const double * elementByColumn = matrix->getElements();
+    // Fixed at end
+    int put2 = numberColumns-numberFixed;
+    for (iColumn = 0; iColumn < numberColumns; iColumn++) {
+      if (columnIsGub[iColumn] ==-2) {
+	whichColumns[put2++] = iColumn;
+	double value = columnLower[iColumn];
+	for (int j = columnStart[iColumn]; 
+	     j < columnStart[iColumn] + columnLength[iColumn]; j++) {
+	  int iRow = row[j];
+	  if (lower[iRow]>-1.0e20)
+	    lower[iRow] -= value*element[j];
+	  if (upper[iRow]<1.0e20)
+	    upper[iRow] -= value*element[j];
+	}
+      }
+    }
+    int put = numberNormal;
+    ClpSimplex * model2 =
+      new ClpSimplex(this, numberNonGub, whichRows , numberNormal, whichColumns);
+    // scale
+    double * scaleArray = new double [numberRows];
+    for (int i=0;i<numberRows;i++) {
+      scaleArray[i]=1.0;
+      if (rowIsGub[i]==-1) {
+	double largest = 1.0e-30;
+	double smallest = 1.0e30;
+	for (int j = rowStart[i]; j < rowStart[i] + rowLength[i]; j++) {
+	  int iColumn = column[j];
+	  if (columnIsGub[iColumn]!=-2) {
+	    double value =fabs(element[j]);
+	    largest = CoinMax(value,largest);
+	    smallest = CoinMin(value,smallest);
+	  }
+	}
+	double scale = CoinMax(0.001,1.0/sqrt(largest*smallest));
+	scaleArray[i]=scale;
+	if (lower[i]>-1.0e30)
+	  lower[i] *= scale;
+	if (upper[i]<1.0e30)
+	  upper[i] *= scale;
+      }
+    }
+    // scale partial matrix
+    {
+      CoinPackedMatrix * matrix = model2->matrix();
+      const int * row = matrix->getIndices();
+      const int * columnLength = matrix->getVectorLengths();
+      const CoinBigIndex * columnStart = matrix->getVectorStarts();
+      double * element = matrix->getMutableElements();
+      for (int i=0;i<numberNormal;i++) {
+	for (int j = columnStart[i]; 
+	     j < columnStart[i] + columnLength[i]; j++) {
+	  int iRow = row[j];
+	  iRow = whichRows[iRow];
+	  double scaleBy = scaleArray[iRow];
+	  element[j] *= scaleBy;
+	}
+      }
+    }
+    // adjust rhs
+    double * rowLower = model2->rowLower();
+    double * rowUpper = model2->rowUpper();
+    for (int i=0;i<numberNonGub;i++) {
+      int iRow = whichRows[i];
+      rowLower[i] = lower[iRow];
+      rowUpper[i] = upper[iRow];
+    }
+    int numberGubColumns = numberColumns - put - numberFixed;
+    CoinBigIndex numberElements=0;
+    int * temp1 = new int [numberRows+1];
+    // get counts
+    memset(temp1,0,numberRows*sizeof(int));
+    for (iColumn = 0; iColumn < numberColumns; iColumn++) {
+      int iGub = columnIsGub[iColumn];
+      if (iGub>=0) {
+	numberElements += columnLength[iColumn]-1;
+	temp1[iGub]++;
+      }
+    }
+    /* Optional but means can eventually simplify coding
+       could even add in fixed slacks to deal with
+       singularities - but should not be necessary */
+    int numberSlacks=0;
+    for (int i = 0; i < numberRows; i++) {
+      if (rowIsGub[i]>=0) {
+	if (lower[i]<upper[i]) {
+	  numberSlacks++;
+	  temp1[i]++;
+	}
+      }
+    }
+    int * gubStart = new int [numberGub+1];
+    numberGub=0;
+    gubStart[0]=0;
+    for (int i = 0; i < numberRows; i++) {
+      if (rowIsGub[i]>=0) {
+	rowIsGub[i]=numberGub;
+	gubStart[numberGub+1]=gubStart[numberGub]+temp1[i];
+	temp1[numberGub]=0;
+	lower[numberGub]=lower[i];
+	upper[numberGub]=upper[i];
+	whichRows[numberNonGub+numberGub]=i;
+	numberGub++;
+      }
+    }
+    int numberGubColumnsPlus = numberGubColumns + numberSlacks;
+    double * lowerColumn2 = new double [numberGubColumnsPlus];
+    CoinFillN(lowerColumn2, numberGubColumnsPlus, 0.0);
+    double * upperColumn2 = new double [numberGubColumnsPlus];
+    CoinFillN(upperColumn2, numberGubColumnsPlus, COIN_DBL_MAX);
+    int * start2 = new int[numberGubColumnsPlus+1];
+    int * row2 = new int[numberElements];
+    double * element2 = new double[numberElements];
+    double * cost2 = new double [numberGubColumnsPlus];
+    CoinFillN(cost2, numberGubColumnsPlus, 0.0);
+    const double * cost = this->objective();
+    put = numberNormal;
+    for (iColumn = 0; iColumn < numberColumns; iColumn++) {
+      int iGub = columnIsGub[iColumn];
+      if (iGub>=0) {
+	// TEMP
+	//this->setColUpper(iColumn,COIN_DBL_MAX);
+	iGub = rowIsGub[iGub];
+	assert (iGub>=0);
+	int kPut = put+gubStart[iGub]+temp1[iGub];
+	temp1[iGub]++;
+	whichColumns[kPut]=iColumn;
+      }
+    }
+    for (int i = 0; i < numberRows; i++) {
+      if (rowIsGub[i]>=0) {
+	int iGub = rowIsGub[i];
+	if (lower[iGub]<upper[iGub]) {
+	  int kPut = put+gubStart[iGub]+temp1[iGub];
+	  temp1[iGub]++;
+	  whichColumns[kPut]=iGub+numberColumns;
+	}
+      }
+    }
+    //this->primal(1); // TEMP
+    // redo rowIsGub to give lookup
+    for (int i=0;i<numberRows;i++)
+      rowIsGub[i]=-1;
+    for (int i=0;i<numberNonGub;i++) 
+      rowIsGub[whichRows[i]]=i;
+    start2[0]=0;
+    numberElements = 0;
+    for (int i=0;i<numberGubColumnsPlus;i++) {
+      int iColumn = whichColumns[put++];
+      if (iColumn<numberColumns) {
+	cost2[i] = cost[iColumn];
+	lowerColumn2[i] = columnLower[iColumn];
+	upperColumn2[i] = columnUpper[iColumn];
+	upperColumn2[i] = COIN_DBL_MAX; 
+	for (int j = columnStart[iColumn]; j < columnStart[iColumn] + columnLength[iColumn]; j++) {
+	  int iRow = row[j];
+	  double scaleBy = scaleArray[iRow];
+	  iRow = rowIsGub[iRow];
+	  if (iRow >= 0) {
+	    row2[numberElements] = iRow;
+	    element2[numberElements++] = elementByColumn[j]*scaleBy;
+	  }
+	}
+      } else {
+	// slack
+	int iGub = iColumn-numberColumns;
+	double slack = upper[iGub]-lower[iGub];
+	assert (upper[iGub]<1.0e20);
+	lower[iGub]=upper[iGub];
+	cost2[i] = 0;
+	lowerColumn2[i] = 0;
+	upperColumn2[i] = slack;
+	upperColumn2[i] = COIN_DBL_MAX;
+      }
+      start2[i+1] = numberElements;
+    }
+    // clean up bounds on variables
+    for (int iSet=0;iSet<numberGub;iSet++) {
+      double lowerValue=0.0;
+      for (int i=gubStart[iSet];i<gubStart[iSet+1];i++) {
+	lowerValue += lowerColumn2[i];
+      }
+      assert (lowerValue<upper[iSet]+1.0e-6);
+      double gap = CoinMax(0.0,upper[iSet]-lowerValue);
+      for (int i=gubStart[iSet];i<gubStart[iSet+1];i++) {
+	if (upperColumn2[i]<1.0e30) {
+	  upperColumn2[i] = CoinMin(upperColumn2[i],
+				    lowerColumn2[i]+gap);
+	}
+      }
+    }
+    sprintf(message,"** Before adding matrix there are %d rows and %d columns",
+	   model2->numberRows(), model2->numberColumns());
+    handler_->message(CLP_GENERAL, messages_)
+      << message << CoinMessageEol;
+    delete [] scaleArray;
+    delete [] temp1;
+    model2->setFactorizationFrequency(factorizationFrequency);
+    ClpDynamicMatrix * newMatrix = 
+      new ClpDynamicMatrix(model2, numberGub,
+				  numberGubColumnsPlus, gubStart,
+				  lower, upper,
+				  start2, row2, element2, cost2,
+				  lowerColumn2, upperColumn2);
+    delete [] gubStart;
+    delete [] lowerColumn2;
+    delete [] upperColumn2;
+    delete [] start2;
+    delete [] row2;
+    delete [] element2;
+    delete [] cost2;
+    delete [] lower;
+    delete [] upper;
+    model2->replaceMatrix(newMatrix,true);
+#ifdef EVERY_ITERATION
+    {
+      ClpDynamicMatrix * gubMatrix =
+	dynamic_cast< ClpDynamicMatrix*>(model2->clpMatrix());
+      assert(gubMatrix);
+      gubMatrix->writeMps("gub.mps");
+    }
+#endif
+    delete [] columnIsGub;
+    delete [] rowIsGub;
+    newMatrix->switchOffCheck();
+#ifdef EVERY_ITERATION
+    newMatrix->setRefreshFrequency(1/*000*/);
+#else
+    newMatrix->setRefreshFrequency(1000);
+#endif
+    sprintf(message,
+	    "** While after adding matrix there are %d rows and %d columns",
+	    model2->numberRows(), model2->numberColumns());
+    handler_->message(CLP_GENERAL, messages_)
+      << message << CoinMessageEol;
+    model2->setSpecialOptions(4);    // exactly to bound
+    // Scaling off (done by hand)
+    model2->scaling(0);
+    return model2;
+  } else {
+    delete [] columnIsGub;
+    delete [] rowIsGub;
+    return NULL;
+  }
+}
+// Sets basis from original
+void 
+ClpSimplexOther::setGubBasis(const ClpSimplex &original,const int * whichRows,
+			     const int * whichColumns)
+{
+  ClpDynamicMatrix * gubMatrix =
+    dynamic_cast< ClpDynamicMatrix*>(clpMatrix());
+  assert(gubMatrix);
+  int numberGubColumns = gubMatrix->numberGubColumns();
+  int numberNormal = gubMatrix->firstDynamic();
+  //int lastOdd = gubMatrix->firstAvailable();
+  //int numberTotalColumns = numberNormal + numberGubColumns;
+  //assert (numberTotalColumns==numberColumns+numberSlacks);
+  int numberRows = original.numberRows();
+  int numberColumns = original.numberColumns();
+  int * columnIsGub = new int [numberColumns];
+  int numberNonGub = gubMatrix->numberStaticRows();
+  //assert (firstOdd==numberNormal);
+  double * solution = primalColumnSolution();
+  const double * originalSolution = original.primalColumnSolution();
+  int numberSets = gubMatrix->numberSets();
+  const int * startSet = gubMatrix->startSets();
+  const CoinBigIndex * startColumn = gubMatrix->startColumn();
+  const double * columnLower = gubMatrix->columnLower();
+  for (int i=0;i<numberSets;i++) {
+    for (int j=startSet[i];j<startSet[i+1];j++) {
+      int iColumn = whichColumns[j+numberNormal];
+      if (iColumn<numberColumns)
+	columnIsGub[iColumn] = whichRows[numberNonGub+i];
+    }
+  }
+  int * numberKey = new int [numberRows];
+  memset(numberKey,0,numberRows*sizeof(int));
+  for (int i=0;i<numberGubColumns;i++) {
+    int iOrig = whichColumns[i+numberNormal];
+    if (iOrig<numberColumns) {
+      if (original.getColumnStatus(iOrig)==ClpSimplex::basic) {
+	int iRow = columnIsGub[iOrig];
+	assert (iRow>=0);
+	numberKey[iRow]++;
+      }
+    } else {
+      // Set slack
+      int iSet = iOrig - numberColumns;
+      int iRow = whichRows[iSet+numberNonGub];
+      if (original.getRowStatus(iRow)==ClpSimplex::basic) 
+	numberKey[iRow]++;
+    }
+  }
+  /* Before going into cleanMatrix we need
+     gub status set (inSmall just means basic and active)
+     row status set
+  */
+  for (int i = 0; i < numberSets; i++) {
+    gubMatrix->setStatus(i,ClpSimplex::isFixed);
+  }
+  for (int i = 0; i < numberGubColumns; i++) {
+    int iOrig = whichColumns[i+numberNormal];
+    if (iOrig<numberColumns) {
+      ClpSimplex::Status status = original.getColumnStatus(iOrig);
+      if (status==ClpSimplex::atUpperBound) {
+	gubMatrix->setDynamicStatus(i,ClpDynamicMatrix::atUpperBound);
+      } else if (status==ClpSimplex::atLowerBound) {
+	gubMatrix->setDynamicStatus(i,ClpDynamicMatrix::atLowerBound);
+      } else if (status==ClpSimplex::basic) {
+	int iRow = columnIsGub[iOrig];
+	assert (iRow>=0);
+	assert(numberKey[iRow]);
+	if (numberKey[iRow]==1)
+	  gubMatrix->setDynamicStatus(i,ClpDynamicMatrix::soloKey);
+	else
+	  gubMatrix->setDynamicStatus(i,ClpDynamicMatrix::inSmall);
+      }
+    } else {
+      // slack
+      int iSet = iOrig - numberColumns;
+      int iRow = whichRows[iSet+numberNonGub];
+      if (original.getRowStatus(iRow)==ClpSimplex::basic) {
+	assert(numberKey[iRow]);
+	if (numberKey[iRow]==1)
+	  gubMatrix->setDynamicStatus(i,ClpDynamicMatrix::soloKey);
+	else
+	  gubMatrix->setDynamicStatus(i,ClpDynamicMatrix::inSmall);
+      } else {
+	gubMatrix->setDynamicStatus(i,ClpDynamicMatrix::atLowerBound);
+      }
+    }
+  }
+  // deal with sets without key
+  for (int i = 0; i < numberSets; i++) {
+    int iRow = whichRows[numberNonGub+i];
+    if (!numberKey[iRow]) {
+      if (original.getRowStatus(iRow)==ClpSimplex::basic) {
+	gubMatrix->setStatus(i,ClpSimplex::basic);
+      } else { 
+	// If not at lb make key otherwise one with smallest number els
+	double largest=0.0;
+	int fewest=numberRows+1;
+	int chosen=-1;
+	for (int j=startSet[i];j<startSet[i+1];j++) {
+	  int length=startColumn[j+1]-startColumn[j];
+	  int iOrig = whichColumns[j+numberNormal];
+	  double value;
+	  if (iOrig<numberColumns) {
+	    value=originalSolution[iOrig]-columnLower[j];
+	  } else {
+	    // slack - take value as 0.0 as will win on length
+	    value=0.0;
+	  }
+	  if (value>largest+1.0e-8) {
+	    largest=value;
+	    fewest=length;
+	    chosen=j;
+	  } else if (fabs(value-largest)<=1.0e-8&&length<fewest) {
+	    largest=value;
+	    fewest=length;
+	    chosen=j;
+	  }
+	}
+	assert(chosen>=0);
+	// set as key
+	for (int j=startSet[i];j<startSet[i+1];j++) {
+	  if (j!=chosen)
+	    gubMatrix->setDynamicStatus(j,ClpDynamicMatrix::atLowerBound);
+	  else
+	    gubMatrix->setDynamicStatus(j,ClpDynamicMatrix::soloKey);
+	}
+      }
+    }
+  }
+  for (int i = 0; i < numberNormal; i++) {
+    int iOrig = whichColumns[i];
+    setColumnStatus(i,original.getColumnStatus(iOrig));
+    solution[i]=originalSolution[iOrig];
+  }
+  for (int i = 0; i < numberNonGub; i++) {
+    int iOrig = whichRows[i];
+    setRowStatus(i,original.getRowStatus(iOrig));
+  }
+  // Fill in current matrix
+  gubMatrix->initialProblem();
+  delete [] numberKey;
+  delete [] columnIsGub;
+}
+// Restores basis to original
+void 
+ClpSimplexOther::getGubBasis(ClpSimplex &original,const int * whichRows,
+			     const int * whichColumns) const
+{
+  ClpDynamicMatrix * gubMatrix =
+    dynamic_cast< ClpDynamicMatrix*>(clpMatrix());
+  assert(gubMatrix);
+  int numberGubColumns = gubMatrix->numberGubColumns();
+  int numberNormal = gubMatrix->firstDynamic();
+  //int lastOdd = gubMatrix->firstAvailable();
+  //int numberRows = original.numberRows();
+  int numberColumns = original.numberColumns();
+  int numberNonGub = gubMatrix->numberStaticRows();
+  //assert (firstOdd==numberNormal);
+  double * solution = primalColumnSolution();
+  double * originalSolution = original.primalColumnSolution();
+  int numberSets = gubMatrix->numberSets();
+  const double * cost = original.objective();
+  int lastOdd = gubMatrix->firstAvailable();
+  //assert (numberTotalColumns==numberColumns+numberSlacks);
+  int numberRows = original.numberRows();
+  //int numberStaticRows = gubMatrix->numberStaticRows();
+  const int * startSet = gubMatrix->startSets();
+  unsigned char * status = original.statusArray();
+  unsigned char * rowStatus = status+numberColumns;
+  //assert (firstOdd==numberNormal);
+  for (int i=0;i<numberSets;i++) {
+    int iRow = whichRows[i+numberNonGub];
+    original.setRowStatus(iRow,ClpSimplex::atLowerBound);
+  }
+  const int * id = gubMatrix->id();
+  const double * columnLower = gubMatrix->columnLower();
+  const double * columnUpper = gubMatrix->columnUpper();
+  for (int i = 0; i < numberGubColumns; i++) {
+    int iOrig = whichColumns[i+numberNormal];
+    if (iOrig<numberColumns) {
+      if (gubMatrix->getDynamicStatus(i) == ClpDynamicMatrix::atUpperBound) {
+	originalSolution[iOrig] = columnUpper[i];
+	status[iOrig] = 2;
+      } else if (gubMatrix->getDynamicStatus(i) == ClpDynamicMatrix::atLowerBound && columnLower) {
+	originalSolution[iOrig] = columnLower[i];
+	status[iOrig] = 3;
+      } else if (gubMatrix->getDynamicStatus(i) == ClpDynamicMatrix::soloKey) {
+	int iSet = gubMatrix->whichSet(i);
+	originalSolution[iOrig] = gubMatrix->keyValue(iSet);
+	status[iOrig] = 1;
+      } else {
+	originalSolution[iOrig] = 0.0;
+	status[iOrig] = 4;
+      }
+    } else {
+      // slack
+      int iSet = iOrig - numberColumns;
+      int iRow = whichRows[iSet+numberNonGub];
+      if (gubMatrix->getDynamicStatus(i) == ClpDynamicMatrix::atUpperBound) {
+	original.setRowStatus(iRow,ClpSimplex::atLowerBound);
+      } else if (gubMatrix->getDynamicStatus(i) == ClpDynamicMatrix::atLowerBound) {
+	original.setRowStatus(iRow,ClpSimplex::atUpperBound);
+      } else if (gubMatrix->getDynamicStatus(i) == ClpDynamicMatrix::soloKey) {
+	original.setRowStatus(iRow,ClpSimplex::basic);
+      }
+    }
+  }
+  for (int i = 0; i < numberNormal; i++) {
+    int iOrig = whichColumns[i];
+    ClpSimplex::Status thisStatus = getStatus(i);
+    if (thisStatus == ClpSimplex::basic)
+      status[iOrig] = 1;
+    else if (thisStatus == ClpSimplex::atLowerBound)
+      status[iOrig] = 3;
+    else if (thisStatus == ClpSimplex::atUpperBound)
+      status[iOrig] = 2;
+    else if (thisStatus == ClpSimplex::isFixed)
+      status[iOrig] = 5;
+    else
+      abort();
+    originalSolution[iOrig] = solution[i];
+  }
+  for (int i = numberNormal; i < lastOdd; i++) {
+    int iOrig = whichColumns[id[i-numberNormal] + numberNormal];
+    if (iOrig<numberColumns) {
+      ClpSimplex::Status thisStatus = getStatus(i);
+      if (thisStatus == ClpSimplex::basic)
+	status[iOrig] = 1;
+      else if (thisStatus == ClpSimplex::atLowerBound)
+	status[iOrig] = 3;
+      else if (thisStatus == ClpSimplex::atUpperBound)
+	status[iOrig] = 2;
+      else if (thisStatus == ClpSimplex::isFixed)
+	status[iOrig] = 5;
+      else
+	abort();
+      originalSolution[iOrig] = solution[i];
+    } else {
+      // slack (basic probably)
+      int iSet = iOrig - numberColumns;
+      int iRow = whichRows[iSet+numberNonGub];
+      ClpSimplex::Status thisStatus = getStatus(i);
+      if (thisStatus == ClpSimplex::atLowerBound)
+	thisStatus = ClpSimplex::atUpperBound;
+      else if (thisStatus == ClpSimplex::atUpperBound)
+	thisStatus = ClpSimplex::atLowerBound;
+      original.setRowStatus(iRow,thisStatus);
+    }
+  }
+  for (int i = 0; i < numberNonGub; i++) {
+    int iOrig = whichRows[i];
+    ClpSimplex::Status thisStatus = getRowStatus(i);
+    if (thisStatus == ClpSimplex::basic)
+      rowStatus[iOrig] = 1;
+    else if (thisStatus == ClpSimplex::atLowerBound)
+      rowStatus[iOrig] = 3;
+    else if (thisStatus == ClpSimplex::atUpperBound)
+      rowStatus[iOrig] = 2;
+    else if (thisStatus == ClpSimplex::isFixed)
+      rowStatus[iOrig] = 5;
+    else
+      abort();
+  }
+  int * numberKey = new int [numberRows];
+  memset(numberKey,0,numberRows*sizeof(int));
+  for (int i=0;i<numberSets;i++) {
+    int iRow = whichRows[i+numberNonGub];
+    for (int j=startSet[i];j<startSet[i+1];j++) {
+      int iOrig = whichColumns[j+numberNormal];
+      if (iOrig<numberColumns) {
+	if (original.getColumnStatus(iOrig)==ClpSimplex::basic) {
+	  numberKey[iRow]++;
+	}
+      } else {
+	// slack
+	if (original.getRowStatus(iRow)==ClpSimplex::basic) 
+	  numberKey[iRow]++;
+      }
+    }
+  }
+  for (int i=0;i<numberSets;i++) {
+    int iRow = whichRows[i+numberNonGub];
+    if (!numberKey[iRow]) {
+      original.setRowStatus(iRow,ClpSimplex::basic);
+    }
+  }
+  delete [] numberKey;
+  double objValue = 0.0;
+  for (int i = 0; i < numberColumns; i++)
+    objValue += cost[i] * originalSolution[i];
+  //printf("objective value is %g\n", objValue);
 }

@@ -1091,7 +1091,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
           rowReducedCost_ = dj_ + numberColumns_;
           objectiveWork_ = cost_;
           rowObjectiveWork_ = cost_ + numberColumns_;
-          if (n)
+          if (n||matrix_->type()>=15)
                gutsOfSolution(NULL, NULL, ifValuesPass != 0);
      }
      double trueInfeasibility = nonLinearCost_->sumInfeasibilities();
@@ -1117,7 +1117,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
           if (lastObj < thisObj - 1.0e-5 * CoinMax(fabs(thisObj), fabs(lastObj)) - 1.0e-7
                     && firstFree_ < 0) {
                if (handler_->logLevel() == 63)
-                    printf("lastobj %g this %g force %d ", lastObj, thisObj, forceFactorization_);
+                    printf("lastobj %g this %g force %d\n", lastObj, thisObj, forceFactorization_);
                int maxFactor = factorization_->maximumPivots();
                if (maxFactor > 10) {
                     if (forceFactorization_ < 0)
@@ -1129,7 +1129,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
           } else if (lastObj3 < thisObj - 1.0e-5 * CoinMax(fabs(thisObj), fabs(lastObj3)) - 1.0e-7
                      && firstFree_ < 0) {
                if (handler_->logLevel() == 63)
-                    printf("lastobj3 %g this3 %g `force %d ", lastObj3, thisObj, forceFactorization_);
+                    printf("lastobj3 %g this3 %g force %d\n", lastObj3, thisObj, forceFactorization_);
                int maxFactor = factorization_->maximumPivots();
                if (maxFactor > 10) {
                     if (forceFactorization_ < 0)

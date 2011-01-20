@@ -189,6 +189,18 @@ public:
      void afterCrunch(const ClpSimplex & small,
                       const int * whichRows, const int * whichColumns,
                       int nBound);
+     /** Returns gub version of model or NULL
+	 whichRows has to be numberRows
+	 whichColumns has to be numberRows+numberColumns */
+     ClpSimplex * gubVersion(int * whichRows, int * whichColumns,
+			     int neededGub,
+			     int factorizationFrequency=50);
+     /// Sets basis from original
+     void setGubBasis(const ClpSimplex &original,const int * whichRows,
+		      const int * whichColumns);
+     /// Restores basis to original
+     void getGubBasis(ClpSimplex &original,const int * whichRows,
+		      const int * whichColumns) const;
      /// Quick try at cleaning up duals if postsolve gets wrong
      void cleanupAfterPostsolve();
      /** Tightens integer bounds - returns number tightened or -1 if infeasible

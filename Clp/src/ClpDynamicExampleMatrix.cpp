@@ -654,7 +654,7 @@ ClpDynamicExampleMatrix::createVariable(ClpSimplex * model, int & bestSequence)
                setDynamicStatusGen(bestSequence2, inSmall);
           }
      }
-     ClpDynamicMatrix::createVariable(model, bestSequence);
+     ClpDynamicMatrix::createVariable(model, bestSequence/*, bestSequence2*/);
      // clear for next iteration
      savedBestSequence_ = -1;
 }

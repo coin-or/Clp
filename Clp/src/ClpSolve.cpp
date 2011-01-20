@@ -3024,7 +3024,7 @@ ClpSimplexProgress::looping()
      // skip if just last time as may be checking something
      if (matched == (1 << (CLP_PROGRESS - 1)))
           numberMatched = 0;
-     if (numberMatched) {
+     if (numberMatched && model_->clpMatrix()->type() < 15) {
           model_->messageHandler()->message(CLP_POSSIBLELOOP, model_->messages())
                     << numberMatched
                     << matched
