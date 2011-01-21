@@ -52,6 +52,9 @@ public:
   /// Resolve an LP relaxation after problem modification
   virtual void resolve();
   
+  /// Resolve an LP relaxation after problem modification (try GUB)
+  virtual void resolveGub(int needed);
+  
   /// Invoke solver's built-in enumeration algorithm
   virtual void branchAndBound();
 
@@ -1368,6 +1371,7 @@ protected:
       262144 Don't try and tighten bounds (funny global cuts)
       524288 Fake objective and 0-1
       1048576 Don't recompute ray after crunch
+      2097152 
   */
   mutable unsigned int specialOptions_;
   /// Copy of model when option 131072 set

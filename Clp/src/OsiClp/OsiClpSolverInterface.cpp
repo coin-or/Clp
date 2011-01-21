@@ -56,6 +56,10 @@ void OsiClpSolverInterface::initialSolve()
     smallModel_=NULL;
   }
 #endif
+  if ((specialOptions_&2097152)!=0) {
+    resolveGub((9*modelPtr_->numberRows())/10);
+    return;
+  }
   bool deleteSolver;
   ClpSimplex * solver;
   double time1 = CoinCpuTime();
@@ -782,6 +786,10 @@ void OsiClpSolverInterface::resolve()
     modelPtr_->fastDual2(&stuff_);
     return;
   }
+  if ((specialOptions_&2097152)!=0) {
+    resolveGub((9*modelPtr_->numberRows())/10);
+    return;
+  }
   //void pclp(char *);
   //pclp("res");
   bool takeHint;
@@ -1268,6 +1276,55 @@ void OsiClpSolverInterface::resolve()
   if (!modelPtr_->columnUpperWork_)
     modelPtr_->whatsChanged_ &= ~0xffff;
   modelPtr_->whatsChanged_ |= 0x30000;
+}
+#include "ClpSimplexOther.hpp"
+// Resolve an LP relaxation after problem modification (try GUB)
+void 
+OsiClpSolverInterface::resolveGub(int needed)
+{
+  bool takeHint;
+  OsiHintStrength strength;
+  // Switch off printing if asked to
+  bool gotHint = (getHintParam(OsiDoReducePrint,takeHint,strength));
+  assert (gotHint);
+  int saveMessageLevel=modelPtr_->logLevel();
+  if (strength!=OsiHintIgnore&&takeHint) {
+    int messageLevel=messageHandler()->logLevel();
+    if (messageLevel>0)
+      modelPtr_->messageHandler()->setLogLevel(messageLevel-1);
+    else
+      modelPtr_->messageHandler()->setLogLevel(0);
+  }
+  setBasis(basis_,modelPtr_);
+  // find gub
+  int numberRows = modelPtr_->numberRows();
+  int * which = new int[numberRows];
+  int numberColumns = modelPtr_->numberColumns();
+  int * whichC = new int[numberColumns+numberRows];
+  ClpSimplex * model2 = 
+    static_cast<ClpSimplexOther *> (modelPtr_)->gubVersion(which,whichC,
+							   needed);
+  if (model2) {
+    // move in solution
+    static_cast<ClpSimplexOther *> (model2)->setGubBasis(*modelPtr_,
+							 which,whichC);
+    model2->setLogLevel(CoinMin(1,model2->logLevel()));
+    ClpPrimalColumnSteepest steepest(5);
+    model2->setPrimalColumnPivotAlgorithm(steepest);
+    double time1 = CoinCpuTime();
+    model2->primal();
+    //printf("Primal took %g seconds\n",CoinCpuTime()-time1);
+    static_cast<ClpSimplexOther *> (model2)->getGubBasis(*modelPtr_,
+							 which,whichC);
+    int totalIterations = model2->numberIterations();
+    //modelPtr_->setLogLevel(63);
+    modelPtr_->primal(1);
+    modelPtr_->setNumberIterations(totalIterations+modelPtr_->numberIterations());
+  } else {
+    modelPtr_->dual();
+  }
+  basis_ = getBasis(modelPtr_);
+  modelPtr_->messageHandler()->setLogLevel(saveMessageLevel);
 }
 // Sort of lexicographic resolve
 void 
@@ -6275,7 +6332,7 @@ OsiClpSolverInterface::setHintParam(OsiHintParam key, bool yesNo,
         specialOptions_=0;
       }
       // set normal
-      specialOptions_ &= (2047+3*8192+15*65536);
+      specialOptions_ &= (2047|3*8192|15*65536|2097152);
       if (otherInformation!=NULL) {
         int * array = static_cast<int *> (otherInformation);
         if (array[0]>=0||array[0]<=2)

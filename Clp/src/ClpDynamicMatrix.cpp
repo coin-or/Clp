@@ -93,7 +93,7 @@ ClpDynamicMatrix::ClpDynamicMatrix (const ClpDynamicMatrix & rhs)
      fromIndex_ = ClpCopyOfArray(rhs.fromIndex_, getNumRows() + 1 - numberStaticRows_);
      lowerSet_ = ClpCopyOfArray(rhs.lowerSet_, numberSets_);
      upperSet_ = ClpCopyOfArray(rhs.upperSet_, numberSets_);
-     status_ = ClpCopyOfArray(rhs.status_, 2*numberSets_);
+     status_ = ClpCopyOfArray(rhs.status_, 2*numberSets_+4*sizeof(int));
      model_ = rhs.model_;
      sumDualInfeasibilities_ = rhs. sumDualInfeasibilities_;
      sumPrimalInfeasibilities_ = rhs.sumPrimalInfeasibilities_;
@@ -236,7 +236,7 @@ ClpDynamicMatrix::ClpDynamicMatrix(ClpSimplex * model, int numberSets,
      matrix_ = originalMatrix;
      flags_ &= ~1;
      // resize model (matrix stays same)
-     int newRowSize = numberRows + CoinMin(numberSets_, CoinMax(frequency, numberRows)) + 1;
+     int newRowSize = numberRows + CoinMin(numberSets_, frequency+numberRows) + 1;
      model->resize(newRowSize, numberNeeded);
      for (i = numberRows; i < newRowSize; i++)
           model->setRowStatus(i, ClpSimplex::basic);
@@ -258,11 +258,11 @@ ClpDynamicMatrix::ClpDynamicMatrix(ClpSimplex * model, int numberSets,
      backToPivotRow_ = new int[numberNeeded];
      keyVariable_ = new int[numberSets_];
      if (status) {
-          status_ = ClpCopyOfArray(status, 2*numberSets_);
+          status_ = ClpCopyOfArray(status, 2*numberSets_+4*sizeof(int));
           assert (dynamicStatus);
           dynamicStatus_ = ClpCopyOfArray(dynamicStatus, 2*numberGubColumns_);
      } else {
-          status_ = new unsigned char [2*numberSets_];
+          status_ = new unsigned char [2*numberSets_+4*sizeof(int)];
           memset(status_, 0, numberSets_);
           int i;
           for (i = 0; i < numberSets_; i++) {
@@ -355,7 +355,7 @@ ClpDynamicMatrix::operator=(const ClpDynamicMatrix& rhs)
           fromIndex_ = ClpCopyOfArray(rhs.fromIndex_, getNumRows() + 1 - numberStaticRows_);
           lowerSet_ = ClpCopyOfArray(rhs.lowerSet_, numberSets_);
           upperSet_ = ClpCopyOfArray(rhs.upperSet_, numberSets_);
-          status_ = ClpCopyOfArray(rhs.status_, 2*numberSets_);
+          status_ = ClpCopyOfArray(rhs.status_, 2*numberSets_+4*sizeof(int));
           model_ = rhs.model_;
           sumDualInfeasibilities_ = rhs. sumDualInfeasibilities_;
           sumPrimalInfeasibilities_ = rhs.sumPrimalInfeasibilities_;
@@ -864,9 +864,11 @@ ClpDynamicMatrix::updatePivot(ClpSimplex * model, double oldInValue, double oldO
                setStatus(iSet, ClpSimplex::atUpperBound);
           if (lowerSet_[iSet] == upperSet_[iSet])
                setStatus(iSet, ClpSimplex::isFixed);
+#if 0
           if (getStatus(iSet) != model->getStatus(sequenceOut))
                printf("** set %d status %d, var status %d\n", iSet,
                       getStatus(iSet), model->getStatus(sequenceOut));
+#endif
      }
      ClpMatrixBase::updatePivot(model, oldInValue, oldOutValue);
 #ifdef CLP_DEBUG
@@ -1043,6 +1045,18 @@ int
 ClpDynamicMatrix::generalExpanded(ClpSimplex * model, int mode, int &number)
 {
      int returnCode = 0;
+#if 0 //ndef NDEBUG
+     {
+       int numberColumns = model->numberColumns();
+       int numberRows = model->numberRows();
+       int * pivotVariable = model->pivotVariable();
+       if (pivotVariable&&model->numberIterations()) {
+	 for (int i=numberStaticRows_+numberActiveSets_;i<numberRows;i++) {
+	   assert (pivotVariable[i]==i+numberColumns);
+	 }
+       }
+     }
+#endif
      switch (mode) {
           // Fill in pivotVariable
      case 0: {
@@ -1086,6 +1100,7 @@ ClpDynamicMatrix::generalExpanded(ClpSimplex * model, int mode, int &number)
      // save status
      case 5: {
        memcpy(status_+numberSets_,status_,numberSets_);
+       memcpy(status_+2*numberSets_,&numberActiveSets_,sizeof(int));
        memcpy(dynamicStatus_+maximumGubColumns_,
 	      dynamicStatus_,maximumGubColumns_);
      }
@@ -1093,6 +1108,7 @@ ClpDynamicMatrix::generalExpanded(ClpSimplex * model, int mode, int &number)
      // restore status
      case 6: {
        memcpy(status_,status_+numberSets_,numberSets_);
+       memcpy(&numberActiveSets_,status_+2*numberSets_,sizeof(int));
        memcpy(dynamicStatus_,dynamicStatus_+maximumGubColumns_,
 	      maximumGubColumns_);
        initialProblem();
@@ -1265,6 +1281,16 @@ ClpDynamicMatrix::refresh(ClpSimplex * model)
           // will be same as last time
           return 1;
      }
+#ifndef NDEBUG
+     {
+       int numberColumns = model->numberColumns();
+       int numberRows = model->numberRows();
+       int * pivotVariable = model->pivotVariable();
+       for (int i=numberStaticRows_+numberActiveSets_;i<numberRows;i++) {
+	 assert (pivotVariable[i]==i+numberColumns);
+       }
+     }
+#endif
      // lookup array
      int * active = new int [numberActiveSets_];
      CoinZeroN(active, numberActiveSets_);
@@ -1478,10 +1504,15 @@ ClpDynamicMatrix::refresh(ClpSimplex * model)
                     pivotVariable[iPut++] = i + base3;
                }
           }
+	  if (iPut<numberStaticRows_+numberActiveSets_) {
+	    printf("lost %d sets\n",
+		   numberStaticRows_+numberActiveSets_-iPut);
+	    iPut = numberStaticRows_+numberActiveSets_;
+	  }
           for (i = numberActiveSets_; i < currentNumberActiveSets; i++) {
                pivotVariable[iPut++] = i + base3;
           }
-          assert (iPut == numberRows);
+          //assert (iPut == numberRows);
      }
 #ifdef CLP_DEBUG
 #if 0
@@ -2287,7 +2318,72 @@ ClpDynamicMatrix::initialProblem()
           assert (toIndex_[iSet] >= 0 || whichKey >= 0);
           keyVariable_[iSet] = whichKey;
      }
+     // clean up pivotVariable
+     int numberColumns = model_->numberColumns();
+     int numberRows = model_->numberRows();
+     int * pivotVariable = model_->pivotVariable();
+     if (pivotVariable) {
+       for (int i=0; i<numberStaticRows_+numberActiveSets_;i++) {
+	 if (model_->getRowStatus(i)!=ClpSimplex::basic)
+	   pivotVariable[i]=-1;
+	 else
+	   pivotVariable[i]=numberColumns+i;
+       }
+       for (int i=numberStaticRows_+numberActiveSets_;i<numberRows;i++) {
+	 pivotVariable[i]=i+numberColumns;
+       }
+       int put=-1;
+       for (int i=0;i<numberColumns;i++) {
+	 if (model_->getColumnStatus(i)==ClpSimplex::basic) {
+	   while(put<numberRows) {
+	     put++;
+	     if (pivotVariable[put]==-1) {
+	       pivotVariable[put]=i;
+	       break;
+	     }
+	   }
+	 }
+       }
+       for (int i=CoinMax(put,0);i<numberRows;i++) {
+	 if (pivotVariable[i]==-1) 
+	   pivotVariable[i]=i+numberColumns;
+       }
+     }
+     if (rhsOffset_) {
+       double * cost = model_->costRegion();
+       double * columnLower = model_->lowerRegion();
+       double * columnUpper = model_->upperRegion();
+       double * solution = model_->solutionRegion();
+       int numberRows = model_->numberRows();
+       for (int i = numberActiveSets_; i < numberRows-numberStaticRows_; i++) {
+	 int iSequence = i + numberStaticRows_ + numberColumns;
+	 solution[iSequence] = 0.0;
+	 columnLower[iSequence] = -COIN_DBL_MAX;
+	 columnUpper[iSequence] = COIN_DBL_MAX;
+	 cost[iSequence] = 0.0;
+	 model_->nonLinearCost()->setOne(iSequence, solution[iSequence],
+					columnLower[iSequence],
+					columnUpper[iSequence], 0.0);
+	 model_->setStatus(iSequence, ClpSimplex::basic);
+	 rhsOffset_[i+numberStaticRows_] = 0.0;
+       }
+#if 0
+       for (int i=0;i<numberStaticRows_;i++)
+	 printf("%d offset %g\n",
+		i,rhsOffset_[i]);
+#endif
+     }
      numberActiveColumns_ = firstAvailable_;
+#if 0
+     for (iSet = 0; iSet < numberSets_; iSet++) {
+       for (int j=startSet_[iSet];j<startSet_[iSet+1];j++) {
+	 if (getDynamicStatus(j)==soloKey)
+	   printf("%d in set %d is solo key\n",j,iSet);
+	 else if (getDynamicStatus(j)==inSmall)
+	   printf("%d in set %d is in small\n",j,iSet);
+       }
+     }
+#endif
      return;
 }
 // Writes out model (without names)

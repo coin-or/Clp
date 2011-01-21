@@ -103,6 +103,7 @@ static Clp_message clp_us_english[] = {
      {CLP_PARAMETRICS_STATS, 62, 1, "Theta %g - objective %g"},
      {CLP_PARAMETRICS_STATS2, 63, 2, "Theta %g - objective %g, %s in, %s out"},
      {CLP_GENERAL, 1000, 1, "%s"},
+     {CLP_GENERAL2, 1001, 2, "%s"},
      {CLP_DUMMY_END, 999999, 0, ""}
 };
 static Clp_message uk_english[] = {

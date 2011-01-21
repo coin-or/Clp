@@ -4172,7 +4172,7 @@ ClpSimplexOther::gubVersion(int * whichRows, int * whichColumns,
   int numberGub = numberEmpty - numberNonGub;
   if (numberGub >= neededGub) { 
     sprintf(message,"%d gub rows", numberGub);
-    handler_->message(CLP_GENERAL, messages_)
+    handler_->message(CLP_GENERAL2, messages_)
       << message << CoinMessageEol;
     int numberNormal = 0;
     for (iColumn = 0; iColumn < numberColumns; iColumn++) {
@@ -4182,7 +4182,7 @@ ClpSimplexOther::gubVersion(int * whichRows, int * whichColumns,
     }
     if (!numberNormal) {
       sprintf(message,"Putting back one gub row to make non-empty");
-      handler_->message(CLP_GENERAL, messages_)
+      handler_->message(CLP_GENERAL2, messages_)
 	<< message << CoinMessageEol;
       rowIsGub[smallestGubRow]=-1;
       whichRows[numberNonGub++] = smallestGubRow;
@@ -4398,7 +4398,7 @@ ClpSimplexOther::gubVersion(int * whichRows, int * whichColumns,
     }
     sprintf(message,"** Before adding matrix there are %d rows and %d columns",
 	   model2->numberRows(), model2->numberColumns());
-    handler_->message(CLP_GENERAL, messages_)
+    handler_->message(CLP_GENERAL2, messages_)
       << message << CoinMessageEol;
     delete [] scaleArray;
     delete [] temp1;
@@ -4438,7 +4438,7 @@ ClpSimplexOther::gubVersion(int * whichRows, int * whichColumns,
     sprintf(message,
 	    "** While after adding matrix there are %d rows and %d columns",
 	    model2->numberRows(), model2->numberColumns());
-    handler_->message(CLP_GENERAL, messages_)
+    handler_->message(CLP_GENERAL2, messages_)
       << message << CoinMessageEol;
     model2->setSpecialOptions(4);    // exactly to bound
     // Scaling off (done by hand)
@@ -4470,12 +4470,14 @@ ClpSimplexOther::setGubBasis(const ClpSimplex &original,const int * whichRows,
   //assert (firstOdd==numberNormal);
   double * solution = primalColumnSolution();
   const double * originalSolution = original.primalColumnSolution();
+  const double * upperSet = gubMatrix->upperSet();
   int numberSets = gubMatrix->numberSets();
   const int * startSet = gubMatrix->startSets();
   const CoinBigIndex * startColumn = gubMatrix->startColumn();
   const double * columnLower = gubMatrix->columnLower();
   for (int i=0;i<numberSets;i++) {
     for (int j=startSet[i];j<startSet[i+1];j++) {
+      gubMatrix->setDynamicStatus(j,ClpDynamicMatrix::atLowerBound);
       int iColumn = whichColumns[j+numberNormal];
       if (iColumn<numberColumns)
 	columnIsGub[iColumn] = whichRows[numberNonGub+i];
@@ -4542,34 +4544,37 @@ ClpSimplexOther::setGubBasis(const ClpSimplex &original,const int * whichRows,
   for (int i = 0; i < numberSets; i++) {
     int iRow = whichRows[numberNonGub+i];
     if (!numberKey[iRow]) {
-      if (original.getRowStatus(iRow)==ClpSimplex::basic) {
+      double upper = upperSet[i]-1.0e-7;
+      if (original.getRowStatus(iRow)==ClpSimplex::basic) 
 	gubMatrix->setStatus(i,ClpSimplex::basic);
-      } else { 
-	// If not at lb make key otherwise one with smallest number els
-	double largest=0.0;
-	int fewest=numberRows+1;
-	int chosen=-1;
-	for (int j=startSet[i];j<startSet[i+1];j++) {
-	  int length=startColumn[j+1]-startColumn[j];
-	  int iOrig = whichColumns[j+numberNormal];
-	  double value;
-	  if (iOrig<numberColumns) {
-	    value=originalSolution[iOrig]-columnLower[j];
-	  } else {
-	    // slack - take value as 0.0 as will win on length
-	    value=0.0;
-	  }
-	  if (value>largest+1.0e-8) {
-	    largest=value;
-	    fewest=length;
-	    chosen=j;
-	  } else if (fabs(value-largest)<=1.0e-8&&length<fewest) {
-	    largest=value;
-	    fewest=length;
-	    chosen=j;
-	  }
+      // If not at lb make key otherwise one with smallest number els
+      double largest=0.0;
+      int fewest=numberRows+1;
+      int chosen=-1;
+      for (int j=startSet[i];j<startSet[i+1];j++) {
+	int length=startColumn[j+1]-startColumn[j];
+	int iOrig = whichColumns[j+numberNormal];
+	double value;
+	if (iOrig<numberColumns) {
+	  value=originalSolution[iOrig]-columnLower[j];
+	  if (value>upper)
+	    gubMatrix->setStatus(i,ClpSimplex::atLowerBound);
+	} else {
+	  // slack - take value as 0.0 as will win on length
+	  value=0.0;
 	}
-	assert(chosen>=0);
+	if (value>largest+1.0e-8) {
+	  largest=value;
+	  fewest=length;
+	  chosen=j;
+	} else if (fabs(value-largest)<=1.0e-8&&length<fewest) {
+	  largest=value;
+	  fewest=length;
+	  chosen=j;
+	}
+      }
+      assert(chosen>=0);
+      if (gubMatrix->getStatus(i)!=ClpSimplex::basic) {
 	// set as key
 	for (int j=startSet[i];j<startSet[i+1];j++) {
 	  if (j!=chosen)
