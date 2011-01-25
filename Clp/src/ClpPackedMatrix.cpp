@@ -4012,6 +4012,8 @@ ClpPackedMatrix::allElementsInRange(ClpModel * model,
      int numberColumns = matrix_->getNumCols();
      // Say no gaps
      flags_ &= ~2;
+     if (type_>=10)
+       return true; // gub
      if (check == 14 || check == 10) {
           if (matrix_->getNumElements() < columnStart[numberColumns]) {
                // pack down!

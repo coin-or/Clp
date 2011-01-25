@@ -196,7 +196,7 @@ public:
 			     int neededGub,
 			     int factorizationFrequency=50);
      /// Sets basis from original
-     void setGubBasis(const ClpSimplex &original,const int * whichRows,
+     void setGubBasis(ClpSimplex &original,const int * whichRows,
 		      const int * whichColumns);
      /// Restores basis to original
      void getGubBasis(ClpSimplex &original,const int * whichRows,

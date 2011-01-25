@@ -176,8 +176,8 @@ ClpDynamicMatrix::ClpDynamicMatrix(ClpSimplex * model, int numberSets,
      lastDynamic_ = numberNeeded;
      startColumn_ = ClpCopyOfArray(startColumn, numberGubColumns_ + 1);
      if (!numberGubColumns_) {
-          startColumn_ = new CoinBigIndex [1];
-          startColumn_[0] = 0;
+       //startColumn_ = new CoinBigIndex [1];
+       startColumn_[0] = 0;
      }
      CoinBigIndex numberElements = startColumn_[numberGubColumns_];
      row_ = ClpCopyOfArray(row, numberElements);
@@ -234,8 +234,12 @@ ClpDynamicMatrix::ClpDynamicMatrix(ClpSimplex * model, int numberSets,
      numberElements_ = static_cast<int> (guess);
      numberElements_ = CoinMin(numberElements_, numberElements) + originalMatrix->getNumElements();
      matrix_ = originalMatrix;
+     //delete originalMatrixA;
      flags_ &= ~1;
      // resize model (matrix stays same)
+     // modify frequency
+     if (frequency>=50)
+       frequency = 50+(frequency-50)/2;
      int newRowSize = numberRows + CoinMin(numberSets_, frequency+numberRows) + 1;
      model->resize(newRowSize, numberNeeded);
      for (i = numberRows; i < newRowSize; i++)
@@ -902,7 +906,10 @@ ClpDynamicMatrix::updatePivot(ClpSimplex * model, double oldInValue, double oldO
      }
 #endif
 #endif
-     return 0;
+     if (numberStaticRows_+numberActiveSets_<model->numberRows())
+       return 0;
+     else
+       return 1;
 }
 /*
      utility dual function for dealing with dynamic constraints
@@ -2274,7 +2281,7 @@ ClpDynamicMatrix::initialProblem()
                fromIndex_[numberActiveSets_++] = iSet;
 	  } else {
 	    // solo key
-	    bool needKey;
+	    bool needKey=false;
 	    if (numberActive) {
 	      if (whichKey<maximumGubColumns_) {
 		// structural - assume ok

@@ -1827,7 +1827,7 @@ ClpSimplex::housekeeping(double objectiveChange)
      }
 
      // Update hidden stuff e.g. effective RHS and gub
-     matrix_->updatePivot(this, oldIn, oldOut);
+     int invertNow=matrix_->updatePivot(this, oldIn, oldOut);
      objectiveValue_ += objectiveChange / (objectiveScale_ * rhsScale_);
      if (handler_->logLevel() > 7) {
           //if (handler_->detail(CLP_SIMPLEX_HOUSE2,messages_)<100) {
@@ -1984,7 +1984,8 @@ ClpSimplex::housekeeping(double objectiveChange)
                }
           }
           return 1;
-     } else if (factorization_->timeToRefactorize() && !dontInvert) {
+     } else if ((factorization_->timeToRefactorize() && !dontInvert)
+		||invertNow) {
           //printf("ret after %d pivots\n",factorization_->pivots());
           return 1;
      } else if (forceFactorization_ > 0 &&
