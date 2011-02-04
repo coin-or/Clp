@@ -1335,10 +1335,10 @@ OsiClpSolverInterface::resolveGub(int needed)
     static_cast<ClpSimplexOther *> (model2)->getGubBasis(*modelPtr_,
 							 which,whichC);
     int totalIterations = model2->numberIterations();
+    delete model2;
     //modelPtr_->setLogLevel(63);
     modelPtr_->primal(1);
     modelPtr_->setNumberIterations(totalIterations+modelPtr_->numberIterations());
-    delete model2;
   } else {
     modelPtr_->dual();
   }
@@ -2840,7 +2840,10 @@ OsiClpSolverInterface::setOptionalInteger(int index)
 //------------------------------------------------------------------
 const CoinPackedMatrix * OsiClpSolverInterface::getMatrixByRow() const
 {
-  if ( matrixByRow_ == NULL ) {
+  if ( matrixByRow_ == NULL ||
+       matrixByRow_->getNumElements() != 
+       modelPtr_->clpMatrix()->getNumElements() ) {
+    delete matrixByRow_;
     matrixByRow_ = new CoinPackedMatrix();
     matrixByRow_->setExtraGap(0.0);
     matrixByRow_->setExtraMajor(0.0);

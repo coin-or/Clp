@@ -3263,7 +3263,7 @@ ClpPackedMatrix::scale(ClpModel * model, const ClpSimplex * /*baseModel*/) const
      const CoinBigIndex * columnStart = matrix_->getVectorStarts();
      int * columnLength = matrix_->getMutableVectorLengths();
      double * elementByColumn = matrix_->getMutableElements();
-     bool deletedElements = false;
+     int deletedElements = 0;
      for (iColumn = 0; iColumn < numberColumns; iColumn++) {
           CoinBigIndex j;
           char useful = 0;
@@ -3300,7 +3300,6 @@ ClpPackedMatrix::scale(ClpModel * model, const ClpSimplex * /*baseModel*/) const
 #endif
           usefulColumn[iColumn] = useful;
           if (deleteSome) {
-               deletedElements = true;
                CoinBigIndex put = start;
                for (j = start; j < end; j++) {
                     double value = elementByColumn[j];
@@ -3309,9 +3308,12 @@ ClpPackedMatrix::scale(ClpModel * model, const ClpSimplex * /*baseModel*/) const
                          elementByColumn[put++] = value;
                     }
                }
+               deletedElements += end - put;
                columnLength[iColumn] = put - start;
           }
      }
+     if (deletedElements)
+       matrix_->setNumElements(matrix_->getNumElements()-deletedElements);
      model->messageHandler()->message(CLP_PACKEDSCALE_INITIAL, *model->messagesPointer())
                << smallest << largest
                << CoinMessageEol;
