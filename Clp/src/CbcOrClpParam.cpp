@@ -1833,7 +1833,7 @@ gap between bounds exceeds this value",
      );
      parameters[numberParameters++] =
           CbcOrClpParam("dualize", "Solves dual reformulation",
-                        0, 3, CLP_PARAM_INT_DUALIZE, 1);
+                        0, 4, CLP_PARAM_INT_DUALIZE, 1);
      parameters[numberParameters-1].setLonghelp
      (
           "Don't even think about it."
@@ -2048,6 +2048,16 @@ of branch and bound are done on reduced problem.  Small problem has to be less t
      parameters[numberParameters-1].append("gammastrong");
      parameters[numberParameters-1].append("deltastrong");
 #endif
+     parameters[numberParameters++] =
+          CbcOrClpParam("gsolu!tion", "Puts glpk solution to file",
+                        CLP_PARAM_ACTION_GMPL_SOLUTION);
+     parameters[numberParameters-1].setLonghelp
+     (
+          "Will write a glpk solution file to the given file name.  It will use the default\
+ directory given by 'directory'.  A name of '$' will use the previous value for the name.  This\
+ is initialized to 'stdout' (this defaults to ordinary solution if stdout). \
+If problem created from gmpl model - will do any reports."
+     );
 #ifdef COIN_HAS_CBC
      parameters[numberParameters++] =
           CbcOrClpParam("gomory!Cuts", "Whether to use Gomory cuts",
