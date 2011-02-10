@@ -1547,7 +1547,7 @@ Cbc/examples/driver4.cpp."
                         "off", CLP_PARAM_STR_CRASH);
      parameters[numberParameters-1].append("on");
      parameters[numberParameters-1].append("so!low_halim");
-     parameters[numberParameters-1].append("ha!lim_solow(JJF mods)");
+     parameters[numberParameters-1].append("lots");
      //  parameters[numberParameters-1].append("4");
      //  parameters[numberParameters-1].append("5");
      parameters[numberParameters-1].setLonghelp

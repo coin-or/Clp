@@ -24,6 +24,11 @@ int boundary_sort3 = 10000;
 #include "ClpConfig.h"
 #include "CoinMpsIO.hpp"
 #include "CoinFileIO.hpp"
+#ifdef COIN_HAS_GLPK
+#include "glpk.h"
+extern glp_tran* cbc_glp_tran;
+extern glp_prob* cbc_glp_prob;
+#endif
 
 #include "ClpFactorization.hpp"
 #include "CoinTime.hpp"
@@ -646,6 +651,11 @@ main (int argc, const char *argv[])
                                    ClpSolve::SolveType method;
                                    ClpSolve::PresolveType presolveType;
                                    ClpSimplex * model2 = models + iModel;
+                                   ClpSolve solveOptions;
+				   if (dualize==4) { 
+				     solveOptions.setSpecialOption(4, 77);
+				     dualize=0;
+				   }
                                    if (dualize) {
                                         bool tryIt = true;
                                         double fractionColumn = 1.0;
@@ -670,12 +680,13 @@ main (int argc, const char *argv[])
                                              } else {
                                                   model2 = models + iModel;
                                                   dualize = 0;
-                                             }
+					     }
                                         } else {
                                              dualize = 0;
                                         }
                                    }
-                                   ClpSolve solveOptions;
+                                   if (preSolveFile)
+                                        presolveOptions |= 0x40000000;
                                    solveOptions.setPresolveActions(presolveOptions);
                                    solveOptions.setSubstitution(substitution);
                                    if (preSolve != 5 && preSolve) {
@@ -721,9 +732,6 @@ main (int argc, const char *argv[])
                                         }
                                    }
                                    solveOptions.setSolveType(method);
-                                   if (preSolveFile)
-                                        presolveOptions |= 0x40000000;
-                                   solveOptions.setSpecialOption(4, presolveOptions);
                                    solveOptions.setSpecialOption(5, printOptions & 1);
                                    if (doVector) {
                                         ClpMatrixBase * matrix = models[iModel].clpMatrix();
@@ -960,6 +968,17 @@ main (int argc, const char *argv[])
                                    }
                                    if (absolutePath) {
                                         fileName = field;
+                                        int length = field.size();
+                                        int percent = field.find('%');
+                                        if (percent < length && percent > 0) {
+                                             gmpl = 1;
+                                             fileName = field.substr(0, percent);
+                                             gmplData = field.substr(percent + 1);
+                                             if (percent < length - 1)
+                                                  gmpl = 2; // two files
+                                             printf("GMPL model file %s and data file %s\n",
+                                                    fileName.c_str(), gmplData.c_str());
+                                        }
                                    } else if (field[0] == '~') {
                                         char * environVar = getenv("HOME");
                                         if (environVar) {
@@ -1755,6 +1774,7 @@ clp watson.mps -\nscaling off\nprimalsimplex"
                               );
                               break;
                          case CLP_PARAM_ACTION_SOLUTION:
+			 case CLP_PARAM_ACTION_GMPL_SOLUTION:
                               if (goodModels[iModel]) {
                                    // get next field
                                    field = CoinReadGetString(argc, argv);
@@ -1802,6 +1822,76 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 					  fp = fopen(fileName.c_str(), "a");
                                    }
                                    if (fp) {
+				     // See if Glpk 
+				     if (type == CLP_PARAM_ACTION_GMPL_SOLUTION) {
+				       int numberRows = models[iModel].getNumRows();
+				       int numberColumns = models[iModel].getNumCols();
+				       int numberGlpkRows=numberRows+1;
+				       if (cbc_glp_prob) {
+					 // from gmpl
+					 numberGlpkRows=glp_get_num_rows(cbc_glp_prob);
+					 if (numberGlpkRows!=numberRows)
+					   printf("Mismatch - cbc %d rows, glpk %d\n",
+						  numberRows,numberGlpkRows);
+				       }
+				       fprintf(fp,"%d %d\n",numberGlpkRows,
+					       numberColumns);
+				       int iStat = models[iModel].status();
+				       int iStat2 = GLP_UNDEF;
+				       if (iStat == 0) {
+					 // optimal
+					 iStat2 = GLP_FEAS;
+				       } else if (iStat == 1) {
+					 // infeasible
+					 iStat2 = GLP_NOFEAS;
+				       } else if (iStat == 2) {
+					 // unbounded
+					 // leave as 1
+				       } else if (iStat >= 3 && iStat <= 5) {
+					 iStat2 = GLP_FEAS;
+				       }
+				       double objValue = models[iModel].getObjValue() 
+					 * models[iModel].getObjSense();
+				       fprintf(fp,"%d 2 %g\n",iStat2,objValue);
+				       if (numberGlpkRows > numberRows) {
+					 // objective as row
+					 fprintf(fp,"4 %g 1.0\n",objValue);
+				       }
+				       int lookup[6]=
+					 {4,1,3,2,4,5};
+				       const double * primalRowSolution =
+					 models[iModel].primalRowSolution();
+				       const double * dualRowSolution =
+					 models[iModel].dualRowSolution();
+				       for (int i=0;i<numberRows;i++) {
+					 fprintf(fp,"%d %g %g\n",lookup[models[iModel].getRowStatus(i)],
+						 primalRowSolution[i],dualRowSolution[i]);
+				       }
+				       const double * primalColumnSolution =
+					 models[iModel].primalColumnSolution();
+				       const double * dualColumnSolution =
+					 models[iModel].dualColumnSolution();
+				       for (int i=0;i<numberColumns;i++) {
+					 fprintf(fp,"%d %g %g\n",lookup[models[iModel].getColumnStatus(i)],
+						 primalColumnSolution[i],dualColumnSolution[i]);
+				       }
+				       fclose(fp);
+#ifdef COIN_HAS_GLPK
+				       if (cbc_glp_prob) {
+					 glp_read_sol(cbc_glp_prob,fileName.c_str());
+					 glp_mpl_postsolve(cbc_glp_tran,
+							   cbc_glp_prob,
+							   GLP_SOL);
+					 // free up as much as possible
+					 glp_free(cbc_glp_prob);
+					 glp_mpl_free_wksp(cbc_glp_tran);
+					 //gmp_free_mem();
+					 /* check that no memory blocks are still allocated */
+					 glp_free_env();
+				       }
+#endif
+				       break;
+				     }
                                         // Write solution header (suggested by Luigi Poderico)
                                         double objValue = models[iModel].getObjValue() * models[iModel].getObjSense();
                                         int iStat = models[iModel].status();
