@@ -25,7 +25,7 @@
 			ConfigurationType="1"
 			InheritedPropertySheets=".\clp.vsprops"
 			CharacterSet="1"
-			ManagedExtensions="1"
+			ManagedExtensions="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -96,7 +96,7 @@
 			ConfigurationType="1"
 			InheritedPropertySheets=".\clp.vsprops"
 			CharacterSet="1"
-			ManagedExtensions="1"
+			ManagedExtensions="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -168,7 +168,7 @@
 			ConfigurationType="1"
 			InheritedPropertySheets=".\clp.vsprops"
 			CharacterSet="1"
-			ManagedExtensions="1"
+			ManagedExtensions="0"
 			WholeProgramOptimization="1"
 			>
 			<Tool
@@ -238,7 +238,7 @@
 			ConfigurationType="1"
 			InheritedPropertySheets=".\clp.vsprops"
 			CharacterSet="1"
-			ManagedExtensions="1"
+			ManagedExtensions="0"
 			WholeProgramOptimization="1"
 			>
 			<Tool
@@ -306,11 +306,10 @@
 		<Configuration
 			Name="DebugDLL|Win32"
 			OutputDirectory="$(CoinBinDir)"
-			IntermediateDirectory="$(ProjectName)\$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="1"
 			InheritedPropertySheets=".\clp.vsprops"
 			CharacterSet="1"
-			ManagedExtensions="1"
+			ManagedExtensions="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -347,6 +346,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				LinkLibraryDependencies="false"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories=""
 				GenerateDebugInformation="true"
@@ -378,11 +378,10 @@
 		<Configuration
 			Name="DebugDLL|x64"
 			OutputDirectory="$(CoinBinDir)"
-			IntermediateDirectory="$(ProjectName)\$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="1"
 			InheritedPropertySheets=".\clp.vsprops"
 			CharacterSet="1"
-			ManagedExtensions="1"
+			ManagedExtensions="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -420,6 +419,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				LinkLibraryDependencies="false"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories=""
 				GenerateDebugInformation="true"
@@ -517,10 +517,6 @@
 			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
 			>
 		</Filter>
-		<File
-			RelativePath=".\clp.vsprops"
-			>
-		</File>
 	</Files>
 	<Globals>
 	</Globals>
