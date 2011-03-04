@@ -441,7 +441,8 @@ COINLIBAPI void COINLINKAGE
 Clp_problemName(Clp_Simplex * model, int maxNumberCharacters, char * array)
 {
      std::string name = model->model_->problemName();
-     maxNumberCharacters = CoinMin(maxNumberCharacters, (int)strlen(name.c_str()));
+     maxNumberCharacters = CoinMin(maxNumberCharacters,
+     				   ((int) strlen(name.c_str()))+1) ;
      strncpy(array, name.c_str(), maxNumberCharacters - 1);
      array[maxNumberCharacters-1] = '\0';
 }
