@@ -92,6 +92,9 @@ else
   AM_CONDITIONAL(COIN_HAS_GLPK, [test 0 = 1])
 fi
 
+# MUMPS
+AC_COIN_CHECK_PACKAGE(Mumps, [coinmumps], [ClpLib])
+
 # WSMP
 AC_ARG_WITH([wsmp],
             AC_HELP_STRING([--with-wsmp],

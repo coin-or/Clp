@@ -55,7 +55,7 @@ extern glp_prob* cbc_glp_prob;
 #ifdef DMALLOC
 #include "dmalloc.h"
 #endif
-#if defined(WSSMP_BARRIER) || defined(COIN_HAS_AMD) || defined(COIN_HAS_CHOLMOD) || defined(TAUCS_BARRIER) || defined(MUMPS_BARRIER)
+#if defined(WSSMP_BARRIER) || defined(COIN_HAS_AMD) || defined(COIN_HAS_CHOLMOD) || defined(TAUCS_BARRIER) || defined(COIN_HAS_MUMPS)
 #define FOREIGN_BARRIER
 #endif
 

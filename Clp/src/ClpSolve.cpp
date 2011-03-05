@@ -5,8 +5,13 @@
 
 // This file has higher level solve functions
 
-#include "ClpConfig.h"
 #include "CoinPragma.hpp"
+#include "ClpConfig.h"
+
+// check already here if COIN_HAS_GLPK is defined, since we do not want to get confused by a COIN_HAS_GLPK in config_coinutils.h
+#if defined(COIN_HAS_AMD) || defined(COIN_HAS_CHOLMOD) || defined(COIN_HAS_GLPK)
+#define UFL_BARRIER
+#endif
 
 #include <math.h>
 
@@ -43,9 +48,7 @@
 #ifdef TAUCS_BARRIER
 #include "ClpCholeskyTaucs.hpp"
 #endif
-#ifdef MUMPS_BARRIER
 #include "ClpCholeskyMumps.hpp"
-#endif
 #ifdef COIN_HAS_VOL
 #include "VolVolume.hpp"
 #include "CoinHelperFunctions.hpp"
@@ -1973,6 +1976,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
                }
                break;
 #endif
+#if UFL_BARRIER
           case 4:
                if (!doKKT) {
                     ClpCholeskyUfl * cholesky = new ClpCholeskyUfl();
@@ -1983,6 +1987,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
                     barrier.setCholesky(cholesky);
                }
                break;
+#endif
 #ifdef TAUCS_BARRIER
           case 5: {
                ClpCholeskyTaucs * cholesky = new ClpCholeskyTaucs();
@@ -1991,7 +1996,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
           }
           break;
 #endif
-#ifdef MUMPS_BARRIER
+#ifdef COIN_HAS_MUMPS
           case 6: {
                ClpCholeskyMumps * cholesky = new ClpCholeskyMumps();
                barrier.setCholesky(cholesky);

@@ -1,20 +1,23 @@
 /* $Id$ */
-#ifdef MUMPS_BARRIER
 // Copyright (C) 2004, International Business Machines
 // Corporation and others.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).
 
 
 #include "CoinPragma.hpp"
-#include "ClpCholeskyMumps.hpp"
-extern "C"
-{
-     //#include "mpi.h"
-#include "/home/jjforre/cbc-trunk/ThirdParty/Mumps/MUMPS/libseq/mpi.h"
-}
+
+#include "ClpConfig.h"
+
+#define MPI_COMM_WORLD CLP_MPI_COMM_WORLD
 #define JOB_INIT -1
 #define JOB_END -2
 #define USE_COMM_WORLD -987654
+extern "C" {
+#include "dmumps_c.h"
+#include "mpi.h"
+}
+
+#include "ClpCholeskyMumps.hpp"
 #include "ClpMessage.hpp"
 #include "ClpInterior.hpp"
 #include "CoinHelperFunctions.hpp"
@@ -29,33 +32,34 @@ extern "C"
 ClpCholeskyMumps::ClpCholeskyMumps (int denseThreshold)
      : ClpCholeskyBase(denseThreshold)
 {
+     mumps_ = (DMUMPS_STRUC_C*)malloc(sizeof(DMUMPS_STRUC_C));
      type_ = 16;
-     mumps_.n = 0;
-     mumps_.nz = 0;
-     mumps_.a = NULL;
-     mumps_.jcn = NULL;
-     mumps_.irn = NULL;
-     mumps_.job = JOB_INIT;//initialize mumps
-     mumps_.par = 1;//working host for sequential version
-     mumps_.sym = 2;//general symmetric matrix
-     mumps_.comm_fortran = USE_COMM_WORLD;
+     mumps_->n = 0;
+     mumps_->nz = 0;
+     mumps_->a = NULL;
+     mumps_->jcn = NULL;
+     mumps_->irn = NULL;
+     mumps_->job = JOB_INIT;//initialize mumps
+     mumps_->par = 1;//working host for sequential version
+     mumps_->sym = 2;//general symmetric matrix
+     mumps_->comm_fortran = USE_COMM_WORLD;
      int myid, ierr;
      int justName;
      ierr = MPI_Init(&justName, NULL);
      ierr = MPI_Comm_rank(MPI_COMM_WORLD, &myid);
      assert (!ierr);
-     dmumps_c(&mumps_);
+     dmumps_c(mumps_);
 #define ICNTL(I) icntl[(I)-1] /* macro s.t. indices match documentation */
 #define CNTL(I) cntl[(I)-1] /* macro s.t. indices match documentation */
-     mumps_.ICNTL(5) = 1; // say compressed format
-     mumps_.ICNTL(4) = 2; // log messages
-     mumps_.ICNTL(24) = 1; // Deal with zeros on diagonal
-     mumps_.CNTL(3) = 1.0e-20; // drop if diagonal less than this
+     mumps_->ICNTL(5) = 1; // say compressed format
+     mumps_->ICNTL(4) = 2; // log messages
+     mumps_->ICNTL(24) = 1; // Deal with zeros on diagonal
+     mumps_->CNTL(3) = 1.0e-20; // drop if diagonal less than this
      // output off
-     mumps_.ICNTL(1) = -1;
-     mumps_.ICNTL(2) = -1;
-     mumps_.ICNTL(3) = -1;
-     mumps_.ICNTL(4) = 0;
+     mumps_->ICNTL(1) = -1;
+     mumps_->ICNTL(2) = -1;
+     mumps_->ICNTL(3) = -1;
+     mumps_->ICNTL(4) = 0;
 }
 
 //-------------------------------------------------------------------
@@ -73,9 +77,10 @@ ClpCholeskyMumps::ClpCholeskyMumps (const ClpCholeskyMumps & rhs)
 //-------------------------------------------------------------------
 ClpCholeskyMumps::~ClpCholeskyMumps ()
 {
-     mumps_.job = JOB_END;
-     dmumps_c(&mumps_); /* Terminate instance */
+     mumps_->job = JOB_END;
+     dmumps_c(mumps_); /* Terminate instance */
      MPI_Finalize();
+     free(mumps_);
 }
 
 //----------------------------------------------------------------
@@ -154,7 +159,7 @@ ClpCholeskyMumps::order(ClpInterior * model)
      }
      delete [] which;
      // NOT COMPRESSED FOR NOW ??? - Space for starts
-     mumps_.ICNTL(5) = 0; // say NOT compressed format
+     mumps_->ICNTL(5) = 0; // say NOT compressed format
      try {
           choleskyStart_ = new CoinBigIndex[numberRows_+1+sizeFactor_];
      } catch (...) {
@@ -230,37 +235,37 @@ ClpCholeskyMumps::order(ClpInterior * model)
                choleskyStart_[k] = iRow + 1;
           choleskyStart_[iRow]++;
      }
-     mumps_.nz = sizeFactor_;
-     mumps_.irn = choleskyStart_ + numberRows_ + 1;
-     mumps_.jcn = choleskyRow_;
-     mumps_.a = NULL;
+     mumps_->nz = sizeFactor_;
+     mumps_->irn = choleskyStart_ + numberRows_ + 1;
+     mumps_->jcn = choleskyRow_;
+     mumps_->a = NULL;
      for (CoinBigIndex i = 0; i < sizeFactor_; i++) {
           choleskyRow_[i]++;
 #ifndef NDEBUG
-          assert (mumps_.irn[i] >= 1 && mumps_.irn[i] <= numberRows_);
-          assert (mumps_.jcn[i] >= 1 && mumps_.jcn[i] <= numberRows_);
+          assert (mumps_->irn[i] >= 1 && mumps_->irn[i] <= numberRows_);
+          assert (mumps_->jcn[i] >= 1 && mumps_->jcn[i] <= numberRows_);
 #endif
      }
      // validate
      //mumps code here
-     mumps_.n = numberRows_;
-     mumps_.nelt = numberRows_;
-     mumps_.eltptr = choleskyStart_;
-     mumps_.eltvar = choleskyRow_;
-     mumps_.a_elt = NULL;
-     mumps_.rhs = NULL;
-     mumps_.job = 1; // order
-     dmumps_c(&mumps_);
-     mumps_.a = sparseFactor_;
-     if (mumps_.infog[0]) {
+     mumps_->n = numberRows_;
+     mumps_->nelt = numberRows_;
+     mumps_->eltptr = choleskyStart_;
+     mumps_->eltvar = choleskyRow_;
+     mumps_->a_elt = NULL;
+     mumps_->rhs = NULL;
+     mumps_->job = 1; // order
+     dmumps_c(mumps_);
+     mumps_->a = sparseFactor_;
+     if (mumps_->infog[0]) {
           printf("MUMPS ordering failed -error %d %d\n",
-                 mumps_.infog[0], mumps_.infog[1]);
+                 mumps_->infog[0], mumps_->infog[1]);
           return 1;
      } else {
-          double size = mumps_.infog[19];
+          double size = mumps_->infog[19];
           if (size < 0)
                size *= -1000000;
-          printf("%g nonzeros, flop count %g\n", size, mumps_.rinfog[0]);
+          printf("%g nonzeros, flop count %g\n", size, mumps_->rinfog[0]);
      }
      for (iRow = 0; iRow < numberRows_; iRow++) {
           permuteInverse_[iRow] = iRow;
@@ -374,13 +379,13 @@ ClpCholeskyMumps::factorize(const double * diagonal, int * rowsDropped)
      }
      delete [] work;
      // code here
-     mumps_.a_elt = sparseFactor_;
-     mumps_.rhs = NULL;
-     mumps_.job = 2; // factorize
-     dmumps_c(&mumps_);
-     if (mumps_.infog[0]) {
+     mumps_->a_elt = sparseFactor_;
+     mumps_->rhs = NULL;
+     mumps_->job = 2; // factorize
+     dmumps_c(mumps_);
+     if (mumps_->infog[0]) {
           printf("MUMPS factorization failed -error %d %d\n",
-                 mumps_.infog[0], mumps_.infog[1]);
+                 mumps_->infog[0], mumps_->infog[1]);
      }
      choleskyCondition_ = 1.0;
      bool cleanCholesky;
@@ -399,8 +404,8 @@ ClpCholeskyMumps::factorize(const double * diagonal, int * rowsDropped)
                //std::cout<<std::endl;
                newDropped = 0;
                for (int i = 0; i < numberRows_; i++) {
-                    char dropped = rowsDropped[i];
-                    rowsDropped_[i] = dropped;
+                    int dropped = rowsDropped[i];
+                    rowsDropped_[i] = (char)dropped;
                     if (dropped == 2) {
                          //dropped this time
                          rowsDropped[newDropped++] = i;
@@ -414,8 +419,8 @@ ClpCholeskyMumps::factorize(const double * diagonal, int * rowsDropped)
           if (newDropped) {
                newDropped = 0;
                for (int i = 0; i < numberRows_; i++) {
-                    char dropped = rowsDropped[i];
-                    rowsDropped_[i] = dropped;
+                    int dropped = rowsDropped[i];
+                    rowsDropped_[i] = (char)dropped;
                     if (dropped == 2) {
                          //dropped this time
                          rowsDropped[newDropped++] = i;
@@ -440,8 +445,7 @@ ClpCholeskyMumps::factorize(const double * diagonal, int * rowsDropped)
 void
 ClpCholeskyMumps::solve (double * region)
 {
-     mumps_.rhs = region;
-     mumps_.job = 3; // solve
-     dmumps_c(&mumps_);
+     mumps_->rhs = region;
+     mumps_->job = 3; // solve
+     dmumps_c(mumps_);
 }
-#endif
