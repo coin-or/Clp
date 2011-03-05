@@ -40,7 +40,7 @@
 #include "ClpPresolve.hpp"
 #ifndef SLIM_CLP
 #include "Idiot.hpp"
-#ifdef WSSMP_BARRIER
+#ifdef COIN_HAS_WSMP
 #include "ClpCholeskyWssmp.hpp"
 #include "ClpCholeskyWssmpKKT.hpp"
 #endif
@@ -1959,7 +1959,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
                     barrier.setCholesky(cholesky);
                }
                break;
-#ifdef WSSMP_BARRIER
+#ifdef COIN_HAS_WSMP
           case 2: {
                ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp(CoinMax(100, model2->numberRows() / 10));
                barrier.setCholesky(cholesky);

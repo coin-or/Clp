@@ -41,7 +41,7 @@ static char coin_prompt[] = "Clp:";
 #define CBC_THREAD
 #endif
 #endif
-#if WSSMP_BARRIER>=2
+#if defined(COIN_HAS_WSMP) && not defined(USE_EKKWSSMP)
 #ifndef CBC_THREAD
 #define CBC_THREAD
 #endif
@@ -1429,7 +1429,7 @@ have more rounds of cuts - see passC!uts and passT!ree."
                         "native", CLP_PARAM_STR_CHOLESKY, 7);
      parameters[numberParameters-1].append("dense");
      //#ifdef FOREIGN_BARRIER
-#ifdef WSSMP_BARRIER
+#ifdef COIN_HAS_WSMP
      parameters[numberParameters-1].append("fudge!Long");
      parameters[numberParameters-1].append("wssmp");
 #else

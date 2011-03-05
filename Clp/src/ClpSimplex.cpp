@@ -5803,10 +5803,8 @@ int ClpSimplex::reducedGradient(int phase)
 #include "ClpPredictorCorrector.hpp"
 #include "ClpCholeskyBase.hpp"
 // Preference is WSSMP, UFL (just ordering), MUMPS, TAUCS then base
-#if WSSMP_BARRIER
 #include "ClpCholeskyWssmp.hpp"
 #include "ClpCholeskyWssmpKKT.hpp"
-#endif
 #include "ClpCholeskyUfl.hpp"
 #include "ClpCholeskyMumps.hpp"
 #if TAUCS_BARRIER

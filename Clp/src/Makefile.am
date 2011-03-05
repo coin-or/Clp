@@ -25,8 +25,6 @@ libClp_la_SOURCES = \
 	ClpConfig.h \
 	ClpCholeskyBase.cpp ClpCholeskyBase.hpp \
 	ClpCholeskyDense.cpp ClpCholeskyDense.hpp \
-	ClpCholeskyWssmp.cpp ClpCholeskyWssmp.hpp \
-	ClpCholeskyWssmpKKT.cpp ClpCholeskyWssmpKKT.hpp \
 	ClpConstraint.cpp ClpConstraint.hpp \
 	ClpConstraintLinear.cpp ClpConstraintLinear.hpp \
 	ClpConstraintQuadratic.cpp ClpConstraintQuadratic.hpp \
@@ -88,6 +86,10 @@ endif
 
 if COIN_HAS_MUMPS
 libClp_la_SOURCES += ClpCholeskyMumps.cpp ClpCholeskyMumps.hpp
+endif
+
+if COIN_HAS_WSMP
+libClp_la_SOURCES += ClpCholeskyWssmp.cpp ClpCholeskyWssmp.hpp ClpCholeskyWssmpKKT.cpp ClpCholeskyWssmpKKT.hpp
 endif
 
 # This is for libtool

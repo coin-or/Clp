@@ -50,9 +50,10 @@ host_triplet = @host@
 @COIN_HAS_AMD_FALSE@@COIN_HAS_CHOLMOD_TRUE@am__append_2 = ClpCholeskyUfl.cpp ClpCholeskyUfl.hpp
 @COIN_HAS_AMD_FALSE@@COIN_HAS_CHOLMOD_FALSE@@COIN_HAS_GLPK_TRUE@am__append_3 = ClpCholeskyUfl.cpp ClpCholeskyUfl.hpp
 @COIN_HAS_MUMPS_TRUE@am__append_4 = ClpCholeskyMumps.cpp ClpCholeskyMumps.hpp
+@COIN_HAS_WSMP_TRUE@am__append_5 = ClpCholeskyWssmp.cpp ClpCholeskyWssmp.hpp ClpCholeskyWssmpKKT.cpp ClpCholeskyWssmpKKT.hpp
 bin_PROGRAMS = clp$(EXEEXT)
-@COIN_HAS_CHOLMOD_TRUE@am__append_5 = -I`$(CYGPATH_W) $(CHOLMODINCDIR)`
-@COIN_HAS_AMD_TRUE@am__append_6 = -I`$(CYGPATH_W) $(AMDINCDIR)`
+@COIN_HAS_CHOLMOD_TRUE@am__append_6 = -I`$(CYGPATH_W) $(CHOLMODINCDIR)`
+@COIN_HAS_AMD_TRUE@am__append_7 = -I`$(CYGPATH_W) $(AMDINCDIR)`
 subdir = src
 DIST_COMMON = $(includecoin_HEADERS) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in
@@ -77,8 +78,6 @@ LTLIBRARIES = $(lib_LTLIBRARIES)
 libClp_la_LIBADD =
 am__libClp_la_SOURCES_DIST = ClpConfig.h ClpCholeskyBase.cpp \
 	ClpCholeskyBase.hpp ClpCholeskyDense.cpp ClpCholeskyDense.hpp \
-	ClpCholeskyWssmp.cpp ClpCholeskyWssmp.hpp \
-	ClpCholeskyWssmpKKT.cpp ClpCholeskyWssmpKKT.hpp \
 	ClpConstraint.cpp ClpConstraint.hpp ClpConstraintLinear.cpp \
 	ClpConstraintLinear.hpp ClpConstraintQuadratic.cpp \
 	ClpConstraintQuadratic.hpp Clp_C_Interface.cpp \
@@ -112,31 +111,34 @@ am__libClp_la_SOURCES_DIST = ClpConfig.h ClpCholeskyBase.cpp \
 	ClpSimplexOther.hpp ClpSimplexPrimal.cpp ClpSimplexPrimal.hpp \
 	ClpSolve.cpp ClpSolve.hpp Idiot.cpp Idiot.hpp IdiSolve.cpp \
 	ClpCholeskyUfl.cpp ClpCholeskyUfl.hpp ClpCholeskyMumps.cpp \
-	ClpCholeskyMumps.hpp
+	ClpCholeskyMumps.hpp ClpCholeskyWssmp.cpp ClpCholeskyWssmp.hpp \
+	ClpCholeskyWssmpKKT.cpp ClpCholeskyWssmpKKT.hpp
 @COIN_HAS_AMD_TRUE@am__objects_1 = ClpCholeskyUfl.lo
 @COIN_HAS_AMD_FALSE@@COIN_HAS_CHOLMOD_TRUE@am__objects_2 =  \
 @COIN_HAS_AMD_FALSE@@COIN_HAS_CHOLMOD_TRUE@	ClpCholeskyUfl.lo
 @COIN_HAS_AMD_FALSE@@COIN_HAS_CHOLMOD_FALSE@@COIN_HAS_GLPK_TRUE@am__objects_3 = ClpCholeskyUfl.lo
 @COIN_HAS_MUMPS_TRUE@am__objects_4 = ClpCholeskyMumps.lo
+@COIN_HAS_WSMP_TRUE@am__objects_5 = ClpCholeskyWssmp.lo \
+@COIN_HAS_WSMP_TRUE@	ClpCholeskyWssmpKKT.lo
 am_libClp_la_OBJECTS = ClpCholeskyBase.lo ClpCholeskyDense.lo \
-	ClpCholeskyWssmp.lo ClpCholeskyWssmpKKT.lo ClpConstraint.lo \
-	ClpConstraintLinear.lo ClpConstraintQuadratic.lo \
-	Clp_C_Interface.lo ClpDualRowDantzig.lo ClpDualRowPivot.lo \
-	ClpDualRowSteepest.lo ClpDummyMatrix.lo \
-	ClpDynamicExampleMatrix.lo ClpDynamicMatrix.lo \
-	ClpEventHandler.lo ClpFactorization.lo ClpGubDynamicMatrix.lo \
-	ClpGubMatrix.lo ClpHelperFunctions.lo ClpInterior.lo \
-	ClpLinearObjective.lo ClpMatrixBase.lo ClpMessage.lo \
-	ClpModel.lo ClpNetworkBasis.lo ClpNetworkMatrix.lo \
-	ClpNonLinearCost.lo ClpNode.lo ClpObjective.lo \
-	ClpPackedMatrix.lo ClpPlusMinusOneMatrix.lo \
+	ClpConstraint.lo ClpConstraintLinear.lo \
+	ClpConstraintQuadratic.lo Clp_C_Interface.lo \
+	ClpDualRowDantzig.lo ClpDualRowPivot.lo ClpDualRowSteepest.lo \
+	ClpDummyMatrix.lo ClpDynamicExampleMatrix.lo \
+	ClpDynamicMatrix.lo ClpEventHandler.lo ClpFactorization.lo \
+	ClpGubDynamicMatrix.lo ClpGubMatrix.lo ClpHelperFunctions.lo \
+	ClpInterior.lo ClpLinearObjective.lo ClpMatrixBase.lo \
+	ClpMessage.lo ClpModel.lo ClpNetworkBasis.lo \
+	ClpNetworkMatrix.lo ClpNonLinearCost.lo ClpNode.lo \
+	ClpObjective.lo ClpPackedMatrix.lo ClpPlusMinusOneMatrix.lo \
 	ClpPredictorCorrector.lo ClpPdco.lo ClpPdcoBase.lo ClpLsqr.lo \
 	ClpPresolve.lo ClpPrimalColumnDantzig.lo \
 	ClpPrimalColumnPivot.lo ClpPrimalColumnSteepest.lo \
 	ClpQuadraticObjective.lo ClpSimplex.lo ClpSimplexDual.lo \
 	ClpSimplexNonlinear.lo ClpSimplexOther.lo ClpSimplexPrimal.lo \
 	ClpSolve.lo Idiot.lo IdiSolve.lo $(am__objects_1) \
-	$(am__objects_2) $(am__objects_3) $(am__objects_4)
+	$(am__objects_2) $(am__objects_3) $(am__objects_4) \
+	$(am__objects_5)
 libClp_la_OBJECTS = $(am_libClp_la_OBJECTS)
 binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(bin_PROGRAMS)
@@ -240,6 +242,8 @@ COIN_HAS_PKGCONFIG_FALSE = @COIN_HAS_PKGCONFIG_FALSE@
 COIN_HAS_PKGCONFIG_TRUE = @COIN_HAS_PKGCONFIG_TRUE@
 COIN_HAS_SAMPLE_FALSE = @COIN_HAS_SAMPLE_FALSE@
 COIN_HAS_SAMPLE_TRUE = @COIN_HAS_SAMPLE_TRUE@
+COIN_HAS_WSMP_FALSE = @COIN_HAS_WSMP_FALSE@
+COIN_HAS_WSMP_TRUE = @COIN_HAS_WSMP_TRUE@
 COIN_PKG_CONFIG_PATH = @COIN_PKG_CONFIG_PATH@
 COIN_PKG_CONFIG_PATH_UNINSTALLED = @COIN_PKG_CONFIG_PATH_UNINSTALLED@
 CPP = @CPP@
@@ -262,6 +266,7 @@ EGREP = @EGREP@
 EXEEXT = @EXEEXT@
 F77 = @F77@
 FFLAGS = @FFLAGS@
+FLIBS = @FLIBS@
 GLPK_CFLAGS = @GLPK_CFLAGS@
 GLPK_CFLAGS_INSTALLED = @GLPK_CFLAGS_INSTALLED@
 GLPK_DATA = @GLPK_DATA@
@@ -425,8 +430,6 @@ lib_LTLIBRARIES = libClp.la
 # List all source files for this library, including headers
 libClp_la_SOURCES = ClpConfig.h ClpCholeskyBase.cpp \
 	ClpCholeskyBase.hpp ClpCholeskyDense.cpp ClpCholeskyDense.hpp \
-	ClpCholeskyWssmp.cpp ClpCholeskyWssmp.hpp \
-	ClpCholeskyWssmpKKT.cpp ClpCholeskyWssmpKKT.hpp \
 	ClpConstraint.cpp ClpConstraint.hpp ClpConstraintLinear.cpp \
 	ClpConstraintLinear.hpp ClpConstraintQuadratic.cpp \
 	ClpConstraintQuadratic.hpp Clp_C_Interface.cpp \
@@ -460,7 +463,7 @@ libClp_la_SOURCES = ClpConfig.h ClpCholeskyBase.cpp \
 	ClpSimplexOther.hpp ClpSimplexPrimal.cpp ClpSimplexPrimal.hpp \
 	ClpSolve.cpp ClpSolve.hpp Idiot.cpp Idiot.hpp IdiSolve.cpp \
 	$(am__append_1) $(am__append_2) $(am__append_3) \
-	$(am__append_4)
+	$(am__append_4) $(am__append_5)
 
 # This is for libtool
 libClp_la_LDFLAGS = $(LT_LDFLAGS)
@@ -490,8 +493,8 @@ clp_LDFLAGS = -rpath $(libdir)
 ########################################################################
 
 # CbcOrClpParam seem to require COIN_HAS_CLP so that it knows that it is build within Clp
-AM_CPPFLAGS = $(CLPLIB_CFLAGS) -DCOIN_HAS_CLP $(am__append_5) \
-	$(am__append_6)
+AM_CPPFLAGS = $(CLPLIB_CFLAGS) -DCOIN_HAS_CLP $(am__append_6) \
+	$(am__append_7)
 
 # This line is necessary to allow VPATH compilation with MS compilers
 # on Cygwin

@@ -52,7 +52,7 @@ void testingMessage( const char * const msg );
 #if defined(COIN_HAS_AMD) || defined(COIN_HAS_CHOLMOD) || defined(COIN_HAS_GLPK)
 static int barrierAvailable = 1;
 static std::string nameBarrier = "barrier-UFL";
-#elif WSSMP_BARRIER
+#elif COIN_HAS_WSMP
 static int barrierAvailable = 2;
 static std::string nameBarrier = "barrier-WSSMP";
 #elifdef COIN_HAS_MUMPS
@@ -1117,7 +1117,7 @@ int mainTest (int argc, const char *argv[], int algorithm,
                          solveOptions.setSpecialOption(4, 4);
                          nameAlgorithm = "barrier-UFL";
 #endif
-#ifdef WSSMP_BARRIER
+#ifdef COIN_HAS_WSMP
                          solveOptions.setSpecialOption(4, 2);
                          nameAlgorithm = "barrier-WSSMP";
 #endif

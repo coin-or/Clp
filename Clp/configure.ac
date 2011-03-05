@@ -60,7 +60,7 @@ AC_COIN_CHECK_PACKAGE(CoinUtils, [coinutils], [ClpLib])
 if test $coin_has_coinutils != yes ; then
   AC_MSG_ERROR([Required package CoinUtils not available.])
 fi
-AC_COIN_CHECK_PACKAGE(Osi,       [osi],               [OsiClpLib])
+AC_COIN_CHECK_PACKAGE(Osi,       [osi],       [OsiClpLib])
 AC_COIN_CHECK_PACKAGE(OsiTests,  [osi-unittests])
 AC_COIN_CHECK_PACKAGE(Sample,    [coindatasample])
 AC_COIN_CHECK_PACKAGE(Netlib,    [coindatanetlib])
@@ -102,29 +102,27 @@ AC_ARG_WITH([wsmp],
             [use_wsmp=$withval], [use_wsmp=no])
 
 if test "$use_wsmp" != "no"; then
+  # Check how to link against Fortran libraries from C
+  AC_COIN_F77_WRAPPERS
+
+  coin_save_LIBS="$LIBS"
+  # WSMP requires Blas, so provide CoinUtils libs, which may include Blas
+  LIBS="$LIBS $use_wsmp $COINUTILS_LIBS"
+  AC_LANG_PUSH([Fortran 77])
+  AC_MSG_CHECKING([whether user-supplied WSMP library \"$use_wsmp\" works])
+  AC_TRY_LINK([],[      call WSSMP()],
+              [AC_MSG_RESULT(yes)],   
+              [AC_MSG_ERROR([WSMP library $use_wsmp does not seem to work])])
+  AC_LANG_POP([Fortran 77])
+  LIBS="$coin_save_LIBS"
+
+  AC_DEFINE_UNQUOTED([COIN_HAS_WSMP], [1], [Define to 1 if the WSMP package is available])
+  
   CLPLIB_LIBS="$use_wsmp $CLPLIB_LIBS"
+  CLPLIB_LIBS_INSTALLED="$use_wsmp $CLPLIB_LIBS_INSTALLED"
   CLPLIB_PCLIBS="$use_wsmp $CLPLIB_PCLIBS"
-
-  defval=
-  AC_MSG_CHECKING([whether user-supplied WSMP library \"$use_wsmp\" works (symbol wssmp_)])
-  AC_TRY_LINK([],[wssmp_()],
-              [AC_MSG_RESULT(yes)
-               defval=2],
-              [AC_MSG_RESULT(no)])
-  if test "$defval" = ""; then
-    AC_MSG_CHECKING([whether user-supplied WSMP library \"$use_wsmp\" works (symbol wssmp)])
-    AC_TRY_LINK([],[wssmp()],
-                [AC_MSG_RESULT(yes)
-                 defval=3],
-                [AC_MSG_RESULT(no)])
-  fi
-  if test "x$defval" = "x"; then
-    AC_MSG_ERROR([WSMP library $use_wsmp does not seem to work])
-  fi
-
-  AC_DEFINE_UNQUOTED([WSSMP_BARRIER], [$defval],
-                     [Define to 2 if wssmp_ is available, and to 3 if wssmp is available])
 fi
+AM_CONDITIONAL(COIN_HAS_WSMP, [test "$use_wsmp" != no])
 
 #############################################################################
 #                             Other dependencies                            #

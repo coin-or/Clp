@@ -1,5 +1,4 @@
 /* $Id$ */
-#ifdef WSSMP_BARRIER
 // Copyright (C) 2004, International Business Machines
 // Corporation and others.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).
@@ -63,36 +62,19 @@ ClpCholeskyBase * ClpCholeskyWssmpKKT::clone() const
 }
 // At present I can't get wssmp to work as my libraries seem to be out of sync
 // so I have linked in ekkwssmp which is an older version
-#if WSSMP_BARRIER==2
-extern "C" void wssmp(int * n,
-                      int * columnStart , int * rowIndex , double * element,
-                      double * diagonal , int * perm , int * invp ,
-                      double * rhs , int * ldb , int * nrhs ,
-                      double * aux , int * naux ,
-                      int   * mrp , int * iparm , double * dparm);
-extern "C" void wsetmaxthrds(int *);
-#elif WSSMP_BARRIER==3
-extern "C" void wssmp_(int * n,
-                       int * columnStart , int * rowIndex , double * element,
-                       double * diagonal , int * perm , int * invp ,
-                       double * rhs , int * ldb , int * nrhs ,
-                       double * aux , int * naux ,
-                       int   * mrp , int * iparm , double * dparm);
-extern "C" void wsetmaxthrds_(int *);
-static void wssmp( int *n, int *ia, int *ja,
-                   double *avals, double *diag, int *perm, int *invp,
-                   double *b, int *ldb, int *nrhs, double *aux, int *
-                   naux, int *mrp, int *iparm, double *dparm)
-{
-     wssmp_(n, ia, ja,
-            avals, diag, perm, invp,
-            b, ldb, nrhs, aux,
-            naux, mrp, iparm, dparm);
-}
-static void wsetmaxthrds(int * n)
-{
-     wsetmaxthrds_(n);
-}
+#ifndef USE_EKKWSSMP
+void F77_FUNC(wsetmaxthrds,WSETMAXTHRDS)(const ipfint* NTHREADS);
+
+void F77_FUNC(wssmp,WSSMP)(const ipfint* N, const ipfint* IA,
+                           const ipfint* JA, const double* AVALS,
+                           double* DIAG,  ipfint* PERM,
+                           ipfint* INVP,  double* B,   
+                           const ipfint* LDB, const ipfint* NRHS,
+                           double* AUX, const ipfint* NAUX,
+                           ipfint* MRP, ipfint* IPARM,
+                           double* DPARM);
+void F77_FUNC_(wsmp_clear,WSMP_CLEAR)(void);
+
 #else
 /* minimum needed for user */
 typedef struct EKKModel EKKModel;
@@ -113,7 +95,7 @@ extern "C" void ekkwssmp(EKKModel *, int * n,
                          double * rhs , int * ldb , int * nrhs ,
                          double * aux , int * naux ,
                          int   * mrp , int * iparm , double * dparm);
-static void wssmp( int *n, int *ia, int *ja,
+static void F77_FUNC(wssmp,WSSMP)( int *n, int *ia, int *ja,
                    double *avals, double *diag, int *perm, int *invp,
                    double *b, int *ldb, int *nrhs, double *aux, int *
                    naux, int *mrp, int *iparm, double *dparm)
@@ -131,6 +113,7 @@ static void wssmp( int *n, int *ia, int *ja,
      //ekk_endContext(context);
 }
 #endif
+
 /* Orders rows and saves pointer to model */
 int
 ClpCholeskyWssmpKKT::order(ClpInterior * model)
@@ -231,15 +214,15 @@ ClpCholeskyWssmpKKT::order(ClpInterior * model)
      integerParameters_[0] = 0;
      int i0 = 0;
      int i1 = 1;
-#if WSSMP_BARRIER>=2
+#ifndef USE_EKKWSSMP
      int i2 = 1;
      if (model->numberThreads() <= 0)
           i2 = 1;
      else
           i2 = model->numberThreads();
-     wsetmaxthrds(&i2);
+     F77_FUNC(wsetmaxthrds,WSETMAXTHRDS)(&i2);
 #endif
-     wssmp(&numberRows_, choleskyStart_, choleskyRow_, sparseFactor_,
+     F77_FUNC(wssmp,WSSMP)(&numberRows_, choleskyStart_, choleskyRow_, sparseFactor_,
            NULL, permute_, permuteInverse_, 0, &numberRows_, &i1,
            NULL, &i0, NULL, integerParameters_, doubleParameters_);
      integerParameters_[1] = 1; //order and symbolic
@@ -261,7 +244,7 @@ ClpCholeskyWssmpKKT::order(ClpInterior * model)
           permute_[iRow] = iRow;
      }
 #endif
-     wssmp(&numberRows_, choleskyStart_, choleskyRow_, sparseFactor_,
+     F77_FUNC(wssmp,WSSMP)(&numberRows_, choleskyStart_, choleskyRow_, sparseFactor_,
            NULL, permute_, permuteInverse_, NULL, &numberRows_, &i1,
            NULL, &i0, NULL, integerParameters_, doubleParameters_);
      //std::cout<<"Ordering and symbolic factorization took "<<doubleParameters_[0]<<std::endl;
@@ -279,7 +262,7 @@ ClpCholeskyWssmpKKT::order(ClpInterior * model)
           integerParameters_[1] = 2;
           integerParameters_[2] = 2;
           integerParameters_[7] = 1; // no permute
-          wssmp(&numberRows_, choleskyStart_, choleskyRow_, sparseFactor_,
+          F77_FUNC(wssmp,WSSMP)(&numberRows_, choleskyStart_, choleskyRow_, sparseFactor_,
                 NULL, permute_, permuteInverse_, NULL, &numberRows_, &i1,
                 NULL, &i0, NULL, integerParameters_, doubleParameters_);
           std::cout << integerParameters_[23] << " elements in dense Cholesky" << std::endl;
@@ -443,7 +426,7 @@ ClpCholeskyWssmpKKT::factorize(const double * diagonal, int * rowsDropped)
 #endif
      int * rowsDropped2 = new int[numberRows_];
      CoinZeroN(rowsDropped2, numberRows_);
-     wssmp(&numberRows_, choleskyStart_, choleskyRow_, sparseFactor_,
+     F77_FUNC(wssmp,WSSMP)(&numberRows_, choleskyStart_, choleskyRow_, sparseFactor_,
            NULL, permute_, permuteInverse_, NULL, &numberRows_, &i1,
            NULL, &i0, rowsDropped2, integerParameters_, doubleParameters_);
      //std::cout<<"factorization took "<<doubleParameters_[0]<<std::endl;
@@ -521,7 +504,7 @@ ClpCholeskyWssmpKKT::solveKKT (double * region1, double * region2, const double 
      doubleParameters_[5] = 1.0e-10;
      integerParameters_[6] = 6;
 #endif
-     wssmp(&numberRows_, choleskyStart_, choleskyRow_, sparseFactor_,
+     F77_FUNC(wssmp,WSSMP)(&numberRows_, choleskyStart_, choleskyRow_, sparseFactor_,
            NULL, permute_, permuteInverse_, array, &numberRows_, &i1,
            NULL, &i0, NULL, integerParameters_, doubleParameters_);
 #if 1
@@ -555,4 +538,3 @@ ClpCholeskyWssmpKKT::solveKKT (double * region1, double * region2, const double 
      std::cout << doubleParameters_[6] << std::endl;
 #endif
 }
-#endif
