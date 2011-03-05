@@ -55,7 +55,7 @@ static std::string nameBarrier = "barrier-UFL";
 #elif COIN_HAS_WSMP
 static int barrierAvailable = 2;
 static std::string nameBarrier = "barrier-WSSMP";
-#elifdef COIN_HAS_MUMPS
+#elif defined(COIN_HAS_MUMPS)
 static int barrierAvailable = 3;
 static std::string nameBarrier = "barrier-MUMPS";
 #else

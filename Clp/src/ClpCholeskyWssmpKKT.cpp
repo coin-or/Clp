@@ -63,18 +63,19 @@ ClpCholeskyBase * ClpCholeskyWssmpKKT::clone() const
 // At present I can't get wssmp to work as my libraries seem to be out of sync
 // so I have linked in ekkwssmp which is an older version
 #ifndef USE_EKKWSSMP
-void F77_FUNC(wsetmaxthrds,WSETMAXTHRDS)(const ipfint* NTHREADS);
+extern "C" {
+void F77_FUNC(wsetmaxthrds,WSETMAXTHRDS)(const int* NTHREADS);
 
-void F77_FUNC(wssmp,WSSMP)(const ipfint* N, const ipfint* IA,
-                           const ipfint* JA, const double* AVALS,
-                           double* DIAG,  ipfint* PERM,
-                           ipfint* INVP,  double* B,   
-                           const ipfint* LDB, const ipfint* NRHS,
-                           double* AUX, const ipfint* NAUX,
-                           ipfint* MRP, ipfint* IPARM,
+void F77_FUNC(wssmp,WSSMP)(const int* N, const int* IA,
+                           const int* JA, const double* AVALS,
+                           double* DIAG,  int* PERM,
+                           int* INVP,  double* B,   
+                           const int* LDB, const int* NRHS,
+                           double* AUX, const int* NAUX,
+                           int* MRP, int* IPARM,
                            double* DPARM);
 void F77_FUNC_(wsmp_clear,WSMP_CLEAR)(void);
-
+}
 #else
 /* minimum needed for user */
 typedef struct EKKModel EKKModel;

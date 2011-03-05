@@ -24,6 +24,9 @@
 /* Define to 1 if the AMD package is available */
 #undef COIN_HAS_AMD
 
+/* If defined, the BLAS Library is available. */
+#undef COIN_HAS_BLAS
+
 /* Define to 1 if the CHOLMOD package is available */
 #undef COIN_HAS_CHOLMOD
 

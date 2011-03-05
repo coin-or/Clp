@@ -74,9 +74,9 @@ AC_COIN_CHECK_USER_LIBRARY(AMD, AMD, [amd.h], [amd_defaults],,[ClpLib])
 
 # CHOLMOD from UFL
 # CHOLMOD requires AMD, which can be given by AMD_LIBS
-# CHOLMOD requires Blas and Lapack, which should be in COINUTILS_LIBS, if available
+# CHOLMOD requires Blas and Lapack?
 coin_save_LIBS="$LIBS"
-LIBS="$LIBS $AMD_LIBS $COINUTILS_LIBS"
+LIBS="$LIBS $AMD_LIBS"
 AC_COIN_CHECK_USER_LIBRARY(CHOLMOD, CHOLMOD, [cholmod.h], [cholmod_start],,[ClpLib])
 LIBS="$coin_save_LIBS"
 
@@ -103,16 +103,20 @@ AC_ARG_WITH([wsmp],
 
 if test "$use_wsmp" != "no"; then
   # Check how to link against Fortran libraries from C
+  AC_COIN_PROG_F77
   AC_COIN_F77_WRAPPERS
+  
+  # WSMP requires Blas
+  AC_COIN_CHECK_PACKAGE_BLAS(ClpLib)
 
   coin_save_LIBS="$LIBS"
-  # WSMP requires Blas, so provide CoinUtils libs, which may include Blas
-  LIBS="$LIBS $use_wsmp $COINUTILS_LIBS"
+  LIBS="$LIBS $use_wsmp $BLAS_LIBS"
   AC_LANG_PUSH([Fortran 77])
   AC_MSG_CHECKING([whether user-supplied WSMP library \"$use_wsmp\" works])
   AC_TRY_LINK([],[      call WSSMP()],
-              [AC_MSG_RESULT(yes)],   
-              [AC_MSG_ERROR([WSMP library $use_wsmp does not seem to work])])
+              [AC_MSG_RESULT(yes)],
+              [AC_MSG_RESULT(no)
+               AC_MSG_ERROR([WSMP library $use_wsmp does not seem to work])])
   AC_LANG_POP([Fortran 77])
   LIBS="$coin_save_LIBS"
 
