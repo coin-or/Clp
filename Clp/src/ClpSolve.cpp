@@ -1976,7 +1976,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
                }
                break;
 #endif
-#if UFL_BARRIER
+#ifdef UFL_BARRIER
           case 4:
                if (!doKKT) {
                     ClpCholeskyUfl * cholesky = new ClpCholeskyUfl();
