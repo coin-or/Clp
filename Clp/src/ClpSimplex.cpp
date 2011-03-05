@@ -5807,9 +5807,9 @@ int ClpSimplex::reducedGradient(int phase)
 #include "ClpCholeskyWssmp.hpp"
 #include "ClpCholeskyWssmpKKT.hpp"
 #endif
-#if UFL_BARRIER
+
 #include "ClpCholeskyUfl.hpp"
-#endif
+
 #if MUMPS_BARRIER
 #include "ClpCholeskyMumps.hpp"
 #endif
@@ -5842,7 +5842,7 @@ ClpSimplex::barrier(bool crossover)
           ClpCholeskyWssmpKKT * cholesky = new ClpCholeskyWssmpKKT(CoinMax(100, model2->numberRows() / 10));
           barrier.setCholesky(cholesky);
      }
-#elif UFL_BARRIER
+#elif defined(COIN_HAS_AMD) || defined(COIN_HAS_CHOLMOD)
      if (!doKKT) {
           ClpCholeskyUfl * cholesky = new ClpCholeskyUfl();
           barrier.setCholesky(cholesky);

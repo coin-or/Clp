@@ -39,9 +39,7 @@
 #include "ClpCholeskyWssmp.hpp"
 #include "ClpCholeskyWssmpKKT.hpp"
 #endif
-#ifdef UFL_BARRIER
 #include "ClpCholeskyUfl.hpp"
-#endif
 #ifdef TAUCS_BARRIER
 #include "ClpCholeskyTaucs.hpp"
 #endif
@@ -1975,7 +1973,6 @@ ClpSimplex::initialSolve(ClpSolve & options)
                }
                break;
 #endif
-#ifdef UFL_BARRIER
           case 4:
                if (!doKKT) {
                     ClpCholeskyUfl * cholesky = new ClpCholeskyUfl();
@@ -1986,7 +1983,6 @@ ClpSimplex::initialSolve(ClpSolve & options)
                     barrier.setCholesky(cholesky);
                }
                break;
-#endif
 #ifdef TAUCS_BARRIER
           case 5: {
                ClpCholeskyTaucs * cholesky = new ClpCholeskyTaucs();

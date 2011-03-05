@@ -69,6 +69,29 @@ AC_COIN_CHECK_PACKAGE(Netlib,    [coindatanetlib])
 #                        Third party linear solvers                         #
 #############################################################################
 
+# AMD from UFL
+AC_COIN_CHECK_USER_LIBRARY(AMD, AMD, [amd.h], [amd_defaults],,[ClpLib])
+
+# CHOLMOD from UFL
+# CHOLMOD requires AMD, which can be given by AMD_LIBS
+# CHOLMOD requires Blas and Lapack, which should be in COINUTILS_LIBS, if available
+coin_save_LIBS="$LIBS"
+LIBS="$LIBS $AMD_LIBS $COINUTILS_LIBS"
+AC_COIN_CHECK_USER_LIBRARY(CHOLMOD, CHOLMOD, [cholmod.h], [cholmod_start],,[ClpLib])
+LIBS="$coin_save_LIBS"
+
+# Glpk also brings AMD
+if test $coin_has_cholmod = false -a $coin_has_amd = false ; then
+  AC_COIN_CHECK_PACKAGE(Glpk, [coinglpk >= 4.39], [ClpLib])
+  if test $coin_has_glpk = yes ; then
+    AC_MSG_NOTICE([using AMD from GLPK package])
+    AC_DEFINE(COIN_HAS_AMD,[1],[Define to 1 if the AMD package is available])
+  fi
+else
+  # for configure
+  AM_CONDITIONAL(COIN_HAS_GLPK, [test 0 = 1])
+fi
+
 # WSMP
 AC_ARG_WITH([wsmp],
             AC_HELP_STRING([--with-wsmp],

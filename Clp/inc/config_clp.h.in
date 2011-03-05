@@ -21,8 +21,17 @@
 /* Define to the debug verbosity level (0 is no output) */
 #undef COIN_CLP_VERBOSITY
 
+/* Define to 1 if the AMD package is available */
+#undef COIN_HAS_AMD
+
+/* Define to 1 if the CHOLMOD package is available */
+#undef COIN_HAS_CHOLMOD
+
 /* Define to 1 if the CoinUtils package is available */
 #undef COIN_HAS_COINUTILS
+
+/* Define to 1 if the Glpk package is available */
+#undef COIN_HAS_GLPK
 
 /* Define to 1 if the Netlib package is available */
 #undef COIN_HAS_NETLIB

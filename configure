@@ -475,6 +475,9 @@ ac_includes_default="\
 
 ac_subdirs_all="$ac_subdirs_all ThirdParty/Blas"
 ac_subdirs_all="$ac_subdirs_all ThirdParty/Lapack"
+ac_subdirs_all="$ac_subdirs_all ThirdParty/Metis"
+ac_subdirs_all="$ac_subdirs_all ThirdParty/Mumps"
+ac_subdirs_all="$ac_subdirs_all ThirdParty/Glpk"
 ac_subdirs_all="$ac_subdirs_all Data/Sample"
 ac_subdirs_all="$ac_subdirs_all Data/Netlib"
 ac_subdirs_all="$ac_subdirs_all CoinUtils"
@@ -1138,6 +1141,15 @@ Optional Packages:
   --with-lapack-datadir directory with data files for using project Lapack
   --with-lapack           specify LAPACK library (or BUILD to enforce use of
                           ThirdParty/Lapack)
+  --with-metis-lib linker flags for using project Metis
+  --with-metis-incdir directory with header files for using project Metis
+  --with-metis-datadir directory with data files for using project Metis
+  --with-mumps-lib linker flags for using project Mumps
+  --with-mumps-incdir directory with header files for using project Mumps
+  --with-mumps-datadir directory with data files for using project Mumps
+  --with-glpk-lib linker flags for using project Glpk
+  --with-glpk-incdir directory with header files for using project Glpk
+  --with-glpk-datadir directory with data files for using project Glpk
   --with-sample-lib linker flags for using project Sample
   --with-sample-incdir directory with header files for using project Sample
   --with-sample-datadir directory with data files for using project Sample
@@ -4232,7 +4244,7 @@ fi
 
 
 # Provide some information about the compiler.
-echo "$as_me:4235:" \
+echo "$as_me:4247:" \
      "checking for Fortran 77 compiler version" >&5
 ac_compiler=`set X $ac_compile; echo $2`
 { (eval echo "$as_me:$LINENO: \"$ac_compiler --version </dev/null >&5\"") >&5
@@ -6498,7 +6510,7 @@ ia64-*-hpux*)
   ;;
 *-*-irix6*)
   # Find out which ABI we are using.
-  echo '#line 6501 "configure"' > conftest.$ac_ext
+  echo '#line 6513 "configure"' > conftest.$ac_ext
   if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
   (eval $ac_compile) 2>&5
   ac_status=$?
@@ -8462,11 +8474,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:8465: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:8477: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:8469: \$? = $ac_status" >&5
+   echo "$as_me:8481: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -8730,11 +8742,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:8733: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:8745: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:8737: \$? = $ac_status" >&5
+   echo "$as_me:8749: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -8834,11 +8846,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:8837: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:8849: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:8841: \$? = $ac_status" >&5
+   echo "$as_me:8853: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -11179,7 +11191,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 11182 "configure"
+#line 11194 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -11279,7 +11291,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 11282 "configure"
+#line 11294 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -13623,11 +13635,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:13626: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:13638: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:13630: \$? = $ac_status" >&5
+   echo "$as_me:13642: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -13727,11 +13739,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:13730: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:13742: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:13734: \$? = $ac_status" >&5
+   echo "$as_me:13746: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -15297,11 +15309,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:15300: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:15312: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:15304: \$? = $ac_status" >&5
+   echo "$as_me:15316: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -15401,11 +15413,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:15404: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:15416: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:15408: \$? = $ac_status" >&5
+   echo "$as_me:15420: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -17608,11 +17620,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:17611: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:17623: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:17615: \$? = $ac_status" >&5
+   echo "$as_me:17627: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -17876,11 +17888,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:17879: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:17891: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:17883: \$? = $ac_status" >&5
+   echo "$as_me:17895: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -17980,11 +17992,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:17983: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:17995: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:17987: \$? = $ac_status" >&5
+   echo "$as_me:17999: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -21138,6 +21150,339 @@ if test "$coin_has_lapack" = yes ; then
 
 
 subdirs="$subdirs ThirdParty/Lapack"
+
+  fi
+fi
+
+
+echo "$as_me:$LINENO: checking whether source of project Metis is available and should be compiled" >&5
+echo $ECHO_N "checking whether source of project Metis is available and should be compiled... $ECHO_C" >&6
+
+coin_has_metis=notGiven
+coin_reason=
+
+# check if user wants to skip project in any case
+
+if test x"$COIN_SKIP_PROJECTS" != x; then
+  for dir in $COIN_SKIP_PROJECTS; do
+    if test $dir = "Metis"; then
+      coin_has_metis="no"
+      coin_reason="Metis has been specified in COIN_SKIP_PROJECTS"
+    fi
+
+    if test $dir = "ThirdParty/Metis"; then
+      coin_has_metis="no"
+      coin_reason="ThirdParty/Metis has been specified in COIN_SKIP_PROJECTS"
+    fi
+  done
+fi
+
+if test "$coin_has_metis" != no; then
+
+# Check whether --with-m4_tolower(Metis)-lib or --without-m4_tolower(Metis)-lib was given.
+if test "${with_metis_lib+set}" = set; then
+  withval="$with_metis_lib"
+  if test "$withval" = no ; then
+       coin_has_metis="no"
+       coin_reason="--without-metis-lib has been specified"
+     else
+       coin_has_metis="no"
+       coin_reason="--with-metis-lib has been specified"
+     fi
+fi;
+fi
+
+if test "$coin_has_metis" != no; then
+
+# Check whether --with-m4_tolower(Metis)-incdir or --without-m4_tolower(Metis)-incdir was given.
+if test "${with_metis_incdir+set}" = set; then
+  withval="$with_metis_incdir"
+  if test "$withval" = no ; then
+       coin_has_metis="no"
+       coin_reason="--without-metis-incdir has been specified"
+     else
+       coin_has_metis="no"
+       coin_reason="--with-metis-incdir has been specified"
+     fi
+fi;
+fi
+
+if test "$coin_has_metis" != no; then
+
+# Check whether --with-m4_tolower(Metis)-datadir or --without-m4_tolower(Metis)-datadir was given.
+if test "${with_metis_datadir+set}" = set; then
+  withval="$with_metis_datadir"
+  if test "$withval" = no ; then
+       coin_has_metis="no"
+       coin_reason="--without-metis-datadir has been specified"
+     else
+       coin_has_metis="no"
+       coin_reason="--with-metis-datadir has been specified"
+     fi
+fi;
+fi
+
+
+
+
+
+# check if project is available in present directory
+if test "$coin_has_metis" = notGiven; then
+  coin_has_metis=no
+  if test -d $srcdir/ThirdParty/Metis; then
+    coin_reason="source in ThirdParty/Metis"
+    # If a third argument is given, then we have to check if one one the files given in that third argument is present.
+    # If none of the files in the third argument is available, then we consider the project directory as non-existing.
+    # However, if no third argument is given, then this means that there should be no check, and existence of the directory is sufficient.
+    for i in $srcdir/ThirdParty/Metis/metis-4.0/Lib/balance.c; do
+         if test -r $i; then
+           coin_has_metis="yes"
+         else
+           coin_has_metis="no"
+           coin_reason="source file $i not available"
+           break
+         fi
+       done
+
+  fi
+fi
+
+if test -z "$coin_reason" ; then
+  echo "$as_me:$LINENO: result: $coin_has_metis" >&5
+echo "${ECHO_T}$coin_has_metis" >&6
+else
+  echo "$as_me:$LINENO: result: $coin_has_metis, $coin_reason" >&5
+echo "${ECHO_T}$coin_has_metis, $coin_reason" >&6
+fi
+
+if test "$coin_has_metis" = yes ; then
+  if test -r $srcdir/ThirdParty/Metis/configure; then
+    coin_subdirs="$coin_subdirs ThirdParty/Metis"
+
+
+subdirs="$subdirs ThirdParty/Metis"
+
+  fi
+fi
+
+
+echo "$as_me:$LINENO: checking whether source of project Mumps is available and should be compiled" >&5
+echo $ECHO_N "checking whether source of project Mumps is available and should be compiled... $ECHO_C" >&6
+
+coin_has_mumps=notGiven
+coin_reason=
+
+# check if user wants to skip project in any case
+
+if test x"$COIN_SKIP_PROJECTS" != x; then
+  for dir in $COIN_SKIP_PROJECTS; do
+    if test $dir = "Mumps"; then
+      coin_has_mumps="no"
+      coin_reason="Mumps has been specified in COIN_SKIP_PROJECTS"
+    fi
+
+    if test $dir = "ThirdParty/Mumps"; then
+      coin_has_mumps="no"
+      coin_reason="ThirdParty/Mumps has been specified in COIN_SKIP_PROJECTS"
+    fi
+  done
+fi
+
+if test "$coin_has_mumps" != no; then
+
+# Check whether --with-m4_tolower(Mumps)-lib or --without-m4_tolower(Mumps)-lib was given.
+if test "${with_mumps_lib+set}" = set; then
+  withval="$with_mumps_lib"
+  if test "$withval" = no ; then
+       coin_has_mumps="no"
+       coin_reason="--without-mumps-lib has been specified"
+     else
+       coin_has_mumps="no"
+       coin_reason="--with-mumps-lib has been specified"
+     fi
+fi;
+fi
+
+if test "$coin_has_mumps" != no; then
+
+# Check whether --with-m4_tolower(Mumps)-incdir or --without-m4_tolower(Mumps)-incdir was given.
+if test "${with_mumps_incdir+set}" = set; then
+  withval="$with_mumps_incdir"
+  if test "$withval" = no ; then
+       coin_has_mumps="no"
+       coin_reason="--without-mumps-incdir has been specified"
+     else
+       coin_has_mumps="no"
+       coin_reason="--with-mumps-incdir has been specified"
+     fi
+fi;
+fi
+
+if test "$coin_has_mumps" != no; then
+
+# Check whether --with-m4_tolower(Mumps)-datadir or --without-m4_tolower(Mumps)-datadir was given.
+if test "${with_mumps_datadir+set}" = set; then
+  withval="$with_mumps_datadir"
+  if test "$withval" = no ; then
+       coin_has_mumps="no"
+       coin_reason="--without-mumps-datadir has been specified"
+     else
+       coin_has_mumps="no"
+       coin_reason="--with-mumps-datadir has been specified"
+     fi
+fi;
+fi
+
+
+
+
+
+# check if project is available in present directory
+if test "$coin_has_mumps" = notGiven; then
+  coin_has_mumps=no
+  if test -d $srcdir/ThirdParty/Mumps; then
+    coin_reason="source in ThirdParty/Mumps"
+    # If a third argument is given, then we have to check if one one the files given in that third argument is present.
+    # If none of the files in the third argument is available, then we consider the project directory as non-existing.
+    # However, if no third argument is given, then this means that there should be no check, and existence of the directory is sufficient.
+    for i in $srcdir/ThirdParty/Mumps/MUMPS/src/dmumps_part1.F; do
+         if test -r $i; then
+           coin_has_mumps="yes"
+         else
+           coin_has_mumps="no"
+           coin_reason="source file $i not available"
+           break
+         fi
+       done
+
+  fi
+fi
+
+if test -z "$coin_reason" ; then
+  echo "$as_me:$LINENO: result: $coin_has_mumps" >&5
+echo "${ECHO_T}$coin_has_mumps" >&6
+else
+  echo "$as_me:$LINENO: result: $coin_has_mumps, $coin_reason" >&5
+echo "${ECHO_T}$coin_has_mumps, $coin_reason" >&6
+fi
+
+if test "$coin_has_mumps" = yes ; then
+  if test -r $srcdir/ThirdParty/Mumps/configure; then
+    coin_subdirs="$coin_subdirs ThirdParty/Mumps"
+
+
+subdirs="$subdirs ThirdParty/Mumps"
+
+  fi
+fi
+
+
+echo "$as_me:$LINENO: checking whether source of project Glpk is available and should be compiled" >&5
+echo $ECHO_N "checking whether source of project Glpk is available and should be compiled... $ECHO_C" >&6
+
+coin_has_glpk=notGiven
+coin_reason=
+
+# check if user wants to skip project in any case
+
+if test x"$COIN_SKIP_PROJECTS" != x; then
+  for dir in $COIN_SKIP_PROJECTS; do
+    if test $dir = "Glpk"; then
+      coin_has_glpk="no"
+      coin_reason="Glpk has been specified in COIN_SKIP_PROJECTS"
+    fi
+
+    if test $dir = "ThirdParty/Glpk"; then
+      coin_has_glpk="no"
+      coin_reason="ThirdParty/Glpk has been specified in COIN_SKIP_PROJECTS"
+    fi
+  done
+fi
+
+if test "$coin_has_glpk" != no; then
+
+# Check whether --with-m4_tolower(Glpk)-lib or --without-m4_tolower(Glpk)-lib was given.
+if test "${with_glpk_lib+set}" = set; then
+  withval="$with_glpk_lib"
+  if test "$withval" = no ; then
+       coin_has_glpk="no"
+       coin_reason="--without-glpk-lib has been specified"
+     else
+       coin_has_glpk="no"
+       coin_reason="--with-glpk-lib has been specified"
+     fi
+fi;
+fi
+
+if test "$coin_has_glpk" != no; then
+
+# Check whether --with-m4_tolower(Glpk)-incdir or --without-m4_tolower(Glpk)-incdir was given.
+if test "${with_glpk_incdir+set}" = set; then
+  withval="$with_glpk_incdir"
+  if test "$withval" = no ; then
+       coin_has_glpk="no"
+       coin_reason="--without-glpk-incdir has been specified"
+     else
+       coin_has_glpk="no"
+       coin_reason="--with-glpk-incdir has been specified"
+     fi
+fi;
+fi
+
+if test "$coin_has_glpk" != no; then
+
+# Check whether --with-m4_tolower(Glpk)-datadir or --without-m4_tolower(Glpk)-datadir was given.
+if test "${with_glpk_datadir+set}" = set; then
+  withval="$with_glpk_datadir"
+  if test "$withval" = no ; then
+       coin_has_glpk="no"
+       coin_reason="--without-glpk-datadir has been specified"
+     else
+       coin_has_glpk="no"
+       coin_reason="--with-glpk-datadir has been specified"
+     fi
+fi;
+fi
+
+
+
+
+
+# check if project is available in present directory
+if test "$coin_has_glpk" = notGiven; then
+  coin_has_glpk=no
+  if test -d $srcdir/ThirdParty/Glpk; then
+    coin_reason="source in ThirdParty/Glpk"
+    # If a third argument is given, then we have to check if one one the files given in that third argument is present.
+    # If none of the files in the third argument is available, then we consider the project directory as non-existing.
+    # However, if no third argument is given, then this means that there should be no check, and existence of the directory is sufficient.
+    for i in $srcdir/ThirdParty/Glpk/glpk/src/glplpx01.c; do
+         if test -r $i; then
+           coin_has_glpk="yes"
+         else
+           coin_has_glpk="no"
+           coin_reason="source file $i not available"
+           break
+         fi
+       done
+
+  fi
+fi
+
+if test -z "$coin_reason" ; then
+  echo "$as_me:$LINENO: result: $coin_has_glpk" >&5
+echo "${ECHO_T}$coin_has_glpk" >&6
+else
+  echo "$as_me:$LINENO: result: $coin_has_glpk, $coin_reason" >&5
+echo "${ECHO_T}$coin_has_glpk, $coin_reason" >&6
+fi
+
+if test "$coin_has_glpk" = yes ; then
+  if test -r $srcdir/ThirdParty/Glpk/configure; then
+    coin_subdirs="$coin_subdirs ThirdParty/Glpk"
+
+
+subdirs="$subdirs ThirdParty/Glpk"
 
   fi
 fi

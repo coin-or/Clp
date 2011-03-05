@@ -49,7 +49,7 @@
 
 // Function Prototypes. Function definitions is in this file.
 void testingMessage( const char * const msg );
-#if UFL_BARRIER
+#if defined(COIN_HAS_AMD) || defined(COIN_HAS_CHOLMOD) || defined(COIN_HAS_GLPK)
 static int barrierAvailable = 1;
 static std::string nameBarrier = "barrier-UFL";
 #elif WSSMP_BARRIER
@@ -1113,7 +1113,7 @@ int mainTest (int argc, const char *argv[], int algorithm,
                          nameAlgorithm = "either";
                     } else {
                          nameAlgorithm = "barrier-slow";
-#ifdef UFL_BARRIER
+#if defined(COIN_HAS_AMD) || defined(COIN_HAS_CHOLMOD) || defined(COIN_HAS_GLPK)
                          solveOptions.setSpecialOption(4, 4);
                          nameAlgorithm = "barrier-UFL";
 #endif

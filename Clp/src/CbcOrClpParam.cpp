@@ -1436,7 +1436,7 @@ have more rounds of cuts - see passC!uts and passT!ree."
      parameters[numberParameters-1].append("fudge!Long_dummy");
      parameters[numberParameters-1].append("wssmp_dummy");
 #endif
-#ifdef UFL_BARRIER
+#if defined(COIN_HAS_AMD) || defined(COIN_HAS_CHOLMOD) || defined(COIN_HAS_GLPK)
      parameters[numberParameters-1].append("Uni!versityOfFlorida");
 #else
      parameters[numberParameters-1].append("Uni!versityOfFlorida_dummy");

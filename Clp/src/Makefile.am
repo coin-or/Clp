@@ -25,7 +25,6 @@ libClp_la_SOURCES = \
 	ClpConfig.h \
 	ClpCholeskyBase.cpp ClpCholeskyBase.hpp \
 	ClpCholeskyDense.cpp ClpCholeskyDense.hpp \
-	ClpCholeskyUfl.cpp ClpCholeskyUfl.hpp \
 	ClpCholeskyMumps.cpp ClpCholeskyMumps.hpp \
 	ClpCholeskyWssmp.cpp ClpCholeskyWssmp.hpp \
 	ClpCholeskyWssmpKKT.cpp ClpCholeskyWssmpKKT.hpp \
@@ -75,6 +74,19 @@ libClp_la_SOURCES = \
 	Idiot.cpp Idiot.hpp \
 	IdiSolve.cpp
 
+# if AMD, CHOLMOD, or GLPK is available, then compile ClpCholeskyUfl.cpp
+if COIN_HAS_AMD
+libClp_la_SOURCES += ClpCholeskyUfl.cpp ClpCholeskyUfl.hpp
+else
+if COIN_HAS_CHOLMOD
+libClp_la_SOURCES += ClpCholeskyUfl.cpp ClpCholeskyUfl.hpp
+else
+if COIN_HAS_GLPK
+libClp_la_SOURCES += ClpCholeskyUfl.cpp ClpCholeskyUfl.hpp
+endif
+endif
+endif
+
 # This is for libtool
 libClp_la_LDFLAGS = $(LT_LDFLAGS)
 
@@ -110,7 +122,15 @@ clp_LDFLAGS = -rpath $(libdir)
 ########################################################################
 
 # CbcOrClpParam seem to require COIN_HAS_CLP so that it knows that it is build within Clp
-AM_CPPFLAGS = $(COINUTILS_CFLAGS) -DCOIN_HAS_CLP
+AM_CPPFLAGS = $(CLPLIB_CFLAGS) -DCOIN_HAS_CLP
+
+if COIN_HAS_CHOLMOD
+AM_CPPFLAGS += -I`$(CYGPATH_W) $(CHOLMODINCDIR)`
+endif
+
+if COIN_HAS_AMD
+AM_CPPFLAGS += -I`$(CYGPATH_W) $(AMDINCDIR)`
+endif
 
 # This line is necessary to allow VPATH compilation with MS compilers
 # on Cygwin
