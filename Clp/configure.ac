@@ -52,16 +52,6 @@ AC_COIN_PROG_CXX
 # Initialize automake and libtool
 AC_COIN_INIT_AUTO_TOOLS
 
-if test "$GXX" = "yes" ; then
-case "$CXX" in 
-   icpc* | */icpc* | icc )
-      ;;
-   *)
-      CXXFLAGS="$CXXFLAGS -Wno-long-long"
-      ;;
-esac
-fi
-
 #############################################################################
 #                              COIN-OR components                           #
 #############################################################################
