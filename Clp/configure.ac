@@ -125,6 +125,9 @@ if test "$use_wsmp" != "no"; then
   CLPLIB_LIBS="$use_wsmp $CLPLIB_LIBS"
   CLPLIB_LIBS_INSTALLED="$use_wsmp $CLPLIB_LIBS_INSTALLED"
   CLPLIB_PCLIBS="$use_wsmp $CLPLIB_PCLIBS"
+else
+  # to please configure
+  AM_CONDITIONAL(COIN_HAS_BLAS, [test 0 = 1])
 fi
 AM_CONDITIONAL(COIN_HAS_WSMP, [test "$use_wsmp" != no])
 

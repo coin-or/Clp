@@ -23313,7 +23313,7 @@ fi
 
 # CHOLMOD from UFL
 # CHOLMOD requires AMD, which can be given by AMD_LIBS
-# CHOLMOD requires Blas and Lapack, which should be in COINUTILS_LIBS, if available
+# CHOLMOD requires Blas and Lapack?
 coin_save_LIBS="$LIBS"
 LIBS="$LIBS $AMD_LIBS"
 
@@ -29483,6 +29483,18 @@ _ACEOF
   CLPLIB_LIBS="$use_wsmp $CLPLIB_LIBS"
   CLPLIB_LIBS_INSTALLED="$use_wsmp $CLPLIB_LIBS_INSTALLED"
   CLPLIB_PCLIBS="$use_wsmp $CLPLIB_PCLIBS"
+else
+  # to please configure
+
+
+if test 0 = 1; then
+  COIN_HAS_BLAS_TRUE=
+  COIN_HAS_BLAS_FALSE='#'
+else
+  COIN_HAS_BLAS_TRUE='#'
+  COIN_HAS_BLAS_FALSE=
+fi
+
 fi
 
 
@@ -30397,6 +30409,13 @@ if test -z "${COIN_HAS_MUMPS_TRUE}" && test -z "${COIN_HAS_MUMPS_FALSE}"; then
   { { echo "$as_me:$LINENO: error: conditional \"COIN_HAS_MUMPS\" was never defined.
 Usually this means the macro was only invoked conditionally." >&5
 echo "$as_me: error: conditional \"COIN_HAS_MUMPS\" was never defined.
+Usually this means the macro was only invoked conditionally." >&2;}
+   { (exit 1); exit 1; }; }
+fi
+if test -z "${COIN_HAS_BLAS_TRUE}" && test -z "${COIN_HAS_BLAS_FALSE}"; then
+  { { echo "$as_me:$LINENO: error: conditional \"COIN_HAS_BLAS\" was never defined.
+Usually this means the macro was only invoked conditionally." >&5
+echo "$as_me: error: conditional \"COIN_HAS_BLAS\" was never defined.
 Usually this means the macro was only invoked conditionally." >&2;}
    { (exit 1); exit 1; }; }
 fi
