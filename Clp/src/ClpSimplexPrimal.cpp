@@ -2117,16 +2117,16 @@ ClpSimplexPrimal::updatePrimalsInPrimal(CoinIndexedVector * rowArray,
                          if (value <= lower_[iPivot] + primalTolerance_) {
                               if (iPivot == sequenceOut_ && value > lower_[iPivot] - relaxedTolerance)
                                    value = lower_[iPivot];
-                              double difference = nonLinearCost_->setOne(iPivot, value);
-                              assert (!difference || fabs(change) > 1.0e9);
+                              //double difference = nonLinearCost_->setOne(iPivot, value);
+                              //assert (!difference || fabs(change) > 1.0e9);
                          }
                     } else {
                          // going up
                          if (value >= upper_[iPivot] - primalTolerance_) {
                               if (iPivot == sequenceOut_ && value < upper_[iPivot] + relaxedTolerance)
                                    value = upper_[iPivot];
-                              double difference = nonLinearCost_->setOne(iPivot, value);
-                              assert (!difference || fabs(change) > 1.0e9);
+                              //double difference = nonLinearCost_->setOne(iPivot, value);
+                              //assert (!difference || fabs(change) > 1.0e9);
                          }
                     }
                }

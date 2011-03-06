@@ -1884,6 +1884,8 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 					 // free up as much as possible
 					 glp_free(cbc_glp_prob);
 					 glp_mpl_free_wksp(cbc_glp_tran);
+					 cbc_glp_prob = NULL;
+					 cbc_glp_tran = NULL;
 					 //gmp_free_mem();
 					 /* check that no memory blocks are still allocated */
 					 glp_free_env();
@@ -2327,6 +2329,16 @@ clp watson.mps -\nscaling off\nprimalsimplex"
           delete [] models;
           delete [] goodModels;
      }
+#ifdef COIN_HAS_GLPK
+     if (cbc_glp_prob) {
+       // free up as much as possible
+       glp_free(cbc_glp_prob);
+       glp_mpl_free_wksp(cbc_glp_tran);
+       glp_free_env(); 
+       cbc_glp_prob = NULL;
+       cbc_glp_tran = NULL;
+     }
+#endif
      // By now all memory should be freed
 #ifdef DMALLOC
      dmalloc_log_unfreed();
@@ -2584,7 +2596,7 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
      }
      if ((k % 3) != 0)
           printf("\n");
-#define SYM
+     //#define SYM
 #ifndef SYM
      if (model->logLevel() < 2)
           return ;

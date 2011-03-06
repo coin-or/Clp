@@ -2772,6 +2772,10 @@ ClpSimplex::checkBothSolutions()
      int numberTotal = numberRows_ + numberColumns_;
      // Say no free or superbasic
      moreSpecialOptions_ |= 8;
+     //#define PRINT_INFEAS
+#ifdef PRINT_INFEAS
+     int seqInf[10];
+#endif
      for (iSequence = 0; iSequence < numberTotal; iSequence++) {
           double value = solution_[iSequence];
 #ifdef COIN_DEBUG
@@ -2787,12 +2791,22 @@ ClpSimplex::checkBothSolutions()
                sumPrimalInfeasibilities_ += infeasibility - primalTolerance_;
                if (infeasibility > relaxedToleranceP)
                     sumOfRelaxedPrimalInfeasibilities_ += infeasibility - relaxedToleranceP;
+#ifdef PRINT_INFEAS
+	       if (numberPrimalInfeasibilities_<10) {
+		 seqInf[numberPrimalInfeasibilities_]=iSequence;
+	       }
+#endif
                numberPrimalInfeasibilities_ ++;
           } else if (distanceDown < -primalTolerance) {
                double infeasibility = -distanceDown;
                sumPrimalInfeasibilities_ += infeasibility - primalTolerance_;
                if (infeasibility > relaxedToleranceP)
                     sumOfRelaxedPrimalInfeasibilities_ += infeasibility - relaxedToleranceP;
+#ifdef PRINT_INFEAS
+	       if (numberPrimalInfeasibilities_<10) {
+		 seqInf[numberPrimalInfeasibilities_]=iSequence;
+	       }
+#endif
                numberPrimalInfeasibilities_ ++;
           } else {
                // feasible (so could be free)
@@ -2845,6 +2859,47 @@ ClpSimplex::checkBothSolutions()
      objectiveValue_ /= (objectiveScale_ * rhsScale_);
      numberDualInfeasibilitiesWithoutFree_ = numberDualInfeasibilities_ -
                                              numberDualInfeasibilitiesFree;
+#ifdef PRINT_INFEAS
+     if (numberPrimalInfeasibilities_<=10) {
+       printf("---------------start-----------\n");
+       if (!rowScale_) {
+	 for (int i=0;i<numberPrimalInfeasibilities_;i++) {
+	   int iSeq = seqInf[i];
+	   double infeas;
+	   if (solution_[iSeq]<lower_[iSeq])
+	     infeas = lower_[iSeq]-solution_[iSeq];
+	   else
+	     infeas = solution_[iSeq]-upper_[iSeq];
+	   if (iSeq<numberColumns_) {
+	     printf("INF C%d %.10g <= %.10g <= %.10g - infeas %g\n",
+		    iSeq,lower_[iSeq],solution_[iSeq],upper_[iSeq],infeas);
+	   } else {
+	     printf("INF R%d %.10g <= %.10g <= %.10g - infeas %g\n",
+		    iSeq-numberColumns_,lower_[iSeq],solution_[iSeq],upper_[iSeq],infeas);
+	   }
+	 }
+       } else {
+	 for (int i=0;i<numberPrimalInfeasibilities_;i++) {
+	   int iSeq = seqInf[i];
+	   double infeas;
+	   if (solution_[iSeq]<lower_[iSeq])
+	     infeas = lower_[iSeq]-solution_[iSeq];
+	   else
+	     infeas = solution_[iSeq]-upper_[iSeq];
+	   double unscaled = infeas;
+	   if (iSeq<numberColumns_) {
+	     unscaled *= columnScale_[iSeq];
+	     printf("INF C%d %.10g <= %.10g <= %.10g - infeas %g - unscaled %g\n",
+		    iSeq,lower_[iSeq],solution_[iSeq],upper_[iSeq],infeas,unscaled);
+	   } else {
+	     unscaled /= rowScale_[iSeq-numberColumns_];
+	     printf("INF R%d %.10g <= %.10g <= %.10g - infeas %g - unscaled %g\n",
+		    iSeq-numberColumns_,lower_[iSeq],solution_[iSeq],upper_[iSeq],infeas,unscaled);
+	   }
+	 }
+       }
+     }
+#endif
      if (algorithm_ < 0 && firstFreeDual >= 0) {
           // dual
           firstFree_ = firstFreeDual;
@@ -7236,6 +7291,85 @@ ClpSimplex::checkSolution(int setToBounds)
 #endif
      // release extra memory
      deleteRim(0);
+}
+// Check unscaled primal solution but allow for rounding error
+void 
+ClpSimplex::checkUnscaledSolution()
+{
+  if (problemStatus_==1 && matrix_->getNumElements()) {
+    const double * element = matrix_->getElements();
+    const CoinBigIndex * columnStart = matrix_->getVectorStarts();
+    const int * columnLength = matrix_->getVectorLengths();
+    const int * row = matrix_->getIndices();
+    memset(rowActivity_,0,numberRows_*sizeof(double));
+    double * sum = new double [numberRows_+100000];
+    memset(sum,0,numberRows_*sizeof(double));
+    // clean column activity
+    for (int i=0;i<numberColumns_;i++) {
+      double value = columnActivity_[i];
+      value = CoinMax(value,columnLower_[i]);
+      value = CoinMin(value,columnUpper_[i]);
+      //columnActivity_[i]=value;
+      if (value) {
+	for (CoinBigIndex j=columnStart[i];
+	     j<columnStart[i]+columnLength[i];j++) {
+	  double value2 = value*element[j];
+	  int iRow = row[j];
+	  assert (iRow>=0&&iRow<numberRows_);
+	  rowActivity_[iRow] += value2;
+	  sum[iRow]+=fabs(value2);
+	}
+      }
+    }
+    sumPrimalInfeasibilities_ = 0.0;
+    numberPrimalInfeasibilities_ = 0;
+    double sumPrimalInfeasibilities2 = 0.0;
+    int numberPrimalInfeasibilities2 = 0;
+    double fudgeFactor = 1.0e-12;
+    double fudgeFactor2 = 1.0e-12;
+    double tolerance = primalTolerance_;
+    for (int i=0;i<numberRows_;i++) {
+      double useTolerance = CoinMax(tolerance,fudgeFactor*sum[i]);
+      double value = rowActivity_[i];
+      useTolerance = CoinMax(useTolerance,fudgeFactor2*fabs(value));
+      if (value>rowUpper_[i]) {
+	sumPrimalInfeasibilities2 += value - rowUpper_[i];
+	numberPrimalInfeasibilities2++;
+	if (value>rowUpper_[i]+useTolerance) {
+	  sumPrimalInfeasibilities_ += value - (rowUpper_[i]+useTolerance);
+	  numberPrimalInfeasibilities_++;
+	}
+      } else if (value<rowLower_[i]) {
+	sumPrimalInfeasibilities2 -= value - rowLower_[i];
+	numberPrimalInfeasibilities2++;
+	if (value<rowLower_[i]-useTolerance) {
+	  sumPrimalInfeasibilities_ -= value - (rowLower_[i]-useTolerance);
+	  numberPrimalInfeasibilities_++;
+	} 
+      }
+    }
+    char line[1000];
+    if (!numberPrimalInfeasibilities2) {
+      sprintf(line,"%d unscaled row infeasibilities - summing to %g",
+	      numberPrimalInfeasibilities2,
+	      sumPrimalInfeasibilities2);
+      handler_->message(CLP_GENERAL, messages_)
+	<< line
+	<< CoinMessageEol;
+    }
+    if (!numberPrimalInfeasibilities_) {
+      if (!numberDualInfeasibilities_) 
+	problemStatus_=0;
+    } else {
+      sprintf(line,"%d relaxed row infeasibilities - summing to %g",
+	    numberPrimalInfeasibilities_,
+	    sumPrimalInfeasibilities_);
+    handler_->message(CLP_GENERAL, messages_)
+                              << line
+                              << CoinMessageEol;
+    }
+    delete [] sum;
+  }
 }
 /* Crash - at present just aimed at dual, returns
    -2 if dual preferred and crash basis created

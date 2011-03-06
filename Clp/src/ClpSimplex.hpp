@@ -610,6 +610,8 @@ public:
      /** Just check solution (for internal use) - sets sum of
          infeasibilities etc. */
      void checkSolutionInternal();
+     /// Check unscaled primal solution but allow for rounding error
+     void checkUnscaledSolution();
      /// Useful row length arrays (0,1,2,3,4,5)
      inline CoinIndexedVector * rowArray(int index) const {
           return rowArray_[index];
