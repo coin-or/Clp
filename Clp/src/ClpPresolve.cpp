@@ -147,6 +147,21 @@ ClpPresolve::originalModel() const
 {
      return originalModel_;
 }
+// Return presolve status (0,1,2)
+int 
+ClpPresolve::presolveStatus() const
+{
+  if (nelems_>=0) {
+    // feasible (or not done yet)
+    return 0;
+  } else {
+    int presolveStatus = - nelems_;
+    // If both infeasible and unbounded - say infeasible
+    if (presolveStatus>2)
+      presolveStatus = 1;
+    return presolveStatus;
+  }
+}
 void
 ClpPresolve::postsolve(bool updateStatus)
 {
@@ -1853,6 +1868,8 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
           } else if (prob.status_) {
                // infeasible or unbounded
                result = 1;
+	       // Put status in nelems_!
+	       nelems_ = - prob.status_;
                originalModel->setProblemStatus(prob.status_);
           } else {
                // no changes - model needs restoring after Lou's changes

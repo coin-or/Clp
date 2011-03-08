@@ -493,7 +493,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
                          << CoinMessageEol;
                model2 = this;
 	       eventHandler()->event(ClpEventHandler::presolveInfeasible);
-               problemStatus_ = 1; // may be unbounded but who cares
+               problemStatus_ = pinfo->presolveStatus(); 
                if (options.infeasibleReturn() || (moreSpecialOptions_ & 1) != 0) {
 		 delete pinfo;
                     return -1;

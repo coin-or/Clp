@@ -180,6 +180,8 @@ public:
      inline void statistics() {
           presolveActions_ |= 0x80000000;
      }
+     /// Return presolve status (0,1,2)
+     int presolveStatus() const;
 
      /**@name postsolve - postsolve the problem.  If the problem
        has not been solved to optimality, there are no guarantees.
