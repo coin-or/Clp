@@ -41,7 +41,7 @@ static char coin_prompt[] = "Clp:";
 #define CBC_THREAD
 #endif
 #endif
-#if defined(COIN_HAS_WSMP) && not defined(USE_EKKWSSMP)
+#if defined(COIN_HAS_WSMP) && ! defined(USE_EKKWSSMP)
 #ifndef CBC_THREAD
 #define CBC_THREAD
 #endif
