@@ -153,7 +153,6 @@ includecoin_HEADERS = \
 	Clp_C_Interface.h \
 	ClpCholeskyBase.hpp \
 	ClpCholeskyDense.hpp \
-	ClpCholeskyWssmp.hpp \
 	ClpConstraint.hpp \
 	ClpConstraintLinear.hpp \
 	ClpConstraintQuadratic.hpp \
@@ -192,6 +191,28 @@ includecoin_HEADERS = \
 	ClpSolve.hpp \
 	CbcOrClpParam.hpp \
 	Idiot.hpp
+
+
+# if AMD, CHOLMOD, or GLPK is available, then install ClpCholeskyUfl.hpp (for advanced users)
+if COIN_HAS_AMD
+includecoin_HEADERS += ClpCholeskyUfl.hpp
+else
+if COIN_HAS_CHOLMOD
+includecoin_HEADERS += ClpCholeskyUfl.hpp
+else
+if COIN_HAS_GLPK
+includecoin_HEADERS += ClpCholeskyUfl.hpp
+endif
+endif
+endif
+
+if COIN_HAS_MUMPS
+includecoin_HEADERS += ClpCholeskyMumps.hpp
+endif
+
+if COIN_HAS_WSMP
+includecoin_HEADERS += ClpCholeskyWssmp.hpp ClpCholeskyWssmpKKT.hpp
+endif
 
 # needed by Cbc
 includecoin_HEADERS += CbcOrClpParam.cpp
