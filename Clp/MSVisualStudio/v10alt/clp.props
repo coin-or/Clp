@@ -1,0 +1,27 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(CoinRoot)\CoinUtils\CoinUtils\MSVisualStudio\v10alt\coinutils.props" Condition=" '$(Have_CoinUtils_Props)' != 'yes' " />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros">
+    <Have_Clp_Props>yes</Have_Clp_Props>
+    <ClpIncludeDir>$(CoinRoot)\Clp\Clp\src</ClpIncludeDir>
+  </PropertyGroup>
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(ClpIncludeDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>libClp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <BuildMacro Include="ClpIncludeDir">
+      <Value>$(ClpIncludeDir)</Value>
+    </BuildMacro>
+  </ItemGroup>
+</Project>

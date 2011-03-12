@@ -1,5 +1,13 @@
 * text=auto !eol
 Clp/LICENSE -text
+Clp/MSVisualStudio/v10alt/Clp.sln -text
+Clp/MSVisualStudio/v10alt/Clp.vcxproj -text
+Clp/MSVisualStudio/v10alt/OsiClpUnitTest.vcxproj -text
+Clp/MSVisualStudio/v10alt/clp.props -text
+Clp/MSVisualStudio/v10alt/genDefForClp.ps1 -text
+Clp/MSVisualStudio/v10alt/libClp.vcxproj -text
+Clp/MSVisualStudio/v10alt/libOsiClp.vcxproj -text
+Clp/MSVisualStudio/v10alt/osiclp.props -text
 Clp/MSVisualStudio/v6/Clp.dsw -text
 Clp/MSVisualStudio/v6/Clp.opt -text
 Clp/MSVisualStudio/v6/ClpExamplesMinimum/ClpExamplesMinimum.dsp -text
