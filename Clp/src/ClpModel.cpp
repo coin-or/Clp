@@ -1020,6 +1020,8 @@ ClpModel::returnModel(ClpModel & otherModel)
      columnLower_ = NULL;
      columnUpper_ = NULL;
      matrix_ = NULL;
+     if (rowCopy_ != otherModel.rowCopy_)
+       delete rowCopy_;
      rowCopy_ = NULL;
      delete scaledMatrix_;
      scaledMatrix_ = NULL;

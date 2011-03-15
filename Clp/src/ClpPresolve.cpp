@@ -438,6 +438,23 @@ void check_sol(CoinPresolveMatrix *prob, double tol)
      delete [] rsol;
 }
 #endif
+//#define COIN_PRESOLVE_BUG
+#ifdef COIN_PRESOLVE_BUG
+static int counter=1000000;
+static bool break2(CoinPresolveMatrix *prob)
+{
+  counter--;
+  if (!counter) {
+    printf("skipping next and all\n");
+  }
+  return (counter<=0);
+}
+#define possibleBreak if (break2(prob)) break
+#define possibleSkip  if (!break2(prob)) 
+#else
+#define possibleBreak
+#define possibleSkip
+#endif
 // This is the presolve loop.
 // It is a separate virtual function so that it can be easily
 // customized by subclassing CoinPresolve.
@@ -512,12 +529,15 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
                // maybe allow integer columns to be checked
                if ((presolveActions_ & 512) != 0)
                     prob->setPresolveOptions(prob->presolveOptions() | 1);
+	       possibleSkip;
                paction_ = dupcol_action::presolve(prob, paction_);
           }
           if (duprow) {
+	    possibleSkip;
                paction_ = duprow_action::presolve(prob, paction_);
           }
           if (doGubrow()) {
+	    possibleSkip;
                paction_ = gubrow_action::presolve(prob, paction_);
           }
 
@@ -562,37 +582,44 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
 
                     if (slackd) {
                          bool notFinished = true;
-                         while (notFinished)
+                         while (notFinished) {
+			   possibleBreak;
                               paction_ = slack_doubleton_action::presolve(prob, paction_,
                                          notFinished);
+			 }
                          if (prob->status_)
                               break;
                     }
                     if (dual && whichPass == 1) {
                          // this can also make E rows so do one bit here
+		      possibleBreak;
                          paction_ = remove_dual_action::presolve(prob, paction_);
                          if (prob->status_)
                               break;
                     }
 
                     if (doubleton) {
+		      possibleBreak;
                          paction_ = doubleton_action::presolve(prob, paction_);
                          if (prob->status_)
                               break;
                     }
                     if (tripleton) {
+		      possibleBreak;
                          paction_ = tripleton_action::presolve(prob, paction_);
                          if (prob->status_)
                               break;
                     }
 
                     if (zerocost) {
+		      possibleBreak;
                          paction_ = do_tighten_action::presolve(prob, paction_);
                          if (prob->status_)
                               break;
                     }
 #ifndef NO_FORCING
                     if (forcing) {
+		      possibleBreak;
                          paction_ = forcing_constraint_action::presolve(prob, paction_);
                          if (prob->status_)
                               break;
@@ -600,6 +627,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
 #endif
 
                     if (ifree && (whichPass % 5) == 1) {
+		      possibleBreak;
                          paction_ = implied_free_action::presolve(prob, paction_, fill_level);
                          if (prob->status_)
                               break;
@@ -703,6 +731,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
                if (dual) {
                     int itry;
                     for (itry = 0; itry < 5; itry++) {
+		      possibleBreak;
                          paction_ = remove_dual_action::presolve(prob, paction_);
                          if (prob->status_)
                               break;
@@ -715,8 +744,10 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
                               int fill_level = IMPLIED2;
 #endif
 #endif
-                              if ((itry & 1) == 0)
+                              if ((itry & 1) == 0) {
+				possibleBreak;
                                    paction_ = implied_free_action::presolve(prob, paction_, fill_level);
+			      }
                               if (prob->status_)
                                    break;
                          }
@@ -732,6 +763,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
                     int fill_level = IMPLIED2;
 #endif
 #endif
+		    possibleBreak;
                     paction_ = implied_free_action::presolve(prob, paction_, fill_level);
                     if (prob->status_)
                          break;
@@ -743,6 +775,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
                     // maybe allow integer columns to be checked
                     if ((presolveActions_ & 512) != 0)
                          prob->setPresolveOptions(prob->presolveOptions() | 1);
+		    possibleBreak;
                     paction_ = dupcol_action::presolve(prob, paction_);
                     if (prob->status_)
                          break;
@@ -752,6 +785,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
 #endif
 
                if (duprow) {
+		 possibleBreak;
                     paction_ = duprow_action::presolve(prob, paction_);
                     if (prob->status_)
                          break;
@@ -782,9 +816,11 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
                if (slackSingleton) {
                     // On most passes do not touch costed slacks
                     if (paction_ != paction0 && !stopLoop) {
+		      possibleBreak;
                          paction_ = slack_singleton_action::presolve(prob, paction_, NULL);
                     } else {
                          // do costed if Clp (at end as ruins rest of presolve)
+		      possibleBreak;
                          paction_ = slack_singleton_action::presolve(prob, paction_, rowObjective_);
                          stopLoop = true;
                     }
