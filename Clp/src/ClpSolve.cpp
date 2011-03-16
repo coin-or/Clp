@@ -2478,6 +2478,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
           else
                setLogLevel(CoinMin(0, saveLevel));
           pinfo->postsolve(true);
+	  numberIterations_ = 0;
 	  delete pinfo;
 	  pinfo = NULL;
           factorization_->areaFactor(model2->factorization()->adjustedAreaFactor());

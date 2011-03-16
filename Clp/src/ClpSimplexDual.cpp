@@ -4482,6 +4482,10 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned, int type,
        printf("OBJ %g sumPinf %g sumDinf %g\n",
         objectiveValue(),sumPrimalInfeasibilities_,
         sumDualInfeasibilities_);*/
+     // mark as having gone optimal if looks like it
+     if (!numberPrimalInfeasibilities_&&
+	 !numberDualInfeasibilities_)
+       progressFlag_ |= 8;
      if (handler_->detail(CLP_SIMPLEX_STATUS, messages_) < 100) {
           handler_->message(CLP_SIMPLEX_STATUS, messages_)
                     << numberIterations_ << objectiveValue();
@@ -5192,6 +5196,9 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned, int type,
      // Maybe only in fast dual
      if (problemStatus_ > 2)
           objectiveValue_ = approximateObjective;
+     if (problemStatus_ == 1 && (progressFlag_&8) != 0 &&
+	 fabs(objectiveValue_) > 1.0e10 )
+       problemStatus_ = 10; // infeasible - but has looked feasible
 }
 /* While updateDualsInDual sees what effect is of flip
    this does actual flipping.
