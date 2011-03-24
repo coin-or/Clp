@@ -604,6 +604,16 @@ ClpSimplexDual::dual(int ifValuesPass, int startFinishOptions)
                secondaryStatus_ = 1;
           }
      }
+     // If infeasible but primal errors - try dual
+     if (problemStatus_==1 && numberPrimalInfeasibilities_) {
+       bool inCbcOrOther = (specialOptions_ & 0x03000000) != 0;
+       double factor = (!inCbcOrOther) ? 1.0 : 0.3;
+       double averageInfeasibility = sumPrimalInfeasibilities_/
+	 static_cast<double>(numberPrimalInfeasibilities_);
+       if (averageInfeasibility<factor*largestPrimalError_)
+	 problemStatus_= 10;
+     }
+       
      if (problemStatus_ == 10)
           startFinishOptions |= 1;
      finishSolve(startFinishOptions);
@@ -3986,6 +3996,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned, int type,
      if (z_thinks > 0 && z_thinks < 2)
           z_thinks += 2;
 #endif
+     bool arraysNotCreated = (type==0);
      // If lots of iterations then adjust costs if large ones
      if (numberIterations_ > 4 * (numberRows_ + numberColumns_) && objectiveScale_ == 1.0) {
           double largest = 0.0;
@@ -4888,6 +4899,23 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned, int type,
                     rowArray_[0]->clear();
                     columnArray_[0]->clear();
                     double objectiveChange = 0.0;
+		    double savePrimalInfeasibilities = sumPrimalInfeasibilities_;
+		    if (!numberIterations_) {
+		      int nTotal = numberRows_ + numberColumns_;
+		      if (arraysNotCreated) {
+			// create save arrays
+			delete [] saveStatus_;
+			delete [] savedSolution_;
+			saveStatus_ = new unsigned char [nTotal];
+			savedSolution_ = new double [nTotal];
+			arraysNotCreated = false;
+		      }
+		      // save arrays
+		      CoinMemcpyN(status_, nTotal, saveStatus_);
+		      CoinMemcpyN(rowActivityWork_,
+				  numberRows_, savedSolution_ + numberColumns_);
+		      CoinMemcpyN(columnActivityWork_, numberColumns_, savedSolution_);
+		    }
 #if 0
                     double * xcost = new double[numberRows_+numberColumns_];
                     double * xlower = new double[numberRows_+numberColumns_];
@@ -4937,6 +4965,21 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned, int type,
                     updateDualsInDual(rowArray_[0], columnArray_[0], rowArray_[1],
                                       0.0, objectiveChange, true);
                     dualTolerance_ = saveTolerance;
+		    if (!numberIterations_ && sumPrimalInfeasibilities_ >
+			1.0e5*(savePrimalInfeasibilities+1.0e3) &&
+			(moreSpecialOptions_ & 256) == 0) {
+		      // Use primal
+		      int nTotal = numberRows_ + numberColumns_;
+		      CoinMemcpyN(saveStatus_, nTotal, status_);
+		      CoinMemcpyN(savedSolution_ + numberColumns_ ,
+				  numberRows_, rowActivityWork_);
+		      CoinMemcpyN(savedSolution_ ,
+				  numberColumns_, columnActivityWork_);
+		      //numberDualInfeasibilities_=1;
+		      problemStatus_ = 10;
+		      situationChanged = 0;
+		      //numberPrimalInfeasibilities_=1;
+		    }
                     //assert(numberDualInfeasibilitiesWithoutFree_==0);
                     if (numberDualInfeasibilities_) {
                          if (numberPrimalInfeasibilities_ || numberPivots) {
@@ -5023,7 +5066,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned, int type,
           }
 #endif
           if (type == 0 || type == 1) {
-               if (!type) {
+               if (!type && arraysNotCreated) {
                     // create save arrays
                     delete [] saveStatus_;
                     delete [] savedSolution_;
@@ -7229,42 +7272,25 @@ ClpSimplexDual::resetFakeBounds(int type)
                     double value = solution_[iSequence];
                     numberFake_++;
                     if (fakeStatus == ClpSimplexDual::upperFake) {
-                         if (fabs(lowerValue - value) < 1.0e-5 ||
-                                   fabs(lowerValue + dualBound_ - value) < 1.0e-5) {
-                              upper_[iSequence] = lowerValue + dualBound_;
+		         upper_[iSequence] = lowerValue + dualBound_;
+                         if (status == ClpSimplex::atLowerBound) {
+			      solution_[iSequence] = lowerValue;
+                         } else if (status == ClpSimplex::atUpperBound) {
+                              solution_[iSequence] = upper_[iSequence];
                          } else {
-                              // wrong way
-                              if (fabs(upperValue - value) < 1.0e-5 ||
-                                        fabs(upperValue - dualBound_ - value) < 1.0e-5) {
-                                   lower_[iSequence] = upperValue - dualBound_;
-                                   setFakeBound(iSequence, ClpSimplexDual::lowerFake);
-                              } else {
-#ifdef CLP_INVESTIGATE
-                                   printf("bad1\n");
-#endif
-                              }
+			      abort();
                          }
-                         assert(fabs(upper_[iSequence] - value) < 1.0e-5 ||
-                                fabs(lower_[iSequence] - value) < 1.0e-5);
                     } else if (fakeStatus == ClpSimplexDual::lowerFake) {
-                         if (fabs(upperValue - value) < 1.0e-5 ||
-                                   fabs(upperValue - dualBound_ - value) < 1.0e-5) {
-                              lower_[iSequence] = upperValue - dualBound_;
+		         lower_[iSequence] = upperValue - dualBound_;
+                         if (status == ClpSimplex::atLowerBound) {
+			      solution_[iSequence] = lower_[iSequence];
+                         } else if (status == ClpSimplex::atUpperBound) {
+                              solution_[iSequence] = upperValue;
                          } else {
-                              // wrong way
-                              if (fabs(lowerValue - value) < 1.0e-5 ||
-                                        fabs(lowerValue + dualBound_ - value) < 1.0e-5) {
-                                   upper_[iSequence] = lowerValue + dualBound_;
-                                   setFakeBound(iSequence, ClpSimplexDual::upperFake);
-                              } else {
-#ifdef CLP_INVESTIGATE
-                                   printf("bad1\n");
-#endif
-                              }
+			      abort();
                          }
-                         assert(fabs(upper_[iSequence] - value) < 1.0e-5 ||
-                                fabs(lower_[iSequence] - value) < 1.0e-5);
-                    } else if (fakeStatus == ClpSimplexDual::bothFake) {
+		    } else {
+		         assert (fakeStatus == ClpSimplexDual::bothFake);
                          if (status == ClpSimplex::atLowerBound) {
                               lower_[iSequence] = value;
                               upper_[iSequence] = value + dualBound_;
@@ -7275,16 +7301,10 @@ ClpSimplexDual::resetFakeBounds(int type)
                                     status == ClpSimplex::superBasic) {
                               lower_[iSequence] = value - 0.5 * dualBound_;
                               upper_[iSequence] = value + 0.5 * dualBound_;
-                         } else if (status == ClpSimplex::isFixed) {
-                              abort();
                          } else {
-                              // basic
-                              abort();
-                              numberFake_--;
-                              // lower_[iSequence] = value;
-                              //upper_[iSequence] = value + dualBound_;
+			      abort();
                          }
-                    }
+		    }
                }
           }
 #ifndef NDEBUG
