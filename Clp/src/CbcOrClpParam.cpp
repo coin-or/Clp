@@ -3200,6 +3200,15 @@ activity at continuous solution",
           CbcOrClpParam("tightLP", "Poor person's preSolve for now",
                         CLP_PARAM_ACTION_TIGHTEN, 7, 0);
 #endif
+     parameters[numberParameters++] =
+          CbcOrClpParam("timeM!ode", "Whether to use CPU or elapsed time",
+                        "cpu", CLP_PARAM_STR_TIME_MODE);
+     parameters[numberParameters-1].append("elapsed");
+     parameters[numberParameters-1].setLonghelp
+     (
+          "cpu uses CPU time for stopping, while elapsed uses elapsed time. \
+(On Windows, elapsed time is always used)."
+     );
 #ifdef COIN_HAS_CBC
      parameters[numberParameters++] =
           CbcOrClpParam("trust!PseudoCosts", "Number of branches before we trust pseudocosts",
