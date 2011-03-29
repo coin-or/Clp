@@ -1837,9 +1837,9 @@ fi
 
   if test "x$have_svnversion" = xyes; then
 
-    svn_rev_tmp=`cd $srcdir/$coin_has_clp ; svnversion`
-    CLP_SVN_REV=`echo $svn_rev_tmp | sed -n -e 's/^[0-9]*://' -e 's/\([0-9]\)[^0-9]*$/\1/p'`
-    if test $CLP_SVN_REV != exported; then
+    svn_rev_tmp=`LANG=en_EN svnversion $srcdir 2>/dev/null`
+    if test "$CLP_SVN_REV" != exported; then
+      CLP_SVN_REV=`echo $svn_rev_tmp | sed -n -e 's/^[0-9]*://' -e 's/\([0-9]\)[^0-9]*$/\1/p'`
 
 cat >>confdefs.h <<_ACEOF
 #define CLP_SVN_REV $CLP_SVN_REV
@@ -25201,7 +25201,9 @@ ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
-  ac_ext=f
+
+# get FLIBS
+ac_ext=f
 ac_compile='$F77 -c $FFLAGS conftest.$ac_ext >&5'
 ac_link='$F77 -o conftest$ac_exeext $FFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_f77_compiler_gnu
@@ -25252,7 +25254,7 @@ _ACEOF
 # flags.
 ac_save_FFLAGS=$FFLAGS
 FFLAGS="$FFLAGS $ac_verb"
-(eval echo $as_me:25255: \"$ac_link\") >&5
+(eval echo $as_me:25257: \"$ac_link\") >&5
 ac_f77_v_output=`eval $ac_link 5>&1 2>&1 | grep -v 'Driving:'`
 echo "$ac_f77_v_output" >&5
 FFLAGS=$ac_save_FFLAGS
@@ -25330,7 +25332,7 @@ _ACEOF
 # flags.
 ac_save_FFLAGS=$FFLAGS
 FFLAGS="$FFLAGS $ac_cv_prog_f77_v"
-(eval echo $as_me:25333: \"$ac_link\") >&5
+(eval echo $as_me:25335: \"$ac_link\") >&5
 ac_f77_v_output=`eval $ac_link 5>&1 2>&1 | grep -v 'Driving:'`
 echo "$ac_f77_v_output" >&5
 FFLAGS=$ac_save_FFLAGS
@@ -25496,10 +25498,70 @@ echo "${ECHO_T}$ac_cv_f77_libs" >&6
 FLIBS="$ac_cv_f77_libs"
 
 
-ac_ext=f
-ac_compile='$F77 -c $FFLAGS conftest.$ac_ext >&5'
-ac_link='$F77 -o conftest$ac_exeext $FFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
-ac_compiler_gnu=$ac_cv_f77_compiler_gnu
+ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+orig_FLIBS="$FLIBS"
+
+# If FLIBS has been set by the user, we just restore its value here
+if test x"$save_FLIBS" != x; then
+  FLIBS="$save_FLIBS"
+else
+  # This is to correct a missing exclusion in autoconf 2.59
+  if test x"$FLIBS" != x; then
+    my_flibs=
+    for flag in $FLIBS; do
+      case $flag in
+        -lcrt*.o) ;;
+        -lcygwin) ;;
+               *) my_flibs="$my_flibs $flag" ;;
+      esac
+    done
+    FLIBS="$my_flibs"
+  fi
+
+  case $build in
+  # The following is a fix to define FLIBS for ifort on Windows
+  # In its original version, it linked in libifcorert.lib or libifcorertd.lib on Windows/ifort explicitly.
+  # However, this seem to create a dependency on libifcorert.dll (or libifcorertd.dll) in the executables.
+  # This is seem to be unnecessary, libifcorert(d).lib has been removed from the link line.
+  # Further, excluding libc.lib from the default libs seemed to be necessary only for VS < 8.
+  # Since the corresponding flag seems to make more trouble than it avoids, it has been removed now.
+     *-cygwin* | *-mingw*)
+       case "$F77" in
+#         ifort* | */ifort* | IFORT* | */IFORT*)
+#           FLIBS="-link $LIBS /NODEFAULTLIB:libc.lib"
+#           if "$coin_debug_compile" = true ; then
+#             FLIBS="-link $LIBS /NODEFAULTLIB:libc.lib /NODEFAULTLIB:libcmt.lib"
+#           else
+#             FLIBS="-link $LIBS /NODEFAULTLIB:libc.lib /NODEFAULTLIB:libcmtd.lib"
+#           fi
+#           ;;
+         compile_f2c*)
+           FLIBS=`$F77 -FLIBS` ;;
+       esac;;
+     *-hp-*)
+         FLIBS="$FLIBS -lm";;
+     *-ibm-*)
+         FLIBS=`echo $FLIBS | sed 's/-lc)/-lc/g'` ;;
+     *-linux-*)
+       case "$F77" in
+         pgf77* | */pgf77* | pgf90* | */pgf90*)
+# ask linker to go through the archives multiple times
+# (the Fortran compiler seems to do that automatically...)
+           FLIBS="-Wl,--start-group $FLIBS -Wl,--end-group" ;;
+       esac
+  esac
+  ac_cv_f77_libs="$FLIBS"
+fi
+
+if test "x$orig_FLIBS" != "x$FLIBS" ; then
+  { echo "$as_me:$LINENO: Corrected Fortran libraries: $FLIBS" >&5
+echo "$as_me: Corrected Fortran libraries: $FLIBS" >&6;}
+fi
 
 ac_ext=f
 ac_compile='$F77 -c $FFLAGS conftest.$ac_ext >&5'
@@ -25928,7 +25990,6 @@ ac_compile='$F77 -c $FFLAGS conftest.$ac_ext >&5'
 ac_link='$F77 -o conftest$ac_exeext $FFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_f77_compiler_gnu
 
-
 ac_ext=f
 ac_compile='$F77 -c $FFLAGS conftest.$ac_ext >&5'
 ac_link='$F77 -o conftest$ac_exeext $FFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
@@ -26018,59 +26079,6 @@ ac_ext=f
 ac_compile='$F77 -c $FFLAGS conftest.$ac_ext >&5'
 ac_link='$F77 -o conftest$ac_exeext $FFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_f77_compiler_gnu
-
-
-# If FLIBS has been set by the user, we just restore its value here
-if test x"$save_FLIBS" != x; then
-  FLIBS="$save_FLIBS"
-else
-  # This is to correct a missing exclusion in autoconf 2.59
-  if test x"$FLIBS" != x; then
-    my_flibs=
-    for flag in $FLIBS; do
-      case $flag in
-        -lcrt*.o) ;;
-        -lcygwin) ;;
-               *) my_flibs="$my_flibs $flag" ;;
-      esac
-    done
-    FLIBS="$my_flibs"
-  fi
-
-  case $build in
-  # The following is a fix to define FLIBS for ifort on Windows
-  # In its original version, it linked in libifcorert.lib or libifcorertd.lib on Windows/ifort explicitly.
-  # However, this seem to create a dependency on libifcorert.dll (or libifcorertd.dll) in the executables.
-  # This is seem to be unnecessary, libifcorert(d).lib has been removed from the link line.
-  # Further, excluding libc.lib from the default libs seemed to be necessary only for VS < 8.
-  # Since the corresponding flag seems to make more trouble that it avoid, it has been removed now.
-     *-cygwin* | *-mingw*)
-       case "$F77" in
-#         ifort* | */ifort* | IFORT* | */IFORT*)
-#           FLIBS="-link $LIBS /NODEFAULTLIB:libc.lib"
-#           if "$coin_debug_compile" = true ; then
-#             FLIBS="-link $LIBS /NODEFAULTLIB:libc.lib /NODEFAULTLIB:libcmt.lib"
-#           else
-#             FLIBS="-link $LIBS /NODEFAULTLIB:libc.lib /NODEFAULTLIB:libcmtd.lib"
-#           fi
-#           ;;
-         compile_f2c*)
-           FLIBS=`$F77 -FLIBS` ;;
-       esac;;
-     *-hp-*)
-         FLIBS="$FLIBS -lm";;
-     *-ibm-*)
-         FLIBS=`echo $FLIBS | sed 's/-lc)/-lc/g'` ;;
-     *-linux-*)
-       case "$F77" in
-         pgf77* | */pgf77* | pgf90* | */pgf90*)
-# ask linker to go through the archives multiple times
-# (the Fortran compiler seems to do that automatically...)
-           FLIBS="-Wl,--start-group $FLIBS -Wl,--end-group" ;;
-       esac
-  esac
-  ac_cv_f77_libs="$FLIBS"
-fi
 
 ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
