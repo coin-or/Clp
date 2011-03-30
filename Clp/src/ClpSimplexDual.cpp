@@ -534,6 +534,9 @@ ClpSimplexDual::gutsOfDual(int ifValuesPass, double * & saveDuals, int initialSt
           }
           // Do iterations
           int returnCode = whileIterating(saveDuals, ifValuesPass);
+	  if (problemStatus_ == 1 && (progressFlag_&8) != 0 &&
+	      fabs(objectiveValue_) > 1.0e10 )
+	    problemStatus_ = 10; // infeasible - but has looked feasible
 #ifdef CLP_INVESTIGATE_SERIAL
           nPivots = factorization_->pivots();
 #endif
@@ -1365,10 +1368,10 @@ ClpSimplexDual::whileIterating(double * & givenDuals, int ifValuesPass)
 #ifdef COIN_DEVELOP
                                    printf("flag a %g %g\n", btranAlpha, alpha_);
 #endif
-                                   //#define FEB_TRY
-#ifdef FEB_TRY
+				   //#define FEB_TRY
+#if 1 //def FEB_TRY
                                    // Make safer?
-                                   factorization_->saferTolerances (1.0e-15, -1.03);
+                                   factorization_->saferTolerances (-0.99, -1.03);
 #endif
                                    setFlagged(sequenceOut_);
                                    progress_.clearBadTimes();
@@ -4975,14 +4978,13 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned, int type,
 				  numberRows_, rowActivityWork_);
 		      CoinMemcpyN(savedSolution_ ,
 				  numberColumns_, columnActivityWork_);
-		      //numberDualInfeasibilities_=1;
 		      problemStatus_ = 10;
 		      situationChanged = 0;
-		      //numberPrimalInfeasibilities_=1;
 		    }
                     //assert(numberDualInfeasibilitiesWithoutFree_==0);
                     if (numberDualInfeasibilities_) {
-                         if (numberPrimalInfeasibilities_ || numberPivots) {
+		        if ((numberPrimalInfeasibilities_ || numberPivots)
+			    && problemStatus_!=10) {
                               problemStatus_ = -1; // carry on as normal
                          } else {
                               problemStatus_ = 10; // try primal

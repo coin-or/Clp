@@ -2891,9 +2891,9 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
                                         << x << sequenceWithin(sequenceIn_)
                                         << CoinMessageEol;
                               setFlagged(sequenceIn_);
-#ifdef FEB_TRY
+#if 1 //def FEB_TRY
                               // Make safer?
-                              factorization_->saferTolerances (1.0e-15, -1.03);
+                              factorization_->saferTolerances (-0.99, -1.03);
 #endif
                               progress_.clearBadTimes();
                               lastBadIteration_ = numberIterations_; // say be more cautious

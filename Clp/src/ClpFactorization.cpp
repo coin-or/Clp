@@ -2819,10 +2819,14 @@ void
 ClpFactorization::saferTolerances (  double zeroValue,
                                      double pivotValue)
 {
+     double newValue;
      // better to have small tolerance even if slower
+     if (zeroValue > 0.0)
+          newValue = zeroValue;
+     else
+          newValue = -zeroTolerance() * zeroValue;
      zeroTolerance(CoinMin(zeroTolerance(), zeroValue));
      // better to have large tolerance even if slower
-     double newValue;
      if (pivotValue > 0.0)
           newValue = pivotValue;
      else
