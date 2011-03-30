@@ -4860,6 +4860,8 @@ int
 OsiClpSolverInterface::readLp(const char *filename, const double epsilon )
 {
   CoinLpIO m;
+  m.passInMessageHandler(modelPtr_->messageHandler());
+  *m.messagesPointer()=modelPtr_->coinMessages();
   m.readLp(filename, epsilon);
   freeCachedResults();
 
