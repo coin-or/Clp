@@ -172,6 +172,7 @@ void OsiClpSolverInterface::initialSolve()
       }
     }
   }
+  ClpPresolve * pinfo = NULL;
   /*
     If basis then do primal (as user could do dual with resolve)
     If not then see if dual feasible (and allow for gubs etc?)
@@ -225,11 +226,13 @@ void OsiClpSolverInterface::initialSolve()
     gotHint = (getHintParam(OsiDoPresolveInInitial,takeHint,strength));
     assert (gotHint);
     if (strength!=OsiHintIgnore&&takeHint) {
-      ClpPresolve pinfo;
-      ClpSimplex * model2 = pinfo.presolvedModel(*solver,1.0e-8);
+      pinfo = new ClpPresolve();
+      ClpSimplex * model2 = pinfo->presolvedModel(*solver,1.0e-8);
       if (!model2) {
         // problem found to be infeasible - whats best?
         model2 = solver;
+	delete pinfo;
+	pinfo = NULL;
       } else {
 	model2->setSpecialOptions(solver->specialOptions());
       }
@@ -487,12 +490,19 @@ void OsiClpSolverInterface::initialSolve()
       model2->setPerturbation(savePerturbation);
       if (model2!=solver) {
         int presolvedStatus = model2->status();
-        pinfo.postsolve(true);
+        pinfo->postsolve(true);
+	delete pinfo;
+	pinfo = NULL;
         
         delete model2;
+	int oldStatus=solver->status();
+	solver->setProblemStatus(presolvedStatus);
+	if (solver->logLevel()==63) // for gcc 4.6 bug
+	  printf("pstat %d stat %d\n",presolvedStatus,oldStatus);
         //printf("Resolving from postsolved model\n");
         // later try without (1) and check duals before solve
-	if (presolvedStatus!=3) {
+	if (presolvedStatus!=3
+	    &&(presolvedStatus||oldStatus==-1)) {
 	  if (!inCbcOrOther||presolvedStatus!=1) {
 	    disasterHandler_->setOsiModel(this);
 	    if (inCbcOrOther) {
@@ -768,6 +778,7 @@ void OsiClpSolverInterface::initialSolve()
   }
   modelPtr_->whatsChanged_ |= 0x30000;
   //std::cout<<time1<<" seconds - total "<<totalTime<<std::endl;
+  delete pinfo;
 }
 //-----------------------------------------------------------------------------
 void OsiClpSolverInterface::resolve()

@@ -441,8 +441,16 @@ void check_sol(CoinPresolveMatrix *prob, double tol)
 //#define COIN_PRESOLVE_BUG
 #ifdef COIN_PRESOLVE_BUG
 static int counter=1000000;
+static int startEmptyRows=0;
+static int startEmptyColumns=0;
 static bool break2(CoinPresolveMatrix *prob)
 {
+  int droppedRows = prob->countEmptyRows() - startEmptyRows ;
+  int droppedColumns =  prob->countEmptyCols() - startEmptyColumns;
+  startEmptyRows=prob->countEmptyRows();
+  startEmptyColumns=prob->countEmptyCols();
+  printf("Dropped %d rows and %d columns - current empty %d, %d\n",droppedRows,
+	 droppedColumns,startEmptyRows,startEmptyColumns);
   counter--;
   if (!counter) {
     printf("skipping next and all\n");
@@ -463,7 +471,30 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
      // Messages
      CoinMessages messages = CoinMessage(prob->messages().language());
      paction_ = 0;
-
+#ifndef PRESOLVE_DETAIL
+     if (prob->tuning_) {
+#endif
+       int numberEmptyRows=0;
+       for ( int i=0;i<prob->nrows_;i++) {
+	 if (!prob->hinrow_[i]) {
+	   PRESOLVE_DETAIL_PRINT(printf("pre_empty row %d\n",i));
+	   //printf("pre_empty row %d\n",i);
+	   numberEmptyRows++;
+	 }
+       }
+       int numberEmptyCols=0;
+       for ( int i=0;i<prob->ncols_;i++) {
+	 if (!prob->hincol_[i]) {
+	   PRESOLVE_DETAIL_PRINT(printf("pre_empty col %d\n",i));
+	   //printf("pre_empty col %d\n",i);
+	   numberEmptyCols++;
+	 }
+       }
+       printf("CoinPresolve initial state %d empty rows and %d empty columns\n",
+	      numberEmptyRows,numberEmptyCols);
+#ifndef PRESOLVE_DETAIL
+     }
+#endif
      prob->status_ = 0; // say feasible
      paction_ = make_fixed(prob, paction_);
      // if integers then switch off dual stuff
