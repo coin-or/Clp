@@ -258,14 +258,14 @@ ClpCholeskyMumps::order(ClpInterior * model)
      dmumps_c(mumps_);
      mumps_->a = sparseFactor_;
      if (mumps_->infog[0]) {
-          printf("MUMPS ordering failed -error %d %d\n",
-                 mumps_->infog[0], mumps_->infog[1]);
+          COIN_DETAIL_PRINT(printf("MUMPS ordering failed -error %d %d\n",
+				   mumps_->infog[0], mumps_->infog[1]));
           return 1;
      } else {
           double size = mumps_->infog[19];
           if (size < 0)
                size *= -1000000;
-          printf("%g nonzeros, flop count %g\n", size, mumps_->rinfog[0]);
+          COIN_DETAIL_PRINT(printf("%g nonzeros, flop count %g\n", size, mumps_->rinfog[0]));
      }
      for (iRow = 0; iRow < numberRows_; iRow++) {
           permuteInverse_[iRow] = iRow;
@@ -384,8 +384,8 @@ ClpCholeskyMumps::factorize(const double * diagonal, int * rowsDropped)
      mumps_->job = 2; // factorize
      dmumps_c(mumps_);
      if (mumps_->infog[0]) {
-          printf("MUMPS factorization failed -error %d %d\n",
-                 mumps_->infog[0], mumps_->infog[1]);
+          COIN_DETAIL_PRINT(printf("MUMPS factorization failed -error %d %d\n",
+				   mumps_->infog[0], mumps_->infog[1]));
      }
      choleskyCondition_ = 1.0;
      bool cleanCholesky;

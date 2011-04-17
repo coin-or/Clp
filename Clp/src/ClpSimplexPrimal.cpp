@@ -335,7 +335,7 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
                                    sprintPass > 100)
                               primalColumnPivot_->switchOffSprint();
                          //lastSprintIteration=numberIterations_;
-                         printf("End small model\n");
+                         COIN_DETAIL_PRINT(printf("End small model\n"));
                     }
                }
 
@@ -368,7 +368,7 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
                     originalModel(saveModel);
                     saveModel = NULL;
                     //lastSprintIteration=numberIterations_;
-                    printf("End small model after\n");
+                    COIN_DETAIL_PRINT(printf("End small model after\n"));
                     statusOfProblemInPrimal(lastCleaned, factorType, &progress_, true, ifValuesPass, saveModel);
                }
                int numberSprintIterations = 0;
@@ -431,7 +431,7 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
                     lastSprintIteration = numberIterations_;
                     if (objectiveValue()*optimizationDirection_ > lastObjectiveValue - 1.0e-7 && sprintPass > 5) {
                          // switch off
-                         printf("Switching off sprint\n");
+		      COIN_DETAIL_PRINT(printf("Switching off sprint\n"));
                          primalColumnPivot_->switchOffSprint();
                     } else {
                          lastObjectiveValue = objectiveValue() * optimizationDirection_;
@@ -447,8 +447,8 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
                          //statusOfProblemInPrimal(lastCleaned,factorType,&progress_,false,saveModel);
                          //statusOfProblemInPrimal(lastCleaned,factorType,&progress_,true,saveModel);
                          stopSprint = numberIterations_ + numberSprintIterations;
-                         printf("Sprint with %d columns for %d iterations\n",
-                                numberSprintColumns, numberSprintIterations);
+                         COIN_DETAIL_PRINT(printf("Sprint with %d columns for %d iterations\n",
+						  numberSprintColumns, numberSprintIterations));
                     }
                }
 
@@ -1437,7 +1437,9 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
           }
      }
      if (problemStatus_ == 0) {
-          double objVal = nonLinearCost_->feasibleCost();
+          double objVal = (nonLinearCost_->feasibleCost()
+			+ objective_->nonlinearOffset());
+	  objVal /= (objectiveScale_ * rhsScale_);
           double tol = 1.0e-10 * CoinMax(fabs(objVal), fabs(objectiveValue_)) + 1.0e-8;
           if (fabs(objVal - objectiveValue_) > tol) {
 #ifdef COIN_DEVELOP
@@ -1746,8 +1748,8 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
           if (pivotOne >= 0 && 0) {
                double thruCost = infeasibilityCost_ * spare[pivotOne];
                if (thruCost >= 0.99 * fabs(dualIn_))
-                    printf("Could pivot on %d as change %g dj %g\n",
-                           index[pivotOne], thruCost, dualIn_);
+                    COIN_DETAIL_PRINT(printf("Could pivot on %d as change %g dj %g\n",
+					     index[pivotOne], thruCost, dualIn_));
                double alpha = spare[pivotOne];
                double oldValue = rhs[pivotOne];
                theta_ = oldValue / alpha;
@@ -2035,11 +2037,11 @@ ClpSimplexPrimal::primalColumn(CoinIndexedVector * updates,
                case ClpSimplex::atUpperBound:
                     if (dualIn_ < 0.0) {
                          // move to other side
-                         printf("For %d U (%g, %g, %g) dj changed from %g",
+                         COIN_DETAIL_PRINT(printf("For %d U (%g, %g, %g) dj changed from %g",
                                 sequenceIn_, lower_[sequenceIn_], solution_[sequenceIn_],
-                                upper_[sequenceIn_], dualIn_);
+						  upper_[sequenceIn_], dualIn_));
                          dualIn_ -= nonLinearCost_->changeUpInCost(sequenceIn_);
-                         printf(" to %g\n", dualIn_);
+                         COIN_DETAIL_PRINT(printf(" to %g\n", dualIn_));
                          nonLinearCost_->setOne(sequenceIn_, upper_[sequenceIn_] + 2.0 * currentPrimalTolerance());
                          setStatus(sequenceIn_, ClpSimplex::atLowerBound);
                     }
@@ -2047,11 +2049,11 @@ ClpSimplexPrimal::primalColumn(CoinIndexedVector * updates,
                case ClpSimplex::atLowerBound:
                     if (dualIn_ > 0.0) {
                          // move to other side
-                         printf("For %d L (%g, %g, %g) dj changed from %g",
+                         COIN_DETAIL_PRINT(printf("For %d L (%g, %g, %g) dj changed from %g",
                                 sequenceIn_, lower_[sequenceIn_], solution_[sequenceIn_],
-                                upper_[sequenceIn_], dualIn_);
+						  upper_[sequenceIn_], dualIn_));
                          dualIn_ -= nonLinearCost_->changeDownInCost(sequenceIn_);
-                         printf(" to %g\n", dualIn_);
+                         COIN_DETAIL_PRINT(printf(" to %g\n", dualIn_));
                          nonLinearCost_->setOne(sequenceIn_, lower_[sequenceIn_] - 2.0 * currentPrimalTolerance());
                          setStatus(sequenceIn_, ClpSimplex::atUpperBound);
                     }
@@ -3190,7 +3192,7 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
           else
                statusOfProblemInPrimal(lastCleaned, 0, &dummyProgress, true, ifValuesPass);
           if (problemStatus_ == 5) {
-               printf("Singular basis\n");
+	    COIN_DETAIL_PRINT(printf("Singular basis\n"));
                problemStatus_ = -1;
                returnCode = 5;
           }
@@ -3490,7 +3492,7 @@ ClpSimplexPrimal::lexSolve()
                                    sprintPass > 100)
                               primalColumnPivot_->switchOffSprint();
                          //lastSprintIteration=numberIterations_;
-                         printf("End small model\n");
+                         COIN_DETAIL_PRINT(printf("End small model\n"));
                     }
                }
 
@@ -3523,7 +3525,7 @@ ClpSimplexPrimal::lexSolve()
                     originalModel(saveModel);
                     saveModel = NULL;
                     //lastSprintIteration=numberIterations_;
-                    printf("End small model after\n");
+                    COIN_DETAIL_PRINT(printf("End small model after\n"));
                     statusOfProblemInPrimal(lastCleaned, factorType, &progress_, true, ifValuesPass, saveModel);
                }
                int numberSprintIterations = 0;
@@ -3586,7 +3588,7 @@ ClpSimplexPrimal::lexSolve()
                     lastSprintIteration = numberIterations_;
                     if (objectiveValue()*optimizationDirection_ > lastObjectiveValue - 1.0e-7 && sprintPass > 5) {
                          // switch off
-                         printf("Switching off sprint\n");
+		      COIN_DETAIL_PRINT(printf("Switching off sprint\n"));
                          primalColumnPivot_->switchOffSprint();
                     } else {
                          lastObjectiveValue = objectiveValue() * optimizationDirection_;
@@ -3602,8 +3604,8 @@ ClpSimplexPrimal::lexSolve()
                          //statusOfProblemInPrimal(lastCleaned,factorType,&progress_,false,saveModel);
                          //statusOfProblemInPrimal(lastCleaned,factorType,&progress_,true,saveModel);
                          stopSprint = numberIterations_ + numberSprintIterations;
-                         printf("Sprint with %d columns for %d iterations\n",
-                                numberSprintColumns, numberSprintIterations);
+                         COIN_DETAIL_PRINT(printf("Sprint with %d columns for %d iterations\n",
+						  numberSprintColumns, numberSprintIterations));
                     }
                }
 
@@ -3646,8 +3648,8 @@ ClpSimplexPrimal::lexSolve()
                          // Start check for cycles
                          progress_.fillFromModel(this);
                          progress_.startCheck();
-                         printf("%d degenerate after %d iterations\n", numberDegen,
-                                numberIterations_);
+                         COIN_DETAIL_PRINT(printf("%d degenerate after %d iterations\n", numberDegen,
+						  numberIterations_));
                          if (!numberDegen) {
                               CoinMemcpyN(originalCost, numberTotal, cost_);
                               delete [] originalCost;
@@ -3662,7 +3664,7 @@ ClpSimplexPrimal::lexSolve()
                          progress_.endOddState();
                          continue;
                     } else {
-                         printf("exiting after %d iterations\n", numberIterations_);
+		      COIN_DETAIL_PRINT(printf("exiting after %d iterations\n", numberIterations_));
                          break;
                     }
                }

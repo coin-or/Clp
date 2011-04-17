@@ -140,7 +140,7 @@ int ClpPredictorCorrector::solve ( )
      //firstFactorization(true);
      int returnCode = cholesky_->order(this);
      if (returnCode || cholesky_->symbolic()) {
-          printf("Error return from symbolic - probably not enough memory\n");
+       COIN_DETAIL_PRINT(printf("Error return from symbolic - probably not enough memory\n"));
           problemStatus_ = 4;
           //delete all temporary regions
           deleteWorkingData();
@@ -163,7 +163,7 @@ int ClpPredictorCorrector::solve ( )
      int numberTotal = numberRows_ + numberColumns_;
      //initialize solution here
      if(createSolution() < 0) {
-          printf("Not enough memory\n");
+       COIN_DETAIL_PRINT(printf("Not enough memory\n"));
           problemStatus_ = 4;
           //delete all temporary regions
           deleteWorkingData();
@@ -317,7 +317,7 @@ int ClpPredictorCorrector::solve ( )
                }
                if (saveIt) {
 #if KEEP_GOING_IF_FIXED<10
-                    printf("saving\n");
+		 COIN_DETAIL_PRINT(printf("saving\n"));
 #endif
                     saveIteration = numberIterations_;
                     if (!savePi) {
@@ -348,7 +348,7 @@ int ClpPredictorCorrector::solve ( )
                               scaledRHSError < 1.0e-2) {
                          bestKilled = numberFixedTotal;
 #if KEEP_GOING_IF_FIXED<10
-                         printf("saving alternate\n");
+                         COIN_DETAIL_PRINT(printf("saving alternate\n"));
 #endif
                          saveIteration2 = numberIterations_;
                          if (!savePi2) {
@@ -514,7 +514,7 @@ int ClpPredictorCorrector::solve ( )
           newDropped = cholesky_->factorize(diagonal_, rowsDroppedThisTime);
           if (newDropped) {
                if (newDropped == -1) {
-                    printf("Out of memory\n");
+		 COIN_DETAIL_PRINT(printf("Out of memory\n"));
                     problemStatus_ = 4;
                     //delete all temporary regions
                     deleteWorkingData();
@@ -740,7 +740,7 @@ int ClpPredictorCorrector::solve ( )
                          break;
                     //assert (goodMove);
                }
-               if (nHalve && handler_->logLevel() > 1)
+               if (nHalve && handler_->logLevel() > 2)
                     printf("halved %d times\n", nHalve);
 #endif
           }
@@ -881,11 +881,11 @@ int ClpPredictorCorrector::solve ( )
                }
           }
           if (numberGoodTries && handler_->logLevel() > 1) {
-               printf("%d centering steps moved from (gap %.18g, dual %.18g, primal %.18g) to (gap %.18g, dual %.18g, primal %.18g)\n",
+               COIN_DETAIL_PRINT(printf("%d centering steps moved from (gap %.18g, dual %.18g, primal %.18g) to (gap %.18g, dual %.18g, primal %.18g)\n",
                       numberGoodTries, static_cast<double>(nextGap), static_cast<double>(originalDualStep),
                       static_cast<double>(originalPrimalStep),
                       static_cast<double>(nextCenterGap), static_cast<double>(actualDualStep_),
-                      static_cast<double>(actualPrimalStep_));
+					static_cast<double>(actualPrimalStep_)));
           }
           // save last gap
           checkGap = complementarityGap_;
@@ -943,7 +943,7 @@ int ClpPredictorCorrector::solve ( )
                << CoinMessageEol;
      //#ifdef SOME_DEBUG
      if (handler_->logLevel() > 1)
-          printf("ENDRUN status %d after %d iterations\n", problemStatus_, numberIterations_);
+       COIN_DETAIL_PRINT(printf("ENDRUN status %d after %d iterations\n", problemStatus_, numberIterations_));
      //#endif
      //std::cout<<"Absolute primal infeasibility at end "<<sumPrimalInfeasibilities_<<std::endl;
      //std::cout<<"Absolute dual infeasibility at end "<<sumDualInfeasibilities_<<std::endl;
@@ -1736,7 +1736,7 @@ CoinWorkDouble ClpPredictorCorrector::findDirectionVector(const int phase)
                     // disaster
                     CoinFillN(deltaX_, numberTotal, static_cast<CoinWorkDouble>(1.0));
                     CoinFillN(deltaY_, numberRows_, static_cast<CoinWorkDouble>(1.0));
-                    printf("bad cholesky\n");
+                    COIN_DETAIL_PRINT(printf("bad cholesky\n"));
                }
           }
      } /* endwhile */
@@ -2012,7 +2012,7 @@ int ClpPredictorCorrector::createSolution()
      int * rowsDropped = new int [numberRows_];
      int returnCode = cholesky_->factorize(diagonal_, rowsDropped);
      if (returnCode == -1) {
-          printf("Out of memory\n");
+       COIN_DETAIL_PRINT(printf("Out of memory\n"));
           problemStatus_ = 4;
           return -1;
      }
@@ -3424,9 +3424,9 @@ int ClpPredictorCorrector::updateSolution(CoinWorkDouble /*nextGap*/)
                                              CoinMin(dualInfeasibility,
                                                      (nextMu - complementarity) / lowerSlack_[iColumn]);
                                         dualInfeasibility -= change;
-                                        printf("%d lb locomp %g - dual inf from %g to %g\n",
+                                        COIN_DETAIL_PRINT(printf("%d lb locomp %g - dual inf from %g to %g\n",
                                                iColumn, complementarity, dualInfeasibility + change,
-                                               dualInfeasibility);
+								 dualInfeasibility));
                                         zVec_[iColumn] += change;
                                         zValue = CoinMax(zVec_[iColumn], 1.0e-12);
                                    }
@@ -3438,9 +3438,9 @@ int ClpPredictorCorrector::updateSolution(CoinWorkDouble /*nextGap*/)
                                              CoinMin(dualInfeasibility,
                                                      (complementarity - nextMu) / upperSlack_[iColumn]);
                                         dualInfeasibility -= change;
-                                        printf("%d ub hicomp %g - dual inf from %g to %g\n",
+                                        COIN_DETAIL_PRINT(printf("%d ub hicomp %g - dual inf from %g to %g\n",
                                                iColumn, complementarity, dualInfeasibility + change,
-                                               dualInfeasibility);
+								 dualInfeasibility));
                                         wVec_[iColumn] -= change;
                                         wValue = CoinMax(wVec_[iColumn], 1.0e-12);
                                    }
@@ -3454,9 +3454,9 @@ int ClpPredictorCorrector::updateSolution(CoinWorkDouble /*nextGap*/)
                                              CoinMax(dualInfeasibility,
                                                      (nextMu - complementarity) / lowerSlack_[iColumn]);
                                         dualInfeasibility -= change;
-                                        printf("%d lb hicomp %g - dual inf from %g to %g\n",
+                                        COIN_DETAIL_PRINT(printf("%d lb hicomp %g - dual inf from %g to %g\n",
                                                iColumn, complementarity, dualInfeasibility + change,
-                                               dualInfeasibility);
+								 dualInfeasibility));
                                         zVec_[iColumn] += change;
                                         zValue = CoinMax(zVec_[iColumn], 1.0e-12);
                                    }
@@ -3468,9 +3468,9 @@ int ClpPredictorCorrector::updateSolution(CoinWorkDouble /*nextGap*/)
                                              CoinMax(dualInfeasibility,
                                                      (complementarity - nextMu) / upperSlack_[iColumn]);
                                         dualInfeasibility -= change;
-                                        printf("%d ub locomp %g - dual inf from %g to %g\n",
+                                        COIN_DETAIL_PRINT(printf("%d ub locomp %g - dual inf from %g to %g\n",
                                                iColumn, complementarity, dualInfeasibility + change,
-                                               dualInfeasibility);
+								 dualInfeasibility));
                                         wVec_[iColumn] -= change;
                                         wValue = CoinMax(wVec_[iColumn], 1.0e-12);
                                    }
@@ -3539,8 +3539,8 @@ int ClpPredictorCorrector::updateSolution(CoinWorkDouble /*nextGap*/)
                     numberKilled++;
                     if (solution_[iColumn] != lower_[iColumn] &&
                               solution_[iColumn] != upper_[iColumn]) {
-                         printf("%d %g %g %g\n", iColumn, static_cast<double>(lower_[iColumn]),
-                                static_cast<double>(solution_[iColumn]), static_cast<double>(upper_[iColumn]));
+                         COIN_DETAIL_PRINT(printf("%d %g %g %g\n", iColumn, static_cast<double>(lower_[iColumn]),
+						  static_cast<double>(solution_[iColumn]), static_cast<double>(upper_[iColumn])));
                     }
                     diagonal_[iColumn] = 0.0;
                     zVec_[iColumn] = 0.0;

@@ -258,10 +258,10 @@ ClpCholeskyUfl::order(ClpInterior * model)
      //c_->dbound=1.0e-20;
      L_ = cholmod_analyze (&A, c_) ;
      if (c_->status) {
-          std::cout << "CHOLMOD ordering failed" << std::endl;
+       COIN_DETAIL_PRINT(std::cout << "CHOLMOD ordering failed" << std::endl);
           return 1;
      } else {
-          printf("%g nonzeros, flop count %g\n", c_->lnz, c_->fl);
+       COIN_DETAIL_PRINT(printf("%g nonzeros, flop count %g\n", c_->lnz, c_->fl));
      }
      for (iRow = 0; iRow < numberRows_; iRow++) {
           permuteInverse_[iRow] = iRow;

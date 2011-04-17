@@ -1953,7 +1953,7 @@ ClpSimplexDual::whileIterating(double * & givenDuals, int ifValuesPass)
                                         }
                                    }
                                    if (bad >= 0)
-                                        printf("bad %d old %g new %g\n", bad, comp[bad], solution_[bad]);
+				     COIN_DETAIL_PRINT(printf("bad %d old %g new %g\n", bad, comp[bad], solution_[bad]));
 #endif
                                    checkPrimalSolution(rowActivityWork_, columnActivityWork_);
                                    if (numberPrimalInfeasibilities_) {
@@ -4725,7 +4725,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned, int type,
                                    // if dual infeasibilities then must be free vector so add in dual
                                    if (numberDualInfeasibilities_) {
                                         if (fabs(changeCost) > 1.0e-5)
-                                             printf("Odd free/unbounded combo\n");
+					  COIN_DETAIL_PRINT(printf("Odd free/unbounded combo\n"));
                                         changeCost += cost_[iChosen];
                                    }
                                    problemStatus_ = checkUnbounded(rowArray_[1], rowArray_[0],
@@ -6712,7 +6712,7 @@ ClpSimplexDual::checkPossibleCleanup(CoinIndexedVector * rowArray,
                case ClpSimplex::isFixed:
                     alpha = work[i];
                     if (addSequence) {
-                         printf("possible - pivot row %d this %d\n", pivotRow_, iSequence);
+		      COIN_DETAIL_PRINT(printf("possible - pivot row %d this %d\n", pivotRow_, iSequence));
                          oldValue = dj_[iSequence2];
                          if (alpha <= -acceptablePivot) {
                               // might do other way
@@ -7311,7 +7311,7 @@ ClpSimplexDual::resetFakeBounds(int type)
           }
 #ifndef NDEBUG
      } else {
-          printf("NULL lower\n");
+       COIN_DETAIL_PRINT(printf("NULL lower\n"));
 #endif
      }
 }

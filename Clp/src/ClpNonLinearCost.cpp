@@ -273,7 +273,7 @@ ClpNonLinearCost::ClpNonLinearCost(ClpSimplex * model, const int * starts,
      memset(offset_, 0, numberTotal * sizeof(int));
 
      double whichWay = model_->optimizationDirection();
-     printf("Direction %g\n", whichWay);
+     COIN_DETAIL_PRINT(printf("Direction %g\n", whichWay));
 
      numberInfeasibilities_ = 0;
      changeCost_ = 0.0;

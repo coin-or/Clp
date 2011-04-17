@@ -1395,8 +1395,8 @@ ClpModel::resize (int newNumberRows, int newNumberColumns)
      }
      if (maximumRows_ >= 0) {
           if (numberRows_ > maximumRows_)
-               printf("resize %d rows, %d old maximum rows\n",
-                      numberRows_, maximumRows_);
+               COIN_DETAIL_PRINT(printf("resize %d rows, %d old maximum rows\n",
+					numberRows_, maximumRows_));
           maximumRows_ = CoinMax(maximumRows_, numberRows_);
           maximumColumns_ = CoinMax(maximumColumns_, numberColumns_);
      }
@@ -3952,8 +3952,8 @@ ClpModel::createCoinModel() const
 void
 ClpModel::startPermanentArrays()
 {
-     printf("startperm a %d rows, %d maximum rows\n",
-            numberRows_, maximumRows_);
+     COIN_DETAIL_PRINT(printf("startperm a %d rows, %d maximum rows\n",
+			      numberRows_, maximumRows_));
      if ((specialOptions_ & 65536) != 0) {
           if (numberRows_ > maximumRows_ || numberColumns_ > maximumColumns_) {
                if (numberRows_ > maximumRows_) {
@@ -3970,8 +3970,8 @@ ClpModel::startPermanentArrays()
                }
                // need to make sure numberRows_ OK and size of matrices
                resize(maximumRows_, maximumColumns_);
-               printf("startperm b %d rows, %d maximum rows\n",
-                      numberRows_, maximumRows_);
+               COIN_DETAIL_PRINT(printf("startperm b %d rows, %d maximum rows\n",
+					numberRows_, maximumRows_));
           } else {
                return;
           }
@@ -3984,8 +3984,8 @@ ClpModel::startPermanentArrays()
           baseRowCopy_.setExtraGap(0.0);
           baseRowCopy_.setExtraMajor(0.0);
           baseRowCopy_.reverseOrderedCopyOf(baseMatrix_);
-          printf("startperm c %d rows, %d maximum rows\n",
-                 numberRows_, maximumRows_);
+          COIN_DETAIL_PRINT(printf("startperm c %d rows, %d maximum rows\n",
+				   numberRows_, maximumRows_));
      }
 }
 // Stop using maximumRows_ and Columns_

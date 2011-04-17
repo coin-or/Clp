@@ -271,13 +271,13 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
                     model_->computeDuals(NULL);
                     saveWeights(model_, 4);
                     anyUpdates = 0;
-                    printf("switching to devex %d nel ratio %g\n", sizeFactorization_, ratio);
+                    COIN_DETAIL_PRINT(printf("switching to devex %d nel ratio %g\n", sizeFactorization_, ratio));
                }
                if (switchType == 5) {
                     numberLook *= 5; // needs tuning for gub
                     if (model_->numberIterations() % 1000 == 0 && model_->logLevel() > 1) {
-                         printf("numels %d ratio %g wanted %d look %d\n",
-                                sizeFactorization_, ratio, numberWanted, numberLook);
+                         COIN_DETAIL_PRINT(printf("numels %d ratio %g wanted %d look %d\n",
+						  sizeFactorization_, ratio, numberWanted, numberLook));
                     }
                     // Update duals and row djs
                     // Do partial pricing
@@ -401,7 +401,7 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
                delete [] weights_;
                weights_ = NULL;
                saveWeights(model_, 4);
-               printf("switching to devex %d nel ratio %g\n", sizeFactorization_, ratio);
+               COIN_DETAIL_PRINT(printf("switching to devex %d nel ratio %g\n", sizeFactorization_, ratio));
           }
           //if (model_->numberIterations()%1000==0)
           //printf("numels %d ratio %g wanted %d\n",sizeFactorization_,ratio,numberWanted);
@@ -431,11 +431,11 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
                delete [] weights_;
                weights_ = NULL;
                saveWeights(model_, 4);
-               printf("switching to exact %d nel ratio %g\n", sizeFactorization_, ratio);
+               COIN_DETAIL_PRINT(printf("switching to exact %d nel ratio %g\n", sizeFactorization_, ratio));
                updates->clear();
           }
           if (model_->numberIterations() % 1000 == 0)
-               printf("numels %d ratio %g wanted %d type x\n", sizeFactorization_, ratio, numberWanted);
+	    COIN_DETAIL_PRINT(printf("numels %d ratio %g wanted %d type x\n", sizeFactorization_, ratio, numberWanted));
      }
      if (switchType < 4) {
           if (switchType < 2 ) {
@@ -2420,11 +2420,11 @@ ClpPrimalColumnSteepest::pivotColumnOldMethod(CoinIndexedVector * updates,
                delete [] weights_;
                weights_ = NULL;
                saveWeights(model_, 4);
-               printf("switching to devex %d nel ratio %g\n", sizeFactorization_, ratio);
+               COIN_DETAIL_PRINT(printf("switching to devex %d nel ratio %g\n", sizeFactorization_, ratio));
                updates->clear();
           }
           if (model_->numberIterations() % 1000 == 0)
-               printf("numels %d ratio %g wanted %d\n", sizeFactorization_, ratio, numberWanted);
+	    COIN_DETAIL_PRINT(printf("numels %d ratio %g wanted %d\n", sizeFactorization_, ratio, numberWanted));
      }
      if(switchType == 4) {
           // Still in devex mode
@@ -2450,11 +2450,11 @@ ClpPrimalColumnSteepest::pivotColumnOldMethod(CoinIndexedVector * updates,
                delete [] weights_;
                weights_ = NULL;
                saveWeights(model_, 4);
-               printf("switching to exact %d nel ratio %g\n", sizeFactorization_, ratio);
+               COIN_DETAIL_PRINT(printf("switching to exact %d nel ratio %g\n", sizeFactorization_, ratio));
                updates->clear();
           }
           if (model_->numberIterations() % 1000 == 0)
-               printf("numels %d ratio %g wanted %d\n", sizeFactorization_, ratio, numberWanted);
+	    COIN_DETAIL_PRINT(printf("numels %d ratio %g wanted %d\n", sizeFactorization_, ratio, numberWanted));
      }
      if (switchType < 4) {
           if (switchType < 2 ) {
@@ -3289,7 +3289,7 @@ ClpPrimalColumnSteepest::checkAccuracy(int sequence,
      double oldDevex = weights_[sequence];
      double check = CoinMax(devex, oldDevex);;
      if ( fabs ( devex - oldDevex ) > relativeTolerance * check ) {
-          printf("check %d old weight %g, new %g\n", sequence, oldDevex, devex);
+       COIN_DETAIL_PRINT(printf("check %d old weight %g, new %g\n", sequence, oldDevex, devex));
           // update so won't print again
           weights_[sequence] = devex;
      }
@@ -3620,6 +3620,7 @@ ClpPrimalColumnSteepest::partialPricing(CoinIndexedVector * updates,
      int sequenceOut = model_->sequenceOut();
      double * duals2 = duals - numberColumns;
      int chunk = CoinMin(1024, (numberColumns + nSlacks) / 32);
+#ifdef COIN_DETAIL
      if (model_->numberIterations() % 1000 == 0 && model_->logLevel() > 1) {
           printf("%d wanted, nSlacks %d, chunk %d\n", numberWanted, nSlacks, chunk);
           int i;
@@ -3627,6 +3628,7 @@ ClpPrimalColumnSteepest::partialPricing(CoinIndexedVector * updates,
                printf("start R %d C %g ", startR[i], startC[i]);
           printf("\n");
      }
+#endif
      chunk = CoinMax(chunk, 256);
      bool finishedR = false, finishedC = false;
      bool doingR = randomR > randomC;

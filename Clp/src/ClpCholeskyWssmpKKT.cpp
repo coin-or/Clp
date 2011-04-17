@@ -508,7 +508,7 @@ ClpCholeskyWssmpKKT::solveKKT (double * region1, double * region2, const double 
      F77_FUNC(wssmp,WSSMP)(&numberRows_, choleskyStart_, choleskyRow_, sparseFactor_,
            NULL, permute_, permuteInverse_, array, &numberRows_, &i1,
            NULL, &i0, NULL, integerParameters_, doubleParameters_);
-#if 1
+#if 0
      int iRow;
      for (iRow = 0; iRow < numberTotal; iRow++) {
           if (rowsDropped_[iRow] && fabs(array[iRow]) > 1.0e-8) {

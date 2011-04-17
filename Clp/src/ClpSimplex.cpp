@@ -1915,8 +1915,8 @@ ClpSimplex::housekeeping(double objectiveChange)
                          }
                     }
                     solution->numberUnsatisfied[solution->numberSolutions++] = numberUnsat;
-                    printf("iteration %d, %d unsatisfied (%g,%g), %d fixed, %d satisfied\n",
-                           numberIterations_, numberUnsat, sumUnsat, mostAway, numberFixed, numberSat);
+                    COIN_DETAIL_PRINT(printf("iteration %d, %d unsatisfied (%g,%g), %d fixed, %d satisfied\n",
+					     numberIterations_, numberUnsat, sumUnsat, mostAway, numberFixed, numberSat));
                }
           }
      }
@@ -3058,8 +3058,8 @@ ClpSimplex::createRim(int what, bool makeRowCopy, int startFinishOptions)
                     numberColumns_ > maximumInternalColumns_) {
                newArrays = true;
                keepPivots = false;
-               printf("createrim a %d rows, %d maximum rows %d maxinternal\n",
-                      numberRows_, maximumRows_, maximumInternalRows_);
+               COIN_DETAIL_PRINT(printf("createrim a %d rows, %d maximum rows %d maxinternal\n",
+					numberRows_, maximumRows_, maximumInternalRows_));
                int oldMaximumRows = maximumInternalRows_;
                int oldMaximumColumns = maximumInternalColumns_;
                if (cost_) {
@@ -3073,8 +3073,8 @@ ClpSimplex::createRim(int what, bool makeRowCopy, int startFinishOptions)
                }
                assert(maximumInternalRows_ == maximumRows_);
                assert(maximumInternalColumns_ == maximumColumns_);
-               printf("createrim b %d rows, %d maximum rows, %d maxinternal\n",
-                      numberRows_, maximumRows_, maximumInternalRows_);
+               COIN_DETAIL_PRINT(printf("createrim b %d rows, %d maximum rows, %d maxinternal\n",
+					numberRows_, maximumRows_, maximumInternalRows_));
                int numberTotal2 = (maximumInternalRows_ + maximumInternalColumns_) * 2;
                delete [] cost_;
                cost_ = new double[numberTotal2];
@@ -3223,7 +3223,7 @@ ClpSimplex::createRim(int what, bool makeRowCopy, int startFinishOptions)
                                    largestRhs = CoinMax(largestRhs, -rowUpper_[i] * scale);
                          }
                     }
-                    printf("small obj %g, large %g - rhs %g\n", smallestObj, largestObj, largestRhs);
+                    COIN_DETAIL_PRINT(printf("small obj %g, large %g - rhs %g\n", smallestObj, largestObj, largestRhs));
                     bool scalingDone = false;
                     // look at element range
                     double smallestNegative;
@@ -4601,11 +4601,11 @@ void checkCorrect(ClpSimplex * /*model*/, int iRow,
      //assert (infiniteLowerC==infiniteLower);
      //assert (infiniteUpperC==infiniteUpper);
      if (fabs(maximumUp - maximumUpC) > 1.0e-12 * CoinMax(fabs(maximumUp), fabs(maximumUpC)))
-          printf("row %d comp up %g, true up %g\n", iRow,
-                 maximumUpC, maximumUp);
+          COIN_DETAIL_PRINT(printf("row %d comp up %g, true up %g\n", iRow,
+				   maximumUpC, maximumUp));
      if (fabs(maximumDown - maximumDownC) > 1.0e-12 * CoinMax(fabs(maximumDown), fabs(maximumDownC)))
-          printf("row %d comp down %g, true down %g\n", iRow,
-                 maximumDownC, maximumDown);
+          COIN_DETAIL_PRINT(printf("row %d comp down %g, true down %g\n", iRow,
+                 maximumDownC, maximumDown));
      maximumUpC = maximumUp;
      maximumDownC = maximumDown;
 }
@@ -8105,8 +8105,8 @@ int ClpSimplex::primalPivotResult()
      if (returnCode < 0 && returnCode > -4) {
           return 0;
      } else {
-          printf("Return code of %d from ClpSimplexPrimal::pivotResult\n",
-                 returnCode);
+          COIN_DETAIL_PRINT(printf("Return code of %d from ClpSimplexPrimal::pivotResult\n",
+				   returnCode));
           return -1;
      }
 }
@@ -8653,7 +8653,7 @@ ClpSimplex::ClpSimplex (ClpSimplex * wholeModel,
      // Now main arrays
      int iColumn;
      int numberTotal = numberRows_ + numberColumns;
-     printf("%d %d %d\n", numberTotal, numberRows_, numberColumns);
+     COIN_DETAIL_PRINT(printf("%d %d %d\n", numberTotal, numberRows_, numberColumns));
      // mapping
      int * mapping = new int[numberRows_+numberColumns_];
      for (iColumn = 0; iColumn < numberColumns_; iColumn++)
@@ -8751,7 +8751,7 @@ ClpSimplex::ClpSimplex (ClpSimplex * wholeModel,
                upper[iRow] -= sumFixed[iRow];
           rowSolution[iRow] -= sumFixed[iRow];
      }
-     printf("offset %g sumfixed %g\n", offset, fixed);
+     COIN_DETAIL_PRINT(printf("offset %g sumfixed %g\n", offset, fixed));
      delete [] sumFixed;
      columnScale_ = wholeModel->columnScale_;
      if (columnScale_) {
@@ -8790,8 +8790,8 @@ ClpSimplex::ClpSimplex (ClpSimplex * wholeModel,
      // Costs
      wholeModel->nonLinearCost_ = new ClpNonLinearCost(wholeModel);
      wholeModel->nonLinearCost_->checkInfeasibilities();
-     printf("after contraction %d infeasibilities summing to %g\n",
-            nonLinearCost_->numberInfeasibilities(), nonLinearCost_->sumInfeasibilities());
+     COIN_DETAIL_PRINT(printf("after contraction %d infeasibilities summing to %g\n",
+			      nonLinearCost_->numberInfeasibilities(), nonLinearCost_->sumInfeasibilities()));
      // Redo some stuff
      wholeModel->reducedCostWork_ = wholeModel->dj_;
      wholeModel->rowReducedCost_ = wholeModel->dj_ + wholeModel->numberColumns_;
@@ -8951,8 +8951,8 @@ ClpSimplex::originalModel(ClpSimplex * miniModel)
      }
      delete [] sumFixed;
      nonLinearCost_->checkInfeasibilities();
-     printf("in original %d infeasibilities summing to %g\n",
-            nonLinearCost_->numberInfeasibilities(), nonLinearCost_->sumInfeasibilities());
+     COIN_DETAIL_PRINT(printf("in original %d infeasibilities summing to %g\n",
+			      nonLinearCost_->numberInfeasibilities(), nonLinearCost_->sumInfeasibilities()));
      // Initialize weights
      primalColumnPivot_ = new ClpPrimalColumnSteepest(10);
      primalColumnPivot_->saveWeights(this, 2);
@@ -10009,8 +10009,8 @@ ClpSimplex::setToBaseModel(ClpSimplex * model)
                maximumColumns_ = model->maximumColumns_;
           }
      }
-     printf("resetbase a %d rows, %d maximum rows\n",
-            numberRows_, maximumRows_);
+     COIN_DETAIL_PRINT(printf("resetbase a %d rows, %d maximum rows\n",
+			      numberRows_, maximumRows_));
      // temporary - later use maximumRows_ for rowUpper_ etc
      assert (numberRows_ >= model->numberRows_);
      abort();
@@ -11085,8 +11085,8 @@ ClpSimplex::fathomMany(void * stuff)
                               int iColumn = info->whichColumn_[i];
                               info->large_->columnUpper_[iColumn] = columnUpper_[i];
                               info->large_->columnLower_[iColumn] = columnLower_[i];
-                              printf("%d dj %g dual %g scale %g\n",
-                                     iColumn, dj_[i], reducedCost_[i], columnScale_[i]);
+                              COIN_DETAIL_PRINT(printf("%d dj %g dual %g scale %g\n",
+						       iColumn, dj_[i], reducedCost_[i], columnScale_[i]));
 
                          }
                     }

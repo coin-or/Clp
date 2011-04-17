@@ -385,7 +385,7 @@ ClpCholeskyDense::factorize(const CoinWorkDouble * diagonal, int * rowsDropped)
           largest = doubleParameters_[3];
           smallest = doubleParameters_[4];
           if (model_->messageHandler()->logLevel() > 1)
-               std::cout << "Cholesky - largest " << largest << " smallest " << smallest << std::endl;
+	    COIN_DETAIL_PRINT(std::cout << "Cholesky - largest " << largest << " smallest " << smallest << std::endl);
           choleskyCondition_ = largest / smallest;
           /* Should save adjustments in ..R_*/
           int n1 = 0, n2 = 0;

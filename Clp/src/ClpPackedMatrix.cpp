@@ -4929,7 +4929,7 @@ ClpPackedMatrix::checkFlags(int type) const
                     }
                }
                if (ok)
-                    printf("flags_ could be 0\n");
+		 COIN_DETAIL_PRINT(printf("flags_ could be 0\n"));
           }
      }
 }

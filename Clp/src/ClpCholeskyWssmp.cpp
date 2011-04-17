@@ -155,7 +155,7 @@ ClpCholeskyWssmp::order(ClpInterior * model)
           int stop = CoinMax(denseThreshold_ / 2, 100);
           for (iRow = numberRows_; iRow >= stop; iRow--) {
                if (used[iRow])
-                    printf("%d columns are of length %d\n", used[iRow], iRow);
+		 COIN_DETAIL_PRINT(printf("%d columns are of length %d\n", used[iRow], iRow));
                nLong += used[iRow];
                if (nLong > 50 || nLong > (numberColumns >> 2))
                     break;
@@ -181,7 +181,7 @@ ClpCholeskyWssmp::order(ClpInterior * model)
                // dense cholesky
                dense_ = new ClpCholeskyDense();
                dense_->reserveSpace(NULL, numberDense);
-               printf("Taking %d columns as dense\n", numberDense);
+               COIN_DETAIL_PRINT(printf("Taking %d columns as dense\n", numberDense));
           }
      }
      for (iRow = 0; iRow < numberRows_; iRow++) {

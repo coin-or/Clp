@@ -595,11 +595,11 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
 #if IMPLIED!=3
 #if IMPLIED>2&&IMPLIED<11
                fill_level = IMPLIED;
-               printf("** fill_level == %d !\n", fill_level);
+               COIN_DETAIL_PRINT(printf("** fill_level == %d !\n", fill_level));
 #endif
 #if IMPLIED>11&&IMPLIED<21
                fill_level = -(IMPLIED - 10);
-               printf("** fill_level == %d !\n", fill_level);
+               COIN_DETAIL_PRINT(printf("** fill_level == %d !\n", fill_level));
 #endif
 #endif
 #else

@@ -755,7 +755,7 @@ ClpQuadraticObjective::stepLength(ClpSimplex * model,
           if (delta < 0.0) {
                return maximumTheta;
           } else {
-               printf("odd linear direction %g\n", delta);
+	    COIN_DETAIL_PRINT(printf("odd linear direction %g\n", delta));
                return 0.0;
           }
      }
