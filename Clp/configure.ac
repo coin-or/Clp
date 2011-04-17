@@ -137,6 +137,10 @@ AM_CONDITIONAL(COIN_HAS_WSMP, [test "$use_wsmp" != no])
 
 AC_COIN_CHECK_GNU_READLINE(ClpLib)
 
+AC_COIN_CHECK_CXX_CHEADER(math)
+AC_COIN_CHECK_CXX_CHEADER(float)
+AC_COIN_CHECK_CXX_CHEADER(ieeefp)
+
 ##############################################################################
 #                   VPATH links for example input files                      #
 ##############################################################################

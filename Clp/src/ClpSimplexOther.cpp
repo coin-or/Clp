@@ -20,6 +20,7 @@
 #include "CoinIndexedVector.hpp"
 #include "CoinBuild.hpp"
 #include "CoinMpsIO.hpp"
+#include "CoinFloatEqual.hpp"
 #include "ClpMessage.hpp"
 #include <cfloat>
 #include <cassert>

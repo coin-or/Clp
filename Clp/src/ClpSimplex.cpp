@@ -14,6 +14,7 @@
 #define SLIM_NOIO
 #endif
 #include "CoinHelperFunctions.hpp"
+#include "CoinFloatEqual.hpp"
 #include "ClpSimplex.hpp"
 #include "ClpFactorization.hpp"
 #include "ClpPackedMatrix.hpp"

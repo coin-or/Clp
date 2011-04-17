@@ -7,7 +7,7 @@
 #define ClpCholeskyBase_H
 
 #include "CoinPragma.hpp"
-#include "CoinFinite.hpp"
+#include "CoinTypes.hpp"
 //#define CLP_LONG_CHOLESKY 0
 #ifndef CLP_LONG_CHOLESKY
 #define CLP_LONG_CHOLESKY 0

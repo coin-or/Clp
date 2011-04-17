@@ -23,6 +23,7 @@
 #include "CoinStructuredModel.hpp"
 #include "CoinHelperFunctions.hpp"
 #include "CoinTime.hpp"
+#include "CoinFloatEqual.hpp"
 
 #include "ClpFactorization.hpp"
 #include "ClpSimplex.hpp"
