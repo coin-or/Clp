@@ -4779,6 +4779,8 @@ OsiClpSolverInterface::readMps(const char *filename,bool keepNames,bool allowErr
   m.setInfinity(getInfinity());
   m.passInMessageHandler(modelPtr_->messageHandler());
   *m.messagesPointer()=modelPtr_->coinMessages();
+  m.setSmallElementValue(CoinMax(modelPtr_->getSmallElementValue(), 
+				 m.getSmallElementValue()));
 
   delete [] setInfo_;
   setInfo_=NULL;

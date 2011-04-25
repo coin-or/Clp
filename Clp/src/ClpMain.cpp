@@ -1029,7 +1029,11 @@ main (int argc, const char *argv[])
                                                                          (gmpl == 2) ? gmplData.c_str() : NULL,
                                                                          keepImportNames != 0);
                                    else
-                                        status = models[iModel].readLp(fileName.c_str(), 1.0e-12);
+#ifdef KILL_ZERO_READLP
+				     status = models[iModel].readLp(fileName.c_str(), models[iModel].getSmallElementValue());
+#else
+				     status = models[iModel].readLp(fileName.c_str(), 1.0e-12);
+#endif
                                    if (!status || (status > 0 && allowImportErrors)) {
                                         goodModels[iModel] = true;
                                         // sets to all slack (not necessary?)

@@ -493,6 +493,9 @@ CbcOrClpParam::setDoubleParameterWithMessage ( ClpSimplex * model, double value 
           case CLP_PARAM_DBL_PRIMALTOLERANCE:
                model->setPrimalTolerance(value);
                break;
+          case CLP_PARAM_DBL_ZEROTOLERANCE:
+               model->setSmallElementValue(value);
+               break;
           case CLP_PARAM_DBL_DUALBOUND:
                model->setDualBound(value);
                break;
@@ -532,6 +535,9 @@ CbcOrClpParam::doubleParameter (ClpSimplex * model) const
           value = model->primalTolerance();
           break;
 #endif
+     case CLP_PARAM_DBL_ZEROTOLERANCE:
+          model->setSmallElementValue(value);
+          break;
      case CLP_PARAM_DBL_DUALBOUND:
           value = model->dualBound();
           break;
@@ -3327,6 +3333,16 @@ See branchAndCut for information on options."
      );
 #endif
 #endif
+     parameters[numberParameters++] =
+          CbcOrClpParam("zeroT!olerance", "Kill all coefficients \
+whose absolute value is less than this value",
+                        1.0e-100, 1.0e-5, CLP_PARAM_DBL_ZEROTOLERANCE);
+     parameters[numberParameters-1].setLonghelp
+     (
+          "This applies to reading mps files (and also lp files \
+if KILL_ZERO_READLP defined)"
+     );
+     parameters[numberParameters-1].setDoubleValue(1.0e-20);
      assert(numberParameters < CBCMAXPARAMETERS);
 }
 // Given a parameter type - returns its number in list
