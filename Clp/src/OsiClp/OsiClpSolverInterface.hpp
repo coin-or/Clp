@@ -19,16 +19,13 @@
 #include "ClpEventHandler.hpp"
 #include "ClpNode.hpp"
 #include "CoinIndexedVector.hpp"
+#include "CoinFinite.hpp"
 
 class OsiRowCut;
 class OsiClpUserSolver;
 class OsiClpDisasterHandler;
 class CoinSet;
-#ifndef COIN_DBL_MAX
-static const double OsiClpInfinity = DBL_MAX;
-#else
 static const double OsiClpInfinity = COIN_DBL_MAX;
-#endif
 
 //#############################################################################
 
