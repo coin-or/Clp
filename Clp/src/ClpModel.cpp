@@ -3309,7 +3309,7 @@ ClpModel::setRowName(int iRow, std::string &name)
      }
 #endif
      unsigned int maxLength = lengthNames_;
-     size_t size = static_cast<int>(rowNames_.size());
+     int size = static_cast<int>(rowNames_.size());
      if (size <= iRow)
           rowNames_.resize(iRow + 1);
      rowNames_[iRow] = name;
