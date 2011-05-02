@@ -817,8 +817,10 @@ int ClpPredictorCorrector::solve ( )
           int numberTries = 0;
           CoinWorkDouble nextCenterGap = 0.0;
           int numberGoodTries = 0;
+#ifdef COIN_DETAIL
           CoinWorkDouble originalDualStep = actualDualStep_;
           CoinWorkDouble originalPrimalStep = actualPrimalStep_;
+#endif
           if (actualDualStep_ > 0.9 && actualPrimalStep_ > 0.9)
                goodMove = false; // don't bother
           if ((modeSwitch & 1) != 0)

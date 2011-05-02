@@ -4070,6 +4070,8 @@ ClpPackedMatrix::allElementsInRange(ClpModel * model,
                     if (iRow < 0 || iRow >= numberRows) {
 #ifndef COIN_BIG_INDEX
                          printf("Out of range %d %d %d %g\n", iColumn, j, row[j], elementByColumn[j]);
+#elif COIN_BIG_INDEX==0
+                         printf("Out of range %d %d %d %g\n", iColumn, j, row[j], elementByColumn[j]);
 #elif COIN_BIG_INDEX==1
                          printf("Out of range %d %ld %d %g\n", iColumn, j, row[j], elementByColumn[j]);
 #else
@@ -4118,6 +4120,8 @@ ClpPackedMatrix::allElementsInRange(ClpModel * model,
                     int iRow = row[j];
                     if (iRow < 0 || iRow >= numberRows) {
 #ifndef COIN_BIG_INDEX
+                         printf("Out of range %d %d %d %g\n", iColumn, j, row[j], elementByColumn[j]);
+#elif COIN_BIG_INDEX==0
                          printf("Out of range %d %d %d %g\n", iColumn, j, row[j], elementByColumn[j]);
 #elif COIN_BIG_INDEX==1
                          printf("Out of range %d %ld %d %g\n", iColumn, j, row[j], elementByColumn[j]);

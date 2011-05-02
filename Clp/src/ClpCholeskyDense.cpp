@@ -805,7 +805,7 @@ ClpCholeskyCfactorLeaf(ClpCholeskyDenseC * thisStruct, longDouble * a, int n,
 {
      double dropValue = thisStruct->doubleParameters_[0];
      int firstPositive = thisStruct->integerParameters_[0];
-     int rowOffset = diagonal - thisStruct->diagonal_;
+     int rowOffset = static_cast<int>(diagonal - thisStruct->diagonal_);
      int i, j, k;
      CoinWorkDouble t00, temp1;
      longDouble * aa;

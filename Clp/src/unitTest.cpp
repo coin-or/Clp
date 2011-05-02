@@ -1355,9 +1355,9 @@ ClpSimplexUnitTest(const std::string & dirSample)
                model.primal(0, 3);
                // Write saved solutions
                int nc = model.getNumCols();
-               int s;
+               size_t s;
                std::deque<StdVectorDouble> fep = messageHandler.getFeasibleExtremePoints();
-               int numSavedSolutions = fep.size();
+               size_t numSavedSolutions = fep.size();
                for ( s = 0; s < numSavedSolutions; ++s ) {
                     const StdVectorDouble & solnVec = fep[s];
                     for ( int c = 0; c < nc; ++c ) {

@@ -3,11 +3,7 @@
 // Corporation and others.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).
 
-#if defined(_MSC_VER)
-// Turn off compiler warning about long names
-#  pragma warning(disable:4786)
-#endif
-
+#include "CoinPragma.hpp"
 #include "CbcOrClpParam.hpp"
 
 #include <string>
@@ -536,7 +532,7 @@ CbcOrClpParam::doubleParameter (ClpSimplex * model) const
           break;
 #endif
      case CLP_PARAM_DBL_ZEROTOLERANCE:
-          model->setSmallElementValue(value);
+          value = model->getSmallElementValue();
           break;
      case CLP_PARAM_DBL_DUALBOUND:
           value = model->dualBound();
@@ -1019,17 +1015,17 @@ static char line[1000];
 static char * where = NULL;
 extern int CbcOrClpRead_mode;
 int CbcOrClpEnvironmentIndex = -1;
-static int fillEnv()
+static size_t fillEnv()
 {
 #if defined(_MSC_VER) || defined(__MSVCRT__)
      return 0;
 #else
      // Don't think it will work on Windows
      char * environ = getenv("CBC_CLP_ENVIRONMENT");
-     int length = 0;
+     size_t length = 0;
      if (environ) {
           length = strlen(environ);
-          if (CbcOrClpEnvironmentIndex < length) {
+          if (CbcOrClpEnvironmentIndex < static_cast<int>(length)) {
                // find next non blank
                char * whereEnv = environ + CbcOrClpEnvironmentIndex;
                // munch white space
@@ -1046,7 +1042,7 @@ static int fillEnv()
                     assert (put - line < 1000);
                     whereEnv++;
                }
-               CbcOrClpEnvironmentIndex = whereEnv - environ;
+               CbcOrClpEnvironmentIndex = static_cast<int>(whereEnv - environ);
                *put = '\0';
                length = strlen(line);
           } else {
@@ -1235,7 +1231,7 @@ CoinReadGetIntField(int argc, const char *argv[], int * valid)
           field = afterEquals;
           afterEquals = "";
      }
-     int value = 0;
+     long int value = 0;
      //std::cout<<field<<std::endl;
      if (field != "EOL") {
           const char * start = field.c_str();
@@ -1251,7 +1247,7 @@ CoinReadGetIntField(int argc, const char *argv[], int * valid)
      } else {
           *valid = 2;
      }
-     return value;
+     return static_cast<int>(value);
 }
 double
 CoinReadGetDoubleField(int argc, const char *argv[], int * valid)
@@ -3404,34 +3400,34 @@ void restoreSolution(ClpSimplex * lpSolver, std::string fileName, int mode)
                lpSolver->setObjectiveValue(objectiveValue);
                if (numberRows == numberRowsFile && numberColumns == numberColumnsFile) {
                     nRead = fread(primalRowSolution, sizeof(double), numberRows, fp);
-                    if (nRead != numberRows)
+                    if (nRead != static_cast<size_t>(numberRows))
                          throw("Error in fread");
                     nRead = fread(dualRowSolution, sizeof(double), numberRows, fp);
-                    if (nRead != numberRows)
+                    if (nRead != static_cast<size_t>(numberRows))
                          throw("Error in fread");
                     nRead = fread(primalColumnSolution, sizeof(double), numberColumns, fp);
-                    if (nRead != numberColumns)
+                    if (nRead != static_cast<size_t>(numberColumns))
                          throw("Error in fread");
                     nRead = fread(dualColumnSolution, sizeof(double), numberColumns, fp);
-                    if (nRead != numberColumns)
+                    if (nRead != static_cast<size_t>(numberColumns))
                          throw("Error in fread");
                } else {
                     std::cout << "Mismatch on rows and/or columns - truncating" << std::endl;
                     double * temp = new double [CoinMax(numberRowsFile, numberColumnsFile)];
                     nRead = fread(temp, sizeof(double), numberRowsFile, fp);
-                    if (nRead != numberRowsFile)
+                    if (nRead != static_cast<size_t>(numberRowsFile))
                          throw("Error in fread");
                     CoinMemcpyN(temp, numberRows, primalRowSolution);
                     nRead = fread(temp, sizeof(double), numberRowsFile, fp);
-                    if (nRead != numberRowsFile)
+                    if (nRead != static_cast<size_t>(numberRowsFile))
                          throw("Error in fread");
                     CoinMemcpyN(temp, numberRows, dualRowSolution);
                     nRead = fread(temp, sizeof(double), numberColumnsFile, fp);
-                    if (nRead != numberColumnsFile)
+                    if (nRead != static_cast<size_t>(numberColumnsFile))
                          throw("Error in fread");
                     CoinMemcpyN(temp, numberColumns, primalColumnSolution);
                     nRead = fread(temp, sizeof(double), numberColumnsFile, fp);
-                    if (nRead != numberColumnsFile)
+                    if (nRead != static_cast<size_t>(numberColumnsFile))
                          throw("Error in fread");
                     CoinMemcpyN(temp, numberColumns, dualColumnSolution);
                     delete [] temp;
@@ -3506,18 +3502,18 @@ void saveSolution(const ClpSimplex * lpSolver, std::string fileName)
           double * dualRowSolution = lpSolver->dualRowSolution();
           double * primalRowSolution = lpSolver->primalRowSolution();
           nWrite = fwrite(primalRowSolution, sizeof(double), numberRows, fp);
-          if (nWrite != numberRows)
+          if (nWrite != static_cast<size_t>(numberRows))
                throw("Error in fwrite");
           nWrite = fwrite(dualRowSolution, sizeof(double), numberRows, fp);
-          if (nWrite != numberRows)
+          if (nWrite != static_cast<size_t>(numberRows))
                throw("Error in fwrite");
           double * dualColumnSolution = lpSolver->dualColumnSolution();
           double * primalColumnSolution = lpSolver->primalColumnSolution();
           nWrite = fwrite(primalColumnSolution, sizeof(double), numberColumns, fp);
-          if (nWrite != numberColumns)
+          if (nWrite != static_cast<size_t>(numberColumns))
                throw("Error in fwrite");
           nWrite = fwrite(dualColumnSolution, sizeof(double), numberColumns, fp);
-          if (nWrite != numberColumns)
+          if (nWrite != static_cast<size_t>(numberColumns))
                throw("Error in fwrite");
           fclose(fp);
      } else {

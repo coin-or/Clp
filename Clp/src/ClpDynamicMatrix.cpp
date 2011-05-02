@@ -93,7 +93,7 @@ ClpDynamicMatrix::ClpDynamicMatrix (const ClpDynamicMatrix & rhs)
      fromIndex_ = ClpCopyOfArray(rhs.fromIndex_, getNumRows() + 1 - numberStaticRows_);
      lowerSet_ = ClpCopyOfArray(rhs.lowerSet_, numberSets_);
      upperSet_ = ClpCopyOfArray(rhs.upperSet_, numberSets_);
-     status_ = ClpCopyOfArray(rhs.status_, 2*numberSets_+4*sizeof(int));
+     status_ = ClpCopyOfArray(rhs.status_, static_cast<int>(2*numberSets_+4*sizeof(int)));
      model_ = rhs.model_;
      sumDualInfeasibilities_ = rhs. sumDualInfeasibilities_;
      sumPrimalInfeasibilities_ = rhs.sumPrimalInfeasibilities_;
@@ -262,7 +262,7 @@ ClpDynamicMatrix::ClpDynamicMatrix(ClpSimplex * model, int numberSets,
      backToPivotRow_ = new int[numberNeeded];
      keyVariable_ = new int[numberSets_];
      if (status) {
-          status_ = ClpCopyOfArray(status, 2*numberSets_+4*sizeof(int));
+          status_ = ClpCopyOfArray(status, static_cast<int>(2*numberSets_+4*sizeof(int)));
           assert (dynamicStatus);
           dynamicStatus_ = ClpCopyOfArray(dynamicStatus, 2*numberGubColumns_);
      } else {
@@ -359,7 +359,7 @@ ClpDynamicMatrix::operator=(const ClpDynamicMatrix& rhs)
           fromIndex_ = ClpCopyOfArray(rhs.fromIndex_, getNumRows() + 1 - numberStaticRows_);
           lowerSet_ = ClpCopyOfArray(rhs.lowerSet_, numberSets_);
           upperSet_ = ClpCopyOfArray(rhs.upperSet_, numberSets_);
-          status_ = ClpCopyOfArray(rhs.status_, 2*numberSets_+4*sizeof(int));
+          status_ = ClpCopyOfArray(rhs.status_, static_cast<int>(2*numberSets_+4*sizeof(int)));
           model_ = rhs.model_;
           sumDualInfeasibilities_ = rhs. sumDualInfeasibilities_;
           sumPrimalInfeasibilities_ = rhs.sumPrimalInfeasibilities_;
