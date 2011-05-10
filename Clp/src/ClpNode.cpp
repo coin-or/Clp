@@ -266,6 +266,9 @@ ClpNode::gutsOfConstructor (ClpSimplex * model, const ClpNodeStuff * stuff,
 #ifdef WEIGHT_PRODUCT
      double smallChange = stuff->smallChange_;
 #endif
+#ifndef INFEAS_MULTIPLIER 
+#define INFEAS_MULTIPLIER 1.0
+#endif
      for (iColumn = 0; iColumn < numberColumns; iColumn++) {
           if (integerType[iColumn]) {
                double value = solution[iColumn];
@@ -309,14 +312,14 @@ ClpNode::gutsOfConstructor (ClpSimplex * model, const ClpNodeStuff * stuff,
                     double upValue2 = (upPseudo[iInteger] / (1.0 + nUp));
                     // Extra for infeasible branches
                     if (nUp) {
-                         double ratio = 1.0 + static_cast<double>(numberUpInfeasible[iInteger]) /
+                         double ratio = 1.0 + INFEAS_MULTIPLIER*static_cast<double>(numberUpInfeasible[iInteger]) /
                                         static_cast<double>(nUp);
                          upValue2 *= ratio;
                     }
                     int nDown = numberDown[iInteger];
                     double downValue2 = (downPseudo[iInteger] / (1.0 + nDown));
                     if (nDown) {
-                         double ratio = 1.0 + static_cast<double>(numberDownInfeasible[iInteger]) /
+                         double ratio = 1.0 + INFEAS_MULTIPLIER*static_cast<double>(numberDownInfeasible[iInteger]) /
                                         static_cast<double>(nDown);
                          downValue2 *= ratio;
                     }
@@ -353,14 +356,14 @@ ClpNode::gutsOfConstructor (ClpSimplex * model, const ClpNodeStuff * stuff,
                     double upValue = (ceil(value) - value) * (upPseudo[iInteger] /
                                      (1.0 + nUp));
                     if (nUp) {
-                         double ratio = 1.0 + static_cast<double>(numberUpInfeasible[iInteger]) /
+                         double ratio = 1.0 + INFEAS_MULTIPLIER*static_cast<double>(numberUpInfeasible[iInteger]) /
                                         static_cast<double>(nUp);
                          upValue *= ratio;
                     }
                     double downValue = (value - floor(value)) * (downPseudo[iInteger] /
                                        (1.0 + nDown));
                     if (nDown) {
-                         double ratio = 1.0 + static_cast<double>(numberDownInfeasible[iInteger]) /
+                         double ratio = 1.0 + INFEAS_MULTIPLIER*static_cast<double>(numberDownInfeasible[iInteger]) /
                                         static_cast<double>(nDown);
                          downValue *= ratio;
                     }
@@ -710,6 +713,9 @@ ClpNodeStuff::ClpNodeStuff () :
      large_(NULL),
      whichRow_(NULL),
      whichColumn_(NULL),
+#ifndef NO_FATHOM_PRINT
+     handler_(NULL),
+#endif
      nBound_(0),
      saveOptions_(0),
      solverOptions_(0),
@@ -721,6 +727,10 @@ ClpNodeStuff::ClpNodeStuff () :
      numberNodesExplored_(0),
      numberIterations_(0),
      presolveType_(0)
+#ifndef NO_FATHOM_PRINT
+     ,startingDepth_(-1),
+     nodeCalled_(-1)
+#endif
 {
 
 }
@@ -744,6 +754,9 @@ ClpNodeStuff::ClpNodeStuff (const ClpNodeStuff & rhs)
        large_(NULL),
        whichRow_(NULL),
        whichColumn_(NULL),
+#ifndef NO_FATHOM_PRINT
+       handler_(rhs.handler_),
+#endif
        nBound_(0),
        saveOptions_(rhs.saveOptions_),
        solverOptions_(rhs.solverOptions_),
@@ -755,6 +768,10 @@ ClpNodeStuff::ClpNodeStuff (const ClpNodeStuff & rhs)
        numberNodesExplored_(rhs.numberNodesExplored_),
        numberIterations_(rhs.numberIterations_),
        presolveType_(rhs.presolveType_)
+#ifndef NO_FATHOM_PRINT
+     ,startingDepth_(rhs.startingDepth_),
+       nodeCalled_(rhs.nodeCalled_)
+#endif
 {
 }
 //----------------------------------------------------------------
@@ -797,6 +814,11 @@ ClpNodeStuff::operator=(const ClpNodeStuff& rhs)
           numberNodesExplored_ = rhs.numberNodesExplored_;
           numberIterations_ = rhs.numberIterations_;
           presolveType_ = rhs.presolveType_;
+#ifndef NO_FATHOM_PRINT
+	  handler_ = rhs.handler_;
+	  startingDepth_ = rhs.startingDepth_;
+	  nodeCalled_ = rhs.nodeCalled_;
+#endif
      }
      return *this;
 }

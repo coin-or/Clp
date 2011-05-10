@@ -1073,6 +1073,8 @@ public:
          256 bit - in primal from dual or vice versa
          512 bit - alternative use of solveType_
          1024 bit - don't do row copy of factorization
+	 2048 bit - perturb in complete fathoming
+	 4096 bit - try more for complete fathoming
      */
      inline int moreSpecialOptions() const {
           return moreSpecialOptions_;
@@ -1089,6 +1091,8 @@ public:
          256 bit - in primal from dual or vice versa
          512 bit - alternative use of solveType_
          1024 bit - don't do row copy of factorization
+	 2048 bit - perturb in complete fathoming
+	 4096 bit - try more for complete fathoming
      */
      inline void setMoreSpecialOptions(int value) {
           moreSpecialOptions_ = value;

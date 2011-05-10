@@ -10073,6 +10073,7 @@ ClpSimplex::startPermanentArrays()
      }
 }
 #include "ClpNode.hpp"
+//#define COIN_DEVELOP
 // Fathom - 1 if solution
 int
 ClpSimplex::fathom(void * stuff)
@@ -10083,9 +10084,17 @@ ClpSimplex::fathom(void * stuff)
      // say can declare optimal
      moreSpecialOptions_ |= 8;
      int saveMaxIterations = maximumIterations();
-     setMaximumIterations(100 + 5 * (numberRows_ + numberColumns_));
-#if 0
-     bool onOptimal = true;
+     setMaximumIterations((((moreSpecialOptions_&2048)==0) ? 100 : 2000)
+			  + 5 * (numberRows_ + numberColumns_));
+     double saveObjLimit;
+     getDblParam(ClpDualObjectiveLimit, saveObjLimit);
+     if (perturbation_<100) {
+       double limit = saveObjLimit * optimizationDirection_;
+       setDblParam(ClpDualObjectiveLimit, 
+		   (limit+1.0e-2+1.0e-7*fabs(limit))*optimizationDirection_);
+     }
+ #if 0
+     bool onOptimal = (numberColumns_==100);
      double optVal[133];
      {
           memset(optVal, 0, sizeof(optVal));
@@ -10104,7 +10113,7 @@ ClpSimplex::fathom(void * stuff)
           }
 #endif
      }
-     if (numberColumns_ == -100) {
+     if (numberColumns_ == 100) {
           const char * integerType = integerInformation();
           for (int i = 0; i < 100; i++) {
                if (integerType[i]) {
@@ -10114,8 +10123,9 @@ ClpSimplex::fathom(void * stuff)
                     }
                }
           }
-          if (onOptimal)
+          if (onOptimal) {
                printf("On optimal path fathom\n");
+	  }
      }
 #endif
      if (info->presolveType_) {
@@ -10137,6 +10147,7 @@ ClpSimplex::fathom(void * stuff)
                //small->getDblParam(ClpDualObjectiveLimit, limit);
                //printf(" %g\n",limit);
                // pack down pseudocosts
+	       small->moreSpecialOptions_ = moreSpecialOptions_;
                if (info->upPseudo_) {
                     const char * integerType2 = small->integerInformation();
                     int n = small->numberColumns();
@@ -10269,12 +10280,14 @@ ClpSimplex::fathom(void * stuff)
           delete [] whichRow;
           delete [] whichColumn;
           setMaximumIterations(saveMaxIterations);
+	  setDblParam(ClpDualObjectiveLimit, saveObjLimit);
           return returnCode;
      }
      int returnCode = startFastDual2(info);
      if (returnCode) {
           stopFastDual2(info);
           setMaximumIterations(saveMaxIterations);
+	  setDblParam(ClpDualObjectiveLimit, saveObjLimit);
           return returnCode;
      }
      // Get fake bounds correctly
@@ -10320,12 +10333,13 @@ ClpSimplex::fathom(void * stuff)
 #endif
           info->nNodes_ = -1;
           setMaximumIterations(saveMaxIterations);
+	  setDblParam(ClpDualObjectiveLimit, saveObjLimit);
           return 0;
      }
      int numberNodes = 1;
      int numberIterations = numberIterations_;
-#ifdef COIN_DEVELOP
-     int printFrequency = 1000;
+#if defined(COIN_DEVELOP) || !defined(NO_FATHOM_PRINT)
+     int printFrequency = 2000;
 #endif
      if (problemStatus_ == 1) {
           //printf("fathom infeasible on initial\n");
@@ -10333,12 +10347,14 @@ ClpSimplex::fathom(void * stuff)
           info->numberNodesExplored_ = 1;
           info->numberIterations_ = numberIterations;
           setMaximumIterations(saveMaxIterations);
+	  setDblParam(ClpDualObjectiveLimit, saveObjLimit);
           return 0;
      } else if (problemStatus_ != 0) {
           stopFastDual2(info);
           info->numberNodesExplored_ = 1;
           info->numberIterations_ = numberIterations;
           setMaximumIterations(saveMaxIterations);
+	  setDblParam(ClpDualObjectiveLimit, saveObjLimit);
           // say bad
           info->nNodes_ = -1;
           return 0;
@@ -10446,6 +10462,15 @@ ClpSimplex::fathom(void * stuff)
                }
           }
 #endif
+#ifdef COIN_DEVELOP
+	  static int zzzzzz=0;
+	  zzzzzz++;
+	  if ((zzzzzz%100000)==0)
+	    printf("%d fathom solves\n",zzzzzz);
+	  if (zzzzzz==-1) {
+	    printf("TROUBLE\n");
+	  }
+#endif
           // Get fake bounds correctly
           (static_cast<ClpSimplexDual *>(this))->changeBounds(3, NULL, dummyChange);
           fastDual2(info);
@@ -10470,8 +10495,8 @@ ClpSimplex::fathom(void * stuff)
           if (problemStatus_ > 1) {
                info->nNodes_ = -1;
 #ifdef COIN_DEVELOP
-               printf("OUCH giving up on loop! %d %d %d %d\n",
-                      numberNodes, numberIterations, problemStatus_, numberIterations_);
+               printf("OUCH giving up on loop! %d %d %d %d - zzzzzz %d - max %d\n",
+                      numberNodes, numberIterations, problemStatus_, numberIterations_,zzzzzz,intParam_[0]);
                printf("xx %d\n", numberIterations*(numberRows_ + numberColumns_));
                //abort();
 #endif
@@ -10482,13 +10507,24 @@ ClpSimplex::fathom(void * stuff)
           if ((numberNodes % 1000) == 0) {
 #ifdef COIN_DEVELOP
                if ((numberNodes % printFrequency) == 0) {
-                    printf("After %d nodes (%d iterations) - best solution %g - current depth %d\n",
-                           numberNodes, numberIterations, bestObjective, depth);
+                    printf("Fathoming from node %d - %d nodes (%d iterations) - current depth %d\n",
+                           info->nodeCalled_,numberNodes, 
+			   numberIterations, depth+info->startingDepth_);
                     printFrequency *= 2;
                }
+#elif !defined(NO_FATHOM_PRINT)
+               if ((numberNodes % printFrequency) == 0) {
+		 if ((moreSpecialOptions_&2048)!=0)
+		   info->handler_->message(CLP_FATHOM_STATUS, messages_)
+		     << info->nodeCalled_ << numberNodes 
+		     << numberIterations << depth+info->startingDepth_
+		     << CoinMessageEol;
+		 printFrequency *= 2;
+               }
 #endif
-               if (numberIterations*(numberRows_ + numberColumns_) > 5.0e8 ||
-                         numberNodes > 1.0e6) {
+               if ((numberIterations*(numberRows_ + numberColumns_) > 5.0e10 ||
+		    numberNodes > 2.0e4) &&
+		   (moreSpecialOptions_&4096)==0) {
                     // give up
                     info->nNodes_ = -1;
 #ifdef COIN_DEVELOP
@@ -10559,28 +10595,40 @@ ClpSimplex::fathom(void * stuff)
                     nodes[maxDepth++] = node;
                }
 #if 0
-               if (numberColumns_ == 133 && onOptimal) {
+               if (numberColumns_ == 100 && onOptimal) {
                     const char * integerType = integerInformation();
-                    for (int i = 0; i < 133; i++) {
+		    bool localOptimal=true;
+                    for (int i = 0; i < 100; i++) {
                          if (integerType[i]) {
                               if (columnLower_[i] > optVal[i] || columnUpper_[i] < optVal[i]) {
-                                   onOptimal = false;
+				localOptimal = false;
                                    printf("bad %d %g %g %g\n", i, columnLower_[i], optVal[i],
                                           columnUpper_[i]);
+				   break;
                               }
                          }
                     }
+		    if (localOptimal) {
+		      printf("still on optimal\n");
+		    }
                     assert (onOptimal);
                }
 #endif
                if (node->sequence() < 0) {
                     // solution
                     double objectiveValue = doubleCheck();
-#ifdef COIN_DEVELOP
-                    printf("Solution of %g after %d nodes at depth %d\n",
-                           objectiveValue, numberNodes, depth);
-#endif
                     if (objectiveValue < bestObjective) {
+#ifdef COIN_DEVELOP
+		      printf("Fathoming from node %d - solution of %g after %d nodes at depth %d\n",
+			     info->nodeCalled_,objectiveValue, 
+			     numberNodes, depth+info->startingDepth_);
+#elif !defined(NO_FATHOM_PRINT)
+		      if ((moreSpecialOptions_&2048)!=0)
+			info->handler_->message(CLP_FATHOM_SOLUTION, messages_)
+			  << info->nodeCalled_ << objectiveValue 
+			  << numberNodes << depth+info->startingDepth_
+			  << CoinMessageEol;
+#endif
                          ClpNode node2(this, info, depth);
                          assert (node2.sequence() < 0);
                          // later then lower_ not columnLower_ (and total?)
@@ -10591,10 +10639,12 @@ ClpSimplex::fathom(void * stuff)
                          delete [] bestStatus;
                          bestStatus = CoinCopyOfArray(status_, numberTotal);
                          bestObjective = objectiveValue - increment;
+			 if (perturbation_<100) 
+			   bestObjective += 1.0e-2+1.0e-7*fabs(bestObjective);
                          setDblParam(ClpDualObjectiveLimit, bestObjective * optimizationDirection_);
                     } else {
                          //#define CLP_INVESTIGATE
-#ifdef CLP_INVESTIGATE
+#ifdef COIN_DEVELOP
                          printf("why bad solution feasible\n");
 #endif
                     }
@@ -10616,6 +10666,13 @@ ClpSimplex::fathom(void * stuff)
      delete [] nodes;
      delete [] back;
      stopFastDual2(info);
+#ifndef NO_FATHOM_PRINT
+     if ((moreSpecialOptions_&2048)!=0 && numberNodes >= 10000)
+       info->handler_->message(CLP_FATHOM_FINISH, messages_)
+	 << info->nodeCalled_ << info->startingDepth_
+	 << numberNodes << numberIterations << maxDepth+info->startingDepth_
+	 << CoinMessageEol;
+#endif
      //printf("fathom finished after %d nodes\n",numberNodes);
      if (bestStatus) {
           CoinMemcpyN(bestLower, numberColumns_, columnLower_);
@@ -10625,6 +10682,7 @@ ClpSimplex::fathom(void * stuff)
           delete [] bestUpper;
           delete [] bestStatus;
           setDblParam(ClpDualObjectiveLimit, saveBestObjective);
+	  saveObjLimit = saveBestObjective;
           int saveOptions = specialOptions_;
           specialOptions_ &= ~65536;
           dual();
@@ -10651,6 +10709,7 @@ ClpSimplex::fathom(void * stuff)
      delete [] saveLowerInternal;
      delete [] saveUpperInternal;
      setMaximumIterations(saveMaxIterations);
+     setDblParam(ClpDualObjectiveLimit, saveObjLimit);
      return returnCode;
 }
 //#define CHECK_PATH
@@ -11354,7 +11413,30 @@ ClpSimplex::startFastDual2(ClpNodeStuff * info)
      factorization_->goSparse();
      assert (!info->saveCosts_);
      int numberTotal = numberRows_ + numberColumns_;
-     double * save = new double [3*numberTotal];
+     double * save = new double [4*numberTotal];
+     CoinMemcpyN(cost_, numberTotal, save+3*numberTotal);
+     if (perturbation_<100) {
+       int saveIterations = numberIterations_;
+       //int saveOptions = moreSpecialOptions_;
+       int savePerturbation = perturbation_;
+       numberIterations_ = 0;
+       //moreSpecialOptions_ |= 128;
+       bool allZero = true;
+       for (int i=0;i<numberColumns_;i++) {
+	 if (cost_[i]) {
+	   if (upper_[i]>lower_[i]) {
+	     allZero=false;
+	     break;
+	   }
+	 }
+       }
+       if (allZero)
+	 perturbation_ = 58;
+       static_cast< ClpSimplexDual *>(this)->perturb();
+       numberIterations_ = saveIterations;
+       //moreSpecialOptions_ = saveOptions;
+       perturbation_ = savePerturbation;
+     }
      info->saveCosts_ = save;
      CoinMemcpyN(cost_, numberTotal, save);
      return 0;
@@ -11481,6 +11563,11 @@ ClpSimplex::fastDual2(ClpNodeStuff * info)
                     problemStatus_ = 4;
           }
           handler_->setLogLevel(saveLog);
+	  // if done primal arrays may be rubbish
+	  save = info->saveCosts_ + numberTotal;
+	  CoinMemcpyN(save, numberTotal, lower_);
+	  save += numberTotal;
+	  CoinMemcpyN(save, numberTotal, upper_);
      }
      status = problemStatus_;
      if (!problemStatus_) {

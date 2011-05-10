@@ -2925,7 +2925,7 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
                     //int i;
 
                     //alpha_ = rowArray_[1]->denseVector()[pivotRow_];
-                    CoinAssert (fabs(alpha_) > 1.0e-8);
+                    CoinAssert (fabs(alpha_) > 1.0e-12);
                     double multiplier = dualIn_ / alpha_;
                     rowArray_[0]->insert(pivotRow_, multiplier);
                     factorization_->updateColumnTranspose(rowArray_[2], rowArray_[0]);

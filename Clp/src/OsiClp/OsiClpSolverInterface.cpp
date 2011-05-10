@@ -2079,7 +2079,7 @@ void OsiClpSolverInterface::markHotStart()
       factorization_ = static_cast<ClpSimplexDual *>(small)->setupForStrongBranching(spareArrays_,numberRows,
 			     numberColumns,false);
 #else
-      assert (factorization!=NULL);
+      assert (factorization!=NULL || small->problemStatus_ );
       factorization_ = factorization;
 #endif
     } else {

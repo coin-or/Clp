@@ -5439,7 +5439,7 @@ ClpSimplexDual::perturb()
                last = sort[i];
           }
           delete [] sort;
-          if (!numberNonZero)
+          if (!numberNonZero && perturbation_ < 55)
                return 1; // safer to use primal
 #if 0
           printf("nnz %d percent %d", number, (number * 100) / numberColumns_);
@@ -5493,6 +5493,8 @@ ClpSimplexDual::perturb()
      numberNonZero = 0;
      if (perturbation_ >= 50) {
           perturbation = 1.0e-8;
+	  if (perturbation_ > 50 && perturbation_ < 60) 
+	    perturbation = CoinMax(1.0e-8,maximumFraction);
           bool allSame = true;
           double lastValue = 0.0;
           for (iRow = 0; iRow < numberRows_; iRow++) {
@@ -6182,7 +6184,7 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
           matrix_->refresh(this);
           // If getting nowhere - why not give it a kick
           // does not seem to work too well - do some more work
-          if ((specialOptions_ & 524288) != 0 &&
+          if ((specialOptions_ & 524288) != 0 && (moreSpecialOptions_&2048) == 0 &&
                     perturbation_ < 101 && numberIterations_ > 2 * (numberRows_ + numberColumns_)) {
                perturb();
                // Can't get here if values pass
@@ -6289,6 +6291,8 @@ ClpSimplexDual::setupForStrongBranching(char * arrays, int numberRows,
           int saveOptions = specialOptions_;
           specialOptions_ |= 16384;
           // solve
+	  int saveMaximumIterations = intParam_[ClpMaxNumIteration];
+	  intParam_[ClpMaxNumIteration] = 100+numberRows_+numberColumns_;
           dual(0, 7);
           if (problemStatus_ == 10) {
                ClpSimplex::dual(0, 0);
@@ -6298,9 +6302,10 @@ ClpSimplexDual::setupForStrongBranching(char * arrays, int numberRows,
                     //assert (problemStatus_!=10);
                }
           }
+	  intParam_[ClpMaxNumIteration] = saveMaximumIterations;
           specialOptions_ = saveOptions;
-          if (problemStatus_ == 1)
-               return NULL; // say infeasible
+          if (problemStatus_ != 0 )
+               return NULL; // say infeasible or odd
           // May be empty
           solveLp = (solution_ != NULL && problemStatus_ == 0);
      }
@@ -6391,7 +6396,7 @@ ClpSimplexDual::cleanupAfterStrongBranching(ClpFactorization * factorization)
      } else {
           startFinishOptions = 1 + 2 + 4;
      }
-     if ((startFinishOptions & 1) == 0) {
+     if ((startFinishOptions & 1) == 0 && cost_) {
           deleteRim(1);
      } else {
           // Original factorization will have been put back by last loop
