@@ -1095,7 +1095,8 @@ Optional Features:
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --enable-debug          compile all projects with debug options tests
-  --enable-debug-clp compile this project (Clp) with debug options
+                          (implies --disable-shared)
+  --enable-debug-clp compile this project (Clp) with debug compiler flags
   --enable-doscompile     Under Cygwin, compile so that executables run under
                           DOS. Set to mingw to use gcc/g++/ld with
                           -mno-cygwin. Set to msvc to use cl/link (or
@@ -1135,6 +1136,7 @@ Optional Packages:
                           include additional configurations [automatic]
   --with-coin-instdir     prefix of installation directory for precompiled
                           COIN packages
+
   --with-coinutils-lib linker flags for using package CoinUtils
   --with-coinutils-incdir directory with header files for using package
                           CoinUtils
@@ -1167,7 +1169,6 @@ Optional Packages:
   --with-wsmp             specify WSMP library
   --with-blas             specify BLAS library (or BUILD to enforce use of
                           ThirdParty/Blas)
-
   --with-blas-lib linker flags for using package Blas
   --with-blas-incdir directory with header files for using package Blas
   --with-blas-datadir directory with data files for using package Blas
@@ -1885,7 +1886,6 @@ if test "${enable_debug_clp+set}" = set; then
   enableval="$enable_debug_clp"
   case "${enableval}" in
     yes) coin_debug_compile=true
-         enable_shared=no
          ;;
     no)  coin_debug_compile=false
          ;;
@@ -3812,7 +3812,7 @@ if test x"$CXXFLAGS" = x; then
         coin_opt_cxxflags="-O3"
         coin_add_cxxflags="-pipe"
         coin_dbg_cxxflags="-g"
-        coin_warn_cxxflags="-Wimplicit -Wparentheses -Wreturn-type -Wcast-qual -Wall -Wpointer-arith -Wwrite-strings -Wconversion -Wno-unknown-pragmas -Wno-long-long"
+        coin_warn_cxxflags="-Wparentheses -Wreturn-type -Wcast-qual -Wall -Wpointer-arith -Wwrite-strings -Wconversion -Wno-unknown-pragmas -Wno-long-long"
         case $build in
           *-darwin*)
             ;;
@@ -20825,6 +20825,18 @@ if test x"$COIN_SKIP_PROJECTS" != x; then
   done
 fi
 
+if test "$coin_has_coinutils" != skipping; then
+
+# Check whether --with-m4_tolower(CoinUtils) or --without-m4_tolower(CoinUtils) was given.
+if test "${with_coinutils+set}" = set; then
+  withval="$with_coinutils"
+  if test "$withval" = no ; then
+       coin_has_coinutils=skipping
+     fi
+
+fi;
+fi
+
 COINUTILS_LIBS=
 COINUTILS_CFLAGS=
 COINUTILS_DATA=
@@ -21310,6 +21322,18 @@ if test x"$COIN_SKIP_PROJECTS" != x; then
   done
 fi
 
+if test "$coin_has_osi" != skipping; then
+
+# Check whether --with-m4_tolower(Osi) or --without-m4_tolower(Osi) was given.
+if test "${with_osi+set}" = set; then
+  withval="$with_osi"
+  if test "$withval" = no ; then
+       coin_has_osi=skipping
+     fi
+
+fi;
+fi
+
 OSI_LIBS=
 OSI_CFLAGS=
 OSI_DATA=
@@ -21790,6 +21814,18 @@ if test x"$COIN_SKIP_PROJECTS" != x; then
   done
 fi
 
+if test "$coin_has_ositests" != skipping; then
+
+# Check whether --with-m4_tolower(OsiTests) or --without-m4_tolower(OsiTests) was given.
+if test "${with_ositests+set}" = set; then
+  withval="$with_ositests"
+  if test "$withval" = no ; then
+       coin_has_ositests=skipping
+     fi
+
+fi;
+fi
+
 OSITESTS_LIBS=
 OSITESTS_CFLAGS=
 OSITESTS_DATA=
@@ -22240,6 +22276,18 @@ if test x"$COIN_SKIP_PROJECTS" != x; then
   done
 fi
 
+if test "$coin_has_sample" != skipping; then
+
+# Check whether --with-m4_tolower(Sample) or --without-m4_tolower(Sample) was given.
+if test "${with_sample+set}" = set; then
+  withval="$with_sample"
+  if test "$withval" = no ; then
+       coin_has_sample=skipping
+     fi
+
+fi;
+fi
+
 SAMPLE_LIBS=
 SAMPLE_CFLAGS=
 SAMPLE_DATA=
@@ -22688,6 +22736,18 @@ if test x"$COIN_SKIP_PROJECTS" != x; then
       coin_has_netlib=skipping
     fi
   done
+fi
+
+if test "$coin_has_netlib" != skipping; then
+
+# Check whether --with-m4_tolower(Netlib) or --without-m4_tolower(Netlib) was given.
+if test "${with_netlib+set}" = set; then
+  withval="$with_netlib"
+  if test "$withval" = no ; then
+       coin_has_netlib=skipping
+     fi
+
+fi;
 fi
 
 NETLIB_LIBS=
@@ -23530,6 +23590,18 @@ if test x"$COIN_SKIP_PROJECTS" != x; then
   done
 fi
 
+if test "$coin_has_glpk" != skipping; then
+
+# Check whether --with-m4_tolower(Glpk) or --without-m4_tolower(Glpk) was given.
+if test "${with_glpk+set}" = set; then
+  withval="$with_glpk"
+  if test "$withval" = no ; then
+       coin_has_glpk=skipping
+     fi
+
+fi;
+fi
+
 GLPK_LIBS=
 GLPK_CFLAGS=
 GLPK_DATA=
@@ -24032,6 +24104,18 @@ if test x"$COIN_SKIP_PROJECTS" != x; then
       coin_has_mumps=skipping
     fi
   done
+fi
+
+if test "$coin_has_mumps" != skipping; then
+
+# Check whether --with-m4_tolower(Mumps) or --without-m4_tolower(Mumps) was given.
+if test "${with_mumps+set}" = set; then
+  withval="$with_mumps"
+  if test "$withval" = no ; then
+       coin_has_mumps=skipping
+     fi
+
+fi;
 fi
 
 MUMPS_LIBS=
@@ -24693,7 +24777,7 @@ fi
 
 
 # Provide some information about the compiler.
-echo "$as_me:24696:" \
+echo "$as_me:24780:" \
      "checking for Fortran 77 compiler version" >&5
 ac_compiler=`set X $ac_compile; echo $2`
 { (eval echo "$as_me:$LINENO: \"$ac_compiler --version </dev/null >&5\"") >&5
@@ -25262,7 +25346,7 @@ _ACEOF
 # flags.
 ac_save_FFLAGS=$FFLAGS
 FFLAGS="$FFLAGS $ac_verb"
-(eval echo $as_me:25265: \"$ac_link\") >&5
+(eval echo $as_me:25349: \"$ac_link\") >&5
 ac_f77_v_output=`eval $ac_link 5>&1 2>&1 | grep -v 'Driving:'`
 echo "$ac_f77_v_output" >&5
 FFLAGS=$ac_save_FFLAGS
@@ -25340,7 +25424,7 @@ _ACEOF
 # flags.
 ac_save_FFLAGS=$FFLAGS
 FFLAGS="$FFLAGS $ac_cv_prog_f77_v"
-(eval echo $as_me:25343: \"$ac_link\") >&5
+(eval echo $as_me:25427: \"$ac_link\") >&5
 ac_f77_v_output=`eval $ac_link 5>&1 2>&1 | grep -v 'Driving:'`
 echo "$ac_f77_v_output" >&5
 FFLAGS=$ac_save_FFLAGS
@@ -28913,6 +28997,18 @@ if test x"$COIN_SKIP_PROJECTS" != x; then
       coin_has_blas=skipping
     fi
   done
+fi
+
+if test "$coin_has_blas" != skipping; then
+
+# Check whether --with-m4_tolower(Blas) or --without-m4_tolower(Blas) was given.
+if test "${with_blas+set}" = set; then
+  withval="$with_blas"
+  if test "$withval" = no ; then
+       coin_has_blas=skipping
+     fi
+
+fi;
 fi
 
 BLAS_LIBS=
