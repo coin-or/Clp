@@ -1883,7 +1883,6 @@ ClpSimplex::housekeeping(double objectiveChange)
                     double sumUnsat = 0.0;
                     double tolerance = 10.0 * primalTolerance_;
                     double mostAway = 0.0;
-                    int iAway = -1;
                     for (int i = 0; i < numberColumns_; i++) {
                          // Save anyway
                          sol[i] = columnScale_ ? solution_[i] * columnScale_[i] : solution_[i];
@@ -1902,7 +1901,6 @@ ClpSimplex::housekeeping(double objectiveChange)
                                         sumUnsat += fabs(value - closest);
                                         if (mostAway < fabs(value - closest)) {
                                              mostAway = fabs(value - closest);
-                                             iAway = i;
                                         }
                                    } else {
                                         numberSat++;
@@ -5702,7 +5700,7 @@ int ClpSimplex::dualRanging(int numberCheck, const int * which,
 {
      int savePerturbation = perturbation_;
      perturbation_ = 100;
-     int returnCode = static_cast<ClpSimplexPrimal *> (this)->primal(0, 1);
+     /*int returnCode =*/ static_cast<ClpSimplexPrimal *> (this)->primal(0, 1);
      if (problemStatus_ == 10) {
           //printf("Cleaning up with dual\n");
           bool denseFactorization = initialDenseFactorization();
@@ -5715,10 +5713,10 @@ int ClpSimplex::dualRanging(int numberCheck, const int * which,
                double saveBound = dualBound_;
                if (upperOut_ > 0.0)
                     dualBound_ = 2.0 * upperOut_;
-               returnCode = static_cast<ClpSimplexDual *> (this)->dual(0, 1);
+               /*returnCode =*/ static_cast<ClpSimplexDual *> (this)->dual(0, 1);
                dualBound_ = saveBound;
           } else {
-               returnCode = static_cast<ClpSimplexPrimal *> (this)->primal(0, 1);
+	        /*returnCode =*/ static_cast<ClpSimplexPrimal *> (this)->primal(0, 1);
           }
           setInitialDenseFactorization(denseFactorization);
           if (problemStatus_ == 10)
@@ -5752,7 +5750,7 @@ int ClpSimplex::primalRanging(int numberCheck, const int * which,
 {
      int savePerturbation = perturbation_;
      perturbation_ = 100;
-     int returnCode = static_cast<ClpSimplexPrimal *> (this)->primal(0, 1);
+     /*int returnCode =*/ static_cast<ClpSimplexPrimal *> (this)->primal(0, 1);
      if (problemStatus_ == 10) {
           //printf("Cleaning up with dual\n");
           bool denseFactorization = initialDenseFactorization();
@@ -5765,10 +5763,10 @@ int ClpSimplex::primalRanging(int numberCheck, const int * which,
                double saveBound = dualBound_;
                if (upperOut_ > 0.0)
                     dualBound_ = 2.0 * upperOut_;
-               returnCode = static_cast<ClpSimplexDual *> (this)->dual(0, 1);
+               /*returnCode =*/ static_cast<ClpSimplexDual *> (this)->dual(0, 1);
                dualBound_ = saveBound;
           } else {
-               returnCode = static_cast<ClpSimplexPrimal *> (this)->primal(0, 1);
+	        /*returnCode =*/ static_cast<ClpSimplexPrimal *> (this)->primal(0, 1);
           }
           setInitialDenseFactorization(denseFactorization);
           if (problemStatus_ == 10)
@@ -10979,7 +10977,6 @@ ClpSimplex::fathomMany(void * stuff)
      /* Use nodeInfo for storage
         depth 0 will be putNode-1, 1 putNode-2 etc */
      int useDepth = putNode - 1;
-     bool lastFeasible = true;
      bool justDive = (info->solverOptions_ & 32) != 0;
      //printf("putNode %d nDepth %d\n");
      while (depth >= 0) {
@@ -11047,7 +11044,6 @@ ClpSimplex::fathomMany(void * stuff)
           if (problemStatus_ == 1 ||
                     (problemStatus_ == 0 && objectiveValue()*optimizationDirection_ > bestObjective)) {
                backtrack = true;
-               lastFeasible = false;
                if (printing)
                     printf("infeasible at depth %d\n", depth);
 #ifdef CHECK_PATH
@@ -11189,7 +11185,6 @@ ClpSimplex::fathomMany(void * stuff)
                }
                if (node->sequence() < 0) {
                     // solution
-                    lastFeasible = false;
                     double objectiveValue = doubleCheck();
                     if (printing)
                          printf("Solution of %g after %d nodes at depth %d\n",
@@ -11237,7 +11232,6 @@ ClpSimplex::fathomMany(void * stuff)
                     }
                     backtrack = true;
                } else {
-                    lastFeasible = true;
                     //if (printing)
                     //printf("depth %d variable %d\n",depth,node->sequence());
                     if (depth == info->nDepth_ || stopAtOnce) {

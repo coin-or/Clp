@@ -84,10 +84,8 @@ ClpNetworkBasis::ClpNetworkBasis(const ClpSimplex * model,
      // so pivotColumnback[0] is first slack in basis and
      // it pivots on row permuteBack[0]
      // a known root is given by permuteBack[numberRows_-1]
-     int lastPivot = numberRows_;
      for (i = 0; i < numberRows_; i++) {
           int iPivot = permuteBack[i];
-          lastPivot = iPivot;
           double sign;
           if (pivotRegion[i] > 0.0)
                sign = 1.0;
@@ -116,7 +114,6 @@ ClpNetworkBasis::ClpNetworkBasis(const ClpSimplex * model,
           leftSibling_[iPivot] = -1;
      }
      // do depth
-     int iPivot = numberRows_;
      int nStack = 1;
      stack_[0] = descendant_[numberRows_];
      depth_[numberRows_] = -1; // root
@@ -125,7 +122,6 @@ ClpNetworkBasis::ClpNetworkBasis(const ClpSimplex * model,
           int iNext = stack_[--nStack];
           if (iNext >= 0) {
                depth_[iNext] = nStack;
-               iPivot = iNext;
                int iRight = rightSibling_[iNext];
                stack_[nStack++] = iRight;
                if (descendant_[iNext] >= 0)
@@ -343,7 +339,6 @@ ClpNetworkBasis::operator=(const ClpNetworkBasis& rhs)
 void ClpNetworkBasis::check()
 {
      // check depth
-     int iPivot = numberRows_;
      int nStack = 1;
      stack_[0] = descendant_[numberRows_];
      depth_[numberRows_] = -1; // root
@@ -353,7 +348,6 @@ void ClpNetworkBasis::check()
           if (iNext >= 0) {
                //assert (depth_[iNext]==nStack);
                depth_[iNext] = nStack;
-               iPivot = iNext;
                int iRight = rightSibling_[iNext];
                stack_[nStack++] = iRight;
                if (descendant_[iNext] >= 0)

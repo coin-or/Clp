@@ -1398,6 +1398,9 @@ ClpFactorization::forceOtherFactorization(int which)
           }
      } else if (!coinFactorizationA_) {
           coinFactorizationA_ = new CoinFactorization();
+	  goOslThreshold_ = -1;
+	  goDenseThreshold_ = -1;
+	  goSmallThreshold_ = -1;
      }
 }
 int

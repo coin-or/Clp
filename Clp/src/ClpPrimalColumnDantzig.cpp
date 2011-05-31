@@ -131,6 +131,7 @@ ClpPrimalColumnDantzig::pivotColumn(CoinIndexedVector * updates,
      int iSequence;
      reducedCost = model_->djRegion();
 
+#ifndef CLP_PRIMAL_SLACK_MULTIPLIER 
      for (iSequence = 0; iSequence < number; iSequence++) {
           // check flagged variable
           if (!model_->flagged(iSequence)) {
@@ -163,6 +164,75 @@ ClpPrimalColumnDantzig::pivotColumn(CoinIndexedVector * updates,
                }
           }
      }
+#else
+     // Columns
+     int numberColumns = model_->numberColumns();
+     for (iSequence = 0; iSequence < numberColumns; iSequence++) {
+          // check flagged variable
+          if (!model_->flagged(iSequence)) {
+               double value = reducedCost[iSequence];
+               ClpSimplex::Status status = model_->getStatus(iSequence);
+
+               switch(status) {
+
+               case ClpSimplex::basic:
+               case ClpSimplex::isFixed:
+                    break;
+               case ClpSimplex::isFree:
+               case ClpSimplex::superBasic:
+                    if (fabs(value) > bestFreeDj) {
+                         bestFreeDj = fabs(value);
+                         bestFreeSequence = iSequence;
+                    }
+                    break;
+               case ClpSimplex::atUpperBound:
+                    if (value > bestDj) {
+                         bestDj = value;
+                         bestSequence = iSequence;
+                    }
+                    break;
+               case ClpSimplex::atLowerBound:
+                    if (value < -bestDj) {
+                         bestDj = -value;
+                         bestSequence = iSequence;
+                    }
+               }
+          }
+     }
+     // Rows
+     for ( ; iSequence < number; iSequence++) {
+          // check flagged variable
+          if (!model_->flagged(iSequence)) {
+               double value = reducedCost[iSequence] * CLP_PRIMAL_SLACK_MULTIPLIER;
+               ClpSimplex::Status status = model_->getStatus(iSequence);
+
+               switch(status) {
+
+               case ClpSimplex::basic:
+               case ClpSimplex::isFixed:
+                    break;
+               case ClpSimplex::isFree:
+               case ClpSimplex::superBasic:
+                    if (fabs(value) > bestFreeDj) {
+                         bestFreeDj = fabs(value);
+                         bestFreeSequence = iSequence;
+                    }
+                    break;
+               case ClpSimplex::atUpperBound:
+                    if (value > bestDj) {
+                         bestDj = value;
+                         bestSequence = iSequence;
+                    }
+                    break;
+               case ClpSimplex::atLowerBound:
+                    if (value < -bestDj) {
+                         bestDj = -value;
+                         bestSequence = iSequence;
+                    }
+               }
+          }
+     }
+#endif
      // bias towards free
      if (bestFreeSequence >= 0 && bestFreeDj > 0.1 * bestDj)
           bestSequence = bestFreeSequence;

@@ -1500,6 +1500,8 @@ ClpModel::deleteRows(int number, const int * which)
      }
      rowScale_ = NULL;
      columnScale_ = NULL;
+     delete scaledMatrix_;
+     scaledMatrix_ = NULL;
 }
 // Deletes columns
 void

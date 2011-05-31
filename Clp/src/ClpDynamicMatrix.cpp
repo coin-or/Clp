@@ -2020,7 +2020,6 @@ ClpDynamicMatrix::gubCrash()
                          for (int i = 0; i <= numberInSet; i++) {
                               double dj = cost[i] - dual;
                               double improvement = 0.0;
-                              double distance = 0.0;
                               if (iphase || i < numberInSet)
                                    assert (solution[i] >= lower[i] && solution[i] <= upper[i]);
                               if (dj > dualTolerance)
@@ -2032,10 +2031,8 @@ ClpDynamicMatrix::gubCrash()
                                    chosen = i;
                                    if (dj < 0.0) {
                                         way = 1;
-                                        distance = upper[i] - solution[i];
                                    } else {
                                         way = -1;
-                                        distance = solution[i] - lower[i];
                                    }
                               }
                          }
