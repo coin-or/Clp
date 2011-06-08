@@ -2879,7 +2879,7 @@ if test x"$CFLAGS" = x; then
       *)
         coin_opt_cflags="-O3"
         coin_add_cflags="-pipe"
-        coin_dbg_cflags="-g"
+        coin_dbg_cflags="-g -O0"
         coin_warn_cflags="-Wimplicit -Wparentheses -Wsequence-point -Wreturn-type -Wcast-qual -Wall -Wno-unknown-pragmas -Wno-long-long"
         case $build in
           *-darwin*)
@@ -3811,7 +3811,7 @@ if test x"$CXXFLAGS" = x; then
 # ToDo decide about unroll-loops
         coin_opt_cxxflags="-O3"
         coin_add_cxxflags="-pipe"
-        coin_dbg_cxxflags="-g"
+        coin_dbg_cxxflags="-g -O0"
         coin_warn_cxxflags="-Wparentheses -Wreturn-type -Wcast-qual -Wall -Wpointer-arith -Wwrite-strings -Wconversion -Wno-unknown-pragmas -Wno-long-long"
         case $build in
           *-darwin*)
@@ -21002,7 +21002,7 @@ COINUTILS_CFLAGS_INSTALLED=
 COINUTILS_DATA=
 COINUTILS_DATA_INSTALLED=
 
-# initial list of dependencies is "coinutils", but we need to filter out version number specifications (= x, <= x, >= x)
+# initial list of dependencies is "coinutils", but we need to filter out version number specifications (= x, <= x, >= x, != x)
 projtoprocess="coinutils"
 
 # we first expand the list of projects to process by adding all dependencies just behind the project which depends on it
@@ -21499,7 +21499,7 @@ OSI_CFLAGS_INSTALLED=
 OSI_DATA=
 OSI_DATA_INSTALLED=
 
-# initial list of dependencies is "osi", but we need to filter out version number specifications (= x, <= x, >= x)
+# initial list of dependencies is "osi", but we need to filter out version number specifications (= x, <= x, >= x, != x)
 projtoprocess="osi"
 
 # we first expand the list of projects to process by adding all dependencies just behind the project which depends on it
@@ -21976,7 +21976,7 @@ OSITESTS_CFLAGS_INSTALLED=
 OSITESTS_DATA=
 OSITESTS_DATA_INSTALLED=
 
-# initial list of dependencies is "osi-unittests", but we need to filter out version number specifications (= x, <= x, >= x)
+# initial list of dependencies is "osi-unittests", but we need to filter out version number specifications (= x, <= x, >= x, != x)
 projtoprocess="osi-unittests"
 
 # we first expand the list of projects to process by adding all dependencies just behind the project which depends on it
@@ -22438,7 +22438,7 @@ SAMPLE_CFLAGS_INSTALLED=
 SAMPLE_DATA=
 SAMPLE_DATA_INSTALLED=
 
-# initial list of dependencies is "coindatasample", but we need to filter out version number specifications (= x, <= x, >= x)
+# initial list of dependencies is "coindatasample", but we need to filter out version number specifications (= x, <= x, >= x, != x)
 projtoprocess="coindatasample"
 
 # we first expand the list of projects to process by adding all dependencies just behind the project which depends on it
@@ -22900,7 +22900,7 @@ NETLIB_CFLAGS_INSTALLED=
 NETLIB_DATA=
 NETLIB_DATA_INSTALLED=
 
-# initial list of dependencies is "coindatanetlib", but we need to filter out version number specifications (= x, <= x, >= x)
+# initial list of dependencies is "coindatanetlib", but we need to filter out version number specifications (= x, <= x, >= x, != x)
 projtoprocess="coindatanetlib"
 
 # we first expand the list of projects to process by adding all dependencies just behind the project which depends on it
@@ -23767,7 +23767,7 @@ GLPK_CFLAGS_INSTALLED=
 GLPK_DATA=
 GLPK_DATA_INSTALLED=
 
-# initial list of dependencies is "coinglpk >= 4.39", but we need to filter out version number specifications (= x, <= x, >= x)
+# initial list of dependencies is "coinglpk >= 4.39", but we need to filter out version number specifications (= x, <= x, >= x, != x)
 projtoprocess="coinglpk "
 
 # we first expand the list of projects to process by adding all dependencies just behind the project which depends on it
@@ -24283,7 +24283,7 @@ MUMPS_CFLAGS_INSTALLED=
 MUMPS_DATA=
 MUMPS_DATA_INSTALLED=
 
-# initial list of dependencies is "coinmumps", but we need to filter out version number specifications (= x, <= x, >= x)
+# initial list of dependencies is "coinmumps", but we need to filter out version number specifications (= x, <= x, >= x, != x)
 projtoprocess="coinmumps"
 
 # we first expand the list of projects to process by adding all dependencies just behind the project which depends on it
@@ -24945,7 +24945,7 @@ if test "$F77" != "unavailable" && test x"$FFLAGS" = x ; then
   if test "$G77" = "yes"; then
     coin_opt_fflags="-O3"
     coin_add_fflags="-pipe"
-    coin_dbg_fflags="-g"
+    coin_dbg_fflags="-g -O0"
     case $enable_doscompile in
       mingw)
 	FFLAGS="-mno-cygwin"
@@ -29176,7 +29176,7 @@ BLAS_CFLAGS_INSTALLED=
 BLAS_DATA=
 BLAS_DATA_INSTALLED=
 
-# initial list of dependencies is "coinblas", but we need to filter out version number specifications (= x, <= x, >= x)
+# initial list of dependencies is "coinblas", but we need to filter out version number specifications (= x, <= x, >= x, != x)
 projtoprocess="coinblas"
 
 # we first expand the list of projects to process by adding all dependencies just behind the project which depends on it
@@ -31174,7 +31174,7 @@ fi
 
 
 # Here put the location and name of the configuration header file
-          ac_config_headers="$ac_config_headers inc/config_clp.h"
+                    ac_config_headers="$ac_config_headers src/config.h src/config_clp.h"
 
 
 # Finally, we let configure write all the output...
@@ -32010,7 +32010,8 @@ do
   "osi-clp-uninstalled.pc" ) CONFIG_FILES="$CONFIG_FILES osi-clp-uninstalled.pc:src/OsiClp/osi-clp-uninstalled.pc.in" ;;
   "doxydoc/doxygen.conf" ) CONFIG_FILES="$CONFIG_FILES doxydoc/doxygen.conf" ;;
   "depfiles" ) CONFIG_COMMANDS="$CONFIG_COMMANDS depfiles" ;;
-  "inc/config_clp.h" ) CONFIG_HEADERS="$CONFIG_HEADERS inc/config_clp.h" ;;
+  "src/config.h" ) CONFIG_HEADERS="$CONFIG_HEADERS src/config.h" ;;
+  "src/config_clp.h" ) CONFIG_HEADERS="$CONFIG_HEADERS src/config_clp.h" ;;
   *) { { echo "$as_me:$LINENO: error: invalid argument: $ac_config_target" >&5
 echo "$as_me: error: invalid argument: $ac_config_target" >&2;}
    { (exit 1); exit 1; }; };;

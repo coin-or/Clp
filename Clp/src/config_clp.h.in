@@ -1,0 +1,13 @@
+/* src/config_clp.h.in.  */
+
+/* Version number of project */
+#undef CLP_VERSION
+
+/* Major Version number of project */
+#undef CLP_VERSION_MAJOR
+
+/* Minor Version number of project */
+#undef CLP_VERSION_MINOR
+
+/* Release Version number of project */
+#undef CLP_VERSION_RELEASE

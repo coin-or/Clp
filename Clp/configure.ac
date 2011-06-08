@@ -168,8 +168,8 @@ AC_CONFIG_FILES([Makefile
                  src/Makefile
                  src/OsiClp/Makefile
                  test/Makefile
-		 clp.pc
-		 clp-uninstalled.pc])
+                 clp.pc
+                 clp-uninstalled.pc])
 		 
 if test $coin_has_osi = yes ; then
   AC_CONFIG_FILES([osi-clp.pc:src/OsiClp/osi-clp.pc.in
@@ -179,7 +179,7 @@ fi
 AC_CONFIG_FILES([doxydoc/doxygen.conf])
 
 # Here put the location and name of the configuration header file
-AC_CONFIG_HEADER([inc/config_clp.h])
+AC_CONFIG_HEADER([src/config.h src/config_clp.h])
 
 # Finally, we let configure write all the output...
 AC_COIN_FINALIZE

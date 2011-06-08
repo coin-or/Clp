@@ -55,7 +55,8 @@ am__aclocal_m4_deps = $(top_srcdir)/acinclude.m4 \
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
-CONFIG_HEADER = $(top_builddir)/inc/config_clp.h
+CONFIG_HEADER = $(top_builddir)/src/config.h \
+	$(top_builddir)/src/config_clp.h
 CONFIG_CLEAN_FILES =
 PROGRAMS = $(noinst_PROGRAMS)
 am__osiUnitTest_SOURCES_DIST = osiUnitTest.cpp \
@@ -65,7 +66,7 @@ am__osiUnitTest_SOURCES_DIST = osiUnitTest.cpp \
 @COIN_HAS_OSITESTS_TRUE@	OsiClpSolverInterfaceTest.$(OBJEXT)
 osiUnitTest_OBJECTS = $(am_osiUnitTest_OBJECTS)
 am__DEPENDENCIES_1 =
-DEFAULT_INCLUDES = -I. -I$(srcdir) -I$(top_builddir)/inc
+DEFAULT_INCLUDES = -I. -I$(srcdir) -I$(top_builddir)/src -I$(top_builddir)/src
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
 CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \

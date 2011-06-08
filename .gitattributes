@@ -70,7 +70,6 @@ Clp/examples/modify.cpp -text
 Clp/examples/myPdco.cpp -text
 Clp/examples/myPdco.hpp -text
 Clp/examples/pdco.cpp -text
-Clp/inc/config_clp.h.in -text
 Clp/install-sh -text
 Clp/ltmain.sh -text
 Clp/missing -text
@@ -96,6 +95,10 @@ Clp/src/OsiClp/OsiClpSolverInterface.cpp -text
 Clp/src/OsiClp/OsiClpSolverInterface.hpp -text
 Clp/src/OsiClp/osi-clp-uninstalled.pc.in -text
 Clp/src/OsiClp/osi-clp.pc.in -text
+Clp/src/config.h.in -text
+Clp/src/config_clp.h.in -text
+Clp/src/config_clp_default.h -text
+Clp/src/config_default.h -text
 Clp/test/OsiClpSolverInterfaceTest.cpp -text
 Clp/test/osiUnitTest.cpp -text
 /Dependencies -text

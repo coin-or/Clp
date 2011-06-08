@@ -1,4 +1,4 @@
-/* inc/config_clp.h.in.  Generated from configure.ac by autoheader.  */
+/* src/config.h.in.  Generated from configure.ac by autoheader.  */
 
 /* SVN revision number of project */
 #undef CLP_SVN_REV
