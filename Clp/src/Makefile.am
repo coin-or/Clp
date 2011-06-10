@@ -117,11 +117,6 @@ clp_LDADD = libClp.la $(CLPLIB_LIBS)
 # List all dependency libraries (similar to LDADD, but without -l, -L flags)
 clp_DEPENDENCIES = libClp.la $(CLPLIB_DEPENDENCIES)
 
-# Finally, the -rpath flag is used by libtool to make sure that the shared
-# library is found (in the lib install directory) when we are using dynamic
-# libraries.
-clp_LDFLAGS = -rpath $(libdir)
-
 ########################################################################
 #                            Additional flags                          #
 ########################################################################
