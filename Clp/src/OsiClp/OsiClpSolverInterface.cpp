@@ -3036,6 +3036,9 @@ void OsiClpSolverInterface::setColSolution(const double * cs)
     CoinDisjointCopyN(cs,modelPtr_->numberColumns(),
 		      modelPtr_->solutionRegion(1));
   }
+  // compute row activity
+  memset(modelPtr_->primalRowSolution(),0,modelPtr_->numberRows()*sizeof(double));
+  modelPtr_->times(1.0,modelPtr_->primalColumnSolution(),modelPtr_->primalRowSolution());
 }
 //-----------------------------------------------------------------------------
 void OsiClpSolverInterface::setRowPrice(const double * rs) 
@@ -3047,6 +3050,10 @@ void OsiClpSolverInterface::setRowPrice(const double * rs)
     CoinDisjointCopyN(rs,modelPtr_->numberRows(),
 		      modelPtr_->djRegion(0));
   }
+  // compute reduced costs
+  memcpy(modelPtr_->dualColumnSolution(),modelPtr_->objective(),
+	 modelPtr_->numberColumns()*sizeof(double));
+  modelPtr_->transposeTimes(-1.0,modelPtr_->dualRowSolution(),modelPtr_->dualColumnSolution());
 }
 
 //#############################################################################
