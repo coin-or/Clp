@@ -367,12 +367,12 @@ public:
     /// Return name of row if one exists or Rnnnnnnn
     /// maxLen is currently ignored and only there to match the signature from the base class! 
     virtual std::string getRowName(int rowIndex,
-				   unsigned maxLen = std::string::npos) const;
+				   unsigned maxLen = static_cast<unsigned>(std::string::npos)) const;
     
     /// Return name of column if one exists or Cnnnnnnn
     /// maxLen is currently ignored and only there to match the signature from the base class! 
     virtual std::string getColName(int colIndex,
-				   unsigned maxLen = std::string::npos) const;
+				   unsigned maxLen = static_cast<unsigned>(std::string::npos)) const;
     
   
   /// Get pointer to array[getNumCols()] of column lower bounds
