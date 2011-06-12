@@ -22,7 +22,6 @@ using namespace OsiUnitTest;
 
 //----------------------------------------------------------------
 // unitTest [-nobuf] [-mpsDir=V1] [-netlibDir=V2] [-testOsiSolverInterface]
-//      [-cutsOnly]
 // 
 // where:
 //   -nobuf: remove buffering on cout (stdout); useful to keep cout and cerr
@@ -34,8 +33,6 @@ using namespace OsiUnitTest;
 //   -testOsiSolverInterface
 //       If specified, then OsiSolveInterface::unitTest
 //       is skipped over and not run.
-//   -cutsOnly
-//   If specified, only OsiCut tests are run.
 //
 // All parameters are optional.
 //----------------------------------------------------------------
