@@ -21,32 +21,19 @@
 using namespace OsiUnitTest;
 
 //----------------------------------------------------------------
-// unitTest [-nobuf] [-mpsDir=V1] [-netlibDir=V2] [-testOsiSolverInterface]
-// 
-// where:
-//   -nobuf: remove buffering on cout (stdout); useful to keep cout and cerr
-//   messages synchronised when redirecting output to a file or pipe.
-//   -mpsDir: directory containing mps test files
-//       Default value V1="../../Data/Sample"    
-//   -netlibDir: directory containing netlib files
-//       Default value V2="../../Data/Netlib"
-//   -testOsiSolverInterface
-//       If specified, then OsiSolveInterface::unitTest
-//       is skipped over and not run.
-//
-// All parameters are optional.
+// to see parameter list, call unitTest -usage
 //----------------------------------------------------------------
 
 int main (int argc, const char *argv[])
 {
   bool exception = false;
-  outcomes.clear();
-
 /*
   Start off with various bits of initialisation that don't really belong
   anywhere else.
-
-  First off, synchronise C++ stream i/o with C stdio. This makes debugging
+*/
+  outcomes.clear();
+/*
+  Synchronise C++ stream i/o with C stdio. This makes debugging
   output a bit more comprehensible. It still suffers from interleave of cout
   (stdout) and cerr (stderr), but -nobuf deals with that.
 */
@@ -88,16 +75,14 @@ int main (int argc, const char *argv[])
     }
 
     /*
-      Run the OsiXXX class test. It's up to the OsiClp implementor
-      to decide whether or not to run OsiSolverInterfaceCommonUnitTest. Arguably
-      this should be required.
+      Run the OsiClp class test. This will also call OsiSolverInterfaceCommonUnitTest.
     */
     testingMessage( "Testing OsiClpSolverInterface\n" );
     OsiClpSolverInterfaceUnitTest(mpsDir,netlibDir);
 
     /*
-      We have run the specialised unit test. Check now to see if we need to
-      run through the Netlib problems.
+      We have run the specialised unit test.
+      Check now to see if we need to run through the Netlib problems.
     */
     if (parms.find("-testOsiSolverInterface") != parms.end())
     {
@@ -132,6 +117,8 @@ int main (int argc, const char *argv[])
 
   if (nerrors > nerrors_expected)
     std::cerr << "Tests completed with " << nerrors - nerrors_expected << " unexpected errors." << std::endl ;
+  else if( exception )
+    std::cerr << "Tests completed with exception\n";
   else
     std::cerr << "All tests completed successfully\n";
 
