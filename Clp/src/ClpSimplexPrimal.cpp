@@ -1417,7 +1417,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
           } else {
                // carry on
                problemStatus_ = -1;
-               if(type == 3 && problemStatus_ != -5) {
+               if(type == 3 && !ifValuesPass) {
                     //bool unflagged =
                     unflag();
                     if (sumDualInfeasibilities_ < 1.0e-3 ||

@@ -3241,7 +3241,7 @@ activity at continuous solution",
 #ifdef COIN_HAS_CBC
      parameters[numberParameters++] =
           CbcOrClpParam("trust!PseudoCosts", "Number of branches before we trust pseudocosts",
-                        -3, 2000000, CBC_PARAM_INT_NUMBERBEFORE);
+                        -3, 2000000000, CBC_PARAM_INT_NUMBERBEFORE);
      parameters[numberParameters-1].setLonghelp
      (
           "Using strong branching computes pseudo-costs.  After this many times for a variable we just \

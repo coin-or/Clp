@@ -10612,9 +10612,14 @@ ClpSimplex::fathom(void * stuff)
                     assert (onOptimal);
                }
 #endif
+	       double objectiveValue=0.0;
+               if (node->sequence() < 0) {
+		 objectiveValue = doubleCheck();
+		 node->gutsOfConstructor(this, info, 1, depth);
+	       }
                if (node->sequence() < 0) {
                     // solution
-                    double objectiveValue = doubleCheck();
+                    //double objectiveValue = doubleCheck();
                     if (objectiveValue < bestObjective) {
 #ifdef COIN_DEVELOP
 		      printf("Fathoming from node %d - solution of %g after %d nodes at depth %d\n",
@@ -10627,8 +10632,6 @@ ClpSimplex::fathom(void * stuff)
 			  << numberNodes << depth+info->startingDepth_
 			  << CoinMessageEol;
 #endif
-                         ClpNode node2(this, info, depth);
-                         assert (node2.sequence() < 0);
                          // later then lower_ not columnLower_ (and total?)
                          delete [] bestLower;
                          bestLower = CoinCopyOfArray(columnLower_, numberColumns_);

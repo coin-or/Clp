@@ -119,7 +119,7 @@ void ClpSimplexOther::dualRanging(int numberCheck, const int * which,
                          scale2 += arrayX[j] * arrayX[j];
                     }
                     scale2 = 1.0 / sqrt(scale2);
-                    valueIncrease[i] = scale2;
+                    //valueIncrease[i] = scale2;
                     if (sequenceIncrease >= 0) {
                          double djValue = dj_[sequenceIncrease];
                          if (fabs(djValue) > 10.0 * dualTolerance_) {
