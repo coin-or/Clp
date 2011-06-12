@@ -4,17 +4,10 @@
 // This code is licensed under the terms of the Eclipse Public License (EPL).
 
 #include "CoinPragma.hpp"
-
 #include "OsiConfig.h"
 
-#ifdef NDEBUG
-#undef NDEBUG
-#endif
-
-#include <cassert>
 #include <cstdio>
 #include <iostream>
-#include <map>
 
 #include "OsiUnitTests.hpp"
 #include "OsiRowCutDebugger.hpp"
@@ -25,156 +18,15 @@
 
 #include "OsiClpSolverInterface.hpp"
 
-namespace {
-
-// Display message on stdout and stderr. Flush cout buffer before printing the
-// message, so that output comes out in order in spite of buffered cout.
-
-void testingMessage( const char * const msg )
-{
-  std::cout.flush() ;
-  std::cerr <<msg;
-  //cout <<endl <<"*****************************************"
-  //     <<endl <<msg <<endl;
-}
-
-
-/*
-  Utility routine to process command line parameters. An unrecognised parameter
-  will trigger the help message and a return value of false.
-  
-  This should be replaced with the one of the standard CoinUtils parameter
-  mechanisms.
-*/
-bool processParameters (int argc, const char **argv,
-			std::map<std::string,std::string> &parms)
-
-{
-  assert(argc >= 1);
-  assert(argv != NULL);
-/*
-  Initialise the parameter keywords.
-*/
-  std::set<std::string> definedKeyWords;
-  definedKeyWords.insert("-cerr2cout");
-  definedKeyWords.insert("-mpsDir");
-  definedKeyWords.insert("-netlibDir");
-  definedKeyWords.insert("-testOsiSolverInterface");
-  definedKeyWords.insert("-nobuf");
-/*
-  Set default values for data directories.
-*/
-  const char dirsep =  CoinFindDirSeparator() ;
-  std::string pathTmp ;
-
-  pathTmp = ".." ;
-  pathTmp += dirsep ;
-  pathTmp += ".." ;
-  pathTmp += dirsep ;
-  pathTmp += "Data" ;
-  pathTmp += dirsep ;
-# ifdef COIN_MSVS
-  // Visual Studio build is deeper
-  pathTmp = "..\\..\\" + pathTmp ;
-# endif
-
-  parms["-mpsDir"] = pathTmp + "Sample"  ;
-  parms["-netlibDir"] = pathTmp + "Netlib" ;
-
-/*
-  Read the command line parameters and fill a map of parameter keys and
-  associated data. The parser allows for parameters which are only a keyword,
-  or parameters of the form keyword=value (no spaces).
-*/
-  for (int i = 1 ; i < argc ; i++)
-  { std::string parm(argv[i]) ;
-    std::string key,value ;
-    std::string::size_type eqPos = parm.find('=');
-
-    if (eqPos == std::string::npos)
-    { key = parm ; }
-    else
-    { key = parm.substr(0,eqPos) ;
-      value = parm.substr(eqPos+1) ; }
-/*
-  Is the specifed key valid?
-*/
-    if (definedKeyWords.find(key) == definedKeyWords.end())
-    { std::cerr << "Undefined parameter \"" << key << "\"." << std::endl ;
-      std::cerr
-	<< "Usage: " << argv[0]
-	<< " [-nobuf] [-mpsDir=V1] [-netlibDir=V2] "
-        << "[-testOsiSolverInterface] " << std::endl ;
-      std::cerr << "  where:" << std::endl ;
-      std::cerr
-	<< "    "
-	<< "-cerr2cout: redirect cerr to cout; sometimes useful." << std::endl
-	<< "\t" << "to synchronise cout & cerr." << std::endl ;
-      std::cerr
-	<< "    "
-	<< "-mpsDir: directory containing mps test files." << std::endl
-        << "\t" << "Default value V1=\"../../Data/Sample\"" << std::endl ;
-      std::cerr
-	<< "    "
-	<< "-netlibDir: directory containing netlib files." << std::endl
-        << "\t" << "Default value V2=\"../../Data/Netlib\"" << std::endl ;
-      std::cerr
-	<< "    "
-	<< "-testOsiSolverInterface: "
-        << "run each OSI on the netlib problem set." << std::endl
-	<< "\t"
-	<< "Default is to not run the netlib problem set." << std::endl ;
-      std::cerr
-	<< "    "
-        << "-nobuf: use unbuffered output." << std::endl
-	<< "\t" << "Default is buffered output." << std::endl ;
-      
-      return (false) ; }
-/*
-  Valid keyword; stash the value for later reference.
-*/
-    parms[key]=value ; }
-/*
-  Tack the directory separator onto the data directories so we don't have to
-  worry about it later.
-*/
-  parms["-mpsDir"] += dirsep ;
-  parms["-netlibDir"] += dirsep ;
-/*
-  Did the user request unbuffered i/o? It seems we need to go after this
-  through stdio --- using pubsetbuf(0,0) on the C++ streams has no
-  discernible affect. Nor, for that matter, did setting the unitbuf flag on
-  the streams. Why? At a guess, sync_with_stdio connects the streams to the
-  stdio buffers, and the C++ side isn't programmed to change them?
-*/
-  if (parms.find("-nobuf") != parms.end())
-  { // std::streambuf *coutBuf, *cerrBuf ;
-    // coutBuf = std::cout.rdbuf() ;
-    // coutBuf->pubsetbuf(0,0) ;
-    // cerrBuf = std::cerr.rdbuf() ;
-    // cerrBuf->pubsetbuf(0,0) ;
-    setbuf(stderr,0) ;
-    setbuf(stdout,0) ; }
-/*
-  Did the user request a redirect for cerr? This must occur before any i/o is
-  performed.
-*/
-  if (parms.find("-cerr2cout") != parms.end())
-  { std::cerr.rdbuf(std::cout.rdbuf()) ; }
-
-  return (true) ; }
-
-
-}	// end file-local namespace
-
-
+using namespace OsiUnitTest;
 
 //----------------------------------------------------------------
 // unitTest [-nobuf] [-mpsDir=V1] [-netlibDir=V2] [-testOsiSolverInterface]
+//      [-cutsOnly]
 // 
 // where:
 //   -nobuf: remove buffering on cout (stdout); useful to keep cout and cerr
-//	 messages synchronised when redirecting output to a file or pipe.
+//   messages synchronised when redirecting output to a file or pipe.
 //   -mpsDir: directory containing mps test files
 //       Default value V1="../../Data/Sample"    
 //   -netlibDir: directory containing netlib files
@@ -182,13 +34,16 @@ bool processParameters (int argc, const char **argv,
 //   -testOsiSolverInterface
 //       If specified, then OsiSolveInterface::unitTest
 //       is skipped over and not run.
+//   -cutsOnly
+//   If specified, only OsiCut tests are run.
 //
 // All parameters are optional.
 //----------------------------------------------------------------
 
 int main (int argc, const char *argv[])
-
-{ int totalErrCnt = 0;
+{
+  bool exception = false;
+  outcomes.clear();
 
 /*
   Start off with various bits of initialisation that don't really belong
@@ -208,74 +63,80 @@ int main (int argc, const char *argv[])
 /*
   Process command line parameters.
 */
-  std::map<std::string,std::string> parms ;
-
+  std::map<std::string,std::string> parms;
   if (processParameters(argc,argv,parms) == false)
   { return (1) ; }
 
   std::string mpsDir = parms["-mpsDir"] ;
   std::string netlibDir = parms["-netlibDir"] ;
 
-try {
-/*
-  Test Osi{Row,Col}Cut routines.
-*/
-  {
-    OsiClpSolverInterface clpSi;
-    testingMessage( "Testing OsiRowCut with OsiClpSolverInterface\n" );
-    OsiRowCutUnitTest(&clpSi,mpsDir);
-  }
-  {
-    OsiClpSolverInterface clpSi;
-    testingMessage( "Testing OsiColCut with OsiClpSolverInterface\n" );
-    OsiColCutUnitTest(&clpSi,mpsDir);
-  }
-  {
-    OsiClpSolverInterface clpSi;
-    testingMessage( "Testing OsiRowCutDebugger with OsiClpSolverInterface\n" );
-    OsiRowCutDebuggerUnitTest(&clpSi,mpsDir);
+  try {
+    /*
+      Test Osi{Row,Col}Cut routines.
+    */
+    {
+      OsiClpSolverInterface clpSi;
+      testingMessage( "Testing OsiRowCut with OsiClpSolverInterface\n" );
+      OsiRowCutUnitTest(&clpSi,mpsDir);
+    }
+    {
+      OsiClpSolverInterface clpSi;
+      testingMessage( "Testing OsiColCut with OsiClpSolverInterface\n" );
+      OsiColCutUnitTest(&clpSi,mpsDir);
+    }
+    {
+      OsiClpSolverInterface clpSi;
+      testingMessage( "Testing OsiRowCutDebugger with OsiClpSolverInterface\n" );
+      OsiRowCutDebuggerUnitTest(&clpSi,mpsDir);
+    }
+
+    /*
+      Run the OsiXXX class test. It's up to the OsiClp implementor
+      to decide whether or not to run OsiSolverInterfaceCommonUnitTest. Arguably
+      this should be required.
+    */
+    testingMessage( "Testing OsiClpSolverInterface\n" );
+    OsiClpSolverInterfaceUnitTest(mpsDir,netlibDir);
+
+    /*
+      We have run the specialised unit test. Check now to see if we need to
+      run through the Netlib problems.
+    */
+    if (parms.find("-testOsiSolverInterface") != parms.end())
+    {
+      // Create vector of solver interfaces
+      std::vector<OsiSolverInterface*> vecSi(1, new OsiClpSolverInterface);
+
+      testingMessage( "Testing OsiSolverInterface on Netlib problems.\n" );
+      OsiSolverInterfaceMpsUnitTest(vecSi,netlibDir);
+
+      delete vecSi[0];
+    }
+    else {
+      testingMessage( "***Skipped Testing of OsiClpSolverInterface on Netlib problems***\n" );
+      testingMessage( "***use -testOsiSolverInterface to run them.***\n" );
+    }
+  } catch (CoinError& error) {
+    std::cout.flush();
+    std::cerr << "Caught CoinError exception: ";
+    error.print(true);
+    exception = true;
   }
 
-/*
-  Run the OsiXXX class test. It's up to the OsiClp implementor
-  to decide whether or not to run OsiSolverInterfaceCommonUnitTest. Arguably
-  this should be required.
-*/
-  testingMessage( "Testing OsiClpSolverInterface\n" );
-  OsiClpSolverInterfaceUnitTest(mpsDir,netlibDir);
-
-/*
-  We have run the specialised unit test. Check now to see if we need to
-  run through the Netlib problems.
-*/
-  if (parms.find("-testOsiSolverInterface") != parms.end())
-  {
-    // Create vector of solver interfaces
-    std::vector<OsiSolverInterface*> vecSi(1, new OsiClpSolverInterface);
-
-    testingMessage( "Testing OsiSolverInterface on Netlib problems.\n" );
-    OsiSolverInterfaceMpsUnitTest(vecSi,netlibDir);
-
-    delete vecSi[0];
-  }
-  else {
-    testingMessage( "***Skipped Testing of OsiClpSolverInterface on Netlib problems***\n" );
-    testingMessage( "***use -testOsiSolverInterface to run them.***\n" );
-  }
-} catch (CoinError& error) {
+  /*
+    We're done. Report on the results.
+  */
   std::cout.flush();
-  std::cerr << "Caught CoinError exception: ";
-  error.print(true);
-  totalErrCnt += 1;
-}
-/*
-  We're done. Report on the results.
-*/
-  if (totalErrCnt)
-  { std::cout.flush() ;
-    std::cerr
-      << "Tests completed with " << totalErrCnt << " errors." << std::endl ; 
-  } else
-  { testingMessage("All tests completed successfully\n") ; }
-  return totalErrCnt;
+  outcomes.print();
+
+  int nerrors;
+  int nerrors_expected;
+  outcomes.getCountBySeverity(TestOutcome::ERROR, nerrors, nerrors_expected);
+
+  if (nerrors > nerrors_expected)
+    std::cerr << "Tests completed with " << nerrors - nerrors_expected << " unexpected errors." << std::endl ;
+  else
+    std::cerr << "All tests completed successfully\n";
+
+  return (nerrors - nerrors_expected) + (exception ? 1 : 0);
 }
