@@ -37,7 +37,7 @@ Instantiation of OsiClpSolverInterface for the Model Algorithm.
 
 class OsiClpSolverInterface :
   virtual public OsiSolverInterface {
-  friend int OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & netlibDir);
+  friend void OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & netlibDir);
   
 public:
   //---------------------------------------------------------------------------
@@ -1479,13 +1479,6 @@ protected:
 // So unit test can find out if NDEBUG set
 bool OsiClpHasNDEBUG();
 //#############################################################################
-/** A function that tests the methods in the OsiClpSolverInterface class. The
-    only reason for it not to be a member method is that this way it doesn't
-    have to be compiled into the library. And that's a gain, because the
-    library should be compiled with optimization on, but this method should be
-    compiled with debugging. Also, if this method is compiled with
-    optimization, the compilation takes 10-15 minutes and the machine pages
-    (has 256M core memory!)... */
-int
-OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & netlibDir);
+/** A function that tests the methods in the OsiClpSolverInterface class. */
+void OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & netlibDir);
 #endif

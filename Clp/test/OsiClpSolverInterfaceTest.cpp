@@ -4,7 +4,6 @@
 // This code is licensed under the terms of the Eclipse Public License (EPL).
 
 #include "CoinPragma.hpp"
-#include "OsiConfig.h"
 
 //#include <cassert>
 //#include <cstdlib>
@@ -12,10 +11,10 @@
 //#include <iostream>
 
 #include "OsiClpSolverInterface.hpp"
+#include "OsiUnitTests.hpp"
 #include "OsiCuts.hpp"
 #include "OsiRowCut.hpp"
 #include "OsiColCut.hpp"
-#include "OsiUnitTests.hpp"
 #include "CoinMessage.hpp"
 #include "ClpMessage.hpp"
 #include "ClpFactorization.hpp"
@@ -47,10 +46,9 @@ OsiClpMessageTest::print()
 
 //--------------------------------------------------------------------------
 // test EKKsolution methods.
-int
+void
 OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & netlibDir)
 {
-
   // Test default constructor
   {
     OsiClpSolverInterface m;
@@ -173,8 +171,8 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
       const double * cu = clpSi.getColUpper();
       const double * rl = clpSi.getRowLower();
       const double * ru = clpSi.getRowUpper();
-      OSIUNITTEST_ASSERT_ERROR(nc == 8, return 1, "clp", "read and copy exmip1");
-      OSIUNITTEST_ASSERT_ERROR(nr == 5, return 1, "clp", "read and copy exmip1");
+      OSIUNITTEST_ASSERT_ERROR(nc == 8, return, "clp", "read and copy exmip1");
+      OSIUNITTEST_ASSERT_ERROR(nr == 5, return, "clp", "read and copy exmip1");
       OSIUNITTEST_ASSERT_ERROR(eq(cl[0],2.5), {}, "clp", "read and copy exmip1");
       OSIUNITTEST_ASSERT_ERROR(eq(cl[1],0.0), {}, "clp", "read and copy exmip1");
       OSIUNITTEST_ASSERT_ERROR(eq(cu[1],4.1), {}, "clp", "read and copy exmip1");
@@ -214,8 +212,8 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
       const OsiClpSolverInterface si(m);
       const CoinPackedMatrix * smP = si.getMatrixByRow();
 
-      OSIUNITTEST_ASSERT_ERROR(smP->getMajorDim()    ==  5, return 1, "clp", "getMatrixByRow: major dim");
-      OSIUNITTEST_ASSERT_ERROR(smP->getNumElements() == 14, return 1, "clp", "getMatrixByRow: num elements");
+      OSIUNITTEST_ASSERT_ERROR(smP->getMajorDim()    ==  5, return, "clp", "getMatrixByRow: major dim");
+      OSIUNITTEST_ASSERT_ERROR(smP->getNumElements() == 14, return, "clp", "getMatrixByRow: num elements");
 
       CoinRelFltEq eq;
       const double * ev = smP->getElements();
@@ -337,14 +335,13 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
 
     // Test matrixByCol method
     {
-  
       const OsiClpSolverInterface si(m);
       const CoinPackedMatrix * smP = si.getMatrixByCol();
       
-      OSIUNITTEST_ASSERT_ERROR(smP->getMajorDim()    ==  8, return 1, "clp", "getMatrixByCol: major dim");
-      OSIUNITTEST_ASSERT_ERROR(smP->getMinorDim()    ==  5, return 1, "clp", "getMatrixByCol: minor dim");
-      OSIUNITTEST_ASSERT_ERROR(smP->getNumElements() == 14, return 1, "clp", "getMatrixByCol: number of elements");
-      OSIUNITTEST_ASSERT_ERROR(smP->getSizeVectorStarts() == 9, return 1, "clp", "getMatrixByCol: vector starts size");
+      OSIUNITTEST_ASSERT_ERROR(smP->getMajorDim()    ==  8, return, "clp", "getMatrixByCol: major dim");
+      OSIUNITTEST_ASSERT_ERROR(smP->getMinorDim()    ==  5, return, "clp", "getMatrixByCol: minor dim");
+      OSIUNITTEST_ASSERT_ERROR(smP->getNumElements() == 14, return, "clp", "getMatrixByCol: number of elements");
+      OSIUNITTEST_ASSERT_ERROR(smP->getSizeVectorStarts() == 9, return, "clp", "getMatrixByCol: vector starts size");
 
       CoinRelFltEq eq;
       const double * ev = smP->getElements();
@@ -425,8 +422,8 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
 
         const CoinPackedMatrix * siC1mbr = siC1.getMatrixByRow();
         OSIUNITTEST_ASSERT_ERROR(siC1mbr != NULL, {}, "clp", "matrix by row");
-        OSIUNITTEST_ASSERT_ERROR(siC1mbr->getMajorDim()    ==  5, return 1, "clp", "matrix by row: major dim");
-        OSIUNITTEST_ASSERT_ERROR(siC1mbr->getNumElements() == 14, return 1, "clp", "matrix by row: num elements");
+        OSIUNITTEST_ASSERT_ERROR(siC1mbr->getMajorDim()    ==  5, return, "clp", "matrix by row: major dim");
+        OSIUNITTEST_ASSERT_ERROR(siC1mbr->getNumElements() == 14, return, "clp", "matrix by row: num elements");
 
         const double * ev = siC1mbr->getElements();
         OSIUNITTEST_ASSERT_ERROR(eq(ev[ 0], 3.0), {}, "clp", "matrix by row: elements");
@@ -544,8 +541,8 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
       
       const CoinPackedMatrix * lhsmbr = lhs.getMatrixByRow();
       OSIUNITTEST_ASSERT_ERROR(lhsmbr != NULL, {}, "clp", "matrix by row after assignment");
-      OSIUNITTEST_ASSERT_ERROR(lhsmbr->getMajorDim()    ==  6, return 1, "clp", "matrix by row after assignment: major dim");
-      OSIUNITTEST_ASSERT_ERROR(lhsmbr->getNumElements() == 14, return 1, "clp", "matrix by row after assignment: num elements");
+      OSIUNITTEST_ASSERT_ERROR(lhsmbr->getMajorDim()    ==  6, return, "clp", "matrix by row after assignment: major dim");
+      OSIUNITTEST_ASSERT_ERROR(lhsmbr->getNumElements() == 14, return, "clp", "matrix by row after assignment: num elements");
 
       const double * ev = lhsmbr->getElements();
       OSIUNITTEST_ASSERT_ERROR(eq(ev[ 0], 3.0), {}, "clp", "matrix by row after assignment: elements");
@@ -1396,6 +1393,6 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
   // Do common solverInterface testing 
   {
     OsiClpSolverInterface m;
-    return OsiSolverInterfaceCommonUnitTest(&m, mpsDir, netlibDir);
+    OsiSolverInterfaceCommonUnitTest(&m, mpsDir, netlibDir);
   }
 }
