@@ -7,7 +7,7 @@
 #define ClpMatrixBase_H
 
 #include "CoinPragma.hpp"
-#include "CoinFinite.hpp"
+#include "CoinTypes.hpp"
 
 #include "CoinPackedMatrix.hpp"
 class CoinIndexedVector;

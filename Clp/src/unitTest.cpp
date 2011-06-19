@@ -23,6 +23,7 @@
 #include "CoinStructuredModel.hpp"
 #include "CoinHelperFunctions.hpp"
 #include "CoinTime.hpp"
+#include "CoinFloatEqual.hpp"
 
 #include "ClpFactorization.hpp"
 #include "ClpSimplex.hpp"
@@ -49,13 +50,13 @@
 
 // Function Prototypes. Function definitions is in this file.
 void testingMessage( const char * const msg );
-#if UFL_BARRIER
+#if defined(COIN_HAS_AMD) || defined(COIN_HAS_CHOLMOD) || defined(COIN_HAS_GLPK)
 static int barrierAvailable = 1;
 static std::string nameBarrier = "barrier-UFL";
-#elif WSSMP_BARRIER
+#elif COIN_HAS_WSMP
 static int barrierAvailable = 2;
 static std::string nameBarrier = "barrier-WSSMP";
-#elif MUMPS_BARRIER
+#elif defined(COIN_HAS_MUMPS)
 static int barrierAvailable = 3;
 static std::string nameBarrier = "barrier-MUMPS";
 #else
@@ -1113,15 +1114,15 @@ int mainTest (int argc, const char *argv[], int algorithm,
                          nameAlgorithm = "either";
                     } else {
                          nameAlgorithm = "barrier-slow";
-#ifdef UFL_BARRIER
+#if defined(COIN_HAS_AMD) || defined(COIN_HAS_CHOLMOD) || defined(COIN_HAS_GLPK)
                          solveOptions.setSpecialOption(4, 4);
                          nameAlgorithm = "barrier-UFL";
 #endif
-#ifdef WSSMP_BARRIER
+#ifdef COIN_HAS_WSMP
                          solveOptions.setSpecialOption(4, 2);
                          nameAlgorithm = "barrier-WSSMP";
 #endif
-#ifdef MUMPS_BARRIER
+#ifdef COIN_HAS_MUMPS
                          solveOptions.setSpecialOption(4, 6);
                          nameAlgorithm = "barrier-MUMPS";
 #endif
@@ -1354,9 +1355,9 @@ ClpSimplexUnitTest(const std::string & dirSample)
                model.primal(0, 3);
                // Write saved solutions
                int nc = model.getNumCols();
-               int s;
+               size_t s;
                std::deque<StdVectorDouble> fep = messageHandler.getFeasibleExtremePoints();
-               int numSavedSolutions = fep.size();
+               size_t numSavedSolutions = fep.size();
                for ( s = 0; s < numSavedSolutions; ++s ) {
                     const StdVectorDouble & solnVec = fep[s];
                     for ( int c = 0; c < nc; ++c ) {

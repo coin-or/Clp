@@ -5,14 +5,13 @@
 
 #include "CoinPragma.hpp"
 
-#include "OsiConfig.h"
-
-#include <cassert>
+//#include <cassert>
 //#include <cstdlib>
 //#include <cstdio>
 //#include <iostream>
 
 #include "OsiClpSolverInterface.hpp"
+#include "OsiUnitTests.hpp"
 #include "OsiCuts.hpp"
 #include "OsiRowCut.hpp"
 #include "OsiColCut.hpp"
@@ -47,24 +46,22 @@ OsiClpMessageTest::print()
 
 //--------------------------------------------------------------------------
 // test EKKsolution methods.
-int
+void
 OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & netlibDir)
 {
-  
   // Test default constructor
   {
     OsiClpSolverInterface m;
-    assert( m.rowsense_==NULL );
-    assert( m.rhs_==NULL );
-    assert( m.rowrange_==NULL );
-    assert( m.matrixByRow_==NULL );
-    assert( m.ws_==NULL);
-    assert( m.itlimOrig_==9999999);
-    assert( m.lastAlgorithm_==0);
-    assert( m.integerInformation_==NULL);
+    OSIUNITTEST_ASSERT_ERROR(m.rowsense_           == NULL, {}, "clp", "default constructor");
+    OSIUNITTEST_ASSERT_ERROR(m.rhs_                == NULL, {}, "clp", "default constructor");
+    OSIUNITTEST_ASSERT_ERROR(m.rowrange_           == NULL, {}, "clp", "default constructor");
+    OSIUNITTEST_ASSERT_ERROR(m.matrixByRow_        == NULL, {}, "clp", "default constructor");
+    OSIUNITTEST_ASSERT_ERROR(m.ws_                 == NULL, {}, "clp", "default constructor");
+    OSIUNITTEST_ASSERT_ERROR(m.itlimOrig_       == 9999999, {}, "clp", "default constructor");
+    OSIUNITTEST_ASSERT_ERROR(m.lastAlgorithm_      == 0,    {}, "clp", "default constructor");
+    OSIUNITTEST_ASSERT_ERROR(m.integerInformation_ == NULL, {}, "clp", "default constructor");
   }
-  
-  
+
   {    
     CoinRelFltEq eq;
     OsiClpSolverInterface m;
@@ -74,19 +71,19 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
     {
       OsiClpSolverInterface im;    
       
-      assert( im.getNumCols() == 0 ); 
-      
-      assert( im.getModelPtr()!=NULL );
+      OSIUNITTEST_ASSERT_ERROR(im.getNumCols()  == 0,    {}, "clp", "default constructor");
+      OSIUNITTEST_ASSERT_ERROR(im.getModelPtr() != NULL, {}, "clp", "default constructor");
+
       // Test reset
       im.reset();
-      assert( im.rowsense_==NULL );
-      assert( im.rhs_==NULL );
-      assert( im.rowrange_==NULL );
-      assert( im.matrixByRow_==NULL );
-      assert( im.ws_==NULL);
-      assert( im.itlimOrig_==9999999);
-      assert( im.lastAlgorithm_==0);
-      assert( im.integerInformation_==NULL);
+      OSIUNITTEST_ASSERT_ERROR(im.rowsense_           == NULL, {}, "clp", "reset");
+      OSIUNITTEST_ASSERT_ERROR(im.rhs_                == NULL, {}, "clp", "reset");
+      OSIUNITTEST_ASSERT_ERROR(im.rowrange_           == NULL, {}, "clp", "reset");
+      OSIUNITTEST_ASSERT_ERROR(im.matrixByRow_        == NULL, {}, "clp", "reset");
+      OSIUNITTEST_ASSERT_ERROR(im.ws_                 == NULL, {}, "clp", "reset");
+      OSIUNITTEST_ASSERT_ERROR(im.itlimOrig_       == 9999999, {}, "clp", "reset");
+      OSIUNITTEST_ASSERT_ERROR(im.lastAlgorithm_      ==    0, {}, "clp", "reset");
+      OSIUNITTEST_ASSERT_ERROR(im.integerInformation_ == NULL, {}, "clp", "reset");
     }
     
     // Test copy constructor and assignment operator
@@ -96,407 +93,170 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
         OsiClpSolverInterface im(m);        
         
         OsiClpSolverInterface imC1(im);
-        assert( imC1.getModelPtr()!=im.getModelPtr() );
-        assert( imC1.getNumCols() == im.getNumCols() );
-        assert( imC1.getNumRows() == im.getNumRows() );   
+        OSIUNITTEST_ASSERT_ERROR(imC1.getModelPtr() != im.getModelPtr(), {}, "clp", "copy constructor");
+        OSIUNITTEST_ASSERT_ERROR(imC1.getNumCols()  == im.getNumCols(),  {}, "clp", "copy constructor");
+        OSIUNITTEST_ASSERT_ERROR(imC1.getNumRows()  == im.getNumRows(),  {}, "clp", "copy constructor");
         
         OsiClpSolverInterface imC2(im);
-        assert( imC2.getModelPtr()!=im.getModelPtr() );
-        assert( imC2.getNumCols() == im.getNumCols() );
-        assert( imC2.getNumRows() == im.getNumRows() );  
+        OSIUNITTEST_ASSERT_ERROR(imC2.getModelPtr() != im.getModelPtr(), {}, "clp", "copy constructor");
+        OSIUNITTEST_ASSERT_ERROR(imC2.getNumCols()  == im.getNumCols(),  {}, "clp", "copy constructor");
+        OSIUNITTEST_ASSERT_ERROR(imC2.getNumRows()  == im.getNumRows(),  {}, "clp", "copy constructor");
+
+        OSIUNITTEST_ASSERT_ERROR(imC1.getModelPtr() != imC2.getModelPtr(), {}, "clp", "copy constructor");
         
-        assert( imC2.getModelPtr()!=imC1.getModelPtr() );
-        
-        lhs=imC2;
+        lhs = imC2;
       }
+
       // Test that lhs has correct values even though rhs has gone out of scope
-      
-      assert( lhs.getModelPtr() != m.getModelPtr() );
-      assert( lhs.getNumCols() == m.getNumCols() );
-      assert( lhs.getNumRows() == m.getNumRows() );      
+      OSIUNITTEST_ASSERT_ERROR(lhs.getModelPtr() != m.getModelPtr(), {}, "clp", "assignment operator");
+      OSIUNITTEST_ASSERT_ERROR(lhs.getNumCols()  == m.getNumCols(),  {}, "clp", "copy constructor");
+      OSIUNITTEST_ASSERT_ERROR(lhs.getNumRows()  == m.getNumRows(),  {}, "clp", "copy constructor");
     }
+
     // Test clone
     {
-      OsiClpSolverInterface oslSi(m);
-      OsiSolverInterface * siPtr = &oslSi;
+      OsiClpSolverInterface clpSi(m);
+      OsiSolverInterface * siPtr = &clpSi;
       OsiSolverInterface * siClone = siPtr->clone();
-      OsiClpSolverInterface * oslClone = dynamic_cast<OsiClpSolverInterface*>(siClone);
-      assert( oslClone != NULL );
-      assert( oslClone->getModelPtr() != oslSi.getModelPtr() );
-      assert( oslClone->getNumRows() == oslSi.getNumRows() );
-      assert( oslClone->getNumCols() == m.getNumCols() );
+      OsiClpSolverInterface * clpClone = dynamic_cast<OsiClpSolverInterface*>(siClone);
       
+      OSIUNITTEST_ASSERT_ERROR(clpClone != NULL, {}, "clp", "clone");
+      OSIUNITTEST_ASSERT_ERROR(clpClone->getModelPtr() != clpSi.getModelPtr(), {}, "clp", "clone");
+      OSIUNITTEST_ASSERT_ERROR(clpClone->getNumRows() == clpSi.getNumRows(),   {}, "clp", "clone");
+      OSIUNITTEST_ASSERT_ERROR(clpClone->getNumCols() == m.getNumCols(),       {}, "clp", "clone");
+
       delete siClone;
     }
   
-    // test infinity
+    // Test infinity
     {
       OsiClpSolverInterface si;
-      assert( eq(si.getInfinity(),OsiClpInfinity));
-    }     
-    
-    // Test setting solution
-    {
-      OsiClpSolverInterface m1(m);
-      int i;
-
-      double * cs = new double[m1.getNumCols()];
-      for ( i = 0;  i < m1.getNumCols();  i++ ) 
-        cs[i] = i + .5;
-      m1.setColSolution(cs);
-      for ( i = 0;  i < m1.getNumCols();  i++ ) 
-        assert(m1.getColSolution()[i] == i + .5);
-      
-      double * rs = new double[m1.getNumRows()];
-      for ( i = 0;  i < m1.getNumRows();  i++ ) 
-        rs[i] = i - .5;
-      m1.setRowPrice(rs);
-      for ( i = 0;  i < m1.getNumRows();  i++ ) 
-        assert(m1.getRowPrice()[i] == i - .5);
-
-      delete [] cs;
-      delete [] rs;
+      OSIUNITTEST_ASSERT_ERROR(si.getInfinity() == OsiClpInfinity, {}, "clp", "infinity");
     }
     
-    
-    // Test fraction Indices
-    {
-      OsiClpSolverInterface fim;
-      std::string fn = mpsDir+"exmip1";
-      fim.readMps(fn.c_str(),"mps");
-      // exmip1.mps has 2 integer variables with index 2 & 3
-      assert(  fim.isContinuous(0) );
-      assert(  fim.isContinuous(1) );
-      assert( !fim.isContinuous(2) );
-      assert( !fim.isContinuous(3) );
-      assert(  fim.isContinuous(4) );
-      
-      assert( !fim.isInteger(0) );
-      assert( !fim.isInteger(1) );
-      assert(  fim.isInteger(2) );
-      assert(  fim.isInteger(3) );
-      assert( !fim.isInteger(4) );
-      
-      assert( !fim.isBinary(0) );
-      assert( !fim.isBinary(1) );
-      assert(  fim.isBinary(2) );
-      assert(  fim.isBinary(3) );
-      assert( !fim.isBinary(4) );
-      
-      assert( !fim.isIntegerNonBinary(0) );
-      assert( !fim.isIntegerNonBinary(1) );
-      assert( !fim.isIntegerNonBinary(2) );
-      assert( !fim.isIntegerNonBinary(3) );
-      assert( !fim.isIntegerNonBinary(4) );
-      // Test fractionalIndices
-      {
-        double sol[]={2.9,3.0};
-        memcpy(fim.modelPtr_->primalColumnSolution()+2,sol,2*sizeof(double));
-        OsiVectorInt fi = fim.getFractionalIndices(1e-5);
-        assert( fi.size() == 1 );
-        assert( fi[0]==2 );
-        
-        // Set integer variables very close to integer values
-        sol[0]=5 + .00001/2.;
-        sol[1]=8 - .00001/2.;
-        memcpy(fim.modelPtr_->primalColumnSolution()+2,sol,2*sizeof(double));
-        fi = fim.getFractionalIndices(1e-5);
-        assert( fi.size() == 0 );
-        
-        // Set integer variables close, but beyond tolerances
-        sol[0]=5 + .00001*2.;
-        sol[1]=8 - .00001*2.;
-        memcpy(fim.modelPtr_->primalColumnSolution()+2,sol,2*sizeof(double));
-        fi = fim.getFractionalIndices(1e-5);
-        assert( fi.size() == 2 );
-        assert( fi[0]==2 );
-        assert( fi[1]==3 );
-      }
-
-
-      
-      // Change date so column 2 & 3 are integerNonBinary
-      double ub[]={5.0,6.0};
-      memcpy(fim.modelPtr_->columnUpper()+2,ub,2*sizeof(double));
-      assert( !fim.isBinary(0) );
-      assert( !fim.isBinary(1) );
-      assert( !fim.isBinary(2) );
-      assert( !fim.isBinary(3) );
-      assert( !fim.isBinary(4) );
-      
-      assert( !fim.isIntegerNonBinary(0) );
-      assert( !fim.isIntegerNonBinary(1) );
-      assert(  fim.isIntegerNonBinary(2) );
-      assert(  fim.isIntegerNonBinary(3) );
-      assert( !fim.isIntegerNonBinary(4) );
-    }
     // Test some catches
-      if (!OsiClpHasNDEBUG())
+    if (!OsiClpHasNDEBUG())
     {
       OsiClpSolverInterface solver;
-#ifndef NDEBUG  /* in optimized mode, the following code crashes */
       try {
         solver.setObjCoeff(0,0.0);
+        OSIUNITTEST_ADD_OUTCOME("clp", "setObjCoeff on empty model", "should throw exception", OsiUnitTest::TestOutcome::ERROR, false);
       }
       catch (CoinError e) {
-        std::cout<<"Correct throw"<<std::endl;
+        if (OsiUnitTest::verbosity >= 1)
+          std::cout<<"Correct throw from setObjCoeff on empty model"<<std::endl;
       }
-#endif
+
       std::string fn = mpsDir+"exmip1";
       solver.readMps(fn.c_str(),"mps");
-      try {
-        solver.setObjCoeff(0,0.0);
-      }
-      catch (CoinError e) {
-        std::cout<<"** Incorrect throw"<<std::endl;
-        abort();
-      }
-#ifndef NDEBUG
+      OSIUNITTEST_CATCH_ERROR(solver.setObjCoeff(0,0.0), {}, "clp", "setObjCoeff on nonempty model");
+
       try {
         int index[]={0,20};
         double value[]={0.0,0.0,0.0,0.0};
         solver.setColSetBounds(index,index+2,value);
+        OSIUNITTEST_ADD_OUTCOME("clp", "setColSetBounds on cols not in model", "should throw exception", OsiUnitTest::TestOutcome::ERROR, false);
       }
       catch (CoinError e) {
-        std::cout<<"Correct throw"<<std::endl;
+        if (OsiUnitTest::verbosity >= 1)
+          std::cout<<"Correct throw from setObjCoeff on empty model"<<std::endl;
       }
-#endif
-    }
-    // Test apply cuts method
-    {      
-      OsiClpSolverInterface im(m);
-      OsiCuts cuts;
-      
-      // Generate some cuts 
-      {
-        // Get number of rows and columns in model
-        int nr=im.getNumRows();
-        int nc=im.getNumCols();
-        assert( nr == 5 );
-        assert( nc == 8 );
-        
-        // Generate a valid row cut from thin air
-        int c;
-        {
-          int *inx = new int[nc];
-          for (c=0;c<nc;c++) inx[c]=c;
-          double *el = new double[nc];
-          for (c=0;c<nc;c++) el[c]=((double)c)*((double)c);
-          
-          OsiRowCut rc;
-          rc.setRow(nc,inx,el);
-          rc.setLb(-100.);
-          rc.setUb(100.);
-          rc.setEffectiveness(22);
-          
-          cuts.insert(rc);
-          delete[]el;
-          delete[]inx;
-        }
-        
-        // Generate valid col cut from thin air
-        {
-          const double * oslColLB = im.getColLower();
-          const double * oslColUB = im.getColUpper();
-          int *inx = new int[nc];
-          for (c=0;c<nc;c++) inx[c]=c;
-          double *lb = new double[nc];
-          double *ub = new double[nc];
-          for (c=0;c<nc;c++) lb[c]=oslColLB[c]+0.001;
-          for (c=0;c<nc;c++) ub[c]=oslColUB[c]-0.001;
-          
-          OsiColCut cc;
-          cc.setLbs(nc,inx,lb);
-          cc.setUbs(nc,inx,ub);
-          
-          cuts.insert(cc);
-          delete [] ub;
-          delete [] lb;
-          delete [] inx;
-        }
-        
-        {
-          // Generate a row and column cut which are ineffective
-          OsiRowCut * rcP= new OsiRowCut;
-          rcP->setEffectiveness(-1.);
-          cuts.insert(rcP);
-          assert(rcP==NULL);
-          
-          OsiColCut * ccP= new OsiColCut;
-          ccP->setEffectiveness(-12.);
-          cuts.insert(ccP);
-          assert(ccP==NULL);
-        }
-        {
-          //Generate inconsistent Row cut
-          OsiRowCut rc;
-          const int ne=1;
-          int inx[ne]={-10};
-          double el[ne]={2.5};
-          rc.setRow(ne,inx,el);
-          rc.setLb(3.);
-          rc.setUb(4.);
-          assert(!rc.consistent());
-          cuts.insert(rc);
-        }
-        {
-          //Generate inconsistent col cut
-          OsiColCut cc;
-          const int ne=1;
-          int inx[ne]={-10};
-          double el[ne]={2.5};
-          cc.setUbs(ne,inx,el);
-          assert(!cc.consistent());
-          cuts.insert(cc);
-        }
-        {
-          // Generate row cut which is inconsistent for model m
-          OsiRowCut rc;
-          const int ne=1;
-          int inx[ne]={10};
-          double el[ne]={2.5};
-          rc.setRow(ne,inx,el);
-          assert(rc.consistent());
-          assert(!rc.consistent(im));
-          cuts.insert(rc);
-        }
-        {
-          // Generate col cut which is inconsistent for model m
-          OsiColCut cc;
-          const int ne=1;
-          int inx[ne]={30};
-          double el[ne]={2.0};
-          cc.setLbs(ne,inx,el);
-          assert(cc.consistent());
-          assert(!cc.consistent(im));
-          cuts.insert(cc);
-        }
-        {
-          // Generate col cut which is infeasible
-          OsiColCut cc;
-          const int ne=1;
-          int inx[ne]={0};
-          double el[ne]={2.0};
-          cc.setUbs(ne,inx,el);
-          cc.setEffectiveness(1000.);
-          assert(cc.consistent());
-          assert(cc.consistent(im));
-          assert(cc.infeasible(im));
-          cuts.insert(cc);
-        }
-      }
-      assert(cuts.sizeRowCuts()==4);
-      assert(cuts.sizeColCuts()==5);
-      
-      OsiSolverInterface::ApplyCutsReturnCode rc = im.applyCuts(cuts);
-      assert( rc.getNumIneffective() == 2 );
-      assert( rc.getNumApplied() == 2 );
-      assert( rc.getNumInfeasible() == 1 );
-      assert( rc.getNumInconsistentWrtIntegerModel() == 2 );
-      assert( rc.getNumInconsistent() == 2 );
-      assert( cuts.sizeCuts() == rc.getNumIneffective() +
-        rc.getNumApplied() +
-        rc.getNumInfeasible() +
-        rc.getNumInconsistentWrtIntegerModel() +
-        rc.getNumInconsistent() );
     }
     
-    {    
-      OsiClpSolverInterface oslSi(m);
-      int nc = oslSi.getNumCols();
-      int nr = oslSi.getNumRows();
-      const double * cl = oslSi.getColLower();
-      const double * cu = oslSi.getColUpper();
-      const double * rl = oslSi.getRowLower();
-      const double * ru = oslSi.getRowUpper();
-      assert( nc == 8 );
-      assert( nr == 5 );
-      assert( eq(cl[0],2.5) );
-      assert( eq(cl[1],0.0) );
-      assert( eq(cu[1],4.1) );
-      assert( eq(cu[2],1.0) );
-      assert( eq(rl[0],2.5) );
-      assert( eq(rl[4],3.0) );
-      assert( eq(ru[1],2.1) );
-      assert( eq(ru[4],15.0) );
+    {
+      OsiClpSolverInterface clpSi(m);
+      int nc = clpSi.getNumCols();
+      int nr = clpSi.getNumRows();
+      const double * cl = clpSi.getColLower();
+      const double * cu = clpSi.getColUpper();
+      const double * rl = clpSi.getRowLower();
+      const double * ru = clpSi.getRowUpper();
+      OSIUNITTEST_ASSERT_ERROR(nc == 8, return, "clp", "read and copy exmip1");
+      OSIUNITTEST_ASSERT_ERROR(nr == 5, return, "clp", "read and copy exmip1");
+      OSIUNITTEST_ASSERT_ERROR(eq(cl[0],2.5), {}, "clp", "read and copy exmip1");
+      OSIUNITTEST_ASSERT_ERROR(eq(cl[1],0.0), {}, "clp", "read and copy exmip1");
+      OSIUNITTEST_ASSERT_ERROR(eq(cu[1],4.1), {}, "clp", "read and copy exmip1");
+      OSIUNITTEST_ASSERT_ERROR(eq(cu[2],1.0), {}, "clp", "read and copy exmip1");
+      OSIUNITTEST_ASSERT_ERROR(eq(rl[0],2.5), {}, "clp", "read and copy exmip1");
+      OSIUNITTEST_ASSERT_ERROR(eq(rl[4],3.0), {}, "clp", "read and copy exmip1");
+      OSIUNITTEST_ASSERT_ERROR(eq(ru[1],2.1), {}, "clp", "read and copy exmip1");
+      OSIUNITTEST_ASSERT_ERROR(eq(ru[4],15.), {}, "clp", "read and copy exmip1");
       
-      const double * cs = oslSi.getColSolution();
-      assert( eq(cs[0],2.5) );
-      assert( eq(cs[7],0.0) );
+      const double * cs = clpSi.getColSolution();
+      OSIUNITTEST_ASSERT_ERROR(eq(cs[0],2.5), {}, "clp", "read and copy exmip1");
+      OSIUNITTEST_ASSERT_ERROR(eq(cs[7],0.0), {}, "clp", "read and copy exmip1");
       
-      assert( !eq(cl[3],1.2345) );
-      oslSi.setColLower( 3, 1.2345 );
-      assert( eq(oslSi.getColLower()[3],1.2345) );
+      OSIUNITTEST_ASSERT_ERROR(!eq(cl[3],1.2345), {}, "clp", "set col lower");
+      clpSi.setColLower( 3, 1.2345 );
+      OSIUNITTEST_ASSERT_ERROR( eq(cl[3],1.2345), {}, "clp", "set col lower");
       
-      assert( !eq(cu[4],10.2345) );
-      oslSi.setColUpper( 4, 10.2345 );
-      assert( eq(oslSi.getColUpper()[4],10.2345) );
+      OSIUNITTEST_ASSERT_ERROR(!eq(clpSi.getColUpper()[4],10.2345), {}, "clp", "set col upper");
+      clpSi.setColUpper( 4, 10.2345 );
+      OSIUNITTEST_ASSERT_ERROR( eq(clpSi.getColUpper()[4],10.2345), {}, "clp", "set col upper");
 
-      double objValue = oslSi.getObjValue();
-      assert( eq(objValue,3.5) );
+      double objValue = clpSi.getObjValue();
+      OSIUNITTEST_ASSERT_ERROR(eq(objValue,3.5), {}, "clp", "getObjValue() before solve");
 
-      assert( eq( oslSi.getObjCoefficients()[0],  1.0) );
-      assert( eq( oslSi.getObjCoefficients()[1],  0.0) );
-      assert( eq( oslSi.getObjCoefficients()[2],  0.0) );
-      assert( eq( oslSi.getObjCoefficients()[3],  0.0) );
-      assert( eq( oslSi.getObjCoefficients()[4],  2.0) );
-      assert( eq( oslSi.getObjCoefficients()[5],  0.0) );
-      assert( eq( oslSi.getObjCoefficients()[6],  0.0) );
-      assert( eq( oslSi.getObjCoefficients()[7], -1.0) );
+      OSIUNITTEST_ASSERT_ERROR(eq(clpSi.getObjCoefficients()[0], 1.0), {}, "clp", "read and copy exmip1");
+      OSIUNITTEST_ASSERT_ERROR(eq(clpSi.getObjCoefficients()[1], 0.0), {}, "clp", "read and copy exmip1");
+      OSIUNITTEST_ASSERT_ERROR(eq(clpSi.getObjCoefficients()[2], 0.0), {}, "clp", "read and copy exmip1");
+      OSIUNITTEST_ASSERT_ERROR(eq(clpSi.getObjCoefficients()[3], 0.0), {}, "clp", "read and copy exmip1");
+      OSIUNITTEST_ASSERT_ERROR(eq(clpSi.getObjCoefficients()[4], 2.0), {}, "clp", "read and copy exmip1");
+      OSIUNITTEST_ASSERT_ERROR(eq(clpSi.getObjCoefficients()[5], 0.0), {}, "clp", "read and copy exmip1");
+      OSIUNITTEST_ASSERT_ERROR(eq(clpSi.getObjCoefficients()[6], 0.0), {}, "clp", "read and copy exmip1");
+      OSIUNITTEST_ASSERT_ERROR(eq(clpSi.getObjCoefficients()[7],-1.0), {}, "clp", "read and copy exmip1");
     }
     
     // Test matrixByRow method
-    { 
+    {
       const OsiClpSolverInterface si(m);
       const CoinPackedMatrix * smP = si.getMatrixByRow();
-      // LL:      const OsiClpPackedMatrix * osmP = dynamic_cast<const OsiClpPackedMatrix*>(smP);
-      // LL: assert( osmP!=NULL );
-      
+
+      OSIUNITTEST_ASSERT_ERROR(smP->getMajorDim()    ==  5, return, "clp", "getMatrixByRow: major dim");
+      OSIUNITTEST_ASSERT_ERROR(smP->getNumElements() == 14, return, "clp", "getMatrixByRow: num elements");
+
       CoinRelFltEq eq;
       const double * ev = smP->getElements();
-      assert( eq(ev[0],   3.0) );
-      assert( eq(ev[1],   1.0) );
-      assert( eq(ev[2],  -2.0) );
-      assert( eq(ev[3],  -1.0) );
-      assert( eq(ev[4],  -1.0) );
-      assert( eq(ev[5],   2.0) );
-      assert( eq(ev[6],   1.1) );
-      assert( eq(ev[7],   1.0) );
-      assert( eq(ev[8],   1.0) );
-      assert( eq(ev[9],   2.8) );
-      assert( eq(ev[10], -1.2) );
-      assert( eq(ev[11],  5.6) );
-      assert( eq(ev[12],  1.0) );
-      assert( eq(ev[13],  1.9) );
+      OSIUNITTEST_ASSERT_ERROR(eq(ev[0],   3.0), {}, "clp", "getMatrixByRow: elements");
+      OSIUNITTEST_ASSERT_ERROR(eq(ev[1],   1.0), {}, "clp", "getMatrixByRow: elements");
+      OSIUNITTEST_ASSERT_ERROR(eq(ev[2],  -2.0), {}, "clp", "getMatrixByRow: elements");
+      OSIUNITTEST_ASSERT_ERROR(eq(ev[3],  -1.0), {}, "clp", "getMatrixByRow: elements");
+      OSIUNITTEST_ASSERT_ERROR(eq(ev[4],  -1.0), {}, "clp", "getMatrixByRow: elements");
+      OSIUNITTEST_ASSERT_ERROR(eq(ev[5],   2.0), {}, "clp", "getMatrixByRow: elements");
+      OSIUNITTEST_ASSERT_ERROR(eq(ev[6],   1.1), {}, "clp", "getMatrixByRow: elements");
+      OSIUNITTEST_ASSERT_ERROR(eq(ev[7],   1.0), {}, "clp", "getMatrixByRow: elements");
+      OSIUNITTEST_ASSERT_ERROR(eq(ev[8],   1.0), {}, "clp", "getMatrixByRow: elements");
+      OSIUNITTEST_ASSERT_ERROR(eq(ev[9],   2.8), {}, "clp", "getMatrixByRow: elements");
+      OSIUNITTEST_ASSERT_ERROR(eq(ev[10], -1.2), {}, "clp", "getMatrixByRow: elements");
+      OSIUNITTEST_ASSERT_ERROR(eq(ev[11],  5.6), {}, "clp", "getMatrixByRow: elements");
+      OSIUNITTEST_ASSERT_ERROR(eq(ev[12],  1.0), {}, "clp", "getMatrixByRow: elements");
+      OSIUNITTEST_ASSERT_ERROR(eq(ev[13],  1.9), {}, "clp", "getMatrixByRow: elements");
       
-      const CoinBigIndex * mi = smP->getVectorStarts();
-      assert( mi[0]==0 );
-      assert( mi[1]==5 );
-      assert( mi[2]==7 );
-      assert( mi[3]==9 );
-      assert( mi[4]==11 );
-      assert( mi[5]==14 );
+      const int * mi = smP->getVectorStarts();
+      OSIUNITTEST_ASSERT_ERROR(mi[0] ==  0, {}, "clp", "getMatrixByRow: vector starts");
+      OSIUNITTEST_ASSERT_ERROR(mi[1] ==  5, {}, "clp", "getMatrixByRow: vector starts");
+      OSIUNITTEST_ASSERT_ERROR(mi[2] ==  7, {}, "clp", "getMatrixByRow: vector starts");
+      OSIUNITTEST_ASSERT_ERROR(mi[3] ==  9, {}, "clp", "getMatrixByRow: vector starts");
+      OSIUNITTEST_ASSERT_ERROR(mi[4] == 11, {}, "clp", "getMatrixByRow: vector starts");
+      OSIUNITTEST_ASSERT_ERROR(mi[5] == 14, {}, "clp", "getMatrixByRow: vector starts");
       
       const int * ei = smP->getIndices();
-      assert( ei[0]  ==  0 );
-      assert( ei[1]  ==  1 );
-      assert( ei[2]  ==  3 );
-      assert( ei[3]  ==  4 );
-      assert( ei[4]  ==  7 );
-      assert( ei[5]  ==  1 );
-      assert( ei[6]  ==  2 );
-      assert( ei[7]  ==  2 );
-      assert( ei[8]  ==  5 );
-      assert( ei[9]  ==  3 );
-      assert( ei[10] ==  6 );
-      assert( ei[11] ==  0 );
-      assert( ei[12] ==  4 );
-      assert( ei[13] ==  7 );    
-      
-      assert( smP->getMajorDim() == 5 ); 
-      assert( smP->getNumElements() == 14 );
-      
+      OSIUNITTEST_ASSERT_ERROR(ei[ 0] == 0, {}, "clp", "getMatrixByRow: indices");
+      OSIUNITTEST_ASSERT_ERROR(ei[ 1] == 1, {}, "clp", "getMatrixByRow: indices");
+      OSIUNITTEST_ASSERT_ERROR(ei[ 2] == 3, {}, "clp", "getMatrixByRow: indices");
+      OSIUNITTEST_ASSERT_ERROR(ei[ 3] == 4, {}, "clp", "getMatrixByRow: indices");
+      OSIUNITTEST_ASSERT_ERROR(ei[ 4] == 7, {}, "clp", "getMatrixByRow: indices");
+      OSIUNITTEST_ASSERT_ERROR(ei[ 5] == 1, {}, "clp", "getMatrixByRow: indices");
+      OSIUNITTEST_ASSERT_ERROR(ei[ 6] == 2, {}, "clp", "getMatrixByRow: indices");
+      OSIUNITTEST_ASSERT_ERROR(ei[ 7] == 2, {}, "clp", "getMatrixByRow: indices");
+      OSIUNITTEST_ASSERT_ERROR(ei[ 8] == 5, {}, "clp", "getMatrixByRow: indices");
+      OSIUNITTEST_ASSERT_ERROR(ei[ 9] == 3, {}, "clp", "getMatrixByRow: indices");
+      OSIUNITTEST_ASSERT_ERROR(ei[10] == 6, {}, "clp", "getMatrixByRow: indices");
+      OSIUNITTEST_ASSERT_ERROR(ei[11] == 0, {}, "clp", "getMatrixByRow: indices");
+      OSIUNITTEST_ASSERT_ERROR(ei[12] == 4, {}, "clp", "getMatrixByRow: indices");
+      OSIUNITTEST_ASSERT_ERROR(ei[13] == 7, {}, "clp", "getMatrixByRow: indices");
     }
+
     // Test adding several cuts
     {
       OsiClpSolverInterface fim;
@@ -505,8 +265,7 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
       // exmip1.mps has 2 integer variables with index 2 & 3
       fim.initialSolve();
       OsiRowCut cuts[3];
-      
-      
+
       // Generate one ineffective cut plus two trivial cuts
       int c;
       int nc = fim.getNumCols();
@@ -538,8 +297,8 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
       // check integer solution
       const double * cs = fim.getColSolution();
       CoinRelFltEq eq;
-      assert( eq(cs[2],   1.0) );
-      assert( eq(cs[3],   1.0) );
+      OSIUNITTEST_ASSERT_ERROR(eq(cs[2], 1.0), {}, "clp", "add cuts");
+      OSIUNITTEST_ASSERT_ERROR(eq(cs[3], 1.0), {}, "clp", "add cuts");
       // check will find invalid matrix
       el[0]=1.0/el[4];
       inx[0]=0;
@@ -550,10 +309,11 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
       fim.applyRowCut(cuts[0]);
       // resolve - should get message about zero elements
       fim.resolve();
-      assert (fim.isAbandoned());
+      OSIUNITTEST_ASSERT_WARNING(fim.isAbandoned(), {}, "clp", "add cuts");
       delete[]el;
       delete[]inx;
     }
+
     // Test using bad basis
     {
       OsiClpSolverInterface fim;
@@ -565,280 +325,265 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
       int numberColumns = fim.getModelPtr()->numberColumns();
       int * columnStatus = new int[numberColumns];
       fim.getBasisStatus(columnStatus,rowStatus);
-      int i;
-      for (i=0;i<numberRows;i++) {
+      for (int i=0; i<numberRows; i++)
         rowStatus[i]=2;
-      }        
       fim.setBasisStatus(columnStatus,rowStatus);
       fim.resolve();
       delete [] rowStatus;
       delete [] columnStatus;
     }
-        // Test matrixByCol method
+
+    // Test matrixByCol method
     {
-  
       const OsiClpSolverInterface si(m);
       const CoinPackedMatrix * smP = si.getMatrixByCol();
-      // LL:      const OsiClpPackedMatrix * osmP = dynamic_cast<const OsiClpPackedMatrix*>(smP);
-      // LL: assert( osmP!=NULL );
       
+      OSIUNITTEST_ASSERT_ERROR(smP->getMajorDim()    ==  8, return, "clp", "getMatrixByCol: major dim");
+      OSIUNITTEST_ASSERT_ERROR(smP->getMinorDim()    ==  5, return, "clp", "getMatrixByCol: minor dim");
+      OSIUNITTEST_ASSERT_ERROR(smP->getNumElements() == 14, return, "clp", "getMatrixByCol: number of elements");
+      OSIUNITTEST_ASSERT_ERROR(smP->getSizeVectorStarts() == 9, return, "clp", "getMatrixByCol: vector starts size");
+
       CoinRelFltEq eq;
       const double * ev = smP->getElements();
-      assert( eq(ev[0],   3.0) );
-      assert( eq(ev[1],   5.6) );
-      assert( eq(ev[2],   1.0) );
-      assert( eq(ev[3],   2.0) );
-      assert( eq(ev[4],   1.1) );
-      assert( eq(ev[5],   1.0) );
-      assert( eq(ev[6],  -2.0) );
-      assert( eq(ev[7],   2.8) );
-      assert( eq(ev[8],  -1.0) );
-      assert( eq(ev[9],   1.0) );
-      assert( eq(ev[10],  1.0) );
-      assert( eq(ev[11], -1.2) );
-      assert( eq(ev[12], -1.0) );
-      assert( eq(ev[13],  1.9) );
+      OSIUNITTEST_ASSERT_ERROR(eq(ev[ 0], 3.0), {}, "clp", "getMatrixByCol: elements");
+      OSIUNITTEST_ASSERT_ERROR(eq(ev[ 1], 5.6), {}, "clp", "getMatrixByCol: elements");
+      OSIUNITTEST_ASSERT_ERROR(eq(ev[ 2], 1.0), {}, "clp", "getMatrixByCol: elements");
+      OSIUNITTEST_ASSERT_ERROR(eq(ev[ 3], 2.0), {}, "clp", "getMatrixByCol: elements");
+      OSIUNITTEST_ASSERT_ERROR(eq(ev[ 4], 1.1), {}, "clp", "getMatrixByCol: elements");
+      OSIUNITTEST_ASSERT_ERROR(eq(ev[ 5], 1.0), {}, "clp", "getMatrixByCol: elements");
+      OSIUNITTEST_ASSERT_ERROR(eq(ev[ 6],-2.0), {}, "clp", "getMatrixByCol: elements");
+      OSIUNITTEST_ASSERT_ERROR(eq(ev[ 7], 2.8), {}, "clp", "getMatrixByCol: elements");
+      OSIUNITTEST_ASSERT_ERROR(eq(ev[ 8],-1.0), {}, "clp", "getMatrixByCol: elements");
+      OSIUNITTEST_ASSERT_ERROR(eq(ev[ 9], 1.0), {}, "clp", "getMatrixByCol: elements");
+      OSIUNITTEST_ASSERT_ERROR(eq(ev[10], 1.0), {}, "clp", "getMatrixByCol: elements");
+      OSIUNITTEST_ASSERT_ERROR(eq(ev[11],-1.2), {}, "clp", "getMatrixByCol: elements");
+      OSIUNITTEST_ASSERT_ERROR(eq(ev[12],-1.0), {}, "clp", "getMatrixByCol: elements");
+      OSIUNITTEST_ASSERT_ERROR(eq(ev[13], 1.9), {}, "clp", "getMatrixByCol: elements");
       
       const CoinBigIndex * mi = smP->getVectorStarts();
-      assert( mi[0]==0 );
-      assert( mi[1]==2 );
-      assert( mi[2]==4 );
-      assert( mi[3]==6 );
-      assert( mi[4]==8 );
-      assert( mi[5]==10 );
-      assert( mi[6]==11 );
-      assert( mi[7]==12 );
-      assert( mi[8]==14 );
+      OSIUNITTEST_ASSERT_ERROR(mi[0] ==  0, {}, "clp", "getMatrixByCol: vector starts");
+      OSIUNITTEST_ASSERT_ERROR(mi[1] ==  2, {}, "clp", "getMatrixByCol: vector starts");
+      OSIUNITTEST_ASSERT_ERROR(mi[2] ==  4, {}, "clp", "getMatrixByCol: vector starts");
+      OSIUNITTEST_ASSERT_ERROR(mi[3] ==  6, {}, "clp", "getMatrixByCol: vector starts");
+      OSIUNITTEST_ASSERT_ERROR(mi[4] ==  8, {}, "clp", "getMatrixByCol: vector starts");
+      OSIUNITTEST_ASSERT_ERROR(mi[5] == 10, {}, "clp", "getMatrixByCol: vector starts");
+      OSIUNITTEST_ASSERT_ERROR(mi[6] == 11, {}, "clp", "getMatrixByCol: vector starts");
+      OSIUNITTEST_ASSERT_ERROR(mi[7] == 12, {}, "clp", "getMatrixByCol: vector starts");
+      OSIUNITTEST_ASSERT_ERROR(mi[8] == 14, {}, "clp", "getMatrixByCol: vector starts");
       
       const int * ei = smP->getIndices();
-      assert( ei[0]  ==  0 );
-      assert( ei[1]  ==  4 );
-      assert( ei[2]  ==  0 );
-      assert( ei[3]  ==  1 );
-      assert( ei[4]  ==  1 );
-      assert( ei[5]  ==  2 );
-      assert( ei[6]  ==  0 );
-      assert( ei[7]  ==  3 );
-      assert( ei[8]  ==  0 );
-      assert( ei[9]  ==  4 );
-      assert( ei[10] ==  2 );
-      assert( ei[11] ==  3 );
-      assert( ei[12] ==  0 );
-      assert( ei[13] ==  4 );    
-      
-      assert( smP->getMajorDim() == 8 ); 
-      assert( smP->getNumElements() == 14 );
-
-      assert( smP->getSizeVectorStarts()==9 );
-      assert( smP->getMinorDim() == 5 );
-      
+      OSIUNITTEST_ASSERT_ERROR(ei[ 0] == 0, {}, "clp", "getMatrixByCol: indices");
+      OSIUNITTEST_ASSERT_ERROR(ei[ 1] == 4, {}, "clp", "getMatrixByCol: indices");
+      OSIUNITTEST_ASSERT_ERROR(ei[ 2] == 0, {}, "clp", "getMatrixByCol: indices");
+      OSIUNITTEST_ASSERT_ERROR(ei[ 3] == 1, {}, "clp", "getMatrixByCol: indices");
+      OSIUNITTEST_ASSERT_ERROR(ei[ 4] == 1, {}, "clp", "getMatrixByCol: indices");
+      OSIUNITTEST_ASSERT_ERROR(ei[ 5] == 2, {}, "clp", "getMatrixByCol: indices");
+      OSIUNITTEST_ASSERT_ERROR(ei[ 6] == 0, {}, "clp", "getMatrixByCol: indices");
+      OSIUNITTEST_ASSERT_ERROR(ei[ 7] == 3, {}, "clp", "getMatrixByCol: indices");
+      OSIUNITTEST_ASSERT_ERROR(ei[ 8] == 0, {}, "clp", "getMatrixByCol: indices");
+      OSIUNITTEST_ASSERT_ERROR(ei[ 9] == 4, {}, "clp", "getMatrixByCol: indices");
+      OSIUNITTEST_ASSERT_ERROR(ei[10] == 2, {}, "clp", "getMatrixByCol: indices");
+      OSIUNITTEST_ASSERT_ERROR(ei[11] == 3, {}, "clp", "getMatrixByCol: indices");
+      OSIUNITTEST_ASSERT_ERROR(ei[12] == 0, {}, "clp", "getMatrixByCol: indices");
+      OSIUNITTEST_ASSERT_ERROR(ei[13] == 4, {}, "clp", "getMatrixByCol: indices");
     }
+
     //--------------
     // Test rowsense, rhs, rowrange, matrixByRow
     {
       OsiClpSolverInterface lhs;
       {      
-        assert( m.rowrange_==NULL );
-        assert( m.rowsense_==NULL );
-        assert( m.rhs_==NULL );
-        assert( m.matrixByRow_==NULL );
-        
-        OsiClpSolverInterface siC1(m);     
-        assert( siC1.rowrange_==NULL );
-        assert( siC1.rowsense_==NULL );
-        assert( siC1.rhs_==NULL );
-        assert( siC1.matrixByRow_==NULL );
+        OsiClpSolverInterface siC1(m);
+        OSIUNITTEST_ASSERT_WARNING(siC1.rowrange_ == NULL, {}, "clp", "row range");
+        OSIUNITTEST_ASSERT_WARNING(siC1.rowsense_ == NULL, {}, "clp", "row sense");
+        OSIUNITTEST_ASSERT_WARNING(siC1.rhs_ == NULL, {}, "clp", "right hand side");
+        OSIUNITTEST_ASSERT_WARNING(siC1.matrixByRow_ == NULL, {}, "clp", "matrix by row");
 
         const char   * siC1rs  = siC1.getRowSense();
-        assert( siC1rs[0]=='G' );
-        assert( siC1rs[1]=='L' );
-        assert( siC1rs[2]=='E' );
-        assert( siC1rs[3]=='R' );
-        assert( siC1rs[4]=='R' );
-        
+        OSIUNITTEST_ASSERT_ERROR(siC1rs[0] == 'G', {}, "clp", "row sense");
+        OSIUNITTEST_ASSERT_ERROR(siC1rs[1] == 'L', {}, "clp", "row sense");
+        OSIUNITTEST_ASSERT_ERROR(siC1rs[2] == 'E', {}, "clp", "row sense");
+        OSIUNITTEST_ASSERT_ERROR(siC1rs[3] == 'R', {}, "clp", "row sense");
+        OSIUNITTEST_ASSERT_ERROR(siC1rs[4] == 'R', {}, "clp", "row sense");
+
         const double * siC1rhs = siC1.getRightHandSide();
-        assert( eq(siC1rhs[0],2.5) );
-        assert( eq(siC1rhs[1],2.1) );
-        assert( eq(siC1rhs[2],4.0) );
-        assert( eq(siC1rhs[3],5.0) );
-        assert( eq(siC1rhs[4],15.) ); 
-        
+        OSIUNITTEST_ASSERT_ERROR(eq(siC1rhs[0],2.5), {}, "clp", "right hand side");
+        OSIUNITTEST_ASSERT_ERROR(eq(siC1rhs[1],2.1), {}, "clp", "right hand side");
+        OSIUNITTEST_ASSERT_ERROR(eq(siC1rhs[2],4.0), {}, "clp", "right hand side");
+        OSIUNITTEST_ASSERT_ERROR(eq(siC1rhs[3],5.0), {}, "clp", "right hand side");
+        OSIUNITTEST_ASSERT_ERROR(eq(siC1rhs[4],15.), {}, "clp", "right hand side");
+
         const double * siC1rr  = siC1.getRowRange();
-        assert( eq(siC1rr[0],0.0) );
-        assert( eq(siC1rr[1],0.0) );
-        assert( eq(siC1rr[2],0.0) );
-        assert( eq(siC1rr[3],5.0-1.8) );
-        assert( eq(siC1rr[4],15.0-3.0) );
-        
+        OSIUNITTEST_ASSERT_ERROR(eq(siC1rr[0],0.0), {}, "clp", "row range");
+        OSIUNITTEST_ASSERT_ERROR(eq(siC1rr[1],0.0), {}, "clp", "row range");
+        OSIUNITTEST_ASSERT_ERROR(eq(siC1rr[2],0.0), {}, "clp", "row range");
+        OSIUNITTEST_ASSERT_ERROR(eq(siC1rr[3],5.0-1.8), {}, "clp", "row range");
+        OSIUNITTEST_ASSERT_ERROR(eq(siC1rr[4],15.0-3.0), {}, "clp", "row range");
+
         const CoinPackedMatrix * siC1mbr = siC1.getMatrixByRow();
-        assert( siC1mbr != NULL );
-        
+        OSIUNITTEST_ASSERT_ERROR(siC1mbr != NULL, {}, "clp", "matrix by row");
+        OSIUNITTEST_ASSERT_ERROR(siC1mbr->getMajorDim()    ==  5, return, "clp", "matrix by row: major dim");
+        OSIUNITTEST_ASSERT_ERROR(siC1mbr->getNumElements() == 14, return, "clp", "matrix by row: num elements");
+
         const double * ev = siC1mbr->getElements();
-        assert( eq(ev[0],   3.0) );
-        assert( eq(ev[1],   1.0) );
-        assert( eq(ev[2],  -2.0) );
-        assert( eq(ev[3],  -1.0) );
-        assert( eq(ev[4],  -1.0) );
-        assert( eq(ev[5],   2.0) );
-        assert( eq(ev[6],   1.1) );
-        assert( eq(ev[7],   1.0) );
-        assert( eq(ev[8],   1.0) );
-        assert( eq(ev[9],   2.8) );
-        assert( eq(ev[10], -1.2) );
-        assert( eq(ev[11],  5.6) );
-        assert( eq(ev[12],  1.0) );
-        assert( eq(ev[13],  1.9) );
-        
+        OSIUNITTEST_ASSERT_ERROR(eq(ev[ 0], 3.0), {}, "clp", "matrix by row: elements");
+        OSIUNITTEST_ASSERT_ERROR(eq(ev[ 1], 1.0), {}, "clp", "matrix by row: elements");
+        OSIUNITTEST_ASSERT_ERROR(eq(ev[ 2],-2.0), {}, "clp", "matrix by row: elements");
+        OSIUNITTEST_ASSERT_ERROR(eq(ev[ 3],-1.0), {}, "clp", "matrix by row: elements");
+        OSIUNITTEST_ASSERT_ERROR(eq(ev[ 4],-1.0), {}, "clp", "matrix by row: elements");
+        OSIUNITTEST_ASSERT_ERROR(eq(ev[ 5], 2.0), {}, "clp", "matrix by row: elements");
+        OSIUNITTEST_ASSERT_ERROR(eq(ev[ 6], 1.1), {}, "clp", "matrix by row: elements");
+        OSIUNITTEST_ASSERT_ERROR(eq(ev[ 7], 1.0), {}, "clp", "matrix by row: elements");
+        OSIUNITTEST_ASSERT_ERROR(eq(ev[ 8], 1.0), {}, "clp", "matrix by row: elements");
+        OSIUNITTEST_ASSERT_ERROR(eq(ev[ 9], 2.8), {}, "clp", "matrix by row: elements");
+        OSIUNITTEST_ASSERT_ERROR(eq(ev[10],-1.2), {}, "clp", "matrix by row: elements");
+        OSIUNITTEST_ASSERT_ERROR(eq(ev[11], 5.6), {}, "clp", "matrix by row: elements");
+        OSIUNITTEST_ASSERT_ERROR(eq(ev[12], 1.0), {}, "clp", "matrix by row: elements");
+        OSIUNITTEST_ASSERT_ERROR(eq(ev[13], 1.9), {}, "clp", "matrix by row: elements");
+
         const CoinBigIndex * mi = siC1mbr->getVectorStarts();
-        assert( mi[0]==0 );
-        assert( mi[1]==5 );
-        assert( mi[2]==7 );
-        assert( mi[3]==9 );
-        assert( mi[4]==11 );
-        assert( mi[5]==14 );
-        
+        OSIUNITTEST_ASSERT_ERROR(mi[0] ==  0, {}, "clp", "matrix by row: vector starts");
+        OSIUNITTEST_ASSERT_ERROR(mi[1] ==  5, {}, "clp", "matrix by row: vector starts");
+        OSIUNITTEST_ASSERT_ERROR(mi[2] ==  7, {}, "clp", "matrix by row: vector starts");
+        OSIUNITTEST_ASSERT_ERROR(mi[3] ==  9, {}, "clp", "matrix by row: vector starts");
+        OSIUNITTEST_ASSERT_ERROR(mi[4] == 11, {}, "clp", "matrix by row: vector starts");
+        OSIUNITTEST_ASSERT_ERROR(mi[5] == 14, {}, "clp", "matrix by row: vector starts");
+
         const int * ei = siC1mbr->getIndices();
-        assert( ei[0]  ==  0 );
-        assert( ei[1]  ==  1 );
-        assert( ei[2]  ==  3 );
-        assert( ei[3]  ==  4 );
-        assert( ei[4]  ==  7 );
-        assert( ei[5]  ==  1 );
-        assert( ei[6]  ==  2 );
-        assert( ei[7]  ==  2 );
-        assert( ei[8]  ==  5 );
-        assert( ei[9]  ==  3 );
-        assert( ei[10] ==  6 );
-        assert( ei[11] ==  0 );
-        assert( ei[12] ==  4 );
-        assert( ei[13] ==  7 );    
-        
-        assert( siC1mbr->getMajorDim() == 5 ); 
-        assert( siC1mbr->getNumElements() == 14 );
-        
+        OSIUNITTEST_ASSERT_ERROR(ei[ 0] == 0, {}, "clp", "matrix by row: indices");
+        OSIUNITTEST_ASSERT_ERROR(ei[ 1] == 1, {}, "clp", "matrix by row: indices");
+        OSIUNITTEST_ASSERT_ERROR(ei[ 2] == 3, {}, "clp", "matrix by row: indices");
+        OSIUNITTEST_ASSERT_ERROR(ei[ 3] == 4, {}, "clp", "matrix by row: indices");
+        OSIUNITTEST_ASSERT_ERROR(ei[ 4] == 7, {}, "clp", "matrix by row: indices");
+        OSIUNITTEST_ASSERT_ERROR(ei[ 5] == 1, {}, "clp", "matrix by row: indices");
+        OSIUNITTEST_ASSERT_ERROR(ei[ 6] == 2, {}, "clp", "matrix by row: indices");
+        OSIUNITTEST_ASSERT_ERROR(ei[ 7] == 2, {}, "clp", "matrix by row: indices");
+        OSIUNITTEST_ASSERT_ERROR(ei[ 8] == 5, {}, "clp", "matrix by row: indices");
+        OSIUNITTEST_ASSERT_ERROR(ei[ 9] == 3, {}, "clp", "matrix by row: indices");
+        OSIUNITTEST_ASSERT_ERROR(ei[10] == 6, {}, "clp", "matrix by row: indices");
+        OSIUNITTEST_ASSERT_ERROR(ei[11] == 0, {}, "clp", "matrix by row: indices");
+        OSIUNITTEST_ASSERT_ERROR(ei[12] == 4, {}, "clp", "matrix by row: indices");
+        OSIUNITTEST_ASSERT_ERROR(ei[13] == 7, {}, "clp", "matrix by row: indices");
 
-        assert( siC1rs  == siC1.getRowSense() );
-        assert( siC1rhs == siC1.getRightHandSide() );
-        assert( siC1rr  == siC1.getRowRange() );
+        OSIUNITTEST_ASSERT_WARNING(siC1rs  == siC1.getRowSense(), {}, "clp", "row sense");
+        OSIUNITTEST_ASSERT_WARNING(siC1rhs == siC1.getRightHandSide(), {}, "clp", "right hand side");
+        OSIUNITTEST_ASSERT_WARNING(siC1rr  == siC1.getRowRange(), {}, "clp", "row range");
 
-        // Change OSL Model by adding free row
+        // Change CLP Model by adding free row
         OsiRowCut rc;
-        rc.setLb(-DBL_MAX);
-        rc.setUb( DBL_MAX);
+        rc.setLb(-COIN_DBL_MAX);
+        rc.setUb( COIN_DBL_MAX);
         OsiCuts cuts;
         cuts.insert(rc);
         siC1.applyCuts(cuts);
-             
-        // Since model was changed, test that cached
-        // data is now freed.
-        assert( siC1.rowrange_==NULL );
-        assert( siC1.rowsense_==NULL );
-        assert( siC1.rhs_==NULL );
-        // now updated! assert( siC1.matrixByRow_==NULL );
-        
+
+        // Since model was changed, test that cached data is now freed.
+        OSIUNITTEST_ASSERT_ERROR(siC1.rowrange_ == NULL, {}, "clp", "free cached data after adding row");
+        OSIUNITTEST_ASSERT_ERROR(siC1.rowsense_ == NULL, {}, "clp", "free cached data after adding row");
+        OSIUNITTEST_ASSERT_ERROR(siC1.rhs_ == NULL, {}, "clp", "free cached data after adding row");
+        // siC1.matrixByRow_ is updated, so it does not have to be NULL
+
         siC1rs  = siC1.getRowSense();
-        assert( siC1rs[0]=='G' );
-        assert( siC1rs[1]=='L' );
-        assert( siC1rs[2]=='E' );
-        assert( siC1rs[3]=='R' );
-        assert( siC1rs[4]=='R' );
-        assert( siC1rs[5]=='N' );
+        OSIUNITTEST_ASSERT_ERROR(siC1rs[0] == 'G', {}, "clp", "row sense after adding row");
+        OSIUNITTEST_ASSERT_ERROR(siC1rs[1] == 'L', {}, "clp", "row sense after adding row");
+        OSIUNITTEST_ASSERT_ERROR(siC1rs[2] == 'E', {}, "clp", "row sense after adding row");
+        OSIUNITTEST_ASSERT_ERROR(siC1rs[3] == 'R', {}, "clp", "row sense after adding row");
+        OSIUNITTEST_ASSERT_ERROR(siC1rs[4] == 'R', {}, "clp", "row sense after adding row");
+        OSIUNITTEST_ASSERT_ERROR(siC1rs[5] == 'N', {}, "clp", "row sense after adding row");
 
         siC1rhs = siC1.getRightHandSide();
-        assert( eq(siC1rhs[0],2.5) );
-        assert( eq(siC1rhs[1],2.1) );
-        assert( eq(siC1rhs[2],4.0) );
-        assert( eq(siC1rhs[3],5.0) );
-        assert( eq(siC1rhs[4],15.) ); 
-        assert( eq(siC1rhs[5],0.0 ) ); 
+        OSIUNITTEST_ASSERT_ERROR(eq(siC1rhs[0],2.5), {}, "clp", "right hand side after adding row");
+        OSIUNITTEST_ASSERT_ERROR(eq(siC1rhs[1],2.1), {}, "clp", "right hand side after adding row");
+        OSIUNITTEST_ASSERT_ERROR(eq(siC1rhs[2],4.0), {}, "clp", "right hand side after adding row");
+        OSIUNITTEST_ASSERT_ERROR(eq(siC1rhs[3],5.0), {}, "clp", "right hand side after adding row");
+        OSIUNITTEST_ASSERT_ERROR(eq(siC1rhs[4],15.), {}, "clp", "right hand side after adding row");
+        OSIUNITTEST_ASSERT_ERROR(eq(siC1rhs[5],0.0), {}, "clp", "right hand side after adding row");
 
         siC1rr  = siC1.getRowRange();
-        assert( eq(siC1rr[0],0.0) );
-        assert( eq(siC1rr[1],0.0) );
-        assert( eq(siC1rr[2],0.0) );
-        assert( eq(siC1rr[3],5.0-1.8) );
-        assert( eq(siC1rr[4],15.0-3.0) );
-        assert( eq(siC1rr[5],0.0) );
-    
-        lhs=siC1;
+        OSIUNITTEST_ASSERT_ERROR(eq(siC1rr[0],0.0), {}, "clp", "row range after adding row");
+        OSIUNITTEST_ASSERT_ERROR(eq(siC1rr[1],0.0), {}, "clp", "row range after adding row");
+        OSIUNITTEST_ASSERT_ERROR(eq(siC1rr[2],0.0), {}, "clp", "row range after adding row");
+        OSIUNITTEST_ASSERT_ERROR(eq(siC1rr[3],5.0-1.8), {}, "clp", "row range after adding row");
+        OSIUNITTEST_ASSERT_ERROR(eq(siC1rr[4],15.0-3.0), {}, "clp", "row range after adding row");
+        OSIUNITTEST_ASSERT_ERROR(eq(siC1rr[5],0.0), {}, "clp", "row range after adding row");
+
+        lhs = siC1;
       }
-      // Test that lhs has correct values even though siC1 has gone out of scope    
-      assert( lhs.rowrange_==NULL );
-      assert( lhs.rowsense_==NULL );
-      assert( lhs.rhs_==NULL ); 
-      assert( lhs.matrixByRow_==NULL ); 
-      
+      // Test that lhs has correct values even though siC1 has gone out of scope
+      OSIUNITTEST_ASSERT_ERROR(lhs.rowrange_ == NULL, {}, "clp", "freed origin after assignment");
+      OSIUNITTEST_ASSERT_ERROR(lhs.rowsense_ == NULL, {}, "clp", "freed origin after assignment");
+      OSIUNITTEST_ASSERT_ERROR(lhs.rhs_ == NULL, {}, "clp", "freed origin after assignment");
+      OSIUNITTEST_ASSERT_ERROR(lhs.matrixByRow_ == NULL, {}, "clp", "freed origin after assignment");
+
       const char * lhsrs  = lhs.getRowSense();
-      assert( lhsrs[0]=='G' );
-      assert( lhsrs[1]=='L' );
-      assert( lhsrs[2]=='E' );
-      assert( lhsrs[3]=='R' );
-      assert( lhsrs[4]=='R' );
-      assert( lhsrs[5]=='N' );
+      OSIUNITTEST_ASSERT_ERROR(lhsrs[0] == 'G', {}, "clp", "row sense after assignment");
+      OSIUNITTEST_ASSERT_ERROR(lhsrs[1] == 'L', {}, "clp", "row sense after assignment");
+      OSIUNITTEST_ASSERT_ERROR(lhsrs[2] == 'E', {}, "clp", "row sense after assignment");
+      OSIUNITTEST_ASSERT_ERROR(lhsrs[3] == 'R', {}, "clp", "row sense after assignment");
+      OSIUNITTEST_ASSERT_ERROR(lhsrs[4] == 'R', {}, "clp", "row sense after assignment");
+      OSIUNITTEST_ASSERT_ERROR(lhsrs[5] == 'N', {}, "clp", "row sense after assignment");
       
       const double * lhsrhs = lhs.getRightHandSide();
-      assert( eq(lhsrhs[0],2.5) );
-      assert( eq(lhsrhs[1],2.1) );
-      assert( eq(lhsrhs[2],4.0) );
-      assert( eq(lhsrhs[3],5.0) );
-      assert( eq(lhsrhs[4],15.) ); 
-      assert( eq(lhsrhs[5],0.0) ); 
+      OSIUNITTEST_ASSERT_ERROR(eq(lhsrhs[0],2.5), {}, "clp", "right hand side after assignment");
+      OSIUNITTEST_ASSERT_ERROR(eq(lhsrhs[1],2.1), {}, "clp", "right hand side after assignment");
+      OSIUNITTEST_ASSERT_ERROR(eq(lhsrhs[2],4.0), {}, "clp", "right hand side after assignment");
+      OSIUNITTEST_ASSERT_ERROR(eq(lhsrhs[3],5.0), {}, "clp", "right hand side after assignment");
+      OSIUNITTEST_ASSERT_ERROR(eq(lhsrhs[4],15.), {}, "clp", "right hand side after assignment");
+      OSIUNITTEST_ASSERT_ERROR(eq(lhsrhs[5],0.0), {}, "clp", "right hand side after assignment");
       
-      const double *lhsrr  = lhs.getRowRange();
-      assert( eq(lhsrr[0],0.0) );
-      assert( eq(lhsrr[1],0.0) );
-      assert( eq(lhsrr[2],0.0) );
-      assert( eq(lhsrr[3],5.0-1.8) );
-      assert( eq(lhsrr[4],15.0-3.0) );
-      assert( eq(lhsrr[5],0.0) );      
+      const double *lhsrr = lhs.getRowRange();
+      OSIUNITTEST_ASSERT_ERROR(eq(lhsrr[0],0.0), {}, "clp", "row range after assignment");
+      OSIUNITTEST_ASSERT_ERROR(eq(lhsrr[1],0.0), {}, "clp", "row range after assignment");
+      OSIUNITTEST_ASSERT_ERROR(eq(lhsrr[2],0.0), {}, "clp", "row range after assignment");
+      OSIUNITTEST_ASSERT_ERROR(eq(lhsrr[3],5.0-1.8), {}, "clp", "row range after assignment");
+      OSIUNITTEST_ASSERT_ERROR(eq(lhsrr[4],15.0-3.0), {}, "clp", "row range after assignment");
+      OSIUNITTEST_ASSERT_ERROR(eq(lhsrr[5],0.0), {}, "clp", "row range after assignment");
       
       const CoinPackedMatrix * lhsmbr = lhs.getMatrixByRow();
-      assert( lhsmbr != NULL );       
+      OSIUNITTEST_ASSERT_ERROR(lhsmbr != NULL, {}, "clp", "matrix by row after assignment");
+      OSIUNITTEST_ASSERT_ERROR(lhsmbr->getMajorDim()    ==  6, return, "clp", "matrix by row after assignment: major dim");
+      OSIUNITTEST_ASSERT_ERROR(lhsmbr->getNumElements() == 14, return, "clp", "matrix by row after assignment: num elements");
+
       const double * ev = lhsmbr->getElements();
-      assert( eq(ev[0],   3.0) );
-      assert( eq(ev[1],   1.0) );
-      assert( eq(ev[2],  -2.0) );
-      assert( eq(ev[3],  -1.0) );
-      assert( eq(ev[4],  -1.0) );
-      assert( eq(ev[5],   2.0) );
-      assert( eq(ev[6],   1.1) );
-      assert( eq(ev[7],   1.0) );
-      assert( eq(ev[8],   1.0) );
-      assert( eq(ev[9],   2.8) );
-      assert( eq(ev[10], -1.2) );
-      assert( eq(ev[11],  5.6) );
-      assert( eq(ev[12],  1.0) );
-      assert( eq(ev[13],  1.9) );
+      OSIUNITTEST_ASSERT_ERROR(eq(ev[ 0], 3.0), {}, "clp", "matrix by row after assignment: elements");
+      OSIUNITTEST_ASSERT_ERROR(eq(ev[ 1], 1.0), {}, "clp", "matrix by row after assignment: elements");
+      OSIUNITTEST_ASSERT_ERROR(eq(ev[ 2],-2.0), {}, "clp", "matrix by row after assignment: elements");
+      OSIUNITTEST_ASSERT_ERROR(eq(ev[ 3],-1.0), {}, "clp", "matrix by row after assignment: elements");
+      OSIUNITTEST_ASSERT_ERROR(eq(ev[ 4],-1.0), {}, "clp", "matrix by row after assignment: elements");
+      OSIUNITTEST_ASSERT_ERROR(eq(ev[ 5], 2.0), {}, "clp", "matrix by row after assignment: elements");
+      OSIUNITTEST_ASSERT_ERROR(eq(ev[ 6], 1.1), {}, "clp", "matrix by row after assignment: elements");
+      OSIUNITTEST_ASSERT_ERROR(eq(ev[ 7], 1.0), {}, "clp", "matrix by row after assignment: elements");
+      OSIUNITTEST_ASSERT_ERROR(eq(ev[ 8], 1.0), {}, "clp", "matrix by row after assignment: elements");
+      OSIUNITTEST_ASSERT_ERROR(eq(ev[ 9], 2.8), {}, "clp", "matrix by row after assignment: elements");
+      OSIUNITTEST_ASSERT_ERROR(eq(ev[10],-1.2), {}, "clp", "matrix by row after assignment: elements");
+      OSIUNITTEST_ASSERT_ERROR(eq(ev[11], 5.6), {}, "clp", "matrix by row after assignment: elements");
+      OSIUNITTEST_ASSERT_ERROR(eq(ev[12], 1.0), {}, "clp", "matrix by row after assignment: elements");
+      OSIUNITTEST_ASSERT_ERROR(eq(ev[13], 1.9), {}, "clp", "matrix by row after assignment: elements");
       
       const CoinBigIndex * mi = lhsmbr->getVectorStarts();
-      assert( mi[0]==0 );
-      assert( mi[1]==5 );
-      assert( mi[2]==7 );
-      assert( mi[3]==9 );
-      assert( mi[4]==11 );
-      assert( mi[5]==14 );
+      OSIUNITTEST_ASSERT_ERROR(mi[0] ==  0, {}, "clp", "matrix by row after assignment: vector starts");
+      OSIUNITTEST_ASSERT_ERROR(mi[1] ==  5, {}, "clp", "matrix by row after assignment: vector starts");
+      OSIUNITTEST_ASSERT_ERROR(mi[2] ==  7, {}, "clp", "matrix by row after assignment: vector starts");
+      OSIUNITTEST_ASSERT_ERROR(mi[3] ==  9, {}, "clp", "matrix by row after assignment: vector starts");
+      OSIUNITTEST_ASSERT_ERROR(mi[4] == 11, {}, "clp", "matrix by row after assignment: vector starts");
+      OSIUNITTEST_ASSERT_ERROR(mi[5] == 14, {}, "clp", "matrix by row after assignment: vector starts");
       
       const int * ei = lhsmbr->getIndices();
-      assert( ei[0]  ==  0 );
-      assert( ei[1]  ==  1 );
-      assert( ei[2]  ==  3 );
-      assert( ei[3]  ==  4 );
-      assert( ei[4]  ==  7 );
-      assert( ei[5]  ==  1 );
-      assert( ei[6]  ==  2 );
-      assert( ei[7]  ==  2 );
-      assert( ei[8]  ==  5 );
-      assert( ei[9]  ==  3 );
-      assert( ei[10] ==  6 );
-      assert( ei[11] ==  0 );
-      assert( ei[12] ==  4 );
-      assert( ei[13] ==  7 );    
-      
-      int md = lhsmbr->getMajorDim();
-      assert(  md == 6 ); 
-      assert( lhsmbr->getNumElements() == 14 );
+      OSIUNITTEST_ASSERT_ERROR(ei[ 0] == 0, {}, "clp", "matrix by row after assignment: indices");
+      OSIUNITTEST_ASSERT_ERROR(ei[ 1] == 1, {}, "clp", "matrix by row after assignment: indices");
+      OSIUNITTEST_ASSERT_ERROR(ei[ 2] == 3, {}, "clp", "matrix by row after assignment: indices");
+      OSIUNITTEST_ASSERT_ERROR(ei[ 3] == 4, {}, "clp", "matrix by row after assignment: indices");
+      OSIUNITTEST_ASSERT_ERROR(ei[ 4] == 7, {}, "clp", "matrix by row after assignment: indices");
+      OSIUNITTEST_ASSERT_ERROR(ei[ 5] == 1, {}, "clp", "matrix by row after assignment: indices");
+      OSIUNITTEST_ASSERT_ERROR(ei[ 6] == 2, {}, "clp", "matrix by row after assignment: indices");
+      OSIUNITTEST_ASSERT_ERROR(ei[ 7] == 2, {}, "clp", "matrix by row after assignment: indices");
+      OSIUNITTEST_ASSERT_ERROR(ei[ 8] == 5, {}, "clp", "matrix by row after assignment: indices");
+      OSIUNITTEST_ASSERT_ERROR(ei[ 9] == 3, {}, "clp", "matrix by row after assignment: indices");
+      OSIUNITTEST_ASSERT_ERROR(ei[10] == 6, {}, "clp", "matrix by row after assignment: indices");
+      OSIUNITTEST_ASSERT_ERROR(ei[11] == 0, {}, "clp", "matrix by row after assignment: indices");
+      OSIUNITTEST_ASSERT_ERROR(ei[12] == 4, {}, "clp", "matrix by row after assignment: indices");
+      OSIUNITTEST_ASSERT_ERROR(ei[13] == 7, {}, "clp", "matrix by row after assignment: indices");
     }
-    
   }
 
   // Test add/delete columns
@@ -855,7 +600,8 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
     m.initialSolve();
     double objValue = m.getObjValue();
     CoinRelFltEq eq(1.0e-2);
-    assert( eq(objValue,2520.57) );
+    OSIUNITTEST_ASSERT_ERROR(eq(objValue,2520.57), {}, "clp", "objvalue after adding col");
+
     // Try deleting first column
     int * d = new int[1];
     d[0]=0;
@@ -864,15 +610,16 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
     d=NULL;
     m.resolve();
     objValue = m.getObjValue();
-    assert( eq(objValue,2520.57) );
+    OSIUNITTEST_ASSERT_ERROR(eq(objValue,2520.57), {}, "clp", "objvalue after deleting first col");
+
     // Try deleting column we added
     int iCol = m.getNumCols()-1;
     m.deleteCols(1,&iCol);
     m.resolve();
     objValue = m.getObjValue();
-    assert( eq(objValue,2520.57) );
-
+    OSIUNITTEST_ASSERT_ERROR(eq(objValue,2520.57), {}, "clp", "objvalue after deleting added col");
   }
+
   // Test branch and bound
   {    
     OsiClpSolverInterface m;
@@ -905,34 +652,15 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
     m.branchAndBound();
     double objValue = m.getObjValue();
     CoinRelFltEq eq(1.0e-2);
-    assert( eq(objValue,-3089) );
+    OSIUNITTEST_ASSERT_ERROR(eq(objValue,-3089), {}, "clp", "branch and bound");
     const double * cs = m.getColSolution();
-    for ( i=0;i<n;i++) {
-      if (cs[i]>1.0e-7)
-        printf("%d has value %g\n",i,cs[i]);
+    if( OsiUnitTest::verbosity >= 2 )
+      for ( i=0;i<n;i++) {
+        if (cs[i]>1.0e-7)
+          printf("%d has value %g\n",i,cs[i]);
     }
   }
-  // Test matt
-  if (fopen("../Mps/Infeas/galenet.mps","r")) {    
-    OsiClpSolverInterface m;
-    m.readMps("../Mps/Infeas/galenet","mps");
-    m.setHintParam(OsiDoPresolveInResolve, true, OsiHintDo);
-    m.resolve();
-    
-    std::vector<double *> rays = m.getDualRays(1);
-    std::cout << "Dual Ray: " << std::endl;
-    for(int i = 0; i < m.getNumRows(); i++){
-      if(fabs(rays[0][i]) > 0.00001)
-        std::cout << i << " : " << rays[0][i] << std::endl;
-    }
-    
-    std::cout << "isProvenOptimal = " << m.isProvenOptimal() << std::endl;
-    std::cout << "isProvenPrimalInfeasible = " << m.isProvenPrimalInfeasible()
-         << std::endl;
-    
-    delete [] rays[0];
-    
-  }
+
   // Test infeasible bounds
   {
     OsiClpSolverInterface solver;
@@ -943,7 +671,7 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
     solver.setColSetBounds(index,index+1,value);
     solver.setHintParam(OsiDoPresolveInInitial, false, OsiHintDo);
     solver.initialSolve();
-    assert (!solver.isProvenOptimal());
+    OSIUNITTEST_ASSERT_ERROR(!solver.isProvenOptimal(), {}, "clp", "infeasible bounds");
   }
 
   // Build a model
@@ -1005,9 +733,9 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
     // save - should be integer
     model2.writeMps("integer");
     // check names are there
-    for (iColumn=0;iColumn<numberColumns;iColumn++) {
-      printf("%d name %s\n",iColumn,model2.getColName(iColumn).c_str());
-    }
+    if (OsiUnitTest::verbosity >= 1)
+      for (iColumn=0;iColumn<numberColumns;iColumn++)
+        printf("%d name %s\n",iColumn,model2.getColName(iColumn).c_str());
     
     // Now do with strings attached
     // Save build to show how to go over rows
@@ -1063,21 +791,19 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
     // If small switch on error printing
     if (numberColumns<50)
       build.setLogLevel(1);
-    int numberErrors=model2.loadFromCoinModel(build);
     // should fail as we never set multiplier
-    assert (numberErrors);
+    OSIUNITTEST_ASSERT_ERROR(model2.loadFromCoinModel(build) != 0, {}, "clp", "build model with missing multipliers");
     build.associateElement("multiplier",0.0);
-    numberErrors=model2.loadFromCoinModel(build);
-    assert (!numberErrors);
+    OSIUNITTEST_ASSERT_ERROR(model2.loadFromCoinModel(build) == 0, {}, "clp", "build model");
     model2.initialSolve();
     // It then loops with multiplier going from 0.0 to 2.0 in increments of 0.1
     for (double multiplier=0.0;multiplier<2.0;multiplier+= 0.1) {
       build.associateElement("multiplier",multiplier);
-      numberErrors=model2.loadFromCoinModel(build,true);
-      assert (!numberErrors);
+      OSIUNITTEST_ASSERT_ERROR(model2.loadFromCoinModel(build,true) == 0, {}, "clp", "build model with increasing multiplier");
       model2.resolve();
     }
   }
+
   // Solve an lp by hand
   {    
     OsiClpSolverInterface m;
@@ -1147,19 +873,14 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
       int colOut;
       int outStatus;
       double theta;
-      int returnCode=m.primalPivotResult(colIn,direction,
-					 colOut,outStatus,theta,NULL);
-      assert (!returnCode);
-      printf("out %d, direction %d theta %g\n",
-             colOut,outStatus,theta);
+      OSIUNITTEST_ASSERT_ERROR(m.primalPivotResult(colIn,direction,colOut,outStatus,theta,NULL) == 0, {}, "clp", "solve model by hand");
+      if (OsiUnitTest::verbosity >= 1)
+        printf("out %d, direction %d theta %g\n", colOut,outStatus,theta);
       if (colIn!=colOut) {
-        returnCode=mm->pivot(colIn,colOut,outStatus);
-        assert (returnCode>=0);
+        OSIUNITTEST_ASSERT_ERROR(mm->pivot(colIn,colOut,outStatus) >= 0, {}, "clp", "solve model by hand");
       } else {
         // bound flip (so pivot does not make sense)
-        returnCode=mm->primalPivotResult(colIn,direction,
-					 colOut,outStatus,theta,NULL);
-        assert (!returnCode);
+        OSIUNITTEST_ASSERT_ERROR(mm->primalPivotResult(colIn,direction,colOut,outStatus,theta,NULL) == 0, {}, "clp", "solve model by hand");
       }
       numberIterations++;
     }
@@ -1172,10 +893,11 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
     m.getModelPtr()->messageHandler()->setLogLevel(4);
     m.messageHandler()->setLogLevel(0);
     m.resolve();
-    assert (!m.getIterationCount());
+    OSIUNITTEST_ASSERT_ERROR(m.getIterationCount() == 0, {}, "clp", "resolve after solving model by hand");
     m.setObjSense(-1.0);
     m.initialSolve();
   }
+
 # if 0
 /*
   This section stops working without setObjectiveAndRefresh. Assertion failure
@@ -1312,6 +1034,7 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
     assert (!m.getIterationCount());
   }
 # endif
+
   // Solve an lp when interface is on
   {    
     OsiClpSolverInterface m;
@@ -1326,6 +1049,7 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
     m.enableSimplexInterface(true);
     m.initialSolve();
   }
+
   // Check tableau stuff when simplex interface is on
   {    
     OsiClpSolverInterface m;
@@ -1362,25 +1086,32 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
     // slacks in second part of binvA
     double * binvA = (double*) malloc((n_cols+n_rows) * sizeof(double));
     
-    printf("B-1 A");
+    if (OsiUnitTest::verbosity >= 2)
+      printf("B-1 A");
     int i;
     for( i = 0; i < n_rows; i++){
       m.getBInvARow(i, binvA,binvA+n_cols);
-      printf("\nrow: %d -> ",i);
-      for(int j=0; j < n_cols+n_rows; j++){
-        printf("%g, ", binvA[j]);
+      if (OsiUnitTest::verbosity >= 2) {
+        printf("\nrow: %d -> ",i);
+        for(int j=0; j < n_cols+n_rows; j++)
+          printf("%g, ", binvA[j]);
       }
     }
-    printf("\n");
-    printf("And by column");
+    if (OsiUnitTest::verbosity >= 2) {
+      printf("\n");
+      printf("And by column");
+    }
     for( i = 0; i < n_cols+n_rows; i++){
       m.getBInvACol(i, binvA);
-      printf("\ncolumn: %d -> ",i);
-      for(int j=0; j < n_rows; j++){
-        printf("%g, ", binvA[j]);
+      if (OsiUnitTest::verbosity >= 2) {
+        printf("\ncolumn: %d -> ",i);
+        for(int j=0; j < n_rows; j++)
+          printf("%g, ", binvA[j]);
       }
     }
-    printf("\n");
+    if (OsiUnitTest::verbosity >= 2)
+      printf("\n");
+
     // and when doing as expert
     m.setSpecialOptions(m.specialOptions()|512);
     ClpSimplex * clp = m.getModelPtr();
@@ -1405,10 +1136,12 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
       int n;
       int * which;
       double * array;
-      printf("B-1 A");
+      if (OsiUnitTest::verbosity >= 2)
+        printf("B-1 A");
       for( i = 0; i < n_rows; i++){
         m.getBInvARow(i, binvA,binvA+n_cols);
-        printf("\nrow: %d -> ",i);
+        if (OsiUnitTest::verbosity >= 2)
+          printf("\nrow: %d -> ",i);
         int j;
         // First columns
         n = columnArray->getNumElements();
@@ -1416,10 +1149,12 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
         array = columnArray->denseVector();
         for(j=0; j < n; j++){
           int k=which[j];
-          if (!columnScale) {
-            printf("(%d %g), ", k, array[k]);
-          } else {
-            printf("(%d %g), ", k, array[k]/columnScale[k]);
+          if (OsiUnitTest::verbosity >= 2) {
+            if (!columnScale) {
+              printf("(%d %g), ", k, array[k]);
+            } else {
+              printf("(%d %g), ", k, array[k]/columnScale[k]);
+            }
           }
           // zero out
           array[k]=0.0;
@@ -1434,10 +1169,12 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
         array = rowArray->denseVector();
         for(j=0; j < n; j++){
           int k=which[j];
-          if (!rowScale) {
-            printf("(%d %g), ", k+n_cols, array[k]);
-          } else {
-            printf("(%d %g), ", k+n_cols, array[k]*rowScale[k]);
+          if (OsiUnitTest::verbosity >= 2) {
+            if (!rowScale) {
+              printf("(%d %g), ", k+n_cols, array[k]);
+            } else {
+              printf("(%d %g), ", k+n_cols, array[k]*rowScale[k]);
+            }
           }
           // zero out
           array[k]=0.0;
@@ -1447,12 +1184,15 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
         // and check (would not be in any production code)
         rowArray->checkClear();
       }
-      printf("\n");
-      printf("And by column (trickier)");
+      if (OsiUnitTest::verbosity >= 2) {
+        printf("\n");
+        printf("And by column (trickier)");
+      }
       const int * pivotVariable = clp->pivotVariable();
       for( i = 0; i < n_cols+n_rows; i++){
         m.getBInvACol(i, binvA);
-        printf("\ncolumn: %d -> ",i);
+        if (OsiUnitTest::verbosity >= 2)
+          printf("\ncolumn: %d -> ",i);
         n = rowArray->getNumElements();
         which = rowArray->getIndices();
         array = rowArray->denseVector();
@@ -1460,18 +1200,20 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
           int k=which[j];
           // need to know pivot variable for +1/-1 (slack) and row/column scaling
           int pivot = pivotVariable[k];
-          if (pivot<n_cols) {
-            // scaled coding is in just in case 
-            if (!columnScale) {
-              printf("(%d %g), ", k, array[k]);
+          if (OsiUnitTest::verbosity >= 2) {
+            if (pivot<n_cols) {
+              // scaled coding is in just in case
+              if (!columnScale) {
+                printf("(%d %g), ", k, array[k]);
+              } else {
+                printf("(%d %g), ", k, array[k]*columnScale[pivot]);
+              }
             } else {
-              printf("(%d %g), ", k, array[k]*columnScale[pivot]);
-            }
-          } else {
-            if (!rowScale) {
-              printf("(%d %g), ", k, -array[k]);
-            } else {
-              printf("(%d %g), ", k, -array[k]/rowScale[pivot-n_cols]);
+              if (!rowScale) {
+                printf("(%d %g), ", k, -array[k]);
+              } else {
+                printf("(%d %g), ", k, -array[k]/rowScale[pivot-n_cols]);
+              }
             }
           }
           // zero out
@@ -1482,7 +1224,8 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
         // and check (would not be in any production code)
         rowArray->checkClear();
       }
-      printf("\n");
+      if (OsiUnitTest::verbosity >= 2)
+        printf("\n");
       // now deal with next pass
       if (!iPass) {
         m.disableSimplexInterface();
@@ -1504,10 +1247,12 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
       int n;
       int * which;
       double * array;
-      printf("B-1 A");
+      if (OsiUnitTest::verbosity >= 2)
+        printf("B-1 A");
       for( i = 0; i < n_rows; i++){
         m.getBInvARow(i, columnArray,rowArray);
-        printf("\nrow: %d -> ",i);
+        if (OsiUnitTest::verbosity >= 2)
+          printf("\nrow: %d -> ",i);
         int j;
         // First columns
         n = columnArray->getNumElements();
@@ -1515,7 +1260,8 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
         array = columnArray->denseVector();
         for(j=0; j < n; j++){
           int k=which[j];
-	  printf("(%d %g), ", k, array[k]);
+          if (OsiUnitTest::verbosity >= 2)
+            printf("(%d %g), ", k, array[k]);
           // zero out
           array[k]=0.0;
         }
@@ -1529,7 +1275,8 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
         array = rowArray->denseVector();
         for(j=0; j < n; j++){
           int k=which[j];
-	  printf("(%d %g), ", k+n_cols, array[k]);
+          if (OsiUnitTest::verbosity >= 2)
+            printf("(%d %g), ", k+n_cols, array[k]);
           // zero out
           array[k]=0.0;
         }
@@ -1538,18 +1285,21 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
         // and check (would not be in any production code)
         rowArray->checkClear();
       }
-      printf("\n");
-      printf("And by column");
-      const int * pivotVariable = clp->pivotVariable();
+      if (OsiUnitTest::verbosity >= 2) {
+        printf("\n");
+        printf("And by column");
+      }
       for( i = 0; i < n_cols+n_rows; i++){
         m.getBInvACol(i, rowArray);
-        printf("\ncolumn: %d -> ",i);
+        if (OsiUnitTest::verbosity >= 2)
+          printf("\ncolumn: %d -> ",i);
         n = rowArray->getNumElements();
         which = rowArray->getIndices();
         array = rowArray->denseVector();
         for(int j=0; j < n; j++){
           int k=which[j];
-	  printf("(%d %g), ", k, array[k]);
+          if (OsiUnitTest::verbosity >= 2)
+            printf("(%d %g), ", k, array[k]);
           // zero out
           array[k]=0.0;
         }
@@ -1558,13 +1308,15 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
         // and check (would not be in any production code)
         rowArray->checkClear();
       }
-      printf("\n");
+      if (OsiUnitTest::verbosity >= 2)
+        printf("\n");
       delete rowArray;
       delete columnArray;
     }
     // may not be needed - but cleaner
     m.disableFactorization();
   }
+
   // Check tableau stuff when simplex interface is off
   {    
     OsiClpSolverInterface m;
@@ -1609,31 +1361,38 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
     int * pivots = new int[n_rows];
     m.getBasics(pivots);
     
-    printf("B-1 A");
+    if (OsiUnitTest::verbosity >= 2)
+      printf("B-1 A");
     int i;
     for( i = 0; i < n_rows; i++){
       m.getBInvARow(i, binvA,binvA+n_cols);
-      printf("\nrow: %d (pivot %d) -> ",i,pivots[i]);
-      for(int j=0; j < n_cols+n_rows; j++){
-        printf("%g, ", binvA[j]);
+      if (OsiUnitTest::verbosity >= 2) {
+        printf("\nrow: %d (pivot %d) -> ",i,pivots[i]);
+        for(int j=0; j < n_cols+n_rows; j++)
+          printf("%g, ", binvA[j]);
       }
     }
-    printf("\n");
-    printf("And by column");
+    if (OsiUnitTest::verbosity >= 2) {
+      printf("\n");
+      printf("And by column");
+    }
     for( i = 0; i < n_cols+n_rows; i++){
       m.getBInvACol(i, binvA);
-      printf("\ncolumn: %d -> ",i);
-      for(int j=0; j < n_rows; j++){
-        printf("%g, ", binvA[j]);
+      if (OsiUnitTest::verbosity >= 2) {
+        printf("\ncolumn: %d -> ",i);
+        for(int j=0; j < n_rows; j++)
+          printf("%g, ", binvA[j]);
       }
     }
-    printf("\n");
+    if (OsiUnitTest::verbosity >= 2)
+      printf("\n");
     free(binvA);
     delete [] pivots;
   }
+
   // Do common solverInterface testing 
   {
     OsiClpSolverInterface m;
-    return OsiSolverInterfaceCommonUnitTest(&m, mpsDir,netlibDir);
+    OsiSolverInterfaceCommonUnitTest(&m, mpsDir, netlibDir);
   }
 }

@@ -19,16 +19,13 @@
 #include "ClpEventHandler.hpp"
 #include "ClpNode.hpp"
 #include "CoinIndexedVector.hpp"
+#include "CoinFinite.hpp"
 
 class OsiRowCut;
 class OsiClpUserSolver;
 class OsiClpDisasterHandler;
 class CoinSet;
-#ifndef COIN_DBL_MAX
-static const double OsiClpInfinity = DBL_MAX;
-#else
 static const double OsiClpInfinity = COIN_DBL_MAX;
-#endif
 
 //#############################################################################
 
@@ -40,7 +37,7 @@ Instantiation of OsiClpSolverInterface for the Model Algorithm.
 
 class OsiClpSolverInterface :
   virtual public OsiSolverInterface {
-  friend int OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & netlibDir);
+  friend void OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & netlibDir);
   
 public:
   //---------------------------------------------------------------------------
@@ -51,6 +48,9 @@ public:
   
   /// Resolve an LP relaxation after problem modification
   virtual void resolve();
+  
+  /// Resolve an LP relaxation after problem modification (try GUB)
+  virtual void resolveGub(int needed);
   
   /// Invoke solver's built-in enumeration algorithm
   virtual void branchAndBound();
@@ -367,12 +367,12 @@ public:
     /// Return name of row if one exists or Rnnnnnnn
     /// maxLen is currently ignored and only there to match the signature from the base class! 
     virtual std::string getRowName(int rowIndex,
-				   unsigned maxLen = std::string::npos) const;
+				   unsigned maxLen = static_cast<unsigned>(std::string::npos)) const;
     
     /// Return name of column if one exists or Cnnnnnnn
     /// maxLen is currently ignored and only there to match the signature from the base class! 
     virtual std::string getColName(int colIndex,
-				   unsigned maxLen = std::string::npos) const;
+				   unsigned maxLen = static_cast<unsigned>(std::string::npos)) const;
     
   
   /// Get pointer to array[getNumCols()] of column lower bounds
@@ -1011,9 +1011,12 @@ public:
   inline unsigned int specialOptions() const
   { return specialOptions_;}
   void setSpecialOptions(unsigned int value);
-  /// Last algorithm used , 1 = primal, 2 = dual
+  /// Last algorithm used , 1 = primal, 2 = dual other unknown
   inline int lastAlgorithm() const
   { return lastAlgorithm_;}
+  /// Set last algorithm used , 1 = primal, 2 = dual other unknown
+  inline void setLastAlgorithm(int value)
+  { lastAlgorithm_ = value;}
   /// Get scaling action option
   inline int cleanupScaling() const
   { return cleanupScaling_;}
@@ -1368,6 +1371,7 @@ protected:
       262144 Don't try and tighten bounds (funny global cuts)
       524288 Fake objective and 0-1
       1048576 Don't recompute ray after crunch
+      2097152 
   */
   mutable unsigned int specialOptions_;
   /// Copy of model when option 131072 set
@@ -1475,13 +1479,6 @@ protected:
 // So unit test can find out if NDEBUG set
 bool OsiClpHasNDEBUG();
 //#############################################################################
-/** A function that tests the methods in the OsiClpSolverInterface class. The
-    only reason for it not to be a member method is that this way it doesn't
-    have to be compiled into the library. And that's a gain, because the
-    library should be compiled with optimization on, but this method should be
-    compiled with debugging. Also, if this method is compiled with
-    optimization, the compilation takes 10-15 minutes and the machine pages
-    (has 256M core memory!)... */
-int
-OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & netlibDir);
+/** A function that tests the methods in the OsiClpSolverInterface class. */
+void OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & netlibDir);
 #endif

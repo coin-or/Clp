@@ -5,8 +5,13 @@
 
 // This file has higher level solve functions
 
-#include "ClpConfig.h"
 #include "CoinPragma.hpp"
+#include "ClpConfig.h"
+
+// check already here if COIN_HAS_GLPK is defined, since we do not want to get confused by a COIN_HAS_GLPK in config_coinutils.h
+#if defined(COIN_HAS_AMD) || defined(COIN_HAS_CHOLMOD) || defined(COIN_HAS_GLPK)
+#define UFL_BARRIER
+#endif
 
 #include <math.h>
 
@@ -35,19 +40,15 @@
 #include "ClpPresolve.hpp"
 #ifndef SLIM_CLP
 #include "Idiot.hpp"
-#ifdef WSSMP_BARRIER
+#ifdef COIN_HAS_WSMP
 #include "ClpCholeskyWssmp.hpp"
 #include "ClpCholeskyWssmpKKT.hpp"
 #endif
-#ifdef UFL_BARRIER
 #include "ClpCholeskyUfl.hpp"
-#endif
 #ifdef TAUCS_BARRIER
 #include "ClpCholeskyTaucs.hpp"
 #endif
-#ifdef MUMPS_BARRIER
 #include "ClpCholeskyMumps.hpp"
-#endif
 #ifdef COIN_HAS_VOL
 #include "VolVolume.hpp"
 #include "CoinHelperFunctions.hpp"
@@ -492,7 +493,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
                          << CoinMessageEol;
                model2 = this;
 	       eventHandler()->event(ClpEventHandler::presolveInfeasible);
-               problemStatus_ = 1; // may be unbounded but who cares
+               problemStatus_ = pinfo->presolveStatus(); 
                if (options.infeasibleReturn() || (moreSpecialOptions_ & 1) != 0) {
 		 delete pinfo;
                     return -1;
@@ -1958,7 +1959,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
                     barrier.setCholesky(cholesky);
                }
                break;
-#ifdef WSSMP_BARRIER
+#ifdef COIN_HAS_WSMP
           case 2: {
                ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp(CoinMax(100, model2->numberRows() / 10));
                barrier.setCholesky(cholesky);
@@ -1995,7 +1996,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
           }
           break;
 #endif
-#ifdef MUMPS_BARRIER
+#ifdef COIN_HAS_MUMPS
           case 6: {
                ClpCholeskyMumps * cholesky = new ClpCholeskyMumps();
                barrier.setCholesky(cholesky);
@@ -2477,6 +2478,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
           else
                setLogLevel(CoinMin(0, saveLevel));
           pinfo->postsolve(true);
+	  numberIterations_ = 0;
 	  delete pinfo;
 	  pinfo = NULL;
           factorization_->areaFactor(model2->factorization()->adjustedAreaFactor());
@@ -3024,7 +3026,7 @@ ClpSimplexProgress::looping()
      // skip if just last time as may be checking something
      if (matched == (1 << (CLP_PROGRESS - 1)))
           numberMatched = 0;
-     if (numberMatched) {
+     if (numberMatched && model_->clpMatrix()->type() < 15) {
           model_->messageHandler()->message(CLP_POSSIBLELOOP, model_->messages())
                     << numberMatched
                     << matched

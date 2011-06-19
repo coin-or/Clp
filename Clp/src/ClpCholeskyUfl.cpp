@@ -1,9 +1,21 @@
 /* $Id$ */
-#ifdef UFL_BARRIER
 // Copyright (C) 2004, International Business Machines
 // Corporation and others.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).
 
+#include "ClpConfig.h"
+
+extern "C" {
+#ifndef COIN_HAS_CHOLMOD
+#ifndef COIN_HAS_AMD
+#error "Need to have AMD or CHOLMOD to compile ClpCholeskyUfl."
+#else
+#include "amd.h"
+#endif
+#else
+#include "cholmod.h"
+#endif
+}
 
 #include "CoinPragma.hpp"
 #include "ClpCholeskyUfl.hpp"
@@ -22,11 +34,14 @@ ClpCholeskyUfl::ClpCholeskyUfl (int denseThreshold)
      : ClpCholeskyBase(denseThreshold)
 {
      type_ = 14;
-#ifdef CLP_USE_CHOLMOD
      L_ = NULL;
-     cholmod_start (&c_) ;
+     c_ = NULL;
+     
+#ifdef COIN_HAS_CHOLMOD
+     c_ = (cholmod_common*) malloc(sizeof(cholmod_common));
+     cholmod_start (c_) ;
      // Can't use supernodal as may not be positive definite
-     c_.supernodal = 0;
+     c_->supernodal = 0;
 #endif
 }
 
@@ -45,9 +60,10 @@ ClpCholeskyUfl::ClpCholeskyUfl (const ClpCholeskyUfl & rhs)
 //-------------------------------------------------------------------
 ClpCholeskyUfl::~ClpCholeskyUfl ()
 {
-#ifdef CLP_USE_CHOLMOD
-     cholmod_free_factor (&L_, &c_) ;
-     cholmod_finish (&c_) ;
+#ifdef COIN_HAS_CHOLMOD
+     cholmod_free_factor (&L_, c_) ;
+     cholmod_finish (c_) ;
+     free(c_);
 #endif
 }
 
@@ -63,6 +79,7 @@ ClpCholeskyUfl::operator=(const ClpCholeskyUfl& rhs)
      }
      return *this;
 }
+
 //-------------------------------------------------------------------
 // Clone
 //-------------------------------------------------------------------
@@ -70,7 +87,8 @@ ClpCholeskyBase * ClpCholeskyUfl::clone() const
 {
      return new ClpCholeskyUfl(*this);
 }
-#ifndef CLP_USE_CHOLMOD
+
+#ifndef COIN_HAS_CHOLMOD
 /* Orders rows and saves pointer to matrix.and model */
 int
 ClpCholeskyUfl::order(ClpInterior * model)
@@ -235,15 +253,15 @@ ClpCholeskyUfl::order(ClpInterior * model)
      A.dtype = CHOLMOD_DOUBLE;
      A.sorted = 1;
      A.packed = 1;
-     c_.nmethods = 9;
-     c_.postorder = true;
-     //c_.dbound=1.0e-20;
-     L_ = cholmod_analyze (&A, &c_) ;
-     if (c_.status) {
-          std::cout << "CHOLMOD ordering failed" << std::endl;
+     c_->nmethods = 9;
+     c_->postorder = true;
+     //c_->dbound=1.0e-20;
+     L_ = cholmod_analyze (&A, c_) ;
+     if (c_->status) {
+       COIN_DETAIL_PRINT(std::cout << "CHOLMOD ordering failed" << std::endl);
           return 1;
      } else {
-          printf("%g nonzeros, flop count %g\n", c_.lnz, c_.fl);
+       COIN_DETAIL_PRINT(printf("%g nonzeros, flop count %g\n", c_->lnz, c_->fl));
      }
      for (iRow = 0; iRow < numberRows_; iRow++) {
           permuteInverse_[iRow] = iRow;
@@ -251,6 +269,8 @@ ClpCholeskyUfl::order(ClpInterior * model)
      }
      return 0;
 }
+#endif
+
 /* Does Symbolic factorization given permutation.
    This is called immediately after order.  If user provides this then
    user must provide factorize and solve.  Otherwise the default factorization is used
@@ -258,8 +278,14 @@ ClpCholeskyUfl::order(ClpInterior * model)
 int
 ClpCholeskyUfl::symbolic()
 {
+#ifdef COIN_HAS_CHOLMOD
      return 0;
+#else
+     return ClpCholeskyBase::symbolic();
+#endif
 }
+
+#ifdef COIN_HAS_CHOLMOD
 /* Factorize - filling in rowsDropped and returning number dropped */
 int
 ClpCholeskyUfl::factorize(const double * diagonal, int * rowsDropped)
@@ -369,7 +395,7 @@ ClpCholeskyUfl::factorize(const double * diagonal, int * rowsDropped)
      A.dtype = CHOLMOD_DOUBLE;
      A.sorted = 1;
      A.packed = 1;
-     cholmod_factorize (&A, L_, &c_) ;		    /* factorize */
+     cholmod_factorize (&A, L_, c_) ;		    /* factorize */
      choleskyCondition_ = 1.0;
      bool cleanCholesky;
      if (model_->numberIterations() < 2000)
@@ -387,8 +413,8 @@ ClpCholeskyUfl::factorize(const double * diagonal, int * rowsDropped)
                //std::cout<<std::endl;
                newDropped = 0;
                for (int i = 0; i < numberRows_; i++) {
-                    char dropped = rowsDropped[i];
-                    rowsDropped_[i] = dropped;
+                    int dropped = rowsDropped[i];
+                    rowsDropped_[i] = (char)dropped;
                     if (dropped == 2) {
                          //dropped this time
                          rowsDropped[newDropped++] = i;
@@ -402,8 +428,8 @@ ClpCholeskyUfl::factorize(const double * diagonal, int * rowsDropped)
           if (newDropped) {
                newDropped = 0;
                for (int i = 0; i < numberRows_; i++) {
-                    char dropped = rowsDropped[i];
-                    rowsDropped_[i] = dropped;
+                    int dropped = rowsDropped[i];
+                    rowsDropped_[i] = (char)dropped;
                     if (dropped == 2) {
                          //dropped this time
                          rowsDropped[newDropped++] = i;
@@ -424,17 +450,32 @@ ClpCholeskyUfl::factorize(const double * diagonal, int * rowsDropped)
      status_ = 0;
      return newDropped;
 }
+#else
+/* Factorize - filling in rowsDropped and returning number dropped */
+int
+ClpCholeskyUfl::factorize(const double * diagonal, int * rowsDropped)
+{
+  return ClpCholeskyBase::factorize(diagonal, rowsDropped);
+}
+#endif
+
+#ifdef COIN_HAS_CHOLMOD
 /* Uses factorization to solve. */
 void
 ClpCholeskyUfl::solve (double * region)
 {
      cholmod_dense *x, *b;
-     b = cholmod_allocate_dense (numberRows_, 1, numberRows_, CHOLMOD_REAL, &c_) ;
+     b = cholmod_allocate_dense (numberRows_, 1, numberRows_, CHOLMOD_REAL, c_) ;
      CoinMemcpyN(region, numberRows_, (double *) b->x);
-     x = cholmod_solve (CHOLMOD_A, L_, b, &c_) ;
+     x = cholmod_solve (CHOLMOD_A, L_, b, c_) ;
      CoinMemcpyN((double *) x->x, numberRows_, region);
-     cholmod_free_dense (&x, &c_) ;
-     cholmod_free_dense (&b, &c_) ;
+     cholmod_free_dense (&x, c_) ;
+     cholmod_free_dense (&b, c_) ;
 }
-#endif
+#else
+void
+ClpCholeskyUfl::solve (double * region)
+{
+  ClpCholeskyBase::solve(region);
+}
 #endif

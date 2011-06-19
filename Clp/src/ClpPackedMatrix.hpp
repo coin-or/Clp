@@ -10,6 +10,15 @@
 
 #include "ClpMatrixBase.hpp"
 
+// Compilers can produce better code if they know about __restrict
+#ifndef COIN_RESTRICT
+#ifdef COIN_USE_RESTRICT
+#define COIN_RESTRICT __restrict
+#else
+#define COIN_RESTRICT
+#endif
+#endif
+
 /** This implements CoinPackedMatrix as derived from ClpMatrixBase.
 
     It adds a few methods that know about model as well as matrix

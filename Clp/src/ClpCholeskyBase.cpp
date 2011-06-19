@@ -273,12 +273,12 @@ ClpCholeskyBase::solveKKT (CoinWorkDouble * region1, CoinWorkDouble * region2, c
           int iRow;
           for (iRow = 0; iRow < numberTotal; iRow++) {
                if (rowsDropped_[iRow] && CoinAbs(array[iRow]) > 1.0e-8) {
-                    printf("row region1 %d dropped %g\n", iRow, array[iRow]);
+		 COIN_DETAIL_PRINT(printf("row region1 %d dropped %g\n", iRow, array[iRow]));
                }
           }
           for (; iRow < numberRows_; iRow++) {
                if (rowsDropped_[iRow] && CoinAbs(array[iRow]) > 1.0e-8) {
-                    printf("row region2 %d dropped %g\n", iRow, array[iRow]);
+		 COIN_DETAIL_PRINT(printf("row region2 %d dropped %g\n", iRow, array[iRow]));
                }
           }
           CoinMemcpyN(array + numberTotal, numberRowsModel, region2);
@@ -336,7 +336,7 @@ ClpCholeskyBase::preOrder(bool lowerTriangular, bool includeDiagonal, bool doKKT
                int stop = CoinMax(denseThreshold_ / 2, 100);
                for (iRow = numberRows_; iRow >= stop; iRow--) {
                     if (used[iRow])
-                         printf("%d columns are of length %d\n", used[iRow], iRow);
+		      COIN_DETAIL_PRINT(printf("%d columns are of length %d\n", used[iRow], iRow));
                     nLong += used[iRow];
                     if (nLong > 50 || nLong > (numberColumns >> 2))
                          break;
@@ -362,7 +362,7 @@ ClpCholeskyBase::preOrder(bool lowerTriangular, bool includeDiagonal, bool doKKT
                     // dense cholesky
                     dense_ = new ClpCholeskyDense();
                     dense_->reserveSpace(NULL, numberDense);
-                    printf("Taking %d columns as dense\n", numberDense);
+                    COIN_DETAIL_PRINT(printf("Taking %d columns as dense\n", numberDense));
                }
           }
           int offset = includeDiagonal ? 0 : 1;
@@ -702,7 +702,7 @@ ClpCholeskyBase::order(ClpInterior * model)
                int stop = CoinMax(denseThreshold_ / 2, 100);
                for (iRow = numberRows_; iRow >= stop; iRow--) {
                     if (used[iRow])
-                         printf("%d columns are of length %d\n", used[iRow], iRow);
+		      COIN_DETAIL_PRINT(printf("%d columns are of length %d\n", used[iRow], iRow));
                     nLong += used[iRow];
                     if (nLong > 50 || nLong > (numberColumns >> 2))
                          break;
@@ -728,7 +728,7 @@ ClpCholeskyBase::order(ClpInterior * model)
                     // dense cholesky
                     dense_ = new ClpCholeskyDense();
                     dense_->reserveSpace(NULL, numberDense);
-                    printf("Taking %d columns as dense\n", numberDense);
+                    COIN_DETAIL_PRINT(printf("Taking %d columns as dense\n", numberDense));
                }
           }
           /*
@@ -1050,8 +1050,8 @@ ClpCholeskyBase::orderAMD()
           if (permuteInverse_[iRow] < 0)
                permuteInverse_[iRow] = done++;
      }
-     printf("%d compressions, %d expansions\n",
-            numberCompressions, numberExpansions);
+     COIN_DETAIL_PRINT(printf("%d compressions, %d expansions\n",
+			      numberCompressions, numberExpansions));
      assert (done == numberRows_);
      delete [] sort;
      delete [] order;
@@ -2602,7 +2602,7 @@ ClpCholeskyBase::symbolic2(const CoinBigIndex * Astart, const int * Arow)
 #define DENSE_THRESHOLD 8
      // don't do if dense columns
      if (nDense >= DENSE_THRESHOLD && !dense_) {
-          printf("Going dense for last %d rows\n", nDense);
+       COIN_DETAIL_PRINT(printf("Going dense for last %d rows\n", nDense));
           // make sure we don't disturb any indices
           CoinBigIndex k = 0;
           for (int jRow = 0; jRow < iRow; jRow++) {
@@ -3275,11 +3275,9 @@ ClpCholeskyBase::factorizePart2(int * rowsDropped)
 {
      CoinWorkDouble largest = doubleParameters_[3];
      CoinWorkDouble smallest = doubleParameters_[4];
-     int numberDropped = integerParameters_[20];
      // probably done before
      largest = 0.0;
      smallest = COIN_DBL_MAX;
-     numberDropped = 0;
      double dropValue = doubleParameters_[10];
      int firstPositive = integerParameters_[34];
      longDouble * d = ClpCopyOfArray(diagonal_, numberRows_);
@@ -3301,7 +3299,6 @@ ClpCholeskyBase::factorizePart2(int * rowsDropped)
      bool newClique = false;
      bool endClique = false;
      int lastRow = 0;
-     int cliqueSize = 0;
      CoinBigIndex cliquePointer = 0;
      int nextRow2 = -1;
 
@@ -3399,7 +3396,6 @@ ClpCholeskyBase::factorizePart2(int * rowsDropped)
                // initialize new clique
                lastRow = iRow;
                cliquePointer = choleskyStart_[iRow];
-               cliqueSize = choleskyStart_[iRow+1] - cliquePointer + 1;
           }
           // for each column L[*,kRow] that affects L[*,iRow]
           CoinWorkDouble diagonalValue = diagonal_[iRow];

@@ -60,7 +60,7 @@ AC_COIN_CHECK_PACKAGE(CoinUtils, [coinutils], [ClpLib])
 if test $coin_has_coinutils != yes ; then
   AC_MSG_ERROR([Required package CoinUtils not available.])
 fi
-AC_COIN_CHECK_PACKAGE(Osi,       [osi],               [OsiClpLib])
+AC_COIN_CHECK_PACKAGE(Osi,       [osi],       [OsiClpLib])
 AC_COIN_CHECK_PACKAGE(OsiTests,  [osi-unittests])
 AC_COIN_CHECK_PACKAGE(Sample,    [coindatasample])
 AC_COIN_CHECK_PACKAGE(Netlib,    [coindatanetlib])
@@ -69,6 +69,32 @@ AC_COIN_CHECK_PACKAGE(Netlib,    [coindatanetlib])
 #                        Third party linear solvers                         #
 #############################################################################
 
+# AMD from UFL
+AC_COIN_CHECK_USER_LIBRARY(AMD, AMD, [amd.h], [amd_defaults],,[ClpLib])
+
+# CHOLMOD from UFL
+# CHOLMOD requires AMD, which can be given by AMD_LIBS
+# CHOLMOD requires Blas and Lapack?
+coin_save_LIBS="$LIBS"
+LIBS="$LIBS $AMD_LIBS"
+AC_COIN_CHECK_USER_LIBRARY(CHOLMOD, CHOLMOD, [cholmod.h], [cholmod_start],,[ClpLib])
+LIBS="$coin_save_LIBS"
+
+# Glpk also brings AMD
+if test $coin_has_cholmod = false -a $coin_has_amd = false ; then
+  AC_COIN_CHECK_PACKAGE(Glpk, [coinglpk], [ClpLib])
+  if test $coin_has_glpk = yes ; then
+    AC_MSG_NOTICE([using AMD from GLPK package])
+    AC_DEFINE(COIN_HAS_AMD,[1],[Define to 1 if the AMD package is available])
+  fi
+else
+  # for configure
+  AM_CONDITIONAL(COIN_HAS_GLPK, [test 0 = 1])
+fi
+
+# MUMPS
+AC_COIN_CHECK_PACKAGE(Mumps, [coinmumps], [ClpLib])
+
 # WSMP
 AC_ARG_WITH([wsmp],
             AC_HELP_STRING([--with-wsmp],
@@ -76,35 +102,44 @@ AC_ARG_WITH([wsmp],
             [use_wsmp=$withval], [use_wsmp=no])
 
 if test "$use_wsmp" != "no"; then
+  # Check how to link against Fortran libraries from C
+  AC_COIN_PROG_F77
+  AC_COIN_F77_WRAPPERS
+  
+  # WSMP requires Blas
+  AC_COIN_CHECK_PACKAGE_BLAS(ClpLib)
+
+  coin_save_LIBS="$LIBS"
+  LIBS="$LIBS $use_wsmp $BLAS_LIBS"
+  AC_LANG_PUSH([Fortran 77])
+  AC_MSG_CHECKING([whether user-supplied WSMP library \"$use_wsmp\" works])
+  AC_TRY_LINK([],[      call WSSMP()],
+              [AC_MSG_RESULT(yes)],
+              [AC_MSG_RESULT(no)
+               AC_MSG_ERROR([WSMP library $use_wsmp does not seem to work])])
+  AC_LANG_POP([Fortran 77])
+  LIBS="$coin_save_LIBS"
+
+  AC_DEFINE_UNQUOTED([COIN_HAS_WSMP], [1], [Define to 1 if the WSMP package is available])
+  
   CLPLIB_LIBS="$use_wsmp $CLPLIB_LIBS"
+  CLPLIB_LIBS_INSTALLED="$use_wsmp $CLPLIB_LIBS_INSTALLED"
   CLPLIB_PCLIBS="$use_wsmp $CLPLIB_PCLIBS"
-
-  defval=
-  AC_MSG_CHECKING([whether user-supplied WSMP library \"$use_wsmp\" works (symbol wssmp_)])
-  AC_TRY_LINK([],[wssmp_()],
-              [AC_MSG_RESULT(yes)
-               defval=2],
-              [AC_MSG_RESULT(no)])
-  if test "$defval" = ""; then
-    AC_MSG_CHECKING([whether user-supplied WSMP library \"$use_wsmp\" works (symbol wssmp)])
-    AC_TRY_LINK([],[wssmp()],
-                [AC_MSG_RESULT(yes)
-                 defval=3],
-                [AC_MSG_RESULT(no)])
-  fi
-  if test "x$defval" = "x"; then
-    AC_MSG_ERROR([WSMP library $use_wsmp does not seem to work])
-  fi
-
-  AC_DEFINE_UNQUOTED([WSSMP_BARRIER], [$defval],
-                     [Define to 2 if wssmp_ is available, and to 3 if wssmp is available])
+else
+  # to please configure
+  AM_CONDITIONAL(COIN_HAS_BLAS, [test 0 = 1])
 fi
+AM_CONDITIONAL(COIN_HAS_WSMP, [test "$use_wsmp" != no])
 
 #############################################################################
 #                             Other dependencies                            #
 #############################################################################
 
 AC_COIN_CHECK_GNU_READLINE(ClpLib)
+
+AC_COIN_CHECK_CXX_CHEADER(math)
+AC_COIN_CHECK_CXX_CHEADER(float)
+AC_COIN_CHECK_CXX_CHEADER(ieeefp)
 
 ##############################################################################
 #                   VPATH links for example input files                      #
@@ -133,8 +168,8 @@ AC_CONFIG_FILES([Makefile
                  src/Makefile
                  src/OsiClp/Makefile
                  test/Makefile
-		 clp.pc
-		 clp-uninstalled.pc])
+                 clp.pc
+                 clp-uninstalled.pc])
 		 
 if test $coin_has_osi = yes ; then
   AC_CONFIG_FILES([osi-clp.pc:src/OsiClp/osi-clp.pc.in
@@ -144,7 +179,7 @@ fi
 AC_CONFIG_FILES([doxydoc/doxygen.conf])
 
 # Here put the location and name of the configuration header file
-AC_CONFIG_HEADER([inc/config_clp.h])
+AC_CONFIG_HEADER([src/config.h src/config_clp.h])
 
 # Finally, we let configure write all the output...
 AC_COIN_FINALIZE

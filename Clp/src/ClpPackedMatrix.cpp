@@ -25,6 +25,25 @@
 #include "mkl_spblas.h"
 #endif
 
+//=============================================================================
+#ifdef COIN_PREFETCH
+#if 1
+#define coin_prefetch(mem) \
+         __asm__ __volatile__ ("prefetchnta %0" : : "m" (*(reinterpret_cast<char *>(mem))))
+#define coin_prefetch_const(mem) \
+         __asm__ __volatile__ ("prefetchnta %0" : : "m" (*(reinterpret_cast<const char *>(mem))))
+#else
+#define coin_prefetch(mem) \
+         __asm__ __volatile__ ("prefetch %0" : : "m" (*(reinterpret_cast<char *>(mem))))
+#define coin_prefetch_const(mem) \
+         __asm__ __volatile__ ("prefetch %0" : : "m" (*(reinterpret_cast<const char *>(mem))))
+#endif
+#else
+// dummy
+#define coin_prefetch(mem)
+#define coin_prefetch_const(mem)
+#endif
+
 //#############################################################################
 // Constructors / Destructor / Assignment
 //#############################################################################
@@ -3263,7 +3282,7 @@ ClpPackedMatrix::scale(ClpModel * model, const ClpSimplex * /*baseModel*/) const
      const CoinBigIndex * columnStart = matrix_->getVectorStarts();
      int * columnLength = matrix_->getMutableVectorLengths();
      double * elementByColumn = matrix_->getMutableElements();
-     bool deletedElements = false;
+     int deletedElements = 0;
      for (iColumn = 0; iColumn < numberColumns; iColumn++) {
           CoinBigIndex j;
           char useful = 0;
@@ -3300,7 +3319,6 @@ ClpPackedMatrix::scale(ClpModel * model, const ClpSimplex * /*baseModel*/) const
 #endif
           usefulColumn[iColumn] = useful;
           if (deleteSome) {
-               deletedElements = true;
                CoinBigIndex put = start;
                for (j = start; j < end; j++) {
                     double value = elementByColumn[j];
@@ -3309,9 +3327,12 @@ ClpPackedMatrix::scale(ClpModel * model, const ClpSimplex * /*baseModel*/) const
                          elementByColumn[put++] = value;
                     }
                }
+               deletedElements += end - put;
                columnLength[iColumn] = put - start;
           }
      }
+     if (deletedElements)
+       matrix_->setNumElements(matrix_->getNumElements()-deletedElements);
      model->messageHandler()->message(CLP_PACKEDSCALE_INITIAL, *model->messagesPointer())
                << smallest << largest
                << CoinMessageEol;
@@ -4012,6 +4033,8 @@ ClpPackedMatrix::allElementsInRange(ClpModel * model,
      int numberColumns = matrix_->getNumCols();
      // Say no gaps
      flags_ &= ~2;
+     if (type_>=10)
+       return true; // gub
      if (check == 14 || check == 10) {
           if (matrix_->getNumElements() < columnStart[numberColumns]) {
                // pack down!
@@ -4046,6 +4069,8 @@ ClpPackedMatrix::allElementsInRange(ClpModel * model,
                     int iRow = row[j];
                     if (iRow < 0 || iRow >= numberRows) {
 #ifndef COIN_BIG_INDEX
+                         printf("Out of range %d %d %d %g\n", iColumn, j, row[j], elementByColumn[j]);
+#elif COIN_BIG_INDEX==0
                          printf("Out of range %d %d %d %g\n", iColumn, j, row[j], elementByColumn[j]);
 #elif COIN_BIG_INDEX==1
                          printf("Out of range %d %ld %d %g\n", iColumn, j, row[j], elementByColumn[j]);
@@ -4095,6 +4120,8 @@ ClpPackedMatrix::allElementsInRange(ClpModel * model,
                     int iRow = row[j];
                     if (iRow < 0 || iRow >= numberRows) {
 #ifndef COIN_BIG_INDEX
+                         printf("Out of range %d %d %d %g\n", iColumn, j, row[j], elementByColumn[j]);
+#elif COIN_BIG_INDEX==0
                          printf("Out of range %d %d %d %g\n", iColumn, j, row[j], elementByColumn[j]);
 #elif COIN_BIG_INDEX==1
                          printf("Out of range %d %ld %d %g\n", iColumn, j, row[j], elementByColumn[j]);
@@ -4906,7 +4933,7 @@ ClpPackedMatrix::checkFlags(int type) const
                     }
                }
                if (ok)
-                    printf("flags_ could be 0\n");
+		 COIN_DETAIL_PRINT(printf("flags_ could be 0\n"));
           }
      }
 }

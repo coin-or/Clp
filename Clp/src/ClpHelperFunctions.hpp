@@ -6,6 +6,17 @@
 #ifndef ClpHelperFunctions_H
 #define ClpHelperFunctions_H
 
+#include "ClpConfig.h"
+#ifdef HAVE_CMATH
+# include <cmath>
+#else
+# ifdef HAVE_MATH_H
+#  include <math.h>
+# else
+#  error "don't have header file for math"
+# endif
+#endif
+
 /**
     Note (JJF) I have added some operations on arrays even though they may
     duplicate CoinDenseVector.  I think the use of templates was a mistake

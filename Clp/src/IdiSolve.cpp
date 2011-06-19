@@ -264,8 +264,8 @@ Idiot::IdiSolve(
                     }
                     if (fabs(smaller) > 1.0e10) {
                          if (!nbad)
-                              printf("Can't handle rows where both bounds >1.0e10 %d %g\n",
-                                     i, smaller);
+                              COIN_DETAIL_PRINT(printf("Can't handle rows where both bounds >1.0e10 %d %g\n",
+						       i, smaller));
                          nbad++;
                          if (rowupper[i] < 0.0 || rowlower[i] > 0.0)
                               abort();
@@ -294,7 +294,7 @@ Idiot::IdiSolve(
                }
           }
           if (nbad)
-               printf("%d bad values - results may be wrong\n", nbad);
+	    COIN_DETAIL_PRINT(printf("%d bad values - results may be wrong\n", nbad));
      }
      for (i = 0; i < nrows; i++) {
           offset += lambda[i] * rowsol[i];
@@ -769,8 +769,8 @@ Idiot::IdiSolve(
                     sum1 = result.infeas;
                     if (saveSol) {
                          if (result.weighted < bestSol) {
-                              printf("%d %g better than %g\n", iter,
-                                     result.weighted * maxmin - useOffset, bestSol * maxmin - useOffset);
+                              COIN_DETAIL_PRINT(printf("%d %g better than %g\n", iter,
+						       result.weighted * maxmin - useOffset, bestSol * maxmin - useOffset));
                               bestSol = result.weighted;
                               CoinMemcpyN(colsol, ncols, saveSol);
                          }
@@ -1095,7 +1095,7 @@ Idiot::IdiSolve(
      }
 RETURN:
      if (kgood || kbad) {
-          printf("%g good %g bad\n", kgood, kbad);
+       COIN_DETAIL_PRINT(printf("%g good %g bad\n", kgood, kbad));
      }
      result = objval(nrows, ncols, rowsol, colsol, pi, djs, useCost,
                      rowlower, rowupper, lower, upper,
@@ -1110,8 +1110,8 @@ RETURN:
                bestSol = result.weighted;
                CoinMemcpyN(colsol, ncols, saveSol);
           } else {
-               printf("restoring previous - now %g best %g\n",
-                      result.weighted * maxmin - useOffset, bestSol * maxmin - useOffset);
+               COIN_DETAIL_PRINT(printf("restoring previous - now %g best %g\n",
+					result.weighted * maxmin - useOffset, bestSol * maxmin - useOffset));
           }
      }
      if (saveSol) {

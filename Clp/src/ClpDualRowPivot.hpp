@@ -121,5 +121,7 @@ protected:
      int type_;
      //@}
 };
-
+#ifndef CLP_DUAL_COLUMN_MULTIPLIER
+//#define CLP_DUAL_COLUMN_MULTIPLIER 0.99999
+#endif
 #endif

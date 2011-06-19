@@ -218,7 +218,7 @@ public:
      double integerTolerance_;
      /// Integer increment
      double integerIncrement_;
-     /// Small chnage in branch
+     /// Small change in branch
      double smallChange_;
      /// Down pseudo costs
      double * downPseudo_;
@@ -244,6 +244,10 @@ public:
      int * whichRow_;
      /// Which columns in large model
      int * whichColumn_;
+#ifndef NO_FATHOM_PRINT
+     /// Cbc's message handler
+     CoinMessageHandler * handler_;
+#endif
      /// Number bounds in large model
      int nBound_;
      /// Save of specialOptions_ (local)
@@ -273,6 +277,12 @@ public:
      int numberIterations_;
      /// Type of presolve - 0 none, 1 crunch
      int presolveType_;
+#ifndef NO_FATHOM_PRINT
+     /// Depth passed in
+     int startingDepth_;
+     /// Node at which called
+     int nodeCalled_;
+#endif
      //@}
 };
 class ClpHashValue {

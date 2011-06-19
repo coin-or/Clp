@@ -56,6 +56,19 @@ void OsiClpSolverInterface::initialSolve()
     smallModel_=NULL;
   }
 #endif
+  if ((specialOptions_&2097152)!=0||(specialOptions_&4194304)!=0) {
+    bool takeHint;
+    OsiHintStrength strength;
+    int algorithm = 0;
+    getHintParam(OsiDoDualInInitial,takeHint,strength);
+    if (strength!=OsiHintIgnore)
+      algorithm = takeHint ? -1 : 1;
+    if (algorithm>0||(specialOptions_&4194304)!=0) {
+      // Gub
+      resolveGub((9*modelPtr_->numberRows())/10);
+      return;
+    }
+  }
   bool deleteSolver;
   ClpSimplex * solver;
   double time1 = CoinCpuTime();
@@ -159,6 +172,7 @@ void OsiClpSolverInterface::initialSolve()
       }
     }
   }
+  ClpPresolve * pinfo = NULL;
   /*
     If basis then do primal (as user could do dual with resolve)
     If not then see if dual feasible (and allow for gubs etc?)
@@ -212,11 +226,13 @@ void OsiClpSolverInterface::initialSolve()
     gotHint = (getHintParam(OsiDoPresolveInInitial,takeHint,strength));
     assert (gotHint);
     if (strength!=OsiHintIgnore&&takeHint) {
-      ClpPresolve pinfo;
-      ClpSimplex * model2 = pinfo.presolvedModel(*solver,1.0e-8);
+      pinfo = new ClpPresolve();
+      ClpSimplex * model2 = pinfo->presolvedModel(*solver,1.0e-8);
       if (!model2) {
         // problem found to be infeasible - whats best?
         model2 = solver;
+	delete pinfo;
+	pinfo = NULL;
       } else {
 	model2->setSpecialOptions(solver->specialOptions());
       }
@@ -474,12 +490,19 @@ void OsiClpSolverInterface::initialSolve()
       model2->setPerturbation(savePerturbation);
       if (model2!=solver) {
         int presolvedStatus = model2->status();
-        pinfo.postsolve(true);
+        pinfo->postsolve(true);
+	delete pinfo;
+	pinfo = NULL;
         
         delete model2;
+	int oldStatus=solver->status();
+	solver->setProblemStatus(presolvedStatus);
+	if (solver->logLevel()==63) // for gcc 4.6 bug
+	  printf("pstat %d stat %d\n",presolvedStatus,oldStatus);
         //printf("Resolving from postsolved model\n");
         // later try without (1) and check duals before solve
-	if (presolvedStatus!=3) {
+	if (presolvedStatus!=3
+	    &&(presolvedStatus||oldStatus==-1)) {
 	  if (!inCbcOrOther||presolvedStatus!=1) {
 	    disasterHandler_->setOsiModel(this);
 	    if (inCbcOrOther) {
@@ -755,6 +778,7 @@ void OsiClpSolverInterface::initialSolve()
   }
   modelPtr_->whatsChanged_ |= 0x30000;
   //std::cout<<time1<<" seconds - total "<<totalTime<<std::endl;
+  delete pinfo;
 }
 //-----------------------------------------------------------------------------
 void OsiClpSolverInterface::resolve()
@@ -781,6 +805,19 @@ void OsiClpSolverInterface::resolve()
   if ((stuff_.solverOptions_&65536)!=0) {
     modelPtr_->fastDual2(&stuff_);
     return;
+  }
+  if ((specialOptions_&2097152)!=0||(specialOptions_&4194304)!=0) {
+    bool takeHint;
+    OsiHintStrength strength;
+    int algorithm = 0;
+    getHintParam(OsiDoDualInResolve,takeHint,strength);
+    if (strength!=OsiHintIgnore)
+      algorithm = takeHint ? -1 : 1;
+    if (algorithm>0||(specialOptions_&4194304)!=0) {
+      // Gub
+      resolveGub((9*modelPtr_->numberRows())/10);
+      return;
+    }
   }
   //void pclp(char *);
   //pclp("res");
@@ -1268,6 +1305,58 @@ void OsiClpSolverInterface::resolve()
   if (!modelPtr_->columnUpperWork_)
     modelPtr_->whatsChanged_ &= ~0xffff;
   modelPtr_->whatsChanged_ |= 0x30000;
+}
+#include "ClpSimplexOther.hpp"
+// Resolve an LP relaxation after problem modification (try GUB)
+void 
+OsiClpSolverInterface::resolveGub(int needed)
+{
+  bool takeHint;
+  OsiHintStrength strength;
+  // Switch off printing if asked to
+  getHintParam(OsiDoReducePrint,takeHint,strength);
+  int saveMessageLevel=modelPtr_->logLevel();
+  if (strength!=OsiHintIgnore&&takeHint) {
+    int messageLevel=messageHandler()->logLevel();
+    if (messageLevel>0)
+      modelPtr_->messageHandler()->setLogLevel(messageLevel-1);
+    else
+      modelPtr_->messageHandler()->setLogLevel(0);
+  }
+  //modelPtr_->messageHandler()->setLogLevel(1);
+  setBasis(basis_,modelPtr_);
+  // find gub
+  int numberRows = modelPtr_->numberRows();
+  int * which = new int[numberRows];
+  int numberColumns = modelPtr_->numberColumns();
+  int * whichC = new int[numberColumns+numberRows];
+  ClpSimplex * model2 = 
+    static_cast<ClpSimplexOther *> (modelPtr_)->gubVersion(which,whichC,
+							   needed,100);
+  if (model2) {
+    // move in solution
+    static_cast<ClpSimplexOther *> (model2)->setGubBasis(*modelPtr_,
+							 which,whichC);
+    model2->setLogLevel(CoinMin(1,model2->logLevel()));
+    ClpPrimalColumnSteepest steepest(5);
+    model2->setPrimalColumnPivotAlgorithm(steepest);
+    //double time1 = CoinCpuTime();
+    model2->primal();
+    //printf("Primal took %g seconds\n",CoinCpuTime()-time1);
+    static_cast<ClpSimplexOther *> (model2)->getGubBasis(*modelPtr_,
+							 which,whichC);
+    int totalIterations = model2->numberIterations();
+    delete model2;
+    //modelPtr_->setLogLevel(63);
+    modelPtr_->primal(1);
+    modelPtr_->setNumberIterations(totalIterations+modelPtr_->numberIterations());
+  } else {
+    modelPtr_->dual();
+  }
+  delete [] which;
+  delete [] whichC;
+  basis_ = getBasis(modelPtr_);
+  modelPtr_->messageHandler()->setLogLevel(saveMessageLevel);
 }
 // Sort of lexicographic resolve
 void 
@@ -1990,7 +2079,7 @@ void OsiClpSolverInterface::markHotStart()
       factorization_ = static_cast<ClpSimplexDual *>(small)->setupForStrongBranching(spareArrays_,numberRows,
 			     numberColumns,false);
 #else
-      assert (factorization!=NULL);
+      assert (factorization!=NULL || small->problemStatus_ );
       factorization_ = factorization;
 #endif
     } else {
@@ -2762,7 +2851,10 @@ OsiClpSolverInterface::setOptionalInteger(int index)
 //------------------------------------------------------------------
 const CoinPackedMatrix * OsiClpSolverInterface::getMatrixByRow() const
 {
-  if ( matrixByRow_ == NULL ) {
+  if ( matrixByRow_ == NULL ||
+       matrixByRow_->getNumElements() != 
+       modelPtr_->clpMatrix()->getNumElements() ) {
+    delete matrixByRow_;
     matrixByRow_ = new CoinPackedMatrix();
     matrixByRow_->setExtraGap(0.0);
     matrixByRow_->setExtraMajor(0.0);
@@ -2944,6 +3036,9 @@ void OsiClpSolverInterface::setColSolution(const double * cs)
     CoinDisjointCopyN(cs,modelPtr_->numberColumns(),
 		      modelPtr_->solutionRegion(1));
   }
+  // compute row activity
+  memset(modelPtr_->primalRowSolution(),0,modelPtr_->numberRows()*sizeof(double));
+  modelPtr_->times(1.0,modelPtr_->primalColumnSolution(),modelPtr_->primalRowSolution());
 }
 //-----------------------------------------------------------------------------
 void OsiClpSolverInterface::setRowPrice(const double * rs) 
@@ -2955,6 +3050,10 @@ void OsiClpSolverInterface::setRowPrice(const double * rs)
     CoinDisjointCopyN(rs,modelPtr_->numberRows(),
 		      modelPtr_->djRegion(0));
   }
+  // compute reduced costs
+  memcpy(modelPtr_->dualColumnSolution(),modelPtr_->objective(),
+	 modelPtr_->numberColumns()*sizeof(double));
+  modelPtr_->transposeTimes(-1.0,modelPtr_->dualRowSolution(),modelPtr_->dualColumnSolution());
 }
 
 //#############################################################################
@@ -4687,6 +4786,8 @@ OsiClpSolverInterface::readMps(const char *filename,bool keepNames,bool allowErr
   m.setInfinity(getInfinity());
   m.passInMessageHandler(modelPtr_->messageHandler());
   *m.messagesPointer()=modelPtr_->coinMessages();
+  m.setSmallElementValue(CoinMax(modelPtr_->getSmallElementValue(), 
+				 m.getSmallElementValue()));
 
   delete [] setInfo_;
   setInfo_=NULL;
@@ -4779,6 +4880,8 @@ int
 OsiClpSolverInterface::readLp(const char *filename, const double epsilon )
 {
   CoinLpIO m;
+  m.passInMessageHandler(modelPtr_->messageHandler());
+  *m.messagesPointer()=modelPtr_->coinMessages();
   m.readLp(filename, epsilon);
   freeCachedResults();
 
@@ -6275,7 +6378,7 @@ OsiClpSolverInterface::setHintParam(OsiHintParam key, bool yesNo,
         specialOptions_=0;
       }
       // set normal
-      specialOptions_ &= (2047+3*8192+15*65536);
+      specialOptions_ &= (2047|3*8192|15*65536|2097152|4194304);
       if (otherInformation!=NULL) {
         int * array = static_cast<int *> (otherInformation);
         if (array[0]>=0||array[0]<=2)

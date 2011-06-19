@@ -613,7 +613,7 @@ Idiot::solve2(CoinMessageHandler * handler, const CoinMessages * messages)
      memset(lambda, 0, nrows * sizeof(double));
      slackStart = countCostedSlacks(model_);
      if (slackStart >= 0) {
-          printf("This model has costed slacks\n");
+       COIN_DETAIL_PRINT(printf("This model has costed slacks\n"));
           slackEnd = slackStart + nrows;
           if (slackStart) {
                ordStart = 0;
@@ -893,7 +893,7 @@ Idiot::solve2(CoinMessageHandler * handler, const CoinMessages * messages)
                          mu *= changeMu;
                          if ((saveStrategy & 32) != 0 && result.infeas < reasonableInfeas && 0) {
                               reasonableInfeas = CoinMax(smallInfeas, reasonableInfeas * sqrt(changeMu));
-                              printf("reasonable infeas now %g\n", reasonableInfeas);
+                              COIN_DETAIL_PRINT(printf("reasonable infeas now %g\n", reasonableInfeas));
                          }
                          result.weighted = 1.0e60;
                          nTry = 0;
@@ -1127,12 +1127,12 @@ Idiot::solve2(CoinMessageHandler * handler, const CoinMessages * messages)
      }
      if ((strategy_ & 1024) != 0) {
           double ratio = static_cast<double> (ncols) / static_cast<double> (nrows);
-          printf("col/row ratio %g infeas ratio %g\n", ratio, lastResult.infeas / firstInfeas);
+          COIN_DETAIL_PRINT(printf("col/row ratio %g infeas ratio %g\n", ratio, lastResult.infeas / firstInfeas));
           if (lastResult.infeas > 0.01 * firstInfeas * ratio) {
                strategy_ &= (~1024);
-               printf(" - layer off\n");
+               COIN_DETAIL_PRINT(printf(" - layer off\n"));
           } else {
-               printf(" - layer on\n");
+	    COIN_DETAIL_PRINT(printf(" - layer on\n"));
           }
      }
      delete [] saveSol;
@@ -1272,7 +1272,7 @@ Idiot::crossOver(int mode)
                colsol[i+slackStart] = value;
                objValue += value * cost[i+slackStart];
           }
-          printf("New objective after scaling %g\n", objValue);
+          COIN_DETAIL_PRINT(printf("New objective after scaling %g\n", objValue));
      }
 #if 0
      maybe put back - but just get feasible ?
@@ -1691,7 +1691,7 @@ Idiot::crossOver(int mode)
                               rowlower[i] = rhs[i];
                          }
                     }
-                    printf("sum of infeasibilities %g\n", sum);
+                    COIN_DETAIL_PRINT(printf("sum of infeasibilities %g\n", sum));
                     delete [] rhs;
                }
                saveModel = model_;

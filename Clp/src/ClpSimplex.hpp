@@ -610,6 +610,8 @@ public:
      /** Just check solution (for internal use) - sets sum of
          infeasibilities etc. */
      void checkSolutionInternal();
+     /// Check unscaled primal solution but allow for rounding error
+     void checkUnscaledSolution();
      /// Useful row length arrays (0,1,2,3,4,5)
      inline CoinIndexedVector * rowArray(int index) const {
           return rowArray_[index];
@@ -1071,6 +1073,8 @@ public:
          256 bit - in primal from dual or vice versa
          512 bit - alternative use of solveType_
          1024 bit - don't do row copy of factorization
+	 2048 bit - perturb in complete fathoming
+	 4096 bit - try more for complete fathoming
      */
      inline int moreSpecialOptions() const {
           return moreSpecialOptions_;
@@ -1087,6 +1091,8 @@ public:
          256 bit - in primal from dual or vice versa
          512 bit - alternative use of solveType_
          1024 bit - don't do row copy of factorization
+	 2048 bit - perturb in complete fathoming
+	 4096 bit - try more for complete fathoming
      */
      inline void setMoreSpecialOptions(int value) {
           moreSpecialOptions_ = value;

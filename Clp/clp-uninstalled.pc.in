@@ -6,5 +6,5 @@ Description: COIN-OR Linear Programming Solver
 URL: https://projects.coin-or.org/Clp
 Version: @PACKAGE_VERSION@
 Libs: ${libdir}/libClp.la @CLPLIB_PCLIBS@
-Cflags: -I@abs_source_dir@/src -I@ABSBUILDDIR@/inc
+Cflags: -I@abs_source_dir@/src -I@ABSBUILDDIR@/src
 Requires: @CLPLIB_PCREQUIRES@

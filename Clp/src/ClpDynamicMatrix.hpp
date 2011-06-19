@@ -94,6 +94,8 @@ public:
      virtual double reducedCost( ClpSimplex * model, int sequence) const;
      /// Does gub crash
      void gubCrash();
+     /// Writes out model (without names)
+     void writeMps(const char * name);
      /// Populates initial matrix from dynamic status
      void initialProblem();
      /** Adds in a column to gub structure (called from descendant) and returns sequence */
@@ -165,10 +167,26 @@ public:
           st_byte = static_cast<unsigned char>(st_byte & ~7);
           st_byte = static_cast<unsigned char>(st_byte | status);
      }
+     /// Whether flagged slack
+     inline bool flaggedSlack(int i) const {
+          return (status_[i] & 8) != 0;
+     }
+     inline void setFlaggedSlack(int i) {
+          status_[i] = static_cast<unsigned char>(status_[i] | 8);
+     }
+     inline void unsetFlaggedSlack(int i) {
+          status_[i] = static_cast<unsigned char>(status_[i] & ~8);
+     }
      /// Number of sets (dynamic rows)
      inline int numberSets() const {
           return numberSets_;
      }
+     /// Number of possible gub variables
+     inline int numberGubEntries() const
+     { return startSet_[numberSets_];}
+     /// Sets
+     inline int * startSets() const
+     { return startSet_;}
      /// Whether flagged
      inline bool flagged(int i) const {
           return (dynamicStatus_[i] & 8) != 0;

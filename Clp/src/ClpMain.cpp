@@ -24,6 +24,17 @@ int boundary_sort3 = 10000;
 #include "ClpConfig.h"
 #include "CoinMpsIO.hpp"
 #include "CoinFileIO.hpp"
+#ifdef COIN_HAS_GLPK
+#include "glpk.h"
+extern glp_tran* cbc_glp_tran;
+extern glp_prob* cbc_glp_prob;
+#else
+#define GLP_UNDEF 1
+#define GLP_FEAS 2
+#define GLP_INFEAS 3
+#define GLP_NOFEAS 4
+#define GLP_OPT 5
+#endif
 
 #include "ClpFactorization.hpp"
 #include "CoinTime.hpp"
@@ -44,16 +55,7 @@ int boundary_sort3 = 10000;
 #ifdef DMALLOC
 #include "dmalloc.h"
 #endif
-#ifdef WSSMP_BARRIER
-#define FOREIGN_BARRIER
-#endif
-#ifdef UFL_BARRIER
-#define FOREIGN_BARRIER
-#endif
-#ifdef TAUCS_BARRIER
-#define FOREIGN_BARRIER
-#endif
-#ifdef MUMPS_BARRIER
+#if defined(COIN_HAS_WSMP) || defined(COIN_HAS_AMD) || defined(COIN_HAS_CHOLMOD) || defined(TAUCS_BARRIER) || defined(COIN_HAS_MUMPS)
 #define FOREIGN_BARRIER
 #endif
 
@@ -283,8 +285,8 @@ main (int argc, const char *argv[])
                // see if ? at end
                int numberQuery = 0;
                if (field != "?" && field != "???") {
-                    int length = field.length();
-                    int i;
+                    size_t length = field.length();
+                    size_t i;
                     for (i = length - 1; i > 0; i--) {
                          if (field[i] == '?')
                               numberQuery++;
@@ -646,6 +648,11 @@ main (int argc, const char *argv[])
                                    ClpSolve::SolveType method;
                                    ClpSolve::PresolveType presolveType;
                                    ClpSimplex * model2 = models + iModel;
+                                   ClpSolve solveOptions;
+				   if (dualize==4) { 
+				     solveOptions.setSpecialOption(4, 77);
+				     dualize=0;
+				   }
                                    if (dualize) {
                                         bool tryIt = true;
                                         double fractionColumn = 1.0;
@@ -670,12 +677,13 @@ main (int argc, const char *argv[])
                                              } else {
                                                   model2 = models + iModel;
                                                   dualize = 0;
-                                             }
+					     }
                                         } else {
                                              dualize = 0;
                                         }
                                    }
-                                   ClpSolve solveOptions;
+                                   if (preSolveFile)
+                                        presolveOptions |= 0x40000000;
                                    solveOptions.setPresolveActions(presolveOptions);
                                    solveOptions.setSubstitution(substitution);
                                    if (preSolve != 5 && preSolve) {
@@ -721,9 +729,6 @@ main (int argc, const char *argv[])
                                         }
                                    }
                                    solveOptions.setSolveType(method);
-                                   if (preSolveFile)
-                                        presolveOptions |= 0x40000000;
-                                   solveOptions.setSpecialOption(4, presolveOptions);
                                    solveOptions.setSpecialOption(5, printOptions & 1);
                                    if (doVector) {
                                         ClpMatrixBase * matrix = models[iModel].clpMatrix();
@@ -943,7 +948,7 @@ main (int argc, const char *argv[])
                                    // See if .lp
                                    {
                                         const char * c_name = field.c_str();
-                                        int length = strlen(c_name);
+                                        size_t length = strlen(c_name);
                                         if (length > 3 && !strncmp(c_name + length - 3, ".lp", 3))
                                              gmpl = -1; // .lp
                                    }
@@ -960,6 +965,17 @@ main (int argc, const char *argv[])
                                    }
                                    if (absolutePath) {
                                         fileName = field;
+                                        size_t length = field.size();
+                                        size_t percent = field.find('%');
+                                        if (percent < length && percent > 0) {
+                                             gmpl = 1;
+                                             fileName = field.substr(0, percent);
+                                             gmplData = field.substr(percent + 1);
+                                             if (percent < length - 1)
+                                                  gmpl = 2; // two files
+                                             printf("GMPL model file %s and data file %s\n",
+                                                    fileName.c_str(), gmplData.c_str());
+                                        }
                                    } else if (field[0] == '~') {
                                         char * environVar = getenv("HOME");
                                         if (environVar) {
@@ -972,8 +988,8 @@ main (int argc, const char *argv[])
                                    } else {
                                         fileName = directory + field;
                                         // See if gmpl (model & data) - or even lp file
-                                        int length = field.size();
-                                        int percent = field.find('%');
+                                        size_t length = field.size();
+                                        size_t percent = field.find('%');
                                         if (percent < length && percent > 0) {
                                              gmpl = 1;
                                              fileName = directory + field.substr(0, percent);
@@ -1013,7 +1029,11 @@ main (int argc, const char *argv[])
                                                                          (gmpl == 2) ? gmplData.c_str() : NULL,
                                                                          keepImportNames != 0);
                                    else
-                                        status = models[iModel].readLp(fileName.c_str(), 1.0e-12);
+#ifdef KILL_ZERO_READLP
+				     status = models[iModel].readLp(fileName.c_str(), models[iModel].getSmallElementValue());
+#else
+				     status = models[iModel].readLp(fileName.c_str(), 1.0e-12);
+#endif
                                    if (!status || (status > 0 && allowImportErrors)) {
                                         goodModels[iModel] = true;
                                         // sets to all slack (not necessary?)
@@ -1531,8 +1551,8 @@ main (int argc, const char *argv[])
                          case CLP_PARAM_ACTION_DIRECTORY: {
                               std::string name = CoinReadGetString(argc, argv);
                               if (name != "EOL") {
-                                   int length = name.length();
-                                   if (name[length-1] == dirsep) {
+                                   size_t length = name.length();
+                                   if (length > 0 && name[length-1] == dirsep) {
                                         directory = name;
                                    } else {
                                         directory = name + dirsep;
@@ -1546,8 +1566,8 @@ main (int argc, const char *argv[])
                          case CLP_PARAM_ACTION_DIRSAMPLE: {
                               std::string name = CoinReadGetString(argc, argv);
                               if (name != "EOL") {
-                                   int length = name.length();
-                                   if (name[length-1] == dirsep) {
+                                   size_t length = name.length();
+                                   if (length > 0 && name[length-1] == dirsep) {
                                         dirSample = name;
                                    } else {
                                         dirSample = name + dirsep;
@@ -1561,8 +1581,8 @@ main (int argc, const char *argv[])
                          case CLP_PARAM_ACTION_DIRNETLIB: {
                               std::string name = CoinReadGetString(argc, argv);
                               if (name != "EOL") {
-                                   int length = name.length();
-                                   if (name[length-1] == dirsep) {
+                                   size_t length = name.length();
+                                   if (length > 0 && name[length-1] == dirsep) {
                                         dirNetlib = name;
                                    } else {
                                         dirNetlib = name + dirsep;
@@ -1576,8 +1596,8 @@ main (int argc, const char *argv[])
                          case CBC_PARAM_ACTION_DIRMIPLIB: {
                               std::string name = CoinReadGetString(argc, argv);
                               if (name != "EOL") {
-                                   int length = name.length();
-                                   if (name[length-1] == dirsep) {
+                                   size_t length = name.length();
+                                   if (length > 0 && name[length-1] == dirsep) {
                                         dirMiplib = name;
                                    } else {
                                         dirMiplib = name + dirsep;
@@ -1755,6 +1775,7 @@ clp watson.mps -\nscaling off\nprimalsimplex"
                               );
                               break;
                          case CLP_PARAM_ACTION_SOLUTION:
+			 case CLP_PARAM_ACTION_GMPL_SOLUTION:
                               if (goodModels[iModel]) {
                                    // get next field
                                    field = CoinReadGetString(argc, argv);
@@ -1802,6 +1823,80 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 					  fp = fopen(fileName.c_str(), "a");
                                    }
                                    if (fp) {
+				     // See if Glpk 
+				     if (type == CLP_PARAM_ACTION_GMPL_SOLUTION) {
+				       int numberRows = models[iModel].getNumRows();
+				       int numberColumns = models[iModel].getNumCols();
+				       int numberGlpkRows=numberRows+1;
+#ifdef COIN_HAS_GLPK
+				       if (cbc_glp_prob) {
+					 // from gmpl
+					 numberGlpkRows=glp_get_num_rows(cbc_glp_prob);
+					 if (numberGlpkRows!=numberRows)
+					   printf("Mismatch - cbc %d rows, glpk %d\n",
+						  numberRows,numberGlpkRows);
+				       }
+#endif
+				       fprintf(fp,"%d %d\n",numberGlpkRows,
+					       numberColumns);
+				       int iStat = models[iModel].status();
+				       int iStat2 = GLP_UNDEF;
+				       if (iStat == 0) {
+					 // optimal
+					 iStat2 = GLP_FEAS;
+				       } else if (iStat == 1) {
+					 // infeasible
+					 iStat2 = GLP_NOFEAS;
+				       } else if (iStat == 2) {
+					 // unbounded
+					 // leave as 1
+				       } else if (iStat >= 3 && iStat <= 5) {
+					 iStat2 = GLP_FEAS;
+				       }
+				       double objValue = models[iModel].getObjValue() 
+					 * models[iModel].getObjSense();
+				       fprintf(fp,"%d 2 %g\n",iStat2,objValue);
+				       if (numberGlpkRows > numberRows) {
+					 // objective as row
+					 fprintf(fp,"4 %g 1.0\n",objValue);
+				       }
+				       int lookup[6]=
+					 {4,1,3,2,4,5};
+				       const double * primalRowSolution =
+					 models[iModel].primalRowSolution();
+				       const double * dualRowSolution =
+					 models[iModel].dualRowSolution();
+				       for (int i=0;i<numberRows;i++) {
+					 fprintf(fp,"%d %g %g\n",lookup[models[iModel].getRowStatus(i)],
+						 primalRowSolution[i],dualRowSolution[i]);
+				       }
+				       const double * primalColumnSolution =
+					 models[iModel].primalColumnSolution();
+				       const double * dualColumnSolution =
+					 models[iModel].dualColumnSolution();
+				       for (int i=0;i<numberColumns;i++) {
+					 fprintf(fp,"%d %g %g\n",lookup[models[iModel].getColumnStatus(i)],
+						 primalColumnSolution[i],dualColumnSolution[i]);
+				       }
+				       fclose(fp);
+#ifdef COIN_HAS_GLPK
+				       if (cbc_glp_prob) {
+					 glp_read_sol(cbc_glp_prob,fileName.c_str());
+					 glp_mpl_postsolve(cbc_glp_tran,
+							   cbc_glp_prob,
+							   GLP_SOL);
+					 // free up as much as possible
+					 glp_free(cbc_glp_prob);
+					 glp_mpl_free_wksp(cbc_glp_tran);
+					 cbc_glp_prob = NULL;
+					 cbc_glp_tran = NULL;
+					 //gmp_free_mem();
+					 /* check that no memory blocks are still allocated */
+					 glp_free_env();
+				       }
+#endif
+				       break;
+				     }
                                         // Write solution header (suggested by Luigi Poderico)
                                         double objValue = models[iModel].getObjValue() * models[iModel].getObjSense();
                                         int iStat = models[iModel].status();
@@ -1849,8 +1944,7 @@ clp watson.mps -\nscaling off\nprimalsimplex"
                                              int nAst = 0;
                                              const char * pMask2 = printMask.c_str();
                                              char pMask[100];
-                                             int iChar;
-                                             int lengthMask = strlen(pMask2);
+                                             size_t lengthMask = strlen(pMask2);
                                              assert (lengthMask < 100);
                                              if (*pMask2 == '"') {
                                                   if (pMask2[lengthMask-1] != '"') {
@@ -1871,12 +1965,12 @@ clp watson.mps -\nscaling off\nprimalsimplex"
                                              } else {
                                                   strcpy(pMask, pMask2);
                                              }
-                                             if (lengthMask > lengthName) {
+                                             if (lengthMask > static_cast<size_t>(lengthName)) {
                                                   printf("mask %s too long - skipping\n", pMask);
                                                   break;
                                              }
                                              maxMasks = 1;
-                                             for (iChar = 0; iChar < lengthMask; iChar++) {
+                                             for (size_t iChar = 0; iChar < lengthMask; iChar++) {
                                                   if (pMask[iChar] == '*') {
                                                        nAst++;
                                                        maxMasks *= (lengthName + 1);
@@ -1899,17 +1993,17 @@ clp watson.mps -\nscaling off\nprimalsimplex"
                                                        char * oldMask = masks[iEntry];
                                                        char * ast = strchr(oldMask, '*');
                                                        assert (ast);
-                                                       int length = strlen(oldMask) - 1;
-                                                       int nBefore = ast - oldMask;
-                                                       int nAfter = length - nBefore;
+                                                       size_t length = strlen(oldMask) - 1;
+                                                       size_t nBefore = ast - oldMask;
+                                                       size_t nAfter = length - nBefore;
                                                        // and add null
                                                        nAfter++;
-                                                       for (int i = 0; i <= lengthName - length; i++) {
+                                                       for (size_t i = 0; i <= lengthName - length; i++) {
                                                             char * maskOut = newMasks[nEntries];
-                                                            CoinMemcpyN(oldMask, nBefore, maskOut);
-                                                            for (int k = 0; k < i; k++)
+                                                            CoinMemcpyN(oldMask, static_cast<int>(nBefore), maskOut);
+                                                            for (size_t k = 0; k < i; k++)
                                                                  maskOut[k+nBefore] = '?';
-                                                            CoinMemcpyN(ast + 1, nAfter, maskOut + nBefore + i);
+                                                            CoinMemcpyN(ast + 1, static_cast<int>(nAfter), maskOut + nBefore + i);
                                                             nEntries++;
                                                             assert (nEntries <= maxMasks);
                                                        }
@@ -1922,11 +2016,11 @@ clp watson.mps -\nscaling off\nprimalsimplex"
                                              int * sort = new int[nEntries];
                                              for (i = 0; i < nEntries; i++) {
                                                   char * maskThis = masks[i];
-                                                  int length = strlen(maskThis);
-                                                  while (maskThis[length-1] == ' ')
+                                                  size_t length = strlen(maskThis);
+                                                  while (length > 0 && maskThis[length-1] == ' ')
                                                        length--;
                                                   maskThis[length] = '\0';
-                                                  sort[i] = length;
+                                                  sort[i] = static_cast<int>(length);
                                              }
                                              CoinSort_2(sort, sort + nEntries, masks);
                                              int lastLength = -1;
@@ -2098,11 +2192,11 @@ clp watson.mps -\nscaling off\nprimalsimplex"
                                                        fprintf(fp, "%7d ", iRow);
                                                        if (lengthName) {
                                                             const char * name = rowNames[iRow].c_str();
-                                                            int n = strlen(name);
-                                                            int i;
+                                                            size_t n = strlen(name);
+                                                            size_t i;
                                                             for (i = 0; i < n; i++)
                                                                  fprintf(fp, "%c", name[i]);
-                                                            for (; i < lengthPrint; i++)
+                                                            for (; i < static_cast<size_t>(lengthPrint); i++)
                                                                  fprintf(fp, " ");
                                                        }
                                                        fprintf(fp, " %15.8g        %15.8g\n", primalRowSolution[iRow],
@@ -2136,11 +2230,11 @@ clp watson.mps -\nscaling off\nprimalsimplex"
                                                   fprintf(fp, "%7d ", iColumn);
                                                   if (lengthName) {
                                                        const char * name = columnNames[iColumn].c_str();
-                                                       int n = strlen(name);
-                                                       int i;
+                                                       size_t n = strlen(name);
+                                                       size_t i;
                                                        for (i = 0; i < n; i++)
                                                             fprintf(fp, "%c", name[i]);
-                                                       for (; i < lengthPrint; i++)
+                                                       for (; i < static_cast<size_t>(lengthPrint); i++)
                                                             fprintf(fp, " ");
                                                   }
                                                   fprintf(fp, " %15.8g        %15.8g\n",
@@ -2238,6 +2332,16 @@ clp watson.mps -\nscaling off\nprimalsimplex"
           delete [] models;
           delete [] goodModels;
      }
+#ifdef COIN_HAS_GLPK
+     if (cbc_glp_prob) {
+       // free up as much as possible
+       glp_free(cbc_glp_prob);
+       glp_mpl_free_wksp(cbc_glp_tran);
+       glp_free_env(); 
+       cbc_glp_prob = NULL;
+       cbc_glp_tran = NULL;
+     }
+#endif
      // By now all memory should be freed
 #ifdef DMALLOC
      dmalloc_log_unfreed();
@@ -2495,7 +2599,7 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
      }
      if ((k % 3) != 0)
           printf("\n");
-#define SYM
+     //#define SYM
 #ifndef SYM
      if (model->logLevel() < 2)
           return ;
@@ -3184,12 +3288,12 @@ static bool maskMatches(const int * starts, char ** masks,
 {
      // back to char as I am old fashioned
      const char * checkC = check.c_str();
-     int length = strlen(checkC);
+     size_t length = strlen(checkC);
      while (checkC[length-1] == ' ')
           length--;
      for (int i = starts[length]; i < starts[length+1]; i++) {
           char * thisMask = masks[i];
-          int k;
+          size_t k;
           for ( k = 0; k < length; k++) {
                if (thisMask[k] != '?' && thisMask[k] != checkC[k])
                     break;

@@ -149,5 +149,7 @@ protected:
      bool looksOptimal_;
      //@}
 };
-
+#ifndef CLP_PRIMAL_SLACK_MULTIPLIER
+#define CLP_PRIMAL_SLACK_MULTIPLIER 1.01
+#endif
 #endif

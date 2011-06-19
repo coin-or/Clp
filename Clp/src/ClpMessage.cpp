@@ -102,7 +102,13 @@ static Clp_message clp_us_english[] = {
      {CLP_CRUNCH_STATS, 61, 2, "Crunch %d (%d) rows, %d (%d) columns and %d (%d) elements"},
      {CLP_PARAMETRICS_STATS, 62, 1, "Theta %g - objective %g"},
      {CLP_PARAMETRICS_STATS2, 63, 2, "Theta %g - objective %g, %s in, %s out"},
+#ifndef NO_FATHOM_PRINT
+     {CLP_FATHOM_STATUS, 63, 2, "Fathoming node %d - %d nodes (%d iterations) - current depth %d"},
+     {CLP_FATHOM_SOLUTION, 64, 1, "Fathoming node %d - solution of %g after %d nodes at depth %d"},
+     {CLP_FATHOM_FINISH, 65, 1, "Fathoming node %d (depth %d) took %d nodes (%d iterations) - maximum depth %d"},
+#endif
      {CLP_GENERAL, 1000, 1, "%s"},
+     {CLP_GENERAL2, 1001, 2, "%s"},
      {CLP_DUMMY_END, 999999, 0, ""}
 };
 static Clp_message uk_english[] = {
