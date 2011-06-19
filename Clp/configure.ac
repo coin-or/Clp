@@ -82,7 +82,7 @@ LIBS="$coin_save_LIBS"
 
 # Glpk also brings AMD
 if test $coin_has_cholmod = false -a $coin_has_amd = false ; then
-  AC_COIN_CHECK_PACKAGE(Glpk, [coinglpk >= 4.39], [ClpLib])
+  AC_COIN_CHECK_PACKAGE(Glpk, [coinglpk], [ClpLib])
   if test $coin_has_glpk = yes ; then
     AC_MSG_NOTICE([using AMD from GLPK package])
     AC_DEFINE(COIN_HAS_AMD,[1],[Define to 1 if the AMD package is available])
