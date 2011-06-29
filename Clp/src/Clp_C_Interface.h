@@ -110,6 +110,8 @@ extern "C" {
      /*@}*/
      /**@name gets and sets - you will find some synonyms at the end of this file */
      /*@{*/
+     /** The underlying ClpSimplex model */
+     COINLIBAPI void* COINLINKAGE Clp_model(Clp_Simplex * model);
      /** Number of rows */
      COINLIBAPI int COINLINKAGE Clp_numberRows(Clp_Simplex * model);
      /** Number of columns */

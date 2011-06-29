@@ -380,6 +380,12 @@ Clp_copyNames(Clp_Simplex * model, const char * const * rowNamesIn,
      model->model_->copyNames(rowNames, columnNames);
 }
 
+/* Underlying model */
+COINLIBAPI void* COINLINKAGE
+Clp_model(Clp_Simplex * model)
+{
+  return model->model_ ;
+}
 /* Number of rows */
 COINLIBAPI int COINLINKAGE
 Clp_numberRows(Clp_Simplex * model)
