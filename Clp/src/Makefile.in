@@ -83,7 +83,8 @@ am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(bindir)" \
 	"$(DESTDIR)$(includecoindir)"
 libLTLIBRARIES_INSTALL = $(INSTALL)
 LTLIBRARIES = $(lib_LTLIBRARIES)
-libClp_la_LIBADD =
+am__DEPENDENCIES_1 =
+libClp_la_DEPENDENCIES = $(am__DEPENDENCIES_1)
 am__libClp_la_SOURCES_DIST = ClpConfig.h ClpCholeskyBase.cpp \
 	ClpCholeskyBase.hpp ClpCholeskyDense.cpp ClpCholeskyDense.hpp \
 	ClpConstraint.cpp ClpConstraint.hpp ClpConstraintLinear.cpp \
@@ -154,7 +155,6 @@ am_clp_OBJECTS = ClpMain.$(OBJEXT) CbcOrClpParam.$(OBJEXT) \
 	MyEventHandler.$(OBJEXT) MyMessageHandler.$(OBJEXT) \
 	unitTest.$(OBJEXT)
 clp_OBJECTS = $(am_clp_OBJECTS)
-am__DEPENDENCIES_1 =
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
 CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
@@ -505,7 +505,10 @@ libClp_la_SOURCES = ClpConfig.h ClpCholeskyBase.cpp \
 	$(am__append_4) $(am__append_5)
 
 # This is for libtool
-libClp_la_LDFLAGS = $(LT_LDFLAGS)
+libClp_la_LDFLAGS = $(LT_LDFLAGS) -module
+
+# Let's try adding the dependencies, eh?
+libClp_la_LIBADD = $(CLPLIB_LIBS)
 
 # List all source files for this executable, including headers
 clp_SOURCES = \

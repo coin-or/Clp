@@ -93,7 +93,10 @@ libClp_la_SOURCES += ClpCholeskyWssmp.cpp ClpCholeskyWssmp.hpp ClpCholeskyWssmpK
 endif
 
 # This is for libtool
-libClp_la_LDFLAGS = $(LT_LDFLAGS)
+libClp_la_LDFLAGS = $(LT_LDFLAGS) -module
+
+# Let's try adding the dependencies, eh?
+libClp_la_LIBADD = $(CLPLIB_LIBS)
 
 ########################################################################
 #                            clp program                               #
