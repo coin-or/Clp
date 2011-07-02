@@ -20939,7 +20939,7 @@ if test $coin_has_coinutils = notGiven; then
 
 if test -n "$PKG_CONFIG" ; then
   if $PKG_CONFIG --exists "coinutils"; then
-    COINUTILS_VERSIONS="`$PKG_CONFIG --modversion "coinutils" 2>/dev/null | sed -n -e "1h;2,\\$H;\\${g;s/\n/ /g;p}"`"
+    COINUTILS_VERSIONS=`$PKG_CONFIG --modversion "coinutils" 2>/dev/null | tr '\n' ' '`
      cflags=`$PKG_CONFIG --cflags "coinutils" 2>/dev/null`
     # pkg-config cannot handle spaces, so CYGPATH_W cannot be put into .pc files
 	# thus, we modify the cflags extracted from pkg-config by putting CYGPATH_W behind -I's
@@ -21455,7 +21455,7 @@ if test $coin_has_osi = notGiven; then
 
 if test -n "$PKG_CONFIG" ; then
   if $PKG_CONFIG --exists "osi"; then
-    OSI_VERSIONS="`$PKG_CONFIG --modversion "osi" 2>/dev/null | sed -n -e "1h;2,\\$H;\\${g;s/\n/ /g;p}"`"
+    OSI_VERSIONS=`$PKG_CONFIG --modversion "osi" 2>/dev/null | tr '\n' ' '`
      cflags=`$PKG_CONFIG --cflags "osi" 2>/dev/null`
     # pkg-config cannot handle spaces, so CYGPATH_W cannot be put into .pc files
 	# thus, we modify the cflags extracted from pkg-config by putting CYGPATH_W behind -I's
@@ -21955,7 +21955,7 @@ if test $coin_has_ositests = notGiven; then
 
 if test -n "$PKG_CONFIG" ; then
   if $PKG_CONFIG --exists "osi-unittests"; then
-    OSITESTS_VERSIONS="`$PKG_CONFIG --modversion "osi-unittests" 2>/dev/null | sed -n -e "1h;2,\\$H;\\${g;s/\n/ /g;p}"`"
+    OSITESTS_VERSIONS=`$PKG_CONFIG --modversion "osi-unittests" 2>/dev/null | tr '\n' ' '`
      cflags=`$PKG_CONFIG --cflags "osi-unittests" 2>/dev/null`
     # pkg-config cannot handle spaces, so CYGPATH_W cannot be put into .pc files
 	# thus, we modify the cflags extracted from pkg-config by putting CYGPATH_W behind -I's
@@ -22436,7 +22436,7 @@ if test $coin_has_sample = notGiven; then
 
 if test -n "$PKG_CONFIG" ; then
   if $PKG_CONFIG --exists "coindatasample"; then
-    SAMPLE_VERSIONS="`$PKG_CONFIG --modversion "coindatasample" 2>/dev/null | sed -n -e "1h;2,\\$H;\\${g;s/\n/ /g;p}"`"
+    SAMPLE_VERSIONS=`$PKG_CONFIG --modversion "coindatasample" 2>/dev/null | tr '\n' ' '`
      cflags=`$PKG_CONFIG --cflags "coindatasample" 2>/dev/null`
     # pkg-config cannot handle spaces, so CYGPATH_W cannot be put into .pc files
 	# thus, we modify the cflags extracted from pkg-config by putting CYGPATH_W behind -I's
@@ -22917,7 +22917,7 @@ if test $coin_has_netlib = notGiven; then
 
 if test -n "$PKG_CONFIG" ; then
   if $PKG_CONFIG --exists "coindatanetlib"; then
-    NETLIB_VERSIONS="`$PKG_CONFIG --modversion "coindatanetlib" 2>/dev/null | sed -n -e "1h;2,\\$H;\\${g;s/\n/ /g;p}"`"
+    NETLIB_VERSIONS=`$PKG_CONFIG --modversion "coindatanetlib" 2>/dev/null | tr '\n' ' '`
      cflags=`$PKG_CONFIG --cflags "coindatanetlib" 2>/dev/null`
     # pkg-config cannot handle spaces, so CYGPATH_W cannot be put into .pc files
 	# thus, we modify the cflags extracted from pkg-config by putting CYGPATH_W behind -I's
@@ -23799,7 +23799,7 @@ if test $coin_has_glpk = notGiven; then
 
 if test -n "$PKG_CONFIG" ; then
   if $PKG_CONFIG --exists "coinglpk"; then
-    GLPK_VERSIONS="`$PKG_CONFIG --modversion "coinglpk" 2>/dev/null | sed -n -e "1h;2,\\$H;\\${g;s/\n/ /g;p}"`"
+    GLPK_VERSIONS=`$PKG_CONFIG --modversion "coinglpk" 2>/dev/null | tr '\n' ' '`
      cflags=`$PKG_CONFIG --cflags "coinglpk" 2>/dev/null`
     # pkg-config cannot handle spaces, so CYGPATH_W cannot be put into .pc files
 	# thus, we modify the cflags extracted from pkg-config by putting CYGPATH_W behind -I's
@@ -24334,7 +24334,7 @@ if test $coin_has_mumps = notGiven; then
 
 if test -n "$PKG_CONFIG" ; then
   if $PKG_CONFIG --exists "coinmumps"; then
-    MUMPS_VERSIONS="`$PKG_CONFIG --modversion "coinmumps" 2>/dev/null | sed -n -e "1h;2,\\$H;\\${g;s/\n/ /g;p}"`"
+    MUMPS_VERSIONS=`$PKG_CONFIG --modversion "coinmumps" 2>/dev/null | tr '\n' ' '`
      cflags=`$PKG_CONFIG --cflags "coinmumps" 2>/dev/null`
     # pkg-config cannot handle spaces, so CYGPATH_W cannot be put into .pc files
 	# thus, we modify the cflags extracted from pkg-config by putting CYGPATH_W behind -I's
@@ -29292,7 +29292,7 @@ if test $coin_has_blas = notGiven; then
 
 if test -n "$PKG_CONFIG" ; then
   if $PKG_CONFIG --exists "coinblas"; then
-    BLAS_VERSIONS="`$PKG_CONFIG --modversion "coinblas" 2>/dev/null | sed -n -e "1h;2,\\$H;\\${g;s/\n/ /g;p}"`"
+    BLAS_VERSIONS=`$PKG_CONFIG --modversion "coinblas" 2>/dev/null | tr '\n' ' '`
      cflags=`$PKG_CONFIG --cflags "coinblas" 2>/dev/null`
     # pkg-config cannot handle spaces, so CYGPATH_W cannot be put into .pc files
 	# thus, we modify the cflags extracted from pkg-config by putting CYGPATH_W behind -I's
@@ -31436,10 +31436,6 @@ if test x$coin_skip_ac_output != xyes; then
 
   fi
 
-  # On AIX, the default sed cannot deal with somewhat long sed commands executed by config.status.
-  # So we reduce the hardcoded number of commands given to sed from 48 to 5 in config.status, hoping this will suffice.
-
-
   cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
 # tests run on this system so they can be shared between configure
@@ -33210,16 +33206,6 @@ cat >>$CONFIG_STATUS <<\_ACEOF
 _ACEOF
 chmod +x $CONFIG_STATUS
 ac_clean_files=$ac_clean_files_save
-
-
-    case $build in
-      *-aix*)
-        { echo "$as_me:$LINENO: patching config.status to reduce ac_max_sed_lines to 5" >&5
-echo "$as_me: patching config.status to reduce ac_max_sed_lines to 5" >&6;}
-        sed -e 's/ac_max_sed_lines=48/ac_max_sed_lines=5/g' config.status > config.status.tmp
-        mv config.status.tmp config.status
-      ;;
-    esac
 
 
 # configure is writing to config.log, and then calls config.status.

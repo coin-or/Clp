@@ -135,7 +135,7 @@ public:
      ClpDynamicMatrix(ClpSimplex * model, int numberSets,
                       int numberColumns, const int * starts,
                       const double * lower, const double * upper,
-                      const int * startColumn, const int * row,
+                      const CoinBigIndex * startColumn, const int * row,
                       const double * element, const double * cost,
                       const double * columnLower = NULL, const double * columnUpper = NULL,
                       const unsigned char * status = NULL,
