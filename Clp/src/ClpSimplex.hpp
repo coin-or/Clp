@@ -339,6 +339,24 @@ public:
      int primalRanging(int numberCheck, const int * which,
                        double * valueIncrease, int * sequenceIncrease,
                        double * valueDecrease, int * sequenceDecrease);
+     /**
+	Modifies coefficients etc and if necessary pivots in and out.
+	All at same status will be done (basis may go singular).
+	User can tell which others have been done (i.e. if status matches).
+	If called from outside will change status and return 0.
+	If called from event handler returns non-zero if user has to take action.
+	indices>=numberColumns are slacks (obviously no coefficients)
+	status array is (char) Status enum
+     */
+     int modifyCoefficientsAndPivot(int number,
+				 const int * which,
+				 const CoinBigIndex * start,
+				 const int * row,
+				 const double * newCoefficient,
+				 const unsigned char * newStatus=NULL,
+				 const double * newLower=NULL,
+				 const double * newUpper=NULL,
+				 const double * newObjective=NULL);
      /** Write the basis in MPS format to the specified file.
          If writeValues true writes values of structurals
          (and adds VALUES to end of NAME card)
@@ -457,10 +475,13 @@ public:
      /** Pivot out a variable and choose an incoing one.  Assumes dual
          feasible - will not go through a reduced cost.
          Returns step length in theta
-         Returns ray in ray_ (or NULL if no pivot)
          Return codes as before but -1 means no acceptable pivot
      */
-     int dualPivotResult();
+     int dualPivotResultPart1();
+     /** Do actual pivot
+	 state is 0 if need tableau column, 1 if in rowArray_[1]
+     */
+  int pivotResultPart2(int algorithm,int state);
 
      /** Common bits of coding for dual and primal.  Return 0 if okay,
          1 if bad matrix, 2 if very bad factorization
@@ -838,6 +859,10 @@ public:
      inline double dualIn() const {
           return dualIn_;
      }
+     /// Set reduced cost of last incoming to force error
+     inline void setDualIn(double value) {
+          dualIn_ = value;
+     }
      /// Pivot Row for use by classes e.g. steepestedge
      inline int pivotRow() const {
           return pivotRow_;
@@ -980,6 +1005,14 @@ public:
      /// Set value of out variable
      inline void setValueOut(double value) {
           valueOut_ = value;
+     }
+     /// Dual value of Out variable
+     inline double dualOut() const {
+          return dualOut_;
+     }
+     /// Set dual value of out variable
+     inline void setDualOut(double value) {
+          dualOut_ = value;
      }
      /// Set lower of out variable
      inline void setLowerOut(double value) {
@@ -1165,6 +1198,13 @@ public:
      /// Progress flag - at present 0 bit says artificials out
      inline int progressFlag() const {
           return (progressFlag_ & 3);
+     }
+     /// For dealing with all issues of cycling etc
+     inline ClpSimplexProgress * progress()
+     { return &progress_;}
+     /// Force re-factorization early value
+     inline int forceFactorization() const {
+          return forceFactorization_ ;
      }
      /// Force re-factorization early
      inline void forceFactorization(int value) {

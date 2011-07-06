@@ -88,6 +88,20 @@ public:
 	 See CbcClpParam.cpp for details of format
 	 Returns -2 if unable to open file */
      int parametrics(const char * dataFile);
+     /** Parametrics
+         This is an initial slow version.
+         The code uses current bounds + theta * change (if change array not NULL)
+         It starts at startingTheta and returns ending theta in endingTheta.
+         If it can not reach input endingTheta return code will be 1 for infeasible,
+         2 for unbounded, if error on ranges -1,  otherwise 0.
+         Event handler may do more
+         On exit endingTheta is maximum reached (can be used for next startingTheta)
+     */
+     int parametrics(double startingTheta, double & endingTheta, 
+                     const double * changeLowerBound, const double * changeUpperBound,
+                     const double * changeLowerRhs, const double * changeUpperRhs);
+    /// Finds best possible pivot
+    double bestPivot(bool justColumns=false);
 
 private:
      /** Parametrics - inner loop
@@ -102,6 +116,8 @@ private:
                          const double * changeLower, const double * changeUpper,
                          const double * changeObjective, ClpDataSave & data,
                          bool canTryQuick);
+     int parametricsLoop(double startingTheta, double & endingTheta,
+                         ClpDataSave & data);
      /**  Refactorizes if necessary
           Checks if finished.  Updates status.
 
@@ -130,6 +146,9 @@ private:
      int nextTheta(int type, double maxTheta, double * primalChange, double * dualChange,
                    const double * changeLower, const double * changeUpper,
                    const double * changeObjective);
+     /// Restores bound to original bound
+     void originalBound(int iSequence, double theta, const double * changeLower,
+		     const double * changeUpper);
      /**
          Row array has row part of pivot row
          Column array has column part.

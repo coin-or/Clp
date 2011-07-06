@@ -15,6 +15,7 @@
 #include "ClpHelperFunctions.hpp"
 #include "ClpFactorization.hpp"
 #include "ClpDualRowDantzig.hpp"
+#include "ClpNonLinearCost.hpp"
 #include "ClpDynamicMatrix.hpp"
 #include "CoinPackedMatrix.hpp"
 #include "CoinIndexedVector.hpp"
@@ -1888,6 +1889,7 @@ ClpSimplexOther::parametrics(double startingTheta, double & endingTheta, double 
           // Dantzig (as will not be used) (out later)
           ClpDualRowPivot * savePivot = dualRowPivot_;
           dualRowPivot_ = new ClpDualRowDantzig();
+	  dualRowPivot_->setModel(this);
 
           if (!returnCode) {
                // Find theta when bounds will cross over and create arrays
@@ -1982,6 +1984,8 @@ ClpSimplexOther::parametrics(double startingTheta, double & endingTheta, double 
                double * saveDuals = NULL;
                reinterpret_cast<ClpSimplexDual *> (this)->gutsOfDual(0, saveDuals, -1, data);
                assert (!problemStatus_);
+	       for (int i=0;i<numberRows_+numberColumns_;i++)
+		 setFakeBound(i, noFake);
                // Now do parametrics
 	       handler_->message(CLP_PARAMETRICS_STATS, messages_)
 		 << startingTheta << objectiveValue() << CoinMessageEol;
@@ -2091,6 +2095,199 @@ ClpSimplexOther::parametrics(double startingTheta, double & endingTheta, double 
      handler_->message(CLP_GENERAL,messages_)
        << line << CoinMessageEol;
      return problemStatus_;
+}
+/* Parametrics
+   This is an initial slow version.
+   The code uses current bounds + theta * change (if change array not NULL)
+   It starts at startingTheta and returns ending theta in endingTheta.
+   If it can not reach input endingTheta return code will be 1 for infeasible,
+   2 for unbounded, if error on ranges -1,  otherwise 0.
+   Event handler may do more
+   On exit endingTheta is maximum reached (can be used for next startingTheta)
+*/
+int
+ClpSimplexOther::parametrics(double startingTheta, double & endingTheta,
+                             const double * changeLowerBound, const double * changeUpperBound,
+                             const double * changeLowerRhs, const double * changeUpperRhs)
+{
+  int savePerturbation = perturbation_;
+  perturbation_ = 102; // switch off
+  algorithm_ = -1;
+  
+  // save data
+  ClpDataSave data = saveData();
+  // Dantzig (as will not be used) (out later)
+  ClpDualRowPivot * savePivot = dualRowPivot_;
+  dualRowPivot_ = new ClpDualRowDantzig();
+  dualRowPivot_->setModel(this);
+  int numberTotal = numberRows_ + numberColumns_;
+  /*
+    Save information and modify
+  */
+  double * saveLower = new double [3*numberTotal];
+  double * saveUpper = new double [3*numberTotal];
+  double * lowerCopy = saveLower+2*numberTotal;
+  double * upperCopy = saveUpper+2*numberTotal;
+  double * lowerChange = saveLower+numberTotal;
+  double * upperChange = saveUpper+numberTotal;
+  // Find theta when bounds will cross over and create arrays
+  memset(lowerChange, 0, numberTotal * sizeof(double));
+  memset(upperChange, 0, numberTotal * sizeof(double));
+  if (changeLowerBound)
+    memcpy(lowerChange,changeLowerBound,numberColumns_*sizeof(double));
+  if (changeUpperBound)
+    memcpy(upperChange,changeUpperBound,numberColumns_*sizeof(double));
+  if (changeLowerRhs)
+    memcpy(lowerChange+numberColumns_,
+	   changeLowerRhs,numberRows_*sizeof(double));
+  if (changeUpperRhs)
+    memcpy(upperChange+numberColumns_,
+	   changeUpperRhs,numberRows_*sizeof(double));
+  memcpy(lowerCopy,columnLower_,numberColumns_*sizeof(double));
+  memcpy(upperCopy,columnUpper_,numberColumns_*sizeof(double));
+  memcpy(lowerCopy+numberColumns_,
+	 rowLower_,numberRows_*sizeof(double));
+  memcpy(upperCopy+numberColumns_,
+	 rowUpper_,numberRows_*sizeof(double));
+  assert (!rowScale_);
+  double maxTheta = 1.0e50;
+  for (int iRow = 0; iRow < numberRows_; iRow++) {
+    double lower = rowLower_[iRow];
+    double upper = rowUpper_[iRow];
+    if (lower<-1.0e30)
+      lowerChange[numberColumns_+iRow]=0.0;
+    double chgLower = lowerChange[numberColumns_+iRow];
+    if (upper>1.0e30)
+      upperChange[numberColumns_+iRow]=0.0;
+    double chgUpper = upperChange[numberColumns_+iRow];
+    if (lower > -1.0e30 && upper < 1.0e30) {
+      if (lower + maxTheta * chgLower > upper + maxTheta * chgUpper) {
+	maxTheta = (upper - lower) / (chgLower - chgUpper);
+      }
+    }
+    lower+=startingTheta*chgLower;
+    upper+=startingTheta*chgUpper;
+    if (lower > upper) {
+      maxTheta = -1.0;
+      break;
+    }
+    rowLower_[iRow]=lower;
+    rowUpper_[iRow]=upper;
+  }
+  for (int iColumn = 0; iColumn < numberColumns_; iColumn++) {
+    double lower = columnLower_[iColumn];
+    double upper = columnUpper_[iColumn];
+    if (lower<-1.0e30)
+      lowerChange[iColumn]=0.0;
+    double chgLower = lowerChange[iColumn];
+    if (upper>1.0e30)
+      upperChange[iColumn]=0.0;
+    double chgUpper = upperChange[iColumn];
+    if (lower > -1.0e30 && upper < 1.0e30) {
+      if (lower + maxTheta * chgLower > upper + maxTheta * chgUpper) {
+	maxTheta = (upper - lower) / (chgLower - chgUpper);
+      }
+    }
+    lower+=startingTheta*chgLower;
+    upper+=startingTheta*chgUpper;
+    if (lower > upper) {
+      maxTheta = -1.0;
+      break;
+    }
+    columnLower_[iColumn]=lower;
+    columnUpper_[iColumn]=upper;
+  }
+  if (maxTheta == 1.0e50)
+    maxTheta = COIN_DBL_MAX;
+  int returnCode=0;
+  if (maxTheta < 0.0) {
+    // bad ranges or initial
+    returnCode = -1;
+  }
+  if (maxTheta < endingTheta) {
+    char line[100];
+    sprintf(line,"Crossover considerations reduce ending  theta from %g to %g\n", 
+	    endingTheta,maxTheta);
+    handler_->message(CLP_GENERAL,messages_)
+      << line << CoinMessageEol;
+    endingTheta = maxTheta;
+  }
+  if (endingTheta < startingTheta) {
+    // bad initial
+    returnCode = -2;
+  }
+  bool swapped=false;
+  if (!returnCode) {
+    returnCode = reinterpret_cast<ClpSimplexDual *> (this)->startupSolve(0, NULL, 0);
+    if (!returnCode) {
+      swapped=true;
+      double * temp;
+      memcpy(saveLower,lower_,numberTotal*sizeof(double));
+      temp=saveLower;
+      saveLower=lower_;
+      lower_=temp;
+      memcpy(saveUpper,upper_,numberTotal*sizeof(double));
+      temp=saveUpper;
+      saveUpper=upper_;
+      upper_=temp;
+      double saveEndingTheta = endingTheta;
+      double * saveDuals = NULL;
+      reinterpret_cast<ClpSimplexDual *> (this)->gutsOfDual(0, saveDuals, -1, data);
+      assert (!problemStatus_);
+      for (int i=0;i<numberRows_+numberColumns_;i++)
+	setFakeBound(i, noFake);
+      // Now do parametrics
+      handler_->message(CLP_PARAMETRICS_STATS, messages_)
+	<< startingTheta << objectiveValue() << CoinMessageEol;
+      while (!returnCode) {
+	returnCode = parametricsLoop(startingTheta, endingTheta,
+				     data);
+	if (!returnCode) {
+	  startingTheta = endingTheta;
+	  endingTheta = saveEndingTheta;
+	  handler_->message(CLP_PARAMETRICS_STATS, messages_)
+	    << startingTheta << objectiveValue() << CoinMessageEol;
+	  if (startingTheta >= endingTheta)
+	    break;
+	} else if (returnCode == -1) {
+	  // trouble - do external solve
+	  abort(); //needToDoSomething = true;
+	} else if (problemStatus_==1) {
+	  // can't move any further
+	  handler_->message(CLP_PARAMETRICS_STATS, messages_)
+	    << endingTheta << objectiveValue() << CoinMessageEol;
+	  problemStatus_=0;
+	}
+      }
+    }
+    reinterpret_cast<ClpSimplexDual *> (this)->finishSolve(0);
+    if (swapped&&lower_) {
+      double * temp=saveLower;
+      saveLower=lower_;
+      lower_=temp;
+      temp=saveUpper;
+      saveUpper=upper_;
+      upper_=temp;
+    }
+  }    
+  memcpy(columnLower_,lowerCopy,numberColumns_*sizeof(double));
+  memcpy(columnUpper_,upperCopy,numberColumns_*sizeof(double));
+  memcpy(rowLower_,lowerCopy+numberColumns_,
+	 numberRows_*sizeof(double));
+  memcpy(rowUpper_,upperCopy+numberColumns_,
+	 numberRows_*sizeof(double));
+  delete [] saveLower;
+  delete [] saveUpper;
+  delete dualRowPivot_;
+  dualRowPivot_ = savePivot;
+  // Restore any saved stuff
+  restoreData(data);
+  perturbation_ = savePerturbation;
+  char line[100];
+  sprintf(line,"Ending theta %g\n", endingTheta);
+  handler_->message(CLP_GENERAL,messages_)
+    << line << CoinMessageEol;
+  return problemStatus_;
 }
 /* Version of parametrics which reads from file
    See CbcClpParam.cpp for details of format
@@ -2768,6 +2965,113 @@ ClpSimplexOther::parametricsLoop(double startingTheta, double & endingTheta, dou
           return problemStatus_;
      }
 }
+int
+ClpSimplexOther::parametricsLoop(double startingTheta, double & endingTheta,
+                                 ClpDataSave & data)
+{
+  int numberTotal = numberRows_+numberColumns_;
+  const double * changeLower = lower_+numberTotal;
+  const double * changeUpper = upper_+numberTotal;
+  // stuff is already at starting
+  // For this crude version just try and go to end
+  double change = 0.0;
+  int i;
+  for ( i = 0; i < numberTotal; i++) {
+    lower_[i] += change * changeLower[i];
+    upper_[i] += change * changeUpper[i];
+    switch(getStatus(i)) {
+      
+    case basic:
+    case isFree:
+    case superBasic:
+      break;
+    case isFixed:
+    case atUpperBound:
+      solution_[i] = upper_[i];
+      break;
+    case atLowerBound:
+      solution_[i] = lower_[i];
+      break;
+    }
+  }
+  problemStatus_ = -1;
+
+  // This says whether to restore things etc
+  // startup will have factorized so can skip
+  int factorType = 0;
+  // Start check for cycles
+  progress_.startCheck();
+  // Say change made on first iteration
+  changeMade_ = 1;
+  /*
+    Status of problem:
+    0 - optimal
+    1 - infeasible
+    2 - unbounded
+    -1 - iterating
+    -2 - factorization wanted
+    -3 - redo checking without factorization
+    -4 - looks infeasible
+  */
+  while (problemStatus_ < 0) {
+    int iRow, iColumn;
+    // clear
+    for (iRow = 0; iRow < 4; iRow++) {
+      rowArray_[iRow]->clear();
+    }
+    
+    for (iColumn = 0; iColumn < 2; iColumn++) {
+      columnArray_[iColumn]->clear();
+    }
+    
+    // give matrix (and model costs and bounds a chance to be
+    // refreshed (normally null)
+    matrix_->refresh(this);
+    // may factorize, checks if problem finished
+    statusOfProblemInParametrics(factorType, data);
+    // Say good factorization
+    factorType = 1;
+    if (data.sparseThreshold_) {
+      // use default at present
+      factorization_->sparseThreshold(0);
+      factorization_->goSparse();
+    }
+    
+    // exit if victory declared
+    if (problemStatus_ >= 0 && startingTheta>=endingTheta-1.0e-7 )
+      break;
+    
+    // test for maximum iterations
+    if (hitMaximumIterations()) {
+      problemStatus_ = 3;
+      break;
+    }
+    // Check event
+    {
+      int status = eventHandler_->event(ClpEventHandler::endOfFactorization);
+      if (status >= 0) {
+	problemStatus_ = 5;
+	secondaryStatus_ = ClpEventHandler::endOfFactorization;
+	break;
+      }
+    }
+    // Do iterations
+    problemStatus_=-1;
+    whileIterating(startingTheta,  endingTheta, 0.0,
+		   changeLower, changeUpper,
+		   NULL);
+    startingTheta = endingTheta;
+  }
+  if (!problemStatus_) {
+    theta_ = change + startingTheta;
+    eventHandler_->event(ClpEventHandler::theta);
+    return 0;
+  } else if (problemStatus_ == 10) {
+    return -1;
+  } else {
+    return problemStatus_;
+  }
+}
 /* Checks if finished.  Updates status */
 void
 ClpSimplexOther::statusOfProblemInParametrics(int type, ClpDataSave & saveData)
@@ -2913,7 +3217,6 @@ ClpSimplexOther::whileIterating(double startingTheta, double & endingTheta, doub
      // status stays at -1 while iterating, >=0 finished, -2 to invert
      // status -3 to go to top without an invert
      int returnCode = -1;
-     double saveSumDual = sumDualInfeasibilities_; // so we know to be careful
      double lastTheta = startingTheta;
      double useTheta = startingTheta;
      int numberTotal = numberColumns_ + numberRows_;
@@ -2928,6 +3231,7 @@ ClpSimplexOther::whileIterating(double startingTheta, double & endingTheta, doub
                break;
           }
      }
+#if 0
      // See if objective
      for (iSequence = 0; iSequence < numberTotal; iSequence++) {
           if (changeObjective[iSequence]) {
@@ -2935,7 +3239,11 @@ ClpSimplexOther::whileIterating(double startingTheta, double & endingTheta, doub
                break;
           }
      }
-     assert (type);
+#endif
+     if (!type) {
+       problemStatus_=0;
+       return 0;
+     }
      while (problemStatus_ == -1) {
           double increaseTheta = CoinMin(endingTheta - lastTheta, 1.0e50);
 
@@ -2945,29 +3253,35 @@ ClpSimplexOther::whileIterating(double startingTheta, double & endingTheta, doub
 	  useTheta += theta_;
 	  double change = useTheta - lastTheta;
 	  for (int i = 0; i < numberTotal; i++) {
-	    lower_[i] += change * changeLower[i];
-	    upper_[i] += change * changeUpper[i];
-	    switch(getStatus(i)) {
-	      
-	    case basic:
-	    case isFree:
-	    case superBasic:
-	      break;
-	    case isFixed:
-	    case atUpperBound:
-	      solution_[i] = upper_[i];
-	      break;
-	    case atLowerBound:
-	      solution_[i] = lower_[i];
-	      break;
+	    if (changeLower[i]||changeUpper[i]) {
+	      lower_[i] += change * changeLower[i];
+	      upper_[i] += change * changeUpper[i];
+	      switch(getStatus(i)) {
+		
+	      case basic:
+	      case isFree:
+	      case superBasic:
+		break;
+	      case isFixed:
+	      case atUpperBound:
+		solution_[i] = upper_[i];
+		break;
+	      case atLowerBound:
+		solution_[i] = lower_[i];
+		break;
+	      }
 	    }
+#if 0
 	    cost_[i] += change * changeObjective[i];
+#endif
 	    assert (solution_[i]>lower_[i]-1.0e-5&&
 		    solution_[i]<upper_[i]+1.0e-5);
 	  }
 	  sequenceIn_=-1;
           if (pivotType) {
 	      problemStatus_ = -2;
+	      if (!factorization_->pivots()&&pivotRow_<0)
+		problemStatus_=2;
 	      endingTheta = useTheta;
 	      return 4;
 	  }
@@ -2982,32 +3296,8 @@ ClpSimplexOther::whileIterating(double startingTheta, double & endingTheta, doub
                }
                // check accuracy of weights
                dualRowPivot_->checkAccuracy();
-               // Get good size for pivot
-               // Allow first few iterations to take tiny
-               double acceptablePivot = 1.0e-9;
-               if (numberIterations_ > 100)
-                    acceptablePivot = 1.0e-8;
-               if (factorization_->pivots() > 10 ||
-                         (factorization_->pivots() && saveSumDual))
-                    acceptablePivot = 1.0e-5; // if we have iterated be more strict
-               else if (factorization_->pivots() > 5)
-                    acceptablePivot = 1.0e-6; // if we have iterated be slightly more strict
-               else if (factorization_->pivots())
-                    acceptablePivot = 1.0e-8; // relax
-               double bestPossiblePivot = 1.0;
-               // get sign for finding row of tableau
-               // normal iteration
-               // create as packed
-               double direction = directionOut_;
-               rowArray_[0]->createPacked(1, &pivotRow_, &direction);
-               factorization_->updateColumnTranspose(rowArray_[1], rowArray_[0]);
-               // put row of tableau in rowArray[0] and columnArray[0]
-               matrix_->transposeTimes(this, -1.0,
-                                       rowArray_[0], rowArray_[3], columnArray_[0]);
                // do ratio test for normal iteration
-               bestPossiblePivot = reinterpret_cast<ClpSimplexDual *> ( this)->dualColumn(rowArray_[0],
-                                   columnArray_[0], columnArray_[1],
-                                   rowArray_[3], acceptablePivot, NULL);
+               double bestPossiblePivot = bestPivot();
                if (sequenceIn_ >= 0) {
                     // normal iteration
                     // update the incoming column
@@ -3205,6 +3495,9 @@ ClpSimplexOther::whileIterating(double startingTheta, double & endingTheta, doub
 		      objectiveChange += solution_[i]*cost_[i];
                     objectiveChange -= objectiveValue_;
                     // outgoing
+                    originalBound(sequenceOut_,useTheta,changeLower,changeUpper);
+		    lowerOut_=lower_[sequenceOut_];
+		    upperOut_=upper_[sequenceOut_];
                     // set dj to zero unless values pass
                     if (directionOut_ > 0) {
                          valueOut_ = lowerOut_;
@@ -3253,7 +3546,7 @@ ClpSimplexOther::whileIterating(double startingTheta, double & endingTheta, doub
 		      lastTheta = useTheta;
 		    }
                     // and set bounds correctly
-                    reinterpret_cast<ClpSimplexDual *> ( this)->originalBound(sequenceIn_);
+                    originalBound(sequenceIn_,useTheta,changeLower,changeUpper);
                     reinterpret_cast<ClpSimplexDual *> ( this)->changeBound(sequenceOut_);
                     if (whatNext == 1) {
                          problemStatus_ = -2; // refactorize
@@ -3275,12 +3568,14 @@ ClpSimplexOther::whileIterating(double startingTheta, double & endingTheta, doub
                     }
                } else {
                     // no incoming column is valid
+		 int savePivotRow = pivotRow_;
                     pivotRow_ = -1;
 #ifdef CLP_DEBUG
                     if (handler_->logLevel() & 32)
                          printf("** no column pivot\n");
 #endif
-                    if (factorization_->pivots() < 5) {
+                    if (factorization_->pivots() < 5) { 
+#if 0
                          // If not in branch and bound etc save ray
                          if ((specialOptions_&(1024 | 4096)) == 0) {
                               // create ray anyway
@@ -3289,6 +3584,7 @@ ClpSimplexOther::whileIterating(double startingTheta, double & endingTheta, doub
                               rowArray_[0]->expand(); // in case packed
                               ClpDisjointCopyN(rowArray_[0]->denseVector(), numberRows_, ray_);
                          }
+#endif
                          // If we have just factorized and infeasibility reasonable say infeas
                          if (((specialOptions_ & 4096) != 0 || bestPossiblePivot < 1.0e-11) && dualBound_ > 1.0e8) {
                               if (valueOut_ > upperOut_ + 1.0e-3 || valueOut_ < lowerOut_ - 1.0e-3
@@ -3302,6 +3598,10 @@ ClpSimplexOther::whileIterating(double startingTheta, double & endingTheta, doub
                                         problemStatus_ = 10;
                                    rowArray_[0]->clear();
                                    columnArray_[0]->clear();
+				   pivotRow_ = savePivotRow;
+				   int action = eventHandler_->event(ClpEventHandler::noTheta);
+				   if (action==-2)
+				     problemStatus_=-1; // carry on
                                    returnCode = 1;
                                    break;
                               }
@@ -3452,8 +3752,45 @@ ClpSimplexOther::whileIterating(double startingTheta, double & endingTheta, doub
      }
      delete [] primalChange;
      delete [] dualChange;
-     endingTheta = lastTheta;
+     endingTheta = lastTheta+theta_;
      return returnCode;
+}
+// Finds best possible pivot
+double 
+ClpSimplexOther::bestPivot(bool justColumns)
+{
+  // Get good size for pivot
+  // Allow first few iterations to take tiny
+  double acceptablePivot = 1.0e-9;
+  if (numberIterations_ > 100)
+    acceptablePivot = 1.0e-8;
+  if (factorization_->pivots() > 10 ||
+      (factorization_->pivots() && sumDualInfeasibilities_))
+    acceptablePivot = 1.0e-5; // if we have iterated be more strict
+  else if (factorization_->pivots() > 5)
+    acceptablePivot = 1.0e-6; // if we have iterated be slightly more strict
+  else if (factorization_->pivots())
+    acceptablePivot = 1.0e-8; // relax
+  double bestPossiblePivot = 1.0;
+  // get sign for finding row of tableau
+  // normal iteration
+  // create as packed
+  double direction = directionOut_;
+  rowArray_[0]->createPacked(1, &pivotRow_, &direction);
+  factorization_->updateColumnTranspose(rowArray_[1], rowArray_[0]);
+  // put row of tableau in rowArray[0] and columnArray[0]
+  matrix_->transposeTimes(this, -1.0,
+			  rowArray_[0], rowArray_[3], columnArray_[0]);
+  sequenceIn_=-1;
+  if (justColumns)
+    rowArray_[0]->clear();
+  // do ratio test for normal iteration
+  bestPossiblePivot = 
+    reinterpret_cast<ClpSimplexDual *> 
+    ( this)->dualColumn(rowArray_[0],
+			columnArray_[0], columnArray_[1],
+			rowArray_[3], acceptablePivot, NULL);
+  return bestPossiblePivot;
 }
 // Computes next theta and says if objective or bounds (0= bounds, 1 objective, -1 none)
 int
@@ -3568,7 +3905,52 @@ ClpSimplexOther::nextTheta(int type, double maxTheta, double * primalChange, dou
           }
           return 0;
      } else {
+          theta_=0.0;
           return -1;
+     }
+}
+// Restores bound to original bound
+void 
+ClpSimplexOther::originalBound(int iSequence, double theta, 
+			       const double * changeLower,
+			       const double * changeUpper)
+{
+     if (getFakeBound(iSequence) != noFake) {
+          numberFake_--;
+          setFakeBound(iSequence, noFake);
+          if (iSequence >= numberColumns_) {
+               // rows
+               int iRow = iSequence - numberColumns_;
+               rowLowerWork_[iRow] = rowLower_[iRow]+theta*changeLower[iSequence];
+               rowUpperWork_[iRow] = rowUpper_[iRow]+theta*changeUpper[iSequence];
+               if (rowScale_) {
+                    if (rowLowerWork_[iRow] > -1.0e50)
+                         rowLowerWork_[iRow] *= rowScale_[iRow] * rhsScale_;
+                    if (rowUpperWork_[iRow] < 1.0e50)
+                         rowUpperWork_[iRow] *= rowScale_[iRow] * rhsScale_;
+               } else if (rhsScale_ != 1.0) {
+                    if (rowLowerWork_[iRow] > -1.0e50)
+                         rowLowerWork_[iRow] *= rhsScale_;
+                    if (rowUpperWork_[iRow] < 1.0e50)
+                         rowUpperWork_[iRow] *= rhsScale_;
+               }
+          } else {
+               // columns
+               columnLowerWork_[iSequence] = columnLower_[iSequence]+theta*changeLower[iSequence];
+               columnUpperWork_[iSequence] = columnUpper_[iSequence]+theta*changeUpper[iSequence];
+               if (rowScale_) {
+                    double multiplier = 1.0 * inverseColumnScale_[iSequence];
+                    if (columnLowerWork_[iSequence] > -1.0e50)
+                         columnLowerWork_[iSequence] *= multiplier * rhsScale_;
+                    if (columnUpperWork_[iSequence] < 1.0e50)
+                         columnUpperWork_[iSequence] *= multiplier * rhsScale_;
+               } else if (rhsScale_ != 1.0) {
+                    if (columnLowerWork_[iSequence] > -1.0e50)
+                         columnLowerWork_[iSequence] *= rhsScale_;
+                    if (columnUpperWork_[iSequence] < 1.0e50)
+                         columnUpperWork_[iSequence] *= rhsScale_;
+               }
+          }
      }
 }
 /* Expands out all possible combinations for a knapsack
@@ -5004,4 +5386,618 @@ ClpSimplexOther::getGubBasis(ClpSimplex &original,const int * whichRows,
   for (int i = 0; i < numberColumns; i++)
     objValue += cost[i] * originalSolution[i];
   //printf("objective value is %g\n", objValue);
+}
+/*
+  Modifies coefficients etc and if necessary pivots in and out.
+  All at same status will be done (basis may go singular).
+  User can tell which others have been done (i.e. if status matches).
+  If called from outside will change status and return 0 (-1 if not ClpPacked)
+  If called from event handler returns non-zero if user has to take action.
+  -1 - not ClpPackedMatrix
+  0 - no pivots
+  1 - pivoted
+  2 - pivoted and optimal
+  3 - refactorize
+  4 - worse than that
+  indices>=numberColumns are slacks (obviously no coefficients)
+  status array is (char) Status enum
+*/
+int 
+ClpSimplex::modifyCoefficientsAndPivot(int number,
+				       const int * which,
+				       const CoinBigIndex * start,
+				       const int * row,
+				       const double * newCoefficient,
+				       const unsigned char * newStatus,
+				       const double * newLower,
+				       const double * newUpper,
+				       const double * newObjective)
+{
+  ClpPackedMatrix* clpMatrix =
+    dynamic_cast< ClpPackedMatrix*>(matrix_);
+  bool canPivot = lower_!=NULL && factorization_!=NULL;
+  int returnCode=0;
+  if (!clpMatrix) {
+    canPivot=false;
+    returnCode=-1;
+    // very slow
+    for (int i=0;i<number;i++) {
+      int iSequence=which[i];
+      if (iSequence<numberColumns_) {
+	for (CoinBigIndex j=start[i];j<start[i+1];j++) {
+ 	  matrix_->modifyCoefficient(row[j],iSequence,newCoefficient[j]);
+	}
+      } else {
+	assert (start[i]==start[i+1]);
+      }
+    }
+  } else {
+    CoinPackedMatrix * matrix = clpMatrix->getPackedMatrix();
+    matrix->modifyCoefficients(number,which,start,
+			       row,newCoefficient);
+    if (canPivot) {
+      // ? faster to modify row copy??
+      if (rowCopy_&&start[number]) {
+	delete rowCopy_;
+	rowCopy_ = clpMatrix->reverseOrderedCopy();
+      }
+      assert (!newStatus); // do later
+      int numberPivots = factorization_->pivots();
+      int needed=0;
+      for (int i=0;i<number;i++) {
+	int iSequence=which[i];
+	if (start[i+1]>start[i]&&getStatus(iSequence)==basic)
+	  needed++;
+      }
+      if (needed&&numberPivots+needed<20&&needed<-2) {
+	// update factorization
+	int saveIn = sequenceIn_;
+	int savePivot = pivotRow_;
+	int nArray=0;
+	CoinIndexedVector * vec[2];
+	for (int i=0;i<4;i++) {
+	  if (!rowArray_[i]->getNumElements()) {
+	    vec[nArray++]=rowArray_[i];
+	    if (nArray==2)
+	      break;
+	  }
+	}
+	assert (nArray==2); // could use temp array
+	for (int i=0;i<number;i++) {
+	  int sequenceIn_=which[i];
+	  if (start[i+1]>start[i]&&getStatus(sequenceIn_)==basic) {
+	    // find pivot row
+	    for (pivotRow_=0;pivotRow_<numberRows_;pivotRow_++) {
+	      if (pivotVariable_[pivotRow_]==sequenceIn_) 
+		break;
+	    }
+	    assert(pivotRow_<numberRows_);
+	    // unpack column
+	    assert(!vec[0]->getNumElements());
+	    unpackPacked(vec[0]);
+	    // update
+	    assert(!vec[1]->getNumElements());
+	    factorization_->updateColumnFT(vec[1], vec[0]);
+	    // Find alpha
+	    const int * indices = vec[0]->getIndices();
+	    const double * array = vec[0]->denseVector();
+	    int n=vec[0]->getNumElements();
+	    alpha_=0.0;
+	    for (int i=0;i<n;i++) {
+	      if (indices[i]==pivotRow_) {
+		alpha_ = array[i];
+		break;
+	      }
+	    }
+	    int updateStatus=2;
+	    if (fabs(alpha_)>1.0e-7) 
+	      updateStatus = factorization_->replaceColumn(this,
+							   vec[1],
+							   vec[0],
+							   pivotRow_,
+							   alpha_);
+	    assert(!vec[1]->getNumElements());
+	    vec[0]->clear();
+	    if (updateStatus) {
+	      returnCode=3;
+	      break;
+	    }
+	  }
+	}
+	sequenceIn_=saveIn;
+	pivotRow_ = savePivot;
+	if (!returnCode)
+	  returnCode=100; // say can do more
+      } else if (needed) {
+	returnCode=3; // refactorize
+      }
+    }
+  }
+  if (newStatus) {
+    for (int i=0;i<number;i++) {
+      int iSequence=which[i];
+      status_[iSequence]=newStatus[i];
+    }
+  }
+  if (newLower) {
+    for (int i=0;i<number;i++) {
+      int iSequence=which[i];
+      if (iSequence<numberColumns_) {
+	if (columnLower_[iSequence]!=newLower[i]) {
+	  columnLower_[iSequence]=newLower[i];
+	}
+      } else {
+	iSequence -= numberColumns_;
+	if (rowLower_[iSequence]!=newLower[i]) {
+	  rowLower_[iSequence]=newLower[i];
+	}
+      }
+    }
+  }
+  if (newLower) {
+    for (int i=0;i<number;i++) {
+      int iSequence=which[i];
+      if (iSequence<numberColumns_) {
+	if (columnLower_[iSequence]!=newLower[i]) {
+	  columnLower_[iSequence]=newLower[i];
+	}
+      } else {
+	iSequence -= numberColumns_;
+	if (rowLower_[iSequence]!=newLower[i]) {
+	  rowLower_[iSequence]=newLower[i];
+	}
+      }
+    }
+  }
+  if (newUpper) {
+    for (int i=0;i<number;i++) {
+      int iSequence=which[i];
+      if (iSequence<numberColumns_) {
+	if (columnUpper_[iSequence]!=newUpper[i]) {
+	  columnUpper_[iSequence]=newUpper[i];
+	}
+      } else {
+	iSequence -= numberColumns_;
+	if (rowUpper_[iSequence]!=newUpper[i]) {
+	  rowUpper_[iSequence]=newUpper[i];
+	}
+      }
+    }
+  }
+  if (newObjective) {
+    double * obj = objective();
+    for (int i=0;i<number;i++) {
+      int iSequence=which[i];
+      if (iSequence<numberColumns_) {
+	if (obj[iSequence]!=newObjective[i]) {
+	  obj[iSequence]=newObjective[i];
+	}
+      } else {
+	  assert (!newObjective[i]);
+      }
+    }
+  }
+  if (canPivot) {
+    // update lower, upper, objective and nonLinearCost
+    assert (!rowScale_); // for now
+    memcpy(lower_,columnLower_,numberColumns_*sizeof(double));
+    memcpy(lower_+numberColumns_,rowLower_,numberRows_*sizeof(double));
+    memcpy(upper_,columnUpper_,numberColumns_*sizeof(double));
+    memcpy(upper_+numberColumns_,rowUpper_,numberRows_*sizeof(double));
+    memcpy(cost_,objective(),numberColumns_*sizeof(double));
+    memset(cost_+numberColumns_,0,numberRows_*sizeof(double));
+    // ? parameter to say no gutsOfSolution needed
+    // make sure slacks have correct value
+    // see if still optimal
+    if (returnCode==100) {
+      // is this needed
+      if (nonLinearCost_) {
+	// speed up later
+	//nonLinearCost_->checkInfeasibilities(oldTolerance);
+	delete nonLinearCost_;
+	nonLinearCost_ = new ClpNonLinearCost(this);
+      }
+      gutsOfSolution(NULL,NULL,false);
+      assert (!newStatus);
+      printf("%d primal %d dual\n",numberPrimalInfeasibilities_,
+	     numberDualInfeasibilities_);
+      returnCode=3;
+    } else {
+      // is this needed
+      if (nonLinearCost_) {
+	// speed up later
+#if 1
+	for (int i=0;i<number;i++) {
+	  int iSequence=which[i];
+	  nonLinearCost_->setOne(iSequence,solution_[iSequence],
+				 lower_[iSequence],upper_[iSequence],
+				 cost_[iSequence]);
+	}
+#else	
+	//nonLinearCost_->checkInfeasibilities(oldTolerance);
+	delete nonLinearCost_;
+	nonLinearCost_ = new ClpNonLinearCost(this);
+	//nonLinearCost_->checkInfeasibilities(0.0);
+#endif
+	//gutsOfSolution(NULL,NULL,false);
+	assert (!newStatus);
+      }
+    }
+  }
+  return returnCode;
+}
+
+/* Pivot out a variable and choose an incoing one.  Assumes dual
+   feasible - will not go through a reduced cost.
+   Returns step length in theta
+   Return codes as before but -1 means no acceptable pivot
+*/
+int
+ClpSimplex::dualPivotResultPart1()
+{
+     return static_cast<ClpSimplexDual *> (this)->pivotResultPart1();
+}
+/* Do actual pivot
+   state is 1,3 if got tableau column in rowArray_[1]
+   2,3 if got tableau row in rowArray_[0] and columnArray_[0]
+*/
+int 
+ClpSimplex::pivotResultPart2(int algorithm,int state)
+{
+  if (!(state&1)) {
+    // update the incoming column
+    unpackPacked(rowArray_[1]);
+    factorization_->updateColumnFT(rowArray_[2], rowArray_[1]);
+  }
+#define CHECK_TABLEAU 0
+  if (!(state&2)||CHECK_TABLEAU) {
+    // get tableau row
+    // create as packed
+    double direction = directionOut_;
+    assert (!rowArray_[2]->getNumElements());
+    assert (!columnArray_[1]->getNumElements());
+#if CHECK_TABLEAU
+    printf("rowArray0 old\n");
+    rowArray_[0]->print();
+    rowArray_[0]->clear();
+    printf("columnArray0 old\n");
+    columnArray_[0]->print();
+    columnArray_[0]->clear();
+#else
+    assert (!columnArray_[0]->getNumElements());
+    assert (!rowArray_[0]->getNumElements());
+#endif
+    rowArray_[0]->createPacked(1, &pivotRow_, &direction);
+    factorization_->updateColumnTranspose(rowArray_[2], rowArray_[0]);
+    rowArray_[3]->clear();
+    // put row of tableau in rowArray[0] and columnArray[0]
+    assert (!rowArray_[2]->getNumElements());
+    matrix_->transposeTimes(this, -1.0,
+			    rowArray_[0], rowArray_[2], columnArray_[0]);
+#if CHECK_TABLEAU
+    printf("rowArray0 new\n");
+    rowArray_[0]->print();
+    printf("columnArray0 new\n");
+    columnArray_[0]->print();
+#endif
+  }
+  assert (pivotRow_>=0);
+  assert (sequenceIn_>=0);
+  assert (sequenceOut_>=0);
+  int returnCode=-1;
+  if (algorithm>0) {
+    // replace in basis
+    int updateStatus = factorization_->replaceColumn(this,
+						     rowArray_[2],
+						     rowArray_[1],
+						     pivotRow_,
+						     alpha_);
+    if (!updateStatus) {
+      dualIn_ = cost_[sequenceIn_];
+      double * work = rowArray_[1]->denseVector();
+      int number = rowArray_[1]->getNumElements();
+      int * which = rowArray_[1]->getIndices();
+      for (int i = 0; i < number; i++) {
+	int iRow = which[i];
+	double alpha = work[i];
+	int iPivot = pivotVariable_[iRow];
+	dualIn_ -= alpha * cost_[iPivot];
+      }
+      returnCode=0;
+      double multiplier = dualIn_ / alpha_;
+      // update column djs
+      int i;
+      int * index = columnArray_[0]->getIndices();
+      number = columnArray_[0]->getNumElements();
+      double * element = columnArray_[0]->denseVector();
+      assert (columnArray_[0]->packedMode());
+      for (i = 0; i < number; i++) {
+	int iSequence = index[i];
+	dj_[iSequence] += multiplier*element[i];
+	reducedCost_[iSequence] = dj_[iSequence];
+	element[i] = 0.0;
+      }
+      columnArray_[0]->setNumElements(0);
+      // and row djs
+      index = rowArray_[0]->getIndices();
+      number = rowArray_[0]->getNumElements();
+      element = rowArray_[0]->denseVector();
+      assert (rowArray_[0]->packedMode());
+      for (i = 0; i < number; i++) {
+	int iSequence = index[i];
+	dj_[iSequence+numberColumns_] += multiplier*element[i];
+	dual_[iSequence] = dj_[iSequence+numberColumns_];
+	element[i] = 0.0;
+      }
+      rowArray_[0]->setNumElements(0);
+      double oldCost = cost_[sequenceOut_];
+      // update primal solution
+      
+      double objectiveChange = 0.0;
+      // after this rowArray_[1] is not empty - used to update djs
+      static_cast<ClpSimplexPrimal *>(this)->updatePrimalsInPrimal(rowArray_[1], theta_, objectiveChange, 0);
+      double oldValue = valueIn_;
+      if (directionIn_ == -1) {
+	// as if from upper bound
+	if (sequenceIn_ != sequenceOut_) {
+	  // variable becoming basic
+	  valueIn_ -= fabs(theta_);
+	} else {
+	  valueIn_ = lowerIn_;
+	}
+      } else {
+	// as if from lower bound
+	if (sequenceIn_ != sequenceOut_) {
+	  // variable becoming basic
+	  valueIn_ += fabs(theta_);
+	} else {
+	  valueIn_ = upperIn_;
+	}
+      }
+      objectiveChange += dualIn_ * (valueIn_ - oldValue);
+      // outgoing
+      if (sequenceIn_ != sequenceOut_) {
+	if (directionOut_ > 0) {
+	  valueOut_ = lowerOut_;
+	} else {
+	  valueOut_ = upperOut_;
+	}
+	if(valueOut_ < lower_[sequenceOut_] - primalTolerance_)
+	  valueOut_ = lower_[sequenceOut_] - 0.9 * primalTolerance_;
+	else if (valueOut_ > upper_[sequenceOut_] + primalTolerance_)
+	  valueOut_ = upper_[sequenceOut_] + 0.9 * primalTolerance_;
+	// may not be exactly at bound and bounds may have changed
+	// Make sure outgoing looks feasible
+	directionOut_ = nonLinearCost_->setOneOutgoing(sequenceOut_, valueOut_);
+	// May have got inaccurate
+	//if (oldCost!=cost_[sequenceOut_])
+	//printf("costchange on %d from %g to %g\n",sequenceOut_,
+	//       oldCost,cost_[sequenceOut_]);
+	dj_[sequenceOut_] = cost_[sequenceOut_] - oldCost; // normally updated next iteration
+	solution_[sequenceOut_] = valueOut_;
+      }
+      // change cost and bounds on incoming if primal
+      nonLinearCost_->setOne(sequenceIn_, valueIn_);
+      progress_.startCheck(); // make sure won't worry about cycling
+      int whatNext = housekeeping(objectiveChange);
+      if (whatNext == 1) {
+	returnCode = -2; // refactorize
+      } else if (whatNext == 2) {
+	// maximum iterations or equivalent
+	returnCode = 3;
+      } else if(numberIterations_ == lastGoodIteration_
+		+ 2 * factorization_->maximumPivots()) {
+	// done a lot of flips - be safe
+	returnCode = -2; // refactorize
+      }
+    } else {
+      // ?
+      abort();
+    }
+  } else {
+    // dual
+    // recompute dualOut_
+    if (directionOut_ < 0) {
+      dualOut_ = valueOut_ - upperOut_;
+    } else {
+      dualOut_ = lowerOut_ - valueOut_;
+    }
+    // update the incoming column
+    double btranAlpha = -alpha_ * directionOut_; // for check
+    rowArray_[1]->clear();
+    unpackPacked(rowArray_[1]);
+    // moved into updateWeights - factorization_->updateColumnFT(rowArray_[2],rowArray_[1]);
+    // and update dual weights (can do in parallel - with extra array)
+    alpha_ = dualRowPivot_->updateWeights(rowArray_[0],
+					  rowArray_[2],
+					  rowArray_[3],
+					  rowArray_[1]);
+    // see if update stable
+#ifdef CLP_DEBUG
+    if ((handler_->logLevel() & 32))
+      printf("btran alpha %g, ftran alpha %g\n", btranAlpha, alpha_);
+#endif
+    double checkValue = 1.0e-7;
+    // if can't trust much and long way from optimal then relax
+    if (largestPrimalError_ > 10.0)
+      checkValue = CoinMin(1.0e-4, 1.0e-8 * largestPrimalError_);
+    if (fabs(btranAlpha) < 1.0e-12 || fabs(alpha_) < 1.0e-12 ||
+	fabs(btranAlpha - alpha_) > checkValue*(1.0 + fabs(alpha_))) {
+      handler_->message(CLP_DUAL_CHECK, messages_)
+	<< btranAlpha
+	<< alpha_
+	<< CoinMessageEol;
+      if (factorization_->pivots()) {
+	dualRowPivot_->unrollWeights();
+	problemStatus_ = -2; // factorize now
+	rowArray_[0]->clear();
+	rowArray_[1]->clear();
+	columnArray_[0]->clear();
+	returnCode = -2;
+	abort();
+	return returnCode;
+      } else {
+	// take on more relaxed criterion
+	double test;
+	if (fabs(btranAlpha) < 1.0e-8 || fabs(alpha_) < 1.0e-8)
+	  test = 1.0e-1 * fabs(alpha_);
+	else
+	  test = 1.0e-4 * (1.0 + fabs(alpha_));
+	if (fabs(btranAlpha) < 1.0e-12 || fabs(alpha_) < 1.0e-12 ||
+	    fabs(btranAlpha - alpha_) > test) {
+	  abort();
+	}
+      }
+    }
+    // update duals BEFORE replaceColumn so can do updateColumn
+    double objectiveChange = 0.0;
+    // do duals first as variables may flip bounds
+    // rowArray_[0] and columnArray_[0] may have flips
+    // so use rowArray_[3] for work array from here on
+    int nswapped = 0;
+    //rowArray_[0]->cleanAndPackSafe(1.0e-60);
+    //columnArray_[0]->cleanAndPackSafe(1.0e-60);
+    // make sure incoming doesn't count
+    Status saveStatus = getStatus(sequenceIn_);
+    setStatus(sequenceIn_, basic);
+    nswapped = 
+      static_cast<ClpSimplexDual *>(this)->updateDualsInDual(rowArray_[0], columnArray_[0],
+				 rowArray_[2], theta_,
+				 objectiveChange, false);
+    assert (!nswapped);
+    setStatus(sequenceIn_, saveStatus);
+    double oldDualOut = dualOut_;
+    // which will change basic solution
+    if (nswapped) {
+      if (rowArray_[2]->getNumElements()) {
+	factorization_->updateColumn(rowArray_[3], rowArray_[2]);
+	dualRowPivot_->updatePrimalSolution(rowArray_[2],
+					    1.0, objectiveChange);
+      }
+      // recompute dualOut_
+      valueOut_ = solution_[sequenceOut_];
+      if (directionOut_ < 0) {
+	dualOut_ = valueOut_ - upperOut_;
+      } else {
+	dualOut_ = lowerOut_ - valueOut_;
+      }
+    }
+    // amount primal will move
+    double movement = -dualOut_ * directionOut_ / alpha_;
+    double movementOld = oldDualOut * directionOut_ / alpha_;
+    // so objective should increase by fabs(dj)*movement
+    // but we already have objective change - so check will be good
+    if (objectiveChange + fabs(movementOld * dualIn_) < -CoinMax(1.0e-5, 1.0e-12 * fabs(objectiveValue_))) {
+      if (handler_->logLevel() & 32)
+	printf("movement %g, swap change %g, rest %g  * %g\n",
+	       objectiveChange + fabs(movement * dualIn_),
+	       objectiveChange, movement, dualIn_);
+    }
+    // if stable replace in basis
+    int updateStatus = factorization_->replaceColumn(this,
+						     rowArray_[2],
+						     rowArray_[1],
+						     pivotRow_,
+						     alpha_);
+    // If looks like bad pivot - refactorize
+    if (fabs(dualOut_) > 1.0e50)
+      updateStatus = 2;
+    // if no pivots, bad update but reasonable alpha - take and invert
+    if (updateStatus == 2 &&
+	!factorization_->pivots() && fabs(alpha_) > 1.0e-5)
+      updateStatus = 4;
+    if (updateStatus == 1 || updateStatus == 4) {
+      // slight error
+      if (factorization_->pivots() > 5 || updateStatus == 4) {
+	problemStatus_ = -2; // factorize now
+	returnCode = -3;
+      }
+    } else if (updateStatus == 2) {
+      // major error
+      dualRowPivot_->unrollWeights();
+      // later we may need to unwind more e.g. fake bounds
+      if (factorization_->pivots() &&
+	  ((moreSpecialOptions_ & 16) == 0 || factorization_->pivots() > 4)) {
+	problemStatus_ = -2; // factorize now
+	returnCode = -2;
+	moreSpecialOptions_ |= 16;
+	return returnCode;
+      } else {
+	// need to reject something
+	abort();
+      }
+    } else if (updateStatus == 3) {
+      // out of memory
+      // increase space if not many iterations
+      if (factorization_->pivots() <
+	  0.5 * factorization_->maximumPivots() &&
+	  factorization_->pivots() < 200)
+	factorization_->areaFactor(
+				   factorization_->areaFactor() * 1.1);
+      problemStatus_ = -2; // factorize now
+    } else if (updateStatus == 5) {
+      problemStatus_ = -2; // factorize now
+    }
+    // update primal solution
+    if (theta_ < 0.0) {
+      if (handler_->logLevel() & 32)
+	printf("negative theta %g\n", theta_);
+      theta_ = 0.0;
+    }
+    // do actual flips (should not be any?)
+    static_cast<ClpSimplexDual *>(this)->flipBounds(rowArray_[0], columnArray_[0]);
+      //rowArray_[1]->expand();
+    dualRowPivot_->updatePrimalSolution(rowArray_[1],
+					movement,
+					objectiveChange);
+    // modify dualout
+    dualOut_ /= alpha_;
+    dualOut_ *= -directionOut_;
+    //setStatus(sequenceIn_,basic);
+    dj_[sequenceIn_] = 0.0;
+    double oldValue = valueIn_;
+    if (directionIn_ == -1) {
+      // as if from upper bound
+      valueIn_ = upperIn_ + dualOut_;
+    } else {
+      // as if from lower bound
+      valueIn_ = lowerIn_ + dualOut_;
+    }
+    objectiveChange += cost_[sequenceIn_] * (valueIn_ - oldValue);
+    // outgoing
+    // set dj to zero unless values pass
+    if (directionOut_ > 0) {
+      valueOut_ = lowerOut_;
+      dj_[sequenceOut_] = theta_;
+    } else {
+      valueOut_ = upperOut_;
+      dj_[sequenceOut_] = -theta_;
+    }
+    solution_[sequenceOut_] = valueOut_;
+    int whatNext = housekeeping(objectiveChange);
+    // and set bounds correctly
+    static_cast<ClpSimplexDual *>(this)->originalBound(sequenceIn_);
+    static_cast<ClpSimplexDual *>(this)->changeBound(sequenceOut_);
+    if (whatNext == 1) {
+      problemStatus_ = -2; // refactorize
+    } else if (whatNext == 2) {
+      // maximum iterations or equivalent
+      problemStatus_ = 3;
+      returnCode = 3;
+      abort();
+    }
+  }
+  // Check event
+  {
+    int status = eventHandler_->event(ClpEventHandler::endOfIteration);
+    if (status >= 0) {
+      problemStatus_ = 5;
+      secondaryStatus_ = ClpEventHandler::endOfIteration;
+      returnCode = 3;
+    }
+  }
+  // need to be able to refactoriza
+  //printf("return code %d problem status %d\n",
+  //	 returnCode,problemStatus_);
+  return returnCode;
 }

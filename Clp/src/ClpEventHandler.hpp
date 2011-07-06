@@ -33,7 +33,7 @@ public:
      */
      enum Event {
           endOfIteration = 100, // used to set secondary status
-          endOfFactorization,
+          endOfFactorization, // after gutsOfSolution etc
           endOfValuesPass,
           node, // for Cbc
           treeStatus, // for Cbc
@@ -46,7 +46,17 @@ public:
 	  presolveBeforeSolve, // ClpSolve presolve before solve
 	  presolveAfterFirstSolve, // ClpSolve presolve after solve
 	  presolveAfterSolve, // ClpSolve presolve after solve
-	  presolveEnd // ClpSolve presolve end
+	  presolveEnd, // ClpSolve presolve end
+	  goodFactorization, // before gutsOfSolution
+	  complicatedPivotIn, // in modifyCoefficients
+	  noCandidateInPrimal, // tentative end
+	  looksEndInPrimal, // About to declare victory (or defeat)
+	  endInPrimal, // Victory (or defeat)
+	  complicatedPivotOut, // in modifyCoefficients
+	  noCandidateInDual, // tentative end
+	  looksEndInDual, // About to declare victory (or defeat)
+	  endInDual, // Victory (or defeat)
+	  noTheta // At end (because no pivot)
      };
      /**@name Virtual method that the derived classes should provide.
       The base class instance does nothing and as event() is only useful method

@@ -281,10 +281,9 @@ public:
 
      /** Pivot in a variable and choose an outgoing one.  Assumes dual
          feasible - will not go through a reduced cost.  Returns step length in theta
-         Returns ray in ray_ (or NULL if no pivot)
          Return codes as before but -1 means no acceptable pivot
      */
-     int pivotResult();
+     int pivotResultPart1();
      /** Get next free , -1 if none */
      int nextSuperBasic();
      /** Startup part of dual (may be extended to other algorithms)

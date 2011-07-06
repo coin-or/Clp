@@ -8098,6 +8098,9 @@ int ClpSimplex::primalPivotResult()
      lowerIn_ = lower_[sequenceIn_];
      upperIn_ = upper_[sequenceIn_];
      dualIn_ = dj_[sequenceIn_];
+     if (!nonLinearCost_)
+       nonLinearCost_ = new ClpNonLinearCost(this);
+      
 
      int returnCode = static_cast<ClpSimplexPrimal *> (this)->pivotResult();
      if (returnCode < 0 && returnCode > -4) {
@@ -8107,18 +8110,6 @@ int ClpSimplex::primalPivotResult()
 				   returnCode));
           return -1;
      }
-}
-
-/* Pivot out a variable and choose an incoing one.  Assumes dual
-   feasible - will not go through a reduced cost.
-   Returns step length in theta
-   Returns ray in ray_ (or NULL if no pivot)
-   Return codes as before but -1 means no acceptable pivot
-*/
-int
-ClpSimplex::dualPivotResult()
-{
-     return static_cast<ClpSimplexDual *> (this)->pivotResult();
 }
 // Factorization frequency
 int

@@ -6442,14 +6442,69 @@ ClpSimplexDual::numberAtFakeBound()
 /* Pivot out a variable and choose an incoing one.  Assumes dual
    feasible - will not go through a reduced cost.
    Returns step length in theta
-   Returns ray in ray_ (or NULL if no pivot)
    Return codes as before but -1 means no acceptable pivot
 */
 int
-ClpSimplexDual::pivotResult()
+ClpSimplexDual::pivotResultPart1()
 {
-     abort();
-     return 0;
+  // Get good size for pivot
+  // Allow first few iterations to take tiny
+  double acceptablePivot = 1.0e-1 * acceptablePivot_;
+  if (numberIterations_ > 100)
+    acceptablePivot = acceptablePivot_;
+  if (factorization_->pivots() > 10)
+    acceptablePivot = 1.0e+3 * acceptablePivot_; // if we have iterated be more strict
+  else if (factorization_->pivots() > 5)
+    acceptablePivot = 1.0e+2 * acceptablePivot_; // if we have iterated be slightly more strict
+  else if (factorization_->pivots())
+    acceptablePivot = acceptablePivot_; // relax
+  // But factorizations complain if <1.0e-8
+  //acceptablePivot=CoinMax(acceptablePivot,1.0e-8);
+  double bestPossiblePivot = 1.0;
+  // get sign for finding row of tableau
+  // create as packed
+  double direction = directionOut_;
+  assert (!rowArray_[0]->getNumElements());
+  rowArray_[1]->clear(); //assert (!rowArray_[1]->getNumElements());
+  assert (!columnArray_[0]->getNumElements());
+  assert (!columnArray_[1]->getNumElements());
+  rowArray_[0]->createPacked(1, &pivotRow_, &direction);
+  factorization_->updateColumnTranspose(rowArray_[1], rowArray_[0]);
+  // Allow to do dualColumn0
+  if (numberThreads_ < -1)
+    spareIntArray_[0] = 1;
+  spareDoubleArray_[0] = acceptablePivot;
+  rowArray_[3]->clear();
+  sequenceIn_ = -1;
+  // put row of tableau in rowArray[0] and columnArray[0]
+  assert (!rowArray_[1]->getNumElements());
+  if (!scaledMatrix_) {
+    if ((moreSpecialOptions_ & 8) != 0 && !rowScale_)
+      spareIntArray_[0] = 1;
+    matrix_->transposeTimes(this, -1.0,
+			    rowArray_[0], rowArray_[1], columnArray_[0]);
+  } else {
+    double * saveR = rowScale_;
+    double * saveC = columnScale_;
+    rowScale_ = NULL;
+    columnScale_ = NULL;
+    if ((moreSpecialOptions_ & 8) != 0)
+      spareIntArray_[0] = 1;
+    scaledMatrix_->transposeTimes(this, -1.0,
+				  rowArray_[0], rowArray_[1], columnArray_[0]);
+    rowScale_ = saveR;
+    columnScale_ = saveC;
+  }
+  // do ratio test for normal iteration
+  dualOut_ *= 1.0e-8;
+  bestPossiblePivot = dualColumn(rowArray_[0], columnArray_[0], rowArray_[3],
+				 columnArray_[1], acceptablePivot, 
+				 NULL/*dubiousWeights*/);
+  dualOut_ *= 1.0e8;
+  if (fabs(bestPossiblePivot)<1.0e-6)
+    return -1;
+  else
+    return 0;
 }
 /*
    Row array has row part of pivot row

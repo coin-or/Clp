@@ -1653,7 +1653,9 @@ ClpNonLinearCost::setOne(int sequence, double solutionValue, double lowerValue, 
           whichRange_[sequence] = iRange;
      }
      if (CLP_METHOD2) {
-          abort(); // may never work
+       bound_[sequence]=0.0;
+       cost2_[sequence]=costValue;
+       setInitialStatus(status_[sequence]);
      }
 
 }

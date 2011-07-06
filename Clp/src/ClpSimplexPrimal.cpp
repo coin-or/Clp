@@ -459,8 +459,25 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
                pivotRow_ = -2;
 
                // exit if victory declared
-               if (problemStatus_ >= 0)
-                    break;
+	       if (problemStatus_ >= 0) {
+#ifdef CLP_USER_DRIVEN
+		 int status = 
+		   eventHandler_->event(ClpEventHandler::endInPrimal);
+		 if (status>=0&&status<10) {
+		   // carry on
+		   problemStatus_=-1;
+		   if (status==0)
+		     continue; // re-factorize
+		 } else if (status>=10) {
+		   problemStatus_=status-10;
+		   break;
+		 } else {
+		   break;
+		 }
+#else
+		 break;
+#endif
+	       }
 
                // test for maximum iterations
                if (hitMaximumIterations() || (ifValuesPass == 2 && firstFree_ < 0)) {
@@ -719,9 +736,28 @@ ClpSimplexPrimal::whileIterating(int valuesOption)
                     problemStatus_ = -4; // might be infeasible
                // Force to re-factorize early next time
                int numberPivots = factorization_->pivots();
-               forceFactorization_ = CoinMin(forceFactorization_, (numberPivots + 1) >> 1);
-               returnCode = 0;
-               break;
+	       returnCode = 0;
+#ifdef CLP_USER_DRIVEN
+	       // If large number of pivots trap later?
+	       if (problemStatus_==-1 && numberPivots<1000) {
+		 int status = eventHandler_->event(ClpEventHandler::noCandidateInPrimal);
+		 if (status>=0&&status<10) {
+		   // carry on
+		   problemStatus_=-1;
+		   if (status==0) 
+		     break;
+		 } else if (status>=10) {
+		     problemStatus_=status-10;
+		     break;
+		 } else {
+		   forceFactorization_ = CoinMin(forceFactorization_, (numberPivots + 1) >> 1);
+		   break;
+		 }
+	       }
+#else
+		   forceFactorization_ = CoinMin(forceFactorization_, (numberPivots + 1) >> 1);
+		   break;
+#endif
           }
      }
      if (valuesOption > 1)
@@ -855,7 +891,16 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
           double lastAverageInfeasibility = sumDualInfeasibilities_ /
                                             static_cast<double>(numberDualInfeasibilities_ + 10);
 #endif
+#ifdef CLP_USER_DRIVEN
+	  int status = eventHandler_->event(ClpEventHandler::goodFactorization);
+	  if (status >= 0) {
+	    numberThrownOut=status;
+	  } else {
+	    numberThrownOut = gutsOfSolution(NULL, NULL, (firstFree_ >= 0));
+	  }
+#else
           numberThrownOut = gutsOfSolution(NULL, NULL, (firstFree_ >= 0));
+#endif
           double sumInfeasibility =  nonLinearCost_->sumInfeasibilities();
           int reason2 = 0;
 #if CLP_CAUTION
@@ -2807,6 +2852,13 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
                primalRow(rowArray_[1], rowArray_[3], rowArray_[2],
                          ifValuesPass);
 #ifdef CLP_USER_DRIVEN
+	       // user can tell which use it is
+               int status = eventHandler_->event(ClpEventHandler::pivotRow);
+               if (status >= 0) {
+                    problemStatus_ = 5;
+                    secondaryStatus_ = ClpEventHandler::pivotRow;
+                    break;
+               }
           } else {
                int status = eventHandler_->event(ClpEventHandler::pivotRow);
                if (status >= 0) {
@@ -2915,10 +2967,11 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 	       // Got good pivot - may need to unflag stuff
 	       userChoiceWasGood(this);
  #endif
-               if (solveType_ == 2 && (moreSpecialOptions_ & 512) == 0) {
+               if (solveType_ >= 2 && (moreSpecialOptions_ & 512) == 0) {
                     // **** Coding for user interface
                     // do ray
-                    primalRay(rowArray_[1]);
+		    if (solveType_==2)
+                      primalRay(rowArray_[1]);
                     // update duals
                     // as packed need to find pivot row
                     //assert (rowArray_[1]->packedMode());
@@ -2927,6 +2980,9 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
                     //alpha_ = rowArray_[1]->denseVector()[pivotRow_];
                     CoinAssert (fabs(alpha_) > 1.0e-12);
                     double multiplier = dualIn_ / alpha_;
+#ifndef NDEBUG
+		    rowArray_[0]->checkClear();
+#endif
                     rowArray_[0]->insert(pivotRow_, multiplier);
                     factorization_->updateColumnTranspose(rowArray_[2], rowArray_[0]);
                     // put row of tableau in rowArray[0] and columnArray[0]
@@ -3146,7 +3202,7 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
                //if (oldCost!=cost_[sequenceOut_])
                //printf("costchange on %d from %g to %g\n",sequenceOut_,
                //       oldCost,cost_[sequenceOut_]);
-               if (solveType_ != 2)
+               if (solveType_ < 2)
                     dj_[sequenceOut_] = cost_[sequenceOut_] - oldCost; // normally updated next iteration
                solution_[sequenceOut_] = valueOut_;
           }
@@ -3317,7 +3373,8 @@ ClpSimplexPrimal::nextSuperBasic(int superBasicType,
                                    setStatus(iColumn, atUpperBound);
                               } else if (lower_[iColumn] < -1.0e20 && upper_[iColumn] > 1.0e20) {
                                    setStatus(iColumn, isFree);
-                                   break;
+				   if (fabs(dj_[iColumn])>dualTolerance_)
+				     break;
                               } else {
                                    break;
                               }
