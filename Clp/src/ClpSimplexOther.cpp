@@ -5432,9 +5432,188 @@ ClpSimplex::modifyCoefficientsAndPivot(int number,
       }
     }
   } else {
+#if 0
+    // when in stable
     CoinPackedMatrix * matrix = clpMatrix->getPackedMatrix();
     matrix->modifyCoefficients(number,which,start,
 			       row,newCoefficient);
+#else
+    // Copy and sort which
+    int * which2 = new int [2*number+2];
+    int * sort = which2+number+1;
+    int n=0;
+    for (int i=0;i<number;i++) {
+      int iSequence=which[i];
+      if (iSequence<numberColumns_) {
+	which2[n]=iSequence;
+	sort[n++]=i;
+      } else {
+	assert (start[i]==start[i+1]);
+      }
+    }
+    if (n) {
+      CoinIndexedVector * rowVector=NULL;
+      for (int i=0;i<4;i++) {
+	if (rowArray_[i]&&!rowArray_[i]->getNumElements()) {
+	  rowVector = rowArray_[i];
+	  break;
+	}
+      }
+      bool tempVector=false;
+      if (!rowVector) {
+	tempVector=true;
+	rowVector=new CoinIndexedVector(numberRows_);
+      }
+      CoinSort_2(which2,which2+n,sort);
+      // Stop at end
+      which2[n]=numberColumns_;
+      sort[n]=n;
+      CoinPackedMatrix * matrix = clpMatrix->getPackedMatrix();
+      int * rowNow = matrix->getMutableIndices();
+      CoinBigIndex * columnStart = matrix->getMutableVectorStarts();
+      int * columnLength = matrix->getMutableVectorLengths();
+      double * elementByColumn = matrix->getMutableElements();
+      double * array = rowVector->denseVector();
+      //int * index = rowVector->getIndices();
+      int needed=0;
+      bool moveUp=false;
+      for (int i=0;i<n;i++) {
+	int inWhich=sort[i];
+	int iSequence=which2[inWhich];
+	int nZeroNew=0;
+	int nZeroOld=0;
+	for (CoinBigIndex j=start[inWhich];j<start[inWhich+1];j++) {
+	  int iRow=row[j];
+	  double newValue=newCoefficient[j];
+	  if (!newValue) {
+	    newValue = COIN_INDEXED_REALLY_TINY_ELEMENT;
+	    nZeroNew++;
+	  }
+	  array[iRow]=newValue;
+	}
+	for (CoinBigIndex j=columnStart[iSequence];
+	     j<columnStart[iSequence]+columnLength[iSequence];j++) {
+	  int iRow=rowNow[j];
+	  double oldValue=elementByColumn[j];
+	  if (fabs(oldValue)>COIN_INDEXED_REALLY_TINY_ELEMENT) {
+	    double newValue=array[iRow];
+	    if (oldValue!=newValue) {
+	      if (newValue) {
+		array[iRow]=0.0;
+		if (newValue==COIN_INDEXED_REALLY_TINY_ELEMENT) {
+		  needed--;
+		}
+	      }
+	    }
+	  } else {
+	    nZeroOld++;
+	  }
+	}
+	assert (!nZeroOld);
+	for (CoinBigIndex j=start[inWhich];j<start[inWhich+1];j++) {
+	  int iRow=row[j];
+	  double newValue=array[iRow];
+	  if (newValue) {
+	    array[iRow]=0.0;
+	    needed++;
+	    if (needed>0)
+	      moveUp=true;
+	  }
+	}
+      }
+      int numberElements = matrix->getNumElements();
+      assert (numberElements==columnStart[numberColumns_]);
+      if (needed>0) {
+	// need more space
+	matrix->reserve(numberColumns_, numberElements+needed);
+	rowNow = matrix->getMutableIndices();
+	elementByColumn = matrix->getMutableElements();
+      }
+      if (moveUp) {
+	// move up from top
+	CoinBigIndex top = numberElements+needed;
+	for (int iColumn=numberColumns_-1;iColumn>=0;iColumn--) {
+	  CoinBigIndex end = columnStart[iColumn+1];
+	  columnStart[iColumn+1]=top;
+	  CoinBigIndex startThis = columnStart[iColumn];
+	  for (CoinBigIndex j=end-1;j>=startThis;j--) {
+	    if (elementByColumn[j]) {
+	      top--;
+	      elementByColumn[top]=elementByColumn[j];
+	      rowNow[top]=rowNow[j];
+	    }
+	  }
+	}
+	columnStart[0]=top;
+      }
+      // now move down and insert
+      CoinBigIndex put=0;
+      int iColumn=0;
+      for (int i=0;i<n+1;i++) {
+	int inWhich=sort[i];
+	int nextMod=which2[inWhich];
+	for (;iColumn<nextMod;iColumn++) {
+	  CoinBigIndex startThis = columnStart[iColumn];
+	  columnStart[iColumn]=put;
+	  for (CoinBigIndex j=startThis;
+	       j<columnStart[iColumn+1];j++) {
+	    int iRow=rowNow[j];
+	    double oldValue=elementByColumn[j];
+	    if (oldValue) {
+	      rowNow[put]=iRow;
+	      elementByColumn[put++]=oldValue;
+	    }
+	  }
+	}
+	if (i==n) {
+	  columnStart[iColumn]=put;
+	  break;
+	}
+	// Now 
+	for (CoinBigIndex j=start[inWhich];j<start[inWhich+1];j++) {
+	  int iRow=row[j];
+	  double newValue=newCoefficient[j];
+	  if (!newValue) {
+	    newValue = COIN_INDEXED_REALLY_TINY_ELEMENT;
+	  }
+	  array[iRow]=newValue;
+	}
+	CoinBigIndex startThis = columnStart[iColumn];
+	columnStart[iColumn]=put;
+	for (CoinBigIndex j=startThis;
+	     j<columnStart[iColumn+1];j++) {
+	  int iRow=rowNow[j];
+	  double oldValue=elementByColumn[j];
+	  if (array[iRow]) {
+	    oldValue=array[iRow];
+	    if (oldValue==COIN_INDEXED_REALLY_TINY_ELEMENT) 
+	      oldValue=0.0;
+	    array[iRow]=0.0;
+	  }
+	  if (fabs(oldValue)>COIN_INDEXED_REALLY_TINY_ELEMENT) {
+	    rowNow[put]=iRow;
+	    elementByColumn[put++]=oldValue;
+	  }
+	}
+	for (CoinBigIndex j=start[inWhich];j<start[inWhich+1];j++) {
+	  int iRow=row[j];
+	  double newValue=array[iRow];
+	  if (newValue) {
+	    array[iRow]=0.0;
+	    rowNow[put]=iRow;
+	    elementByColumn[put++]=newValue;
+	  }
+	}
+	iColumn++;
+      }
+      matrix->setNumElements(put);
+      if (tempVector)
+	delete rowVector;
+      for (int i=0;i<numberColumns_;i++) {
+	columnLength[i]=columnStart[i+1]-columnStart[i];
+      }
+    }
+#endif
     if (canPivot) {
       // ? faster to modify row copy??
       if (rowCopy_&&start[number]) {
