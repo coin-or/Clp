@@ -195,7 +195,7 @@ am__includecoin_HEADERS_DIST = Clp_C_Interface.h ClpCholeskyBase.hpp \
 	ClpPresolve.hpp ClpPrimalColumnDantzig.hpp \
 	ClpPrimalColumnPivot.hpp ClpPrimalColumnSteepest.hpp \
 	ClpQuadraticObjective.hpp ClpSimplex.hpp \
-	ClpSimplexNonlinear.hpp ClpSimplexOther.hpp \
+	ClpSimplexNonlinear.hpp ClpSimplexOther.hpp ClpSimplexDual.hpp \
 	ClpSimplexPrimal.hpp ClpSolve.hpp CbcOrClpParam.hpp Idiot.hpp \
 	ClpCholeskyUfl.hpp ClpCholeskyMumps.hpp ClpCholeskyWssmp.hpp \
 	ClpCholeskyWssmpKKT.hpp CbcOrClpParam.cpp
@@ -556,7 +556,7 @@ includecoin_HEADERS = Clp_C_Interface.h ClpCholeskyBase.hpp \
 	ClpPresolve.hpp ClpPrimalColumnDantzig.hpp \
 	ClpPrimalColumnPivot.hpp ClpPrimalColumnSteepest.hpp \
 	ClpQuadraticObjective.hpp ClpSimplex.hpp \
-	ClpSimplexNonlinear.hpp ClpSimplexOther.hpp \
+	ClpSimplexNonlinear.hpp ClpSimplexOther.hpp ClpSimplexDual.hpp \
 	ClpSimplexPrimal.hpp ClpSolve.hpp CbcOrClpParam.hpp Idiot.hpp \
 	$(am__append_8) $(am__append_9) $(am__append_10) \
 	$(am__append_11) $(am__append_12) CbcOrClpParam.cpp

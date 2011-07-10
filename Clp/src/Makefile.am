@@ -180,6 +180,7 @@ includecoin_HEADERS = \
 	ClpSimplex.hpp \
 	ClpSimplexNonlinear.hpp \
 	ClpSimplexOther.hpp \
+	ClpSimplexDual.hpp \
 	ClpSimplexPrimal.hpp \
 	ClpSolve.hpp \
 	CbcOrClpParam.hpp \
