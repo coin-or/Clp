@@ -141,7 +141,7 @@
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>..\..\..\..\Clp\src;..\..\..\..\Clp\src\OsiClp;..\..\..\..\Osi\src;..\..\..\..\Osi\src\Osi;..\..\..\..\Osi\src\OsiCommonTest;..\..\..\..\CoinUtils\src;..\..\..\..\BuildTools\headers;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;COIN_MSVS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>OSI_BUILD;WIN32;NDEBUG;_CONSOLE;COIN_MSVS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <PrecompiledHeader>
