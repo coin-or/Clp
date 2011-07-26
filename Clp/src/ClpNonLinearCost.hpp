@@ -149,6 +149,8 @@ public:
      void refreshCosts(const double * columnCosts);
      /// Puts feasible bounds into lower and upper
      void feasibleBounds();
+     /// Refresh - assuming regions OK
+     void refresh();
      /** Sets bounds and cost for one variable
          Returns change in cost
       May need to be inline for speed */

@@ -21,7 +21,7 @@ EXE = $(DRIVER)@EXEEXT@
 OBJS =  $(DRIVER).@OBJEXT@ 
 
 # CHANGEME: Additional libraries
-ADDLIBS =
+ADDLIBS = -lOsi -lOsiClp
 
 # CHANGEME: Additional flags for compilation (e.g., include flags)
 ADDINCFLAGS =

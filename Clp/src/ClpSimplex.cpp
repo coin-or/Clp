@@ -3930,6 +3930,9 @@ ClpSimplex::createRim(int what, bool makeRowCopy, int startFinishOptions)
                inverseColumnScale_ = savedColumnScale_ + maximumInternalColumns_;
           }
      }
+#ifdef CLP_USER_DRIVEN
+     eventHandler_->event(ClpEventHandler::endOfCreateRim);
+#endif
      return goodMatrix;
 }
 // Does rows and columns
@@ -8357,6 +8360,19 @@ ClpSimplex::startup(int ifValuesPass, int startFinishOptions)
 
 }
 
+/* Get a clean factorization - i.e. throw out singularities
+    may do more later */
+int
+ClpSimplex::cleanFactorization(int ifValuesPass)
+{
+  int status = internalFactorize(ifValuesPass ? 10 : 0);
+  if (status < 0) {
+    return 1; // some error
+  } else {
+    firstFree_=0;
+    return 0;
+  }
+}
 
 void
 ClpSimplex::finish(int startFinishOptions)

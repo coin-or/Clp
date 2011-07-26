@@ -52,10 +52,17 @@ public:
 	  noCandidateInPrimal, // tentative end
 	  looksEndInPrimal, // About to declare victory (or defeat)
 	  endInPrimal, // Victory (or defeat)
+	  beforeStatusOfProblemInPrimal,
+	  startOfStatusOfProblemInPrimal,
 	  complicatedPivotOut, // in modifyCoefficients
 	  noCandidateInDual, // tentative end
 	  looksEndInDual, // About to declare victory (or defeat)
 	  endInDual, // Victory (or defeat)
+	  beforeStatusOfProblemInDual,
+	  startOfStatusOfProblemInDual,
+	  startOfIterationInDual,
+	  updateDualsInDual,
+	  endOfCreateRim,
 	  noTheta // At end (because no pivot)
      };
      /**@name Virtual method that the derived classes should provide.

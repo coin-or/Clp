@@ -894,13 +894,10 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
 #ifdef CLP_USER_DRIVEN
 	  int status = eventHandler_->event(ClpEventHandler::goodFactorization);
 	  if (status >= 0) {
-	    numberThrownOut=status;
-	  } else {
-	    numberThrownOut = gutsOfSolution(NULL, NULL, (firstFree_ >= 0));
+	    lastSumInfeasibility = COIN_DBL_MAX;
 	  }
-#else
-          numberThrownOut = gutsOfSolution(NULL, NULL, (firstFree_ >= 0));
 #endif
+          numberThrownOut = gutsOfSolution(NULL, NULL, (firstFree_ >= 0));
           double sumInfeasibility =  nonLinearCost_->sumInfeasibilities();
           int reason2 = 0;
 #if CLP_CAUTION
@@ -3162,6 +3159,14 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
           int savePivot = pivotRow_;
           if (pivotRow_ >= numberRows_)
                pivotRow_ = -1;
+#ifdef CLP_USER_DRIVEN
+	  if (theta_<0.0) {
+	    if (theta_>=-1.0e-12)
+	      theta_=0.0;
+	    //else
+	    //printf("negative theta %g\n",theta_);
+	  }
+#endif
           updatePrimalsInPrimal(rowArray_[1], theta_, objectiveChange, ifValuesPass);
           pivotRow_ = savePivot;
 

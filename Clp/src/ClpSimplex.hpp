@@ -728,7 +728,9 @@ public:
         Also applies scaling if needed
      */
      void unpackPacked(CoinIndexedVector * rowArray, int sequence);
+#ifndef CLP_USER_DRIVEN
 protected:
+#endif
      /**
          This does basis housekeeping and does values for in/out variables.
          Can also decide to re-factorize
@@ -765,6 +767,9 @@ public:
      */
      void setValuesPassAction(double incomingInfeasibility,
                               double allowedInfeasibility);
+     /** Get a clean factorization - i.e. throw out singularities
+	 may do more later */
+     int cleanFactorization(int ifValuesPass);
      //@}
      /**@name most useful gets and sets */
      //@{
@@ -874,7 +879,9 @@ public:
      double valueIncomingDual() const;
      //@}
 
+#ifndef CLP_USER_DRIVEN
 protected:
+#endif
      /**@name protected methods */
      //@{
      /** May change basis and then returns number changed.
