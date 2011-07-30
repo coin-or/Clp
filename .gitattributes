@@ -8,6 +8,14 @@ Clp/MSVisualStudio/v10/OsiClpUnitTest/OsiClpUnitTest.vcxproj -text
 Clp/MSVisualStudio/v10/clp/clp.vcxproj -text
 Clp/MSVisualStudio/v10/libClp/libClp.vcxproj -text
 Clp/MSVisualStudio/v10/libOsiClp/libOsiClp.vcxproj -text
+Clp/MSVisualStudio/v9/Clp.sln -text
+Clp/MSVisualStudio/v9/ClpExamplesMinimum/ClpExamplesMinimum.vcproj -text
+Clp/MSVisualStudio/v9/ClpExamplesTestBarrier/ClpExamplesTestBarrier.vcproj -text
+Clp/MSVisualStudio/v9/ClpExamplesTestQP/ClpExamplesTestQP.vcproj -text
+Clp/MSVisualStudio/v9/OsiClpUnitTest/OsiClpUnitTest.vcproj -text
+Clp/MSVisualStudio/v9/clp/clp.vcproj -text
+Clp/MSVisualStudio/v9/libClp/libClp.vcproj -text
+Clp/MSVisualStudio/v9/libOsiClp/libOsiClp.vcproj -text
 Clp/clp-uninstalled.pc.in -text
 Clp/clp.pc.in -text
 Clp/config.guess -text
