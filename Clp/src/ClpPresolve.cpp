@@ -95,7 +95,9 @@ ClpPresolve::presolvedModel(ClpSimplex & si,
                             bool keepIntegers,
                             int numberPasses,
                             bool dropNames,
-                            bool doRowObjective)
+                            bool doRowObjective,
+			    const char * prohibitedRows,
+			    const char * prohibitedColumns)
 {
      // Check matrix
      int checkType = ((si.specialOptions() & 128) != 0) ? 14 : 15;
@@ -104,7 +106,9 @@ ClpPresolve::presolvedModel(ClpSimplex & si,
           return NULL;
      else
           return gutsOfPresolvedModel(&si, feasibilityTolerance, keepIntegers, numberPasses, dropNames,
-                                      doRowObjective);
+                                      doRowObjective,
+				      prohibitedRows,
+				      prohibitedColumns);
 }
 #ifndef CLP_NO_STD
 /* This version of presolve updates
@@ -1541,12 +1545,18 @@ CoinPostsolveMatrix::CoinPostsolveMatrix(ClpSimplex*  si,
      si->setDblParam(ClpObjOffset, originalOffset_);
 
      for (int j = 0; j < ncols1; j++) {
+#ifdef COIN_SLOW_PRESOLVE
+       if (hincol_[j]) {
+#endif
           CoinBigIndex kcs = mcstrt_[j];
           CoinBigIndex kce = kcs + hincol_[j];
           for (CoinBigIndex k = kcs; k < kce; ++k) {
                link_[k] = k + 1;
           }
           link_[kce-1] = NO_LINK ;
+#ifdef COIN_SLOW_PRESOLVE
+       }
+#endif
      }
      {
           int ml = maxlink_;
@@ -1573,7 +1583,9 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
                                   bool keepIntegers,
                                   int numberPasses,
                                   bool dropNames,
-                                  bool doRowObjective)
+                                  bool doRowObjective,
+				  const char * prohibitedRows,
+				  const char * prohibitedColumns)
 {
      ncols_ = originalModel->getNumCols();
      nrows_ = originalModel->getNumRows();
@@ -1646,6 +1658,20 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
                                   maxmin,
                                   presolvedModel_,
                                   nrows_, nelems_, true, nonLinearValue_, ratio);
+	  if (prohibitedRows) {
+	    prob.setAnyProhibited();
+	    for (int i=0;i<nrows_;i++) {
+	      if (prohibitedRows[i])
+		prob.setRowProhibited(i);
+	    }
+	  }
+	  if (prohibitedColumns) {
+	    prob.setAnyProhibited();
+	    for (int i=0;i<ncols_;i++) {
+	      if (prohibitedColumns[i])
+		prob.setColProhibited(i);
+	    }
+	  }
           prob.setMaximumSubstitutionLevel(substitution_);
           if (doRowObjective)
                memset(rowObjective_, 0, nrows_ * sizeof(double));

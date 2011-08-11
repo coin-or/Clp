@@ -43,7 +43,9 @@ public:
                                  bool keepIntegers = true,
                                  int numberPasses = 5,
                                  bool dropNames = false,
-                                 bool doRowObjective = false);
+                                 bool doRowObjective = false,
+				 const char * prohibitedRows=NULL,
+				 const char * prohibitedColumns=NULL);
 #ifndef CLP_NO_STD
      /** This version saves data in a file.  The passed in model
          is updated to be presolved model.  
@@ -257,6 +259,8 @@ protected:
                bool keepIntegers,
                int numberPasses,
                bool dropNames,
-               bool doRowObjective);
+					       bool doRowObjective,
+					       const char * prohibitedRows=NULL,
+					       const char * prohibitedColumns=NULL);
 };
 #endif

@@ -4665,6 +4665,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned, int type,
                          }
                          if (lastCleaned < numberIterations_ && numberTimesOptimal_ < 4 &&
                                    (numberChanged_ || (specialOptions_ & 4096) == 0)) {
+			   if ((specialOptions_&2097152)==0) {
                               doOriginalTolerance = 2;
                               numberTimesOptimal_++;
                               changeMade_++; // say something changed
@@ -4679,6 +4680,10 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned, int type,
                                    dualTolerance_ *= pow(2.0, numberTimesOptimal_ - 1);
                               }
                               cleanDuals = 2; // If nothing changed optimal else primal
+			   } else {
+			     // no cost - skip checks
+			     problemStatus_=0;
+			   }
                          } else {
                               problemStatus_ = 0; // optimal
                               if (lastCleaned < numberIterations_ && numberChanged_) {

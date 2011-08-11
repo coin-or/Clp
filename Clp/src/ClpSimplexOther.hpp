@@ -116,8 +116,8 @@ private:
                          const double * changeLower, const double * changeUpper,
                          const double * changeObjective, ClpDataSave & data,
                          bool canTryQuick);
-     int parametricsLoop(double startingTheta, double & endingTheta,
-                         ClpDataSave & data);
+     int parametricsLoop(double & startingTheta, double & endingTheta,
+                         ClpDataSave & data,bool canSkipFactorization=false);
      /**  Refactorizes if necessary
           Checks if finished.  Updates status.
 
@@ -136,14 +136,14 @@ private:
          +1 looks infeasible
          +3 max iterations
       */
-     int whileIterating(double startingTheta, double & endingTheta, double reportIncrement,
+     int whileIterating(double & startingTheta, double & endingTheta, double reportIncrement,
                         const double * changeLower, const double * changeUpper,
                         const double * changeObjective);
      /** Computes next theta and says if objective or bounds (0= bounds, 1 objective, -1 none).
          theta is in theta_.
          type 1 bounds, 2 objective, 3 both.
      */
-     int nextTheta(int type, double maxTheta, double * primalChange, double * dualChange,
+     int nextTheta(int type, double maxTheta, 
                    const double * changeLower, const double * changeUpper,
                    const double * changeObjective);
      /// Restores bound to original bound

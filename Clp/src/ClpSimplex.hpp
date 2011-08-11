@@ -357,6 +357,21 @@ public:
 				 const double * newLower=NULL,
 				 const double * newUpper=NULL,
 				 const double * newObjective=NULL);
+     /** Take out duplicate rows (includes scaled rows and intersections).
+	 On exit whichRows has rows to delete - return code is number can be deleted 
+	 or -1 if would be infeasible.
+	 If tolerance is -1.0 use primalTolerance for equality rows and infeasibility
+	 If cleanUp not zero then spend more time trying to leave more stable row
+	 and make row bounds exact multiple of cleanUp if close enough
+     */
+     int outDuplicateRows(int numberLook,int * whichRows, double tolerance=-1.0,
+			  double cleanUp=0.0);
+     /** Try simple crash like techniques to get closer to primal feasibility
+	 returns final sum of infeasibilities */
+     double moveTowardsPrimalFeasible();
+     /** Try simple crash like techniques to remove super basic slacks
+	 but only if > threshold */
+     void removeSuperBasicSlacks(int threshold=0);
      /** Write the basis in MPS format to the specified file.
          If writeValues true writes values of structurals
          (and adds VALUES to end of NAME card)

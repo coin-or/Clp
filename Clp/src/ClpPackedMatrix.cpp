@@ -3883,7 +3883,7 @@ ClpPackedMatrix::unpack(const ClpSimplex * model, CoinIndexedVector * rowArray,
      if (!rowScale) {
           for (i = columnStart[iColumn];
                     i < columnStart[iColumn] + columnLength[iColumn]; i++) {
-               rowArray->add(row[i], elementByColumn[i]);
+               rowArray->quickAdd(row[i], elementByColumn[i]);
           }
      } else {
           // apply scaling
@@ -3891,7 +3891,7 @@ ClpPackedMatrix::unpack(const ClpSimplex * model, CoinIndexedVector * rowArray,
           for (i = columnStart[iColumn];
                     i < columnStart[iColumn] + columnLength[iColumn]; i++) {
                int iRow = row[i];
-               rowArray->add(iRow, elementByColumn[i]*scale * rowScale[iRow]);
+               rowArray->quickAdd(iRow, elementByColumn[i]*scale * rowScale[iRow]);
           }
      }
 }
