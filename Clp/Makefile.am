@@ -123,7 +123,7 @@ if COIN_HAS_PKGCONFIG
 	$(PKG_CONFIG) --libs clp > $(addlibsdir)/clp_addlibs.txt
 else
 if COIN_CXX_IS_CL
-	echo "/libpath:`$(CYGPATH_W) @abs_lib_dir@` libClp.lib @CLPLIB_LIBS_INSTALLED@" > $(addlibsdir)/clp_addlibs_cpp.txt
+	echo "-libpath:`$(CYGPATH_W) @abs_lib_dir@` libClp.lib @CLPLIB_LIBS_INSTALLED@" > $(addlibsdir)/clp_addlibs_cpp.txt
 else
 	echo -L@abs_lib_dir@ -lClp @CLPLIB_LIBS_INSTALLED@ > $(addlibsdir)/clp_addlibs.txt
 endif
