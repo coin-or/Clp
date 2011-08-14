@@ -24,9 +24,10 @@ osiUnitTest_LDADD = ../src/libClp.la ../src/OsiClp/libOsiClp.la \
 osiUnitTest_DEPENDENCIES = ../src/libClp.la ../src/OsiClp/libOsiClp.la \
   $(CLPLIB_DEPENDENCIES) $(OSICLP_DEPENDENCIES) $(OSITESTS_DEPENDENCIES)
 
-AM_CPPFLAGS = $(COINUTILS_CFLAGS) $(OSI_CFLAGS) $(OSITESTS_CFLAGS) \
+AM_CPPFLAGS = \
 	-I`$(CYGPATH_W) $(srcdir)/../src` \
-	-I`$(CYGPATH_W) $(srcdir)/../src/OsiClp`
+	-I`$(CYGPATH_W) $(srcdir)/../src/OsiClp` \
+	$(COINUTILS_CFLAGS) $(OSI_CFLAGS) $(OSITESTS_CFLAGS)
 
 testdepend =  osiUnitTest$(EXEEXT)
 endif
