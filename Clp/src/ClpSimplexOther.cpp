@@ -6717,8 +6717,7 @@ ClpSimplex::outDuplicateRows(int numberLook,int * whichRows, double tolerance,
       int iColumn = column[j];
       value += columnWeights[iColumn];
     }
-    weights[iRow]=value;
-    whichRows[iRow]=iRow;
+    weights[i]=value;
   }
   CoinSort_2(weights,weights+numberLook,whichRows);
   if (tolerance<0.0)
