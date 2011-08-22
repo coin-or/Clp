@@ -3590,10 +3590,16 @@ ClpSimplexOther::whileIterating(double & startingTheta, double & endingTheta, do
                     int nswapped = 0;
                     //rowArray_[0]->cleanAndPackSafe(1.0e-60);
                     //columnArray_[0]->cleanAndPackSafe(1.0e-60);
-                    nswapped = reinterpret_cast<ClpSimplexDual *> ( this)->updateDualsInDual(rowArray_[0], columnArray_[0],
-                               rowArray_[2], theta_,
-                               objectiveChange, false);
-		    assert (!nswapped);
+		    if ((specialOptions_&2097152)==0) {
+		      nswapped = reinterpret_cast<ClpSimplexDual *> ( this)->updateDualsInDual(rowArray_[0], columnArray_[0],
+											       rowArray_[2], theta_,
+											       objectiveChange, false);
+		      assert (!nswapped);
+		    } else {
+		      rowArray_[0]->clear();
+		      rowArray_[2]->clear();
+		      columnArray_[0]->clear();
+		    }
                     // which will change basic solution
                     if (nswapped) {
                          factorization_->updateColumn(rowArray_[3], rowArray_[2]);
@@ -3730,9 +3736,11 @@ ClpSimplexOther::whileIterating(double & startingTheta, double & endingTheta, do
                          valueIn_ = lowerIn_ + dualOut_;
                     }
 		    objectiveChange = 0.0;
-		    for (int i=0;i<numberTotal;i++)
-		      objectiveChange += solution_[i]*cost_[i];
-                    objectiveChange -= objectiveValue_;
+		    if ((specialOptions_&2097152)==0) {
+		      for (int i=0;i<numberTotal;i++)
+			objectiveChange += solution_[i]*cost_[i];
+		      objectiveChange -= objectiveValue_;
+		    }
                     // outgoing
                     originalBound(sequenceOut_,useTheta,lowerChange,upperChange);
 		    lowerOut_=lower_[sequenceOut_];
