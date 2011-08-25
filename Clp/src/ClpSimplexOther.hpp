@@ -102,6 +102,16 @@ public:
                      const double * changeLowerRhs, const double * changeUpperRhs);
     /// Finds best possible pivot
     double bestPivot(bool justColumns=false);
+  typedef struct {
+    double startingTheta;
+    double endingTheta;
+    double * lowerChange; // full array of lower bound changes
+    int * lowerList; // list of lower bound changes
+    double * upperChange; // full array of upper bound changes
+    int * upperList; // list of upper bound changes
+    char * markDone; // mark which ones looked at
+    int * backwardBasic; // from sequence to pivot row
+  } parametricsData;
 
 private:
      /** Parametrics - inner loop
@@ -112,11 +122,11 @@ private:
          Normal report is just theta and objective but
          if event handler exists it may do more
      */
-     int parametricsLoop(double startingTheta, double & endingTheta, double reportIncrement,
+     int parametricsLoop(parametricsData & paramData, double reportIncrement,
                          const double * changeLower, const double * changeUpper,
                          const double * changeObjective, ClpDataSave & data,
                          bool canTryQuick);
-     int parametricsLoop(double & startingTheta, double & endingTheta,
+     int parametricsLoop(parametricsData & paramData,
                          ClpDataSave & data,bool canSkipFactorization=false);
      /**  Refactorizes if necessary
           Checks if finished.  Updates status.
@@ -136,15 +146,13 @@ private:
          +1 looks infeasible
          +3 max iterations
       */
-     int whileIterating(double & startingTheta, double & endingTheta, double reportIncrement,
-                        const double * changeLower, const double * changeUpper,
+     int whileIterating(parametricsData & paramData, double reportIncrement,
                         const double * changeObjective);
      /** Computes next theta and says if objective or bounds (0= bounds, 1 objective, -1 none).
          theta is in theta_.
          type 1 bounds, 2 objective, 3 both.
      */
-     int nextTheta(int type, double maxTheta, 
-                   const double * changeLower, const double * changeUpper,
+     int nextTheta(int type, double maxTheta, parametricsData & paramData,
                    const double * changeObjective);
      /// Restores bound to original bound
      void originalBound(int iSequence, double theta, const double * changeLower,
@@ -196,7 +204,8 @@ public:
      /** Restores solution from dualized problem
          non-zero return code indicates minor problems
      */
-     int restoreFromDual(const ClpSimplex * dualProblem);
+  int restoreFromDual(const ClpSimplex * dualProblem,
+		      bool checkAccuracy=false);
      /** Does very cursory presolve.
          rhs is numberRows, whichRows is 3*numberRows and whichColumns is 2*numberColumns.
      */

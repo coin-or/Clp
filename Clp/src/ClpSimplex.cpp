@@ -668,6 +668,9 @@ ClpSimplex::gutsOfSolution ( double * givenDuals,
                }
           }
      }
+#if CAN_HAVE_ZERO_OBJ>1
+     if ((specialOptions_&2097152)==0) {
+#endif
      computeDuals(givenDuals);
      if ((moreSpecialOptions_ & 128) != 0 && !numberIterations_) {
           const char * integerType = integerInformation();
@@ -691,6 +694,30 @@ ClpSimplex::gutsOfSolution ( double * givenDuals,
      //checkDualSolution();
      checkBothSolutions();
      objectiveValue_ += objectiveModification / (objectiveScale_ * rhsScale_);
+#if CAN_HAVE_ZERO_OBJ>1
+     } else {
+       checkPrimalSolution( rowActivityWork_, columnActivityWork_);
+#ifndef COIN_REUSE_RANDOM
+       memset(dj_,0,(numberRows_+numberColumns_)*sizeof(double));
+#else
+       for (int iSequence=0;iSequence<numberRows_+numberColumns_;iSequence++) {
+	 double value;
+	 switch (getStatus(iSequence)) {
+	 case atLowerBound:
+	   value=1.0e-9*(1.0+CoinDrand48());
+	   break;
+	 case atUpperBound:
+	   value=-1.0e-9*(1.0+CoinDrand48());
+	   break;
+	 default:
+	   value=0.0;
+	   break;
+	 }
+       }
+#endif
+       objectiveValue_=0.0;
+     }
+#endif
      if (handler_->logLevel() > 3 || (largestPrimalError_ > 1.0e-2 ||
                                       largestDualError_ > 1.0e-2))
           handler_->message(CLP_SIMPLEX_ACCURACY, messages_)

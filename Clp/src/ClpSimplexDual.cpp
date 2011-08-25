@@ -1222,6 +1222,10 @@ ClpSimplexDual::whileIterating(double * & givenDuals, int ifValuesPass)
                     // do ratio test for normal iteration
                     bestPossiblePivot = dualColumn(rowArray_[0], columnArray_[0], rowArray_[3],
                                                    columnArray_[1], acceptablePivot, dubiousWeights);
+#if CAN_HAVE_ZERO_OBJ>1
+		    if ((specialOptions_&2097152)!=0) 
+		      theta_=0.0;
+#endif
                } else {
                     // Make sure direction plausible
                     CoinAssert (upperOut_ < 1.0e50 || lowerOut_ > -1.0e50);
@@ -1398,6 +1402,9 @@ ClpSimplexDual::whileIterating(double * & givenDuals, int ifValuesPass)
                     //rowArray_[0]->cleanAndPackSafe(1.0e-60);
                     //columnArray_[0]->cleanAndPackSafe(1.0e-60);
                     if (candidate == -1) {
+#if CLP_CAN_HAVE_ZERO_OBJ>1
+		    if ((specialOptions_&2097152)==0) {
+#endif
                          // make sure incoming doesn't count
                          Status saveStatus = getStatus(sequenceIn_);
                          setStatus(sequenceIn_, basic);
@@ -1405,6 +1412,13 @@ ClpSimplexDual::whileIterating(double * & givenDuals, int ifValuesPass)
                                                       rowArray_[2], theta_,
                                                       objectiveChange, false);
                          setStatus(sequenceIn_, saveStatus);
+#if CLP_CAN_HAVE_ZERO_OBJ>1
+		    } else {
+		      rowArray_[0]->clear();
+		      rowArray_[2]->clear();
+		      columnArray_[0]->clear();
+		    }
+#endif
                     } else {
                          updateDualsInValuesPass(rowArray_[0], columnArray_[0], theta_);
                     }
@@ -3777,7 +3791,9 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
                               //at upper bound
                               if (value > dualTolerance_) {
                                    thisIncrease = true;
+#if CLP_CAN_HAVE_ZERO_OBJ<2
 #define MODIFYCOST 2
+#endif
 #if MODIFYCOST
                                    // modify cost to hit new tolerance
                                    double modification = alpha * theta_ - dj_[iSequence]
@@ -4665,7 +4681,9 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned, int type,
                          }
                          if (lastCleaned < numberIterations_ && numberTimesOptimal_ < 4 &&
                                    (numberChanged_ || (specialOptions_ & 4096) == 0)) {
+#if CLP_CAN_HAVE_ZERO_OBJ
 			   if ((specialOptions_&2097152)==0) {
+#endif
                               doOriginalTolerance = 2;
                               numberTimesOptimal_++;
                               changeMade_++; // say something changed
@@ -4680,10 +4698,12 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned, int type,
                                    dualTolerance_ *= pow(2.0, numberTimesOptimal_ - 1);
                               }
                               cleanDuals = 2; // If nothing changed optimal else primal
+#if CLP_CAN_HAVE_ZERO_OBJ
 			   } else {
 			     // no cost - skip checks
 			     problemStatus_=0;
 			   }
+#endif
                          } else {
                               problemStatus_ = 0; // optimal
                               if (lastCleaned < numberIterations_ && numberChanged_) {
@@ -4938,8 +4958,18 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned, int type,
 #endif
                     if (givenDuals)
                          dualTolerance_ = 1.0e50;
+#if CLP_CAN_HAVE_ZERO_OBJ>1
+		    if ((specialOptions_&2097152)==0) {
+#endif
                     updateDualsInDual(rowArray_[0], columnArray_[0], rowArray_[1],
                                       0.0, objectiveChange, true);
+#if CLP_CAN_HAVE_ZERO_OBJ>1
+		    } else {
+		      rowArray_[0]->clear();
+		      rowArray_[1]->clear();
+		      columnArray_[0]->clear();
+		    }
+#endif
                     dualTolerance_ = saveTolerance;
 #if 0
                     int i;
@@ -4970,8 +5000,18 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned, int type,
                     gutsOfSolution(NULL, NULL);
                     if (givenDuals)
                          dualTolerance_ = 1.0e50;
+#if CLP_CAN_HAVE_ZERO_OBJ>1
+		    if ((specialOptions_&2097152)==0) {
+#endif
                     updateDualsInDual(rowArray_[0], columnArray_[0], rowArray_[1],
                                       0.0, objectiveChange, true);
+#if CLP_CAN_HAVE_ZERO_OBJ>1
+		    } else {
+		      rowArray_[0]->clear();
+		      rowArray_[1]->clear();
+		      columnArray_[0]->clear();
+		    }
+#endif
                     dualTolerance_ = saveTolerance;
 		    if (!numberIterations_ && sumPrimalInfeasibilities_ >
 			1.0e5*(savePrimalInfeasibilities+1.0e3) &&
