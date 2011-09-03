@@ -3231,15 +3231,19 @@ ClpModel::ClpModel ( const ClpModel * rhs,
           objective_ = NULL;
      rowObjective_ = whichDouble(rhs->rowObjective_, numberRows, whichRow);
      // status has to be done in two stages
-     status_ = new unsigned char[numberColumns_+numberRows_];
-     unsigned char * rowStatus = whichUnsignedChar(rhs->status_ + rhs->numberColumns_,
-                                 numberRows_, whichRow);
-     unsigned char * columnStatus = whichUnsignedChar(rhs->status_,
-                                    numberColumns_, whichColumn);
-     CoinMemcpyN(rowStatus, numberRows_, status_ + numberColumns_);
-     delete [] rowStatus;
-     CoinMemcpyN(columnStatus, numberColumns_, status_);
-     delete [] columnStatus;
+     if (rhs->status_) {
+       status_ = new unsigned char[numberColumns_+numberRows_];
+       unsigned char * rowStatus = whichUnsignedChar(rhs->status_ + rhs->numberColumns_,
+						     numberRows_, whichRow);
+       unsigned char * columnStatus = whichUnsignedChar(rhs->status_,
+							numberColumns_, whichColumn);
+       CoinMemcpyN(rowStatus, numberRows_, status_ + numberColumns_);
+       delete [] rowStatus;
+       CoinMemcpyN(columnStatus, numberColumns_, status_);
+       delete [] columnStatus;
+     } else {
+       status_=NULL;
+     }
      ray_ = NULL;
      if (problemStatus_ == 1)
           ray_ = whichDouble (rhs->ray_, numberRows, whichRow);
