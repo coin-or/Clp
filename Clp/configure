@@ -30129,12 +30129,7 @@ fi
 echo "$as_me:$LINENO: result: $ac_cv_lib_readline_readline" >&5
 echo "${ECHO_T}$ac_cv_lib_readline_readline" >&6
 if test $ac_cv_lib_readline_readline = yes; then
-
-                    CLPLIB_LIBS="-lreadline $LIBS $CLPLIB_LIBS"
-                    CLPLIB_PCLIBS="-lreadline $LIBS $CLPLIB_PCLIBS"
-                    CLPLIB_LIBS_INSTALLED="-lreadline $LIBS $CLPLIB_LIBS_INSTALLED"
-
-                 :
+  :
 else
   coin_has_readline=no
 fi
@@ -30142,6 +30137,11 @@ fi
   fi
 
   if test $coin_has_readline = yes; then
+
+                    CLPLIB_LIBS="-lreadline $LIBS $CLPLIB_LIBS"
+                    CLPLIB_PCLIBS="-lreadline $LIBS $CLPLIB_PCLIBS"
+                    CLPLIB_LIBS_INSTALLED="-lreadline $LIBS $CLPLIB_LIBS_INSTALLED"
+
 
 cat >>confdefs.h <<\_ACEOF
 #define COIN_HAS_READLINE 1
