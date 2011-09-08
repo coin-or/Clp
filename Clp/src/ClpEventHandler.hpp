@@ -63,6 +63,7 @@ public:
 	  startOfIterationInDual,
 	  updateDualsInDual,
 	  endOfCreateRim,
+	  slightlyInfeasible,
 	  noTheta // At end (because no pivot)
      };
      /**@name Virtual method that the derived classes should provide.

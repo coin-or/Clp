@@ -3242,10 +3242,23 @@ ClpSimplexOther::parametricsLoop(parametricsData & paramData,
 	    moved += lower_[iSequence]-value;
 	    lower_[iSequence]=value;
 	  } else if (value>upper_[iSequence]+1.0e-9) {
-	    moved = upper_[iSequence]-value;
+	    moved += upper_[iSequence]-value;
 	    upper_[iSequence]=value;
 	  }
 	}
+	if (!moved) {
+	  for (int iSequence=0;iSequence<numberColumns_;iSequence++) {
+	    double value=solution_[iSequence];
+	    if (value<lower_[iSequence]-1.0e-9) {
+	      moved += lower_[iSequence]-value;
+	      lower_[iSequence]=value;
+	    } else if (value>upper_[iSequence]+1.0e-9) {
+	      moved += upper_[iSequence]-value;
+	      upper_[iSequence]=value;
+	    }
+	  }
+	}
+	assert (moved);
 	reinterpret_cast<ClpSimplexDual *> (this)->gutsOfDual(1, saveDuals, -1, data);
       }
       // adjust
@@ -3384,6 +3397,24 @@ ClpSimplexOther::statusOfProblemInParametrics(int type, ClpDataSave & saveData)
                     << numberDualInfeasibilitiesWithoutFree_;
           handler_->message() << CoinMessageEol;
      }
+#ifdef CLP_USER_DRIVEN
+     if (sumPrimalInfeasibilities_&&sumPrimalInfeasibilities_<1.0e-7) {
+       int status=eventHandler_->event(ClpEventHandler::slightlyInfeasible);
+       if (status>=0) {
+	 // fix up
+	 for (int iSequence=0;iSequence<numberRows_+numberColumns_;iSequence++) {
+	   double value=solution_[iSequence];
+	   if (value<=lower_[iSequence]-primalTolerance_) {
+	     lower_[iSequence]=value;
+	   } else if (value>=upper_[iSequence]+primalTolerance_) {
+	     upper_[iSequence]=value;
+	   }
+	 }
+	 numberPrimalInfeasibilities_ = 0;
+	 sumPrimalInfeasibilities_ = 0.0;
+       }
+     }
+#endif
      /* If we are primal feasible and any dual infeasibilities are on
         free variables then it is better to go to primal */
      if (!numberPrimalInfeasibilities_ && !numberDualInfeasibilitiesWithoutFree_ &&
