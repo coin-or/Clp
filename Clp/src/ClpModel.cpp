@@ -3364,6 +3364,11 @@ ClpModel::setColumnName(int iColumn, std::string &name)
 void
 ClpModel::copyRowNames(const std::vector<std::string> & rowNames, int first, int last)
 {
+     // Do column names if necessary
+     if (!lengthNames_&&numberColumns_) {
+       lengthNames_=8;
+       copyColumnNames(NULL,0,numberColumns_);
+     }
      unsigned int maxLength = lengthNames_;
      int size = static_cast<int>(rowNames_.size());
      if (size != numberRows_)
@@ -3380,6 +3385,11 @@ ClpModel::copyRowNames(const std::vector<std::string> & rowNames, int first, int
 void
 ClpModel::copyColumnNames(const std::vector<std::string> & columnNames, int first, int last)
 {
+     // Do row names if necessary
+     if (!lengthNames_&&numberRows_) {
+       lengthNames_=8;
+       copyRowNames(NULL,0,numberRows_);
+     }
      unsigned int maxLength = lengthNames_;
      int size = static_cast<int>(columnNames_.size());
      if (size != numberColumns_)
@@ -3396,13 +3406,18 @@ ClpModel::copyColumnNames(const std::vector<std::string> & columnNames, int firs
 void
 ClpModel::copyRowNames(const char * const * rowNames, int first, int last)
 {
+     // Do column names if necessary
+     if (!lengthNames_&&numberColumns_) {
+       lengthNames_=8;
+       copyColumnNames(NULL,0,numberColumns_);
+     }
      unsigned int maxLength = lengthNames_;
      int size = static_cast<int>(rowNames_.size());
      if (size != numberRows_)
           rowNames_.resize(numberRows_);
      int iRow;
      for (iRow = first; iRow < last; iRow++) {
-          if (rowNames[iRow-first] && strlen(rowNames[iRow-first])) {
+          if (rowNames && rowNames[iRow-first] && strlen(rowNames[iRow-first])) {
                rowNames_[iRow] = rowNames[iRow-first];
                maxLength = CoinMax(maxLength, static_cast<unsigned int> (strlen(rowNames[iRow-first])));
           } else {
@@ -3419,13 +3434,18 @@ ClpModel::copyRowNames(const char * const * rowNames, int first, int last)
 void
 ClpModel::copyColumnNames(const char * const * columnNames, int first, int last)
 {
+     // Do row names if necessary
+     if (!lengthNames_&&numberRows_) {
+       lengthNames_=8;
+       copyRowNames(NULL,0,numberRows_);
+     }
      unsigned int maxLength = lengthNames_;
      int size = static_cast<int>(columnNames_.size());
      if (size != numberColumns_)
           columnNames_.resize(numberColumns_);
      int iColumn;
      for (iColumn = first; iColumn < last; iColumn++) {
-          if (columnNames[iColumn-first] && strlen(columnNames[iColumn-first])) {
+          if (columnNames && columnNames[iColumn-first] && strlen(columnNames[iColumn-first])) {
                columnNames_[iColumn] = columnNames[iColumn-first];
                maxLength = CoinMax(maxLength, static_cast<unsigned int> (strlen(columnNames[iColumn-first])));
           } else {
