@@ -2557,6 +2557,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
                                     "Errors", "User stopped"
                                    };
      assert (finalStatus >= -1 && finalStatus <= 5);
+     numberIterations_ = numberIterations;
      handler_->message(CLP_TIMING, messages_)
                << statusMessage[finalStatus+1] << objectiveValue() << numberIterations << time2 - time1;
      handler_->printing(presolve == ClpSolve::presolveOn)
