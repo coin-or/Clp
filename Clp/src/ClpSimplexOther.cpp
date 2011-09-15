@@ -3187,6 +3187,12 @@ ClpSimplexOther::parametricsLoop(parametricsData & paramData,
       statusOfProblemInParametrics(factorType, data);
     canSkipFactorization=false;
     if (numberPrimalInfeasibilities_) {
+      if (largestPrimalError_>1.0e3&&startingTheta>1.0e10) {
+	// treat as success
+	problemStatus_=0;
+	endingTheta=startingTheta;
+	break;
+      }
       // probably can get rid of this if we adjust every change in theta
       //printf("INFEAS %d %g\n",numberPrimalInfeasibilities_,
       //     sumPrimalInfeasibilities_);
