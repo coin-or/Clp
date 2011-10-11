@@ -285,11 +285,11 @@ ClpPresolve::postsolve(bool updateStatus)
      CoinMemcpyN(originalModel_->objectiveAsObject()->gradient(originalModel_,
                  originalModel_->primalColumnSolution(), offset, true),
                  ncols_, originalModel_->dualColumnSolution());
-     originalModel_->transposeTimes(-1.0,
+     originalModel_->clpMatrix()->transposeTimes(-1.0,
                                     originalModel_->dualRowSolution(),
                                     originalModel_->dualColumnSolution());
      memset(originalModel_->primalRowSolution(), 0, nrows_ * sizeof(double));
-     originalModel_->times(1.0, originalModel_->primalColumnSolution(),
+     originalModel_->clpMatrix()->times(1.0, originalModel_->primalColumnSolution(),
                            originalModel_->primalRowSolution());
      originalModel_->checkSolutionInternal();
      if (originalModel_->sumDualInfeasibilities() > 1.0e-1) {
