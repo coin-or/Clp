@@ -8717,11 +8717,14 @@ OsiClpSolverInterface::computeLargestAway()
 {
   // get largest scaled away from bound
   ClpSimplex temp=*modelPtr_;
+  // save logLevel (in case derived message handler)
+  int saveLogLevel=temp.logLevel();
   temp.setLogLevel(0);
   temp.dual();
   if (temp.status()==1)
     temp.primal(); // may mean we have optimal so continuous cutoff
   temp.dual(0,7);
+  temp.setLogLevel(saveLogLevel);
   double largestScaled=1.0e-12;
   double largest=1.0e-12;
   int numberRows = temp.numberRows();
