@@ -41,7 +41,7 @@ ClpDualRowSteepest::ClpDualRowSteepest (const ClpDualRowSteepest & rhs)
      mode_ = rhs.mode_;
      persistence_ = rhs.persistence_;
      model_ = rhs.model_;
-     if ((model_ && model_->whatsChanged() & 1) != 0) {
+     if ((model_ && (model_->whatsChanged() & 1)) != 0) {
           int number = model_->numberRows();
           if (rhs.savedWeights_)
                number = CoinMin(number, rhs.savedWeights_->capacity());

@@ -2729,7 +2729,7 @@ ClpModel::readMps(const char *fileName,
      int status = 0;
      try {
           status = m.readMps(fileName, "");
-     } catch (CoinError e) {
+     } catch (CoinError& e) {
           e.print();
           status = -1;
      }

@@ -142,7 +142,7 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
         solver.setObjCoeff(0,0.0);
         OSIUNITTEST_ADD_OUTCOME("clp", "setObjCoeff on empty model", "should throw exception", OsiUnitTest::TestOutcome::ERROR, false);
       }
-      catch (CoinError e) {
+      catch (CoinError& e) {
         if (OsiUnitTest::verbosity >= 1)
           std::cout<<"Correct throw from setObjCoeff on empty model"<<std::endl;
       }
@@ -157,7 +157,7 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
         solver.setColSetBounds(index,index+2,value);
         OSIUNITTEST_ADD_OUTCOME("clp", "setColSetBounds on cols not in model", "should throw exception", OsiUnitTest::TestOutcome::ERROR, false);
       }
-      catch (CoinError e) {
+      catch (CoinError& e) {
         if (OsiUnitTest::verbosity >= 1)
           std::cout<<"Correct throw from setObjCoeff on empty model"<<std::endl;
       }

@@ -814,7 +814,7 @@ main (int argc, const char *argv[])
 #endif
                                    try {
                                         status = model2->initialSolve(solveOptions);
-                                   } catch (CoinError e) {
+                                   } catch (CoinError& e) {
                                         e.print();
                                         status = -1;
                                    }

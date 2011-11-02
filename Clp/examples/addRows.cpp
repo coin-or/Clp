@@ -273,7 +273,7 @@ int main(int argc, const char *argv[])
                                    1.0, 1.0);
           }
           model.addRows(buildObject3, true);
-     } catch (CoinError e) {
+     } catch (CoinError& e) {
           e.print();
           if (e.lineNumber() >= 0)
                std::cout << "This was from a CoinAssert" << std::endl;

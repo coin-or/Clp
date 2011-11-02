@@ -56,7 +56,7 @@ ClpPrimalColumnSteepest::ClpPrimalColumnSteepest (const ClpPrimalColumnSteepest 
      savedSequenceOut_ = rhs.savedSequenceOut_;
      sizeFactorization_ = rhs.sizeFactorization_;
      devex_ = rhs.devex_;
-     if ((model_ && model_->whatsChanged() & 1) != 0) {
+     if ((model_ && (model_->whatsChanged() & 1)) != 0) {
           if (rhs.infeasible_) {
                infeasible_ = new CoinIndexedVector(rhs.infeasible_);
           } else {
