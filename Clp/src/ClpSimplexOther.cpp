@@ -2969,6 +2969,8 @@ ClpSimplexOther::parametrics(double startingTheta, double & endingTheta,
   if (!returnCode) {
     returnCode = reinterpret_cast<ClpSimplexDual *> (this)->startupSolve(0, NULL, 0);
     if (!returnCode) {
+      double saveDualBound=dualBound_;
+      dualBound_=CoinMax(dualBound_,1.0e15);
       swapped=true;
       double * temp;
       memcpy(saveLower,lower_,numberTotal*sizeof(double));
@@ -3080,6 +3082,7 @@ ClpSimplexOther::parametrics(double startingTheta, double & endingTheta,
 	  }
 	}
       }
+      dualBound_ = saveDualBound;
       //reinterpret_cast<ClpSimplexDual *> (this)->gutsOfDual(0, saveDuals, -1, data);
     }
     if (problemStatus_==2) {
@@ -4390,7 +4393,7 @@ ClpSimplexOther::nextTheta(int type, double maxTheta, parametricsData & paramDat
     double thetaCoefficientUpper = upperChange[iSequence] + alpha;
     if (thetaCoefficientLower > 1.0e-8) {
       double currentLower = lower_[iSequence];
-      assert (currentSolution >= currentLower - 100.0*primalTolerance_);
+      ClpTraceDebug (currentSolution >= currentLower - 100.0*primalTolerance_);
       double gap=currentSolution-currentLower;
       if (thetaCoefficientLower*theta_>gap) {
 	theta_ = gap/thetaCoefficientLower;
@@ -4400,7 +4403,7 @@ ClpSimplexOther::nextTheta(int type, double maxTheta, parametricsData & paramDat
     }
     if (thetaCoefficientUpper < -1.0e-8) {
       double currentUpper = upper_[iSequence];
-      assert (currentSolution <= currentUpper + 100.0*primalTolerance_);
+      ClpTraceDebug (currentSolution <= currentUpper + 100.0*primalTolerance_);
       double gap=currentSolution-currentUpper; //negative
       if (thetaCoefficientUpper*theta_<gap) {
 	theta_ = gap/thetaCoefficientUpper;
@@ -4416,7 +4419,7 @@ ClpSimplexOther::nextTheta(int type, double maxTheta, parametricsData & paramDat
     if (getColumnStatus(iSequence)==basic&&!markDone[iSequence]) {
       double currentSolution = solution_[iSequence];
       double currentLower = lower_[iSequence];
-      assert (currentSolution >= currentLower - 100.0*primalTolerance_);
+      ClpTraceDebug (currentSolution >= currentLower - 100.0*primalTolerance_);
       double thetaCoefficient = lowerChange[iSequence];
       if (thetaCoefficient > 0.0) {
 	double gap=currentSolution-currentLower;
@@ -4434,7 +4437,7 @@ ClpSimplexOther::nextTheta(int type, double maxTheta, parametricsData & paramDat
     if (getColumnStatus(iSequence)==basic&&!markDone[iSequence]) {
       double currentSolution = solution_[iSequence];
       double currentUpper = upper_[iSequence];
-      assert (currentSolution <= currentUpper + 100.0*primalTolerance_);
+      ClpTraceDebug (currentSolution <= currentUpper + 100.0*primalTolerance_);
       double thetaCoefficient = upperChange[iSequence];
       if (thetaCoefficient < 0) {
 	double gap=currentSolution-currentUpper; //negative

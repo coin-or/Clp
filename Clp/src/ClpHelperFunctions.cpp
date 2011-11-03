@@ -114,6 +114,24 @@ getNorms(const double * region, int size, double & norm1, double & norm2)
           norm1 = CoinMax(norm1, fabs(region[i]));
      }
 }
+#ifndef NDEBUG
+#include "ClpModel.hpp"
+#include "ClpMessage.hpp"
+ClpModel * clpTraceModel=NULL; // Set to trap messages
+void ClpTracePrint(std::string fileName, std::string message, int lineNumber)
+{
+  if (!clpTraceModel) {
+    std::cout<<fileName<<":"<<lineNumber<<" : \'"
+	     <<message<<"\' failed."<<std::endl;	
+  } else {
+    char line[1000];
+    sprintf(line,"%s: %d : \'%s\' failed.",fileName.c_str(),lineNumber,message.c_str());
+    clpTraceModel->messageHandler()->message(CLP_GENERAL_WARNING, clpTraceModel->messages())
+      << line
+      << CoinMessageEol;
+  }
+}
+#endif
 #if COIN_LONG_WORK
 // For long double versions
 CoinWorkDouble

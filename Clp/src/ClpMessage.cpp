@@ -109,6 +109,7 @@ static Clp_message clp_us_english[] = {
 #endif
      {CLP_GENERAL, 1000, 1, "%s"},
      {CLP_GENERAL2, 1001, 2, "%s"},
+     {CLP_GENERAL_WARNING, 3006, 1, "%s"},
      {CLP_DUMMY_END, 999999, 0, ""}
 };
 static Clp_message uk_english[] = {
