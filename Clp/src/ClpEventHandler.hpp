@@ -64,6 +64,9 @@ public:
 	  updateDualsInDual,
 	  endOfCreateRim,
 	  slightlyInfeasible,
+	  modifyMatrixInMiniPresolve,
+	  moreMiniPresolve,
+	  modifyMatrixInMiniPostsolve,
 	  noTheta // At end (because no pivot)
      };
      /**@name Virtual method that the derived classes should provide.
@@ -77,6 +80,10 @@ public:
 	 For ClpSolve 2 -> too big return status of -2 and -> too small 3
      */
      virtual int event(Event whichEvent);
+     /** This can do whatever it likes.  Return code -1 means no action.
+	 This passes in something
+     */
+     virtual int eventWithInfo(Event whichEvent, void * info) ;
      //@}
 
 

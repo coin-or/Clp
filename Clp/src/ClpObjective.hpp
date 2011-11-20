@@ -95,8 +95,12 @@ public:
      ///@name Other
      //@{
      /// Returns type (above 63 is extra information)
-     inline int type() {
+     inline int type() const {
           return type_;
+     }
+     /// Sets type (above 63 is extra information)
+     inline void setType(int value) {
+          type_ = value;
      }
      /// Whether activated
      inline int activated() const {

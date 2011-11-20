@@ -333,6 +333,12 @@ public:
      inline void checkGaps() {
           flags_ = (matrix_->hasGaps()) ? (flags_ | 2) : (flags_ & (~2));
      }
+     /// number of active columns (normally same as number of columns)
+     inline int numberActiveColumns() const
+     { return numberActiveColumns_;}
+     /// Set number of active columns (normally same as number of columns)
+     inline void setNumberActiveColumns(int value)
+     { numberActiveColumns_ = value;}
      //@}
 
 

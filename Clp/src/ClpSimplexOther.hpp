@@ -100,6 +100,8 @@ public:
      int parametrics(double startingTheta, double & endingTheta, 
                      const double * changeLowerBound, const double * changeUpperBound,
                      const double * changeLowerRhs, const double * changeUpperRhs);
+     int parametricsObj(double startingTheta, double & endingTheta, 
+			const double * changeObjective);
     /// Finds best possible pivot
     double bestPivot(bool justColumns=false);
   typedef struct {
@@ -128,6 +130,8 @@ private:
                          bool canTryQuick);
      int parametricsLoop(parametricsData & paramData,
                          ClpDataSave & data,bool canSkipFactorization=false);
+     int parametricsObjLoop(parametricsData & paramData,
+                         ClpDataSave & data,bool canSkipFactorization=false);
      /**  Refactorizes if necessary
           Checks if finished.  Updates status.
 
@@ -136,6 +140,7 @@ private:
            - 2 restoring from saved
      */
      void statusOfProblemInParametrics(int type, ClpDataSave & saveData);
+     void statusOfProblemInParametricsObj(int type, ClpDataSave & saveData);
      /** This has the flow between re-factorizations
 
          Reasons to come out:
@@ -154,6 +159,8 @@ private:
      */
      int nextTheta(int type, double maxTheta, parametricsData & paramData,
                    const double * changeObjective);
+     int whileIteratingObj(parametricsData & paramData);
+     int nextThetaObj(double maxTheta, parametricsData & paramData);
      /// Restores bound to original bound
      void originalBound(int iSequence, double theta, const double * changeLower,
 		     const double * changeUpper);

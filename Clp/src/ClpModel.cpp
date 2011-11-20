@@ -1583,6 +1583,160 @@ ClpModel::deleteColumns(int number, const int * which)
      setRowScale(NULL);
      setColumnScale(NULL);
 }
+// Deletes rows AND columns (does not reallocate)
+void 
+ClpModel::deleteRowsAndColumns(int numberRows, const int * whichRows,
+			       int numberColumns, const int * whichColumns)
+{
+  if (!numberColumns) {
+    deleteRows(numberRows,whichRows);
+  } else if (!numberRows) {
+    deleteColumns(numberColumns,whichColumns);
+  } else {
+    whatsChanged_ &= ~511; // all changed
+    bool doStatus = status_!=NULL;
+    int numberTotal=numberRows_+numberColumns_;
+    int * backRows = new int [numberTotal];
+    int * backColumns = backRows+numberRows_;
+    memset(backRows,0,numberTotal*sizeof(int));
+    int newNumberColumns=0;
+    for (int i=0;i<numberColumns;i++) {
+      int iColumn=whichColumns[i];
+      if (iColumn>=0&&iColumn<numberColumns_)
+	backColumns[iColumn]=-1;
+    }
+    assert (objective_->type()==1);
+    double * obj = objective(); 
+    for (int i=0;i<numberColumns_;i++) {
+      if (!backColumns[i]) {
+	columnActivity_[newNumberColumns] = columnActivity_[i];
+	reducedCost_[newNumberColumns] = reducedCost_[i];
+	obj[newNumberColumns] = obj[i];
+	columnLower_[newNumberColumns] = columnLower_[i];
+	columnUpper_[newNumberColumns] = columnUpper_[i];
+	if (doStatus)
+	  status_[newNumberColumns] = status_[i];
+	backColumns[i]=newNumberColumns++;
+      }
+    }
+    integerType_ = deleteChar(integerType_, numberColumns_,
+			      numberColumns, whichColumns, newNumberColumns, true);
+#ifndef CLP_NO_STD
+    // Now works if which out of order
+    if (lengthNames_) {
+      for (int i=0;i<numberColumns_;i++) {
+	int iColumn=backColumns[i];
+	if (iColumn) 
+	  columnNames_[iColumn] = columnNames_[i];
+      }
+      columnNames_.erase(columnNames_.begin() + newNumberColumns, columnNames_.end());
+    }
+#endif
+    int newNumberRows=0;
+    assert (!rowObjective_);
+    unsigned char * status2 = status_ + numberColumns_;
+    for (int i=0;i<numberRows;i++) {
+      int iRow=whichRows[i];
+      if (iRow>=0&&iRow<numberRows_)
+	backRows[iRow]=-1;
+    }
+    for (int i=0;i<numberRows_;i++) {
+      if (!backRows[i]) {
+	rowActivity_[newNumberRows] = rowActivity_[i];
+	dual_[newNumberRows] = dual_[i];
+	rowLower_[newNumberRows] = rowLower_[i];
+	rowUpper_[newNumberRows] = rowUpper_[i];
+	if (doStatus)
+	  status2[newNumberRows] = status2[i];
+	backRows[i]=newNumberRows++;
+      }
+    }
+#ifndef CLP_NO_STD
+    // Now works if which out of order
+    if (lengthNames_) {
+      for (int i=0;i<numberRows_;i++) {
+	int iRow=backRows[i];
+	if (iRow) 
+	  rowNames_[iRow] = rowNames_[i];
+      }
+      rowNames_.erase(rowNames_.begin() + newNumberRows, rowNames_.end());
+    }
+#endif
+    // possible matrix is not full
+    ClpPackedMatrix * clpMatrix = dynamic_cast<ClpPackedMatrix *>(matrix_);
+    CoinPackedMatrix * matrix = clpMatrix ? clpMatrix->matrix() : NULL;
+    if (matrix_->getNumCols() < numberColumns_) {
+      assert (matrix);
+      CoinBigIndex nel=matrix->getNumElements();
+      int n=matrix->getNumCols();
+      matrix->reserve(numberColumns_,nel);
+      CoinBigIndex * columnStart = matrix->getMutableVectorStarts();
+      int * columnLength = matrix->getMutableVectorLengths();
+      for (int i=n;i<numberColumns_;i++) {
+	columnStart[i]=nel;
+	columnLength[i]=0;
+      }
+    }
+    if (matrix) {
+      matrix->setExtraMajor(0.1);
+      //CoinPackedMatrix temp(*matrix);
+      matrix->setExtraGap(0.0);
+      matrix->setExtraMajor(0.0);
+      int * row = matrix->getMutableIndices();
+      CoinBigIndex * columnStart = matrix->getMutableVectorStarts();
+      int * columnLength = matrix->getMutableVectorLengths();
+      double * element = matrix->getMutableElements();
+      newNumberColumns=0;
+      CoinBigIndex n=0;
+      for (int iColumn=0;iColumn<numberColumns_;iColumn++) {
+	if (backColumns[iColumn]>=0) {
+	  CoinBigIndex start = columnStart[iColumn];
+	  int nSave=n;
+	  columnStart[newNumberColumns]=n;
+	  for (CoinBigIndex j=start;j<start+columnLength[iColumn];j++) {
+	    int iRow=row[j];
+	    iRow = backRows[iRow];
+	    if (iRow>=0) {
+	      row[n]=iRow;
+	      element[n++]=element[j];
+	    }
+	  }
+	  columnLength[newNumberColumns++]=n-nSave;
+	}
+      }
+      columnStart[newNumberColumns]=n;
+      matrix->setNumElements(n);
+      matrix->setMajorDim(newNumberColumns);
+      matrix->setMinorDim(newNumberRows);
+      clpMatrix->setNumberActiveColumns(newNumberColumns);
+      //temp.deleteRows(numberRows, whichRows);
+      //temp.deleteCols(numberColumns, whichColumns);
+      //assert(matrix->isEquivalent2(temp));
+      //*matrix=temp;
+    } else {
+      matrix_->deleteRows(numberRows, whichRows);
+      matrix_->deleteCols(numberColumns, whichColumns);
+    }
+    numberColumns_ = newNumberColumns;
+    numberRows_ = newNumberRows;
+    delete [] backRows;
+    // set state back to unknown
+    problemStatus_ = -1;
+    secondaryStatus_ = 0;
+    delete [] ray_;
+    ray_ = NULL;
+    if (savedRowScale_ != rowScale_) {
+      delete [] rowScale_;
+      delete [] columnScale_;
+    }
+    rowScale_ = NULL;
+    columnScale_ = NULL;
+    delete scaledMatrix_;
+    scaledMatrix_ = NULL;
+    delete rowCopy_;
+    rowCopy_ = NULL;
+  }
+}
 // Add one row
 void
 ClpModel::addRow(int numberInRow, const int * columns,

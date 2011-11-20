@@ -62,6 +62,14 @@ ClpEventHandler::event(Event whichEvent)
      else
           return 0; // say normal exit
 }
+/* This can do whatever it likes.  Return code -1 means no action.
+   This passes in something
+*/
+int 
+ClpEventHandler::eventWithInfo(Event whichEvent, void * info) 
+{ 
+  return -1;
+}
 /* set model. */
 void
 ClpEventHandler::setSimplex(ClpSimplex * model)

@@ -183,6 +183,9 @@ public:
 
      /// Deletes columns
      void deleteColumns(int number, const int * which);
+     /// Deletes rows AND columns (keeps old sizes)
+     void deleteRowsAndColumns(int numberRows, const int * whichRows,
+			       int numberColumns, const int * whichColumns);
      /// Add one column
      void addColumn(int numberInColumn,
                     const int * rows,

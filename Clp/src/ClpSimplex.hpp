@@ -372,6 +372,21 @@ public:
      /** Try simple crash like techniques to remove super basic slacks
 	 but only if > threshold */
      void removeSuperBasicSlacks(int threshold=0);
+     /** Mini presolve (faster)
+	 Char arrays must be numberRows and numberColumns long
+	 on entry second part must be filled in as follows -
+	 0 - possible
+	 >0 - take out and do something (depending on value - TBD)
+	 -1 row/column can't vanish but can have entries removed/changed
+	 -2 don't touch at all
+	 on exit <=0 ones will be in presolved problem
+	 struct will be created and will be long enough
+	 (information on length etc in first entry)
+	 user must delete struct
+     */
+     ClpSimplex * miniPresolve(char * rowType, char * columnType,void ** info);
+     /// After mini presolve
+     void miniPostsolve(const ClpSimplex * presolvedModel,void * info);
      /** Write the basis in MPS format to the specified file.
          If writeValues true writes values of structurals
          (and adds VALUES to end of NAME card)
