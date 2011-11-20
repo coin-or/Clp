@@ -8168,6 +8168,11 @@ ClpSimplex::miniPresolve(char * rowType, char * columnType,void ** infoOut)
     // mark one row as ub and take out row in column copy
     numberRowsLook=0;
     for (int iLook=0;iLook<numberColumnsLook;iLook++) {
+#if DEBUG_SOME>0
+#ifndef NDEBUG
+      checkBasis(newModel, rowType, columnType);
+#endif
+#endif
       nChanged++;
       int iColumn = whichColumns[iLook];
       if (columnType[iColumn]!=55&&columnType[iColumn]>10)
@@ -8284,8 +8289,10 @@ ClpSimplex::miniPresolve(char * rowType, char * columnType,void ** infoOut)
 		 iRow,getRowStatus(iRow),iColumn,
 		 getColumnStatus(iColumn),jRowLower,jRowUpper,nActions);
 #endif
-	  if (newModel->getRowStatus(iRow)!=basic)
+	  if (newModel->getRowStatus(iRow)!=basic) {
+	    //newModel->setRowStatus(iRow,basic);
 	    numberNonBasicSlacksOut++;
+	  }
 	  rowType[iRow]=1;
 	  if (iRow!=jRowLower&&iRow!=jRowUpper) {
 	    // mark as redundant
@@ -8366,6 +8373,10 @@ ClpSimplex::miniPresolve(char * rowType, char * columnType,void ** infoOut)
 	  iFlag=-1;
       }
       columnLength[iColumn]=length;
+      //#define NO_MOVABLE
+#ifdef NO_MOVABLE
+      iFlag=-1;
+#endif
       if (iFlag>0&&nonFree) {
 	double newValue;
 	if (iFlag==2) {

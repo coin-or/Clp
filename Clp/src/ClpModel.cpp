@@ -1635,6 +1635,7 @@ ClpModel::deleteRowsAndColumns(int numberRows, const int * whichRows,
     int newNumberRows=0;
     assert (!rowObjective_);
     unsigned char * status2 = status_ + numberColumns_;
+    unsigned char * status2a = status_ + newNumberColumns;
     for (int i=0;i<numberRows;i++) {
       int iRow=whichRows[i];
       if (iRow>=0&&iRow<numberRows_)
@@ -1647,7 +1648,7 @@ ClpModel::deleteRowsAndColumns(int numberRows, const int * whichRows,
 	rowLower_[newNumberRows] = rowLower_[i];
 	rowUpper_[newNumberRows] = rowUpper_[i];
 	if (doStatus)
-	  status2[newNumberRows] = status2[i];
+	  status2a[newNumberRows] = status2[i];
 	backRows[i]=newNumberRows++;
       }
     }
