@@ -893,6 +893,13 @@ public:
     			     double*& rowrng);
   
   /** Just like the other loadProblem() methods except that the matrix is
+      given as a ClpMatrixBase. */
+  virtual void loadProblem(const ClpMatrixBase& matrix,
+			   const double* collb, const double* colub,
+			   const double* obj,
+			   const double* rowlb, const double* rowub) ;
+
+  /** Just like the other loadProblem() methods except that the matrix is
       given in a standard column major ordered format (without gaps). */
   virtual void loadProblem(const int numcols, const int numrows,
                            const CoinBigIndex * start, const int* index,

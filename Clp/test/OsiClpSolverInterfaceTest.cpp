@@ -20,6 +20,7 @@
 #include "ClpFactorization.hpp"
 #include "CoinModel.hpp"
 #include "CoinIndexedVector.hpp"
+#include "ClpPlusMinusOneMatrix.hpp"
 
 //#############################################################################
 
@@ -585,6 +586,28 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
       OSIUNITTEST_ASSERT_ERROR(ei[13] == 7, {}, "clp", "matrix by row after assignment: indices");
     }
   }
+
+  // Test ClpPlusMinusOneMatrix by way of loadProblem(ClpMatrixBase, ... )
+  { int pos_start[4] = {0,5,9,12};
+    int neg_start[4] = {3,7,11,12};
+    int col[12] = {0,1,2,3,4,5,6,7,0,1,2,3};
+    double rhs[3] = {0.0,0.0,0.0};
+    double cost[8];
+    double var_lb[8];
+    double var_ub[8];
+    for (uint i = 0 ; i < 8 ; i++) {
+      cost[i] = 1.0;
+      var_lb[i] = 0.0;
+      var_ub[i] = 1.0;
+    }
+    ClpPlusMinusOneMatrix pmone_matrix(3,8,false,col,pos_start,neg_start);
+    OsiClpSolverInterface clpSi;
+    OSIUNITTEST_CATCH_ERROR(
+        {clpSi.loadProblem(pmone_matrix,var_lb,var_ub,cost,rhs,rhs);
+	 clpSi.initialSolve();},
+	{},"clp","loadProblem(ClpMatrixBase, ...)")
+  }
+
 
   // Test add/delete columns
   {    

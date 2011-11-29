@@ -3509,6 +3509,33 @@ OsiClpSolverInterface::loadProblem(const CoinPackedMatrix& matrix,
 
 //-----------------------------------------------------------------------------
 
+/*
+  Expose the method that takes ClpMatrixBase. User request. Can't hurt, given
+  the number of non-OSI methods already here.
+*/
+void OsiClpSolverInterface::loadProblem (const ClpMatrixBase& matrix,
+					 const double* collb,
+					 const double* colub,   
+					 const double* obj,
+					 const double* rowlb,
+					 const double* rowub)
+{
+  modelPtr_->whatsChanged_ = 0;
+  // Get rid of integer information (modelPtr will get rid of its copy)
+  delete [] integerInformation_;
+  integerInformation_=NULL;
+  modelPtr_->loadProblem(matrix,collb,colub,obj,rowlb,rowub);
+  linearObjective_ = modelPtr_->objective();
+  freeCachedResults();
+  basis_=CoinWarmStartBasis();
+  if (ws_) {
+     delete ws_;
+     ws_ = 0;
+  }
+}
+
+//-----------------------------------------------------------------------------
+
 void
 OsiClpSolverInterface::assignProblem(CoinPackedMatrix*& matrix,
 				     double*& collb, double*& colub,
