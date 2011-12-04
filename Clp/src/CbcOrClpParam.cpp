@@ -1079,7 +1079,7 @@ CoinReadNextField()
           }
 #else
           if (CbcOrClpReadCommand == stdin) {
-               fprintf(stdout, coin_prompt);
+	       fputs(coin_prompt,stdout);
                fflush(stdout);
           }
           where = fgets(line, 1000, CbcOrClpReadCommand);
