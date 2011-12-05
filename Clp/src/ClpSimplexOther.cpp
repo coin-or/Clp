@@ -7698,6 +7698,7 @@ ClpSimplex::outDuplicateRows(int numberLook,int * whichRows, bool noOverlaps,
   }
   //#define PRINT_DUP
 #if USE_HASH == 0
+#if 0
   if (false) {
     double * w =CoinCopyOfArray(weights,numberLook);
     int * ind = CoinCopyOfArray(whichRows,numberLook);
@@ -7710,6 +7711,7 @@ ClpSimplex::outDuplicateRows(int numberLook,int * whichRows, bool noOverlaps,
     delete [] w;
     delete [] ind;
   }
+#endif
   CoinSort_2(weights,weights+numberLook,whichRows);
 #if 0
   {
