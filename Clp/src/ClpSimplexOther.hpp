@@ -113,6 +113,12 @@ public:
     int * upperList; // list of upper bound changes
     char * markDone; // mark which ones looked at
     int * backwardBasic; // from sequence to pivot row
+    int * lowerActive;
+    double * lowerGap;
+    double * lowerCoefficient;
+    int * upperActive;
+    double * upperGap;
+    double * upperCoefficient;
   } parametricsData;
 
 private:

@@ -2865,7 +2865,7 @@ ClpSimplexOther::parametrics(double startingTheta, double & endingTheta,
   int ratio = (2*sizeof(int))/sizeof(double);
   assert (ratio==1||ratio==2);
   // allow for unscaled - even if not needed
-  int lengthArrays = 4*numberTotal+(2*numberTotal+2)*ratio;
+  int lengthArrays = 4*numberTotal+(3*numberTotal+2)*ratio+2*numberRows_+1;
   /*
     Save information and modify
   */
@@ -2875,12 +2875,18 @@ ClpSimplexOther::parametrics(double startingTheta, double & endingTheta,
   double * upperCopy = saveUpper+2*numberTotal;
   double * lowerChange = saveLower+numberTotal;
   double * upperChange = saveUpper+numberTotal;
-  int * lowerList = (reinterpret_cast<int *>(saveLower+4*numberTotal))+2;
-  int * upperList = (reinterpret_cast<int *>(saveUpper+4*numberTotal))+2;
+  double * lowerGap = saveLower+4*numberTotal;
+  double * lowerCoefficient = lowerGap+numberRows_;
+  double * upperGap = saveUpper+4*numberTotal;
+  double * upperCoefficient = upperGap+numberRows_;
+  int * lowerList = (reinterpret_cast<int *>(saveLower+4*numberTotal+2*numberRows_))+2;
+  int * upperList = (reinterpret_cast<int *>(saveUpper+4*numberTotal+2*numberRows_))+2;
+  int * lowerActive = lowerList+numberTotal+1;
+  int * upperActive = upperList+numberTotal+1;
   // To mark as odd
-  char * markDone = reinterpret_cast<char *>(lowerList+numberTotal);
+  char * markDone = reinterpret_cast<char *>(lowerActive+numberTotal);
   //memset(markDone,0,numberTotal);
-  int * backwardBasic = lowerList+2*numberTotal;
+  int * backwardBasic = upperActive+numberTotal;
   parametricsData paramData;
   paramData.lowerChange = lowerChange;
   paramData.lowerList=lowerList;
@@ -2888,6 +2894,12 @@ ClpSimplexOther::parametrics(double startingTheta, double & endingTheta,
   paramData.upperList=upperList;
   paramData.markDone=markDone;
   paramData.backwardBasic=backwardBasic;
+  paramData.lowerActive = lowerActive;
+  paramData.lowerGap = lowerGap;
+  paramData.lowerCoefficient = lowerCoefficient;
+  paramData.upperActive = upperActive;
+  paramData.upperGap = upperGap;
+  paramData.upperCoefficient = upperCoefficient;
   // Find theta when bounds will cross over and create arrays
   memset(lowerChange, 0, numberTotal * sizeof(double));
   memset(upperChange, 0, numberTotal * sizeof(double));
@@ -3558,6 +3570,13 @@ ClpSimplexOther::whileIterating(parametricsData & paramData, double /*reportIncr
   int numberTotal = numberColumns_ + numberRows_;
   const int * lowerList = paramData.lowerList;
   const int * upperList = paramData.upperList;
+  //#define CLP_PARAMETRIC_DENSE_ARRAYS 2
+#if CLP_PARAMETRIC_DENSE_ARRAYS
+  double * lowerGap = paramData.lowerGap;
+  double * upperGap = paramData.upperGap;
+  double * lowerCoefficient = paramData.lowerCoefficient;
+  double * upperCoefficient = paramData.upperCoefficient;
+#endif
   // do basic pointers
   int * backwardBasic = paramData.backwardBasic;
   for (int i=0;i<numberTotal;i++)
@@ -3597,11 +3616,21 @@ ClpSimplexOther::whileIterating(parametricsData & paramData, double /*reportIncr
 	    n=lowerList[-1];
 	    for (int i=0;i<n;i++) {
 	      int iSequence = lowerList[i];
-	      double newValue = lower_[iSequence] + change * lowerChange[iSequence];
+	      double thisChange = change * lowerChange[iSequence];
+	      double newValue = lower_[iSequence] + thisChange;
 	      lower_[iSequence] = newValue;
+#if CLP_PARAMETRIC_DENSE_ARRAYS
+	      if (getStatus(iSequence)==basic) {
+		int iRow=backwardBasic[iSequence];
+		lowerGap[iRow] -= thisChange;
+	      } else if(getStatus(iSequence)==atLowerBound) {
+		solution_[iSequence] = newValue;
+	      }
+#else
 	      if(getStatus(iSequence)==atLowerBound) {
 		solution_[iSequence] = newValue;
 	      }
+#endif
 #if 0
 	      // may have to adjust other bound
 	      double otherValue = upper_[iSequence];
@@ -3615,11 +3644,17 @@ ClpSimplexOther::whileIterating(parametricsData & paramData, double /*reportIncr
 	    n=upperList[-1];
 	    for (int i=0;i<n;i++) {
 	      int iSequence = upperList[i];
-	      double newValue = upper_[iSequence] + change * upperChange[iSequence];
+	      double thisChange = change * upperChange[iSequence];
+	      double newValue = upper_[iSequence] + thisChange;
 	      upper_[iSequence] = newValue;
 	      if(getStatus(iSequence)==atUpperBound||
 		 getStatus(iSequence)==isFixed) {
 		solution_[iSequence] = newValue;
+#if CLP_PARAMETRIC_DENSE_ARRAYS
+	      } else if (getStatus(iSequence)==basic) {
+		int iRow=backwardBasic[iSequence];
+		upperGap[iRow] += thisChange;
+#endif
 	      }
 	      // may have to adjust other bound
 	      double otherValue = lower_[iSequence];
@@ -3771,6 +3806,7 @@ ClpSimplexOther::whileIterating(parametricsData & paramData, double /*reportIncr
 #endif
                     // which will change basic solution
                     if (nswapped) {
+		      abort(); //needs testing
                          factorization_->updateColumn(rowArray_[3], rowArray_[2]);
                          dualRowPivot_->updatePrimalSolution(rowArray_[2],
                                                              1.0, objectiveChange);
@@ -3858,6 +3894,8 @@ ClpSimplexOther::whileIterating(parametricsData & paramData, double /*reportIncr
                     } else if (updateStatus == 5) {
                          problemStatus_ = -2; // factorize now
                     }
+		    int * lowerActive = paramData.lowerActive;
+		    int * upperActive = paramData.upperActive;
 		    // update change vector
 		    {
 		      double * work = rowArray_[1]->denseVector();
@@ -3871,19 +3909,90 @@ ClpSimplexOther::whileIterating(parametricsData & paramData, double /*reportIncr
 #endif
 		      double pivotValue = rowArray_[4]->denseVector()[pivotRow_];
 		      double multiplier = -pivotValue/alpha_;
+		      double * array=rowArray_[4]->denseVector();
+#if CLP_PARAMETRIC_DENSE_ARRAYS==2
+		      int lowerN=lowerActive[-1];
+		      int upperN=upperActive[-1];
+#endif
 		      if (multiplier) {
 			for (int i = 0; i < number; i++) {
 			  int iRow = which[i];
 #ifndef COIN_FAC_NEW
-			  rowArray_[4]->quickAddNonZero(iRow,multiplier*work[i]);
+			  double alpha=multiplier*work[i];
 #else
-			  rowArray_[4]->quickAddNonZero(iRow,multiplier*work[iRow]);
+			  double alpha=multiplier*work[iRow];
 #endif
+#if CLP_PARAMETRIC_DENSE_ARRAYS
+			  double alpha3 = alpha+array[iRow];
+			  int iSequence = pivotVariable_[iRow];
+#if CLP_PARAMETRIC_DENSE_ARRAYS==2
+			  double oldLower = lowerCoefficient[iRow];
+			  double oldUpper = upperCoefficient[iRow];
+#endif
+			  if (lower_[iSequence]>-1.0e30) {
+			    //lowerGap[iRow]=value-lower_[iSequence];
+			    double alpha2 = alpha3 + lowerChange[iSequence];
+#if CLP_PARAMETRIC_DENSE_ARRAYS==2
+			    if (alpha2>1.0e-8)  {
+			      lowerCoefficient[iRow]=alpha2;
+			      if (!oldLower)
+				lowerActive[lowerN++]=iRow;
+			    } else {
+			      if (oldLower)
+				lowerCoefficient[iRow]=COIN_DBL_MIN;
+			    }
+#else
+			    if (alpha2>1.0e-8)
+			      lowerCoefficient[iRow]=alpha2;
+			    else
+			      lowerCoefficient[iRow]=0.0;
+#endif
+			  } else {
+#if CLP_PARAMETRIC_DENSE_ARRAYS==2
+			    if (oldLower)
+			      lowerCoefficient[iRow]=COIN_DBL_MIN;
+#else
+			    lowerCoefficient[iRow]=0.0;
+#endif
+			  }
+			  if (upper_[iSequence]<1.0e30) {
+			    //upperGap[iRow]=-(value-upper_[iSequence]);
+			    double alpha2 = -(alpha3+upperChange[iSequence]);
+#if CLP_PARAMETRIC_DENSE_ARRAYS==2
+			    if (alpha2>1.0e-8) {
+			      upperCoefficient[iRow]=alpha2;
+			      if (!oldUpper)
+				upperActive[upperN++]=iRow;
+			    } else {
+			      if (oldUpper)
+				upperCoefficient[iRow]=COIN_DBL_MIN;
+			    }
+#else
+			    if (alpha2>1.0e-8)
+			      upperCoefficient[iRow]=alpha2;
+			    else
+			      upperCoefficient[iRow]=0.0;
+#endif
+			  } else {
+#if CLP_PARAMETRIC_DENSE_ARRAYS==2
+			    if (oldUpper)
+			      upperCoefficient[iRow]=COIN_DBL_MIN;
+#else
+			    upperCoefficient[iRow]=0.0;
+#endif
+			  }
+#endif
+			  rowArray_[4]->quickAdd(iRow,alpha);
 			}
 		      }
-		      pivotValue = rowArray_[4]->denseVector()[pivotRow_];
+		      pivotValue = array[pivotRow_];
 		      // we want pivot to be -multiplier
 		      rowArray_[4]->quickAdd(pivotRow_,-multiplier-pivotValue);
+#if CLP_PARAMETRIC_DENSE_ARRAYS==2
+		      assert (lowerN>=0&&lowerN<=numberRows_);
+		      lowerActive[-1]=lowerN;
+		      upperActive[-1]=upperN;
+#endif
 		    }
                     // update primal solution
 #if CLP_CAN_HAVE_ZERO_OBJ
@@ -3900,9 +4009,47 @@ ClpSimplexOther::whileIterating(parametricsData & paramData, double /*reportIncr
                     // do actual flips
                     reinterpret_cast<ClpSimplexDual *> ( this)->flipBounds(rowArray_[0], columnArray_[0]);
                     //rowArray_[1]->expand();
+#if CLP_PARAMETRIC_DENSE_ARRAYS==0
                     dualRowPivot_->updatePrimalSolution(rowArray_[1],
                                                         movement,
                                                         objectiveChange);
+#else
+		    // do by hand
+		    {
+		      double * work = rowArray_[1]->denseVector();
+		      int number = rowArray_[1]->getNumElements();
+		      int * which = rowArray_[1]->getIndices();
+		      int i;
+		      if (rowArray_[1]->packedMode()) {
+			for (i = 0; i < number; i++) {
+			  int iRow = which[i];
+			  int iSequence = pivotVariable_[iRow];
+			  double value = solution_[iSequence];
+			  double change = movement * work[i];
+			  value -= change;
+			  if (lower_[iSequence]>-1.0e30)
+			    lowerGap[iRow]=value-lower_[iSequence];
+			  if (upper_[iSequence]<1.0e30)
+			    upperGap[iRow]=-(value-upper_[iSequence]);
+			  solution_[iSequence] = value;
+			  objectiveChange -= change * cost_[iSequence];
+			  work[i] = 0.0;
+			}
+		      } else {
+			for (i = 0; i < number; i++) {
+			  int iRow = which[i];
+			  int iSequence = pivotVariable_[iRow];
+			  double value = solution_[iSequence];
+			  double change = movement * work[iRow];
+			  value -= change;
+			  solution_[iSequence] = value;
+			  objectiveChange -= change * cost_[iSequence];
+			  work[iRow] = 0.0;
+			}
+		      }
+		      rowArray_[1]->setNumElements(0);
+		    }
+#endif
                     // modify dualout
                     dualOut_ /= alpha_;
                     dualOut_ *= -directionOut_;
@@ -3958,6 +4105,73 @@ ClpSimplexOther::whileIterating(parametricsData & paramData, double /*reportIncr
 		    assert (backwardBasic[sequenceOut_]==pivotRow_);
 		    backwardBasic[sequenceOut_]=-1;
 		    backwardBasic[sequenceIn_]=pivotRow_;
+#if CLP_PARAMETRIC_DENSE_ARRAYS
+		    double value = solution_[sequenceIn_];
+		    double alpha = rowArray_[4]->denseVector()[pivotRow_];
+#if CLP_PARAMETRIC_DENSE_ARRAYS==2
+		    double oldLower = lowerCoefficient[pivotRow_];
+		    double oldUpper = upperCoefficient[pivotRow_];
+		    if (lower_[sequenceIn_]>-1.0e30) {
+		      lowerGap[pivotRow_]=value-lower_[sequenceIn_];
+		      double alpha2 = alpha + lowerChange[sequenceIn_];
+		      if (alpha2>1.0e-8)  {
+			lowerCoefficient[pivotRow_]=alpha2;
+			if (!oldLower) {
+			  int lowerN=lowerActive[-1];
+			  assert (lowerN>=0&&lowerN<numberRows_);
+			  lowerActive[lowerN]=pivotRow_;
+			  lowerActive[-1]=lowerN+1;
+			}
+		      } else {
+			if (oldLower)
+			  lowerCoefficient[pivotRow_]=COIN_DBL_MIN;
+		      }
+		    } else {
+		      if (oldLower)
+			lowerCoefficient[pivotRow_]=COIN_DBL_MIN;
+		    }
+		    if (upper_[sequenceIn_]<1.0e30) {
+		      upperGap[pivotRow_]=-(value-upper_[sequenceIn_]);
+		      double alpha2 = -(alpha+upperChange[sequenceIn_]);
+		      if (alpha2>1.0e-8) {
+			upperCoefficient[pivotRow_]=alpha2;
+			if (!oldUpper) {
+			  int upperN=upperActive[-1];
+			  assert (upperN>=0&&upperN<numberRows_);
+			  upperActive[upperN]=pivotRow_;
+			  upperActive[-1]=upperN+1;
+			}
+		      } else {
+			if (oldUpper)
+			  upperCoefficient[pivotRow_]=COIN_DBL_MIN;
+		      }
+		    } else {
+		      if (oldUpper)
+			upperCoefficient[pivotRow_]=COIN_DBL_MIN;
+		    }
+#else
+		    if (lower_[sequenceIn_]>-1.0e30) {
+		      lowerGap[pivotRow_]=value-lower_[sequenceIn_];
+		      double alpha2 = alpha + lowerChange[sequenceIn_];
+		      if (alpha2>1.0e-8)
+			lowerCoefficient[pivotRow_]=alpha2;
+		      else
+			lowerCoefficient[pivotRow_]=0.0;
+		    } else {
+		      lowerCoefficient[pivotRow_]=0.0;
+		    }
+		    if (upper_[sequenceIn_]<1.0e30) {
+		      upperGap[pivotRow_]=-(value-upper_[sequenceIn_]);
+		      double alpha2 = -(alpha+upperChange[sequenceIn_]);
+		      if (alpha2>1.0e-8)
+			upperCoefficient[pivotRow_]=alpha2;
+		      else
+			upperCoefficient[pivotRow_]=0.0;
+		    } else {
+		      upperCoefficient[pivotRow_]=0.0;
+		    }
+#endif
+#endif
 		    {
 		      char in[200],out[200];
 		      int iSequence=sequenceIn_;
@@ -4226,6 +4440,10 @@ ClpSimplexOther::whileIterating(parametricsData & paramData, double /*reportIncr
      startingTheta = lastTheta+theta_;
      return returnCode;
 }
+#if 0
+static int zzzzzz=0;
+int zzzzzzOther=0;
+#endif
 // Finds best possible pivot
 double 
 ClpSimplexOther::bestPivot(bool justColumns)
@@ -4282,6 +4500,7 @@ ClpSimplexOther::nextTheta(int /*type*/, double maxTheta, parametricsData & para
   // may need to decide based on model?
   bool needFullUpdate = rowArray_[4]->getNumElements()==0;
   double * array = rowArray_[4]->denseVector();
+  //rowArray_[4]->checkClean();
   const int * row = matrix_->getIndices();
   const int * columnLength = matrix_->getVectorLengths();
   const CoinBigIndex * columnStart = matrix_->getVectorStarts();
@@ -4295,7 +4514,19 @@ ClpSimplexOther::nextTheta(int /*type*/, double maxTheta, parametricsData & para
     needFullUpdate=true;
   }
 #endif
+  //#define CLP_PARAMETRIC_DENSE_ARRAYS
+#if CLP_PARAMETRIC_DENSE_ARRAYS
+  double * lowerGap = paramData.lowerGap;
+  double * upperGap = paramData.upperGap;
+  double * lowerCoefficient = paramData.lowerCoefficient;
+  double * upperCoefficient = paramData.upperCoefficient;
+#if CLP_PARAMETRIC_DENSE_ARRAYS==2
+  int * lowerActive=paramData.lowerActive;
+  int * upperActive=paramData.upperActive;
+#endif
+#endif
   if (!factorization_->pivots()||needFullUpdate) {
+    //zzzzzz=0;
     rowArray_[4]->clear();
     // get change
     if (!rowScale_) {
@@ -4309,7 +4540,7 @@ ClpSimplexOther::nextTheta(int /*type*/, double maxTheta, parametricsData & para
 	  double value=lowerChange[iSequence];
 	  for (CoinBigIndex j = columnStart[iSequence];
 	       j < columnStart[iSequence] + columnLength[iSequence]; j++) {
-	    rowArray_[4]->quickAddNonZero(row[j], elementByColumn[j]*value);
+	    rowArray_[4]->quickAdd(row[j], elementByColumn[j]*value);
 	  }
 	}
       }
@@ -4320,7 +4551,7 @@ ClpSimplexOther::nextTheta(int /*type*/, double maxTheta, parametricsData & para
 	assert (iSequence>=0);
 	if (getRowStatus(iSequence)==atLowerBound) {
 	  double value=change[iSequence];
-	  rowArray_[4]->quickAddNonZero(iSequence, -value);
+	  rowArray_[4]->quickAdd(iSequence, -value);
 	}
       }
       n=upperList[-2];
@@ -4331,7 +4562,7 @@ ClpSimplexOther::nextTheta(int /*type*/, double maxTheta, parametricsData & para
 	  double value=upperChange[iSequence];
 	  for (CoinBigIndex j = columnStart[iSequence];
 	       j < columnStart[iSequence] + columnLength[iSequence]; j++) {
-	    rowArray_[4]->quickAddNonZero(row[j], elementByColumn[j]*value);
+	    rowArray_[4]->quickAdd(row[j], elementByColumn[j]*value);
 	  }
 	}
       }
@@ -4342,7 +4573,7 @@ ClpSimplexOther::nextTheta(int /*type*/, double maxTheta, parametricsData & para
 	assert (iSequence>=0);
 	if (getRowStatus(iSequence)==atUpperBound) {
 	  double value=change[iSequence];
-	  rowArray_[4]->quickAddNonZero(iSequence, -value);
+	  rowArray_[4]->quickAdd(iSequence, -value);
 	}
       }
     } else {
@@ -4359,7 +4590,7 @@ ClpSimplexOther::nextTheta(int /*type*/, double maxTheta, parametricsData & para
 	  for (CoinBigIndex j = columnStart[iSequence];
 	       j < columnStart[iSequence] + columnLength[iSequence]; j++) {
 	    int iRow = row[j];
-	    rowArray_[4]->quickAddNonZero(iRow, elementByColumn[j]*scale * rowScale_[iRow]*value);
+	    rowArray_[4]->quickAdd(iRow, elementByColumn[j]*scale * rowScale_[iRow]*value);
 	  }
 	}
       }
@@ -4370,7 +4601,7 @@ ClpSimplexOther::nextTheta(int /*type*/, double maxTheta, parametricsData & para
 	assert (iSequence>=0);
 	if (getRowStatus(iSequence)==atLowerBound) {
 	  double value=change[iSequence];
-	  rowArray_[4]->quickAddNonZero(iSequence, -value);
+	  rowArray_[4]->quickAdd(iSequence, -value);
 	}
       }
       n=upperList[-2];
@@ -4384,7 +4615,7 @@ ClpSimplexOther::nextTheta(int /*type*/, double maxTheta, parametricsData & para
 	  for (CoinBigIndex j = columnStart[iSequence];
 	       j < columnStart[iSequence] + columnLength[iSequence]; j++) {
 	    int iRow = row[j];
-	    rowArray_[4]->quickAddNonZero(iRow, elementByColumn[j]*scale * rowScale_[iRow]*value);
+	    rowArray_[4]->quickAdd(iRow, elementByColumn[j]*scale * rowScale_[iRow]*value);
 	  }
 	}
       }
@@ -4395,7 +4626,7 @@ ClpSimplexOther::nextTheta(int /*type*/, double maxTheta, parametricsData & para
 	assert (iSequence>=0);
 	if (getRowStatus(iSequence)==atUpperBound) {
 	  double value=change[iSequence];
-	  rowArray_[4]->quickAddNonZero(iSequence, -value);
+	  rowArray_[4]->quickAdd(iSequence, -value);
 	}
       }
     }
@@ -4407,6 +4638,52 @@ ClpSimplexOther::nextTheta(int /*type*/, double maxTheta, parametricsData & para
 	assert (fabs(tempArray[i]-array[i])<1.0e-8);
       }
     }
+#endif
+#if CLP_PARAMETRIC_DENSE_ARRAYS
+    /* later for sparse - keep like CoinIndexedvector
+       and just redo here */
+#if CLP_PARAMETRIC_DENSE_ARRAYS==2
+    int lowerN=0;
+    int upperN=0;
+#endif
+    memset(lowerCoefficient,0,numberRows_*sizeof(double));
+    memset(upperCoefficient,0,numberRows_*sizeof(double));
+    for (int iRow=0;iRow<numberRows_;iRow++) {
+      iSequence = pivotVariable_[iRow];
+      double currentSolution = solution_[iSequence];
+      double alpha = array[iRow];
+      double thetaCoefficientLower = lowerChange[iSequence] + alpha;
+      double thetaCoefficientUpper = upperChange[iSequence] + alpha;
+      if (thetaCoefficientLower > 1.0e-8&&lower_[iSequence]>-1.0e30) {
+	double currentLower = lower_[iSequence];
+	ClpTraceDebug (currentSolution >= currentLower - 100.0*primalTolerance_);
+	double gap=currentSolution-currentLower;
+	lowerGap[iRow]=gap;
+	lowerCoefficient[iRow]=thetaCoefficientLower;
+#if CLP_PARAMETRIC_DENSE_ARRAYS==2
+	lowerActive[lowerN++]=iRow;
+#endif
+	//} else {
+	//lowerCoefficient[iRow]=0.0;
+      }
+      if (thetaCoefficientUpper < -1.0e-8&&upper_[iSequence]<1.0e30) {
+	double currentUpper = upper_[iSequence];
+	ClpTraceDebug (currentSolution <= currentUpper + 100.0*primalTolerance_);
+	double gap2=-(currentSolution-currentUpper); //positive
+	upperGap[iRow]=gap2;
+	upperCoefficient[iRow]=-thetaCoefficientUpper;
+#if CLP_PARAMETRIC_DENSE_ARRAYS==2
+	upperActive[upperN++]=iRow;
+#endif
+	//} else {
+	//upperCoefficient[iRow]=0.0;
+      }
+    }
+#endif
+#if CLP_PARAMETRIC_DENSE_ARRAYS==2
+    assert (lowerN>=0&&lowerN<=numberRows_);
+    lowerActive[-1]=lowerN;
+    upperActive[-1]=upperN;
 #endif
   } else if (sequenceIn_>=0) {
     //assert (sequenceIn_>=0);
@@ -4420,7 +4697,7 @@ ClpSimplexOther::nextTheta(int /*type*/, double maxTheta, parametricsData & para
 	if (!rowScale_) {
 	  for (CoinBigIndex i = columnStart[sequenceIn_];
 	       i < columnStart[sequenceIn_] + columnLength[sequenceIn_]; i++) {
-	    rowArray_[5]->quickAddNonZero(row[i], elementByColumn[i]*change);
+	    rowArray_[5]->quickAdd(row[i], elementByColumn[i]*change);
 	  }
 	} else {
 	  // apply scaling
@@ -4428,7 +4705,7 @@ ClpSimplexOther::nextTheta(int /*type*/, double maxTheta, parametricsData & para
 	  for (CoinBigIndex i = columnStart[sequenceIn_];
 	       i < columnStart[sequenceIn_] + columnLength[sequenceIn_]; i++) {
 	    int iRow = row[i];
-	    rowArray_[5]->quickAddNonZero(iRow, elementByColumn[i]*scale * rowScale_[iRow]*change);
+	    rowArray_[5]->quickAdd(iRow, elementByColumn[i]*scale * rowScale_[iRow]*change);
 	  }
 	}
       } else {
@@ -4445,7 +4722,7 @@ ClpSimplexOther::nextTheta(int /*type*/, double maxTheta, parametricsData & para
 	if (!rowScale_) {
 	  for (CoinBigIndex i = columnStart[sequenceOut_];
 	       i < columnStart[sequenceOut_] + columnLength[sequenceOut_]; i++) {
-	    rowArray_[5]->quickAddNonZero(row[i], elementByColumn[i]*change);
+	    rowArray_[5]->quickAdd(row[i], elementByColumn[i]*change);
 	  }
 	} else {
 	  // apply scaling
@@ -4453,11 +4730,11 @@ ClpSimplexOther::nextTheta(int /*type*/, double maxTheta, parametricsData & para
 	  for (CoinBigIndex i = columnStart[sequenceOut_];
 	       i < columnStart[sequenceOut_] + columnLength[sequenceOut_]; i++) {
 	    int iRow = row[i];
-	    rowArray_[5]->quickAddNonZero(iRow, elementByColumn[i]*scale * rowScale_[iRow]*change);
+	    rowArray_[5]->quickAdd(iRow, elementByColumn[i]*scale * rowScale_[iRow]*change);
 	  }
 	}
       } else {
-	rowArray_[5]->quickAddNonZero(sequenceOut_-numberColumns_,-change);
+	rowArray_[5]->quickAdd(sequenceOut_-numberColumns_,-change);
       }
       needed++;
     }
@@ -4470,34 +4747,117 @@ ClpSimplexOther::nextTheta(int /*type*/, double maxTheta, parametricsData & para
       double * array5 = rowArray_[5]->denseVector();
       int * index5 = rowArray_[5]->getIndices();
       int number5 = rowArray_[5]->getNumElements();
+#if CLP_PARAMETRIC_DENSE_ARRAYS==2
+      int lowerN=lowerActive[-1];
+      int upperN=upperActive[-1];
+      int nIn4=rowArray_[4]->getNumElements();
+      int * index4 = rowArray_[4]->getIndices();
+#endif
       for (int i = 0; i < number5; i++) {
 	int iPivot = index5[i];
-	rowArray_[4]->quickAddNonZero(iPivot,array5[iPivot]);
+#if CLP_PARAMETRIC_DENSE_ARRAYS==0
+	rowArray_[4]->quickAdd(iPivot,array5[iPivot]);
+#else
+	/* later for sparse - modify here */
+	int iSequence = pivotVariable_[iPivot];
+	double currentSolution = solution_[iSequence];
+	double currentAlpha = array[iPivot];
+	double alpha5 = array5[iPivot];
+	double alpha = currentAlpha+alpha5;
+#if CLP_PARAMETRIC_DENSE_ARRAYS==2
+	if (currentAlpha) {
+	  if (alpha) {
+	    array[iPivot] = alpha;
+	  } else {
+	    array[iPivot] = COIN_DBL_MIN;
+	  }
+	} else {
+	  index4[nIn4++] = iPivot;
+	  array[iPivot] = alpha;
+	}
+#else
+	rowArray_[4]->quickAdd(iPivot,alpha5);
+#endif
+	//#undef CLP_PARAMETRIC_DENSE_ARRAYS
+	//#define CLP_PARAMETRIC_DENSE_ARRAYS 1
+	double thetaCoefficientLower = lowerChange[iSequence] + alpha;
+	double thetaCoefficientUpper = upperChange[iSequence] + alpha;
+#if CLP_PARAMETRIC_DENSE_ARRAYS==2
+	double oldLower = lowerCoefficient[iPivot];
+	double oldUpper = upperCoefficient[iPivot];
+#endif
+	if (thetaCoefficientLower > 1.0e-8&&lower_[iSequence]>-1.0e30) {
+	  double currentLower = lower_[iSequence];
+	  ClpTraceDebug (currentSolution >= currentLower - 100.0*primalTolerance_);
+	  double gap=currentSolution-currentLower;
+	  lowerGap[iPivot]=gap;
+	  lowerCoefficient[iPivot]=thetaCoefficientLower;
+#if CLP_PARAMETRIC_DENSE_ARRAYS==2
+	  if (!oldLower)
+	    lowerActive[lowerN++]=iPivot;
+#endif
+	} else {
+#if CLP_PARAMETRIC_DENSE_ARRAYS==2
+	  if (oldLower)
+	    lowerCoefficient[iPivot]=COIN_DBL_MIN;
+#else
+	  lowerCoefficient[iPivot]=0.0;
+#endif
+	}
+	if (thetaCoefficientUpper < -1.0e-8&&upper_[iSequence]<1.0e30) {
+	  double currentUpper = upper_[iSequence];
+	  ClpTraceDebug (currentSolution <= currentUpper + 100.0*primalTolerance_);
+	  double gap2=-(currentSolution-currentUpper); //positive
+	  upperGap[iPivot]=gap2;
+	  upperCoefficient[iPivot]=-thetaCoefficientUpper;
+#if CLP_PARAMETRIC_DENSE_ARRAYS==2
+	  if (!oldUpper)
+	    upperActive[upperN++]=iPivot;
+#endif
+	} else {
+#if CLP_PARAMETRIC_DENSE_ARRAYS==2
+	  if (oldUpper)
+	    upperCoefficient[iPivot]=COIN_DBL_MIN;
+#else
+	  upperCoefficient[iPivot]=0.0;
+#endif
+	}
+#endif
 	array5[iPivot]=0.0;
       }
       rowArray_[5]->setNumElements(0);
+#if CLP_PARAMETRIC_DENSE_ARRAYS==2
+      rowArray_[4]->setNumElements(nIn4);
+      assert (lowerN>=0&&lowerN<=numberRows_);
+      lowerActive[-1]=lowerN;
+      upperActive[-1]=upperN;
+#endif
     }
   }
   const int * index = rowArray_[4]->getIndices();
   int number = rowArray_[4]->getNumElements();
+#define TESTXX 0
+#if CLP_PARAMETRIC_DENSE_ARRAYS==0 //TESTXX
   int * markDone = reinterpret_cast<int *>(paramData.markDone);
   int nToZero=(numberRows_+numberColumns_+COIN_ANY_BITS_PER_INT-1)>>COIN_ANY_SHIFT_PER_INT;
   memset(markDone,0,nToZero*sizeof(int));
   const int * backwardBasic = paramData.backwardBasic;
+#endif
   // first ones with alpha
   double theta1=maxTheta;
-  double theta2=maxTheta;
-  //bool toLower2=true;
   int pivotRow1=-1;
+#if CLP_PARAMETRIC_DENSE_ARRAYS<2 //TESTXX
   int pivotRow2=-1;
-  cilk_for (int i=0;i<number;i++) {
+  double theta2=maxTheta;
+#endif
+#if CLP_PARAMETRIC_DENSE_ARRAYS==0 //TESTXX
+  for (int i=0;i<number;i++) {
     int iPivot=index[i];
     iSequence = pivotVariable_[iPivot];
     //assert(!markDone[iSequence]);
     int word = iSequence >> COIN_ANY_SHIFT_PER_INT;
     int bit = iSequence & COIN_ANY_MASK_PER_INT;
     markDone[word] |= ( 1 << bit );
-    //markDone[iSequence]=1;
     // solution value will be sol - theta*alpha
     // bounds will be bounds + change *theta
     double currentSolution = solution_[iSequence];
@@ -4510,6 +4870,7 @@ ClpSimplexOther::nextTheta(int /*type*/, double maxTheta, parametricsData & para
 #endif
       double currentLower = lower_[iSequence];
       ClpTraceDebug (currentSolution >= currentLower - 100.0*primalTolerance_);
+      assert (currentSolution >= currentLower - 100.0*primalTolerance_);
       double gap=currentSolution-currentLower;
       if (thetaCoefficientLower*theta1>gap) {
 	theta1 = gap/thetaCoefficientLower;
@@ -4522,6 +4883,7 @@ ClpSimplexOther::nextTheta(int /*type*/, double maxTheta, parametricsData & para
 #endif
       double currentUpper = upper_[iSequence];
       ClpTraceDebug (currentSolution <= currentUpper + 100.0*primalTolerance_);
+      assert (currentSolution <= currentUpper + 100.0*primalTolerance_);
       double gap2=currentSolution-currentUpper; //negative
       if (thetaCoefficientUpper*theta2<gap2) {
 	theta2 = gap2/thetaCoefficientUpper;
@@ -4582,26 +4944,245 @@ ClpSimplexOther::nextTheta(int /*type*/, double maxTheta, parametricsData & para
     toLower=true;
     pivotRow_=pivotRow1;
   }
+#if 0 //TESTXX
+#if CLP_PARAMETRIC_DENSE_ARRAYS==2
+  {
+    double * checkArray = new double[numberRows_];
+    memcpy(checkArray,lowerCoefficient,numberRows_*sizeof(double));
+    int lowerN=lowerActive[-1];
+    for (int i=0;i<lowerN;i++) {
+      int iRow=lowerActive[i];
+      int iSequence = pivotVariable_[iRow];
+      double alpha = array[iRow];
+      double thetaCoefficient = lowerChange[iSequence] + alpha;
+      if (thetaCoefficient > 1.0e-8&&lower_[iSequence]>-1.0e30) {
+	assert(fabs(checkArray[iRow]-thetaCoefficient)<1.0e-5);
+	if(fabs(checkArray[iRow]-thetaCoefficient)>1.0e-5) {
+	  abort();
+	}
+      } else {
+	assert (fabs(checkArray[iRow])<1.0e-12);
+	if (fabs(checkArray[iRow])>1.0e-12) {
+	  abort();
+	}
+      }
+      checkArray[iRow]=0.0;
+    }
+    for (int i=0;i<numberRows_;i++) {
+      assert (!checkArray[i]);
+      if (checkArray[i])
+	abort();
+    }
+    memcpy(checkArray,upperCoefficient,numberRows_*sizeof(double));
+    int upperN=upperActive[-1];
+    for (int i=0;i<upperN;i++) {
+      int iRow=upperActive[i];
+      int iSequence = pivotVariable_[iRow];
+      double alpha = array[iRow];
+      double thetaCoefficient = -(upperChange[iSequence] + alpha);
+      if (thetaCoefficient > 1.0e-8&&upper_[iSequence]<1.0e30) {
+	assert(fabs(checkArray[iRow]-thetaCoefficient)<1.0e-5);
+	if(fabs(checkArray[iRow]-thetaCoefficient)>1.0e-5) {
+	  abort();
+	}
+      } else {
+	assert (fabs(checkArray[iRow])<1.0e-12);
+	if (fabs(checkArray[iRow])>1.0e-12) {
+	  abort();
+	}
+      }
+      checkArray[iRow]=0.0;
+    }
+    for (int i=0;i<numberRows_;i++) {
+      assert (!checkArray[i]);
+      if (checkArray[i])
+	abort();
+    }
+    delete [] checkArray;
+  }
+#endif
+#if CLP_PARAMETRIC_DENSE_ARRAYS==2
+  double theta3=maxTheta;
+  int pivotRow3=-1;
+  int lowerN=lowerActive[-1];
+  for (int i=0;i<lowerN;i++) {
+    int iRow=lowerActive[i];
+    double lowerC = lowerCoefficient[iRow];
+    double gap=lowerGap[iRow];
+    if (toLower&&iRow==pivotRow_) {
+      assert (lowerC*theta3>gap-1.0e-8);
+      if (lowerC*theta3<gap-1.0e-8)
+	abort();
+    }
+    if (lowerC*theta3>gap&&lowerC!=COIN_DBL_MIN) {
+      theta3 = gap/lowerC;
+      pivotRow3=iRow;
+    }
+  }
+  int pivotRow4=pivotRow3;
+  double theta4=theta3;
+  int upperN=upperActive[-1];
+  for (int i=0;i<upperN;i++) {
+    int iRow=upperActive[i];
+    double upperC = upperCoefficient[iRow];
+    double gap=upperGap[iRow];
+    if (!toLower&&iRow==pivotRow_) {
+      assert (upperC*theta3>gap-1.0e-8);
+      if (upperC*theta3<gap-1.0e-8)
+	abort();
+    }
+    if (upperC*theta4>gap&&upperC!=COIN_DBL_MIN) {
+      theta4 = gap/upperC;
+      pivotRow4=iRow;
+    }
+  }
+  bool toLower3;
+  if (theta4<theta3) {
+    theta3=theta4;
+    toLower3=false;
+    pivotRow3=pivotRow4;
+  } else {
+    toLower3=true;
+  }
+  if (fabs(theta3-theta_)>1.0e-8)
+    abort();
+  if (toLower!=toLower3||pivotRow_!=pivotRow3) {
+    printf("bad piv - good %d %g %s, bad %d %g %s\n",pivotRow_,theta_,toLower ? "toLower" : "toUpper",
+	   pivotRow3,theta3,toLower3 ? "toLower" : "toUpper");
+    //zzzzzz++;
+    if (true/*zzzzzz>zzzzzzOther*/) {
+      printf("Swapping\n");
+      pivotRow_=pivotRow3;
+      theta_=theta3;
+      toLower=toLower3;
+    }
+  }
+#endif
+#endif
+#else
+#if 0 //CLP_PARAMETRIC_DENSE_ARRAYS==2
+  {
+    double * checkArray = new double[numberRows_];
+    memcpy(checkArray,lowerCoefficient,numberRows_*sizeof(double));
+    int lowerN=lowerActive[-1];
+    for (int i=0;i<lowerN;i++) {
+      int iRow=lowerActive[i];
+      checkArray[iRow]=0.0;
+    }
+    for (int i=0;i<numberRows_;i++) {
+      assert (!checkArray[i]);
+      if (checkArray[i])
+	abort();
+    }
+    memcpy(checkArray,upperCoefficient,numberRows_*sizeof(double));
+    int upperN=upperActive[-1];
+    for (int i=0;i<upperN;i++) {
+      int iRow=upperActive[i];
+      checkArray[iRow]=0.0;
+    }
+    for (int i=0;i<numberRows_;i++) {
+      assert (!checkArray[i]);
+      if (checkArray[i])
+	abort();
+    }
+    delete [] checkArray;
+  }
+#endif
+#if CLP_PARAMETRIC_DENSE_ARRAYS==2
+  int lowerN=lowerActive[-1];
+  for (int i=0;i<lowerN;i++) {
+    int iRow=lowerActive[i];
+    double lowerC = lowerCoefficient[iRow];
+    double gap=lowerGap[iRow];
+    if (lowerC*theta1>gap&&lowerC!=COIN_DBL_MIN) {
+      theta1 = gap/lowerC;
+      pivotRow1=iRow;
+    }
+  }
+  pivotRow_=pivotRow1;
+  theta_=theta1;
+  int upperN=upperActive[-1];
+  for (int i=0;i<upperN;i++) {
+    int iRow=upperActive[i];
+    double upperC = upperCoefficient[iRow];
+    double gap=upperGap[iRow];
+    if (upperC*theta1>gap&&upperC!=COIN_DBL_MIN) {
+      theta1 = gap/upperC;
+      pivotRow1=iRow;
+    }
+  }
+  if (theta1<theta_) {
+    theta_=theta1;
+    toLower=false;
+    pivotRow_=pivotRow1;
+  } else {
+    toLower=true;
+  }
+#else
+  for (int iRow=0;iRow<numberRows_;iRow++) {
+    double lowerC = lowerCoefficient[iRow];
+    if (lowerC) {
+      double gap=lowerGap[iRow];
+      if (lowerC*theta1>gap&&lowerC!=COIN_DBL_MIN) {
+	theta1 = gap/lowerC;
+	pivotRow1=iRow;
+      }
+    }
+    double upperC = upperCoefficient[iRow];
+    if (upperC) {
+      double gap=upperGap[iRow];
+      if (upperC*theta2>gap&&upperC!=COIN_DBL_MIN) {
+	theta2 = gap/upperC;
+	pivotRow2=iRow;
+      }
+    }
+  }
+  if (theta2<theta1) {
+    theta_=theta2;
+    toLower=false;
+    pivotRow_=pivotRow2;
+  } else {
+    theta_=theta1;
+    toLower=true;
+    pivotRow_=pivotRow1;
+  }
+#endif
+#endif
   theta_ = CoinMax(theta_,0.0);
   if (theta_>1.0e-15) {
     // update solution
     for (int iRow = 0; iRow < number; iRow++) {
       int iPivot = index[iRow];
       iSequence = pivotVariable_[iPivot];
-      //markDone[iSequence]=0;
       // solution value will be sol - theta*alpha
       double alpha = array[iPivot];
-      solution_[iSequence] -= theta_ * alpha;
-    }
-#if 0
-  } else {
-    for (int iRow = 0; iRow < number; iRow++) {
-      int iPivot = index[iRow];
-      iSequence = pivotVariable_[iPivot];
-      markDone[iSequence]=0;
-    }
+      double currentSolution = solution_[iSequence] - theta_ * alpha;
+      solution_[iSequence] =currentSolution;
+#if CLP_PARAMETRIC_DENSE_ARRAYS 
+      if (lower_[iSequence]>-1.0e30)
+	lowerGap[iPivot]=currentSolution-lower_[iSequence];
+      if (upper_[iSequence]<1.0e30)
+	upperGap[iPivot]=-(currentSolution-upper_[iSequence]);
 #endif
+    }
   }
+#if CLP_PARAMETRIC_DENSE_ARRAYS
+  if (pivotRow_>=0&&false) {
+    double oldValue = upperCoefficient[pivotRow_];
+    double value = array[pivotRow_];
+    if (value) {
+      if (!oldValue) {
+	int upperN=upperActive[-1];
+	assert (upperN>=0&&upperN<numberRows_);
+	upperActive[upperN]=pivotRow_;
+	upperActive[-1]=upperN+1;
+      }
+    } else {
+      if (oldValue)
+	upperCoefficient[pivotRow_]=COIN_DBL_MIN;
+    }
+  }
+#endif
 #if 0
   for (int i=0;i<numberTotal;i++)
     assert(!markDone[i]);
@@ -6929,6 +7510,104 @@ ClpSimplex::pivotResultPart2(int algorithm,int state)
   //	 returnCode,problemStatus_);
   return returnCode;
 }
+#ifdef COIN_SHORT_SORT
+#define USE_HASH 1
+#else
+#define USE_HASH 0
+#endif
+#if USE_HASH==2
+static const unsigned int mmult[] = {
+  262139, 259459, 256889, 254291, 251701, 249133, 246709, 244247};
+// Returns a hash value
+inline unsigned int 
+hashValue(double value, unsigned int maxHash) 
+{
+  const char * name = reinterpret_cast<char *>(&value);
+  unsigned int n = 0;
+  for (int j = 0; j < 8; ++j ) {
+    n += mmult[j] * name[j];
+  }
+  return ( n  % maxHash );
+}
+/*
+ */
+static int sameTogether(unsigned int nin,int * which, double * weights,
+			int * which2, double * weights2, unsigned int * hash)
+{
+  if (nin<=1)
+    return nin;
+  // move up and fill hash
+  unsigned int maxHash=4*nin;
+  memset(hash,0xf0,maxHash*sizeof(int));
+  int * spare=which2+maxHash;
+  int n2=0;
+  unsigned int iNext = hashValue (weights[0],maxHash);
+  unsigned int endMarker=0x80000000+maxHash;
+  hash[iNext]=endMarker;
+  unsigned int iLast=iNext;
+  weights2[iNext]=weights[0];
+  which2[iNext]=which[0];
+  for (unsigned int i=1;i<nin;i++) {
+    double value = weights[i];
+    unsigned int ipos = hashValue (value,maxHash);
+    if ( hash[ipos] == 0xf0f0f0f0 ) {
+      hash[iLast] = ipos+0x80000000;
+      hash[ipos]=endMarker;
+      weights2[ipos]=value;
+      which2[ipos]=which[i];
+      iLast=ipos;
+    } else {
+      spare[n2++]=i;
+    }
+  }
+  unsigned int lastSlot = 0;
+  for (int j = 0; j < n2; ++j ) {
+    int i = spare[j];
+    double value=weights[i];
+    unsigned int ipos = hashValue ( value , maxHash);
+    iLast=ipos;
+    while ( hash[ipos] <= 0x80000000) {
+      iLast=ipos;
+      ipos=hash[ipos];
+    }
+    while (hash[lastSlot]!=0xf0f0f0f0)
+      lastSlot++;
+    assert (lastSlot<maxHash);
+    hash[lastSlot] = hash[ipos];
+    hash[iLast] = lastSlot;
+    weights2[lastSlot]=value;
+    which2[lastSlot]=which[i];
+  }
+  int put=0;
+  //unsigned int iNext=0;
+  int savePut=0;
+  while (iNext!=maxHash) {
+    weights[put]=weights2[iNext];
+    assert (iNext<maxHash);
+    which[put++]=which2[iNext];
+    iNext = hash[iNext];
+    if (iNext>0x7fffffff) {
+      // end 
+      if (put>savePut+1) {
+	CoinShortSort_2(weights+savePut,weights+put,which+savePut);
+	// keep
+#if 0
+	printf("DUP2 value %g ",weights[savePut]);
+	for (int i=savePut;i<put;i++)
+	  printf("%d (%g) ",which[i],weights[i]);
+	printf("\n");
+#endif
+	savePut=put;
+      } else {
+	// no
+	put=savePut;
+      }
+      iNext -= 0x80000000;
+    }
+  }
+  return savePut;
+}
+#endif
 #include "CoinPresolveMatrix.hpp"
 /* Take out duplicate rows (includes scaled rows and intersections).
    On exit whichRows has rows to delete - return code is number can be deleted 
@@ -6939,16 +7618,46 @@ ClpSimplex::pivotResultPart2(int algorithm,int state)
    moves status to try and delete a basic slack
 */
 int 
-ClpSimplex::outDuplicateRows(int numberLook,int * whichRows, double tolerance,
-			  double cleanUp) 
+ClpSimplex::outDuplicateRows(int numberLook,int * whichRows, bool noOverlaps,
+			     double tolerance,double cleanUp) 
 {
+#if USE_HASH<2
   double * weights = new double [numberLook+numberColumns_];
+#else
+  int numberAlloc=5*numberLook+numberColumns_+((9*numberLook+1)/(sizeof(double)/sizeof(int)));
+  double * weights = new double [numberAlloc];
+  double * weights2=weights+numberLook+numberColumns_;
+#endif
   double * columnWeights = weights+numberLook;
 #ifndef COIN_REUSE_RANDOM
   coin_init_random_vec(columnWeights,numberColumns_);
 #else
   for (int i=0;i<numberColumns_;i++)
     columnWeights[i]=CoinDrand48();
+#endif
+#if USE_HASH==1
+  typedef struct {
+#define INTEL // need way to find out at compile time
+#ifdef INTEL
+    int which;
+    float value;
+#else
+    float value;
+    int which;
+#endif
+  } hash_1;
+  typedef struct {
+    union {
+      double d;
+      hash_1 hash;
+    } item;
+  } hash;
+  assert (sizeof(double) == 8);
+  hash * hashWeights = reinterpret_cast<hash *>(weights);
+#endif
+#if 0
+  int counts[5]={0,0,0,0,0};
+  int countsEq[5]={0,0,0,0,0};
 #endif
   // get row copy
   CoinPackedMatrix rowCopy = *matrix();
@@ -6957,47 +7666,143 @@ ClpSimplex::outDuplicateRows(int numberLook,int * whichRows, double tolerance,
   CoinBigIndex * rowStart = rowCopy.getMutableVectorStarts();
   int * rowLength = rowCopy.getMutableVectorLengths();
   double * element = rowCopy.getMutableElements();
+  //double wwww[200];
+  //assert (numberLook<=200);
+  //int iiii[200];
   for (int i=0;i<numberLook;i++) {
     int iRow=whichRows[i];
     double value = 0.0;
     CoinBigIndex start=rowStart[iRow];
     CoinBigIndex end = start+rowLength[iRow];
     // sort (probably in order anyway)
+#ifdef COIN_SHORT_SORT
+    CoinShortSort_2(column+start,column+end,element+start);
+#else
     CoinSort_2(column+start,column+end,element+start);
+#endif
     for (CoinBigIndex j=start;j<end;j++) {
       int iColumn = column[j];
       value += columnWeights[iColumn];
     }
+#if USE_HASH ==1
+    //printf("iLook %d weight %g (before)\n",i,value);
+    hash temp;
+    temp.item.d=value;
+    temp.item.hash.which=iRow;
+    hashWeights[i]=temp;
+    //wwww[i]=value;
+    //iiii[i]=iRow;
+#else
     weights[i]=value;
+#endif
+  }
+  //#define PRINT_DUP
+#if USE_HASH == 0
+  if (false) {
+    double * w =CoinCopyOfArray(weights,numberLook);
+    int * ind = CoinCopyOfArray(whichRows,numberLook);
+    double * weights2=new double[50000];
+    int * which2 = reinterpret_cast<int *>(weights2+4*numberLook);
+    unsigned int * hash = reinterpret_cast<unsigned int *>(which2+5*numberLook);
+    int n=sameTogether(numberLook,ind,w,which2,weights2,hash);
+    printf("Reduced length of %d\n",n);
+    delete [] weights2;
+    delete [] w;
+    delete [] ind;
   }
   CoinSort_2(weights,weights+numberLook,whichRows);
+#if 0
+  {
+    double value = weights[0];
+    int firstSame=-1;
+    int lastSame=-1;
+    for (int iLook = 1; iLook < numberLook; iLook++) {
+      if (weights[iLook]==value) {
+	if (firstSame<0) {
+	  /* see how many same - if >2 but < ? may be 
+	     worth looking at all combinations
+	  */
+	  firstSame=iLook-1;
+	  printf("DUPS weight %g first row %d ",value,whichRows[firstSame]);
+	  for (lastSame=iLook;lastSame<numberLook;lastSame++) {
+	    if (weights[lastSame]!=value)
+	      break;
+	    else
+	      printf(", %d ",whichRows[lastSame]);
+	  }
+	  printf("\n");
+	  //printf("dupsame %d rows have same weight",lastSame-firstSame);
+	}
+      } else {
+	firstSame=-1;
+	value=weights[iLook];
+      }
+    }
+  }
+#endif
+#elif USE_HASH==1
+  std::sort(weights,weights+numberLook);
+#ifdef PRINT_DUP
+  //CoinSort_2(wwww,wwww+numberLook,iiii);
+  for (int i=0;i<numberLook;i++) {
+    hash * temp = reinterpret_cast<hash *>(weights+i);
+    whichRows[i]=temp->item.hash.which;
+    weights[i]=temp->item.hash.value;
+    //printf("iLook %d weight %g (after) - true %d %g\n",
+    //	   whichRows[i],weights[i],iiii[i],wwww[i]);
+  }
+#undef USE_HASH
+#define USE_HASH 0
+#endif
+#else
+  int * which2 = reinterpret_cast<int *>(weights2+4*numberLook);
+  unsigned int * hash = reinterpret_cast<unsigned int *>(which2+5*numberLook);
+  numberLook=sameTogether(numberLook,whichRows,weights,which2,weights2,hash);
+  printf("Reduced length of %d\n",numberLook);
+#endif
   if (tolerance<0.0)
     tolerance = primalTolerance_;
   int nPossible=0;
   int nDelete=0;
+#if USE_HASH==1
+  hash * temp = reinterpret_cast<hash *>(weights);
+  int iLast=temp->item.hash.which;
+  float value=temp->item.hash.value;
+#else
   double value = weights[0];
+  int iLast = whichRows[0];
+#endif
   double inverseCleanup = (cleanUp>0.0) ? 1.0/cleanUp : 0.0;
+  //#define PRINT_DUP
+#ifdef PRINT_DUP
   int firstSame=-1;
   int lastSame=-1;
+#endif
   for (int iLook = 1; iLook < numberLook; iLook++) {
-    if (weights[iLook]==value) {
-      int iLast=whichRows[iLook-1];
+#if USE_HASH==1
+    hash * temp = reinterpret_cast<hash *>(weights+iLook);
+    int iThis=temp->item.hash.which;
+    float valueThis=temp->item.hash.value;
+#else
+    int iThis=whichRows[iLook];
+    double valueThis=weights[iLook];
+#endif
+    if (valueThis==value) {
+#ifdef PRINT_DUP
       if (firstSame<0) {
 	/* see how many same - if >2 but < ? may be 
 	   worth looking at all combinations
 	*/
 	firstSame=iLook-1;
-	for (lastSame=iLook+1;lastSame<numberLook;lastSame++) {
+	printf("DUPS weight %g first row %d ",value,whichRows[firstSame]);
+	for (lastSame=iLook;lastSame<numberLook;lastSame++) {
 	  if (weights[lastSame]!=value)
 	    break;
+	  else
+	    printf(", %d ",whichRows[lastSame]);
 	}
-	//#define PRINT_DUP
-#ifdef PRINT_DUP
-	if (lastSame-firstSame>2)
-	  printf("dupsame %d rows have same weight\n",lastSame-firstSame);
+	printf("\n");
 #endif
-      }
-      int iThis=whichRows[iLook];
       CoinBigIndex start = rowStart[iThis];
       CoinBigIndex end = start + rowLength[iThis];
       if (rowLength[iThis] == rowLength[iLast]) {
@@ -7062,16 +7867,53 @@ ClpSimplex::outDuplicateRows(int numberLook,int * whichRows, double tolerance,
 	  printf("duplicate row %g %g, %g %g\n",
 		 rlo1,rup1,rlo2,rup2);
 #endif
-	  /* we always keep this and delete last 
-	     later maybe keep better formed one */
-	  rlo2 = CoinMax(rlo1,rlo2);
-	  if (rlo2<-1.0e30)
-	    rlo2=-COIN_DBL_MAX;
-	  rup2 = CoinMin(rup1,rup2);
-	  if (rup2>1.0e30)
-	    rup2=COIN_DBL_MAX;
+	  if (!noOverlaps) {
+	    /* we always keep this and delete last 
+	       later maybe keep better formed one */
+	    rlo2 = CoinMax(rlo1,rlo2);
+	    if (rlo2<-1.0e30)
+	      rlo2=-COIN_DBL_MAX;
+	    rup2 = CoinMin(rup1,rup2);
+	    if (rup2>1.0e30)
+	      rup2=COIN_DBL_MAX;
+	  } else {
+	    /* keep better formed one */
+	    if (rlo2>=rlo1-1.0e-8&&rup2<=rup1+1.0e-8) {
+	      // ok
+	      rlo2 = CoinMax(rlo1,rlo2);
+	      if (rlo2<-1.0e30)
+		rlo2=-COIN_DBL_MAX;
+	      rup2 = CoinMin(rup1,rup2);
+	      if (rup2>1.0e30)
+		rup2=COIN_DBL_MAX;
+	    } else if (rlo1>=rlo2-1.0e-8&&rup1<=rup2+1.0e-8) {
+	      rlo2 = CoinMax(rlo1,rlo2);
+	      if (rlo2<-1.0e30)
+		rlo2=-COIN_DBL_MAX;
+	      rup2 = CoinMin(rup1,rup2);
+	      if (rup2>1.0e30)
+		rup2=COIN_DBL_MAX;
+	      // swap
+	      int temp=iLast;
+	      iLast=iThis;
+	      iThis=temp;
+	    } else {
+	      // leave (for now)
+#if DEBUG_SOME>0
+	      printf("row %d %g %g row %d %g %g\n",iLast,rlo1,rup1,iThis,rlo2,rup2);
+#endif
+	      iLast=iThis;
+	      continue;
+	    }
+	  }
 #ifdef PRINT_DUP
 	  printf("pre_duprow %dR %dR keep this\n",iLast,iThis);
+#endif
+#if 0
+	  if (rowLength[iThis]<4)
+	    counts[rowLength[iThis]]++;
+	  else
+	    counts[4]++;
 #endif
 	  if (rup2<rlo2-tolerance) {
 	    // infeasible
@@ -7083,6 +7925,12 @@ ClpSimplex::outDuplicateRows(int numberLook,int * whichRows, double tolerance,
 	      rlo2=rup2;
 	    else
 	      rup2=rlo2;
+#if 0
+	  if (rowLength[iThis]<4)
+	    countsEq[rowLength[iThis]]++;
+	  else
+	    countsEq[4]++;
+#endif
 #ifdef PRINT_DUP
 	    printf("Row %d has %d elements == %g\n",
 		   iThis,end-start,rlo2);
@@ -7133,14 +7981,23 @@ ClpSimplex::outDuplicateRows(int numberLook,int * whichRows, double tolerance,
 	}
       }
     } else {
+#ifdef PRINT_DUP
       // say no match
       firstSame=-1;
-      value=weights[iLook];
+#endif
+      value=valueThis;
     }
+    iLast=iThis;
   }
 #ifdef PRINT_DUP
   printf("%d possible duplicate rows - deleting %d\n",
 	 nPossible,nDelete);
+#endif
+#if 0
+  for (int i=0;i<5;i++) {
+    if (counts[i])
+      printf("CC counts %d %d times of which %d were equalities\n",i,counts[i],countsEq[i]);
+  }
 #endif
   delete [] weights;
   return nDelete;
@@ -7853,6 +8710,7 @@ ClpSimplex::miniPresolve(char * rowType, char * columnType,void ** infoOut)
 #endif
   int nChanged = 1;
   bool feasible=true;
+  //#define CLP_NO_SUBS
   for (int iRow=0;iRow<numberRows_;iRow++) {
 #if DEBUG_SOME>0
 #ifndef NDEBUG
@@ -7873,7 +8731,9 @@ ClpSimplex::miniPresolve(char * rowType, char * columnType,void ** infoOut)
     if (rowLength[iRow]<=nPoss&&!rowType[iRow]) {
       if (rowLength[iRow]<=1) {
 	if (rowLength[iRow]==1)  {
+#ifndef CLP_NO_SUBS
 	  whichRows[numberRowsLook++]=iRow;
+#endif
 	} else {
 #if DEBUG_SOME > 0
 	  printf("Dropping null row %d (status %d) - nActions %d\n",
@@ -7902,7 +8762,9 @@ ClpSimplex::miniPresolve(char * rowType, char * columnType,void ** infoOut)
 	}
 #ifdef TWOFER
       } else if (rowLower[iRow]==rowUpper[iRow]) {
+#ifndef CLP_NO_SUBS
 	whichRows[numberRowsLook++]=iRow;
+#endif
 	CoinBigIndex start = rowStart[iRow];
 	int iColumn1 = column[start];
 	double value1 = elementByRow[start];
@@ -8108,16 +8970,37 @@ ClpSimplex::miniPresolve(char * rowType, char * columnType,void ** infoOut)
 	    }
 	  }
 	  int rowLength2=putR-startR;
+#ifndef CLP_NO_SUBS
 	  if (rowLength2<=1&&rowLength[jRow]>1&&jRow<iRow) {
 	    // may be interesting
 	    whichRows[numberRowsLook++]=jRow;
 	  }
+#endif
 	  rowLength[jRow]=rowLength2;
 	}
 	columnLength[iColumn1]=put-start;
 	lastElement=CoinMax(lastElement,put);
 #endif
       }
+    } else if (true&&rowLower[iRow]==-COIN_DBL_MAX&&rowUpper[iRow]==COIN_DBL_MAX) {
+#if DEBUG_SOME > 0
+      printf("Dropping null free row %d (status %d) - nActions %d\n",
+	     iRow,getRowStatus(iRow),nActions);
+#endif
+      rowType[iRow]=1;
+      clpPresolveInfo1_4_8  thisInfo;
+      thisInfo.oldRowLower=(rowLower_[iRow]>-1.0e30) ? rowLower_[iRow]-rowLower[iRow] : rowLower[iRow];
+      thisInfo.oldRowUpper=(rowUpper_[iRow]<1.0e30) ? rowUpper_[iRow]-rowUpper[iRow] : rowUpper[iRow];
+      thisInfo.row=iRow;
+      int n=rowLength[iRow];
+      CoinBigIndex start=rowStart[iRow];
+      thisInfo.lengthRow=n;
+      //thisInfo.column=-1;
+      infoA[nActions].infoOffset=stuff.putStuff-startStuff;
+      infoA[nActions].type=1;
+      nActions++;
+      ClpCopyToMiniSave(stuff,reinterpret_cast<char *>(&thisInfo),sizeof(clpPresolveInfo1_4_8),
+			n,column+start,elementByRow+start);
     }
   }
 #if DEBUG_SOME>0
@@ -8491,7 +9374,7 @@ ClpSimplex::miniPresolve(char * rowType, char * columnType,void ** infoOut)
       }
     }
   }
-  if (nActions&&feasible) {
+  if (feasible) {
     clpPresolveMore moreInfo;
     moreInfo.model=newModel;
     moreInfo.rowCopy=&rowCopy;
@@ -9196,7 +10079,7 @@ ClpSimplex::miniPostsolve(const ClpSimplex * presolvedModel, void * infoIn)
 	    hasToBeBasic=true;
 	  }
 	  if (hasToBeBasic) {
-	    abort();
+	    //abort();
 	    //setRowStatus(iRow,superBasic);
 	    setColumnStatus(iColumn,basic);
 	    //dual_[iRow]=djValue/value;

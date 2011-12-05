@@ -364,7 +364,7 @@ public:
 	 If cleanUp not zero then spend more time trying to leave more stable row
 	 and make row bounds exact multiple of cleanUp if close enough
      */
-     int outDuplicateRows(int numberLook,int * whichRows, double tolerance=-1.0,
+     int outDuplicateRows(int numberLook,int * whichRows, bool noOverlaps=false, double tolerance=-1.0,
 			  double cleanUp=0.0);
      /** Try simple crash like techniques to get closer to primal feasibility
 	 returns final sum of infeasibilities */
