@@ -3571,7 +3571,7 @@ ClpSimplexOther::whileIterating(parametricsData & paramData, double /*reportIncr
   const int * lowerList = paramData.lowerList;
   const int * upperList = paramData.upperList;
   //#define CLP_PARAMETRIC_DENSE_ARRAYS 2
-#if CLP_PARAMETRIC_DENSE_ARRAYS
+#ifdef CLP_PARAMETRIC_DENSE_ARRAYS
   double * lowerGap = paramData.lowerGap;
   double * upperGap = paramData.upperGap;
   double * lowerCoefficient = paramData.lowerCoefficient;
@@ -3619,7 +3619,7 @@ ClpSimplexOther::whileIterating(parametricsData & paramData, double /*reportIncr
 	      double thisChange = change * lowerChange[iSequence];
 	      double newValue = lower_[iSequence] + thisChange;
 	      lower_[iSequence] = newValue;
-#if CLP_PARAMETRIC_DENSE_ARRAYS
+#ifdef CLP_PARAMETRIC_DENSE_ARRAYS
 	      if (getStatus(iSequence)==basic) {
 		int iRow=backwardBasic[iSequence];
 		lowerGap[iRow] -= thisChange;
@@ -3650,7 +3650,7 @@ ClpSimplexOther::whileIterating(parametricsData & paramData, double /*reportIncr
 	      if(getStatus(iSequence)==atUpperBound||
 		 getStatus(iSequence)==isFixed) {
 		solution_[iSequence] = newValue;
-#if CLP_PARAMETRIC_DENSE_ARRAYS
+#ifdef CLP_PARAMETRIC_DENSE_ARRAYS
 	      } else if (getStatus(iSequence)==basic) {
 		int iRow=backwardBasic[iSequence];
 		upperGap[iRow] += thisChange;
@@ -3910,7 +3910,7 @@ ClpSimplexOther::whileIterating(parametricsData & paramData, double /*reportIncr
 		      double pivotValue = rowArray_[4]->denseVector()[pivotRow_];
 		      double multiplier = -pivotValue/alpha_;
 		      double * array=rowArray_[4]->denseVector();
-#if CLP_PARAMETRIC_DENSE_ARRAYS==2
+#ifdef CLP_PARAMETRIC_DENSE_ARRAYS
 		      int lowerN=lowerActive[-1];
 		      int upperN=upperActive[-1];
 #endif
@@ -3922,17 +3922,14 @@ ClpSimplexOther::whileIterating(parametricsData & paramData, double /*reportIncr
 #else
 			  double alpha=multiplier*work[iRow];
 #endif
-#if CLP_PARAMETRIC_DENSE_ARRAYS
+#ifdef CLP_PARAMETRIC_DENSE_ARRAYS
 			  double alpha3 = alpha+array[iRow];
 			  int iSequence = pivotVariable_[iRow];
-#if CLP_PARAMETRIC_DENSE_ARRAYS==2
 			  double oldLower = lowerCoefficient[iRow];
 			  double oldUpper = upperCoefficient[iRow];
-#endif
 			  if (lower_[iSequence]>-1.0e30) {
 			    //lowerGap[iRow]=value-lower_[iSequence];
 			    double alpha2 = alpha3 + lowerChange[iSequence];
-#if CLP_PARAMETRIC_DENSE_ARRAYS==2
 			    if (alpha2>1.0e-8)  {
 			      lowerCoefficient[iRow]=alpha2;
 			      if (!oldLower)
@@ -3941,24 +3938,13 @@ ClpSimplexOther::whileIterating(parametricsData & paramData, double /*reportIncr
 			      if (oldLower)
 				lowerCoefficient[iRow]=COIN_DBL_MIN;
 			    }
-#else
-			    if (alpha2>1.0e-8)
-			      lowerCoefficient[iRow]=alpha2;
-			    else
-			      lowerCoefficient[iRow]=0.0;
-#endif
 			  } else {
-#if CLP_PARAMETRIC_DENSE_ARRAYS==2
 			    if (oldLower)
 			      lowerCoefficient[iRow]=COIN_DBL_MIN;
-#else
-			    lowerCoefficient[iRow]=0.0;
-#endif
 			  }
 			  if (upper_[iSequence]<1.0e30) {
 			    //upperGap[iRow]=-(value-upper_[iSequence]);
 			    double alpha2 = -(alpha3+upperChange[iSequence]);
-#if CLP_PARAMETRIC_DENSE_ARRAYS==2
 			    if (alpha2>1.0e-8) {
 			      upperCoefficient[iRow]=alpha2;
 			      if (!oldUpper)
@@ -3967,19 +3953,9 @@ ClpSimplexOther::whileIterating(parametricsData & paramData, double /*reportIncr
 			      if (oldUpper)
 				upperCoefficient[iRow]=COIN_DBL_MIN;
 			    }
-#else
-			    if (alpha2>1.0e-8)
-			      upperCoefficient[iRow]=alpha2;
-			    else
-			      upperCoefficient[iRow]=0.0;
-#endif
 			  } else {
-#if CLP_PARAMETRIC_DENSE_ARRAYS==2
 			    if (oldUpper)
 			      upperCoefficient[iRow]=COIN_DBL_MIN;
-#else
-			    upperCoefficient[iRow]=0.0;
-#endif
 			  }
 #endif
 			  rowArray_[4]->quickAdd(iRow,alpha);
@@ -3988,7 +3964,7 @@ ClpSimplexOther::whileIterating(parametricsData & paramData, double /*reportIncr
 		      pivotValue = array[pivotRow_];
 		      // we want pivot to be -multiplier
 		      rowArray_[4]->quickAdd(pivotRow_,-multiplier-pivotValue);
-#if CLP_PARAMETRIC_DENSE_ARRAYS==2
+#ifdef CLP_PARAMETRIC_DENSE_ARRAYS
 		      assert (lowerN>=0&&lowerN<=numberRows_);
 		      lowerActive[-1]=lowerN;
 		      upperActive[-1]=upperN;
@@ -4009,7 +3985,7 @@ ClpSimplexOther::whileIterating(parametricsData & paramData, double /*reportIncr
                     // do actual flips
                     reinterpret_cast<ClpSimplexDual *> ( this)->flipBounds(rowArray_[0], columnArray_[0]);
                     //rowArray_[1]->expand();
-#if CLP_PARAMETRIC_DENSE_ARRAYS==0
+#ifndef CLP_PARAMETRIC_DENSE_ARRAYS
                     dualRowPivot_->updatePrimalSolution(rowArray_[1],
                                                         movement,
                                                         objectiveChange);
@@ -4105,10 +4081,9 @@ ClpSimplexOther::whileIterating(parametricsData & paramData, double /*reportIncr
 		    assert (backwardBasic[sequenceOut_]==pivotRow_);
 		    backwardBasic[sequenceOut_]=-1;
 		    backwardBasic[sequenceIn_]=pivotRow_;
-#if CLP_PARAMETRIC_DENSE_ARRAYS
+#ifdef CLP_PARAMETRIC_DENSE_ARRAYS
 		    double value = solution_[sequenceIn_];
 		    double alpha = rowArray_[4]->denseVector()[pivotRow_];
-#if CLP_PARAMETRIC_DENSE_ARRAYS==2
 		    double oldLower = lowerCoefficient[pivotRow_];
 		    double oldUpper = upperCoefficient[pivotRow_];
 		    if (lower_[sequenceIn_]>-1.0e30) {
@@ -4149,28 +4124,6 @@ ClpSimplexOther::whileIterating(parametricsData & paramData, double /*reportIncr
 		      if (oldUpper)
 			upperCoefficient[pivotRow_]=COIN_DBL_MIN;
 		    }
-#else
-		    if (lower_[sequenceIn_]>-1.0e30) {
-		      lowerGap[pivotRow_]=value-lower_[sequenceIn_];
-		      double alpha2 = alpha + lowerChange[sequenceIn_];
-		      if (alpha2>1.0e-8)
-			lowerCoefficient[pivotRow_]=alpha2;
-		      else
-			lowerCoefficient[pivotRow_]=0.0;
-		    } else {
-		      lowerCoefficient[pivotRow_]=0.0;
-		    }
-		    if (upper_[sequenceIn_]<1.0e30) {
-		      upperGap[pivotRow_]=-(value-upper_[sequenceIn_]);
-		      double alpha2 = -(alpha+upperChange[sequenceIn_]);
-		      if (alpha2>1.0e-8)
-			upperCoefficient[pivotRow_]=alpha2;
-		      else
-			upperCoefficient[pivotRow_]=0.0;
-		    } else {
-		      upperCoefficient[pivotRow_]=0.0;
-		    }
-#endif
 #endif
 		    {
 		      char in[200],out[200];
@@ -4514,16 +4467,13 @@ ClpSimplexOther::nextTheta(int /*type*/, double maxTheta, parametricsData & para
     needFullUpdate=true;
   }
 #endif
-  //#define CLP_PARAMETRIC_DENSE_ARRAYS
-#if CLP_PARAMETRIC_DENSE_ARRAYS
+#ifdef CLP_PARAMETRIC_DENSE_ARRAYS
   double * lowerGap = paramData.lowerGap;
   double * upperGap = paramData.upperGap;
   double * lowerCoefficient = paramData.lowerCoefficient;
   double * upperCoefficient = paramData.upperCoefficient;
-#if CLP_PARAMETRIC_DENSE_ARRAYS==2
   int * lowerActive=paramData.lowerActive;
   int * upperActive=paramData.upperActive;
-#endif
 #endif
   if (!factorization_->pivots()||needFullUpdate) {
     //zzzzzz=0;
@@ -4639,13 +4589,11 @@ ClpSimplexOther::nextTheta(int /*type*/, double maxTheta, parametricsData & para
       }
     }
 #endif
-#if CLP_PARAMETRIC_DENSE_ARRAYS
+#ifdef CLP_PARAMETRIC_DENSE_ARRAYS
     /* later for sparse - keep like CoinIndexedvector
        and just redo here */
-#if CLP_PARAMETRIC_DENSE_ARRAYS==2
     int lowerN=0;
     int upperN=0;
-#endif
     memset(lowerCoefficient,0,numberRows_*sizeof(double));
     memset(upperCoefficient,0,numberRows_*sizeof(double));
     for (int iRow=0;iRow<numberRows_;iRow++) {
@@ -4660,9 +4608,7 @@ ClpSimplexOther::nextTheta(int /*type*/, double maxTheta, parametricsData & para
 	double gap=currentSolution-currentLower;
 	lowerGap[iRow]=gap;
 	lowerCoefficient[iRow]=thetaCoefficientLower;
-#if CLP_PARAMETRIC_DENSE_ARRAYS==2
 	lowerActive[lowerN++]=iRow;
-#endif
 	//} else {
 	//lowerCoefficient[iRow]=0.0;
       }
@@ -4672,15 +4618,9 @@ ClpSimplexOther::nextTheta(int /*type*/, double maxTheta, parametricsData & para
 	double gap2=-(currentSolution-currentUpper); //positive
 	upperGap[iRow]=gap2;
 	upperCoefficient[iRow]=-thetaCoefficientUpper;
-#if CLP_PARAMETRIC_DENSE_ARRAYS==2
 	upperActive[upperN++]=iRow;
-#endif
-	//} else {
-	//upperCoefficient[iRow]=0.0;
       }
     }
-#endif
-#if CLP_PARAMETRIC_DENSE_ARRAYS==2
     assert (lowerN>=0&&lowerN<=numberRows_);
     lowerActive[-1]=lowerN;
     upperActive[-1]=upperN;
@@ -4747,7 +4687,7 @@ ClpSimplexOther::nextTheta(int /*type*/, double maxTheta, parametricsData & para
       double * array5 = rowArray_[5]->denseVector();
       int * index5 = rowArray_[5]->getIndices();
       int number5 = rowArray_[5]->getNumElements();
-#if CLP_PARAMETRIC_DENSE_ARRAYS==2
+#ifdef CLP_PARAMETRIC_DENSE_ARRAYS
       int lowerN=lowerActive[-1];
       int upperN=upperActive[-1];
       int nIn4=rowArray_[4]->getNumElements();
@@ -4755,7 +4695,7 @@ ClpSimplexOther::nextTheta(int /*type*/, double maxTheta, parametricsData & para
 #endif
       for (int i = 0; i < number5; i++) {
 	int iPivot = index5[i];
-#if CLP_PARAMETRIC_DENSE_ARRAYS==0
+#ifndef CLP_PARAMETRIC_DENSE_ARRAYS
 	rowArray_[4]->quickAdd(iPivot,array5[iPivot]);
 #else
 	/* later for sparse - modify here */
@@ -4764,7 +4704,6 @@ ClpSimplexOther::nextTheta(int /*type*/, double maxTheta, parametricsData & para
 	double currentAlpha = array[iPivot];
 	double alpha5 = array5[iPivot];
 	double alpha = currentAlpha+alpha5;
-#if CLP_PARAMETRIC_DENSE_ARRAYS==2
 	if (currentAlpha) {
 	  if (alpha) {
 	    array[iPivot] = alpha;
@@ -4775,34 +4714,21 @@ ClpSimplexOther::nextTheta(int /*type*/, double maxTheta, parametricsData & para
 	  index4[nIn4++] = iPivot;
 	  array[iPivot] = alpha;
 	}
-#else
-	rowArray_[4]->quickAdd(iPivot,alpha5);
-#endif
-	//#undef CLP_PARAMETRIC_DENSE_ARRAYS
-	//#define CLP_PARAMETRIC_DENSE_ARRAYS 1
 	double thetaCoefficientLower = lowerChange[iSequence] + alpha;
 	double thetaCoefficientUpper = upperChange[iSequence] + alpha;
-#if CLP_PARAMETRIC_DENSE_ARRAYS==2
 	double oldLower = lowerCoefficient[iPivot];
 	double oldUpper = upperCoefficient[iPivot];
-#endif
 	if (thetaCoefficientLower > 1.0e-8&&lower_[iSequence]>-1.0e30) {
 	  double currentLower = lower_[iSequence];
 	  ClpTraceDebug (currentSolution >= currentLower - 100.0*primalTolerance_);
 	  double gap=currentSolution-currentLower;
 	  lowerGap[iPivot]=gap;
 	  lowerCoefficient[iPivot]=thetaCoefficientLower;
-#if CLP_PARAMETRIC_DENSE_ARRAYS==2
 	  if (!oldLower)
 	    lowerActive[lowerN++]=iPivot;
-#endif
 	} else {
-#if CLP_PARAMETRIC_DENSE_ARRAYS==2
 	  if (oldLower)
 	    lowerCoefficient[iPivot]=COIN_DBL_MIN;
-#else
-	  lowerCoefficient[iPivot]=0.0;
-#endif
 	}
 	if (thetaCoefficientUpper < -1.0e-8&&upper_[iSequence]<1.0e30) {
 	  double currentUpper = upper_[iSequence];
@@ -4810,23 +4736,17 @@ ClpSimplexOther::nextTheta(int /*type*/, double maxTheta, parametricsData & para
 	  double gap2=-(currentSolution-currentUpper); //positive
 	  upperGap[iPivot]=gap2;
 	  upperCoefficient[iPivot]=-thetaCoefficientUpper;
-#if CLP_PARAMETRIC_DENSE_ARRAYS==2
 	  if (!oldUpper)
 	    upperActive[upperN++]=iPivot;
-#endif
 	} else {
-#if CLP_PARAMETRIC_DENSE_ARRAYS==2
 	  if (oldUpper)
 	    upperCoefficient[iPivot]=COIN_DBL_MIN;
-#else
-	  upperCoefficient[iPivot]=0.0;
-#endif
 	}
 #endif
 	array5[iPivot]=0.0;
       }
       rowArray_[5]->setNumElements(0);
-#if CLP_PARAMETRIC_DENSE_ARRAYS==2
+#ifdef CLP_PARAMETRIC_DENSE_ARRAYS
       rowArray_[4]->setNumElements(nIn4);
       assert (lowerN>=0&&lowerN<=numberRows_);
       lowerActive[-1]=lowerN;
@@ -4837,7 +4757,7 @@ ClpSimplexOther::nextTheta(int /*type*/, double maxTheta, parametricsData & para
   const int * index = rowArray_[4]->getIndices();
   int number = rowArray_[4]->getNumElements();
 #define TESTXX 0
-#if CLP_PARAMETRIC_DENSE_ARRAYS==0 //TESTXX
+#ifndef CLP_PARAMETRIC_DENSE_ARRAYS //TESTXX
   int * markDone = reinterpret_cast<int *>(paramData.markDone);
   int nToZero=(numberRows_+numberColumns_+COIN_ANY_BITS_PER_INT-1)>>COIN_ANY_SHIFT_PER_INT;
   memset(markDone,0,nToZero*sizeof(int));
@@ -4846,11 +4766,11 @@ ClpSimplexOther::nextTheta(int /*type*/, double maxTheta, parametricsData & para
   // first ones with alpha
   double theta1=maxTheta;
   int pivotRow1=-1;
-#if CLP_PARAMETRIC_DENSE_ARRAYS<2 //TESTXX
+#ifndef CLP_PARAMETRIC_DENSE_ARRAYS //TESTXX
   int pivotRow2=-1;
   double theta2=maxTheta;
 #endif
-#if CLP_PARAMETRIC_DENSE_ARRAYS==0 //TESTXX
+#ifndef CLP_PARAMETRIC_DENSE_ARRAYS //TESTXX
   for (int i=0;i<number;i++) {
     int iPivot=index[i];
     iSequence = pivotVariable_[iPivot];
@@ -4864,10 +4784,7 @@ ClpSimplexOther::nextTheta(int /*type*/, double maxTheta, parametricsData & para
     double alpha = array[iPivot];
     double thetaCoefficientLower = lowerChange[iSequence] + alpha;
     double thetaCoefficientUpper = upperChange[iSequence] + alpha;
-    //#define NO_TEST
-#ifndef NO_TEST
     if (thetaCoefficientLower > 1.0e-8) {
-#endif
       double currentLower = lower_[iSequence];
       ClpTraceDebug (currentSolution >= currentLower - 100.0*primalTolerance_);
       assert (currentSolution >= currentLower - 100.0*primalTolerance_);
@@ -4877,10 +4794,8 @@ ClpSimplexOther::nextTheta(int /*type*/, double maxTheta, parametricsData & para
 	//toLower=true;
 	pivotRow1=iPivot;
       }
-#ifndef NO_TEST
     }
     if (thetaCoefficientUpper < -1.0e-8) {
-#endif
       double currentUpper = upper_[iSequence];
       ClpTraceDebug (currentSolution <= currentUpper + 100.0*primalTolerance_);
       assert (currentSolution <= currentUpper + 100.0*primalTolerance_);
@@ -4890,9 +4805,7 @@ ClpSimplexOther::nextTheta(int /*type*/, double maxTheta, parametricsData & para
 	//toLower=false;
 	pivotRow2=iPivot;
       }
-#ifndef NO_TEST
     }
-#endif
   }
   // now others
   int nLook=lowerList[-1];
@@ -4945,7 +4858,7 @@ ClpSimplexOther::nextTheta(int /*type*/, double maxTheta, parametricsData & para
     pivotRow_=pivotRow1;
   }
 #if 0 //TESTXX
-#if CLP_PARAMETRIC_DENSE_ARRAYS==2
+#ifdef CLP_PARAMETRIC_DENSE_ARRAYS
   {
     double * checkArray = new double[numberRows_];
     memcpy(checkArray,lowerCoefficient,numberRows_*sizeof(double));
@@ -5000,8 +4913,6 @@ ClpSimplexOther::nextTheta(int /*type*/, double maxTheta, parametricsData & para
     }
     delete [] checkArray;
   }
-#endif
-#if CLP_PARAMETRIC_DENSE_ARRAYS==2
   double theta3=maxTheta;
   int pivotRow3=-1;
   int lowerN=lowerActive[-1];
@@ -5088,7 +4999,6 @@ ClpSimplexOther::nextTheta(int /*type*/, double maxTheta, parametricsData & para
     delete [] checkArray;
   }
 #endif
-#if CLP_PARAMETRIC_DENSE_ARRAYS==2
   int lowerN=lowerActive[-1];
   for (int i=0;i<lowerN;i++) {
     int iRow=lowerActive[i];
@@ -5118,35 +5028,6 @@ ClpSimplexOther::nextTheta(int /*type*/, double maxTheta, parametricsData & para
   } else {
     toLower=true;
   }
-#else
-  for (int iRow=0;iRow<numberRows_;iRow++) {
-    double lowerC = lowerCoefficient[iRow];
-    if (lowerC) {
-      double gap=lowerGap[iRow];
-      if (lowerC*theta1>gap&&lowerC!=COIN_DBL_MIN) {
-	theta1 = gap/lowerC;
-	pivotRow1=iRow;
-      }
-    }
-    double upperC = upperCoefficient[iRow];
-    if (upperC) {
-      double gap=upperGap[iRow];
-      if (upperC*theta2>gap&&upperC!=COIN_DBL_MIN) {
-	theta2 = gap/upperC;
-	pivotRow2=iRow;
-      }
-    }
-  }
-  if (theta2<theta1) {
-    theta_=theta2;
-    toLower=false;
-    pivotRow_=pivotRow2;
-  } else {
-    theta_=theta1;
-    toLower=true;
-    pivotRow_=pivotRow1;
-  }
-#endif
 #endif
   theta_ = CoinMax(theta_,0.0);
   if (theta_>1.0e-15) {
@@ -5158,7 +5039,7 @@ ClpSimplexOther::nextTheta(int /*type*/, double maxTheta, parametricsData & para
       double alpha = array[iPivot];
       double currentSolution = solution_[iSequence] - theta_ * alpha;
       solution_[iSequence] =currentSolution;
-#if CLP_PARAMETRIC_DENSE_ARRAYS 
+#ifdef CLP_PARAMETRIC_DENSE_ARRAYS 
       if (lower_[iSequence]>-1.0e30)
 	lowerGap[iPivot]=currentSolution-lower_[iSequence];
       if (upper_[iSequence]<1.0e30)
@@ -5166,7 +5047,7 @@ ClpSimplexOther::nextTheta(int /*type*/, double maxTheta, parametricsData & para
 #endif
     }
   }
-#if CLP_PARAMETRIC_DENSE_ARRAYS
+#ifdef CLP_PARAMETRIC_DENSE_ARRAYS
   if (pivotRow_>=0&&false) {
     double oldValue = upperCoefficient[pivotRow_];
     double value = array[pivotRow_];
