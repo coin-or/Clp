@@ -958,6 +958,14 @@ void ClpPresolve::postsolve(CoinPostsolveMatrix &prob)
           paction->postsolve(&prob);
 
 #if	PRESOLVE_DEBUG
+#         if 0
+          /*
+	    This check fails (on exmip1 (!) in osiUnitTest) because clp
+	    enters postsolve with a solution that seems to have incorrect
+	    status for a logical. You can see similar behaviour with
+	    column status --- incorrect entering postsolve.
+	    -- lh, 111207 --
+	  */
           {
                int nr = 0;
                int i;
@@ -979,6 +987,7 @@ void ClpPresolve::postsolve(CoinPostsolveMatrix &prob)
                }
                printf("%d rows (%d basic), %d cols (%d basic)\n", prob.nrows_, nr, prob.ncols_, nc);
           }
+#         endif   // if 0
           checkit++;
           if (prob.colstat_ && checkit > 0) {
                presolve_check_nbasic(&prob) ;
@@ -1394,10 +1403,17 @@ CoinPresolveMatrix::CoinPresolveMatrix(int ncols0_in,
 #endif
 }
 
+// avoid compiler warnings
+#if PRESOLVE_SUMMARY > 0
+void CoinPresolveMatrix::update_model(ClpSimplex * si,
+                                      int nrows0, int ncols0,
+                                      CoinBigIndex nelems0)
+#else
 void CoinPresolveMatrix::update_model(ClpSimplex * si,
                                       int /*nrows0*/,
                                       int /*ncols0*/,
                                       CoinBigIndex /*nelems0*/)
+#endif
 {
      si->loadProblem(ncols_, nrows_, mcstrt_, hrow_, colels_, hincol_,
                      clo_, cup_, cost_, rlo_, rup_);
