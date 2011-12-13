@@ -3107,58 +3107,59 @@ ClpSimplexOther::parametrics(double startingTheta, double & endingTheta,
 	  reinterpret_cast<ClpSimplexDual *> (this)->gutsOfDual(1, saveDuals, -1, data);
 	}
       }
-      assert (!problemStatus_);
-      if (nLowerChange||nUpperChange) {
+      if (!problemStatus_) {
+	if (nLowerChange||nUpperChange) {
 #ifndef ALL_DANTZIG
-	// Dantzig 
-	savePivot = dualRowPivot_;
-	dualRowPivot_ = new ClpDualRowDantzig();
-	dualRowPivot_->setModel(this);
+	  // Dantzig 
+	  savePivot = dualRowPivot_;
+	  dualRowPivot_ = new ClpDualRowDantzig();
+	  dualRowPivot_->setModel(this);
 #endif
-	//for (int i=0;i<numberRows_+numberColumns_;i++)
-	//setFakeBound(i, noFake);
-	// Now do parametrics
-	handler_->message(CLP_PARAMETRICS_STATS, messages_)
-	  << startingTheta << objectiveValue() << CoinMessageEol;
-	bool canSkipFactorization=true;
-	while (!returnCode) {
-		 paramData.startingTheta=startingTheta;
-		 paramData.endingTheta=endingTheta;
-		 returnCode = parametricsLoop(paramData,
-				       data,canSkipFactorization);
-		 startingTheta=paramData.startingTheta;
-		 endingTheta=paramData.endingTheta;
-	  canSkipFactorization=false;
-	  if (!returnCode) {
-	    //startingTheta = endingTheta;
-	    //endingTheta = saveEndingTheta;
-	    handler_->message(CLP_PARAMETRICS_STATS, messages_)
-	      << startingTheta << objectiveValue() << CoinMessageEol;
-	    if (startingTheta >= endingTheta-primalTolerance_
-		||problemStatus_==2)
-	      break;
-	  } else if (returnCode == -1) {
-	    // trouble - do external solve
-	    abort(); //needToDoSomething = true;
-	  } else if (problemStatus_==1) {
-	    // can't move any further
-	    handler_->message(CLP_PARAMETRICS_STATS, messages_)
-	      << endingTheta << objectiveValue() << CoinMessageEol;
-	    problemStatus_=0;
+	  //for (int i=0;i<numberRows_+numberColumns_;i++)
+	  //setFakeBound(i, noFake);
+	  // Now do parametrics
+	  handler_->message(CLP_PARAMETRICS_STATS, messages_)
+	    << startingTheta << objectiveValue() << CoinMessageEol;
+	  bool canSkipFactorization=true;
+	  while (!returnCode) {
+	    paramData.startingTheta=startingTheta;
+	    paramData.endingTheta=endingTheta;
+	    returnCode = parametricsLoop(paramData,
+					 data,canSkipFactorization);
+	    startingTheta=paramData.startingTheta;
+	    endingTheta=paramData.endingTheta;
+	    canSkipFactorization=false;
+	    if (!returnCode) {
+	      //startingTheta = endingTheta;
+	      //endingTheta = saveEndingTheta;
+	      handler_->message(CLP_PARAMETRICS_STATS, messages_)
+		<< startingTheta << objectiveValue() << CoinMessageEol;
+	      if (startingTheta >= endingTheta-primalTolerance_
+		  ||problemStatus_==2)
+		break;
+	    } else if (returnCode == -1) {
+	      // trouble - do external solve
+	      abort(); //needToDoSomething = true;
+	    } else if (problemStatus_==1) {
+	      // can't move any further
+	      handler_->message(CLP_PARAMETRICS_STATS, messages_)
+		<< endingTheta << objectiveValue() << CoinMessageEol;
+	      problemStatus_=0;
+	    }
 	  }
 	}
-      }
-      dualBound_ = saveDualBound;
-      //reinterpret_cast<ClpSimplexDual *> (this)->gutsOfDual(0, saveDuals, -1, data);
-    } else {
-      // check if empty
-      //if (!numberRows_||!matrix_->getNumElements()) {
+	dualBound_ = saveDualBound;
+	//reinterpret_cast<ClpSimplexDual *> (this)->gutsOfDual(0, saveDuals, -1, data);
+      } else {
+	// check if empty
+	//if (!numberRows_||!matrix_->getNumElements()) {
 	// success
 #ifdef CLP_USER_DRIVEN
-      //theta_ = endingTheta;
-      //eventHandler_->event(ClpEventHandler::theta);
+	//theta_ = endingTheta;
+	//eventHandler_->event(ClpEventHandler::theta);
 #endif
-      //}
+	//}
+      }
     }
     if (problemStatus_==2) {
       delete [] ray_;
