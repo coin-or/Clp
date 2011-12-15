@@ -69,12 +69,16 @@ ClpPackedMatrix::ClpPackedMatrix (const ClpPackedMatrix & rhs)
      : ClpMatrixBase(rhs)
 {
 #ifndef COIN_SPARSE_MATRIX
-     matrix_ = new CoinPackedMatrix(*(rhs.matrix_), -1, -1);
+     // Guaranteed no gaps or small elements
+     matrix_ = new CoinPackedMatrix(*(rhs.matrix_),-1,0) ;
+     flags_ = rhs.flags_&(~0x02) ;
 #else
-     matrix_ = new CoinPackedMatrix(*(rhs.matrix_), -0, -0);
+     // Gaps & small elements preserved
+     matrix_ = new CoinPackedMatrix(*(rhs.matrix_),0,0) ;
+     flags_ = rhs.flags_ ;
+     if (matrix_->hasGaps()) flags_ |= 0x02 ;
 #endif
      numberActiveColumns_ = rhs.numberActiveColumns_;
-     flags_ = rhs.flags_ & (~2);
      int numberRows = matrix_->getNumRows();
      if (rhs.rhsOffset_ && numberRows) {
           rhsOffset_ = ClpCopyOfArray(rhs.rhsOffset_, numberRows);
@@ -101,7 +105,7 @@ ClpPackedMatrix::ClpPackedMatrix (CoinPackedMatrix * rhs)
      : ClpMatrixBase()
 {
      matrix_ = rhs;
-     flags_ = matrix_->hasGaps() ? 2 : 0;
+     flags_ = ((matrix_->hasGaps())?0x02:0) ;
      numberActiveColumns_ = matrix_->getNumCols();
      rowCopy_ = NULL;
      columnCopy_ = NULL;
@@ -113,13 +117,14 @@ ClpPackedMatrix::ClpPackedMatrix (const CoinPackedMatrix & rhs)
      : ClpMatrixBase()
 {
 #ifndef COIN_SPARSE_MATRIX
-     matrix_ = new CoinPackedMatrix(rhs, -1, -1);
+     matrix_ = new CoinPackedMatrix(rhs,-1,0) ;
+     flags_ = 0 ;
 #else
-     matrix_ = new CoinPackedMatrix(rhs, -0, -0);
+     matrix_ = new CoinPackedMatrix(rhs,0,0) ;
+     flags_ = ((matrix_->hasGaps())?0x02:0) ;
 #endif
      numberActiveColumns_ = matrix_->getNumCols();
      rowCopy_ = NULL;
-     flags_ = 0;
      columnCopy_ = NULL;
      setType(1);
 
@@ -145,12 +150,14 @@ ClpPackedMatrix::operator=(const ClpPackedMatrix& rhs)
           ClpMatrixBase::operator=(rhs);
           delete matrix_;
 #ifndef COIN_SPARSE_MATRIX
-          matrix_ = new CoinPackedMatrix(*(rhs.matrix_));
+          matrix_ = new CoinPackedMatrix(*(rhs.matrix_),-1,0) ;
+	  flags_ = rhs.flags_&(~0x02) ;
 #else
-	  matrix_ = new CoinPackedMatrix(*(rhs.matrix_), -0, -0);
+	  matrix_ = new CoinPackedMatrix(*(rhs.matrix_),0,0) ;
+	  flags_ = rhs.flags_ ;
+	  if (matrix_->hasGaps()) flags_ |= 0x02 ;
 #endif
           numberActiveColumns_ = rhs.numberActiveColumns_;
-          flags_ = rhs.flags_;
           delete rowCopy_;
           delete columnCopy_;
           if (rhs.rowCopy_) {
@@ -206,7 +213,7 @@ ClpPackedMatrix::ClpPackedMatrix (
                                     numberColumns, whichColumns);
      numberActiveColumns_ = matrix_->getNumCols();
      rowCopy_ = NULL;
-     flags_ = rhs.flags_ & (~2); // no gaps
+     flags_ = rhs.flags_&(~0x02) ; // no gaps
      columnCopy_ = NULL;
 }
 ClpPackedMatrix::ClpPackedMatrix (
@@ -219,7 +226,7 @@ ClpPackedMatrix::ClpPackedMatrix (
                                     numberColumns, whichColumns);
      numberActiveColumns_ = matrix_->getNumCols();
      rowCopy_ = NULL;
-     flags_ = 2;
+     flags_ = 0 ;  // no gaps
      columnCopy_ = NULL;
      setType(1);
 }
@@ -235,7 +242,7 @@ ClpPackedMatrix::reverseOrderedCopy() const
      copy->matrix_->reverseOrderedCopyOf(*matrix_);
      //copy->matrix_->removeGaps();
      copy->numberActiveColumns_ = copy->matrix_->getNumCols();
-     copy->flags_ = flags_ & (~2); // no gaps
+     copy->flags_ = flags_&(~0x02) ; // no gaps
      return copy;
 }
 //unscaled versions
@@ -249,7 +256,7 @@ ClpPackedMatrix::times(double scalar,
      const CoinBigIndex * columnStart = matrix_->getVectorStarts();
      const double * elementByColumn = matrix_->getElements();
      //memset(y,0,matrix_->getNumRows()*sizeof(double));
-     assert (((flags_ & 2) != 0) == matrix_->hasGaps());
+     assert (((flags_&0x02) != 0) == matrix_->hasGaps());
      if (!(flags_ & 2)) {
           for (iColumn = 0; iColumn < numberActiveColumns_; iColumn++) {
                CoinBigIndex j;
@@ -3331,8 +3338,10 @@ ClpPackedMatrix::scale(ClpModel * model, const ClpSimplex * /*baseModel*/) const
                columnLength[iColumn] = put - start;
           }
      }
-     if (deletedElements)
+     if (deletedElements) {
        matrix_->setNumElements(matrix_->getNumElements()-deletedElements);
+       flags_ |= 0x02 ;
+     }
      model->messageHandler()->message(CLP_PACKEDSCALE_INITIAL, *model->messagesPointer())
                << smallest << largest
                << CoinMessageEol;

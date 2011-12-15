@@ -474,7 +474,7 @@ protected:
          8 - has special column copy
          16 - wants special column copy
      */
-     int flags_;
+     mutable int flags_;
      /// Special row copy
      ClpPackedMatrix2 * rowCopy_;
      /// Special column copy
