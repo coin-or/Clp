@@ -2373,7 +2373,11 @@ void OsiClpSolverInterface::solveFromHotStart()
     int * arrayI = whichColumn + 2*numberColumns;
     unsigned char * saveStatus = reinterpret_cast<unsigned char *> (arrayI+1);
     CoinMemcpyN(saveStatus,number,smallModel_->statusArray());
-    smallModel_->setFactorization(*factorization_);
+    /* If factorization_ NULL then infeasible
+       not really sure how could have slipped through.
+       But this can't make situation worse */
+    if (factorization_) 
+      smallModel_->setFactorization(*factorization_);
     //int * backColumn = whichColumn+numberColumns;
     const double * lowerBig = modelPtr_->columnLower();
     const double * upperBig = modelPtr_->columnUpper();
@@ -2412,7 +2416,10 @@ void OsiClpSolverInterface::solveFromHotStart()
       if (upperSmall[i]<lowerSmall[i]-1.0e-8)
 	break;
     }
-    bool infeasible = (i<numberColumns2);
+    /* If factorization_ NULL then infeasible
+       not really sure how could have slipped through.
+       But this can't make situation worse */
+    bool infeasible = (i<numberColumns2||!factorization_);
     // Start of fast iterations
     bool alwaysFinish= ((specialOptions_&32)==0) ? true : false;
     //smallModel_->setLogLevel(1);
