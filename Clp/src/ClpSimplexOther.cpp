@@ -8631,7 +8631,8 @@ ClpSimplex::miniPresolve(char * rowType, char * columnType,void ** infoOut)
 	  printf("Dropping null row %d (status %d) - nActions %d\n",
 		 iRow,getRowStatus(iRow),nActions);
 #endif
-	  if (rowLower[iRow]>0.0||rowUpper[iRow]<0.0) {
+	  if (rowLower[iRow] > primalTolerance_ ||
+	      rowUpper[iRow] <-primalTolerance_) {
 	    feasible=false;
 	    nChanged=-1;
 	    numberRowsLook=0;
