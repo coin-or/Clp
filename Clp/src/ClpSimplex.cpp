@@ -2022,7 +2022,14 @@ ClpSimplex::housekeeping(double objectiveChange)
                forceFactorization_ = -1; //off
           return 1;
      } else if (numberIterations_ > 1000 + 10 * (numberRows_ + (numberColumns_ >> 2)) && matrix_->type()<15) {
+          // A bit worried problem may be cycling - lets factorize at random intervals for a short period
+          int numberTooManyIterations = numberIterations_ - 10 * (numberRows_ + (numberColumns_ >> 2));
           double random = randomNumberGenerator_.randomDouble();
+	  int window = numberTooManyIterations%5000;
+	  if (window<2*maximumPivots)
+	    random = 0.2*random+0.8; // randomly re-factorize but not too soon
+	  else
+	    random=1.0; // switch off if not in window of opportunity
           int maxNumber = (forceFactorization_ < 0) ? maximumPivots : CoinMin(forceFactorization_, maximumPivots);
           if (factorization_->pivots() >= random * maxNumber) {
                return 1;

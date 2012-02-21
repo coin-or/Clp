@@ -8488,7 +8488,10 @@ ClpSimplex::miniPresolve(char * rowType, char * columnType,void ** infoOut)
   double * rowLower = newModel->rowLower();
   double * rowUpper = newModel->rowUpper();
   //double * rowActivity = newModel->primalRowSolution();
-  //unsigned char * rowStatus = newModel->statusArray()+numberColumns_;
+  unsigned char * rowStatus = newModel->statusArray()+numberColumns_;
+  // use top bit of status as marker for whichRows update
+  for (int i=0;i<numberRows_;i++)
+    rowStatus[i] &= 127;
   double * columnLower = newModel->columnLower();
   double * columnUpper = newModel->columnUpper();
   //double * columnActivity = newModel->primalColumnSolution();
@@ -8616,7 +8619,12 @@ ClpSimplex::miniPresolve(char * rowType, char * columnType,void ** infoOut)
       if (rowLength[iRow]<=1) {
 	if (rowLength[iRow]==1)  {
 #ifndef CLP_NO_SUBS
-	  whichRows[numberRowsLook++]=iRow;
+	  // See if already marked
+	  if ((rowStatus[iRow]&128)==0) {
+	    rowStatus[iRow] |= 128;
+	    whichRows[numberRowsLook++]=iRow;
+	    assert (numberRowsLook<=numberRows_);
+	  }
 #endif
 	} else {
 #if DEBUG_SOME > 0
@@ -8647,7 +8655,12 @@ ClpSimplex::miniPresolve(char * rowType, char * columnType,void ** infoOut)
 #ifdef TWOFER
       } else if (rowLower[iRow]==rowUpper[iRow]) {
 #ifndef CLP_NO_SUBS
-	whichRows[numberRowsLook++]=iRow;
+	// See if already marked
+	if ((rowStatus[iRow]&128)==0) {
+	  rowStatus[iRow] |= 128;
+	  whichRows[numberRowsLook++]=iRow;
+	  assert (numberRowsLook<=numberRows_);
+	}
 #endif
 	CoinBigIndex start = rowStart[iRow];
 	int iColumn1 = column[start];
@@ -8857,7 +8870,12 @@ ClpSimplex::miniPresolve(char * rowType, char * columnType,void ** infoOut)
 #ifndef CLP_NO_SUBS
 	  if (rowLength2<=1&&rowLength[jRow]>1&&jRow<iRow) {
 	    // may be interesting
-	    whichRows[numberRowsLook++]=jRow;
+	    // See if already marked
+	    if ((rowStatus[jRow]&128)==0) {
+	      rowStatus[jRow] |= 128;
+	      whichRows[numberRowsLook++]=jRow;
+	      assert (numberRowsLook<=numberRows_);
+	    }
 	  }
 #endif
 	  rowLength[jRow]=rowLength2;
@@ -8901,6 +8919,9 @@ ClpSimplex::miniPresolve(char * rowType, char * columnType,void ** infoOut)
 #endif
 #endif
       int iRow = whichRows[i];
+      // unmark
+      assert ((rowStatus[iRow]&128)!=0);
+      rowStatus[iRow] &= 127;
       if (rowLength[iRow]==1) {
 	//rowType[iRow]=55;
 	int iColumn =  column[rowStart[iRow]];
@@ -9240,10 +9261,12 @@ ClpSimplex::miniPresolve(char * rowType, char * columnType,void ** infoOut)
 	    rowUpper[iRow]=upper-value;
 	  // take out of row copy (and put on list)
 	  assert (rowType[iRow]<=0&&rowType[iRow]>-2);
-	  //if (!rowType[iRow]) {
-	  //rowType[iRow]=-1;
-	  whichRows[numberRowsLook++]=iRow;
-	  //}
+	  // See if already marked (will get to row later in loop
+	  if ((rowStatus[iRow]&128)==0) {
+	    rowStatus[iRow] |= 128;
+	    whichRows[numberRowsLook++]=iRow;
+	    assert (numberRowsLook<=numberRows_);
+	  }
 	  int start = rowStart[iRow];
 	  int put=start;
 	  for (int i=start;i<start+rowLength[iRow];i++) {
