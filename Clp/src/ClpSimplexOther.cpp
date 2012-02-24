@@ -8485,6 +8485,7 @@ ClpSimplex::miniPresolve(char * rowType, char * columnType,void ** infoOut)
   ClpSimplex * newModel = new ClpSimplex(*this);
   //newModel->matrix()->reserve(numberColumns_,lastElement,true);
 #endif
+  newModel->dropNames();
   double * rowLower = newModel->rowLower();
   double * rowUpper = newModel->rowUpper();
   //double * rowActivity = newModel->primalRowSolution();
