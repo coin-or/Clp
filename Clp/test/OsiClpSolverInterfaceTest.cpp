@@ -595,7 +595,7 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
     double cost[8];
     double var_lb[8];
     double var_ub[8];
-    for (uint i = 0 ; i < 8 ; i++) {
+    for (int i = 0 ; i < 8 ; i++) {
       cost[i] = 1.0;
       var_lb[i] = 0.0;
       var_ub[i] = 1.0;
