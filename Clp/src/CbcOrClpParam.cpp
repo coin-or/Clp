@@ -868,6 +868,10 @@ CbcOrClpParam::setIntParameterWithMessage ( CbcModel & model, int value , int & 
                oldValue = model.getIntParam(CbcModel::CbcMaxNumSol);
                model.setIntParam(CbcModel::CbcMaxNumSol, value);
                break;
+          case CBC_PARAM_INT_MAXSAVEDSOLS:
+               oldValue = model.maximumSavedSolutions();
+               model.setMaximumSavedSolutions(value);
+               break;
           case CBC_PARAM_INT_STRONGBRANCHING:
                oldValue = model.numberStrong();
                model.setNumberStrong(value);
@@ -922,6 +926,9 @@ CbcOrClpParam::intParameter (CbcModel &model) const
      case CBC_PARAM_INT_MAXSOLS:
           value = model.getIntParam(CbcModel::CbcMaxNumSol);
           break;
+     case CBC_PARAM_INT_MAXSAVEDSOLS:
+          value = model.maximumSavedSolutions();
+	  break;
      case CBC_PARAM_INT_STRONGBRANCHING:
           value = model.numberStrong();
           break;
@@ -2325,7 +2332,14 @@ stopping",
 but then the results may not be repeatable."
      );
      parameters[numberParameters++] =
-          CbcOrClpParam("maxS!olutions", "Maximum number of solutions to get",
+          CbcOrClpParam("maxSaved!Solutions", "Maximum number of solutions to save",
+                        0, 2147483647, CBC_PARAM_INT_MAXSAVEDSOLS);
+     parameters[numberParameters-1].setLonghelp
+     (
+          "Number of solutions to save."
+     );
+     parameters[numberParameters++] =
+          CbcOrClpParam("maxSo!lutions", "Maximum number of solutions to get",
                         1, 2147483647, CBC_PARAM_INT_MAXSOLS);
      parameters[numberParameters-1].setLonghelp
      (
@@ -2458,6 +2472,17 @@ with University of Florida ordering."
 specialized network code."
      );
 #ifdef COIN_HAS_CBC
+     parameters[numberParameters++] =
+          CbcOrClpParam("nextB!estSolution", "Prints next best saved solution to file",
+                        CLP_PARAM_ACTION_NEXTBESTSOLUTION);
+     parameters[numberParameters-1].setLonghelp
+     (
+          "To write best solution, just use solution.  This prints next best (if exists) \
+ and then deletes it. \
+ This will write a primitive solution file to the given file name.  It will use the default\
+ directory given by 'directory'.  A name of '$' will use the previous value for the name.  This\
+ is initialized to 'stdout'.  The amount of output can be varied using printi!ngOptions or printMask."
+     );
      parameters[numberParameters++] =
           CbcOrClpParam("node!Strategy", "What strategy to use to select nodes",
                         "hybrid", CBC_PARAM_STR_NODESTRATEGY);
