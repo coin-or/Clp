@@ -2048,6 +2048,7 @@ ClpSimplexOther::parametrics(double startingTheta, double & endingTheta, double 
 		 parametricsData paramData;
 		 paramData.startingTheta=startingTheta;
 		 paramData.endingTheta=endingTheta;
+		 paramData.maxTheta=COIN_DBL_MAX;
 		 paramData.lowerChange = chgLower;
 		 paramData.upperChange = chgUpper;
                     returnCode = parametricsLoop(paramData, reportIncrement,
@@ -3019,6 +3020,7 @@ ClpSimplexOther::parametrics(double startingTheta, double & endingTheta,
     // bad initial
     returnCode = -2;
   }
+  paramData.maxTheta=maxTheta;
   bool swapped=false;
   // Dantzig 
 #define ALL_DANTZIG
@@ -3680,10 +3682,11 @@ ClpSimplexOther::whileIterating(parametricsData & paramData, double /*reportIncr
 	    {
 	      double saveTheta=theta_;
 	      theta_ = endingTheta;
+	      if (problemStatus_==2&&theta_>0.99999999*paramData.maxTheta)
+		theta_=COIN_DBL_MAX; // we have finished
 	      int status=eventHandler_->event(ClpEventHandler::theta);
 	      if (status>=0&&status<10) {
 		endingTheta=theta_;
-		theta_=saveTheta;
 		problemStatus_=-1;
 		continue;
 	      } else {
@@ -3691,8 +3694,8 @@ ClpSimplexOther::whileIterating(parametricsData & paramData, double /*reportIncr
 		  problemStatus_=status-10;
 		if (status<0)
 		  startingTheta = useTheta;
-		theta_=saveTheta;
 	      }
+	      theta_=saveTheta;
 	    }
 #else
 	    startingTheta = useTheta;
