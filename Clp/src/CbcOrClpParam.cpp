@@ -2389,6 +2389,15 @@ but this program turns this off to make it look more friendly.  It can be useful
  you intend to override the behavior of a particular message.  This only affects Clp not Cbc."
      );
 #ifdef COIN_HAS_CBC
+      parameters[numberParameters++] =
+          CbcOrClpParam("mips!tart", "reads an initial feasible solution from file",
+                        CBC_PARAM_ACTION_MIPSTART, 3);
+     parameters[numberParameters-1].setLonghelp
+     (
+          "This will read a file containing an initial feasible solution. \
+Files containing previously saved solution files (in cbc format) are directly read. \
+If the value of only a subset of variables is informed the solver automatically tries to fill the remaining values. \
+");
      parameters[numberParameters++] =
           CbcOrClpParam("moreT!une", "Yet more dubious ideas for feasibility pump",
                         0, 100000000, CBC_PARAM_INT_FPUMPTUNE2, 0);
