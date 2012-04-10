@@ -8908,6 +8908,26 @@ ClpSimplex::miniPresolve(char * rowType, char * columnType,void ** infoOut)
       nActions++;
       ClpCopyToMiniSave(stuff,reinterpret_cast<char *>(&thisInfo),sizeof(clpPresolveInfo1_4_8),
 			n,column+start,elementByRow+start);
+      // need to take out row
+      CoinBigIndex end=start+n;
+      rowLength[iRow]=0;
+      for (CoinBigIndex k=start;k<end;k++) {
+	int iColumn=column[k];
+	CoinBigIndex startColumn=columnStart[iColumn];
+	int n=columnLength[iColumn];
+	CoinBigIndex endColumn=startColumn+n;
+	columnLength[iColumn]=n-1;
+	for (CoinBigIndex j=startColumn;j<endColumn;j++) {
+	  int jRow=row[j];
+	  if (jRow==iRow) {
+	    endColumn--;
+	    row[j]=row[endColumn];
+	    element[j]=element[endColumn];
+	    break;
+	  }
+	}
+	assert (endColumn==startColumn+n-1);
+      }
     }
   }
 #if DEBUG_SOME>0
