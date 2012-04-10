@@ -2391,12 +2391,43 @@ but this program turns this off to make it look more friendly.  It can be useful
 #ifdef COIN_HAS_CBC
       parameters[numberParameters++] =
           CbcOrClpParam("mips!tart", "reads an initial feasible solution from file",
-                        CBC_PARAM_ACTION_MIPSTART, 3);
+                        CBC_PARAM_ACTION_MIPSTART);
      parameters[numberParameters-1].setLonghelp
-     (
-          "This will read a file containing an initial feasible solution. \
-Files containing previously saved solution files (in cbc format) are directly read. \
-If the value of only a subset of variables is informed the solver automatically tries to fill the remaining values. \
+     ("\
+The MIPStart allows one to enter an initial integer feasible solution \
+to CBC. Values of the main decision variables which are active (have \
+non-zero values) in this solution are specified in a text  file. The \
+text file format used is the same of the solutions saved by CBC, but \
+not all fields are required to be filled. First line may contain the \
+solution status and will be ignored, remaning lines contain column \
+indexes, names and values as in this example:\n\
+\n\
+Stopped on iterations - objective value 57597.00000000\n\
+      0  x(1,1,2,2)               1 \n\
+      1  x(3,1,3,2)               1 \n\
+      5  v(5,1)                   2 \n\
+      33 x(8,1,5,2)               1 \n\
+      ...\n\
+\n\
+Column indexes are also ignored since pre-processing can change them. \
+There is no need to include values for continuous or integer auxiliary \
+variables, since they can be computed based on main decision variables. \
+Starting CBC with an integer feasible solution can dramatically improve \
+its performance: several MIP heuristics (e.g. RINS) rely on having at \
+least one feasible solution available and can start immediately if the \
+user provides one. Feasibility Pump (FP) is a heuristic which tries to \
+overcome the problem of taking too long to find feasible solution (or \
+not finding at all), but it not always suceeds. If you provide one \
+starting solution you will probably save some time by disabling FP. \
+\n\n\
+Knowledge specific to your problem can be considered to write an \
+external module to quickly produce an initial feasible solution - some \
+alternatives are the implementation of simple greedy heuristics or the \
+solution (by CBC for example) of a simpler model created just to find \
+a feasible solution. \
+\n\n\
+Question and suggestions regarding MIPStart can be directed to\n\
+haroldo.santos@gmail.com.\
 ");
      parameters[numberParameters++] =
           CbcOrClpParam("moreT!une", "Yet more dubious ideas for feasibility pump",
