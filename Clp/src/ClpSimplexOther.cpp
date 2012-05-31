@@ -2955,15 +2955,18 @@ ClpSimplexOther::parametrics(double startingTheta, double & endingTheta,
 	   rowUpper_,numberRows_*sizeof(double));
   }
   double maxTheta = 1.0e50;
+  double largestChange=0.0;
   for (int iRow = 0; iRow < numberRows_; iRow++) {
     double lower = rowLower_[iRow];
     double upper = rowUpper_[iRow];
     if (lower<-1.0e30)
       lowerChange[numberColumns_+iRow]=0.0;
     double chgLower = lowerChange[numberColumns_+iRow];
+    largestChange=CoinMax(largestChange,fabs(chgLower));
     if (upper>1.0e30)
       upperChange[numberColumns_+iRow]=0.0;
     double chgUpper = upperChange[numberColumns_+iRow];
+    largestChange=CoinMax(largestChange,fabs(chgUpper));
     if (lower > -1.0e30 && upper < 1.0e30) {
       if (lower + maxTheta * chgLower > upper + maxTheta * chgUpper) {
 	maxTheta = (upper - lower) / (chgLower - chgUpper);
@@ -2984,9 +2987,11 @@ ClpSimplexOther::parametrics(double startingTheta, double & endingTheta,
     if (lower<-1.0e30)
       lowerChange[iColumn]=0.0;
     double chgLower = lowerChange[iColumn];
+    largestChange=CoinMax(largestChange,fabs(chgLower));
     if (upper>1.0e30)
       upperChange[iColumn]=0.0;
     double chgUpper = upperChange[iColumn];
+    largestChange=CoinMax(largestChange,fabs(chgUpper));
     if (lower > -1.0e30 && upper < 1.0e30) {
       if (lower + maxTheta * chgLower > upper + maxTheta * chgUpper) {
 	maxTheta = (upper - lower) / (chgLower - chgUpper);
@@ -3021,6 +3026,11 @@ ClpSimplexOther::parametrics(double startingTheta, double & endingTheta,
     returnCode = -2;
   }
   paramData.maxTheta=maxTheta;
+  /* given largest change element choose acceptable end
+     be safe and make sure difference < 0.1*tolerance */
+  double acceptableDifference=0.1*primalTolerance_/
+    CoinMax(largestChange,1.0);
+  paramData.acceptableMaxTheta=maxTheta-acceptableDifference;
   bool swapped=false;
   // Dantzig 
 #define ALL_DANTZIG
@@ -3682,7 +3692,7 @@ ClpSimplexOther::whileIterating(parametricsData & paramData, double /*reportIncr
 	    {
 	      double saveTheta=theta_;
 	      theta_ = endingTheta;
-	      if (problemStatus_==2&&theta_>0.99999999*paramData.maxTheta)
+	      if (problemStatus_==2&&theta_>paramData.acceptableMaxTheta)
 		theta_=COIN_DBL_MAX; // we have finished
 	      int status=eventHandler_->event(ClpEventHandler::theta);
 	      if (status>=0&&status<10) {

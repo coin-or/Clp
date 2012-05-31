@@ -108,6 +108,7 @@ public:
     double startingTheta;
     double endingTheta;
     double maxTheta;
+    double acceptableMaxTheta; // if this far then within tolerances
     double * lowerChange; // full array of lower bound changes
     int * lowerList; // list of lower bound changes
     double * upperChange; // full array of upper bound changes
