@@ -2974,10 +2974,12 @@ ClpSimplexOther::parametrics(double startingTheta, double & endingTheta,
     }
     lower+=startingTheta*chgLower;
     upper+=startingTheta*chgUpper;
+#ifndef CLP_USER_DRIVEN
     if (lower > upper) {
       maxTheta = -1.0;
       break;
     }
+#endif
     rowLower_[iRow]=lower;
     rowUpper_[iRow]=upper;
   }
@@ -2999,16 +3001,24 @@ ClpSimplexOther::parametrics(double startingTheta, double & endingTheta,
     }
     lower+=startingTheta*chgLower;
     upper+=startingTheta*chgUpper;
+#ifndef CLP_USER_DRIVEN
     if (lower > upper) {
       maxTheta = -1.0;
       break;
     }
+#endif
     columnLower_[iColumn]=lower;
     columnUpper_[iColumn]=upper;
   }
   if (maxTheta == 1.0e50)
     maxTheta = COIN_DBL_MAX;
   int returnCode=0;
+  /*
+    If user is in charge then they are sophisticated enough
+    to know what they are doing.  They must be doing something clever
+    with event handlers!
+   */
+#ifndef CLP_USER_DRIVEN
   if (maxTheta < 0.0) {
     // bad ranges or initial
     returnCode = -1;
@@ -3025,11 +3035,10 @@ ClpSimplexOther::parametrics(double startingTheta, double & endingTheta,
     // bad initial
     returnCode = -2;
   }
-#ifdef CLP_USER_DRIVEN
+  paramData.maxTheta=CoinMin(maxTheta,endingTheta);
+#else
   // accept user's version
   paramData.maxTheta=endingTheta;
-#else
-  paramData.maxTheta=CoinMin(maxTheta,endingTheta);
 #endif
   /* given largest change element choose acceptable end
      be safe and make sure difference < 0.1*tolerance */
