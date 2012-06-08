@@ -3025,7 +3025,12 @@ ClpSimplexOther::parametrics(double startingTheta, double & endingTheta,
     // bad initial
     returnCode = -2;
   }
-  paramData.maxTheta=maxTheta;
+#ifdef CLP_USER_DRIVEN
+  // accept user's version
+  paramData.maxTheta=endingTheta;
+#else
+  paramData.maxTheta=CoinMin(maxTheta,endingTheta);
+#endif
   /* given largest change element choose acceptable end
      be safe and make sure difference < 0.1*tolerance */
   double acceptableDifference=0.1*primalTolerance_/
