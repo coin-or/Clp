@@ -3391,8 +3391,11 @@ ClpSimplexOther::parametricsLoop(parametricsData & paramData,
     }
     
     // exit if victory declared
-    if (problemStatus_ >= 0 && startingTheta>=endingTheta-1.0e-7 )
+    if ((problemStatus_ >= 0 && startingTheta>=endingTheta-1.0e-7) ||
+	(problemStatus_ == 0 && startingTheta>=CoinMin(endingTheta-1.0e-7,1.0e49) )) {
+      startingTheta=endingTheta;
       break;
+    }
     
     // test for maximum iterations
     if (hitMaximumIterations()) {
