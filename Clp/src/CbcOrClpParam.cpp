@@ -3321,7 +3321,7 @@ trust the pseudo costs and do not do any more strong branching."
      (
           "For making equality cliques this is minimumsize.  Also for adding \
 integer slacks.  May be used for more later \
-If <1000 that is what it does.  If <1000000 - numberPasses is (value/1000)-1 and tune is tune %1000. \
+If <10000 that is what it does.  If <1000000 - numberPasses is (value/10000)-1 and tune is tune %10000. \
 If >= 1000000! - numberPasses is (value/1000000)-1 and tune is tune %1000000.  In this case if tune is now still >=10000 \
 numberPassesPerInnerLoop is changed from 10 to (tune-10000)-1 and tune becomes tune % 10000!!!!! - happy? - \
 so to keep normal limit on cliques of 5, do 3 major passes (include presolves) but only doing one tightening pass per major pass - \

@@ -4077,6 +4077,7 @@ ClpPackedMatrix::allElementsInRange(ClpModel * model,
 #else
                          printf("Out of range %d %lld %d %g\n", iColumn, j, row[j], elementByColumn[j]);
 #endif
+			 delete [] mark;
                          return false;
                     }
                     if (mark[iRow] == -1) {
@@ -4825,7 +4826,7 @@ ClpPackedMatrix::appendMatrix(int number, int type,
           // rows
           if (matrix_->isColOrdered() && numberOther > matrix_->getNumCols())
                matrix_->setDimensions(-1, numberOther);
-          if (!matrix_->isColOrdered() || numberOther >= 0 || matrix_->getExtraGap()) {
+          if (!matrix_->isColOrdered() || numberOther >= 0 || matrix_->getExtraGap() || matrix_->hasGaps()) {
                numberErrors = matrix_->appendRows(number, starts, index, element, numberOther);
           } else {
                //CoinPackedMatrix mm(*matrix_);
