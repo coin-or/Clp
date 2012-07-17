@@ -8339,8 +8339,8 @@ ClpSimplex::startup(int ifValuesPass, int startFinishOptions)
                }
           } else {
                // using previous factorization - we assume fine
-               if ((moreSpecialOptions_ & 8) == 0) {
-                    // but we need to say not optimal
+               if ((moreSpecialOptions_ & 8) == 0 || !(whatsChanged_ & 64)) {
+                    // but we need to say not optimal (!(whatsChanged_ & 64) means that objective has changed)
                     numberPrimalInfeasibilities_ = 1;
                     numberDualInfeasibilities_ = 1;
                }
