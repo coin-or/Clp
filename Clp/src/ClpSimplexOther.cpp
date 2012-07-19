@@ -9853,12 +9853,13 @@ ClpSimplex::miniPostsolve(const ClpSimplex * presolvedModel, void * infoIn)
 	int jRowUpper=thisInfo.row2;
 	int length=columnLengthX[iColumn];
 	CoinBigIndex start=columnStartX[iColumn];
+	int newLength=length+((jRowLower<0||jRowUpper<0) ? 1 : 2);
 	int nextColumn=forward[iColumn];
 	CoinBigIndex startNext=columnStartX[nextColumn];
-	if (start+length==startNext) {
+	if (start+newLength>startNext) {
 	  // need more
 	  moveAround(numberColumns_,numberElementsOriginal,
-		     iColumn,length+(jRowLower<0||jRowUpper<0) ? 1 : 2,
+		     iColumn,newLength,
 		     forward,backward,columnStartX,columnLengthX,
 		     rowX,elementX);
 	  start=columnStartX[iColumn];
