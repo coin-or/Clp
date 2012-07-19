@@ -1145,6 +1145,7 @@ public:
          1024 bit - don't do row copy of factorization
 	 2048 bit - perturb in complete fathoming
 	 4096 bit - try more for complete fathoming
+	 8192 bit - don't even think of using primal if user asks for dual (and vv)
      */
      inline int moreSpecialOptions() const {
           return moreSpecialOptions_;
@@ -1163,6 +1164,7 @@ public:
          1024 bit - don't do row copy of factorization
 	 2048 bit - perturb in complete fathoming
 	 4096 bit - try more for complete fathoming
+	 8192 bit - don't even think of using primal if user asks for dual (and vv)
      */
      inline void setMoreSpecialOptions(int value) {
           moreSpecialOptions_ = value;

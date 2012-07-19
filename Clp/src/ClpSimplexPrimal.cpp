@@ -1284,7 +1284,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                          numberDualInfeasibilities_ = 1; // carry on
                          problemStatus_ = -1;
                     } else if (numberDualInfeasibilities_ == 0 && largestDualError_ > 1.0e-2 &&
-                               (moreSpecialOptions_ & 256) == 0) {
+                               (moreSpecialOptions_ & (256|8192)) == 0) {
                          goToDual = true;
                          factorization_->pivotTolerance(CoinMax(0.9, factorization_->pivotTolerance()));
                     }

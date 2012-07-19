@@ -5015,7 +5015,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned, int type,
                     dualTolerance_ = saveTolerance;
 		    if (!numberIterations_ && sumPrimalInfeasibilities_ >
 			1.0e5*(savePrimalInfeasibilities+1.0e3) &&
-			(moreSpecialOptions_ & 256) == 0) {
+			(moreSpecialOptions_ & (256|8192)) == 0) {
 		      // Use primal
 		      int nTotal = numberRows_ + numberColumns_;
 		      CoinMemcpyN(saveStatus_, nTotal, status_);
