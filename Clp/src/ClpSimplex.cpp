@@ -5418,7 +5418,7 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
                baseIteration_ = numberIterations_;
 	       // Say second call
 	       moreSpecialOptions_ |= 256;
-               returnCode = static_cast<ClpSimplexPrimal *> (this)->primal(0);
+               returnCode = static_cast<ClpSimplexPrimal *> (this)->primal(0, startFinishOptions);
 	       // Say not second call
 	       moreSpecialOptions_ &= ~256;
                baseIteration_ = 0;
