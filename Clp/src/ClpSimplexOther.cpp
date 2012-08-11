@@ -7687,6 +7687,12 @@ ClpSimplex::outDuplicateRows(int numberLook,int * whichRows, bool noOverlaps,
   int iLast = whichRows[0];
 #endif
   double inverseCleanup = (cleanUp>0.0) ? 1.0/cleanUp : 0.0;
+  /*
+    Rules for cleaning up rhs
+    if cleanup != 0.0 just use cleanup
+    otherwise if problemStatus_==0 (i.e. was optimal) use rowActivity
+    then go to integer value if close 
+   */
   //#define PRINT_DUP
 #ifdef PRINT_DUP
   int firstSame=-1;
@@ -7834,11 +7840,30 @@ ClpSimplex::outDuplicateRows(int numberLook,int * whichRows, bool noOverlaps,
 	    nDelete=-1;
 	    break;
 	  } else if (fabs(rup2-rlo2)<=tolerance) {
-	    // equal - choose closer to zero
-	    if (fabs(rup2)<fabs(rlo2))
-	      rlo2=rup2;
-	    else
+	    // equal
+	    if (!inverseCleanup) {
+	      if (!problemStatus_) {
+		// choose one closer to rowActivity
+		double rval2=rowActivity_[iThis];
+		if (fabs(rup2-rval2)<fabs(rlo2-rval2))
+		  rlo2=rup2;
+	      } else {
+		// no solution - closer to zero
+		if (fabs(rup2)<fabs(rlo2))
+		  rlo2=rup2;
+	      }
+	      // see if close to integer value
+	      double value2 = floor(rlo2+0.5);
+	      if (fabs(rlo2-value2)<1.0e-9) 
+		rlo2=value2;
 	      rup2=rlo2;
+	    } else {
+	      // we will be cleaning up later - choose closer to zero
+	      if (fabs(rup2)<fabs(rlo2))
+		rlo2=rup2;
+	      else
+		rup2=rlo2;
+	    }
 #if 0
 	  if (rowLength[iThis]<4)
 	    countsEq[rowLength[iThis]]++;
