@@ -8727,7 +8727,7 @@ ClpSimplex::miniPresolve(char * rowType, char * columnType,void ** infoOut)
 	bool swap=false;
 	double ratio = fabs(value1/value2);
 	if (ratio<0.001||ratio>1000.0) {
-	  if (fabs(value1)<fabs(value2)) {
+	  if (fabs(value1)>fabs(value2)) {
 	    swap=true;
 	  } 
 	} else if (columnLength[iColumn1]<columnLength[iColumn2]) {
