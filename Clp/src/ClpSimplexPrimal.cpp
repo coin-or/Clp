@@ -496,7 +496,7 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
                               break;
                          }
                          //#define FEB_TRY
-#ifdef FEB_TRY
+#if 1 //def FEB_TRY
                          if (perturbation_ < 100)
                               perturb(0);
 #endif
@@ -739,7 +739,7 @@ ClpSimplexPrimal::whileIterating(int valuesOption)
 	       returnCode = 0;
 #ifdef CLP_USER_DRIVEN
 	       // If large number of pivots trap later?
-	       if (problemStatus_==-1 && numberPivots<1000) {
+	       if (problemStatus_==-1 && numberPivots<1000000) {
 		 int status = eventHandler_->event(ClpEventHandler::noCandidateInPrimal);
 		 if (status>=0&&status<10) {
 		   // carry on
@@ -1279,7 +1279,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                               numberDualInfeasibilities_ == 0) && perturbation_ == 101) {
                          goToDual = unPerturb(); // stop any further perturbation
                          if (nonLinearCost_->sumInfeasibilities() > 1.0e-1)
-                              goToDual = false;
+			   goToDual = false;
                          nonLinearCost_->checkInfeasibilities(primalTolerance_);
                          numberDualInfeasibilities_ = 1; // carry on
                          problemStatus_ = -1;
@@ -1523,6 +1523,8 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
      lastGoodIteration_ = numberIterations_;
      if (numberIterations_ > lastBadIteration_ + 100)
           moreSpecialOptions_ &= ~16; // clear check accuracy flag
+     if ((moreSpecialOptions_ & 256) != 0)
+       goToDual=false;
      if (goToDual || (numberIterations_ > 1000 && largestPrimalError_ > 1.0e6
                       && largestDualError_ > 1.0e6)) {
           problemStatus_ = 10; // try dual
@@ -1739,7 +1741,7 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
                     alpha = - alpha;
                }
                double value;
-               assert (oldValue >= -tolerance);
+               //assert (oldValue >= -10.0*tolerance);
                if (possible) {
                     value = oldValue - upperTheta * alpha;
 #ifdef CLP_USER_DRIVEN1
@@ -2300,8 +2302,10 @@ ClpSimplexPrimal::perturb(int type)
      if (!numberIterations_)
           cleanStatus(); // make sure status okay
      // Make sure feasible bounds
-     if (nonLinearCost_)
-          nonLinearCost_->feasibleBounds();
+     if (nonLinearCost_) {
+       nonLinearCost_->checkInfeasibilities();
+       //nonLinearCost_->feasibleBounds();
+     }
      // look at element range
      double smallestNegative;
      double largestNegative;
@@ -2464,6 +2468,10 @@ ClpSimplexPrimal::perturb(int type)
           // tone down perturbation
           maximumFraction *= 0.1;
      }
+     if (savePerturbation==51) {
+       perturbation = CoinMin(0.1,perturbation);
+       maximumFraction *=0.1;
+     }
      if (number != numberRows_)
           type = 1;
      // modify bounds
@@ -2495,6 +2503,7 @@ ClpSimplexPrimal::perturb(int type)
                          difference = CoinMin(difference, fabs(solutionValue) + 1.0);
                          double value = maximumFraction * (difference + bias);
                          value = CoinMin(value, 0.1);
+			 value = CoinMax(value,primalTolerance_);
 #ifndef SAVE_PERT
                          value *= randomNumberGenerator_.randomDouble();
 #else

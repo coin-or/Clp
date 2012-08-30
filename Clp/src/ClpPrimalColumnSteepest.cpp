@@ -591,6 +591,12 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
           }
      }
 #endif
+#if 0
+     for (int i=0;i<numberRows;i++)
+       printf("row %d weight %g infeas %g\n",i,weights_[i+numberColumns],infeas[i+numberColumns]);
+     for (int i=0;i<numberColumns;i++)
+       printf("column %d weight %g infeas %g\n",i,weights_[i],infeas[i]);
+#endif
      return bestSequence;
 }
 // Just update djs

@@ -68,6 +68,57 @@ libClp_la_SOURCES = \
 	ClpSimplexOther.cpp ClpSimplexOther.hpp \
 	ClpSimplexPrimal.cpp ClpSimplexPrimal.hpp \
 	ClpSolve.cpp ClpSolve.hpp \
+	AbcWarmStart.cpp AbcWarmStart.hpp \
+	CoinAbcBaseFactorization.hpp \
+	CoinAbcCommonFactorization.hpp \
+	CoinAbcCommon.hpp \
+	AbcDualRowDantzig.hpp \
+	AbcDualRowPivot.hpp \
+	AbcDualRowSteepest.hpp \
+	CoinAbcFactorization.hpp \
+	CoinAbcHelperFunctions.hpp \
+	AbcMatrix.hpp \
+	AbcCommon.hpp \
+	AbcSimplexDual.hpp \
+	AbcSimplexPrimal.hpp \
+	AbcSimplex.hpp \
+	CoinAbcBaseFactorization1.cpp \
+	CoinAbcBaseFactorization2.cpp \
+	CoinAbcBaseFactorization3.cpp \
+	CoinAbcBaseFactorization4.cpp \
+	CoinAbcBaseFactorization5.cpp \
+	CoinAbcDenseFactorization.cpp \
+	CoinAbcDenseFactorization.hpp \
+	AbcDualRowDantzig.cpp \
+	AbcDualRowPivot.cpp \
+	AbcDualRowSteepest.cpp \
+	CoinAbcFactorization1.cpp \
+	CoinAbcFactorization2.cpp \
+	CoinAbcFactorization3.cpp \
+	CoinAbcFactorization4.cpp \
+	CoinAbcFactorization5.cpp \
+	CoinAbcHelperFunctions.cpp \
+	AbcMatrix.cpp \
+	AbcSimplex.cpp \
+	AbcSimplexDual.cpp \
+	AbcSimplexPrimal.cpp \
+	AbcSimplexParallel.cpp \
+	AbcPrimalColumnDantzig.cpp AbcPrimalColumnDantzig.hpp \
+	AbcPrimalColumnPivot.cpp AbcPrimalColumnPivot.hpp \
+	AbcPrimalColumnSteepest.cpp AbcPrimalColumnSteepest.hpp \
+	CoinAbcSmallFactorization1.cpp \
+	CoinAbcSmallFactorization2.cpp \
+	CoinAbcSmallFactorization3.cpp \
+	CoinAbcSmallFactorization4.cpp \
+	CoinAbcSmallFactorization5.cpp \
+	CoinAbcOrderedFactorization1.cpp \
+	CoinAbcOrderedFactorization2.cpp \
+	CoinAbcOrderedFactorization3.cpp \
+	CoinAbcOrderedFactorization4.cpp \
+	CoinAbcOrderedFactorization5.cpp \
+	AbcSimplexFactorization.cpp \
+	AbcSimplexFactorization.hpp \
+	AbcNonLinearCost.cpp AbcNonLinearCost.hpp \
 	Idiot.cpp Idiot.hpp \
 	IdiSolve.cpp
 
@@ -184,6 +235,7 @@ includecoin_HEADERS = \
 	ClpSimplexPrimal.hpp \
 	ClpSolve.hpp \
 	CbcOrClpParam.hpp \
+	AbcSimplex.hpp CoinAbcCommon.hpp AbcCommon.hpp \
 	Idiot.hpp
 
 

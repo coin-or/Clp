@@ -28,13 +28,6 @@
 #include <string>
 #include <stdio.h>
 #include <iostream>
-#ifdef HAS_CILK 
-#include <cilk/cilk.h>
-#else
-#define cilk_for for
-#define cilk_spawn
-#define cilk_sync
-#endif
 #ifdef INT_IS_8
 #define COIN_ANY_BITS_PER_INT 64
 #define COIN_ANY_SHIFT_PER_INT 6
@@ -120,7 +113,7 @@ void ClpSimplexOther::dualRanging(int numberCheck, const int * which,
                // put row of tableau in rowArray[0] and columnArray[0]
                matrix_->transposeTimes(this, -1.0,
                                        rowArray_[0], columnArray_[1], columnArray_[0]);
-#if COIN_FAC_NEW
+#ifdef COIN_FAC_NEW
 	       assert (!rowArray_[0]->packedMode());
 #endif
                double alphaIncrease;
@@ -137,7 +130,7 @@ void ClpSimplexOther::dualRanging(int numberCheck, const int * which,
                     }
                } else {
                     int number = rowArray_[0]->getNumElements();
-#if COIN_FAC_NEW
+#ifdef COIN_FAC_NEW
 		    const int * index = rowArray_[0]->getIndices();
 #endif
                     double scale2 = 0.0;
@@ -806,23 +799,30 @@ ClpSimplexOther::dualOfModel(double fractionRowRanges, double fractionColumnRang
      const ClpSimplex * model2 = static_cast<const ClpSimplex *> (this);
      bool changed = false;
      int numberChanged = 0;
+     int numberFreeColumnsInPrimal=0;
      int iColumn;
      // check if we need to change bounds to rows
      for (iColumn = 0; iColumn < numberColumns_; iColumn++) {
-          if (columnUpper_[iColumn] < 1.0e20 &&
-                    columnLower_[iColumn] > -1.0e20) {
+       if (columnUpper_[iColumn] < 1.0e20) {
+	 if (columnLower_[iColumn] > -1.0e20) {
                changed = true;
                numberChanged++;
           }
+       } else if (columnLower_[iColumn] < -1.0e20) {
+	 numberFreeColumnsInPrimal++;
+       }
      }
      int iRow;
      int numberExtraRows = 0;
+     int numberFreeColumnsInDual=0;
      if (numberChanged <= fractionColumnRanges * numberColumns_) {
           for (iRow = 0; iRow < numberRows_; iRow++) {
                if (rowLower_[iRow] > -1.0e20 &&
                          rowUpper_[iRow] < 1.0e20) {
                     if (rowUpper_[iRow] != rowLower_[iRow])
                          numberExtraRows++;
+		    else
+		      numberFreeColumnsInDual++;
                }
           }
           if (numberExtraRows > fractionRowRanges * numberRows_)
@@ -830,6 +830,11 @@ ClpSimplexOther::dualOfModel(double fractionRowRanges, double fractionColumnRang
      } else {
           return NULL;
      }
+     printf("would have %d free columns in primal, %d in dual\n",
+	    numberFreeColumnsInPrimal,numberFreeColumnsInDual);
+     if (4*(numberFreeColumnsInDual-numberFreeColumnsInPrimal)>
+	 numberColumns_&&fractionRowRanges<1.0)
+       return NULL; //dangerous (well anyway in dual)
      if (changed) {
           ClpSimplex * model3 = new ClpSimplex(*model2);
           CoinBuild build;
@@ -977,6 +982,9 @@ ClpSimplexOther::dualOfModel(double fractionRowRanges, double fractionColumnRang
      modelDual->setPerturbation(model2->perturbation());
      modelDual->setSpecialOptions(model2->specialOptions());
      modelDual->setMoreSpecialOptions(model2->moreSpecialOptions());
+     modelDual->setMaximumIterations(model2->maximumIterations());
+     modelDual->setFactorizationFrequency(model2->factorizationFrequency());
+     modelDual->setLogLevel(model2->logLevel());
      delete [] fromRowsLower;
      delete [] fromRowsUpper;
      delete [] fromColumnsLower;
@@ -1165,7 +1173,7 @@ ClpSimplexOther::restoreFromDual(const ClpSimplex * dualProblem,
                     rowActivity_[iRow] = rowUpper_[iRow];
                     setRowStatus(iRow, atUpperBound);
                } else {
-                    assert (dualDj[iRow] < 1.0e-5);
+                    // might be stopped assert (dualDj[iRow] < 1.0e-5);
                     rowActivity_[iRow] = rowUpper_[iRow] + dualDj[iRow];
                }
           } else if (rowUpper_[iRow] > 1.0e20) {
@@ -1174,7 +1182,7 @@ ClpSimplexOther::restoreFromDual(const ClpSimplex * dualProblem,
                     setRowStatus(iRow, atLowerBound);
                } else {
                     rowActivity_[iRow] = rowLower_[iRow] + dualDj[iRow];
-                    assert (dualDj[iRow] > -1.0e-5);
+                    // might be stopped assert (dualDj[iRow] > -1.0e-5);
                }
           } else {
                if (rowUpper_[iRow] == rowLower_[iRow]) {
@@ -1190,7 +1198,7 @@ ClpSimplexOther::restoreFromDual(const ClpSimplex * dualProblem,
                     //     iRow,status,kExtraRow,statusL, dualSol[iRow],
                     //     dualSol[kExtraRow],dualDj[iRow],dualDj[kExtraRow]);
                     if (status == basic) {
-                         assert (statusL != basic);
+                         // might be stopped assert (statusL != basic);
                          rowActivity_[iRow] = rowUpper_[iRow];
                          setRowStatus(iRow, atUpperBound);
                     } else if (statusL == basic) {
@@ -1200,7 +1208,7 @@ ClpSimplexOther::restoreFromDual(const ClpSimplex * dualProblem,
                          dual_[iRow] = dualSol[kExtraRow];;
                     } else {
                          rowActivity_[iRow] = rowLower_[iRow] - dualDj[iRow];
-                         assert (dualDj[iRow] < 1.0e-5);
+                         // might be stopped assert (dualDj[iRow] < 1.0e-5);
                          // row basic
                          //setRowStatus(iRow,basic);
                          //numberBasic++;
@@ -3391,11 +3399,8 @@ ClpSimplexOther::parametricsLoop(parametricsData & paramData,
     }
     
     // exit if victory declared
-    if ((problemStatus_ >= 0 && startingTheta>=endingTheta-1.0e-7) ||
-	(problemStatus_ == 0 && startingTheta>=CoinMin(endingTheta-1.0e-7,1.0e49) )) {
-      startingTheta=endingTheta;
+    if (problemStatus_ >= 0 && startingTheta>=endingTheta-1.0e-7 )
       break;
-    }
     
     // test for maximum iterations
     if (hitMaximumIterations()) {
@@ -7687,12 +7692,6 @@ ClpSimplex::outDuplicateRows(int numberLook,int * whichRows, bool noOverlaps,
   int iLast = whichRows[0];
 #endif
   double inverseCleanup = (cleanUp>0.0) ? 1.0/cleanUp : 0.0;
-  /*
-    Rules for cleaning up rhs
-    if cleanup != 0.0 just use cleanup
-    otherwise if problemStatus_==0 (i.e. was optimal) use rowActivity
-    then go to integer value if close 
-   */
   //#define PRINT_DUP
 #ifdef PRINT_DUP
   int firstSame=-1;
@@ -7840,30 +7839,11 @@ ClpSimplex::outDuplicateRows(int numberLook,int * whichRows, bool noOverlaps,
 	    nDelete=-1;
 	    break;
 	  } else if (fabs(rup2-rlo2)<=tolerance) {
-	    // equal
-	    if (!inverseCleanup) {
-	      if (!problemStatus_) {
-		// choose one closer to rowActivity
-		double rval2=rowActivity_[iThis];
-		if (fabs(rup2-rval2)<fabs(rlo2-rval2))
-		  rlo2=rup2;
-	      } else {
-		// no solution - closer to zero
-		if (fabs(rup2)<fabs(rlo2))
-		  rlo2=rup2;
-	      }
-	      // see if close to integer value
-	      double value2 = floor(rlo2+0.5);
-	      if (fabs(rlo2-value2)<1.0e-9) 
-		rlo2=value2;
+	    // equal - choose closer to zero
+	    if (fabs(rup2)<fabs(rlo2))
+	      rlo2=rup2;
+	    else
 	      rup2=rlo2;
-	    } else {
-	      // we will be cleaning up later - choose closer to zero
-	      if (fabs(rup2)<fabs(rlo2))
-		rlo2=rup2;
-	      else
-		rup2=rlo2;
-	    }
 #if 0
 	  if (rowLength[iThis]<4)
 	    countsEq[rowLength[iThis]]++;
@@ -8727,7 +8707,7 @@ ClpSimplex::miniPresolve(char * rowType, char * columnType,void ** infoOut)
 	bool swap=false;
 	double ratio = fabs(value1/value2);
 	if (ratio<0.001||ratio>1000.0) {
-	  if (fabs(value1)>fabs(value2)) {
+	  if (fabs(value1)<fabs(value2)) {
 	    swap=true;
 	  } 
 	} else if (columnLength[iColumn1]<columnLength[iColumn2]) {
@@ -9878,13 +9858,12 @@ ClpSimplex::miniPostsolve(const ClpSimplex * presolvedModel, void * infoIn)
 	int jRowUpper=thisInfo.row2;
 	int length=columnLengthX[iColumn];
 	CoinBigIndex start=columnStartX[iColumn];
-	int newLength=length+((jRowLower<0||jRowUpper<0) ? 1 : 2);
 	int nextColumn=forward[iColumn];
 	CoinBigIndex startNext=columnStartX[nextColumn];
-	if (start+newLength>startNext) {
+	if (start+length==startNext) {
 	  // need more
 	  moveAround(numberColumns_,numberElementsOriginal,
-		     iColumn,newLength,
+		     iColumn,length+(jRowLower<0||jRowUpper<0) ? 1 : 2,
 		     forward,backward,columnStartX,columnLengthX,
 		     rowX,elementX);
 	  start=columnStartX[iColumn];

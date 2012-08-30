@@ -21,7 +21,11 @@ static Clp_message clp_us_english[] = {
      {CLP_SIMPLEX_INTERRUPT, 5, 1, "Stopped by event handler - objective value %g"},
      {CLP_SIMPLEX_STATUS, 6, 1, "%d  Obj %g%? Primal inf %g (%d)%? Dual inf %g (%d)%? w.o. free dual inf (%d)"},
      {CLP_DUAL_BOUNDS, 25, 3, "Looking optimal checking bounds with %g"},
+#if ABC_NORMAL_DEBUG>1
+     {CLP_SIMPLEX_ACCURACY, 60, 1, "Primal error %g, dual error %g"},
+#else
      {CLP_SIMPLEX_ACCURACY, 60, 3, "Primal error %g, dual error %g"},
+#endif
      {CLP_SIMPLEX_BADFACTOR, 7, 2, "Singular factorization of basis - status %d"},
      {CLP_SIMPLEX_BOUNDTIGHTEN, 8, 3, "Bounds were tightened %d times"},
      {CLP_SIMPLEX_INFEASIBILITIES, 9, 1, "%d infeasibilities"},

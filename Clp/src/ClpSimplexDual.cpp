@@ -568,6 +568,8 @@ ClpSimplexDual::gutsOfDual(int ifValuesPass, double * & saveDuals, int initialSt
 int
 ClpSimplexDual::dual(int ifValuesPass, int startFinishOptions)
 {
+  //handler_->setLogLevel(63);
+  //yprintf("STARTing dual %d rows\n",numberRows_);
      bestObjectiveValue_ = -COIN_DBL_MAX;
      algorithm_ = -1;
      moreSpecialOptions_ &= ~16; // clear check replaceColumn accuracy
@@ -2627,7 +2629,7 @@ ClpSimplexDual::dualRow(int alreadyChosen)
           }
      }
 #endif
-     double freeAlpha = 0.0;
+     //double freeAlpha = 0.0;
      if (alreadyChosen < 0) {
           // first see if any free variables and put them in basis
           int nextFree = nextSuperBasic();
@@ -2677,7 +2679,7 @@ ClpSimplexDual::dualRow(int alreadyChosen)
                     chosenRow = bestFeasibleRow;
                if (chosenRow >= 0) {
                     pivotRow_ = chosenRow;
-                    freeAlpha = work[chosenRow];
+                    //freeAlpha = work[chosenRow];
                }
                rowArray_[1]->clear();
           }
@@ -5194,21 +5196,21 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned, int type,
                     secondaryStatus_ = 1; // and say was on cutoff
                } else if (largestPrimalError_ > 1.0e5) {
                     {
-                         int iBigB = -1;
+		      //int iBigB = -1;
                          double bigB = 0.0;
-                         int iBigN = -1;
+                         //int iBigN = -1;
                          double bigN = 0.0;
                          for (int i = 0; i < numberRows_ + numberColumns_; i++) {
                               double value = fabs(solution_[i]);
                               if (getStatus(i) == basic) {
                                    if (value > bigB) {
                                         bigB = value;
-                                        iBigB = i;
+                                        //iBigB = i;
                                    }
                               } else {
                                    if (value > bigN) {
                                         bigN = value;
-                                        iBigN = i;
+                                        //iBigN = i;
                                    }
                               }
                          }
@@ -5427,6 +5429,57 @@ ClpSimplexDual::changeBound( int iSequence)
      }
      return modified;
 }
+#if ABC_NORMAL_DEBUG>0
+//#define PERT_STATISTICS
+#endif
+#ifdef PERT_STATISTICS
+static void breakdown(const char * name, int numberLook, const double * region)
+{
+     double range[] = {
+          -COIN_DBL_MAX,
+          -1.0e15, -1.0e11, -1.0e8, -1.0e5, -1.0e4, -1.0e3, -1.0e2, -1.0e1,
+          -1.0,
+          -1.0e-1, -1.0e-2, -1.0e-3, -1.0e-4, -1.0e-5, -1.0e-8, -1.0e-11, -1.0e-15,
+          0.0,
+          1.0e-15, 1.0e-11, 1.0e-8, 1.0e-5, 1.0e-4, 1.0e-3, 1.0e-2, 1.0e-1,
+          1.0,
+          1.0e1, 1.0e2, 1.0e3, 1.0e4, 1.0e5, 1.0e8, 1.0e11, 1.0e15,
+          COIN_DBL_MAX
+     };
+     int nRanges = static_cast<int> (sizeof(range) / sizeof(double));
+     int * number = new int[nRanges];
+     memset(number, 0, nRanges * sizeof(int));
+     int * numberExact = new int[nRanges];
+     memset(numberExact, 0, nRanges * sizeof(int));
+     int i;
+     for ( i = 0; i < numberLook; i++) {
+          double value = region[i];
+          for (int j = 0; j < nRanges; j++) {
+               if (value == range[j]) {
+                    numberExact[j]++;
+                    break;
+               } else if (value < range[j]) {
+                    number[j]++;
+                    break;
+               }
+          }
+     }
+     printf("\n%s has %d entries\n", name, numberLook);
+     for (i = 0; i < nRanges; i++) {
+          if (number[i])
+               printf("%d between %g and %g", number[i], range[i-1], range[i]);
+          if (numberExact[i]) {
+               if (number[i])
+                    printf(", ");
+               printf("%d exactly at %g", numberExact[i], range[i]);
+          }
+          if (number[i] + numberExact[i])
+               printf("\n");
+     }
+     delete [] number;
+     delete [] numberExact;
+}
+#endif
 // Perturbs problem
 int
 ClpSimplexDual::perturb()
@@ -5679,12 +5732,12 @@ ClpSimplexDual::perturb()
      // good its double weight[]={1.0e-4,1.0e-2,5.0e-1,1.0,2.0,5.0,10.0,20.0,30.0,40.0,100.0};
      double weight[] = {1.0e-4, 1.0e-2, 5.0e-1, 1.0, 2.0, 5.0, 10.0, 20.0, 30.0, 40.0, 100.0};
      //double weight[]={1.0e-4,1.0e-2,5.0e-1,1.0,20.0,50.0,100.0,120.0,130.0,140.0,200.0};
-     double extraWeight = 10.0;
+     //double extraWeight = 10.0;
      // Scale back if wanted
      double weight2[] = {1.0e-4, 1.0e-2, 5.0e-1, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0};
      if (constantPerturbation < 99.0 * dualTolerance_) {
           perturbation *= 0.1;
-          extraWeight = 0.5;
+          //extraWeight = 0.5;
           memcpy(weight, weight2, sizeof(weight2));
      }
      // adjust weights if all columns long
@@ -5807,6 +5860,35 @@ ClpSimplexDual::perturb()
      //int nTotal = numberRows_+numberColumns_;
      //CoinZeroN(cost_+nTotal,nTotal);
      // say perturbed
+#ifdef PERT_STATISTICS
+  {
+    double averageCost = 0.0;
+    int numberNonZero = 0;
+    double * COIN_RESTRICT sort = new double[numberColumns_];
+    for (int i = 0; i < numberColumns_; i++) {
+      double value = fabs(cost_[i]);
+      sort[i] = value;
+      averageCost += value;
+      if (value)
+	numberNonZero++;
+    }
+    if (numberNonZero)
+      averageCost /= static_cast<double> (numberNonZero);
+    else
+      averageCost = 1.0;
+    std::sort(sort, sort + numberColumns_);
+    int number = 1;
+    double last = sort[0];
+    for (int i = 1; i < numberColumns_; i++) {
+      if (last != sort[i])
+	number++;
+    last = sort[i];
+    }
+    printf("nnz %d percent %d", number, (number * 100) / numberColumns_);
+    delete [] sort;
+    breakdown("Objective", numberColumns_+numberRows_, cost_);
+  }
+#endif
      perturbation_ = 101;
      return 0;
 }

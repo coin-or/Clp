@@ -25,6 +25,12 @@
 #include "CoinTime.hpp"
 #include "CoinFloatEqual.hpp"
 
+#if CLP_HAS_ABC
+#include "CoinAbcCommon.hpp"
+#endif
+#ifdef ABC_INHERIT
+#include "CoinAbcFactorization.hpp"
+#endif
 #include "ClpFactorization.hpp"
 #include "ClpSimplex.hpp"
 #include "ClpSimplexOther.hpp"
@@ -43,7 +49,25 @@
 
 #include "ClpPresolve.hpp"
 #include "Idiot.hpp"
-
+#if FACTORIZATION_STATISTICS
+extern double ftranTwiddleFactor1X;
+extern double ftranTwiddleFactor2X;
+extern double ftranFTTwiddleFactor1X;
+extern double ftranFTTwiddleFactor2X;
+extern double btranTwiddleFactor1X;
+extern double btranTwiddleFactor2X;
+extern double ftranFullTwiddleFactor1X;
+extern double ftranFullTwiddleFactor2X;
+extern double btranFullTwiddleFactor1X;
+extern double btranFullTwiddleFactor2X;
+extern double denseThresholdX;
+extern double twoThresholdX;
+extern double minRowsSparse;
+extern double largeRowsSparse;
+extern double mediumRowsDivider;
+extern double mediumRowsMinCount;
+extern double largeRowsCount;
+#endif
 
 //#############################################################################
 
@@ -250,10 +274,19 @@ void usage(const std::string& key)
                << "    -netlib\n"
                << "        If specified, then netlib testset run as well as the nitTest.\n";
 }
-
+#if FACTORIZATION_STATISTICS
+int loSizeX=-1;
+int hiSizeX=1000000;
+#endif
 //----------------------------------------------------------------
+#ifndef ABC_INHERIT
+#define AnySimplex ClpSimplex
+#else
+#include "AbcSimplex.hpp"
+#define AnySimplex AbcSimplex
+#endif
 int mainTest (int argc, const char *argv[], int algorithm,
-              ClpSimplex empty, ClpSolve solveOptionsIn,
+              AnySimplex empty, ClpSolve solveOptionsIn,
               int switchOffValue, bool doVector)
 {
      int i;
@@ -270,7 +303,7 @@ int mainTest (int argc, const char *argv[], int algorithm,
                switchOff[iTest] = 0;
           }
      }
-
+     int numberFailures=0;
      // define valid parameter keywords
      std::set<std::string> definedKeyWords;
      definedKeyWords.insert("-dirSample");
@@ -317,13 +350,44 @@ int mainTest (int argc, const char *argv[], int algorithm,
           dirNetlib = parms["-dirNetlib"];
      else
           dirNetlib = dirsep == '/' ? "../../Data/Netlib/" : "..\\..\\Data\\Netlib\\";
+#if 0 //FACTORIZATION_STATISTICS==0
      if (!empty.numberRows()) {
           testingMessage( "Testing ClpSimplex\n" );
           ClpSimplexUnitTest(dirSample);
      }
+#endif
      if (parms.find("-netlib") != parms.end() || empty.numberRows()) {
           unsigned int m;
-
+	  std::string sizeLoHi;
+#if FACTORIZATION_STATISTICS
+	  double ftranTwiddleFactor1XChoice[3]={0.9,1.0,1.1};
+	  double ftranTwiddleFactor2XChoice[3]={0.9,1.0,1.1};
+	  double ftranFTTwiddleFactor1XChoice[3]={0.9,1.0,1.1};
+	  double ftranFTTwiddleFactor2XChoice[3]={0.9,1.0,1.1};
+	  double btranTwiddleFactor1XChoice[3]={0.9,1.0,1.1};
+	  double btranTwiddleFactor2XChoice[3]={0.9,1.0,1.1};
+	  double ftranFullTwiddleFactor1XChoice[3]={0.9,1.0,1.1};
+	  double ftranFullTwiddleFactor2XChoice[3]={0.9,1.0,1.1};
+	  double btranFullTwiddleFactor1XChoice[3]={0.9,1.0,1.1};
+	  double btranFullTwiddleFactor2XChoice[3]={0.9,1.0,1.1};
+	  double denseThresholdXChoice[3]={2,20,40};
+	  double twoThresholdXChoice[3]={800,1000,1200};
+	  double minRowsSparseChoice[3]={250,300,350};
+	  double largeRowsSparseChoice[3]={8000,10000,12000};
+	  double mediumRowsDividerChoice[3]={5,6,7};
+	  double mediumRowsMinCountChoice[3]={300,500,600};
+	  double largeRowsCountChoice[3]={700,1000,1300};
+	  double times[3*3*3*3*3];
+	  memset(times,0,sizeof(times));
+#define whichParam(za,zname) const char * choice##za=#zname; \
+       const double * use##za=zname##Choice;		     \
+       double * external##za=&zname
+	  whichParam(A,denseThresholdX);
+	  whichParam(B,twoThresholdX);
+	  whichParam(C,minRowsSparse);
+	  whichParam(D,mediumRowsDivider);
+	  whichParam(E,mediumRowsMinCount);
+#endif
           // Define test problems:
           //   mps names,
           //   maximization or minimization,
@@ -351,6 +415,7 @@ int mainTest (int argc, const char *argv[], int algorithm,
                }
           }
           if (!empty.numberRows()) {
+#if 1
                mpsName.push_back("25fv47");
                min.push_back(true);
                nRows.push_back(822);
@@ -362,14 +427,14 @@ int mainTest (int argc, const char *argv[], int algorithm,
                min.push_back(true);
                nRows.push_back(2263);
                nCols.push_back(9799);
-               objValueTol.push_back(1.e-10);
+               objValueTol.push_back(1.e-8);
                objValue.push_back(9.8722419241E+05);
                bestStrategy.push_back(3);
                mpsName.push_back("blend");
                min.push_back(true);
                nRows.push_back(75);
                nCols.push_back(83);
-               objValueTol.push_back(1.e-10);
+               objValueTol.push_back(1.e-8);
                objValue.push_back(-3.0812149846e+01);
                bestStrategy.push_back(3);
                mpsName.push_back("pilotnov");
@@ -400,6 +465,7 @@ int mainTest (int argc, const char *argv[], int algorithm,
                objValueTol.push_back(5.e-5);
                objValue.push_back(-2.5811392641e+03);
                bestStrategy.push_back(3);
+#endif
                mpsName.push_back("pilot87");
                min.push_back(true);
                nRows.push_back(2031);
@@ -407,6 +473,7 @@ int mainTest (int argc, const char *argv[], int algorithm,
                objValueTol.push_back(1.e-4);
                objValue.push_back(3.0171072827e+02);
                bestStrategy.push_back(0);
+#if 1
                mpsName.push_back("adlittle");
                min.push_back(true);
                nRows.push_back(57);
@@ -986,6 +1053,7 @@ int mainTest (int argc, const char *argv[], int algorithm,
                objValueTol.push_back(1.e-10);
                objValue.push_back(1.3044763331E+00);
                bestStrategy.push_back(3);
+#endif
           } else {
                // Just testing one
                mpsName.push_back(empty.problemName());
@@ -1014,10 +1082,17 @@ int mainTest (int argc, const char *argv[], int algorithm,
                switchOff[0] = 1;
           // Loop once for each Mps File
           for (m = 0; m < mpsName.size(); m++ ) {
+#if FACTORIZATION_STATISTICS
+	       if (nRows[m]<loSizeX||nRows[m]>=hiSizeX) {
+		 std::cerr << "  skipping mps file: " << mpsName[m]
+			   <<" as "<<nRows[m]
+                         << " (" << m + 1 << " out of " << mpsName.size() << ")" << std::endl;
+		 continue;
+	       }
+#endif
                std::cerr << "  processing mps file: " << mpsName[m]
                          << " (" << m + 1 << " out of " << mpsName.size() << ")" << std::endl;
-
-               ClpSimplex solutionBase = empty;
+               AnySimplex solutionBase = empty;
                std::string fn = dirNetlib + mpsName[m];
                if (!empty.numberRows() || algorithm < 6) {
                     // Read data mps file,
@@ -1059,7 +1134,8 @@ int mainTest (int argc, const char *argv[], int algorithm,
                               solution.initialSolve(solveOptions);
                               double time2 = CoinCpuTime() - time1;
                               testTime[iTest] = time2;
-                              printf("Took %g seconds - status %d\n", time2, solution.problemStatus());
+                              printf("Finished %s Took %g seconds (%d iterations) - status %d\n", 
+				     mpsName[m].c_str(),time2, solution.problemStatus(),solution.numberIterations());
                               if (solution.problemStatus())
                                    testTime[iTest] = 1.0e20;
                          } else {
@@ -1088,7 +1164,7 @@ int mainTest (int argc, const char *argv[], int algorithm,
                     continue;
                }
                double time1 = CoinCpuTime();
-               ClpSimplex solution = solutionBase;
+               AnySimplex solution = solutionBase;
 #if 0
                solution.setOptimizationDirection(-1);
                {
@@ -1150,27 +1226,177 @@ int mainTest (int argc, const char *argv[], int algorithm,
                          clpMatrix->makeSpecialColumnCopy();
                     }
                }
+#if FACTORIZATION_STATISTICS
+	       double timesOne[3*3*3*3*3];
+	       memset(timesOne,0,sizeof(timesOne));
+	       int iterationsOne[3*3*3*3*3];
+	       memset(iterationsOne,0,sizeof(iterationsOne));
+	       AnySimplex saveModel(solution);
+	       double time2;
+#if 0
+               solution.initialSolve(solveOptions);
+               time2 = CoinCpuTime() - time1;
+               timeTaken += time2;
+               printf("%s took %g seconds using algorithm %s\n", fn.c_str(), time2, nameAlgorithm.c_str());
+#endif
+#define loA 1
+#define loB 0
+#define loC 0
+#define loD 1
+#define loE 1
+#define hiA 2
+#define hiB 1
+#define hiC 1
+#define hiD 2
+#define hiE 2
+               time2 = CoinCpuTime();
+	       for (int iA=loA;iA<hiA;iA++) {
+		 *externalA=useA[iA];
+		 for (int iB=loB;iB<hiB;iB++) {
+		   *externalB=useB[iB];
+		   for (int iC=loC;iC<hiC;iC++) {
+		     *externalC=useC[iC];
+		     for (int iD=loD;iD<hiD;iD++) {
+		       *externalD=useD[iD];
+		       for (int iE=loE;iE<hiE;iE++) {
+			 *externalE=useE[iE];
+			 solution=saveModel;
+			 solution.initialSolve(solveOptions);
+			 double time3=CoinCpuTime();
+			 printf("Finished %s Took %g seconds (%d iterations) - status %d\n", 
+				mpsName[m].c_str(),time3-time2,solution.numberIterations(), solution.problemStatus());
+			 iterationsOne[iA+3*iB+9*iC+27*iD+81*iE]=solution.numberIterations();
+			 timesOne[iA+3*iB+9*iC+27*iD+81*iE]=time3-time2;
+			 times[iA+3*iB+9*iC+27*iD+81*iE]+=time3-time2;
+			 time2=time3;
+		       }
+		     }
+		   }
+		 }
+	       }
+	       double bestTime=1.0e100;
+	       int iBestTime=-1;
+	       double bestTimePer=1.0e100;
+	       int iBestTimePer=-1;
+	       int bestIterations=1000000;
+	       int iBestIterations=-1;
+	       printf("TTimes ");
+	       for (int i=0;i<3*3*3*3*3;i++) {
+		 // skip if not done
+		 if (!iterationsOne[i])
+		   continue;
+		 double average=timesOne[i]/static_cast<double>(iterationsOne[i]);
+		 if (timesOne[i]<bestTime) {
+		   bestTime=timesOne[i];
+		   iBestTime=i;
+		 }
+		 if (average<bestTimePer) {
+		   bestTimePer=average;
+		   iBestTimePer=i;
+		 }
+		 if (iterationsOne[i]<bestIterations) {
+		   bestIterations=iterationsOne[i];
+		   iBestIterations=i;
+		 }
+		 printf("%.2f ",timesOne[i]);
+	       }
+	       printf("\n");
+	       int iA,iB,iC,iD,iE;
+	       iA=iBestTime;
+	       iE=iA/81;
+	       iA-=81*iE;
+	       iD=iA/27;
+	       iA-=27*iD;
+	       iC=iA/9;
+	       iA-=9*iC;
+	       iB=iA/3;
+	       iA-=3*iB;
+	       printf("Best time %.2f %s=%g %s=%g %s=%g %s=%g %s=%g\n",bestTime,choiceA,useA[iA],
+		      choiceB,useB[iB],choiceC,useC[iC],choiceD,useD[iD],choiceE,useE[iE]);
+	       iA=iBestTimePer;
+	       iE=iA/81;
+	       iA-=81*iE;
+	       iD=iA/27;
+	       iA-=27*iD;
+	       iC=iA/9;
+	       iA-=9*iC;
+	       iB=iA/3;
+	       iA-=3*iB;
+	       printf("Best time per iteration %g %s=%g %s=%g %s=%g %s=%g %s=%g\n",bestTimePer,choiceA,useA[iA],
+		      choiceB,useB[iB],choiceC,useC[iC],choiceD,useD[iD],choiceE,useE[iE]);
+	       iA=iBestIterations;
+	       iE=iA/81;
+	       iA-=81*iE;
+	       iD=iA/27;
+	       iA-=27*iD;
+	       iC=iA/9;
+	       iA-=9*iC;
+	       iB=iA/3;
+	       iA-=3*iB;
+	       printf("Best iterations %d %s=%g %s=%g %s=%g %s=%g %s=%g\n",bestIterations,choiceA,useA[iA],
+		      choiceB,useB[iB],choiceC,useC[iC],choiceD,useD[iD],choiceE,useE[iE]);
+#else
                solution.initialSolve(solveOptions);
                double time2 = CoinCpuTime() - time1;
                timeTaken += time2;
                printf("%s took %g seconds using algorithm %s\n", fn.c_str(), time2, nameAlgorithm.c_str());
+#endif
                // Test objective solution value
                {
+		    if (!solution.isProvenOptimal()) {
+		      std::cerr <<"** NOT OPTIMAL ";
+		      numberFailures++;
+		    }
                     double soln = solution.objectiveValue();
                     CoinRelFltEq eq(objValueTol[m]);
                     std::cerr << soln << ",  " << objValue[m] << " diff " <<
                               soln - objValue[m] << std::endl;
-                    if(!eq(soln, objValue[m]))
+                    if(!eq(soln, objValue[m])) {
                          printf("** difference fails\n");
+			 numberFailures++;
+		    }
                }
           }
           printf("Total time %g seconds\n", timeTaken);
+#if FACTORIZATION_STATISTICS
+	  double bestTime=1.0e100;
+	  int iBestTime=-1;
+	  for (int i=0;i<3*3*3*3*3;i++) {
+	    if (times[i]&&times[i]<bestTime) {
+	      bestTime=times[i];
+	      iBestTime=i;
+	    }
+	  }
+	  for (int iA=0;iA<hiA;iA++) {
+	    for (int iB=0;iB<hiB;iB++) {
+	      for (int iC=0;iC<hiC;iC++) {
+		for (int iD=loD;iD<hiD;iD++) {
+		  for (int iE=loE;iE<hiE;iE++) {
+		    int k=iA+3*iB+9*iC+27*iD+81*iE;
+		    double thisTime=times[k];
+		    if (thisTime) {
+		      if (k==iBestTime)
+			printf("** ");
+		      printf("%s=%g %s=%g %s=%g %s=%g %s=%g - time %.2f\n",
+			     choiceA,useA[iA],
+			     choiceB,useB[iB],choiceC,useC[iC],
+			     choiceD,useD[iD],choiceE,useE[iE],thisTime);
+		    }
+		  }
+		}
+	      }
+	    }
+	  }
+	  //exit(0);
+#endif
      } else {
           testingMessage( "***Skipped Testing on netlib    ***\n" );
           testingMessage( "***use -netlib to test class***\n" );
      }
-
-     testingMessage( "All tests completed successfully\n" );
+     if (!numberFailures)
+       testingMessage( "All tests completed successfully\n" );
+     else
+       testingMessage( "Some tests failed\n" );
      return 0;
 }
 

@@ -3299,7 +3299,6 @@ ClpCholeskyBase::factorizePart2(int * rowsDropped)
      bool newClique = false;
      bool endClique = false;
      int lastRow = 0;
-     CoinBigIndex cliquePointer = 0;
      int nextRow2 = -1;
 
      for (iRow = 0; iRow < firstDense_ + 1; iRow++) {
@@ -3395,7 +3394,6 @@ ClpCholeskyBase::factorizePart2(int * rowsDropped)
           if (newClique) {
                // initialize new clique
                lastRow = iRow;
-               cliquePointer = choleskyStart_[iRow];
           }
           // for each column L[*,kRow] that affects L[*,iRow]
           CoinWorkDouble diagonalValue = diagonal_[iRow];

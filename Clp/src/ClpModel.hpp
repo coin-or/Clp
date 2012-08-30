@@ -355,7 +355,7 @@ public:
           return dblParam_[ClpPresolveTolerance];
      }
 #ifndef CLP_NO_STD
-     inline std::string problemName() const {
+     inline const std::string & problemName() const {
           return strParam_[ClpProbName];
      }
 #endif
@@ -1175,6 +1175,18 @@ protected:
              top bits may be used internally
        shift by 65336 is 3 all same, 1 all except col bounds
      */
+#define ROW_COLUMN_COUNTS_SAME 1
+#define MATRIX_SAME 2
+#define MATRIX_JUST_ROWS_ADDED 4
+#define MATRIX_JUST_COLUMNS_ADDED 8
+#define ROW_LOWER_SAME 16
+#define ROW_UPPER_SAME 32
+#define OBJECTIVE_SAME 64 
+#define COLUMN_LOWER_SAME 128
+#define COLUMN_UPPER_SAME 256
+#define BASIS_SAME 512
+#define ALL_SAME 65339
+#define ALL_SAME_EXCEPT_COLUMN_BOUNDS 65337
      unsigned int whatsChanged_;
      /// Status of problem
      int problemStatus_;

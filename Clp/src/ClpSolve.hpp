@@ -384,4 +384,42 @@ public:
      int oddState_;
      //@}
 };
+#if CLP_HAS_ABC
+#include "AbcCommon.hpp"
+/// For saving extra information to see if looping.
+class AbcSimplexProgress : public ClpSimplexProgress {
+
+public:
+
+
+     /**@name Constructors and destructor and copy */
+     //@{
+     /// Default constructor
+     AbcSimplexProgress (  );
+
+     /// Constructor from model
+     AbcSimplexProgress ( ClpSimplex * model );
+
+     /// Copy constructor.
+     AbcSimplexProgress(const AbcSimplexProgress &);
+
+     /// Assignment operator. This copies the data
+     AbcSimplexProgress & operator=(const AbcSimplexProgress & rhs);
+     /// Destructor
+     ~AbcSimplexProgress (  );
+
+     //@}
+
+     /**@name Check progress */
+     //@{
+     /** Returns -1 if okay, -n+1 (n number of times bad) if bad but action taken,
+         >=0 if give up and use as problem status
+     */
+     int looping (  );
+
+     //@}
+     /**@name Data  */
+     //@}
+};
+#endif
 #endif

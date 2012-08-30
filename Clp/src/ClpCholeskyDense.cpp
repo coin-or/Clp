@@ -13,6 +13,17 @@
 #include "ClpCholeskyDense.hpp"
 #include "ClpMessage.hpp"
 #include "ClpQuadraticObjective.hpp"
+#if CLP_HAS_ABC
+#include "CoinAbcCommon.hpp"
+#endif
+#if CLP_HAS_ABC<3
+#undef cilk_for 
+#undef cilk_spawn
+#undef cilk_sync
+#define cilk_for for 
+#define cilk_spawn
+#define cilk_sync
+#endif
 
 /*#############################################################################*/
 /* Constructors / Destructor / Assignment*/
@@ -694,9 +705,10 @@ ClpCholeskyCtriRec(ClpCholeskyDenseC * thisStruct, longDouble * aTri, int nThis,
      } else if (nThis < nLeft) {
           int nb = number_blocks((nLeft + 1) >> 1);
           int nLeft2 = number_rows(nb);
-          ClpCholeskyCtriRec(thisStruct, aTri, nThis, aUnder, diagonal, work, nLeft2, iBlock, jBlock, numberBlocks);
+          cilk_spawn ClpCholeskyCtriRec(thisStruct, aTri, nThis, aUnder, diagonal, work, nLeft2, iBlock, jBlock, numberBlocks);
           ClpCholeskyCtriRec(thisStruct, aTri, nThis, aUnder + number_entries(nb), diagonal, work, nLeft - nLeft2,
                              iBlock + nb, jBlock, numberBlocks);
+	  cilk_sync;
      } else {
           int nb = number_blocks((nThis + 1) >> 1);
           int nThis2 = number_rows(nb);
@@ -742,7 +754,7 @@ ClpCholeskyCrecTri(ClpCholeskyDenseC * thisStruct, longDouble * aUnder, int nTri
           int nTri2 = number_rows(nb);
           longDouble * aother;
           int i;
-          ClpCholeskyCrecTri(thisStruct, aUnder, nTri2, nDo, iBlock, jBlock, aTri, diagonal, work, numberBlocks);
+          cilk_spawn ClpCholeskyCrecTri(thisStruct, aUnder, nTri2, nDo, iBlock, jBlock, aTri, diagonal, work, numberBlocks);
           /* and rectangular update */
           i = ((numberBlocks - iBlock) * (numberBlocks - iBlock + 1) -
                (numberBlocks - iBlock - nb) * (numberBlocks - iBlock - nb + 1)) >> 1;
@@ -751,6 +763,7 @@ ClpCholeskyCrecTri(ClpCholeskyDenseC * thisStruct, longDouble * aUnder, int nTri
                              work, iBlock, jBlock, numberBlocks);
           ClpCholeskyCrecTri(thisStruct, aUnder + number_entries(nb), nTri - nTri2, nDo, iBlock + nb, jBlock,
                              aTri + number_entries(i), diagonal, work, numberBlocks);
+	  cilk_sync;
      }
 }
 /* Non leaf recursive rectangle rectangle update,
@@ -770,10 +783,11 @@ ClpCholeskyCrecRec(ClpCholeskyDenseC * thisStruct, longDouble * above, int nUnde
      } else if (nDo <= nUnderK && nUnder <= nUnderK) {
           int nb = number_blocks((nUnderK + 1) >> 1);
           int nUnder2 = number_rows(nb);
-          ClpCholeskyCrecRec(thisStruct, above, nUnder, nUnder2, nDo, aUnder, aOther, work,
+          cilk_spawn ClpCholeskyCrecRec(thisStruct, above, nUnder, nUnder2, nDo, aUnder, aOther, work,
                              iBlock, jBlock, numberBlocks);
           ClpCholeskyCrecRec(thisStruct, above, nUnder, nUnderK - nUnder2, nDo, aUnder + number_entries(nb),
                              aOther + number_entries(nb), work, iBlock, jBlock, numberBlocks);
+	  cilk_sync;
      } else if (nUnderK <= nDo && nUnder <= nDo) {
           int nb = number_blocks((nDo + 1) >> 1);
           int nDo2 = number_rows(nb);
@@ -790,12 +804,13 @@ ClpCholeskyCrecRec(ClpCholeskyDenseC * thisStruct, longDouble * above, int nUnde
           int nb = number_blocks((nUnder + 1) >> 1);
           int nUnder2 = number_rows(nb);
           int i;
-          ClpCholeskyCrecRec(thisStruct, above, nUnder2, nUnderK, nDo, aUnder, aOther, work,
+          cilk_spawn ClpCholeskyCrecRec(thisStruct, above, nUnder2, nUnderK, nDo, aUnder, aOther, work,
                              iBlock, jBlock, numberBlocks);
           i = ((numberBlocks - iBlock) * (numberBlocks - iBlock - 1) -
                (numberBlocks - iBlock - nb) * (numberBlocks - iBlock - nb - 1)) >> 1;
           ClpCholeskyCrecRec(thisStruct, above + number_entries(nb), nUnder - nUnder2, nUnderK, nDo, aUnder,
                              aOther + number_entries(i), work, iBlock + nb, jBlock, numberBlocks);
+	  cilk_sync;
      }
 }
 /* Leaf recursive factor*/

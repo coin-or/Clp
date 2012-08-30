@@ -129,12 +129,12 @@ Idiot::objval(int nrows, int ncols, double * rowsol , double * colsol,
 }
 IdiotResult
 Idiot::IdiSolve(
-     int nrows, int ncols, double * rowsol , double * colsol,
-     double * pi, double * djs, const double * origcost , double * rowlower,
-     double * rowupper, const double * lower,
-     const double * upper, const double * elemnt,
+     int nrows, int ncols, double * COIN_RESTRICT rowsol , double * COIN_RESTRICT colsol,
+     double * COIN_RESTRICT pi, double * COIN_RESTRICT djs, const double * COIN_RESTRICT origcost , double * COIN_RESTRICT rowlower,
+     double * COIN_RESTRICT rowupper, const double * COIN_RESTRICT lower,
+     const double * COIN_RESTRICT upper, const double * COIN_RESTRICT elemnt,
      const int * row, const CoinBigIndex * columnStart,
-     const int * length, double * lambda,
+     const int * length, double * COIN_RESTRICT lambda,
      int maxIts, double mu, double drop,
      double maxmin, double offset,
      int strategy, double djTol, double djExit, double djFlag,
@@ -149,13 +149,13 @@ Idiot::IdiSolve(
      int nChange;
      int extraBlock = 0;
      int * rowExtra = NULL;
-     double * solExtra = NULL;
-     double * elemExtra = NULL;
-     double * upperExtra = NULL;
-     double * costExtra = NULL;
-     double * useCostExtra = NULL;
-     double * saveExtra = NULL;
-     double * cost = NULL;
+     double * COIN_RESTRICT solExtra = NULL;
+     double * COIN_RESTRICT elemExtra = NULL;
+     double * COIN_RESTRICT upperExtra = NULL;
+     double * COIN_RESTRICT costExtra = NULL;
+     double * COIN_RESTRICT useCostExtra = NULL;
+     double * COIN_RESTRICT saveExtra = NULL;
+     double * COIN_RESTRICT cost = NULL;
      double saveValue = 1.0e30;
      double saveOffset = offset;
      double useOffset = offset;
@@ -166,15 +166,15 @@ Idiot::IdiSolve(
      int nsolve = NSOLVE + 1; /* allow for null vector */
 #endif
      int nflagged;
-     double * thetaX;
-     double * djX;
-     double * bX;
-     double * vX;
+     double * COIN_RESTRICT thetaX;
+     double * COIN_RESTRICT djX;
+     double * COIN_RESTRICT bX;
+     double * COIN_RESTRICT vX;
      double ** aX;
      double **aworkX;
      double ** allsum;
-     double * saveSol = 0;
-     const double * useCost = cost;
+     double * COIN_RESTRICT saveSol = 0;
+     const double * COIN_RESTRICT useCost = cost;
      double bestSol = 1.0e60;
      double weight = 0.5 / mu;
      char * statusSave = new char[2*ncols];
@@ -196,10 +196,25 @@ Idiot::IdiSolve(
      for (i = 0; i < DROP; i++) {
           obj[i] = 1.0e70;
      }
-     //#define TWO_GOES
-#ifdef TWO_GOES
-     double * pi2 = new double [nrows];
-     double * rowsol2 = new double [nrows];
+     //#define FOUR_GOES 2
+#ifdef FOUR_GOES
+     double * COIN_RESTRICT pi2 = new double [3*nrows];
+     double * COIN_RESTRICT rowsol2 = new double [3*nrows];
+     double * COIN_RESTRICT piX[4];
+     double * COIN_RESTRICT rowsolX[4];
+     int startsX[2][5];
+     int nChangeX[4];
+     double maxDjX[4];
+     double objvalueX[4];
+     int nflaggedX[4];
+     piX[0]=pi;
+     piX[1]=pi2;
+     piX[2]=pi2+nrows;
+     piX[3]=piX[2]+nrows;
+     rowsolX[0]=rowsol;
+     rowsolX[1]=rowsol2;
+     rowsolX[2]=rowsol2+nrows;
+     rowsolX[3]=rowsolX[2]+nrows;
 #endif
      allsum = new double * [nsolve];
      aX = new double * [nsolve];
@@ -338,14 +353,14 @@ Idiot::IdiSolve(
      stop[1] = 0;
      iter = 0;
      for (; iter < maxIts; iter++) {
-          double sum1 = 0.0, sum2 = 0.0, djtot;
+          double sum1 = 0.0, sum2 = 0.0;
           double lastObj = 1.0e70;
           int good = 0, doScale = 0;
           if (strategy & 16) {
                int ii = iter / EVERY + 1;
                ii = ii * EVERY;
                if (iter > ii - HISTORY * 2 && (iter & 1) == 0) {
-                    double * x = history[HISTORY-1];
+                    double * COIN_RESTRICT x = history[HISTORY-1];
                     for (i = HISTORY - 1; i > 0; i--) {
                          history[i] = history[i-1];
                     }
@@ -356,7 +371,7 @@ Idiot::IdiSolve(
           }
           if ((iter % SAVEHISTORY) == 0 || doFull) {
                if ((strategy & 16) == 0) {
-                    double * x = history[HISTORY-1];
+                    double * COIN_RESTRICT x = history[HISTORY-1];
                     for (i = HISTORY - 1; i > 0; i--) {
                          history[i] = history[i-1];
                     }
@@ -379,15 +394,31 @@ Idiot::IdiSolve(
                     stop[0] = ncols;
                     start[1] = 0;
                     stop[1] = kcol;
+#ifdef FOUR_GOES
+		    for (int itry=0;itry<2;itry++) {
+		      int chunk=(stop[itry]-start[itry]+FOUR_GOES-1)/FOUR_GOES;
+		      startsX[itry][0]=start[itry];
+		      for (int i=1;i<5;i++)
+			startsX[itry][i]=CoinMin(stop[itry],startsX[itry][i-1]+chunk);
+		    }
+#endif
                } else {
                     start[0] = kcol;
                     stop[0] = -1;
                     start[1] = ncols - 1;
                     stop[1] = kcol;
+#ifdef FOUR_GOES
+		    for (int itry=0;itry<2;itry++) {
+		      int chunk=(start[itry]-stop[itry]+FOUR_GOES-1)/FOUR_GOES;
+		      startsX[itry][0]=start[itry];
+		      for (int i=1;i<5;i++)
+			startsX[itry][i]=CoinMax(stop[itry],startsX[itry][i-1]-chunk);
+		    }
+#endif
                }
                int itry = 0;
                /*if ((strategy&16)==0) {
-               	double * x=history[HISTORY-1];
+               	double * COIN_RESTRICT x=history[HISTORY-1];
                	for (i=HISTORY-1;i>0;i--) {
                	history[i]=history[i-1];
                	}
@@ -406,14 +437,13 @@ Idiot::IdiSolve(
                          sum2 = 0.0;
                          objvalue = 0.0;
                          memset(pi, 0, nrows * sizeof(double));
-                         djtot = 0.0;
                          {
-                              double * theta = thetaX;
-                              double * dj = djX;
-                              double * b = bX;
+                              double * COIN_RESTRICT theta = thetaX;
+                              double * COIN_RESTRICT dj = djX;
+                              double * COIN_RESTRICT b = bX;
                               double ** a = aX;
                               double ** awork = aworkX;
-                              double * v = vX;
+                              double * COIN_RESTRICT v = vX;
                               double c;
 #ifdef FIT
                               int ntot = 0, nsign = 0, ngood = 0, mgood[4] = {0, 0, 0, 0};
@@ -882,30 +912,50 @@ Idiot::IdiSolve(
           doFull = 0;
           maxDj = 0.0;
           // go through forwards or backwards and starting at odd places
-          int itry;
-#ifdef TWO_GOES
-          memcpy(pi2, pi, nrows * sizeof(double));
-          memcpy(rowsol2, rowsol, nrows * sizeof(double));
+#ifdef FOUR_GOES
+	  for (int i=1;i<FOUR_GOES;i++) {
+	    cilk_spawn memcpy(piX[i], pi, nrows * sizeof(double));
+	    cilk_spawn memcpy(rowsolX[i], rowsol, nrows * sizeof(double));
+	  }
+	  for (int i=0;i<FOUR_GOES;i++) {
+	    nChangeX[i]=0;
+	    maxDjX[i]=0.0;
+	    objvalueX[i]=0.0;
+	    nflaggedX[i]=0;
+	  }
+	  cilk_sync;
 #endif
-          for (itry = 0; itry < 2; itry++) {
-               int icol = start[itry];
-               int istop = stop[itry];
-#ifdef TWO_GOES
-               for (int iPar = 0; iPar < 2; iPar++) {
-                    double * temp = pi;
-                    pi = pi2;
-                    pi2 = temp;
-                    temp = rowsol;
-                    rowsol = rowsol2;
-                    rowsol2 = temp;
+	  //printf("PASS\n");
+#ifdef FOUR_GOES
+               cilk_for (int iPar = 0; iPar < FOUR_GOES; iPar++) {
+                    double * COIN_RESTRICT pi=piX[iPar];
+                    double * COIN_RESTRICT rowsol = rowsolX[iPar];
+          for (int itry = 0; itry < 2; itry++) {
+		    int istop;
+		    int istart;
+#if 0
+		    int chunk = (start[itry]+stop[itry]+FOUR_GOES-1)/FOUR_GOES;
                     if (iPar == 0) {
-                         istop = (icol + istop) >> 1;
+		      istart=start[itry];
+		      istop=(start[itry]+stop[itry])>>1;
                     } else {
-                         icol = istop;
-                         istop = stop[itry];
+		      istart=(start[itry]+stop[itry])>>1;
+		      istop = stop[itry];
                     }
 #endif
-                    for (; icol != istop; icol += direction) {
+#if 0
+		    printf("istart %d istop %d direction %d array %d %d new %d %d\n",
+		    	   istart,istop,direction,start[itry],stop[itry],
+		    	   startsX[itry][iPar],startsX[itry][iPar+1]);
+#endif
+		    istart=startsX[itry][iPar];
+		    istop=startsX[itry][iPar+1];
+#else
+          for (int itry = 0; itry < 2; itry++) {
+               int istart = start[itry];
+               int istop = stop[itry];
+#endif
+                    for (int icol=istart; icol != istop; icol += direction) {
                          if (!statusWork[icol]) {
                               CoinBigIndex j;
                               double value = colsol[icol];
@@ -934,9 +984,13 @@ Idiot::IdiSolve(
                               djval = fabs(djval);
                               if (djval > djTol) {
                                    if (djval2 < -1.0e-4) {
-                                        double valuep, thetap;
+#ifndef FOUR_GOES
                                         nChange++;
                                         if (djval > maxDj) maxDj = djval;
+#else
+                                        nChangeX[iPar]++;
+                                        if (djval > maxDjX[iPar]) maxDjX[iPar] = djval;
+#endif
                                         /*if (djval>3.55e6) {
                                         		printf("big\n");
                                         		}*/
@@ -966,7 +1020,9 @@ Idiot::IdiSolve(
                                         c *= weight;
                                         /* solve */
                                         theta = -b / a;
+#ifndef FOUR_GOES
                                         if ((strategy & 4) != 0) {
+					  double valuep, thetap;
                                              value2 = a * theta * theta + 2.0 * b * theta;
                                              thetap = 2.0 * theta;
                                              valuep = a * thetap * thetap + 2.0 * b * thetap;
@@ -977,6 +1033,7 @@ Idiot::IdiSolve(
                                                   kbad++;
                                              }
                                         }
+#endif
                                         if (theta > 0.0) {
                                              if (theta < upper[icol] - colsol[icol]) {
                                                   value2 = theta;
@@ -991,7 +1048,11 @@ Idiot::IdiSolve(
                                              }
                                         }
                                         colsol[icol] += value2;
+#ifndef FOUR_GOES
                                         objvalue += cost[icol] * value2;
+#else
+                                        objvalueX[iPar] += cost[icol] * value2;
+#endif
                                         if (elemnt) {
                                              for (j = columnStart[icol]; j < columnStart[icol] + length[icol]; j++) {
                                                   int irow = row[j];
@@ -1013,24 +1074,42 @@ Idiot::IdiSolve(
                                         /* dj but at bound */
                                         if (djval > djFlag) {
                                              statusWork[icol] = 1;
+#ifndef FOUR_GOES
                                              nflagged++;
+#else
+                                             nflaggedX[iPar]++;
+#endif
                                         }
                                    }
                               }
                          }
                     }
-#ifdef TWO_GOES
+#ifdef FOUR_GOES
                }
 #endif
           }
-#ifdef TWO_GOES
-          for (i = 0; i < nrows; i++) {
-               rowsol[i] = 0.5 * (rowsol[i] + rowsol2[i]);
-               pi[i] = 0.5 * (pi[i] + pi2[i]);
+#ifdef FOUR_GOES
+	  for (int i=0;i<FOUR_GOES;i++) {
+	    nChange += nChangeX[i];
+	    maxDj = CoinMax(maxDj,maxDjX[i]);
+	    objvalue += objvalueX[i];
+	    nflagged += nflaggedX[i];
+	  }
+          cilk_for (int i = 0; i < nrows; i++) {
+#if FOUR_GOES==2
+	    rowsol[i] = 0.5 * (rowsolX[0][i] + rowsolX[1][i]);
+	    pi[i] = 0.5 * (piX[0][i] + piX[1][i]);
+#elif FOUR_GOES==3
+	    pi[i] = 0.33333333333333 * (piX[0][i] + piX[1][i]+piX[2][i]);
+	    rowsol[i] = 0.3333333333333 * (rowsolX[0][i] + rowsolX[1][i]+rowsolX[2][i]);
+#else
+	    pi[i] = 0.25 * (piX[0][i] + piX[1][i]+piX[2][i]+piX[3][i]);
+	    rowsol[i] = 0.25 * (rowsolX[0][i] + rowsolX[1][i]+rowsolX[2][i]+rowsolX[3][i]);
+#endif
           }
 #endif
           if (extraBlock) {
-               for (i = 0; i < extraBlock; i++) {
+               for (int i = 0; i < extraBlock; i++) {
                     double value = solExtra[i];
                     double djval = costExtra[i];
                     double djval2, value2;
@@ -1074,13 +1153,13 @@ Idiot::IdiSolve(
                }
           }
           if ((iter % 10) == 2) {
-               for (i = DJTEST - 1; i > 0; i--) {
+               for (int i = DJTEST - 1; i > 0; i--) {
                     djSave[i] = djSave[i-1];
                }
                djSave[0] = maxDj;
                largestDj = CoinMax(largestDj, maxDj);
                smallestDj = CoinMin(smallestDj, maxDj);
-               for (i = DJTEST - 1; i > 0; i--) {
+               for (int i = DJTEST - 1; i > 0; i--) {
                     maxDj += djSave[i];
                }
                maxDj = maxDj / static_cast<double> (DJTEST);
@@ -1134,7 +1213,7 @@ RETURN:
      delete [] aworkX;
      delete [] allsum;
      delete [] cost;
-#ifdef TWO_GOES
+#ifdef FOUR_GOES
      delete [] pi2 ;
      delete [] rowsol2 ;
 #endif

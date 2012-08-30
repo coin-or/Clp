@@ -117,7 +117,35 @@ am__libClp_la_SOURCES_DIST = ClpConfig.h ClpCholeskyBase.cpp \
 	ClpSimplexDual.hpp ClpSimplexNonlinear.cpp \
 	ClpSimplexNonlinear.hpp ClpSimplexOther.cpp \
 	ClpSimplexOther.hpp ClpSimplexPrimal.cpp ClpSimplexPrimal.hpp \
-	ClpSolve.cpp ClpSolve.hpp Idiot.cpp Idiot.hpp IdiSolve.cpp \
+	ClpSolve.cpp ClpSolve.hpp AbcWarmStart.cpp AbcWarmStart.hpp \
+	CoinAbcBaseFactorization.hpp CoinAbcCommonFactorization.hpp \
+	CoinAbcCommon.hpp AbcDualRowDantzig.hpp AbcDualRowPivot.hpp \
+	AbcDualRowSteepest.hpp CoinAbcFactorization.hpp \
+	CoinAbcHelperFunctions.hpp AbcMatrix.hpp AbcCommon.hpp \
+	AbcSimplexDual.hpp AbcSimplexPrimal.hpp AbcSimplex.hpp \
+	CoinAbcBaseFactorization1.cpp CoinAbcBaseFactorization2.cpp \
+	CoinAbcBaseFactorization3.cpp CoinAbcBaseFactorization4.cpp \
+	CoinAbcBaseFactorization5.cpp CoinAbcDenseFactorization.cpp \
+	CoinAbcDenseFactorization.hpp AbcDualRowDantzig.cpp \
+	AbcDualRowPivot.cpp AbcDualRowSteepest.cpp \
+	CoinAbcFactorization1.cpp CoinAbcFactorization2.cpp \
+	CoinAbcFactorization3.cpp CoinAbcFactorization4.cpp \
+	CoinAbcFactorization5.cpp CoinAbcHelperFunctions.cpp \
+	AbcMatrix.cpp AbcSimplex.cpp AbcSimplexDual.cpp \
+	AbcSimplexPrimal.cpp AbcSimplexParallel.cpp \
+	AbcPrimalColumnDantzig.cpp AbcPrimalColumnDantzig.hpp \
+	AbcPrimalColumnPivot.cpp AbcPrimalColumnPivot.hpp \
+	AbcPrimalColumnSteepest.cpp AbcPrimalColumnSteepest.hpp \
+	CoinAbcSmallFactorization1.cpp CoinAbcSmallFactorization2.cpp \
+	CoinAbcSmallFactorization3.cpp CoinAbcSmallFactorization4.cpp \
+	CoinAbcSmallFactorization5.cpp \
+	CoinAbcOrderedFactorization1.cpp \
+	CoinAbcOrderedFactorization2.cpp \
+	CoinAbcOrderedFactorization3.cpp \
+	CoinAbcOrderedFactorization4.cpp \
+	CoinAbcOrderedFactorization5.cpp AbcSimplexFactorization.cpp \
+	AbcSimplexFactorization.hpp AbcNonLinearCost.cpp \
+	AbcNonLinearCost.hpp Idiot.cpp Idiot.hpp IdiSolve.cpp \
 	ClpCholeskyUfl.cpp ClpCholeskyUfl.hpp ClpCholeskyMumps.cpp \
 	ClpCholeskyMumps.hpp ClpCholeskyWssmp.cpp ClpCholeskyWssmp.hpp \
 	ClpCholeskyWssmpKKT.cpp ClpCholeskyWssmpKKT.hpp
@@ -144,7 +172,26 @@ am_libClp_la_OBJECTS = ClpCholeskyBase.lo ClpCholeskyDense.lo \
 	ClpPrimalColumnPivot.lo ClpPrimalColumnSteepest.lo \
 	ClpQuadraticObjective.lo ClpSimplex.lo ClpSimplexDual.lo \
 	ClpSimplexNonlinear.lo ClpSimplexOther.lo ClpSimplexPrimal.lo \
-	ClpSolve.lo Idiot.lo IdiSolve.lo $(am__objects_1) \
+	ClpSolve.lo AbcWarmStart.lo CoinAbcBaseFactorization1.lo \
+	CoinAbcBaseFactorization2.lo CoinAbcBaseFactorization3.lo \
+	CoinAbcBaseFactorization4.lo CoinAbcBaseFactorization5.lo \
+	CoinAbcDenseFactorization.lo AbcDualRowDantzig.lo \
+	AbcDualRowPivot.lo AbcDualRowSteepest.lo \
+	CoinAbcFactorization1.lo CoinAbcFactorization2.lo \
+	CoinAbcFactorization3.lo CoinAbcFactorization4.lo \
+	CoinAbcFactorization5.lo CoinAbcHelperFunctions.lo \
+	AbcMatrix.lo AbcSimplex.lo AbcSimplexDual.lo \
+	AbcSimplexPrimal.lo AbcSimplexParallel.lo \
+	AbcPrimalColumnDantzig.lo AbcPrimalColumnPivot.lo \
+	AbcPrimalColumnSteepest.lo CoinAbcSmallFactorization1.lo \
+	CoinAbcSmallFactorization2.lo CoinAbcSmallFactorization3.lo \
+	CoinAbcSmallFactorization4.lo CoinAbcSmallFactorization5.lo \
+	CoinAbcOrderedFactorization1.lo \
+	CoinAbcOrderedFactorization2.lo \
+	CoinAbcOrderedFactorization3.lo \
+	CoinAbcOrderedFactorization4.lo \
+	CoinAbcOrderedFactorization5.lo AbcSimplexFactorization.lo \
+	AbcNonLinearCost.lo Idiot.lo IdiSolve.lo $(am__objects_1) \
 	$(am__objects_2) $(am__objects_3) $(am__objects_4) \
 	$(am__objects_5)
 libClp_la_OBJECTS = $(am_libClp_la_OBJECTS)
@@ -196,7 +243,8 @@ am__includecoin_HEADERS_DIST = Clp_C_Interface.h ClpCholeskyBase.hpp \
 	ClpPrimalColumnPivot.hpp ClpPrimalColumnSteepest.hpp \
 	ClpQuadraticObjective.hpp ClpSimplex.hpp \
 	ClpSimplexNonlinear.hpp ClpSimplexOther.hpp ClpSimplexDual.hpp \
-	ClpSimplexPrimal.hpp ClpSolve.hpp CbcOrClpParam.hpp Idiot.hpp \
+	ClpSimplexPrimal.hpp ClpSolve.hpp CbcOrClpParam.hpp \
+	AbcSimplex.hpp CoinAbcCommon.hpp AbcCommon.hpp Idiot.hpp \
 	ClpCholeskyUfl.hpp ClpCholeskyMumps.hpp ClpCholeskyWssmp.hpp \
 	ClpCholeskyWssmpKKT.hpp CbcOrClpParam.cpp
 includecoinHEADERS_INSTALL = $(INSTALL_HEADER)
@@ -500,7 +548,35 @@ libClp_la_SOURCES = ClpConfig.h ClpCholeskyBase.cpp \
 	ClpSimplexDual.hpp ClpSimplexNonlinear.cpp \
 	ClpSimplexNonlinear.hpp ClpSimplexOther.cpp \
 	ClpSimplexOther.hpp ClpSimplexPrimal.cpp ClpSimplexPrimal.hpp \
-	ClpSolve.cpp ClpSolve.hpp Idiot.cpp Idiot.hpp IdiSolve.cpp \
+	ClpSolve.cpp ClpSolve.hpp AbcWarmStart.cpp AbcWarmStart.hpp \
+	CoinAbcBaseFactorization.hpp CoinAbcCommonFactorization.hpp \
+	CoinAbcCommon.hpp AbcDualRowDantzig.hpp AbcDualRowPivot.hpp \
+	AbcDualRowSteepest.hpp CoinAbcFactorization.hpp \
+	CoinAbcHelperFunctions.hpp AbcMatrix.hpp AbcCommon.hpp \
+	AbcSimplexDual.hpp AbcSimplexPrimal.hpp AbcSimplex.hpp \
+	CoinAbcBaseFactorization1.cpp CoinAbcBaseFactorization2.cpp \
+	CoinAbcBaseFactorization3.cpp CoinAbcBaseFactorization4.cpp \
+	CoinAbcBaseFactorization5.cpp CoinAbcDenseFactorization.cpp \
+	CoinAbcDenseFactorization.hpp AbcDualRowDantzig.cpp \
+	AbcDualRowPivot.cpp AbcDualRowSteepest.cpp \
+	CoinAbcFactorization1.cpp CoinAbcFactorization2.cpp \
+	CoinAbcFactorization3.cpp CoinAbcFactorization4.cpp \
+	CoinAbcFactorization5.cpp CoinAbcHelperFunctions.cpp \
+	AbcMatrix.cpp AbcSimplex.cpp AbcSimplexDual.cpp \
+	AbcSimplexPrimal.cpp AbcSimplexParallel.cpp \
+	AbcPrimalColumnDantzig.cpp AbcPrimalColumnDantzig.hpp \
+	AbcPrimalColumnPivot.cpp AbcPrimalColumnPivot.hpp \
+	AbcPrimalColumnSteepest.cpp AbcPrimalColumnSteepest.hpp \
+	CoinAbcSmallFactorization1.cpp CoinAbcSmallFactorization2.cpp \
+	CoinAbcSmallFactorization3.cpp CoinAbcSmallFactorization4.cpp \
+	CoinAbcSmallFactorization5.cpp \
+	CoinAbcOrderedFactorization1.cpp \
+	CoinAbcOrderedFactorization2.cpp \
+	CoinAbcOrderedFactorization3.cpp \
+	CoinAbcOrderedFactorization4.cpp \
+	CoinAbcOrderedFactorization5.cpp AbcSimplexFactorization.cpp \
+	AbcSimplexFactorization.hpp AbcNonLinearCost.cpp \
+	AbcNonLinearCost.hpp Idiot.cpp Idiot.hpp IdiSolve.cpp \
 	$(am__append_1) $(am__append_2) $(am__append_3) \
 	$(am__append_4) $(am__append_5)
 
@@ -557,7 +633,8 @@ includecoin_HEADERS = Clp_C_Interface.h ClpCholeskyBase.hpp \
 	ClpPrimalColumnPivot.hpp ClpPrimalColumnSteepest.hpp \
 	ClpQuadraticObjective.hpp ClpSimplex.hpp \
 	ClpSimplexNonlinear.hpp ClpSimplexOther.hpp ClpSimplexDual.hpp \
-	ClpSimplexPrimal.hpp ClpSolve.hpp CbcOrClpParam.hpp Idiot.hpp \
+	ClpSimplexPrimal.hpp ClpSolve.hpp CbcOrClpParam.hpp \
+	AbcSimplex.hpp CoinAbcCommon.hpp AbcCommon.hpp Idiot.hpp \
 	$(am__append_8) $(am__append_9) $(am__append_10) \
 	$(am__append_11) $(am__append_12) CbcOrClpParam.cpp
 all: config.h config_clp.h
@@ -688,6 +765,20 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/AbcDualRowDantzig.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/AbcDualRowPivot.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/AbcDualRowSteepest.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/AbcMatrix.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/AbcNonLinearCost.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/AbcPrimalColumnDantzig.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/AbcPrimalColumnPivot.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/AbcPrimalColumnSteepest.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/AbcSimplex.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/AbcSimplexDual.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/AbcSimplexFactorization.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/AbcSimplexParallel.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/AbcSimplexPrimal.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/AbcWarmStart.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CbcOrClpParam.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpCholeskyBase.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpCholeskyDense.Plo@am__quote@
@@ -738,6 +829,28 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpSimplexPrimal.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpSolve.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Clp_C_Interface.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CoinAbcBaseFactorization1.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CoinAbcBaseFactorization2.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CoinAbcBaseFactorization3.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CoinAbcBaseFactorization4.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CoinAbcBaseFactorization5.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CoinAbcDenseFactorization.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CoinAbcFactorization1.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CoinAbcFactorization2.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CoinAbcFactorization3.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CoinAbcFactorization4.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CoinAbcFactorization5.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CoinAbcHelperFunctions.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CoinAbcOrderedFactorization1.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CoinAbcOrderedFactorization2.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CoinAbcOrderedFactorization3.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CoinAbcOrderedFactorization4.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CoinAbcOrderedFactorization5.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CoinAbcSmallFactorization1.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CoinAbcSmallFactorization2.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CoinAbcSmallFactorization3.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CoinAbcSmallFactorization4.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CoinAbcSmallFactorization5.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/IdiSolve.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Idiot.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/MyEventHandler.Po@am__quote@

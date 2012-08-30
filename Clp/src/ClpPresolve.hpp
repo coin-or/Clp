@@ -167,6 +167,14 @@ public:
           if (doGubrow) presolveActions_  &= ~1024;
           else presolveActions_ |= 1024;
      }
+     /// Whether we want to do twoxtwo part of presolve
+     inline bool doTwoxTwo() const {
+          return (presolveActions_ & 2048) == 0;
+     }
+     inline void setDoTwoxtwo(bool doTwoxTwo) {
+          if (doTwoxTwo) presolveActions_  &= ~2048;
+          else presolveActions_ |= 2048;
+     }
      /// Set whole group
      inline int presolveActions() const {
           return presolveActions_ & 0xffff;

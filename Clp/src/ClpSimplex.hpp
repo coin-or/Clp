@@ -27,7 +27,12 @@ class OsiClpSolverInterface;
 class CoinWarmStartBasis;
 class ClpDisasterHandler;
 class ClpConstraint;
-
+#if CLP_HAS_ABC
+#include "AbcCommon.hpp"
+class AbcTolerancesEtc;
+class AbcSimplex;
+#include "CoinAbcCommon.hpp"
+#endif
 /** This solves LPs using the simplex method
 
     It inherits from ClpModel and all its arrays are created at
@@ -115,6 +120,20 @@ public:
      /** This copies back stuff from miniModel and then deletes miniModel.
          Only to be used with mini constructor */
      void originalModel(ClpSimplex * miniModel);
+  inline int abcState() const
+  { return abcState_;}
+  inline void setAbcState(int state)
+  { abcState_=state;}
+#ifdef ABC_INHERIT
+  inline AbcSimplex * abcSimplex() const
+  { return abcSimplex_;}
+  inline void setAbcSimplex(AbcSimplex * simplex)
+  { abcSimplex_=simplex;}
+  /// Returns 0 if dual can be skipped
+  int doAbcDual();
+  /// Returns 0 if primal can be skipped
+  int doAbcPrimal(int ifValuesPass);
+#endif
      /** Array persistence flag
          If 0 then as now (delete/new)
          1 then only do arrays if bigger needed
@@ -212,6 +231,12 @@ public:
      */
      int loadNonLinear(void * info, int & numberConstraints,
                        ClpConstraint ** & constraints);
+#ifdef ABC_INHERIT
+  /// Loads tolerances etc
+  void loadTolerancesEtc(const AbcTolerancesEtc & data);
+  /// Unloads tolerances etc
+  void unloadTolerancesEtc(AbcTolerancesEtc & data);
+#endif
      //@}
 
      /**@name Functions most useful to user */
@@ -275,6 +300,13 @@ public:
      int reducedGradient(int phase = 0);
      /// Solve using structure of model and maybe in parallel
      int solve(CoinStructuredModel * model);
+#ifdef ABC_INHERIT
+  /** solvetype 0 for dual, 1 for primal
+      startup 1 for values pass
+      interrupt whether to pass across interrupt handler
+  */
+  void dealWithAbc(int solveType,int startUp,bool interrupt=false);
+#endif
      /** This loads a model from a CoinStructuredModel object - returns number of errors.
          If originalOrder then keep to order stored in blocks,
          otherwise first column/rows correspond to first block - etc.
@@ -1146,6 +1178,10 @@ public:
 	 2048 bit - perturb in complete fathoming
 	 4096 bit - try more for complete fathoming
 	 8192 bit - don't even think of using primal if user asks for dual (and vv)
+	 16384 bit - in initialSolve so be more flexible
+	 debug
+	 32768 bit - do dual in netlibd
+	 65536 (*3) initial stateDualColumn
      */
      inline int moreSpecialOptions() const {
           return moreSpecialOptions_;
@@ -1165,6 +1201,7 @@ public:
 	 2048 bit - perturb in complete fathoming
 	 4096 bit - try more for complete fathoming
 	 8192 bit - don't even think of using primal if user asks for dual (and vv)
+	 16384 bit - in initialSolve so be more flexible
      */
      inline void setMoreSpecialOptions(int value) {
           moreSpecialOptions_ = value;
@@ -1598,6 +1635,15 @@ protected:
      ClpSimplex * baseModel_;
      /// For dealing with all issues of cycling etc
      ClpSimplexProgress progress_;
+#ifdef ABC_INHERIT
+  AbcSimplex * abcSimplex_;
+#define CLP_ABC_WANTED 1
+#define CLP_ABC_WANTED_PARALLEL 2
+#define CLP_ABC_FULL_DONE 8
+#define CLP_ABC_BEEN_FEASIBLE 65536
+  // bits 256,512,1024 for crash
+#endif
+  int abcState_;
 public:
      /// Spare int array for passing information [0]!=0 switches on
      mutable int spareIntArray_[4];

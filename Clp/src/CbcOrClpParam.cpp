@@ -42,6 +42,9 @@ static char coin_prompt[] = "Clp:";
 #define CBC_THREAD
 #endif
 #endif
+#if CLP_HAS_ABC
+#include "AbcCommon.hpp"
+#endif
 static bool doPrinting = true;
 std::string afterEquals = "";
 static char printArray[200];
@@ -1311,6 +1314,26 @@ establishParams (int &numberParameters, CbcOrClpParam *const parameters)
      parameters[numberParameters++] =
           CbcOrClpParam("-", "From stdin",
                         CLP_PARAM_ACTION_STDIN, 3, 0);
+#ifdef ABC_INHERIT
+      parameters[numberParameters++] =
+          CbcOrClpParam("abc", "Whether to visit Aboca",
+                        "off", CLP_PARAM_STR_ABCWANTED, 7, 0);
+     parameters[numberParameters-1].append("one");
+     parameters[numberParameters-1].append("two");
+     parameters[numberParameters-1].append("three");
+     parameters[numberParameters-1].append("four");
+     parameters[numberParameters-1].append("five");
+     parameters[numberParameters-1].append("six");
+     parameters[numberParameters-1].append("seven");
+     parameters[numberParameters-1].append("eight");
+     parameters[numberParameters-1].append("on");
+     parameters[numberParameters-1].append("decide");
+     parameters[numberParameters-1].setLonghelp
+     (
+          "Decide whether to use A Basic Optimization Code (Accelerated?) \
+and whether to try going parallel!"
+     );
+#endif
      parameters[numberParameters++] =
           CbcOrClpParam("allC!ommands", "Whether to print less used commands",
                         "no", CLP_PARAM_STR_ALLCOMMANDS);
@@ -1557,8 +1580,11 @@ Cbc/examples/driver4.cpp."
      parameters[numberParameters-1].append("on");
      parameters[numberParameters-1].append("so!low_halim");
      parameters[numberParameters-1].append("lots");
-     //  parameters[numberParameters-1].append("4");
-     //  parameters[numberParameters-1].append("5");
+#ifdef ABC_INHERIT
+     parameters[numberParameters-1].append("dual");
+     parameters[numberParameters-1].append("dw");
+     parameters[numberParameters-1].append("idiot");
+#endif
      parameters[numberParameters-1].setLonghelp
      (
           "If crash is set on and there is an all slack basis then Clp will flip or put structural\
@@ -1984,8 +2010,15 @@ of dual information to use.  After that it goes back to powers of 2 so -\n\
      parameters[numberParameters-1].append("osl");
      parameters[numberParameters-1].setLonghelp
      (
+#ifndef ABC_INHERIT
           "The default is to use the normal CoinFactorization, but \
 other choices are a dense one, osl's or one designed for small problems."
+#else
+          "Normally the default is to use the normal CoinFactorization, but \
+other choices are a dense one, osl's or one designed for small problems. \
+However if at Aboca then the default is CoinAbcFactorization and other choices are \
+a dense one, one designed for small problems or if enabled a long factorization."
+#endif
      );
      parameters[numberParameters++] =
           CbcOrClpParam("fakeB!ound", "All bounds <= this value - DEBUG",
@@ -2820,6 +2853,7 @@ costs this much to be infeasible",
      parameters[numberParameters-1].append("bound!ranging");
      parameters[numberParameters-1].append("rhs!ranging");
      parameters[numberParameters-1].append("objective!ranging");
+     parameters[numberParameters-1].append("stats");
      parameters[numberParameters-1].setLonghelp
      (
           "This changes the amount and format of printing a solution:\nnormal - nonzero column variables \n\
@@ -3170,10 +3204,10 @@ this does branch and cut."
  value for most uses, while 2 and 3 give more information.  This parameter is only used inside MIP - for Clp use 'log'"
      );
 #else
-     // allow solve as synonym for dual
+     // allow solve as synonym for possible dual
      parameters[numberParameters++] =
-          CbcOrClpParam("solv!e", "Solve problem using dual simplex",
-                        CBC_PARAM_ACTION_BAB);
+       CbcOrClpParam("solv!e", "Solve problem using dual simplex (probably)",
+                        CLP_PARAM_ACTION_EITHERSIMPLEX);
      parameters[numberParameters-1].setLonghelp
      (
           "Just so can use solve for clp as well as in cbc"
@@ -3321,7 +3355,7 @@ trust the pseudo costs and do not do any more strong branching."
      (
           "For making equality cliques this is minimumsize.  Also for adding \
 integer slacks.  May be used for more later \
-If <1000 that is what it does.  If <1000000 - numberPasses is (value/1000)-1 and tune is tune %1000. \
+If <10000 that is what it does.  If <1000000 - numberPasses is (value/10000)-1 and tune is tune %10000. \
 If >= 1000000! - numberPasses is (value/1000000)-1 and tune is tune %1000000.  In this case if tune is now still >=10000 \
 numberPassesPerInnerLoop is changed from 10 to (tune-10000)-1 and tune becomes tune % 10000!!!!! - happy? - \
 so to keep normal limit on cliques of 5, do 3 major passes (include presolves) but only doing one tightening pass per major pass - \

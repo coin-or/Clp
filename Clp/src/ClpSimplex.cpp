@@ -31,6 +31,9 @@
 #include "CoinModel.hpp"
 #include "CoinLpIO.hpp"
 #include <cfloat>
+#if CLP_HAS_ABC
+#include "CoinAbcCommon.hpp"
+#endif
 
 #include <string>
 #include <stdio.h>
@@ -121,6 +124,10 @@ ClpSimplex::ClpSimplex (bool emptyMessages) :
      maximumPerturbationSize_(0),
      perturbationArray_(NULL),
      baseModel_(NULL)
+#ifdef ABC_INHERIT
+     ,abcSimplex_(NULL),
+     abcState_(0)
+#endif
 {
      int i;
      for (i = 0; i < 6; i++) {
@@ -232,6 +239,10 @@ ClpSimplex::ClpSimplex ( const ClpModel * rhs,
      maximumPerturbationSize_(0),
      perturbationArray_(NULL),
      baseModel_(NULL)
+#ifdef ABC_INHERIT
+     ,abcSimplex_(NULL),
+     abcState_(0)
+#endif
 {
      int i;
      for (i = 0; i < 6; i++) {
@@ -380,6 +391,10 @@ ClpSimplex::ClpSimplex ( const ClpSimplex * rhs,
      maximumPerturbationSize_(0),
      perturbationArray_(NULL),
      baseModel_(NULL)
+#ifdef ABC_INHERIT
+     ,abcSimplex_(NULL),
+     abcState_(rhs->abcState_)
+#endif
 {
      int i;
      for (i = 0; i < 6; i++) {
@@ -1741,6 +1756,59 @@ int ClpSimplex::internalFactorize ( int solveType)
           k++;
      }
 #    endif
+#if 0 //ndef NDEBUG
+  // Make sure everything is clean
+  double sumOutside=0.0;
+  int numberOutside=0;
+  //double sumOutsideLarge=0.0;
+  int numberOutsideLarge=0;
+  double sumInside=0.0;
+  int numberInside=0;
+  //double sumInsideLarge=0.0;
+  int numberInsideLarge=0;
+  int numberTotal=numberRows_+numberColumns_;
+  for (int iSequence = 0; iSequence < numberTotal; iSequence++) {
+    if(getStatus(iSequence) == isFixed) {
+      // double check fixed
+      assert (upper_[iSequence] == lower_[iSequence]);
+      assert (fabs(solution_[iSequence]-lower_[iSequence])<primalTolerance_);
+    } else if (getStatus(iSequence) == isFree) {
+      assert (upper_[iSequence] == COIN_DBL_MAX && lower_[iSequence]==-COIN_DBL_MAX);
+    } else if (getStatus(iSequence) == atLowerBound) {
+      assert (fabs(solution_[iSequence]-lower_[iSequence])<1000.0*primalTolerance_);
+      if (solution_[iSequence]<lower_[iSequence]) {
+	numberOutside++;
+	sumOutside-=solution_[iSequence]-lower_[iSequence];
+	if (solution_[iSequence]<lower_[iSequence]-primalTolerance_) 
+	  numberOutsideLarge++;
+      } else if (solution_[iSequence]>lower_[iSequence]) {
+	numberInside++;
+	sumInside+=solution_[iSequence]-lower_[iSequence];
+	if (solution_[iSequence]>lower_[iSequence]+primalTolerance_) 
+	  numberInsideLarge++;
+      }
+    } else if (getStatus(iSequence) == atUpperBound) {
+      assert (fabs(solution_[iSequence]-upper_[iSequence])<1000.0*primalTolerance_);
+      if (solution_[iSequence]>upper_[iSequence]) {
+	numberOutside++;
+	sumOutside+=solution_[iSequence]-upper_[iSequence];
+	if (solution_[iSequence]>upper_[iSequence]+primalTolerance_) 
+	  numberOutsideLarge++;
+      } else if (solution_[iSequence]<upper_[iSequence]) {
+	numberInside++;
+	sumInside-=solution_[iSequence]-upper_[iSequence];
+	if (solution_[iSequence]<upper_[iSequence]-primalTolerance_) 
+	  numberInsideLarge++;
+      }
+    } else if (getStatus(iSequence) == superBasic) {
+      //assert (!valuesPass);
+    }
+  }
+  if (numberInside+numberOutside)
+    printf("%d outside summing to %g (%d large), %d inside summing to %g (%d large)\n",
+	   numberOutside,sumOutside,numberOutsideLarge,
+	   numberInside,sumInside,numberInsideLarge);
+#endif
      int status = factorization_->factorize(this, solveType, valuesPass);
      if (status) {
           handler_->message(CLP_SIMPLEX_BADFACTOR, messages_)
@@ -2022,14 +2090,7 @@ ClpSimplex::housekeeping(double objectiveChange)
                forceFactorization_ = -1; //off
           return 1;
      } else if (numberIterations_ > 1000 + 10 * (numberRows_ + (numberColumns_ >> 2)) && matrix_->type()<15) {
-          // A bit worried problem may be cycling - lets factorize at random intervals for a short period
-          int numberTooManyIterations = numberIterations_ - 10 * (numberRows_ + (numberColumns_ >> 2));
           double random = randomNumberGenerator_.randomDouble();
-	  int window = numberTooManyIterations%5000;
-	  if (window<2*maximumPivots)
-	    random = 0.2*random+0.8; // randomly re-factorize but not too soon
-	  else
-	    random=1.0; // switch off if not in window of opportunity
           int maxNumber = (forceFactorization_ < 0) ? maximumPivots : CoinMin(forceFactorization_, maximumPivots);
           if (factorization_->pivots() >= random * maxNumber) {
                return 1;
@@ -2129,6 +2190,10 @@ ClpSimplex::ClpSimplex(const ClpSimplex &rhs, int scalingMode) :
      maximumPerturbationSize_(0),
      perturbationArray_(NULL),
      baseModel_(NULL)
+#ifdef ABC_INHERIT
+     ,abcSimplex_(NULL),
+     abcState_(0)
+#endif
 {
      int i;
      for (i = 0; i < 6; i++) {
@@ -2233,6 +2298,10 @@ ClpSimplex::ClpSimplex(const ClpModel &rhs, int scalingMode) :
      maximumPerturbationSize_(0),
      perturbationArray_(NULL),
      baseModel_(NULL)
+#ifdef ABC_INHERIT
+     ,abcSimplex_(NULL),
+     abcState_(0)
+#endif
 {
      int i;
      for (i = 0; i < 6; i++) {
@@ -2409,6 +2478,10 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
      incomingInfeasibility_ = rhs.incomingInfeasibility_;
      allowedInfeasibility_ = rhs.allowedInfeasibility_;
      automaticScale_ = rhs.automaticScale_;
+#ifdef ABC_INHERIT
+     abcSimplex_ = NULL;
+     abcState_ = rhs.abcState_;
+#endif
      maximumPerturbationSize_ = rhs.maximumPerturbationSize_;
      if (maximumPerturbationSize_ && maximumPerturbationSize_ >= 2 * numberColumns_) {
           perturbationArray_ = CoinCopyOfArray(rhs.perturbationArray_,
@@ -3103,6 +3176,8 @@ ClpSimplex::createRim(int what, bool makeRowCopy, int startFinishOptions)
                     maximumInternalRows_ = numberRows2;
                     maximumInternalColumns_ = numberColumns_;
                }
+               //maximumRows_=CoinMax(maximumInternalRows_,maximumRows_);
+               //maximumColumns_=CoinMax(maximumInternalColumns_,maximumColumns_);
                assert(maximumInternalRows_ == maximumRows_);
                assert(maximumInternalColumns_ == maximumColumns_);
                COIN_DETAIL_PRINT(printf("createrim b %d rows, %d maximum rows, %d maxinternal\n",
@@ -3202,6 +3277,9 @@ ClpSimplex::createRim(int what, bool makeRowCopy, int startFinishOptions)
           }
           inverseRowScale_ = NULL;
           inverseColumnScale_ = NULL;
+          if (scalingFlag_ > 0 &&(specialOptions_ & 65536) != 0&&
+	      rowScale_&&rowScale_==savedRowScale_) 
+	    rowScale_=NULL;
           if (scalingFlag_ > 0 && !rowScale_) {
                if ((specialOptions_ & 65536) != 0) {
                     assert (!rowScale_);
@@ -3805,8 +3883,8 @@ ClpSimplex::createRim(int what, bool makeRowCopy, int startFinishOptions)
           // check pivots
           for (int i = 0; i < numberRows2; i++) {
                int iSequence = pivotVariable_[i];
-               if (iSequence < numberRows_ + numberColumns_ &&
-                         getStatus(iSequence) != basic) {
+               if (iSequence<0||(iSequence < numberRows_ + numberColumns_ &&
+				 getStatus(iSequence) != basic)) {
                     keepPivots = false;
                     break;
                }
@@ -3889,10 +3967,7 @@ ClpSimplex::createRim(int what, bool makeRowCopy, int startFinishOptions)
                          delete columnArray_[iColumn];
                          columnArray_[iColumn] = new CoinIndexedVector();
                     }
-                    if (!iColumn)
-                         columnArray_[iColumn]->reserve(numberColumns_);
-                    else
-                         columnArray_[iColumn]->reserve(CoinMax(numberRows2, numberColumns_));
+		    columnArray_[iColumn]->reserve(numberColumns_+numberRows2);
                }
           } else {
                int iRow, iColumn;
@@ -7443,19 +7518,64 @@ ClpSimplex::crash(double gap, int pivot)
                numberBasic++;
      }
      if (!numberBasic || pivot == 3) {
+#if 0
+          int nFree=0;
+	  for (int iColumn = 0; iColumn < numberColumns_; iColumn++) {
+	    if (columnLower_[iColumn] < -1.0e20 && columnUpper_[iColumn] > 1.0e20) 
+	      nFree++;
+	  }
+	  if (nFree>numberColumns_/10)
+	    pivot=3;
+#endif
           if (pivot == 3) {
-               // Just throw all free variables in basis
-               for (int iRow = 0; iRow < numberRows_; iRow++) {
-                    if (fabs(rowLower_[iRow]) < fabs(rowUpper_[iRow]))
-                         setRowStatus(iRow, atLowerBound);
-                    else
-                         setRowStatus(iRow, atUpperBound);
-               }
-               for (int iColumn = 0; iColumn < numberColumns_; iColumn++) {
-                    if (columnLower_[iColumn] < -1.0e20 && columnUpper_[iColumn] > 1.0e20)
-                         setColumnStatus(iColumn, basic);
-               }
-               return 0;
+	    // Get column copy
+	    CoinPackedMatrix * columnCopy = matrix();
+	    const int * row = columnCopy->getIndices();
+	    const CoinBigIndex * columnStart = columnCopy->getVectorStarts();
+	    const int * columnLength = columnCopy->getVectorLengths();
+	    const double * element = columnCopy->getElements();
+	    int nFree=0;
+	    for (int iColumn = 0; iColumn < numberColumns_; iColumn++) {
+	      if (columnLower_[iColumn] < -1.0e20 && columnUpper_[iColumn] > 1.0e20) {
+		// find triangular row
+		int kRow=-1;
+		double largest=0.0;
+		double largestOther=0.0;
+		for (CoinBigIndex j=columnStart[iColumn];
+		     j<columnStart[iColumn]+columnLength[iColumn];j++) {
+		  int iSequence=row[j]+numberColumns_;
+		  if (!flagged(iSequence)) {
+		    if (fabs(element[j])>largest) {
+		      kRow=row[j];
+		      largest=fabs(element[j]);
+		    }
+		  } else {
+		    if (fabs(element[j])>largestOther) {
+		      largestOther=fabs(element[j]);
+		    }
+		  }
+		}
+		if (kRow>=0&&largest*2.5>=largestOther) {
+		  nFree++;
+		  setColumnStatus(iColumn, basic);
+		  if (fabs(rowLower_[kRow]) < fabs(rowUpper_[kRow]))
+		    setRowStatus(kRow, atLowerBound);
+		  else
+		    setRowStatus(kRow, atUpperBound);
+		  for (CoinBigIndex j=columnStart[iColumn];
+		       j<columnStart[iColumn]+columnLength[iColumn];j++) {
+		    int iSequence=row[j]+numberColumns_;
+		    setFlagged(iSequence);
+		  }
+		}
+	      }
+	    }
+	    if (nFree) {
+	      for (int i=0;i<numberRows_;i++)
+		clearFlagged(i);
+	      printf("%d free variables put in basis\n",nFree);
+	      return 0;
+	    }
           }
           // all slack
           double * dj = new double [numberColumns_];
@@ -7877,6 +7997,10 @@ ClpSimplex::crash(double gap, int pivot)
                               << numberIn
                               << numberBad
                               << CoinMessageEol;
+		    // could do elsewhere and could even if something done
+		    // see if some MUST be in basis
+		    if (!numberIn) {
+		    }
                     returnCode =  -1;
                }
           } else {
@@ -8269,7 +8393,7 @@ ClpSimplex::startup(int ifValuesPass, int startFinishOptions)
                if (perturbation_ < 100) {
                     if (algorithm_ > 0 && (objective_->type() < 2 || !objective_->activated())) {
 #ifndef FEB_TRY
-                         static_cast<ClpSimplexPrimal *> (this)->perturb(0);
+		      //static_cast<ClpSimplexPrimal *> (this)->perturb(0);
 #endif
                     } else if (algorithm_ < 0) {
                          static_cast<ClpSimplexDual *> (this)->perturb();
@@ -8360,8 +8484,8 @@ ClpSimplex::startup(int ifValuesPass, int startFinishOptions)
                }
           } else {
                // using previous factorization - we assume fine
-               if ((moreSpecialOptions_ & 8) == 0 || !(whatsChanged_ & 64)) {
-                    // but we need to say not optimal (!(whatsChanged_ & 64) means that objective has changed)
+               if ((moreSpecialOptions_ & 8) == 0) {
+                    // but we need to say not optimal
                     numberPrimalInfeasibilities_ = 1;
                     numberDualInfeasibilities_ = 1;
                }
@@ -9731,7 +9855,7 @@ ClpSimplex::checkSolutionInternal()
                case basic:
                     // dual should be zero
                     if (fabs(dualValue) > 10.0 * dualTolerance) {
-                         sumDualInfeasibilities_ -= dualValue + dualTolerance_;
+		      sumDualInfeasibilities_ += fabs(dualValue) - dualTolerance_;
                          numberDualInfeasibilities_ ++;
                     }
                     break;
@@ -9933,19 +10057,28 @@ ClpSimplex::defaultFactorizationFrequency()
      if (factorizationFrequency() == 200) {
           // User did not touch preset
           const int cutoff1 = 10000;
-          const int cutoff2 = 100000;
           const int base = 75;
           const int freq0 = 50;
+          int frequency;
+#ifndef ABC_INHERIT
+          const int cutoff2 = 100000;
           const int freq1 = 200;
           const int freq2 = 400;
           const int maximum = 1000;
-          int frequency;
           if (numberRows_ < cutoff1)
                frequency = base + numberRows_ / freq0;
           else if (numberRows_ < cutoff2)
                frequency = base + cutoff1 / freq0 + (numberRows_ - cutoff1) / freq1;
           else
                frequency = base + cutoff1 / freq0 + (cutoff2 - cutoff1) / freq1 + (numberRows_ - cutoff2) / freq2;
+#else
+          const int freq1 = 150;
+          const int maximum = 10000;
+          if (numberRows_ < cutoff1)
+               frequency = base + numberRows_ / freq0;
+          else
+               frequency = base + cutoff1 / freq0 + (numberRows_ - cutoff1) / freq1;
+#endif
           setFactorizationFrequency(CoinMin(maximum, frequency));
      }
 }
