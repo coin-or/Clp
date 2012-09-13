@@ -208,8 +208,8 @@ class ClpSimplex;
 #define CLEAN_FIXED 0
 // Startup part of dual (may be extended to other algorithms)
 // To force to follow another run put logfile name here and define
-#define FORCE_FOLLOW
-//#ifdef FORCE_FOLLOW
+//#define FORCE_FOLLOW
+#ifdef FORCE_FOLLOW
 static FILE * fpFollow = NULL;
 static const char * forceFile = NULL;
 static int force_in = -1;
