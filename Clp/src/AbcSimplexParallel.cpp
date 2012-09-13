@@ -1131,12 +1131,12 @@ AbcSimplexDual::createDualPricingVectorCilk()
   abcDualRowPivot_->checkAccuracy();
   // get sign for finding row of tableau
   // create as packed
-#ifdef MOVE_REPLACE_PART1A
+#if MOVE_REPLACE_PART1A > 0
   if (!abcFactorization_->usingFT()) {
 #endif
     usefulArray_[arrayForBtran_].createOneUnpackedElement(pivotRow_, -directionOut_);
     abcFactorization_->updateColumnTranspose(usefulArray_[arrayForBtran_]);
-#ifdef MOVE_REPLACE_PART1A
+#if MOVE_REPLACE_PART1A > 0
   } else {
     cilk_spawn abcFactorization_->checkReplacePart1a(&usefulArray_[arrayForReplaceColumn_],pivotRow_);
     usefulArray_[arrayForBtran_].createOneUnpackedElement(pivotRow_, -directionOut_);
@@ -1177,9 +1177,11 @@ AbcSimplexDual::getTableauColumnFlipAndStartReplaceCilk()
   int numberFlipped;
   //cilk
   getTableauColumnPart1Cilk();
-#ifndef MOVE_REPLACE_PART1A
+#if MOVE_REPLACE_PART1A <= 0
   cilk_spawn getTableauColumnPart2();
+#if MOVE_REPLACE_PART1A == 0
   cilk_spawn checkReplacePart1();
+#endif
   numberFlipped=flipBounds();
   cilk_sync;
 #else

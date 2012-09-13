@@ -4049,6 +4049,8 @@ AbcSimplex::doAbcPrimal(int ifValuesPass)
 #endif
   // add values pass options
   minimumThetaMovement_=1.0e-12;
+  if ((specialOptions_&8192)!=0)
+    minimumThetaMovement_=1.0e-15;
   int returnCode=static_cast<AbcSimplexPrimal *> (this)->primal(ifValuesPass);
   stateOfProblem_ &= ~VALUES_PASS;
 #ifndef TRY_ABC_GUS
@@ -4063,7 +4065,7 @@ AbcSimplex::doAbcPrimal(int ifValuesPass)
 #else
   minimumThetaMovement_=1.0e-12;
   int iPass=0;
-  while (problemStatus_==10) {
+  while (problemStatus_==10&&minimumThetaMovement_>1.0e-15) {
     iPass++;
     if (minimumThetaMovement_==1.0e-12)
       perturbation_=CoinMin(savePerturbation,55);
@@ -4078,10 +4080,35 @@ AbcSimplex::doAbcPrimal(int ifValuesPass)
     if (iPass>2)
       perturbation_=101;
     baseIteration_=numberIterations_;
-    static_cast<AbcSimplexDual *> (this)->dual();
+    if ((specialOptions_&8192)==0)
+      static_cast<AbcSimplexDual *> (this)->dual();
     baseIteration_=numberIterations_;
     if (problemStatus_==10) {
-      perturbation_=100;
+      if (initialSumInfeasibilities_>=0.0) {
+	if (savePerturbation>=100) {
+	  perturbation_=100;
+	} else {
+	  if (savePerturbation==50)
+	    perturbation_=CoinMax(51,HEAVY_PERTURBATION-4-iPass); //smaller
+	  else
+	    perturbation_=CoinMax(51,savePerturbation-1-iPass); //smaller
+	}
+      } else {
+	specialOptions_ |= 8192; // stop going to dual
+	perturbation_=savePerturbation;
+	abcFactorization_->setPivots(100000); // force factorization
+	initialSumInfeasibilities_=1.23456789e-5;
+	// clean pivots
+	int numberBasic=0;
+	int * pivot=pivotVariable();
+	for (int i=0;i<numberTotal_;i++) {
+	  if (getInternalStatus(i)==basic)
+	    pivot[numberBasic++]=i;
+	}
+	assert (numberBasic==numberRows_);
+      }
+      if (iPass>2)
+	perturbation_=100;
       copyFromSaved(14);
       baseIteration_=numberIterations_;
       static_cast<AbcSimplexPrimal *> (this)->primal(0);
@@ -5923,6 +5950,7 @@ AbcSimplexProgress::looping()
       << matched
       << numberTimes_
       << CoinMessageEol;
+    printf("loop detected %d times out of %d\n",numberBadTimes_,numberTimes_);
     numberBadTimes_++;
     if (numberBadTimes_ < 10) {
       // make factorize every iteration
@@ -5972,6 +6000,7 @@ AbcSimplexProgress::looping()
 	  int save = model->sequenceIn();
 	  model->setSequenceIn(iSequence);
 	  model->setFlagged(iSequence);
+	  model->setLastBadIteration(model->numberIterations());
 	  model->setSequenceIn(save);
 	  //printf("flagging %d from loop\n",iSequence);
 	  startCheck();

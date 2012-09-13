@@ -584,7 +584,7 @@ AbcPrimalColumnSteepest::pivotColumn(CoinPartitionedVector * updates,
        }
      }
 #endif
-#if 1
+#if 0
      for (int iCheck = 0; iCheck < numberRows + numberColumns; iCheck++) {
        if (model_->getInternalStatus(iCheck) != AbcSimplex::basic &&
 	   model_->getInternalStatus(iCheck) != AbcSimplex::isFixed)

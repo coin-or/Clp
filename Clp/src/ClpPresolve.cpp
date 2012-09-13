@@ -565,12 +565,12 @@ static int tightenDoubletons2(CoinPresolveMatrix * prob)
       if (possible) {
 	// skip if no cost (should be able to get rid of)
 	if (!cost[icol]) {
-	  printf("should be able to get rid of %d with no cost\n",icol);
+	  PRESOLVE_DETAIL_PRINT(printf("should be able to get rid of %d with no cost\n",icol));
 	  continue;
 	}
 	// skip if negative cost for now
 	if (cost[icol]<0.0) {
-	  printf("code for negative cost\n");
+	  PRESOLVE_DETAIL_PRINT(printf("code for negative cost\n"));
 	  continue;
 	}
 	bound[0]=clo[otherCol];
@@ -654,7 +654,7 @@ static int tightenDoubletons2(CoinPresolveMatrix * prob)
 	// see if any good
 	//#define PRINT_VALUES
 	if (!binding0||!binding1) {
-	  printf("Row redundant for column %d\n",icol);
+	  PRESOLVE_DETAIL_PRINT(printf("Row redundant for column %d\n",icol));
 	} else {
 #ifdef PRINT_VALUES
 	  printf("Column %d bounds %g,%g lowest %g,%g highest %g,%g\n",

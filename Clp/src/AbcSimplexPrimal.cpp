@@ -736,9 +736,18 @@ AbcSimplexPrimal::statusOfProblemInPrimal(int type)
   int tentativeStatus = problemStatus_;
   double lastSumInfeasibility = COIN_DBL_MAX;
   int lastNumberInfeasibility = 1;
+#ifndef CLP_CAUTION
+#define CLP_CAUTION 1
+#endif
+#if CLP_CAUTION
+  double lastAverageInfeasibility = sumDualInfeasibilities_ /
+    static_cast<double>(numberDualInfeasibilities_ + 1);
+#endif
   if (numberIterations_&&type) {
     lastSumInfeasibility = abcNonLinearCost_->sumInfeasibilities();
     lastNumberInfeasibility = abcNonLinearCost_->numberInfeasibilities();
+  } else {
+    lastAverageInfeasibility=1.0e10;
   }
   bool ifValuesPass=(stateOfProblem_&VALUES_PASS)!=0;
   bool takenAction=false;
@@ -809,13 +818,6 @@ AbcSimplexPrimal::statusOfProblemInPrimal(int type)
     // get primal and dual solutions
     // put back original costs and then check
     // createRim(4); // costs do not change
-#ifndef CLP_CAUTION
-#define CLP_CAUTION 1
-#endif
-#if CLP_CAUTION
-    double lastAverageInfeasibility = sumDualInfeasibilities_ /
-      static_cast<double>(numberDualInfeasibilities_ + 10);
-#endif
     if (ifValuesPass&&numberIterations_==baseIteration_) {
       abcNonLinearCost_->checkInfeasibilities(primalTolerance_);
       lastSumInfeasibility = abcNonLinearCost_->largestInfeasibility();
@@ -1219,6 +1221,17 @@ AbcSimplexPrimal::statusOfProblemInPrimal(int type)
   }
   // we may wish to say it is optimal even if infeasible
   bool alwaysOptimal = (specialOptions_ & 1) != 0;
+#if CLP_CAUTION
+  // If twice nearly there ...
+  if (lastAverageInfeasibility<2.0*dualTolerance_) {
+    double averageInfeasibility = sumDualInfeasibilities_ /
+      static_cast<double>(numberDualInfeasibilities_ + 1);
+    printf("last av %g now %g\n",lastAverageInfeasibility,
+	   averageInfeasibility);
+    if (averageInfeasibility<2.0*dualTolerance_) 
+      sumOfRelaxedDualInfeasibilities_ = 0.0;
+  }
+#endif
   // give code benefit of doubt
   if (sumOfRelaxedDualInfeasibilities_ == 0.0 &&
       sumOfRelaxedPrimalInfeasibilities_ == 0.0) {
@@ -1269,53 +1282,41 @@ AbcSimplexPrimal::statusOfProblemInPrimal(int type)
 	&& !alwaysOptimal) {
       //may need infeasiblity cost changed
       // we can see if we can construct a ray
-      // make up a new objective
-      double saveWeight = infeasibilityCost_;
-      // save nonlinear cost as we are going to switch off costs
-      AbcNonLinearCost * nonLinear = abcNonLinearCost_;
       // do twice to make sure Primal solution has settled
       // put non-basics to bounds in case tolerance moved
       // put back original costs
       CoinAbcMemcpy(abcCost_,costSaved_,numberTotal_);;
       abcNonLinearCost_->checkInfeasibilities(0.0);
       gutsOfPrimalSolution(3);
-      
-      infeasibilityCost_ = 1.0e100;
       // put back original costs
       CoinAbcMemcpy(abcCost_,costSaved_,numberTotal_);;
       abcNonLinearCost_->checkInfeasibilities(primalTolerance_);
+      gutsOfPrimalSolution(3);
       // may have fixed infeasibilities - double check
       if (abcNonLinearCost_->numberInfeasibilities() == 0) {
 	// carry on
 	problemStatus_ = -1;
-	infeasibilityCost_ = saveWeight;
 	abcNonLinearCost_->checkInfeasibilities(primalTolerance_);
       } else {
-	abcNonLinearCost_ = NULL;
-	// scale
-	int i;
-	for (i = 0; i < numberRows_ + numberColumns_; i++)
-	  abcCost_[i] *= 1.0e-95;
-	gutsOfPrimalSolution(3);
-	abcNonLinearCost_ = nonLinear;
-	infeasibilityCost_ = saveWeight;
 	if ((infeasibilityCost_ >= 1.0e18 ||
-	     numberDualInfeasibilities_ == 0) && perturbation_ == 101) {
+	     numberDualInfeasibilities_ == 0) && perturbation_ == 101
+	    && (specialOptions_&8192)==0) {
 	  goToDual = unPerturb(); // stop any further perturbation
 #ifndef TRY_ABC_GUS
 	  if (abcNonLinearCost_->sumInfeasibilities() > 1.0e-1)
 	    goToDual = false;
 #endif
-	  abcNonLinearCost_->checkInfeasibilities(primalTolerance_);
 	  numberDualInfeasibilities_ = 1; // carry on
 	  problemStatus_ = -1;
 	} else if (numberDualInfeasibilities_ == 0 && largestDualError_ > 1.0e-2 
 #ifndef TRY_ABC_GUS
-		   &&(moreSpecialOptions_ & 256) == 0
+		   &&((moreSpecialOptions_ & 256) == 0&&(specialOptions_ & 8192) == 0)
+#else
+		   &&(specialOptions_ & 8192) == 0
 #endif
 		   ) {
 	  goToDual = true;
-	  abcFactorization_->pivotTolerance(CoinMax(0.9, abcFactorization_->pivotTolerance()));
+	  abcFactorization_->pivotTolerance(CoinMax(0.5, abcFactorization_->pivotTolerance()));
 	}
 	if (!goToDual) {
 	  if (infeasibilityCost_ >= 1.0e20 ||
@@ -1346,13 +1347,14 @@ AbcSimplexPrimal::statusOfProblemInPrimal(int type)
 	      << CoinMessageEol;
 	    // put back original costs and then check
 	    CoinAbcMemcpy(abcCost_,costSaved_,numberTotal_);;
-#ifndef TRY_ABC_GUS
 	    abcNonLinearCost_->checkInfeasibilities(0.0);
 	    gutsOfPrimalSolution(3);
 	    problemStatus_ = -1; //continue
+#ifndef TRY_ABC_GUS
 	    goToDual = false;
 #else
-	    goToDual=true;
+	    if((specialOptions_&8192)==0&&!sumOfRelaxedDualInfeasibilities_)
+	      goToDual=true;
 #endif
 	  } else {
 	    // say infeasible
@@ -1366,8 +1368,10 @@ AbcSimplexPrimal::statusOfProblemInPrimal(int type)
 	goToDual = unPerturb(); // stop any further perturbation
 #ifndef TRY_ABC_GUS
 	if ((numberRows_ > 20000 || numberDualInfeasibilities_) && !numberTimesOptimal_)
-	  goToDual = false; // Better to carry on a bit longer
+#else
+	  if ((specialOptions_&8192)!=0)
 #endif
+	  goToDual = false; // Better to carry on a bit longer
 	lastCleaned_ = -1; // carry on
       }
       bool unflagged = (unflag() != 0);
@@ -1517,7 +1521,10 @@ AbcSimplexPrimal::statusOfProblemInPrimal(int type)
   if (numberIterations_ > lastBadIteration_ + 100)
     moreSpecialOptions_ &= ~16; // clear check accuracy flag
 #ifndef TRY_ABC_GUS
-  if ((moreSpecialOptions_ & 256) != 0||saveSum)
+  if ((moreSpecialOptions_ & 256) != 0||saveSum||(specialOptions_ & 8192) != 0)
+    goToDual=false;
+#else
+  if ((specialOptions_ & 8192) != 0)
     goToDual=false;
 #endif
   if (goToDual || (numberIterations_ > 1000+baseIteration_ && largestPrimalError_ > 1.0e6
@@ -3328,6 +3335,8 @@ AbcSimplexPrimal::pivotResult(int ifValuesPass)
 	  }
 	  sequenceOut_ = -1;
 	  sequenceIn_=-1;
+	  if (abcFactorization_->pivots()<10&&abcFactorization_->pivotTolerance()<0.25)
+	    abcFactorization_->saferTolerances(1.0,-1.03);
 	  break;
 	} else {
 	  // take on more relaxed criterion
@@ -3343,7 +3352,7 @@ AbcSimplexPrimal::pivotResult(int ifValuesPass)
 #if 1 //def FEB_TRY
 	    // Make safer?
 	    double tolerance=abcFactorization_->pivotTolerance();
-	    abcFactorization_->saferTolerances (-0.99, -1.03);
+	    abcFactorization_->saferTolerances (1.0, -1.03);
 #endif
 	    abcProgress_.clearBadTimes();
 	    lastBadIteration_ = numberIterations_; // say be more cautious

@@ -207,9 +207,87 @@ class ClpSimplex;
 */
 #define CLEAN_FIXED 0
 // Startup part of dual (may be extended to other algorithms)
+// To force to follow another run put logfile name here and define
+#define FORCE_FOLLOW
+//#ifdef FORCE_FOLLOW
+static FILE * fpFollow = NULL;
+static const char * forceFile = NULL;
+static int force_in = -1;
+static int force_out = -1;
+static int force_way_in = -1;
+static int force_way_out = -1;
+static int force_iterations = 0;
+int force_argc=0;
+const char ** force_argv=NULL;
+#endif
 void
 AbcSimplexDual::startupSolve()
 {
+#ifdef FORCE_FOLLOW
+  int ifld;
+  for (ifld=1;ifld<force_argc;ifld++) {
+    if (strstr(argv[ifld],".log")) {
+      forceFile=argv[ifld];
+      break;
+    }
+  }
+  if (!fpFollow && strlen(forceFile)) {
+    fpFollow = fopen(forceFile, "r");
+    assert (fpFollow);
+  }
+  if (fpFollow) {
+    int numberRead= atoi(argv[ifld+1]);
+    force_iterations=atoi(argv[ifld+1]);
+    printf("skipping %d iterations and then doing %d\n",numberRead,force_iterations);
+    for (int iteration=0;iteration<numberRead;iteration++) {
+      // read to next Clp0102
+      char temp[300];
+      while (fgets(temp, 250, fpFollow)) {
+	if (!strncmp(temp, "dirOut", 6))
+	  break;
+      }
+      sscanf(temp+7 , "%d%*s%d%*s%*s%d",
+	     &force_way_out, &force_way_in);
+      fgets(temp, 250, fpFollow);
+      char cin, cout;
+      int whichIteration;
+      sscanf(temp , "%d%*f%*s%*c%c%d%*s%*c%c%d",
+	     &whichIteration, &cin, &force_in, &cout, &force_out);
+      assert (whichIterations==iteration+1);
+      if (cin == 'C')
+	force_in += numberColumns_;
+      if (cout == 'C')
+	force_out += numberColumns_;
+      printf("Iteration %d will force %d out (way %d) and %d in (way %d)\n",
+	     whichIteration, force_out, force_way_out,force_in,force_way_in);
+      assert (getInternalStatus(force_out)==basic);
+      assert (getInternalStatus(force_in)!=basic);
+      setInternalStatus(force_in,basic);
+      if (force_way_out==-1)
+	setInternalStatus(force_out,atUpperBound);
+      else
+	setInternalStatus(force_out,atLowerBound);
+    }
+    // clean up
+    int numberBasic=0;
+    for (int i=0;i<numberTotal_;i++) {
+      if (getInternalStatus(i)==basic) {
+	abcPivotVariable_[numberBasic++]=i;
+      } else if (getInternalStatus(i)==atLowerBound) {
+	if (abcLower_[i]<-1.0e30) {
+	  abcLower_[i]=abcUpper_[i]-dualBound_;
+	  setFakeLower(i);
+	}
+      } else if (getInternalStatus(i)==atUpperBound) {
+	if (abcUpper_[i]>1.0e30) {
+	  abcUpper_[i]=abcLower_[i]+dualBound_;
+	  setFakeUpper(i);
+	}
+      }
+    }
+    assert (numberBasic==numberRows_);
+  }
+#endif
   // initialize - no values pass and algorithm_ is -1
   // put in standard form (and make row copy)
   // create modifiable copies of model rim and do optional scaling
@@ -2706,6 +2784,7 @@ AbcSimplexDual::statusOfProblemInDual(int type)
 	  printf("flag d\n");
 #endif
 	  setFlagged(sequenceOut_);
+	  lastBadIteration_ = numberIterations_; // say be more cautious
 	  // so can't happen immediately again
 	  sequenceOut_=-1;
 	}
@@ -2743,7 +2822,7 @@ AbcSimplexDual::statusOfProblemInDual(int type)
   }
   double savePrimalInfeasibilities=sumPrimalInfeasibilities_;
   if ((moreSpecialOptions_&16384)!=0&&(moreSpecialOptions_&8192)==0) {
-    if (!numberIterations_) {
+    if (numberIterations_==baseIteration_) {
       // If primal feasible and looks suited to primal go to primal
       if (!sumPrimalInfeasibilities_&&sumDualInfeasibilities_>1.0&&
 	  numberRows_*4>numberColumns_) {
@@ -2846,6 +2925,7 @@ AbcSimplexDual::statusOfProblemInDual(int type)
 	  printf("flag d\n");
 #endif
 	  setFlagged(sequenceOut_);
+	  lastBadIteration_ = numberIterations_; // say be more cautious
 #if ABC_NORMAL_DEBUG>0
 	} else {
 	  printf("backtracking - no valid sequence out\n");
@@ -5459,6 +5539,9 @@ AbcSimplexDual::checkReplace()
   if (!stateOfIteration_) {
     int saveStatus=problemStatus_;
     // check update
+#if MOVE_REPLACE_PART1A < 0
+    checkReplacePart1();
+#endif
     int updateStatus=abcFactorization_->checkReplacePart2(pivotRow_,btranAlpha_,alpha_,ftAlpha_);
 #if ABC_DEBUG
     checkArrays();
@@ -5625,6 +5708,7 @@ AbcSimplexDual::noPivotColumn()
 	printf("flag c\n");
 #endif
 	setFlagged(sequenceOut_);
+	lastBadIteration_ = numberIterations_; // say be more cautious
 	// so can't happen immediately again
 	sequenceOut_=-1;
 	if (!abcFactorization_->pivots()) {

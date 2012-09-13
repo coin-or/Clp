@@ -1271,6 +1271,10 @@ public:
      inline int lastBadIteration() const {
           return lastBadIteration_;
      }
+     /// Set so we know when to be cautious
+     inline void setLastBadIteration(int value) {
+          lastBadIteration_=value;
+     }
      /// Progress flag - at present 0 bit says artificials out
      inline int progressFlag() const {
           return (progressFlag_ & 3);

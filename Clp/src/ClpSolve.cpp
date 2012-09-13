@@ -547,7 +547,7 @@ ClpSimplex::dealWithAbc(int solveType, int startUp,
     if (!solveType)
       this->dual(0);
     else
-      this->primal(startUp);
+      this->primal(startUp ? 1 : 0);
   } else {
     AbcSimplex * abcModel2=new AbcSimplex(*this);
     if (interrupt)
@@ -559,7 +559,7 @@ ClpSimplex::dealWithAbc(int solveType, int startUp,
     //abcModel2->startPermanentArrays();
     int crashState=abcModel2->abcState()&(256+512+1024);
     abcModel2->setAbcState(CLP_ABC_WANTED|crashState);
-    int ifValuesPass=startUp;
+    int ifValuesPass=startUp ? 1 : 0;
     // temp
     if (fabs(this->primalTolerance()-1.001e-6)<0.999e-9) {
       int type=1;
@@ -671,10 +671,15 @@ ClpSimplex::dealWithAbc(int solveType, int startUp,
     instrument_initialize(abcModel2->numberRows());
 #endif
 #endif
-    if (!solveType)
+    if (!solveType) {
       abcModel2->ClpSimplex::doAbcDual();
-    else
+    } else {
+      int saveOptions=abcModel2->specialOptions();
+      if (startUp==2)
+	abcModel2->setSpecialOptions(8192|saveOptions);
       abcModel2->ClpSimplex::doAbcPrimal(ifValuesPass);
+      abcModel2->setSpecialOptions(saveOptions);
+    }
 #if ABC_INSTRUMENT
     double timeCpu=CoinCpuTime()-startTimeCpu;
     double timeElapsed=CoinGetTimeOfDay()-startTimeElapsed;
@@ -3115,7 +3120,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
 #ifndef ABC_INHERIT
 		        primal(1);
 #else
-			dealWithAbc(1,1,interrupt);
+			dealWithAbc(1,2,interrupt);
 #endif
                     }
                } else {
@@ -3133,7 +3138,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
                timeX = time2;
           } else if (rcode >= 0) {
 #ifdef ABC_INHERIT
-	    dealWithAbc(1,1,true);
+	    dealWithAbc(1,2,true);
 #else
 	    primal(1);
 #endif
