@@ -1713,7 +1713,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
 			     reductions /= 13.0;
 			     info.setStartingWeight(1.0e4);
 			   }
-			   double ratio=1.0/exp10(1.0/reductions);
+			   double ratio=1.0/std::pow(10.0,(1.0/reductions));
 			   printf("%d passes reduction factor %g\n",nPasses,ratio);
 			   info.setWeightFactor(ratio);
 			 } else if (nPasses > 500) {
