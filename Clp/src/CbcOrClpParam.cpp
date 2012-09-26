@@ -4,6 +4,7 @@
 // This code is licensed under the terms of the Eclipse Public License (EPL).
 
 #include "CoinPragma.hpp"
+#include "CoinTime.hpp"
 #include "CbcOrClpParam.hpp"
 
 #include <string>
@@ -602,6 +603,20 @@ CbcOrClpParam::setIntParameterWithMessage ( ClpSimplex * model, int value , int 
                break;
           case CLP_PARAM_INT_SPECIALOPTIONS:
                model->setSpecialOptions(value);
+               break;
+          case CLP_PARAM_INT_RANDOMSEED:
+	    {
+	      if (value==0) {
+		double time = fabs(CoinGetTimeOfDay());
+		while (time>=COIN_INT_MAX)
+		  time *= 0.5;
+		value = static_cast<int>(time);
+		sprintf(printArray, "using time of day %s was changed from %d to %d",
+                  name_.c_str(), oldValue, value);
+	      }
+	      model->setRandomSeed(value);
+	    }
+               break;
 #ifndef COIN_HAS_CBC
 #ifdef CBC_THREAD
           case CBC_PARAM_INT_THREADS:
@@ -637,6 +652,9 @@ CbcOrClpParam::intParameter (ClpSimplex * model) const
           break;
      case CLP_PARAM_INT_SPECIALOPTIONS:
           value = model->specialOptions();
+          break;
+     case CLP_PARAM_INT_RANDOMSEED:
+          value = model->randomNumberGenerator()->getSeed();
           break;
 #ifndef COIN_HAS_CBC
 #ifdef CBC_THREAD
@@ -2949,7 +2967,7 @@ are fixed and a small branch and bound is tried."
      );
 #ifdef COIN_HAS_CBC
      parameters[numberParameters++] =
-          CbcOrClpParam("rand!omizedRounding", "Whether to try randomized rounding heuristic",
+          CbcOrClpParam("randomi!zedRounding", "Whether to try randomized rounding heuristic",
                         "off", CBC_PARAM_STR_RANDROUND);
      parameters[numberParameters-1].append("on");
      parameters[numberParameters-1].append("both");
@@ -2958,6 +2976,19 @@ are fixed and a small branch and bound is tried."
      (
           "stuff needed. \
 Doh option does heuristic before preprocessing"     );
+#endif
+#ifdef COIN_HAS_CLP
+     parameters[numberParameters++] =
+          CbcOrClpParam("randomS!eed", "Random seed for Clp",
+                        0, COIN_INT_MAX, CLP_PARAM_INT_RANDOMSEED);
+     parameters[numberParameters-1].setLonghelp
+     (
+          "This sets a random seed for Clp \
+- 0 says use time of day."
+     );
+     parameters[numberParameters-1].setIntValue(1234567);
+#endif
+#ifdef COIN_HAS_CBC
      parameters[numberParameters++] =
           CbcOrClpParam("ratio!Gap", "Stop when gap between best possible and \
 best less than this fraction of larger of two",

@@ -717,7 +717,7 @@ ClpModel::ClpModel(const ClpModel &rhs, int scalingMode) :
                scalingFlag_ = 0;
           }
      }
-     randomNumberGenerator_.setSeed(1234567);
+     //randomNumberGenerator_.setSeed(1234567);
 }
 // Assignment operator. This copies the data
 ClpModel &
