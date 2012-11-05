@@ -121,6 +121,8 @@ public:
     int * upperActive;
     double * upperGap;
     double * upperCoefficient;
+    int unscaledChangesOffset; 
+    bool firstIteration; // so can update rhs for accuracy
   } parametricsData;
 
 private:
@@ -172,6 +174,10 @@ private:
      /// Restores bound to original bound
      void originalBound(int iSequence, double theta, const double * changeLower,
 		     const double * changeUpper);
+     /// Compute new rowLower_ etc (return negative if infeasible - otherwise largest change)
+     double computeRhsEtc(parametricsData & paramData);
+     /// Redo lower_ from rowLower_ etc
+     void redoInternalArrays();
      /**
          Row array has row part of pivot row
          Column array has column part.

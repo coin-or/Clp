@@ -2875,6 +2875,9 @@ ClpSimplexOther::parametrics(double startingTheta, double & endingTheta,
   assert (ratio==1||ratio==2);
   // allow for unscaled - even if not needed
   int lengthArrays = 4*numberTotal+(3*numberTotal+2)*ratio+2*numberRows_+1;
+  int unscaledChangesOffset=lengthArrays; // need extra copy of change
+  lengthArrays += numberTotal;
+  
   /*
     Save information and modify
   */
@@ -2909,6 +2912,8 @@ ClpSimplexOther::parametrics(double startingTheta, double & endingTheta,
   paramData.upperActive = upperActive;
   paramData.upperGap = upperGap;
   paramData.upperCoefficient = upperCoefficient;
+  paramData.unscaledChangesOffset = unscaledChangesOffset-numberTotal;
+  paramData.firstIteration=true;
   // Find theta when bounds will cross over and create arrays
   memset(lowerChange, 0, numberTotal * sizeof(double));
   memset(upperChange, 0, numberTotal * sizeof(double));
@@ -2922,6 +2927,26 @@ ClpSimplexOther::parametrics(double startingTheta, double & endingTheta,
   if (upperChangeRhs)
     memcpy(upperChange+numberColumns_,
 	   upperChangeRhs,numberRows_*sizeof(double));
+  // clean
+  for (int iRow = 0; iRow < numberRows_; iRow++) {
+    double lower = rowLower_[iRow];
+    double upper = rowUpper_[iRow];
+    if (lower<-1.0e30)
+      lowerChange[numberColumns_+iRow]=0.0;
+    if (upper>1.0e30)
+      upperChange[numberColumns_+iRow]=0.0;
+  }
+  for (int iColumn = 0; iColumn < numberColumns_; iColumn++) {
+    double lower = columnLower_[iColumn];
+    double upper = columnUpper_[iColumn];
+    if (lower<-1.0e30)
+      lowerChange[iColumn]=0.0;
+    if (upper>1.0e30)
+      upperChange[iColumn]=0.0;
+  }
+  // save unscaled version of changes
+  memcpy(saveLower+unscaledChangesOffset,lowerChange,numberTotal*sizeof(double));
+  memcpy(saveUpper+unscaledChangesOffset,upperChange,numberTotal*sizeof(double));
   int nLowerChange=0;
   int nUpperChange=0;
   for (int i=0;i<numberColumns_;i++) {
@@ -2962,97 +2987,11 @@ ClpSimplexOther::parametrics(double startingTheta, double & endingTheta,
     memcpy(unscaledCopy+numberColumns_,
 	   rowUpper_,numberRows_*sizeof(double));
   }
-  double maxTheta = 1.0e50;
-  double largestChange=0.0;
-  for (int iRow = 0; iRow < numberRows_; iRow++) {
-    double lower = rowLower_[iRow];
-    double upper = rowUpper_[iRow];
-    if (lower<-1.0e30)
-      lowerChange[numberColumns_+iRow]=0.0;
-    double chgLower = lowerChange[numberColumns_+iRow];
-    largestChange=CoinMax(largestChange,fabs(chgLower));
-    if (upper>1.0e30)
-      upperChange[numberColumns_+iRow]=0.0;
-    double chgUpper = upperChange[numberColumns_+iRow];
-    largestChange=CoinMax(largestChange,fabs(chgUpper));
-    if (lower > -1.0e30 && upper < 1.0e30) {
-      if (lower + maxTheta * chgLower > upper + maxTheta * chgUpper) {
-	maxTheta = (upper - lower) / (chgLower - chgUpper);
-      }
-    }
-    lower+=startingTheta*chgLower;
-    upper+=startingTheta*chgUpper;
-#ifndef CLP_USER_DRIVEN
-    if (lower > upper) {
-      maxTheta = -1.0;
-      break;
-    }
-#endif
-    rowLower_[iRow]=lower;
-    rowUpper_[iRow]=upper;
-  }
-  for (int iColumn = 0; iColumn < numberColumns_; iColumn++) {
-    double lower = columnLower_[iColumn];
-    double upper = columnUpper_[iColumn];
-    if (lower<-1.0e30)
-      lowerChange[iColumn]=0.0;
-    double chgLower = lowerChange[iColumn];
-    largestChange=CoinMax(largestChange,fabs(chgLower));
-    if (upper>1.0e30)
-      upperChange[iColumn]=0.0;
-    double chgUpper = upperChange[iColumn];
-    largestChange=CoinMax(largestChange,fabs(chgUpper));
-    if (lower > -1.0e30 && upper < 1.0e30) {
-      if (lower + maxTheta * chgLower > upper + maxTheta * chgUpper) {
-	maxTheta = (upper - lower) / (chgLower - chgUpper);
-      }
-    }
-    lower+=startingTheta*chgLower;
-    upper+=startingTheta*chgUpper;
-#ifndef CLP_USER_DRIVEN
-    if (lower > upper) {
-      maxTheta = -1.0;
-      break;
-    }
-#endif
-    columnLower_[iColumn]=lower;
-    columnUpper_[iColumn]=upper;
-  }
-  if (maxTheta == 1.0e50)
-    maxTheta = COIN_DBL_MAX;
   int returnCode=0;
-  /*
-    If user is in charge then they are sophisticated enough
-    to know what they are doing.  They must be doing something clever
-    with event handlers!
-   */
-#ifndef CLP_USER_DRIVEN
-  if (maxTheta < 0.0) {
-    // bad ranges or initial
-    returnCode = -1;
-  }
-  if (maxTheta < endingTheta) {
-    char line[100];
-    sprintf(line,"Crossover considerations reduce ending  theta from %g to %g\n", 
-	    endingTheta,maxTheta);
-    handler_->message(CLP_GENERAL,messages_)
-      << line << CoinMessageEol;
-    endingTheta = maxTheta;
-  }
-  if (endingTheta < startingTheta) {
-    // bad initial
-    returnCode = -2;
-  }
-  paramData.maxTheta=CoinMin(maxTheta,endingTheta);
-#else
-  // accept user's version
+  paramData.startingTheta=startingTheta;
+  paramData.endingTheta=endingTheta;
   paramData.maxTheta=endingTheta;
-#endif
-  /* given largest change element choose acceptable end
-     be safe and make sure difference < 0.1*tolerance */
-  double acceptableDifference=0.1*primalTolerance_/
-    CoinMax(largestChange,1.0);
-  paramData.acceptableMaxTheta=maxTheta-acceptableDifference;
+  computeRhsEtc(paramData);
   bool swapped=false;
   // Dantzig 
 #define ALL_DANTZIG
@@ -3646,6 +3585,34 @@ ClpSimplexOther::whileIterating(parametricsData & paramData, double /*reportIncr
                                      NULL);
 	  useTheta += theta_;
 	  double change = useTheta - lastTheta;
+	  if (paramData.firstIteration) {
+	    // redo rhs etc to make as accurate as possible
+	    paramData.firstIteration=false;
+	    if (change>1.0e-14) {
+	      startingTheta=useTheta;
+	      lastTheta=startingTheta;
+	      change=0.0;
+	      // restore rhs
+	      const double * saveLower = paramData.lowerChange+2*numberTotal;
+	      memcpy(columnLower_,saveLower,numberColumns_*sizeof(double));
+	      memcpy(rowLower_,saveLower+numberColumns_,numberRows_*sizeof(double));
+	      const double * saveUpper = paramData.upperChange+2*numberTotal;
+	      memcpy(columnUpper_,saveUpper,numberColumns_*sizeof(double));
+	      memcpy(rowUpper_,saveUpper+numberColumns_,numberRows_*sizeof(double));
+	      paramData.startingTheta=startingTheta;
+	      computeRhsEtc(paramData);
+	      redoInternalArrays();
+	      // Update solution
+	      rowArray_[4]->clear();
+	      for (int i=0;i<numberTotal;i++) {
+		if (getStatus(i)==atLowerBound||getStatus(i)==isFixed)
+		  solution_[i]=lower_[i];
+		else if (getStatus(i)==atUpperBound)
+		  solution_[i]=upper_[i];
+	      }
+	      gutsOfSolution(NULL,NULL);
+	    }
+	  }
 	  if (change>1.0e-14) {
 	    int n;
 	    n=lowerList[-1];
@@ -4428,6 +4395,107 @@ ClpSimplexOther::whileIterating(parametricsData & paramData, double /*reportIncr
      }
      startingTheta = lastTheta+theta_;
      return returnCode;
+}
+// Compute new rowLower_ etc (return negative if infeasible - otherwise largest change)
+double 
+ClpSimplexOther::computeRhsEtc( parametricsData & paramData)
+{
+  double maxTheta = COIN_DBL_MAX;
+  double largestChange=0.0;
+  double startingTheta = paramData.startingTheta;
+  const double * lowerChange = paramData.lowerChange+
+    paramData.unscaledChangesOffset;
+  const double * upperChange = paramData.upperChange+
+    paramData.unscaledChangesOffset;
+  for (int iRow = 0; iRow < numberRows_; iRow++) {
+    double lower = rowLower_[iRow];
+    double upper = rowUpper_[iRow];
+    double chgLower = lowerChange[numberColumns_+iRow];
+    largestChange=CoinMax(largestChange,fabs(chgLower));
+    double chgUpper = upperChange[numberColumns_+iRow];
+    largestChange=CoinMax(largestChange,fabs(chgUpper));
+    if (lower > -1.0e30 && upper < 1.0e30) {
+      if (lower + maxTheta * chgLower > upper + maxTheta * chgUpper) {
+	maxTheta = (upper - lower) / (chgLower - chgUpper);
+      }
+    }
+    lower+=startingTheta*chgLower;
+    upper+=startingTheta*chgUpper;
+#ifndef CLP_USER_DRIVEN
+    if (lower > upper) {
+      maxTheta = -1.0;
+      break;
+    }
+#endif
+    rowLower_[iRow]=lower;
+    rowUpper_[iRow]=upper;
+  }
+  for (int iColumn = 0; iColumn < numberColumns_; iColumn++) {
+    double lower = columnLower_[iColumn];
+    double upper = columnUpper_[iColumn];
+    double chgLower = lowerChange[iColumn];
+    largestChange=CoinMax(largestChange,fabs(chgLower));
+    double chgUpper = upperChange[iColumn];
+    largestChange=CoinMax(largestChange,fabs(chgUpper));
+    if (lower > -1.0e30 && upper < 1.0e30) {
+      if (lower + maxTheta * chgLower > upper + maxTheta * chgUpper) {
+	maxTheta = (upper - lower) / (chgLower - chgUpper);
+      }
+    }
+    lower+=startingTheta*chgLower;
+    upper+=startingTheta*chgUpper;
+#ifndef CLP_USER_DRIVEN
+    if (lower > upper) {
+      maxTheta = -1.0;
+      break;
+    }
+#endif
+    columnLower_[iColumn]=lower;
+    columnUpper_[iColumn]=upper;
+  }
+#ifndef CLP_USER_DRIVEN
+  paramData.maxTheta=maxTheta;
+  if (maxTheta<0)
+    largestChange=-1.0; // signal infeasible
+#else
+  // maxTheta already set
+  /* given largest change element choose acceptable end
+     be safe and make sure difference < 0.1*tolerance */
+  double acceptableDifference=0.1*primalTolerance_/
+    CoinMax(largestChange,1.0);
+  paramData.acceptableMaxTheta=maxTheta-acceptableDifference;
+#endif
+  return largestChange;
+}
+// Redo lower_ from rowLower_ etc
+void 
+ClpSimplexOther::redoInternalArrays()
+{
+  double * lowerSave = lower_;
+  double * upperSave = upper_;
+  memcpy(lowerSave,columnLower_,numberColumns_*sizeof(double));
+  memcpy(lowerSave+numberColumns_,rowLower_,numberRows_*sizeof(double));
+  memcpy(upperSave,columnUpper_,numberColumns_*sizeof(double));
+  memcpy(upperSave+numberColumns_,rowUpper_,numberRows_*sizeof(double));
+  if (rowScale_) {
+    // scale arrays
+    for (int i=0;i<numberColumns_;i++) {
+      double multiplier = inverseColumnScale_[i];
+      if (lowerSave[i]>-1.0e20)
+	lowerSave[i] *= multiplier;
+      if (upperSave[i]<1.0e20)
+	upperSave[i] *= multiplier;
+    }
+    lowerSave += numberColumns_;
+    upperSave += numberColumns_;
+    for (int i=0;i<numberRows_;i++) {
+      double multiplier = rowScale_[i];
+      if (lowerSave[i]>-1.0e20)
+	lowerSave[i] *= multiplier;
+      if (upperSave[i]<1.0e20)
+	upperSave[i] *= multiplier;
+    }
+  }
 }
 #if 0
 static int zzzzzz=0;
