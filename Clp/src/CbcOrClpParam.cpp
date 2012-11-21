@@ -2924,6 +2924,22 @@ See branchAndCut for information on options. \
 but strong options do more probing"
      );
      parameters[numberParameters++] =
+          CbcOrClpParam("proximity!Search", "Whether to do proximity search heuristic",
+                        "off", CBC_PARAM_STR_PROXIMITY);
+     parameters[numberParameters-1].append("on");
+     parameters[numberParameters-1].append("both");
+     parameters[numberParameters-1].append("before");
+     parameters[numberParameters-1].append("10");
+     parameters[numberParameters-1].append("100");
+     parameters[numberParameters-1].append("300");
+     parameters[numberParameters-1].setLonghelp
+     (
+          "This switches on a heuristic which looks for a solution close \
+to incumbent solution (Fischetti and Monaci). \
+See Rounding for meaning of on,both,before. \
+The ones at end have different maxNode settings (and are 'on'(on==30))."
+     );
+     parameters[numberParameters++] =
           CbcOrClpParam("pumpC!utoff", "Fake cutoff for use in feasibility pump",
                         -COIN_DBL_MAX, COIN_DBL_MAX, CBC_PARAM_DBL_FAKECUTOFF);
      parameters[numberParameters-1].setDoubleValue(0.0);
