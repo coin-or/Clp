@@ -5252,7 +5252,7 @@ OsiClpSolverInterface::setRowLower( int elementIndex, double elementValue ) {
 void 
 OsiClpSolverInterface::setRowUpper( int elementIndex, double elementValue ) {
   modelPtr_->whatsChanged_ &= 0xffff;
-  // Say can't gurantee optimal basis etc
+  // Say can't guarantee optimal basis etc
   lastAlgorithm_=999;
 #ifndef NDEBUG
   int n = modelPtr_->numberRows();
