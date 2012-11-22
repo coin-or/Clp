@@ -617,6 +617,9 @@ CbcOrClpParam::setIntParameterWithMessage ( ClpSimplex * model, int value , int 
 	      model->setRandomSeed(value);
 	    }
                break;
+          case CLP_PARAM_INT_MORESPECIALOPTIONS:
+               model->setMoreSpecialOptions(value);
+	       break;
 #ifndef COIN_HAS_CBC
 #ifdef CBC_THREAD
           case CBC_PARAM_INT_THREADS:
@@ -655,6 +658,9 @@ CbcOrClpParam::intParameter (ClpSimplex * model) const
           break;
      case CLP_PARAM_INT_RANDOMSEED:
           value = model->randomNumberGenerator()->getSeed();
+          break;
+     case CLP_PARAM_INT_MORESPECIALOPTIONS:
+          value = model->moreSpecialOptions();
           break;
 #ifndef COIN_HAS_CBC
 #ifdef CBC_THREAD
@@ -2480,6 +2486,11 @@ a feasible solution. \
 Question and suggestions regarding MIPStart can be directed to\n\
 haroldo.santos@gmail.com.\
 ");
+#endif
+     parameters[numberParameters++] =
+          CbcOrClpParam("moreS!pecialOptions", "Yet more dubious options for Simplex - see ClpSimplex.hpp",
+                        0, COIN_INT_MAX, CLP_PARAM_INT_MORESPECIALOPTIONS, 0);
+#ifdef COIN_HAS_CBC
      parameters[numberParameters++] =
           CbcOrClpParam("moreT!une", "Yet more dubious ideas for feasibility pump",
                         0, 100000000, CBC_PARAM_INT_FPUMPTUNE2, 0);
