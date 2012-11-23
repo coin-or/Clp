@@ -743,13 +743,13 @@ void
 ClpModel::gutsOfCopy(const ClpModel & rhs, int trueCopy)
 {
      defaultHandler_ = rhs.defaultHandler_;
+     randomNumberGenerator_ = rhs.randomNumberGenerator_;
      if (trueCopy >= 0) {
           if (defaultHandler_)
                handler_ = new CoinMessageHandler(*rhs.handler_);
           else
                handler_ = rhs.handler_;
           eventHandler_ = rhs.eventHandler_->clone();
-          randomNumberGenerator_ = rhs.randomNumberGenerator_;
           messages_ = rhs.messages_;
           coinMessages_ = rhs.coinMessages_;
      } else {
@@ -3416,7 +3416,7 @@ ClpModel::ClpModel ( const ClpModel * rhs,
           matrix_ = rhs->matrix_->subsetClone(numberRows, whichRow,
                                               numberColumns, whichColumn);
      }
-     randomNumberGenerator_.setSeed(1234567);
+     randomNumberGenerator_ = rhs->randomNumberGenerator_;
 }
 #ifndef CLP_NO_STD
 // Copies in names
