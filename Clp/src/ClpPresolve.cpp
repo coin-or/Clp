@@ -877,6 +877,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
      // Messages
      CoinMessages messages = CoinMessage(prob->messages().language());
      paction_ = 0;
+     prob->maxSubstLevel_ = 3 ;
 #ifndef PRESOLVE_DETAIL
      if (prob->tuning_) {
 #endif
@@ -903,6 +904,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
 #endif
      prob->status_ = 0; // say feasible
      paction_ = make_fixed(prob, paction_);
+     paction_ = testRedundant(prob,paction_) ;
      // if integers then switch off dual stuff
      // later just do individually
      bool doDualStuff = (presolvedModel_->integerInformation() == NULL);
@@ -1031,7 +1033,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
 #endif
 #endif
 #else
-               int fill_level = 2;
+               int fill_level = prob->maxSubstLevel_;
 #endif
                int whichPass = 0;
                while (1) {
@@ -1249,6 +1251,8 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
                     if (prob->status_)
                          break;
                }
+	       // Marginally slower on netlib if this call is enabled.
+	       // paction_ = testRedundant(prob,paction_) ;
 #if	PRESOLVE_DEBUG
                check_sol(prob, 1.0e0);
 #endif
