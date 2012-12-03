@@ -924,10 +924,13 @@ CbcOrClpParam::setIntParameterWithMessage ( CbcModel & model, int value , int & 
                break;
 #endif
 #endif
+#if defined(COIN_HAS_CBC) && ((CBC_VERSION_MAJOR > 2) || (CBC_VERSION_MINOR > 7))
           case CBC_PARAM_INT_RANDOMSEED:
                oldValue = model.getRandomSeed();
                model.setRandomSeed(value);
                break;
+               
+#endif
           default:
                break;
           }
@@ -979,9 +982,11 @@ CbcOrClpParam::intParameter (CbcModel &model) const
           break;
 #endif
 #endif
+#if defined(COIN_HAS_CBC) && ((CBC_VERSION_MAJOR > 2) || (CBC_VERSION_MINOR > 7))
      case CBC_PARAM_INT_RANDOMSEED:
           value = model.getRandomSeed();
           break;
+#endif
      default:
           value = intValue_;
           break;
