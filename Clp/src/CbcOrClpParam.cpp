@@ -2456,7 +2456,7 @@ to CBC. Values of the main decision variables which are active (have \
 non-zero values) in this solution are specified in a text  file. The \
 text file format used is the same of the solutions saved by CBC, but \
 not all fields are required to be filled. First line may contain the \
-solution status and will be ignored, remaning lines contain column \
+solution status and will be ignored, remaining lines contain column \
 indexes, names and values as in this example:\n\
 \n\
 Stopped on iterations - objective value 57597.00000000\n\
@@ -2474,7 +2474,7 @@ its performance: several MIP heuristics (e.g. RINS) rely on having at \
 least one feasible solution available and can start immediately if the \
 user provides one. Feasibility Pump (FP) is a heuristic which tries to \
 overcome the problem of taking too long to find feasible solution (or \
-not finding at all), but it not always suceeds. If you provide one \
+not finding at all), but it not always succeeds. If you provide one \
 starting solution you will probably save some time by disabling FP. \
 \n\n\
 Knowledge specific to your problem can be considered to write an \
