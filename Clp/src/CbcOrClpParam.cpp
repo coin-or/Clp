@@ -2913,6 +2913,7 @@ File is in csv format with allowed headings - name, number, priority, direction,
 See branchAndCut for information on options. \
 but strong options do more probing"
      );
+#if (CBC_VERSION_MAJOR > 2) || (CBC_VERSION_MINOR > 7)
      parameters[numberParameters++] =
           CbcOrClpParam("proximity!Search", "Whether to do proximity search heuristic",
                         "off", CBC_PARAM_STR_PROXIMITY);
@@ -2929,6 +2930,7 @@ to incumbent solution (Fischetti and Monaci). \
 See Rounding for meaning of on,both,before. \
 The ones at end have different maxNode settings (and are 'on'(on==30))."
      );
+#endif
      parameters[numberParameters++] =
           CbcOrClpParam("pumpC!utoff", "Fake cutoff for use in feasibility pump",
                         -COIN_DBL_MAX, COIN_DBL_MAX, CBC_PARAM_DBL_FAKECUTOFF);
