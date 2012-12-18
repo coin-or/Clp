@@ -764,6 +764,10 @@ public:
          delete [] ray_;
          ray_=NULL;
      }
+	 /// Access internal ray storage. Users should call infeasibilityRay() or unboundedRay() instead.
+	 inline const double * internalRay() const {
+		 return ray_;
+	 }
      /// See if status (i.e. basis) array exists (partly for OsiClp)
      inline bool statusExists() const {
           return (status_ != NULL);

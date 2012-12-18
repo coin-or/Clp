@@ -197,7 +197,7 @@ extern "C" {
      /** Integer information */
      COINLIBAPI char * COINLINKAGE Clp_integerInformation(Clp_Simplex * model);
      /** Infeasibility/unbounded ray (NULL returned if none/wrong)
-         Up to user to use delete [] on these arrays.  */
+         Up to user to use free() on these arrays.  */
      COINLIBAPI double * COINLINKAGE Clp_infeasibilityRay(Clp_Simplex * model);
      COINLIBAPI double * COINLINKAGE Clp_unboundedRay(Clp_Simplex * model);
      /** See if status array exists (partly for OsiClp) */

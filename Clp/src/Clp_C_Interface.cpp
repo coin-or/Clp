@@ -637,16 +637,37 @@ Clp_integerInformation(Clp_Simplex * model)
      return model->model_->integerInformation();
 }
 /* Infeasibility/unbounded ray (NULL returned if none/wrong)
-   Up to user to use delete [] on these arrays.  */
+   Up to user to use free() on these arrays.  */
 COINLIBAPI double * COINLINKAGE
 Clp_infeasibilityRay(Clp_Simplex * model)
 {
-     return model->model_->infeasibilityRay();
+     const double * ray = model->model_->internalRay();
+     double * array = NULL;
+     int numberRows = model->model_->numberRows(); 
+     int status = model->model_->status();
+     if (status == 1 && ray) {
+          array = static_cast<double*>(malloc(numberRows*sizeof(double)));
+          memcpy(array,ray,numberRows*sizeof(double));
+#ifndef CLP_NO_SWAP_SIGN
+          // swap signs to be consistent with norm
+          for (int i = 0; i < numberRows; i++)
+               array[i] = -array[i];
+#endif
+     }
+     return array;
 }
 COINLIBAPI double * COINLINKAGE
 Clp_unboundedRay(Clp_Simplex * model)
 {
-     return model->model_->unboundedRay();
+     const double * ray = model->model_->internalRay();
+     double * array = NULL;
+     int numberColumns = model->model_->numberColumns(); 
+     int status = model->model_->status();
+     if (status == 2 && ray) {
+          array = static_cast<double*>(malloc(numberColumns*sizeof(double)));
+          memcpy(array,ray,numberColumns*sizeof(double));
+     }
+     return array;
 }
 /* See if status array exists (partly for OsiClp) */
 COINLIBAPI int COINLINKAGE
