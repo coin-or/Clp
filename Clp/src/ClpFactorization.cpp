@@ -1527,6 +1527,12 @@ ClpFactorization::factorize ( ClpSimplex * model,
 
                numberElements += matrix->countBasis(pivotTemp + numberRowBasic,
                                                     numberColumnBasic);
+#ifndef NDEBUG
+//#define CHECK_CLEAN_BASIS
+#ifdef CHECK_CLEAN_BASIS
+	       int saveNumberElements = numberElements;
+#endif
+#endif
                // Not needed for dense
                numberElements = 3 * numberBasic + 3 * numberElements + 20000;
                int numberIterations = model->numberIterations();
@@ -1544,6 +1550,14 @@ ClpFactorization::factorize ( ClpSimplex * model,
                elementU = coinFactorizationB_->elements();
                indexRowU = coinFactorizationB_->indices();
                startColumnU = coinFactorizationB_->starts();
+#ifdef CHECK_CLEAN_BASIS
+	       for (int i=0;i<saveNumberElements;i++) {
+		 elementU[i]=0.0;
+		 indexRowU[i]=-1;
+	       }
+	       for (int i=0;i<numberRows;i++)
+		 startColumnU[i]=-1;
+#endif
 #ifndef COIN_FAST_CODE
                double slackValue;
                slackValue = coinFactorizationB_->slackValue();
@@ -1584,6 +1598,19 @@ ClpFactorization::factorize ( ClpSimplex * model,
                                      + numberInColumn[numberBasic-1];
                else
                     numberElements = 0;
+#ifdef CHECK_CLEAN_BASIS
+	       assert (!startColumnU[0]);
+	       int lastStart=0;
+	       for (int i=0;i<numberRows;i++) {
+		 assert (startColumnU[i+1]>lastStart);
+		 lastStart=startColumnU[i+1];
+	       }
+	       assert (lastStart==saveNumberElements);
+	       for (int i=0;i<saveNumberElements;i++) {
+		 assert(elementU[i]);
+		 assert(indexRowU[i]>=0&&indexRowU[i]<numberRows);
+	       }
+#endif
                coinFactorizationB_->preProcess ( );
                coinFactorizationB_->factor (  );
                if (coinFactorizationB_->status() == -1 &&
