@@ -11,6 +11,14 @@
 /* include all defines and ugly stuff */
 #include "Coin_C_defines.h"
 
+#if defined (CLP_EXTERN_C)
+typedef struct {
+  ClpSolve options;
+} Clp_Solve;
+#else
+typedef void Clp_Solve;
+#endif
+
 /** This is a first "C" interface to Clp.
     It has similarities to the OSL V3 interface
     and only has most common functions
@@ -22,11 +30,15 @@ extern "C" {
 
      /**@name Constructors and destructor
         These do not have an exact analogue in C++.
-        The user does not need to know structure of Clp_Simplex.
+        The user does not need to know structure of Clp_Simplex or Clp_Solve.
 
-        For all functions outside this group there is an exact C++
+        For (almost) all Clp_* functions outside this group there is an exact C++
         analogue created by taking the first parameter out, removing the Clp_
         from name and applying the method to an object of type ClpSimplex.
+        
+        Similarly, for all ClpSolve_* functions there is an exact C++
+        analogue created by taking the first parameter out, removing the ClpSolve_
+        from name and applying the method to an object of type ClpSolve.
      */
      /*@{*/
 
@@ -34,6 +46,10 @@ extern "C" {
      COINLIBAPI Clp_Simplex * COINLINKAGE Clp_newModel(void);
      /** Destructor */
      COINLIBAPI void COINLINKAGE Clp_deleteModel(Clp_Simplex * model);
+     /** Default constructor */
+     COINLIBAPI Clp_Solve * COINLINKAGE ClpSolve_new();
+     /** Destructor */ 
+     COINLIBAPI void COINLINKAGE ClpSolve_delete(Clp_Solve * solve);
      /*@}*/
 
      /**@name Load model - loads some stuff and initializes others */
@@ -257,6 +273,8 @@ extern "C" {
          See  ClpSolve.hpp for options
       */
      COINLIBAPI int COINLINKAGE Clp_initialSolve(Clp_Simplex * model);
+     /** Pass solve options. (Exception to direct analogue rule) */ 
+     COINLIBAPI int COINLINKAGE Clp_initialSolveWithOptions(Clp_Simplex * model, Clp_Solve *);
      /** Dual initial solve */
      COINLIBAPI int COINLINKAGE Clp_initialDualSolve(Clp_Simplex * model);
      /** Primal initial solve */
@@ -399,6 +417,77 @@ extern "C" {
         default is 1.0e-20 */
      COINLIBAPI double COINLINKAGE Clp_getSmallElementValue(Clp_Simplex * model);
      COINLIBAPI void COINLINKAGE Clp_setSmallElementValue(Clp_Simplex * model, double value);
+     /*@}*/
+
+     
+     /**@name Get and set ClpSolve options
+     */
+     /*@{*/
+     COINLIBAPI void COINLINKAGE ClpSolve_setSpecialOption(Clp_Solve *, int which, int value, int extraInfo);
+     COINLIBAPI int COINLINKAGE ClpSolve_getSpecialOption(Clp_Solve *, int which);
+
+     /** method: (see ClpSolve::SolveType)
+         0 - dual simplex
+         1 - primal simplex
+         2 - primal or sprint
+         3 - barrier
+         4 - barrier no crossover
+         5 - automatic
+         6 - not implemented
+       -- pass extraInfo == -1 for default behavior */
+     COINLIBAPI void COINLINKAGE ClpSolve_setSolveType(Clp_Solve *, int method, int extraInfo);
+     COINLIBAPI int COINLINKAGE ClpSolve_getSolveType(Clp_Solve *);
+
+     /** amount: (see ClpSolve::PresolveType)
+         0 - presolve on
+         1 - presolve off
+         2 - presolve number
+         3 - presolve number cost
+       -- pass extraInfo == -1 for default behavior */
+     COINLIBAPI void COINLINKAGE ClpSolve_setPresolveType(Clp_Solve *, int amount, int extraInfo);
+     COINLIBAPI int COINLINKAGE ClpSolve_getPresolveType(Clp_Solve *);
+
+     COINLIBAPI int COINLINKAGE ClpSolve_getPresolvePasses(Clp_Solve *);
+     COINLIBAPI int COINLINKAGE ClpSolve_getExtraInfo(Clp_Solve *, int which);
+     COINLIBAPI void COINLINKAGE ClpSolve_setInfeasibleReturn(Clp_Solve *, int trueFalse);
+     COINLIBAPI int COINLINKAGE ClpSolve_infeasibleReturn(Clp_Solve *);
+
+     COINLIBAPI int COINLINKAGE ClpSolve_doDual(Clp_Solve *);
+     COINLIBAPI void COINLINKAGE ClpSolve_setDoDual(Clp_Solve *, int doDual);
+
+     COINLIBAPI int COINLINKAGE ClpSolve_doSingleton(Clp_Solve *);
+     COINLIBAPI void COINLINKAGE ClpSolve_setDoSingleton(Clp_Solve *, int doSingleton);
+
+     COINLIBAPI int COINLINKAGE ClpSolve_doDoubleton(Clp_Solve *);
+     COINLIBAPI void COINLINKAGE ClpSolve_setDoDoubleton(Clp_Solve *, int doDoubleton);
+
+     COINLIBAPI int COINLINKAGE ClpSolve_doTripleton(Clp_Solve *);
+     COINLIBAPI void COINLINKAGE ClpSolve_setDoTripleton(Clp_Solve *, int doTripleton);
+
+     COINLIBAPI int COINLINKAGE ClpSolve_doTighten(Clp_Solve *);
+     COINLIBAPI void COINLINKAGE ClpSolve_setDoTighten(Clp_Solve *, int doTighten);
+
+     COINLIBAPI int COINLINKAGE ClpSolve_doForcing(Clp_Solve *);
+     COINLIBAPI void COINLINKAGE ClpSolve_setDoForcing(Clp_Solve *, int doForcing);
+
+     COINLIBAPI int COINLINKAGE ClpSolve_doImpliedFree(Clp_Solve *);
+     COINLIBAPI void COINLINKAGE ClpSolve_setDoImpliedFree(Clp_Solve *, int doImpliedFree);
+     
+     COINLIBAPI int COINLINKAGE ClpSolve_doDupcol(Clp_Solve *);
+     COINLIBAPI void COINLINKAGE ClpSolve_setDoDupcol(Clp_Solve *, int doDupcol);
+     
+     COINLIBAPI int COINLINKAGE ClpSolve_doDuprow(Clp_Solve *);
+     COINLIBAPI void COINLINKAGE ClpSolve_setDoDuprow(Clp_Solve *, int doDuprow);
+
+     COINLIBAPI int COINLINKAGE ClpSolve_doSingletonColumn(Clp_Solve *);
+     COINLIBAPI void COINLINKAGE ClpSolve_setDoSingletonColumn(Clp_Solve *, int doSingleton);
+
+     COINLIBAPI int COINLINKAGE ClpSolve_presolveActions(Clp_Solve *);
+     COINLIBAPI void COINLINKAGE ClpSolve_setPresolveActions(Clp_Solve *, int action);
+
+     COINLIBAPI int COINLINKAGE ClpSolve_substitution(Clp_Solve *);
+     COINLIBAPI void COINLINKAGE ClpSolve_setSubstitution(Clp_Solve *, int value);
+
      /*@}*/
 #ifdef __cplusplus
 }

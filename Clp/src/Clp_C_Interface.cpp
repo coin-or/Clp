@@ -765,6 +765,12 @@ Clp_initialSolve(Clp_Simplex * model)
 {
      return model->model_->initialSolve();
 }
+/* Pass solve options. (Exception to direct analogue rule) */
+COINLIBAPI int COINLINKAGE
+Clp_initialSolveWithOptions(Clp_Simplex * model, Clp_Solve * s)
+{
+     return model->model_->initialSolve(s->options);
+}
 /* Barrier initial solve */
 COINLIBAPI int COINLINKAGE
 Clp_initialBarrierSolve(Clp_Simplex * model0)
@@ -1210,6 +1216,107 @@ Clp_idiot(Clp_Simplex * model, int tryhard)
      info.crash(numberpass, clp->messageHandler(), clp->messagesPointer(), false);
 }
 #endif
+
+COINLIBAPI Clp_Solve * COINLINKAGE 
+ClpSolve_new() 
+{ 
+    return new Clp_Solve(); 
+}
+
+COINLIBAPI void COINLINKAGE 
+ClpSolve_delete(Clp_Solve * solve) 
+{ 
+    delete solve; 
+}
+
+// space- and error-saving macros
+#define ClpSolveGetIntProperty(prop) \
+COINLIBAPI int COINLINKAGE \
+ClpSolve_ ## prop (Clp_Solve *s) \
+{ \
+    return s->options.prop(); \
+}
+
+#define ClpSolveSetIntProperty(prop) \
+COINLIBAPI void COINLINKAGE \
+ClpSolve_ ## prop (Clp_Solve *s, int val) \
+{ \
+    s->options.prop(val); \
+}
+
+COINLIBAPI void COINLINKAGE 
+ClpSolve_setSpecialOption(Clp_Solve * s, int which, int value, int extraInfo) 
+{
+    s->options.setSpecialOption(which,value,extraInfo);
+}
+
+COINLIBAPI int COINLINKAGE 
+ClpSolve_getSpecialOption(Clp_Solve * s, int which)
+{
+    return s->options.getSpecialOption(which);
+}
+
+COINLIBAPI void COINLINKAGE 
+ClpSolve_setSolveType(Clp_Solve * s, int method, int extraInfo)
+{
+    s->options.setSolveType(static_cast<ClpSolve::SolveType>(method), extraInfo);
+}
+
+ClpSolveGetIntProperty(getSolveType)
+
+COINLIBAPI void COINLINKAGE ClpSolve_setPresolveType(Clp_Solve * s, int amount, int extraInfo)
+{
+    s->options.setPresolveType(static_cast<ClpSolve::PresolveType>(amount),extraInfo);
+}
+
+ClpSolveGetIntProperty(getPresolveType)
+
+ClpSolveGetIntProperty(getPresolvePasses)
+
+
+COINLIBAPI int COINLINKAGE 
+ClpSolve_getExtraInfo(Clp_Solve * s, int which) {
+     return s->options.getExtraInfo(which);
+}
+
+ClpSolveSetIntProperty(setInfeasibleReturn)
+ClpSolveGetIntProperty(infeasibleReturn)
+
+ClpSolveGetIntProperty(doDual)
+ClpSolveSetIntProperty(setDoDual)
+
+ClpSolveGetIntProperty(doSingleton)
+ClpSolveSetIntProperty(setDoSingleton)
+
+ClpSolveGetIntProperty(doDoubleton)
+ClpSolveSetIntProperty(setDoDoubleton)
+
+ClpSolveGetIntProperty(doTripleton)
+ClpSolveSetIntProperty(setDoTripleton)
+
+ClpSolveGetIntProperty(doTighten)
+ClpSolveSetIntProperty(setDoTighten)
+
+ClpSolveGetIntProperty(doForcing)
+ClpSolveSetIntProperty(setDoForcing)
+
+ClpSolveGetIntProperty(doImpliedFree)
+ClpSolveSetIntProperty(setDoImpliedFree)
+
+ClpSolveGetIntProperty(doDupcol)
+ClpSolveSetIntProperty(setDoDupcol)
+
+ClpSolveGetIntProperty(doDuprow)
+ClpSolveSetIntProperty(setDoDuprow)
+
+ClpSolveGetIntProperty(doSingletonColumn)
+ClpSolveSetIntProperty(setDoSingletonColumn)
+
+ClpSolveGetIntProperty(presolveActions)
+ClpSolveSetIntProperty(setPresolveActions)
+
+ClpSolveGetIntProperty(substitution)
+ClpSolveSetIntProperty(setSubstitution)
 
 #if defined(__MWERKS__)
 #pragma export off
