@@ -136,6 +136,8 @@ enum CbcOrClpParameterType
      CLP_PARAM_INT_LOGLEVEL ,
 #endif
      CBC_PARAM_INT_MAXSAVEDSOLS,
+     CBC_PARAM_INT_RANDOMSEED,
+     CBC_PARAM_INT_MULTIPLEROOTS,
 
      CLP_PARAM_STR_DIRECTION = 201,
      CLP_PARAM_STR_DUALPIVOT,
@@ -477,7 +479,7 @@ int CoinReadGetIntField(int argc, const char *argv[], int * valid);
 double CoinReadGetDoubleField(int argc, const char *argv[], int * valid);
 void CoinReadPrintit(const char * input);
 void setCbcOrClpPrinting(bool yesNo);
-#define CBCMAXPARAMETERS 200
+#define CBCMAXPARAMETERS 250
 /*
   Subroutine to establish the cbc parameter array. See the description of
   class CbcOrClpParam for details. Pulled from C..Main() for clarity.
