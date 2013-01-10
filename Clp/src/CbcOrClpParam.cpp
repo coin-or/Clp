@@ -12,6 +12,13 @@
 #include <cassert>
 
 #ifdef COIN_HAS_CBC
+#if CBC_VERSION_MAJOR>2
+#define CBC_AFTER_2_8
+#elif CBC_VERSION_MAJOR==2
+#if CBC_VERSION_MINOR>8
+#define CBC_AFTER_2_8
+#endif
+#endif
 #ifdef COIN_HAS_CLP
 #include "OsiClpSolverInterface.hpp"
 #include "ClpSimplex.hpp"
@@ -2489,6 +2496,21 @@ haroldo.santos@gmail.com.\
      parameters[numberParameters++] =
           CbcOrClpParam("miplib", "Do some of miplib test set",
                         CBC_PARAM_ACTION_MIPLIB, 3, 1);
+#ifdef CBC_AFTER_2_8
+     parameters[numberParameters++] =
+          CbcOrClpParam("multiple!RootPasses", "Do multiple root passes to collect cuts and solutions",
+                        0, 100000000, CBC_PARAM_INT_MULTIPLEROOTS, 0);
+     parameters[numberParameters-1].setIntValue(0);
+     parameters[numberParameters-1].setLonghelp
+     (
+          "Do (in parallel if threads enabled) the root phase this number of times \
+ and collect all solutions and cuts generated.  The actual format is aabbcc \
+where aa is non-zero to say just do heuristics - no cuts, if bb is non zero \
+then it is number of threads to use (otherwise uses threads setting) and \
+cc is number of times to do root phase.  Yet another one from the Italian idea factory \
+(Andrea Lodi , Matteo Fischetti , Michele Monaci , Domenico Salvagnin , and Andrea Tramontani3)"
+     );
+#endif
      parameters[numberParameters++] =
           CbcOrClpParam("naive!Heuristics", "Whether to try some stupid heuristic",
                         "off", CBC_PARAM_STR_NAIVE, 7, 1);
@@ -3499,7 +3521,8 @@ Doh option does heuristic before preprocessing"     );
      parameters[numberParameters-1].setLonghelp
      (
           "This switches on zero-half cuts (either at root or in entire tree) \
-See branchAndCut for information on options."
+See branchAndCut for information on options.  This implementation was written by \
+Alberto Caprara."
      );
 #endif
 #endif
