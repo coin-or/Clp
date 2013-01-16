@@ -673,6 +673,7 @@ CbcOrClpParam::intParameter (ClpSimplex * model) const
 #ifdef CBC_THREAD
      case CBC_PARAM_INT_THREADS:
           value = model->numberThreads();
+	  break;
 #endif
 #endif
      default:
@@ -933,6 +934,12 @@ CbcOrClpParam::setIntParameterWithMessage ( CbcModel & model, int value , int & 
                model.setNumberThreads(value);
                break;
 #endif
+#ifdef CBC_AFTER_2_8
+          case CBC_PARAM_INT_RANDOMSEED:
+               oldValue = model.getRandomSeed();
+               model.setRandomSeed(value);
+               break;
+#endif
 #endif
           default:
                break;
@@ -982,6 +989,11 @@ CbcOrClpParam::intParameter (CbcModel &model) const
 #ifdef CBC_THREAD
      case CBC_PARAM_INT_THREADS:
           value = model.getNumberThreads();
+#endif
+#ifdef CBC_AFTER_2_8
+     case CBC_PARAM_INT_RANDOMSEED:
+          value = model.getRandomSeed();
+          break;
 #endif
 #endif
      default:
@@ -1984,7 +1996,7 @@ e.g. no ENDATA.  This has to be set before import i.e. -errorsAllowed on -import
      );
 #ifdef COIN_HAS_CBC
      parameters[numberParameters++] =
-          CbcOrClpParam("exp!eriment", "Whether to use testing features",
+          CbcOrClpParam("exper!iment", "Whether to use testing features",
                         -1, 200, CBC_PARAM_INT_EXPERIMENT, 0);
      parameters[numberParameters-1].setLonghelp
      (
@@ -1992,6 +2004,25 @@ e.g. no ENDATA.  This has to be set before import i.e. -errorsAllowed on -import
 0 then no new ideas, 1 fairly sensible, 2 a bit dubious, 3 you are on your own!"
      );
      parameters[numberParameters-1].setIntValue(0);
+#ifdef CBC_AFTER_2_8
+     parameters[numberParameters++] =
+          CbcOrClpParam("expensive!Strong", "Whether to do even more strong branching",
+                        0, COIN_INT_MAX, CBC_PARAM_INT_STRONG_STRATEGY, 0);
+     parameters[numberParameters-1].setLonghelp
+     (
+      "Strategy for extra strong branching \n\
+\t0 - normal\n\
+\twhen to do all fractional\n\
+\t1 - root node\n\
+\t2 - depth less than modifier\n\
+\t4 - if objective == best possible\n\
+\t6 - as 2+4\n\
+\twhen to do all including satisfied\n\
+\t10 - root node etc.\n\
+\tIf >=100 then do when depth <= strategy/100 (otherwise 5)"
+     );
+     parameters[numberParameters-1].setIntValue(0);
+#endif
 #endif
      parameters[numberParameters++] =
           CbcOrClpParam("export", "Export model as mps file",
@@ -3016,6 +3047,17 @@ are fixed and a small branch and bound is tried."
           "This stops the execution of Clp, end, exit, quit and stop are synonyms"
      );
 #ifdef COIN_HAS_CBC
+#ifdef CBC_AFTER_2_8
+     parameters[numberParameters++] =
+          CbcOrClpParam("randomC!bcSeed", "Random seed for Cbc",
+                        -1, COIN_INT_MAX, CBC_PARAM_INT_RANDOMSEED);
+     parameters[numberParameters-1].setLonghelp
+     (
+          "This sets a random seed for Cbc \
+- 0 says use time of day, -1 is as now."
+     );
+     parameters[numberParameters-1].setIntValue(-1);
+#endif
      parameters[numberParameters++] =
           CbcOrClpParam("randomi!zedRounding", "Whether to try randomized rounding heuristic",
                         "off", CBC_PARAM_STR_RANDROUND);
@@ -3357,7 +3399,7 @@ will be in resulting problem"
 #endif
      parameters[numberParameters++] =
           CbcOrClpParam("strong!Branching", "Number of variables to look at in strong branching",
-                        0, 999999, CBC_PARAM_INT_STRONGBRANCHING);
+                        0, COIN_INT_MAX, CBC_PARAM_INT_STRONGBRANCHING);
      parameters[numberParameters-1].setLonghelp
      (
           "In order to decide which variable to branch on, the code will choose up to this number \
