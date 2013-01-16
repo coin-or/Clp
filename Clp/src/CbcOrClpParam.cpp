@@ -50,6 +50,9 @@ static char coin_prompt[] = "Clp:";
 #define CBC_THREAD
 #endif
 #endif
+#if CLP_HAS_ABC
+#include "AbcCommon.hpp"
+#endif
 static bool doPrinting = true;
 std::string afterEquals = "";
 static char printArray[200];
@@ -607,6 +610,7 @@ CbcOrClpParam::setIntParameterWithMessage ( ClpSimplex * model, int value , int 
                break;
           case CLP_PARAM_INT_SPECIALOPTIONS:
                model->setSpecialOptions(value);
+               break;
           case CLP_PARAM_INT_RANDOMSEED:
 	    {
 	      if (value==0) {
@@ -930,13 +934,12 @@ CbcOrClpParam::setIntParameterWithMessage ( CbcModel & model, int value , int & 
                model.setNumberThreads(value);
                break;
 #endif
-#endif
-#if defined(COIN_HAS_CBC) && ((CBC_VERSION_MAJOR > 2) || (CBC_VERSION_MINOR > 7))
+#ifdef CBC_AFTER_2_8
           case CBC_PARAM_INT_RANDOMSEED:
                oldValue = model.getRandomSeed();
                model.setRandomSeed(value);
                break;
-               
+#endif
 #endif
           default:
                break;
@@ -986,13 +989,12 @@ CbcOrClpParam::intParameter (CbcModel &model) const
 #ifdef CBC_THREAD
      case CBC_PARAM_INT_THREADS:
           value = model.getNumberThreads();
-          break;
 #endif
-#endif
-#if defined(COIN_HAS_CBC) && ((CBC_VERSION_MAJOR > 2) || (CBC_VERSION_MINOR > 7))
+#ifdef CBC_AFTER_2_8
      case CBC_PARAM_INT_RANDOMSEED:
           value = model.getRandomSeed();
           break;
+#endif
 #endif
      default:
           value = intValue_;
@@ -1130,7 +1132,7 @@ CoinReadNextField()
           }
 #else
           if (CbcOrClpReadCommand == stdin) {
-               fprintf(stdout, coin_prompt);
+	       fputs(coin_prompt,stdout);
                fflush(stdout);
           }
           where = fgets(line, 1000, CbcOrClpReadCommand);
@@ -1355,6 +1357,26 @@ establishParams (int &numberParameters, CbcOrClpParam *const parameters)
      parameters[numberParameters++] =
           CbcOrClpParam("-", "From stdin",
                         CLP_PARAM_ACTION_STDIN, 3, 0);
+#ifdef ABC_INHERIT
+      parameters[numberParameters++] =
+          CbcOrClpParam("abc", "Whether to visit Aboca",
+                        "off", CLP_PARAM_STR_ABCWANTED, 7, 0);
+     parameters[numberParameters-1].append("one");
+     parameters[numberParameters-1].append("two");
+     parameters[numberParameters-1].append("three");
+     parameters[numberParameters-1].append("four");
+     parameters[numberParameters-1].append("five");
+     parameters[numberParameters-1].append("six");
+     parameters[numberParameters-1].append("seven");
+     parameters[numberParameters-1].append("eight");
+     parameters[numberParameters-1].append("on");
+     parameters[numberParameters-1].append("decide");
+     parameters[numberParameters-1].setLonghelp
+     (
+          "Decide whether to use A Basic Optimization Code (Accelerated?) \
+and whether to try going parallel!"
+     );
+#endif
      parameters[numberParameters++] =
           CbcOrClpParam("allC!ommands", "Whether to print less used commands",
                         "no", CLP_PARAM_STR_ALLCOMMANDS);
@@ -1601,8 +1623,11 @@ Cbc/examples/driver4.cpp."
      parameters[numberParameters-1].append("on");
      parameters[numberParameters-1].append("so!low_halim");
      parameters[numberParameters-1].append("lots");
-     //  parameters[numberParameters-1].append("4");
-     //  parameters[numberParameters-1].append("5");
+#ifdef ABC_INHERIT
+     parameters[numberParameters-1].append("dual");
+     parameters[numberParameters-1].append("dw");
+     parameters[numberParameters-1].append("idiot");
+#endif
      parameters[numberParameters-1].setLonghelp
      (
           "If crash is set on and there is an all slack basis then Clp will flip or put structural\
@@ -1971,7 +1996,7 @@ e.g. no ENDATA.  This has to be set before import i.e. -errorsAllowed on -import
      );
 #ifdef COIN_HAS_CBC
      parameters[numberParameters++] =
-          CbcOrClpParam("exp!eriment", "Whether to use testing features",
+          CbcOrClpParam("exper!iment", "Whether to use testing features",
                         -1, 200, CBC_PARAM_INT_EXPERIMENT, 0);
      parameters[numberParameters-1].setLonghelp
      (
@@ -1979,6 +2004,25 @@ e.g. no ENDATA.  This has to be set before import i.e. -errorsAllowed on -import
 0 then no new ideas, 1 fairly sensible, 2 a bit dubious, 3 you are on your own!"
      );
      parameters[numberParameters-1].setIntValue(0);
+#ifdef CBC_AFTER_2_8
+     parameters[numberParameters++] =
+          CbcOrClpParam("expensive!Strong", "Whether to do even more strong branching",
+                        0, COIN_INT_MAX, CBC_PARAM_INT_STRONG_STRATEGY, 0);
+     parameters[numberParameters-1].setLonghelp
+     (
+      "Strategy for extra strong branching \n\
+\t0 - normal\n\
+\twhen to do all fractional\n\
+\t1 - root node\n\
+\t2 - depth less than modifier\n\
+\t4 - if objective == best possible\n\
+\t6 - as 2+4\n\
+\twhen to do all including satisfied\n\
+\t10 - root node etc.\n\
+\tIf >=100 then do when depth <= strategy/100 (otherwise 5)"
+     );
+     parameters[numberParameters-1].setIntValue(0);
+#endif
 #endif
      parameters[numberParameters++] =
           CbcOrClpParam("export", "Export model as mps file",
@@ -2028,8 +2072,15 @@ of dual information to use.  After that it goes back to powers of 2 so -\n\
      parameters[numberParameters-1].append("osl");
      parameters[numberParameters-1].setLonghelp
      (
+#ifndef ABC_INHERIT
           "The default is to use the normal CoinFactorization, but \
 other choices are a dense one, osl's or one designed for small problems."
+#else
+          "Normally the default is to use the normal CoinFactorization, but \
+other choices are a dense one, osl's or one designed for small problems. \
+However if at Aboca then the default is CoinAbcFactorization and other choices are \
+a dense one, one designed for small problems or if enabled a long factorization."
+#endif
      );
      parameters[numberParameters++] =
           CbcOrClpParam("fakeB!ound", "All bounds <= this value - DEBUG",
@@ -2432,6 +2483,9 @@ but this program turns this off to make it look more friendly.  It can be useful
  to turn them back on if you want to be able to 'grep' for particular messages or if\
  you intend to override the behavior of a particular message.  This only affects Clp not Cbc."
      );
+     parameters[numberParameters++] =
+          CbcOrClpParam("miplib", "Do some of miplib test set",
+                        CBC_PARAM_ACTION_MIPLIB, 3, 1);
 #ifdef COIN_HAS_CBC
       parameters[numberParameters++] =
           CbcOrClpParam("mips!tart", "reads an initial feasible solution from file",
@@ -2443,7 +2497,7 @@ to CBC. Values of the main decision variables which are active (have \
 non-zero values) in this solution are specified in a text  file. The \
 text file format used is the same of the solutions saved by CBC, but \
 not all fields are required to be filled. First line may contain the \
-solution status and will be ignored, remaning lines contain column \
+solution status and will be ignored, remaining lines contain column \
 indexes, names and values as in this example:\n\
 \n\
 Stopped on iterations - objective value 57597.00000000\n\
@@ -2461,7 +2515,7 @@ its performance: several MIP heuristics (e.g. RINS) rely on having at \
 least one feasible solution available and can start immediately if the \
 user provides one. Feasibility Pump (FP) is a heuristic which tries to \
 overcome the problem of taking too long to find feasible solution (or \
-not finding at all), but it not always suceeds. If you provide one \
+not finding at all), but it not always succeeds. If you provide one \
 starting solution you will probably save some time by disabling FP. \
 \n\n\
 Knowledge specific to your problem can be considered to write an \
@@ -2493,9 +2547,6 @@ haroldo.santos@gmail.com.\
 \t n fix if value of variable same for last n iterations."
      );
      parameters[numberParameters-1].setIntValue(0);
-     parameters[numberParameters++] =
-          CbcOrClpParam("miplib", "Do some of miplib test set",
-                        CBC_PARAM_ACTION_MIPLIB, 3, 1);
 #ifdef CBC_AFTER_2_8
      parameters[numberParameters++] =
           CbcOrClpParam("multiple!RootPasses", "Do multiple root passes to collect cuts and solutions",
@@ -2508,7 +2559,8 @@ haroldo.santos@gmail.com.\
 where aa is non-zero to say just do heuristics - no cuts, if bb is non zero \
 then it is number of threads to use (otherwise uses threads setting) and \
 cc is number of times to do root phase.  Yet another one from the Italian idea factory \
-(Andrea Lodi , Matteo Fischetti , Michele Monaci , Domenico Salvagnin , and Andrea Tramontani3)"
+(This time - Andrea Lodi , Matteo Fischetti , Michele Monaci , Domenico Salvagnin , \
+and Andrea Tramontani)"
      );
 #endif
      parameters[numberParameters++] =
@@ -2884,6 +2936,7 @@ costs this much to be infeasible",
      parameters[numberParameters-1].append("bound!ranging");
      parameters[numberParameters-1].append("rhs!ranging");
      parameters[numberParameters-1].append("objective!ranging");
+     parameters[numberParameters-1].append("stats");
      parameters[numberParameters-1].setLonghelp
      (
           "This changes the amount and format of printing a solution:\nnormal - nonzero column variables \n\
@@ -2935,7 +2988,6 @@ File is in csv format with allowed headings - name, number, priority, direction,
 See branchAndCut for information on options. \
 but strong options do more probing"
      );
-#if (CBC_VERSION_MAJOR > 2) || (CBC_VERSION_MINOR > 7)
      parameters[numberParameters++] =
           CbcOrClpParam("proximity!Search", "Whether to do proximity search heuristic",
                         "off", CBC_PARAM_STR_PROXIMITY);
@@ -2952,7 +3004,6 @@ to incumbent solution (Fischetti and Monaci). \
 See Rounding for meaning of on,both,before. \
 The ones at end have different maxNode settings (and are 'on'(on==30))."
      );
-#endif
      parameters[numberParameters++] =
           CbcOrClpParam("pumpC!utoff", "Fake cutoff for use in feasibility pump",
                         -COIN_DBL_MAX, COIN_DBL_MAX, CBC_PARAM_DBL_FAKECUTOFF);
@@ -2996,6 +3047,7 @@ are fixed and a small branch and bound is tried."
           "This stops the execution of Clp, end, exit, quit and stop are synonyms"
      );
 #ifdef COIN_HAS_CBC
+#ifdef CBC_AFTER_2_8
      parameters[numberParameters++] =
           CbcOrClpParam("randomC!bcSeed", "Random seed for Cbc",
                         -1, COIN_INT_MAX, CBC_PARAM_INT_RANDOMSEED);
@@ -3005,8 +3057,9 @@ are fixed and a small branch and bound is tried."
 - 0 says use time of day, -1 is as now."
      );
      parameters[numberParameters-1].setIntValue(-1);
+#endif
      parameters[numberParameters++] =
-          CbcOrClpParam("rand!omizedRounding", "Whether to try randomized rounding heuristic",
+          CbcOrClpParam("randomi!zedRounding", "Whether to try randomized rounding heuristic",
                         "off", CBC_PARAM_STR_RANDROUND);
      parameters[numberParameters-1].append("on");
      parameters[numberParameters-1].append("both");
@@ -3274,10 +3327,10 @@ this does branch and cut."
  value for most uses, while 2 and 3 give more information.  This parameter is only used inside MIP - for Clp use 'log'"
      );
 #else
-     // allow solve as synonym for dual
+     // allow solve as synonym for possible dual
      parameters[numberParameters++] =
-          CbcOrClpParam("solv!e", "Solve problem using dual simplex",
-                        CBC_PARAM_ACTION_BAB);
+       CbcOrClpParam("solv!e", "Solve problem using dual simplex (probably)",
+                        CLP_PARAM_ACTION_EITHERSIMPLEX);
      parameters[numberParameters-1].setLonghelp
      (
           "Just so can use solve for clp as well as in cbc"
@@ -3346,7 +3399,7 @@ will be in resulting problem"
 #endif
      parameters[numberParameters++] =
           CbcOrClpParam("strong!Branching", "Number of variables to look at in strong branching",
-                        0, 999999, CBC_PARAM_INT_STRONGBRANCHING);
+                        0, COIN_INT_MAX, CBC_PARAM_INT_STRONGBRANCHING);
      parameters[numberParameters-1].setLonghelp
      (
           "In order to decide which variable to branch on, the code will choose up to this number \
