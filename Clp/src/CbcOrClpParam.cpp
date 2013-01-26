@@ -3545,7 +3545,6 @@ Doh option does heuristic before preprocessing"     );
           "If set will try and fix some integer variables"
      );
      parameters[numberParameters-1].setIntValue(-1);
-#ifdef ZERO_HALF_CUTS
      parameters[numberParameters++] =
           CbcOrClpParam("zero!HalfCuts", "Whether to use zero half cuts",
                         "off", CBC_PARAM_STR_ZEROHALFCUTS);
@@ -3560,7 +3559,6 @@ Doh option does heuristic before preprocessing"     );
 See branchAndCut for information on options.  This implementation was written by \
 Alberto Caprara."
      );
-#endif
 #endif
      parameters[numberParameters++] =
           CbcOrClpParam("zeroT!olerance", "Kill all coefficients \
