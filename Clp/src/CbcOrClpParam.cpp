@@ -12,13 +12,6 @@
 #include <cassert>
 
 #ifdef COIN_HAS_CBC
-#if CBC_VERSION_MAJOR>2
-#define CBC_AFTER_2_8
-#elif CBC_VERSION_MAJOR==2
-#if CBC_VERSION_MINOR>8
-#define CBC_AFTER_2_8
-#endif
-#endif
 #ifdef COIN_HAS_CLP
 #include "OsiClpSolverInterface.hpp"
 #include "ClpSimplex.hpp"
@@ -934,12 +927,10 @@ CbcOrClpParam::setIntParameterWithMessage ( CbcModel & model, int value , int & 
                model.setNumberThreads(value);
                break;
 #endif
-#ifdef CBC_AFTER_2_8
           case CBC_PARAM_INT_RANDOMSEED:
                oldValue = model.getRandomSeed();
                model.setRandomSeed(value);
                break;
-#endif
 #endif
           default:
                break;
@@ -990,11 +981,9 @@ CbcOrClpParam::intParameter (CbcModel &model) const
      case CBC_PARAM_INT_THREADS:
           value = model.getNumberThreads();
 #endif
-#ifdef CBC_AFTER_2_8
      case CBC_PARAM_INT_RANDOMSEED:
           value = model.getRandomSeed();
           break;
-#endif
 #endif
      default:
           value = intValue_;
@@ -2004,7 +1993,6 @@ e.g. no ENDATA.  This has to be set before import i.e. -errorsAllowed on -import
 0 then no new ideas, 1 fairly sensible, 2 a bit dubious, 3 you are on your own!"
      );
      parameters[numberParameters-1].setIntValue(0);
-#ifdef CBC_AFTER_2_8
      parameters[numberParameters++] =
           CbcOrClpParam("expensive!Strong", "Whether to do even more strong branching",
                         0, COIN_INT_MAX, CBC_PARAM_INT_STRONG_STRATEGY, 0);
@@ -2022,7 +2010,6 @@ e.g. no ENDATA.  This has to be set before import i.e. -errorsAllowed on -import
 \tIf >=100 then do when depth <= strategy/100 (otherwise 5)"
      );
      parameters[numberParameters-1].setIntValue(0);
-#endif
 #endif
      parameters[numberParameters++] =
           CbcOrClpParam("export", "Export model as mps file",
@@ -2547,7 +2534,6 @@ haroldo.santos@gmail.com.\
 \t n fix if value of variable same for last n iterations."
      );
      parameters[numberParameters-1].setIntValue(0);
-#ifdef CBC_AFTER_2_8
      parameters[numberParameters++] =
           CbcOrClpParam("multiple!RootPasses", "Do multiple root passes to collect cuts and solutions",
                         0, 100000000, CBC_PARAM_INT_MULTIPLEROOTS, 0);
@@ -2562,7 +2548,6 @@ cc is number of times to do root phase.  Yet another one from the Italian idea f
 (This time - Andrea Lodi , Matteo Fischetti , Michele Monaci , Domenico Salvagnin , \
 and Andrea Tramontani)"
      );
-#endif
      parameters[numberParameters++] =
           CbcOrClpParam("naive!Heuristics", "Whether to try some stupid heuristic",
                         "off", CBC_PARAM_STR_NAIVE, 7, 1);
@@ -3047,7 +3032,6 @@ are fixed and a small branch and bound is tried."
           "This stops the execution of Clp, end, exit, quit and stop are synonyms"
      );
 #ifdef COIN_HAS_CBC
-#ifdef CBC_AFTER_2_8
      parameters[numberParameters++] =
           CbcOrClpParam("randomC!bcSeed", "Random seed for Cbc",
                         -1, COIN_INT_MAX, CBC_PARAM_INT_RANDOMSEED);
@@ -3057,7 +3041,6 @@ are fixed and a small branch and bound is tried."
 - 0 says use time of day, -1 is as now."
      );
      parameters[numberParameters-1].setIntValue(-1);
-#endif
      parameters[numberParameters++] =
           CbcOrClpParam("randomi!zedRounding", "Whether to try randomized rounding heuristic",
                         "off", CBC_PARAM_STR_RANDROUND);
