@@ -1,17 +1,14 @@
-/* $Id: CoinAbcCommon.hpp.cpp 1448 2011-06-19 15:34:41Z stefan $ */
+/* $Id$ */
 // Copyright (C) 2000, International Business Machines
 // Corporation and others, Copyright (C) 2012, FasterCoin.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).
 #ifndef CoinAbcCommon_H
 #define CoinAbcCommon_H
-#if defined(_MSC_VER)
-// Turn off compiler warning about long names
-#  pragma warning(disable:4786)
-#endif
 #ifndef COIN_FAC_NEW
 #define COIN_FAC_NEW
 #endif
 
+#include "CoinPragma.hpp"
 #include "CoinUtilsConfig.h"
 #include <iostream>
 #include <string>

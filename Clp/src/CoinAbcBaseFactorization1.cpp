@@ -1,8 +1,7 @@
-/* $Id: CoinAbcBaseFactorization1.cpp 1448 2011-06-19 15:34:41Z stefan $ */
+/* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others, Copyright (C) 2012, FasterCoin.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).
-#if CLP_HAS_ABC
 #ifdef ABC_JUST_ONE_FACTORIZATION
 #include "CoinAbcCommonFactorization.hpp"
 #define CoinAbcTypeFactorization CoinAbcBaseFactorization
@@ -4727,6 +4726,5 @@ CoinAbcTypeFactorization::checkLinks(int type)
   }
   delete [] mark;
 }
-#endif
 #endif
 #endif

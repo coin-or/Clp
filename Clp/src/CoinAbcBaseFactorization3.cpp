@@ -1,8 +1,7 @@
-/* $Id: CoinAbcBaseFactorization3.cpp 1373 2011-01-03 23:57:44Z lou $ */
+/* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others, Copyright (C) 2012, FasterCoin.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).
-#ifdef CLP_HAS_ABC
 #ifdef ABC_JUST_ONE_FACTORIZATION
 #include "CoinAbcCommonFactorization.hpp"
 #define CoinAbcTypeFactorization CoinAbcBaseFactorization
@@ -2685,5 +2684,4 @@ CoinAbcTypeFactorization::doAddresses()
   markRowAddress_ = reinterpret_cast<CoinCheckZero *> (listAddress_ + numberRows_);
 #endif
 }
-#endif
 #endif

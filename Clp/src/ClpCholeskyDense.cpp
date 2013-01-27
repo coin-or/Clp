@@ -7,8 +7,8 @@
 */
 #include "CoinPragma.hpp"
 #include "CoinHelperFunctions.hpp"
+#include "ClpConfig.h"
 #include "ClpHelperFunctions.hpp"
-
 #include "ClpInterior.hpp"
 #include "ClpCholeskyDense.hpp"
 #include "ClpMessage.hpp"

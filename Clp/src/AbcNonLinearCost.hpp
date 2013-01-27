@@ -1,4 +1,4 @@
-/* $Id: AbcNonLinearCost.hpp 1769 2011-07-26 09:31:51Z forrest $ */
+/* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others, Copyright (C) 2012, FasterCoin.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).

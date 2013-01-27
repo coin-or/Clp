@@ -1,11 +1,10 @@
-/* $Id: AbcMatrix.cpp 1780 2011-08-11 07:15:40Z forrest $ */
+/* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others, Copyright (C) 2012, FasterCoin.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).
 
 
 
-#if CLP_HAS_ABC
 #include <cstdio>
 #include "CoinPragma.hpp"
 #include "CoinIndexedVector.hpp"
@@ -3590,4 +3589,3 @@ AbcMatrix::rowColumns() const
 {
   return column_;
 }
-#endif

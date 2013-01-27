@@ -1,11 +1,10 @@
-/* $Id: AbcSimplexTemp.cpp 1785 2011-08-25 10:17:49Z forrest $ */
+/* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others, Copyright (C) 2012, FasterCoin.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).
 #include "CoinPragma.hpp"
 
 #include <math.h>
-#if CLP_HAS_ABC
 #include "CoinHelperFunctions.hpp"
 #include "CoinAbcHelperFunctions.hpp"
 #include "AbcSimplexDual.hpp"
@@ -3258,5 +3257,4 @@ CoinAbcDgetrs(char trans,int m, long double * COIN_RESTRICT a, long double * COI
     //CoinAbcDlaswp1Backwards(work,m,ipiv);
   }
 }
-#endif
 #endif

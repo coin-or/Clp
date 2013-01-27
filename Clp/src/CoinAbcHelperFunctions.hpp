@@ -1,4 +1,4 @@
-/* $Id: CoinAbcHelperFunctions.hpp 1817 2011-11-03 09:26:23Z forrest $ */
+/* $Id$ */
 // Copyright (C) 2003, International Business Machines
 // Corporation and others, Copyright (C) 2012, FasterCoin.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).

@@ -1,8 +1,7 @@
-/* $Id: CoinAbcDenseFactorization.cpp 1448 2011-06-19 15:34:41Z stefan $ */
+/* $Id$ */
 // Copyright (C) 2008, International Business Machines
 // Corporation and others, Copyright (C) 2012, FasterCoin.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).
-#if CLP_HAS_ABC
 
 #include "CoinUtilsConfig.h"
 #include "CoinPragma.hpp"
@@ -822,4 +821,3 @@ CoinAbcAnyFactorization::wantsTableauColumn() const
 void 
 CoinAbcAnyFactorization::setUsefulInformation(const int * ,int )
 { }
-#endif

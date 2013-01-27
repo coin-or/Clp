@@ -1,9 +1,8 @@
-/* $Id: CoinAbcHelperFunctions.cpp 1817 2011-11-03 09:26:23Z forrest $ */
+/* $Id$ */
 // Copyright (C) 2003, International Business Machines
 // Corporation and others, Copyright (C) 2012, FasterCoin.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).
 
-#if CLP_HAS_ABC
 #include <cfloat>
 #include <cstdlib>
 #include <cmath>
@@ -2014,4 +2013,3 @@ bool DetectFeature(unsigned int feature)
 #endif
   return true;  
 } 
-#endif

@@ -1,14 +1,9 @@
-/* $Id: AbcWarmStart.cpp 1515 2011-12-10 23:38:04Z lou $ */
+/* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others, Copyright (C) 2012, FasterCoin.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).
 
-#if CLP_HAS_ABC
-#if defined(_MSC_VER)
-// Turn off compiler warning about long names
-#  pragma warning(disable:4786)
-#endif
-
+#include "CoinPragma.hpp"
 #include "CoinUtilsConfig.h"
 #include <cassert>
 
@@ -165,4 +160,3 @@ AbcWarmStart::~AbcWarmStart()
 {
   delete[] extraInformation_;
 }
-#endif

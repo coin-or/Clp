@@ -1,5 +1,8 @@
 /* src/config_clp.h.in.  */
 
+/* Define to 1, 2, 3, or 4 if Aboca should be build. */
+#undef CLP_HAS_ABC
+
 /* Version number of project */
 #undef CLP_VERSION
 

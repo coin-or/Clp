@@ -1,13 +1,9 @@
-/* $Id: CoinAbcCommonFactorization.hpp 1448 2011-06-19 15:34:41Z stefan $ */
+/* $Id$ */
 // Copyright (C) 2000, International Business Machines
 // Corporation and others, Copyright (C) 2012, FasterCoin.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).
 #ifndef CoinAbcCommonFactorization_H
 #define CoinAbcCommonFactorization_H
-#if defined(_MSC_VER)
-// Turn off compiler warning about long names
-#  pragma warning(disable:4786)
-#endif
 /* meaning of ABC_SMALL 
    -1 force copies (and no tests)
    0 force copy of U

@@ -1,8 +1,7 @@
-/* $Id: AbcSimplexFactorization.cpp 1732 2011-05-31 08:09:41Z forrest $ */
+/* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others, Copyright (C) 2012, FasterCoin.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).
-#if CLP_HAS_ABC
 #define USE_DENSE_FAC -1
 #define USE_SMALL_FAC 200
 #define USE_LONG_FAC 10000
@@ -611,4 +610,3 @@ AbcSimplexFactorization::setFactorization(AbcSimplexFactorization & rhs)
 {
   AbcSimplexFactorization::operator=(rhs);
 }
-#endif

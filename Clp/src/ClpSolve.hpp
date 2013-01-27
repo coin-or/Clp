@@ -384,6 +384,8 @@ public:
      int oddState_;
      //@}
 };
+
+#include "ClpConfig.h"
 #if CLP_HAS_ABC
 #include "AbcCommon.hpp"
 /// For saving extra information to see if looping.

@@ -36,9 +36,7 @@ extern glp_prob* cbc_glp_prob;
 #define GLP_OPT 5
 #endif
 
-#if CLP_HAS_ABC
 #include "AbcCommon.hpp"
-#endif
 #include "ClpFactorization.hpp"
 #include "CoinTime.hpp"
 #include "ClpSimplex.hpp"

@@ -1,5 +1,8 @@
 /* src/config.h.in.  Generated from configure.ac by autoheader.  */
 
+/* Define to 1, 2, 3, or 4 if Aboca should be build. */
+#undef CLP_HAS_ABC
+
 /* SVN revision number of project */
 #undef CLP_SVN_REV
 

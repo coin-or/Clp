@@ -1,10 +1,7 @@
-/* $Id: AbcSimplex.cpp 1448 2011-06-19 15:34:41Z stefan $ */
+/* $Id$ */
 // Copyright (C) 2000, International Business Machines
 // Corporation and others, Copyright (C) 2012, FasterCoin.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).
-
-//#undef NDEBUG
-#if CLP_HAS_ABC
 
 #include "ClpConfig.h"
 
@@ -170,7 +167,9 @@ AbcSimplex::copyFromSaved(int which)
 void
 AbcSimplex::gutsOfCopy(const AbcSimplex & rhs)
 {
+#ifdef ABC_INHERIT
   abcSimplex_=this;
+#endif
   assert (numberRows_ == rhs.numberRows_);
   assert (numberColumns_ == rhs.numberColumns_);
   numberTotal_ = rhs.numberTotal_;
@@ -317,7 +316,9 @@ resizeArray( T * array, int oldSize1, int oldSize2, int newSize1, int newSize2,i
 void 
 AbcSimplex::gutsOfInitialize(int numberRows,int numberColumns,bool doMore)
 {
+#ifdef ABC_INHERIT
   abcSimplex_=this;
+#endif
   // Zero all
   CoinAbcMemset0(&sumNonBasicCosts_,(reinterpret_cast<double *>(&usefulArray_[0])-&sumNonBasicCosts_));
   zeroTolerance_ = 1.0e-13;
@@ -3582,6 +3583,7 @@ AbcSimplex::tightenPrimalBounds()
 }
 // dual
 #include "AbcSimplexDual.hpp"
+#ifdef ABC_INHERIT
 // Returns 0 if dual can be skipped
 int 
 ClpSimplex::doAbcDual()
@@ -3667,6 +3669,7 @@ ClpSimplex::doAbcDual()
     return returnCode;
   }
 }
+#endif
 #include "AbcSimplexPrimal.hpp"
 // Do dual (return 1 if cleanup needed)
 int 
@@ -3915,6 +3918,7 @@ int AbcSimplex::dual ()
   onStopped(); // set secondary status if stopped
   return returnCode;
 }
+#ifdef ABC_INHERIT
 // primal
 // Returns 0 if primal can be skipped
 int 
@@ -4010,6 +4014,7 @@ ClpSimplex::doAbcPrimal(int ifValuesPass)
     return returnCode;
   }
 }
+#endif
 // Do primal (return 1 if cleanup needed)
 int 
 AbcSimplex::doAbcPrimal(int ifValuesPass)
@@ -5875,7 +5880,12 @@ AbcSimplexProgress::looping()
 {
   if (!model_)
     return -1;
+#ifdef ABC_INHERIT
   AbcSimplex * model = model_->abcSimplex();
+#else
+  AbcSimplex * model;
+  return -1;
+#endif
   double objective = model->rawObjectiveValue();
   if (model->algorithm() < 0)
     objective -= model->bestPossibleImprovement();
@@ -6108,5 +6118,4 @@ AbcSimplex::whichThread() const
   assert (whichThread<NUMBER_THREADS);
   return whichThread;
 }
-#endif
 #endif

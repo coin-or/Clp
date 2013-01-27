@@ -1,4 +1,4 @@
-/* $Id: AbcCommon.hpp 1665 2011-01-04 17:55:54Z lou $ */
+/* $Id$ */
 // Copyright (C) 2003, International Business Machines
 // Corporation and others, Copyright (C) 2012, FasterCoin.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).
@@ -10,6 +10,9 @@
  */
 #ifndef AbcCommon_H
 #define AbcCommon_H
+
+#include "ClpConfig.h"
+
 /*
   0 - off
   1 - build Abc serial but no inherit code
@@ -17,7 +20,7 @@
   3 - build Abc cilk parallel but no inherit code
   4 - build Abc cilk parallel and inherit code
  */
-#if CLP_HAS_ABC
+#ifdef CLP_HAS_ABC
 #if CLP_HAS_ABC==1
 #ifndef ABC_PARALLEL
 #define ABC_PARALLEL 0

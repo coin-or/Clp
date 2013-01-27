@@ -1,9 +1,8 @@
-/* $Id: AbcPrimalColumnPivot.cpp 1665 2011-01-04 17:55:54Z lou $ */
+/* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others, Copyright (C) 2012, FasterCoin.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).
 
-#if CLP_HAS_ABC
 #include "CoinPragma.hpp"
 
 #include "AbcSimplex.hpp"
@@ -86,4 +85,3 @@ void
 AbcPrimalColumnPivot::switchOffSprint()
 {
 }
-#endif

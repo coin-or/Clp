@@ -1,9 +1,8 @@
-/* $Id: AbcNonLinearCost.cpp 1769 2011-07-26 09:31:51Z forrest $ */
+/* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others, Copyright (C) 2012, FasterCoin.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).
 
-#if CLP_HAS_ABC
 #include "CoinPragma.hpp"
 #include <iostream>
 #include <cassert>
@@ -979,5 +978,4 @@ AbcNonLinearCost::validate()
     printf("JJ %d infeasibilities summing to %g\n",
 	   numberInfeasibilities, sumInfeasibilities);
 }
-#endif
 #endif

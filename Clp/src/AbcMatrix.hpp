@@ -1,4 +1,4 @@
-/* $Id: AbcMatrix.hpp 1825 2011-11-20 16:02:57Z forrest $ */
+/* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others, Copyright (C) 2012, FasterCoin.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).

@@ -66,6 +66,32 @@ AC_COIN_CHECK_PACKAGE(Sample,    [coindatasample])
 AC_COIN_CHECK_PACKAGE(Netlib,    [coindatanetlib])
 
 #############################################################################
+#                                    Aboca                                  #
+#############################################################################
+
+#  1 - build Abc serial but no inherit code
+#  2 - build Abc serial and inherit code
+#  3 - build Abc cilk parallel but no inherit code
+#  4 - build Abc cilk parallel and inherit code
+AC_ARG_ENABLE([aboca],
+              [AC_HELP_STRING([--enable-aboca],[enables build of Aboca solver (set to 1,2,3,4)])],
+              [use_aboca=$enableval],
+              [use_aboca=no])
+case "$use_aboca" in 
+  yes)
+    use_aboca=1
+    ;&
+  1 | 2 | 3 | 4)
+    AC_DEFINE_UNQUOTED([CLP_HAS_ABC], [$use_aboca], [Define to 1, 2, 3, or 4 if Aboca should be build.])
+    ;;
+  no) ;;
+  *)
+    AC_MSG_ERROR([invalid argument for --enable-aboca: $use_aboca])
+    ;;
+esac
+AM_CONDITIONAL(COIN_HAS_ABC, test ! "$use_aboca" = no)
+
+#############################################################################
 #                        Third party linear solvers                         #
 #############################################################################
 
@@ -170,7 +196,7 @@ AC_CONFIG_FILES([Makefile
                  test/Makefile
                  clp.pc
                  clp-uninstalled.pc])
-		 
+
 if test $coin_has_osi = yes ; then
   AC_CONFIG_FILES([osi-clp.pc:src/OsiClp/osi-clp.pc.in
                    osi-clp-uninstalled.pc:src/OsiClp/osi-clp-uninstalled.pc.in])

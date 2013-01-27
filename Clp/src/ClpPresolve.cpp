@@ -12,7 +12,8 @@
 #include <iostream>
 
 #include "CoinHelperFunctions.hpp"
-#if CLP_HAS_ABC
+#include "ClpConfig.h"
+#ifdef CLP_HAS_ABC
 #include "CoinAbcCommon.hpp"
 #endif
 

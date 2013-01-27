@@ -27,8 +27,8 @@ class OsiClpSolverInterface;
 class CoinWarmStartBasis;
 class ClpDisasterHandler;
 class ClpConstraint;
-#if CLP_HAS_ABC
 #include "AbcCommon.hpp"
+#ifdef CLP_HAS_ABC
 class AbcTolerancesEtc;
 class AbcSimplex;
 #include "CoinAbcCommon.hpp"
@@ -1644,9 +1644,9 @@ protected:
 #define CLP_ABC_WANTED 1
 #define CLP_ABC_WANTED_PARALLEL 2
 #define CLP_ABC_FULL_DONE 8
-#define CLP_ABC_BEEN_FEASIBLE 65536
   // bits 256,512,1024 for crash
 #endif
+#define CLP_ABC_BEEN_FEASIBLE 65536
   int abcState_;
 public:
      /// Spare int array for passing information [0]!=0 switches on

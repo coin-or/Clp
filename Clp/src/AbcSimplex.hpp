@@ -1,4 +1,4 @@
-/* $Id: AbcSimplex.hpp 1831 2011-12-05 14:42:00Z forrest $ */
+/* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others, Copyright (C) 2012, FasterCoin.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).

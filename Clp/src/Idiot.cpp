@@ -14,9 +14,7 @@
 #include "CoinSort.hpp"
 #include "CoinMessageHandler.hpp"
 #include "CoinHelperFunctions.hpp"
-#if CLP_HAS_ABC
 #include "AbcCommon.hpp"
-#endif
 // Redefine stuff for Clp
 #ifndef OSI_IDIOT
 #include "ClpMessage.hpp"

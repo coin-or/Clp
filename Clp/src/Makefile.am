@@ -68,59 +68,54 @@ libClp_la_SOURCES = \
 	ClpSimplexOther.cpp ClpSimplexOther.hpp \
 	ClpSimplexPrimal.cpp ClpSimplexPrimal.hpp \
 	ClpSolve.cpp ClpSolve.hpp \
+	Idiot.cpp Idiot.hpp \
+	IdiSolve.cpp
+
+if COIN_HAS_ABC
+libClp_la_SOURCES += \
+	AbcCommon.hpp \
+	AbcDualRowDantzig.cpp AbcDualRowDantzig.hpp \
+	AbcDualRowPivot.cpp AbcDualRowPivot.hpp \
+	AbcDualRowSteepest.cpp AbcDualRowSteepest.hpp \
+	AbcMatrix.cpp AbcMatrix.hpp \
+	AbcNonLinearCost.cpp AbcNonLinearCost.hpp \
+	AbcPrimalColumnDantzig.cpp AbcPrimalColumnDantzig.hpp \
+	AbcPrimalColumnPivot.cpp AbcPrimalColumnPivot.hpp \
+	AbcPrimalColumnSteepest.cpp AbcPrimalColumnSteepest.hpp \
+	AbcSimplex.cpp AbcSimplex.hpp \
+	AbcSimplexDual.cpp AbcSimplexDual.hpp \
+	AbcSimplexPrimal.cpp AbcSimplexPrimal.hpp \
+	AbcSimplexParallel.cpp \
+	AbcSimplexFactorization.cpp AbcSimplexFactorization.hpp \
 	AbcWarmStart.cpp AbcWarmStart.hpp \
 	CoinAbcBaseFactorization.hpp \
-	CoinAbcCommonFactorization.hpp \
-	CoinAbcCommon.hpp \
-	AbcDualRowDantzig.hpp \
-	AbcDualRowPivot.hpp \
-	AbcDualRowSteepest.hpp \
-	CoinAbcFactorization.hpp \
-	CoinAbcHelperFunctions.hpp \
-	AbcMatrix.hpp \
-	AbcCommon.hpp \
-	AbcSimplexDual.hpp \
-	AbcSimplexPrimal.hpp \
-	AbcSimplex.hpp \
 	CoinAbcBaseFactorization1.cpp \
 	CoinAbcBaseFactorization2.cpp \
 	CoinAbcBaseFactorization3.cpp \
 	CoinAbcBaseFactorization4.cpp \
 	CoinAbcBaseFactorization5.cpp \
+	CoinAbcCommonFactorization.hpp \
+	CoinAbcCommon.hpp \
 	CoinAbcDenseFactorization.cpp \
 	CoinAbcDenseFactorization.hpp \
-	AbcDualRowDantzig.cpp \
-	AbcDualRowPivot.cpp \
-	AbcDualRowSteepest.cpp \
+	CoinAbcFactorization.hpp \
 	CoinAbcFactorization1.cpp \
 	CoinAbcFactorization2.cpp \
 	CoinAbcFactorization3.cpp \
 	CoinAbcFactorization4.cpp \
 	CoinAbcFactorization5.cpp \
-	CoinAbcHelperFunctions.cpp \
-	AbcMatrix.cpp \
-	AbcSimplex.cpp \
-	AbcSimplexDual.cpp \
-	AbcSimplexPrimal.cpp \
-	AbcSimplexParallel.cpp \
-	AbcPrimalColumnDantzig.cpp AbcPrimalColumnDantzig.hpp \
-	AbcPrimalColumnPivot.cpp AbcPrimalColumnPivot.hpp \
-	AbcPrimalColumnSteepest.cpp AbcPrimalColumnSteepest.hpp \
-	CoinAbcSmallFactorization1.cpp \
-	CoinAbcSmallFactorization2.cpp \
-	CoinAbcSmallFactorization3.cpp \
-	CoinAbcSmallFactorization4.cpp \
-	CoinAbcSmallFactorization5.cpp \
+	CoinAbcHelperFunctions.cpp CoinAbcHelperFunctions.hpp \
 	CoinAbcOrderedFactorization1.cpp \
 	CoinAbcOrderedFactorization2.cpp \
 	CoinAbcOrderedFactorization3.cpp \
 	CoinAbcOrderedFactorization4.cpp \
 	CoinAbcOrderedFactorization5.cpp \
-	AbcSimplexFactorization.cpp \
-	AbcSimplexFactorization.hpp \
-	AbcNonLinearCost.cpp AbcNonLinearCost.hpp \
-	Idiot.cpp Idiot.hpp \
-	IdiSolve.cpp
+	CoinAbcSmallFactorization1.cpp \
+	CoinAbcSmallFactorization2.cpp \
+	CoinAbcSmallFactorization3.cpp \
+	CoinAbcSmallFactorization4.cpp \
+	CoinAbcSmallFactorization5.cpp
+endif
 
 # if AMD, CHOLMOD, or GLPK is available, then compile ClpCholeskyUfl.cpp
 if COIN_HAS_AMD
@@ -235,8 +230,11 @@ includecoin_HEADERS = \
 	ClpSimplexPrimal.hpp \
 	ClpSolve.hpp \
 	CbcOrClpParam.hpp \
-	AbcSimplex.hpp CoinAbcCommon.hpp AbcCommon.hpp \
 	Idiot.hpp
+
+if COIN_HAS_ABC
+includecoin_HEADERS += AbcSimplex.hpp CoinAbcCommon.hpp AbcCommon.hpp
+endif
 
 
 # if AMD, CHOLMOD, or GLPK is available, then install ClpCholeskyUfl.hpp (for advanced users)

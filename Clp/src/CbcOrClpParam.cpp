@@ -43,7 +43,8 @@ static char coin_prompt[] = "Clp:";
 #define CBC_THREAD
 #endif
 #endif
-#if CLP_HAS_ABC
+#include "ClpConfig.h"
+#ifdef CLP_HAS_ABC
 #include "AbcCommon.hpp"
 #endif
 static bool doPrinting = true;

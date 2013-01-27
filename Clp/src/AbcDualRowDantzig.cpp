@@ -1,9 +1,9 @@
-/* $Id: AbcDualRowDantzig.cpp 1732 2011-05-31 08:09:41Z forrest $ */
+/* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others, Copyright (C) 2012, FasterCoin.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).
 
-#if CLP_HAS_ABC
+
 #include "CoinPragma.hpp"
 #include "AbcSimplex.hpp"
 #include "AbcDualRowDantzig.hpp"
@@ -417,5 +417,3 @@ AbcDualRowPivot * AbcDualRowDantzig::clone(bool CopyData) const
     return new AbcDualRowDantzig();
   }
 }
-
-#endif

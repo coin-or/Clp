@@ -1,9 +1,7 @@
-/* $Id: AbcSimplexDual.cpp 1785 2011-08-25 10:17:49Z forrest $ */
+/* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others, Copyright (C) 2012, FasterCoin.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).
-
-#if CLP_HAS_ABC
 
 /* Notes on implementation of dual simplex algorithm.
    
@@ -6124,4 +6122,3 @@ AbcSimplexDual::dual()
 #endif
   return problemStatus_;
 }
-#endif
