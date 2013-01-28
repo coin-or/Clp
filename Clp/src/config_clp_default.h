@@ -5,13 +5,13 @@
 /***************************************************************************/
 
 /* Version number of project */
-#define CLP_VERSION "1.15"
+#define CLP_VERSION      "trunk"
 
 /* Major Version number of project */
-#define CLP_VERSION_MAJOR 1
+#define CLP_VERSION_MAJOR   9999
 
 /* Minor Version number of project */
-#define CLP_VERSION_MINOR 15
+#define CLP_VERSION_MINOR   9999
 
 /* Release Version number of project */
 #define CLP_VERSION_RELEASE 9999
