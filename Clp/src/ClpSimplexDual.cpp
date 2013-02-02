@@ -6431,7 +6431,7 @@ ClpSimplexDual::setupForStrongBranching(char * arrays, int numberRows,
           }
 	  intParam_[ClpMaxNumIteration] = saveMaximumIterations;
           specialOptions_ = saveOptions;
-          if (problemStatus_ != 0 )
+          if (problemStatus_ != 0 && problemStatus_ != 10)
                return NULL; // say infeasible or odd
           // May be empty
           solveLp = (solution_ != NULL && problemStatus_ == 0);
