@@ -27,8 +27,8 @@ class OsiClpSolverInterface;
 class CoinWarmStartBasis;
 class ClpDisasterHandler;
 class ClpConstraint;
-#include "AbcCommon.hpp"
 #ifdef CLP_HAS_ABC
+#include "AbcCommon.hpp"
 class AbcTolerancesEtc;
 class AbcSimplex;
 #include "CoinAbcCommon.hpp"
