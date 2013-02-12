@@ -16,6 +16,7 @@
 #include "ClpModel.hpp"
 #include "ClpMatrixBase.hpp"
 #include "ClpSolve.hpp"
+#include "ClpConfig.h"
 class ClpDualRowPivot;
 class ClpPrimalColumnPivot;
 class ClpFactorization;
@@ -27,8 +28,8 @@ class OsiClpSolverInterface;
 class CoinWarmStartBasis;
 class ClpDisasterHandler;
 class ClpConstraint;
-#include "AbcCommon.hpp"
 #ifdef CLP_HAS_ABC
+#include "AbcCommon.hpp"
 class AbcTolerancesEtc;
 class AbcSimplex;
 #include "CoinAbcCommon.hpp"
