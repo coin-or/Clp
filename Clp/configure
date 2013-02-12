@@ -23310,10 +23310,10 @@ if test "${enable_aboca+set}" = set; then
 else
   use_aboca=no
 fi;
+if test "$use_aboca" = yes ; then
+  use_aboca=1
+fi
 case "$use_aboca" in
-  yes)
-    use_aboca=1
-    ;&
   1 | 2 | 3 | 4)
 
 cat >>confdefs.h <<_ACEOF
