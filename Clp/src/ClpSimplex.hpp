@@ -16,6 +16,7 @@
 #include "ClpModel.hpp"
 #include "ClpMatrixBase.hpp"
 #include "ClpSolve.hpp"
+#include "ClpConfig.h"
 class ClpDualRowPivot;
 class ClpPrimalColumnPivot;
 class ClpFactorization;

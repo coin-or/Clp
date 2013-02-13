@@ -77,10 +77,10 @@ AC_ARG_ENABLE([aboca],
               [AC_HELP_STRING([--enable-aboca],[enables build of Aboca solver (set to 1,2,3,4)])],
               [use_aboca=$enableval],
               [use_aboca=no])
+if test "$use_aboca" = yes ; then
+  use_aboca=1
+fi
 case "$use_aboca" in 
-  yes)
-    use_aboca=1
-    ;&
   1 | 2 | 3 | 4)
     AC_DEFINE_UNQUOTED([CLP_HAS_ABC], [$use_aboca], [Define to 1, 2, 3, or 4 if Aboca should be build.])
     ;;
