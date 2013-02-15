@@ -4667,6 +4667,7 @@ ClpPackedMatrix::refresh(ClpSimplex * )
      }
      delete rowCopy;
 #endif
+     checkGaps();
      return 0;
 }
 
