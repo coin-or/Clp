@@ -2038,7 +2038,8 @@ void OsiClpSolverInterface::markHotStart()
 	printf("**** iterated small %d\n",small->numberIterations());
       //small->setLogLevel(0);
       // Could be infeasible if forced one way (and other way stopped on iterations)
-      if (small->status()==1) {
+      // could also be stopped on iterations
+      if (small->status()) {
 #ifndef KEEP_SMALL
 	if (small!=modelPtr_)
 	  delete small;
@@ -2353,6 +2354,9 @@ void OsiClpSolverInterface::solveFromHotStart()
     double * arrayD = reinterpret_cast<double *> (spareArrays_);
     double saveObjectiveValue = arrayD[0];
     double * saveSolution = arrayD+1;
+    // double check arrays exist (? for nonlinear)
+    //if (!smallModel_->solutionRegion())
+    //smallModel_->createRim(63);
     int numberRows2 = smallModel_->numberRows();
     int numberColumns2 = smallModel_->numberColumns();
     int number = numberRows2+numberColumns2;
@@ -3477,13 +3481,12 @@ OsiClpSolverInterface::deleteRows(const int num, const int * rowIndices)
   delete modelPtr_->scaledMatrix_;
   modelPtr_->scaledMatrix_=NULL;
   if (saveRowCopy) {
-#if 1
     matrixByRow_=saveRowCopy;
     matrixByRow_->deleteRows(num,rowIndices);
-    assert (matrixByRow_->getNumElements()==modelPtr_->clpMatrix()->getNumElements());
-#else
-    delete saveRowCopy;
-#endif
+    if (matrixByRow_->getNumElements()!=modelPtr_->clpMatrix()->getNumElements()) {
+      delete matrixByRow_; // odd type matrix
+      matrixByRow_=NULL;
+    }
   }
   lastAlgorithm_ = saveAlgorithm;
   if ((specialOptions_&131072)!=0) 
@@ -4277,18 +4280,22 @@ OsiClpSolverInterface::applyRowCuts(int numberCuts, const OsiRowCut ** cuts)
       upper[i]=COIN_DBL_MAX;
   }
   starts[numberCuts]=size;
-  if (!modelPtr_->clpMatrix())
+ if (!modelPtr_->clpMatrix())
     modelPtr_->createEmptyMatrix();
   //modelPtr_->matrix()->appendRows(numberCuts,rows);
   modelPtr_->clpMatrix()->appendMatrix(numberCuts,0,starts,indices,elements);
   modelPtr_->setNewRowCopy(NULL);
+  modelPtr_->setClpScaledMatrix(NULL);
   freeCachedResults1();
   redoScaleFactors( numberCuts,starts, indices, elements);
   if (saveRowCopy) {
 #if 1
     matrixByRow_=saveRowCopy;
     matrixByRow_->appendRows(numberCuts,starts,indices,elements,0);
-    assert (matrixByRow_->getNumElements()==modelPtr_->clpMatrix()->getNumElements());
+    if (matrixByRow_->getNumElements()!=modelPtr_->clpMatrix()->getNumElements()) {
+      delete matrixByRow_; // odd type matrix
+      matrixByRow_=NULL;
+    }
 #else
     delete saveRowCopy;
 #endif
@@ -5333,9 +5340,14 @@ OsiClpSolverInterface::setRowName(int rowIndex, std::string name)
 std::string 
 OsiClpSolverInterface::getRowName(int rowIndex, unsigned int /*maxLen*/) const
 { 
-	if (rowIndex == getNumRows())
-		return getObjName();
-  return modelPtr_->getRowName(rowIndex);
+  if (rowIndex == getNumRows())
+    return getObjName();
+  int useNames;
+  getIntParam (OsiNameDiscipline,useNames);
+  if (useNames)
+    return modelPtr_->getRowName(rowIndex);
+  else
+    return dfltRowColName('r',rowIndex);
 }
     
 // Set name of col
@@ -5356,7 +5368,12 @@ OsiClpSolverInterface::setColName(int colIndex, std::string name)
 std::string 
 OsiClpSolverInterface::getColName(int colIndex, unsigned int /*maxLen*/) const
 {
-  return modelPtr_->getColumnName(colIndex);
+  int useNames;
+  getIntParam (OsiNameDiscipline,useNames);
+  if (useNames)
+    return modelPtr_->getColumnName(colIndex);
+  else
+    return dfltRowColName('c',colIndex);
 }
     
     
@@ -5500,6 +5517,8 @@ OsiClpSolverInterface::enableSimplexInterface(bool doingPrimal)
   modelPtr_->specialOptions_ &= ~262144;
   delete modelPtr_->scaledMatrix_;
   modelPtr_->scaledMatrix_=NULL;
+  // make sure using standard factorization
+  modelPtr_->factorization()->forceOtherFactorization(4);
 #ifdef NDEBUG
   modelPtr_->startup(0);
 #else
@@ -6705,6 +6724,56 @@ OsiClpSolverInterface::crunch()
 	} else {
 	  delete [] modelPtr_->ray_;
 	  modelPtr_->ray_=NULL;
+	  if (problemStatus==1&&small->ray_) {
+	    // get ray to full problem
+	    int numberRows = modelPtr_->numberRows();
+	    int numberRows2 = small->numberRows();
+	    double * ray = new double [numberRows];
+	    memset(ray,0,numberRows*sizeof(double));
+	    for (int i = 0; i < numberRows2; i++) {
+	      int iRow = whichRow[i];
+	      ray[iRow] = small->ray_[i];
+	    }
+	    // Column copy of matrix
+	    const double * element = getMatrixByCol()->getElements();
+	    const int * row = getMatrixByCol()->getIndices();
+	    const CoinBigIndex * columnStart = getMatrixByCol()->getVectorStarts();
+	    const int * columnLength = getMatrixByCol()->getVectorLengths();
+	    // translate
+	    //pivotRow=whichRow[pivotRow];
+	    //modelPtr_->spareIntArray_[3]=pivotRow;
+	    int pivotRow=-1;
+	    for (int jRow = nBound; jRow < 2 * numberRows; jRow++) {
+	      int iRow = whichRow[jRow];
+	      int iColumn = whichRow[jRow+numberRows];
+	      if (modelPtr_->getColumnStatus(iColumn) == ClpSimplex::basic) {
+		double value = 0.0;
+		double sum = 0.0;
+		for (CoinBigIndex j = columnStart[iColumn];
+		     j < columnStart[iColumn] + columnLength[iColumn]; j++) {
+		  if (iRow == row[j]) {
+		    value = element[j];
+		  } else {
+		    sum += ray[row[j]]*element[j];
+		  }
+		}
+		if (iRow!=pivotRow) {
+		  ray[iRow] = -sum / value;
+		} else {
+		  printf("what now - direction %d wanted %g sum %g value %g\n",
+			 small->directionOut_,ray[iRow],
+			 sum,value);
+		}
+	      }
+	    }
+	    for (int i=0;i<modelPtr_->numberColumns_;i++) {
+	      if (modelPtr_->getStatus(i)!=ClpSimplex::basic&&
+		  modelPtr_->columnLower_[i]==modelPtr_->columnUpper_[i])
+		modelPtr_->setStatus(i,ClpSimplex::isFixed);
+	    }
+	    modelPtr_->ray_=ray;
+	    modelPtr_->directionOut_=small->directionOut_;
+	  }
 	}
       }
 #ifdef KEEP_SMALL

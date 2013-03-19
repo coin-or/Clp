@@ -3102,7 +3102,9 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	  int rcode=eventHandler()->event(ClpEventHandler::presolveAfterFirstSolve);
           if (finalStatus != 3 && rcode < 0 && (finalStatus || oldStatus == -1)) {
                int savePerturbation = perturbation();
-               if (!finalStatus || (moreSpecialOptions_ & 2) == 0) {
+               if (!finalStatus || (moreSpecialOptions_ & 2) == 0 ||
+		   fabs(sumDualInfeasibilities_)+
+		   fabs(sumPrimalInfeasibilities_)<1.0e-3) {
                     if (finalStatus == 2) {
                          // unbounded - get feasible first
                          double save = optimizationDirection_;

@@ -564,6 +564,8 @@ public:
      bool statusOfProblem(bool initial = false);
      /// If user left factorization frequency then compute
      void defaultFactorizationFrequency();
+     /// Copy across enabled stuff from one solver to another
+     void copyEnabledStuff(const ClpSimplex * rhs);
      //@}
 
      /**@name most useful gets and sets */

@@ -2759,7 +2759,7 @@ ClpModel::infeasibilityRay() const
      double * array = NULL;
      if (problemStatus_ == 1 && ray_) {
           array = ClpCopyOfArray(ray_, numberRows_);
-#ifndef CLP_NO_SWAP_SIGN
+#if 0 //ndef CLP_NO_SWAP_SIGN
           // swap signs to be consistent with norm
           for (int i = 0; i < numberRows_; i++)
                array[i] = -array[i];
@@ -4063,7 +4063,9 @@ ClpModel::createCoinModel() const
           if (isInteger(i))
                coinModel->setColumnIsInteger(i, true);
      }
-     // do names
+     // do names - clear out
+     coinModel->zapRowNames();
+     coinModel->zapColumnNames();
      for (i = 0; i < numberRows_; i++) {
           char temp[30];
           strcpy(temp, rowName(i).c_str());

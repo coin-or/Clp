@@ -168,6 +168,8 @@ int ClpSimplexNonlinear::primal ()
      if (problemStatus_ == 1) {
           infeasibilityCost_ = 0.0;
           createRim(1 + 4);
+          delete nonLinearCost_;
+          nonLinearCost_ = new ClpNonLinearCost(this);
           nonLinearCost_->checkInfeasibilities(0.0);
           sumPrimalInfeasibilities_ = nonLinearCost_->sumInfeasibilities();
           numberPrimalInfeasibilities_ = nonLinearCost_->numberInfeasibilities();
@@ -1912,6 +1914,7 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
                if (handler_->logLevel() & 32)
                     printf("current obj %g thetaObj %g, predictedObj %g\n", currentObj, thetaObj, predictedObj);
 #endif
+	       objTheta2=CoinMin(objTheta2,1.0e29);
 #if MINTYPE==1
                if (conjugate) {
                     double offset;

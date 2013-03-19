@@ -870,6 +870,14 @@ static bool break2(CoinPresolveMatrix *prob)
 #define possibleBreak
 #define possibleSkip
 #endif
+#define SOME_PRESOLVE_DETAIL
+#ifndef SOME_PRESOLVE_DETAIL
+#define printProgress(x,y) {}
+#else
+#define printProgress(x,y) {if ((presolveActions_ & 0x80000000) != 0)	\
+      printf("%c loop %d %d empty rows, %d empty columns\n",x,y,prob->countEmptyRows(), \
+	   prob->countEmptyCols());}
+#endif
 // This is the presolve loop.
 // It is a separate virtual function so that it can be easily
 // customized by subclassing CoinPresolve.
@@ -904,8 +912,10 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
      }
 #endif
      prob->status_ = 0; // say feasible
+     printProgress('A',0);
      paction_ = make_fixed(prob, paction_);
      paction_ = testRedundant(prob,paction_) ;
+     printProgress('B',0);
      // if integers then switch off dual stuff
      // later just do individually
      bool doDualStuff = (presolvedModel_->integerInformation() == NULL);
@@ -973,6 +983,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
                     prob->setPresolveOptions(prob->presolveOptions() | 1);
 	       possibleSkip;
                paction_ = dupcol_action::presolve(prob, paction_);
+	       printProgress('C',0);
           }
 #ifdef ABC_INHERIT
           if (doTwoxTwo()) {
@@ -987,14 +998,19 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
 	       PRESOLVE_DETAIL_PRINT(printf("%d doubletons tightened\n",
 					    nTightened));
 	    paction_ = duprow_action::presolve(prob, paction_);
+	    printProgress('D',0);
           }
           if (doGubrow()) {
 	    possibleSkip;
                paction_ = gubrow_action::presolve(prob, paction_);
+	       printProgress('E',0);
           }
 
           if ((presolveActions_ & 16384) != 0)
                prob->setPresolveOptions(prob->presolveOptions() | 16384);
+	  // For inaccurate data in implied free
+          if ((presolveActions_ & 1024) != 0)
+               prob->setPresolveOptions(prob->presolveOptions() | 0x20000);
           // Check number rows dropped
           int lastDropped = 0;
           prob->pass_ = 0;
@@ -1014,7 +1030,9 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
           for (iLoop = 0; iLoop < numberPasses_; iLoop++) {
                // See if we want statistics
                if ((presolveActions_ & 0x80000000) != 0)
-                    printf("Starting major pass %d after %g seconds\n", iLoop + 1, CoinCpuTime() - prob->startTime_);
+		 printf("Starting major pass %d after %g seconds with %d rows, %d columns\n", iLoop + 1, CoinCpuTime() - prob->startTime_,
+			nrows_-prob->countEmptyRows(),
+			ncols_-prob->countEmptyCols());
 #ifdef PRESOLVE_SUMMARY
                printf("Starting major pass %d\n", iLoop + 1);
 #endif
@@ -1050,6 +1068,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
                               paction_ = slack_doubleton_action::presolve(prob, paction_,
                                          notFinished);
 			 }
+			 printProgress('F',iLoop+1);
                          if (prob->status_)
                               break;
                     }
@@ -1059,6 +1078,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
                          paction_ = remove_dual_action::presolve(prob, paction_);
                          if (prob->status_)
                               break;
+			 printProgress('G',iLoop+1);
                     }
 
                     if (doubleton) {
@@ -1066,12 +1086,14 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
                          paction_ = doubleton_action::presolve(prob, paction_);
                          if (prob->status_)
                               break;
+			 printProgress('H',iLoop+1);
                     }
                     if (tripleton) {
 		      possibleBreak;
                          paction_ = tripleton_action::presolve(prob, paction_);
                          if (prob->status_)
                               break;
+			 printProgress('I',iLoop+1);
                     }
 
                     if (zerocost) {
@@ -1079,6 +1101,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
                          paction_ = do_tighten_action::presolve(prob, paction_);
                          if (prob->status_)
                               break;
+			 printProgress('J',iLoop+1);
                     }
 #ifndef NO_FORCING
                     if (forcing) {
@@ -1086,6 +1109,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
                          paction_ = forcing_constraint_action::presolve(prob, paction_);
                          if (prob->status_)
                               break;
+			 printProgress('K',iLoop+1);
                     }
 #endif
 
@@ -1094,6 +1118,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
                          paction_ = implied_free_action::presolve(prob, paction_, fill_level);
                          if (prob->status_)
                               break;
+			 printProgress('L',iLoop+1);
                     }
 
 #if	PRESOLVE_DEBUG
@@ -1198,6 +1223,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
                          paction_ = remove_dual_action::presolve(prob, paction_);
                          if (prob->status_)
                               break;
+			 printProgress('M',iLoop+1);
                          const CoinPresolveAction * const paction2 = paction_;
                          if (ifree) {
 #ifdef IMPLIED
@@ -1213,6 +1239,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
 			      }
                               if (prob->status_)
                                    break;
+			      printProgress('N',iLoop+1);
                          }
                          if (paction_ == paction2)
                               break;
@@ -1230,6 +1257,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
                     paction_ = implied_free_action::presolve(prob, paction_, fill_level);
                     if (prob->status_)
                          break;
+		    printProgress('O',iLoop+1);
                }
 #if	PRESOLVE_DEBUG
                check_sol(prob, 1.0e0);
@@ -1242,6 +1270,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
                     paction_ = dupcol_action::presolve(prob, paction_);
                     if (prob->status_)
                          break;
+		    printProgress('P',iLoop+1);
                }
 #if	PRESOLVE_DEBUG
                check_sol(prob, 1.0e0);
@@ -1252,6 +1281,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
                     paction_ = duprow_action::presolve(prob, paction_);
                     if (prob->status_)
                          break;
+		    printProgress('Q',iLoop+1);
                }
 	       // Marginally slower on netlib if this call is enabled.
 	       // paction_ = testRedundant(prob,paction_) ;
@@ -1289,6 +1319,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
                          paction_ = slack_singleton_action::presolve(prob, paction_, rowObjective_);
                          stopLoop = true;
                     }
+		    printProgress('R',iLoop+1);
                }
 #if	PRESOLVE_DEBUG
                check_sol(prob, 1.0e0);

@@ -1754,7 +1754,10 @@ ClpSimplexDual::whileIterating(double * & givenDuals, int ifValuesPass)
                               // create ray anyway
                               ray_ = new double [ numberRows_];
                               rowArray_[0]->expand(); // in case packed
-                              CoinMemcpyN(rowArray_[0]->denseVector(), numberRows_, ray_);
+			      // swap sign NO
+			      const double * array = rowArray_[0]->denseVector();
+			      for (int i=0;i<numberRows_;i++) 
+				ray_[i] = array[i];
                          } else {
                               ray_ = NULL;
                          }
@@ -7452,7 +7455,7 @@ ClpSimplexDual::resetFakeBounds(int type)
                FakeBound fakeStatus = getFakeBound(iSequence);
                if (fakeStatus != ClpSimplexDual::noFake) {
                     Status status = getStatus(iSequence);
-                    if (status == basic) {
+                    if (status == basic || status == isFixed) {
                          setFakeBound(iSequence, ClpSimplexDual::noFake);
                          continue;
                     }
@@ -7467,6 +7470,8 @@ ClpSimplexDual::resetFakeBounds(int type)
                          } else if (status == ClpSimplex::atUpperBound) {
                               solution_[iSequence] = upper_[iSequence];
                          } else {
+			      printf("Unknown status %d for variable %d in %s line %d\n",
+				  status,iSequence,__FILE__,__LINE__);
 			      abort();
                          }
                     } else if (fakeStatus == ClpSimplexDual::lowerFake) {
@@ -7476,6 +7481,8 @@ ClpSimplexDual::resetFakeBounds(int type)
                          } else if (status == ClpSimplex::atUpperBound) {
                               solution_[iSequence] = upperValue;
                          } else {
+			      printf("Unknown status %d for variable %d in %s line %d\n",
+				  status,iSequence,__FILE__,__LINE__);
 			      abort();
                          }
 		    } else {
@@ -7491,6 +7498,8 @@ ClpSimplexDual::resetFakeBounds(int type)
                               lower_[iSequence] = value - 0.5 * dualBound_;
                               upper_[iSequence] = value + 0.5 * dualBound_;
                          } else {
+			      printf("Unknown status %d for variable %d in %s line %d\n",
+				  status,iSequence,__FILE__,__LINE__);
 			      abort();
                          }
 		    }

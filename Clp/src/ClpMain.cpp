@@ -914,6 +914,105 @@ main (int argc, const char *argv[])
 #endif
                                    try {
                                         status = model2->initialSolve(solveOptions);
+#ifndef NDEBUG
+					// if infeasible check ray
+					if (model2->status()==1) {
+					  int debugMode=0;
+					  ClpSimplex * simplex = model2;
+					  if(simplex->ray()) {
+					    // make sure we use non-scaled versions
+					    ClpPackedMatrix * saveMatrix = simplex->swapScaledMatrix(NULL);
+					    double * saveScale = simplex->swapRowScale(NULL);
+					    // could use existing arrays
+					    int numberRows=simplex->numberRows();
+					    int numberColumns=simplex->numberColumns();
+					    double * farkas = new double [2*numberColumns+numberRows];
+					    double * bound = farkas + numberColumns;
+					    double * effectiveRhs = bound + numberColumns;
+					     double * ray = simplex->ray();
+					    // get farkas row
+					    memset(farkas,0,(2*numberColumns+numberRows)*sizeof(double));
+					    simplex->transposeTimes(-1.0,ray,farkas);
+					    // Put nonzero bounds in bound
+					    const double * columnLower = simplex->columnLower();
+					    const double * columnUpper = simplex->columnUpper();
+					    int numberBad=0;
+					    for (int i=0;i<numberColumns;i++) {
+					      double value = farkas[i];
+					      double boundValue=0.0;
+					      if (simplex->getStatus(i)==ClpSimplex::basic) {
+						// treat as zero if small
+						if (fabs(value)<1.0e-8) {
+						  value=0.0;
+						  farkas[i]=0.0;
+						}
+						if (value) {
+						  //printf("basic %d direction %d farkas %g\n",
+						  //	   i,simplex->directionOut(),value);
+						  if (value<0.0) 
+						    boundValue=columnLower[i];
+						  else
+						    boundValue=columnUpper[i];
+						}
+					      } else if (fabs(value)>1.0e-10) {
+						if (value<0.0) 
+						  boundValue=columnLower[i];
+						else
+						  boundValue=columnUpper[i];
+					      }
+					      bound[i]=boundValue;
+					      if (fabs(boundValue)>1.0e10)
+						numberBad++;
+					    }
+					    const double * rowLower = simplex->rowLower();
+					    const double * rowUpper = simplex->rowUpper();
+					    //int pivotRow = simplex->spareIntArray_[3];
+					    //bool badPivot=pivotRow<0;
+					    for (int i=0;i<numberRows;i++) {
+					      double value = ray[i];
+					      double rhsValue=0.0;
+					      if (simplex->getRowStatus(i)==ClpSimplex::basic) {
+						// treat as zero if small
+						if (fabs(value)<1.0e-8) {
+						  value=0.0;
+						  ray[i]=0.0;
+						}
+						if (value) {
+						  //printf("row basic %d direction %d ray %g\n",
+						  //	   i,simplex->directionOut(),value);
+						  if (value<0.0) 
+						    rhsValue=rowLower[i];
+						  else
+						    rhsValue=rowUpper[i];
+						}
+					      } else if (fabs(value)>1.0e-10) {
+						if (value<0.0) 
+						  rhsValue=rowLower[i];
+						else
+						  rhsValue=rowUpper[i];
+					      }
+					      effectiveRhs[i]=rhsValue;
+					    }
+					    simplex->times(-1.0,bound,effectiveRhs);
+					    simplex->swapRowScale(saveScale);
+					    simplex->swapScaledMatrix(saveMatrix);
+					    double bSum=0.0;
+					    for (int i=0;i<numberRows;i++) {
+					      bSum += effectiveRhs[i]*ray[i];
+					    }
+					    if (numberBad||bSum>-1.0e-4) {
+					      printf("Bad infeasibility ray %g  - %d bad\n",
+						     bSum,numberBad);
+					    } else {
+					      //printf("Good ray - infeasibility %g\n",
+					      //     -bSum);
+					    }
+					    delete [] farkas;
+					  } else {
+					    //printf("No dual ray\n");
+					  }
+					}
+#endif
                                    } catch (CoinError e) {
                                         e.print();
                                         status = -1;
@@ -2686,11 +2785,13 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
                if (integerInformation[iColumn]) {
                     if (columnUpper[iColumn] > columnLower[iColumn]) {
                          numberIntegers++;
-                         if (columnUpper[iColumn] == 0.0 && columnLower[iColumn] == 1)
+                         if (columnLower[iColumn] == 0.0 && columnUpper[iColumn] == 1)
                               numberBinary++;
                     }
                }
           }
+	  printf("Original problem has %d integers (%d of which binary)\n",
+		 numberIntegers,numberBinary);
      }
      numberColumns = model->numberColumns();
      int numberRows = model->numberRows();
@@ -2699,6 +2800,182 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
      const double * rowLower = model->rowLower();
      const double * rowUpper = model->rowUpper();
      const double * objective = model->objective();
+     if (model->integerInformation()) {
+       const char * integerInformation  = model->integerInformation();
+       int numberIntegers = 0;
+       int numberBinary = 0;
+       double * obj = new double [numberColumns];
+       int * which = new int [numberColumns];
+       for (int iColumn = 0; iColumn < numberColumns; iColumn++) {
+	 if (columnUpper[iColumn] > columnLower[iColumn]) {
+	   if (integerInformation[iColumn]) {
+	     numberIntegers++;
+	     if (columnLower[iColumn] == 0.0 && columnUpper[iColumn] == 1)
+	       numberBinary++;
+	   }
+	 }
+       }
+       if(numberColumns != originalModel->numberColumns())
+	 printf("Presolved problem has %d integers (%d of which binary)\n",
+		numberIntegers,numberBinary);
+       for (int ifInt=0;ifInt<2;ifInt++) {
+	 for (int ifAbs=0;ifAbs<2;ifAbs++) {
+	   int numberSort=0;
+	   int numberZero=0;
+	   int numberDifferentObj=0;
+	   for (int iColumn = 0; iColumn < numberColumns; iColumn++) {
+	     if (columnUpper[iColumn] > columnLower[iColumn]) {
+	       if (!ifInt||integerInformation[iColumn]) {
+		 obj[numberSort]=(ifAbs) ? fabs(objective[iColumn]) :
+		   objective[iColumn];
+		 which[numberSort++]=iColumn;
+		 if (!objective[iColumn])
+		   numberZero++;
+	       }
+	     }
+	   }
+	   CoinSort_2(obj,obj+numberSort,which);
+	   double last=obj[0];
+	   for (int jColumn = 1; jColumn < numberSort; jColumn++) {
+	     if (fabs(obj[jColumn]-last)>1.0e-12) {
+	       numberDifferentObj++;
+	       last=obj[jColumn];
+	     }
+	   }
+	   numberDifferentObj++;
+	   printf("==== ");
+	   if (ifInt)
+	     printf("for integers ");
+	   if (!ifAbs)
+	     printf("%d zero objective ",numberZero);
+	   else
+	     printf("absolute objective values ");
+	   printf("%d different\n",numberDifferentObj);
+	   bool saveModel=false;
+	   int target=model->logLevel();
+	   if (target>10000) {
+	     if (ifInt&&!ifAbs)
+	       saveModel=true;
+	     target-=10000;
+	   }
+
+	   if (target<=100)
+	     target=12;
+	   else
+	     target-=100;
+	   if (numberDifferentObj<target) {
+	     int iLast=0;
+	     double last=obj[0];
+	     for (int jColumn = 1; jColumn < numberSort; jColumn++) {
+	       if (fabs(obj[jColumn]-last)>1.0e-12) {
+		 printf("%d variables have objective of %g\n",
+			jColumn-iLast,last);
+		 iLast=jColumn;
+		 last=obj[jColumn];
+	       }
+	     }
+	     printf("%d variables have objective of %g\n",
+		    numberSort-iLast,last);
+	     if (saveModel) {
+	       int spaceNeeded=numberSort+numberDifferentObj;
+	       int * columnAdd = new int[spaceNeeded+numberDifferentObj+1];
+	       double * elementAdd = new double[spaceNeeded];
+	       int * rowAdd = new int[2*numberDifferentObj+1];
+	       int * newIsInteger = rowAdd+numberDifferentObj+1;
+	       double * objectiveNew = new double[3*numberDifferentObj];
+	       double * lowerNew = objectiveNew+numberDifferentObj;
+	       double * upperNew = lowerNew+numberDifferentObj;
+	       memset(columnAdd+spaceNeeded,0,
+		      (numberDifferentObj+1)*sizeof(int));
+	       ClpSimplex tempModel=*model;
+	       int iLast=0;
+	       double last=obj[0];
+	       numberDifferentObj=0;
+	       int numberElements=0;
+	       rowAdd[0]=0;
+	       double * objective = tempModel.objective();
+	       for (int jColumn = 1; jColumn < numberSort+1; jColumn++) {
+		 if (jColumn==numberSort||fabs(obj[jColumn]-last)>1.0e-12) {
+		   // not if just one
+		   if (jColumn-iLast>1) {
+		     bool allInteger=integerInformation!=NULL;
+		     int iColumn=which[iLast];
+		     objectiveNew[numberDifferentObj]=objective[iColumn];
+		     double lower=0.0;
+		     double upper=0.0;
+		     for (int kColumn=iLast;kColumn<jColumn;kColumn++) {
+		       iColumn=which[kColumn];
+		       objective[iColumn]=0.0;
+		       double lowerValue=columnLower[iColumn];
+		       double upperValue=columnUpper[iColumn];
+		       double elementValue=-1.0;
+		       if (objectiveNew[numberDifferentObj]*objective[iColumn]<0.0) {
+			 lowerValue=-columnUpper[iColumn];
+			 upperValue=-columnLower[iColumn];
+			 elementValue=1.0;
+		       }
+		       columnAdd[numberElements]=iColumn;
+		       elementAdd[numberElements++]=elementValue;
+		       if (integerInformation&&!integerInformation[iColumn])
+			 allInteger=false;
+		       if (lower!=-COIN_DBL_MAX) {
+			 if (lowerValue!=-COIN_DBL_MAX)
+			   lower += lowerValue;
+			 else
+			   lower=-COIN_DBL_MAX;
+		       }
+		       if (upper!=COIN_DBL_MAX) {
+			 if (upperValue!=COIN_DBL_MAX)
+			   upper += upperValue;
+			 else
+			   upper=COIN_DBL_MAX;
+		       }
+		     }
+		     columnAdd[numberElements]=numberColumns+numberDifferentObj;
+		     elementAdd[numberElements++]=1.0;
+		     newIsInteger[numberDifferentObj]= (allInteger) ? 1 : 0;
+		     lowerNew[numberDifferentObj]=lower;
+		     upperNew[numberDifferentObj]=upper;
+		     numberDifferentObj++;
+		     rowAdd[numberDifferentObj]=numberElements;
+		   }
+		   iLast=jColumn;
+		   last=obj[jColumn];
+		 }
+	       }
+	       // add columns
+	       tempModel.addColumns(numberDifferentObj, lowerNew, upperNew,
+				    objectiveNew,
+				    columnAdd+spaceNeeded, NULL, NULL);
+	       // add constraints and make integer if all integer in group
+	       for (int iObj=0; iObj < numberDifferentObj; iObj++) {
+		 lowerNew[iObj]=0.0;
+		 upperNew[iObj]=0.0;
+		 if (newIsInteger[iObj])
+		   tempModel.setInteger(numberColumns+iObj);
+	       }
+	       tempModel.addRows(numberDifferentObj, lowerNew, upperNew,
+				 rowAdd,columnAdd,elementAdd);
+	       delete [] columnAdd;
+	       delete [] elementAdd;
+	       delete [] rowAdd;
+	       delete [] objectiveNew;
+	       // save
+	       std::string tempName = model->problemName();
+	       if (ifInt)
+		 tempName += "_int";
+	       if (ifAbs)
+		 tempName += "_abs";
+	       tempName += ".mps";
+	       tempModel.writeMps(tempName.c_str());
+	     }
+	   }
+	 }
+       }
+       delete [] which;
+       delete [] obj;
+       printf("===== end objective counts\n");
+     }
      CoinPackedMatrix * matrix = model->matrix();
      CoinBigIndex numberElements = matrix->getNumElements();
      const int * columnLength = matrix->getVectorLengths();

@@ -556,6 +556,9 @@ ClpSimplexPrimal::whileIterating(int valuesOption)
      int superBasicType = 1;
      if (valuesOption > 1)
           superBasicType = 3;
+     // delete any rays
+     delete [] ray_;
+     ray_ = NULL;
      // status stays at -1 while iterating, >=0 finished, -2 to invert
      // status -3 to go to top without an invert
      while (problemStatus_ == -1) {
@@ -1294,7 +1297,9 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                               // we are infeasible - use as ray
                               delete [] ray_;
                               ray_ = new double [numberRows_];
-                              CoinMemcpyN(dual_, numberRows_, ray_);
+			      // swap sign
+			      for (int i=0;i<numberRows_;i++) 
+				ray_[i] = -dual_[i];
                               // and get feasible duals
                               infeasibilityCost_ = 0.0;
                               createRim(4);
@@ -3133,10 +3138,11 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
 		      }
 		    }
  #endif
-                    if (!factorization_->pivots() && acceptablePivot_ <= 1.0e-8) {
+                    if (!factorization_->pivots() && acceptablePivot_ <= 1.0e-8 ) {
                          returnCode = 2; //say looks unbounded
                          // do ray
-                         primalRay(rowArray_[1]);
+			 if (!nonLinearCost_->sumInfeasibilities())
+			   primalRay(rowArray_[1]);
                     } else if (solveType_ == 2 && (moreSpecialOptions_ & 512) == 0) {
                          // refactorize
                          int lastCleaned = 0;

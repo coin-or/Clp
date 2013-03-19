@@ -648,7 +648,7 @@ Clp_infeasibilityRay(Clp_Simplex * model)
      if (status == 1 && ray) {
           array = static_cast<double*>(malloc(numberRows*sizeof(double)));
           memcpy(array,ray,numberRows*sizeof(double));
-#ifndef CLP_NO_SWAP_SIGN
+#if 0 //ndef CLP_NO_SWAP_SIGN
           // swap signs to be consistent with norm
           for (int i = 0; i < numberRows; i++)
                array[i] = -array[i];
