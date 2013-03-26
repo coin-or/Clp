@@ -929,7 +929,8 @@ main (int argc, const char *argv[])
 					    double * farkas = new double [2*numberColumns+numberRows];
 					    double * bound = farkas + numberColumns;
 					    double * effectiveRhs = bound + numberColumns;
-					     double * ray = simplex->ray();
+					    // get ray as user would
+					    double * ray = simplex->infeasibilityRay();
 					    // get farkas row
 					    memset(farkas,0,(2*numberColumns+numberRows)*sizeof(double));
 					    simplex->transposeTimes(-1.0,ray,farkas);
@@ -992,22 +993,29 @@ main (int argc, const char *argv[])
 						  rhsValue=rowUpper[i];
 					      }
 					      effectiveRhs[i]=rhsValue;
+					      if (fabs(effectiveRhs[i])>1.0e10)
+						printf("Large rhs row %d %g\n",
+						       i,effectiveRhs[i]);
 					    }
 					    simplex->times(-1.0,bound,effectiveRhs);
-					    simplex->swapRowScale(saveScale);
-					    simplex->swapScaledMatrix(saveMatrix);
 					    double bSum=0.0;
 					    for (int i=0;i<numberRows;i++) {
 					      bSum += effectiveRhs[i]*ray[i];
+					      if (fabs(effectiveRhs[i])>1.0e10)
+						printf("Large rhs row %d %g after\n",
+						       i,effectiveRhs[i]);
 					    }
-					    if (numberBad||bSum>-1.0e-4) {
+					    if (numberBad||bSum>1.0e-6) {
 					      printf("Bad infeasibility ray %g  - %d bad\n",
 						     bSum,numberBad);
 					    } else {
 					      //printf("Good ray - infeasibility %g\n",
 					      //     -bSum);
 					    }
+					    delete [] ray;
 					    delete [] farkas;
+					    simplex->swapRowScale(saveScale);
+					    simplex->swapScaledMatrix(saveMatrix);
 					  } else {
 					    //printf("No dual ray\n");
 					  }

@@ -5408,6 +5408,10 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
      if ((specialOptions_ & 2048) != 0 && problemStatus_ == 10 && !numberPrimalInfeasibilities_
                && sumDualInfeasibilities_ < 1000.0 * dualTolerance_ && perturbation_ >= 100)
           problemStatus_ = 0; // ignore
+     if (problemStatus_==1&&((specialOptions_&(1024 | 4096)) == 0 || (specialOptions_ & 32) != 0)
+	 &&numberFake_) {
+       problemStatus_ = 10; // clean up in primal as fake bounds
+     }
      if (problemStatus_ == 10) {
           //printf("Cleaning up with primal\n");
 #ifdef COIN_DEVELOP
@@ -8709,6 +8713,7 @@ ClpSimplex::returnModel(ClpSimplex & otherModel)
      otherModel.sequenceOut_ = sequenceOut_;
      otherModel.directionOut_ = directionOut_;
      otherModel.pivotRow_ = pivotRow_;
+     otherModel.algorithm_ = algorithm_;
      otherModel.sumDualInfeasibilities_ = sumDualInfeasibilities_;
      otherModel.numberDualInfeasibilities_ = numberDualInfeasibilities_;
      otherModel.numberDualInfeasibilitiesWithoutFree_ =
@@ -10061,6 +10066,27 @@ ClpSimplex::computeInternalObjectiveValue()
      objectiveValue *= optimizationDirection_ / rhsScale_;
      objectiveValue -= dblParam_[ClpObjOffset];
      return objectiveValue;
+}
+// Infeasibility/unbounded ray (NULL returned if none/wrong)
+double *
+ClpSimplex::infeasibilityRay(bool fullRay) const
+{
+     double * array = NULL;
+     if (problemStatus_ == 1 && ray_) {
+       if (!fullRay) {
+	 array = ClpCopyOfArray(ray_, numberRows_);
+       } else {
+	 array = new double [numberRows_+numberColumns_];
+	 memcpy(array,ray_,numberRows_*sizeof(double));
+	 memset(array+numberRows_,0,numberColumns_*sizeof(double));
+	 transposeTimes(-1.0,array,array+numberRows_);
+       }
+#ifdef PRINT_RAY_METHOD
+       printf("Infeasibility ray obtained by algorithm %s - direction out %d\n",algorithm_>0 ?
+	      "primal" : "dual",directionOut_);
+#endif
+     }
+     return array;
 }
 // If user left factorization frequency then compute
 void

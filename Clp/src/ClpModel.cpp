@@ -122,7 +122,7 @@ ClpModel::ClpModel (bool emptyMessages) :
 {
      intParam_[ClpMaxNumIteration] = 2147483647;
      intParam_[ClpMaxNumIterationHotStart] = 9999999;
-     intParam_[ClpNameDiscipline] = 0;
+     intParam_[ClpNameDiscipline] = 1;
 
      dblParam_[ClpDualObjectiveLimit] = COIN_DBL_MAX;
      dblParam_[ClpPrimalObjectiveLimit] = COIN_DBL_MAX;
@@ -2754,27 +2754,18 @@ ClpModel::chgObjCoefficients(const double * objIn)
 }
 // Infeasibility/unbounded ray (NULL returned if none/wrong)
 double *
-ClpModel::infeasibilityRay() const
+ClpModel::infeasibilityRay(bool fullRay) const
 {
      double * array = NULL;
      if (problemStatus_ == 1 && ray_) {
-          array = ClpCopyOfArray(ray_, numberRows_);
-#if 0 //ndef CLP_NO_SWAP_SIGN
-          // swap signs to be consistent with norm
-          for (int i = 0; i < numberRows_; i++)
-               array[i] = -array[i];
-#endif
-#if 0
-          // clean up
-          double largest = 1.0e-30;
-          double smallest = COIN_DBL_MAX;
-          int i;
-          for (i = 0; i < numberRows_; i++) {
-               double value = fabs(array[i]);
-               smallest = CoinMin(smallest, value);
-               largest = CoinMax(largest, value);
-          }
-#endif
+       if (!fullRay) {
+	 array = ClpCopyOfArray(ray_, numberRows_);
+       } else {
+	 array = new double [numberRows_+numberColumns_];
+	 memcpy(array,ray_,numberRows_*sizeof(double));
+	 memset(array+numberRows_,0,numberColumns_*sizeof(double));
+	 transposeTimes(-1.0,array,array+numberRows_);
+       }
      }
      return array;
 }
@@ -2849,6 +2840,17 @@ ClpModel::popMessageHandler(CoinMessageHandler * oldHandler, bool oldDefault)
           delete handler_;
      defaultHandler_ = oldDefault;
      handler_ = oldHandler;
+}
+// Overrides message handler with a default one
+void 
+ClpModel::setDefaultMessageHandler()
+{
+     int logLevel = handler_->logLevel();
+     if (defaultHandler_)
+          delete handler_;
+     defaultHandler_ = true;
+     handler_ = new CoinMessageHandler();
+     handler_->setLogLevel(logLevel);
 }
 // Set language
 void

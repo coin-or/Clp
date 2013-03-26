@@ -1300,6 +1300,9 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
 			      // swap sign
 			      for (int i=0;i<numberRows_;i++) 
 				ray_[i] = -dual_[i];
+#ifdef PRINT_RAY_METHOD
+			      printf("Primal creating infeasibility ray\n");
+#endif
                               // and get feasible duals
                               infeasibilityCost_ = 0.0;
                               createRim(4);

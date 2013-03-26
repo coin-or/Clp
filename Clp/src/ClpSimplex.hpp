@@ -1301,6 +1301,9 @@ public:
      void computeObjectiveValue(bool useWorkingSolution = false);
      /// Compute minimization objective value from internal solution without perturbation
      double computeInternalObjectiveValue();
+     /** Infeasibility/unbounded ray (NULL returned if none/wrong)
+         Up to user to use delete [] on these arrays.  */
+     double * infeasibilityRay(bool fullRay=false) const;
      /** Number of extra rows.  These are ones which will be dynamically created
          each iteration.  This is for GUB but may have other uses.
      */

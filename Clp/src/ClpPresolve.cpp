@@ -993,10 +993,12 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
 #endif
           if (duprow) {
 	    possibleSkip;
-	    int nTightened=tightenDoubletons2(prob);
-	    if (nTightened)
-	       PRESOLVE_DETAIL_PRINT(printf("%d doubletons tightened\n",
-					    nTightened));
+	    if (doTwoxTwo()) {
+	      int nTightened=tightenDoubletons2(prob);
+	      if (nTightened)
+		PRESOLVE_DETAIL_PRINT(printf("%d doubletons tightened\n",
+					     nTightened));
+	    }
 	    paction_ = duprow_action::presolve(prob, paction_);
 	    printProgress('D',0);
           }

@@ -132,7 +132,8 @@ void OsiClpSolverInterface::initialSolve()
   int messageLevel=messageHandler()->logLevel();
   int saveMessageLevel2 = messageLevel;
   // Set message handler
-  solver->passInMessageHandler(handler_);
+  if (!defaultHandler_)
+    solver->passInMessageHandler(handler_);
   // But keep log level
   solver->messageHandler()->setLogLevel(saveMessageLevel);
   // set reasonable defaults
@@ -777,6 +778,13 @@ void OsiClpSolverInterface::initialSolve()
     modelPtr_->setProblemStatus(4);
   }
   modelPtr_->whatsChanged_ |= 0x30000;
+#if 0
+  // delete scaled matrix and rowcopy for safety
+  delete modelPtr_->scaledMatrix_;
+  modelPtr_->scaledMatrix_=NULL;
+  delete modelPtr_->rowCopy_;
+  modelPtr_->rowCopy_=NULL;
+#endif
   //std::cout<<time1<<" seconds - total "<<totalTime<<std::endl;
   delete pinfo;
 }
@@ -918,7 +926,9 @@ void OsiClpSolverInterface::resolve()
   int saveMessageLevel=modelPtr_->logLevel();
   int messageLevel=messageHandler()->logLevel();
   bool oldDefault;
-  CoinMessageHandler * saveHandler = modelPtr_->pushMessageHandler(handler_,oldDefault);
+  CoinMessageHandler * saveHandler = NULL;
+  if (!defaultHandler_)
+    saveHandler = modelPtr_->pushMessageHandler(handler_,oldDefault);
   //printf("basis before dual\n");
   //basis_.print();
   setBasis(basis_,modelPtr_);
@@ -1256,7 +1266,8 @@ void OsiClpSolverInterface::resolve()
  disaster:
   //printf("basis after dual\n");
   //basis_.print();
-  modelPtr_->popMessageHandler(saveHandler,oldDefault);
+  if (!defaultHandler_)
+    modelPtr_->popMessageHandler(saveHandler,oldDefault);
   modelPtr_->messageHandler()->setLogLevel(saveMessageLevel);
   if (saveSolveType==2) {
     int saveStatus = modelPtr_->problemStatus_;
@@ -2903,11 +2914,7 @@ OsiClpSolverInterface::getMutableMatrixByCol() const
 std::vector<double*> OsiClpSolverInterface::getDualRays(int /*maxNumRays*/,
 							bool fullRay) const
 {
-  if (fullRay == true) {
-    throw CoinError("Full dual rays not yet implemented.","getDualRays",
-		    "OsiClpSolverInterface");
-  }
-  return std::vector<double*>(1, modelPtr_->infeasibilityRay());
+  return std::vector<double*>(1, modelPtr_->infeasibilityRay(fullRay));
 }
 //------------------------------------------------------------------
 std::vector<double*> OsiClpSolverInterface::getPrimalRays(int /*maxNumRays*/) const

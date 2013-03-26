@@ -2189,6 +2189,25 @@ This version is by Giacomo Nannicini and may be more robust \
 See branchAndCut for information on options."
      );
      parameters[numberParameters++] =
+          CbcOrClpParam("GMI!Cuts", "Whether to use alternative Gomory cuts",
+                        "off", CBC_PARAM_STR_GMICUTS);
+     parameters[numberParameters-1].append("on");
+     parameters[numberParameters-1].append("root");
+     parameters[numberParameters-1].append("ifmove");
+     parameters[numberParameters-1].append("forceOn");
+     parameters[numberParameters-1].append("endonly");
+     parameters[numberParameters-1].append("long");
+     parameters[numberParameters-1].append("longroot");
+     parameters[numberParameters-1].append("longifmove");
+     parameters[numberParameters-1].append("forceLongOn");
+     parameters[numberParameters-1].append("longendonly");
+     parameters[numberParameters-1].setLonghelp
+     (
+          "This switches on an alternative Gomory cut generator (either at root or in entire tree) \
+This version is by Giacomo Nannicini and may be more robust \
+See branchAndCut for information on options."
+     );
+     parameters[numberParameters++] =
           CbcOrClpParam("gomory!Cuts", "Whether to use Gomory cuts",
                         "off", CBC_PARAM_STR_GOMORYCUTS);
      parameters[numberParameters-1].append("on");
@@ -2481,7 +2500,7 @@ stopping",
      parameters[numberParameters++] =
           CbcOrClpParam("maxN!odes", "Maximum number of nodes to do",
                         -1, 2147483647, CBC_PARAM_INT_MAXNODES);
-     parameters[numberParameters-1].setLonghelp
+     parameters[numberParameters-1].setLonghelp 
      (
           "This is a repeatable way to limit search.  Normally using time is easier \
 but then the results may not be repeatable."
@@ -2619,9 +2638,9 @@ where aa is number of extra passes, if bb is non zero \
 then it is number of threads to use (otherwise uses threads setting) and \
 cc is number of times to do root phase.  Yet another one from the Italian idea factory \
 (This time - Andrea Lodi , Matteo Fischetti , Michele Monaci , Domenico Salvagnin , \
-+and Andrea Tramontani). \
-+The solvers do not interact with each other.  However if extra passes are specified \
-+then cuts are collected and used in later passes - so there is interaction there." 
+and Andrea Tramontani). \
+The solvers do not interact with each other.  However if extra passes are specified \
+then cuts are collected and used in later passes - so there is interaction there." 
      );
      parameters[numberParameters++] =
           CbcOrClpParam("naive!Heuristics", "Whether to try some stupid heuristic",
@@ -3194,6 +3213,20 @@ See branchAndCut for information on options."
 This version is by Giacomo Nannicini based on Francois Margot's version \
 Standard setting only uses rows in tableau <=256, long uses all \
 May be slow \
+See branchAndCut for information on options."
+     );
+     parameters[numberParameters++] =
+          CbcOrClpParam("reduce2!AndSplitCuts", "Whether to use Reduce-and-Split cuts - style 2",
+                        "off", CBC_PARAM_STR_REDSPLIT2CUTS);
+     parameters[numberParameters-1].append("on");
+     parameters[numberParameters-1].append("root");
+     parameters[numberParameters-1].append("longOn");
+     parameters[numberParameters-1].append("longRoot");
+     parameters[numberParameters-1].setLonghelp
+     (
+          "This switches on reduce and split  cuts (either at root or in entire tree) \
+This version is by Giacomo Nannicini based on Francois Margot's version \
+Standard setting only uses rows in tableau <=256, long uses all \
 See branchAndCut for information on options."
      );
      parameters[numberParameters++] =

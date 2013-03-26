@@ -1593,6 +1593,17 @@ ClpSimplexDual::whileIterating(double * & givenDuals, int ifValuesPass)
                     }
                     solution_[sequenceOut_] = valueOut_;
                     int whatNext = housekeeping(objectiveChange);
+#if 0
+		    for (int i=0;i<numberRows_+numberColumns_;i++) {
+		      if (getStatus(i)==atLowerBound) {
+			assert (dj_[i]>-1.0e-5);
+			assert (solution_[i]<=lower_[i]+1.0e-5);
+		      } else if (getStatus(i)==atUpperBound) {
+			assert (dj_[i]<1.0e-5);
+			assert (solution_[i]>=upper_[i]-1.0e-5);
+		      }
+		    }
+#endif
 #ifdef CLP_REPORT_PROGRESS
                     if (ixxxxxx > ixxyyyy - 5) {
                          handler_->setLogLevel(63);
@@ -1741,6 +1752,7 @@ ClpSimplexDual::whileIterating(double * & givenDuals, int ifValuesPass)
                     z_thinks = 1;
 #endif
                     // no incoming column is valid
+		    spareIntArray_[3]=pivotRow_;
                     pivotRow_ = -1;
 #ifdef CLP_DEBUG
                     if (handler_->logLevel() & 32)
@@ -1752,9 +1764,12 @@ ClpSimplexDual::whileIterating(double * & givenDuals, int ifValuesPass)
                          delete [] ray_;
                          if ((specialOptions_&(1024 | 4096)) == 0 || (specialOptions_ & 32) != 0) {
                               // create ray anyway
+#ifdef PRINT_RAY_METHOD
+			   printf("Dual creating infeasibility ray direction out %d - pivRow %d seqOut %d lower %g,val %g,upper %g\n",
+				  directionOut_,spareIntArray_[3],sequenceOut_,lowerOut_,valueOut_,upperOut_);
+#endif
                               ray_ = new double [ numberRows_];
                               rowArray_[0]->expand(); // in case packed
-			      // swap sign NO
 			      const double * array = rowArray_[0]->denseVector();
 			      for (int i=0;i<numberRows_;i++) 
 				ray_[i] = array[i];

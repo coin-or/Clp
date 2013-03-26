@@ -764,7 +764,7 @@ public:
      }
      /** Infeasibility/unbounded ray (NULL returned if none/wrong)
          Up to user to use delete [] on these arrays.  */
-     double * infeasibilityRay() const;
+     double * infeasibilityRay(bool fullRay=false) const;
      double * unboundedRay() const;
      /// For advanced users - no need to delete - sign not changed
      inline double * ray() const
@@ -839,6 +839,8 @@ public:
      inline void setLanguage(CoinMessages::Language language) {
           newLanguage(language);
      }
+     /// Overrides message handler with a default one
+     void setDefaultMessageHandler();
      /// Return handler
      inline CoinMessageHandler * messageHandler() const       {
           return handler_;
