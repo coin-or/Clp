@@ -4433,7 +4433,7 @@ ClpSimplex::deleteRim(int getRidOfFactorizationData)
                          secondaryStatus_ = 3;
                }
           }
-          if (problemStatus_ == 2) {
+          if (problemStatus_ == 2 && ray_) {
                for (i = 0; i < numberColumns; i++) {
                     ray_[i] *= columnScale_[i];
                }
