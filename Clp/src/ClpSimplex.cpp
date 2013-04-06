@@ -597,6 +597,16 @@ ClpSimplex::gutsOfSolution ( double * givenDuals,
                     (CoinMax(10.0 * allowedInfeasibility_, 100.0 * oldValue)))
                     && (badInfeasibility > CoinMax(incomingInfeasibility_, allowedInfeasibility_) ||
                         useError > 1.0e-3)) {
+	       if (algorithm_>1) {
+		 // nonlinear
+		 //printf("Original largest infeas %g, now %g, primalError %g\n",
+		 //	oldValue,nonLinearCost_->largestInfeasibility(),
+		 //	largestPrimalError_);
+		 //printf("going to all slack\n");
+		 allSlackBasis(true);
+		 CoinIotaN(pivotVariable_, numberRows_, numberColumns_);
+		 return 1;
+	       }
                //printf("Original largest infeas %g, now %g, primalError %g\n",
                //     oldValue,nonLinearCost_->largestInfeasibility(),
                //     largestPrimalError_);
@@ -1738,7 +1748,7 @@ int ClpSimplex::internalFactorize ( int solveType)
      //         solution_[iRow],iRow,status_[iRow]);
      //}
      //}
-#    ifndef _MSC_VER
+#    if 0 //ndef _MSC_VER
 	 // The local static var k is a problem when trying to build a DLL. Since this is
 	 // just for debugging (likely done on *nix), just hide it from Windows
 	 // -- lh, 101016 --
@@ -4423,7 +4433,7 @@ ClpSimplex::deleteRim(int getRidOfFactorizationData)
                          secondaryStatus_ = 3;
                }
           }
-          if (problemStatus_ == 2) {
+          if (problemStatus_ == 2 && ray_) {
                for (i = 0; i < numberColumns; i++) {
                     ray_[i] *= columnScale_[i];
                }
@@ -5398,6 +5408,10 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
      if ((specialOptions_ & 2048) != 0 && problemStatus_ == 10 && !numberPrimalInfeasibilities_
                && sumDualInfeasibilities_ < 1000.0 * dualTolerance_ && perturbation_ >= 100)
           problemStatus_ = 0; // ignore
+     if (problemStatus_==1&&((specialOptions_&(1024 | 4096)) == 0 || (specialOptions_ & 32) != 0)
+	 &&numberFake_) {
+       problemStatus_ = 10; // clean up in primal as fake bounds
+     }
      if (problemStatus_ == 10) {
           //printf("Cleaning up with primal\n");
 #ifdef COIN_DEVELOP
@@ -8031,7 +8045,7 @@ int ClpSimplex::pivot()
      upperOut_ = upper_[sequenceOut_];
      // for now assume primal is feasible (or in dual)
      dualOut_ = dj_[sequenceOut_];
-     assert(fabs(dualOut_) < 1.0e-6);
+     assert(fabs(dualOut_) < 1.0e-5);
      bool roundAgain = true;
      int returnCode = 0;
      bool updateSolution = true;
@@ -8088,7 +8102,7 @@ int ClpSimplex::pivot()
           //rowArray_[1]->setNumElements(0);
           // see where something went to
 #ifndef NDEBUG
-          CoinRelFltEq eq(1.0e-9);
+          CoinRelFltEq eq(1.0e-7);
 #endif
           if (sequenceOut_ < 0) {
                if (directionIn_ < 0) {
@@ -8699,6 +8713,7 @@ ClpSimplex::returnModel(ClpSimplex & otherModel)
      otherModel.sequenceOut_ = sequenceOut_;
      otherModel.directionOut_ = directionOut_;
      otherModel.pivotRow_ = pivotRow_;
+     otherModel.algorithm_ = algorithm_;
      otherModel.sumDualInfeasibilities_ = sumDualInfeasibilities_;
      otherModel.numberDualInfeasibilities_ = numberDualInfeasibilities_;
      otherModel.numberDualInfeasibilitiesWithoutFree_ =
@@ -9857,6 +9872,8 @@ ClpSimplex::checkSolutionInternal()
                     if (fabs(dualValue) > 10.0 * dualTolerance) {
 		      sumDualInfeasibilities_ += fabs(dualValue) - dualTolerance_;
                          numberDualInfeasibilities_ ++;
+			 if (fabs(dualValue) > 1000.0 * dualTolerance) 
+			   setColumnStatus(iColumn,superBasic);
                     }
                     break;
                case ClpSimplex::isFixed:
@@ -10049,6 +10066,27 @@ ClpSimplex::computeInternalObjectiveValue()
      objectiveValue *= optimizationDirection_ / rhsScale_;
      objectiveValue -= dblParam_[ClpObjOffset];
      return objectiveValue;
+}
+// Infeasibility/unbounded ray (NULL returned if none/wrong)
+double *
+ClpSimplex::infeasibilityRay(bool fullRay) const
+{
+     double * array = NULL;
+     if (problemStatus_ == 1 && ray_) {
+       if (!fullRay) {
+	 array = ClpCopyOfArray(ray_, numberRows_);
+       } else {
+	 array = new double [numberRows_+numberColumns_];
+	 memcpy(array,ray_,numberRows_*sizeof(double));
+	 memset(array+numberRows_,0,numberColumns_*sizeof(double));
+	 transposeTimes(-1.0,array,array+numberRows_);
+       }
+#ifdef PRINT_RAY_METHOD
+       printf("Infeasibility ray obtained by algorithm %s - direction out %d\n",algorithm_>0 ?
+	      "primal" : "dual",directionOut_);
+#endif
+     }
+     return array;
 }
 // If user left factorization frequency then compute
 void
@@ -11509,6 +11547,8 @@ ClpSimplex::doubleCheck()
      }
      //abort();
 #endif
+     // make sure clean
+     whatsChanged_=0;
      dual(0, 7);
 #if 0
      for (int i = 0; i < numberColumns_; i++) {
@@ -11886,6 +11926,9 @@ void
 ClpSimplex::resize (int newNumberRows, int newNumberColumns)
 {
      ClpModel::resize(newNumberRows, newNumberColumns);
+     delete [] perturbationArray_;
+     perturbationArray_ = NULL;
+     maximumPerturbationSize_=0;
      if (saveStatus_) {
           // delete arrays
           int saveOptions = specialOptions_;
@@ -11950,4 +11993,47 @@ ClpSimplex::generateCpp( FILE * fp, bool defaultFactor)
      fprintf(fp, "%d  int save_perturbation = clpModel->perturbation();\n", iValue1 == iValue2 ? 2 : 1);
      fprintf(fp, "%d  clpModel->setPerturbation(%d);\n", iValue1 == iValue2 ? 4 : 3, iValue1);
      fprintf(fp, "%d  clpModel->setPerturbation(save_perturbation);\n", iValue1 == iValue2 ? 7 : 6);
+}
+// Copy across enabled stuff from one solver to another
+void 
+ClpSimplex::copyEnabledStuff(const ClpSimplex * rhs)
+{
+  solveType_=rhs->solveType_; 
+  if (rhs->solution_) {
+    int numberTotal = numberRows_+numberColumns_;
+    assert (!solution_);
+    solution_ = CoinCopyOfArray(rhs->solution_,numberTotal);
+    lower_ = CoinCopyOfArray(rhs->lower_,numberTotal);
+    upper_ = CoinCopyOfArray(rhs->upper_,numberTotal);
+    dj_ = CoinCopyOfArray(rhs->dj_,numberTotal);
+    cost_ = CoinCopyOfArray(rhs->cost_,2*numberTotal);
+    reducedCostWork_ = dj_;
+    rowReducedCost_ = dj_ + numberColumns_;
+    columnActivityWork_ = solution_;
+    rowActivityWork_ = solution_ + numberColumns_;
+    objectiveWork_ = cost_;
+    rowObjectiveWork_ = cost_ + numberColumns_;
+    rowLowerWork_ = lower_ + numberColumns_;
+    columnLowerWork_ = lower_;
+    rowUpperWork_ = upper_ + numberColumns_;
+    columnUpperWork_ = upper_;
+  }
+  if (rhs->factorization_) {
+    delete factorization_;
+    factorization_ = new ClpFactorization(*rhs->factorization_);
+    delete [] pivotVariable_;
+    pivotVariable_ = CoinCopyOfArray(rhs->pivotVariable_,numberRows_);
+  }
+  for (int i = 0; i < 6; i++) {
+    if (rhs->rowArray_[i])
+      rowArray_[i] = new CoinIndexedVector(*rhs->rowArray_[i]);
+    if (rhs->columnArray_[i])
+      columnArray_[i] = new CoinIndexedVector(*rhs->columnArray_[i]);
+  }
+  if (rhs->nonLinearCost_)
+    nonLinearCost_=new ClpNonLinearCost(*rhs->nonLinearCost_);
+  if (rhs->dualRowPivot_)
+    dualRowPivot_ = rhs->dualRowPivot_->clone();
+  if (rhs->primalColumnPivot_)
+    primalColumnPivot_ = rhs->primalColumnPivot_->clone();
 }

@@ -24,7 +24,7 @@
 #ifdef INTEL_MKL
 #include "mkl_spblas.h"
 #endif
-
+//#define DO_CHECK_FLAGS 1
 //=============================================================================
 #ifdef COIN_PREFETCH
 #if 1
@@ -68,6 +68,9 @@ ClpPackedMatrix::ClpPackedMatrix ()
 ClpPackedMatrix::ClpPackedMatrix (const ClpPackedMatrix & rhs)
      : ClpMatrixBase(rhs)
 {
+#ifdef DO_CHECK_FLAGS
+     rhs.checkFlags(0);
+#endif
 #ifndef COIN_SPARSE_MATRIX
      // Guaranteed no gaps or small elements
      matrix_ = new CoinPackedMatrix(*(rhs.matrix_),-1,0) ;
@@ -97,6 +100,9 @@ ClpPackedMatrix::ClpPackedMatrix (const ClpPackedMatrix & rhs)
      } else {
           columnCopy_ = NULL;
      }
+#ifdef DO_CHECK_FLAGS
+     checkFlags(0);
+#endif
 }
 //-------------------------------------------------------------------
 // assign matrix (for space reasons)
@@ -110,6 +116,9 @@ ClpPackedMatrix::ClpPackedMatrix (CoinPackedMatrix * rhs)
      rowCopy_ = NULL;
      columnCopy_ = NULL;
      setType(1);
+#ifdef DO_CHECK_FLAGS
+     checkFlags(0);
+#endif
 
 }
 
@@ -127,6 +136,9 @@ ClpPackedMatrix::ClpPackedMatrix (const CoinPackedMatrix & rhs)
      rowCopy_ = NULL;
      columnCopy_ = NULL;
      setType(1);
+#ifdef DO_CHECK_FLAGS
+     checkFlags(0);
+#endif
 
 }
 
@@ -172,6 +184,9 @@ ClpPackedMatrix::operator=(const ClpPackedMatrix& rhs)
           } else {
                columnCopy_ = NULL;
           }
+#ifdef DO_CHECK_FLAGS
+	  checkFlags(0);
+#endif
      }
      return *this;
 }
@@ -190,6 +205,9 @@ ClpPackedMatrix::copy(const ClpPackedMatrix * rhs)
      assert(numberActiveColumns_ == rhs->numberActiveColumns_);
      assert (matrix_->isColOrdered() == rhs->matrix_->isColOrdered());
      matrix_->copyReuseArrays(*rhs->matrix_);
+#ifdef DO_CHECK_FLAGS
+     checkFlags(0);
+#endif
 }
 /* Subset clone (without gaps).  Duplicates are allowed
    and order is as given */
@@ -215,6 +233,9 @@ ClpPackedMatrix::ClpPackedMatrix (
      rowCopy_ = NULL;
      flags_ = rhs.flags_&(~0x02) ; // no gaps
      columnCopy_ = NULL;
+#ifdef DO_CHECK_FLAGS
+     checkFlags(0);
+#endif
 }
 ClpPackedMatrix::ClpPackedMatrix (
      const CoinPackedMatrix & rhs,
@@ -229,6 +250,9 @@ ClpPackedMatrix::ClpPackedMatrix (
      flags_ = 0 ;  // no gaps
      columnCopy_ = NULL;
      setType(1);
+#ifdef DO_CHECK_FLAGS
+     checkFlags(0);
+#endif
 }
 
 /* Returns a new matrix in reverse order without gaps */
@@ -243,6 +267,9 @@ ClpPackedMatrix::reverseOrderedCopy() const
      //copy->matrix_->removeGaps();
      copy->numberActiveColumns_ = copy->matrix_->getNumCols();
      copy->flags_ = flags_&(~0x02) ; // no gaps
+#ifdef DO_CHECK_FLAGS
+     checkFlags(0);
+#endif
      return copy;
 }
 //unscaled versions
@@ -3407,6 +3434,15 @@ ClpPackedMatrix::scale(ClpModel * model, const ClpSimplex * /*baseModel*/) const
           bool finished = false;
           // if scalingMethod 3 then may change
           bool extraDetails = (model->logLevel() > 2);
+#if 0
+	  for (iColumn = 0; iColumn < numberColumns; iColumn++) {
+	    if (columnUpper[iColumn] >
+		columnLower[iColumn] + 1.0e-12 && columnLength[iColumn]) 
+	      assert(usefulColumn[iColumn]!=0);
+	    else
+	      assert(usefulColumn[iColumn]==0);
+	  }
+#endif
           while (!finished) {
                int numberPass = 3;
                overallLargest = -1.0e-20;
@@ -3653,7 +3689,7 @@ ClpPackedMatrix::scale(ClpModel * model, const ClpSimplex * /*baseModel*/) const
                               overallSmallest = value;
                          //overallSmallest = CoinMin(overallSmallest,smallest*columnScale[iColumn]);
                     } else {
-                         assert(columnScale[iColumn] == 1.0);
+		      assert(columnScale[iColumn] == 1.0);
                          //columnScale[iColumn]=1.0;
                     }
                }
@@ -3876,6 +3912,9 @@ ClpPackedMatrix::createScaledMatrix(ClpSimplex * model) const
                elementByColumn[j] *= scale * rowScale[iRow];
           }
      }
+#ifdef DO_CHECK_FLAGS
+     checkFlags(0);
+#endif
 }
 /* Unpacks a column into an CoinIndexedvector
  */
@@ -4051,6 +4090,9 @@ ClpPackedMatrix::allElementsInRange(ClpModel * model,
                matrix_->removeGaps();
 #else
                checkGaps();
+#ifdef DO_CHECK_FLAGS
+	       checkFlags(0);
+#endif
 #endif
 #ifdef COIN_DEVELOP
                //printf("flags set to 2\n");
@@ -4643,6 +4685,9 @@ ClpPackedMatrix::clearCopies()
      columnCopy_ = NULL;
      flags_ &= ~(4 + 8);
      checkGaps();
+#ifdef DO_CHECK_FLAGS
+     checkFlags(0);
+#endif
 }
 // makes sure active columns correct
 int
@@ -4666,6 +4711,10 @@ ClpPackedMatrix::refresh(ClpSimplex * )
                printf("zero row %d\n", i);
      }
      delete rowCopy;
+#endif
+     checkGaps();
+#ifdef DO_CHECK_FLAGS
+     checkFlags(0);
 #endif
      return 0;
 }
@@ -4775,6 +4824,9 @@ ClpPackedMatrix::deleteCols(const int numDel, const int * indDel)
      numberActiveColumns_ = matrix_->getNumCols();
      // may now have gaps
      checkGaps();
+#ifdef DO_CHECK_FLAGS
+     checkFlags(0);
+#endif
      matrix_->setExtraGap(0.0);
 }
 /* Delete the rows whose indices are listed in <code>indDel</code>. */
@@ -4787,6 +4839,9 @@ ClpPackedMatrix::deleteRows(const int numDel, const int * indDel)
      numberActiveColumns_ = matrix_->getNumCols();
      // may now have gaps
      checkGaps();
+#ifdef DO_CHECK_FLAGS
+     checkFlags(0);
+#endif
      matrix_->setExtraGap(0.0);
 }
 #ifndef CLP_NO_VECTOR
@@ -4806,6 +4861,9 @@ ClpPackedMatrix::appendRows(int number, const CoinPackedVectorBase * const * row
      numberActiveColumns_ = matrix_->getNumCols();
      // may now have gaps
      checkGaps();
+#ifdef DO_CHECK_FLAGS
+     checkFlags(0);
+#endif
      clearCopies();
 }
 #endif
@@ -4818,6 +4876,9 @@ void
 ClpPackedMatrix::setDimensions(int numrows, int numcols)
 {
      matrix_->setDimensions(numrows, numcols);
+#ifdef DO_CHECK_FLAGS
+     checkFlags(0);
+#endif
 }
 /* Append a set of rows/columns to the end of the matrix. Returns number of errors
    i.e. if any of the new rows/columns contain an index that's larger than the

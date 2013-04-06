@@ -12,6 +12,13 @@
 #include <cassert>
 
 #ifdef COIN_HAS_CBC
+#if CBC_VERSION_MAJOR==2
+#if CBC_VERSION_MINOR>9
+#define CBC_AFTER_2_9
+#endif
+#else
+#define CBC_AFTER_2_9
+#endif
 #ifdef COIN_HAS_CLP
 #include "OsiClpSolverInterface.hpp"
 #include "ClpSimplex.hpp"
@@ -1564,6 +1571,16 @@ fixing variables which have same value in two or more solutions. \
 It obviously only tries after two or more solutions. \
 See Rounding for meaning of on,both,before"
      );
+#ifdef CBC_AFTER_2_9
+      parameters[numberParameters++] =
+          CbcOrClpParam("constraint!fromCutoff", "Whether to use cutoff as constraint",
+                        "off", CBC_PARAM_STR_CUTOFF_CONSTRAINT);
+     parameters[numberParameters-1].append("on");
+     parameters[numberParameters-1].setLonghelp
+     (
+          "This adds the objective as a constraint with best solution as RHS"
+     );
+#endif
      parameters[numberParameters++] =
           CbcOrClpParam("cost!Strategy", "How to use costs as priorities",
                         "off", CBC_PARAM_STR_COSTSTRATEGY);
@@ -1572,6 +1589,8 @@ See Rounding for meaning of on,both,before"
      parameters[numberParameters-1].append("01f!irst?");
      parameters[numberParameters-1].append("01l!ast?");
      parameters[numberParameters-1].append("length!?");
+     parameters[numberParameters-1].append("singletons");
+     parameters[numberParameters-1].append("nonzero");
      parameters[numberParameters-1].setLonghelp
      (
           "This orders the variables in order of their absolute costs - with largest cost ones being branched on \
@@ -1816,11 +1835,11 @@ You can also use the parameters 'maximize' or 'minimize'."
      parameters[numberParameters-1].setLonghelp
      (
           "If >2 && <8 then modify diving options - \
-	 \t3 only at root and if no solution,  \
-	 \t4 only at root and if this heuristic has not got solution, \
-	 \t5 only at depth <4, \
-	 \t6 decay, \
-	 \t7 run up to 2 times if solution found 4 otherwise."
+	 \n\t3 only at root and if no solution,  \
+	 \n\t4 only at root and if this heuristic has not got solution, \
+	 \n\t5 only at depth <4, \
+	 \n\t6 decay, \
+	 \n\t7 run up to 2 times if solution found 4 otherwise."
      );
      parameters[numberParameters-1].setIntValue(-1);
      parameters[numberParameters++] =
@@ -2000,15 +2019,15 @@ e.g. no ENDATA.  This has to be set before import i.e. -errorsAllowed on -import
      parameters[numberParameters-1].setLonghelp
      (
       "Strategy for extra strong branching \n\
-\t0 - normal\n\
-\twhen to do all fractional\n\
-\t1 - root node\n\
-\t2 - depth less than modifier\n\
-\t4 - if objective == best possible\n\
-\t6 - as 2+4\n\
-\twhen to do all including satisfied\n\
-\t10 - root node etc.\n\
-\tIf >=100 then do when depth <= strategy/100 (otherwise 5)"
+\n\t0 - normal\n\
+\n\twhen to do all fractional\n\
+\n\t1 - root node\n\
+\n\t2 - depth less than modifier\n\
+\n\t4 - if objective == best possible\n\
+\n\t6 - as 2+4\n\
+\n\twhen to do all including satisfied\n\
+\n\t10 - root node etc.\n\
+\n\tIf >=100 then do when depth <= strategy/100 (otherwise 5)"
      );
      parameters[numberParameters-1].setIntValue(0);
 #endif
@@ -2045,10 +2064,19 @@ It can be useful to get rid of the original names and go over to using Rnnnnnnn 
 The bottom digit is a strategy when to used shadow price stuff e.g. 3 \
 means use until a solution is found.  The next two digits say what sort \
 of dual information to use.  After that it goes back to powers of 2 so -\n\
-\t1000 - switches on experimental hotstart\n\
-\t2,4,6000 - switches on experimental methods of stopping cuts\n\
-\t8000 - increase minimum drop gradually\n\
-\t16000 - switches on alternate gomory criterion"
+\n\t1000 - switches on experimental hotstart\n\
+\n\t2,4,6000 - switches on experimental methods of stopping cuts\n\
+\n\t8000 - increase minimum drop gradually\n\
+\n\t16000 - switches on alternate gomory criterion"
+     );
+     parameters[numberParameters++] =
+       CbcOrClpParam("extraV!ariables", "Allow creation of extra integer variables",
+		     -COIN_INT_MAX, COIN_INT_MAX, CBC_PARAM_INT_EXTRA_VARIABLES, 0);
+     parameters[numberParameters-1].setIntValue(0);
+     parameters[numberParameters-1].setLonghelp
+     (
+          "This switches on creation of extra integer variables \
+to gather all variables with same cost."
      );
 #endif
 #ifdef COIN_HAS_CLP
@@ -2140,17 +2168,45 @@ of branch and bound are done on reduced problem.  Small problem has to be less t
      parameters[numberParameters-1].append("gammastrong");
      parameters[numberParameters-1].append("deltastrong");
 #endif
-     parameters[numberParameters++] =
-          CbcOrClpParam("gsolu!tion", "Puts glpk solution to file",
-                        CLP_PARAM_ACTION_GMPL_SOLUTION);
+#ifdef COIN_HAS_CBC
+      parameters[numberParameters++] =
+          CbcOrClpParam("GMI!Cuts", "Whether to use alternative Gomory cuts",
+                        "off", CBC_PARAM_STR_GMICUTS);
+     parameters[numberParameters-1].append("on");
+     parameters[numberParameters-1].append("root");
+     parameters[numberParameters-1].append("ifmove");
+     parameters[numberParameters-1].append("forceOn");
+     parameters[numberParameters-1].append("endonly");
+     parameters[numberParameters-1].append("long");
+     parameters[numberParameters-1].append("longroot");
+     parameters[numberParameters-1].append("longifmove");
+     parameters[numberParameters-1].append("forceLongOn");
+     parameters[numberParameters-1].append("longendonly");
      parameters[numberParameters-1].setLonghelp
      (
-          "Will write a glpk solution file to the given file name.  It will use the default\
- directory given by 'directory'.  A name of '$' will use the previous value for the name.  This\
- is initialized to 'stdout' (this defaults to ordinary solution if stdout). \
-If problem created from gmpl model - will do any reports."
+          "This switches on an alternative Gomory cut generator (either at root or in entire tree) \
+This version is by Giacomo Nannicini and may be more robust \
+See branchAndCut for information on options."
      );
-#ifdef COIN_HAS_CBC
+     parameters[numberParameters++] =
+          CbcOrClpParam("GMI!Cuts", "Whether to use alternative Gomory cuts",
+                        "off", CBC_PARAM_STR_GMICUTS);
+     parameters[numberParameters-1].append("on");
+     parameters[numberParameters-1].append("root");
+     parameters[numberParameters-1].append("ifmove");
+     parameters[numberParameters-1].append("forceOn");
+     parameters[numberParameters-1].append("endonly");
+     parameters[numberParameters-1].append("long");
+     parameters[numberParameters-1].append("longroot");
+     parameters[numberParameters-1].append("longifmove");
+     parameters[numberParameters-1].append("forceLongOn");
+     parameters[numberParameters-1].append("longendonly");
+     parameters[numberParameters-1].setLonghelp
+     (
+          "This switches on an alternative Gomory cut generator (either at root or in entire tree) \
+This version is by Giacomo Nannicini and may be more robust \
+See branchAndCut for information on options."
+     );
      parameters[numberParameters++] =
           CbcOrClpParam("gomory!Cuts", "Whether to use Gomory cuts",
                         "off", CBC_PARAM_STR_GOMORYCUTS);
@@ -2183,6 +2239,18 @@ See branchAndCut for information on options."
 percentage of variables and then try a small branch and cut run. \
 See Rounding for meaning of on,both,before"
      );
+#endif
+     parameters[numberParameters++] =
+          CbcOrClpParam("gsolu!tion", "Puts glpk solution to file",
+                        CLP_PARAM_ACTION_GMPL_SOLUTION);
+     parameters[numberParameters-1].setLonghelp
+     (
+          "Will write a glpk solution file to the given file name.  It will use the default\
+ directory given by 'directory'.  A name of '$' will use the previous value for the name.  This\
+ is initialized to 'stdout' (this defaults to ordinary solution if stdout). \
+If problem created from gmpl model - will do any reports."
+     );
+#ifdef COIN_HAS_CBC
      parameters[numberParameters++] =
           CbcOrClpParam("heur!isticsOnOff", "Switches most heuristics on or off",
                         "off", CBC_PARAM_STR_HEURISTICSTRATEGY);
@@ -2336,6 +2404,28 @@ So 'only' does this while clean also allows integral valued cuts.  \
 does a few passes. \
 The length options for gomory cuts are used."
      );
+#ifdef CBC_AFTER_2_9
+      parameters[numberParameters++] =
+          CbcOrClpParam("latwomir!Cuts", "Whether to use Lagrangean TwoMir cuts",
+                        "off", CBC_PARAM_STR_LATWOMIRCUTS);
+     parameters[numberParameters-1].append("endonlyroot");
+     parameters[numberParameters-1].append("endcleanroot");
+     parameters[numberParameters-1].append("endbothroot");
+     parameters[numberParameters-1].append("endonly");
+     parameters[numberParameters-1].append("endclean");
+     parameters[numberParameters-1].append("endboth");
+     parameters[numberParameters-1].append("onlyaswell");
+     parameters[numberParameters-1].append("cleanaswell");
+     parameters[numberParameters-1].append("bothaswell");
+     parameters[numberParameters-1].append("onlyinstead");
+     parameters[numberParameters-1].append("cleaninstead");
+     parameters[numberParameters-1].append("bothinstead");
+     parameters[numberParameters-1].setLonghelp
+     (
+          "This is a lagrangean relaxation for TwoMir cuts.  See \
+lagomoryCuts for description of options."
+     );
+#endif
      parameters[numberParameters++] =
           CbcOrClpParam("lift!AndProjectCuts", "Whether to use Lift and Project cuts",
                         "off", CBC_PARAM_STR_LANDPCUTS);
@@ -2345,7 +2435,8 @@ The length options for gomory cuts are used."
      parameters[numberParameters-1].append("forceOn");
      parameters[numberParameters-1].setLonghelp
      (
-          "Lift and project cuts - may be expensive to compute. \
+          "Lift and project cuts. \
+May be slow \
 See branchAndCut for information on options."
      );
      parameters[numberParameters++] =
@@ -2363,7 +2454,7 @@ heuristics are switched on."
 #ifndef COIN_HAS_CBC
      parameters[numberParameters++] =
           CbcOrClpParam("log!Level", "Level of detail in Solver output",
-                        -1, 63, CLP_PARAM_INT_SOLVERLOGLEVEL);
+                        -1, 999999, CLP_PARAM_INT_SOLVERLOGLEVEL);
 #else
      parameters[numberParameters++] =
           CbcOrClpParam("log!Level", "Level of detail in Coin branch and Cut output",
@@ -2409,7 +2500,7 @@ stopping",
      parameters[numberParameters++] =
           CbcOrClpParam("maxN!odes", "Maximum number of nodes to do",
                         -1, 2147483647, CBC_PARAM_INT_MAXNODES);
-     parameters[numberParameters-1].setLonghelp
+     parameters[numberParameters-1].setLonghelp 
      (
           "This is a repeatable way to limit search.  Normally using time is easier \
 but then the results may not be repeatable."
@@ -2543,11 +2634,13 @@ haroldo.santos@gmail.com.\
      (
           "Do (in parallel if threads enabled) the root phase this number of times \
  and collect all solutions and cuts generated.  The actual format is aabbcc \
-where aa is non-zero to say just do heuristics - no cuts, if bb is non zero \
+where aa is number of extra passes, if bb is non zero \
 then it is number of threads to use (otherwise uses threads setting) and \
 cc is number of times to do root phase.  Yet another one from the Italian idea factory \
 (This time - Andrea Lodi , Matteo Fischetti , Michele Monaci , Domenico Salvagnin , \
-and Andrea Tramontani)"
+and Andrea Tramontani). \
+The solvers do not interact with each other.  However if extra passes are specified \
+then cuts are collected and used in later passes - so there is interaction there." 
      );
      parameters[numberParameters++] =
           CbcOrClpParam("naive!Heuristics", "Whether to try some stupid heuristic",
@@ -3103,7 +3196,37 @@ way of using absolute value rather than fraction."
      parameters[numberParameters-1].append("forceOn");
      parameters[numberParameters-1].setLonghelp
      (
+          "This switches on reduce and split  cuts (either at root or in entire tree). \
+May be slow \
+See branchAndCut for information on options."
+     );
+      parameters[numberParameters++] =
+          CbcOrClpParam("reduce2!AndSplitCuts", "Whether to use Reduce-and-Split cuts - style 2",
+                        "off", CBC_PARAM_STR_REDSPLIT2CUTS);
+     parameters[numberParameters-1].append("on");
+     parameters[numberParameters-1].append("root");
+     parameters[numberParameters-1].append("longOn");
+     parameters[numberParameters-1].append("longRoot");
+     parameters[numberParameters-1].setLonghelp
+     (
           "This switches on reduce and split  cuts (either at root or in entire tree) \
+This version is by Giacomo Nannicini based on Francois Margot's version \
+Standard setting only uses rows in tableau <=256, long uses all \
+May be slow \
+See branchAndCut for information on options."
+     );
+     parameters[numberParameters++] =
+          CbcOrClpParam("reduce2!AndSplitCuts", "Whether to use Reduce-and-Split cuts - style 2",
+                        "off", CBC_PARAM_STR_REDSPLIT2CUTS);
+     parameters[numberParameters-1].append("on");
+     parameters[numberParameters-1].append("root");
+     parameters[numberParameters-1].append("longOn");
+     parameters[numberParameters-1].append("longRoot");
+     parameters[numberParameters-1].setLonghelp
+     (
+          "This switches on reduce and split  cuts (either at root or in entire tree) \
+This version is by Giacomo Nannicini based on Francois Margot's version \
+Standard setting only uses rows in tableau <=256, long uses all \
 See branchAndCut for information on options."
      );
      parameters[numberParameters++] =
@@ -3253,6 +3376,18 @@ If name contains '_fix_read_' then does not write but reads and will fix all var
      (
           "If passed to solver fom ampl, then ampl will wait so that you can copy .nl file for debug."
      );
+#ifdef COIN_HAS_CBC
+#ifdef CBC_AFTER_2_9
+     parameters[numberParameters++] =
+          CbcOrClpParam("slow!cutpasses", "Maximum number of tries for slower cuts",
+                        -1, COIN_INT_MAX, CBC_PARAM_INT_MAX_SLOW_CUTS);
+     parameters[numberParameters-1].setLonghelp
+     (
+          "Some cut generators are fairly slow - this limits the number of times they are tried."
+     );
+     parameters[numberParameters-1].setIntValue(10);
+#endif
+#endif
 #ifdef COIN_HAS_CLP
      parameters[numberParameters++] =
           CbcOrClpParam("slp!Value", "Number of slp passes before primal",

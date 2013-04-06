@@ -199,6 +199,14 @@ public:
           if (doSingleton_) independentOptions_[1]  &= ~512;
           else independentOptions_[1] |= 512;
      }
+     /// Whether we want to kill small substitutions
+     inline bool doKillSmall() const {
+          return (independentOptions_[1] & 1024) == 0;
+     }
+     inline void setDoKillSmall(bool doKill) {
+          if (doKill) independentOptions_[1]  &= ~1024;
+          else independentOptions_[1] |= 1024;
+     }
      /// Set whole group
      inline int presolveActions() const {
           return independentOptions_[1] & 0xffff;

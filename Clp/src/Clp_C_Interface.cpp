@@ -648,10 +648,9 @@ Clp_infeasibilityRay(Clp_Simplex * model)
      if (status == 1 && ray) {
           array = static_cast<double*>(malloc(numberRows*sizeof(double)));
           memcpy(array,ray,numberRows*sizeof(double));
-#ifndef CLP_NO_SWAP_SIGN
-          // swap signs to be consistent with norm
-          for (int i = 0; i < numberRows; i++)
-               array[i] = -array[i];
+#ifdef PRINT_RAY_METHOD
+	  printf("Infeasibility ray obtained by algorithm %s\n",model->model_->algorithm()>0 ?
+	      "primal" : "dual");
 #endif
      }
      return array;

@@ -210,6 +210,8 @@ int ClpPredictorCorrector::solve ( )
      int saveIteration = -1;
      int saveIteration2 = -1;
      bool sloppyOptimal = false;
+     // this just to be used to exit
+     bool sloppyOptimal2 = false;
      CoinWorkDouble * savePi = NULL;
      CoinWorkDouble * savePrimal = NULL;
      CoinWorkDouble * savePi2 = NULL;
@@ -358,7 +360,7 @@ int ClpPredictorCorrector::solve ( )
                          CoinMemcpyN(dualArray, numberRows_, savePi2);
                          CoinMemcpyN(solution_, numberTotal, savePrimal2);
                     }
-                    if (sloppyOptimal) {
+                    if (sloppyOptimal2) {
                          // vaguely optimal
                          if (maximumBoundInfeasibility_ > 1.0e-2 ||
                                    scaledRHSError > 1.0e-2 ||
@@ -400,8 +402,17 @@ int ClpPredictorCorrector::solve ( )
                     break;
                }
           }
+	  // See if we should be thinking about exit if diverging
+	  double relativeMultiplier = 1.0 + fabs(primalObjective_) + fabs(dualObjective_);
+	  // Quadratic coding is rubbish so be more forgiving?
+	  if (quadraticObj)
+	    relativeMultiplier *= 5.0;
+	  if (gapO < 1.0e-5 + 1.0e-9 * relativeMultiplier
+	      || complementarityGap_ < 0.1 + 1.0e-9 * relativeMultiplier)
+	      sloppyOptimal2 = true;
           if ((gapO < 1.0e-6 || (gapO < 1.0e-4 && complementarityGap_ < 0.1)) && !sloppyOptimal) {
                sloppyOptimal = true;
+               sloppyOptimal2 = true;
                handler_->message(CLP_BARRIER_CLOSE_TO_OPTIMAL, messages_)
                          << numberIterations_ << static_cast<double>(complementarityGap_)
                          << CoinMessageEol;
@@ -414,7 +425,7 @@ int ClpPredictorCorrector::solve ( )
                handler_->message(CLP_BARRIER_COMPLEMENTARITY, messages_)
                          << static_cast<double>(complementarityGap_) << "increasing"
                          << CoinMessageEol;
-               if (saveIteration >= 0 && sloppyOptimal) {
+               if (saveIteration >= 0 && sloppyOptimal2) {
                     handler_->message(CLP_BARRIER_EXIT2, messages_)
                               << saveIteration
                               << CoinMessageEol;

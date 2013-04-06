@@ -615,6 +615,11 @@ public:
      inline double * mutableInverseColumnScale() const {
           return inverseColumnScale_;
      }
+     inline double * swapRowScale(double * newScale) {
+          double * oldScale = rowScale_;
+	  rowScale_ = newScale;
+          return oldScale;
+     }
      void setRowScale(double * scale) ;
      void setColumnScale(double * scale);
      /// Scaling of objective
@@ -722,6 +727,12 @@ public:
           delete scaledMatrix_;
           scaledMatrix_ = scaledMatrix;
      }
+     /// Swaps pointer to scaled ClpPackedMatrix
+     inline ClpPackedMatrix * swapScaledMatrix(ClpPackedMatrix * scaledMatrix) {
+          ClpPackedMatrix * oldMatrix = scaledMatrix_;
+          scaledMatrix_ = scaledMatrix;
+	  return oldMatrix;
+     }
      /** Replace Clp Matrix (current is not deleted unless told to
          and new is used)
          So up to user to delete current.  This was used where
@@ -753,8 +764,11 @@ public:
      }
      /** Infeasibility/unbounded ray (NULL returned if none/wrong)
          Up to user to use delete [] on these arrays.  */
-     double * infeasibilityRay() const;
+     double * infeasibilityRay(bool fullRay=false) const;
      double * unboundedRay() const;
+     /// For advanced users - no need to delete - sign not changed
+     inline double * ray() const
+     { return ray_;}
      /// just test if infeasibility or unbounded Ray exists
      inline bool rayExists() const {
          return (ray_!=NULL);
@@ -825,6 +839,8 @@ public:
      inline void setLanguage(CoinMessages::Language language) {
           newLanguage(language);
      }
+     /// Overrides message handler with a default one
+     void setDefaultMessageHandler();
      /// Return handler
      inline CoinMessageHandler * messageHandler() const       {
           return handler_;
