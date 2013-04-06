@@ -12,13 +12,6 @@
 #include <cassert>
 
 #ifdef COIN_HAS_CBC
-#if CBC_VERSION_MAJOR==2
-#if CBC_VERSION_MINOR>9
-#define CBC_AFTER_2_9
-#endif
-#else
-#define CBC_AFTER_2_9
-#endif
 #ifdef COIN_HAS_CLP
 #include "OsiClpSolverInterface.hpp"
 #include "ClpSimplex.hpp"
@@ -1571,8 +1564,7 @@ fixing variables which have same value in two or more solutions. \
 It obviously only tries after two or more solutions. \
 See Rounding for meaning of on,both,before"
      );
-#ifdef CBC_AFTER_2_9
-      parameters[numberParameters++] =
+     parameters[numberParameters++] =
           CbcOrClpParam("constraint!fromCutoff", "Whether to use cutoff as constraint",
                         "off", CBC_PARAM_STR_CUTOFF_CONSTRAINT);
      parameters[numberParameters-1].append("on");
@@ -1580,7 +1572,6 @@ See Rounding for meaning of on,both,before"
      (
           "This adds the objective as a constraint with best solution as RHS"
      );
-#endif
      parameters[numberParameters++] =
           CbcOrClpParam("cost!Strategy", "How to use costs as priorities",
                         "off", CBC_PARAM_STR_COSTSTRATEGY);
@@ -2404,8 +2395,7 @@ So 'only' does this while clean also allows integral valued cuts.  \
 does a few passes. \
 The length options for gomory cuts are used."
      );
-#ifdef CBC_AFTER_2_9
-      parameters[numberParameters++] =
+     parameters[numberParameters++] =
           CbcOrClpParam("latwomir!Cuts", "Whether to use Lagrangean TwoMir cuts",
                         "off", CBC_PARAM_STR_LATWOMIRCUTS);
      parameters[numberParameters-1].append("endonlyroot");
@@ -2425,7 +2415,6 @@ The length options for gomory cuts are used."
           "This is a lagrangean relaxation for TwoMir cuts.  See \
 lagomoryCuts for description of options."
      );
-#endif
      parameters[numberParameters++] =
           CbcOrClpParam("lift!AndProjectCuts", "Whether to use Lift and Project cuts",
                         "off", CBC_PARAM_STR_LANDPCUTS);
@@ -3377,7 +3366,6 @@ If name contains '_fix_read_' then does not write but reads and will fix all var
           "If passed to solver fom ampl, then ampl will wait so that you can copy .nl file for debug."
      );
 #ifdef COIN_HAS_CBC
-#ifdef CBC_AFTER_2_9
      parameters[numberParameters++] =
           CbcOrClpParam("slow!cutpasses", "Maximum number of tries for slower cuts",
                         -1, COIN_INT_MAX, CBC_PARAM_INT_MAX_SLOW_CUTS);
@@ -3386,7 +3374,6 @@ If name contains '_fix_read_' then does not write but reads and will fix all var
           "Some cut generators are fairly slow - this limits the number of times they are tried."
      );
      parameters[numberParameters-1].setIntValue(10);
-#endif
 #endif
 #ifdef COIN_HAS_CLP
      parameters[numberParameters++] =
