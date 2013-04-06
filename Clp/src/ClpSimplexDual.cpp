@@ -7298,10 +7298,14 @@ ClpSimplexDual::resetFakeBounds(int type)
                FakeBound fakeStatus = getFakeBound(iSequence);
                Status status = getStatus(iSequence);
                bool isFake = false;
+#ifdef CLP_INVESTIGATE
                char RC = 'C';
+#endif
                int jSequence = iSequence;
                if (jSequence >= numberColumns_) {
+#ifdef CLP_INVESTIGATE
                     RC = 'R';
+#endif
                     jSequence -= numberColumns_;
                }
                double lowerValue = tempLower[iSequence];
@@ -7404,10 +7408,14 @@ ClpSimplexDual::resetFakeBounds(int type)
                if (type <= -1000) {
                     iSequence = -type;
                     iSequence -= 1000;
+#ifdef CLP_INVESTIGATE
                     char RC = 'C';
+#endif
                     int jSequence = iSequence;
                     if (jSequence >= numberColumns_) {
+#ifdef CLP_INVESTIGATE
                          RC = 'R';
+#endif
                          jSequence -= numberColumns_;
                     }
 #ifdef CLP_INVESTIGATE
