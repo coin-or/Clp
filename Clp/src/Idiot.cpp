@@ -422,7 +422,7 @@ Idiot::solve2(CoinMessageHandler * handler, const CoinMessages * messages)
      double fakeSmall = smallInfeas;
      double firstInfeas;
      int badIts = 0;
-     int slackStart, slackEnd, ordStart, ordEnd;
+     int slackStart, ordStart, ordEnd;
      int checkIteration = 0;
      int lambdaIteration = 0;
      int belowReasonable = 0; /* set if ever gone below reasonable infeas */
@@ -616,7 +616,6 @@ Idiot::solve2(CoinMessageHandler * handler, const CoinMessages * messages)
      slackStart = countCostedSlacks(model_);
      if (slackStart >= 0) {
        COIN_DETAIL_PRINT(printf("This model has costed slacks\n"));
-          slackEnd = slackStart + nrows;
           if (slackStart) {
                ordStart = 0;
                ordEnd = slackStart;
@@ -625,7 +624,6 @@ Idiot::solve2(CoinMessageHandler * handler, const CoinMessages * messages)
                ordEnd = ncols;
           }
      } else {
-          slackEnd = slackStart;
           ordStart = 0;
           ordEnd = ncols;
      }

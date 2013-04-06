@@ -917,7 +917,6 @@ main (int argc, const char *argv[])
 #ifndef NDEBUG
 					// if infeasible check ray
 					if (model2->status()==1) {
-					  int debugMode=0;
 					  ClpSimplex * simplex = model2;
 					  if(simplex->ray()) {
 					    // make sure we use non-scaled versions

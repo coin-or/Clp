@@ -43,11 +43,15 @@ ClpCholeskyMumps::ClpCholeskyMumps (int denseThreshold)
      mumps_->par = 1;//working host for sequential version
      mumps_->sym = 2;//general symmetric matrix
      mumps_->comm_fortran = USE_COMM_WORLD;
-     int myid, ierr;
+     int myid;
      int justName;
-     ierr = MPI_Init(&justName, NULL);
-     ierr = MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+     MPI_Init(&justName, NULL);
+#ifndef NDEBUG
+     int ierr = MPI_Comm_rank(MPI_COMM_WORLD, &myid);
      assert (!ierr);
+#else
+     MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+#endif
      dmumps_c(mumps_);
 #define ICNTL(I) icntl[(I)-1] /* macro s.t. indices match documentation */
 #define CNTL(I) cntl[(I)-1] /* macro s.t. indices match documentation */
@@ -300,7 +304,6 @@ ClpCholeskyMumps::factorize(const double * diagonal, int * rowsDropped)
      CoinZeroN(work, numberRows_);
      const double * diagonalSlack = diagonal + numberColumns;
      int newDropped = 0;
-     double largest;
      //double smallest;
      //perturbation
      double perturbation = model_->diagonalPerturbation() * model_->diagonalNorm();
@@ -359,7 +362,6 @@ ClpCholeskyMumps::factorize(const double * diagonal, int * rowsDropped)
      //check sizes
      double largest2 = maximumAbsElement(sparseFactor_, sizeFactor_);
      largest2 *= 1.0e-20;
-     largest = CoinMin(largest2, 1.0e-11);
      int numberDroppedBefore = 0;
      for (iRow = 0; iRow < numberRows_; iRow++) {
           int dropped = rowsDropped_[iRow];

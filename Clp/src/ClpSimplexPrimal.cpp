@@ -1717,7 +1717,7 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
           numberRemaining = 0;
           dualIn_ = cost_[sequenceIn_];
 #ifndef NDEBUG
-          double tolerance = primalTolerance_ * 1.002;
+          //double tolerance = primalTolerance_ * 1.002;
 #endif
           for (iIndex = 0; iIndex < number; iIndex++) {
 

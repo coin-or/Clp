@@ -2115,7 +2115,6 @@ ClpGubMatrix::primalExpanded(ClpSimplex * model, int mode)
      case 1: {
           int i;
           double * solution = model->solutionRegion();
-          ClpSimplex::Status iStatus;
           //const int * columnLength = matrix_->getVectorLengths();
           //const CoinBigIndex * columnStart = matrix_->getVectorStarts();
           //const int * row = matrix_->getIndices();
@@ -2166,8 +2165,7 @@ ClpGubMatrix::primalExpanded(ClpSimplex * model, int mode)
                     //printf("Value of key structural %d for set %d is %g\n",kColumn,i,solution[kColumn]);
                } else {
                     // slack is key
-                    iStatus = getStatus(i);
-                    assert (iStatus == ClpSimplex::basic);
+                    assert (getStatus(i) == ClpSimplex::basic);
                     double infeasibility = 0.0;
                     if (value > upper_[i] + primalTolerance) {
                          infeasibility = value - upper_[i] - primalTolerance;
@@ -2216,7 +2214,6 @@ ClpGubMatrix::dualExpanded(ClpSimplex * model,
      case 0: {
           int i;
           double * cost = model->costRegion();
-          ClpSimplex::Status iStatus;
           // not dual values yet
           //assert (!other);
           //double * work = array->denseVector();
@@ -2236,8 +2233,7 @@ ClpGubMatrix::dualExpanded(ClpSimplex * model,
                               costValue = cost[kColumn];
                          } else {
                               // slack is key
-                              iStatus = getStatus(iSet);
-                              assert (iStatus == ClpSimplex::basic);
+                              assert (getStatus(iSet) == ClpSimplex::basic);
                               // negative as -1.0 for slack
                               costValue = -weight(iSet) * infeasibilityCost;
                          }
