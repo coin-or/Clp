@@ -3286,7 +3286,7 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
      double newTolerance = dualTolerance_;
      //newTolerance = dualTolerance_+1.0e-6*dblParam_[ClpDualTolerance];
      // will we need to increase tolerance
-     bool thisIncrease = false;
+     //bool thisIncrease = false;
      // If we think we need to modify costs (not if something from broad sweep)
      bool modifyCosts = false;
      // Increase in objective due to swapping bounds (may be negative)
@@ -3810,7 +3810,7 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
                          if (alpha < 0.0) {
                               //at upper bound
                               if (value > dualTolerance_) {
-                                   thisIncrease = true;
+                                   //thisIncrease = true;
 #if CLP_CAN_HAVE_ZERO_OBJ<2
 #define MODIFYCOST 2
 #endif
@@ -3840,7 +3840,7 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
                          } else {
                               // at lower bound
                               if (-value > dualTolerance_) {
-                                   thisIncrease = true;
+                                   //thisIncrease = true;
 #if MODIFYCOST
                                    // modify cost to hit new tolerance
                                    double modification = alpha * theta_ - dj_[iSequence]

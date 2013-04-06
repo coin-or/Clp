@@ -1396,7 +1396,6 @@ ClpSimplex::initialSolve(ClpSolve & options)
                int iRow;
                double largest = 0.0;
                double smallest = 1.0e30;
-               double largestGap = 0.0;
                for (iRow = 0; iRow < numberRows; iRow++) {
                     double value1 = model2->rowLower_[iRow];
                     if (value1 && value1 > -1.0e31) {
@@ -1410,10 +1409,6 @@ ClpSimplex::initialSolve(ClpSolve & options)
                     }
                     if (value2 > value1) {
                          numberNotE++;
-                         if (value2 > 1.0e31 || value1 < -1.0e31)
-                              largestGap = COIN_DBL_MAX;
-                         else
-                              largestGap = value2 - value1;
                     }
                }
                if (doIdiot < 0) {

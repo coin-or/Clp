@@ -703,8 +703,10 @@ static int tightenDoubletons2(CoinPresolveMatrix * prob)
 	  double yValue1;
 	  double newLower=COIN_DBL_MAX;
 	  double newUpper=-COIN_DBL_MAX;
+#ifdef PRINT_VALUES
 	  double ranges0[2];
 	  double ranges1[2];
+#endif
 	  double costEqual;
 	  double slope[2];
 	  assert (binding0+binding1==3);
@@ -718,10 +720,12 @@ static int tightenDoubletons2(CoinPresolveMatrix * prob)
 	  double yValueEqual=yValue0;
 	  costEqual = xValue*cost[otherCol]+yValueEqual*cost[icol];
 	  if (binding0==1) {
+#ifdef PRINT_VALUES
 	    ranges0[0]=bound[0];
 	    ranges0[1]=yValue0;
 	    ranges1[0]=yValue0;
 	    ranges1[1]=bound[1];
+#endif
 	    // take x 1.0 down
 	    double x=xValue-1.0;
 	    double y=(rowUpper0-x*alpha[0])/element0;
@@ -733,10 +737,12 @@ static int tightenDoubletons2(CoinPresolveMatrix * prob)
 	    costTotal = x*cost[otherCol]+y*cost[icol];
 	    slope[1] = costTotal-costEqual;
 	  } else {
+#ifdef PRINT_VALUES
 	    ranges1[0]=bound[0];
 	    ranges1[1]=yValue0;
 	    ranges0[0]=yValue0;
 	    ranges0[1]=bound[1];
+#endif
 	    // take x 1.0 down
 	    double x=xValue-1.0;
 	    double y=(rowUpper1-x*alpha[1])/element0;

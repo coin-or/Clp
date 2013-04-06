@@ -735,16 +735,11 @@ int
 ClpSimplexOther::readBasis(const char *fileName)
 {
      int status = 0;
-     bool canOpen = false;
-     if (!strcmp(fileName, "-") || !strcmp(fileName, "stdin")) {
-          // stdin
-          canOpen = true;
-     } else {
+     if (strcmp(fileName, "-") != 0 && strcmp(fileName, "stdin") != 0) {
           FILE *fp = fopen(fileName, "r");
           if (fp) {
                // can open - lets go for it
                fclose(fp);
-               canOpen = true;
           } else {
                handler_->message(CLP_UNABLE_OPEN, messages_)
                          << fileName << CoinMessageEol;
@@ -2352,13 +2347,10 @@ ClpSimplexOther::parametrics(const char * dataFile)
       int nLine = 0;
       int nBadLine = 0;
       int nBadName = 0;
-      bool goodLine=false;
       while (fgets(line, 200, fp)) {
-	goodLine=true;
 	if (!strncmp(line, "ENDATA", 6)||
 	    !strncmp(line, "COLUMN",6))
 	  break;
-	goodLine=false;
 	nLine++;
 	iRow = -1;
 	double upper = 0.0;
@@ -2529,12 +2521,9 @@ ClpSimplexOther::parametrics(const char * dataFile)
 	int nLine = 0;
 	int nBadLine = 0;
 	int nBadName = 0;
-	bool goodLine=false;
 	while (fgets(line, 200, fp)) {
-	  goodLine=true;
 	  if (!strncmp(line, "ENDATA", 6))
 	    break;
-	  goodLine=false;
 	  nLine++;
 	  iColumn = -1;
 	  double upper = 0.0;
@@ -3897,8 +3886,10 @@ ClpSimplexOther::whileIterating(parametricsData & paramData, double /*reportIncr
                     } else if (updateStatus == 5) {
                          problemStatus_ = -2; // factorize now
                     }
+#ifdef CLP_PARAMETRIC_DENSE_ARRAYS
 		    int * lowerActive = paramData.lowerActive;
 		    int * upperActive = paramData.upperActive;
+#endif
 		    // update change vector
 		    {
 		      double * work = rowArray_[1]->denseVector();
@@ -8313,11 +8304,11 @@ void ClpCopyToMiniSave(saveInfo & where, const char * info, unsigned int sizeInf
 			 const int * indices, const double * elements)
 {
   char * put = where.putStuff;
-  int n = numberElements*(sizeof(int)+sizeof(double))+sizeInfo;
+  int n = numberElements*static_cast<int>(sizeof(int)+sizeof(double))+static_cast<int>(sizeInfo);
   if (n+(put-where.startStuff)>where.maxStuff) {
     where.maxStuff += CoinMax(where.maxStuff/2 + 10000, 2*n);
     char * temp = new char[where.maxStuff];
-    int k = put-where.startStuff;
+    long k = put-where.startStuff;
     memcpy(temp,where.startStuff,k);
     delete [] where.startStuff;
     where.startStuff=temp;
@@ -8544,7 +8535,7 @@ ClpSimplex::miniPresolve(char * rowType, char * columnType,void ** infoOut)
   // Big enough structure
   int numberTotal=numberRows_+numberColumns_;
   CoinBigIndex lastElement = matrix_->getNumElements();
-  int maxInfoStuff = 5*lastElement*sizeof(double)+numberTotal*sizeof(clpPresolveInfo2);
+  int maxInfoStuff = 5*lastElement*static_cast<int>(sizeof(double))+numberTotal*static_cast<int>(sizeof(clpPresolveInfo2));
   clpPresolveInfo * infoA = new clpPresolveInfo[numberTotal];
   char * startStuff = new char [maxInfoStuff];
   memset(infoA,'B',numberTotal*sizeof(clpPresolveInfo));
@@ -8627,7 +8618,7 @@ ClpSimplex::miniPresolve(char * rowType, char * columnType,void ** infoOut)
       CoinBigIndex start=rowStart[iRow];
       thisInfo.lengthRow=n;
       //thisInfo.column=-1;
-      infoA[nActions].infoOffset=stuff.putStuff-startStuff;
+      infoA[nActions].infoOffset=static_cast<int>(stuff.putStuff-startStuff);
       infoA[nActions].type=4; //rowType[iRow];
       nActions++;
       ClpCopyToMiniSave(stuff,reinterpret_cast<char *>(&thisInfo),sizeof(clpPresolveInfo1_4_8),
@@ -8647,7 +8638,7 @@ ClpSimplex::miniPresolve(char * rowType, char * columnType,void ** infoOut)
       thisInfo.oldColumnUpper=columnUpper[iColumn];
       thisInfo.column=iColumn;
       CoinBigIndex start=columnStart[iColumn];
-      infoA[nActions].infoOffset=stuff.putStuff-startStuff;
+      infoA[nActions].infoOffset=static_cast<int>(stuff.putStuff-startStuff);
       infoA[nActions].type=(columnType[iColumn]>0) ? columnType[iColumn] : 13;
       nActions++;
       ClpCopyToMiniSave(stuff,reinterpret_cast<char *>(&thisInfo),sizeof(clpPresolveInfo13),
@@ -8751,7 +8742,7 @@ ClpSimplex::miniPresolve(char * rowType, char * columnType,void ** infoOut)
 	  CoinBigIndex start=rowStart[iRow];
 	  thisInfo.lengthRow=n;
 	  //thisInfo.column=-1;
-	  infoA[nActions].infoOffset=stuff.putStuff-startStuff;
+	  infoA[nActions].infoOffset=static_cast<int>(stuff.putStuff-startStuff);
 	  infoA[nActions].type=1;
 	  nActions++;
 	  ClpCopyToMiniSave(stuff,reinterpret_cast<char *>(&thisInfo),sizeof(clpPresolveInfo1_4_8),
@@ -8820,7 +8811,7 @@ ClpSimplex::miniPresolve(char * rowType, char * columnType,void ** infoOut)
 	int nel=columnLength[iColumn2];
 	CoinBigIndex startCol=columnStart[iColumn2];
 	thisInfo.lengthColumn2=nel;
-	infoA[nActions].infoOffset=stuff.putStuff-startStuff;
+	infoA[nActions].infoOffset=static_cast<int>(stuff.putStuff-startStuff);
 	infoA[nActions].type=14;
 	nActions++;
 	ClpCopyToMiniSave(stuff,reinterpret_cast<char *>(&thisInfo),sizeof(clpPresolveInfo14),
@@ -9003,7 +8994,7 @@ ClpSimplex::miniPresolve(char * rowType, char * columnType,void ** infoOut)
       CoinBigIndex start=rowStart[iRow];
       thisInfo.lengthRow=n;
       //thisInfo.column=-1;
-      infoA[nActions].infoOffset=stuff.putStuff-startStuff;
+      infoA[nActions].infoOffset=static_cast<int>(stuff.putStuff-startStuff);
       infoA[nActions].type=1;
       nActions++;
       ClpCopyToMiniSave(stuff,reinterpret_cast<char *>(&thisInfo),sizeof(clpPresolveInfo1_4_8),
@@ -9187,7 +9178,7 @@ ClpSimplex::miniPresolve(char * rowType, char * columnType,void ** infoOut)
 	columnLower[iColumn]=newLower;
 	columnUpper[iColumn]=newUpper;
 	thisInfo.column=iColumn;
-	infoA[nActions].infoOffset=stuff.putStuff-startStuff;
+	infoA[nActions].infoOffset=static_cast<int>(stuff.putStuff-startStuff);
 	ClpCopyToMiniSave(stuff,reinterpret_cast<char *>(&thisInfo),sizeof(clpPresolveInfo2),
 		   0,NULL,NULL);
 	infoA[nActions].type=2;
@@ -9209,7 +9200,7 @@ ClpSimplex::miniPresolve(char * rowType, char * columnType,void ** infoOut)
 	  rowType[iRow]=1;
 	  if (iRow!=jRowLower&&iRow!=jRowUpper) {
 	    // mark as redundant
-	    infoA[nActions].infoOffset=stuff.putStuff-startStuff;
+	    infoA[nActions].infoOffset=static_cast<int>(stuff.putStuff-startStuff);
 	    clpPresolveInfo1_4_8 thisInfo;
 	    thisInfo.oldRowLower=(rowLower_[iRow]>-1.0e30) ? rowLower_[iRow]-rowLower[iRow] : rowLower[iRow];
 	    thisInfo.oldRowUpper=(rowUpper_[iRow]<1.0e30) ? rowUpper_[iRow]-rowUpper[iRow] : rowUpper[iRow];
@@ -9367,7 +9358,7 @@ ClpSimplex::miniPresolve(char * rowType, char * columnType,void ** infoOut)
 	int n=columnLength[iColumn];
 	CoinBigIndex start=columnStart[iColumn];
 	thisInfo.lengthColumn=n;
-	infoA[nActions].infoOffset=stuff.putStuff-startStuff;
+	infoA[nActions].infoOffset=static_cast<int>(stuff.putStuff-startStuff);
 	infoA[nActions].type=11;
 	nActions++;
 	ClpCopyToMiniSave(stuff,reinterpret_cast<char *>(&thisInfo),sizeof(clpPresolveInfo11),
@@ -9417,7 +9408,7 @@ ClpSimplex::miniPresolve(char * rowType, char * columnType,void ** infoOut)
     moreInfo.nActions=&nActions;
     eventHandler_->eventWithInfo(ClpEventHandler::moreMiniPresolve,&moreInfo);
     newModel->setObjectiveOffset(offset);
-    int nChar2 = nActions*sizeof(clpPresolveInfo)+(stuff.putStuff-startStuff);
+    int nChar2 = nActions*static_cast<int>(sizeof(clpPresolveInfo))+static_cast<int>(stuff.putStuff-startStuff);
     clpPresolveInfo * infoData = reinterpret_cast<clpPresolveInfo *>(new char[nChar2]);
     memcpy(infoData,infoA,nActions*sizeof(clpPresolveInfo));
     char * info2 = reinterpret_cast<char *>(infoData+nActions);
