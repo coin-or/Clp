@@ -417,7 +417,9 @@ int main(int argc, const char *argv[])
                FILE * fp = fopen("xx.sol", "w");
                fwrite(gubSolution, sizeof(double), numberTotalColumns, fp);
                fwrite(status, sizeof(char), numberTotalColumns, fp);
+#ifndef NDEBUG
                const double * rowsol = model2.primalRowSolution();
+#endif
                double * rowsol2 = new double[originalNumberRows];
                memset(rowsol2, 0, originalNumberRows * sizeof(double));
                model.times(1.0, gubSolution, rowsol2);
