@@ -106,6 +106,8 @@ CLEANFILES = \
 	addBits.@OBJEXT@ addBits@EXEEXT@ \
 	addColumns.@OBJEXT@ addColumns@EXEEXT@ \
 	addRows.@OBJEXT@ addRows@EXEEXT@ \
+	decomp2.@OBJEXT@ decomp2@EXEEXT@ \
+	decomp3.@OBJEXT@ decomp3@EXEEXT@ \
 	decompose.@OBJEXT@ decompose@EXEEXT@ \
 	defaults.@OBJEXT@ defaults@EXEEXT@ \
 	driver2.@OBJEXT@ driver2@EXEEXT@ \
@@ -117,7 +119,9 @@ CLEANFILES = \
 	hello.@OBJEXT@ hello@EXEEXT@ \
 	makeDual.@OBJEXT@ makeDual@EXEEXT@ \
 	minimum.@OBJEXT@ minimum@EXEEXT@ \
+	modify.@OBJEXT@ modify@EXEEXT@ \
 	network.@OBJEXT@ network@EXEEXT@ \
+	pdco.@OBJEXT@ pdco@EXEEXT@ \
 	piece.@OBJEXT@ piece@EXEEXT@ \
 	rowColumn.@OBJEXT@ rowColumn@EXEEXT@ \
 	sprint2.@OBJEXT@ sprint2@EXEEXT@ \
