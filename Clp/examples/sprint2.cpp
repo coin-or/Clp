@@ -71,6 +71,8 @@ int main(int argc, const char *argv[])
 
      // Just take this number of columns in small problem
      int smallNumberColumns = 3 * numberRows;
+     // To stop seg faults on unsuitable problems
+     smallNumberColumns = CoinMin(smallNumberColumns,numberColumns);
      // And we want number of rows to be this
      int smallNumberRows = numberRows / 4;
 
@@ -100,6 +102,8 @@ int main(int argc, const char *argv[])
           if (iPass) {
                double ratio = ((double) smallNumberRows) / ((double) model2->numberRows());
                smallNumberColumns = (int)(smallNumberColumns * ratio);
+	       // deal with pathological case
+	       smallNumberColumns = CoinMax(smallNumberColumns,0);
           }
           delete model2;
           /* After this postsolve model should be optimal.

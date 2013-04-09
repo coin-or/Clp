@@ -244,7 +244,7 @@ int main(int argc, const char *argv[])
                          lower, upper,
                          start2, row2, element2, cost2,
                          lowerColumn2, upperColumn2);
-               model2.replaceMatrix(newMatrix);
+               model2.replaceMatrix(newMatrix,true);
                newMatrix->switchOffCheck();
                newMatrix->setRefreshFrequency(1000);
           }
@@ -274,7 +274,7 @@ int main(int argc, const char *argv[])
                                 start2, row2, element2, cost2,
                                 lowerColumn2, upperColumn2,
                                 oldMatrix->gubRowStatus(), oldMatrix->dynamicStatus());
-               model3.replaceMatrix(newMatrix);
+               model3.replaceMatrix(newMatrix,true);
                // and ordinary status (but only NON gub rows)
                memcpy(model3.statusArray(), model2.statusArray(),
                       (newMatrix->numberStaticRows() + model3.numberColumns()) *sizeof(unsigned char));
@@ -292,7 +292,7 @@ int main(int argc, const char *argv[])
                                        lowerColumn2, upperColumn2,
                                        oldMatrix->gubRowStatus(), oldMatrix->dynamicStatus(),
                                        oldMatrix->numberGubColumns(), oldMatrix->idGen());
-               model3.replaceMatrix(newMatrix);
+               model3.replaceMatrix(newMatrix,true);
                // and ordinary status (but only NON gub rows)
                memcpy(model3.statusArray(), model2.statusArray(),
                       (newMatrix->numberStaticRows() + model3.numberColumns()) *sizeof(unsigned char));
