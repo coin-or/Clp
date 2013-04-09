@@ -100,7 +100,7 @@ ClpDynamicExampleMatrix::ClpDynamicExampleMatrix(ClpSimplex * model, int numberS
      numberGubColumns_ = 0;
      startColumn_[0] = 0;
      cost_ = new double[maximumGubColumns_];
-     dynamicStatus_ = new unsigned char [maximumGubColumns_];
+     dynamicStatus_ = new unsigned char [2*maximumGubColumns_];
      memset(dynamicStatus_, 0, maximumGubColumns_);
      id_ = new int[maximumGubColumns_];
      if (columnLower)
@@ -157,14 +157,14 @@ ClpDynamicExampleMatrix::ClpDynamicExampleMatrix(ClpSimplex * model, int numberS
           for(i = firstDynamic_; i < lastDynamic_; i++)
                columnUpper[i] = 1.0e10;
      }
+     status_ = new unsigned char [2*numberSets_+4];
      if (status) {
-          status_ = ClpCopyOfArray(status, numberSets_);
+          memcpy(status_,status, numberSets_ * sizeof(char));
           assert (dynamicStatus);
           CoinMemcpyN(dynamicStatus, numberIds, dynamicStatus_);
           assert (numberIds);
      } else {
           assert (!numberIds);
-          status_ = new unsigned char [numberSets_];
           memset(status_, 0, numberSets_);
           for (i = 0; i < numberSets_; i++) {
                // make slack key
@@ -219,6 +219,7 @@ ClpDynamicExampleMatrix::ClpDynamicExampleMatrix(ClpSimplex * model, int numberS
           initialProblem();
      }
 }
+#if 0
 // This constructor just takes over ownership
 ClpDynamicExampleMatrix::ClpDynamicExampleMatrix(ClpSimplex * model, int numberSets,
           int numberGubColumns, int * starts,
@@ -259,7 +260,7 @@ ClpDynamicExampleMatrix::ClpDynamicExampleMatrix(ClpSimplex * model, int numberS
      numberGubColumns_ = 0;
      startColumn_[0] = 0;
      cost_ = new double[maximumGubColumns_];
-     dynamicStatus_ = new unsigned char [maximumGubColumns_];
+     dynamicStatus_ = new unsigned char [2*maximumGubColumns_];
      memset(dynamicStatus_, 0, maximumGubColumns_);
      id_ = new int[maximumGubColumns_];
      if (columnLower)
@@ -309,14 +310,14 @@ ClpDynamicExampleMatrix::ClpDynamicExampleMatrix(ClpSimplex * model, int numberS
           for(i = firstDynamic_; i < lastDynamic_; i++)
                columnUpper[i] = 1.0e10;
      }
+     status_ = new unsigned char [2*numberSets_+4];
      if (status) {
-          status_ = ClpCopyOfArray(status, numberSets_);
+          memcpy(status_,status, numberSets_ * sizeof(char));
           assert (dynamicStatus);
           CoinMemcpyN(dynamicStatus, numberIds, dynamicStatus_);
           assert (numberIds);
      } else {
           assert (!numberIds);
-          status_ = new unsigned char [numberSets_];
           memset(status_, 0, numberSets_);
           for (i = 0; i < numberSets_; i++) {
                // make slack key
@@ -372,6 +373,7 @@ ClpDynamicExampleMatrix::ClpDynamicExampleMatrix(ClpSimplex * model, int numberS
           initialProblem();
      }
 }
+#endif
 //-------------------------------------------------------------------
 // Destructor
 //-------------------------------------------------------------------
