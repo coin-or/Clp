@@ -176,6 +176,8 @@ AC_COIN_CHECK_CXX_CHEADER(ieeefp)
 
 AC_COIN_VPATH_LINK(examples/hello.mps)
 AC_COIN_VPATH_LINK(examples/input.130)
+AC_COIN_VPATH_LINK(examples/g.tiny)
+AC_COIN_VPATH_LINK(examples/gparm.tiny)
 
 #############################################################################
 #                  Check for doxygen                                        #

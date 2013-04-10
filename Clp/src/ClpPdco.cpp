@@ -3,8 +3,6 @@
 // Corporation and others.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).
 
-#ifdef COIN_DO_PDCO
-
 /* Pdco algorithm
 
 Method
@@ -180,7 +178,7 @@ ClpPdco::pdco( ClpPdcoBase * stuff, Options &options, Info &info, Outfo &outfo)
 //  global pdDDD1 pdDDD2 pdDDD3
      double inf = 1.0e30;
      double eps = 1.0e-15;
-     double atolold, r3ratio, Pinf, Dinf, Cinf, Cinf0;
+     double atolold = -1.0, r3ratio = -1.0, Pinf, Dinf, Cinf, Cinf0;
 
      printf("\n   --------------------------------------------------------");
      printf("\n   pdco.m                            Version of 01 Nov 2002");
@@ -225,8 +223,7 @@ ClpPdco::pdco( ClpPdcoBase * stuff, Options &options, Info &info, Outfo &outfo)
      //true   = 1;
      //false  = 0;
      //zn     = zeros(n,1);
-     int nb     = n + m;
-     int nkkt   = nb;
+     //int nb     = n + m;
      int CGitns = 0;
      int inform = 0;
      //---------------------------------------------------------------------
@@ -259,7 +256,7 @@ ClpPdco::pdco( ClpPdcoBase * stuff, Options &options, Info &info, Outfo &outfo)
      double atol1     = options.LSQRatol1;  // Initial  atol
      double atol2     = options.LSQRatol2;  // Smallest atol,unless atol1 is smaller
      double conlim    = options.LSQRconlim;
-     int  wait      = options.wait;
+     //int  wait      = options.wait;
 
      // LSproblem:
      //  1 = dy          2 = dy shifted, DLS
@@ -316,8 +313,8 @@ ClpPdco::pdco( ClpPdcoBase * stuff, Options &options, Info &info, Outfo &outfo)
      // All parameters have now been set.
      //---------------------------------------------------------------------
      double time    = CoinCpuTime();
-     bool useChol = (LSmethod == 1);
-     bool useQR   = (LSmethod == 2);
+     //bool useChol = (LSmethod == 1);
+     //bool useQR   = (LSmethod == 2);
      bool direct  = (LSmethod <= 2 && ifexplicit);
      char solver[6];
      strcpy(solver, "  LSQR");
@@ -455,7 +452,7 @@ ClpPdco::pdco( ClpPdcoBase * stuff, Options &options, Info &info, Outfo &outfo)
      getHessian(x , H);
      x.scale((1.0 / beta));
 
-     double * g_elts = grad.getElements();
+     //double * g_elts = grad.getElements();
      double * H_elts = H.getElements();
 
      obj /= theta;                       // Scaled obj.
@@ -503,7 +500,7 @@ ClpPdco::pdco( ClpPdcoBase * stuff, Options &options, Info &info, Outfo &outfo)
 
      bool  precon   = true;
      double PDitns    = 0;
-     bool converged = false;
+     //bool converged = false;
      double atol      = atol1;
      atol2     = CoinMax( atol2, atolmin );
      atolmin   = atol2;
@@ -511,8 +508,6 @@ ClpPdco::pdco( ClpPdcoBase * stuff, Options &options, Info &info, Outfo &outfo)
 
      //  Iteration log.
 
-     double stepx   = 0;
-     double stepz   = 0;
      int nf      = 0;
      int itncg   = 0;
      int nfail   = 0;
@@ -627,7 +622,7 @@ ClpPdco::pdco( ClpPdcoBase * stuff, Options &options, Info &info, Outfo &outfo)
                     	*/
                     //  New version of lsqr
 
-                    int istop, itn;
+                    int istop;
                     dy.clear();
                     show = false;
                     info.atolmin = atolmin;
@@ -917,7 +912,7 @@ ClpPdco::pdco( ClpPdcoBase * stuff, Options &options, Info &info, Outfo &outfo)
          printf(" %d   %e\n", k, x[k]);
      */
 // Print distribution
-     float thresh[9] = { 0.00000001, 0.0000001, 0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1, 1.00001};
+     double thresh[9] = { 0.00000001, 0.0000001, 0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1, 1.00001};
      int counts[9] = {0};
      for (int ij = 0; ij < n; ij++) {
           for (int j = 0; j < 9; j++) {
@@ -929,10 +924,10 @@ ClpPdco::pdco( ClpPdcoBase * stuff, Options &options, Info &info, Outfo &outfo)
      }
      printf ("Distribution of Solution Values\n");
      for (int j = 8; j > 1; j--)
-          printf(" %f  to  %f %d\n", thresh[j-1], thresh[j], counts[j]);
-     printf("   Less than   %f %d\n", thresh[2], counts[0]);
+          printf(" %g  to  %g %d\n", thresh[j-1], thresh[j], counts[j]);
+     printf("   Less than   %g %d\n", thresh[2], counts[0]);
 
-     return 0;
+     return inform;
 }
 // LSQR
 void
@@ -1017,4 +1012,3 @@ void ClpPdco::getHessian(CoinDenseVector<double> &x, CoinDenseVector<double> &H)
 {
      pdcoStuff_->getHessian(this, x, H);
 }
-#endif

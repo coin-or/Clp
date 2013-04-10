@@ -258,7 +258,7 @@ int main(int argc, const char *argv[])
           }
           std::cout << "--------------------------------------" << std::endl;
           // Test CoinAssert
-          std::cout << "If Clp compiled with -g below should give assert, if with -O1 or COIN_ASSERT CoinError" << std::endl;
+          std::cout << "If Clp compiled without NDEBUG below should give assert, if with NDEBUG or COIN_ASSERT CoinError" << std::endl;
           model = modelSave;
           model.deleteRows(2, del);
           // Deliberate error

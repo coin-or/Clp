@@ -3,8 +3,6 @@
 // Corporation and others.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).
 
-#ifdef COIN_DO_PDCO
-
 #include "ClpLsqr.hpp"
 #include "ClpPdco.hpp"
 
@@ -38,20 +36,16 @@ void ClpLsqr::do_lsqr( CoinDenseVector<double> &b,
 
      char str1[100], str2[100], str3[100], str4[100], head1[100], head2[100];
 
-     int m = nrows_;
      int n = ncols_;     // set  m,n from lsqr object
 
      *itn     = 0;
      *istop   = 0;
-     int nstop  = 0;
      double ctol   = 0;
      if (conlim > 0) ctol = 1 / conlim;
 
      double anorm  = 0;
      double acond  = 0;
-     double dampsq = damp * damp;
      double ddnorm = 0;
-     double res2   = 0;
      double xnorm  = 0;
      double xxnorm = 0;
      double z      = 0;
@@ -266,7 +260,7 @@ void ClpLsqr::do_lsqr( CoinDenseVector<double> &b,
                if (n     <= 40       ) prnt = 1;
                if (*itn   <= 10       ) prnt = 1;
                if (*itn   >= itnlim - 10) prnt = 1;
-               if (fmod(*itn, 10) == 0  ) prnt = 1;
+               if (*itn % 10 == 0  ) prnt = 1;
                if (test3 <=  2 * ctol  ) prnt = 1;
                if (test2 <= 10 * atol  ) prnt = 1;
                if (test1 <= 10 * rtol  ) prnt = 1;
@@ -395,4 +389,3 @@ ClpLsqr::operator=(const ClpLsqr & rhs)
      }
      return *this;
 }
-#endif

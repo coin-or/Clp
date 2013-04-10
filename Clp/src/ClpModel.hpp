@@ -266,8 +266,8 @@ public:
      /// Drops names - makes lengthnames 0 and names empty
      void dropNames();
      /// Copies in names
-     void copyNames(std::vector<std::string> & rowNames,
-                    std::vector<std::string> & columnNames);
+     void copyNames(const std::vector<std::string> & rowNames,
+                    const std::vector<std::string> & columnNames);
      /// Copies in Row names - modifies names first .. last-1
      void copyRowNames(const std::vector<std::string> & rowNames, int first, int last);
      /// Copies in Column names - modifies names first .. last-1

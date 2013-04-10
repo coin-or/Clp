@@ -11,10 +11,10 @@ int main(int argc, const char *argv[])
      if (argc < 2) {
 #if defined(SAMPLEDIR)
 /*
-  SAMPLEDIR should "path/to/Data/Sample/"
+  SAMPLEDIR should "path/to/Data/Sample"
   Include the quotes and final path separator.
 */
-          status = model.readMps(SAMPLEDIR "p0033.mps", true);
+          status = model.readMps(SAMPLEDIR "/p0033.mps", true);
 #else
           fprintf(stderr, "Do not know where to find sample MPS files.\n");
           exit(1);

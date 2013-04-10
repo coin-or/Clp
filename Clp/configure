@@ -31242,6 +31242,26 @@ if test $coin_vpath_config = yes; then
 fi
 
 
+
+# Allow for newlines in the parameter
+if test $coin_vpath_config = yes; then
+  cvl_tmp="examples/g.tiny"
+  for file in $cvl_tmp ; do
+    coin_vpath_link_files="$coin_vpath_link_files $file"
+  done
+fi
+
+
+
+# Allow for newlines in the parameter
+if test $coin_vpath_config = yes; then
+  cvl_tmp="examples/gparm.tiny"
+  for file in $cvl_tmp ; do
+    coin_vpath_link_files="$coin_vpath_link_files $file"
+  done
+fi
+
+
 #############################################################################
 #                  Check for doxygen                                        #
 #############################################################################

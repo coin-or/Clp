@@ -155,8 +155,8 @@ ClpDynamicMatrix::ClpDynamicMatrix(ClpSimplex * model, int numberSets,
                     next_[i] = i + 1;
                next_[last] = -iSet - 1;
           }
+	  startSet_[numberSets_] = starts[numberSets_];
      }
-     startSet_[numberSets_] = starts[numberSets_];
      int numberColumns = model->numberColumns();
      int numberRows = model->numberRows();
      numberStaticRows_ = numberRows;
@@ -176,7 +176,8 @@ ClpDynamicMatrix::ClpDynamicMatrix(ClpSimplex * model, int numberSets,
      lastDynamic_ = numberNeeded;
      startColumn_ = ClpCopyOfArray(startColumn, numberGubColumns_ + 1);
      if (!numberGubColumns_) {
-       //startColumn_ = new CoinBigIndex [1];
+       if (!startColumn_)
+	 startColumn_ = new CoinBigIndex [1];
        startColumn_[0] = 0;
      }
      CoinBigIndex numberElements = startColumn_[numberGubColumns_];

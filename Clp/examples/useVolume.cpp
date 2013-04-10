@@ -171,6 +171,11 @@ int main(int argc, const char *argv[])
 #endif
      } else
           status = model.readMps(argv[1], true);
+     if( status != 0 )
+     {
+        printf("Error %d reading MPS file\n", status);
+        return status;
+     }
      /*
        This driver uses volume algorithm
        then does dual - after adjusting costs

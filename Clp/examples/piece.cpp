@@ -202,7 +202,11 @@ int main(int argc, const char *argv[])
      model.setDblParam(ClpObjOffset, -objectiveOffset);
      // Create nonlinear objective
      int returnCode = model.createPiecewiseLinearCosts(segstart, breakpt, slope);
-     assert(!returnCode);
+     if( returnCode != 0 )
+     {
+        printf("Unexpected return code %d from model.createPiecewiseLinearCosts()\n", returnCode);
+        return returnCode;
+     }
 
      // delete
      delete [] segstart;

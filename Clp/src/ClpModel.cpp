@@ -2285,8 +2285,8 @@ ClpModel::addColumns(int number, const double * columnLower,
                columnNames_.resize(numberColumns_);
           }
 #endif
-          //if (elements)
-          matrix_->appendMatrix(number, 1, columnStarts, rows, elements);
+          if (elements)
+	    matrix_->appendMatrix(number, 1, columnStarts, rows, elements);
      }
 }
 // Add columns
@@ -3423,8 +3423,8 @@ ClpModel::ClpModel ( const ClpModel * rhs,
 #ifndef CLP_NO_STD
 // Copies in names
 void
-ClpModel::copyNames(std::vector<std::string> & rowNames,
-                    std::vector<std::string> & columnNames)
+ClpModel::copyNames(const std::vector<std::string> & rowNames,
+                    const std::vector<std::string> & columnNames)
 {
      unsigned int maxLength = 0;
      int iRow;

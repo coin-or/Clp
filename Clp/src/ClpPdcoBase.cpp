@@ -3,8 +3,6 @@
 // Corporation and others.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).
 
-#ifdef COIN_DO_PDCO
-
 #include "CoinPragma.hpp"
 
 #include <iostream>
@@ -59,4 +57,3 @@ ClpPdcoBase::operator=(const ClpPdcoBase& rhs)
      }
      return *this;
 }
-#endif
