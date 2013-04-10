@@ -260,7 +260,7 @@ void ClpLsqr::do_lsqr( CoinDenseVector<double> &b,
                if (n     <= 40       ) prnt = 1;
                if (*itn   <= 10       ) prnt = 1;
                if (*itn   >= itnlim - 10) prnt = 1;
-               if (fmod(*itn, 10) == 0  ) prnt = 1;
+               if (*itn % 10 == 0  ) prnt = 1;
                if (test3 <=  2 * ctol  ) prnt = 1;
                if (test2 <= 10 * atol  ) prnt = 1;
                if (test1 <= 10 * rtol  ) prnt = 1;
