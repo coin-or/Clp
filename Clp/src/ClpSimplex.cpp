@@ -7179,7 +7179,11 @@ ClpSimplex::readGMPL(const char *filename, const char * dataName,
 int
 ClpSimplex::readLp(const char *filename, const double epsilon )
 {
-     FILE *fp = fopen(filename, "r");
+  FILE *fp;
+  if (strcmp(filename,"-"))
+    fp = fopen(filename, "r");
+  else
+    fp = stdin;
 
      if(!fp) {
           printf("### ERROR: ClpSimplex::readLp():  Unable to open file %s for reading\n",
