@@ -39,9 +39,11 @@ extern glp_prob* cbc_glp_prob;
 #include "AbcCommon.hpp"
 #include "ClpFactorization.hpp"
 #include "CoinTime.hpp"
+#include "CoinWarmStartBasis.hpp"
 #include "ClpSimplex.hpp"
 #include "ClpSimplexOther.hpp"
 #include "ClpSolve.hpp"
+#include "ClpMessage.hpp"
 #include "ClpPackedMatrix.hpp"
 #include "ClpPlusMinusOneMatrix.hpp"
 #include "ClpNetworkMatrix.hpp"
@@ -58,6 +60,9 @@ extern glp_prob* cbc_glp_prob;
 #include "AbcSimplexFactorization.hpp"
 #include "AbcDualRowSteepest.hpp"
 #include "AbcDualRowDantzig.hpp"
+#endif
+#ifdef COIN_HAS_ASL
+#include "Clp_ampl.h"
 #endif
 #ifdef DMALLOC
 #include "dmalloc.h"
@@ -262,6 +267,107 @@ main (int argc, const char *argv[])
           // total number of commands read
           int numberGoodCommands = 0;
           bool * goodModels = new bool[1];
+          goodModels[0] = false;
+#ifdef COIN_HAS_ASL
+	  ampl_info info;
+	  int usingAmpl=0;
+	  CoinMessageHandler * generalMessageHandler = models->messageHandler();
+	  generalMessageHandler->setPrefix(false);
+	  CoinMessages generalMessages = models->messages();
+	  char generalPrint[10000];
+	  {
+	    bool noPrinting_=false;
+            memset(&info, 0, sizeof(info));
+            if (argc > 2 && !strcmp(argv[2], "-AMPL")) {
+	      usingAmpl = 1;
+	      // see if log in list
+	      noPrinting_ = true;
+	      for (int i = 1; i < argc; i++) {
+                    if (!strncmp(argv[i], "log", 3)) {
+                        const char * equals = strchr(argv[i], '=');
+                        if (equals && atoi(equals + 1) > 0) {
+			    noPrinting_ = false;
+                            info.logLevel = atoi(equals + 1);
+                            int log = whichParam(CLP_PARAM_INT_LOGLEVEL, numberParameters, parameters);
+                            parameters[log].setIntValue(info.logLevel);
+                            // mark so won't be overWritten
+                            info.numberRows = -1234567;
+                            break;
+                        }
+                    }
+                }
+
+                union {
+                    void * voidModel;
+                    CoinModel * model;
+                } coinModelStart;
+                coinModelStart.model = NULL;
+                int returnCode = readAmpl(&info, argc, const_cast<char **>(argv), & coinModelStart.voidModel);
+                if (returnCode)
+                    return returnCode;
+		if (info.numberBinary+info.numberIntegers+info.numberSos
+		    &&!info.starts) {
+		  printf("Unable to handle integer problems\n");
+		  return 1;
+		}
+                CbcOrClpRead_mode = 2; // so will start with parameters
+                // see if log in list (including environment)
+                for (int i = 1; i < info.numberArguments; i++) {
+                    if (!strcmp(info.arguments[i], "log")) {
+                        if (i < info.numberArguments - 1 && atoi(info.arguments[i+1]) > 0)
+                            noPrinting_ = false;
+                        break;
+                    }
+                }
+                if (noPrinting_) {
+                    models->messageHandler()->setLogLevel(0);
+                    setCbcOrClpPrinting(false);
+                }
+                if (!noPrinting_)
+                    printf("%d rows, %d columns and %d elements\n",
+                           info.numberRows, info.numberColumns, info.numberElements);
+                if (!coinModelStart.model) {
+		  // linear
+                    models->loadProblem(info.numberColumns, info.numberRows, info.starts,
+                                        info.rows, info.elements,
+                                        info.columnLower, info.columnUpper, info.objective,
+                                        info.rowLower, info.rowUpper);
+		} else {
+		  // QP
+		  models->loadProblem(*(coinModelStart.model));
+		}
+                // If we had a solution use it
+                if (info.primalSolution) {
+                    models->setColSolution(info.primalSolution);
+                }
+                // status
+                if (info.rowStatus) {
+                    unsigned char * statusArray = models->statusArray();
+                    int i;
+                    for (i = 0; i < info.numberColumns; i++)
+                        statusArray[i] = static_cast<unsigned char>(info.columnStatus[i]);
+                    statusArray += info.numberColumns;
+                    for (i = 0; i < info.numberRows; i++)
+                        statusArray[i] = static_cast<unsigned char>(info.rowStatus[i]);
+                }
+                freeArrays1(&info);
+                // modify objective if necessary
+                models->setOptimizationDirection(info.direction);
+                models->setObjectiveOffset(info.offset);
+                if (info.offset) {
+                    sprintf(generalPrint, "Ampl objective offset is %g",
+                            info.offset);
+                    generalMessageHandler->message(CLP_GENERAL, generalMessages)
+                    << generalPrint
+                    << CoinMessageEol;
+                }
+                goodModels[0] = true;
+                // change argc etc
+                argc = info.numberArguments;
+                argv = const_cast<const char **>(info.arguments);
+            }
+        }
+#endif
 
           // Hidden stuff for barrier
           int choleskyType = 0;
@@ -272,7 +378,6 @@ main (int argc, const char *argv[])
           int crossover = 2; // do crossover unless quadratic
 
           int iModel = 0;
-          goodModels[0] = false;
           //models[0].scaling(1);
           //models[0].setDualBound(1.0e6);
           //models[0].setDualTolerance(1.0e-7);
@@ -373,6 +478,10 @@ main (int argc, const char *argv[])
                               evenHidden = true;
                               verbose &= ~8;
                          }
+#ifdef COIN_HAS_ASL
+			 if (verbose < 4 && usingAmpl)
+			   verbose += 4;
+#endif
                          if (verbose)
                               maxAcross = 1;
                          int limits[] = {1, 101, 201, 301, 401};
@@ -682,8 +791,16 @@ main (int argc, const char *argv[])
                          }
                     } else {
                          // action
-                         if (type == CLP_PARAM_ACTION_EXIT)
-                              break; // stop all
+		         if (type == CLP_PARAM_ACTION_EXIT) {
+#ifdef COIN_HAS_ASL
+			   if (usingAmpl) {
+			     writeAmpl(&info);
+			     freeArrays2(&info);
+			     freeArgs(&info);
+			   }
+#endif
+			   break; // stop all
+			 }
                          switch (type) {
                          case CLP_PARAM_ACTION_DUALSIMPLEX:
                          case CLP_PARAM_ACTION_PRIMALSIMPLEX:
@@ -914,6 +1031,71 @@ main (int argc, const char *argv[])
 #endif
                                    try {
                                         status = model2->initialSolve(solveOptions);
+#ifdef COIN_HAS_ASL
+                            if (usingAmpl) {
+                                double value = model2->getObjValue() * model2->getObjSense();
+                                char buf[300];
+                                int pos = 0;
+                                int iStat = model2->status();
+                                if (iStat == 0) {
+                                    pos += sprintf(buf + pos, "optimal," );
+                                } else if (iStat == 1) {
+                                    // infeasible
+                                    pos += sprintf(buf + pos, "infeasible,");
+                                } else if (iStat == 2) {
+                                    // unbounded
+                                    pos += sprintf(buf + pos, "unbounded,");
+                                } else if (iStat == 3) {
+                                    pos += sprintf(buf + pos, "stopped on iterations or time,");
+                                } else if (iStat == 4) {
+                                    iStat = 7;
+                                    pos += sprintf(buf + pos, "stopped on difficulties,");
+                                } else if (iStat == 5) {
+                                    iStat = 3;
+                                    pos += sprintf(buf + pos, "stopped on ctrl-c,");
+                                } else if (iStat == 6) {
+                                    // bab infeasible
+                                    pos += sprintf(buf + pos, "integer infeasible,");
+                                    iStat = 1;
+                                } else {
+                                    pos += sprintf(buf + pos, "status unknown,");
+                                    iStat = 6;
+                                }
+                                info.problemStatus = iStat;
+                                info.objValue = value;
+                                pos += sprintf(buf + pos, " objective %.*g", ampl_obj_prec(),
+                                               value);
+                                sprintf(buf + pos, "\n%d iterations",
+                                        model2->getIterationCount());
+                                free(info.primalSolution);
+                                int numberColumns = model2->numberColumns();
+                                info.primalSolution = reinterpret_cast<double *> (malloc(numberColumns * sizeof(double)));
+                                CoinCopyN(model2->primalColumnSolution(), numberColumns, info.primalSolution);
+                                int numberRows = model2->numberRows();
+                                free(info.dualSolution);
+                                info.dualSolution = reinterpret_cast<double *> (malloc(numberRows * sizeof(double)));
+                                CoinCopyN(model2->dualRowSolution(), numberRows, info.dualSolution);
+                                CoinWarmStartBasis * basis = model2->getBasis();
+                                free(info.rowStatus);
+                                info.rowStatus = reinterpret_cast<int *> (malloc(numberRows * sizeof(int)));
+                                free(info.columnStatus);
+                                info.columnStatus = reinterpret_cast<int *> (malloc(numberColumns * sizeof(int)));
+                                // Put basis in
+                                int i;
+                                // free,basic,ub,lb are 0,1,2,3
+                                for (i = 0; i < numberRows; i++) {
+                                    CoinWarmStartBasis::Status status = basis->getArtifStatus(i);
+                                    info.rowStatus[i] = status;
+                                }
+                                for (i = 0; i < numberColumns; i++) {
+                                    CoinWarmStartBasis::Status status = basis->getStructStatus(i);
+                                    info.columnStatus[i] = status;
+                                }
+                                // put buffer into info
+                                strcpy(info.buffer, buf);
+                                delete basis;
+                            }
+#endif
 #ifndef NDEBUG
 					// if infeasible check ray
 					if (model2->status()==1) {

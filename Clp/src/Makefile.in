@@ -255,8 +255,8 @@ libClp_la_OBJECTS = $(am_libClp_la_OBJECTS)
 binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(bin_PROGRAMS)
 am_clp_OBJECTS = ClpMain.$(OBJEXT) CbcOrClpParam.$(OBJEXT) \
-	MyEventHandler.$(OBJEXT) MyMessageHandler.$(OBJEXT) \
-	unitTest.$(OBJEXT)
+	Clp_ampl.$(OBJEXT) MyEventHandler.$(OBJEXT) \
+	MyMessageHandler.$(OBJEXT) unitTest.$(OBJEXT)
 clp_OBJECTS = $(am_clp_OBJECTS)
 am__DEPENDENCIES_1 =
 depcomp = $(SHELL) $(top_srcdir)/depcomp
@@ -323,6 +323,13 @@ AMDINCDIR = @AMDINCDIR@
 AMDLIB = @AMDLIB@
 AMTAR = @AMTAR@
 AR = @AR@
+ASL_CFLAGS = @ASL_CFLAGS@
+ASL_CFLAGS_INSTALLED = @ASL_CFLAGS_INSTALLED@
+ASL_DATA = @ASL_DATA@
+ASL_DATA_INSTALLED = @ASL_DATA_INSTALLED@
+ASL_DEPENDENCIES = @ASL_DEPENDENCIES@
+ASL_LIBS = @ASL_LIBS@
+ASL_LIBS_INSTALLED = @ASL_LIBS_INSTALLED@
 AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
@@ -365,6 +372,8 @@ COIN_HAS_ABC_FALSE = @COIN_HAS_ABC_FALSE@
 COIN_HAS_ABC_TRUE = @COIN_HAS_ABC_TRUE@
 COIN_HAS_AMD_FALSE = @COIN_HAS_AMD_FALSE@
 COIN_HAS_AMD_TRUE = @COIN_HAS_AMD_TRUE@
+COIN_HAS_ASL_FALSE = @COIN_HAS_ASL_FALSE@
+COIN_HAS_ASL_TRUE = @COIN_HAS_ASL_TRUE@
 COIN_HAS_BLAS_FALSE = @COIN_HAS_BLAS_FALSE@
 COIN_HAS_BLAS_TRUE = @COIN_HAS_BLAS_TRUE@
 COIN_HAS_CHOLMOD_FALSE = @COIN_HAS_CHOLMOD_FALSE@
@@ -618,13 +627,14 @@ libClp_la_LDFLAGS = $(LT_LDFLAGS)
 clp_SOURCES = \
 	ClpMain.cpp \
 	CbcOrClpParam.cpp CbcOrClpParam.hpp \
+	Clp_ampl.cpp Clp_ampl.h \
 	MyEventHandler.cpp MyEventHandler.hpp \
 	MyMessageHandler.cpp MyMessageHandler.hpp \
 	unitTest.cpp
 
 
 # List all additionally required libraries
-clp_LDADD = libClp.la $(CLPLIB_LIBS)
+clp_LDADD = libClp.la $(CLPLIB_LIBS) $(ASL_LIBS)
 
 # List all dependency libraries (similar to LDADD, but without -l, -L flags)
 clp_DEPENDENCIES = libClp.la $(CLPLIB_DEPENDENCIES)
@@ -860,6 +870,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpSimplexPrimal.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpSolve.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Clp_C_Interface.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Clp_ampl.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CoinAbcBaseFactorization1.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CoinAbcBaseFactorization2.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CoinAbcBaseFactorization3.Plo@am__quote@

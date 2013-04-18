@@ -153,12 +153,13 @@ bin_PROGRAMS = clp
 clp_SOURCES = \
 	ClpMain.cpp \
 	CbcOrClpParam.cpp CbcOrClpParam.hpp \
+	Clp_ampl.cpp Clp_ampl.h \
 	MyEventHandler.cpp MyEventHandler.hpp \
 	MyMessageHandler.cpp MyMessageHandler.hpp \
 	unitTest.cpp
 
 # List all additionally required libraries
-clp_LDADD = libClp.la $(CLPLIB_LIBS)
+clp_LDADD = libClp.la $(CLPLIB_LIBS) $(ASL_LIBS)
 
 # List all dependency libraries (similar to LDADD, but without -l, -L flags)
 clp_DEPENDENCIES = libClp.la $(CLPLIB_DEPENDENCIES)

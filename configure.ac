@@ -42,6 +42,7 @@ AC_COIN_CREATE_LIBTOOL
 #                  Check which subprojects are there                        #
 #############################################################################
 
+AC_COIN_MAIN_PACKAGEDIR(ASL,    ThirdParty,[solvers/asl.h])
 AC_COIN_MAIN_PACKAGEDIR(Blas,   ThirdParty,[daxpy.f])
 AC_COIN_MAIN_PACKAGEDIR(Lapack, ThirdParty,[LAPACK/SRC/dlarf.f])
 AC_COIN_MAIN_PACKAGEDIR(Metis,  ThirdParty,[metis-4.0/Lib/balance.c])

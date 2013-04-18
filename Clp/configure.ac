@@ -160,6 +160,8 @@ AM_CONDITIONAL(COIN_HAS_WSMP, [test "$use_wsmp" != no])
 #############################################################################
 #                             Other dependencies                            #
 #############################################################################
+# Ampl Solver library
+AC_COIN_CHECK_PACKAGE(ASL, [coinasl], [ClpLib])
 
 AC_COIN_CHECK_GNU_READLINE(ClpLib)
 
