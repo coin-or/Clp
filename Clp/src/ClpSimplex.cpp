@@ -9876,8 +9876,8 @@ ClpSimplex::checkSolutionInternal()
                     if (fabs(dualValue) > 10.0 * dualTolerance) {
 		      sumDualInfeasibilities_ += fabs(dualValue) - dualTolerance_;
                          numberDualInfeasibilities_ ++;
-			 if (fabs(dualValue) > 1000.0 * dualTolerance) 
-			   setColumnStatus(iColumn,superBasic);
+			 //if (fabs(dualValue) > 1000.0 * dualTolerance) 
+			 //setColumnStatus(iColumn,superBasic); Maybe on a switch
                     }
                     break;
                case ClpSimplex::isFixed:
