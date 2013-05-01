@@ -14,6 +14,7 @@
 
 #include "CoinHelperFunctions.hpp"
 #include "ClpPredictorCorrector.hpp"
+#include "ClpEventHandler.hpp"
 #include "CoinPackedMatrix.hpp"
 #include "ClpMessage.hpp"
 #include "ClpCholeskyBase.hpp"
@@ -250,6 +251,15 @@ int ClpPredictorCorrector::solve ( )
                     << numberFixedTotal
                     << cholesky_->rank()
                     << CoinMessageEol;
+	  // Check event
+	  {
+	    int status = eventHandler_->event(ClpEventHandler::endOfIteration);
+	    if (status >= 0) {
+	      problemStatus_ = 5;
+	      secondaryStatus_ = ClpEventHandler::endOfIteration;
+	      break;
+	    }
+	  }
 #if 0
           if (numberIterations_ == -1) {
                saveSolution("xxx.sav");
