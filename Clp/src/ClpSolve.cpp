@@ -2767,6 +2767,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
                }
           }
 #ifdef BORROW
+	  int saveNumberIterations = barrier.numberIterations();
           barrier.returnModel(*model2);
           double * rowPrimal = new double [numberRows];
           double * columnPrimal = new double [numberColumns];
@@ -3008,6 +3009,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
 
           //model2->setMaximumIterations(saveMaxIts);
 #ifdef BORROW
+          model2->setNumberIterations(model2->numberIterations()+saveNumberIterations);
           delete [] rowPrimal;
           delete [] columnPrimal;
           delete [] rowDual;
