@@ -543,7 +543,7 @@ void
 ClpSimplex::dealWithAbc(int solveType, int startUp,
 			bool interrupt)
 {
-  if (!this->abcState()) {
+  if (!this->abcState()||!numberRows_||!numberColumns_) {
     if (!solveType)
       this->dual(0);
     else
