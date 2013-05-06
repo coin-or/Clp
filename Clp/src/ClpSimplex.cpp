@@ -3312,6 +3312,10 @@ ClpSimplex::createRim(int what, bool makeRowCopy, int startFinishOptions)
                if (matrix_->scale(this))
                     scalingFlag_ = -scalingFlag_; // not scaled after all
                if (rowScale_ && automaticScale_) {
+		    if (!savedRowScale_) {
+		      inverseRowScale_ = rowScale_ + numberRows2;
+		      inverseColumnScale_ = columnScale_ + numberColumns_;
+		    }
                     // try automatic scaling
                     double smallestObj = 1.0e100;
                     double largestObj = 0.0;
