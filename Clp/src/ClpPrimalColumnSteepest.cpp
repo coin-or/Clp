@@ -584,7 +584,7 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
 
 #ifndef NDEBUG
      if (bestSequence >= 0) {
-          if (model_->getStatus(bestSequence) == ClpSimplex::atLowerBound)
+          if (model_->getStatus(bestSequence) == ClpSimplex::atLowerBound) 
                assert(model_->reducedCost(bestSequence) < 0.0);
           if (model_->getStatus(bestSequence) == ClpSimplex::atUpperBound) {
                assert(model_->reducedCost(bestSequence) > 0.0);
@@ -3039,6 +3039,10 @@ ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model, int mode)
           int iSequence;
 
           double * reducedCost = model_->djRegion();
+	  const double * lower = model_->lowerRegion();
+	  const double * upper = model_->upperRegion();
+	  const double * solution = model_->solutionRegion();
+	  double primalTolerance = model_->currentPrimalTolerance();
 
           if (!model_->nonLinearCost()->lookBothWays()) {
 #ifndef CLP_PRIMAL_SLACK_MULTIPLIER 
@@ -3086,10 +3090,23 @@ ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model, int mode)
                     case ClpSimplex::isFree:
                     case ClpSimplex::superBasic:
                          if (fabs(value) > FREE_ACCEPT * tolerance) {
-                              // we are going to bias towards free (but only if reasonable)
-                              value *= FREE_BIAS;
-                              // store square in list
-                              infeasible_->quickAdd(iSequence, value * value);
+			      // check hasn't slipped through
+  			      if (solution[iSequence]<lower[iSequence]+primalTolerance) {
+				model_->setStatus(iSequence,ClpSimplex::atLowerBound);
+				if (value < -tolerance) {
+				  infeasible_->quickAdd(iSequence, value * value);
+				}
+			      } else if (solution[iSequence]>upper[iSequence]-primalTolerance) {
+				model_->setStatus(iSequence,ClpSimplex::atUpperBound);
+				if (value > tolerance) {
+				  infeasible_->quickAdd(iSequence, value * value);
+				}
+			      } else {
+				    // we are going to bias towards free (but only if reasonable)
+				    value *= FREE_BIAS;
+				    // store square in list
+				    infeasible_->quickAdd(iSequence, value * value);
+				  }
                          }
                          break;
                     case ClpSimplex::atUpperBound:
