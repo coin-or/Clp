@@ -1802,8 +1802,8 @@ ClpModel::addRows(int number, const double * rowLower,
           }
 #endif
           if (rowStarts) {
-               // Make sure matrix has correct number of columns
-               matrix_->getPackedMatrix()->reserve(numberColumns_, 0, true);
+	       // Make sure matrix has correct number of columns
+	       matrix_->getPackedMatrix()->reserve(numberColumns_, 0, true);
                matrix_->appendMatrix(number, 0, rowStarts, columns, elements);
           }
      }
@@ -2285,8 +2285,8 @@ ClpModel::addColumns(int number, const double * columnLower,
                columnNames_.resize(numberColumns_);
           }
 #endif
-          if (elements)
-	    matrix_->appendMatrix(number, 1, columnStarts, rows, elements);
+          // Do even if elements NULL (to resize)
+	  matrix_->appendMatrix(number, 1, columnStarts, rows, elements);
      }
 }
 // Add columns

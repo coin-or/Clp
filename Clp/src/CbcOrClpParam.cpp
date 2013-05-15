@@ -1936,7 +1936,7 @@ gap between bounds exceeds this value",
                         CLP_PARAM_ACTION_DUALSIMPLEX);
      parameters[numberParameters-1].setLonghelp
      (
-          "This command solves the current model using the dual steepest edge algorithm.\
+          "This command solves the continuous relaxation of the current model using the dual steepest edge algorithm.\
 The time and iterations may be affected by settings such as presolve, scaling, crash\
  and also by dual pivot method, fake bound on variables and dual and primal tolerances."
      );
@@ -1958,7 +1958,7 @@ correct tolerance (remembering to switch off presolve for this final short clean
                         CLP_PARAM_ACTION_EITHERSIMPLEX);
      parameters[numberParameters-1].setLonghelp
      (
-          "This command solves the current model using the dual or primal algorithm,\
+          "This command solves the continuous relaxation of the current model using the dual or primal algorithm,\
  based on a dubious analysis of model."
      );
 #endif
@@ -2962,7 +2962,7 @@ infeasible and you have awkward numbers and you are sure the problem is really f
                         CLP_PARAM_ACTION_PRIMALSIMPLEX);
      parameters[numberParameters-1].setLonghelp
      (
-          "This command solves the current model using the primal algorithm.\
+          "This command solves the continuous relaxation of the current model using the primal algorithm.\
   The default is to use exact devex.\
  The time and iterations may be affected by settings such as presolve, scaling, crash\
  and also by column selection  method, infeasibility weight and dual and primal tolerances."
