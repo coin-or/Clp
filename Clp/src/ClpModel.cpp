@@ -2285,8 +2285,8 @@ ClpModel::addColumns(int number, const double * columnLower,
                columnNames_.resize(numberColumns_);
           }
 #endif
-          if (elements)
-	    matrix_->appendMatrix(number, 1, columnStarts, rows, elements);
+          // Do even if elements NULL (to resize)
+	  matrix_->appendMatrix(number, 1, columnStarts, rows, elements);
      }
 }
 // Add columns
