@@ -9784,7 +9784,7 @@ ClpSimplex::checkSolutionInternal()
      int iRow, iColumn;
      assert (!rowObjective_);
 
-     objectiveValue_ = 0.0;
+     objectiveValue_ = -nonLinearOffset;
      // now look at solution
      sumPrimalInfeasibilities_ = 0.0;
      numberPrimalInfeasibilities_ = 0;
