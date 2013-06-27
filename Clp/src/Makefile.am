@@ -262,6 +262,19 @@ endif
 # needed by Cbc
 includecoin_HEADERS += CbcOrClpParam.cpp
 
+########################################################################
+#                     Installing manifest (MSVC++)                     #
+########################################################################
+
+install-exec-hook:
+	test -s clp.exe.manifest && \
+	mt -manifest clp.exe.manifest -outputresource:clp.exe;\
+	cp clp.exe $(bindir)/clp.exe
+
+#######################################################################
+# Create the Config.h file that has all public defines and install it #
+#######################################################################
+
 install-exec-local:
 	$(install_sh_DATA) config_clp.h $(DESTDIR)$(includecoindir)/ClpConfig.h
 
