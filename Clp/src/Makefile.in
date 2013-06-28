@@ -1156,6 +1156,7 @@ distclean-generic:
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
 	@echo "it deletes files that may require special tools to rebuild."
+@COIN_CXX_IS_CL_FALSE@install-exec-hook:
 clean: clean-recursive
 
 clean-am: clean-binPROGRAMS clean-generic clean-libLTLIBRARIES \
@@ -1236,12 +1237,10 @@ uninstall-info: uninstall-info-recursive
 #                     Installing manifest (MSVC++)                     #
 ########################################################################
 
-install-exec-hook:
-	if COIN_CXX_IS_CL
-		test -s clp.exe.manifest && \
-		mt -manifest clp.exe.manifest -outputresource:clp.exe;\
-		cp clp.exe $(bindir)/clp.exe
-	endif
+@COIN_CXX_IS_CL_TRUE@install-exec-hook:
+@COIN_CXX_IS_CL_TRUE@	test -s clp.exe.manifest && \
+@COIN_CXX_IS_CL_TRUE@	mt -manifest clp.exe.manifest -outputresource:clp.exe;\
+@COIN_CXX_IS_CL_TRUE@	cp clp.exe $(bindir)/clp.exe
 
 #######################################################################
 # Create the Config.h file that has all public defines and install it #

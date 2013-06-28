@@ -266,12 +266,12 @@ includecoin_HEADERS += CbcOrClpParam.cpp
 #                     Installing manifest (MSVC++)                     #
 ########################################################################
 
+if COIN_CXX_IS_CL
 install-exec-hook:
-	if COIN_CXX_IS_CL
-		test -s clp.exe.manifest && \
-		mt -manifest clp.exe.manifest -outputresource:clp.exe;\
-		cp clp.exe $(bindir)/clp.exe
-	endif
+	test -s clp.exe.manifest && \
+	mt -manifest clp.exe.manifest -outputresource:clp.exe;\
+	cp clp.exe $(bindir)/clp.exe
+endif
 
 #######################################################################
 # Create the Config.h file that has all public defines and install it #
