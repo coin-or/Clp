@@ -420,6 +420,10 @@ public:
      ClpSimplex * miniPresolve(char * rowType, char * columnType,void ** info);
      /// After mini presolve
      void miniPostsolve(const ClpSimplex * presolvedModel,void * info);
+     /// Scale real objective 
+     void scaleRealObjective(double multiplier);
+     /// Scale so no RHS (abs not infinite) > value
+     void scaleRealRhs(double maxValue, double killIfSmaller);
      /** Write the basis in MPS format to the specified file.
          If writeValues true writes values of structurals
          (and adds VALUES to end of NAME card)
@@ -1185,6 +1189,7 @@ public:
 	 debug
 	 32768 bit - do dual in netlibd
 	 65536 (*3) initial stateDualColumn
+	 262144 bit - stop when primal feasible
      */
      inline int moreSpecialOptions() const {
           return moreSpecialOptions_;
@@ -1205,6 +1210,10 @@ public:
 	 4096 bit - try more for complete fathoming
 	 8192 bit - don't even think of using primal if user asks for dual (and vv)
 	 16384 bit - in initialSolve so be more flexible
+	 debug
+	 32768 bit - do dual in netlibd
+	 65536 (*3) initial stateDualColumn
+	 262144 bit - stop when primal feasible
      */
      inline void setMoreSpecialOptions(int value) {
           moreSpecialOptions_ = value;

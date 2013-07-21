@@ -952,6 +952,9 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
           const bool dupcol = doDupcol();
           const bool duprow = doDuprow();
           const bool dual = doDualStuff;
+	  // Whether we want to allow duplicate intersections
+	  if (doIntersection())
+	    prob->presolveOptions_ |= 0x10;
 
           // some things are expensive so just do once (normally)
 

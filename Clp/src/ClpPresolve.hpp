@@ -175,6 +175,14 @@ public:
           if (!doTwoxTwo) presolveActions_  &= ~2048;
           else presolveActions_ |= 2048;
      }
+     /// Whether we want to allow duplicate intersections
+     inline bool doIntersection() const {
+          return (presolveActions_ & 4096) != 0;
+     }
+     inline void setDoIntersection(bool doIntersection) {
+          if (doIntersection) presolveActions_  &= ~4096;
+          else presolveActions_ |= 4096;
+     }
      /// Set whole group
      inline int presolveActions() const {
           return presolveActions_ & 0xffff;

@@ -1927,6 +1927,8 @@ ClpSimplexDual::whileIterating(double * & givenDuals, int ifValuesPass)
                     useNumberFake = numberFake_;
                }
                if (!numberPivots || specialCase) {
+		 if (numberPrimalInfeasibilities_ && problemStatus_==-1)
+		   problemStatus_=-4;
                     // may have crept through - so may be optimal
                     // check any flagged variables
                     int iRow;

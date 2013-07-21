@@ -3460,7 +3460,9 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
 	     nPossibleZeroCost++;
 	   } else if (value!=-COIN_DBL_MAX) {
 	     if (model->logLevel() > 4) 
-	     printf("Singleton %d with objective in row with %d equal elements - rhs %g,%g\n",iColumn,rowLength[iRow],rowLower[iRow],rowUpper[iRow]);
+	       printf("Singleton %d (%s) with objective in row %d (%s) with %d equal elements - rhs %g,%g\n",iColumn,model->getColumnName(iColumn).c_str(),
+		      iRow,model->getRowName(iRow).c_str(),
+		      rowLength[iRow],rowLower[iRow],rowUpper[iRow]);
 	     nPossibleNonzeroCost++;
 	   }
 	 }
@@ -3469,11 +3471,13 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
 	 printf("%d singletons with zero cost, %d with valid cost\n",
 		nPossibleZeroCost,nPossibleNonzeroCost);
        // look for DW
-       int * blockStart = new int [2*(numberRows+numberColumns)+1+numberRows];
+       int * blockStart = new int [3*(numberRows+numberColumns)+1];
        int * columnBlock = blockStart+numberRows;
        int * nextColumn = columnBlock+numberColumns;
        int * blockCount = nextColumn+numberColumns;
        int * blockEls = blockCount+numberRows+1;
+       int * countIntegers = blockEls+numberRows;
+       memset(countIntegers,0,numberColumns*sizeof(int));
        int direction[2]={-1,1};
        int bestBreak=-1;
        double bestValue=0.0;
@@ -3652,11 +3656,17 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
 	 }
 	 int numberEmptyColumns=0;
 	 int numberMasterColumns=0;
+	 int numberMasterIntegers=0;
 	 for (int iColumn = 0; iColumn < numberColumns; iColumn++) {
 	   int iBlock=columnBlock[iColumn];
+	   bool isInteger = (model->isInteger(iColumn));
 	   if (iBlock>=0) {
 	     nextColumn[iBlock]++;
+	     if (isInteger)
+	       countIntegers[iBlock]++;
 	   } else {
+	     if (isInteger)
+	       numberMasterIntegers++;
 	     if (columnLength[iColumn])
 	       numberMasterColumns++;
 	     else
@@ -3674,13 +3684,28 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
 	 bool useful=true;
 	 if (numberMaster>halfway||largestRows*3>numberRows)
 	   useful=false;
-	 printf("%s %d blocks (largest %d,%d), %d master rows (%d empty) out of %d, %d master columns (%d empty) out of %d\n",
+	 printf("%s %d blocks (largest %d,%d), %d master rows (%d empty) out of %d, %d master columns (%d empty, %d integer) out of %d\n",
 		useful ? "**Useful" : "NoGood",
 		numberBlocks,largestRows,largestColumns,numberMaster,numberEmpty,numberRows,
-		numberMasterColumns,numberEmptyColumns,numberColumns);
+		numberMasterColumns,numberEmptyColumns,numberMasterIntegers,
+		numberColumns);
 	 for (int i=0;i<numberBlocks;i++) 
-	   printf("Block %d has %d rows and %d columns (%d elements)\n",
-		  i,blockCount[i],nextColumn[i],blockEls[i]);
+	   printf("Block %d has %d rows and %d columns (%d elements, %d integers)\n",
+		  i,blockCount[i],nextColumn[i],blockEls[i],countIntegers[i]);
+	 FILE * fpBlocks = fopen("blocks.data","wb");
+	 printf("Blocks data on file blocks.data\n");
+	 int stats[3];
+	 stats[0]=numberRows;
+	 stats[1]=numberColumns;
+	 stats[2]=numberBlocks;
+	 size_t numberWritten;
+	 numberWritten=fwrite(stats,sizeof(int),3,fpBlocks);
+	 assert (numberWritten==3);
+	 numberWritten=fwrite(blockStart,sizeof(int),numberRows,fpBlocks);
+	 assert (numberWritten==numberRows);
+	 numberWritten=fwrite(columnBlock,sizeof(int),numberColumns,fpBlocks);
+	 assert (numberWritten==numberColumns);
+	 fclose(fpBlocks);
 	 if (model->logLevel() == 17) {
 	   int * whichRows=new int[numberRows+numberColumns];
 	   int * whichColumns=whichRows+numberRows;
@@ -3698,6 +3723,18 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
 		 whichColumns[nColumns++]=iColumn;
 	     }
 	     ClpSimplex subset(model,nRows,whichRows,nColumns,whichColumns);
+	     for (int jRow=0;jRow<nRows;jRow++) {
+	       int iRow = whichRows[jRow];
+	       std::string name = model->getRowName(iRow);
+	       subset.setRowName(jRow,name);
+	     }
+	     for (int jColumn=0;jColumn<nColumns;jColumn++) {
+	       int iColumn = whichColumns[jColumn];
+	       if (model->isInteger(iColumn))
+		 subset.setInteger(jColumn);
+	       std::string name = model->getColumnName(iColumn);
+	       subset.setColumnName(jColumn,name);
+	     }
 	     subset.writeMps(name,0,1);
 	   }
 	   delete [] whichRows;
@@ -4281,6 +4318,26 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
      breakdown("ColumnLower", numberColumns, columnLower);
      breakdown("ColumnUpper", numberColumns, columnUpper);
      breakdown("Objective", numberColumns, objective);
+     // do integer objective
+     double * obj = CoinCopyOfArray(objective,numberColumns);
+     int n=0;
+     //#define FIX_COSTS 1.0
+#ifdef FIX_COSTS
+     double * obj2   = originalModel->objective();
+     double * upper2   = originalModel->columnUpper();
+#endif
+     for (int i=0;i<numberColumns;i++) {
+       if (integerInformation&&integerInformation[i]) {
+	 obj[n++]=obj[i];
+#ifdef FIX_COSTS
+	 if (obj2[i]>FIX_COSTS)
+	 upper2[i]=0.0;
+#endif
+       }
+     }
+     if (n) {
+       breakdown("Integer objective", n, obj);
+     }
 }
 static bool maskMatches(const int * starts, char ** masks,
                         std::string & check)

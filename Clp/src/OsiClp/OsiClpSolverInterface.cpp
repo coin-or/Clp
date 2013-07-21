@@ -4467,27 +4467,29 @@ void OsiClpSolverInterface::freeCachedResults() const
   delete [] rhs_;
   delete [] rowrange_;
   delete matrixByRow_;
-  if (modelPtr_&&modelPtr_->scaledMatrix_) {
-    delete modelPtr_->scaledMatrix_;
-    modelPtr_->scaledMatrix_=NULL;
-  }
   //delete ws_;
   rowsense_=NULL;
   rhs_=NULL;
   rowrange_=NULL;
   matrixByRow_=NULL;
   //ws_ = NULL;
-  if (modelPtr_&&modelPtr_->clpMatrix()) {
-    modelPtr_->clpMatrix()->refresh(modelPtr_); // make sure all clean
-#ifndef NDEBUG
-    ClpPackedMatrix * clpMatrix = dynamic_cast<ClpPackedMatrix *> (modelPtr_->clpMatrix());
-    if (clpMatrix) {
-      if (clpMatrix->getNumCols())
-	assert (clpMatrix->getNumRows()==modelPtr_->getNumRows());
-      if (clpMatrix->getNumRows())
-	assert (clpMatrix->getNumCols()==modelPtr_->getNumCols());
+  if (!notOwned_&&modelPtr_) {
+    if(modelPtr_->scaledMatrix_) {
+      delete modelPtr_->scaledMatrix_;
+      modelPtr_->scaledMatrix_=NULL;
     }
+    if (modelPtr_->clpMatrix()) {
+      modelPtr_->clpMatrix()->refresh(modelPtr_); // make sure all clean
+#ifndef NDEBUG
+      ClpPackedMatrix * clpMatrix = dynamic_cast<ClpPackedMatrix *> (modelPtr_->clpMatrix());
+      if (clpMatrix) {
+	if (clpMatrix->getNumCols())
+	  assert (clpMatrix->getNumRows()==modelPtr_->getNumRows());
+	if (clpMatrix->getNumRows())
+	  assert (clpMatrix->getNumCols()==modelPtr_->getNumCols());
+      }
 #endif
+    }
   }
 }
 
@@ -5791,6 +5793,33 @@ OsiClpSolverInterface::setBasisStatus(const int* cstat, const int* rstat)
   // Save 
   basis_ = getBasis(modelPtr_);
   return 0;
+}
+// Set column status in ClpSimplex and warmStart
+void 
+OsiClpSolverInterface::setColumnStatus(int iColumn, ClpSimplex::Status status)
+{
+  if (status!=modelPtr_->status_[iColumn]) {
+    modelPtr_->whatsChanged_ &= 0xffff;
+    // Say can't gurantee optimal basis etc
+    lastAlgorithm_=999;
+    modelPtr_->setColumnStatus(iColumn,status);
+    switch (status) {
+    case ClpSimplex::basic:
+      basis_.setStructStatus(iColumn,CoinWarmStartBasis::basic);
+      break;
+    case ClpSimplex::atUpperBound:
+      basis_.setStructStatus(iColumn,CoinWarmStartBasis::atUpperBound);
+      break;
+    case ClpSimplex::isFixed:
+    case ClpSimplex::atLowerBound:
+      basis_.setStructStatus(iColumn,CoinWarmStartBasis::atLowerBound);
+      break;
+    case ClpSimplex::superBasic:
+    case ClpSimplex::isFree:
+      basis_.setStructStatus(iColumn,CoinWarmStartBasis::isFree);
+      break;
+    }
+  }
 }
 
 /* Perform a pivot by substituting a colIn for colOut in the basis. 

@@ -316,7 +316,7 @@ ClpPdco::pdco( ClpPdcoBase * stuff, Options &options, Info &info, Outfo &outfo)
      //bool useChol = (LSmethod == 1);
      //bool useQR   = (LSmethod == 2);
      bool direct  = (LSmethod <= 2 && ifexplicit);
-     char solver[6];
+     char solver[7];
      strcpy(solver, "  LSQR");
 
 

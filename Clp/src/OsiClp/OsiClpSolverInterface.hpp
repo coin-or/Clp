@@ -308,6 +308,9 @@ public:
   */
   virtual CoinWarmStart* getPointerToWarmStart(bool & mustDelete) ;
 
+  /// Set column status in ClpSimplex and warmStart
+  void setColumnStatus(int iColumn, ClpSimplex::Status status);
+
   //@}
   
   //---------------------------------------------------------------------------

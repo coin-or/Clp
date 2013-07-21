@@ -480,8 +480,15 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
 	       }
 
                // test for maximum iterations
-               if (hitMaximumIterations() || (ifValuesPass == 2 && firstFree_ < 0)) {
+               if (hitMaximumIterations() || 
+		   (ifValuesPass == 2 && firstFree_ < 0)) {
                     problemStatus_ = 3;
+                    break;
+	       } else if ((moreSpecialOptions_&262144)!=0&&
+			  !nonLinearCost_->numberInfeasibilities()&&
+			  fabs(dblParam_[ClpDualObjectiveLimit])>1.0e30) {
+                    problemStatus_ = 3;
+		    secondaryStatus_ = 10;
                     break;
                }
 

@@ -3365,6 +3365,14 @@ ClpPackedMatrix::scale(ClpModel * model, const ClpSimplex * /*baseModel*/) const
                columnLength[iColumn] = put - start;
           }
      }
+     // don't scale integers if option set
+     if ((model->specialOptions()&4194304)!=0 && model->integerInformation()) {
+       const char * integer  = model->integerInformation();
+       for (iColumn = 0; iColumn < numberColumns; iColumn++) {
+	 if (integer[iColumn])
+	   usefulColumn[iColumn]=0;
+       }
+     }
      if (deletedElements) {
        matrix_->setNumElements(matrix_->getNumElements()-deletedElements);
        flags_ |= 0x02 ;

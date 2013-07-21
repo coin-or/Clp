@@ -5416,6 +5416,11 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
 	 &&numberFake_) {
        problemStatus_ = 10; // clean up in primal as fake bounds
      }
+     if ((moreSpecialOptions_&262144)!=0&&
+	 !nonLinearCost_->numberInfeasibilities()&&
+	 fabs(dblParam_[ClpDualObjectiveLimit])>1.0e30) {
+       problemStatus_=0;
+     }
      if (problemStatus_ == 10) {
           //printf("Cleaning up with primal\n");
 #ifdef COIN_DEVELOP

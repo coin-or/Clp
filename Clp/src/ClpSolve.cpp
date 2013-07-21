@@ -3658,6 +3658,7 @@ ClpSimplexProgress::looping()
                     if (model_->algorithm() < 0) {
                          // dual - change tolerance
                          model_->setCurrentDualTolerance(model_->currentDualTolerance() * 1.05);
+                         model_->setCurrentPrimalTolerance(model_->currentPrimalTolerance() * 1.05);
                          // if infeasible increase dual bound
                          if (model_->dualBound() < 1.0e17) {
                               model_->setDualBound(model_->dualBound() * 1.1);

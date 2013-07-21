@@ -2527,6 +2527,10 @@ You can also use the parameters 'direction minimize'."
           CbcOrClpParam("more!MipOptions", "More dubious options for mip",
                         -1, COIN_INT_MAX, CBC_PARAM_INT_MOREMIPOPTIONS, 0);
      parameters[numberParameters++] =
+          CbcOrClpParam("more2!MipOptions", "More more dubious options for mip",
+                        -1, COIN_INT_MAX, CBC_PARAM_INT_MOREMOREMIPOPTIONS, 0);
+     parameters[numberParameters-1].setIntValue(0);
+     parameters[numberParameters++] =
           CbcOrClpParam("mixed!IntegerRoundingCuts", "Whether to use Mixed Integer Rounding cuts",
                         "off", CBC_PARAM_STR_MIXEDCUTS);
      parameters[numberParameters-1].append("on");
