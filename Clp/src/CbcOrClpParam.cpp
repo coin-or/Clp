@@ -1952,6 +1952,18 @@ no dual infeasibility may exceed this value",
 to use a large tolerance e.g. 1.0e-4 and dual and then clean up problem using primal and the \
 correct tolerance (remembering to switch off presolve for this final short clean up phase)."
      );
+#ifdef COIN_HAS_CBC
+     parameters[numberParameters++] =
+          CbcOrClpParam("dw!Heuristic", "Whether to try DW heuristic",
+                        "off", CBC_PARAM_STR_DW);
+     parameters[numberParameters-1].append("on");
+     parameters[numberParameters-1].append("both");
+     parameters[numberParameters-1].append("before");
+     parameters[numberParameters-1].setLonghelp
+     (
+      "See Rounding for meaning of on,both,before"
+     );
+#endif
 #ifdef COIN_HAS_CLP
      parameters[numberParameters++] =
           CbcOrClpParam("either!Simplex", "Do dual or primal simplex algorithm",

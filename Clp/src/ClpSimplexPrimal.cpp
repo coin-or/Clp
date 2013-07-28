@@ -252,6 +252,20 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
      // Start can skip some things in transposeTimes
      specialOptions_ |= 131072;
      if (!startup(ifValuesPass, startFinishOptions)) {
+         // See if better to use all slack basis
+         if (nonLinearCost_->sumInfeasibilities()>1.0e15) {
+	   // If not all slack then make it
+	   int numberRowBasic = 0;
+	   for (int i=0;i<numberRows_;i++) {
+	     if (getRowStatus(i)==basic)
+	       numberRowBasic++;
+	   }
+	   if (numberRowBasic<numberRows_) {
+	     allSlackBasis(true);
+	     int lastCleaned=-10000;
+	     statusOfProblemInPrimal(lastCleaned, 1, &progress_, true, ifValuesPass, NULL);
+	   }
+	 }
 
           // Set average theta
           nonLinearCost_->setAverageTheta(1.0e3);
