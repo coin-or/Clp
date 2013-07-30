@@ -640,8 +640,8 @@ ClpCholeskyBase::order(ClpInterior * model)
      model_ = model;
 #define BASE_ORDER 2
 #if BASE_ORDER>0
-     if (!doKKT_ && model_->numberRows() > 6) {
-          if (preOrder(false, true, false))
+     if (model_->numberRows() > 6 ) {
+          if (preOrder(doKKT_, true, doKKT_))
                return -1;
           //rowsDropped_ = new char [numberRows_];
           numberRowsDropped_ = 0;
