@@ -16,7 +16,12 @@
 int boundary_sort = 1000;
 int boundary_sort2 = 1000;
 int boundary_sort3 = 10000;
-
+// for printing
+#ifndef CLP_OUTPUT_FORMAT
+#define CLP_OUTPUT_FORMAT %15.8g
+#endif
+#define CLP_QUOTE(s) CLP_STRING(s)
+#define CLP_STRING(s) #s
 #include "CoinPragma.hpp"
 #include "CoinHelperFunctions.hpp"
 #include "CoinSort.hpp"
@@ -2355,7 +2360,10 @@ clp watson.mps -\nscaling off\nprimalsimplex"
                                         } else {
                                              fprintf(fp, "status unknown\n" );
                                         }
-                                        fprintf(fp, "Objective value %15.8g\n", objValue);
+					char printFormat[50];
+					sprintf(printFormat,"Objective value %s\n",
+						CLP_QUOTE(CLP_OUTPUT_FORMAT));
+                                        fprintf(fp, printFormat, objValue);
 					if (printMode==9) {
 					  // just statistics
 					  int numberRows = models[iModel].numberRows();
@@ -2698,6 +2706,9 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 					  }
 					  break;
 					}
+					sprintf(printFormat," %s         %s\n",
+						CLP_QUOTE(CLP_OUTPUT_FORMAT),
+						CLP_QUOTE(CLP_OUTPUT_FORMAT));
                                         if (printMode > 2) {
                                              for (iRow = 0; iRow < numberRows; iRow++) {
                                                   int type = printMode - 3;
@@ -2723,7 +2734,7 @@ clp watson.mps -\nscaling off\nprimalsimplex"
                                                             for (; i < static_cast<size_t>(lengthPrint); i++)
                                                                  fprintf(fp, " ");
                                                        }
-                                                       fprintf(fp, " %15.8g        %15.8g\n", primalRowSolution[iRow],
+                                                       fprintf(fp, printFormat, primalRowSolution[iRow],
                                                                dualRowSolution[iRow]);
                                                   }
                                              }
@@ -2761,7 +2772,7 @@ clp watson.mps -\nscaling off\nprimalsimplex"
                                                        for (; i < static_cast<size_t>(lengthPrint); i++)
                                                             fprintf(fp, " ");
                                                   }
-                                                  fprintf(fp, " %15.8g        %15.8g\n",
+						  fprintf(fp, printFormat, 
                                                           primalColumnSolution[iColumn],
                                                           dualColumnSolution[iColumn]);
                                              }
