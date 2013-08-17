@@ -102,6 +102,7 @@ enum CbcOrClpParameterType
      CLP_PARAM_INT_USESOLUTION,
      CLP_PARAM_INT_RANDOMSEED,
      CLP_PARAM_INT_MORESPECIALOPTIONS,
+     CLP_PARAM_INT_DECOMPOSE_BLOCKS,
 
      CBC_PARAM_INT_STRONGBRANCHING = 151,
      CBC_PARAM_INT_CUTDEPTH,
@@ -382,9 +383,12 @@ public:
      /// Sets current parameter option using string
      void setCurrentOption (const std::string value );
      /// Returns current parameter option position
-     inline int currentOptionAsInteger (  ) const {
-          return currentKeyWord_;
-     }
+     int currentOptionAsInteger (  ) const ;
+     /** Returns current parameter option position
+	 but if fake keyword returns a fake value and sets
+	 fakeInteger to true value.  If not fake then fakeInteger is -COIN_INT_MAX
+      */
+     int currentOptionAsInteger ( int & fakeInteger ) const;
      /// Sets int value
      void setIntValue ( int value );
      inline int intValue () const {
@@ -426,6 +430,14 @@ public:
      inline int whereUsed() const {
           return whereUsed_;
      }
+     /// Gets value of fake keyword
+     inline int fakeKeyWord() const
+     { return fakeKeyWord_;}
+     /// Sets value of fake keyword 
+     inline void setFakeKeyWord(int value, int fakeValue)
+     { fakeKeyWord_ = value; fakeValue_ = fakeValue;}
+     /// Sets value of fake keyword to current size of keywords 
+     void setFakeKeyWord(int fakeValue);
 
 private:
      /// gutsOfConstructor
@@ -476,6 +488,13 @@ private:
          4 - used by ampl
      */
      int whereUsed_;
+     /** If >=0 then integers allowed as a fake keyword
+	 So minusnnnn would got to -nnnn in currentKeyword_
+	 and plusnnnn would go to fakeKeyword_+nnnn
+     */
+     int fakeKeyWord_;
+     /// Return this as main value if an integer
+     int fakeValue_;
      //@}
 };
 /// Simple read stuff

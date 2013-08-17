@@ -79,7 +79,9 @@ CbcOrClpParam::CbcOrClpParam ()
        intValue_(-1),
        doubleValue_(-1.0),
        stringValue_(""),
-       whereUsed_(7)
+       whereUsed_(7),
+       fakeKeyWord_(-1),
+       fakeValue_(0)
 {
 }
 // Other constructors
@@ -99,7 +101,9 @@ CbcOrClpParam::CbcOrClpParam (std::string name, std::string help,
        intValue_(-1),
        doubleValue_(-1.0),
        stringValue_(""),
-       whereUsed_(7)
+       whereUsed_(7),
+       fakeKeyWord_(-1),
+       fakeValue_(0)
 {
      lowerDoubleValue_ = lower;
      upperDoubleValue_ = upper;
@@ -121,7 +125,9 @@ CbcOrClpParam::CbcOrClpParam (std::string name, std::string help,
        intValue_(-1),
        doubleValue_(-1.0),
        stringValue_(""),
-       whereUsed_(7)
+       whereUsed_(7),
+       fakeKeyWord_(-1),
+       fakeValue_(0)
 {
      gutsOfConstructor();
      lowerIntValue_ = lower;
@@ -147,7 +153,9 @@ CbcOrClpParam::CbcOrClpParam (std::string name, std::string help,
        intValue_(-1),
        doubleValue_(-1.0),
        stringValue_(""),
-       whereUsed_(whereUsed)
+       whereUsed_(whereUsed),
+       fakeKeyWord_(-1),
+       fakeValue_(0)
 {
      gutsOfConstructor();
      definedKeyWords_.push_back(firstValue);
@@ -170,7 +178,9 @@ CbcOrClpParam::CbcOrClpParam (std::string name, std::string help,
        display_(display),
        intValue_(-1),
        doubleValue_(-1.0),
-       stringValue_("")
+       stringValue_(""),
+       fakeKeyWord_(-1),
+       fakeValue_(0)
 {
      whereUsed_ = whereUsed;
      gutsOfConstructor();
@@ -199,6 +209,8 @@ CbcOrClpParam::CbcOrClpParam (const CbcOrClpParam & rhs)
      doubleValue_ = rhs.doubleValue_;
      stringValue_ = rhs.stringValue_;
      whereUsed_ = rhs.whereUsed_;
+     fakeKeyWord_ = rhs.fakeKeyWord_;
+     fakeValue_ = rhs.fakeValue_;
 }
 
 //-------------------------------------------------------------------
@@ -233,6 +245,8 @@ CbcOrClpParam::operator=(const CbcOrClpParam & rhs)
           doubleValue_ = rhs.doubleValue_;
           stringValue_ = rhs.stringValue_;
           whereUsed_ = rhs.whereUsed_;
+	  fakeKeyWord_ = rhs.fakeKeyWord_;
+	  fakeValue_ = rhs.fakeValue_;
      }
      return *this;
 }
@@ -249,6 +263,45 @@ CbcOrClpParam::gutsOfConstructor()
           name_ = name_.substr(0, shriekPos) + name_.substr(shriekPos + 1);
           lengthName_--;
      }
+}
+// Sets value of fake keyword to current size of keywords 
+void 
+CbcOrClpParam::setFakeKeyWord(int fakeValue)
+{
+  fakeKeyWord_ = static_cast<int>(definedKeyWords_.size());
+  assert (fakeKeyWord_>0);
+  fakeValue_ = fakeValue;
+  assert (fakeValue_>=0);
+}
+/* Returns current parameter option position
+   but if fake keyword returns fakeValue_
+*/
+int 
+CbcOrClpParam::currentOptionAsInteger (  ) const
+{
+  int fakeInteger;
+  return currentOptionAsInteger(fakeInteger);
+}
+/* Returns current parameter option position
+   but if fake keyword returns fakeValue_ and sets
+   fakeInteger to value
+*/
+int 
+CbcOrClpParam::currentOptionAsInteger ( int & fakeInteger ) const
+{
+  fakeInteger=-COIN_INT_MAX;
+  if (fakeKeyWord_<0) {
+    return currentKeyWord_;
+  } else if (currentKeyWord_>=0&&currentKeyWord_<fakeKeyWord_){
+    return currentKeyWord_;
+  } else {
+    // fake
+    if (currentKeyWord_<0)
+      fakeInteger = currentKeyWord_ + 1000;
+    else
+      fakeInteger = currentKeyWord_ - 1000;
+    return fakeValue_;
+  }
 }
 // Returns length of name for printing
 int
@@ -335,10 +388,38 @@ CbcOrClpParam::parameterOption ( std::string check ) const
                     whichItem++;
                }
           }
-          if (whichItem < numberItems)
+          if (whichItem < numberItems) {
                return whichItem;
-          else
-               return -1;
+          } else {
+	    if (fakeKeyWord_<=0)
+	      return -1;
+	    // allow plus or minus
+	    int n;
+	    if (check.substr(0,4)=="plus"||check.substr(0,4)=="PLUS") {
+	      n = 4;
+	    } else if (check.substr(0,5)=="minus"||check.substr(0,5)=="MINUS") {
+	      n = 5;
+	    } else {
+	      return -1;
+	    }
+	    int value = 0;
+	    std::string field=check.substr(n);
+	    if (field != "EOL") {
+	      const char * start = field.c_str();
+	      char * endPointer = NULL;
+	      // check valid
+	      value =  static_cast<int>(strtol(start, &endPointer, 10));
+	      if (*endPointer != '\0') {
+		return -1;
+	      }
+	      if (n==4) 
+		return value + 1000;
+	      else
+		return -value - 1000;
+	    } else {
+	      return -1;
+	    }
+	  }
      }
 }
 // Prints parameter options
@@ -1017,11 +1098,23 @@ const char *
 CbcOrClpParam::setCurrentOptionWithMessage ( int value )
 {
      if (value != currentKeyWord_) {
-          sprintf(printArray, "Option for %s changed from %s to %s",
-                  name_.c_str(), definedKeyWords_[currentKeyWord_].c_str(),
-                  definedKeyWords_[value].c_str());
-
-          currentKeyWord_ = value;
+         char current[100];
+	 char newString[100];
+	 if (currentKeyWord_>=0&&(fakeKeyWord_<=0||currentKeyWord_<fakeKeyWord_)) 
+	   strcpy(current,definedKeyWords_[currentKeyWord_].c_str());
+	 else if (currentKeyWord_<0)
+	   sprintf(current,"minus%d",-currentKeyWord_-1000);
+	 else
+	   sprintf(current,"plus%d",currentKeyWord_-1000);
+	 if (value>=0&&(fakeKeyWord_<=0||value<fakeKeyWord_) )
+	   strcpy(newString,definedKeyWords_[value].c_str());
+	 else if (value<0)
+	   sprintf(newString,"minus%d",-value-1000);
+	 else
+	   sprintf(newString,"plus%d",value-1000);
+	 sprintf(printArray, "Option for %s changed from %s to %s",
+		 name_.c_str(), current, newString);
+	 currentKeyWord_ = value;
      } else {
           printArray[0] = '\0';
      }
@@ -1361,6 +1454,7 @@ establishParams (int &numberParameters, CbcOrClpParam *const parameters)
      parameters[numberParameters-1].append("eight");
      parameters[numberParameters-1].append("on");
      parameters[numberParameters-1].append("decide");
+     parameters[numberParameters-1].setFakeKeyWord(10);
      parameters[numberParameters-1].setLonghelp
      (
           "Decide whether to use A Basic Optimization Code (Accelerated?) \
@@ -1721,6 +1815,16 @@ re-run with debug set to 'debug.file'  The create case has same effect as saveSo
      );
 #endif
 #ifdef COIN_HAS_CLP
+     parameters[numberParameters++] =
+          CbcOrClpParam("decomp!ose", "Whether to try decomposition",
+                        -COIN_INT_MAX, COIN_INT_MAX, CLP_PARAM_INT_DECOMPOSE_BLOCKS, 1);
+     parameters[numberParameters-1].setLonghelp
+     (
+          "0 - off, 1 choose blocks >1 use as blocks \
+Dantzig Wolfe if primal, Benders if dual \
+- uses sprint pass for number of passes"
+     );
+     parameters[numberParameters-1].setIntValue(0);
 #if CLP_MULTIPLE_FACTORIZATIONS >0
      parameters[numberParameters++] =
           CbcOrClpParam("dense!Threshold", "Whether to use dense factorization",
@@ -2135,10 +2239,12 @@ before branch and bound - use with extreme caution!"
      parameters[numberParameters-1].append("ifmove");
      parameters[numberParameters-1].append("forceOn");
      parameters[numberParameters-1].append("onglobal");
+     parameters[numberParameters-1].setFakeKeyWord(3);
      parameters[numberParameters-1].setLonghelp
      (
           "This switches on flow cover cuts (either at root or in entire tree) \
-See branchAndCut for information on options."
+See branchAndCut for information on options. \
+Can also enter testing values by plusnn (==ifmove)"
      );
      parameters[numberParameters++] =
           CbcOrClpParam("force!Solution", "Whether to use given solution as crash for BAB",
@@ -2173,25 +2279,6 @@ of branch and bound are done on reduced problem.  Small problem has to be less t
 #endif
 #ifdef COIN_HAS_CBC
       parameters[numberParameters++] =
-          CbcOrClpParam("GMI!Cuts", "Whether to use alternative Gomory cuts",
-                        "off", CBC_PARAM_STR_GMICUTS);
-     parameters[numberParameters-1].append("on");
-     parameters[numberParameters-1].append("root");
-     parameters[numberParameters-1].append("ifmove");
-     parameters[numberParameters-1].append("forceOn");
-     parameters[numberParameters-1].append("endonly");
-     parameters[numberParameters-1].append("long");
-     parameters[numberParameters-1].append("longroot");
-     parameters[numberParameters-1].append("longifmove");
-     parameters[numberParameters-1].append("forceLongOn");
-     parameters[numberParameters-1].append("longendonly");
-     parameters[numberParameters-1].setLonghelp
-     (
-          "This switches on an alternative Gomory cut generator (either at root or in entire tree) \
-This version is by Giacomo Nannicini and may be more robust \
-See branchAndCut for information on options."
-     );
-     parameters[numberParameters++] =
           CbcOrClpParam("GMI!Cuts", "Whether to use alternative Gomory cuts",
                         "off", CBC_PARAM_STR_GMICUTS);
      parameters[numberParameters-1].append("on");
@@ -3021,6 +3108,8 @@ costs this much to be infeasible",
      parameters[numberParameters-1].append("rhs!ranging");
      parameters[numberParameters-1].append("objective!ranging");
      parameters[numberParameters-1].append("stats");
+     parameters[numberParameters-1].append("boundsint");
+     parameters[numberParameters-1].append("boundsall");
      parameters[numberParameters-1].setLonghelp
      (
           "This changes the amount and format of printing a solution:\nnormal - nonzero column variables \n\
@@ -3081,12 +3170,14 @@ but strong options do more probing"
      parameters[numberParameters-1].append("10");
      parameters[numberParameters-1].append("100");
      parameters[numberParameters-1].append("300");
+     // but allow numbers after this (returning 1)
+     parameters[numberParameters-1].setFakeKeyWord(1);
      parameters[numberParameters-1].setLonghelp
      (
           "This switches on a heuristic which looks for a solution close \
 to incumbent solution (Fischetti and Monaci). \
 See Rounding for meaning of on,both,before. \
-The ones at end have different maxNode settings (and are 'on'(on==30))."
+Can also set different maxNode settings by plusnnnn (and are 'on'(on==30))."
      );
      parameters[numberParameters++] =
           CbcOrClpParam("pumpC!utoff", "Fake cutoff for use in feasibility pump",
@@ -3394,7 +3485,7 @@ If name contains '_fix_read_' then does not write but reads and will fix all var
 #ifdef COIN_HAS_CLP
      parameters[numberParameters++] =
           CbcOrClpParam("slp!Value", "Number of slp passes before primal",
-                        -1, 50000, CLP_PARAM_INT_SLPVALUE, 1);
+                        -50000, 50000, CLP_PARAM_INT_SLPVALUE, 1);
      parameters[numberParameters-1].setLonghelp
      (
           "If you are solving a quadratic problem using primal then it may be helpful to do some \
