@@ -4836,6 +4836,11 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned, int type,
                               //numberChangedBounds=1;
                               //createRim4(false);
                          }
+			 // but double check
+			 if (!numberPrimalInfeasibilities_) {
+			   problemStatus_=-1;
+			   doOriginalTolerance=2;
+			 }
                     } else {
                          problemStatus_ = -1; //iterate
                          cleanDuals = 1;

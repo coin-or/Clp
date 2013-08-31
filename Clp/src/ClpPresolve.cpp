@@ -2084,9 +2084,13 @@ CoinPostsolveMatrix::CoinPostsolveMatrix(ClpSimplex*  si,
 
      ClpDisjointCopyN(si->getColSolution(), ncols1, sol_);
      si->setDblParam(ClpObjOffset, originalOffset_);
-
+     // Test below only needed for QP ..... but .....
+     // To switch off define COIN_SLOW_PRESOLVE=0
+#ifndef COIN_SLOW_PRESOLVE
+#define COIN_SLOW_PRESOLVE 1
+#endif
      for (int j = 0; j < ncols1; j++) {
-#ifdef COIN_SLOW_PRESOLVE
+#if COIN_SLOW_PRESOLVE
        if (hincol_[j]) {
 #endif
           CoinBigIndex kcs = mcstrt_[j];
@@ -2095,7 +2099,7 @@ CoinPostsolveMatrix::CoinPostsolveMatrix(ClpSimplex*  si,
                link_[k] = k + 1;
           }
           link_[kce-1] = NO_LINK ;
-#ifdef COIN_SLOW_PRESOLVE
+#if COIN_SLOW_PRESOLVE
        }
 #endif
      }
