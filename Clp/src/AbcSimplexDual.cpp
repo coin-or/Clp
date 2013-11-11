@@ -1594,6 +1594,7 @@ AbcSimplexDual::dualColumn2Most(dualColumnResult & result)
 #endif
   // not free
   int lastSequence = -1;
+  double lastTheta = 0.0; 
   double lastPivotValue = 0.0;
   double thisPivotValue=0.0;
   // if free then always choose , otherwise ...
@@ -1659,7 +1660,7 @@ AbcSimplexDual::dualColumn2Most(dualColumnResult & result)
 	   numberIterations_,iPass,fabs(dualOut_),totalThru+thruThis,increaseInObjective+increaseInThis,
 	   numberRemaining);
 #endif
-    if (totalThru + thruThis >= fabs(dualOut_) ||
+    if (totalThru + thruThis > fabs(dualOut_)-fabs(1.0e-9*dualOut_)-1.0e-12 ||
 	(increaseInObjective + increaseInThis < 0.0&&bestSequence>=0) || !numberRemaining) {
       // We should be pivoting in this batch
       // so compress down to this lot
@@ -1798,7 +1799,9 @@ AbcSimplexDual::dualColumn2Most(dualColumnResult & result)
 	increase += increaseInObjective;
 	if (theta < 0.0)
 	  thruThis += fabs(dualOut_); // force using this one
-	if (increaseInObjective < 0.0 && increase < 0.0 && lastSequence >= 0) {
+	if (((increaseInObjective < 0.0 && increase < 0.0)||
+	     (theta>1.0e9 && lastTheta < 1.0e-5))
+	    && lastSequence >= 0) {
 	  // back
 	  // We may need to be more careful - we could do by
 	  // switch so we always do fine grained?
@@ -1808,6 +1811,7 @@ AbcSimplexDual::dualColumn2Most(dualColumnResult & result)
 	  // add in
 	  totalThru += thruThis;
 	  increaseInObjective += increaseInThis;
+	  lastTheta=theta;
 	}
 	if (bestPivot < 0.1 * bestEverPivot &&
 	    bestEverPivot > 1.0e-6 &&
@@ -2282,6 +2286,8 @@ AbcSimplex::saveGoodStatus()
 {
   // save arrays
   CoinMemcpyN(internalStatus_, numberTotal_, internalStatusSaved_);
+  // save costs
+  CoinMemcpyN(abcCost_,numberTotal_,abcCost_+2*numberTotal_);
   CoinMemcpyN(abcSolution_,numberTotal_,solutionSaved_);
 }
 // Restores previous good status and says trouble
@@ -2296,6 +2302,7 @@ AbcSimplex::restoreGoodStatus(int type)
       alphaAccuracy_ = -2.0;
     // trouble - restore solution
     CoinMemcpyN(internalStatusSaved_, numberTotal_, internalStatus_);
+    CoinMemcpyN(abcCost_+2*numberTotal_,numberTotal_,abcCost_);
     CoinMemcpyN(solutionSaved_,numberTotal_, abcSolution_);
     int *  COIN_RESTRICT abcPivotVariable = abcPivotVariable_;
     // redo pivotVariable
@@ -2937,6 +2944,7 @@ AbcSimplexDual::statusOfProblemInDual(int type)
 	if (internalFactorize(1)) {
 	  abort();
 	}
+	moveToBasic();
 #if PARTITION_ROW_COPY==1
 	int iVector=getAvailableArray();
 	abcMatrix_->sortUseful(usefulArray_[iVector]);
@@ -2944,6 +2952,8 @@ AbcSimplexDual::statusOfProblemInDual(int type)
 #endif
 	// get primal and dual solutions
 	numberBlackMarks+=gutsOfSolution(3);
+	//gutsOfSolution(1);
+	makeNonFreeVariablesDualFeasible();
       }
     }
   }
@@ -5917,7 +5927,7 @@ AbcSimplexDual::dual()
   if (!lastDualBound_) {
     dualTolerance_ = dblParam_[ClpDualTolerance];
     primalTolerance_ = dblParam_[ClpPrimalTolerance];
-    int tryType=moreSpecialOptions_/65536;
+    int tryType=moreSpecialOptions_/131072;
     if (tryType<5) {
       currentDualBound_=1.0e8;
     } else {

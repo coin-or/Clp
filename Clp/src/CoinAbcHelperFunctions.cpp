@@ -261,7 +261,7 @@ CoinAbcMultiplyIndexed(int number,
 		       CoinSimplexDouble * COIN_RESTRICT region)
 {
 #ifndef INTEL_COMPILER
-#pragma simd
+// was #pragma simd
 #endif
 #if UNROLL_MULTIPLY_ADD==0
   for (CoinSimplexInt i = 0; i < number; i ++ ) {
@@ -281,7 +281,7 @@ CoinAbcMultiplyIndexed(int number,
 		       long double * COIN_RESTRICT region)
 {
 #ifndef INTEL_COMPILER
-#pragma simd
+// was #pragma simd
 #endif
 #if UNROLL_MULTIPLY_ADD==0
   for (CoinSimplexInt i = 0; i < number; i ++ ) {
@@ -302,7 +302,7 @@ CoinAbcMaximumAbsElement(const double * region, int sizeIn)
      double maxValue = 0.0;
      //printf("a\n");
 #ifndef INTEL_COMPILER
-#pragma simd
+// was #pragma simd
 #endif
      /*cilk_*/ for (int i = 0; i < size; i++)
           maxValue = CoinMax(maxValue, fabs(region[i]));
@@ -316,7 +316,7 @@ CoinAbcMinMaxAbsElement(const double * region, int sizeIn,double & minimum , dou
   int size=sizeIn;
   //printf("b\n");
 #ifndef INTEL_COMPILER
-#pragma simd
+// was #pragma simd
 #endif
      /*cilk_*/ for (int i=0;i<size;i++) {
     double value=fabs(region[i]);
@@ -336,7 +336,7 @@ CoinAbcMinMaxAbsNormalValues(const double * region, int sizeIn,double & minimum 
 #define NORMAL_HIGH_VALUE 1.0e8
   //printf("c\n");
 #ifndef INTEL_COMPILER
-#pragma simd
+// was #pragma simd
 #endif
      /*cilk_*/ for (int i=0;i<size;i++) {
     double value=fabs(region[i]);
@@ -354,7 +354,7 @@ CoinAbcScale(double * region, double multiplier,int sizeIn)
   int size=sizeIn;
   // used printf("d\n");
 #ifndef INTEL_COMPILER
-#pragma simd
+// was #pragma simd
 #endif
 #pragma cilk_grainsize=CILK_FOR_GRAINSIZE
   cilk_for (int i=0;i<size;i++) {
@@ -367,7 +367,7 @@ CoinAbcScaleNormalValues(double * region, double multiplier,double killIfLessTha
   int size=sizeIn;
      // used printf("e\n");
 #ifndef INTEL_COMPILER
-#pragma simd
+// was #pragma simd
 #endif
 #pragma cilk_grainsize=CILK_FOR_GRAINSIZE
   cilk_for (int i=0;i<size;i++) {
@@ -393,7 +393,7 @@ CoinAbcMaximumAbsElementAndScale(double * region, double multiplier,int sizeIn)
   int size=sizeIn;
   //printf("f\n");
 #ifndef INTEL_COMPILER
-#pragma simd
+// was #pragma simd
 #endif
      /*cilk_*/ for (int i=0;i<size;i++) {
     double value=fabs(region[i]);
@@ -408,7 +408,7 @@ CoinAbcSetElements(double * region, int sizeIn, double value)
   int size=sizeIn;
      printf("g\n");
 #ifndef INTEL_COMPILER
-#pragma simd
+// was #pragma simd
 #endif
 #pragma cilk_grainsize=CILK_FOR_GRAINSIZE
      cilk_for (int i = 0; i < size; i++)
@@ -423,25 +423,25 @@ CoinAbcMultiplyAdd(const double * region1, int sizeIn, double multiplier1,
      if (multiplier1 == 1.0) {
           if (multiplier2 == 1.0) {
 #ifndef INTEL_COMPILER
-#pragma simd
+// was #pragma simd
 #endif
                /*cilk_*/ for (int i = 0; i < size; i++)
                     regionChanged[i] = region1[i] + regionChanged[i];
           } else if (multiplier2 == -1.0) {
 #ifndef INTEL_COMPILER
-#pragma simd
+// was #pragma simd
 #endif
                /*cilk_*/ for (int i = 0; i < size; i++)
                     regionChanged[i] = region1[i] - regionChanged[i];
           } else if (multiplier2 == 0.0) {
 #ifndef INTEL_COMPILER
-#pragma simd
+// was #pragma simd
 #endif
                /*cilk_*/ for (int i = 0; i < size; i++)
                     regionChanged[i] = region1[i] ;
           } else {
 #ifndef INTEL_COMPILER
-#pragma simd
+// was #pragma simd
 #endif
                /*cilk_*/ for (int i = 0; i < size; i++)
                     regionChanged[i] = region1[i] + multiplier2 * regionChanged[i];
@@ -449,25 +449,25 @@ CoinAbcMultiplyAdd(const double * region1, int sizeIn, double multiplier1,
      } else if (multiplier1 == -1.0) {
           if (multiplier2 == 1.0) {
 #ifndef INTEL_COMPILER
-#pragma simd
+// was #pragma simd
 #endif
                /*cilk_*/ for (int i = 0; i < size; i++)
                     regionChanged[i] = -region1[i] + regionChanged[i];
           } else if (multiplier2 == -1.0) {
 #ifndef INTEL_COMPILER
-#pragma simd
+// was #pragma simd
 #endif
                /*cilk_*/ for (int i = 0; i < size; i++)
                     regionChanged[i] = -region1[i] - regionChanged[i];
           } else if (multiplier2 == 0.0) {
 #ifndef INTEL_COMPILER
-#pragma simd
+// was #pragma simd
 #endif
                /*cilk_*/ for (int i = 0; i < size; i++)
                     regionChanged[i] = -region1[i] ;
           } else {
 #ifndef INTEL_COMPILER
-#pragma simd
+// was #pragma simd
 #endif
                /*cilk_*/ for (int i = 0; i < size; i++)
                     regionChanged[i] = -region1[i] + multiplier2 * regionChanged[i];
@@ -477,19 +477,19 @@ CoinAbcMultiplyAdd(const double * region1, int sizeIn, double multiplier1,
                // nothing to do
           } else if (multiplier2 == -1.0) {
 #ifndef INTEL_COMPILER
-#pragma simd
+// was #pragma simd
 #endif
                /*cilk_*/ for (int i = 0; i < size; i++)
                     regionChanged[i] =  -regionChanged[i];
           } else if (multiplier2 == 0.0) {
 #ifndef INTEL_COMPILER
-#pragma simd
+// was #pragma simd
 #endif
                /*cilk_*/ for (int i = 0; i < size; i++)
                     regionChanged[i] =  0.0;
           } else {
 #ifndef INTEL_COMPILER
-#pragma simd
+// was #pragma simd
 #endif
                /*cilk_*/ for (int i = 0; i < size; i++)
                     regionChanged[i] =  multiplier2 * regionChanged[i];
@@ -497,25 +497,25 @@ CoinAbcMultiplyAdd(const double * region1, int sizeIn, double multiplier1,
      } else {
           if (multiplier2 == 1.0) {
 #ifndef INTEL_COMPILER
-#pragma simd
+// was #pragma simd
 #endif
                /*cilk_*/ for (int i = 0; i < size; i++)
                     regionChanged[i] = multiplier1 * region1[i] + regionChanged[i];
           } else if (multiplier2 == -1.0) {
 #ifndef INTEL_COMPILER
-#pragma simd
+// was #pragma simd
 #endif
                /*cilk_*/ for (int i = 0; i < size; i++)
                     regionChanged[i] = multiplier1 * region1[i] - regionChanged[i];
           } else if (multiplier2 == 0.0) {
 #ifndef INTEL_COMPILER
-#pragma simd
+// was #pragma simd
 #endif
                /*cilk_*/ for (int i = 0; i < size; i++)
                     regionChanged[i] = multiplier1 * region1[i] ;
           } else {
 #ifndef INTEL_COMPILER
-#pragma simd
+// was #pragma simd
 #endif
                /*cilk_*/ for (int i = 0; i < size; i++)
                     regionChanged[i] = multiplier1 * region1[i] + multiplier2 * regionChanged[i];
@@ -529,7 +529,7 @@ CoinAbcInnerProduct(const double * region1, int sizeIn, const double * region2)
   //printf("i\n");
      double value = 0.0;
 #ifndef INTEL_COMPILER
-#pragma simd
+// was #pragma simd
 #endif
      /*cilk_*/ for (int i = 0; i < size; i++)
           value += region1[i] * region2[i];
@@ -543,7 +543,7 @@ CoinAbcGetNorms(const double * region, int sizeIn, double & norm1, double & norm
      norm1 = 0.0;
      norm2 = 0.0;
 #ifndef INTEL_COMPILER
-#pragma simd
+// was #pragma simd
 #endif
      /*cilk_*/ for (int i = 0; i < size; i++) {
           norm2 += region[i] * region[i];
@@ -557,7 +557,7 @@ CoinAbcScatterTo(const double * regionFrom, double * regionTo, const int * index
   int number=numberIn;
      // used printf("k\n");
 #ifndef INTEL_COMPILER
-#pragma simd
+// was #pragma simd
 #endif
 #pragma cilk_grainsize=CILK_FOR_GRAINSIZE
   cilk_for (int i=0;i<number;i++) {
@@ -572,7 +572,7 @@ CoinAbcGatherFrom(const double * regionFrom, double * regionTo, const int * inde
   int number=numberIn;
      // used printf("l\n");
 #ifndef INTEL_COMPILER
-#pragma simd
+// was #pragma simd
 #endif
 #pragma cilk_grainsize=CILK_FOR_GRAINSIZE
   cilk_for (int i=0;i<number;i++) {
@@ -587,7 +587,7 @@ CoinAbcScatterZeroTo(double * regionTo, const int * index,int numberIn)
   int number=numberIn;
      // used printf("m\n");
 #ifndef INTEL_COMPILER
-#pragma simd
+// was #pragma simd
 #endif
 #pragma cilk_grainsize=CILK_FOR_GRAINSIZE
   cilk_for (int i=0;i<number;i++) {
@@ -603,7 +603,7 @@ CoinAbcScatterToList(const double * regionFrom, double * regionTo,
   int number=numberIn;
   //printf("n\n");
 #ifndef INTEL_COMPILER
-#pragma simd
+// was #pragma simd
 #endif
      /*cilk_*/ for (int i=0;i<number;i++) {
     int j=indexList[i];
@@ -618,7 +618,7 @@ CoinAbcInverseSqrts(double * array, int nIn)
   int n=nIn;
      // used printf("o\n");
 #ifndef INTEL_COMPILER
-#pragma simd
+// was #pragma simd
 #endif
 #pragma cilk_grainsize=CILK_FOR_GRAINSIZE
   cilk_for (int i = 0; i < n; i++)
@@ -630,7 +630,7 @@ CoinAbcReciprocal(double * array, int nIn, const double *input)
   int n=nIn;
      // used printf("p\n");
 #ifndef INTEL_COMPILER
-#pragma simd
+// was #pragma simd
 #endif
 #pragma cilk_grainsize=CILK_FOR_GRAINSIZE
   cilk_for (int i = 0; i < n; i++)

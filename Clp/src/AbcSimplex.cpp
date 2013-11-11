@@ -187,8 +187,9 @@ AbcSimplex::gutsOfCopy(const AbcSimplex & rhs)
   internalStatus_ = ClpCopyOfArray(rhs.internalStatus_,sizeArray+maximumNumberTotal_);
   abcLower_ = ClpCopyOfArray(rhs.abcLower_, sizeArray);
   abcUpper_ = ClpCopyOfArray(rhs.abcUpper_, sizeArray);
-  abcCost_ = ClpCopyOfArray(rhs.abcCost_, sizeArray);
+  abcCost_ = ClpCopyOfArray(rhs.abcCost_, sizeArray+maximumNumberTotal_);
   abcDj_ = ClpCopyOfArray(rhs.abcDj_, sizeArray);
+
   abcSolution_ = ClpCopyOfArray(rhs.abcSolution_, sizeArray+maximumNumberTotal_);
   abcPerturbation_ = ClpCopyOfArray(rhs.abcPerturbation_,sizeArray);
   abcPivotVariable_ = ClpCopyOfArray(rhs.abcPivotVariable_,maximumAbcNumberRows_);
@@ -367,10 +368,11 @@ AbcSimplex::gutsOfInitialize(int numberRows,int numberColumns,bool doMore)
     // say Steepest pricing
     abcDualRowPivot_ = new AbcDualRowSteepest();
     abcPrimalColumnPivot_ = new AbcPrimalColumnSteepest();
-    internalStatus_ = newArray(reinterpret_cast<unsigned char *>(NULL),sizeArray+maximumNumberTotal_);
+    internalStatus_ = newArray(reinterpret_cast<unsigned char *>(NULL),
+			       sizeArray+maximumNumberTotal_);
     abcLower_ = newArray(reinterpret_cast<double *>(NULL),sizeArray);
     abcUpper_ = newArray(reinterpret_cast<double *>(NULL),sizeArray);
-    abcCost_ = newArray(reinterpret_cast<double *>(NULL),sizeArray);
+    abcCost_ = newArray(reinterpret_cast<double *>(NULL),sizeArray+maximumNumberTotal_);
     abcDj_ = newArray(reinterpret_cast<double *>(NULL),sizeArray);
     abcSolution_ = newArray(reinterpret_cast<double *>(NULL),sizeArray+maximumNumberTotal_);
     //fromExternal_ = newArray(reinterpret_cast<int *>(NULL),sizeArray);
@@ -416,10 +418,12 @@ AbcSimplex::gutsOfResize(int numberRows,int numberColumns)
   //toExternal_ = resizeArray(toExternal_,maximumAbcNumberRows_,maximumAbcNumberColumns_,newSize1,newSize2,1,0);
   scaleFromExternal_ = resizeArray(scaleFromExternal_,maximumAbcNumberRows_,maximumAbcNumberColumns_,newSize1,newSize2,0);
   //scaleToExternal_ = resizeArray(scaleToExternal_,maximumAbcNumberRows_,maximumAbcNumberColumns_,newSize1,newSize2,1,0);
-  internalStatus_ = resizeArray(internalStatus_,maximumAbcNumberRows_,maximumAbcNumberColumns_,newSize1,newSize2,numberTotal_);
+  internalStatus_ = resizeArray(internalStatus_,maximumAbcNumberRows_,
+				maximumAbcNumberColumns_,
+				newSize1,newSize2,numberTotal_);
   abcLower_ = resizeArray(abcLower_,maximumAbcNumberRows_,maximumAbcNumberColumns_,newSize1,newSize2,0);
   abcUpper_ = resizeArray(abcUpper_,maximumAbcNumberRows_,maximumAbcNumberColumns_,newSize1,newSize2,0);
-  abcCost_ = resizeArray(abcCost_,maximumAbcNumberRows_,maximumAbcNumberColumns_,newSize1,newSize2,0);
+  abcCost_ = resizeArray(abcCost_,maximumAbcNumberRows_,maximumAbcNumberColumns_,newSize1,newSize2,numberTotal_);
   abcDj_ = resizeArray(abcDj_,maximumAbcNumberRows_,maximumAbcNumberColumns_,newSize1,newSize2,0);
   abcSolution_ = resizeArray(abcSolution_,maximumAbcNumberRows_,maximumAbcNumberColumns_,newSize1,newSize2,numberTotal_);
   abcPerturbation_ = resizeArray(abcPerturbation_,maximumAbcNumberRows_,maximumAbcNumberColumns_,newSize1,newSize2,0);
@@ -648,7 +652,6 @@ AbcSimplex::computePrimals(CoinIndexedVector * arrayVector, CoinIndexedVector * 
   arrayVector->clear();
   previousVector->clear();
   // accumulate non basic stuff
-  
   double *  COIN_RESTRICT array = arrayVector->denseVector();
   CoinAbcScatterZeroTo(abcSolution_,abcPivotVariable_,numberRows_);
   abcMatrix_->timesIncludingSlacks(-1.0, abcSolution_, array);
@@ -1038,6 +1041,8 @@ int AbcSimplex::internalFactorize ( int solveType)
 	numberSlacks++;
     }
     status = CoinMax(numberSlacks - numberRows_, 0);
+    if (status)
+      printf("%d singularities\n",status);
     // special case if all slack
     if (numberSlacks == numberRows_) {
       status = numberRows_ + 1;
@@ -3733,6 +3738,9 @@ AbcSimplex::doAbcDual()
     abcCost_=save;
   }
   int totalNumberIterations=numberIterations_;
+  if (problemStatus_ == 10 && (moreSpecialOptions_&32768)!=0 &&sumDualInfeasibilities_ < 0.1) {
+    problemStatus_=0;
+  }
 #ifndef TRY_ABC_GUS
   if (problemStatus_==10) {
     int savePerturbation=perturbation_;
@@ -5782,8 +5790,10 @@ AbcSimplex::clearArrays(int which)
     stateOfProblem_&= ~check;
   } else if (which==-1) {
     for (int i=0;i<ABC_NUMBER_USEFUL_NORMAL;i++) {
-      if (usefulArray_[i].getNumElements())
+      if (usefulArray_[i].getNumElements()) {
 	usefulArray_[i].clear();
+	usefulArray_[i].clearAndReset();
+      }
     }
     stateOfProblem_&= ~255;
   } else {

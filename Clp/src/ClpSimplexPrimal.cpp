@@ -498,7 +498,7 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
 		   (ifValuesPass == 2 && firstFree_ < 0)) {
                     problemStatus_ = 3;
                     break;
-	       } else if ((moreSpecialOptions_&262144)!=0&&
+	       } else if ((moreSpecialOptions_&524288)!=0&&
 			  !nonLinearCost_->numberInfeasibilities()&&
 			  fabs(dblParam_[ClpDualObjectiveLimit])>1.0e30) {
                     problemStatus_ = 3;

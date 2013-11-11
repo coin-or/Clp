@@ -658,10 +658,10 @@ ClpSimplex::dealWithAbc(int solveType, int startUp,
     abcModel2->setParallelMode(numberCpu-1);
 #endif
     //if (abcState()==3||abcState()==4) {
-    //abcModel2->setMoreSpecialOptions((65536*2)|abcModel2->moreSpecialOptions());
+    //abcModel2->setMoreSpecialOptions((131072*2)|abcModel2->moreSpecialOptions());
     //}
     //if (processTune>0&&processTune<8)
-    //abcModel2->setMoreSpecialOptions(abcModel2->moreSpecialOptions()|65536*processTune);
+    //abcModel2->setMoreSpecialOptions(abcModel2->moreSpecialOptions()|131072*processTune);
 #if ABC_INSTRUMENT
     double startTimeCpu=CoinCpuTime();
     double startTimeElapsed=CoinGetTimeOfDay();
@@ -2184,7 +2184,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
 
 
           int iPass;
-          double lastObjective = 1.0e31;
+          double lastObjective[] = {1.0e31,1.0e31};
           // It will be safe to allow dense
           model2->setInitialDenseFactorization(true);
 
@@ -2263,16 +2263,18 @@ ClpSimplex::initialSolve(ClpSolve & options)
 #if 1
 #ifdef ABC_INHERIT
 		      //small.writeMps("try.mps");
-		      if (iPass) 
+		      if (iPass||!numberArtificials) 
 		         small.dealWithAbc(1,1);
 		       else 
 		         small.dealWithAbc(0,0);
 #else
-		      if (iPass)
+		      if (iPass||!numberArtificials) 
 		         small.primal(1);
 		      else
 		         small.dual(0);
 #endif
+		      if (small.problemStatus())
+			small.dual(0);
 #else
                          int numberColumns = small.numberColumns();
                          int numberRows = small.numberRows();
@@ -2367,13 +2369,14 @@ ClpSimplex::initialSolve(ClpSolve & options)
                }
                if (iPass > 20)
                     sumArtificials = 0.0;
-               if ((small.objectiveValue()*optimizationDirection_ > lastObjective - 1.0e-7 && iPass > 5 && sumArtificials < 1.0e-8) ||
+               if ((small.objectiveValue()*optimizationDirection_ > lastObjective[1] - 1.0e-7 && iPass > 5 && sumArtificials < 1.0e-8) ||
                          (!small.numberIterations() && iPass) ||
                          iPass == maxSprintPass - 1 || small.status() == 3) {
 
                     break; // finished
                } else {
-                    lastObjective = small.objectiveValue() * optimizationDirection_;
+		    lastObjective[1] = lastObjective[0];
+                    lastObjective[0] = small.objectiveValue() * optimizationDirection_;
                     double tolerance;
                     double averageNegDj = sumNegative / static_cast<double> (numberNegative + 1);
                     if (numberNegative + numberSort > smallNumberColumns)
@@ -3112,10 +3115,12 @@ ClpSimplex::initialSolve(ClpSolve & options)
                     } else if (finalStatus == 1) {
                          dual();
                     } else {
-		      if (numberRows_<10000)
- 			setPerturbation(100); // probably better to perturb after n its
- 		      else if (savePerturbation<100)
- 			setPerturbation(51); // probably better to perturb after n its
+		        if ((moreSpecialOptions_&65536)==0) {
+			  if (numberRows_<10000) 
+			    setPerturbation(100); // probably better to perturb after n its
+			  else if (savePerturbation<100)
+			    setPerturbation(51); // probably better to perturb after n its
+			}
 #ifndef ABC_INHERIT
 		        primal(1);
 #else

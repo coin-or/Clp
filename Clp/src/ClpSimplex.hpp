@@ -1186,10 +1186,10 @@ public:
 	 4096 bit - try more for complete fathoming
 	 8192 bit - don't even think of using primal if user asks for dual (and vv)
 	 16384 bit - in initialSolve so be more flexible
-	 debug
-	 32768 bit - do dual in netlibd
-	 65536 (*3) initial stateDualColumn
-	 262144 bit - stop when primal feasible
+	 32768 bit - don't swap algorithms from dual if small infeasibility
+	 65536 bit - perturb in postsolve cleanup (even if < 10000 rows)
+	 131072 bit (*3) initial stateDualColumn
+	 524288 bit - stop when primal feasible
      */
      inline int moreSpecialOptions() const {
           return moreSpecialOptions_;
@@ -1210,10 +1210,10 @@ public:
 	 4096 bit - try more for complete fathoming
 	 8192 bit - don't even think of using primal if user asks for dual (and vv)
 	 16384 bit - in initialSolve so be more flexible
-	 debug
-	 32768 bit - do dual in netlibd
-	 65536 (*3) initial stateDualColumn
-	 262144 bit - stop when primal feasible
+	 32768 bit - don't swap algorithms from dual if small infeasibility
+	 65536 bit - perturb in postsolve cleanup (even if < 10000 rows)
+	 131072 bit (*3) initial stateDualColumn
+	 524288 bit - stop when primal feasible
      */
      inline void setMoreSpecialOptions(int value) {
           moreSpecialOptions_ = value;
