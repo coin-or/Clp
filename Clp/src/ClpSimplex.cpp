@@ -611,6 +611,7 @@ ClpSimplex::gutsOfSolution ( double * givenDuals,
                //     oldValue,nonLinearCost_->largestInfeasibility(),
                //     largestPrimalError_);
                // throw out up to 1000 structurals
+	       int maxOut = (allowedInfeasibility_==10.0) ? 1000 : 100;
                int iRow;
                int * sort = new int[numberRows_];
                // first put back solution and store difference
@@ -646,7 +647,7 @@ ClpSimplex::gutsOfSolution ( double * givenDuals,
 #endif
                }
                CoinSort_2(save, save + numberOut, sort);
-               numberOut = CoinMin(1000, numberOut);
+               numberOut = CoinMin(maxOut, numberOut);
                for (iRow = 0; iRow < numberOut; iRow++) {
                     int jRow = sort[iRow];
                     int iColumn = pivotVariable_[jRow];

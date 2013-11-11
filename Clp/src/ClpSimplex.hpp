@@ -1205,6 +1205,8 @@ public:
 	 4096 bit - try more for complete fathoming
 	 8192 bit - don't even think of using primal if user asks for dual (and vv)
 	 16384 bit - in initialSolve so be more flexible
+	 32768 bit - don't swap algorithms from dual if small infeasibility
+	 65536 bit - perturb in postsolve cleanup (even if < 10000 rows)
      */
      inline void setMoreSpecialOptions(int value) {
           moreSpecialOptions_ = value;

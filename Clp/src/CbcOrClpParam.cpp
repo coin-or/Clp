@@ -3005,6 +3005,8 @@ costs this much to be infeasible",
      parameters[numberParameters-1].append("rhs!ranging");
      parameters[numberParameters-1].append("objective!ranging");
      parameters[numberParameters-1].append("stats");
+     parameters[numberParameters-1].append("boundsint");
+     parameters[numberParameters-1].append("boundsall");
      parameters[numberParameters-1].setLonghelp
      (
           "This changes the amount and format of printing a solution:\nnormal - nonzero column variables \n\
