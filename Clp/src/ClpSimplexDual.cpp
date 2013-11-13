@@ -3677,8 +3677,7 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
                          // If we have done pivots and things look bad set alpha_ 0.0 to force factorization
                          if (sumBadPivots > 1.0e4) {
                               if (handler_->logLevel() > 1)
-                                   printf("maybe forcing re-factorization - sum %g  %d pivots\n", sumBadPivots,
-                                          factorization_->pivots());
+                                   *handler_ << "maybe forcing re-factorization - sum " << sumBadPivots << " " << factorization_->pivots() << " pivots" << CoinMessageEol;
                               if(factorization_->pivots() > 3) {
                                    badSumPivots = true;
                                    break;
@@ -3876,7 +3875,7 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
      if ((badSumPivots ||
                fabs(theta_ * badFree) > 10.0 * dualTolerance_) && factorization_->pivots()) {
           if (handler_->logLevel() > 1)
-               printf("forcing re-factorization\n");
+               *handler_ << "forcing re-factorization" << CoinMessageEol;
           sequenceIn_ = -1;
      }
 #endif
