@@ -53,11 +53,14 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 
+# Don't do src/OsiClp recursively, since src/OsiClp/libOsiClp depends on src/libClp
+@COIN_HAS_OSI_TRUE@am__append_1 = src/OsiClp
+
 # We don't want to compile the test subdirectory, unless the test target is
 # specified.  But we need to list it as subdirectory to make sure that it is
 # included in the tarball
-@ALWAYS_FALSE@am__append_1 = test
-@COIN_HAS_OSI_TRUE@am__append_2 = osi-clp.pc
+@ALWAYS_FALSE@am__append_2 = test
+@COIN_HAS_OSI_TRUE@am__append_3 = osi-clp.pc
 DIST_COMMON = README $(am__configure_deps) \
 	$(srcdir)/BuildTools/Makemain.inc $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in $(srcdir)/clp-uninstalled.pc.in \
@@ -67,8 +70,8 @@ DIST_COMMON = README $(am__configure_deps) \
 	$(top_srcdir)/src/OsiClp/osi-clp-uninstalled.pc.in \
 	$(top_srcdir)/src/OsiClp/osi-clp.pc.in AUTHORS config.guess \
 	config.sub depcomp install-sh ltmain.sh missing
-@HAVE_EXTERNALS_TRUE@am__append_3 = Dependencies
-@HAVE_EXTERNALS_TRUE@am__append_4 = .Dependencies-stamp
+@HAVE_EXTERNALS_TRUE@am__append_4 = Dependencies
+@HAVE_EXTERNALS_TRUE@am__append_5 = .Dependencies-stamp
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/acinclude.m4 \
@@ -101,7 +104,7 @@ pkgconfiglibDATA_INSTALL = $(INSTALL_DATA)
 DATA = $(pkgconfiglib_DATA)
 ETAGS = etags
 CTAGS = ctags
-DIST_SUBDIRS = src test
+DIST_SUBDIRS = src src/OsiClp test
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 distdir = $(PACKAGE)-$(VERSION)
 top_distdir = $(distdir)
@@ -214,6 +217,8 @@ DBG_CXXFLAGS = @DBG_CXXFLAGS@
 DBG_FFLAGS = @DBG_FFLAGS@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
+DEPENDENCY_LINKING_FALSE = @DEPENDENCY_LINKING_FALSE@
+DEPENDENCY_LINKING_TRUE = @DEPENDENCY_LINKING_TRUE@
 ECHO = @ECHO@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
@@ -379,7 +384,7 @@ AUTOMAKE_OPTIONS = foreign
 ########################################################################
 #                          Subdirectories                              #
 ########################################################################
-SUBDIRS = src $(am__append_1)
+SUBDIRS = src $(am__append_1) $(am__append_2)
 
 ########################################################################
 #             Additional files to be included in tarball               #
@@ -403,13 +408,13 @@ EXTRA_DIST = doc/authors.xml doc/basicmodelclasses.xml doc/clpexe.xml \
 	examples/sprint.cpp examples/testBarrier.cpp \
 	examples/testBasis.cpp examples/testGub2.cpp \
 	examples/testGub.cpp examples/testQP.cpp \
-	examples/useVolume.cpp $(am__append_3)
+	examples/useVolume.cpp $(am__append_4)
 
 ########################################################################
 #                    Creation of the addlibs file                      #
 ########################################################################
 pkgconfiglibdir = $(libdir)/pkgconfig
-pkgconfiglib_DATA = clp.pc $(am__append_2)
+pkgconfiglib_DATA = clp.pc $(am__append_3)
 addlibsdir = $(DESTDIR)$(datadir)/coin/doc/Clp
 
 ########################################################################
@@ -418,7 +423,7 @@ addlibsdir = $(DESTDIR)$(datadir)/coin/doc/Clp
 CLEANFILES = 
 
 # Files that are generated and should be cleaned with make distclean
-DISTCLEANFILES = $(am__append_4) $(VPATH_DISTCLEANFILES)
+DISTCLEANFILES = $(am__append_5) $(VPATH_DISTCLEANFILES)
 DocFiles = README AUTHORS LICENSE
 DocInstallDir = $(datadir)/coin/doc/$(PACKAGE_NAME)
 all: all-recursive
