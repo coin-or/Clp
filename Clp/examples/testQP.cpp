@@ -24,14 +24,14 @@ int main(int argc, const char *argv[])
           CoinMpsIO  m;
 #if defined(SAMPLEDIR)
           int status = m.readMps(SAMPLEDIR "/share2qp", "mps");
-#else
-          fprintf(stderr, "Do not know where to find sample MPS files.\n");
-          exit(1);
-#endif
           if (status) {
                printf("errors on input\n");
                exit(77);
           }
+#else
+          fprintf(stderr, "Do not know where to find sample MPS files.\n");
+          exit(1);
+#endif
           ClpInterior model;
           model.loadProblem(*m.getMatrixByCol(), m.getColLower(), m.getColUpper(),
                             m.getObjCoefficients(),
