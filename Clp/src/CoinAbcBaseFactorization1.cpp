@@ -1482,9 +1482,11 @@ CoinAbcTypeFactorization::pivot ( CoinSimplexInt & pivotRow,
     pivotStartup(0,numberInPivotRow,numberInPivotColumn,lengthArea,giveUp,
 		 eArea,saveColumn,startColumnU,tempColumnCount,
 		 elementU,numberInColumn,indexRowU);
+    assert (tempColumnCount[0]>=0);
     for (int iTry=numberZeroOther-1;iTry>=0;iTry--) {
       pivotWhile(0,numberInPivotRow,numberInPivotColumn,lengthArea,giveUp,
 		 eArea,multipliersL);
+    assert (tempColumnCount[0]>=0);
       // find new pivot row
       int jPivotColumn=others[iTry];
       CoinFactorizationDouble * COIN_RESTRICT area =eArea+jPivotColumn*lengthArea;
@@ -1505,6 +1507,12 @@ CoinAbcTypeFactorization::pivot ( CoinSimplexInt & pivotRow,
 	deleteLink ( pivotColumn + numberRows_ );
 	// put away last
 	afterPivot(pivotRow,pivotColumn);
+	if (reinterpret_cast<unsigned int *>(elementUColumnPlusAddress_+lastEntryByColumnUPlus_)>aBits) {
+#ifndef NDEBUG
+	  printf("? dense\n");
+#endif
+	  return -99;
+	}
 	// new ones
 	pivotRow=indexL[jPivotRow];
 	pivotColumn=saveColumn[jPivotColumn];
@@ -1526,6 +1534,7 @@ CoinAbcTypeFactorization::pivot ( CoinSimplexInt & pivotRow,
 #endif
 	lastRow[pivotRow] = -2;
 	numberInRow[pivotRow] = 0;
+    assert (tempColumnCount[0]>=0);
 	//store column in L, compress in U and take column out
 	CoinBigIndex l = lengthL_;
 	if ( l + numberInPivotColumn > lengthAreaL_ ) {
@@ -1538,6 +1547,7 @@ CoinAbcTypeFactorization::pivot ( CoinSimplexInt & pivotRow,
 	numberGoodL_++;
 	// move to L and move last
 	numberInPivotColumn--;
+    assert (tempColumnCount[0]>=0);
 	if (jPivotRow!=numberInPivotColumn) {
 	  // swap
 	  for (int jColumn = 0; jColumn < numberInPivotRow; jColumn++ ) {
@@ -1555,6 +1565,7 @@ CoinAbcTypeFactorization::pivot ( CoinSimplexInt & pivotRow,
 	  multipliersL[jPivotRow]=tempD;
 	  jPivotRow=numberInPivotColumn;
 	}
+    assert (tempColumnCount[0]>=0);
 	numberInPivotRow--;
 	CoinFactorizationDouble pivotElement = area[numberInPivotColumn];
 	area[numberInPivotColumn]=0.0;
@@ -1567,6 +1578,7 @@ CoinAbcTypeFactorization::pivot ( CoinSimplexInt & pivotRow,
 	tempColumnCount[jPivotColumn]=tempColumnCount[numberInPivotRow];
 	totalElements_-=numberInColumn[pivotColumn];
 	mark[pivotColumn]=0;
+    assert (tempColumnCount[0]>=0);
 	for (int jRow=0;jRow<numberInPivotColumn+1;jRow++) {
 	  CoinFactorizationDouble temp=areaLast[jRow];
 	  areaLast[jRow]=area[jRow];
@@ -1577,6 +1589,7 @@ CoinAbcTypeFactorization::pivot ( CoinSimplexInt & pivotRow,
 	for (int jColumn = 0; jColumn < numberInPivotRow; jColumn++ ) {
 	  CoinFactorizationDouble * COIN_RESTRICT area =eArea+jColumn*lengthArea;
 	  CoinFactorizationDouble thisPivotValue = area[numberInPivotColumn];
+    assert (tempColumnCount[0]>=0);
 	  area[numberInPivotColumn]=thisPivotValue;
 	  if (fabs(thisPivotValue)>tolerance) {
 	    CoinSimplexInt iColumn = saveColumn[jColumn];
@@ -1600,6 +1613,7 @@ CoinAbcTypeFactorization::pivot ( CoinSimplexInt & pivotRow,
 	    //numberInColumn[iColumn]--;
 	  }
 	}
+    assert (tempColumnCount[0]>=0);
 	// put away last (but remember count is one out)
 	CoinAbcMemcpy(elementL+lSave,multipliersL,numberInPivotColumn+1);
 	lSave=l;
@@ -1630,6 +1644,7 @@ CoinAbcTypeFactorization::pivot ( CoinSimplexInt & pivotRow,
 	break;
       }
     }
+    assert (tempColumnCount[0]>=0);
 #if 0
     // zero out extra bits
     int add1=numberInPivotColumn>>5;

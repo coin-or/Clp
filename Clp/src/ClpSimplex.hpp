@@ -1184,7 +1184,6 @@ public:
 	 16384 bit - in initialSolve so be more flexible
 	 debug
 	 32768 bit - do dual in netlibd
-	 65536 (*3) initial stateDualColumn
      */
      inline int moreSpecialOptions() const {
           return moreSpecialOptions_;
@@ -1207,6 +1206,7 @@ public:
 	 16384 bit - in initialSolve so be more flexible
 	 32768 bit - don't swap algorithms from dual if small infeasibility
 	 65536 bit - perturb in postsolve cleanup (even if < 10000 rows)
+	 1048576 bit - don't perturb even if long time
      */
      inline void setMoreSpecialOptions(int value) {
           moreSpecialOptions_ = value;
