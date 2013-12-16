@@ -27,6 +27,9 @@
 /* Define to 1 if the AMD package is available */
 #undef COIN_HAS_AMD
 
+/* Define to 1 if the ASL package is available */
+#undef COIN_HAS_ASL
+
 /* If defined, the BLAS Library is available. */
 #undef COIN_HAS_BLAS
 

@@ -39,6 +39,7 @@ extern glp_prob* cbc_glp_prob;
 #include "AbcCommon.hpp"
 #include "ClpFactorization.hpp"
 #include "CoinTime.hpp"
+#include "CoinWarmStartBasis.hpp"
 #include "ClpSimplex.hpp"
 #include "ClpSimplexOther.hpp"
 #include "ClpSolve.hpp"
@@ -61,7 +62,6 @@ extern glp_prob* cbc_glp_prob;
 #include "AbcDualRowSteepest.hpp"
 #include "AbcDualRowDantzig.hpp"
 #endif
-//#define COIN_HAS_ASL
 #ifdef COIN_HAS_ASL
 #include "Clp_ampl.h"
 #endif
@@ -306,6 +306,11 @@ main (int argc, const char *argv[])
                 int returnCode = readAmpl(&info, argc, const_cast<char **>(argv), & coinModelStart.voidModel);
                 if (returnCode)
                     return returnCode;
+		if (info.numberBinary+info.numberIntegers+info.numberSos
+		    &&!info.starts) {
+		  printf("Unable to handle integer problems\n");
+		  return 1;
+		}
                 CbcOrClpRead_mode = 2; // so will start with parameters
                 // see if log in list (including environment)
                 for (int i = 1; i < info.numberArguments; i++) {
@@ -322,10 +327,16 @@ main (int argc, const char *argv[])
                 if (!noPrinting_)
                     printf("%d rows, %d columns and %d elements\n",
                            info.numberRows, info.numberColumns, info.numberElements);
+                if (!coinModelStart.model) {
+		  // linear
                     models->loadProblem(info.numberColumns, info.numberRows, info.starts,
                                         info.rows, info.elements,
                                         info.columnLower, info.columnUpper, info.objective,
                                         info.rowLower, info.rowUpper);
+		} else {
+		  // QP
+		  models->loadProblem(*(coinModelStart.model));
+		}
                 // If we had a solution use it
                 if (info.primalSolution) {
                     models->setColSolution(info.primalSolution);
@@ -1021,6 +1032,71 @@ main (int argc, const char *argv[])
 #endif
                                    try {
                                         status = model2->initialSolve(solveOptions);
+#ifdef COIN_HAS_ASL
+                            if (usingAmpl) {
+                                double value = model2->getObjValue() * model2->getObjSense();
+                                char buf[300];
+                                int pos = 0;
+                                int iStat = model2->status();
+                                if (iStat == 0) {
+                                    pos += sprintf(buf + pos, "optimal," );
+                                } else if (iStat == 1) {
+                                    // infeasible
+                                    pos += sprintf(buf + pos, "infeasible,");
+                                } else if (iStat == 2) {
+                                    // unbounded
+                                    pos += sprintf(buf + pos, "unbounded,");
+                                } else if (iStat == 3) {
+                                    pos += sprintf(buf + pos, "stopped on iterations or time,");
+                                } else if (iStat == 4) {
+                                    iStat = 7;
+                                    pos += sprintf(buf + pos, "stopped on difficulties,");
+                                } else if (iStat == 5) {
+                                    iStat = 3;
+                                    pos += sprintf(buf + pos, "stopped on ctrl-c,");
+                                } else if (iStat == 6) {
+                                    // bab infeasible
+                                    pos += sprintf(buf + pos, "integer infeasible,");
+                                    iStat = 1;
+                                } else {
+                                    pos += sprintf(buf + pos, "status unknown,");
+                                    iStat = 6;
+                                }
+                                info.problemStatus = iStat;
+                                info.objValue = value;
+                                pos += sprintf(buf + pos, " objective %.*g", ampl_obj_prec(),
+                                               value);
+                                sprintf(buf + pos, "\n%d iterations",
+                                        model2->getIterationCount());
+                                free(info.primalSolution);
+                                int numberColumns = model2->numberColumns();
+                                info.primalSolution = reinterpret_cast<double *> (malloc(numberColumns * sizeof(double)));
+                                CoinCopyN(model2->primalColumnSolution(), numberColumns, info.primalSolution);
+                                int numberRows = model2->numberRows();
+                                free(info.dualSolution);
+                                info.dualSolution = reinterpret_cast<double *> (malloc(numberRows * sizeof(double)));
+                                CoinCopyN(model2->dualRowSolution(), numberRows, info.dualSolution);
+                                CoinWarmStartBasis * basis = model2->getBasis();
+                                free(info.rowStatus);
+                                info.rowStatus = reinterpret_cast<int *> (malloc(numberRows * sizeof(int)));
+                                free(info.columnStatus);
+                                info.columnStatus = reinterpret_cast<int *> (malloc(numberColumns * sizeof(int)));
+                                // Put basis in
+                                int i;
+                                // free,basic,ub,lb are 0,1,2,3
+                                for (i = 0; i < numberRows; i++) {
+                                    CoinWarmStartBasis::Status status = basis->getArtifStatus(i);
+                                    info.rowStatus[i] = status;
+                                }
+                                for (i = 0; i < numberColumns; i++) {
+                                    CoinWarmStartBasis::Status status = basis->getStructStatus(i);
+                                    info.columnStatus[i] = status;
+                                }
+                                // put buffer into info
+                                strcpy(info.buffer, buf);
+                                delete basis;
+                            }
+#endif
 #ifndef NDEBUG
 					// if infeasible check ray
 					if (model2->status()==1) {
