@@ -14,6 +14,11 @@ AUTOMAKE_OPTIONS = foreign
 
 SUBDIRS = src
 
+# Don't do src/OsiClp recursively, since src/OsiClp/libOsiClp depends on src/libClp
+if COIN_HAS_OSI
+  SUBDIRS += src/OsiClp
+endif
+
 # We don't want to compile the test subdirectory, unless the test target is
 # specified.  But we need to list it as subdirectory to make sure that it is
 # included in the tarball

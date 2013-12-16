@@ -64,7 +64,9 @@ am__strip_dir = `echo $$p | sed -e 's|^.*/||'`;
 am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(includecoindir)"
 libLTLIBRARIES_INSTALL = $(INSTALL)
 LTLIBRARIES = $(lib_LTLIBRARIES)
-libOsiClp_la_LIBADD =
+am__DEPENDENCIES_1 =
+@DEPENDENCY_LINKING_TRUE@libOsiClp_la_DEPENDENCIES =  \
+@DEPENDENCY_LINKING_TRUE@	$(am__DEPENDENCIES_1) ../libClp.la
 am_libOsiClp_la_OBJECTS = OsiClpSolverInterface.lo
 libOsiClp_la_OBJECTS = $(am_libOsiClp_la_OBJECTS)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
@@ -357,6 +359,9 @@ lib_LTLIBRARIES = libOsiClp.la
 
 # List all source files for this library, including headers
 libOsiClp_la_SOURCES = OsiClpSolverInterface.cpp OsiClpSolverInterface.hpp
+
+# List all additionally required libraries
+@DEPENDENCY_LINKING_TRUE@libOsiClp_la_LIBADD = $(OSICLPLIB_LIBS) ../libClp.la
 
 # This is for libtool (on Windows)
 libOsiClp_la_LDFLAGS = $(LT_LDFLAGS)
