@@ -10,7 +10,6 @@
 #include <string>
 #include <iostream>
 #include <cassert>
-
 #ifdef COIN_HAS_CBC
 #ifdef COIN_HAS_CLP
 #include "OsiClpSolverInterface.hpp"
@@ -22,6 +21,10 @@
 #ifdef COIN_HAS_CLP
 #include "ClpSimplex.hpp"
 #include "ClpFactorization.hpp"
+#endif
+#if COIN_INT_MAX==0
+#undef COIN_INT_MAX
+#define COIN_INT_MAX 2147483647
 #endif
 #ifdef COIN_HAS_READLINE
 #include <readline/readline.h>
