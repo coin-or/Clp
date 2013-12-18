@@ -1214,6 +1214,7 @@ public:
 	 65536 bit - perturb in postsolve cleanup (even if < 10000 rows)
 	 131072 bit (*3) initial stateDualColumn
 	 524288 bit - stop when primal feasible
+	 1048576 bit - don't perturb even if long time
      */
      inline void setMoreSpecialOptions(int value) {
           moreSpecialOptions_ = value;

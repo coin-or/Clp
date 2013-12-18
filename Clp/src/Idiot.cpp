@@ -1071,7 +1071,7 @@ Idiot::solve2(CoinMessageHandler * handler, const CoinMessages * messages)
      }
      muAtExit_ = mu;
      // For last iteration make as feasible as possible
-     if (oddSlacks)
+     if (oddSlacks && (strategy_&32768)==0)
           strategy_ |= 16384;
      // not scaled
      n = cleanIteration(iteration, ordStart, ordEnd,

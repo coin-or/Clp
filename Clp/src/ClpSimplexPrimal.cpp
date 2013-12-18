@@ -527,9 +527,15 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
                {
                     int status = eventHandler_->event(ClpEventHandler::endOfFactorization);
                     if (status >= 0) {
-                         problemStatus_ = 5;
-                         secondaryStatus_ = ClpEventHandler::endOfFactorization;
-                         break;
+		        // if >=100 - then special e.g. unperturb
+		        if (status!=101) {
+			  problemStatus_ = 5;
+			  secondaryStatus_ = ClpEventHandler::endOfFactorization;
+			  break;
+			} else {
+			  unPerturb();
+			  continue;
+			}
                     }
                }
                // Iterate

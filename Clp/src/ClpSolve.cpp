@@ -1693,6 +1693,18 @@ ClpSimplex::initialSolve(ClpSolve & options)
                if (doIdiot > 0) {
                     // pick up number passes
                     nPasses = options.getExtraInfo(1) % 1000000;
+#ifdef COIN_HAS_VOL
+                    int returnCode = solveWithVolume(model2, nPasses, saveDoIdiot);
+		    nPasses=0;
+                    if (!returnCode) {
+		      time2 = CoinCpuTime();
+		      timeIdiot = time2 - timeX;
+		      handler_->message(CLP_INTERVAL_TIMING, messages_)
+			<< "Idiot Crash" << timeIdiot << time2 - time1
+			<< CoinMessageEol;
+		      timeX = time2;
+                    }
+#endif
                     if (nPasses > 70) {
                          info.setStartingWeight(1.0e3);
                          info.setReduceIterations(6);
@@ -3581,15 +3593,15 @@ ClpSimplexProgress::looping()
      double objective;
      if (model_->algorithm() < 0) {
        objective = model_->rawObjectiveValue();
-          objective -= model_->bestPossibleImprovement();
+       objective -= model_->bestPossibleImprovement();
      } else {
-       objective = model_->rawObjectiveValue();
+       objective = model_->nonLinearCost()->feasibleReportCost();
      }
      double infeasibility;
      double realInfeasibility = 0.0;
      int numberInfeasibilities;
      int iterationNumber = model_->numberIterations();
-     numberTimesFlagged_ = 0;
+     //numberTimesFlagged_ = 0;
      if (model_->algorithm() < 0) {
           // dual
           infeasibility = model_->sumPrimalInfeasibilities();

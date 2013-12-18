@@ -138,7 +138,7 @@ AbcSimplex::setupPointers(int maxRows,int maxColumns)
   offsetRhs_=tempArray_+numberTotal;
   lowerBasic_=lowerSaved_+numberTotal;
   upperBasic_=upperSaved_+numberTotal;
-  costBasic_=costSaved_+numberTotal;
+  costBasic_=costSaved_+2*numberTotal;
   solutionBasic_=solutionSaved_+numberTotal;
   djBasic_=djSaved_+numberTotal;
   perturbationBasic_=perturbationSaved_+numberTotal;
@@ -5598,6 +5598,11 @@ AbcSimplex::checkArrays(int ignoreEmpty) const
     for (int i=0;i<ABC_NUMBER_USEFUL_NORMAL;i++) 
       elAddress[i]=usefulArray_[i].denseVector();
   } else {
+    if(elAddress[0]!=usefulArray_[0].denseVector()) {
+      printf("elAddress not zero and does not match??\n");
+      for (int i=0;i<ABC_NUMBER_USEFUL_NORMAL;i++) 
+	elAddress[i]=usefulArray_[i].denseVector();
+    }
     for (int i=0;i<ABC_NUMBER_USEFUL_NORMAL;i++) 
       assert(elAddress[i]==usefulArray_[i].denseVector());
   }
@@ -5896,14 +5901,18 @@ AbcSimplexProgress::looping()
   AbcSimplex * model;
   return -1;
 #endif
-  double objective = model->rawObjectiveValue();
-  if (model->algorithm() < 0)
-    objective -= model->bestPossibleImprovement();
+  double objective;
+  if (model_->algorithm() < 0) {
+    objective = model_->rawObjectiveValue();
+    objective -= model_->bestPossibleImprovement();
+  } else {
+    objective = model->abcNonLinearCost()->feasibleReportCost();
+  }
   double infeasibility;
   double realInfeasibility = 0.0;
   int numberInfeasibilities;
   int iterationNumber = model->numberIterations();
-  numberTimesFlagged_ = 0;
+  //numberTimesFlagged_ = 0;
   if (model->algorithm() < 0) {
     // dual
     infeasibility = model->sumPrimalInfeasibilities();

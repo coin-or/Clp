@@ -331,6 +331,9 @@ int AbcSimplexPrimal::primal (int ifValuesPass , int /*startFinishOptions*/)
       // may factorize, checks if problem finished
       if (factorType)
 	statusOfProblemInPrimal(factorType);
+      if (problemStatus_==10 && (moreSpecialOptions_ & 2048) != 0) {
+	problemStatus_=0;
+      }
       if (initialStatus == 10) {
 	initialStatus=-1;
 	// cleanup phase
@@ -435,6 +438,7 @@ int AbcSimplexPrimal::primal (int ifValuesPass , int /*startFinishOptions*/)
   }
   // clean up
   unflag();
+  abcProgress_.clearTimesFlagged();
 #if ABC_PARALLEL>0
   if (parallelMode()) {
     for (int i = 0; i < 6; i++) {
@@ -511,6 +515,7 @@ AbcSimplexPrimal::whileIterating(int valuesOption)
   int numberStartingInfeasibilities=abcNonLinearCost_->numberInfeasibilities();
   // status stays at -1 while iterating, >=0 finished, -2 to invert
   // status -3 to go to top without an invert
+  int numberFlaggedStart =abcProgress_.timesFlagged();
   while (problemStatus_ == -1) {
     if (!ifValuesPass) {
       // choose column to come in
@@ -649,6 +654,8 @@ AbcSimplexPrimal::whileIterating(int valuesOption)
       if (returnCode < -1 && returnCode > -5) {
 	problemStatus_ = -2; //
       } else if (returnCode == -5) {
+	if (abcProgress_.timesFlagged()>10+numberFlaggedStart)
+	  problemStatus_ =-2;
 	if ((moreSpecialOptions_ & 16) == 0 && abcFactorization_->pivots()) {
 	  moreSpecialOptions_ |= 16;
 	  problemStatus_ = -2;
@@ -794,6 +801,7 @@ AbcSimplexPrimal::statusOfProblemInPrimal(int type)
 	    } else if (sequenceOut_ >= 0 && getInternalStatus(sequenceOut_) != basic) {
 	      setFlagged(sequenceOut_);
 	    }
+	    abcProgress_.incrementTimesFlagged();
 	    double newTolerance = CoinMax(0.5 + 0.499 * randomNumberGenerator_.randomDouble(), abcFactorization_->pivotTolerance());
 	    abcFactorization_->pivotTolerance(newTolerance);
 	  } else {
@@ -958,6 +966,7 @@ AbcSimplexPrimal::statusOfProblemInPrimal(int type)
 	  } else if (sequenceOut_ >= 0 && getInternalStatus(sequenceOut_) != basic) {
 	    setFlagged(sequenceOut_);
 	  }
+	  abcProgress_.incrementTimesFlagged();
 	}
 	type = 2; // so will restore weights
 	if (internalFactorize(2) != 0) {
@@ -991,6 +1000,17 @@ AbcSimplexPrimal::statusOfProblemInPrimal(int type)
     loop = abcProgress_.looping();
   else
     loop = -1;
+  if ((moreSpecialOptions_ & 2048) != 0 && !numberPrimalInfeasibilities_ && numberDualInfeasibilities_) {
+    double average = sumDualInfeasibilities_ / (static_cast<double> (numberDualInfeasibilities_));
+    if (abcProgress_.lastIterationNumber(2)==numberIterations_&&
+	((abcProgress_.timesFlagged()>2&&average < 1.0e-1)||
+	 abcProgress_.timesFlagged()>20)) {
+      numberDualInfeasibilities_ = 0;
+      sumDualInfeasibilities_ = 0.0;
+      problemStatus_=3;
+      loop=0;
+    }
+  }
   if (loop >= 0) {
     if (!problemStatus_) {
       // declaring victory
@@ -1264,6 +1284,7 @@ AbcSimplexPrimal::statusOfProblemInPrimal(int type)
 	bool unflagged =
 #endif
 	  unflag();
+	abcProgress_.clearTimesFlagged();
 #if ABC_NORMAL_DEBUG>3
 	if (unflagged && handler_->logLevel() > 0)
 	  printf(" - but flagged variables\n");
@@ -1373,6 +1394,7 @@ AbcSimplexPrimal::statusOfProblemInPrimal(int type)
 	lastCleaned_ = -1; // carry on
       }
       bool unflagged = (unflag() != 0);
+      abcProgress_.clearTimesFlagged();
       if ( lastCleaned_ != numberIterations_ || unflagged) {
 	handler_->message(CLP_PRIMAL_OPTIMAL, messages_)
 	  << primalTolerance_
@@ -1470,6 +1492,7 @@ AbcSimplexPrimal::statusOfProblemInPrimal(int type)
       if(type == 3 && !ifValuesPass) {
 	//bool unflagged =
 	unflag();
+	abcProgress_.clearTimesFlagged();
 	if (sumDualInfeasibilities_ < 1.0e-3 ||
 	    (sumDualInfeasibilities_ / static_cast<double> (numberDualInfeasibilities_)) < 1.0e-5 ||
 	    abcProgress_.lastIterationNumber(0) == numberIterations_) {
@@ -1699,7 +1722,7 @@ AbcSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
                             CoinIndexedVector * spareArray,
                             int valuesPass)
 {
-#if 0
+#if 1
   for (int iRow=0;iRow<numberRows_;iRow++) {
     int iPivot=abcPivotVariable_[iRow];
     assert (costBasic_[iRow]==abcCost_[iPivot]);
@@ -3153,6 +3176,7 @@ AbcSimplexPrimal::unPerturb()
   //sanityCheck();
   // unflag
   unflag();
+  abcProgress_.clearTimesFlagged();
   // get a valid nonlinear cost function
   delete abcNonLinearCost_;
   abcNonLinearCost_ = new AbcNonLinearCost(this);
@@ -3290,6 +3314,7 @@ AbcSimplexPrimal::pivotResult(int ifValuesPass)
 	    << x << sequenceWithin(sequenceIn_)
 	    << CoinMessageEol;
 	  setFlagged(sequenceIn_);
+	  abcProgress_.incrementTimesFlagged();
 	  abcProgress_.clearBadTimes();
 	  lastBadIteration_ = numberIterations_; // say be more cautious
 	  clearAll();
@@ -3347,6 +3372,7 @@ AbcSimplexPrimal::pivotResult(int ifValuesPass)
 	      << x << sequenceWithin(sequenceIn_)
 	      << CoinMessageEol;
 	    setFlagged(sequenceIn_);
+	    abcProgress_.incrementTimesFlagged();
 #if 1 //def FEB_TRY
 	    // Make safer?
 	    double tolerance=abcFactorization_->pivotTolerance();
@@ -3419,6 +3445,7 @@ AbcSimplexPrimal::pivotResult(int ifValuesPass)
 	    << x << sequenceWithin(sequenceIn_)
 	    << CoinMessageEol;
 	  setFlagged(sequenceIn_);
+	  abcProgress_.incrementTimesFlagged();
 	  abcProgress_.clearBadTimes();
 	  lastBadIteration_ = numberIterations_; // say be more cautious
 	  clearAll();
@@ -3464,6 +3491,7 @@ AbcSimplexPrimal::pivotResult(int ifValuesPass)
 	      << x << sequenceWithin(sequenceIn_)
 	      << CoinMessageEol;
 	    setFlagged(sequenceIn_);
+	    abcProgress_.incrementTimesFlagged();
 	    abcProgress_.clearBadTimes();
 	    roundAgain = true;
 	    continue;
@@ -3732,6 +3760,7 @@ AbcSimplexPrimal::pivotResult4(int ifValuesPass)
 	    << x << sequenceWithin(sequenceIn_)
 	    << CoinMessageEol;
 	  setFlagged(sequenceIn_);
+	  abcProgress_.incrementTimesFlagged();
 	  abcProgress_.clearBadTimes();
 	  lastBadIteration_ = numberIterations_; // say be more cautious
 	  clearAll();
@@ -3940,6 +3969,7 @@ AbcSimplexPrimal::doFTUpdate(CoinIndexedVector * vector[4])
 	<< x << sequenceWithin(sequenceIn_)
 	<< CoinMessageEol;
       setFlagged(sequenceIn_);
+      abcProgress_.incrementTimesFlagged();
       abcProgress_.clearBadTimes();
       lastBadIteration_ = numberIterations_; // say be more cautious
       pivotRow_ = -1;

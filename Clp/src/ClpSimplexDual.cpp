@@ -441,7 +441,7 @@ ClpSimplexDual::gutsOfDual(int ifValuesPass, double * & saveDuals, int initialSt
           matrix_->refresh(this);
           // If getting nowhere - why not give it a kick
           // does not seem to work too well - do some more work
-          if (perturbation_ < 101 && numberIterations_ > 2 * (numberRows_ + numberColumns_)
+          if (perturbation_ < 101 && numberIterations_ > 2 * (numberRows_ + numberColumns_) && (moreSpecialOptions_&1048576)==0
                     && initialStatus != 10) {
                perturb();
                // Can't get here if values pass
@@ -783,7 +783,7 @@ int ClpSimplexDual::dual (int ifValuesPass , int startFinishOptions)
                matrix_->refresh(this);
                // If getting nowhere - why not give it a kick
                // does not seem to work too well - do some more work
-               if (perturbation_ < 101 && numberIterations_ > 2 * (numberRows_ + numberColumns_)
+               if (perturbation_ < 101 && numberIterations_ > 2 * (numberRows_ + numberColumns_) && (moreSpecialOptions_&1048576)==0
                          && initialStatus != 10) {
                     perturb();
                     // Can't get here if values pass
@@ -6336,7 +6336,7 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
           // If getting nowhere - why not give it a kick
           // does not seem to work too well - do some more work
           if ((specialOptions_ & 524288) != 0 && (moreSpecialOptions_&2048) == 0 &&
-                    perturbation_ < 101 && numberIterations_ > 2 * (numberRows_ + numberColumns_)) {
+                    perturbation_ < 101 && numberIterations_ > 2 * (numberRows_ + numberColumns_) && (moreSpecialOptions_&1048576)==0) {
                perturb();
                // Can't get here if values pass
                gutsOfSolution(NULL, NULL);
