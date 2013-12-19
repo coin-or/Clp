@@ -50,6 +50,10 @@ static char coin_prompt[] = "Clp:";
 static bool doPrinting = true;
 std::string afterEquals = "";
 static char printArray[200];
+#if COIN_INT_MAX==0
+#undef COIN_INT_MAX
+#define COIN_INT_MAX 2147483647
+#endif
 void setCbcOrClpPrinting(bool yesNo)
 {
      doPrinting = yesNo;
