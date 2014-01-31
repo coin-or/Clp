@@ -10,6 +10,7 @@
 #include <cstring>
 
 #include "CoinHelperFunctions.hpp"
+#include "ClpConfig.h"
 #include "ClpSimplex.hpp"
 #include "ClpInterior.hpp"
 #ifndef SLIM_CLP
@@ -197,6 +198,27 @@ CMessageHandler::setCallBack(clp_callback callback)
 #if defined(__MWERKS__)
 #pragma export on
 #endif
+
+
+COINLIBAPI const char* COINLINKAGE
+Clp_Version(void)
+{
+   return CLP_VERSION;
+}
+COINLIBAPI int COINLINKAGE
+Clp_VersionMajor(void)
+{
+   return CLP_VERSION_MAJOR;
+}
+COINLIBAPI int COINLINKAGE Clp_VersionMinor(void)
+{
+   return CLP_VERSION_MINOR;
+}
+COINLIBAPI int COINLINKAGE Clp_VersionRelease(void)
+{
+   return CLP_VERSION_RELEASE;
+}
+
 /* Default constructor */
 COINLIBAPI Clp_Simplex *  COINLINKAGE
 Clp_newModel()
@@ -667,6 +689,11 @@ Clp_unboundedRay(Clp_Simplex * model)
           memcpy(array,ray,numberColumns*sizeof(double));
      }
      return array;
+}
+COINLIBAPI void COINLINKAGE
+Clp_freeRay(Clp_Simplex * model, double * ray)
+{
+     free(ray);
 }
 /* See if status array exists (partly for OsiClp) */
 COINLIBAPI int COINLINKAGE
