@@ -668,11 +668,6 @@ Clp_unboundedRay(Clp_Simplex * model)
      }
      return array;
 }
-COINLIBAPI void COINLINKAGE
-Clp_freeRay(Clp_Simplex * model, double * ray)
-{
-     free(ray);
-}
 /* See if status array exists (partly for OsiClp) */
 COINLIBAPI int COINLINKAGE
 Clp_statusExists(Clp_Simplex * model)

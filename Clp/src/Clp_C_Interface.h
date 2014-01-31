@@ -212,22 +212,10 @@ extern "C" {
      COINLIBAPI double COINLINKAGE Clp_objectiveValue(Clp_Simplex * model);
      /** Integer information */
      COINLIBAPI char * COINLINKAGE Clp_integerInformation(Clp_Simplex * model);
-     /** Gives Infeasibility ray.
-      * 
-      * Use Clp_freeRay to free the returned array.
-      * 
-      * @return infeasibility ray, or NULL returned if none/wrong.
-      */
+     /** Infeasibility/unbounded ray (NULL returned if none/wrong)
+         Up to user to use free() on these arrays.  */
      COINLIBAPI double * COINLINKAGE Clp_infeasibilityRay(Clp_Simplex * model);
-     /** Gives ray in which the problem is unbounded.
-      * 
-      * Use Clp_freeRay to free the returned array.
-      * 
-      * @return unbounded ray, or NULL returned if none/wrong.
-      */
      COINLIBAPI double * COINLINKAGE Clp_unboundedRay(Clp_Simplex * model);
-     /** Frees a infeasibility or unbounded ray. */
-     COINLIBAPI void COINLINKAGE Clp_freeRay(Clp_Simplex * model, double * ray);
      /** See if status array exists (partly for OsiClp) */
      COINLIBAPI int COINLINKAGE Clp_statusExists(Clp_Simplex * model);
      /** Return address of status array (char[numberRows+numberColumns]) */
