@@ -2585,6 +2585,16 @@ ClpModel::addColumns( CoinModel & modelObject, bool tryPlusMinusOne, bool checkD
 #ifndef SLIM_CLP
                if (!tryPlusMinusOne) {
 #endif
+		    /* addColumns just above extended matrix - to keep
+		       things clean - take off again.  I know it is a bit
+		       clumsy but won't break anything */
+		    {
+		      int * which = new int [numberColumns2];
+		      for (int i=0;i<numberColumns2;i++)
+			which[i]=i+numberColumns;
+		      matrix_->deleteCols(numberColumns2,which);
+		      delete [] which;
+		    }
                     CoinPackedMatrix matrix;
                     modelObject.createPackedMatrix(matrix, associated);
                     assert (!matrix.getExtraGap());
