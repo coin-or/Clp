@@ -2581,38 +2581,23 @@ ClpModel::addColumns( CoinModel & modelObject, bool tryPlusMinusOne, bool checkD
                     tryPlusMinusOne = false;
                }
                assert (columnLower);
-               addColumns(numberColumns2, columnLower, columnUpper, objective, NULL, NULL, NULL);
 #ifndef SLIM_CLP
                if (!tryPlusMinusOne) {
 #endif
-		    /* addColumns just above extended matrix - to keep
-		       things clean - take off again.  I know it is a bit
-		       clumsy but won't break anything */
-		    {
-		      int * which = new int [numberColumns2];
-		      for (int i=0;i<numberColumns2;i++)
-			which[i]=i+numberColumns;
-		      matrix_->deleteCols(numberColumns2,which);
-		      delete [] which;
-		    }
                     CoinPackedMatrix matrix;
                     modelObject.createPackedMatrix(matrix, associated);
                     assert (!matrix.getExtraGap());
-                    if (matrix_->getNumCols()) {
-                         const int * row = matrix.getIndices();
-                         //const int * columnLength = matrix.getVectorLengths();
-                         const CoinBigIndex * columnStart = matrix.getVectorStarts();
-                         const double * element = matrix.getElements();
-                         // make sure matrix has enough rows
-                         matrix_->setDimensions(numberRows_, -1);
-                         numberErrors += matrix_->appendMatrix(numberColumns2, 1, columnStart, row, element,
-                                                               checkDuplicates ? numberRows_ : -1);
-                    } else {
-                         delete matrix_;
-                         matrix_ = new ClpPackedMatrix(matrix);
-                    }
+		    const int * row = matrix.getIndices();
+		    //const int * columnLength = matrix.getVectorLengths();
+		    const CoinBigIndex * columnStart = matrix.getVectorStarts();
+		    const double * element = matrix.getElements();
+		    // make sure matrix has enough rows
+		    matrix_->setDimensions(numberRows_, -1);
+		    addColumns(numberColumns2, columnLower, columnUpper, 
+			       objective, columnStart, row, element);
 #ifndef SLIM_CLP
                } else {
+                    addColumns(numberColumns2, columnLower, columnUpper, objective, NULL, NULL, NULL);
                     // create +-1 matrix
                     CoinBigIndex size = startPositive[numberColumns2];
                     int * indices = new int[size];

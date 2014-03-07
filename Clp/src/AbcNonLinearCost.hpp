@@ -40,6 +40,7 @@ class CoinIndexedVector;
 #define CLP_FEASIBLE 1
 #define CLP_ABOVE_UPPER 2
 #define CLP_SAME 4
+#ifndef ClpNonLinearCost_H
 inline int originalStatus(unsigned char status)
 {
   return (status & 15);
@@ -67,6 +68,7 @@ inline void setSameStatus(unsigned char &status)
   status = static_cast<unsigned char>(status & ~(15 << 4));
   status = static_cast<unsigned char>(status | (CLP_SAME << 4));
 }
+#endif
 class AbcNonLinearCost  {
   
 public:

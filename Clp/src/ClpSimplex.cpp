@@ -2519,6 +2519,7 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
      else
           nonLinearCost_ = NULL;
      solveType_ = rhs.solveType_;
+     eventHandler_->setSimplex(this);
 }
 // type == 0 do everything, most + pivot data, 2 factorization data as well
 void
@@ -2860,7 +2861,7 @@ ClpSimplex::checkBothSolutions()
      double primalTolerance = primalTolerance_;
      double relaxedToleranceP = primalTolerance_;
      // we can't really trust infeasibilities if there is primal error
-     double error = CoinMin(1.0e-2, largestPrimalError_);
+     double error = CoinMin(1.0e-2, CoinMax(largestPrimalError_,5.0*primalTolerance_));
      // allow tolerance at least slightly bigger than standard
      relaxedToleranceP = relaxedToleranceP +  error;
      sumOfRelaxedPrimalInfeasibilities_ = 0.0;
@@ -2869,7 +2870,7 @@ ClpSimplex::checkBothSolutions()
      double dualTolerance = dualTolerance_;
      double relaxedToleranceD = dualTolerance;
      // we can't really trust infeasibilities if there is dual error
-     error = CoinMin(1.0e-2, largestDualError_);
+     error = CoinMin(1.0e-2, CoinMax(largestDualError_,5.0*dualTolerance_));
      // allow tolerance at least slightly bigger than standard
      relaxedToleranceD = relaxedToleranceD +  error;
      // allow bigger tolerance for possible improvement

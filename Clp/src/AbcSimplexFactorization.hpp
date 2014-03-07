@@ -235,6 +235,9 @@ public:
   inline int pivots (  ) const {
     return coinAbcFactorization_->pivots() ;
   }
+  /// Sets model
+  inline void setModel(AbcSimplex * model)
+  {model_ = model;}
   /// Sets number of pivots since factorization 
   inline void setPivots ( int value ) const {
     coinAbcFactorization_->setPivots(value) ;

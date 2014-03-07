@@ -4585,6 +4585,9 @@ CoinAbcTypeFactorization::checkSparse()
       btranAverageAfterU_ = INITIAL_AVERAGE2;
       btranAverageAfterR_ = INITIAL_AVERAGE2;
       btranAverageAfterL_ = INITIAL_AVERAGE2;
+      btranFullCountAfterL_ = INITIAL_AVERAGE2;
+      btranFullCountAfterR_ = INITIAL_AVERAGE2;
+      btranFullCountAfterU_ = INITIAL_AVERAGE2;
     }
     ftranFullCountInput_= CoinMax(ftranFullCountInput_,1.0);
     ftranFullAverageAfterL_ = CoinMax(ftranFullCountAfterL_/ftranFullCountInput_,INITIAL_AVERAGE2);

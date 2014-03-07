@@ -335,8 +335,8 @@ public:
   ClpDataSave saveData() ;
   /// Restore data
   void restoreData(ClpDataSave saved);
-  /// Clean up status
-  void cleanStatus();
+  /// Clean up status - make sure no superbasic etc
+  void cleanStatus(bool valuesPass=false);
   /** Computes duals from scratch. If givenDjs then
       allows for nonzero basic djs.  Returns number of refinements  */
   int computeDuals(double * givenDjs, CoinIndexedVector * array1, CoinIndexedVector * array2);
@@ -741,6 +741,12 @@ public:
   /// For dealing with all issues of cycling etc
   inline AbcSimplexProgress * abcProgress()
   { return &abcProgress_;}
+#ifdef ABC_SPRINT
+  /// Overwrite to create sub problem (just internal arrays) - save full stuff
+  AbcSimplex * createSubProblem(int numberColumns,const int * whichColumn);
+  /// Restore stuff from sub problem (and delete sub problem)
+  void restoreFromSubProblem(AbcSimplex * fullProblem, const int * whichColumn);
+#endif
 public:
   /** Clears an array and says available (-1 does all)
       when no possibility of going parallel */

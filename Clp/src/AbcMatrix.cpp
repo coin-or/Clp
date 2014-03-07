@@ -143,7 +143,46 @@ AbcMatrix::AbcMatrix (const CoinPackedMatrix & rhs)
   minimumObjectsScan_ = -1;
   minimumGoodReducedCosts_ = -1;
 }
-
+#ifdef ABC_SPRINT
+/* Subset constructor (without gaps). */
+AbcMatrix::AbcMatrix (const AbcMatrix & wholeMatrix,
+		      int numberRows, const int * whichRows,
+		      int numberColumns, const int * whichColumns)
+{
+#ifndef COIN_SPARSE_MATRIX
+  matrix_ = new CoinPackedMatrix(*wholeMatrix.matrix_,numberRows,whichRows,
+				 numberColumns,whichColumns);
+#else
+  matrix_ = new CoinPackedMatrix(rhs, -0, -0);
+  abort();
+#endif
+  matrix_->cleanMatrix();
+  model_=NULL;
+  rowStart_ = NULL;
+  element_ = NULL;
+  column_ = NULL;
+#ifdef COUNT_COPY
+  countRealColumn_ = NULL;
+  countStartLarge_ = NULL;
+  countRow_ = NULL;
+  countElement_ = NULL;
+  smallestCount_ = 0;
+  largestCount_ = 0;
+#endif
+  numberColumnBlocks_=1;
+  startColumnBlock_[0]=0;
+  startColumnBlock_[1]=0;
+  numberRowBlocks_ = 0;
+  startFraction_ = 0;
+  endFraction_ = 1.0;
+  savedBestDj_ = 0;
+  originalWanted_ = 0;
+  currentWanted_ = 0;
+  savedBestSequence_ = -1;
+  minimumObjectsScan_ = -1;
+  minimumGoodReducedCosts_ = -1;
+}
+#endif
 //-------------------------------------------------------------------
 // Destructor
 //-------------------------------------------------------------------
@@ -3149,7 +3188,10 @@ AbcMatrix::primalColumnDouble(CoinPartitionedVector & updateForTableauRow,
    // see if worth using row copy
    int maximumRows=model_->maximumAbcNumberRows();
    int number=updateForTableauRow.getNumElements();
-   assert (number);
+   // was assert (number);
+   if (!number) {
+     printf("Null tableau row!\n");
+   }
    bool useRowCopy = (gotRowCopy()&&(number<<2)<maximumRows);
    //useRowCopy=false;
    if (!scaleFactor)

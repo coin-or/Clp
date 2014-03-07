@@ -521,6 +521,211 @@ AbcSimplex::translate(int type)
     CoinAbcMemcpy(abcCost_,abcCost_+maximumNumberTotal_,numberTotal_);
   }
 }
+#ifdef ABC_SPRINT
+// Overwrite to create sub problem (just internal arrays) - save full stuff
+AbcSimplex * 
+AbcSimplex::createSubProblem(int numberColumns,const int * whichColumn)
+{
+  int numberFullColumns = numberColumns_;
+  numberColumns_ = numberColumns;
+  AbcSimplex * subProblem = this;
+  AbcSimplex * fullProblem = reinterpret_cast<AbcSimplex *>(new char[sizeof(AbcSimplex)]);
+  memset(fullProblem,0,sizeof(AbcSimplex));
+  fullProblem->maximumAbcNumberRows_ = maximumAbcNumberRows_;
+  fullProblem->numberColumns_ = numberFullColumns;
+  fullProblem->numberTotal_ = numberTotal_;
+  fullProblem->maximumNumberTotal_ = maximumNumberTotal_;
+  fullProblem->numberTotalWithoutFixed_ = numberTotalWithoutFixed_;
+  fullProblem->abcPrimalColumnPivot_ =   abcPrimalColumnPivot_;
+  fullProblem->internalStatus_ =   internalStatus_;
+  fullProblem->abcLower_ =   abcLower_;
+  fullProblem->abcUpper_ =   abcUpper_;
+  fullProblem->abcCost_ =   abcCost_;
+  fullProblem->abcDj_ =   abcDj_;
+  fullProblem->abcSolution_ =   abcSolution_;
+  fullProblem->scaleFromExternal_ =   scaleFromExternal_;
+  fullProblem->offset_ =   offset_;
+  fullProblem->abcPerturbation_ =   abcPerturbation_;
+  fullProblem->abcPivotVariable_ =   abcPivotVariable_;
+  fullProblem->abcMatrix_ =   abcMatrix_;
+  fullProblem->abcNonLinearCost_ = abcNonLinearCost_;
+  fullProblem->setupPointers(maximumAbcNumberRows_,numberFullColumns);
+  subProblem->numberTotal_= maximumAbcNumberRows_+numberColumns;
+  subProblem->maximumNumberTotal_= maximumAbcNumberRows_+numberColumns;
+  subProblem->numberTotalWithoutFixed_= subProblem->numberTotal_;
+  int sizeArray=2*subProblem->maximumNumberTotal_+maximumAbcNumberRows_;
+  subProblem->internalStatus_ = newArray(reinterpret_cast<unsigned char *>(NULL),
+					 sizeArray+subProblem->maximumNumberTotal_);
+  subProblem->abcLower_ = newArray(reinterpret_cast<double *>(NULL),sizeArray);
+  subProblem->abcUpper_ = newArray(reinterpret_cast<double *>(NULL),sizeArray);
+  subProblem->abcCost_ = newArray(reinterpret_cast<double *>(NULL),sizeArray+subProblem->maximumNumberTotal_);
+  subProblem->abcDj_ = newArray(reinterpret_cast<double *>(NULL),sizeArray);
+  subProblem->abcSolution_ = newArray(reinterpret_cast<double *>(NULL),sizeArray+subProblem->maximumNumberTotal_);
+  //fromExternal_ = newArray(reinterpret_cast<int *>(NULL),sizeArray);
+  //toExternal_ = newArray(reinterpret_cast<int *>(NULL),sizeArray);
+  subProblem->scaleFromExternal_ = newArray(reinterpret_cast<double *>(NULL),sizeArray);
+  subProblem->offset_ = newArray(reinterpret_cast<double *>(NULL),sizeArray);
+  subProblem->abcPerturbation_ = newArray(reinterpret_cast<double *>(NULL),sizeArray);
+  subProblem->abcPivotVariable_ = newArray(reinterpret_cast<int *>(NULL),maximumAbcNumberRows_);
+  subProblem->setupPointers(maximumAbcNumberRows_,numberColumns);
+  // could use arrays - but for now be safe
+  int * backward = new int [numberFullColumns+numberRows_];
+  int * whichRow = backward+numberFullColumns;
+  for (int i=0;i<numberFullColumns;i++)
+    backward[i]=-1;
+  for (int i=0;i<numberColumns;i++)
+    backward[whichColumn[i]]=i+numberRows_;
+  for (int i=0;i<numberRows_;i++) {
+    whichRow[i]=i;
+    int iPivot = fullProblem->abcPivotVariable_[i];
+    if (iPivot<numberRows_) {
+      subProblem->abcPivotVariable_[i]=iPivot;
+    } else {
+      assert(backward[iPivot-numberRows_]>=0);
+      subProblem->abcPivotVariable_[i]=backward[iPivot-numberRows_];
+    }
+    subProblem->internalStatus_[i] = fullProblem->internalStatus_[i];
+    subProblem->abcLower_[i] = fullProblem->abcLower_[i];
+    subProblem->abcUpper_[i] = fullProblem->abcUpper_[i];
+    subProblem->abcCost_[i] = fullProblem->abcCost_[i];
+    subProblem->abcDj_[i] = fullProblem->abcDj_[i];
+    subProblem->abcSolution_[i] = fullProblem->abcSolution_[i];
+    subProblem->abcPerturbation_[i] = fullProblem->abcPerturbation_[i];
+    subProblem->internalStatusSaved_[i] = fullProblem->internalStatusSaved_[i];
+    subProblem->perturbationSaved_[i] = fullProblem->perturbationSaved_[i];
+    subProblem->lowerSaved_[i] = fullProblem->lowerSaved_[i];
+    subProblem->upperSaved_[i] = fullProblem->upperSaved_[i];
+    subProblem->costSaved_[i] = fullProblem->costSaved_[i];
+    subProblem->djSaved_[i] = fullProblem->djSaved_[i];
+    subProblem->solutionSaved_[i] = fullProblem->solutionSaved_[i];
+    subProblem->offset_[i] = fullProblem->offset_[i];
+    subProblem->lowerBasic_[i] = fullProblem->lowerBasic_[i];
+    subProblem->upperBasic_[i] = fullProblem->upperBasic_[i];
+    subProblem->costBasic_[i] = fullProblem->costBasic_[i];
+    subProblem->solutionBasic_[i] = fullProblem->solutionBasic_[i];
+    subProblem->djBasic_[i] = fullProblem->djBasic_[i];
+  }
+  for (int i=0;i<numberColumns;i++) {
+    int k=whichColumn[i];
+    subProblem->internalStatus_[maximumAbcNumberRows_+i] = 
+      fullProblem->internalStatus_[maximumAbcNumberRows_+k];
+    subProblem->internalStatus_[maximumAbcNumberRows_+i] = fullProblem->internalStatus_[maximumAbcNumberRows_+k];
+    subProblem->abcLower_[maximumAbcNumberRows_+i] = fullProblem->abcLower_[maximumAbcNumberRows_+k];
+    subProblem->abcUpper_[maximumAbcNumberRows_+i] = fullProblem->abcUpper_[maximumAbcNumberRows_+k];
+    subProblem->abcCost_[maximumAbcNumberRows_+i] = fullProblem->abcCost_[maximumAbcNumberRows_+k];
+    subProblem->abcDj_[maximumAbcNumberRows_+i] = fullProblem->abcDj_[maximumAbcNumberRows_+k];
+    subProblem->abcSolution_[maximumAbcNumberRows_+i] = fullProblem->abcSolution_[maximumAbcNumberRows_+k];
+    subProblem->abcPerturbation_[maximumAbcNumberRows_+i] = fullProblem->abcPerturbation_[maximumAbcNumberRows_+k];
+    subProblem->internalStatusSaved_[maximumAbcNumberRows_+i] = fullProblem->internalStatusSaved_[maximumAbcNumberRows_+k];
+    subProblem->perturbationSaved_[maximumAbcNumberRows_+i] = fullProblem->perturbationSaved_[maximumAbcNumberRows_+k];
+    subProblem->lowerSaved_[maximumAbcNumberRows_+i] = fullProblem->lowerSaved_[maximumAbcNumberRows_+k];
+    subProblem->upperSaved_[maximumAbcNumberRows_+i] = fullProblem->upperSaved_[maximumAbcNumberRows_+k];
+    subProblem->costSaved_[maximumAbcNumberRows_+i] = fullProblem->costSaved_[maximumAbcNumberRows_+k];
+    subProblem->djSaved_[maximumAbcNumberRows_+i] = fullProblem->djSaved_[maximumAbcNumberRows_+k];
+    subProblem->solutionSaved_[maximumAbcNumberRows_+i] = fullProblem->solutionSaved_[maximumAbcNumberRows_+k];
+    subProblem->offset_[maximumAbcNumberRows_+i] = fullProblem->offset_[maximumAbcNumberRows_+k];
+  }
+  subProblem->abcNonLinearCost_=new AbcNonLinearCost(subProblem);
+  subProblem->abcNonLinearCost_->checkInfeasibilities(0.0);
+  subProblem->abcMatrix_ = new AbcMatrix(*fullProblem->abcMatrix_,numberRows_,whichRow,
+					 numberColumns,whichColumn);
+  subProblem->abcMatrix_->setModel(subProblem);
+  subProblem->abcMatrix_->rebalance();
+  subProblem->abcPrimalColumnPivot_ = new AbcPrimalColumnSteepest();
+  subProblem->abcPrimalColumnPivot_->saveWeights(subProblem,2);
+  delete [] backward;
+  // swap
+  return fullProblem;
+}
+// Restore stuff from sub problem (and delete sub problem)
+void 
+AbcSimplex::restoreFromSubProblem(AbcSimplex * fullProblem, const int * whichColumn)
+{
+  AbcSimplex * subProblem = this;
+  for (int i=0;i<numberRows_;i++) {
+    int iPivot = subProblem->abcPivotVariable_[i];
+    if (iPivot<numberRows_) {
+      fullProblem->abcPivotVariable_[i]=iPivot;
+    } else {
+      fullProblem->abcPivotVariable_[i]=whichColumn[iPivot-numberRows_]+numberRows_;
+    }
+    fullProblem->internalStatus_[i] = subProblem->internalStatus_[i];
+    fullProblem->abcLower_[i] = subProblem->abcLower_[i];
+    fullProblem->abcUpper_[i] = subProblem->abcUpper_[i];
+    fullProblem->abcCost_[i] = subProblem->abcCost_[i];
+    fullProblem->abcDj_[i] = subProblem->abcDj_[i];
+    fullProblem->abcSolution_[i] = subProblem->abcSolution_[i];
+    fullProblem->abcPerturbation_[i] = subProblem->abcPerturbation_[i];
+    fullProblem->internalStatusSaved_[i] = subProblem->internalStatusSaved_[i];
+    fullProblem->perturbationSaved_[i] = subProblem->perturbationSaved_[i];
+    fullProblem->lowerSaved_[i] = subProblem->lowerSaved_[i];
+    fullProblem->upperSaved_[i] = subProblem->upperSaved_[i];
+    fullProblem->costSaved_[i] = subProblem->costSaved_[i];
+    fullProblem->djSaved_[i] = subProblem->djSaved_[i];
+    fullProblem->solutionSaved_[i] = subProblem->solutionSaved_[i];
+    fullProblem->offset_[i] = subProblem->offset_[i];
+    fullProblem->lowerBasic_[i] = subProblem->lowerBasic_[i];
+    fullProblem->upperBasic_[i] = subProblem->upperBasic_[i];
+    fullProblem->costBasic_[i] = subProblem->costBasic_[i];
+    fullProblem->solutionBasic_[i] = subProblem->solutionBasic_[i];
+    fullProblem->djBasic_[i] = subProblem->djBasic_[i];
+  }
+  int numberColumns = subProblem->numberColumns_;
+  for (int i=0;i<numberColumns;i++) {
+    int k=whichColumn[i];
+    fullProblem->internalStatus_[maximumAbcNumberRows_+k] = subProblem->internalStatus_[maximumAbcNumberRows_+i];
+    fullProblem->abcLower_[maximumAbcNumberRows_+k] = subProblem->abcLower_[maximumAbcNumberRows_+i];
+    fullProblem->abcUpper_[maximumAbcNumberRows_+k] = subProblem->abcUpper_[maximumAbcNumberRows_+i];
+    fullProblem->abcCost_[maximumAbcNumberRows_+k] = subProblem->abcCost_[maximumAbcNumberRows_+i];
+    fullProblem->abcDj_[maximumAbcNumberRows_+k] = subProblem->abcDj_[maximumAbcNumberRows_+i];
+    fullProblem->abcSolution_[maximumAbcNumberRows_+k] = subProblem->abcSolution_[maximumAbcNumberRows_+i];
+    fullProblem->abcPerturbation_[maximumAbcNumberRows_+k] = subProblem->abcPerturbation_[maximumAbcNumberRows_+i];
+    fullProblem->internalStatusSaved_[maximumAbcNumberRows_+k] = subProblem->internalStatusSaved_[maximumAbcNumberRows_+i];
+    fullProblem->perturbationSaved_[maximumAbcNumberRows_+k] = subProblem->perturbationSaved_[maximumAbcNumberRows_+i];
+    fullProblem->lowerSaved_[maximumAbcNumberRows_+k] = subProblem->lowerSaved_[maximumAbcNumberRows_+i];
+    fullProblem->upperSaved_[maximumAbcNumberRows_+k] = subProblem->upperSaved_[maximumAbcNumberRows_+i];
+    fullProblem->costSaved_[maximumAbcNumberRows_+k] = subProblem->costSaved_[maximumAbcNumberRows_+i];
+    fullProblem->djSaved_[maximumAbcNumberRows_+k] = subProblem->djSaved_[maximumAbcNumberRows_+i];
+    fullProblem->solutionSaved_[maximumAbcNumberRows_+k] = subProblem->solutionSaved_[maximumAbcNumberRows_+i];
+    fullProblem->offset_[maximumAbcNumberRows_+k] = subProblem->offset_[maximumAbcNumberRows_+i];
+  }
+  delete [] subProblem->internalStatus_;
+  delete [] subProblem->abcPerturbation_;
+  delete subProblem->abcMatrix_;
+  delete [] subProblem->abcLower_;
+  delete [] subProblem->abcUpper_;
+  delete [] subProblem->abcCost_;
+  delete [] subProblem->abcSolution_;
+  delete [] subProblem->abcDj_;
+  delete subProblem->abcPrimalColumnPivot_;
+  delete [] subProblem->scaleFromExternal_;
+  delete [] subProblem->offset_;
+  delete [] subProblem->abcPivotVariable_;
+  delete [] subProblem->reversePivotVariable_;
+  delete subProblem->abcNonLinearCost_;
+  numberColumns_ = fullProblem->numberColumns_;
+  numberTotal_ =   fullProblem->numberTotal_;
+  maximumNumberTotal_ =   fullProblem->maximumNumberTotal_;
+  numberTotalWithoutFixed_ =   fullProblem->numberTotalWithoutFixed_;
+  abcPrimalColumnPivot_ =   fullProblem->abcPrimalColumnPivot_;
+  internalStatus_ =   fullProblem->internalStatus_;
+  abcLower_ =   fullProblem->abcLower_;
+  abcUpper_ =   fullProblem->abcUpper_;
+  abcCost_ =   fullProblem->abcCost_;
+  abcDj_ =   fullProblem->abcDj_;
+  abcSolution_ =   fullProblem->abcSolution_;
+  scaleFromExternal_ =   fullProblem->scaleFromExternal_;
+  offset_ =   fullProblem->offset_;
+  abcPerturbation_ =   fullProblem->abcPerturbation_;
+  abcPivotVariable_ =   fullProblem->abcPivotVariable_;
+  abcMatrix_ =   fullProblem->abcMatrix_;
+  setupPointers(maximumAbcNumberRows_,numberColumns);
+  // ? redo nonlinearcost
+  abcNonLinearCost_ = fullProblem->abcNonLinearCost_;
+  abcNonLinearCost_->refresh();
+  delete [] reinterpret_cast<char *>(fullProblem);
+}
+#endif
 /* Sets dual values pass djs using unscaled duals
    type 1 - values pass
    type 2 - just use as infeasibility weights 
@@ -994,6 +1199,7 @@ int AbcSimplex::internalFactorize ( int solveType)
 	   numberInside,sumInside,numberInsideLarge);
 #endif
 #endif
+  // *** replace below by cleanStatus
   for (int iSequence = 0; iSequence < numberTotal_; iSequence++) {
     AbcSimplex::Status status=getInternalStatus(iSequence);
     if (status!= basic&&status!=isFixed&&abcUpper_[iSequence] == abcLower_[iSequence])
@@ -1049,6 +1255,44 @@ int AbcSimplex::internalFactorize ( int solveType)
     }
   }
   return status;
+}
+// Make sure no superbasic etc
+void 
+AbcSimplex::cleanStatus(bool valuesPass)
+{
+  for (int iSequence = 0; iSequence < numberTotal_; iSequence++) {
+    AbcSimplex::Status status=getInternalStatus(iSequence);
+    if (status!= basic&&status!=isFixed&&abcUpper_[iSequence] == abcLower_[iSequence])
+      setInternalStatus(iSequence,isFixed);
+  }
+  if (numberIterations_==baseIteration_&&!valuesPass) {
+    double largeValue = this->largeValue();
+    double * COIN_RESTRICT solution = abcSolution_;
+    for (int iSequence = 0; iSequence < numberTotal_; iSequence++) {
+      AbcSimplex::Status status=getInternalStatus(iSequence);
+      if (status== superBasic) {
+	double lower = abcLower_[iSequence];
+	double upper = abcUpper_[iSequence];
+	double value = solution[iSequence];
+	AbcSimplex::Status thisStatus=isFree;
+	if (lower > -largeValue || upper < largeValue) {
+	  if (lower!=upper) {
+	    if (fabs(value - lower) < fabs(value - upper)) {
+	      thisStatus=AbcSimplex::atLowerBound;
+	      solution[iSequence] = lower;
+	    } else {
+	      thisStatus= AbcSimplex::atUpperBound;
+	      solution[iSequence] = upper;
+	    }
+	  } else {
+	    thisStatus= AbcSimplex::isFixed;
+	    solution[iSequence] = upper;
+	  }
+	  setInternalStatus(iSequence,thisStatus);
+	}
+      }
+    }
+  }
 }
 // Sets objectiveValue_ from rawObjectiveValue_
 void 
@@ -3974,7 +4218,7 @@ ClpSimplex::doAbcPrimal(int ifValuesPass)
     int returnCode = abcSimplex_->doAbcPrimal(ifValuesPass);
     //set to force crossover test returnCode=1;
     abcSimplex_->permuteOut(ROW_PRIMAL_OK|ROW_DUAL_OK|COLUMN_PRIMAL_OK|COLUMN_DUAL_OK|ALL_STATUS_OK);
-    if (returnCode) {
+    if (returnCode && problemStatus_ < 3) {
       // fix as this model is all messed up e.g. scaling
      scalingFlag_ = abs(scalingFlag_);
      //delete [] rowScale_;
@@ -4006,7 +4250,7 @@ ClpSimplex::doAbcPrimal(int ifValuesPass)
 	 columnArray_[i]->clear();
      }
      //problemStatus_=-1;
-     if (status!=3&&status!=0) {
+     if (status<3&&status!=0) {
        if (status!=10) {
 	 primal(); // Do ClpSimplexPrimal
        } else {
@@ -4093,6 +4337,8 @@ AbcSimplex::doAbcPrimal(int ifValuesPass)
     if (iPass>2)
       perturbation_=101;
     baseIteration_=numberIterations_;
+    // make sure no superbasic
+    cleanStatus();
     if ((specialOptions_&8192)==0)
       static_cast<AbcSimplexDual *> (this)->dual();
     baseIteration_=numberIterations_;
@@ -4823,6 +5069,7 @@ AbcSimplex::permuteIn()
     double lowerValue=columnLower_[iColumn];
     double upperValue=columnUpper_[iColumn];
     double thisOffset=0.0;
+#if 1 //ndef CLP_USER_DRIVEN
     double lowerValue2 = fabs(lowerValue);
     double upperValue2 = fabs(upperValue);
     if (CoinMin(lowerValue2,upperValue2)<1000.0) {
@@ -4832,12 +5079,15 @@ AbcSimplex::permuteIn()
       else
 	thisOffset=lowerValue;
     }
+#endif
     offset[iColumn]=thisOffset;
-    objectiveOffset_ += thisOffset*objective[iColumn]*optimizationDirection_;
-    double scaledOffset = thisOffset*scale;
-    for (CoinBigIndex j=columnStart[iColumn];j<columnStart[iColumn+1];j++) {
-      int iRow=row[j];
-      offsetRhs[iRow]+= scaledOffset*elementByColumn[j];
+    if (thisOffset) {
+      objectiveOffset_ += thisOffset*objective[iColumn]*optimizationDirection_;
+      double scaledOffset = thisOffset*scale;
+      for (CoinBigIndex j=columnStart[iColumn];j<columnStart[iColumn+1];j++) {
+	int iRow=row[j];
+	offsetRhs[iRow]+= scaledOffset*elementByColumn[j];
+      }
     }
     lowerValue-=thisOffset;
     if (lowerValue>-1.0e30) 
@@ -5271,13 +5521,15 @@ AbcSimplex::permuteOut(int whatsWanted)
 	secondaryStatus_ = 4;
     }
   }
-  if (problemStatus_ == 2) {
-    for (int i = 0; i < numberColumns_; i++) {
-      ray_[i] *= columnScale[i];
-    }
-  } else if (problemStatus_ == 1 && ray_) {
-    for (int i = 0; i < numberRows_; i++) {
-      ray_[i] *= rowScale[i];
+  if (scalingFlag_) {
+    if (problemStatus_ == 2) {
+      for (int i = 0; i < numberColumns_; i++) {
+	ray_[i] *= columnScale[i];
+      }
+    } else if (problemStatus_ == 1 && ray_) {
+      for (int i = 0; i < numberRows_; i++) {
+	ray_[i] *= rowScale[i];
+      }
     }
   }
 }
@@ -5995,7 +6247,6 @@ AbcSimplexProgress::looping()
 	    static_cast<AbcSimplexDual *>(model)->bounceTolerances(100);
 	  }
 	} else {
-	  abort();
 	  // primal - change tolerance
 	  if (numberBadTimes_ > 3)
 	    model->setCurrentPrimalTolerance(model->currentPrimalTolerance() * 1.05);

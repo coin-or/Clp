@@ -3293,9 +3293,14 @@ AbcSimplexDual::statusOfProblemInDual(int type)
   // see if cutoff reached
   double limit = 0.0;
   getDblParam(ClpDualObjectiveLimit, limit);
+  int numberChangedBounds=0;
   if (primalFeasible()&&ignoreStuff!=2) {
     // may be optimal - or may be bounds are wrong
-    int numberChangedBounds = changeBounds(0, changeCost);
+    numberChangedBounds = changeBounds(0, changeCost);
+    if (numberChangedBounds)
+      gutsOfSolution(2);
+  }
+  if (primalFeasible()&&ignoreStuff!=2) {
     if (numberChangedBounds <= 0 && !numberDualInfeasibilities_) {
       //looks optimal - do we need to reset tolerance
       if (lastCleaned_ < numberIterations_ && /*numberTimesOptimal_*/ stateDualColumn_ < 4 &&
@@ -3366,7 +3371,7 @@ AbcSimplexDual::statusOfProblemInDual(int type)
       printf("numberChangedBounds %d numberAtFakeBound %d at line %d in file %s\n",
 	     numberChangedBounds,numberAtFakeBound(),__LINE__,__FILE__);
 #endif
-    } else if (numberAtFakeBound()) {
+    } else if (numberChangedBounds>0||numberAtFakeBound()) {
       handler_->message(CLP_DUAL_BOUNDS, messages_)
 	<< currentDualBound_
 	<< CoinMessageEol;
@@ -5927,7 +5932,7 @@ AbcSimplexDual::dual()
   if (!lastDualBound_) {
     dualTolerance_ = dblParam_[ClpDualTolerance];
     primalTolerance_ = dblParam_[ClpPrimalTolerance];
-    int tryType=moreSpecialOptions_/131072;
+    int tryType=moreSpecialOptions_/65536;
     if (tryType<5) {
       currentDualBound_=1.0e8;
     } else {

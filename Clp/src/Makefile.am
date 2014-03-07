@@ -235,7 +235,7 @@ includecoin_HEADERS = \
 	Idiot.hpp
 
 if COIN_HAS_ABC
-includecoin_HEADERS += AbcSimplex.hpp CoinAbcCommon.hpp AbcCommon.hpp
+includecoin_HEADERS += AbcSimplex.hpp CoinAbcCommon.hpp AbcCommon.hpp AbcNonLinearCost.hpp
 endif
 
 
