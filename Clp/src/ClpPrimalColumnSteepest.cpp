@@ -511,7 +511,7 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
           infeas[sequenceOut] = 0.0;
      }
      if (model_->factorization()->pivots() && model_->numberPrimalInfeasibilities())
-          tolerance = CoinMax(tolerance, 1.0e-10 * model_->infeasibilityCost());
+          tolerance = CoinMax(tolerance, 1.0e-15 * model_->infeasibilityCost());
      tolerance *= tolerance; // as we are using squares
 
      int iPass;
@@ -3697,7 +3697,7 @@ ClpPrimalColumnSteepest::partialPricing(CoinIndexedVector * updates,
           tolerance = CoinMin(1000.0, tolerance);
      }
      if (model_->factorization()->pivots() && model_->numberPrimalInfeasibilities())
-          tolerance = CoinMax(tolerance, 1.0e-10 * model_->infeasibilityCost());
+          tolerance = CoinMax(tolerance, 1.0e-15 * model_->infeasibilityCost());
      // So partial pricing can use
      model_->setCurrentDualTolerance(tolerance);
      model_->factorization()->updateColumnTranspose(spareRow2, updates);

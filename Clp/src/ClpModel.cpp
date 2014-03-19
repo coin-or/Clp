@@ -1426,6 +1426,31 @@ ClpModel::deleteRows(int number, const int * which)
           // status
           if (status_) {
                if (numberColumns_ + newSize) {
+#define CLP_TIDY_DELETE_ROWS
+#ifdef CLP_TIDY_DELETE_ROWS
+		    // try and get right number of basic
+		    int nChange=0;
+		    unsigned char * rowStatus = status_+numberColumns_;
+		    for (int i=0;i<number;i++) {
+		      int iRow = which[i];
+		      if ((rowStatus[iRow]&7) !=1)
+			nChange++;
+		    }
+		    // take out slacks at bound
+		    for (int iRow=0;iRow<numberRows_;iRow++) {
+			if (!nChange)
+			  break;
+			if ((rowStatus[iRow]&7) ==1) {
+			  if (fabs(rowActivity_[iRow]-rowLower_[iRow])<1.0e-8) {
+			    rowStatus[iRow]=3;
+			    nChange--;
+			  } else if (fabs(rowActivity_[iRow]-rowUpper_[iRow])<1.0e-8) {
+			    rowStatus[iRow]=2;
+			    nChange--;
+			  }
+			}
+		      }
+#endif
                     unsigned char * tempR  = reinterpret_cast<unsigned char *>
                                              (deleteChar(reinterpret_cast<char *>(status_) + numberColumns_,
                                                          numberRows_,

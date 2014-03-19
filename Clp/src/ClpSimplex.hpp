@@ -305,8 +305,10 @@ public:
   /** solvetype 0 for dual, 1 for primal
       startup 1 for values pass
       interrupt whether to pass across interrupt handler
+      add 10 to return AbcSimplex 
   */
-  void dealWithAbc(int solveType,int startUp,bool interrupt=false);
+  AbcSimplex * dealWithAbc(int solveType,int startUp,bool interrupt=false);
+  //void dealWithAbc(int solveType,int startUp,bool interrupt=false);
 #endif
      /** This loads a model from a CoinStructuredModel object - returns number of errors.
          If originalOrder then keep to order stored in blocks,
@@ -420,10 +422,8 @@ public:
      ClpSimplex * miniPresolve(char * rowType, char * columnType,void ** info);
      /// After mini presolve
      void miniPostsolve(const ClpSimplex * presolvedModel,void * info);
-     /// Scale real objective 
-     void scaleRealObjective(double multiplier);
-     /// Scale so no RHS (abs not infinite) > value
-     void scaleRealRhs(double maxValue, double killIfSmaller);
+     /// mini presolve and solve
+     void miniSolve(char * rowType, char *columnType,int algorithm, int startUp);
      /** Write the basis in MPS format to the specified file.
          If writeValues true writes values of structurals
          (and adds VALUES to end of NAME card)
@@ -483,6 +483,12 @@ public:
      void setDualRowPivotAlgorithm(ClpDualRowPivot & choice);
      /// Sets column pivot choice algorithm in primal
      void setPrimalColumnPivotAlgorithm(ClpPrimalColumnPivot & choice);
+     /// Create a hotstart point of the optimization process
+     void markHotStart(void * & saveStuff);
+     /// Optimize starting from the hotstart
+     void solveFromHotStart(void * saveStuff);
+     /// Delete the snapshot
+     void unmarkHotStart(void * saveStuff);
      /** For strong branching.  On input lower and upper are new bounds
          while on output they are change in objective function values
          (>1.0e50 infeasible).
@@ -820,9 +826,9 @@ protected:
      */
      double scaleObjective(double value);
      /// Solve using Dantzig-Wolfe decomposition and maybe in parallel
-     int solveDW(CoinStructuredModel * model);
+    int solveDW(CoinStructuredModel * model, ClpSolve & options);
      /// Solve using Benders decomposition and maybe in parallel
-     int solveBenders(CoinStructuredModel * model);
+     int solveBenders(CoinStructuredModel * model, ClpSolve & options);
 public:
      /** For advanced use.  When doing iterative solves things can get
          nasty so on values pass if incoming solution has largest
@@ -1273,6 +1279,16 @@ public:
      inline bool active(int iRow) const {
           return ((status_[iRow] & 128) != 0);
      }
+     /// To say perturbed 
+     inline void setPerturbed( int iSequence) {
+          status_[iSequence] = static_cast<unsigned char>(status_[iSequence] | 128);
+     }
+     inline void clearPerturbed( int iSequence) {
+          status_[iSequence] = static_cast<unsigned char>(status_[iSequence] & ~128);
+     }
+     inline bool perturbed(int iSequence) const {
+          return ((status_[iSequence] & 128) != 0);
+     }
      /** Set up status array (can be used by OsiClp).
          Also can be used to set up all slack basis */
      void createStatus() ;
@@ -1664,6 +1680,8 @@ protected:
 #endif
 #define CLP_ABC_BEEN_FEASIBLE 65536
   int abcState_;
+  /// Number of degenerate pivots since last perturbed
+  int numberDegeneratePivots_;
 public:
      /// Spare int array for passing information [0]!=0 switches on
      mutable int spareIntArray_[4];
@@ -1672,6 +1690,8 @@ public:
 protected:
      /// Allow OsiClp certain perks
      friend class OsiClpSolverInterface;
+     /// And OsiCLP
+     friend class OsiCLPSolverInterface;
      //@}
 };
 //#############################################################################

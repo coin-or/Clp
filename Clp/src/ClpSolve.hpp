@@ -29,6 +29,8 @@ public:
           useBarrier,
           useBarrierNoCross,
           automatic,
+	  tryDantzigWolfe,
+	  tryBenders,
           notImplemented
      };
      enum PresolveType {
@@ -221,6 +223,12 @@ public:
      inline void setSubstitution(int value) {
           independentOptions_[2] = value;
      }
+     inline void setIndependentOption(int type,int value) {
+          independentOptions_[type]  = value;
+     }
+     inline int independentOption(int type) const {
+          return independentOptions_[type];
+     }
      //@}
 
 ////////////////// data //////////////////
@@ -243,6 +251,7 @@ private:
          0 - if set return from clpsolve if infeasible
          1 - To be copied over to presolve options
          2 - max substitution level
+	 If Dantzig Wolfe/benders 0 is number blocks, 2 is #passes (notional)
      */
      int independentOptions_[3];
      //@}
@@ -293,6 +302,8 @@ public:
      void setInfeasibility(double value);
      /// Returns real primal infeasibility (if -1) - current if (0)
      double lastInfeasibility(int back = 1) const;
+     /// Returns number of primal infeasibilities (if -1) - current if (0)
+     int numberInfeasibilities(int back = 1) const;
      /// Modify objective e.g. if dual infeasible in dual
      void modifyObjective(double value);
      /// Returns previous iteration number (if -1) - current if (0)

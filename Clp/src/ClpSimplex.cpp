@@ -4615,7 +4615,7 @@ ClpSimplex::setDualRowPivotAlgorithm(ClpDualRowPivot & choice)
      dualRowPivot_ = choice.clone(true);
      dualRowPivot_->setModel(this);
 }
-// Sets row pivot choice algorithm in dual
+// Sets column pivot choice algorithm in primal
 void
 ClpSimplex::setPrimalColumnPivotAlgorithm(ClpPrimalColumnPivot & choice)
 {
@@ -6263,6 +6263,184 @@ ClpSimplex::barrier(bool crossover)
      }
      model2->setPerturbation(savePerturbation);
      return model2->status();
+}
+typedef struct {
+     char * spareArrays_;
+     ClpFactorization * factorization_;
+     int logLevel_;
+} ClpHotSaveData;
+// Create a hotstart point of the optimization process
+void 
+ClpSimplex::markHotStart(void * &saveStuff)
+{
+  ClpHotSaveData * saveData = new ClpHotSaveData;
+  saveStuff = saveData;
+  setProblemStatus(0);
+  saveData->logLevel_=logLevel();
+  if (logLevel()<2)
+    setLogLevel(0);
+  // Get space for strong branching 
+  int size = static_cast<int>((1+4*(numberRows_+numberColumns_))*sizeof(double));
+  // and for save of original column bounds
+  size += static_cast<int>(2*numberColumns_*sizeof(double));
+  size += static_cast<int>((1+4*numberRows_+2*numberColumns_)*sizeof(int));
+  size += numberRows_+numberColumns_;
+  saveData->spareArrays_ = new char[size];
+  // Setup for strong branching
+  saveData->factorization_ = 
+    static_cast<ClpSimplexDual *>(this)->setupForStrongBranching(saveData->spareArrays_,numberRows_,numberColumns_,true);
+  double * arrayD = reinterpret_cast<double *> (saveData->spareArrays_);
+  arrayD[0]=objectiveValue()* optimizationDirection();
+  double * saveSolution = arrayD+1;
+  double * saveLower = saveSolution + (numberRows_+numberColumns_);
+  double * saveUpper = saveLower + (numberRows_+numberColumns_);
+  double * saveObjective = saveUpper + (numberRows_+numberColumns_);
+  double * saveLowerOriginal = saveObjective + (numberRows_+numberColumns_);
+  double * saveUpperOriginal = saveLowerOriginal + numberColumns_;
+  CoinMemcpyN( columnLower(),numberColumns_, saveLowerOriginal);
+  CoinMemcpyN( columnUpper(),numberColumns_, saveUpperOriginal);
+}
+// Optimize starting from the hotstart
+void 
+ClpSimplex::solveFromHotStart(void * saveStuff)
+{
+  ClpHotSaveData * saveData = reinterpret_cast<ClpHotSaveData *>(saveStuff);
+  int iterationLimit = intParam_[ClpMaxNumIteration];
+  intParam_[ClpMaxNumIteration] = intParam_[ClpMaxNumIterationHotStart];
+  double * arrayD = reinterpret_cast<double *> (saveData->spareArrays_);
+  double saveObjectiveValue = arrayD[0];
+  double * saveSolution = arrayD+1;
+  int number = numberRows_+numberColumns_;
+  CoinMemcpyN(saveSolution,number,solutionRegion());
+  double * saveLower = saveSolution + (numberRows_+numberColumns_);
+  CoinMemcpyN(saveLower,number,lowerRegion());
+  double * saveUpper = saveLower + (numberRows_+numberColumns_);
+  CoinMemcpyN(saveUpper,number,upperRegion());
+  double * saveObjective = saveUpper + (numberRows_+numberColumns_);
+  CoinMemcpyN(saveObjective,number,costRegion());
+  double * saveLowerOriginal = saveObjective + (numberRows_+numberColumns_);
+  double * saveUpperOriginal = saveLowerOriginal + numberColumns_;
+  arrayD = saveUpperOriginal + numberColumns_;
+  int * savePivot = reinterpret_cast<int *> (arrayD);
+  CoinMemcpyN(savePivot,numberRows_,pivotVariable());
+  int * whichRow = savePivot+numberRows_;
+  int * whichColumn = whichRow + 3*numberRows_;
+  int * arrayI = whichColumn + 2*numberColumns_;
+  unsigned char * saveStatus = reinterpret_cast<unsigned char *> (arrayI+1);
+  CoinMemcpyN(saveStatus,number,statusArray());
+  setFactorization(*saveData->factorization_);
+  // make sure whatsChanged_ has 1 set
+  setWhatsChanged(511);
+  double * lowerInternal = lowerRegion();
+  double * upperInternal = upperRegion();
+  double rhsScale = this->rhsScale();
+  const double * columnScale = NULL;
+  // and do bounds in case dual needs them
+  int iColumn;
+  for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+    if (columnLower_[iColumn]>saveLowerOriginal[iColumn]) {
+      double value = columnLower_[iColumn];
+      value *= rhsScale;
+      if (columnScale_)
+	value /= columnScale_[iColumn];
+      lowerInternal[iColumn]=value;
+    }
+    if (columnUpper_[iColumn]<saveUpperOriginal[iColumn]) {
+      double value = columnUpper_[iColumn];
+      value *= rhsScale;
+      if (columnScale_)
+	value /= columnScale_[iColumn];
+      upperInternal[iColumn]=value;
+    }
+  }
+  //#define REDO_STEEPEST_EDGE
+#ifdef REDO_STEEPEST_EDGE
+    if (dynamic_cast<ClpDualRowSteepest *>(dualRowPivot_)) {
+      // new copy (should think about keeping around)
+      ClpDualRowSteepest steepest;
+      setDualRowPivotAlgorithm(steepest);
+    }      
+#endif
+  // Start of fast iterations
+  bool alwaysFinish = true; //((specialOptions_&32)==0) ? true : false;
+  int saveNumberFake = (static_cast<ClpSimplexDual *>(this))->numberFake_;
+  int status = (static_cast<ClpSimplexDual *>(this))->fastDual(alwaysFinish);
+  (static_cast<ClpSimplexDual *>(this))->numberFake_ = saveNumberFake;
+  
+  int probStatus = problemStatus();
+  double objValue =objectiveValue() * optimizationDirection();
+  CoinAssert (probStatus||objValue<1.0e50);
+  // make sure plausible
+  double obj = CoinMax(objValue,saveObjectiveValue);
+  if (status==10||status<0) {
+    // was trying to clean up or something odd
+    status=1;
+  }
+  if (status) {
+    // not finished - might be optimal
+    checkPrimalSolution(solutionRegion(0),
+			      solutionRegion(1));
+    objValue =objectiveValue() *
+      optimizationDirection();
+    obj = CoinMax(objValue,saveObjectiveValue);
+    if (!numberDualInfeasibilities()) { 
+      double limit = 0.0;
+      getDblParam(ClpDualObjectiveLimit, limit);
+      if (secondaryStatus()==1&&!probStatus&&obj<limit) {
+	obj=limit;
+	probStatus=3;
+      }
+      if (!numberPrimalInfeasibilities()&&obj<limit) { 
+	probStatus=0;
+      } else if (probStatus==10) {
+	probStatus=3;
+      } else if (!numberPrimalInfeasibilities()) {
+	probStatus=1; // infeasible
+      } 
+    } else {
+      // can't say much
+      probStatus=3;
+    }
+  } else if (!probStatus) {
+    if (isDualObjectiveLimitReached()) 
+      probStatus=1; // infeasible
+  }
+  if (status&&!probStatus) {
+    probStatus=3; // can't be sure
+  }
+  if (probStatus<0)
+    probStatus=3;
+  setProblemStatus(probStatus);
+  setObjectiveValue(obj*optimizationDirection());
+  double * solution = primalColumnSolution();
+  const double * solution2 = solutionRegion();
+  // could just do changed bounds - also try double size scale so can use * not /
+  if (!columnScale) {
+    for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+      solution[iColumn]= solution2[iColumn];
+    }
+  } else {
+    for (iColumn=0;iColumn<numberColumns_;iColumn++) {
+      solution[iColumn]= solution2[iColumn]*columnScale[iColumn];
+    }
+  }
+  CoinMemcpyN(saveLowerOriginal,numberColumns_,columnLower_);
+  CoinMemcpyN(saveUpperOriginal,numberColumns_,columnUpper_);
+  // and back bounds
+  CoinMemcpyN(saveLower,number,lowerRegion());
+  CoinMemcpyN(saveUpper,number,upperRegion());
+  intParam_[ClpMaxNumIteration] = iterationLimit;
+}
+// Delete the snapshot
+void 
+ClpSimplex::unmarkHotStart(void * saveStuff)
+{
+  ClpHotSaveData * saveData = reinterpret_cast<ClpHotSaveData *>(saveStuff);
+  setLogLevel(saveData->logLevel_);
+  deleteRim(0);
+  delete saveData->factorization_;
+  delete [] saveData->spareArrays_;
+  delete saveData;
 }
 /* For strong branching.  On input lower and upper are new bounds
    while on output they are objective function values (>1.0e50 infeasible).

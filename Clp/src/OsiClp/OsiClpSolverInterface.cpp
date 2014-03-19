@@ -2237,6 +2237,14 @@ void OsiClpSolverInterface::solveFromHotStart()
 	  upperInternal[iColumn+extraCopy]=value;
       }
     }
+    //#define REDO_STEEPEST_EDGE
+#ifdef REDO_STEEPEST_EDGE
+    if (dynamic_cast<ClpDualRowSteepest *>(modelPtr_->dualRowPivot())) {
+      // new copy (should think about keeping around)
+      ClpDualRowSteepest steepest;
+      modelPtr_->setDualRowPivotAlgorithm(steepest);
+    }      
+#endif
     // Start of fast iterations
     bool alwaysFinish= ((specialOptions_&32)==0) ? true : false;
     //modelPtr_->setLogLevel(1);
@@ -2442,6 +2450,13 @@ void OsiClpSolverInterface::solveFromHotStart()
     int saveNumberFake = (static_cast<ClpSimplexDual *>(smallModel_))->numberFake_;
     int status;
     if (!infeasible) {
+#ifdef REDO_STEEPEST_EDGE
+      if (dynamic_cast<ClpDualRowSteepest *>(smallModel_->dualRowPivot())) {
+	// new copy
+	ClpDualRowSteepest steepest;
+	smallModel_->setDualRowPivotAlgorithm(steepest);
+      }      
+#endif
       status = static_cast<ClpSimplexDual *>(smallModel_)->fastDual(alwaysFinish);
     } else {
       status=0;

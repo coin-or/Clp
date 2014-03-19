@@ -716,6 +716,17 @@ ClpSimplexOther::writeBasis(const char *filename,
                     // Dummy row name if values
                     if (writeValues)
                          fprintf(fp, "      _dummy_");
+               } else if( (getColumnStatus(iColumn) == ClpSimplex::superBasic||
+			   getColumnStatus(iColumn) == ClpSimplex::isFree)&&
+			  writeValues) {
+                    printit = true;
+                    if (lengthNames_)
+                         fprintf(fp, " BS %s", columnNames_[iColumn].c_str());
+                    else
+                         fprintf(fp, " BS C%7.7d", iColumn);
+                    // Dummy row name if values
+                    if (writeValues)
+                         fprintf(fp, "      _dummy_");
                }
           }
           if (printit && writeValues) {
@@ -10443,55 +10454,16 @@ ClpSimplex::miniPostsolve(const ClpSimplex * presolvedModel, void * infoIn)
   delete [] infoA;
   delete [] rowLowerX;
 }
-// Scale real objective 
+// mini presolve and solve
 void 
-ClpSimplex::scaleRealObjective(double multiplier)
+ClpSimplex::miniSolve(char * rowType, char *columnType,int algorithm, int startUp)
 {
-  double * obj = objective();
-  for (int i=0;i<numberColumns_;i++)
-    obj[i] *= multiplier;
-  setObjectiveOffset(multiplier*objectiveOffset());
-}
-// Scale so no RHS (abs not infinite) > value
-void 
-ClpSimplex::scaleRealRhs(double maxValue, double killIfSmaller)
-{
-  ClpPackedMatrix * matrix = dynamic_cast<ClpPackedMatrix *>(matrix_);
-  if (matrix&&maxValue>1.0) {
-    matrix->allElementsInRange(this,
-			       1.0e-12,1.0e12,8);
-    double * element = matrix->getMutableElements();
-    const int * row = matrix->getIndices();
-    const int * columnLength = matrix->getVectorLengths();
-    const CoinBigIndex * columnStart = matrix->getVectorStarts();
-    for (int iRow=0;iRow<numberRows_;iRow++) {
-      double lowerValue=rowLower_[iRow];
-      if (lowerValue<-1.0e15)
-	lowerValue=-1.0;
-      double upperValue=rowUpper_[iRow];
-      if (upperValue>1.0e15)
-	upperValue=1.0;
-      double scale = CoinMax(fabs(lowerValue),fabs(upperValue));
-      if (scale>maxValue) {
-	dual_[iRow]=maxValue/scale;
-      } else {
-	dual_[iRow]=1.0;
-      }
-      if (lowerValue>=-1.0e15)
-	rowLower_[iRow] *= dual_[iRow];
-      if (upperValue<=1.0e15)
-	rowUpper_[iRow] *= dual_[iRow];
-    }
-    for (int iColumn=0;iColumn<numberColumns_;iColumn++) {
-      for (CoinBigIndex j = columnStart[iColumn];
-	   j < columnStart[iColumn] + columnLength[iColumn]; j++) {
-	int iRow = row[j];
-	element[j] *= dual_[iRow];
-      }
-    }
-    matrix->allElementsInRange(this,
-			       killIfSmaller,1.0e22,15);
-  } else {
-    printf("Can't scale rhs as not ClpPackedMatrix\n");
-  }
+  listInfo * info = NULL;
+  ClpSimplex * small2 = miniPresolve(rowType,columnType,reinterpret_cast<void **>(&info));
+  if (algorithm<0)
+    small2->dual(startUp);
+  else 
+    small2->primal(startUp);
+  miniPostsolve(small2,info);
+  delete info;
 }

@@ -6044,15 +6044,16 @@ int ClpSimplexDual::strongBranching(int numberVariables, const int * variables,
                objectiveChange = 1.0e100;
                status = 1;
           }
-
-          if (scalingFlag_ <= 0) {
-               CoinMemcpyN(solution_, numberColumns_, outputSolution[iSolution]);
-          } else {
-               int j;
-               double * sol = outputSolution[iSolution];
-               for (j = 0; j < numberColumns_; j++)
-                    sol[j] = solution_[j] * columnScale_[j];
-          }
+	  if (outputSolution) {
+	    if (scalingFlag_ <= 0) {
+	      CoinMemcpyN(solution_, numberColumns_, outputSolution[iSolution]);
+	    } else {
+	      int j;
+	      double * sol = outputSolution[iSolution];
+	      for (j = 0; j < numberColumns_; j++)
+		sol[j] = solution_[j] * columnScale_[j];
+	    }
+	  }
           outputStatus[iSolution] = status;
           outputIterations[iSolution] = numberIterations_;
           iSolution++;
@@ -6115,14 +6116,16 @@ int ClpSimplexDual::strongBranching(int numberVariables, const int * variables,
                objectiveChange = 1.0e100;
                status = 1;
           }
-          if (scalingFlag_ <= 0) {
-               CoinMemcpyN(solution_, numberColumns_, outputSolution[iSolution]);
-          } else {
-               int j;
-               double * sol = outputSolution[iSolution];
-               for (j = 0; j < numberColumns_; j++)
-                    sol[j] = solution_[j] * columnScale_[j];
-          }
+	  if (outputSolution) {
+	    if (scalingFlag_ <= 0) {
+	      CoinMemcpyN(solution_, numberColumns_, outputSolution[iSolution]);
+	    } else {
+	      int j;
+	      double * sol = outputSolution[iSolution];
+	      for (j = 0; j < numberColumns_; j++)
+		sol[j] = solution_[j] * columnScale_[j];
+	    }
+	  }
           outputStatus[iSolution] = status;
           outputIterations[iSolution] = numberIterations_;
           iSolution++;

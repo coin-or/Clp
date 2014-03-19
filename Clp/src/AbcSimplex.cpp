@@ -2835,7 +2835,7 @@ AbcSimplex::checkPrimalSolution(bool justBasic)
   double primalTolerance = primalTolerance_;
   double relaxedTolerance = primalTolerance_;
   // we can't really trust infeasibilities if there is primal error
-  double error = CoinMin(1.0e-2, largestPrimalError_);
+  double error = CoinMin(1.0e-2, CoinMax(largestPrimalError_,5.0*primalTolerance_));
   // allow tolerance at least slightly bigger than standard
   relaxedTolerance = relaxedTolerance +  error;
   sumOfRelaxedPrimalInfeasibilities_ = 0.0;
@@ -2886,7 +2886,7 @@ AbcSimplex::checkDualSolution()
   int numberSuperBasicWithDj = 0;
   bestPossibleImprovement_ = 0.0;
   // we can't really trust infeasibilities if there is dual error
-  double error = CoinMin(1.0e-2, largestDualError_);
+  double error = CoinMin(1.0e-2, CoinMax(largestDualError_,5.0*dualTolerance_));
   // allow tolerance at least slightly bigger than standard
   double relaxedTolerance = currentDualTolerance_ +  error;
   // allow bigger tolerance for possible improvement

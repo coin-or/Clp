@@ -43,6 +43,7 @@
 #include "AbcSimplex.hpp"
 #include "AbcSimplexFactorization.hpp"
 #endif
+#include "CoinStructuredModel.hpp"
 double zz_slack_value=0.0;
 
 #include "ClpPresolve.hpp"
@@ -539,17 +540,22 @@ int number_cilk_workers=0;
 #endif
 #endif
 #ifdef ABC_INHERIT
-void 
+AbcSimplex *
 ClpSimplex::dealWithAbc(int solveType, int startUp,
 			bool interrupt)
 {
+  bool keepAbc = startUp>=10;
+  startUp=startUp%10;
+  AbcSimplex * abcModel2 = NULL;
   if (!this->abcState()||!numberRows_||!numberColumns_) {
+    //this->readBasis("aaa.bas");
     if (!solveType)
       this->dual(0);
-    else
+    else if (solveType==1)
       this->primal(startUp ? 1 : 0);
+    //this->writeBasis("a.bas",true);
   } else {
-    AbcSimplex * abcModel2=new AbcSimplex(*this);
+    abcModel2=new AbcSimplex(*this);
     if (interrupt)
       currentAbcModel = abcModel2;
     //if (abcSimplex_) {
@@ -558,7 +564,7 @@ ClpSimplex::dealWithAbc(int solveType, int startUp,
     //}
     //abcModel2->startPermanentArrays();
     int crashState=abcModel2->abcState()&(256+512+1024);
-    abcModel2->setAbcState(CLP_ABC_WANTED|crashState);
+    abcModel2->setAbcState(CLP_ABC_WANTED|crashState|(abcModel2->abcState()&15));
     int ifValuesPass=startUp ? 1 : 0;
     // temp
     if (fabs(this->primalTolerance()-1.001e-6)<0.999e-9) {
@@ -594,7 +600,7 @@ ClpSimplex::dealWithAbc(int solveType, int startUp,
 	this->dual(0);
 	abcModel2->setupDualValuesPass(this->dualRowSolution(),
 				       this->primalColumnSolution(),type);
-      } else {
+      } else if (solveType==1) {
 	ifValuesPass=1;
 	abcModel2->setStateOfProblem(abcModel2->stateOfProblem() | VALUES_PASS);
 	Idiot info(*abcModel2);
@@ -673,7 +679,7 @@ ClpSimplex::dealWithAbc(int solveType, int startUp,
 #endif
     if (!solveType) {
       abcModel2->ClpSimplex::doAbcDual();
-    } else {
+    } else if (solveType==1) {
       int saveOptions=abcModel2->specialOptions();
       if (startUp==2)
 	abcModel2->setSpecialOptions(8192|saveOptions);
@@ -681,70 +687,103 @@ ClpSimplex::dealWithAbc(int solveType, int startUp,
       abcModel2->setSpecialOptions(saveOptions);
     }
 #if ABC_INSTRUMENT
-    double timeCpu=CoinCpuTime()-startTimeCpu;
-    double timeElapsed=CoinGetTimeOfDay()-startTimeElapsed;
-    sprintf(line,"Cpu time for %s (%d rows, %d columns %d elements) %g elapsed %g ratio %g - %d iterations",
-	    this->problemName().c_str(),this->numberRows(),this->numberColumns(),
-	    this->getNumElements(),
-	    timeCpu,timeElapsed,timeElapsed ? timeCpu/timeElapsed : 1.0,abcModel2->numberIterations());
-    handler_->message(CLP_GENERAL, messages_)
-      << line
-      << CoinMessageEol;
+    if (solveType<2) {
+      double timeCpu=CoinCpuTime()-startTimeCpu;
+      double timeElapsed=CoinGetTimeOfDay()-startTimeElapsed;
+      sprintf(line,"Cpu time for %s (%d rows, %d columns %d elements) %g elapsed %g ratio %g - %d iterations",
+	      this->problemName().c_str(),this->numberRows(),this->numberColumns(),
+	      this->getNumElements(),
+	      timeCpu,timeElapsed,timeElapsed ? timeCpu/timeElapsed : 1.0,abcModel2->numberIterations());
+      handler_->message(CLP_GENERAL, messages_)
+	<< line
+	<< CoinMessageEol;
 #if ABC_INSTRUMENT>1
-    {
-      int n;
-      n=0;
-      for (int i=0;i<20;i++) 
-	n+= abcPricing[i];
-      printf("CCSparse pricing done %d times",n);
-      int n2=0;
-      for (int i=0;i<20;i++) 
-	n2+= abcPricingDense[i];
-      if (n2) 
-	printf(" and dense pricing done %d times\n",n2);
-      else
-	printf("\n");
-      n=0;
-      printf ("CCS");
-      for (int i=0;i<19;i++) {
-	if (abcPricing[i]) {
+      {
+	int n;
+	n=0;
+	for (int i=0;i<20;i++) 
+	  n+= abcPricing[i];
+	printf("CCSparse pricing done %d times",n);
+	int n2=0;
+	for (int i=0;i<20;i++) 
+	  n2+= abcPricingDense[i];
+	if (n2) 
+	  printf(" and dense pricing done %d times\n",n2);
+	else
+	  printf("\n");
+	n=0;
+	printf ("CCS");
+	for (int i=0;i<19;i++) {
+	  if (abcPricing[i]) {
+	    if (n==5) {
+	      n=0;
+	      printf("\nCCS");
+	    }
+	    n++;
+	    printf("(%d els,%d times) ",i,abcPricing[i]);
+	  }
+	}
+	if (abcPricing[19]) {
 	  if (n==5) {
 	    n=0;
 	    printf("\nCCS");
 	  }
 	  n++;
-	  printf("(%d els,%d times) ",i,abcPricing[i]);
+	  printf("(>=19 els,%d times) ",abcPricing[19]);
 	}
-      }
-      if (abcPricing[19]) {
-	if (n==5) {
-	  n=0;
-	  printf("\nCCS");
-	}
-	n++;
-	printf("(>=19 els,%d times) ",abcPricing[19]);
-      }
-      if (n2) {
-	printf ("CCD");
-	for (int i=0;i<19;i++) {
-	  if (abcPricingDense[i]) {
-	    if (n==5) {
-	      n=0;
-	      printf("\nCCD");
+	if (n2) {
+	  printf ("CCD");
+	  for (int i=0;i<19;i++) {
+	    if (abcPricingDense[i]) {
+	      if (n==5) {
+		n=0;
+		printf("\nCCD");
+	      }
+	      n++;
+	      int k1=(numberRows_/16)*i;;
+	      int k2=CoinMin(numberRows_,k1+(numberRows_/16)-1);
+	      printf("(%d-%d els,%d times) ",k1,k2,abcPricingDense[i]);
 	    }
-	    n++;
-	    int k1=(numberRows_/16)*i;;
-	    int k2=CoinMin(numberRows_,k1+(numberRows_/16)-1);
-	    printf("(%d-%d els,%d times) ",k1,k2,abcPricingDense[i]);
 	  }
 	}
+	printf("\n");
       }
-      printf("\n");
-    }
-    instrument_print();
+      instrument_print();
 #endif
+    }
 #endif
     abcModel2->moveStatusToClp(this);
+#if 1
+    if (!problemStatus_) {
+      double offset;
+      CoinMemcpyN(this->objectiveAsObject()->gradient(this,
+						      this->primalColumnSolution(), offset, true),
+		  numberColumns_, this->dualColumnSolution());
+      this->clpMatrix()->transposeTimes(-1.0,
+					this->dualRowSolution(),
+					this->dualColumnSolution());
+      memset(this->primalRowSolution(), 0, numberRows_ * sizeof(double));
+      this->clpMatrix()->times(1.0, 
+			       this->primalColumnSolution(),
+			       this->primalRowSolution());
+      this->checkSolutionInternal();
+      if (sumDualInfeasibilities_>100.0*dualTolerance_) {
+	printf("internal check on duals failed %d %g\n",
+	       numberDualInfeasibilities_,sumDualInfeasibilities_);
+      } else {
+	sumDualInfeasibilities_=0.0;
+	numberDualInfeasibilities_=0;
+      }
+      if (sumPrimalInfeasibilities_>100.0*primalTolerance_) {
+	printf("internal check on primals failed %d %g\n",
+	       numberPrimalInfeasibilities_,sumPrimalInfeasibilities_);
+      } else {
+	sumPrimalInfeasibilities_=0.0;
+	numberPrimalInfeasibilities_=0;
+      }
+      problemStatus_=0;
+    }
+#endif
     //ClpModel::stopPermanentArrays();
     this->setSpecialOptions(this->specialOptions()&~65536);
 #if 0
@@ -759,8 +798,12 @@ ClpSimplex::dealWithAbc(int solveType, int startUp,
     // switch off initialSolve flag
     moreSpecialOptions_ &= ~16384;
     //this->setNumberIterations(abcModel2->numberIterations()+this->numberIterations());
-    delete abcModel2;
+    if (!keepAbc) {
+      delete abcModel2;
+      abcModel2=NULL;
+    }
   }
+  return abcModel2;
 }
 #endif
 /** General solve algorithm which can do presolve
@@ -784,7 +827,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
      int numberIterations = 0;
      double time1 = CoinCpuTime();
      double timeX = time1;
-     double time2;
+     double time2=0.0;
      ClpMatrixBase * saveMatrix = NULL;
      ClpObjective * savedObjective = NULL;
      if (!objective_ || !matrix_) {
@@ -980,6 +1023,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
           }
      }
      if (method != ClpSolve::useDual && method != ClpSolve::useBarrier
+	 && method != ClpSolve::tryBenders && method != ClpSolve::tryDantzigWolfe
                && method != ClpSolve::useBarrierNoCross) {
           switch (options.getSpecialOption(1)) {
           case 0:
@@ -1040,7 +1084,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
                doIdiot = 0;
                doCrash = 0;
                doSprint = 0;
-               if (options.getExtraInfo(1) > 0)
+               if (options.getExtraInfo(1) )
                     doSlp = options.getExtraInfo(1);
                break;
           case 11:
@@ -1052,7 +1096,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
           default:
                abort();
           }
-     } else {
+     } else if (method != ClpSolve::tryBenders && method != ClpSolve::tryDantzigWolfe) {
           // Dual
           switch (options.getSpecialOption(0)) {
           case 0:
@@ -1077,6 +1121,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
           default:
                abort();
           }
+     } else {
+       // decomposition
      }
 #ifndef NO_RTTI
      ClpQuadraticObjective * quadraticObj = (dynamic_cast< ClpQuadraticObjective*>(objectiveAsObject()));
@@ -1088,7 +1134,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
      // If quadratic then primal or barrier or slp
      if (quadraticObj) {
           doSprint = 0;
-          doIdiot = 0;
+          //doIdiot = 0;
           // off
           if (method == ClpSolve::useBarrier)
                method = ClpSolve::useBarrierNoCross;
@@ -1128,7 +1174,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
      for (iRow = 0; iRow < numberRows; iRow++)
           if (model2->getRowStatus(iRow) == basic)
                numberRowsBasic++;
-     if (numberRowsBasic < numberRows) {
+     if (numberRowsBasic < numberRows && objective_->type()<2) {
           doIdiot = 0;
           doCrash = 0;
           //doSprint=0;
@@ -1221,16 +1267,19 @@ ClpSimplex::initialSolve(ClpSolve & options)
                     const double * columnUpper = model2->columnUpper();
 		    const double * objective = model2->objective();
 		    int nObj=0;
+		    int nFree=0;
                     for (iColumn = 0; iColumn < numberColumns; iColumn++) {
                          if (columnLower[iColumn] < -1.0e10 && columnUpper[iColumn] > 1.0e10) {
-			      doSprint = 0;
-                              doIdiot = 0;
-                              break;
+			   nFree++;
 			 } else if (objective[iColumn]) {
 			   nObj++;
                          }
                     }
 		    if (nObj*10<numberColumns)
+		      doSprint=0;
+		    if (nFree)
+		      doIdiot=0;
+		    if (nFree*10>numberRows)
 		      doSprint=0;
                     int nPasses = 0;
                     // look at rhs
@@ -1323,6 +1372,37 @@ ClpSimplex::initialSolve(ClpSolve & options)
                     }
                }
           }
+     }
+     if (method == ClpSolve::tryBenders) {
+       // Now build model
+       int lengthNames=model2->lengthNames();
+       model2->setLengthNames(0);
+       CoinModel * build = model2->createCoinModel();
+       model2->setLengthNames(lengthNames);
+       CoinStructuredModel benders;
+       build->convertMatrix();
+       int numberBlocks = options.independentOption(0);
+       benders.setMessageHandler(handler_);
+       numberBlocks=benders.decompose(*build,2,numberBlocks,NULL);
+       delete build;
+       //exit(0);
+       if (numberBlocks) {
+	 options.setIndependentOption(1,1); // don't do final clean up
+	 model2->solveBenders(&benders,options);
+	 //move solution
+	 method=ClpSolve::notImplemented;
+	 time2 = CoinCpuTime();
+	 timeCore = time2 - timeX;
+	 handler_->message(CLP_INTERVAL_TIMING, messages_)
+	   << "Crossover" << timeCore << time2 - time1
+	   << CoinMessageEol;
+	 timeX = time2;
+       } else {
+	 printf("No structure\n");
+	 method=ClpSolve::useDual;
+       }
+     } else if (method == ClpSolve::tryDantzigWolfe) {
+	 abort();
      }
      if (method == ClpSolve::usePrimalorSprint) {
           if (doSprint < 0) {
@@ -1798,7 +1878,11 @@ ClpSimplex::initialSolve(ClpSolve & options)
 #endif
                     // Allow for scaling
                     info.setStrategy(32 | info.getStrategy());
-                    info.crash(nPasses, model2->messageHandler(), model2->messagesPointer());
+		    int saveScalingFlag=model2->scalingFlag();
+		    if (objective_->type()==2)
+		      model2->scaling(0);
+                    info.crash(nPasses, model2->messageHandler(), model2->messagesPointer(),(objective_->type() <2));
+		      model2->scaling(saveScalingFlag);
 #endif
                     time2 = CoinCpuTime();
                     timeIdiot = time2 - timeX;
@@ -1891,7 +1975,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
                }
           }
 #ifndef SLIM_CLP
-          if (doSlp > 0 && objective_->type() == 2) {
+          if (doSlp && objective_->type() == 2) {
                model2->nonlinearSLP(doSlp, 1.0e-5);
           }
 #endif
@@ -2176,9 +2260,11 @@ ClpSimplex::initialSolve(ClpSolve & options)
                for (i = 0; i < numberSort; i++)
                     sort[i] = i + originalNumberColumns;
           }
+	  // put in free
           // maybe a solution there already
           for (iColumn = 0; iColumn < originalNumberColumns; iColumn++) {
-               if (model2->getColumnStatus(iColumn) == basic)
+               if (model2->getColumnStatus(iColumn) == basic||
+		   (columnLower[iColumn]<-1.0e30&&columnUpper[iColumn]>1.0e30))
                     sort[numberSort++] = iColumn;
           }
           for (iColumn = 0; iColumn < originalNumberColumns; iColumn++) {
@@ -2280,7 +2366,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
 		       else 
 		         small.dealWithAbc(0,0);
 #else
-		      if (iPass||!numberArtificials) 
+		      if (iPass||!numberArtificials)
 		         small.primal(1);
 		      else
 		         small.dual(0);
@@ -2546,9 +2632,13 @@ ClpSimplex::initialSolve(ClpSolve & options)
                break;
 #ifdef COIN_HAS_WSMP
           case 2: {
-               ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp(CoinMax(100, model2->numberRows() / 10));
-               barrier.setCholesky(cholesky);
-               assert (!doKKT);
+               if (!doKKT) {
+		    ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp(CoinMax(100, model2->numberRows() / 10));
+                    barrier.setCholesky(cholesky);
+               } else {
+                    ClpCholeskyWssmpKKT * cholesky = new ClpCholeskyWssmpKKT(CoinMax(100, model2->numberRows() / 10));
+                    barrier.setCholesky(cholesky);
+               }
           }
           break;
           case 3:
@@ -2583,9 +2673,14 @@ ClpSimplex::initialSolve(ClpSolve & options)
 #endif
 #ifdef COIN_HAS_MUMPS
           case 6: {
-               ClpCholeskyMumps * cholesky = new ClpCholeskyMumps();
-               barrier.setCholesky(cholesky);
-               assert (!doKKT);
+               if (!doKKT) {
+                    ClpCholeskyMumps * cholesky = new ClpCholeskyMumps();
+                    barrier.setCholesky(cholesky);
+               } else {
+                    ClpCholeskyMumps * cholesky = new ClpCholeskyMumps();
+                    cholesky->setKKT(true);
+                    barrier.setCholesky(cholesky);
+               }
           }
           break;
 #endif
@@ -2903,8 +2998,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
                                    saveLower = NULL;
                                    saveUpper = NULL;
                               }
-                              int numberRows = model2->numberRows();
-                              int numberColumns = model2->numberColumns();
+                              //int numberRows = model2->numberRows();
+                              //int numberColumns = model2->numberColumns();
 #ifdef ABC_INHERIT
 			      model2->checkSolution(0);
 			      printf("%d primal infeasibilities summing to %g\n",
@@ -3061,6 +3156,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
 #else
           abort();
 #endif
+     } else if (method == ClpSolve::notImplemented) {
+	 printf("done decomposition\n");
      } else {
           assert (method != ClpSolve::automatic); // later
           time2 = 0.0;
@@ -3675,7 +3772,6 @@ ClpSimplexProgress::looping()
                     if (model_->algorithm() < 0) {
                          // dual - change tolerance
                          model_->setCurrentDualTolerance(model_->currentDualTolerance() * 1.05);
-                         model_->setCurrentPrimalTolerance(model_->currentPrimalTolerance() * 1.05);
                          // if infeasible increase dual bound
                          if (model_->dualBound() < 1.0e17) {
                               model_->setDualBound(model_->dualBound() * 1.1);
@@ -3802,6 +3898,12 @@ ClpSimplexProgress::setInfeasibility(double value)
      for (int i = 1; i < CLP_PROGRESS; i++)
           realInfeasibility_[i-1] = realInfeasibility_[i];
      realInfeasibility_[CLP_PROGRESS-1] = value;
+}
+// Returns number of primal infeasibilities (if -1) - current if (0)
+int 
+ClpSimplexProgress::numberInfeasibilities(int back) const
+{
+    return numberInfeasibilities_[CLP_PROGRESS-1-back];
 }
 // Modify objective e.g. if dual infeasible in dual
 void
@@ -4025,6 +4127,8 @@ ClpSimplex::solve(CoinStructuredModel * model)
      delete [] columnCounts;
      delete [] blockInfo;
      // decide what to do
+     ClpSolve options;
+     options.setIndependentOption(2,100);
      switch (decomposeType) {
           // No good
      case 0:
@@ -4032,10 +4136,10 @@ ClpSimplex::solve(CoinStructuredModel * model)
           return dual();
           // DW
      case 1:
-          return solveDW(model);
+       return solveDW(model,options);
           // Benders
      case 2:
-          return solveBenders(model);
+       return solveBenders(model,options);
      }
      return 0; // to stop compiler warning
 }
@@ -4081,11 +4185,11 @@ ClpSimplex::loadProblem (  CoinStructuredModel & coinModel,
      int * rowBase = new int[numberRowBlocks];
      CoinFillN(rowBase, numberRowBlocks, -1);
      // And row to put it
-     int * whichRow = new int [numberRows];
+     int * whichRow = new int [numberRows+numberRowBlocks];
      int * columnBase = new int[numberColumnBlocks];
      CoinFillN(columnBase, numberColumnBlocks, -1);
      // And column to put it
-     int * whichColumn = new int [numberColumns];
+     int * whichColumn = new int [numberColumns+numberColumnBlocks];
      for (int iBlock = 0; iBlock < numberElementBlocks; iBlock++) {
           CoinModel * block = coinModel.coinBlock(iBlock);
           numberElements += block->numberElements();
@@ -4101,14 +4205,14 @@ ClpSimplex::loadProblem (  CoinStructuredModel & coinModel,
           if (rowBase[iRowBlock] < 0) {
                rowBase[iRowBlock] = block->numberRows();
                // Save block number
-               whichRow[numberRows-numberRowBlocks+iRowBlock] = iBlock;
+               whichRow[numberRows+iRowBlock] = iBlock;
           } else {
                assert(rowBase[iRowBlock] == block->numberRows());
           }
           if (columnBase[iColumnBlock] < 0) {
                columnBase[iColumnBlock] = block->numberColumns();
                // Save block number
-               whichColumn[numberColumns-numberColumnBlocks+iColumnBlock] = iBlock;
+               whichColumn[numberColumns+iColumnBlock] = iBlock;
           } else {
                assert(columnBase[iColumnBlock] == block->numberColumns());
           }
@@ -4126,7 +4230,7 @@ ClpSimplex::loadProblem (  CoinStructuredModel & coinModel,
           rowBase[iBlock] = n;
           assert (k >= 0);
           // block number
-          int jBlock = whichRow[numberRows-numberRowBlocks+iBlock];
+          int jBlock = whichRow[numberRows+iBlock];
           if (originalOrder) {
                memcpy(whichRow + n, coinModel.coinBlock(jBlock)->originalRows(), k * sizeof(int));
           } else {
@@ -4142,7 +4246,7 @@ ClpSimplex::loadProblem (  CoinStructuredModel & coinModel,
           assert (k >= 0);
           if (k) {
                // block number
-               int jBlock = whichColumn[numberColumns-numberColumnBlocks+iBlock];
+               int jBlock = whichColumn[numberColumns+iBlock];
                if (originalOrder) {
                     memcpy(whichColumn + n, coinModel.coinBlock(jBlock)->originalColumns(),
                            k * sizeof(int));
@@ -4343,7 +4447,7 @@ ClpSimplex::scaleObjective(double value)
 }
 // Solve using Dantzig-Wolfe decomposition and maybe in parallel
 int
-ClpSimplex::solveDW(CoinStructuredModel * model)
+ClpSimplex::solveDW(CoinStructuredModel * model,ClpSolve & options)
 {
      double time1 = CoinCpuTime();
      int numberColumns = model->numberColumns();
@@ -4440,6 +4544,12 @@ ClpSimplex::solveDW(CoinStructuredModel * model)
      ClpSimplex master;
      // Set offset
      master.setObjectiveOffset(model->objectiveOffset());
+     bool reducePrint = logLevel()==7;
+     if (reducePrint) {
+       // special
+       setLogLevel(1);
+       master.setLogLevel(1);
+     }
      kBlock = 0;
      int masterBlock = -1;
      for (iBlock = 0; iBlock < numberColumnBlocks; iBlock++) {
@@ -4559,7 +4669,9 @@ ClpSimplex::solveDW(CoinStructuredModel * model)
                             columnAdd, rowAdd, elementAdd);
           lastArtificial = master.numberColumns();
      }
-     int maxPass = 500;
+     int maxPass = options.independentOption(2);
+     if (maxPass<2)
+       maxPass=100;
      int iPass;
      double lastObjective = 1.0e31;
      // Create convexity rows for proposals
@@ -4598,12 +4710,19 @@ ClpSimplex::solveDW(CoinStructuredModel * model)
           master.addColumns(numberBlocks, NULL, NULL, objective,
                             columnAdd, rowAdd, elementAdd);
      }
+     char generalPrint[200];
      // and resize matrix to double check clp will be happy
      //master.matrix()->setDimensions(numberMasterRows+numberBlocks,
      //			 numberMasterColumns+numberBlocks);
-     std::cout << "Time to decompose " << CoinCpuTime() - time1 << " seconds" << std::endl;
+     sprintf(generalPrint,"Time to decompose %.2f seconds",CoinCpuTime() - time1);
+     handler_->message(CLP_GENERAL, messages_)
+       << generalPrint
+       << CoinMessageEol;
      for (iPass = 0; iPass < maxPass; iPass++) {
-          printf("Start of pass %d\n", iPass);
+          sprintf(generalPrint,"Start of pass %d", iPass);
+	  handler_->message(CLP_GENERAL, messages_)
+	    << generalPrint
+	    << CoinMessageEol;
           // Solve master - may be infeasible
           //master.scaling(0);
           if (0) {
@@ -4634,7 +4753,10 @@ ClpSimplex::solveDW(CoinStructuredModel * model)
                          upper[i] = solution[i] + 1.0e-5 * (1.0 + solution[i]);
                     }
                }
-               printf("Sum of artificials before solve is %g\n", sumArtificials);
+               sprintf(generalPrint,"Sum of artificials before solve is %g", sumArtificials);
+	       handler_->message(CLP_GENERAL, messages_)
+		 << generalPrint
+		 << CoinMessageEol;
           }
           // scale objective to be reasonable
           double scaleFactor = master.scaleObjective(-1.0e9);
@@ -4654,7 +4776,7 @@ ClpSimplex::solveDW(CoinStructuredModel * model)
                     else if (value < lower[iRow])
                          sum -= value - lower[iRow];
                }
-               printf("suminf %g\n", sum);
+               printf("** suminf %g\n", sum);
                lower = master.columnLower();
                upper = master.columnUpper();
                n = master.numberColumns();
@@ -4665,7 +4787,7 @@ ClpSimplex::solveDW(CoinStructuredModel * model)
                     else if (value < lower[iColumn] - 1.0e-5)
                          sum -= value - lower[iColumn];
                }
-               printf("suminf %g\n", sum);
+               printf("** suminf %g\n", sum);
           }
           master.primal(1);
           // Correct artificials
@@ -4675,10 +4797,24 @@ ClpSimplex::solveDW(CoinStructuredModel * model)
                for (int i = firstArtificial; i < lastArtificial; i++) {
                     sumArtificials += solution[i];
                }
-               printf("Sum of artificials after solve is %g\n", sumArtificials);
+               printf("** Sum of artificials after solve is %g\n", sumArtificials);
           }
           master.scaleObjective(scaleFactor);
           int problemStatus = master.status(); // do here as can change (delcols)
+          if (problemStatus == 2 && master.numberColumns()) {
+	    master.primal(1);
+	    if (problemStatus==2) {
+	      int numberColumns = master.numberColumns();
+	      double * lower = master.columnLower();
+	      double * upper = master.columnUpper();
+	      for (int i=0;i<numberColumns;i++) {
+		lower[i]=CoinMax(lower[i],-1.0e10);
+		upper[i]=CoinMin(upper[i],1.0e10);
+	      }
+	      master.primal(1);
+	      assert (problemStatus!=2);
+	    }
+          }
           if (master.numberIterations() == 0 && iPass)
                break; // finished
           if (master.objectiveValue() > lastObjective - 1.0e-7 && iPass > 555)
@@ -4718,7 +4854,7 @@ ClpSimplex::solveDW(CoinStructuredModel * model)
                // could do composite objective
                dual = master.infeasibilityRay();
                deleteDual = true;
-               printf("The sum of infeasibilities is %g\n",
+               printf("** The sum of infeasibilities is %g\n",
                       master.sumPrimalInfeasibilities());
           } else if (!master.numberColumns()) {
                assert(!iPass);
@@ -4726,6 +4862,7 @@ ClpSimplex::solveDW(CoinStructuredModel * model)
                memset(master.dualRowSolution(),
                       0, (numberMasterRows + numberBlocks)*sizeof(double));
           } else {
+               master.writeMps("unbounded.mps");
                abort();
           }
           // Scale back on first time
@@ -4757,6 +4894,9 @@ ClpSimplex::solveDW(CoinStructuredModel * model)
                // scale objective to be reasonable
                double scaleFactor =
                     sub[iBlock].scaleObjective((sumArtificials > 1.0e-5) ? -1.0e-4 : -1.0e9);
+		    
+	       if (reducePrint) 
+		   sub[iBlock].setLogLevel(0);
                if (iPass) {
                     sub[iBlock].primal();
                } else {
@@ -4812,8 +4952,11 @@ ClpSimplex::solveDW(CoinStructuredModel * model)
                          elementAdd[number++] = 1.0;
                          // if elements large then scale?
                          //if (largest>1.0e8||smallest<1.0e-8)
-                         printf("For subproblem %d smallest - %g, largest %g - dj %g\n",
+                         sprintf(generalPrint,"For subproblem %d smallest - %g, largest %g - dj %g",
                                 iBlock, smallest, largest, dj);
+			 handler_->message(CLP_GENERAL2, messages_)
+			   << generalPrint
+			   << CoinMessageEol;
                          if (dj < -1.0e-6 || !iPass) {
                               // take
                               objective[numberProposals] = objValue;
@@ -4844,8 +4987,11 @@ ClpSimplex::solveDW(CoinStructuredModel * model)
                          }
                          // if elements large or small then scale?
                          //if (largest>1.0e8||smallest<1.0e-8)
-                         printf("For subproblem ray %d smallest - %g, largest %g - dj %g\n",
+                         sprintf(generalPrint,"For subproblem ray %d smallest - %g, largest %g - dj %g",
                                 iBlock, smallest, largest, dj);
+			 handler_->message(CLP_GENERAL2, messages_)
+			   << generalPrint
+			   << CoinMessageEol;
                          if (dj < -1.0e-6) {
                               // take
                               objective[numberProposals] = objValue;
@@ -4865,7 +5011,10 @@ ClpSimplex::solveDW(CoinStructuredModel * model)
                master.addColumns(numberProposals, NULL, NULL, objective,
                                  columnAdd, rowAdd, elementAdd);
      }
-     std::cout << "Time at end of D-W " << CoinCpuTime() - time1 << " seconds" << std::endl;
+     sprintf(generalPrint,"Time at end of D-W %.2f seconds",CoinCpuTime() - time1);
+     handler_->message(CLP_GENERAL, messages_)
+       << generalPrint
+       << CoinMessageEol;
      //master.scaling(0);
      //master.primal(1);
      loadProblem(*model);
@@ -4975,9 +5124,15 @@ ClpSimplex::solveDW(CoinStructuredModel * model)
      //int numberRows=model->numberRows();
      //for (int iRow=0;iRow<numberRows;iRow++)
      //setRowStatus(iRow,ClpSimplex::superBasic);
-     std::cout << "Time before cleanup of full model " << CoinCpuTime() - time1 << " seconds" << std::endl;
+     sprintf(generalPrint,"Time before cleanup of full model %.2f seconds",CoinCpuTime() - time1);
+     handler_->message(CLP_GENERAL, messages_)
+       << generalPrint
+       << CoinMessageEol;
      primal(1);
-     std::cout << "Total time " << CoinCpuTime() - time1 << " seconds" << std::endl;
+     sprintf(generalPrint,"Total time %.2f seconds",CoinCpuTime() - time1);
+     handler_->message(CLP_GENERAL, messages_)
+       << generalPrint
+       << CoinMessageEol;
      delete [] columnCounts;
      delete [] sol;
      delete [] lower;
@@ -4992,15 +5147,282 @@ ClpSimplex::solveDW(CoinStructuredModel * model)
      delete [] sub;
      return 0;
 }
+static ClpSimplex * deBound(ClpSimplex * oldModel)
+{
+  ClpSimplex * model = new ClpSimplex(*oldModel);
+  int numberRows = model->numberRows();
+  CoinPackedMatrix * matrix = model->matrix();
+  const int * row = matrix->getIndices();
+  const int * columnLength = matrix->getVectorLengths();
+  const CoinBigIndex * columnStart = matrix->getVectorStarts();
+  double * elementByColumn = matrix->getMutableElements();
+  int numberColumns = model->numberColumns();
+  double * rowLower = model->rowLower();
+  double * rowUpper = model->rowUpper();
+  double * columnLower = model->columnLower();
+  double * columnUpper = model->columnUpper();
+  double * objective = model->objective();
+  double * change = new double[CoinMax(numberRows,numberColumns)+numberColumns];
+  int * rowStart = new int [2*numberColumns+1];
+  memset(change,0,numberRows*sizeof(double));
+  // first swap ones with infinite lower bounds
+  for (int iColumn=0;iColumn<numberColumns;iColumn++) {
+    if (columnLower[iColumn]==-COIN_DBL_MAX&&
+	columnUpper[iColumn]!=COIN_DBL_MAX) {
+      for (CoinBigIndex j=columnStart[iColumn];j<columnStart[iColumn]
+	     +columnLength[iColumn];j++)
+	elementByColumn[j] *= -1.0;
+      objective[iColumn] *= -1.0;
+      columnLower[iColumn] = -columnUpper[iColumn];
+      columnUpper[iColumn] = COIN_DBL_MAX;
+    }
+  }
+  // Out nonzero LB's
+  for (int iColumn=0;iColumn<numberColumns;iColumn++) {
+    if (columnLower[iColumn]) {
+      double value=columnLower[iColumn];
+      for (CoinBigIndex j=columnStart[iColumn];j<columnStart[iColumn]
+	     +columnLength[iColumn];j++) {
+	int iRow=row[j];
+	change[iRow] -= value*elementByColumn[j];
+      }
+    }
+  }
+  for (int iRow = 0; iRow < numberRows; iRow++) {
+    double value=change[iRow];
+    if (rowLower[iRow]>-COIN_DBL_MAX)
+      rowLower[iRow]-=value;
+    if (rowUpper[iRow]<COIN_DBL_MAX)
+      rowUpper[iRow]-=value;
+  }
+  int nExtra=0;
+  int * columnNew = rowStart+numberColumns+1;
+  for (int iColumn=0;iColumn<numberColumns;iColumn++) {
+    if (columnUpper[iColumn]<COIN_DBL_MAX&&columnUpper[iColumn]) {
+      columnNew[nExtra]=iColumn;
+      change[nExtra++]=columnUpper[iColumn];
+      columnUpper[iColumn]=COIN_DBL_MAX;
+    }
+  }
+  double * elementNew = change+numberColumns;
+  for (int i=0;i<nExtra;i++) {
+    rowStart[i]=i;
+    elementNew[i]=1.0;
+  }
+  rowStart[nExtra]=nExtra;
+  model->addRows(nExtra, NULL, change,
+		 rowStart, columnNew, elementNew);
+  delete [] rowStart;
+  delete [] change;
+  return model;
+}
+#ifdef ABC_INHERIT
+static void * abc_parallelManager(void * stuff)
+{
+  AbcPthreadStuff * driver = reinterpret_cast<AbcPthreadStuff *>(stuff);
+  int whichThread=driver->whichThread();
+  CoinAbcThreadInfo * threadInfo = driver->threadInfoPointer(whichThread);
+  threadInfo->status=-1;
+  int * which = threadInfo->stuff;
+  pthread_barrier_wait(driver->barrierPointer());
+#if 0
+  int status=-1;
+  while (status!=100)
+    status=timedWait(driver,1000,2);
+  pthread_cond_signal(driver->conditionPointer(1));
+  pthread_mutex_unlock(driver->mutexPointer(1,whichThread));
+#endif
+  // so now mutex_ is locked
+  int whichLocked=0;
+  while (true) {
+    pthread_mutex_t * mutexPointer = driver->mutexPointer(whichLocked,whichThread);
+    // wait
+    //printf("Child waiting for %d - status %d %d %d\n",
+    //	   whichLocked,lockedX[0],lockedX[1],lockedX[2]);
+#ifdef DETAIL_THREAD
+    printf("thread %d about to lock mutex %d\n",whichThread,whichLocked);
+#endif
+    pthread_mutex_lock (mutexPointer);
+    whichLocked++;
+    if (whichLocked==3)
+      whichLocked=0;
+    int unLock=whichLocked+1;
+    if (unLock==3)
+      unLock=0;
+    //printf("child pointer %x status %d\n",threadInfo,threadInfo->status);
+    assert(threadInfo->status>=0);
+    if (threadInfo->status==1000)
+      pthread_exit(NULL);
+    int type=threadInfo->status;
+    int & returnCode=which[0];
+    int iPass=which[1];
+    ClpSimplex * clpSimplex = reinterpret_cast<ClpSimplex *>(threadInfo->extraInfo);
+    //CoinIndexedVector * array;
+    //double dummy;
+    switch(type) {
+      // dummy
+    case 0:
+      break;
+    case 1:
+      if (!clpSimplex->problemStatus()||!iPass)
+	returnCode=clpSimplex->dual();
+      else
+	returnCode=clpSimplex->primal();
+      break;
+    case 100:
+      // initialization
+      break;
+    }
+    threadInfo->status=-1;
+#ifdef DETAIL_THREAD
+    printf("thread %d about to unlock mutex %d\n",whichThread,unLock);
+#endif
+    pthread_mutex_unlock (driver->mutexPointer(unLock,whichThread));
+  }
+}
+AbcPthreadStuff::AbcPthreadStuff(int numberThreads)
+{
+  numberThreads_=numberThreads;
+  if (numberThreads>8) 
+    numberThreads=1;
+  // For waking up thread
+  memset(mutex_,0,sizeof(mutex_));
+  for (int iThread=0;iThread<numberThreads;iThread++) {
+    for (int i=0;i<3;i++) {
+      pthread_mutex_init(&mutex_[i+3*iThread], NULL);
+      if (i<2)
+	pthread_mutex_lock(&mutex_[i+3*iThread]);
+    }
+    threadInfo_[iThread].status = 100;
+  }
+  //pthread_barrierattr_t attr;
+  pthread_barrier_init(&barrier_, /*&attr*/ NULL, numberThreads+1); 
+  for (int iThread=0;iThread<numberThreads;iThread++) {
+    pthread_create(&abcThread_[iThread], NULL, abc_parallelManager, reinterpret_cast<void *>(this));
+  }
+  pthread_barrier_wait(&barrier_);
+  pthread_barrier_destroy(&barrier_);
+  for (int iThread=0;iThread<numberThreads;iThread++) {
+    threadInfo_[iThread].status = -1;
+    threadInfo_[iThread].stuff[3]=1; // idle
+    locked_[iThread]=0; 
+  }
+}
+AbcPthreadStuff::~AbcPthreadStuff()
+{
+  for (int iThread=0;iThread<numberThreads_;iThread++) {
+    startParallelTask(1000,iThread);
+  }
+  for (int iThread=0;iThread<numberThreads_;iThread++) {
+    pthread_join(abcThread_[iThread],NULL);
+    for (int i=0;i<3;i++) {
+      pthread_mutex_destroy (&mutex_[i+3*iThread]);
+    }
+  }
+}
+// so thread can find out which one it is 
+int 
+AbcPthreadStuff::whichThread() const
+{
+  pthread_t thisThread=pthread_self();
+  int whichThread;
+  for (whichThread=0;whichThread<numberThreads_;whichThread++) {
+    if (pthread_equal(thisThread,abcThread_[whichThread]))
+      break;
+  }
+  assert (whichThread<NUMBER_THREADS+1);
+  return whichThread;
+}
+void 
+AbcPthreadStuff::startParallelTask(int type, int iThread, void * info)
+{
+  /*
+    first time 0,1 owned by main 2 by child
+    at end of cycle should be 1,2 by main 0 by child then 2,0 by main 1 by child
+  */
+  threadInfo_[iThread].status=type;
+  threadInfo_[iThread].extraInfo=info;
+  threadInfo_[iThread].stuff[3]=0; // say not idle
+#ifdef DETAIL_THREAD
+  printf("main doing thread %d about to unlock mutex %d\n",iThread,locked_[iThread]);
+#endif
+  pthread_mutex_unlock (&mutex_[locked_[iThread]+3*iThread]);
+}
+int
+AbcPthreadStuff::waitParallelTask(int type,int & iThread, bool allowIdle)
+{
+  bool finished = false;
+  if (allowIdle) {
+    for (iThread = 0; iThread < numberThreads_; iThread++) {
+      if (threadInfo_[iThread].status < 0&&threadInfo_[iThread].stuff[3]) {
+	finished = true;
+	break;
+      }
+    }
+    if (finished)
+      return 0;
+  }
+  while (!finished) {
+    for (iThread = 0; iThread < numberThreads_; iThread++) {
+      if (threadInfo_[iThread].status < 0&&!threadInfo_[iThread].stuff[3]) {
+	finished = true;
+	break;
+      }
+    }
+    if (!finished) {
+      struct timespec time1, time2;
+      time1.tv_sec = 0;
+      time1.tv_nsec = 100000;
+      nanosleep(&time1 , &time2);
+    }
+  }
+  int locked=locked_[iThread]+2;
+  if (locked>=3)
+    locked-=3;
+#ifdef DETAIL_THREAD
+  printf("Main do thread %d about to lock mutex %d\n",iThread,locked);
+#endif
+  pthread_mutex_lock(&mutex_[locked+iThread*3]);
+  locked_[iThread]++;
+  if (locked_[iThread]==3)
+    locked_[iThread]=0;
+  threadInfo_[iThread].stuff[3]=1; // say idle
+  return threadInfo_[iThread].stuff[0];
+}
+void
+AbcPthreadStuff::waitAllTasks()
+{
+  int nWait=0;
+  for (int iThread=0;iThread<numberThreads_;iThread++) {
+    int idle = threadInfo_[iThread].stuff[3];
+    if (!idle) 
+      nWait++;
+  }
+#ifdef DETAIL_THREAD
+  printf("Waiting for %d tasks to finish\n",nWait);
+#endif
+  for (int iThread=0;iThread<nWait;iThread++) {
+    int jThread;
+    waitParallelTask(0,jThread,false);
+#ifdef DETAIL_THREAD
+    printf("finished with thread %d\n",jThread);
+#endif
+  }
+}
+#endif
 // Solve using Benders decomposition and maybe in parallel
 int
-ClpSimplex::solveBenders(CoinStructuredModel * model)
+ClpSimplex::solveBenders(CoinStructuredModel * model,ClpSolve & options)
 {
      double time1 = CoinCpuTime();
+     //ClpSimplex * xxxx = deBound(this);
+     //xxxx->writeMps("nobounds.mps");
+     //delete xxxx;
      //int numberColumns = model->numberColumns();
      int numberRowBlocks = model->numberRowBlocks();
      int numberColumnBlocks = model->numberColumnBlocks();
      int numberElementBlocks = model->numberElementBlocks();
+     char generalPrint[200];
      // We already have top level structure
      CoinModelBlockInfo * blockInfo = new CoinModelBlockInfo [numberElementBlocks];
      for (int i = 0; i < numberElementBlocks; i++) {
@@ -5088,10 +5510,16 @@ ClpSimplex::solveBenders(CoinStructuredModel * model)
      // create all data
      const CoinPackedMatrix ** first = new const CoinPackedMatrix * [numberRowBlocks];
      ClpSimplex * sub = new ClpSimplex [numberBlocks];
-     ClpSimplex master;
+     ClpSimplex masterModel;
      // Set offset
-     master.setObjectiveOffset(model->objectiveOffset());
+     masterModel.setObjectiveOffset(model->objectiveOffset());
      kBlock = 0;
+#define ADD_ARTIFICIALS
+#ifdef ADD_ARTIFICIALS
+     int * originalSubColumns = new int [numberBlocks];
+     for (iBlock = 0; iBlock < numberBlocks; iBlock++) 
+       originalSubColumns[iBlock]=9999999;
+#endif
      int masterBlock = -1;
      for (iBlock = 0; iBlock < numberRowBlocks; iBlock++) {
           first[kBlock] = NULL;
@@ -5135,16 +5563,56 @@ ClpSimplex::solveBenders(CoinStructuredModel * model)
                               sub[kBlock].setFactorizationFrequency(this->factorizationFrequency());
                          }
                          sub[kBlock].setPerturbation(50);
+#ifdef ADD_ARTIFICIALS
+			 originalSubColumns[kBlock]=sub[kBlock].numberColumns();
+			 if (intParam_[0]<1000000) {
+			   printf("** Adding artificials\n");
+			   int nRow = sub[kBlock].numberRows();
+			   int * addStarts = new int [2*nRow+1];
+			   int * addRow = new int[2*nRow];
+			   double * addElement = new double[2*nRow];
+			   addStarts[0] = 0;
+			   int numberArtificials = 0;
+			   double penalty =1.0e5;
+			   double * addCost = new double [2*nRow];
+			   const double * lower = sub[kBlock].rowLower();
+			   const double * upper = sub[kBlock].rowUpper();
+			   for (int iRow = 0; iRow < nRow; iRow++) {
+			     if (lower[iRow] > -1.0e20) {
+			       addRow[numberArtificials] = iRow;
+			       addElement[numberArtificials] = 1.0;
+			       addCost[numberArtificials] = penalty;
+			       numberArtificials++;
+			       addStarts[numberArtificials] = numberArtificials;
+			     }
+			     if (upper[iRow] < 1.0e20) {
+			       addRow[numberArtificials] = iRow;
+			       addElement[numberArtificials] = -1.0;
+			       addCost[numberArtificials] = penalty;
+			       numberArtificials++;
+			       addStarts[numberArtificials] = numberArtificials;
+			     }
+			   }
+			   if (numberArtificials) {
+			     sub[kBlock].addColumns(numberArtificials, NULL, NULL, addCost,
+						    addStarts, addRow, addElement);
+			   }
+			   delete [] addStarts;
+			   delete [] addRow;
+			   delete [] addElement;
+			   delete [] addCost;
+			 }
+#endif
                          // Set rowCounts to be diagonal block index for cleanup
                          rowCounts[kBlock] = jBlock;
                     } else {
                          // master
                          masterBlock = jBlock;
-                         master.loadProblem(*matrix, columnLower, columnUpper,
+                         masterModel.loadProblem(*matrix, columnLower, columnUpper,
                                             objective, rowLower, rowUpper);
                          if (optimizationDirection_ < 0.0) {
-                              double * obj = master.objective();
-                              int n = master.numberColumns();
+                              double * obj = masterModel.objective();
+                              int n = masterModel.numberColumns();
                               for (int i = 0; i < n; i++)
                                    obj[i] = - obj[i];
                          }
@@ -5156,255 +5624,1644 @@ ClpSimplex::solveBenders(CoinStructuredModel * model)
      }
      delete [] whichBlock;
      delete [] blockInfo;
-     // For now master must have been defined (does not have to have rows)
-     assert (master.numberColumns());
      assert (masterBlock >= 0);
-     int numberMasterColumns = master.numberColumns();
+     int numberMasterColumns = masterModel.numberColumns();
+     masterModel.setStrParam(ClpProbName,"Master");
      // Overkill in terms of space
      int spaceNeeded = CoinMax(numberBlocks * (numberMasterColumns + 1),
                                2 * numberMasterColumns);
      int * columnAdd = new int[spaceNeeded];
      double * elementAdd = new double[spaceNeeded];
      spaceNeeded = numberBlocks;
-     int * rowAdd = new int[spaceNeeded+1];
+     int * rowAdd = new int[2*spaceNeeded+1]; // temp for block info
+     int * blockPrint = rowAdd+spaceNeeded+1;
      double * objective = new double[spaceNeeded];
-     int maxPass = 500;
+     int logLevel=handler_->logLevel();
+     //#define TEST_MODEL
+#ifdef TEST_MODEL
+     double goodValue=COIN_DBL_MAX;
+     ClpSimplex goodModel;
+     if (logLevel>3) {
+       // temp - create copy with master at front
+       const int * columnBack = model->coinBlock(masterBlock)->originalColumns();
+       int numberColumns2 = model->coinBlock(masterBlock)->numberColumns();
+       const int * rowBack = model->coinBlock(masterBlock)->originalRows();
+       int numberRows2 = model->coinBlock(masterBlock)->numberRows();
+       int * whichColumn = new int [numberColumns_+numberBlocks];
+       int * whichRow = new int [numberRows_];
+       int nColumn=0;
+       for (int iColumn = 0; iColumn < numberColumns2; iColumn++) {
+	 int kColumn = columnBack[iColumn];
+	 whichColumn[nColumn++]=kColumn;
+       }
+       int nRow=0;
+       for (int iRow = 0; iRow < numberRows2; iRow++) {
+	 int kRow = rowBack[iRow];
+	 whichRow[nRow++]=kRow;
+       }
+       for (iBlock = 0; iBlock < numberBlocks; iBlock++) {
+	 int kBlock = rowCounts[iBlock];
+	 const int * columnBack = model->coinBlock(kBlock)->originalColumns();
+	 int numberColumns2 = model->coinBlock(kBlock)->numberColumns();
+	 const int * rowBack = model->coinBlock(kBlock)->originalRows();
+	 int numberRows2 = model->coinBlock(kBlock)->numberRows();
+	 for (int iColumn = 0; iColumn < numberColumns2; iColumn++) {
+	   int kColumn = columnBack[iColumn];
+	   whichColumn[nColumn++]=kColumn;
+	 }
+	 for (int iRow = 0; iRow < numberRows2; iRow++) {
+	   int kRow = rowBack[iRow];
+	   whichRow[nRow++]=kRow;
+	 }
+       }
+       ClpSimplex temp(this,nRow,whichRow,nColumn,whichColumn);
+       temp.writeMps("ordered.mps");
+       for (int i=numberMasterColumns;i<numberColumns_;i++)
+	 whichColumn[i+numberBlocks]=i;
+       for (int i=0;i<numberMasterColumns;i++)
+	 whichColumn[i]=i;
+       for (int i=0;i<numberBlocks;i++)
+	 whichColumn[i+numberMasterColumns]=i+numberColumns_;
+       double * lower = new double [numberBlocks];
+       // Add extra variables
+       columnAdd[0] = 0;
+       for (int iBlock = 0; iBlock < numberBlocks; iBlock++) {
+	 objective[iBlock] = 0.0;
+	 lower[iBlock]=-COIN_DBL_MAX;
+	 columnAdd[iBlock+1] = 0;
+       }
+       temp.addColumns(numberBlocks, lower, NULL, objective,
+		       columnAdd, rowAdd, elementAdd);
+       delete [] lower;
+       ClpSimplex temp2(&temp,nRow,whichRow,nColumn+numberBlocks,whichColumn);
+       goodModel=temp2;
+       goodModel.dual();
+       goodValue=goodModel.objectiveValue();
+#if 0
+       double * obj = goodModel.objective();
+       for (int i=numberMasterColumns;i<numberMasterColumns+numberBlocks;i++)
+	 obj[i]=0.5;;
+       for (int i=numberMasterColumns+numberBlocks;i<goodModel.numberColumns();i++)
+	 obj[i]*=0.5;
+       // fix solution
+       {
+	 double * lower = goodModel.columnLower();
+	 double * upper = goodModel.columnUpper();
+	 double * solution = goodModel.primalColumnSolution();
+	 for (int i=0;i<numberMasterColumns;i++) {
+	   lower[i]=solution[i];
+	   upper[i]=solution[i];
+	 }
+	 goodModel.scaling(0);
+	 goodModel.dual();
+       }
+#endif
+       delete [] whichColumn;
+       delete [] whichRow;
+     }
+#endif
+     int maxPass = options.independentOption(2);
+     if (maxPass<2)
+       maxPass=100;
      int iPass;
      double lastObjective = -1.0e31;
      // Create columns for proposals
-     int numberMasterRows = master.numberRows();
-     master.resize(numberMasterColumns + numberBlocks, numberMasterRows);
+     int numberMasterRows = masterModel.numberRows();
+     //masterModel.resize(numberMasterColumns + numberBlocks, numberMasterRows);
      if (this->factorizationFrequency() == 200) {
           // User did not touch preset
-          master.defaultFactorizationFrequency();
+          masterModel.defaultFactorizationFrequency();
      } else {
           // make sure model has correct value
-          master.setFactorizationFrequency(this->factorizationFrequency());
+          masterModel.setFactorizationFrequency(this->factorizationFrequency());
      }
-     master.setPerturbation(50);
+     masterModel.setPerturbation(50);
+     // temp bounds
+     if (0) {
+       printf("temp bounds\n");
+       double * lower = masterModel.columnLower();
+       double * upper = masterModel.columnUpper();
+       for (int i=0;i<numberMasterColumns;i++) {
+	 lower[i]=CoinMax(lower[i],-1.0e8);
+	 upper[i]=CoinMin(upper[i],1.0e8);
+       }
+     }
+     //printf("take out debound\n");
+     //master=*deBound(&master);
      // Arrays to say which block and when created
      int maximumRows = 2 * numberMasterColumns + 10 * numberBlocks;
      whichBlock = new int[maximumRows];
      int * when = new int[maximumRows];
+     // state of each problem (0 first or infeas, 1 feasible, add 2 if extra variables freed)
+     int * problemState = new int [numberBlocks];
+     memset(problemState,0,numberBlocks*sizeof(int));
      int numberRowsGenerated = numberBlocks;
+     // space for rhs modifications
+     double ** modification = new double * [numberBlocks];
      // Add extra variables
-     {
-          int iBlock;
-          columnAdd[0] = 0;
-          for (iBlock = 0; iBlock < numberBlocks; iBlock++) {
-               objective[iBlock] = 1.0;
-               columnAdd[iBlock+1] = 0;
-               when[iBlock] = -1;
-               whichBlock[iBlock] = iBlock;
-          }
-          master.addColumns(numberBlocks, NULL, NULL, objective,
-                            columnAdd, rowAdd, elementAdd);
+     columnAdd[0] = 0;
+     for (int iBlock = 0; iBlock < numberBlocks; iBlock++) {
+       int numberRows2=sub[iBlock].numberRows();
+       int numberColumns2 = sub[iBlock].numberColumns();
+       int numberTotal2 = numberRows2+numberColumns2;
+       modification[iBlock]=new double [2*numberTotal2+numberRows2];
+       double * save = modification[iBlock];
+       memcpy(save,sub[iBlock].rowLower(),numberRows2*sizeof(double));
+       save += numberRows2;
+       memcpy(save,sub[iBlock].columnLower(),numberColumns2*sizeof(double));
+       save += numberColumns2;
+       memcpy(save,sub[iBlock].rowUpper(),numberRows2*sizeof(double));
+       save += numberRows2;
+       memcpy(save,sub[iBlock].columnUpper(),numberColumns2*sizeof(double));
+       objective[iBlock] = 1.0;
+       columnAdd[iBlock+1] = 0;
+       when[iBlock] = -1;
+       whichBlock[iBlock] = iBlock;
+       if (logLevel<2) {
+	 // modify printing
+	 sub[iBlock].messagesPointer()->setDetailMessage(2,6);
+	 sub[iBlock].messagesPointer()->setDetailMessage(2,14);
+	 sub[iBlock].messagesPointer()->setDetailMessage(2,0);
+       }
+       // scaling
+       sub[iBlock].scaling(scalingFlag_);
+       //sub[iBlock].scaling(0);
      }
-     std::cout << "Time to decompose " << CoinCpuTime() - time1 << " seconds" << std::endl;
+     masterModel.addColumns(numberBlocks, NULL, NULL, objective,
+		       columnAdd, rowAdd, elementAdd);
+     sprintf(generalPrint,"Time to decompose %.2f seconds",CoinCpuTime() - time1);
+     handler_->message(CLP_GENERAL, messages_)
+       << generalPrint
+       << CoinMessageEol;
+     int ixxxxxx=0;
+     if (intParam_[0]>=100000&&intParam_[0]<100999) {
+       ixxxxxx=intParam_[0]-100000;
+       printf("ixxxxxx %d\n",ixxxxxx);
+     }
+#ifdef ADD_ARTIFICIALS
+     double ** saveObjective = new double * [numberBlocks];
+     for (int i=0;i<numberBlocks;i++)
+       saveObjective[i]=CoinCopyOfArray(sub[i].objective(),
+					originalSubColumns[i]);
+     int iFudge=1;
+     int lowFudge=0;
+     int highFudge=0;
+#endif
+#define UNBOUNDED
+     if (ixxxxxx>0) {
+       for (iBlock = 0; iBlock < CoinMin(numberBlocks,ixxxxxx); iBlock++) {
+	 ClpSimplex * temp = deBound(sub+iBlock);
+	 sub[iBlock]=*temp;
+	 delete temp;
+	 delete [] modification[iBlock];
+	 int numberRows2 = sub[iBlock].numberRows();
+	 int numberColumns2 = sub[iBlock].numberColumns();
+	 int numberTotal2 = numberRows2+numberColumns2;
+	 modification[iBlock]=new double [2*numberTotal2+numberRows2];
+	 double * save = modification[iBlock];
+	 memcpy(save,sub[iBlock].rowLower(),numberRows2*sizeof(double));
+	 save += numberRows2;
+	 memcpy(save,sub[iBlock].columnLower(),numberColumns2*sizeof(double));
+	 save += numberColumns2;
+	 memcpy(save,sub[iBlock].rowUpper(),numberRows2*sizeof(double));
+	 save += numberRows2;
+	 memcpy(save,sub[iBlock].columnUpper(),numberColumns2*sizeof(double));
+       }
+     }
+#ifdef ABC_INHERIT
+     //AbcSimplex abcMaster;
+     //if (!this->abcState())
+     //setAbcState(1);
+     int numberCpu=CoinMin((this->abcState()&15),4);
+     AbcPthreadStuff threadInfo(numberCpu);
+     masterModel.setAbcState(this->abcState());
+     //AbcSimplex * tempMaster=masterModel.dealWithAbc(2,10,true);
+     //abcMaster=*tempMaster;
+     //delete tempMaster;
+     //abcMaster.startThreads(numberCpu);
+     //#define masterModel abcMaster
+#endif
+     double treatSubAsFeasible=1.0e-6;
+     int numberSubInfeasible=0;
+     bool canSkipSubSolve=false;
+     int numberProposals=999;
      for (iPass = 0; iPass < maxPass; iPass++) {
-          printf("Start of pass %d\n", iPass);
+          sprintf(generalPrint,"Start of pass %d", iPass);
+	  handler_->message(CLP_GENERAL, messages_)
+	    << generalPrint
+	    << CoinMessageEol;
           // Solve master - may be unbounded
-          //master.scaling(0);
-          if (1) {
-               master.writeMps("yy.mps");
+          //masterModel.scaling(0);
+	  // get obj for debug
+	  double objSum=masterModel.objectiveValue();
+	  for (int i=0;i<numberBlocks;i++) 
+	    objSum += sub[i].objectiveValue();
+	  //printf("objsum %g\n",objSum);
+          if (0) {
+               masterModel.writeMps("yy.mps");
+	       masterModel.writeBasis("yy.bas",true,2);
           }
-          master.dual();
-          int problemStatus = master.status(); // do here as can change (delcols)
-          if (master.numberIterations() == 0 && iPass)
-               break; // finished
-          if (master.objectiveValue() < lastObjective + 1.0e-7 && iPass > 555)
-               break; // finished
-          lastObjective = master.objectiveValue();
+	  {
+	    // free up extra variables
+	    double * lower = masterModel.columnLower();
+	    int numberFreed=0;
+	    for (int i=0;i<numberBlocks;i++) {
+	      if (problemState[i]==1
+		  ) {
+		// ? need trust region ?
+		lower[i+numberMasterColumns]=-COIN_DBL_MAX;
+#if 0 //1 //ndef UNBOUNDED
+		lower[i+numberMasterColumns]=-1.0e10;
+#endif
+		//if (problemState[i]!=2) {
+		  numberFreed++;
+		  problemState[i]=3;
+		  //}
+	      }
+	    }
+	    if (numberFreed)
+	      lastObjective = -1.0e31;
+	  }
+#ifdef TRY_NO_SCALING
+	  masterModel.scaling(0);
+#endif
+#ifdef ABC_INHERIT
+	  masterModel.dealWithAbc(0,0,true);
+#else
+          masterModel.dual();
+#endif
+	  if ((maxPass==5000&&scalingFlag_)||(maxPass==4000&&!scalingFlag_)) {
+	    int n=masterModel.numberIterations();
+	    masterModel.scaling(0);
+	    masterModel.primal();
+	    masterModel.setNumberIterations(n+masterModel.numberIterations());
+	    masterModel.scaling(scalingFlag_);
+	  }
+          int masterStatus = masterModel.status(); // do here as can change
+	  sprintf(generalPrint,"Pass %d objective %g change %g",
+		 iPass,masterModel.objectiveValue(),
+		 masterModel.objectiveValue()-lastObjective);
+	  handler_->message(CLP_GENERAL, messages_)
+	    << generalPrint
+	    << CoinMessageEol;
+#ifndef UNBOUNDED
+	  if(masterStatus==2) {
+	    // unbounded
+	    masterModel.writeMps("unbounded.mps");
+	    // get primal feasible
+#ifdef ABC_INHERIT
+	    masterModel.dealWithAbc(1,1,true);
+#else
+	    masterModel.primal();
+#endif
+	    const double * fullLower = columnLower();
+	    const double * fullUpper = columnUpper();
+	    double * lower = masterModel.columnLower();
+	    double * upper = masterModel.columnUpper();
+	    double * solution = masterModel.primalColumnSolution();
+	    const int * columnBack = 
+	      model->coinBlock(masterBlock)->originalColumns();
+	    if (!numberTimesUnbounded) {
+	      for (int iColumn = 0; iColumn < numberMasterColumns; iColumn++) {
+		int kColumn = columnBack[iColumn];
+		double value = solution[iColumn];
+		double lowerValue=CoinMax(fullLower[kColumn],
+					  CoinMin(value,fullUpper[kColumn])-trust);
+		lower[iColumn]=lowerValue;
+		double upperValue=CoinMin(fullUpper[kColumn],
+					  CoinMax(value,fullLower[kColumn])+trust);
+		upper[iColumn]=upperValue;
+	      }
+#ifdef TEST_MODEL
+	      if (logLevel>3) {
+		//use ones from solved
+		const double * solutionGood = goodModel.primalColumnSolution();
+		for (int iColumn = 0; iColumn < numberMasterColumns; iColumn++) {
+		  double value = solutionGood[iColumn];
+		  lower[iColumn]=CoinMin(value,-trust);
+		  upper[iColumn]=CoinMax(value,trust);
+		}
+	      }
+#endif
+	    } else {
+	      abort(); // probably can happen
+	    } 
+	    numberTimesUnbounded++;
+#ifdef ABC_INHERIT
+	    masterModel.dealWithAbc(0,0,true);
+#else
+	    masterModel.dual();
+#endif
+	    masterStatus = masterModel.status();
+	    assert (!masterStatus);
+	    masterModel.setNumberIterations(1); // so will continue
+	  }
+	  if (numberTimesUnbounded>1&&trust>0.0) {
+	    assert (!masterStatus);
+	    const double * fullLower = columnLower();
+	    const double * fullUpper = columnUpper();
+	    double * lower = masterModel.columnLower();
+	    double * upper = masterModel.columnUpper();
+	    //double * solution = masterModel.primalColumnSolution();
+	    const int * columnBack = 
+	      model->coinBlock(masterBlock)->originalColumns();
+	    int nTrusted=0;
+	    for (int iColumn = 0; iColumn < numberMasterColumns; iColumn++) {
+	      int kColumn = columnBack[iColumn];
+	      if (lower[iColumn]>fullLower[kColumn]) {
+		if(masterModel.getColumnStatus(iColumn)!=atLowerBound) {
+		  lower[iColumn]=fullLower[kColumn];
+		} else {
+		  nTrusted++;
+		}
+	      }
+	      if (upper[iColumn]<fullUpper[kColumn]) {
+		if(masterModel.getColumnStatus(iColumn)!=atUpperBound) {
+		  upper[iColumn]=fullUpper[kColumn];
+		} else {
+		  nTrusted++;
+		}
+	      }
+	    }
+	    if (nTrusted) {
+	      sprintf(generalPrint,"%d at artificial bound",nTrusted);
+	    } else {
+	      sprintf(generalPrint,"All at natural bounds");
+	      trust=0.0;
+	    }
+	    handler_->message(CLP_GENERAL2, messages_)
+	    << generalPrint
+	    << CoinMessageEol;
+	  }
+#endif
+	  if (!masterStatus) {
+	    if (masterModel.numberIterations() == 0 && iPass ) {
+	      if ((!numberSubInfeasible&&!numberProposals)||treatSubAsFeasible>1.0e-2||iPass>5555)
+		break; // finished
+	      if (!numberProposals&&numberSubInfeasible) {
+		treatSubAsFeasible *= 2.0;
+		printf("Doubling sub primal tolerance to %g\n",treatSubAsFeasible);
+	      } else {
+		treatSubAsFeasible *= 1.2;
+		printf("Increasing sub primal tolerance to %g\n",treatSubAsFeasible);
+	      }
+	      canSkipSubSolve=false;
+	    } else if (!numberSubInfeasible) {
+	      if (treatSubAsFeasible>1.0e-6) {
+		treatSubAsFeasible = CoinMax(0.9*treatSubAsFeasible,1.0e-6);
+		printf("Reducing sub primal tolerance to %g\n",treatSubAsFeasible);
+	      }
+	    }	      
+	    if (masterModel.objectiveValue() < lastObjective + 1.0e-7 && iPass > 5555)
+	      break; // finished
+	    lastObjective = masterModel.objectiveValue();
+	  }
           // mark non-basic rows and delete if necessary
           int iRow;
-          numberRowsGenerated = master.numberRows() - numberMasterRows;
+          numberRowsGenerated = masterModel.numberRows() - numberMasterRows;
           for (iRow = 0; iRow < numberRowsGenerated; iRow++) {
-               if (master.getStatus(iRow + numberMasterRows) != ClpSimplex::basic)
+               if (masterModel.getStatus(iRow + numberMasterRows) != ClpSimplex::basic)
                     when[iRow] = iPass;
           }
-          if (numberRowsGenerated > maximumRows) {
+          if (numberRowsGenerated > maximumRows-numberBlocks) {
                // delete
                int numberKeep = 0;
                int numberDelete = 0;
                int * whichDelete = new int[numberRowsGenerated];
                for (iRow = 0; iRow < numberRowsGenerated; iRow++) {
-                    if (when[iRow] > iPass - 7) {
-                         // keep
-                         when[numberKeep] = when[iRow];
-                         whichBlock[numberKeep++] = whichBlock[iRow];
-                    } else {
-                         // delete
-                         whichDelete[numberDelete++] = iRow + numberMasterRows;
-                    }
+		 if (masterModel.getRowStatus(iRow+numberMasterRows)!= basic) {
+		   // keep
+		   when[numberKeep] = when[iRow];
+		   whichBlock[numberKeep++] = whichBlock[iRow];
+		 } else {
+		   // delete
+		   whichDelete[numberDelete++] = iRow + numberMasterRows;
+		 }
                }
+	       if (numberRowsGenerated-numberDelete > maximumRows-numberBlocks) {
+		 for (iRow = 0; iRow < numberRowsGenerated; iRow++) {
+		   if (when[iRow] > iPass - 7 ) {
+		     // keep
+		     when[numberKeep] = when[iRow];
+		     whichBlock[numberKeep++] = whichBlock[iRow];
+		   } else {
+		     // delete
+		     whichDelete[numberDelete++] = iRow + numberMasterRows;
+		   }
+		 }
+	       }
                numberRowsGenerated -= numberDelete;
-               master.deleteRows(numberDelete, whichDelete);
+               masterModel.deleteRows(numberDelete, whichDelete);
                delete [] whichDelete;
           }
-          const double * primal = NULL;
+          double * primal = NULL;
           bool deletePrimal = false;
-          if (problemStatus == 0) {
-               primal = master.primalColumnSolution();
-          } else if (problemStatus == 2) {
-               // could do composite objective
-               primal = master.unboundedRay();
-               deletePrimal = true;
-               printf("The sum of infeasibilities is %g\n",
-                      master.sumPrimalInfeasibilities());
-          } else if (!master.numberRows()) {
+          if (masterStatus == 0) {
+               primal = masterModel.primalColumnSolution();
+          } else if (masterStatus == 2 && masterModel.numberRows()) {
+               // scale back ray (1.0e20?)
+               primal = masterModel.ray();
+               //deletePrimal = true;
+               sprintf(generalPrint,"The sum of dual infeasibilities is %g",
+                      masterModel.sumDualInfeasibilities());
+	       handler_->message(CLP_GENERAL, messages_)
+		 << generalPrint
+		 << CoinMessageEol;
+#if 0
+	       const double * primal2 = masterModel.primalColumnSolution();
+#ifndef UNBOUNDED
+	       for (int i=0;i<numberMasterColumns;i++) {
+		 primal[i] = 1.0e-10*primal[i]+primal2[i];
+	       }
+#else
+	       double scaleFactor = innerProduct(primal,numberMasterColumns,primal);
+	       double scaleFactor2 = innerProduct(primal+numberMasterColumns,
+						  numberBlocks,primal+numberMasterColumns);
+	       if (scaleFactor&&!scaleFactor2) {
+		 scaleFactor = 1.0/sqrt(scaleFactor);
+		 for (int i=0;i<numberMasterColumns;i++) {
+		   primal[i] *= scaleFactor;
+		 }
+	       } else {
+		 // treat as feasible
+		 if (scaleFactor)
+		   scaleFactor = 1.0e10/sqrt(scaleFactor);
+		 for (int i=0;i<numberMasterColumns;i++) {
+		   primal[i] = primal[i]*scaleFactor+primal2[i];
+		 }
+		 masterStatus=0;
+	       }
+#endif
+#endif
+          } else if (!masterModel.numberRows()) {
                assert(!iPass);
-               primal = master.primalColumnSolution();
-               memset(master.primalColumnSolution(),
+               primal = masterModel.primalColumnSolution();
+               memset(masterModel.primalColumnSolution(),
                       0, numberMasterColumns * sizeof(double));
           } else {
-               abort();
+	    printf("Master infeasible - sum %g\n",
+		   masterModel.sumPrimalInfeasibilities());
+	    masterModel.setProblemStatus(0);
+	    primal = masterModel.primalColumnSolution();
+	    masterModel.writeMps("inf.mps");
+	    //abort();
           }
+#ifndef UNBOUNDED
+	  if (masterStatus==2) {
+	    // adjust variables with no elements
+	    const int * columnLength = masterModel.matrix()->getVectorLengths();
+	    const double * lower = masterModel.columnLower(); 
+	    const double * upper = masterModel.columnUpper(); 
+	    const double * obj = masterModel.objective();
+	    for (int i=0;i<numberMasterColumns;i++) {
+	      double value=primal[i];
+	      if (!columnLength[i]) {
+		if (obj[i]<0.0)
+		  value += 1.0e10;
+		else if (obj[i]>0.0)
+		  value -= 1.0e10;
+	      }
+	      // make sure feasible
+	      primal[i]=CoinMax(-1.0e10,CoinMin(1.0e10,value));
+	      primal[i]=CoinMax(lower[i],CoinMin(upper[i],primal[i]));
+	    }
+	  }
+#endif
           // Create rhs for sub problems and solve
-          rowAdd[0] = 0;
-          int numberProposals = 0;
           for (iBlock = 0; iBlock < numberBlocks; iBlock++) {
-               int numberRows2 = sub[iBlock].numberRows();
-               double * saveLower = new double [numberRows2];
-               double * lower2 = sub[iBlock].rowLower();
-               double * saveUpper = new double [numberRows2];
-               double * upper2 = sub[iBlock].rowUpper();
-               // new rhs
-               CoinZeroN(saveUpper, numberRows2);
-               first[iBlock]->times(primal, saveUpper);
-               for (int i = 0; i < numberRows2; i++) {
-                    double value = saveUpper[i];
-                    saveLower[i] = lower2[i];
-                    saveUpper[i] = upper2[i];
-                    if (saveLower[i] > -1.0e30)
-                         lower2[i] -= value;
-                    if (saveUpper[i] < 1.0e30)
-                         upper2[i] -= value;
-               }
-               sub[iBlock].dual();
-               memcpy(lower2, saveLower, numberRows2 * sizeof(double));
-               memcpy(upper2, saveUpper, numberRows2 * sizeof(double));
-               // get proposal
-               if (sub[iBlock].numberIterations() || !iPass) {
-                    double objValue = 0.0;
-                    int start = rowAdd[numberProposals];
-                    // proposal
-                    if (sub[iBlock].isProvenOptimal()) {
-                         const double * solution = sub[iBlock].dualRowSolution();
-                         first[iBlock]->transposeTimes(solution, elementAdd + start);
-                         for (int i = 0; i < numberRows2; i++) {
-                              if (solution[i] < -dualTolerance_) {
-                                   // at upper
-                                   assert (saveUpper[i] < 1.0e30);
-                                   objValue += solution[i] * saveUpper[i];
-                              } else if (solution[i] > dualTolerance_) {
-                                   // at lower
-                                   assert (saveLower[i] > -1.0e30);
-                                   objValue += solution[i] * saveLower[i];
-                              }
-                         }
-
-                         // See if cuts off and pack down
-                         int number = start;
-                         double infeas = objValue;
-                         double smallest = 1.0e100;
-                         double largest = 0.0;
-                         for (int i = 0; i < numberMasterColumns; i++) {
-                              double value = elementAdd[start+i];
-                              if (fabs(value) > 1.0e-15) {
-                                   infeas -= primal[i] * value;
-                                   smallest = CoinMin(smallest, fabs(value));
-                                   largest = CoinMax(largest, fabs(value));
-                                   columnAdd[number] = i;
-                                   elementAdd[number++] = -value;
-                              }
-                         }
-                         columnAdd[number] = numberMasterColumns + iBlock;
-                         elementAdd[number++] = -1.0;
-                         // if elements large then scale?
-                         //if (largest>1.0e8||smallest<1.0e-8)
-                         printf("For subproblem %d smallest - %g, largest %g - infeas %g\n",
-                                iBlock, smallest, largest, infeas);
-                         if (infeas < -1.0e-6 || !iPass) {
-                              // take
-                              objective[numberProposals] = objValue;
-                              rowAdd[++numberProposals] = number;
-                              when[numberRowsGenerated] = iPass;
-                              whichBlock[numberRowsGenerated++] = iBlock;
-                         }
-                    } else if (sub[iBlock].isProvenPrimalInfeasible()) {
-                         // use ray
-                         const double * solution = sub[iBlock].infeasibilityRay();
-                         first[iBlock]->transposeTimes(solution, elementAdd + start);
-                         for (int i = 0; i < numberRows2; i++) {
-                              if (solution[i] < -dualTolerance_) {
-                                   // at upper
-                                   assert (saveUpper[i] < 1.0e30);
-                                   objValue += solution[i] * saveUpper[i];
-                              } else if (solution[i] > dualTolerance_) {
-                                   // at lower
-                                   assert (saveLower[i] > -1.0e30);
-                                   objValue += solution[i] * saveLower[i];
-                              }
-                         }
-                         // See if good infeas and pack down
-                         int number = start;
-                         double infeas = objValue;
-                         double smallest = 1.0e100;
-                         double largest = 0.0;
-                         for (int i = 0; i < numberMasterColumns; i++) {
-                              double value = elementAdd[start+i];
-                              if (fabs(value) > 1.0e-15) {
-                                   infeas -= primal[i] * value;
-                                   smallest = CoinMin(smallest, fabs(value));
-                                   largest = CoinMax(largest, fabs(value));
-                                   columnAdd[number] = i;
-                                   elementAdd[number++] = -value;
-                              }
-                         }
-                         // if elements large or small then scale?
-                         //if (largest>1.0e8||smallest<1.0e-8)
-                         printf("For subproblem ray %d smallest - %g, largest %g - infeas %g\n",
-                                iBlock, smallest, largest, infeas);
-                         if (infeas < -1.0e-6) {
-                              // take
-                              objective[numberProposals] = objValue;
-                              rowAdd[++numberProposals] = number;
-                              when[numberRowsGenerated] = iPass;
-                              whichBlock[numberRowsGenerated++] = iBlock;
-                         }
-                    } else {
-                         abort();
-                    }
-               }
-               delete [] saveLower;
-               delete [] saveUpper;
-          }
-          if (deletePrimal)
-               delete [] primal;
+#ifdef ADD_ARTIFICIALS
+	    {
+	      double * columnUpper2=sub[iBlock].columnUpper();
+	      double * obj = sub[iBlock].objective();
+	      int start=originalSubColumns[iBlock];
+	      int numberColumns2=sub[iBlock].numberColumns();
+	      if (iFudge>=lowFudge&&iFudge<=abs(highFudge)) {
+		for (int i=start;i<numberColumns2;i++) 
+		  columnUpper2[i]=COIN_DBL_MAX;
+		memset(obj,0,originalSubColumns[iBlock]*sizeof(double));
+	      } else {
+		for (int i=start;i<numberColumns2;i++) 
+		  columnUpper2[i]=0.0;
+		memcpy(obj,saveObjective[iBlock],originalSubColumns[iBlock]*sizeof(double));
+		if (highFudge<0) {
+		  sub[iBlock].allSlackBasis(true);
+		}
+	      }
+	    }
+#endif
+	    int numberRows2 = sub[iBlock].numberRows();
+	    int numberColumns2 = sub[iBlock].numberColumns();
+	    double * saveLower = modification[iBlock];
+	    double * lower2 = sub[iBlock].rowLower();
+	    memcpy(lower2, saveLower, numberRows2 * sizeof(double));
+	    double * saveColumnLower = saveLower+numberRows2;
+	    double * columnLower2 = sub[iBlock].columnLower();
+	    memcpy(columnLower2,saveColumnLower,numberColumns2*sizeof(double));
+	    double * saveUpper = saveColumnLower+numberColumns2;
+	    double * upper2 = sub[iBlock].rowUpper();
+	    memcpy(upper2, saveUpper, numberRows2 * sizeof(double));
+	    double * saveColumnUpper = saveUpper+numberRows2;
+	    double * columnUpper2 = sub[iBlock].columnUpper();
+	    memcpy(columnUpper2,saveColumnUpper,numberColumns2*sizeof(double));
+	    double * lastMod = saveColumnUpper+numberColumns2;
+#ifdef UNBOUNDED
+	    if (masterStatus==2) {
+	      for (int i=0;i<numberRows2;i++) {
+		if (lower2[i]>-COIN_DBL_MAX)
+		  lower2[i]=0.0;
+		if (upper2[i]<COIN_DBL_MAX)
+		  upper2[i]=0.0;
+	      }
+	      for (int i=0;i<numberColumns2;i++) {
+		if (columnLower2[i]>-COIN_DBL_MAX)
+		  columnLower2[i]=0.0;
+		if (columnUpper2[i]<COIN_DBL_MAX)
+		  columnUpper2[i]=0.0;
+	      }
+	    }
+#endif
+	    // new rhs
+	    double * rhs = sub[iBlock].dualRowSolution();
+	    CoinZeroN(rhs, numberRows2);
+	    first[iBlock]->times(primal, rhs);
+	    for (int i = 0; i < numberRows2; i++) {
+	      double value = rhs[i];
+	      if (lower2[i] > -1.0e30)
+		lower2[i] -= value;
+	      if (upper2[i] < 1.0e30)
+		upper2[i] -= value;
+	    }
+	    bool canSkip=false;
+	    if (canSkipSubSolve) {
+	      canSkip=true;
+	      const double * rowSolution = sub[iBlock].primalRowSolution();
+	      for (int i = 0; i < numberRows2; i++) {
+		double value = lastMod[i]-rhs[i];
+		if (fabs(value)>primalTolerance_) {
+		  // see if we can adjust
+		  double rowValue=rowSolution[i];
+		  if (rowValue<lower2[i]-primalTolerance_
+		      ||rowValue>upper2[i]+primalTolerance_) {
+		    canSkip=false;
+		    break;
+		  } else if (sub[iBlock].getRowStatus(i)!=basic) {
+		    canSkip=false;
+		    break;
+		  }
+		}
+	      }
+	    }
+	    if (!canSkip) {
+	      memcpy(lastMod,rhs,numberRows2*sizeof(double));
+	    } else {
+	      // mark
+	      sub[iBlock].setSecondaryStatus(99);
+	    }
+	  }
+	  canSkipSubSolve=true;
+	  if (!iPass) {
+	    // do first and then copy status?
+#ifdef TRY_NO_SCALING
+	    sub[0].scaling(0);
+#endif
+#ifdef ABC_INHERIT
+	    sub[0].setAbcState(numberCpu);
+	    //sub[0].dealWithAbc(0,0,true);
+	    sub[0].dealWithAbc(1,1,true);
+	    sub[0].setAbcState(0);
+#else
+	    sub[0].dual();
+#endif
+	    if ((maxPass==5000&&scalingFlag_)||(maxPass==4000&&!scalingFlag_)) {
+	      int n=sub[0].numberIterations();
+	      sub[0].scaling(0);
+	      sub[0].primal();
+	      sub[0].setNumberIterations(n+sub[0].numberIterations());
+	      sub[0].scaling(scalingFlag_);
+	    }
+	    int numberIterations=sub[0].numberIterations();
+	    if (sub[0].problemStatus()) {
+	      sub[0].primal();
+#if 0
+	      sub[0].writeMps("first.mps");
+	      sub[0].writeBasis("first.bas",true);
+	      sub[0].readBasis("first.bas");
+	      sub[0].primal();
+#endif
+	      numberIterations+=sub[0].numberIterations();
+	    }
+	    sprintf(generalPrint,"First block - initial solve - %d iterations, objective %g",
+		   numberIterations,sub[0].objectiveValue());
+	    handler_->message(CLP_GENERAL, messages_)
+	      << generalPrint
+	      << CoinMessageEol;
+	    // copy status if same size
+	    int numberRows2 = sub[0].numberRows();
+	    int numberColumns2 = sub[0].numberColumns();
+	    for (int iBlock = 1; iBlock < numberBlocks; iBlock++) {
+	      int numberRows2a = sub[iBlock].numberRows();
+	      int numberColumns2a = sub[iBlock].numberColumns();
+	      if (numberRows2==numberRows2a&&
+		  numberColumns2==numberColumns2a) {
+		memcpy(sub[iBlock].primalColumnSolution(),
+		       sub[0].primalColumnSolution(),
+		       numberColumns2*sizeof(double));
+		memcpy(sub[iBlock].statusArray(),sub[0].statusArray(),
+		       numberRows2+numberColumns2);
+	      }
+	    }
+	    // mark
+	    sub[0].setSecondaryStatus(99);
+	  }
+#ifdef ABC_INHERIT
+	  if (numberCpu<2) {
+#endif
+	    numberSubInfeasible=0;
+	    for (iBlock = 0; iBlock < numberBlocks; iBlock++) {
+#ifdef TRY_NO_SCALING
+	      sub[iBlock].scaling(0);
+#endif
+	      if (sub[iBlock].secondaryStatus()!=99||false) {
+		//int ix=sub[iBlock].secondaryStatus();
+		int lastStatus = sub[iBlock].problemStatus();
+		// was do dual unless unbounded
+		double saveTolerance=sub[iBlock].primalTolerance();
+		if (lastStatus==0||!iPass) {
+		//if (lastStatus<2||!iPass) {
+		  //sub[iBlock].dual();
+		  sub[iBlock].primal();
+		  if (!sub[iBlock].isProvenOptimal()&&
+		      sub[iBlock].sumPrimalInfeasibilities()<treatSubAsFeasible) {
+		    printf("Block %d was feasible now has small infeasibility %g\n",iBlock,
+			   sub[iBlock].sumPrimalInfeasibilities());
+		    sub[iBlock].setPrimalTolerance(CoinMin(treatSubAsFeasible,1.0e-4));
+		    sub[iBlock].setCurrentPrimalTolerance(CoinMin(treatSubAsFeasible,1.0e-4));
+		    sub[iBlock].primal();
+		    sub[iBlock].setProblemStatus(0);
+		    problemState[iBlock] |= 4; // force actions
+		  }
+		  if ((maxPass==5000&&scalingFlag_)||(maxPass==4000&&!scalingFlag_)) {
+		    int n=sub[iBlock].numberIterations();
+		    sub[iBlock].scaling(0);
+		    sub[iBlock].primal();
+		    sub[iBlock].setNumberIterations(n+sub[iBlock].numberIterations());
+		    sub[iBlock].scaling(scalingFlag_);
+		  }
+		} else if (lastStatus==1) {
+		  // zero out objective
+		  double saveScale = sub[iBlock].infeasibilityCost();
+		  ClpObjective * saveObjective = sub[iBlock].objectiveAsObject();
+		  int numberColumns = sub[iBlock].numberColumns();
+		  ClpLinearObjective fake(NULL,numberColumns);
+		  sub[iBlock].setObjectivePointer(&fake);
+		  int saveOptions = sub[iBlock].specialOptions();
+		  sub[iBlock].setSpecialOptions(saveOptions|8192);
+		  sub[iBlock].primal();
+		  if ((maxPass==5000&&scalingFlag_)||(maxPass==4000&&!scalingFlag_)) {
+		    int n=sub[iBlock].numberIterations();
+		    sub[iBlock].scaling(0);
+		    sub[iBlock].primal();
+		    sub[iBlock].setNumberIterations(n+sub[iBlock].numberIterations());
+		    sub[iBlock].scaling(scalingFlag_);
+		  }
+		  sub[iBlock].setObjectivePointer(saveObjective);
+		  sub[iBlock].setInfeasibilityCost(saveScale);
+		  if (!sub[iBlock].isProvenOptimal()&&
+		      sub[iBlock].sumPrimalInfeasibilities()<treatSubAsFeasible) {
+		    printf("Block %d was infeasible now has small infeasibility %g\n",iBlock,
+			   sub[iBlock].sumPrimalInfeasibilities());
+		    sub[iBlock].setProblemStatus(0);
+		    sub[iBlock].setPrimalTolerance(CoinMin(treatSubAsFeasible,1.0e-4));
+		    sub[iBlock].setCurrentPrimalTolerance(CoinMin(treatSubAsFeasible,1.0e-4));
+		  }
+		  if (sub[iBlock].isProvenOptimal()) {
+		    sub[iBlock].primal();
+		    if ((maxPass==5000&&scalingFlag_)||(maxPass==4000&&!scalingFlag_)) {
+		      int n=sub[iBlock].numberIterations();
+		      sub[iBlock].scaling(0);
+		      sub[iBlock].primal();
+		      sub[iBlock].setNumberIterations(n+sub[iBlock].numberIterations());
+		      sub[iBlock].scaling(scalingFlag_);
+		    }
+		    if (!sub[iBlock].isProvenOptimal()) {
+		      printf("Block %d infeasible on second go has small infeasibility %g\n",iBlock,
+			   sub[iBlock].sumPrimalInfeasibilities());
+		      sub[iBlock].setProblemStatus(0);
+		    }
+		    problemState[iBlock] |= 4; // force actions
+		  } else {
+		    printf("Block %d still infeasible - sum %g - %d iterations\n",iBlock,
+			   sub[iBlock].sumPrimalInfeasibilities(),
+			   sub[iBlock].numberIterations());
+		    numberSubInfeasible++;
+		    if (!sub[iBlock].ray()) {
+		      printf("Block %d has no ray!\n",iBlock);
+		      sub[iBlock].primal();
+		      assert (sub[iBlock].ray()); // otherwise declare optimal
+		    }
+		  }
+		  sub[iBlock].setSpecialOptions(saveOptions);
+		} else {
+		  sub[iBlock].primal();
+		}
+		sub[iBlock].setPrimalTolerance(saveTolerance);
+		sub[iBlock].setCurrentPrimalTolerance(saveTolerance);
+		if (!sub[iBlock].isProvenOptimal()&&!sub[iBlock].isProvenPrimalInfeasible()) {
+		  printf("!!!Block %d has bad status %d\n",iBlock,sub[iBlock].problemStatus());
+		  sub[iBlock].primal(); // last go
+		}
+		//#define WRITE_ALL
+#ifdef WRITE_ALL
+		char name[20];
+		sprintf(name,"pass_%d_block_%d.mps",iPass,iBlock);
+		sub[iBlock].writeMps(name);
+		sprintf(name,"pass_%d_block_%d.bas",iPass,iBlock);
+		sub[iBlock].writeBasis(name,true);
+		if (sub[iBlock].problemStatus()==1) {
+		  sub[iBlock].readBasis(name);
+		  sub[iBlock].primal();
+		}
+#endif
+		//assert (!sub[iBlock].numberIterations()||ix!=99);
+	      }
+	    }
+#ifdef ABC_INHERIT
+	  } else {
+	    int iBlock=0;
+	    while (iBlock<numberBlocks) {
+	      if (sub[iBlock].secondaryStatus()!=99) {
+		int iThread;
+		threadInfo.waitParallelTask(1,iThread,true);
+#ifdef DETAIL_THREAD
+		printf("Starting block %d on thread %d\n",
+		       iBlock,iThread);
+#endif
+		threadInfo.startParallelTask(1,iThread,sub+iBlock);
+	      }
+	      iBlock++;
+	    }
+	    threadInfo.waitAllTasks();
+	  }
+#endif
+          for (iBlock = 0; iBlock < numberBlocks; iBlock++) {
+	    if (!iPass)
+	      problemState[iBlock] |= 4; // force actions
+	    // if state changed then fake number of iterations
+	    if ((problemState[iBlock]&1)==0) {
+	      // was infeasible
+	      if (sub[iBlock].isProvenOptimal()) {
+		// say feasible and changed
+		problemState[iBlock] |= 1+4;
+	      }
+	    } else {
+	      // was feasible
+	      if (sub[iBlock].isProvenPrimalInfeasible()) {
+		// say infeasible and changed
+		problemState[iBlock] &= ~1;
+		problemState[iBlock] |= 4;
+	      }
+	    }
+	    if (sub[iBlock].secondaryStatus()!=99) {
+	      if (logLevel>1) {
+		sprintf(generalPrint,"Block %d - %d iterations, objective %g",
+		       iBlock,sub[iBlock].numberIterations(),
+		       sub[iBlock].objectiveValue());
+		handler_->message(CLP_GENERAL2, messages_)
+		  << generalPrint
+		  << CoinMessageEol;
+	      }
+	      if (sub[iBlock].problemStatus()&&sub[iBlock].algorithm()<0&&false) {
+		int numberRows2=sub[iBlock].numberRows();
+		double * ray = sub[iBlock].infeasibilityRay();
+		double * saveRay=CoinCopyOfArray(ray,numberRows2);
+#if 0
+		int directionOut = sub[iBlock].directionOut();
+		sub[iBlock].allSlackBasis(true);
+		sub[iBlock].dual();
+		printf("old dir %d new %d\n",directionOut,sub[iBlock].directionOut());
+#else
+		double * obj = sub[iBlock].objective();
+		int numberColumns2=sub[iBlock].numberColumns();
+		double * saveObj = CoinCopyOfArray(obj,numberColumns2);
+		memset(obj,0,numberColumns2*sizeof(double));
+		sub[iBlock].allSlackBasis(true);
+		sub[iBlock].primal();
+		memcpy(obj,saveObj,numberColumns2*sizeof(double));
+		delete [] saveObj;
+#endif
+		ray = sub[iBlock].infeasibilityRay();
+		for (int i=0;i<numberRows2;i++) {
+		  if (fabs(ray[i]-saveRay[i])>1.0e-4+1.0e20)
+		    printf("** diffray block %d row %d first %g second %g\n",
+			   iBlock,i,saveRay[i],ray[i]);
+		}
+		delete [] saveRay;
+	      }
+	    }
+	  }
+	  if (!iPass)
+	    sub[0].setSecondaryStatus(0);
+	  if (logLevel>2) {
+	    for (iBlock = 0; iBlock < numberBlocks; iBlock++) {
+	      printf("block %d obj %g thetaC %g\n",iBlock,sub[iBlock].objectiveValue(),masterModel.primalColumnSolution()[numberMasterColumns+iBlock]);
+	    }
+	  }
+          rowAdd[0] = 0;
+          numberProposals = 0;
+          for (iBlock = 0; iBlock < numberBlocks; iBlock++) {
+	    int numberRows2 = sub[iBlock].numberRows();
+	    int numberColumns2 = sub[iBlock].numberColumns();
+	    double * saveLower = modification[iBlock];
+	    double * lower2 = sub[iBlock].rowLower();
+	    double * saveUpper = saveLower+numberRows2+numberColumns2;
+	    double * upper2 = sub[iBlock].rowUpper();
+	    int typeRun=sub[iBlock].secondaryStatus();
+	    sub[iBlock].setSecondaryStatus(0);
+	    if (typeRun!=99) {
+	      if (0) {
+		double objValue = 0.0;
+		const double * solution = sub[iBlock].dualRowSolution();
+		for (int i = 0; i < numberRows2; i++) {
+		  if (solution[i] < -dualTolerance_) {
+		    // at upper
+		    assert (saveUpper[i] < 1.0e30);
+		    objValue += solution[i] * upper2[i];
+		  } else if (solution[i] > dualTolerance_) {
+		    // at lower
+		    assert (saveLower[i] > -1.0e30);
+		    objValue += solution[i] * lower2[i];
+		  }
+		}
+		//printf("obj %g\n",objValue);
+	      }
+	      // temp
+	      if (sub[iBlock].isProvenPrimalInfeasible()&&!sub[iBlock].numberIterations())
+		problemState[iBlock] |= 4;
+	      // get proposal
+	      if (sub[iBlock].numberIterations()||(problemState[iBlock]&4)!=0) {
+		double objValue = 0.0;
+		int start = rowAdd[numberProposals];
+		// proposal
+		if (sub[iBlock].isProvenOptimal()) {
+		  double * solution = sub[iBlock].dualRowSolution();
+		  first[iBlock]->transposeTimes(solution, elementAdd + start);
+		  for (int i = 0; i < numberRows2; i++) {
+		    if (sub[iBlock].getRowStatus(i)==basic)
+		      solution[i]=0.0;
+		    if (saveUpper[i]>saveLower[i]) {
+		      if (sub[iBlock].getRowStatus(i)==atUpperBound)
+			objValue += solution[i] * saveUpper[i];
+		      else
+			objValue += solution[i] * saveLower[i];
+		    } else {
+		      // fixed
+		      objValue += solution[i] * saveLower[i];
+		    }
+		  }
+		  const double * dj = sub[iBlock].dualColumnSolution();
+		  const double * columnLower = sub[iBlock].columnLower();
+		  const double * columnUpper = sub[iBlock].columnUpper();
+		  double objValue2=0.0;
+		  int numberColumns2 = sub[iBlock].numberColumns();
+		  for (int i=0;i<numberColumns2;i++) {
+		    if (logLevel>2) {
+		      if (sub[iBlock].getColumnStatus(i)!=basic&&
+			  fabs(sub[iBlock].primalColumnSolution()[i])>1.0e-5)
+			printf("zz %d has value %g\n",i,sub[iBlock].primalColumnSolution()[i]);
+		    }
+		    if (sub[iBlock].getColumnStatus(i)==isFixed) {
+		      objValue2+=columnLower[i]*dj[i];
+		    } else if (sub[iBlock].getColumnStatus(i)==atLowerBound) {
+		      objValue2+=columnLower[i]*dj[i];
+		    } else if (sub[iBlock].getColumnStatus(i)==atUpperBound) {
+		      objValue2+=columnUpper[i]*dj[i];
+		    }
+		  }
+#if 1
+		  double objValue3=0.0;
+		  const double * cost = sub[iBlock].objective();
+		  for (int i=0;i<numberColumns2;i++) {
+		    double value=dj[i]-cost[i];
+		    if (sub[iBlock].getColumnStatus(i)==isFixed) {
+		      objValue3+=columnLower[i]*value;
+		    } else if (sub[iBlock].getColumnStatus(i)==atLowerBound) {
+		      objValue3+=columnLower[i]*value;
+		    } else if (sub[iBlock].getColumnStatus(i)==atUpperBound) {
+		      objValue3+=columnUpper[i]*value;
+		    }
+		  }
+#endif
+		  // recompute 
+		  if (logLevel>3) {
+		    printf("objValue %g from lp %g, obj2 %g, obj3 %g\n",
+			   objValue,sub[iBlock].objectiveValue(),
+			   objValue2,objValue3);
+		  }
+		  objValue += objValue2;
+		  //objValue=sub[iBlock].objectiveValue();
+		  // See if cuts off and pack down
+		  int number = start;
+		  double infeas = -objValue;
+		  double smallest = 1.0e100;
+		  double largest = 0.0;
+		  for (int i = 0; i < numberMasterColumns; i++) {
+		    double value = elementAdd[start+i];
+		    if (fabs(value) > 1.0e-12) {
+		      infeas += primal[i] * value;
+		      smallest = CoinMin(smallest, fabs(value));
+		      largest = CoinMax(largest, fabs(value));
+		      columnAdd[number] = i;
+		      elementAdd[number++] = -value;
+		    }
+		  }
+		  
+		  infeas += primal[numberMasterColumns+iBlock];
+		  columnAdd[number] = numberMasterColumns + iBlock;
+		  elementAdd[number++] = -1.0;
+		  // if elements large then scale?
+		  if (largest>1.0e8||smallest<1.0e-8) {
+		    sprintf(generalPrint,"For subproblem %d smallest - %g, largest %g - infeas %g",
+			   iBlock, smallest, largest, infeas);
+		    handler_->message(CLP_GENERAL2, messages_)
+		      << generalPrint
+		      << CoinMessageEol;
+		    if (smallest<1.0e-12*largest) {
+		      sprintf(generalPrint,"Removing small elements");
+		      handler_->message(CLP_GENERAL2, messages_)
+			<< generalPrint
+			<< CoinMessageEol;
+		      double target=1.0e-12*largest;
+		      smallest=largest;
+		      int number2=number-1;
+		      number = start;
+		      for (int i = start; i < number2; i++) {
+			double value = elementAdd[i];
+			if (fabs(value) > target) {
+			  smallest=CoinMin(smallest,fabs(value));
+			  columnAdd[number] = columnAdd[i];
+			  elementAdd[number++] = value;
+			}
+		      }
+		      columnAdd[number] = numberMasterColumns + iBlock;
+		      elementAdd[number++] = -1.0;
+		    }
+		  }
+		  // if smallest >1.0 then scale
+		  if ((smallest>1.0e6||fabs(objValue)>0.01*largeValue_)
+		      &&number>start+1) {
+		    double scale = 1.0/smallest;
+		    if (fabs(scale*objValue)>0.01*largeValue_) {
+		      printf("** scale before obj scale %g\n",scale);
+		      scale =(0.01*largeValue_)/fabs(objValue);
+		    }
+		    printf("** scale %g infeas %g\n",scale,infeas);
+		    objValue *= scale;
+		    infeas = -objValue;
+		    for (int i = start; i < number-1; i++) {
+		      double value = elementAdd[i]*scale;
+		      elementAdd[i]=value;
+		      int iColumn=columnAdd[i];
+		      infeas -= primal[iColumn] * value;
+		    }
+		    elementAdd[number-1]*=scale;
+		    infeas += primal[numberMasterColumns+iBlock]*scale;
+		    printf("** new infeas %g - scales to %g\n",infeas,infeas/scale);
+		  }
+		  if (infeas < -1.0e-6 || (problemState[iBlock]&4)!=0) {
+		    // take
+		    // double check infeasibility
+		    if (logLevel>3) 
+		      printf("objValue %g objectiveValue() %g\n",
+			     objValue,sub[iBlock].objectiveValue());
+		    double sum=0.0;
+		    for (int i=start;i<number;i++) {
+		      int iColumn=columnAdd[i];
+		      sum  += primal[iColumn]*elementAdd[i];
+		    }
+		    if (logLevel>3) 
+		      printf("Sum %g rhs %g\n",sum,-objValue);
+		    if (logLevel>1) 
+		      printf("Cut for block %d has %d elements\n",iBlock,number-1-start);
+		    blockPrint[numberProposals]=iBlock;
+		    objective[numberProposals] = -objValue;
+		    rowAdd[++numberProposals] = number;
+		    when[numberRowsGenerated] = iPass;
+		    whichBlock[numberRowsGenerated++] = iBlock;
+		  }
+		} else if (sub[iBlock].isProvenPrimalInfeasible()) {
+		  // use ray
+		  double * solution = sub[iBlock].infeasibilityRay();
+		  if (0) {
+		    double trueOffset=0.0;
+		    int numberRows=sub[iBlock].numberRows();
+		    int numberColumns=sub[iBlock].numberColumns();
+		    double * farkas = new double [CoinMax(2*numberColumns+numberRows,numberMasterColumns)];
+		    double * bound = farkas + numberColumns;
+		    double * effectiveRhs = bound + numberColumns;
+		    // get ray as user would
+		    double * ray = solution; //sub[iBlock].infeasibilityRay();
+		    // get farkas row
+		    memset(farkas,0,(2*numberColumns+numberRows)*sizeof(double));
+		    // Looks to me as if ray should be flipped according to mosek
+		    sub[iBlock].clpMatrix()->transposeTimes(-1.0,ray,farkas);
+		    // now farkas has A_T_y 
+		    // Put nonzero bounds in bound
+		    const double * columnLower = sub[iBlock].columnLower();
+		    const double * columnUpper = sub[iBlock].columnUpper();
+		    int numberBad=0;
+		    // For sum in mosek
+		    double ySum=0.0;
+		    for (int i=0;i<numberColumns;i++) {
+		      double value = farkas[i];
+		      double boundValue=0.0;
+		      if (sub[iBlock].getStatus(i)==ClpSimplex::basic) {
+			// treat as zero if small
+			if (fabs(value)<1.0e-8) {
+			  value=0.0;
+			  farkas[i]=0.0;
+			}
+			if (value) {
+			  //printf("basic %d direction %d farkas %g\n",
+			  //	   i,sub[iBlock].directionOut(),value);
+			  if (value<0.0) 
+			    boundValue=columnLower[i];
+			  else
+			    boundValue=columnUpper[i];
+			}
+		      } else if (fabs(value)>1.0e-8) {
+			if (value<0.0) 
+			  boundValue=columnLower[i];
+			else
+			  boundValue=columnUpper[i];
+			if (fabs(boundValue)>1.0e12&&fabs(value)<1.0e-8) {
+			  boundValue=0.0;
+			  value=0.0;
+			}
+		      } else {
+			value=0.0;
+		      }
+		      if (fabs(boundValue)>1.0e20) {
+			numberBad++;
+			boundValue=0.0;
+			value=0.0;
+			farkas[i]=0.0;
+		      }
+		      // mosek way
+		      // A_T_y + s_x_l -s_x_u == 0
+		      // So if value >0 s_x_l->0 s_x_u->value
+		      // otherwise s_x_l->-value, s_x_u->0
+		      double s_x_l=0.0;
+		      double s_x_u=0.0;
+		      if (value>0)
+			s_x_u=value;
+		      else
+			s_x_l=-value;
+		      ySum += columnLower[i]*s_x_l;
+		      ySum -= columnUpper[i]*s_x_u;
+		      bound[i]=boundValue;
+		    }
+		    const double * rowLower = sub[iBlock].rowLower();
+		    const double * rowUpper = sub[iBlock].rowUpper();
+		    //int pivotRow = sub[iBlock].spareIntArray_[3];
+		    //bool badPivot=pivotRow<0;
+		    for (int i=0;i<numberRows;i++) {
+		      double value = ray[i];
+		      double rhsValue=0.0;
+		      if (sub[iBlock].getRowStatus(i)==ClpSimplex::basic) {
+			// treat as zero if small
+			if (fabs(value)<1.0e-7) {
+			  value=0.0;
+			}
+			if (value) {
+			  //printf("row basic %d direction %d ray %g\n",
+			  //	   i,sub[iBlock].directionOut(),value);
+			  if (value<0.0) 
+			    rhsValue=rowLower[i];
+			  else
+			    rhsValue=rowUpper[i];
+			}
+		      } else if (fabs(value)>1.0e-10) {
+			if (value<0.0) 
+			  rhsValue=rowLower[i];
+			else
+			  rhsValue=rowUpper[i];
+		      } else {
+			value=0.0;
+		      }
+		      if (fabs(rhsValue)>1.0e20) {
+			numberBad++;
+			value=0.0;
+		      }
+		      ray[i]=value; 
+		      if (!value) 
+			rhsValue=0.0;
+		      // for mosek flip value back
+		      double yvalue = -value;
+		      // -y + s_c_l - s_c_u==0
+		      double s_c_l=0.0;
+		      double s_c_u=0.0;
+		      if (yvalue>0)
+			s_c_l=yvalue;
+		      else
+			s_c_u=-yvalue;
+		      ySum += rowLower[i]*s_c_l;
+		      ySum -= rowUpper[i]*s_c_u;
+		      effectiveRhs[i]=rhsValue;
+		      if (fabs(effectiveRhs[i])>1.0e10)
+			printf("Large rhs row %d %g\n",
+			       i,effectiveRhs[i]);
+		    }
+		    sub[iBlock].clpMatrix()->times(-1.0,bound,effectiveRhs);
+		    double bSum=0.0;
+		    for (int i=0;i<numberRows;i++) {
+		      bSum += effectiveRhs[i]*ray[i];
+		      if (fabs(effectiveRhs[i])>1.0e10)
+			printf("Large rhs row %d %g after\n",
+			       i,effectiveRhs[i]);
+		    }
+		    if (logLevel>1)
+		      printf("Block %d Mosek user manual wants %g to be positive so bSum should be negative %g\n",
+			     iBlock,ySum,bSum);
+		    if (numberBad||bSum>1.0e-6) {
+		      printf("Bad infeasibility ray %g  - %d bad\n",
+			     bSum,numberBad);
+		    } else {
+		      //printf("Good ray - infeasibility %g\n",
+		      //     -bSum);
+		    }
+		    /*
+		      wanted cut is
+		      plus or minus! (temp2 * x - temp2 *x_bar) <= bSum
+		      first[iBlock]->transposeTimes(ray, temp2);
+		     */
+		    memset(farkas,0,numberColumns*sizeof(double));
+		    first[iBlock]->transposeTimes(ray,farkas);
+		    double offset=0.0;
+		    const double * masterSolution = masterModel.primalColumnSolution();
+		    for (int i=0;i<numberMasterColumns;i++) {
+		      double value = farkas[i];
+		      if (fabs(value)>1.0e-9) {
+			offset += value*masterSolution[i];
+			if (logLevel>2) 
+			  printf("(%d,%g) ",i,value);
+		      } else {
+			farkas[i]=0.0;
+		      }
+		    }
+		    trueOffset = bSum+offset;
+		    if (sub[iBlock].algorithm()>0) 
+		      trueOffset *= 1.0e-5;
+		    if (logLevel>2) 
+		      printf(" - offset %g - ? rhs of %g\n",offset,trueOffset);
+		    //delete [] ray;
+		    delete [] farkas;
+		  }
+		  // if primal then scale
+		  if (sub[iBlock].algorithm()>0) {
+		    for (int i = 0; i < numberRows2; i++) 
+		      solution[i] = -1.0e-5*solution[i]; 
+		  } else {
+		    for (int i = 0; i < numberRows2; i++) 
+		      solution[i] = -solution[i]; 
+		  }
+		  first[iBlock]->transposeTimes(solution, elementAdd + start);
+		  for (int i = 0; i < numberRows2; i++) 
+		    solution[i] = -solution[i]; 
+		  for (int i = 0; i < numberRows2; i++) {
+		    if (sub[iBlock].getRowStatus(i)==basic && fabs(solution[i])<1.0e-7)
+		      solution[i]=0.0;
+		    if (solution[i] > dualTolerance_) {
+		      // at upper
+		      if (saveUpper[i] > 1.0e20)
+			solution[i]=0.0;
+		      objValue += solution[i] * saveUpper[i];
+		    } else if (solution[i] < -dualTolerance_) {
+		      // at lower
+		      if (saveLower[i] < -1.0e20);
+			solution[i]=0.0;
+		      objValue += solution[i] * saveLower[i];
+		    } else {
+		      solution[i]=0.0;
+		    }
+		  }
+		  //objValue=-objValue;
+		  {
+		    int numberColumns2=sub[iBlock].numberColumns();
+		    double * temp = new double[numberColumns2];
+		    memset(temp,0,numberColumns2*sizeof(double));
+		    sub[iBlock].clpMatrix()->transposeTimes(-1.0,solution, temp);
+		    double loX=0.0;
+		    double upX=0.0;
+		    const double * lower = sub[iBlock].columnLower();
+		    const double * upper = sub[iBlock].columnUpper();
+		    const double * primal = sub[iBlock].primalColumnSolution();
+		    for (int i=0;i<numberColumns2;i++) {
+		      double value = temp[i];
+		      if (sub[iBlock].getColumnStatus(i)==basic&&
+			  fabs(value)<1.0e-7)
+			value=0.0;
+		      if (logLevel>2) {
+			//if (sub[iBlock].getColumnStatus(i)!=basic&&
+			//  primal[i]>1.0e-5)
+			//printf("zz_inf %d has value %g\n",i,primal[i]);
+		      }
+		      if (sub[iBlock].getStatus(i)==atLowerBound||
+			  sub[iBlock].getStatus(i)==isFixed) {
+			loX += lower[i]*value;
+		      } else if (sub[iBlock].getStatus(i)==atUpperBound) {
+			upX += upper[i]*value;
+		      } else if (sub[iBlock].getStatus(i)==basic) {
+			double value2 = primal[i]*value;
+			if (logLevel>2) {
+			  if (fabs(value2)>1.0e-3)
+			    printf("Basic %d arrayval %g primal %g bounds %g %g\n",
+				   i,value,primal[i],
+				   lower[i],upper[i]);
+			}
+			if (value<0.0) {
+			  assert (primal[i]<lower[i]);
+			  value2 = value*lower[i];
+			} else if (value>0.0) {
+			  assert (primal[i]>upper[i]);
+			  if (primal[i]-upper[i]<1.0e-3) {
+			    if (logLevel>2)
+			      printf("small diff %g\n",primal[i]-upper[i]);
+			    //handler_->message(CLP_GENERAL2, messages_)
+			    //<< generalPrint
+			    //<< CoinMessageEol;
+			    //value=0.0;
+			    //elementAdd[start+i]=0.0;
+			  }
+			  value2 = value*upper[i];
+			}
+			loX += value2;
+		      }
+		    }
+		    objValue += loX+upX;
+		    if (logLevel>2) 
+		      printf("Inf Offsets %g %g - new Objvalue %g\n",loX,upX,objValue);
+#define OBJ_OFFSET 0
+#if OBJ_OFFSET==1
+		    objValue -= loX+upX;
+		    objValue -= loX+upX;
+#elif OBJ_OFFSET==2
+		    objValue -= loX+upX;
+		    objValue = -objValue;
+		    objValue += loX+upX;
+#elif OBJ_OFFSET==3
+		    objValue -= loX+upX;
+		    objValue = -objValue;
+		    objValue -= loX+upX;
+#endif
+		    if (iBlock==-3) {
+		       ClpSimplex * temp = deBound(sub+iBlock);
+		       //temp->allSlackBasis();
+		       temp->primal();
+		       // use ray
+		       double * solution = temp->infeasibilityRay();
+		       int numberRows2=temp->numberRows();
+		       // bug somewhere - if primal then flip
+		       if (temp->algorithm_>0) {
+			 for (int i = 0; i < numberRows2; i++) 
+			   solution[i] = - 1.0e-5 * solution[i]; 
+		       }
+		       double objValue7=0.0;
+		       const double * lower = temp->rowLower();
+		       const double * upper = temp->rowUpper();
+		       for (int i = 0; i < numberRows2; i++) {
+			 if (solution[i] < -dualTolerance_) {
+			   // at upper
+			   assert (upper[i] < 1.0e30);
+			   if (i<sub[iBlock].numberRows())
+			     objValue7 += solution[i] * saveUpper[i];
+			   else
+			     objValue7 += solution[i] * upper[i];
+			 } else if (solution[i] > dualTolerance_) {
+			   // at lower
+			   assert (lower[i] > -1.0e30);
+			   if (i<sub[iBlock].numberRows())
+			     objValue7 += solution[i] * saveLower[i];
+			   else
+			     objValue7 += solution[i] * lower[i];
+			 }
+		       }
+		       sprintf(generalPrint,"new objValue %g - old %g",objValue7,objValue);
+		       handler_->message(CLP_GENERAL2, messages_)
+			 << generalPrint
+			 << CoinMessageEol;
+		       //objValue=-objValue7;
+		       //loX=1.0e-2*objValue;
+		       //first[iBlock]->transposeTimes(solution, elementAdd + start);
+		       double * temp2 = new double [numberMasterColumns];
+		       memset(temp2,0,numberMasterColumns*sizeof(double));
+		       first[iBlock]->transposeTimes(solution, temp2);
+		       double * temp3 = elementAdd+start;
+		       for (int i=0;i<numberMasterColumns;i++) {
+			 if (fabs(temp2[i]-temp3[i])>1.0e-4)
+			   printf("** %d bound el %g nobound %g\n",i,temp3[i],temp2[i]);
+		       }
+		       memcpy(temp3,temp2,numberMasterColumns*sizeof(double));
+		       delete [] temp2;
+		       delete temp;
+		    }
+		    // relax slightly
+		    objValue += 1.0e-9*fabs(loX);
+		    delete [] temp;
+		  }
+		  delete [] solution;
+		  // See if good infeas and pack down (signs on infeas,value changed)
+		  int number = start;
+		  //printf("Not changing objValue from %g to %g\n",objValue,trueOffset);
+		  //printf("Changing objValue from %g to %g\n",objValue,trueOffset);
+		  //objValue=trueOffset;
+		  double infeas = objValue;
+		  double smallest = 1.0e100;
+		  double largest = 0.0;
+		  for (int i = 0; i < numberMasterColumns; i++) {
+		    double value = -elementAdd[start+i];
+		    if (fabs(value) > 1.0e-12) {
+		      infeas -= primal[i] * value;
+		      smallest = CoinMin(smallest, fabs(value));
+		      largest = CoinMax(largest, fabs(value));
+		      columnAdd[number] = i;
+		      elementAdd[number++] = value;
+		    }
+		  }
+		  // if elements large or small then scale?
+		  if (largest>1.0e8||smallest<1.0e-8) {
+		    sprintf(generalPrint,"For subproblem ray %d smallest - %g, largest %g - infeas %g",
+			   iBlock, smallest, largest, infeas);
+		    handler_->message(CLP_GENERAL2, messages_)
+		      << generalPrint
+		      << CoinMessageEol;
+		  }
+		  if (smallest<1.0e-12*largest) {
+		    sprintf(generalPrint,"Removing small elements");
+		    handler_->message(CLP_GENERAL2, messages_)
+		      << generalPrint
+		      << CoinMessageEol;
+		    smallest=1.0e-12*largest;
+		    int number2=number-1;
+		    number = start;
+		    for (int i = start; i < number2; i++) {
+		      double value = elementAdd[i];
+		      if (fabs(value) > smallest) {
+			columnAdd[number] = columnAdd[i];
+			elementAdd[number++] = value;
+		      }
+		    }
+		    columnAdd[number] = numberMasterColumns + iBlock;
+		    elementAdd[number++] = -1.0;
+		  }
+		  if (infeas < -1.0e-6||false) {
+		    double sum=0.0;
+		    for (int i=start;i<number;i++) {
+		      int iColumn=columnAdd[i];
+		      sum  += primal[iColumn]*elementAdd[i];
+		    }
+		    if (logLevel>2) 
+		      printf("Sum %g rhs %g\n",sum,objValue);
+		    if (logLevel>1) 
+		      printf("Cut for block %d has %d elements (infeasibility)\n",iBlock,number-start);
+		    blockPrint[numberProposals]=iBlock;
+		    // take
+		    objective[numberProposals] = objValue;
+		    rowAdd[++numberProposals] = number;
+		    when[numberRowsGenerated] = iPass;
+		    whichBlock[numberRowsGenerated++] = iBlock;
+		  }
+		} else {
+		  abort();
+		}
+	      }
+	    } else {
+	      //printf("Can skip\n");
+	    }
+	    problemState[iBlock] &= ~4;
+	  }
+	  if (deletePrimal)
+	    delete [] primal;
           if (numberProposals) {
-               master.addRows(numberProposals, NULL, objective,
+	       sprintf(generalPrint,"%d cuts added with %d elements",
+		      numberProposals,rowAdd[numberProposals]);
+	       handler_->message(CLP_GENERAL, messages_)
+		 << generalPrint
+		 << CoinMessageEol;
+	       if (logLevel>2) {
+		 for (int i=0;i<numberProposals;i++) {
+		   printf("Cut %d block %d thetac %d ",i,blockPrint[i],
+			  blockPrint[i]+numberMasterColumns);
+		   int k=0;
+		   for (int j=rowAdd[i];j<rowAdd[i+1];j++) {
+		     if (k==12) {
+		       printf("\n");
+		       k=0;
+		     }
+		     k++;
+		     printf("(%d,%g) ",columnAdd[j],elementAdd[j]);
+		   }
+		   printf(" <= %g\n",objective[i]);
+		   //if (k)
+		   //printf("\n");
+		 }
+	       }
+#ifdef TEST_MODEL
+	       if (logLevel>3) {
+		 const double * solution = goodModel.primalColumnSolution();
+		 const double * solution2 = masterModel.primalColumnSolution();
+		 for (int i=0;i<numberProposals;i++) {
+		   double sum = 0.0;
+		   double sum2 = 0.0;
+		   for (int j=rowAdd[i];j<rowAdd[i+1];j++) {
+		     int iColumn=columnAdd[j];
+		     double value=elementAdd[j];
+		     sum += value*solution[iColumn];
+		     sum2 += value*solution2[iColumn];
+		   }
+		   if (sum2<objective[i]-1.0e-4) {
+		     sprintf(generalPrint,"Rhs for cut %d (from block %d) does not cutoff sum2 %g sum %g rhs %g)",
+			    i,blockPrint[i],sum2,sum,objective[i]);
+		     handler_->message(CLP_GENERAL2, messages_)
+		       << generalPrint
+		       << CoinMessageEol;
+		   }
+#define FIXUP_RHS 0
+		   if (sum>objective[i]+1.0e-4) {
+		     sprintf(generalPrint,"Rhs for cut %d (from block %d) is %g too low (rhs is %g)",
+			    i,blockPrint[i],sum-objective[i],objective[i]);
+		     handler_->message(CLP_GENERAL2, messages_)
+		       << generalPrint
+		       << CoinMessageEol;
+#if FIXUP_RHS == 1 || FIXUP_RHS ==3
+		     objective[i]=sum;
+#endif
+		   } else if (sum<objective[i]-1.0e-4) {
+		     sprintf(generalPrint,"Rhs for cut %d (from block %d) is %g ineffective (rhs is %g)",
+			    i,blockPrint[i],objective[i]-sum,objective[i]);
+		     handler_->message(CLP_GENERAL2, messages_)
+		       << generalPrint
+		       << CoinMessageEol;
+#if FIXUP_RHS == 2 || FIXUP_RHS ==3
+		     objective[i]=sum;
+#endif
+		   }
+		 }
+	       }
+	       if (logLevel>3) {
+		 goodModel.addRows(numberProposals, NULL, objective,
+				   rowAdd, columnAdd, elementAdd);
+		 goodModel.dual();
+		 if (goodModel.problemStatus()==1||goodModel.objectiveValue()>goodValue+1.0e-5*fabs(goodValue)) {
+		   int numberRows=goodModel.numberRows();
+		   int numberStart=numberRows-numberProposals;
+		   double * upper = goodModel.rowUpper();
+		   for (int iRow=numberStart;iRow<numberRows;iRow++) {
+		     upper[iRow]=COIN_DBL_MAX;
+		   }
+		   for (int iRow=numberStart;iRow<numberRows;iRow++) {
+		     upper[iRow]=objective[iRow-numberStart];
+		     goodModel.allSlackBasis(true);
+		     goodModel.dual();
+		     if (goodModel.problemStatus()==1) {
+		       sprintf(generalPrint,"Cut %d makes infeasible - upper=%g",
+			      iRow-numberStart,upper[iRow]);
+		       handler_->message(CLP_GENERAL, messages_)
+			 << generalPrint
+			 << CoinMessageEol;
+		     } else if (goodModel.objectiveValue()>goodValue+1.0e-5*fabs(goodValue)) {
+		       sprintf(generalPrint,"Cut %d makes too expensive - upper=%g",
+			      iRow-numberStart,upper[iRow]);
+		       handler_->message(CLP_GENERAL, messages_)
+			 << generalPrint
+			 << CoinMessageEol;
+		       int iBlock=blockPrint[iRow-numberStart];
+		       ClpSimplex * temp = deBound(sub+iBlock);
+		       temp->allSlackBasis();
+		       temp->primal();
+		       // use ray
+		       double * solution = temp->infeasibilityRay();
+		       int numberRows2=temp->numberRows();
+		       // bug somewhere - if primal then flip
+		       if (true) {
+			 for (int i = 0; i < numberRows2; i++) 
+			   solution[i] = - 1.0e-5 * solution[i]; 
+		       }
+		       double objValue=0.0;
+		       const double * lower = temp->rowLower();
+		       const double * upper = temp->rowUpper();
+		       for (int i = 0; i < numberRows2; i++) {
+			 if (solution[i] < -dualTolerance_) {
+			   // at upper
+			   assert (upper[i] < 1.0e30);
+			   objValue += solution[i] * upper[i];
+			 } else if (solution[i] > dualTolerance_) {
+			   // at lower
+			   assert (lower[i] > -1.0e30);
+			   objValue += solution[i] * lower[i];
+			 }
+		       }
+		       //printf("new objValue %g\n",objValue);
+		       int numberColumns2=sub[iBlock].numberColumns();
+		       double * temp2 = new double[numberColumns2];
+		       memset(temp2,0,numberColumns2*sizeof(double));
+		       sub[iBlock].clpMatrix()->transposeTimes(1.0,sub[iBlock].infeasibilityRay(), temp2);
+		       double loX=0.0;
+		       double upX=0.0;
+		       const double * lower2 = sub[iBlock].columnLower();
+		       const double * upper2 = sub[iBlock].columnUpper();
+		       for (int i=0;i<numberColumns2;i++) {
+			 if (sub[iBlock].getColumnStatus(i)!=basic&&
+			     fabs(sub[iBlock].primalColumnSolution()[i])>1.0e-5)
+			   printf("zz_inf %d has value %g\n",i,sub[iBlock].primalColumnSolution()[i]);
+			 if (sub[iBlock].getStatus(i)==atLowerBound) {
+			   loX += lower2[i]*temp2[i];
+			 } else if (sub[iBlock].getStatus(i)==atUpperBound) {
+			   upX += upper2[i]*temp2[i];
+			 }
+		       }
+		       printf("Offsets %g %g\n",loX,upX);
+		       memset(temp2,0,numberColumns2*sizeof(double));
+		       temp->clpMatrix()->transposeTimes(1.0,solution, temp2);
+		       loX=0.0;
+		       upX=0.0;
+		       lower2 = temp->columnLower();
+		       upper2 = temp->columnUpper();
+		       for (int i=0;i<numberColumns2;i++) {
+			 if (temp->getColumnStatus(i)!=basic&&
+			     fabs(temp->primalColumnSolution()[i])>1.0e-5)
+			   printf("zz_inf %d has value %g\n",i,temp->primalColumnSolution()[i]);
+			 if (temp->getStatus(i)==atLowerBound) {
+			   loX += lower2[i]*temp2[i];
+			 } else if (temp->getStatus(i)==atUpperBound) {
+			   upX += upper2[i]*temp2[i];
+			 }
+		       }
+		       printf("Offsets %g %g\n",loX,upX);
+		       delete [] temp2;
+		       delete temp;
+		     }
+		     upper[iRow]=COIN_DBL_MAX;
+		   }
+		 }
+		 double objValue=goodModel.objectiveValue();
+		 const double * obj = goodModel.objective();
+		 const double * solution = goodModel.primalColumnSolution();
+		 double obj1=0.0;
+		 for (int i=0;i<numberMasterColumns;i++)
+		   obj1 += obj[i]*solution[i];
+		 double obj2=0.0;
+		 for (int i=numberMasterColumns;i<numberMasterColumns+numberBlocks;i++)
+		   obj2 += obj[i]*solution[i];
+		 double obj3=0.0;
+		 for (int i=numberMasterColumns+numberBlocks;i<goodModel.numberColumns();i++)
+		   obj3 += obj[i]*solution[i];
+		 //assert (fabs(goodValue-objValue)<1.0e-3+1.0e-7*fabs(goodValue));
+		 printf("XXXX good %g this %g difference %g - objs %g, %g, %g\n",
+			goodValue,objValue,goodValue-objValue,obj1,obj2,obj3);
+	       }
+#endif
+               masterModel.addRows(numberProposals, NULL, objective,
                               rowAdd, columnAdd, elementAdd);
-          }
+	  }
      }
-     std::cout << "Time at end of Benders " << CoinCpuTime() - time1 << " seconds" << std::endl;
-     //master.scaling(0);
-     //master.primal(1);
-     loadProblem(*model);
+     sprintf(generalPrint,"Time at end of Benders %.2f seconds",CoinCpuTime() - time1);
+     handler_->message(CLP_GENERAL, messages_)
+       << generalPrint
+       << CoinMessageEol;
+     delete [] problemState;
+     for (int iBlock = 0; iBlock < numberBlocks; iBlock++) {
+       delete [] modification[iBlock];
+     }
+     delete [] modification;
+#ifdef ADD_ARTIFICIALS
+     delete [] originalSubColumns;
+     for (int i=0;i<numberBlocks;i++)
+       delete [] saveObjective[i];
+     delete [] saveObjective;
+#endif
+     //masterModel.scaling(0);
+     //masterModel.primal(1);
+     if (!options.independentOption(1))
+       loadProblem(*model);
      // now put back a good solution
-     const double * columnSolution = master.primalColumnSolution();
+     const double * columnSolution = masterModel.primalColumnSolution();
      double * fullColumnSolution = primalColumnSolution();
      const int * columnBack = model->coinBlock(masterBlock)->originalColumns();
      int numberColumns2 = model->coinBlock(masterBlock)->numberColumns();
      const int * rowBack = model->coinBlock(masterBlock)->originalRows();
      int numberRows2 = model->coinBlock(masterBlock)->numberRows();
+#ifndef NDEBUG
+     for (int iColumn = 0; iColumn < numberColumns_; iColumn++) 
+       fullColumnSolution[iColumn]=COIN_DBL_MAX;
+#endif
      for (int iColumn = 0; iColumn < numberColumns2; iColumn++) {
           int kColumn = columnBack[iColumn];
-          setColumnStatus(kColumn, master.getColumnStatus(iColumn));
+          setColumnStatus(kColumn, masterModel.getColumnStatus(iColumn));
           fullColumnSolution[kColumn] = columnSolution[iColumn];
      }
      for (int iRow = 0; iRow < numberRows2; iRow++) {
           int kRow = rowBack[iRow];
-          setStatus(kRow, master.getStatus(iRow));
+          setRowStatus(kRow, masterModel.getRowStatus(iRow));
           //fullSolution[kRow]=solution[iRow];
      }
      for (iBlock = 0; iBlock < numberBlocks; iBlock++) {
@@ -5418,23 +7275,77 @@ ClpSimplex::solveBenders(CoinStructuredModel * model)
           for (int iColumn = 0; iColumn < numberColumns2; iColumn++) {
                int kColumn = columnBack[iColumn];
                setColumnStatus(kColumn, sub[iBlock].getColumnStatus(iColumn));
+#ifndef NDEBUG
+	       assert(fullColumnSolution[kColumn]==COIN_DBL_MAX);
+#endif
                fullColumnSolution[kColumn] = subColumnSolution[iColumn];
           }
           for (int iRow = 0; iRow < numberRows2; iRow++) {
                int kRow = rowBack[iRow];
-               setStatus(kRow, sub[iBlock].getStatus(iRow));
-               setStatus(kRow, atLowerBound);
+               setRowStatus(kRow, sub[iBlock].getRowStatus(iRow));
+               //setStatus(kRow, atLowerBound);
           }
      }
+#ifndef NDEBUG
+     for (int iColumn = 0; iColumn < numberColumns_; iColumn++) 
+       assert(fullColumnSolution[iColumn]!=COIN_DBL_MAX);
+#endif
      double * fullSolution = primalRowSolution();
      CoinZeroN(fullSolution, numberRows_);
      times(1.0, fullColumnSolution, fullSolution);
-     //int numberColumns=model->numberColumns();
-     //for (int iColumn=0;iColumn<numberColumns;iColumn++)
-     //setColumnStatus(iColumn,ClpSimplex::superBasic);
-     std::cout << "Time before cleanup of full model " << CoinCpuTime() - time1 << " seconds" << std::endl;
+     int numberRowBasic=0;
+#ifndef NDEBUG
+     int numberInfeasibilities=0;
+     double sumInfeasibilities=0.0;
+#endif
+     for (int iRow=0;iRow<numberRows_;iRow++) {
+       if (getRowStatus(iRow)==ClpSimplex::basic)
+	 numberRowBasic++;
+#ifndef NDEBUG
+       if (fullSolution[iRow]<rowLower_[iRow]-primalTolerance_) { 
+	 numberInfeasibilities++;
+	 sumInfeasibilities -= fullSolution[iRow]-rowLower_[iRow];
+	 if (getRowStatus(iRow)!=basic)
+	   setRowStatus(iRow,superBasic);
+       } else if (fullSolution[iRow]>rowUpper_[iRow]+primalTolerance_) { 
+	 numberInfeasibilities++;
+	 sumInfeasibilities += fullSolution[iRow]-rowUpper_[iRow];
+	 if (getRowStatus(iRow)!=basic)
+	   setRowStatus(iRow,superBasic);
+       }
+#endif
+     }
+     int numberColumnBasic=0;
+     for (int iColumn=0;iColumn<numberColumns_;iColumn++)
+       if (getColumnStatus(iColumn)==ClpSimplex::basic)
+	 numberColumnBasic++;
+     sprintf(generalPrint,"%d row basic %d col basic (total %d) - wanted %d",
+	    numberRowBasic,numberColumnBasic,
+	    numberRowBasic+numberColumnBasic,numberRows_);
+     handler_->message(CLP_GENERAL2, messages_)
+       << generalPrint
+       << CoinMessageEol;
+#ifndef NDEBUG
+     sprintf(generalPrint,"%d infeasibilities summing to %g",
+	    numberInfeasibilities,sumInfeasibilities);
+     handler_->message(CLP_GENERAL2, messages_)
+       << generalPrint
+       << CoinMessageEol;
+#endif
+     //for (int i=0;i<numberRows_;i++) setRowStatus(i,basic);
+     sprintf(generalPrint,"Time before cleanup of full model %.2f seconds",CoinCpuTime() - time1);
+     handler_->message(CLP_GENERAL, messages_)
+       << generalPrint
+       << CoinMessageEol;
+#ifdef ABC_INHERIT
+     this->dealWithAbc(1,1,true);
+#else
      this->primal(1);
-     std::cout << "Total time " << CoinCpuTime() - time1 << " seconds" << std::endl;
+#endif
+     sprintf(generalPrint,"Total time %.2f seconds",CoinCpuTime() - time1);
+     handler_->message(CLP_GENERAL, messages_)
+       << generalPrint
+       << CoinMessageEol;
      delete [] rowCounts;
      //delete [] sol;
      //delete [] lower;
