@@ -2861,7 +2861,7 @@ ClpSimplex::checkBothSolutions()
      double primalTolerance = primalTolerance_;
      double relaxedToleranceP = primalTolerance_;
      // we can't really trust infeasibilities if there is primal error
-     double error = CoinMin(1.0e-2, CoinMax(largestPrimalError_,5.0*primalTolerance_));
+     double error = CoinMin(1.0e-2, CoinMax(largestPrimalError_,0.0*primalTolerance_));
      // allow tolerance at least slightly bigger than standard
      relaxedToleranceP = relaxedToleranceP +  error;
      sumOfRelaxedPrimalInfeasibilities_ = 0.0;
@@ -11045,8 +11045,12 @@ ClpSimplex::fathom(void * stuff)
                          delete [] bestStatus;
                          bestStatus = CoinCopyOfArray(status_, numberTotal);
                          bestObjective = objectiveValue - increment;
-			 if (perturbation_<100) 
-			   bestObjective += 1.0e-2+1.0e-7*fabs(bestObjective);
+			 if (perturbation_<100) {
+			   // be safer - but still cut off others
+			   bestObjective += 1.0e-5+1.0e-7*fabs(bestObjective);
+			   bestObjective = CoinMin(bestObjective,
+						   objectiveValue-1.0e-5);
+			 }
                          setDblParam(ClpDualObjectiveLimit, bestObjective * optimizationDirection_);
                     } else {
                          //#define CLP_INVESTIGATE
@@ -11757,6 +11761,7 @@ ClpSimplex::doubleCheck()
      }
      delete [] solution;
 #endif
+     computeObjectiveValue(); // without perturbation
      return objectiveValue() * optimizationDirection_;
 }
 // Start Fast dual

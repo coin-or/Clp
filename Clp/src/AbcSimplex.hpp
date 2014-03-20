@@ -63,6 +63,7 @@ typedef struct {
   double result;
   //const CoinIndexedVector * constVector; // can get rid of
   //CoinIndexedVector * vectors[2]; // can get rid of
+  void * extraInfo;
   int status;
   int stuff[4];
 } CoinAbcThreadInfo;

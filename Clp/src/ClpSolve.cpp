@@ -5217,6 +5217,50 @@ static ClpSimplex * deBound(ClpSimplex * oldModel)
   return model;
 }
 #ifdef ABC_INHERIT
+// Use pthreads
+#include <pthread.h>
+class AbcPthreadStuff {
+public:
+  /**@name Constructors and destructor and copy */
+  //@{
+  /** Main constructor
+  */
+  AbcPthreadStuff (int numberThreads=0);
+  /// Assignment operator. This copies the data
+  AbcPthreadStuff & operator=(const AbcPthreadStuff & rhs);
+  /// Destructor
+  ~AbcPthreadStuff (  );
+  /// set stop start
+  inline void setStopStart(int value)
+  { stopStart_=value;}
+#ifndef NUMBER_THREADS 
+#define NUMBER_THREADS 8
+#endif
+  // For waking up thread
+  inline pthread_mutex_t * mutexPointer(int which,int thread=0) 
+  { return mutex_+which+3*thread;}
+  inline pthread_barrier_t * barrierPointer() 
+  { return &barrier_;}
+  inline int whichLocked(int thread=0) const
+  { return locked_[thread];}
+  inline CoinAbcThreadInfo * threadInfoPointer(int thread=0) 
+  { return threadInfo_+thread;}
+  void startParallelTask(int type,int iThread,void * info=NULL);
+  int waitParallelTask(int type, int & iThread,bool allowIdle);
+  void waitAllTasks();
+  /// so thread can find out which one it is 
+  int whichThread() const;
+  //void startThreads(int numberThreads);
+  //void stopThreads();
+  // For waking up thread
+  pthread_mutex_t mutex_[3*(NUMBER_THREADS+1)];
+  pthread_barrier_t barrier_; 
+  CoinAbcThreadInfo threadInfo_[NUMBER_THREADS+1];
+  pthread_t abcThread_[NUMBER_THREADS+1];
+  int locked_[NUMBER_THREADS+1];
+  int stopStart_;
+  int numberThreads_;
+};
 static void * abc_parallelManager(void * stuff)
 {
   AbcPthreadStuff * driver = reinterpret_cast<AbcPthreadStuff *>(stuff);
