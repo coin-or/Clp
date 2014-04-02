@@ -1351,21 +1351,26 @@ ClpModel::resize (int newNumberRows, int newNumberColumns)
      }
 #ifndef CLP_NO_STD
      if (lengthNames_) {
-          // redo row and column names
-          if (numberRows_ < newNumberRows) {
+          // redo row and column names (make sure clean)
+          int numberRowNames = 
+	    CoinMin(static_cast<int>(rowNames_.size()),numberRows_);
+          if (numberRowNames < newNumberRows) {
                rowNames_.resize(newNumberRows);
                lengthNames_ = CoinMax(lengthNames_, 8);
                char name[9];
-               for (int iRow = numberRows_; iRow < newNumberRows; iRow++) {
+               for (int iRow = numberRowNames; iRow < newNumberRows; iRow++) {
                     sprintf(name, "R%7.7d", iRow);
                     rowNames_[iRow] = name;
                }
           }
-          if (numberColumns_ < newNumberColumns) {
+          int numberColumnNames = 
+	    CoinMin(static_cast<int>(columnNames_.size()),numberColumns_);
+          if (numberColumnNames < newNumberColumns) {
                columnNames_.resize(newNumberColumns);
                lengthNames_ = CoinMax(lengthNames_, 8);
                char name[9];
-               for (int iColumn = numberColumns_; iColumn < newNumberColumns; iColumn++) {
+               for (int iColumn = numberColumnNames; 
+		    iColumn < newNumberColumns; iColumn++) {
                     sprintf(name, "C%7.7d", iColumn);
                     columnNames_[iColumn] = name;
                }
