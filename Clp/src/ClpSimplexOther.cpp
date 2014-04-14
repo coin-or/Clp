@@ -3070,11 +3070,11 @@ ClpSimplexOther::parametrics(double startingTheta, double & endingTheta,
 	    double value=solution_[iSequence];
 	    // remember scaling
 	    if (value<lower_[iSequence]-1.0e-9) {
+	      lowerCopy[iSequence]+=value-lower_[iSequence];
 	      lower_[iSequence]=value;
-	      lowerCopy[iSequence]=value;
 	    } else if (value>upper_[iSequence]+1.0e-9) {
+	      upperCopy[iSequence]+=value-upper_[iSequence];
 	      upper_[iSequence]=value;
-	      upperCopy[iSequence]=value;
 	    }
 	  }
 	  reinterpret_cast<ClpSimplexDual *> (this)->gutsOfDual(1, saveDuals, -1, data);
