@@ -481,6 +481,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\ClpSolver.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\MyEventHandler.cpp"
 				>
 			</File>
