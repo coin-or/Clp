@@ -1351,21 +1351,26 @@ ClpModel::resize (int newNumberRows, int newNumberColumns)
      }
 #ifndef CLP_NO_STD
      if (lengthNames_) {
-          // redo row and column names
-          if (numberRows_ < newNumberRows) {
+          // redo row and column names (make sure clean)
+          int numberRowNames = 
+	    CoinMin(static_cast<int>(rowNames_.size()),numberRows_);
+          if (numberRowNames < newNumberRows) {
                rowNames_.resize(newNumberRows);
                lengthNames_ = CoinMax(lengthNames_, 8);
                char name[9];
-               for (int iRow = numberRows_; iRow < newNumberRows; iRow++) {
+               for (int iRow = numberRowNames; iRow < newNumberRows; iRow++) {
                     sprintf(name, "R%7.7d", iRow);
                     rowNames_[iRow] = name;
                }
           }
-          if (numberColumns_ < newNumberColumns) {
+          int numberColumnNames = 
+	    CoinMin(static_cast<int>(columnNames_.size()),numberColumns_);
+          if (numberColumnNames < newNumberColumns) {
                columnNames_.resize(newNumberColumns);
                lengthNames_ = CoinMax(lengthNames_, 8);
                char name[9];
-               for (int iColumn = numberColumns_; iColumn < newNumberColumns; iColumn++) {
+               for (int iColumn = numberColumnNames; 
+		    iColumn < newNumberColumns; iColumn++) {
                     sprintf(name, "C%7.7d", iColumn);
                     columnNames_[iColumn] = name;
                }
@@ -1409,25 +1414,9 @@ ClpModel::deleteRows(int number, const int * which)
           return; // nothing to do
      whatsChanged_ &= ~(1 + 2 + 4 + 8 + 16 + 32); // all except columns changed
      int newSize = 0;
-     if (maximumRows_ < 0) {
-          rowActivity_ = deleteDouble(rowActivity_, numberRows_,
-                                      number, which, newSize);
-          dual_ = deleteDouble(dual_, numberRows_,
-                               number, which, newSize);
-          rowObjective_ = deleteDouble(rowObjective_, numberRows_,
-                                       number, which, newSize);
-          rowLower_ = deleteDouble(rowLower_, numberRows_,
-                                   number, which, newSize);
-          rowUpper_ = deleteDouble(rowUpper_, numberRows_,
-                                   number, which, newSize);
-          if (matrix_->getNumRows())
-               matrix_->deleteRows(number, which);
-          //matrix_->removeGaps();
-          // status
-          if (status_) {
-               if (numberColumns_ + newSize) {
 #define CLP_TIDY_DELETE_ROWS
 #ifdef CLP_TIDY_DELETE_ROWS
+     if (status_) {
 		    // try and get right number of basic
 		    int nChange=0;
 		    unsigned char * rowStatus = status_+numberColumns_;
@@ -1450,7 +1439,25 @@ ClpModel::deleteRows(int number, const int * which)
 			  }
 			}
 		      }
+     }
 #endif
+     if (maximumRows_ < 0) {
+          rowActivity_ = deleteDouble(rowActivity_, numberRows_,
+                                      number, which, newSize);
+          dual_ = deleteDouble(dual_, numberRows_,
+                               number, which, newSize);
+          rowObjective_ = deleteDouble(rowObjective_, numberRows_,
+                                       number, which, newSize);
+          rowLower_ = deleteDouble(rowLower_, numberRows_,
+                                   number, which, newSize);
+          rowUpper_ = deleteDouble(rowUpper_, numberRows_,
+                                   number, which, newSize);
+          if (matrix_->getNumRows())
+               matrix_->deleteRows(number, which);
+          //matrix_->removeGaps();
+          // status
+          if (status_) {
+               if (numberColumns_ + newSize) {
                     unsigned char * tempR  = reinterpret_cast<unsigned char *>
                                              (deleteChar(reinterpret_cast<char *>(status_) + numberColumns_,
                                                          numberRows_,
@@ -4511,8 +4518,8 @@ ClpDataSave::operator=(const ClpDataSave& rhs)
           dualBound_ = rhs.dualBound_;
           infeasibilityCost_ = rhs.infeasibilityCost_;
           pivotTolerance_ = rhs.pivotTolerance_;
-          zeroFactorizationTolerance_ = zeroFactorizationTolerance_;
-          zeroSimplexTolerance_ = zeroSimplexTolerance_;
+          zeroFactorizationTolerance_ = rhs.zeroFactorizationTolerance_;
+          zeroSimplexTolerance_ = rhs.zeroSimplexTolerance_;
           acceptablePivot_ = rhs.acceptablePivot_;
           objectiveScale_ = rhs.objectiveScale_;
           sparseThreshold_ = rhs.sparseThreshold_;

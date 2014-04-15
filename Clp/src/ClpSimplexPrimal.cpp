@@ -1187,7 +1187,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
           double lastObj3 = progress->lastObjective(3);
           lastObj3 += infeasibilityCost_ * 2.0 * lastInf3;
           if (lastObj < thisObj - 1.0e-5 * CoinMax(fabs(thisObj), fabs(lastObj)) - 1.0e-7
-                    && firstFree_ < 0) {
+                    && firstFree_ < 0 && thisInf >= lastInf) {
                if (handler_->logLevel() == 63)
                     printf("lastobj %g this %g force %d\n", lastObj, thisObj, forceFactorization_);
                int maxFactor = factorization_->maximumPivots();
@@ -1199,7 +1199,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                          printf("Reducing factorization frequency to %d\n", forceFactorization_);
                }
           } else if (lastObj3 < thisObj - 1.0e-5 * CoinMax(fabs(thisObj), fabs(lastObj3)) - 1.0e-7
-                     && firstFree_ < 0) {
+                     && firstFree_ < 0 && thisInf >= lastInf) {
                if (handler_->logLevel() == 63)
                     printf("lastobj3 %g this3 %g force %d\n", lastObj3, thisObj, forceFactorization_);
                int maxFactor = factorization_->maximumPivots();
@@ -2645,12 +2645,16 @@ ClpSimplexPrimal::perturb(int type)
                lower_[i] = lowerValue;
                upper_[i] = upperValue;
           }
+	  // biased
+	  const double * rowLower = rowLower_-numberColumns_;
+	  const double * rowUpper = rowUpper_-numberColumns_;
           for (; i < numberColumns_ + numberRows_; i++) {
                double lowerValue = lower_[i], upperValue = upper_[i];
                double value = perturbation * maximumFraction;
                value = CoinMin(value, 0.1);
                value *= randomNumberGenerator_.randomDouble();
-               if (upperValue > lowerValue + tolerance) {
+               if (rowLower[i]!=rowUpper[i] &&
+		   upperValue > lowerValue + tolerance) {
                     if (savePerturbation != 50) {
                          if (fabs(value) <= primalTolerance_)
                               value = 0.0;
@@ -2687,11 +2691,11 @@ ClpSimplexPrimal::perturb(int type)
                               upperValue += valueU;
                     }
                } else if (upperValue > 0.0) {
-                    upperValue -= value * (CoinMax(1.0e-2, 1.0e-5 * fabs(lowerValue)));
-                    lowerValue -= value * (CoinMax(1.0e-2, 1.0e-5 * fabs(lowerValue)));
+		 //upperValue -= value * (CoinMax(1.0e-2, 1.0e-5 * fabs(lowerValue)));
+		 // lowerValue -= value * (CoinMax(1.0e-2, 1.0e-5 * fabs(lowerValue)));
                } else if (upperValue < 0.0) {
-                    upperValue += value * (CoinMax(1.0e-2, 1.0e-5 * fabs(lowerValue)));
-                    lowerValue += value * (CoinMax(1.0e-2, 1.0e-5 * fabs(lowerValue)));
+		 // upperValue += value * (CoinMax(1.0e-2, 1.0e-5 * fabs(lowerValue)));
+		 // lowerValue += value * (CoinMax(1.0e-2, 1.0e-5 * fabs(lowerValue)));
                } else {
                }
                if (lowerValue != lower_[i]) {
@@ -2735,7 +2739,6 @@ ClpSimplexPrimal::perturb(int type)
      handler_->message(CLP_SIMPLEX_PERTURB, messages_)
                << 100.0 * maximumFraction << perturbation << largest << 100.0 * largestPerCent << largestZero
                << CoinMessageEol;
-     // redo nonlinear costs
      // say perturbed
      perturbation_ = 101;
 }

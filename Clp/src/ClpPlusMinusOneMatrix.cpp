@@ -1423,14 +1423,14 @@ ClpPlusMinusOneMatrix::appendRows(int number, const CoinPackedVectorBase * const
           move = startNegative_[iColumn] - now;
           n = countPositive[iColumn];
           startPositive_[iColumn] += numberAdded;
-          CoinMemcpyN(newIndices + startPositive_[iColumn], move, indices_ + now);
+          CoinMemcpyN(indices_+now, move, newIndices + startPositive_[iColumn]);
           countPositive[iColumn] = startNegative_[iColumn] + numberAdded;
           numberAdded += n;
           now = startNegative_[iColumn];
           move = startPositive_[iColumn+1] - now;
           n = countNegative[iColumn];
           startNegative_[iColumn] += numberAdded;
-          CoinMemcpyN(newIndices + startNegative_[iColumn], move, indices_ + now);
+          CoinMemcpyN(indices_+now, move, newIndices + startNegative_[iColumn]);
           countNegative[iColumn] = startPositive_[iColumn+1] + numberAdded;
           numberAdded += n;
      }

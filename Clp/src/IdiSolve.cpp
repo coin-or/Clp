@@ -124,6 +124,7 @@ Idiot::objval(int nrows, int ncols, double * rowsol , double * colsol,
      result.infeas = sum1;
      result.objval = objvalue;
      result.weighted = objvalue + weight * sum2;
+     result.dropThis = 0.0;
      result.sumSquared = sum2;
      return result;
 }

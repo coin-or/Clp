@@ -758,6 +758,11 @@ ClpSimplex::gutsOfSolution ( double * givenDuals,
      // Switch off false values pass indicator
      if (!valuesPass && algorithm_ > 0)
           firstFree_ = -1;
+     if (handler_->logLevel()==63)
+     printf("end getsolution algorithm %d status %d npinf %d sum,relaxed %g,%g ndinf %d sum,relaxed %g,%g\n",
+	    algorithm_,problemStatus_,
+	    numberPrimalInfeasibilities_,sumPrimalInfeasibilities_,sumOfRelaxedPrimalInfeasibilities_,
+	    numberDualInfeasibilities_,sumDualInfeasibilities_,sumOfRelaxedDualInfeasibilities_);
      return 0;
 }
 void
@@ -8634,7 +8639,11 @@ ClpSimplex::startup(int ifValuesPass, int startFinishOptions)
                               numberThrownOut = gutsOfSolution(  NULL, NULL,
                                                                  ifValuesPass != 0);
                               //firstFree_=saveFirstFree;
-                              if (largestPrimalError_ > 10.0 && !ifValuesPass && !numberThrownOut) {
+			      bool badBasis = (largestPrimalError_ > 10.0);
+			      if (algorithm_>0 && largestDualError_ > 10.0
+				  * infeasibilityCost_)
+				badBasis=true;
+                              if (badBasis && !numberThrownOut) {
                                    // throw out up to 1000 structurals
                                    int iRow;
                                    int * sort = new int[numberRows_];

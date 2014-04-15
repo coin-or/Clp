@@ -224,6 +224,7 @@ ClpNonLinearCost::ClpNonLinearCost ( ClpSimplex * model, int method)
           }
      }
 }
+#if 0
 // Refresh - assuming regions OK
 void 
 ClpNonLinearCost::refresh()
@@ -276,6 +277,7 @@ ClpNonLinearCost::refresh()
      //     checkInfeasibilities(model_->primalTolerance());
      
 }
+#endif
 // Refreshes costs always makes row costs zero
 void
 ClpNonLinearCost::refreshCosts(const double * columnCosts)
@@ -1030,6 +1032,7 @@ ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
                     }
                     lower[iSequence] = lowerValue;
                     upper[iSequence] = upperValue;
+		    assert (lowerValue<=upperValue);
                }
                // always do as other things may change
                cost[iSequence] = costValue;

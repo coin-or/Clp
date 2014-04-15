@@ -1738,7 +1738,7 @@ Idiot::crossOver(int mode)
                     clpMatrix->releaseSpecialColumnCopy();
                }
                if (presolve) {
-		 model_->primal();
+		 model_->primal(1);
                     pinfo.postsolve(true);
                     delete model_;
                     model_ = saveModel;

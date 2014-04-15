@@ -1193,7 +1193,7 @@ AbcSimplexPrimal::statusOfProblemInPrimal(int type)
     double lastObj3 = abcProgress_.lastObjective(3);
     lastObj3 += infeasibilityCost_ * 2.0 * lastInf3;
     if (lastObj < thisObj - 1.0e-5 * CoinMax(fabs(thisObj), fabs(lastObj)) - 1.0e-7
-	&& firstFree_ < 0) {
+	&& firstFree_ < 0 && thisInf >= lastInf) {
 #if ABC_NORMAL_DEBUG>0
       if (handler_->logLevel() == 63)
 	printf("lastobj %g this %g force %d\n", lastObj, thisObj, forceFactorization_);
@@ -1209,7 +1209,7 @@ AbcSimplexPrimal::statusOfProblemInPrimal(int type)
 #endif
       }
     } else if (lastObj3 < thisObj - 1.0e-5 * CoinMax(fabs(thisObj), fabs(lastObj3)) - 1.0e-7
-	       && firstFree_ < 0) {
+	       && firstFree_ < 0 && thisInf >= lastInf) {
 #if ABC_NORMAL_DEBUG>0
       if (handler_->logLevel() == 63)
 	printf("lastobj3 %g this3 %g force %d\n", lastObj3, thisObj, forceFactorization_);
@@ -3014,9 +3014,24 @@ AbcSimplexPrimal::perturb(int /*type*/)
   }
   double tolerance = 100.0 * primalTolerance_;
   int numberChanged=0;
+  // Set bit if fixed
+  for (int i=0;i<numberRows_;i++) {
+    if (rowLower_[i]!=rowUpper_[i])
+      internalStatus_[i] &= ~128;
+    else
+      internalStatus_[i] |= 128;
+  }
+  for (int i=0;i<numberColumns_;i++) {
+    if (columnLower_[i]!=columnUpper_[i])
+      internalStatus_[i+numberRows_] &= ~128;
+    else
+      internalStatus_[i+numberRows_] |= 128;
+  }
   //double multiplier = perturbation*maximumFraction;
   for (iSequence = 0; iSequence < numberRows_ + numberColumns_; iSequence++) {
     if (getInternalStatus(iSequence) == basic) {
+      if ((internalStatus_[i] &128)!=0)
+	continue;
       double lowerValue = abcLower_[iSequence];
       double upperValue = abcUpper_[iSequence];
       if (upperValue > lowerValue + tolerance) {
@@ -3078,6 +3093,8 @@ AbcSimplexPrimal::perturb(int /*type*/)
     // do non basic columns?
     for (iSequence = 0; iSequence < maximumAbcNumberRows_ + numberColumns_; iSequence++) {
       if (getInternalStatus(iSequence) != basic) {
+	if ((internalStatus_[i] &128)!=0)
+	  continue;
 	double lowerValue = abcLower_[iSequence];
 	double upperValue = abcUpper_[iSequence];
 	if (upperValue > lowerValue + tolerance) {
@@ -3125,6 +3142,7 @@ AbcSimplexPrimal::perturb(int /*type*/)
   }
   // Clean up
   for (i = 0; i < numberColumns_ + numberRows_; i++) {
+    internalStatus_[i] &= ~128;
     switch(getInternalStatus(i)) {
       
     case basic:

@@ -254,11 +254,14 @@ am_libClp_la_OBJECTS = ClpCholeskyBase.lo ClpCholeskyDense.lo \
 	$(am__objects_2) $(am__objects_3) $(am__objects_4) \
 	$(am__objects_5) $(am__objects_6)
 libClp_la_OBJECTS = $(am_libClp_la_OBJECTS)
+@DEPENDENCY_LINKING_TRUE@libClpSolver_la_DEPENDENCIES =  \
+@DEPENDENCY_LINKING_TRUE@	$(am__DEPENDENCIES_1) libClp.la
+am_libClpSolver_la_OBJECTS = ClpSolver.lo CbcOrClpParam.lo Clp_ampl.lo \
+	MyEventHandler.lo MyMessageHandler.lo unitTest.lo
+libClpSolver_la_OBJECTS = $(am_libClpSolver_la_OBJECTS)
 binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(bin_PROGRAMS)
-am_clp_OBJECTS = ClpMain.$(OBJEXT) CbcOrClpParam.$(OBJEXT) \
-	Clp_ampl.$(OBJEXT) MyEventHandler.$(OBJEXT) \
-	MyMessageHandler.$(OBJEXT) unitTest.$(OBJEXT)
+am_clp_OBJECTS = ClpMain.$(OBJEXT)
 clp_OBJECTS = $(am_clp_OBJECTS)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -278,8 +281,10 @@ LTCOMPILE = $(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) \
 CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
-SOURCES = $(libClp_la_SOURCES) $(clp_SOURCES)
-DIST_SOURCES = $(am__libClp_la_SOURCES_DIST) $(clp_SOURCES)
+SOURCES = $(libClp_la_SOURCES) $(libClpSolver_la_SOURCES) \
+	$(clp_SOURCES)
+DIST_SOURCES = $(am__libClp_la_SOURCES_DIST) \
+	$(libClpSolver_la_SOURCES) $(clp_SOURCES)
 am__includecoin_HEADERS_DIST = Clp_C_Interface.h ClpCholeskyBase.hpp \
 	ClpCholeskyDense.hpp ClpConstraint.hpp ClpConstraintLinear.hpp \
 	ClpConstraintQuadratic.hpp ClpDualRowDantzig.hpp \
@@ -580,7 +585,7 @@ AUTOMAKE_OPTIONS = foreign
 
 # Name of the library compiled in this directory.  We want it to be installed
 # in the 'lib' directory
-lib_LTLIBRARIES = libClp.la
+lib_LTLIBRARIES = libClp.la libClpSolver.la
 
 # List all source files for this library, including headers
 libClp_la_SOURCES = ClpConfig.h ClpCholeskyBase.cpp \
@@ -619,16 +624,8 @@ libClp_la_SOURCES = ClpConfig.h ClpCholeskyBase.cpp \
 	ClpSolve.cpp ClpSolve.hpp Idiot.cpp Idiot.hpp IdiSolve.cpp \
 	$(am__append_1) $(am__append_2) $(am__append_3) \
 	$(am__append_4) $(am__append_5) $(am__append_6)
-
-# List all additionally required libraries
-@DEPENDENCY_LINKING_TRUE@libClp_la_LIBADD = $(CLPLIB_LIBS)
-
-# This is for libtool
-libClp_la_LDFLAGS = $(LT_LDFLAGS)
-
-# List all source files for this executable, including headers
-clp_SOURCES = \
-	ClpMain.cpp \
+libClpSolver_la_SOURCES = \
+	ClpSolver.cpp \
 	CbcOrClpParam.cpp CbcOrClpParam.hpp \
 	Clp_ampl.cpp Clp_ampl.h \
 	MyEventHandler.cpp MyEventHandler.hpp \
@@ -637,10 +634,21 @@ clp_SOURCES = \
 
 
 # List all additionally required libraries
-clp_LDADD = libClp.la $(CLPLIB_LIBS) $(ASL_LIBS)
+@DEPENDENCY_LINKING_TRUE@libClp_la_LIBADD = $(CLPLIB_LIBS)
+@DEPENDENCY_LINKING_TRUE@libClpSolver_la_LIBADD = $(CLPLIB_LIBS) libClp.la
+
+# This is for libtool
+libClp_la_LDFLAGS = $(LT_LDFLAGS)
+libClpSolver_la_LDFLAGS = $(LT_LDFLAGS)
+
+# List all source files for this executable, including headers
+clp_SOURCES = ClpMain.cpp 
+
+# List all additionally required libraries
+clp_LDADD = libClpSolver.la libClp.la $(CLPLIB_LIBS) $(ASL_LIBS)
 
 # List all dependency libraries (similar to LDADD, but without -l, -L flags)
-clp_DEPENDENCIES = libClp.la $(CLPLIB_DEPENDENCIES)
+clp_DEPENDENCIES = libClpSolver.la libClp.la $(CLPLIB_DEPENDENCIES)
 
 ########################################################################
 #                            Additional flags                          #
@@ -661,7 +669,7 @@ DEFAULT_INCLUDES = -I. -I`$(CYGPATH_W) $(srcdir)`
 # and that therefore should be installed in 'include/coin'
 includecoindir = $(includedir)/coin
 
-# needed by Cbc
+# needed by Clp
 includecoin_HEADERS = Clp_C_Interface.h ClpCholeskyBase.hpp \
 	ClpCholeskyDense.hpp ClpConstraint.hpp ClpConstraintLinear.hpp \
 	ClpConstraintQuadratic.hpp ClpDualRowDantzig.hpp \
@@ -771,6 +779,8 @@ clean-libLTLIBRARIES:
 	done
 libClp.la: $(libClp_la_OBJECTS) $(libClp_la_DEPENDENCIES) 
 	$(CXXLINK) -rpath $(libdir) $(libClp_la_LDFLAGS) $(libClp_la_OBJECTS) $(libClp_la_LIBADD) $(LIBS)
+libClpSolver.la: $(libClpSolver_la_OBJECTS) $(libClpSolver_la_DEPENDENCIES) 
+	$(CXXLINK) -rpath $(libdir) $(libClpSolver_la_LDFLAGS) $(libClpSolver_la_OBJECTS) $(libClpSolver_la_LIBADD) $(LIBS)
 install-binPROGRAMS: $(bin_PROGRAMS)
 	@$(NORMAL_INSTALL)
 	test -z "$(bindir)" || $(mkdir_p) "$(DESTDIR)$(bindir)"
@@ -823,7 +833,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/AbcSimplexParallel.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/AbcSimplexPrimal.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/AbcWarmStart.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CbcOrClpParam.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CbcOrClpParam.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpCholeskyBase.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpCholeskyDense.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpCholeskyMumps.Plo@am__quote@
@@ -872,8 +882,9 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpSimplexOther.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpSimplexPrimal.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpSolve.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpSolver.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Clp_C_Interface.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Clp_ampl.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Clp_ampl.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CoinAbcBaseFactorization1.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CoinAbcBaseFactorization2.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CoinAbcBaseFactorization3.Plo@am__quote@
@@ -898,9 +909,9 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CoinAbcSmallFactorization5.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/IdiSolve.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Idiot.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/MyEventHandler.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/MyMessageHandler.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/unitTest.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/MyEventHandler.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/MyMessageHandler.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/unitTest.Plo@am__quote@
 
 .cpp.o:
 @am__fastdepCXX_TRUE@	if $(CXXCOMPILE) -MT $@ -MD -MP -MF "$(DEPDIR)/$*.Tpo" -c -o $@ $<; \

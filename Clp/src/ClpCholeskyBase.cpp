@@ -195,7 +195,6 @@ ClpCholeskyBase::operator=(const ClpCholeskyBase& rhs)
           link_ = ClpCopyOfArray(rhs.link_, numberRows_);
           workInteger_ = ClpCopyOfArray(rhs.workInteger_, numberRows_);
           clique_ = ClpCopyOfArray(rhs.clique_, numberRows_);
-          delete rowCopy_;
           rowCopy_ = rhs.rowCopy_->clone();
           whichDense_ = NULL;
           denseColumn_ = NULL;

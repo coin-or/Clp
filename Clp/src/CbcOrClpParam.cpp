@@ -3690,16 +3690,16 @@ trust the pseudo costs and do not do any more strong branching."
 #ifdef COIN_HAS_CBC
      parameters[numberParameters++] =
           CbcOrClpParam("tune!PreProcess", "Dubious tuning parameters",
-                        0, 20000000, CLP_PARAM_INT_PROCESSTUNE, 1);
+                        0, 2000000000, CLP_PARAM_INT_PROCESSTUNE, 1);
      parameters[numberParameters-1].setLonghelp
      (
-          "For making equality cliques this is minimumsize.  Also for adding \
-integer slacks.  May be used for more later \
-If <10000 that is what it does.  If <1000000 - numberPasses is (value/10000)-1 and tune is tune %10000. \
-If >= 1000000! - numberPasses is (value/1000000)-1 and tune is tune %1000000.  In this case if tune is now still >=10000 \
-numberPassesPerInnerLoop is changed from 10 to (tune-10000)-1 and tune becomes tune % 10000!!!!! - happy? - \
-so to keep normal limit on cliques of 5, do 3 major passes (include presolves) but only doing one tightening pass per major pass - \
-you would use 3010005 (I think)"
+	  "Format aabbcccc - \n If aa then this is number of major passes (i.e. with presolve) \n \
+If bb and bb>0 then this is number of minor passes (if unset or 0 then 10) \n \
+cccc is bit set \n 0 - 1 Heavy probing \n 1 - 2 Make variables integer if possible (if obj value)\n \
+2 - 4 As above but even if zero objective value\n \
+7 - 128 Try and create cliques\n 8 - 256 If all +1 try hard for dominated rows\n \
+10 - 1024 Use a larger feasibility tolerance in presolve\n \
+11 - 2048 Try probing before creating cliques"
      );
      parameters[numberParameters++] =
           CbcOrClpParam("two!MirCuts", "Whether to use Two phase Mixed Integer Rounding cuts",
