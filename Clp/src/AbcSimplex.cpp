@@ -4043,7 +4043,7 @@ AbcSimplex::doAbcDual()
   }
 #endif
   numberIterations_=totalNumberIterations;
-  return (problemStatus_<0||problemStatus_==4) ? 1 : 0;
+  return (problemStatus_<0||problemStatus_==4||problemStatus_==10) ? 1 : 0;
 }
 int AbcSimplex::dual ()
 {
