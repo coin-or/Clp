@@ -82,7 +82,7 @@ inline double CoinSqrt(double x)
 }
 #endif
 /// Trace
-#   ifndef NDEBUG
+#   ifdef NDEBUG
 #      define ClpTraceDebug(expression)		{}
 #   else
 void ClpTracePrint(std::string fileName, std::string message, int line);
