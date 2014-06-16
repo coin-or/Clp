@@ -6792,7 +6792,7 @@ OsiClpSolverInterface::crunch()
       whichRow[nCopy]=nBound;
       assert (arrayI[0]==nBound);
       arrayI[0]=nBound; // same
-      spareArrays_ = spareArrays_;
+      spareArrays_ = spareArrays;
       spareArrays=NULL;
 #endif
     } else if (problemStatus!=3) {
