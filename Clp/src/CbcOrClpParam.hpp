@@ -218,6 +218,7 @@ enum CbcOrClpParameterType
      CBC_PARAM_STR_GMICUTS,
      CBC_PARAM_STR_CUTOFF_CONSTRAINT,
      CBC_PARAM_STR_DW,
+     CBC_PARAM_STR_ORBITAL,
 
      CLP_PARAM_ACTION_DIRECTORY = 301,
      CLP_PARAM_ACTION_DIRSAMPLE,
@@ -268,8 +269,9 @@ enum CbcOrClpParameterType
      CLP_PARAM_ACTION_ENVIRONMENT,
      CLP_PARAM_ACTION_PARAMETRICS,
      CLP_PARAM_ACTION_GMPL_SOLUTION,
+     CLP_PARAM_ACTION_RESTORESOL,
 
-     CBC_PARAM_ACTION_BAB = 351,
+     CBC_PARAM_ACTION_BAB = 361,
      CBC_PARAM_ACTION_MIPLIB,
      CBC_PARAM_ACTION_STRENGTHEN,
      CBC_PARAM_ACTION_PRIORITYIN,
@@ -516,6 +518,7 @@ void establishParams (int &numberParameters, CbcOrClpParam *const parameters);
 // Given a parameter type - returns its number in list
 int whichParam (CbcOrClpParameterType name,
                 int numberParameters, CbcOrClpParam *const parameters);
-// Dump a solution to file
+// Dump/restore a solution to file
 void saveSolution(const ClpSimplex * lpSolver, std::string fileName);
+void restoreSolution(ClpSimplex * lpSolver, std::string fileName, int mode);
 #endif	/* CbcOrClpParam_H */

@@ -1666,6 +1666,8 @@ See Rounding for meaning of on,both,before"
           CbcOrClpParam("constraint!fromCutoff", "Whether to use cutoff as constraint",
                         "off", CBC_PARAM_STR_CUTOFF_CONSTRAINT);
      parameters[numberParameters-1].append("on");
+     parameters[numberParameters-1].append("variable");
+     parameters[numberParameters-1].append("forcevariable");
      parameters[numberParameters-1].setLonghelp
      (
           "This adds the objective as a constraint with best solution as RHS"
@@ -1680,6 +1682,7 @@ See Rounding for meaning of on,both,before"
      parameters[numberParameters-1].append("length!?");
      parameters[numberParameters-1].append("singletons");
      parameters[numberParameters-1].append("nonzero");
+     parameters[numberParameters-1].append("general!Force?");
      parameters[numberParameters-1].setLonghelp
      (
           "This orders the variables in order of their absolute costs - with largest cost ones being branched on \
@@ -2486,6 +2489,9 @@ See branchAndCut for information on options."
      parameters[numberParameters-1].append("onlyinstead");
      parameters[numberParameters-1].append("cleaninstead");
      parameters[numberParameters-1].append("bothinstead");
+     parameters[numberParameters-1].append("onlyaswellroot");
+     parameters[numberParameters-1].append("cleanaswellroot");
+     parameters[numberParameters-1].append("bothaswellroot");
      parameters[numberParameters-1].setLonghelp
      (
           "This is a gross simplification of 'A Relax-and-Cut Framework for Gomory's Mixed-Integer Cuts' \
@@ -2850,6 +2856,18 @@ This is a first try and will hopefully become more sophisticated."
      parameters[numberParameters-1].setDoubleValue(1.0);
 #endif
 #ifdef COIN_HAS_CBC
+#ifdef COIN_HAS_NTY
+     parameters[numberParameters++] =
+          CbcOrClpParam("Orbit!alBranching", "Whether to try orbital branching",
+                        "off", CBC_PARAM_STR_ORBITAL);
+     parameters[numberParameters-1].append("on");
+     parameters[numberParameters-1].append("strong");
+     //parameters[numberParameters-1].append("select");
+     parameters[numberParameters-1].setLonghelp
+     (
+          "This switches on Orbital branching. \
+On just adds orbital, strong tries extra fixing in strong branching");
+#endif
      parameters[numberParameters++] =
           CbcOrClpParam("outDup!licates", "takes duplicate rows etc out of integer model",
                         CLP_PARAM_ACTION_OUTDUPROWS, 7, 0);
@@ -3269,8 +3287,19 @@ best less than this fraction of larger of two",
 of the objective value at the root node then the search will terminate.  See 'allowableGap' for a \
 way of using absolute value rather than fraction."
      );
+#endif
      parameters[numberParameters++] =
-          CbcOrClpParam("readS!tored", "Import stored cuts from file",
+          CbcOrClpParam("restoreS!olution", "reads solution from file",
+                        CLP_PARAM_ACTION_RESTORESOL);
+     parameters[numberParameters-1].setLonghelp
+     (
+          "This will read a binary solution file from the given file name.  It will use the default\
+ directory given by 'directory'.  A name of '$' will use the previous value for the name.  This\
+ is initialized to 'solution.file'.  This reads in a file from saveSolution"
+     );
+#ifdef COIN_HAS_CBC
+     parameters[numberParameters++] =
+          CbcOrClpParam("readSt!ored", "Import stored cuts from file",
                         CLP_PARAM_ACTION_STOREDFILE, 3, 0);
 #endif
 #ifdef COIN_HAS_CLP
