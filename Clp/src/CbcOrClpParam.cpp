@@ -2862,7 +2862,7 @@ This is a first try and will hopefully become more sophisticated."
                         "off", CBC_PARAM_STR_ORBITAL);
      parameters[numberParameters-1].append("on");
      parameters[numberParameters-1].append("strong");
-     //parameters[numberParameters-1].append("select");
+     parameters[numberParameters-1].append("force");
      parameters[numberParameters-1].setLonghelp
      (
           "This switches on Orbital branching. \
