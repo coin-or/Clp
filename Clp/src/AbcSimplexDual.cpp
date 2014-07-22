@@ -593,7 +593,7 @@ AbcSimplexDual::updateDualsInDual()
     double * COIN_RESTRICT work=array.denseVector();
     const int * COIN_RESTRICT which=array.getIndices();
     double * COIN_RESTRICT reducedCost=abcDj_;
-#pragma cilk_grainsize=128
+#pragma cilk grainsize=128
     cilk_for (int i = 0; i < number; i++) {
       //for (int i = 0; i < number; i++) {
       int iSequence = which[i];

@@ -356,7 +356,7 @@ CoinAbcScale(double * region, double multiplier,int sizeIn)
 #ifndef INTEL_COMPILER
 // was #pragma simd
 #endif
-#pragma cilk_grainsize=CILK_FOR_GRAINSIZE
+#pragma cilk grainsize=CILK_FOR_GRAINSIZE
   cilk_for (int i=0;i<size;i++) {
     region[i] *= multiplier;
   }
@@ -369,7 +369,7 @@ CoinAbcScaleNormalValues(double * region, double multiplier,double killIfLessTha
 #ifndef INTEL_COMPILER
 // was #pragma simd
 #endif
-#pragma cilk_grainsize=CILK_FOR_GRAINSIZE
+#pragma cilk grainsize=CILK_FOR_GRAINSIZE
   cilk_for (int i=0;i<size;i++) {
     double value=fabs(region[i]);
     if (value>killIfLessThanThis) {
@@ -410,7 +410,7 @@ CoinAbcSetElements(double * region, int sizeIn, double value)
 #ifndef INTEL_COMPILER
 // was #pragma simd
 #endif
-#pragma cilk_grainsize=CILK_FOR_GRAINSIZE
+#pragma cilk grainsize=CILK_FOR_GRAINSIZE
      cilk_for (int i = 0; i < size; i++)
           region[i] = value;
 }
@@ -559,7 +559,7 @@ CoinAbcScatterTo(const double * regionFrom, double * regionTo, const int * index
 #ifndef INTEL_COMPILER
 // was #pragma simd
 #endif
-#pragma cilk_grainsize=CILK_FOR_GRAINSIZE
+#pragma cilk grainsize=CILK_FOR_GRAINSIZE
   cilk_for (int i=0;i<number;i++) {
     int k=index[i];
     regionTo[k]=regionFrom[i];
@@ -574,7 +574,7 @@ CoinAbcGatherFrom(const double * regionFrom, double * regionTo, const int * inde
 #ifndef INTEL_COMPILER
 // was #pragma simd
 #endif
-#pragma cilk_grainsize=CILK_FOR_GRAINSIZE
+#pragma cilk grainsize=CILK_FOR_GRAINSIZE
   cilk_for (int i=0;i<number;i++) {
     int k=index[i];
     regionTo[i]=regionFrom[k];
@@ -589,7 +589,7 @@ CoinAbcScatterZeroTo(double * regionTo, const int * index,int numberIn)
 #ifndef INTEL_COMPILER
 // was #pragma simd
 #endif
-#pragma cilk_grainsize=CILK_FOR_GRAINSIZE
+#pragma cilk grainsize=CILK_FOR_GRAINSIZE
   cilk_for (int i=0;i<number;i++) {
     int k=index[i];
     regionTo[k]=0.0;
@@ -620,7 +620,7 @@ CoinAbcInverseSqrts(double * array, int nIn)
 #ifndef INTEL_COMPILER
 // was #pragma simd
 #endif
-#pragma cilk_grainsize=CILK_FOR_GRAINSIZE
+#pragma cilk grainsize=CILK_FOR_GRAINSIZE
   cilk_for (int i = 0; i < n; i++)
     array[i] = 1.0 / sqrt(array[i]);
 }
@@ -632,7 +632,7 @@ CoinAbcReciprocal(double * array, int nIn, const double *input)
 #ifndef INTEL_COMPILER
 // was #pragma simd
 #endif
-#pragma cilk_grainsize=CILK_FOR_GRAINSIZE
+#pragma cilk grainsize=CILK_FOR_GRAINSIZE
   cilk_for (int i = 0; i < n; i++)
     array[i] = 1.0 / input[i];
 }
