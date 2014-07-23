@@ -1983,6 +1983,7 @@ void CoinAbcDgemm(int m, int n, int k, long double * COIN_RESTRICT a,int lda,
   }
 }
 #endif
+#if 0
 // From Intel site
 // get AVX intrinsics  
 #include <immintrin.h>  
@@ -2013,3 +2014,4 @@ bool DetectFeature(unsigned int feature)
 #endif
   return true;  
 } 
+#endif
