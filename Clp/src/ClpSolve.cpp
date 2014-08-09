@@ -14,6 +14,14 @@
 #endif
 
 #include <math.h>
+#ifdef _MSC_VER
+#include <windows.h>   // for Sleep()
+#ifdef small
+#undef small
+#endif
+#else
+#include <unistd.h>    // for usleep()
+#endif
 
 #include "CoinHelperFunctions.hpp"
 #include "ClpHelperFunctions.hpp"
@@ -5414,10 +5422,13 @@ AbcPthreadStuff::waitParallelTask(int type,int & iThread, bool allowIdle)
       }
     }
     if (!finished) {
-      struct timespec time1, time2;
-      time1.tv_sec = 0;
-      time1.tv_nsec = 100000;
-      nanosleep(&time1 , &time2);
+#ifdef _WIN32
+      // wait 1 millisecond
+      Sleep(1);
+#else
+      // wait 0.1 millisecond
+      usleep(100);
+#endif
     }
   }
   int locked=locked_[iThread]+2;
