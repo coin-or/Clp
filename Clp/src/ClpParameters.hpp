@@ -58,8 +58,10 @@ enum ClpDblParam {
      /** Objective function constant. This the value of the constant term in
          the objective function. */
      ClpObjOffset,
-     /// Maximum time in seconds - after this action is as max iterations
+     /// Maximum time in seconds - after, this action is as max iterations
      ClpMaxSeconds,
+     /// Maximum wallclock running time in seconds - after, this action is as max iterations
+     ClpMaxWallSeconds,
      /// Tolerance to use in presolve
      ClpPresolveTolerance,
      /** Just a marker, so that we can allocate a static sized array to store
