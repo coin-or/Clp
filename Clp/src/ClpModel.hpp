@@ -386,6 +386,7 @@ public:
           return dblParam_[ClpMaxSeconds];
      }
      void setMaximumSeconds(double value);
+     void setMaximumWallSeconds(double value);
      /// Returns true if hit maximum iterations (or time)
      bool hitMaximumIterations() const;
      /** Status of problem:

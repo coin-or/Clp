@@ -1620,8 +1620,9 @@ bool OsiClpSolverInterface::isDualObjectiveLimitReached() const
 
 bool OsiClpSolverInterface::isIterationLimitReached() const
 {
-  const int stat = modelPtr_->status();
-  return (stat == 3);
+  const int status = modelPtr_->status();
+  const int secondaryStatus = modelPtr_->secondaryStatus();
+  return (status == 3 && secondaryStatus == 0);
 }
 
 //#############################################################################

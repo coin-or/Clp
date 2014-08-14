@@ -130,6 +130,7 @@ ClpModel::ClpModel (bool emptyMessages) :
      dblParam_[ClpPrimalTolerance] = 1e-7;
      dblParam_[ClpObjOffset] = 0.0;
      dblParam_[ClpMaxSeconds] = -1.0;
+     dblParam_[ClpMaxWallSeconds] = -1.0;
      dblParam_[ClpPresolveTolerance] = 1.0e-8;
 
 #ifndef CLP_NO_STD
@@ -767,6 +768,7 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, int trueCopy)
      dblParam_[ClpPrimalTolerance] = rhs.dblParam_[ClpPrimalTolerance];
      dblParam_[ClpObjOffset] = rhs.dblParam_[ClpObjOffset];
      dblParam_[ClpMaxSeconds] = rhs.dblParam_[ClpMaxSeconds];
+     dblParam_[ClpMaxWallSeconds] = rhs.dblParam_[ClpMaxWallSeconds];
      dblParam_[ClpPresolveTolerance] = rhs.dblParam_[ClpPresolveTolerance];
 #ifndef CLP_NO_STD
 
@@ -1105,6 +1107,13 @@ ClpModel::setDblParam(ClpDblParam key, double value)
      case ClpMaxSeconds:
           if(value >= 0)
                value += CoinCpuTime();
+          else
+               value = -1.0;
+          break;
+
+     case ClpMaxWallSeconds:
+          if(value >= 0)
+               value += CoinWallclockTime();
           else
                value = -1.0;
           break;
@@ -2818,6 +2827,14 @@ ClpModel::setMaximumSeconds(double value)
      else
           dblParam_[ClpMaxSeconds] = -1.0;
 }
+void
+ClpModel::setMaximumWallSeconds(double value)
+{
+     if(value >= 0)
+          dblParam_[ClpMaxWallSeconds] = value + CoinWallclockTime();
+     else
+          dblParam_[ClpMaxWallSeconds] = -1.0;
+}
 // Returns true if hit maximum iterations (or time)
 bool
 ClpModel::hitMaximumIterations() const
@@ -2827,6 +2844,9 @@ ClpModel::hitMaximumIterations() const
      if (dblParam_[ClpMaxSeconds] >= 0.0 && !hitMax) {
           hitMax = (CoinCpuTime() >= dblParam_[ClpMaxSeconds]);
      }
+     if (dblParam_[ClpMaxWallSeconds] >= 0.0 && !hitMax) {
+          hitMax = (CoinWallclockTime() >= dblParam_[ClpMaxWallSeconds]);
+     }
      return hitMax;
 }
 // On stopped - sets secondary status
@@ -2835,7 +2855,8 @@ ClpModel::onStopped()
 {
      if (problemStatus_ == 3) {
           secondaryStatus_ = 0;
-          if (CoinCpuTime() >= dblParam_[ClpMaxSeconds] && dblParam_[ClpMaxSeconds] >= 0.0)
+          if ((CoinCpuTime() >= dblParam_[ClpMaxSeconds] && dblParam_[ClpMaxSeconds] >= 0.0) ||
+	      (CoinWallclockTime() >= dblParam_[ClpMaxWallSeconds] && dblParam_[ClpMaxWallSeconds] >= 0.0))
                secondaryStatus_ = 9;
      }
 }
@@ -3331,6 +3352,7 @@ ClpModel::ClpModel ( const ClpModel * rhs,
      dblParam_[ClpPrimalTolerance] = rhs->dblParam_[ClpPrimalTolerance];
      dblParam_[ClpObjOffset] = rhs->dblParam_[ClpObjOffset];
      dblParam_[ClpMaxSeconds] = rhs->dblParam_[ClpMaxSeconds];
+     dblParam_[ClpMaxWallSeconds] = rhs->dblParam_[ClpMaxWallSeconds];
      dblParam_[ClpPresolveTolerance] = rhs->dblParam_[ClpPresolveTolerance];
 #ifndef CLP_NO_STD
      strParam_[ClpProbName] = rhs->strParam_[ClpProbName];
