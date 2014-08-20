@@ -420,6 +420,7 @@ public:
          7 - postSolve says not optimal
          8 - failed due to bad element check
          9 - status was 3 and stopped on time
+	 10 - status was 3 and can't use objective as lb
          100 up - translation of enum from ClpEventHandler
      */
      inline int secondaryStatus() const            {
