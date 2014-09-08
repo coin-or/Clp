@@ -5001,13 +5001,21 @@ OsiClpSolverInterface::readLp(const char *filename, const double epsilon )
       OsiSolverInterface::setColName(iColumn,name) ;
   }
   modelPtr_->copyNames(rowNames,columnNames);
+  if (m.numberSets()) {
+    // SOS
+    numberSOS_=m.numberSets();
+    setInfo_ = new CoinSet[numberSOS_];
+    CoinSet ** sets = m.setInformation();
+    for (int i=0;i<numberSOS_;i++) 
+      setInfo_[i]=*sets[i];
+  }
   return(0);
 }
 /* Write the problem into an Lp file of the given filename.
    If objSense is non zero then -1.0 forces the code to write a
    maximization objective and +1.0 to write a minimization one.
    If 0.0 then solver can do what it wants.
-   This version calls writeLpNative with names */
+    */
 void 
 OsiClpSolverInterface::writeLp(const char *filename,
                                const char *extension ,
@@ -5026,17 +5034,15 @@ OsiClpSolverInterface::writeLp(const char *filename,
     // no extension so no trailing period
     fullname = f;
   }
-  // get names
-  const char * const * const rowNames = modelPtr_->rowNamesAsChar();
-  const char * const * const columnNames = modelPtr_->columnNamesAsChar();
-  // Fall back on Osi version - possibly with names
-  OsiSolverInterface::writeLpNative(fullname.c_str(), 
-				    rowNames,columnNames, epsilon, numberAcross,
-				    decimals, objSense,changeNameOnRange);
-  if (rowNames) {
-    modelPtr_->deleteNamesAsChar(rowNames, modelPtr_->numberRows_+1);
-    modelPtr_->deleteNamesAsChar(columnNames, modelPtr_->numberColumns_);
+  FILE *fp = NULL;
+  fp = fopen(fullname.c_str(),"w");
+  if (!fp) {
+    printf("### ERROR: in OsiSolverInterface::writeLpNative(): unable to open file %s\n",
+	   fullname.c_str());
+    exit(1);
   }
+  writeLp(fp, epsilon, numberAcross,
+	  decimals, objSense,changeNameOnRange);
 }
 void 
 OsiClpSolverInterface::writeLp(FILE * fp,
@@ -5049,10 +5055,64 @@ OsiClpSolverInterface::writeLp(FILE * fp,
   // get names
   const char * const * const rowNames = modelPtr_->rowNamesAsChar();
   const char * const * const columnNames = modelPtr_->columnNamesAsChar();
-  // Fall back on Osi version - possibly with names
-  OsiSolverInterface::writeLpNative(fp,
-				    rowNames,columnNames, epsilon, numberAcross,
-				    decimals, objSense,changeNameOnRange);
+  if (!numberSOS_) {
+    // Fall back on Osi version - possibly with names
+    OsiSolverInterface::writeLpNative(fp,
+				      rowNames,columnNames, epsilon, numberAcross,
+				      decimals, objSense,changeNameOnRange);
+  } else {
+    // need own version
+   const int numcols = getNumCols();
+   char *integrality = new char[numcols];
+   bool hasInteger = false;
+
+   for (int i=0; i<numcols; i++) {
+     if (isInteger(i)) {
+       integrality[i] = 1;
+       hasInteger = true;
+     } else {
+       integrality[i] = 0;
+     }
+   }
+
+   // Get multiplier for objective function - default 1.0
+   double *objective = new double[numcols];
+   const double *curr_obj = getObjCoefficients();
+
+   //if(getObjSense() * objSense < 0.0) {
+   double locObjSense = (objSense == 0 ? 1 : objSense);
+   if(getObjSense() * locObjSense < 0.0) {
+     for (int i=0; i<numcols; i++) {
+       objective[i] = - curr_obj[i];
+     }
+   }
+   else {
+     for (int i=0; i<numcols; i++) {
+       objective[i] = curr_obj[i];
+     }
+   }
+
+   CoinLpIO writer;
+   writer.setInfinity(getInfinity());
+   writer.setEpsilon(epsilon);
+   writer.setNumberAcross(numberAcross);
+   writer.setDecimals(decimals);
+
+   writer.setLpDataWithoutRowAndColNames(*getMatrixByRow(),
+		     getColLower(), getColUpper(),
+		     objective, hasInteger ? integrality : 0,
+		     getRowLower(), getRowUpper());
+
+   writer.setLpDataRowAndColNames(rowNames, columnNames);
+
+   //writer.print();
+   delete [] objective;
+   delete[] integrality;
+   // do SOS
+   writer.loadSOS(numberSOS_,setInfo_);
+   writer.writeLp(fp, epsilon, numberAcross, decimals, 
+			 changeNameOnRange);
+  }
   if (rowNames) {
     modelPtr_->deleteNamesAsChar(rowNames, modelPtr_->numberRows_+1);
     modelPtr_->deleteNamesAsChar(columnNames, modelPtr_->numberColumns_);
