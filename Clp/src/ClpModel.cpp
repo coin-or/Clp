@@ -2524,7 +2524,7 @@ ClpModel::addColumns(const CoinBuild & buildObject, bool tryPlusMinusOne, bool c
                     for (int i = 0; i < numberElements; i++) {
                          int iRow = rows[i];
                          if (checkDuplicates) {
-                              if (iRow >= numberRows_) {
+                              if (iRow < numberRows_) {
                                    if(which[iRow])
                                         numberErrors++;
                                    else
