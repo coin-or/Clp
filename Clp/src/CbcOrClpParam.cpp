@@ -846,7 +846,7 @@ CbcOrClpParam::intParameter (OsiSolverInterface * model) const
 int
 CbcOrClpParam::setDoubleParameter (CbcModel &model, double value)
 {
-     int returnCode;
+     int returnCode=0;
      setDoubleParameterWithMessage(model, value, returnCode);
      if (doPrinting && strlen(printArray))
           std::cout << printArray << std::endl;
@@ -1936,12 +1936,14 @@ You can also use the parameters 'maximize' or 'minimize'."
                         -1, 200000, CBC_PARAM_INT_DIVEOPT, 1);
      parameters[numberParameters-1].setLonghelp
      (
-          "If >2 && <8 then modify diving options - \
+          "If >2 && <20 then modify diving options - \
 	 \n\t3 only at root and if no solution,  \
 	 \n\t4 only at root and if this heuristic has not got solution, \
-	 \n\t5 only at depth <4, \
-	 \n\t6 decay, \
-	 \n\t7 run up to 2 times if solution found 4 otherwise."
+	 \n\t5 decay only if no solution, \
+	 \n\t6 if depth <3 or decay, \
+	 \n\t7 run up to 2 times if solution found 4 otherwise, \
+	 \n\t>10 All only at root (DivingC normal as value-10), \
+	 \n\t>10 All with value-20)."
      );
      parameters[numberParameters-1].setIntValue(-1);
      parameters[numberParameters++] =
