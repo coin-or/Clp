@@ -2956,6 +2956,9 @@ ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model, int mode)
                }
                savedPivotSequence_ = -2;
                savedSequenceOut_ = -2;
+	       if (pivotSequence_ < 0 || pivotSequence_ >= 
+		   numberRows+numberColumns) 
+		 pivotSequence_ = -1;
 
           } else {
                if (mode != 4) {
