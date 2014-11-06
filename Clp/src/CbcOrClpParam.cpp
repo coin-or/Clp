@@ -1947,6 +1947,18 @@ You can also use the parameters 'maximize' or 'minimize'."
      );
      parameters[numberParameters-1].setIntValue(-1);
      parameters[numberParameters++] =
+          CbcOrClpParam("diveS!olves", "Diving solve option",
+                        -1, 200000, CBC_PARAM_INT_DIVEOPTSOLVES, 1);
+     parameters[numberParameters-1].setLonghelp
+     (
+          "If >0 then do up to this many solves.  Last digit is ignored \
+and used for extra options - \
+	 \n\t1-3 allow fixing of satisfied integers (but not at bound) \
+	 \n\t1 switch off above for that dive if goes infeasible \
+	 \n\t2 switch off above permanenty if goes infeasible"
+     );
+     parameters[numberParameters-1].setIntValue(100);
+     parameters[numberParameters++] =
           CbcOrClpParam("DivingS!ome", "Whether to try Diving heuristics",
                         "off", CBC_PARAM_STR_DIVINGS);
      parameters[numberParameters-1].append("on");
