@@ -907,6 +907,36 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                if (problemStatus_ != -4)
                     problemStatus_ = -3;
           }
+	  if(progress->realInfeasibility_[0]<1.0e-1 &&
+	     primalTolerance_==1.0e-7&&progress->iterationNumber_[0]>0&&
+	     progress->iterationNumber_[CLP_PROGRESS-1]-progress->iterationNumber_[0]>25) {
+	    // default - so user did not set
+	    int iP;
+	    double minAverage=COIN_DBL_MAX;
+	    double maxAverage=0.0;
+	    for (iP=0;iP<CLP_PROGRESS;iP++) {
+	      int n=progress->numberInfeasibilities_[iP];
+	      if (!n) {
+		break;
+	      } else {
+		double average=progress->realInfeasibility_[iP];
+		if (average>0.1)
+		  break;
+		average /= static_cast<double>(n);
+		minAverage=CoinMin(minAverage,average);
+		maxAverage=CoinMax(maxAverage,average);
+	      }
+	    }
+	    if (iP==CLP_PROGRESS&&minAverage<1.0e-5&&maxAverage<1.0e-3) {
+	      // change tolerance
+#if CBC_USEFUL_PRINTING>0
+	      printf("CCchanging tolerance\n");
+#endif
+	      primalTolerance_=1.0e-6;
+	      dblParam_[ClpPrimalTolerance]=1.0e-6;
+	      moreSpecialOptions_ |= 4194304;
+	    }
+	  }
           // at this stage status is -3 or -5 if looks unbounded
           // get primal and dual solutions
           // put back original costs and then check

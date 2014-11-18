@@ -803,7 +803,10 @@ ClpDualRowSteepest::updatePrimalSolution(
    1) before factorization
    2) after factorization
    3) just redo infeasibilities
-   4) restore weights
+   4) as 2 but restore weights from previous snapshot
+   5) for strong branching - initialize to 1 , infeasibilities
+   6) scale back
+   7) for strong branching - initialize full weights , infeasibilities
 */
 void
 ClpDualRowSteepest::saveWeights(ClpSimplex * model, int mode)
@@ -826,6 +829,12 @@ ClpDualRowSteepest::saveWeights(ClpSimplex * model, int mode)
                          which[i] = iPivot;
                     }
                     state_ = 1;
+		    // clear marker on savedWeights_
+		    assert (savedWeights_);
+		    if (savedWeights_->packedMode()) {
+		      savedWeights_->setPackedMode(false);
+		      savedWeights_->setNumElements(0);
+		    }
                } else {
                     // size has changed - clear everything
                     delete [] weights_;
@@ -843,27 +852,34 @@ ClpDualRowSteepest::saveWeights(ClpSimplex * model, int mode)
           }
      } else if (mode == 2 || mode == 4 || mode >= 5) {
           // restore
-          if (!weights_ || state_ == -1 || mode == 5) {
+          if (!weights_ || state_ == -1 || mode == 5 || mode == 7) {
                // initialize weights
                delete [] weights_;
                delete alternateWeights_;
                weights_ = new double[numberRows];
+	       // initialize to 1.0 (can we do better?)
+	       for (i = 0; i < numberRows; i++) {
+		 weights_[i] = 1.0;
+	       }
                alternateWeights_ = new CoinIndexedVector();
                // enough space so can use it for factorization
                alternateWeights_->reserve(numberRows +
                                           model_->factorization()->maximumPivots());
                if (mode_ != 1 || mode == 5) {
-                    // initialize to 1.0 (can we do better?)
-                    for (i = 0; i < numberRows; i++) {
-                         weights_[i] = 1.0;
-                    }
                } else {
                     CoinIndexedVector * temp = new CoinIndexedVector();
                     temp->reserve(numberRows +
                                   model_->factorization()->maximumPivots());
                     double * array = alternateWeights_->denseVector();
                     int * which = alternateWeights_->getIndices();
-                    for (i = 0; i < numberRows; i++) {
+		    int firstRow=0;
+		    int lastRow=numberRows;
+		    if (mode==7) {
+		      // use info passed in
+		      firstRow=model->spareIntArray_[0];
+		      lastRow=model->spareIntArray_[1];
+		    }
+                    for (i = firstRow; i < lastRow; i++) {
                          double value = 0.0;
                          array[0] = 1.0;
                          which[0] = i;
@@ -885,13 +901,19 @@ ClpDualRowSteepest::saveWeights(ClpSimplex * model, int mode)
                // create saved weights (not really indexedvector)
                savedWeights_ = new CoinIndexedVector();
                savedWeights_->reserve(numberRows);
+	       for (int i=0;i<model_->numberRows();i++)
+		 savedWeights_->denseVector()[i]=1.0;
 
                double * array = savedWeights_->denseVector();
                int * which = savedWeights_->getIndices();
-               for (i = 0; i < numberRows; i++) {
+               for (int i = 0; i < numberRows; i++) {
                     array[i] = weights_[i];
                     which[i] = pivotVariable[i];
                }
+	       if (mode==7) {
+		 savedWeights_->setNumElements(numberRows); //flag as special
+		 savedWeights_->setPackedMode(true);
+	       }
           } else if (mode != 6) {
                int * which = alternateWeights_->getIndices();
                CoinIndexedVector * rowArray3 = model_->rowArray(3);
@@ -918,7 +940,14 @@ ClpDualRowSteepest::saveWeights(ClpSimplex * model, int mode)
                     int iSeq = which[i];
                     back[iSeq] = i;
                }
-               for (i = 0; i < numberRows; i++) {
+	       int firstRow=0;
+	       int lastRow=numberRows;
+	       if (mode==7) {
+		 // use info passed in
+		 firstRow=model->spareIntArray_[0];
+		 lastRow=model->spareIntArray_[1];
+	       }
+               for (i = firstRow; i < lastRow; i++) {
                     int iPivot = pivotVariable[i];
                     iPivot = back[iPivot];
                     if (iPivot >= 0) {
@@ -928,8 +957,17 @@ ClpDualRowSteepest::saveWeights(ClpSimplex * model, int mode)
                     } else {
                          // odd
                          weights_[i] = 1.0;
+			 //printf("bad pivot row %d (%d->%d) iPivot %d\n",i,firstRow,lastRow,iPivot);
                     }
                }
+#if 0
+	       printf("mode %d mode_ %d state_ %d\n",mode,mode_,state_);
+	       if (!model_->numberIterations()) {
+		 for (int k=0;k<numberRows;k+=10)
+		   printf("%d %g ",k,weights_[k]);
+		 printf("\n");
+	       }
+#endif
           } else {
                // mode 6 - scale back weights as primal errors
                double primalError = model_->largestPrimalError();
@@ -1002,6 +1040,30 @@ ClpDualRowSteepest::saveWeights(ClpSimplex * model, int mode)
                }
           }
      }
+     // see where coming from
+     if (mode==2&&!model->numberIterations()) {
+       int options=model->specialOptions();
+       if ((options&16384)!=0&&true) {
+	 // fast of some sort - could be clever???
+	 // for now initialize
+	 if ((options&524288)!=0&&false) {
+	   // fathom 
+	   for (int i = 0; i < numberRows; i++) 
+	     weights_[i] = 1.0;
+	 } else if (true) {
+	   // strong
+	   for (int i = 0; i < numberRows; i++) 
+	     weights_[i] = 1.0;
+	 }
+       }
+     }
+}
+// Pass in saved weights
+void 
+ClpDualRowSteepest::passInSavedWeights(const CoinIndexedVector * saved)
+{
+  delete savedWeights_;
+  savedWeights_=new CoinIndexedVector(*saved);
 }
 // Gets rid of last update
 void

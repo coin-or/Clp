@@ -1083,6 +1083,13 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
                          if (prob->status_)
                               break;
                     }
+                    if (zerocost) {
+		      possibleBreak;
+                         paction_ = do_tighten_action::presolve(prob, paction_);
+                         if (prob->status_)
+                              break;
+			 printProgress('J',iLoop+1);
+                    }
                     if (dual && whichPass == 1) {
                          // this can also make E rows so do one bit here
 		      possibleBreak;
@@ -1107,13 +1114,6 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
 			 printProgress('I',iLoop+1);
                     }
 
-                    if (zerocost) {
-		      possibleBreak;
-                         paction_ = do_tighten_action::presolve(prob, paction_);
-                         if (prob->status_)
-                              break;
-			 printProgress('J',iLoop+1);
-                    }
 #ifndef NO_FORCING
                     if (forcing) {
 		      possibleBreak;

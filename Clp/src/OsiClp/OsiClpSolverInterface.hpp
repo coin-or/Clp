@@ -339,6 +339,16 @@ public:
   void stopFastDual();
   /// Sets integer tolerance and increment
   void setStuff(double tolerance,double increment);
+  /// Return a conflict analysis cut from small model
+  OsiRowCut * smallModelCut(const double * originalLower, const double * originalUpper,
+			    int numberRowsAtContinuous,const int * whichGenerator,
+			    int typeCut=0);
+  /** Return a conflict analysis cut from model
+      If type is 0 then genuine cut, if 1 then only partially processed
+   */
+  OsiRowCut * modelCut(const double * originalLower, const double * originalUpper,
+		       int numberRowsAtContinuous,const int * whichGenerator,
+		       int typeCut=0);
   //@}
   
   //---------------------------------------------------------------------------
@@ -1079,6 +1089,8 @@ public:
       0 - normal, 1 lightweight but just integers, 2 lightweight and all
   */
   virtual int tightenBounds(int lightweight=0);
+  /// See if any integer variables make infeasible other way
+  int infeasibleOtherWay(char * whichWay);
   /// Return number of entries in L part of current factorization
   virtual CoinBigIndex getSizeL() const;
   /// Return number of entries in U part of current factorization
@@ -1458,8 +1470,7 @@ public:
   inline int phase() const
   { return phase_;}
   /// are we in trouble
-  inline bool inTrouble() const
-  { return inTrouble_;}
+  bool inTrouble() const;
   
   //@}
   

@@ -776,15 +776,19 @@ ClpSimplex::dealWithAbc(int solveType, int startUp,
 			       this->primalRowSolution());
       this->checkSolutionInternal();
       if (sumDualInfeasibilities_>100.0*dualTolerance_) {
+#if CBC_USEFUL_PRINTING>0
 	printf("internal check on duals failed %d %g\n",
 	       numberDualInfeasibilities_,sumDualInfeasibilities_);
+#endif
       } else {
 	sumDualInfeasibilities_=0.0;
 	numberDualInfeasibilities_=0;
       }
       if (sumPrimalInfeasibilities_>100.0*primalTolerance_) {
+#if CBC_USEFUL_PRINTING>0
 	printf("internal check on primals failed %d %g\n",
 	       numberPrimalInfeasibilities_,sumPrimalInfeasibilities_);
+#endif
       } else {
 	sumPrimalInfeasibilities_=0.0;
 	numberPrimalInfeasibilities_=0;
@@ -971,6 +975,12 @@ ClpSimplex::initialSolve(ClpSolve & options)
 #else
 	    //ClpModel::stopPermanentArrays();
 	    //setSpecialOptions(specialOptions()&~65536);
+	    // try setting tolerances up
+#define CLP_NEW_TOLERANCE 1.0e-7
+	    if (model2->primalTolerance()==1.0e-7&&model2->dualTolerance()==1.0e-7) {
+	      model2->setPrimalTolerance(CLP_NEW_TOLERANCE);
+	      model2->setDualTolerance(CLP_NEW_TOLERANCE);
+	    }
 #endif
 	      model2->eventHandler()->setSimplex(model2);
 	      int rcode=model2->eventHandler()->event(ClpEventHandler::presolveSize);
@@ -5224,56 +5234,12 @@ static ClpSimplex * deBound(ClpSimplex * oldModel)
   delete [] change;
   return model;
 }
-#ifdef ABC_INHERIT
-// Use pthreads
-#include <pthread.h>
-class AbcPthreadStuff {
-public:
-  /**@name Constructors and destructor and copy */
-  //@{
-  /** Main constructor
-  */
-  AbcPthreadStuff (int numberThreads=0);
-  /// Assignment operator. This copies the data
-  AbcPthreadStuff & operator=(const AbcPthreadStuff & rhs);
-  /// Destructor
-  ~AbcPthreadStuff (  );
-  /// set stop start
-  inline void setStopStart(int value)
-  { stopStart_=value;}
-#ifndef NUMBER_THREADS 
-#define NUMBER_THREADS 8
-#endif
-  // For waking up thread
-  inline pthread_mutex_t * mutexPointer(int which,int thread=0) 
-  { return mutex_+which+3*thread;}
-  inline pthread_barrier_t * barrierPointer() 
-  { return &barrier_;}
-  inline int whichLocked(int thread=0) const
-  { return locked_[thread];}
-  inline CoinAbcThreadInfo * threadInfoPointer(int thread=0) 
-  { return threadInfo_+thread;}
-  void startParallelTask(int type,int iThread,void * info=NULL);
-  int waitParallelTask(int type, int & iThread,bool allowIdle);
-  void waitAllTasks();
-  /// so thread can find out which one it is 
-  int whichThread() const;
-  //void startThreads(int numberThreads);
-  //void stopThreads();
-  // For waking up thread
-  pthread_mutex_t mutex_[3*(NUMBER_THREADS+1)];
-  pthread_barrier_t barrier_; 
-  CoinAbcThreadInfo threadInfo_[NUMBER_THREADS+1];
-  pthread_t abcThread_[NUMBER_THREADS+1];
-  int locked_[NUMBER_THREADS+1];
-  int stopStart_;
-  int numberThreads_;
-};
-static void * abc_parallelManager(void * stuff)
+#if defined(ABC_INHERIT) || defined(CBC_THREAD)
+void * clp_parallelManager(void * stuff)
 {
-  AbcPthreadStuff * driver = reinterpret_cast<AbcPthreadStuff *>(stuff);
+  CoinPthreadStuff * driver = reinterpret_cast<CoinPthreadStuff *>(stuff);
   int whichThread=driver->whichThread();
-  CoinAbcThreadInfo * threadInfo = driver->threadInfoPointer(whichThread);
+  CoinThreadInfo * threadInfo = driver->threadInfoPointer(whichThread);
   threadInfo->status=-1;
   int * which = threadInfo->stuff;
   pthread_barrier_wait(driver->barrierPointer());
@@ -5332,7 +5298,8 @@ static void * abc_parallelManager(void * stuff)
     pthread_mutex_unlock (driver->mutexPointer(unLock,whichThread));
   }
 }
-AbcPthreadStuff::AbcPthreadStuff(int numberThreads)
+CoinPthreadStuff::CoinPthreadStuff(int numberThreads,
+				   void * parallelManager(void * stuff))
 {
   numberThreads_=numberThreads;
   if (numberThreads>8) 
@@ -5350,7 +5317,7 @@ AbcPthreadStuff::AbcPthreadStuff(int numberThreads)
   //pthread_barrierattr_t attr;
   pthread_barrier_init(&barrier_, /*&attr*/ NULL, numberThreads+1); 
   for (int iThread=0;iThread<numberThreads;iThread++) {
-    pthread_create(&abcThread_[iThread], NULL, abc_parallelManager, reinterpret_cast<void *>(this));
+    pthread_create(&abcThread_[iThread], NULL, parallelManager, reinterpret_cast<void *>(this));
   }
   pthread_barrier_wait(&barrier_);
   pthread_barrier_destroy(&barrier_);
@@ -5360,7 +5327,7 @@ AbcPthreadStuff::AbcPthreadStuff(int numberThreads)
     locked_[iThread]=0; 
   }
 }
-AbcPthreadStuff::~AbcPthreadStuff()
+CoinPthreadStuff::~CoinPthreadStuff()
 {
   for (int iThread=0;iThread<numberThreads_;iThread++) {
     startParallelTask(1000,iThread);
@@ -5374,7 +5341,7 @@ AbcPthreadStuff::~AbcPthreadStuff()
 }
 // so thread can find out which one it is 
 int 
-AbcPthreadStuff::whichThread() const
+CoinPthreadStuff::whichThread() const
 {
   pthread_t thisThread=pthread_self();
   int whichThread;
@@ -5386,7 +5353,7 @@ AbcPthreadStuff::whichThread() const
   return whichThread;
 }
 void 
-AbcPthreadStuff::startParallelTask(int type, int iThread, void * info)
+CoinPthreadStuff::startParallelTask(int type, int iThread, void * info)
 {
   /*
     first time 0,1 owned by main 2 by child
@@ -5400,8 +5367,14 @@ AbcPthreadStuff::startParallelTask(int type, int iThread, void * info)
 #endif
   pthread_mutex_unlock (&mutex_[locked_[iThread]+3*iThread]);
 }
+void
+CoinPthreadStuff::sayIdle(int iThread)
+{
+  threadInfo_[iThread].status = -1;
+  threadInfo_[iThread].stuff[3] = -1;
+}
 int
-AbcPthreadStuff::waitParallelTask(int type,int & iThread, bool allowIdle)
+CoinPthreadStuff::waitParallelTask(int type,int & iThread, bool allowIdle)
 {
   bool finished = false;
   if (allowIdle) {
@@ -5445,7 +5418,7 @@ AbcPthreadStuff::waitParallelTask(int type,int & iThread, bool allowIdle)
   return threadInfo_[iThread].stuff[0];
 }
 void
-AbcPthreadStuff::waitAllTasks()
+CoinPthreadStuff::waitAllTasks()
 {
   int nWait=0;
   for (int iThread=0;iThread<numberThreads_;iThread++) {
@@ -5888,7 +5861,7 @@ ClpSimplex::solveBenders(CoinStructuredModel * model,ClpSolve & options)
      //if (!this->abcState())
      //setAbcState(1);
      int numberCpu=CoinMin((this->abcState()&15),4);
-     AbcPthreadStuff threadInfo(numberCpu);
+     CoinPthreadStuff threadInfo(numberCpu,clp_parallelManager);
      masterModel.setAbcState(this->abcState());
      //AbcSimplex * tempMaster=masterModel.dealWithAbc(2,10,true);
      //abcMaster=*tempMaster;

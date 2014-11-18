@@ -1635,12 +1635,12 @@ double parallelDual4(AbcSimplexDual * dual)
   assert (numberBlocks==matrix->numberRowBlocks());
 #if ABC_PARALLEL==1
   // redo so can pass info in with void *
-  CoinAbcThreadInfo * infoP = dual->threadInfoPointer();
+  CoinThreadInfo * infoP = dual->threadInfoPointer();
   int cpuMask=((1<<dual->parallelMode())-1);
   cpuMask += cpuMask<<5;
   dual->setStopStart(cpuMask);
 #endif
-  CoinAbcThreadInfo info[NUMBER_BLOCKS];
+  CoinThreadInfo info[NUMBER_BLOCKS];
   const int * starts;
   if (useRowCopy)
     starts=matrix->blockStart();

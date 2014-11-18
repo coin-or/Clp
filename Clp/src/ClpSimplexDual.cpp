@@ -3630,7 +3630,10 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
                marker[1-iFlip][0] = CoinMax(marker[1-iFlip][0], numberRemaining);
                marker[1-iFlip][1] = CoinMin(marker[1-iFlip][1], numberPossiblySwapped);
 
-               if (totalThru + thruThis >= fabs(dualOut_) ||
+	       double check = fabs(totalThru+thruThis);
+	       // add a bit
+	       check += 1.0e-8+1.0e-10*check;
+               if (check >= fabs(dualOut_) ||
                          increaseInObjective + increaseInThis < 0.0) {
                     // We should be pivoting in this batch
                     // so compress down to this lot
@@ -4165,6 +4168,9 @@ ClpSimplexDual::checkUnbounded(CoinIndexedVector * ray,
      ray->clear();
      return status;
 }
+//static int count_status=0;
+//static double obj_status=0.0;
+//static int check_status=123456789;//41754;
 //static int count_alpha=0;
 /* Checks if finished.  Updates status */
 void
@@ -4302,6 +4308,36 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned, int type,
           //count_alpha++;
           //if ((count_alpha%5000)==0)
           //printf("count alpha %d\n",count_alpha);
+     }
+     if(progress_.infeasibility_[0]<1.0e-1 &&
+	primalTolerance_==1.0e-7&&progress_.iterationNumber_[0]>0&&
+	progress_.iterationNumber_[CLP_PROGRESS-1]-progress_.iterationNumber_[0]>25) {
+       // default - so user did not set
+       int iP;
+       double minAverage=COIN_DBL_MAX;
+       double maxAverage=0.0;
+       for (iP=0;iP<CLP_PROGRESS;iP++) {
+	 int n=progress_.numberInfeasibilities_[iP];
+	 if (!n) {
+	   break;
+	 } else {
+	   double average=progress_.infeasibility_[iP];
+	   if (average>0.1)
+	     break;
+	   average /= static_cast<double>(n);
+	   minAverage=CoinMin(minAverage,average);
+	   maxAverage=CoinMax(maxAverage,average);
+	 }
+       }
+       if (iP==CLP_PROGRESS&&minAverage<1.0e-5&&maxAverage<1.0e-3) {
+	 // change tolerance
+#if CBC_USEFUL_PRINTING>0
+	 printf("CCchanging tolerance\n");
+#endif
+	 primalTolerance_=1.0e-6;
+	 dblParam_[ClpPrimalTolerance]=1.0e-6;
+	 moreSpecialOptions_ |= 4194304;
+       }
      }
      // at this stage status is -3 or -4 if looks infeasible
      // get primal and dual solutions
@@ -4690,6 +4726,19 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned, int type,
           handler_->message() << CoinMessageEol;
      }
 #if 0
+     count_status++;
+     if (!numberIterations_)
+       obj_status=-1.0e30;
+     if (objectiveValue()<obj_status-0.01) {
+       printf("Backward obj at %d from %g to %g\n",
+	      count_status,obj_status,objectiveValue());
+     }
+     obj_status=objectiveValue();
+     if (count_status>=check_status-1) {
+       printf("Trouble ahead - count_status %d\n",count_status);
+     }
+#endif
+#if 0
      printf("IT %d %g %g(%d) %g(%d)\n",
             numberIterations_, objectiveValue(),
             sumPrimalInfeasibilities_, numberPrimalInfeasibilities_,
@@ -4727,8 +4776,9 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned, int type,
      }
      /* If we are primal feasible and any dual infeasibilities are on
         free variables then it is better to go to primal */
-     if (!numberPrimalInfeasibilities_ && !numberDualInfeasibilitiesWithoutFree_ &&
-               numberDualInfeasibilities_)
+     if (!numberPrimalInfeasibilities_ && ((!numberDualInfeasibilitiesWithoutFree_ &&
+					    numberDualInfeasibilities_)||
+					   (moreSpecialOptions_&2097152)!=0))
           problemStatus_ = 10;
      // dual bound coming in
      //double saveDualBound = dualBound_;

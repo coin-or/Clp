@@ -28,6 +28,18 @@ class OsiClpSolverInterface;
 class CoinWarmStartBasis;
 class ClpDisasterHandler;
 class ClpConstraint;
+/*
+  May want to use Clp defaults so that with ABC defined but not used
+  it behaves as Clp (and ABC used will be different than if not defined)
+ */
+#ifdef ABC_INHERIT
+#ifndef ABC_CLP_DEFAULTS
+#define ABC_CLP_DEFAULTS 0
+#endif
+#else
+#undef ABC_CLP_DEFAULTS
+#define ABC_CLP_DEFAULTS 1
+#endif
 #ifdef CLP_HAS_ABC
 #include "AbcCommon.hpp"
 class AbcTolerancesEtc;
@@ -1221,6 +1233,8 @@ public:
 	 131072 bit (*3) initial stateDualColumn
 	 524288 bit - stop when primal feasible
 	 1048576 bit - don't perturb even if long time
+	 2097152 bit - no primal in fastDual2 if feasible
+	 4194304 bit - tolerances have been changed by code
      */
      inline void setMoreSpecialOptions(int value) {
           moreSpecialOptions_ = value;
@@ -1709,4 +1723,62 @@ ClpSimplexUnitTest(const std::string & mpsDir);
 // For Devex stuff
 #define DEVEX_TRY_NORM 1.0e-4
 #define DEVEX_ADD_ONE 1.0
+#if defined(ABC_INHERIT) || defined(CBC_THREAD)
+// Use pthreads
+#include <pthread.h>
+typedef struct {
+  double result;
+  //const CoinIndexedVector * constVector; // can get rid of
+  //CoinIndexedVector * vectors[2]; // can get rid of
+  void * extraInfo;
+  void * extraInfo2;
+  int status;
+  int stuff[4];
+} CoinThreadInfo;
+class CoinPthreadStuff {
+public:
+  /**@name Constructors and destructor and copy */
+  //@{
+  /** Main constructor
+  */
+  CoinPthreadStuff (int numberThreads=0,
+		    void * parallelManager(void * stuff)=NULL);
+  /// Assignment operator. This copies the data
+  CoinPthreadStuff & operator=(const CoinPthreadStuff & rhs);
+  /// Destructor
+  ~CoinPthreadStuff (  );
+  /// set stop start
+  inline void setStopStart(int value)
+  { stopStart_=value;}
+#ifndef NUMBER_THREADS 
+#define NUMBER_THREADS 8
+#endif
+  // For waking up thread
+  inline pthread_mutex_t * mutexPointer(int which,int thread=0) 
+  { return mutex_+which+3*thread;}
+  inline pthread_barrier_t * barrierPointer() 
+  { return &barrier_;}
+  inline int whichLocked(int thread=0) const
+  { return locked_[thread];}
+  inline CoinThreadInfo * threadInfoPointer(int thread=0) 
+  { return threadInfo_+thread;}
+  void startParallelTask(int type,int iThread,void * info=NULL);
+  int waitParallelTask(int type, int & iThread,bool allowIdle);
+  void waitAllTasks();
+  /// so thread can find out which one it is 
+  int whichThread() const;
+  void sayIdle(int iThread);
+  //void startThreads(int numberThreads);
+  //void stopThreads();
+  // For waking up thread
+  pthread_mutex_t mutex_[3*(NUMBER_THREADS+1)];
+  pthread_barrier_t barrier_; 
+  CoinThreadInfo threadInfo_[NUMBER_THREADS+1];
+  pthread_t abcThread_[NUMBER_THREADS+1];
+  int locked_[NUMBER_THREADS+1];
+  int stopStart_;
+  int numberThreads_;
+};
+void * clp_parallelManager(void * stuff);
+#endif
 #endif

@@ -963,6 +963,9 @@ CbcOrClpParam::setIntParameterWithMessage ( CbcModel & model, int value , int & 
                   value, name_.c_str(), lowerIntValue_, upperIntValue_);
           returnCode = 1;
      } else {
+          printArray[0] = '\0';
+	  if (value==intValue_)
+	    return printArray;
           int oldValue = intValue_;
           intValue_ = value;
           switch (type_) {
@@ -1124,6 +1127,31 @@ CbcOrClpParam::setCurrentOptionWithMessage ( int value )
      }
      return printArray;
 }
+// Sets current parameter option using string with message
+const char *
+CbcOrClpParam::setCurrentOptionWithMessage ( const std::string value )
+{
+     int action = parameterOption(value);
+     char current[100];
+     printArray[0] = '\0';
+     if (action >= 0) {
+         if (action == currentKeyWord_)
+	   return NULL;
+	 if (currentKeyWord_>=0&&(fakeKeyWord_<=0||currentKeyWord_<fakeKeyWord_)) 
+	   strcpy(current,definedKeyWords_[currentKeyWord_].c_str());
+	 else if (currentKeyWord_<0)
+	   sprintf(current,"minus%d",-currentKeyWord_-1000);
+	 else
+	   sprintf(current,"plus%d",currentKeyWord_-1000);
+	 sprintf(printArray, "Option for %s changed from %s to %s",
+		 name_.c_str(), current, value.c_str());
+          currentKeyWord_ = action;
+     } else {
+	 sprintf(printArray, "Option for %s given illegal value %s",
+		 name_.c_str(), value.c_str());
+     }
+     return printArray;
+}
 void
 CbcOrClpParam::setIntValue ( int value )
 {
@@ -1135,6 +1163,22 @@ CbcOrClpParam::setIntValue ( int value )
           intValue_ = value;
      }
 }
+const char *
+CbcOrClpParam::setIntValueWithMessage ( int value )
+{
+     printArray[0] = '\0';
+     if (value < lowerIntValue_ || value > upperIntValue_) {
+          sprintf(printArray, "%d was provided for %s - valid range is %d to %d",
+	       value,name_.c_str(),lowerIntValue_,upperIntValue_);
+     } else {
+         if (value==intValue_)
+	   return NULL;
+          sprintf(printArray, "%s was changed from %d to %d",
+                  name_.c_str(), intValue_, value);
+          intValue_ = value;
+     }
+     return printArray;
+}
 void
 CbcOrClpParam::setDoubleValue ( double value )
 {
@@ -1145,6 +1189,22 @@ CbcOrClpParam::setDoubleValue ( double value )
      } else {
           doubleValue_ = value;
      }
+}
+const char *
+CbcOrClpParam::setDoubleValueWithMessage ( double value )
+{
+     printArray[0] = '\0';
+     if (value < lowerDoubleValue_ || value > upperDoubleValue_) {
+          sprintf(printArray, "%g was provided for %s - valid range is %g to %g",
+	       value,name_.c_str(),lowerDoubleValue_,upperDoubleValue_);
+     } else {
+         if (value==doubleValue_)
+	   return NULL;
+          sprintf(printArray, "%s was changed from %g to %g",
+                  name_.c_str(), doubleValue_, value);
+          doubleValue_ = value;
+     }
+     return printArray;
 }
 void
 CbcOrClpParam::setStringValue ( std::string value )
@@ -1668,6 +1728,7 @@ See Rounding for meaning of on,both,before"
      parameters[numberParameters-1].append("on");
      parameters[numberParameters-1].append("variable");
      parameters[numberParameters-1].append("forcevariable");
+     parameters[numberParameters-1].append("conflict");
      parameters[numberParameters-1].setLonghelp
      (
           "This adds the objective as a constraint with best solution as RHS"
@@ -1943,7 +2004,7 @@ You can also use the parameters 'maximize' or 'minimize'."
 	 \n\t6 if depth <3 or decay, \
 	 \n\t7 run up to 2 times if solution found 4 otherwise, \
 	 \n\t>10 All only at root (DivingC normal as value-10), \
-	 \n\t>10 All with value-20)."
+	 \n\t>20 All with value-20)."
      );
      parameters[numberParameters-1].setIntValue(-1);
      parameters[numberParameters++] =
@@ -1955,7 +2016,7 @@ You can also use the parameters 'maximize' or 'minimize'."
 and used for extra options - \
 	 \n\t1-3 allow fixing of satisfied integers (but not at bound) \
 	 \n\t1 switch off above for that dive if goes infeasible \
-	 \n\t2 switch off above permanenty if goes infeasible"
+	 \n\t2 switch off above permanently if goes infeasible"
      );
      parameters[numberParameters-1].setIntValue(100);
      parameters[numberParameters++] =
@@ -2493,7 +2554,7 @@ See branchAndCut for information on options."
                         "off", CBC_PARAM_STR_LAGOMORYCUTS);
      parameters[numberParameters-1].append("endonlyroot");
      parameters[numberParameters-1].append("endcleanroot");
-     parameters[numberParameters-1].append("endbothroot");
+     parameters[numberParameters-1].append("root");
      parameters[numberParameters-1].append("endonly");
      parameters[numberParameters-1].append("endclean");
      parameters[numberParameters-1].append("endboth");

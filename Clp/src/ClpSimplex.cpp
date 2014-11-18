@@ -4359,6 +4359,14 @@ ClpSimplex::deleteRim(int getRidOfFactorizationData)
                printf("yy %d basic fixed\n", nBad);
      }
 #endif
+     if ((moreSpecialOptions_&4194304)!=0) {
+       // preset tolerances were changed
+       moreSpecialOptions_ &= ~4194304;
+       primalTolerance_=1.0e-7;
+       dblParam_[ClpPrimalTolerance]=1.0e-7;
+       dualTolerance_=1.0e-7;
+       dblParam_[ClpDualTolerance]=1.0e-7;
+     }
      // ray may be null if in branch and bound
      if (rowScale_) {
           // Collect infeasibilities
@@ -5469,6 +5477,11 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
           // Say not second call
           moreSpecialOptions_ &= ~256;
           baseIteration_ = 0;
+	  bool inCbcOrOther = (specialOptions_ & 0x03000000) != 0;
+	  if (inCbcOrOther) {
+	    delete [] ray_;
+	    ray_ = NULL;
+	  }
           if (saveObjective != objective_) {
                // We changed objective to see if infeasible
                delete objective_;
@@ -5558,11 +5571,6 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
      onStopped(); // set secondary status if stopped
      //if (problemStatus_==1&&lastAlgorithm==1)
      //returnCode=10; // so will do primal after postsolve
-     if (!problemStatus_) {
-          //assert (!numberPrimalInfeasibilities_);
-          //if (returnCode!=10)
-          //assert (!numberDualInfeasibilities_);
-     }
      return returnCode;
 }
 // primal
@@ -10300,7 +10308,7 @@ ClpSimplex::defaultFactorizationFrequency()
           const int base = 75;
           const int freq0 = 50;
           int frequency;
-#ifndef ABC_INHERIT
+#if ABC_CLP_DEFAULTS
           const int cutoff2 = 100000;
           const int freq1 = 200;
           const int freq2 = 400;
@@ -10496,8 +10504,8 @@ ClpSimplex::fathom(void * stuff)
      // say can declare optimal
      moreSpecialOptions_ |= 8;
      int saveMaxIterations = maximumIterations();
-     setMaximumIterations((((moreSpecialOptions_&2048)==0) ? 100 : 2000)
-			  + 5 * (numberRows_ + numberColumns_));
+     setMaximumIterations((((moreSpecialOptions_&2048)==0) ? 200 : 2000)
+			  + 2 * (numberRows_ + numberColumns_));
      double saveObjLimit;
      getDblParam(ClpDualObjectiveLimit, saveObjLimit);
      if (perturbation_<100) {
@@ -10812,6 +10820,8 @@ ClpSimplex::fathom(void * stuff)
      double saveBestObjective = bestObjective;
      bool backtrack = false;
      bool printing = handler_->logLevel() > 0;
+     // Say can stop without cleaning up in primal
+     moreSpecialOptions_ |= 2097152;
      while (depth >= 0) {
           // If backtrack get to correct depth
           if (backtrack) {
@@ -10885,7 +10895,13 @@ ClpSimplex::fathom(void * stuff)
 #endif
           // Get fake bounds correctly
           (static_cast<ClpSimplexDual *>(this))->changeBounds(3, NULL, dummyChange);
-          fastDual2(info);
+          int statusWeights = fastDual2(info);
+#if 0
+	  if (statusWeights==100)
+	    printf("weights ok\n");
+	  else
+	    printf("weights not ok\n");
+#endif
 #if 0
           {
                int iPivot;
@@ -10904,6 +10920,8 @@ ClpSimplex::fathom(void * stuff)
           }
 #endif
           // give up if odd
+          numberNodes++;
+          numberIterations += numberIterations_;
           if (problemStatus_ > 1) {
                info->nNodes_ = -1;
 #ifdef COIN_DEVELOP
@@ -10912,10 +10930,25 @@ ClpSimplex::fathom(void * stuff)
                printf("xx %d\n", numberIterations*(numberRows_ + numberColumns_));
                //abort();
 #endif
+	       printf("too long in one solve (%d iterations) average %d iterations %d nodes\n",
+		      numberIterations_,numberIterations,numberNodes);
                break;
           }
-          numberNodes++;
-          numberIterations += numberIterations_;
+	  if (numberNodes>20) {
+	    if (numberIterations>200*numberNodes) {
+	      info->nNodes_ = -2;
+	      printf("too long average %d iterations %d nodes\n",
+		     numberIterations,numberNodes);
+	      break;
+	    }
+	  } else {
+	    if (numberIterations>4000) {
+	      info->nNodes_ = -2;
+	      printf("too long average %d iterations %d nodes\n",
+		     numberIterations,numberNodes);
+	      break;
+	    }
+	  }
           if ((numberNodes % 1000) == 0) {
 #ifdef COIN_DEVELOP
                if ((numberNodes % printFrequency) == 0) {
@@ -10935,10 +10968,10 @@ ClpSimplex::fathom(void * stuff)
                }
 #endif
                if ((numberIterations*(numberRows_ + numberColumns_) > 5.0e10 ||
-		    numberNodes > 2.0e4) &&
+		    numberNodes > 1.5e4) &&
 		   (moreSpecialOptions_&4096)==0) {
                     // give up
-                    info->nNodes_ = -1;
+                    info->nNodes_ = -10;
 #ifdef COIN_DEVELOP
                     printf("OUCH giving up on nodes %d %d\n", numberNodes, numberIterations);
                     printf("xx %d\n", numberIterations*(numberRows_ + numberColumns_));
@@ -11391,6 +11424,8 @@ ClpSimplex::fathomMany(void * stuff)
      double saveBestObjective = bestObjective;
      bool backtrack = false;
      bool printing = handler_->logLevel() > 0;
+     // Say can stop without cleaning up in primal
+     moreSpecialOptions_ |= 2097152;
 #ifdef CHECK_PATH
      if (startOptimal)
           printing = true;
@@ -11889,6 +11924,7 @@ ClpSimplex::fastDual2(ClpNodeStuff * info)
 #endif
      //int saveNumberFake = numberFake_;
      int status = static_cast<ClpSimplexDual *> (this)->fastDual(true);
+     bool goodWeights=true; 
      //numberFake_ = saveNumberFake;
      specialOptions_ &= ~524288; // say dont use solution
      CoinAssert (problemStatus_ || objectiveValue_ < 1.0e50);
@@ -11900,12 +11936,22 @@ ClpSimplex::fastDual2(ClpNodeStuff * info)
           if (!numberPrimalInfeasibilities_ && objectiveValue()*optimizationDirection_ < limit) {
                problemStatus_ = 0;
           }
+     } else if (problemStatus_==10 && 
+		(moreSpecialOptions_&2097152) != 0) {
+          // not finished - may want to use anyway
+          checkPrimalSolution(rowActivityWork_, columnActivityWork_);
+          double limit = 0.0;
+          getDblParam(ClpDualObjectiveLimit, limit);
+          if (!numberPrimalInfeasibilities_ && objectiveValue()*optimizationDirection_ < limit) {
+               problemStatus_ = 11;
+          }
      }
      if (problemStatus_ == 10) {
           // Say second call
           moreSpecialOptions_ |= 256;
           //printf("Cleaning up with primal\n");
           //lastAlgorithm=1;
+	  goodWeights=false;
           int savePerturbation = perturbation_;
           int saveLog = handler_->logLevel();
           //handler_->setLogLevel(63);
@@ -11958,6 +12004,7 @@ ClpSimplex::fastDual2(ClpNodeStuff * info)
                                                        2 * numberRows_ + numberColumns_, saveMax);
                perturbation_ = savePerturbation;
                baseIteration_ = numberIterations_;
+	       goodWeights=false;
                status = static_cast<ClpSimplexPrimal *> (this)->primal(0);
                baseIteration_ = 0;
                computeObjectiveValue();
@@ -11988,7 +12035,7 @@ ClpSimplex::fastDual2(ClpNodeStuff * info)
 	  CoinMemcpyN(save, numberTotal, upper_);
      }
      status = problemStatus_;
-     if (!problemStatus_) {
+     if (!problemStatus_||problemStatus_==11) {
           int j;
           // Move solution to external array
           if (!columnScale_) {
@@ -11999,12 +12046,18 @@ ClpSimplex::fastDual2(ClpNodeStuff * info)
           }
           if ((info->solverOptions_ & 1) != 0) {
                // reduced costs
-               if (!columnScale_) {
-                    CoinMemcpyN(dj_, numberColumns_, reducedCost_);
-               } else {
-                    for (j = 0; j < numberColumns_; j++)
-                         reducedCost_[j] = dj_[j] * columnScale_[j+numberColumns_];
-               }
+	       if (!problemStatus_) {
+		 if (!columnScale_) {
+		   CoinMemcpyN(dj_, numberColumns_, reducedCost_);
+		 } else {
+		   for (j = 0; j < numberColumns_; j++)
+		     reducedCost_[j] = dj_[j] * columnScale_[j+numberColumns_];
+		 }
+	       } else {
+		 // zero djs
+		 memset(reducedCost_,0,numberColumns_*sizeof(double));
+		 problemStatus_=0;
+	       }
           }
           if ((info->solverOptions_ & 2) != 0) {
                // dual
@@ -12033,6 +12086,8 @@ ClpSimplex::fastDual2(ClpNodeStuff * info)
      save += numberTotal;
      CoinMemcpyN(save, numberTotal, upper_);
 #endif
+     if (goodWeights)
+       status=100;
      return status;
 }
 // Stop Fast dual

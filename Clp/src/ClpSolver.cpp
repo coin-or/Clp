@@ -843,10 +843,10 @@ int ClpMain1(int argc, const char *argv[],AbcSimplex * models)
                                    ClpSimplex * model2 = models + iModel;
 #else
                                    AbcSimplex * model2 = models + iModel;
+#endif
 				   if (type==CLP_PARAM_ACTION_EITHERSIMPLEX||
 				       type==CBC_PARAM_ACTION_BAB)
 				     solveOptions.setSpecialOption(3,0); // allow +-1
-#endif
 				   if (dualize==4) { 
 				     solveOptions.setSpecialOption(4, 77);
 				     dualize=0;

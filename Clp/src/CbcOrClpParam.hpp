@@ -385,6 +385,8 @@ public:
      const char * setCurrentOptionWithMessage ( int value );
      /// Sets current parameter option using string
      void setCurrentOption (const std::string value );
+     /// Sets current parameter option using string with message
+     const char * setCurrentOptionWithMessage (const std::string value );
      /// Returns current parameter option position
      int currentOptionAsInteger (  ) const ;
      /** Returns current parameter option position
@@ -394,11 +396,15 @@ public:
      int currentOptionAsInteger ( int & fakeInteger ) const;
      /// Sets int value
      void setIntValue ( int value );
+     /// Sets int value with message
+     const char * setIntValueWithMessage ( int value );
      inline int intValue () const {
           return intValue_;
      }
      /// Sets double value
      void setDoubleValue ( double value );
+     /// Sets double value with message
+     const char * setDoubleValueWithMessage ( double value );
      inline double doubleValue () const {
           return doubleValue_;
      }

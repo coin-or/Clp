@@ -2385,7 +2385,7 @@ AbcSimplex::gutsOfSolution(int type)
 	startParallelStuff(1);
 #else
 	whichArray[0]=1;
-	CoinAbcThreadInfo info;
+	CoinThreadInfo info;
 	info.status=1;
 	info.stuff[0]=whichArray[1];
 	info.stuff[1]=whichArray[2];
@@ -5769,7 +5769,7 @@ void * abc_parallelManager(void * simplex)
 {
   AbcSimplexDual * dual = reinterpret_cast<AbcSimplexDual *>(simplex);
   int whichThread=dual->whichThread();
-  CoinAbcThreadInfo * threadInfo = dual->threadInfoPointer(whichThread);
+  CoinThreadInfo * threadInfo = dual->threadInfoPointer(whichThread);
   pthread_mutex_lock(dual->mutexPointer(2,whichThread));
   pthread_barrier_wait(dual->barrierPointer());
 #if 0
