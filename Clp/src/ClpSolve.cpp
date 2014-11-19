@@ -5234,7 +5234,7 @@ static ClpSimplex * deBound(ClpSimplex * oldModel)
   delete [] change;
   return model;
 }
-#if defined(ABC_INHERIT) || defined(CBC_THREAD)
+#if defined(ABC_INHERIT) || defined(CBC_THREAD) || defined(THREADS_IN_ANALYZE)
 void * clp_parallelManager(void * stuff)
 {
   CoinPthreadStuff * driver = reinterpret_cast<CoinPthreadStuff *>(stuff);
