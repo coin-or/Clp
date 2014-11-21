@@ -3948,9 +3948,9 @@ ClpSimplex::createRim(int what, bool makeRowCopy, int startFinishOptions)
                               }
                          } else if (status == isFixed && upper_[i] > lower_[i]) {
                               // was fixed - not now
-                              if (solution_[i] <= lower_[i]) {
+                              if (solution_[i] <= lower_[i]+primalTolerance_) {
                                    setStatus(i, atLowerBound);
-                              } else if (solution_[i] >= upper_[i]) {
+                              } else if (solution_[i] >= upper_[i]-primalTolerance_) {
                                    setStatus(i, atUpperBound);
                               } else {
                                    setStatus(i, superBasic);
