@@ -1261,7 +1261,9 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
      bool alwaysOptimal = (specialOptions_ & 1) != 0;
      // give code benefit of doubt
      if (sumOfRelaxedDualInfeasibilities_ == 0.0 &&
-               sumOfRelaxedPrimalInfeasibilities_ == 0.0) {
+               sumOfRelaxedPrimalInfeasibilities_ == 0.0 &&
+	 progress->objective_[CLP_PROGRESS-1]>
+	 progress->objective_[CLP_PROGRESS-2]-1.0e-9*(10.0+fabs(objectiveValue_))) {
           // say optimal (with these bounds etc)
           numberDualInfeasibilities_ = 0;
           sumDualInfeasibilities_ = 0.0;
