@@ -1111,7 +1111,8 @@ ClpSimplexOther::restoreFromDual(const ClpSimplex * dualProblem,
                               setColumnStatus(iColumn, isFixed);
                          columnActivity_[iColumn] = columnUpper_[iColumn];
                     } else {
-                         abort();
+			 setColumnStatus(iColumn, superBasic);
+                         columnActivity_[iColumn] = otherValue;
                     }
                }
           } else {
@@ -1154,7 +1155,8 @@ ClpSimplexOther::restoreFromDual(const ClpSimplex * dualProblem,
                                    setColumnStatus(iColumn, isFixed);
                               columnActivity_[iColumn] = columnUpper_[iColumn];
                          } else {
-                              abort();
+			      setColumnStatus(iColumn, superBasic);
+			      columnActivity_[iColumn] = otherValue;
                          }
                     }
                }

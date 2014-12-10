@@ -72,6 +72,13 @@ extern glp_prob* cbc_glp_prob;
 #ifdef DMALLOC
 #include "dmalloc.h"
 #endif
+#ifdef CLP_USEFUL_PRINTOUT
+static double startElapsed=0.0;
+static double startCpu=0.0;
+static std::string mpsFile="";
+extern double debugDouble[10];
+extern int debugInt[24];
+#endif
 #if defined(COIN_HAS_WSMP) || defined(COIN_HAS_AMD) || defined(COIN_HAS_CHOLMOD) || defined(TAUCS_BARRIER) || defined(COIN_HAS_MUMPS)
 #define FOREIGN_BARRIER
 #endif
@@ -96,6 +103,7 @@ extern "C" {
                currentModel->setMaximumIterations(0); // stop at next iterations
           return;
      }
+  void openblas_set_num_threads(int num_threads);
 }
 
 //#############################################################################
@@ -160,7 +168,7 @@ void ClpMain0(AbcSimplex * models)
 {
           models->setPerturbation(50);
           models->messageHandler()->setPrefix(false);
-#ifdef ABC_INHERIT
+#if CLP_INHERIT_MODE>1
           models->setDualTolerance(1.0e-6);
           models->setPrimalTolerance(1.0e-6);
 #endif
@@ -174,6 +182,12 @@ int ClpMain1(int argc, const char *argv[],AbcSimplex * models)
           double time1 = CoinCpuTime(), time2;
           // Set up all non-standard stuff
           //int numberModels=1;
+#ifdef CLP_USEFUL_PRINTOUT
+	  startElapsed=CoinGetTimeOfDay();
+	  startCpu=CoinCpuTime();
+	  memset(debugInt,0,sizeof(debugInt));
+	  memset(debugDouble,0,sizeof(debugDouble));
+#endif
 #if 0
 #ifndef ABC_INHERIT
           ClpSimplex * models = new ClpSimplex[1];
@@ -195,7 +209,7 @@ int ClpMain1(int argc, const char *argv[],AbcSimplex * models)
           int doVector = 0;
           int doSprint = -1;
           // set reasonable defaults
-#ifdef ABC_INHERIT
+#if CLP_INHERIT_MODE>1
 #define DEFAULT_PRESOLVE_PASSES 20
 #else
 #define DEFAULT_PRESOLVE_PASSES 5
@@ -809,8 +823,9 @@ int ClpMain1(int argc, const char *argv[],AbcSimplex * models)
                               // synonym for dual
                          case CBC_PARAM_ACTION_BAB:
                               if (goodModels[iModel]) {
+				//openblas_set_num_threads(4);
 				if (type==CLP_PARAM_ACTION_EITHERSIMPLEX||
-				    type==CBC_PARAM_ACTION_BAB)
+		 		    type==CBC_PARAM_ACTION_BAB)
 				  models[iModel].setMoreSpecialOptions(16384|
 								       models[iModel].moreSpecialOptions());
                                    double objScale =
@@ -1219,6 +1234,17 @@ int ClpMain1(int argc, const char *argv[],AbcSimplex * models)
                                              thisModel->primal(1);
                                              currentModel = NULL;
                                         }
+#ifndef COIN_HAS_ASL
+					CoinMessageHandler * generalMessageHandler = models->messageHandler();
+					generalMessageHandler->setPrefix(false);
+					CoinMessages generalMessages = models->messages();
+					char generalPrint[100];
+#endif
+                                        sprintf(generalPrint, "After translating dual back to primal - objective value is %g",
+						thisModel->objectiveValue());
+                                        generalMessageHandler->message(CLP_GENERAL, generalMessages)
+                                        << generalPrint
+                                        << CoinMessageEol;
 					// switch off (user can switch back on)
 					parameters[whichParam(CLP_PARAM_INT_DUALIZE, 
 							      numberParameters, parameters)].setIntValue(dualize);
@@ -1412,6 +1438,9 @@ int ClpMain1(int argc, const char *argv[],AbcSimplex * models)
                               }
                               if (canOpen) {
                                    int status;
+#ifdef CLP_USEFUL_PRINTOUT
+				   mpsFile=fileName;
+#endif
                                    if (!gmpl)
                                         status = models[iModel].readMps(fileName.c_str(),
                                                                         keepImportNames != 0,
@@ -2874,6 +2903,15 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 #ifdef DMALLOC
      dmalloc_log_unfreed();
      dmalloc_shutdown();
+#endif
+#ifdef CLP_USEFUL_PRINTOUT
+     printf("BENCHMARK %s took %g cpu seconds (%g elapsed) - %d row, %d columns, %d elements - reduced to %d, %d, %d\n",
+	      mpsFile.c_str(),CoinCpuTime()-startCpu,CoinGetTimeOfDay()-startElapsed,
+	      debugInt[0],debugInt[1],debugInt[2],
+	      debugInt[3],debugInt[4],debugInt[5]);
+	    const char * method[]={"","Dual","Primal","Sprint","Idiot"};
+	    printf("BENCHMARK using method %s (%d)\n",
+	      method[debugInt[6]],debugInt[7]);
 #endif
      return 0;
 }

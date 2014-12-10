@@ -1520,6 +1520,15 @@ ClpSimplexDual::whileIterating(double * & givenDuals, int ifValuesPass)
                               problemStatus_ = -2; // factorize now
                               returnCode = -2;
                               moreSpecialOptions_ |= 16;
+			      double pivotTolerance = factorization_->pivotTolerance();
+			      if (pivotTolerance<0.4&&factorization_->pivots()<100) {
+				factorization_->pivotTolerance(1.05*pivotTolerance);
+#ifdef CLP_USEFUL_PRINTOUT
+				printf("Changing pivot tolerance from %g to %g as ftran/btran error %g/%g\n",
+				       pivotTolerance,factorization_->pivotTolerance(),
+				       alpha_,btranAlpha);
+#endif
+			      }
                               break;
                          } else {
                               // need to reject something
@@ -4475,7 +4484,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned, int type,
           gutsOfSolution(givenDuals, NULL);
      } else if (goodAccuracy()) {
           // Can reduce tolerance
-          double newTolerance = CoinMax(0.99 * factorization_->pivotTolerance(), saveData.pivotTolerance_);
+          double newTolerance = CoinMax(0.995 * factorization_->pivotTolerance(), saveData.pivotTolerance_);
           factorization_->pivotTolerance(newTolerance);
      }
      bestObjectiveValue_ = CoinMax(bestObjectiveValue_,
@@ -6066,6 +6075,22 @@ ClpSimplexDual::perturb()
                     objectiveWork_[iColumn] += value;
                }
           }
+     }
+     if (largestZero>1.0*largest&&largest) {
+       //printf("largest zero perturbation of %g too big (nonzero %g)\n",
+       //     largestZero,largest);
+       largestZero = 0.0;
+       const double * obj = objective();
+       double test=CoinMax(1.0e-8,largest);
+       for (iColumn = 0; iColumn < numberColumns_; iColumn++) {
+	 if (!obj[iColumn]) {
+	   double cost = cost_[iColumn];
+	   while (fabs(cost)>test)
+	     cost *= 0.5;
+	   cost_[iColumn] = cost;
+	   largestZero=CoinMax(largestZero,fabs(cost));
+	 }
+       }
      }
      handler_->message(CLP_SIMPLEX_PERTURB, messages_)
                << 100.0 * maximumFraction << perturbation << largest << 100.0 * largestPerCent << largestZero

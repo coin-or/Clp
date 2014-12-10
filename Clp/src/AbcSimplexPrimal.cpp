@@ -3793,7 +3793,8 @@ AbcSimplexPrimal::pivotResult4(int ifValuesPass)
 	// if stable replace in basis
 	// check update
 	CoinIndexedVector * tempVector[4];
-	memcpy(tempVector,vector+4*iBest,4*sizeof(CoinIndexedVector *));
+	for (int i=0;i<4;i++) 
+	  tempVector[i] = vector[4*iBest+i];
 	returnCode = cilk_spawn doFTUpdate(tempVector);
 	bestUpdate=tempVector[0];
 	// after this bestUpdate is not empty - used to update djs ??

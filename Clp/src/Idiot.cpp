@@ -12,6 +12,7 @@
 #include "Idiot.hpp"
 #include "CoinTime.hpp"
 #include "CoinSort.hpp"
+#include "CoinFactorization.hpp"
 #include "CoinMessageHandler.hpp"
 #include "CoinHelperFunctions.hpp"
 #include "AbcCommon.hpp"
@@ -474,6 +475,17 @@ Idiot::solve2(CoinMessageHandler * handler, const CoinMessages * messages)
      CoinMemcpyN(model_->getColSolution(), ncols, colsol);
      pi = new double[nrows];
      dj = new double[ncols];
+#ifndef OSI_IDIOT
+     bool fixAfterSome = false; //(model_->specialOptions()&8388608)!=0;
+     int exitAfter = 1000000; //(model_->specialOptions()&8388608)!=0 ? 50 : 1000000;
+     {
+        int numberColumns = model_->numberColumns();
+	for (int i=0;i<numberColumns;i++) {
+	  if (upper[i]==lower[i])
+	    model_->setColumnStatus(i,ClpSimplex::isFixed);
+	}
+     }
+#endif
      delete [] whenUsed_;
      bool oddSlacks = false;
      // See if any costed slacks
@@ -786,6 +798,8 @@ Idiot::solve2(CoinMessageHandler * handler, const CoinMessages * messages)
           if (lastResult.infeas <= exitFeasibility_)
                break;
           iteration++;
+	  if (iteration>=exitAfter)
+	    break;
           checkIteration++;
           if (lastResult.infeas <= smallInfeas && lastResult.objval < bestFeasible) {
                bestFeasible = lastResult.objval;
@@ -834,6 +848,21 @@ Idiot::solve2(CoinMessageHandler * handler, const CoinMessages * messages)
                }
 #endif
           }
+#ifndef OSI_IDIOT
+	  if (fixAfterSome) {
+	    if (result.infeas<0.01*nrows&&iteration>10&&(3*n>2*nrows||4*n>2*ncols)) {
+		// flag
+		int numberColumns = model_->numberColumns();
+		printf("Flagging satisfied\n");
+		fixAfterSome=false;
+		for (int i=0;i<numberColumns;i++) {
+		  if (colsol[i]>upper[i]-1.0e-7||
+		      colsol[i]<lower[i]+1.0e-7)
+		    model_->setColumnStatus(i,ClpSimplex::isFixed);
+		}
+	      }
+	      }
+#endif
           if (iteration > 50 && n == numberAway ) {
 	    if((result.infeas < 1.0e-4 && majorIterations_<200)||result.infeas<1.0e-8) {
 #ifdef CLP_INVESTIGATE
@@ -1305,12 +1334,13 @@ Idiot::crossOver(int mode)
           presolve = 0;
      }
 #endif
+#define FEB_TRY
 #ifdef FEB_TRY
      int savePerturbation = model_->perturbation();
      int saveOptions = model_->specialOptions();
      model_->setSpecialOptions(saveOptions | 8192);
-     if (savePerturbation_ == 50)
-          model_->setPerturbation(56);
+     //if (savePerturbation_ == 50)
+     //   model_->setPerturbation(56);
 #endif
      model_->createStatus();
      /* addAll
@@ -1608,12 +1638,12 @@ Idiot::crossOver(int mode)
           }
      } else {
           /* still try and put singletons rather than artificials in basis */
-          int ninbas = 0;
           for (i = 0; i < nrows; i++) {
-               model_->setRowStatus(i, ClpSimplex::basic);
-          }
-          for (i = 0; i < ncols; i++) {
-               if (columnLength[i] == 1 && upper[i] > lower[i] + 1.0e-5) {
+	      model_->setRowStatus(i, ClpSimplex::basic);
+	  }
+	  int ninbas = 0;
+	  for (i = 0; i < ncols; i++) {
+	      if (columnLength[i] == 1 && upper[i] > lower[i] + 1.0e-5) {
                     CoinBigIndex j = columnStart[i];
                     double value = element[j];
                     int irow = row[j];
@@ -1675,8 +1705,8 @@ Idiot::crossOver(int mode)
                          ninbas++;
                     }
                }
-          }
-          /*printf("%d in basis\n",ninbas);*/
+	    }
+	    /*printf("%d in basis\n",ninbas);*/
      }
      bool wantVector = false;
      if (dynamic_cast< ClpPackedMatrix*>(model_->clpMatrix())) {
@@ -1684,35 +1714,188 @@ Idiot::crossOver(int mode)
           ClpPackedMatrix * clpMatrixO = dynamic_cast< ClpPackedMatrix*>(model_->clpMatrix());
           wantVector = clpMatrixO->wantsSpecialColumnCopy();
      }
+     if ((model_->specialOptions()&8388608)!=0) { // temp test
+       justValuesPass=true; 
+       assert (addAll<3);
+       assert (presolve);
+       allowInfeasible=true;
+     }
+     double * saveBounds=NULL;
      if (addAll < 3) {
           ClpPresolve pinfo;
           if (presolve) {
                if (allowInfeasible) {
                     // fix up so will be feasible
-                    double * rhs = new double[nrows];
-                    memset(rhs, 0, nrows * sizeof(double));
-                    model_->clpMatrix()->times(1.0, colsol, rhs);
+		    const double * dual = model_->dualRowSolution();
+		    double * rhs = new double[nrows];
+		    double * saveBounds=new double[2*ncols];
+		    memcpy(saveBounds,lower,ncols*sizeof(double));
+		    memcpy(saveBounds+ncols,upper,ncols*sizeof(double));
+                    for (i = 0; i < nrows; i++) 
+		      rhs[i]=fabs(dual[i]);
+		    std::sort(rhs,rhs+nrows);
+		    int nSmall=nrows;
+		    int nMedium=nrows;
+		    double small=CoinMax(1.0e-4,1.0e-5*rhs[nrows-1]);
+		    double medium=CoinMax(1.0e-2,1.0e-3*rhs[nrows-1]);
+		    char * marked = new char [nrows];
                     double * rowupper = model_->rowUpper();
                     double * rowlower = model_->rowLower();
+		    // if tiny then drop row??
+                    for (i = 0; i < nrows; i++) {
+		      if (rhs[i]>=small) {
+			nSmall=i-1;
+			break;
+		      }
+		    }
+                    for (; i < nrows; i++) {
+		      if (rhs[i]>=medium) {
+			nMedium=i-1;
+			break;
+		      }
+		    }
+		    printf("%d < %g, %d < %g, %d >= %g\n",
+			   nSmall,small,nMedium-nSmall,medium,nrows-nMedium,medium);
+                    for (i = 0; i < nrows; i++) {
+		      if (fabs(dual[i])<medium) {
+			marked[i]=0;
+		      } else {
+			marked[i]=1;
+		      }
+		    }
+                    memset(rhs, 0, nrows * sizeof(double));
+                    model_->clpMatrix()->times(1.0, colsol, rhs);
                     saveRowUpper = CoinCopyOfArray(rowupper, nrows);
                     saveRowLower = CoinCopyOfArray(rowlower, nrows);
                     double sum = 0.0;
+		    int nFixedRows=0;
                     for (i = 0; i < nrows; i++) {
+		         if (marked[i]&&rowupper[i]>rowlower[i]) {
+			   double distance=CoinMin(rowupper[i]-rhs[i],rhs[i]-rowlower[i]);
+			   // look at distance and sign of dual
+			   if (rhs[i] > rowupper[i]-1.0e-6) {
+			     rhs[i]=rowupper[i];
+			     rowlower[i]=rowupper[i];
+			     nFixedRows++;
+			   } else if (rhs[i] < rowlower[i]+1.0e-6) {
+			     rhs[i]=rowlower[i];
+			     rowupper[i]=rowlower[i];
+			     nFixedRows++;
+			   }
+			 }
                          if (rhs[i] > rowupper[i]) {
                               sum += rhs[i] - rowupper[i];
                               rowupper[i] = rhs[i];
+			      // maybe make equality
                          }
                          if (rhs[i] < rowlower[i]) {
                               sum += rowlower[i] - rhs[i];
                               rowlower[i] = rhs[i];
+			      // maybe make equality
                          }
                     }
-                    COIN_DETAIL_PRINT(printf("sum of infeasibilities %g\n", sum));
+		    int nFixed=0;
+		    for (i = 0; i < ncols; i++) {
+		      if (colsol[i]<lower[i]+1.0e-7) {
+			upper[i]=lower[i];
+			nFixed++;
+		      } else if (colsol[i]>upper[i]-1.0e-7) {
+			lower[i]=upper[i];
+			nFixed++;
+		      }
+		    }
+                    printf("sum of infeasibilities %g - %d fixed rows, %d fixed columns\n", 
+			   sum,nFixedRows,nFixed);
+                    //COIN_DETAIL_PRINT(printf("sum of infeasibilities %g\n", sum));
                     delete [] rhs;
+		    delete [] marked;
                }
                saveModel = model_;
                pinfo.setPresolveActions(pinfo.presolveActions() | 16384);
                model_ = pinfo.presolvedModel(*model_, 1.0e-8, false, 5);
+	       if (saveBounds) {
+		 memcpy(saveModel->columnLower(),saveBounds,ncols*sizeof(double));
+		 memcpy(saveModel->columnUpper(),saveBounds+ncols,ncols*sizeof(double));
+		 delete [] saveBounds;
+	       }
+	       if (model_&&(saveModel->specialOptions()&8388608)!=0) {
+		 int nrows = model_->getNumRows();
+		 int ncols = model_->getNumCols();
+		 double * lower = model_->columnLower();
+		 double * upper = model_->columnUpper();
+		 const double * rowlower = model_->getRowLower();
+		 const double * rowupper = model_->getRowUpper();
+		 double * rowsol = model_->primalRowSolution();
+		 double * colsol = model_->primalColumnSolution();;
+		 int ninbas = 0;
+		 int * which = new int[2*ncols+nrows];
+		 double * dj = model_->dualColumnSolution();
+		 for (int i=0;i<ncols;i++) {
+		   dj[i]=-CoinMin(upper[i]-colsol[i],colsol[i]-lower[i]);
+		   which[i]=i;
+		 }
+		 CoinSort_2(dj,dj+ncols,which);
+		 ninbas=CoinMin(ncols,nrows);
+		 int * columnIsBasic=which+ncols;
+		 int * rowIsBasic=columnIsBasic+ncols;
+		 for (int i=0;i<nrows+ncols;i++)
+		   columnIsBasic[i]=-1;
+		 for (int i=0;i<ninbas;i++) {
+		   int iColumn=which[i];
+		   columnIsBasic[iColumn]=i;
+		 }
+		 // factorize
+		 CoinFactorization factor;
+		 factor.pivotTolerance(0.1);
+		 factor.setDenseThreshold(0);
+		 int status=-1;
+		 // If initial is too dense - then all-slack may be better
+		 double areaFactor=4.0;
+		 const CoinPackedMatrix * matrix = model_->matrix();
+		 while (status) {
+		   status=factor.factorize(*matrix,rowIsBasic,columnIsBasic,areaFactor);
+		   if (status==-99) {
+		     // put all slacks in
+		     for (int i=0;i<nrows;i++) 
+		       rowIsBasic[i]=i;
+		     for (int i=0;i<ncols;i++) 
+		      columnIsBasic[i]=-1;
+		     break;
+		   } else if (status==-1) {
+		     factor.pivotTolerance(0.99);
+		     // put all slacks in
+		     for (int i=0;i<nrows;i++) 
+		       rowIsBasic[i]=i;
+		     for (int i=0;i<ncols;i++) {
+		       int iRow=columnIsBasic[i];
+		       if (iRow>=0)
+			 rowIsBasic[iRow]=-1; // out
+		     }
+		   }
+		 }
+		 delete [] which;
+		 for (int i = 0; i < nrows; i++) {
+		   if (rowIsBasic[i]>=0) {
+		     model_->setRowStatus(i, ClpSimplex::basic);
+		   } else if (rowlower[i]==rowupper[i]) {
+		     model_->setRowStatus(i, ClpSimplex::isFixed);
+		   } else if (rowsol[i]-rowlower[i]<rowupper[i]-rowsol[i]) {
+		     model_->setRowStatus(i, ClpSimplex::atLowerBound);
+		   } else {
+		     model_->setRowStatus(i, ClpSimplex::atUpperBound);
+		   }
+		 }
+		 for (int i=0;i<ncols;i++) {
+		   if (colsol[i]>upper[i]-1.0e-7||
+		       colsol[i]<lower[i]+1.0e-7) {
+		     model_->setColumnStatus(i,ClpSimplex::isFixed);
+		   } else if (columnIsBasic[i]>=0) {
+		     model_->setColumnStatus(i,ClpSimplex::basic);
+		   } else {
+		     model_->setColumnStatus(i,ClpSimplex::superBasic);
+		   }
+		 }
+	       }
           }
           if (model_) {
                if (!wantVector) {
@@ -1743,12 +1926,13 @@ Idiot::crossOver(int mode)
                     clpMatrix->releaseSpecialColumnCopy();
                }
                if (presolve) {
-		 model_->primal(1);
+		 if (!justValuesPass)
+		   model_->primal(1);
                     pinfo.postsolve(true);
                     delete model_;
                     model_ = saveModel;
                     saveModel = NULL;
-               }
+               } 
           } else {
                // not feasible
                addAll = 1;

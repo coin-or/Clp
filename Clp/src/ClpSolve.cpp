@@ -53,6 +53,10 @@
 #endif
 #include "CoinStructuredModel.hpp"
 double zz_slack_value=0.0;
+#ifdef CLP_USEFUL_PRINTOUT
+double debugDouble[10];
+int debugInt[24];
+#endif
 
 #include "ClpPresolve.hpp"
 #ifndef SLIM_CLP
@@ -623,19 +627,6 @@ ClpSimplex::dealWithAbc(int solveType, int startUp,
       }
 #endif
     }
-    char line[200];
-#if ABC_PARALLEL
-#if ABC_PARALLEL==2
-#ifndef FAKE_CILK
-    if (!number_cilk_workers) {
-      number_cilk_workers=__cilkrts_get_nworkers();
-      sprintf(line,"%d cilk workers",number_cilk_workers);
-      handler_->message(CLP_GENERAL, messages_)
-	<< line
-	<< CoinMessageEol;
-    }
-#endif
-#endif
     int numberCpu=this->abcState()&15;
     if (numberCpu==9) {
       numberCpu=1;
@@ -662,13 +653,29 @@ ClpSimplex::dealWithAbc(int solveType, int startUp,
 	numberCpu=1;
     } else {
 #if ABC_PARALLEL==2
-#if 0 //ndef FAKE_CILK
+#ifndef FAKE_CILK
       char temp[3];
       sprintf(temp,"%d",numberCpu);
       __cilkrts_set_param("nworkers",temp);
+      printf("setting cilk workers to %d\n",numberCpu);
+      number_cilk_workers=numberCpu;
+
 #endif
 #endif
     }
+    char line[200];
+#if ABC_PARALLEL
+#if ABC_PARALLEL==2
+#ifndef FAKE_CILK
+    if (!number_cilk_workers) {
+      number_cilk_workers=__cilkrts_get_nworkers();
+      sprintf(line,"%d cilk workers",number_cilk_workers);
+      handler_->message(CLP_GENERAL, messages_)
+	<< line
+	<< CoinMessageEol;
+    }
+#endif
+#endif
     abcModel2->setParallelMode(numberCpu-1);
 #endif
     //if (abcState()==3||abcState()==4) {
@@ -842,6 +849,11 @@ ClpSimplex::initialSolve(ClpSolve & options)
      double time2=0.0;
      ClpMatrixBase * saveMatrix = NULL;
      ClpObjective * savedObjective = NULL;
+#ifdef CLP_USEFUL_PRINTOUT
+     debugInt[0]=numberRows();
+     debugInt[1]=numberColumns();
+     debugInt[2]=matrix()->getNumElements();
+#endif
      if (!objective_ || !matrix_) {
           // totally empty
           handler_->message(CLP_EMPTY_PROBLEM, messages_)
@@ -914,9 +926,15 @@ ClpSimplex::initialSolve(ClpSolve & options)
      }
 #endif
 #endif
+#ifndef CLPSOLVE_ACTIONS 
+#define CLPSOLVE_ACTIONS 2
+#endif
+#if CLPSOLVE_ACTIONS 
+     bool wasAutomatic = (method==ClpSolve::automatic);
+#endif
      if (presolve != ClpSolve::presolveOff) {
           bool costedSlacks = false;
-#ifdef ABC_INHERIT
+#if CLP_INHERIT_MODE>1
           int numberPasses = 20;
 #else
           int numberPasses = 5;
@@ -976,11 +994,19 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	    //ClpModel::stopPermanentArrays();
 	    //setSpecialOptions(specialOptions()&~65536);
 	    // try setting tolerances up
-#define CLP_NEW_TOLERANCE 1.0e-7
-	    if (model2->primalTolerance()==1.0e-7&&model2->dualTolerance()==1.0e-7) {
-	      model2->setPrimalTolerance(CLP_NEW_TOLERANCE);
-	      model2->setDualTolerance(CLP_NEW_TOLERANCE);
+#if CLPSOLVE_ACTIONS
+	    bool changeTolerances=wasAutomatic;
+#if CLPSOLVE_ACTIONS>1
+	    changeTolerances=true;
+#endif
+	    if (changeTolerances && model2 != this) {
+#define CLP_NEW_TOLERANCE 1.0e-6
+	      if (model2->primalTolerance()==1.0e-7&&model2->dualTolerance()==1.0e-7) {
+	        model2->setPrimalTolerance(CLP_NEW_TOLERANCE);
+		model2->setDualTolerance(CLP_NEW_TOLERANCE);
+	      }
 	    }
+#endif
 #endif
 	      model2->eventHandler()->setSimplex(model2);
 	      int rcode=model2->eventHandler()->event(ClpEventHandler::presolveSize);
@@ -1009,8 +1035,200 @@ ClpSimplex::initialSolve(ClpSolve & options)
                }
           }
      }
+#ifdef CLP_USEFUL_PRINTOUT
+     debugInt[3]=model2->numberRows();
+     debugInt[4]=model2->numberColumns();
+     debugInt[5]=model2->matrix()->getNumElements();
+     // analyze
+     {
+       double time1 =CoinCpuTime();
+       int numberColumns = model2->numberColumns();
+       const double * columnLower = model2->columnLower();
+       const double * columnUpper = model2->columnUpper();
+       int numberRows = model2->numberRows();
+       const double * rowLower = model2->rowLower();
+       const double * rowUpper = model2->rowUpper();
+       const double * objective = model2->objective();
+       CoinPackedMatrix * matrix = model2->matrix();
+       CoinBigIndex numberElements = matrix->getNumElements();
+       const int * columnLength = matrix->getVectorLengths();
+       //const CoinBigIndex * columnStart = matrix->getVectorStarts();
+       const double * elementByColumn = matrix->getElements();
+       const int * row = matrix->getIndices();
+       int * rowCount = new int [numberRows];
+       memset(rowCount,0,numberRows*sizeof(int));
+       int n=CoinMax (2*numberRows,numberElements);
+       n= CoinMax(2*numberColumns,n);
+       double * check = new double[n];
+       memcpy(check,elementByColumn,numberElements*sizeof(double));
+       for (int i=0;i<numberElements;i++) {
+	 check[i]=fabs(check[i]);
+	 rowCount[row[i]]++;
+       }
+       int largestIndex=0;
+       for (int i=0;i<numberColumns;i++) {
+	 largestIndex=CoinMax(largestIndex,columnLength[i]);
+       }
+       debugInt[12]=largestIndex;
+       largestIndex=0;
+       for (int i=0;i<numberRows;i++) {
+	 largestIndex=CoinMax(largestIndex,rowCount[i]);
+       }
+       n=numberElements;
+       delete [] rowCount;
+       debugInt[11]=largestIndex;
+       std::sort(check,check+n);
+       debugDouble[4]=check[0];
+       debugDouble[5]=check[n-1];
+       int nAtOne=0;
+       int nDifferent=0;
+       double last=-COIN_DBL_MAX;
+       for (int i=0;i<n;i++) {
+	 if (fabs(last-check[i])>1.0e-12) {
+	   nDifferent++;
+	   last=check[i];
+	 }
+	 if (check[i]==1.0)
+	   nAtOne++;
+       }
+       debugInt[10]=nDifferent;
+       debugInt[15]=nAtOne;
+       int nInf=0;
+       int nZero=0;
+       n=0;
+       for (int i=0;i<numberRows;i++) {
+	 double value=fabs(rowLower[i]);
+	 if (!value)
+	   nZero++;
+	 else if (value!=COIN_DBL_MAX)
+	   check[n++]=value;
+	 else
+	   nInf++;
+       }
+       for (int i=0;i<numberRows;i++) {
+	 double value=fabs(rowUpper[i]);
+	 if (!value)
+	   nZero++;
+	 else if (value!=COIN_DBL_MAX)
+	   check[n++]=value;
+	 else
+	   nInf++;
+       }
+       debugInt[16]=nInf;
+       debugInt[20]=nZero;
+       if (n) {
+	 std::sort(check,check+n);
+	 debugDouble[0]=check[0];
+	 debugDouble[1]=check[n-1];
+       } else {
+	 debugDouble[0]=0.0;
+	 debugDouble[1]=0.0;
+       }
+       nAtOne=0;
+       nDifferent=0;
+       last=-COIN_DBL_MAX;
+       for (int i=0;i<n;i++) {
+	 if (fabs(last-check[i])>1.0e-12) {
+	   nDifferent++;
+	   last=check[i];
+	 }
+	 if (check[i]==1.0)
+	   nAtOne++;
+       }
+       debugInt[8]=nDifferent;
+       debugInt[13]=nAtOne;
+       nZero=0;
+       n=0;
+       for (int i=0;i<numberColumns;i++) {
+	 double value=fabs(objective[i]);
+	 if (value)
+	   check[n++]=value;
+	 else
+	   nZero++;
+       }
+       debugInt[21]=nZero;
+       if (n) {
+	 std::sort(check,check+n);
+	 debugDouble[2]=check[0];
+	 debugDouble[3]=check[n-1];
+       } else {
+	 debugDouble[2]=0.0;
+	 debugDouble[3]=0.0;
+       }
+       nAtOne=0;
+       nDifferent=0;
+       last=-COIN_DBL_MAX;
+       for (int i=0;i<n;i++) {
+	 if (fabs(last-check[i])>1.0e-12) {
+	   nDifferent++;
+	   last=check[i];
+	 }
+	 if (check[i]==1.0)
+	   nAtOne++;
+       }
+       debugInt[9]=nDifferent;
+       debugInt[14]=nAtOne;
+       nInf=0;
+       nZero=0;
+       n=0;
+       for (int i=0;i<numberColumns;i++) {
+	 double value=fabs(columnLower[i]);
+	 if (!value)
+	   nZero++;
+	 else if (value!=COIN_DBL_MAX)
+	   check[n++]=value;
+	 else
+	   nInf++;
+       }
+       for (int i=0;i<numberColumns;i++) {
+	 double value=fabs(columnUpper[i]);
+	 if (!value)
+	   nZero++;
+	 else if (value!=COIN_DBL_MAX)
+	   check[n++]=value;
+	 else
+	   nInf++;
+       }
+       debugInt[17]=nInf;
+       double smallestColBound;
+       double largestColBound;
+       if (n) {
+	 std::sort(check,check+n);
+	 smallestColBound=check[0];
+	 largestColBound=check[n-1];
+       } else {
+         smallestColBound=0.0;
+         largestColBound=0.0;
+       }
+       nAtOne=0;
+       nDifferent=0;
+       last=-COIN_DBL_MAX;
+       for (int i=0;i<n;i++) {
+	 if (fabs(last-check[i])>1.0e-12) {
+	   nDifferent++;
+	   last=check[i];
+	 }
+	 if (check[i]==1.0)
+	   nAtOne++;
+       }
+       //debugInt[8]=nDifferent;
+       //debugInt[13]=nAtOne;
+       printf("BENCHMARK_STATS rhs %d different - %g -> %g (%d at one, %d infinite, %d zero)\n",
+	      debugInt[8],debugDouble[0],debugDouble[1],debugInt[13],debugInt[16],debugInt[20]);
+       printf("BENCHMARK_STATS col %d different - %g -> %g (%d at one, %d infinite, %d zero)\n",
+	      nDifferent,smallestColBound,largestColBound,nAtOne,nInf,nZero);
+       printf("BENCHMARK_STATS els %d different - %g -> %g (%d at one) - longest r,c %d,%d\n",
+	      debugInt[10],debugDouble[4],debugDouble[5],debugInt[15],
+	      debugInt[11],debugInt[12]);
+       printf("BENCHMARK_STATS obj %d different - %g -> %g (%d at one, %d zero) - time %g\n",
+	      debugInt[9],debugDouble[2],debugDouble[3],debugInt[14],debugInt[21],
+	      CoinCpuTime()-time1);
+       delete [] check;
+     }
+#endif
      if (interrupt)
           currentModel = model2;
+     int saveMoreOptions = moreSpecialOptions_;
      // For below >0 overrides
      // 0 means no, -1 means maybe
      int doIdiot = 0;
@@ -1019,25 +1237,70 @@ ClpSimplex::initialSolve(ClpSolve & options)
      int doSlp = 0;
      int primalStartup = 1;
      model2->eventHandler()->event(ClpEventHandler::presolveBeforeSolve);
-     bool tryItSave = false;
+     int tryItSave = 0;
+#if CLPSOLVE_ACTIONS 
+     if (method == ClpSolve::automatic )
+       model2->moreSpecialOptions_ |= 8192; // stop switch over
+#endif
      // switch to primal from automatic if just one cost entry
-     if (method == ClpSolve::automatic && model2->numberColumns() > 5000 &&
-               (specialOptions_ & 1024) != 0) {
+     if (method == ClpSolve::automatic && model2->numberColumns() > 5000
+#ifndef CLPSOLVE_ACTIONS 
+	 && (specialOptions_ & 1024) != 0
+#endif
+	 ) {
+          // look at original model for objective
           int numberColumns = model2->numberColumns();
           int numberRows = model2->numberRows();
-          const double * obj = model2->objective();
+          int numberColumnsOrig = this->numberColumns();
+          const double * obj = this->objective();
           int nNon = 0;
-          for (int i = 0; i < numberColumns; i++) {
-               if (obj[i])
-                    nNon++;
+	  bool allOnes=true;
+          for (int i = 0; i < numberColumnsOrig; i++) {
+	    if (obj[i]) {
+	      nNon++;
+	      if (fabs(obj[i])!=1.0)
+		allOnes=false;
+	    }
           }
-          if (nNon == 1) {
+          if (nNon <= 1 || allOnes) {
 #ifdef COIN_DEVELOP
                printf("Forcing primal\n");
 #endif
                method = ClpSolve::usePrimal;
-               tryItSave = numberRows > 200 && numberColumns > 2000 &&
-                           (numberColumns > 2 * numberRows || (specialOptions_ & 1024) != 0);
+#ifndef CLPSOLVE_ACTIONS 
+               tryItSave = (numberRows > 200 && numberColumns > 2000 &&
+			    (numberColumns > 2 * numberRows || (specialOptions_ & 1024) != 0)) ? 3 : 0;
+#else
+               if (numberRows > 200 && numberColumns > 2000 &&
+		   numberColumns > 2 * numberRows) {
+		 tryItSave= 3;
+	       } else {
+		 // If rhs also rubbish then maybe
+		 int numberRowsOrig = this->numberRows();
+		 const double * rowLower = this->rowLower();
+		 const double * rowUpper = this->rowUpper();
+		 double last=COIN_DBL_MAX;
+		 int nDifferent=0;
+		 for (int i=0;i<numberRowsOrig;i++) {
+		   double value=fabs(rowLower[i]);
+		   if (value&&value!=COIN_DBL_MAX) {
+		     if (value!=last) {
+		       nDifferent++;
+		       last=value;
+		     }
+		   }
+		   value=fabs(rowUpper[i]);
+		   if (value&&value!=COIN_DBL_MAX) {
+		     if (value!=last) {
+		       nDifferent++;
+		       last=value;
+		     }
+		   }
+		 }
+		 if (nDifferent<2)
+		   tryItSave=1;
+	       }
+#endif
           }
      }
      if (method != ClpSolve::useDual && method != ClpSolve::useBarrier
@@ -1335,15 +1598,15 @@ ClpSimplex::initialSolve(ClpSolve & options)
 			      //   largestGap = value2 - value1;
                          }
                     }
-                    bool tryIt = numberRows > 200 && numberColumns > 2000 &&
-                                 (numberColumns > 2 * numberRows || (method != ClpSolve::useDual && (specialOptions_ & 1024) != 0));
+                    int tryIt = (numberRows > 200 && numberColumns > 2000 &&
+                                 (numberColumns > 2 * numberRows || (method != ClpSolve::useDual && (specialOptions_ & 1024) != 0))) ? 3 : 0;
                     tryItSave = tryIt;
                     if (numberRows < 1000 && numberColumns < 3000)
-                         tryIt = false;
+                         tryIt = 0;
                     if (notInteger)
-                         tryIt = false;
+                         tryIt = 0;
                     if (largest / smallest > 10 || (largest / smallest > 2.0 && largest > 50))
-                         tryIt = false;
+                         tryIt = 0;
                     if (tryIt) {
                          if (largest / smallest > 2.0) {
                               nPasses = 10 + numberColumns / 100000;
@@ -1381,6 +1644,11 @@ ClpSimplex::initialSolve(ClpSolve & options)
                     //exit(0);
                     if (!tryIt || nPasses <= 5)
                          doIdiot = 0;
+#if CLPSOLVE_ACTIONS
+		    if (doIdiot&&doSprint<0&&wasAutomatic &&
+			20*model2->numberRows()>model2->numberColumns())
+		      doSprint=0; // switch off sprint
+#endif
                     if (doSprint) {
                          method = ClpSolve::usePrimalorSprint;
                     } else if (doIdiot) {
@@ -1443,6 +1711,9 @@ ClpSimplex::initialSolve(ClpSolve & options)
           }
      }
      if (method == ClpSolve::useDual) {
+#ifdef CLP_USEFUL_PRINTOUT
+       debugInt[6]=1;
+#endif
           double * saveLower = NULL;
           double * saveUpper = NULL;
           if (presolve == ClpSolve::presolveOn) {
@@ -1659,6 +1930,9 @@ ClpSimplex::initialSolve(ClpSolve & options)
                     << CoinMessageEol;
           timeX = time2;
      } else if (method == ClpSolve::usePrimal) {
+#ifdef CLP_USEFUL_PRINTOUT
+       debugInt[6]=2;
+#endif
 #ifndef SLIM_CLP
           if (doIdiot) {
                int nPasses = 0;
@@ -1698,9 +1972,9 @@ ClpSimplex::initialSolve(ClpSolve & options)
                     if (statistics[0] >= 0 && 10 * statistics[2] < statistics[0] + statistics[1])
                          increaseSprint = true;
                }
-               bool tryIt = tryItSave;
+               int tryIt = tryItSave;
                if (numberRows < 1000 && numberColumns < 3000)
-                    tryIt = false;
+                    tryIt = 0;
                if (tryIt) {
                     if (increaseSprint) {
                          info.setStartingWeight(1.0e3);
@@ -1787,6 +2061,9 @@ ClpSimplex::initialSolve(ClpSolve & options)
                               nPasses = 0;
                          //info.setStartingWeight(1.0e-1);
                     }
+		    if (tryIt==1)
+		      model2->setSpecialOptions(model2->specialOptions()
+						|8388608);
                }
                if (doIdiot > 0) {
                     // pick up number passes
@@ -1802,6 +2079,10 @@ ClpSimplex::initialSolve(ClpSolve & options)
 			<< CoinMessageEol;
 		      timeX = time2;
                     }
+#endif
+#ifdef CLP_USEFUL_PRINTOUT
+		    debugInt[6]=4;
+		    debugInt[7]=nPasses;
 #endif
                     if (nPasses > 70) {
                          info.setStartingWeight(1.0e3);
@@ -1897,9 +2178,84 @@ ClpSimplex::initialSolve(ClpSolve & options)
                     // Allow for scaling
                     info.setStrategy(32 | info.getStrategy());
 		    int saveScalingFlag=model2->scalingFlag();
-		    if (objective_->type()==2)
+		    bool linearObjective = objective_->type()<2;
+		    if (!linearObjective)
 		      model2->scaling(0);
+#define CLP_DUAL_IDIOT
+#ifdef CLP_DUAL_IDIOT
+		    bool doubleIdiot=false;
+		    if (nPasses==99&&linearObjective)
+		      doubleIdiot=true;
+		    if (doubleIdiot) {
+		      ClpSimplex * dualModel2 = static_cast<ClpSimplexOther *> (model2)->dualOfModel(1.0,1.0);
+		      if (dualModel2) {
+			printf("Dual of model has %d rows and %d columns\n",
+			       dualModel2->numberRows(), dualModel2->numberColumns());
+			dualModel2->setOptimizationDirection(1.0);
+			Idiot infoDual(info);
+			infoDual.setModel(dualModel2);
+#if 0
+			info.setStrategy(512 | info.getStrategy());
+			// Allow for scaling
+			info.setStrategy(32 | info.getStrategy());
+			info.setStartingWeight(1.0e3);
+			info.setReduceIterations(6);
+#endif
+			info.crash(nPasses, model2->messageHandler(), 
+				   model2->messagesPointer(),false);
+			infoDual.crash(nPasses, model2->messageHandler(), 
+				   model2->messagesPointer(),false);
+			// two copies of solutions
+			ClpSimplex temp(*model2);
+#if 0
+			static_cast<ClpSimplexOther *> (&temp)->restoreFromDual(dualModel2);
+#else
+			// move duals and just copy primal
+			memcpy(temp.dualRowSolution(),dualModel2->primalColumnSolution(),
+			       numberRows*sizeof(double));
+			memcpy(temp.primalColumnSolution(),model2->primalColumnSolution(),
+			       numberColumns*sizeof(double));
+#endif
+			delete dualModel2;
+			int numberRows=model2->numberRows();
+			int numberColumns=model2->numberColumns();
+			ClpSimplex * tempModel[2];
+			tempModel[0]=model2;
+			tempModel[1]=&temp;
+			const double * primalColumn[2];
+			const double * dualRow[2];
+			double * dualColumn[2];
+			double * primalRow[2];
+			for (int i=0;i<2;i++) {
+			  primalColumn[i]=tempModel[i]->primalColumnSolution();
+			  dualRow[i]=tempModel[i]->dualRowSolution();
+			  dualColumn[i]=tempModel[i]->dualColumnSolution();
+			  primalRow[i]=tempModel[i]->primalRowSolution();
+			  memcpy(dualColumn[i],model2->objective(),
+				 numberColumns*sizeof(double));
+			  memset(primalRow[i], 0, numberRows * sizeof(double));
+			  tempModel[i]->clpMatrix()->transposeTimes(-1.0,
+							      dualRow[i],
+							      dualColumn[i]);
+			  tempModel[i]->clpMatrix()->times(1.0, 
+						     primalColumn[i],
+						     primalRow[i]);
+			  tempModel[i]->checkSolutionInternal();
+			  printf("model %d - dual inf %g primal inf %g\n",
+				 i,tempModel[i]->sumDualInfeasibilities(),
+				 tempModel[i]->sumPrimalInfeasibilities());
+			}
+			printf("What now\n");
+		      } else {
+			doubleIdiot=false;
+		      }
+		    }
+		    if (!doubleIdiot)
+		      info.crash(nPasses, model2->messageHandler(), model2->messagesPointer(),
+				(objective_->type() <2));
+#else
                     info.crash(nPasses, model2->messageHandler(), model2->messagesPointer(),(objective_->type() <2));
+#endif
 		      model2->scaling(saveScalingFlag);
 #endif
                     time2 = CoinCpuTime();
@@ -2252,6 +2608,10 @@ ClpSimplex::initialSolve(ClpSolve & options)
                maxSprintPass = options.getExtraInfo(1);
           // but if big use to get ratio
           double ratio = 3;
+#ifdef CLP_USEFUL_PRINTOUT
+	  debugInt[6]=3;
+	  debugInt[7]=maxSprintPass;
+#endif
           if (maxSprintPass > 1000) {
                ratio = static_cast<double> (maxSprintPass) * 0.0001;
                ratio = CoinMax(ratio, 1.1);
@@ -3228,22 +3588,35 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	  setSecondaryStatus(finalSecondaryStatus);
 	  int rcode=eventHandler()->event(ClpEventHandler::presolveAfterFirstSolve);
           if (finalStatus != 3 && rcode < 0 && (finalStatus || oldStatus == -1)) {
+	       double sumPrimal=sumPrimalInfeasibilities_;
+	       double sumDual=sumDualInfeasibilities_;
+	       // ignore some parts of solution
+	       if (finalStatus == 1) {
+		 // infeasible
+		 sumDual=0.0;
+	       } else if (finalStatus == 2) {
+		 sumPrimal=0.0;
+	       }
                int savePerturbation = perturbation();
-               if (!finalStatus || (moreSpecialOptions_ & 2) == 0 ||
-		   fabs(sumDualInfeasibilities_)+
-		   fabs(sumPrimalInfeasibilities_)<1.0e-3) {
+	       if (savePerturbation==50)
+		 setPerturbation(51); // small
+               if (!finalStatus || finalStatus == 2 ||(moreSpecialOptions_ & 2) == 0 ||
+		   fabs(sumDual)+
+		   fabs(sumPrimal)<1.0e-3) {
                     if (finalStatus == 2) {
+		      if (sumDual>1.0e-4) {
                          // unbounded - get feasible first
                          double save = optimizationDirection_;
                          optimizationDirection_ = 0.0;
                          primal(1);
                          optimizationDirection_ = save;
-                         primal(1);
+		      }
+		      primal(1);
                     } else if (finalStatus == 1) {
                          dual();
                     } else {
 		        if ((moreSpecialOptions_&65536)==0) {
-			  if (numberRows_<10000) 
+			  if (numberRows_<10000||true) 
 			    setPerturbation(100); // probably better to perturb after n its
 			  else if (savePerturbation<100)
 			    setPerturbation(51); // probably better to perturb after n its
@@ -3334,6 +3707,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
      }
      eventHandler()->event(ClpEventHandler::presolveEnd);
      delete pinfo;
+     moreSpecialOptions_= saveMoreOptions;
      return finalStatus;
 }
 // General solve

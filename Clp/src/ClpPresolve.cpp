@@ -58,7 +58,7 @@ ClpPresolve::ClpPresolve() :
      ncols_(0),
      nrows_(0),
      nelems_(0),
-#ifdef ABC_INHERIT
+#ifdef CLP_INHERIT_MODE
      numberPasses_(20),
 #else
      numberPasses_(5),
@@ -892,7 +892,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
      // Messages
      CoinMessages messages = CoinMessage(prob->messages().language());
      paction_ = 0;
-     prob->maxSubstLevel_ = 3 ;
+     prob->maxSubstLevel_ = CoinMax(3,prob->maxSubstLevel_) ;
 #ifndef PRESOLVE_DETAIL
      if (prob->tuning_) {
 #endif
@@ -955,7 +955,8 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
 	  // Whether we want to allow duplicate intersections
 	  if (doIntersection())
 	    prob->presolveOptions_ |= 0x10;
-
+	  // zero small elements in aggregation
+	  prob->presolveOptions_ |= zeroSmall()*0x20000;
           // some things are expensive so just do once (normally)
 
           int i;
@@ -994,12 +995,10 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
                paction_ = dupcol_action::presolve(prob, paction_);
 	       printProgress('C',0);
           }
-#ifdef ABC_INHERIT
           if (doTwoxTwo()) {
 	    possibleSkip;
 	    paction_ = twoxtwo_action::presolve(prob, paction_);
           }
-#endif
           if (duprow) {
 	    possibleSkip;
 	    if (doTwoxTwo()) {
@@ -1025,7 +1024,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
           // Check number rows dropped
           int lastDropped = 0;
           prob->pass_ = 0;
-#ifdef ABC_INHERIT
+#if CLP_INHERIT_MODE>1
 	  int numberRowsStart=nrows_-prob->countEmptyRows();
 	  int numberColumnsStart=ncols_-prob->countEmptyCols();
 	  int numberRowsLeft=numberRowsStart;
@@ -1337,7 +1336,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
 #endif
                if (paction_ == paction0 || stopLoop)
                     break;
-#ifdef ABC_INHERIT
+#if CLP_INHERIT_MODE>1
 	       // see whether to stop anyway
 	       int numberRowsNow=nrows_-prob->countEmptyRows();
 	       int numberColumnsNow=ncols_-prob->countEmptyCols();
@@ -1436,6 +1435,7 @@ void ClpPresolve::postsolve(CoinPostsolveMatrix &prob)
                          int row = hrow[k];
                          double coeff = colels[k];
                          k = link[k];
+			 assert (k!=NO_LINK||i==nx-1);
                          rsol[row] += solutionValue * coeff;
                     }
                }
@@ -1634,7 +1634,8 @@ CoinPrePostsolveMatrix::CoinPrePostsolveMatrix(const ClpSimplex * si,
        messages_()
 
 {
-     bulk0_ = static_cast<CoinBigIndex> (bulkRatio_ * nelems_in);
+     bulk0_ = static_cast<CoinBigIndex> (bulkRatio_ * 
+					 CoinMax(nelems_in,nelems_));
      hrow_  = new int   [bulk0_];
      colels_ = new double[bulk0_];
      si->getDblParam(ClpObjOffset, originalOffset_);
@@ -2196,7 +2197,7 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
 
           double ratio = 2.0;
           if (substitution_ > 3)
-               ratio = substitution_;
+	       ratio = sqrt((substitution_-3)+5.0);
           else if (substitution_ == 2)
                ratio = 1.5;
           CoinPresolveMatrix prob(ncols_,

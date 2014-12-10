@@ -1495,7 +1495,7 @@ AbcSimplex::housekeeping()
   if (numberPivots == maximumPivots ||
       maximumPivots < 2) {
     // If dense then increase
-    if (maximumPivots > 100 && numberDense > 1.5 * maximumPivots) {
+    if (maximumPivots > 100 && numberDense > 1.5 * maximumPivots && false) {
       abcFactorization_->maximumPivots(numberDense);
     }
     //printf("ZZ maxpivots %d its %d\n",numberPivots,maximumPivots);

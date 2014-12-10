@@ -540,6 +540,8 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
                }
                // Iterate
                whileIterating(ifValuesPass ? 1 : 0);
+	       if (sequenceIn_<0&&ifValuesPass==2)
+		 problemStatus_=3; // user wants to exit
           }
      }
      // if infeasible get real values
@@ -957,6 +959,10 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
 	    lastSumInfeasibility = COIN_DBL_MAX;
 	  }
 #endif
+	  if (ifValuesPass && firstFree_ <0) {
+	    largestPrimalError_=1.0e7;
+	    largestDualError_=1.0e7;
+	  }
           numberThrownOut = gutsOfSolution(NULL, NULL, (firstFree_ >= 0));
           double sumInfeasibility =  nonLinearCost_->sumInfeasibilities();
           int reason2 = 0;
@@ -1598,7 +1604,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                numberPrimalInfeasibilities_ = nonLinearCost_->numberInfeasibilities();
                sumPrimalInfeasibilities_ = nonLinearCost_->sumInfeasibilities();
                // say infeasible
-               if (numberPrimalInfeasibilities_)
+               if (numberPrimalInfeasibilities_ && largestPrimalError_<1.0e-1)
                     problemStatus_ = 1;
           }
      }
@@ -2499,8 +2505,8 @@ ClpSimplexPrimal::perturb(int type)
                perturbation = 1.0e-1;
           if (perturbation_ > 50 && perturbation_ < 55) {
                // reduce
-               while (perturbation_ > 50) {
-                    perturbation_--;
+               while (perturbation_ < 55) {
+                    perturbation_++;
                     perturbation *= 0.25;
                     bias *= 0.25;
                }
@@ -2556,6 +2562,7 @@ ClpSimplexPrimal::perturb(int type)
 #endif
      if (type == 1) {
           double tolerance = 100.0 * primalTolerance_;
+          tolerance = 10.0 * primalTolerance_; // try smaller
           //double multiplier = perturbation*maximumFraction;
           for (iSequence = 0; iSequence < numberRows_ + numberColumns_; iSequence++) {
                if (getStatus(iSequence) == basic) {
@@ -2574,6 +2581,10 @@ ClpSimplexPrimal::perturb(int type)
 #else
                          value *= perturbationArray_[2*iSequence];
 #endif
+			 if (value) {
+			   while (value<tolerance)
+			     value *= 3.0;
+			 }
                          if (solutionValue - lowerValue <= primalTolerance_) {
                               lower_[iSequence] -= value;
                          } else if (upperValue - solutionValue <= primalTolerance_) {
@@ -2610,6 +2621,7 @@ ClpSimplexPrimal::perturb(int type)
           }
      } else {
           double tolerance = 100.0 * primalTolerance_;
+          tolerance = 10.0 * primalTolerance_; // try smaller
           for (i = 0; i < numberColumns_; i++) {
                double lowerValue = lower_[i], upperValue = upper_[i];
                if (upperValue > lowerValue + primalTolerance_) {
@@ -2622,22 +2634,19 @@ ClpSimplexPrimal::perturb(int type)
 #endif
                     value *= randomNumberGenerator_.randomDouble();
                     if (savePerturbation != 50) {
-                         if (fabs(value) <= primalTolerance_)
-                              value = 0.0;
-                         if (lowerValue > -1.0e20 && lowerValue)
-                              lowerValue -= value * (CoinMax(1.0e-2, 1.0e-5 * fabs(lowerValue)));
-                         if (upperValue < 1.0e20 && upperValue)
-                              upperValue += value * (CoinMax(1.0e-2, 1.0e-5 * fabs(upperValue)));
-                    } else if (value) {
+		      if (fabs(value) <= primalTolerance_) 
+			value = 0.0;
+		    }
+                    if (value) {
                          double valueL = value * (CoinMax(1.0e-2, 1.0e-5 * fabs(lowerValue)));
                          // get in range
                          if (valueL <= tolerance) {
                               valueL *= 10.0;
                               while (valueL <= tolerance)
                                    valueL *= 10.0;
-                         } else if (valueL > 1.0) {
+                         } else if (valueL > 1.0e-3) {
                               valueL *= 0.1;
-                              while (valueL > 1.0)
+                              while (valueL > 1.0e-3)
                                    valueL *= 0.1;
                          }
                          if (lowerValue > -1.0e20 && lowerValue)
@@ -2648,9 +2657,9 @@ ClpSimplexPrimal::perturb(int type)
                               valueU *= 10.0;
                               while (valueU <= tolerance)
                                    valueU *= 10.0;
-                         } else if (valueU > 1.0) {
+                         } else if (valueU > 1.0e-3) {
                               valueU *= 0.1;
-                              while (valueU > 1.0)
+                              while (valueU > 1.0e-3)
                                    valueU *= 0.1;
                          }
                          if (upperValue < 1.0e20 && upperValue)
@@ -3010,9 +3019,11 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
                          break;
                     } else {
                          // take on more relaxed criterion
-                         if (saveDj * dualIn_ < test1 ||
+		         if ((saveDj * dualIn_ < test1 ||
                                    fabs(saveDj - dualIn_) > 2.0e-1 * (1.0 + fabs(dualIn_)) ||
-                                   fabs(dualIn_) < test2) {
+			      fabs(dualIn_) < test2) && 
+			     (fabs(saveDj)>fabs(dualIn_)
+						||saveDj*dualIn_<1.0e-4||factorization_->pivots())) {
                               // need to reject something
                               char x = isColumn(sequenceIn_) ? 'C' : 'R';
                               handler_->message(CLP_SIMPLEX_FLAG, messages_)
@@ -3020,8 +3031,29 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
                                         << CoinMessageEol;
                               setFlagged(sequenceIn_);
 #if 1 //def FEB_TRY
+			      // could do conditional reset of weights to get larger djs
+			      primalColumnPivot_->saveWeights(this,6);
                               // Make safer?
+			      double oldTolerance=factorization_->pivotTolerance();
                               factorization_->saferTolerances (-0.99, -1.03);
+			      if (factorization_->pivotTolerance()<1.029*oldTolerance
+				  &&oldTolerance<0.995
+				  &&!factorization_->pivots()) {
+#ifdef CLP_USEFUL_PRINTOUT
+				printf("Changing pivot tolerance from %g to %g and factorizing\n",
+				       oldTolerance,factorization_->pivotTolerance());
+#endif
+				clearAll();
+				pivotRow_ = -1; // say no weights update
+				returnCode = -4;
+				if(lastGoodIteration_ + 1 == numberIterations_) {
+				  // not looking wonderful - try cleaning bounds
+				  // put non-basics to bounds in case tolerance moved
+				  nonLinearCost_->checkInfeasibilities(0.0);
+				}
+				sequenceOut_ = -1;
+				break;
+			      }
 #endif
                               progress_.clearBadTimes();
                               lastBadIteration_ = numberIterations_; // say be more cautious

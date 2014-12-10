@@ -203,11 +203,11 @@ public:
      }
      /// Whether we want to kill small substitutions
      inline bool doKillSmall() const {
-          return (independentOptions_[1] & 1024) == 0;
+          return (independentOptions_[1] & 8192) == 0;
      }
      inline void setDoKillSmall(bool doKill) {
-          if (doKill) independentOptions_[1]  &= ~1024;
-          else independentOptions_[1] |= 1024;
+          if (doKill) independentOptions_[1]  &= ~8192;
+          else independentOptions_[1] |= 8192;
      }
      /// Set whole group
      inline int presolveActions() const {

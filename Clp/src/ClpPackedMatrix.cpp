@@ -1212,30 +1212,41 @@ ClpPackedMatrix::transposeTimesByRow(const ClpSimplex * model, double scalar,
 		 }
 	       }
 #endif
-	       //#define COIN_SPARSE_MATRIX 1
-#if COIN_SPARSE_MATRIX
-               assert (!y->getNumElements());
+#define COIN_SPARSE_MATRIX 2
+	       int numberCovered=0;
+	       int numberColumns = matrix_->getNumCols();
+	       bool sparse=true;
+	       for (int i = 0; i < numberInRowArray; i++) {
+		 int iRow = whichRow[i];
+		 numberCovered += rowStart[iRow+1] - rowStart[iRow];
+		 // ? exact ratio
+		 if (numberCovered>numberColumns) {
+		   sparse=false;
+		   break;
+		 }
+	       }
+	       if (sparse) {
+		 assert (!y->getNumElements());
 #if COIN_SPARSE_MATRIX != 2
-               // and set up mark as char array
-               char * marked = reinterpret_cast<char *> (index+columnArray->capacity());
-               int * lookup = y->getIndices();
+		 // and set up mark as char array
+		 char * marked = reinterpret_cast<char *> (index+columnArray->capacity());
+		 int * lookup = y->getIndices();
 #ifndef NDEBUG
-               //int numberColumns = matrix_->getNumCols();
-               //for (int i=0;i<numberColumns;i++)
-               //assert(!marked[i]);
+		 //int numberColumns = matrix_->getNumCols();
+		 //for (int i=0;i<numberColumns;i++)
+		 //assert(!marked[i]);
 #endif
-               numberNonZero=gutsOfTransposeTimesByRowGE3a(rowArray,index,array,
-               				   lookup,marked,zeroTolerance,scalar);
+		 numberNonZero=gutsOfTransposeTimesByRowGE3a(rowArray,index,array,
+							     lookup,marked,zeroTolerance,scalar);
 #else
-               double  * array2 = y->denseVector();
-               numberNonZero=gutsOfTransposeTimesByRowGE3(rowArray,index,array,
-               				   array2,zeroTolerance,scalar);
+		 double  * array2 = y->denseVector();
+		 numberNonZero=gutsOfTransposeTimesByRowGE3(rowArray,index,array,
+							    array2,zeroTolerance,scalar);
 #endif
-#else
-               int numberColumns = matrix_->getNumCols();
-               numberNonZero = gutsOfTransposeTimesByRowGEK(rowArray, index, array,
-                               numberColumns, zeroTolerance, scalar);
-#endif
+	       } else {
+		 numberNonZero = gutsOfTransposeTimesByRowGEK(rowArray, index, array,
+							      numberColumns, zeroTolerance, scalar);
+	       }
                columnArray->setNumElements(numberNonZero);
           } else {
                double * markVector = y->denseVector();

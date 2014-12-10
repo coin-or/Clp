@@ -543,6 +543,8 @@ ClpSimplex::gutsOfSolution ( double * givenDuals,
      // if values pass, save values of basic variables
      double * save = NULL;
      double oldValue = 0.0;
+     double oldLargestPrimalError=largestPrimalError_;
+     double oldLargestDualError=largestDualError_;
      if (valuesPass) {
           assert(algorithm_ > 0); // only primal at present
           assert(nonLinearCost_);
@@ -755,6 +757,36 @@ ClpSimplex::gutsOfSolution ( double * givenDuals,
           if (factorization_->zeroTolerance() > 1.0e-18)
                factorization_->zeroTolerance(1.0e-18);
      }
+     int returnCode=0;
+     if (numberIterations_ && (forceFactorization_ > 2 || forceFactorization_<0 || factorization_->pivotTolerance()<0.9899999999)) {
+       if ((largestPrimalError_>1.0e3&&
+	   oldLargestPrimalError*1.0e2<largestPrimalError_)||
+	   (largestDualError_>1.0e3&&
+	    oldLargestDualError*1.0e2<largestDualError_)) {
+	 double pivotTolerance = factorization_->pivotTolerance();
+	 double factor=(largestPrimalError_>1.0e10||largestDualError_>1.0e10)
+	   ? 2.0 : 1.2;
+	 if (pivotTolerance<0.1)
+	   factorization_->pivotTolerance(0.1);
+	 else if (pivotTolerance<0.98999999)
+	   factorization_->pivotTolerance(CoinMin(0.99,pivotTolerance*factor));
+#ifdef CLP_USEFUL_PRINTOUT
+	 if (pivotTolerance<0.9899999) {
+	   printf("Changing pivot tolerance from %g to %g and backtracking\n",
+		  pivotTolerance,factorization_->pivotTolerance());
+	 } 
+	 printf("because old,new primal error %g,%g - dual %g,%g pivot_tol %g\n",
+		oldLargestPrimalError,largestPrimalError_,
+		oldLargestDualError,largestDualError_,
+		pivotTolerance);
+#endif
+	 if (pivotTolerance<0.9899999) {
+	   largestPrimalError_=0.0;
+	   largestDualError_=0.0;
+	   returnCode=1;
+	 } 
+       }
+     }
      // Switch off false values pass indicator
      if (!valuesPass && algorithm_ > 0)
           firstFree_ = -1;
@@ -763,7 +795,7 @@ ClpSimplex::gutsOfSolution ( double * givenDuals,
 	    algorithm_,problemStatus_,
 	    numberPrimalInfeasibilities_,sumPrimalInfeasibilities_,sumOfRelaxedPrimalInfeasibilities_,
 	    numberDualInfeasibilities_,sumDualInfeasibilities_,sumOfRelaxedDualInfeasibilities_);
-     return 0;
+     return returnCode;
 }
 void
 ClpSimplex::computePrimals ( const double * rowActivities,
@@ -851,6 +883,49 @@ ClpSimplex::computePrimals ( const double * rowActivities,
      int iRefine;
      CoinIndexedVector * thisVector = arrayVector;
      CoinIndexedVector * lastVector = previousVector;
+#if 0
+     static double * xsave=NULL;
+     {
+       double * xx = thisVector->denseVector();
+       double largest=0.0;
+       int iLargest=-1;
+       for (int i=0;i<numberRows_;i++) {
+	 if (fabs(xx[i])>largest) {
+	   largest=fabs(xx[i]);
+	   iLargest=i;
+	 }
+       }
+       printf("largest incoming rhs %g on row %d\n",largest,iLargest);
+     }
+     if (numberIterations_<-40722) {
+       double * xx = thisVector->denseVector();
+       if (xsave) {
+	 double * sol = xsave+numberRows_;
+	 double largest=0.0;
+	 int iLargest=-1;
+	 for (int i=0;i<numberRows_;i++) {
+	   if (fabs(xx[i]-xsave[i])>largest) {
+	     largest=fabs(xx[i]-xsave[i]);
+	     iLargest=i;
+	   }
+	 }
+	 printf("error %g on row %d\n",largest,iLargest);
+	 largest=0.0;
+	 iLargest=-1;
+	 for (int i=0;i<numberColumns_;i++) {
+	   if (fabs(solution_[i]-sol[i])>largest) {
+	     largest=fabs(solution_[i]-sol[i]);
+	     iLargest=i;
+	   }
+	 }
+	 printf("error %g on col %d\n",largest,iLargest);
+       } else {
+	 xsave=new double[2*numberRows_+numberColumns_];
+       }
+       memcpy(xsave,xx,numberRows_*sizeof(double));
+       memcpy(xsave+numberRows_,solution_,(numberRows_+numberColumns_)*sizeof(double));
+     }
+#endif
      if (number)
           factorization_->updateColumn(workSpace, thisVector);
      double * work = workSpace->denseVector();
@@ -1830,6 +1905,10 @@ int ClpSimplex::internalFactorize ( int solveType)
           handler_->message(CLP_SIMPLEX_BADFACTOR, messages_)
                     << status
                     << CoinMessageEol;
+#ifdef CLP_USEFUL_PRINTOUT
+	  printf("Basis singular - pivot tolerance %g\n",
+		 factorization_->pivotTolerance());
+#endif
           return -1;
      } else if (!solveType) {
           // Initial basis - return number of singularities
@@ -2083,7 +2162,8 @@ ClpSimplex::housekeeping(double objectiveChange)
      if (numberPivots == maximumPivots ||
                maximumPivots < 2) {
           // If dense then increase
-          if (maximumPivots > 100 && numberDense > 1.5 * maximumPivots) {
+          if (maximumPivots > 100 && numberDense > 1.5 * maximumPivots
+	      && false) {
                factorization_->maximumPivots(numberDense);
                dualRowPivot_->maximumPivotsChanged();
                primalColumnPivot_->maximumPivotsChanged();
@@ -2107,6 +2187,8 @@ ClpSimplex::housekeeping(double objectiveChange)
           return 1;
      } else if (numberIterations_ > 1000 + 10 * (numberRows_ + (numberColumns_ >> 2)) && matrix_->type()<15) {
           double random = randomNumberGenerator_.randomDouble();
+	  while (random<0.45)
+	    random *= 2.0;
           int maxNumber = (forceFactorization_ < 0) ? maximumPivots : CoinMin(forceFactorization_, maximumPivots);
           if (factorization_->pivots() >= random * maxNumber) {
                return 1;
@@ -8604,7 +8686,7 @@ ClpSimplex::startup(int ifValuesPass, int startFinishOptions)
                factorization_->setDefaultValues();
                // Switch off dense (unless special option set)
                if ((specialOptions_ & 8) == 0)
-                    factorization_->setDenseThreshold(0);
+	          factorization_->setDenseThreshold(-saveThreshold);
           }
           // If values pass then perturb (otherwise may be optimal so leave a bit)
           if (ifValuesPass) {

@@ -2448,7 +2448,7 @@ int CoinAbcTypeFactorization::wantToGoDense()
 	}
 #else
 	status=2;
-#if 0 //ABC_NORMAL_DEBUG>1
+#if 1 //0 //ABC_NORMAL_DEBUG>1
 	std::cout<<"      Went dense at "<<numberRowsLeft_<<" rows "<<
 	  totalElements_<<" "<<full<<" "<<leftElements<<std::endl;
 #endif

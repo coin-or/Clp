@@ -3188,10 +3188,13 @@ AbcMatrix::primalColumnDouble(CoinPartitionedVector & updateForTableauRow,
    // see if worth using row copy
    int maximumRows=model_->maximumAbcNumberRows();
    int number=updateForTableauRow.getNumElements();
-   // was assert (number);
+#ifdef GCC_4_9
+   assert (number);
+#else
    if (!number) {
      printf("Null tableau row!\n");
    }
+#endif
    bool useRowCopy = (gotRowCopy()&&(number<<2)<maximumRows);
    //useRowCopy=false;
    if (!scaleFactor)

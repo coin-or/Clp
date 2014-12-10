@@ -204,6 +204,10 @@ public:
      inline void setDropEnoughWeighted(double value) {
           dropEnoughWeighted_ = value;
      }
+     /// Set model
+     inline void setModel(OsiSolverInterface * model) {
+       model_ = model;
+     };
      //@}
 
 

@@ -33,6 +33,9 @@ class ClpConstraint;
   it behaves as Clp (and ABC used will be different than if not defined)
  */
 #ifdef ABC_INHERIT
+#ifndef CLP_INHERIT_MODE
+#define CLP_INHERIT_MODE 1
+#endif
 #ifndef ABC_CLP_DEFAULTS
 #define ABC_CLP_DEFAULTS 0
 #endif

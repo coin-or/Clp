@@ -1785,7 +1785,7 @@ Cbc/examples/driver4.cpp."
      parameters[numberParameters-1].append("on");
      parameters[numberParameters-1].append("so!low_halim");
      parameters[numberParameters-1].append("lots");
-#ifdef ABC_INHERIT
+#ifdef CLP_INHERIT_MODE
      parameters[numberParameters-1].append("dual");
      parameters[numberParameters-1].append("dw");
      parameters[numberParameters-1].append("idiot");
