@@ -614,6 +614,11 @@ Idiot::solve2(CoinMessageHandler * handler, const CoinMessages * messages)
      strategy &= 3;
      memset(lambda, 0, nrows * sizeof(double));
      slackStart = countCostedSlacks(model_);
+     // redo in case odd matrix
+     row = matrix->getIndices();
+     columnStart = matrix->getVectorStarts();
+     columnLength = matrix->getVectorLengths();
+     element = matrix->getElements();
      if (slackStart >= 0) {
        COIN_DETAIL_PRINT(printf("This model has costed slacks\n"));
           if (slackStart) {

@@ -1207,6 +1207,7 @@ public:
 	 32768 bit - don't swap algorithms from dual if small infeasibility
 	 65536 bit - perturb in postsolve cleanup (even if < 10000 rows)
 	 1048576 bit - don't perturb even if long time
+	 4194304 bit - tolerances have been changed by code
      */
      inline void setMoreSpecialOptions(int value) {
           moreSpecialOptions_ = value;

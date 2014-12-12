@@ -4353,6 +4353,14 @@ ClpSimplex::deleteRim(int getRidOfFactorizationData)
                printf("yy %d basic fixed\n", nBad);
      }
 #endif
+     if ((moreSpecialOptions_&4194304)!=0) {
+       // preset tolerances were changed
+       moreSpecialOptions_ &= ~4194304;
+       primalTolerance_=1.0e-7;
+       dblParam_[ClpPrimalTolerance]=primalTolerance_;
+       dualTolerance_=1.0e-7;
+       dblParam_[ClpDualTolerance]=dualTolerance_;
+     }
      // ray may be null if in branch and bound
      if (rowScale_) {
           // Collect infeasibilities

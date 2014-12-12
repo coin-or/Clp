@@ -80,6 +80,85 @@ static ClpSimplex * currentModel = NULL;
 #else
 static AbcSimplex * currentModel = NULL;
 #endif
+//#define LAPACK_TEST
+//#define CLP_USE_OPENBLAS 1
+#if CLP_USE_OPENBLAS
+extern "C" 
+{
+  void openblas_set_num_threads(int num_threads);
+}
+#endif
+#ifdef LAPACK_TEST
+#include "/include/lapacke.h"
+// using simple lapack interface
+extern "C" 
+{
+  void openblas_set_num_threads(int num_threads);
+#if 0
+  /** LAPACK Fortran subroutine DGETRF. */
+  void LAPACK_dgetrf(int * m, int *n,
+                               double *A, int *ldA,
+                               int * ipiv, int *info);
+  /** LAPACK Fortran subroutine DGETRS. */
+  void LAPACK_dgetrs(char *trans, int *n,
+                               int *nrhs, const double *A, int *ldA,
+		     int * ipiv, double *B, int *ldB, int *info);
+  //	LAPACK_dgetrf(&N, &N, m, &LDA,ipiv, &info);
+#endif
+}
+int test_lapack(int n)
+{
+  int* ipiv;
+  int info;
+  int i, j;
+  double * m, *x, *y;
+  
+  int LDB,LDA, N, NRHS;
+  char transp = 'N';
+ 
+  
+  m=(double*)malloc(sizeof(double)*n*n);
+  x=(double*)malloc(sizeof(double)*n);
+  y=(double*)malloc(sizeof(double)*n);
+  ipiv=(int*)malloc(sizeof(int)*n);
+ 
+  for (i=0; i<n; ++i) {
+    x[i]=1.0;
+    for (j=0; j<n; ++j) {
+      m[i*n+j]=(rand()%100+1)/10.0;
+      //      printf("m[%d,%d]=%lf\n",i,j, m[i*n+j]); 
+    }
+  }
+ 
+  /* test cblas.h */
+  //cblas_dgemv(CblasColMajor, CblasNoTrans, n, n, 1.0, m, n,
+  //	      x, 1, 0.0, y, 1);
+ 
+  //  for (i=0; i<n; ++i)  printf("x[%d]=%lf\n",i, x[i]); 
+  //for (i=0; i<n; ++i)  printf("y[%d]=%lf\n",i, y[i]); 
+ 
+	LDB=n;
+	LDA=n;
+	N=n;
+	NRHS=1;
+	info=0;
+	
+	LAPACK_dgetrf(&N, &N, m, &LDA,ipiv, &info);
+	
+if (info != 0) fprintf(stderr, "dgetrf failure with error %d\n", info);
+ 
+  LAPACK_dgetrs(&transp, &N, &NRHS, m, &LDA, ipiv, y, &LDB, &info);
+  
+  if (info != 0) fprintf(stderr, "failure with error %d\n", info);
+  //  for (i=0; i<n; ++i) printf("%lf\n", y[i]);
+
+  free(m);
+  free(x);
+  free(y);
+  free(ipiv);
+  return 0;
+}
+#endif
 
 extern "C" {
      static void
@@ -158,6 +237,26 @@ __cdecl
 #endif // _MSC_VER
 main (int argc, const char *argv[])
 {
+#if CLP_USE_OPENBLAS
+  openblas_set_num_threads(CLP_USE_OPENBLAS);
+#endif
+#ifdef LAPACK_TEST
+  //void openblas_set_num_threads(int num_threads);
+  openblas_set_num_threads(1);
+  if(argc<2){
+    printf("Error - need size of matrix for lapack test\n");
+    return 1; 
+  }
+  int n=atoi(argv[1]);
+  printf("n=%d\n",n);
+  if(argc>2){
+    int nThreads=atoi(argv[2]);
+    printf("Using %d threads\n",nThreads);
+    openblas_set_num_threads(nThreads);
+  }
+  test_lapack(n);
+  return 0;
+#endif
 #ifdef CILK_TEST
   cilkTest();
 #endif
@@ -833,10 +932,10 @@ main (int argc, const char *argv[])
                                    ClpSimplex * model2 = models + iModel;
 #else
                                    AbcSimplex * model2 = models + iModel;
+#endif
 				   if (type==CLP_PARAM_ACTION_EITHERSIMPLEX||
 				       type==CBC_PARAM_ACTION_BAB)
 				     solveOptions.setSpecialOption(3,0); // allow +-1
-#endif
 				   if (dualize==4) { 
 				     solveOptions.setSpecialOption(4, 77);
 				     dualize=0;
