@@ -1024,7 +1024,11 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                     }
                     numberPivots = 0;
                     numberThrownOut = gutsOfSolution(NULL, NULL, (firstFree_ >= 0));
-                    assert (!numberThrownOut);
+                    //assert (!numberThrownOut);
+                    if (numberThrownOut)
+		      printf("OUCH! - %d thrownout at %s line %d\n",
+			     numberThrownOut,__FILE__,__LINE__);
+		      //abort();
                     sumInfeasibility =  nonLinearCost_->sumInfeasibilities();
                }
           }

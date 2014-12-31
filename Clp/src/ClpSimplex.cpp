@@ -758,11 +758,20 @@ ClpSimplex::gutsOfSolution ( double * givenDuals,
                factorization_->zeroTolerance(1.0e-18);
      }
      int returnCode=0;
-     if (numberIterations_ && (forceFactorization_ > 2 || forceFactorization_<0 || factorization_->pivotTolerance()<0.9899999999)) {
+     if (numberIterations_ && (forceFactorization_ > 2 || forceFactorization_<0 || factorization_->pivotTolerance()<0.9899999999) && 
+	 (oldLargestDualError||oldLargestPrimalError)) {
+       double useOldDualError=oldLargestDualError;
+       double useDualError=largestDualError_;
+       if (algorithm_>0&&nonLinearCost_&&
+	   nonLinearCost_->sumInfeasibilities()) {
+	 double factor=CoinMax(1.0,CoinMin(1.0e3,infeasibilityCost_*1.0e-6));
+	 useOldDualError /= factor;
+	 useDualError /= factor;
+       }
        if ((largestPrimalError_>1.0e3&&
 	   oldLargestPrimalError*1.0e2<largestPrimalError_)||
-	   (largestDualError_>1.0e3&&
-	    oldLargestDualError*1.0e2<largestDualError_)) {
+	   (useDualError>1.0e3&&
+	    useOldDualError*1.0e2<useDualError)) {
 	 double pivotTolerance = factorization_->pivotTolerance();
 	 double factor=(largestPrimalError_>1.0e10||largestDualError_>1.0e10)
 	   ? 2.0 : 1.2;
