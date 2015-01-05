@@ -1702,6 +1702,9 @@ See branchAndCut for information on options."
      parameters[numberParameters-1].append("on");
      parameters[numberParameters-1].append("both");
      parameters[numberParameters-1].append("before");
+     parameters[numberParameters-1].append("onquick");
+     parameters[numberParameters-1].append("bothquick");
+     parameters[numberParameters-1].append("beforequick");
      parameters[numberParameters-1].setLonghelp
      (
           "This switches on a heuristic which does branch and cut on the problem given by just \
@@ -3493,6 +3496,7 @@ See branchAndCut for information on options."
      parameters[numberParameters-1].append("10000");
      parameters[numberParameters-1].append("dj");
      parameters[numberParameters-1].append("djbefore");
+     parameters[numberParameters-1].append("usesolution");
      parameters[numberParameters-1].setLonghelp
      (
           "This switches on Relaxation enforced neighborhood Search. \
