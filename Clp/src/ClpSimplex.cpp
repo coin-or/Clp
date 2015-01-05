@@ -533,6 +533,9 @@ void ClpSimplex::setLargeValue( double value)
      if (value > 0.0 && value < COIN_DBL_MAX)
           largeValue_ = value;
 }
+double minimumPrimalToleranceZZ=0.0;
+#define CLP_INFEAS_SAVE 5
+double averageInfeasZZ[CLP_INFEAS_SAVE];
 int
 ClpSimplex::gutsOfSolution ( double * givenDuals,
                              const double * givenPrimals,
@@ -758,6 +761,7 @@ ClpSimplex::gutsOfSolution ( double * givenDuals,
                factorization_->zeroTolerance(1.0e-18);
      }
      int returnCode=0;
+     bool notChanged=true;
      if (numberIterations_ && (forceFactorization_ > 2 || forceFactorization_<0 || factorization_->pivotTolerance()<0.9899999999) && 
 	 (oldLargestDualError||oldLargestPrimalError)) {
        double useOldDualError=oldLargestDualError;
@@ -779,6 +783,7 @@ ClpSimplex::gutsOfSolution ( double * givenDuals,
 	   factorization_->pivotTolerance(0.1);
 	 else if (pivotTolerance<0.98999999)
 	   factorization_->pivotTolerance(CoinMin(0.99,pivotTolerance*factor));
+	 notChanged=pivotTolerance==factorization_->pivotTolerance();
 #ifdef CLP_USEFUL_PRINTOUT
 	 if (pivotTolerance<0.9899999) {
 	   printf("Changing pivot tolerance from %g to %g and backtracking\n",
@@ -796,6 +801,17 @@ ClpSimplex::gutsOfSolution ( double * givenDuals,
 	 } 
        }
      }
+     if (progress_.iterationNumber_[0]>0&&
+	 progress_.iterationNumber_[CLP_PROGRESS-1]
+	 -progress_.iterationNumber_[0]<CLP_PROGRESS*3&&
+	 factorization_->pivotTolerance()<0.25&&notChanged) {
+       double pivotTolerance = factorization_->pivotTolerance();
+       factorization_->pivotTolerance(pivotTolerance*1.5);
+#ifdef CLP_USEFUL_PRINTOUT
+       printf("Changing pivot tolerance from %g to %g - inverting too often\n",
+	      pivotTolerance,factorization_->pivotTolerance());
+#endif
+     }
      // Switch off false values pass indicator
      if (!valuesPass && algorithm_ > 0)
           firstFree_ = -1;
@@ -804,6 +820,69 @@ ClpSimplex::gutsOfSolution ( double * givenDuals,
 	    algorithm_,problemStatus_,
 	    numberPrimalInfeasibilities_,sumPrimalInfeasibilities_,sumOfRelaxedPrimalInfeasibilities_,
 	    numberDualInfeasibilities_,sumDualInfeasibilities_,sumOfRelaxedDualInfeasibilities_);
+     if ((moreSpecialOptions_&8388608)!=0) {
+       if (algorithm_<0) {
+	 bool doneFiddling=false;
+	 // Optimization may make exact test iffy
+	 double testTolerance=minimumPrimalToleranceZZ+1.0e-15;
+	 while (!doneFiddling) {
+	   doneFiddling=true;
+	   while( !sumOfRelaxedPrimalInfeasibilities_&&
+		  primalTolerance_>testTolerance) {
+	     // feasible - adjust tolerance
+	     double saveTolerance=primalTolerance_;
+	     primalTolerance_=CoinMax(0.25*primalTolerance_,
+				      minimumPrimalToleranceZZ);
+	     printf("Resetting primal tolerance from %g to %g\n",
+		    saveTolerance,primalTolerance_);
+	     dblParam_[ClpPrimalTolerance]=primalTolerance_;
+	     moreSpecialOptions_ &= ~8388608;
+	     // redo with switch off
+	     returnCode=gutsOfSolution ( givenDuals,givenPrimals,valuesPass);
+	   }
+	   if(primalTolerance_>testTolerance) 
+	     moreSpecialOptions_ |= 8388608; // back on
+	   if ((moreSpecialOptions_&8388608)!=0) {
+	     assert( numberPrimalInfeasibilities_);
+	     // average infeasibility
+	     double average=sumPrimalInfeasibilities_/numberPrimalInfeasibilities_;
+	     double minimum=COIN_DBL_MAX;
+	     double averageTotal=average;
+	     bool firstTime=averageInfeasZZ[0]==COIN_DBL_MAX;
+	     for (int i=0;i<CLP_INFEAS_SAVE-1;i++) {
+	       double value = averageInfeasZZ[i+1];
+	       averageTotal+=value;
+	       averageInfeasZZ[i]=value;
+	       minimum=CoinMin(minimum,value);
+	     }
+	     averageInfeasZZ[CLP_INFEAS_SAVE-1]=average;
+	     averageTotal /= CLP_INFEAS_SAVE;
+	     double oldTolerance=primalTolerance_;
+	     if (averageInfeasZZ[0]!=COIN_DBL_MAX) {
+	       if (firstTime) {
+		 primalTolerance_=CoinMin(0.1,0.1*averageTotal);
+		 primalTolerance_ = CoinMin(primalTolerance_,average);
+	       } else if (primalTolerance_>0.1*minimum) {
+		 primalTolerance_=0.1*minimum;
+	       }
+	       primalTolerance_=
+		 CoinMax(primalTolerance_,minimumPrimalToleranceZZ);
+	     }
+	     if (primalTolerance_!=oldTolerance) {
+	       printf("Changing primal tolerance from %g to %g\n",
+		      oldTolerance,primalTolerance_);
+	       moreSpecialOptions_ &= ~8388608;
+	       // redo with switch off
+	       returnCode=gutsOfSolution ( givenDuals,givenPrimals,valuesPass);
+	       if(primalTolerance_>testTolerance) 
+		 moreSpecialOptions_ |= 8388608|4194304;
+	       if( !sumOfRelaxedPrimalInfeasibilities_)
+		 doneFiddling=false; // over done it
+	     }
+	   }
+	 }
+       }
+     }
      return returnCode;
 }
 void
@@ -935,8 +1014,10 @@ ClpSimplex::computePrimals ( const double * rowActivities,
        memcpy(xsave+numberRows_,solution_,(numberRows_+numberColumns_)*sizeof(double));
      }
 #endif
+     //printf ("ZZ0 n before %d",number);
      if (number)
           factorization_->updateColumn(workSpace, thisVector);
+     //printf(" - after %d\n",thisVector->getNumElements());
      double * work = workSpace->denseVector();
 #ifdef CLP_DEBUG
      if (numberIterations_ == -3840) {
@@ -1014,7 +1095,9 @@ ClpSimplex::computePrimals ( const double * rowActivities,
                }
                thisVector->setNumElements(number);
                lastError = largestPrimalError_;
+	       //printf ("ZZ%d n before %d",iRefine+1,number);
                factorization_->updateColumn(workSpace, thisVector);
+	       //printf(" - after %d\n",thisVector->getNumElements());
                multiplier = 1.0 / multiplier;
                double * previous = lastVector->denseVector();
                number = 0;
@@ -2182,10 +2265,16 @@ ClpSimplex::housekeeping(double objectiveChange)
                     rowArray_[iRow]->reserve(length);
                }
           }
+#if CLP_FACTORIZATION_NEW_TIMING>1
+	  factorization_->statsRefactor('M');
+#endif
           return 1;
      } else if ((factorization_->timeToRefactorize() && !dontInvert)
 		||invertNow) {
           //printf("ret after %d pivots\n",factorization_->pivots());
+#if CLP_FACTORIZATION_NEW_TIMING>1
+	  factorization_->statsRefactor('T');
+#endif
           return 1;
      } else if (forceFactorization_ > 0 &&
                 factorization_->pivots() == forceFactorization_) {
@@ -2193,6 +2282,9 @@ ClpSimplex::housekeeping(double objectiveChange)
           forceFactorization_ = (3 + 5 * forceFactorization_) / 4;
           if (forceFactorization_ > factorization_->maximumPivots())
                forceFactorization_ = -1; //off
+#if CLP_FACTORIZATION_NEW_TIMING>1
+	  factorization_->statsRefactor('F');
+#endif
           return 1;
      } else if (numberIterations_ > 1000 + 10 * (numberRows_ + (numberColumns_ >> 2)) && matrix_->type()<15) {
           double random = randomNumberGenerator_.randomDouble();
@@ -4454,9 +4546,9 @@ ClpSimplex::deleteRim(int getRidOfFactorizationData)
        // preset tolerances were changed
        moreSpecialOptions_ &= ~4194304;
        primalTolerance_=1.0e-7;
-       dblParam_[ClpPrimalTolerance]=1.0e-7;
+       dblParam_[ClpPrimalTolerance]=primalTolerance_;
        dualTolerance_=1.0e-7;
-       dblParam_[ClpDualTolerance]=1.0e-7;
+       dblParam_[ClpDualTolerance]=dualTolerance_;
      }
      // ray may be null if in branch and bound
      if (rowScale_) {
@@ -5448,6 +5540,8 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
 #ifdef COIN_DEVELOP
      //#define EXPENSIVE
 #endif
+     for (int i=0;i<CLP_INFEAS_SAVE;i++)
+       averageInfeasZZ[i]=COIN_DBL_MAX;
 #ifdef EXPENSIVE
      static int dualCount = 0;
      static int dualCheckCount = -1;
@@ -10418,6 +10512,7 @@ ClpSimplex::defaultFactorizationFrequency()
           else
                frequency = base + cutoff1 / freq0 + (numberRows_ - cutoff1) / freq1;
 #endif
+	  //frequency *= 1.05;
           setFactorizationFrequency(CoinMin(maximum, frequency));
      }
 }

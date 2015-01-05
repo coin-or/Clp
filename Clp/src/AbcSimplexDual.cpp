@@ -96,6 +96,7 @@
 #include "AbcSimplexDual.hpp"
 #include "ClpEventHandler.hpp"
 #include "AbcSimplexFactorization.hpp"
+#include "AbcNonLinearCost.hpp"
 #include "CoinPackedMatrix.hpp"
 #include "CoinIndexedVector.hpp"
 #include "CoinFloatEqual.hpp"
@@ -2336,6 +2337,8 @@ static int computeDualsAndCheck(AbcSimplexDual * model,const int whichArray[2])
 int
 AbcSimplex::gutsOfSolution(int type)
 {
+  double oldLargestPrimalError=largestPrimalError_;
+  double oldLargestDualError=largestDualError_;
   AbcSimplexDual * dual = reinterpret_cast<AbcSimplexDual *>(this);
   // do work and check
   int numberRefinements=0;
@@ -2420,6 +2423,59 @@ AbcSimplex::gutsOfSolution(int type)
     // Change factorization tolerance
     //if (abcFactorization_->zeroTolerance() > 1.0e-18)
     //abcFactorization_->zeroTolerance(1.0e-18);
+  }
+  bool notChanged=true;
+  if (numberIterations_ && (forceFactorization_ > 2 || forceFactorization_<0 || abcFactorization_->pivotTolerance()<0.9899999999) && 
+      (oldLargestDualError||oldLargestPrimalError)) {
+    double useOldDualError=oldLargestDualError;
+    double useDualError=largestDualError_;
+    if (algorithm_>0&&abcNonLinearCost_&&
+	abcNonLinearCost_->sumInfeasibilities()) {
+      double factor=CoinMax(1.0,CoinMin(1.0e3,infeasibilityCost_*1.0e-6));
+      useOldDualError /= factor;
+      useDualError /= factor;
+    }
+    if ((largestPrimalError_>1.0e3&&
+	 oldLargestPrimalError*1.0e2<largestPrimalError_)||
+	(useDualError>1.0e3&&
+	 useOldDualError*1.0e2<useDualError)) {
+      double pivotTolerance = abcFactorization_->pivotTolerance();
+      double factor=(largestPrimalError_>1.0e10||largestDualError_>1.0e10)
+	? 2.0 : 1.2;
+      if (pivotTolerance<0.1)
+	abcFactorization_->pivotTolerance(0.1);
+      else if (pivotTolerance<0.98999999)
+	abcFactorization_->pivotTolerance(CoinMin(0.99,pivotTolerance*factor));
+      notChanged=pivotTolerance==abcFactorization_->pivotTolerance();
+#if defined(CLP_USEFUL_PRINTOUT) && !defined(GCC_4_9)
+      if (pivotTolerance<0.9899999) {
+	double newTolerance=abcFactorization_->pivotTolerance();
+	printf("Changing pivot tolerance from %g to %g and backtracking\n",
+	       pivotTolerance,newTolerance);
+      } 
+      printf("because old,new primal error %g,%g - dual %g,%g pivot_tol %g\n",
+	     oldLargestPrimalError,largestPrimalError_,
+	     oldLargestDualError,largestDualError_,
+	     pivotTolerance);
+#endif
+      if (pivotTolerance<0.9899999) {
+	//largestPrimalError_=0.0;
+	//largestDualError_=0.0;
+	//returnCode=1;
+      } 
+    }
+  }
+  if (progress_.iterationNumber_[0]>0&&
+      progress_.iterationNumber_[CLP_PROGRESS-1]
+      -progress_.iterationNumber_[0]<CLP_PROGRESS*3&&
+      abcFactorization_->pivotTolerance()<0.25&&notChanged) {
+    double pivotTolerance = abcFactorization_->pivotTolerance();
+    abcFactorization_->pivotTolerance(pivotTolerance*1.5);
+#if defined(CLP_USEFUL_PRINTOUT) && !defined(GCC_4_9)
+    double newTolerance=abcFactorization_->pivotTolerance();
+    printf("Changing pivot tolerance from %g to %g - inverting too often\n",
+	   pivotTolerance,newTolerance);
+#endif
   }
   return numberRefinements;
 }

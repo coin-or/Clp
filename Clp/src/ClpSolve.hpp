@@ -99,8 +99,8 @@ public:
                       32 - Use KKT
          5 - for presolve
                       1 - switch off dual stuff
-         6 - for detailed printout (initially just presolve)
-                      1 - presolve statistics
+         6 - extra switches
+                      
      */
      void setSpecialOption(int which, int value, int extraInfo = -1);
      int getSpecialOption(int which) const;

@@ -24,6 +24,9 @@ class CoinOtherFactorization;
 #ifndef COIN_FAST_CODE
 #define COIN_FAST_CODE
 #endif
+#ifndef CLP_FACTORIZATION_NEW_TIMING
+#define CLP_FACTORIZATION_NEW_TIMING 1
+#endif
 
 /** This just implements CoinFactorization when an ClpMatrixBase object
     is passed.  If a network then has a dummy CoinFactorization and
@@ -221,16 +224,10 @@ public:
           else return 0 ;
      }
 #endif
-     inline bool timeToRefactorize() const {
-          if (coinFactorizationA_) {
-               return (coinFactorizationA_->pivots() * 3 > coinFactorizationA_->maximumPivots() * 2 &&
-                       coinFactorizationA_->numberElementsR() * 3 > (coinFactorizationA_->numberElementsL() +
-                                 coinFactorizationA_->numberElementsU()) * 2 + 1000 &&
-                       !coinFactorizationA_->numberDense());
-          } else {
-               return coinFactorizationB_->pivots() > coinFactorizationB_->numberRows() / 2.45 + 20;
-          }
-     }
+     bool timeToRefactorize() const;
+#if CLP_FACTORIZATION_NEW_TIMING>1
+     void statsRefactor(char when) const;
+#endif
      /// Level of detail of messages
      inline int messageLevel (  ) const {
           if (coinFactorizationA_) return coinFactorizationA_->messageLevel();
@@ -420,7 +417,16 @@ private:
      /// Switch to dense if number rows <= this
      int goDenseThreshold_;
 #endif
+#ifdef CLP_FACTORIZATION_NEW_TIMING
+     /// For guessing when to re-factorize
+     mutable double shortestAverage_;
+     mutable double totalInR_;
+     mutable double totalInIncreasingU_;
+     mutable int endLengthU_;
+     mutable int lastNumberPivots_;
+     mutable int effectiveStartNumberU_;
+#endif
      //@}
 };
-
+ 
 #endif

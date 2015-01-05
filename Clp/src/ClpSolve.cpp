@@ -561,10 +561,14 @@ ClpSimplex::dealWithAbc(int solveType, int startUp,
   AbcSimplex * abcModel2 = NULL;
   if (!this->abcState()||!numberRows_||!numberColumns_) {
     //this->readBasis("aaa.bas");
-    if (!solveType)
+    if (!solveType) {
       this->dual(0);
-    else if (solveType==1)
-      this->primal(startUp ? 1 : 0);
+    } else if (solveType==1) {
+      int ifValuesPass=startUp ? 1 : 0;
+      if (startUp==3)
+	ifValuesPass=2;
+      this->primal(ifValuesPass);
+    }
     //this->writeBasis("a.bas",true);
   } else {
     abcModel2=new AbcSimplex(*this);
@@ -578,6 +582,8 @@ ClpSimplex::dealWithAbc(int solveType, int startUp,
     int crashState=abcModel2->abcState()&(256+512+1024);
     abcModel2->setAbcState(CLP_ABC_WANTED|crashState|(abcModel2->abcState()&15));
     int ifValuesPass=startUp ? 1 : 0;
+    if (startUp==3)
+      ifValuesPass=2;
     // temp
     if (fabs(this->primalTolerance()-1.001e-6)<0.999e-9) {
       int type=1;
@@ -616,6 +622,7 @@ ClpSimplex::dealWithAbc(int solveType, int startUp,
 	ifValuesPass=1;
 	abcModel2->setStateOfProblem(abcModel2->stateOfProblem() | VALUES_PASS);
 	Idiot info(*abcModel2);
+	info.setStrategy(idiotOptions | info.getStrategy());
 	info.setStrategy(512 | info.getStrategy());
 	// Allow for scaling
 	info.setStrategy(32 | info.getStrategy());
@@ -696,8 +703,8 @@ ClpSimplex::dealWithAbc(int solveType, int startUp,
       abcModel2->ClpSimplex::doAbcDual();
     } else if (solveType==1) {
       int saveOptions=abcModel2->specialOptions();
-      if (startUp==2)
-	abcModel2->setSpecialOptions(8192|saveOptions);
+      //if (startUp==2)
+      //abcModel2->setSpecialOptions(8192|saveOptions);
       abcModel2->ClpSimplex::doAbcPrimal(ifValuesPass);
       abcModel2->setSpecialOptions(saveOptions);
     }
@@ -849,6 +856,9 @@ ClpSimplex::initialSolve(ClpSolve & options)
      double time2=0.0;
      ClpMatrixBase * saveMatrix = NULL;
      ClpObjective * savedObjective = NULL;
+     int idiotOptions=0;
+     if(options.getSpecialOption(6))
+       idiotOptions=options.getExtraInfo(6)*32768;
 #ifdef CLP_USEFUL_PRINTOUT
      debugInt[0]=numberRows();
      debugInt[1]=numberColumns();
@@ -1262,7 +1272,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
 		allOnes=false;
 	    }
           }
-          if (nNon <= 1 || allOnes) {
+          if (nNon <= 1 || allOnes || 
+	      (options.getExtraInfo(1) > 0 && options.getSpecialOption(1)==2)) {
 #ifdef COIN_DEVELOP
                printf("Forcing primal\n");
 #endif
@@ -1543,20 +1554,26 @@ ClpSimplex::initialSolve(ClpSolve & options)
                     }
                     // switch off idiot or sprint if any free variable
 		    // switch off sprint if very few with costs
+		    // or great variation in cost
                     int iColumn;
                     const double * columnLower = model2->columnLower();
                     const double * columnUpper = model2->columnUpper();
 		    const double * objective = model2->objective();
 		    int nObj=0;
 		    int nFree=0;
+		    double smallestObj=COIN_DBL_MAX;
+		    double largestObj=0.0;
                     for (iColumn = 0; iColumn < numberColumns; iColumn++) {
                          if (columnLower[iColumn] < -1.0e10 && columnUpper[iColumn] > 1.0e10) {
 			   nFree++;
 			 } else if (objective[iColumn]) {
 			   nObj++;
+			   smallestObj=CoinMin(smallestObj,objective[iColumn]);
+			   largestObj=CoinMax(largestObj,objective[iColumn]);
                          }
                     }
-		    if (nObj*10<numberColumns)
+		    if (nObj*10<numberColumns ||
+			smallestObj*10.0<largestObj)
 		      doSprint=0;
 		    if (nFree)
 		      doIdiot=0;
@@ -1632,10 +1649,10 @@ ClpSimplex::initialSolve(ClpSolve & options)
                                    nPasses *= 2;
                          } else {
                               nPasses = 10 + numberColumns / 1000;
-                              nPasses = CoinMin(nPasses, 200);
                               nPasses = CoinMax(nPasses, 100);
                               if (!largestGap)
                                    nPasses *= 2;
+                              nPasses = CoinMin(nPasses, 200);
                          }
                     }
                     //printf("%d rows %d cols plus %c tryIt %c largest %g smallest %g largestGap %g npasses %d sprint %c\n",
@@ -1759,6 +1776,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
                // See if candidate for idiot
                nPasses = 0;
                Idiot info(*model2);
+	       info.setStrategy(idiotOptions | info.getStrategy());
                // Get average number of elements per column
                double ratio  = static_cast<double> (numberElements) / static_cast<double> (numberColumns);
                // look at rhs
@@ -1937,6 +1955,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
           if (doIdiot) {
                int nPasses = 0;
                Idiot info(*model2);
+	       info.setStrategy(idiotOptions | info.getStrategy());
                // Get average number of elements per column
                double ratio  = static_cast<double> (numberElements) / static_cast<double> (numberColumns);
                // look at rhs
@@ -2061,9 +2080,12 @@ ClpSimplex::initialSolve(ClpSolve & options)
                               nPasses = 0;
                          //info.setStartingWeight(1.0e-1);
                     }
-		    if (tryIt==1)
-		      model2->setSpecialOptions(model2->specialOptions()
-						|8388608);
+		    if (tryIt==1) {
+		      idiotOptions |= 262144;
+		      info.setStrategy(idiotOptions | info.getStrategy());
+		      //model2->setSpecialOptions(model2->specialOptions()
+		      //			|8388608);
+		    }
                }
                if (doIdiot > 0) {
                     // pick up number passes
@@ -2170,7 +2192,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
                     //#define LACI_TRY
 #ifndef LACI_TRY
                     //if (doIdiot>0)
-#ifdef ABC_INHERIT
+#if 0 //def ABC_INHERIT
 		    if (!model2->abcState()) 
 #endif
                     info.setStrategy(512 | info.getStrategy());
@@ -3708,6 +3730,9 @@ ClpSimplex::initialSolve(ClpSolve & options)
      eventHandler()->event(ClpEventHandler::presolveEnd);
      delete pinfo;
      moreSpecialOptions_= saveMoreOptions;
+#ifdef CLP_USEFUL_PRINTOUT
+     debugInt[23]=numberIterations_;
+#endif
      return finalStatus;
 }
 // General solve

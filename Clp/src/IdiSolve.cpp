@@ -346,10 +346,12 @@ Idiot::IdiSolve(
 	 statusSave[i] = 2;
      }
      memset(statusSave+numberColumns,0,ncols-numberColumns);
-     for (int i=0;i<numberColumns;i++) {
-       if (model_->getColumnStatus(i)==ClpSimplex::isFixed) {
-	 assert (colsol[i]<lower[i]+tolerance||
-		 colsol[i]>upper[i]-tolerance);
+     if ((strategy_&131072)==0) {
+       for (int i=0;i<numberColumns;i++) {
+	 if (model_->getColumnStatus(i)==ClpSimplex::isFixed) {
+	   assert (colsol[i]<lower[i]+tolerance||
+		   colsol[i]>upper[i]-tolerance);
+	 }
        }
      }
 #else

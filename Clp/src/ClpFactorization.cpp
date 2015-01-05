@@ -23,7 +23,9 @@ const static bool doCheck = true;
 const static bool doCheck = false;
 #endif
 #endif
-//#define CLP_FACTORIZATION_INSTRUMENT
+#ifndef CLP_FACTORIZATION_NEW_TIMING
+#define CLP_FACTORIZATION_NEW_TIMING
+#endif
 #ifdef CLP_FACTORIZATION_INSTRUMENT
 #include "CoinTime.hpp"
 double factorization_instrument(int type)
@@ -738,7 +740,7 @@ ClpFactorization::replaceColumn ( const ClpSimplex * model,
 #endif
           // see if FT
           if (doForrestTomlin_) {
-               returnCode = CoinFactorization::replaceColumn(regionSparse,
+	     returnCode = CoinFactorization::replaceColumn(regionSparse,
                             pivotRow,
                             pivotCheck,
                             checkBeforeModifying,
@@ -1403,6 +1405,225 @@ ClpFactorization::forceOtherFactorization(int which)
 	  goSmallThreshold_ = -1;
      }
 }
+#ifdef CLP_FACTORIZATION_NEW_TIMING
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+extern double externalTimeStart;
+extern double timeInFactorize;
+extern double timeInUpdate;
+extern double timeInFactorizeFake;
+extern double timeInUpdateFake1;
+extern double timeInUpdateFake2;
+extern double timeInUpdateTranspose;
+extern double timeInUpdateFT;
+extern double timeInUpdateTwoFT;
+extern double timeInReplace;
+extern int numberUpdate;
+extern int numberUpdateTranspose;
+extern int numberUpdateFT;
+extern int numberUpdateTwoFT;
+extern int numberReplace;
+extern int currentLengthR;
+extern int currentLengthU;
+extern int currentTakeoutU;
+ extern double averageLengthR;
+ extern double averageLengthL;
+ extern double averageLengthU;
+ extern double scaledLengthDense;
+ extern double scaledLengthDenseSquared;
+ extern double scaledLengthL;
+ extern double scaledLengthR;
+ extern double scaledLengthU;
+extern int startLengthU;
+extern int endLengthU;
+extern int endLengthU2;
+extern int numberAdded;
+static int average[3];
+static double shortest;
+static int ifPrint;
+#else
+#ifdef CLP_STATIC
+static int endLengthU_;
+#endif
+#endif
+#ifdef CLP_STATIC
+static double shortestAverage_;
+static double totalInR_=0.0;
+static double totalInIncreasingU_=0.0;
+//static int lastR=0;
+//static int lastU=0;
+static int lastNumberPivots_=0;
+static int effectiveStartNumberU_=0;
+#else
+//#define shortestAverage shortestAverage_
+//#define totalInR totalInR_
+//#define totalInIncreasingU totalInIncreasingU_
+//#define lastNumberPivots lastNumberPivots_
+//#define effectiveStartNumberU effectiveStartNumberU_
+//#define endLengthU endLengthU_
+#endif
+#ifdef CLP_USEFUL_PRINTOUT
+static bool readTwiddle=false;
+static double weightIncU=1.0;
+static double weightR=2.0;
+static double weightRest=1.0;
+static double weightFactL=30.0;
+static double weightFactDense=0.1; 
+static double weightNrows=10.0;
+static double increaseNeeded=1.1;
+static double constWeightIterate = 1.0;
+static double weightNrowsIterate = 3.0;
+#else
+#define weightIncU 1.0
+#define weightR 2.0
+#define weightRest 1.0
+#define weightFactL 30.0
+#define weightFactDense 0.1 
+#define weightNrows 10.0
+#define increaseNeeded 1.1
+#define constWeightIterate   1.0
+#define weightNrowsIterate   3.0
+#endif
+bool 
+ClpFactorization::timeToRefactorize() const 
+{
+  if (coinFactorizationA_) {
+    bool reFactor = (coinFactorizationA_->pivots() * 3 > coinFactorizationA_->maximumPivots() * 2 &&
+		     coinFactorizationA_->numberElementsR() * 3 > (coinFactorizationA_->numberElementsL() +
+								   coinFactorizationA_->numberElementsU()) * 2 + 1000 &&
+		     !coinFactorizationA_->numberDense());
+    reFactor=false;
+    bool reFactor3=false;
+    int numberPivots=coinFactorizationA_->pivots();
+    //if (coinFactorizationA_->pivots()<2)
+    if (numberPivots>lastNumberPivots_) {
+      if (!lastNumberPivots_) {
+        //lastR=0;
+	//lastU=endLengthU;
+	totalInR_=0.0;
+	totalInIncreasingU_=0.0;
+	shortestAverage_=COIN_DBL_MAX;
+#ifdef CLP_USEFUL_PRINTOUT
+	if (!readTwiddle) {
+          readTwiddle=true;
+          char * environ = getenv("CLP_TWIDDLE");
+	  if (environ) {
+            sscanf(environ,"%lg %lg %lg %lg %lg %lg %lg %lg %lg",
+      &weightIncU,&weightR,&weightRest,&weightFactL,
+      &weightFactDense,&weightNrows,&increaseNeeded,
+      &constWeightIterate,&weightNrowsIterate);
+	  }
+	    printf("weightIncU %g, weightR %g, weightRest %g, weightFactL %g, weightFactDense %g, weightNrows %g increaseNeeded %g constWeightIterate %g weightNrowsIterate %g\n",
+      weightIncU,weightR,weightRest,weightFactL,
+	weightFactDense,weightNrows,increaseNeeded,
+      constWeightIterate,weightNrowsIterate);
+	}
+#endif
+      }
+      lastNumberPivots_=numberPivots;
+      int numberDense=coinFactorizationA_->numberDense();
+      double nnd=numberDense*numberDense;
+      int lengthL=coinFactorizationA_->numberElementsL();
+      int lengthR=coinFactorizationA_->numberElementsR();
+      int numberRows = coinFactorizationA_->numberRows();
+      int lengthU=coinFactorizationA_->numberElementsU()-
+	(numberRows-numberDense);
+      totalInR_ += lengthR;
+      int effectiveU=lengthU-effectiveStartNumberU_;
+      totalInIncreasingU_ += effectiveU;
+      //lastR=lengthR;
+      //lastU=lengthU;
+      double rest=lengthL+0.05*nnd;
+      double constWeightFactor = weightFactL*lengthL+weightFactDense*nnd
+	+ weightNrows*numberRows;
+      double constWeightIterateX = constWeightIterate*(lengthL+endLengthU_)
+	+ weightNrowsIterate*numberRows;
+      double variableWeight = weightIncU*totalInIncreasingU_+
+			       weightR*totalInR_+weightRest*rest;
+      double average=constWeightIterateX+
+	(constWeightFactor+variableWeight)/static_cast<double>(numberPivots);
+#if 0
+      if ((numberPivots%20)==0&&!ifPrint3)
+      printf("PIV %d nrow %d startU %d now %d L %d R %d dense %g average %g\n",
+      numberPivots,numberRows,effectiveStartNumberU_,
+      lengthU,lengthL,lengthR,nnd,average);
+#endif
+      shortestAverage_=CoinMin(shortestAverage_,average);
+      if (average>increaseNeeded*shortestAverage_&&
+	coinFactorizationA_->pivots()>30) {
+	//printf("PIVX %d nrow %d startU %d now %d L %d R %d dense %g average %g\n",
+	//numberPivots,numberRows,effectiveStartNumberU_,
+	//lengthU,lengthL,lengthR,nnd,average);
+	reFactor3=true;
+      }
+  }
+    if (reFactor|| reFactor3) {
+#if 0
+	printf("%c%cftranCountInput_ %g  ,ftranCountAfterL_ %g  ,ftranCountAfterR_ %g  ,ftranCountAfterU_ %g  ,btranCountInput_ %g  ,btranCountAfterU_ %g  ,btranCountAfterR_ %g  ,btranCountAfterL_ %g  ,numberFtranCounts_ %d  ,numberBtranCounts_ %d  ,ftranAverageAfterL_ %g  ,ftranAverageAfterR_ %g  ,ftranAverageAfterU_ %g  ,btranAverageAfterU_ %g  ,btranAverageAfterR_ %g  ,btranAverageAfterL_ %g\n"
+	       ,reFactor3 ? 'Y' : 'N'
+	       ,reFactor ? 'Y' : 'N'
+  ,coinFactorizationA_->ftranCountInput_
+  ,coinFactorizationA_->ftranCountAfterL_
+  ,coinFactorizationA_->ftranCountAfterR_
+  ,coinFactorizationA_->ftranCountAfterU_
+  ,coinFactorizationA_->btranCountInput_
+  ,coinFactorizationA_->btranCountAfterU_
+  ,coinFactorizationA_->btranCountAfterR_
+  ,coinFactorizationA_->btranCountAfterL_
+  ,coinFactorizationA_->numberFtranCounts_
+  ,coinFactorizationA_->numberBtranCounts_
+  ,coinFactorizationA_->ftranAverageAfterL_
+  ,coinFactorizationA_->ftranAverageAfterR_
+  ,coinFactorizationA_->ftranAverageAfterU_
+  ,coinFactorizationA_->btranAverageAfterU_
+  ,coinFactorizationA_->btranAverageAfterR_
+	       ,coinFactorizationA_->btranAverageAfterL_);
+#endif
+      reFactor=true;
+    }
+    return reFactor;
+  } else {
+    return coinFactorizationB_->pivots() > coinFactorizationB_->numberRows() / 2.45 + 20;
+  }
+}
+#if CLP_FACTORIZATION_NEW_TIMING>1
+void 
+ClpFactorization::statsRefactor(char when) const
+{
+  int numberPivots=coinFactorizationA_->pivots();
+  int numberDense=coinFactorizationA_->numberDense();
+  double nnd=numberDense*numberDense;
+  int lengthL=coinFactorizationA_->numberElementsL();
+  int lengthR=coinFactorizationA_->numberElementsR();
+  int numberRows = coinFactorizationA_->numberRows();
+  int lengthU=coinFactorizationA_->numberElementsU()-
+    (numberRows-numberDense);
+  double rest=lengthL+0.05*nnd;
+  double constWeightFactor = weightFactL*lengthL+weightFactDense*nnd
+    + weightNrows*numberRows;
+  double constWeightIterateX = constWeightIterate*(lengthL+endLengthU_)
+    + weightNrowsIterate*numberRows;
+  double variableWeight = weightIncU*totalInIncreasingU_+
+    weightR*totalInR_+weightRest*rest;
+  double average=constWeightIterateX+
+    (constWeightFactor+variableWeight)/static_cast<double>(numberPivots);
+  printf("PIV%c %d nrow %d startU %d now %d L %d R %d dense %g average %g - shortest %g\n",
+	 when,numberPivots,numberRows,effectiveStartNumberU_,
+	 lengthU,lengthL,lengthR,nnd,average,shortestAverage_);
+}
+#endif
+#else
+bool 
+ClpFactorization::timeToRefactorize() const 
+{
+    if (coinFactorizationA_) {
+    return (coinFactorizationA_->pivots() * 3 > coinFactorizationA_->maximumPivots() * 2 &&
+      coinFactorizationA_->numberElementsR() * 3 > (coinFactorizationA_->numberElementsL() +
+      coinFactorizationA_->numberElementsU()) * 2 + 1000 &&
+      !coinFactorizationA_->numberDense());
+  } else {
+    return coinFactorizationB_->pivots() > coinFactorizationB_->numberRows() / 2.45 + 20;
+  }
+#endif
 int
 ClpFactorization::factorize ( ClpSimplex * model,
                               int solveType, bool valuesPass)
@@ -1419,6 +1640,22 @@ ClpFactorization::factorize ( ClpSimplex * model,
           return 0;
 #ifdef CLP_FACTORIZATION_INSTRUMENT
      factorization_instrument(-1);
+     if (!timeInUpdate) {
+      printf("ZZZZ,timeInFactor,nRows,nrows_2,\
+startU,endU,lengthL,dense,dense_2,nslacks\n");
+      printf("YYYY,time,added,dense,dense_2,averageR,averageL,averageU,\
+average2R,average2L,average2U,\
+scaledDense,scaledDense_2,scaledL,scaledR,scaledU\n");
+      printf("WWWW,time,size0,ratio1,ratio05,ratio02\n");
+    }
+#endif
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+     externalTimeStart=CoinCpuTime();
+     memset(average,0,sizeof(average));
+     shortest=COIN_DBL_MAX;
+     ifPrint=0;
+     if (!model->numberIterations())
+       printf("maxfactor %d\n",coinFactorizationA_->maximumPivots());
 #endif
      bool anyChanged = false;
      if (coinFactorizationB_) {
@@ -1998,6 +2235,12 @@ if (model->clpMatrix()->type() == 11)
                                           + numberInColumn[numberBasic-1];
                     else
                          numberElements = 0;
+#ifdef CLP_FACTORIZATION_NEW_TIMING
+		    lastNumberPivots_=0;
+		    effectiveStartNumberU_=numberElements-numberRows;
+		    //printf("%d slacks,%d in U at beginning\n",
+		    //numberRowBasic,numberElements);
+#endif
                     coinFactorizationA_->setNumberElementsU(numberElements);
                     //saveFactorization("dump.d");
                     if (coinFactorizationA_->biasLU() >= 3 || coinFactorizationA_->numberRows() != coinFactorizationA_->numberColumns())
@@ -2005,6 +2248,11 @@ if (model->clpMatrix()->type() == 11)
                     else
                          coinFactorizationA_->preProcess ( 3 ); // no row copy
                     coinFactorizationA_->factor (  );
+#ifdef CLP_FACTORIZATION_NEW_TIMING
+		    endLengthU_ = coinFactorizationA_->numberElements() - 
+		      coinFactorizationA_->numberDense()*coinFactorizationA_->numberDense()
+		      -coinFactorizationA_->numberElementsL();
+#endif
                     if (coinFactorizationA_->status() == -99) {
                          // get more memory
                          coinFactorizationA_->areaFactor(2.0 * coinFactorizationA_->areaFactor());
@@ -2107,6 +2355,7 @@ if (model->clpMatrix()->type() == 11)
 #endif
                } else if (coinFactorizationA_->status() == -1 && (solveType == 0 || solveType == 2)) {
                     // This needs redoing as it was merged coding - does not need array
+#if 1
                     int numberTotal = numberRows + numberColumns;
                     int * isBasic = new int [numberTotal];
                     int * rowIsBasic = isBasic + numberColumns;
@@ -2167,6 +2416,21 @@ if (model->clpMatrix()->type() == 11)
                          }
                     }
                     delete [] isBasic;
+#else
+		    {
+		      //int * lastColumn = lastColumn_.array(); // -1 or pivot row
+		      int * lastRow = coinFactorizationA_->lastRow(); // -1 or pivot sequence (inside sequence)
+		      for ( int i=0;i<numberRows;i++) {
+			int iSeq = lastRow[i];
+			if (iSeq >=0) {
+			  pivotVariable[i]=pivotTemp[iSeq];
+			  model->setRowStatus(i, ClpSimplex::superBasic);
+			} else {
+			  pivotVariable[i]=i+numberColumns;
+			}
+		      }
+		    }
+#endif
                     double * columnLower = model->lowerRegion();
                     double * columnUpper = model->upperRegion();
                     double * columnActivity = model->solutionRegion();
@@ -2303,18 +2567,59 @@ ClpFactorization::replaceColumn ( const ClpSimplex * model,
 #ifndef SLIM_CLP
      if (!networkBasis_) {
 #endif
+#ifdef CLP_FACTORIZATION_NEW_TIMING
 #ifdef CLP_FACTORIZATION_INSTRUMENT
           factorization_instrument(-1);
+#endif
+	  int nOld=0;
+	  int nNew=0;
+	  int seq;
+	  const CoinPackedMatrix * matrix=model->matrix();
+	  const int * columnLength = matrix->getVectorLengths();
+	  seq=model->sequenceIn();
+	  if (seq>=0&&seq<model->numberColumns()+model->numberRows()) {
+	    if (seq<model->numberColumns())
+	      nNew=columnLength[seq];
+	    else
+	      nNew=1;
+	  }
+	  seq=model->sequenceOut();
+	  if (seq>=0&&seq<model->numberColumns()+model->numberRows()) {
+	    if (seq<model->numberColumns())
+	      nOld=columnLength[seq];
+	    else
+	      nOld=1;
+	  }
+	  effectiveStartNumberU_ += nNew-nOld;
 #endif
           int returnCode;
           // see if FT
           if (!coinFactorizationA_ || coinFactorizationA_->forrestTomlin()) {
                if (coinFactorizationA_) {
-                    returnCode = coinFactorizationA_->replaceColumn(regionSparse,
-                                 pivotRow,
-                                 pivotCheck,
-                                 checkBeforeModifying,
-                                 acceptablePivot);
+#if ABC_USE_COIN_FACTORIZATION<2
+		 returnCode = 
+		   coinFactorizationA_->replaceColumn(regionSparse,
+						      pivotRow,
+						      pivotCheck,
+						      checkBeforeModifying,
+						      acceptablePivot);
+#else
+		 // fake btran alpha until I understand
+		 double btranAlpha=model->alpha();
+		 double ftAlpha = 
+		   coinFactorizationA_->checkReplacePart1(regionSparse,
+							  pivotRow);
+		 returnCode = 
+		   coinFactorizationA_->checkReplacePart2(pivotRow,
+							  btranAlpha,
+							  model->alpha(),
+							  ftAlpha,
+							  acceptablePivot);
+		 if (returnCode<2)
+		   coinFactorizationA_->replaceColumnPart3(regionSparse,
+							   pivotRow,
+							   model->alpha());
+#endif
                } else {
                     bool tab = coinFactorizationB_->wantsTableauColumn();
 #ifdef CLP_REUSE_ETAS

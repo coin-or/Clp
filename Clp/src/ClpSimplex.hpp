@@ -1238,6 +1238,7 @@ public:
 	 1048576 bit - don't perturb even if long time
 	 2097152 bit - no primal in fastDual2 if feasible
 	 4194304 bit - tolerances have been changed by code
+	 8388608 bit - tolerances are dynamic (at first)
      */
      inline void setMoreSpecialOptions(int value) {
           moreSpecialOptions_ = value;

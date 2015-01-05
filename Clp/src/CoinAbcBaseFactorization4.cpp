@@ -4365,8 +4365,10 @@ CoinAbcTypeFactorization::goSparse2 ( )
 #endif
     if (numberRows_<largeRowsSparse) {
       sparseThreshold_=CoinMin(numberRows_/mediumRowsDivider,mediumRowsMinCount);
+      sparseThreshold_=CoinMin(numberRows_/6,500);
     } else {
       sparseThreshold_=CoinMax(largeRowsCount,numberRows_>>3);
+      sparseThreshold_=500;
     }
 #if FACTORIZATION_STATISTICS
     ftranTwiddleFactor1_=ftranTwiddleFactor1X;

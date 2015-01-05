@@ -212,7 +212,7 @@ int ClpMain1(int argc, const char *argv[],AbcSimplex * models)
 #if CLP_INHERIT_MODE>1
 #define DEFAULT_PRESOLVE_PASSES 20
 #else
-#define DEFAULT_PRESOLVE_PASSES 5
+#define DEFAULT_PRESOLVE_PASSES 10
 #endif
           int preSolve = DEFAULT_PRESOLVE_PASSES;
           bool preSolveFile = false;
@@ -941,6 +941,12 @@ int ClpMain1(int argc, const char *argv[],AbcSimplex * models)
                                         method = ClpSolve::usePrimalorSprint;
                                    } else if (type == CLP_PARAM_ACTION_EITHERSIMPLEX) {
                                         method = ClpSolve::automatic;
+                                        if (doCrash>3) {
+					  solveOptions.setSpecialOption(6, 1,doCrash-3);
+					  doCrash=0;
+					}
+                                        if (doIdiot > 0) 
+                                             solveOptions.setSpecialOption(1, 2, doIdiot);
                                    } else {
                                         method = ClpSolve::useBarrier;
 #ifdef ABC_INHERIT
@@ -969,7 +975,7 @@ int ClpMain1(int argc, const char *argv[],AbcSimplex * models)
                                    }
                                    if (method == ClpSolve::useDual) {
                                         // dual
-                                        if (doCrash)
+                                        if (doCrash&&doCrash<4)
                                              solveOptions.setSpecialOption(0, 1, doCrash); // crash
                                         else if (doIdiot)
                                              solveOptions.setSpecialOption(0, 2, doIdiot); // possible idiot
@@ -983,7 +989,11 @@ int ClpMain1(int argc, const char *argv[],AbcSimplex * models)
                                              solveOptions.setSpecialOption(1, 10, slpValue); // slp
                                              method = ClpSolve::usePrimal;
                                         }
-                                        if (doCrash) {
+                                        if (doCrash>3) {
+					  solveOptions.setSpecialOption(6, 1,doCrash-3);
+					  doCrash=0;
+					}
+                                        if (doCrash>0) {
                                              solveOptions.setSpecialOption(1, 1, doCrash); // crash
                                         } else if (doSprint > 0) {
                                              // sprint overrides idiot
@@ -2905,8 +2915,9 @@ clp watson.mps -\nscaling off\nprimalsimplex"
      dmalloc_shutdown();
 #endif
 #ifdef CLP_USEFUL_PRINTOUT
-     printf("BENCHMARK %s took %g cpu seconds (%g elapsed) - %d row, %d columns, %d elements - reduced to %d, %d, %d\n",
+     printf("BENCHMARK_RESULT %s took %g cpu seconds (%g elapsed - %d iterations) - %d row, %d columns, %d elements - reduced to %d, %d, %d\n",
 	      mpsFile.c_str(),CoinCpuTime()-startCpu,CoinGetTimeOfDay()-startElapsed,
+	    debugInt[23],
 	      debugInt[0],debugInt[1],debugInt[2],
 	      debugInt[3],debugInt[4],debugInt[5]);
 	    const char * method[]={"","Dual","Primal","Sprint","Idiot"};

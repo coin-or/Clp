@@ -14,8 +14,13 @@
 #include "AbcMatrix.hpp"
 //#include "CoinAbcAnyFactorization.hpp"
 #include "AbcSimplex.hpp"
+#ifndef ABC_USE_COIN_FACTORIZATION
 class ClpFactorization;
-
+class CoinFactorization;
+#else
+#include "ClpFactorization.hpp"
+#include "CoinFactorization.hpp"
+#endif
 /** This just implements AbcFactorization when an AbcMatrix object
     is passed. 
 */
@@ -87,6 +92,7 @@ public:
 				  CoinIndexedVector * partialUpdate,
 				  int pivotRow)
   {return coinAbcFactorization_->checkReplacePart1(regionSparse,partialUpdate,pivotRow);}
+#ifdef MOVE_REPLACE_PART1A
   /** Checks if can replace one Column to basis,
       returns update alpha
       Fills in region for use later
@@ -97,6 +103,7 @@ public:
   inline double checkReplacePart1b (CoinIndexedVector * regionSparse,
 			     int pivotRow)
   {return coinAbcFactorization_->checkReplacePart1b(regionSparse,pivotRow);}
+#endif
   /** Checks if can replace one Column to basis,
       returns 0=OK, 1=Probably OK, 2=singular, 3=no room, 5 max pivots */
   inline int checkReplacePart2 ( int pivotRow,
@@ -200,10 +207,18 @@ public:
   { return coinAbcFactorization_->updateColumnTranspose(regionSparse);}
   /** Updates one column (FTRAN) */
   inline void updateColumnCpu ( CoinIndexedVector & regionSparse,int whichCpu) const
+#ifndef ABC_USE_COIN_FACTORIZATION
   { coinAbcFactorization_->updateColumnCpu(regionSparse,whichCpu);}
+#else
+  { coinAbcFactorization_->updateColumn(regionSparse);}
+#endif
   /** Updates one column (BTRAN) */
   inline void updateColumnTransposeCpu ( CoinIndexedVector & regionSparse,int whichCpu) const
+#ifndef ABC_USE_COIN_FACTORIZATION
   { coinAbcFactorization_->updateColumnTransposeCpu(regionSparse,whichCpu);}
+#else
+  { coinAbcFactorization_->updateColumnTranspose(regionSparse);}
+#endif
   /** Updates one full column (FTRAN) */
   inline void updateFullColumn ( CoinIndexedVector & regionSparse) const
   { coinAbcFactorization_->updateFullColumn(regionSparse);}
@@ -212,7 +227,11 @@ public:
   { coinAbcFactorization_->updateFullColumnTranspose(regionSparse);}
   /** Updates one column for dual steepest edge weights (FTRAN) */
   void updateWeights ( CoinIndexedVector & regionSparse) const
+#ifndef ABC_USE_COIN_FACTORIZATION
   { coinAbcFactorization_->updateWeights(regionSparse);}
+#else
+  { coinAbcFactorization_->updateColumn(regionSparse);}
+#endif
   //@}
   /**@name Lifted from CoinFactorization */
   //@{
@@ -277,9 +296,10 @@ public:
   inline int numberDense() const {
     return coinAbcFactorization_->numberDense() ;
   }
-  inline bool timeToRefactorize() const {
-    return coinAbcFactorization_->pivots() > coinAbcFactorization_->numberRows() / 2.45 + 20;
-  }
+  bool timeToRefactorize() const;
+#if CLP_FACTORIZATION_NEW_TIMING>1
+  void statsRefactor(char when) const;
+#endif
   /// Get rid of all memory
   inline void clearArrays() {
     coinAbcFactorization_->clearArrays();
@@ -361,14 +381,24 @@ public:
   /** makes a row copy of L for speed and to allow very sparse problems */
   void goSparse();
 #ifndef NDEBUG
+#ifndef ABC_USE_COIN_FACTORIZATION
   inline void checkMarkArrays() const
   { coinAbcFactorization_->checkMarkArrays();}
+#else
+  inline void checkMarkArrays() const
+  { }
+#endif
 #endif
   /// Says whether to redo pivot order
   inline bool needToReorder() const {abort();return true;}
   /// Pointer to factorization
+#ifndef ABC_USE_COIN_FACTORIZATION
   CoinAbcAnyFactorization * factorization() const
   { return coinAbcFactorization_;}
+#else
+  CoinFactorization * factorization() const
+  { return coinAbcFactorization_;}
+#endif
   //@}
   
   ////////////////// data //////////////////
@@ -379,7 +409,20 @@ private:
   /// Pointer to model
   AbcSimplex * model_;
   /// Pointer to factorization
+#ifndef ABC_USE_COIN_FACTORIZATION
   CoinAbcAnyFactorization * coinAbcFactorization_;
+#else
+  CoinFactorization * coinAbcFactorization_;
+#endif
+#ifdef CLP_FACTORIZATION_NEW_TIMING
+  /// For guessing when to re-factorize
+  mutable double shortestAverage_;
+  mutable double totalInR_;
+  mutable double totalInIncreasingU_;
+  mutable int endLengthU_;
+  mutable int lastNumberPivots_;
+  mutable int effectiveStartNumberU_;
+#endif
   /// If nonzero force use of 1,dense 2,small 3,long
   int forceB_;
   /// Switch to dense if number rows <= this

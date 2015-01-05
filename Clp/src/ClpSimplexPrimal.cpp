@@ -1029,6 +1029,9 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
 		      printf("OUCH! - %d thrownout at %s line %d\n",
 			     numberThrownOut,__FILE__,__LINE__);
 		      //abort();
+                    //if (numberThrownOut)
+		    //printf("OUCH! - %d thrownout at %s line %d\n",
+		    //	     numberThrownOut,__FILE__,__LINE__);
                     sumInfeasibility =  nonLinearCost_->sumInfeasibilities();
                }
           }
@@ -1181,19 +1184,26 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                }
                progress->initialWeight_ = -1.0;
           }
-          //printf("XXXX %d same, %d different, %d zero, -- free %d %d %d\n",
-          //   numberSame,numberDifferent,numberZero,
-          //   numberFreeSame,numberFreeDifferent,numberFreeZero);
+#ifdef CLP_USEFUL_PRINTOUT
+          printf("XXXX %d same, %d different, %d zero, -- free %d %d %d\n",
+             numberSame,numberDifferent,numberZero,
+             numberFreeSame,numberFreeDifferent,numberFreeZero);
+#endif
           // we want most to be same
           if (n) {
-               double most = 0.95;
                std::sort(dj_, dj_ + n);
+#ifdef CLP_USEFUL_PRINTOUT
+               double most = 0.95;
                int which = static_cast<int> ((1.0 - most) * static_cast<double> (n));
-               double take = -dj_[which] * infeasibilityCost_;
-               //printf("XXXXZ inf cost %g take %g (range %g %g)\n",infeasibilityCost_,take,-dj_[0]*infeasibilityCost_,-dj_[n-1]*infeasibilityCost_);
-               take = -dj_[0] * infeasibilityCost_;
-               infeasibilityCost_ = CoinMin(CoinMax(1000.0 * take, 1.0e8), 1.0000001e10);;
-               //printf("XXXX increasing weight to %g\n",infeasibilityCost_);
+               double take2 = -dj_[which] * infeasibilityCost_;
+               printf("XXXX inf cost %g take %g (range %g %g)\n",infeasibilityCost_,take2,-dj_[0]*infeasibilityCost_,-dj_[n-1]*infeasibilityCost_);
+#endif
+               double take = -dj_[0] * infeasibilityCost_;
+               // was infeasibilityCost_ = CoinMin(CoinMax(1000.0 * take, 1.0e8), 1.0000001e10);
+               infeasibilityCost_ = CoinMin(CoinMax(1000.0 * take, 1.0e3), 1.0000001e10);
+#ifdef CLP_USEFUL_PRINTOUT
+               printf("XXXX changing weight to %g\n",infeasibilityCost_);
+#endif
           }
           delete [] dj_;
           delete [] cost_;

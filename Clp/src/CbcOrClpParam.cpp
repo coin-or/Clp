@@ -1789,6 +1789,14 @@ Cbc/examples/driver4.cpp."
      parameters[numberParameters-1].append("dual");
      parameters[numberParameters-1].append("dw");
      parameters[numberParameters-1].append("idiot");
+#else
+     parameters[numberParameters-1].append("idiot1");
+     parameters[numberParameters-1].append("idiot2");
+     parameters[numberParameters-1].append("idiot3");
+     parameters[numberParameters-1].append("idiot4");
+     parameters[numberParameters-1].append("idiot5");
+     parameters[numberParameters-1].append("idiot6");
+     parameters[numberParameters-1].append("idiot7");
 #endif
      parameters[numberParameters-1].setLonghelp
      (
@@ -3010,7 +3018,7 @@ stop if drop small if less than 5000 columns, 20 otherwise"
                         -200, 100, CLP_PARAM_INT_PRESOLVEPASS, 1);
      parameters[numberParameters-1].setLonghelp
      (
-          "Normally Presolve does 5 passes but you may want to do less to make it\
+          "Normally Presolve does 10 passes but you may want to do less to make it\
  more lightweight or do more if improvements are still being made.  As Presolve will return\
  if nothing is being taken out, you should not normally need to use this fine tuning."
      );

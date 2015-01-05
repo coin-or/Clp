@@ -168,6 +168,51 @@ if (info != 0) fprintf(stderr, "dgetrf failure with error %d\n", info);
 }
 #endif
 #endif
+//#define CLP_MALLOC_STATISTICS
+#ifdef CLP_MALLOC_STATISTICS
+#include <malloc.h>
+#include <exception>
+#include <new>
+static double malloc_times = 0.0;
+static double malloc_total = 0.0;
+static int malloc_amount[] = {0, 32, 128, 256, 1024, 4096, 16384, 65536, 262144, COIN_INT_MAX};
+static int malloc_n = 10;
+double malloc_counts[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+bool malloc_counts_on = true;
+void * operator new (size_t size) throw (std::bad_alloc)
+{
+    malloc_times ++;
+    malloc_total += size;
+    int i;
+    for (i = 0; i < malloc_n; i++) {
+        if ((int) size <= malloc_amount[i]) {
+            malloc_counts[i]++;
+            break;
+        }
+    }
+    if (size>100000) {
+      printf("allocating %ld bytes\n",size);
+    }
+    void * p = malloc(size);
+    return p;
+}
+void operator delete (void *p) throw()
+{
+    free(p);
+}
+static void malloc_stats2()
+{
+    double average = malloc_total / malloc_times;
+    printf("count %g bytes %g - average %g\n", malloc_times, malloc_total, average);
+    for (int i = 0; i < malloc_n; i++)
+        printf("%g ", malloc_counts[i]);
+    printf("\n");
+    malloc_times = 0.0;
+    malloc_total = 0.0;
+    memset(malloc_counts, 0, sizeof(malloc_counts));
+    // print results
+}
+#endif	//CLP_MALLOC_STATISTICS
 int
 #if defined(_MSC_VER)
 __cdecl

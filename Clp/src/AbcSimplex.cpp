@@ -1254,6 +1254,10 @@ int AbcSimplex::internalFactorize ( int solveType)
       status = numberRows_ + 1;
     }
   }
+#ifdef ABC_USE_COIN_FACTORIZATION
+  // sparse methods
+  abcFactorization_->goSparse();
+#endif
   return status;
 }
 // Make sure no superbasic etc
@@ -1499,10 +1503,16 @@ AbcSimplex::housekeeping()
       abcFactorization_->maximumPivots(numberDense);
     }
     //printf("ZZ maxpivots %d its %d\n",numberPivots,maximumPivots);
+#if CLP_FACTORIZATION_NEW_TIMING>1
+    abcFactorization_->statsRefactor('M');
+#endif
     return 1;
   } else if ((abcFactorization_->timeToRefactorize() && !dontInvert)
 	     ||invertNow) {
     //printf("ZZ time invertNow %s its %d\n",invertNow ? "yes":"no",numberPivots);
+#if CLP_FACTORIZATION_NEW_TIMING>1
+    abcFactorization_->statsRefactor('T');
+#endif
     return 1;
   } else if (forceFactorization_ > 0 &&
 #ifndef DELAYED_UPDATE
@@ -1516,6 +1526,9 @@ AbcSimplex::housekeeping()
     if (forceFactorization_ > abcFactorization_->maximumPivots())
       forceFactorization_ = -1; //off
     //printf("ZZ forceFactor %d its %d\n",forceFactorization_,numberPivots);
+#if CLP_FACTORIZATION_NEW_TIMING>1
+    abcFactorization_->statsRefactor('F');
+#endif
     return 1;
   } else if (numberIterations_ > 1000 + 10 * (numberRows_ + (numberColumns_ >> 2))) {
     // A bit worried problem may be cycling - lets factorize at random intervals for a short period
