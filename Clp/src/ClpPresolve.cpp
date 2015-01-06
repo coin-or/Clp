@@ -1718,6 +1718,7 @@ CoinPresolveMatrix::CoinPresolveMatrix(int ncols0_in,
 
      // temporary init
      integerType_(new unsigned char[ncols0_in]),
+     anyInteger_(false),
      tuning_(false),
      startTime_(0.0),
      feasibilityTolerance_(0.0),
