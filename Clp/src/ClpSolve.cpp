@@ -622,7 +622,6 @@ ClpSimplex::dealWithAbc(int solveType, int startUp,
 	ifValuesPass=1;
 	abcModel2->setStateOfProblem(abcModel2->stateOfProblem() | VALUES_PASS);
 	Idiot info(*abcModel2);
-	info.setStrategy(idiotOptions | info.getStrategy());
 	info.setStrategy(512 | info.getStrategy());
 	// Allow for scaling
 	info.setStrategy(32 | info.getStrategy());

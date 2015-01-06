@@ -1025,13 +1025,11 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                     numberPivots = 0;
                     numberThrownOut = gutsOfSolution(NULL, NULL, (firstFree_ >= 0));
                     //assert (!numberThrownOut);
+#ifdef CLP_USEFUL_PRINTOUT
                     if (numberThrownOut)
 		      printf("OUCH! - %d thrownout at %s line %d\n",
 			     numberThrownOut,__FILE__,__LINE__);
-		      //abort();
-                    //if (numberThrownOut)
-		    //printf("OUCH! - %d thrownout at %s line %d\n",
-		    //	     numberThrownOut,__FILE__,__LINE__);
+#endif
                     sumInfeasibility =  nonLinearCost_->sumInfeasibilities();
                }
           }
@@ -1319,8 +1317,9 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                }
           }
      }
+     bool looksOptimal = (!numberDualInfeasibilities_&&!nonLinearCost_->sumInfeasibilities());
      // had ||(type==3&&problemStatus_!=-5) -- ??? why ????
-     if ((dualFeasible() || problemStatus_ == -4) && !ifValuesPass) {
+     if ((dualFeasible() || problemStatus_ == -4) && (!ifValuesPass||looksOptimal)) {
           // see if extra helps
           if (nonLinearCost_->numberInfeasibilities() &&
                     (nonLinearCost_->sumInfeasibilities() > 1.0e-3 || sumOfRelaxedPrimalInfeasibilities_)
@@ -2791,11 +2790,16 @@ ClpSimplexPrimal::perturb(int type)
                break;
           }
      }
-     handler_->message(CLP_SIMPLEX_PERTURB, messages_)
+     if (largest || largestZero) {
+       handler_->message(CLP_SIMPLEX_PERTURB, messages_)
                << 100.0 * maximumFraction << perturbation << largest << 100.0 * largestPerCent << largestZero
                << CoinMessageEol;
-     // say perturbed
-     perturbation_ = 101;
+       // say perturbed
+       perturbation_ = 101;
+     } else {
+       // say no need
+       perturbation_ = 102;
+     }
 }
 // un perturb
 bool
