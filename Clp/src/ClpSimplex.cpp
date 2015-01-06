@@ -11116,22 +11116,28 @@ ClpSimplex::fathom(void * stuff)
                printf("xx %d\n", numberIterations*(numberRows_ + numberColumns_));
                //abort();
 #endif
+#ifdef CLP_USEFUL_PRINTOUT
 	       printf("too long in one solve (%d iterations) average %d iterations %d nodes\n",
 		      numberIterations_,numberIterations,numberNodes);
+#endif
                break;
           }
 	  if (numberNodes>20) {
 	    if (numberIterations>200*numberNodes) {
 	      info->nNodes_ = -2;
+#ifdef CLP_USEFUL_PRINTOUT
 	      printf("too long average %d iterations %d nodes\n",
 		     numberIterations,numberNodes);
+#endif
 	      break;
 	    }
 	  } else {
 	    if (numberIterations>4000) {
 	      info->nNodes_ = -2;
+#ifdef CLP_USEFUL_PRINTOUT
 	      printf("too long average %d iterations %d nodes\n",
 		     numberIterations,numberNodes);
+#endif
 	      break;
 	    }
 	  }
