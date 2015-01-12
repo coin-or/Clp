@@ -22,17 +22,11 @@ int ClpMain1(int argc, const char *argv[],AbcSimplex * model);
 static void cilkTest();
 #endif
 //#define LAPACK_TEST
-//#define CLP_USE_OPENBLAS 1
 /*
   Somehow with some BLAS we get multithreaded by default
   For 99.99% of problems this is not a good idea.
   The openblas_set_num_threads(1) seems to work even with other blas
  */
-#if COIN_FACTORIZATION_DENSE_CODE==1
-#ifndef CLP_USE_OPENBLAS
-#define CLP_USE_OPENBLAS 1
-#endif
-#endif
 #if CLP_USE_OPENBLAS
 extern "C" 
 {
