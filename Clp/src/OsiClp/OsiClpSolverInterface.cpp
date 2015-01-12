@@ -1606,7 +1606,9 @@ bool OsiClpSolverInterface::isDualObjectiveLimitReached() const
 
   const int stat = modelPtr_->status();
   if (stat == 1)
-  return true;
+    return true;
+  else if (stat<0)
+    return false;
   double limit = 0.0;
   modelPtr_->getDblParam(ClpDualObjectiveLimit, limit);
   if (fabs(limit) > 1e30) {
