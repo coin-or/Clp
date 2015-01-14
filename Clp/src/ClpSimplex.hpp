@@ -1727,6 +1727,11 @@ ClpSimplexUnitTest(const std::string & mpsDir);
 // For Devex stuff
 #define DEVEX_TRY_NORM 1.0e-4
 #define DEVEX_ADD_ONE 1.0
+#if defined(ABC_INHERIT) || defined(THREADS_IN_ANALYZE)
+#ifndef NORMAL_PTHREADS
+#define NORMAL_PTHREADS
+#endif
+#endif
 #if defined(ABC_INHERIT) || defined(CBC_THREAD) || defined(THREADS_IN_ANALYZE)
 // Use pthreads
 #include <pthread.h>
@@ -1760,8 +1765,10 @@ public:
   // For waking up thread
   inline pthread_mutex_t * mutexPointer(int which,int thread=0) 
   { return mutex_+which+3*thread;}
+#ifdef NORMAL_PTHREADS
   inline pthread_barrier_t * barrierPointer() 
   { return &barrier_;}
+#endif
   inline int whichLocked(int thread=0) const
   { return locked_[thread];}
   inline CoinThreadInfo * threadInfoPointer(int thread=0) 
@@ -1776,7 +1783,9 @@ public:
   //void stopThreads();
   // For waking up thread
   pthread_mutex_t mutex_[3*(NUMBER_THREADS+1)];
+#ifdef NORMAL_PTHREADS
   pthread_barrier_t barrier_; 
+#endif
   CoinThreadInfo threadInfo_[NUMBER_THREADS+1];
   pthread_t abcThread_[NUMBER_THREADS+1];
   int locked_[NUMBER_THREADS+1];
