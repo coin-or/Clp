@@ -5640,7 +5640,7 @@ void * clp_parallelManager(void * stuff)
   CoinThreadInfo * threadInfo = driver->threadInfoPointer(whichThread);
   threadInfo->status=-1;
   int * which = threadInfo->stuff;
-#ifdef NORMAL_PTHREADS
+#ifdef PTHREAD_BARRIER_SERIAL_THREAD
   pthread_barrier_wait(driver->barrierPointer());
 #endif
 #if 0
@@ -5714,14 +5714,14 @@ CoinPthreadStuff::CoinPthreadStuff(int numberThreads,
     }
     threadInfo_[iThread].status = 100;
   }
-#ifdef NORMAL_PTHREADS
+#ifdef PTHREAD_BARRIER_SERIAL_THREAD
   //pthread_barrierattr_t attr;
   pthread_barrier_init(&barrier_, /*&attr*/ NULL, numberThreads+1); 
 #endif
   for (int iThread=0;iThread<numberThreads;iThread++) {
     pthread_create(&abcThread_[iThread], NULL, parallelManager, reinterpret_cast<void *>(this));
   }
-#ifdef NORMAL_PTHREADS
+#ifdef PTHREAD_BARRIER_SERIAL_THREAD
   pthread_barrier_wait(&barrier_);
   pthread_barrier_destroy(&barrier_);
 #endif

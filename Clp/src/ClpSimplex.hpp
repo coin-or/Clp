@@ -267,7 +267,7 @@ public:
      int initialDualSolve();
      /// Primal initial solve
      int initialPrimalSolve();
-/// Barrier initial solve
+     /// Barrier initial solve
      int initialBarrierSolve();
      /// Barrier initial solve, not to be followed by crossover
      int initialBarrierNoCrossSolve();
@@ -1727,11 +1727,6 @@ ClpSimplexUnitTest(const std::string & mpsDir);
 // For Devex stuff
 #define DEVEX_TRY_NORM 1.0e-4
 #define DEVEX_ADD_ONE 1.0
-#if defined(ABC_INHERIT) || defined(THREADS_IN_ANALYZE)
-#ifndef NORMAL_PTHREADS
-#define NORMAL_PTHREADS
-#endif
-#endif
 #if defined(ABC_INHERIT) || defined(CBC_THREAD) || defined(THREADS_IN_ANALYZE)
 // Use pthreads
 #include <pthread.h>
@@ -1765,7 +1760,7 @@ public:
   // For waking up thread
   inline pthread_mutex_t * mutexPointer(int which,int thread=0) 
   { return mutex_+which+3*thread;}
-#ifdef NORMAL_PTHREADS
+#ifdef PTHREAD_BARRIER_SERIAL_THREAD
   inline pthread_barrier_t * barrierPointer() 
   { return &barrier_;}
 #endif
@@ -1783,7 +1778,7 @@ public:
   //void stopThreads();
   // For waking up thread
   pthread_mutex_t mutex_[3*(NUMBER_THREADS+1)];
-#ifdef NORMAL_PTHREADS
+#ifdef PTHREAD_BARRIER_SERIAL_THREAD
   pthread_barrier_t barrier_; 
 #endif
   CoinThreadInfo threadInfo_[NUMBER_THREADS+1];
