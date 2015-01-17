@@ -5927,6 +5927,7 @@ OsiClpSolverInterface::writeLp(const char *filename,
   }
   writeLp(fp, epsilon, numberAcross,
 	  decimals, objSense,changeNameOnRange);
+  fclose(fp);
 }
 void 
 OsiClpSolverInterface::writeLp(FILE * fp,
