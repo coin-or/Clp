@@ -541,6 +541,13 @@ ClpSimplexDual::gutsOfDual(int ifValuesPass, double * & saveDuals, int initialSt
                     break;
                }
           }
+	  // If looks odd try other way
+	  if ((moreSpecialOptions_&256)==0 &&
+	      fabs(objectiveValue_)>1.0e20&&sumDualInfeasibilities_>1.0
+	      &&problemStatus_<0) {
+	    problemStatus_=10;
+	    break;
+	  }
           // Do iterations
           int returnCode = whileIterating(saveDuals, ifValuesPass);
 	  if (problemStatus_ == 1 && (progressFlag_&8) != 0 &&
