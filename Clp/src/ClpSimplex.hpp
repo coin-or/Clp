@@ -1557,6 +1557,11 @@ protected:
      double sumOfRelaxedPrimalInfeasibilities_;
      /// Acceptable pivot value just after factorization
      double acceptablePivot_;
+     /// Minimum primal tolerance
+     double minimumPrimalTolerance_;
+     /// Last few infeasibilities
+#define CLP_INFEAS_SAVE 5
+     double averageInfeasibility_[CLP_INFEAS_SAVE];
      /// Working copy of lower bounds (Owner of arrays below)
      double * lower_;
      /// Row lower bounds - working copy

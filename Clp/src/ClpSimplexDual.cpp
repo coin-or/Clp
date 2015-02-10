@@ -134,9 +134,6 @@ extern int * nextDescendent;
 #ifndef CLP_INVESTIGATE
 #define NDEBUG_CLP
 #endif
-extern double minimumPrimalToleranceZZ;
-#define CLP_INFEAS_SAVE 5
-extern double averageInfeasZZ[CLP_INFEAS_SAVE];
 // dual
 
 /* *** Method
@@ -603,7 +600,7 @@ ClpSimplexDual::dual(int ifValuesPass, int startFinishOptions)
      }
      if (alphaAccuracy_ != -1.0)
           alphaAccuracy_ = 1.0;
-     minimumPrimalToleranceZZ=primalTolerance();
+     minimumPrimalTolerance_=primalTolerance();
      int returnCode = startupSolve(ifValuesPass, saveDuals, startFinishOptions);
      // Save so can see if doing after primal
      int initialStatus = problemStatus_;
@@ -4355,7 +4352,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned, int type,
 	 printf("CCchanging tolerance\n");
 #endif
 	 primalTolerance_=1.0e-6;
-	 minimumPrimalToleranceZZ=primalTolerance_;
+	 minimumPrimalTolerance_=primalTolerance_;
 	 dblParam_[ClpPrimalTolerance]=1.0e-6;
 	 moreSpecialOptions_ |= 4194304;
        }
