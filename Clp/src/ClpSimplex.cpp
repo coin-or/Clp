@@ -533,9 +533,6 @@ void ClpSimplex::setLargeValue( double value)
      if (value > 0.0 && value < COIN_DBL_MAX)
           largeValue_ = value;
 }
-double minimumPrimalToleranceZZ=0.0;
-#define CLP_INFEAS_SAVE 5
-double averageInfeasZZ[CLP_INFEAS_SAVE];
 int
 ClpSimplex::gutsOfSolution ( double * givenDuals,
                              const double * givenPrimals,
@@ -824,7 +821,7 @@ ClpSimplex::gutsOfSolution ( double * givenDuals,
        if (algorithm_<0) {
 	 bool doneFiddling=false;
 	 // Optimization may make exact test iffy
-	 double testTolerance=minimumPrimalToleranceZZ+1.0e-15;
+	 double testTolerance=minimumPrimalTolerance_+1.0e-15;
 	 while (!doneFiddling) {
 	   doneFiddling=true;
 	   while( !sumOfRelaxedPrimalInfeasibilities_&&
@@ -832,7 +829,7 @@ ClpSimplex::gutsOfSolution ( double * givenDuals,
 	     // feasible - adjust tolerance
 	     double saveTolerance=primalTolerance_;
 	     primalTolerance_=CoinMax(0.25*primalTolerance_,
-				      minimumPrimalToleranceZZ);
+				      minimumPrimalTolerance_);
 	     printf("Resetting primal tolerance from %g to %g\n",
 		    saveTolerance,primalTolerance_);
 	     dblParam_[ClpPrimalTolerance]=primalTolerance_;
@@ -848,17 +845,17 @@ ClpSimplex::gutsOfSolution ( double * givenDuals,
 	     double average=sumPrimalInfeasibilities_/numberPrimalInfeasibilities_;
 	     double minimum=COIN_DBL_MAX;
 	     double averageTotal=average;
-	     bool firstTime=averageInfeasZZ[0]==COIN_DBL_MAX;
+	     bool firstTime=averageInfeasibility_[0]==COIN_DBL_MAX;
 	     for (int i=0;i<CLP_INFEAS_SAVE-1;i++) {
-	       double value = averageInfeasZZ[i+1];
+	       double value = averageInfeasibility_[i+1];
 	       averageTotal+=value;
-	       averageInfeasZZ[i]=value;
+	       averageInfeasibility_[i]=value;
 	       minimum=CoinMin(minimum,value);
 	     }
-	     averageInfeasZZ[CLP_INFEAS_SAVE-1]=average;
+	     averageInfeasibility_[CLP_INFEAS_SAVE-1]=average;
 	     averageTotal /= CLP_INFEAS_SAVE;
 	     double oldTolerance=primalTolerance_;
-	     if (averageInfeasZZ[0]!=COIN_DBL_MAX) {
+	     if (averageInfeasibility_[0]!=COIN_DBL_MAX) {
 	       if (firstTime) {
 		 primalTolerance_=CoinMin(0.1,0.1*averageTotal);
 		 primalTolerance_ = CoinMin(primalTolerance_,average);
@@ -866,7 +863,7 @@ ClpSimplex::gutsOfSolution ( double * givenDuals,
 		 primalTolerance_=0.1*minimum;
 	       }
 	       primalTolerance_=
-		 CoinMax(primalTolerance_,minimumPrimalToleranceZZ);
+		 CoinMax(primalTolerance_,minimumPrimalTolerance_);
 	     }
 	     if (primalTolerance_!=oldTolerance) {
 	       printf("Changing primal tolerance from %g to %g\n",
@@ -5541,7 +5538,7 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
      //#define EXPENSIVE
 #endif
      for (int i=0;i<CLP_INFEAS_SAVE;i++)
-       averageInfeasZZ[i]=COIN_DBL_MAX;
+       averageInfeasibility_[i]=COIN_DBL_MAX;
 #ifdef EXPENSIVE
      static int dualCount = 0;
      static int dualCheckCount = -1;
