@@ -1148,6 +1148,7 @@ ClpFactorization::ClpFactorization ()
      goOslThreshold_ = -1;
      goDenseThreshold_ = -1;
      goSmallThreshold_ = -1;
+     memset(&shortestAverage_,0,3*(sizeof(double)+sizeof(int)));
 }
 
 //-------------------------------------------------------------------
@@ -1225,6 +1226,7 @@ ClpFactorization::ClpFactorization (const ClpFactorization & rhs,
 #ifdef CLP_FACTORIZATION_INSTRUMENT
      factorization_instrument(1);
 #endif
+     memcpy(&shortestAverage_,&rhs.shortestAverage_,3*(sizeof(double)+sizeof(int)));
 }
 
 ClpFactorization::ClpFactorization (const CoinFactorization & rhs)
@@ -1245,6 +1247,7 @@ ClpFactorization::ClpFactorization (const CoinFactorization & rhs)
      goDenseThreshold_ = -1;
      goSmallThreshold_ = -1;
      assert (!coinFactorizationA_ || !coinFactorizationB_);
+     memset(&shortestAverage_,0,3*(sizeof(double)+sizeof(int)));
 }
 
 ClpFactorization::ClpFactorization (const CoinOtherFactorization & rhs)
@@ -1266,6 +1269,7 @@ ClpFactorization::ClpFactorization (const CoinOtherFactorization & rhs)
      factorization_instrument(1);
 #endif
      assert (!coinFactorizationA_ || !coinFactorizationB_);
+     memset(&shortestAverage_,0,3*(sizeof(double)+sizeof(int)));
 }
 
 //-------------------------------------------------------------------
@@ -1304,6 +1308,7 @@ ClpFactorization::operator=(const ClpFactorization& rhs)
           goOslThreshold_ = rhs.goOslThreshold_;
           goDenseThreshold_ = rhs.goDenseThreshold_;
           goSmallThreshold_ = rhs.goSmallThreshold_;
+	  memcpy(&shortestAverage_,&rhs.shortestAverage_,3*(sizeof(double)+sizeof(int)));
           if (rhs.coinFactorizationA_) {
                if (coinFactorizationA_)
                     *coinFactorizationA_ = *(rhs.coinFactorizationA_);
