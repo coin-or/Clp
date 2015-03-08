@@ -120,7 +120,7 @@ pkgconfiglib_DATA += osi-clp.pc
 endif
 
 addlibsdir = $(DESTDIR)$(datadir)/coin/doc/Clp
-	
+
 install-data-hook:
 	@$(mkdir_p) "$(addlibsdir)"
 if COIN_HAS_PKGCONFIG
@@ -128,7 +128,7 @@ if COIN_HAS_PKGCONFIG
 	$(PKG_CONFIG) --libs clp > $(addlibsdir)/clp_addlibs.txt
 else
 if COIN_CXX_IS_CL
-	echo "-libpath:`$(CYGPATH_W) @abs_lib_dir@` libClp.lib @CLPLIB_LIBS_INSTALLED@" > $(addlibsdir)/clp_addlibs.txt
+	echo "-libpath:`$(CYGPATH_W) @abs_lib_dir@` libClpSolver.lib libClp.lib @CLPLIB_LIBS_INSTALLED@" > $(addlibsdir)/clp_addlibs.txt
 else
 	echo -L@abs_lib_dir@ -lClp @CLPLIB_LIBS_INSTALLED@ > $(addlibsdir)/clp_addlibs.txt
 endif
