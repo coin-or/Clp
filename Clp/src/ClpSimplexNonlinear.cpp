@@ -1525,7 +1525,7 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
 #if MINTYPE==1
                     if (conjugate) {
                          double djNorm2 = djNorm;
-                         if (numberNonBasic && 0) {
+                         if (numberNonBasic && false) {
                               int iIndex;
                               djNorm2 = 0.0;
                               for (iIndex = 0; iIndex < numberNonBasic; iIndex++) {

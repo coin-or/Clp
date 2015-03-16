@@ -10040,7 +10040,7 @@ ClpSimplex::miniPostsolve(const ClpSimplex * presolvedModel, void * infoIn)
 	if (start+length==startNext) {
 	  // need more
 	  moveAround(numberColumns_,numberElementsOriginal,
-		     iColumn,length+(jRowLower<0||jRowUpper<0) ? 1 : 2,
+		     iColumn,length+((jRowLower<0||jRowUpper<0) ? 1 : 2),
 		     forward,backward,columnStartX,columnLengthX,
 		     rowX,elementX);
 	  start=columnStartX[iColumn];
