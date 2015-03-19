@@ -3851,6 +3851,8 @@ ClpModel::writeMps(const char *filename,
      // Pass in array saying if each variable integer
      writer.copyInIntegerInformation(integerInformation());
      writer.setObjectiveOffset(objectiveOffset());
+     // set name
+     writer.setProblemName(problemName().c_str());
      delete [] objective;
      CoinPackedMatrix * quadratic = NULL;
 #ifndef SLIM_CLP
