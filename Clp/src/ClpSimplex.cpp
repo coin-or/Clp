@@ -5614,7 +5614,7 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
        problemStatus_ = 10; // clean up in primal as fake bounds
      }
      if ((moreSpecialOptions_&524288)!=0&&
-	 !nonLinearCost_->numberInfeasibilities()&&
+	 (!nonLinearCost_||!nonLinearCost_->numberInfeasibilities())&&
 	 fabs(dblParam_[ClpDualObjectiveLimit])>1.0e30) {
        problemStatus_=0;
      }

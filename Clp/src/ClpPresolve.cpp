@@ -1009,12 +1009,29 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
 	    }
 	    paction_ = duprow_action::presolve(prob, paction_);
 	    printProgress('D',0);
+	    //paction_ = doubleton_action::presolve(prob, paction_);
+	    //printProgress('d',0);
+	    //if (doDependency()) {
+	      //paction_ = duprow3_action::presolve(prob, paction_);
+	      //printProgress('Z',0);
+	    //}
           }
           if (doGubrow()) {
 	    possibleSkip;
                paction_ = gubrow_action::presolve(prob, paction_);
 	       printProgress('E',0);
           }
+	  if (ifree) {
+	    int fill_level=10;
+	    const CoinPresolveAction * lastAction = NULL;
+	    int iPass=4;
+	    while(lastAction!=paction_&&iPass) {
+	      lastAction=paction_;
+	      paction_ = implied_free_action::presolve(prob, paction_, fill_level);
+	      printProgress('l',0);
+	      iPass--;
+	    }
+	  }
 
           if ((presolveActions_ & 16384) != 0)
                prob->setPresolveOptions(prob->presolveOptions() | 16384);
@@ -1365,6 +1382,10 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
 	       numberColumnsLeft=numberColumnsNow;
 #endif
           }
+     }
+     if (!prob->status_&&doDependency()) {
+       paction_ = duprow3_action::presolve(prob, paction_);
+       printProgress('Z',0);
      }
      prob->presolveOptions_ &= ~0x10000;
      if (!prob->status_) {
@@ -1723,6 +1744,7 @@ CoinPresolveMatrix::CoinPresolveMatrix(int ncols0_in,
      startTime_(0.0),
      feasibilityTolerance_(0.0),
      status_(-1),
+     pass_(0),
      colsToDo_(new int [ncols0_in]),
      numberColsToDo_(0),
      nextColsToDo_(new int[ncols0_in]),
