@@ -910,6 +910,8 @@ int ClpMain1(int argc, const char *argv[],AbcSimplex * models)
                                    }
                                    if (preSolveFile)
                                         presolveOptions |= 0x40000000;
+				   // allow dependency
+				   presolveOptions |= 32768;
                                    solveOptions.setPresolveActions(presolveOptions);
                                    solveOptions.setSubstitution(substitution);
                                    if (preSolve != DEFAULT_PRESOLVE_PASSES && preSolve) {
