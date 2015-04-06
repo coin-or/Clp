@@ -5614,7 +5614,7 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
        problemStatus_ = 10; // clean up in primal as fake bounds
      }
      if ((moreSpecialOptions_&524288)!=0&&
-	 !nonLinearCost_->numberInfeasibilities()&&
+	 (!nonLinearCost_||!nonLinearCost_->numberInfeasibilities())&&
 	 fabs(dblParam_[ClpDualObjectiveLimit])>1.0e30) {
        problemStatus_=0;
      }
@@ -7620,6 +7620,97 @@ ClpSimplex::readLp(const char *filename, const double epsilon )
      lengthNames_ = static_cast<int> (maxLength);
 
      return 0;
+}
+/* Write the problem into an Lp file of the given filename.
+   If objSense is non zero then -1.0 forces the code to write a
+   maximization objective and +1.0 to write a minimization one.
+   If 0.0 then solver can do what it wants.
+*/
+void 
+ClpSimplex::writeLp(const char *filename,
+                               const char *extension ,
+                               double epsilon ,
+                               int numberAcross ,
+                               int decimals ,
+                               double objSense ,
+                               bool changeNameOnRange) const
+{
+  std::string f(filename);
+  std::string e(extension);
+  std::string fullname;
+  if (e!="") {
+    fullname = f + "." + e;
+  } else {
+    // no extension so no trailing period
+    fullname = f;
+  }
+  FILE *fp = NULL;
+  fp = fopen(fullname.c_str(),"w");
+  if (!fp) {
+    printf("### ERROR: in OsiSolverInterface::writeLpNative(): unable to open file %s\n",
+	   fullname.c_str());
+    exit(1);
+  }
+  // get names
+  const char * const * const rowNames = rowNamesAsChar();
+  const char * const * const columnNames = columnNamesAsChar();
+  const int numcols = getNumCols();
+  char *integrality = new char[numcols];
+  bool hasInteger = false;
+  
+  for (int i=0; i<numcols; i++) {
+    if (isInteger(i)) {
+      integrality[i] = 1;
+      hasInteger = true;
+    } else {
+      integrality[i] = 0;
+    }
+  }
+  
+  // Get multiplier for objective function - default 1.0
+  double *objective = new double[numcols];
+  const double *curr_obj = getObjCoefficients();
+  
+  //if(getObjSense() * objSense < 0.0) {
+  double locObjSense = (objSense == 0 ? 1 : objSense);
+  if(getObjSense() * locObjSense < 0.0) {
+    for (int i=0; i<numcols; i++) {
+      objective[i] = - curr_obj[i];
+    }
+  }
+  else {
+    for (int i=0; i<numcols; i++) {
+      objective[i] = curr_obj[i];
+    }
+  }
+  
+  CoinLpIO writer;
+  writer.setInfinity(COIN_DBL_MAX);
+  writer.setEpsilon(epsilon);
+  writer.setNumberAcross(numberAcross);
+  writer.setDecimals(decimals);
+  
+  // Get a row copy in standard format
+  CoinPackedMatrix rowCopy;
+  rowCopy.setExtraGap(0.0);
+  rowCopy.setExtraMajor(0.0);
+  rowCopy.reverseOrderedCopyOf(*matrix());
+  writer.setLpDataWithoutRowAndColNames(rowCopy,
+					getColLower(), getColUpper(),
+					objective, hasInteger ? integrality : 0,
+					getRowLower(), getRowUpper());
+  
+  writer.setLpDataRowAndColNames(rowNames, columnNames);
+
+  delete [] objective;
+  delete[] integrality;
+  writer.writeLp(fp, epsilon, numberAcross, decimals, 
+		 changeNameOnRange);
+  if (rowNames) {
+    deleteNamesAsChar(rowNames, numberRows_+1);
+    deleteNamesAsChar(columnNames, numberColumns_);
+  }
+  fclose(fp);
 }
 #endif
 // Just check solution (for external use)
