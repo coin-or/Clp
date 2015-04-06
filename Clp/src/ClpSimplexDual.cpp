@@ -2332,7 +2332,8 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
                     reducedCost[iSequence] = value;
                     double mult = multiplier[iStatus-1];
                     value *= mult;
-                    if (value < -tolerance) {
+		    // skip if free
+                    if (value < -tolerance&&iStatus > 0) {
                          // flipping bounds
                          double movement = mult * (lower[iSequence] - upper[iSequence]);
                          which[numberInfeasibilities++] = iSequence;
@@ -2375,7 +2376,8 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
                          reducedCost[iSequence] = value;
                          double mult = multiplier[iStatus-1];
                          value *= mult;
-                         if (value < -tolerance) {
+			 // skip if free
+			 if (value < -tolerance&&iStatus > 0) {
                               // flipping bounds
                               double movement = mult * (upper[iSequence] - lower[iSequence]);
                               which[numberInfeasibilities++] = iSequence;
