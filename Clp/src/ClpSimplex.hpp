@@ -227,6 +227,17 @@ public:
      /// Read file in LP format from file with name filename.
      /// See class CoinLpIO for description of this format.
      int readLp(const char *filename, const double epsilon = 1e-5);
+      /** Write the problem into an Lp file of the given filename.
+	  If objSense is non zero then -1.0 forces the code to write a
+	  maximization objective and +1.0 to write a minimization one.
+	  If 0.0 then solver can do what it wants.*/
+      void writeLp(const char *filename,
+		   const char *extension = "lp",
+		   double epsilon = 1e-5,
+		   int numberAcross = 10,
+		   int decimals = 5,
+		   double objSense = 0.0,
+		   bool useRowNames = true) const;
      /** Borrow model.  This is so we dont have to copy large amounts
          of data around.  It assumes a derived class wants to overwrite
          an empty model with a real one - while it does an algorithm.
