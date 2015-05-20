@@ -290,7 +290,8 @@ private:
 		 32768 - experimental 1
 		 65536 - experimental 2
 		 131072 - experimental 3 
-		 262144 - just values pass etc */
+		 262144 - just values pass etc 
+		 524288 - don't treat structural slacks as slacks */
                  
      int lightWeight_; // 0 - normal, 1 lightweight
 };
