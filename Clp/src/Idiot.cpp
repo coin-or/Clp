@@ -497,7 +497,7 @@ Idiot::solve2(CoinMessageHandler * handler, const CoinMessages * messages)
           if (columnLength[i] == 1)
                numberSlacks++;
      }
-     if (!numberSlacks) {
+     if (!numberSlacks || (strategy_&524288)!=0) {
           whenUsed_ = new int[ncols];
      } else {
 #ifdef COIN_DEVELOP
@@ -675,7 +675,12 @@ Idiot::solve2(CoinMessageHandler * handler, const CoinMessages * messages)
           if (model_->scalingFlag() > 0)
                scaled = model_->clpMatrix()->scale(model_) == 0;
           if (scaled) {
+#define IDIOT_SCALE 2
+#ifndef IDIOT_SCALE
                const double * rowScale = model_->rowScale();
+#else
+               double * rowScale = model_->mutableRowScale();
+#endif
                const double * columnScale = model_->columnScale();
                double * oldLower = lower;
                double * oldUpper = upper;
@@ -687,6 +692,12 @@ Idiot::solve2(CoinMessageHandler * handler, const CoinMessages * messages)
                CoinMemcpyN(oldUpper, ncols, upper);
                CoinMemcpyN(oldCost, ncols, cost);
                int icol, irow;
+#if IDIOT_SCALE<0
+               for (irow = 0; irow < nrows; irow++) {
+		 rowlower[irow]=1.0e100;
+		 rowupper[irow]=1.0e-100;
+	       }
+#endif
                for (icol = 0; icol < ncols; icol++) {
                     double multiplier = 1.0 / columnScale[icol];
                     if (lower[icol] > -1.0e50)
@@ -695,7 +706,41 @@ Idiot::solve2(CoinMessageHandler * handler, const CoinMessages * messages)
                          upper[icol] *= multiplier;
                     colsol[icol] *= multiplier;
                     cost[icol] *= columnScale[icol];
+#if IDIOT_SCALE<0
+                    CoinBigIndex j;
+                    double scale = columnScale[i];
+                    for (j = columnStart[i]; j < columnStart[i] + columnLength[i]; j++) {
+                         int jrow = row[j];
+			 double scaledValue = fabs(scale*element[j]);
+			 rowlower[jrow]=CoinMin(rowlower[jrow],scaledValue);
+			 rowupper[jrow]=CoinMax(rowupper[jrow],scaledValue);
+                    }
+#endif
                }
+#ifdef IDIOT_SCALE
+#if IDIOT_SCALE>1||IDIOT_SCALE<-1
+	       const double * rowLower=model_->rowLower();
+	       const double * rowUpper=model_->rowUpper();
+#endif
+               for (irow = 0; irow < nrows; irow++) {
+#if IDIOT_SCALE<0
+		 double multiplier = 1.0/sqrt(rowlower[irow]*rowupper[irow]);
+#else
+		 double multiplier = rowScale[irow];
+#endif
+#if IDIOT_SCALE>1||IDIOT_SCALE<-1
+#define EQUALITY_MULTIPLIER 2
+		 if (rowLower[irow]==rowUpper[irow])
+		   multiplier *= EQUALITY_MULTIPLIER;
+#if IDIOT_SCALE>2||IDIOT_SCALE<-2
+		 if (rowLower[irow]==rowUpper[irow]&&!rowlower[irow])
+		   multiplier *= EQUALITY_MULTIPLIER;
+#endif
+#endif
+		 rowScale[irow]=multiplier;
+	       }
+               CoinMemcpyN(model_->rowUpper(), nrows, rowupper);
+#endif
                CoinMemcpyN(model_->rowLower(), nrows, rowlower);
                for (irow = 0; irow < nrows; irow++) {
                     double multiplier = rowScale[irow];
@@ -1365,7 +1410,7 @@ Idiot::crossOver(int mode)
           COIN_DETAIL_PRINT(printf("New objective after scaling %g\n", objValue));
      }
 #if 0
-     maybe put back - but just get feasible ?
+     //maybe put back - but just get feasible ?
      // If not many fixed then just exit
      int numberFixed = 0;
      for (i = ordStart; i < ordEnd; i++) {
@@ -1374,7 +1419,7 @@ Idiot::crossOver(int mode)
           else if (colsol[i] > upper[i] - fixTolerance)
                numberFixed++;
      }
-     if (numberFixed < ncols / 2) {
+     if (numberFixed < ncols / 3) {
           addAll = 3;
           presolve = 0;
      }
