@@ -1560,7 +1560,7 @@ basis anyway."
 #ifdef COIN_HAS_CBC
      parameters[numberParameters++] =
           CbcOrClpParam("artif!icialCost", "Costs >= this treated as artificials in feasibility pump",
-                        0.0, COIN_DBL_MAX, CBC_PARAM_DBL_ARTIFICIALCOST, 1);
+                        0.0, 1.0e100, CBC_PARAM_DBL_ARTIFICIALCOST, 1);
      parameters[numberParameters-1].setDoubleValue(0.0);
      parameters[numberParameters-1].setLonghelp
      (
@@ -1927,15 +1927,15 @@ means use Cplex if it is linked in.  Otherwise if negative then go into depth fi
      );
      parameters[numberParameters++] =
           CbcOrClpParam("dextra3", "Extra double parameter 3",
-                        -COIN_DBL_MAX, COIN_DBL_MAX, CBC_PARAM_DBL_DEXTRA3, 0);
+                        -1.0e100, 1.0e100, CBC_PARAM_DBL_DEXTRA3, 0);
      parameters[numberParameters-1].setDoubleValue(0.0);
      parameters[numberParameters++] =
           CbcOrClpParam("dextra4", "Extra double parameter 4",
-                        -COIN_DBL_MAX, COIN_DBL_MAX, CBC_PARAM_DBL_DEXTRA4, 0);
+                        -1.0e100, 1.0e100, CBC_PARAM_DBL_DEXTRA4, 0);
      parameters[numberParameters-1].setDoubleValue(0.0);
      parameters[numberParameters++] =
           CbcOrClpParam("dextra5", "Extra double parameter 5",
-                        -COIN_DBL_MAX, COIN_DBL_MAX, CBC_PARAM_DBL_DEXTRA5, 0);
+                        -1.0e100, 1.0e100, CBC_PARAM_DBL_DEXTRA5, 0);
      parameters[numberParameters-1].setDoubleValue(0.0);
      parameters[numberParameters++] =
           CbcOrClpParam("Dins", "Whether to try Distance Induced Neighborhood Search",
@@ -3289,7 +3289,7 @@ Can also set different maxNode settings by plusnnnn (and are 'on'(on==30))."
      );
      parameters[numberParameters++] =
           CbcOrClpParam("pumpC!utoff", "Fake cutoff for use in feasibility pump",
-                        -COIN_DBL_MAX, COIN_DBL_MAX, CBC_PARAM_DBL_FAKECUTOFF);
+                        -1.0e100, 1.0e100, CBC_PARAM_DBL_FAKECUTOFF);
      parameters[numberParameters-1].setDoubleValue(0.0);
      parameters[numberParameters-1].setLonghelp
      (
@@ -3298,7 +3298,7 @@ Can also set different maxNode settings by plusnnnn (and are 'on'(on==30))."
      );
      parameters[numberParameters++] =
           CbcOrClpParam("pumpI!ncrement", "Fake increment for use in feasibility pump",
-                        -COIN_DBL_MAX, COIN_DBL_MAX, CBC_PARAM_DBL_FAKEINCREMENT, 1);
+                        -1.0e100, 1.0e100, CBC_PARAM_DBL_FAKEINCREMENT, 1);
      parameters[numberParameters-1].setDoubleValue(0.0);
      parameters[numberParameters-1].setLonghelp
      (
