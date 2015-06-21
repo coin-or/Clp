@@ -488,7 +488,7 @@ ClpSimplexDual::gutsOfDual(int ifValuesPass, double * & saveDuals, int initialSt
           statusOfProblemInDual(lastCleaned, factorType, saveDuals, data,
                                 ifValuesPass);
 	  if ((specialOptions_&2097152)!=0&&problemStatus_==1&&!ray_&&
-	      !numberRayTries && numberIterations_) {
+ 	      !numberRayTries && numberIterations_) {
 	    numberRayTries=1;
 	    problemStatus_=-1;
 	  }
@@ -2277,6 +2277,59 @@ ClpSimplexDual::whileIterating(double * & givenDuals, int ifValuesPass)
 #endif
      return returnCode;
 }
+//#define ABOCA_LITE 4
+#if ABOCA_LITE
+#include <cilk/cilk.h>
+typedef struct {
+  double tolerance;
+  double theta;
+  double * reducedCost;
+  const double * lower;
+  const double * upper;
+  double * work;
+  const unsigned char * statusArray;
+  int * which;
+  int numberInfeasibilities;
+  int numberToDo;
+} update_duals;
+static void
+updateDualBit(update_duals & info)
+{
+  int numberInfeasibilities = 0;
+  double tolerance = info.tolerance;
+  double theta = info.theta;
+  double * COIN_RESTRICT reducedCost = info.reducedCost;
+  const double * COIN_RESTRICT lower = info.lower;
+  const double * COIN_RESTRICT upper = info.upper;
+  double * COIN_RESTRICT work = info.work;
+  int number = info.numberToDo;
+  int * COIN_RESTRICT which = info.which;
+  const unsigned char * COIN_RESTRICT statusArray = info.statusArray;
+  double multiplier[] = { -1.0, 1.0};
+  for (int i = 0; i < number; i++) {
+    int iSequence = which[i];
+    double alphaI = work[i];
+    work[i] = 0.0;
+    
+    int iStatus = (statusArray[iSequence] & 3) - 1;
+    if (iStatus) {
+      double value = reducedCost[iSequence] - theta * alphaI;
+      reducedCost[iSequence] = value; 
+      //printf("xx %d %.18g\n",iSequence,reducedCost[iSequence]);
+      double mult = multiplier[iStatus-1];
+      value *= mult;
+      // skip if free
+      if (value < -tolerance&&iStatus > 0) {
+	// flipping bounds
+	double movement = mult * (upper[iSequence] - lower[iSequence]);
+	work[numberInfeasibilities] = movement;
+	which[numberInfeasibilities++] = iSequence;
+      }
+    }
+  }
+  info.numberInfeasibilities=numberInfeasibilities;
+}
+#endif
 /* The duals are updated by the given arrays.
    Returns number of infeasibilities.
    rowArray and columnarray will have flipped
@@ -2332,8 +2385,8 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
                     reducedCost[iSequence] = value;
                     double mult = multiplier[iStatus-1];
                     value *= mult;
-		    // skip free
-                    if (value < -tolerance && iStatus > 0) {
+		    // skip if free
+                    if (value < -tolerance&&iStatus > 0) {
                          // flipping bounds
                          double movement = mult * (lower[iSequence] - upper[iSequence]);
                          which[numberInfeasibilities++] = iSequence;
@@ -2365,6 +2418,45 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
           which = columnArray->getIndices();
           if ((moreSpecialOptions_ & 8) != 0) {
                const unsigned char * COIN_RESTRICT statusArray = status_;
+#if ABOCA_LITE
+	       update_duals info[ABOCA_LITE];
+	       int chunk = (number+ABOCA_LITE-1)/ABOCA_LITE;
+	       int n=0;
+	       int * whichX = which;
+	       for (i=0;i<ABOCA_LITE;i++) {
+		 info[i].theta=theta;
+		 info[i].tolerance=tolerance;
+		 info[i].reducedCost = reducedCost;
+		 info[i].lower = lower;
+		 info[i].upper = upper;
+		 info[i].statusArray=statusArray;
+		 info[i].which=which+n;
+		 info[i].work=work+n;
+		 info[i].numberToDo=CoinMin(chunk,number-n);
+		 n += chunk;
+	       }
+	       for (i=0;i<ABOCA_LITE;i++) {
+		 cilk_spawn updateDualBit(info[i]);
+	       }
+	       cilk_sync;
+	       for (i=0;i<ABOCA_LITE;i++) {
+		 int n = info[i].numberInfeasibilities;
+		 double * workV = info[i].work;
+		 int * whichV = info[i].which;
+		 for (int j = 0; j < n; j++) {
+		   int iSequence = whichV[j];
+		   double movement = workV[j];
+		   workV[j] = 0.0;
+		   whichX[numberInfeasibilities++]=iSequence;
+#ifndef NDEBUG
+		   if (fabs(movement) >= 1.0e30)
+		     resetFakeBounds(-1000 - iSequence);
+#endif
+		    changeObj += movement * cost[iSequence];
+		    matrix_->add(this, outputArray, iSequence, movement);
+		 }
+               }
+#else
                for (i = 0; i < number; i++) {
                     int iSequence = which[i];
                     double alphaI = work[i];
@@ -2373,11 +2465,12 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
                     int iStatus = (statusArray[iSequence] & 3) - 1;
                     if (iStatus) {
                          double value = reducedCost[iSequence] - theta * alphaI;
-                         reducedCost[iSequence] = value;
+                         reducedCost[iSequence] = value; 
+			 //printf("xx %d %.18g\n",iSequence,reducedCost[iSequence]);
                          double mult = multiplier[iStatus-1];
                          value *= mult;
-			 // skip free
-                         if (value < -tolerance && iStatus > 0) {
+			 // skip if free
+			 if (value < -tolerance&&iStatus > 0) {
                               // flipping bounds
                               double movement = mult * (upper[iSequence] - lower[iSequence]);
                               which[numberInfeasibilities++] = iSequence;
@@ -2395,6 +2488,7 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
                          }
                     }
                }
+#endif
           } else {
                for (i = 0; i < number; i++) {
                     int iSequence = which[i];
@@ -3235,6 +3329,86 @@ ClpSimplexDual::changeBounds(int initialize,
           return 0;
      }
 }
+#if ABOCA_LITE
+typedef struct {
+  const int * COIN_RESTRICT which;
+  const double * COIN_RESTRICT work;
+  int * COIN_RESTRICT index;
+  double * COIN_RESTRICT spare;
+  const unsigned char * COIN_RESTRICT status;
+  const double * COIN_RESTRICT reducedCost;
+  double upperTheta;
+  double bestPossible;
+  double acceptablePivot;
+  double dualTolerance;
+  int numberRemaining;
+  int numberToDo;
+} pricingInfo;
+
+/* Meat of transposeTimes by column when not scaled and skipping
+   and doing part of dualColumn */
+static void
+dualColumn00(pricingInfo & info)
+{
+  const int * COIN_RESTRICT which = info.which;
+  const double * COIN_RESTRICT work = info.work;
+  int * COIN_RESTRICT index = info.index;
+  double * COIN_RESTRICT spare = info.spare;
+  const unsigned char * COIN_RESTRICT status = info.status;
+  const double * COIN_RESTRICT reducedCost = info.reducedCost;
+  double upperTheta = info.upperTheta;
+  double acceptablePivot = info.acceptablePivot;
+  double dualTolerance = info.dualTolerance;
+  double bestPossible = info.bestPossible;
+  int numberToDo=info.numberToDo;
+  double tentativeTheta = 1.0e15;
+  int numberRemaining = 0;
+  double multiplier[] = { -1.0, 1.0};
+  double dualT = - dualTolerance;
+  for (int i = 0; i < numberToDo; i++) {
+    int iSequence = which[i];
+    int wanted = (status[iSequence] & 3) - 1;
+    if (wanted) {
+      double mult = multiplier[wanted-1];
+      double alpha = work[i] * mult;
+      if (alpha > 0.0) {
+	double oldValue = reducedCost[iSequence] * mult;
+	double value = oldValue - tentativeTheta * alpha;
+	if (value < dualT) {
+	  bestPossible = CoinMax(bestPossible, alpha);
+	  value = oldValue - upperTheta * alpha;
+	  if (value < dualT && alpha >= acceptablePivot) {
+	    upperTheta = (oldValue - dualT) / alpha;
+	  }
+	  // add to list
+	  spare[numberRemaining] = alpha * mult;
+	  index[numberRemaining++] = iSequence;
+	}
+      }
+    }
+  }
+  info.numberRemaining = numberRemaining;
+  info.upperTheta = upperTheta;
+  info.bestPossible = bestPossible;
+}
+// later do so less zeroing in first blocks
+// and some of it combined for loop to move and zero
+static void moveAndZero(double * to, double * from, int n)
+{
+  long int distance = from-to;
+  assert (distance>=0);
+  if (distance==0)
+    return;
+  memmove(to,from,n*sizeof(double));
+  if (n<distance) {
+    // no overlap
+    memset(from,0,n*sizeof(double));
+  } else {
+    //memmove(to,from,n*sizeof(double));
+    memset(to+n,0,distance*sizeof(double));
+  }
+}
+#endif
 int
 ClpSimplexDual::dualColumn0(const CoinIndexedVector * rowArray,
                             const CoinIndexedVector * columnArray,
@@ -3261,7 +3435,12 @@ ClpSimplexDual::dualColumn0(const CoinIndexedVector * rowArray,
           // No free or super basic
           double multiplier[] = { -1.0, 1.0};
           double dualT = - dualTolerance_;
-          for (int iSection = 0; iSection < 2; iSection++) {
+#if ABOCA_LITE==0
+	  int nSections=2;
+#else
+	  int nSections=1;
+#endif
+          for (int iSection = 0; iSection < nSections; iSection++) {
 
                int addSequence;
                unsigned char * statusArray;
@@ -3311,6 +3490,47 @@ ClpSimplexDual::dualColumn0(const CoinIndexedVector * rowArray,
                     }
                }
           }
+#if ABOCA_LITE
+	  work = columnArray->denseVector();
+	  number = columnArray->getNumElements();
+	  which = columnArray->getIndices();
+	  reducedCost = reducedCostWork_;
+	  unsigned char * statusArray = status_;
+	  
+	  pricingInfo info[ABOCA_LITE];
+	  int chunk = (number+ABOCA_LITE-1)/ABOCA_LITE;
+	  int n=0;
+	  int nR=numberRemaining;
+	  for (int i=0;i<ABOCA_LITE;i++) {
+	    info[i].which=which+n;
+	    info[i].work=work+n;
+	    info[i].numberToDo=CoinMin(chunk,number-n);
+	    n += chunk;
+	    info[i].index = index+nR;
+	    info[i].spare = spare+nR;
+	    nR += chunk;
+	    info[i].reducedCost = reducedCost;
+	    info[i].upperTheta = upperTheta;
+	    info[i].bestPossible = bestPossible;
+	    info[i].acceptablePivot = acceptablePivot;
+	    info[i].status = statusArray;
+	    info[i].dualTolerance=dualTolerance_;
+	  }
+	  for (int i=0;i<ABOCA_LITE;i++) {
+	    cilk_spawn dualColumn00(info[i]);
+	  }
+	  cilk_sync;
+	  numberRemaining += info[0].numberRemaining;
+	  bestPossible = CoinMax(bestPossible,info[0].bestPossible);
+	  upperTheta = CoinMin(upperTheta,info[0].upperTheta);
+	  for (int i=1;i<ABOCA_LITE;i++) {
+	    memmove(index+numberRemaining,info[i].index,info[i].numberRemaining*sizeof(int));
+	    moveAndZero(spare+numberRemaining,info[i].spare,info[i].numberRemaining);
+	    numberRemaining += info[i].numberRemaining;
+	    bestPossible = CoinMax(bestPossible,info[i].bestPossible);
+	    upperTheta = CoinMin(upperTheta,info[i].upperTheta);
+	  }
+#endif
      } else {
           // some free or super basic
           for (int iSection = 0; iSection < 2; iSection++) {

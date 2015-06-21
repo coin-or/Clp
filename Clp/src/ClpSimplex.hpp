@@ -359,6 +359,17 @@ public:
         return code as dual/primal
      */
      int cleanup(int cleanupScaling);
+     /** Clean primal solution
+	 If you expect solution to only have exact multiples of "exactMultiple" then
+	 this tries moving solution values to nearest multiple.  If still feasible
+	 then the solution is replaced.
+
+	 This is designed for the case where values should be integral, but Clp may
+	 have values at e.g. 1.0e-13
+	 Returns 0 if successful, n if n rhs violated
+	 The dual version may be written if this gets used.
+      */
+      int cleanPrimalSolution(double exactMultiple);
      /** Dual ranging.
          This computes increase/decrease in cost for each given variable and corresponding
          sequence numbers which would change basis.  Sequence numbers are 0..numberColumns

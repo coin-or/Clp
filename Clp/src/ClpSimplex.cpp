@@ -10463,6 +10463,58 @@ void printHowMany()
             n2, n1, n3);
 }
 #endif
+/* Clean primal solution
+   If you expect solution to only have exact multiples of "exactMultiple" then
+   this tries moving solution values to nearest multiple.  If still feasible
+   then the solution is replaced.
+   
+   This is designed for the case where values should be integral, but Clp may
+   have values at e.g. 1.0e-13
+   Returns 0 if successful, n if n rhs violated
+   The dual version will be written if this gets used.
+*/
+int 
+ClpSimplex::cleanPrimalSolution(double exactMultiple)
+{
+  double * tempColumn = new double [numberRows_+numberColumns_];
+  double * tempRow = tempColumn+numberColumns_;
+  // allow tiny amount of error if not 1.0
+  double allowedError=0.0;
+  // set up cleaned solution
+  if (exactMultiple==1.0) {
+    for (int i=0;i<numberColumns_;i++) {
+      tempColumn[i] = floor(columnActivity_[i]+0.5);
+    }
+  } else {
+    double reciprocal=1.0/exactMultiple;
+    allowedError=1.0e-1*primalTolerance_;
+    for (int i=0;i<numberColumns_;i++) {
+      double value = floor(columnActivity_[i]*reciprocal+0.5);
+      tempColumn[i] = exactMultiple*value;
+    }
+  }
+  // Check bounds
+  int nBad=0;
+  for (int i=0;i<numberColumns_;i++) {
+    double value = tempColumn[i];
+    if (value<columnLower_[i]-allowedError||value>columnUpper_[i]+allowedError)
+      nBad++;
+  }
+  memset(tempRow,0,numberRows_*sizeof(double));
+  times(-1.0,tempColumn,tempRow);
+  for (int i=0;i<numberRows_;i++) {
+    double value = tempRow[i];
+    if (value<rowLower_[i]-allowedError||value>rowUpper_[i]+allowedError)
+      nBad++;
+  }
+  if (!nBad) {
+    // replace
+    memcpy(columnLower_,tempColumn,numberColumns_*sizeof(double));
+    memcpy(rowLower_,tempRow,numberRows_*sizeof(double));
+  }
+  delete [] tempColumn;
+  return nBad;
+}
 #ifndef SLIM_CLP
 #include "CoinWarmStartBasis.hpp"
 
