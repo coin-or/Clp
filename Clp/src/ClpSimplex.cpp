@@ -794,7 +794,7 @@ ClpSimplex::gutsOfSolution ( double * givenDuals,
 	 if (pivotTolerance<0.9899999) {
 	   largestPrimalError_=0.0;
 	   largestDualError_=0.0;
-	   returnCode=1;
+	   returnCode=-123456789;
 	 } 
        }
      }

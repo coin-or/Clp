@@ -165,10 +165,14 @@ am__libClp_la_SOURCES_DIST = ClpConfig.h ClpCholeskyBase.cpp \
 	ClpSimplexNonlinear.hpp ClpSimplexOther.cpp \
 	ClpSimplexOther.hpp ClpSimplexPrimal.cpp ClpSimplexPrimal.hpp \
 	ClpSolve.cpp ClpSolve.hpp Idiot.cpp Idiot.hpp IdiSolve.cpp \
-	AbcCommon.hpp AbcDualRowDantzig.cpp AbcDualRowDantzig.hpp \
-	AbcDualRowPivot.cpp AbcDualRowPivot.hpp AbcDualRowSteepest.cpp \
-	AbcDualRowSteepest.hpp AbcMatrix.cpp AbcMatrix.hpp \
-	AbcNonLinearCost.cpp AbcNonLinearCost.hpp \
+	ClpPESimplex.cpp ClpPESimplex.hpp ClpPEPrimalColumnDantzig.cpp \
+	ClpPEPrimalColumnDantzig.hpp ClpPEPrimalColumnSteepest.cpp \
+	ClpPEPrimalColumnSteepest.hpp ClpPEDualRowDantzig.cpp \
+	ClpPEDualRowDantzig.hpp ClpPEDualRowSteepest.cpp \
+	ClpPEDualRowSteepest.hpp AbcCommon.hpp AbcDualRowDantzig.cpp \
+	AbcDualRowDantzig.hpp AbcDualRowPivot.cpp AbcDualRowPivot.hpp \
+	AbcDualRowSteepest.cpp AbcDualRowSteepest.hpp AbcMatrix.cpp \
+	AbcMatrix.hpp AbcNonLinearCost.cpp AbcNonLinearCost.hpp \
 	AbcPrimalColumnDantzig.cpp AbcPrimalColumnDantzig.hpp \
 	AbcPrimalColumnPivot.cpp AbcPrimalColumnPivot.hpp \
 	AbcPrimalColumnSteepest.cpp AbcPrimalColumnSteepest.hpp \
@@ -250,7 +254,9 @@ am_libClp_la_OBJECTS = ClpCholeskyBase.lo ClpCholeskyDense.lo \
 	ClpPrimalColumnPivot.lo ClpPrimalColumnSteepest.lo \
 	ClpQuadraticObjective.lo ClpSimplex.lo ClpSimplexDual.lo \
 	ClpSimplexNonlinear.lo ClpSimplexOther.lo ClpSimplexPrimal.lo \
-	ClpSolve.lo Idiot.lo IdiSolve.lo $(am__objects_1) \
+	ClpSolve.lo Idiot.lo IdiSolve.lo ClpPESimplex.lo \
+	ClpPEPrimalColumnDantzig.lo ClpPEPrimalColumnSteepest.lo \
+	ClpPEDualRowDantzig.lo ClpPEDualRowSteepest.lo $(am__objects_1) \
 	$(am__objects_2) $(am__objects_3) $(am__objects_4) \
 	$(am__objects_5) $(am__objects_6)
 libClp_la_OBJECTS = $(am_libClp_la_OBJECTS)
@@ -301,9 +307,12 @@ am__includecoin_HEADERS_DIST = Clp_C_Interface.h ClpCholeskyBase.hpp \
 	ClpQuadraticObjective.hpp ClpSimplex.hpp \
 	ClpSimplexNonlinear.hpp ClpSimplexOther.hpp ClpSimplexDual.hpp \
 	ClpSimplexPrimal.hpp ClpSolve.hpp CbcOrClpParam.hpp Idiot.hpp \
-	AbcSimplex.hpp CoinAbcCommon.hpp AbcCommon.hpp \
-	AbcNonLinearCost.hpp ClpCholeskyUfl.hpp ClpCholeskyMumps.hpp \
-	ClpCholeskyWssmp.hpp ClpCholeskyWssmpKKT.hpp CbcOrClpParam.cpp
+	ClpPESimplex.hpp ClpPEPrimalColumnDantzig.hpp \
+	ClpPEPrimalColumnSteepest.hpp ClpPEDualRowDantzig.hpp \
+	ClpPEDualRowSteepest.hpp AbcSimplex.hpp CoinAbcCommon.hpp \
+	AbcCommon.hpp AbcNonLinearCost.hpp ClpCholeskyUfl.hpp \
+	ClpCholeskyMumps.hpp ClpCholeskyWssmp.hpp \
+	ClpCholeskyWssmpKKT.hpp CbcOrClpParam.cpp
 includecoinHEADERS_INSTALL = $(INSTALL_HEADER)
 HEADERS = $(includecoin_HEADERS)
 ETAGS = etags
@@ -432,6 +441,7 @@ GLPK_DATA_INSTALLED = @GLPK_DATA_INSTALLED@
 GLPK_DEPENDENCIES = @GLPK_DEPENDENCIES@
 GLPK_LIBS = @GLPK_LIBS@
 GLPK_LIBS_INSTALLED = @GLPK_LIBS_INSTALLED@
+GREP = @GREP@
 HAVE_EXTERNALS_FALSE = @HAVE_EXTERNALS_FALSE@
 HAVE_EXTERNALS_TRUE = @HAVE_EXTERNALS_TRUE@
 INSTALL_DATA = @INSTALL_DATA@
@@ -498,6 +508,7 @@ PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
 PACKAGE_NAME = @PACKAGE_NAME@
 PACKAGE_STRING = @PACKAGE_STRING@
 PACKAGE_TARNAME = @PACKAGE_TARNAME@
+PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 PKG_CONFIG = @PKG_CONFIG@
@@ -520,13 +531,9 @@ abs_include_dir = @abs_include_dir@
 abs_lib_dir = @abs_lib_dir@
 abs_source_dir = @abs_source_dir@
 ac_c_preproc_warn_flag = @ac_c_preproc_warn_flag@
-ac_ct_AR = @ac_ct_AR@
 ac_ct_CC = @ac_ct_CC@
 ac_ct_CXX = @ac_ct_CXX@
 ac_ct_F77 = @ac_ct_F77@
-ac_ct_PKG_CONFIG = @ac_ct_PKG_CONFIG@
-ac_ct_RANLIB = @ac_ct_RANLIB@
-ac_ct_STRIP = @ac_ct_STRIP@
 ac_cxx_preproc_warn_flag = @ac_cxx_preproc_warn_flag@
 am__fastdepCC_FALSE = @am__fastdepCC_FALSE@
 am__fastdepCC_TRUE = @am__fastdepCC_TRUE@
@@ -551,6 +558,9 @@ coin_doxy_usedot = @coin_doxy_usedot@
 coin_have_doxygen = @coin_have_doxygen@
 coin_have_latex = @coin_have_latex@
 datadir = @datadir@
+datarootdir = @datarootdir@
+docdir = @docdir@
+dvidir = @dvidir@
 exec_prefix = @exec_prefix@
 have_autoconf = @have_autoconf@
 have_automake = @have_automake@
@@ -561,17 +571,21 @@ host_alias = @host_alias@
 host_cpu = @host_cpu@
 host_os = @host_os@
 host_vendor = @host_vendor@
+htmldir = @htmldir@
 includedir = @includedir@
 infodir = @infodir@
 install_sh = @install_sh@
 libdir = @libdir@
 libexecdir = @libexecdir@
+localedir = @localedir@
 localstatedir = @localstatedir@
 mandir = @mandir@
 mkdir_p = @mkdir_p@
 oldincludedir = @oldincludedir@
+pdfdir = @pdfdir@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
+psdir = @psdir@
 sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 sol_cc_compiler = @sol_cc_compiler@
@@ -622,8 +636,13 @@ libClp_la_SOURCES = ClpConfig.h ClpCholeskyBase.cpp \
 	ClpSimplexNonlinear.hpp ClpSimplexOther.cpp \
 	ClpSimplexOther.hpp ClpSimplexPrimal.cpp ClpSimplexPrimal.hpp \
 	ClpSolve.cpp ClpSolve.hpp Idiot.cpp Idiot.hpp IdiSolve.cpp \
-	$(am__append_1) $(am__append_2) $(am__append_3) \
-	$(am__append_4) $(am__append_5) $(am__append_6)
+	ClpPESimplex.cpp ClpPESimplex.hpp ClpPEPrimalColumnDantzig.cpp \
+	ClpPEPrimalColumnDantzig.hpp ClpPEPrimalColumnSteepest.cpp \
+	ClpPEPrimalColumnSteepest.hpp ClpPEDualRowDantzig.cpp \
+	ClpPEDualRowDantzig.hpp ClpPEDualRowSteepest.cpp \
+	ClpPEDualRowSteepest.hpp $(am__append_1) $(am__append_2) \
+	$(am__append_3) $(am__append_4) $(am__append_5) \
+	$(am__append_6)
 libClpSolver_la_SOURCES = \
 	ClpSolver.cpp \
 	CbcOrClpParam.cpp CbcOrClpParam.hpp \
@@ -686,9 +705,11 @@ includecoin_HEADERS = Clp_C_Interface.h ClpCholeskyBase.hpp \
 	ClpQuadraticObjective.hpp ClpSimplex.hpp \
 	ClpSimplexNonlinear.hpp ClpSimplexOther.hpp ClpSimplexDual.hpp \
 	ClpSimplexPrimal.hpp ClpSolve.hpp CbcOrClpParam.hpp Idiot.hpp \
-	$(am__append_9) $(am__append_10) $(am__append_11) \
-	$(am__append_12) $(am__append_13) $(am__append_14) \
-	CbcOrClpParam.cpp
+	ClpPESimplex.hpp ClpPEPrimalColumnDantzig.hpp \
+	ClpPEPrimalColumnSteepest.hpp ClpPEDualRowDantzig.hpp \
+	ClpPEDualRowSteepest.hpp $(am__append_9) $(am__append_10) \
+	$(am__append_11) $(am__append_12) $(am__append_13) \
+	$(am__append_14) CbcOrClpParam.cpp
 all: config.h config_clp.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
 
@@ -911,6 +932,11 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Idiot.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/MyEventHandler.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/MyMessageHandler.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpPEDualRowDantzig.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpPEDualRowSteepest.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpPEPrimalColumnDantzig.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpPEPrimalColumnSteepest.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpPESimplex.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/unitTest.Plo@am__quote@
 
 .cpp.o:

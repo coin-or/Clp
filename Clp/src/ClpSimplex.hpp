@@ -1121,6 +1121,14 @@ public:
      inline double valueOut() const {
           return valueOut_;
      }
+     /// Lower of out variable
+     inline double lowerOut() const {
+          return lowerOut_ ;
+     }
+     /// Upper of out variable
+     inline double upperOut() const {
+          return upperOut_ ;
+     }
      /// Set value of out variable
      inline void setValueOut(double value) {
           valueOut_ = value;
@@ -1204,6 +1212,15 @@ public:
      inline double theta() const {
           return theta_;
      }
+     /// Lower Bound on In variable
+     inline double lowerIn() const
+     { return lowerIn_;}
+     /// Value of In variable
+     inline double valueIn() const
+     { return valueIn_;} 
+     /// Upper Bound on In variable
+     inline double upperIn() const
+     { return upperIn_;}
      /** Best possible improvement using djs (primal) or
          obj change by flipping bounds to make dual feasible (dual) */
      inline double bestPossibleImprovement() const {
@@ -1608,7 +1625,7 @@ protected:
      CoinIndexedVector * columnArray_[6];
      /// Sequence of In variable
      int sequenceIn_;
-     /// Direction of In, 1 going up, -1 going down, 0 not a clude
+     /// Direction of In, 1 going up, -1 going down, 0 not a clue
      int directionIn_;
      /// Sequence of Out variable
      int sequenceOut_;

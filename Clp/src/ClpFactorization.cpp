@@ -1148,6 +1148,7 @@ ClpFactorization::ClpFactorization ()
      goOslThreshold_ = -1;
      goDenseThreshold_ = -1;
      goSmallThreshold_ = -1;
+     doStatistics_ = true;
      memset(&shortestAverage_,0,3*(sizeof(double)+sizeof(int)));
 }
 
@@ -1170,6 +1171,7 @@ ClpFactorization::ClpFactorization (const ClpFactorization & rhs,
      goOslThreshold_ = rhs.goOslThreshold_;
      goDenseThreshold_ = rhs.goDenseThreshold_;
      goSmallThreshold_ = rhs.goSmallThreshold_;
+     doStatistics_ = rhs.doStatistics_;
      int goDense = 0;
 #ifdef CLP_REUSE_ETAS
      model_=rhs.model_;
@@ -1246,6 +1248,7 @@ ClpFactorization::ClpFactorization (const CoinFactorization & rhs)
      goOslThreshold_ = -1;
      goDenseThreshold_ = -1;
      goSmallThreshold_ = -1;
+     doStatistics_ = true;
      assert (!coinFactorizationA_ || !coinFactorizationB_);
      memset(&shortestAverage_,0,3*(sizeof(double)+sizeof(int)));
 }
@@ -1265,6 +1268,7 @@ ClpFactorization::ClpFactorization (const CoinOtherFactorization & rhs)
      goOslThreshold_ = -1;
      goDenseThreshold_ = -1;
      goSmallThreshold_ = -1;
+     doStatistics_ = true;
 #ifdef CLP_FACTORIZATION_INSTRUMENT
      factorization_instrument(1);
 #endif
@@ -1308,6 +1312,7 @@ ClpFactorization::operator=(const ClpFactorization& rhs)
           goOslThreshold_ = rhs.goOslThreshold_;
           goDenseThreshold_ = rhs.goDenseThreshold_;
           goSmallThreshold_ = rhs.goSmallThreshold_;
+          doStatistics_ = rhs.doStatistics_;
 	  memcpy(&shortestAverage_,&rhs.shortestAverage_,3*(sizeof(double)+sizeof(int)));
           if (rhs.coinFactorizationA_) {
                if (coinFactorizationA_)
@@ -2798,7 +2803,7 @@ ClpFactorization::updateColumn ( CoinIndexedVector * regionSparse,
 #endif
           int returnCode;
           if (coinFactorizationA_) {
-               coinFactorizationA_->setCollectStatistics(true);
+               coinFactorizationA_->setCollectStatistics(doStatistics_);
                returnCode = coinFactorizationA_->updateColumn(regionSparse,
                             regionSparse2,
                             noPermute);
@@ -2984,7 +2989,7 @@ ClpFactorization::updateColumnTranspose ( CoinIndexedVector * regionSparse,
           int returnCode;
 
           if (coinFactorizationA_) {
-               coinFactorizationA_->setCollectStatistics(true);
+               coinFactorizationA_->setCollectStatistics(doStatistics_);
                returnCode =  coinFactorizationA_->updateColumnTranspose(regionSparse,
                              regionSparse2);
                coinFactorizationA_->setCollectStatistics(false);

@@ -124,8 +124,8 @@ public:
 
      //---------------------------------------------------------------------------
 
-private:
-     ///@name Private member data
+protected:
+     ///@name Protected member data
      /** Status
          0) Normal
          -1) Needs initialization

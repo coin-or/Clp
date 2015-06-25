@@ -988,7 +988,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
           if (reason2) {
                problemStatus_ = tentativeStatus;
                doFactorization = true;
-               if (numberPivots) {
+               if (numberPivots||numberThrownOut==-123456789) {
                     // go back
                     // trouble - restore solution
                     CoinMemcpyN(saveStatus_, numberColumns_ + numberRows_, status_);

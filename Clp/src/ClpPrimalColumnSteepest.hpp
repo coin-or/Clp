@@ -194,8 +194,8 @@ public:
      //@}
      //---------------------------------------------------------------------------
 
-private:
-     ///@name Private member data
+protected:
+     ///@name Protected member data
      // Update weight
      double devex_;
      /// weight array

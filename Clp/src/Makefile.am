@@ -65,7 +65,12 @@ libClp_la_SOURCES = \
 	ClpSimplexPrimal.cpp ClpSimplexPrimal.hpp \
 	ClpSolve.cpp ClpSolve.hpp \
 	Idiot.cpp Idiot.hpp \
-	IdiSolve.cpp
+	IdiSolve.cpp \
+	ClpPESimplex.cpp ClpPESimplex.hpp \
+        ClpPEPrimalColumnDantzig.cpp ClpPEPrimalColumnDantzig.hpp \
+ 	ClpPEPrimalColumnSteepest.cpp ClpPEPrimalColumnSteepest.hpp \
+ 	ClpPEDualRowDantzig.cpp ClpPEDualRowDantzig.hpp \
+ 	ClpPEDualRowSteepest.cpp ClpPEDualRowSteepest.hpp
 
 if COIN_HAS_ABC
 libClp_la_SOURCES += \
@@ -236,7 +241,12 @@ includecoin_HEADERS = \
 	ClpSimplexPrimal.hpp \
 	ClpSolve.hpp \
 	CbcOrClpParam.hpp \
-	Idiot.hpp
+	Idiot.hpp \
+	ClpPESimplex.hpp \
+        ClpPEPrimalColumnDantzig.hpp \
+        ClpPEPrimalColumnSteepest.hpp \
+        ClpPEDualRowDantzig.hpp \
+        ClpPEDualRowSteepest.hpp
 
 if COIN_HAS_ABC
 includecoin_HEADERS += AbcSimplex.hpp CoinAbcCommon.hpp AbcCommon.hpp AbcNonLinearCost.hpp

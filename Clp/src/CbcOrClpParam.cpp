@@ -2119,6 +2119,8 @@ gap between bounds exceeds this value",
      parameters[numberParameters-1].append("dant!zig");
      parameters[numberParameters-1].append("partial");
      parameters[numberParameters-1].append("steep!est");
+     parameters[numberParameters-1].append("PEsteep!est");
+     parameters[numberParameters-1].append("PEdantzig");
      parameters[numberParameters-1].setLonghelp
      (
           "Clp can use any pivot selection algorithm which the user codes as long as it\
@@ -2126,7 +2128,9 @@ gap between bounds exceeds this value",
  to show a simple method but its use is deprecated.  Steepest is the method of choice and there\
  are two variants which keep all weights updated but only scan a subset each iteration.\
  Partial switches this on while automatic decides at each iteration based on information\
- about the factorization."
+ about the factorization. \n\
+** NEWS - the Positive Edge criterion has been added. \
+This selects incoming variables to try and avoid degenerate moves. See definition of psi."
      );
      parameters[numberParameters++] =
           CbcOrClpParam("dualS!implex", "Do dual simplex algorithm",
@@ -3159,6 +3163,8 @@ infeasible and you have awkward numbers and you are sure the problem is really f
      parameters[numberParameters-1].append("steep!est");
      parameters[numberParameters-1].append("change");
      parameters[numberParameters-1].append("sprint");
+     parameters[numberParameters-1].append("PEsteep!est");
+     parameters[numberParameters-1].append("PEdantzig");
      parameters[numberParameters-1].setLonghelp
      (
           "Clp can use any pivot selection algorithm which the user codes as long as it\
@@ -3166,7 +3172,12 @@ infeasible and you have awkward numbers and you are sure the problem is really f
  to show a simple method but its use is deprecated.  Exact devex is the method of choice and there\
  are two variants which keep all weights updated but only scan a subset each iteration.\
  Partial switches this on while change initially does dantzig until the factorization\
- becomes denser.  This is still a work in progress."
+ becomes denser.  This is still a work in progress. \n\
+** NEWS - the Positive Edge criterion has been added. \
+This selects incoming variables to try and avoid degenerate moves. Code \
+donated by Jeremy Omer.  See \
+Towhidi, M., Desrosiers, J., Soumis, F., The positive edge criterion within COIN-OR’s CLP. and \
+Omer, J., Towhidi, M., Soumis, F., The positive edge pricing rule for the dual simplex."
      );
      parameters[numberParameters++] =
           CbcOrClpParam("primalS!implex", "Do primal simplex algorithm",
@@ -3202,6 +3213,26 @@ costs this much to be infeasible",
  the code may go all the way and then have to increase the weight in order to get feasible.\
   OSL had a heuristic to\
  adjust bounds, maybe we need that here."
+     );
+     CLP_PARAM_DBL_PSI,
+     parameters[numberParameters++] =
+          CbcOrClpParam("psi", "Two-dimension pricing factor for Positive edge",
+                        -1.1, 1.1, CLP_PARAM_DBL_PSI);
+     parameters[numberParameters-1].setDoubleValue(-0.5);
+     parameters[numberParameters-1].setLonghelp
+     (
+          "The Positive Edge criterion has been added to \
+select incoming variables to try and avoid degenerate moves. \
+Variables not in promising set have their infeasibility weight multiplied by psi \
+so 0.01 would mean that if there were any promising variables, then they would always be chosen, \
+while 1.0 effectively switches algorithm off. \
+There are two ways of switching on this feature.  One way is to set psi positive and then \
+the Positive Edge criterion will be used for Primal and Dual.  The other way is to select pesteep \
+in dualpivot choice (for example), then the absolute value of psi is used - default 0.5. \
+Until this settles down it is only implemented in clp. \
+Code donated by Jeremy Omer.  See \
+Towhidi, M., Desrosiers, J., Soumis, F., The positive edge criterion within COIN-OR’s CLP. and \
+Omer, J., Towhidi, M., Soumis, F., The positive edge pricing rule for the dual simplex."
      );
 #endif
      parameters[numberParameters++] =

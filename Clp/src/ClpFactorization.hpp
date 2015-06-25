@@ -375,6 +375,9 @@ public:
      void cleanUp();
      /// Says whether to redo pivot order
      bool needToReorder() const;
+     /// To switch statistics on or off
+     inline void doStatistics(bool trueFalse) const
+     { doStatistics_ = trueFalse;}
 #ifndef SLIM_CLP
      /// Says if a network basis
      inline bool networkBasis() const {
@@ -426,6 +429,8 @@ private:
      mutable int lastNumberPivots_;
      mutable int effectiveStartNumberU_;
 #endif
+     /// To switch statistics on or off
+     mutable bool doStatistics_;
      //@}
 };
  

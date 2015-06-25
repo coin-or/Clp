@@ -54,6 +54,10 @@ extern glp_prob* cbc_glp_prob;
 #include "ClpNetworkMatrix.hpp"
 #include "ClpDualRowSteepest.hpp"
 #include "ClpDualRowDantzig.hpp"
+#include "ClpPEDualRowSteepest.hpp"
+#include "ClpPEDualRowDantzig.hpp"
+#include "ClpPEPrimalColumnSteepest.hpp"
+#include "ClpPEPrimalColumnDantzig.hpp"
 #include "ClpLinearObjective.hpp"
 #include "ClpPrimalColumnSteepest.hpp"
 #include "ClpPrimalColumnDantzig.hpp"
@@ -689,13 +693,21 @@ int ClpMain1(int argc, const char *argv[],AbcSimplex * models)
                                         AbcDualRowSteepest steep2(2);
                                         models[iModel].setDualRowPivotAlgorithm(steep2);
 #endif
-                                   } else {
+                                   } else if (action == 3) {
                                         ClpDualRowSteepest steep;
                                         thisModel->setDualRowPivotAlgorithm(steep);
 #ifdef ABC_INHERIT
                                         AbcDualRowSteepest steep2;
                                         models[iModel].setDualRowPivotAlgorithm(steep2);
 #endif
+                                   } else if (action == 4) {
+				     // Positive edge steepest
+				     ClpPEDualRowSteepest p(fabs(parameters[whichParam(CLP_PARAM_DBL_PSI, numberParameters, parameters)].doubleValue()));
+				     thisModel->setDualRowPivotAlgorithm(p);
+                                   } else if (action == 5) {
+				     // Positive edge Dantzig
+				     ClpPEDualRowDantzig p(fabs(parameters[whichParam(CLP_PARAM_DBL_PSI, numberParameters, parameters)].doubleValue()));
+				     thisModel->setDualRowPivotAlgorithm(p);
                                    }
                                    break;
                               case CLP_PARAM_STR_PRIMALPIVOT:
@@ -720,6 +732,14 @@ int ClpMain1(int argc, const char *argv[],AbcSimplex * models)
                                    } else if (action == 6) {
                                         ClpPrimalColumnSteepest steep(10);
                                         thisModel->setPrimalColumnPivotAlgorithm(steep);
+                                   } else if (action == 7) {
+				     // Positive edge steepest
+				     ClpPEPrimalColumnSteepest p(fabs(parameters[whichParam(CLP_PARAM_DBL_PSI, numberParameters, parameters)].doubleValue()));
+				     thisModel->setPrimalColumnPivotAlgorithm(p);
+                                   } else if (action == 8) {
+				     // Positive edge Dantzig
+				     ClpPEPrimalColumnDantzig p(fabs(parameters[whichParam(CLP_PARAM_DBL_PSI, numberParameters, parameters)].doubleValue()));
+				     thisModel->setPrimalColumnPivotAlgorithm(p);
                                    }
                                    break;
                               case CLP_PARAM_STR_SCALING:
@@ -823,7 +843,36 @@ int ClpMain1(int argc, const char *argv[],AbcSimplex * models)
                               // synonym for dual
                          case CBC_PARAM_ACTION_BAB:
                               if (goodModels[iModel]) {
+#ifndef ABC_INHERIT
+				ClpSimplex * clpModel = models+iModel;
+#else
+				ClpSimplex * clpModel = static_cast<ClpSimplex *>(models+iModel);
+#endif
 				//openblas_set_num_threads(4);
+				// deal with positive edge
+				double psi = parameters[whichParam(CLP_PARAM_DBL_PSI, numberParameters, parameters)].doubleValue();
+				if (psi>0.0) {
+				  ClpDualRowPivot * dualp = clpModel->dualRowPivot();
+				  ClpDualRowSteepest * d1 = dynamic_cast<ClpDualRowSteepest *>(dualp);
+				  ClpDualRowDantzig * d2 = dynamic_cast<ClpDualRowDantzig *>(dualp);
+				  if (d1) {
+				    ClpPEDualRowSteepest p(psi,d1->mode());
+				    clpModel->setDualRowPivotAlgorithm(p);
+				  } else if (d2) {
+				    ClpPEDualRowDantzig p(psi);
+				    clpModel->setDualRowPivotAlgorithm(p);
+				  }
+				  ClpPrimalColumnPivot * primalp = clpModel->primalColumnPivot();
+				  ClpPrimalColumnSteepest * p1 = dynamic_cast<ClpPrimalColumnSteepest *>(primalp);
+				  ClpPrimalColumnDantzig * p2 = dynamic_cast<ClpPrimalColumnDantzig *>(primalp);
+				  if (p1) {
+				    ClpPEPrimalColumnSteepest p(psi,p1->mode());
+				    clpModel->setPrimalColumnPivotAlgorithm(p);
+				  } else if (p2) {
+				    ClpPEPrimalColumnDantzig p(psi);
+				    clpModel->setPrimalColumnPivotAlgorithm(p);
+				  }
+				}
 				if (type==CLP_PARAM_ACTION_EITHERSIMPLEX||
 		 		    type==CBC_PARAM_ACTION_BAB)
 				  models[iModel].setMoreSpecialOptions(16384|
