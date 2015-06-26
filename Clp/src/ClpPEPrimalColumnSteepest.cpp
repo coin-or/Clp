@@ -30,8 +30,9 @@
 //-------------------------------------------------------------------
 ClpPEPrimalColumnSteepest::ClpPEPrimalColumnSteepest (double psi, int mode)
 : ClpPrimalColumnSteepest(mode), modelPE_(NULL), psi_(psi),
-iCurrent_(0), iInterval_(100), updateCompatibles_(true),
-coDegenCompatibles_(0), coConsecutiveCompatibles_(0)
+iCurrent_(0), iInterval_(100), 
+  coDegenCompatibles_(0), coConsecutiveCompatibles_(0),
+updateCompatibles_(true)
 {
 }
 
@@ -593,7 +594,8 @@ void
 ClpPEPrimalColumnSteepest::saveWeights(ClpSimplex * model, int mode)
 {
   // See if we need to initialize ClpPESimplex
-  if (!modelPE_||model!=modelPE_->clpModel()) {
+  if (!modelPE_||model!=modelPE_->clpModel()||
+      !modelPE_->checkSize()) {
     delete modelPE_;
     modelPE_ = new ClpPESimplex(model);
   }

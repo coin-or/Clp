@@ -471,7 +471,8 @@ void
 ClpPEDualRowSteepest::saveWeights(ClpSimplex * model, int mode)
 {
   // See if we need to initialize ClpPESimplex
-  if (!modelPE_||model!=modelPE_->clpModel()) {
+  if (!modelPE_||model!=modelPE_->clpModel()||
+      !modelPE_->checkSize()) {
     delete modelPE_;
     modelPE_ = new ClpPESimplex(model);
   }

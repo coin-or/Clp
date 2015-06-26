@@ -71,7 +71,9 @@ public:
                                        double & changeInObjective);
      //@}
 
-
+     // Psi
+     inline double psi() const
+     { return psi_;}
 
      //---------------------------------------------------------------------------
 

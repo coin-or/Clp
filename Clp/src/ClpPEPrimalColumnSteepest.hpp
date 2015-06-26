@@ -82,6 +82,9 @@ public:
      /// Updates weights - as ordinary but checks for zero moves
      virtual void updateWeights(CoinIndexedVector * input);
      //---------------------------------------------------------------------------
+     // Psi
+     inline double psi() const
+     { return psi_;}
 
 private:
     /* this PESimplex object is used to identify the compatible variables */

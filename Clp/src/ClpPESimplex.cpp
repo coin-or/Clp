@@ -681,6 +681,13 @@ bool ClpPESimplex::checkCompatibilityRow(int pivotRow) {
 
   return isCompatible;
 }
+// checks size
+bool
+ClpPESimplex::checkSize()
+{
+  return (numberRows_==model_->numberRows()&&
+	  numberColumns_==model_->numberColumns());
+}
 /* Update the dual compatible rows */
 void 
 ClpPESimplex::updateCompatibleRows(int iColumn)

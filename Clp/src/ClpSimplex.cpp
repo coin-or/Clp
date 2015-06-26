@@ -23,6 +23,8 @@
 #include "ClpDualRowSteepest.hpp"
 #include "ClpPrimalColumnDantzig.hpp"
 #include "ClpPrimalColumnSteepest.hpp"
+#include "ClpPEDualRowSteepest.hpp"
+#include "ClpPEPrimalColumnSteepest.hpp"
 #include "ClpNonLinearCost.hpp"
 #include "ClpMessage.hpp"
 #include "ClpEventHandler.hpp"
@@ -409,15 +411,27 @@ ClpSimplex::ClpSimplex ( const ClpSimplex * rhs,
      factorization_ = new ClpFactorization(*rhs->factorization_, -numberRows_);
      //factorization_ = new ClpFactorization(*rhs->factorization_,
      //				rhs->factorization_->goDenseThreshold());
-     ClpDualRowDantzig * pivot =
-          dynamic_cast< ClpDualRowDantzig*>(rhs->dualRowPivot_);
-     // say Steepest pricing
-     if (!pivot)
-          dualRowPivot_ = new ClpDualRowSteepest();
-     else
-          dualRowPivot_ = new ClpDualRowDantzig();
-     // say Steepest pricing
-     primalColumnPivot_ = new ClpPrimalColumnSteepest();
+     ClpPEDualRowSteepest * pivotDualPE =
+          dynamic_cast< ClpPEDualRowSteepest*>(rhs->dualRowPivot_);
+     if (pivotDualPE) {
+       dualRowPivot_ = new ClpPEDualRowSteepest(pivotDualPE->psi());
+     } else {
+       ClpDualRowDantzig * pivot =
+	 dynamic_cast< ClpDualRowDantzig*>(rhs->dualRowPivot_);
+       // say Steepest pricing
+       if (!pivot)
+	 dualRowPivot_ = new ClpDualRowSteepest();
+       else
+	 dualRowPivot_ = new ClpDualRowDantzig();
+     }
+     ClpPEPrimalColumnSteepest * pivotPrimalPE =
+          dynamic_cast< ClpPEPrimalColumnSteepest*>(rhs->primalColumnPivot_);
+     if (pivotPrimalPE) {
+       primalColumnPivot_ = new ClpPEPrimalColumnSteepest(pivotPrimalPE->psi());
+     } else {
+       // say Steepest pricing
+       primalColumnPivot_ = new ClpPrimalColumnSteepest();
+     }
      solveType_ = 1; // say simplex based life form
      if (fixOthers) {
           int numberOtherColumns = rhs->numberColumns();

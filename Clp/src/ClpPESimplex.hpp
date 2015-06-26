@@ -59,10 +59,13 @@ public:
     inline int coCompatibleRows() {return coCompatibleRows_;}
 
     inline bool isCompatibleCol(int sequence) {return isCompatibleCol_[sequence];} 
-    inline bool isCompatibleRow(int row) {return isCompatibleRow_[row];}
+    inline bool isCompatibleRow(int row) {
+      assert (row>=0&&row<numberRows_);
+      return isCompatibleRow_[row];}
 
     inline ClpSimplex* clpModel() {return model_;}
-
+    // check seems to be same model - returns false if size changed
+    bool checkSize();
 /** PUBLIC METHODS RELATED TO COMPATIBILITY */
 public:
     /** Updates the set of variables that are not at their bounds */
